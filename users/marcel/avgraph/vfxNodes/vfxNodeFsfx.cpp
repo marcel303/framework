@@ -1,3 +1,4 @@
+#include "vfxGraph.h"
 #include "vfxNodeFsfx.h"
 
 VfxNodeFsfx::VfxNodeFsfx()
@@ -79,7 +80,7 @@ void VfxNodeFsfx::draw() const
 				shader.setImmediate("opacity", getInputFloat(kInput_Opacity, 1.f));
 				shader.setTexture("texture1", 1, texture1, true, false);
 				shader.setTexture("texture2", 2, texture2, true, false);
-				shader.setImmediate("time", framework.time);
+				shader.setImmediate("time", g_currentVfxGraph->time);
 				surface->postprocess();
 			}
 			clearShader();

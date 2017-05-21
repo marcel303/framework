@@ -193,6 +193,9 @@ void VfxGraph::tick(const float dt)
 
 void VfxGraph::draw() const
 {
+	Assert(g_currentVfxGraph == nullptr);
+	g_currentVfxGraph = const_cast<VfxGraph*>(this);
+	
 	// start traversal at the display node and traverse to leafs following predeps and and back up the tree again to draw
 	
 	if (displayNodeId != kGraphNodeIdInvalid)
@@ -222,4 +225,8 @@ void VfxGraph::draw() const
 	}
 	
 	++nextDrawTraversalId;
+	
+	//
+	
+	g_currentVfxGraph = nullptr;
 }
