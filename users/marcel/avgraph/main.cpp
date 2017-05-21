@@ -25,6 +25,7 @@
 #include "vfxNodes/vfxNodeNoiseSimplex2D.h"
 #include "vfxNodes/vfxNodeOsc.h"
 #include "vfxNodes/vfxNodeOscPrimitives.h"
+#include "vfxNodes/vfxNodeOscSend.h"
 #include "vfxNodes/vfxNodePhysicalSpring.h"
 #include "vfxNodes/vfxNodePicture.h"
 #include "vfxNodes/vfxNodeSampleAndHold.h"
@@ -704,6 +705,10 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	{
 		vfxNode = new VfxNodeOsc();
 	}
+	else if (typeName == "osc.send")
+	{
+		vfxNode = new VfxNodeOscSend();
+	}
 	else if (typeName == "composite")
 	{
 		vfxNode = new VfxNodeComposite();
@@ -1271,6 +1276,10 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 				{
 					value = String::FormatC("%f", triggerData.asFloat());
 					return true;
+				}
+				else if (triggerData.type == kVfxTriggerDataType_None)
+				{
+					return false;
 				}
 				else
 				{
@@ -2276,7 +2285,7 @@ static void testDotDetector()
 	
 	if (useVideo)
 	{
-		mp.openAsync("mocapb.mp4", false);
+		mp.openAsync("mocap5.mp4", false);
 	}
 	
 	//
@@ -2325,7 +2334,7 @@ static void testDotDetector()
 			tresholdValue -= 1;
 		if (keyboard.wentDown(SDLK_a, true))
 			maxRadius += 1;
-		if (keyboard.wentDown(SDLK_z, true))
+		if (keyboard.wentDown(SDLK_z, true) && maxRadius > 1)
 			maxRadius -= 1;
 		
 		//
@@ -2676,12 +2685,12 @@ int main(int argc, char * argv[])
 		
 		//testImpulseResponseMeasurement();
 		
-		testTextureAtlas();
+		//testTextureAtlas();
 		
 		//for (int i = 0; i < 10; ++i)
-			testDynamicTextureAtlas();
+		//	testDynamicTextureAtlas();
 		
-		testDotDetector();
+		//testDotDetector();
 		
 		//
 		
