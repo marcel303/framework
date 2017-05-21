@@ -6,6 +6,10 @@
 #include "spriter.h"
 #include "StringEx.h"
 
+#if USE_GLYPH_ATLAS
+	#include "textureatlas.h"
+#endif
+
 #if defined(WIN32)
 	#include <Windows.h>
 	#include <Pathcch.h>
@@ -391,6 +395,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 					glBindTexture(GL_TEXTURE_2D, restoreTexture);
 					glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpackAlignment);
 					glPixelStorei(GL_UNPACK_ROW_LENGTH, restoreUnpackRowLength);
+					checkErrorGL();
 				}
 				
 				this->sx = imageData->sx;
@@ -1567,6 +1572,9 @@ SoundCacheElem & SoundCache::findOrCreate(const char * name)
 FontCacheElem::FontCacheElem()
 {
 	face = 0;
+#if USE_GLYPH_ATLAS
+	textureAtlas = nullptr;
+#endif
 }
 
 void FontCacheElem::free()
@@ -1580,6 +1588,14 @@ void FontCacheElem::free()
 		
 		face = 0;
 	}
+	
+#if USE_GLYPH_ATLAS
+	if (textureAtlas != nullptr)
+	{
+		delete textureAtlas;
+		textureAtlas = nullptr;
+	}
+#endif
 }
 
 void FontCacheElem::load(const char * filename)
@@ -1603,6 +1619,29 @@ void FontCacheElem::load(const char * filename)
 		// num_fixed_sizes to zero here
 		face->num_fixed_sizes = 0;
 	}
+	
+#if USE_GLYPH_ATLAS
+	textureAtlas = new TextureAtlas();
+	textureAtlas->init(256, 256);
+	
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+	checkErrorGL();
+	
+	glBindTexture(GL_TEXTURE_2D, textureAtlas->texture);
+	GLint swizzleMask[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
+	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+	checkErrorGL();
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	checkErrorGL();
+	
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	checkErrorGL();
+#endif
 }
 
 void FontCache::clear()
@@ -1649,6 +1688,9 @@ FontCacheElem & FontCache::findOrCreate(const char * name)
 
 void GlyphCache::clear()
 {
+#if USE_GLYPH_ATLAS
+	// todo : free texture atlas elements
+#else
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
 		if (i->second.texture != 0)
@@ -1657,12 +1699,15 @@ void GlyphCache::clear()
 			checkErrorGL();
 		}
 	}
+#endif
 	
 	m_map.clear();
 }
 
 GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 {
+	fassert(face == globals.font->face);
+	
 	Key key;
 	key.face = face;
 	key.size = size;
@@ -1684,6 +1729,13 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 
 		if (FT_Load_Char(face, c, FT_LOAD_RENDER | FT_LOAD_TARGET_NORMAL) == 0)
 		{
+		#if USE_GLYPH_ATLAS
+			elem.g = *face->glyph;
+		
+			BoxAtlasElem * e = globals.font->textureAtlas->tryAlloc(elem.g.bitmap.buffer, elem.g.bitmap.width, elem.g.bitmap.rows);
+			
+			elem.textureAtlasElem = e;
+		#else
 			// capture current OpenGL states before we change them
 			
 			GLuint restoreTexture;
@@ -1751,13 +1803,18 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 			glBindTexture(GL_TEXTURE_2D, restoreTexture);
 			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
 			checkErrorGL();
+		#endif
 		}
 		else
 		{
 			// failed to render the glyph. return the NULL texture handle
 			
 			logError("failed to render glyph");
+		#if USE_GLYPH_ATLAS
+			elem.textureAtlasElem = nullptr;
+		#else
 			elem.texture = 0;
+		#endif
 		}
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;

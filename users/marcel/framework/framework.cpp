@@ -32,6 +32,10 @@
 #include "shaders.h"
 #include "spriter.h"
 
+#if USE_GLYPH_ATLAS
+	#include "textureatlas.h"
+#endif
+
 #include "StringEx.h"
 #include "Timer.h"
 
@@ -4922,7 +4926,11 @@ static void measureText(FT_Face face, int size, const char * _text, float & sx, 
 		
 		const GlyphCacheElem & elem = g_glyphCache.findOrCreate(face, size, text[i]);
 		
+	#if USE_GLYPH_ATLAS
+		if (elem.textureAtlasElem != nullptr)
+	#else
 		if (elem.texture != 0)
+	#endif
 		{
 			const float bsx = float(elem.g.bitmap.width);
 			const float bsy = float(elem.g.bitmap.rows);
@@ -4980,9 +4988,17 @@ static void drawTextInternal(FT_Face face, int size, const char * _text)
 		
 		const GlyphCacheElem & elem = g_glyphCache.findOrCreate(face, size, text[i]);
 		
+	#if USE_GLYPH_ATLAS
+		if (elem.textureAtlasElem != nullptr)
+	#else
 		if (elem.texture != 0)
+	#endif
 		{
+		#if USE_GLYPH_ATLAS
+			gxSetTexture(globals.font->textureAtlas->texture);
+		#else
 			gxSetTexture(elem.texture);
+		#endif
 			
 			gxBegin(GL_QUADS);
 			{
@@ -4993,10 +5009,26 @@ static void drawTextInternal(FT_Face face, int size, const char * _text)
 				const float x2 = x1 + bsx;
 				const float y2 = y1 + bsy;
 				
+			#if USE_GLYPH_ATLAS
+				const int iu1 = elem.textureAtlasElem->x;
+				const int iu2 = elem.textureAtlasElem->x + elem.textureAtlasElem->sx;
+				const int iv1 = elem.textureAtlasElem->y;
+				const int iv2 = elem.textureAtlasElem->y + elem.textureAtlasElem->sy;
+				const float u1 = iu1 / float(globals.font->textureAtlas->a.sx);
+				const float u2 = iu2 / float(globals.font->textureAtlas->a.sx);
+				const float v1 = iv1 / float(globals.font->textureAtlas->a.sy);
+				const float v2 = iv2 / float(globals.font->textureAtlas->a.sy);
+				
+				gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
+				gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);
+				gxTexCoord2f(u2, v2); gxVertex2f(x2, y2);
+				gxTexCoord2f(u1, v2); gxVertex2f(x1, y2);
+			#else
 				gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 				gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
 				gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
 				gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
+			#endif
 			}
 			gxEnd();
 			

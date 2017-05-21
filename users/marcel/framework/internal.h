@@ -11,6 +11,8 @@
 
 #define MAX_MIDI_KEYS 256
 
+#define USE_GLYPH_ATLAS 1
+
 #ifndef WIN32
 static int fopen_s(FILE ** file, const char * filename, const char * mode)
 {
@@ -380,6 +382,9 @@ class FontCacheElem
 {
 public:
 	FT_Face face;
+#if USE_GLYPH_ATLAS
+	struct TextureAtlas * textureAtlas;
+#endif
 	
 	FontCacheElem();
 	void free();
@@ -405,7 +410,11 @@ class GlyphCacheElem
 {
 public:
 	FT_GlyphSlotRec g;
+#if USE_GLYPH_ATLAS
+	struct BoxAtlasElem * textureAtlasElem;
+#else
 	GLuint texture;
+#endif
 };
 
 class GlyphCache
