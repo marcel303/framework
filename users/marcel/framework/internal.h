@@ -13,6 +13,10 @@
 
 #define USE_GLYPH_ATLAS 1
 
+#if USE_GLYPH_ATLAS
+	#define GLYPH_ATLAS_BORDER 1
+#endif
+
 #ifndef WIN32
 static int fopen_s(FILE ** file, const char * filename, const char * mode)
 {

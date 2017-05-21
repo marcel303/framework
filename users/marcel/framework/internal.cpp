@@ -1731,8 +1731,23 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 		{
 		#if USE_GLYPH_ATLAS
 			elem.g = *face->glyph;
-		
-			BoxAtlasElem * e = globals.font->textureAtlas->tryAlloc(elem.g.bitmap.buffer, elem.g.bitmap.width, elem.g.bitmap.rows);
+			
+			BoxAtlasElem * e = nullptr;
+			
+			for (;;)
+			{
+				e = globals.font->textureAtlas->tryAlloc(elem.g.bitmap.buffer, elem.g.bitmap.width, elem.g.bitmap.rows, GLYPH_ATLAS_BORDER);
+				
+				if (e != nullptr)
+					break;
+				
+				logDebug("glyph allocation failed. growing texture atlas to twice the old height");
+				
+				// todo : make sure texture atlas re-allocation doesn't happen in draw code; make sure to cache each glyph elem first!
+				
+				globals.font->textureAtlas->makeBigger(globals.font->textureAtlas->a.sx, globals.font->textureAtlas->a.sy * 2);
+				globals.font->textureAtlas->optimize();
+			}
 			
 			elem.textureAtlasElem = e;
 		#else

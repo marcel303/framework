@@ -5010,10 +5010,10 @@ static void drawTextInternal(FT_Face face, int size, const char * _text)
 				const float y2 = y1 + bsy;
 				
 			#if USE_GLYPH_ATLAS
-				const int iu1 = elem.textureAtlasElem->x;
-				const int iu2 = elem.textureAtlasElem->x + elem.textureAtlasElem->sx;
-				const int iv1 = elem.textureAtlasElem->y;
-				const int iv2 = elem.textureAtlasElem->y + elem.textureAtlasElem->sy;
+				const int iu1 = elem.textureAtlasElem->x + GLYPH_ATLAS_BORDER;
+				const int iu2 = elem.textureAtlasElem->x - GLYPH_ATLAS_BORDER + elem.textureAtlasElem->sx;
+				const int iv1 = elem.textureAtlasElem->y + GLYPH_ATLAS_BORDER;
+				const int iv2 = elem.textureAtlasElem->y - GLYPH_ATLAS_BORDER + elem.textureAtlasElem->sy;
 				const float u1 = iu1 / float(globals.font->textureAtlas->a.sx);
 				const float u2 = iu2 / float(globals.font->textureAtlas->a.sx);
 				const float v1 = iv1 / float(globals.font->textureAtlas->a.sy);

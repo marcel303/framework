@@ -42,9 +42,9 @@ void TextureAtlas::init(const int sx, const int sy)
 	}
 }
 
-BoxAtlasElem * TextureAtlas::tryAlloc(const uint8_t * values, const int sx, const int sy)
+BoxAtlasElem * TextureAtlas::tryAlloc(const uint8_t * values, const int sx, const int sy, const int border)
 {
-	auto e = a.tryAlloc(sx, sy);
+	auto e = a.tryAlloc(sx + border * 2, sy + border * 2);
 	
 	if (e != nullptr)
 	{
@@ -62,7 +62,7 @@ BoxAtlasElem * TextureAtlas::tryAlloc(const uint8_t * values, const int sx, cons
 			checkErrorGL();
 			
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, e->x, e->y, sx, sy, GL_RED, GL_UNSIGNED_BYTE, values);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, e->x + border, e->y + border, sx, sy, GL_RED, GL_UNSIGNED_BYTE, values);
 			checkErrorGL();
 			
 			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
@@ -109,7 +109,7 @@ void TextureAtlas::free(BoxAtlasElem *& e)
 void TextureAtlas::clearTexture(GLuint texture, float r, float g, float b, float a)
 {
 	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_FRAMEBUFFER, (GLint*)&oldBuffer);
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
 	{
 		GLuint frameBuffer = 0;
 		
@@ -139,7 +139,7 @@ bool TextureAtlas::makeBigger(const int sx, const int sy)
 	// update texture
 	
 	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_FRAMEBUFFER, (GLint*)&oldBuffer);
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
 	checkErrorGL();
 	
 	//
@@ -200,7 +200,7 @@ bool TextureAtlas::optimize()
 	// update texture
 	
 	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_FRAMEBUFFER, (GLint*)&oldBuffer);
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
 	checkErrorGL();
 	
 	//
