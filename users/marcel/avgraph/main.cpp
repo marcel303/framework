@@ -222,6 +222,9 @@ todo : framework :
 todo : media player
 - for image analysis we often only need luminance. make it an option to output YUV Y-channel only?
 
+todo : UI
+- add drop down list for (large) enums
+
 reference :
 + http://www.dsperados.com (company based in Utrecht ? send to Stijn)
 
@@ -1409,7 +1412,10 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 //
 
 #include "BoxAtlas.h"
+#include "textureatlas.h"
 #include "Timer.h"
+
+#if 0
 
 struct TextureAtlas
 {
@@ -1448,24 +1454,27 @@ struct TextureAtlas
 		}
 	}
 	
-	BoxAtlasElem * alloc(const uint8_t * values, const int sx, const int sy)
+	BoxAtlasElem * tryAlloc(const uint8_t * values, const int sx, const int sy)
 	{
 		auto e = a.tryAlloc(sx, sy);
 		
 		if (e != nullptr)
 		{
-			glBindTexture(GL_TEXTURE_2D, texture);
-			
-			GLint restoreUnpack;
-			glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
-			checkErrorGL();
-			
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, e->x, e->y, sx, sy, GL_RED, GL_UNSIGNED_BYTE, values);
-			checkErrorGL();
-			
-			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
-			checkErrorGL();
+			if (values != nullptr)
+			{
+				glBindTexture(GL_TEXTURE_2D, texture);
+				
+				GLint restoreUnpack;
+				glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
+				checkErrorGL();
+				
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+				glTexSubImage2D(GL_TEXTURE_2D, 0, e->x, e->y, sx, sy, GL_RED, GL_UNSIGNED_BYTE, values);
+				checkErrorGL();
+				
+				glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
+				checkErrorGL();
+			}
 			
 			return e;
 		}
@@ -1479,6 +1488,8 @@ struct TextureAtlas
 	{
 		if (e != nullptr)
 		{
+			Assert(e->isAllocated);
+			
 			uint8_t * zeroes = (uint8_t*)alloca(e->sx * e->sy);
 			memset(zeroes, 0, e->sx * e->sy);
 			
@@ -1498,10 +1509,269 @@ struct TextureAtlas
 			a.free(e);
 		}
 	}
+	
+	void clearTexture(GLuint texture, float r, float g, float b, float a)
+	{
+		GLuint oldBuffer = 0;
+		glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
+		checkErrorGL();
+		{
+			GLuint frameBuffer = 0;
+			
+			glGenFramebuffers(1, &frameBuffer);
+			checkErrorGL();
+			
+			glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+			checkErrorGL();
+			{
+				glClearColor(0, 0, 0, 0);
+				glClear(GL_COLOR_BUFFER_BIT);
+			}
+			glDeleteFramebuffers(1, &frameBuffer);
+			frameBuffer = 0;
+			checkErrorGL();
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+		checkErrorGL();
+	}
+	
+	bool makeBigger(const int sx, const int sy)
+	{
+		if (sx < a.sx || sy < a.sy)
+			return false;
+		
+		// update texture
+		
+		GLuint oldBuffer = 0;
+		glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
+		checkErrorGL();
+		
+		//
+		
+		GLuint newTexture = 0;
+		
+		glGenTextures(1, &newTexture);
+		glBindTexture(GL_TEXTURE_2D, newTexture);
+		glTexStorage2D(GL_TEXTURE_2D, 1, GL_R8, sx, sy);
+		checkErrorGL();
+		
+		clearTexture(newTexture, 0, 0, 0, 0);
+		
+		GLuint frameBuffer = 0;
+		
+		glGenFramebuffers(1, &frameBuffer);
+		checkErrorGL();
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+		checkErrorGL();
+		
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, a.sx, a.sy);
+		checkErrorGL();
+		
+		glDeleteFramebuffers(1, &frameBuffer);
+		frameBuffer = 0;
+		
+		glDeleteTextures(1, &texture);
+		texture = 0;
+		
+		//
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+		checkErrorGL();
+		
+		//
+		
+		texture = newTexture;
+		
+		a.makeBigger(sx, sy);
+		
+		return true;
+	}
+	
+	bool optimize()
+	{
+		BoxAtlasElem elems[a.kMaxElems];
+		memcpy(elems, a.elems, sizeof(elems));
+		
+		if (a.optimize() == false)
+		{
+			return false;
+		}
+		
+		// update texture
+		
+		GLuint oldBuffer = 0;
+		glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
+		checkErrorGL();
+		
+		//
+		
+		GLuint newTexture = 0;
+		
+		glGenTextures(1, &newTexture);
+		glBindTexture(GL_TEXTURE_2D, newTexture);
+		glTexStorage2D(GL_TEXTURE_2D, 1, GL_R8, a.sx, a.sy);
+		checkErrorGL();
+		
+		clearTexture(newTexture, 0, 0, 0, 0);
+		
+		GLuint frameBuffer = 0;
+		
+		glGenFramebuffers(1, &frameBuffer);
+		checkErrorGL();
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+		checkErrorGL();
+		
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		checkErrorGL();
+		
+		for (int i = 0; i < a.kMaxElems; ++i)
+		{
+			auto & eSrc = elems[i];
+			auto & eDst = a.elems[i];
+			
+			Assert(eSrc.isAllocated == eDst.isAllocated);
+			
+			if (eSrc.isAllocated)
+			{
+				glCopyTexSubImage2D(GL_TEXTURE_2D, 0, eDst.x, eDst.y, eSrc.x, eSrc.y, eSrc.sx, eSrc.sy);
+				checkErrorGL();
+			}
+		}
+		
+		glDeleteFramebuffers(1, &frameBuffer);
+		frameBuffer = 0;
+		checkErrorGL();
+		
+		glDeleteTextures(1, &texture);
+		texture = 0;
+		checkErrorGL();
+		
+		//
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+		checkErrorGL();
+		
+		//
+		
+		texture = newTexture;
+		
+		return true;
+	}
 };
+
+#endif
+
+static void testTextureAtlas()
+{
+	{
+		TextureAtlas ta;
+		
+		ta.init(128, 128);
+		
+		bool success = true;
+		
+		uint8_t * values = (uint8_t*)malloc(1024 * 1024);
+		memset(values, 0xff, 1024 * 1024);
+		
+		const uint64_t tr1 = g_TimerRT.TimeUS_get();
+		
+		success &= nullptr != ta.tryAlloc(values, 128, 128);
+		
+		success &= false != ta.makeBigger(256, 256);
+		
+		success &= nullptr != ta.tryAlloc(values, 128, 128);
+		success &= nullptr != ta.tryAlloc(values, 128, 128);
+		success &= nullptr != ta.tryAlloc(values, 128, 128);
+		
+		success &= false != ta.makeBigger(512, 256);
+		
+		for (int i = 0; i < 500; ++i)
+		{
+			success &= nullptr != ta.tryAlloc(values, random(4, 12), random(4, 12));
+		}
+		
+		const uint64_t tr2 = g_TimerRT.TimeUS_get();
+		
+		printf("resize test: time=%.2fms, success=%d\n", (tr2 - tr1) / 1000.f, success ? 1 : 0);
+		
+		delete[] values;
+		values = nullptr;
+		
+		do
+		{
+			framework.process();
+			
+			if (keyboard.wentDown(SDLK_o))
+			{
+				const uint64_t to1 = g_TimerRT.TimeUS_get();
+				
+				const bool success = ta.optimize();
+				
+				const uint64_t to2 = g_TimerRT.TimeUS_get();
+				
+				printf("optimize: time=%.2fms, success=%d\n", (to2 - to1) / 1000.f, success ? 1 : 0);
+			}
+			
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				pushBlend(BLEND_OPAQUE);
+				gxSetTexture(ta.texture);
+				{
+					setColor(colorWhite);
+					drawRect(0, 0, ta.a.sx, ta.a.sy);
+				}
+				gxSetTexture(0);
+				popBlend();
+				
+			#if 1
+				setColor(127, 0, 0);
+				for (auto & e : ta.a.elems)
+					if (e.isAllocated)
+						drawRectLine(e.x, e.y, e.x + e.sx, e.y + e.sy);
+			#endif
+			}
+			framework.endDraw();
+		} while (!keyboard.wentDown(SDLK_SPACE));
+	}
+}
 
 static void testDynamicTextureAtlas()
 {
+	{
+		BoxAtlas a;
+		
+		a.init(128, 128);
+		
+		bool success = true;
+		
+		const uint64_t tr1 = g_TimerRT.TimeUS_get();
+		
+		success &= nullptr != a.tryAlloc(128, 128);
+		
+		success &= false != a.makeBigger(256, 256);
+		
+		success &= nullptr != a.tryAlloc(128, 128);
+		success &= nullptr != a.tryAlloc(128, 128);
+		success &= nullptr != a.tryAlloc(128, 128);
+		
+		success &= false != a.makeBigger(512, 256);
+		
+		for (int i = 0; i < 500; ++i)
+		{
+			success &= nullptr != a.tryAlloc(random(4, 8), random(4, 8));
+		}
+		
+		const uint64_t tr2 = g_TimerRT.TimeUS_get();
+		
+		printf("resize test: time=%.2fms, success=%d\n", (tr2 - tr1) / 1000.f, success ? 1 : 0);
+	}
+	
 	BoxAtlas a;
 	
 	a.init(1024, 1024);
@@ -1536,6 +1806,14 @@ static void testDynamicTextureAtlas()
 	const uint64_t t2 = g_TimerRT.TimeUS_get();
 	
 	printf("insert took %.2fms for %d elems (%d/%d)\n", (t2 - t1) / 1000.f, kMaxElems, numElems, kMaxElems);
+	
+	const uint64_t to1 = g_TimerRT.TimeUS_get();
+	
+	a.optimize();
+	
+	const uint64_t to2 = g_TimerRT.TimeUS_get();
+	
+	printf("optimize took %.2fms for %d elems (%d/%d)\n", (to2 - to1) / 1000.f, kMaxElems, numElems, kMaxElems);
 	
 	for (int i = 0; i < numElems; ++i)
 	{
@@ -1576,7 +1854,7 @@ static void testDynamicTextureAtlas()
 	
 	TextureAtlas ta;
 	
-	ta.init(GFX_SX, GFX_SY);
+	ta.init(GFX_SX/2, GFX_SY/2);
 	
 	const uint64_t tt1 = g_TimerRT.TimeUS_get();
 
@@ -1590,7 +1868,7 @@ static void testDynamicTextureAtlas()
 		for (int i = 0; i < sx * sy; ++i)
 			values[i] = i;
 		
-		BoxAtlasElem * e = ta.alloc(values, sx, sy);
+		BoxAtlasElem * e = ta.tryAlloc(values, sx, sy);
 		
 		if (e != nullptr)
 		{
@@ -1617,15 +1895,37 @@ static void testDynamicTextureAtlas()
 	numElems = 0;
 #endif
 	
+	const int kAnimSize = 1000;
+	int animItr = 0;
+	
 	do
 	{
 		framework.process();
 		
 		//
 		
+		if (mouse.isDown(BUTTON_LEFT))
+			SDL_Delay(500);
+		
+		//
+		
 	#if 1
-	for (int i = 0; i < 300; ++i)
-		if (numElems < kMaxElems && numElems < 300)
+		if (animItr == kAnimSize)
+		{
+			for (int i = 0; i < numElems; ++i)
+			{
+				ta.free(elems[i]);
+			}
+			
+			numElems = 0;
+			animItr = 0;
+		}
+		
+		const int numToAdd = mouse.x * 50 / GFX_SX;
+		
+	//for (int i = 0; i < kAnimSize; ++i)
+	for (int i = 0; i < numToAdd; ++i)
+		if (numElems < kMaxElems && animItr < kAnimSize)
 		{
 			const int sx = random(4, 100);
 			const int sy = random(4, 100);
@@ -1635,7 +1935,7 @@ static void testDynamicTextureAtlas()
 			for (int i = 0; i < sx * sy; ++i)
 				values[i] = i;
 			
-			BoxAtlasElem * e = ta.alloc(values, sx, sy);
+			BoxAtlasElem * e = ta.tryAlloc(values, sx, sy);
 			
 			if (e != nullptr)
 			{
@@ -1647,17 +1947,32 @@ static void testDynamicTextureAtlas()
 			{
 				logDebug("failed to alloc %d, %d", sx, sy);
 			}
-		}
-		else
-		{
-			for (int i = 0; i < numElems; ++i)
-			{
-				ta.free(elems[i]);
-			}
 			
-			numElems = 0;
+			animItr++;
 		}
 	#endif
+	
+		if (keyboard.isDown(SDLK_o))
+		{
+			const uint64_t to1 = g_TimerRT.TimeUS_get();
+			
+			const bool success = ta.optimize();
+			
+			const uint64_t to2 = g_TimerRT.TimeUS_get();
+			
+			printf("optimize: time=%.2fms, success=%d\n", (to2 - to1) / 1000.f, success ? 1 : 0);
+		}
+		
+		if (keyboard.isDown(SDLK_b))
+		{
+			const uint64_t tb1 = g_TimerRT.TimeUS_get();
+			
+			const bool success = ta.makeBigger(ta.a.sx + 4, ta.a.sy + 4);
+			
+			const uint64_t tb2 = g_TimerRT.TimeUS_get();
+			
+			printf("makeBigger: time=%.2fms, success=%d\n", (tb2 - tb1) / 1000.f, success ? 1 : 0);
+		}
 		
 		//
 		
@@ -1666,10 +1981,28 @@ static void testDynamicTextureAtlas()
 			pushBlend(BLEND_OPAQUE);
 			gxSetTexture(ta.texture);
 			{
+				setColor(colorWhite);
 				drawRect(0, 0, ta.a.sx, ta.a.sy);
 			}
 			gxSetTexture(0);
 			popBlend();
+			
+		#if 1
+			setColor(colorRed);
+			for (auto & e : ta.a.elems)
+				if (e.isAllocated)
+					drawRectLine(e.x, e.y, e.x + e.sx, e.y + e.sy);
+			
+			BoxAtlas ao;
+			ao.copyFrom(ta.a);
+			
+			ao.optimize();
+			
+			setColor(colorGreen);
+			for (auto & e : ao.elems)
+				if (e.isAllocated)
+					drawRectLine(e.x, e.y, e.x + e.sx, e.y + e.sy);
+		#endif
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
@@ -1943,7 +2276,7 @@ static void testDotDetector()
 	
 	if (useVideo)
 	{
-		mp.openAsync("mocapc.mp4", false);
+		mp.openAsync("mocapb.mp4", false);
 	}
 	
 	//
@@ -2343,7 +2676,9 @@ int main(int argc, char * argv[])
 		
 		//testImpulseResponseMeasurement();
 		
-		for (int i = 0; i < 10; ++i)
+		testTextureAtlas();
+		
+		//for (int i = 0; i < 10; ++i)
 			testDynamicTextureAtlas();
 		
 		testDotDetector();
