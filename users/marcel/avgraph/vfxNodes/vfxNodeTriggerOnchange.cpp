@@ -2,8 +2,8 @@
 
 VfxNodeTriggerOnchange::VfxNodeTriggerOnchange()
 	: VfxNodeBase()
-	, triggerValue()
 	, oldValue(0.f)
+	, triggerValue()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Value, kVfxPlugType_Float);
