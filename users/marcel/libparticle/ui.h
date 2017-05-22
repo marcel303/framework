@@ -20,6 +20,8 @@ struct UiState
 	std::string font;
 	float textBoxTextOffset;
 	
+	float opacity;
+	
 	UiElem * activeElem;
 	ParticleColor * activeColor;
 	ColorWheel * colorWheel;
@@ -100,6 +102,16 @@ void doEnum(E & value, const char * name, const std::vector<EnumValue> & enumVal
 {
 	int valueInt = int(value);
 	doEnumImpl(valueInt, name, enumValues);
+	value = E(valueInt);
+}
+
+void doDropdownImpl(int & value, const char * name, const std::vector<EnumValue> & enumValues);
+
+template <typename E>
+void doDropdown(E & value, const char * name, const std::vector<EnumValue> & enumValues)
+{
+	int valueInt = int(value);
+	doDropdownImpl(valueInt, name, enumValues);
 	value = E(valueInt);
 }
 

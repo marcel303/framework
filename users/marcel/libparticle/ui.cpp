@@ -19,8 +19,8 @@ static const int kEnumSelectOffset = 150;
 static const int kCurveHeight = 20;
 static const int kColorHeight = 20;
 static const int kColorCurveHeight = 20;
-static const Color kBackgroundFocusColor(0.f, 0.f, 1.f, .5f);
-static const Color kBackgroundColor(0.f, 0.f, 0.f, .7f);
+#define kBackgroundFocusColor Color(0.f, 0.f, 1.f, g_uiState->opacity * .7f)
+#define kBackgroundColor Color(0.f, 0.f, 0.f, g_uiState->opacity * .8f)
 
 // ui draw state
 bool g_doActions;
@@ -67,6 +67,7 @@ UiState::UiState()
 	, sx(100)
 	, font("calibri.ttf")
 	, textBoxTextOffset(kTextBoxTextOffset)
+	, opacity(1.f)
 	, activeElem(nullptr)
 	, activeColor(nullptr)
 	, colorWheel(nullptr)
@@ -505,6 +506,8 @@ bool doButton(const char * name, const float xOffset, const float xScale, const 
 
 		if (elem.isActive && elem.hasFocus && mouse.wentUp(BUTTON_LEFT))
 		{
+			elem.deactivate();
+			
 			result = true;
 		}
 	}
@@ -1064,6 +1067,113 @@ void doEnumImpl(int & value, const char * name, const std::vector<EnumValue> & e
 				index = i;
 		if (index != -1)
 			drawText(x1 + kPadding + kEnumSelectOffset, (y1+y2)/2, kFontSize, +1.f, 0.f, "%s", enumValues[index].name.c_str());
+	}
+}
+
+bool doDropdownDrawer(bool & value, const char * name, const char * valueName)
+{
+	UiElem & elem = g_menu->getElem(name);
+	
+	const int kPadding = 5;
+	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
+	const int kCheckButtonRadius = kCheckButtonSize/2;
+	const int kCollapseIconSx = kCheckButtonSize;
+	const int kCollapseIconSy = kCheckButtonSize * 2 / 5;
+
+	const int x1 = g_drawX;
+	const int x2 = g_drawX + g_menu->sx;
+	const int y1 = g_drawY;
+	const int y2 = g_drawY + kCheckBoxHeight;
+
+	g_drawY += kCheckBoxHeight;
+
+	elem.tick(x1, y1, x2, y2);
+
+	if (g_doActions)
+	{
+		if (elem.isActive && elem.hasFocus && mouse.wentUp(BUTTON_LEFT))
+		{
+			value = !value;
+		}
+	}
+
+	if (g_doDraw)
+	{
+		if (elem.hasFocus)
+			setColor(kBackgroundFocusColor);
+		else
+			setColor(kBackgroundColor);
+		drawRect(x1, y1, x2, y2);
+		setColor(colorBlue);
+		drawRectLine(x1, y1, x2, y2);
+
+		setColor(colorWhite);
+		drawText(x1 + kPadding, (y1+y2)/2, kFontSize, +1.f, 0.f, "%s : %s", name, valueName);
+
+		const float strokeSize = 1.25f;
+		const float x = x2 - kPadding - kCollapseIconSx;
+		const float y = (y1 + y2) / 2 - kCollapseIconSy / 2;
+		
+		if (value)
+		{
+			hqBegin(HQ_LINES);
+			{
+				setColor(colorWhite);
+				hqLine(x, y + kCollapseIconSy, strokeSize, x + kCollapseIconSx/2, y, strokeSize);
+				hqLine(x + kCollapseIconSx, y + kCollapseIconSy, strokeSize, x + kCollapseIconSx/2, y, strokeSize);
+			}
+			hqEnd();
+		}
+		else
+		{
+			hqBegin(HQ_LINES);
+			{
+				setColor(colorWhite);
+				hqLine(x, y, strokeSize, x + kCollapseIconSx/2, y + kCollapseIconSy, strokeSize);
+				hqLine(x + kCollapseIconSx, y, strokeSize, x + kCollapseIconSx/2, y + kCollapseIconSy, strokeSize);
+			}
+			hqEnd();
+		}
+	}
+
+	return value;
+}
+
+void doDropdownImpl(int & value, const char * name, const std::vector<EnumValue> & enumValues)
+{
+	UiElem & elem = g_menu->getElem(name);
+	
+	bool & isOpen = elem.getBool(0, false);
+	
+	const char * valueName = "n/a";
+	
+	for (size_t i = 0; i < enumValues.size(); ++i)
+		if (enumValues[i].value == value)
+			valueName = enumValues[i].name.c_str();
+	
+	if (doDropdownDrawer(isOpen, name, valueName))
+	{
+		const float indentation = 10.f;
+		
+		g_uiState->sx -= indentation;
+		g_drawX += indentation;
+		
+		pushMenu(name);
+		{
+			for (auto & enumValue : enumValues)
+			{
+				if (doButton(enumValue.name.c_str()))
+				{
+					value = enumValue.value;
+					
+					isOpen = false;
+				}
+			}
+		}
+		popMenu();
+		
+		g_uiState->sx += indentation;
+		g_drawX -= indentation;
 	}
 }
 
