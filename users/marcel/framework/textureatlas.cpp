@@ -206,19 +206,21 @@ bool TextureAtlas::makeBigger(const int sx, const int sy)
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, a.sx, a.sy);
 	checkErrorGL();
 	
-	glDeleteFramebuffers(1, &frameBuffer);
-	frameBuffer = 0;
-	
-	glDeleteTextures(1, &texture);
-	texture = 0;
-	checkErrorGL();
-	
 	//
 	
 	glBindTexture(GL_TEXTURE_2D, restoreTexture);
 	checkErrorGL();
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+	checkErrorGL();
+	
+	//
+	
+	glDeleteFramebuffers(1, &frameBuffer);
+	frameBuffer = 0;
+	
+	glDeleteTextures(1, &texture);
+	texture = 0;
 	checkErrorGL();
 	
 	//
@@ -285,20 +287,22 @@ bool TextureAtlas::optimize()
 		}
 	}
 	
-	glDeleteFramebuffers(1, &frameBuffer);
-	frameBuffer = 0;
-	checkErrorGL();
-	
-	glDeleteTextures(1, &texture);
-	texture = 0;
-	checkErrorGL();
-	
 	//
 	
 	glBindTexture(GL_TEXTURE_2D, restoreTexture);
 	checkErrorGL();
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+	checkErrorGL();
+	
+	//
+	
+	glDeleteFramebuffers(1, &frameBuffer);
+	frameBuffer = 0;
+	checkErrorGL();
+	
+	glDeleteTextures(1, &texture);
+	texture = 0;
 	checkErrorGL();
 	
 	//
@@ -368,20 +372,22 @@ bool TextureAtlas::makeBiggerAndOptimize(const int sx, const int sy)
 		}
 	}
 	
-	glDeleteFramebuffers(1, &frameBuffer);
-	frameBuffer = 0;
-	checkErrorGL();
-	
-	glDeleteTextures(1, &texture);
-	texture = 0;
-	checkErrorGL();
-	
 	//
 	
 	glBindTexture(GL_TEXTURE_2D, restoreTexture);
 	checkErrorGL();
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+	checkErrorGL();
+	
+	//
+	
+	glDeleteFramebuffers(1, &frameBuffer);
+	frameBuffer = 0;
+	checkErrorGL();
+	
+	glDeleteTextures(1, &texture);
+	texture = 0;
 	checkErrorGL();
 	
 	//
