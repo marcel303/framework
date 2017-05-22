@@ -211,6 +211,12 @@ todo : nodes :
 	- fix issue with output time not reset on filename change or looping. remember start time? -> capture time on next provide
 + video: add loop input
 + video: add playback speed input
+- add FFT analyser node. output image with amplitude per band
+	- output is image. input = ?
+- add note (like C1) to MIDI note
+- add base event ID to OSC send node ?
+- add editor option to disable real-time preview. add time dilation effect on no input before stopping responding ?
+- hide node text until mouse moves close to node ? makes the screen more serene and helps optimize UI drawing
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -225,6 +231,7 @@ todo : media player
 
 todo : UI
 - add drop down list for (large) enums
+- add load/save notifications to UI., maybe a UI message that briefly appears on the bottom. white text on dark background ?
 
 reference :
 + http://www.dsperados.com (company based in Utrecht ? send to Stijn)
@@ -2736,7 +2743,19 @@ int main(int argc, char * argv[])
 		
 		while (!framework.quitRequested)
 		{
+			if (graphEdit->editorOptions.realTimePreview)
+				framework.waitForEvents = false;
+			else
+			{
+				framework.waitForEvents = true;
+			}
+			
 			framework.process();
+			
+			if (!graphEdit->editorOptions.realTimePreview)
+			{
+				framework.timeStep = std::min(framework.timeStep, 1.f / 15.f);
+			}
 			
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;

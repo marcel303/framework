@@ -2590,6 +2590,7 @@ void GraphEdit::doEditorOptions(const float dt)
 		
 		if (doDrawer(editorOptions.menuIsVisible, "options"))
 		{
+			doCheckBox(editorOptions.realTimePreview, "real-time preview", false);
 			doCheckBox(editorOptions.showBackground, "show background", false);
 			doCheckBox(editorOptions.showGrid, "show grid", false);
 			doParticleColor(editorOptions.backgroundColor, "background color");
@@ -3288,6 +3289,7 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 		EditorOptions defaultOptions;
 		
 		editorOptions.menuIsVisible = boolAttrib(editorOptionsElem, "menuIsVisible", defaultOptions.menuIsVisible);
+		editorOptions.realTimePreview = boolAttrib(editorOptionsElem, "realTimePreview", defaultOptions.realTimePreview);
 		editorOptions.showBackground = boolAttrib(editorOptionsElem, "showBackground", defaultOptions.showBackground);
 		editorOptions.showGrid = boolAttrib(editorOptionsElem, "showGrid", defaultOptions.showGrid);
 		editorOptions.snapToGrid = boolAttrib(editorOptionsElem, "snapToGrid", defaultOptions.snapToGrid);
@@ -3317,6 +3319,7 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 	editorElem.OpenElement("editorOptions");
 	{	
 		editorElem.PushAttribute("menuIsVisible", editorOptions.menuIsVisible);
+		editorElem.PushAttribute("realTimePreview", editorOptions.realTimePreview);
 		editorElem.PushAttribute("showBackground", editorOptions.showBackground);
 		editorElem.PushAttribute("showGrid", editorOptions.showGrid);
 		editorElem.PushAttribute("snapToGrid", editorOptions.snapToGrid);

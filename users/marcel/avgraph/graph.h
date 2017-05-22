@@ -747,6 +747,7 @@ struct GraphEdit : GraphEditConnection
 	struct EditorOptions
 	{
 		bool menuIsVisible;
+		bool realTimePreview;
 		bool showBackground;
 		bool showGrid;
 		bool snapToGrid;
@@ -757,6 +758,7 @@ struct GraphEdit : GraphEditConnection
 		
 		EditorOptions()
 			: menuIsVisible(false)
+			, realTimePreview(true)
 			, showBackground(true)
 			, showGrid(true)
 			, snapToGrid(false)
