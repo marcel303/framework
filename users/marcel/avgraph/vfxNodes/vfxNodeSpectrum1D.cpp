@@ -2,6 +2,7 @@
 
 VfxNodeSpectrum1D::VfxNodeSpectrum1D()
 	: VfxNodeBase()
+	, texture(0)
 	, imageOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -12,8 +13,12 @@ VfxNodeSpectrum1D::VfxNodeSpectrum1D()
 
 VfxNodeSpectrum1D::~VfxNodeSpectrum1D()
 {
-	delete surface;
-	surface = nullptr;
+	if (texture != 0)
+	{
+		glDeleteTextures(1, &texture);
+		texture = 0;
+		checkErrorGL();
+	}
 }
 
 void VfxNodeSpectrum1D::tick(const float dt)
@@ -23,29 +28,95 @@ void VfxNodeSpectrum1D::tick(const float dt)
 	const int buffer = getInputInt(kInput_Buffer, 0);
 	const int windowSize = getInputInt(kInput_Size, 64);
 	
-	if (windowSize != surface->getWidth())
+	if (false)
 	{
-		delete surface;
-		surface = nullptr;
-		
-		surface = new Surface(windowSize, 1, false, false, SURFACE_R32F);
+		allocateTexture(windowSize);
 	}
 	
-	pushSurface(surface);
-	{
-		pushBlend(BLEND_OPAQUE);
-		setColor(rand() % 256, rand() % 256, rand() % 256);
-		drawRect(0, 0, surface->getWidth(), surface->getHeight());
-		popBlend();
-	}
-	popSurface();
+	float * values = (float*)alloca(sizeof(float) * windowSize);
+	for (int i = 0; i < windowSize; ++i)
+		values[i] = random(-1.f, +1.f);
 	
-	imageOutput.texture = surface->getTexture();
+	// capture current OpenGL states before we change them
+	
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+	GLint restoreUnpack;
+	glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
+	checkErrorGL();
+	
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	checkErrorGL();
+	
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, windowSize, 1, GL_RED, GL_FLOAT, values);
+	checkErrorGL();
+	
+	// restore previous OpenGL states
+	
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
+	checkErrorGL();
+	
+	imageOutput.texture = texture;
 }
 
 void VfxNodeSpectrum1D::init(const GraphNode & node)
 {
 	const int windowSize = getInputInt(kInput_Size, 64);
 	
-	surface = new Surface(windowSize, 1, false, false, SURFACE_R32F);
+	allocateTexture(windowSize);
+}
+
+void VfxNodeSpectrum1D::allocateTexture(const int size)
+{
+	if (texture != 0)
+	{
+		glDeleteTextures(1, &texture);
+		texture = 0;
+		checkErrorGL();
+	}
+	
+	glGenTextures(1, &texture);
+	checkErrorGL();
+	
+	if (texture == 0)
+	{
+		return;
+	}
+	
+	// capture current OpenGL states before we change them
+	
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+	checkErrorGL();
+
+	glBindTexture(GL_TEXTURE_2D, texture);
+	checkErrorGL();
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+	checkErrorGL();
+	
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_R32F, size, 1);
+	checkErrorGL();
+	
+	GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
+	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+	checkErrorGL();
+
+	// set filtering
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	checkErrorGL();
+	
+	// todo : clear texture contents
+	
+	// restore previous OpenGL states
+			
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	checkErrorGL();
 }

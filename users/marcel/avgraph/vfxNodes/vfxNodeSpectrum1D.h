@@ -19,7 +19,7 @@ struct VfxNodeSpectrum1D : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	Surface * surface;
+	GLuint texture;
 	
 	VfxImage_Texture imageOutput;
 
@@ -29,4 +29,6 @@ struct VfxNodeSpectrum1D : VfxNodeBase
 	virtual void tick(const float dt) override;
 	
 	virtual void init(const GraphNode & node) override;
+	
+	void allocateTexture(const int size);
 };
