@@ -1188,6 +1188,9 @@ void GraphEdit_Visualizer::measure(
 		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &baseTextureSy);
 		gxSetTexture(0);
 		
+		if (baseTextureSy == 1)
+			baseTextureSy = baseTextureSx/4;
+		
 		const float scaleX = maxTextureSx / float(baseTextureSx);
 		const float scaleY = maxTextureSy / float(baseTextureSy);
 		const float scale = std::min(scaleX, scaleY);
@@ -1341,6 +1344,9 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &baseTextureSy);
 		gxSetTexture(0);
 		
+		if (baseTextureSy == 1)
+			baseTextureSy = baseTextureSx/4;
+			
 		const float scaleX = textureSx / float(baseTextureSx);
 		const float scaleY = textureSy / float(baseTextureSy);
 		const float scale = std::min(scaleX, scaleY);
@@ -3592,7 +3598,7 @@ static bool doMenuItem(std::string & valueText, const std::string & name, const 
 			enumValues.push_back(EnumValue(elem.value, elem.name));
 		}
 		
-		doEnum(value, name.c_str(), enumValues);
+		doDropdown(value, name.c_str(), enumValues);
 		
 		valueText = String::ToString(value);
 		
