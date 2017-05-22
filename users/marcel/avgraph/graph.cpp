@@ -698,6 +698,8 @@ bool GraphEdit_ValueTypeDefinition::loadXml(const XMLElement * xmlType)
 	typeName = stringAttrib(xmlType, "typeName", "");
 	result &= !typeName.empty();
 	
+	multipleInputs = boolAttrib(xmlType, "multipleInputs", false);
+	
 	editor = stringAttrib(xmlType, "editor", "textbox");
 	editorMin = stringAttrib(xmlType, "editorMin", "0");
 	editorMax = stringAttrib(xmlType, "editorMax", "1");
@@ -2540,6 +2542,15 @@ void GraphEdit::socketConnectEnd()
 {
 	if (socketConnect.srcNodeId != kGraphNodeIdInvalid && socketConnect.dstNodeId != kGraphNodeIdInvalid)
 	{
+		bool clearInputDuplicates = true;
+		
+		const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeDefinitionLibrary->tryGetValueTypeDefinition(socketConnect.srcNodeSocket->typeName);
+		
+		if (valueTypeDefinition != nullptr && valueTypeDefinition->multipleInputs)
+		{
+			clearInputDuplicates = false;
+		}
+		
 		GraphNodeSocketLink link;
 		link.id = graph->allocLinkId();
 		link.srcNodeId = socketConnect.srcNodeId;
@@ -2549,7 +2560,7 @@ void GraphEdit::socketConnectEnd()
 		link.dstNodeSocketName = socketConnect.dstNodeSocket->name;
 		link.dstNodeSocketIndex = socketConnect.dstNodeSocket->index;
 		
-		graph->addLink(link, true);
+		graph->addLink(link, clearInputDuplicates);
 		
 		selectLink(link.id);
 	}
@@ -2579,19 +2590,19 @@ void GraphEdit::doMenu(const float dt)
 			const std::string filename = documentInfo.filename.c_str();
 			
 			load(filename.c_str());
-			showNotification("Loaded %s", documentInfo.filename.c_str());
+			showNotification("Loaded '%s'", documentInfo.filename.c_str());
 		}
 		
 		if (doButton("save", size * 1, size, false))
 		{
 			save(documentInfo.filename.c_str());
-			showNotification("Saved %s", documentInfo.filename.c_str());
+			showNotification("Saved '%s'", documentInfo.filename.c_str());
 		}
 		
 		if (doButton("save as", size * 2, size, true))
 		{
 			save(documentInfo.filename.c_str());
-			showNotification("Saved as %s", documentInfo.filename.c_str());
+			showNotification("Saved as '%s'", documentInfo.filename.c_str());
 		}
 		
 		doTextBox(documentInfo.filename, "filename", dt);

@@ -180,6 +180,7 @@ struct Graph
 struct GraphEdit_ValueTypeDefinition
 {
 	std::string typeName;
+	bool multipleInputs;
 	
 	// ui
 	
@@ -190,6 +191,7 @@ struct GraphEdit_ValueTypeDefinition
 	
 	GraphEdit_ValueTypeDefinition()
 		: typeName()
+		, multipleInputs(false)
 		, editor()
 		, editorMin()
 		, editorMax()
