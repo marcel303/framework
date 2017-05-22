@@ -51,6 +51,8 @@
     #define INDEX_TYPE GL_UNSIGNED_SHORT
 #endif
 
+#define MAX_TEXT_LENGTH 2048
+
 #if INDEX_TYPE == GL_UNSIGNED_INT
 typedef unsigned int glindex_t;
 #else
@@ -2642,7 +2644,7 @@ float Dictionary::getFloat(const char * name, float _default) const
 
 void * Dictionary::getPtr(const char * name, void * _default) const
 {
-	// fixme : right now this only works with 32 bit pointers
+	// fixme : right now this only works with 32 or 64 bit bit pointers
 
 	return reinterpret_cast<void*>(getInt64(name, (int)(reinterpret_cast<intptr_t>(_default))));
 }
@@ -4898,18 +4900,8 @@ void fillCircle(float x, float y, float radius, int numSegments)
 	gxEnd();
 }
 
-static void measureText(FT_Face face, int size, const char * _text, float & sx, float & sy, float & yTop)
+static void measureText(FT_Face face, int size, const GlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
 {
-#if ENABLE_UTF8_SUPPORT
-	// fixme : convert in calling function
-	const int kMaxTextSize = 2048;
-	unicode_t text[kMaxTextSize];
-	const size_t textLength = utf8toutf32(_text, strlen(_text), text, kMaxTextSize * 4, 0) / 4;
-#else
-	const char * text = _text;
-	const size_t textLength = strlen(_text);
-#endif
-
 	float minX = std::numeric_limits<float>::max();
 	float minY = std::numeric_limits<float>::max();
 	float maxX = std::numeric_limits<float>::min();
@@ -4920,11 +4912,11 @@ static void measureText(FT_Face face, int size, const char * _text, float & sx, 
 	
 	//y += size;
 	
-	for (size_t i = 0; i < textLength; ++i)
+	for (size_t i = 0; i < numGlyphs; ++i)
 	{
 		// find or create glyph. skip current character if the element is invalid
 		
-		const GlyphCacheElem & elem = g_glyphCache.findOrCreate(face, size, text[i]);
+		const GlyphCacheElem & elem = *glyphs[i];
 		
 	#if USE_GLYPH_ATLAS
 		if (elem.textureAtlasElem != nullptr)
@@ -4963,30 +4955,14 @@ static void measureText(FT_Face face, int size, const char * _text, float & sx, 
 	yTop = minY;
 }
 
-static void drawTextInternal(FT_Face face, int size, const char * _text, float x, float y)
+static void drawTextInternal(FT_Face face, int size, const GlyphCacheElem ** glyphs, const int numGlyphs, float x, float y)
 {
-#if ENABLE_UTF8_SUPPORT
-	const int kMaxTextSize = 2048;
-	unicode_t text[kMaxTextSize];
-	const size_t textLength = utf8toutf32(_text, strlen(_text), text, kMaxTextSize * 4, 0) / 4;
-#else
-	const char * text = _text;
-	const size_t textLength = strlen(_text);
-#endif
-
 	// the (0,0) coordinate represents the lower left corner of a glyph
 	// we want to render the glyph using its top left corner at (0,0)
 	
 	//y += size;
 	
 #if USE_GLYPH_ATLAS
-	GlyphCacheElem * glyphs[kMaxTextSize];
-	
-	for (size_t i = 0; i < textLength; ++i)
-	{
-		glyphs[i] = &g_glyphCache.findOrCreate(face, size, text[i]);
-	}
-	
 	if (globals.isInTextBatch == false)
 	{
 		gxSetTexture(globals.font->textureAtlas->texture);
@@ -4994,7 +4970,7 @@ static void drawTextInternal(FT_Face face, int size, const char * _text, float x
 		gxBegin(GL_QUADS);
 	}
 	
-	for (size_t i = 0; i < textLength; ++i)
+	for (size_t i = 0; i < numGlyphs; ++i)
 	{
 		const GlyphCacheElem & elem = *glyphs[i];
 		
@@ -5035,11 +5011,11 @@ static void drawTextInternal(FT_Face face, int size, const char * _text, float x
 		gxSetTexture(0);
 	}
 #else
-	for (size_t i = 0; i < textLength; ++i)
+	for (size_t i = 0; i < numGlyphs; ++i)
 	{
 		// find or create glyph. skip current character if the element is invalid
 		
-		const GlyphCacheElem & elem = g_glyphCache.findOrCreate(face, size, text[i]);
+		const GlyphCacheElem & elem = *glyphs[i];
 		
 		if (elem.texture != 0)
 		{
@@ -5072,15 +5048,32 @@ static void drawTextInternal(FT_Face face, int size, const char * _text, float x
 
 void measureText(int size, float & sx, float & sy, const char * format, ...)
 {
-	char text[1024];
+	char _text[MAX_TEXT_LENGTH];
 	va_list args;
 	va_start(args, format);
-	vsprintf_s(text, sizeof(text), format, args);
+	vsprintf_s(_text, sizeof(text), format, args);
 	va_end(args);
+	
+#if ENABLE_UTF8_SUPPORT
+	unicode_t text[MAX_TEXT_LENGTH];
+	const size_t textLength = utf8toutf32(_text, strlen(_text), text, MAX_TEXT_LENGTH * 4, 0) / 4;
+#else
+	const char * text = _text;
+	const size_t textLength = strlen(_text);
+#endif
+
+	auto face = globals.font->face;
+	
+	const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+	
+	for (size_t i = 0; i < textLength; ++i)
+	{
+		glyphs[i] = &g_glyphCache.findOrCreate(face, size, text[i]);
+	}
 	
 	float yTop;
 
-	measureText(globals.font->face, size, text, sx, sy, yTop);
+	measureText(face, size, glyphs, textLength, sx, sy, yTop);
 }
 
 void beginTextBatch()
@@ -5107,16 +5100,33 @@ void endTextBatch()
 
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
 {
-	char text[1024];
+	char _text[MAX_TEXT_LENGTH];
 	va_list args;
 	va_start(args, format);
-	vsprintf_s(text, sizeof(text), format, args);
+	vsprintf_s(_text, sizeof(text), format, args);
 	va_end(args);
 	
-#if USE_GLYPH_ATLAS
-	float sx, sy, yTop;
-	measureText(globals.font->face, size, text, sx, sy, yTop);
+#if ENABLE_UTF8_SUPPORT
+	unicode_t text[MAX_TEXT_LENGTH];
+	const size_t textLength = utf8toutf32(_text, strlen(_text), text, MAX_TEXT_LENGTH * 4, 0) / 4;
+#else
+	const char * text = _text;
+	const size_t textLength = strlen(_text);
+#endif
 	
+	auto face = globals.font->face;
+	
+	const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+	
+	for (size_t i = 0; i < textLength; ++i)
+	{
+		glyphs[i] = &g_glyphCache.findOrCreate(face, size, text[i]);
+	}
+	
+	float sx, sy, yTop;
+	measureText(face, size, glyphs, textLength, sx, sy, yTop);
+	
+#if USE_GLYPH_ATLAS
 	x += sx * (alignX - 1.f) / 2.f;
 	y += sy * (alignY - 1.f) / 2.f;
 	//y += sy * (alignY - 2.f) / 2.f;
@@ -5124,14 +5134,11 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 	
 	y -= yTop;
 	
-	drawTextInternal(globals.font->face, size, text, x, y);
+	drawTextInternal(face, size, glyphs, textLength, x, y);
 #else
 	gxMatrixMode(GL_MODELVIEW);
 	gxPushMatrix();
 	{
-		float sx, sy, yTop;
-		measureText(globals.font->face, size, text, sx, sy, yTop);
-		
 		x += sx * (alignX - 1.f) / 2.f;
 		y += sy * (alignY - 1.f) / 2.f;
 		//y += sy * (alignY - 2.f) / 2.f;
@@ -5141,7 +5148,7 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 
  		gxTranslatef(x, y, 0.f);
 		
-		drawTextInternal(globals.font->face, size, text, 0.f, 0.f);
+		drawTextInternal(globals.font->face, size, glyphs, textLength, 0.f, 0.f);
 	}
 	gxPopMatrix();
 #endif
@@ -5158,7 +5165,7 @@ static char * eatWord(char * str)
 
 void drawTextArea(float x, float y, float sx, int size, const char * format, ...)
 {
-	char text[1024];
+	char text[MAX_TEXT_LENGTH];
 	va_list args;
 	va_start(args, format);
 	vsprintf_s(text, sizeof(text), format, args);
@@ -5169,7 +5176,7 @@ void drawTextArea(float x, float y, float sx, int size, const char * format, ...
 
 void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, float alignY, const char * format, ...)
 {
-	char text[1024];
+	char text[MAX_TEXT_LENGTH];
 	va_list args;
 	va_start(args, format);
 	vsprintf_s(text, sizeof(text), format, args);
@@ -5181,7 +5188,9 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 
 	char * textend = text + strlen(text);
 	char * textptr = text;
-
+	
+	auto face = globals.font->face;
+	
 	float tsx = 0.f;
 
 	while (textptr != textend && numLines < kMaxLines)
@@ -5191,10 +5200,8 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 		{
 			char * tempptr = eatWord(nextptr);
 			float _sx, _sy, _yTop;
-			char temp = *tempptr;
-			*tempptr = 0;
-			measureText(globals.font->face, size, textptr, _sx, _sy, _yTop);
-			*tempptr = temp;
+			const GlyphCacheElem * glyph = &g_glyphCache.findOrCreate(face, size, *tempptr);
+			measureText(globals.font->face, size, &glyph, 1, _sx, _sy, _yTop);
 
 			if (_sx > tsx)
 				tsx = _sx;
