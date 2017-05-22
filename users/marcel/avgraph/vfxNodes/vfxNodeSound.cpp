@@ -135,23 +135,23 @@ void VfxNodeSound::init(const GraphNode & node)
 	}
 }
 
-void VfxNodeSound::handleTrigger(const int socketIndex)
+void VfxNodeSound::handleTrigger(const int inputSocketIndex, const VfxTriggerData & data)
 {
-	if (socketIndex == kInput_Play)
+	if (inputSocketIndex == kInput_Play)
 	{
 		isPaused = false;
 		
 		playTrigger.setBool(true);
 		trigger(kOutput_Play);
 	}
-	else if (socketIndex == kInput_Pause)
+	else if (inputSocketIndex == kInput_Pause)
 	{
 		isPaused = true;
 		
 		pauseTrigger.setBool(false);
 		trigger(kOutput_Pause);
 	}
-	else if (socketIndex == kInput_Resume)
+	else if (inputSocketIndex == kInput_Resume)
 	{
 		isPaused = false;
 		

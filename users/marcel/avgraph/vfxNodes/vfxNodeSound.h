@@ -46,5 +46,5 @@ struct VfxNodeSound : VfxNodeBase
 	
 	virtual void init(const GraphNode & node) override;
 	
-	virtual void handleTrigger(const int socketIndex) override;
+	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) override;
 };

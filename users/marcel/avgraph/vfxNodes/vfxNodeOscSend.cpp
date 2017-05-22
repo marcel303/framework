@@ -13,6 +13,7 @@ VfxNodeOscSend::VfxNodeOscSend()
 	addInput(kInput_Port, kVfxPlugType_Int);
 	addInput(kInput_IpAddress, kVfxPlugType_String);
 	addInput(kInput_Event, kVfxPlugType_String);
+	addInput(kInput_BaseId, kVfxPlugType_Int);
 	addInput(kInput_Trigger, kVfxPlugType_Trigger);
 }
 
@@ -27,16 +28,17 @@ void VfxNodeOscSend::init(const GraphNode & node)
 	transmitSocket = new UdpTransmitSocket(IpEndpointName("127.0.0.1", 1000));
 }
 
-void VfxNodeOscSend::handleTrigger(const int socketIndex)
+void VfxNodeOscSend::handleTrigger(const int inputSocketIndex, const VfxTriggerData & data)
 {
-	if (socketIndex == kInput_Trigger)
+	if (inputSocketIndex == kInput_Trigger)
 	{
 		const char * ipAddress = getInputString(kInput_IpAddress, "");
 		const int udpPort = getInputInt(kInput_Port, 0);
-		const char * eventName = getInputString(kInput_IpAddress, "");
-		const int eventId = getInputInt(kInput_Trigger, 0);
+		const char * eventName = getInputString(kInput_Event, "");
+		const int baseId = getInputInt(kInput_BaseId, 0);
+		const int eventId = data.asInt();
 		
-		sendOscEvent(eventName, eventId, ipAddress, udpPort);
+		sendOscEvent(eventName, baseId + eventId, ipAddress, udpPort);
 	}
 }
 

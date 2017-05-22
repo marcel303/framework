@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <string.h>
 
+class Surface;
+
 struct VfxTransform
 {
 	VfxTransform()
@@ -135,26 +137,6 @@ struct VfxImage_Texture : VfxImageBase
 	}
 };
 
-struct VfxImage_Surface : VfxImageBase
-{
-	Surface * surface;
-	
-	VfxImage_Surface(Surface * _surface)
-		: VfxImageBase()
-		, surface(nullptr)
-	{
-		surface = _surface;
-	}
-	
-	virtual GLuint getTexture() const override
-	{
-		if (surface)
-			return surface->getTexture();
-		else
-			return 0;
-	}
-};
-
 enum VfxPlugType
 {
 	kVfxPlugType_None,
@@ -218,24 +200,18 @@ struct VfxPlug
 	
 	bool getBool() const
 	{
-		if (type == kVfxPlugType_Trigger)
-			return ((VfxTriggerData*)mem)->asBool();
 		Assert(type == kVfxPlugType_Bool);
 		return *((bool*)mem);
 	}
 	
 	int getInt() const
 	{
-		if (type == kVfxPlugType_Trigger)
-			return ((VfxTriggerData*)mem)->asInt();
 		Assert(type == kVfxPlugType_Int);
 		return *((int*)mem);
 	}
 	
 	float getFloat() const
 	{
-		if (type == kVfxPlugType_Trigger)
-			return ((VfxTriggerData*)mem)->asFloat();
 		Assert(type == kVfxPlugType_Float);
 		return *((float*)mem);
 	}
@@ -400,13 +376,15 @@ struct VfxNodeBase
 			{
 				// iterate the list of outgoing connections, call handleTrigger on nodes with correct outputSocketIndex
 				
+				const VfxTriggerData & triggerData = outputSocket.getTriggerData();
+				
 				for (auto & triggerTarget : triggerTargets)
 				{
 					if (triggerTarget.dstSocketIndex == outputSocketIndex)
 					{
 						triggerTarget.srcNode->editorIsTriggered = true;
 						
-						triggerTarget.srcNode->handleTrigger(triggerTarget.srcSocketIndex);
+						triggerTarget.srcNode->handleTrigger(triggerTarget.srcSocketIndex, triggerData);
 					}
 				}
 			}
@@ -544,6 +522,16 @@ struct VfxNodeBase
 			return plug->getSurface();
 	}
 	
+	const VfxTriggerData * getInputTriggerData(const int index) const
+	{
+		const VfxPlug * plug = tryGetInput(index);
+		
+		if (plug == nullptr || !plug->isConnected())
+			return nullptr;
+		else
+			return &plug->getTriggerData();
+	}
+	
 	void setOuputIsValid(const int index, const bool isValid)
 	{
 		VfxPlug * plug = tryGetOutput(index);
@@ -560,6 +548,6 @@ struct VfxNodeBase
 	virtual void initSelf(const GraphNode & node) { }
 	virtual void init(const GraphNode & node) { }
 	virtual void tick(const float dt) { }
-	virtual void handleTrigger(const int inputSocketIndex) { }
+	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) { }
 	virtual void draw() const { }
 };

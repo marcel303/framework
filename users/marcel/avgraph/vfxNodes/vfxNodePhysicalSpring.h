@@ -27,5 +27,5 @@ struct VfxNodePhysicalSpring : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 	
-	virtual void handleTrigger(const int inputSocketIndex) override;
+	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) override;
 };

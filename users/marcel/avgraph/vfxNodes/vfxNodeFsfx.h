@@ -10,6 +10,8 @@ struct VfxNodeFsfx : VfxNodeBase
 	{
 		kInput_Image,
 		kInput_Shader,
+		kInput_Width,
+		kInput_Height,
 		kInput_Color1,
 		kInput_Color2,
 		kInput_Param1,
@@ -36,4 +38,6 @@ struct VfxNodeFsfx : VfxNodeBase
 	virtual ~VfxNodeFsfx() override;
 
 	virtual void draw() const override;
+	
+	virtual void init(const GraphNode & node);
 };

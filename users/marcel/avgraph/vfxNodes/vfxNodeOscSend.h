@@ -14,6 +14,7 @@ struct VfxNodeOscSend : VfxNodeBase
 		kInput_Port,
 		kInput_IpAddress,
 		kInput_Event,
+		kInput_BaseId,
 		kInput_Trigger,
 		kInput_COUNT
 	};
@@ -30,7 +31,7 @@ struct VfxNodeOscSend : VfxNodeBase
 	
 	virtual void init(const GraphNode & node) override;
 	
-	virtual void handleTrigger(const int socketIndex) override;
+	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) override;
 	
 	void sendOscEvent(const char * eventName, const int eventId, const char * ipAddress, const int udpPort);
 };

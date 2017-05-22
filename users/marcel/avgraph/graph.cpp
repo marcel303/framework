@@ -2756,7 +2756,7 @@ void GraphEdit::showNotification(const char * format, ...)
 	
 	Notification n;
 	n.text = text;
-	n.displayTime = 3.f;
+	n.displayTime = 2.f;
 	n.displayTimeRcp = 1.f / n.displayTime;
 	
 	notifications.push_back(n);
@@ -3058,8 +3058,8 @@ void GraphEdit::draw() const
 		const Notification & n = notifications.front();
 		
 		const float t = n.displayTime * n.displayTimeRcp;
-		const float tMoveUp = .1f;
-		const float tMoveDown = .1f;
+		const float tMoveUp = .05f;
+		const float tMoveDown = .05f;
 		
 		float y = 1.f;
 		

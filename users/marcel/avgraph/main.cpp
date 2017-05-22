@@ -30,6 +30,7 @@
 #include "vfxNodes/vfxNodePicture.h"
 #include "vfxNodes/vfxNodeSampleAndHold.h"
 #include "vfxNodes/vfxNodeSound.h"
+#include "vfxNodes/vfxNodeSpectrum1D.h"
 #include "vfxNodes/vfxNodeTime.h"
 #include "vfxNodes/vfxNodeTriggerOnchange.h"
 #include "vfxNodes/vfxNodeTriggerTimer.h"
@@ -183,7 +184,7 @@ todo : nodes :
 	- add (re)start input trigger
 	- can be very very useful to trigger effects
 	- add time! input trigger. performs seek operation
-- add gamepad node
++ add gamepad node
 - add MIDI node
 - kinect node:
 	- don't calculate images when output sockets are not connected (?) or when real-time connection asks for the output ..
@@ -214,8 +215,10 @@ todo : nodes :
 - add FFT analyser node. output image with amplitude per band
 	- output is image. input = ?
 - add note (like C1) to MIDI note
-- add base event ID to OSC send node ?
-- add editor option to disable real-time preview. add time dilation effect on no input before stopping responding ?
++ add base event ID to OSC send node ?
+- add editor option to disable real-time preview
+	- add time dilation effect on no input before stopping responding ?
+	- add way for UI/editor to tell update loop it's animating something (camera..)
 - hide node text until mouse moves close to node ? makes the screen more serene and helps optimize UI drawing
 
 todo : fsfx :
@@ -224,7 +227,7 @@ todo : fsfx :
 - iterate FSFX pixel shaders and generate type definitions based on FSFX name and exposed uniforms
 
 todo : framework :
-- optimize text rendering. use a dynamic texture atlas instead of one separate texture for each glyph. drawText should only emit a single draw call
++ optimize text rendering. use a dynamic texture atlas instead of one separate texture for each glyph. drawText should only emit a single draw call
 
 todo : media player
 - for image analysis we often only need luminance. make it an option to output YUV Y-channel only?
@@ -279,7 +282,12 @@ struct VfxNodeTriggerAsFloat : VfxNodeBase
 	
 	virtual void tick(const float dt) override
 	{
-		outputValue = getInputFloat(kInput_Trigger, 0.f);
+		const VfxTriggerData * triggerData = getInputTriggerData(kInput_Trigger);
+		
+		if (triggerData != nullptr)
+			outputValue = triggerData->asFloat();
+		else
+			outputValue = 0.f;
 	}
 };
 
@@ -731,6 +739,10 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	else if (typeName == "sound")
 	{
 		vfxNode = new VfxNodeSound();
+	}
+	else if (typeName == "spectrum.1d")
+	{
+		vfxNode = new VfxNodeSpectrum1D();
 	}
 	else if (typeName == "fsfx")
 	{

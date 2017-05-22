@@ -1,4 +1,4 @@
-#include <libfreenect2/frame_listener_impl.h> // FrameMap
+#include <libfreenect2/frame_listener_impl.h> // FrameListener
 
 struct SDL_cond;
 struct SDL_mutex;

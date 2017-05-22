@@ -31,11 +31,11 @@ void VfxNodePhysicalSpring::tick(const float dt)
 	outputValue += outputSpeed * dt;
 }
 
-void VfxNodePhysicalSpring::handleTrigger(const int inputSocketIndex)
+void VfxNodePhysicalSpring::handleTrigger(const int inputSocketIndex, const VfxTriggerData & data)
 {
 	if (inputSocketIndex == kInput_ImpulseTrigger)
 	{
-		const float impulse = getInputFloat(kInput_ImpulseTrigger, 0.f);
+		const float impulse = data.asFloat();
 		
 		outputSpeed += impulse;
 	}

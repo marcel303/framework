@@ -1,18 +1,14 @@
 #include "vfxGraph.h"
 #include "vfxNodeFsfx.h"
 
+extern const int GFX_SX;
+extern const int GFX_SY;
+
 VfxNodeFsfx::VfxNodeFsfx()
 	: VfxNodeBase()
 	, surface(nullptr)
 	, image(nullptr)
 {
-	surface = new Surface(framework.windowSx, framework.windowSy, true);
-	
-	surface->clear();
-	surface->swapBuffers();
-	surface->clear();
-	surface->swapBuffers();
-	
 	image = new VfxImage_Texture();
 	
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -114,4 +110,20 @@ void VfxNodeFsfx::draw() const
 	}
 	
 	image->texture = surface->getTexture();
+}
+
+void VfxNodeFsfx::init(const GraphNode & node)
+{
+	const int w = getInputInt(kInput_Width, 0);
+	const int h = getInputInt(kInput_Height, 0);
+	
+	const int sx = w ? w : GFX_SX;
+	const int sy = h ? h : GFX_SY;
+	
+	surface = new Surface(sx, sy, true);
+	
+	surface->clear();
+	surface->swapBuffers();
+	surface->clear();
+	surface->swapBuffers();
 }

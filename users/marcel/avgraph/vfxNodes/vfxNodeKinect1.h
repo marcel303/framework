@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vfxNodes/vfxNodeBase.h"
+#include "vfxNodeBase.h"
 
 struct Kinect1;
 
