@@ -826,6 +826,22 @@ struct GraphEdit : GraphEditConnection
 		}
 	};
 	
+	// UI
+	
+	struct Notification
+	{
+		std::string text;
+		float displayTime;
+		float displayTimeRcp;
+		
+		Notification()
+			: text()
+			, displayTime(0.f)
+			, displayTimeRcp(0.f)
+		{
+		}
+	};
+	
 	Graph * graph;
 	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
@@ -860,6 +876,8 @@ struct GraphEdit : GraphEditConnection
 	
 	GraphUi::NodeTypeNameSelect * nodeTypeNameSelect;
 	
+	std::list<Notification> notifications;
+	
 	UiState * uiState;
 	
 	SDL_Cursor * cursorHand;
@@ -892,6 +910,8 @@ struct GraphEdit : GraphEditConnection
 	
 	void undo();
 	void redo();
+	
+	void showNotification(const char * format, ...);
 	
 	void draw() const;
 	void drawNode(const GraphNode & node, const GraphEdit_TypeDefinition & typeDefinition) const;

@@ -231,7 +231,7 @@ todo : media player
 
 todo : UI
 - add drop down list for (large) enums
-- add load/save notifications to UI., maybe a UI message that briefly appears on the bottom. white text on dark background ?
++ add load/save notifications to UI., maybe a UI message that briefly appears on the bottom. white text on dark background ?
 
 reference :
 + http://www.dsperados.com (company based in Utrecht ? send to Stijn)

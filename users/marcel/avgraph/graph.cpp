@@ -2480,6 +2480,8 @@ bool GraphEdit::tick(const float dt)
 		break;
 	}
 	
+	// update UI
+	
 	if (graph != nullptr)
 	{
 		for (auto & nodeItr : graph->nodes)
@@ -2504,6 +2506,20 @@ bool GraphEdit::tick(const float dt)
 			//
 			
 			node.tick(*this, dt);
+		}
+	}
+	
+	if (!notifications.empty())
+	{
+		Notification & n = notifications.front();
+		
+		n.displayTime = std::max(0.f, n.displayTime - dt);
+		
+		const float t = n.displayTime * n.displayTimeRcp;
+		
+		if (t <= 0.f)
+		{
+			notifications.pop_front();
 		}
 	}
 	
@@ -2563,16 +2579,19 @@ void GraphEdit::doMenu(const float dt)
 			const std::string filename = documentInfo.filename.c_str();
 			
 			load(filename.c_str());
+			showNotification("Loaded %s", documentInfo.filename.c_str());
 		}
 		
 		if (doButton("save", size * 1, size, false))
 		{
 			save(documentInfo.filename.c_str());
+			showNotification("Saved %s", documentInfo.filename.c_str());
 		}
 		
 		if (doButton("save as", size * 2, size, true))
 		{
 			save(documentInfo.filename.c_str());
+			showNotification("Saved as %s", documentInfo.filename.c_str());
 		}
 		
 		doTextBox(documentInfo.filename, "filename", dt);
@@ -2723,6 +2742,24 @@ void GraphEdit::selectAll()
 {
 	selectNodeAll();
 	selectLinkAll();
+}
+
+void GraphEdit::showNotification(const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(text, sizeof(text), format, args);
+	va_end(args);
+	
+	notifications.clear();
+	
+	Notification n;
+	n.text = text;
+	n.displayTime = 3.f;
+	n.displayTimeRcp = 1.f / n.displayTime;
+	
+	notifications.push_back(n);
 }
 
 void GraphEdit::draw() const
@@ -3010,6 +3047,38 @@ void GraphEdit::draw() const
 	if (nodeTypeNameSelect != nullptr)
 	{
 		nodeTypeNameSelect->doMenus(uiState, 0.f);
+	}
+	
+	//
+	
+	if (!notifications.empty())
+	{
+		const int kWidth = 200;
+		
+		const Notification & n = notifications.front();
+		
+		const float t = n.displayTime * n.displayTimeRcp;
+		const float tMoveUp = .1f;
+		const float tMoveDown = .1f;
+		
+		float y = 1.f;
+		
+		if (t > (1.f - tMoveUp))
+			y = 1.f - (t - (1.f - tMoveUp)) / tMoveUp;
+		if (t < tMoveDown)
+			y = t / tMoveDown;
+		
+		y *= 40;
+		
+		setColor(colorBlack);
+		drawRect(GFX_SX/2 - kWidth, GFX_SY - y, GFX_SX/2 + kWidth, GFX_SY);
+		
+		setColor(colorWhite);
+		drawRectLine(GFX_SX/2 - kWidth, GFX_SY - y, GFX_SX/2 + kWidth, GFX_SY);
+		
+		setColor(colorWhite);
+		setFont("calibri.ttf");
+		drawText(GFX_SX/2, GFX_SY - y + 20, 18, 0.f, 0.f, "%s", n.text.c_str());
 	}
 }
 
