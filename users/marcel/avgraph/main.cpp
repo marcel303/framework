@@ -130,12 +130,14 @@ todo :
 	- purchase and evaluate Lemur (by Liine)
 	- figure out how to best interop with this software
 	- adapt OSC node to fit these products
+	- have a learning function, to setup mappings from inputs to outputs
 + save/load editor options to editor XML
 + add editorName to nodes and add a text box to edit it
 + add 2 texture inputs to fsfx node
 + integrate CCL bugfixes and changes
 + add Kinect and Kinect2 nodes
 - add ability to set node to horizontal or vertical mode. vertical mode hides socket names/is more condensed
+	- maybe also a sphere mode ?
 + add specialized visualizer node, that's present in the editor only. visualize values, but with lots of options for how to. also, make the node resizable
 	+ extract visualization code and make it reusable
 	+ add support for resizing (special) node types
@@ -156,7 +158,9 @@ todo :
 + make time node use local vfx graph instance time, not process time
 - add sub-graph container node. to help organize complex graphs
 - add mouse cursor to user interface
-- allow trigger inputs to have multiple incoming connections
++ allow trigger inputs to have multiple incoming connections
+- make nodes use rounded rectangles
+- make links use bezier curves
 
 todo : nodes :
 + add ease node
@@ -220,6 +224,9 @@ todo : nodes :
 	- add time dilation effect on no input before stopping responding ?
 	- add way for UI/editor to tell update loop it's animating something (camera..)
 - hide node text until mouse moves close to node ? makes the screen more serene and helps optimize UI drawing
+- add adsr node
+- add random noise node with frequency
+- look at Bitwig 2 for inspiration of node types
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -1700,7 +1707,7 @@ static void testTextureAtlas()
 	{
 		TextureAtlas ta;
 		
-		ta.init(128, 128);
+		ta.init(128, 128, GL_R8, false, false, nullptr);
 		
 		bool success = true;
 		
@@ -1709,19 +1716,19 @@ static void testTextureAtlas()
 		
 		const uint64_t tr1 = g_TimerRT.TimeUS_get();
 		
-		success &= nullptr != ta.tryAlloc(values, 128, 128);
+		success &= nullptr != ta.tryAlloc(values, 128, 128, GL_RED, GL_UNSIGNED_BYTE);
 		
 		success &= false != ta.makeBigger(256, 256);
 		
-		success &= nullptr != ta.tryAlloc(values, 128, 128);
-		success &= nullptr != ta.tryAlloc(values, 128, 128);
-		success &= nullptr != ta.tryAlloc(values, 128, 128);
+		success &= nullptr != ta.tryAlloc(values, 128, 128, GL_RED, GL_UNSIGNED_BYTE);
+		success &= nullptr != ta.tryAlloc(values, 128, 128, GL_RED, GL_UNSIGNED_BYTE);
+		success &= nullptr != ta.tryAlloc(values, 128, 128, GL_RED, GL_UNSIGNED_BYTE);
 		
 		success &= false != ta.makeBigger(512, 256);
 		
 		for (int i = 0; i < 500; ++i)
 		{
-			success &= nullptr != ta.tryAlloc(values, random(4, 12), random(4, 12));
+			success &= nullptr != ta.tryAlloc(values, random(4, 12), random(4, 12), GL_RED, GL_UNSIGNED_BYTE);
 		}
 		
 		const uint64_t tr2 = g_TimerRT.TimeUS_get();
@@ -1882,7 +1889,7 @@ static void testDynamicTextureAtlas()
 	
 	TextureAtlas ta;
 	
-	ta.init(GFX_SX/2, GFX_SY/2);
+	ta.init(GFX_SX/2, GFX_SY/2, GL_R8, false, false, nullptr);
 	
 	const uint64_t tt1 = g_TimerRT.TimeUS_get();
 
@@ -1896,7 +1903,7 @@ static void testDynamicTextureAtlas()
 		for (int i = 0; i < sx * sy; ++i)
 			values[i] = i;
 		
-		BoxAtlasElem * e = ta.tryAlloc(values, sx, sy);
+		BoxAtlasElem * e = ta.tryAlloc(values, sx, sy, GL_RED, GL_UNSIGNED_BYTE);
 		
 		if (e != nullptr)
 		{
@@ -1963,7 +1970,7 @@ static void testDynamicTextureAtlas()
 			for (int i = 0; i < sx * sy; ++i)
 				values[i] = i;
 			
-			BoxAtlasElem * e = ta.tryAlloc(values, sx, sy);
+			BoxAtlasElem * e = ta.tryAlloc(values, sx, sy, GL_RED, GL_UNSIGNED_BYTE);
 			
 			if (e != nullptr)
 			{
