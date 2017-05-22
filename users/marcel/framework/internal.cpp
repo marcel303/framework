@@ -1621,26 +1621,10 @@ void FontCacheElem::load(const char * filename)
 	}
 	
 #if USE_GLYPH_ATLAS
+	const GLint swizzleMask[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
+	
 	textureAtlas = new TextureAtlas();
-	textureAtlas->init(256, 256);
-	
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
-	
-	glBindTexture(GL_TEXTURE_2D, textureAtlas->texture);
-	GLint swizzleMask[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
-	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-	checkErrorGL();
-	
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	checkErrorGL();
-	
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
+	textureAtlas->init(256, 16, GL_R8, false, false, swizzleMask);
 #endif
 }
 
@@ -1727,7 +1711,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 		
 		FT_Set_Pixel_Sizes(face, 0, size);
 
-		if (FT_Load_Char(face, c, FT_LOAD_RENDER | FT_LOAD_TARGET_NORMAL) == 0)
+		if (FT_Load_Char(face, c, FT_LOAD_RENDER | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL) == 0)
 		{
 		#if USE_GLYPH_ATLAS
 			elem.g = *face->glyph;
@@ -1736,17 +1720,16 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 			
 			for (;;)
 			{
-				e = globals.font->textureAtlas->tryAlloc(elem.g.bitmap.buffer, elem.g.bitmap.width, elem.g.bitmap.rows, GLYPH_ATLAS_BORDER);
+				e = globals.font->textureAtlas->tryAlloc(elem.g.bitmap.buffer, elem.g.bitmap.width, elem.g.bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, GLYPH_ATLAS_BORDER);
 				
 				if (e != nullptr)
 					break;
 				
 				logDebug("glyph allocation failed. growing texture atlas to twice the old height");
 				
-				// todo : make sure texture atlas re-allocation doesn't happen in draw code; make sure to cache each glyph elem first!
+				// note : texture atlas re-allocation shouldn't happen in draw code; make sure to cache each glyph elem first before calling gxBegin!
 				
-				globals.font->textureAtlas->makeBigger(globals.font->textureAtlas->a.sx, globals.font->textureAtlas->a.sy * 2);
-				globals.font->textureAtlas->optimize();
+				globals.font->textureAtlas->makeBiggerAndOptimize(globals.font->textureAtlas->a.sx, globals.font->textureAtlas->a.sy * 2);
 			}
 			
 			elem.textureAtlasElem = e;
