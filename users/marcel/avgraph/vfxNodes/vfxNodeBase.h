@@ -136,20 +136,30 @@ struct VfxImage_Texture : VfxImageBase
 	virtual int getSx() const override
 	{
 		int result = 0;
-		// todo : nicely restore previously bound texture ?
-		gxSetTexture(texture);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &result);
-		gxSetTexture(0);
+		
+		if (texture != 0)
+		{
+			// todo : nicely restore previously bound texture ?
+			gxSetTexture(texture);
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &result);
+			gxSetTexture(0);
+		}
+		
 		return result;
 	}
 	
 	virtual int getSy() const override
 	{
 		int result = 0;
-		// todo : nicely restore previously bound texture ?
-		gxSetTexture(texture);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &result);
-		gxSetTexture(0);
+		
+		if (texture != 0)
+		{
+			// todo : nicely restore previously bound texture ?
+			gxSetTexture(texture);
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &result);
+			gxSetTexture(0);
+		}
+		
 		return result;
 	}
 	
@@ -164,7 +174,8 @@ struct VfxImageCpu
 	struct Channel
 	{
 		const uint8_t * data;
-		uint8_t pitch;
+		int stride;
+		int pitch;
 		
 		Channel()
 			: data(nullptr)
@@ -185,16 +196,18 @@ struct VfxImageCpu
 	{
 	}
 	
-	void setDataR8(const uint8_t * r, const int _sx, const int _sy, const int _pitch)
+	void setDataR8(const uint8_t * r, const int _sx, const int _sy, const int _stride, const int _pitch)
 	{
 		sx = _sx;
 		sy = _sy;
 		
-		const int pitch = _pitch == 0 ? sx * 4 : _pitch;
+		const int stride = _stride;
+		const int pitch = _pitch == 0 ? sx * 1 : _pitch;
 		
 		for (int i = 0; i < 4; ++i)
 		{
 			channel[i].data = r;
+			channel[i].stride = stride;
 			channel[i].pitch = pitch;
 		}
 	}
@@ -204,11 +217,13 @@ struct VfxImageCpu
 		sx = _sx;
 		sy = _sy;
 		
+		const int stride = 4;
 		const int pitch = _pitch == 0 ? sx * 4 : _pitch;
 		
 		for (int i = 0; i < 4; ++i)
 		{
 			channel[i].data = rgba + i;
+			channel[i].stride = stride;
 			channel[i].pitch = pitch;
 		}
 	}
