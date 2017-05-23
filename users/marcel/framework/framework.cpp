@@ -600,6 +600,8 @@ void Framework::process()
 	
 	const int oldMouseX = mouse.x;
 	const int oldMouseY = mouse.y;
+	
+	events.clear();
 
 	SDL_Event e;
 	
@@ -627,6 +629,8 @@ void Framework::process()
 				break;
 		}
 
+		events.push_back(e);
+		
 		if (e.type == SDL_KEYDOWN)
 		{
 			keyboard.events.push_back(e);
@@ -2233,7 +2237,7 @@ Color Color::fromHex(const char * str)
 		const float a = 1.f;
 		return Color(r, g, b, a);
 	}
-	else
+	else if (len == 8)
 	{
 		const uint32_t hex = std::stoul(str, 0, 16);
 		const float r = scale255((hex >> 24) & 0xff);
@@ -2241,6 +2245,10 @@ Color Color::fromHex(const char * str)
 		const float b = scale255((hex >>  8) & 0xff);
 		const float a = scale255((hex >>  0) & 0xff);
 		return Color(r, g, b, a);
+	}
+	else
+	{
+		return colorBlack;
 	}
 }
 
@@ -5931,7 +5939,8 @@ static void gxFlush(bool endOfBatch)
 					break;
 				case GL_TRIANGLE_FAN:
 					s_gxVertices[0] = s_gxVertices[0];
-					s_gxVertexCount = 1;
+					s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+					s_gxVertexCount = 2;
 					break;
 				case GL_TRIANGLE_STRIP:
 					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 2];

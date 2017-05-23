@@ -272,6 +272,8 @@ public:
 	RealTimeEditCallback realTimeEditCallback;
 	InitErrorHandler initErrorHandler;
 	
+	std::vector<SDL_Event> events;
+	
 private:
 	typedef std::set<Model*> ModelSet;
 	
