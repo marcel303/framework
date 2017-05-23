@@ -1,3 +1,4 @@
+#include "Debugging.h"
 #include "dotDetector.h"
 #include <algorithm>
 
@@ -102,15 +103,22 @@ static bool isValidIndex(const T value)
 	return value != T(-1);
 }
 
-int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, const int maxRadius, DotIsland * __restrict islands, const int maxIslands, const bool useGrid)
+int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, const float _maxRadius, DotIsland * __restrict islands, const int maxIslands, const bool useGrid)
 {
+	if (_maxRadius <= 0.f)
+		return 0;
+	
 	int numIslands = 0;
 	
-	const int maxRadiusSq = maxRadius * maxRadius;
+	const int maxRadius = int(_maxRadius);
+	const int maxRadiusSq = int(_maxRadius * _maxRadius);
 	
 #if USE_GRID
-	const int gridSx = sx / maxRadius + 1;
-	const int gridSy = sy / maxRadius + 1;
+	const int cellSx = std::max(4, maxRadius);
+	const int cellSy = std::max(4, maxRadius);
+	
+	const int gridSx = sx / cellSx + 1;
+	const int gridSy = sy / cellSy + 1;
 	
 	uint16_t grid[gridSx][gridSy];
 	memset(grid, 0xff, sizeof(grid));
@@ -121,7 +129,8 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 		const uint8_t * __restrict dataLine = data + y * sx;
 		
 	#if USE_GRID
-		const int gridY = y / maxRadius;
+		const int gridY = y / cellSy;
+		Assert(gridY >= 0 && gridY < gridSy);
 	#endif
 	
 		for (int x = 0; x < sx; )
@@ -145,7 +154,8 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 			if (dataLine[x])
 			{
 			#if USE_GRID
-				const int gridX = x / maxRadius;
+				const int gridX = x / cellSx;
+				Assert(gridX >= 0 && gridX < gridSx);
 				
 				if (useGrid)
 				{

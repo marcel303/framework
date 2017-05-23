@@ -41,5 +41,5 @@ struct DotDetector
 	static int detectDots(
 		const uint8_t * __restrict data,
 		const int sx, const int sy,
-		const int maxRadius, DotIsland * __restrict islands, const int maxIslands, const bool useGrid);
+		const float maxRadius, DotIsland * __restrict islands, const int maxIslands, const bool useGrid);
 };
