@@ -1769,6 +1769,8 @@ bool GraphEdit::tick(const float dt)
 		mousePosition.y = dstMousePosition[1];
 	}
 	
+	tickTouches();
+	
 	if (realTimeConnection != nullptr)
 	{
 		bool isValid = false;
@@ -2261,13 +2263,6 @@ bool GraphEdit::tick(const float dt)
 				break;
 			}
 			
-			// touches
-			
-			if (tickTouches())
-			{
-				break;
-			}
-			
 			// drag and zoom
 			
 			if (keyboard.isDown(SDLK_LCTRL) || mouse.isDown(BUTTON_RIGHT))
@@ -2486,16 +2481,12 @@ bool GraphEdit::tick(const float dt)
 		
 	case kState_TouchDrag:
 		{
-			tickTouches();
-			
 			dragAndZoom.tick(dt);
 		}
 		break;
 		
 	case kState_TouchZoom:
 		{
-			tickTouches();
-			
 			dragAndZoom.tick(dt);
 		}
 		break;
