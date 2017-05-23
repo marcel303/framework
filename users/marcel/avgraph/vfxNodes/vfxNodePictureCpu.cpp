@@ -4,6 +4,7 @@
 VfxNodePictureCpu::VfxNodePictureCpu()
 	: VfxNodeBase()
 	, image()
+	, currentFilename()
 	, imageData(nullptr)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -13,8 +14,7 @@ VfxNodePictureCpu::VfxNodePictureCpu()
 
 VfxNodePictureCpu::~VfxNodePictureCpu()
 {
-	delete imageData;
-	imageData = nullptr;
+	setImage(nullptr);
 }
 
 void VfxNodePictureCpu::init(const GraphNode & node)
@@ -23,12 +23,7 @@ void VfxNodePictureCpu::init(const GraphNode & node)
 	
 	if (filename != nullptr)
 	{
-		imageData = loadImage(filename);
-
-		if (imageData != nullptr)
-		{
-			image.setDataRGBA8((uint8_t*)imageData->getLine(0), imageData->sx, imageData->sy, 0);
-		}
+		setImage(filename);
 	}
 }
 
@@ -38,13 +33,38 @@ void VfxNodePictureCpu::tick(const float dt)
 	
 	if (filename == nullptr)
 	{
-		delete imageData;
-		imageData = nullptr;
+		setImage(nullptr);
+	}
+	else if (filename != currentFilename)
+	{
+		setImage(filename);
+	}
+}
 
-		image.reset();
+void VfxNodePictureCpu::setImage(const char * filename)
+{
+	if (filename != nullptr)
+	{
+		currentFilename = filename;
+		
+		imageData = loadImage(filename);
+
+		if (imageData != nullptr)
+		{
+			image.setDataRGBA8((uint8_t*)imageData->getLine(0), imageData->sx, imageData->sy, 0);
+		}
+		else
+		{
+			image.reset();
+		}
 	}
 	else
 	{
-		// todo : detect if the filename has changed
+		currentFilename.clear();
+		
+		delete imageData;
+		imageData = nullptr;
+		
+		image.reset();
 	}
 }

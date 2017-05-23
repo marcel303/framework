@@ -19,7 +19,8 @@ struct VfxNodePictureCpu : VfxNodeBase
 	};
 	
 	VfxImageCpu image;
-
+	
+	std::string currentFilename;
 	ImageData * imageData;
 	
 	VfxNodePictureCpu();
@@ -28,4 +29,6 @@ struct VfxNodePictureCpu : VfxNodeBase
 	
 	virtual void init(const GraphNode & node) override;
 	virtual void tick(const float dt) override;
+	
+	void setImage(const char * filename);
 };
