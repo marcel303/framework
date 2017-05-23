@@ -16,6 +16,7 @@
 #include "vfxNodes/vfxNodeDisplay.h"
 #include "vfxNodes/vfxNodeDotDetector.h"
 #include "vfxNodes/vfxNodeFsfx.h"
+#include "vfxNodes/vfxNodeImageCpuToGpu.h"
 #include "vfxNodes/vfxNodeKinect1.h"
 #include "vfxNodes/vfxNodeKinect2.h"
 #include "vfxNodes/vfxNodeLeapMotion.h"
@@ -725,6 +726,7 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	DefineNodeImpl("spectrum.2d", VfxNodeSpectrum2D)
 	DefineNodeImpl("fsfx", VfxNodeFsfx)
 	DefineNodeImpl("image.dots", VfxNodeDotDetector)
+	DefineNodeImpl("image.toGpu", VfxNodeImageCpuToGpu)
 	else
 	{
 		logError("unknown node type: %s", typeName.c_str());
