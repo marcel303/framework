@@ -2134,8 +2134,8 @@ bool GraphEdit::tick(const float dt)
 				if (keyboard.wentDown(SDLK_DOWN, true))
 					moveY += 1;
 				
-				dragAndZoom.desiredFocusX += moveX * kGridSize * 8;
-				dragAndZoom.desiredFocusY += moveY * kGridSize * 10;
+				dragAndZoom.desiredFocusX += moveX / dragAndZoom.zoom * kGridSize * 8;
+				dragAndZoom.desiredFocusY += moveY / dragAndZoom.zoom * kGridSize * 10;
 			}
 			else
 			{
@@ -2267,10 +2267,10 @@ bool GraphEdit::tick(const float dt)
 			
 			if (keyboard.isDown(SDLK_LCTRL) || mouse.isDown(BUTTON_RIGHT))
 			{
-				dragAndZoom.desiredFocusX -= mouse.dx / dragAndZoom.zoom;
-				dragAndZoom.desiredFocusY -= mouse.dy / dragAndZoom.zoom;
-				dragAndZoom.focusX = dragAndZoom.desiredFocusX;
-				dragAndZoom.focusY = dragAndZoom.desiredFocusY;
+				dragAndZoom.focusX -= mouse.dx / dragAndZoom.zoom;
+				dragAndZoom.focusY -= mouse.dy / dragAndZoom.zoom;
+				dragAndZoom.desiredFocusX = dragAndZoom.focusX;
+				dragAndZoom.desiredFocusY = dragAndZoom.focusY;
 			}
 			
 			if (keyboard.isDown(SDLK_LALT))
@@ -2558,22 +2558,29 @@ bool GraphEdit::tickTouches()
 	{
 		if (event.type == SDL_FINGERDOWN)
 		{
-			logDebug("touch down: fingerId=%d", event.tfinger.fingerId);
+			//logDebug("touch down: fingerId=%d", event.tfinger.fingerId);
 			
 			if (state == kState_Idle)
 			{
 				Assert(touches.finger2 == 0);
 				
 				if (touches.finger1 == 0)
+				{
 					touches.finger1 = event.tfinger.fingerId;
+					touches.position1.Set(event.tfinger.x, event.tfinger.y);
+				}
 				else
+				{
 					touches.finger2 = event.tfinger.fingerId;
+					touches.position2.Set(event.tfinger.x, event.tfinger.y);
+				}
 				
 				if (touches.finger1 != 0 && touches.finger2 != 0)
 				{
-					logDebug("touch down: Idle -> TouchZoom");
+					//logDebug("touch down: Idle -> TouchZoom");
 					
 					state = kState_TouchZoom;
+					touches.distance = touches.getDistance();
 				}
 			}
 			else if (state == kState_TouchDrag)
@@ -2582,10 +2589,12 @@ bool GraphEdit::tickTouches()
 				Assert(touches.finger2 == 0);
 				
 				touches.finger2 = event.tfinger.fingerId;
+				touches.position2.Set(event.tfinger.x, event.tfinger.y);
 				
-				logDebug("touch down: TouchDrag -> TouchZoom");
+				//logDebug("touch down: TouchDrag -> TouchZoom");
 				
 				state = kState_TouchZoom;
+				touches.distance = touches.getDistance();
 			}
 			else
 			{
@@ -2594,7 +2603,7 @@ bool GraphEdit::tickTouches()
 		}
 		else if (event.type == SDL_FINGERUP)
 		{
-			logDebug("touch up: fingerId=%d", event.tfinger.fingerId);
+			//logDebug("touch up: fingerId=%d", event.tfinger.fingerId);
 			
 			if (state == kState_Idle)
 			{
@@ -2605,7 +2614,7 @@ bool GraphEdit::tickTouches()
 					
 					touches.finger1 = 0;
 					
-					logDebug("touch down: Idle -> Idle");
+					//logDebug("touch down: Idle -> Idle");
 					
 					state = kState_Idle;
 				}
@@ -2619,7 +2628,7 @@ bool GraphEdit::tickTouches()
 				
 					touches.finger1 = 0;
 					
-					logDebug("touch down: TouchDrag -> Idle");
+					//logDebug("touch down: TouchDrag -> Idle");
 					
 					state = kState_Idle;
 				}
@@ -2634,7 +2643,10 @@ bool GraphEdit::tickTouches()
 					touches.finger1 = touches.finger2;
 					touches.finger2 = 0;
 					
-					logDebug("touch down: TouchZoom -> TouchDrag");
+					touches.position1 = touches.position2;
+					touches.position2.SetZero();
+					
+					//logDebug("touch down: TouchZoom -> TouchDrag");
 					
 					state = kState_TouchDrag;
 				}
@@ -2644,8 +2656,9 @@ bool GraphEdit::tickTouches()
 					Assert(touches.finger2 != 0);
 				
 					touches.finger2 = 0;
+					touches.position2.SetZero();
 					
-					logDebug("touch down: TouchZoom -> TouchDrag");
+					//logDebug("touch down: TouchZoom -> TouchDrag");
 					
 					state = kState_TouchDrag;
 				}
@@ -2653,6 +2666,21 @@ bool GraphEdit::tickTouches()
 		}
 		else if (event.type == SDL_FINGERMOTION)
 		{
+			Vec2 position(event.tfinger.x, event.tfinger.y);
+			Vec2 delta;
+			
+			if (event.tfinger.fingerId == touches.finger1)
+			{
+				delta = position - touches.position1;
+				touches.position1 = position;
+			}
+			
+			if (event.tfinger.fingerId == touches.finger2)
+			{
+				delta = position - touches.position2;
+				touches.position2 = position;
+			}
+			
 			if (state == kState_TouchDrag)
 			{
 				Assert(touches.finger1 != 0);
@@ -2663,8 +2691,8 @@ bool GraphEdit::tickTouches()
 					const float sx = 1000.f;
 					const float sy = 1000.f;
 					
-					dragAndZoom.focusX -= event.tfinger.dx * sx;
-					dragAndZoom.focusY -= event.tfinger.dy * sy;
+					dragAndZoom.focusX -= delta[0] / dragAndZoom.zoom * sx;
+					dragAndZoom.focusY -= delta[1] / dragAndZoom.zoom * sy;
 					
 					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
 					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
@@ -2678,13 +2706,45 @@ bool GraphEdit::tickTouches()
 				if (event.tfinger.fingerId == touches.finger1 ||
 					event.tfinger.fingerId == touches.finger2)
 				{
-					// todo : funky math
+				#if 0
+					const float kZoomPixels = 100.f / 100.f / 3.f;
+					const float kMinZoom = .5f;
+					const float kMaxZoom = 2.f;
 					
-					const float sx = 1000.f;
-					const float sy = 1000.f;
+					// calculate movement
+			
+					const float distance = touches.getDistance();
 					
-					dragAndZoom.focusX -= event.tfinger.dx * sx;
-					dragAndZoom.focusY -= event.tfinger.dy * sy;
+					// update zoom
+					
+					const float deltaLength = distance - touches.distance;
+					
+					const float zoomDelta = deltaLength / kZoomPixels;
+
+					// update current touch distance
+					
+					touches.distance = distance;
+					
+					// update zoom info
+					
+					dragAndZoom.zoom += zoomDelta;
+					dragAndZoom.desiredZoom = dragAndZoom.zoom;
+					
+					// constrain zoom
+					
+					if (dragAndZoom.zoom < kMinZoom)
+						dragAndZoom.zoom = kMinZoom;
+					if (dragAndZoom.zoom > kMaxZoom)
+						dragAndZoom.zoom = kMaxZoom;
+				#endif
+				
+					// update movement
+					
+					const float sx = framework.windowSx / 2.f;
+					const float sy = framework.windowSy / 2.f;
+					
+					dragAndZoom.focusX -= delta[0] / dragAndZoom.zoom * sx;
+					dragAndZoom.focusY -= delta[1] / dragAndZoom.zoom * sy;
 					
 					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
 					dragAndZoom.desiredFocusY = dragAndZoom.focusY;

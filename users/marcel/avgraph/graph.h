@@ -835,10 +835,23 @@ struct GraphEdit : GraphEditConnection
 		uint64_t finger1;
 		uint64_t finger2;
 		
+		Vec2 position1;
+		Vec2 position2;
+		
+		float distance;
+		
 		Touches()
 			: finger1(0)
 			, finger2(0)
+			, position1()
+			, position2()
+			, distance(0.f)
 		{
+		}
+		
+		float getDistance() const
+		{
+			return (position2 - position1).CalcSize();
 		}
 	};
 	
