@@ -9,9 +9,12 @@
 #include "vfxGraph.h"
 #include "vfxTypes.h"
 
+#include "vfxNodes/dotDetector.h"
+
 #include "vfxNodes/vfxNodeBase.h"
 #include "vfxNodes/vfxNodeComposite.h"
 #include "vfxNodes/vfxNodeDisplay.h"
+#include "vfxNodes/vfxNodeDotDetector.h"
 #include "vfxNodes/vfxNodeFsfx.h"
 #include "vfxNodes/vfxNodeKinect1.h"
 #include "vfxNodes/vfxNodeKinect2.h"
@@ -721,6 +724,7 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	DefineNodeImpl("spectrum.1d", VfxNodeSpectrum1D)
 	DefineNodeImpl("spectrum.2d", VfxNodeSpectrum2D)
 	DefineNodeImpl("fsfx", VfxNodeFsfx)
+	DefineNodeImpl("image.dots", VfxNodeDotDetector)
 	else
 	{
 		logError("unknown node type: %s", typeName.c_str());
@@ -2026,201 +2030,8 @@ static void testDynamicTextureAtlas()
 #include "image.h"
 #include "Timer.h"
 
-#define USE_GRID 1 // improves matching result as we find the closes island when enabled. also greatly increases detection speed when there's many dots being detected
-#define USE_SSE2 1// improves tresholding and detection speed
 #define USE_READPIXELS_OPTIMIZE 1
 #define USE_READPIXELS_FENCES 0
-
-struct DotIsland
-{
-	int totalX;
-	int totalY;
-	int numPixels;
-	
-	int x;
-	int y;
-	
-	int minX;
-	int minY;
-	int maxX;
-	int maxY;
-	
-#if USE_GRID
-	uint16_t next;
-#endif
-};
-
-template <typename T>
-static bool isValidIndex(const T value)
-{
-	return value != T(-1);
-}
-
-static int detectDots(const uint8_t * data, const int sx, const int sy, const int maxRadius, DotIsland * __restrict islands, int maxIslands, const bool useGrid)
-{
-	int numIslands = 0;
-	
-	const int maxRadiusSq = maxRadius * maxRadius;
-	
-#if USE_GRID
-	const int gridSx = sx / maxRadius + 1;
-	const int gridSy = sy / maxRadius + 1;
-	
-	uint16_t grid[gridSx][gridSy];
-	memset(grid, 0xff, sizeof(grid));
-#endif
-	
-	for (int y = 0; y < sy; ++y)
-	{
-		const uint8_t * __restrict dataLine = data + y * sx;
-		
-	#if USE_GRID
-		const int gridY = y / maxRadius;
-	#endif
-	
-		for (int x = 0; x < sx; )
-		{
-		#if USE_SSE2
-			// see if ant of the next 16 pixels passes the treshold test. if not, skip the next 16 pixels
-			// we only do this test once every 16 pixels, to avoid redundant calculations
-			
-			if ((x & 15) == 0)
-			{
-				const __m128i data16 = _mm_loadu_si128((const __m128i*)(dataLine + x));
-				
-				if (_mm_movemask_epi8(data16) == 0)
-				{
-					x += 16;
-					continue;
-				}
-			}
-		#endif
-			
-			if (dataLine[x])
-			{
-			#if USE_GRID
-				const int gridX = x / maxRadius;
-				
-				if (useGrid)
-				{
-					for (int gx = gridX - 2; gx <= gridX + 1; ++gx)
-					{
-						for (int gy = gridY - 2; gy <= gridY + 1; ++gy)
-						{
-							if (gx >= 0 && gx < gridSx && gy >= 0 && gy < gridSy)
-							{
-								for (uint16_t islandIndex = grid[gx][gy]; isValidIndex(islandIndex); islandIndex = islands[islandIndex].next)
-								{
-									auto & island = islands[islandIndex];
-									
-									const int dx = x - island.x;
-									const int dy = y - island.y;
-									const int dsSq = dx * dx + dy * dy;
-									
-									if (dsSq < maxRadiusSq)
-									{
-										island.totalX += x;
-										island.totalY += y;
-										island.numPixels++;
-										
-										island.x = island.totalX / island.numPixels;
-										island.y = island.totalY / island.numPixels;
-										
-										island.minX = std::min(island.minX, x);
-										island.minY = std::min(island.minY, y);
-										island.maxX = std::max(island.maxX, x);
-										island.maxY = std::max(island.maxY, y);
-										
-										goto foundIsland;
-									}
-								}
-							}
-						}
-					}
-				}
-				else
-			#endif
-				{
-					for (int i = 0; i < numIslands; ++i)
-					{
-						auto & island = islands[i];
-						
-						const int dx = x - island.x;
-						const int dy = y - island.y;
-						const int dsSq = dx * dx + dy * dy;
-						
-						if (dsSq < maxRadiusSq)
-						{
-							island.totalX += x;
-							island.totalY += y;
-							island.numPixels++;
-							
-							island.x = island.totalX / island.numPixels;
-							island.y = island.totalY / island.numPixels;
-							
-							island.minX = std::min(island.minX, x);
-							island.minY = std::min(island.minY, y);
-							island.maxX = std::max(island.maxX, x);
-							island.maxY = std::max(island.maxY, y);
-							
-							goto foundIsland;
-						}
-					}
-				}
-				
-				// we didn't find an island close to this pixel. add a new one
-				
-				if (numIslands < maxIslands)
-				{
-					auto & island = islands[numIslands];
-					
-					island.totalX = x;
-					island.totalY = y;
-					island.numPixels = 1;
-					
-					island.x = x;
-					island.y = y;
-					
-					island.minX = x;
-					island.minY = y;
-					island.maxX = x;
-					island.maxY = y;
-					
-				#if USE_GRID
-					if (useGrid)
-					{
-						island.next = grid[gridX][gridY];
-						grid[gridX][gridY] = numIslands;
-					}
-				#endif
-				
-					numIslands++;
-				}
-				
-			foundIsland:
-				do { } while (false); // clang compiler errors if there is no expression of a label
-			}
-			
-			++x;
-		}
-	}
-	
-	return numIslands;
-}
-
-#if USE_SSE2
-
-static __m128i _mm_cmple_epu8(__m128i x, __m128i y)
-{
-	return _mm_cmpeq_epi8(_mm_min_epu8(x, y), x);
-}
-
-static __m128i _mm_cmpge_epu8(__m128i x, __m128i y)
-{
-	return _mm_cmple_epu8(y, x);
-}
-
-#endif
 
 static void testDotDetector()
 {
@@ -2289,7 +2100,7 @@ static void testDotDetector()
 	
 	if (useVideo)
 	{
-		mp.openAsync("mocap5.mp4", false);
+		mp.openAsync("mocapc.mp4", false);
 	}
 	
 	//
@@ -2473,6 +2284,12 @@ static void testDotDetector()
 			checkErrorGL();
 		#endif
 			
+		#if 1
+			const int treshold = tresholdFunction == 0 ? 255 - tresholdValue : tresholdValue;
+			const DotDetector::TresholdTest test = tresholdFunction == 0 ? DotDetector::kTresholdTest_GreaterEqual : DotDetector::kTresholdTest_LessEqual;
+			
+			DotDetector::treshold(surfaceData, maskedData, sx, sy, test, treshold);
+		#else
 			// creste treshold mask
 			
 			const uint8_t * __restrict surfaceDataItr = surfaceData;
@@ -2552,6 +2369,7 @@ static void testDotDetector()
 				}
 			#endif
 			}
+		#endif
 			
 		#if USE_READPIXELS_OPTIMIZE
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
@@ -2573,7 +2391,7 @@ static void testDotDetector()
 		
 		const uint64_t td1 = g_TimerRT.TimeUS_get();
 		
-		const int numIslands = detectDots(maskedData, sx, sy, radius, islands, kMaxIslands, useGrid);
+		const int numIslands = DotDetector::detectDots(maskedData, sx, sy, radius, islands, kMaxIslands, useGrid);
 		
 		const uint64_t td2 = g_TimerRT.TimeUS_get();
 		
@@ -2694,7 +2512,7 @@ int main(int argc, char * argv[])
 		//for (int i = 0; i < 10; ++i)
 		//	testDynamicTextureAtlas();
 		
-		//testDotDetector();
+		testDotDetector();
 		
 		//
 		
