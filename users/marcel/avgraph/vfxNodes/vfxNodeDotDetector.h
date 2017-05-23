@@ -18,6 +18,7 @@ struct VfxNodeDotDetector : VfxNodeBase
 	{
 		kOutput_Lumi,
 		kOutput_Mask,
+		kOutput_NumDots,
 		kOutput_COUNT
 	};
 	
@@ -37,6 +38,7 @@ struct VfxNodeDotDetector : VfxNodeBase
 	
 	VfxImageCpu lumiOutput;
 	VfxImageCpu maskOutput;
+	int numDotsOutput;
 
 	VfxNodeDotDetector();
 	virtual ~VfxNodeDotDetector() override;

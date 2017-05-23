@@ -7,6 +7,9 @@ VfxNodeDotDetector::VfxNodeDotDetector()
 	, mask(nullptr)
 	, maskSx(0)
 	, maskSy(0)
+	, lumiOutput()
+	, maskOutput()
+	, numDotsOutput(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
@@ -16,6 +19,7 @@ VfxNodeDotDetector::VfxNodeDotDetector()
 	addInput(kInput_MaxRadius, kVfxPlugType_Float);
 	addOutput(kOutput_Lumi, kVfxPlugType_ImageCpu, &lumiOutput);
 	addOutput(kOutput_Mask, kVfxPlugType_ImageCpu, &maskOutput);
+	addOutput(kOutput_NumDots, kVfxPlugType_Int, &numDotsOutput);
 }
 
 VfxNodeDotDetector::~VfxNodeDotDetector()
@@ -129,6 +133,8 @@ void VfxNodeDotDetector::tick(const float dt)
 		logDebug("dot detector detected %d islands", numIslands);
 		
 		// todo : store dot detection result somewhere and make it available somehow
+		
+		numDotsOutput = numIslands;
 	}
 }
 
@@ -154,4 +160,5 @@ void VfxNodeDotDetector::freeMask()
 	
 	lumiOutput.reset();
 	maskOutput.reset();
+	numDotsOutput = 0;
 }
