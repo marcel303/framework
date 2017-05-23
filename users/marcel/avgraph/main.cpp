@@ -193,7 +193,7 @@ todo : nodes :
 - kinect node:
 	- don't calculate images when output sockets are not connected (?) or when real-time connection asks for the output ..
 	- add player index output ?
-	- add point cloud xyz output
+	- add point cloud xyz output image. or make a node which can calculate this for us, giving (optional) rgb, depth data, and an enum which controls the projection params (should be set to Kinect1 or Kinect2)
 - add pitch control to oscillators ?
 + add restart signal to oscillators ? if input > 0, reset phase
 - add 'window' size to square oscillator
@@ -227,20 +227,36 @@ todo : nodes :
 - add adsr node
 - add random noise node with frequency
 - look at Bitwig 2 for inspiration of node types
+- add touch pad node which reads data from the MacBook's touch pad (up to ten fingers..)
+- add node which can analyze images, detect the dots in them, and send the dots as output
+	- will need a vector socket value type ?
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
 - expose uniforms/inputs from FSFX pixel shader
 - iterate FSFX pixel shaders and generate type definitions based on FSFX name and exposed uniforms
+	- OR: allow nodes to specify dynamic input sockets. use real-time callback to get the list of inputs
+	- store inputs by name in nodes (like regular inputs)
+	- let FSFX node  resize its inputs dynamically (?)
+	- match the dynamic sockets by name ? add to VfxNodeBase to try to get socket based on name if index lookup fails ?
+- add standard include file (shaderSource(..)) for FSFX nodes. include params, time, texture1 and 2 and maybe some common functions too
 
 todo : framework :
 + optimize text rendering. use a dynamic texture atlas instead of one separate texture for each glyph. drawText should only emit a single draw call
+- add MSDF font rendering support
 
 todo : media player
 - for image analysis we often only need luminance. make it an option to output YUV Y-channel only?
+- add image_cpu value type ?
+	- extend video node so it can output Y/UV/RGB image_cpu data
+		- requires rewriting media player a little, so consume (acquire) and release of frame data is possible
+	- add spectrum2d node
+	- add dot detector node
+- add image to image_cpu node. default behaviour is to delay by a few frames
+- add image_cpu to image node. default behaviour is to upload immediately
 
 todo : UI
-- add drop down list for (large) enums
++ add drop down list for (large) enums
 + add load/save notifications to UI., maybe a UI message that briefly appears on the bottom. white text on dark background ?
 
 reference :
@@ -630,30 +646,15 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	else if (typeName == _typeName) \
 		vfxNode = new _type();
 	
-	if (typeName == "intBool")
+	if (false)
 	{
-		vfxNode = new VfxNodeBoolLiteral();
 	}
-	else if (typeName == "intLiteral")
-	{
-		vfxNode = new VfxNodeIntLiteral();
-	}
-	else if (typeName == "floatLiteral")
-	{
-		vfxNode = new VfxNodeFloatLiteral();
-	}
-	else if (typeName == "transformLiteral")
-	{
-		vfxNode = new VfxNodeTransformLiteral();
-	}
-	else if (typeName == "stringLiteral")
-	{
-		vfxNode = new VfxNodeStringLiteral();
-	}
-	else if (typeName == "colorLiteral")
-	{
-		vfxNode = new VfxNodeColorLiteral();
-	}
+	DefineNodeImpl("intBool", VfxNodeBoolLiteral)
+	DefineNodeImpl("intLiteral", VfxNodeIntLiteral)
+	DefineNodeImpl("floatLiteral", VfxNodeFloatLiteral)
+	DefineNodeImpl("transformLiteral", VfxNodeTransformLiteral)
+	DefineNodeImpl("stringLiteral", VfxNodeStringLiteral)
+	DefineNodeImpl("colorLiteral", VfxNodeColorLiteral)
 	DefineNodeImpl("trigger.asFloat", VfxNodeTriggerAsFloat)
 	DefineNodeImpl("time", VfxNodeTime)
 	DefineNodeImpl("sampleAndHold", VfxNodeSampleAndHold)
@@ -703,58 +704,19 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 		Assert(vfxGraph->displayNodeId == kGraphNodeIdInvalid);
 		vfxGraph->displayNodeId = nodeId;
 	}
-	else if (typeName == "mouse")
-	{
-		vfxNode = new VfxNodeMouse();
-	}
-	else if (typeName == "xinput")
-	{
-		vfxNode = new VfxNodeXinput();
-	}
-	else if (typeName == "leap")
-	{
-		vfxNode = new VfxNodeLeapMotion();
-	}
-	else if (typeName == "kinect1")
-	{
-		vfxNode = new VfxNodeKinect1();
-	}
-	else if (typeName == "kinect2")
-	{
-		vfxNode = new VfxNodeKinect2();
-	}
-	else if (typeName == "osc")
-	{
-		vfxNode = new VfxNodeOsc();
-	}
-	else if (typeName == "osc.send")
-	{
-		vfxNode = new VfxNodeOscSend();
-	}
-	else if (typeName == "composite")
-	{
-		vfxNode = new VfxNodeComposite();
-	}
-	else if (typeName == "picture")
-	{
-		vfxNode = new VfxNodePicture();
-	}
-	else if (typeName == "video")
-	{
-		vfxNode = new VfxNodeVideo();
-	}
-	else if (typeName == "sound")
-	{
-		vfxNode = new VfxNodeSound();
-	}
-	else if (typeName == "spectrum.1d")
-	{
-		vfxNode = new VfxNodeSpectrum1D();
-	}
-	else if (typeName == "fsfx")
-	{
-		vfxNode = new VfxNodeFsfx();
-	}
+	DefineNodeImpl("mouse", VfxNodeMouse)
+	DefineNodeImpl("xinput", VfxNodeXinput)
+	DefineNodeImpl("leap", VfxNodeLeapMotion)
+	DefineNodeImpl("kinect1", VfxNodeKinect1)
+	DefineNodeImpl("kinect2", VfxNodeKinect2)
+	DefineNodeImpl("osc", VfxNodeOsc)
+	DefineNodeImpl("osc.send", VfxNodeOscSend)
+	DefineNodeImpl("composite", VfxNodeComposite)
+	DefineNodeImpl("picture", VfxNodePicture)
+	DefineNodeImpl("video", VfxNodeVideo)
+	DefineNodeImpl("sound", VfxNodeSound)
+	DefineNodeImpl("spectrum.1d", VfxNodeSpectrum1D)
+	DefineNodeImpl("fsfx", VfxNodeFsfx)
 	else
 	{
 		logError("unknown node type: %s", typeName.c_str());
