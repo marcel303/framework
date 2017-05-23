@@ -2,12 +2,11 @@
 
 #include "vfxNodeBase.h"
 
-struct VfxNodeSpectrum1D : VfxNodeBase
+struct VfxNodeSpectrum2D : VfxNodeBase
 {
 	enum Input
 	{
-		kInput_Buffer,
-		kInput_Size,
+		kInput_Image,
 		kInput_COUNT
 	};
 	
@@ -18,15 +17,18 @@ struct VfxNodeSpectrum1D : VfxNodeBase
 	};
 	
 	GLuint texture;
+	int textureSx;
+	int textureSy;
 	
 	VfxImage_Texture imageOutput;
 
-	VfxNodeSpectrum1D();
-	virtual ~VfxNodeSpectrum1D() override;
+	VfxNodeSpectrum2D();
+	virtual ~VfxNodeSpectrum2D() override;
 	
 	virtual void tick(const float dt) override;
 	
 	virtual void init(const GraphNode & node) override;
 	
-	void allocateTexture(const int size);
+	void allocateTexture(const int sx, const int sy);
+	void freeTexture();
 };

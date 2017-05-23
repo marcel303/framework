@@ -28,9 +28,11 @@
 #include "vfxNodes/vfxNodeOscSend.h"
 #include "vfxNodes/vfxNodePhysicalSpring.h"
 #include "vfxNodes/vfxNodePicture.h"
+#include "vfxNodes/vfxNodePictureCpu.h"
 #include "vfxNodes/vfxNodeSampleAndHold.h"
 #include "vfxNodes/vfxNodeSound.h"
 #include "vfxNodes/vfxNodeSpectrum1D.h"
+#include "vfxNodes/vfxNodeSpectrum2D.h"
 #include "vfxNodes/vfxNodeTime.h"
 #include "vfxNodes/vfxNodeTriggerOnchange.h"
 #include "vfxNodes/vfxNodeTriggerTimer.h"
@@ -713,9 +715,11 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	DefineNodeImpl("osc.send", VfxNodeOscSend)
 	DefineNodeImpl("composite", VfxNodeComposite)
 	DefineNodeImpl("picture", VfxNodePicture)
+	DefineNodeImpl("picture.cpu", VfxNodePictureCpu)
 	DefineNodeImpl("video", VfxNodeVideo)
 	DefineNodeImpl("sound", VfxNodeSound)
 	DefineNodeImpl("spectrum.1d", VfxNodeSpectrum1D)
+	DefineNodeImpl("spectrum.2d", VfxNodeSpectrum2D)
 	DefineNodeImpl("fsfx", VfxNodeFsfx)
 	else
 	{
@@ -1174,7 +1178,7 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 			
 		case kVfxPlugType_Image:
 			return false;
-		case kVfxPlugType_Surface:
+		case kVfxPlugType_ImageCpu:
 			return false;
 		case kVfxPlugType_Trigger:
 			return false;
@@ -1246,10 +1250,22 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 				return true;
 			}
 		case kVfxPlugType_Image:
-			value = String::ToString(plug->getImage()->getTexture());
-			return true;
-		case kVfxPlugType_Surface:
-			return false;
+			{
+				auto image = plug->getImage();
+				value = String::FormatC("%d [%d x %d]", image->getTexture(), image->getSx(), image->getSy());
+				return true;
+			}
+		case kVfxPlugType_ImageCpu:
+			{
+				auto image = plug->getImageCpu();
+				if (image == nullptr)
+					return false;
+				else
+				{
+					value = String::FormatC("[%d x %d]", image->sx, image->sy);
+					return true;
+				}
+			}
 		case kVfxPlugType_Trigger:
 			{
 				const VfxTriggerData & triggerData = plug->getTriggerData();

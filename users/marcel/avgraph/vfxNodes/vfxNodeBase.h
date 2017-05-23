@@ -118,6 +118,8 @@ struct VfxImageBase
 	{
 	}
 	
+	virtual int getSx() const = 0;
+	virtual int getSy() const = 0;
 	virtual GLuint getTexture() const = 0;
 };
 
@@ -131,9 +133,95 @@ struct VfxImage_Texture : VfxImageBase
 	{
 	}
 	
+	virtual int getSx() const override
+	{
+		int result = 0;
+		// todo : nicely restore previously bound texture ?
+		gxSetTexture(texture);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &result);
+		gxSetTexture(0);
+		return result;
+	}
+	
+	virtual int getSy() const override
+	{
+		int result = 0;
+		// todo : nicely restore previously bound texture ?
+		gxSetTexture(texture);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &result);
+		gxSetTexture(0);
+		return result;
+	}
+	
 	virtual GLuint getTexture() const override
 	{
 		return texture;
+	}
+};
+
+struct VfxImageCpu
+{
+	struct Channel
+	{
+		const uint8_t * data;
+		uint8_t pitch;
+		
+		Channel()
+			: data(nullptr)
+			, pitch(0)
+		{
+		}
+	};
+	
+	int sx;
+	int sy;
+	
+	Channel channel[4];
+	
+	VfxImageCpu()
+		: sx(0)
+		, sy(0)
+		, channel()
+	{
+	}
+	
+	void setDataR8(const uint8_t * r, const int _sx, const int _sy, const int _pitch)
+	{
+		sx = _sx;
+		sy = _sy;
+		
+		const int pitch = _pitch == 0 ? sx * 4 : _pitch;
+		
+		for (int i = 0; i < 4; ++i)
+		{
+			channel[i].data = r;
+			channel[i].pitch = pitch;
+		}
+	}
+	
+	void setDataRGBA8(const uint8_t * rgba, const int _sx, const int _sy, const int _pitch)
+	{
+		sx = _sx;
+		sy = _sy;
+		
+		const int pitch = _pitch == 0 ? sx * 4 : _pitch;
+		
+		for (int i = 0; i < 4; ++i)
+		{
+			channel[i].data = rgba + i;
+			channel[i].pitch = pitch;
+		}
+	}
+	
+	void reset()
+	{
+		sx = 0;
+		sy = 0;
+		
+		for (int i = 0; i < 4; ++i)
+		{
+			channel[i] = Channel();
+		}
 	}
 };
 
@@ -147,7 +235,7 @@ enum VfxPlugType
 	kVfxPlugType_String,
 	kVfxPlugType_Color,
 	kVfxPlugType_Image,
-	kVfxPlugType_Surface,
+	kVfxPlugType_ImageCpu,
 	kVfxPlugType_Trigger
 };
 
@@ -240,10 +328,10 @@ struct VfxPlug
 		return (VfxImageBase*)mem;
 	}
 	
-	Surface * getSurface() const
+	VfxImageCpu * getImageCpu() const
 	{
-		Assert(type == kVfxPlugType_Surface);
-		return *((Surface**)mem);
+		Assert(type == kVfxPlugType_ImageCpu);
+		return (VfxImageCpu*)mem;
 	}
 	
 	VfxTriggerData & getTriggerData() const
@@ -512,14 +600,14 @@ struct VfxNodeBase
 			return plug->getImage();
 	}
 	
-	const Surface * getInputSurface(const int index, const Surface * defaultValue) const
+	const VfxImageCpu * getInputImageCpu(const int index, const VfxImageCpu * defaultValue) const
 	{
 		const VfxPlug * plug = tryGetInput(index);
 		
 		if (plug == nullptr || !plug->isConnected())
 			return defaultValue;
 		else
-			return plug->getSurface();
+			return plug->getImageCpu();
 	}
 	
 	const VfxTriggerData * getInputTriggerData(const int index) const
