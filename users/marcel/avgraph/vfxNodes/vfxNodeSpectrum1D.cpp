@@ -13,12 +13,7 @@ VfxNodeSpectrum1D::VfxNodeSpectrum1D()
 
 VfxNodeSpectrum1D::~VfxNodeSpectrum1D()
 {
-	if (texture != 0)
-	{
-		glDeleteTextures(1, &texture);
-		texture = 0;
-		checkErrorGL();
-	}
+	freeTexture();
 }
 
 void VfxNodeSpectrum1D::tick(const float dt)
@@ -57,8 +52,6 @@ void VfxNodeSpectrum1D::tick(const float dt)
 	glBindTexture(GL_TEXTURE_2D, restoreTexture);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
 	checkErrorGL();
-	
-	imageOutput.texture = texture;
 }
 
 void VfxNodeSpectrum1D::init(const GraphNode & node)
@@ -70,12 +63,7 @@ void VfxNodeSpectrum1D::init(const GraphNode & node)
 
 void VfxNodeSpectrum1D::allocateTexture(const int size)
 {
-	if (texture != 0)
-	{
-		glDeleteTextures(1, &texture);
-		texture = 0;
-		checkErrorGL();
-	}
+	freeTexture();
 	
 	glGenTextures(1, &texture);
 	checkErrorGL();
@@ -119,4 +107,16 @@ void VfxNodeSpectrum1D::allocateTexture(const int size)
 			
 	glBindTexture(GL_TEXTURE_2D, restoreTexture);
 	checkErrorGL();
+}
+
+void VfxNodeSpectrum1D::freeTexture()
+{
+	if (texture != 0)
+	{
+		glDeleteTextures(1, &texture);
+		texture = 0;
+		checkErrorGL();
+		
+		imageOutput.texture = 0;
+	}
 }

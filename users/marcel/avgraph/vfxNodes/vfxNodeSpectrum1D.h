@@ -29,4 +29,5 @@ struct VfxNodeSpectrum1D : VfxNodeBase
 	virtual void init(const GraphNode & node) override;
 	
 	void allocateTexture(const int size);
+	void freeTexture();
 };

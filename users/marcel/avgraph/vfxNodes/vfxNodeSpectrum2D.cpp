@@ -67,8 +67,6 @@ void VfxNodeSpectrum2D::tick(const float dt)
 		free(values);
 		values = nullptr;
 	}
-	
-	imageOutput.texture = texture;
 }
 
 void VfxNodeSpectrum2D::init(const GraphNode & node)
@@ -130,6 +128,8 @@ void VfxNodeSpectrum2D::allocateTexture(const int sx, const int sy)
 			
 	glBindTexture(GL_TEXTURE_2D, restoreTexture);
 	checkErrorGL();
+	
+	imageOutput.texture = texture;
 }
 
 void VfxNodeSpectrum2D::freeTexture()
@@ -140,4 +140,6 @@ void VfxNodeSpectrum2D::freeTexture()
 	
 	textureSx = 0;
 	textureSy = 0;
+	
+	imageOutput.texture = 0;
 }
