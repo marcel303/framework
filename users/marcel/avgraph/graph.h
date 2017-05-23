@@ -633,6 +633,8 @@ struct GraphEdit : GraphEditConnection
 		kState_InputSocketConnect,
 		kState_OutputSocketConnect,
 		kState_NodeResize,
+		kState_TouchDrag,
+		kState_TouchZoom,
 		kState_Hidden
 	};
 	
@@ -828,6 +830,18 @@ struct GraphEdit : GraphEditConnection
 		}
 	};
 	
+	struct Touches
+	{
+		uint64_t finger1;
+		uint64_t finger2;
+		
+		Touches()
+			: finger1(0)
+			, finger2(0)
+		{
+		}
+	};
+	
 	// UI
 	
 	struct Notification
@@ -864,6 +878,8 @@ struct GraphEdit : GraphEditConnection
 	SocketConnect socketConnect;
 	NodeResize nodeResize;
 	
+	Touches touches;
+	
 	GraphEditMouse mousePosition;
 	
 	DragAndZoom dragAndZoom;
@@ -895,6 +911,7 @@ struct GraphEdit : GraphEditConnection
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
 	
 	bool tick(const float dt);
+	bool tickTouches();
 	void nodeSelectEnd();
 	void socketConnectEnd();
 	

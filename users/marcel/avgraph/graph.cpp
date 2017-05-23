@@ -2261,6 +2261,13 @@ bool GraphEdit::tick(const float dt)
 				break;
 			}
 			
+			// touches
+			
+			if (tickTouches())
+			{
+				break;
+			}
+			
 			// drag and zoom
 			
 			if (keyboard.isDown(SDLK_LCTRL) || mouse.isDown(BUTTON_RIGHT))
@@ -2476,6 +2483,22 @@ bool GraphEdit::tick(const float dt)
 			}
 		}
 		break;
+		
+	case kState_TouchDrag:
+		{
+			tickTouches();
+			
+			dragAndZoom.tick(dt);
+		}
+		break;
+		
+	case kState_TouchZoom:
+		{
+			tickTouches();
+			
+			dragAndZoom.tick(dt);
+		}
+		break;
 			
 	case kState_Hidden:
 		{
@@ -2534,6 +2557,152 @@ bool GraphEdit::tick(const float dt)
 	SDL_SetCursor(cursor);
 	
 	return inputIsCaptured;
+}
+
+bool GraphEdit::tickTouches()
+{
+	const State oldState = state;
+	
+	for (auto & event : framework.events)
+	{
+		if (event.type == SDL_FINGERDOWN)
+		{
+			logDebug("touch down: fingerId=%d", event.tfinger.fingerId);
+			
+			if (state == kState_Idle)
+			{
+				Assert(touches.finger2 == 0);
+				
+				if (touches.finger1 == 0)
+					touches.finger1 = event.tfinger.fingerId;
+				else
+					touches.finger2 = event.tfinger.fingerId;
+				
+				if (touches.finger1 != 0 && touches.finger2 != 0)
+				{
+					logDebug("touch down: Idle -> TouchZoom");
+					
+					state = kState_TouchZoom;
+				}
+			}
+			else if (state == kState_TouchDrag)
+			{
+				Assert(touches.finger1 != 0);
+				Assert(touches.finger2 == 0);
+				
+				touches.finger2 = event.tfinger.fingerId;
+				
+				logDebug("touch down: TouchDrag -> TouchZoom");
+				
+				state = kState_TouchZoom;
+			}
+			else
+			{
+				// ignore touch event
+			}
+		}
+		else if (event.type == SDL_FINGERUP)
+		{
+			logDebug("touch up: fingerId=%d", event.tfinger.fingerId);
+			
+			if (state == kState_Idle)
+			{
+				if (event.tfinger.fingerId == touches.finger1)
+				{
+					Assert(touches.finger1 != 0);
+					Assert(touches.finger2 == 0);
+					
+					touches.finger1 = 0;
+					
+					logDebug("touch down: Idle -> Idle");
+					
+					state = kState_Idle;
+				}
+			}
+			else if (state == kState_TouchDrag)
+			{
+				if (event.tfinger.fingerId == touches.finger1)
+				{
+					Assert(touches.finger1 != 0);
+					Assert(touches.finger2 == 0);
+				
+					touches.finger1 = 0;
+					
+					logDebug("touch down: TouchDrag -> Idle");
+					
+					state = kState_Idle;
+				}
+			}
+			else if (state == kState_TouchZoom)
+			{
+				if (event.tfinger.fingerId == touches.finger1)
+				{
+					Assert(touches.finger1 != 0);
+					Assert(touches.finger2 != 0);
+				
+					touches.finger1 = touches.finger2;
+					touches.finger2 = 0;
+					
+					logDebug("touch down: TouchZoom -> TouchDrag");
+					
+					state = kState_TouchDrag;
+				}
+				else if (event.tfinger.fingerId == touches.finger2)
+				{
+					Assert(touches.finger1 != 0);
+					Assert(touches.finger2 != 0);
+				
+					touches.finger2 = 0;
+					
+					logDebug("touch down: TouchZoom -> TouchDrag");
+					
+					state = kState_TouchDrag;
+				}
+			}
+		}
+		else if (event.type == SDL_FINGERMOTION)
+		{
+			if (state == kState_TouchDrag)
+			{
+				Assert(touches.finger1 != 0);
+				Assert(touches.finger2 == 0);
+				
+				if (event.tfinger.fingerId == touches.finger1)
+				{
+					const float sx = 1000.f;
+					const float sy = 1000.f;
+					
+					dragAndZoom.focusX += event.tfinger.dx * sx;
+					dragAndZoom.focusY += event.tfinger.dy * sy;
+					
+					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
+					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
+				}
+			}
+			else if (state == kState_TouchZoom)
+			{
+				Assert(touches.finger1 != 0);
+				Assert(touches.finger2 != 0);
+				
+				if (event.tfinger.fingerId == touches.finger1 ||
+					event.tfinger.fingerId == touches.finger2)
+				{
+					// todo : funky math
+					
+					const float sx = 1000.f;
+					const float sy = 1000.f;
+					
+					dragAndZoom.focusX += event.tfinger.dx * sx;
+					dragAndZoom.focusY += event.tfinger.dy * sy;
+					
+					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
+					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
+				}
+			}
+		}
+	}
+	
+	return state != oldState;
 }
 
 void GraphEdit::nodeSelectEnd()
@@ -3002,9 +3171,13 @@ void GraphEdit::draw() const
 		break;
 		
 	case kState_NodeResize:
-		{
-			break;
-		}
+		break;
+		
+	case kState_TouchDrag:
+		break;
+		
+	case kState_TouchZoom:
+		break;
 		
 	case kState_Hidden:
 		break;
@@ -3042,6 +3215,12 @@ void GraphEdit::draw() const
 		break;
 		
 	case kState_NodeResize:
+		break;
+		
+	case kState_TouchDrag:
+		break;
+		
+	case kState_TouchZoom:
 		break;
 		
 	case kState_Hidden:
