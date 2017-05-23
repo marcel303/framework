@@ -1835,7 +1835,10 @@ bool GraphEdit::tick(const float dt)
 	
 	bool inputIsCaptured = (state != kState_Idle);
 	
-	inputIsCaptured |= tickTouches();
+	if (inputIsCaptured == false)
+	{
+		inputIsCaptured |= tickTouches();
+	}
 	
 	if (inputIsCaptured == false)
 	{
@@ -1904,6 +1907,10 @@ bool GraphEdit::tick(const float dt)
 			
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
+				const bool appendSelection =
+					keyboard.isDown(SDLK_LSHIFT) ||
+					keyboard.isDown(SDLK_RSHIFT);
+				
 				HitTestResult hitTestResult;
 				
 				if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
@@ -1934,7 +1941,7 @@ bool GraphEdit::tick(const float dt)
 						
 						if (selectedNodes.count(hitTestResult.node->id) == 0)
 						{
-							selectNode(hitTestResult.node->id);
+							selectNode(hitTestResult.node->id, appendSelection == false);
 						}
 						
 						if (hitTestResult.nodeHitTestResult.borderL ||
@@ -1963,7 +1970,7 @@ bool GraphEdit::tick(const float dt)
 					{
 						if (selectedLinks.count(hitTestResult.link->id) == 0)
 						{
-							selectLink(hitTestResult.link->id);
+							selectLink(hitTestResult.link->id, appendSelection == false);
 						}
 					}
 				}
@@ -2788,7 +2795,7 @@ void GraphEdit::socketConnectEnd()
 		
 		graph->addLink(link, clearInputDuplicates);
 		
-		selectLink(link.id);
+		selectLink(link.id, true);
 	}
 	else if (socketConnect.dstNodeId != kGraphNodeIdInvalid)
 	{
@@ -2892,7 +2899,7 @@ bool GraphEdit::tryAddNode(const std::string & typeName, const int x, const int 
 		
 		if (select)
 		{
-			selectNode(node.id);
+			selectNode(node.id, true);
 		}
 		
 		return true;
@@ -2932,27 +2939,35 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 		
 		if (select)
 		{
-			selectNode(node.id);
+			selectNode(node.id, true);
 		}
 		
 		return true;
 	}
 }
 
-void GraphEdit::selectNode(const GraphNodeId nodeId)
+void GraphEdit::selectNode(const GraphNodeId nodeId, const bool clearSelection)
 {
 	Assert(selectedNodes.count(nodeId) == 0);
-	selectedNodes.clear();
-	selectedLinks.clear();
+	
+	if (clearSelection)
+	{
+		selectedNodes.clear();
+		selectedLinks.clear();
+	}
 	
 	selectedNodes.insert(nodeId);
 }
 
-void GraphEdit::selectLink(const GraphLinkId linkId)
+void GraphEdit::selectLink(const GraphLinkId linkId, const bool clearSelection)
 {
 	Assert(selectedLinks.count(linkId) == 0);
-	selectedNodes.clear();
-	selectedLinks.clear();
+	
+	if (clearSelection)
+	{
+		selectedNodes.clear();
+		selectedLinks.clear();
+	}
 	
 	selectedLinks.insert(linkId);
 }
