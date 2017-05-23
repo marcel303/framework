@@ -2284,92 +2284,10 @@ static void testDotDetector()
 			checkErrorGL();
 		#endif
 			
-		#if 1
 			const int treshold = tresholdFunction == 0 ? 255 - tresholdValue : tresholdValue;
 			const DotDetector::TresholdTest test = tresholdFunction == 0 ? DotDetector::kTresholdTest_GreaterEqual : DotDetector::kTresholdTest_LessEqual;
 			
 			DotDetector::treshold(surfaceData, maskedData, sx, sy, test, treshold);
-		#else
-			// creste treshold mask
-			
-			const uint8_t * __restrict surfaceDataItr = surfaceData;
-			      uint8_t * __restrict maskedDataItr = maskedData;
-			
-			if (tresholdFunction == 0)
-			{
-				const uint8_t treshold = 255 - tresholdValue;
-				
-				const int numPixels = sx * sy;
-				
-			#if USE_SSE2
-				const __m128i tresholdVec = _mm_set1_epi8(treshold);
-				
-				const int numPixels16 = numPixels >> 4;
-				
-				for (int i = 0; i < numPixels16; ++i)
-				{
-					const __m128i surfaceVec = _mm_loadu_si128((__m128i*)surfaceDataItr);
-					const __m128i maskVec = _mm_cmpge_epu8(surfaceVec, tresholdVec);
-					
-					_mm_storeu_si128((__m128i*)maskedDataItr, maskVec);
-					
-					surfaceDataItr += 16;
-					maskedDataItr += 16;
-				}
-				
-				for (int i = numPixels16 << 4; i < numPixels; ++i)
-				{
-					const uint8_t value = *surfaceDataItr++;
-					
-					*maskedDataItr++ = value >= treshold ? 1 : 0;
-				}
-			#else
-				for (int i = 0; i < numPixels; ++i)
-				{
-					const uint8_t value = *surfaceDataItr++;
-					
-					*maskedDataItr++ = value >= treshold ? 1 : 0;
-				}
-			#endif
-			}
-			else
-			{
-				const uint8_t treshold = tresholdValue;
-				
-				const int numPixels = sx * sy;
-				
-			#if USE_SSE2
-				const __m128i tresholdVec = _mm_set1_epi8(treshold);
-				
-				const int numPixels16 = numPixels >> 4;
-				
-				for (int i = 0; i < numPixels16; ++i)
-				{
-					const __m128i surfaceVec = _mm_loadu_si128((__m128i*)surfaceDataItr);
-					const __m128i maskVec = _mm_cmple_epu8(surfaceVec, tresholdVec);
-					
-					_mm_storeu_si128((__m128i*)maskedDataItr, maskVec);
-					
-					surfaceDataItr += 16;
-					maskedDataItr += 16;
-				}
-				
-				for (int i = numPixels16 << 4; i < numPixels; ++i)
-				{
-					const uint8_t value = *surfaceDataItr++;
-					
-					*maskedDataItr++ = value <= treshold ? 1 : 0;
-				}
-			#else
-				for (int i = 0; i < numPixels; ++i)
-				{
-					const uint8_t value = *surfaceDataItr++;
-					
-					*maskedDataItr++ = value <= treshold ? 1 : 0;
-				}
-			#endif
-			}
-		#endif
 			
 		#if USE_READPIXELS_OPTIMIZE
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
