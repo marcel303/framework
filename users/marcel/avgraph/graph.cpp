@@ -1769,8 +1769,6 @@ bool GraphEdit::tick(const float dt)
 		mousePosition.y = dstMousePosition[1];
 	}
 	
-	tickTouches();
-	
 	if (realTimeConnection != nullptr)
 	{
 		bool isValid = false;
@@ -1836,6 +1834,8 @@ bool GraphEdit::tick(const float dt)
 	//
 	
 	bool inputIsCaptured = (state != kState_Idle);
+	
+	inputIsCaptured |= tickTouches();
 	
 	if (inputIsCaptured == false)
 	{
@@ -2663,8 +2663,8 @@ bool GraphEdit::tickTouches()
 					const float sx = 1000.f;
 					const float sy = 1000.f;
 					
-					dragAndZoom.focusX += event.tfinger.dx * sx;
-					dragAndZoom.focusY += event.tfinger.dy * sy;
+					dragAndZoom.focusX -= event.tfinger.dx * sx;
+					dragAndZoom.focusY -= event.tfinger.dy * sy;
 					
 					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
 					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
@@ -2683,8 +2683,8 @@ bool GraphEdit::tickTouches()
 					const float sx = 1000.f;
 					const float sy = 1000.f;
 					
-					dragAndZoom.focusX += event.tfinger.dx * sx;
-					dragAndZoom.focusY += event.tfinger.dy * sy;
+					dragAndZoom.focusX -= event.tfinger.dx * sx;
+					dragAndZoom.focusY -= event.tfinger.dy * sy;
 					
 					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
 					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
