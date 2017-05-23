@@ -48,14 +48,14 @@ void DotDetector::treshold(const uint8_t * __restrict src, uint8_t * __restrict 
 		{
 			const uint8_t value = *srcItr++;
 			
-			*dstItr++ = value >= tresholdValue ? 1 : 0;
+			*dstItr++ = value >= tresholdValue ? 0xff : 0x00;
 		}
 	#else
 		for (int i = 0; i < numPixels; ++i)
 		{
 			const uint8_t value = *srcItr++;
 			
-			*dstItr++ = value >= tresholdValue ? 1 : 0;
+			*dstItr++ = value >= tresholdValue ? 0xff : 0x00;
 		}
 	#endif
 	}
@@ -83,14 +83,14 @@ void DotDetector::treshold(const uint8_t * __restrict src, uint8_t * __restrict 
 		{
 			const uint8_t value = *srcItr++;
 			
-			*dstItr++ = value <= tresholdValue ? 1 : 0;
+			*dstItr++ = value <= tresholdValue ? 0xff : 0x00;
 		}
 	#else
 		for (int i = 0; i < numPixels; ++i)
 		{
 			const uint8_t value = *srcItr++;
 			
-			*dstItr++ = value <= tresholdValue ? 1 : 0;
+			*dstItr++ = value <= tresholdValue ? 0xff : 0x00;
 		}
 	#endif
 	}
