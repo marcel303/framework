@@ -26,40 +26,47 @@ void VfxNodeSpectrum2D::tick(const float dt)
 	if (image == nullptr)
 	{
 		freeTexture();
-		return;
 	}
-	
-	//
-
-	if (texture == 0 || textureSx != image->sx || textureSy != image->sy)
+	else if (texture == 0 || textureSx != image->sx || textureSy != image->sy)
 	{
-		allocateTexture(image->sx, image->sy);
+		if (image->sx == 0 || image->sy == 0)
+			freeTexture();
+		else
+			allocateTexture(image->sx, image->sy);
 	}
 	
-	float * values = (float*)alloca(sizeof(float) * image->sx * image->sy);
-	for (int i = 0; i < image->sx * image->sy; ++i)
-		values[i] = random(-1.f, +1.f);
-	
-	// capture current OpenGL states before we change them
-	
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	GLint restoreUnpack;
-	glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
-	checkErrorGL();
-	
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	checkErrorGL();
-	
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, image->sx, image->sy, GL_RED, GL_FLOAT, values);
-	checkErrorGL();
-	
-	// restore previous OpenGL states
-	
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
-	checkErrorGL();
+	if (texture != 0)
+	{
+		float * values = (float*)malloc(sizeof(float) * image->sx * image->sy);
+		for (int i = 0; i < image->sx * image->sy; ++i)
+			values[i] = random(-1.f, +1.f);
+		
+		// capture current OpenGL states before we change them
+		
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		GLint restoreUnpack;
+		glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		checkErrorGL();
+		
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, image->sx, image->sy, GL_RED, GL_FLOAT, values);
+		checkErrorGL();
+		
+		// restore previous OpenGL states
+		
+		glBindTexture(GL_TEXTURE_2D, restoreTexture);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
+		checkErrorGL();
+		
+		//
+		
+		free(values);
+		values = nullptr;
+	}
 	
 	imageOutput.texture = texture;
 }
