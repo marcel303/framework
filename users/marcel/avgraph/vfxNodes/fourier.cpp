@@ -1,4 +1,5 @@
 #include "fourier.h"
+#include <alloca.h>
 #include <cmath>
 #include <string.h>
 
@@ -9,7 +10,7 @@ void Fourier::fft1D(
 	const int transformSize,
 	const bool inverse, const bool normalize)
 {
-	const int numBits = Fourier::integerLog2(transformSize);
+	const int numBits = integerLog2(transformSize);
 	
 	// pad the data with zeroes
 	
@@ -78,7 +79,7 @@ void Fourier::fft1D_slow(
 	const int size, const int transformSize,
 	const bool inverse, const bool normalize)
 {
-	const int numBits = Fourier::integerLog2(transformSize);
+	const int numBits = integerLog2(transformSize);
 	
 	// create temporary storage needed for index reversal
 	
@@ -117,9 +118,11 @@ void Fourier::fft2D(
 	double * __restrict dimag,
 	const int sx, const int transformSx,
 	const int sy, const int transformSy,
-	const bool inverse, const bool normalize)
+	const bool inverse, const bool normalize,
+	double * __restrict _creal,
+	double * __restrict _cimag)
 {
-	const int numBitsY = Fourier::integerLog2(transformSy);
+	const int numBitsY = integerLog2(transformSy);
 	
 	// perform FFT on each row
 	
@@ -128,14 +131,32 @@ void Fourier::fft2D(
 		double * __restrict rreal = &dreal[y * transformSx];
 		double * __restrict rimag = &dimag[y * transformSx];
 		
-		Fourier::fft1D(rreal, rimag, sx, transformSx, false, false);
+		fft1D(rreal, rimag, sx, transformSx, false, false);
 	}
 	
 	// perform FFT on each column
 	
-	// complex values for current column
-	double * creal = new double[transformSy];
-	double * cimag = new double[transformSy];
+	double * __restrict creal;
+	double * __restrict cimag;
+	
+	double * temp = nullptr;
+	
+	if (_creal && _cimag)
+	{
+		creal = _creal;
+		cimag = _cimag;
+	}
+	else
+	{
+		temp = new double[transformSy * 2];
+		
+		creal = temp + transformSy * 0;
+		cimag = temp + transformSy * 1;
+	}
+	
+	int * yReversedLUT = (int*)alloca(sizeof(int) * sy);
+	for (int y = 0; y < sy; ++y)
+		yReversedLUT[y] = reverseBits(y, numBitsY);
 	
 	for (int x = 0; x < transformSx; ++x)
 	{
@@ -144,7 +165,7 @@ void Fourier::fft2D(
 		
 		for (int y = 0; y < sy; ++y)
 		{
-			const int yReversed = Fourier::reverseBits(y, numBitsY);
+			const int yReversed = yReversedLUT[y];
 			
 			creal[yReversed] = *drealc;
 			cimag[yReversed] = *dimagc;
@@ -153,7 +174,7 @@ void Fourier::fft2D(
 			dimagc += transformSx;
 		}
 		
-		Fourier::fft1D(creal, cimag, sy, transformSy, false, false);
+		fft1D(creal, cimag, sy, transformSy, false, false);
 		
 		//
 		
@@ -170,11 +191,8 @@ void Fourier::fft2D(
 		}
 	}
 	
-	delete[] creal;
-	creal = nullptr;
-	
-	delete[] cimag;
-	cimag = nullptr;
+	delete[] temp;
+	temp = nullptr;
 }
 
 void Fourier::fft2D_slow(
@@ -182,14 +200,20 @@ void Fourier::fft2D_slow(
 	double * __restrict dimag,
 	const int sx, const int transformSx,
 	const int sy, const int transformSy,
-	const bool inverse, const bool normalize)
+	const bool inverse, const bool normalize,
+	double * __restrict creal,
+	double * __restrict cimag)
 {
-	const int numBitsX = Fourier::integerLog2(transformSx);
+	const int numBitsX = integerLog2(transformSx);
 	
 	double * temp = new double[transformSx * transformSy * 2];
 	
 	double * __restrict treal = temp + transformSx * transformSy * 0;
 	double * __restrict timag = temp + transformSx * transformSy * 1;
+	
+	int * xReversedLUT = (int*)alloca(sizeof(int) * sx);
+	for (int x = 0; x < sx; ++x)
+		xReversedLUT[x] = reverseBits(x, numBitsX);
 	
 	for (int y = 0; y < sy; ++y)
 	{
@@ -201,26 +225,17 @@ void Fourier::fft2D_slow(
 		
 		for (int x = 0; x < sx; ++x)
 		{
-			const int xReversed = reverseBits(x, numBitsX);
+			const int xReversed = xReversedLUT[x];
 		
 			dstReal[xReversed] = srcReal[x];
 			dstImag[xReversed] = srcImag[x];
 		}
 	}
 	
-	fft2D(treal, timag, sx, transformSx, sy, transformSy, inverse, normalize);
+	fft2D(treal, timag, sx, transformSx, sy, transformSy, inverse, normalize, creal, cimag);
 	
-	for (int y = 0; y < transformSy; ++y)
-	{
-		const double * __restrict srcReal = treal + y * transformSx;
-		const double * __restrict srcImag = timag + y * transformSx;
-		
-		double * __restrict dstReal = dreal + y * transformSx;
-		double * __restrict dstImag = dimag + y * transformSx;
-		
-		memcpy(dstReal, srcReal, sizeof(double) * transformSx);
-		memcpy(dstImag, srcImag, sizeof(double) * transformSx);
-	}
+	memcpy(dreal, treal, sizeof(double) * transformSx * transformSy);
+	memcpy(dimag, timag, sizeof(double) * transformSx * transformSy);
 	
 	delete[] temp;
 	temp = nullptr;

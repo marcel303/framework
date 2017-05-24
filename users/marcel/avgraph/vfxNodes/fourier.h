@@ -89,13 +89,17 @@ struct Fourier
 		double * __restrict dimag,
 		const int sx, const int transformSx,
 		const int sy, const int transformSy,
-		const bool inverse, const bool normalize);
+		const bool inverse, const bool normalize,
+		double * __restrict creal = nullptr,
+		double * __restrict cimag = nullptr);
 	static void fft2D_slow(
 		double * __restrict dreal,
 		double * __restrict dimag,
 		const int sx, const int transformSx,
 		const int sy, const int transformSy,
-		const bool inverse, const bool normalize);
+		const bool inverse, const bool normalize,
+		double * __restrict creal = nullptr,
+		double * __restrict cimag = nullptr);
 
 	static inline int reverseBits(const int value, const int numBits)
 	{
