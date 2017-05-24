@@ -238,6 +238,82 @@ struct VfxImageCpu
 		}
 	}
 	
+	static void interleave1(const Channel * channel1, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
+	{
+		const int dstPitch = _dstPitch == 0 ? sx * 1 : _dstPitch;
+		
+		for (int y = 0; y < sy; ++y)
+		{
+			const uint8_t * __restrict src1 = channel1->data + y * channel1->pitch;
+				  uint8_t * __restrict dst  = _dst + y * dstPitch;
+			
+			if (channel1->stride == 1)
+			{
+				memcpy(dst, src1, sx);
+			}
+			else
+			{
+				for (int x = 0; x < sx; ++x)
+				{
+					*dst++ = *src1;
+					
+					src1 += channel1->stride;
+				}
+			}
+		}
+	}
+	
+	static void interleave3(const Channel * channel1, const Channel * channel2, const Channel * channel3, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
+	{
+		const int dstPitch = _dstPitch == 0 ? sx * 3 : _dstPitch;
+		
+		for (int y = 0; y < sy; ++y)
+		{
+			const uint8_t * __restrict src1 = channel1->data + y * channel1->pitch;
+			const uint8_t * __restrict src2 = channel2->data + y * channel2->pitch;
+			const uint8_t * __restrict src3 = channel3->data + y * channel3->pitch;
+				  uint8_t * __restrict dst  = _dst + y * dstPitch;
+			
+			for (int x = 0; x < sx; ++x)
+			{
+				*dst++ = *src1;
+				*dst++ = *src2;
+				*dst++ = *src3;
+				
+				src1 += channel1->stride;
+				src2 += channel2->stride;
+				src3 += channel3->stride;
+			}
+		}
+	}
+	
+	static void interleave4(const Channel * channel1, const Channel * channel2, const Channel * channel3, const Channel * channel4, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
+	{
+		const int dstPitch = _dstPitch == 0 ? sx * 4 : _dstPitch;
+		
+		for (int y = 0; y < sy; ++y)
+		{
+			const uint8_t * __restrict src1 = channel1->data + y * channel1->pitch;
+			const uint8_t * __restrict src2 = channel2->data + y * channel2->pitch;
+			const uint8_t * __restrict src3 = channel3->data + y * channel3->pitch;
+			const uint8_t * __restrict src4 = channel4->data + y * channel4->pitch;
+				  uint8_t * __restrict dst  = _dst + y * dstPitch;
+			
+			for (int x = 0; x < sx; ++x)
+			{
+				*dst++ = *src1;
+				*dst++ = *src2;
+				*dst++ = *src3;
+				*dst++ = *src4;
+				
+				src1 += channel1->stride;
+				src2 += channel2->stride;
+				src3 += channel3->stride;
+				src4 += channel4->stride;
+			}
+		}
+	}
+	
 	void reset()
 	{
 		sx = 0;
