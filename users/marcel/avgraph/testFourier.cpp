@@ -1,100 +1,70 @@
 #include "framework.h"
 #include "image.h"
 #include "Timer.h"
+#include "vfxNodes/fourier.h"
 #include <math.h>
 
 extern int GFX_SX;
 extern int GFX_SY;
 
-static void fft(double * dreal, double * dimag, const int size, const int log2n, const bool inverse, const bool normalize)
+void testFourier1d()
 {
-	const double pi2 = M_PI * 2.0;
-	const double scale = 1.0 / size;
+	// perform fast fourier transform on 64 samples of complex data
 	
-	int n = 1;
+	const int kN = 64;
+	const int kLog2N = Fourier::integerLog2(kN);
 	
-	for (int k = 0; k < log2n; ++k)
+	double dreal[2][kN];
+	double dimag[2][kN];
+	
+	int a = 0; // we need to reverse bits of data indices before doing the fft. to do so we ping-pong between two sets of data, dreal/dimag[0] and dreal/dimag[1]
+	
+	for (int i = 0; i < kN; ++i)
 	{
-		const int n2 = n;
+		dreal[a][i] = std::cos(i / 100.0);
+		dimag[a][i] = 0.0;
+	}
+	
+	for (int i = 0; i < kN; ++i)
+	{
+		logDebug("[%03d] inv=1: dreal=%g, dimag=%g", i, dreal[a][i], dimag[a][i]);
+	}
+	
+	for (int i = 0; i < kN; ++i)
+	{
+		const int sindex = i;
+		const int dindex = Fourier::reverseBits(i, kLog2N);
 		
-		n <<= 1;
+		dreal[1 - a][dindex] = dreal[a][sindex];
+		dimag[1 - a][dindex] = dimag[a][sindex];
+	}
+	
+	a = 1 - a;
+	
+	Fourier::fft(dreal[a], dimag[a], kN, kLog2N, false, false);
+	
+	for (int i = 0; i < kN; ++i)
+	{
+		logDebug("[%03d] inv=0: dreal=%g, dimag=%g", i, dreal[a][i], dimag[a][i]);
+	}
+	
+	for (int i = 0; i < kN; ++i)
+	{
+		const int sindex = i;
+		const int dindex = Fourier::reverseBits(i, kLog2N);
 		
-		const double angle = (inverse) ? pi2 / n : -pi2 / n;
-		double wtmp = std::sin(0.5 * angle);
-		double wpr = -2.0 * wtmp * wtmp;
-		double wpi = std::sin(angle);
-		double wr = 1.0;
-		double wi = 0.0;
-
-		for (int m = 0; m < n2; ++m)
-		{
-			for (int i = m; i < size; i += n)
-			{
-				const int j = i + n2;
-				
-				const double tcreal = wr * dreal[j] - wi * dimag[j];
-				const double tcimag = wr * dimag[j] + wi * dreal[j];
-				
-				dreal[j] = dreal[i] - tcreal;
-				dimag[j] = dimag[i] - tcimag;
-				
-				dreal[i] += tcreal;
-				dimag[i] += tcimag;
-			}
-			
-			wtmp = wr;
-			wr = wtmp * wpr - wi * wpi + wr;
-			wi = wi * wpr + wtmp * wpi + wi;
-		}
+		dreal[1 - a][dindex] = dreal[a][sindex];
+		dimag[1 - a][dindex] = dimag[a][sindex];
 	}
 	
-	if (normalize)
+	a = 1 - a;
+	
+	Fourier::fft(dreal[a], dimag[a], kN, kLog2N, true, true);
+	
+	for (int i = 0; i < kN; ++i)
 	{
-		for (int i = 0; i < n; ++i)
-		{
-			dreal[i] *= scale;
-			dimag[i] *= scale;
-		}
+		logDebug("[%03d] inv=1: dreal=%g, dimag=%g", i, dreal[a][i], dimag[a][i]);
 	}
-}
-
-static int reverseBits(const int value, const int numBits)
-{
-	int smask = 1 << (numBits - 1);
-	int dmask = 1;
-	
-	int result = 0;
-	
-	for (int i = 0; i < numBits; ++i, smask >>= 1, dmask <<= 1)
-	{
-		if (value & smask)
-			result |= dmask;
-	}
-	
-	return result;
-}
-
-static int upperPowerOf2(int v)
-{
-    v--;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v++;
-    return v;
-}
-
-static int integerLog2(int v)
-{
-	int r = 0;
-	while (v > 1)
-	{
-		v >>= 1;
-		r++;
-	}
-	return r;
 }
 
 void testFourier2d()
@@ -113,69 +83,12 @@ void testFourier2d()
 		return;
 	}
 	
-	// perform fast fourier transform on 64 samples of complex data
-	
-	const int kN = 64;
-	const int kLog2N = integerLog2(kN);
-	
-	double dreal[2][kN];
-	double dimag[2][kN];
-	
-	int a = 0; // we need to reverse bits of data indices before doing the fft. to do so we ping-pong between two sets of data, dreal/dimag[0] and dreal/dimag[1]
-	
-	for (int i = 0; i < kN; ++i)
-	{
-		dreal[a][i] = std::cos(i / 100.0);
-		dimag[a][i] = 0.0;
-	}
-	
-	for (int i = 0; i < kN; ++i)
-	{
-		logDebug("[%03d] inv=1: dreal=%g, dimag=%g", i, dreal[i], dimag[i]);
-	}
-	
-	for (int i = 0; i < kN; ++i)
-	{
-		const int sindex = i;
-		const int dindex = reverseBits(i, kLog2N);
-		
-		dreal[1 - a][dindex] = dreal[a][sindex];
-		dimag[1 - a][dindex] = dimag[a][sindex];
-	}
-	
-	a = 1 - a;
-	
-	fft(dreal[a], dimag[a], kN, kLog2N, false, false);
-	
-	for (int i = 0; i < kN; ++i)
-	{
-		logDebug("[%03d] inv=0: dreal=%g, dimag=%g", i, dreal[a][i], dimag[a][i]);
-	}
-	
-	for (int i = 0; i < kN; ++i)
-	{
-		const int sindex = i;
-		const int dindex = reverseBits(i, kLog2N);
-		
-		dreal[1 - a][dindex] = dreal[a][sindex];
-		dimag[1 - a][dindex] = dimag[a][sindex];
-	}
-	
-	a = 1 - a;
-	
-	fft(dreal[a], dimag[a], kN, kLog2N, true, true);
-	
-	for (int i = 0; i < kN; ++i)
-	{
-		logDebug("[%03d] inv=1: dreal=%g, dimag=%g", i, dreal[a][i], dimag[a][i]);
-	}
-	
 	// perform 2d fast fourier transform on image data
 
 	const int imageSx = image->sx;
 	const int imageSy = image->sy;
-	const int transformSx = upperPowerOf2(imageSx);
-	const int transformSy = upperPowerOf2(imageSy);
+	const int transformSx = Fourier::upperPowerOf2(imageSx);
+	const int transformSy = Fourier::upperPowerOf2(imageSy);
 
 	double * freal = new double[transformSx * transformSy];
 	double * fimag = new double[transformSx * transformSy];
@@ -185,8 +98,8 @@ void testFourier2d()
 		//        on all samples at once, or first for each row, and then for each column
 		//        of the already transformed results of the previous row-passes
 		
-		const int numBitsX = integerLog2(transformSx);
-		const int numBitsY = integerLog2(transformSy);
+		const int numBitsX = Fourier::integerLog2(transformSx);
+		const int numBitsY = Fourier::integerLog2(transformSy);
 		
 		auto fast_t1 = g_TimerRT.TimeUS_get();
 		
@@ -197,26 +110,28 @@ void testFourier2d()
 			double * __restrict rreal = &freal[y * transformSx];
 			double * __restrict rimag = &fimag[y * transformSx];
 			
-			auto line = image->getLine(y);
+			const ImageData::Pixel * __restrict line = image->getLine(y);
+			
+			// todo : do memset on rimag instead of explicitly setting every element to 0.0
 			
 			for (int x = 0; x < imageSx; ++x)
 			{
 				const auto & pixel = line[x];
 				const double value = (pixel.r + pixel.g + pixel.b) / 3.0;
 				
-				const int index = reverseBits(x, numBitsX);
+				const int index = Fourier::reverseBits(x, numBitsX);
 				rreal[index] = value;
 				rimag[index] = 0.0;
 			}
 			
 			for (int x = imageSx; x < transformSx; ++x)
 			{
-				const int index = reverseBits(x, numBitsX);
+				const int index = Fourier::reverseBits(x, numBitsX);
 				rreal[index] = 0.0;
 				rimag[index] = 0.0;
 			}
 			
-			fft(rreal, rimag, transformSx, numBitsX, false, false);
+			Fourier::fft(rreal, rimag, transformSx, numBitsX, false, false);
 		}
 		
 		// perform FFT on each column
@@ -232,7 +147,7 @@ void testFourier2d()
 			
 			for (int y = 0; y < imageSy; ++y)
 			{
-				const int index = reverseBits(y, numBitsY);
+				const int index = Fourier::reverseBits(y, numBitsY);
 				
 				creal[index] = *frealc;
 				cimag[index] = *fimagc;
@@ -243,12 +158,12 @@ void testFourier2d()
 			
 			for (int y = imageSy; y < transformSy; ++y)
 			{
-				const int index = reverseBits(y, numBitsY);
+				const int index = Fourier::reverseBits(y, numBitsY);
 				creal[index] = 0.0;
 				cimag[index] = 0.0;
 			}
 			
-			fft(creal, cimag, transformSy, numBitsY, false, false);
+			Fourier::fft(creal, cimag, transformSy, numBitsY, false, false);
 			
 			//
 			
