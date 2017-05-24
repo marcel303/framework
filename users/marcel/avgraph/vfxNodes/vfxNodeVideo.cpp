@@ -1,14 +1,14 @@
 #include "vfxNodeVideo.h"
 #include "../avpaint/video.h"
+#include "mediaplayer_new/MPVideoBuffer.h"
 
 VfxNodeVideo::VfxNodeVideo()
 	: VfxNodeBase()
-	, image(nullptr)
+	, imageOutput()
+	, imageCpuOutput()
 	, mediaPlayer(nullptr)
 	, textureBlack(0)
 {
-	image = new VfxImage_Texture();
-	
 	mediaPlayer = new MediaPlayer();
 	
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -16,7 +16,8 @@ VfxNodeVideo::VfxNodeVideo()
 	addInput(kInput_Transform, kVfxPlugType_Transform);
 	addInput(kInput_Loop, kVfxPlugType_Bool);
 	addInput(kInput_Speed, kVfxPlugType_Float);
-	addOutput(kOutput_Image, kVfxPlugType_Image, image);
+	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
+	addOutput(kOutput_ImageCpu, kVfxPlugType_ImageCpu, &imageCpuOutput);
 	
 	uint32_t pixels[4] = { 0, 0, 0, 0 };
 	textureBlack = createTextureFromRGBA8(pixels, 1, 1, false, true);
@@ -28,9 +29,6 @@ VfxNodeVideo::~VfxNodeVideo()
 	
 	delete mediaPlayer;
 	mediaPlayer = nullptr;
-	
-	delete image;
-	image = nullptr;
 }
 
 void VfxNodeVideo::tick(const float dt)
@@ -56,7 +54,7 @@ void VfxNodeVideo::tick(const float dt)
 		if (mediaPlayer->context->hasBegun)
 			mediaPlayer->presentTime += dt * speed;
 		
-		image->texture = mediaPlayer->getTexture();
+		imageOutput.texture = mediaPlayer->getTexture();
 	}
 	else
 	{
@@ -68,9 +66,18 @@ void VfxNodeVideo::tick(const float dt)
 		}
 	}
 	
-	if (image->texture == 0)
+	if (mediaPlayer->videoFrame != nullptr)
 	{
-		image->texture = textureBlack;
+		imageCpuOutput.setDataRGBA8((uint8_t*)mediaPlayer->videoFrame->m_frameBuffer, mediaPlayer->videoFrame->m_width, mediaPlayer->videoFrame->m_height, 0);
+	}
+	else
+	{
+		imageCpuOutput.reset();
+	}
+	
+	if (imageOutput.texture == 0)
+	{
+		imageOutput.texture = textureBlack;
 	}
 }
 

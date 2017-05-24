@@ -187,6 +187,8 @@ struct VfxImageCpu
 	int sx;
 	int sy;
 	
+	Channel interleaved;
+	
 	Channel channel[4];
 	
 	VfxImageCpu()
@@ -196,18 +198,22 @@ struct VfxImageCpu
 	{
 	}
 	
-	void setDataR8(const uint8_t * r, const int _sx, const int _sy, const int _stride, const int _pitch)
+	void setDataR8(const uint8_t * r, const int _sx, const int _sy, const int _pitch)
 	{
 		sx = _sx;
 		sy = _sy;
 		
-		const int stride = _stride;
+		const int stride = 1;
 		const int pitch = _pitch == 0 ? sx * 1 : _pitch;
+		
+		interleaved.data = r;
+		interleaved.stride = stride;
+		interleaved.pitch = pitch;
 		
 		for (int i = 0; i < 4; ++i)
 		{
 			channel[i].data = r;
-			channel[i].stride = stride;
+			channel[i].stride = 1;
 			channel[i].pitch = pitch;
 		}
 	}
@@ -219,6 +225,10 @@ struct VfxImageCpu
 		
 		const int stride = 4;
 		const int pitch = _pitch == 0 ? sx * 4 : _pitch;
+		
+		interleaved.data = rgba;
+		interleaved.stride = stride;
+		interleaved.pitch = pitch;
 		
 		for (int i = 0; i < 4; ++i)
 		{
@@ -232,6 +242,8 @@ struct VfxImageCpu
 	{
 		sx = 0;
 		sy = 0;
+		
+		interleaved = Channel();
 		
 		for (int i = 0; i < 4; ++i)
 		{

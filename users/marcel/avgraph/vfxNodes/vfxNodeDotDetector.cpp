@@ -146,8 +146,8 @@ void VfxNodeDotDetector::allocateMask(const int sx, const int sy)
 	maskSx = sx;
 	maskSy = sy;
 	
-	lumiOutput.setDataR8(lumi, sx, sy, 1, sx);
-	maskOutput.setDataR8(mask, sx, sy, 1, sx);
+	lumiOutput.setDataR8(lumi, sx, sy, sx);
+	maskOutput.setDataR8(mask, sx, sy, sx);
 }
 
 void VfxNodeDotDetector::freeMask()

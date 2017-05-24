@@ -27,7 +27,12 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	
 	if (channel == kChannel_RGBA)
 	{
-		// todo : convert image data
+		// convert image data
+		
+		// todo : take into account pitch
+		
+		Assert(image->interleaved.stride == 4);
+		imageOutput.texture = createTextureFromRGBA8(image->interleaved.data, image->sx, image->sy, true, true);
 	}
 	else if (channel == kChannel_RGB)
 	{

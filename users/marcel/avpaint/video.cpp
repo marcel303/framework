@@ -121,7 +121,9 @@ void MediaPlayer::close(const bool freeTexture)
 	{
 		stopMediaPlayerThread();
 	}
-
+	
+	videoFrame = nullptr;
+	
 	if (freeTexture)
 	{
 		const int t1 = SDL_GetTicks();
@@ -170,15 +172,13 @@ void MediaPlayer::updateTexture()
 {
 	if (!context->hasBegun)
 	{
-		Assert(texture == 0);
 		return;
 	}
 
 	Assert(context->mpContext.HasBegun());
 
 	const double time = presentTime >= 0.0 ? presentTime : context->mpContext.GetAudioTime();
-
-	MP::VideoFrame * videoFrame = nullptr;
+	
 	bool gotVideo = false;
 	context->mpContext.RequestVideo(time, &videoFrame, gotVideo);
 
@@ -274,7 +274,6 @@ void MediaPlayer::updateAudio()
 {
 	if (!context->hasBegun)
 	{
-		Assert(texture == 0);
 		return;
 	}
 

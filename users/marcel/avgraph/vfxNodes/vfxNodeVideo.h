@@ -16,17 +16,18 @@ struct VfxNodeVideo : VfxNodeBase
 	enum Output
 	{
 		kOutput_Image,
+		kOutput_ImageCpu,
 		kOutput_COUNT
 	};
 	
-	VfxImage_Texture * image;
+	VfxImage_Texture imageOutput;
+	VfxImageCpu imageCpuOutput;
 	
 	MediaPlayer * mediaPlayer;
 	
 	GLuint textureBlack;
 	
 	VfxNodeVideo();
-	
 	virtual ~VfxNodeVideo() override;
 	
 	virtual void tick(const float dt) override;
