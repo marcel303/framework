@@ -7,33 +7,36 @@
 extern int GFX_SX;
 extern int GFX_SY;
 
-void testFourier1d()
+static void testFourier1d_fast()
 {
-	// perform fast fourier transform on 64 samples of complex data
+	logDebug("testFourier1d_fast");
 	
-	const int kN = 64;
-	const int kLog2N = Fourier::integerLog2(kN);
+	// perform fast fourier transform on 48 (64 output) samples of complex data
 	
-	double dreal[2][kN];
-	double dimag[2][kN];
+	const int kSize = 48;
+	const int kTransformSize = 64;
+	const int kNumBits = Fourier::integerLog2(kTransformSize);
+	
+	double dreal[2][kTransformSize];
+	double dimag[2][kTransformSize];
 	
 	int a = 0; // we need to reverse bits of data indices before doing the fft. to do so we ping-pong between two sets of data, dreal/dimag[0] and dreal/dimag[1]
 	
-	for (int i = 0; i < kN; ++i)
+	for (int i = 0; i < kSize; ++i)
 	{
 		dreal[a][i] = std::cos(i / 100.0);
 		dimag[a][i] = 0.0;
 	}
 	
-	for (int i = 0; i < kN; ++i)
+	for (int i = 0; i < kSize; ++i)
 	{
 		logDebug("[%03d] inv=1: dreal=%g, dimag=%g", i, dreal[a][i], dimag[a][i]);
 	}
 	
-	for (int i = 0; i < kN; ++i)
+	for (int i = 0; i < kSize; ++i)
 	{
 		const int sindex = i;
-		const int dindex = Fourier::reverseBits(i, kLog2N);
+		const int dindex = Fourier::reverseBits(i, kNumBits);
 		
 		dreal[1 - a][dindex] = dreal[a][sindex];
 		dimag[1 - a][dindex] = dimag[a][sindex];
@@ -41,17 +44,17 @@ void testFourier1d()
 	
 	a = 1 - a;
 	
-	Fourier::fft(dreal[a], dimag[a], kN, kLog2N, false, false);
+	Fourier::fft1D(dreal[a], dimag[a], kSize, kTransformSize, false, false);
 	
-	for (int i = 0; i < kN; ++i)
+	for (int i = 0; i < kTransformSize; ++i)
 	{
 		logDebug("[%03d] inv=0: dreal=%g, dimag=%g", i, dreal[a][i], dimag[a][i]);
 	}
 	
-	for (int i = 0; i < kN; ++i)
+	for (int i = 0; i < kTransformSize; ++i)
 	{
 		const int sindex = i;
-		const int dindex = Fourier::reverseBits(i, kLog2N);
+		const int dindex = Fourier::reverseBits(i, kNumBits);
 		
 		dreal[1 - a][dindex] = dreal[a][sindex];
 		dimag[1 - a][dindex] = dimag[a][sindex];
@@ -59,12 +62,186 @@ void testFourier1d()
 	
 	a = 1 - a;
 	
-	Fourier::fft(dreal[a], dimag[a], kN, kLog2N, true, true);
+	Fourier::fft1D(dreal[a], dimag[a], kTransformSize, kTransformSize, true, true);
 	
-	for (int i = 0; i < kN; ++i)
+	for (int i = 0; i < kTransformSize; ++i)
 	{
 		logDebug("[%03d] inv=1: dreal=%g, dimag=%g", i, dreal[a][i], dimag[a][i]);
 	}
+}
+
+static void testFourier1d_slow()
+{
+	logDebug("testFourier1d_slow");
+	
+	// perform fast fourier transform on 64 samples of complex data
+	
+	const int kSize = 48;
+	const int kTransformSize = 64;
+	
+	double dreal[kTransformSize];
+	double dimag[kTransformSize];
+	
+	for (int i = 0; i < kSize; ++i)
+	{
+		dreal[i] = std::cos(i / 100.0);
+		dimag[i] = 0.0;
+	}
+	
+	for (int i = 0; i < kSize; ++i)
+	{
+		logDebug("[%03d] inv=1: dreal=%g, dimag=%g", i, dreal[i], dimag[i]);
+	}
+	
+	Fourier::fft1D_slow(dreal, dimag, kSize, kTransformSize, false, false);
+	
+	for (int i = 0; i < kTransformSize; ++i)
+	{
+		logDebug("[%03d] inv=0: dreal=%g, dimag=%g", i, dreal[i], dimag[i]);
+	}
+	
+	Fourier::fft1D_slow(dreal, dimag, kTransformSize, kTransformSize, true, true);
+	
+	for (int i = 0; i < kTransformSize; ++i)
+	{
+		logDebug("[%03d] inv=1: dreal=%g, dimag=%g", i, dreal[i], dimag[i]);
+	}
+}
+
+void testFourier1d()
+{
+	testFourier1d_fast();
+	
+	testFourier1d_slow();
+}
+
+static void doFourier2D_fast(const ImageData * image, double *& dreal, double *& dimag, int & transformSx, int & transformSy, const bool inverse, const bool normalize)
+{
+	const int imageSx = image->sx;
+	const int imageSy = image->sy;
+	transformSx = Fourier::upperPowerOf2(imageSx);
+	transformSy = Fourier::upperPowerOf2(imageSy);
+
+	dreal = new double[transformSx * transformSy];
+	dimag = new double[transformSx * transformSy];
+	
+	const int numBitsX = Fourier::integerLog2(transformSx);
+	
+	// calculate initial data set
+	
+	for (int y = 0; y < imageSy; ++y)
+	{
+		double * __restrict rreal = &dreal[y * transformSx];
+		double * __restrict rimag = &dimag[y * transformSx];
+		
+		const ImageData::Pixel * __restrict line = image->getLine(y);
+		
+		for (int x = 0; x < imageSx; ++x)
+		{
+			const auto & pixel = line[x];
+			const double value = (pixel.r + pixel.g + pixel.b) / 3.0;
+			
+			const int xReversed = Fourier::reverseBits(x, numBitsX);
+			
+			rreal[xReversed] = value;
+			rimag[xReversed] = 0.0;
+		}
+	}
+	
+	Fourier::fft2D(dreal, dimag, imageSx, transformSx, imageSy, transformSy, inverse, normalize);
+}
+
+static void doFourier2D_slow(const ImageData * image, double *& dreal, double *& dimag, int & transformSx, int & transformSy, const bool inverse, const bool normalize)
+{
+	const int imageSx = image->sx;
+	const int imageSy = image->sy;
+	transformSx = Fourier::upperPowerOf2(imageSx);
+	transformSy = Fourier::upperPowerOf2(imageSy);
+
+	dreal = new double[transformSx * transformSy];
+	dimag = new double[transformSx * transformSy];
+	
+	// calculate initial data set
+	
+	for (int y = 0; y < imageSy; ++y)
+	{
+		double * __restrict rreal = &dreal[y * imageSx];
+		double * __restrict rimag = &dimag[y * imageSx];
+		
+		const ImageData::Pixel * __restrict line = image->getLine(y);
+		
+		for (int x = 0; x < imageSx; ++x)
+		{
+			const auto & pixel = line[x];
+			const double value = (pixel.r + pixel.g + pixel.b) / 3.0;
+			
+			rreal[x] = value;
+			rimag[x] = 0.0;
+		}
+	}
+	
+	Fourier::fft2D_slow(dreal, dimag, imageSx, transformSx, imageSy, transformSy, inverse, normalize);
+}
+
+static void fft2D_scale(double * __restrict dreal, double * __restrict dimag, const int transformSx, const int transformSy)
+{
+	const int numValues = transformSx * transformSy;
+	const double scale = 1.0 / double(numValues);
+	
+	for (int i = 0; i < numValues; ++i)
+	{
+		dreal[i] *= scale;
+		dimag[i] *= scale;
+	}
+}
+
+static void fft2D_draw(const double * __restrict dreal, const double * __restrict dimag, const int transformSx, const int transformSy, const char * impl)
+{
+	gxPushMatrix();
+	{
+		const double scaleX = 100.0 * mouse.x / double(GFX_SX);
+		const double scaleY = 100.0 * mouse.y / double(GFX_SX);
+		
+		const int displayScaleX = std::max(1, GFX_SX / transformSx);
+		const int displayScaleY = std::max(1, GFX_SY / transformSy);
+		const int displayScale = std::min(displayScaleX, displayScaleY);
+		gxScalef(displayScale, displayScale, 1);
+		
+		gxBegin(GL_QUADS);
+		{
+			for (int y = 0; y < transformSy; ++y)
+			{
+				for (int x = 0; x < transformSx; ++x)
+				{
+					// sample from the middle as it looks nicer when presenting the result ..
+					
+					const int sx = (x + transformSx/2) % transformSx;
+					const int sy = (y + transformSy/2) % transformSy;
+					
+					const double c = dreal[sy * transformSx + sx];
+					const double s = dimag[sy * transformSx + sx];
+					const double m = std::log10(10.0 + std::hypot(c, s)) - 1.0;
+					
+					const double r = c * scaleX;
+					const double g = s * scaleX;
+					const double b = m * scaleY;
+					
+					gxColor4f(r, g, b, 1.f);
+					//gxColor4f(b, b, b, 1.f);
+					gxVertex2f(x+0, y+0);
+					gxVertex2f(x+1, y+0);
+					gxVertex2f(x+1, y+1);
+					gxVertex2f(x+0, y+1);
+				}
+			}
+		}
+		gxEnd();
+	}
+	gxPopMatrix();
+	
+	setFont("calibri.ttf");
+	setColor(colorWhite);
+	drawText(5, 5, 18, +1, +1, "method: %s", impl);
 }
 
 void testFourier2d()
@@ -83,15 +260,45 @@ void testFourier2d()
 		return;
 	}
 	
-	// perform 2d fast fourier transform on image data
+	// do fast 2D fft
+	
+	double * dreal_fast = nullptr;
+	double * dimag_fast = nullptr;
+	int transformSx_fast = 0;
+	int transformSy_fast = 0;
+	
+	doFourier2D_fast(
+		image,
+		dreal_fast, dimag_fast,
+		transformSx_fast, transformSy_fast,
+		false, false);
+	
+	fft2D_scale(dreal_fast, dimag_fast, transformSx_fast, transformSy_fast);
+	
+	// do slow 2D fft
+	
+	double * dreal_slow = nullptr;
+	double * dimag_slow = nullptr;
+	int transformSx_slow = 0;
+	int transformSy_slow = 0;
+	
+	doFourier2D_slow(
+		image,
+		dreal_slow, dimag_slow,
+		transformSx_slow, transformSy_slow,
+		false, false);
+	
+	fft2D_scale(dreal_slow, dimag_slow, transformSx_slow, transformSy_slow);
+	
+	// do reference 2D fft (fast)
 
 	const int imageSx = image->sx;
 	const int imageSy = image->sy;
 	const int transformSx = Fourier::upperPowerOf2(imageSx);
 	const int transformSy = Fourier::upperPowerOf2(imageSy);
 
-	double * freal = new double[transformSx * transformSy];
-	double * fimag = new double[transformSx * transformSy];
+	double * dreal = new double[transformSx * transformSy];
+	double * dimag = new double[transformSx * transformSy];
 	
 	{
 		// note : the 2d fourier transform is seperable, meaning we could do the transform
@@ -107,8 +314,8 @@ void testFourier2d()
 		
 		for (int y = 0; y < imageSy; ++y)
 		{
-			double * __restrict rreal = &freal[y * transformSx];
-			double * __restrict rimag = &fimag[y * transformSx];
+			double * __restrict rreal = &dreal[y * transformSx];
+			double * __restrict rimag = &dimag[y * transformSx];
 			
 			const ImageData::Pixel * __restrict line = image->getLine(y);
 			
@@ -124,14 +331,7 @@ void testFourier2d()
 				rimag[index] = 0.0;
 			}
 			
-			for (int x = imageSx; x < transformSx; ++x)
-			{
-				const int index = Fourier::reverseBits(x, numBitsX);
-				rreal[index] = 0.0;
-				rimag[index] = 0.0;
-			}
-			
-			Fourier::fft(rreal, rimag, transformSx, numBitsX, false, false);
+			Fourier::fft1D(rreal, rimag, imageSx, transformSx, false, false);
 		}
 		
 		// perform FFT on each column
@@ -142,8 +342,8 @@ void testFourier2d()
 		
 		for (int x = 0; x < transformSx; ++x)
 		{
-			double * __restrict frealc = &freal[x];
-			double * __restrict fimagc = &fimag[x];
+			double * __restrict frealc = &dreal[x];
+			double * __restrict fimagc = &dimag[x];
 			
 			for (int y = 0; y < imageSy; ++y)
 			{
@@ -156,19 +356,12 @@ void testFourier2d()
 				fimagc += transformSx;
 			}
 			
-			for (int y = imageSy; y < transformSy; ++y)
-			{
-				const int index = Fourier::reverseBits(y, numBitsY);
-				creal[index] = 0.0;
-				cimag[index] = 0.0;
-			}
-			
-			Fourier::fft(creal, cimag, transformSy, numBitsY, false, false);
+			Fourier::fft1D(creal, cimag, imageSy, transformSy, false, false);
 			
 			//
 			
-			frealc = &freal[x];
-			fimagc = &fimag[x];
+			frealc = &dreal[x];
+			fimagc = &dimag[x];
 			
 			const double scale = 1.0 / double(transformSx * transformSy);
 			
@@ -220,8 +413,8 @@ void testFourier2d()
 				}
 			}
 			
-			freal[y * transformSx + x] = coss / double(image->sx * image->sy);
-			fimag[y * transformSx + x] = sins / double(image->sx * image->sy);
+			dreal[y * transformSx + x] = coss / double(image->sx * image->sy);
+			dimag[y * transformSx + x] = sins / double(image->sx * image->sy);
 		}
 	}
 	auto ref_t2 = g_TimerRT.TimeUS_get();
@@ -254,53 +447,33 @@ void testFourier2d()
 	// todo : reconstruct image from coefficients
 #endif
 	
+	int display = 0;
+	
 	do
 	{
 		framework.process();
 		
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			display = (display + 1) % 3;
+		}
+		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			const double scaleX = 100.0 * mouse.x / double(GFX_SX);
-			const double scaleY = 100.0 * mouse.y / double(GFX_SX);
-			
-			const int displayScaleX = std::max(1, GFX_SX / transformSx);
-			const int displayScaleY = std::max(1, GFX_SY / transformSy);
-			const int displayScale = std::min(displayScaleX, displayScaleY);
-			gxScalef(displayScale, displayScale, 1);
-			
-			gxBegin(GL_QUADS);
-			{
-				for (int y = 0; y < transformSy; ++y)
-				{
-					for (int x = 0; x < transformSx; ++x)
-					{
-						// sample from the middle as it looks nicer when presenting the result ..
-						
-						const int sx = (x + transformSx/2) % transformSx;
-						const int sy = (y + transformSy/2) % transformSy;
-						
-						const double c = freal[sy * transformSx + sx];
-						const double s = fimag[sy * transformSx + sx];
-						const double m = std::log10(10.0 + std::hypot(c, s)) - 1.0;
-						
-						const double r = c * scaleX;
-						const double g = s * scaleX;
-						const double b = m * scaleY;
-						
-						gxColor4f(r, g, b, 1.f);
-						//gxColor4f(b, b, b, 1.f);
-						gxVertex2f(x+0, y+0);
-						gxVertex2f(x+1, y+0);
-						gxVertex2f(x+1, y+1);
-						gxVertex2f(x+0, y+1);
-					}
-				}
-			}
-			gxEnd();
+			if (display == 0)
+				fft2D_draw(dreal, dimag, transformSx, transformSy, "reference");
+			else if (display == 1)
+				fft2D_draw(dreal_fast, dimag_fast, transformSx_fast, transformSy_fast, "fast");
+			else if (display == 2)
+				fft2D_draw(dreal_slow, dimag_slow, transformSx_slow, transformSy_slow, "slow");
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
 	
-	delete[] freal;
-	delete[] fimag;
+	delete[] dreal_fast;
+	delete[] dimag_fast;
+	delete[] dreal_slow;
+	delete[] dimag_slow;
+	delete[] dreal;
+	delete[] dimag;
 }

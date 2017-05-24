@@ -2,39 +2,40 @@
 
 /*
 
-note: to use the fft function, the data needs to be inserted into dreal/dimag in bit reversed order first! see the usage example below for how this works. the reason for this is how the FFT algortihm works and to make it possible to perform the FFT in-place
+fft1D:
+
+note: to use the fft1D function, the data needs to be inserted into dreal/dimag in bit reversed order first! see the usage example below for how this works. the reason for this is how the FFT algortihm works and to make it possible to perform the FFT in-place
  
 note: the input size must be a power of two
 
 example usage:
 
-	const int kN = 64;
-	const int kLog2N = Fourier::integerLog2(kN);
+	// perform fast fourier transform on 48 (64 output) samples of complex data
 	
-	double dreal[2][kN];
-	double dimag[2][kN];
+	const int kSize = 48;
+	const int kTransformSize = 64;
+	const int kNumBits = Fourier::integerLog2(kTransformSize);
+	
+	double dreal[2][kTransformSize];
+	double dimag[2][kTransformSize];
 	
 	int a = 0; // we need to reverse bits of data indices before doing the fft. to do so we ping-pong between two sets of data, dreal/dimag[0] and dreal/dimag[1]
 	
-	// generate some initial data
-	
-	for (int i = 0; i < kN; ++i)
+	for (int i = 0; i < kSize; ++i)
 	{
 		dreal[a][i] = std::cos(i / 100.0);
 		dimag[a][i] = 0.0;
 	}
 	
-	for (int i = 0; i < kN; ++i)
+	for (int i = 0; i < kSize; ++i)
 	{
 		logDebug("[%03d] inv=1: dreal=%g, dimag=%g", i, dreal[a][i], dimag[a][i]);
 	}
 	
-	// perform forward pass
-	
-	for (int i = 0; i < kN; ++i)
+	for (int i = 0; i < kSize; ++i)
 	{
 		const int sindex = i;
-		const int dindex = Fourier::reverseBits(i, kLog2N);
+		const int dindex = Fourier::reverseBits(i, kNumBits);
 		
 		dreal[1 - a][dindex] = dreal[a][sindex];
 		dimag[1 - a][dindex] = dimag[a][sindex];
@@ -42,19 +43,17 @@ example usage:
 	
 	a = 1 - a;
 	
-	Fourier::fft(dreal[a], dimag[a], kN, kLog2N, false, false);
+	Fourier::fft1D(dreal[a], dimag[a], kSize, kTransformSize, false, false);
 	
-	for (int i = 0; i < kN; ++i)
+	for (int i = 0; i < kTransformSize; ++i)
 	{
 		logDebug("[%03d] inv=0: dreal=%g, dimag=%g", i, dreal[a][i], dimag[a][i]);
 	}
 	
-	// perform reverse pass
-	
-	for (int i = 0; i < kN; ++i)
+	for (int i = 0; i < kTransformSize; ++i)
 	{
 		const int sindex = i;
-		const int dindex = Fourier::reverseBits(i, kLog2N);
+		const int dindex = Fourier::reverseBits(i, kNumBits);
 		
 		dreal[1 - a][dindex] = dreal[a][sindex];
 		dimag[1 - a][dindex] = dimag[a][sindex];
@@ -62,19 +61,41 @@ example usage:
 	
 	a = 1 - a;
 	
-	Fourier::fft(dreal[a], dimag[a], kN, kLog2N, true, true);
+	Fourier::fft1D(dreal[a], dimag[a], kTransformSize, kTransformSize, true, true);
 	
-	for (int i = 0; i < kN; ++i)
+	for (int i = 0; i < kTransformSize; ++i)
 	{
-		// note: the values here should be within a small error margin of the original values generated above
- 
 		logDebug("[%03d] inv=1: dreal=%g, dimag=%g", i, dreal[a][i], dimag[a][i]);
 	}
+
 */
 
 struct Fourier
 {
-	static void fft(double * __restrict dreal, double * __restrict dimag, const int size, const int log2n, const bool inverse, const bool normalize);
+	static void fft1D(
+		double * __restrict dreal,
+		double * __restrict dimag,
+		const int size,
+		const int transformSize,
+		const bool inverse, const bool normalize);
+	static void fft1D_slow(
+		double * __restrict dreal,
+		double * __restrict dimag,
+		const int size, const int transformSize,
+		const bool inverse, const bool normalize);
+	
+	static void fft2D(
+		double * __restrict dreal,
+		double * __restrict dimag,
+		const int sx, const int transformSx,
+		const int sy, const int transformSy,
+		const bool inverse, const bool normalize);
+	static void fft2D_slow(
+		double * __restrict dreal,
+		double * __restrict dimag,
+		const int sx, const int transformSx,
+		const int sy, const int transformSy,
+		const bool inverse, const bool normalize);
 
 	static inline int reverseBits(const int value, const int numBits)
 	{
