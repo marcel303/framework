@@ -170,7 +170,13 @@ todo :
 - make nodes use rounded rectangles
 - make links use bezier curves
 - add buffer type and add buffer input(s) to fsfx node ?
-
+- add OpenGL texture routines. seems we are doing a lot of duplicate/messy/easy to fuck up texture management in various nodes and other places
+- add editor option to disable real-time preview
+	- add time dilation effect on no input before stopping responding ?
+	- add way for UI/editor to tell update loop it's animating something (camera..)
+- hide node text until mouse moves close to node ? makes the screen more serene and helps optimize UI drawing
+- look at Bitwig 2 for inspiration of node types
+	
 todo : nodes :
 + add ease node
 	+ value
@@ -229,16 +235,14 @@ todo : nodes :
 	- output is image. input = ?
 - add note (like C1) to MIDI note
 + add base event ID to OSC send node ?
-- add editor option to disable real-time preview
-	- add time dilation effect on no input before stopping responding ?
-	- add way for UI/editor to tell update loop it's animating something (camera..)
-- hide node text until mouse moves close to node ? makes the screen more serene and helps optimize UI drawing
 - add adsr node
-- add random noise node with frequency
-- look at Bitwig 2 for inspiration of node types
+- add random noise node with update frequency. updates random value N times per second
 - add touch pad node which reads data from the MacBook's touch pad (up to ten fingers..)
 - add node which can analyze images, detect the dots in them, and send the dots as output
+	+ add dot detection node
 	- will need a vector socket value type ?
+- add CPU image downscale node. Downscale 2x2 or 4x4. would make dot detector operate faster on large video files
+	- maybe should work with maximum size constraints and keep downscaling until met ? makes it possible to have varying sized image data incoming and have some kind of size gaurantee on the output
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -259,6 +263,7 @@ todo : media player
 - add image_cpu value type ?
 	- extend video node so it can output Y/UV/RGB image_cpu data
 		- requires rewriting media player a little, so consume (acquire) and release of frame data is possible
+		- add Y and UV pointers to MP::VideoFrame
 	- add spectrum2d node
 	- add dot detector node
 - add image to image_cpu node. default behaviour is to delay by a few frames
