@@ -333,8 +333,13 @@ bool RealTimeConnection::getPlugValue(VfxPlug * plug, std::string & value)
 	case kVfxPlugType_Image:
 		{
 			auto image = plug->getImage();
-			value = String::FormatC("%d [%d x %d]", image->getTexture(), image->getSx(), image->getSy());
-			return true;
+			if (image->getTexture() == 0)
+				return false;
+			else
+			{
+				value = String::FormatC("%d", image->getTexture());
+				return true;
+			}
 		}
 	case kVfxPlugType_ImageCpu:
 		{
