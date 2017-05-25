@@ -28,6 +28,12 @@ namespace MP
 	AudioContext::~AudioContext()
 	{
 		Assert(m_initialized == false);
+		
+		Assert(m_packetQueue == nullptr);
+		Assert(m_audioBuffer == nullptr);
+		Assert(m_codecContext == nullptr);
+		Assert(m_codec == nullptr);
+		Assert(m_swrContext == nullptr);
 	}
 
 	bool AudioContext::Initialize(Context * context, const size_t streamIndex)

@@ -35,6 +35,18 @@ namespace MP
 	VideoContext::~VideoContext()
 	{
 		Assert(m_initialized == false);
+		
+		Assert(m_packetQueue == nullptr);
+		Assert(m_codecContext == nullptr);
+		Assert(m_codec == nullptr);
+		Assert(m_tempFrame == nullptr);
+		Assert(m_tempFrameBuffer == nullptr);
+		Assert(m_videoBuffer == nullptr);
+		Assert(m_swsContext == nullptr);
+		Assert(m_streamIndex == -1);
+		Assert(m_outputYuv == false);
+		Assert(m_time == 0.0);
+		Assert(m_frameCount == 0);
 	}
 
 	bool VideoContext::Initialize(Context * context, const size_t streamIndex, const bool outputYuv)
@@ -42,7 +54,11 @@ namespace MP
 		Assert(m_initialized == false);
 		
 		m_initialized = true;
-
+		
+		Assert(m_streamIndex == -1);
+		Assert(m_outputYuv == false);
+		Assert(m_time == 0.0);
+		Assert(m_frameCount == 0);
 		m_streamIndex = streamIndex;
 		m_outputYuv = outputYuv;
 		m_time = 0.0;
@@ -66,7 +82,7 @@ namespace MP
 		m_codec = avcodec_find_decoder(codecParams->codec_id);
 		if (!m_codec)
 		{
-			Assert(false);
+			Debug::Print("Video: failed to find decoder.");
 			return false;
 		}
 		else
@@ -214,7 +230,12 @@ namespace MP
 			delete m_packetQueue;
 			m_packetQueue = nullptr;
 		}
-
+		
+		m_streamIndex = -1;
+		m_outputYuv = false;
+		m_time = 0.0;
+		m_frameCount = 0;
+		
 		return result;
 	}
 

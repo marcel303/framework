@@ -16,7 +16,7 @@ namespace MP
 		{
 			SDL_DestroyMutex(mutex);
 			mutex = nullptr;
-			}
+		}
 	}
 
 	void Mutex::Lock()

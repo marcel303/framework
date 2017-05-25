@@ -10,6 +10,7 @@ namespace MP
 	{
 	public:
 		Context();
+		~Context();
 
 		bool Begin(const std::string & filename, const bool enableAudioStream = true, const bool enableVideoStream = true, const bool outputYuv = false);
 		bool End();

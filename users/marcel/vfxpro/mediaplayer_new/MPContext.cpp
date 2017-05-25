@@ -17,12 +17,25 @@ namespace MP
 {
 	Context::Context()
 		: m_begun(false)
+		, m_filename()
 		, m_eof(false)
 		, m_time(0.0)
 		, m_formatContext(nullptr)
 		, m_audioContext(nullptr)
 		, m_videoContext(nullptr)
 	{
+	}
+	
+	Context::~Context()
+	{
+		Assert(m_begun == false);
+		Assert(m_filename.empty());
+		Assert(m_eof == false);
+		Assert(m_time == 0.0);
+		
+		Assert(m_formatContext == nullptr);
+		Assert(m_audioContext == nullptr);
+		Assert(m_videoContext == nullptr);
 	}
 
 	bool Context::Begin(const std::string & filename, const bool enableAudioStream, const bool enableVideoStream, const bool outputYuv)
@@ -409,7 +422,6 @@ namespace MP
 
 		// Read packet.
 		AVPacket packet;
-		av_init_packet(&packet);
 
 		if (ReadPacket(packet))
 		{
@@ -449,9 +461,7 @@ namespace MP
 	bool Context::ProcessPacket(AVPacket & packet)
 	{
 		bool result = true;
-
-		bool captured = false;
-
+		
 		Debug::Print("ProcessPacket: stream_index=%d.", packet.stream_index);
 
 		if (m_audioContext != nullptr)
@@ -459,7 +469,6 @@ namespace MP
 			if (packet.stream_index == m_audioContext->GetStreamIndex())
 			{
 				result &= m_audioContext->AddPacket(packet);
-				captured = true;
 			}
 		}
 
@@ -468,7 +477,6 @@ namespace MP
 			if (packet.stream_index == m_videoContext->GetStreamIndex())
 			{
 				result &= m_videoContext->AddPacket(packet);
-				captured = true;
 			}
 		}
 
@@ -478,8 +486,10 @@ namespace MP
 	bool Context::ReadPacket(AVPacket & out_packet)
 	{
 		// Read packet.
+		av_init_packet(&out_packet);
 		out_packet.buf = nullptr;
-
+		out_packet.size = 0;
+		
 		const int readResult = av_read_frame(m_formatContext, &out_packet);
 
 		if (readResult < 0)

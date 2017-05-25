@@ -30,6 +30,13 @@ namespace MP
 	VideoFrame::~VideoFrame()
 	{
 		Assert(m_initialized == false);
+		
+		Assert(m_width == 0);
+		Assert(m_height == 0);
+		Assert(m_frame == nullptr);
+		Assert(m_frameBuffer == nullptr);
+		Assert(m_time == 0.0);
+		Assert(m_isFirstFrame == false);
 	}
 
 	bool VideoFrame::Initialize(const size_t width, const size_t height)
@@ -109,6 +116,11 @@ namespace MP
 			//printf("numFrameBufferAllocations: %d\n", (int)s_numFrameBufferAllocations);
 		#endif
 		}
+		
+		m_width = 0;
+		m_height = 0;
+		m_time = 0.0;
+		m_isFirstFrame = false;
 	}
 
 	// VideBuffer
@@ -123,6 +135,10 @@ namespace MP
 	VideoBuffer::~VideoBuffer()
 	{
 		Assert(m_initialized == false);
+		
+		Assert(m_freeList.empty());
+		Assert(m_consumeList.empty());
+		Assert(m_currentFrame == nullptr);
 	}
 
 	bool VideoBuffer::Initialize(const size_t width, const size_t height)
