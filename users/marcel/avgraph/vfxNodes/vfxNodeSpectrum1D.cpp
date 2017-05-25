@@ -1,3 +1,4 @@
+#include "framework.h"
 #include "vfxNodeSpectrum1D.h"
 
 VfxNodeSpectrum1D::VfxNodeSpectrum1D()

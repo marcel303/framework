@@ -1,4 +1,6 @@
+#include "framework.h"
 #include "Parse.h"
+#include "Timer.h"
 #include "vfxGraph.h"
 #include "vfxNodes/vfxNodeBase.h"
 #include "vfxNodes/vfxNodeDisplay.h"
@@ -176,7 +178,13 @@ void VfxGraph::tick(const float dt)
 		{
 			node->lastTickTraversalId = nextTickTraversalId;
 			
+			const uint64_t t1 = g_TimerRT.TimeUS_get();
+			
 			node->tick(dt);
+			
+			const uint64_t t2 = g_TimerRT.TimeUS_get();
+			
+			node->tickTimeAvg = (node->tickTimeAvg * 99 + (t2 - t1)) / 100;
 		}
 	}
 	
@@ -225,6 +233,29 @@ void VfxGraph::draw() const
 	}
 	
 	++nextDrawTraversalId;
+	
+	//
+	
+#if 0 // todo : add some way to (visually) communicate node computational cost (heat value)
+	setFont("calibri.ttf");
+	beginTextBatch();
+	{
+		int x = GFX_SX/2;
+		int y = 10;
+		
+		for (auto i : nodes)
+		{
+			const GraphNodeId nodeId = i.first;
+			const VfxNodeBase * node = i.second;
+			
+			setColor(colorWhite);
+			drawText(x, y, 12, 0, 0, "node %d: tick: %.2fms, draw %.2fms", nodeId, node->tickTimeAvg/1000.0, node->drawTimeAvg/1000.0);
+			
+			y += 18;
+		}
+	}
+	endTextBatch();
+#endif
 	
 	//
 	

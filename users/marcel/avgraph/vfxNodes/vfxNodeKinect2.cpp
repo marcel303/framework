@@ -1,3 +1,4 @@
+#include "framework.h"
 #include "kinect2.h"
 #include "kinect2FrameListener.h"
 #include "vfxNodeKinect2.h"

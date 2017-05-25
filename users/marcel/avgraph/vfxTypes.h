@@ -45,7 +45,7 @@ struct DelayLine
 	
 	void push(const float value)
 	{
-		fassert(samples != nullptr);
+		Assert(samples != nullptr);
 		
 		samples[nextWriteIndex] = value;
 		

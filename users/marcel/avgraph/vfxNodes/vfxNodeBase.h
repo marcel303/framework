@@ -1,22 +1,50 @@
 #pragma once
 
-#include "framework.h"
-#include "graph.h"
+#include "Debugging.h"
 #include "Mat4x4.h"
 #include <stdint.h>
-#include <string.h>
+#include <string>
+#include <vector>
 
+struct GraphNode;
 class Surface;
+
+//
+
+struct VfxColor
+{
+	float r;
+	float g;
+	float b;
+	float a;
+	
+	VfxColor()
+		: r(0.f)
+		, g(0.f)
+		, b(0.f)
+		, a(0.f)
+	{
+	}
+	
+	VfxColor(const float _r, const float _g, const float _b, const float _a)
+		: r(_r)
+		, g(_g)
+		, b(_b)
+		, a(_a)
+	{
+	}
+};
+
+//
 
 struct VfxTransform
 {
-	VfxTransform()
-	{
-		matrix.MakeIdentity();
-	}
-	
 	Mat4x4 matrix;
+	
+	VfxTransform();
 };
+
+//
 
 enum VfxTriggerDataType
 {
@@ -38,11 +66,7 @@ struct VfxTriggerData
 		uint8_t mem[8];
 	};
 	
-	VfxTriggerData()
-		: type(kVfxTriggerDataType_None)
-	{
-		memset(mem, 0, sizeof(mem));
-	}
+	VfxTriggerData();
 	
 	void setBool(const bool value)
 	{
@@ -108,6 +132,8 @@ struct VfxTriggerData
 	}
 };
 
+//
+
 struct VfxImageBase
 {
 	VfxImageBase()
@@ -120,54 +146,21 @@ struct VfxImageBase
 	
 	virtual int getSx() const = 0;
 	virtual int getSy() const = 0;
-	virtual GLuint getTexture() const = 0;
+	virtual uint32_t getTexture() const = 0;
 };
 
 struct VfxImage_Texture : VfxImageBase
 {
-	GLuint texture;
+	uint32_t texture;
 	
-	VfxImage_Texture()
-		: VfxImageBase()
-		, texture(0)
-	{
-	}
+	VfxImage_Texture();
 	
-	virtual int getSx() const override
-	{
-		int result = 0;
-		
-		if (texture != 0)
-		{
-			// todo : nicely restore previously bound texture ?
-			gxSetTexture(texture);
-			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &result);
-			gxSetTexture(0);
-		}
-		
-		return result;
-	}
-	
-	virtual int getSy() const override
-	{
-		int result = 0;
-		
-		if (texture != 0)
-		{
-			// todo : nicely restore previously bound texture ?
-			gxSetTexture(texture);
-			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &result);
-			gxSetTexture(0);
-		}
-		
-		return result;
-	}
-	
-	virtual GLuint getTexture() const override
-	{
-		return texture;
-	}
+	virtual int getSx() const override;
+	virtual int getSy() const override;
+	virtual uint32_t getTexture() const override;
 };
+
+//
 
 struct VfxImageCpu
 {
@@ -177,11 +170,7 @@ struct VfxImageCpu
 		int stride;
 		int pitch;
 		
-		Channel()
-			: data(nullptr)
-			, pitch(0)
-		{
-		}
+		Channel();
 	};
 	
 	int sx;
@@ -191,142 +180,18 @@ struct VfxImageCpu
 	
 	Channel channel[4];
 	
-	VfxImageCpu()
-		: sx(0)
-		, sy(0)
-		, channel()
-	{
-	}
+	VfxImageCpu();
 	
-	void setDataR8(const uint8_t * r, const int _sx, const int _sy, const int _pitch)
-	{
-		sx = _sx;
-		sy = _sy;
-		
-		const int stride = 1;
-		const int pitch = _pitch == 0 ? sx * 1 : _pitch;
-		
-		interleaved.data = r;
-		interleaved.stride = stride;
-		interleaved.pitch = pitch;
-		
-		for (int i = 0; i < 4; ++i)
-		{
-			channel[i].data = r;
-			channel[i].stride = 1;
-			channel[i].pitch = pitch;
-		}
-	}
-	
-	void setDataRGBA8(const uint8_t * rgba, const int _sx, const int _sy, const int _pitch)
-	{
-		sx = _sx;
-		sy = _sy;
-		
-		const int stride = 4;
-		const int pitch = _pitch == 0 ? sx * 4 : _pitch;
-		
-		interleaved.data = rgba;
-		interleaved.stride = stride;
-		interleaved.pitch = pitch;
-		
-		for (int i = 0; i < 4; ++i)
-		{
-			channel[i].data = rgba + i;
-			channel[i].stride = stride;
-			channel[i].pitch = pitch;
-		}
-	}
-	
-	static void interleave1(const Channel * channel1, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
-	{
-		const int dstPitch = _dstPitch == 0 ? sx * 1 : _dstPitch;
-		
-		for (int y = 0; y < sy; ++y)
-		{
-			const uint8_t * __restrict src1 = channel1->data + y * channel1->pitch;
-				  uint8_t * __restrict dst  = _dst + y * dstPitch;
-			
-			if (channel1->stride == 1)
-			{
-				memcpy(dst, src1, sx);
-			}
-			else
-			{
-				for (int x = 0; x < sx; ++x)
-				{
-					*dst++ = *src1;
-					
-					src1 += channel1->stride;
-				}
-			}
-		}
-	}
-	
-	static void interleave3(const Channel * channel1, const Channel * channel2, const Channel * channel3, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
-	{
-		const int dstPitch = _dstPitch == 0 ? sx * 3 : _dstPitch;
-		
-		for (int y = 0; y < sy; ++y)
-		{
-			const uint8_t * __restrict src1 = channel1->data + y * channel1->pitch;
-			const uint8_t * __restrict src2 = channel2->data + y * channel2->pitch;
-			const uint8_t * __restrict src3 = channel3->data + y * channel3->pitch;
-				  uint8_t * __restrict dst  = _dst + y * dstPitch;
-			
-			for (int x = 0; x < sx; ++x)
-			{
-				*dst++ = *src1;
-				*dst++ = *src2;
-				*dst++ = *src3;
-				
-				src1 += channel1->stride;
-				src2 += channel2->stride;
-				src3 += channel3->stride;
-			}
-		}
-	}
-	
-	static void interleave4(const Channel * channel1, const Channel * channel2, const Channel * channel3, const Channel * channel4, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
-	{
-		const int dstPitch = _dstPitch == 0 ? sx * 4 : _dstPitch;
-		
-		for (int y = 0; y < sy; ++y)
-		{
-			const uint8_t * __restrict src1 = channel1->data + y * channel1->pitch;
-			const uint8_t * __restrict src2 = channel2->data + y * channel2->pitch;
-			const uint8_t * __restrict src3 = channel3->data + y * channel3->pitch;
-			const uint8_t * __restrict src4 = channel4->data + y * channel4->pitch;
-				  uint8_t * __restrict dst  = _dst + y * dstPitch;
-			
-			for (int x = 0; x < sx; ++x)
-			{
-				*dst++ = *src1;
-				*dst++ = *src2;
-				*dst++ = *src3;
-				*dst++ = *src4;
-				
-				src1 += channel1->stride;
-				src2 += channel2->stride;
-				src3 += channel3->stride;
-				src4 += channel4->stride;
-			}
-		}
-	}
-	
-	void reset()
-	{
-		sx = 0;
-		sy = 0;
-		
-		interleaved = Channel();
-		
-		for (int i = 0; i < 4; ++i)
-		{
-			channel[i] = Channel();
-		}
-	}
+	void setDataR8(const uint8_t * r, const int _sx, const int _sy, const int _pitch);
+	void setDataRGBA8(const uint8_t * rgba, const int _sx, const int _sy, const int _pitch);
+	void reset();
+
+	static void interleave1(const Channel * channel1, uint8_t * _dst, const int _dstPitch, const int sx, const int sy);
+	static void interleave3(const Channel * channel1, const Channel * channel2, const Channel * channel3, uint8_t * _dst, const int _dstPitch, const int sx, const int sy);
+	static void interleave4(const Channel * channel1, const Channel * channel2, const Channel * channel3, const Channel * channel4, uint8_t * _dst, const int _dstPitch, const int sx, const int sy);
 };
+
+//
 
 enum VfxPlugType
 {
@@ -355,29 +220,8 @@ struct VfxPlug
 	{
 	}
 	
-	void connectTo(VfxPlug & dst)
-	{
-		if (dst.type != type)
-		{
-			logError("node connection failed. type mismatch");
-		}
-		else
-		{
-			mem = dst.mem;
-		}
-	}
-	
-	void connectTo(void * dstMem, const VfxPlugType dstType)
-	{
-		if (dstType != type)
-		{
-			logError("node connection failed. type mismatch");
-		}
-		else
-		{
-			mem = dstMem;
-		}
-	}
+	void connectTo(VfxPlug & dst);
+	void connectTo(void * dstMem, const VfxPlugType dstType);
 	
 	void disconnect()
 	{
@@ -419,10 +263,10 @@ struct VfxPlug
 		return *((std::string*)mem);
 	}
 	
-	const Color & getColor() const
+	const VfxColor & getColor() const
 	{
 		Assert(type == kVfxPlugType_Color);
-		return *((Color*)mem);
+		return *((VfxColor*)mem);
 	}
 	
 	VfxImageBase * getImage() const
@@ -475,10 +319,10 @@ struct VfxPlug
 		return *((std::string*)mem);
 	}
 	
-	Color & getRwColor()
+	VfxColor & getRwColor()
 	{
 		Assert(type == kVfxPlugType_Color);
-		return *((Color*)mem);
+		return *((VfxColor*)mem);
 	}
 };
 
@@ -490,12 +334,7 @@ struct VfxNodeBase
 		int srcSocketIndex;
 		int dstSocketIndex;
 		
-		TriggerTarget()
-			: srcNode(nullptr)
-			, srcSocketIndex(-1)
-			, dstSocketIndex(-1)
-		{
-		}
+		TriggerTarget();
 	};
 	
 	std::vector<VfxPlug> inputs;
@@ -510,77 +349,19 @@ struct VfxNodeBase
 	
 	bool isPassthrough;
 	
-	VfxNodeBase()
-		: inputs()
-		, outputs()
-		, predeps()
-		, triggerTargets()
-		, lastTickTraversalId(-1)
-		, lastDrawTraversalId(-1)
-		, editorIsTriggered(false)
-		, isPassthrough(false)
-	{
-	}
+	int tickTimeAvg;
+	int drawTimeAvg;
+	
+	VfxNodeBase();
 	
 	virtual ~VfxNodeBase()
 	{
 	}
 	
-	void traverseTick(const int traversalId, const float dt)
-	{
-		Assert(lastTickTraversalId != traversalId);
-		lastTickTraversalId = traversalId;
-		
-		for (auto predep : predeps)
-		{
-			if (predep->lastTickTraversalId != traversalId)
-				predep->traverseTick(traversalId, dt);
-		}
-		
-		tick(dt);
-	}
+	void traverseTick(const int traversalId, const float dt);
+	void traverseDraw(const int traversalId);
 	
-	void traverseDraw(const int traversalId)
-	{
-		Assert(lastDrawTraversalId != traversalId);
-		lastDrawTraversalId = traversalId;
-		
-		for (auto predep : predeps)
-		{
-			if (predep->lastDrawTraversalId != traversalId)
-				predep->traverseDraw(traversalId);
-		}
-		
-		draw();
-	}
-	
-	void trigger(const int outputSocketIndex)
-	{
-		editorIsTriggered = true;
-		
-		Assert(outputSocketIndex >= 0 && outputSocketIndex < outputs.size());
-		if (outputSocketIndex >= 0 && outputSocketIndex < outputs.size())
-		{
-			auto & outputSocket = outputs[outputSocketIndex];
-			Assert(outputSocket.type == kVfxPlugType_Trigger);
-			if (outputSocket.type == kVfxPlugType_Trigger)
-			{
-				// iterate the list of outgoing connections, call handleTrigger on nodes with correct outputSocketIndex
-				
-				const VfxTriggerData & triggerData = outputSocket.getTriggerData();
-				
-				for (auto & triggerTarget : triggerTargets)
-				{
-					if (triggerTarget.dstSocketIndex == outputSocketIndex)
-					{
-						triggerTarget.srcNode->editorIsTriggered = true;
-						
-						triggerTarget.srcNode->handleTrigger(triggerTarget.srcSocketIndex, triggerData);
-					}
-				}
-			}
-		}
-	}
+	void trigger(const int outputSocketIndex);
 	
 	void resizeSockets(const int numInputs, const int numOutputs)
 	{

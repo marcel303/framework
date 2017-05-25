@@ -1,4 +1,5 @@
 #include "dotDetector.h"
+#include "framework.h" // log
 #include "vfxNodeDotDetector.h"
 
 VfxNodeDotDetector::VfxNodeDotDetector()

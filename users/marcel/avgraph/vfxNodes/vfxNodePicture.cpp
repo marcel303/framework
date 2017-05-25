@@ -1,3 +1,4 @@
+#include "framework.h"
 #include "vfxNodePicture.h"
 
 VfxNodePicture::VfxNodePicture()

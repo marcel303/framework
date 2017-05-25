@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vfxNodeBase.h"
+#include <SDL2/SDL_opengl.h>
 
 struct VfxNodeSpectrum1D : VfxNodeBase
 {

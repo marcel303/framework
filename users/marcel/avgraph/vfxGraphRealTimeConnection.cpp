@@ -289,8 +289,11 @@ bool RealTimeConnection::setPlugValue(VfxPlug * plug, const std::string & value)
 		plug->getRwString() = value;
 		return true;
 	case kVfxPlugType_Color:
-		plug->getRwColor() = Color::fromHex(value.c_str());
-		return true;
+		{
+			const Color color = Color::fromHex(value.c_str());
+			plug->getRwColor() = VfxColor(color.r, color.g, color.b, color.a);
+			return true;
+		}
 		
 	case kVfxPlugType_Image:
 		return false;
@@ -326,7 +329,8 @@ bool RealTimeConnection::getPlugValue(VfxPlug * plug, std::string & value)
 		return true;
 	case kVfxPlugType_Color:
 		{
-			const Color & color = plug->getColor();
+			const VfxColor & vfxColor = plug->getColor();
+			const Color color(vfxColor.r, vfxColor.g, vfxColor.b, vfxColor.a);
 			value = color.toHexString(true);
 			return true;
 		}

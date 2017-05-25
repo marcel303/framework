@@ -1,3 +1,4 @@
+#include "framework.h"
 #include "vfxNodeOsc.h"
 
 #include "ip/UdpSocket.h"

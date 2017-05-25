@@ -1,5 +1,6 @@
 #include "vfxNodeLeapMotion.h"
 #include "leap/Leap.h"
+#include <SDL2/SDL.h>
 
 struct LeapListener : public Leap::Listener
 {

@@ -1,4 +1,5 @@
 #include "dotDetector.h"
+#include "framework.h"
 #include "vfxNodeImageCpuToGpu.h"
 
 VfxNodeImageCpuToGpu::VfxNodeImageCpuToGpu()
@@ -23,7 +24,14 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const Channel channel = (Channel)getInputInt(kInput_Channel, 0);
 	
+	//
+	
 	freeTexture();
+	
+	if (image == nullptr)
+		return;
+	
+	//
 	
 	if (channel == kChannel_RGBA)
 	{

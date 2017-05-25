@@ -39,5 +39,5 @@ struct VfxNodeFsfx : VfxNodeBase
 
 	virtual void draw() const override;
 	
-	virtual void init(const GraphNode & node);
+	virtual void init(const GraphNode & node) override;
 };

@@ -1,3 +1,4 @@
+#include "framework.h"
 #include "vfxNodeComposite.h"
 
 extern int GFX_SX;
