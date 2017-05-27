@@ -51,31 +51,51 @@ void VfxNodeDotDetector::tick(const float dt)
 			allocateMask(image->sx, image->sy);
 		}
 		
+		const uint8_t * lumiPtr = nullptr;
+		int lumiPitch = 0;
+		
 		// create luminance map
 		
 		if (channel == kChannel_RGB)
 		{
-			for (int y = 0; y < maskSy; ++y)
+			if (image->interleaved.stride == 1)
 			{
-				const uint8_t * __restrict srcR = image->channel[0].data + y * image->channel[0].pitch;
-				const uint8_t * __restrict srcG = image->channel[1].data + y * image->channel[1].pitch;
-				const uint8_t * __restrict srcB = image->channel[2].data + y * image->channel[2].pitch;
-					  uint8_t * __restrict dst  = lumi + y * maskSx;
+				// single channel image. copy the bytes directly without luminance calculation
 				
-				for (int x = 0; x < maskSx; ++x)
+				// todo : for single channel images, we could just pass the data directly into the dot detection algortihm. it would have to support custom pitch, but that's all..
+				
+				const VfxImageCpu::Channel * source = &image->interleaved;
+				
+				lumiPtr = source->data;
+				lumiPitch = source->pitch;
+			}
+			else
+			{
+				lumiPtr = lumi;
+				lumiPitch = maskSx;
+				
+				for (int y = 0; y < maskSy; ++y)
 				{
-					const int r = *srcR;
-					const int g = *srcG;
-					const int b = *srcB;
+					const uint8_t * __restrict srcR = image->channel[0].data + y * image->channel[0].pitch;
+					const uint8_t * __restrict srcG = image->channel[1].data + y * image->channel[1].pitch;
+					const uint8_t * __restrict srcB = image->channel[2].data + y * image->channel[2].pitch;
+						  uint8_t * __restrict dst  = lumi + y * maskSx;
 					
-					const int l = (r + g * 2 + b) >> 2;
-					
-					*dst = l;
-					
-					srcR += image->channel[0].stride;
-					srcG += image->channel[1].stride;
-					srcB += image->channel[2].stride;
-					dst  += 1;
+					for (int x = 0; x < maskSx; ++x)
+					{
+						const int r = *srcR;
+						const int g = *srcG;
+						const int b = *srcB;
+						
+						const int l = (r + g * 2 + b) >> 2;
+						
+						*dst = l;
+						
+						srcR += image->channel[0].stride;
+						srcG += image->channel[1].stride;
+						srcB += image->channel[2].stride;
+						dst  += 1;
+					}
 				}
 			}
 		}
@@ -94,16 +114,14 @@ void VfxNodeDotDetector::tick(const float dt)
 			
 			if (source->stride == 1)
 			{
-				for (int y = 0; y < maskSy; ++y)
-				{
-					const uint8_t * __restrict src = source->data + y * source->pitch;
-					      uint8_t * __restrict dst = lumi + y * maskSx;
-					
-					memcpy(dst, src, maskSx);
-				}
+				lumiPtr = source->data;
+				lumiPitch = source->pitch;
 			}
 			else
 			{
+				lumiPtr = lumi;
+				lumiPitch = maskSx;
+				
 				for (int y = 0; y < maskSy; ++y)
 				{
 					const uint8_t * __restrict src = source->data + y * source->pitch;
@@ -119,10 +137,14 @@ void VfxNodeDotDetector::tick(const float dt)
 				}
 			}
 		}
+		
+		// update lumi output
+		
+		lumiOutput.setDataR8(lumiPtr, maskSx, maskSy, lumiPitch);
 
 		// do tresholding
 		
-		DotDetector::treshold(lumi, mask, maskSx, maskSy, test, tresholdValue);
+		DotDetector::treshold(lumiPtr, lumiPitch, mask, maskSx, maskSx, maskSy, test, tresholdValue);
 
 		// do dot detection
 		
@@ -131,7 +153,7 @@ void VfxNodeDotDetector::tick(const float dt)
 		
 		const int numIslands = DotDetector::detectDots(mask, maskSx, maskSy, maxRadius, islands, kMaxIslands, true);
 		
-		logDebug("dot detector detected %d islands", numIslands);
+		//logDebug("dot detector detected %d islands", numIslands);
 		
 		// todo : store dot detection result somewhere and make it available somehow
 		
@@ -144,6 +166,9 @@ void VfxNodeDotDetector::allocateMask(const int sx, const int sy)
 	lumi = new uint8_t[sx * sy];
 	mask = new uint8_t[sx * sy];
 	
+	memset(lumi, 0, sx * sy);
+	memset(mask, 0, sx * sy);
+	
 	maskSx = sx;
 	maskSy = sy;
 	
@@ -153,6 +178,9 @@ void VfxNodeDotDetector::allocateMask(const int sx, const int sy)
 
 void VfxNodeDotDetector::freeMask()
 {
+	delete[] lumi;
+	lumi = nullptr;
+	
 	delete[] mask;
 	mask = nullptr;
 	
