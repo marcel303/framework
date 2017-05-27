@@ -98,6 +98,11 @@ void RealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	node = nullptr;
 	
 	vfxGraph->nodes.erase(nodeItr);
+	
+	if (nodeId == vfxGraph->displayNodeId)
+	{
+		vfxGraph->displayNodeId = kGraphNodeIdInvalid;
+	}
 }
 
 void RealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
