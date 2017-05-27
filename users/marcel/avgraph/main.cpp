@@ -46,6 +46,7 @@
 #include "vfxNodes/vfxNodeVideo.h"
 #include "vfxNodes/vfxNodeXinput.h"
 
+#include "mediaplayer_new/MPUtil.h"
 #include "../libparticle/ui.h"
 
 using namespace tinyxml2;
@@ -162,6 +163,7 @@ todo :
 - double click node to perform node-specific action
 	- add real-time editing callback for double click event
 	- open text editor for ps/vs when double clicking fsfx node
+	- open container when double clicking container node
 - rename _TypeDefinition to _NodeTypeDefinition
 + make time node use local vfx graph instance time, not process time
 - add sub-graph container node. to help organize complex graphs
@@ -170,12 +172,14 @@ todo :
 - make nodes use rounded rectangles
 - make links use bezier curves
 - add buffer type and add buffer input(s) to fsfx node ?
-- add OpenGL texture routines. seems we are doing a lot of duplicate/messy/easy to fuck up texture management in various nodes and other places
++ add OpenGL texture routines/helper object. seems we are doing a lot of duplicate/messy/easy to fuck up texture management in various nodes and other places
 - add editor option to disable real-time preview
 	- add time dilation effect on no input before stopping responding ?
 	- add way for UI/editor to tell update loop it's animating something (camera..)
 - hide node text until mouse moves close to node ? makes the screen more serene and helps optimize UI drawing
 - look at Bitwig 2 for inspiration of node types
+- add per-node profiling data. measure time tick and draw take and report it. maybe use a special colouring mode of the node background ? black -> red/orange/yellow
+- add real-time callback to get node description. report tick/draw time and some other stats/info
 	
 todo : nodes :
 + add ease node
@@ -198,7 +202,7 @@ todo : nodes :
 - add quantize node
 - investigate how to render 2D and 3D shapes
 - investigate ways of composing/decomposing image data and masking
-	- is it possible to create a texture sharing data with a base texture and to just change to rgba swizzling?
+	- is it possible to create a texture sharing data with a base texture and to just change the rgba swizzling?
 - add timeline node (?). trigger events based on markers on a timeline
 	- add (re)start input trigger
 	- can be very very useful to trigger effects
@@ -243,6 +247,8 @@ todo : nodes :
 	- will need a vector socket value type ?
 - add CPU image downscale node. Downscale 2x2 or 4x4. would make dot detector operate faster on large video files
 	- maybe should work with maximum size constraints and keep downscaling until met ? makes it possible to have varying sized image data incoming and have some kind of size gaurantee on the output
+- add spectrum2d node
++ add dot detector node
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -259,15 +265,20 @@ todo : framework :
 - add MSDF font rendering support
 
 todo : media player
-- for image analysis we often only need luminance. make it an option to output YUV Y-channel only?
-- add image_cpu value type ?
-	- extend video node so it can output Y/UV/RGB image_cpu data
-		- requires rewriting media player a little, so consume (acquire) and release of frame data is possible
-		- add Y and UV pointers to MP::VideoFrame
-	- add spectrum2d node
-	- add dot detector node
++ for image analysis we often only need luminance. make it an option to output YUV Y-channel only?
+	+ outputting Y+UV is just as cheap as Y only. added planar YUV support.
+- add option to disable texture generation
++ add image_cpu value type ?
+	+ extend video node so it can output Y/UV image_cpu data
+	+ extend video node so it can output RGB image_cpu data
+		# requires rewriting media player a little, so consume (acquire) and release of frame data is possible
+		+ add Y and UV pointers to MP::VideoFrame
 - add image to image_cpu node. default behaviour is to delay by a few frames
-- add image_cpu to image node. default behaviour is to upload immediately
++ add image_cpu to image (gpu) node. default behaviour is to upload immediately
+- add openAsync call which accepts OpenParams
+- add yuvToRgb node. let user select colour space
++ add image_y, image_u, image_v to video node
++ double check image.toGpu node uses optimized code path for converting single channel source to texture 
 
 todo : UI
 + add drop down list for (large) enums
@@ -288,6 +299,7 @@ const int GFX_SY = 768;
 
 extern void testDatGui();
 extern void testNanovg();
+extern void testFourier1d();
 extern void testFourier2d();
 extern void testChaosGame();
 extern void testImpulseResponseMeasurement();
@@ -587,11 +599,15 @@ int main(int argc, char * argv[])
 	{
 		initUi();
 		
+		MP::Util::InitializeLibAvcodec();
+		
 		//testDatGui();
 		
 		//testNanovg();
 		
 		//testChaosGame();
+		
+		//testFourier1d();
 		
 		//testFourier2d();
 		
@@ -602,7 +618,7 @@ int main(int argc, char * argv[])
 		//for (int i = 0; i < 10; ++i)
 		//	testDynamicTextureAtlas();
 		
-		testDotDetector();
+		//testDotDetector();
 		
 		//
 		
