@@ -74,6 +74,10 @@ bool OpenglTexture::isChanged(const int _sx, const int _sy, const int _internalF
 
 void OpenglTexture::setSwizzle(const int r, const int g, const int b, const int a)
 {
+	Assert(id != 0);
+	if (id == 0)
+		return;
+	
 	// capture current OpenGL states before we change them
 
 	GLuint restoreTexture;
@@ -95,6 +99,10 @@ void OpenglTexture::setSwizzle(const int r, const int g, const int b, const int 
 
 void OpenglTexture::upload(const void * src, const int srcAlignment, const int srcPitch, const int uploadFormat, const int uploadElementType)
 {
+	Assert(id != 0);
+	if (id == 0)
+		return;
+	
 	// capture current OpenGL states before we change them
 
 	GLuint restoreTexture;
