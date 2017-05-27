@@ -521,6 +521,11 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 			}
 		}
 		
+		if (link.srcNodeSocketIndex == -1)
+		{
+			printf("failed to find srcSocketIndex. srcNodeId=%d, srcSocketName=%s\n", link.srcNodeId, link.srcNodeSocketName.c_str());
+		}
+		
 		auto dstNode = tryGetNode(link.dstNodeId);
 		
 		if (dstNode)
@@ -539,6 +544,11 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 					}
 				}
 			}
+		}
+		
+		if (link.dstNodeSocketIndex == -1)
+		{
+			printf("failed to find dstSocketIndex. dstNodeId=%d, dstSocketName=%s\n", link.dstNodeId, link.dstNodeSocketName.c_str());
 		}
 	}
 	
@@ -1978,10 +1988,15 @@ bool GraphEdit::tick(const float dt)
 						{
 							for (auto nodeId : selectedNodes)
 							{
-								auto & offset = nodeDrag.offsets[nodeId];
+								auto node = tryGetNode(nodeId);
 								
-								offset[0] = mousePosition.x - hitTestResult.node->editorX;
-								offset[1] = mousePosition.y - hitTestResult.node->editorY;
+								if (node != nullptr)
+								{
+									auto & offset = nodeDrag.offsets[nodeId];
+									
+									offset[0] = mousePosition.x - node->editorX;
+									offset[1] = mousePosition.y - node->editorY;
+								}
 							}
 							
 							state = kState_NodeDrag;
@@ -2910,7 +2925,13 @@ void GraphEdit::doMenu(const float dt)
 			showNotification("Saved as '%s'", documentInfo.filename.c_str());
 		}
 		
-		doTextBox(documentInfo.filename, "filename", dt);
+		if (doTextBox(documentInfo.filename, "filename", dt))
+		{
+			const std::string filename = documentInfo.filename.c_str();
+			
+			load(filename.c_str());
+			showNotification("Loaded '%s'", documentInfo.filename.c_str());
+		}
 		
 		doBreak();
 	}
@@ -2954,6 +2975,10 @@ bool GraphEdit::tryAddNode(const std::string & typeName, const int x, const int 
 		return false;
 	}
 	else if (typeName.empty())
+	{
+		return false;
+	}
+	else if (typeDefinitionLibrary->tryGetTypeDefinition(typeName) == nullptr)
 	{
 		return false;
 	}
@@ -4127,55 +4152,62 @@ static uint32_t fuzzyStringDistance(const std::string & s1, const std::string & 
 	return d[len1][len2];
 }
 
+struct TypeNameAndScore
+{
+	std::string typeName;
+	uint32_t score;
+	
+	bool operator<(const TypeNameAndScore & other) const
+	{
+		if (score != other.score)
+			return score < other.score;
+		else
+			return typeName < other.typeName;
+	}
+};
+
+void calculateTypeNamesAndScores(const std::string & typeName, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, std::vector<TypeNameAndScore> & typeNamesAndScores)
+{
+	int index = 0;
+	
+	for (auto & typeDefenition : typeDefinitionLibrary->typeDefinitions)
+	{
+		const std::string & typeNameToMatch = typeDefenition.second.typeName;
+		
+		if (typeNameToMatch[0] != typeName[0])
+			continue;
+		
+		const uint32_t score = fuzzyStringDistance(typeNameToMatch, typeName);
+		
+		typeNamesAndScores.resize(index + 1);
+		typeNamesAndScores[index].typeName = typeNameToMatch;
+		typeNamesAndScores[index].score = score;
+		
+		++index;
+	}
+	
+	std::sort(typeNamesAndScores.begin(), typeNamesAndScores.end());
+}
+
 void GraphUi::NodeTypeNameSelect::doMenus(UiState * uiState, const float dt)
 {
 	pushMenu("nodeTypeSelect");
 	{
 		doLabel("insert", 0.f);
 		
-		doTextBox(typeName, "type", dt);
+		if (doTextBox(typeName, "type", dt))
+		{
+			typeName = findClosestMatch(typeName);
+			selectTypeName(typeName);
+		}
 		
 		if (!typeName.empty())
 		{
 			// list recommendations
 			
-			// todo : store this list in the type definition library ?
-			
-			struct TypeNameAndScore
-			{
-				std::string typeName;
-				uint32_t score;
-				
-				bool operator<(const TypeNameAndScore & other) const
-				{
-					if (score != other.score)
-						return score < other.score;
-					else
-						return typeName < other.typeName;
-				}
-			};
-			
 			std::vector<TypeNameAndScore> typeNamesAndScores;
 			
-			int index = 0;
-			
-			for (auto & typeDefenition : graphEdit->typeDefinitionLibrary->typeDefinitions)
-			{
-				const std::string & typeNameToMatch = typeDefenition.second.typeName;
-				
-				if (typeNameToMatch[0] != typeName[0])
-					continue;
-				
-				const uint32_t score = fuzzyStringDistance(typeNameToMatch, typeName);
-				
-				typeNamesAndScores.resize(index + 1);
-				typeNamesAndScores[index].typeName = typeNameToMatch;
-				typeNamesAndScores[index].score = score;
-				
-				++index;
-			}
-			
-			std::sort(typeNamesAndScores.begin(), typeNamesAndScores.end());
+			calculateTypeNamesAndScores(typeName, graphEdit->typeDefinitionLibrary, typeNamesAndScores);
 			
 			const int count = std::min(5, int(typeNamesAndScores.size()));
 			
@@ -4224,28 +4256,39 @@ void GraphUi::NodeTypeNameSelect::doMenus(UiState * uiState, const float dt)
 	popMenu();
 }
 
+std::string GraphUi::NodeTypeNameSelect::findClosestMatch(const std::string & typeName) const
+{
+	std::vector<TypeNameAndScore> typeNamesAndScores;
+			
+	calculateTypeNamesAndScores(typeName, graphEdit->typeDefinitionLibrary, typeNamesAndScores);
+	
+	if (typeNamesAndScores.empty())
+		return typeName;
+	else
+		return typeNamesAndScores.front().typeName;
+}
+
 void GraphUi::NodeTypeNameSelect::selectTypeName(const std::string & _typeName)
 {
 	typeName = _typeName;
 	
-	// update history
-	
-	for (auto i = history.begin(); i != history.end(); )
+	if (graphEdit->tryAddNode(typeName, graphEdit->dragAndZoom.focusX, graphEdit->dragAndZoom.focusY, true))
 	{
-		if ((*i) == typeName)
-			i = history.erase(i);
-		else
-			++i;
+		// update history
+		
+		for (auto i = history.begin(); i != history.end(); )
+		{
+			if ((*i) == typeName)
+				i = history.erase(i);
+			else
+				++i;
+		}
+		
+		history.push_front(_typeName);
+		
+		while (history.size() > kMaxHistory)
+			history.pop_back();
 	}
-	
-	history.push_front(_typeName);
-	
-	while (history.size() > kMaxHistory)
-		history.pop_back();
-	
-	//
-	
-	graphEdit->tryAddNode(typeName, graphEdit->dragAndZoom.focusX, graphEdit->dragAndZoom.focusY, true);
 }
 
 std::string & GraphUi::NodeTypeNameSelect::getNodeTypeName()

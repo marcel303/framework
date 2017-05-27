@@ -1023,6 +1023,7 @@ namespace GraphUi
 		~NodeTypeNameSelect();
 		
 		void doMenus(UiState * uiState, const float dt);
+		std::string findClosestMatch(const std::string & typeName) const;
 		void selectTypeName(const std::string & typeName);
 		
 		std::string & getNodeTypeName();
