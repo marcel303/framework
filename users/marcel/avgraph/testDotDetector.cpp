@@ -77,7 +77,7 @@ void testDotDetector()
 	
 	if (useVideo)
 	{
-		mp.openAsync("mocapc.mp4", false);
+		mp.openAsync("mocapc.mp4", MP::kOutputMode_PlanarYUV);
 	}
 	
 	//
@@ -149,7 +149,7 @@ void testDotDetector()
 				
 				mp.presentTime = 0.0;
 				
-				mp.openAsync(filename.c_str(), false);
+				mp.openAsync(filename.c_str(), MP::kOutputMode_RGBA);
 			}
 		}
 		
@@ -264,7 +264,7 @@ void testDotDetector()
 			const int treshold = tresholdFunction == 0 ? 255 - tresholdValue : tresholdValue;
 			const DotDetector::TresholdTest test = tresholdFunction == 0 ? DotDetector::kTresholdTest_GreaterEqual : DotDetector::kTresholdTest_LessEqual;
 			
-			DotDetector::treshold(surfaceData, maskedData, sx, sy, test, treshold);
+			DotDetector::treshold(surfaceData, sx, maskedData, sx, sx, sy, test, treshold);
 			
 		#if USE_READPIXELS_OPTIMIZE
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
