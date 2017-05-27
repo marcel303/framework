@@ -21,7 +21,6 @@ namespace MP
 	enum OutputMode
 	{
 		kOutputMode_RGBA,
-		kOutputMode_YUV,
 		kOutputMode_PlanarYUV
 	};
 }

@@ -14,6 +14,8 @@
 //#define QUEUE_SIZE (4 * 30)
 //#define QUEUE_SIZE (4)
 
+#define DO_DECODE_BUFFER_OPTIMIZE 0
+
 namespace MP
 {
 	VideoContext::VideoContext()
@@ -114,6 +116,12 @@ namespace MP
 			else
 			{
 				const bool isPlanarYUV = m_codecContext->pix_fmt == AV_PIX_FMT_YUV420P;
+				const AVPixelFormat destinationFormat =
+					m_outputMode == kOutputMode_RGBA
+					? AV_PIX_FMT_RGBA
+					: m_outputMode == kOutputMode_PlanarYUV && isPlanarYUV
+					? AV_PIX_FMT_YUV420P
+					: AV_PIX_FMT_RGBA;
 				
 				// Display codec info.
 				Debug::Print("Video: width: %d.", m_codecContext->width);
@@ -121,16 +129,17 @@ namespace MP
 				Debug::Print("Video: bitrate: %d.", m_codecContext->bit_rate);
 				Debug::Print("Video: format: %d. isPlanarYUV: %d", m_codecContext->pix_fmt, isPlanarYUV ? 1 : 0);
 				
-				if (!m_videoBuffer->Initialize(m_codecContext->width, m_codecContext->height))
+				if (!m_videoBuffer->Initialize(m_codecContext->width, m_codecContext->height, destinationFormat))
 				{
 					Debug::Print("Video: failed to initialize video buffer.");
 					return false;
 				}
-			
-				if (m_outputMode == kOutputMode_PlanarYUV && isPlanarYUV)
+				
+				if (DO_DECODE_BUFFER_OPTIMIZE && m_outputMode == kOutputMode_PlanarYUV && isPlanarYUV)
 				{
 					Assert(m_tempVideoFrame == nullptr);
 					m_tempVideoFrame = m_videoBuffer->AllocateFrame();
+					Assert(m_tempVideoFrame->m_isValidForRead == false);
 					
 					Assert(m_tempFrame == nullptr);
 					m_tempFrame = m_tempVideoFrame->m_frame;
@@ -171,15 +180,6 @@ namespace MP
 							Debug::Print("Video: required frame buffer size exceeds allocated frame buffer size.");
 							return false;
 						}
-						
-						AVPixelFormat destinationFormat =
-							m_outputMode == kOutputMode_RGBA
-							? AV_PIX_FMT_RGBA
-							: m_outputMode == kOutputMode_PlanarYUV
-							? AV_PIX_FMT_YUV420P
-							: m_outputMode == kOutputMode_YUV
-							? AV_PIX_FMT_YUV420P
-							: AV_PIX_FMT_RGBA;
 						
 						m_swsContext = sws_getContext(
 							m_codecContext->width, m_codecContext->height, m_codecContext->pix_fmt,
@@ -295,9 +295,14 @@ namespace MP
 		out_gotVideo = false;
 
 		// Check if the frame is in the buffer.
+		
 		VideoFrame * oldFrame = m_videoBuffer->GetCurrentFrame();
-		m_videoBuffer->AdvanceToTime(time);
+		Assert(oldFrame == nullptr || oldFrame->m_isValidForRead);
+		{
+			m_videoBuffer->AdvanceToTime(time);
+		}
 		VideoFrame * newFrame = m_videoBuffer->GetCurrentFrame();
+		Assert(newFrame == nullptr || newFrame->m_isValidForRead);
 
 		*out_frame = newFrame;
 
@@ -338,6 +343,12 @@ namespace MP
 		{
 			int gotPicture = 0;
 			
+			if (m_tempVideoFrame)
+			{
+				Assert(!m_tempVideoFrame->m_isValidForRead);
+				Assert(m_tempFrame == m_tempVideoFrame->m_frame);
+			}
+			
 			// Decode some data.
 			const int bytesDecoded = avcodec_decode_video2(
 				m_codecContext,
@@ -363,17 +374,25 @@ namespace MP
 				// Video frame finished?
 				if (gotPicture)
 				{
-					VideoFrame * frame = nullptr;
+					const bool isPlanarYUV = m_codecContext->pix_fmt == AV_PIX_FMT_YUV420P;
+					Assert(m_tempFrame->format == m_codecContext->pix_fmt);
 					
-					if (m_outputMode == kOutputMode_PlanarYUV && m_tempVideoFrame->m_frame->format == AV_PIX_FMT_YUV420P)
+					//SDL_Delay(25);
+					
+					if (DO_DECODE_BUFFER_OPTIMIZE && m_outputMode == kOutputMode_PlanarYUV && isPlanarYUV)
 					{
+						Assert(m_tempFrame == m_tempVideoFrame->m_frame);
 						SetTimingForFrame(m_tempVideoFrame);
 						
+						Assert(m_tempVideoFrame->m_isValidForRead == false);
 						m_videoBuffer->StoreFrame(m_tempVideoFrame);
 						m_tempVideoFrame = nullptr;
 						m_tempFrame = nullptr;
 						
 						m_tempVideoFrame = m_videoBuffer->AllocateFrame();
+						Assert(m_tempVideoFrame->m_isValidForRead == false);
+						
+						Assert(m_tempFrame == nullptr);
 						m_tempFrame = m_tempVideoFrame->m_frame;
 					}
 					else
@@ -386,22 +405,15 @@ namespace MP
 
 						m_videoBuffer->StoreFrame(frame);
 					}
+					
+					//SDL_Delay(25);
 				}
 			}
 		}
 		
 		return true;
 	}
-
-	bool VideoContext::AdvanceToTime(const double time, VideoFrame ** out_currentFrame)
-	{
-		m_videoBuffer->AdvanceToTime(time);
-
-		*out_currentFrame = m_videoBuffer->GetCurrentFrame();
-
-		return true;
-	}
-
+	
 	bool VideoContext::Depleted() const
 	{
 		return m_videoBuffer->Depleted() && (m_packetQueue->GetSize() == 0);
@@ -417,7 +429,8 @@ namespace MP
 		const AVFrame & src = *m_tempFrame;
 		      AVFrame & dst = *out_frame->m_frame;
 
-		if (m_outputMode == kOutputMode_YUV && m_tempFrame->format == AV_PIX_FMT_YUV420P)
+		//if (m_outputMode == kOutputMode_YUV && m_tempFrame->format == AV_PIX_FMT_YUV420P)
+		if (false)
 		{
 			const uint8_t * __restrict srcYLine = src.data[0];
 			const uint8_t * __restrict srcULine = src.data[1];
@@ -447,12 +460,14 @@ namespace MP
 				}
 			}
 		}
+	#if DO_DECODE_BUFFER_OPTIMIZE
 		else if (m_outputMode == kOutputMode_PlanarYUV && m_tempFrame->format == AV_PIX_FMT_YUV420P)
 		{
 			// this case should be handled without conversion at all
 			
 			Assert(false);
 		}
+	#endif
 		else
 		{
 			sws_scale(m_swsContext, src.data, src.linesize, 0, src.height, dst.data, dst.linesize);
@@ -463,25 +478,25 @@ namespace MP
 	
 	void VideoContext::SetTimingForFrame(VideoFrame * out_frame)
 	{
-			//if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
-						
-			if (true)
-			{
-				m_time = av_frame_get_best_effort_timestamp(m_tempFrame) * m_timeBase;
-			}
-			else
-			{
-				double frameDelay = av_q2d(m_codecContext->time_base);
-				frameDelay += m_tempFrame->repeat_pict * (frameDelay * 0.5);
+		//if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
+					
+		if (true)
+		{
+			m_time = av_frame_get_best_effort_timestamp(m_tempFrame) * m_timeBase;
+		}
+		else
+		{
+			double frameDelay = av_q2d(m_codecContext->time_base);
+			frameDelay += m_tempFrame->repeat_pict * (frameDelay * 0.5);
 
-				m_time += frameDelay;
-			}
-			
-			out_frame->m_time = m_time;
-			out_frame->m_isFirstFrame = (m_frameCount == 0);
+			m_time += frameDelay;
+		}
+		
+		out_frame->m_time = m_time;
+		out_frame->m_isFirstFrame = (m_frameCount == 0);
 
-			++m_frameCount;
+		++m_frameCount;
 
-			Debug::Print("Video: decoded frame. time: %03.3f.", float(m_time));
+		Debug::Print("Video: decoded frame. time: %03.3f.", float(m_time));
 	}
 };

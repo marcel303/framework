@@ -14,7 +14,7 @@ namespace MP
 		VideoFrame();
 		~VideoFrame();
 
-		bool Initialize(const size_t width, const size_t height);
+		bool Initialize(const size_t width, const size_t height, const size_t pixelFormat);
 		void Destroy();
 		
 		uint8_t * getY(int & sx, int & sy, int & pitch) const;
@@ -23,11 +23,14 @@ namespace MP
 		
 		size_t m_width;
 		size_t m_height;
+		size_t m_pixelFormat;
 
 		AVFrame * m_frame;
 		uint8_t * m_frameBuffer;
+		int m_frameBufferSize; // todo : remove once decode buffer optimize issue is fixed ? or only compile in debug
 		double m_time;
 		bool m_isFirstFrame;
+		bool m_isValidForRead; // todo : remove once decode buffer optimize issue is fixed ?
 
 		bool m_initialized;
 	};
@@ -38,7 +41,7 @@ namespace MP
 		VideoBuffer();
 		~VideoBuffer();
 
-		bool Initialize(const size_t width, const size_t height);
+		bool Initialize(const size_t width, const size_t height, const size_t pixelFormat);
 		bool Destroy();
 		bool IsInitialized() const;
 

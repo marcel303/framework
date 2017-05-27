@@ -19,10 +19,13 @@ namespace MP
 	VideoFrame::VideoFrame()
 		: m_width(0)
 		, m_height(0)
+		, m_pixelFormat(AV_PIX_FMT_NONE)
 		, m_frame(nullptr)
 		, m_frameBuffer(nullptr)
+		, m_frameBufferSize(0)
 		, m_time(0.0)
 		, m_isFirstFrame(false)
+		, m_isValidForRead(false)
 		, m_initialized(false)
 	{
 	}
@@ -33,20 +36,26 @@ namespace MP
 		
 		Assert(m_width == 0);
 		Assert(m_height == 0);
+		Assert(m_pixelFormat == AV_PIX_FMT_NONE);
 		Assert(m_frame == nullptr);
 		Assert(m_frameBuffer == nullptr);
+		Assert(m_frameBufferSize == 0);
 		Assert(m_time == 0.0);
 		Assert(m_isFirstFrame == false);
+		Assert(m_isValidForRead == false);
 	}
 
-	bool VideoFrame::Initialize(const size_t width, const size_t height)
+	bool VideoFrame::Initialize(const size_t width, const size_t height, const size_t _pixelFormat)
 	{
 		Assert(m_initialized == false);
+		
+		const AVPixelFormat pixelFormat = (AVPixelFormat)_pixelFormat;
 
 		m_initialized = true;
 
 		m_width = width;
 		m_height = height;
+		m_pixelFormat = pixelFormat;
 
 		// Create frames.
 		m_frame = av_frame_alloc();
@@ -58,13 +67,13 @@ namespace MP
 		}
 	
 		// Allocate buffer to use for RGB frame.
-		const int frameBufferSize = av_image_get_buffer_size(
-			AV_PIX_FMT_RGBA,
+		m_frameBufferSize = av_image_get_buffer_size(
+			pixelFormat,
 			static_cast<int>(width),
 			static_cast<int>(height),
 			16);
 		
-		m_frameBuffer = (uint8_t*)_mm_malloc(frameBufferSize, 16);
+		m_frameBuffer = (uint8_t*)_mm_malloc(m_frameBufferSize, 16);
 		
 		if (!m_frameBuffer)
 		{
@@ -77,15 +86,15 @@ namespace MP
 		s_numFrameBufferAllocations++;
 	#endif
 		
-		m_frame->format = AV_PIX_FMT_RGBA;
+		m_frame->format = pixelFormat;
 		m_frame->width = width;
 		m_frame->height = height;
-		const int requiredFrameBufferSize = av_image_fill_arrays(m_frame->data, m_frame->linesize, m_frameBuffer, AV_PIX_FMT_RGBA, width, height, 16);
+		const int requiredFrameBufferSize = av_image_fill_arrays(m_frame->data, m_frame->linesize, m_frameBuffer, pixelFormat, width, height, 16);
 		
-		Debug::Print("Video: frameBufferSize: %d.", frameBufferSize);
+		Debug::Print("Video: frameBufferSize: %d.", m_frameBufferSize);
 		Debug::Print("Video: requiredFrameBufferSize: %d.", requiredFrameBufferSize);
 		
-		if (requiredFrameBufferSize > frameBufferSize)
+		if (requiredFrameBufferSize > m_frameBufferSize)
 		{
 			Debug::Print("Video: required frame buffer size exceeds allocated frame buffer size.");
 			return false;
@@ -110,6 +119,7 @@ namespace MP
 		{
 			_mm_free(m_frameBuffer);
 			m_frameBuffer = nullptr;
+			m_frameBufferSize = 0;
 			
 		#if DEBUG_MEDIAPLAYER
 			s_numFrameBufferAllocations--;
@@ -119,12 +129,16 @@ namespace MP
 		
 		m_width = 0;
 		m_height = 0;
+		m_pixelFormat = AV_PIX_FMT_NONE;
 		m_time = 0.0;
 		m_isFirstFrame = false;
+		m_isValidForRead = false;
 	}
 	
 	uint8_t * VideoFrame::getY(int & sx, int & sy, int & pitch) const
 	{
+		Assert(m_isValidForRead && m_pixelFormat == AV_PIX_FMT_YUV420P);
+		
 		sx = m_frame->width;
 		sy = m_frame->height;
 		pitch = m_frame->linesize[0];
@@ -134,6 +148,8 @@ namespace MP
 	
 	uint8_t * VideoFrame::getU(int & sx, int & sy, int & pitch) const
 	{
+		Assert(m_isValidForRead && m_pixelFormat == AV_PIX_FMT_YUV420P);
+		
 		sx = m_frame->width / 2;
 		sy = m_frame->height / 2;
 		pitch = m_frame->linesize[1];
@@ -143,11 +159,13 @@ namespace MP
 	
 	uint8_t * VideoFrame::getV(int & sx, int & sy, int & pitch) const
 	{
+		Assert(m_isValidForRead && m_pixelFormat == AV_PIX_FMT_YUV420P);
+		
 		sx = m_frame->width / 2;
 		sy = m_frame->height / 2;
-		pitch = m_frame->linesize[1];
+		pitch = m_frame->linesize[2];
 		
-		return m_frame->data[1];
+		return m_frame->data[2];
 	}
 
 	// VideBuffer
@@ -168,7 +186,7 @@ namespace MP
 		Assert(m_currentFrame == nullptr);
 	}
 
-	bool VideoBuffer::Initialize(const size_t width, const size_t height)
+	bool VideoBuffer::Initialize(const size_t width, const size_t height, const size_t pixelFormat)
 	{
 		Assert(m_initialized == false);
 
@@ -180,7 +198,7 @@ namespace MP
 		{
 			VideoFrame * frame = new VideoFrame();
 
-			result &= frame->Initialize(width, height);
+			result &= frame->Initialize(width, height, pixelFormat);
 
 			m_freeList.push_back(frame);
 		}
@@ -238,8 +256,8 @@ namespace MP
 			m_freeList.pop_front();
 
 			Assert(frame != m_currentFrame);
-
-			//memset(frame->m_frameBuffer, 0xcc, frame->m_width * frame->m_height * 3);
+			
+			//memset(frame->m_frameBuffer, 0xcc, frame->m_frameBufferSize);
 		}
 		m_mutex.Unlock();
 
@@ -271,14 +289,20 @@ namespace MP
 
 		while (!m_consumeList.empty() && (m_consumeList.front()->m_time < time || m_consumeList.front()->m_isFirstFrame))
 		{
-			if (m_currentFrame != nullptr && m_currentFrame != m_consumeList.front())
+			if (m_currentFrame != nullptr)
 			{
+				Assert(m_currentFrame != m_consumeList.front());
+				Assert(m_currentFrame->m_isValidForRead);
+				m_currentFrame->m_isValidForRead = false;
 				m_freeList.push_back(m_currentFrame);
 				m_currentFrame = nullptr;
 			}
 
 			m_currentFrame = m_consumeList.front();
 			m_consumeList.pop_front();
+			
+			Assert(!m_currentFrame->m_isValidForRead);
+			m_currentFrame->m_isValidForRead = true;
 
 			++skipCount;
 
@@ -307,6 +331,9 @@ namespace MP
 	{
 		if (m_currentFrame != nullptr)
 		{
+			Assert(m_currentFrame->m_isValidForRead);
+			m_currentFrame->m_isValidForRead = false;
+			
 			m_freeList.push_back(m_currentFrame);
 			m_currentFrame = nullptr;
 		}

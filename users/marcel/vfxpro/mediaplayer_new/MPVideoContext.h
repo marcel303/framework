@@ -28,7 +28,6 @@ namespace MP
 		bool IsQueueFull() const;
 		bool AddPacket(const AVPacket & packet);
 		bool ProcessPacket(AVPacket & packet);
-		bool AdvanceToTime(const double time, VideoFrame ** out_currentFrame);
 		bool Depleted() const;
 
 	//private:
