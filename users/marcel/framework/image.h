@@ -2,37 +2,12 @@
 
 // Copyright (C) 2013 Grannies Games - All rights reserved
 
-#include <stdlib.h>
-#include <string.h>
-
 class ImageData
 {
 public:
-	ImageData()
-	{
-		memset(this, 0, sizeof(ImageData));
-	}
-
-	ImageData(int sx, int sy)
-	{
-		memset(this, 0, sizeof(ImageData));
-
-		this->sx = sx;
-		this->sy = sy;
-
-		imageData = new Pixel[sx * sy];
-	}
-	
-	~ImageData()
-	{
-		if (imageData)
-		{
-			free(imageData);
-			imageData = 0;
-			
-			sx = sy = 0;
-		}
-	}
+	ImageData();
+	ImageData(int sx, int sy);
+	~ImageData();
 	
 	int sx;
 	int sy;
@@ -58,5 +33,5 @@ public:
 };
 
 ImageData * loadImage(const char * filename);
-ImageData * imagePremultiplyAlpha(ImageData * image);
-ImageData * imageFixAlphaFilter(ImageData * image);
+ImageData * imagePremultiplyAlpha(const ImageData * image);
+ImageData * imageFixAlphaFilter(const ImageData * image);
