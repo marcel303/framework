@@ -41,12 +41,12 @@ struct MediaPlayer : public AudioStream
 		{
 			OpenParams()
 				: filename()
-				, yuv(false)
+				, outputMode(MP::kOutputMode_RGBA)
 			{
 			}
 			
 			std::string filename;
-			bool yuv;
+			MP::OutputMode outputMode;
 		};
 
 		OpenParams openParams;
@@ -96,7 +96,7 @@ struct MediaPlayer : public AudioStream
 		close(true);
 	}
 
-	void openAsync(const char * filename, const bool yuv);
+	void openAsync(const char * filename, const MP::OutputMode outputMode);
 	void close(const bool freeTexture);
 	void tick(Context * context);
 

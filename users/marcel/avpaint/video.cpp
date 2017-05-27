@@ -18,7 +18,7 @@ static int ExecMediaPlayerThread(void * param)
 
 	SDL_LockMutex(s_avcodecMutex);
 	{
-		context->hasBegun = context->mpContext.Begin(context->openParams.filename, false, true, context->openParams.yuv);
+		context->hasBegun = context->mpContext.Begin(context->openParams.filename, false, true, context->openParams.outputMode);
 	}
 	SDL_UnlockMutex(s_avcodecMutex);
 
@@ -58,7 +58,7 @@ static int ExecMediaPlayerThread(void * param)
 
 		logDebug("MP context end took %dms", t2 - t1);
 	}
-
+	
 	s_numVideoThreads--;
 
 	return 0;
@@ -94,7 +94,7 @@ bool MediaPlayer::Context::presentedLastFrame() const
 
 //
 
-void MediaPlayer::openAsync(const char * filename, const bool yuv)
+void MediaPlayer::openAsync(const char * filename, const MP::OutputMode outputMode)
 {
 	Assert(context == nullptr);
 
@@ -103,7 +103,7 @@ void MediaPlayer::openAsync(const char * filename, const bool yuv)
 	context = new Context();
 
 	context->openParams.filename = filename;
-	context->openParams.yuv = yuv;
+	context->openParams.outputMode = outputMode;
 
 	const int t2 = SDL_GetTicks();
 
@@ -186,46 +186,51 @@ void MediaPlayer::updateTexture()
 	{
 		SDL_CondSignal(context->mpTickEvent);
 
-		textureSx = videoFrame->m_width;
-		textureSy = videoFrame->m_height;
-
 		//logDebug("gotVideo. t=%06dms, sx=%d, sy=%d", int(time * 1000.0), textureSx, textureSy);
-
-		if (!texture)
-		{
-			glGenTextures(1, &texture);
-		}
 		
-		if (texture)
+		const void * bytes = nullptr;
+		int sx = 0;
+		int sy = 0;
+		int pitch = 0;
+		
+		GLenum internalFormat = 0;
+		GLenum uploadFormat = 0;
+		
+		if (context->openParams.outputMode == MP::kOutputMode_PlanarYUV)
 		{
-			const void * source = videoFrame->m_frameBuffer;
-			const int sx = videoFrame->m_width;
-			const int sy = videoFrame->m_height;
-			const GLenum internalFormat = GL_RGBA8;
-			const GLenum uploadFormat = GL_RGBA;
+			bytes = videoFrame->getY(sx, sy, pitch);
+			
+			internalFormat = GL_R8;
+			uploadFormat = GL_RED;
+		}
+		else
+		{
+			bytes = videoFrame->m_frameBuffer;
+			sx = videoFrame->m_width;
+			sy = videoFrame->m_height;
 			
 			const int alignment = 16;
 			const int alignmentMask = ~(alignment - 1);
-			const int numBytesPerRow = ((sx * 4) + alignment - 1) & alignmentMask;
-			const int numPixelsPerRow = numBytesPerRow / 4;
 			
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, numPixelsPerRow);
-			checkErrorGL();
+			pitch = (((sx * 4) + alignment - 1) & alignmentMask) / 4;
 			
-			// copy image data
-
+			internalFormat = GL_RGBA8;
+			uploadFormat = GL_RGBA;
+		}
+		
+		if (texture == 0 || sx != textureSx || sy != textureSy)
+		{
+			glGenTextures(1, &texture);
 			glBindTexture(GL_TEXTURE_2D, texture);
-			glTexImage2D(
-				GL_TEXTURE_2D,
-				0,
-				internalFormat,
-				sx,
-				sy,
-				0,
-				uploadFormat,
-				GL_UNSIGNED_BYTE,
-				source);
+			glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, sx, sy);
 			checkErrorGL();
+			
+			if (internalFormat == GL_R8)
+			{
+				GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
+				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+				checkErrorGL();
+			}
 			
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
@@ -235,6 +240,27 @@ void MediaPlayer::updateTexture()
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			checkErrorGL();
+			
+			textureSx = sx;
+			textureSy = sy;
+		}
+		
+		if (texture)
+		{
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch);
+			checkErrorGL();
+			
+			// copy image data
+
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glTexSubImage2D(
+				GL_TEXTURE_2D,
+				0, 0, 0,
+				sx, sy,
+				uploadFormat,
+				GL_UNSIGNED_BYTE,
+				bytes);
 			checkErrorGL();
 			
 			glBindTexture(GL_TEXTURE_2D, 0);
