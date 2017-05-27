@@ -16,7 +16,9 @@
 #include "vfxNodes/vfxNodeDisplay.h"
 #include "vfxNodes/vfxNodeDotDetector.h"
 #include "vfxNodes/vfxNodeFsfx.h"
+#include "vfxNodes/vfxNodeImageCpuDownsample.h"
 #include "vfxNodes/vfxNodeImageCpuToGpu.h"
+#include "vfxNodes/vfxNodeImageDownsample.h"
 #include "vfxNodes/vfxNodeImpulseResponse.h"
 #include "vfxNodes/vfxNodeKinect1.h"
 #include "vfxNodes/vfxNodeKinect2.h"
@@ -122,7 +124,7 @@ todo :
 + add mouse up/down movement support to increment/decrement values of int/float text boxes
 + add option to specify (in UiState) how far text boxes indent their text fields
 + add history of last nodes added
-- insert node on pressing enter in the node type name box
++ insert node on pressing enter in the node type name box
 	+ or when pressing one of the suggestion buttons
 - add suggestion based purely on matching first part of string (no fuzzy string comparison)
 	- order of listing should be : pure matches, fuzzy matches, history. show history once type name text box is made active
@@ -181,6 +183,20 @@ todo :
 - look at Bitwig 2 for inspiration of node types
 - add per-node profiling data. measure time tick and draw take and report it. maybe use a special colouring mode of the node background ? black -> red/orange/yellow
 - add real-time callback to get node description. report tick/draw time and some other stats/info
+	- report texture format, memory usage
+	- report cpu image channel count, memory usage, alignment
+	- report video playback time
+	- report number of dots
+	- report analog values for xinput
+	- report list of N latest events OSC send node
+	- report list of N latest events OSC receive node
+- automatically un-fold nodes (temporarily) when the mouse hovers over them ?
+	- (temporarily) un-fold node when it is the only selected node. allows connecting sockets
+	- (temporarily) un-fold hovered over node when connecting sockets
++ always to dragAndZoom tick ? regard of state
++ fix node dragging as dragAndZoom updates the viewport
+	+ remember where (in node space) the mouse went down
+	+ calculate new position based on current mouse position in graph space and initial position in node space
 	
 todo : nodes :
 + add ease node
@@ -246,7 +262,8 @@ todo : nodes :
 - add node which can analyze images, detect the dots in them, and send the dots as output
 	+ add dot detection node
 	- will need a vector socket value type ?
-- add CPU image downscale node. Downscale 2x2 or 4x4. would make dot detector operate faster on large video files
+- add CPU image downsample node.
+	+ downscale 2x2 or 4x4. would make dot detector operate faster on large video files
 	- maybe should work with maximum size constraints and keep downscaling until met ? makes it possible to have varying sized image data incoming and have some kind of size gaurantee on the output
 - add spectrum2d node
 + add dot detector node
@@ -277,7 +294,9 @@ todo : media player
 - add image to image_cpu node. default behaviour is to delay by a few frames
 + add image_cpu to image (gpu) node. default behaviour is to upload immediately
 - add openAsync call which accepts OpenParams
-- add yuvToRgb node. let user select colour space
+- add yuvToRgb node
+	+ add node and shader
+	- let user select colour space
 + add image_y, image_u, image_v to video node
 + double check image.toGpu node uses optimized code path for converting single channel source to texture 
 
@@ -427,6 +446,8 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("fsfx", VfxNodeFsfx)
 	DefineNodeImpl("image.dots", VfxNodeDotDetector)
 	DefineNodeImpl("image.toGpu", VfxNodeImageCpuToGpu)
+	DefineNodeImpl("image_cpu.downsample", VfxNodeImageCpuDownsample)
+	DefineNodeImpl("image.downsample", VfxNodeImageDownsample)
 	DefineNodeImpl("yuvToRgb", VfxNodeYuvToRgb)
 	else
 	{
