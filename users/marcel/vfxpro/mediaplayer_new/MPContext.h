@@ -12,7 +12,7 @@ namespace MP
 		Context();
 		~Context();
 
-		bool Begin(const std::string & filename, const bool enableAudioStream = true, const bool enableVideoStream = true, const bool outputYuv = false);
+		bool Begin(const std::string & filename, const bool enableAudioStream = true, const bool enableVideoStream = true, const OutputMode outputMode = kOutputMode_RGBA);
 		bool End();
 
 		bool HasBegun() const { return m_begun; }

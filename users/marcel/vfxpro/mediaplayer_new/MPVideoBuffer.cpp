@@ -122,6 +122,33 @@ namespace MP
 		m_time = 0.0;
 		m_isFirstFrame = false;
 	}
+	
+	uint8_t * VideoFrame::getY(int & sx, int & sy, int & pitch) const
+	{
+		sx = m_frame->width;
+		sy = m_frame->height;
+		pitch = m_frame->linesize[0];
+		
+		return m_frame->data[0];
+	}
+	
+	uint8_t * VideoFrame::getU(int & sx, int & sy, int & pitch) const
+	{
+		sx = m_frame->width / 2;
+		sy = m_frame->height / 2;
+		pitch = m_frame->linesize[1];
+		
+		return m_frame->data[1];
+	}
+	
+	uint8_t * VideoFrame::getV(int & sx, int & sy, int & pitch) const
+	{
+		sx = m_frame->width / 2;
+		sy = m_frame->height / 2;
+		pitch = m_frame->linesize[1];
+		
+		return m_frame->data[1];
+	}
 
 	// VideBuffer
 	VideoBuffer::VideoBuffer()

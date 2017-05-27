@@ -17,4 +17,11 @@ namespace MP
 	class VideoBuffer;
 	class VideoContext;
 	class VideoFrame;
+	
+	enum OutputMode
+	{
+		kOutputMode_RGBA,
+		kOutputMode_YUV,
+		kOutputMode_PlanarYUV
+	};
 }

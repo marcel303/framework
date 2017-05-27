@@ -20,12 +20,13 @@ namespace MP
 		: m_packetQueue(nullptr)
 		, m_codecContext(nullptr)
 		, m_codec(nullptr)
+		, m_tempVideoFrame(nullptr)
 		, m_tempFrame(nullptr)
 		, m_tempFrameBuffer(nullptr)
 		, m_videoBuffer(nullptr)
 		, m_swsContext(nullptr)
 		, m_streamIndex(-1)
-		, m_outputYuv(false)
+		, m_outputMode(kOutputMode_RGBA)
 		, m_time(0.0)
 		, m_frameCount(0)
 		, m_initialized(false)
@@ -39,28 +40,29 @@ namespace MP
 		Assert(m_packetQueue == nullptr);
 		Assert(m_codecContext == nullptr);
 		Assert(m_codec == nullptr);
+		Assert(m_tempVideoFrame == nullptr);
 		Assert(m_tempFrame == nullptr);
 		Assert(m_tempFrameBuffer == nullptr);
 		Assert(m_videoBuffer == nullptr);
 		Assert(m_swsContext == nullptr);
 		Assert(m_streamIndex == -1);
-		Assert(m_outputYuv == false);
+		Assert(m_outputMode == kOutputMode_RGBA);
 		Assert(m_time == 0.0);
 		Assert(m_frameCount == 0);
 	}
 
-	bool VideoContext::Initialize(Context * context, const size_t streamIndex, const bool outputYuv)
+	bool VideoContext::Initialize(Context * context, const size_t streamIndex, const OutputMode outputMode)
 	{
 		Assert(m_initialized == false);
 		
 		m_initialized = true;
 		
 		Assert(m_streamIndex == -1);
-		Assert(m_outputYuv == false);
+		Assert(m_outputMode == kOutputMode_RGBA);
 		Assert(m_time == 0.0);
 		Assert(m_frameCount == 0);
 		m_streamIndex = streamIndex;
-		m_outputYuv = outputYuv;
+		m_outputMode = outputMode;
 		m_time = 0.0;
 		m_frameCount = 0;
 		
@@ -111,67 +113,90 @@ namespace MP
 			}
 			else
 			{
+				const bool isPlanarYUV = m_codecContext->pix_fmt == AV_PIX_FMT_YUV420P;
+				
 				// Display codec info.
 				Debug::Print("Video: width: %d.", m_codecContext->width);
 				Debug::Print("Video: height: %d.", m_codecContext->height);
 				Debug::Print("Video: bitrate: %d.", m_codecContext->bit_rate);
-
-				// Create frame.
-				Assert(m_tempFrame == nullptr);
-				m_tempFrame = av_frame_alloc();
-
-				if (!m_tempFrame)
+				Debug::Print("Video: format: %d. isPlanarYUV: %d", m_codecContext->pix_fmt, isPlanarYUV ? 1 : 0);
+				
+				if (!m_videoBuffer->Initialize(m_codecContext->width, m_codecContext->height))
 				{
-					Debug::Print("Video: failed to allocate AV frame for decode.");
+					Debug::Print("Video: failed to initialize video buffer.");
 					return false;
+				}
+			
+				if (m_outputMode == kOutputMode_PlanarYUV && isPlanarYUV)
+				{
+					Assert(m_tempVideoFrame == nullptr);
+					m_tempVideoFrame = m_videoBuffer->AllocateFrame();
+					
+					Assert(m_tempFrame == nullptr);
+					m_tempFrame = m_tempVideoFrame->m_frame;
 				}
 				else
 				{
-					// Allocate buffer to use for frame.
-					const int frameBufferSize = av_image_get_buffer_size(
-						m_codecContext->pix_fmt,
-						m_codecContext->width,
-						m_codecContext->height,
-						16);
+					// Create frame.
+					Assert(m_tempFrame == nullptr);
+					m_tempFrame = av_frame_alloc();
 
-					Assert(m_tempFrameBuffer == nullptr);
-					m_tempFrameBuffer = (uint8_t*)_mm_malloc(frameBufferSize, 16);
-
-					// Assign buffer to frame.
-					const int requiredFrameBufferSize = av_image_fill_arrays(
-						m_tempFrame->data, m_tempFrame->linesize, m_tempFrameBuffer,
-						m_codecContext->pix_fmt, m_codecContext->width, m_codecContext->height, 16);
-					
-					Debug::Print("Vide: frameBufferSize: %d.", frameBufferSize);
-					Debug::Print("Video: requiredFrameBufferSize: %d.", requiredFrameBufferSize);
-					
-					if (requiredFrameBufferSize > frameBufferSize)
+					if (!m_tempFrame)
 					{
-						Debug::Print("Video: required frame buffer size exceeds allocated frame buffer size.");
+						Debug::Print("Video: failed to allocate AV frame for decode.");
 						return false;
 					}
-					
-					if (!m_videoBuffer->Initialize(m_codecContext->width, m_codecContext->height))
+					else
 					{
-						Debug::Print("Video: failed to initialize video buffer.");
-						return false;
-					}
+						// Allocate buffer to use for frame.
+						const int frameBufferSize = av_image_get_buffer_size(
+							m_codecContext->pix_fmt,
+							m_codecContext->width,
+							m_codecContext->height,
+							16);
 
-					m_swsContext = sws_getContext(
-						m_codecContext->width, m_codecContext->height, m_codecContext->pix_fmt,
-						m_codecContext->width, m_codecContext->height, AV_PIX_FMT_RGBA,
-						SWS_POINT, nullptr, nullptr, nullptr);
-					
-					if (!m_swsContext)
-					{
-						Debug::Print("Video: failed to allocated sws context.");
-						return false;
+						Assert(m_tempFrameBuffer == nullptr);
+						m_tempFrameBuffer = (uint8_t*)_mm_malloc(frameBufferSize, 16);
+
+						// Assign buffer to frame.
+						const int requiredFrameBufferSize = av_image_fill_arrays(
+							m_tempFrame->data, m_tempFrame->linesize, m_tempFrameBuffer,
+							m_codecContext->pix_fmt, m_codecContext->width, m_codecContext->height, 16);
+						
+						Debug::Print("Vide: frameBufferSize: %d.", frameBufferSize);
+						Debug::Print("Video: requiredFrameBufferSize: %d.", requiredFrameBufferSize);
+						
+						if (requiredFrameBufferSize > frameBufferSize)
+						{
+							Debug::Print("Video: required frame buffer size exceeds allocated frame buffer size.");
+							return false;
+						}
+						
+						AVPixelFormat destinationFormat =
+							m_outputMode == kOutputMode_RGBA
+							? AV_PIX_FMT_RGBA
+							: m_outputMode == kOutputMode_PlanarYUV
+							? AV_PIX_FMT_YUV420P
+							: m_outputMode == kOutputMode_YUV
+							? AV_PIX_FMT_YUV420P
+							: AV_PIX_FMT_RGBA;
+						
+						m_swsContext = sws_getContext(
+							m_codecContext->width, m_codecContext->height, m_codecContext->pix_fmt,
+							m_codecContext->width, m_codecContext->height, destinationFormat,
+							SWS_POINT, nullptr, nullptr, nullptr);
+						
+						if (!m_swsContext)
+						{
+							Debug::Print("Video: failed to allocated sws context.");
+							return false;
+						}
 					}
-					
-					m_timeBase = av_q2d(context->GetFormatContext()->streams[streamIndex]->time_base);
-					
-					return true;
 				}
+					
+				m_timeBase = av_q2d(context->GetFormatContext()->streams[streamIndex]->time_base);
+				
+				return true;
 			}
 		}
 	}
@@ -188,6 +213,12 @@ namespace MP
 		{
 			sws_freeContext(m_swsContext);
 			m_swsContext = nullptr;
+		}
+		
+		if (m_tempVideoFrame != nullptr)
+		{
+			m_videoBuffer->StoreFrame(m_tempVideoFrame);
+			m_tempVideoFrame = nullptr;
 		}
 		
 		if (m_videoBuffer != nullptr)
@@ -232,7 +263,7 @@ namespace MP
 		}
 		
 		m_streamIndex = -1;
-		m_outputYuv = false;
+		m_outputMode = kOutputMode_RGBA;
 		m_time = 0.0;
 		m_frameCount = 0;
 		
@@ -332,11 +363,29 @@ namespace MP
 				// Video frame finished?
 				if (gotPicture)
 				{
-					VideoFrame * frame = m_videoBuffer->AllocateFrame();
+					VideoFrame * frame = nullptr;
+					
+					if (m_outputMode == kOutputMode_PlanarYUV && m_tempVideoFrame->m_frame->format == AV_PIX_FMT_YUV420P)
+					{
+						SetTimingForFrame(m_tempVideoFrame);
+						
+						m_videoBuffer->StoreFrame(m_tempVideoFrame);
+						m_tempVideoFrame = nullptr;
+						m_tempFrame = nullptr;
+						
+						m_tempVideoFrame = m_videoBuffer->AllocateFrame();
+						m_tempFrame = m_tempVideoFrame->m_frame;
+					}
+					else
+					{
+						VideoFrame * frame = m_videoBuffer->AllocateFrame();
 
-					Convert(frame);
+						Convert(frame);
+						
+						SetTimingForFrame(frame);
 
-					m_videoBuffer->StoreFrame(frame);
+						m_videoBuffer->StoreFrame(frame);
+					}
 				}
 			}
 		}
@@ -362,10 +411,13 @@ namespace MP
 	{
 		bool result = true;
 		
+		Assert(out_frame->m_width == m_tempFrame->width);
+		Assert(out_frame->m_height == m_tempFrame->height);
+		
 		const AVFrame & src = *m_tempFrame;
 		      AVFrame & dst = *out_frame->m_frame;
 
-		if (m_outputYuv)
+		if (m_outputMode == kOutputMode_YUV && m_tempFrame->format == AV_PIX_FMT_YUV420P)
 		{
 			const uint8_t * __restrict srcYLine = src.data[0];
 			const uint8_t * __restrict srcULine = src.data[1];
@@ -395,31 +447,41 @@ namespace MP
 				}
 			}
 		}
+		else if (m_outputMode == kOutputMode_PlanarYUV && m_tempFrame->format == AV_PIX_FMT_YUV420P)
+		{
+			// this case should be handled without conversion at all
+			
+			Assert(false);
+		}
 		else
 		{
 			sws_scale(m_swsContext, src.data, src.linesize, 0, src.height, dst.data, dst.linesize);
 		}
-		
-        //if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
-		if (true)
-		{
-			m_time = av_frame_get_best_effort_timestamp(m_tempFrame) * m_timeBase;
-		}
-		else
-		{
-			double frameDelay = av_q2d(m_codecContext->time_base);
-			frameDelay += m_tempFrame->repeat_pict * (frameDelay * 0.5);
-
-			m_time += frameDelay;
-		}
-		
-		out_frame->m_time = m_time;
-		out_frame->m_isFirstFrame = (m_frameCount == 0);
-
-		++m_frameCount;
-
-		Debug::Print("Video: decoded frame. time: %03.3f.", float(m_time));
 
 		return result;
+	}
+	
+	void VideoContext::SetTimingForFrame(VideoFrame * out_frame)
+	{
+			//if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
+						
+			if (true)
+			{
+				m_time = av_frame_get_best_effort_timestamp(m_tempFrame) * m_timeBase;
+			}
+			else
+			{
+				double frameDelay = av_q2d(m_codecContext->time_base);
+				frameDelay += m_tempFrame->repeat_pict * (frameDelay * 0.5);
+
+				m_time += frameDelay;
+			}
+			
+			out_frame->m_time = m_time;
+			out_frame->m_isFirstFrame = (m_frameCount == 0);
+
+			++m_frameCount;
+
+			Debug::Print("Video: decoded frame. time: %03.3f.", float(m_time));
 	}
 };

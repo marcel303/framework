@@ -8,14 +8,14 @@ struct SwsContext;
 namespace MP
 {
 	class Context;
-
+	
 	class VideoContext
 	{
 	public:
 		VideoContext();
 		~VideoContext();
 
-		bool Initialize(Context * context, const size_t streamIndex, const bool outputYuv);
+		bool Initialize(Context * context, const size_t streamIndex, const OutputMode outputMode);
 		bool Destroy();
 
 		size_t GetStreamIndex() const;
@@ -33,10 +33,12 @@ namespace MP
 
 	//private:
 		bool Convert(VideoFrame * out_frame);
+		void SetTimingForFrame(VideoFrame * out_frame);
 
 		PacketQueue * m_packetQueue;
 		AVCodecContext * m_codecContext;
 		AVCodec * m_codec;
+		VideoFrame * m_tempVideoFrame;
 		AVFrame * m_tempFrame;
 		uint8_t * m_tempFrameBuffer;
 		VideoBuffer * m_videoBuffer;
@@ -44,7 +46,7 @@ namespace MP
 		double m_timeBase;
 
 		size_t m_streamIndex;
-		bool m_outputYuv;
+		OutputMode m_outputMode;
 		double m_time;
 		size_t m_frameCount;
 
