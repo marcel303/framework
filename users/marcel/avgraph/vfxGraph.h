@@ -46,6 +46,7 @@ struct VfxGraph
 	
 	GraphNodeId displayNodeId;
 	
+	mutable int nextTickOrder;
 	mutable int nextTickTraversalId;
 	mutable int nextDrawTraversalId;
 	

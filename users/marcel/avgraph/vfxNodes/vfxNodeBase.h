@@ -349,6 +349,7 @@ struct VfxNodeBase
 	
 	bool isPassthrough;
 	
+	int tickOrder;
 	int tickTimeAvg;
 	int drawTimeAvg;
 	

@@ -17,6 +17,7 @@ VfxGraph * g_currentVfxGraph = nullptr;
 VfxGraph::VfxGraph()
 	: nodes()
 	, displayNodeId(kGraphNodeIdInvalid)
+	, nextTickOrder(0)
 	, nextTickTraversalId(0)
 	, nextDrawTraversalId(0)
 	, graph(nullptr)
@@ -152,6 +153,8 @@ void VfxGraph::tick(const float dt)
 	
 	// use traversalId, start update at display node
 	
+	nextTickOrder = 0;
+	
 	if (displayNodeId != kGraphNodeIdInvalid)
 	{
 		auto nodeItr = nodes.find(displayNodeId);
@@ -250,7 +253,7 @@ void VfxGraph::draw() const
 			const VfxNodeBase * vfxNode = i.second;
 			
 			setColor(colorWhite);
-			drawText(x, y, 12, 0, 0, "node %d / %s: tick: %.2fms, draw %.2fms", nodeId, node ? node->getDisplayName().c_str() : "n/a", vfxNode->tickTimeAvg/1000.0, vfxNode->drawTimeAvg/1000.0);
+			drawText(x, y, 12, 0, 0, "node %d / %s: tickOrder: %d, tick: %.2fms, draw %.2fms", nodeId, node ? node->getDisplayName().c_str() : "n/a", vfxNode->tickOrder, vfxNode->tickTimeAvg/1000.0, vfxNode->drawTimeAvg/1000.0);
 			
 			y += 18;
 		}

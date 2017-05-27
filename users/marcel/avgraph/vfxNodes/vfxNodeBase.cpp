@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "Timer.h"
+#include "vfxGraph.h"
 #include "vfxNodeBase.h"
 #include <string.h>
 
@@ -251,6 +252,7 @@ VfxNodeBase::VfxNodeBase()
 	, lastDrawTraversalId(-1)
 	, editorIsTriggered(false)
 	, isPassthrough(false)
+	, tickOrder(0)
 	, tickTimeAvg(0)
 	, drawTimeAvg(0)
 {
@@ -266,6 +268,8 @@ void VfxNodeBase::traverseTick(const int traversalId, const float dt)
 		if (predep->lastTickTraversalId != traversalId)
 			predep->traverseTick(traversalId, dt);
 	}
+	
+	tickOrder = g_currentVfxGraph->nextTickOrder++;
 	
 	const uint64_t t1 = g_TimerRT.TimeUS_get();
 	
