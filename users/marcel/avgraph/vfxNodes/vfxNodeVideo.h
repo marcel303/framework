@@ -10,18 +10,25 @@ struct VfxNodeVideo : VfxNodeBase
 		kInput_Transform,
 		kInput_Loop,
 		kInput_Speed,
+		kInput_OutputMode,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
 		kOutput_Image,
-		kOutput_ImageCpu,
+		kOutput_ImageCpuRGBA,
+		kOutput_ImageCpuY,
+		kOutput_ImageCpuU,
+		kOutput_ImageCpuV,
 		kOutput_COUNT
 	};
 	
 	VfxImage_Texture imageOutput;
-	VfxImageCpu imageCpuOutput;
+	VfxImageCpu imageCpuOutputRGBA;
+	VfxImageCpu imageCpuOutputY;
+	VfxImageCpu imageCpuOutputU;
+	VfxImageCpu imageCpuOutputV;
 	
 	MediaPlayer * mediaPlayer;
 	

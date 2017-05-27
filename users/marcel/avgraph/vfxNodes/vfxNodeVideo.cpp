@@ -6,7 +6,10 @@
 VfxNodeVideo::VfxNodeVideo()
 	: VfxNodeBase()
 	, imageOutput()
-	, imageCpuOutput()
+	, imageCpuOutputRGBA()
+	, imageCpuOutputY()
+	, imageCpuOutputU()
+	, imageCpuOutputV()
 	, mediaPlayer(nullptr)
 	, textureBlack(0)
 {
@@ -17,8 +20,12 @@ VfxNodeVideo::VfxNodeVideo()
 	addInput(kInput_Transform, kVfxPlugType_Transform);
 	addInput(kInput_Loop, kVfxPlugType_Bool);
 	addInput(kInput_Speed, kVfxPlugType_Float);
+	addInput(kInput_OutputMode, kVfxPlugType_Int);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
-	addOutput(kOutput_ImageCpu, kVfxPlugType_ImageCpu, &imageCpuOutput);
+	addOutput(kOutput_ImageCpuRGBA, kVfxPlugType_ImageCpu, &imageCpuOutputRGBA);
+	addOutput(kOutput_ImageCpuY, kVfxPlugType_ImageCpu, &imageCpuOutputY);
+	addOutput(kOutput_ImageCpuU, kVfxPlugType_ImageCpu, &imageCpuOutputU);
+	addOutput(kOutput_ImageCpuV, kVfxPlugType_ImageCpu, &imageCpuOutputV);
 	
 	uint32_t pixels[4] = { 0, 0, 0, 0 };
 	textureBlack = createTextureFromRGBA8(pixels, 1, 1, false, true);
@@ -27,6 +34,7 @@ VfxNodeVideo::VfxNodeVideo()
 VfxNodeVideo::~VfxNodeVideo()
 {
 	glDeleteTextures(1, &textureBlack);
+	textureBlack = 0;
 	
 	delete mediaPlayer;
 	mediaPlayer = nullptr;
@@ -36,18 +44,24 @@ void VfxNodeVideo::tick(const float dt)
 {
 	const bool loop = getInputBool(kInput_Loop, true);
 	const float speed = getInputFloat(kInput_Speed, 1.f);
+	const MP::OutputMode outputMode = (MP::OutputMode)getInputInt(kInput_OutputMode, MP::kOutputMode_RGBA);
 	
 	if (mediaPlayer->isActive(mediaPlayer->context))
 	{
 		const char * source = getInputString(kInput_Source, "");
 		
-		if (mediaPlayer->context->openParams.filename != source || (mediaPlayer->context->hasPresentedLastFrame && loop))
+		const bool paramsChanged =
+			mediaPlayer->context->openParams.filename != source ||
+			(mediaPlayer->context->hasPresentedLastFrame && loop) ||
+			mediaPlayer->context->openParams.outputMode != outputMode;
+		
+		if (paramsChanged)
 		{
 			mediaPlayer->close(false);
 			
 			mediaPlayer->presentTime = 0.f;
 			
-			mediaPlayer->openAsync(source, false);
+			mediaPlayer->openAsync(source, outputMode);
 		}
 		
 		mediaPlayer->tick(mediaPlayer->context);
@@ -63,17 +77,42 @@ void VfxNodeVideo::tick(const float dt)
 		
 		if (source[0])
 		{
-			mediaPlayer->openAsync(source, false);
+			mediaPlayer->openAsync(source, MP::kOutputMode_RGBA);
 		}
 	}
 	
+	imageCpuOutputRGBA.reset();
+	imageCpuOutputY.reset();
+	imageCpuOutputU.reset();
+	imageCpuOutputV.reset();
+
 	if (mediaPlayer->videoFrame != nullptr)
 	{
-		imageCpuOutput.setDataRGBA8((uint8_t*)mediaPlayer->videoFrame->m_frameBuffer, mediaPlayer->videoFrame->m_width, mediaPlayer->videoFrame->m_height, 0);
-	}
-	else
-	{
-		imageCpuOutput.reset();
+		if (mediaPlayer->context->openParams.outputMode == MP::kOutputMode_PlanarYUV)
+		{
+			int ySx;
+			int ySy;
+			int yPitch;
+			const uint8_t * yBytes = mediaPlayer->videoFrame->getY(ySx, ySy, yPitch);
+			
+			int uSx;
+			int uSy;
+			int uPitch;
+			const uint8_t * uBytes = mediaPlayer->videoFrame->getU(uSx, uSy, uPitch);
+			
+			int vSx;
+			int vSy;
+			int vPitch;
+			const uint8_t * vBytes = mediaPlayer->videoFrame->getV(vSx, vSy, vPitch);
+			
+			imageCpuOutputY.setDataR8(yBytes, ySx, ySy, yPitch);
+			imageCpuOutputU.setDataR8(uBytes, uSx, uSy, uPitch);
+			imageCpuOutputV.setDataR8(vBytes, vSx, vSy, vPitch);
+		}
+		else if (mediaPlayer->context->openParams.outputMode == MP::kOutputMode_RGBA)
+		{
+			imageCpuOutputRGBA.setDataRGBA8((uint8_t*)mediaPlayer->videoFrame->m_frameBuffer, mediaPlayer->videoFrame->m_width, mediaPlayer->videoFrame->m_height, 0);
+		}
 	}
 	
 	if (imageOutput.texture == 0)
@@ -85,9 +124,10 @@ void VfxNodeVideo::tick(const float dt)
 void VfxNodeVideo::init(const GraphNode & node)
 {
 	const char * source = getInputString(kInput_Source, "");
+	const MP::OutputMode outputMode = (MP::OutputMode)getInputInt(kInput_OutputMode, MP::kOutputMode_RGBA);
 	
 	if (source[0])
 	{
-		mediaPlayer->openAsync(source, false);
+		mediaPlayer->openAsync(source, outputMode);
 	}
 }
