@@ -40,8 +40,8 @@ struct DotDetector
 	};
 
 	static void treshold(
-		const uint8_t * __restrict src,
-		      uint8_t * __restrict dst,
+		const uint8_t * __restrict src, const int srcPitch,
+		      uint8_t * __restrict dst, const int dstPitch,
 		const int sx, const int sy,
 		const TresholdTest test, const uint8_t tresholdValue);
 
