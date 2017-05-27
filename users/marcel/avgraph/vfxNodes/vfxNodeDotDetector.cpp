@@ -52,27 +52,30 @@ void VfxNodeDotDetector::tick(const float dt)
 		}
 		
 		const uint8_t * lumiPtr = nullptr;
+		int lumiAlignment = 1;
 		int lumiPitch = 0;
 		
 		// create luminance map
 		
 		if (channel == kChannel_RGB)
 		{
-			if (image->interleaved.stride == 1)
+			if (image->numChannels == 1 && image->isPlanar)
 			{
-				// single channel image. copy the bytes directly without luminance calculation
+				// note : single channel images. we just pass the data directly into the dot detection algortihm
 				
-				// todo : for single channel images, we could just pass the data directly into the dot detection algortihm. it would have to support custom pitch, but that's all..
-				
-				const VfxImageCpu::Channel * source = &image->interleaved;
+				const VfxImageCpu::Channel * source = &image->channel[0];
 				
 				lumiPtr = source->data;
+				lumiAlignment = image->alignment;
 				lumiPitch = source->pitch;
 			}
 			else
 			{
 				lumiPtr = lumi;
+				lumiAlignment = 16;
 				lumiPitch = maskSx;
+				
+				// todo : if the data is planar it would be trivial to SSE-optimize this loop
 				
 				for (int y = 0; y < maskSy; ++y)
 				{
@@ -112,14 +115,16 @@ void VfxNodeDotDetector::tick(const float dt)
 			else
 				source = &image->channel[3];
 			
-			if (source->stride == 1)
+			if (image->isPlanar)
 			{
 				lumiPtr = source->data;
+				lumiAlignment = image->alignment;
 				lumiPitch = source->pitch;
 			}
 			else
 			{
 				lumiPtr = lumi;
+				lumiAlignment = 16;
 				lumiPitch = maskSx;
 				
 				for (int y = 0; y < maskSy; ++y)
@@ -140,7 +145,7 @@ void VfxNodeDotDetector::tick(const float dt)
 		
 		// update lumi output
 		
-		lumiOutput.setDataR8(lumiPtr, maskSx, maskSy, lumiPitch);
+		lumiOutput.setDataR8(lumiPtr, maskSx, maskSy, lumiAlignment, lumiPitch);
 
 		// do tresholding
 		
@@ -163,8 +168,8 @@ void VfxNodeDotDetector::tick(const float dt)
 
 void VfxNodeDotDetector::allocateMask(const int sx, const int sy)
 {
-	lumi = new uint8_t[sx * sy];
-	mask = new uint8_t[sx * sy];
+	lumi = (uint8_t*)_mm_malloc(sx * sy, 16);
+	mask = (uint8_t*)_mm_malloc(sx * sy, 16);
 	
 	memset(lumi, 0, sx * sy);
 	memset(mask, 0, sx * sy);
@@ -172,16 +177,16 @@ void VfxNodeDotDetector::allocateMask(const int sx, const int sy)
 	maskSx = sx;
 	maskSy = sy;
 	
-	lumiOutput.setDataR8(lumi, sx, sy, sx);
-	maskOutput.setDataR8(mask, sx, sy, sx);
+	lumiOutput.setDataR8(lumi, sx, sy, 16, sx);
+	maskOutput.setDataR8(mask, sx, sy, 16, sx);
 }
 
 void VfxNodeDotDetector::freeMask()
 {
-	delete[] lumi;
+	_mm_free(lumi);
 	lumi = nullptr;
 	
-	delete[] mask;
+	_mm_free(mask);
 	mask = nullptr;
 	
 	maskSx = 0;

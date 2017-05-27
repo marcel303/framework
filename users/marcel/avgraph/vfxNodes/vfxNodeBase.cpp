@@ -74,49 +74,44 @@ VfxImageCpu::Channel::Channel()
 VfxImageCpu::VfxImageCpu()
 	: sx(0)
 	, sy(0)
-	, interleaved()
+	, numChannels(0)
+	, alignment(1)
+	, isInterleaved(false)
+	, isPlanar(false)
 	, channel()
 {
 }
 
-void VfxImageCpu::setDataR8(const uint8_t * r, const int _sx, const int _sy, const int _pitch)
+void VfxImageCpu::setDataInterleaved(const uint8_t * data, const int _sx, const int _sy, const int _numChannels, const int _alignment, const int pitch)
 {
 	sx = _sx;
 	sy = _sy;
 	
-	const int stride = 1;
-	const int pitch = _pitch == 0 ? sx * 1 : _pitch;
-	
-	interleaved.data = r;
-	interleaved.stride = stride;
-	interleaved.pitch = pitch;
+	numChannels = _numChannels;
+	alignment = _alignment;
+	isInterleaved = true;
+	isPlanar = _numChannels == 1;
 	
 	for (int i = 0; i < 4; ++i)
 	{
-		channel[i].data = r;
-		channel[i].stride = 1;
+		channel[i].data = data + (i % numChannels);
+		channel[i].stride = numChannels;
 		channel[i].pitch = pitch;
 	}
 }
 
-void VfxImageCpu::setDataRGBA8(const uint8_t * rgba, const int _sx, const int _sy, const int _pitch)
+void VfxImageCpu::setDataR8(const uint8_t * r, const int sx, const int sy, const int alignment, const int _pitch)
 {
-	sx = _sx;
-	sy = _sy;
+	const int pitch = _pitch == 0 ? sx * 1 : _pitch;
 	
-	const int stride = 4;
+	setDataInterleaved(r, sx, sy, 1, alignment, pitch);
+}
+
+void VfxImageCpu::setDataRGBA8(const uint8_t * rgba, const int sx, const int sy, const int alignment, const int _pitch)
+{
 	const int pitch = _pitch == 0 ? sx * 4 : _pitch;
 	
-	interleaved.data = rgba;
-	interleaved.stride = stride;
-	interleaved.pitch = pitch;
-	
-	for (int i = 0; i < 4; ++i)
-	{
-		channel[i].data = rgba + i;
-		channel[i].stride = stride;
-		channel[i].pitch = pitch;
-	}
+	setDataInterleaved(rgba, sx, sy, 4, alignment, pitch);
 }
 
 void VfxImageCpu::reset()
@@ -124,7 +119,10 @@ void VfxImageCpu::reset()
 	sx = 0;
 	sy = 0;
 	
-	interleaved = Channel();
+	numChannels = 0;
+	alignment = 1;
+	isInterleaved = false;
+	isPlanar = false;
 	
 	for (int i = 0; i < 4; ++i)
 	{

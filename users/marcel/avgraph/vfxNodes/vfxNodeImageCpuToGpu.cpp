@@ -42,14 +42,14 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	
 	//
 	
-	if (image->interleaved.stride == 1)
+	if (image->numChannels == 1)
 	{
 		// always upload single channel data using the fast path
 		
 		if (texture.isChanged(image->sx, image->sy, GL_R8))
 			texture.allocate(image->sx, image->sy, GL_R8);
 		
-		texture.upload(image->interleaved.data, 4, image->interleaved.pitch, GL_RED, GL_UNSIGNED_BYTE);
+		texture.upload(image->channel[0].data, image->alignment, image->channel[0].pitch, GL_RED, GL_UNSIGNED_BYTE);
 		
 		texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 	}
@@ -58,9 +58,9 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		if (texture.isChanged(image->sx, image->sy, GL_RGBA8))
 			texture.allocate(image->sx, image->sy, GL_RGBA8);
 	
-		if (image->interleaved.stride == 4)
+		if (image->numChannels == 4 && image->isInterleaved)
 		{
-			texture.upload(image->interleaved.data, 4, image->interleaved.pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
+			texture.upload(image->channel[0].data, image->alignment, image->channel[0].pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
 		}
 		else
 		{
@@ -86,11 +86,11 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		if (texture.isChanged(image->sx, image->sy, GL_RGB8))
 			texture.allocate(image->sx, image->sy, GL_RGB8);
 		
-		if (image->interleaved.stride == 3)
+		if (image->numChannels == 3 && image->isInterleaved)
 		{
 			// todo : RGB image upload is a slow path on my Intel Iris. convert to RGBA first ?
 			
-			texture.upload(image->interleaved.data, 4, image->interleaved.pitch / 3, GL_RGB, GL_UNSIGNED_BYTE);
+			texture.upload(image->channel[0].data, image->alignment, image->channel[0].pitch / 3, GL_RGB, GL_UNSIGNED_BYTE);
 		}
 		else
 		{
@@ -104,7 +104,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 				&image->channel[2],
 				temp, 0, image->sx, image->sy);
 			
-			texture.upload(image->interleaved.data, 16, image->sx, GL_RGB, GL_UNSIGNED_BYTE);
+			texture.upload(temp, 16, image->sx, GL_RGB, GL_UNSIGNED_BYTE);
 			
 			_mm_free(temp);
 			temp = nullptr;
