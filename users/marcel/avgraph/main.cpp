@@ -45,6 +45,7 @@
 #include "vfxNodes/vfxNodeTriggerTreshold.h"
 #include "vfxNodes/vfxNodeVideo.h"
 #include "vfxNodes/vfxNodeXinput.h"
+#include "vfxNodes/vfxNodeYuvToRgb.h"
 
 #include "mediaplayer_new/MPUtil.h"
 #include "../libparticle/ui.h"
@@ -289,7 +290,7 @@ reference :
 
 */
 
-#define FILENAME "kinect.xml"
+#define FILENAME "yuvtest.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -426,6 +427,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("fsfx", VfxNodeFsfx)
 	DefineNodeImpl("image.dots", VfxNodeDotDetector)
 	DefineNodeImpl("image.toGpu", VfxNodeImageCpuToGpu)
+	DefineNodeImpl("yuvToRgb", VfxNodeYuvToRgb)
 	else
 	{
 		logError("unknown node type: %s", typeName.c_str());
