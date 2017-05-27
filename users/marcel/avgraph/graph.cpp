@@ -423,6 +423,16 @@ GraphNode * Graph::tryGetNode(const GraphNodeId nodeId)
 		return &nodeItr->second;
 }
 
+GraphNodeSocketLink * Graph::tryGetLink(const GraphLinkId linkId)
+{
+	auto linkItr = links.find(linkId);
+	
+	if (linkItr == links.end())
+		return nullptr;
+	else
+		return &linkItr->second;
+}
+
 bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary)
 {
 	nextNodeId = intAttrib(xmlGraph, "nextNodeId", nextNodeId);
@@ -2262,7 +2272,8 @@ bool GraphEdit::tick(const float dt)
 				
 				for (auto linkId : selectedLinks)
 				{
-					graph->removeLink(linkId);
+					if (graph->tryGetLink(linkId) != nullptr)
+						graph->removeLink(linkId);
 				}
 				
 				selectedLinks.clear();

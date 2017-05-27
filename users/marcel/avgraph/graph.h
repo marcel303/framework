@@ -170,6 +170,7 @@ struct Graph
 	void removeLink(const GraphLinkId linkId);
 	
 	GraphNode * tryGetNode(const GraphNodeId nodeId);
+	GraphNodeSocketLink * tryGetLink(const GraphLinkId linkId);
 	
 	bool loadXml(const tinyxml2::XMLElement * xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
 	bool saveXml(tinyxml2::XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary) const;
