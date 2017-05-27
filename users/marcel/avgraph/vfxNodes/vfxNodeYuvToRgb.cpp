@@ -1,0 +1,122 @@
+#include "framework.h"
+#include "vfxNodeYuvToRgb.h"
+
+static bool initialized = false;
+
+static const char * s_yuvToRgbVs = R"SHADER(
+	include engine/ShaderVS.txt
+
+	shader_out vec2 texcoord;
+
+	void main()
+	{
+		gl_Position = ModelViewProjectionMatrix * in_position4;
+		
+		texcoord = vec2(in_texcoord);
+	}
+)SHADER";
+
+static const char * s_yuvToRgbPs = R"SHADER(
+	include engine/ShaderPS.txt
+
+	shader_in vec2 texcoord;
+	uniform sampler2D yTex;
+	uniform sampler2D uTex;
+	uniform sampler2D vTex;
+
+	void main()
+	{
+		float y = texture(yTex, texcoord).x;
+		float u = texture(uTex, texcoord).x;
+		float v = texture(vTex, texcoord).x;
+		
+		y = y - 16/255.0;
+		u = u - 0.5;
+		v = v - 0.5;
+		
+		float r = 1.164 * y + 1.596 * v;
+		float g = 1.164 * y - 0.813 * v - 0.391 * u;
+		float b = 1.164 * y + 2.018 * u;
+		
+		vec4 color = vec4(r, g, b, 1.0);
+		
+		shader_fragColor = color;
+	}
+)SHADER";
+
+
+VfxNodeYuvToRgb::VfxNodeYuvToRgb()
+	: VfxNodeBase()
+	, surface(nullptr)
+	, imageOutput()
+{
+	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	addInput(kInput_Y, kVfxPlugType_Image);
+	addInput(kInput_U, kVfxPlugType_Image);
+	addInput(kInput_V, kVfxPlugType_Image);
+	addInput(kInput_ColorSpace, kVfxPlugType_Int);
+	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
+	
+	if (initialized == false)
+	{
+		shaderSource("yuvToRgb.vs", s_yuvToRgbVs);
+		shaderSource("yuvToRgb.ps", s_yuvToRgbPs);
+	}
+}
+
+VfxNodeYuvToRgb::~VfxNodeYuvToRgb()
+{
+	delete surface;
+	surface = nullptr;
+}
+
+void VfxNodeYuvToRgb::tick(const float dt)
+{
+	const VfxImageBase * y = getInputImage(kInput_Y, nullptr);
+	const VfxImageBase * u = getInputImage(kInput_U, nullptr);
+	const VfxImageBase * v = getInputImage(kInput_V, nullptr);
+
+	if (y == nullptr || u == nullptr || v == nullptr || y->getSx() == 0 || y->getSy() == 0)
+	{
+		delete surface;
+		surface = nullptr;
+	}
+	else
+	{
+		const int sx = y->getSx();
+		const int sy = y->getSy();
+
+		if (surface == nullptr || surface->getWidth() != sx || surface->getHeight() != sy)
+		{
+			delete surface;
+			surface = nullptr;
+
+			surface = new Surface(sx, sy, false, false, SURFACE_RGBA8);
+		}
+		
+		pushSurface(surface);
+		{
+			pushBlend(BLEND_OPAQUE);
+			setColor(colorWhite);
+			
+			Shader shader("yuvToRgb");
+			setShader(shader);
+			{
+				shader.setTexture("yTex", 0, y->getTexture());
+				shader.setTexture("uTex", 1, u->getTexture());
+				shader.setTexture("vTex", 2, v->getTexture());
+				
+				drawRect(0, 0, surface->getWidth(), surface->getHeight());
+			}
+			clearShader();
+			
+			popBlend();
+		}
+		popSurface();
+	}
+
+	if (surface != nullptr)
+		imageOutput.texture = surface->getTexture();
+	else
+		imageOutput.texture = 0;
+}
