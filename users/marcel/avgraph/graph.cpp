@@ -1499,6 +1499,7 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, selectedLinks()
 	, state(kState_Idle)
 	, nodeSelect()
+	, nodeDrag()
 	, socketConnect()
 	, nodeResize()
 	, mousePosition()
@@ -1975,6 +1976,14 @@ bool GraphEdit::tick(const float dt)
 						
 						if (hitTestResult.nodeHitTestResult.background)
 						{
+							for (auto nodeId : selectedNodes)
+							{
+								auto & offset = nodeDrag.offsets[nodeId];
+								
+								offset[0] = mousePosition.x - hitTestResult.node->editorX;
+								offset[1] = mousePosition.y - hitTestResult.node->editorY;
+							}
+							
 							state = kState_NodeDrag;
 							break;
 						}
@@ -2143,20 +2152,7 @@ bool GraphEdit::tick(const float dt)
 			
 			if (selectedNodes.empty())
 			{
-				int moveX = 0;
-				int moveY = 0;
-				
-				if (keyboard.wentDown(SDLK_LEFT, true))
-					moveX -= 1;
-				if (keyboard.wentDown(SDLK_RIGHT, true))
-					moveX += 1;
-				if (keyboard.wentDown(SDLK_UP, true))
-					moveY -= 1;
-				if (keyboard.wentDown(SDLK_DOWN, true))
-					moveY += 1;
-				
-				dragAndZoom.desiredFocusX += moveX / dragAndZoom.zoom * kGridSize * 8;
-				dragAndZoom.desiredFocusY += moveY / dragAndZoom.zoom * kGridSize * 10;
+				tickKeyboardScroll();
 			}
 			else
 			{
@@ -2300,13 +2296,15 @@ bool GraphEdit::tick(const float dt)
 				dragAndZoom.desiredZoom += mouse.dy / 100.f;
 				dragAndZoom.zoom = dragAndZoom.desiredZoom;
 			}
-			
-			dragAndZoom.tick(dt);
 		}
 		break;
 		
 	case kState_NodeSelect:
 		{
+			tickMouseScroll(dt);
+			
+			tickKeyboardScroll();
+			
 			nodeSelect.endX = mousePosition.x;
 			nodeSelect.endY = mousePosition.y;
 			
@@ -2372,8 +2370,14 @@ bool GraphEdit::tick(const float dt)
 		
 	case kState_NodeDrag:
 		{
+			tickMouseScroll(dt);
+			
+			tickKeyboardScroll();
+			
 			if (mouse.wentUp(BUTTON_LEFT))
 			{
+				nodeDragEnd();
+				
 				state = kState_Idle;
 				break;
 			}
@@ -2384,8 +2388,15 @@ bool GraphEdit::tick(const float dt)
 				
 				if (node != nullptr)
 				{
-					node->editorX += mouse.dx;
-					node->editorY += mouse.dy;
+					auto offsetItr = nodeDrag.offsets.find(i);
+					
+					if (offsetItr != nodeDrag.offsets.end())
+					{
+						auto & offset = offsetItr->second;
+						
+						node->editorX = mousePosition.x - offset[0];
+						node->editorY = mousePosition.y - offset[1];
+					}
 				}
 			}
 		}
@@ -2393,6 +2404,10 @@ bool GraphEdit::tick(const float dt)
 		
 	case kState_InputSocketConnect:
 		{
+			tickMouseScroll(dt);
+			
+			tickKeyboardScroll();
+			
 			socketConnect.dstNodeId = kGraphNodeIdInvalid;
 			socketConnect.dstNodeSocket = nullptr;
 			
@@ -2424,6 +2439,10 @@ bool GraphEdit::tick(const float dt)
 		
 	case kState_OutputSocketConnect:
 		{
+			tickMouseScroll(dt);
+			
+			tickKeyboardScroll();
+			
 			socketConnect.srcNodeId = kGraphNodeIdInvalid;
 			socketConnect.srcNodeSocket = nullptr;
 			
@@ -2503,13 +2522,11 @@ bool GraphEdit::tick(const float dt)
 		
 	case kState_TouchDrag:
 		{
-			dragAndZoom.tick(dt);
 		}
 		break;
 		
 	case kState_TouchZoom:
 		{
-			dragAndZoom.tick(dt);
 		}
 		break;
 			
@@ -2525,6 +2542,8 @@ bool GraphEdit::tick(const float dt)
 	}
 	
 	// update UI
+	
+	dragAndZoom.tick(dt);
 	
 	if (graph != nullptr)
 	{
@@ -2778,12 +2797,50 @@ bool GraphEdit::tickTouches()
 		state == kState_TouchZoom;
 }
 
+void GraphEdit::tickMouseScroll(const float dt)
+{
+	const int kScrollBorder = 32;
+	const float kScrollSpeed = 400.f;
+	
+	if (mouse.x < kScrollBorder)
+		dragAndZoom.desiredFocusX -= kScrollSpeed * dt;
+	if (mouse.y < kScrollBorder)
+		dragAndZoom.desiredFocusY -= kScrollSpeed * dt;
+	if (mouse.x > GFX_SX - 1 - kScrollBorder)
+		dragAndZoom.desiredFocusX += kScrollSpeed * dt;
+	if (mouse.y > GFX_SY - 1 - kScrollBorder)
+		dragAndZoom.desiredFocusY += kScrollSpeed * dt;
+}
+
+void GraphEdit::tickKeyboardScroll()
+{
+	int moveX = 0;
+	int moveY = 0;
+	
+	if (keyboard.wentDown(SDLK_LEFT, true))
+		moveX -= 1;
+	if (keyboard.wentDown(SDLK_RIGHT, true))
+		moveX += 1;
+	if (keyboard.wentDown(SDLK_UP, true))
+		moveY -= 1;
+	if (keyboard.wentDown(SDLK_DOWN, true))
+		moveY += 1;
+	
+	dragAndZoom.desiredFocusX += moveX / dragAndZoom.zoom * kGridSize * 8;
+	dragAndZoom.desiredFocusY += moveY / dragAndZoom.zoom * kGridSize * 10;
+}
+
 void GraphEdit::nodeSelectEnd()
 {
 	selectedNodes = nodeSelect.nodeIds;
 	selectedLinks.clear(); // todo : also select links
 	
 	nodeSelect = NodeSelect();
+}
+
+void GraphEdit::nodeDragEnd()
+{
+	nodeDrag = NodeDrag();
 }
 
 void GraphEdit::socketConnectEnd()

@@ -796,6 +796,16 @@ struct GraphEdit : GraphEditConnection
 		}
 	};
 	
+	struct NodeDrag
+	{
+		std::map<GraphNodeId, Vec2> offsets;
+		
+		NodeDrag()
+			: offsets()
+		{
+		}
+	};
+	
 	struct SocketConnect
 	{
 		GraphNodeId srcNodeId;
@@ -889,6 +899,7 @@ struct GraphEdit : GraphEditConnection
 	State state;
 	
 	NodeSelect nodeSelect;
+	NodeDrag nodeDrag;
 	SocketConnect socketConnect;
 	NodeResize nodeResize;
 	
@@ -926,7 +937,10 @@ struct GraphEdit : GraphEditConnection
 	
 	bool tick(const float dt);
 	bool tickTouches();
+	void tickMouseScroll(const float dt);
+	void tickKeyboardScroll();
 	void nodeSelectEnd();
+	void nodeDragEnd();
 	void socketConnectEnd();
 	
 	void doMenu(const float dt);
