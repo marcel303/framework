@@ -1,8 +1,8 @@
 #define DO_PORTAUDIO 1
 #define DO_PORTAUDIO_BASIC_OSCS 0
 #define DO_PORTAUDIO_SPRING_OSC1D 0
-#define DO_PORTAUDIO_SPRING_OSC2D 0
-#define DO_PORTAUDIO_AUDIODSP 1
+#define DO_PORTAUDIO_SPRING_OSC2D 1
+#define DO_PORTAUDIO_AUDIODSP 0
 #define DO_MONDRIAAN 0
 
 #if DO_PORTAUDIO
@@ -15,6 +15,8 @@
 #include <emmintrin.h>
 #include <immintrin.h>
 #include <portaudio/portaudio.h>
+
+#define SAMPLERATE (44100.0)
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -46,7 +48,7 @@ struct SineOsc : BaseOsc
 	virtual void init(const float frequency) override
 	{
 		phase = 0.f;
-		phaseStep = frequency / 44100.f * M_PI * 2.f;
+		phaseStep = frequency / SAMPLERATE * M_PI * 2.f;
 	}
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
@@ -76,7 +78,7 @@ struct SawOsc : BaseOsc
 	virtual void init(const float frequency) override
 	{
 		phase = 0.f;
-		phaseStep = frequency / 44100.f * 2.f;
+		phaseStep = frequency / SAMPLERATE * 2.f;
 	}
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
@@ -106,7 +108,7 @@ struct TriangleOsc : BaseOsc
 	virtual void init(const float frequency) override
 	{
 		phase = 0.f;
-		phaseStep = frequency / 44100.f * 2.f;
+		phaseStep = frequency / SAMPLERATE * 2.f;
 	}
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
@@ -145,7 +147,7 @@ struct SquareOsc : BaseOsc
 	virtual void init(const float frequency) override
 	{
 		phase = 0.f;
-		phaseStep = frequency / 44100.f * 2.f;
+		phaseStep = frequency / SAMPLERATE * 2.f;
 	}
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
@@ -359,10 +361,10 @@ struct SpringOsc1D : BaseOsc
 		}
 		
 	#if 0
-		const double dt = 1.0 / 44100.0 * Calc::Lerp(0.0, 1.0, mouse.y / double(GFX_SY - 1));
+		const double dt = 1.0 / SAMPLERATE * Calc::Lerp(0.0, 1.0, mouse.y / double(GFX_SY - 1));
 		const double c = 1000000000.0;
 	#else
-		const double dt = 1.0 / 44100.0;
+		const double dt = 1.0 / SAMPLERATE;
 		const double m2 = mouse.y / double(GFX_SY - 1);
 		const double m1 = 1.0 - m2;
 		const double c1 = 100000.0;
@@ -370,7 +372,8 @@ struct SpringOsc1D : BaseOsc
 		const double c = c1 * m1 + c2 * m2;
 	#endif
 		
-		const double vRetainPerSecond = 0.45;
+		//const double vRetainPerSecond = 0.45;
+		const double vRetainPerSecond = 0.05;
 		const double pRetainPerSecond = 0.95;
 		
 		const int sampleLocation = m_sampleLocation;
@@ -389,11 +392,12 @@ struct SpringOsc2D : BaseOsc
 {
 	struct WaterSim
 	{
-		static const int kNumElems = 64;
+		static const int kNumElems = 32;
 		
 		__attribute__((aligned(32))) double p[kNumElems][kNumElems];
 		__attribute__((aligned(32))) double v[kNumElems][kNumElems];
 		__attribute__((aligned(32))) double f[kNumElems][kNumElems];
+		__attribute__((aligned(32))) double d[kNumElems][kNumElems];
 		
 		WaterSim()
 		{
@@ -403,6 +407,8 @@ struct SpringOsc2D : BaseOsc
 			for (int x = 0; x < kNumElems; ++x)
 				for (int y = 0; y < kNumElems; ++y)
 					f[x][y] = 1.0;
+			
+			memset(d, 0, sizeof(d));
 		}
 		
 		void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool _closedEnds)
@@ -433,10 +439,10 @@ struct SpringOsc2D : BaseOsc
 				{
 					x0 = (x + kNumElems - 1) & (kNumElems - 1);
 					x1 = x;
-					x2 = (x + kNumElems + 1) & (kNumElems - 1);
+					x2 = (x             + 1) & (kNumElems - 1);
 					y0 = (y + kNumElems - 1) & (kNumElems - 1);
 					y1 = y;
-					y2 = (y + kNumElems + 1) & (kNumElems - 1);
+					y2 = (y             + 1) & (kNumElems - 1);
 				}
 				
 				double pt = 0.0;
@@ -493,15 +499,20 @@ struct SpringOsc2D : BaseOsc
 			__m256d _mm_dt = _mm256_set1_pd(dt);
 			__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
 			__m256d _mm_vRetain = _mm256_set1_pd(vRetain);
+			__m256d _mm_dMax = _mm256_set1_pd(5000.0 * dt);
 			
 			__m256d * __restrict _mm_p = (__m256d*)p;
 			__m256d * __restrict _mm_v = (__m256d*)v;
 			__m256d * __restrict _mm_f = (__m256d*)f;
+			__m256d * __restrict _mm_d = (__m256d*)d;
 			
 			for (int i = 0; i < kNumElems*kNumElems/4; ++i)
 			{
-				_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i];
+				const __m256d _mm_d_clamped = _mm256_min_pd(_mm_d[i], _mm_dMax);
+				
+				_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
 				_mm_v[i] = _mm_v[i] * _mm_vRetain;
+				_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 			}
 		#elif 1
 			__m128d _mm_dt = _mm_set1_pd(dt);
@@ -531,21 +542,48 @@ struct SpringOsc2D : BaseOsc
 	
 	//
 	
+	struct Command
+	{
+		bool isSet;
+		
+		int x;
+		int y;
+		int radius;
+		
+		double strength;
+		
+		Command()
+		{
+			memset(this, 0, sizeof(*this));
+		}
+	};
+	
+	//
+	
 	WaterSim m_waterSim;
 	float m_sampleLocation[2];
 	bool m_slowMotion;
+	
+	SDL_mutex * mutex;
+	
+	Command command;
 	
 	SpringOsc2D()
 		: m_waterSim()
 		, m_sampleLocation()
 		, m_slowMotion(false)
+		, mutex(nullptr)
 	{
 		m_sampleLocation[0] = 0.f;
 		m_sampleLocation[1] = 0.f;
+		
+		mutex = SDL_CreateMutex();
 	}
 	
 	virtual ~SpringOsc2D() override
 	{
+		SDL_DestroyMutex(mutex);
+		mutex = nullptr;
 	}
 	
 	virtual void init(const float frequency) override
@@ -554,44 +592,20 @@ struct SpringOsc2D : BaseOsc
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
 	{
-		if (mouse.wentDown(BUTTON_LEFT))
+		SDL_LockMutex(mutex);
 		{
-			//const int r = random(1, 5);
-			const int r = 1 + mouse.x * 30 / GFX_SX;
-			const int v = WaterSim::kNumElems - r * 2;
-			
-			if (v > 0)
+			if (command.isSet)
 			{
-				const int spotX = r + (rand() % v);
-				const int spotY = r + (rand() % v);
+				doGaussianImpact(command.x, command.y, command.radius, command.strength);
 				
-				const double s = random(-1.f, +1.f) * 4.0;
-				//const double s = 1.0;
-				
-				for (int i = -r; i <= +r; ++i)
-				{
-					for (int j = -r; j <= +r; ++j)
-					{
-						const int x = spotX + i;
-						const int y = spotY + j;
-						
-						double value = 1.0;
-						value *= (1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0;
-						value *= (1.0 + std::cos(j / double(r) * Calc::mPI)) / 2.0;
-						
-						//value = std::pow(value, 2.0);
-						
-						if (x >= 0 && x < WaterSim::kNumElems)
-							if (y >= 0 && y < WaterSim::kNumElems)
-								m_waterSim.p[x][y] += value * s;
-					}
-				}
+				command = Command();
 			}
 		}
+		SDL_UnlockMutex(mutex);
 		
 		float sampleLocationSpeed[2] = { 0.f, 0.f };
 		
-		const float speed = 30.f;
+		const float speed = 5.f;
 		
 		if (keyboard.isDown(SDLK_LEFT))
 			sampleLocationSpeed[0] -= speed;
@@ -614,7 +628,7 @@ struct SpringOsc2D : BaseOsc
 		
 		//if (keyboard.wentDown(SDLK_r))
 		if (keyboard.isDown(SDLK_r))
-			m_waterSim.p[rand() % WaterSim::kNumElems][rand() % WaterSim::kNumElems] = random(-1.f, +1.f) * 20.f;
+			m_waterSim.p[rand() % WaterSim::kNumElems][rand() % WaterSim::kNumElems] = random(-1.f, +1.f) * 5.f;
 		
 		if (keyboard.wentDown(SDLK_t))
 		{
@@ -642,11 +656,12 @@ struct SpringOsc2D : BaseOsc
 		}
 		
 	#if 0
-		const double dt = 1.0 / 44100.0 * Calc::Lerp(0.0, 1.0, mouse.y / double(GFX_SY - 1));
+		const double dt = 1.0 / SAMPLERATE * Calc::Lerp(0.0, 1.0, mouse.y / double(GFX_SY - 1));
 		const double c = 1000000000.0;
 	#else
-		const double dt = 1.0 / 44100.0 * (m_slowMotion ? 0.001 : 1.0);
-		const double m1 = mouse.y / double(GFX_SY - 1);
+		const double dt = 1.0 / SAMPLERATE * (m_slowMotion ? 0.001 : 1.0);
+		//const double m1 = mouse.y / double(GFX_SY - 1);
+		const double m1 = 0.75;
 		const double m2 = 1.0 - m1;
 		const double c = 10000.0 * m2 + 1000000000.0 * m1;
 	#endif
@@ -662,6 +677,45 @@ struct SpringOsc2D : BaseOsc
 			samples[i] = sample(m_sampleLocation[0], m_sampleLocation[1]);
 			
 			m_waterSim.tick(dt, c, vRetainPerSecond, pRetainPerSecond, true);
+		}
+	}
+	
+	void doGaussianImpact(const int _x, const int _y, const int _radius, const double strength)
+	{
+		if (_x - _radius < 0 ||
+			_y - _radius < 0 ||
+			_x + _radius >= WaterSim::kNumElems ||
+			_y + _radius >= WaterSim::kNumElems)
+		{
+			return;
+		}
+		
+		const int r = _radius;
+		const int spotX = _x;
+		const int spotY = _y;
+		const double s = strength;
+
+		for (int i = -r; i <= +r; ++i)
+		{
+			for (int j = -r; j <= +r; ++j)
+			{
+				const int x = spotX + i;
+				const int y = spotY + j;
+				
+				double value = 1.0;
+				value *= (1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0;
+				value *= (1.0 + std::cos(j / double(r) * Calc::mPI)) / 2.0;
+				
+				//value = std::pow(value, 2.0);
+				
+				if (x >= 0 && x < WaterSim::kNumElems)
+				{
+					if (y >= 0 && y < WaterSim::kNumElems)
+					{
+						m_waterSim.d[x][y] += value * s;
+					}
+				}
+			}
 		}
 	}
 	
@@ -807,7 +861,7 @@ struct AudioDspOsc : BaseOsc
 	virtual void generate(float * __restrict samples, const int numSamples) override
 	{
 		static double t = 0.0;
-		static double tStep = 1.0 / 44100.0;
+		static double tStep = 1.0 / SAMPLERATE;
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
@@ -1007,9 +1061,9 @@ static bool initAudioOutput()
 	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
 	outputParameters.hostApiSpecificStreamInfo = nullptr;
 	
-	//if (Pa_OpenDefaultStream(&stream, 1, 0, paFloat32, 44100, 1024, portaudioCallback, nullptr) != paNoError)
-	//if (Pa_OpenDefaultStream(&stream, 0, 2, paFloat32, 44100, 1024, portaudioCallback, nullptr) != paNoError)
-	if ((err = Pa_OpenStream(&stream, nullptr, &outputParameters, 44100, 256, paDitherOff, portaudioCallback, nullptr)) != paNoError)
+	//if (Pa_OpenDefaultStream(&stream, 1, 0, paFloat32, SAMPLERATE, 1024, portaudioCallback, nullptr) != paNoError)
+	//if (Pa_OpenDefaultStream(&stream, 0, 2, paFloat32, SAMPLERATE, 1024, portaudioCallback, nullptr) != paNoError)
+	if ((err = Pa_OpenStream(&stream, nullptr, &outputParameters, SAMPLERATE, 256, paDitherOff, portaudioCallback, nullptr)) != paNoError)
 	{
 		logError("portaudio: failed to open stream: %s", Pa_GetErrorText(err));
 		return false;
@@ -1163,7 +1217,7 @@ void testPortaudio()
 			mousePy = mouse.y / float(GFX_SY);
 			
 		#if DO_PORTAUDIO_SPRING_OSC1D
-			const int numSamples = 44100 / 60;
+			const int numSamples = SAMPLERATE / 60;
 			float samples[numSamples];
 			
 			//osc.generate(samples, numSamples);
@@ -1226,6 +1280,31 @@ void testPortaudio()
 		#endif
 		
 		#if DO_PORTAUDIO_SPRING_OSC2D
+			static int frameIndex = 0;
+			frameIndex++;
+			//if (mouse.wentDown(BUTTON_LEFT))
+			if (mouse.isDown(BUTTON_LEFT) && (frameIndex % 10) == 0)
+			{
+				//const int r = 1 + mouse.x * 30 / GFX_SX;
+				const int r = 6;
+				const double strength = random(0.f, +1.f) * 10.0;
+				
+				const int gfxSize = std::min(GFX_SX, GFX_SY);
+				
+				const int spotX = (mouse.x - GFX_SX/2.0) / gfxSize * (osc.m_waterSim.kNumElems - 1) + (osc.m_waterSim.kNumElems-1)/2.f;
+				const int spotY = (mouse.y - GFX_SY/2.0) / gfxSize * (osc.m_waterSim.kNumElems - 1) + (osc.m_waterSim.kNumElems-1)/2.f;
+				
+				SDL_LockMutex(osc.mutex);
+				{
+					osc.command.isSet = true;
+					osc.command.x = spotX;
+					osc.command.y = spotY;
+					osc.command.radius = r;
+					osc.command.strength = strength;
+				}
+				SDL_UnlockMutex(osc.mutex);
+			}
+			
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				gxPushMatrix();
@@ -1264,6 +1343,16 @@ void testPortaudio()
 				//popBlend();
 				
 				gxPopMatrix();
+				
+				if (mouse.isDown(BUTTON_LEFT))
+				{
+					hqBegin(HQ_STROKED_CIRCLES);
+					{
+						setColor(127, 127, 255);
+						hqStrokeCircle(mouse.x, mouse.y, 16.f, 5.5f);
+					}
+					hqEnd();
+				}
 			}
 			framework.endDraw();
 		#endif
