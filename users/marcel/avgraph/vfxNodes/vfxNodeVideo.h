@@ -7,7 +7,6 @@ struct VfxNodeVideo : VfxNodeBase
 	enum Input
 	{
 		kInput_Source,
-		kInput_Transform,
 		kInput_Loop,
 		kInput_Speed,
 		kInput_OutputMode,

@@ -17,7 +17,6 @@ VfxNodeVideo::VfxNodeVideo()
 	
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Source, kVfxPlugType_String);
-	addInput(kInput_Transform, kVfxPlugType_Transform);
 	addInput(kInput_Loop, kVfxPlugType_Bool);
 	addInput(kInput_Speed, kVfxPlugType_Float);
 	addInput(kInput_OutputMode, kVfxPlugType_Int);
