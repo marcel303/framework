@@ -219,8 +219,6 @@ int Kinect2::threadMain(void * userData)
 		{
 			logDebug("thread process failed");
 		}
-		
-		SDL_Delay(100);
 	}
 	
 	self->threadShut();
