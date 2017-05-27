@@ -33,7 +33,21 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	
 	//
 	
-	if (channel == kChannel_RGBA)
+	if (image->interleaved.stride == 1)
+	{
+		// always upload single channel data using the fast path
+		
+		imageOutput.texture = createTextureFromR8(image->interleaved.data, image->sx, image->sy, true, true);
+		
+		if (imageOutput.texture != 0)
+		{
+			glBindTexture(GL_TEXTURE_2D, imageOutput.texture);
+			GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
+			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+			checkErrorGL();
+		}
+	}
+	else if (channel == kChannel_RGBA)
 	{
 		if (image->interleaved.stride == 4)
 		{
@@ -106,6 +120,8 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 			source = &image->channel[2];
 		else
 			source = &image->channel[3];
+		
+		// todo : use fast path once there is a texture object which allows uploading pixels with custom pitch
 		
 		if (source->stride == 1 && source->pitch == image->sx)
 		{
