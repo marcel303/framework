@@ -180,6 +180,7 @@ void VfxGraph::tick(const float dt)
 		if (node->lastTickTraversalId != nextTickTraversalId)
 		{
 			node->lastTickTraversalId = nextTickTraversalId;
+			node->tickOrder = -1;
 			
 			const uint64_t t1 = g_TimerRT.TimeUS_get();
 			
@@ -240,17 +241,34 @@ void VfxGraph::draw() const
 	//
 	
 #if 1 // todo : add some way to (visually) communicate node computational cost (heat value)
+	struct SortedNode
+	{
+		GraphNodeId nodeId;
+		const VfxNodeBase * vfxNode;
+	};
+	SortedNode * sortedNodes = (SortedNode*)alloca((sizeof(SortedNode) * nodes.size()));
+	int numSortedNodes = 0;
+	for (auto i : nodes)
+	{
+		if (i.second->tickOrder == -1)
+			continue;
+		sortedNodes[numSortedNodes].nodeId = i.first;
+		sortedNodes[numSortedNodes].vfxNode = i.second;
+		numSortedNodes++;
+	}
+	std::sort(sortedNodes, sortedNodes + numSortedNodes, [](auto & n1, auto & n2) { return n1.vfxNode->tickOrder < n2.vfxNode->tickOrder; });
+	
 	setFont("calibri.ttf");
 	beginTextBatch();
 	{
 		int x = GFX_SX/2;
 		int y = 10;
 		
-		for (auto i : nodes)
+		for (int i = 0; i < numSortedNodes; ++i)
 		{
-			const GraphNodeId nodeId = i.first;
+			const GraphNodeId nodeId = sortedNodes[i].nodeId;
 			const GraphNode * node = graph->tryGetNode(nodeId);
-			const VfxNodeBase * vfxNode = i.second;
+			const VfxNodeBase * vfxNode = sortedNodes[i].vfxNode;
 			
 			setColor(colorWhite);
 			drawText(x, y, 12, 0, 0, "node %d / %s: tickOrder: %d, tick: %.2fms, draw %.2fms", nodeId, node ? node->getDisplayName().c_str() : "n/a", vfxNode->tickOrder, vfxNode->tickTimeAvg/1000.0, vfxNode->drawTimeAvg/1000.0);
