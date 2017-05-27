@@ -339,10 +339,12 @@ static void fft2D_draw(const double * __restrict dreal, const double * __restric
 		
 		const int displayScaleX = std::max(1, GFX_SX / transformSx);
 		const int displayScaleY = std::max(1, GFX_SY / transformSy);
-		const int displayScale = std::min(displayScaleX, displayScaleY);
+		//const int displayScale = std::min(displayScaleX, displayScaleY);
+		const int displayScale = 1;
 		gxScalef(displayScale, displayScale, 1);
 		
-		gxBegin(GL_QUADS);
+		//gxBegin(GL_QUADS);
+		gxBegin(GL_POINTS);
 		{
 			for (int y = 0; y < transformSy; ++y)
 			{
@@ -363,10 +365,18 @@ static void fft2D_draw(const double * __restrict dreal, const double * __restric
 					
 					gxColor4f(r, g, b, 1.f);
 					//gxColor4f(b, b, b, 1.f);
-					gxVertex2f(x+0, y+0);
-					gxVertex2f(x+1, y+0);
-					gxVertex2f(x+1, y+1);
-					gxVertex2f(x+0, y+1);
+					
+					if (displayScale == 1)
+					{
+						gxVertex2f(x+0, y+0);
+					}
+					else
+					{
+						gxVertex2f(x+0, y+0);
+						gxVertex2f(x+1, y+0);
+						gxVertex2f(x+1, y+1);
+						gxVertex2f(x+0, y+1);
+					}
 				}
 			}
 		}
@@ -385,9 +395,8 @@ void testFourier2d()
 	//ImageData * image = loadImage("rainbow-small.png");
 	//ImageData * image = loadImage("rainbow.png");
 	//ImageData * image = loadImage("rainbow.jpg");
-	ImageData * image = loadImage("picture.jpg");
-	//ImageData * image = loadImage("wordcloud.png");
-	//ImageData * image = loadImage("antigrain.png");
+	//ImageData * image = loadImage("picture.jpg");
+	ImageData * image = loadImage("happysun.jpg");
 	
 	if (image == nullptr)
 	{
@@ -395,6 +404,10 @@ void testFourier2d()
 		return;
 	}
 	
+	int display = 0;
+	
+	do
+	{
 	// do reference 2D fft (fast)
 	
 	double * dreal_reference = nullptr;
@@ -402,13 +415,13 @@ void testFourier2d()
 	int transformSx_reference = 0;
 	int transformSy_reference = 0;
 	
-	uint64_t t_reference = doFourier2D_reference(
+	const uint64_t t_reference = doFourier2D_reference(
 		image,
 		dreal_reference, dimag_reference,
 		transformSx_reference, transformSy_reference,
 		false, false);
 	
-	printf("doFourier2D_reference (fast) took %gms\n", t_reference / 1000.0);
+	//printf("doFourier2D_reference (fast) took %gms\n", t_reference / 1000.0);
 	
 	// do fast 2D fft
 	
@@ -417,7 +430,7 @@ void testFourier2d()
 	int transformSx_fast = 0;
 	int transformSy_fast = 0;
 	
-	uint64_t t_fast = doFourier2D_fast(
+	const uint64_t t_fast = doFourier2D_fast(
 		image,
 		dreal_fast, dimag_fast,
 		transformSx_fast, transformSy_fast,
@@ -425,7 +438,7 @@ void testFourier2d()
 	
 	fft2D_scale(dreal_fast, dimag_fast, transformSx_fast, transformSy_fast);
 	
-	printf("doFourier2D_fast took %gms\n", t_fast / 1000.0);
+	//printf("doFourier2D_fast took %gms\n", t_fast / 1000.0);
 	
 	// do slow 2D fft
 	
@@ -434,7 +447,7 @@ void testFourier2d()
 	int transformSx_slow = 0;
 	int transformSy_slow = 0;
 	
-	uint64_t t_slow = doFourier2D_slow(
+	const uint64_t t_slow = doFourier2D_slow(
 		image,
 		dreal_slow, dimag_slow,
 		transformSx_slow, transformSy_slow,
@@ -442,7 +455,7 @@ void testFourier2d()
 	
 	fft2D_scale(dreal_slow, dimag_slow, transformSx_slow, transformSy_slow);
 	
-	printf("doFourier2D_slow took %gms\n", t_slow / 1000.0);
+	//printf("doFourier2D_slow took %gms\n", t_slow / 1000.0);
 	
 #if 0
 	auto ref_t1 = g_TimerRT.TimeUS_get();
@@ -509,8 +522,6 @@ void testFourier2d()
 	// todo : reconstruct image from coefficients
 #endif
 	
-	int display = 0;
-	
 	do
 	{
 		framework.process();
@@ -522,15 +533,29 @@ void testFourier2d()
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			if (display == 0)
+			gxPushMatrix();
+			//if (display == 0)
 				fft2D_draw(dreal_reference, dimag_reference, transformSx_reference, transformSy_reference, "reference", t_reference);
-			else if (display == 1)
+				gxTranslatef(0, transformSy_reference, 0);
+			//else if (display == 1)
 				fft2D_draw(dreal_fast, dimag_fast, transformSx_fast, transformSy_fast, "fast", t_fast);
-			else if (display == 2)
+				gxTranslatef(0, transformSy_fast, 0);
+			//else if (display == 2)
 				fft2D_draw(dreal_slow, dimag_slow, transformSx_slow, transformSy_slow, "slow", t_slow);
+				gxTranslatef(0, transformSy_slow, 0);
+			gxPopMatrix();
+			
+			gxTranslatef(transformSx_reference, 0, 0);
+			GLuint texture = createTextureFromRGBA8(image->imageData, image->sx, image->sy, false, true);
+			gxSetTexture(texture);
+			setColor(colorWhite);
+			drawRect(0, 0, image->sx, image->sy);
+			gxSetTexture(0);
+			glDeleteTextures(1, &texture);
+			texture = 0;
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (!keyboard.wentDown(SDLK_SPACE) && false);
 	
 	delete[] dreal_reference;
 	delete[] dimag_reference;
@@ -538,4 +563,8 @@ void testFourier2d()
 	delete[] dimag_fast;
 	delete[] dreal_slow;
 	delete[] dimag_slow;
+	} while (!keyboard.wentDown(SDLK_SPACE));
+	
+	delete image;
+	image = nullptr;
 }
