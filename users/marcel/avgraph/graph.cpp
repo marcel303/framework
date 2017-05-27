@@ -156,7 +156,7 @@ void GraphNode::EditorVisualizer::tick(const GraphEdit & graphEdit)
 {
 	if (sx == 0 || sy == 0)
 	{
-		if (/*visualizer->hasValue || */visualizer->texture != 0 || visualizer->history.historySize > 0)
+		if (visualizer->hasValue)
 		{
 			int sxi = 0;
 			int syi = 0;
@@ -1191,8 +1191,8 @@ void GraphEdit_Visualizer::measure(
 		if (baseTextureSy == 1)
 			baseTextureSy = baseTextureSx/4;
 		
-		const float scaleX = maxTextureSx / float(baseTextureSx);
-		const float scaleY = maxTextureSy / float(baseTextureSy);
+		const float scaleX = baseTextureSx == 0 ? 1.f : (maxTextureSx / float(baseTextureSx));
+		const float scaleY = baseTextureSy == 0 ? 1.f : (maxTextureSy / float(baseTextureSy));
 		const float scale = std::min(scaleX, scaleY);
 		textureSx = std::floor(baseTextureSx * scale);
 		textureSy = std::floor(baseTextureSy * scale);
@@ -1347,8 +1347,8 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		if (baseTextureSy == 1)
 			baseTextureSy = baseTextureSx/4;
 			
-		const float scaleX = textureSx / float(baseTextureSx);
-		const float scaleY = textureSy / float(baseTextureSy);
+		const float scaleX = baseTextureSx == 0 ? 1.f : (textureSx / float(baseTextureSx));
+		const float scaleY = baseTextureSy == 0 ? 1.f : (textureSy / float(baseTextureSy));
 		const float scale = std::min(scaleX, scaleY);
 		textureSx = std::floor(baseTextureSx * scale);
 		textureSy = std::floor(baseTextureSy * scale);
@@ -2559,6 +2559,8 @@ bool GraphEdit::tick(const float dt)
 
 bool GraphEdit::tickTouches()
 {
+	return false; // fixme : debug why touch pressing doesn't play nice with the state machine and the UI getting into a locked state
+	
 	const State oldState = state;
 	
 	for (auto & event : framework.events)
@@ -2849,9 +2851,7 @@ void GraphEdit::doEditorOptions(const float dt)
 {
 	pushMenu("editorOptions");
 	{
-		doLabel("editor options", 0.f);
-		
-		if (doDrawer(editorOptions.menuIsVisible, "options"))
+		if (doDrawer(editorOptions.menuIsVisible, "editor options"))
 		{
 			doCheckBox(editorOptions.realTimePreview, "real-time preview", false);
 			doCheckBox(editorOptions.showBackground, "show background", false);
@@ -4036,7 +4036,8 @@ static uint32_t fuzzyStringDistance(const std::string & s1, const std::string & 
 	for (uint32_t i = 0; i < len1 + 1; ++i)
 		d[i] = (uint32_t*)alloca(4 * (len2 + 1));
 	
-	d[0][0] = 0;
+	if (len1 >= 1 && len2 >= 1)
+		d[0][0] = 0;
 	
 	for (uint32_t i = 1; i <= len1; ++i)
 		d[i][0] = i;
