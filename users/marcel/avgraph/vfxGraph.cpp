@@ -236,7 +236,7 @@ void VfxGraph::draw() const
 	
 	//
 	
-#if 0 // todo : add some way to (visually) communicate node computational cost (heat value)
+#if 1 // todo : add some way to (visually) communicate node computational cost (heat value)
 	setFont("calibri.ttf");
 	beginTextBatch();
 	{
@@ -246,10 +246,11 @@ void VfxGraph::draw() const
 		for (auto i : nodes)
 		{
 			const GraphNodeId nodeId = i.first;
-			const VfxNodeBase * node = i.second;
+			const GraphNode * node = graph->tryGetNode(nodeId);
+			const VfxNodeBase * vfxNode = i.second;
 			
 			setColor(colorWhite);
-			drawText(x, y, 12, 0, 0, "node %d: tick: %.2fms, draw %.2fms", nodeId, node->tickTimeAvg/1000.0, node->drawTimeAvg/1000.0);
+			drawText(x, y, 12, 0, 0, "node %d / %s: tick: %.2fms, draw %.2fms", nodeId, node ? node->getDisplayName().c_str() : "n/a", vfxNode->tickTimeAvg/1000.0, vfxNode->drawTimeAvg/1000.0);
 			
 			y += 18;
 		}

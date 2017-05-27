@@ -13,6 +13,8 @@ void RealTimeConnection::loadBegin()
 {
 	isLoading = true;
 	
+	vfxGraph->graph = nullptr;
+	
 	delete vfxGraph;
 	vfxGraph = nullptr;
 	*vfxGraphPtr = nullptr;
@@ -22,6 +24,8 @@ void RealTimeConnection::loadEnd(GraphEdit & graphEdit)
 {
 	vfxGraph = constructVfxGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary);
 	*vfxGraphPtr = vfxGraph;
+	
+	vfxGraph->graph = graphEdit.graph;
 	
 	isLoading = false;
 }
