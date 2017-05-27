@@ -1835,9 +1835,13 @@ bool GraphEdit::tick(const float dt)
 	
 	bool inputIsCaptured = (state != kState_Idle);
 	
-	if (inputIsCaptured == false)
+	if (inputIsCaptured == false || state == kState_TouchDrag || state == kState_TouchZoom)
 	{
 		inputIsCaptured |= tickTouches();
+	}
+	else
+	{
+		touches = Touches();
 	}
 	
 	if (inputIsCaptured == false)
@@ -2559,10 +2563,6 @@ bool GraphEdit::tick(const float dt)
 
 bool GraphEdit::tickTouches()
 {
-	return false; // fixme : debug why touch pressing doesn't play nice with the state machine and the UI getting into a locked state
-	
-	const State oldState = state;
-	
 	for (auto & event : framework.events)
 	{
 		if (event.type == SDL_FINGERDOWN)
@@ -2762,7 +2762,9 @@ bool GraphEdit::tickTouches()
 		}
 	}
 	
-	return state != oldState;
+	return
+		state == kState_TouchDrag ||
+		state == kState_TouchZoom;
 }
 
 void GraphEdit::nodeSelectEnd()
