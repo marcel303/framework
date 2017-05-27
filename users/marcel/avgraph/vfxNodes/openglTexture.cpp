@@ -97,11 +97,13 @@ void OpenglTexture::setSwizzle(const int r, const int g, const int b, const int 
 	checkErrorGL();
 }
 
-void OpenglTexture::upload(const void * src, const int srcAlignment, const int srcPitch, const int uploadFormat, const int uploadElementType)
+void OpenglTexture::upload(const void * src, const int _srcAlignment, const int srcPitch, const int uploadFormat, const int uploadElementType)
 {
 	Assert(id != 0);
 	if (id == 0)
 		return;
+	
+	const int srcAlignment = ((srcPitch & (_srcAlignment - 1)) == 0) ? _srcAlignment : 1;
 	
 	// capture current OpenGL states before we change them
 
