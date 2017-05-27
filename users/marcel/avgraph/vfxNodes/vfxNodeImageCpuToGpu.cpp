@@ -1,9 +1,11 @@
 #include "dotDetector.h"
 #include "framework.h"
 #include "vfxNodeImageCpuToGpu.h"
+#include <xmmintrin.h>
 
 VfxNodeImageCpuToGpu::VfxNodeImageCpuToGpu()
 	: VfxNodeBase()
+	, texture()
 	, imageOutput()
 {
 	// todo : make image filtering inputs
@@ -16,7 +18,7 @@ VfxNodeImageCpuToGpu::VfxNodeImageCpuToGpu()
 
 VfxNodeImageCpuToGpu::~VfxNodeImageCpuToGpu()
 {
-	freeTexture();
+	texture.free();
 }
 
 void VfxNodeImageCpuToGpu::tick(const float dt)
@@ -24,12 +26,19 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const Channel channel = (Channel)getInputInt(kInput_Channel, 0);
 	
-	//
+	// todo : add texture filtering and clamping options to OpenglTexture object
 	
-	freeTexture();
-	
-	if (image == nullptr)
+	if (image == nullptr || image->sx == 0 || image->sy == 0)
+	{
+		// todo : make it an option to do when source image is empty. persist or free ?
+		// todo : fix issue where freeing texture here can result in issues when drawing visualizer. tick of visualizer should always happen after cpuToGpu tick, but there's no link connecting visualizer to the node it references, so tick order is undefined .. !
+		
+		//texture.free();
+		
+		//imageOutput.texture = 0;
+		
 		return;
+	}
 	
 	//
 	
@@ -37,29 +46,27 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	{
 		// always upload single channel data using the fast path
 		
-		imageOutput.texture = createTextureFromR8(image->interleaved.data, image->sx, image->sy, true, true);
+		if (texture.isChanged(image->sx, image->sy, GL_R8))
+			texture.allocate(image->sx, image->sy, GL_R8);
 		
-		if (imageOutput.texture != 0)
-		{
-			glBindTexture(GL_TEXTURE_2D, imageOutput.texture);
-			GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-			checkErrorGL();
-		}
+		texture.upload(image->interleaved.data, 4, image->interleaved.pitch, GL_RED, GL_UNSIGNED_BYTE);
+		
+		texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 	}
 	else if (channel == kChannel_RGBA)
 	{
+		if (texture.isChanged(image->sx, image->sy, GL_RGBA8))
+			texture.allocate(image->sx, image->sy, GL_RGBA8);
+	
 		if (image->interleaved.stride == 4)
 		{
-			// todo : take into account pitch
-			
-			imageOutput.texture = createTextureFromRGBA8(image->interleaved.data, image->sx, image->sy, true, true);
+			texture.upload(image->interleaved.data, 4, image->interleaved.pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
 		}
 		else
 		{
 			// todo : should we keep this temp buffer allocated ?
 			
-			uint8_t * temp = new uint8_t[image->sx * image->sy * 4];
+			uint8_t * temp = (uint8_t*)_mm_malloc(image->sx * image->sy * 4, 16);
 			
 			VfxImageCpu::interleave4(
 				&image->channel[0],
@@ -68,25 +75,28 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 				&image->channel[3],
 				temp, 0, image->sx, image->sy);
 			
-			imageOutput.texture = createTextureFromRGBA8(temp, image->sx, image->sy, true, true);
+			texture.upload(temp, 16, image->sx, GL_RGBA, GL_UNSIGNED_BYTE);
 			
-			delete[] temp;
+			_mm_free(temp);
 			temp = nullptr;
 		}
 	}
 	else if (channel == kChannel_RGB)
 	{
+		if (texture.isChanged(image->sx, image->sy, GL_RGB8))
+			texture.allocate(image->sx, image->sy, GL_RGB8);
+		
 		if (image->interleaved.stride == 3)
 		{
-			// todo : take into account pitch
 			// todo : RGB image upload is a slow path on my Intel Iris. convert to RGBA first ?
-			imageOutput.texture = createTextureFromRGB8(image->interleaved.data, image->sx, image->sy, true, true);
+			
+			texture.upload(image->interleaved.data, 4, image->interleaved.pitch / 3, GL_RGB, GL_UNSIGNED_BYTE);
 		}
 		else
 		{
 			// todo : RGB image upload is a slow path on my Intel Iris. convert to RGBA first ?
 			
-			uint8_t * temp = new uint8_t[image->sx * image->sy * 3];
+			uint8_t * temp = (uint8_t*)_mm_malloc(image->sx * image->sy * 3, 16);
 			
 			VfxImageCpu::interleave3(
 				&image->channel[0],
@@ -94,22 +104,19 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 				&image->channel[2],
 				temp, 0, image->sx, image->sy);
 			
-			imageOutput.texture = createTextureFromRGB8(temp, image->sx, image->sy, true, true);
+			texture.upload(image->interleaved.data, 16, image->sx, GL_RGB, GL_UNSIGNED_BYTE);
 			
-			delete[] temp;
+			_mm_free(temp);
 			temp = nullptr;
 		}
 		
-		if (imageOutput.texture != 0)
-		{
-			glBindTexture(GL_TEXTURE_2D, imageOutput.texture);
-			GLint swizzleMask[4] = { GL_RED, GL_GREEN, GL_BLUE, GL_ONE };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-			checkErrorGL();
-		}
+		texture.setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ONE);
 	}
 	else if (channel == kChannel_R || channel == kChannel_G || channel == kChannel_B || channel == kChannel_A)
 	{
+		if (texture.isChanged(image->sx, image->sy, GL_R8))
+			texture.allocate(image->sx, image->sy, GL_R8);
+		
 		const VfxImageCpu::Channel * source = nullptr;
 		
 		if (channel == kChannel_R)
@@ -121,43 +128,21 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		else
 			source = &image->channel[3];
 		
-		// todo : use fast path once there is a texture object which allows uploading pixels with custom pitch
+		uint8_t * temp = (uint8_t*)_mm_malloc(image->sx * image->sy * 1, 16);
 		
-		if (source->stride == 1 && source->pitch == image->sx)
-		{
-			imageOutput.texture = createTextureFromR8(source->data, image->sx, image->sy, true, true);
-		}
-		else
-		{
-			uint8_t * temp = new uint8_t[image->sx * image->sy * 1];
-			
-			VfxImageCpu::interleave1(source, temp, 0, image->sx, image->sy);
-			
-			imageOutput.texture = createTextureFromR8(temp, image->sx, image->sy, true, true);
-			
-			delete[] temp;
-			temp = nullptr;
-		}
+		VfxImageCpu::interleave1(source, temp, 0, image->sx, image->sy);
 		
-		if (imageOutput.texture != 0)
-		{
-			glBindTexture(GL_TEXTURE_2D, imageOutput.texture);
-			GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-			checkErrorGL();
-		}
+		texture.upload(temp, 16, image->sx, GL_RED, GL_UNSIGNED_BYTE);
+		
+		_mm_free(temp);
+		temp = nullptr;
+		
+		texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 	}
 	else
 	{
 		Assert(false);
 	}
-}
-
-void VfxNodeImageCpuToGpu::freeTexture()
-{
-	if (imageOutput.texture != 0)
-	{
-		glDeleteTextures(1, &imageOutput.texture);
-		imageOutput.texture = 0;
-	}
+	
+	imageOutput.texture = texture.id;
 }

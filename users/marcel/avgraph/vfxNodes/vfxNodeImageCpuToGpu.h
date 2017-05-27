@@ -1,5 +1,6 @@
 #pragma once
 
+#include "openglTexture.h"
 #include "vfxNodeBase.h"
 
 struct VfxNodeImageCpuToGpu : VfxNodeBase
@@ -27,12 +28,12 @@ struct VfxNodeImageCpuToGpu : VfxNodeBase
 		kChannel_A
 	};
 	
+	OpenglTexture texture;
+	
 	VfxImage_Texture imageOutput;
 
 	VfxNodeImageCpuToGpu();
 	virtual ~VfxNodeImageCpuToGpu() override;
 	
 	virtual void tick(const float dt) override;
-	
-	void freeTexture();
 };
