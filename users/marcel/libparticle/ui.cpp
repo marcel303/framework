@@ -652,8 +652,10 @@ static void increment(char * dst, int dstSize, int direction, std::string & valu
 }
 
 template <typename T>
-static void doTextBoxImpl(T & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
+static bool doTextBoxImpl(T & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
 {
+	bool result = false;
+	
 	UiElem & elem = g_menu->getElem(name);
 	
 	enum Vars
@@ -718,7 +720,9 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 		if (!elem.isActive)
 		{
 			if (textField.isActive())
+			{
 				textField.close();
+			}
 		}
 
 		if (textField.isActive())
@@ -766,6 +770,8 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 			if (finished)
 			{
 				elem.deactivate();
+				
+				result = true;
 			}
 		}
 	}
@@ -785,42 +791,44 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 
 		textField.draw(x1 + kPadding + g_uiState->textBoxTextOffset * xScale, y1, y2 - y1, kFontSize);
 	}
+	
+	return result;
 }
 
-void doTextBox(int & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
+bool doTextBox(int & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
 {
-	doTextBoxImpl(value, name, xOffset, xScale, lineBreak, dt);
+	return doTextBoxImpl(value, name, xOffset, xScale, lineBreak, dt);
 }
 
-void doTextBox(float & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
+bool doTextBox(float & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
 {
-	doTextBoxImpl(value, name, xOffset, xScale, lineBreak, dt);
+	return doTextBoxImpl(value, name, xOffset, xScale, lineBreak, dt);
 }
 
-void doTextBox(std::string & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
+bool doTextBox(std::string & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
 {
-	doTextBoxImpl(value, name, xOffset, xScale, lineBreak, dt);
+	return doTextBoxImpl(value, name, xOffset, xScale, lineBreak, dt);
 }
 
 template <typename T>
-static void doTextBoxImpl(T & value, const char * name, const float dt)
+static bool doTextBoxImpl(T & value, const char * name, const float dt)
 {
-	doTextBox(value, name, 0.f, 1.f, true, dt);
+	return doTextBox(value, name, 0.f, 1.f, true, dt);
 }
 
-void doTextBox(int & value, const char * name, const float dt)
+bool doTextBox(int & value, const char * name, const float dt)
 {
-	doTextBoxImpl(value, name, dt);
+	return doTextBoxImpl(value, name, dt);
 }
 
-void doTextBox(float & value, const char * name, const float dt)
+bool doTextBox(float & value, const char * name, const float dt)
 {
-	doTextBoxImpl(value, name, dt);
+	return doTextBoxImpl(value, name, dt);
 }
 
-void doTextBox(std::string & value, const char * name, const float dt)
+bool doTextBox(std::string & value, const char * name, const float dt)
 {
-	doTextBoxImpl(value, name, dt);
+	return doTextBoxImpl(value, name, dt);
 }
 
 bool doCheckBox(bool & value, const char * name, const bool isCollapsable)

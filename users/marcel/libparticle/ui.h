@@ -64,13 +64,13 @@ void popMenu();
 bool doButton(const char * name, const float xOffset, const float xScale, const bool lineBreak);
 bool doButton(const char * name);
 
-void doTextBox(int & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
-void doTextBox(float & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
-void doTextBox(std::string & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
+bool doTextBox(int & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
+bool doTextBox(float & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
+bool doTextBox(std::string & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
 
-void doTextBox(int & value, const char * name, const float dt);
-void doTextBox(float & value, const char * name, const float dt);
-void doTextBox(std::string & value, const char * name, const float dt);
+bool doTextBox(int & value, const char * name, const float dt);
+bool doTextBox(float & value, const char * name, const float dt);
+bool doTextBox(std::string & value, const char * name, const float dt);
 
 bool doCheckBox(bool & value, const char * name, const bool isCollapsable);
 
