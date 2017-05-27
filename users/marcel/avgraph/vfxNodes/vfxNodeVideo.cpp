@@ -34,6 +34,7 @@ VfxNodeVideo::~VfxNodeVideo()
 {
 	glDeleteTextures(1, &textureBlack);
 	textureBlack = 0;
+	checkErrorGL();
 	
 	delete mediaPlayer;
 	mediaPlayer = nullptr;
@@ -44,6 +45,11 @@ void VfxNodeVideo::tick(const float dt)
 	const bool loop = getInputBool(kInput_Loop, true);
 	const float speed = getInputFloat(kInput_Speed, 1.f);
 	const MP::OutputMode outputMode = (MP::OutputMode)getInputInt(kInput_OutputMode, MP::kOutputMode_RGBA);
+	
+	imageCpuOutputRGBA.reset();
+	imageCpuOutputY.reset();
+	imageCpuOutputU.reset();
+	imageCpuOutputV.reset();
 	
 	if (mediaPlayer->isActive(mediaPlayer->context))
 	{
@@ -56,6 +62,8 @@ void VfxNodeVideo::tick(const float dt)
 		
 		if (paramsChanged)
 		{
+			// todo : media player should re-allocate texture when output mode has changed
+			
 			mediaPlayer->close(false);
 			
 			mediaPlayer->presentTime = 0.f;
@@ -68,7 +76,45 @@ void VfxNodeVideo::tick(const float dt)
 		if (mediaPlayer->context->hasBegun)
 			mediaPlayer->presentTime += dt * speed;
 		
+		//
+		
 		imageOutput.texture = mediaPlayer->getTexture();
+		
+		//
+		
+		if (mediaPlayer->videoFrame != nullptr)
+		{
+			Assert(mediaPlayer->videoFrame->m_isValidForRead);
+			
+			if (mediaPlayer->context->openParams.outputMode == MP::kOutputMode_PlanarYUV)
+			{
+				int ySx;
+				int ySy;
+				int yPitch;
+				const uint8_t * yBytes = mediaPlayer->videoFrame->getY(ySx, ySy, yPitch);
+				
+				int uSx;
+				int uSy;
+				int uPitch;
+				const uint8_t * uBytes = mediaPlayer->videoFrame->getU(uSx, uSy, uPitch);
+				
+				int vSx;
+				int vSy;
+				int vPitch;
+				const uint8_t * vBytes = mediaPlayer->videoFrame->getV(vSx, vSy, vPitch);
+				
+				imageCpuOutputY.setDataR8(yBytes, ySx, ySy, yPitch);
+				imageCpuOutputU.setDataR8(uBytes, uSx, uSy, uPitch);
+				imageCpuOutputV.setDataR8(vBytes, vSx, vSy, vPitch);
+			}
+			else if (mediaPlayer->context->openParams.outputMode == MP::kOutputMode_RGBA)
+			{
+				imageCpuOutputRGBA.setDataRGBA8(
+					(uint8_t*)mediaPlayer->videoFrame->m_frameBuffer,
+					mediaPlayer->videoFrame->m_width,
+					mediaPlayer->videoFrame->m_height, 0);
+			}
+		}
 	}
 	else
 	{
@@ -79,44 +125,20 @@ void VfxNodeVideo::tick(const float dt)
 			mediaPlayer->openAsync(source, MP::kOutputMode_RGBA);
 		}
 	}
-	
-	imageCpuOutputRGBA.reset();
-	imageCpuOutputY.reset();
-	imageCpuOutputU.reset();
-	imageCpuOutputV.reset();
 
-	if (mediaPlayer->videoFrame != nullptr)
-	{
-		if (mediaPlayer->context->openParams.outputMode == MP::kOutputMode_PlanarYUV)
-		{
-			int ySx;
-			int ySy;
-			int yPitch;
-			const uint8_t * yBytes = mediaPlayer->videoFrame->getY(ySx, ySy, yPitch);
-			
-			int uSx;
-			int uSy;
-			int uPitch;
-			const uint8_t * uBytes = mediaPlayer->videoFrame->getU(uSx, uSy, uPitch);
-			
-			int vSx;
-			int vSy;
-			int vPitch;
-			const uint8_t * vBytes = mediaPlayer->videoFrame->getV(vSx, vSy, vPitch);
-			
-			imageCpuOutputY.setDataR8(yBytes, ySx, ySy, yPitch);
-			imageCpuOutputU.setDataR8(uBytes, uSx, uSy, uPitch);
-			imageCpuOutputV.setDataR8(vBytes, vSx, vSy, vPitch);
-		}
-		else if (mediaPlayer->context->openParams.outputMode == MP::kOutputMode_RGBA)
-		{
-			imageCpuOutputRGBA.setDataRGBA8((uint8_t*)mediaPlayer->videoFrame->m_frameBuffer, mediaPlayer->videoFrame->m_width, mediaPlayer->videoFrame->m_height, 0);
-		}
-	}
-	
 	if (imageOutput.texture == 0)
 	{
 		imageOutput.texture = textureBlack;
+	}
+}
+
+void VfxNodeVideo::draw() const
+{
+	// todo : remove once decode buffer optimize is free of bugs
+	
+	if (mediaPlayer->videoFrame)
+	{
+		Assert(mediaPlayer->videoFrame->m_isValidForRead);
 	}
 }
 
