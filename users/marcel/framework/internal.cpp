@@ -315,9 +315,12 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 	else
 	{
 	#if 1
-		ImageData * temp = imageFixAlphaFilter(imageData);
-		delete imageData;
-		imageData = temp;
+		if (String::EndsWith(filename, ".png") || String::EndsWith(filename, ".gif"))
+		{
+			ImageData * temp = imageFixAlphaFilter(imageData);
+			delete imageData;
+			imageData = temp;
+		}
 	#endif
 
 	#if 0
