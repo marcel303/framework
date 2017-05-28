@@ -254,6 +254,9 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 				#endif
 				
 					numIslands++;
+					
+					if (numIslands == maxIslands)
+						return numIslands;
 				}
 				
 			foundIsland:
