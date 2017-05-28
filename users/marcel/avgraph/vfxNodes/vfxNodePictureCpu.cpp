@@ -51,7 +51,7 @@ void VfxNodePictureCpu::setImage(const char * filename)
 
 		if (imageData != nullptr)
 		{
-			image.setDataRGBA8((uint8_t*)imageData->getLine(0), imageData->sx, 16, imageData->sy, 0);
+			image.setDataRGBA8((uint8_t*)imageData->getLine(0), imageData->sx, imageData->sy, 16, 0);
 		}
 		else
 		{
