@@ -87,7 +87,7 @@ void testDotDetector()
 	uint64_t averageTimeM = 0;
 	
 	bool useGrid = true;
-	int tresholdFunction = 0;
+	int tresholdFunction = 1;
 	int tresholdValue = 32;
 	int maxRadius = 10;
 	
