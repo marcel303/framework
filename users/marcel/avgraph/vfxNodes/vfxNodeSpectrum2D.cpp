@@ -3,9 +3,7 @@
 
 VfxNodeSpectrum2D::VfxNodeSpectrum2D()
 	: VfxNodeBase()
-	, texture(0)
-	, textureSx(0)
-	, textureSy(0)
+	, texture()
 	, imageOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -28,7 +26,7 @@ void VfxNodeSpectrum2D::tick(const float dt)
 	{
 		freeTexture();
 	}
-	else if (texture == 0 || textureSx != image->sx || textureSy != image->sy)
+	else if (texture.isChanged(image->sx, image->sy, GL_R32F))
 	{
 		if (image->sx == 0 || image->sy == 0)
 			freeTexture();
@@ -36,36 +34,15 @@ void VfxNodeSpectrum2D::tick(const float dt)
 			allocateTexture(image->sx, image->sy);
 	}
 	
-	if (texture != 0)
+	if (texture.id != 0)
 	{
-		float * values = (float*)malloc(sizeof(float) * image->sx * image->sy);
+		float * values = (float*)_mm_malloc(sizeof(float) * image->sx * image->sy, 16);
 		for (int i = 0; i < image->sx * image->sy; ++i)
 			values[i] = random(-1.f, +1.f);
 		
-		// capture current OpenGL states before we change them
+		texture.upload(values, 16, image->sx, GL_RED, GL_FLOAT);
 		
-		GLuint restoreTexture;
-		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-		GLint restoreUnpack;
-		glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
-		checkErrorGL();
-		
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		checkErrorGL();
-		
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, image->sx, image->sy, GL_RED, GL_FLOAT, values);
-		checkErrorGL();
-		
-		// restore previous OpenGL states
-		
-		glBindTexture(GL_TEXTURE_2D, restoreTexture);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
-		checkErrorGL();
-		
-		//
-		
-		free(values);
+		_mm_free(values);
 		values = nullptr;
 	}
 }
@@ -84,63 +61,15 @@ void VfxNodeSpectrum2D::allocateTexture(const int sx, const int sy)
 {
 	freeTexture();
 	
-	glGenTextures(1, &texture);
-	checkErrorGL();
+	texture.allocate(sx, sy, GL_R32F);
+	texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 	
-	if (texture == 0)
-	{
-		return;
-	}
-	
-	textureSx = sx;
-	textureSy = sy;
-	
-	// capture current OpenGL states before we change them
-	
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
-
-	glBindTexture(GL_TEXTURE_2D, texture);
-	checkErrorGL();
-	
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-	checkErrorGL();
-	
-	glTexStorage2D(GL_TEXTURE_2D, 1, GL_R32F, sx, sy);
-	checkErrorGL();
-	
-	GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-	checkErrorGL();
-
-	// set filtering
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	checkErrorGL();
-	
-	// todo : clear texture contents
-	
-	// restore previous OpenGL states
-			
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-	
-	imageOutput.texture = texture;
+	imageOutput.texture = texture.id;
 }
 
 void VfxNodeSpectrum2D::freeTexture()
 {
-	glDeleteTextures(1, &texture);
-	texture = 0;
-	checkErrorGL();
-	
-	textureSx = 0;
-	textureSy = 0;
+	texture.free();
 	
 	imageOutput.texture = 0;
 }

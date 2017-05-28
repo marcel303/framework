@@ -1,5 +1,6 @@
 #pragma once
 
+#include "openglTexture.h"
 #include "vfxNodeBase.h"
 
 struct VfxNodeSpectrum2D : VfxNodeBase
@@ -16,9 +17,7 @@ struct VfxNodeSpectrum2D : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	GLuint texture;
-	int textureSx;
-	int textureSy;
+	OpenglTexture texture;
 	
 	VfxImage_Texture imageOutput;
 
