@@ -9,6 +9,7 @@ VfxNodeImageCpuDownsample::VfxNodeImageCpuDownsample()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
 	addInput(kInput_DownsampleSize, kVfxPlugType_Int);
+	addInput(kInput_DownsampleChannel, kVfxPlugType_Int);
 	addOutput(kOutput_Image, kVfxPlugType_ImageCpu, &imageOutput);
 }
 
@@ -21,6 +22,7 @@ void VfxNodeImageCpuDownsample::tick(const float dt)
 {
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const DownsampleSize downsampleSize = (DownsampleSize)getInputInt(kInput_DownsampleSize, kDownsampleSize_2x2);
+	const DownsampleChannel downsampleChannel = (DownsampleChannel)getInputInt(kInput_DownsampleChannel, kDownsampleChannel_All);
 
 	if (image == nullptr || image->sx == 0 || image->sy == 0)
 	{
@@ -32,17 +34,26 @@ void VfxNodeImageCpuDownsample::tick(const float dt)
 
 		const int downsampledSx = std::max(1, image->sx / pixelSize);
 		const int downsampledSy = std::max(1, image->sy / pixelSize);
-
-		if (downsampledSx != imageOutput.sx || downsampledSy != imageOutput.sy)
+		const int numChannels = downsampleChannel == kDownsampleChannel_All ? image->numChannels : 1;
+		
+		if (downsampledSx != imageOutput.sx || downsampledSy != imageOutput.sy || numChannels != imageOutput.numChannels)
 		{
-			allocateImage(downsampledSx, downsampledSy, image->numChannels);
+			allocateImage(downsampledSx, downsampledSy, numChannels);
 		}
 		
 		if (downsampleSize == kDownsampleSize_2x2)
 		{
-			for (int i = 0; i < image->numChannels; ++i)
+			for (int i = 0; i < imageOutput.numChannels; ++i)
 			{
-				const VfxImageCpu::Channel & srcChannel = image->channel[i];
+				const int srcChannelIndex =
+					downsampleChannel == kDownsampleChannel_All ? i
+					: downsampleChannel == kDownsampleChannel_R ? 0
+					: downsampleChannel == kDownsampleChannel_G ? 1
+					: downsampleChannel == kDownsampleChannel_B ? 2
+					: downsampleChannel == kDownsampleChannel_A ? 3
+					: 0;
+				
+				const VfxImageCpu::Channel & srcChannel = image->channel[srcChannelIndex];
 					  VfxImageCpu::Channel & dstChannel = imageOutput.channel[i];
 				
 				for (int y = 0; y < downsampledSy; ++y)
@@ -72,9 +83,17 @@ void VfxNodeImageCpuDownsample::tick(const float dt)
 		}
 		else if (downsampleSize == kDownsampleSize_4x4)
 		{
-			for (int i = 0; i < image->numChannels; ++i)
+			for (int i = 0; i < imageOutput.numChannels; ++i)
 			{
-				const VfxImageCpu::Channel & srcChannel = image->channel[i];
+				const int srcChannelIndex =
+					downsampleChannel == kDownsampleChannel_All ? i
+					: downsampleChannel == kDownsampleChannel_R ? 0
+					: downsampleChannel == kDownsampleChannel_G ? 1
+					: downsampleChannel == kDownsampleChannel_B ? 2
+					: downsampleChannel == kDownsampleChannel_A ? 3
+					: 0;
+				
+				const VfxImageCpu::Channel & srcChannel = image->channel[srcChannelIndex];
 					  VfxImageCpu::Channel & dstChannel = imageOutput.channel[i];
 				
 				for (int y = 0; y < downsampledSy; ++y)

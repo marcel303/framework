@@ -9,11 +9,21 @@ struct VfxNodeImageCpuDownsample : VfxNodeBase
 		kDownsampleSize_2x2,
 		kDownsampleSize_4x4
 	};
+	
+	enum DownsampleChannel
+	{
+		kDownsampleChannel_All,
+		kDownsampleChannel_R,
+		kDownsampleChannel_G,
+		kDownsampleChannel_B,
+		kDownsampleChannel_A
+	};
 
 	enum Input
 	{
 		kInput_Image,
 		kInput_DownsampleSize,
+		kInput_DownsampleChannel,
 		kInput_COUNT
 	};
 	
