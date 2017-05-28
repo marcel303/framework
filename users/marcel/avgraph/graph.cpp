@@ -1091,25 +1091,27 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 		if (hasValue)
 		{
 			//logDebug("real time srcSocket value: %s", value.c_str());
-		}
 		
-		//
-		
-		auto valueTypeDefinition = graphEdit.typeDefinitionLibrary->tryGetValueTypeDefinition(dstSocket->typeName);
-		
-		if (valueTypeDefinition != nullptr)
-		{
-			if (valueTypeDefinition->visualizer == "valueplotter")
-			{
-				const float valueAsFloat = Parse::Float(value);
-				
-				history.add(valueAsFloat);
-			}
+			auto valueTypeDefinition = graphEdit.typeDefinitionLibrary->tryGetValueTypeDefinition(dstSocket->typeName);
 			
-			if (valueTypeDefinition->visualizer == "opengl-texture")
+			if (valueTypeDefinition != nullptr)
 			{
-				texture = Parse::Int32(value);
+				if (valueTypeDefinition->visualizer == "valueplotter")
+				{
+					const float valueAsFloat = Parse::Float(value);
+					
+					history.add(valueAsFloat);
+				}
+				
+				if (valueTypeDefinition->visualizer == "opengl-texture")
+				{
+					texture = Parse::Int32(value);
+				}
 			}
+		}
+		else
+		{
+			texture = 0;
 		}
 	}
 	
@@ -1329,6 +1331,11 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		if (numVisuals > 0)
 		{
 			perVisualSy = visualSy / numVisuals;
+		}
+		else
+		{
+			sx = std::max(sx, visualSx);
+			sy += visualSy;
 		}
 	}
 	
