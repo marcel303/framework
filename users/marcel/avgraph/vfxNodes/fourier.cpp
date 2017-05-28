@@ -3,27 +3,28 @@
 #include <cmath>
 #include <string.h>
 
-void Fourier::fft1D(
-	double * __restrict dreal,
-	double * __restrict dimag,
+template <typename real>
+static void fft1DImpl(
+	real * __restrict dreal,
+	real * __restrict dimag,
 	const int size,
 	const int transformSize,
 	const bool inverse, const bool normalize)
 {
-	const int numBits = integerLog2(transformSize);
+	const int numBits = Fourier::integerLog2(transformSize);
 	
 	// pad the data with zeroes
 	
 	for (int x = size; x < transformSize; ++x)
 	{
-		const int xReversed = reverseBits(x, numBits);
+		const int xReversed = Fourier::reverseBits(x, numBits);
 		
 		dreal[xReversed] = 0.0;
 		dimag[xReversed] = 0.0;
 	}
 	
-	const double pi2 = M_PI * 2.0;
-	const double scale = 1.0 / transformSize;
+	const real pi2 = M_PI * 2.0;
+	const real scale = 1.0 / transformSize;
 	
 	int n = 1;
 	
@@ -33,13 +34,13 @@ void Fourier::fft1D(
 		
 		n <<= 1;
 		
-		const double angle = (inverse) ? pi2 / n : -pi2 / n;
+		const real angle = (inverse) ? pi2 / n : -pi2 / n;
 
-		double wtmp = std::sin(0.5 * angle);
-		double wpr = -2.0 * wtmp * wtmp;
-		double wpi = std::sin(angle);
-		double wr = 1.0;
-		double wi = 0.0;
+		real wtmp = std::sin(0.5 * angle);
+		real wpr = -2.0 * wtmp * wtmp;
+		real wpi = std::sin(angle);
+		real wr = 1.0;
+		real wi = 0.0;
 
 		for (int m = 0; m < n2; ++m)
 		{
@@ -47,8 +48,8 @@ void Fourier::fft1D(
 			{
 				const int j = i + n2;
 				
-				const double tcreal = wr * dreal[j] - wi * dimag[j];
-				const double tcimag = wr * dimag[j] + wi * dreal[j];
+				const real tcreal = wr * dreal[j] - wi * dimag[j];
+				const real tcimag = wr * dimag[j] + wi * dreal[j];
 				
 				dreal[j] = dreal[i] - tcreal;
 				dimag[j] = dimag[i] - tcimag;
@@ -73,26 +74,27 @@ void Fourier::fft1D(
 	}
 }
 
-void Fourier::fft1D_slow(
-	double * __restrict dreal,
-	double * __restrict dimag,
+template <typename real>
+static void fft1D_slowImpl(
+	real * __restrict dreal,
+	real * __restrict dimag,
 	const int size, const int transformSize,
 	const bool inverse, const bool normalize)
 {
-	const int numBits = integerLog2(transformSize);
+	const int numBits = Fourier::integerLog2(transformSize);
 	
 	// create temporary storage needed for index reversal
 	
-	double * temp = new double[transformSize * 2];
+	real * temp = new real[transformSize * 2];
 	
-	double * __restrict treal = temp + transformSize * 0;
-	double * __restrict timag = temp + transformSize * 1;
+	real * __restrict treal = temp + transformSize * 0;
+	real * __restrict timag = temp + transformSize * 1;
 	
 	// reverse the initial data set
 	
 	for (int x = 0; x < size; ++x)
 	{
-		const int xReversed = reverseBits(x, numBits);
+		const int xReversed = Fourier::reverseBits(x, numBits);
 		
 		treal[xReversed] = dreal[x];
 		timag[xReversed] = dimag[x];
@@ -100,12 +102,12 @@ void Fourier::fft1D_slow(
 	
 	// perform the fourier pass
 	
-	fft1D(treal, timag, size, transformSize, inverse, normalize);
+	fft1DImpl(treal, timag, size, transformSize, inverse, normalize);
 	
 	// copy the data back. the size of the resulting data is always equal to the transform size
 	
-	memcpy(dreal, treal, sizeof(double) * transformSize);
-	memcpy(dimag, timag, sizeof(double) * transformSize);
+	memcpy(dreal, treal, sizeof(real) * transformSize);
+	memcpy(dimag, timag, sizeof(real) * transformSize);
 	
 	// free temporary storage
 	
@@ -113,33 +115,72 @@ void Fourier::fft1D_slow(
 	temp = nullptr;
 }
 
-void Fourier::fft2D(
+void Fourier::fft1D(
 	double * __restrict dreal,
 	double * __restrict dimag,
+	const int size,
+	const int transformSize,
+	const bool inverse, const bool normalize)
+{
+	fft1DImpl(dreal, dimag, size, transformSize, inverse, normalize);
+}
+
+void Fourier::fft1D_slow(
+	double * __restrict dreal,
+	double * __restrict dimag,
+	const int size, const int transformSize,
+	const bool inverse, const bool normalize)
+{
+	fft1D_slowImpl(dreal, dimag, size, transformSize, inverse, normalize);
+}
+
+void Fourier::fft1D(
+	float * __restrict dreal,
+	float * __restrict dimag,
+	const int size,
+	const int transformSize,
+	const bool inverse, const bool normalize)
+{
+	fft1DImpl(dreal, dimag, size, transformSize, inverse, normalize);
+}
+
+void Fourier::fft1D_slow(
+	float * __restrict dreal,
+	float * __restrict dimag,
+	const int size, const int transformSize,
+	const bool inverse, const bool normalize)
+{
+	fft1D_slowImpl(dreal, dimag, size, transformSize, inverse, normalize);
+}
+
+template <typename real>
+static void fft2DImpl(
+	real * __restrict dreal,
+	real * __restrict dimag,
 	const int sx, const int transformSx,
 	const int sy, const int transformSy,
 	const bool inverse, const bool normalize,
-	double * __restrict _creal,
-	double * __restrict _cimag)
+	real * __restrict _creal,
+	real * __restrict _cimag)
 {
-	const int numBitsY = integerLog2(transformSy);
+	const int numBitsY = Fourier::integerLog2(transformSy);
 	
 	// perform FFT on each row
 	
 	for (int y = 0; y < sy; ++y)
 	{
-		double * __restrict rreal = &dreal[y * transformSx];
-		double * __restrict rimag = &dimag[y * transformSx];
+		real * __restrict rreal = &dreal[y * transformSx];
+		real * __restrict rimag = &dimag[y * transformSx];
 		
-		fft1D(rreal, rimag, sx, transformSx, false, false);
+		fft1DImpl(rreal, rimag, sx, transformSx, false, false);
 	}
 	
 	// perform FFT on each column
 	
-	double * __restrict creal;
-	double * __restrict cimag;
+	real * __restrict creal;
+	real * __restrict cimag;
 	
-	double * temp = nullptr;
+	real * temp = nullptr;
 	
 	if (_creal && _cimag)
 	{
@@ -148,7 +189,7 @@ void Fourier::fft2D(
 	}
 	else
 	{
-		temp = new double[transformSy * 2];
+		temp = new real[transformSy * 2];
 		
 		creal = temp + transformSy * 0;
 		cimag = temp + transformSy * 1;
@@ -156,12 +197,12 @@ void Fourier::fft2D(
 	
 	int * yReversedLUT = (int*)alloca(sizeof(int) * sy);
 	for (int y = 0; y < sy; ++y)
-		yReversedLUT[y] = reverseBits(y, numBitsY);
+		yReversedLUT[y] = Fourier::reverseBits(y, numBitsY);
 	
 	for (int x = 0; x < transformSx; ++x)
 	{
-		double * __restrict drealc = &dreal[x];
-		double * __restrict dimagc = &dimag[x];
+		real * __restrict drealc = &dreal[x];
+		real * __restrict dimagc = &dimag[x];
 		
 		for (int y = 0; y < sy; ++y)
 		{
@@ -174,7 +215,7 @@ void Fourier::fft2D(
 			dimagc += transformSx;
 		}
 		
-		fft1D(creal, cimag, sy, transformSy, false, false);
+		fft1DImpl(creal, cimag, sy, transformSy, false, false);
 		
 		//
 		
@@ -195,33 +236,34 @@ void Fourier::fft2D(
 	temp = nullptr;
 }
 
-void Fourier::fft2D_slow(
-	double * __restrict dreal,
-	double * __restrict dimag,
+template <typename real>
+static void fft2D_slowImpl(
+	real * __restrict dreal,
+	real * __restrict dimag,
 	const int sx, const int transformSx,
 	const int sy, const int transformSy,
 	const bool inverse, const bool normalize,
-	double * __restrict creal,
-	double * __restrict cimag)
+	real * __restrict creal,
+	real * __restrict cimag)
 {
-	const int numBitsX = integerLog2(transformSx);
+	const int numBitsX = Fourier::integerLog2(transformSx);
 	
-	double * temp = new double[transformSx * transformSy * 2];
+	real * temp = new real[transformSx * transformSy * 2];
 	
-	double * __restrict treal = temp + transformSx * transformSy * 0;
-	double * __restrict timag = temp + transformSx * transformSy * 1;
+	real * __restrict treal = temp + transformSx * transformSy * 0;
+	real * __restrict timag = temp + transformSx * transformSy * 1;
 	
 	int * xReversedLUT = (int*)alloca(sizeof(int) * sx);
 	for (int x = 0; x < sx; ++x)
-		xReversedLUT[x] = reverseBits(x, numBitsX);
+		xReversedLUT[x] = Fourier::reverseBits(x, numBitsX);
 	
 	for (int y = 0; y < sy; ++y)
 	{
-		const double * __restrict srcReal = dreal + y * sx;
-		const double * __restrict srcImag = dimag + y * sx;
+		const real * __restrict srcReal = dreal + y * sx;
+		const real * __restrict srcImag = dimag + y * sx;
 		
-		double * __restrict dstReal = treal + y * transformSx;
-		double * __restrict dstImag = timag + y * transformSx;
+		real * __restrict dstReal = treal + y * transformSx;
+		real * __restrict dstImag = timag + y * transformSx;
 		
 		for (int x = 0; x < sx; ++x)
 		{
@@ -232,11 +274,59 @@ void Fourier::fft2D_slow(
 		}
 	}
 	
-	fft2D(treal, timag, sx, transformSx, sy, transformSy, inverse, normalize, creal, cimag);
+	fft2DImpl(treal, timag, sx, transformSx, sy, transformSy, inverse, normalize, creal, cimag);
 	
-	memcpy(dreal, treal, sizeof(double) * transformSx * transformSy);
-	memcpy(dimag, timag, sizeof(double) * transformSx * transformSy);
+	memcpy(dreal, treal, sizeof(real) * transformSx * transformSy);
+	memcpy(dimag, timag, sizeof(real) * transformSx * transformSy);
 	
 	delete[] temp;
 	temp = nullptr;
+}
+
+void Fourier::fft2D(
+	double * __restrict dreal,
+	double * __restrict dimag,
+	const int sx, const int transformSx,
+	const int sy, const int transformSy,
+	const bool inverse, const bool normalize,
+	double * __restrict creal,
+	double * __restrict cimag)
+{
+	fft2DImpl(dreal, dimag, sx, transformSx, sy, transformSy, inverse, normalize, creal, cimag);
+}
+
+void Fourier::fft2D_slow(
+	double * __restrict dreal,
+	double * __restrict dimag,
+	const int sx, const int transformSx,
+	const int sy, const int transformSy,
+	const bool inverse, const bool normalize,
+	double * __restrict creal,
+	double * __restrict cimag)
+{
+	fft2D_slowImpl(dreal, dimag, sx, transformSx, sy, transformSy, inverse, normalize, creal, cimag);
+}
+
+void Fourier::fft2D(
+	float * __restrict dreal,
+	float * __restrict dimag,
+	const int sx, const int transformSx,
+	const int sy, const int transformSy,
+	const bool inverse, const bool normalize,
+	float * __restrict creal,
+	float * __restrict cimag)
+{
+	fft2DImpl(dreal, dimag, sx, transformSx, sy, transformSy, inverse, normalize, creal, cimag);
+}
+
+void Fourier::fft2D_slow(
+	float * __restrict dreal,
+	float * __restrict dimag,
+	const int sx, const int transformSx,
+	const int sy, const int transformSy,
+	const bool inverse, const bool normalize,
+	float * __restrict creal,
+	float * __restrict cimag)
+{
+	fft2D_slowImpl(dreal, dimag, sx, transformSx, sy, transformSy, inverse, normalize, creal, cimag);
 }

@@ -84,6 +84,18 @@ struct Fourier
 		const int size, const int transformSize,
 		const bool inverse, const bool normalize);
 	
+	static void fft1D(
+		float * __restrict dreal,
+		float * __restrict dimag,
+		const int size,
+		const int transformSize,
+		const bool inverse, const bool normalize);
+	static void fft1D_slow(
+		float * __restrict dreal,
+		float * __restrict dimag,
+		const int size, const int transformSize,
+		const bool inverse, const bool normalize);
+	
 	static void fft2D(
 		double * __restrict dreal,
 		double * __restrict dimag,
@@ -101,6 +113,23 @@ struct Fourier
 		double * __restrict creal = nullptr,
 		double * __restrict cimag = nullptr);
 
+	static void fft2D(
+		float * __restrict dreal,
+		float * __restrict dimag,
+		const int sx, const int transformSx,
+		const int sy, const int transformSy,
+		const bool inverse, const bool normalize,
+		float * __restrict creal = nullptr,
+		float * __restrict cimag = nullptr);
+	static void fft2D_slow(
+		float * __restrict dreal,
+		float * __restrict dimag,
+		const int sx, const int transformSx,
+		const int sy, const int transformSy,
+		const bool inverse, const bool normalize,
+		float * __restrict creal = nullptr,
+		float * __restrict cimag = nullptr);
+	
 	static inline int reverseBits(const int value, const int numBits)
 	{
 		int smask = 1 << (numBits - 1);
