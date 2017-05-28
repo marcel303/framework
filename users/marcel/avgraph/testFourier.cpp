@@ -339,16 +339,9 @@ static void fft2D_draw(const real * __restrict dreal, const real * __restrict di
 {
 	gxPushMatrix();
 	{
-		const real scaleX = 100.0 * mouse.x / real(GFX_SX);
+		const real scaleX =  10.0 * mouse.x / real(GFX_SX);
 		const real scaleY = 100.0 * mouse.y / real(GFX_SX);
 		
-		const int displayScaleX = std::max(1, GFX_SX / transformSx);
-		const int displayScaleY = std::max(1, GFX_SY / transformSy);
-		//const int displayScale = std::min(displayScaleX, displayScaleY);
-		const int displayScale = 1;
-		gxScalef(displayScale, displayScale, 1);
-		
-		//gxBegin(GL_QUADS);
 		gxBegin(GL_POINTS);
 		{
 			for (int y = 0; y < transformSy; ++y)
@@ -365,23 +358,12 @@ static void fft2D_draw(const real * __restrict dreal, const real * __restrict di
 					const real m = std::log10(10.0 + std::hypot(c, s)) - 1.0;
 					
 					const real r = c * scaleX;
-					const real g = s * scaleX;
-					const real b = m * scaleY;
+					const real b = s * scaleX;
+					const real g = m * scaleY;
 					
 					gxColor4f(r, g, b, 1.f);
 					//gxColor4f(b, b, b, 1.f);
-					
-					if (displayScale == 1)
-					{
-						gxVertex2f(x+0, y+0);
-					}
-					else
-					{
-						gxVertex2f(x+0, y+0);
-						gxVertex2f(x+1, y+0);
-						gxVertex2f(x+1, y+1);
-						gxVertex2f(x+0, y+1);
-					}
+					gxVertex2f(x+0, y+0);
 				}
 			}
 		}
@@ -411,8 +393,6 @@ void testFourier2dImpl()
 		logDebug("failed to load image!");
 		return;
 	}
-	
-	int display = 0;
 	
 	do
 	{
@@ -534,23 +514,17 @@ void testFourier2dImpl()
 	{
 		framework.process();
 		
-		if (mouse.wentDown(BUTTON_LEFT))
-		{
-			display = (display + 1) % 3;
-		}
-		
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			gxPushMatrix();
-			//if (display == 0)
+			{
 				fft2D_draw(dreal_reference, dimag_reference, transformSx_reference, transformSy_reference, "reference", t_reference);
 				gxTranslatef(0, transformSy_reference, 0);
-			//else if (display == 1)
 				fft2D_draw(dreal_fast, dimag_fast, transformSx_fast, transformSy_fast, "fast", t_fast);
 				gxTranslatef(0, transformSy_fast, 0);
-			//else if (display == 2)
 				fft2D_draw(dreal_slow, dimag_slow, transformSx_slow, transformSy_slow, "slow", t_slow);
 				gxTranslatef(0, transformSy_slow, 0);
+			}
 			gxPopMatrix();
 			
 			gxTranslatef(transformSx_reference, 0, 0);
