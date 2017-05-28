@@ -221,14 +221,31 @@ static void fft2DImpl(
 		
 		drealc = &dreal[x];
 		dimagc = &dimag[x];
-			
-		for (int y = 0; y < transformSy; ++y)
+		
+		if (normalize)
 		{
-			*drealc = creal[y];
-			*dimagc = cimag[y];
-			
-			drealc += transformSx;
-			dimagc += transformSx;
+			const int numValues = transformSx * transformSy;
+			const real scale = 1.0 / real(numValues);
+	
+			for (int y = 0; y < transformSy; ++y)
+			{
+				*drealc = creal[y] * scale;
+				*dimagc = cimag[y] * scale;
+				
+				drealc += transformSx;
+				dimagc += transformSx;
+			}
+		}
+		else
+		{
+			for (int y = 0; y < transformSy; ++y)
+			{
+				*drealc = creal[y];
+				*dimagc = cimag[y];
+				
+				drealc += transformSx;
+				dimagc += transformSx;
+			}
 		}
 	}
 	
