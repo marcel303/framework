@@ -17,6 +17,9 @@ VfxNodeSpectrum2D::VfxNodeSpectrum2D()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
+	addInput(kInput_OutputMode, kVfxPlugType_Int);
+	addInput(kInput_Normalize, kVfxPlugType_Bool);
+	addInput(kInput_Scale, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
 }
 
@@ -27,11 +30,12 @@ VfxNodeSpectrum2D::~VfxNodeSpectrum2D()
 
 void VfxNodeSpectrum2D::tick(const float dt)
 {
-	// todo : analyze image. create/update texture
-
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const int transformSx = image ? Fourier::upperPowerOf2(image->sx) : 0;
 	const int transformSy = image ? Fourier::upperPowerOf2(image->sy) : 0;
+	const OutputMode outputMode = (OutputMode)getInputInt(kInput_OutputMode, kOutputMode_Channel1And2);
+	const bool normalize = getInputBool(kInput_Normalize, true);
+	const float scale = getInputFloat(kInput_Scale, 1.f);
 	
 	if (image == nullptr)
 	{
@@ -65,34 +69,65 @@ void VfxNodeSpectrum2D::tick(const float dt)
 			}
 		}
 		
-		Fourier::fft2D_slow(dreal, dimag, image->sx, transformSx, image->sy, transformSy, false, true);
+		Fourier::fft2D_slow(dreal, dimag, image->sx, transformSx, image->sy, transformSy, false, normalize);
 		
 		for (int y = 0; y < transformSy; ++y)
 		{
 			float * __restrict rreal = dreal + y * transformSx;
 			float * __restrict rimag = dimag + y * transformSx;
 			
-			for (int x = 0; x < transformSx; ++x)
+			if (outputMode == kOutputMode_Channel1And2)
 			{
-				const float r = rreal[x];
-				const float i = rimag[x];
-				const float s = std::hypotf(r, i);
+				// todo : write combined real/imag channel
 				
-				rreal[x] = s;
+				for (int x = 0; x < transformSx; ++x)
+				{
+					const float r = rreal[x];
+					const float i = rimag[x];
+					const float s = std::hypotf(r, i);
+					
+					rreal[x] = s * scale;
+				}
+			}
+			else if (outputMode == kOutputMode_Channel1)
+			{
+				for (int x = 0; x < transformSx; ++x)
+				{
+					rreal[x] = rreal[x] * scale;
+				}
+			}
+			else if (outputMode == kOutputMode_Channel2)
+			{
+				for (int x = 0; x < transformSx; ++x)
+				{
+					rreal[x] = rimag[x];
+				}
+			}
+			else if (outputMode == kOutputMode_Length)
+			{
+				for (int x = 0; x < transformSx; ++x)
+				{
+					const float r = rreal[x];
+					const float i = rimag[x];
+					const float s = std::sqrtf(r * r + i * i);
+					
+					rreal[x] = s * scale;
+				}
+			}
+			else if (outputMode == kOutputMode_LengthSq)
+			{
+				for (int x = 0; x < transformSx; ++x)
+				{
+					const float r = rreal[x];
+					const float i = rimag[x];
+					const float sSq = r * r + i * i;
+					
+					rreal[x] = sSq * scale;
+				}
 			}
 		}
 		
 		texture.upload(dreal, 4, transformSx, GL_RED, GL_FLOAT);
-	}
-}
-
-void VfxNodeSpectrum2D::init(const GraphNode & node)
-{
-	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
-	
-	if (image != nullptr)
-	{
-		allocateTexture(image->sx, image->sy);
 	}
 }
 

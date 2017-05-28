@@ -5,9 +5,21 @@
 
 struct VfxNodeSpectrum2D : VfxNodeBase
 {
+	enum OutputMode
+	{
+		kOutputMode_Channel1And2,
+		kOutputMode_Channel1,
+		kOutputMode_Channel2,
+		kOutputMode_Length,
+		kOutputMode_LengthSq
+	};
+	
 	enum Input
 	{
 		kInput_Image,
+		kInput_OutputMode,
+		kInput_Normalize,
+		kInput_Scale,
 		kInput_COUNT
 	};
 	
@@ -27,8 +39,6 @@ struct VfxNodeSpectrum2D : VfxNodeBase
 	virtual ~VfxNodeSpectrum2D() override;
 	
 	virtual void tick(const float dt) override;
-	
-	virtual void init(const GraphNode & node) override;
 	
 	void allocateTexture(const int sx, const int sy);
 	void freeTexture();
