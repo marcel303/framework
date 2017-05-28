@@ -177,7 +177,7 @@ struct ofApp
 	{
 	    if (key == 'f') {
 	        toggleFullscreen();
-	    }   else if (key == 32){
+	    }   else if (key == 't'){
 	        tIndex = tIndex < themes.size()-1 ? tIndex+1 : 0;
 	        gui->setTheme(themes[tIndex].theme);
 	    }
@@ -206,7 +206,7 @@ void testDatGui()
 	
 	app.setup();
 	
-	while (!framework.quitRequested)
+	do
 	{
 		framework.process();
 		
@@ -240,5 +240,5 @@ void testDatGui()
 			app.draw();
 		}
 		framework.endDraw();
-	}
+	} while (!keyboard.wentDown(SDLK_SPACE));
 }

@@ -200,7 +200,7 @@ static void drawParagraph(NVGcontext* vg, float x, float y, float width, float h
 
 	if (gutter) {
 		char txt[16];
-		sprintf_s(txt, sizeof(txt), "%d", gutter);
+		snprintf(txt, sizeof(txt), "%d", gutter);
 		nvgFontSize(vg, 13.0f);
 		nvgTextAlign(vg, NVG_ALIGN_RIGHT|NVG_ALIGN_MIDDLE);
 
@@ -251,7 +251,7 @@ void testNanovg()
 	
 	auto calibri = nvgCreateFont(vg, "calibri", "calibri.ttf");
 	
-	while (!framework.quitRequested)
+	do
 	{
 		framework.process();
 		
@@ -283,7 +283,7 @@ void testNanovg()
 			nvgEndFrame(vg);
 		}
 		framework.endDraw();
-	}
+	} while (!keyboard.wentDown(SDLK_SPACE));
 	
 	nvgDeleteGL3(vg);
 	vg = nullptr;
