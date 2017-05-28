@@ -1206,12 +1206,9 @@ void testPortaudio()
 	#endif
 	#endif
 		
-		while (!framework.quitRequested)
+		do
 		{
 			framework.process();
-			
-			if (keyboard.wentDown(SDLK_ESCAPE))
-				framework.quitRequested = true;
 			
 			mousePx = mouse.x / float(GFX_SX);
 			mousePy = mouse.y / float(GFX_SY);
@@ -1363,7 +1360,7 @@ void testPortaudio()
 			}
 			framework.endDraw();
 		#endif
-		}
+		} while (!keyboard.wentDown(SDLK_SPACE));
 	}
 	
 	shutAudioOutput();
