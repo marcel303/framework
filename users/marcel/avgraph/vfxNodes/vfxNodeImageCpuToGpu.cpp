@@ -47,16 +47,20 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		// always upload single channel data using the fast path
 		
 		if (texture.isChanged(image->sx, image->sy, GL_R8))
+		{
 			texture.allocate(image->sx, image->sy, GL_R8);
+			texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+		}
 		
 		texture.upload(image->channel[0].data, image->alignment, image->channel[0].pitch, GL_RED, GL_UNSIGNED_BYTE);
-		
-		texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 	}
 	else if (channel == kChannel_RGBA)
 	{
 		if (texture.isChanged(image->sx, image->sy, GL_RGBA8))
+		{
 			texture.allocate(image->sx, image->sy, GL_RGBA8);
+			texture.setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA);
+		}
 	
 		if (image->numChannels == 4 && image->isInterleaved)
 		{
@@ -84,7 +88,10 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	else if (channel == kChannel_RGB)
 	{
 		if (texture.isChanged(image->sx, image->sy, GL_RGB8))
+		{
 			texture.allocate(image->sx, image->sy, GL_RGB8);
+			texture.setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ONE);
+		}
 		
 		if (image->numChannels == 3 && image->isInterleaved)
 		{
@@ -109,13 +116,14 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 			_mm_free(temp);
 			temp = nullptr;
 		}
-		
-		texture.setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ONE);
 	}
 	else if (channel == kChannel_R || channel == kChannel_G || channel == kChannel_B || channel == kChannel_A)
 	{
 		if (texture.isChanged(image->sx, image->sy, GL_R8))
+		{
 			texture.allocate(image->sx, image->sy, GL_R8);
+			texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+		}
 		
 		const VfxImageCpu::Channel * source = nullptr;
 		
@@ -136,8 +144,6 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		
 		_mm_free(temp);
 		temp = nullptr;
-		
-		texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 	}
 	else
 	{
