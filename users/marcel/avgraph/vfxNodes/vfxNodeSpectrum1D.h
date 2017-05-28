@@ -1,7 +1,7 @@
 #pragma once
 
+#include "openglTexture.h"
 #include "vfxNodeBase.h"
-#include <SDL2/SDL_opengl.h>
 
 struct VfxNodeSpectrum1D : VfxNodeBase
 {
@@ -18,7 +18,7 @@ struct VfxNodeSpectrum1D : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	GLuint texture;
+	OpenglTexture texture;
 	
 	VfxImage_Texture imageOutput;
 
