@@ -12,7 +12,7 @@ struct OpenglTexture
 	OpenglTexture();
 	~OpenglTexture();
 
-	void allocate(const int sx, const int sy, const int internalFormat);
+	void allocate(const int sx, const int sy, const int internalFormat, const bool filter, const bool clamp);
 	void free();
 	
 	bool isChanged(const int sx, const int sy, const int internalFormat) const;
