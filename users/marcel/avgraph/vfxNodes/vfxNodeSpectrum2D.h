@@ -18,6 +18,8 @@ struct VfxNodeSpectrum2D : VfxNodeBase
 	};
 	
 	OpenglTexture texture;
+	float * dreal;
+	float * dimag;
 	
 	VfxImage_Texture imageOutput;
 

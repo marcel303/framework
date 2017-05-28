@@ -1,9 +1,18 @@
+#include "fourier.h"
 #include "framework.h"
 #include "vfxNodeSpectrum2D.h"
+
+// todo : add normalize option
+// todo : add scale option
+// todo : add channel option
+// todo : add output option : RG32F/real+imag or R32F/length(real, imag)
+// todo : add output channels for real and imag arrays
 
 VfxNodeSpectrum2D::VfxNodeSpectrum2D()
 	: VfxNodeBase()
 	, texture()
+	, dreal(nullptr)
+	, dimag(nullptr)
 	, imageOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -21,29 +30,59 @@ void VfxNodeSpectrum2D::tick(const float dt)
 	// todo : analyze image. create/update texture
 
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
+	const int transformSx = image ? Fourier::upperPowerOf2(image->sx) : 0;
+	const int transformSy = image ? Fourier::upperPowerOf2(image->sy) : 0;
 	
 	if (image == nullptr)
 	{
 		freeTexture();
 	}
-	else if (texture.isChanged(image->sx, image->sy, GL_R32F))
+	else if (texture.isChanged(transformSx, transformSy, GL_R32F))
 	{
 		if (image->sx == 0 || image->sy == 0)
 			freeTexture();
 		else
-			allocateTexture(image->sx, image->sy);
+			allocateTexture(transformSx, transformSy);
 	}
 	
 	if (texture.id != 0)
 	{
-		float * values = (float*)_mm_malloc(sizeof(float) * image->sx * image->sy, 16);
-		for (int i = 0; i < image->sx * image->sy; ++i)
-			values[i] = random(-1.f, +1.f);
+		const VfxImageCpu::Channel & srcChannel = image->channel[0];
 		
-		texture.upload(values, 16, image->sx, GL_RED, GL_FLOAT);
+		for (int y = 0; y < image->sy; ++y)
+		{
+			const uint8_t * __restrict srcItr = srcChannel.data + y * srcChannel.pitch;
+			
+			float * __restrict rreal = dreal + y * image->sx;
+			float * __restrict rimag = dimag + y * image->sx;
+			
+			for (int x = 0; x < image->sx; ++x)
+			{
+				rreal[x] = *srcItr;
+				rimag[x] = 0.f;
+				
+				srcItr += srcChannel.stride;
+			}
+		}
 		
-		_mm_free(values);
-		values = nullptr;
+		Fourier::fft2D_slow(dreal, dimag, image->sx, transformSx, image->sy, transformSy, false, true);
+		
+		for (int y = 0; y < transformSy; ++y)
+		{
+			float * __restrict rreal = dreal + y * transformSx;
+			float * __restrict rimag = dimag + y * transformSx;
+			
+			for (int x = 0; x < transformSx; ++x)
+			{
+				const float r = rreal[x];
+				const float i = rimag[x];
+				const float s = std::hypotf(r, i);
+				
+				rreal[x] = s;
+			}
+		}
+		
+		texture.upload(dreal, 4, transformSx, GL_RED, GL_FLOAT);
 	}
 }
 
@@ -61,8 +100,11 @@ void VfxNodeSpectrum2D::allocateTexture(const int sx, const int sy)
 {
 	freeTexture();
 	
-	texture.allocate(sx, sy, GL_R32F);
+	texture.allocate(sx, sy, GL_R32F, true, true);
 	texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+	
+	dreal = new float[sx * sy];
+	dimag = new float[sx * sy];
 	
 	imageOutput.texture = texture.id;
 }
@@ -70,6 +112,12 @@ void VfxNodeSpectrum2D::allocateTexture(const int sx, const int sy)
 void VfxNodeSpectrum2D::freeTexture()
 {
 	texture.free();
+	
+	delete[] dreal;
+	dreal = nullptr;
+	
+	delete[] dimag;
+	dimag = nullptr;
 	
 	imageOutput.texture = 0;
 }
