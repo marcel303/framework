@@ -109,12 +109,12 @@ bool g_copyPiIsValid = false;
 
 //
 
-inline float lerp(const float v1, const float v2, const float t)
+static inline float lerp(const float v1, const float v2, const float t)
 {
 	return v1 * (1.f - t) + v2 * t;
 }
 
-inline float saturate(const float v)
+static inline float saturate(const float v)
 {
 	return v < 0.f ? 0.f : v > 1.f ? 1.f : v;
 }
@@ -129,6 +129,17 @@ struct ScopedValueAdjust
 };
 
 //
+
+~ParticleEditorState()
+{
+	for (int i = 0; i < kMaxParticleInfos; ++i)
+	{
+		ParticlePool & pool = g_pool[i];
+		
+		while (pool.head != nullptr)
+			pool.freeParticle(pool.head);
+	}
+}
 
 void refreshUi()
 {
