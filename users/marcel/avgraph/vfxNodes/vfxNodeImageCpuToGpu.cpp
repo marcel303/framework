@@ -48,7 +48,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		
 		if (texture.isChanged(image->sx, image->sy, GL_R8))
 		{
-			texture.allocate(image->sx, image->sy, GL_R8);
+			texture.allocate(image->sx, image->sy, GL_R8, true, true);
 			texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 		}
 		
@@ -58,7 +58,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	{
 		if (texture.isChanged(image->sx, image->sy, GL_RGBA8))
 		{
-			texture.allocate(image->sx, image->sy, GL_RGBA8);
+			texture.allocate(image->sx, image->sy, GL_RGBA8, true, true);
 			texture.setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA);
 		}
 	
@@ -89,7 +89,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	{
 		if (texture.isChanged(image->sx, image->sy, GL_RGB8))
 		{
-			texture.allocate(image->sx, image->sy, GL_RGB8);
+			texture.allocate(image->sx, image->sy, GL_RGB8, true, true);
 			texture.setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ONE);
 		}
 		
@@ -121,7 +121,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	{
 		if (texture.isChanged(image->sx, image->sy, GL_R8))
 		{
-			texture.allocate(image->sx, image->sy, GL_R8);
+			texture.allocate(image->sx, image->sy, GL_R8, true, true);
 			texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 		}
 		
