@@ -38,7 +38,7 @@ struct VideoLoop
 			if (mediaPlayer == nullptr || mediaPlayer->presentTime >= 1.0)
 			{
 				mediaPlayer2 = new MediaPlayer();
-				mediaPlayer2->openAsync(filename.c_str(), false);
+				mediaPlayer2->openAsync(filename.c_str(), MP::kOutputMode_RGBA);
 			}
 		}
 		
