@@ -115,18 +115,19 @@ void testFourier1d()
 	testFourier1d_slow();
 }
 
-static uint64_t doFourier2D_fast(const ImageData * image, double *& dreal, double *& dimag, int & transformSx, int & transformSy, const bool inverse, const bool normalize)
+template <typename real>
+static uint64_t doFourier2D_fast(const ImageData * image, real *& dreal, real *& dimag, int & transformSx, int & transformSy, const bool inverse, const bool normalize)
 {
 	const int imageSx = image->sx;
 	const int imageSy = image->sy;
 	transformSx = Fourier::upperPowerOf2(imageSx);
 	transformSy = Fourier::upperPowerOf2(imageSy);
 
-	dreal = new double[transformSx * transformSy];
-	dimag = new double[transformSx * transformSy];
+	dreal = new real[transformSx * transformSy];
+	dimag = new real[transformSx * transformSy];
 	
-	double * creal = new double[transformSy];
-	double * cimag = new double[transformSy];
+	real * creal = new real[transformSy];
+	real * cimag = new real[transformSy];
 	
 	uint64_t t1 = g_TimerRT.TimeUS_get();
 	
@@ -140,15 +141,15 @@ static uint64_t doFourier2D_fast(const ImageData * image, double *& dreal, doubl
 	
 	for (int y = 0; y < imageSy; ++y)
 	{
-		double * __restrict rreal = &dreal[y * transformSx];
-		double * __restrict rimag = &dimag[y * transformSx];
+		real * __restrict rreal = &dreal[y * transformSx];
+		real * __restrict rimag = &dimag[y * transformSx];
 		
 		const ImageData::Pixel * __restrict line = image->getLine(y);
 		
 		for (int x = 0; x < imageSx; ++x)
 		{
 			const auto & pixel = line[x];
-			const double value = pixel.r + pixel.g + pixel.b;
+			const real value = pixel.r + pixel.g + pixel.b;
 			
 			const int xReversed = xReversedLUT[x];
 			
@@ -170,18 +171,19 @@ static uint64_t doFourier2D_fast(const ImageData * image, double *& dreal, doubl
 	return t2 - t1;
 }
 
-static uint64_t doFourier2D_slow(const ImageData * image, double *& dreal, double *& dimag, int & transformSx, int & transformSy, const bool inverse, const bool normalize)
+template <typename real>
+static uint64_t doFourier2D_slow(const ImageData * image, real *& dreal, real *& dimag, int & transformSx, int & transformSy, const bool inverse, const bool normalize)
 {
 	const int imageSx = image->sx;
 	const int imageSy = image->sy;
 	transformSx = Fourier::upperPowerOf2(imageSx);
 	transformSy = Fourier::upperPowerOf2(imageSy);
 
-	dreal = new double[transformSx * transformSy];
-	dimag = new double[transformSx * transformSy];
+	dreal = new real[transformSx * transformSy];
+	dimag = new real[transformSx * transformSy];
 	
-	double * creal = new double[transformSy];
-	double * cimag = new double[transformSy];
+	real * creal = new real[transformSy];
+	real * cimag = new real[transformSy];
 	
 	uint64_t t1 = g_TimerRT.TimeUS_get();
 	
@@ -189,15 +191,15 @@ static uint64_t doFourier2D_slow(const ImageData * image, double *& dreal, doubl
 	
 	for (int y = 0; y < imageSy; ++y)
 	{
-		double * __restrict rreal = &dreal[y * imageSx];
-		double * __restrict rimag = &dimag[y * imageSx];
+		real * __restrict rreal = &dreal[y * imageSx];
+		real * __restrict rimag = &dimag[y * imageSx];
 		
 		const ImageData::Pixel * __restrict line = image->getLine(y);
 		
 		for (int x = 0; x < imageSx; ++x)
 		{
 			const auto & pixel = line[x];
-			const double value = pixel.r + pixel.g + pixel.b;
+			const real value = pixel.r + pixel.g + pixel.b;
 			
 			rreal[x] = value;
 			rimag[x] = 0.0;
@@ -217,15 +219,16 @@ static uint64_t doFourier2D_slow(const ImageData * image, double *& dreal, doubl
 	return t2 - t1;
 }
 
-static uint64_t doFourier2D_reference(const ImageData * image, double *& dreal, double *& dimag, int & transformSx, int & transformSy, const bool inverse, const bool normalize)
+template <typename real>
+static uint64_t doFourier2D_reference(const ImageData * image, real *& dreal, real *& dimag, int & transformSx, int & transformSy, const bool inverse, const bool normalize)
 {
 	const int imageSx = image->sx;
 	const int imageSy = image->sy;
 	transformSx = Fourier::upperPowerOf2(imageSx);
 	transformSy = Fourier::upperPowerOf2(imageSy);
 
-	dreal = new double[transformSx * transformSy];
-	dimag = new double[transformSx * transformSy];
+	dreal = new real[transformSx * transformSy];
+	dimag = new real[transformSx * transformSy];
 	
 	uint64_t t1 = g_TimerRT.TimeUS_get();
 	
@@ -244,8 +247,8 @@ static uint64_t doFourier2D_reference(const ImageData * image, double *& dreal, 
 	
 	for (int y = 0; y < imageSy; ++y)
 	{
-		double * __restrict rreal = &dreal[y * transformSx];
-		double * __restrict rimag = &dimag[y * transformSx];
+		real * __restrict rreal = &dreal[y * transformSx];
+		real * __restrict rimag = &dimag[y * transformSx];
 		
 		const ImageData::Pixel * __restrict line = image->getLine(y);
 		
@@ -254,7 +257,7 @@ static uint64_t doFourier2D_reference(const ImageData * image, double *& dreal, 
 		for (int x = 0; x < imageSx; ++x)
 		{
 			const auto & pixel = line[x];
-			const double value = pixel.r + pixel.g + pixel.b;
+			const real value = pixel.r + pixel.g + pixel.b;
 			
 			const int index = xReversedLUT[x];
 			
@@ -268,8 +271,8 @@ static uint64_t doFourier2D_reference(const ImageData * image, double *& dreal, 
 	// perform FFT on each column
 	
 	// complex values for current column
-	double * creal = new double[transformSy];
-	double * cimag = new double[transformSy];
+	real * creal = new real[transformSy];
+	real * cimag = new real[transformSy];
 	
 	int * yReversedLUT = (int*)alloca(sizeof(int) * imageSy);
 	for (int y = 0; y < imageSy; ++y)
@@ -277,8 +280,8 @@ static uint64_t doFourier2D_reference(const ImageData * image, double *& dreal, 
 	
 	for (int x = 0; x < transformSx; ++x)
 	{
-		double * __restrict frealc = &dreal[x];
-		double * __restrict fimagc = &dimag[x];
+		real * __restrict frealc = &dreal[x];
+		real * __restrict fimagc = &dimag[x];
 		
 		for (int y = 0; y < imageSy; ++y)
 		{
@@ -298,7 +301,7 @@ static uint64_t doFourier2D_reference(const ImageData * image, double *& dreal, 
 		frealc = &dreal[x];
 		fimagc = &dimag[x];
 		
-		const double scale = 1.0 / double(transformSx * transformSy);
+		const real scale = 1.0 / real(transformSx * transformSy);
 		
 		for (int y = 0; y < transformSy; ++y)
 		{
@@ -318,10 +321,11 @@ static uint64_t doFourier2D_reference(const ImageData * image, double *& dreal, 
 	return t2 - t1;
 }
 
-static void fft2D_scale(double * __restrict dreal, double * __restrict dimag, const int transformSx, const int transformSy)
+template <typename real>
+static void fft2D_scale(real * __restrict dreal, real * __restrict dimag, const int transformSx, const int transformSy)
 {
 	const int numValues = transformSx * transformSy;
-	const double scale = 1.0 / double(numValues);
+	const real scale = 1.0 / real(numValues);
 	
 	for (int i = 0; i < numValues; ++i)
 	{
@@ -330,12 +334,13 @@ static void fft2D_scale(double * __restrict dreal, double * __restrict dimag, co
 	}
 }
 
-static void fft2D_draw(const double * __restrict dreal, const double * __restrict dimag, const int transformSx, const int transformSy, const char * impl, const uint64_t usecs)
+template <typename real>
+static void fft2D_draw(const real * __restrict dreal, const real * __restrict dimag, const int transformSx, const int transformSy, const char * impl, const uint64_t usecs)
 {
 	gxPushMatrix();
 	{
-		const double scaleX = 100.0 * mouse.x / double(GFX_SX);
-		const double scaleY = 100.0 * mouse.y / double(GFX_SX);
+		const real scaleX = 100.0 * mouse.x / real(GFX_SX);
+		const real scaleY = 100.0 * mouse.y / real(GFX_SX);
 		
 		const int displayScaleX = std::max(1, GFX_SX / transformSx);
 		const int displayScaleY = std::max(1, GFX_SY / transformSy);
@@ -355,13 +360,13 @@ static void fft2D_draw(const double * __restrict dreal, const double * __restric
 					const int sx = (x + transformSx/2) % transformSx;
 					const int sy = (y + transformSy/2) % transformSy;
 					
-					const double c = dreal[sy * transformSx + sx];
-					const double s = dimag[sy * transformSx + sx];
-					const double m = std::log10(10.0 + std::hypot(c, s)) - 1.0;
+					const real c = dreal[sy * transformSx + sx];
+					const real s = dimag[sy * transformSx + sx];
+					const real m = std::log10(10.0 + std::hypot(c, s)) - 1.0;
 					
-					const double r = c * scaleX;
-					const double g = s * scaleX;
-					const double b = m * scaleY;
+					const real r = c * scaleX;
+					const real g = s * scaleX;
+					const real b = m * scaleY;
 					
 					gxColor4f(r, g, b, 1.f);
 					//gxColor4f(b, b, b, 1.f);
@@ -389,14 +394,17 @@ static void fft2D_draw(const double * __restrict dreal, const double * __restric
 	drawText(5, 5, 18, +1, +1, "method: %s. time=%gms", impl, usecs / 1000.0);
 }
 
-void testFourier2d()
+template <typename real>
+void testFourier2dImpl()
 {
 	//ImageData * image = loadImage("rainbow-pow2.png");
 	//ImageData * image = loadImage("rainbow-small.png");
 	//ImageData * image = loadImage("rainbow.png");
 	//ImageData * image = loadImage("rainbow.jpg");
 	//ImageData * image = loadImage("picture.jpg");
-	ImageData * image = loadImage("happysun.jpg");
+	//const char * filename = "happysun.jpg";
+	const char * filename = "happysun2.png";
+	ImageData * image = loadImage(filename);
 	
 	if (image == nullptr)
 	{
@@ -410,8 +418,8 @@ void testFourier2d()
 	{
 	// do reference 2D fft (fast)
 	
-	double * dreal_reference = nullptr;
-	double * dimag_reference = nullptr;
+	real * dreal_reference = nullptr;
+	real * dimag_reference = nullptr;
 	int transformSx_reference = 0;
 	int transformSy_reference = 0;
 	
@@ -425,8 +433,8 @@ void testFourier2d()
 	
 	// do fast 2D fft
 	
-	double * dreal_fast = nullptr;
-	double * dimag_fast = nullptr;
+	real * dreal_fast = nullptr;
+	real * dimag_fast = nullptr;
 	int transformSx_fast = 0;
 	int transformSy_fast = 0;
 	
@@ -442,8 +450,8 @@ void testFourier2d()
 	
 	// do slow 2D fft
 	
-	double * dreal_slow = nullptr;
-	double * dimag_slow = nullptr;
+	real * dreal_slow = nullptr;
+	real * dimag_slow = nullptr;
 	int transformSx_slow = 0;
 	int transformSy_slow = 0;
 	
@@ -465,31 +473,31 @@ void testFourier2d()
 		
 		for (int x = 0; x < image->sx; ++x)
 		{
-			double coss = 0.0;
-			double sins = 0.0;
+			real coss = 0.0;
+			real sins = 0.0;
 			
 			for (int v = 0; v < image->sy; ++v)
 			{
-				double phaseV = v * y / double(image->sy);
+				real phaseV = v * y / real(image->sy);
 				
 				for (int u = 0; u < image->sx; ++u)
 				{
-					double phaseU = u * x / double(image->sx);
+					real phaseU = u * x / real(image->sx);
 					
-					double phase = (2.0 * M_PI) * (phaseV + phaseU);
+					real phase = (2.0 * M_PI) * (phaseV + phaseU);
 					
-					double cosv = +std::cos(phase);
-					double sinv = -std::sin(phase);
+					real cosv = +std::cos(phase);
+					real sinv = -std::sin(phase);
 					
-					double value = image->getLine(v)[u].r + image->getLine(v)[u].g + image->getLine(v)[u].b);
+					real value = image->getLine(v)[u].r + image->getLine(v)[u].g + image->getLine(v)[u].b);
 					
 					coss += cosv * value;
 					sins += sinv * value;
 				}
 			}
 			
-			dreal_reference[y * transformSx_reference + x] = coss / double(image->sx * image->sy);
-			dimag_reference[y * transformSx_reference + x] = sins / double(image->sx * image->sy);
+			dreal_reference[y * transformSx_reference + x] = coss / real(image->sx * image->sy);
+			dimag_reference[y * transformSx_reference + x] = sins / real(image->sx * image->sy);
 		}
 	}
 	auto ref_t2 = g_TimerRT.TimeUS_get();
@@ -501,18 +509,18 @@ void testFourier2d()
 	{
 		for (int x = 0; x < image->sx; ++x)
 		{
-			double & fc = f[y * transformSx * 2 + x * 2 + 0];
-			double & fs = f[y * transformSx * 2 + x * 2 + 1];
+			real & fc = f[y * transformSx * 2 + x * 2 + 0];
+			real & fs = f[y * transformSx * 2 + x * 2 + 1];
 			
 			const int sx = (x + image->sx/2) % image->sx;
 			const int sy = (y + image->sy/2) % image->sy;
 			
-			const double dx = sx - image->sx/2;
-			const double dy = sy - image->sy/2;
-			const double ds = std::hypot(dx, dy);
+			const real dx = sx - image->sx/2;
+			const real dy = sy - image->sy/2;
+			const real ds = std::hypot(dx, dy);
 			
-			const double w = std::pow(ds / 50.0, 4.0);
-			const double s = w < 0.0 ? 0.0 : w > 1.0 ? 1.0 : w;
+			const real w = std::pow(ds / 50.0, 4.0);
+			const real s = w < 0.0 ? 0.0 : w > 1.0 ? 1.0 : w;
 			
 			fc *= s;
 			fs *= s;
@@ -546,13 +554,7 @@ void testFourier2d()
 			gxPopMatrix();
 			
 			gxTranslatef(transformSx_reference, 0, 0);
-			GLuint texture = createTextureFromRGBA8(image->imageData, image->sx, image->sy, false, true);
-			gxSetTexture(texture);
-			setColor(colorWhite);
-			drawRect(0, 0, image->sx, image->sy);
-			gxSetTexture(0);
-			glDeleteTextures(1, &texture);
-			texture = 0;
+			Sprite(filename).draw();
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE) && false);
@@ -567,4 +569,11 @@ void testFourier2d()
 	
 	delete image;
 	image = nullptr;
+}
+
+void testFourier2d()
+{
+	//testFourier2dImpl<float>();
+	
+	testFourier2dImpl<double>();
 }
