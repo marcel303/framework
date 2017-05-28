@@ -2821,17 +2821,23 @@ bool GraphEdit::tickTouches()
 
 void GraphEdit::tickMouseScroll(const float dt)
 {
-	const int kScrollBorder = 32;
-	const float kScrollSpeed = 400.f;
+	const int kScrollBorder = 100;
+	const float kScrollSpeed = 600.f;
+	
+	int tX = 0;
+	int tY = 0;
 	
 	if (mouse.x < kScrollBorder)
-		dragAndZoom.desiredFocusX -= kScrollSpeed * dt;
+		tX = mouse.x - kScrollBorder;
 	if (mouse.y < kScrollBorder)
-		dragAndZoom.desiredFocusY -= kScrollSpeed * dt;
+		tY = mouse.y - kScrollBorder;
 	if (mouse.x > GFX_SX - 1 - kScrollBorder)
-		dragAndZoom.desiredFocusX += kScrollSpeed * dt;
+		tX = mouse.x - (GFX_SX - 1 - kScrollBorder);
 	if (mouse.y > GFX_SY - 1 - kScrollBorder)
-		dragAndZoom.desiredFocusY += kScrollSpeed * dt;
+		tY = mouse.y - (GFX_SY - 1 - kScrollBorder);
+	
+	dragAndZoom.desiredFocusX += tX / float(kScrollBorder) * kScrollSpeed * dt;
+	dragAndZoom.desiredFocusY += tY / float(kScrollBorder) * kScrollSpeed * dt;
 }
 
 void GraphEdit::tickKeyboardScroll()
