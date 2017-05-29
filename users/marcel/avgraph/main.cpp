@@ -45,6 +45,7 @@
 #include "vfxNodes/vfxNodeTriggerOnchange.h"
 #include "vfxNodes/vfxNodeTriggerTimer.h"
 #include "vfxNodes/vfxNodeTriggerTreshold.h"
+#include "vfxNodes/vfxNodeTouches.h"
 #include "vfxNodes/vfxNodeVideo.h"
 #include "vfxNodes/vfxNodeXinput.h"
 #include "vfxNodes/vfxNodeYuvToRgb.h"
@@ -181,7 +182,12 @@ todo :
 	- add way for UI/editor to tell update loop it's animating something (camera..)
 - hide node text until mouse moves close to node ? makes the screen more serene and helps optimize UI drawing
 - look at Bitwig 2 for inspiration of node types
-- add per-node profiling data. measure time tick and draw take and report it. maybe use a special colouring mode of the node background ? black -> red/orange/yellow
+- add per-node profiling data
+	- measure time tick and draw take
+	- report node details. perhaps when hovering above it?
+	- add special colouring mode of the node background ? black (zero cpu) -> red -> orange -> yellow (high cpu)
+		- add editor option to show cpu/gpu cost
+		- add GPU performance markers
 - add real-time callback to get node description. report tick/draw time and some other stats/info
 	- report texture format, memory usage
 	- report cpu image channel count, memory usage, alignment
@@ -197,7 +203,8 @@ todo :
 + fix node dragging as dragAndZoom updates the viewport
 	+ remember where (in node space) the mouse went down
 	+ calculate new position based on current mouse position in graph space and initial position in node space
-	
+- add visualizer for multi-channel data
+
 todo : nodes :
 + add ease node
 	+ value
@@ -233,7 +240,7 @@ todo : nodes :
 - add pitch control to oscillators ?
 + add restart signal to oscillators ? if input > 0, reset phase
 - add 'window' size to square oscillator
-- add spring node ? does physical simulation of a spring
++ add spring node ? does physical simulation of a spring
 + add node which sends a trigger when a value changes. send new value as trigger data
 + add node which sends a trigger when a value crosses a treshold
 + add pitch and semitone nodes
@@ -252,21 +259,28 @@ todo : nodes :
 	- fix issue with output time not reset on filename change or looping. remember start time? -> capture time on next provide
 + video: add loop input
 + video: add playback speed input
-- add FFT analyser node. output image with amplitude per band
-	- output is image. input = ?
++ add FFT analyser node. output image with amplitude per band
+	+ output is image. input = ?
 - add note (like C1) to MIDI note
 + add base event ID to OSC send node ?
 - add adsr node
-- add random noise node with update frequency. updates random value N times per second
-- add touch pad node which reads data from the MacBook's touch pad (up to ten fingers..)
++ add random noise node with update frequency. updates random value N times per second
++ add touch pad node which reads data from the MacBook's touch pad (up to ten fingers..)
 - add node which can analyze images, detect the dots in them, and send the dots as output
 	+ add dot detection node
 	- will need a vector socket value type ?
 - add CPU image downsample node.
 	+ downscale 2x2 or 4x4. would make dot detector operate faster on large video files
 	- maybe should work with maximum size constraints and keep downscaling until met ? makes it possible to have varying sized image data incoming and have some kind of size gaurantee on the output
-- add spectrum2d node
++ add spectrum2d node
 + add dot detector node
+- let nodes that allocate a surface push their surface as the current surface, so rendering in dep nodes happens in these surfaces ?
+- add channels.toGpu node
+	- convert a single channel into a buffer
+	- convert all channels for GPU access
+	- specify which channels. perhaps using swizzle control ?
+		- perhaps add index 1, 2, 3, 4 and set them to -1 by default, except for index 1, which should be 0
+		- perhaps add a string input which specifies channels ..
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -296,19 +310,29 @@ todo : media player
 - add openAsync call which accepts OpenParams
 - add yuvToRgb node
 	+ add node and shader
-	- let user select colour space
+	+ let user select colour space
+	- verify color spaces. check what avcodec does, QuickTime player, etc .. there's many ways to go from yuv -> rgb !
 + add image_y, image_u, image_v to video node
 + double check image.toGpu node uses optimized code path for converting single channel source to texture 
 
 todo : UI
 + add drop down list for (large) enums
 + add load/save notifications to UI., maybe a UI message that briefly appears on the bottom. white text on dark background ?
+- make nodes into lilly shapes ?
+	- the lilly is round so doesn't prefer a certain direction. democracy for the nodes !
+	- let the petals become outputs
+	- so a lilly is a circle with petals. clicking around the circle's radius will let you reorient the lilly -> which will set the output socket orientations. more freedom, love and happiness for all !
+	- let lillies grow when planted
+	- 'Victoria Regina', the largest water lilly known to man. found in the rain forest. and on a lamp post somewhere in Rotterdam, with the story of two brothers and their greeen house
+	- allocate link colours based on hue, where the hue is 360 / numTypes * indexOfTypeInTypeDefinitionLibrary
+		- it will be such a happy sight to behold :-)
 
 reference :
 + http://www.dsperados.com (company based in Utrecht ? send to Stijn)
 
 */
 
+//#define FILENAME "kinect.xml"
 #define FILENAME "yuvtest.xml"
 
 extern const int GFX_SX;
@@ -421,6 +445,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("osc.saw", VfxNodeOscSaw)
 	DefineNodeImpl("osc.triangle", VfxNodeOscTriangle)
 	DefineNodeImpl("osc.square", VfxNodeOscSquare)
+	DefineNodeImpl("osc.random", VfxNodeOscRandom)
 	else if (typeName == "display")
 	{
 		vfxNode = new VfxNodeDisplay();
@@ -431,6 +456,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	}
 	DefineNodeImpl("mouse", VfxNodeMouse)
 	DefineNodeImpl("xinput", VfxNodeXinput)
+	DefineNodeImpl("touches", VfxNodeTouches)
 	DefineNodeImpl("leap", VfxNodeLeapMotion)
 	DefineNodeImpl("kinect1", VfxNodeKinect1)
 	DefineNodeImpl("kinect2", VfxNodeKinect2)
@@ -638,8 +664,7 @@ int main(int argc, char * argv[])
 		
 		//testTextureAtlas();
 		
-		//for (int i = 0; i < 10; ++i)
-		//	testDynamicTextureAtlas();
+		//testDynamicTextureAtlas();
 		
 		//testDotDetector();
 		
