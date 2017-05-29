@@ -1,3 +1,4 @@
+#include "framework.h"
 #include "vfxNodeOscPrimitives.h"
 
 VfxNodeOscSine::VfxNodeOscSine()
@@ -43,7 +44,7 @@ void VfxNodeOscSine::tick(const float dt)
 		}
 	}
 	
-	outputValue = std::sin(phaseHelper.phase * 2.f * float(M_PI));
+	outputValue = (1.f + std::sin(phaseHelper.phase * 2.f * float(M_PI))) * .5f;
 }
 
 //
@@ -91,7 +92,7 @@ void VfxNodeOscSaw::tick(const float dt)
 		}
 	}
 	
-	outputValue = -1.f + 2.f * phaseHelper.phase;
+	outputValue = phaseHelper.phase;
 }
 
 //
@@ -139,7 +140,7 @@ void VfxNodeOscTriangle::tick(const float dt)
 		}
 	}
 	
-	outputValue = 1.f - std::abs(phaseHelper.phase * 4.f - 2.f);
+	outputValue = 1.f - std::abs(phaseHelper.phase * 2.f - 1.f);
 }
 
 //
@@ -188,4 +189,36 @@ void VfxNodeOscSquare::tick(const float dt)
 	}
 	
 	outputValue = 0.f; // todo
+}
+
+//
+
+VfxNodeOscRandom::VfxNodeOscRandom()
+	: VfxNodeBase()
+	, phase(0.f)
+	, outputValue(0.f)
+{
+	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	addInput(kInput_Frequency, kVfxPlugType_Float);
+	addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
+	
+	//
+	
+	outputValue = random(0.f, 1.f);
+}
+
+void VfxNodeOscRandom::tick(const float dt)
+{
+	const float frequency = getInputFloat(kInput_Frequency, 1.f);
+	
+	const float phaseDelta = dt * frequency;
+	
+	phase += phaseDelta;
+	
+	if (phase > 1.f)
+	{
+		outputValue = random(0.f, 1.f);
+		
+		phase = std::fmodf(phase, 1.f);
+	}
 }

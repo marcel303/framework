@@ -133,3 +133,26 @@ struct VfxNodeOscSquare : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 };
+
+struct VfxNodeOscRandom : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Frequency,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	float phase;
+	
+	float outputValue;
+	
+	VfxNodeOscRandom();
+	
+	virtual void tick(const float dt) override;
+};
