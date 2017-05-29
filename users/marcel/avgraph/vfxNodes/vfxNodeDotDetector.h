@@ -18,6 +18,7 @@ struct VfxNodeDotDetector : VfxNodeBase
 	{
 		kOutput_Lumi,
 		kOutput_Mask,
+		kOutput_XYRadius,
 		kOutput_NumDots,
 		kOutput_COUNT
 	};
@@ -35,9 +36,14 @@ struct VfxNodeDotDetector : VfxNodeBase
 	uint8_t * mask;
 	int maskSx;
 	int maskSy;
+	VfxChannelData dotX;
+	VfxChannelData dotY;
+	VfxChannelData dotRadius;
 	
 	VfxImageCpu lumiOutput;
 	VfxImageCpu maskOutput;
+	VfxChannels xyrOutput;
+	
 	int numDotsOutput;
 
 	VfxNodeDotDetector();
@@ -45,6 +51,9 @@ struct VfxNodeDotDetector : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 	
-	void allocateMask(const int sx, const int sy);
+	void allocateMask(const int sx, const int sy, const int maxIslands);
 	void freeMask();
+	
+	void allocateChannels(const int size);
+	void freeChannels();
 };

@@ -1,6 +1,6 @@
 #include "dotDetector.h"
-#include "framework.h" // log
 #include "vfxNodeDotDetector.h"
+#include <xmmintrin.h>
 
 VfxNodeDotDetector::VfxNodeDotDetector()
 	: VfxNodeBase()
@@ -8,8 +8,12 @@ VfxNodeDotDetector::VfxNodeDotDetector()
 	, mask(nullptr)
 	, maskSx(0)
 	, maskSy(0)
+	, dotX()
+	, dotY()
+	, dotRadius()
 	, lumiOutput()
 	, maskOutput()
+	, xyrOutput()
 	, numDotsOutput(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -20,35 +24,44 @@ VfxNodeDotDetector::VfxNodeDotDetector()
 	addInput(kInput_MaxRadius, kVfxPlugType_Float);
 	addOutput(kOutput_Lumi, kVfxPlugType_ImageCpu, &lumiOutput);
 	addOutput(kOutput_Mask, kVfxPlugType_ImageCpu, &maskOutput);
+	addOutput(kOutput_XYRadius, kVfxPlugType_Channels, &xyrOutput);
 	addOutput(kOutput_NumDots, kVfxPlugType_Int, &numDotsOutput);
 }
 
 VfxNodeDotDetector::~VfxNodeDotDetector()
 {
 	freeMask();
+	
+	freeChannels();
 }
 
 void VfxNodeDotDetector::tick(const float dt)
 {
+	const int kMaxIslands = 256;
+	
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const Channel channel = (Channel)getInputInt(kInput_Channel, kChannel_RGB);
 	const DotDetector::TresholdTest test = getInputInt(kInput_TresholdTest, 0) == 0 ? DotDetector::kTresholdTest_GreaterEqual : DotDetector::kTresholdTest_LessEqual;
 	const int tresholdValue = getInputFloat(kInput_TresholdValue, .5f) * 255.f;
 	const int maxRadius = std::max(1, int(std::round(getInputFloat(kInput_MaxRadius, 10.f))));
+	const int maxIslands = std::min(kMaxIslands, kMaxIslands); // todo : add max islands input
 	
-	if (image == nullptr)
+	if (image == nullptr || isPassthrough)
 	{
-		// todo : clear dot cache
-		
 		freeMask();
+		
+		freeChannels();
 	}
 	else
 	{
 		if (image->sx != maskSx || image->sy != maskSy)
 		{
-			freeMask();
-			
-			allocateMask(image->sx, image->sy);
+			allocateMask(image->sx, image->sy, maxIslands);
+		}
+		
+		if (kMaxIslands != dotX.size)
+		{
+			allocateChannels(kMaxIslands);
 		}
 		
 		const uint8_t * lumiPtr = nullptr;
@@ -153,21 +166,40 @@ void VfxNodeDotDetector::tick(const float dt)
 
 		// do dot detection
 		
-		const int kMaxIslands = 256;
 		DotIsland islands[kMaxIslands];
 		
-		const int numIslands = DotDetector::detectDots(mask, maskSx, maskSy, maxRadius, islands, kMaxIslands, true);
+		const int numIslands = DotDetector::detectDots(mask, maskSx, maskSy, maxRadius, islands, maxIslands, true);
 		
 		//logDebug("dot detector detected %d islands", numIslands);
 		
-		// todo : store dot detection result somewhere and make it available somehow
+		// store dot detection results and make it available
+		
+		for (int i = 0; i < numIslands; ++i)
+		{
+			const int sx = islands[i].maxX - islands[i].minX;
+			const int sy = islands[i].maxY - islands[i].minY;
+			const int sSq = sx * sx + sy * sy;
+			const float s = std::sqrtf(sSq);
+			
+			dotX.data[i] = islands[i].x;
+			dotY.data[i] = islands[i].y;
+			dotRadius.data[i] = s;
+		}
+		
+		const float * data[] = { dotX.data, dotY.data, dotRadius.data };
+		
+		xyrOutput.setData(data, numIslands, 3);
+		
+		//
 		
 		numDotsOutput = numIslands;
 	}
 }
 
-void VfxNodeDotDetector::allocateMask(const int sx, const int sy)
+void VfxNodeDotDetector::allocateMask(const int sx, const int sy, const int maxIslands)
 {
+	freeMask();
+	
 	lumi = (uint8_t*)_mm_malloc(sx * sy, 16);
 	mask = (uint8_t*)_mm_malloc(sx * sy, 16);
 	
@@ -194,5 +226,24 @@ void VfxNodeDotDetector::freeMask()
 	
 	lumiOutput.reset();
 	maskOutput.reset();
+}
+
+void VfxNodeDotDetector::allocateChannels(const int size)
+{
+	freeChannels();
+	
+	dotX.alloc(size);
+	dotY.alloc(size);
+	dotRadius.alloc(size);
+}
+
+void VfxNodeDotDetector::freeChannels()
+{
+	dotX.free();
+	dotY.free();
+	dotRadius.free();
+	
+	xyrOutput.reset();
+	
 	numDotsOutput = 0;
 }
