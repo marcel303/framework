@@ -11,6 +11,9 @@ extern VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 
 void RealTimeConnection::loadBegin()
 {
+	Assert(g_currentVfxGraph == vfxGraph);
+	g_currentVfxGraph = nullptr;
+	
 	isLoading = true;
 	
 	vfxGraph->graph = nullptr;
@@ -28,6 +31,9 @@ void RealTimeConnection::loadEnd(GraphEdit & graphEdit)
 	vfxGraph->graph = graphEdit.graph;
 	
 	isLoading = false;
+	
+	Assert(g_currentVfxGraph == nullptr);
+	g_currentVfxGraph = vfxGraph;
 }
 
 void RealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
@@ -471,6 +477,8 @@ bool RealTimeConnection::getSrcSocketValue(const GraphNodeId nodeId, const int s
 	if (input->isConnected() == false)
 		return false;
 	
+	input->referencedByRealTimeConnectionTick = g_currentVfxGraph->nextTickTraversalId;
+	
 	return getPlugValue(input, value);
 }
 
@@ -524,6 +532,8 @@ bool RealTimeConnection::getDstSocketValue(const GraphNodeId nodeId, const int d
 	Assert(output != nullptr);
 	if (output == nullptr)
 		return false;
+	
+	output->referencedByRealTimeConnectionTick = g_currentVfxGraph->nextTickTraversalId;
 	
 	return getPlugValue(output, value);
 }

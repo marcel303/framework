@@ -149,8 +149,6 @@ todo :
 + add 2 texture inputs to fsfx node
 + integrate CCL bugfixes and changes
 + add Kinect and Kinect2 nodes
-- add ability to set node to horizontal or vertical mode. vertical mode hides socket names/is more condensed
-	- maybe also a sphere mode ?
 + add specialized visualizer node, that's present in the editor only. visualize values, but with lots of options for how to. also, make the node resizable
 	+ extract visualization code and make it reusable
 	+ add support for resizing (special) node types
@@ -326,6 +324,9 @@ todo : UI
 	- 'Victoria Regina', the largest water lilly known to man. found in the rain forest. and on a lamp post somewhere in Rotterdam, with the story of two brothers and their greeen house
 	- allocate link colours based on hue, where the hue is 360 / numTypes * indexOfTypeInTypeDefinitionLibrary
 		- it will be such a happy sight to behold :-)
+- add ability to set node to horizontal or vertical mode. vertical mode hides socket names/is more condensed
+	- maybe also a sphere mode ?
+	*** I think I like the lilly idea better
 
 reference :
 + http://www.dsperados.com (company based in Utrecht ? send to Stijn)
@@ -731,6 +732,8 @@ int main(int argc, char * argv[])
 			
 			const float dt = framework.timeStep;
 			
+			g_currentVfxGraph = realTimeConnection->vfxGraph;
+			
 			if (graphEdit->tick(dt))
 			{
 			}
@@ -742,6 +745,8 @@ int main(int argc, char * argv[])
 			{
 				graphEdit->load(FILENAME);
 			}
+			
+			g_currentVfxGraph = nullptr;
 			
 			// fixme : this should be handled by graph edit
 			

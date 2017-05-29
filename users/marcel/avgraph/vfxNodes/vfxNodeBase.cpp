@@ -270,6 +270,8 @@ void VfxPlug::connectTo(VfxPlug & dst)
 	else
 	{
 		mem = dst.mem;
+		
+		dst.isReferencedByLink = true;
 	}
 }
 
@@ -283,6 +285,20 @@ void VfxPlug::connectTo(void * dstMem, const VfxPlugType dstType)
 	{
 		mem = dstMem;
 	}
+}
+
+bool VfxPlug::isReferenced() const
+{
+	if (isReferencedByLink)
+		return true;
+	
+	if (referencedByRealTimeConnectionTick != -1)
+	{
+		if (referencedByRealTimeConnectionTick >= g_currentVfxGraph->nextTickTraversalId - 60)
+			return true;
+	}
+	
+	return false;
 }
 
 //

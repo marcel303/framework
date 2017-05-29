@@ -274,11 +274,15 @@ struct VfxPlug
 {
 	VfxPlugType type;
 	bool isValid;
+	bool isReferencedByLink;
+	int referencedByRealTimeConnectionTick;
 	void * mem;
 	
 	VfxPlug()
 		: type(kVfxPlugType_None)
 		, isValid(true)
+		, isReferencedByLink(false)
+		, referencedByRealTimeConnectionTick(-1)
 		, mem(nullptr)
 	{
 	}
@@ -295,6 +299,8 @@ struct VfxPlug
 	{
 		return mem != nullptr;
 	}
+	
+	bool isReferenced() const;
 	
 	bool getBool() const
 	{
