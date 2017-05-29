@@ -37,7 +37,7 @@ void VfxNodeSpectrum2D::tick(const float dt)
 	const bool normalize = getInputBool(kInput_Normalize, true);
 	const float scale = getInputFloat(kInput_Scale, 1.f);
 	
-	if (image == nullptr)
+	if (image == nullptr || isPassthrough)
 	{
 		freeTexture();
 	}
