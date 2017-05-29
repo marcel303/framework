@@ -21,6 +21,7 @@ VfxNodeTouches::VfxNodeTouches()
 	, wentDownOutput(0)
 	, wentUpOutput(0)
 	, movedOutput(0)
+	, numTouchesOutput(0)
 	, channelsOutput()
 {
 	resizeSockets(0, kOutput_COUNT);
@@ -29,6 +30,7 @@ VfxNodeTouches::VfxNodeTouches()
 	addOutput(kOutput_IsDownMask, kVfxPlugType_Int, &isDownOutput);
 	addOutput(kOutput_IsUpMask, kVfxPlugType_Int, &isUpOutput);
 	addOutput(kOutput_MovedMask, kVfxPlugType_Int, &movedOutput);
+	addOutput(kOutput_NumTouches, kVfxPlugType_Float, &numTouchesOutput);
 	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
 
 	//
@@ -137,7 +139,9 @@ void VfxNodeTouches::tick(const float dt)
 			isDownOutput |= 1 << i;
 
 	isUpOutput = (~isDownOutput) & ((1 << kMaxTouches) - 1);
-
+	
+	numTouchesOutput = numTouches;
+	
 	// update XY channels
 
 	for (int i = 0; i < numTouches; ++i)

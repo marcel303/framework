@@ -26,6 +26,7 @@ struct VfxNodeTouches : VfxNodeBase
 		kOutput_WentDownMask,
 		kOutput_WentUpMask,
 		kOutput_MovedMask,
+		kOutput_NumTouches,
 		kOutput_Channels,
 		kOutput_COUNT
 	};
@@ -43,6 +44,7 @@ struct VfxNodeTouches : VfxNodeBase
 	int wentDownOutput;
 	int wentUpOutput;
 	int movedOutput;
+	float numTouchesOutput;
 	VfxChannels channelsOutput;
 
 	VfxNodeTouches();
