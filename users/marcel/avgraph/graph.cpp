@@ -1046,46 +1046,44 @@ void GraphEdit_Visualizer::init(const GraphNodeId _nodeId, const std::string & _
 
 void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 {
-	bool isValid = false;
-	
 	auto srcSocket = graphEdit.tryGetInputSocket(nodeId, srcSocketIndex);
 	auto dstSocket = graphEdit.tryGetOutputSocket(nodeId, dstSocketIndex);
 	
 	if (srcSocket != nullptr)
 	{
-		isValid = true;
-		
 		hasValue = graphEdit.realTimeConnection->getSrcSocketValue(nodeId, srcSocketIndex, srcSocket->name, value);
 		
 		if (hasValue)
 		{
 			//logDebug("real time srcSocket value: %s", value.c_str());
-		}
-		
-		//
-		
-		auto valueTypeDefinition = graphEdit.typeDefinitionLibrary->tryGetValueTypeDefinition(srcSocket->typeName);
-		
-		if (valueTypeDefinition != nullptr)
-		{
-			if (valueTypeDefinition->visualizer == "valueplotter")
-			{
-				const float valueAsFloat = Parse::Float(value);
-				
-				history.add(valueAsFloat);
-			}
 			
-			if (valueTypeDefinition->visualizer == "opengl-texture")
+			auto valueTypeDefinition = graphEdit.typeDefinitionLibrary->tryGetValueTypeDefinition(srcSocket->typeName);
+		
+			if (valueTypeDefinition != nullptr)
 			{
-				texture = Parse::Int32(value);
+				if (valueTypeDefinition->visualizer == "valueplotter")
+				{
+					const float valueAsFloat = Parse::Float(value);
+					
+					history.add(valueAsFloat);
+				}
+				
+				if (valueTypeDefinition->visualizer == "opengl-texture")
+				{
+					texture = Parse::Int32(value);
+				}
 			}
+		}
+		else
+		{
+			value.clear();
+			
+			texture = 0;
 		}
 	}
 	
 	if (dstSocket != nullptr)
 	{
-		isValid = true;
-		
 		hasValue = graphEdit.realTimeConnection->getDstSocketValue(nodeId, dstSocketIndex, dstSocket->name, value);
 		
 		if (hasValue)
@@ -1111,14 +1109,16 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 		}
 		else
 		{
+			value.clear();
+			
 			texture = 0;
 		}
 	}
 	
-	if (isValid == false && nodeId != kGraphNodeIdInvalid)
+	if (hasValue == false && nodeId != kGraphNodeIdInvalid)
 	{
 		//logDebug("reset realTimeSocketCapture");
-		*this = GraphEdit_Visualizer();
+		//*this = GraphEdit_Visualizer();
 	}
 }
 
