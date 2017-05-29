@@ -6,6 +6,13 @@ class Surface;
 
 struct VfxNodeYuvToRgb : VfxNodeBase
 {
+	enum ColorSpace
+	{
+		kColorSpace_NTSC,
+		kColorSpace_BT601,
+		kColorSpace_BT709
+	};
+	
 	enum Input
 	{
 		kInput_Y,
