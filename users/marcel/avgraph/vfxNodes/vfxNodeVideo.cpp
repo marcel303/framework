@@ -71,7 +71,9 @@ void VfxNodeVideo::tick(const float dt)
 			mediaPlayer->openAsync(source, outputMode);
 		}
 		
-		mediaPlayer->tick(mediaPlayer->context);
+		const bool wantsTexture = outputs[kOutput_Image].isReferenced();
+		
+		mediaPlayer->tick(mediaPlayer->context, wantsTexture);
 		
 		if (mediaPlayer->context->hasBegun)
 			mediaPlayer->presentTime += dt * speed;
