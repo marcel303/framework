@@ -106,6 +106,7 @@ struct MediaPlayer : public AudioStream
 	
 	bool updateVideoFrame();
 	void updateTexture();
+	void freeTexture();
 	uint32_t getTexture() const;
 	bool getVideoProperties(int & sx, int & sy, double & duration) const;
 

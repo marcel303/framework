@@ -115,7 +115,7 @@ void MediaPlayer::openAsync(const char * filename, const MP::OutputMode outputMo
 	logDebug("MP thread start took %dms", t3 - t2);
 }
 
-void MediaPlayer::close(const bool freeTexture)
+void MediaPlayer::close(const bool _freeTexture)
 {
 	if (mpThread)
 	{
@@ -124,15 +124,11 @@ void MediaPlayer::close(const bool freeTexture)
 	
 	videoFrame = nullptr;
 	
-	if (freeTexture)
+	if (_freeTexture)
 	{
 		const int t1 = SDL_GetTicks();
 
-		if (texture)
-		{
-			glDeleteTextures(1, &texture);
-			texture = 0;
-		}
+		freeTexture();
 
 		const int t2 = SDL_GetTicks();
 
@@ -142,12 +138,18 @@ void MediaPlayer::close(const bool freeTexture)
 
 void MediaPlayer::tick(Context * context, const bool wantsTexture)
 {
-	if (updateVideoFrame())
+	const bool gotVideoFrame = updateVideoFrame();
+	
+	if (wantsTexture)
 	{
-		if (wantsTexture)
+		if (gotVideoFrame)
 		{
 			updateTexture();
 		}
+	}
+	else
+	{
+		freeTexture();
 	}
 
 	updateAudio();
@@ -290,6 +292,15 @@ void MediaPlayer::updateTexture()
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 			checkErrorGL();
 		}
+	}
+}
+
+void MediaPlayer::freeTexture()
+{
+	if (texture != 0)
+	{
+		glDeleteTextures(1, &texture);
+		texture = 0;
 	}
 }
 
