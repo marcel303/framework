@@ -64,13 +64,6 @@ uint32_t VfxImage_Texture::getTexture() const
 
 //
 
-VfxImageCpu::Channel::Channel()
-	: data(nullptr)
-	, stride(0)
-	, pitch(0)
-{
-}
-
 VfxImageCpu::VfxImageCpu()
 	: sx(0)
 	, sy(0)
@@ -116,6 +109,11 @@ void VfxImageCpu::setDataRGBA8(const uint8_t * rgba, const int sx, const int sy,
 
 void VfxImageCpu::reset()
 {
+	for (int i = 0; i < numChannels; ++i)
+	{
+		channel[i] = Channel();
+	}
+	
 	sx = 0;
 	sy = 0;
 	
@@ -123,11 +121,6 @@ void VfxImageCpu::reset()
 	alignment = 1;
 	isInterleaved = false;
 	isPlanar = false;
-	
-	for (int i = 0; i < 4; ++i)
-	{
-		channel[i] = Channel();
-	}
 }
 
 void VfxImageCpu::interleave1(const Channel * channel1, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
@@ -204,6 +197,66 @@ void VfxImageCpu::interleave4(const Channel * channel1, const Channel * channel2
 			src4 += channel4->stride;
 		}
 	}
+}
+
+//
+
+void VfxChannelData::alloc(const int _size)
+{
+	free();
+	
+	if (_size > 0)
+	{
+		data = new float[_size];
+		size = _size;
+	}
+}
+
+void VfxChannelData::free()
+{
+	delete[] data;
+	data = nullptr;
+	
+	size = 0;
+}
+
+//
+
+void VfxChannels::setData(const float * const * data, const int _size, const int _numChannels)
+{
+	Assert(_numChannels <= kMaxVfxChannels);
+	
+	size = _size;
+	numChannels = std::min(_numChannels, kMaxVfxChannels);
+	
+	for (int i = 0; i < numChannels; ++i)
+	{
+		channels[i].data = data[i];
+	}
+}
+
+void VfxChannels::setDataContiguous(const float * data, const int _size, const int _numChannels)
+{
+	Assert(_numChannels <= kMaxVfxChannels);
+	
+	size = _size;
+	numChannels = std::min(_numChannels, kMaxVfxChannels);
+	
+	for (int i = 0; i < numChannels; ++i)
+	{
+		channels[i].data = data + i * size;
+	}
+}
+
+void VfxChannels::reset()
+{
+	for (int i = 0; i < numChannels; ++i)
+	{
+		channels[i] = VfxChannel();
+	}
+	
+	size = 0;
+	numChannels = 0;
 }
 
 //

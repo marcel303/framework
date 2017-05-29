@@ -170,7 +170,12 @@ struct VfxImageCpu
 		int stride;
 		int pitch;
 		
-		Channel();
+		Channel()
+			: data(nullptr)
+			, stride(0)
+			, pitch(0)
+		{
+		}
 	};
 	
 	int sx;
@@ -196,6 +201,60 @@ struct VfxImageCpu
 
 //
 
+struct VfxChannel
+{
+	const float * data;
+	
+	VfxChannel()
+		: data(nullptr)
+	{
+	}
+};
+
+struct VfxChannelData
+{
+	float * data;
+	int size;
+	
+	VfxChannelData()
+		: data(nullptr)
+		, size(0)
+	{
+	}
+	
+	~VfxChannelData()
+	{
+		free();
+	}
+	
+	void alloc(const int size);
+	void free();
+};
+
+// fixme : for some reason this is not allowed to be a struct member in XCode. it starts to complain about an undefined reference to this constant. I have no idea why .. I do this all over the place and it should be allowed ?
+static const int kMaxVfxChannels = 16;
+
+struct VfxChannels
+{
+	VfxChannel channels[kMaxVfxChannels];
+	
+	int size;
+	int numChannels;
+	
+	VfxChannels()
+		: channels()
+		, size(0)
+		, numChannels(0)
+	{
+	}
+	
+	void setData(const float * const * data, const int size, const int numChannels);
+	void setDataContiguous(const float * data, const int size, const int numChannels);
+	void reset();
+};
+
+//
+
 enum VfxPlugType
 {
 	kVfxPlugType_None,
@@ -207,6 +266,7 @@ enum VfxPlugType
 	kVfxPlugType_Color,
 	kVfxPlugType_Image,
 	kVfxPlugType_ImageCpu,
+	kVfxPlugType_Channels,
 	kVfxPlugType_Trigger
 };
 
@@ -282,6 +342,12 @@ struct VfxPlug
 	{
 		Assert(type == kVfxPlugType_ImageCpu);
 		return (VfxImageCpu*)mem;
+	}
+	
+	VfxChannels * getChannels() const
+	{
+		Assert(type == kVfxPlugType_Channels);
+		return (VfxChannels*)mem;
 	}
 	
 	VfxTriggerData & getTriggerData() const
