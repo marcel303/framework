@@ -98,12 +98,13 @@ struct MediaPlayer : public AudioStream
 
 	void openAsync(const char * filename, const MP::OutputMode outputMode);
 	void close(const bool freeTexture);
-	void tick(Context * context);
+	void tick(Context * context, const bool wantsTexture);
 
 	bool isActive(Context * context) const;
 	bool presentedLastFrame(Context * context) const;
 	void seek(const double time);
-
+	
+	bool updateVideoFrame();
 	void updateTexture();
 	uint32_t getTexture() const;
 	bool getVideoProperties(int & sx, int & sy, double & duration) const;

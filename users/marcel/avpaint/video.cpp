@@ -140,9 +140,15 @@ void MediaPlayer::close(const bool freeTexture)
 	}
 }
 
-void MediaPlayer::tick(Context * context)
+void MediaPlayer::tick(Context * context, const bool wantsTexture)
 {
-	updateTexture();
+	if (updateVideoFrame())
+	{
+		if (wantsTexture)
+		{
+			updateTexture();
+		}
+	}
 
 	updateAudio();
 }
@@ -168,11 +174,11 @@ void MediaPlayer::seek(const double time)
 	SDL_UnlockMutex(context->mpTickMutex);
 }
 
-void MediaPlayer::updateTexture()
+bool MediaPlayer::updateVideoFrame()
 {
 	if (!context->hasBegun)
 	{
-		return;
+		return false;
 	}
 
 	Assert(context->mpContext.HasBegun());
@@ -181,12 +187,28 @@ void MediaPlayer::updateTexture()
 	
 	bool gotVideo = false;
 	context->mpContext.RequestVideo(time, &videoFrame, gotVideo);
-
-	if (gotVideo)
+	
+	// fixme : there seems to be an issues with signalling .. it's possible to never awaken the media player thread again under certain conditions, so just signal it each update for now ..
+	//if (gotVideo)
 	{
 		SDL_CondSignal(context->mpTickEvent);
-
+		
 		//logDebug("gotVideo. t=%06dms, sx=%d, sy=%d", int(time * 1000.0), textureSx, textureSy);
+	}
+	
+	return gotVideo;
+}
+
+void MediaPlayer::updateTexture()
+{
+	if (!context->hasBegun)
+	{
+		return;
+	}
+	
+	if (true)
+	{
+		Assert(videoFrame->m_isValidForRead);
 		
 		const void * bytes = nullptr;
 		int sx = 0;
