@@ -308,6 +308,8 @@ bool RealTimeConnection::setPlugValue(VfxPlug * plug, const std::string & value)
 		return false;
 	case kVfxPlugType_ImageCpu:
 		return false;
+	case kVfxPlugType_Channels:
+		return false;
 	case kVfxPlugType_Trigger:
 		return false;
 	}
@@ -362,6 +364,17 @@ bool RealTimeConnection::getPlugValue(VfxPlug * plug, std::string & value)
 			else
 			{
 				value = String::FormatC("[%d x %d]", image->sx, image->sy);
+				return true;
+			}
+		}
+	case kVfxPlugType_Channels:
+		{
+			auto channels = plug->getChannels();
+			if (channels == nullptr)
+				return false;
+			else
+			{
+				value = String::FormatC("[%d x %d]", channels->numChannels, channels->size);
 				return true;
 			}
 		}
