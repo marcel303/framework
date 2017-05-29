@@ -8,6 +8,7 @@ VfxNodeSpectrum1D::VfxNodeSpectrum1D()
 	, dreal(nullptr)
 	, dimag(nullptr)
 	, imageOutput()
+	, channelsOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
@@ -16,6 +17,7 @@ VfxNodeSpectrum1D::VfxNodeSpectrum1D()
 	addInput(kInput_Normalize, kVfxPlugType_Bool);
 	addInput(kInput_Scale, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
+	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
 }
 
 VfxNodeSpectrum1D::~VfxNodeSpectrum1D()
@@ -32,7 +34,7 @@ void VfxNodeSpectrum1D::tick(const float dt)
 	const bool normalize = getInputBool(kInput_Normalize, true);
 	const float scale = getInputFloat(kInput_Scale, 1.f);
 	
-	if (image == nullptr)
+	if (image == nullptr || isPassthrough)
 	{
 		freeTexture();
 	}
@@ -72,16 +74,9 @@ void VfxNodeSpectrum1D::tick(const float dt)
 			
 			if (outputMode == kOutputMode_Channel1And2)
 			{
-				// todo : write combined real/imag channel
+				float * channels[] = { dreal, rreal };
 				
-				for (int x = 0; x < transformSx; ++x)
-				{
-					const float r = rreal[x];
-					const float i = rimag[x];
-					const float s = std::hypotf(r, i);
-					
-					rreal[x] = s * scale;
-				}
+				channelsOutput.setData(channels, transformSx, 2);
 			}
 			else if (outputMode == kOutputMode_Channel1)
 			{
@@ -89,6 +84,8 @@ void VfxNodeSpectrum1D::tick(const float dt)
 				{
 					rreal[x] = rreal[x] * scale;
 				}
+				
+				channelsOutput.setDataContiguous(dreal, transformSx, 1);
 			}
 			else if (outputMode == kOutputMode_Channel2)
 			{
@@ -96,6 +93,8 @@ void VfxNodeSpectrum1D::tick(const float dt)
 				{
 					rreal[x] = rimag[x] * scale;
 				}
+				
+				channelsOutput.setDataContiguous(dreal, transformSx, 1);
 			}
 			else if (outputMode == kOutputMode_Length)
 			{
@@ -107,6 +106,8 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					
 					rreal[x] = s * scale;
 				}
+				
+				channelsOutput.setDataContiguous(dreal, transformSx, 1);
 			}
 			else if (outputMode == kOutputMode_LengthSq)
 			{
@@ -118,6 +119,8 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					
 					rreal[x] = sSq * scale;
 				}
+				
+				channelsOutput.setDataContiguous(dreal, transformSx, 1);
 			}
 		}
 		
