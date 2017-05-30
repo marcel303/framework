@@ -201,6 +201,23 @@ struct VfxImageCpu
 
 //
 
+struct VfxImageCpuData
+{
+	uint8_t * data;
+	
+	VfxImageCpu image;
+	
+	VfxImageCpuData();
+	~VfxImageCpuData();
+
+	void alloc(const int sx, const int sy, const int numChannels, const bool interleaved);
+	void allocOnSizeChange(const int sx, const int sy, const int numChannels, const bool interleaved);
+	void allocOnSizeChange(const VfxImageCpu & reference);
+	void free();
+};
+
+//
+
 struct VfxChannel
 {
 	const float * data;

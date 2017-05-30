@@ -3,6 +3,7 @@
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
 #include <string.h>
+#include <xmmintrin.h>
 
 //
 
@@ -197,6 +198,55 @@ void VfxImageCpu::interleave4(const Channel * channel1, const Channel * channel2
 			src4 += channel4->stride;
 		}
 	}
+}
+
+//
+
+VfxImageCpuData::VfxImageCpuData()
+	: data(nullptr)
+	, image()
+{
+}
+
+VfxImageCpuData::~VfxImageCpuData()
+{
+	free();	
+}
+
+void VfxImageCpuData::alloc(const int sx, const int sy, const int numChannels, const bool interleaved)
+{
+	free();
+
+	if (sx > 0 && sy > 0 && numChannels > 0)
+	{
+		data = (uint8_t*)_mm_malloc(sx * sy * numChannels, 16);
+
+		image.setDataInterleaved(data, sx, sy, numChannels, 16, sx * numChannels);
+	}
+}
+
+void VfxImageCpuData::allocOnSizeChange(const int sx, const int sy, const int numChannels, const bool interleaved)
+{
+	if (image.sx != sx || image.sy != sy || image.numChannels != numChannels || image.isInterleaved != interleaved)
+	{
+		alloc(sx, sy, numChannels, interleaved);
+	}
+}
+
+void VfxImageCpuData::allocOnSizeChange(const VfxImageCpu & reference)
+{
+	if (image.sx != reference.sx || image.sy != reference.sy || image.numChannels != reference.numChannels)
+	{
+		alloc(reference.sx, reference.sy, reference.numChannels, image.isInterleaved);
+	}
+}
+
+void VfxImageCpuData::free()
+{
+	_mm_free(data);
+	data = nullptr;
+
+	image = VfxImageCpu();
 }
 
 //
