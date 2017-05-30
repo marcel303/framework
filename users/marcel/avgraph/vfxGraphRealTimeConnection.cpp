@@ -369,7 +369,7 @@ bool RealTimeConnection::getPlugValue(VfxPlug * plug, std::string & value)
 				return false;
 			else
 			{
-				value = String::FormatC("[%d x %d]", image->sx, image->sy);
+				value = String::FormatC("[%d x %d x %d]", image->sx, image->sy, image->numChannels);
 				return true;
 			}
 		}
