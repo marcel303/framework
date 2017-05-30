@@ -6,6 +6,8 @@ OpenglTexture::OpenglTexture()
 	, sx(0)
 	, sy(0)
 	, internalFormat(0)
+	, filter(false)
+	, clamp(false)
 {
 }
 
@@ -40,12 +42,8 @@ void OpenglTexture::allocate(const int _sx, const int _sy, const int _internalFo
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 	checkErrorGL();
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-	checkErrorGL();
+	
+	setSampling(filter, clamp);
 
 	// restore previous OpenGL states
 
@@ -72,6 +70,11 @@ bool OpenglTexture::isChanged(const int _sx, const int _sy, const int _internalF
 	return _sx != sx || _sy != sy || _internalFormat != internalFormat;
 }
 
+bool OpenglTexture::isSamplingChange(const bool _filter, const bool _clamp) const
+{
+	return _filter != filter || _clamp != clamp;
+}
+
 void OpenglTexture::setSwizzle(const int r, const int g, const int b, const int a)
 {
 	Assert(id != 0);
@@ -91,6 +94,32 @@ void OpenglTexture::setSwizzle(const int r, const int g, const int b, const int 
 	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 	checkErrorGL();
 
+	// restore previous OpenGL states
+
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	checkErrorGL();
+}
+
+void OpenglTexture::setSampling(const bool _filter, const bool _clamp)
+{
+	// capture current OpenGL states before we change them
+
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+	checkErrorGL();
+	
+	//
+	
+	filter = _filter;
+	clamp = _clamp;
+	
+	glBindTexture(GL_TEXTURE_2D, id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
+	checkErrorGL();
+	
 	// restore previous OpenGL states
 
 	glBindTexture(GL_TEXTURE_2D, restoreTexture);
