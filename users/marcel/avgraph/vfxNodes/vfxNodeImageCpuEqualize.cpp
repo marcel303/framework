@@ -4,6 +4,7 @@
 
 // todo : use floyd steinberg error diffusion
 
+#define USE_AVX2 0
 #define USE_ERROR_DIFFUSION 0
 
 #if USE_ERROR_DIFFUSION
@@ -141,7 +142,7 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 			
 				if (numChannels == 1 && image->numChannels == 1)
 				{
-				#if USE_ERROR_DIFFUSION == 0
+				#if USE_AVX2 && USE_ERROR_DIFFUSION == 0
 					// optimized version using AVX scattered reads from remap table
 					
 					const int sx32 = image->sx / 32;
@@ -231,4 +232,9 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 			}
 		}
 	}
+}
+
+void VfxNodeImageCpuEqualize::getDescription(VfxNodeDescription & d)
+{
+	d.add(imageData.image);
 }

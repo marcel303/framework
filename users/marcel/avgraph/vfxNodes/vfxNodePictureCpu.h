@@ -31,4 +31,6 @@ struct VfxNodePictureCpu : VfxNodeBase
 	virtual void tick(const float dt) override;
 	
 	void setImage(const char * filename);
+	
+	virtual void getDescription(VfxNodeDescription & d) override;
 };

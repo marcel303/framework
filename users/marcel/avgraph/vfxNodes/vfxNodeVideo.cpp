@@ -156,3 +156,36 @@ void VfxNodeVideo::init(const GraphNode & node)
 		mediaPlayer->openAsync(source, outputMode);
 	}
 }
+
+void VfxNodeVideo::getDescription(VfxNodeDescription & d)
+{
+	d.add("active: %d", mediaPlayer->isActive(mediaPlayer->context));
+	
+	if (mediaPlayer->isActive(mediaPlayer->context))
+	{
+		d.add("file: %s", mediaPlayer->context->openParams.filename.c_str());
+		d.add("presentedLastFrame: %d", mediaPlayer->presentedLastFrame(mediaPlayer->context));
+		
+		int sx;
+		int sy;
+		double duration;
+		
+		if (mediaPlayer->getVideoProperties(sx, sy, duration))
+		{
+			d.add("size: %d x %d", sx, sy);
+			d.add("duration: %.2fs", duration);
+		}
+	}
+	d.newline();
+	
+	d.add("Y image:");
+	d.add(imageCpuOutputY);
+	d.newline();
+	
+	d.add("U image:");
+	d.add(imageCpuOutputU);
+	d.newline();
+	
+	d.add("V image:");
+	d.add(imageCpuOutputV);
+}

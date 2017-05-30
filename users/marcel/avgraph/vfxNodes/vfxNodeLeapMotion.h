@@ -43,4 +43,6 @@ struct VfxNodeLeapMotion : VfxNodeBase
 	virtual void init(const GraphNode & node) override;
 
 	virtual void tick(const float dt) override;
+	
+	virtual void getDescription(VfxNodeDescription & d) override;
 };

@@ -61,6 +61,8 @@ struct VfxNodeImageCpuDownsample : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 
+	virtual void getDescription(VfxNodeDescription & d) override;
+
 	void allocateImage(const int sx, const int sy, const int numChannels, const int maxSx, const int maxSy, const int pixelSize);
 	void freeImage();
 	

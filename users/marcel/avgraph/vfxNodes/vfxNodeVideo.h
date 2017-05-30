@@ -39,4 +39,6 @@ struct VfxNodeVideo : VfxNodeBase
 	virtual void tick(const float dt) override;
 	virtual void draw() const override;
 	virtual void init(const GraphNode & node) override;
+	
+	virtual void getDescription(VfxNodeDescription & d) override;
 };

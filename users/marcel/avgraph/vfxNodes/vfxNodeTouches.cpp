@@ -162,3 +162,13 @@ void VfxNodeTouches::tick(const float dt)
 			freeTouch(i);
 	}
 }
+
+void VfxNodeTouches::getDescription(VfxNodeDescription & d)
+{
+	d.add("touches:");
+	
+	for (int i = 0; i < numTouches; ++i)
+	{
+		d.add("[%02d] fingerId: %llx, x: %.2f, y: %.2f", i, touches[i].id, touches[i].x, touches[i].y);
+	}
+}

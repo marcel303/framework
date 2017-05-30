@@ -51,6 +51,8 @@ struct VfxNodeDotDetector : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 	
+	virtual void getDescription(VfxNodeDescription & d) override;
+	
 	void allocateMask(const int sx, const int sy, const int maxIslands);
 	void freeMask();
 	

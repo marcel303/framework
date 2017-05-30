@@ -196,6 +196,22 @@ void VfxNodeDotDetector::tick(const float dt)
 	}
 }
 
+void VfxNodeDotDetector::getDescription(VfxNodeDescription & d)
+{
+	d.add("numDots: %d", numDotsOutput);
+	
+	d.add("lumi image:");
+	d.add(lumiOutput);
+	d.newline();
+	
+	d.add("mask image:");
+	d.add(maskOutput);
+	d.newline();
+	
+	d.add("dot XY + radius channels:");
+	d.add(xyrOutput);
+}
+
 void VfxNodeDotDetector::allocateMask(const int sx, const int sy, const int maxIslands)
 {
 	freeMask();

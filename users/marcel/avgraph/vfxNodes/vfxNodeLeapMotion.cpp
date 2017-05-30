@@ -150,3 +150,9 @@ void VfxNodeLeapMotion::tick(const float dt)
 	setOuputIsValid(kOutput_RightHandY, isConnected);
 	setOuputIsValid(kOutput_RightHandZ, isConnected);
 }
+
+void VfxNodeLeapMotion::getDescription(VfxNodeDescription & d)
+{
+	d.add("Leap Motion connected: %d", leapController->isConnected());
+	d.add("Leap Motion has focus: %d", leapController->hasFocus());
+}

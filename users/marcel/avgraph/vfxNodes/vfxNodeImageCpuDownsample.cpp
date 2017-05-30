@@ -156,6 +156,11 @@ void VfxNodeImageCpuDownsample::tick(const float dt)
 	}
 }
 
+void VfxNodeImageCpuDownsample::getDescription(VfxNodeDescription & d)
+{
+	d.add(imageOutput);
+}
+
 void VfxNodeImageCpuDownsample::allocateImage(const int sx, const int sy, const int numChannels, const int maxSx, const int maxSy, const int pixelSize)
 {
 	freeImage();

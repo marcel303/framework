@@ -68,3 +68,9 @@ void VfxNodePictureCpu::setImage(const char * filename)
 		image.reset();
 	}
 }
+
+void VfxNodePictureCpu::getDescription(VfxNodeDescription & d)
+{
+	d.add("image:");
+	d.add(image);
+}

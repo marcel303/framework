@@ -71,3 +71,17 @@ void VfxNodeXinput::tick(const float dt)
 		back = g.isDown(GAMEPAD_BACK);
 	}
 }
+
+void VfxNodeXinput::getDescription(VfxNodeDescription & d)
+{
+	const int id = getInputInt(kInput_Id, 0);
+
+	if (id >= 0 && id < GAMEPAD_MAX)
+	{
+		d.add("controller connected: %d", gamepad[id].isConnected);
+	}
+	else
+	{
+		d.add("CONTROLLER ID INVALID!");
+	}
+}

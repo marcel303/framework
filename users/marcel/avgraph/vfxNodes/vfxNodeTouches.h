@@ -59,4 +59,6 @@ struct VfxNodeTouches : VfxNodeBase
 	Touch * allocTouch();
 
 	virtual void tick(const float dt) override;
+	
+	virtual void getDescription(VfxNodeDescription & d) override;
 };
