@@ -538,6 +538,38 @@ bool RealTimeConnection::getDstSocketValue(const GraphNodeId nodeId, const int d
 	return getPlugValue(output, value);
 }
 
+bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines)
+{
+	if (isLoading)
+		return false;
+	
+	Assert(vfxGraph != nullptr);
+	if (vfxGraph == nullptr)
+		return false;
+	
+	auto nodeItr = vfxGraph->nodes.find(nodeId);
+	
+	Assert(nodeItr != vfxGraph->nodes.end());
+	if (nodeItr == vfxGraph->nodes.end())
+		return false;
+	
+	auto node = nodeItr->second;
+	
+	VfxNodeDescription d;
+	
+	node->getDescription(d);
+	
+	if (!d.lines.empty())
+		d.add("");
+	
+	d.add("tick: %.3fms", node->tickTimeAvg / 1000.0);
+	d.add("draw: %.3fms", node->drawTimeAvg / 1000.0);
+	
+	std::swap(lines, d.lines);
+	
+	return true;
+}
+
 int RealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 {
 	if (isLoading)
