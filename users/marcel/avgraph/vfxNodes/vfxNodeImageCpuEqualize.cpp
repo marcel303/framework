@@ -1,4 +1,6 @@
 #include "vfxNodeImageCpuEqualize.h"
+#include <emmintrin.h>
+#include <immintrin.h>
 
 // todo : use floyd steinberg error diffusion
 
@@ -10,7 +12,7 @@
 	typedef int LookupElem;
 #endif
 
-static void computeHistogram(const VfxImageCpu::Channel * channel, const int sx, const int sy, int histogram[256])
+static void computeHistogram(const VfxImageCpu::Channel * __restrict channel, const int sx, const int sy, int * __restrict histogram)
 {
 	memset(histogram, 0, sizeof(int) * 256);
 	
@@ -19,11 +21,11 @@ static void computeHistogram(const VfxImageCpu::Channel * channel, const int sx,
 		for (int y = 0; y < sy; ++y)
 		{
 			const uint8_t * __restrict srcPtr = channel->data + y * channel->pitch;
-
+			
 			for (int x = 0; x < sx; ++x)
 			{
 				const int value = srcPtr[x];
-
+				
 				histogram[value]++;
 			}
 		}
@@ -46,7 +48,7 @@ static void computeHistogram(const VfxImageCpu::Channel * channel, const int sx,
 	}
 }
 
-static void equalizeHistogram(const int srcHistogram[256], const int numSamples, LookupElem dstHistorgram[256])
+static void equalizeHistogram(const int * __restrict srcHistogram, const int numSamples, LookupElem * __restrict dstHistorgram)
 {
 	int total = 0;
 	
@@ -95,7 +97,9 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 
 		for (int i = 0; i < numChannels; ++i)
 		{
-			const VfxImageCpu::Channel * srcChannel = nullptr;
+			// determine source channel
+			
+			const VfxImageCpu::Channel * __restrict srcChannel = nullptr;
 			
 			if (channel == kChannel_R)
 				srcChannel = &image->channel[0];
@@ -107,30 +111,104 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 				srcChannel = &image->channel[3];
 			else
 				srcChannel = &image->channel[i];
-
+			
+			// calculate the histogram for this channel
+			
 			int histogram[256];
 
 			computeHistogram(srcChannel, image->sx, image->sy, histogram);
 			
-			//if (total != 0)
+			// equalize the histogram. this yields our remapping table
+			
+			const int numPixels = image->sx * image->sy;
+			
+			LookupElem remap[256];
+			
+			equalizeHistogram(histogram, numPixels, remap);
+			
+			// apply the remapping table to every value in the source channel
+			
+			VfxImageCpu::Channel * __restrict dstChannel = &imageData.image.channel[i];
+			
+			for (int y = 0; y < image->sy; ++y)
 			{
-				const int numPixels = image->sx * image->sy;
-				
-				LookupElem remap[256];
-				
-				equalizeHistogram(histogram, numPixels, remap);
-				
-				VfxImageCpu::Channel & dstChannel = imageData.image.channel[i];
-				
-				for (int y = 0; y < image->sy; ++y)
-				{
-					const uint8_t * __restrict srcPtr = srcChannel->data + y * srcChannel->pitch;
-					      uint8_t * __restrict dstPtr = (uint8_t*)dstChannel.data + y * dstChannel.pitch;
+				const uint8_t * __restrict srcPtr = srcChannel->data + y * srcChannel->pitch;
+					  uint8_t * __restrict dstPtr = (uint8_t*)dstChannel->data + y * dstChannel->pitch;
 
-				#if USE_ERROR_DIFFUSION
-					float error = 0.f;
+			#if USE_ERROR_DIFFUSION
+				float error = 0.f;
+			#endif
+			
+				if (numChannels == 1 && image->numChannels == 1)
+				{
+				#if USE_ERROR_DIFFUSION == 0
+					// optimized version using AVX scattered reads from remap table
+					
+					const int sx32 = image->sx / 32;
+					
+					for (int x = 0; x < sx32; ++x)
+					{
+						// read 32 source values. these values will be used to index into the remap table
+						
+						const __m256i indices = _mm256_load_si256((__m256i*)&srcPtr[x * 32]);
+						
+						// unfortunately there's no gather instruction which reads 32 int8s. the smallest
+						// size available is reading 8 int32s. unpack the indices so they can be used
+						// with the  gather32 instruction
+						
+						const __m256i zero = _mm256_setzero_si256();
+						
+						// 1x32 uint8 -> 2x16 uint16
+						const __m256i i00 = _mm256_unpacklo_epi8(indices, zero);
+						const __m256i i01 = _mm256_unpackhi_epi8(indices, zero);
+						
+						// 2x16 uint16 -> 4x8 uint32
+						const __m256i i0 = _mm256_unpacklo_epi16(i00, zero);
+						const __m256i i1 = _mm256_unpackhi_epi16(i00, zero);
+						const __m256i i2 = _mm256_unpacklo_epi16(i01, zero);
+						const __m256i i3 = _mm256_unpackhi_epi16(i01, zero);
+						
+						// gather 4x8 values from the remap table
+						const __m256i d1 = _mm256_i32gather_epi32(remap, i0, sizeof(LookupElem));
+						const __m256i d2 = _mm256_i32gather_epi32(remap, i1, sizeof(LookupElem));
+						const __m256i d3 = _mm256_i32gather_epi32(remap, i2, sizeof(LookupElem));
+						const __m256i d4 = _mm256_i32gather_epi32(remap, i3, sizeof(LookupElem));
+						
+						// 4x8 uint32 -> 2x16 uint16
+						const __m256i d00 = _mm256_packus_epi32(d1, d2);
+						const __m256i d01 = _mm256_packus_epi32(d3, d4);
+						
+						// 2x16 uint16 -> 1x32 uint8
+						const __m256i d = _mm256_packus_epi16(d00, d01);
+						
+						// store the 32 remapped values
+						_mm256_store_si256((__m256i*)&dstPtr[x * 32], d);
+					}
+					
+					for (int x = sx32 * 32; x < image->sx; ++x)
+				#else
+					for (int x = 0; x < image->sx; ++x)
 				#endif
-				
+					{
+					#if USE_ERROR_DIFFUSION
+						const int srcValue = srcPtr[x];
+						const float dstValuef = remap[srcValue];
+						const int dstValue = std::max(0, std::min(255, int(std::round(dstValuef + error))));
+						
+						error = dstValuef - dstValue;
+					#else
+						const int srcValue = srcPtr[x];
+						const int dstValue = remap[srcValue];
+					#endif
+						
+						dstPtr[x] = dstValue;
+					}
+				}
+				else
+				{
+					const int srcStride = srcChannel->stride;
+					const int dstStride = dstChannel->stride;
+					
 					for (int x = 0; x < image->sx; ++x)
 					{
 					#if USE_ERROR_DIFFUSION
@@ -146,13 +224,11 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 						
 						*dstPtr = dstValue;
 						
-						srcPtr += srcChannel->stride;
-						dstPtr += dstChannel.stride;
+						srcPtr += srcStride;
+						dstPtr += dstStride;
 					}
 				}
 			}
-			
-			//printf("equalize: total: %d\n", total);
 		}
 	}
 }
