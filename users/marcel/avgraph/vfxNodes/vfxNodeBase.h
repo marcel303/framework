@@ -418,6 +418,17 @@ struct VfxPlug
 	}
 };
 
+struct VfxNodeDescription
+{
+	std::vector<std::string> lines;
+	
+	void add(const char * format, ...);
+	void add(const VfxImageCpu & image);
+	void add(const VfxChannels & channels);
+	
+	void newline();
+};
+
 struct VfxNodeBase
 {
 	struct TriggerTarget
@@ -615,4 +626,6 @@ struct VfxNodeBase
 	virtual void tick(const float dt) { }
 	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) { }
 	virtual void draw() const { }
+	
+	virtual void getDescription(VfxNodeDescription & d) { }
 };

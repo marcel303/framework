@@ -1,4 +1,5 @@
 #include "framework.h"
+#include "StringEx.h"
 #include "Timer.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
@@ -349,6 +350,52 @@ bool VfxPlug::isReferenced() const
 	}
 	
 	return false;
+}
+
+//
+
+void VfxNodeDescription::add(const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(text, sizeof(text), format, args);
+	va_end(args);
+	
+	lines.push_back(text);
+}
+
+void VfxNodeDescription::add(const VfxImageCpu & image)
+{
+	add("size: %d x %d", image.sx, image.sy);
+	add("numChannels: %d, alignment: %d", image.numChannels, image.alignment);
+	add("isInterleaved: %d", image.isInterleaved);
+	add("isPlanar: %d", image.isPlanar);
+	
+	int numBytes = 0;
+	
+	add("channels:");
+	for (int i = 0; i < image.numChannels; ++i)
+	{
+		const VfxImageCpu::Channel & c = image.channel[i];
+		add("[%d] stride: %d, pitch: %06d, data: %p", i, c.stride, c.pitch, c.data);
+		
+		numBytes += c.pitch * image.sy;
+	}
+	
+	add("MEMORY: %.2f Kb", numBytes / 1024.0);
+}
+
+void VfxNodeDescription::add(const VfxChannels & channels)
+{
+	add("numChannels: %d", channels.numChannels);
+	add("size: %d", channels.size);
+	add("MEMORY: %.2f Kb", channels.numChannels * channels.size * sizeof(float) / 1024.0);
+}
+
+void VfxNodeDescription::newline()
+{
+	add("");
 }
 
 //
