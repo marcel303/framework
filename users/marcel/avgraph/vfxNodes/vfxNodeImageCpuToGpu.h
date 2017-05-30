@@ -9,6 +9,8 @@ struct VfxNodeImageCpuToGpu : VfxNodeBase
 	{
 		kInput_Image,
 		kInput_Channel,
+		kInput_Filter,
+		kInput_Clamp,
 		kInput_COUNT
 	};
 	

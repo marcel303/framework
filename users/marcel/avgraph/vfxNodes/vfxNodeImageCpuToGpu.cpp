@@ -13,6 +13,8 @@ VfxNodeImageCpuToGpu::VfxNodeImageCpuToGpu()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
 	addInput(kInput_Channel, kVfxPlugType_Int);
+	addInput(kInput_Filter, kVfxPlugType_Bool);
+	addInput(kInput_Clamp, kVfxPlugType_Bool);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
 }
 
@@ -25,6 +27,8 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 {
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const Channel channel = (Channel)getInputInt(kInput_Channel, 0);
+	const bool filter = getInputBool(kInput_Filter, true);
+	const bool clamp = getInputBool(kInput_Clamp, false);
 	
 	// todo : add texture filtering and clamping options to OpenglTexture object
 	
@@ -48,7 +52,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		
 		if (texture.isChanged(image->sx, image->sy, GL_R8))
 		{
-			texture.allocate(image->sx, image->sy, GL_R8, true, true);
+			texture.allocate(image->sx, image->sy, GL_R8, filter, clamp);
 			texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 		}
 		
@@ -58,7 +62,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	{
 		if (texture.isChanged(image->sx, image->sy, GL_RGBA8))
 		{
-			texture.allocate(image->sx, image->sy, GL_RGBA8, true, true);
+			texture.allocate(image->sx, image->sy, GL_RGBA8, filter, clamp);
 			texture.setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA);
 		}
 	
@@ -72,12 +76,33 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 			
 			uint8_t * temp = (uint8_t*)_mm_malloc(image->sx * image->sy * 4, 16);
 			
-			VfxImageCpu::interleave4(
-				&image->channel[0],
-				&image->channel[1],
-				&image->channel[2],
-				&image->channel[3],
-				temp, 0, image->sx, image->sy);
+			if (image->numChannels == 3)
+			{
+				// special case for RGB input. set the alpha to one
+				
+				const uint32_t white = ~0;
+				
+				VfxImageCpu::Channel alphaChannel;
+				alphaChannel.data = (uint8_t*)&white;
+				alphaChannel.stride = 0;
+				alphaChannel.pitch = 0;
+				
+				VfxImageCpu::interleave4(
+					&image->channel[0],
+					&image->channel[1],
+					&image->channel[2],
+					&alphaChannel,
+					temp, 0, image->sx, image->sy);
+			}
+			else
+			{
+				VfxImageCpu::interleave4(
+					&image->channel[0],
+					&image->channel[1],
+					&image->channel[2],
+					&image->channel[3],
+					temp, 0, image->sx, image->sy);
+			}
 			
 			texture.upload(temp, 16, image->sx, GL_RGBA, GL_UNSIGNED_BYTE);
 			
@@ -89,7 +114,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	{
 		if (texture.isChanged(image->sx, image->sy, GL_RGB8))
 		{
-			texture.allocate(image->sx, image->sy, GL_RGB8, true, true);
+			texture.allocate(image->sx, image->sy, GL_RGB8, filter, clamp);
 			texture.setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ONE);
 		}
 		
@@ -121,7 +146,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	{
 		if (texture.isChanged(image->sx, image->sy, GL_R8))
 		{
-			texture.allocate(image->sx, image->sy, GL_R8, true, true);
+			texture.allocate(image->sx, image->sy, GL_R8, filter, clamp);
 			texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 		}
 		
@@ -148,6 +173,11 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	else
 	{
 		Assert(false);
+	}
+	
+	if (texture.isSamplingChange(filter, clamp))
+	{
+		texture.setSampling(filter, clamp);
 	}
 	
 	imageOutput.texture = texture.id;
