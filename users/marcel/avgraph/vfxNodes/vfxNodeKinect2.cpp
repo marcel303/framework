@@ -59,7 +59,10 @@ void VfxNodeKinect2::init(const GraphNode & node)
 		
 		kinect = new Kinect2();
 		
-		kinect->init();
+		if (kinect->init() == false)
+		{
+			kinect->shut();
+		}
 	}
 	
 	initCount++;
@@ -67,6 +70,16 @@ void VfxNodeKinect2::init(const GraphNode & node)
 
 void VfxNodeKinect2::tick(const float dt)
 {
+	// todo : optimize texture updates using OpenGL texture object
+	
+	if (kinect->isInit == false)
+	{
+		videoImage.texture = 0;
+		depthImage.texture = 0;
+		
+		return;
+	}
+	
 	kinect->listener->lockBuffers();
 	{
 		if (kinect->listener->video)
@@ -117,4 +130,15 @@ void VfxNodeKinect2::tick(const float dt)
 	
 	videoImage.texture = videoTexture;
 	depthImage.texture = depthTexture;
+}
+
+void VfxNodeKinect2::getDescription(VfxNodeDescription & d)
+{
+	if (kinect != nullptr)
+	{
+		d.add("Kinect2 initialized: %d", kinect->isInit);
+		d.add("capture image size: %d x %d", kinect->width, kinect->height);
+		d.add("video texture OpenGL handle: %d", videoTexture);
+		d.add("depth texture OpenGL handle: %d", depthTexture);
+	}
 }

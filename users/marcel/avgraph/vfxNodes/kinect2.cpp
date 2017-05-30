@@ -22,6 +22,7 @@ Kinect2::Kinect2()
 	, mutex(nullptr)
 	, thread(nullptr)
 	, stopThread(false)
+	, isInit(false)
 {
 }
 
@@ -87,10 +88,22 @@ bool Kinect2::init()
 	//
 	
 	Assert(mutex == nullptr);
-	Assert(thread == nullptr);
-	
 	mutex = SDL_CreateMutex();
+	
+	if (mutex == nullptr)
+		return false;
+	
+	//
+	
+	Assert(thread == nullptr);
 	thread = SDL_CreateThread(threadMain, "Kinect2 Thread", this);
+	
+	if (thread == nullptr)
+		return false;
+	
+	//
+	
+	isInit = true;
 	
 	return true;
 }
@@ -108,10 +121,13 @@ bool Kinect2::shut()
 		SDL_WaitThread(thread, nullptr);
 		thread = nullptr;
 		
+		stopThread = false;
+	}
+	
+	if (mutex != nullptr)
+	{
 		SDL_DestroyMutex(mutex);
 		mutex = nullptr;
-		
-		stopThread = false;
 	}
 	
 	delete listener;
@@ -122,6 +138,8 @@ bool Kinect2::shut()
 	
 	delete freenect2;
 	freenect2 = nullptr;
+	
+	isInit = false;
 	
 	return true;
 }

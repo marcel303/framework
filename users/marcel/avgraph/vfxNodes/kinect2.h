@@ -36,6 +36,8 @@ struct Kinect2
 	SDL_Thread * thread;
 	bool stopThread;
 	
+	bool isInit;
+	
 	Kinect2();
 	~Kinect2();
 	
