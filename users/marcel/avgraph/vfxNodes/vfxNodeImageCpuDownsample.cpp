@@ -169,16 +169,48 @@ void VfxNodeImageCpuDownsample::allocateImage(const int sx, const int sy, const 
 	
 	if (maxSx > 0 || maxSy > 0)
 	{
-		Assert(buffers.data1 == nullptr);
-		buffers.data1 = (uint8_t*)_mm_malloc(sx * sy * numChannels, 16);
-		
-		Assert(buffers.data2 == nullptr);
-		buffers.data2 = (uint8_t*)_mm_malloc(std::max(1, sx/pixelSize/pixelSize) * std::max(1, sy/pixelSize/pixelSize) * numChannels, 16);
+		if (sx <= maxSx && sy <= maxSy)
+		{
+			// note : if the downsample criteria are already met by the input image, we need a space to store the
+			//        entire image's contents. so our buffer needs to be full-size. ideally we could just reference
+			//        the original channel data in our own output image, but unfortunately tick order is not
+			//        guaranteed right now when nodes do not directly connect to the display node
+			
+			// todo : reference input image output data once typology is recursed in dependency order regardless
+			//        of connectivity with display node
+			
+			Assert(buffers.data1 == nullptr);
+			buffers.data1 = (uint8_t*)_mm_malloc(sx * sy * numChannels, 16);
+		}
+		else
+		{
+			int downsampledSx = sx;
+			int downsampledSy = sy;
+			
+			//
+			
+			downsampledSx = std::max(1, downsampledSx / pixelSize);
+			downsampledSy = std::max(1, downsampledSy / pixelSize);
+			
+			Assert(buffers.data1 == nullptr);
+			buffers.data1 = (uint8_t*)_mm_malloc(downsampledSx * downsampledSy * numChannels, 16);
+			
+			//
+			
+			downsampledSx = std::max(1, downsampledSx / pixelSize);
+			downsampledSy = std::max(1, downsampledSy / pixelSize);
+			
+			Assert(buffers.data2 == nullptr);
+			buffers.data2 = (uint8_t*)_mm_malloc(downsampledSx * downsampledSy * numChannels, 16);
+		}
 	}
 	else
 	{
+		const int downsampledSx = std::max(1, sx / pixelSize);
+		const int downsampledSy = std::max(1, sy / pixelSize);
+		
 		Assert(buffers.data1 == nullptr);
-		buffers.data1 = (uint8_t*)_mm_malloc(std::max(1, sx/pixelSize) * std::max(1, sy/pixelSize) * numChannels, 16);
+		buffers.data1 = (uint8_t*)_mm_malloc(downsampledSx * downsampledSy * numChannels, 16);
 	}
 }
 
