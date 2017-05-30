@@ -12,7 +12,8 @@ VfxNodeTouches::Touch::Touch()
 }
 
 VfxNodeTouches::VfxNodeTouches()
-	: touches()
+	: VfxNodeBase()
+	, touches()
 	, numTouches(0)
 	, xChannel()
 	, yChannel()
@@ -24,7 +25,7 @@ VfxNodeTouches::VfxNodeTouches()
 	, numTouchesOutput(0)
 	, channelsOutput()
 {
-	resizeSockets(0, kOutput_COUNT);
+	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addOutput(kOutput_WentDownMask, kVfxPlugType_Int, &wentDownOutput);
 	addOutput(kOutput_WentUpMask, kVfxPlugType_Int, &wentUpOutput);
 	addOutput(kOutput_IsDownMask, kVfxPlugType_Int, &isDownOutput);

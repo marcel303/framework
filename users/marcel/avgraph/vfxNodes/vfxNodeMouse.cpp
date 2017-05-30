@@ -2,12 +2,13 @@
 #include "vfxNodeMouse.h"
 
 VfxNodeMouse::VfxNodeMouse()
-	: x(0.f)
+	: VfxNodeBase()
+	, x(0.f)
 	, y(0.f)
 	, buttonLeft(0.f)
 	, buttonRight(0.f)
 {
-	resizeSockets(0, kOutput_COUNT);
+	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addOutput(kOutput_X, kVfxPlugType_Float, &x);
 	addOutput(kOutput_Y, kVfxPlugType_Float, &y);
 	addOutput(kOutput_ButtonLeft, kVfxPlugType_Float, &buttonLeft);

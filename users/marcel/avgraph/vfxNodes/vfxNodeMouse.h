@@ -4,6 +4,11 @@
 
 struct VfxNodeMouse : VfxNodeBase
 {
+	enum Input
+	{
+		kInput_COUNT
+	};
+	
 	enum Output
 	{
 		kOutput_X,

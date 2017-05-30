@@ -19,6 +19,11 @@ struct VfxNodeTouches : VfxNodeBase
 		Touch();
 	};
 
+	enum Input
+	{
+		kInput_COUNT
+	};
+
 	enum Output
 	{
 		kOutput_IsDownMask,
