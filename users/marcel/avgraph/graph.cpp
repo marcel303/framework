@@ -3450,6 +3450,74 @@ void GraphEdit::draw() const
 		setFont("calibri.ttf");
 		drawText(GFX_SX/2, GFX_SY - y + 20, 18, 0.f, 0.f, "%s", n.text.c_str());
 	}
+	
+	HitTestResult hitTestResult;
+	
+	if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
+	{
+		if (hitTestResult.hasNode && hitTestResult.nodeHitTestResult.background)
+		{
+			// draw node description
+			
+			if (realTimeConnection != nullptr)
+			{
+				std::vector<std::string> lines;
+				
+				if (realTimeConnection->getNodeDescription(hitTestResult.node->id, lines) && !lines.empty())
+				{
+					const int kFontSize = 14;
+					const int kSpacing = 4;
+					const int kBorderSize = 8;
+					
+					setFont("calibri.ttf");
+					
+					int sx = 0;
+					int sy = 0;
+					
+					sy += kBorderSize;
+					sy += kFontSize * lines.size() + kSpacing * (lines.size() - 1);
+					sy += kBorderSize;
+					
+					for (auto & line : lines)
+					{
+						float textSx;
+						float textSy;
+						
+						measureText(kFontSize, textSx, textSy, "%s", line.c_str());
+						
+						sx = std::max(sx, int(std::ceil(textSx)));
+					}
+					
+					sx += kBorderSize * 2;
+								
+					gxPushMatrix();
+					{
+						gxTranslatef(mousePosition.uiX + 10, mousePosition.uiY + 10, 0);
+						
+						setColor(255, 255, 227);
+						drawRect(0, 0, sx, sy);
+						
+						gxTranslatef(kBorderSize, kBorderSize, 0);
+						
+						setColor(colorBlack);
+						setFont("calibri.ttf");
+						beginTextBatch();
+						{
+							int y = 0;
+							
+							for (auto & line : lines)
+							{
+								drawText(0, y, kFontSize, +1, +1, "%s", line.c_str());
+								y += kFontSize + kSpacing;
+							}
+						}
+						endTextBatch();
+					}
+					gxPopMatrix();
+				}
+			}
+		}
+	}
 }
 
 void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition & definition) const

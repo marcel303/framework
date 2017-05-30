@@ -605,6 +605,11 @@ struct GraphEdit_RealTimeConnection
 		return false;
 	}
 	
+	virtual bool getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines)
+	{
+		return false;
+	}
+	
 	virtual int nodeIsActive(const GraphNodeId nodeId)
 	{
 		return kActivity_Inactive;
