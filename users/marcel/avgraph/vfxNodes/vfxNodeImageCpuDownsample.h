@@ -24,6 +24,8 @@ struct VfxNodeImageCpuDownsample : VfxNodeBase
 		kInput_Image,
 		kInput_DownsampleSize,
 		kInput_DownsampleChannel,
+		kInput_MaxSx,
+		kInput_MaxSy,
 		kInput_COUNT
 	};
 	
@@ -33,7 +35,24 @@ struct VfxNodeImageCpuDownsample : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	uint8_t * data;
+	struct Buffers
+	{
+		uint8_t * data1;
+		uint8_t * data2;
+		int sx;
+		int sy;
+		int numChannels;
+		int maxSx;
+		int maxSy;
+		int pixelSize;
+		
+		Buffers()
+		{
+			memset(this, 0, sizeof(*this));
+		}
+	};
+	
+	Buffers buffers;
 	
 	VfxImageCpu imageOutput;
 	
@@ -42,6 +61,8 @@ struct VfxNodeImageCpuDownsample : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 
-	void allocateImage(const int sx, const int sy, const int numChannels);
+	void allocateImage(const int sx, const int sy, const int numChannels, const int maxSx, const int maxSy, const int pixelSize);
 	void freeImage();
+	
+	static void downsample(const VfxImageCpu & src, VfxImageCpu & dst, const int pixelSize, const DownsampleChannel downsampleChannel);
 };
