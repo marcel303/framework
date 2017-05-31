@@ -8,6 +8,7 @@
 VfxNodeOscSend::VfxNodeOscSend()
 	: VfxNodeBase()
 	, transmitSocket(nullptr)
+	, history()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Port, kVfxPlugType_Int);
@@ -42,6 +43,18 @@ void VfxNodeOscSend::handleTrigger(const int inputSocketIndex, const VfxTriggerD
 	}
 }
 
+void VfxNodeOscSend::getDescription(VfxNodeDescription & d)
+{
+	const char * ipAddress = getInputString(kInput_IpAddress, "");
+	const int udpPort = getInputInt(kInput_Port, 0);
+	
+	d.add("target: %s:%d", ipAddress, udpPort);
+	d.newline();
+	
+	for (auto & h : history)
+		d.add("%s: %d -> %s:%d", h.eventName.c_str(), h.eventId, h.ipAddress.c_str(), h.udpPort);
+}
+
 void VfxNodeOscSend::sendOscEvent(const char * eventName, const int eventId, const char * ipAddress, const int udpPort)
 {
 	char buffer[OSC_BUFFER_SIZE];
@@ -61,4 +74,16 @@ void VfxNodeOscSend::sendOscEvent(const char * eventName, const int eventId, con
 	IpEndpointName endpointName(ipAddress, udpPort);
 
 	transmitSocket->SendTo(endpointName, p.Data(), p.Size());
+	
+	//
+	
+	HistoryItem historyItem;
+	historyItem.eventName = eventName;
+	historyItem.eventId = eventId;
+	historyItem.ipAddress = ipAddress;
+	historyItem.udpPort = udpPort;
+	history.push_front(historyItem);
+	
+	while (history.size() > kMaxHistory)
+		history.pop_back();
 }
