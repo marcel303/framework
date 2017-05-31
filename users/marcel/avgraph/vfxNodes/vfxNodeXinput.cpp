@@ -78,7 +78,15 @@ void VfxNodeXinput::getDescription(VfxNodeDescription & d)
 
 	if (id >= 0 && id < GAMEPAD_MAX)
 	{
-		d.add("controller connected: %d", gamepad[id].isConnected);
+		auto & g = gamepad[id];
+		
+		d.add("controller connected: %d", g.isConnected);
+		
+		if (g.isConnected)
+		{
+			d.add("L-Analog: %.2f, %.2f", g.getAnalog(0, ANALOG_X), g.getAnalog(0, ANALOG_Y));
+			d.add("R-Analog: %.2f, %.2f", g.getAnalog(1, ANALOG_X), g.getAnalog(1, ANALOG_Y));
+		}
 	}
 	else
 	{
