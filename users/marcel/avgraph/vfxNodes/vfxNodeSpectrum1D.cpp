@@ -87,7 +87,7 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					rreal[x] = rreal[x] * scale;
 				}
 				
-				channelsOutput.setDataContiguous(rreal, continuous, transformSx, 1);
+				channelsOutput.setDataContiguous(rreal, true, transformSx, 1);
 			}
 			else if (outputMode == kOutputMode_Channel2)
 			{
@@ -96,7 +96,7 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					rreal[x] = rimag[x] * scale;
 				}
 				
-				channelsOutput.setDataContiguous(rreal, continuous, transformSx, 1);
+				channelsOutput.setDataContiguous(rreal, true, transformSx, 1);
 			}
 			else if (outputMode == kOutputMode_Length)
 			{
@@ -109,7 +109,7 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					rreal[x] = s * scale;
 				}
 				
-				channelsOutput.setDataContiguous(rreal, continuous, transformSx, 1);
+				channelsOutput.setDataContiguous(rreal, true, transformSx, 1);
 			}
 			else if (outputMode == kOutputMode_LengthSq)
 			{
@@ -122,9 +122,11 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					rreal[x] = sSq * scale;
 				}
 				
-				channelsOutput.setDataContiguous(rreal, continuous, transformSx, 1);
+				channelsOutput.setDataContiguous(rreal, true, transformSx, 1);
 			}
 		}
+		
+		// combined channel mode requires tetxure format change
 		
 		texture.upload(dreal, 4, transformSx, GL_RED, GL_FLOAT);
 	}
