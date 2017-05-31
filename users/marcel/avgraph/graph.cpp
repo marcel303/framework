@@ -2169,8 +2169,7 @@ bool GraphEdit::tick(const float dt)
 						
 						if (appendSelection == false)
 						{
-							if (selectedNodes.count(hitTestResult.node->id) == 0)
-								selectNode(hitTestResult.node->id, true);
+							selectNode(hitTestResult.node->id, true);
 						}
 						else
 						{
@@ -2219,8 +2218,7 @@ bool GraphEdit::tick(const float dt)
 					{
 						if (appendSelection == false)
 						{
-							if (selectedLinks.count(hitTestResult.link->id) == 0)
-								selectLink(hitTestResult.link->id, true);
+							selectLink(hitTestResult.link->id, true);
 						}
 						else
 						{
