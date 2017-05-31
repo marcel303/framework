@@ -188,7 +188,7 @@ void VfxNodeDotDetector::tick(const float dt)
 		
 		const float * data[] = { dotX.data, dotY.data, dotRadius.data };
 		
-		xyrOutput.setData(data, numIslands, 3);
+		xyrOutput.setData(data, nullptr, numIslands, 3);
 		
 		//
 		

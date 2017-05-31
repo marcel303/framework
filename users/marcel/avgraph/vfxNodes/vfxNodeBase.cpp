@@ -273,7 +273,7 @@ void VfxChannelData::free()
 
 //
 
-void VfxChannels::setData(const float * const * data, const int _size, const int _numChannels)
+void VfxChannels::setData(const float * const * data, const bool * continuous, const int _size, const int _numChannels)
 {
 	Assert(_numChannels <= kMaxVfxChannels);
 	
@@ -283,10 +283,11 @@ void VfxChannels::setData(const float * const * data, const int _size, const int
 	for (int i = 0; i < numChannels; ++i)
 	{
 		channels[i].data = data[i];
+		channels[i].continuous = continuous != nullptr ? continuous[i] : false;
 	}
 }
 
-void VfxChannels::setDataContiguous(const float * data, const int _size, const int _numChannels)
+void VfxChannels::setDataContiguous(const float * data, const bool * continuous, const int _size, const int _numChannels)
 {
 	Assert(_numChannels <= kMaxVfxChannels);
 	
@@ -296,6 +297,7 @@ void VfxChannels::setDataContiguous(const float * data, const int _size, const i
 	for (int i = 0; i < numChannels; ++i)
 	{
 		channels[i].data = data + i * size;
+		channels[i].continuous = continuous != nullptr ? continuous[i] : false;
 	}
 }
 

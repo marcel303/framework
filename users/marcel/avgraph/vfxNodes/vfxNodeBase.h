@@ -221,9 +221,11 @@ struct VfxImageCpuData
 struct VfxChannel
 {
 	const float * data;
+	bool continuous; // hints whether data should be treated as individual samples, or continuous. it's similar to nearest vs linear texture sampling in OpenGL
 	
 	VfxChannel()
 		: data(nullptr)
+		, continuous(false)
 	{
 	}
 };
@@ -265,8 +267,8 @@ struct VfxChannels
 	{
 	}
 	
-	void setData(const float * const * data, const int size, const int numChannels);
-	void setDataContiguous(const float * data, const int size, const int numChannels);
+	void setData(const float * const * data, const bool * continuous, const int size, const int numChannels);
+	void setDataContiguous(const float * data, const bool * continuous, const int size, const int numChannels);
 	void reset();
 };
 

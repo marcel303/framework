@@ -152,7 +152,7 @@ void VfxNodeTouches::tick(const float dt)
 	}
 
 	const float * data[] = { xChannel.data, yChannel.data };
-	channelsOutput.setData(data, numTouches, 2);
+	channelsOutput.setData(data, nullptr, numTouches, 2);
 
 	// free dangling touches
 
