@@ -139,7 +139,7 @@ void testDotDetector()
 		{
 			mp.presentTime += dt;
 			
-			mp.tick(mp.context);
+			mp.tick(mp.context, true);
 			
 			if (mp.context->hasPresentedLastFrame)
 			{

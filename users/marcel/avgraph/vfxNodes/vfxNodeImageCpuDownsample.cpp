@@ -158,6 +158,7 @@ void VfxNodeImageCpuDownsample::tick(const float dt)
 
 void VfxNodeImageCpuDownsample::getDescription(VfxNodeDescription & d)
 {
+	d.add("output image:");
 	d.add(imageOutput);
 }
 

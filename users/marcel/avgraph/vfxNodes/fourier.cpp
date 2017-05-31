@@ -201,50 +201,57 @@ static void fft2DImpl(
 	
 	for (int x = 0; x < transformSx; ++x)
 	{
-		real * __restrict drealc = &dreal[x];
-		real * __restrict dimagc = &dimag[x];
-		
-		for (int y = 0; y < sy; ++y)
 		{
-			const int yReversed = yReversedLUT[y];
+			real * __restrict drealc = &dreal[x];
+			real * __restrict dimagc = &dimag[x];
 			
-			creal[yReversed] = *drealc;
-			cimag[yReversed] = *dimagc;
+			for (int y = 0; y < sy; ++y)
+			{
+				const int yReversed = yReversedLUT[y];
+				
+				creal[yReversed] = *drealc;
+				cimag[yReversed] = *dimagc;
+				
+				drealc += transformSx;
+				dimagc += transformSx;
+			}
 			
-			drealc += transformSx;
-			dimagc += transformSx;
+			fft1DImpl(creal, cimag, sy, transformSy, false, false);
 		}
-		
-		fft1DImpl(creal, cimag, sy, transformSy, false, false);
 		
 		//
 		
-		drealc = &dreal[x];
-		dimagc = &dimag[x];
-		
 		if (normalize)
 		{
+			real * __restrict drealc = dreal;
+			real * __restrict dimagc = dimag;
+			
+			int offset = x;
+		
 			const int numValues = transformSx * transformSy;
 			const real scale = 1.0 / real(numValues);
 	
 			for (int y = 0; y < transformSy; ++y)
 			{
-				*drealc = creal[y] * scale;
-				*dimagc = cimag[y] * scale;
+				drealc[offset] = creal[y] * scale;
+				dimagc[offset] = cimag[y] * scale;
 				
-				drealc += transformSx;
-				dimagc += transformSx;
+				offset += transformSx;
 			}
 		}
 		else
 		{
+			real * __restrict drealc = dreal;
+			real * __restrict dimagc = dimag;
+			
+			int offset = x;
+			
 			for (int y = 0; y < transformSy; ++y)
 			{
-				*drealc = creal[y];
-				*dimagc = cimag[y];
+				drealc[offset] = creal[y];
+				dimagc[offset] = cimag[y];
 				
-				drealc += transformSx;
-				dimagc += transformSx;
+				offset += transformSx;
 			}
 		}
 	}
