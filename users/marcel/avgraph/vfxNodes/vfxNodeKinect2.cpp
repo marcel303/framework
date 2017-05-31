@@ -7,10 +7,18 @@
 
 #include <libfreenect2/frame_listener_impl.h> // fixme : remove
 
+// kinect device and video frames/textures. note that these are all shared between kinect2 nodes, as
+// it would be senseless for each node to compute these over and over again with the same data coming
+// from the kinect. share them globally so we only need to compute them once for each new frame
+
 static int initCount = 0;
+
 static Kinect2 * kinect = nullptr;
+static libfreenect2::Frame * videoFrame = nullptr;
 static OpenglTexture videoTexture;
 static OpenglTexture depthTexture;
+
+//
 
 VfxNodeKinect2::VfxNodeKinect2()
 	: VfxNodeBase()
@@ -22,6 +30,7 @@ VfxNodeKinect2::VfxNodeKinect2()
 	addInput(kInput_Infrared, kVfxPlugType_Bool);
 	addOutput(kOutput_VideoImage, kVfxPlugType_Image, &videoImage);
 	addOutput(kOutput_DepthImage, kVfxPlugType_Image, &depthImage);
+	addOutput(kOutput_VideoImageCpu, kVfxPlugType_ImageCpu, &videoImageCpu);
 }
 
 VfxNodeKinect2::~VfxNodeKinect2()
@@ -30,6 +39,9 @@ VfxNodeKinect2::~VfxNodeKinect2()
 	
 	if (initCount == 0)
 	{
+		delete videoFrame;
+		videoFrame = nullptr;
+		
 		videoTexture.free();
 		depthTexture.free();
 		
@@ -46,9 +58,12 @@ void VfxNodeKinect2::init(const GraphNode & node)
 {
 	if (initCount == 0)
 	{
+		Assert(videoFrame == nullptr);
+		
 		Assert(videoTexture.id == 0);
 		Assert(depthTexture.id == 0);
 		
+		Assert(kinect == nullptr);
 		kinect = new Kinect2();
 		
 		if (kinect->init() == false)
@@ -89,7 +104,8 @@ void VfxNodeKinect2::tick(const float dt)
 			
 			// consume video data
 			
-			delete kinect->listener->video;
+			delete videoFrame;
+			videoFrame = kinect->listener->video;
 			kinect->listener->video = nullptr;
 		}
 		
@@ -113,8 +129,15 @@ void VfxNodeKinect2::tick(const float dt)
 	}
 	kinect->listener->unlockBuffers();
 	
+	// update outputs
+	
 	videoImage.texture = videoTexture.id;
 	depthImage.texture = depthTexture.id;
+	
+	if (videoFrame != nullptr)
+		videoImageCpu.setDataRGBA8(videoFrame->data, videoFrame->width, videoFrame->height, 16, videoFrame->width * 4);
+	else
+		videoImageCpu.reset();
 }
 
 void VfxNodeKinect2::getDescription(VfxNodeDescription & d)
@@ -123,9 +146,17 @@ void VfxNodeKinect2::getDescription(VfxNodeDescription & d)
 	{
 		d.add("Kinect2 initialized: %d", kinect->isInit);
 		d.add("capture image size: %d x %d", kinect->width, kinect->height);
-		d.add("video OpenGL texture:");
-		d.addOpenglTexture(videoTexture.id);
-		d.add("depth OpenGL texture:");
-		d.addOpenglTexture(depthTexture.id);
+		d.newline();
 	}
+	
+	d.add("video OpenGL texture:");
+	d.addOpenglTexture(videoTexture.id);
+	d.newline();
+	
+	d.add("depth OpenGL texture:");
+	d.addOpenglTexture(depthTexture.id);
+	d.newline();
+	
+	d.add("video image:");
+	d.add(videoImageCpu);
 }

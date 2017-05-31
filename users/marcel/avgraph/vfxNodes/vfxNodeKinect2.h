@@ -17,11 +17,14 @@ struct VfxNodeKinect2 : VfxNodeBase
 	{
 		kOutput_VideoImage,
 		kOutput_DepthImage,
+		kOutput_VideoImageCpu,
 		kOutput_COUNT
 	};
 
 	VfxImage_Texture videoImage;
 	VfxImage_Texture depthImage;
+	
+	VfxImageCpu videoImageCpu;
 
 	VfxNodeKinect2();
 	virtual ~VfxNodeKinect2() override;
