@@ -2500,7 +2500,7 @@ bool GraphEdit::tick(const float dt)
 			
 			if (keyboard.isDown(SDLK_LALT))
 			{
-				dragAndZoom.desiredZoom += mouse.dy / 100.f;
+				dragAndZoom.desiredZoom += mouse.dy / 200.f * dragAndZoom.zoom;
 				dragAndZoom.zoom = dragAndZoom.desiredZoom;
 			}
 		}
@@ -2952,37 +2952,29 @@ bool GraphEdit::tickTouches()
 				if (event.tfinger.fingerId == touches.finger1 ||
 					event.tfinger.fingerId == touches.finger2)
 				{
-				#if 0
-					const float kZoomPixels = 100.f / 100.f / 3.f;
-					const float kMinZoom = .5f;
-					const float kMaxZoom = 2.f;
-					
-					// calculate movement
-			
-					const float distance = touches.getDistance();
-					
-					// update zoom
-					
-					const float deltaLength = distance - touches.distance;
-					
-					const float zoomDelta = deltaLength / kZoomPixels;
+					if (keyboard.isDown(SDLK_LALT))
+					{
+						const float kZoomPixels = 100.f / 100.f / 3.f;
+						
+						// calculate movement
+				
+						const float distance = touches.getDistance();
+						
+						// update zoom
+						
+						const float deltaLength = distance - touches.distance;
+						
+						const float zoomDelta = deltaLength / kZoomPixels;
 
-					// update current touch distance
-					
-					touches.distance = distance;
-					
-					// update zoom info
-					
-					dragAndZoom.zoom += zoomDelta;
-					dragAndZoom.desiredZoom = dragAndZoom.zoom;
-					
-					// constrain zoom
-					
-					if (dragAndZoom.zoom < kMinZoom)
-						dragAndZoom.zoom = kMinZoom;
-					if (dragAndZoom.zoom > kMaxZoom)
-						dragAndZoom.zoom = kMaxZoom;
-				#endif
+						// update current touch distance
+						
+						touches.distance = distance;
+						
+						// update zoom info
+						
+						dragAndZoom.zoom += zoomDelta * dragAndZoom.zoom;
+						dragAndZoom.desiredZoom = dragAndZoom.zoom;
+					}
 				
 					// update movement
 					
