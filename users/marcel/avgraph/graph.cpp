@@ -1589,17 +1589,30 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		
 		const int dataY = y + kDataBorder;
 		
-		float min = std::numeric_limits<float>::max();
-		float max = std::numeric_limits<float>::min();
+		float min = 0.f;
+		float max = 0.f;
+		
+		bool isFirst = true;
 		
 		for (auto & channel : channels.channels)
 		{
-			for (int i = 0; i < channel.numValues; ++i)
+			if (channel.numValues > 0)
 			{
-				const float value = channel.values[i * channel.stride];
+				if (isFirst)
+				{
+					isFirst = false;
+					
+					min = channel.values[0];
+					max = channel.values[0];
+				}
 				
-				min = std::min(min, value);
-				max = std::max(max, value);
+				for (int i = 0; i < channel.numValues; ++i)
+				{
+					const float value = channel.values[i * channel.stride];
+					
+					min = std::min(min, value);
+					max = std::max(max, value);
+				}
 			}
 		}
 					
@@ -1654,6 +1667,8 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 			}
 			else
 			{
+				setColor(Color::fromHSL(i / float(channels.channels.size()), .5f, .5f));
+				
 				hqBegin(HQ_FILLED_CIRCLES);
 				{
 					for (int i = 0; i < channel.numValues; ++i)
@@ -2500,7 +2515,7 @@ bool GraphEdit::tick(const float dt)
 			
 			if (keyboard.isDown(SDLK_LALT))
 			{
-				dragAndZoom.desiredZoom += mouse.dy / 200.f * (dragAndZoom.zoom + .2f);
+				dragAndZoom.desiredZoom += mouse.dy / 200.f * (dragAndZoom.zoom + .5f);
 				dragAndZoom.zoom = dragAndZoom.desiredZoom;
 			}
 		}
