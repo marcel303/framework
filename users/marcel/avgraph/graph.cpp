@@ -1167,6 +1167,8 @@ void GraphEdit_Visualizer::measure(
 	const int kPadding = 8;
 	const int kElemPadding = 4;
 	
+	setFont("calibri.ttf");
+	
 	std::string caption;
 	
 	if (srcSocketIndex != -1)
@@ -1281,6 +1283,8 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	const int kFontSize = 12;
 	const int kPadding = 8;
 	const int kElemPadding = 4;
+	
+	setFont("calibri.ttf");
 	
 	int visualSx = 0;
 	int visualSy = 0;
@@ -1656,14 +1660,12 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 			}
 		}
 		
-		/*
 		setColor(255, 255, 255);
-		drawText(graphX + graphSx - 3, y           + 4, 10, -1.f, +1.f, "%0.03f", graphMax);
-		drawText(graphX + graphSx - 3, y + graphSy - 3, 10, -1.f, -1.f, "%0.03f", graphMin);
+		drawText(channelsX + channelsSx - 3, y              + 4, 10, -1.f, +1.f, "%0.03f", max);
+		drawText(channelsX + channelsSx - 3, y + channelsSy - 3, 10, -1.f, -1.f, "%0.03f", min);
 		
 		setColor(colorWhite);
-		drawRectLine(graphX, y, graphX + graphSx, y + graphSy);
-		*/
+		drawRectLine(channelsX, y, channelsX + channelsSx, y + channelsSy);
 		
 		y += channelsSy;
 	}
@@ -3672,7 +3674,6 @@ void GraphEdit::draw() const
 						gxTranslatef(kBorderSize, kBorderSize, 0);
 						
 						setColor(colorBlack);
-						setFont("calibri.ttf");
 						beginTextBatch();
 						{
 							int y = 0;
