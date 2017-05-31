@@ -14,6 +14,7 @@ VfxNodeSpectrum2D::VfxNodeSpectrum2D()
 	, dreal(nullptr)
 	, dimag(nullptr)
 	, imageOutput()
+	, channelsOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
@@ -21,6 +22,7 @@ VfxNodeSpectrum2D::VfxNodeSpectrum2D()
 	addInput(kInput_Normalize, kVfxPlugType_Bool);
 	addInput(kInput_Scale, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
+	addOutput(kOutput_RealChannels, kVfxPlugType_Channels, &channelsOutput);
 }
 
 VfxNodeSpectrum2D::~VfxNodeSpectrum2D()
@@ -82,11 +84,7 @@ void VfxNodeSpectrum2D::tick(const float dt)
 				
 				for (int x = 0; x < transformSx; ++x)
 				{
-					const float r = rreal[x];
-					const float i = rimag[x];
-					const float s = std::hypotf(r, i);
-					
-					rreal[x] = s * scale;
+					//
 				}
 			}
 			else if (outputMode == kOutputMode_Channel1)
@@ -127,7 +125,11 @@ void VfxNodeSpectrum2D::tick(const float dt)
 			}
 		}
 		
+		// combined channel mode requires tetxure format change
+		
 		texture.upload(dreal, 4, transformSx, GL_RED, GL_FLOAT);
+		
+		channelsOutput.setDataContiguous(dreal, true, transformSx, transformSy);
 	}
 }
 
@@ -155,4 +157,6 @@ void VfxNodeSpectrum2D::freeTexture()
 	dimag = nullptr;
 	
 	imageOutput.texture = 0;
+	
+	channelsOutput.reset();
 }

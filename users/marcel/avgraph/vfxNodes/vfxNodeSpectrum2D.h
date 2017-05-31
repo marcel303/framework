@@ -26,6 +26,8 @@ struct VfxNodeSpectrum2D : VfxNodeBase
 	enum Output
 	{
 		kOutput_Image,
+		kOutput_RealChannels,
+		kOutput_ImagChannels,
 		kOutput_COUNT
 	};
 	
@@ -34,6 +36,7 @@ struct VfxNodeSpectrum2D : VfxNodeBase
 	float * dimag;
 	
 	VfxImage_Texture imageOutput;
+	VfxChannels channelsOutput;
 
 	VfxNodeSpectrum2D();
 	virtual ~VfxNodeSpectrum2D() override;
