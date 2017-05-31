@@ -395,6 +395,37 @@ void VfxNodeDescription::add(const VfxChannels & channels)
 	add("MEMORY: %.2f Kb", channels.numChannels * channels.size * sizeof(float) / 1024.0);
 }
 
+void VfxNodeDescription::addOpenglTexture(const uint32_t id)
+{
+	add("handle: %d", id);
+	
+	if (id != 0)
+	{
+		int sx = 0;
+		int sy = 0;
+		
+		// capture current OpenGL states before we change them
+
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, id);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sx);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
+		checkErrorGL();
+		
+		// restore previous OpenGL states
+		
+		glBindTexture(GL_TEXTURE_2D, restoreTexture);
+		checkErrorGL();
+		
+		//
+		
+		add("size: %d x %d", sx, sy);
+	}
+}
+
 void VfxNodeDescription::newline()
 {
 	add("");
