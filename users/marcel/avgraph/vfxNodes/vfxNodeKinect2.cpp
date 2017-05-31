@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "kinect2.h"
 #include "kinect2FrameListener.h"
+#include "openglTexture.h"
 #include "vfxNodeKinect2.h"
 #include <libfreenect2/libfreenect2.hpp>
 
@@ -8,8 +9,8 @@
 
 static int initCount = 0;
 static Kinect2 * kinect = nullptr;
-static GLuint videoTexture = 0;
-static GLuint depthTexture = 0;
+static OpenglTexture videoTexture;
+static OpenglTexture depthTexture;
 
 VfxNodeKinect2::VfxNodeKinect2()
 	: VfxNodeBase()
@@ -29,17 +30,8 @@ VfxNodeKinect2::~VfxNodeKinect2()
 	
 	if (initCount == 0)
 	{
-		if (videoTexture != 0)
-		{
-			glDeleteTextures(1, &videoTexture);
-			videoTexture = 0;
-		}
-		
-		if (depthTexture != 0)
-		{
-			glDeleteTextures(1, &depthTexture);
-			depthTexture = 0;
-		}
+		videoTexture.free();
+		depthTexture.free();
 		
 		//
 		
@@ -54,8 +46,8 @@ void VfxNodeKinect2::init(const GraphNode & node)
 {
 	if (initCount == 0)
 	{
-		Assert(videoTexture == 0);
-		Assert(depthTexture == 0);
+		Assert(videoTexture.id == 0);
+		Assert(depthTexture.id == 0);
 		
 		kinect = new Kinect2();
 		
@@ -70,9 +62,10 @@ void VfxNodeKinect2::init(const GraphNode & node)
 
 void VfxNodeKinect2::tick(const float dt)
 {
-	// todo : optimize texture updates using OpenGL texture object
+	const bool wantsVideo = outputs[kOutput_VideoImage].isReferenced();
+	const bool wantsDepth = outputs[kOutput_DepthImage].isReferenced();
 	
-	if (kinect->isInit == false)
+	if (kinect->isInit == false || (wantsVideo == false && wantsDepth == false))
 	{
 		videoImage.texture = 0;
 		depthImage.texture = 0;
@@ -82,21 +75,17 @@ void VfxNodeKinect2::tick(const float dt)
 	
 	kinect->listener->lockBuffers();
 	{
-		if (kinect->listener->video)
+		if (kinect->listener->video && wantsVideo)
 		{
 			// create texture from video data
 			
-			if (videoTexture != 0)
+			if (videoTexture.isChanged(kinect->listener->video->width, kinect->listener->video->height, GL_RGBA8))
 			{
-				glDeleteTextures(1, &videoTexture);
-				videoTexture = 0;
+				videoTexture.allocate(kinect->listener->video->width, kinect->listener->video->height, GL_RGBA8, true, true);
+				videoTexture.setSwizzle(GL_BLUE, GL_GREEN, GL_RED, GL_ONE);
 			}
 			
-			videoTexture = createTextureFromRGBA8(kinect->listener->video->data, kinect->listener->video->width, kinect->listener->video->height, true, true);
-			
-			glBindTexture(GL_TEXTURE_2D, videoTexture);
-			GLint swizzleMask[4] = { GL_BLUE, GL_GREEN, GL_RED, GL_ONE };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+			videoTexture.upload(kinect->listener->video->data, 16, kinect->listener->video->width * 4, GL_RGBA, GL_UNSIGNED_BYTE);
 			
 			// consume video data
 			
@@ -104,21 +93,17 @@ void VfxNodeKinect2::tick(const float dt)
 			kinect->listener->video = nullptr;
 		}
 		
-		if (kinect->listener->depth)
+		if (kinect->listener->depth && wantsDepth)
 		{
 			// create texture from depth data
 			
-			if (depthTexture != 0)
+			if (depthTexture.isChanged(kinect->listener->depth->width, kinect->listener->depth->height, GL_R32F))
 			{
-				glDeleteTextures(1, &depthTexture);
-				depthTexture = 0;
+				depthTexture.allocate(kinect->listener->depth->width, kinect->listener->depth->height, GL_R32F, true, true);
+				depthTexture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 			}
 			
-			depthTexture = createTextureFromR32F(kinect->listener->depth->data, kinect->listener->depth->width, kinect->listener->depth->height, true, true);
-			
-			glBindTexture(GL_TEXTURE_2D, depthTexture);
-			GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+			depthTexture.upload(kinect->listener->depth->data, 16, kinect->listener->depth->width * 4, GL_RED, GL_FLOAT);
 			
 			// consume depth data
 			
@@ -128,8 +113,8 @@ void VfxNodeKinect2::tick(const float dt)
 	}
 	kinect->listener->unlockBuffers();
 	
-	videoImage.texture = videoTexture;
-	depthImage.texture = depthTexture;
+	videoImage.texture = videoTexture.id;
+	depthImage.texture = depthTexture.id;
 }
 
 void VfxNodeKinect2::getDescription(VfxNodeDescription & d)
@@ -138,7 +123,9 @@ void VfxNodeKinect2::getDescription(VfxNodeDescription & d)
 	{
 		d.add("Kinect2 initialized: %d", kinect->isInit);
 		d.add("capture image size: %d x %d", kinect->width, kinect->height);
-		d.add("video texture OpenGL handle: %d", videoTexture);
-		d.add("depth texture OpenGL handle: %d", depthTexture);
+		d.add("video OpenGL texture:");
+		d.addOpenglTexture(videoTexture.id);
+		d.add("depth OpenGL texture:");
+		d.addOpenglTexture(depthTexture.id);
 	}
 }
