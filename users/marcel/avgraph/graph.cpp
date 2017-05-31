@@ -1577,9 +1577,17 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	if (hasChannels)
 	{
+		const int kDataBorder = 2;
+		
 		y += kElemPadding;
 		
-		const int channelsX = (sx - channelsSx) / 2;
+		const int channelsDataSx = channelsSx - kDataBorder * 2;
+		const int channelsDataSy = channelsSy - kDataBorder * 2;
+		
+		const int channelsEdgeX = (sx - channelsSx) / 2;
+		const int channelsDataX = (sx - channelsDataSx) / 2;
+		
+		const int dataY = y + kDataBorder;
 		
 		float min = std::numeric_limits<float>::max();
 		float max = std::numeric_limits<float>::min();
@@ -1600,7 +1608,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		{
 			if (channel.continuous)
 			{
-				gxBegin(GL_LINES);
+				hqBegin(HQ_LINES, true);
 				{
 					if (channel.numValues == 1)
 					{
@@ -1608,12 +1616,11 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 						
 						const float value = channel.values[0];
 							
-						const float plotX1 = channelsX;
-						const float plotX2 = channelsX + channelsSx;
-						const float plotY = y + (min == max ? .5f : 1.f - (value - min) / (max - min)) * channelsSy;
+						const float plotX1 = channelsDataX;
+						const float plotX2 = channelsDataX + channelsDataSx;
+						const float plotY = dataY + (min == max ? .5f : 1.f - (value - min) / (max - min)) * channelsDataSy;
 						
-						gxVertex2f(plotX1, plotY);
-						gxVertex2f(plotX2, plotY);
+						hqLine(plotX1, plotY, 1.5f, plotX2, plotY, 1.5f);
 					}
 					else if (channel.numValues >= 2)
 					{
@@ -1626,13 +1633,12 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 						{
 							const float value = channel.values[i * channel.stride];
 							
-							const float plotX = channelsX + i * channelsSx / (channel.numValues - 1.f);
-							const float plotY = y + (min == max ? .5f : 1.f - (value - min) / (max - min)) * channelsSy;
+							const float plotX = channelsDataX + i * channelsDataSx / (channel.numValues - 1.f);
+							const float plotY = dataY + (min == max ? .5f : 1.f - (value - min) / (max - min)) * channelsDataSy;
 							
 							if (i > 0)
 							{
-								gxVertex2f(lastX, lastY);
-								gxVertex2f(plotX, plotY);
+								hqLine(lastX, lastY, 1.f, plotX, plotY, 1.f);
 							}
 							
 							lastX = plotX;
@@ -1640,32 +1646,32 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 						}
 					}
 				}
-				gxEnd();
+				hqEnd();
 			}
 			else
 			{
-				gxBegin(GL_POINTS);
+				hqBegin(HQ_FILLED_CIRCLES);
 				{
 					for (int i = 0; i < channel.numValues; ++i)
 					{
 						const float value = channel.values[i * channel.stride];
 						
-						const float plotX = channelsX + (channel.numValues == 1 ? .5f : i / (channel.numValues - 1.f)) * channelsSx;
-						const float plotY = y + (min == max ? .5f : 1.f - (value - min) / (max - min)) * channelsSy;
+						const float plotX = channelsDataX + (channel.numValues == 1 ? .5f : i / (channel.numValues - 1.f)) * channelsDataSx;
+						const float plotY = dataY + (min == max ? .5f : 1.f - (value - min) / (max - min)) * channelsDataSy;
 						
-						gxVertex2f(plotX, plotY);
+						hqFillCircle(plotX, plotY, 2.f);
 					}
 				}
-				gxEnd();
+				hqEnd();
 			}
 		}
 		
 		setColor(255, 255, 255);
-		drawText(channelsX + channelsSx - 3, y              + 4, 10, -1.f, +1.f, "%0.03f", max);
-		drawText(channelsX + channelsSx - 3, y + channelsSy - 3, 10, -1.f, -1.f, "%0.03f", min);
+		drawText(channelsDataX + channelsDataSx - 3, dataY                  + 4, 10, -1.f, +1.f, "%0.03f", max);
+		drawText(channelsDataX + channelsDataSx - 3, dataY + channelsDataSy - 3, 10, -1.f, -1.f, "%0.03f", min);
 		
 		setColor(colorWhite);
-		drawRectLine(channelsX, y, channelsX + channelsSx, y + channelsSy);
+		drawRectLine(channelsEdgeX, y, channelsEdgeX + channelsSx, y + channelsSy);
 		
 		y += channelsSy;
 	}
@@ -2264,8 +2270,12 @@ bool GraphEdit::tick(const float dt)
 				if (keyboard.isDown(SDLK_LGUI))
 				{
 					dragAndZoom.desiredZoom = 1.f;
-					dragAndZoom.desiredFocusX = 0.f;
-					dragAndZoom.desiredFocusY = 0.f;
+					
+					if (keyboard.isDown(SDLK_LSHIFT))
+					{
+						dragAndZoom.desiredFocusX = 0.f;
+						dragAndZoom.desiredFocusY = 0.f;
+					}
 				}
 			}
 			
@@ -3334,7 +3344,7 @@ void GraphEdit::draw() const
 					editorOptions.gridColor.rgba[1],
 					editorOptions.gridColor.rgba[2],
 					editorOptions.gridColor.rgba[3]);
-				hqBegin(HQ_LINES);
+				hqBegin(HQ_LINES, true);
 				{
 					for (int cx = cx1; cx <= cx2; ++cx)
 					{
