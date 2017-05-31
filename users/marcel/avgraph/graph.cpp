@@ -2500,7 +2500,7 @@ bool GraphEdit::tick(const float dt)
 			
 			if (keyboard.isDown(SDLK_LALT))
 			{
-				dragAndZoom.desiredZoom += mouse.dy / 200.f * dragAndZoom.zoom;
+				dragAndZoom.desiredZoom += mouse.dy / 200.f * (dragAndZoom.zoom + .2f);
 				dragAndZoom.zoom = dragAndZoom.desiredZoom;
 			}
 		}
