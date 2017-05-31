@@ -76,7 +76,7 @@ void VfxNodeSpectrum1D::tick(const float dt)
 			
 			if (outputMode == kOutputMode_Channel1And2)
 			{
-				float * channels[] = { dreal, rreal };
+				float * channels[] = { rreal, rimag };
 				
 				channelsOutput.setData(channels, continuous, transformSx, 2);
 			}
@@ -87,7 +87,7 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					rreal[x] = rreal[x] * scale;
 				}
 				
-				channelsOutput.setDataContiguous(dreal, continuous, transformSx, 1);
+				channelsOutput.setDataContiguous(rreal, continuous, transformSx, 1);
 			}
 			else if (outputMode == kOutputMode_Channel2)
 			{
@@ -96,7 +96,7 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					rreal[x] = rimag[x] * scale;
 				}
 				
-				channelsOutput.setDataContiguous(dreal, continuous, transformSx, 1);
+				channelsOutput.setDataContiguous(rreal, continuous, transformSx, 1);
 			}
 			else if (outputMode == kOutputMode_Length)
 			{
@@ -109,7 +109,7 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					rreal[x] = s * scale;
 				}
 				
-				channelsOutput.setDataContiguous(dreal, continuous, transformSx, 1);
+				channelsOutput.setDataContiguous(rreal, continuous, transformSx, 1);
 			}
 			else if (outputMode == kOutputMode_LengthSq)
 			{
@@ -122,7 +122,7 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					rreal[x] = sSq * scale;
 				}
 				
-				channelsOutput.setDataContiguous(dreal, continuous, transformSx, 1);
+				channelsOutput.setDataContiguous(rreal, continuous, transformSx, 1);
 			}
 		}
 		
