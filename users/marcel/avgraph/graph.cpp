@@ -2167,9 +2167,17 @@ bool GraphEdit::tick(const float dt)
 							break;
 						}
 						
-						if (selectedNodes.count(hitTestResult.node->id) == 0)
+						if (appendSelection == false)
 						{
-							selectNode(hitTestResult.node->id, appendSelection == false);
+							if (selectedNodes.count(hitTestResult.node->id) == 0)
+								selectNode(hitTestResult.node->id, true);
+						}
+						else
+						{
+							if (selectedNodes.count(hitTestResult.node->id) == 0)
+								selectNode(hitTestResult.node->id, false);
+							else
+								selectedNodes.erase(hitTestResult.node->id);
 						}
 						
 						if (hitTestResult.nodeHitTestResult.borderL ||
@@ -2209,9 +2217,17 @@ bool GraphEdit::tick(const float dt)
 					
 					if (hitTestResult.hasLink)
 					{
-						if (selectedLinks.count(hitTestResult.link->id) == 0)
+						if (appendSelection == false)
 						{
-							selectLink(hitTestResult.link->id, appendSelection == false);
+							if (selectedLinks.count(hitTestResult.link->id) == 0)
+								selectLink(hitTestResult.link->id, true);
+						}
+						else
+						{
+							if (selectedLinks.count(hitTestResult.link->id) == 0)
+								selectLink(hitTestResult.link->id, false);
+							else
+								selectedLinks.erase(hitTestResult.link->id);
 						}
 					}
 				}
@@ -2284,7 +2300,7 @@ bool GraphEdit::tick(const float dt)
 				}
 			}
 			
-			if (keyboard.wentDown(SDLK_o))
+			if (keyboard.wentDown(SDLK_o) || keyboard.wentDown(SDLK_0))
 			{
 				if (keyboard.isDown(SDLK_LGUI))
 				{
@@ -3052,6 +3068,8 @@ void GraphEdit::tickKeyboardScroll()
 
 void GraphEdit::nodeSelectEnd()
 {
+	// fixme : apply append behavior
+	
 	selectedNodes = nodeSelect.nodeIds;
 	selectedLinks.clear(); // todo : also select links
 	
