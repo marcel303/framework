@@ -164,6 +164,7 @@ void GraphNode::EditorVisualizer::tick(const GraphEdit & graphEdit)
 			visualizer->measure(graphEdit, "measure",
 				GraphEdit_Visualizer::kDefaultGraphSx, GraphEdit_Visualizer::kDefaultGraphSy,
 				GraphEdit_Visualizer::kDefaultMaxTextureSx, GraphEdit_Visualizer::kDefaultMaxTextureSy,
+				GraphEdit_Visualizer::kDefaultChannelsSx, GraphEdit_Visualizer::kDefaultChannelsSy,
 				sxi, syi);
 			
 			sx = sxi;
@@ -1049,29 +1050,44 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 	auto srcSocket = graphEdit.tryGetInputSocket(nodeId, srcSocketIndex);
 	auto dstSocket = graphEdit.tryGetOutputSocket(nodeId, dstSocketIndex);
 	
+	texture = 0;
+	
+	channels.clear();
+	
 	if (srcSocket != nullptr)
 	{
-		hasValue = graphEdit.realTimeConnection->getSrcSocketValue(nodeId, srcSocketIndex, srcSocket->name, value);
+		auto valueTypeDefinition = graphEdit.typeDefinitionLibrary->tryGetValueTypeDefinition(srcSocket->typeName);
+		
+		if (valueTypeDefinition == nullptr)
+		{
+			hasValue = false;
+		}
+		else
+		{
+			if (valueTypeDefinition->visualizer == "channels")
+			{
+				hasValue = graphEdit.realTimeConnection->getSrcSocketChannelData(nodeId, srcSocketIndex, srcSocket->name, channels);
+			}
+			else
+			{
+				hasValue = graphEdit.realTimeConnection->getSrcSocketValue(nodeId, srcSocketIndex, srcSocket->name, value);
+			}
+		}
 		
 		if (hasValue)
 		{
 			//logDebug("real time srcSocket value: %s", value.c_str());
 			
-			auto valueTypeDefinition = graphEdit.typeDefinitionLibrary->tryGetValueTypeDefinition(srcSocket->typeName);
-		
-			if (valueTypeDefinition != nullptr)
+			if (valueTypeDefinition->visualizer == "valueplotter")
 			{
-				if (valueTypeDefinition->visualizer == "valueplotter")
-				{
-					const float valueAsFloat = Parse::Float(value);
-					
-					history.add(valueAsFloat);
-				}
+				const float valueAsFloat = Parse::Float(value);
 				
-				if (valueTypeDefinition->visualizer == "opengl-texture")
-				{
-					texture = Parse::Int32(value);
-				}
+				history.add(valueAsFloat);
+			}
+			
+			if (valueTypeDefinition->visualizer == "opengl-texture")
+			{
+				texture = Parse::Int32(value);
 			}
 		}
 		else
@@ -1079,18 +1095,34 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 			value.clear();
 			
 			texture = 0;
+			
+			channels.clear();
 		}
 	}
 	
 	if (dstSocket != nullptr)
 	{
-		hasValue = graphEdit.realTimeConnection->getDstSocketValue(nodeId, dstSocketIndex, dstSocket->name, value);
+		auto valueTypeDefinition = graphEdit.typeDefinitionLibrary->tryGetValueTypeDefinition(dstSocket->typeName);
+		
+		if (valueTypeDefinition == nullptr)
+		{
+			hasValue = false;
+		}
+		else
+		{
+			if (valueTypeDefinition->visualizer == "channels")
+			{
+				hasValue = graphEdit.realTimeConnection->getDstSocketChannelData(nodeId, dstSocketIndex, dstSocket->name, channels);
+			}
+			else
+			{
+				hasValue = graphEdit.realTimeConnection->getDstSocketValue(nodeId, dstSocketIndex, dstSocket->name, value);
+			}
+		}
 		
 		if (hasValue)
 		{
 			//logDebug("real time srcSocket value: %s", value.c_str());
-		
-			auto valueTypeDefinition = graphEdit.typeDefinitionLibrary->tryGetValueTypeDefinition(dstSocket->typeName);
 			
 			if (valueTypeDefinition != nullptr)
 			{
@@ -1112,6 +1144,8 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 			value.clear();
 			
 			texture = 0;
+			
+			channels.clear();
 		}
 	}
 	
@@ -1126,6 +1160,7 @@ void GraphEdit_Visualizer::measure(
 	const GraphEdit & graphEdit, const std::string & nodeName,
 	const int graphSx, const int graphSy,
 	const int maxTextureSx, const int maxTextureSy,
+	const int channelsSx, const int channelsSy,
 	int & sx, int & sy) const
 {
 	const int kFontSize = 12;
@@ -1223,6 +1258,20 @@ void GraphEdit_Visualizer::measure(
 		sy += textureSy;
 	}
 	
+	//
+	
+	const bool hasChannels = channels.channels.empty() == false;
+	
+	if (hasChannels)
+	{
+		sy += kElemPadding;
+		
+		sx = std::max(sx, channelsSx);
+		sy += channelsSy;
+	}
+	
+	// add a border around everything
+	
 	sx += kPadding * 2;
 	sy += kPadding;
 }
@@ -1241,7 +1290,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		int minSx;
 		int minSy;
 		
-		measure(graphEdit, nodeName, 0, 0, 0, 0, minSx, minSy);
+		measure(graphEdit, nodeName, 0, 0, 0, 0, 0, 0, minSx, minSy);
 		
 		//logDebug("minSize: %d, %d", minSx, minSy);
 		
@@ -1315,6 +1364,10 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	//
 	
+	const bool hasChannels = channels.channels.empty() == false;
+	
+	//
+	
 	const bool hasVisualSy = _sx != nullptr && _sy != nullptr;
 	
 	int perVisualSy = 0;
@@ -1326,6 +1379,8 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		if (hasGraph)
 			numVisuals++;
 		if (hasTexture)
+			numVisuals++;
+		if (hasChannels)
 			numVisuals++;
 		
 		if (numVisuals > 0)
@@ -1393,6 +1448,19 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		
 		sx = std::max(sx, textureAreaSx);
 		sy += textureAreaSy;
+	}
+	
+	//
+	
+	int channelsSx = hasVisualSy ? (*_sx - kPadding * 2) : kDefaultChannelsSx;
+	int channelsSy = hasVisualSy ? perVisualSy : kDefaultChannelsSy;
+	
+	if (hasChannels)
+	{
+		sy += kElemPadding;
+		
+		sx = std::max(sx, channelsSx);
+		sy += channelsSy;
 	}
 	
 	//
@@ -1500,6 +1568,107 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		
 		y += textureAreaSy;
 	}
+	
+	//
+	
+	if (hasChannels)
+	{
+		y += kElemPadding;
+		
+		const int channelsX = (sx - channelsSx) / 2;
+		
+		float min = std::numeric_limits<float>::max();
+		float max = std::numeric_limits<float>::min();
+		
+		for (auto & channel : channels.channels)
+		{
+			for (int i = 0; i < channel.numValues; ++i)
+			{
+				const float value = channel.values[i * channel.stride];
+				
+				min = std::min(min, value);
+				max = std::max(max, value);
+			}
+		}
+					
+		setColor(127, 127, 255);
+		for (auto & channel : channels.channels)
+		{
+			if (channel.continuous)
+			{
+				gxBegin(GL_LINES);
+				{
+					if (channel.numValues == 1)
+					{
+						// special 'flat line' visual for single value channels
+						
+						const float value = channel.values[0];
+							
+						const float plotX1 = channelsX;
+						const float plotX2 = channelsX + channelsSx;
+						const float plotY = y + (min == max ? .5f : 1.f - (value - min) / (max - min)) * channelsSy;
+						
+						gxVertex2f(plotX1, plotY);
+						gxVertex2f(plotX2, plotY);
+					}
+					else if (channel.numValues >= 2)
+					{
+						// connected lines between each sample
+						
+						float lastX = 0.f;
+						float lastY = 0.f;
+						
+						for (int i = 0; i < channel.numValues; ++i)
+						{
+							const float value = channel.values[i * channel.stride];
+							
+							const float plotX = channelsX + i * channelsSx / (channel.numValues - 1.f);
+							const float plotY = y + (min == max ? .5f : 1.f - (value - min) / (max - min)) * channelsSy;
+							
+							if (i > 0)
+							{
+								gxVertex2f(lastX, lastY);
+								gxVertex2f(plotX, plotY);
+							}
+							
+							lastX = plotX;
+							lastY = plotY;
+						}
+					}
+				}
+				gxEnd();
+			}
+			else
+			{
+				gxBegin(GL_POINTS);
+				{
+					for (int i = 0; i < channel.numValues; ++i)
+					{
+						const float value = channel.values[i * channel.stride];
+						
+						const float plotX = channelsX + (channel.numValues == 1 ? .5f : i / (channel.numValues - 1.f)) * channelsSx;
+						const float plotY = y + (min == max ? .5f : 1.f - (value - min) / (max - min)) * channelsSy;
+						
+						gxVertex2f(plotX, plotY);
+					}
+				}
+				gxEnd();
+			}
+		}
+		
+		/*
+		setColor(255, 255, 255);
+		drawText(graphX + graphSx - 3, y           + 4, 10, -1.f, +1.f, "%0.03f", graphMax);
+		drawText(graphX + graphSx - 3, y + graphSy - 3, 10, -1.f, -1.f, "%0.03f", graphMin);
+		
+		setColor(colorWhite);
+		drawRectLine(graphX, y, graphX + graphSx, y + graphSy);
+		*/
+		
+		y += channelsSy;
+	}
+	
+	//
 	
 	y += kPadding;
 	fassert(y == sy);
@@ -3424,6 +3593,7 @@ void GraphEdit::draw() const
 	if (!notifications.empty())
 	{
 		const int kWidth = 200;
+		const int kHeight = 40;
 		
 		const Notification & n = notifications.front();
 		
@@ -3438,24 +3608,26 @@ void GraphEdit::draw() const
 		if (t < tMoveDown)
 			y = t / tMoveDown;
 		
-		y *= 40;
+		y *= 50;
 		
 		setColor(colorBlack);
-		drawRect(GFX_SX/2 - kWidth, GFX_SY - y, GFX_SX/2 + kWidth, GFX_SY);
+		drawRect(GFX_SX/2 - kWidth, GFX_SY - y, GFX_SX/2 + kWidth, GFX_SY - y + kHeight);
 		
 		setColor(colorWhite);
-		drawRectLine(GFX_SX/2 - kWidth, GFX_SY - y, GFX_SX/2 + kWidth, GFX_SY);
+		drawRectLine(GFX_SX/2 - kWidth, GFX_SY - y, GFX_SX/2 + kWidth, GFX_SY - y + kHeight);
 		
 		setColor(colorWhite);
 		setFont("calibri.ttf");
-		drawText(GFX_SX/2, GFX_SY - y + 20, 18, 0.f, 0.f, "%s", n.text.c_str());
+		drawText(GFX_SX/2, GFX_SY - y + kHeight/2, 18, 0.f, 0.f, "%s", n.text.c_str());
 	}
 	
 	HitTestResult hitTestResult;
 	
 	if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
 	{
-		if (hitTestResult.hasNode && hitTestResult.nodeHitTestResult.background)
+		if (hitTestResult.hasNode &&
+			hitTestResult.nodeHitTestResult.background &&
+			hitTestResult.node->nodeType == kGraphNodeType_Regular)
 		{
 			// draw node description
 			

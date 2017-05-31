@@ -38,6 +38,9 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	virtual void setDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, const std::string & value) override;
 	virtual bool getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value) override;
 	
+	virtual bool getSrcSocketChannelData(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, GraphEdit_ChannelData & channels) override;
+	virtual bool getDstSocketChannelData(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, GraphEdit_ChannelData & channels) override;
+	
 	virtual bool getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines) override;
 	
 	virtual int nodeIsActive(const GraphNodeId nodeId) override;

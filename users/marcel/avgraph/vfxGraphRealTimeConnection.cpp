@@ -538,6 +538,75 @@ bool RealTimeConnection::getDstSocketValue(const GraphNodeId nodeId, const int d
 	return getPlugValue(output, value);
 }
 
+bool RealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, GraphEdit_ChannelData & channels)
+{
+	if (isLoading)
+		return false;
+	
+	Assert(vfxGraph != nullptr);
+	if (vfxGraph == nullptr)
+		return false;
+	
+	auto nodeItr = vfxGraph->nodes.find(nodeId);
+	
+	Assert(nodeItr != vfxGraph->nodes.end());
+	if (nodeItr == vfxGraph->nodes.end())
+		return false;
+	
+	auto node = nodeItr->second;
+	
+	auto input = node->tryGetInput(srcSocketIndex);
+	
+	Assert(input != nullptr);
+	if (input == nullptr)
+		return false;
+	
+	if (input->isConnected() == false)
+		return false;
+	
+	auto inputChannels = input->getChannels();
+	
+	for (int i = 0; i < inputChannels->numChannels; ++i)
+	{
+		channels.addChannel(inputChannels->channels[i].data, inputChannels->size, 1, inputChannels->channels[i].continuous);
+	}
+	
+	return true;
+}
+
+bool RealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, GraphEdit_ChannelData & channels)
+{
+	if (isLoading)
+		return false;
+	
+	Assert(vfxGraph != nullptr);
+	if (vfxGraph == nullptr)
+		return false;
+	
+	auto nodeItr = vfxGraph->nodes.find(nodeId);
+	
+	Assert(nodeItr != vfxGraph->nodes.end());
+	if (nodeItr == vfxGraph->nodes.end())
+		return false;
+	
+	auto node = nodeItr->second;
+	
+	auto output = node->tryGetOutput(dstSocketIndex);
+	
+	Assert(output != nullptr);
+	if (output == nullptr)
+		return false;
+
+	auto outputChannels = output->getChannels();
+	
+	for (int i = 0; i < outputChannels->numChannels; ++i)
+	{
+		channels.addChannel(outputChannels->channels[i].data, outputChannels->size, 1, outputChannels->channels[i].continuous);
+	}
+	
+	return true;
+}
+
 bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines)
 {
 	if (isLoading)

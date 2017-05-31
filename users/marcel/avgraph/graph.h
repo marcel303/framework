@@ -409,6 +409,50 @@ struct GraphEdit_UndoHistory
 
 //
 
+struct GraphEdit_ChannelData
+{
+	struct Channel
+	{
+		const float * values;
+		int numValues;
+		int stride;
+		bool continuous;
+		
+		Channel()
+			: values(nullptr)
+			, numValues(0)
+			, stride(0)
+			, continuous(false)
+		{
+		}
+	};
+	
+	std::vector<Channel> channels;
+	
+	GraphEdit_ChannelData()
+		: channels()
+	{
+	}
+	
+	void addChannel(const float * values, const int numValues, const int stride, const bool continuous)
+	{
+		Channel channel;
+		channel.values = values;
+		channel.numValues = numValues;
+		channel.stride = stride;
+		channel.continuous = continuous;
+		
+		channels.push_back(channel);
+	}
+	
+	void clear()
+	{
+		channels.clear();
+	}
+};
+
+//
+
 struct GraphEdit_Visualizer
 {
 	struct History
@@ -503,18 +547,26 @@ struct GraphEdit_Visualizer
 		}
 	};
 	
+	// source
+	
 	GraphNodeId nodeId;
 	std::string srcSocketName;
 	int srcSocketIndex;
 	std::string dstSocketName;
 	int dstSocketIndex;
 	
+	// raw value
+	
 	std::string value;
 	bool hasValue;
+	
+	// interpreted values
 	
 	History history;
 	
 	uint32_t texture;
+	
+	GraphEdit_ChannelData channels;
 	
 	GraphEdit_Visualizer()
 		: nodeId(kGraphNodeIdInvalid)
@@ -526,6 +578,7 @@ struct GraphEdit_Visualizer
 		, hasValue(false)
 		, history()
 		, texture(0)
+		, channels()
 	{
 	}
 	
@@ -533,6 +586,8 @@ struct GraphEdit_Visualizer
 	static const int kDefaultMaxTextureSy = 200;
 	static const int kDefaultGraphSx = History::kMaxHistory;
 	static const int kDefaultGraphSy = 50;
+	static const int kDefaultChannelsSx = 200;
+	static const int kDefaultChannelsSy = 100;
 	
 	void init(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 	
@@ -540,6 +595,7 @@ struct GraphEdit_Visualizer
 	void measure(const GraphEdit & graphEdit, const std::string & nodeName,
 		const int graphSx, const int graphSy,
 		const int maxTextureSx, const int maxTextureSy,
+		const int channelsSx, const int channelsSy,
 		int & sx, int & sy) const;
 	void draw(const GraphEdit & graphEdit, const std::string & nodeName, const bool isSelected, const int * sx, const int * sy) const;
 };
@@ -601,6 +657,16 @@ struct GraphEdit_RealTimeConnection
 	}
 	
 	virtual bool getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value)
+	{
+		return false;
+	}
+	
+	virtual bool getSrcSocketChannelData(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, GraphEdit_ChannelData & channels)
+	{
+		return false;
+	}
+	
+	virtual bool getDstSocketChannelData(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, GraphEdit_ChannelData & channels)
 	{
 		return false;
 	}
