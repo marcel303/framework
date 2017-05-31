@@ -71,9 +71,7 @@ void VfxNodeVideo::tick(const float dt)
 			mediaPlayer->openAsync(source, outputMode);
 		}
 		
-		const bool wantsTexture =
-			outputMode == MP::kOutputMode_RGBA &&
-			outputs[kOutput_Image].isReferenced();
+		const bool wantsTexture = outputs[kOutput_Image].isReferenced();
 		
 		mediaPlayer->tick(mediaPlayer->context, wantsTexture);
 		
@@ -173,9 +171,25 @@ void VfxNodeVideo::getDescription(VfxNodeDescription & d)
 		if (mediaPlayer->getVideoProperties(sx, sy, duration))
 		{
 			d.add("size: %d x %d", sx, sy);
-			d.add("duration: %.2fs", duration);
+			
+			const int dh = duration / 3600.0;
+			duration -= dh * 3600;
+			const int dm = duration / 60.0;
+			duration -= dm * 60;
+			
+			double presentTime = mediaPlayer->presentTime;
+			const int ph = presentTime / 3600.0;
+			presentTime -= dh * 3600;
+			const int pm = presentTime / 60.0;
+			presentTime -= pm * 60;
+			
+			d.add("time: %02d:%02d:%05.2fs / %02d:%02d:%05.2fs", ph, pm, presentTime, dh, dm, duration);
 		}
 	}
+	d.newline();
+	
+	d.add("OpenGL texture:");
+	d.addOpenglTexture(mediaPlayer->getTexture());
 	d.newline();
 	
 	d.add("Y image:");
