@@ -26,7 +26,7 @@ VfxNodeOscSend::~VfxNodeOscSend()
 
 void VfxNodeOscSend::init(const GraphNode & node)
 {
-	transmitSocket = new UdpTransmitSocket(IpEndpointName("127.0.0.1", 1000));
+	transmitSocket = new UdpTransmitSocket(IpEndpointName("127.0.0.1", 8000));
 }
 
 void VfxNodeOscSend::handleTrigger(const int inputSocketIndex, const VfxTriggerData & data)
@@ -51,6 +51,7 @@ void VfxNodeOscSend::getDescription(VfxNodeDescription & d)
 	d.add("target: %s:%d", ipAddress, udpPort);
 	d.newline();
 	
+	d.add("sent messages:");
 	for (auto & h : history)
 		d.add("%s: %d -> %s:%d", h.eventName.c_str(), h.eventId, h.ipAddress.c_str(), h.udpPort);
 }

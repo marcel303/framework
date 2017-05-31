@@ -178,11 +178,33 @@ void VfxNodeOsc::tick(const float dt)
 				// todo : store OSC values in trigger mem
 				
 				trigger(kOutput_Trigger);
+				
+				//
+	
+				HistoryItem historyItem;
+				historyItem.eventName = message.event;
+				history.push_front(historyItem);
+				
+				while (history.size() > kMaxHistory)
+					history.pop_back();
 			}
 			SDL_LockMutex(oscPacketListener->oscMessageMtx);
 		}
 	}
 	SDL_UnlockMutex(oscPacketListener->oscMessageMtx);
+}
+
+void VfxNodeOsc::getDescription(VfxNodeDescription & d)
+{
+	const char * ipAddress = getInputString(kInput_IpAddress, "");
+	const int udpPort = getInputInt(kInput_Port, 0);
+	
+	d.add("target: %s:%d", ipAddress, udpPort);
+	d.newline();
+	
+	d.add("received messages:");
+	for (auto & h : history)
+		d.add("%s", h.eventName.c_str());
 }
 
 int VfxNodeOsc::executeOscThread(void * data)
