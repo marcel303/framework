@@ -1604,8 +1604,10 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		}
 					
 		setColor(127, 127, 255);
-		for (auto & channel : channels.channels)
+		for (int i = 0; i < channels.channels.size(); ++i)
 		{
+			auto & channel = channels.channels[i];
+			
 			if (channel.continuous)
 			{
 				hqBegin(HQ_LINES, true);
@@ -1628,6 +1630,8 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 						
 						float lastX = 0.f;
 						float lastY = 0.f;
+						
+						setColor(Color::fromHSL(i / float(channels.channels.size()), .5f, .5f));
 						
 						for (int i = 0; i < channel.numValues; ++i)
 						{
@@ -3310,6 +3314,7 @@ void GraphEdit::draw() const
 	
 	gxPushMatrix();
 	gxMultMatrixf(dragAndZoom.transform.m_v);
+	gxTranslatef(.375f, .375f, 0.f); // avoid bad looking rectangles due to some diamond rule shenanigans in OpenGL by translating slightly
 	
 	// draw background and grid
 	
