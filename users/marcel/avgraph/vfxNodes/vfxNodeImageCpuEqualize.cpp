@@ -91,8 +91,9 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 	else
 	{
 		const int numChannels =
+			std::min(image->numChannels,
 			channel == kChannel_RGBA ? 4 :
-			channel == kChannel_RGB ? 3 : 1;
+			channel == kChannel_RGB ? 3 : 1);
 		
 		imageData.allocOnSizeChange(image->sx, image->sy, numChannels, true);
 
