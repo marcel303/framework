@@ -34,7 +34,6 @@ float computeDistance(vec2 p)
 
 float distanceFade(float distance)
 {
-	//return clamp(v_strokeSize * abs(v_p.x-750.0)/100.0 - distance, 0.0, 1.0);
 	return clamp(v_strokeSize - distance, 0.0, 1.0);
 }
 
