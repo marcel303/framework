@@ -435,6 +435,8 @@ int main(int argc, char * argv[])
 		
 		//
 		
+		double vflip = 1.0;
+		
 		while (!framework.quitRequested)
 		{
 			if (graphEdit->editorOptions.realTimePreview)
@@ -481,12 +483,27 @@ int main(int argc, char * argv[])
 				graphEdit->propertyEditor->setNode(nodeId);
 			}
 			
+			// update vflip effect
+			
+			const double targetVflip = graphEdit->dragAndZoom.zoom < 0.f ? -1.0 : +1.0;
+			const double vflipMix = std::pow(.001, dt);
+			vflip = vflip * vflipMix + targetVflip * (1.0 - vflipMix);
+			
 			framework.beginDraw(31, 31, 31, 255);
 			{
 				if (vfxGraph != nullptr)
 				{
 					vfxGraph->tick(framework.timeStep);
-					vfxGraph->draw();
+					
+					gxPushMatrix();
+					{
+						gxTranslatef(0, +GFX_SY/2, 0);
+						gxScalef(1.f, vflip, 1.f);
+						gxTranslatef(0, -GFX_SY/2, 0);
+						
+						vfxGraph->draw();
+					}
+					gxPopMatrix();
 				}
 				
 				graphEdit->draw();
