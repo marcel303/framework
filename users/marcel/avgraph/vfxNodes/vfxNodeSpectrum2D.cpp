@@ -22,7 +22,7 @@ VfxNodeSpectrum2D::VfxNodeSpectrum2D()
 	addInput(kInput_Normalize, kVfxPlugType_Bool);
 	addInput(kInput_Scale, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
-	addOutput(kOutput_RealChannels, kVfxPlugType_Channels, &channelsOutput);
+	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
 }
 
 VfxNodeSpectrum2D::~VfxNodeSpectrum2D()
@@ -129,8 +129,14 @@ void VfxNodeSpectrum2D::tick(const float dt)
 		
 		texture.upload(dreal, 4, transformSx, GL_RED, GL_FLOAT);
 		
-		channelsOutput.setDataContiguous(dreal, true, transformSx, transformSy);
+		channelsOutput.setData2DContiguous(dreal, true, transformSx, transformSy, 1);
 	}
+}
+
+void VfxNodeSpectrum2D::getDescription(VfxNodeDescription & d)
+{
+	d.add("channels:");
+	d.add(channelsOutput);
 }
 
 void VfxNodeSpectrum2D::allocateTexture(const int sx, const int sy)
