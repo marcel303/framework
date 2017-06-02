@@ -24,6 +24,7 @@ VfxNodeKinect2::VfxNodeKinect2()
 	: VfxNodeBase()
 	, videoImage()
 	, depthImage()
+	, videoImageCpu()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_DeviceId, kVfxPlugType_Int);

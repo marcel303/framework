@@ -3,7 +3,9 @@
 top priority items from list below:
 + add channels visualizer
 + add node description callback
-- add channels.toGpu node
+- add buffer type and channels.toGpu node
+- add timeline node
++ add OSC history to node description
 
 todo :
 + add default value to socket definitions
@@ -62,14 +64,15 @@ todo :
 - add real-time callback to get node description. report tick/draw time and some other stats/info
 	- report texture format, memory usage
 	+ report cpu image channel count, memory usage, alignment
-	- report video playback time
+	+ report video playback time
 	+ report number of dots
-	- report analog values for xinput
+	+ report analog values for xinput
 	- report list of N latest events OSC send node
 	- report list of N latest events OSC receive node
 - automatically un-fold nodes (temporarily) when the mouse hovers over them ?
 	- (temporarily) un-fold node when it is the only selected node. allows connecting sockets
 	- (temporarily) un-fold hovered over node when connecting sockets
+- extend channel data to 2D and possibly 3D. add sx, sy, sz in addition to just 'size', which is ALWAYS equal to sx * sy * sz
 
 todo : nodes :
 - add sample.float node
@@ -85,8 +88,10 @@ todo : nodes :
 	- add time! input trigger. performs seek operation
 - add MIDI node
 - kinect node:
-	- don't calculate images when output sockets are not connected (?) or when real-time connection asks for the output ..
+	+ don't calculate images when output sockets are not connected (?) or when real-time connection asks for the output ..
 	- add player index output ?
+	+ add image_cpu output for video data
+	- add channels output for depth data
 	- add point cloud xyz output image. or make a node which can calculate this for us, giving (optional) rgb, depth data, and an enum which controls the projection params (should be set to Kinect1 or Kinect2)
 - add pitch control to oscillators ?
 - add 'window' size to square oscillator
@@ -105,9 +110,9 @@ todo : nodes :
 	- fix issue with output time not reset on filename change or looping. remember start time? -> capture time on next provide
 - add note (like C1) to MIDI note
 - add adsr node
-- add CPU image downsample node.
++ add CPU image downsample node.
 	+ downscale 2x2 or 4x4. would make dot detector operate faster on large video files
-	- maybe should work with maximum size constraints and keep downscaling until met ? makes it possible to have varying sized image data incoming and have some kind of size gaurantee on the output
+	+ maybe should work with maximum size constraints and keep downscaling until met ? makes it possible to have varying sized image data incoming and have some kind of size gaurantee on the output
 - add dot tracker node
 - let nodes that allocate a surface push their surface as the current surface, so rendering in dep nodes happens in these surfaces ?
 - add channels.toGpu node
@@ -116,6 +121,14 @@ todo : nodes :
 	- specify which channels. perhaps using swizzle control ?
 		- perhaps add index 1, 2, 3, 4 and set them to -1 by default, except for index 1, which should be 0
 		- perhaps add a string input which specifies channels ..
+- add image to image_cpu node. default behaviour is to delay by a few frames
+- add integral image node. expose integral as 2d channels object
+	- add integral node
+	- add sample integral node. add normalized sample xy option. if normalized any input can be used for sampling
+		- samples a rect. has x1 y1 x2 y2 coords
+		- has a filter option?
+		- has a normalized coords option
+		- has an option to fix coords so it always specified min/max for box or not ?
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -131,8 +144,7 @@ todo : framework :
 - add MSDF font rendering support
 
 todo : media player
-- add option to disable texture generation
-- add image to image_cpu node. default behaviour is to delay by a few frames
++ add option to disable texture generation
 + add image_cpu to image (gpu) node. default behaviour is to upload immediately
 - add openAsync call which accepts OpenParams
 - add yuvToRgb node
@@ -152,6 +164,7 @@ todo : UI
 - add ability to set node to horizontal or vertical mode. vertical mode hides socket names/is more condensed
 	- maybe also a sphere mode ?
 	*** I think I like the lilly idea better
++ touch zoom on moving fingers treshold distance apart. also, try to convert normalized touch coords into inches or cms
 
 
 

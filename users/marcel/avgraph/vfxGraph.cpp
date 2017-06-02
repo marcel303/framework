@@ -188,7 +188,7 @@ void VfxGraph::tick(const float dt)
 			
 			const uint64_t t2 = g_TimerRT.TimeUS_get();
 			
-			node->tickTimeAvg = (node->tickTimeAvg * 99 + (t2 - t1)) / 100;
+			node->tickTimeAvg = (node->tickTimeAvg * 90 + (t2 - t1) * 10) / 100;
 		}
 	}
 	
