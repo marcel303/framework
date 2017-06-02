@@ -19,14 +19,14 @@ void VfxNodeChannelSelect::tick(const float dt)
 		? int(std::round(getInputFloat(kInput_ChannelIndexNorm, 0.f) * (channels->numChannels - 1)))
 		: getInputInt(kInput_ChannelIndex, 0);
 	
-	channelIndex = std::max(0, std::min(channels->numChannels - 1, channelIndex));
-	
 	if (channels == nullptr || channels->sx == 0 || channels->sy == 0 || channels->numChannels == 0)
 	{
 		channelsOutput.reset();
 	}
 	else
 	{
+		channelIndex = std::max(0, std::min(channels->numChannels - 1, channelIndex));
+		
 		const auto & channel = channels->channels[channelIndex];
 		
 		channelsOutput.setData2DContiguous(channel.data, channel.continuous, channels->sx, channels->sy, 1);

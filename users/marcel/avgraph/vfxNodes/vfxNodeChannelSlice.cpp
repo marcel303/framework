@@ -31,16 +31,16 @@ void VfxNodeChannelSlice::tick(const float dt)
 		? int(std::round(getInputFloat(kInput_SliceCountNorm, 0.f) * channels->sy))
 		: getInputInt(kInput_SliceCount, 1);
 	
-	channelIndex = std::max(0, std::min(channels->numChannels - 1, channelIndex));
-	sliceIndex = std::max(0, std::min(channels->sy - 1, sliceIndex));
-	sliceCount = std::max(0, std::min(channels->sy, sliceCount));
-	
 	if (channels == nullptr || channels->sx == 0 || channels->sy == 0 || channels->numChannels == 0)
 	{
 		channelsOutput.reset();
 	}
 	else
 	{
+		channelIndex = std::max(0, std::min(channels->numChannels - 1, channelIndex));
+		sliceIndex = std::max(0, std::min(channels->sy - 1, sliceIndex));
+		sliceCount = std::max(0, std::min(channels->sy, sliceCount));
+		
 		const auto & channel = channels->channels[channelIndex];
 		
 		int sliceIndex1 = sliceIndex;
