@@ -80,6 +80,7 @@ struct GraphNode
 	std::string editorName;
 	float editorX;
 	float editorY;
+	int editorZKey;
 	bool editorIsFolded;
 	float editorFoldAnimTime;
 	float editorFoldAnimTimeRcp;
@@ -154,6 +155,7 @@ struct Graph
 	
 	GraphNodeId nextNodeId;
 	GraphLinkId nextLinkId;
+	int nextZKey;
 	
 	GraphEditConnection * graphEditConnection;
 	
@@ -162,6 +164,7 @@ struct Graph
 	
 	GraphNodeId allocNodeId();
 	GraphLinkId allocLinkId();
+	int allocZKey();
 	
 	void addNode(GraphNode & node);
 	void removeNode(const GraphNodeId nodeId);
@@ -658,6 +661,10 @@ struct GraphEdit_RealTimeConnection
 		return false;
 	}
 	
+	virtual void clearSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName)
+	{
+	}
+	
 	virtual bool getSrcSocketChannelData(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, GraphEdit_ChannelData & channels)
 	{
 		return false;
@@ -1024,6 +1031,8 @@ struct GraphEdit : GraphEditConnection
 	void selectNodeAll();
 	void selectLinkAll();
 	void selectAll();
+	
+	void snapToGrid(GraphNode & node);
 	
 	void undo();
 	void redo();

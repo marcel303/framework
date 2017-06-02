@@ -3,9 +3,10 @@
 top priority items from list below:
 + add channels visualizer
 + add node description callback
-- add buffer type and channels.toGpu node
++ add buffer type and channels.toGpu node
 - add timeline node
 + add OSC history to node description
+- add buttons that can trigger inputs
 
 todo :
 + add default value to socket definitions
@@ -14,7 +15,7 @@ todo :
 - add zoom in/out
 	+ add basic implementation
 	- improve zoom in and out behavior
-		- clamp max zoom level
+		# clamp max zoom level -> actually this is not needed and the negative zoom adds a nice effect and possible source for inspiration
 		- improve font rendering so it's both resolution independent and supports sub-pixel translation
 	+ save/load zoom and focus position to/from XML
 	+ add option to quickly reset drag and zoom values
@@ -48,8 +49,8 @@ todo :
 - add mouse cursor to user interface
 - make nodes use rounded rectangles
 - make links use bezier curves
-- add buffer type and add buffer input(s) to fsfx node ?
-	- add channels.toGpu node
+# add buffer type and add buffer input(s) to fsfx node ?
+	-> I'm trying to use mostly textures to improve remixability
 - add editor option to disable real-time preview
 	- add time dilation effect on no input before stopping responding ?
 	- add way for UI/editor to tell update loop it's animating something (camera..)
@@ -61,19 +62,24 @@ todo :
 	- add special colouring mode of the node background ? black (zero cpu) -> red -> orange -> yellow (high cpu)
 		- add editor option to show cpu/gpu cost
 		- add GPU performance markers
-- add real-time callback to get node description. report tick/draw time and some other stats/info
-	- report texture format, memory usage
++ add real-time callback to get node description. report tick/draw time and some other stats/info
 	+ report cpu image channel count, memory usage, alignment
 	+ report video playback time
 	+ report number of dots
 	+ report analog values for xinput
 	+ report list of N latest events OSC send node
 	+ report list of N latest events OSC receive node
+- report OpenGL texture format and memory usage in node getDescription
 - automatically un-fold nodes (temporarily) when the mouse hovers over them ?
 	- (temporarily) un-fold node when it is the only selected node. allows connecting sockets
 	- (temporarily) un-fold hovered over node when connecting sockets
 + extend channel data to 2D and possibly 3D. add sx, sy, sz in addition to just 'size', which is ALWAYS equal to sx * sy * sz
-- add real-time callback for when a socket values is reset back to its default. allow VFX implementation to clean up automatically allocated literals and to disconnect them. otherwise isConnected() for inputs keeps returning true, which messes up the functioning of some nodes
++ add real-time callback for when a socket values is reset back to its default. allow VFX implementation to clean up automatically allocated literals and to disconnect them. otherwise isConnected() for inputs keeps returning true, which messes up the functioning of some nodes
+- reset socket values that are edited by a text box when text box editing ends with or is an empty value
++ add Z-index to nodes. right now the draw order is fixed
+	+ use a continously incrementing counter (akin to node/link alloc id) and assign to nodes upon select ?
+	+ apply/increment counter upon SINGLE node selection
+	+ upon draw, add nodes to an array, sort, draw
 
 todo : nodes :
 - add sample.float node
@@ -116,12 +122,15 @@ todo : nodes :
 	+ maybe should work with maximum size constraints and keep downscaling until met ? makes it possible to have varying sized image data incoming and have some kind of size gaurantee on the output
 - add dot tracker node
 - let nodes that allocate a surface push their surface as the current surface, so rendering in dep nodes happens in these surfaces ?
-- add channels.toGpu node
-	- convert a single channel into a buffer
-	- convert all channels for GPU access
-	- specify which channels. perhaps using swizzle control ?
-		- perhaps add index 1, 2, 3, 4 and set them to -1 by default, except for index 1, which should be 0
-		- perhaps add a string input which specifies channels ..
++ add channels.toGpu node
+	+ convert a single channel into a buffer
+	# convert all channels for GPU access
+		-> this doesn't map well. always convert a single (1D or 2D) channel for now
+	# specify which channels. perhaps using swizzle control ?
+		# perhaps add index 1, 2, 3, 4 and set them to -1 by default, except for index 1, which should be 0
+			-> this has been replaced with a channel select node for now
+- add channel swizzle node. allow it to reorder one or more channels into a new channels object
+- perhaps add string names to channels, for more convenient selection ? would reduce remixing capability I fear .. maybe let nodes which produce channels to document in their node description what those channels represent, semantically .. but not let the user use those semantics to select channels
 - add image to image_cpu node. default behaviour is to delay by a few frames
 - add integral image node. expose integral as 2d channels object
 	- add integral node

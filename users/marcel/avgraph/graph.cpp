@@ -199,6 +199,7 @@ GraphNode::GraphNode()
 	, editorName()
 	, editorX(0.f)
 	, editorY(0.f)
+	, editorZKey(0)
 	, editorIsFolded(false)
 	, editorFoldAnimTime(0.f)
 	, editorFoldAnimTimeRcp(0.f)
@@ -285,6 +286,7 @@ Graph::Graph()
 	, links()
 	, nextNodeId(1)
 	, nextLinkId(1)
+	, nextZKey(1)
 	, graphEditConnection(nullptr)
 {
 }
@@ -313,6 +315,11 @@ GraphNodeId Graph::allocLinkId()
 	Assert(links.find(result) == links.end());
 	
 	return result;
+}
+
+int Graph::allocZKey()
+{
+	return nextZKey++;
 }
 
 void Graph::addNode(GraphNode & node)
@@ -438,6 +445,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 {
 	nextNodeId = intAttrib(xmlGraph, "nextNodeId", nextNodeId);
 	nextLinkId = intAttrib(xmlGraph, "nextLinkId", nextLinkId);
+	nextZKey = intAttrib(xmlGraph, "nextZKey", nextZKey);
 	
 	for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
 	{
@@ -479,6 +487,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		addNode(node);
 		
 		nextNodeId = std::max(nextNodeId, node.id + 1);
+		nextZKey = std::max(nextZKey, node.editorZKey + 1);
 	}
 	
 	for (const XMLElement * xmlLink = xmlGraph->FirstChildElement("link"); xmlLink != nullptr; xmlLink = xmlLink->NextSiblingElement("link"))
@@ -608,6 +617,7 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 	
 	xmlGraph.PushAttribute("nextNodeId", nextNodeId);
 	xmlGraph.PushAttribute("nextLinkId", nextLinkId);
+	xmlGraph.PushAttribute("nextZKey", nextZKey);
 	
 	for (auto & nodeItr : nodes)
 	{
@@ -2169,7 +2179,14 @@ bool GraphEdit::tick(const float dt)
 						
 						if (appendSelection == false)
 						{
-							selectNode(hitTestResult.node->id, true);
+							// todo : implement the following bahvior: click + hold/move = drag, click + release = select single and discard the rest of the selection
+							
+							if (selectedNodes.count(hitTestResult.node->id) == 0)
+							{
+								selectNode(hitTestResult.node->id, true);
+								
+								hitTestResult.node->editorZKey = graph->allocZKey();
+							}
 						}
 						else
 						{
@@ -2291,8 +2308,7 @@ bool GraphEdit::tick(const float dt)
 						
 						if (node != nullptr)
 						{
-							node->editorX = std::round(node->editorX / float(kGridSize)) * kGridSize;
-							node->editorY = std::round(node->editorY / float(kGridSize)) * kGridSize;
+							snapToGrid(*node);
 						}
 					}
 				}
@@ -2329,6 +2345,7 @@ bool GraphEdit::tick(const float dt)
 						newNode.isPassthrough = false;
 						newNode.editorX = node->editorX + kGridSize;
 						newNode.editorY = node->editorY + kGridSize;
+						newNode.editorZKey = graph->allocZKey();
 						newNode.editorInputValues.clear();
 						newNode.editorValue.clear();
 						
@@ -3115,6 +3132,19 @@ void GraphEdit::nodeSelectEnd()
 
 void GraphEdit::nodeDragEnd()
 {
+	if (editorOptions.snapToGrid)
+	{
+		for (auto i : selectedNodes)
+		{
+			auto node = tryGetNode(i);
+				
+			if (node != nullptr)
+			{
+				snapToGrid(*node);
+			}
+		}
+	}
+	
 	nodeDrag = NodeDrag();
 }
 
@@ -3249,6 +3279,7 @@ bool GraphEdit::tryAddNode(const std::string & typeName, const int x, const int 
 		node.typeName = typeName;
 		node.editorX = x;
 		node.editorY = y;
+		node.editorZKey = graph->allocZKey();
 		
 		graph->addNode(node);
 		
@@ -3273,6 +3304,7 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 		node.id = graph->allocNodeId();
 		node.editorX = mousePosition.x;
 		node.editorY = mousePosition.y;
+		node.editorZKey = graph->allocZKey();
 		node.setVisualizer(nodeId, srcSocketName, srcSocketIndex, dstSocketName, dstSocketIndex);
 		
 		node.editorVisualizer.sx = 0;
@@ -3349,6 +3381,12 @@ void GraphEdit::selectAll()
 {
 	selectNodeAll();
 	selectLinkAll();
+}
+
+void GraphEdit::snapToGrid(GraphNode & node)
+{
+	node.editorX = std::round(node.editorX / float(kGridSize)) * kGridSize;
+	node.editorY = std::round(node.editorY / float(kGridSize)) * kGridSize;
 }
 
 void GraphEdit::showNotification(const char * format, ...)
@@ -3486,9 +3524,24 @@ void GraphEdit::draw() const
 	
 	// traverse nodes and draw
 	
+	const int numNodes = graph->nodes.size();
+	
+	const GraphNode ** sortedNodes = (const GraphNode**)alloca(numNodes * sizeof(GraphNode*));
+	
+	int nodeIndex = 0;
+	
 	for (auto & nodeItr : graph->nodes)
 	{
 		auto & node = nodeItr.second;
+		
+		sortedNodes[nodeIndex++] = &node;
+	}
+	
+	std::sort(sortedNodes, sortedNodes + numNodes, [](auto n1, auto n2) { return n1->editorZKey < n2->editorZKey; });
+	
+	for (int i = 0; i < numNodes; ++i)
+	{
+		auto & node = *sortedNodes[i];
 		
 		const auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 		
@@ -4220,6 +4273,8 @@ void GraphUi::PropEdit::setNode(const GraphNodeId _nodeId)
 
 static bool doMenuItem(std::string & valueText, const std::string & name, const std::string & defaultValue, const std::string & editor, const float dt, const int index, ParticleColor * uiColors, const int maxUiColors, const GraphEdit_EnumDefinition * enumDefinition)
 {
+	// todo : detect if text box got cleared. if so, set valueText to defaultValue
+	
 	if (editor == "textbox")
 	{
 		doTextBox(valueText, name.c_str(), dt);
@@ -4369,7 +4424,14 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				if (isPreExisting)
 				{
 					if (!hasValue)
+					{
 						node->editorInputValues.erase(inputSocket.name);
+						
+						if (graphEdit->realTimeConnection)
+						{
+							graphEdit->realTimeConnection->clearSrcSocketValue(nodeId, inputSocket.index, inputSocket.name);
+						}
+					}
 					else
 						valueTextItr->second = newValueText;
 				}
@@ -4383,7 +4445,7 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				
 				if (graphEdit->realTimeConnection)
 				{
-					if (newValueText != oldValueText && !(!hasValue && oldValueText.empty()))
+					if (newValueText != oldValueText && hasValue)
 					{
 						graphEdit->realTimeConnection->setSrcSocketValue(nodeId, inputSocket.index, inputSocket.name, newValueText);
 					}

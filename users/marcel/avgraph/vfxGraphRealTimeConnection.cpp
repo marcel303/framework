@@ -201,6 +201,8 @@ void RealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNodeId 
 	Assert(input->isConnected());
 	input->disconnect();
 	
+	// todo : we should reconnect with the node socket's editor value when set here
+	
 	{
 		// attempt to remove dst node from predeps
 		
@@ -536,6 +538,48 @@ bool RealTimeConnection::getDstSocketValue(const GraphNodeId nodeId, const int d
 	output->referencedByRealTimeConnectionTick = g_currentVfxGraph->nextTickTraversalId;
 	
 	return getPlugValue(output, value);
+}
+
+void RealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName)
+{
+	if (isLoading)
+		return;
+	
+	//logDebug("clearSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
+	
+	Assert(vfxGraph != nullptr);
+	if (vfxGraph == nullptr)
+		return;
+	
+	auto nodeItr = vfxGraph->nodes.find(nodeId);
+	
+	Assert(nodeItr != vfxGraph->nodes.end());
+	if (nodeItr == vfxGraph->nodes.end())
+		return;
+	
+	auto node = nodeItr->second;
+	
+	auto input = node->tryGetInput(srcSocketIndex);
+	
+	Assert(input != nullptr);
+	if (input == nullptr)
+		return;
+	
+	if (input->isConnected())
+	{
+		// check if this link is connected to a literal value
+		
+		bool isImmediate = false;
+		
+		for (auto & i : vfxGraph->valuesToFree)
+			if (i.mem == input->mem)
+				isImmediate = true;
+		
+		if (isImmediate)
+		{
+			input->disconnect();
+		}
+	}
 }
 
 bool RealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, GraphEdit_ChannelData & channels)
