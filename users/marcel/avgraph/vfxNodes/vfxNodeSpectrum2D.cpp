@@ -80,12 +80,7 @@ void VfxNodeSpectrum2D::tick(const float dt)
 			
 			if (outputMode == kOutputMode_Channel1And2)
 			{
-				// todo : write combined real/imag channel
-				
-				for (int x = 0; x < transformSx; ++x)
-				{
-					//
-				}
+				// nothing to do
 			}
 			else if (outputMode == kOutputMode_Channel1)
 			{
@@ -129,7 +124,17 @@ void VfxNodeSpectrum2D::tick(const float dt)
 		
 		texture.upload(dreal, 4, transformSx, GL_RED, GL_FLOAT);
 		
-		channelsOutput.setData2DContiguous(dreal, true, transformSx, transformSy, 1);
+		if (outputMode == kOutputMode_Channel1And2)
+		{
+			const float * channels[] = { dreal, dimag };
+			const bool continuous[] = { true, true };
+			
+			channelsOutput.setData2D(channels, continuous, transformSx, transformSy, 2);
+		}
+		else
+		{
+			channelsOutput.setData2DContiguous(dreal, true, transformSx, transformSy, 1);
+		}
 	}
 }
 
