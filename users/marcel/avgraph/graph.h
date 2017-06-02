@@ -920,6 +920,7 @@ struct GraphEdit : GraphEditConnection
 		Vec2 position1;
 		Vec2 position2;
 		
+		float initialDistance;
 		float distance;
 		
 		Touches()
@@ -927,6 +928,7 @@ struct GraphEdit : GraphEditConnection
 			, finger2(0)
 			, position1()
 			, position2()
+			, initialDistance(0.f)
 			, distance(0.f)
 		{
 		}
