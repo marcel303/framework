@@ -72,11 +72,12 @@ static void equalizeHistogram(const int * __restrict srcHistogram, const int num
 VfxNodeImageCpuEqualize::VfxNodeImageCpuEqualize()
 	: VfxNodeBase()
 	, imageData()
+	, imageOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
 	addInput(kInput_Channel, kVfxPlugType_Int);
-	addOutput(kOutput_Image, kVfxPlugType_ImageCpu, &imageData.image);
+	addOutput(kOutput_Image, kVfxPlugType_ImageCpu, &imageOutput);
 }
 
 void VfxNodeImageCpuEqualize::tick(const float dt)
@@ -87,6 +88,14 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 	if (image == nullptr || image->sx == 0 || image->sy == 0 || image->numChannels == 0)
 	{
 		imageData.free();
+		
+		imageOutput.reset();
+	}
+	else if (isPassthrough)
+	{
+		imageData.free();
+		
+		imageOutput = *image;
 	}
 	else
 	{
@@ -96,6 +105,8 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 			channel == kChannel_RGB ? 3 : 1);
 		
 		imageData.allocOnSizeChange(image->sx, image->sy, numChannels, true);
+		
+		imageOutput = imageData.image;
 
 		for (int i = 0; i < numChannels; ++i)
 		{

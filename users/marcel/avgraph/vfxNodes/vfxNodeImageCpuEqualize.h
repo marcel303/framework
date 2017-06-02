@@ -28,6 +28,8 @@ struct VfxNodeImageCpuEqualize : VfxNodeBase
 	};
 
 	VfxImageCpuData imageData;
+	
+	VfxImageCpu imageOutput;
 
 	VfxNodeImageCpuEqualize();
 	
