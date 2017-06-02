@@ -280,6 +280,9 @@ void VfxChannels::setData(const float * const * data, const bool * continuous, c
 	size = _size;
 	numChannels = std::min(_numChannels, kMaxVfxChannels);
 	
+	sx = _size;
+	sy = 1;
+	
 	for (int i = 0; i < numChannels; ++i)
 	{
 		channels[i].data = data[i];
@@ -293,6 +296,26 @@ void VfxChannels::setDataContiguous(const float * data, const bool continuous, c
 	
 	size = _size;
 	numChannels = std::min(_numChannels, kMaxVfxChannels);
+	
+	sx = _size;
+	sy = 1;
+	
+	for (int i = 0; i < numChannels; ++i)
+	{
+		channels[i].data = data + i * size;
+		channels[i].continuous = continuous;
+	}
+}
+
+void VfxChannels::setData2DContiguous(const float * data, const bool continuous, const int _sx, const int _sy, const int _numChannels)
+{
+	Assert(_numChannels <= kMaxVfxChannels);
+	
+	size = _sx * _sy;
+	numChannels = std::min(_numChannels, kMaxVfxChannels);
+	
+	sx = _sx;
+	sy = _sy;
 	
 	for (int i = 0; i < numChannels; ++i)
 	{
@@ -310,6 +333,9 @@ void VfxChannels::reset()
 	
 	size = 0;
 	numChannels = 0;
+	
+	sx = 0;
+	sy = 0;
 }
 
 //
@@ -391,7 +417,10 @@ void VfxNodeDescription::add(const VfxImageCpu & image)
 void VfxNodeDescription::add(const VfxChannels & channels)
 {
 	add("numChannels: %d", channels.numChannels);
-	add("size: %d", channels.size);
+	if (channels.sy > 1)
+		add("size: %d x %d", channels.sx, channels.sy);
+	else
+		add("size: %d", channels.size);
 	add("MEMORY: %.2f Kb", channels.numChannels * channels.size * sizeof(float) / 1024.0);
 }
 

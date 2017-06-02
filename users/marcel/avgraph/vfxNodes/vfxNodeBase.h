@@ -260,15 +260,21 @@ struct VfxChannels
 	int size;
 	int numChannels;
 	
+	int sx;
+	int sy;
+	
 	VfxChannels()
 		: channels()
 		, size(0)
 		, numChannels(0)
+		, sx(0)
+		, sy(0)
 	{
 	}
 	
 	void setData(const float * const * data, const bool * continuous, const int size, const int numChannels);
 	void setDataContiguous(const float * data, const bool continuous, const int size, const int numChannels);
+	void setData2DContiguous(const float * data, const bool continuous, const int sx, const int sy, const int numChannels);
 	void reset();
 };
 
