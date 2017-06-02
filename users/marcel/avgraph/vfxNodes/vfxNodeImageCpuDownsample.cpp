@@ -273,6 +273,8 @@ static int downsampleLine2x2_SSE(const uint8_t * __restrict _srcLine1, const uin
 	return numIterations * 8;
 }
 
+#if 0 // todo : check for AVX support somehow
+
 static int downsampleLine2x2_AVX(const uint8_t * __restrict _srcLine1, const uint8_t * __restrict _srcLine2, const int numPixels, uint8_t * __restrict dstLine)
 {
 	const int numIterations = numPixels / 16;
@@ -301,6 +303,8 @@ static int downsampleLine2x2_AVX(const uint8_t * __restrict _srcLine1, const uin
 	return numIterations * 16;
 }
 
+#endif
+
 void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu & dst, const int pixelSize)
 {
 	if (pixelSize == 2)
@@ -328,8 +332,8 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 			#if 1
 				if (srcChannel.stride == 1 && dstChannel.stride == 1 && ((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(dstItr)) & 0xf) == 0)
 				{
-					//numPixelsProcessed = downsampleLine2x2_SSE(srcItr1, srcItr2, downsampledSx, dstItr);
-					numPixelsProcessed = downsampleLine2x2_AVX(srcItr1, srcItr2, downsampledSx, dstItr);
+					numPixelsProcessed = downsampleLine2x2_SSE(srcItr1, srcItr2, downsampledSx, dstItr);
+					//numPixelsProcessed = downsampleLine2x2_AVX(srcItr1, srcItr2, downsampledSx, dstItr);
 					
 					srcItr1 += numPixelsProcessed * 2;
 					srcItr2 += numPixelsProcessed * 2;
