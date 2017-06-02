@@ -415,13 +415,11 @@ struct GraphEdit_ChannelData
 	{
 		const float * values;
 		int numValues;
-		int stride;
 		bool continuous;
 		
 		Channel()
 			: values(nullptr)
 			, numValues(0)
-			, stride(0)
 			, continuous(false)
 		{
 		}
@@ -434,12 +432,11 @@ struct GraphEdit_ChannelData
 	{
 	}
 	
-	void addChannel(const float * values, const int numValues, const int stride, const bool continuous)
+	void addChannel(const float * values, const int numValues, const bool continuous)
 	{
 		Channel channel;
 		channel.values = values;
 		channel.numValues = numValues;
-		channel.stride = stride;
 		channel.continuous = continuous;
 		
 		channels.push_back(channel);

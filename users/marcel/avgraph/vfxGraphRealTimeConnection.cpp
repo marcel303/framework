@@ -568,7 +568,7 @@ bool RealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, const
 	
 	for (int i = 0; i < inputChannels->numChannels; ++i)
 	{
-		channels.addChannel(inputChannels->channels[i].data, inputChannels->size, 1, inputChannels->channels[i].continuous);
+		channels.addChannel(inputChannels->channels[i].data, inputChannels->sx * inputChannels->sy, inputChannels->channels[i].continuous);
 	}
 	
 	return true;
@@ -601,7 +601,7 @@ bool RealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, const
 	
 	for (int i = 0; i < outputChannels->numChannels; ++i)
 	{
-		channels.addChannel(outputChannels->channels[i].data, outputChannels->size, 1, outputChannels->channels[i].continuous);
+		channels.addChannel(outputChannels->channels[i].data, outputChannels->sx * outputChannels->sy, outputChannels->channels[i].continuous);
 	}
 	
 	return true;

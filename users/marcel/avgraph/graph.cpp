@@ -1608,7 +1608,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 				
 				for (int i = 0; i < channel.numValues; ++i)
 				{
-					const float value = channel.values[i * channel.stride];
+					const float value = channel.values[i];
 					
 					min = std::min(min, value);
 					max = std::max(max, value);
@@ -1648,7 +1648,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 						
 						for (int i = 0; i < channel.numValues; ++i)
 						{
-							const float value = channel.values[i * channel.stride];
+							const float value = channel.values[i];
 							
 							const float plotX = channelsDataX + i * channelsDataSx / (channel.numValues - 1.f);
 							const float plotY = dataY + (min == max ? .5f : 1.f - (value - min) / (max - min)) * channelsDataSy;
@@ -1673,7 +1673,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 				{
 					for (int i = 0; i < channel.numValues; ++i)
 					{
-						const float value = channel.values[i * channel.stride];
+						const float value = channel.values[i];
 						
 						const float plotX = channelsDataX + (channel.numValues == 1 ? .5f : i / (channel.numValues - 1.f)) * channelsDataSx;
 						const float plotY = dataY + (min == max ? .5f : 1.f - (value - min) / (max - min)) * channelsDataSy;
