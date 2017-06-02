@@ -75,8 +75,10 @@ void VfxNodeVideo::tick(const float dt)
 		
 		mediaPlayer->tick(mediaPlayer->context, wantsTexture);
 		
-		if (mediaPlayer->context->hasBegun)
+		if (mediaPlayer->context->hasBegun && isPassthrough == false)
+		{
 			mediaPlayer->presentTime += dt * speed;
+		}
 		
 		//
 		
@@ -128,7 +130,7 @@ void VfxNodeVideo::tick(const float dt)
 		}
 	}
 
-	if (imageOutput.texture == 0)
+	if (imageOutput.texture == 0 || isPassthrough)
 	{
 		imageOutput.texture = textureBlack;
 	}
