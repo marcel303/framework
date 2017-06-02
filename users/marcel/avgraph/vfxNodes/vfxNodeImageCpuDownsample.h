@@ -66,5 +66,5 @@ struct VfxNodeImageCpuDownsample : VfxNodeBase
 	void allocateImage(const int sx, const int sy, const int numChannels, const int maxSx, const int maxSy, const int pixelSize);
 	void freeImage();
 	
-	static void downsample(const VfxImageCpu & src, VfxImageCpu & dst, const int pixelSize, const DownsampleChannel downsampleChannel);
+	static void downsample(const VfxImageCpu & src, VfxImageCpu & dst, const int pixelSize);
 };
