@@ -40,6 +40,7 @@
 #include "vfxNodes/vfxNodePhysicalSpring.h"
 #include "vfxNodes/vfxNodePicture.h"
 #include "vfxNodes/vfxNodePictureCpu.h"
+#include "vfxNodes/vfxNodePointcloud.h"
 #include "vfxNodes/vfxNodeSampleAndHold.h"
 #include "vfxNodes/vfxNodeSound.h"
 #include "vfxNodes/vfxNodeSpectrum1D.h"
@@ -189,6 +190,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("leap", VfxNodeLeapMotion)
 	DefineNodeImpl("kinect1", VfxNodeKinect1)
 	DefineNodeImpl("kinect2", VfxNodeKinect2)
+	DefineNodeImpl("pointcloud", VfxNodePointcloud)
 	DefineNodeImpl("osc", VfxNodeOsc)
 	DefineNodeImpl("osc.send", VfxNodeOscSend)
 	DefineNodeImpl("composite", VfxNodeComposite)
@@ -602,7 +604,7 @@ int main(int argc, char * argv[])
 			{
 				graphEdit->load(FILENAME);
 			}
-			else if (keyboard.wentDown(SDLK_p))
+			else if (keyboard.wentDown(SDLK_p) && keyboard.isDown(SDLK_LGUI))
 			{
 				isPaused = !isPaused;
 			}
