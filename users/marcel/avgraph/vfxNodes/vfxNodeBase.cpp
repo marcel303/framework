@@ -307,6 +307,23 @@ void VfxChannels::setDataContiguous(const float * data, const bool continuous, c
 	}
 }
 
+void VfxChannels::setData2D(const float * const * data, const bool * continuous, const int _sx, const int _sy, const int _numChannels)
+{
+	Assert(_numChannels <= kMaxVfxChannels);
+	
+	size = _sx * _sy;
+	numChannels = std::min(_numChannels, kMaxVfxChannels);
+	
+	sx = _sx;
+	sy = _sy;
+	
+	for (int i = 0; i < numChannels; ++i)
+	{
+		channels[i].data = data[i];
+		channels[i].continuous = continuous != nullptr ? continuous[i] : false;
+	}
+}
+
 void VfxChannels::setData2DContiguous(const float * data, const bool continuous, const int _sx, const int _sy, const int _numChannels)
 {
 	Assert(_numChannels <= kMaxVfxChannels);
