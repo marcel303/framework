@@ -393,6 +393,11 @@ void VfxNodeDescription::add(const char * format, ...)
 	lines.push_back(text);
 }
 
+void VfxNodeDescription::add(const VfxImageBase & image)
+{
+	addOpenglTexture(image.getTexture());
+}
+
 void VfxNodeDescription::add(const VfxImageCpu & image)
 {
 	add("size: %d x %d", image.sx, image.sy);

@@ -431,6 +431,7 @@ struct VfxNodeDescription
 	std::vector<std::string> lines;
 	
 	void add(const char * format, ...);
+	void add(const VfxImageBase & image);
 	void add(const VfxImageCpu & image);
 	void add(const VfxChannels & channels);
 	void addOpenglTexture(const uint32_t id);
@@ -605,6 +606,16 @@ struct VfxNodeBase
 			return defaultValue;
 		else
 			return plug->getImageCpu();
+	}
+	
+	const VfxChannels * getInputChannels(const int index, const VfxChannels * defaultValue) const
+	{
+		const VfxPlug * plug = tryGetInput(index);
+		
+		if (plug == nullptr || !plug->isConnected())
+			return defaultValue;
+		else
+			return plug->getChannels();
 	}
 	
 	const VfxTriggerData * getInputTriggerData(const int index) const

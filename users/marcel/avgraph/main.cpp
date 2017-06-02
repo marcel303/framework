@@ -11,6 +11,9 @@
 
 #include "vfxNodes/vfxNodeBase.h"
 #include "vfxNodes/vfxNodeBinaryOutput.h"
+#include "vfxNodes/vfxNodeChannelSelect.h"
+#include "vfxNodes/vfxNodeChannelSlice.h"
+#include "vfxNodes/vfxNodeChannelToGpu.h"
 #include "vfxNodes/vfxNodeComposite.h"
 #include "vfxNodes/vfxNodeDelayLine.h"
 #include "vfxNodes/vfxNodeDisplay.h"
@@ -42,6 +45,7 @@
 #include "vfxNodes/vfxNodeSpectrum1D.h"
 #include "vfxNodes/vfxNodeSpectrum2D.h"
 #include "vfxNodes/vfxNodeTime.h"
+#include "vfxNodes/vfxNodeTimeline.h"
 #include "vfxNodes/vfxNodeTransform2D.h"
 #include "vfxNodes/vfxNodeTriggerOnchange.h"
 #include "vfxNodes/vfxNodeTriggerTimer.h"
@@ -130,6 +134,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("colorLiteral", VfxNodeColorLiteral)
 	DefineNodeImpl("trigger.asFloat", VfxNodeTriggerAsFloat)
 	DefineNodeImpl("time", VfxNodeTime)
+	DefineNodeImpl("timeline", VfxNodeTimeline)
 	DefineNodeImpl("sampleAndHold", VfxNodeSampleAndHold)
 	DefineNodeImpl("binary.output", VfxNodeBinaryOutput)
 	DefineNodeImpl("transform.2d", VfxNodeTransform2D)
@@ -200,6 +205,9 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("image_cpu.downsample", VfxNodeImageCpuDownsample)
 	DefineNodeImpl("image.downsample", VfxNodeImageDownsample)
 	DefineNodeImpl("yuvToRgb", VfxNodeYuvToRgb)
+	DefineNodeImpl("channel.select", VfxNodeChannelSelect)
+	DefineNodeImpl("channel.slice", VfxNodeChannelSlice)
+	DefineNodeImpl("channel.toGpu", VfxNodeChannelToGpu)
 	else
 	{
 		logError("unknown node type: %s", typeName.c_str());
@@ -359,6 +367,119 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 
 //
 
+#include "Timer.h"
+#include <immintrin.h>
+
+static void sumChannels_fast(float ** channels, const int numChannels, const int channelSize, float * __restrict output)
+{
+#if 0
+	const int channelSize4 = channelSize / 4;
+	
+	__m128 * __restrict output128 = (__m128*)output;
+	
+	memset(output128, 0, sizeof(float) * channelSize);
+	
+	for (int c = 0; c < numChannels; ++c)
+	{
+		__m128 * __restrict channel128 = (__m128*)channels[c];
+		
+		for (int i = 0; i < channelSize4; ++i)
+		{
+			output128[i] += channel128[i];
+		}
+	}
+#else
+	const int channelSize8 = channelSize / 8;
+	
+	__m256 * __restrict outputVec = (__m256*)output;
+	
+	memset(outputVec, 0, sizeof(float) * channelSize);
+	
+	for (int c = 0; c < numChannels; ++c)
+	{
+		__m256 * __restrict channelVec = (__m256*)channels[c];
+		
+		for (int i = 0; i < channelSize8; ++i)
+		{
+			outputVec[i] += channelVec[i];
+		}
+	}
+#endif
+}
+
+static void sumChannels_slow(const float * const * channels, const int numChannels, const int channelSize, float * output)
+{
+	memset(output, 0, sizeof(float) * channelSize);
+	
+	for (int c = 0; c < numChannels; ++c)
+	{
+		const float * channel = channels[c];
+		
+		for (int i = 0; i < channelSize; ++i)
+		{
+			output[i] += channel[i];
+		}
+	}
+}
+
+static void testAudioMixing()
+{
+	const int kNumChannels = 24;
+	const int kChannelSize = 64;
+	
+	float * channels[kNumChannels];
+	
+	for (int c = 0; c < kNumChannels; ++c)
+	{
+		channels[c] = (float*)_mm_malloc(sizeof(float) * kChannelSize, 16);
+	}
+	
+	for (int c = 0; c < kNumChannels; ++c)
+	{
+		float * channel = channels[c];
+		
+		for (int i = 0; i < kChannelSize; ++i)
+			channel[i] = c + i;
+	}
+	
+	float output[kChannelSize];
+	
+	for (int i = 0; i < 100; ++i)
+	{
+		uint64_t f1 = g_TimerRT.TimeUS_get();
+		
+		float q = 0.f;
+		
+		for (int n = 0; n < 200; ++n)
+		{
+			sumChannels_fast(channels, kNumChannels, kChannelSize, output);
+			
+			q += output[kChannelSize - 1];
+		}
+		
+		uint64_t f2 = g_TimerRT.TimeUS_get();
+		
+		//
+		
+		uint64_t s1 = g_TimerRT.TimeUS_get();
+		
+		for (int i = 0; i < 200; ++i)
+		{
+			sumChannels_slow(channels, kNumChannels, kChannelSize, output);
+			
+			q += output[kChannelSize - 1];
+		}
+		
+		uint64_t s2 = g_TimerRT.TimeUS_get();
+		
+		//
+		
+		printf("fast: %gms, slow: %gms (%g)\n", (f2 - f1) / 1000.0, (s2 - s1) / 1000.0, q);
+	}
+}
+
+//
+
 int main(int argc, char * argv[])
 {
 	//framework.waitForEvents = true;
@@ -368,6 +489,8 @@ int main(int argc, char * argv[])
 	//framework.minification = 2;
 	
 	framework.enableDepthBuffer = true;
+	
+	//framework.fullscreen = true;
 	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
@@ -392,6 +515,8 @@ int main(int argc, char * argv[])
 		//testDynamicTextureAtlas();
 		
 		//testDotDetector();
+		
+		//testAudioMixing();
 		
 		//
 		
@@ -431,9 +556,15 @@ int main(int argc, char * argv[])
 		
 		//
 		
+		g_currentVfxGraph = realTimeConnection->vfxGraph;
+		
 		graphEdit->load(FILENAME);
 		
+		g_currentVfxGraph = nullptr;
+		
 		//
+		
+		bool isPaused = false;
 		
 		double vflip = 1.0;
 		
@@ -471,6 +602,10 @@ int main(int argc, char * argv[])
 			{
 				graphEdit->load(FILENAME);
 			}
+			else if (keyboard.wentDown(SDLK_p))
+			{
+				isPaused = !isPaused;
+			}
 			
 			g_currentVfxGraph = nullptr;
 			
@@ -493,7 +628,7 @@ int main(int argc, char * argv[])
 			{
 				if (vfxGraph != nullptr)
 				{
-					vfxGraph->tick(framework.timeStep);
+					vfxGraph->tick(isPaused ? 0.f : framework.timeStep);
 					
 					gxPushMatrix();
 					{

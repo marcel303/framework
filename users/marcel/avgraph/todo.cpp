@@ -67,12 +67,13 @@ todo :
 	+ report video playback time
 	+ report number of dots
 	+ report analog values for xinput
-	- report list of N latest events OSC send node
-	- report list of N latest events OSC receive node
+	+ report list of N latest events OSC send node
+	+ report list of N latest events OSC receive node
 - automatically un-fold nodes (temporarily) when the mouse hovers over them ?
 	- (temporarily) un-fold node when it is the only selected node. allows connecting sockets
 	- (temporarily) un-fold hovered over node when connecting sockets
-- extend channel data to 2D and possibly 3D. add sx, sy, sz in addition to just 'size', which is ALWAYS equal to sx * sy * sz
++ extend channel data to 2D and possibly 3D. add sx, sy, sz in addition to just 'size', which is ALWAYS equal to sx * sy * sz
+- add real-time callback for when a socket values is reset back to its default. allow VFX implementation to clean up automatically allocated literals and to disconnect them. otherwise isConnected() for inputs keeps returning true, which messes up the functioning of some nodes
 
 todo : nodes :
 - add sample.float node
@@ -129,6 +130,8 @@ todo : nodes :
 		- has a filter option?
 		- has a normalized coords option
 		- has an option to fix coords so it always specified min/max for box or not ?
++ add channel select node. selects one or a range of channels from a channels object. specify channel (default=0) and numChannels (default=1)
++ add channel slice node. make a new channels object from a 2D channels object by selecting only between y (default=0) and numSlices (default=1)
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
