@@ -1,5 +1,5 @@
-#include "framework.h"
 #include "vfxNodeChannelToGpu.h"
+#include <GL/glew.h>
 
 VfxNodeChannelToGpu::VfxNodeChannelToGpu()
 	: VfxNodeBase()
@@ -15,6 +15,8 @@ VfxNodeChannelToGpu::VfxNodeChannelToGpu()
 
 void VfxNodeChannelToGpu::tick(const float dt)
 {
+	vfxGpuTimingBlock(VfxNodeChannelToGpu);
+	
 	const VfxChannels * channels = getInputChannels(kInput_Channels, nullptr);
 	
 	int channelIndex =
@@ -28,6 +30,8 @@ void VfxNodeChannelToGpu::tick(const float dt)
 	}
 	else
 	{
+		vfxGpuTimingBlock(VfxNodeChannelToGpu);
+		
 		channelIndex = std::max(0, std::min(channels->numChannels - 1, channelIndex));
 		
 		const auto & channel = channels->channels[channelIndex];

@@ -1,6 +1,5 @@
-#include "dotDetector.h"
-#include "framework.h"
 #include "vfxNodeImageCpuToGpu.h"
+#include <GL/glew.h>
 #include <xmmintrin.h>
 
 VfxNodeImageCpuToGpu::VfxNodeImageCpuToGpu()
@@ -25,6 +24,8 @@ VfxNodeImageCpuToGpu::~VfxNodeImageCpuToGpu()
 
 void VfxNodeImageCpuToGpu::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeImageCpuToGpu);
+	
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const Channel channel = (Channel)getInputInt(kInput_Channel, 0);
 	const bool filter = getInputBool(kInput_Filter, true);
@@ -46,8 +47,12 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	
 	//
 	
+	vfxGpuTimingBlock(VfxNodeImageCpuToGpu);
+	
 	if (image->numChannels == 1)
 	{
+		Assert(image->isPlanar);
+		
 		// always upload single channel data using the fast path
 		
 		if (texture.isChanged(image->sx, image->sy, GL_R8))

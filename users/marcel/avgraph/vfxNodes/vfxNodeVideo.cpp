@@ -42,6 +42,8 @@ VfxNodeVideo::~VfxNodeVideo()
 
 void VfxNodeVideo::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeVideo);
+	
 	const bool loop = getInputBool(kInput_Loop, true);
 	const float speed = getInputFloat(kInput_Speed, 1.f);
 	const MP::OutputMode outputMode = (MP::OutputMode)getInputInt(kInput_OutputMode, MP::kOutputMode_RGBA);

@@ -15,6 +15,8 @@ VfxNodeMapEase::VfxNodeMapEase()
 
 void VfxNodeMapEase::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeMapEase);
+	
 	float value = getInputFloat(kInput_Value, 0.f);
 	
 	if (isPassthrough)

@@ -14,6 +14,8 @@ VfxNodeTriggerTimer::VfxNodeTriggerTimer()
 
 void VfxNodeTriggerTimer::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeTriggerTimer);
+	
 	const float interval = getInputFloat(kInput_Interval, 0.f);
 	
 	if (interval == 0.f)

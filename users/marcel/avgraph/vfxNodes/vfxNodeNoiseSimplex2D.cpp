@@ -16,6 +16,8 @@ VfxNodeNoiseSimplex2D::VfxNodeNoiseSimplex2D()
 
 void VfxNodeNoiseSimplex2D::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeNoiseSimplex2D);
+	
 	const float x = getInputFloat(kInput_X, 0.f);
 	const float y = getInputFloat(kInput_Y, 0.f);
 	const int numOctaves = getInputInt(kInput_NumOctaves, 4);

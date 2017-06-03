@@ -82,6 +82,8 @@ VfxNodeImageCpuEqualize::VfxNodeImageCpuEqualize()
 
 void VfxNodeImageCpuEqualize::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeImageCpuEqualize);
+	
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const Channel channel = (Channel)getInputInt(kInput_Channel, kChannel_RGB);
 	

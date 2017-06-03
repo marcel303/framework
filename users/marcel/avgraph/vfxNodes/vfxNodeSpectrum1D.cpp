@@ -1,6 +1,6 @@
 #include "fourier.h"
-#include "framework.h"
 #include "vfxNodeSpectrum1D.h"
+#include <GL/glew.h>
 
 VfxNodeSpectrum1D::VfxNodeSpectrum1D()
 	: VfxNodeBase()
@@ -27,6 +27,8 @@ VfxNodeSpectrum1D::~VfxNodeSpectrum1D()
 
 void VfxNodeSpectrum1D::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeSpectrum1D);
+	
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const int transformSx = image ? Fourier::upperPowerOf2(image->sx) : 0;
 	const float sampleY = getInputFloat(kInput_SampleY, .5f);

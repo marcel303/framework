@@ -14,6 +14,8 @@ VfxNodeTriggerOnchange::VfxNodeTriggerOnchange()
 
 void VfxNodeTriggerOnchange::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeTriggerOnchange);
+	
 	const float value = getInputFloat(kInput_Value, 0.f);
 	
 	if (value != oldValue)

@@ -73,6 +73,8 @@ VfxNodeTouches::Touch * VfxNodeTouches::allocTouch()
 
 void VfxNodeTouches::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeTouches);
+	
 	// todo : write a note here describing the peculiarities of the process here and why it's necessary for consistency
 
 	wentDownOutput = 0;

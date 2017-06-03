@@ -20,6 +20,8 @@ VfxNodeTriggerTreshold::VfxNodeTriggerTreshold()
 
 void VfxNodeTriggerTreshold::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeTriggerTreshold);
+	
 	const float value = getInputFloat(kInput_Value, 0.f);
 	const float treshold = getInputFloat(kInput_Treshold, 0.f);
 	

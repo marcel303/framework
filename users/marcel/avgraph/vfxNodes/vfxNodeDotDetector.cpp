@@ -37,6 +37,8 @@ VfxNodeDotDetector::~VfxNodeDotDetector()
 
 void VfxNodeDotDetector::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeDotDetector);
+	
 	const int kMaxIslands = 256;
 	
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);

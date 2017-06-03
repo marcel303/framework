@@ -1,6 +1,5 @@
 #include "audiostream/AudioOutput.h"
 #include "audiostream/AudioStreamVorbis.h"
-#include "framework.h"
 #include "vfxNodeSound.h"
 
 // todo : trigger on start to send beat 0
@@ -50,6 +49,8 @@ VfxNodeSound::~VfxNodeSound()
 
 void VfxNodeSound::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeSound);
+	
 	const char * source = getInputString(kInput_Source, "");
 	const bool loop = getInputBool(kInput_Loop, true);
 	const float volume = getInputFloat(kInput_Volume, 1.f);

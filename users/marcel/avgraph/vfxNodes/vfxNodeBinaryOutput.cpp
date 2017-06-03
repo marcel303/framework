@@ -17,6 +17,8 @@ VfxNodeBinaryOutput::VfxNodeBinaryOutput()
 
 void VfxNodeBinaryOutput::tick(const float dt)
 {
+	vfxGpuTimingBlock(VfxNodeBinaryOutput);
+	
 	double valueAsDouble = getInputFloat(kInput_Value, 0.f);
 	
 	valueAsDouble = std::round(valueAsDouble);

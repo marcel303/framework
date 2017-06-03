@@ -17,6 +17,8 @@ VfxNodeMapRange::VfxNodeMapRange()
 
 void VfxNodeMapRange::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeMapRange);
+	
 	const float in = getInputFloat(kInput_In, 0.f);
 	
 	if (isPassthrough)

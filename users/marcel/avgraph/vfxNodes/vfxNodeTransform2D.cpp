@@ -23,6 +23,8 @@ void VfxNodeTransform2D::initSelf(const GraphNode & node)
 
 void VfxNodeTransform2D::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeTransform2D);
+	
 	const float x = getInputFloat(kInput_X, 0.f);
 	const float y = getInputFloat(kInput_Y, 0.f);
 	const float scale = getInputFloat(kInput_Scale, 1.f);

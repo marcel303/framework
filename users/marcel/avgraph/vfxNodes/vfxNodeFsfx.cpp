@@ -1,3 +1,4 @@
+#include "framework.h"
 #include "vfxGraph.h"
 #include "vfxNodeFsfx.h"
 
@@ -37,6 +38,8 @@ VfxNodeFsfx::~VfxNodeFsfx()
 
 void VfxNodeFsfx::draw() const
 {
+	vfxCpuTimingBlock(VfxNodeFsfx);
+	
 	if (isPassthrough)
 	{
 		const VfxImageBase * inputImage = getInputImage(kInput_Image, nullptr);
@@ -59,9 +62,38 @@ void VfxNodeFsfx::draw() const
 		
 		if (shader.isValid())
 		{
+			vfxGpuTimingBlock(VfxNodeFsfx);
+			
 			pushBlend(BLEND_OPAQUE);
 			setShader(shader);
 			{
+				// fixme : remove this code. it's here to test enumerating uniforms so we can dynamically add node type definitions for shaders at some point ..
+				static bool isFirst = true;
+				
+				if (isFirst)
+				{
+					isFirst = false;
+					
+					GLsizei uniformCount = 0;
+					glGetProgramiv(shader.getProgram(), GL_ACTIVE_UNIFORMS, &uniformCount);
+
+					for (int i = 0; i < uniformCount; ++i)
+					{
+						const GLsizei bufferSize = 32;
+						char name[bufferSize];
+						
+						GLsizei length;
+						GLint size;
+						GLenum type;
+						
+						glGetActiveUniform(shader.getProgram(), i, bufferSize, &length, &size, &type, name);
+						
+						const bool supported = type == GL_FLOAT || type == GL_INT || type == GL_BOOL || type == GL_SAMPLER_2D;
+						
+						logDebug("uniform %d. supported=%d, name=%s, type=%d, size=%d", i, supported, name, type, size);
+					}
+				}
+				
 				const VfxImageBase * image1 = getInputImage(kInput_Image1, nullptr);
 				const VfxImageBase * image2 = getInputImage(kInput_Image2, nullptr);
 				const GLuint texture1 = image1 ? image1->getTexture() : 0;

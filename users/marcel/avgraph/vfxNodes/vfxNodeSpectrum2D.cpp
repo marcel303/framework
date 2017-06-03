@@ -1,6 +1,6 @@
 #include "fourier.h"
-#include "framework.h"
 #include "vfxNodeSpectrum2D.h"
+#include <GL/glew.h>
 
 // todo : add normalize option
 // todo : add scale option
@@ -32,6 +32,8 @@ VfxNodeSpectrum2D::~VfxNodeSpectrum2D()
 
 void VfxNodeSpectrum2D::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeSpectrum2D);
+	
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const int transformSx = image ? Fourier::upperPowerOf2(image->sx) : 0;
 	const int transformSy = image ? Fourier::upperPowerOf2(image->sy) : 0;

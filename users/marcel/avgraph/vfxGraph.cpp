@@ -148,6 +148,9 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 
 void VfxGraph::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxGraph_Tick);
+	vfxGpuTimingBlock(VfxGraph_Tick);
+	
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = this;
 	
@@ -205,6 +208,9 @@ void VfxGraph::tick(const float dt)
 
 void VfxGraph::draw() const
 {
+	vfxCpuTimingBlock(VfxGraph_Draw);
+	vfxGpuTimingBlock(VfxGraph_Draw);
+	
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = const_cast<VfxGraph*>(this);
 	

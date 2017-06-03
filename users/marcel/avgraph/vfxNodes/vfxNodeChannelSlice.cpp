@@ -17,6 +17,8 @@ VfxNodeChannelSlice::VfxNodeChannelSlice()
 
 void VfxNodeChannelSlice::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeChannelSlice);
+	
 	const VfxChannels * channels = getInputChannels(kInput_Channels, nullptr);
 	int channelIndex =
 		tryGetInput(kInput_ChannelIndexNorm)->isConnected()

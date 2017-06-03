@@ -29,6 +29,8 @@ void VfxNodePictureCpu::init(const GraphNode & node)
 
 void VfxNodePictureCpu::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodePictureCpu);
+	
 	const char * filename = getInputString(kInput_Source, nullptr);
 	
 	if (filename == nullptr)

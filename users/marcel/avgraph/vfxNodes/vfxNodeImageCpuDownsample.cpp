@@ -30,6 +30,8 @@ VfxNodeImageCpuDownsample::~VfxNodeImageCpuDownsample()
 
 void VfxNodeImageCpuDownsample::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeImageCpuDownsample);
+	
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const DownsampleSize downsampleSize = (DownsampleSize)getInputInt(kInput_DownsampleSize, kDownsampleSize_2x2);
 	const DownsampleChannel downsampleChannel = (DownsampleChannel)getInputInt(kInput_DownsampleChannel, kDownsampleChannel_All);

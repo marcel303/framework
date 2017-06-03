@@ -23,6 +23,8 @@ VfxNodeImpulseResponse::~VfxNodeImpulseResponse()
 
 void VfxNodeImpulseResponse::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeImpulseResponse);
+	
 	const float value = getInputFloat(kInput_Value, 0.f);
 	const float frequency = getInputFloat(kInput_Frequency, 0.f);
 	

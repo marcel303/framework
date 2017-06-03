@@ -1,6 +1,7 @@
-#include "framework.h"
 #include "kinect1.h"
 #include "vfxNodeKinect1.h"
+
+#include "framework.h" // todo : use OpenGL texture object and remove this dependency
 
 VfxNodeKinect1::VfxNodeKinect1()
 	: VfxNodeBase()
@@ -35,10 +36,14 @@ void VfxNodeKinect1::init(const GraphNode & node)
 
 void VfxNodeKinect1::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeKinect1);
+	
 	kinect->lockBuffers();
 	{
 		if (kinect->hasVideo)
 		{
+			vfxGpuTimingBlock(VfxNodeKinect1_VideoTextureUpload);
+			
 			kinect->hasVideo = false;
 			
 			// create texture from video data
@@ -62,6 +67,8 @@ void VfxNodeKinect1::tick(const float dt)
 		
 		if (kinect->hasDepth)
 		{
+			vfxGpuTimingBlock(VfxNodeKinect1_DepthTextureUpload);
+			
 			kinect->hasDepth = false;
 			
 			// FREENECT_DEPTH_MM_MAX_VALUE

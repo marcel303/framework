@@ -1,8 +1,8 @@
-#include "framework.h"
 #include "kinect2.h"
 #include "kinect2FrameListener.h"
 #include "openglTexture.h"
 #include "vfxNodeKinect2.h"
+#include <GL/glew.h>
 #include <libfreenect2/libfreenect2.hpp>
 
 #include <libfreenect2/frame_listener_impl.h> // fixme : remove
@@ -78,6 +78,8 @@ void VfxNodeKinect2::init(const GraphNode & node)
 
 void VfxNodeKinect2::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeKinect2);
+	
 	const bool wantsVideo = outputs[kOutput_VideoImage].isReferenced();
 	const bool wantsDepth = outputs[kOutput_DepthImage].isReferenced();
 	
@@ -93,6 +95,8 @@ void VfxNodeKinect2::tick(const float dt)
 	{
 		if (kinect->listener->video && wantsVideo)
 		{
+			vfxGpuTimingBlock(VfxNodeKinect2_VideoTextureUpload);
+			
 			// create texture from video data
 			
 			if (videoTexture.isChanged(kinect->listener->video->width, kinect->listener->video->height, GL_RGBA8))
@@ -112,6 +116,8 @@ void VfxNodeKinect2::tick(const float dt)
 		
 		if (kinect->listener->depth && wantsDepth)
 		{
+			vfxGpuTimingBlock(VfxNodeKinect2_DepthTextureUpload);
+			
 			// create texture from depth data
 			
 			if (depthTexture.isChanged(kinect->listener->depth->width, kinect->listener->depth->height, GL_R32F))

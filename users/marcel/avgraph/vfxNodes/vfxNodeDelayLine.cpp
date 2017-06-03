@@ -29,6 +29,8 @@ VfxNodeDelayLine::~VfxNodeDelayLine()
 
 void VfxNodeDelayLine::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeDelayLine);
+	
 	const float delay1 = getInputFloat(kInput_Delay1, 0.f);
 	const float delay2 = getInputFloat(kInput_Delay2, 0.f);
 	const float delay3 = getInputFloat(kInput_Delay3, 0.f);

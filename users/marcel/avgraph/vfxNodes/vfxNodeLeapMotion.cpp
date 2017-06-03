@@ -117,6 +117,8 @@ void VfxNodeLeapMotion::init(const GraphNode & node)
 
 void VfxNodeLeapMotion::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeLeapMotion);
+	
 	const bool isConnected = leapController->isConnected();
 	
 	if (isConnected)

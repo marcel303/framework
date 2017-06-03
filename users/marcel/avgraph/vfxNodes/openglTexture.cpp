@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "openglTexture.h"
+#include "vfxProfiling.h"
 
 OpenglTexture::OpenglTexture()
 	: id(0)
@@ -128,6 +129,8 @@ void OpenglTexture::setSampling(const bool _filter, const bool _clamp)
 
 void OpenglTexture::upload(const void * src, const int _srcAlignment, const int srcPitch, const int uploadFormat, const int uploadElementType)
 {
+	vfxGpuTimingBlock(OpenglTexture_Upload);
+	
 	Assert(id != 0);
 	if (id == 0)
 		return;

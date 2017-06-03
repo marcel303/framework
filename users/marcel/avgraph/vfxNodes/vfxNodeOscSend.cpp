@@ -31,6 +31,8 @@ void VfxNodeOscSend::init(const GraphNode & node)
 
 void VfxNodeOscSend::handleTrigger(const int inputSocketIndex, const VfxTriggerData & data)
 {
+	vfxCpuTimingBlock(VfxNodeOscSend);
+	
 	if (inputSocketIndex == kInput_Trigger)
 	{
 		const char * ipAddress = getInputString(kInput_IpAddress, "");

@@ -163,6 +163,8 @@ void VfxNodeOsc::init(const GraphNode & node)
 
 void VfxNodeOsc::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeOscReceive);
+	
 	// update network input
 
 	SDL_LockMutex(oscPacketListener->oscMessageMtx);

@@ -136,6 +136,8 @@ VfxNodeYuvToRgb::~VfxNodeYuvToRgb()
 
 void VfxNodeYuvToRgb::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeYuvToRgb);
+	
 	const VfxImageBase * y = getInputImage(kInput_Y, nullptr);
 	const VfxImageBase * u = getInputImage(kInput_U, nullptr);
 	const VfxImageBase * v = getInputImage(kInput_V, nullptr);
@@ -148,6 +150,8 @@ void VfxNodeYuvToRgb::tick(const float dt)
 	}
 	else
 	{
+		vfxGpuTimingBlock(VfxNodeYuvToRgb);
+		
 		const int sx = y->getSx();
 		const int sy = y->getSy();
 

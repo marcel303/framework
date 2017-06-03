@@ -31,6 +31,9 @@ VfxNodeComposite::~VfxNodeComposite()
 
 void VfxNodeComposite::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeDelayLine);
+	vfxGpuTimingBlock(VfxNodeDelayLine);
+	
 	pushSurface(surface);
 	{
 		surface->clear();

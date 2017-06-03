@@ -16,6 +16,8 @@ VfxNodePhysicalSpring::VfxNodePhysicalSpring()
 
 void VfxNodePhysicalSpring::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodePhysicalSpring);
+	
 	const float strength = getInputFloat(kInput_Strength, 1.f);
 	const float dampen = getInputFloat(kInput_Dampen, .5f);
 	const float externalForce = getInputFloat(kInput_Force, 0.f);

@@ -20,6 +20,8 @@ VfxNodePicture::~VfxNodePicture()
 
 void VfxNodePicture::init(const GraphNode & node)
 {
+	vfxCpuTimingBlock(VfxNodePictureCpu);
+	
 	const char * filename = getInputString(kInput_Source, nullptr);
 	
 	if (filename == nullptr)

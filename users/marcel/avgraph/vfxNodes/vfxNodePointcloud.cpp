@@ -48,6 +48,8 @@ namespace KinectV2
 
 void VfxNodePointcloud::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodePointcloud);
+	
 	const VfxChannels * channels = getInputChannels(kInput_DepthChannel, nullptr);
 	const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
 	

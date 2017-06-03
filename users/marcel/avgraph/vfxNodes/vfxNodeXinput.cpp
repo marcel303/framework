@@ -45,6 +45,8 @@ VfxNodeXinput::VfxNodeXinput()
 
 void VfxNodeXinput::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeXinput);
+	
 	const int id = getInputInt(kInput_Id, 0);
 
 	if (id >= 0 && id < GAMEPAD_MAX)
