@@ -1,5 +1,17 @@
 #pragma once
 
+#include "Debugging.h"
+#include <cmath>
+#include <string.h>
+
+// todo : remove cmath and string.h dependency
+
+namespace tinyxml2
+{
+	class XMLElement;
+	class XMLPrinter;
+}
+
 struct DelayLine
 {
 	float * samples;
@@ -78,4 +90,34 @@ struct DelayLine
 		
 		return sample;
 	}
+};
+
+struct VfxTimeline
+{
+	static const int kMaxKeys = 10;
+
+	struct Key
+	{
+		double beat;
+		int id;
+
+		Key();
+
+		bool operator<(const Key & other) const;
+		bool operator==(const Key & other) const;
+		bool operator!=(const Key & other) const;
+	};
+
+	Key keys[kMaxKeys];
+	int numKeys;
+
+	VfxTimeline();
+
+	bool allocKey(Key *& key);
+	void freeKey(Key *& key);
+	void clearKeys();
+	Key * sortKeys(Key * keyToReturn = 0);
+
+	void save(tinyxml2::XMLPrinter * printer);
+	void load(tinyxml2::XMLElement * elem);
 };
