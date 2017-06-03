@@ -11,6 +11,14 @@ struct UiElem;
 struct UiMenu;
 struct UiMenuStates;
 
+enum UiTextboxResult
+{
+	kUiTextboxResult_NoEvent,
+	kUiTextboxResult_EditingComplete,
+	kUiTextboxResult_EditingCompleteCanceled,
+	kUiTextboxResult_EditingCompleteCleared
+};
+
 struct UiState
 {
 	int x;
@@ -64,13 +72,13 @@ void popMenu();
 bool doButton(const char * name, const float xOffset, const float xScale, const bool lineBreak);
 bool doButton(const char * name);
 
-bool doTextBox(int & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
-bool doTextBox(float & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
-bool doTextBox(std::string & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
+UiTextboxResult doTextBox(int & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
+UiTextboxResult doTextBox(float & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
+UiTextboxResult doTextBox(std::string & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
 
-bool doTextBox(int & value, const char * name, const float dt);
-bool doTextBox(float & value, const char * name, const float dt);
-bool doTextBox(std::string & value, const char * name, const float dt);
+UiTextboxResult doTextBox(int & value, const char * name, const float dt);
+UiTextboxResult doTextBox(float & value, const char * name, const float dt);
+UiTextboxResult doTextBox(std::string & value, const char * name, const float dt);
 
 bool doCheckBox(bool & value, const char * name, const bool isCollapsable);
 

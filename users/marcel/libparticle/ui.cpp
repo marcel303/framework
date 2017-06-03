@@ -652,9 +652,9 @@ static void increment(char * dst, int dstSize, int direction, std::string & valu
 }
 
 template <typename T>
-static bool doTextBoxImpl(T & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
+static UiTextboxResult doTextBoxImpl(T & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
 {
-	bool result = false;
+	UiTextboxResult result = kUiTextboxResult_NoEvent;
 	
 	UiElem & elem = g_menu->getElem(name);
 	
@@ -771,7 +771,10 @@ static bool doTextBoxImpl(T & value, const char * name, const float xOffset, con
 			{
 				elem.deactivate();
 				
-				result = true;
+				if (textField.getText()[0] == 0)
+					result = kUiTextboxResult_EditingCompleteCleared;
+				else
+					result = kUiTextboxResult_EditingComplete;
 			}
 		}
 	}
@@ -795,38 +798,38 @@ static bool doTextBoxImpl(T & value, const char * name, const float xOffset, con
 	return result;
 }
 
-bool doTextBox(int & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
+UiTextboxResult doTextBox(int & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
 {
 	return doTextBoxImpl(value, name, xOffset, xScale, lineBreak, dt);
 }
 
-bool doTextBox(float & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
+UiTextboxResult doTextBox(float & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
 {
 	return doTextBoxImpl(value, name, xOffset, xScale, lineBreak, dt);
 }
 
-bool doTextBox(std::string & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
+UiTextboxResult doTextBox(std::string & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
 {
 	return doTextBoxImpl(value, name, xOffset, xScale, lineBreak, dt);
 }
 
 template <typename T>
-static bool doTextBoxImpl(T & value, const char * name, const float dt)
+static UiTextboxResult doTextBoxImpl(T & value, const char * name, const float dt)
 {
 	return doTextBox(value, name, 0.f, 1.f, true, dt);
 }
 
-bool doTextBox(int & value, const char * name, const float dt)
+UiTextboxResult doTextBox(int & value, const char * name, const float dt)
 {
 	return doTextBoxImpl(value, name, dt);
 }
 
-bool doTextBox(float & value, const char * name, const float dt)
+UiTextboxResult doTextBox(float & value, const char * name, const float dt)
 {
 	return doTextBoxImpl(value, name, dt);
 }
 
-bool doTextBox(std::string & value, const char * name, const float dt)
+UiTextboxResult doTextBox(std::string & value, const char * name, const float dt)
 {
 	return doTextBoxImpl(value, name, dt);
 }
