@@ -711,7 +711,8 @@ struct GraphEdit : GraphEditConnection
 		kState_NodeResize,
 		kState_TouchDrag,
 		kState_TouchZoom,
-		kState_Hidden
+		kState_Hidden,
+		kState_HiddenIdle
 	};
 	
 	struct HitTestResult
@@ -1002,6 +1003,8 @@ struct GraphEdit : GraphEditConnection
 	
 	SDL_Cursor * cursorHand;
 	
+	float idleTime;
+	
 	GraphEdit(GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
 	~GraphEdit();
 	
@@ -1016,12 +1019,15 @@ struct GraphEdit : GraphEditConnection
 	bool tickTouches();
 	void tickMouseScroll(const float dt);
 	void tickKeyboardScroll();
+	
 	void nodeSelectEnd();
 	void nodeDragEnd();
 	void socketConnectEnd();
 	
 	void doMenu(const float dt);
 	void doEditorOptions(const float dt);
+	
+	bool isInputIdle() const;
 	
 	bool tryAddNode(const std::string & typeName, const int x, const int y, const bool select);
 	bool tryAddVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex, const int x, const int y, const bool select);

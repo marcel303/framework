@@ -11,7 +11,7 @@ top priority items from list below:
 todo :
 + add default value to socket definitions
 	+ add to XML
-	- add ability to reset values to their default in UI
+	+ add ability to reset values to their default in UI
 - add zoom in/out
 	+ add basic implementation
 	- improve zoom in and out behavior
@@ -29,7 +29,7 @@ todo :
 - add suggestion based purely on matching first part of string (no fuzzy string comparison)
 	- order of listing should be : pure matches, fuzzy matches, history. show history once type name text box is made active
 	- clear type name text box when adding node
-- automatically hide UI when mouse/keyboard is inactive for a while
++ automatically hide UI when mouse/keyboard is inactive for a while
 - improve OSC node
 	# purchase and evaluate TouchOSC
 	- purchase and evaluate Lemur (by Liine)

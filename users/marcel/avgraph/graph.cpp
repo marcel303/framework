@@ -7,6 +7,8 @@
 #include "tinyxml2_helpers.h"
 #include <cmath>
 
+#include "vfxProfiling.h" // fixme : remove !!
+
 extern const int GFX_SX; // fixme : make property of graph editor
 extern const int GFX_SY;
 
@@ -1734,6 +1736,7 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, nodeTypeNameSelect(nullptr)
 	, uiState(nullptr)
 	, cursorHand(nullptr)
+	, idleTime(0.f)
 {
 	graph = new Graph();
 	
@@ -1993,6 +1996,8 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 
 bool GraphEdit::tick(const float dt)
 {
+	cpuTimingBlock(GraphEdit_Tick);
+	
 	{
 		mousePosition.uiX = mouse.x;
 		mousePosition.uiY = mouse.y;
@@ -2002,6 +2007,8 @@ bool GraphEdit::tick(const float dt)
 		mousePosition.x = dstMousePosition[0];
 		mousePosition.y = dstMousePosition[1];
 	}
+	
+	//
 	
 	if (realTimeConnection != nullptr)
 	{
@@ -2095,6 +2102,15 @@ bool GraphEdit::tick(const float dt)
 		
 		inputIsCaptured |= uiState->activeElem != nullptr;
 	}
+	
+	//
+	
+	const bool isIdle = isInputIdle() && (state == kState_Idle || state == kState_HiddenIdle);
+	
+	if (isIdle)
+		idleTime += dt;
+	else
+		idleTime = 0.f;
 	
 	//
 	
@@ -2534,6 +2550,12 @@ bool GraphEdit::tick(const float dt)
 				break;
 			}
 			
+			if (idleTime > 3.f)
+			{
+				state = kState_HiddenIdle;
+				break;
+			}
+			
 			// drag and zoom
 			
 			if (keyboard.isDown(SDLK_LCTRL) || mouse.isDown(BUTTON_RIGHT))
@@ -2792,6 +2814,16 @@ bool GraphEdit::tick(const float dt)
 			}
 		}
 		break;
+		
+	case kState_HiddenIdle:
+		{
+			if (isIdle == false)
+			{
+				state = kState_Idle;
+				break;
+			}
+		}
+		break;
 	}
 	
 	// update UI
@@ -2964,6 +2996,9 @@ bool GraphEdit::tickTouches()
 					touches.distance = 0.f;
 					touches.initialDistance = 0.f;
 					
+					if (std::abs(dragAndZoom.desiredZoom - 1.f) < .1f)
+						dragAndZoom.desiredZoom = 1.f;
+					
 					//logDebug("touch down: TouchZoom -> TouchDrag");
 					
 					state = kState_TouchDrag;
@@ -2978,6 +3013,9 @@ bool GraphEdit::tickTouches()
 					
 					touches.distance = 0.f;
 					touches.initialDistance = 0.f;
+					
+					if (std::abs(dragAndZoom.desiredZoom - 1.f) < .1f)
+						dragAndZoom.desiredZoom = 1.f;
 					
 					//logDebug("touch down: TouchZoom -> TouchDrag");
 					
@@ -3258,6 +3296,23 @@ void GraphEdit::doEditorOptions(const float dt)
 		uiState->activeColor = nullptr;
 }
 
+bool GraphEdit::isInputIdle() const
+{
+	bool result = true;
+	
+	result &= keyboard.isIdle();
+	result &= mouse.isIdle();
+
+	for (auto & e : framework.events)
+	{
+		result &= e.type != SDL_FINGERDOWN;
+		result &= e.type != SDL_FINGERUP;
+		result &= e.type != SDL_FINGERMOTION;
+	}
+	
+	return result;
+}
+
 bool GraphEdit::tryAddNode(const std::string & typeName, const int x, const int y, const bool select)
 {
 	if (state != kState_Idle)
@@ -3409,7 +3464,9 @@ void GraphEdit::showNotification(const char * format, ...)
 
 void GraphEdit::draw() const
 {
-	if (state == kState_Hidden)
+	cpuTimingBlock(GraphEdit_Draw);
+	
+	if (state == kState_Hidden || state == kState_HiddenIdle)
 		return;
 	
 	gxPushMatrix();
@@ -3656,6 +3713,9 @@ void GraphEdit::draw() const
 		
 	case kState_Hidden:
 		break;
+		
+	case kState_HiddenIdle:
+		break;
 	}
 
 	gxPopMatrix();
@@ -3699,6 +3759,9 @@ void GraphEdit::draw() const
 		break;
 		
 	case kState_Hidden:
+		break;
+	
+	case kState_HiddenIdle:
 		break;
 	}
 	
@@ -3825,6 +3888,8 @@ void GraphEdit::draw() const
 
 void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition & definition) const
 {
+	vfxCpuTimingBlock(drawNode);
+	
 	const bool isEnabled = node.isEnabled;
 	const bool isSelected = selectedNodes.count(node.id) != 0;
 	const bool isFolded = node.editorIsFolded;
@@ -3950,6 +4015,8 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 
 void GraphEdit::drawVisualizer(const GraphNode & node) const
 {
+	vfxCpuTimingBlock(drawVisualizer);
+	
 	const bool isSelected = selectedNodes.count(node.id) != 0;
 	
 	auto srcNode = tryGetNode(node.editorVisualizer.nodeId);
@@ -4285,21 +4352,21 @@ static bool doMenuItem(std::string & valueText, const std::string & name, const 
 	{
 		int value = Parse::Int32(valueText);
 		
-		doTextBox(value, name.c_str(), dt);
+		auto result = doTextBox(value, name.c_str(), dt);
 		
 		valueText = String::ToString(value);
 		
-		return value != Parse::Int32(defaultValue);
+		return (value != Parse::Int32(defaultValue)) && result != kUiTextboxResult_EditingCompleteCleared;
 	}
 	else if (editor == "textbox_float")
 	{
 		float value = Parse::Float(valueText);
 		
-		doTextBox(value, name.c_str(), dt);
+		auto result = doTextBox(value, name.c_str(), dt);
 		
 		valueText = String::FormatC("%f", value);
 		
-		return value != Parse::Float(defaultValue);
+		return (value != Parse::Float(defaultValue)) && result != kUiTextboxResult_EditingCompleteCleared;
 	}
 	else if (editor == "checkbox")
 	{

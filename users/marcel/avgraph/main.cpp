@@ -491,6 +491,8 @@ int main(int argc, char * argv[])
 	//framework.minification = 2;
 	
 	framework.enableDepthBuffer = true;
+	framework.enableDrawTiming = false;
+	//framework.enableProfiling = true;
 	
 	//framework.fullscreen = true;
 	
@@ -499,6 +501,8 @@ int main(int argc, char * argv[])
 		initUi();
 		
 		MP::Util::InitializeLibAvcodec();
+		
+		vfxSetThreadName("Main Thread");
 		
 		//testDatGui();
 		
@@ -566,12 +570,15 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		bool isPaused = false;
+		bool isPaused = false; // todo : move to editor
 		
 		double vflip = 1.0;
 		
 		while (!framework.quitRequested)
 		{
+			vfxCpuTimingBlock(tick);
+			vfxGpuTimingBlock(tick);
+			
 			if (graphEdit->editorOptions.realTimePreview)
 				framework.waitForEvents = false;
 			else
@@ -586,10 +593,16 @@ int main(int argc, char * argv[])
 				framework.timeStep = std::min(framework.timeStep, 1.f / 15.f);
 			}
 			
+			//
+			
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
+			//
+			
 			const float dt = framework.timeStep;
+			
+			//
 			
 			g_currentVfxGraph = realTimeConnection->vfxGraph;
 			
@@ -628,15 +641,17 @@ int main(int argc, char * argv[])
 			
 			framework.beginDraw(31, 31, 31, 255);
 			{
+				vfxGpuTimingBlock(draw);
+				
 				if (vfxGraph != nullptr)
 				{
 					vfxGraph->tick(isPaused ? 0.f : framework.timeStep);
 					
 					gxPushMatrix();
 					{
-						gxTranslatef(0, +GFX_SY/2, 0);
+						gxTranslatef(+GFX_SX/2, +GFX_SY/2, 0);
 						gxScalef(1.f, vflip, 1.f);
-						gxTranslatef(0, -GFX_SY/2, 0);
+						gxTranslatef(-GFX_SX/2, -GFX_SY/2, 0);
 						
 						vfxGraph->draw();
 					}
