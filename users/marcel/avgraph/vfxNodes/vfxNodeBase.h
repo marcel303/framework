@@ -2,6 +2,7 @@
 
 #include "Debugging.h"
 #include "Mat4x4.h"
+#include "vfxProfiling.h"
 #include <stdint.h>
 #include <string>
 #include <vector>
