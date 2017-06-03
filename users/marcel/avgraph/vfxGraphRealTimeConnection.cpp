@@ -733,14 +733,15 @@ static float beatToScreen(int x1, int x2, float beat, const float bpm, const flo
 	return x1 + (x2 - x1) * beat / numBeats;
 }
 
-static VfxTimeline::Key * findNearestKey(VfxTimeline & timeline, const float beat, const float maxDeviation)
+static VfxTimeline::Key * findNearestKey(VfxTimeline & timeline, const int x1, const int x2, const float beat, const float maxDeviation)
 {
 	VfxTimeline::Key * nearestKey = 0;
 	float nearestDistance = 0.f;
 
 	for (int i = 0; i < timeline.numKeys; ++i)
 	{
-		const float dt = timeline.keys[i].beat - beat;
+		const float dt = beatToScreen(x1, x2, timeline.keys[i].beat, timeline.bpm, timeline.length) - beatToScreen(x1, x2, beat, timeline.bpm, timeline.length);
+		
 		const float distance = std::sqrtf(dt * dt);
 
 		if (distance < maxDeviation && (distance < nearestDistance || nearestKey == 0))
@@ -785,7 +786,7 @@ void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const char * 
 	if (selectedKeyIndex >= 0 && selectedKeyIndex < timeline.numKeys)
 		selectedKey = &timeline.keys[selectedKeyIndex];
 	
-	const float kMaxSelectionDeviation = 5 / float(g_menu->sx);
+	const float kMaxSelectionDeviation = 5;
 	
 	const int sx = g_menu->sx * 3;
 	
@@ -816,7 +817,7 @@ void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const char * 
 				// select or insert key
 
 				const float beat = screenToBeat(x1, x2, mouse.x, 0.f, timeline.bpm, timeline.length);
-				auto key = findNearestKey(timeline, beat, kMaxSelectionDeviation);
+				auto key = findNearestKey(timeline, x1, x2, beat, kMaxSelectionDeviation);
 				
 				if (key == nullptr)
 				{
@@ -851,7 +852,7 @@ void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const char * 
 					// erase key
 
 					const float beat = screenToBeat(x1, x2, mouse.x, 0.f, timeline.bpm, timeline.length);
-					auto * key = findNearestKey(timeline, beat, kMaxSelectionDeviation);
+					auto * key = findNearestKey(timeline, x1, x2, beat, kMaxSelectionDeviation);
 
 					if (key)
 					{
@@ -964,7 +965,7 @@ void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const char * 
 		
 		{
 			const float beat = screenToBeat(x1, x2, mouse.x, 0.f, timeline.bpm, timeline.length);
-			auto key = findNearestKey(timeline, beat, kMaxSelectionDeviation);
+			auto key = findNearestKey(timeline, x1, x2, beat, kMaxSelectionDeviation);
 			for (int i = 0; i < timeline.numKeys; ++i)
 			{
 				const float c =
