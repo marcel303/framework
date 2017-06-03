@@ -2550,7 +2550,7 @@ bool GraphEdit::tick(const float dt)
 				break;
 			}
 			
-			if (idleTime > 3.f)
+			if (editorOptions.autoHideUi && idleTime > 3.f)
 			{
 				state = kState_HiddenIdle;
 				break;
@@ -3273,6 +3273,7 @@ void GraphEdit::doEditorOptions(const float dt)
 		if (doDrawer(editorOptions.menuIsVisible, "editor options"))
 		{
 			doCheckBox(editorOptions.realTimePreview, "real-time preview", false);
+			doCheckBox(editorOptions.autoHideUi, "auto-hide UI", false);
 			doCheckBox(editorOptions.showBackground, "show background", false);
 			doCheckBox(editorOptions.showGrid, "show grid", false);
 			doParticleColor(editorOptions.backgroundColor, "background color");
@@ -4167,6 +4168,7 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 		
 		editorOptions.menuIsVisible = boolAttrib(editorOptionsElem, "menuIsVisible", defaultOptions.menuIsVisible);
 		editorOptions.realTimePreview = boolAttrib(editorOptionsElem, "realTimePreview", defaultOptions.realTimePreview);
+		editorOptions.autoHideUi = boolAttrib(editorOptionsElem, "autoHideUi", defaultOptions.autoHideUi);
 		editorOptions.showBackground = boolAttrib(editorOptionsElem, "showBackground", defaultOptions.showBackground);
 		editorOptions.showGrid = boolAttrib(editorOptionsElem, "showGrid", defaultOptions.showGrid);
 		editorOptions.snapToGrid = boolAttrib(editorOptionsElem, "snapToGrid", defaultOptions.snapToGrid);
@@ -4197,6 +4199,7 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 	{	
 		editorElem.PushAttribute("menuIsVisible", editorOptions.menuIsVisible);
 		editorElem.PushAttribute("realTimePreview", editorOptions.realTimePreview);
+		editorElem.PushAttribute("autoHideUi", editorOptions.autoHideUi);
 		editorElem.PushAttribute("showBackground", editorOptions.showBackground);
 		editorElem.PushAttribute("showGrid", editorOptions.showGrid);
 		editorElem.PushAttribute("snapToGrid", editorOptions.snapToGrid);
@@ -4338,9 +4341,9 @@ void GraphUi::PropEdit::setNode(const GraphNodeId _nodeId)
 	}
 }
 
-static bool doMenuItem(std::string & valueText, const std::string & name, const std::string & defaultValue, const std::string & editor, const float dt, const int index, ParticleColor * uiColors, const int maxUiColors, const GraphEdit_EnumDefinition * enumDefinition)
+static bool doMenuItem(std::string & valueText, const std::string & name, const std::string & defaultValue, const std::string & editor, const float dt, const int index, ParticleColor * uiColors, const int maxUiColors, const GraphEdit_EnumDefinition * enumDefinition, bool & pressed)
 {
-	// todo : detect if text box got cleared. if so, set valueText to defaultValue
+	pressed = false;
 	
 	if (editor == "textbox")
 	{
@@ -4427,6 +4430,15 @@ static bool doMenuItem(std::string & valueText, const std::string & name, const 
 		
 		return false;
 	}
+	else if (editor == "button")
+	{
+		if (doButton(name.c_str()))
+		{
+			pressed = true;
+		}
+		
+		return false;
+	}
 	
 	return false;
 }
@@ -4478,13 +4490,15 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				
 				const GraphEdit_EnumDefinition * enumDefinition = typeLibrary->tryGetEnumDefinition(inputSocket.enumName);
 				
+				bool pressed = false;
+				
 				const bool hasValue = doMenuItem(newValueText, inputSocket.name, inputSocket.defaultValue,
 					enumDefinition != nullptr
 					? "enum"
 					: valueTypeDefinition != nullptr
 					? valueTypeDefinition->editor
 					: "textbox",
-					dt, menuItemIndex, uiColors, kMaxUiColors, enumDefinition);
+					dt, menuItemIndex, uiColors, kMaxUiColors, enumDefinition, pressed);
 				
 				menuItemIndex++;
 				
@@ -4516,6 +4530,11 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 					{
 						graphEdit->realTimeConnection->setSrcSocketValue(nodeId, inputSocket.index, inputSocket.name, newValueText);
 					}
+					
+					if (pressed)
+					{
+						graphEdit->realTimeConnection->handleSrcSocketPressed(nodeId, inputSocket.index, inputSocket.name);
+					}
 				}
 			}
 			
@@ -4530,17 +4549,24 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				
 				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(outputSocket.typeName);
 				
+				bool pressed = false;
+				
 				const bool hasValue = doMenuItem(newValueText, outputSocket.name, "",
 					valueTypeDefinition != nullptr
 					? valueTypeDefinition->editor
 					: "textbox",
-					dt, menuItemIndex, uiColors, kMaxUiColors, nullptr);
+					dt, menuItemIndex, uiColors, kMaxUiColors, nullptr, pressed);
 				
 				if (graphEdit->realTimeConnection)
 				{
 					if (newValueText != oldValueText && !(!hasValue && oldValueText.empty()))
 					{
 						graphEdit->realTimeConnection->setDstSocketValue(nodeId, outputSocket.index, outputSocket.name, newValueText);
+					}
+					
+					if (pressed)
+					{
+						graphEdit->realTimeConnection->handleDstSocketPressed(nodeId, outputSocket.index, outputSocket.name);
 					}
 				}
 				

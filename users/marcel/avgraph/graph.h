@@ -675,6 +675,14 @@ struct GraphEdit_RealTimeConnection
 		return false;
 	}
 	
+	virtual void handleSrcSocketPressed(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName)
+	{
+	}
+	
+	virtual void handleDstSocketPressed(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName)
+	{
+	}
+	
 	virtual bool getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines)
 	{
 		return false;
@@ -829,6 +837,7 @@ struct GraphEdit : GraphEditConnection
 	{
 		bool menuIsVisible;
 		bool realTimePreview;
+		bool autoHideUi;
 		bool showBackground;
 		bool showGrid;
 		bool snapToGrid;
@@ -840,6 +849,7 @@ struct GraphEdit : GraphEditConnection
 		EditorOptions()
 			: menuIsVisible(false)
 			, realTimePreview(true)
+			, autoHideUi(false)
 			, showBackground(true)
 			, showGrid(true)
 			, snapToGrid(false)

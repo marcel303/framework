@@ -651,6 +651,37 @@ bool RealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, const
 	return true;
 }
 
+void RealTimeConnection::handleSrcSocketPressed(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName)
+{
+	if (isLoading)
+		return;
+	
+	Assert(vfxGraph != nullptr);
+	if (vfxGraph == nullptr)
+		return;
+	
+	auto nodeItr = vfxGraph->nodes.find(nodeId);
+	
+	Assert(nodeItr != vfxGraph->nodes.end());
+	if (nodeItr == vfxGraph->nodes.end())
+		return;
+	
+	auto node = nodeItr->second;
+	
+	auto input = node->tryGetInput(srcSocketIndex);
+	
+	Assert(input != nullptr);
+	if (input == nullptr)
+		return;
+	
+	node->editorIsTriggered = true;
+	
+	VfxTriggerData data;
+	data.setInt(0);
+	
+	node->handleTrigger(srcSocketIndex, data);
+}
+
 bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines)
 {
 	if (isLoading)
