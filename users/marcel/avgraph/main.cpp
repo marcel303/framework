@@ -62,7 +62,8 @@
 using namespace tinyxml2;
 
 //#define FILENAME "kinect.xml"
-#define FILENAME "yuvtest.xml"
+//#define FILENAME "yuvtest.xml"
+#define FILENAME "timeline.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
