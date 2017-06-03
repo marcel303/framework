@@ -36,18 +36,6 @@ static GLuint checkersTexture = 0;
 
 //
 
-struct UiMenu
-{
-	int sx;
-	
-	std::map<std::string, UiElem> elems;
-	
-	UiElem & getElem(const char * name)
-	{
-		return elems[name];
-	}
-};
-
 struct UiMenuStates
 {
 	std::map<std::string, UiMenu> menus;
@@ -57,7 +45,7 @@ static const int kMaxUiElemStoreDepth = 4;
 
 static std::string g_menuStack[kMaxUiElemStoreDepth];
 static int g_menuStackSize = -1;
-static UiMenu * g_menu = nullptr;
+UiMenu * g_menu = nullptr;
 
 //
 
@@ -284,110 +272,21 @@ void linearToSrgb(float r, float g, float b, float & out_r, float & out_g, float
 
 //
 
-struct UiElem
+UiElem::UiElem()
+	: hasFocus(false)
+	, isActive(false)
+	, clicked(false)
+	, vars()
+	, varMask(0)
+	, textField(nullptr)
 {
-	static const int kMaxVars = 10;
-	
-	bool hasFocus;
-	bool isActive;
-	bool clicked;
-	
-	struct Var
-	{
-		union
-		{
-			bool boolValue;
-			int intValue;
-			float floatValue;
-			void * pointerValue;
-		};
-	};
-	
-	Var vars[kMaxVars];
-	int varMask;
-	
-	EditorTextField * textField; // ugh
-	
-	UiElem()
-		: hasFocus(false)
-		, isActive(false)
-		, clicked(false)
-		, vars()
-		, varMask(0)
-		, textField(nullptr)
-	{
-	}
-	
-	~UiElem()
-	{
-		delete textField;
-		textField = nullptr;
-	}
-	
-	void tick(const int x1, const int y1, const int x2, const int y2);
-	
-	void deactivate();
-	
-	void resetVars()
-	{
-		varMask = 0;
-	}
-	
-	bool & getBool(const int index, const bool defaultValue)
-	{
-		fassert(index >= 0 && index < kMaxVars);
-		if ((varMask & (1 << index)) == 0)
-		{
-			vars[index].boolValue = defaultValue;
-			varMask |= (1 << index);
-		}
-		return vars[index].boolValue;
-	}
-	
-	int & getInt(const int index, const int defaultValue)
-	{
-		fassert(index >= 0 && index < kMaxVars);
-		if ((varMask & (1 << index)) == 0)
-		{
-			vars[index].intValue = defaultValue;
-			varMask |= (1 << index);
-		}
-		return vars[index].intValue;
-	}
-	
-	float & getFloat(const int index, const float defaultValue)
-	{
-		fassert(index >= 0 && index < kMaxVars);
-		if ((varMask & (1 << index)) == 0)
-		{
-			vars[index].floatValue = defaultValue;
-			varMask |= (1 << index);
-		}
-		return vars[index].floatValue;
-	}
-	
-	template <typename T>
-	T & getPointer(const int index, const T defaultValue)
-	{
-		fassert(index >= 0 && index < kMaxVars);
-		if ((varMask & (1 << index)) == 0)
-		{
-			vars[index].pointerValue = defaultValue;
-			varMask |= (1 << index);
-		}
-		return (T&)vars[index].pointerValue;
-	}
-	
-	EditorTextField & getTextField()
-	{
-		if (textField == nullptr)
-			textField = new EditorTextField();
-		
-		return *textField;
-	}
-};
+}
 
-//
+UiElem::~UiElem()
+{
+	delete textField;
+	textField = nullptr;
+}
 
 void UiElem::tick(const int x1, const int y1, const int x2, const int y2)
 {
@@ -421,6 +320,63 @@ void UiElem::deactivate()
 	if (g_uiState->activeElem == this)
 		g_uiState->activeElem = nullptr;
 	isActive = false;
+}
+
+void UiElem::resetVars()
+{
+	varMask = 0;
+}
+
+bool & UiElem::getBool(const int index, const bool defaultValue)
+{
+	fassert(index >= 0 && index < kMaxVars);
+	if ((varMask & (1 << index)) == 0)
+	{
+		vars[index].boolValue = defaultValue;
+		varMask |= (1 << index);
+	}
+	return vars[index].boolValue;
+}
+
+int & UiElem::getInt(const int index, const int defaultValue)
+{
+	fassert(index >= 0 && index < kMaxVars);
+	if ((varMask & (1 << index)) == 0)
+	{
+		vars[index].intValue = defaultValue;
+		varMask |= (1 << index);
+	}
+	return vars[index].intValue;
+}
+
+float & UiElem::getFloat(const int index, const float defaultValue)
+{
+	fassert(index >= 0 && index < kMaxVars);
+	if ((varMask & (1 << index)) == 0)
+	{
+		vars[index].floatValue = defaultValue;
+		varMask |= (1 << index);
+	}
+	return vars[index].floatValue;
+}
+
+void *& UiElem::getPointerImpl(const int index, const void * defaultValue)
+{
+	fassert(index >= 0 && index < kMaxVars);
+	if ((varMask & (1 << index)) == 0)
+	{
+		vars[index].pointerValue = (void*)defaultValue;
+		varMask |= (1 << index);
+	}
+	return vars[index].pointerValue;
+}
+
+EditorTextField & UiElem::getTextField()
+{
+	if (textField == nullptr)
+		textField = new EditorTextField();
+	
+	return *textField;
 }
 
 //

@@ -1,15 +1,20 @@
 #pragma once
 
+#include <map>
 #include <string>
 
 class Color;
 class ColorWheel;
+class EditorTextField;
 struct ParticleColor;
 struct ParticleColorCurve;
 struct ParticleCurve;
 struct UiElem;
 struct UiMenu;
 struct UiMenuStates;
+struct UiState;
+
+extern UiMenu * g_menu;
 
 enum UiTextboxResult
 {
@@ -17,6 +22,65 @@ enum UiTextboxResult
 	kUiTextboxResult_EditingComplete,
 	kUiTextboxResult_EditingCompleteCanceled,
 	kUiTextboxResult_EditingCompleteCleared
+};
+
+struct UiElem
+{
+	static const int kMaxVars = 10;
+	
+	bool hasFocus;
+	bool isActive;
+	bool clicked;
+	
+	struct Var
+	{
+		union
+		{
+			bool boolValue;
+			int intValue;
+			float floatValue;
+			void * pointerValue;
+		};
+	};
+	
+	Var vars[kMaxVars];
+	int varMask;
+	
+	EditorTextField * textField; // ugh
+	
+	UiElem();
+	~UiElem();
+	
+	void tick(const int x1, const int y1, const int x2, const int y2);
+	
+	void deactivate();
+	
+	void resetVars();
+	
+	bool & getBool(const int index, const bool defaultValue);
+	int & getInt(const int index, const int defaultValue);
+	float & getFloat(const int index, const float defaultValue);
+	void *& getPointerImpl(const int index, const void * defaultValue);
+	
+	template <typename T>
+	T & getPointer(const int index, const T defaultValue)
+	{
+		return (T&)getPointerImpl(index, defaultValue);
+	}
+	
+	EditorTextField & getTextField();
+};
+
+struct UiMenu
+{
+	int sx;
+	
+	std::map<std::string, UiElem> elems;
+	
+	UiElem & getElem(const char * name)
+	{
+		return elems[name];
+	}
 };
 
 struct UiState
