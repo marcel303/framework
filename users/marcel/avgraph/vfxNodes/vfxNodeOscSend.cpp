@@ -9,6 +9,7 @@ VfxNodeOscSend::VfxNodeOscSend()
 	: VfxNodeBase()
 	, transmitSocket(nullptr)
 	, history()
+	, numSends()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Port, kVfxPlugType_Int);
@@ -53,9 +54,9 @@ void VfxNodeOscSend::getDescription(VfxNodeDescription & d)
 	d.add("target: %s:%d", ipAddress, udpPort);
 	d.newline();
 	
-	d.add("sent messages:");
+	d.add("sent messages: %d:", numSends);
 	for (auto & h : history)
-		d.add("%s: %d -> %s:%d", h.eventName.c_str(), h.eventId, h.ipAddress.c_str(), h.udpPort);
+		d.add("%s:%d <- %s: %d", h.ipAddress.c_str(), h.udpPort, h.eventName.c_str(), h.eventId);
 }
 
 void VfxNodeOscSend::sendOscEvent(const char * eventName, const int eventId, const char * ipAddress, const int udpPort)
@@ -89,4 +90,6 @@ void VfxNodeOscSend::sendOscEvent(const char * eventName, const int eventId, con
 	
 	while (history.size() > kMaxHistory)
 		history.pop_back();
+	
+	numSends++;
 }

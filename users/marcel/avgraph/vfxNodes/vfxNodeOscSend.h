@@ -38,6 +38,7 @@ struct VfxNodeOscSend : VfxNodeBase
 	class UdpTransmitSocket * transmitSocket;
 	
 	std::list<HistoryItem> history;
+	int numSends;
 	
 	VfxNodeOscSend();
 	virtual ~VfxNodeOscSend() override;
