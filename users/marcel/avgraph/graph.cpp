@@ -4341,7 +4341,7 @@ void GraphUi::PropEdit::setNode(const GraphNodeId _nodeId)
 	}
 }
 
-static bool doMenuItem(std::string & valueText, const std::string & name, const std::string & defaultValue, const std::string & editor, const float dt, const int index, ParticleColor * uiColors, const int maxUiColors, const GraphEdit_EnumDefinition * enumDefinition, bool & pressed)
+static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, const std::string & name, const std::string & defaultValue, const std::string & editor, const float dt, const int index, ParticleColor * uiColors, const int maxUiColors, const GraphEdit_EnumDefinition * enumDefinition, bool & pressed)
 {
 	pressed = false;
 	
@@ -4439,6 +4439,17 @@ static bool doMenuItem(std::string & valueText, const std::string & name, const 
 		
 		return false;
 	}
+	else if (editor == "custom")
+	{
+		if (graphEdit.realTimeConnection != nullptr)
+		{
+			graphEdit.realTimeConnection->doEditor(valueText, name, defaultValue, g_doActions, g_doDraw, dt);
+			
+			return valueText != defaultValue;
+		}
+		
+		return false;
+	}
 	
 	return false;
 }
@@ -4492,7 +4503,7 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				
 				bool pressed = false;
 				
-				const bool hasValue = doMenuItem(newValueText, inputSocket.name, inputSocket.defaultValue,
+				const bool hasValue = doMenuItem(*graphEdit, newValueText, inputSocket.name, inputSocket.defaultValue,
 					enumDefinition != nullptr
 					? "enum"
 					: valueTypeDefinition != nullptr
@@ -4551,7 +4562,7 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				
 				bool pressed = false;
 				
-				const bool hasValue = doMenuItem(newValueText, outputSocket.name, "",
+				const bool hasValue = doMenuItem(*graphEdit, newValueText, outputSocket.name, "",
 					valueTypeDefinition != nullptr
 					? valueTypeDefinition->editor
 					: "textbox",

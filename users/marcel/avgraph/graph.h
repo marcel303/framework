@@ -688,6 +688,11 @@ struct GraphEdit_RealTimeConnection
 		return false;
 	}
 	
+	virtual bool doEditor(std::string & valueText, const std::string & name, const std::string & defaultValue, const bool doActions, const bool doDraw, const float dt)
+	{
+		return false;
+	}
+	
 	virtual int nodeIsActive(const GraphNodeId nodeId)
 	{
 		return kActivity_Inactive;
