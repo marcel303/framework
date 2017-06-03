@@ -1,21 +1,11 @@
 #pragma once
 
 #include "vfxNodeBase.h"
-#include <vector>
+
+#include "vfxTypes.h"
 
 struct VfxNodeTimeline : VfxNodeBase
 {
-	struct Marker
-	{
-		double beat;
-		int id;
-		
-		bool operator<(const Marker & other) const
-		{
-			return beat < other.beat;
-		}
-	};
-
 	enum Input
 	{
 		kInput_Timeline,
@@ -37,8 +27,6 @@ struct VfxNodeTimeline : VfxNodeBase
 		kOutput_BeatTrigger,
 		kOutput_COUNT
 	};
-
-	std::vector<Marker> markers;
 	
 	double time;
 	
@@ -46,6 +34,8 @@ struct VfxNodeTimeline : VfxNodeBase
 	
 	VfxTriggerData eventTriggerData;
 	VfxTriggerData beatTriggerData;
+	
+	VfxTimeline timeline;
 
 	VfxNodeTimeline();
 	

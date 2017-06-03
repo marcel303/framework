@@ -1,14 +1,14 @@
 #include "vfxNodeTimeline.h"
 
-#include "framework.h" // fixme : remove dep. needed for random(..) call
+#include "tinyxml2.h" // fixme
 
 VfxNodeTimeline::VfxNodeTimeline()
 	: VfxNodeBase()
-	, markers()
 	, time(0.0)
 	, isPlaying(false)
 	, eventTriggerData()
 	, beatTriggerData()
+	, timeline()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Timeline, kVfxPlugType_String);
@@ -23,27 +23,27 @@ VfxNodeTimeline::VfxNodeTimeline()
 	addInput(kInput_Time, kVfxPlugType_Float);
 	addOutput(kOutput_EventTrigger, kVfxPlugType_Trigger, &eventTriggerData);
 	addOutput(kOutput_BeatTrigger, kVfxPlugType_Trigger, &beatTriggerData);
-	
-	// generate random markers; needed until we have the UI to edit markers
-	
-	for (int i = 0; i < 20; ++i)
-	{
-		Marker m;
-		m.id = i;
-		m.beat = random(0, 60 * 10);
-		
-		markers.push_back(m);
-	}
-	
-	std::sort(markers.begin(), markers.end());
 }
 
 void VfxNodeTimeline::tick(const float dt)
 {
+	const std::string & timelineText = getInputString(kInput_Timeline, "");
 	const double duration = getInputFloat(kInput_Duration, 0.f);
 	const double bpm = getInputFloat(kInput_Bpm, 0.f);
 	const bool loop = getInputBool(kInput_Loop, true);
 	const double speed = getInputFloat(kInput_Speed, 1.f);
+	
+	timeline = VfxTimeline();
+	
+	tinyxml2::XMLDocument d;
+	
+	if (d.Parse(timelineText.c_str()) == tinyxml2::XML_SUCCESS)
+	{
+		tinyxml2::XMLElement * e = d.FirstChildElement();
+		
+		if (e != nullptr)
+			timeline.load(e);
+	}
 	
 	if (isPlaying)
 	{
@@ -139,11 +139,11 @@ void VfxNodeTimeline::getDescription(VfxNodeDescription & d)
 int VfxNodeTimeline::calculateMarkerIndex(const double time, const double _bpm)
 {
 	const double bpm = _bpm > 0.0 ? _bpm : 60.0;
-	const double beat = time * bpm;
+	const double beat = time * bpm / 60.0;
 	
 	int index = -1;
 	
-	while (index + 1 < markers.size() && beat > markers[index + 1].beat)
+	while (index + 1 < timeline.numKeys && beat > timeline.keys[index + 1].beat)
 		index++;
 	
 	return index;
@@ -154,13 +154,15 @@ void VfxNodeTimeline::handleTimeSegment(const double oldTime, const double newTi
 	const int oldMarkerIndex = calculateMarkerIndex(oldTime, bpm);
 	const int newMarkerIndex = calculateMarkerIndex(newTime, bpm);
 	
+	Assert(newMarkerIndex < timeline.numKeys);
+	
 	if (oldMarkerIndex <= newMarkerIndex)
 	{
 		for (int i = oldMarkerIndex; i < newMarkerIndex; ++i)
 		{
-			const Marker & markerToTrigger = markers[i + 1];
+			const VfxTimeline::Key & keyToTrigger = timeline.keys[i + 1];
 			
-			eventTriggerData.setInt(markerToTrigger.id);
+			eventTriggerData.setInt(keyToTrigger.id);
 			
 			trigger(kOutput_EventTrigger);
 		}
@@ -169,9 +171,9 @@ void VfxNodeTimeline::handleTimeSegment(const double oldTime, const double newTi
 	{
 		for (int i = oldMarkerIndex; i > newMarkerIndex; --i)
 		{
-			const Marker & markerToTrigger = markers[i];
+			const VfxTimeline::Key & keyToTrigger = timeline.keys[i];
 			
-			eventTriggerData.setInt(markerToTrigger.id);
+			eventTriggerData.setInt(keyToTrigger.id);
 			
 			trigger(kOutput_EventTrigger);
 		}
