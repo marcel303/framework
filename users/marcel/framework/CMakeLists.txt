@@ -30,7 +30,7 @@ list(REMOVE_ITEM source example.cpp)
 list(REMOVE_ITEM source ../fbx1/main.cpp)
 
 if (APPLE)
-	list(REMOVE_ITEM source remotery.cpp)
+	#list(REMOVE_ITEM source remotery.cpp)
 endif (APPLE)
 
 add_library(framework ${source})
