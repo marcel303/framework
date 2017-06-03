@@ -714,6 +714,207 @@ bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vecto
 	return true;
 }
 
+#include "../libparticle/ui.h" // todo : remove
+#include "tinyxml2.h"
+#include "vfxTypes.h"
+
+static float screenToBeat(const int x1, const int x2, const int x, const float offset)
+{
+	return saturate((x - x1) / float(x2 - x1) + offset);
+}
+
+static float beatToScreen(int x1, int x2, float t)
+{
+	return x1 + (x2 - x1) * t;
+}
+
+static VfxTimeline::Key * findNearestKey(VfxTimeline & timeline, const float beat, const float maxDeviation)
+{
+	VfxTimeline::Key * nearestKey = 0;
+	float nearestDistance = 0.f;
+
+	for (int i = 0; i < timeline.numKeys; ++i)
+	{
+		const float dt = timeline.keys[i].beat - beat;
+		const float distance = std::sqrtf(dt * dt);
+
+		if (distance < maxDeviation && (distance < nearestDistance || nearestKey == 0))
+		{
+			nearestKey = &timeline.keys[i];
+			nearestDistance = distance;
+		}
+	}
+
+	return nearestKey;
+}
+
+void doTimeline(VfxTimeline & timeline, const char * name)
+{
+	const int kTimelineHeight = 20;
+	const Color kBackgroundFocusColor(0.f, 0.f, 1.f, g_uiState->opacity * .7f);
+	const Color kBackgroundColor(0.f, 0.f, 0.f, g_uiState->opacity * .8f);
+	
+	pushMenu(name);
+	
+	UiElem & elem = g_menu->getElem("timeline");
+	
+	enum Vars
+	{
+		kVar_SelectedKey,
+		kVar_IsDragging,
+		kVar_DragOffset
+	};
+	
+	VfxTimeline::Key *& selectedKey = elem.getPointer<VfxTimeline::Key*>(kVar_SelectedKey, nullptr);
+	bool & isDragging = elem.getBool(kVar_IsDragging, false);
+	float & dragOffset = elem.getFloat(kVar_DragOffset, 0.f);
+	
+	const float kMaxSelectionDeviation = 5 / float(g_menu->sx);
+
+	const int x1 = g_drawX;
+	const int x2 = g_drawX + g_menu->sx;
+	const int y1 = g_drawY;
+	const int y2 = g_drawY + kTimelineHeight;
+
+	g_drawY += kTimelineHeight;
+
+	const int cx1 = x1;
+	const int cy1 = y1;
+	const int cx2 = x2;
+	const int cy2 = y2;
+
+	if (g_doActions)
+	{
+		elem.tick(x1, y1, x2, y2);
+
+		if (!elem.isActive)
+			selectedKey = nullptr;
+		else if (elem.hasFocus)
+		{
+			if (mouse.wentDown(BUTTON_LEFT))
+			{
+				// select or insert key
+
+				const float beat = screenToBeat(x1, x2, mouse.x, 0.f);
+				auto key = findNearestKey(timeline, beat, kMaxSelectionDeviation);
+				
+				if (key == nullptr)
+				{
+					// insert a new key
+
+					if (timeline.allocKey(key))
+					{
+						key->beat = beat;
+						key->id = 0;
+
+						key = timeline.sortKeys(key);
+					}
+				}
+
+				selectedKey = key;
+
+				if (selectedKey != nullptr)
+				{
+					isDragging = true;
+					dragOffset = key->beat - beat;
+				}
+			}
+			
+			if (!mouse.isDown(BUTTON_LEFT))
+			{
+				if (mouse.wentDown(BUTTON_RIGHT) || keyboard.wentDown(SDLK_DELETE) || keyboard.wentDown(SDLK_BACKSPACE))
+				{
+					selectedKey = nullptr;
+
+					// erase key
+
+					const float beat = screenToBeat(x1, x2, mouse.x, 0.f);
+					auto * key = findNearestKey(timeline, beat, kMaxSelectionDeviation);
+
+					if (key)
+					{
+						timeline.freeKey(key);
+					}
+				}
+			}
+		}
+
+		if (isDragging)
+		{
+			if (elem.isActive && selectedKey != nullptr && mouse.isDown(BUTTON_LEFT))
+			{
+				// move selected key around
+
+				const float beat = screenToBeat(x1, x2, mouse.x, dragOffset);
+
+				selectedKey->beat = beat;
+				selectedKey = timeline.sortKeys(selectedKey);
+
+				fassert(selectedKey->beat == beat);
+			}
+			else
+			{
+				isDragging = false;
+			}
+		}
+	}
+
+	if (g_doDraw)
+	{
+		if (elem.hasFocus)
+			setColor(kBackgroundFocusColor);
+		else
+			setColor(kBackgroundColor);
+		drawRect(x1, y1, x2, y2);
+		setColor(colorBlue);
+		drawRectLine(x1, y1, x2, y2);
+
+		setColor(colorWhite);
+		drawUiRectCheckered(cx1, cy1, cx2, cy2, 4.f);
+		
+		{
+			const float beat = screenToBeat(x1, x2, mouse.x, 0.f);
+			auto key = findNearestKey(timeline, beat, kMaxSelectionDeviation);
+			for (int i = 0; i < timeline.numKeys; ++i)
+			{
+				const float c =
+					  !elem.hasFocus ? .5f
+					: (key == &timeline.keys[i]) ? 1.f
+					: (selectedKey == &timeline.keys[i]) ? .8f
+					: .5f;
+				const float x = beatToScreen(x1, x2, timeline.keys[i].beat);
+				const float y = (y1 + y2) / 2.f;
+				drawUiCircle(x, y, 5.5f, c, c, c, 1.f);
+			}
+		}
+	}
+	
+	popMenu();
+}
+
+bool RealTimeConnection::doEditor(std::string & valueText, const std::string & name, const std::string & defaultValue, const bool doActions, const bool doDraw, const float dt)
+{
+	VfxTimeline timeline;
+	
+	tinyxml2::XMLDocument d;
+	if (d.Parse(valueText.c_str()) == tinyxml2::XML_SUCCESS)
+	{
+		tinyxml2::XMLElement * e = d.FirstChildElement();
+		timeline.load(e);
+	}
+	
+	doTimeline(timeline, name.c_str());
+	
+	tinyxml2::XMLPrinter p;
+	p.OpenElement("value");
+	timeline.save(&p);
+	p.CloseElement();
+	
+	valueText = p.CStr();
+	
+	return false;
+}
+
 int RealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 {
 	if (isLoading)
