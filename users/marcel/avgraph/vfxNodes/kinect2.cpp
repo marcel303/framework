@@ -206,6 +206,8 @@ bool Kinect2::threadProcess()
 	//libfreenect2::Frame undistorted(512, 424, 4);
 	//libfreenect2::Frame registered(512, 424, 4);
 	
+	SDL_Delay(50);
+	
 	return true;
 }
 
