@@ -98,7 +98,7 @@ struct VfxTimeline
 
 	struct Key
 	{
-		double beat;
+		float beat;
 		int id;
 
 		Key();
@@ -107,6 +107,9 @@ struct VfxTimeline
 		bool operator==(const Key & other) const;
 		bool operator!=(const Key & other) const;
 	};
+	
+	float length;
+	int bpm;
 
 	Key keys[kMaxKeys];
 	int numKeys;

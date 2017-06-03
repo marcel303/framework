@@ -29,7 +29,10 @@ bool VfxTimeline::Key::operator!=(const Key & other) const
 //
 
 VfxTimeline::VfxTimeline()
-	: numKeys(0)
+	: length(60.f)
+	, bpm(60.f)
+	, keys()
+	, numKeys(0)
 {
 }
 
@@ -95,6 +98,9 @@ VfxTimeline::Key * VfxTimeline::sortKeys(Key * keyToReturn)
 
 void VfxTimeline::save(XMLPrinter * printer)
 {
+	printer->PushAttribute("length", length);
+	printer->PushAttribute("bpm", bpm);
+	
 	for (int i = 0; i < numKeys; ++i)
 	{
 		printer->OpenElement("key");
@@ -108,9 +114,15 @@ void VfxTimeline::save(XMLPrinter * printer)
 
 void VfxTimeline::load(XMLElement * elem)
 {
+	length = 60.f;
+	bpm = 60.f;
+	
 	clearKeys();
 	
 	//
+	
+	length = floatAttrib(elem, "length", length);
+	bpm = floatAttrib(elem, "bpm", bpm);
 	
 	for (auto keyElem = elem->FirstChildElement("key"); keyElem; keyElem = keyElem->NextSiblingElement())
 	{
