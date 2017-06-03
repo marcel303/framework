@@ -3,6 +3,7 @@
 #include <atomic>
 
 #include "mediaplayer_new/MPVideoBuffer.h"
+#include "StringEx.h"
 
 static SDL_mutex * s_avcodecMutex = nullptr;
 static std::atomic_int s_numVideoThreads;
@@ -11,6 +12,12 @@ static const int kMaxVideoThreads = 64;
 static int ExecMediaPlayerThread(void * param)
 {
 	MediaPlayer::Context * context = (MediaPlayer::Context*)param;
+	
+	{
+		char threadName[1024];
+		sprintf_s(threadName, sizeof(threadName), "Media Player (%s)", context->openParams.filename.c_str());
+		cpuTimingSetThreadName(threadName);
+	}
 
 	SDL_LockMutex(context->mpTickMutex);
 
@@ -30,6 +37,8 @@ static int ExecMediaPlayerThread(void * param)
 		
 		if (context->hasBegun)
 		{
+			cpuTimingBlock(tickMediaPlayer);
+			
 			context->tick();
 		}
 		
