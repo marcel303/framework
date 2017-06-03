@@ -11,6 +11,7 @@ VfxNodeTimeline::VfxNodeTimeline()
 	, beatTriggerData()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	addInput(kInput_Timeline, kVfxPlugType_String);
 	addInput(kInput_Duration, kVfxPlugType_Float);
 	addInput(kInput_Bpm, kVfxPlugType_Float);
 	addInput(kInput_Loop, kVfxPlugType_Bool);
@@ -44,8 +45,6 @@ void VfxNodeTimeline::tick(const float dt)
 	const bool loop = getInputBool(kInput_Loop, true);
 	const double speed = getInputFloat(kInput_Speed, 1.f);
 	
-	// todo : add support for custom time. note: will have to remember old marker index as a member variable
-	
 	if (isPlaying)
 	{
 		double oldTime = time;
@@ -61,19 +60,15 @@ void VfxNodeTimeline::tick(const float dt)
 			newTime = time + dt * speed;
 		}
 		
-		const int direction = newTime < oldTime ? -1 : +1;
-		
-		if (tryGetInput(kInput_Duration)->isConnected())
+		if (tryGetInput(kInput_Duration)->isConnected() && duration > 0.0)
 		{
 			while (newTime < 0.0)
 			{
-				Assert(direction == -1);
+				handleTimeSegment(oldTime, 0.0, bpm);
 				
 				if (loop)
 				{
 					newTime += duration;
-					
-					handleTimeSegment(oldTime, 0.0, bpm);
 					
 					oldTime = duration;
 				}
@@ -81,23 +76,17 @@ void VfxNodeTimeline::tick(const float dt)
 				{
 					newTime = 0.0;
 					
-					handleTimeSegment(newTime, oldTime, bpm);
-					
-					oldTime = newTime;
+					oldTime = 0.0;
 				}
 			}
 			
-			// todo : should we use a for loop like above so we trigger events possibly multiple times per tick, if the speed/clock is incremented very, very quickly ?
-			
 			while (newTime >= duration)
 			{
-				Assert(direction == +1);
+				handleTimeSegment(oldTime, duration, bpm);
 				
 				if (loop)
 				{
 					newTime -= duration;
-					
-					handleTimeSegment(oldTime, duration, bpm);
 					
 					oldTime = 0.0;
 				}
@@ -105,18 +94,12 @@ void VfxNodeTimeline::tick(const float dt)
 				{
 					newTime = duration;
 					
-					handleTimeSegment(oldTime, duration, bpm);
-					
 					oldTime = duration;
 				}
 			}
-			
-			handleTimeSegment(oldTime, newTime, bpm);
 		}
-		else
-		{
-			handleTimeSegment(oldTime, newTime, bpm);
-		}
+		
+		handleTimeSegment(oldTime, newTime, bpm);
 		
 		time = newTime;
 	}

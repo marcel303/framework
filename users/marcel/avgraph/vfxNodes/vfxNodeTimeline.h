@@ -18,6 +18,7 @@ struct VfxNodeTimeline : VfxNodeBase
 
 	enum Input
 	{
+		kInput_Timeline,
 		kInput_Duration,
 		kInput_Bpm,
 		kInput_Loop,
