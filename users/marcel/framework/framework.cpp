@@ -107,6 +107,8 @@ Framework::Framework()
 	useClosestDisplayMode = false;
 	basicOpenGL = false;
 	enableDepthBuffer = false;
+	enableDrawTiming = true;
+	enableProfiling = false;
 	minification = 1;
 	enableMidi = false;
 	midiDeviceIndex = 0;
@@ -370,9 +372,12 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	gxInitialize();
 
 #if ENABLE_PROFILING
-	if (rmt_CreateGlobalInstance(&globals.rmt) != RMT_ERROR_NONE)
-		return false;
-	rmt_BindOpenGL();
+	if (framework.enableProfiling)
+	{
+		if (rmt_CreateGlobalInstance(&globals.rmt) != RMT_ERROR_NONE)
+			return false;
+		rmt_BindOpenGL();
+	}
 #endif
 
 	globals.builtinShaders = new BuiltinShaders();
@@ -487,9 +492,12 @@ bool Framework::shutdown()
 	globals.builtinShaders = nullptr;
 
 #if ENABLE_PROFILING
-	rmt_UnbindOpenGL();
-	rmt_DestroyGlobalInstance(globals.rmt);
-	globals.rmt = 0;
+	if (framework.enableProfiling)
+	{
+		rmt_UnbindOpenGL();
+		rmt_DestroyGlobalInstance(globals.rmt);
+		globals.rmt = 0;
+	}
 #endif
 
 	gxShutdown();
@@ -534,6 +542,8 @@ bool Framework::shutdown()
 	useClosestDisplayMode = false;
 	basicOpenGL = false;
 	enableDepthBuffer = false;
+	enableDrawTiming = true;
+	enableProfiling = false;
 	minification = 1;
 	enableMidi = false;
 	midiDeviceIndex = 0;
@@ -1059,7 +1069,8 @@ void Framework::setFullscreen(bool fullscreen)
 void Framework::beginDraw(int r, int g, int b, int a)
 {
 #if ENABLE_OPENGL
-	gpuTimingBegin(frameworkDraw);
+	if (enableDrawTiming)
+		gpuTimingBegin(frameworkDraw);
 
 	// clear back buffer
 	
@@ -1109,7 +1120,8 @@ void Framework::endDraw()
 	
 	globals.debugDraw.numLines = 0;
 	
-	gpuTimingEnd();
+	if (enableDrawTiming)
+		gpuTimingEnd();
 
 	// check for errors
 	
@@ -3947,6 +3959,11 @@ void Mouse::setRelative(bool isRelative)
 {
 	SDL_SetRelativeMouseMode(isRelative ? SDL_TRUE : SDL_FALSE);
 	SDL_CaptureMouse(isRelative ? SDL_TRUE : SDL_FALSE);
+}
+
+bool Mouse::isIdle() const
+{
+	return dx == 0 && dy == 0 && !globals.mouseChange[0] && !globals.mouseChange[1];
 }
 
 // -----

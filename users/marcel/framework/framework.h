@@ -27,14 +27,14 @@
 #if defined(DEBUG)
 	#define ENABLE_LOGGING_DBG 1
 	#define ENABLE_LOGGING 1
-	#define ENABLE_PROFILING 0
+	#define ENABLE_PROFILING 1
 
 	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 1
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 1
 #else
 	#define ENABLE_LOGGING_DBG 0 // do not alter
 	#define ENABLE_LOGGING 0 // do not alter
-	#define ENABLE_PROFILING 0 // do not alter
+	#define ENABLE_PROFILING 1 // do not alter
 
 	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 0 // do not alter
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0 // do not alter
@@ -250,6 +250,8 @@ public:
 	bool exclusiveFullscreen;
 	bool basicOpenGL;
 	bool enableDepthBuffer;
+	bool enableDrawTiming;
+	bool enableProfiling;
 	int minification;
 	bool enableMidi;
 	int midiDeviceIndex;
@@ -958,6 +960,8 @@ public:
 	bool wentUp(BUTTON button) const;
 	void showCursor(bool enabled);
 	void setRelative(bool isRelative);
+	
+	bool isIdle() const; // return true when there is no mouse movement and there are no buttons being pressed
 };
 
 class Keyboard
@@ -1371,6 +1375,7 @@ static T random(T min, T max)
 
 #if ENABLE_PROFILING
 	#include "remotery.h"
+	#define cpuTimingSetThreadName(name) rmt_SetCurrentThreadName(name)
 	#define cpuTimingBlock(name) rmt_ScopedCPUSample(name)
 	#define cpuTimingBegin(name) rmt_BeginCPUSample(name)
 	#define cpuTimingEnd() rmt_EndCPUSample()
@@ -1378,6 +1383,7 @@ static T random(T min, T max)
 	#define gpuTimingBegin(name) rmt_BeginOpenGLSample(name)
 	#define gpuTimingEnd() rmt_EndOpenGLSample()
 #else
+	#define cpuTimingSetThreadName(name) do { } while (false)
 	#define cpuTimingBlock(name) do { } while (false)
 	#define cpuTimingBegin(name) do { } while (false)
 	#define cpuTimingEnd() do { } while (false)
