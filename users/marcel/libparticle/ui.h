@@ -55,6 +55,7 @@ struct UiElem
 	
 	void deactivate();
 	
+	void reset();
 	void resetVars();
 	
 	bool & getBool(const int index, const bool defaultValue);

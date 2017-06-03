@@ -322,6 +322,11 @@ void UiElem::deactivate()
 	isActive = false;
 }
 
+void UiElem::reset()
+{
+	resetVars();
+}
+
 void UiElem::resetVars()
 {
 	varMask = 0;
