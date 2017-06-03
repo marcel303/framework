@@ -716,16 +716,21 @@ bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vecto
 
 #include "../libparticle/ui.h" // todo : remove
 #include "tinyxml2.h"
+#include "tinyxml2_helpers.h"
 #include "vfxTypes.h"
 
-static float screenToBeat(const int x1, const int x2, const int x, const float offset)
+static float screenToBeat(const int x1, const int x2, const int x, const float offset, const float bpm, const float length)
 {
-	return saturate((x - x1) / float(x2 - x1) + offset);
+	const float numBeats = length * bpm / 60.f;
+	
+	return saturate((x - x1) / float(x2 - x1)) * numBeats + offset;
 }
 
-static float beatToScreen(int x1, int x2, float t)
+static float beatToScreen(int x1, int x2, float beat, const float bpm, const float length)
 {
-	return x1 + (x2 - x1) * t;
+	const float numBeats = length * bpm / 60.f;
+	
+	return x1 + (x2 - x1) * beat / numBeats;
 }
 
 static VfxTimeline::Key * findNearestKey(VfxTimeline & timeline, const float beat, const float maxDeviation)
@@ -748,13 +753,21 @@ static VfxTimeline::Key * findNearestKey(VfxTimeline & timeline, const float bea
 	return nearestKey;
 }
 
-void doTimeline(VfxTimeline & timeline, const char * name)
+static void resetSelectedKeyUi()
+{
+	g_menu->getElem("beat").reset();
+	g_menu->getElem("id").reset();
+}
+
+void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const char * name, const float dt)
 {
 	const int kTimelineHeight = 20;
 	const Color kBackgroundFocusColor(0.f, 0.f, 1.f, g_uiState->opacity * .7f);
 	const Color kBackgroundColor(0.f, 0.f, 0.f, g_uiState->opacity * .8f);
 	
 	pushMenu(name);
+	
+	doBreak();
 	
 	UiElem & elem = g_menu->getElem("timeline");
 	
@@ -769,10 +782,17 @@ void doTimeline(VfxTimeline & timeline, const char * name)
 	bool & isDragging = elem.getBool(kVar_IsDragging, false);
 	float & dragOffset = elem.getFloat(kVar_DragOffset, 0.f);
 	
+	if (selectedKeyIndex >= 0 && selectedKeyIndex < timeline.numKeys)
+		selectedKey = &timeline.keys[selectedKeyIndex];
+	
 	const float kMaxSelectionDeviation = 5 / float(g_menu->sx);
+	
+	const int sx = g_menu->sx * 3;
+	
+	g_drawX -= g_menu->sx * 2;
 
 	const int x1 = g_drawX;
-	const int x2 = g_drawX + g_menu->sx;
+	const int x2 = g_drawX + sx;
 	const int y1 = g_drawY;
 	const int y2 = g_drawY + kTimelineHeight;
 
@@ -787,7 +807,7 @@ void doTimeline(VfxTimeline & timeline, const char * name)
 	{
 		elem.tick(x1, y1, x2, y2);
 
-		if (!elem.isActive)
+		if (!elem.isActive && false)
 			selectedKey = nullptr;
 		else if (elem.hasFocus)
 		{
@@ -795,7 +815,7 @@ void doTimeline(VfxTimeline & timeline, const char * name)
 			{
 				// select or insert key
 
-				const float beat = screenToBeat(x1, x2, mouse.x, 0.f);
+				const float beat = screenToBeat(x1, x2, mouse.x, 0.f, timeline.bpm, timeline.length);
 				auto key = findNearestKey(timeline, beat, kMaxSelectionDeviation);
 				
 				if (key == nullptr)
@@ -810,7 +830,7 @@ void doTimeline(VfxTimeline & timeline, const char * name)
 						key = timeline.sortKeys(key);
 					}
 				}
-
+				
 				selectedKey = key;
 
 				if (selectedKey != nullptr)
@@ -818,6 +838,8 @@ void doTimeline(VfxTimeline & timeline, const char * name)
 					isDragging = true;
 					dragOffset = key->beat - beat;
 				}
+				
+				resetSelectedKeyUi();
 			}
 			
 			if (!mouse.isDown(BUTTON_LEFT))
@@ -828,13 +850,15 @@ void doTimeline(VfxTimeline & timeline, const char * name)
 
 					// erase key
 
-					const float beat = screenToBeat(x1, x2, mouse.x, 0.f);
+					const float beat = screenToBeat(x1, x2, mouse.x, 0.f, timeline.bpm, timeline.length);
 					auto * key = findNearestKey(timeline, beat, kMaxSelectionDeviation);
 
 					if (key)
 					{
 						timeline.freeKey(key);
 					}
+					
+					g_menu->getElem("beat").deactivate();
 				}
 			}
 		}
@@ -845,16 +869,57 @@ void doTimeline(VfxTimeline & timeline, const char * name)
 			{
 				// move selected key around
 
-				const float beat = screenToBeat(x1, x2, mouse.x, dragOffset);
+				const float beat = screenToBeat(x1, x2, mouse.x, dragOffset, timeline.bpm, timeline.length);
 
 				selectedKey->beat = beat;
 				selectedKey = timeline.sortKeys(selectedKey);
 
 				fassert(selectedKey->beat == beat);
+				
+				resetSelectedKeyUi();
 			}
 			else
 			{
+				float beat = selectedKey->beat;
+				
+				if (!keyboard.isDown(SDLK_LSHIFT) && !keyboard.isDown(SDLK_RSHIFT))
+					beat = std::round(beat * 4.f) / 4.f;
+				
+				selectedKey->beat = beat;
+				
 				isDragging = false;
+			}
+		}
+		else if (elem.isActive && selectedKey != nullptr)
+		{
+			if (keyboard.wentDown(SDLK_LEFT, true))
+			{
+				selectedKey->beat -= 1.f / 4.f;
+				if (!keyboard.isDown(SDLK_LSHIFT) && !keyboard.isDown(SDLK_RSHIFT))
+					selectedKey->beat = std::round(selectedKey->beat * 4.f) / 4.f;
+				selectedKey = timeline.sortKeys(selectedKey);
+				resetSelectedKeyUi();
+			}
+			
+			if (keyboard.wentDown(SDLK_RIGHT, true))
+			{
+				selectedKey->beat += 1.f / 4.f;
+				if (!keyboard.isDown(SDLK_LSHIFT) && !keyboard.isDown(SDLK_RSHIFT))
+					selectedKey->beat = std::round(selectedKey->beat * 4.f) / 4.f;
+				selectedKey = timeline.sortKeys(selectedKey);
+				resetSelectedKeyUi();
+			}
+			
+			if (keyboard.wentDown(SDLK_UP, true))
+			{
+				selectedKey->id++;
+				resetSelectedKeyUi();
+			}
+			
+			if (keyboard.wentDown(SDLK_DOWN, true))
+			{
+				selectedKey->id--;
+				resetSelectedKeyUi();
 			}
 		}
 	}
@@ -872,8 +937,33 @@ void doTimeline(VfxTimeline & timeline, const char * name)
 		setColor(colorWhite);
 		drawUiRectCheckered(cx1, cy1, cx2, cy2, 4.f);
 		
+		const int numBeatMarkers = int(timeline.length * timeline.bpm / 60.f);
+		
+		hqBegin(HQ_LINES);
 		{
-			const float beat = screenToBeat(x1, x2, mouse.x, 0.f);
+			for (int i = 1; i < numBeatMarkers * 4; ++i)
+			{
+				if ((i % 4) == 0)
+					continue;
+				
+				const float x = beatToScreen(x1, x2, i / 4.f, timeline.bpm, timeline.length);
+				
+				setColor(127, 127, 127, 127);
+				hqLine(x, y1, 1.2f, x, y2, 1.2f);
+			}
+			
+			for (int i = 1; i < numBeatMarkers; ++i)
+			{
+				const float x = beatToScreen(x1, x2, i, timeline.bpm, timeline.length);
+				
+				setColor(255, 127, 0, 127);
+				hqLine(x, y1, 1.2f, x, y2, 1.2f);
+			}
+		}
+		hqEnd();
+		
+		{
+			const float beat = screenToBeat(x1, x2, mouse.x, 0.f, timeline.bpm, timeline.length);
 			auto key = findNearestKey(timeline, beat, kMaxSelectionDeviation);
 			for (int i = 0; i < timeline.numKeys; ++i)
 			{
@@ -882,12 +972,29 @@ void doTimeline(VfxTimeline & timeline, const char * name)
 					: (key == &timeline.keys[i]) ? 1.f
 					: (selectedKey == &timeline.keys[i]) ? .8f
 					: .5f;
-				const float x = beatToScreen(x1, x2, timeline.keys[i].beat);
+				const float x = beatToScreen(x1, x2, timeline.keys[i].beat, timeline.bpm, timeline.length);
 				const float y = (y1 + y2) / 2.f;
 				drawUiCircle(x, y, 5.5f, c, c, c, 1.f);
 			}
 		}
 	}
+	
+	doTextBox(timeline.length, "length (sec)", dt);
+	doTextBox(timeline.bpm, "bpm", dt);
+	
+	if (selectedKey != nullptr)
+	{
+		doTextBox(selectedKey->beat, "beat", dt);
+		doTextBox(selectedKey->id, "id", dt);
+		selectedKey = timeline.sortKeys(selectedKey);
+		fassert(selectedKey != nullptr);
+	}
+	
+	doBreak();
+	
+	g_drawX += g_menu->sx * 2;
+	
+	selectedKeyIndex = selectedKey == nullptr ? -1 : selectedKey - timeline.keys;
 	
 	popMenu();
 }
@@ -896,17 +1003,26 @@ bool RealTimeConnection::doEditor(std::string & valueText, const std::string & n
 {
 	VfxTimeline timeline;
 	
+	int selectedKeyIndex = -1;
+	
 	tinyxml2::XMLDocument d;
 	if (d.Parse(valueText.c_str()) == tinyxml2::XML_SUCCESS)
 	{
 		tinyxml2::XMLElement * e = d.FirstChildElement();
-		timeline.load(e);
+		
+		if (e != nullptr)
+		{
+			selectedKeyIndex = intAttrib(e, "selectedKey", -1);
+			
+			timeline.load(e);
+		}
 	}
 	
-	doTimeline(timeline, name.c_str());
+	doVfxTimeline(timeline, selectedKeyIndex, name.c_str(), dt);
 	
 	tinyxml2::XMLPrinter p;
 	p.OpenElement("value");
+	p.PushAttribute("selectedKey", selectedKeyIndex);
 	timeline.save(&p);
 	p.CloseElement();
 	
