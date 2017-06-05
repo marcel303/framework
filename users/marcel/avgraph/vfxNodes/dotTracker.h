@@ -2,24 +2,17 @@
 
 struct TrackedDot
 {
+	// (x, y) must be passed in as input
 	float x;
 	float y;
 	
+	// id is outputted after running identify on the input set of dots
 	int id;
 	
+	// stuff used internally by the dot tracker, or if you choose to use DGrid
 	TrackedDot * next;
 	int gridIndex;
 	bool identified;
-
-	TrackedDot()
-		: x(0.f)
-		, y(0.f)
-		, id(-1)
-		, next(nullptr)
-		, gridIndex(-1)
-		, identified(false)
-	{
-	}
 };
 
 struct DotTracker
@@ -79,7 +72,11 @@ struct DotTracker
 		return nextAllocId++;
 	}
 
-	void identify(TrackedDot * dots, const int numDots, const float dt, const float maxDistance);
+	void identify(TrackedDot * dots, const int numDots, const float dt, const float maxDistance,
+		const bool useExtrapolation = true,
+		int * addedIds = nullptr, int * numAdded = nullptr,
+		int * removedIds = nullptr, int * numRemoved = nullptr);
+	
 	void identify_hgrid(TrackedDot * dots, const int numDots, const float dt, const float maxDistance);
 	void identify_reference(TrackedDot * dots, const int numDots, const float dt, const float maxDistance);
 };

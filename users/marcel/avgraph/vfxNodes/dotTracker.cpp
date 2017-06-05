@@ -4,7 +4,7 @@
 #include <limits>
 #include <string.h>
 
-#define DO_VALIDATION 1
+#define DO_VALIDATION 0
 
 #if DO_VALIDATION
 	#include <stdio.h>
@@ -116,7 +116,7 @@ void DotTracker::DGrid::erase(TrackedDot * e)
 
 //
 
-void DotTracker::identify(TrackedDot * dots, const int numDots, const float dt, const float maxDistance)
+void DotTracker::identify(TrackedDot * dots, const int numDots, const float dt, const float maxDistance, const bool useExtrapolation, int * addedIds, int * numAdded, int * removedIds, int * numRemoved)
 {
 	// note : even faster would is to iterate over each history item, compute the interesting region (item position in cell coordinates +/- 1), and within this region, calculate the minimum of any dot to any history item in the dot region (dot position in cell coordinates +/- 1). if there is a dot with a nearest history item being the current history item, the current history item can 'claim' this dot. otherwise, the history item is considered 'dead'
 	
@@ -128,8 +128,16 @@ void DotTracker::identify(TrackedDot * dots, const int numDots, const float dt, 
 	{
 		HistoryElem & h = history[i];
 		
-		h.projectedX = h.x + h.speedX * dt;
-		h.projectedY = h.y + h.speedY * dt;
+		if (useExtrapolation)
+		{
+			h.projectedX = h.x + h.speedX * dt;
+			h.projectedY = h.y + h.speedY * dt;
+		}
+		else
+		{
+			h.projectedX = h.x;
+			h.projectedY = h.y;
+		}
 		
 		h.identified = false;
 	}
@@ -266,17 +274,32 @@ void DotTracker::identify(TrackedDot * dots, const int numDots, const float dt, 
 
 	// purge unidentified history elements from the list
 	
-	for (int i = 0; i < historySize; ++i)
+	if (numRemoved)
+		*numRemoved = 0;
+	
+	for (int i = 0; i < historySize; )
 	{
 		if (history[i].identified == false)
 		{
+			if (numRemoved)
+			{
+				if (removedIds)
+					removedIds[*numRemoved] = history[i].id;
+				(*numRemoved)++;
+			}
+			
 			history[i] = history[historySize - 1];
 			
 			historySize--;
 		}
+		else
+			++i;
 	}
 	
 	// allocate history elements for unidentified dots
+	
+	if (numAdded)
+		*numAdded = 0;
 	
 	for (int i = 0; i < numDots; ++i)
 	{
@@ -289,9 +312,18 @@ void DotTracker::identify(TrackedDot * dots, const int numDots, const float dt, 
 			h.speedX = 0.f;
 			h.speedY = 0.f;
 			
-			h.id = allocId();
+			const int id = allocId();
 			
-			dots[i].id = h.id;
+			h.id = id;
+			
+			dots[i].id = id;
+			
+			if (numAdded)
+			{
+				if (addedIds)
+					addedIds[*numAdded] = id;
+				(*numAdded)++;
+			}
 		}
 	}
 	
@@ -429,7 +461,7 @@ void DotTracker::identify_hgrid(TrackedDot * dots, const int numDots, const floa
 		}
 	}
 	
-	for (int i = 0; i < historySize; ++i)
+	for (int i = 0; i < historySize; )
 	{
 		if (history[i].gridIndex != -1)
 		{
@@ -437,6 +469,8 @@ void DotTracker::identify_hgrid(TrackedDot * dots, const int numDots, const floa
 			
 			historySize--;
 		}
+		else
+			++i;
 	}
 	
 #if DO_VALIDATION
@@ -542,7 +576,7 @@ void DotTracker::identify_reference(TrackedDot * dots, const int numDots, const 
 		}
 	}
 	
-	for (int i = 0; i < historySize; ++i)
+	for (int i = 0; i < historySize; )
 	{
 		if (history[i].identified == false)
 		{
@@ -550,6 +584,8 @@ void DotTracker::identify_reference(TrackedDot * dots, const int numDots, const 
 			
 			historySize--;
 		}
+		else
+			++i;
 	}
 	
 #if DO_VALIDATION

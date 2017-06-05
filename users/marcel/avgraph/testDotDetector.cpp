@@ -2,6 +2,7 @@
 #include "image.h"
 #include "Timer.h"
 #include "vfxNodes/dotDetector.h"
+#include "vfxNodes/dotTracker.h"
 #include "../avpaint/video.h"
 
 #define USE_READPIXELS_OPTIMIZE 1
@@ -80,6 +81,9 @@ void testDotDetector()
 		mp.openAsync("mocapc.mp4", MP::kOutputMode_PlanarYUV);
 	}
 	
+	DotTracker dotTracker;
+	bool useDotTracker = true;
+	
 	//
 	
 	uint64_t averageTime = 0;
@@ -128,6 +132,9 @@ void testDotDetector()
 			maxRadius += 1;
 		if (keyboard.wentDown(SDLK_z, true) && maxRadius > 1)
 			maxRadius -= 1;
+		
+		if (keyboard.wentDown(SDLK_i))
+			useDotTracker = !useDotTracker;
 		
 		//
 		
@@ -294,6 +301,26 @@ void testDotDetector()
 		
 		averageTime = ((td2 - td1) * 1 + averageTime * 49) / 50;
 		
+		// track dots
+		
+		TrackedDot trackedDots[kMaxIslands];
+		
+		for (int i = 0; i < numIslands; ++i)
+		{
+			trackedDots[i].x = islands[i].x;
+			trackedDots[i].y = islands[i].y;
+		}
+		
+		// todo : should only do dot tracking when we know we got a new video frame, to ensure motion is stable
+		
+		int numAdded = 0;
+		int numRemoved = 0;
+		
+		if (useDotTracker)
+		{
+			dotTracker.identify(trackedDots, numIslands, dt, 50.f, true, nullptr, &numAdded, nullptr, &numRemoved);
+		}
+		
 		// visualize the dot detection results!
 		
 		framework.beginDraw(0, 0, 0, 0);
@@ -328,6 +355,24 @@ void testDotDetector()
 			}
 			hqEnd();
 			
+			if (useDotTracker)
+			{
+				// draw dot IDs
+				
+				setFont("calibri.ttf");
+				setColor(colorWhite);
+				beginTextBatch();
+				{
+					for (int i = 0; i < numIslands; ++i)
+					{
+						auto & island = islands[i];
+						
+						drawText(island.x, island.y, 14, 0, 0, "%d", trackedDots[i].id);
+					}
+				}
+				endTextBatch();
+			}
+			
  			// draw stats and instructional text
 			
 			setFont("calibri.ttf");
@@ -343,11 +388,17 @@ void testDotDetector()
 			y += spacing;
 			drawText(5, y, fontSize, +1, +1, "useGrid: %d, tresholdFunction: %d, tresholdValue: %d", useGrid ? 1 : 0, tresholdFunction, tresholdValue);
 			y += spacing;
-			drawText(5, y, fontSize, +1, +1, "G = toggle grid. T = next treshold function. A/Z = change treshold");
+			drawText(5, y, fontSize, +1, +1, "G = toggle grid. T = next treshold function. UP/DOWN = change treshold");
 			y += spacing;
 			drawText(5, y, fontSize, +1, +1, "SPACE = quit test. MOUSE_LBUTTON = enable speed/radius test");
 			y += spacing;
+			y += spacing;
+			drawText(5, y, fontSize, +1, +1, "dotTracker enabled: %d. I = toggle dot tracking", useDotTracker);
+			y += spacing;
+			drawText(5, y, fontSize, +1, +1, "tracking %d dots, numAdded: %d, numRemoved: %d", useDotTracker ? numIslands : 0, numAdded, numRemoved);
+			y += spacing;
 		}
+		
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
 	
