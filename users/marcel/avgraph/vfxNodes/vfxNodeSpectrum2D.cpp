@@ -95,7 +95,7 @@ void VfxNodeSpectrum2D::tick(const float dt)
 			{
 				for (int x = 0; x < transformSx; ++x)
 				{
-					rreal[x] = rimag[x];
+					rreal[x] = rimag[x] * scale;
 				}
 			}
 			else if (outputMode == kOutputMode_Length)
