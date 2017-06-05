@@ -80,7 +80,7 @@ void VfxNodeTimeline::tick(const float dt)
 				}
 			}
 			
-			while (newTime >= duration)
+			while (newTime > duration)
 			{
 				handleTimeSegment(oldTime, duration, bpm);
 				
