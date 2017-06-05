@@ -78,6 +78,12 @@ void VfxNodeSpectrum1D::tick(const float dt)
 			
 			if (outputMode == kOutputMode_Channel1And2)
 			{
+				for (int x = 0; x < transformSx; ++x)
+				{
+					rreal[x] = rreal[x] * scale;
+					rimag[x] = rimag[x] * scale;
+				}
+				
 				float * channels[] = { rreal, rimag };
 				
 				channelsOutput.setData(channels, continuous, transformSx, 2);
