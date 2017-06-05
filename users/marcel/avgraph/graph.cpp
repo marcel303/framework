@@ -3309,9 +3309,12 @@ void GraphEdit::doEditorOptions(const float dt)
 			doCheckBox(editorOptions.snapToGrid, "snap to grid", false);
 			doCheckBox(editorOptions.showOneShotActivity, "show one-shot activity", false);
 			doCheckBox(editorOptions.showContinuousActivity, "show continuous activity", false);
+			doCheckBox(editorOptions.showCpuHeat, "show CPU heat", false);
+			doParticleColorCurve(editorOptions.cpuHeatColors, "0 .. 33ms");
 			
 			if (uiState->activeColor == &editorOptions.gridColor ||
-				uiState->activeColor == &editorOptions.backgroundColor)
+				uiState->activeColor == &editorOptions.backgroundColor ||
+				uiState->activeColor != nullptr)
 			{
 				doColorWheel(*uiState->activeColor, "colorwheel", dt);
 			}
@@ -3949,6 +3952,18 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 		}
 	}
 	
+	if (editorOptions.showCpuHeat)
+	{
+		const int timeUs = realTimeConnection->getNodeCpuTimeUs(node.id);
+		const float t = timeUs / 1000.0 / 33.0;
+		
+		ParticleColor color;
+		editorOptions.cpuHeatColors.sample(t, true, color);
+		
+		setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
+		drawRect(0.f, 0.f, definition.sx, nodeSy);
+	}
+	
 	if (isSelected)
 		setColor(255, 255, 255, 255);
 	else
@@ -4202,12 +4217,20 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 		editorOptions.snapToGrid = boolAttrib(editorOptionsElem, "snapToGrid", defaultOptions.snapToGrid);
 		editorOptions.showOneShotActivity = boolAttrib(editorOptionsElem, "showOneShotActivity", defaultOptions.showOneShotActivity);
 		editorOptions.showContinuousActivity = boolAttrib(editorOptionsElem, "showContinuousActivity", defaultOptions.showContinuousActivity);
+		editorOptions.showCpuHeat = boolAttrib(editorOptionsElem, "showCpuHeat", defaultOptions.showCpuHeat);
 		
 		const std::string defaultBackgroundColor = toColor(defaultOptions.backgroundColor).toHexString(true);
 		const std::string defaultGridColor = toColor(defaultOptions.gridColor).toHexString(true);
 		
 		editorOptions.backgroundColor = toParticleColor(Color::fromHex(stringAttrib(editorOptionsElem, "backgroundColor", defaultBackgroundColor.c_str())));
 		editorOptions.gridColor = toParticleColor(Color::fromHex(stringAttrib(editorOptionsElem, "gridColor", defaultGridColor.c_str())));
+		
+		editorOptions.cpuHeatColors = ParticleColorCurve();
+		auto cpuHeatColorsElem = editorOptionsElem->FirstChildElement("cpuHeatColors");
+		if (cpuHeatColorsElem != nullptr)
+		{
+			editorOptions.cpuHeatColors.load(cpuHeatColorsElem);
+		}
 	}
 	
 	return true;
@@ -4239,6 +4262,15 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 		
 		editorElem.PushAttribute("backgroundColor", backgroundColor.c_str());
 		editorElem.PushAttribute("gridColor", gridColor.c_str());
+		
+		if (editorOptions.cpuHeatColors.numKeys > 0)
+		{
+			editorElem.OpenElement("cpuHeatColors");
+			{
+				editorOptions.cpuHeatColors.save(&editorElem);
+			}
+			editorElem.CloseElement();
+		}
 	}
 	editorElem.CloseElement();
 	

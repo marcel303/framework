@@ -51,4 +51,6 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual int nodeIsActive(const GraphNodeId nodeId) override;
 	virtual int linkIsActive(const GraphLinkId linkId) override;
+	
+	virtual int getNodeCpuTimeUs(const GraphNodeId nodeId) const override;
 };

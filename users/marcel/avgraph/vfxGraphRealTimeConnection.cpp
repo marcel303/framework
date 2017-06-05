@@ -1071,3 +1071,23 @@ int RealTimeConnection::linkIsActive(const GraphLinkId linkId)
 	
 	return false;
 }
+
+int RealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const
+{
+		if (isLoading)
+		return false;
+	
+	Assert(vfxGraph != nullptr);
+	if (vfxGraph == nullptr)
+		return false;
+	
+	auto nodeItr = vfxGraph->nodes.find(nodeId);
+	
+	Assert(nodeItr != vfxGraph->nodes.end());
+	if (nodeItr == vfxGraph->nodes.end())
+		return false;
+	
+	auto node = nodeItr->second;
+	
+	return node->tickTimeAvg;
+}

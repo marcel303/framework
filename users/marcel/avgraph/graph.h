@@ -704,6 +704,11 @@ struct GraphEdit_RealTimeConnection
 	{
 		return kActivity_Inactive;
 	}
+	
+	virtual int getNodeCpuTimeUs(const GraphNodeId nodeId) const
+	{
+		return 0;
+	}
 };
 
 //
@@ -850,8 +855,10 @@ struct GraphEdit : GraphEditConnection
 		bool snapToGrid;
 		bool showOneShotActivity;
 		bool showContinuousActivity;
+		bool showCpuHeat;
 		ParticleColor backgroundColor;
 		ParticleColor gridColor;
+		ParticleColorCurve cpuHeatColors;
 		
 		EditorOptions()
 			: menuIsVisible(false)
@@ -862,8 +869,10 @@ struct GraphEdit : GraphEditConnection
 			, snapToGrid(false)
 			, showOneShotActivity(false)
 			, showContinuousActivity(false)
+			, showCpuHeat(false)
 			, backgroundColor(0.f, 0.f, 0.f, .8f)
 			, gridColor(1.f, 1.f, 1.f, .3f)
+			, cpuHeatColors()
 		{
 		}
 	};
