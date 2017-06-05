@@ -35,6 +35,8 @@ struct TrackedDot
 struct DotTracker
 {
 	static const int kHistorySize = kNumPoints * 2;
+	static const int kGridSize = 128;
+	static const int kGridSizeSq = kGridSize * kGridSize;
 	
 	struct HistoryElem
 	{
@@ -51,6 +53,118 @@ struct DotTracker
 		
 		HistoryElem * next;
 		int gridIndex;
+	};
+	
+	struct HGrid
+	{
+		HistoryElem * elems[kGridSizeSq];
+		
+		void init(HistoryElem * history, const int historySize, const int cellSize)
+		{
+			memset(elems, 0, sizeof(elems));
+			
+			for (int i = 0; i < historySize; ++i)
+			{
+				HistoryElem & h = history[i];
+				
+				const int cellX = (int(std::round(h.projectedX / cellSize)) + (kGridSize << 10)) % kGridSize;
+				const int cellY = (int(std::round(h.projectedY / cellSize)) + (kGridSize << 10)) % kGridSize;
+				Assert(cellX >= 0);
+				Assert(cellY >= 0);
+				
+				const int cellIndex = cellX + cellY * kGridSize;
+				
+				h.next = elems[cellIndex];
+				h.gridIndex = cellIndex;
+				
+				elems[cellIndex] = &h;
+			}
+		}
+		
+		void erase(HistoryElem * e)
+		{
+			Assert(e->gridIndex != -1);
+			
+		#if DO_VALIDATION
+			bool removed = false;
+		#endif
+			
+			for (HistoryElem ** gridElem = &elems[e->gridIndex]; *gridElem != nullptr; gridElem = &(*gridElem)->next)
+			{
+				if (*gridElem == e)
+				{
+					*gridElem = (*gridElem)->next;
+					
+				#if DO_VALIDATION
+					removed = true;
+				#endif
+					
+					break;
+				}
+			}
+			
+		#if DO_VALIDATION
+			Assert(removed);
+		#endif
+			
+			e->gridIndex = -1;
+		}
+	};
+	
+	struct DGrid
+	{
+		TrackedDot * elems[kGridSizeSq];
+		
+		void init(TrackedDot * dots, const int numDots, const int cellSize)
+		{
+			memset(elems, 0, sizeof(elems));
+			
+			for (int i = 0; i < numDots; ++i)
+			{
+				TrackedDot & d = dots[i];
+				
+				const int cellX = (int(std::round(d.x / cellSize)) + (kGridSize << 10)) % kGridSize;
+				const int cellY = (int(std::round(d.y / cellSize)) + (kGridSize << 10)) % kGridSize;
+				Assert(cellX >= 0);
+				Assert(cellY >= 0);
+				
+				const int cellIndex = cellX + cellY * kGridSize;
+				
+				d.next = elems[cellIndex];
+				d.gridIndex = cellIndex;
+				
+				elems[cellIndex] = &d;
+			}
+		}
+		
+		void erase(TrackedDot * e)
+		{
+			Assert(e->gridIndex != -1);
+			
+		#if DO_VALIDATION
+			bool removed = false;
+		#endif
+			
+			for (TrackedDot ** gridElem = &elems[e->gridIndex]; *gridElem != nullptr; gridElem = &(*gridElem)->next)
+			{
+				if (*gridElem == e)
+				{
+					*gridElem = (*gridElem)->next;
+					
+				#if DO_VALIDATION
+					removed = true;
+				#endif
+					
+					break;
+				}
+			}
+			
+		#if DO_VALIDATION
+			Assert(removed);
+		#endif
+		
+			e->gridIndex = -1;
+		}
 	};
 
 	HistoryElem history[kHistorySize];
@@ -70,47 +184,34 @@ struct DotTracker
 		return nextAllocId++;
 	}
 
-	void identify(TrackedDot * dots, const int numDots, const float dt, const float maxDistance)
+	void identify_slow(TrackedDot * dots, const int numDots, const float dt, const float maxDistance)
 	{
-		const float maxDistanceSq = maxDistance * maxDistance;
-		
-		const int cellSize = (int(std::ceil(maxDistance)) + 1) / 2;
-		const int gridSize = 128;
-		const int gridSizeSq = gridSize * gridSize;
-		
-		// insert history elements into a grid
-		
-		HistoryElem * grid[gridSizeSq];
-		memset(grid, 0, sizeof(grid));
-		
 		for (int i = 0; i < historySize; ++i)
 		{
 			HistoryElem & h = history[i];
 			
 			h.projectedX = h.x + h.speedX * dt;
 			h.projectedY = h.y + h.speedY * dt;
-			
-			h.identified = false;
-			
-			const int cellX = (int(std::round(h.projectedX / cellSize)) + (gridSize << 10)) % gridSize;
-			const int cellY = (int(std::round(h.projectedY / cellSize)) + (gridSize << 10)) % gridSize;
-			Assert(cellX >= 0);
-			Assert(cellY >= 0);
-			
-			const int cellIndex = cellX + cellY * gridSize;
-			
-			h.next = grid[cellIndex];
-			h.gridIndex = cellIndex;
-			
-			grid[cellIndex] = &h;
 		}
+		
+		// setup grid data structure
+		
+		const float maxDistanceSq = maxDistance * maxDistance;
+		
+		const int cellSize = (int(std::ceil(maxDistance)) + 1) / 2;
+		
+		HGrid hgrid;
+		
+		hgrid.init(history, historySize, cellSize);
 		
 		//
 		
 		bool identified[kNumPoints];
 		memset(identified, 0, sizeof(identified));
 		
+	#if DO_VALIDATION
 		int numEvaluated = 0;
+	#endif
 		
 		for (int n = 0; n < numDots; ++n)
 		{
@@ -128,8 +229,8 @@ struct DotTracker
 				const int baseCellX = int(std::round(dot.x / cellSize));
 				const int baseCellY = int(std::round(dot.y / cellSize));
 				
-				const int cellX1 = baseCellX - 1 + gridSize;
-				const int cellY1 = baseCellY - 1 + gridSize;
+				const int cellX1 = baseCellX - 1 + kGridSize;
+				const int cellY1 = baseCellY - 1 + kGridSize;
 				
 				const int cellX2 = cellX1 + 2;
 				const int cellY2 = cellY1 + 2;
@@ -138,15 +239,15 @@ struct DotTracker
 				{
 					for (int _cellY = cellY1; _cellY <= cellY2; ++_cellY)
 					{
-						const int cellX = _cellX % gridSize;
-						const int cellY = _cellY % gridSize;
+						const int cellX = _cellX % kGridSize;
+						const int cellY = _cellY % kGridSize;
 						
-						const int cellIndex = cellX + cellY * gridSize;
+						const int cellIndex = cellX + cellY * kGridSize;
 						
-						for (HistoryElem * h = grid[cellIndex]; h != nullptr; h = h->next)
+						for (HistoryElem * h = hgrid.elems[cellIndex]; h != nullptr; h = h->next)
 						{
 						#if DO_VALIDATION
-							Assert(h->identified == false);
+							Assert(h->gridIndex != -1);
 						#endif
 							
 							const float dx = h->projectedX - dot.x;
@@ -160,7 +261,9 @@ struct DotTracker
 								bestHistoryIndex = h - history;
 							}
 							
+						#if DO_VALIDATION
 							numEvaluated++;
+						#endif
 						}
 					}
 				}
@@ -182,7 +285,7 @@ struct DotTracker
 					
 					h.id = allocId();
 					
-					h.identified = true;
+					h.gridIndex = -1;
 					
 					dots[i].id = h.id;
 				}
@@ -193,7 +296,7 @@ struct DotTracker
 			{
 				auto & h = history[bestHistoryIndex];
 				
-				Assert(h.identified == false);
+				Assert(h.gridIndex != -1);
 				
 				dots[bestValueIndex].id = h.id;
 				identified[bestValueIndex] = true;
@@ -204,35 +307,13 @@ struct DotTracker
 				h.x = dots[bestValueIndex].x;
 				h.y = dots[bestValueIndex].y;
 				
-			#if DO_VALIDATION
-				bool removed = false;
-			#endif
-				
-				for (HistoryElem ** gridElem = &grid[h.gridIndex]; *gridElem != nullptr; gridElem = &(*gridElem)->next)
-				{
-					if (*gridElem == &h)
-					{
-						*gridElem = (*gridElem)->next;
-						
-					#if DO_VALIDATION
-						removed = true;
-					#endif
-						
-						break;
-					}
-				}
-				
-			#if DO_VALIDATION
-				Assert(removed);
-			#endif
-				
-				h.identified = true;
+				hgrid.erase(&h);
 			}
 		}
 		
 		for (int i = 0; i < historySize; ++i)
 		{
-			if (history[i].identified == false)
+			if (history[i].gridIndex != -1)
 			{
 				history[i] = history[historySize - 1];
 				
@@ -240,25 +321,20 @@ struct DotTracker
 			}
 		}
 		
+	#if DO_VALIDATION
 		logDebug("numEvaluated: %d", numEvaluated);
+	#endif
 		
 		Assert(historySize == numDots);
 	}
 	
-	void identify_fast(TrackedDot * dots, const int numDots, const float dt, const float maxDistance)
+	void identify(TrackedDot * dots, const int numDots, const float dt, const float maxDistance)
 	{
 		// note : even faster would is to iterate over each history item, compute the interesting region (item position in cell coordinates +/- 1), and within this region, calculate the minimum of any dot to any history item in the dot region (dot position in cell coordinates +/- 1). if there is a dot with a nearest history item being the current history item, the current history item can 'claim' this dot. otherwise, the history item is considered 'dead'
 		
 		const float maxDistanceSq = maxDistance * maxDistance;
 		
 		const int cellSize = (int(std::ceil(maxDistance)) + 1) / 2;
-		const int gridSize = 128;
-		const int gridSizeSq = gridSize * gridSize;
-		
-		// insert history elements into a grid
-		
-		HistoryElem * hgrid[gridSizeSq];
-		memset(hgrid, 0, sizeof(hgrid));
 		
 		for (int i = 0; i < historySize; ++i)
 		{
@@ -268,72 +344,51 @@ struct DotTracker
 			h.projectedY = h.y + h.speedY * dt;
 			
 			h.identified = false;
-			
-			const int cellX = (int(std::round(h.projectedX / cellSize)) + (gridSize << 10)) % gridSize;
-			const int cellY = (int(std::round(h.projectedY / cellSize)) + (gridSize << 10)) % gridSize;
-			Assert(cellX >= 0);
-			Assert(cellY >= 0);
-			
-			const int cellIndex = cellX + cellY * gridSize;
-			
-			h.next = hgrid[cellIndex];
-			h.gridIndex = cellIndex;
-			
-			hgrid[cellIndex] = &h;
 		}
+		
+		// insert history elements into a grid
+		
+		HGrid hgrid;
+		hgrid.init(history, historySize, cellSize);
 		
 		// insert dots into a grid
 		
-		TrackedDot * dgrid[gridSizeSq];
-		memset(dgrid, 0, sizeof(dgrid));
-		
-		for (int i = 0; i < numDots; ++i)
-		{
-			TrackedDot & d = dots[i];
-			
-			const int cellX = (int(std::round(d.x / cellSize)) + (gridSize << 10)) % gridSize;
-			const int cellY = (int(std::round(d.y / cellSize)) + (gridSize << 10)) % gridSize;
-			Assert(cellX >= 0);
-			Assert(cellY >= 0);
-			
-			const int cellIndex = cellX + cellY * gridSize;
-			
-			d.next = dgrid[cellIndex];
-			d.gridIndex = cellIndex;
-			
-			dgrid[cellIndex] = &d;
-		}
+		DGrid dgrid;
+		dgrid.init(dots, numDots, cellSize);
 		
 		//
 		
+	#if DO_VALIDATION
 		int numEvaluated = 0;
+	#endif
 		
 		for (int n = 0; n < historySize; ++n)
 		{
 			HistoryElem & h = history[n];
 			
-			float hbestDistance = std::numeric_limits<float>::max();
-			TrackedDot * hbestDot = nullptr;
+			float bestDistance = std::numeric_limits<float>::max();
+			TrackedDot * bestDot = nullptr;
 			
 			const int hbaseCellX = int(std::round(h.projectedX / cellSize));
 			const int hbaseCellY = int(std::round(h.projectedY / cellSize));
 			
-			const int hcellX1 = hbaseCellX - 1 + gridSize;
-			const int hcellY1 = hbaseCellY - 1 + gridSize;
+			const int hcellX1 = hbaseCellX - 1 + kGridSize;
+			const int hcellY1 = hbaseCellY - 1 + kGridSize;
 			
 			const int hcellX2 = hcellX1 + 2;
 			const int hcellY2 = hcellY1 + 2;
 		
 			for (int _hcellX = hcellX1; _hcellX <= hcellX2; ++_hcellX)
 			{
+				const int hcellX = _hcellX % kGridSize;
+				
 				for (int _hcellY = hcellY1; _hcellY <= hcellY2; ++_hcellY)
 				{
-					const int hcellX = _hcellX % gridSize;
-					const int hcellY = _hcellY % gridSize;
+					const int hcellY = _hcellY % kGridSize;
 					
-					const int hcellIndex = hcellX + hcellY * gridSize;
+					const int hcellIndex = hcellX + hcellY * kGridSize;
 					
-					for (TrackedDot * dot = dgrid[hcellIndex]; dot != nullptr; dot = dot->next)
+					for (TrackedDot * dot = dgrid.elems[hcellIndex]; dot != nullptr; dot = dot->next)
 					{
 					#if DO_VALIDATION
 						Assert(dot->gridIndex != -1);
@@ -343,7 +398,7 @@ struct DotTracker
 						const float hdy = h.projectedY - dot->y;
 						const float hdsSq = hdx * hdx + hdy * hdy;
 						
-						if (hdsSq >= hbestDistance || hdsSq >= maxDistanceSq)
+						if (hdsSq >= bestDistance || hdsSq >= maxDistanceSq)
 						{
 							// there's another dot that considers the current history element as its nearest history element. and it's distance is less than the current dot's. we can safely skip this dot for consideration
 							
@@ -352,28 +407,29 @@ struct DotTracker
 						
 						//
 						
-						const int cellX1 = hcellX - 1 + gridSize;
-						const int cellY1 = hcellY - 1 + gridSize;
+						const int cellX1 = hcellX - 1 + kGridSize;
+						const int cellY1 = hcellY - 1 + kGridSize;
 						
 						const int cellX2 = cellX1 + 2;
 						const int cellY2 = cellY1 + 2;
 						
 						for (int _cellX = cellX1; _cellX <= cellX2; ++_cellX)
 						{
+							const int cellX = _cellX % kGridSize;
+							
 							for (int _cellY = cellY1; _cellY <= cellY2; ++_cellY)
 							{
-								const int cellX = _cellX % gridSize;
-								const int cellY = _cellY % gridSize;
+								const int cellY = _cellY % kGridSize;
 								
-								const int cellIndex = cellX + cellY * gridSize;
+								const int cellIndex = cellX + cellY * kGridSize;
 								
-								for (HistoryElem * h = hgrid[cellIndex]; h != nullptr; h = h->next)
+								for (HistoryElem * h = hgrid.elems[cellIndex]; h != nullptr; h = h->next)
 								{
 								#if DO_VALIDATION
-									Assert(h->identified == false);
-								#endif
+									Assert(h->gridIndex != -1);
 								
 									numEvaluated++;
+								#endif
 									
 									const float dx = h->projectedX - dot->x;
 									const float dy = h->projectedY - dot->y;
@@ -387,8 +443,8 @@ struct DotTracker
 							}
 						}
 						
-						hbestDistance = hdsSq;
-						hbestDot = dot;
+						bestDistance = hdsSq;
+						bestDot = dot;
 						
 					nohit:
 						do { } while (false);
@@ -396,72 +452,32 @@ struct DotTracker
 				}
 			}
 			
-			if (hbestDot != nullptr)
+			if (bestDot != nullptr)
 			{
-				hbestDot->id = h.id;
-				
-				// todo : remove dot from grid. it's been claimed by a history element
-				
-				h.speedX = (hbestDot->x - h.x) / dt;
-				h.speedY = (hbestDot->y - h.y) / dt;
-				
-				h.x = hbestDot->x;
-				h.y = hbestDot->y;
-				
-				h.identified = true;
+				bestDot->id = h.id;
 				
 				// remove dot from grid. it's been claimed by a history element
 			
-			#if DO_VALIDATION
-				bool removed = false;
-			#endif
+				dgrid.erase(bestDot);
 				
-				for (TrackedDot ** gridElem = &dgrid[hbestDot->gridIndex]; *gridElem != nullptr; gridElem = &(*gridElem)->next)
-				{
-					if (*gridElem == hbestDot)
-					{
-						*gridElem = (*gridElem)->next;
-						
-					#if DO_VALIDATION
-						removed = true;
-					#endif
-						
-						break;
-					}
-				}
+				// update history element
 				
-			#if DO_VALIDATION
-				Assert(removed);
-			#endif
-			
-				hbestDot->gridIndex = -1;
+				h.speedX = (bestDot->x - h.x) / dt;
+				h.speedY = (bestDot->y - h.y) / dt;
+				
+				h.x = bestDot->x;
+				h.y = bestDot->y;
+				
+				h.identified = true;
 			}
 			
 			// remove history element from grid. it's been considered by all dots surrounding it
 			
-		#if DO_VALIDATION
-			bool removed = false;
-		#endif
-			
-			for (HistoryElem ** gridElem = &hgrid[h.gridIndex]; *gridElem != nullptr; gridElem = &(*gridElem)->next)
-			{
-				if (*gridElem == &h)
-				{
-					*gridElem = (*gridElem)->next;
-					
-				#if DO_VALIDATION
-					removed = true;
-				#endif
-					
-					break;
-				}
-			}
-			
-		#if DO_VALIDATION
-			Assert(removed);
-		#endif
+			hgrid.erase(&h);
 		}
 	
+		// purge unidentified history elements from the list
+		
 		for (int i = 0; i < historySize; ++i)
 		{
 			if (history[i].identified == false)
@@ -471,25 +487,29 @@ struct DotTracker
 				historySize--;
 			}
 		}
-	
+		
+		// allocate history elements for unidentified dots
+		
 		for (int i = 0; i < numDots; ++i)
 		{
-			if (dots[i].gridIndex == -1)
-				continue;
-			
-			auto & h = history[historySize++];
-			
-			h.x = dots[i].x;
-			h.y = dots[i].y;
-			h.speedX = 0.f;
-			h.speedY = 0.f;
-			
-			h.id = allocId();
-			
-			dots[i].id = h.id;
+			if (dots[i].gridIndex != -1)
+			{
+				auto & h = history[historySize++];
+				
+				h.x = dots[i].x;
+				h.y = dots[i].y;
+				h.speedX = 0.f;
+				h.speedY = 0.f;
+				
+				h.id = allocId();
+				
+				dots[i].id = h.id;
+			}
 		}
 		
+	#if DO_VALIDATION
 		logDebug("numEvaluated: %d", numEvaluated);
+	#endif
 		
 		Assert(historySize == numDots);
 	}
@@ -509,7 +529,9 @@ struct DotTracker
 		bool identified[kNumPoints];
 		memset(identified, 0, sizeof(identified));
 		
+	#if DO_VALIDATION
 		int numEvaluated = 0;
+	#endif
 		
 		for (int n = 0; n < numDots; ++n)
 		{
@@ -540,7 +562,9 @@ struct DotTracker
 						bestHistoryIndex = j;
 					}
 					
+				#if DO_VALIDATION
 					numEvaluated++;
+				#endif
 				}
 			}
 			
@@ -596,7 +620,9 @@ struct DotTracker
 			}
 		}
 		
+	#if DO_VALIDATION
 		logDebug("numEvaluated: %d", numEvaluated);
+	#endif
 		
 		Assert(historySize == numDots);
 	}
@@ -618,6 +644,8 @@ void testDotTracker()
 	
 	bool validateReference = false;
 	
+	bool fast = true;
+	
 	float maxRadius = 10.f;
 	
 	do
@@ -637,6 +665,9 @@ void testDotTracker()
 		
 		if (keyboard.wentDown(SDLK_v))
 			validateReference = !validateReference;
+		
+		if (keyboard.wentDown(SDLK_f))
+			fast = !fast;
 		
 		//
 		
@@ -672,8 +703,10 @@ void testDotTracker()
 			dotTracker_reference.identify_reference(dots_reference, kNumPoints, dt, maxRadius);
 		}
 		
-		//dotTracker.identify(dots, kNumPoints, dt, maxRadius);
-		dotTracker.identify_fast(dots, kNumPoints, dt, maxRadius);
+		if (fast)
+			dotTracker.identify(dots, kNumPoints, dt, maxRadius);
+		else
+			dotTracker.identify_slow(dots, kNumPoints, dt, maxRadius);
 		
 		auto t2 = g_TimerRT.TimeUS_get();
 		
@@ -716,7 +749,7 @@ void testDotTracker()
 			
 			setColor(0, 0, 0);
 			drawText(5, 5, 14, +1, +1, "nextAllocId: %d, delay: %dms, time: %.2fms", dotTracker.nextAllocId, delay, timeAvg / 1000.0);
-			drawText(5, 25, 14, +1, +1, "validate: %d [V to toggle]. validationPassed: %d", validateReference, validationPassed);
+			drawText(5, 25, 14, +1, +1, "validate: %d [V to toggle]. validationPassed: %d. fast: %d (F to toggle)", validateReference, validationPassed, fast);
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
