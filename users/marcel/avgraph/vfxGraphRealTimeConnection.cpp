@@ -788,12 +788,11 @@ void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const char * 
 	
 	const float kMaxSelectionDeviation = 5;
 	
-	const int sx = g_menu->sx * 3;
-	
 	g_drawX -= g_menu->sx * 2;
+	g_menu->sx *= 3;
 
 	const int x1 = g_drawX;
-	const int x2 = g_drawX + sx;
+	const int x2 = g_drawX + g_menu->sx;
 	const int y1 = g_drawY;
 	const int y2 = g_drawY + kTimelineHeight;
 
@@ -980,19 +979,20 @@ void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const char * 
 		}
 	}
 	
-	doTextBox(timeline.length, "length (sec)", dt);
-	doTextBox(timeline.bpm, "bpm", dt);
+	doTextBox(timeline.length, "length (sec)", 0.f, .3f, false, dt);
+	doTextBox(timeline.bpm, "bpm", .3f, .3f, true, dt);
 	
 	if (selectedKey != nullptr)
 	{
-		doTextBox(selectedKey->beat, "beat", dt);
-		doTextBox(selectedKey->id, "id", dt);
+		doTextBox(selectedKey->beat, "beat", 0.f, .3f, false, dt);
+		doTextBox(selectedKey->id, "id", .3f, .3f, true, dt);
 		selectedKey = timeline.sortKeys(selectedKey);
 		fassert(selectedKey != nullptr);
 	}
 	
 	doBreak();
 	
+	g_menu->sx /= 3;
 	g_drawX += g_menu->sx * 2;
 	
 	selectedKeyIndex = selectedKey == nullptr ? -1 : selectedKey - timeline.keys;
