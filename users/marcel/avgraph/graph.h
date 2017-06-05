@@ -192,6 +192,7 @@ struct GraphEdit_ValueTypeDefinition
 	std::string editorMin;
 	std::string editorMax;
 	std::string visualizer;
+	bool typeValidation;
 	
 	GraphEdit_ValueTypeDefinition()
 		: typeName()
@@ -200,6 +201,7 @@ struct GraphEdit_ValueTypeDefinition
 		, editorMin()
 		, editorMax()
 		, visualizer()
+		, typeValidation(true)
 	{
 	}
 	
@@ -256,7 +258,7 @@ struct GraphEdit_TypeDefinition
 		{
 		}
 		
-		bool canConnectTo(const OutputSocket & socket) const;
+		bool canConnectTo(const GraphEdit_TypeDefinitionLibrary * typeDefintionLibrary, const OutputSocket & socket) const;
 	};
 	
 	struct OutputSocket
@@ -283,7 +285,7 @@ struct GraphEdit_TypeDefinition
 		{
 		}
 		
-		bool canConnectTo(const InputSocket & socket) const;
+		bool canConnectTo(const GraphEdit_TypeDefinitionLibrary * typeDefintionLibrary, const InputSocket & socket) const;
 	};
 	
 	struct HitTestResult
@@ -1019,6 +1021,7 @@ struct GraphEdit : GraphEditConnection
 	SDL_Cursor * cursorHand;
 	
 	float idleTime;
+	float hideTime;
 	
 	GraphEdit(GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
 	~GraphEdit();

@@ -25,8 +25,10 @@ static const int kGridSize = 16;
 
 //
 
-static bool areCompatibleSocketLinkTypeNames(const std::string & srcTypeName, const std::string & dstTypeName)
+static bool areCompatibleSocketLinkTypeNames(const std::string & srcTypeName, const bool srcTypeValidation, const std::string & dstTypeName)
 {
+	if (srcTypeValidation == false)
+		return true;
 	if (srcTypeName == dstTypeName)
 		return true;
 	
@@ -737,6 +739,7 @@ bool GraphEdit_ValueTypeDefinition::loadXml(const XMLElement * xmlType)
 	editorMin = stringAttrib(xmlType, "editorMin", "0");
 	editorMax = stringAttrib(xmlType, "editorMax", "1");
 	visualizer = stringAttrib(xmlType, "visualizer", "");
+	typeValidation = boolAttrib(xmlType, "typeValidation", true);
 	
 	if (result == false)
 	{
@@ -778,17 +781,21 @@ bool GraphEdit_EnumDefinition::loadXml(const XMLElement * xmlEnum)
 	return result;
 }
 
-bool GraphEdit_TypeDefinition::InputSocket::canConnectTo(const GraphEdit_TypeDefinition::OutputSocket & socket) const
+bool GraphEdit_TypeDefinition::InputSocket::canConnectTo(const GraphEdit_TypeDefinitionLibrary * typeDefintionLibrary, const GraphEdit_TypeDefinition::OutputSocket & socket) const
 {
-	if (!areCompatibleSocketLinkTypeNames(typeName, socket.typeName))
+	auto valueTypeDefinition = typeDefintionLibrary->tryGetValueTypeDefinition(typeName);
+	
+	if (!areCompatibleSocketLinkTypeNames(typeName, valueTypeDefinition ? valueTypeDefinition->typeValidation : true, socket.typeName))
 		return false;
 	
 	return true;
 }
 
-bool GraphEdit_TypeDefinition::OutputSocket::canConnectTo(const GraphEdit_TypeDefinition::InputSocket & socket) const
+bool GraphEdit_TypeDefinition::OutputSocket::canConnectTo(const GraphEdit_TypeDefinitionLibrary * typeDefintionLibrary, const GraphEdit_TypeDefinition::InputSocket & socket) const
 {
-	if (!areCompatibleSocketLinkTypeNames(socket.typeName, typeName))
+	auto valueTypeDefinition = typeDefintionLibrary->tryGetValueTypeDefinition(socket.typeName);
+	
+	if (!areCompatibleSocketLinkTypeNames(socket.typeName, valueTypeDefinition ? valueTypeDefinition->typeValidation : true, typeName))
 		return false;
 	
 	return true;
@@ -1737,6 +1744,7 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, uiState(nullptr)
 	, cursorHand(nullptr)
 	, idleTime(0.f)
+	, hideTime(1.f)
 {
 	graph = new Graph();
 	
@@ -2344,6 +2352,16 @@ bool GraphEdit::tick(const float dt)
 				}
 			}
 			
+			if (keyboard.wentDown(SDLK_MINUS) && keyboard.isDown(SDLK_LGUI))
+			{
+				dragAndZoom.desiredZoom /= 1.5f;
+			}
+			
+			if (keyboard.wentDown(SDLK_EQUALS) && keyboard.isDown(SDLK_LGUI))
+			{
+				dragAndZoom.desiredZoom *= 1.5f;
+			}
+			
 			if (keyboard.wentDown(SDLK_d))
 			{
 				std::set<GraphNodeId> newSelectedNodes;
@@ -2552,6 +2570,8 @@ bool GraphEdit::tick(const float dt)
 			
 			if (editorOptions.autoHideUi && idleTime > 3.f)
 			{
+				hideTime = 1.f;
+				
 				state = kState_HiddenIdle;
 				break;
 			}
@@ -2694,7 +2714,7 @@ bool GraphEdit::tick(const float dt)
 					hitTestResult.node->id != socketConnect.srcNodeId &&
 					hitTestResult.nodeHitTestResult.outputSocket)
 				{
-					if (socketConnect.srcNodeSocket->canConnectTo(*hitTestResult.nodeHitTestResult.outputSocket))
+					if (socketConnect.srcNodeSocket->canConnectTo(typeDefinitionLibrary, *hitTestResult.nodeHitTestResult.outputSocket))
 					{
 						socketConnect.dstNodeId = hitTestResult.node->id;
 						socketConnect.dstNodeSocket = hitTestResult.nodeHitTestResult.outputSocket;
@@ -2729,7 +2749,7 @@ bool GraphEdit::tick(const float dt)
 					hitTestResult.node->id != socketConnect.dstNodeId &&
 					hitTestResult.nodeHitTestResult.inputSocket)
 				{
-					if (socketConnect.dstNodeSocket->canConnectTo(*hitTestResult.nodeHitTestResult.inputSocket))
+					if (socketConnect.dstNodeSocket->canConnectTo(typeDefinitionLibrary, *hitTestResult.nodeHitTestResult.inputSocket))
 					{
 						socketConnect.srcNodeId = hitTestResult.node->id;
 						socketConnect.srcNodeSocket = hitTestResult.nodeHitTestResult.inputSocket;
@@ -2856,6 +2876,14 @@ bool GraphEdit::tick(const float dt)
 			node.tick(*this, dt);
 		}
 	}
+	
+	const bool doHideAnimation = state == kState_HiddenIdle;
+	
+	if (doHideAnimation)
+		hideTime = std::max(0.f, hideTime - dt / .5f);
+	else
+		//hideTime = std::min(1.f, hideTime + dt / .2f);
+		hideTime = 1.f;
 	
 	if (!notifications.empty())
 	{
@@ -3467,7 +3495,7 @@ void GraphEdit::draw() const
 {
 	cpuTimingBlock(GraphEdit_Draw);
 	
-	if (state == kState_Hidden || state == kState_HiddenIdle)
+	if (state == kState_Hidden || (state == kState_HiddenIdle && hideTime == 0.f))
 		return;
 	
 	gxPushMatrix();
@@ -3970,7 +3998,7 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 				{
 					setColor(255, 255, 255);
 				}
-				else if (state == kState_OutputSocketConnect && node.id != socketConnect.dstNodeId && inputSocket.canConnectTo(*socketConnect.dstNodeSocket))
+				else if (state == kState_OutputSocketConnect && node.id != socketConnect.dstNodeId && inputSocket.canConnectTo(typeDefinitionLibrary, *socketConnect.dstNodeSocket))
 				{
 					setColor(255, 255, 255);
 				}
@@ -3998,7 +4026,7 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 				{
 					setColor(255, 255, 255);
 				}
-				else if (state == kState_InputSocketConnect && node.id != socketConnect.srcNodeId && outputSocket.canConnectTo(*socketConnect.srcNodeSocket))
+				else if (state == kState_InputSocketConnect && node.id != socketConnect.srcNodeId && outputSocket.canConnectTo(typeDefinitionLibrary, *socketConnect.srcNodeSocket))
 				{
 					setColor(255, 255, 255);
 				}
@@ -4345,7 +4373,10 @@ static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, con
 {
 	pressed = false;
 	
-	if (editor == "textbox")
+	if (editor == "none")
+	{
+	}
+	else if (editor == "textbox")
 	{
 		doTextBox(valueText, name.c_str(), dt);
 		
@@ -4449,6 +4480,10 @@ static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, con
 		}
 		
 		return false;
+	}
+	else
+	{
+		Assert(false);
 	}
 	
 	return false;
