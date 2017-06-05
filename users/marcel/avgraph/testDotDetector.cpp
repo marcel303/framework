@@ -42,7 +42,7 @@ void testDotDetector()
 			x = random(0, sx);
 			y = random(0, sy);
 			angle = random(0.f, float(M_PI * 2.f));
-			speed = random(50.f, 200.f);
+			speed = random(10.f, 100.f);
 			timer = random(1.f, 3.f);
 			timerRcp = 1.f / timer;
 		}
@@ -64,7 +64,7 @@ void testDotDetector()
 		}
 	};
 	
-	const int kNumCircles = 100;
+	const int kNumCircles = 70;
 	Circle circles[kNumCircles];
 	
 	for (auto & c : circles)
@@ -72,7 +72,7 @@ void testDotDetector()
 		c.randomize();
 	}
 	
-	bool useVideo = true;
+	bool useVideo = false;
 	
 	MediaPlayer mp;
 	
@@ -188,7 +188,7 @@ void testDotDetector()
 				{
 					for (auto & c : circles)
 					{
-						const float radius = c.timer * c.timerRcp * 12.f + 3.f;
+						const float radius = c.timer * c.timerRcp * 12.f + 2.f;
 						
 						setColor(colorBlack);
 						hqFillCircle(c.x, c.y, radius);
@@ -360,14 +360,14 @@ void testDotDetector()
 				// draw dot IDs
 				
 				setFont("calibri.ttf");
-				setColor(colorWhite);
+				setColor(useVideo ? colorWhite : colorBlack);
 				beginTextBatch();
 				{
 					for (int i = 0; i < numIslands; ++i)
 					{
 						auto & island = islands[i];
 						
-						drawText(island.x, island.y, 14, 0, 0, "%d", trackedDots[i].id);
+						drawText(island.x, island.y + maxRadius + 4, 12, 0, +1, "%d", trackedDots[i].id);
 					}
 				}
 				endTextBatch();

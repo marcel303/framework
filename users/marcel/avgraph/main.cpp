@@ -45,6 +45,7 @@
 #include "vfxNodes/vfxNodeSound.h"
 #include "vfxNodes/vfxNodeSpectrum1D.h"
 #include "vfxNodes/vfxNodeSpectrum2D.h"
+#include "vfxNodes/vfxNodeSurface.h"
 #include "vfxNodes/vfxNodeTime.h"
 #include "vfxNodes/vfxNodeTimeline.h"
 #include "vfxNodes/vfxNodeTransform2D.h"
@@ -58,6 +59,7 @@
 
 #include "mediaplayer_new/MPUtil.h"
 #include "../libparticle/ui.h"
+#include "vfxNodeTest.h"
 
 using namespace tinyxml2;
 
@@ -80,6 +82,8 @@ extern void testImpulseResponseMeasurement();
 extern void testTextureAtlas();
 extern void testDynamicTextureAtlas();
 extern void testDotDetector();
+extern void testDotTracker();
+extern void testAudiochannels();
 
 struct VfxNodeTriggerAsFloat : VfxNodeBase
 {
@@ -128,6 +132,9 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	if (false)
 	{
 	}
+	
+	DefineNodeImpl("test", VfxNodeTest)
+	
 	DefineNodeImpl("intBool", VfxNodeBoolLiteral)
 	DefineNodeImpl("intLiteral", VfxNodeIntLiteral)
 	DefineNodeImpl("floatLiteral", VfxNodeFloatLiteral)
@@ -185,6 +192,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 		Assert(vfxGraph->displayNodeId == kGraphNodeIdInvalid);
 		vfxGraph->displayNodeId = nodeId;
 	}
+	DefineNodeImpl("surface", VfxNodeSurface)
 	DefineNodeImpl("mouse", VfxNodeMouse)
 	DefineNodeImpl("xinput", VfxNodeXinput)
 	DefineNodeImpl("touches", VfxNodeTouches)
@@ -523,7 +531,11 @@ int main(int argc, char * argv[])
 		
 		//testDotDetector();
 		
+		//testDotTracker();
+		
 		//testAudioMixing();
+
+		//testAudiochannels();
 		
 		//
 		
@@ -568,6 +580,10 @@ int main(int argc, char * argv[])
 		graphEdit->load(FILENAME);
 		
 		g_currentVfxGraph = nullptr;
+		
+		//
+		
+		Surface * graphEditSurface = new Surface(GFX_SX, GFX_SY, false);
 		
 		//
 		
@@ -659,11 +675,47 @@ int main(int argc, char * argv[])
 					gxPopMatrix();
 				}
 				
-				graphEdit->draw();
+				pushSurface(graphEditSurface);
+				{
+					graphEditSurface->clear();
+					
+					graphEdit->draw();
+				}
+				popSurface();
+				
+				if (graphEdit->hideTime == 1.f)
+					setColor(colorWhite);
+				else if (graphEdit->hideTime == 0.f)
+					setColor(colorBlack);
+				else
+				{
+					pushBlend(BLEND_OPAQUE);
+					{
+						const float radius = std::pow(1.f - graphEdit->hideTime, 2.f) * 200.f;
+						
+						setShader_GaussianBlurH(graphEditSurface->getTexture(), 32, radius);
+						graphEditSurface->postprocess();
+						setShader_GaussianBlurV(graphEditSurface->getTexture(), 32, radius);
+						graphEditSurface->postprocess();
+						clearShader();
+					}
+					popBlend();
+					
+					setColorf(1.f, 1.f, 1.f, graphEdit->hideTime);
+				}
+				
+				gxSetTexture(graphEditSurface->getTexture());
+				{
+					drawRect(0, 0, GFX_SX, GFX_SY);
+				}
+				gxSetTexture(0);
 			}
 			framework.endDraw();
 		}
 		
+		delete graphEditSurface;
+		graphEditSurface = nullptr;
+	
 		delete graphEdit;
 		graphEdit = nullptr;
 		

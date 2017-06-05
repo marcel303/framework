@@ -9,9 +9,6 @@ top priority items from list below:
 - add buttons that can trigger inputs
 
 todo :
-+ add default value to socket definitions
-	+ add to XML
-	+ add ability to reset values to their default in UI
 - add zoom in/out
 	+ add basic implementation
 	- improve zoom in and out behavior
@@ -29,7 +26,6 @@ todo :
 - add suggestion based purely on matching first part of string (no fuzzy string comparison)
 	- order of listing should be : pure matches, fuzzy matches, history. show history once type name text box is made active
 	- clear type name text box when adding node
-+ automatically hide UI when mouse/keyboard is inactive for a while
 - improve OSC node
 	# purchase and evaluate TouchOSC
 	- purchase and evaluate Lemur (by Liine)
@@ -62,24 +58,12 @@ todo :
 	- add special colouring mode of the node background ? black (zero cpu) -> red -> orange -> yellow (high cpu)
 		- add editor option to show cpu/gpu cost
 		- add GPU performance markers
-+ add real-time callback to get node description. report tick/draw time and some other stats/info
-	+ report cpu image channel count, memory usage, alignment
-	+ report video playback time
-	+ report number of dots
-	+ report analog values for xinput
-	+ report list of N latest events OSC send node
-	+ report list of N latest events OSC receive node
+	- add color curve to editor options to use for coloring nodes. from 0 .. 33ms ?
 - report OpenGL texture format and memory usage in node getDescription
 - automatically un-fold nodes (temporarily) when the mouse hovers over them ?
 	- (temporarily) un-fold node when it is the only selected node. allows connecting sockets
 	- (temporarily) un-fold hovered over node when connecting sockets
-+ extend channel data to 2D and possibly 3D. add sx, sy, sz in addition to just 'size', which is ALWAYS equal to sx * sy * sz
-+ add real-time callback for when a socket values is reset back to its default. allow VFX implementation to clean up automatically allocated literals and to disconnect them. otherwise isConnected() for inputs keeps returning true, which messes up the functioning of some nodes
-- reset socket values that are edited by a text box when text box editing ends with or is an empty value
-+ add Z-index to nodes. right now the draw order is fixed
-	+ use a continously incrementing counter (akin to node/link alloc id) and assign to nodes upon select ?
-	+ apply/increment counter upon SINGLE node selection
-	+ upon draw, add nodes to an array, sort, draw
++ render graph edit UI into a separate surface. use fade effect when the UI is being hidden
 
 todo : nodes :
 - add sample.float node
@@ -87,11 +71,13 @@ todo : nodes :
 - add doValuePlotter to ui framework
 - add quantize node
 - investigate how to render 2D and 3D shapes
+	+ add surface node. push surface before tick, pop surface after tick
+	- add sequencer node. has multiple any type inputs. inputs are processed in socket order
 - investigate ways of composing/decomposing image data and masking
 	- is it possible to create a texture sharing data with a base texture and to just change the rgba swizzling?
 - add timeline node (?). trigger events based on markers on a timeline
 	- add (re)start input trigger
-	- can be very very useful to trigger effects
+	+ can be very very useful to trigger effects
 	- add time! input trigger. performs seek operation
 - add MIDI node
 - kinect node:
@@ -117,19 +103,10 @@ todo : nodes :
 	- fix issue with output time not reset on filename change or looping. remember start time? -> capture time on next provide
 - add note (like C1) to MIDI note
 - add adsr node
-+ add CPU image downsample node.
-	+ downscale 2x2 or 4x4. would make dot detector operate faster on large video files
-	+ maybe should work with maximum size constraints and keep downscaling until met ? makes it possible to have varying sized image data incoming and have some kind of size gaurantee on the output
 - add dot tracker node
 - let nodes that allocate a surface push their surface as the current surface, so rendering in dep nodes happens in these surfaces ?
-+ add channels.toGpu node
-	+ convert a single channel into a buffer
-	# convert all channels for GPU access
-		-> this doesn't map well. always convert a single (1D or 2D) channel for now
-	# specify which channels. perhaps using swizzle control ?
-		# perhaps add index 1, 2, 3, 4 and set them to -1 by default, except for index 1, which should be 0
-			-> this has been replaced with a channel select node for now
 - add channel swizzle node. allow it to reorder one or more channels into a new channels object
+- add channel combiner node. allow multiple input channels to be merged into one
 - perhaps add string names to channels, for more convenient selection ? would reduce remixing capability I fear .. maybe let nodes which produce channels to document in their node description what those channels represent, semantically .. but not let the user use those semantics to select channels
 - add image to image_cpu node. default behaviour is to delay by a few frames
 - add integral image node. expose integral as 2d channels object
@@ -139,8 +116,6 @@ todo : nodes :
 		- has a filter option?
 		- has a normalized coords option
 		- has an option to fix coords so it always specified min/max for box or not ?
-+ add channel select node. selects one or a range of channels from a channels object. specify channel (default=0) and numChannels (default=1)
-+ add channel slice node. make a new channels object from a 2D channels object by selecting only between y (default=0) and numSlices (default=1)
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -265,6 +240,25 @@ todo :
 	+ remember where (in node space) the mouse went down
 	+ calculate new position based on current mouse position in graph space and initial position in node space
 + add visualizer for multi-channel data
++ add default value to socket definitions
+	+ add to XML
+	+ add ability to reset values to their default in UI
++ automatically hide UI when mouse/keyboard is inactive for a while
++ add real-time callback to get node description. report tick/draw time and some other stats/info
+	+ report cpu image channel count, memory usage, alignment
+	+ report video playback time
+	+ report number of dots
+	+ report analog values for xinput
+	+ report list of N latest events OSC send node
+	+ report list of N latest events OSC receive node
++ extend channel data to 2D and possibly 3D. add sx, sy, sz in addition to just 'size', which is ALWAYS equal to sx * sy * sz
++ add real-time callback for when a socket value is reset back to its default. allow VFX implementation to clean up automatically allocated literals and to disconnect them. otherwise isConnected() for inputs keeps returning true, which messes up the functioning of some nodes
++ reset socket values that are edited by a text box when text box editing ends with or is an empty value
++ add Z-index to nodes. right now the draw order is fixed
+	+ use a continously incrementing counter (akin to node/link alloc id) and assign to nodes upon select ?
+	+ apply/increment counter upon SINGLE node selection
+	+ upon draw, add nodes to an array, sort, draw
+
 
 todo : nodes :
 + add ease node
@@ -298,6 +292,18 @@ todo : nodes :
 	+ add dot detection node
 	+ will need a vector socket value type ?
 + add spectrum2d node
++ add CPU image downsample node.
+	+ downscale 2x2 or 4x4. would make dot detector operate faster on large video files
+	+ maybe should work with maximum size constraints and keep downscaling until met ? makes it possible to have varying sized image data incoming and have some kind of size gaurantee on the output
++ add channels.toGpu node
+	+ convert a single channel into a buffer
+	# convert all channels for GPU access
+		-> this doesn't map well. always convert a single (1D or 2D) channel for now
+	# specify which channels. perhaps using swizzle control ?
+		# perhaps add index 1, 2, 3, 4 and set them to -1 by default, except for index 1, which should be 0
+			-> this has been replaced with a channel select node for now
++ add channel select node. selects one or a range of channels from a channels object. specify channel (default=0) and numChannels (default=1)
++ add channel slice node. make a new channels object from a 2D channels object by selecting only between y (default=0) and numSlices (default=1)
 
 todo : framework :
 + optimize text rendering. use a dynamic texture atlas instead of one separate texture for each glyph. drawText should only emit a single draw call
