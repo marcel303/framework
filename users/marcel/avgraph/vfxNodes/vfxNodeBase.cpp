@@ -359,7 +359,11 @@ void VfxChannels::reset()
 
 void VfxPlug::connectTo(VfxPlug & dst)
 {
-	if (dst.type != type)
+	if (dst.type == kVfxPlugType_DontCare)
+	{
+		dst.isReferencedByLink = true;
+	}
+	else if (dst.type != type)
 	{
 		logError("node connection failed. type mismatch");
 	}
@@ -373,7 +377,11 @@ void VfxPlug::connectTo(VfxPlug & dst)
 
 void VfxPlug::connectTo(void * dstMem, const VfxPlugType dstType)
 {
-	if (dstType != type)
+	if (dstType == kVfxPlugType_DontCare)
+	{
+		//
+	}
+	else if (dstType != type)
 	{
 		logError("node connection failed. type mismatch");
 	}
@@ -511,21 +519,37 @@ void VfxNodeBase::traverseTick(const int traversalId, const float dt)
 	Assert(lastTickTraversalId != traversalId);
 	lastTickTraversalId = traversalId;
 	
+	//
+	
+	beforeTick();
+	
+	//
+	
 	for (auto predep : predeps)
 	{
 		if (predep->lastTickTraversalId != traversalId)
 			predep->traverseTick(traversalId, dt);
 	}
 	
+	//
+	
 	tickOrder = g_currentVfxGraph->nextTickOrder++;
+	
+	//
 	
 	const uint64_t t1 = g_TimerRT.TimeUS_get();
 	
 	tick(dt);
 	
 	const uint64_t t2 = g_TimerRT.TimeUS_get();
-		
+	
+	//
+	
 	tickTimeAvg = (tickTimeAvg * 99 + (t2 - t1)) / 100;
+	
+	//
+	
+	afterTick();
 }
 
 void VfxNodeBase::traverseDraw(const int traversalId)

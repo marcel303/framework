@@ -290,6 +290,7 @@ struct VfxChannels
 enum VfxPlugType
 {
 	kVfxPlugType_None,
+	kVfxPlugType_DontCare,
 	kVfxPlugType_Bool,
 	kVfxPlugType_Int,
 	kVfxPlugType_Float,
@@ -595,6 +596,16 @@ struct VfxNodeBase
 			return plug->getString().c_str();
 	}
 	
+	const VfxColor * getInputColor(const int index, const VfxColor * defaultValue) const
+	{
+		const VfxPlug * plug = tryGetInput(index);
+		
+		if (plug == nullptr || !plug->isConnected())
+			return defaultValue;
+		else
+			return &plug->getColor();
+	}
+	
 	const VfxImageBase * getInputImage(const int index, const VfxImageBase * defaultValue) const
 	{
 		const VfxPlug * plug = tryGetInput(index);
@@ -651,6 +662,8 @@ struct VfxNodeBase
 	virtual void initSelf(const GraphNode & node) { }
 	virtual void init(const GraphNode & node) { }
 	virtual void tick(const float dt) { }
+	virtual void beforeTick() { }
+	virtual void afterTick() { }
 	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) { }
 	virtual void draw() const { }
 	
