@@ -121,7 +121,7 @@ void ParticleColor::interpolateBetweenLinear(const ParticleColor & v1, const Par
 	linearToSrgb(linear[0], linear[1], linear[2], rgba[0], rgba[1], rgba[2]);
 }
 
-void ParticleColor::save(XMLPrinter * printer)
+void ParticleColor::save(XMLPrinter * printer) const
 {
 	printer->PushAttribute("r", rgba[0]);
 	printer->PushAttribute("g", rgba[1]);
@@ -129,7 +129,7 @@ void ParticleColor::save(XMLPrinter * printer)
 	printer->PushAttribute("a", rgba[3]);
 }
 
-void ParticleColor::load(XMLElement * elem)
+void ParticleColor::load(const XMLElement * elem)
 {
 	*this = ParticleColor();
 
@@ -192,7 +192,7 @@ float ParticleCurve::sample(const float _t) const
 	}
 }
 
-void ParticleCurve::save(XMLPrinter * printer)
+void ParticleCurve::save(XMLPrinter * printer) const
 {
 	printer->PushAttribute("numKeys", numKeys);
 	for (int i = 0; i < numKeys; ++i)
@@ -207,11 +207,11 @@ void ParticleCurve::save(XMLPrinter * printer)
 	}
 }
 
-void ParticleCurve::load(XMLElement * elem)
+void ParticleCurve::load(const XMLElement * elem)
 {
 	memset(this, 0, sizeof(*this));
 
-	for (XMLElement * keyElem = elem->FirstChildElement("key"); keyElem; keyElem = keyElem->NextSiblingElement())
+	for (const XMLElement * keyElem = elem->FirstChildElement("key"); keyElem; keyElem = keyElem->NextSiblingElement())
 	{
 		if (numKeys < kMaxKeys)
 		{
@@ -407,7 +407,7 @@ void ParticleColorCurve::sample(const float t, const bool linearColorSpace, Part
 	}
 }
 
-void ParticleColorCurve::save(XMLPrinter * printer)
+void ParticleColorCurve::save(XMLPrinter * printer) const
 {
 	printer->PushAttribute("useLinearColorSpace", useLinearColorSpace);
 	
@@ -422,13 +422,13 @@ void ParticleColorCurve::save(XMLPrinter * printer)
 	}
 }
 
-void ParticleColorCurve::load(XMLElement * elem)
+void ParticleColorCurve::load(const XMLElement * elem)
 {
 	clearKeys();
 	
 	//
 	
-	useLinearColorSpace = boolAttrib(elem, "useLinearColorSpace", useLinearColorSpace);
+	useLinearColorSpace = boolAttrib(elem, "useLinearColorSpace", true);
 	
 	for (auto keyElem = elem->FirstChildElement("key"); keyElem; keyElem = keyElem->NextSiblingElement())
 	{
@@ -479,7 +479,7 @@ bool ParticleEmitterInfo::operator!=(const ParticleEmitterInfo & other) const
 	return !(*this == other);
 }
 
-void ParticleEmitterInfo::save(XMLPrinter * printer)
+void ParticleEmitterInfo::save(XMLPrinter * printer) const
 {
 	printer->PushAttribute("name", name);
 	printer->PushAttribute("duration", duration);
@@ -503,7 +503,7 @@ void ParticleEmitterInfo::save(XMLPrinter * printer)
 	printer->CloseElement();
 }
 
-void ParticleEmitterInfo::load(XMLElement * elem)
+void ParticleEmitterInfo::load(const XMLElement * elem)
 {
 	*this = ParticleEmitterInfo();
 
@@ -622,7 +622,7 @@ void ParticleInfo::clearBursts()
 	numBursts = 0;
 }
 
-void ParticleInfo::save(XMLPrinter * printer)
+void ParticleInfo::save(XMLPrinter * printer) const
 {
 	// emission
 	printer->PushAttribute("rate", rate);
@@ -744,7 +744,7 @@ void ParticleInfo::save(XMLPrinter * printer)
 	}
 }
 
-void ParticleInfo::load(XMLElement * elem)
+void ParticleInfo::load(const XMLElement * elem)
 {
 	*this = ParticleInfo();
 
@@ -845,7 +845,7 @@ ParticleInfo::SubEmitter::SubEmitter()
 	memset(emitterName, 0, sizeof(emitterName));
 }
 
-void ParticleInfo::SubEmitter::save(XMLPrinter * printer)
+void ParticleInfo::SubEmitter::save(XMLPrinter * printer) const
 {
 	printer->PushAttribute("enabled", enabled);
 	printer->PushAttribute("count", count);
@@ -853,7 +853,7 @@ void ParticleInfo::SubEmitter::save(XMLPrinter * printer)
 	printer->PushAttribute("emitterName", emitterName);
 }
 
-void ParticleInfo::SubEmitter::load(XMLElement * elem)
+void ParticleInfo::SubEmitter::load(const XMLElement * elem)
 {
 	enabled = boolAttrib(elem, "enabled", enabled);
 	count = intAttrib(elem, "count", count);

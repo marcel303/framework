@@ -824,6 +824,8 @@ bool doCheckBox(bool & value, const char * name, const bool isCollapsable)
 		if (elem.isActive && elem.hasFocus && mouse.wentUp(BUTTON_LEFT))
 		{
 			value = !value;
+			
+			elem.deactivate();
 		}
 	}
 

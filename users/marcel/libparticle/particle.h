@@ -35,8 +35,8 @@ struct ParticleColor
 	void interpolateBetween(const ParticleColor & v1, const ParticleColor & v2, const float t);
 	void interpolateBetweenLinear(const ParticleColor & v1, const ParticleColor & v2, const float t);
 
-	void save(tinyxml2::XMLPrinter * printer);
-	void load(tinyxml2::XMLElement * elem);
+	void save(tinyxml2::XMLPrinter * printer) const;
+	void load(const tinyxml2::XMLElement * elem);
 };
 
 struct ParticleCurve
@@ -58,8 +58,8 @@ struct ParticleCurve
 	void setLinear(float v1, float v2);
 	float sample(const float t) const;
 
-	void save(tinyxml2::XMLPrinter * printer);
-	void load(tinyxml2::XMLElement * elem);
+	void save(tinyxml2::XMLPrinter * printer) const;
+	void load(const tinyxml2::XMLElement * elem);
 };
 
 struct ParticleColorCurve
@@ -96,8 +96,8 @@ struct ParticleColorCurve
 	void setLinearAlpha(float v1, float v2);
 	void sample(const float t, const bool linearColorSpace, ParticleColor & result) const;
 
-	void save(tinyxml2::XMLPrinter * printer);
-	void load(tinyxml2::XMLElement * elem);
+	void save(tinyxml2::XMLPrinter * printer) const;
+	void load(const tinyxml2::XMLElement * elem);
 };
 
 struct ParticleEmitterInfo
@@ -125,8 +125,8 @@ struct ParticleEmitterInfo
 	bool operator==(const ParticleEmitterInfo & other) const;
 	bool operator!=(const ParticleEmitterInfo & other) const;
 
-	void save(tinyxml2::XMLPrinter * printer);
-	void load(tinyxml2::XMLElement * elem);
+	void save(tinyxml2::XMLPrinter * printer) const;
+	void load(const tinyxml2::XMLElement * elem);
 };
 
 struct ParticleInfo
@@ -247,8 +247,8 @@ struct ParticleInfo
 	{
 		SubEmitter();
 
-		void save(tinyxml2::XMLPrinter * printer);
-		void load(tinyxml2::XMLElement * elem);
+		void save(tinyxml2::XMLPrinter * printer) const;
+		void load(const tinyxml2::XMLElement * elem);
 
 		bool enabled;
 		float chance;
@@ -288,8 +288,8 @@ struct ParticleInfo
 	bool allocBurst(Burst *& burst);
 	void clearBursts();
 
-	void save(tinyxml2::XMLPrinter * printer);
-	void load(tinyxml2::XMLElement * elem);
+	void save(tinyxml2::XMLPrinter * printer) const;
+	void load(const tinyxml2::XMLElement * elem);
 };
 
 struct ParticleEmitter
