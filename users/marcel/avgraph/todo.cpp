@@ -55,9 +55,9 @@ todo :
 - add per-node profiling data
 	+ measure time tick and draw take
 	+ report node details. perhaps when hovering above it?
-	- add special colouring mode of the node background ? black (zero cpu) -> red -> orange -> yellow (high cpu)
-		- add editor option to show cpu/gpu cost
-		- add GPU performance markers
+	+ add special colouring mode of the node background ? black (zero cpu) -> red -> orange -> yellow (high cpu)
+		+ add editor option to show cpu/gpu cost
+	- add GPU performance markers
 	- add color curve to editor options to use for coloring nodes. from 0 .. 33ms ?
 - report OpenGL texture format and memory usage in node getDescription
 - automatically un-fold nodes (temporarily) when the mouse hovers over them ?

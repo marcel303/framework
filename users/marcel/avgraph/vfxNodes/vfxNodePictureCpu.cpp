@@ -73,6 +73,5 @@ void VfxNodePictureCpu::setImage(const char * filename)
 
 void VfxNodePictureCpu::getDescription(VfxNodeDescription & d)
 {
-	d.add("image:");
-	d.add(image);
+	d.add("output image", image);
 }

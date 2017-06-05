@@ -246,7 +246,7 @@ void VfxGraph::draw() const
 	
 	//
 	
-#if 1 // todo : add some way to (visually) communicate node computational cost (heat value)
+#if 0 // todo : remove this code ?
 	struct SortedNode
 	{
 		GraphNodeId nodeId;

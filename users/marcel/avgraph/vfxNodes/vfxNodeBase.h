@@ -310,6 +310,7 @@ struct VfxPlug
 	bool isReferencedByLink;
 	int referencedByRealTimeConnectionTick;
 	void * mem;
+	VfxPlugType memType;
 	
 	VfxPlug()
 		: type(kVfxPlugType_None)
@@ -317,6 +318,7 @@ struct VfxPlug
 		, isReferencedByLink(false)
 		, referencedByRealTimeConnectionTick(-1)
 		, mem(nullptr)
+		, memType(kVfxPlugType_None)
 	{
 	}
 	
@@ -326,6 +328,7 @@ struct VfxPlug
 	void disconnect()
 	{
 		mem = nullptr;
+		memType = type;
 	}
 	
 	bool isConnected() const
@@ -337,61 +340,61 @@ struct VfxPlug
 	
 	bool getBool() const
 	{
-		Assert(type == kVfxPlugType_Bool);
+		Assert(memType == kVfxPlugType_Bool);
 		return *((bool*)mem);
 	}
 	
 	int getInt() const
 	{
-		Assert(type == kVfxPlugType_Int);
+		Assert(memType == kVfxPlugType_Int);
 		return *((int*)mem);
 	}
 	
 	float getFloat() const
 	{
-		Assert(type == kVfxPlugType_Float);
+		Assert(memType == kVfxPlugType_Float);
 		return *((float*)mem);
 	}
 	
 	const VfxTransform & getTransform() const
 	{
-		Assert(type == kVfxPlugType_Transform);
+		Assert(memType == kVfxPlugType_Transform);
 		return *((VfxTransform*)mem);
 	}
 	
 	const std::string & getString() const
 	{
-		Assert(type == kVfxPlugType_String);
+		Assert(memType == kVfxPlugType_String);
 		return *((std::string*)mem);
 	}
 	
 	const VfxColor & getColor() const
 	{
-		Assert(type == kVfxPlugType_Color);
+		Assert(memType == kVfxPlugType_Color);
 		return *((VfxColor*)mem);
 	}
 	
 	VfxImageBase * getImage() const
 	{
-		Assert(type == kVfxPlugType_Image);
+		Assert(memType == kVfxPlugType_Image);
 		return (VfxImageBase*)mem;
 	}
 	
 	VfxImageCpu * getImageCpu() const
 	{
-		Assert(type == kVfxPlugType_ImageCpu);
+		Assert(memType == kVfxPlugType_ImageCpu);
 		return (VfxImageCpu*)mem;
 	}
 	
 	VfxChannels * getChannels() const
 	{
-		Assert(type == kVfxPlugType_Channels);
+		Assert(memType == kVfxPlugType_Channels);
 		return (VfxChannels*)mem;
 	}
 	
 	VfxTriggerData & getTriggerData() const
 	{
-		Assert(type == kVfxPlugType_Trigger);
+		Assert(memType == kVfxPlugType_Trigger);
 		return *((VfxTriggerData*)mem);
 	}
 	
@@ -399,37 +402,37 @@ struct VfxPlug
 	
 	bool & getRwBool()
 	{
-		Assert(type == kVfxPlugType_Bool);
+		Assert(memType == kVfxPlugType_Bool);
 		return *((bool*)mem);
 	}
 	
 	int & getRwInt()
 	{
-		Assert(type == kVfxPlugType_Int);
+		Assert(memType == kVfxPlugType_Int);
 		return *((int*)mem);
 	}
 	
 	float & getRwFloat()
 	{
-		Assert(type == kVfxPlugType_Float);
+		Assert(memType == kVfxPlugType_Float);
 		return *((float*)mem);
 	}
 	
 	VfxTransform & getRwTransform()
 	{
-		Assert(type == kVfxPlugType_Transform);
+		Assert(memType == kVfxPlugType_Transform);
 		return *((VfxTransform*)mem);
 	}
 	
 	std::string & getRwString()
 	{
-		Assert(type == kVfxPlugType_String);
+		Assert(memType == kVfxPlugType_String);
 		return *((std::string*)mem);
 	}
 	
 	VfxColor & getRwColor()
 	{
-		Assert(type == kVfxPlugType_Color);
+		Assert(memType == kVfxPlugType_Color);
 		return *((VfxColor*)mem);
 	}
 };
@@ -440,7 +443,7 @@ struct VfxNodeDescription
 	
 	void add(const char * format, ...);
 	void add(const VfxImageBase & image);
-	void add(const VfxImageCpu & image);
+	void add(const char * name, const VfxImageCpu & image);
 	void add(const VfxChannels & channels);
 	void addOpenglTexture(const uint32_t id);
 	
@@ -497,6 +500,7 @@ struct VfxNodeBase
 		if (index >= 0 && index < inputs.size())
 		{
 			inputs[index].type = type;
+			inputs[index].memType = type;
 		}
 	}
 	
@@ -507,6 +511,7 @@ struct VfxNodeBase
 		{
 			outputs[index].type = type;
 			outputs[index].mem = mem;
+			outputs[index].memType = type;
 		}
 	}
 	

@@ -250,5 +250,5 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 
 void VfxNodeImageCpuEqualize::getDescription(VfxNodeDescription & d)
 {
-	d.add(imageData.image);
+	d.add("output image", imageData.image);
 }

@@ -196,14 +196,11 @@ void VfxNodeVideo::getDescription(VfxNodeDescription & d)
 	d.addOpenglTexture(mediaPlayer->getTexture());
 	d.newline();
 	
-	d.add("Y image:");
-	d.add(imageCpuOutputY);
+	d.add("Y image", imageCpuOutputY);
 	d.newline();
 	
-	d.add("U image:");
-	d.add(imageCpuOutputU);
+	d.add("U image", imageCpuOutputU);
 	d.newline();
 	
-	d.add("V image:");
-	d.add(imageCpuOutputV);
+	d.add("V image", imageCpuOutputV);
 }

@@ -42,6 +42,7 @@
 #include "vfxNodes/vfxNodePictureCpu.h"
 #include "vfxNodes/vfxNodePointcloud.h"
 #include "vfxNodes/vfxNodeSampleAndHold.h"
+#include "vfxNodes/vfxNodeSequence.h"
 #include "vfxNodes/vfxNodeSound.h"
 #include "vfxNodes/vfxNodeSpectrum1D.h"
 #include "vfxNodes/vfxNodeSpectrum2D.h"
@@ -193,6 +194,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 		vfxGraph->displayNodeId = nodeId;
 	}
 	DefineNodeImpl("surface", VfxNodeSurface)
+	DefineNodeImpl("sequence", VfxNodeSequence)
 	DefineNodeImpl("mouse", VfxNodeMouse)
 	DefineNodeImpl("xinput", VfxNodeXinput)
 	DefineNodeImpl("touches", VfxNodeTouches)
@@ -687,7 +689,7 @@ int main(int argc, char * argv[])
 					setColor(colorWhite);
 				else if (graphEdit->hideTime == 0.f)
 					setColor(colorBlack);
-				else
+				else if (graphEdit->state == GraphEdit::kState_HiddenIdle)
 				{
 					pushBlend(BLEND_OPAQUE);
 					{
@@ -695,12 +697,14 @@ int main(int argc, char * argv[])
 						
 						setShader_GaussianBlurH(graphEditSurface->getTexture(), 32, radius);
 						graphEditSurface->postprocess();
-						setShader_GaussianBlurV(graphEditSurface->getTexture(), 32, radius);
-						graphEditSurface->postprocess();
 						clearShader();
 					}
 					popBlend();
 					
+					setColorf(1.f, 1.f, 1.f, graphEdit->hideTime);
+				}
+				else
+				{
 					setColorf(1.f, 1.f, 1.f, graphEdit->hideTime);
 				}
 				

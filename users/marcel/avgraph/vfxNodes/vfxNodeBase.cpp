@@ -359,8 +359,11 @@ void VfxChannels::reset()
 
 void VfxPlug::connectTo(VfxPlug & dst)
 {
-	if (dst.type == kVfxPlugType_DontCare)
+	if (type == kVfxPlugType_DontCare)
 	{
+		mem = dst.mem;
+		memType = dst.type;
+		
 		dst.isReferencedByLink = true;
 	}
 	else if (dst.type != type)
@@ -370,6 +373,7 @@ void VfxPlug::connectTo(VfxPlug & dst)
 	else
 	{
 		mem = dst.mem;
+		memType = dst.type;
 		
 		dst.isReferencedByLink = true;
 	}
@@ -377,9 +381,10 @@ void VfxPlug::connectTo(VfxPlug & dst)
 
 void VfxPlug::connectTo(void * dstMem, const VfxPlugType dstType)
 {
-	if (dstType == kVfxPlugType_DontCare)
+	if (type == kVfxPlugType_DontCare)
 	{
-		//
+		mem = dstMem;
+		memType = dstType;
 	}
 	else if (dstType != type)
 	{
@@ -388,6 +393,7 @@ void VfxPlug::connectTo(void * dstMem, const VfxPlugType dstType)
 	else
 	{
 		mem = dstMem;
+		memType = dstType;
 	}
 }
 
@@ -423,16 +429,18 @@ void VfxNodeDescription::add(const VfxImageBase & image)
 	addOpenglTexture(image.getTexture());
 }
 
-void VfxNodeDescription::add(const VfxImageCpu & image)
+void VfxNodeDescription::add(const char * name, const VfxImageCpu & image)
 {
-	add("size: %d x %d", image.sx, image.sy);
+	if (name)
+		add("%s: %d x %d", name, image.sx, image.sy);
+	else
+		add("size: %d x %d", image.sx, image.sy);
 	add("numChannels: %d, alignment: %d", image.numChannels, image.alignment);
-	add("isInterleaved: %d", image.isInterleaved);
-	add("isPlanar: %d", image.isPlanar);
+	add("isInterleaved: %d, isPlanar: %d", image.isInterleaved, image.isPlanar);
 	
 	int numBytes = 0;
 	
-	add("channels:");
+	//add("channels:");
 	for (int i = 0; i < image.numChannels; ++i)
 	{
 		const VfxImageCpu::Channel & c = image.channel[i];

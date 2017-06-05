@@ -201,13 +201,12 @@ void VfxNodeDotDetector::tick(const float dt)
 void VfxNodeDotDetector::getDescription(VfxNodeDescription & d)
 {
 	d.add("numDots: %d", numDotsOutput);
-	
-	d.add("lumi image:");
-	d.add(lumiOutput);
 	d.newline();
 	
-	d.add("mask image:");
-	d.add(maskOutput);
+	d.add("lumi image", lumiOutput);
+	d.newline();
+	
+	d.add("mask image", maskOutput);
 	d.newline();
 	
 	d.add("dot XY + radius channels:");

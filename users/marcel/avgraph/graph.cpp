@@ -2882,8 +2882,7 @@ bool GraphEdit::tick(const float dt)
 	if (doHideAnimation)
 		hideTime = std::max(0.f, hideTime - dt / .5f);
 	else
-		//hideTime = std::min(1.f, hideTime + dt / .2f);
-		hideTime = 1.f;
+		hideTime = std::min(1.f, hideTime + dt / .25f);
 	
 	if (!notifications.empty())
 	{
@@ -3042,8 +3041,8 @@ bool GraphEdit::tickTouches()
 					touches.distance = 0.f;
 					touches.initialDistance = 0.f;
 					
-					if (std::abs(dragAndZoom.desiredZoom - 1.f) < .1f)
-						dragAndZoom.desiredZoom = 1.f;
+					if (std::abs(std::abs(dragAndZoom.desiredZoom) - 1.f) < .1f)
+						dragAndZoom.desiredZoom = Calc::Sign(dragAndZoom.desiredZoom);
 					
 					//logDebug("touch down: TouchZoom -> TouchDrag");
 					
@@ -3126,14 +3125,14 @@ bool GraphEdit::tickTouches()
 						
 						// update zoom info
 						
-						dragAndZoom.zoom += zoomDelta * std::max(dragAndZoom.zoom, .1f);
+						dragAndZoom.zoom += zoomDelta * std::max(std::abs(dragAndZoom.zoom), .1f);
 						dragAndZoom.desiredZoom = dragAndZoom.zoom;
 					}
 				
 					// update movement
 					
-					dragAndZoom.focusX -= delta[0] / std::max(1.f, dragAndZoom.zoom);
-					dragAndZoom.focusY -= delta[1] / std::max(1.f, dragAndZoom.zoom);
+					dragAndZoom.focusX -= delta[0] / std::max(1.f, std::abs(dragAndZoom.zoom)) * Calc::Sign(dragAndZoom.zoom);
+					dragAndZoom.focusY -= delta[1] / std::max(1.f, std::abs(dragAndZoom.zoom)) * Calc::Sign(dragAndZoom.zoom);
 					
 					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
 					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
@@ -3422,7 +3421,7 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 
 void GraphEdit::selectNode(const GraphNodeId nodeId, const bool clearSelection)
 {
-	Assert(selectedNodes.count(nodeId) == 0);
+	Assert(selectedNodes.count(nodeId) == 0 || clearSelection);
 	
 	if (clearSelection)
 	{
@@ -3435,7 +3434,7 @@ void GraphEdit::selectNode(const GraphNodeId nodeId, const bool clearSelection)
 
 void GraphEdit::selectLink(const GraphLinkId linkId, const bool clearSelection)
 {
-	Assert(selectedLinks.count(linkId) == 0);
+	Assert(selectedLinks.count(linkId) == 0 || clearSelection);
 	
 	if (clearSelection)
 	{
@@ -4256,6 +4255,7 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 		editorElem.PushAttribute("snapToGrid", editorOptions.snapToGrid);
 		editorElem.PushAttribute("showOneShotActivity", editorOptions.showOneShotActivity);
 		editorElem.PushAttribute("showContinuousActivity", editorOptions.showContinuousActivity);
+		editorElem.PushAttribute("showCpuHeat", editorOptions.showCpuHeat);
 		
 		const std::string backgroundColor = toColor(editorOptions.backgroundColor).toHexString(true);
 		const std::string gridColor = toColor(editorOptions.gridColor).toHexString(true);
