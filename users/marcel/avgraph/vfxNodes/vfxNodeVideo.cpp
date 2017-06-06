@@ -161,20 +161,15 @@ void VfxNodeVideo::init(const GraphNode & node)
 
 void VfxNodeVideo::getDescription(VfxNodeDescription & d)
 {
-	d.add("active: %d", mediaPlayer->isActive(mediaPlayer->context));
-	
 	if (mediaPlayer->isActive(mediaPlayer->context))
 	{
-		d.add("file: %s", mediaPlayer->context->openParams.filename.c_str());
-		d.add("presentedLastFrame: %d", mediaPlayer->presentedLastFrame(mediaPlayer->context));
-		
 		int sx;
 		int sy;
 		double duration;
 		
 		if (mediaPlayer->getVideoProperties(sx, sy, duration))
 		{
-			d.add("size: %d x %d", sx, sy);
+			d.add("file: %s. size: %d x %d", mediaPlayer->context->openParams.filename.c_str(), sx, sy);
 			
 			const int dh = duration / 3600.0;
 			duration -= dh * 3600;
@@ -189,11 +184,18 @@ void VfxNodeVideo::getDescription(VfxNodeDescription & d)
 			
 			d.add("time: %02d:%02d:%05.2fs / %02d:%02d:%05.2fs", ph, pm, presentTime, dh, dm, duration);
 		}
+		else
+		{
+			d.add("file: %s", mediaPlayer->context->openParams.filename.c_str());
+		}
+	}
+	else
+	{
+		d.add("file: (not active)");
 	}
 	d.newline();
 	
-	d.add("OpenGL texture:");
-	d.addOpenglTexture(mediaPlayer->getTexture());
+	d.addOpenglTexture("texture", mediaPlayer->getTexture());
 	d.newline();
 	
 	d.add("Y image", imageCpuOutputY);

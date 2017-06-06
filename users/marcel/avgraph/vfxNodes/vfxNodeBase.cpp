@@ -424,17 +424,14 @@ void VfxNodeDescription::add(const char * format, ...)
 	lines.push_back(text);
 }
 
-void VfxNodeDescription::add(const VfxImageBase & image)
+void VfxNodeDescription::add(const char * name, const VfxImageBase & image)
 {
-	addOpenglTexture(image.getTexture());
+	addOpenglTexture(name, image.getTexture());
 }
 
 void VfxNodeDescription::add(const char * name, const VfxImageCpu & image)
 {
-	if (name)
-		add("%s: %d x %d", name, image.sx, image.sy);
-	else
-		add("size: %d x %d", image.sx, image.sy);
+	add("%s. size: %d x %d", name, image.sx, image.sy);
 	add("numChannels: %d, alignment: %d", image.numChannels, image.alignment);
 	add("isInterleaved: %d, isPlanar: %d", image.isInterleaved, image.isPlanar);
 	
@@ -462,11 +459,13 @@ void VfxNodeDescription::add(const VfxChannels & channels)
 	add("MEMORY: %.2f Kb", channels.numChannels * channels.size * sizeof(float) / 1024.0);
 }
 
-void VfxNodeDescription::addOpenglTexture(const uint32_t id)
+void VfxNodeDescription::addOpenglTexture(const char * name, const uint32_t id)
 {
-	add("handle: %d", id);
-	
-	if (id != 0)
+	if (id == 0)
+	{
+		add("%s. id: %d", name, id);
+	}
+	else
 	{
 		int sx = 0;
 		int sy = 0;
@@ -489,7 +488,7 @@ void VfxNodeDescription::addOpenglTexture(const uint32_t id)
 		
 		//
 		
-		add("size: %d x %d", sx, sy);
+		add("%s. id: %d, size: %d x %d", name, id, sx, sy);
 	}
 }
 

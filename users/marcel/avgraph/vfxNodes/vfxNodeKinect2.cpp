@@ -156,12 +156,10 @@ void VfxNodeKinect2::getDescription(VfxNodeDescription & d)
 		d.newline();
 	}
 	
-	d.add("video OpenGL texture:");
-	d.addOpenglTexture(videoTexture.id);
+	d.addOpenglTexture("video texture", videoTexture.id);
 	d.newline();
 	
-	d.add("depth OpenGL texture:");
-	d.addOpenglTexture(depthTexture.id);
+	d.addOpenglTexture("depth texture", depthTexture.id);
 	d.newline();
 	
 	d.add("video image", videoImageCpu);

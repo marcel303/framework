@@ -47,8 +47,7 @@ void VfxNodeChannelToGpu::tick(const float dt)
 
 void VfxNodeChannelToGpu::getDescription(VfxNodeDescription & d)
 {
-	d.add("output image:");
-	d.add(imageOutput);
+	d.add("output image", imageOutput);
 }
 
 void VfxNodeChannelToGpu::freeImage()

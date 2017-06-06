@@ -442,10 +442,10 @@ struct VfxNodeDescription
 	std::vector<std::string> lines;
 	
 	void add(const char * format, ...);
-	void add(const VfxImageBase & image);
+	void add(const char * name, const VfxImageBase & image);
 	void add(const char * name, const VfxImageCpu & image);
 	void add(const VfxChannels & channels);
-	void addOpenglTexture(const uint32_t id);
+	void addOpenglTexture(const char * name, const uint32_t id);
 	
 	void newline();
 };
