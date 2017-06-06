@@ -85,6 +85,8 @@ extern void testDynamicTextureAtlas();
 extern void testDotDetector();
 extern void testDotTracker();
 extern void testAudiochannels();
+extern void testStbTruetype();
+extern void testMsdfgen();
 
 struct VfxNodeTriggerAsFloat : VfxNodeBase
 {
@@ -538,6 +540,10 @@ int main(int argc, char * argv[])
 		//testAudioMixing();
 
 		//testAudiochannels();
+		
+		testStbTruetype();
+		
+		testMsdfgen();
 		
 		//
 		
