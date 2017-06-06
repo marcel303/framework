@@ -1,3 +1,4 @@
+#include "framework.h"
 #include "vfxNodeTransform2D.h"
 
 #include "Calc.h"
@@ -7,6 +8,7 @@ VfxNodeTransform2D::VfxNodeTransform2D()
 	, transform()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	addInput(kInput_Any, kVfxPlugType_DontCare);
 	addInput(kInput_X, kVfxPlugType_Float);
 	addInput(kInput_Y, kVfxPlugType_Float);
 	addInput(kInput_Scale, kVfxPlugType_Float);
@@ -41,4 +43,15 @@ void VfxNodeTransform2D::tick(const float dt)
 	r.MakeRotationZ(Calc::DegToRad(angle));
 	
 	transform.matrix = t * r * s;
+}
+
+void VfxNodeTransform2D::beforeDraw() const
+{
+	gxPushMatrix();
+	gxMultMatrixf(transform.matrix.m_v);
+}
+
+void VfxNodeTransform2D::afterDraw() const
+{
+	gxPopMatrix();
 }

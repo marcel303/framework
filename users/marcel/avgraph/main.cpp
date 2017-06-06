@@ -643,6 +643,11 @@ int main(int argc, char * argv[])
 			
 			g_currentVfxGraph = nullptr;
 			
+			if (graphEdit->state == GraphEdit::kState_Hidden)
+				SDL_ShowCursor(0);
+			else
+				SDL_ShowCursor(1);
+			
 			// fixme : this should be handled by graph edit
 			
 			if (!graphEdit->selectedNodes.empty())

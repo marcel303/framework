@@ -705,6 +705,15 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 #include "../libparticle/particle.h"
 #include "../libparticle/ui.h"
 
+static bool selectionMod()
+{
+	return keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
+}
+
+static bool commandMod()
+{
+	return keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI);
+}
 
 static ParticleColor toParticleColor(const Color & color)
 {
@@ -1705,6 +1714,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		}
 		
 		setColor(255, 255, 255);
+		drawText(channelsDataX                  + 3, dataY                  + 4, 10, +1.f, +1.f, "%d x %d", channels.channels.size(), channels.channels[0].numValues);
 		drawText(channelsDataX + channelsDataSx - 3, dataY                  + 4, 10, -1.f, +1.f, "%0.03f", max);
 		drawText(channelsDataX + channelsDataSx - 3, dataY + channelsDataSy - 3, 10, -1.f, -1.f, "%0.03f", min);
 		
@@ -2169,9 +2179,7 @@ bool GraphEdit::tick(const float dt)
 			
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
-				const bool appendSelection =
-					keyboard.isDown(SDLK_LSHIFT) ||
-					keyboard.isDown(SDLK_RSHIFT);
+				const bool appendSelection = selectionMod();
 				
 				HitTestResult hitTestResult;
 				
@@ -2322,7 +2330,7 @@ bool GraphEdit::tick(const float dt)
 			
 			if (keyboard.wentDown(SDLK_a))
 			{
-				if (keyboard.isDown(SDLK_LGUI))
+				if (commandMod())
 					selectAll();
 				else
 				{
@@ -2340,11 +2348,11 @@ bool GraphEdit::tick(const float dt)
 			
 			if (keyboard.wentDown(SDLK_o) || keyboard.wentDown(SDLK_0))
 			{
-				if (keyboard.isDown(SDLK_LGUI))
+				if (commandMod())
 				{
 					dragAndZoom.desiredZoom = 1.f;
 					
-					if (keyboard.isDown(SDLK_LSHIFT))
+					if (selectionMod())
 					{
 						dragAndZoom.desiredFocusX = 0.f;
 						dragAndZoom.desiredFocusY = 0.f;
@@ -2352,12 +2360,12 @@ bool GraphEdit::tick(const float dt)
 				}
 			}
 			
-			if (keyboard.wentDown(SDLK_MINUS) && keyboard.isDown(SDLK_LGUI))
+			if (keyboard.wentDown(SDLK_MINUS) && commandMod())
 			{
 				dragAndZoom.desiredZoom /= 1.5f;
 			}
 			
-			if (keyboard.wentDown(SDLK_EQUALS) && keyboard.isDown(SDLK_LGUI))
+			if (keyboard.wentDown(SDLK_EQUALS) && commandMod())
 			{
 				dragAndZoom.desiredZoom *= 1.5f;
 			}
@@ -2383,7 +2391,7 @@ bool GraphEdit::tick(const float dt)
 						newNode.editorInputValues.clear();
 						newNode.editorValue.clear();
 						
-						if (keyboard.isDown(SDLK_LGUI))
+						if (commandMod())
 						{
 							// deep copy node including values
 							newNode.editorInputValues = node->editorInputValues;
@@ -2588,7 +2596,7 @@ bool GraphEdit::tick(const float dt)
 			
 			if (keyboard.isDown(SDLK_LALT))
 			{
-				dragAndZoom.desiredZoom += mouse.dy / 200.f * (dragAndZoom.zoom + .5f);
+				dragAndZoom.desiredZoom += mouse.dy / 200.f * (std::abs(dragAndZoom.zoom) + .5f);
 				dragAndZoom.zoom = dragAndZoom.desiredZoom;
 			}
 		}
@@ -3023,8 +3031,8 @@ bool GraphEdit::tickTouches()
 					touches.distance = 0.f;
 					touches.initialDistance = 0.f;
 					
-					if (std::abs(dragAndZoom.desiredZoom - 1.f) < .1f)
-						dragAndZoom.desiredZoom = 1.f;
+					if (std::abs(std::abs(dragAndZoom.desiredZoom) - 1.f) < .1f)
+						dragAndZoom.desiredZoom = Calc::Sign(dragAndZoom.desiredZoom);
 					
 					//logDebug("touch down: TouchZoom -> TouchDrag");
 					
@@ -3052,6 +3060,8 @@ bool GraphEdit::tickTouches()
 		}
 		else if (event.type == SDL_FINGERMOTION)
 		{
+			const float dragSpeed = 1.f / std::max(1.f, std::abs(dragAndZoom.zoom)) * Calc::Sign(dragAndZoom.zoom);
+			
 			Vec2 position(event.tfinger.x * sx, event.tfinger.y * sy);
 			Vec2 delta;
 			
@@ -3073,8 +3083,8 @@ bool GraphEdit::tickTouches()
 				
 				if (event.tfinger.fingerId == touches.finger1)
 				{
-					dragAndZoom.focusX -= delta[0] / dragAndZoom.zoom;
-					dragAndZoom.focusY -= delta[1] / dragAndZoom.zoom;
+					dragAndZoom.focusX -= delta[0] * dragSpeed;
+					dragAndZoom.focusY -= delta[1] * dragSpeed;
 					
 					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
 					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
@@ -3125,14 +3135,14 @@ bool GraphEdit::tickTouches()
 						
 						// update zoom info
 						
-						dragAndZoom.zoom += zoomDelta * std::max(std::abs(dragAndZoom.zoom), .1f);
+						dragAndZoom.zoom += zoomDelta * (std::abs(dragAndZoom.zoom) + .5f);
 						dragAndZoom.desiredZoom = dragAndZoom.zoom;
 					}
 				
 					// update movement
 					
-					dragAndZoom.focusX -= delta[0] / std::max(1.f, std::abs(dragAndZoom.zoom)) * Calc::Sign(dragAndZoom.zoom);
-					dragAndZoom.focusY -= delta[1] / std::max(1.f, std::abs(dragAndZoom.zoom)) * Calc::Sign(dragAndZoom.zoom);
+					dragAndZoom.focusX -= delta[0] * dragSpeed;
+					dragAndZoom.focusY -= delta[1] * dragSpeed;
 					
 					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
 					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
@@ -3241,7 +3251,7 @@ void GraphEdit::socketConnectEnd()
 	}
 	else if (socketConnect.dstNodeId != kGraphNodeIdInvalid)
 	{
-		if (keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI))
+		if (commandMod())
 		{
 			tryAddVisualizer(
 				socketConnect.dstNodeId,

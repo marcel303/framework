@@ -565,6 +565,12 @@ void VfxNodeBase::traverseDraw(const int traversalId)
 	Assert(lastDrawTraversalId != traversalId);
 	lastDrawTraversalId = traversalId;
 	
+	//
+	
+	beforeDraw();
+	
+	//
+	
 	for (auto predep : predeps)
 	{
 		if (predep->lastDrawTraversalId != traversalId)
@@ -576,8 +582,14 @@ void VfxNodeBase::traverseDraw(const int traversalId)
 	draw();
 	
 	const uint64_t t2 = g_TimerRT.TimeUS_get();
-		
+	
+	//
+	
 	drawTimeAvg = (drawTimeAvg * 95 + (t2 - t1) * 5) / 100;
+	
+	//
+	
+	afterDraw();
 }
 
 void VfxNodeBase::trigger(const int outputSocketIndex)

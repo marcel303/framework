@@ -22,4 +22,5 @@ struct VfxNodeTest : VfxNodeBase
 	virtual ~VfxNodeTest() override;
 
 	virtual void tick(const float dt) override;
+	virtual void draw() const override;
 };

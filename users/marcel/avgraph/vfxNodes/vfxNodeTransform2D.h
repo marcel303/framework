@@ -6,6 +6,7 @@ struct VfxNodeTransform2D : VfxNodeBase
 {
 	enum Input
 	{
+		kInput_Any,
 		kInput_X,
 		kInput_Y,
 		kInput_Scale,
@@ -28,4 +29,7 @@ struct VfxNodeTransform2D : VfxNodeBase
 	virtual void initSelf(const GraphNode & node) override;
 	
 	virtual void tick(const float dt) override;
+	
+	virtual void beforeDraw() const override;
+	virtual void afterDraw() const override;
 };

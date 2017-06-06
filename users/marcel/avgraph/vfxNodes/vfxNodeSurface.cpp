@@ -25,7 +25,7 @@ VfxNodeSurface::~VfxNodeSurface()
 	surface = nullptr;
 }
 
-void VfxNodeSurface::beforeTick()
+void VfxNodeSurface::beforeDraw() const
 {
 	const bool clear = getInputBool(kInput_Clear, true);
 	const VfxColor * clearColor = getInputColor(kInput_ClearColor, nullptr);
@@ -41,7 +41,7 @@ void VfxNodeSurface::beforeTick()
 	}
 }
 
-void VfxNodeSurface::afterTick()
+void VfxNodeSurface::afterDraw() const
 {
 	popSurface();
 }

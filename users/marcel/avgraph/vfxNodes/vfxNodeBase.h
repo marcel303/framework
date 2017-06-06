@@ -671,6 +671,8 @@ struct VfxNodeBase
 	virtual void afterTick() { }
 	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) { }
 	virtual void draw() const { }
+	virtual void beforeDraw() const { }
+	virtual void afterDraw() const { }
 	
 	virtual void getDescription(VfxNodeDescription & d) { }
 };

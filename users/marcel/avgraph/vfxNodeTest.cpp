@@ -19,6 +19,10 @@ VfxNodeTest::~VfxNodeTest()
 
 void VfxNodeTest::tick(const float dt)
 {
+}
+
+void VfxNodeTest::draw() const
+{
 	const VfxChannels * channels = getInputChannels(kInput_Channels, nullptr);
 	
 	if (channels && channels->numChannels >= 2)
@@ -27,21 +31,15 @@ void VfxNodeTest::tick(const float dt)
 		auto & y = channels->channels[1];
 		//auto & z = channels->channels[2];
 		
-		gxPushMatrix();
+		hqBegin(HQ_FILLED_CIRCLES);
 		{
-			gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
-
-			hqBegin(HQ_FILLED_CIRCLES);
+			for (int i = 0; i < channels->size; ++i)
 			{
-				for (int i = 0; i < channels->size; ++i)
-				{
-					setColor(colorWhite);
-					//hqFillCircle(x.data[i], y.data[i], 100);
-					hqFillCircle(x.data[i] * 10, y.data[i] * 10, 3);
-				}
+				setColor(colorWhite);
+				//hqFillCircle(x.data[i], y.data[i], 100);
+				hqFillCircle(x.data[i] * 10, y.data[i] * 10, 3);
 			}
-			hqEnd();
 		}
-		gxPopMatrix();
+		hqEnd();
 	}
 }

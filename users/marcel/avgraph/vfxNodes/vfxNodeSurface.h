@@ -27,6 +27,6 @@ struct VfxNodeSurface : VfxNodeBase
 	VfxNodeSurface();
 	virtual ~VfxNodeSurface() override;
 
-	virtual void beforeTick() override;
-	virtual void afterTick() override;
+	virtual void beforeDraw() const override;
+	virtual void afterDraw() const override;
 };
