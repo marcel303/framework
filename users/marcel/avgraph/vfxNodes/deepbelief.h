@@ -69,6 +69,8 @@ struct Deepbelief
 		}
 	};
 	
+	bool isInitialized;
+	
 	void * network;
 	
 	SDL_Thread * thread;

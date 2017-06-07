@@ -11,7 +11,8 @@
 #endif
 
 Deepbelief::Deepbelief()
-	: network(nullptr)
+	: isInitialized(false)
+	, network(nullptr)
 	, thread(nullptr)
 	, mutex(nullptr)
 	, workEvent(nullptr)
@@ -61,11 +62,16 @@ bool Deepbelief::doInit(const char * networkFilename)
 	if (thread == nullptr)
 		return false;
 	
+	Assert(isInitialized == false);
+	isInitialized = true;
+	
 	return true;
 }
 
 void Deepbelief::shut()
 {
+	isInitialized = false;
+	
 	if (thread != nullptr)
 	{
 		SDL_Delay(1);
@@ -138,8 +144,11 @@ void Deepbelief::process(const uint8_t * bytes, const int sx, const int sy, cons
 	}
 	SDL_UnlockMutex(mutex);
 
-	delete oldWork;
-	oldWork = nullptr;
+	if (oldWork)
+	{
+		delete oldWork;
+		oldWork = nullptr;
+	}
 }
 
 void Deepbelief::wait()
