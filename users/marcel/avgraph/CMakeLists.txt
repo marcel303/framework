@@ -27,7 +27,7 @@ project(avgraph)
 
 # --- avgraph ---
 
-file(GLOB_RECURSE source "*.c" "*.cpp" "*.h")
+file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.mm")
 file(GLOB_RECURSE source_video "../avpaint/video.cpp" "../avpaint/video.h")
 file(GLOB_RECURSE source_mediaplayer_new "../vfxpro/mediaplayer_new/*.*")
 file(GLOB_RECURSE source_ffmpeg "../vfxpro/ffmpeg/*.*")
@@ -152,6 +152,7 @@ if (APPLE)
 	target_link_libraries(avgraph PRIVATE ${ICONV_LIBRARY})
 	target_link_libraries(avgraph PRIVATE ${BZ2_LIBRARY})
 	target_link_libraries(avgraph PRIVATE ${SECURITY_LIBRARY})
+	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/DeepBelief.framework)
 endif (APPLE)
 
 if (MSVC)

@@ -39,6 +39,7 @@ struct Deepbelief
 		int sy;
 		int numChannels;
 		int pitch;
+		float certaintyTreshold;
 
 		~Work()
 		{
@@ -84,7 +85,7 @@ struct Deepbelief
 	bool doInit(const char * networkFilename);
 	void shut();
 
-	void process(const uint8_t * bytes, const int sx, const int sy, const int numChannels, const int pitch);
+	void process(const uint8_t * bytes, const int sx, const int sy, const int numChannels, const int pitch, const float certaintyTreshold);
 	void wait(); // optional : wait for all of the processing to complete
 
 	bool getResult(DeepbeliefResult & result);
