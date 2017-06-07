@@ -109,7 +109,7 @@ void main()
     }
     else
     {
-	    int kernelSize = min(10, int(length(dFdx(v_texcoord * msdfSize))) + 1);
+	    int kernelSize = min(5, int(length(dFdx(v_texcoord * msdfSize))) + 1);
 
 	    // note : devision by two provides sharpening and is more correct, as we sample in the range [-0.5, +0.5] of the derivative of texcoord, for a total sampled area of 1.0 x 1.0 = 1.0
 	    vec2 du = dFdx(v_texcoord) / kernelSize / 2.0;
