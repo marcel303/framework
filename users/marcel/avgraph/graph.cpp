@@ -1195,7 +1195,7 @@ void GraphEdit_Visualizer::measure(
 	const int kPadding = 8;
 	const int kElemPadding = 4;
 	
-	setFont("calibri.ttf");
+	setFontMSDF("calibri.ttf");
 	
 	std::string caption;
 	
@@ -1222,13 +1222,13 @@ void GraphEdit_Visualizer::measure(
 	
 	float captionSx;
 	float captionSy;
-	measureText(kFontSize, captionSx, captionSy, "%s", caption.c_str());
+	measureTextMSDF(kFontSize, captionSx, captionSy, "%s", caption.c_str());
 	
 	//
 	
 	float valueSx;
 	float valueSy;
-	measureText(kFontSize, valueSx, valueSy, "%s", value.c_str());
+	measureTextMSDF(kFontSize, valueSx, valueSy, "%s", value.c_str());
 	
 	//
 	
@@ -1312,7 +1312,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	const int kPadding = 8;
 	const int kElemPadding = 4;
 	
-	setFont("calibri.ttf");
+	setFontMSDF("calibri.ttf");
 	
 	int visualSx = 0;
 	int visualSy = 0;
@@ -1355,13 +1355,13 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	float captionSx;
 	float captionSy;
-	measureText(kFontSize, captionSx, captionSy, "%s", caption.c_str());
+	measureTextMSDF(kFontSize, captionSx, captionSy, "%s", caption.c_str());
 	
 	//
 	
 	float valueSx;
 	float valueSy;
-	measureText(kFontSize, valueSx, valueSy, "%s", value.c_str());
+	measureTextMSDF(kFontSize, valueSx, valueSy, "%s", value.c_str());
 	
 	//
 	
@@ -1517,19 +1517,19 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	int y = kPadding;
 	
 	setColor(255, 255, 255);
-	drawText(sx/2, y, kFontSize, 0.f, +1.f, "%s", caption.c_str());
+	drawTextMSDF(sx/2, y, kFontSize, 0.f, +1.f, "%s", caption.c_str());
 	y += kFontSize;
 	
 	y += kElemPadding;
 	if (hasValue)
 	{
 		setColor(191, 191, 255);
-		drawText(sx/2, y, kFontSize, 0.f, +1.f, "%s", value.c_str());
+		drawTextMSDF(sx/2, y, kFontSize, 0.f, +1.f, "%s", value.c_str());
 	}
 	else
 	{
 		setColor(255, 191, 127);
-		drawText(sx/2, y, kFontSize, 0.f, +1.f, "n/a");
+		drawTextMSDF(sx/2, y, kFontSize, 0.f, +1.f, "n/a");
 	}
 	y += kFontSize;
 	
@@ -1567,8 +1567,8 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		gxEnd();
 		
 		setColor(255, 255, 255);
-		drawText(graphX + graphSx - 3, y           + 4, 10, -1.f, +1.f, "%0.03f", graphMax);
-		drawText(graphX + graphSx - 3, y + graphSy - 3, 10, -1.f, -1.f, "%0.03f", graphMin);
+		drawTextMSDF(graphX + graphSx - 3, y           + 4, 10, -1.f, +1.f, "%0.03f", graphMax);
+		drawTextMSDF(graphX + graphSx - 3, y + graphSy - 3, 10, -1.f, -1.f, "%0.03f", graphMin);
 		
 		setColor(colorWhite);
 		drawRectLine(graphX, y, graphX + graphSx, y + graphSy);
@@ -1714,9 +1714,11 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		}
 		
 		setColor(255, 255, 255);
-		drawText(channelsDataX                  + 3, dataY                  + 4, 10, +1.f, +1.f, "%d x %d", channels.channels.size(), channels.channels[0].numValues);
-		drawText(channelsDataX + channelsDataSx - 3, dataY                  + 4, 10, -1.f, +1.f, "%0.03f", max);
-		drawText(channelsDataX + channelsDataSx - 3, dataY + channelsDataSy - 3, 10, -1.f, -1.f, "%0.03f", min);
+		beginTextBatchMSDF();
+		drawTextMSDF(channelsDataX                  + 3, dataY                  + 4, 10, +1.f, +1.f, "%d x %d", channels.channels.size(), channels.channels[0].numValues);
+		drawTextMSDF(channelsDataX + channelsDataSx - 3, dataY                  + 4, 10, -1.f, +1.f, "%0.03f", max);
+		drawTextMSDF(channelsDataX + channelsDataSx - 3, dataY + channelsDataSy - 3, 10, -1.f, -1.f, "%0.03f", min);
+		endTextBatchMSDF();
 		
 		setColor(colorWhite);
 		drawRectLine(channelsEdgeX, y, channelsEdgeX + channelsSx, y + channelsSy);
@@ -1744,6 +1746,7 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, nodeDrag()
 	, socketConnect()
 	, nodeResize()
+	, touches()
 	, mousePosition()
 	, dragAndZoom()
 	, realTimeSocketCapture()
@@ -3651,8 +3654,8 @@ void GraphEdit::draw() const
 			setColor(colorRed);
 			drawRectLine(node.editorX, node.editorY, node.editorX + 100, node.editorY + 20);
 			setColor(colorWhite);
-			setFont("calibri.ttf");
-			drawText(node.editorX + 100/2, node.editorY + 20/2, 12, 0.f, 0.f, "%s", node.typeName.c_str());
+			setFontMSDF("calibri.ttf");
+			drawTextMSDF(node.editorX + 100/2, node.editorY + 20/2, 12, 0.f, 0.f, "%s", node.typeName.c_str());
 		}
 		else
 		{
@@ -3853,8 +3856,8 @@ void GraphEdit::draw() const
 		drawRectLine(GFX_SX/2 - kWidth, GFX_SY - y, GFX_SX/2 + kWidth, GFX_SY - y + kHeight);
 		
 		setColor(colorWhite);
-		setFont("calibri.ttf");
-		drawText(GFX_SX/2, GFX_SY - y + kHeight/2, 18, 0.f, 0.f, "%s", n.text.c_str());
+		setFontMSDF("calibri.ttf");
+		drawTextMSDF(GFX_SX/2, GFX_SY - y + kHeight/2, 18, 0.f, 0.f, "%s", n.text.c_str());
 	}
 	
 	HitTestResult hitTestResult;
@@ -3979,36 +3982,33 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 		setColor(127, 127, 127, 255);
 	drawRectLine(0.f, 0.f, definition.sx, nodeSy);
 	
-	setFont("calibri.ttf");
+	setFontMSDF("calibri.ttf");
 	setColor(255, 255, 255);
-	drawText(definition.sx/2, 12, 14, 0.f, 0.f, "%s", !node.editorName.empty() ? node.editorName.c_str() : definition.displayName.empty() ? definition.typeName.c_str() : definition.displayName.c_str());
+	drawTextMSDF(definition.sx/2, 12, 14, 0.f, 0.f, "%s", !node.editorName.empty() ? node.editorName.c_str() : definition.displayName.empty() ? definition.typeName.c_str() : definition.displayName.c_str());
 	
 	if (node.isPassthrough)
 	{
-		setFont("calibri.ttf");
 		setColor(127, 127, 255);
-		drawText(definition.sx - 8, 12, 14, -1.f, 0.f, "P");
+		drawTextMSDF(definition.sx - 8, 12, 14, -1.f, 0.f, "P");
 	}
 	
 	if (isFolded == false)
 	{
-		setFont("calibri.ttf");
-		
-		beginTextBatch();
+		beginTextBatchMSDF();
 		{
 			for (auto & inputSocket : definition.inputSockets)
 			{
 				setColor(255, 255, 255);
-				drawText(inputSocket.px + inputSocket.radius + 2, inputSocket.py, 12, +1.f, 0.f, "%s", inputSocket. name.c_str());
+				drawTextMSDF(inputSocket.px + inputSocket.radius + 2, inputSocket.py, 12, +1.f, 0.f, "%s", inputSocket. name.c_str());
 			}
 			
 			for (auto & outputSocket : definition.outputSockets)
 			{
 				setColor(255, 255, 255);
-				drawText(outputSocket.px - outputSocket.radius - 2, outputSocket.py, 12, -1.f, 0.f, "%s", outputSocket.name.c_str());
+				drawTextMSDF(outputSocket.px - outputSocket.radius - 2, outputSocket.py, 12, -1.f, 0.f, "%s", outputSocket.name.c_str());
 			}
 		}
-		endTextBatch();
+		endTextBatchMSDF();
 		
 		hqBegin(HQ_FILLED_CIRCLES);
 		{
