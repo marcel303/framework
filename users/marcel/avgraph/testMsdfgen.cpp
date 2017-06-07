@@ -82,12 +82,14 @@ struct MsdfGlyph
 	int sy;
 	float scale;
 	int advance;
+	int y1;
 
 	MsdfGlyph()
 		: textureAtlasElem(nullptr)
 		, sx(0)
 		, sy(0)
 		, advance(0)
+		, y1(0)
 	{
 	}
 };
@@ -268,6 +270,123 @@ void MsdfGlyphCache::makeGlyph(const int codepoint, MsdfGlyph & glyph)
 	stbtt_GetCodepointHMetrics(&font.fontInfo, codepoint, &advance, &lsb);
 	
 	glyph.advance = advance;
+	glyph.y1 = y1;
+}
+
+static Shader * msdfShader = nullptr;
+
+static bool isInTextBatch = false;
+
+static void beginTextBatchMSDF(MsdfGlyphCache & glyphCache)
+{
+	Assert(isInTextBatch == false);
+	if (isInTextBatch == true)
+		return;
+	
+	isInTextBatch = true;
+	
+	if (msdfShader == nullptr)
+	{
+		msdfShader = new Shader("msdf/msdf");
+	}
+	
+	setShader(*msdfShader);
+	
+	msdfShader->setTexture("msdf", 0, glyphCache.textureAtlas.texture);
+	msdfShader->setImmediate("sampleMethod", 0);
+	msdfShader->setImmediate("useSuperSampling", 1);
+	
+	gxBegin(GL_QUADS);
+}
+
+static void endTextBatchMSDF()
+{
+	Assert(isInTextBatch == true);
+	if (isInTextBatch == false)
+		return;
+	
+	isInTextBatch = false;
+
+	gxEnd();
+	
+	clearShader();
+}
+
+static void drawTextMSDF(MsdfGlyphCache & glyphCache, const float _x, const float _y, const float size, const char * text)
+{
+	if (msdfShader == nullptr)
+	{
+		msdfShader = new Shader("msdf/msdf");
+	}
+	
+	if (isInTextBatch == false)
+	{
+		setShader(*msdfShader);
+		
+		msdfShader->setTexture("msdf", 0, glyphCache.textureAtlas.texture);
+		msdfShader->setImmediate("sampleMethod", 0);
+		msdfShader->setImmediate("useSuperSampling", 1);
+		
+		gxBegin(GL_QUADS);
+	}
+	
+	const float scale = stbtt_ScaleForPixelHeight(&glyphCache.font.fontInfo, size);
+	
+	int lastCodepoint = -1;
+	
+	float x = _x / scale;
+	float y = _y / scale;
+	
+	for (int i = 0; text[i]; ++i)
+	{
+		const int codepoint = text[i];
+		
+		const MsdfGlyph & glyph = glyphCache.findOrCreate(codepoint);
+		
+		//
+		
+		const int sx = glyph.textureAtlasElem->sx;
+		const int sy = glyph.textureAtlasElem->sy;
+		
+		const int u1i = glyph.textureAtlasElem->x;
+		const int v1i = glyph.textureAtlasElem->y;
+		const int u2i = u1i + sx;
+		const int v2i = v1i + sy;
+		
+		const float u1 = u1i / float(glyphCache.textureAtlas.a.sx);
+		const float v1 = v1i / float(glyphCache.textureAtlas.a.sy);
+		const float u2 = u2i / float(glyphCache.textureAtlas.a.sx);
+		const float v2 = v2i / float(glyphCache.textureAtlas.a.sy);
+		
+		int gsx = glyph.sx;
+		int gsy = glyph.sy;
+		
+		int dx1 = x - GLYPH_PADDING;
+		int dy1 = 0 + GLYPH_PADDING;
+		int dx2 = dx1 + gsx;
+		int dy2 = dy1 - gsy;
+		
+		dy1 += y - glyph.y1;
+		dy2 += y - glyph.y1;
+		
+		gxTexCoord2f(u1, v1); gxVertex2f(dx1 * scale, dy1 * scale);
+		gxTexCoord2f(u2, v1); gxVertex2f(dx2 * scale, dy1 * scale);
+		gxTexCoord2f(u2, v2); gxVertex2f(dx2 * scale, dy2 * scale);
+		gxTexCoord2f(u1, v2); gxVertex2f(dx1 * scale, dy2 * scale);
+	
+		const int advance = glyph.advance + stbtt_GetCodepointKernAdvance(&glyphCache.font.fontInfo, lastCodepoint, codepoint);
+		
+		x += advance;
+		
+		lastCodepoint = codepoint;
+	}
+	
+	if (isInTextBatch == false)
+	{
+		gxEnd();
+		
+		clearShader();
+	}
 }
 
 void testMsdfgen()
@@ -378,8 +497,6 @@ void testMsdfgen()
 						setShader(shader);
 						{
 							shader.setTexture("msdf", 0, glyphCache.textureAtlas.texture);
-							shader.setImmediate("bgColor", i / 9.f, .5f, .5f, 1.f);
-							shader.setImmediate("fgColor", 1.f, 1.f, 1.f, 1.f);
 							shader.setImmediate("sampleMethod", sampleMethod);
 							shader.setImmediate("useSuperSampling", useSuperSampling);
 							
@@ -456,6 +573,19 @@ void testMsdfgen()
 			setColor(colorWhite);
 			setFont("calibri.ttf");
 			drawText(5, GFX_SY - 5, 18, +1, -1, "super sampling: %d, sample method: %d - %s", useSuperSampling, sampleMethod, sampleMethodNames[sampleMethod]);
+			
+			gxPushMatrix();
+			gxTranslatef(GFX_SX/4, GFX_SY/3, 0);
+			beginTextBatchMSDF(glyphCache);
+			{
+				setColor(colorYellow);
+				drawTextMSDF(glyphCache, 0, 0, 12, "Hello - World");
+				
+				setColor(colorGreen);
+				drawTextMSDF(glyphCache, 0, 25, 12, "Lalala");
+			}
+			endTextBatchMSDF();
+			gxPopMatrix();
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
