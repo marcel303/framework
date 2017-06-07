@@ -139,11 +139,12 @@ enum SHADER_TYPE
 enum RESOURCE_CACHE
 {
 	CACHE_FONT = 1 << 0,
-	CACHE_SHADER = 1 << 1,
-	CACHE_SOUND = 1 << 2,
-	CACHE_SPRITE = 1 << 3,
-	CACHE_SPRITER = 1 << 4,
-	CACHE_TEXTURE = 1 << 5
+	CACHE_FONT_MSDF = 1 << 1,
+	CACHE_SHADER = 1 << 2,
+	CACHE_SOUND = 1 << 3,
+	CACHE_SPRITE = 1 << 4,
+	CACHE_SPRITER = 1 << 5,
+	CACHE_TEXTURE = 1 << 6
 };
 
 enum INIT_ERROR
@@ -834,6 +835,22 @@ private:
 
 //
 
+class FontMSDF
+{
+public:
+	FontMSDF(const char * filename);
+	
+	class MsdfFontCacheElem * getFont()
+	{
+		return m_font;
+	}
+	
+private:
+	class MsdfFontCacheElem * m_font;
+};
+
+//
+
 class Path2d
 {
 	enum ELEM_TYPE
@@ -1114,6 +1131,8 @@ void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, 
 void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, float x2, float y2, float r2, float g2, float b2, float a2);
 void setFont(const Font & font);
 void setFont(const char * font);
+void setFontMSDF(const FontMSDF & font);
+void setFontMSDF(const char * font);
 void setShader(const ShaderBase & shader);
 void clearShader();
 void shaderSource(const char * filename, const char * text);
@@ -1131,6 +1150,11 @@ void endTextBatch();
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 void drawTextArea(float x, float y, float sx, int size, const char * format, ...);
 void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, float alignY, const char * format, ...);
+void measureTextMSDF(float size, float & sx, float & sy, const char * format, ...);
+void beginTextBatchMSDF();
+void endTextBatchMSDF();
+void drawTextMSDF(float x, float y, float size, float alignX, float alignY, const char * format, ...);
+
 void drawPath(const Path2d & path);
 
 GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
@@ -1255,7 +1279,6 @@ void showErrorMessage(const char * caption, const char * format, ...);
 
 void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius);
 void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius);
-void setShader_Invert(const GLuint source, const float opacity);
 void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity);
 void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor, const float opacity);
 void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor, const float opacity);

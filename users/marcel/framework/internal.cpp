@@ -10,6 +10,12 @@
 	#include "textureatlas.h"
 #endif
 
+#if ENABLE_MSDF_FONTS
+	#define STB_TRUETYPE_IMPLEMENTATION
+	#include "stb_truetype.h"
+	#include "msdfgen/msdfgen.h"
+#endif
+
 #if defined(WIN32)
 	#include <Windows.h>
 	#include <Pathcch.h>
@@ -31,6 +37,7 @@ AnimCache g_animCache;
 SpriterCache g_spriterCache;
 SoundCache g_soundCache;
 FontCache g_fontCache;
+MsdfFontCache g_fontCacheMSDF;
 GlyphCache g_glyphCache;
 UiCache g_uiCache;
 
@@ -1826,6 +1833,350 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 	}
 }
 
+// -----
+
+StbFont::StbFont()
+	: buffer(nullptr)
+	, bufferSize(0)
+{
+}
+
+StbFont::~StbFont()
+{
+	free();
+}
+
+bool StbFont::load(const char * filename)
+{
+	bool result = false;
+	
+	FILE * file = fopen(filename, "rb");
+	
+	if (file != nullptr)
+	{
+		// load source from file
+
+		fseek(file, 0, SEEK_END);
+		bufferSize = ftell(file);
+		fseek(file, 0, SEEK_SET);
+
+		buffer = new uint8_t[bufferSize];
+
+		if (fread(buffer, 1, bufferSize, file) == (size_t)bufferSize)
+		{
+			if (stbtt_InitFont(&fontInfo, buffer, 0) != 0)
+			{
+				result = true;
+			}
+		}
+		
+		fclose(file);
+		file = nullptr;
+	}
+	
+	if (result == false)
+	{
+		free();
+	}
+	
+	return result;
+}
+
+void StbFont::free()
+{
+	delete[] buffer;
+	buffer = nullptr;
+	
+	bufferSize = 0;
+}
+
+//
+
+#if ENABLE_MSDF_FONTS
+
+MsdfGlyphCacheElem::MsdfGlyphCacheElem()
+	: textureAtlasElem(nullptr)
+	, y(0)
+	, sx(0)
+	, sy(0)
+	, scale(1.f)
+	, advance(0)
+	, isInitialized(false)
+{
+}
+
+MsdfGlyphCache::MsdfGlyphCache()
+	: m_isLoaded(false)
+	, m_font()
+	, m_textureAtlas(nullptr)
+	, m_map()
+{
+}
+
+MsdfGlyphCache::~MsdfGlyphCache()
+{
+	free();
+}
+
+//
+
+void MsdfGlyphCache::free()
+{
+	m_map.clear();
+	
+	delete m_textureAtlas;
+	m_textureAtlas = nullptr;
+	
+	m_font.free();
+	
+	//
+	
+	m_isLoaded = false;
+}
+
+void MsdfGlyphCache::load(const char * filename)
+{
+	const int kAtlasSx = 512;
+	const int kAtlasSy = 512;
+	
+	//
+	
+	free();
+	
+	//
+	
+	if (m_font.load(filename))
+	{
+		m_textureAtlas = new TextureAtlas();
+		m_textureAtlas->init(kAtlasSx, kAtlasSy, GL_RGB32F, true, true, nullptr);
+		
+		m_isLoaded = true;
+	}
+	
+	if (m_isLoaded == false)
+	{
+		free();
+	}
+}
+
+const MsdfGlyphCacheElem & MsdfGlyphCache::findOrCreate(const int codepoint)
+{
+	MsdfGlyphCacheElem & glyph = m_map[codepoint];
+	
+	// glyph is new. make sure it gets initialized here
+				
+	if (glyph.isInitialized == false && m_isLoaded)
+	{
+		makeGlyph(codepoint, glyph);
+	}
+	
+	return glyph;
+}
+
+bool MsdfGlyphCache::stbGlyphToMsdfShape(const int codePoint, msdfgen::Shape & shape)
+{
+	stbtt_vertex * vertices = nullptr;
+	
+	const int numVertices = stbtt_GetCodepointShape(&m_font.fontInfo, codePoint, &vertices);
+	
+	msdfgen::Contour * contour = nullptr;
+	
+	msdfgen::Point2 old_p;
+	
+	for (int i = 0; i < numVertices; ++i)
+	{
+		stbtt_vertex & v = vertices[i];
+		
+		if (v.type == STBTT_vmove)
+		{
+			//logDebug("moveTo: %d, %d", v.x, v.y);
+			
+			contour = &shape.addContour();
+			
+			old_p.set(v.x, v.y);
+			
+		}
+		else if (v.type == STBTT_vline)
+		{
+			//logDebug("lineTo: %d, %d", v.x, v.y);
+			
+			msdfgen::Point2 new_p(v.x, v.y);
+			
+			contour->addEdge(new msdfgen::LinearSegment(old_p, new_p));
+			
+			old_p = new_p;
+		}
+		else if (v.type == STBTT_vcurve)
+		{
+			//logDebug("quadraticTo: %d, %d", v.x, v.y);
+			
+			const msdfgen::Point2 new_p(v.x, v.y);
+			const msdfgen::Point2 control_p(v.cx, v.cy);
+			
+			contour->addEdge(new msdfgen::QuadraticSegment(old_p, control_p, new_p));
+			
+			old_p = new_p;
+		}
+		else if (v.type == STBTT_vcubic)
+		{
+			//logDebug("cubicTo: %d, %d", v.x, v.y);
+			
+			const msdfgen::Point2 new_p(v.x, v.y);
+			const msdfgen::Point2 control_p1(v.cx, v.cy);
+			const msdfgen::Point2 control_p2(v.cx1, v.cy1);
+			
+			contour->addEdge(new msdfgen::CubicSegment(old_p, control_p1, control_p2, new_p));
+			
+			old_p = new_p;
+		}
+		else
+		{
+			logDebug("unknown vertex type: %d", v.type);
+		}
+	}
+	
+	stbtt_FreeShape(&m_font.fontInfo, vertices);
+	vertices = nullptr;
+	
+	return true;
+}
+
+void MsdfGlyphCache::makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph)
+{
+	msdfgen::Shape shape;
+	
+	stbGlyphToMsdfShape(codepoint, shape);
+	
+	int x1, y1;
+	int x2, y2;
+	if (stbtt_GetCodepointBox(&m_font.fontInfo, codepoint, &x1, &y1, &x2, &y2) != 0)
+	{
+		//logDebug("glyph box: (%d, %d) - (%d, %d)", x1, y1, x2, y2);
+		
+		if (x2 < x1)
+			std::swap(x1, x2);
+		if (y2 < y1)
+			std::swap(y1, y2);
+		
+		const int sx = x2 - x1 + 1;
+		const int sy = y2 - y1 + 1;
+		
+		const float scale = MSDF_SCALE;
+		const float sx1 = x1 * scale;
+		const float sy1 = y1 * scale;
+		const float sx2 = (x1 + sx) * scale;
+		const float sy2 = (y1 + sy) * scale;
+		
+		const float ssx = sx2 - sx1;
+		const float ssy = sy2 - sy1;
+		
+		const int bitmapSx = std::ceil(ssx) + MSDF_GLYPH_PADDING_OUTER * 2;
+		const int bitmapSy = std::ceil(ssy) + MSDF_GLYPH_PADDING_OUTER * 2;
+		logDebug("bitmap size: %d x %d", bitmapSx, bitmapSy);
+		
+		msdfgen::edgeColoringSimple(shape, 3.f);
+		msdfgen::Bitmap<msdfgen::FloatRGB> msdf(bitmapSx, bitmapSy);
+		
+		const msdfgen::Vector2 scaleVec(scale, scale);
+		const msdfgen::Vector2 transVec(
+			-x1 + int(MSDF_GLYPH_PADDING_OUTER / scale),
+			-y1 + int(MSDF_GLYPH_PADDING_OUTER / scale));
+		msdfgen::generateMSDF(msdf, shape, 1.f / scale, scaleVec, transVec);
+		
+		glyph.sx = (bitmapSx - MSDF_GLYPH_PADDING_INNER * 2) / MSDF_SCALE;
+		glyph.sy = (bitmapSy - MSDF_GLYPH_PADDING_INNER * 2) / MSDF_SCALE;
+		
+		for (;;)
+		{
+			glyph.textureAtlasElem = m_textureAtlas->tryAlloc((uint8_t*)&msdf(0, 0), bitmapSx, bitmapSy, GL_RGB, GL_FLOAT);
+			
+			if (glyph.textureAtlasElem != nullptr)
+				break;
+			
+			logDebug("glyph allocation failed. growing texture atlas to twice the old height");
+				
+			// note : texture atlas re-allocation shouldn't happen in draw code; make sure to cache each glyph elem first before calling gxBegin!
+			
+			m_textureAtlas->makeBiggerAndOptimize(m_textureAtlas->a.sx, m_textureAtlas->a.sy * 2);
+		}
+	}
+	
+	int advance;
+	int lsb;
+	stbtt_GetCodepointHMetrics(&m_font.fontInfo, codepoint, &advance, &lsb);
+	
+	glyph.isInitialized = true;
+	glyph.advance = advance;
+	glyph.y = y1;
+}
+
+// -----
+
+MsdfFontCacheElem::MsdfFontCacheElem()
+	: m_glyphCache()
+{
+}
+
+void MsdfFontCacheElem::free()
+{
+	delete m_glyphCache;
+	m_glyphCache = nullptr;
+}
+
+void MsdfFontCacheElem::load(const char * filename)
+{
+	ScopedLoadTimer loadTimer(filename);
+
+	free();
+	
+	m_glyphCache = new MsdfGlyphCache();
+	m_glyphCache->load(filename);
+}
+
+//
+
+void MsdfFontCache::clear()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.free();
+	}
+	
+	m_map.clear();
+}
+
+void MsdfFontCache::reload()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.load(i->first.c_str());
+	}
+}
+
+MsdfFontCacheElem & MsdfFontCache::findOrCreate(const char * name)
+{
+	Key key = name;
+	
+	Map::iterator i = m_map.find(key);
+	
+	if (i != m_map.end())
+	{
+		return i->second;
+	}
+	else
+	{
+		MsdfFontCacheElem elem;
+		
+		elem.load(name);
+		
+		i = m_map.insert(Map::value_type(key, elem)).first;
+		
+		return i->second;
+	}
+}
+
+#endif
+
 //
 
 void UiCacheElem::free()
@@ -1931,6 +2282,6 @@ BuiltinShaders::BuiltinShaders()
 	, hqStrokeTriangle("engine/builtin-hq-stroked-triangle")
 	, hqStrokedCircle("engine/builtin-hq-stroked-circle")
 	, hqStrokedRect("engine/builtin-hq-stroked-rect")
-	, invert("engine/builtin-invert")
+	, msdfText("engine/builtin-msdf-text")
 {
 }

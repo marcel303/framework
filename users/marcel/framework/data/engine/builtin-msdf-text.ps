@@ -1,0 +1,158 @@
+static const char * s_msdfTextPs = R"SHADER(
+
+include engine/ShaderPS.txt
+
+shader_in vec4 v_color;
+shader_in vec2 v_texcoord;
+
+uniform sampler2D msdf;
+uniform float sampleMethod;
+uniform float useSuperSampling;
+
+float median(float r, float g, float b)
+{
+    return max(min(r, g), min(max(r, g), b));
+}
+
+vec2 safeNormalize(vec2 v)
+{
+	float len = length(v);
+	len = (len > 0.0) ? 1.0 / len : 0.0;
+	return v * len;
+}
+
+float sampleMsdf_Marcel1(vec2 texcoord)
+{
+	vec3 msdfSample = texture(msdf, texcoord).rgb;
+	float sigDist = median(msdfSample.r, msdfSample.g, msdfSample.b) - 0.5;
+	float w = fwidth(sigDist);
+	return smoothstep(-w, +w, sigDist);
+}
+
+float sampleMsdf_Marcel2(vec2 texcoord)
+{
+	vec3 msdfSample = texture(msdf, texcoord).rgb;
+	float sigDist = median(msdfSample.r, msdfSample.g, msdfSample.b) - 0.5;
+	float w = length(vec2(dFdx(sigDist), dFdy(sigDist)));
+	return smoothstep(-w, +w, sigDist);
+}
+
+float sampleMsdf_PHoux1a(vec2 TexCoord)
+{
+	vec3 msdfSample = texture( msdf, TexCoord ).rgb;
+	vec2 sz = textureSize( msdf, 0 );
+	float dx = dFdx( TexCoord.x ) * sz.x;
+	float dy = dFdy( TexCoord.y ) * sz.y;
+	float toPixels = 2.0 * inversesqrt( dx * dx + dy * dy );
+	float sigDist = median( msdfSample.r, msdfSample.g, msdfSample.b ) - 0.5;
+	return sigDist * toPixels + 0.5;
+}
+
+float sampleMsdf_PHoux1b(vec2 TexCoord)
+{
+	vec3 msdfSample = texture( msdf, TexCoord ).rgb;
+	vec2 sz = textureSize( msdf, 0 );
+	float dx = dFdx( TexCoord.x ) * sz.x;
+	float dy = dFdy( TexCoord.y ) * sz.y;
+	float toPixels = inversesqrt( dx * dx + dy * dy ); // originally got multiplied by 8 .. but generates very opaque looking edges .. ?
+	float sigDist = median( msdfSample.r, msdfSample.g, msdfSample.b ) - 0.5;
+	return sigDist * toPixels + 0.5;
+}
+
+float sampleMsdf_PHoux1_Marcel(vec2 TexCoord)
+{
+	vec3 msdfSample = texture( msdf, TexCoord ).rgb;
+	vec2 sz = textureSize( msdf, 0 );
+	float dx = dFdx( TexCoord.x ) * sz.x;
+	float dy = dFdy( TexCoord.y ) * sz.y;
+	float toPixels = 1.4 * inversesqrt( dx * dx + dy * dy ); // originally got multiplied by 8 .. but generates very opaque looking edges .. ?
+	float sigDist = median( msdfSample.r, msdfSample.g, msdfSample.b ) - 0.5;
+	return sigDist * toPixels + 0.5;
+}
+
+float sampleMsdf(vec2 texcoord)
+{
+	float opacity;
+
+	if (sampleMethod == 0)
+		opacity = sampleMsdf_Marcel1(texcoord);
+	else if (sampleMethod == 1)
+		opacity = sampleMsdf_Marcel2(texcoord);
+	else if (sampleMethod == 2)
+		opacity = sampleMsdf_PHoux1a(texcoord);
+	else if (sampleMethod == 3)
+		opacity = sampleMsdf_PHoux1b(texcoord);
+	else if (sampleMethod == 4)
+		opacity = sampleMsdf_PHoux1_Marcel(texcoord);
+	else
+		opacity = texcoord.y;
+
+	return clamp(opacity * 1.5, 0.0, 1.0);
+}
+
+void main()
+{
+	vec2 msdfSize = textureSize(msdf, 0);
+
+    vec3 msdfSample = texture(msdf, v_texcoord).rgb;
+
+#if 1
+    float opacity = 0.0;
+
+    if (useSuperSampling == 0)
+    {
+    	opacity = sampleMsdf(v_texcoord);
+    }
+    else if (length(dFdx(v_texcoord * msdfSize)) <= 1.0)
+    {
+		opacity = sampleMsdf(v_texcoord);
+    }
+    else
+    {
+	    int kernelSize = min(10, int(length(dFdx(v_texcoord * msdfSize))) + 1);
+
+	    // note : devision by two provides sharpening and is more correct, as we sample in the range [-0.5, +0.5] of the derivative of texcoord, for a total sampled area of 1.0 x 1.0 = 1.0
+	    vec2 du = dFdx(v_texcoord) / kernelSize / 2.0;
+		vec2 dv = dFdy(v_texcoord) / kernelSize / 2.0;
+
+		for (int i = -kernelSize; i <= +kernelSize; ++i)
+		{
+			for (int j = -kernelSize; j <= +kernelSize; ++j)
+			{
+				vec2 texcoord = v_texcoord + du * i + dv * j;
+
+	    		opacity += sampleMsdf(texcoord);
+			}
+		}
+
+		int numSamples = (kernelSize*2+1) * (kernelSize*2+1);
+	    opacity /= numSamples;
+	}
+#elif 0
+    vec2 uv = v_texcoord * textureSize(msdf, 0);
+
+	// Calculate derivates
+	vec2 Jdx = dFdx(uv);
+	vec2 Jdy = dFdy(uv);
+
+	float sigDist = median(msdfSample.r, msdfSample.g, msdfSample.b) - 0.5;
+    vec2 gradDist = safeNormalize(vec2(dFdx(sigDist), dFdy(sigDist)));
+	vec2 grad = vec2(gradDist.x * Jdx.x + gradDist.y * Jdy.x, gradDist.x * Jdx.y + gradDist.y * Jdy.y);
+
+	// Apply anti-aliasing.
+	//const float kThickness = 0.125;
+	const float kThickness = 1.0;
+	float kNormalization = kThickness * 0.5 * sqrt( 2.0 );
+	float afwidth = min( kNormalization * length( grad ), 0.5 );
+	float opacity = smoothstep(-afwidth, +afwidth, sigDist );
+#endif
+
+    vec4 color = v_color;
+    color.a *= opacity;
+
+    // todo : premultiplied alpha rendering ?
+
+    shader_fragColor = color;
+}
+
+)SHADER";

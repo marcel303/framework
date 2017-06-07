@@ -36,8 +36,9 @@
 #include "data/engine/builtin-hq-stroked-rect.vs"
 #include "data/engine/builtin-hq-stroked-triangle.ps"
 #include "data/engine/builtin-hq-stroked-triangle.vs"
-//#include "data/engine/builtin-invert.ps"
-//#include "data/engine/builtin-invert.vs"
+
+#include "data/engine/builtin-msdf-text.ps"
+#include "data/engine/builtin-msdf-text.vs"
 
 void registerBuiltinShaders()
 {
@@ -101,8 +102,9 @@ void registerBuiltinShaders()
 	shaderSource("engine/builtin-hq-stroked-rect.vs", s_hqStrokedRectVs);
 	shaderSource("engine/builtin-hq-stroked-triangle.ps", s_hqStrokedTrianglePs);
 	shaderSource("engine/builtin-hq-stroked-triangle.vs", s_hqStrokedTriangleVs);
-	//shaderSource("engine/builtin-invert.ps", s_invertPs);
-	//shaderSource("engine/builtin-invert.vs", s_invertVs);
+	
+	shaderSource("engine/builtin-msdf-text.ps", s_msdfTextPs);
+	shaderSource("engine/builtin-msdf-text.vs", s_msdfTextVs);
 }
 
 #endif

@@ -471,6 +471,7 @@ bool Framework::shutdown()
 	g_modelCache.clear();
 	g_soundCache.clear();
 	g_fontCache.clear();
+	g_fontCacheMSDF.clear();
 	g_glyphCache.clear();
 	g_uiCache.clear();
 	
@@ -873,6 +874,7 @@ void Framework::reloadCaches()
 	g_modelCache.reload();
 	g_soundCache.reload();
 	g_fontCache.reload();
+	g_fontCacheMSDF.reload();
 	g_glyphCache.clear();
 	g_uiCache.reload();
 	
@@ -1017,7 +1019,10 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 			}
 		}
 		else if (e == "ttf")
+		{
 			g_fontCache.findOrCreate(f);
+			g_fontCacheMSDF.findOrCreate(f);
+		}
 		else if (e == "txt")
 		{
 			FileReader r;
@@ -3462,6 +3467,13 @@ Font::Font(const char * filename)
 
 // -----
 
+FontMSDF::FontMSDF(const char * filename)
+{
+	m_font = &g_fontCacheMSDF.findOrCreate(filename);
+}
+
+// -----
+
 void Path2d::PathElem::lineHeading(float & x, float & y) const
 {
 	x = v2.x - v1.x;
@@ -4412,6 +4424,9 @@ void clearCaches(int caches)
 		g_fontCache.clear();
 		g_glyphCache.clear();
 	}
+	
+	if (caches & CACHE_FONT_MSDF)
+		g_fontCacheMSDF.clear();
 
 	if (caches & CACHE_SHADER)
 		g_shaderCache.clear();
@@ -4784,6 +4799,16 @@ void setFont(const Font & font)
 void setFont(const char * font)
 {
 	setFont(Font(font));
+}
+
+void setFontMSDF(const FontMSDF & font)
+{
+	globals.fontMSDF = const_cast<FontMSDF&>(font).getFont();
+}
+
+void setFontMSDF(const char * font)
+{
+	setFontMSDF(FontMSDF(font));
 }
 
 void setShader(const ShaderBase & shader)
@@ -5258,6 +5283,266 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 		y += size;
 	}
 }
+
+//
+
+#if ENABLE_MSDF_FONTS
+
+// fixme : settle on one method
+static int sampleMethod = 3;
+static bool useSuperSampling = true;
+
+void beginTextBatchMSDF()
+{
+	fassert(globals.isInTextBatchMSDF == false);
+	if (globals.isInTextBatchMSDF == true)
+		return;
+	
+	globals.isInTextBatchMSDF = true;
+	
+	Shader & shader = globals.builtinShaders->msdfText;
+	setShader(shader);
+	
+	shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture);
+	shader.setImmediate("sampleMethod", sampleMethod);
+	shader.setImmediate("useSuperSampling", useSuperSampling);
+	
+	gxBegin(GL_QUADS);
+}
+
+void endTextBatchMSDF()
+{
+	fassert(globals.isInTextBatchMSDF == true);
+	if (globals.isInTextBatchMSDF == false)
+		return;
+	
+	globals.isInTextBatchMSDF = false;
+
+	gxEnd();
+	
+	clearShader();
+}
+
+static void measureTextMSDFInternal(const stbtt_fontinfo & fontInfo, const float size, const MsdfGlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
+
+{
+	int x1 = 0;
+	int y1 = 0;
+	int x2 = 0;
+	int y2 = 0;
+	
+	//
+	
+	int lastCodepoint = -1;
+	
+	int x = 0;
+	
+	bool isFirst = true;
+	
+	for (int i = 0; i < numGlyphs; ++i)
+	{
+		const int codepoint = codepoints[i];
+		const MsdfGlyphCacheElem & glyph = *glyphs[i];
+		
+		//
+		
+		if (glyph.textureAtlasElem != nullptr)
+		{
+			int gsx = glyph.sx;
+			int gsy = glyph.sy;
+			
+			int dx1 = x - MSDF_GLYPH_PADDING_INNER;
+			int dy1 = 0 + MSDF_GLYPH_PADDING_INNER;
+			int dx2 = dx1 + gsx;
+			int dy2 = dy1 - gsy;
+			
+			dy1 -= glyph.y;
+			dy2 -= glyph.y;
+			
+			// note: as natively the Y axis runs up, not down for STB/TrueType fonts we need to swap these. note also that while drawing we don't have to do this, as it neatly compensates for the glyphs being drawn 'upside down' as well
+			
+			std::swap(dy1, dy2);
+			
+			if (isFirst)
+			{
+				isFirst = false;
+				
+				x1 = dx1;
+				y1 = dy1;
+				x2 = dx2;
+				y2 = dy2;
+			}
+			else
+			{
+				x1 = std::min(x1, dx1);
+				y1 = std::min(y1, dy1);
+				x2 = std::max(x2, dx2);
+				y2 = std::max(y2, dy2);
+			}
+		}
+	
+		const int advance = glyph.advance + stbtt_GetCodepointKernAdvance(&fontInfo, lastCodepoint, codepoint);
+		
+		x += advance;
+		
+		lastCodepoint = codepoint;
+	}
+	
+	//
+	
+	const float scale = stbtt_ScaleForPixelHeight(&fontInfo, size);
+	
+	sx = (x2 - x1) * scale;
+	sy = (y2 - y1) * scale;
+	yTop = y1 * scale;
+}
+
+static void drawTextMSDFInternal(MsdfGlyphCache & glyphCache, const float _x, const float _y, const float size, const MsdfGlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs)
+{
+	if (globals.isInTextBatchMSDF == false)
+	{
+		Shader & shader = globals.builtinShaders->msdfText;
+		setShader(shader);
+		
+		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture);
+		shader.setImmediate("sampleMethod", sampleMethod);
+		shader.setImmediate("useSuperSampling", useSuperSampling);
+		
+		gxBegin(GL_QUADS);
+	}
+	
+	const float scale = stbtt_ScaleForPixelHeight(&glyphCache.m_font.fontInfo, size);
+	
+	int lastCodepoint = -1;
+	
+	float x = _x / scale;
+	float y = _y / scale;
+	
+	const int atlasSx = glyphCache.m_textureAtlas->a.sx;
+	const int atlasSy = glyphCache.m_textureAtlas->a.sy;
+	
+	for (int i = 0; i < numGlyphs; ++i)
+	{
+		const int codepoint = codepoints[i];
+		const MsdfGlyphCacheElem & glyph = *glyphs[i];
+		
+		//
+		
+		if (glyph.textureAtlasElem != nullptr)
+		{
+			const int sx = glyph.textureAtlasElem->sx;
+			const int sy = glyph.textureAtlasElem->sy;
+			
+			const int u1i = glyph.textureAtlasElem->x + MSDF_GLYPH_PADDING_INNER;
+			const int v1i = glyph.textureAtlasElem->y + MSDF_GLYPH_PADDING_INNER;
+			const int u2i = glyph.textureAtlasElem->x + sx - MSDF_GLYPH_PADDING_INNER;
+			const int v2i = glyph.textureAtlasElem->y + sy - MSDF_GLYPH_PADDING_INNER;
+			
+			const float u1 = u1i / float(atlasSx);
+			const float v1 = v1i / float(atlasSy);
+			const float u2 = u2i / float(atlasSx);
+			const float v2 = v2i / float(atlasSy);
+			
+			int gsx = glyph.sx;
+			int gsy = glyph.sy;
+			
+			int dx1 = x - MSDF_GLYPH_PADDING_INNER;
+			int dy1 = 0 + MSDF_GLYPH_PADDING_INNER;
+			int dx2 = dx1 + gsx;
+			int dy2 = dy1 - gsy;
+			
+			dy1 += y - glyph.y;
+			dy2 += y - glyph.y;
+			
+			gxTexCoord2f(u1, v1); gxVertex2f(dx1 * scale, dy1 * scale);
+			gxTexCoord2f(u2, v1); gxVertex2f(dx2 * scale, dy1 * scale);
+			gxTexCoord2f(u2, v2); gxVertex2f(dx2 * scale, dy2 * scale);
+			gxTexCoord2f(u1, v2); gxVertex2f(dx1 * scale, dy2 * scale);
+		}
+	
+		const int advance = glyph.advance + stbtt_GetCodepointKernAdvance(&glyphCache.m_font.fontInfo, lastCodepoint, codepoint);
+		
+		x += advance;
+		
+		lastCodepoint = codepoint;
+	}
+	
+	if (globals.isInTextBatchMSDF == false)
+	{
+		gxEnd();
+		
+		clearShader();
+	}
+}
+
+void drawTextMSDF(float _x, float _y, float size, float alignX, float alignY, const char * format, ...)
+{
+	char _text[MAX_TEXT_LENGTH];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(_text, sizeof(text), format, args);
+	va_end(args);
+	
+#if ENABLE_UTF8_SUPPORT
+	unicode_t text[MAX_TEXT_LENGTH];
+	const size_t textLength = utf8toutf32(_text, strlen(_text), text, MAX_TEXT_LENGTH * 4, 0) / 4;
+#else
+	const char * text = _text;
+	const size_t textLength = strlen(_text);
+#endif
+
+	MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
+	const MsdfGlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+	
+	for (size_t i = 0; i < textLength; ++i)
+	{
+		glyphs[i] = &glyphCache.findOrCreate(text[i]);
+	}
+	
+	float sx, sy, yTop;
+	measureTextMSDFInternal(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
+	
+	const float x = _x + sx * (alignX - 1.f) / 2.f;
+	const float y = _y + sy * (alignY - 1.f) / 2.f - yTop;
+
+	drawTextMSDFInternal(glyphCache, x, y, size, text, glyphs, textLength);
+}
+
+void measureTextMSDF(float size, float & sx, float & sy, const char * format, ...)
+{
+	char _text[MAX_TEXT_LENGTH];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(_text, sizeof(text), format, args);
+	va_end(args);
+	
+#if ENABLE_UTF8_SUPPORT
+	unicode_t text[MAX_TEXT_LENGTH];
+	const size_t textLength = utf8toutf32(_text, strlen(_text), text, MAX_TEXT_LENGTH * 4, 0) / 4;
+#else
+	const char * text = _text;
+	const size_t textLength = strlen(_text);
+#endif
+
+	MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
+	const MsdfGlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+	
+	for (size_t i = 0; i < textLength; ++i)
+	{
+		glyphs[i] = &glyphCache.findOrCreate(text[i]);
+	}
+	
+	float yTop;
+	measureTextMSDFInternal(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
+}
+
+#else
+
+	// todo : route calls to regular drawText routines
+
+#endif
+
+//
 
 void drawPath(const Path2d & path)
 {
@@ -6279,15 +6564,6 @@ void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const fl
 	shader.setImmediate("kernelSize", kernelSize);
 	shader.setImmediate("radius", radius);
 	shader.setBuffer("kernel", kernel);
-}
-
-void setShader_Invert(const GLuint source, const float opacity)
-{
-	Shader & shader = globals.builtinShaders->invert;
-	setShader(shader);
-	
-	shader.setImmediate("opacity", opacity);
-	shader.setTexture("source", 0, source, true, true);
 }
 
 // todo : move these shaders to BuiltinShaders and supply shader source
