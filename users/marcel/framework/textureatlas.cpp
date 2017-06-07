@@ -12,7 +12,7 @@ TextureAtlas::TextureAtlas()
 
 TextureAtlas::~TextureAtlas()
 {
-	init(0, 0, GL_R32F, false, false, nullptr);
+	shut();
 }
 
 void TextureAtlas::init(const int sx, const int sy, const GLenum _internalFormat, const bool _filter, const bool _clamp, const GLint * _swizzleMask)
@@ -44,6 +44,11 @@ void TextureAtlas::init(const int sx, const int sy, const GLenum _internalFormat
 	}
 	
 	texture = allocateTexture(sx, sy);
+}
+
+void TextureAtlas::shut()
+{
+	init(0, 0, GL_R32F, false, false, nullptr);
 }
 
 BoxAtlasElem * TextureAtlas::tryAlloc(const uint8_t * values, const int sx, const int sy, const GLenum uploadFormat, const GLenum uploadType, const int border)

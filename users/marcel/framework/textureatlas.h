@@ -19,6 +19,7 @@ struct TextureAtlas
 	~TextureAtlas();
 	
 	void init(const int sx, const int sy, const GLenum internalFormat, const bool filter, const bool clamp, const GLint * swizzleMask);
+	void shut();
 	
 	BoxAtlasElem * tryAlloc(const uint8_t * values, const int sx, const int sy, const GLenum uploadFormat, const GLenum uploadType, const int border = 0);
 	void free(BoxAtlasElem *& e);
