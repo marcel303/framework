@@ -120,7 +120,7 @@ void VfxNodeKinect2::tick(const float dt)
 				videoTexture.setSwizzle(GL_BLUE, GL_GREEN, GL_RED, GL_ONE);
 			}
 			
-			videoTexture.upload(kinect->listener->video->data, 16, kinect->listener->video->width * 4, GL_RGBA, GL_UNSIGNED_BYTE);
+			videoTexture.upload(kinect->listener->video->data, 16, kinect->listener->video->width, GL_RGBA, GL_UNSIGNED_BYTE);
 			
 			// consume video data
 			
@@ -141,7 +141,7 @@ void VfxNodeKinect2::tick(const float dt)
 				depthTexture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 			}
 			
-			depthTexture.upload(kinect->listener->depth->data, 16, kinect->listener->depth->width * 4, GL_RED, GL_FLOAT);
+			depthTexture.upload(kinect->listener->depth->data, 16, kinect->listener->depth->width, GL_RED, GL_FLOAT);
 			
 			// consume depth data
 			
