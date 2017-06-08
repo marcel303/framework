@@ -10,6 +10,7 @@ struct VfxNodeDeepbelief : VfxNodeBase
 		kInput_Network,
 		kInput_Image,
 		kInput_Treshold,
+		kInput_UpdateInterval,
 		kInput_ShowResult,
 		kInput_COUNT
 	};
@@ -23,6 +24,8 @@ struct VfxNodeDeepbelief : VfxNodeBase
 
 	Deepbelief deepbelief;
 	std::string networkFilename;
+	
+	float updateTimer;
 
 	DeepbeliefResult result;
 

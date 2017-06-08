@@ -6,6 +6,7 @@ VfxNodeDeepbelief::VfxNodeDeepbelief()
 	: VfxNodeBase()
 	, deepbelief()
 	, networkFilename()
+	, updateTimer(0.f)
 	, result()
 	, labelOutput()
 	, certaintyOutput(0.f)
@@ -14,6 +15,7 @@ VfxNodeDeepbelief::VfxNodeDeepbelief()
 	addInput(kInput_Network, kVfxPlugType_String);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
 	addInput(kInput_Treshold, kVfxPlugType_Float);
+	addInput(kInput_UpdateInterval, kVfxPlugType_Float);
 	addInput(kInput_ShowResult, kVfxPlugType_Bool);
 	addOutput(kOutput_Label, kVfxPlugType_String, &labelOutput);
 	addOutput(kOutput_Certainty, kVfxPlugType_Float, &certaintyOutput);
@@ -26,6 +28,7 @@ void VfxNodeDeepbelief::tick(const float dt)
 	const char * newNetworkFilename = getInputString(kInput_Network, "");
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const float treshold = getInputFloat(kInput_Treshold, .01f);
+	const float updateInterval = getInputFloat(kInput_UpdateInterval, 0.f);
 
 	if (newNetworkFilename != networkFilename)
 	{
@@ -36,9 +39,13 @@ void VfxNodeDeepbelief::tick(const float dt)
 			deepbelief.init(newNetworkFilename);
 		}
 	}
+	
+	updateTimer += dt;
 
-	if (image != nullptr && deepbelief.isInitialized)
+	if (image != nullptr && deepbelief.isInitialized && updateTimer >= updateInterval)
 	{
+		updateTimer = 0.f;
+		
 		if (image->isInterleaved)
 		{
 			deepbelief.process(image->channel[0].data, image->sx, image->sy, image->numChannels, image->channel[0].pitch, treshold);
@@ -75,5 +82,5 @@ void VfxNodeDeepbelief::getDescription(VfxNodeDescription & d)
 	}
 
 	d.newline();
-	d.add("classification took %.2fms", result.classificationTime / 1000.0);
+	d.add("classification took %.2fms", result.classificationTime);
 }
