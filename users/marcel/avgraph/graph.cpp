@@ -2579,7 +2579,7 @@ bool GraphEdit::tick(const float dt)
 				break;
 			}
 			
-			if (editorOptions.autoHideUi && idleTime > 3.f)
+			if (editorOptions.autoHideUi && idleTime > 30.f)
 			{
 				hideTime = 1.f;
 				

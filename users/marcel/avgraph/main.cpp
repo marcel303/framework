@@ -15,6 +15,7 @@
 #include "vfxNodes/vfxNodeChannelSlice.h"
 #include "vfxNodes/vfxNodeChannelToGpu.h"
 #include "vfxNodes/vfxNodeComposite.h"
+#include "vfxNodes/vfxNodeDeepbelief.h"
 #include "vfxNodes/vfxNodeDelayLine.h"
 #include "vfxNodes/vfxNodeDisplay.h"
 #include "vfxNodes/vfxNodeDotDetector.h"
@@ -85,8 +86,10 @@ extern void testDynamicTextureAtlas();
 extern void testDotDetector();
 extern void testDotTracker();
 extern void testAudiochannels();
+extern void testThreading();
 extern void testStbTruetype();
 extern void testMsdfgen();
+extern void testDeepbelief();
 
 struct VfxNodeTriggerAsFloat : VfxNodeBase
 {
@@ -204,6 +207,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("kinect1", VfxNodeKinect1)
 	DefineNodeImpl("kinect2", VfxNodeKinect2)
 	DefineNodeImpl("pointcloud", VfxNodePointcloud)
+	DefineNodeImpl("deepbelief", VfxNodeDeepbelief)
 	DefineNodeImpl("osc", VfxNodeOsc)
 	DefineNodeImpl("osc.send", VfxNodeOscSend)
 	DefineNodeImpl("composite", VfxNodeComposite)
@@ -541,9 +545,13 @@ int main(int argc, char * argv[])
 
 		//testAudiochannels();
 		
-		testStbTruetype();
+		//testThreading();
+		
+		//testStbTruetype();
 		
 		testMsdfgen();
+		
+		testDeepbelief();
 		
 		//
 		

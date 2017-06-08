@@ -249,7 +249,7 @@ void testNanovg()
 {
 	struct NVGcontext * vg = nvgCreateGL3(NVG_ANTIALIAS | NVG_STENCIL_STROKES);
 	
-	auto calibri = nvgCreateFont(vg, "calibri", "calibri.ttf");
+	nvgCreateFont(vg, "calibri", "calibri.ttf");
 	
 	do
 	{
@@ -266,6 +266,19 @@ void testNanovg()
 				nvgFill(vg);
 			#endif
 				
+				nvgSave(vg);
+				{
+					nvgScale(vg, 3.f, 3.f);
+					nvgFillColor(vg, nvgRGBf(0.f, 0.f, 0.f));
+					nvgStrokeWidth(vg, 1.5f);
+					nvgStrokeColor(vg, nvgRGBf(1.f, 0.f, 0.f));
+					nvgBeginPath(vg);
+					nvgRoundedRect(vg, 10.f, 10.f, 200.f, 400.f, 20.f);
+					nvgFill(vg);
+					nvgStroke(vg);
+				}
+				nvgRestore(vg);
+				
 				nvgBeginPath(vg);
 				nvgRect(vg, 100,100, 120,30);
 				nvgCircle(vg, 120,120, 5);
@@ -277,7 +290,7 @@ void testNanovg()
 				
 				drawGraph(vg, 200, 200, 400, 400, framework.time);
 				
-				//nvgScale(vg, 1.2f, 1.2f);
+				//nvgFontBlur(vg, mouse.x/100);
 				drawParagraph(vg, 400, 200, 400, 400, mouse.x, mouse.y);
 			}
 			nvgEndFrame(vg);

@@ -11,13 +11,16 @@ extern const int GFX_SY;
 void testDeepbelief()
 {
 	const char * networkFilename = "deepbelief/jetpac.ntwk";
-	
-	ImageData * image = loadImage("deepbelief/dog.jpg");
+	const char * imageFilename = "deepbelief/dog.jpg";
+	//const char * imageFilename = "deepbelief/rainbow.png"; // apparently it looks like a banana! :-)
+	ImageData * image = loadImage(imageFilename);
 	Assert(image);
 	
 	Deepbelief * d = new Deepbelief();
 	
 	d->init(networkFilename);
+	
+	d->process((uint8_t*)image->imageData, image->sx, image->sy, 4, image->sx * 4, certaintyTreshold);
 	
 	DeepbeliefResult result;
 	
@@ -48,11 +51,6 @@ void testDeepbelief()
 		if (keyboard.wentDown(SDLK_a))
 		{
 			automaticUpdates = !automaticUpdates;
-			
-			if (automaticUpdates)
-			{
-				d->process((uint8_t*)image->imageData, image->sx, image->sy, 4, image->sx * 4, certaintyTreshold);
-			}
 		}
 		
 		if (keyboard.wentDown(SDLK_i))
@@ -66,14 +64,30 @@ void testDeepbelief()
 		
 		if (d->getResult(result))
 		{
-			if (automaticUpdates)
-			{
-				d->process((uint8_t*)image->imageData, image->sx, image->sy, 4, image->sx * 4, certaintyTreshold);
-			}
+			//
+		}
+		
+		if (automaticUpdates)
+		{
+			d->process((uint8_t*)image->imageData, image->sx, image->sy, 4, image->sx * 4, certaintyTreshold);
 		}
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			const GLuint texture = getTexture(imageFilename);
+			
+			gxPushMatrix();
+			{
+				gxTranslatef(GFX_SX-200, GFX_SY-200, 0);
+				gxSetTexture(texture);
+				setColor(colorWhite);
+				drawRect(0, 0, 150, 150);
+				gxSetTexture(0);
+				setColor(colorGreen);
+				drawRectLine(0, 0, 150, 150);
+			}
+			gxPopMatrix();
+			
 			hqBegin(HQ_FILLED_CIRCLES);
 			{
 				for (int i = 0; i < 100; ++i)
