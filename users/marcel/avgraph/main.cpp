@@ -549,9 +549,9 @@ int main(int argc, char * argv[])
 		
 		//testStbTruetype();
 		
-		testMsdfgen();
+		//testMsdfgen();
 		
-		testDeepbelief();
+		//testDeepbelief();
 		
 		//
 		

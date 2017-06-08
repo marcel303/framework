@@ -37,6 +37,9 @@ file(GLOB_RECURSE source_msdfgen "msdfgen/*.*")
 file(GLOB_RECURSE source_nanovg "nanovg/*.*")
 file(GLOB_RECURSE source_vfxnodes "vfxNodes/*.*")
 file(GLOB_RECURSE source_macos "macos/*.*")
+file(GLOB_RECURSE source_leap "leap/*.*")
+
+file(GLOB source_tests "test*.*")
 
 file(GLOB_RECURSE source_ui "../libparticle/ui.cpp" "../libparticle/ui.h" "../libparticle/textfield.cpp" "../libparticle/textfield.h" "../libparticle/colorwheel.cpp" "../libparticle/colorwheel.h" "../libparticle/particle.cpp" "../libparticle/particle.h")
 
@@ -47,15 +50,17 @@ list(APPEND source ${source_ui})
 #list(REMOVE_ITEM source ${source_datgui})
 
 source_group("Source Files" FILES ${source})
+source_group("vfxNodes" FILES ${source_vfxnodes})
+source_group("tests" FILES ${source_tests})
+source_group("ui" FILES ${source_ui})
 source_group("video" FILES ${source_video})
-source_group("mediaplayer_new" FILES ${source_mediaplayer_new})
+source_group("video\\mediaplayer_new" FILES ${source_mediaplayer_new})
 source_group("3rdparty\\ffmpeg" FILES ${source_ffmpeg})
 source_group("3rdparty\\ofxDatGui" FILES ${source_datgui})
 source_group("3rdparty\\msdfgen" FILES ${source_msdfgen})
 source_group("3rdparty\\nanovg" FILES ${source_nanovg})
-source_group("vfxNodes" FILES ${source_vfxnodes})
-source_group("ui" FILES ${source_ui})
 source_group("3rdparty\\macos" FILES ${source_macos})
+source_group("3rdparty\\leap" FILES ${source_leap})
 
 add_executable(avgraph ${source})
 

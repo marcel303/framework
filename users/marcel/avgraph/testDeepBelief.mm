@@ -20,13 +20,13 @@ void testDeepbelief()
 	
 	d->init(networkFilename);
 	
-	d->process((uint8_t*)image->imageData, image->sx, image->sy, 4, image->sx * 4, certaintyTreshold);
-	
 	DeepbeliefResult result;
 	
 	bool automaticUpdates = false;
 	
 	float certaintyTreshold = .01f;
+	
+	d->process((uint8_t*)image->imageData, image->sx, image->sy, 4, image->sx * 4, certaintyTreshold);
 	
 	do
 	{

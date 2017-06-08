@@ -1,3 +1,5 @@
+#include "framework.h"
+
 static SDL_atomic_t activeCount;
 static SDL_atomic_t numRunning;
 static SDL_atomic_t stopThreads;
