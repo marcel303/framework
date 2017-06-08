@@ -18,6 +18,7 @@ struct VfxNodeKinect2 : VfxNodeBase
 		kOutput_VideoImage,
 		kOutput_DepthImage,
 		kOutput_VideoImageCpu,
+		kOutput_DepthChannels,
 		kOutput_COUNT
 	};
 
@@ -25,6 +26,7 @@ struct VfxNodeKinect2 : VfxNodeBase
 	VfxImage_Texture depthImage;
 	
 	VfxImageCpu videoImageCpu;
+	VfxChannels depthChannels;
 
 	VfxNodeKinect2();
 	virtual ~VfxNodeKinect2() override;

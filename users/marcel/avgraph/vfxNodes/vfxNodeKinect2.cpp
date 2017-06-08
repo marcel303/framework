@@ -15,6 +15,7 @@ static int initCount = 0;
 
 static Kinect2 * kinect = nullptr;
 static libfreenect2::Frame * videoFrame = nullptr;
+static libfreenect2::Frame * depthFrame = nullptr;
 static OpenglTexture videoTexture;
 static OpenglTexture depthTexture;
 
@@ -32,6 +33,7 @@ VfxNodeKinect2::VfxNodeKinect2()
 	addOutput(kOutput_VideoImage, kVfxPlugType_Image, &videoImage);
 	addOutput(kOutput_DepthImage, kVfxPlugType_Image, &depthImage);
 	addOutput(kOutput_VideoImageCpu, kVfxPlugType_ImageCpu, &videoImageCpu);
+	addOutput(kOutput_DepthChannels, kVfxPlugType_Channels, &depthChannels);
 }
 
 VfxNodeKinect2::~VfxNodeKinect2()
@@ -43,8 +45,14 @@ VfxNodeKinect2::~VfxNodeKinect2()
 		delete videoFrame;
 		videoFrame = nullptr;
 		
+		delete depthFrame;
+		depthFrame = nullptr;
+		
 		videoTexture.free();
 		depthTexture.free();
+		
+		videoImageCpu.reset();
+		depthChannels.reset();
 		
 		//
 		
@@ -80,6 +88,11 @@ void VfxNodeKinect2::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeKinect2);
 	
+	// todo : this check is no longer sufficient : need to also check CPU image and depth channels output
+	//        BUT if only CPU image and/or depth channels is referenced, we aren't interested in making textures
+	//        UNLESS! there is another node that has video and/or depth image references
+	//        so we should let the first node that wants textures to update textures, if they're not up to date yet
+	
 	const bool wantsVideo = outputs[kOutput_VideoImage].isReferenced();
 	const bool wantsDepth = outputs[kOutput_DepthImage].isReferenced();
 	
@@ -87,6 +100,8 @@ void VfxNodeKinect2::tick(const float dt)
 	{
 		videoImage.texture = 0;
 		depthImage.texture = 0;
+		videoImageCpu.reset();
+		depthChannels.reset();
 		
 		return;
 	}
@@ -130,7 +145,8 @@ void VfxNodeKinect2::tick(const float dt)
 			
 			// consume depth data
 			
-			delete kinect->listener->depth;
+			delete depthFrame;
+			depthFrame = kinect->listener->depth;
 			kinect->listener->depth = nullptr;
 		}
 	}
@@ -145,6 +161,11 @@ void VfxNodeKinect2::tick(const float dt)
 		videoImageCpu.setDataRGBA8(videoFrame->data, videoFrame->width, videoFrame->height, 16, videoFrame->width * 4);
 	else
 		videoImageCpu.reset();
+	
+	if (depthFrame != nullptr)
+		depthChannels.setData2DContiguous((float*)depthFrame->data, false, depthFrame->width, depthFrame->height, 1);
+	else
+		depthChannels.reset();
 }
 
 void VfxNodeKinect2::getDescription(VfxNodeDescription & d)
