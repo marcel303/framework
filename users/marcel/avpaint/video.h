@@ -125,7 +125,7 @@ struct MediaPlayer : public AudioStream
 
 	void openAsync(const char * filename, const MP::OutputMode outputMode);
 	void close(const bool freeTexture);
-	void tick(Context * context, const bool wantsTexture);
+	bool tick(Context * context, const bool wantsTexture);
 
 	bool isActive(Context * context) const;
 	bool presentedLastFrame(Context * context) const;

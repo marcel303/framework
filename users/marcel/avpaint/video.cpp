@@ -172,7 +172,7 @@ void MediaPlayer::close(const bool _freeTexture)
 	}
 }
 
-void MediaPlayer::tick(Context * context, const bool wantsTexture)
+bool MediaPlayer::tick(Context * context, const bool wantsTexture)
 {
 	const bool gotVideoFrame = updateVideoFrame();
 	
@@ -189,6 +189,8 @@ void MediaPlayer::tick(Context * context, const bool wantsTexture)
 	}
 
 	updateAudio();
+	
+	return gotVideoFrame;
 }
 
 bool MediaPlayer::isActive(Context * context) const
