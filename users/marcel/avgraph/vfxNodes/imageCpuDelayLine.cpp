@@ -203,11 +203,11 @@ void ImageCpuDelayLine::shut()
 	saveBufferSize = 0;
 }
 
-void ImageCpuDelayLine::add(const VfxImageCpu & image)
+void ImageCpuDelayLine::add(const VfxImageCpu & image, const int jpegQualityLevel)
 {
 	compressWait();
 	
-	compressWork(image);
+	compressWork(image, jpegQualityLevel);
 }
 
 VfxImageCpu * ImageCpuDelayLine::get(const int offset)
@@ -251,7 +251,69 @@ VfxImageCpu * ImageCpuDelayLine::get(const int offset)
 	}
 }
 
-ImageCpuDelayLine::JpegData * ImageCpuDelayLine::compress(const VfxImageCpu & image)
+void ImageCpuDelayLine::clearHistory()
+{
+	SDL_LockMutex(mutex);
+	{
+		while (!history.empty())
+		{
+			HistoryItem * item = history.back();
+			delete item;
+			item = nullptr;
+
+			history.pop_back();
+		}
+		
+		historySize = 0;
+	}
+	SDL_UnlockMutex(mutex);
+}
+
+ImageCpuDelayLine::MemoryUsage ImageCpuDelayLine::getMemoryUsage() const
+{
+	MemoryUsage result;
+	
+	SDL_LockMutex(mutex);
+	{
+		result.numHistoryBytes = 0;
+		
+		for (auto & h : history)
+		{
+			result.numHistoryBytes += h->jpegData->numBytes;
+		}
+		
+		//
+		
+		result.numCachedImageBytes = 0;
+		
+		if (cachedLoadData != nullptr)
+		{
+			result.numCachedImageBytes += cachedLoadData->bufferSize;
+		}
+		
+		//
+		
+		result.numSaveBufferBytes = 0;
+		
+		result.numSaveBufferBytes += saveBufferSize;
+		
+		if (work != nullptr)
+		{
+			result.numSaveBufferBytes += work->imageData->image.getMemoryUsage();
+		}
+		
+		//
+		
+		result.historySize = historySize;
+	}
+	SDL_UnlockMutex(mutex);
+	
+	result.numBytes = result.numHistoryBytes + result.numCachedImageBytes + result.numSaveBufferBytes;
+	
+	return result;
+}
+
+ImageCpuDelayLine::JpegData * ImageCpuDelayLine::compress(const VfxImageCpu & image, const int jpegQualityLevel)
 {
 	const void * srcBuffer = image.channel[0].data;
 	const int srcBufferSize = image.sx * image.sy * image.numChannels;
@@ -262,7 +324,7 @@ ImageCpuDelayLine::JpegData * ImageCpuDelayLine::compress(const VfxImageCpu & im
 	void * dstBuffer = saveBuffer;
 	int dstBufferSize = saveBufferSize;
 	
-	if (saveImage_turbojpeg(srcBuffer, srcBufferSize, srcSx, srcSy, srcIsColor, dstBuffer, dstBufferSize))
+	if (saveImage_turbojpeg(srcBuffer, srcBufferSize, srcSx, srcSy, srcIsColor, jpegQualityLevel, dstBuffer, dstBufferSize))
 	{
 		JpegData * jpegData = new JpegData();
 		jpegData->bytes = new uint8_t[dstBufferSize];
@@ -315,7 +377,7 @@ void ImageCpuDelayLine::threadMain()
 					Assert(w != nullptr);
 					Assert(w->imageData != nullptr);
 
-					JpegData * jpegData = compress(w->imageData->image);
+					JpegData * jpegData = compress(w->imageData->image, w->jpegQualityLevel);
 					
 					if (jpegData != nullptr)
 					{
@@ -333,18 +395,18 @@ void ImageCpuDelayLine::threadMain()
 			{
 				if (historySize == maxHistorySize)
 				{
-					HistoryItem * item = history.front();
+					HistoryItem * item = history.back();
 					delete item;
 					item = nullptr;
 
-					history.pop_front();
+					history.pop_back();
 				}
 				else
 				{
 					historySize++;
 				}
 
-				history.push_back(historyItem);
+				history.push_front(historyItem);
 			}
 		}
 		
@@ -359,7 +421,7 @@ void ImageCpuDelayLine::threadMain()
 	SDL_UnlockMutex(mutex);
 }
 
-void ImageCpuDelayLine::compressWork(const VfxImageCpu & image)
+void ImageCpuDelayLine::compressWork(const VfxImageCpu & image, const int jpegQualityLevel)
 {
 	if (image.isInterleaved == false)
 		return;
@@ -384,6 +446,7 @@ void ImageCpuDelayLine::compressWork(const VfxImageCpu & image)
 	{
 		WorkItem * w = new WorkItem();
 		w->imageData = imageData;
+		w->jpegQualityLevel = jpegQualityLevel;
 		
 		Assert(work == nullptr);
 		work = w;

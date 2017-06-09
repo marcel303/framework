@@ -62,11 +62,23 @@ struct ImageCpuDelayLine
 	struct WorkItem
 	{
 		VfxImageCpuData * imageData;
+		int jpegQualityLevel;
 
 		WorkItem();
 		~WorkItem();
 	};
-
+	
+	struct MemoryUsage
+	{
+		int numBytes;
+		
+		int numHistoryBytes;
+		int numCachedImageBytes;
+		int numSaveBufferBytes;
+		
+		int historySize;
+	};
+	
 	uint8_t * saveBuffer;
 	int saveBufferSize;
 	
@@ -91,14 +103,18 @@ struct ImageCpuDelayLine
 	void init(const int maxHistorySize, const int saveBufferSize);
 	void shut();
 	
-	void add(const VfxImageCpu & image);
+	void add(const VfxImageCpu & image, const int jpegQualityLevel);
 	VfxImageCpu * get(const int offset);
+	
+	void clearHistory();
+	
+	MemoryUsage getMemoryUsage() const;
 
-	JpegData * compress(const VfxImageCpu & image);
+	JpegData * compress(const VfxImageCpu & image, const int jpegQualityLevel);
 
 	static int threadProc(void * arg);
 	void threadMain();
 
-	void compressWork(const VfxImageCpu & image);
+	void compressWork(const VfxImageCpu & image, const int jpegQualityLevel);
 	void compressWait();
 };
