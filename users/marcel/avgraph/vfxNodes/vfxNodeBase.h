@@ -221,6 +221,8 @@ struct VfxImageCpu
 	void setDataR8(const uint8_t * r, const int sx, const int sy, const int alignment, const int pitch);
 	void setDataRGBA8(const uint8_t * rgba, const int sx, const int sy, const int alignment, const int pitch);
 	void reset();
+	
+	int getMemoryUsage() const;
 
 	static void interleave1(const Channel * channel1, uint8_t * _dst, const int dstPitch, const int sx, const int sy);
 	static void interleave3(const Channel * channel1, const Channel * channel2, const Channel * channel3, uint8_t * dst, const int dstPitch, const int sx, const int sy);

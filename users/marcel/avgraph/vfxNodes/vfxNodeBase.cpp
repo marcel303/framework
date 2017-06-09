@@ -152,6 +152,18 @@ void VfxImageCpu::reset()
 	isPlanar = false;
 }
 
+int VfxImageCpu::getMemoryUsage() const
+{
+	int result = 0;
+	
+	for (int i = 0; i < numChannels; ++i)
+	{
+		result += sy * channel[i].pitch / channel[i].stride;
+	}
+	
+	return result;
+}
+
 void VfxImageCpu::interleave1(const Channel * channel1, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
 {
 	const int dstPitch = _dstPitch == 0 ? sx * 1 : _dstPitch;
@@ -248,7 +260,9 @@ void VfxImageCpuData::alloc(const int sx, const int sy, const int numChannels, c
 	if (sx > 0 && sy > 0 && numChannels > 0)
 	{
 		data = (uint8_t*)_mm_malloc(sx * sy * numChannels, 16);
-
+		
+		// todo : non interleaved case ?
+		
 		image.setDataInterleaved(data, sx, sy, numChannels, 16, sx * numChannels);
 	}
 }
