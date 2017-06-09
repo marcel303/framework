@@ -101,8 +101,6 @@ void Deepbelief::shut()
 	
 	if (thread != nullptr)
 	{
-		SDL_Delay(1);
-		
 		SDL_LockMutex(mutex);
 		{
 			state.stop = true;
@@ -233,25 +231,25 @@ void Deepbelief::threadMain()
 	printf("thread: start\n");
 #endif
 	
-	bool stop = false;
-	
 	SDL_LockMutex(mutex);
 	
-	do
+	for (;;)
 	{
-		Work * work = nullptr;
+		Work * work = state.work;
+		state.work = nullptr;
 		
-		SDL_CondWait(workEvent, mutex);
+		if (state.stop)
 		{
-			stop = state.stop;
+			delete work;
+			work = nullptr;
 			
-			work = state.work;
-			state.work = nullptr;
+			break;
 		}
-		SDL_UnlockMutex(mutex);
-
-		if (stop == false)
+		
+		if (work != nullptr)
 		{
+			SDL_UnlockMutex(mutex);
+			
 		#if DO_PRINTS
 			printf("thread: work\n");
 		#endif
@@ -340,7 +338,7 @@ void Deepbelief::threadMain()
 			work = nullptr;
 		
 			SDL_LockMutex(mutex);
-			
+		
 			state.hasResult = true;
 			state.result.predictions = std::move(predictions);
 		#if DO_TIMING
@@ -352,20 +350,12 @@ void Deepbelief::threadMain()
 			int r = SDL_CondSignal(doneEvent);
 			Assert(r == 0);
 		}
-		else
+		
+		if (state.stop == false && state.work == nullptr) // 'if no more work to be done and should go idle'
 		{
-		#if DO_PRINTS
-			printf("thread: stop\n");
-		#endif
-			
-			delete work;
-			work = nullptr;
-			
-			SDL_LockMutex(mutex);
-			
-			// we are done! let our thread end peacefully
+			SDL_CondWait(workEvent, mutex);
 		}
-	} while (state.stop == false);
+	}
 	
 	SDL_UnlockMutex(mutex);
 }
