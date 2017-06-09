@@ -117,6 +117,7 @@ extern void testThreading();
 extern void testStbTruetype();
 extern void testMsdfgen();
 extern void testDeepbelief();
+extern void testImageCpuDelayLine();
 
 struct VfxNodeTriggerAsFloat : VfxNodeBase
 {
@@ -579,6 +580,8 @@ int main(int argc, char * argv[])
 		//testMsdfgen();
 		
 		//testDeepbelief();
+		
+		testImageCpuDelayLine();
 		
 		//
 		

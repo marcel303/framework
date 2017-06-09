@@ -29,7 +29,8 @@
 #include "image.h"
 #include "Timer.h"
 #include "vfxNodes/deepbelief.h"
-#include "video.h"
+#include "../avpaint/video.h"
+#include "mediaplayer_new/MPVideoBuffer.h"
 #include <DeepBelief/DeepBelief.h>
 
 extern const int GFX_SX;
@@ -40,10 +41,22 @@ void testDeepbelief()
 	const char * networkFilename = "deepbelief/jetpac.ntwk";
 	const char * imageFilename = "deepbelief/dog.jpg";
 	//const char * imageFilename = "deepbelief/rainbow.png"; // apparently it looks like a banana! :-)
+	const char * videoFilename = "mocapc.mp4";
+	
 	ImageData * image = loadImage(imageFilename);
 	Assert(image);
 	
+	//auto videoOutputMode = MP::kOutputMode_RGBA;
+	auto videoOutputMode = MP::kOutputMode_PlanarYUV;
+	
+	MediaPlayer mediaPlayer;
+	mediaPlayer.openAsync(videoFilename, videoOutputMode);
+	
 	Deepbelief * d = new Deepbelief();
+	
+	d->init("");
+	
+	d->shut();
 	
 	d->init(networkFilename);
 	
@@ -51,28 +64,84 @@ void testDeepbelief()
 	
 	bool automaticUpdates = false;
 	
+	bool sampleVideo = false;
+	
 	float certaintyTreshold = .01f;
 	
-	d->process((uint8_t*)image->imageData, image->sx, image->sy, 4, image->sx * 4, certaintyTreshold);
+	bool isFirstFrame = true;
 	
 	do
 	{
 		framework.process();
 		
+		// the specifications of the image we want to process
+		const uint8_t * buffer;
+		int sx;
+		int sy;
+		int numChannels;
+		int pitch;
+		
+		// set the image specifications to a 1x1 single channel black image initially
+		uint8_t black = 0;
+		buffer = &black;
+		sx = 1;
+		sy = 1;
+		numChannels = 1;
+		pitch = 1;
+		
+		if (sampleVideo)
+		{
+			if (mediaPlayer.videoFrame != nullptr)
+			{
+				if (videoOutputMode == MP::kOutputMode_RGBA)
+				{
+					buffer = mediaPlayer.videoFrame->m_frameBuffer;
+					sx = mediaPlayer.videoFrame->m_width;
+					sy = mediaPlayer.videoFrame->m_height;
+					numChannels = 4;
+					
+					const int alignment = 16;
+					const int alignmentMask = ~(alignment - 1);
+					
+					pitch = (((sx * 4) + alignment - 1) & alignmentMask);
+				}
+				else
+				{
+					buffer = mediaPlayer.videoFrame->getY(sx, sy, pitch);
+					numChannels = 1;
+				}
+			}
+		}
+		else
+		{
+			buffer = (uint8_t*)image->imageData;
+			sx = image->sx;
+			sy = image->sy;
+			numChannels = 4;
+			pitch= image->sx * 4;
+		}
+		
+		if (isFirstFrame)
+		{
+			isFirstFrame = false;
+			
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
+		}
+		
 		if (keyboard.wentDown(SDLK_p))
 		{
-			d->process((uint8_t*)image->imageData, image->sx, image->sy, 4, image->sx * 4, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
 		}
 		
 		if (keyboard.wentDown(SDLK_w))
 		{
-			d->process((uint8_t*)image->imageData, image->sx, image->sy, 4, image->sx * 4, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
 			d->wait();
 		}
 		
 		if (keyboard.isDown(SDLK_r))
 		{
-			d->process((uint8_t*)image->imageData, image->sx, image->sy, 4, image->sx * 4, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
 		}
 		
 		if (keyboard.wentDown(SDLK_a))
@@ -89,6 +158,11 @@ void testDeepbelief()
 			d->shut();
 		}
 		
+		if (keyboard.wentDown(SDLK_v))
+		{
+			sampleVideo = !sampleVideo;
+		}
+		
 		if (d->getResult(result))
 		{
 			//
@@ -96,38 +170,60 @@ void testDeepbelief()
 		
 		if (automaticUpdates)
 		{
-			d->process((uint8_t*)image->imageData, image->sx, image->sy, 4, image->sx * 4, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
+		}
+		
+		mediaPlayer.presentTime += framework.timeStep;
+		
+		mediaPlayer.tick(mediaPlayer.context, true);
+		
+		if (mediaPlayer.presentedLastFrame(mediaPlayer.context))
+		{
+			mediaPlayer.close(false);
+			
+			mediaPlayer.presentTime = 0.0;
+			
+			mediaPlayer.openAsync(videoFilename, videoOutputMode);
 		}
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			const GLuint texture = getTexture(imageFilename);
+			const GLuint texture = sampleVideo ? mediaPlayer.getTexture() : getTexture(imageFilename);
+			
+			const int size = 400;
+			const int padding = 50;
 			
 			gxPushMatrix();
 			{
-				gxTranslatef(GFX_SX-200, GFX_SY-200, 0);
+				gxTranslatef(GFX_SX-size-padding, GFX_SY-size-padding, 0);
 				gxSetTexture(texture);
 				setColor(colorWhite);
-				drawRect(0, 0, 150, 150);
+				drawRect(0, 0, size, size);
 				gxSetTexture(0);
 				setColor(colorGreen);
-				drawRectLine(0, 0, 150, 150);
+				drawRectLine(0, 0, size, size);
 			}
 			gxPopMatrix();
 			
-			hqBegin(HQ_FILLED_CIRCLES);
+			gxPushMatrix();
 			{
-				for (int i = 0; i < 100; ++i)
+				gxTranslatef(padding, GFX_SY-size-padding, 0);
+				
+				hqBegin(HQ_FILLED_CIRCLES);
 				{
-					const float x = GFX_SX/2 + std::cos(i / 30.f * framework.time / 1.234f) * 200.f;
-					const float y = GFX_SY/2 + std::sin(i / 30.f * framework.time / 2.345f) * 100.f;
-					const float a = .5f + .5f * std::cos(i / 100.f * framework.time / 4.567f);
-					
-					setColorf(.4f, .4f, .4f, a);
-					hqFillCircle(x, y, 10.f);
+					for (int i = 0; i < 100; ++i)
+					{
+						const float x = size/2 + std::cos(i / 30.f * framework.time / 1.234f) * size * 4/10.f;
+						const float y = size/2 + std::sin(i / 30.f * framework.time / 2.345f) * size * 2/10.f;
+						const float a = .5f + .5f * std::cos(i / 100.f * framework.time / 4.567f);
+						
+						setColorf(.4f, .4f, .4f, a);
+						hqFillCircle(x, y, 10.f);
+					}
 				}
+				hqEnd();
 			}
-			hqEnd();
+			gxPopMatrix();
 			
 			setFont("calibri.ttf");
 			setColor(colorGreen);
@@ -149,7 +245,7 @@ void testDeepbelief()
 			for (auto & p : result.predictions)
 			{
 				setColorf(p.certainty, p.certainty + .5f, p.certainty);
-				drawText(40, 140 + index * 20, 14, +1, +1, "%d: %s @ %.3f certainty", index, p.label.c_str(), p.certainty);
+				drawText(40, 140 + index * 20, 14, +1, +1, "%d: %s @ %.2f%% certainty", index, p.label.c_str(), p.certainty * 100.f);
 				
 				index++;
 			}
@@ -161,6 +257,8 @@ void testDeepbelief()
 	
 	delete d;
 	d = nullptr;
+	
+	mediaPlayer.close(true);
 	
 	delete image;
 	image = nullptr;

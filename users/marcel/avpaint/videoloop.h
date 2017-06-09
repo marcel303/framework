@@ -86,7 +86,7 @@ struct VideoLoop
 		
 		if (mediaPlayer)
 		{
-			mediaPlayer->tick(mediaPlayer->context);
+			mediaPlayer->tick(mediaPlayer->context, true);
 			
 			if (firstFrame == nullptr)
 			{
@@ -124,7 +124,7 @@ struct VideoLoop
 		
 		if (mediaPlayer2)
 		{
-			mediaPlayer2->tick(mediaPlayer2->context);
+			mediaPlayer2->tick(mediaPlayer2->context, true);
 		}
 	}
 	
