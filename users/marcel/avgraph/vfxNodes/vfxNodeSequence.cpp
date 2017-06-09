@@ -25,7 +25,11 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "framework.h"
 #include "vfxNodeSequence.h"
+
+extern const int GFX_SX;
+extern const int GFX_SY;
 
 VfxNodeSequence::VfxNodeSequence()
 	: VfxNodeBase()
@@ -41,4 +45,26 @@ VfxNodeSequence::VfxNodeSequence()
 	addInput(kInput_7, kVfxPlugType_DontCare);
 	addInput(kInput_8, kVfxPlugType_DontCare);
 	addOutput(kOutput_Any, kVfxPlugType_Int, &anyOutput);
+}
+
+void VfxNodeSequence::draw() const
+{
+	for (int i = kInput_1; i <= kInput_8; ++i)
+	{
+		const VfxPlug * plug = tryGetInput(i);
+		
+		if (plug && plug->isConnected() && plug->memType == kVfxPlugType_Image)
+		{
+			const VfxImageBase * image = plug->getImage();
+			
+			if (image != nullptr)
+			{
+				gxSetTexture(image->getTexture());
+				{
+					drawRect(0, 0, GFX_SX, GFX_SY);
+				}
+				gxSetTexture(0);
+			}
+		}
+	}
 }

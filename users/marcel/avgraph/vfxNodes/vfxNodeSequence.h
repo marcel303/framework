@@ -55,4 +55,6 @@ struct VfxNodeSequence : VfxNodeBase
 	int anyOutput;
 	
 	VfxNodeSequence();
+	
+	virtual void draw() const override;
 };
