@@ -60,6 +60,8 @@ void testImageCpuDelayLine()
 	{
 		framework.process();
 		
+		SDL_Delay(1);
+		
 		//
 		
 		if (keyboard.isDown(SDLK_LEFT))
@@ -83,7 +85,7 @@ void testImageCpuDelayLine()
 		
 		mediaPlayer->presentTime += framework.timeStep;
 		
-		mediaPlayer->tick(mediaPlayer->context, true);
+		bool gotVideoFrame = mediaPlayer->tick(mediaPlayer->context, true);
 		
 		if (mediaPlayer->presentedLastFrame(mediaPlayer->context))
 		{
@@ -92,11 +94,20 @@ void testImageCpuDelayLine()
 			mediaPlayer->presentTime = 0.0;
 			
 			mediaPlayer->openAsync(videoFilename, MP::kOutputMode_PlanarYUV);
+			
+			// frame we got before is no longer valid, as we re-opened the media player
+			gotVideoFrame = false;
 		}
 		
 		//
 		
-		VfxImageCpu * delayedImage = d->get(int(offset * (d->maxHistorySize - 1)));
+		d->tick();
+		
+		//
+		
+		double delayedTimestamp = 0.0;
+		
+		VfxImageCpu * delayedImage = d->get(int(offset * (d->maxHistorySize - 1)), &delayedTimestamp);
 		
 		//
 		
@@ -104,8 +115,10 @@ void testImageCpuDelayLine()
 		
 		VfxImageCpu image;
 		
-		if (mediaPlayer->videoFrame)
+		if (gotVideoFrame)
 		{
+			Assert(mediaPlayer->videoFrame != nullptr);
+			
 			int sx;
 			int sy;
 			int pitch;
@@ -116,7 +129,7 @@ void testImageCpuDelayLine()
 			
 			//
 			
-			d->add(image, jpegQualityLevel);
+			d->add(image, jpegQualityLevel, mediaPlayer->videoFrame->m_time);
 		}
 		
 	#if 0
@@ -180,6 +193,7 @@ void testImageCpuDelayLine()
 			}
 			
 			setFont("calibri.ttf");
+			setFontMSDF("calibri.ttf");
 			setColor(colorGreen);
 			ImageCpuDelayLine::MemoryUsage memoryUsage = d->getMemoryUsage();
 			drawText(10, 10, 14, +1, +1, "memory usage: %.2f Mb", memoryUsage.numBytes / 1024.0 / 1024.0);
@@ -189,11 +203,15 @@ void testImageCpuDelayLine()
 			
 			drawText(210, 10, 14, +1, +1, "current jpeg quality level: %d", jpegQualityLevel);
 			drawText(210, 30, 14, +1, +1, "history size: %d / %d", memoryUsage.historySize, d->maxHistorySize);
+			if (mediaPlayer->videoFrame != nullptr)
+				drawText(210, 50, 14, +1, +1, "VIDEO: %d x %d, timestamp: %.2fs", mediaPlayer->videoFrame->m_width, mediaPlayer->videoFrame->m_height, mediaPlayer->videoFrame->m_time);
+			if (delayedImage != nullptr)
+				drawText(210, 70, 14, +1, +1, "DELAYED IMAGE: %d x %d, timestamp: %.2fs", delayedImage->sx, delayedImage->sy, delayedTimestamp);
 			
 			setColor(50, 50, 50);
 			drawRect(x, y, x + 400 * memoryUsage.historySize / d->maxHistorySize, y + 20);
 			setColor(colorWhite);
-			drawText(x + 5, y + 20/2, 12, +1, 0, "delay line FIFO");
+			drawTextMSDF(x + 5, y + 20/2, 10, +1, 0, "delay line FIFO");
 			setColor(100, 100, 100);
 			drawRectLine(x, y, x + 400, y + 20);
 			

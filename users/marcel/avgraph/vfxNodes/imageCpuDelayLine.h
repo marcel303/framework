@@ -54,6 +54,7 @@ struct ImageCpuDelayLine
 	{
 		VfxImageCpu * image;
 		JpegData * jpegData;
+		double timestamp;
 
 		HistoryItem();
 		~HistoryItem();
@@ -63,6 +64,9 @@ struct ImageCpuDelayLine
 	{
 		VfxImageCpuData * imageData;
 		int jpegQualityLevel;
+		double timestamp;
+		
+		JpegData * jpegData;
 
 		WorkItem();
 		~WorkItem();
@@ -86,7 +90,7 @@ struct ImageCpuDelayLine
 	int maxHistorySize;
 	int historySize;
 	
-	WorkItem * work;
+	WorkItem work;
 	
 	bool stop;
 	SDL_cond * workEvent;
@@ -103,8 +107,13 @@ struct ImageCpuDelayLine
 	void init(const int maxHistorySize, const int saveBufferSize);
 	void shut();
 	
-	void add(const VfxImageCpu & image, const int jpegQualityLevel);
-	VfxImageCpu * get(const int offset);
+	void tick();
+	
+	void add(const VfxImageCpu & image, const int jpegQualityLevel, const double timestamp = 0.0);
+	
+	VfxImageCpu * decode(const JpegData & jpegData);
+	VfxImageCpu * get(const int offset, double * imageTimestamp = nullptr);
+	VfxImageCpu * getByTimestamp(const double timestamp, double * imageTimestamp = nullptr);
 	
 	void clearHistory();
 	
@@ -115,6 +124,6 @@ struct ImageCpuDelayLine
 	static int threadProc(void * arg);
 	void threadMain();
 
-	void compressWork(const VfxImageCpu & image, const int jpegQualityLevel);
+	void compressWork(const VfxImageCpu & image, const int jpegQualityLevel, const double timestamp);
 	void compressWait();
 };
