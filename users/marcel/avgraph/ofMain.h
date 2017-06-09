@@ -31,6 +31,34 @@ static const float PI = float(M_PI);
 #define OF_EVENT_ORDER_BEFORE_APP 0
 #define OF_EVENT_ORDER_AFTER_APP 1
 
+struct ofBuffer
+{
+	unsigned char * bytes;
+	int numBytes;
+	
+	ofBuffer()
+		: bytes(nullptr)
+		, numBytes(0)
+	{
+	}
+	
+	ofBuffer(unsigned char * _bytes, int _numBytes)
+		: bytes(_bytes)
+		, numBytes(_numBytes)
+	{
+	}
+	
+	unsigned char * getBinaryBuffer()
+	{
+		return bytes;
+	}
+	
+	int size() const
+	{
+		return numBytes;
+	}
+};
+
 struct ofColor
 {
 	uint8_t r;
@@ -314,6 +342,8 @@ std::string ofToString(const double v, const int numDecimals);
 float ofToFloat(const std::string & s);
 
 int ofHexToInt(const std::string & s);
+
+float ofRandom(const float min, const float max);
 
 //
 

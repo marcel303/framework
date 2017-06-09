@@ -325,6 +325,11 @@ int ofHexToInt(const std::string & s)
 	return std::stoul(s, 0, 16);
 }
 
+float ofRandom(const float min, const float max)
+{
+	return random(min, max);
+}
+
 //
 
 ofCoreEvents sEvents;
