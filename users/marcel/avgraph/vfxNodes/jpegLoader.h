@@ -37,12 +37,12 @@ bool loadImage_turbojpeg(const char * filename, JpegLoadData & data);
 // to speed up allocations, it ASSUMES dstBuffer is large enough to fit the encoded JPEG data
 // + doesn't require any allocations
 // + doesn't require any IO operations to occur
-bool saveImage_turbojpeg(const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, const bool srcIsColor, void *& dstBuffer, int & dstBufferSize);
+bool saveImage_turbojpeg(const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, const bool srcIsColor, const int dstQualityLevel, void *& dstBuffer, int & dstBufferSize);
 
 // compresses the image data contained in srcBuffer of srcBufferSize bytes, and stores the encoded image in dstBuffer
 // to speed up allocations, it ASSUMES dstBuffer is large enough to fit the encoded JPEG data
 // + doesn't require any allocations
-bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, const bool srcIsColor, void * saveBuffer, int saveBufferSize);
+bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, const bool srcIsColor, const int dstQualityLevel, void * saveBuffer, int saveBufferSize);
 
 // compresses the image data contained in srcBuffer of srcBufferSize bytes, and stores the encoded image in dstBuffer
-bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, const bool srcIsColor);
+bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, const bool srcIsColor, const int dstQualityLevel);
