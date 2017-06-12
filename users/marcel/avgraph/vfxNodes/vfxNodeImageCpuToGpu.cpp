@@ -64,11 +64,11 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		
 		if (texture.isChanged(image->sx, image->sy, GL_RGBA8))
 		{
-			uint32_t black = 0;
-			
 			texture.allocate(1, 1, GL_RGBA8, false, false);
-			texture.upload(&black, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE);
 		}
+		
+		uint32_t black = 0;
+		texture.upload(&black, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE);
 		
 		imageOutput.texture = texture.id;
 		
