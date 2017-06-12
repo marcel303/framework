@@ -58,16 +58,19 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	const bool filter = getInputBool(kInput_Filter, true);
 	const bool clamp = getInputBool(kInput_Clamp, false);
 	
-	// todo : add texture filtering and clamping options to OpenglTexture object
-	
-	if (image == nullptr || image->sx == 0 || image->sy == 0)
+	if (isPassthrough || image == nullptr || image->sx == 0 || image->sy == 0)
 	{
 		// todo : make it an option to do when source image is empty. persist or free ?
-		// todo : fix issue where freeing texture here can result in issues when drawing visualizer. tick of visualizer should always happen after cpuToGpu tick, but there's no link connecting visualizer to the node it references, so tick order is undefined .. !
 		
-		//texture.free();
+		if (texture.isChanged(image->sx, image->sy, GL_RGBA8))
+		{
+			uint32_t black = 0;
+			
+			texture.allocate(1, 1, GL_RGBA8, false, false);
+			texture.upload(&black, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE);
+		}
 		
-		//imageOutput.texture = 0;
+		imageOutput.texture = texture.id;
 		
 		return;
 	}
