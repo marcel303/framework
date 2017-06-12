@@ -612,6 +612,10 @@ int main(int argc, char * argv[])
 		
 		//
 		
+		createVfxNodeTypeDefinitions(*typeDefinitionLibrary, g_vfxNodeTypeRegistrationList);
+		
+		//
+		
 		RealTimeConnection * realTimeConnection = new RealTimeConnection();
 		
 		//
@@ -673,6 +677,13 @@ int main(int argc, char * argv[])
 			
 			//
 			
+			if (vfxGraph != nullptr)
+			{
+				vfxGraph->tick(isPaused ? 0.f : framework.timeStep);
+			}
+			
+			//
+			
 			g_currentVfxGraph = realTimeConnection->vfxGraph;
 			
 			if (graphEdit->tick(dt))
@@ -719,8 +730,6 @@ int main(int argc, char * argv[])
 				
 				if (vfxGraph != nullptr)
 				{
-					vfxGraph->tick(isPaused ? 0.f : framework.timeStep);
-					
 					gxPushMatrix();
 					{
 						gxTranslatef(+GFX_SX/2, +GFX_SY/2, 0);
