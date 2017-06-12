@@ -34,6 +34,7 @@
 #include <string>
 #include <vector>
 
+struct GraphEdit_TypeDefinitionLibrary;
 struct GraphNode;
 class Surface;
 
@@ -705,3 +706,50 @@ struct VfxNodeBase
 	
 	virtual void getDescription(VfxNodeDescription & d) { }
 };
+
+//
+
+struct VfxNodeTypeRegistration
+{
+	struct Input
+	{
+		std::string typeName;
+		std::string name;
+		std::string displayName;
+		std::string enumName;
+		std::string defaultValue;
+	};
+	
+	struct Output
+	{
+		std::string typeName;
+		std::string name;
+		std::string displayName;
+	};
+	
+	VfxNodeTypeRegistration * next;
+	
+	std::string typeName;
+	std::string displayName;
+	
+	std::vector<Input> inputs;
+	std::vector<Output> outputs;
+	
+	VfxNodeTypeRegistration();
+	
+	void in(const char * name, const char * typeName, const char * defaultValue = "", const char * enumName = "", const char * displayName = "");
+	void out(const char * name, const char * typeName, const char * displayName = "");
+};
+
+extern VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList;
+
+#define VFX_NODE_TYPE(name) \
+	struct name ## __registration : VfxNodeTypeRegistration \
+	{ \
+		name ## __registration(); \
+	}; \
+	extern name ## __registration name ## __registrationInstance; \
+	name ## __registration name ## __registrationInstance; \
+	name ## __registration :: name ## __registration()
+
+void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, VfxNodeTypeRegistration * registrationList);

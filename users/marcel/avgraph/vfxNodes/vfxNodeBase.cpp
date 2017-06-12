@@ -256,6 +256,10 @@ VfxImageCpuData::~VfxImageCpuData()
 void VfxImageCpuData::alloc(const int sx, const int sy, const int numChannels, const bool interleaved)
 {
 	free();
+	
+	//
+	
+	Assert(interleaved);
 
 	if (sx > 0 && sy > 0 && numChannels > 0)
 	{
@@ -657,5 +661,88 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 				}
 			}
 		}
+	}
+}
+
+//
+
+VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList = nullptr;
+
+VfxNodeTypeRegistration::VfxNodeTypeRegistration()
+	: next(nullptr)
+	, typeName()
+	, inputs()
+	, outputs()
+{
+	next = g_vfxNodeTypeRegistrationList;
+	g_vfxNodeTypeRegistrationList = this;
+}
+
+void VfxNodeTypeRegistration::in(const char * name, const char * typeName, const char * defaultValue, const char * enumName, const char * displayName)
+{
+	Input i;
+	i.name = name;
+	i.displayName = displayName;
+	i.typeName = typeName;
+	i.enumName = enumName;
+	i.defaultValue = defaultValue;
+	
+	inputs.push_back(i);
+}
+
+void VfxNodeTypeRegistration::out(const char * name, const char * typeName, const char * displayName)
+{
+	Output o;
+	o.name = name;
+	o.typeName = typeName;
+	o.displayName = displayName;
+	
+	outputs.push_back(o);
+}
+
+//
+
+// todo : move elsewhere ?
+
+#include "graph.h"
+
+void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, VfxNodeTypeRegistration * registrationList)
+{
+	for (VfxNodeTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
+	{
+		GraphEdit_TypeDefinition typeDefinition;
+		
+		typeDefinition.typeName = registration->typeName;
+		typeDefinition.displayName = registration->displayName;
+		
+		for (int i = 0; i < registration->inputs.size(); ++i)
+		{
+			auto & src = registration->inputs[i];
+			
+			GraphEdit_TypeDefinition::InputSocket inputSocket;
+			inputSocket.typeName = src.typeName;
+			inputSocket.name = src.name;
+			inputSocket.index = i;
+			inputSocket.enumName = src.enumName;
+			inputSocket.defaultValue = src.defaultValue;
+			
+			typeDefinition.inputSockets.push_back(inputSocket);
+		}
+		
+		for (int i = 0; i < registration->outputs.size(); ++i)
+		{
+			auto & src = registration->outputs[i];
+			
+			GraphEdit_TypeDefinition::OutputSocket outputSocket;
+			outputSocket.typeName = src.typeName;
+			outputSocket.name = src.name;
+			outputSocket.index = i;
+			
+			typeDefinition.outputSockets.push_back(outputSocket);
+		}
+		
+		typeDefinition.createUi();
+		
+		typeDefinitionLibrary.typeDefinitions[typeDefinition.typeName] = typeDefinition;
 	}
 }
