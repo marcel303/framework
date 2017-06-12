@@ -33,6 +33,22 @@
 
 struct MediaPlayer : public AudioStream
 {
+	struct OpenParams
+	{
+		OpenParams()
+			: filename()
+			, outputMode(MP::kOutputMode_RGBA)
+			, enableAudioStream(true)
+			, enableVideoStream(true)
+		{
+		}
+		
+		std::string filename;
+		MP::OutputMode outputMode;
+		bool enableAudioStream;
+		bool enableVideoStream;
+	};
+	
 	struct Context
 	{
 		Context()
@@ -63,18 +79,6 @@ struct MediaPlayer : public AudioStream
 		void tick();
 
 		bool presentedLastFrame() const;
-
-		struct OpenParams
-		{
-			OpenParams()
-				: filename()
-				, outputMode(MP::kOutputMode_RGBA)
-			{
-			}
-			
-			std::string filename;
-			MP::OutputMode outputMode;
-		};
 
 		OpenParams openParams;
 
@@ -122,7 +126,8 @@ struct MediaPlayer : public AudioStream
 	{
 		close(true);
 	}
-
+	
+	void openAsync(const OpenParams & openParams);
 	void openAsync(const char * filename, const MP::OutputMode outputMode);
 	void close(const bool freeTexture);
 	bool tick(Context * context, const bool wantsTexture);

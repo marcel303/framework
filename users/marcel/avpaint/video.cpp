@@ -52,7 +52,11 @@ static int ExecMediaPlayerThread(void * param)
 
 	SDL_LockMutex(s_avcodecMutex);
 	{
-		context->hasBegun = context->mpContext.Begin(context->openParams.filename, false, true, context->openParams.outputMode);
+		context->hasBegun = context->mpContext.Begin(
+			context->openParams.filename,
+			context->openParams.enableAudioStream,
+			context->openParams.enableVideoStream,
+			context->openParams.outputMode);
 	}
 	SDL_UnlockMutex(s_avcodecMutex);
 
@@ -130,7 +134,7 @@ bool MediaPlayer::Context::presentedLastFrame() const
 
 //
 
-void MediaPlayer::openAsync(const char * filename, const MP::OutputMode outputMode)
+void MediaPlayer::openAsync(const OpenParams & openParams)
 {
 	Assert(context == nullptr);
 
@@ -138,8 +142,7 @@ void MediaPlayer::openAsync(const char * filename, const MP::OutputMode outputMo
 
 	context = new Context();
 
-	context->openParams.filename = filename;
-	context->openParams.outputMode = outputMode;
+	context->openParams = openParams;
 
 	const int t2 = SDL_GetTicks();
 
@@ -149,6 +152,16 @@ void MediaPlayer::openAsync(const char * filename, const MP::OutputMode outputMo
 
 	logDebug("MP begin took %dms", t2 - t1);
 	logDebug("MP thread start took %dms", t3 - t2);
+}
+
+void MediaPlayer::openAsync(const char * filename, const MP::OutputMode outputMode)
+{
+	OpenParams openParams;
+	openParams.filename = filename;
+	openParams.outputMode = outputMode;
+	openParams.enableAudioStream = false;
+	
+	openAsync(openParams);
 }
 
 void MediaPlayer::close(const bool _freeTexture)
