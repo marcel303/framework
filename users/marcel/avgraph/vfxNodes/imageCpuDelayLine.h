@@ -46,13 +46,17 @@ struct ImageCpuDelayLine
 		uint8_t * bytes;
 		int numBytes;
 		
+		int sx;
+		int sy;
+		int numChannels;
+		
 		JpegData();
 		~JpegData();
 	};
 
 	struct HistoryItem
 	{
-		VfxImageCpu * image;
+		VfxImageCpuData * imageData;
 		JpegData * jpegData;
 		double timestamp;
 
@@ -109,11 +113,14 @@ struct ImageCpuDelayLine
 	
 	void tick();
 	
-	void add(const VfxImageCpu & image, const int jpegQualityLevel, const double timestamp = 0.0);
+	int getLength() const;
+	void setLength(const int length);
 	
-	VfxImageCpu * decode(const JpegData & jpegData);
-	VfxImageCpu * get(const int offset, double * imageTimestamp = nullptr);
-	VfxImageCpu * getByTimestamp(const double timestamp, double * imageTimestamp = nullptr);
+	void add(const VfxImageCpu & image, const int jpegQualityLevel, const double timestamp = 0.0, const bool useCompression = true);
+	
+	bool decode(const JpegData & jpegData, VfxImageCpuData & imageData, const bool glitch);
+	bool get(const int offset, VfxImageCpuData & imageData, double * imageTimestamp = nullptr, const bool glitch = false);
+	bool getByTimestamp(const double timestamp, VfxImageCpuData & imageData, double * imageTimestamp = nullptr, const bool glitch = false);
 	
 	void clearHistory();
 	

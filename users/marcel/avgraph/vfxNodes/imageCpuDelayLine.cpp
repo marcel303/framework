@@ -31,9 +31,30 @@
 #include "vfxNodeBase.h"
 #include <SDL2/SDL.h>
 
+static void copyImage(const VfxImageCpu & image, VfxImageCpuData & imageData)
+{
+	imageData.allocOnSizeChange(image.sx, image.sy, image.numChannels, true);
+	
+	const VfxImageCpu::Channel & srcChannel = image.channel[0];
+	VfxImageCpu::Channel & dstChannel = imageData.image.channel[0];
+	
+	for (int y = 0; y < image.sy; ++y)
+	{
+		const uint8_t * __restrict srcBytes = srcChannel.data + y * srcChannel.pitch;
+		uint8_t * __restrict dstBytes = (uint8_t*)dstChannel.data + y * dstChannel.pitch;
+		
+		memcpy(dstBytes, srcBytes, image.sx * image.numChannels);
+	}
+}
+
+//
+
 ImageCpuDelayLine::JpegData::JpegData()
 	: bytes(nullptr)
 	, numBytes(0)
+	, sx(0)
+	, sy(0)
+	, numChannels(0)
 {
 }
 
@@ -42,12 +63,16 @@ ImageCpuDelayLine::JpegData::~JpegData()
 	delete[] bytes;
 	bytes = nullptr;
 	numBytes = 0;
+	
+	sx = 0;
+	sy = 0;
+	numChannels = 0;
 }
 
 //
 
 ImageCpuDelayLine::HistoryItem::HistoryItem()
-	: image(nullptr)
+	: imageData(nullptr)
 	, jpegData(nullptr)
 	, timestamp(0.0)
 {
@@ -55,8 +80,8 @@ ImageCpuDelayLine::HistoryItem::HistoryItem()
 
 ImageCpuDelayLine::HistoryItem::~HistoryItem()
 {
-	delete image;
-	image = nullptr;
+	delete imageData;
+	imageData = nullptr;
 
 	delete jpegData;
 	jpegData = nullptr;
@@ -225,14 +250,74 @@ void ImageCpuDelayLine::tick()
 	compressWait();
 }
 
-void ImageCpuDelayLine::add(const VfxImageCpu & image, const int jpegQualityLevel, const double timestamp)
+int ImageCpuDelayLine::getLength() const
+{
+	return maxHistorySize;
+}
+
+void ImageCpuDelayLine::setLength(const int length)
+{
+	SDL_LockMutex(mutex);
+	{
+		maxHistorySize = length;
+		
+		while (historySize > maxHistorySize)
+		{
+			HistoryItem * item = history.back();
+			delete item;
+			item = nullptr;
+
+			history.pop_back();
+			
+			historySize--;
+		}
+	}
+	SDL_UnlockMutex(mutex);
+}
+
+void ImageCpuDelayLine::add(const VfxImageCpu & image, const int jpegQualityLevel, const double timestamp, const bool useCompression)
 {
 	compressWait();
 	
-	compressWork(image, jpegQualityLevel, timestamp);
+	if (useCompression)
+	{
+		compressWork(image, jpegQualityLevel, timestamp);
+	}
+	else
+	{
+		SDL_LockMutex(mutex);
+		{
+			HistoryItem * historyItem = nullptr;
+			
+			if (historySize == maxHistorySize)
+			{
+				historyItem = history.back();
+
+				history.pop_back();
+			}
+			else
+			{
+				historySize++;
+				
+				historyItem = new HistoryItem();
+			}
+			
+			delete historyItem->jpegData;
+			historyItem->jpegData = nullptr;
+			
+			if (historyItem->imageData == nullptr)
+				historyItem->imageData = new VfxImageCpuData();
+			
+			copyImage(image, *historyItem->imageData);
+			historyItem->timestamp = timestamp;
+			
+			history.push_front(historyItem);
+		}
+		SDL_UnlockMutex(mutex);
+	}
 }
 
-VfxImageCpu * ImageCpuDelayLine::decode(const JpegData & jpegData)
+bool ImageCpuDelayLine::decode(const JpegData & jpegData, VfxImageCpuData & imageData, const bool glitch)
 {
 	if (jpegData.bytes == nullptr)
 	{
@@ -242,32 +327,49 @@ VfxImageCpu * ImageCpuDelayLine::decode(const JpegData & jpegData)
 	{
 		// decode JPEG data
 		
-		// todo : make glitching an option!
-		ofxJpegGlitch glitch;
-		ofBuffer buffer(jpegData.bytes, jpegData.numBytes);
-		glitch.setJpegBuffer(buffer);
-		glitch.setDataGlitchness(0);
-		glitch.setDHTGlitchness(0);
-		//glitch.setQNGlitchness(0);
-		glitch.setQNGlitchness(100000);
-		glitch.glitch();
-		
-		if (loadImage_turbojpeg(jpegData.bytes, jpegData.numBytes, *cachedLoadData) == false)
+		if (glitch)
 		{
-			return nullptr;
+			// todo : make glitchiness an option!
+			ofxJpegGlitch glitch;
+			ofBuffer buffer(jpegData.bytes, jpegData.numBytes);
+			glitch.setJpegBuffer(buffer);
+			glitch.setDataGlitchness(0);
+			glitch.setDHTGlitchness(0);
+			//glitch.setQNGlitchness(0);
+			glitch.setQNGlitchness(100000);
+			glitch.glitch();
+		}
+		
+		imageData.allocOnSizeChange(jpegData.sx, jpegData.sy, jpegData.numChannels, true);
+		const int numImageDataBytes = imageData.image.sy * imageData.image.channel[0].pitch;
+		
+		if (loadImage_turbojpeg(jpegData.bytes, jpegData.numBytes, imageData.data, numImageDataBytes, jpegData.numChannels == 1) == false)
+		{
+			return false;
 		}
 		else
 		{
-			cachedImage->setDataRGBA8(cachedLoadData->buffer, cachedLoadData->sx, cachedLoadData->sy, 4, cachedLoadData->sx * 4);
+			return true;
+			/*
+			if (jpegData.isSingleChannel)
+			{
+				cachedImage->setDataR8(cachedLoadData->buffer, cachedLoadData->sx, cachedLoadData->sy, 1, cachedLoadData->sx);
+			}
+			else
+			{
+				cachedImage->setDataRGBA8(cachedLoadData->buffer, cachedLoadData->sx, cachedLoadData->sy, 4, cachedLoadData->sx * 4);
+			}
 			
 			return cachedImage;
+			*/
 		}
 	}
 }
 
-VfxImageCpu * ImageCpuDelayLine::get(const int offset, double * imageTimestamp)
+bool ImageCpuDelayLine::get(const int offset, VfxImageCpuData & imageData, double * imageTimestamp, const bool glitch)
 {
 	JpegData jpegData;
+	bool gotImageData = false;
 	
 	// make a copy of the data, so we can leave the mutex quickly again and let the worker thread do it's encode thing
 	
@@ -277,23 +379,34 @@ VfxImageCpu * ImageCpuDelayLine::get(const int offset, double * imageTimestamp)
 		{
 			HistoryItem * item = history[offset];
 			
-			jpegData.bytes = new uint8_t[item->jpegData->numBytes];
-			jpegData.numBytes = item->jpegData->numBytes;
-			
-			memcpy(jpegData.bytes, item->jpegData->bytes, item->jpegData->numBytes);
-			
-			if (imageTimestamp != nullptr)
+			if (item->jpegData != nullptr)
 			{
-				*imageTimestamp = item->timestamp;
+				memcpy(&jpegData, item->jpegData, sizeof(jpegData));
+				jpegData.bytes = new uint8_t[jpegData.numBytes];
+				memcpy(jpegData.bytes, item->jpegData->bytes, item->jpegData->numBytes);
+				
+				if (imageTimestamp != nullptr)
+				{
+					*imageTimestamp = item->timestamp;
+				}
+			}
+			else
+			{
+				gotImageData = true;
+				
+				copyImage(item->imageData->image, imageData);
 			}
 		}
 	}
 	SDL_UnlockMutex(mutex);
 	
-	return decode(jpegData);
+	if (gotImageData)
+		return true;
+	else
+		return decode(jpegData, imageData, glitch);
 }
 
-VfxImageCpu * ImageCpuDelayLine::getByTimestamp(const double timestamp, double * imageTimestamp)
+bool ImageCpuDelayLine::getByTimestamp(const double timestamp, VfxImageCpuData & imageData, double * imageTimestamp, const bool glitch)
 {
 	JpegData jpegData;
 	
@@ -313,9 +426,8 @@ VfxImageCpu * ImageCpuDelayLine::getByTimestamp(const double timestamp, double *
 		
 		if (item != nullptr)
 		{
+			memcpy(&jpegData, item->jpegData, sizeof(jpegData));
 			jpegData.bytes = new uint8_t[item->jpegData->numBytes];
-			jpegData.numBytes = item->jpegData->numBytes;
-			
 			memcpy(jpegData.bytes, item->jpegData->bytes, item->jpegData->numBytes);
 			
 			if (imageTimestamp != nullptr)
@@ -326,7 +438,7 @@ VfxImageCpu * ImageCpuDelayLine::getByTimestamp(const double timestamp, double *
 	}
 	SDL_UnlockMutex(mutex);
 	
-	return decode(jpegData);
+	return decode(jpegData, imageData, glitch);
 }
 
 void ImageCpuDelayLine::clearHistory()
@@ -357,7 +469,10 @@ ImageCpuDelayLine::MemoryUsage ImageCpuDelayLine::getMemoryUsage() const
 		
 		for (auto & h : history)
 		{
-			result.numHistoryBytes += h->jpegData->numBytes;
+			if (h->jpegData != nullptr)
+				result.numHistoryBytes += h->jpegData->numBytes;
+			if (h->imageData != nullptr)
+				result.numHistoryBytes += h->imageData->image.getMemoryUsage();
 		}
 		
 		//
@@ -412,6 +527,9 @@ ImageCpuDelayLine::JpegData * ImageCpuDelayLine::compress(const VfxImageCpu & im
 		JpegData * jpegData = new JpegData();
 		jpegData->bytes = new uint8_t[dstBufferSize];
 		jpegData->numBytes = dstBufferSize;
+		jpegData->sx = image.sx;
+		jpegData->sy = image.sy;
+		jpegData->numChannels = image.numChannels;
 		
 		memcpy(jpegData->bytes, dstBuffer, dstBufferSize);
 		
@@ -495,21 +613,12 @@ void ImageCpuDelayLine::compressWork(const VfxImageCpu & image, const int jpegQu
 	if (image.isInterleaved == false)
 		return;
 	
-	// todo : make a copy of the image
+	// make a copy of the image
 	
 	VfxImageCpuData * imageData = new VfxImageCpuData();
-	imageData->alloc(image.sx, image.sy, image.numChannels, true);
+	copyImage(image, *imageData);
 	
-	const VfxImageCpu::Channel & srcChannel = image.channel[0];
-	VfxImageCpu::Channel & dstChannel = imageData->image.channel[0];
-	
-	for (int y = 0; y < image.sy; ++y)
-	{
-		const uint8_t * __restrict srcBytes = srcChannel.data + y * srcChannel.pitch;
-		uint8_t * __restrict dstBytes = (uint8_t*)dstChannel.data + y * dstChannel.pitch;
-		
-		memcpy(dstBytes, srcBytes, image.sx * image.numChannels);
-	}
+	// kick the compression thread
 	
 	SDL_LockMutex(mutex);
 	{
