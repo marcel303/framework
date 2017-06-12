@@ -1303,7 +1303,7 @@ void GraphEdit_Visualizer::measure(
 		gxSetTexture(0);
 		
 		if (baseTextureSy == 1)
-			baseTextureSy = baseTextureSx/4;
+			baseTextureSy = std::max(1, baseTextureSx/4);
 		
 		const float scaleX = baseTextureSx == 0 ? 1.f : (maxTextureSx / float(baseTextureSx));
 		const float scaleY = baseTextureSy == 0 ? 1.f : (maxTextureSy / float(baseTextureSy));
@@ -1486,7 +1486,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		gxSetTexture(0);
 		
 		if (baseTextureSy == 1)
-			baseTextureSy = baseTextureSx/4;
+			baseTextureSy = std::max(1, baseTextureSx/4);
 			
 		const float scaleX = baseTextureSx == 0 ? 1.f : (textureSx / float(baseTextureSx));
 		const float scaleY = baseTextureSy == 0 ? 1.f : (textureSy / float(baseTextureSy));
