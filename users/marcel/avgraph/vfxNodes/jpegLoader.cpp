@@ -81,7 +81,64 @@ static bool loadFileContents(const char * filename, void * bytes, int & numBytes
 
 //
 
-bool loadImage_turbojpeg(const void * buffer, const int bufferSize, JpegLoadData & data)
+bool loadImage_turbojpeg(const void * buffer, const int bufferSize, const void * dstBuffer, const int dstBufferSize, const bool decodeGrayscale)
+{
+	bool result = true;
+	
+	tjhandle h = tjInitDecompress();
+	
+	if (h == nullptr)
+	{
+		LOG_ERR("turbojpeg: %s", tjGetErrorStr());
+		
+		result = false;
+	}
+	else
+	{
+		int sx = 0;
+		int sy = 0;
+		
+		int jpegSubsamp = 0;
+		int jpegColorspace = 0;
+		
+		if (tjDecompressHeader3(h, (unsigned char*)buffer, (unsigned long)bufferSize, &sx, &sy, &jpegSubsamp, &jpegColorspace) != 0)
+		{
+			LOG_ERR("turbojpeg: %s", tjGetErrorStr());
+			
+			result = false;
+		}
+		else
+		{
+			const TJPF pixelFormat = decodeGrayscale ? TJPF_GRAY : TJPF_RGBX;
+			
+			const int pitch = sx * tjPixelSize[pixelFormat];
+			
+			const int flags = 0;
+			
+			const int requiredBufferSize = pitch * sy;
+			
+			Assert(requiredBufferSize <= dstBufferSize);
+			
+			if (tjDecompress2(h, (unsigned char*)buffer, (unsigned long)bufferSize, (unsigned char*)dstBuffer, sx, pitch, sy, pixelFormat, flags) != 0)
+			{
+				LOG_ERR("turbojpeg: %s", tjGetErrorStr());
+				
+				result = false;
+			}
+			else
+			{
+				//logDebug("decoded jpeg!");
+			}
+		}
+		
+		tjDestroy(h);
+		h = nullptr;
+	}
+	
+	return result;
+}
+
+bool loadImage_turbojpeg(const void * buffer, const int bufferSize, JpegLoadData & data, const bool decodeGrayscale)
 {
 	bool result = true;
 	
@@ -112,7 +169,7 @@ bool loadImage_turbojpeg(const void * buffer, const int bufferSize, JpegLoadData
 			data.sx = sx;
 			data.sy = sy;
 			
-			const TJPF pixelFormat = TJPF_RGBX;
+			const TJPF pixelFormat = decodeGrayscale ? TJPF_GRAY : TJPF_RGBX;
 			
 			const int pitch = sx * tjPixelSize[pixelFormat];
 			
@@ -151,7 +208,7 @@ bool loadImage_turbojpeg(const void * buffer, const int bufferSize, JpegLoadData
 	return result;
 }
 
-bool loadImage_turbojpeg(const char * filename, JpegLoadData & data, void * fileBuffer, int fileBufferSize)
+bool loadImage_turbojpeg(const char * filename, JpegLoadData & data, void * fileBuffer, int fileBufferSize, const bool decodeGrayscale)
 {
 	bool result = true;
 	
@@ -163,13 +220,13 @@ bool loadImage_turbojpeg(const char * filename, JpegLoadData & data, void * file
 	}
 	else
 	{
-		result = loadImage_turbojpeg(fileBuffer, fileBufferSize, data);
+		result = loadImage_turbojpeg(fileBuffer, fileBufferSize, data, decodeGrayscale);
 	}
 	
 	return result;
 }
 
-bool loadImage_turbojpeg(const char * filename, JpegLoadData & data)
+bool loadImage_turbojpeg(const char * filename, JpegLoadData & data, const bool decodeGrayscale)
 {
 	bool result = true;
 
@@ -198,7 +255,7 @@ bool loadImage_turbojpeg(const char * filename, JpegLoadData & data)
 		}
 		else
 		{
-			result = loadImage_turbojpeg(fileBuffer, fileBufferSize, data);
+			result = loadImage_turbojpeg(fileBuffer, fileBufferSize, data, decodeGrayscale);
 		}
 
 		delete[] fileBuffer;
