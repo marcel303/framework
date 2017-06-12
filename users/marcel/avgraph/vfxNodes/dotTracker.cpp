@@ -145,7 +145,7 @@ void DotTracker::DGrid::erase(TrackedDot * e)
 
 void DotTracker::identify(TrackedDot * dots, const int numDots, const float dt, const float maxDistance, const bool useExtrapolation, int * addedIds, int * numAdded, int * removedIds, int * numRemoved)
 {
-	// note : even faster would is to iterate over each history item, compute the interesting region (item position in cell coordinates +/- 1), and within this region, calculate the minimum of any dot to any history item in the dot region (dot position in cell coordinates +/- 1). if there is a dot with a nearest history item being the current history item, the current history item can 'claim' this dot. otherwise, the history item is considered 'dead'
+	// note : this algortihm uses the 'even faster' method. which is to iterate over each history item, compute the interesting region (item position in cell coordinates +/- 1), and within this region, calculate the minimum of any dot to any history item in the dot region (dot position in cell coordinates +/- 1). if there is a dot with a nearest history item being the current history item, the current history item can 'claim' this dot. otherwise, the history item is considered 'dead'
 	
 	const float maxDistanceSq = maxDistance * maxDistance;
 	
@@ -277,21 +277,36 @@ void DotTracker::identify(TrackedDot * dots, const int numDots, const float dt, 
 		
 		if (bestDot != nullptr)
 		{
-			bestDot->id = h.id;
-			
-			// remove dot from grid. it's been claimed by a history element
-		
-			dgrid.erase(bestDot);
-			
 			// update history element
 			
-			h.speedX = (bestDot->x - h.x) / dt;
-			h.speedY = (bestDot->y - h.y) / dt;
+			if (useExtrapolation)
+			{
+				if (dt == 0.f)
+				{
+					h.speedX = 0.f;
+					h.speedY = 0.f;
+				}
+				else
+				{
+					h.speedX = (bestDot->x - h.x) / dt;
+					h.speedY = (bestDot->y - h.y) / dt;
+				}
+			}
 			
 			h.x = bestDot->x;
 			h.y = bestDot->y;
 			
 			h.identified = true;
+			
+			// update dot
+			
+			bestDot->id = h.id;
+			bestDot->speedX = h.speedX;
+			bestDot->speedY = h.speedY;
+			
+			// remove dot from grid. it's been claimed by a history element
+		
+			dgrid.erase(bestDot);
 		}
 		
 		// remove history element from grid. it's been considered by all dots surrounding it
@@ -344,6 +359,8 @@ void DotTracker::identify(TrackedDot * dots, const int numDots, const float dt, 
 			h.id = id;
 			
 			dots[i].id = id;
+			dots[i].speedX = 0.f;
+			dots[i].speedY = 0.f;
 			
 			if (numAdded)
 			{

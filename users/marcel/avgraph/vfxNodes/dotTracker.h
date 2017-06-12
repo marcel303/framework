@@ -33,8 +33,10 @@ struct TrackedDot
 	float x;
 	float y;
 	
-	// id is outputted after running identify on the input set of dots
+	// id and speed are outputted after running identify on the input set of dots
 	int id;
+	float speedX;
+	float speedY;
 	
 	// stuff used internally by the dot tracker, or if you choose to use DGrid
 	TrackedDot * next;
