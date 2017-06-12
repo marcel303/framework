@@ -87,16 +87,13 @@ float sampleMsdf(vec2 texcoord)
 	else
 		opacity = texcoord.y;
 
-	return clamp(opacity * 1.5, 0.0, 1.0);
+	return clamp(opacity, 0.0, 1.0);
 }
 
 void main()
 {
 	vec2 msdfSize = textureSize(msdf, 0);
 
-    vec3 msdfSample = texture(msdf, v_texcoord).rgb;
-
-#if 1
     float opacity = 0.0;
 
     if (useSuperSampling == 0)
@@ -128,24 +125,6 @@ void main()
 		int numSamples = (kernelSize*2+1) * (kernelSize*2+1);
 	    opacity /= numSamples;
 	}
-#elif 0
-    vec2 uv = v_texcoord * textureSize(msdf, 0);
-
-	// Calculate derivates
-	vec2 Jdx = dFdx(uv);
-	vec2 Jdy = dFdy(uv);
-
-	float sigDist = median(msdfSample.r, msdfSample.g, msdfSample.b) - 0.5;
-    vec2 gradDist = safeNormalize(vec2(dFdx(sigDist), dFdy(sigDist)));
-	vec2 grad = vec2(gradDist.x * Jdx.x + gradDist.y * Jdy.x, gradDist.x * Jdx.y + gradDist.y * Jdy.y);
-
-	// Apply anti-aliasing.
-	//const float kThickness = 0.125;
-	const float kThickness = 1.0;
-	float kNormalization = kThickness * 0.5 * sqrt( 2.0 );
-	float afwidth = min( kNormalization * length( grad ), 0.5 );
-	float opacity = smoothstep(-afwidth, +afwidth, sigDist );
-#endif
 
     vec4 color = v_color;
     color.a *= opacity;
