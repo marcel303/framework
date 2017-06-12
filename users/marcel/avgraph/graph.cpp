@@ -185,6 +185,8 @@ void GraphNode::EditorVisualizer::allocVisualizer()
 
 void GraphNode::EditorVisualizer::tick(const GraphEdit & graphEdit)
 {
+	visualizer->tick(graphEdit);
+	
 	if (sx == 0 || sy == 0)
 	{
 		if (visualizer->hasValue)
@@ -202,8 +204,6 @@ void GraphNode::EditorVisualizer::tick(const GraphEdit & graphEdit)
 			sy = syi;
 		}
 	}
-	
-	visualizer->tick(graphEdit);
 }
 
 void GraphNode::EditorVisualizer::operator=(const EditorVisualizer & other)
