@@ -38,6 +38,7 @@ struct VfxNodeDelayLine : VfxNodeBase
 	enum Input
 	{
 		kInput_Value,
+		kInput_MaxDelay,
 		kInput_Delay1,
 		kInput_Delay2,
 		kInput_Delay3,

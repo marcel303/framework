@@ -58,12 +58,12 @@ void VfxNodeDelayLine::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeDelayLine);
 	
+	const float maxDelay = getInputFloat(kInput_MaxDelay, 0.f);
+	
 	const float delay1 = getInputFloat(kInput_Delay1, 0.f);
 	const float delay2 = getInputFloat(kInput_Delay2, 0.f);
 	const float delay3 = getInputFloat(kInput_Delay3, 0.f);
 	const float delay4 = getInputFloat(kInput_Delay4, 0.f);
-
-	const float maxDelay = std::max(std::max(delay1, delay2), std::max(delay3, delay4));
 	
 	{
 		// set delay line length
