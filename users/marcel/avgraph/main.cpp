@@ -46,10 +46,13 @@
 #include "vfxNodes/vfxNodeDelayLine.h"
 #include "vfxNodes/vfxNodeDisplay.h"
 #include "vfxNodes/vfxNodeDotDetector.h"
+#include "vfxNodes/vfxNodeDotTracker.h"
 #include "vfxNodes/vfxNodeFsfx.h"
+#include "vfxNodes/vfxNodeImageCpuDelayLine.h"
 #include "vfxNodes/vfxNodeImageCpuDownsample.h"
 #include "vfxNodes/vfxNodeImageCpuEqualize.h"
 #include "vfxNodes/vfxNodeImageCpuToGpu.h"
+#include "vfxNodes/vfxNodeImageDelayLine.h"
 #include "vfxNodes/vfxNodeImageDownsample.h"
 #include "vfxNodes/vfxNodeImpulseResponse.h"
 #include "vfxNodes/vfxNodeKinect1.h"
@@ -247,8 +250,11 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("spectrum.2d", VfxNodeSpectrum2D)
 	DefineNodeImpl("fsfx", VfxNodeFsfx)
 	DefineNodeImpl("image.dots", VfxNodeDotDetector)
+	DefineNodeImpl("image.dotTracker", VfxNodeDotTracker)
 	DefineNodeImpl("image.toGpu", VfxNodeImageCpuToGpu)
+	DefineNodeImpl("image.delay", VfxNodeImageDelayLine)
 	DefineNodeImpl("image_cpu.equalize", VfxNodeImageCpuEqualize)
+	DefineNodeImpl("image_cpu.delay", VfxNodeImageCpuDelayLine)
 	DefineNodeImpl("image_cpu.downsample", VfxNodeImageCpuDownsample)
 	DefineNodeImpl("image.downsample", VfxNodeImageDownsample)
 	DefineNodeImpl("yuvToRgb", VfxNodeYuvToRgb)
@@ -581,7 +587,7 @@ int main(int argc, char * argv[])
 		
 		//testDeepbelief();
 		
-		testImageCpuDelayLine();
+		//testImageCpuDelayLine();
 		
 		//
 		
@@ -728,9 +734,15 @@ int main(int argc, char * argv[])
 				
 				pushSurface(graphEditSurface);
 				{
-					graphEditSurface->clear();
+					graphEditSurface->clear(0, 0, 0, 255);
+					pushBlend(BLEND_ADD);
+					
+					glBlendEquation(GL_FUNC_ADD);
+					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
 					
 					graphEdit->draw();
+					
+					popBlend();
 				}
 				popSurface();
 				
@@ -759,7 +771,14 @@ int main(int argc, char * argv[])
 				
 				gxSetTexture(graphEditSurface->getTexture());
 				{
+					pushBlend(BLEND_ADD);
+					
+					glBlendEquation(GL_FUNC_ADD);
+					glBlendFuncSeparate(GL_ONE, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO);
+					
 					drawRect(0, 0, GFX_SX, GFX_SY);
+					
+					popBlend();
 				}
 				gxSetTexture(0);
 			}
