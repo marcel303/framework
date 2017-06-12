@@ -301,6 +301,43 @@ static int downsampleLine2x2_SSE(const uint8_t * __restrict _srcLine1, const uin
 	return numIterations * 8;
 }
 
+static int downsampleLine4x4_SSE(const uint8_t * __restrict _srcLine1, const uint8_t * __restrict _srcLine2, const uint8_t * __restrict _srcLine3, const uint8_t * __restrict _srcLine4, const int numPixels, uint8_t * __restrict dstLine)
+{
+	const int numIterations = numPixels / 4;
+	
+	const __m128i * __restrict srcLine1 = (__m128i*)_srcLine1;
+	const __m128i * __restrict srcLine2 = (__m128i*)_srcLine2;
+	const __m128i * __restrict srcLine3 = (__m128i*)_srcLine3;
+	const __m128i * __restrict srcLine4 = (__m128i*)_srcLine4;
+	
+	const __m128i zero = _mm_setzero_si128();
+	
+	for (int x = 0; x < numIterations; ++x)
+	{
+		const __m128i srcValues1 = srcLine1[x];
+		const __m128i srcValues2 = srcLine2[x];
+		const __m128i srcValues3 = srcLine3[x];
+		const __m128i srcValues4 = srcLine4[x];
+		
+		const __m128i srcValuesA = _mm_avg_epu8(srcValues1, srcValues2);
+		const __m128i srcValuesB = _mm_avg_epu8(srcValues3, srcValues4);
+		const __m128i srcValues = _mm_avg_epu8(srcValuesA, srcValuesB);
+		const __m128i srcValuesL = _mm_unpacklo_epi8(srcValues, zero);
+		const __m128i srcValuesR = _mm_unpackhi_epi8(srcValues, zero);
+		
+		__m128i dstValues;
+		dstValues = _mm_hadd_epi16(srcValuesL, srcValuesR);
+		dstValues = _mm_hadd_epi16(dstValues, dstValues);
+		dstValues = _mm_srli_epi16(dstValues, 2);
+		
+		const __m128i dstValuesPacked = _mm_packus_epi16(dstValues, zero);
+		
+		((int*)dstLine)[x] = _mm_extract_epi32(dstValuesPacked, 0);
+	}
+	
+	return numIterations * 4;
+}
+
 #if 0 // todo : check for AVX support somehow
 
 static int downsampleLine2x2_AVX(const uint8_t * __restrict _srcLine1, const uint8_t * __restrict _srcLine2, const int numPixels, uint8_t * __restrict dstLine)
@@ -406,7 +443,26 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 				const uint8_t * __restrict srcItr4 = srcChannel.data + (y * 4 + 3) * srcChannel.pitch;
 					  uint8_t * __restrict dstItr = (uint8_t*)dstChannel.data + y * dstChannel.pitch;
 				
-				for (int x = 0; x < downsampledSx; ++x)
+				if (src.isPlanar)
+					Assert(((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(srcItr3) | uintptr_t(srcItr4)) & 0xf) == 0);
+				Assert((uintptr_t(dstItr) & 0xf) == 0);
+				
+				int numPixelsProcessed = 0;
+				
+			#if 1
+				if (srcChannel.stride == 1 && dstChannel.stride == 1 && ((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(srcItr3) | uintptr_t(srcItr4) | uintptr_t(dstItr)) & 0xf) == 0)
+				{
+					numPixelsProcessed = downsampleLine4x4_SSE(srcItr1, srcItr2, srcItr3, srcItr4, downsampledSx, dstItr);
+					
+					srcItr1 += numPixelsProcessed * 4;
+					srcItr2 += numPixelsProcessed * 4;
+					srcItr3 += numPixelsProcessed * 4;
+					srcItr4 += numPixelsProcessed * 4;
+					dstItr += numPixelsProcessed;
+				}
+			#endif
+			
+				for (int x = numPixelsProcessed; x < downsampledSx; ++x)
 				{
 					int src1 = 0;
 					int src2 = 0;
