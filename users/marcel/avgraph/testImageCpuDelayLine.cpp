@@ -56,6 +56,8 @@ void testImageCpuDelayLine()
 	
 	float offset = .5f;
 	
+	bool glitchEnabled = false;
+	
 	do
 	{
 		framework.process();
@@ -70,6 +72,9 @@ void testImageCpuDelayLine()
 			offset += .2f * framework.timeStep;
 		
 		offset = std::max(0.f, std::min(1.f, offset));
+		
+		if (keyboard.wentDown(SDLK_g))
+			glitchEnabled = !glitchEnabled;
 		
 		if (keyboard.wentDown(SDLK_c))
 			d->clearHistory();
@@ -107,7 +112,8 @@ void testImageCpuDelayLine()
 		
 		double delayedTimestamp = 0.0;
 		
-		VfxImageCpu * delayedImage = d->get(int(offset * (d->maxHistorySize - 1)), &delayedTimestamp);
+		VfxImageCpuData delayedImage;
+		const bool gotDelatedImage = d->get(int(offset * (d->maxHistorySize - 1)), delayedImage, &delayedTimestamp, glitchEnabled);
 		
 		//
 		
@@ -133,57 +139,71 @@ void testImageCpuDelayLine()
 		}
 		
 	#if 0
-		if (delayedImage == nullptr)
+		if (gotDelatedImage == false)
 		{
 			logDebug("delayedImage is NULL");
 		}
 		else
 		{
-			logDebug("delayedImage: sx=%d, sy=%d", delayedImage->sx, delayedImage->sy);
+			logDebug("delayedImage: sx=%d, sy=%d", delayedImage.image->sx, delayedImage.image->sy);
 		}
 	#endif
 		
 		//
 		
-		framework.beginDraw(0, 0, 0, 0);
+		const Color textColor(0, 0, 255);
+		const float fontSize = 15.f;
+		
+		framework.beginDraw(250, 250, 250, 0);
 		{
-			int x = 10;
+			int x = 0;
 			int y = 100;
 			
 			{
 				int sy = 0;
 				
+				const int padding = 10;
+				
+				const float videoSx = mediaPlayer->videoFrame ? mediaPlayer->videoFrame->m_width : gotDelatedImage ? delayedImage.image.sx : 1.f;
+				
+				const float videoScale = float(GFX_SX - padding * 3) / videoSx / 2.f;
+				
 				if (mediaPlayer->videoFrame != nullptr)
 				{
+					x += padding;
+					
 					gxSetTexture(mediaPlayer->getTexture());
 					setColor(colorWhite);
-					drawRect(x, y, x + mediaPlayer->videoFrame->m_width, y + mediaPlayer->videoFrame->m_height);
+					drawRect(x, y, x + mediaPlayer->videoFrame->m_width * videoScale, y + mediaPlayer->videoFrame->m_height * videoScale);
 					gxSetTexture(0);
 					
-					x += mediaPlayer->videoFrame->m_width;
+					x += mediaPlayer->videoFrame->m_width * videoScale;
 					
-					sy = std::max(sy, (int)mediaPlayer->videoFrame->m_height);
+					sy = std::max(sy, int(mediaPlayer->videoFrame->m_height * videoScale));
 				}
 				
-				if (delayedImage != nullptr)
+				if (gotDelatedImage)
 				{
-					if (texture.isChanged(delayedImage->sx, delayedImage->sy, GL_RGBA8))
+					x += padding;
+					
+					if (texture.isChanged(delayedImage.image.sx, delayedImage.image.sy, GL_R8))
 					{
-						texture.allocate(delayedImage->sx, delayedImage->sy, GL_RGBA8, true, true);
+						texture.allocate(delayedImage.image.sx, delayedImage.image.sy, GL_R8, true, true);
+						texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 					}
 					
-					texture.upload(delayedImage->channel[0].data, 4, delayedImage->channel[0].pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
+					texture.upload(delayedImage.image.channel[0].data, 1, delayedImage.image.channel[0].pitch / 1, GL_RED, GL_UNSIGNED_BYTE);
 					
 					//
 					
 					gxSetTexture(texture.id);
 					setColor(colorWhite);
-					drawRect(x, y, x + delayedImage->sx, y + delayedImage->sy);
+					drawRect(x, y, x + delayedImage.image.sx * videoScale, y + delayedImage.image.sy * videoScale);
 					gxSetTexture(0);
 					
-					x += delayedImage->sx;
+					x += delayedImage.image.sx * videoScale;
 					
-					sy = std::max(sy, delayedImage->sy);
+					sy = std::max(sy, int(delayedImage.image.sy * videoScale));
 				}
 				
 				y += sy;
@@ -194,39 +214,38 @@ void testImageCpuDelayLine()
 			
 			setFont("calibri.ttf");
 			setFontMSDF("calibri.ttf");
-			setColor(colorGreen);
+			setColor(textColor);
 			ImageCpuDelayLine::MemoryUsage memoryUsage = d->getMemoryUsage();
-			drawText(10, 10, 14, +1, +1, "memory usage: %.2f Mb", memoryUsage.numBytes / 1024.0 / 1024.0);
-			drawText(10, 30, 14, +1, +1, "history: %.2f Mb", memoryUsage.numHistoryBytes / 1024.0 / 1024.0);
-			drawText(10, 50, 14, +1, +1, "cached image: %.2f Mb", memoryUsage.numCachedImageBytes / 1024.0 / 1024.0);
-			drawText(10, 70, 14, +1, +1, "save buffers: %.2f Mb", memoryUsage.numSaveBufferBytes / 1024.0 / 1024.0);
+			drawText(10, 10, fontSize, +1, +1, "memory usage: %.2f Mb", memoryUsage.numBytes / 1024.0 / 1024.0);
+			drawText(10, 30, fontSize, +1, +1, "history: %.2f Mb", memoryUsage.numHistoryBytes / 1024.0 / 1024.0);
+			drawText(10, 50, fontSize, +1, +1, "cached image: %.2f Mb", memoryUsage.numCachedImageBytes / 1024.0 / 1024.0);
+			drawText(10, 70, fontSize, +1, +1, "save buffers: %.2f Mb", memoryUsage.numSaveBufferBytes / 1024.0 / 1024.0);
 			
-			drawText(210, 10, 14, +1, +1, "current jpeg quality level: %d", jpegQualityLevel);
-			drawText(210, 30, 14, +1, +1, "history size: %d / %d", memoryUsage.historySize, d->maxHistorySize);
+			drawText(210, 10, fontSize, +1, +1, "current jpeg quality level: %d, glitch enabled: %d", jpegQualityLevel, glitchEnabled);
+			drawText(210, 30, fontSize, +1, +1, "history size: %d / %d", memoryUsage.historySize, d->maxHistorySize);
 			if (mediaPlayer->videoFrame != nullptr)
-				drawText(210, 50, 14, +1, +1, "VIDEO: %d x %d, timestamp: %.2fs", mediaPlayer->videoFrame->m_width, mediaPlayer->videoFrame->m_height, mediaPlayer->videoFrame->m_time);
-			if (delayedImage != nullptr)
-				drawText(210, 70, 14, +1, +1, "DELAYED IMAGE: %d x %d, timestamp: %.2fs", delayedImage->sx, delayedImage->sy, delayedTimestamp);
+				drawText(210, 50, fontSize, +1, +1, "VIDEO: %d x %d, timestamp: %.2fs", mediaPlayer->videoFrame->m_width, mediaPlayer->videoFrame->m_height, mediaPlayer->videoFrame->m_time);
+			if (gotDelatedImage)
+				drawText(210, 70, fontSize, +1, +1, "DELAYED IMAGE: %d x %d, timestamp: %.2fs", delayedImage.image.sx, delayedImage.image.sy, delayedTimestamp);
 			
-			setColor(50, 50, 50);
+			setColor(150, 150, 250);
 			drawRect(x, y, x + 400 * memoryUsage.historySize / d->maxHistorySize, y + 20);
 			setColor(colorWhite);
 			drawTextMSDF(x + 5, y + 20/2, 10, +1, 0, "delay line FIFO");
-			setColor(100, 100, 100);
-			drawRectLine(x, y, x + 400, y + 20);
-			
-			setColor(colorYellow);
+			setColor(colorRed);
 			drawLine(
 				x + 400 * offset, y +  0,
 				x + 400 * offset, y + 20);
-			
+			setColor(50, 50, 150);
+			drawRectLine(x, y, x + 400, y + 20);
+						
 			y += 30;
 			
-			setColor(colorGreen);
-			drawText(x, y + 0, 14, +1, +1, "LEFT/RIGHT: control sampling position within the delay line");
-			drawText(x, y + 20, 14, +1, +1, "C: clear delay line FIFO");
-			drawText(x, y + 40, 14, +1, +1, "R: set a random delay line size");
-			drawText(x, y + 60, 14, +1, +1, "SPACE: quit test");
+			setColor(textColor);
+			drawText(x, y + 0, fontSize, +1, +1, "LEFT/RIGHT: control sampling position within the delay line");
+			drawText(x, y + 20, fontSize, +1, +1, "C: clear delay line FIFO");
+			drawText(x, y + 40, fontSize, +1, +1, "R: set a random delay line size");
+			drawText(x, y + 60, fontSize, +1, +1, "SPACE: quit test");
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
