@@ -28,10 +28,11 @@
 #pragma once
 
 #include "Mat4x4.h"
-#include <string>
-#include <vector>
+#include <list>
 #include <map>
 #include <set>
+#include <string>
+#include <vector>
 
 namespace tinyxml2
 {
@@ -134,6 +135,20 @@ struct GraphNode
 	void setVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 };
 
+struct GraphLinkRoutePoint
+{
+	GraphLinkId linkId;
+	float x;
+	float y;
+	
+	GraphLinkRoutePoint()
+		: linkId(kGraphLinkIdInvalid)
+		, x(0.f)
+		, y(0.f)
+	{
+	}
+};
+
 struct GraphNodeSocketLink
 {
 	GraphLinkId id;
@@ -146,6 +161,10 @@ struct GraphNodeSocketLink
 	GraphNodeId dstNodeId;
 	std::string dstNodeSocketName;
 	int dstNodeSocketIndex;
+	
+	// editor
+	
+	std::list<GraphLinkRoutePoint> editorRoutePoints;
 	
 	GraphNodeSocketLink();
 	
@@ -770,6 +789,10 @@ struct GraphEdit : GraphEditConnection
 		
 		bool hasLink;
 		GraphNodeSocketLink * link;
+		int linkSegmentIndex;
+		
+		bool hasLinkRoutePoint;
+		GraphLinkRoutePoint * linkRoutePoint;
 		
 		HitTestResult()
 			: hasNode(false)
@@ -777,6 +800,9 @@ struct GraphEdit : GraphEditConnection
 			, nodeHitTestResult()
 			, hasLink(false)
 			, link(nullptr)
+			, linkSegmentIndex(-1)
+			, hasLinkRoutePoint(false)
+			, linkRoutePoint(nullptr)
 		{
 		}
 	};
@@ -803,12 +829,38 @@ struct GraphEdit : GraphEditConnection
 		float uiY;
 		float x;
 		float y;
+		float dx;
+		float dy;
 		
 		GraphEditMouse()
 			: uiX(0.f)
 			, uiY(0.f)
 			, x(0.f)
 			, y(0.f)
+			, dx(0.f)
+			, dy(0.f)
+		{
+		}
+	};
+	
+	struct LinkPath
+	{
+		struct Point
+		{
+			float x;
+			float y;
+			
+			Point()
+				: x(0.f)
+				, y(0.f)
+			{
+			}
+		};
+		
+		std::vector<Point> points;
+		
+		LinkPath()
+			: points()
 		{
 		}
 	};
@@ -972,20 +1024,22 @@ struct GraphEdit : GraphEditConnection
 	
 	struct Touches
 	{
-		uint64_t finger1;
-		uint64_t finger2;
+		struct FingerInfo
+		{
+			uint64_t id;
+			Vec2 position;
+			Vec2 initialPosition;
+		};
 		
-		Vec2 position1;
-		Vec2 position2;
+		FingerInfo finger1;
+		FingerInfo finger2;
 		
 		float initialDistance;
 		float distance;
 		
 		Touches()
-			: finger1(0)
-			, finger2(0)
-			, position1()
-			, position2()
+			: finger1()
+			, finger2()
 			, initialDistance(0.f)
 			, distance(0.f)
 		{
@@ -993,7 +1047,7 @@ struct GraphEdit : GraphEditConnection
 		
 		float getDistance() const
 		{
-			return (position2 - position1).CalcSize();
+			return (finger2.position - finger1.position).CalcSize();
 		}
 	};
 	
@@ -1023,6 +1077,7 @@ struct GraphEdit : GraphEditConnection
 	std::set<GraphNodeId> selectedNodes;
 	std::set<GraphLinkId> highlightedLinks;
 	std::set<GraphLinkId> selectedLinks;
+	std::set<GraphLinkRoutePoint*> selectedLinkRoutePoints;
 	
 	SocketSelection highlightedSockets;
 	SocketSelection selectedSockets;
@@ -1066,6 +1121,7 @@ struct GraphEdit : GraphEditConnection
 	GraphNodeSocketLink * tryGetLink(const GraphLinkId id) const;
 	const GraphEdit_TypeDefinition::InputSocket * tryGetInputSocket(const GraphNodeId nodeId, const int socketIndex) const;
 	const GraphEdit_TypeDefinition::OutputSocket * tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const;
+	bool getLinkPath(const GraphLinkId linkId, LinkPath & path) const;
 	
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
 	
@@ -1088,11 +1144,15 @@ struct GraphEdit : GraphEditConnection
 	
 	void selectNode(const GraphNodeId nodeId, const bool clearSelection);
 	void selectLink(const GraphLinkId linkId, const bool clearSelection);
+	void selectLinkRoutePoint(GraphLinkRoutePoint * routePoint, const bool clearSelection);
 	void selectNodeAll();
 	void selectLinkAll();
+	void selectLinkRoutePointAll();
 	void selectAll();
 	
-	void snapToGrid(GraphNode & node);
+	void snapToGrid(float & x, float & y) const;
+	void snapToGrid(GraphLinkRoutePoint & routePoint) const;
+	void snapToGrid(GraphNode & node) const;
 	
 	void undo();
 	void redo();

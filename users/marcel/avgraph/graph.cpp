@@ -132,6 +132,18 @@ static bool testLineOverlap(
 	return false;
 }
 
+static bool testCircleOverlap(
+	const int x1, const int y1,
+	const int x2, const int y2,
+	const int r)
+{
+	const int dx = x2 - x1;
+	const int dy = y2 - y1;
+	const int dsSq = dx * dx + dy * dy;
+	
+	return dsSq <= r * r;
+}
+
 //
 
 GraphNode::EditorVisualizer::EditorVisualizer()
@@ -1768,6 +1780,7 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, realTimeConnection(nullptr)
 	, selectedNodes()
 	, selectedLinks()
+	, selectedLinkRoutePoints()
 	, state(kState_Idle)
 	, nodeSelect()
 	, nodeDrag()
@@ -1897,6 +1910,71 @@ const GraphEdit_TypeDefinition::OutputSocket * GraphEdit::tryGetOutputSocket(con
 	return &typeDefinition->outputSockets[socketIndex];
 }
 
+bool GraphEdit::getLinkPath(const GraphLinkId linkId, LinkPath & path) const
+{
+	path = LinkPath();
+	
+	//
+	
+	auto linkItr = graph->links.find(linkId);
+	
+	Assert(linkItr != graph->links.end());
+	if (linkItr == graph->links.end())
+		return false;
+	
+	//
+	
+	auto & link = linkItr->second;
+	
+	//
+	
+	auto srcNode = tryGetNode(link.srcNodeId);
+	auto dstNode = tryGetNode(link.dstNodeId);
+	
+	auto inputSocket = tryGetInputSocket(link.srcNodeId, link.srcNodeSocketIndex);
+	auto outputSocket = tryGetOutputSocket(link.dstNodeId, link.dstNodeSocketIndex);
+	
+	if (srcNode == nullptr ||
+		dstNode == nullptr ||
+		inputSocket == nullptr ||
+		outputSocket == nullptr)
+	{
+		return false;
+	}
+	else
+	{
+		auto srcTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
+		auto dstTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
+		
+		const float srcSy = srcTypeDefinition == nullptr ? 0.f : srcTypeDefinition->syFolded;
+		const float dstSy = dstTypeDefinition == nullptr ? 0.f : dstTypeDefinition->syFolded;
+		
+		const float srcX = srcNode->editorX + inputSocket->px;
+		const float srcY = srcNode->editorY + (srcNode->editorIsFolded ? srcSy/2.f : inputSocket->py);
+		const float dstX = dstNode->editorX + outputSocket->px;
+		const float dstY = dstNode->editorY + (dstNode->editorIsFolded ? dstSy/2.f : outputSocket->py);
+		
+		LinkPath::Point p;
+		
+		p.x = srcX;
+		p.y = srcY;
+		path.points.push_back(p);
+		
+		for (auto & routePoint : link.editorRoutePoints)
+		{
+			p.x = routePoint.x;
+			p.y = routePoint.y;
+			path.points.push_back(p);
+		}
+		
+		p.x = dstX;
+		p.y = dstY;
+		path.points.push_back(p);
+		
+		return true;
+	}
+}
+
 bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) const
 {
 	result = HitTestResult();
@@ -2008,34 +2086,42 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 	
 	for (auto linkItr = graph->links.rbegin(); linkItr != graph->links.rend(); ++linkItr)
 	{
+		auto linkId = linkItr->first;
 		auto & link = linkItr->second;
 		
-		auto srcNode = tryGetNode(link.srcNodeId);
-		auto dstNode = tryGetNode(link.dstNodeId);
-		
-		auto srcNodeSocket = tryGetInputSocket(link.srcNodeId, link.srcNodeSocketIndex);
-		auto dstNodeSocket = tryGetOutputSocket(link.dstNodeId, link.dstNodeSocketIndex);
-		
-		Assert(srcNode != nullptr && dstNode != nullptr && srcNodeSocket != nullptr && dstNodeSocket != nullptr);
-		if (srcNode != nullptr && dstNode != nullptr && srcNodeSocket != nullptr && dstNodeSocket != nullptr)
+		for (auto & routePoint : link.editorRoutePoints)
 		{
-			auto srcTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
-			auto dstTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
+			if (testCircleOverlap(routePoint.x, routePoint.y, x, y, 5))
+			{
+				result.hasLinkRoutePoint = true;
+				result.linkRoutePoint = &routePoint;
+				return true;
+			}
+		}
+		
+		LinkPath path;
 			
-			const int srcY = srcTypeDefinition == nullptr ? 0 : srcNode->editorIsFolded ? srcTypeDefinition->syFolded/2 : srcNodeSocket->py;
-			const int dstY = dstTypeDefinition == nullptr ? 0 : dstNode->editorIsFolded ? dstTypeDefinition->syFolded/2 : dstNodeSocket->py;
+		if (getLinkPath(linkId, path) == false)
+			continue;
+		
+		float x1 = path.points[0].x;
+		float y1 = path.points[0].y;
+		
+		for (int i = 1; i < path.points.size(); ++i)
+		{
+			const float x2 = path.points[i].x;
+			const float y2 = path.points[i].y;
 			
-			if (testLineOverlap(
-				srcNode->editorX + srcNodeSocket->px,
-				srcNode->editorY + srcY,
-				dstNode->editorX + dstNodeSocket->px,
-				dstNode->editorY + dstY,
-				x, y, 10.f))
+			if (testLineOverlap(x1, y1, x2, y2, x, y, 10.f))
 			{
 				result.hasLink = true;
 				result.link = &link;
+				result.linkSegmentIndex = i - 1;
 				return true;
 			}
+			
+			x1 = x2;
+			y1 = y2;
 		}
 	}
 	
@@ -2052,6 +2138,8 @@ bool GraphEdit::tick(const float dt)
 		
 		const Vec2 srcMousePosition(mouse.x, mouse.y);
 		const Vec2 dstMousePosition = dragAndZoom.invTransform * srcMousePosition;
+		mousePosition.dx = dstMousePosition[0] - mousePosition.x;
+		mousePosition.dy = dstMousePosition[1] - mousePosition.y;
 		mousePosition.x = dstMousePosition[0];
 		mousePosition.y = dstMousePosition[1];
 	}
@@ -2307,6 +2395,24 @@ bool GraphEdit::tick(const float dt)
 								selectedLinks.erase(hitTestResult.link->id);
 						}
 					}
+					
+					if (hitTestResult.hasLinkRoutePoint)
+					{
+						if (appendSelection == false)
+						{
+							selectLinkRoutePoint(hitTestResult.linkRoutePoint, true);
+						}
+						else
+						{
+							if (selectedLinkRoutePoints.count(hitTestResult.linkRoutePoint) == 0)
+								selectLinkRoutePoint(hitTestResult.linkRoutePoint, false);
+							else
+								selectedLinkRoutePoints.erase(hitTestResult.linkRoutePoint);
+						}
+						
+						state = kState_NodeDrag;
+						break;
+					}
 				}
 				else
 				{
@@ -2347,6 +2453,22 @@ bool GraphEdit::tick(const float dt)
 								hitTestResult.nodeHitTestResult.outputSocket->index,
 								mousePosition.x, mousePosition.y, true);
 						}
+					}
+					
+					if (hitTestResult.hasLink)
+					{
+						GraphLinkRoutePoint routePoint;
+						routePoint.linkId = hitTestResult.link->id;
+						routePoint.x = mousePosition.x;
+						routePoint.y = mousePosition.y;
+						
+						auto at = hitTestResult.link->editorRoutePoints.begin();
+						for (int i = 0; i < hitTestResult.linkSegmentIndex; ++i)
+							++at;
+						
+						auto result = hitTestResult.link->editorRoutePoints.insert(at, routePoint);
+						
+						selectLinkRoutePoint(&(*result), true);
 					}
 				}
 			}
@@ -2440,6 +2562,7 @@ bool GraphEdit::tick(const float dt)
 				{
 					selectedNodes = newSelectedNodes;
 					selectedLinks.clear();
+					selectedLinkRoutePoints.clear();
 				}
 			}
 			
@@ -2475,7 +2598,7 @@ bool GraphEdit::tick(const float dt)
 				}
 			}
 			
-			if (selectedNodes.empty())
+			if (selectedNodes.empty() && selectedLinkRoutePoints.empty())
 			{
 				tickKeyboardScroll();
 			}
@@ -2508,6 +2631,12 @@ bool GraphEdit::tick(const float dt)
 							node->editorX += moveX;
 							node->editorY += moveY;
 						}
+					}
+					
+					for (auto routePoint : selectedLinkRoutePoints)
+					{
+						routePoint->x += moveX;
+						routePoint->y += moveY;
 					}
 				}
 			}
@@ -2584,20 +2713,41 @@ bool GraphEdit::tick(const float dt)
 			
 			if (keyboard.wentDown(SDLK_BACKSPACE))
 			{
-				for (auto nodeId : selectedNodes)
+				auto nodesToRemove = selectedNodes;
+				for (auto nodeId : nodesToRemove)
 				{
 					graph->removeNode(nodeId);
 				}
 				
+				Assert(selectedNodes.empty());
 				selectedNodes.clear();
 				
-				for (auto linkId : selectedLinks)
+				auto linksToRemove = selectedLinks;
+				for (auto linkId : linksToRemove)
 				{
 					if (graph->tryGetLink(linkId) != nullptr)
 						graph->removeLink(linkId);
 				}
 				
+				Assert(selectedLinks.empty());
 				selectedLinks.clear();
+				
+				auto routePointsToRemove = selectedLinkRoutePoints;
+				for (auto routePoint : routePointsToRemove)
+				{
+					auto link = graph->tryGetLink(routePoint->linkId);
+					
+					for (auto routePointItr = link->editorRoutePoints.begin(); routePointItr != link->editorRoutePoints.end(); ++routePointItr)
+					{
+						auto routePoint2 = &(*routePointItr);
+						
+						if (routePoint2 == routePoint)
+						{
+							link->editorRoutePoints.erase(routePointItr);
+							break;
+						}
+					}
+				}
 			}
 			
 			if (keyboard.wentDown(SDLK_TAB))
@@ -2731,6 +2881,12 @@ bool GraphEdit::tick(const float dt)
 						node->editorY = mousePosition.y - offset[1];
 					}
 				}
+			}
+			
+			for (auto & routePoint : selectedLinkRoutePoints)
+			{
+				routePoint->x += mousePosition.dx;
+				routePoint->y += mousePosition.dy;
 			}
 		}
 		break;
@@ -2943,6 +3099,13 @@ bool GraphEdit::tick(const float dt)
 
 bool GraphEdit::tickTouches()
 {
+	if (state != kState_Idle && state != kState_TouchDrag && state != kState_TouchZoom)
+	{
+		touches = Touches();
+		
+		return false;
+	}
+	
 	const float sx = GFX_SX;
 	const float sy = GFX_SY;
 	
@@ -2954,24 +3117,19 @@ bool GraphEdit::tickTouches()
 			
 			if (state == kState_Idle)
 			{
-				Assert(touches.finger2 == 0);
-				
-				if (touches.finger1 == 0)
+				if (touches.finger1.id == 0)
 				{
-					touches.finger1 = event.tfinger.fingerId;
-					touches.position1.Set(event.tfinger.x * sx, event.tfinger.y * sy);
+					touches.finger1.id = event.tfinger.fingerId;
+					touches.finger1.position.Set(event.tfinger.x * sx, event.tfinger.y * sy);
+					touches.finger1.initialPosition = touches.finger1.position;
 				}
-				else
+				else if (touches.finger2.id == 0)
 				{
-					touches.finger2 = event.tfinger.fingerId;
-					touches.position2.Set(event.tfinger.x * sx, event.tfinger.y * sy);
-				}
-				
-				if (touches.finger1 != 0 && touches.finger2 != 0)
-				{
-					//logDebug("touch down: Idle -> TouchDrag");
+					touches.finger2.id = event.tfinger.fingerId;
+					touches.finger2.position.Set(event.tfinger.x * sx, event.tfinger.y * sy);
+					touches.finger2.initialPosition = touches.finger2.position;
 					
-					state = kState_TouchDrag;
+					//
 					
 					touches.distance = touches.getDistance();
 					touches.initialDistance = touches.getDistance();
@@ -2979,12 +3137,13 @@ bool GraphEdit::tickTouches()
 			}
 			else if (state == kState_TouchDrag)
 			{
-				Assert(touches.finger1 != 0);
+				Assert(touches.finger1.id != 0);
 				
-				if (touches.finger2 == 0)
+				if (touches.finger2.id == 0)
 				{
-					touches.finger2 = event.tfinger.fingerId;
-					touches.position2.Set(event.tfinger.x * sx, event.tfinger.y * sy);
+					touches.finger2.id = event.tfinger.fingerId;
+					touches.finger2.position.Set(event.tfinger.x * sx, event.tfinger.y * sy);
+					touches.finger2.initialPosition = touches.finger2.position;
 					
 					touches.distance = touches.getDistance();
 					touches.initialDistance = touches.getDistance();
@@ -3001,44 +3160,45 @@ bool GraphEdit::tickTouches()
 			
 			if (state == kState_Idle)
 			{
-				if (event.tfinger.fingerId == touches.finger1)
+				if (event.tfinger.fingerId == touches.finger1.id)
 				{
-					Assert(touches.finger1 != 0);
-					Assert(touches.finger2 == 0);
+					touches.finger1 = touches.finger2;
+					touches.finger2 = Touches::FingerInfo();
 					
-					touches.finger1 = 0;
+					touches.distance = 0.f;
+					touches.initialDistance = 0.f;
+				}
+				
+				if (event.tfinger.fingerId == touches.finger2.id)
+				{
+					touches.finger2 = Touches::FingerInfo();
 					
-					//logDebug("touch down: Idle -> Idle");
-					
-					state = kState_Idle;
+					touches.distance = 0.f;
+					touches.initialDistance = 0.f;
 				}
 			}
 			else if (state == kState_TouchDrag)
 			{
-				Assert(touches.finger1 != 0);
+				Assert(touches.finger1.id != 0);
 				
-				if (event.tfinger.fingerId == touches.finger1)
+				if (event.tfinger.fingerId == touches.finger1.id)
 				{
 					touches.finger1 = touches.finger2;
-					touches.position1 = touches.position2;
-					
-					touches.finger2 = 0;
-					touches.position2.SetZero();
+					touches.finger2 = Touches::FingerInfo();
 					
 					touches.distance = 0.f;
 					touches.initialDistance = 0.f;
 				}
 				
-				if (event.tfinger.fingerId == touches.finger2)
+				if (event.tfinger.fingerId == touches.finger2.id)
 				{
-					touches.finger2 = 0;
-					touches.position2.SetZero();
+					touches.finger2 = Touches::FingerInfo();
 					
 					touches.distance = 0.f;
 					touches.initialDistance = 0.f;
 				}
 				
-				if (touches.finger1 == 0 && touches.finger2 == 0)
+				if (touches.finger1.id == 0 && touches.finger2.id == 0)
 				{
 					//logDebug("touch down: TouchDrag -> Idle");
 					
@@ -3047,16 +3207,13 @@ bool GraphEdit::tickTouches()
 			}
 			else if (state == kState_TouchZoom)
 			{
-				if (event.tfinger.fingerId == touches.finger1)
+				if (event.tfinger.fingerId == touches.finger1.id)
 				{
-					Assert(touches.finger1 != 0);
-					Assert(touches.finger2 != 0);
+					Assert(touches.finger1.id != 0);
+					Assert(touches.finger2.id != 0);
 				
 					touches.finger1 = touches.finger2;
-					touches.finger2 = 0;
-					
-					touches.position1 = touches.position2;
-					touches.position2.SetZero();
+					touches.finger2 = Touches::FingerInfo();
 					
 					touches.distance = 0.f;
 					touches.initialDistance = 0.f;
@@ -3068,13 +3225,12 @@ bool GraphEdit::tickTouches()
 					
 					state = kState_TouchDrag;
 				}
-				else if (event.tfinger.fingerId == touches.finger2)
+				else if (event.tfinger.fingerId == touches.finger2.id)
 				{
-					Assert(touches.finger1 != 0);
-					Assert(touches.finger2 != 0);
+					Assert(touches.finger1.id != 0);
+					Assert(touches.finger2.id != 0);
 				
-					touches.finger2 = 0;
-					touches.position2.SetZero();
+					touches.finger2 = Touches::FingerInfo();
 					
 					touches.distance = 0.f;
 					touches.initialDistance = 0.f;
@@ -3090,28 +3246,48 @@ bool GraphEdit::tickTouches()
 		}
 		else if (event.type == SDL_FINGERMOTION)
 		{
-			const float dragSpeed = 1.f / std::max(1.f, std::abs(dragAndZoom.zoom)) * Calc::Sign(dragAndZoom.zoom);
-			
-			Vec2 position(event.tfinger.x * sx, event.tfinger.y * sy);
-			Vec2 delta;
-			
-			if (event.tfinger.fingerId == touches.finger1)
+			if (event.tfinger.fingerId != touches.finger1.id &&
+				event.tfinger.fingerId != touches.finger2.id)
 			{
-				delta = position - touches.position1;
-				touches.position1 = position;
+				continue;
 			}
 			
-			if (event.tfinger.fingerId == touches.finger2)
-			{
-				delta = position - touches.position2;
-				touches.position2 = position;
-			}
+			auto & finger = event.tfinger.fingerId == touches.finger1.id ? touches.finger1 : touches.finger2;
 			
-			if (state == kState_TouchDrag)
+			const float dragSpeed = 1.f / 2.f / std::max(1.f, std::abs(dragAndZoom.zoom)) * Calc::Sign(dragAndZoom.zoom);
+			
+			const Vec2 position(event.tfinger.x * sx, event.tfinger.y * sy);
+			const Vec2 delta = position - finger.position;
+			const float lengthFromInitialPosition = (position - finger.initialPosition).CalcSize();
+			
+			finger.position = position;
+			
+			if (state == kState_Idle)
 			{
-				Assert(touches.finger1 != 0);
+				touches.distance = touches.getDistance();
 				
-				if (event.tfinger.fingerId == touches.finger1)
+				if (touches.finger1.id != 0 && touches.finger2.id != 0)
+				{
+					const float delta = std::abs(touches.getDistance() - touches.initialDistance);
+					
+					if (delta > 40.f)
+					{
+						state = kState_TouchZoom;
+						
+						continue;
+					}
+					else if (lengthFromInitialPosition > 40.f)
+					{
+						state = kState_TouchDrag;
+						
+						continue;
+					}
+				}
+			}
+			else if (state == kState_TouchDrag)
+			{
+				Assert(touches.finger1.id != 0);
+				
 				{
 					dragAndZoom.focusX -= delta[0] * dragSpeed;
 					dragAndZoom.focusY -= delta[1] * dragSpeed;
@@ -3120,9 +3296,9 @@ bool GraphEdit::tickTouches()
 					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
 				}
 				
-				if (touches.finger2 != 0)
+				if (touches.finger2.id != 0)
 				{
-					Assert(touches.finger1 != 0);
+					Assert(touches.finger1.id != 0);
 					
 					touches.distance = touches.getDistance();
 					
@@ -3138,11 +3314,9 @@ bool GraphEdit::tickTouches()
 			}
 			else if (state == kState_TouchZoom)
 			{
-				Assert(touches.finger1 != 0);
-				Assert(touches.finger2 != 0);
+				Assert(touches.finger1.id != 0);
+				Assert(touches.finger2.id != 0);
 				
-				if (event.tfinger.fingerId == touches.finger1 ||
-					event.tfinger.fingerId == touches.finger2)
 				{
 					// update zoom
 					
@@ -3231,6 +3405,7 @@ void GraphEdit::nodeSelectEnd()
 	
 	selectedNodes = nodeSelect.nodeIds;
 	selectedLinks.clear(); // todo : also select links
+	selectedLinkRoutePoints.clear(); // todo : also select route points
 	
 	nodeSelect = NodeSelect();
 }
@@ -3247,6 +3422,11 @@ void GraphEdit::nodeDragEnd()
 			{
 				snapToGrid(*node);
 			}
+		}
+		
+		for (auto & routePoint : selectedLinkRoutePoints)
+		{
+			snapToGrid(*routePoint);
 		}
 	}
 	
@@ -3467,6 +3647,7 @@ void GraphEdit::selectNode(const GraphNodeId nodeId, const bool clearSelection)
 	{
 		selectedNodes.clear();
 		selectedLinks.clear();
+		selectedLinkRoutePoints.clear();
 	}
 	
 	selectedNodes.insert(nodeId);
@@ -3480,15 +3661,29 @@ void GraphEdit::selectLink(const GraphLinkId linkId, const bool clearSelection)
 	{
 		selectedNodes.clear();
 		selectedLinks.clear();
+		selectedLinkRoutePoints.clear();
 	}
 	
 	selectedLinks.insert(linkId);
 }
 
+void GraphEdit::selectLinkRoutePoint(GraphLinkRoutePoint * routePoint, const bool clearSelection)
+{
+	Assert(selectedLinkRoutePoints.count(routePoint) == 0 || clearSelection);
+	
+	if (clearSelection)
+	{
+		selectedNodes.clear();
+		selectedLinks.clear();
+		selectedLinkRoutePoints.clear();
+	}
+	
+	selectedLinkRoutePoints.insert(routePoint);
+}
+
 void GraphEdit::selectNodeAll()
 {
 	selectedNodes.clear();
-	//selectedLinks.clear();
 	
 	for (auto & nodeItr : graph->nodes)
 		selectedNodes.insert(nodeItr.first);
@@ -3496,23 +3691,46 @@ void GraphEdit::selectNodeAll()
 
 void GraphEdit::selectLinkAll()
 {
-	//selectedNodes.clear();
 	selectedLinks.clear();
 	
 	for (auto & linkItr : graph->links)
 		selectedLinks.insert(linkItr.first);
 }
 
+void GraphEdit::selectLinkRoutePointAll()
+{
+	for (auto & linkItr : graph->links)
+	{
+		auto & link = linkItr.second;
+		
+		for (auto & routePoint : link.editorRoutePoints)
+		{
+			selectedLinkRoutePoints.insert(&routePoint);
+		}
+	}
+}
+
 void GraphEdit::selectAll()
 {
 	selectNodeAll();
 	selectLinkAll();
+	selectLinkRoutePointAll();
 }
 
-void GraphEdit::snapToGrid(GraphNode & node)
+void GraphEdit::snapToGrid(float & x, float & y) const
 {
-	node.editorX = std::round(node.editorX / float(kGridSize)) * kGridSize;
-	node.editorY = std::round(node.editorY / float(kGridSize)) * kGridSize;
+	x = std::round(x / float(kGridSize)) * kGridSize;
+	y = std::round(y / float(kGridSize)) * kGridSize;
+}
+
+void GraphEdit::snapToGrid(GraphLinkRoutePoint & routePoint) const
+{
+	snapToGrid(routePoint.x, routePoint.y);
+}
+
+void GraphEdit::snapToGrid(GraphNode & node) const
+{
+	snapToGrid(node.editorX, node.editorY);
 }
 
 void GraphEdit::showNotification(const char * format, ...)
@@ -3596,27 +3814,16 @@ void GraphEdit::draw() const
 
 	// traverse links and draw
 	
-	for (auto & linkItr : graph->links)
+	hqBegin(HQ_LINES);
 	{
-		auto linkId = linkItr.first;
-		auto & link = linkItr.second;
-		
-		auto srcNode = tryGetNode(link.srcNodeId);
-		auto dstNode = tryGetNode(link.dstNodeId);
-		
-		auto inputSocket = tryGetInputSocket(link.srcNodeId, link.srcNodeSocketIndex);
-		auto outputSocket = tryGetOutputSocket(link.dstNodeId, link.dstNodeSocketIndex);
-		
-		if (srcNode == nullptr ||
-			dstNode == nullptr ||
-			inputSocket == nullptr ||
-			outputSocket == nullptr)
+		for (auto & linkItr : graph->links)
 		{
-			// todo : error
-		}
-		else
-		{
-			hqBegin(HQ_LINES);
+			auto linkId = linkItr.first;
+			auto & link = linkItr.second;
+			
+			LinkPath path;
+			
+			if (getLinkPath(linkId, path))
 			{
 				const bool isEnabled = link.isEnabled;
 				const bool isSelected = selectedLinks.count(linkId) != 0;
@@ -3631,24 +3838,50 @@ void GraphEdit::draw() const
 				else
 					setColor(255, 255, 0);
 				
-				auto srcTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
-				auto dstTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
+				float x1 = path.points[0].x;
+				float y1 = path.points[0].y;
 				
-				const float srcSy = srcTypeDefinition == nullptr ? 0.f : srcTypeDefinition->syFolded;
-				const float dstSy = dstTypeDefinition == nullptr ? 0.f : dstTypeDefinition->syFolded;
-				
-				const float srcX = srcNode->editorX + inputSocket->px;
-				const float srcY = srcNode->editorY + (srcNode->editorIsFolded ? srcSy/2.f : inputSocket->py);
-				const float dstX = dstNode->editorX + outputSocket->px;
-				const float dstY = dstNode->editorY + (dstNode->editorIsFolded ? dstSy/2.f : outputSocket->py);
-				
-				hqLine(
-					srcX, srcY, 2.f,
-					dstX, dstY, 4.f);
+				for (int i = 1; i < path.points.size(); ++i)
+				{
+					const float x2 = path.points[i].x;
+					const float y2 = path.points[i].y;
+					
+					hqLine(
+						x1, y1, 2.f,
+						x2, y2, 2.f);
+					
+					x1 = x2;
+					y1 = y2;
+				}
 			}
-			hqEnd();
 		}
 	}
+	hqEnd();
+	
+	hqBegin(HQ_FILLED_CIRCLES);
+	{
+		for (auto & linkItr : graph->links)
+		{
+			auto linkId = linkItr.first;
+			auto & link = linkItr.second;
+			
+			for (auto & routePoint : link.editorRoutePoints)
+			{
+				const bool isSelected = selectedLinkRoutePoints.count(&routePoint) != 0;
+				const bool isHighlighted = false; // todo : highlightedLinks.count(linkId) != 0;
+				
+				if (isSelected)
+					setColor(127, 127, 255);
+				else if (isHighlighted)
+					setColor(255, 255, 255);
+				else
+					setColor(255, 255, 0);
+				
+				hqFillCircle(routePoint.x, routePoint.y, 5.f);
+			}
+		}
+	}
+	hqEnd();
 	
 	// traverse nodes and draw
 	
@@ -4330,6 +4563,9 @@ void GraphEdit::nodeRemove(const GraphNodeId nodeId)
 	auto node = tryGetNode(nodeId);
 	Assert(node != nullptr);
 	
+	if (selectedNodes.count(nodeId) != 0)
+		selectedNodes.erase(nodeId);
+	
 	if (realTimeConnection != nullptr && node->nodeType == kGraphNodeType_Regular)
 	{
 		realTimeConnection->nodeRemove(nodeId);
@@ -4359,6 +4595,19 @@ void GraphEdit::linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId
 	
 	Assert(srcNode != nullptr);
 	Assert(dstNode != nullptr);
+	
+	if (selectedLinks.count(linkId) != 0)
+		selectedLinks.erase(linkId);
+	
+	for (auto i = selectedLinkRoutePoints.begin(); i != selectedLinkRoutePoints.end(); )
+	{
+		auto routePoint = *i;
+		
+		if (routePoint->linkId == linkId)
+			i = selectedLinkRoutePoints.erase(i);
+		else
+			++i;
+	}
 	
 	if (realTimeConnection != nullptr &&
 		srcNode->nodeType == kGraphNodeType_Regular &&
