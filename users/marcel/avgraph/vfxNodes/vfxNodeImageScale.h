@@ -31,28 +31,14 @@
 
 class Surface;
 
-struct VfxNodeImageDownsample : VfxNodeBase
+struct VfxNodeImageScale : VfxNodeBase
 {
-	enum DownsampleSize
-	{
-		kDownsampleSize_2x2,
-		kDownsampleSize_4x4
-	};
-
-	enum DownsampleChannel
-	{
-		kDownsampleChannel_All,
-		kDownsampleChannel_R,
-		kDownsampleChannel_G,
-		kDownsampleChannel_B,
-		kDownsampleChannel_A
-	};
-
 	enum Input
 	{
 		kInput_Image,
-		kInput_Size,
-		kInput_Channel,
+		kInput_Scale,
+		kInput_MaxSx,
+		kInput_MaxSy,
 		kInput_COUNT
 	};
 	
@@ -66,8 +52,8 @@ struct VfxNodeImageDownsample : VfxNodeBase
 	
 	VfxImage_Texture imageOutput;
 	
-	VfxNodeImageDownsample();
-	virtual ~VfxNodeImageDownsample() override;
+	VfxNodeImageScale();
+	virtual ~VfxNodeImageScale() override;
 	
 	virtual void tick(const float dt) override;
 

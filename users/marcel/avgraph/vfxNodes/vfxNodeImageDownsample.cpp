@@ -32,6 +32,42 @@
 // todo : add setSwizzle method to Surface class
 // todo : swizzle Surface class to RED, RED, RED, ONE for single channel formats ?
 
+const char * s_downsample2x2Vs = R"SHADER(
+
+	include engine/ShaderVS.txt
+
+	shader_out vec2 v_texcoord;
+
+	void main()
+	{
+		vec4 position = unpackPosition();
+		
+		position = objectToProjection(position);
+		
+		vec2 texcoord = unpackTexcoord(0);
+		
+		gl_Position = position;
+		
+		v_texcoord = texcoord;
+	}
+
+	)SHADER";
+
+const char * s_downsample2x2Ps = R"SHADER(
+
+	include engine/ShaderPS.txt
+
+	shader_in vec2 v_texcoord;
+
+	uniform sampler2D source;
+
+	void main()
+	{
+		shader_fragColor = texture(source, v_texcoord);
+	}
+
+	)SHADER";
+
 VfxNodeImageDownsample::VfxNodeImageDownsample()
 	: VfxNodeBase()
 	, surface(nullptr)
@@ -39,11 +75,12 @@ VfxNodeImageDownsample::VfxNodeImageDownsample()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_Image);
-	addInput(kInput_Scale, kVfxPlugType_Float);
-	addInput(kInput_MaxSx, kVfxPlugType_Float);
-	addInput(kInput_MaxSy, kVfxPlugType_Float);
+	addInput(kInput_Size, kVfxPlugType_Int);
 	addInput(kInput_Channel, kVfxPlugType_Int);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
+	
+	shaderSource("image.downsample2x2.vs", s_downsample2x2Vs);
+	shaderSource("image.downsample2x2.ps", s_downsample2x2Ps);
 }
 
 VfxNodeImageDownsample::~VfxNodeImageDownsample()
@@ -56,10 +93,7 @@ void VfxNodeImageDownsample::tick(const float dt)
 	vfxCpuTimingBlock(VfxNodeImageDownsample);
 	
 	const VfxImageBase * image = getInputImage(kInput_Image, nullptr);
-	const float _scale = getInputFloat(kInput_Scale, 1.f);
-	const float maxSx = getInputFloat(kInput_MaxSx, -1.f);
-	const float maxSy = getInputFloat(kInput_MaxSy, -1.f);
-	
+	const DownsampleSize downsampleSize = (DownsampleSize)getInputInt(kInput_Size, 0);
 	const DownsampleChannel channel = (DownsampleChannel)getInputInt(kInput_Channel, kDownsampleChannel_All);
 
 	if (image == nullptr || image->getSx() == 0 || image->getSy() == 0)
@@ -70,49 +104,50 @@ void VfxNodeImageDownsample::tick(const float dt)
 	{
 		vfxGpuTimingBlock(VfxNodeImageDownsample);
 		
-		float scale = _scale;;
+		const int pixelSize = downsampleSize == kDownsampleSize_2x2 ? 2 : 4;
+		const int sx = std::max(1, image->getSx() / pixelSize);
+		const int sy = std::max(1, image->getSy() / pixelSize);
 		
-		if (tryGetInput(kInput_MaxSx)->isConnected())
+		if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight())
 		{
-			const float scaleX = maxSx / image->getSx();
-			
-			scale = std::min(scale, scaleX);
+			allocateImage(sx, sy);
 		}
-		
-		if (tryGetInput(kInput_MaxSy)->isConnected())
-		{
-			const float scaleY = maxSy / image->getSy();
-			
-			scale = std::min(scale, scaleY);
-		}
-		
-		if (scale <= 0.f)
-		{
-			freeImage();
-		}
-		else
-		{
-			const int sx = int(std::ceil(image->getSx() * scale));
-			const int sy = int(std::ceil(image->getSy() * scale));
-			
-			if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight())
-			{
-				allocateImage(sx, sy);
-			}
 
-			pushSurface(surface);
+		pushSurface(surface);
+		{
+			pushBlend(BLEND_OPAQUE);
 			{
-				pushBlend(BLEND_OPAQUE);
-				setColor(colorWhite);
-				gxSetTexture(image->getTexture());
-				drawRect(0, 0, surface->getWidth(), surface->getHeight());
-				gxSetTexture(0);
-				popBlend();
+				Shader shader("image.downsample2x2");
+				setShader(shader);
+				{
+					shader.setTexture("source", 0, image->getTexture(), true, true);
+					
+					const int x1 = 0;
+					const int y1 = 0;
+					const int x2 = surface->getWidth();
+					const int y2 = surface->getHeight();
+					
+					const float u1 = .5f / float(image->getSx());
+					const float v1 = .5f / float(image->getSy());
+					const float u2 = (sx * pixelSize + .5f) / float(image->getSx());
+					const float v2 = (sy * pixelSize + .5f) / float(image->getSy());
+					
+					gxBegin(GL_QUADS);
+					{
+						gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
+						gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);
+						gxTexCoord2f(u2, v2); gxVertex2f(x2, y2);
+						gxTexCoord2f(u1, v2); gxVertex2f(x1, y2);
+					}
+					gxEnd();
+				}
+				clearShader();
 			}
-			popSurface();
-			
-			Assert(imageOutput.texture == surface->getTexture());
+			popBlend();
 		}
+		popSurface();
+		
+		Assert(imageOutput.texture == surface->getTexture());
 	}
 }
 
