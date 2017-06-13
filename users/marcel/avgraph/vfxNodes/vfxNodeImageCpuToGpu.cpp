@@ -217,3 +217,8 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	
 	imageOutput.texture = texture.id;
 }
+
+void VfxNodeImageCpuToGpu::getDescription(VfxNodeDescription & d)
+{
+	d.addOpenglTexture("output image", imageOutput.texture);
+}
