@@ -106,6 +106,8 @@ VfxImageCpu::VfxImageCpu()
 
 void VfxImageCpu::setDataInterleaved(const uint8_t * data, const int _sx, const int _sy, const int _numChannels, const int _alignment, const int pitch)
 {
+	Assert((uintptr_t(data) & (_alignment - 1)) == 0);
+
 	sx = _sx;
 	sy = _sy;
 	
@@ -480,17 +482,13 @@ void VfxNodeDescription::add(const char * name, const VfxImageCpu & image)
 	add("numChannels: %d, alignment: %d", image.numChannels, image.alignment);
 	add("isInterleaved: %d, isPlanar: %d", image.isInterleaved, image.isPlanar);
 	
-	int numBytes = 0;
-	
-	//add("channels:");
 	for (int i = 0; i < image.numChannels; ++i)
 	{
 		const VfxImageCpu::Channel & c = image.channel[i];
 		add("[%d] stride: %d, pitch: %06d, data: %p", i, c.stride, c.pitch, c.data);
-		
-		numBytes += c.pitch * image.sy;
 	}
 	
+	const int numBytes = image.getMemoryUsage();
 	add("MEMORY: %.2f Kb", numBytes / 1024.0);
 }
 
