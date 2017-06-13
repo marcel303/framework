@@ -29,6 +29,9 @@
 #include <immintrin.h>
 #include <xmmintrin.h>
 
+//#define ENABLE_SSE_INTERLEAVED ((rand() % 2) == 0)
+#define ENABLE_SSE_INTERLEAVED 1
+
 // todo : test with really small input textures and maxSx/maxSy set
 
 static int pad16(const int v)
@@ -338,6 +341,78 @@ static int downsampleLine4x4_SSE(const uint8_t * __restrict _srcLine1, const uin
 	return numIterations * 4;
 }
 
+//
+
+static int downsampleLine2x2_4channel_SSE(const uint8_t * __restrict _srcLine1, const uint8_t * __restrict _srcLine2, const int numPixels, uint8_t * __restrict dstLine)
+{
+	const int numIterations = numPixels / 2;
+	
+	const __m128i * __restrict srcLine1 = (__m128i*)_srcLine1;
+	const __m128i * __restrict srcLine2 = (__m128i*)_srcLine2;
+	
+	const __m128i zero = _mm_setzero_si128();
+	
+	for (int x = 0; x < numIterations; ++x)
+	{
+		const __m128i srcValues1 = srcLine1[x];
+		const __m128i srcValues2 = srcLine2[x];
+		
+		const __m128i srcValuesA = _mm_avg_epu8(srcValues1, srcValues2);
+		const __m128i srcValuesL = _mm_unpacklo_epi8(srcValuesA, zero);
+		const __m128i srcValuesR = _mm_unpackhi_epi8(srcValuesA, zero);
+		
+		const __m128i dstValues = _mm_avg_epu16(srcValuesL, srcValuesR);
+		const __m128i dstValuesPacked = _mm_packus_epi16(dstValues, zero);
+		
+		_mm_storel_epi64((__m128i*)(&dstLine[x * 8]), dstValuesPacked);
+	}
+	
+	return numIterations * 2;
+}
+
+static int downsampleLine4x4_4channel_SSE(const uint8_t * __restrict _srcLine1, const uint8_t * __restrict _srcLine2, const uint8_t * __restrict _srcLine3, const uint8_t * __restrict _srcLine4, const int numPixels, uint8_t * __restrict dstLine)
+{
+	const int numIterations = numPixels / 1;
+	
+	const __m128i * __restrict srcLine1 = (__m128i*)_srcLine1;
+	const __m128i * __restrict srcLine2 = (__m128i*)_srcLine2;
+	const __m128i * __restrict srcLine3 = (__m128i*)_srcLine3;
+	const __m128i * __restrict srcLine4 = (__m128i*)_srcLine4;
+	
+	const __m128i zero = _mm_setzero_si128();
+	
+	for (int x = 0; x < numIterations; ++x)
+	{
+		const __m128i srcValues1 = srcLine1[x];
+		const __m128i srcValues2 = srcLine2[x];
+		const __m128i srcValues3 = srcLine3[x];
+		const __m128i srcValues4 = srcLine4[x];
+		
+		const __m128i srcValuesA = _mm_avg_epu8(srcValues1, srcValues2);
+		const __m128i srcValuesB = _mm_avg_epu8(srcValues3, srcValues4);
+		const __m128i srcValues = _mm_avg_epu8(srcValuesA, srcValuesB);
+		
+		const __m128i srcValuesL = _mm_unpacklo_epi8(srcValues, zero);
+		const __m128i srcValuesL1 = srcValuesL;
+		const __m128i srcValuesL2 = _mm_srli_si128(srcValuesL, 8);
+		
+		const __m128i srcValuesR = _mm_unpackhi_epi8(srcValues, zero);
+		const __m128i srcValuesR1 = srcValuesR;
+		const __m128i srcValuesR2 = _mm_srli_si128(srcValuesR, 8);
+		
+		const __m128i srcValuesT1 = _mm_add_epi16(srcValuesL1, srcValuesL2);
+		const __m128i srcValuesT2 = _mm_add_epi16(srcValuesR1, srcValuesR2);
+		const __m128i srcValuesT = _mm_add_epi16(srcValuesT1, srcValuesT2);
+		
+		const __m128i dstValues = _mm_srli_epi16(srcValuesT, 2);
+		const __m128i dstValuesPacked = _mm_packus_epi16(dstValues, zero);
+		
+		((int*)dstLine)[x] = _mm_extract_epi32(dstValuesPacked, 0);
+	}
+	
+	return numIterations * 1;
+}
+
 #if 0 // todo : check for AVX support somehow
 
 static int downsampleLine2x2_AVX(const uint8_t * __restrict _srcLine1, const uint8_t * __restrict _srcLine2, const int numPixels, uint8_t * __restrict dstLine)
@@ -377,6 +452,22 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 		const int downsampledSx = std::max(1, src.sx / pixelSize);
 		const int downsampledSy = std::max(1, src.sy / pixelSize);
 		
+	#if 1
+		int interleavedNumPixelsProcessed = 0;
+		
+		if (src.numChannels == 4 && src.isInterleaved && src.alignment == 16 && ENABLE_SSE_INTERLEAVED)
+		{
+			for (int y = 0; y < downsampledSy; ++y)
+			{
+				const uint8_t * __restrict srcItr1 = src.channel[0].data + (y * 2 + 0) * src.channel[0].pitch;
+				const uint8_t * __restrict srcItr2 = src.channel[0].data + (y * 2 + 1) * src.channel[0].pitch;
+					  uint8_t * __restrict dstItr = (uint8_t*)dst.channel[0].data + y * dst.channel[0].pitch;
+				
+				interleavedNumPixelsProcessed = downsampleLine2x2_4channel_SSE(srcItr1, srcItr2, downsampledSx, dstItr);
+			}
+		}
+	#endif
+	
 		for (int i = 0; i < dst.numChannels; ++i)
 		{
 			const VfxImageCpu::Channel & srcChannel = src.channel[i];
@@ -390,21 +481,33 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 				
 				if (src.isPlanar)
 					Assert(((uintptr_t(srcItr1) | uintptr_t(srcItr2)) & 0xf) == 0);
-				Assert((uintptr_t(dstItr) & 0xf) == 0);
+				if (dst.isPlanar)
+					Assert((uintptr_t(dstItr) & 0xf) == 0);
 				
 				int numPixelsProcessed = 0;
 				
-			#if 1
-				if (srcChannel.stride == 1 && dstChannel.stride == 1 && ((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(dstItr)) & 0xf) == 0)
+				if (interleavedNumPixelsProcessed == 0)
 				{
-					numPixelsProcessed = downsampleLine2x2_SSE(srcItr1, srcItr2, downsampledSx, dstItr);
-					//numPixelsProcessed = downsampleLine2x2_AVX(srcItr1, srcItr2, downsampledSx, dstItr);
+				#if 1
+					if (srcChannel.stride == 1 && dstChannel.stride == 1 && ((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(dstItr)) & 0xf) == 0)
+					{
+						numPixelsProcessed = downsampleLine2x2_SSE(srcItr1, srcItr2, downsampledSx, dstItr);
+						//numPixelsProcessed = downsampleLine2x2_AVX(srcItr1, srcItr2, downsampledSx, dstItr);
+						
+						srcItr1 += numPixelsProcessed * 2;
+						srcItr2 += numPixelsProcessed * 2;
+						dstItr += numPixelsProcessed;
+					}
+				#endif
+				}
+				else
+				{
+					numPixelsProcessed = interleavedNumPixelsProcessed;
 					
 					srcItr1 += numPixelsProcessed * 2;
 					srcItr2 += numPixelsProcessed * 2;
 					dstItr += numPixelsProcessed;
 				}
-			#endif
 				
 				for (int x = numPixelsProcessed; x < downsampledSx; ++x)
 				{
@@ -430,6 +533,24 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 		const int downsampledSx = std::max(1, src.sx / pixelSize);
 		const int downsampledSy = std::max(1, src.sy / pixelSize);
 		
+	#if 1
+		int interleavedNumPixelsProcessed = 0;
+		
+		if (src.numChannels == 4 && src.isInterleaved && src.alignment == 16 && ENABLE_SSE_INTERLEAVED)
+		{
+			for (int y = 0; y < downsampledSy; ++y)
+			{
+				const uint8_t * __restrict srcItr1 = src.channel[0].data + (y * 4 + 0) * src.channel[0].pitch;
+				const uint8_t * __restrict srcItr2 = src.channel[0].data + (y * 4 + 1) * src.channel[0].pitch;
+				const uint8_t * __restrict srcItr3 = src.channel[0].data + (y * 4 + 2) * src.channel[0].pitch;
+				const uint8_t * __restrict srcItr4 = src.channel[0].data + (y * 4 + 3) * src.channel[0].pitch;
+					  uint8_t * __restrict dstItr = (uint8_t*)dst.channel[0].data + y * dst.channel[0].pitch;
+				
+				interleavedNumPixelsProcessed = downsampleLine4x4_4channel_SSE(srcItr1, srcItr2, srcItr3, srcItr4, downsampledSx, dstItr);
+			}
+		}
+	#endif
+	
 		for (int i = 0; i < dst.numChannels; ++i)
 		{
 			const VfxImageCpu::Channel & srcChannel = src.channel[i];
@@ -445,14 +566,29 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 				
 				if (src.isPlanar)
 					Assert(((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(srcItr3) | uintptr_t(srcItr4)) & 0xf) == 0);
-				Assert((uintptr_t(dstItr) & 0xf) == 0);
+				if (dst.isPlanar)
+					Assert((uintptr_t(dstItr) & 0xf) == 0);
 				
 				int numPixelsProcessed = 0;
 				
-			#if 1
-				if (srcChannel.stride == 1 && dstChannel.stride == 1 && ((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(srcItr3) | uintptr_t(srcItr4) | uintptr_t(dstItr)) & 0xf) == 0)
+				if (interleavedNumPixelsProcessed == 0)
 				{
-					numPixelsProcessed = downsampleLine4x4_SSE(srcItr1, srcItr2, srcItr3, srcItr4, downsampledSx, dstItr);
+				#if 1
+					if (srcChannel.stride == 1 && dstChannel.stride == 1 && ((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(srcItr3) | uintptr_t(srcItr4) | uintptr_t(dstItr)) & 0xf) == 0)
+					{
+						numPixelsProcessed = downsampleLine4x4_SSE(srcItr1, srcItr2, srcItr3, srcItr4, downsampledSx, dstItr);
+						
+						srcItr1 += numPixelsProcessed * 4;
+						srcItr2 += numPixelsProcessed * 4;
+						srcItr3 += numPixelsProcessed * 4;
+						srcItr4 += numPixelsProcessed * 4;
+						dstItr += numPixelsProcessed;
+					}
+				#endif
+				}
+				else
+				{
+					numPixelsProcessed = interleavedNumPixelsProcessed;
 					
 					srcItr1 += numPixelsProcessed * 4;
 					srcItr2 += numPixelsProcessed * 4;
@@ -460,7 +596,6 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 					srcItr4 += numPixelsProcessed * 4;
 					dstItr += numPixelsProcessed;
 				}
-			#endif
 			
 				for (int x = numPixelsProcessed; x < downsampledSx; ++x)
 				{
