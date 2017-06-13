@@ -51,7 +51,18 @@ VfxNodeDeepbelief::VfxNodeDeepbelief()
 void VfxNodeDeepbelief::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeDeepbelief);
-
+	
+	if (isPassthrough)
+	{
+		updateTimer = 0.f;
+		result = DeepbeliefResult();
+		
+		labelOutput.clear();
+		certaintyOutput = 0.f;
+		
+		return;
+	}
+	
 	const char * newNetworkFilename = getInputString(kInput_Network, "");
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const float treshold = getInputFloat(kInput_Treshold, .01f);
@@ -101,13 +112,13 @@ void VfxNodeDeepbelief::draw() const
 
 void VfxNodeDeepbelief::getDescription(VfxNodeDescription & d)
 {
+	d.add("classification took %.2fms", result.classificationTime);
+	d.newline();
+	
 	d.add("result:");
 	
 	for (auto & p : result.predictions)
 	{
 		d.add("certainty: %1.3f, label: %s", p.certainty, p.label.c_str());
 	}
-
-	d.newline();
-	d.add("classification took %.2fms", result.classificationTime);
 }
