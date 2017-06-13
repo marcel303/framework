@@ -31,7 +31,6 @@
 #include "vfxNodes/deepbelief.h"
 #include "../avpaint/video.h"
 #include "mediaplayer_new/MPVideoBuffer.h"
-#include <DeepBelief/DeepBelief.h>
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -39,15 +38,18 @@ extern const int GFX_SY;
 void testDeepbelief()
 {
 	const char * networkFilename = "deepbelief/jetpac.ntwk";
-	const char * imageFilename = "deepbelief/dog.jpg";
+	//const char * networkFilename = "deepbelief/ccv2010.ntwk";
+	//const char * imageFilename = "deepbelief/dog.jpg";
 	//const char * imageFilename = "deepbelief/rainbow.png"; // apparently it looks like a banana! :-)
-	const char * videoFilename = "mocapc.mp4";
+	const char * imageFilename = "deepbelief/tea.jpg";
+	//const char * videoFilename = "mocapb.mp4";
+	const char * videoFilename = "deepbelief/objects1.mp4";
 	
 	ImageData * image = loadImage(imageFilename);
 	Assert(image);
 	
-	//auto videoOutputMode = MP::kOutputMode_RGBA;
-	auto videoOutputMode = MP::kOutputMode_PlanarYUV;
+	auto videoOutputMode = MP::kOutputMode_RGBA;
+	//auto videoOutputMode = MP::kOutputMode_PlanarYUV;
 	
 	MediaPlayer mediaPlayer;
 	mediaPlayer.openAsync(videoFilename, videoOutputMode);
@@ -62,9 +64,9 @@ void testDeepbelief()
 	
 	DeepbeliefResult result;
 	
-	bool automaticUpdates = false;
+	bool automaticUpdates = true;
 	
-	bool sampleVideo = false;
+	bool sampleVideo = true;
 	
 	float certaintyTreshold = .01f;
 	
@@ -191,7 +193,7 @@ void testDeepbelief()
 			const GLuint texture = sampleVideo ? mediaPlayer.getTexture() : getTexture(imageFilename);
 			
 			const int size = 400;
-			const int padding = 50;
+			const int padding = (GFX_SX - size * 2) / 3;
 			
 			gxPushMatrix();
 			{
@@ -226,6 +228,7 @@ void testDeepbelief()
 			gxPopMatrix();
 			
 			setFont("calibri.ttf");
+			setFontMSDF("calibri.ttf");
 			setColor(colorGreen);
 			
 			drawText(20, 20, 14, +1, +1, "initialized: %d, automaticProcessing: %d", d->isInitialized, automaticUpdates);
@@ -244,10 +247,25 @@ void testDeepbelief()
 			
 			for (auto & p : result.predictions)
 			{
-				setColorf(p.certainty, p.certainty + .5f, p.certainty);
-				drawText(40, 140 + index * 20, 14, +1, +1, "%d: %s @ %.2f%% certainty", index, p.label.c_str(), p.certainty * 100.f);
-				
+				if (index <= 9)
+				{
+					setColorf(p.certainty, p.certainty + .5f, p.certainty);
+					drawText(40, 140 + index * 20, 14, +1, +1, "%d: %s @ %.2f%% certainty", index + 1, p.label.c_str(), p.certainty * 100.f);
+				}
+					
 				index++;
+			}
+			
+			if (!result.predictions.empty())
+			{
+				gxPushMatrix();
+				gxTranslatef(GFX_SX*4/9, 220, 0);
+				const float scale = 1.f + std::sin(framework.time / 1.234f) * .2f;
+				gxScalef(scale, scale, 1);
+				gxRotatef(std::sin(framework.time / 2.345f) * 5.f, 0, 0, 1);
+				setColor(200, 200, 200);
+				drawTextMSDF(0, 0, 48, 0, 0, "%s", result.predictions.front().label.c_str());
+				gxPopMatrix();
 			}
 		}
 		framework.endDraw();
