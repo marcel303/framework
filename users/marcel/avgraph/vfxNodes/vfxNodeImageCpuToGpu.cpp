@@ -62,7 +62,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	{
 		// todo : make it an option to do when source image is empty. persist or free ?
 		
-		if (texture.isChanged(image->sx, image->sy, GL_RGBA8))
+		if (texture.isChanged(1, 1, GL_RGBA8))
 		{
 			texture.allocate(1, 1, GL_RGBA8, false, false);
 		}
