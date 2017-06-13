@@ -136,16 +136,16 @@ void VfxNodeVideo::tick(const float dt)
 				int vPitch;
 				const uint8_t * vBytes = mediaPlayer->videoFrame->getV(vSx, vSy, vPitch);
 				
-				imageCpuOutputY.setDataR8(yBytes, ySx, ySy, 4, yPitch);
-				imageCpuOutputU.setDataR8(uBytes, uSx, uSy, 4, uPitch);
-				imageCpuOutputV.setDataR8(vBytes, vSx, vSy, 4, vPitch);
+				imageCpuOutputY.setDataR8(yBytes, ySx, ySy, 16, yPitch);
+				imageCpuOutputU.setDataR8(uBytes, uSx, uSy, 16, uPitch);
+				imageCpuOutputV.setDataR8(vBytes, vSx, vSy, 16, vPitch);
 			}
 			else if (mediaPlayer->context->openParams.outputMode == MP::kOutputMode_RGBA)
 			{
 				imageCpuOutputRGBA.setDataRGBA8(
 					(uint8_t*)mediaPlayer->videoFrame->m_frameBuffer,
 					mediaPlayer->videoFrame->m_width,
-					mediaPlayer->videoFrame->m_height, 4, 0);
+					mediaPlayer->videoFrame->m_height, 16, 0);
 			}
 		}
 	}
@@ -223,6 +223,9 @@ void VfxNodeVideo::getDescription(VfxNodeDescription & d)
 	d.newline();
 	
 	d.addOpenglTexture("texture", mediaPlayer->getTexture());
+	d.newline();
+	
+	d.add("RGBA image", imageCpuOutputRGBA);
 	d.newline();
 	
 	d.add("Y image", imageCpuOutputY);
