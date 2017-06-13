@@ -514,6 +514,7 @@ void VfxNodeDescription::addOpenglTexture(const char * name, const uint32_t id)
 	{
 		int sx = 0;
 		int sy = 0;
+		int internalFormat = 0;
 		
 		// capture current OpenGL states before we change them
 
@@ -526,6 +527,9 @@ void VfxNodeDescription::addOpenglTexture(const char * name, const uint32_t id)
 		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
 		checkErrorGL();
 		
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &internalFormat);
+		checkErrorGL();
+		
 		// restore previous OpenGL states
 		
 		glBindTexture(GL_TEXTURE_2D, restoreTexture);
@@ -533,7 +537,26 @@ void VfxNodeDescription::addOpenglTexture(const char * name, const uint32_t id)
 		
 		//
 		
-		add("%s. id: %d, size: %d x %d", name, id, sx, sy);
+		const char * formatString =
+			internalFormat == GL_R8 ? "R8, 8 bpp (unorm)" :
+			internalFormat == GL_RG8 ? "R8G8, 16 bpp (unorm)" :
+			internalFormat == GL_R16F ? "R16F, 16 bpp (half float)" :
+			internalFormat == GL_R32F ? "R32F, 32 bpp (float)" :
+			internalFormat == GL_RGB8 ? "RGB888, 24 bpp (unorm)" :
+			internalFormat == GL_RGBA8 ? "RGBA8888, 32 bpp (unorm)" :
+			"n/a";
+		
+		const int bpp =
+			internalFormat == GL_R8 ? 8 :
+			internalFormat == GL_RG8 ? 16 :
+			internalFormat == GL_R16F ? 16 :
+			internalFormat == GL_R32F ? 32 :
+			internalFormat == GL_RGB8 ? 24 :
+			internalFormat == GL_RGBA8 ? 32 :
+			0;
+		
+		add("%s. size: %d x %d, id: %d", name, sx, sy, id);
+		add("format: %s, size: %.2f Mb (estimate)", formatString, (sx * sy * bpp / 8) / 1024.0 / 1024.0);
 	}
 }
 
