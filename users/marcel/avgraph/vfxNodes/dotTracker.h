@@ -106,6 +106,7 @@ struct DotTracker
 		int * addedIds = nullptr, int * numAdded = nullptr,
 		int * removedIds = nullptr, int * numRemoved = nullptr);
 	
+	// older, slower versions of the algorithm. these only exist for reference and verification of the newer version
 	void identify_hgrid(TrackedDot * dots, const int numDots, const float dt, const float maxDistance);
 	void identify_reference(TrackedDot * dots, const int numDots, const float dt, const float maxDistance);
 };

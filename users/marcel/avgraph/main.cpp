@@ -54,6 +54,7 @@
 #include "vfxNodes/vfxNodeImageCpuToGpu.h"
 #include "vfxNodes/vfxNodeImageDelayLine.h"
 #include "vfxNodes/vfxNodeImageDownsample.h"
+#include "vfxNodes/vfxNodeImageScale.h"
 #include "vfxNodes/vfxNodeImpulseResponse.h"
 #include "vfxNodes/vfxNodeKinect1.h"
 #include "vfxNodes/vfxNodeKinect2.h"
@@ -257,6 +258,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("image_cpu.delay", VfxNodeImageCpuDelayLine)
 	DefineNodeImpl("image_cpu.downsample", VfxNodeImageCpuDownsample)
 	DefineNodeImpl("image.downsample", VfxNodeImageDownsample)
+	DefineNodeImpl("image.scale", VfxNodeImageScale)
 	DefineNodeImpl("yuvToRgb", VfxNodeYuvToRgb)
 	DefineNodeImpl("channel.select", VfxNodeChannelSelect)
 	DefineNodeImpl("channel.slice", VfxNodeChannelSlice)

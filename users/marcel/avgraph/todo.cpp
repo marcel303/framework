@@ -9,14 +9,6 @@ top priority items from list below:
 - add buttons that can trigger inputs
 
 todo :
-- add zoom in/out
-	+ add basic implementation
-	- improve zoom in and out behavior
-		# clamp max zoom level -> actually this is not needed and the negative zoom adds a nice effect and possible source for inspiration
-		- improve font rendering so it's both resolution independent and supports sub-pixel translation
-	+ save/load zoom and focus position to/from XML
-	+ add option to quickly reset drag and zoom values
-	+ use arrow keys to navigate workspace (when no nodes are selected)
 - add undo/redo support. just serialize/deserialize graph for every action?
 	- note : serialize/deserialize entire graph doesn't work nicely with real-time connection
 			 we will need to serialize node on remove and re-add/restore it during undo (also invoking real-time connection)
@@ -28,7 +20,7 @@ todo :
 	- clear type name text box when adding node
 - improve OSC node
 	# purchase and evaluate TouchOSC
-	- purchase and evaluate Lemur (by Liine)
+	+ purchase and evaluate Lemur (by Liine)
 	- figure out how to best interop with this software
 	- adapt OSC node to fit these products
 	- have a learning function, to setup mappings from inputs to outputs
@@ -52,18 +44,16 @@ todo :
 	- add way for UI/editor to tell update loop it's animating something (camera..)
 - hide node text until mouse moves close to node ? makes the screen more serene and helps optimize UI drawing
 - look at Bitwig 2 for inspiration of node types
-- add per-node profiling data
-	+ measure time tick and draw take
-	+ report node details. perhaps when hovering above it?
-	+ add special colouring mode of the node background ? black (zero cpu) -> red -> orange -> yellow (high cpu)
-		+ add editor option to show cpu/gpu cost
-	- add GPU performance markers
-	- add color curve to editor options to use for coloring nodes. from 0 .. 33ms ?
-- report OpenGL texture format and memory usage in node getDescription
+- add GPU performance markers
++ report OpenGL texture format and memory usage in node getDescription
 - automatically un-fold nodes (temporarily) when the mouse hovers over them ?
 	- (temporarily) un-fold node when it is the only selected node. allows connecting sockets
 	- (temporarily) un-fold hovered over node when connecting sockets
-+ render graph edit UI into a separate surface. use fade effect when the UI is being hidden
+- NanoVG includes an interesting blurring algortihm used for blurring fonts. integrate ?
+- add new node type selection memu. make it a pop-over ?
+- fix issue where freeing texture here can result in issues when drawing visualizer. tick of visualizer should always happen after cpuToGpu tick, but there's no link connecting visualizer to the node it references, so tick order is undefined .. ! -> maybe update visualizer in draw. or never capture references (to textures ID's or whatever) in visualizer. only let it copy values by value (as needed for graph) but capture everything else on draw
+- add ability to add node between nodes ?
++ add ability to route connections
 
 todo : nodes :
 - add sample.float node
@@ -80,12 +70,6 @@ todo : nodes :
 	+ can be very very useful to trigger effects
 	- add time! input trigger. performs seek operation
 - add MIDI node
-- kinect node:
-	+ don't calculate images when output sockets are not connected (?) or when real-time connection asks for the output ..
-	- add player index output ?
-	+ add image_cpu output for video data
-	- add channels output for depth data
-	- add point cloud xyz output image. or make a node which can calculate this for us, giving (optional) rgb, depth data, and an enum which controls the projection params (should be set to Kinect1 or Kinect2)
 - add pitch control to oscillators ?
 - add 'window' size to square oscillator
 - add audio playback node
@@ -103,8 +87,17 @@ todo : nodes :
 	- fix issue with output time not reset on filename change or looping. remember start time? -> capture time on next provide
 - add note (like C1) to MIDI note
 - add adsr node
-- add dot tracker node
-- let nodes that allocate a surface push their surface as the current surface, so rendering in dep nodes happens in these surfaces ?
++ add dot tracker node
++ let nodes that allocate a surface push their surface as the current surface, so rendering in dep nodes happens in these surfaces ?
+	+ add surface node
+- add draw points node
+- add draw circles node
+	- xyz channels input
+	- radius channels input
+	- radius literal input
+	- screen size input (if true, scaling doesn't affect circle size)
+	- texture
+	- color
 - add channel swizzle node. allow it to reorder one or more channels into a new channels object
 - add channel combiner node. allow multiple input channels to be merged into one
 - perhaps add string names to channels, for more convenient selection ? would reduce remixing capability I fear .. maybe let nodes which produce channels to document in their node description what those channels represent, semantically .. but not let the user use those semantics to select channels
@@ -116,6 +109,17 @@ todo : nodes :
 		- has a filter option?
 		- has a normalized coords option
 		- has an option to fix coords so it always specified min/max for box or not ?
++ add CPU image delay node
+	+ use a list of images as history
+	+ max history size is set as input. re-allocate history on change
+	+ current history delay is set a input [0..1]. default=1
+	+ store to jpeg optionally to save memory
+	+ make jpeg compression optional
++ add jpeg glitch node. in combination with capturing from image would be awesome!
+- add yuvToRgb node
+	+ add node and shader
+	+ let user select colour space
+	- verify color spaces. check what avcodec does, QuickTime player, etc .. there's many ways to go from yuv -> rgb !
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -126,18 +130,6 @@ todo : fsfx :
 	- let FSFX node  resize its inputs dynamically (?)
 	- match the dynamic sockets by name ? add to VfxNodeBase to try to get socket based on name if index lookup fails ?
 - add standard include file (shaderSource(..)) for FSFX nodes. include params, time, texture1 and 2 and maybe some common functions too
-
-todo : framework :
-- add MSDF font rendering support
-
-todo : media player
-+ add option to disable texture generation
-+ add image_cpu to image (gpu) node. default behaviour is to upload immediately
-- add openAsync call which accepts OpenParams
-- add yuvToRgb node
-	+ add node and shader
-	+ let user select colour space
-	- verify color spaces. check what avcodec does, QuickTime player, etc .. there's many ways to go from yuv -> rgb !
 
 todo : UI
 - make nodes into lilly shapes ?
@@ -152,6 +144,9 @@ todo : UI
 	- maybe also a sphere mode ?
 	*** I think I like the lilly idea better
 + touch zoom on moving fingers treshold distance apart. also, try to convert normalized touch coords into inches or cms
+
+todo : framework
+- add ability to save MSDF texture atlas and load/supplement it
 
 
 
@@ -258,7 +253,21 @@ todo :
 	+ use a continously incrementing counter (akin to node/link alloc id) and assign to nodes upon select ?
 	+ apply/increment counter upon SINGLE node selection
 	+ upon draw, add nodes to an array, sort, draw
-
++ add zoom in/out
+	+ add basic implementation
+	+ improve zoom in and out behavior
+		# clamp max zoom level -> actually this is not needed and the negative zoom adds a nice effect and possible source for inspiration
+		+ improve font rendering so it's both resolution independent and supports sub-pixel translation
+	+ save/load zoom and focus position to/from XML
+	+ add option to quickly reset drag and zoom values
+	+ use arrow keys to navigate workspace (when no nodes are selected)
++ add per-node profiling data
+	+ measure time tick and draw take
+	+ report node details. perhaps when hovering above it?
+	+ add special colouring mode of the node background ? black (zero cpu) -> red -> orange -> yellow (high cpu)
+		+ add editor option to show cpu/gpu cost
+	+ add color curve to editor options to use for coloring nodes. from 0 .. 33ms ?
++ render graph edit UI into a separate surface. use fade effect when the UI is being hidden
 
 todo : nodes :
 + add ease node
@@ -304,9 +313,16 @@ todo : nodes :
 			-> this has been replaced with a channel select node for now
 + add channel select node. selects one or a range of channels from a channels object. specify channel (default=0) and numChannels (default=1)
 + add channel slice node. make a new channels object from a 2D channels object by selecting only between y (default=0) and numSlices (default=1)
++ kinect node:
+	+ don't calculate images when output sockets are not connected (?) or when real-time connection asks for the output ..
+	# add player index output ?
+	+ add image_cpu output for video data
+	+ add channels output for depth data
+	+ add point cloud xyz output image. or make a node which can calculate this for us, giving (optional) rgb, depth data, and an enum which controls the projection params (should be set to Kinect1 or Kinect2)
 
 todo : framework :
 + optimize text rendering. use a dynamic texture atlas instead of one separate texture for each glyph. drawText should only emit a single draw call
++ add MSDF font rendering support
 
 todo : media player
 + for image analysis we often only need luminance. make it an option to output YUV Y-channel only?
@@ -318,7 +334,10 @@ todo : media player
 		+ add Y and UV pointers to MP::VideoFrame
 + add image_cpu to image (gpu) node. default behaviour is to upload immediately
 + add image_y, image_u, image_v to video node
-+ double check image.toGpu node uses optimized code path for converting single channel source to texture 
++ double check image.toGpu node uses optimized code path for converting single channel source to texture
++ add option to disable texture generation
++ add image_cpu to image (gpu) node. default behaviour is to upload immediately
++ add openAsync call which accepts OpenParams
 
 todo : UI
 + add drop down list for (large) enums

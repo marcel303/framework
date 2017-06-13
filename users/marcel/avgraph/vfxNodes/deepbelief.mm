@@ -286,7 +286,7 @@ void Deepbelief::threadMain()
 				{
 					const float predictionValue = predictionValues[i];
 
-					if (predictionValue >= work->certaintyTreshold) // todo : make tweakable
+					if (predictionValue >= work->certaintyTreshold)
 					{
 						DeepbeliefPrediction p;
 						p.certainty = predictionValue;
