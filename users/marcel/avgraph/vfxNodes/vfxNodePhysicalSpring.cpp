@@ -27,6 +27,18 @@
 
 #include "vfxNodePhysicalSpring.h"
 
+VFX_NODE_TYPE(physical_spring, VfxNodePhysicalSpring)
+{
+	typeName = "physical.spring";
+	
+	in("strength", "float", "1.0");
+	in("dampen", "float", "0.5");
+	in("force", "float");
+	in("force!", "trigger");
+	out("value", "float");
+	out("speed", "float");
+}
+
 VfxNodePhysicalSpring::VfxNodePhysicalSpring()
 	: VfxNodeBase()
 	, outputValue(0.f)

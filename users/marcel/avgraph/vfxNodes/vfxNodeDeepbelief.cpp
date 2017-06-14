@@ -29,6 +29,19 @@
 
 #include "FileStream.h"
 
+VFX_NODE_TYPE(deepbelief, VfxNodeDeepbelief)
+{
+	typeName = "deepbelief";
+	
+	in("network", "string");
+	in("image", "image_cpu");
+	in("treshold", "float", "0.01");
+	in("interval", "float");
+	in("show_result", "bool");
+	out("label", "string");
+	out("certainty", "float");
+}
+
 VfxNodeDeepbelief::VfxNodeDeepbelief()
 	: VfxNodeBase()
 	, deepbelief()

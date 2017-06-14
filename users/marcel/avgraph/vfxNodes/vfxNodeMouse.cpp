@@ -28,6 +28,16 @@
 #include "framework.h"
 #include "vfxNodeMouse.h"
 
+VFX_NODE_TYPE(mouse, VfxNodeMouse)
+{
+	typeName = "mouse";
+	
+	out("x", "float");
+	out("y", "float");
+	out("buttonLeft", "float");
+	out("buttonRight", "float");
+}
+
 VfxNodeMouse::VfxNodeMouse()
 	: VfxNodeBase()
 	, x(0.f)

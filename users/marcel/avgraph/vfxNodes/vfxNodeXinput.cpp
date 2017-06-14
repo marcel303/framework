@@ -28,6 +28,31 @@
 #include "framework.h"
 #include "vfxNodeXinput.h"
 
+VFX_NODE_TYPE(xinput, VfxNodeXinput)
+{
+	typeName = "xinput";
+	
+	in("id", "int");
+	out("A", "float");
+	out("B", "float");
+	out("X", "float");
+	out("Y", "float");
+	out("L1", "float");
+	out("L2", "float");
+	out("R1", "float");
+	out("R2", "float");
+	out("dpadL", "float");
+	out("dpadR", "float");
+	out("dpadU", "float");
+	out("dpadD", "float");
+	out("LAnalogX", "float");
+	out("LAnalogY", "float");
+	out("RAnalogX", "float");
+	out("RAnalogY", "float");
+	out("start", "float");
+	out("back", "float");
+}
+
 VfxNodeXinput::VfxNodeXinput()
 	: a(0.f)
 	, b(0.f)

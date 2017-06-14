@@ -30,6 +30,24 @@
 
 //
 
+VFX_NODE_TYPE(image_delay, VfxNodeImageDelayLine)
+{
+	typeName = "image.delay";
+	
+	in("image", "image");
+	in("maxDelay", "float");
+	in("delay1", "float", "-1");
+	in("delay2", "float", "-1");
+	in("delay3", "float", "-1");
+	in("delay4", "float", "-1");
+	out("image1", "image");
+	out("image2", "image");
+	out("image3", "image");
+	out("image4", "image");
+}
+
+//
+
 #include <deque>
 #include "framework.h"
 

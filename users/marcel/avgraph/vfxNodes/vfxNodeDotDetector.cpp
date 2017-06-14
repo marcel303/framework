@@ -29,6 +29,21 @@
 #include "vfxNodeDotDetector.h"
 #include <xmmintrin.h>
 
+VFX_NODE_TYPE(image_dots, VfxNodeDotDetector)
+{
+	typeName = "image.dots";
+	
+	in("image", "image_cpu");
+	inEnum("channel", "dotDetectorChannel");
+	inEnum("tresholdTest", "dotDetectorTresholdTest");
+	in("tresholdValue", "float", "0.5");
+	in("maxRadius", "float", "10");
+	out("lumi", "image_cpu");
+	out("mask", "image_cpu");
+	out("channels", "channels");
+	out("numDots", "int");
+}
+
 VfxNodeDotDetector::VfxNodeDotDetector()
 	: VfxNodeBase()
 	, lumi(nullptr)

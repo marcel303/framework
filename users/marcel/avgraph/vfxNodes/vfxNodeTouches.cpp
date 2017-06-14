@@ -30,6 +30,19 @@
 
 // todo : add wentDown, wentUp and moved triggers
 
+VFX_NODE_TYPE(touches, VfxNodeTouches)
+{
+	typeName = "touches";
+	
+	out("isDown", "int");
+	out("isUp", "int");
+	out("wentDown", "int");
+	out("wentUp", "int");
+	out("moved", "int");
+	out("numTouches", "float");
+	out("channels", "channels");
+}
+
 VfxNodeTouches::Touch::Touch()
 	: id(0)
 	, x(0.f)

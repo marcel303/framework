@@ -27,6 +27,13 @@
 
 #include "vfxNodeLogicSwitch.h"
 
+VFX_NODE_TYPE(logic_switch, VfxNodeLogicSwitch)
+{
+	typeName = "logic.switch";
+	in("switch!", "trigger");
+	out("value", "float");
+}
+
 VfxNodeLogicSwitch::VfxNodeLogicSwitch()
 	: VfxNodeBase()
 	, outputValue(0.f)

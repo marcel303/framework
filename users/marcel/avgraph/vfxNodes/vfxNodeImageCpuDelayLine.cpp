@@ -28,6 +28,24 @@
 #include "imageCpuDelayLine.h"
 #include "vfxNodeImageCpuDelayLine.h"
 
+VFX_NODE_TYPE(image_cpu_delay, VfxNodeImageCpuDelayLine)
+{
+	typeName = "image_cpu.delay";
+	
+	in("image", "image_cpu");
+	in("maxDelay", "float");
+	in("compress", "bool");
+	in("jpegQuality", "float", "0.85");
+	in("delay1", "float", "-1");
+	in("delay2", "float", "-1");
+	in("delay3", "float", "-1");
+	in("delay4", "float", "-1");
+	out("image1", "image_cpu");
+	out("image2", "image_cpu");
+	out("image3", "image_cpu");
+	out("image4", "image_cpu");
+}
+
 VfxNodeImageCpuDelayLine::VfxNodeImageCpuDelayLine()
 	: VfxNodeBase()
 	, imageData()

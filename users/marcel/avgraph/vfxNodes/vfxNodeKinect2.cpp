@@ -48,6 +48,18 @@ static OpenglTexture depthTexture;
 
 //
 
+VFX_NODE_TYPE(kinect2, VfxNodeKinect2)
+{
+	typeName = "kinect2";
+	
+	in("deviceId", "int");
+	in("infrared", "bool");
+	out("video", "image");
+	out("depth", "image");
+	out("mem_video", "image_cpu");
+	out("ch_depth", "channels");
+}
+
 VfxNodeKinect2::VfxNodeKinect2()
 	: VfxNodeBase()
 	, videoImage()

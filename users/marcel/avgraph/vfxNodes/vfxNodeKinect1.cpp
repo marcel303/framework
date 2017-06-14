@@ -30,6 +30,16 @@
 
 #include "framework.h" // todo : use OpenGL texture object and remove this dependency
 
+VFX_NODE_TYPE(kinect1, VfxNodeKinect1)
+{
+	typeName = "kinect1";
+	
+	in("deviceId", "int");
+	in("infrared", "bool");
+	out("video", "image");
+	out("depth", "image");
+}
+
 VfxNodeKinect1::VfxNodeKinect1()
 	: VfxNodeBase()
 	, videoImage()

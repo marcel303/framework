@@ -27,6 +27,20 @@
 
 #include "vfxNodeChannelSlice.h"
 
+VFX_NODE_TYPE(channel_slice, VfxNodeChannelSlice)
+{
+	typeName = "channel.slice";
+	
+	in("channels", "channels");
+	in("channel", "int");
+	in("channel_norm", "float");
+	in("sliceBase", "int");
+	in("sliceBase_norm", "float");
+	in("sliceCount", "int", "1");
+	in("sliceCount_norm", "float");
+	out("channels", "channels");
+}
+
 VfxNodeChannelSlice::VfxNodeChannelSlice()
 	: VfxNodeBase()
 	, channelsOutput()

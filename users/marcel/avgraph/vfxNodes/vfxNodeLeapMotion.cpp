@@ -29,6 +29,18 @@
 #include "leap/Leap.h"
 #include <SDL2/SDL.h>
 
+VFX_NODE_TYPE(leap, VfxNodeLeapmotion)
+{
+	typeName = "leap";
+	
+	out("leftHandX", "float");
+	out("leftHandY", "float");
+	out("leftHandZ", "float");
+	out("rightHandX", "float");
+	out("rightHandY", "float");
+	out("rightHandZ", "float");
+}
+
 struct LeapListener : public Leap::Listener
 {
 	struct State

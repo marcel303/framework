@@ -27,6 +27,20 @@
 
 #include "vfxNodeBinaryOutput.h"
 
+VFX_NODE_TYPE(binary_output, VfxNodeBinaryOutput)
+{
+	typeName = "binary.output";
+	
+	in("value", "float");
+	in("modulo", "int");
+	out("bit1", "float");
+	out("bit2", "float");
+	out("bit3", "float");
+	out("bit4", "float");
+	out("bit5", "float");
+	out("bit6", "float");
+}
+
 VfxNodeBinaryOutput::VfxNodeBinaryOutput()
 	: VfxNodeBase()
 	, outputValue()

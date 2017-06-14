@@ -29,6 +29,24 @@
 
 #include "tinyxml2.h" // fixme
 
+VFX_NODE_TYPE(timeline, VfxNodeTimeline)
+{
+	typeName = "timeline";
+	
+	in("timeline", "timeline");
+	in("duration", "float");
+	in("bpm", "float");
+	in("loop", "bool", "1");
+	in("autoPlay", "bool", "1");
+	in("speed", "float", "1");
+	in("play!", "trigger");
+	in("pause!", "trigger");
+	in("resume!", "trigger");
+	in("time", "float");
+	out("event!", "trigger");
+	out("beat!", "trigger");
+}
+
 VfxNodeTimeline::VfxNodeTimeline()
 	: VfxNodeBase()
 	, time(0.0)
