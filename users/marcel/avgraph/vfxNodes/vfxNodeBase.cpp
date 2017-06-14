@@ -699,12 +699,23 @@ VfxNodeTypeRegistration::VfxNodeTypeRegistration()
 	g_vfxNodeTypeRegistrationList = this;
 }
 
-void VfxNodeTypeRegistration::in(const char * name, const char * typeName, const char * defaultValue, const char * enumName, const char * displayName)
+void VfxNodeTypeRegistration::in(const char * name, const char * typeName, const char * defaultValue, const char * displayName)
 {
 	Input i;
 	i.name = name;
 	i.displayName = displayName;
 	i.typeName = typeName;
+	i.defaultValue = defaultValue;
+	
+	inputs.push_back(i);
+}
+
+void VfxNodeTypeRegistration::inEnum(const char * name, const char * enumName, const char * defaultValue, const char * displayName)
+{
+	Input i;
+	i.name = name;
+	i.displayName = displayName;
+	i.typeName = "int";
 	i.enumName = enumName;
 	i.defaultValue = defaultValue;
 	

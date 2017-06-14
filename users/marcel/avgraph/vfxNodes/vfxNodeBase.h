@@ -732,18 +732,24 @@ struct VfxNodeTypeRegistration
 	std::string typeName;
 	std::string displayName;
 	
+	std::string author;
+	std::string copyright;
+	std::string description;
+	std::string helpText;
+	
 	std::vector<Input> inputs;
 	std::vector<Output> outputs;
 	
 	VfxNodeTypeRegistration();
 	
-	void in(const char * name, const char * typeName, const char * defaultValue = "", const char * enumName = "", const char * displayName = "");
+	void in(const char * name, const char * typeName, const char * defaultValue = "", const char * displayName = "");
+	void inEnum(const char * name, const char * enumName, const char * defaultValue = "", const char * displayName = "");
 	void out(const char * name, const char * typeName, const char * displayName = "");
 };
 
 extern VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList;
 
-#define VFX_NODE_TYPE(name) \
+#define VFX_NODE_TYPE(name, type) \
 	struct name ## __registration : VfxNodeTypeRegistration \
 	{ \
 		name ## __registration(); \
