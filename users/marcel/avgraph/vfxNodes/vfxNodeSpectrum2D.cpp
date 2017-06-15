@@ -35,6 +35,18 @@
 // todo : add output option : RG32F/real+imag or R32F/length(real, imag)
 // todo : add output channels for real and imag arrays
 
+VFX_NODE_TYPE(spectrum2d, VfxNodeSpectrum2D)
+{
+	typeName = "spectrum.2d";
+	
+	in("image", "image_cpu");
+	inEnum("mode", "spectrumOutputMode");
+	in("normalize", "bool", "1");
+	in("scale", "float", "1.0");
+	out("image", "image");
+	out("channels", "channels");
+}
+
 VfxNodeSpectrum2D::VfxNodeSpectrum2D()
 	: VfxNodeBase()
 	, texture()

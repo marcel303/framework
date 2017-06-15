@@ -28,6 +28,17 @@
 #include "framework.h"
 #include "vfxNodeImageScale.h"
 
+VFX_NODE_TYPE(image_scale, VfxNodeImageScale)
+{
+	typeName = "image.scale";
+	
+	in("image", "image");
+	in("scale", "float", "1");
+	in("maxWidth", "float" "-1");
+	in("maxHeight", "float" "-1");
+	out("image", "image");
+}
+
 VfxNodeImageScale::VfxNodeImageScale()
 	: VfxNodeBase()
 	, surface(nullptr)

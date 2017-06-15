@@ -32,6 +32,16 @@
 // todo : add setSwizzle method to Surface class
 // todo : swizzle Surface class to RED, RED, RED, ONE for single channel formats ?
 
+VFX_NODE_TYPE(image_downsample, VfxNodeImageDownsample)
+{
+	typeName = "image.downsample";
+	
+	in("image", "image");
+	inEnum("size", "downsampleSize");
+	inEnum("channel", "downsampleChannel");
+	out("image", "image");
+}
+
 const char * s_downsample2x2Vs = R"SHADER(
 
 	include engine/ShaderVS.txt

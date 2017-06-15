@@ -28,6 +28,18 @@
 #include "Noise.h"
 #include "vfxNodeNoiseSimplex2D.h"
 
+VFX_NODE_TYPE(noise_simplex2d, VfxNodeNoiseSimplex2D)
+{
+	typeName = "noise.simplex2d";
+	
+	in("x", "float");
+	in("y", "float");
+	in("numOctaves", "int", "4");
+	in("persistence", "float", "0.5");
+	in("scale", "float", "1");
+	out("value", "float");
+}
+
 VfxNodeNoiseSimplex2D::VfxNodeNoiseSimplex2D()
 	: VfxNodeBase()
 	, outputValue(0.f)

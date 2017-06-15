@@ -30,6 +30,20 @@
 
 #include "Calc.h"
 
+VFX_NODE_TYPE(transform_2d, VfxNodeTransform2D)
+{
+	typeName = "transform.2d";
+	
+	in("any", "any");
+	in("x", "float");
+	in("y", "float");
+	in("scale", "float", "1");
+	in("scaleX", "float", "1");
+	in("scaleY", "float", "1");
+	in("angle", "float");
+	out("transform", "transform");
+}
+
 VfxNodeTransform2D::VfxNodeTransform2D()
 	: VfxNodeBase()
 	, transform()

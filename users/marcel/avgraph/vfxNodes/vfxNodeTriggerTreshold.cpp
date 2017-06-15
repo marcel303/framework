@@ -27,6 +27,18 @@
 
 #include "vfxNodeTriggerTreshold.h"
 
+VFX_NODE_TYPE(trigger_treshold, VfxNodeTriggerTreshold)
+{
+	typeName = "trigger.treshold";
+	
+	in("value", "float");
+	in("treshold", "float");
+	in("upValue", "float");
+	in("downValue", "float");
+	out("wentUp!", "trigger");
+	out("wentDown!", "trigger");
+}
+
 VfxNodeTriggerTreshold::VfxNodeTriggerTreshold()
 	: VfxNodeBase()
 	, wentUp()

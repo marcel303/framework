@@ -28,6 +28,15 @@
 #include "dotTracker.h"
 #include "vfxNodeDotTracker.h"
 
+VFX_NODE_TYPE(dottracker, VfxNodeDotTracker)
+{
+	typeName = "image.dotTracker";
+	
+	in("xy", "channels");
+	in("maxDistance", "float", "10");
+	out("idAndSpeed", "channels");
+}
+
 static const int kMaxDots = 1024;
 
 VfxNodeDotTracker::VfxNodeDotTracker()

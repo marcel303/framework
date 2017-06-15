@@ -31,6 +31,24 @@
 
 // todo : trigger on start to send beat 0
 
+VFX_NODE_TYPE(sound, VfxNodeSound)
+{
+	typeName = "sound";
+	
+	in("source", "string");
+	in("autoplay", "bool", "1");
+	in("loop", "bool", "1");
+	in("bpm", "float", "60");
+	in("volume", "float", "1");
+	in("play!", "trigger");
+	in("pause!", "trigger");
+	in("resume!", "trigger");
+	in("time", "float");
+	out("play!", "trigger");
+	out("pause!", "trigger");
+	out("beat!", "trigger");
+}
+
 class AudioStreamNULL : public AudioStream
 {
 public:

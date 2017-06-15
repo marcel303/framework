@@ -28,6 +28,16 @@
 #include "vfxNodeChannelToGpu.h"
 #include <GL/glew.h>
 
+VFX_NODE_TYPE(channel_togpu, VfxNodeChannelToGpu)
+{
+	typeName = "channel.toGpu";
+	
+	in("channels", "channels");
+	in("channel", "int");
+	in("channel_norm", "float");
+	out("image", "image");
+}
+
 VfxNodeChannelToGpu::VfxNodeChannelToGpu()
 	: VfxNodeBase()
 	, texture()

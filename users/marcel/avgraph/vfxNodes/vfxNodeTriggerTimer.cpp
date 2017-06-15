@@ -27,6 +27,14 @@
 
 #include "vfxNodeTriggerTimer.h"
 
+VFX_NODE_TYPE(trigger_timer, VfxNodeTriggerTimer)
+{
+	typeName = "trigger.timer";
+	
+	in("interval", "float");
+	out("trigger!", "trigger");
+}
+
 VfxNodeTriggerTimer::VfxNodeTriggerTimer()
 	: VfxNodeBase()
 	, triggerCount()

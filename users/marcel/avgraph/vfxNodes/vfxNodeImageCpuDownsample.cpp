@@ -39,6 +39,18 @@ static int pad16(const int v)
 	return (v + 15) & (~15);
 }
 
+VFX_NODE_TYPE(image_cpu_downsample, VfxNodeImageCpuDownsample)
+{
+	typeName = "image_cpu.downsample";
+	
+	in("image", "image_cpu");
+	inEnum("size", "downsampleSize");
+	inEnum("channel", "downsampleChannel");
+	in("maxWidth", "int");
+	in("maxHeight", "int");
+	out("image", "image_cpu");
+}
+
 VfxNodeImageCpuDownsample::VfxNodeImageCpuDownsample()
 	: VfxNodeBase()
 	, buffers()

@@ -40,6 +40,15 @@
 	typedef int LookupElem;
 #endif
 
+VFX_NODE_TYPE(image_cpu_equalize, VfxNodeImageCpuEqualize)
+{
+	typeName = "image_cpu.equalize";
+	
+	in("image", "image_cpu");
+	inEnum("channel", "imageCpuEqualizeChannel", "1");
+	out("image", "image_cpu");
+}
+
 static void computeHistogram(const VfxImageCpu::Channel * __restrict channel, const int sx, const int sy, int * __restrict histogram)
 {
 	memset(histogram, 0, sizeof(int) * 256);

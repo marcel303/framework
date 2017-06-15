@@ -27,6 +27,15 @@
 
 #include "vfxNodeSampleAndHold.h"
 
+VFX_NODE_TYPE(sample_andhold, VfxNodeSampleAndHold)
+{
+	typeName = "sampleAndHold";
+	
+	in("trigger!", "trigger");
+	in("value", "float");
+	out("value", "float");
+}
+
 VfxNodeSampleAndHold::VfxNodeSampleAndHold()
 	: VfxNodeBase()
 	, outputValue(0.f)

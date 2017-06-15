@@ -29,6 +29,19 @@
 #include "vfxNodeSpectrum1D.h"
 #include <GL/glew.h>
 
+VFX_NODE_TYPE(spectrum1D, VfxNodeSpectrum1D)
+{
+	typeName = "spectrum.1d";
+	
+	in("image", "image_cpu");
+	in("sample_y", "float", "0.5");
+	inEnum("mode", "spectrumOutputMode");
+	in("normalize", "bool", "1");
+	in("scale", "float", "1.0");
+	out("image", "image");
+	out("channels", "channels");
+}
+
 VfxNodeSpectrum1D::VfxNodeSpectrum1D()
 	: VfxNodeBase()
 	, texture()

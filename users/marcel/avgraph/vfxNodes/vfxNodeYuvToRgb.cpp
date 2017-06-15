@@ -30,6 +30,17 @@
 
 // todo : get YUV to RGB constants from avcodec, pass them to this node from video node
 
+VFX_NODE_TYPE(yuvToRgb, VfxNodeYuvToRgb)
+{
+	typeName = "yuvToRgb";
+	
+	in("y", "image");
+	in("u", "image");
+	in("v", "image");
+	inEnum("colorspace", "yuvToRgbColorSpace");
+	out("image", "image");
+}
+
 static bool initialized = false;
 
 static const char * s_yuvToRgbVs = R"SHADER(

@@ -28,6 +28,22 @@
 #include "vfxNodeDelayLine.h"
 #include "vfxTypes.h"
 
+VFX_NODE_TYPE(sample_delay, VfxNodeDelayLine)
+{
+	typeName = "sample.delay";
+	
+	in("value", "float");
+	in("maxDelay", "float");
+	in("delay1", "float");
+	in("delay2", "float");
+	in("delay3", "float");
+	in("delay4", "float");
+	out("value1", "float");
+	out("value2", "float");
+	out("value3", "float");
+	out("value4", "float");
+}
+
 VfxNodeDelayLine::VfxNodeDelayLine()
 	: VfxNodeBase()
 	, outputValue()

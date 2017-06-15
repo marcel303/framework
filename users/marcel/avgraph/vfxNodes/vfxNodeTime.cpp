@@ -29,6 +29,13 @@
 #include "vfxGraph.h"
 #include "vfxNodeTime.h"
 
+VFX_NODE_TYPE(time, VfxNodeTime)
+{
+	typeName = "time";
+	
+	out("time", "float");
+}
+
 VfxNodeTime::VfxNodeTime()
 	: VfxNodeBase()
 	, time(0.f)

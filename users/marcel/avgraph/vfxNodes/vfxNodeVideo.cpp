@@ -30,6 +30,21 @@
 #include "../avpaint/video.h"
 #include "mediaplayer_new/MPVideoBuffer.h"
 
+VFX_NODE_TYPE(video, VfxNodeVideo)
+{
+	typeName = "video";
+	
+	in("source", "string");
+	in("loop", "bool", "1");
+	in("speed", "float", "1");
+	inEnum("mode", "videoOutputMode");
+	out("image", "image");
+	out("mem.rgb", "image_cpu");
+	out("mem.y", "image_cpu");
+	out("mem.u", "image_cpu");
+	out("mem.v", "image_cpu");
+}
+
 VfxNodeVideo::VfxNodeVideo()
 	: VfxNodeBase()
 	, imageOutput()

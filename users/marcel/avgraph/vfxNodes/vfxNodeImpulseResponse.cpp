@@ -28,6 +28,15 @@
 #include "vfxNodeImpulseResponse.h"
 #include "vfxTypes.h"
 
+VFX_NODE_TYPE(impulse_response, VfxNodeImpulseResponse)
+{
+	typeName = "impulse.response";
+	
+	in("value", "float");
+	in("frequency", "float");
+	out("response", "float");
+}
+
 VfxNodeImpulseResponse::VfxNodeImpulseResponse()
 	: VfxNodeBase()
 	, impulseResponse(0.f)

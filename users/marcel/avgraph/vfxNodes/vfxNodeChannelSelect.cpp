@@ -27,6 +27,16 @@
 
 #include "vfxNodeChannelSelect.h"
 
+VFX_NODE_TYPE(channel_select, VfxNodeChannelSelect)
+{
+	typeName = "channel.select";
+	
+	in("channels", "channels");
+	in("channel", "int");
+	in("channel_norm", "float");
+	out("channels", "channels");
+}
+
 VfxNodeChannelSelect::VfxNodeChannelSelect()
 	: VfxNodeBase()
 	, channelsOutput()

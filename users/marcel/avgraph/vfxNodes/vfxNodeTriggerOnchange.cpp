@@ -27,6 +27,14 @@
 
 #include "vfxNodeTriggerOnchange.h"
 
+VFX_NODE_TYPE(trigger_onchange, VfxNodeTriggerOnChange)
+{
+	typeName = "trigger.onchange";
+	
+	in("value", "float");
+	out("trigger!", "trigger");
+}
+
 VfxNodeTriggerOnchange::VfxNodeTriggerOnchange()
 	: VfxNodeBase()
 	, oldValue(0.f)
