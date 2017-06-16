@@ -36,6 +36,9 @@ struct Recording
 	int phraseIndex;
 	
 	std::vector<Vec2> points;
+	std::vector<Vec2> deltas;
+	
+	xmm::HierarchicalHMM gestureFollower;
 	
 	void getMinMax(Vec2 & min, Vec2 & max) const
 	{
@@ -152,6 +155,8 @@ void testXmm()
 		logDebug("done!");
 	}
 	
+	//
+	
 	xmm::TrainingSet trainingSet;
 	trainingSet.dimension.set(2);
 	trainingSet.column_names = std::vector<std::string> { "x", "y" };
@@ -160,7 +165,6 @@ void testXmm()
 	observation.resize(2);
 
 	xmm::HierarchicalHMM hhmm;
-	//hhmm.configuration.hierarchical = false;
 	
 	std::map<std::string, Recording> recordings;
 	
@@ -185,50 +189,72 @@ void testXmm()
 			recording = Recording();
 			
 			hhmm.reset();
+			
+			for (auto & r : recordings)
+				r.second.gestureFollower.reset();
 		}
 		
-		if (mouse.isDown(BUTTON_LEFT))
+		if (mouse.isDown(BUTTON_LEFT) && (mouse.dx || mouse.dy))
 		{
 			Vec2 point(mouse.x, mouse.y);
+			Vec2 delta(mouse.dx, mouse.dy);
 			
 			recording.points.push_back(point);
+			recording.deltas.push_back(delta);
 			
 			if (isRecording == false)
 			{
-				observation[0] = point[0];
-				observation[1] = point[1];
+				observation[0] = delta[0];
+				observation[1] = delta[1];
 				
 				hhmm.filter(observation);
 				
-				int index = 0;
-				
-				for (auto & i : recordings)
+				for (auto & r : recordings)
 				{
-					auto & name = i.first;
+					r.second.gestureFollower.filter(observation);
 					
-					logDebug("hhmm: %s: certainty: %.2f, progress: %.2f",
-						name.c_str(),
-						hhmm.results.instant_normalized_likelihoods[index],
-						//hhmm.models[name].results.log_likelihood,
-						hhmm.models[name].results.progress);
-					
-					index++;
+					/*
+					logDebug("%s: certainty: %.2f, progress: %.2f",
+						r.first.c_str(),
+						r.second.shmm.results.instant_normalized_likelihoods[0],
+						r.second.shmm.models["a"].results.progress);
+					*/
 				}
 			}
 		}
 		
 		if (mouse.wentUp(BUTTON_LEFT))
 		{
-			if (isRecording)
+			if (isRecording && recording.points.empty() == false)
 			{
 				char name[32];
 				sprintf(name, "%d", nextRecordingIndex);
 				
 				recording.phraseIndex = nextRecordingIndex;
-				recordings[name] = recording;
+				auto & newRecording = recordings[name];
+				newRecording.points = recording.points;
+				newRecording.deltas = recording.deltas;
+				newRecording.phraseIndex = recording.phraseIndex;
+				
+				xmm::TrainingSet rts;
+				rts.dimension.set(2);
+				rts.column_names = std::vector<std::string> { "x", "y" };
+				rts.addPhrase(0, "a");
+				auto p = rts.getPhrase(0).get();
+					
+				for (int i = 0; i < newRecording.deltas.size(); ++i)
+				{
+					observation[0] = newRecording.deltas[i][0];
+					observation[1] = newRecording.deltas[i][1];
+					p->record(observation);
+				}
+				
+				newRecording.gestureFollower.train(&rts);
+				newRecording.gestureFollower.reset();
 				
 				hhmm = xmm::HierarchicalHMM();
-				hhmm.shared_parameters->likelihood_window.set(40);
+				hhmm.shared_parameters->likelihood_window.set(15);
+				//hhmm.shared_parameters->likelihood_window.set(100);
 				
 				for (auto & i : recordings)
 				{
@@ -238,10 +264,10 @@ void testXmm()
 					trainingSet.addPhrase(r.phraseIndex, n);
 					auto p = trainingSet.getPhrase(r.phraseIndex).get();
 					
-					for (int i = 0; i < r.points.size(); ++i)
+					for (int i = 0; i < r.deltas.size(); ++i)
 					{
-						observation[0] = r.points[i][0];
-						observation[1] = r.points[i][1];
+						observation[0] = r.deltas[i][0];
+						observation[1] = r.deltas[i][1];
 						p->record(observation);
 					}
 				}
@@ -255,7 +281,7 @@ void testXmm()
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			auto drawRecording = [frameIndex](const Recording & recording, const Color & outline, const Color & line, const bool useView, const Vec2 & viewMin, const Vec2 & viewMax)
+			auto drawRecording = [frameIndex](Recording & recording, const Color & outline, const Color & line, const bool useView, const Vec2 & viewMin, const Vec2 & viewMax)
 			{
 				Vec2 min;
 				Vec2 max;
@@ -299,7 +325,7 @@ void testXmm()
 				{
 					for (int i = 0; i < recording.points.size(); ++i)
 					{
-						const bool isHighlighted = (frameIndex % recording.points.size()) == i;
+						const bool isHighlighted = (i % 30) == (frameIndex % 30);
 						
 						const Vec2 & p = recording.points[i];
 						
@@ -317,6 +343,16 @@ void testXmm()
 				if (useView)
 				{
 					gxPopMatrix();
+				}
+				
+				if (recording.gestureFollower.models.empty() == false)
+				{
+					const Vec2 viewMid = (viewMin + viewMax) / 2.f;
+					
+					setColor(colorWhite);
+					setFontMSDF("calibri.ttf");
+					drawTextMSDF(viewMid[0] + 5, viewMid[1] + 5, 20, +1, +1, "gfd %.2f",
+					recording.gestureFollower.models["a"].results.progress);
 				}
 			};
 			
@@ -354,6 +390,7 @@ void testXmm()
 				}
 			}
 			
+			setColor(200, 200, 200);
 			setFontMSDF("calibri.ttf");
 			drawTextMSDF(GFX_SX/2, GFX_SY-20, 18, 0, 0, "%s", isRecording ? "RECORDING" : "RECOGNIZING");
 			drawTextMSDF(GFX_SX/2, GFX_SY-80, 18, 0, 0, "%s", isRecording ? "(n/a)" : hhmm.results.likeliest.c_str());
