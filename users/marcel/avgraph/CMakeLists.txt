@@ -27,7 +27,7 @@ project(avgraph)
 
 # --- avgraph ---
 
-file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.mm")
+file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 file(GLOB_RECURSE source_video "../avpaint/video.cpp" "../avpaint/video.h")
 file(GLOB_RECURSE source_mediaplayer_new "../vfxpro/mediaplayer_new/*.*")
 file(GLOB_RECURSE source_ffmpeg "../vfxpro/ffmpeg/*.*")
@@ -38,6 +38,7 @@ file(GLOB_RECURSE source_nanovg "nanovg/*.*")
 file(GLOB_RECURSE source_vfxnodes "vfxNodes/*.*")
 file(GLOB_RECURSE source_macos "macos/*.*")
 file(GLOB_RECURSE source_leap "leap/*.*")
+file(GLOB_RECURSE source_xmm "xmm/*.*")
 
 file(GLOB source_tests "test*.*")
 
@@ -61,6 +62,7 @@ source_group("3rdparty\\msdfgen" FILES ${source_msdfgen})
 source_group("3rdparty\\nanovg" FILES ${source_nanovg})
 source_group("3rdparty\\macos" FILES ${source_macos})
 source_group("3rdparty\\leap" FILES ${source_leap})
+source_group("3rdparty\\xmm" FILES ${source_xmm})
 
 add_executable(avgraph ${source})
 
