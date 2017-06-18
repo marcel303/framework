@@ -553,11 +553,15 @@ public:
 	~MsdfGlyphCache();
 	
 	void free();
+	void allocTextureAtlas();
 	void load(const char * filename);
 	const MsdfGlyphCacheElem & findOrCreate(int c);
 	
 	bool stbGlyphToMsdfShape(const int codePoint, msdfgen::Shape & shape);
 	void makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph);
+	
+	bool saveCache(const char * filename) const;
+	bool loadCache(const char * filename);
 };
 
 //
@@ -565,6 +569,7 @@ public:
 class MsdfFontCacheElem
 {
 public:
+	std::string m_filename;
 	MsdfGlyphCache * m_glyphCache;
 	
 	MsdfFontCacheElem();

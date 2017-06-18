@@ -3499,6 +3499,20 @@ FontMSDF::FontMSDF(const char * filename)
 	m_font = &g_fontCacheMSDF.findOrCreate(filename);
 }
 
+bool FontMSDF::saveCache(const char * _filename) const
+{
+	const std::string filename = _filename ? _filename : (m_font->m_filename + ".cache");
+	
+	return m_font->m_glyphCache->saveCache(filename.c_str());
+}
+
+bool FontMSDF::loadCache(const char * _filename)
+{
+	const std::string filename = _filename ? _filename : (m_font->m_filename + ".cache");
+	
+	return m_font->m_glyphCache->loadCache(filename.c_str());
+}
+
 // -----
 
 void Path2d::PathElem::lineHeading(float & x, float & y) const

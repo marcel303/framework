@@ -867,6 +867,9 @@ class FontMSDF
 public:
 	FontMSDF(const char * filename);
 	
+	bool saveCache(const char * filename = nullptr) const;
+	bool loadCache(const char * filename = nullptr);
+	
 	class MsdfFontCacheElem * getFont()
 	{
 		return m_font;

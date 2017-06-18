@@ -1961,21 +1961,38 @@ void MsdfGlyphCache::free()
 	m_isLoaded = false;
 }
 
-void MsdfGlyphCache::load(const char * filename)
+void MsdfGlyphCache::allocTextureAtlas()
 {
 	const int kAtlasSx = 512;
 	const int kAtlasSy = 512;
 	
-	//
+	delete m_textureAtlas;
+	m_textureAtlas = nullptr;
 	
+	m_textureAtlas = new TextureAtlas();
+	m_textureAtlas->init(kAtlasSx, kAtlasSy, GL_RGB32F, true, true, nullptr);
+	
+	m_map.clear();
+}
+
+void MsdfGlyphCache::load(const char * filename)
+{
 	free();
 	
 	//
 	
 	if (m_font.load(filename))
 	{
-		m_textureAtlas = new TextureAtlas();
-		m_textureAtlas->init(kAtlasSx, kAtlasSy, GL_RGB32F, true, true, nullptr);
+		const std::string cacheFilename = std::string(filename) + ".cache";
+		
+		if (loadCache(cacheFilename.c_str()))
+		{
+			// done
+		}
+		else
+		{
+			allocTextureAtlas();
+		}
 		
 		m_isLoaded = true;
 	}
@@ -2137,10 +2154,295 @@ void MsdfGlyphCache::makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph)
 	glyph.y = y1;
 }
 
+bool MsdfGlyphCache::loadCache(const char * filename)
+{
+	bool result = true;
+	
+	FILE * file = nullptr;
+	
+	if (result == true)
+	{
+		file = fopen(filename, "rb");
+		
+		if (file == nullptr)
+		{
+			logDebug("loadCache: failed to open file");
+			result = false;
+		}
+	}
+	
+	if (result == false)
+	{
+		return result;
+	}
+	
+	//
+	
+	if (result == true)
+	{
+		int32_t version;
+		
+		result &= fread(&version, 4, 1, file);
+		
+		if (version != 1)
+		{
+			logDebug("loadCache: version mismatch");
+			result = false;
+		}
+	}
+	
+	allocTextureAtlas();
+	
+	if (result == true)
+	{
+		// load glyphs
+		
+		int32_t numGlyphs = 0;
+		
+		result &= fread(&numGlyphs, 4, 1, file);
+		
+		for (int i = 0; result && i < numGlyphs; ++i)
+		{
+			int32_t c = 0;
+			
+			result &= fread(&c, 4, 1, file);
+			
+			//
+			
+			int32_t y;
+			int32_t sx;
+			int32_t sy;
+			float scale;
+			int32_t advance;
+			
+			result &= fread(&y, 4, 1, file);
+			result &= fread(&sx, 4, 1, file);
+			result &= fread(&sy, 4, 1, file);
+			result &= fread(&scale, 4, 1, file);
+			result &= fread(&advance, 4, 1, file);
+			
+			//
+			
+			int32_t atlasElemSx;
+			int32_t atlasElemSy;
+			
+			result &= fread(&atlasElemSx, 4, 1, file);
+			result &= fread(&atlasElemSy, 4, 1, file);
+			
+			//
+			
+			if (result == false)
+			{
+				logDebug("loadCache: failed to load glyph info");
+			}
+			
+			//
+			
+			BoxAtlasElem * ae = nullptr;
+			
+			if (atlasElemSx > 0 && atlasElemSy > 0)
+			{
+				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 3;
+				uint8_t * bytes = new uint8_t[numBytes];
+				
+				result &= fread(bytes, numBytes, 1, file);
+				
+				if (result)
+				{
+					ae = m_textureAtlas->tryAlloc(bytes, atlasElemSx, atlasElemSy, GL_RGB, GL_FLOAT);
+					
+					result &= ae != nullptr;
+				}
+				
+				delete[] bytes;
+				
+				if (result == false)
+				{
+					logDebug("loadCache: failed to load glyph data");
+				}
+			}
+			
+			if (result == true)
+			{
+				auto & glyph = m_map[c];
+						
+				glyph.textureAtlasElem = ae;
+				glyph.y = y;
+				glyph.sx = sx;
+				glyph.sy = sy;
+				glyph.scale = scale;
+				glyph.advance = advance;
+				glyph.isInitialized = true;
+			}
+		}
+	}
+	
+	if (file != nullptr)
+	{
+		fclose(file);
+		file = nullptr;
+	}
+	
+	if (result == false)
+	{
+		logDebug("loadCache: failed to load cache");
+		
+		allocTextureAtlas();
+	}
+	
+	return result;
+}
+
+bool MsdfGlyphCache::saveCache(const char * filename) const
+{
+	bool result = true;
+	
+	FILE * file = nullptr;
+	
+	if (result == true)
+	{
+		file = fopen(filename, "wb");
+		
+		if (file == nullptr)
+		{
+			logDebug("saveCache: failed to open file");
+			result = false;
+		}
+	}
+	
+	if (result == false)
+	{
+		return result;
+	}
+	
+	//
+	
+	if (result == true)
+	{
+		const int32_t version = 1;
+		
+		result &= fwrite(&version, 4, 1, file);
+	}
+	
+	if (result == true)
+	{
+		// save glyphs
+		
+		GLuint oldBuffer = 0;
+		glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
+		checkErrorGL();
+		
+		//
+
+		GLuint frameBuffer = 0;
+		
+		glGenFramebuffers(1, &frameBuffer);
+		checkErrorGL();
+		
+		result &= frameBuffer != 0;
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureAtlas->texture, 0);
+		checkErrorGL();
+		
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		
+		//
+		
+		const int32_t numGlyphs = m_map.size();
+		
+		result &= fwrite(&numGlyphs, 4, 1, file);
+		
+		for (auto & i : m_map)
+		{
+			const int32_t c = i.first;
+			
+			result &= fwrite(&c, 4, 1, file);
+			
+			//
+			
+			const MsdfGlyphCacheElem & e = i.second;
+			
+			const int32_t y = e.y;
+			const int32_t sx = e.sx;
+			const int32_t sy = e.sy;
+			const float scale = e.scale;
+			const int32_t advance = e.advance;
+			
+			result &= fwrite(&y, 4, 1, file);
+			result &= fwrite(&sx, 4, 1, file);
+			result &= fwrite(&sy, 4, 1, file);
+			result &= fwrite(&scale, 4, 1, file);
+			result &= fwrite(&advance, 4, 1, file);
+			
+			//
+			
+			const BoxAtlasElem * ae = e.textureAtlasElem;
+			
+			const int32_t atlasElemSx = ae ? ae->sx : 0;
+			const int32_t atlasElemSy = ae ? ae->sy : 0;
+			
+			result &= fwrite(&atlasElemSx, 4, 1, file);
+			result &= fwrite(&atlasElemSy, 4, 1, file);
+			
+			//
+			
+			if (result == false)
+			{
+				logDebug("saveCache: failed to save glyph info");
+			}
+			
+			//
+			
+			if (atlasElemSx > 0 && atlasElemSy > 0)
+			{
+				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 3;
+				uint8_t * bytes = new uint8_t[numBytes];
+				
+				glReadPixels(ae->x, ae->y, ae->sx, ae->sy, GL_RGB, GL_FLOAT, bytes);
+				checkErrorGL();
+				
+				result &= fwrite(bytes, numBytes, 1, file);
+				
+				delete[] bytes;
+				
+				if (result == false)
+				{
+					logDebug("saveCache: failed to save glyph data");
+				}
+			}
+		}
+		
+		//
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+		checkErrorGL();
+		
+		//
+		
+		glDeleteFramebuffers(1, &frameBuffer);
+		frameBuffer = 0;
+	}
+	
+	if (file != nullptr)
+	{
+		fclose(file);
+		file = nullptr;
+	}
+	
+	if (result == false)
+	{
+		logDebug("saveCache: failed to save cache");
+	}
+	
+	return result;
+}
+
 // -----
 
 MsdfFontCacheElem::MsdfFontCacheElem()
-	: m_glyphCache()
+	: m_filename()
+	, m_glyphCache()
 {
 }
 
@@ -2148,6 +2450,8 @@ void MsdfFontCacheElem::free()
 {
 	delete m_glyphCache;
 	m_glyphCache = nullptr;
+	
+	m_filename.clear();
 }
 
 void MsdfFontCacheElem::load(const char * filename)
@@ -2155,6 +2459,8 @@ void MsdfFontCacheElem::load(const char * filename)
 	ScopedLoadTimer loadTimer(filename);
 
 	free();
+	
+	m_filename = filename;
 	
 	m_glyphCache = new MsdfGlyphCache();
 	m_glyphCache->load(filename);
