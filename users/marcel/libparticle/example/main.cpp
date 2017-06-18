@@ -6,15 +6,9 @@
 #include "StringEx.h" // _s functions
 #include "ui.h"
 
-#include "msdfgen/msdfgen.h"
-
-#define STB_TRUETYPE_IMPLEMENTATION  // force following include to generate implementation
-#include "stb_truetype.h"
-
 using namespace tinyxml2;
 
 #define DO_PARTICLELIB_TEST 0
-#define DO_UIAPI_TEST 1
 
 #if DO_PARTICLELIB_TEST
 
@@ -302,369 +296,6 @@ static void testParticleLib()
 
 #endif
 
-static void testMsdfgen()
-{
-	msdfgen::Shape shape;
-	
-	if (0)
-	{
-		auto & c = shape.addContour();
-		
-		auto p1 = msdfgen::Point2(10.f, 2.f);
-		auto p11 = msdfgen::Point2(15.f, 2.f);
-		auto p2 = msdfgen::Point2(30.f, 2.f);
-		auto p21 = msdfgen::Point2(10.f, 30.f);
-		
-		c.addEdge(new msdfgen::QuadraticSegment(p1, p11, p2));
-		c.addEdge(new msdfgen::QuadraticSegment(p2, p21, p1));
-	}
-	
-	if (1)
-	{
-		auto & c = shape.addContour();
-		
-		auto p1 = msdfgen::Point2(12.f, 16.f);
-		auto p11 = msdfgen::Point2(17.f, 25.f);
-		auto p2 = msdfgen::Point2(20.f, 22.f);
-		auto p21 = msdfgen::Point2(15.f, 19.f);
-		
-		c.addEdge(new msdfgen::QuadraticSegment(p1, p11, p2));
-		c.addEdge(new msdfgen::QuadraticSegment(p2, p21, p1));
-	}
-	
-	shape.normalize();
-	msdfgen::edgeColoringSimple(shape, 3.f);
-	msdfgen::Bitmap<msdfgen::FloatRGB> msdf(60, 60);
-	//                     range, scale, translation
-	msdfgen::generateMSDF(msdf, shape, 4.f, 1.8f, msdfgen::Vector2(4.f, 4.f));
-	
-	GLuint msdfTexture = createTextureFromRGBF32(&msdf(0, 0), msdf.width(), msdf.height(), true, true);
-	
-	int index = 0;
-	
-	do
-	{
-		framework.process();
-		
-		if (keyboard.wentUp(SDLK_UP))
-			index = (index + 1) % 4;
-		
-		framework.beginDraw(0, 0, 0, 0);
-		{
-			gxPushMatrix();
-			gxTranslatef(40.f, 40.f, 0.f);
-			gxScalef(10.f, 10.f, 10.f);
-			
-			hqBegin(HQ_STROKED_CIRCLES);
-			{
-				for (int x = 0; x < msdf.width(); ++x)
-				{
-					for (int y = 0; y < msdf.height(); ++y)
-					{
-						auto & rgb = msdf(x, y);
-						
-						auto scale = [](float v) { return (v * .5f) + .0f; };
-						
-						if (index == 0 && rgb.r < 0.f)
-							setColor(colorWhite);
-						else if (index == 1 && rgb.g < 0.f)
-							setColor(colorWhite);
-						else if (index == 2 && rgb.b < 0.f)
-							setColor(colorWhite);
-						else
-							setColorf(scale(rgb.r), scale(rgb.g), scale(rgb.b));
-						hqStrokeCircle(x, y, .3f, 2.f);
-						//drawCircle(x, y, .3f, 20);
-					}
-				}
-			}
-			hqEnd();
-			
-			gxPopMatrix();
-			
-			gxPushMatrix();
-			gxTranslatef(700.f, 450.f, 0.f);
-			gxScalef(300.f, 300.f, 1.f);
-			const float s = mouse.y / 900.f * 2.f;
-			gxScalef(s, s, 1.f);
-			gxRotatef(framework.time, 0.f, 0.f, 1.f);
-			Shader shader("msdf");
-			setShader(shader);
-			{
-				shader.setTexture("msdf", 0, msdfTexture);
-				shader.setImmediate("bgColor", 1.f, .5f, .5f, 1.f);
-				shader.setImmediate("fgColor", 1.f, 1.f, 1.f, 1.f);
-				
-				drawRect(-1.f, -1.f, +1.f, +1.f);
-			}
-			clearShader();
-			gxPopMatrix();
-		}
-		framework.endDraw();
-	}
-	while (!keyboard.wentDown(SDLK_SPACE));
-}
-
-static stbtt_bakedchar cdata[96]; // ASCII 32..126 is 95 glyphs
-
-static void stbTruetype_Print(float x, float y, const char *text)
-{
-	// assume orthographic projection with units = screen pixels, origin at top left
-	gxBegin(GL_QUADS);
-	{
-		while (*text)
-		{
-			if (*text >= 32 && *text < 128)
-			{
-				stbtt_aligned_quad q;
-				stbtt_GetBakedQuad(cdata, 512,512, *text-32, &x,&y,&q,1);//1=opengl & d3d10+,0=d3d9
-				
-				gxTexCoord2f(q.s0,q.t1); gxVertex2f(q.x0,q.y1);
-				gxTexCoord2f(q.s1,q.t1); gxVertex2f(q.x1,q.y1);
-				gxTexCoord2f(q.s1,q.t0); gxVertex2f(q.x1,q.y0);
-				gxTexCoord2f(q.s0,q.t0); gxVertex2f(q.x0,q.y0);
-			}
-			
-			++text;
-		}
-	}
-	gxEnd();
-}
-
-static bool stbGlyphToMsdfShape(msdfgen::Shape & shape, const stbtt_fontinfo & fontInfo, const int codePoint)
-{
-	stbtt_vertex * vertices = nullptr;
-	
-	const int numVertices = stbtt_GetCodepointShape(&fontInfo, codePoint, &vertices);
-	
-	msdfgen::Contour * contour = nullptr;
-	
-	msdfgen::Point2 old_p;
-	
-	for (int i = 0; i < numVertices; ++i)
-	{
-		stbtt_vertex & v = vertices[i];
-		
-		if (v.type == STBTT_vmove)
-		{
-			logDebug("moveTo: %d, %d", v.x, v.y);
-			
-			contour = &shape.addContour();
-			
-			old_p.set(v.x, v.y);
-			
-		}
-		else if (v.type == STBTT_vline)
-		{
-			logDebug("lineTo: %d, %d", v.x, v.y);
-			
-			msdfgen::Point2 new_p(v.x, v.y);
-			
-			contour->addEdge(new msdfgen::LinearSegment(old_p, new_p));
-			
-			old_p = new_p;
-		}
-		else if (v.type == STBTT_vcurve)
-		{
-			logDebug("quadraticTo: %d, %d", v.x, v.y);
-			
-			const msdfgen::Point2 new_p(v.x, v.y);
-			const msdfgen::Point2 control_p(v.cx, v.cy);
-			
-			contour->addEdge(new msdfgen::QuadraticSegment(old_p, control_p, new_p));
-			
-			old_p = new_p;
-		}
-		else if (v.type == STBTT_vcubic)
-		{
-			logDebug("cubicTo: %d, %d", v.x, v.y);
-			
-			const msdfgen::Point2 new_p(v.x, v.y);
-			const msdfgen::Point2 control_p1(v.cx, v.cy);
-			const msdfgen::Point2 control_p2(v.cx1, v.cy1);
-			
-			contour->addEdge(new msdfgen::CubicSegment(old_p, control_p1, control_p2, new_p));
-			
-			old_p = new_p;
-		}
-		else
-		{
-			logDebug("unknown vertex type: %d", v.type);
-		}
-	}
-	
-	stbtt_FreeShape(&fontInfo, vertices);
-	vertices = nullptr;
-	
-	return true;
-}
-
-static void testStbTruetype()
-{
-	GLuint fontTexture = 0;
-	
-	Path2d path;
-	
-	struct GlyphInfo
-	{
-		int sx;
-		int sy;
-		GLuint texture;
-	};
-	
-	GlyphInfo glyphInfos[10];
-	
-	{
-		static unsigned char ttf_buffer[1<<20];
-		static unsigned char temp_bitmap[512*512];
-
-		fread(ttf_buffer, 1, 1<<20, fopen("calibri.ttf", "rb"));
-		stbtt_BakeFontBitmap(ttf_buffer, 0, 32.0, temp_bitmap, 512, 512, 32, 96, cdata); // no guarantee this fits!
-
-		// can free ttf_buffer at this point
-		fontTexture = createTextureFromR8(temp_bitmap, 512, 512, false, true);
-		
-		stbtt_fontinfo fontInfo;
-		if (stbtt_InitFont(&fontInfo, ttf_buffer, 0) == 0)
-			logError("failed to init font");
-		else
-		{
-			int fx1, fy1;
-			int fx2, fy2;
-			stbtt_GetFontBoundingBox(&fontInfo, &fx1, &fy1, &fx2, &fy2);
-			logDebug("font box: (%d, %d) - (%d, %d)", fx1, fy1, fx2, fy2);
-			
-			//
-			
-			for (int i = 0; i < 10; ++i)
-			{
-				//const int base_cp = 0x0124;
-				const int base_cp = 0x0100;
-				
-				const int cp = base_cp + i;
-				
-				GlyphInfo & glyphInfo = glyphInfos[i];
-				
-				msdfgen::Shape shape;
-				
-				stbGlyphToMsdfShape(shape, fontInfo, cp);
-				
-				//stbGlyphToPath2d(path, fontInfo, cp);
-				
-				//stbtt_GetCodepointHMetrics(&fontInfo, cp, &advanceWidth, &leftSideBearing);
-				//stbtt_GetCodepointKernAdvance(&fontInfo, cp_old, cp_new);
-				
-				int x1, y1;
-				int x2, y2;
-				stbtt_GetCodepointBox(&fontInfo, cp, &x1, &y1, &x2, &y2);
-				logDebug("glyph box: (%d, %d) - (%d, %d)", x1, y1, x2, y2);
-				
-				const float scale = .04f;
-				const float sx1 = x1 * scale;
-				const float sy1 = y1 * scale;
-				const float sx2 = x2 * scale;
-				const float sy2 = y2 * scale;
-				
-				const float ssx = sx2 - sx1;
-				const float ssy = sy2 - sy1;
-				
-				const int padding = 2;
-				
-				const int bitmapSx = std::ceil(ssx) + padding * 2;
-				const int bitmapSy = std::ceil(ssy) + padding * 2;
-				
-				msdfgen::edgeColoringSimple(shape, 3.f);
-				msdfgen::Bitmap<msdfgen::FloatRGB> msdf(bitmapSx, bitmapSy);
-				msdfgen::generateMSDF(msdf, shape, 1.f, scale, msdfgen::Vector2(-x1 + padding / scale, -y1 + padding / scale));
-				
-				glyphInfo.sx = bitmapSx;
-				glyphInfo.sy = bitmapSy;
-				glyphInfo.texture = createTextureFromRGBF32(&msdf(0, 0), msdf.width(), msdf.height(), true, true);
-			}
-		}
-	}
-	
-	do
-	{
-		framework.process();
-		
-		framework.beginDraw(0, 0, 0, 0);
-		{
-			auto myDrawRect = [](float x1, float y1, float x2, float y2)
-			{
-				gxBegin(GL_QUADS);
-				{
-					gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
-					gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
-					gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
-					gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
-				}
-				gxEnd();
-			};
-			
-			gxSetTexture(fontTexture);
-			{
-				setColor(colorWhite);
-				myDrawRect(0, 0, 512*2, 512*2);
-			
-				setColor(colorWhite);
-				stbTruetype_Print(300, 300, "Hello World!");
-			}
-			gxSetTexture(0);
-			
-			float x = 0.f;
-			
-			for (int i = 0; i < 10; ++i)
-			{
-				auto & glyphInfo = glyphInfos[i];
-				
-				const float scale = mouse.isDown(BUTTON_LEFT) ? 1.f : (mouse.y / float(900.f) * 10.f);
-				const float angle = (mouse.x - 700.f) / float(700.f) * 20.f;
-				
-			#if 1
-				gxPushMatrix();
-				{
-					gxRotatef(angle, 0.f, 0.f, 1.f);
-					Shader shader("msdf");
-					setShader(shader);
-					{
-						shader.setTexture("msdf", 0, glyphInfo.texture);
-						shader.setImmediate("bgColor", 1.f, .5f, .5f, 1.f);
-						shader.setImmediate("fgColor", 1.f, 1.f, 1.f, 1.f);
-						
-						//myDrawRect(x, 0, x + glyphInfo.sx * 4, glyphInfo.sy * 4);
-						drawRect(x, 0, x + glyphInfo.sx * scale, glyphInfo.sy * scale);
-					}
-					clearShader();
-				}
-				gxPopMatrix();
-			#else
-				gxSetTexture(glyphInfo.texture);
-				{
-					setColor(colorWhite);
-					myDrawRect(x, 0, x + glyphInfo.sx * scale, glyphInfo.sy * scale);
-				}
-				gxSetTexture(0);
-			#endif
-			
-				x += glyphInfos[i].sx * scale;
-			}
-			
-			gxPushMatrix();
-			{
-				gxTranslatef(400, 400, 0);
-				gxScalef(.1f, .1f, 1.f);
-				setColor(colorWhite);
-				drawPath(path);
-				//hqDrawPath(path);
-			}
-			gxPopMatrix();
-		}
-		framework.endDraw();
-	}
-	while (!keyboard.wentDown(SDLK_SPACE));
-}
-
 int main(int argc, char * argv[])
 {
 #ifdef WIN32
@@ -684,26 +315,11 @@ int main(int argc, char * argv[])
 
 	if (framework.init(argc, (const char**)argv, windowSx, windowSy))
 	{
-		testMsdfgen();
-		testStbTruetype();
-		
 		initUi();
 		
-		ParticleEditor particleEditor;
+		ParticleEditor * particleEditor = new ParticleEditor();
 		
 		bool menuActive = true;
-	
-	#if DO_UIAPI_TEST
-		UiState s;
-		s.x = 400;
-		s.y = 10;
-		s.sx = 250;
-		s.font = "GloriaHallelujah.ttf";
-		bool v[10] = { };
-		ParticleColorCurve c[10];
-		std::string t[10];
-		std::for_each(t, t + 10, [](auto & t) { t = "01234"; });
-	#endif
 		
 		while (!framework.quitRequested)
 		{
@@ -723,37 +339,17 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_TAB))
 				menuActive = !menuActive;
 			
-			particleEditor.tick(menuActive, windowSx, windowSy, timeStep);
+			particleEditor->tick(menuActive, windowSx, windowSy, timeStep);
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
-			#if DO_UIAPI_TEST
-				makeActive(&s, true, true);
-				pushMenu("");
-				for (int i = 0; i < 10; ++i)
-				{
-					char n[2] = { char('a' + i), 0 };
-					if (doCheckBox(v[i], n, true))
-					{
-						pushMenu(n);
-						g_drawX += 10;
-						doParticleColorCurve(c[i], "Color Curve");
-						doTextBox(t[i], "Hey!", timeStep);
-						g_drawX -= 10;
-						popMenu();
-					}
-				}
-				if (s.activeColor)
-					doColorWheel(*s.activeColor, "Color", timeStep);
-				if (s.activeElem == nullptr)
-					s.activeColor = nullptr;
-				popMenu();
-			#endif
-				
-				particleEditor.draw(menuActive, windowSx, windowSy);
+				particleEditor->draw(menuActive, windowSx, windowSy);
 			}
 			framework.endDraw();
 		}
+		
+		delete particleEditor;
+		particleEditor = nullptr;
 		
 		shutUi();
 
