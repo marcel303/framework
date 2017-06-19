@@ -14,7 +14,7 @@ struct MacWebcamImage
 	
 	int index;
 	
-	uint32_t pixels[kMaxPixels];
+	uint8_t data[kMaxPixels * 4];
 	
 	MacWebcamImage()
 		: sx(0)

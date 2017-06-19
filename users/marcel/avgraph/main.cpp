@@ -87,6 +87,7 @@
 #include "vfxNodes/vfxNodeTriggerTreshold.h"
 #include "vfxNodes/vfxNodeTouches.h"
 #include "vfxNodes/vfxNodeVideo.h"
+#include "vfxNodes/vfxNodeWebcam.h"
 #include "vfxNodes/vfxNodeXinput.h"
 #include "vfxNodes/vfxNodeYuvToRgb.h"
 
@@ -255,6 +256,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("picture", VfxNodePicture)
 	DefineNodeImpl("picture.cpu", VfxNodePictureCpu)
 	DefineNodeImpl("video", VfxNodeVideo)
+	DefineNodeImpl("webcam", VfxNodeWebcam)
 	DefineNodeImpl("sound", VfxNodeSound)
 	DefineNodeImpl("spectrum.1d", VfxNodeSpectrum1D)
 	DefineNodeImpl("spectrum.2d", VfxNodeSpectrum2D)
@@ -576,10 +578,9 @@ static void testMacWebcam()
 			if (texture.isChanged(webcam->image.sx, webcam->image.sy, GL_RGBA8))
 			{
 				texture.allocate(webcam->image.sx, webcam->image.sy, GL_RGBA8, false, true);
-				texture.setSwizzle(GL_BLUE, GL_GREEN, GL_RED, GL_ALPHA);
 			}
 			
-			texture.upload(webcam->image.pixels, 4, webcam->image.pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
+			texture.upload(webcam->image.data, 4, webcam->image.pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
 		}
 		
 		//

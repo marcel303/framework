@@ -94,19 +94,6 @@ int nextImageIndex = 0;
 	}
 
 	[session startRunning];
-
-	//[session beginConfiguration];
-	// todo : add/configure capture devices
-	//[session commitConfiguration];
-
-	//session.running
-	//session.interrupted
-
-	//[session devices]
-	//[session devicesWithMediaType:hasMediaType:AVMediaTypeVideo]
-
-	//if ([device position] == AVCaptureDevicePositionBack)
-		//
 	
 	return true;
 }
@@ -137,25 +124,40 @@ int nextImageIndex = 0;
      didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
      fromConnection:(AVCaptureConnection *)connection
 {
-	//UIImage * image = imageFromSampleBuffer(sampleBuffer);
 	CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
 	CVPixelBufferLockBaseAddress(imageBuffer, 0);
 
 	const size_t bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer);
-    const size_t width = CVPixelBufferGetWidth(imageBuffer);
-    const size_t height = CVPixelBufferGetHeight(imageBuffer);
+    const size_t sx = CVPixelBufferGetWidth(imageBuffer);
+    const size_t sy = CVPixelBufferGetHeight(imageBuffer);
 
-	void * baseAddress = CVPixelBufferGetBaseAddress(imageBuffer);
+	uint8_t * baseAddress = (uint8_t*)CVPixelBufferGetBaseAddress(imageBuffer);
 	
-	const int numBytes = bytesPerRow * height;
+	const int numBytes = bytesPerRow * sy;
 	
-	if (numBytes < sizeof(image->pixels))
+	if (numBytes <= sizeof(image->data))
 	{
-		memcpy(image->pixels, baseAddress, numBytes);
-		image->sx = width;
-		image->sy = height;
-		image->pitch = bytesPerRow;
+		image->sx = sx;
+		image->sy = sy;
+		image->pitch = sx * 4;
 		image->index = nextImageIndex++;
+		
+		// todo : write SSE optimized version
+		// todo : see if we can let webcam output to RGBA directly
+		
+		for (int y = 0; y < sy; ++y)
+		{
+			const uint8_t * __restrict srcPtr = baseAddress + y * bytesPerRow;
+			      uint8_t * __restrict dstPtr = image->data + y * image->pitch;
+			
+			for (int x = 0; x < sx; ++x)
+			{
+				dstPtr[x * 4 + 0] = srcPtr[x * 4 + 2];
+				dstPtr[x * 4 + 1] = srcPtr[x * 4 + 1];
+				dstPtr[x * 4 + 2] = srcPtr[x * 4 + 0];
+				dstPtr[x * 4 + 3] = srcPtr[x * 4 + 3];
+			}
+		}
 	}
 	
 	CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
