@@ -58,8 +58,8 @@ VfxNodeComposite::~VfxNodeComposite()
 
 void VfxNodeComposite::tick(const float dt)
 {
-	vfxCpuTimingBlock(VfxNodeDelayLine);
-	vfxGpuTimingBlock(VfxNodeDelayLine);
+	vfxCpuTimingBlock(VfxNodeComposite);
+	vfxGpuTimingBlock(VfxNodeComposite);
 	
 	pushSurface(surface);
 	{

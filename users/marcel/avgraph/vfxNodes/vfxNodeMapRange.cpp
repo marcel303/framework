@@ -27,6 +27,20 @@
 
 #include "vfxNodeMapRange.h"
 
+VFX_NODE_TYPE(map_range, VfxNodeMapRange)
+{
+	typeName = "map.range";
+	
+	in("in", "float");
+	in("inMin", "float");
+	in("inMax", "float", "1");
+	in("outMin", "float");
+	in("outMax", "float", "1");
+	in("outCurvePow", "float", "1");
+	in("clamp", "bool");
+	out("result", "float");
+}
+
 VfxNodeMapRange::VfxNodeMapRange()
 	: VfxNodeBase()
 	, outputValue(0.f)

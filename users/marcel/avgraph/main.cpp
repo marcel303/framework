@@ -122,6 +122,15 @@ extern void testStbTruetype();
 extern void testMsdfgen();
 extern void testDeepbelief();
 extern void testImageCpuDelayLine();
+extern void testXmm();
+
+VFX_NODE_TYPE(trigger_asfloat, VfxNodeTriggerAsFloat)
+{
+	typeName = "trigger.asFloat";
+	
+	in("trigger!", "trigger");
+	out("value", "float");
+}
 
 struct VfxNodeTriggerAsFloat : VfxNodeBase
 {
@@ -535,6 +544,73 @@ static void testAudioMixing()
 
 //
 
+#include "vfxNodes/macWebcam.h"
+#include "vfxNodes/openglTexture.h"
+
+static void testMacWebcam()
+{
+	MacWebcam * webcam = new MacWebcam();
+	
+	if (webcam->init() == false)
+	{
+		logDebug("webcam init failed");
+		
+		delete webcam;
+		webcam = nullptr;
+		
+		return;
+	}
+	
+	OpenglTexture texture;
+	
+	int lastImageIndex = -1;
+	
+	do
+	{
+		framework.process();
+		
+		//
+		
+		if (webcam->image.index != lastImageIndex)
+		{
+			if (texture.isChanged(webcam->image.sx, webcam->image.sy, GL_RGBA8))
+			{
+				texture.allocate(webcam->image.sx, webcam->image.sy, GL_RGBA8, false, true);
+				texture.setSwizzle(GL_BLUE, GL_GREEN, GL_RED, GL_ALPHA);
+			}
+			
+			texture.upload(webcam->image.pixels, 4, webcam->image.pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
+		}
+		
+		//
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			if (texture.id != 0)
+			{
+				setColor(colorWhite);
+				gxPushMatrix();
+				gxTranslatef(0, 0, 0);
+				gxSetTexture(texture.id);
+				drawRect(0, 0, texture.sx, texture.sy);
+				gxPopMatrix();
+			}
+			
+			setFontMSDF("calibri.ttf");
+			setColor(colorGreen);
+			drawTextMSDF(GFX_SX/2, GFX_SY/2, 20, 0, 0, "webcam image index: %d", webcam->image.index);
+		}
+		framework.endDraw();
+	} while (!keyboard.wentDown(SDLK_SPACE));
+	
+	webcam->shut();
+	
+	delete webcam;
+	webcam = nullptr;
+}
+
+//
+
 int main(int argc, char * argv[])
 {
 	//framework.waitForEvents = true;
@@ -590,6 +666,10 @@ int main(int argc, char * argv[])
 		//testDeepbelief();
 		
 		//testImageCpuDelayLine();
+		
+		//testXmm();
+		
+		testMacWebcam();
 		
 		//
 		
@@ -694,6 +774,10 @@ int main(int argc, char * argv[])
 			else if (keyboard.wentDown(SDLK_s))
 			{
 				graphEdit->save(FILENAME);
+				
+				// todo : remove !
+				FontMSDF("calibri.ttf").saveCache();
+				FontMSDF("calibri.ttf").loadCache();
 			}
 			else if (keyboard.wentDown(SDLK_l))
 			{
@@ -726,7 +810,7 @@ int main(int argc, char * argv[])
 			const double vflipMix = std::pow(.001, dt);
 			vflip = vflip * vflipMix + targetVflip * (1.0 - vflipMix);
 			
-			framework.beginDraw(31, 31, 31, 255);
+			framework.beginDraw(0, 0, 0, 255);
 			{
 				vfxGpuTimingBlock(draw);
 				

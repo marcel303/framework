@@ -28,6 +28,17 @@
 #include "Ease.h"
 #include "vfxNodeMapEase.h"
 
+VFX_NODE_TYPE(map_ease, VfxNodeMapEase)
+{
+	typeName = "ease";
+	
+	in("value", "float");
+	inEnum("type", "easeType");
+	in("param", "float");
+	in("mirror", "bool");
+	out("result", "float");
+}
+
 VfxNodeMapEase::VfxNodeMapEase()
 	: VfxNodeBase()
 	, outputValue(0.f)

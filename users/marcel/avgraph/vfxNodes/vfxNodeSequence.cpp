@@ -49,6 +49,8 @@ VfxNodeSequence::VfxNodeSequence()
 
 void VfxNodeSequence::draw() const
 {
+	vfxGpuTimingBlock(VfxNodeSequence);
+	
 	for (int i = kInput_1; i <= kInput_8; ++i)
 	{
 		const VfxPlug * plug = tryGetInput(i);
