@@ -85,27 +85,37 @@ struct Deepbelief
 		
 		bool hasResult;
 		DeepbeliefResult result;
-
+		
+		//
+		
+		bool isInitialized;
+		
+		std::string networkFilename;
+		void * network;
+		
+		SDL_Thread * thread;
+		SDL_mutex * mutex;
+		SDL_cond * workEvent;
+		SDL_cond * doneEvent;
+		
 		State()
 			: stop(false)
 			, isDone(false)
 			, work(nullptr)
 			, hasResult(false)
 			, result()
+			, isInitialized(false)
+			, networkFilename()
+			, network(nullptr)
+			, thread(nullptr)
+			, mutex(nullptr)
+			, workEvent(nullptr)
+			, doneEvent(nullptr)
 		{
 		}
 	};
 	
-	bool isInitialized;
-	
-	void * network;
-	
-	SDL_Thread * thread;
-	SDL_mutex * mutex;
-	SDL_cond * workEvent;
-	SDL_cond * doneEvent;
-	
-	State state;
+	State * state;
 
 	Deepbelief();
 	~Deepbelief();
@@ -120,6 +130,8 @@ struct Deepbelief
 	bool getResult(DeepbeliefResult & result);
 
 	static int threadMainProc(void * arg);
-
-	void threadMain();
+	
+	static bool threadInit(State * state);
+	static void threadShut(State * state);
+	static void threadMain(State * state);
 };

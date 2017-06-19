@@ -93,7 +93,7 @@ void VfxNodeDeepbelief::tick(const float dt)
 	
 	updateTimer += dt;
 
-	if (image != nullptr && deepbelief.isInitialized && updateTimer >= updateInterval)
+	if (image != nullptr && deepbelief.state != nullptr && deepbelief.state->isInitialized && updateTimer >= updateInterval)
 	{
 		updateTimer = 0.f;
 		
@@ -103,7 +103,7 @@ void VfxNodeDeepbelief::tick(const float dt)
 		}
 	}
 	
-	if (deepbelief.isInitialized)
+	if (deepbelief.state && deepbelief.state->isInitialized)
 	{
 		if (deepbelief.getResult(result))
 		{

@@ -27,6 +27,7 @@
 
 #include "Debugging.h"
 #include "deepbelief.h"
+#include "Log.h"
 #include <DeepBelief/DeepBelief.h>
 #include <SDL2/SDL.h>
 
@@ -38,13 +39,7 @@
 #endif
 
 Deepbelief::Deepbelief()
-	: isInitialized(false)
-	, network(nullptr)
-	, thread(nullptr)
-	, mutex(nullptr)
-	, workEvent(nullptr)
-	, doneEvent(nullptr)
-	, state()
+	: state(nullptr)
 {
 }
 
@@ -65,81 +60,46 @@ void Deepbelief::init(const char * networkFilename)
 
 bool Deepbelief::doInit(const char * networkFilename)
 {
-	network = jpcnn_create_network(networkFilename);
-	Assert(network);
+	Assert(state == nullptr);
+	state = new State();
 	
-	if (network == nullptr)
+	state->networkFilename = networkFilename;
+	
+	state->mutex = SDL_CreateMutex();
+	state->workEvent = SDL_CreateCond();
+	state->doneEvent = SDL_CreateCond();
+	
+	if (state->mutex == nullptr || state->workEvent == nullptr || state->doneEvent == nullptr)
 		return false;
 	
-	Assert(mutex == nullptr);
-	mutex = SDL_CreateMutex();
+	state->thread = SDL_CreateThread(threadMainProc, "DeepBelief", state);
 
-	Assert(workEvent == nullptr);
-	workEvent = SDL_CreateCond();
-	
-	Assert(doneEvent == nullptr);
-	doneEvent = SDL_CreateCond();
-	
-	if (mutex == nullptr || workEvent == nullptr || doneEvent == nullptr)
+	if (state->thread == nullptr)
 		return false;
 	
-	Assert(thread == nullptr);
-	thread = SDL_CreateThread(threadMainProc, "DeepBelief", this);
-
-	if (thread == nullptr)
-		return false;
-	
-	Assert(isInitialized == false);
-	isInitialized = true;
+	SDL_DetachThread(state->thread);
 	
 	return true;
 }
 
 void Deepbelief::shut()
 {
-	isInitialized = false;
+	if (state == nullptr)
+		return;
 	
-	if (thread != nullptr)
+	if (state->thread != nullptr)
 	{
-		SDL_LockMutex(mutex);
+		SDL_LockMutex(state->mutex);
 		{
-			state.stop = true;
+			state->stop = true;
 
-			int r = SDL_CondSignal(workEvent);
+			int r = SDL_CondSignal(state->workEvent);
 			Assert(r == 0);
 		}
-		SDL_UnlockMutex(mutex);
-
-		SDL_WaitThread(thread, nullptr);
-		thread = nullptr;
+		SDL_UnlockMutex(state->mutex);
 	}
 	
-	Assert(state.work == nullptr);
-	state = State();
-	
-	if (workEvent)
-	{
-		SDL_DestroyCond(workEvent);
-		workEvent = nullptr;
-	}
-	
-	if (doneEvent)
-	{
-		SDL_DestroyCond(doneEvent);
-		doneEvent = nullptr;
-	}
-	
-	if (mutex)
-	{
-		SDL_DestroyMutex(mutex);
-		mutex = nullptr;
-	}
-	
-	if (network)
-	{
-		jpcnn_destroy_network(network);
-		network = nullptr;
-	}
+	state = nullptr;
 }
 
 void Deepbelief::process(const uint8_t * bytes, const int sx, const int sy, const int numChannels, const int pitch, const float certaintyTreshold)
@@ -159,15 +119,15 @@ void Deepbelief::process(const uint8_t * bytes, const int sx, const int sy, cons
 	newWork->pitch = pitch;
 	newWork->certaintyTreshold = certaintyTreshold;
 	
-	SDL_LockMutex(mutex);
+	SDL_LockMutex(state->mutex);
 	{
-		oldWork = state.work;
-		state.work = newWork;
+		oldWork = state->work;
+		state->work = newWork;
 
-		int r = SDL_CondSignal(workEvent);
+		int r = SDL_CondSignal(state->workEvent);
 		Assert(r == 0);
 	}
-	SDL_UnlockMutex(mutex);
+	SDL_UnlockMutex(state->mutex);
 
 	if (oldWork)
 	{
@@ -178,67 +138,123 @@ void Deepbelief::process(const uint8_t * bytes, const int sx, const int sy, cons
 
 void Deepbelief::wait()
 {
-	SDL_LockMutex(mutex);
+	SDL_LockMutex(state->mutex);
 	{
-		if (state.hasResult == false)
+		if (state->hasResult == false)
 		{
-			SDL_CondWait(doneEvent, mutex);
+			SDL_CondWait(state->doneEvent, state->mutex);
 		}
 		
-		Assert(state.hasResult);
+		Assert(state->hasResult);
 	}
-	SDL_UnlockMutex(mutex);
+	SDL_UnlockMutex(state->mutex);
 }
 
 bool Deepbelief::getResult(DeepbeliefResult & result)
 {
 	bool hasResult = false;
 
-	SDL_LockMutex(mutex);
+	SDL_LockMutex(state->mutex);
 	{
-		if (state.hasResult)
+		if (state->hasResult)
 		{
-			state.hasResult = false;
+			state->hasResult = false;
 			
-			result.predictions = std::move(state.result.predictions);
+			result.predictions = std::move(state->result.predictions);
 			
-			result.bufferCreationTime = state.result.bufferCreationTime;
-			result.classificationTime = state.result.classificationTime;
-			result.sortTime = state.result.sortTime;
+			result.bufferCreationTime = state->result.bufferCreationTime;
+			result.classificationTime = state->result.classificationTime;
+			result.sortTime = state->result.sortTime;
 			
-			state.result = DeepbeliefResult();
+			state->result = DeepbeliefResult();
 
 			hasResult = true;
 		}
 	}
-	SDL_UnlockMutex(mutex);
+	SDL_UnlockMutex(state->mutex);
 
 	return hasResult;
 }
 
 int Deepbelief::threadMainProc(void * arg)
 {
-	Deepbelief * self = (Deepbelief*)arg;
+	State * state = (State*)arg;
+	
+	if (threadInit(state))
+	{
+		threadMain(state);
+	}
+	
+	threadShut(state);
 
-	self->threadMain();
-
+	delete state;
+	state = nullptr;
+	
 	return 0;
 }
 
-void Deepbelief::threadMain()
+bool Deepbelief::threadInit(State * state)
+{
+	LOG_DBG("creating deepbelief network", 0);
+	
+	state->network = jpcnn_create_network(state->networkFilename.c_str());
+	Assert(state->network);
+	
+	if (state->network == nullptr)
+		return false;
+	
+	state->isInitialized = true;
+	
+	return true;
+}
+
+void Deepbelief::threadShut(State * state)
+{
+	Assert(state->work == nullptr);
+	
+	state->isInitialized = false;
+	
+	if (state->workEvent)
+	{
+		SDL_DestroyCond(state->workEvent);
+		state->workEvent = nullptr;
+	}
+	
+	if (state->doneEvent)
+	{
+		SDL_DestroyCond(state->doneEvent);
+		state->doneEvent = nullptr;
+	}
+	
+	if (state->mutex)
+	{
+		SDL_DestroyMutex(state->mutex);
+		state->mutex = nullptr;
+	}
+	
+	if (state->network)
+	{
+		LOG_DBG("destroying deepbelief network", 0);
+		
+		jpcnn_destroy_network(state->network);
+		state->network = nullptr;
+	}
+}
+
+void Deepbelief::threadMain(State * state)
 {
 #if DO_PRINTS
 	printf("thread: start\n");
 #endif
 	
-	SDL_LockMutex(mutex);
+	SDL_LockMutex(state->mutex);
 	
 	for (;;)
 	{
-		Work * work = state.work;
-		state.work = nullptr;
+		Work * work = state->work;
+		state->work = nullptr;
 		
-		if (state.stop)
+		if (state->stop)
 		{
 			delete work;
 			work = nullptr;
@@ -248,7 +264,7 @@ void Deepbelief::threadMain()
 		
 		if (work != nullptr)
 		{
-			SDL_UnlockMutex(mutex);
+			SDL_UnlockMutex(state->mutex);
 			
 		#if DO_PRINTS
 			printf("thread: work\n");
@@ -280,7 +296,9 @@ void Deepbelief::threadMain()
 				char ** predictionsLabels = nullptr;
 				int predictionsLabelsLength = 0;
 				
-				jpcnn_classify_image(network, buffer, JPCNN_RANDOM_SAMPLE, 0, &predictionValues, &predictionValuesLength, &predictionsLabels, &predictionsLabelsLength);
+				jpcnn_classify_image(
+					state->network, buffer, JPCNN_RANDOM_SAMPLE, 0,
+					&predictionValues, &predictionValuesLength, &predictionsLabels, &predictionsLabelsLength);
 				
 				for (int i = 0; i < predictionValuesLength; ++i)
 				{
@@ -337,25 +355,25 @@ void Deepbelief::threadMain()
 			delete work;
 			work = nullptr;
 		
-			SDL_LockMutex(mutex);
+			SDL_LockMutex(state->mutex);
 		
-			state.hasResult = true;
-			state.result.predictions = std::move(predictions);
+			state->hasResult = true;
+			state->result.predictions = std::move(predictions);
 		#if DO_TIMING
-			state.result.bufferCreationTime = (ti2 - ti1) / 1000.0;
-			state.result.classificationTime = (tc2 - tc1) / 1000.0;
-			state.result.sortTime = (ts2 - ts1) / 1000.0;
+			state->result.bufferCreationTime = (ti2 - ti1) / 1000.0;
+			state->result.classificationTime = (tc2 - tc1) / 1000.0;
+			state->result.sortTime = (ts2 - ts1) / 1000.0;
 		#endif
 			
-			int r = SDL_CondSignal(doneEvent);
+			int r = SDL_CondSignal(state->doneEvent);
 			Assert(r == 0);
 		}
 		
-		if (state.stop == false && state.work == nullptr) // 'if no more work to be done and should go idle'
+		if (state->stop == false && state->work == nullptr) // 'if no more work to be done and should go idle'
 		{
-			SDL_CondWait(workEvent, mutex);
+			SDL_CondWait(state->workEvent, state->mutex);
 		}
 	}
 	
-	SDL_UnlockMutex(mutex);
+	SDL_UnlockMutex(state->mutex);
 }

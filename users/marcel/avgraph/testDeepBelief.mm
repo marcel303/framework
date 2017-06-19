@@ -231,7 +231,7 @@ void testDeepbelief()
 			setFontMSDF("calibri.ttf");
 			setColor(colorGreen);
 			
-			drawText(20, 20, 14, +1, +1, "initialized: %d, automaticProcessing: %d", d->isInitialized, automaticUpdates);
+			drawText(20, 20, 14, +1, +1, "initialized: %d, automaticProcessing: %d", d->state && d->state->isInitialized, automaticUpdates);
 			drawText(20, 60, 14, +1, +1, "buffer creation took %.2fms", result.bufferCreationTime);
 			drawText(20, 80, 14, +1, +1, "classification took %.2fms", result.classificationTime);
 			drawText(20, 100, 14, +1, +1, "sorting took %.2fms", result.sortTime);
