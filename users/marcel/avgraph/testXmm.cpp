@@ -92,7 +92,7 @@ void testXmm()
 		gmm.configuration.gaussians.set(10);
 		gmm.configuration.relative_regularization.set(0.01);
 		gmm.configuration.absolute_regularization.set(0.0001);
-		gmm.configuration.multithreading = xmm::MultithreadingMode::Sequential;
+		//gmm.configuration.multithreading = xmm::MultithreadingMode::Sequential;
 		
 		gmm.train(&trainingSet);
 		gmm.reset();
@@ -165,6 +165,9 @@ void testXmm()
 	observation.resize(2);
 
 	xmm::HierarchicalHMM hhmm;
+	hhmm.configuration.gaussians.set(10);
+	hhmm.configuration.relative_regularization.set(0.01);
+	hhmm.configuration.absolute_regularization.set(0.0001);
 	
 	std::map<std::string, Recording> recordings;
 	
@@ -331,6 +334,8 @@ void testXmm()
 						
 						if (isHighlighted)
 							setColor(colorWhite);
+						//else
+						//	continue;
 						
 						hqFillCircle(p[0], p[1], 5.f);
 						
