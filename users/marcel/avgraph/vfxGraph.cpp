@@ -212,13 +212,7 @@ void VfxGraph::tick(const float dt)
 		
 		if (node->lastTickTraversalId != nextTickTraversalId)
 		{
-			const uint64_t t1 = g_TimerRT.TimeUS_get();
-			
 			node->traverseTick(nextTickTraversalId, dt);
-			
-			const uint64_t t2 = g_TimerRT.TimeUS_get();
-			
-			node->tickTimeAvg = (node->tickTimeAvg * 90 + (t2 - t1) * 10) / 100;
 		}
 	}
 	
