@@ -48,6 +48,7 @@
 #include "vfxNodes/vfxNodeDotDetector.h"
 #include "vfxNodes/vfxNodeDotTracker.h"
 #include "vfxNodes/vfxNodeFsfx.h"
+#include "vfxNodes/vfxNodeImageCpuCrop.h"
 #include "vfxNodes/vfxNodeImageCpuDelayLine.h"
 #include "vfxNodes/vfxNodeImageCpuDownsample.h"
 #include "vfxNodes/vfxNodeImageCpuEqualize.h"
@@ -266,6 +267,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("image.toGpu", VfxNodeImageCpuToGpu)
 	DefineNodeImpl("image.delay", VfxNodeImageDelayLine)
 	DefineNodeImpl("image_cpu.equalize", VfxNodeImageCpuEqualize)
+	DefineNodeImpl("image_cpu.crop", VfxNodeImageCpuCrop)
 	DefineNodeImpl("image_cpu.delay", VfxNodeImageCpuDelayLine)
 	DefineNodeImpl("image_cpu.downsample", VfxNodeImageCpuDownsample)
 	DefineNodeImpl("image.downsample", VfxNodeImageDownsample)
