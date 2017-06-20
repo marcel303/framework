@@ -25,12 +25,17 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "Parse.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
 #include "vfxTypes.h"
 #include <algorithm>
+#include <string>
+#include <vector>
 
 using namespace tinyxml2;
+
+extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
 VfxTimeline::Key::Key()
 	: beat(0.0)
@@ -168,3 +173,62 @@ void VfxTimeline::load(XMLElement * elem)
 
 	sortKeys();
 }
+
+//
+
+VfxSwizzle::VfxSwizzle()
+	: channels()
+	, numChannels(0)
+{
+
+}
+
+void VfxSwizzle::reset()
+{
+	numChannels = 0;
+}
+
+bool VfxSwizzle::parse(const char * text)
+{
+	bool result = true;
+
+	std::vector<std::string> elems;
+	splitString(text, elems, ' ');
+
+	if (elems.size() > kMaxChannels)
+	{
+		result = false;
+	}
+	else
+	{
+		for (auto & elem : elems)
+		{
+			Channel & channel = channels[numChannels++];
+
+			const char * period = strchr(elem.c_str(), '.');
+
+			if (period == nullptr)
+			{
+				channel.sourceIndex = 0;
+				channel.elemIndex = Parse::Int32(elem.c_str());
+			}
+			else
+			{
+				// todo : parse string before and after period
+				const std::string source = elem.substr(0, period - elem.c_str());
+				channel.sourceIndex = Parse::Int32(source);
+				
+				const char * elem = period + 1;
+				channel.elemIndex = Parse::Int32(elem);
+			}
+		}
+	}
+
+	if (result == false)
+	{
+		reset();
+	}
+
+	return result;
+}
+

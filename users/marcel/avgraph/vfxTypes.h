@@ -151,3 +151,22 @@ struct VfxTimeline
 	void save(tinyxml2::XMLPrinter * printer);
 	void load(tinyxml2::XMLElement * elem);
 };
+
+struct VfxSwizzle
+{
+	static const int kMaxChannels = 16;
+
+	struct Channel
+	{
+		int sourceIndex;
+		int elemIndex;
+	};
+
+	Channel channels[kMaxChannels];
+	int numChannels;
+
+	VfxSwizzle();
+
+	void reset();
+	bool parse(const char * text);
+};
