@@ -69,7 +69,9 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	const bool filter = getInputBool(kInput_Filter, true);
 	const bool clamp = getInputBool(kInput_Clamp, false);
 	
-	if (isPassthrough || image == nullptr || image->sx == 0 || image->sy == 0)
+	const bool wantsTexture = outputs[kOutput_Image].isReferenced();
+	
+	if (isPassthrough || image == nullptr || image->sx == 0 || image->sy == 0 || wantsTexture == false)
 	{
 		// todo : make it an option to do when source image is empty. persist or free ?
 		
