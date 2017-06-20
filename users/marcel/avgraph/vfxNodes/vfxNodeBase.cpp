@@ -691,6 +691,7 @@ VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList = nullptr;
 
 VfxNodeTypeRegistration::VfxNodeTypeRegistration()
 	: next(nullptr)
+	, create(nullptr)
 	, typeName()
 	, inputs()
 	, outputs()

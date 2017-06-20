@@ -100,7 +100,8 @@ using namespace tinyxml2;
 
 //#define FILENAME "kinect.xml"
 //#define FILENAME "yuvtest.xml"
-#define FILENAME "timeline.xml"
+//#define FILENAME "timeline.xml"
+#define FILENAME "channels.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -125,14 +126,6 @@ extern void testMsdfgen();
 extern void testDeepbelief();
 extern void testImageCpuDelayLine();
 extern void testXmm();
-
-VFX_NODE_TYPE(trigger_asfloat, VfxNodeTriggerAsFloat)
-{
-	typeName = "trigger.asFloat";
-	
-	in("trigger!", "trigger");
-	out("value", "float");
-}
 
 struct VfxNodeTriggerAsFloat : VfxNodeBase
 {
@@ -170,15 +163,32 @@ struct VfxNodeTriggerAsFloat : VfxNodeBase
 	}
 };
 
+VFX_NODE_TYPE(trigger_asfloat, VfxNodeTriggerAsFloat)
+{
+	typeName = "trigger.asFloat";
+	
+	in("trigger!", "trigger");
+	out("value", "float");
+}
+
 VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName, VfxGraph * vfxGraph)
 {
 	VfxNodeBase * vfxNode = nullptr;
+	
+	for (VfxNodeTypeRegistration * r = g_vfxNodeTypeRegistrationList; r != nullptr; r = r->next)
+	{
+		if (r->typeName == typeName)
+		{
+			vfxNode = r->create();
+			break;
+		}
+	}
 	
 #define DefineNodeImpl(_typeName, _type) \
 	else if (typeName == _typeName) \
 		vfxNode = new _type();
 	
-	if (false)
+	if (vfxNode != nullptr)
 	{
 	}
 	

@@ -729,6 +729,8 @@ struct VfxNodeTypeRegistration
 	
 	VfxNodeTypeRegistration * next;
 	
+	VfxNodeBase* (*create)();
+	
 	std::string typeName;
 	std::string displayName;
 	
@@ -752,10 +754,15 @@ extern VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList;
 #define VFX_NODE_TYPE(name, type) \
 	struct name ## __registration : VfxNodeTypeRegistration \
 	{ \
-		name ## __registration(); \
+		name ## __registration() \
+		{ \
+			create = []() -> VfxNodeBase* { return new type(); }; \
+			init(); \
+		} \
+		void init(); \
 	}; \
 	extern name ## __registration name ## __registrationInstance; \
 	name ## __registration name ## __registrationInstance; \
-	name ## __registration :: name ## __registration()
+	void name ## __registration :: init()
 
 void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, VfxNodeTypeRegistration * registrationList);
