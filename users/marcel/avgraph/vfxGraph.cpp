@@ -203,18 +203,18 @@ void VfxGraph::tick(const float dt)
 
 	// todo : perhaps process unconnected nodes as islands, following predeps ?
 	
+	// todo : fix tick order for nodes without well defined tick order ..
+	nextTickOrder = -1000000;
+	
 	for (auto i : nodes)
 	{
 		VfxNodeBase * node = i.second;
 		
 		if (node->lastTickTraversalId != nextTickTraversalId)
 		{
-			node->lastTickTraversalId = nextTickTraversalId;
-			node->tickOrder = -1;
-			
 			const uint64_t t1 = g_TimerRT.TimeUS_get();
 			
-			node->tick(dt);
+			node->traverseTick(nextTickTraversalId, dt);
 			
 			const uint64_t t2 = g_TimerRT.TimeUS_get();
 			
