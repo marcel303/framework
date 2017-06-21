@@ -88,25 +88,27 @@ void VfxNodeWebcam::tick(const float dt)
 	}
 	else
 	{
-		vfxGpuTimingBlock(VfxNodeWebcam);
+		webcam->tick();
 		
-		if (webcam->image.index != lastImageIndex)
+		if (webcam->image/* && webcam->image->index != lastImageIndex*/)
 		{
 			const bool wantsTexture = outputs[kOutput_Image].isReferenced();
 			
 			if (wantsTexture)
 			{
-				if (texture.isChanged(webcam->image.sx, webcam->image.sy, GL_RGBA8))
+				vfxGpuTimingBlock(VfxNodeWebcam);
+				
+				if (texture.isChanged(webcam->image->sx, webcam->image->sy, GL_RGBA8))
 				{
-					allocateImage(webcam->image.sx, webcam->image.sy);
+					allocateImage(webcam->image->sx, webcam->image->sy);
 				}
 				
-				texture.upload(webcam->image.data, 4, webcam->image.pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
+				texture.upload(webcam->image->data, 16, webcam->image->pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
 			}
 			
-			imageCpuOutput.setDataRGBA8(webcam->image.data, webcam->image.sx, webcam->image.sy, 4, webcam->image.pitch);
+			imageCpuOutput.setDataRGBA8(webcam->image->data, webcam->image->sx, webcam->image->sy, 16, webcam->image->pitch);
 			
-			lastImageIndex = webcam->image.index;
+			lastImageIndex = webcam->image->index;
 		}
 	}
 }
