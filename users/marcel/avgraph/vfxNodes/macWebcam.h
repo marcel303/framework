@@ -2,38 +2,37 @@
 
 #include <stdint.h>
 
+struct SDL_mutex;
+
 struct MacWebcamImage
 {
-	static const int kMaxSx = 1920;
-	static const int kMaxSy = 1080;
-	static const int kMaxPixels = kMaxSx * kMaxSy;
-	
+	int index;
+
 	int sx;
 	int sy;
 	int pitch;
 	
-	int index;
+	uint8_t * data;
 	
-	uint8_t data[kMaxPixels * 4];
-	
-	MacWebcamImage()
-		: sx(0)
-		, sy(0)
-		, pitch(0)
-		, index(-1)
-	{
-	}
+	MacWebcamImage(const int sx, const int sy);
+	~MacWebcamImage();
 };
 
 struct MacWebcam
 {
 	void * webcamImpl;
 	
-	MacWebcamImage image;
-	bool gotImage;
-
+	MacWebcamImage * image;
+	MacWebcamImage * newImage;
+	MacWebcamImage * oldImage;
+	
+	SDL_mutex * mutex;
+	
 	MacWebcam();
+	~MacWebcam();
 
 	bool init();
 	void shut();
+	
+	void tick();
 };
