@@ -27,10 +27,13 @@
 
 #include "framework.h"
 #include "Parse.h"
-#include "Timer.h"
 #include "vfxGraph.h"
 #include "vfxNodes/vfxNodeBase.h"
 #include "vfxNodes/vfxNodeDisplay.h"
+
+#if VFX_GRAPH_ENABLE_TIMING
+	#include "Timer.h"
+#endif
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -60,8 +63,6 @@ VfxGraph::~VfxGraph()
 
 void VfxGraph::destroy()
 {
-	graph = nullptr;
-	
 	displayNodeId = kGraphNodeIdInvalid;
 	
 	for (auto i : valuesToFree)
@@ -98,11 +99,24 @@ void VfxGraph::destroy()
 	{
 		VfxNodeBase * node = i.second;
 		
+	#if VFX_GRAPH_ENABLE_TIMING
+		const uint64_t t1 = g_TimerRT.TimeUS_get();
+	#endif
+		
 		delete node;
 		node = nullptr;
+		
+	#if VFX_GRAPH_ENABLE_TIMING
+		const uint64_t t2 = g_TimerRT.TimeUS_get();
+		auto graphNode = graph->tryGetNode(i.first);
+		const std::string typeName = graphNode ? graphNode->typeName : "n/a";
+		logDebug("delete %s took %.2fms", typeName.c_str(), (t2 - t1) / 1000.0);
+	#endif
 	}
 	
 	nodes.clear();
+	
+	graph = nullptr;
 }
 
 void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputValue)

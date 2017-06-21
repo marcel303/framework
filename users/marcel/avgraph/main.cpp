@@ -94,6 +94,7 @@
 
 #include "mediaplayer_new/MPUtil.h"
 #include "../libparticle/ui.h"
+#include "Timer.h"
 #include "vfxNodeTest.h"
 
 using namespace tinyxml2;
@@ -179,7 +180,17 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	{
 		if (r->typeName == typeName)
 		{
+		#if VFX_GRAPH_ENABLE_TIMING
+			const uint64_t t1 = g_TimerRT.TimeUS_get();
+		#endif
+		
 			vfxNode = r->create();
+			
+		#if VFX_GRAPH_ENABLE_TIMING
+			const uint64_t t2 = g_TimerRT.TimeUS_get();
+			logDebug("create %s took %.2fms", typeName.c_str(), (t2 - t1) / 1000.0);
+		#endif
+		
 			break;
 		}
 	}
@@ -585,14 +596,16 @@ static void testMacWebcam()
 		
 		//
 		
-		if (webcam->image.index != lastImageIndex)
+		webcam->tick();
+		
+		if (webcam->image && webcam->image->index != lastImageIndex)
 		{
-			if (texture.isChanged(webcam->image.sx, webcam->image.sy, GL_RGBA8))
+			if (texture.isChanged(webcam->image->sx, webcam->image->sy, GL_RGBA8))
 			{
-				texture.allocate(webcam->image.sx, webcam->image.sy, GL_RGBA8, false, true);
+				texture.allocate(webcam->image->sx, webcam->image->sy, GL_RGBA8, false, true);
 			}
 			
-			texture.upload(webcam->image.data, 4, webcam->image.pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
+			texture.upload(webcam->image->data, 4, webcam->image->pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
 		}
 		
 		//
@@ -611,7 +624,7 @@ static void testMacWebcam()
 			
 			setFontMSDF("calibri.ttf");
 			setColor(colorGreen);
-			drawTextMSDF(GFX_SX/2, GFX_SY/2, 20, 0, 0, "webcam image index: %d", webcam->image.index);
+			drawTextMSDF(GFX_SX/2, GFX_SY/2, 20, 0, 0, "webcam image index: %d", webcam->image ? webcam->image->index : -1);
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));

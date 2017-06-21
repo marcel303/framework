@@ -32,6 +32,12 @@
 #include <string>
 #include <vector>
 
+#if defined(DEBUG)
+	#define VFX_GRAPH_ENABLE_TIMING 1
+#else
+	#define VFX_GRAPH_ENABLE_TIMING 0
+#endif
+
 struct VfxGraph;
 struct VfxNodeBase;
 struct VfxPlug;
