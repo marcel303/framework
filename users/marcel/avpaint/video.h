@@ -29,6 +29,7 @@
 
 #include "audiostream/AudioStream.h"
 #include "mediaplayer_new/MPContext.h"
+#include <atomic>
 #include <stdint.h>
 
 struct MediaPlayer : public AudioStream
@@ -88,9 +89,9 @@ struct MediaPlayer : public AudioStream
 		SDL_threadID mpThreadId;
 
 		// hacky messaging between threads
-		volatile bool hasBegun;
-		volatile bool stopMpThread;
-		volatile bool hasPresentedLastFrame;
+		std::atomic_bool hasBegun;
+		std::atomic_bool stopMpThread;
+		std::atomic_bool hasPresentedLastFrame;
 	};
 
 	Context * context;
