@@ -96,7 +96,7 @@ void ofxJpegGlitch::glitch() {
     int bpp = 0;
     int width = 0;
     int height = 0;
-    int resetMarkerNum = 0;
+    //int resetMarkerNum = 0;
     
     while(cur < buf.size()) {
         MarkerType marker = calcMarkerType(bytes, cur);
