@@ -81,7 +81,7 @@ namespace MP
 		void Clear();
 
 	private:
-		Mutex m_mutex;
+		mutable Mutex m_mutex;
 
 		std::list<VideoFrame*> m_freeList;
 		std::list<VideoFrame*> m_consumeList;

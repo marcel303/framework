@@ -351,7 +351,11 @@ namespace MP
 
 	bool VideoBuffer::IsFull() const
 	{
-		return m_freeList.empty();
+		m_mutex.Lock();
+		const bool result = m_freeList.empty();
+		m_mutex.Unlock();
+		
+		return result;
 	}
 
 	void VideoBuffer::Clear()
