@@ -45,7 +45,7 @@
 */
 
 #define RMT_IMPL
-#include "Remotery.h"
+#include "remotery.h"
 
 #ifdef RMT_PLATFORM_WINDOWS
   #pragma comment(lib, "ws2_32.lib")
@@ -506,6 +506,7 @@ static void WriteFence()
 }
 
 
+/*
 // Get a shared value with acquire semantics, ensuring the read is complete
 // before the function returns.
 static void* LoadAcquire(void* volatile const* addr)
@@ -525,6 +526,7 @@ static void StoreRelease(void* volatile*  addr, void* v)
     WriteFence();
     *addr = v;
 }
+*/
 
 
 
