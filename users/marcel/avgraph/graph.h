@@ -1077,6 +1077,7 @@ struct GraphEdit : GraphEditConnection
 	std::set<GraphNodeId> selectedNodes;
 	std::set<GraphLinkId> highlightedLinks;
 	std::set<GraphLinkId> selectedLinks;
+	std::set<GraphLinkRoutePoint*> highlightedLinkRoutePoints;
 	std::set<GraphLinkRoutePoint*> selectedLinkRoutePoints;
 	
 	SocketSelection highlightedSockets;

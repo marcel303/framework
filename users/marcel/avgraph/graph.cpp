@@ -1768,7 +1768,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	//
 	
 	y += kPadding;
-	fassert(y == sy);
+	//fassert(y == sy); // fixme
 }
 
 //
@@ -2252,6 +2252,7 @@ bool GraphEdit::tick(const float dt)
 	
 	highlightedSockets = SocketSelection();
 	highlightedLinks.clear();
+	highlightedLinkRoutePoints.clear();
 	
 	SDL_Cursor * cursor = SDL_GetDefaultCursor();
 	
@@ -2292,6 +2293,11 @@ bool GraphEdit::tick(const float dt)
 				if (hitTestResult.hasLink)
 				{
 					highlightedLinks.insert(hitTestResult.link->id);
+				}
+				
+				if (hitTestResult.hasLinkRoutePoint)
+				{
+					highlightedLinkRoutePoints.insert(hitTestResult.linkRoutePoint);
 				}
 			}
 			
@@ -3862,13 +3868,12 @@ void GraphEdit::draw() const
 	{
 		for (auto & linkItr : graph->links)
 		{
-			auto linkId = linkItr.first;
 			auto & link = linkItr.second;
 			
 			for (auto & routePoint : link.editorRoutePoints)
 			{
 				const bool isSelected = selectedLinkRoutePoints.count(&routePoint) != 0;
-				const bool isHighlighted = false; // todo : highlightedLinks.count(linkId) != 0;
+				const bool isHighlighted = highlightedLinkRoutePoints.count(&routePoint) != 0;
 				
 				if (isSelected)
 					setColor(127, 127, 255);
