@@ -181,7 +181,10 @@ void ImageCpuDelayLine::init(const int _maxHistorySize, const int _saveBufferSiz
 
 void ImageCpuDelayLine::shut()
 {
-	compressWait();
+	if (mutex != nullptr)
+	{
+		compressWait();
+	}
 	
 	delete cachedLoadData;
 	cachedLoadData = nullptr;
