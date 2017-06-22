@@ -88,7 +88,7 @@ struct Deepbelief
 		
 		//
 		
-		bool isInitialized;
+		std::atomic_bool isInitialized;
 		
 		std::string networkFilename;
 		void * network;
