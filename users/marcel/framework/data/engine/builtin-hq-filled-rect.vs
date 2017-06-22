@@ -32,7 +32,7 @@ void main()
 	{
 		float scale = length(ModelViewMatrix[0].xyz);
 		
-		vec2 s = (p11 - p12) * 0.5;
+		vec2 s = (p12 - p11) * 0.5;
 		vec2 m = (p11 + p12) * 0.5;
 		p11 = m - s / scale;
 		p12 = m + s / scale;
