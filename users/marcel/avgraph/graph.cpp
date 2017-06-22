@@ -4205,27 +4205,26 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 	
 	const float nodeSy = Calc::Lerp(definition.syFolded, definition.sy, isFolded ? node.editorFoldAnimTime * node.editorFoldAnimTimeRcp : 1.f - node.editorFoldAnimTime * node.editorFoldAnimTimeRcp);
 	
+	Color color;
+	
 	if (!isEnabled)
-		setColor(191, 191, 191, 255);
+		color = Color(191, 191, 191, 255);
 	else if (isSelected)
-		setColor(63, 63, 127, 255);
+		color = Color(63, 63, 127, 255);
 	else
-		setColor(63, 63, 63, 255);
-	drawRect(0.f, 0.f, definition.sx, nodeSy);
+		color = Color(63, 63, 63, 255);
 	
 	if (editorOptions.showOneShotActivity)
 	{
 		const float activeAnim = node.editorIsActiveAnimTime * node.editorIsActiveAnimTimeRcp;
-		setColor(63, 63, 255, 255 * activeAnim);
-		drawRect(0.f, 0.f, definition.sx, nodeSy);
+		color = color.interp(Color(63, 63, 255), activeAnim);
 	}
 	
 	if (editorOptions.showContinuousActivity)
 	{
 		if (node.editorIsActiveContinuous)
 		{
-			setColor(63, 63, 255, 127 + 127 * (std::cos(framework.time * 8.f) + 1.f) / 2.f);
-			drawRect(0.f, 0.f, definition.sx, nodeSy);
+			color = color.interp(Color(63, 63, 255), .5f + .5f * (std::cos(framework.time * 8.f) + 1.f) / 2.f);
 		}
 	}
 	
@@ -4234,18 +4233,35 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 		const int timeUs = realTimeConnection->getNodeCpuTimeUs(node.id);
 		const float t = timeUs / 1000.0 / 33.0;
 		
-		ParticleColor color;
-		editorOptions.cpuHeatColors.sample(t, true, color);
+		ParticleColor particleColor;
+		editorOptions.cpuHeatColors.sample(t, true, particleColor);
 		
-		setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
-		drawRect(0.f, 0.f, definition.sx, nodeSy);
+		color = color.interp(Color(particleColor.rgba[0], particleColor.rgba[1], particleColor.rgba[2]), particleColor.rgba[3]);
 	}
+	
+#if 1
+	hqBegin(HQ_FILLED_ROUNDED_RECTS);
+	{
+		const int border = 3;
+		const int radius = 5;
+		
+		setColor(isSelected ? colorWhite : colorBlack);
+		hqFillRoundedRect(-border, -border, definition.sx + border, nodeSy + border, radius + border);
+		
+		setColor(color);
+		hqFillRoundedRect(0.f, 0.f, definition.sx, nodeSy, radius);
+	}
+	hqEnd();
+#else
+	setColor(color);
+	drawRect(0.f, 0.f, definition.sx, nodeSy);
+#endif
 	
 	if (isSelected)
 		setColor(255, 255, 255, 255);
 	else
 		setColor(127, 127, 127, 255);
-	drawRectLine(0.f, 0.f, definition.sx, nodeSy);
+	//drawRectLine(0.f, 0.f, definition.sx, nodeSy);
 	
 	setFontMSDF("calibri.ttf");
 	setColor(255, 255, 255);
