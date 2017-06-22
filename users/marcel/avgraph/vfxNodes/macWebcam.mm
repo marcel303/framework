@@ -1,5 +1,3 @@
-#if 1
-
 #import "Debugging.h"
 #import "Log.h"
 #import "macWebcam.h"
@@ -9,26 +7,23 @@
 #include <SDL2/SDL.h>
 
 @interface MacWebcamImpl : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
-
-@property (assign) AVCaptureSession * session;
-@property (assign) AVCaptureDevice * device;
-@property (assign) AVCaptureDeviceInput * deviceInput;
-@property (assign) AVCaptureVideoDataOutput * videoOutput;
-@property (assign) dispatch_queue_t queue;
-@property MacWebcamContext * webcamContext;
-@property int nextImageIndex;
-
+	@property (assign) AVCaptureSession * session;
+	@property (assign) AVCaptureDevice * device;
+	@property (assign) AVCaptureDeviceInput * deviceInput;
+	@property (assign) AVCaptureVideoDataOutput * videoOutput;
+	@property (assign) dispatch_queue_t queue;
+	@property MacWebcamContext * webcamContext;
+	@property int nextImageIndex;
 @end
 
 @implementation MacWebcamImpl
-
-@synthesize session;
-@synthesize device;
-@synthesize deviceInput;
-@synthesize videoOutput;
-@synthesize queue;
-@synthesize webcamContext;
-@synthesize nextImageIndex;
+	@synthesize session;
+	@synthesize device;
+	@synthesize deviceInput;
+	@synthesize videoOutput;
+	@synthesize queue;
+	@synthesize webcamContext;
+	@synthesize nextImageIndex;
 
 - (id)init
 {
@@ -66,37 +61,15 @@
 {
 	NSError * error = nullptr;
 	
-	uint64_t ts1 = g_TimerRT.TimeUS_get();
+	// allocate a new AV capture session
 	
 	Assert(session == nullptr);
 	session = [[AVCaptureSession alloc] init];
 	
-	uint64_t ts2 = g_TimerRT.TimeUS_get();
-	
-	uint64_t tc1 = g_TimerRT.TimeUS_get();
-	
-#if 0
 	[session beginConfiguration];
 	
-	if (true && [session canSetSessionPreset:AVCaptureSessionPreset1280x720])
-	{
-		session.sessionPreset = AVCaptureSessionPreset1280x720;
-	}
-	else if ([session canSetSessionPreset:AVCaptureSessionPreset640x480])
-	{
-		session.sessionPreset = AVCaptureSessionPreset640x480;
-	}
-	else
-	{
-		return false;
-	}
-	
-	[session commitConfiguration];
-#endif
-
-	uint64_t tc2 = g_TimerRT.TimeUS_get();
-	
-	uint64_t td1 = g_TimerRT.TimeUS_get();
+	// get the default capture device
+	// todo : select the correct capture device
 	
 	device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
 	
@@ -105,9 +78,7 @@
 		return false;
 	}
 	
-	uint64_t td2 = g_TimerRT.TimeUS_get();
-	
-	uint64_t ti1 = g_TimerRT.TimeUS_get();
+	// get the input associated with the device
 	
 	deviceInput = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
 	
@@ -118,32 +89,30 @@
 	
 	[session addInput:deviceInput];
 	
-	uint64_t ti2 = g_TimerRT.TimeUS_get();
-	
-	uint64_t to1 = g_TimerRT.TimeUS_get();
+	// add a video data output. this will let us capture the video feed as pixel data
 	
 	videoOutput = [[AVCaptureVideoDataOutput alloc] init];
-	//kCVPixelFormatType_32ABGR
-	// todo : setting videoSettings here overrides session preset params like resolution
-	// todo : figure out how to set resolution on output
-	// todo : figure out how to set desired framerate (60 fps)
-	// todo : figure out what's the most efficient output format. by default it doesn't output 32 bit BGRA
 	
-#if 1
-NSDictionary * newSettings =
-		@{
-			(NSString *)kCVPixelBufferPixelFormatTypeKey : @(kCVPixelFormatType_32BGRA)
-		};
-#else
-	NSDictionary * newSettings =
-		@{
-			(NSString *)kCVPixelBufferPixelFormatTypeKey : @(kCVPixelFormatType_32BGRA),
-			(NSString *)kCVPixelBufferWidthKey : @(640),
-			(NSString *)kCVPixelBufferHeightKey : @(480)
-		};
-#endif
+	// todo : figure out what's the most efficient output format. by default it doesn't output 32 bit BGRA. perhaps we should capture RGBA when available. or YUV when not. what is most efficient for the OS/driver ?
 	
-	/*
+	NSMutableDictionary * newSettings = [[[NSMutableDictionary alloc] init] autorelease];
+	
+	[newSettings setValue:@(kCVPixelFormatType_32BGRA) forKey:(NSString*)kCVPixelBufferPixelFormatTypeKey];
+	
+	if ([session canSetSessionPreset:AVCaptureSessionPreset640x480])
+	{
+		[newSettings setValue:@640 forKey:(NSString *)kCVPixelBufferWidthKey];
+		[newSettings setValue:@480 forKey:(NSString *)kCVPixelBufferHeightKey];
+	}
+	else if ([session canSetSessionPreset:AVCaptureSessionPreset1280x720])
+	{
+		[newSettings setValue:@1280 forKey:(NSString *)kCVPixelBufferWidthKey];
+		[newSettings setValue:@720 forKey:(NSString *)kCVPixelBufferHeightKey];
+	}
+	
+#if 0
+	// print the current settings and list the available pixel formats
+	
 	NSDictionary * oldSettings = videoOutput.videoSettings;
 	
 	NSArray * pixelFormats = [videoOutput availableVideoCVPixelFormatTypes];
@@ -162,11 +131,10 @@ NSDictionary * newSettings =
 		
 		printf("%u: %c%c%c%c\n", value, c4, c3, c2, c1);
 	}
-	*/
+#endif
 	
 	videoOutput.videoSettings = newSettings;
 	[videoOutput setAlwaysDiscardsLateVideoFrames:YES];
-
 	[videoOutput setSampleBufferDelegate:self queue:queue];
 
 	if ([session canAddOutput:videoOutput])
@@ -178,27 +146,11 @@ NSDictionary * newSettings =
 		return false;
 	}
 	
-	uint64_t to2 = g_TimerRT.TimeUS_get();
+	[session commitConfiguration];
 	
-	uint64_t tr1 = g_TimerRT.TimeUS_get();
+	// begin capturing !
 	
 	[session startRunning];
-	
-	uint64_t tr2 = g_TimerRT.TimeUS_get();
-	
-	LOG_DBG("ts: %.2fms, td: %.2fms, ti: %.2fms, to: %.2fms, tr: %.2fms",
-		(ts2 - ts1) / 1000.0,
-		(td2 - td1) / 1000.0,
-		(ti2 - ti1) / 1000.0,
-		(to2 - ti1) / 1000.0,
-		(tr2 - tr1) / 1000.0);
-	
-	NSArray * supportedFrameRateRanges = device.activeFormat.videoSupportedFrameRateRanges;
-	
-	for (AVFrameRateRange * frr in supportedFrameRateRanges)
-	{
-		LOG_DBG("frateRateRange: %.2f - %.2f", frr.minFrameRate, frr.maxFrameRate);
-	}
 	
 	return true;
 }
@@ -234,13 +186,11 @@ NSDictionary * newSettings =
 	
 	if (deviceInput != nullptr)
 	{
-		//[deviceInput release];
 		deviceInput = nullptr;
 	}
 	
 	if (device != nullptr)
 	{
-		//[device release];
 		device = nullptr;
 	}
 	
@@ -595,5 +545,3 @@ void MacWebcam::tick()
 	}
 	SDL_UnlockMutex(context->mutex);
 }
-
-#endif
