@@ -33,6 +33,7 @@ struct VfxNodeMath : VfxNodeBase
 {
 	enum Input
 	{
+		kInput_Type,
 		kInput_A,
 		kInput_B,
 		kInput_COUNT
@@ -71,17 +72,18 @@ struct VfxNodeMath : VfxNodeBase
 		kType_Semitone
 	};
 	
-	Type type;
+	Type initType;
 	float result;
 	
-	VfxNodeMath(Type _type)
+	VfxNodeMath(Type _type = kType_Unknown)
 		: VfxNodeBase()
-		, type(kType_Unknown)
+		, initType(kType_Unknown)
 		, result(0.f)
 	{
-		type = _type;
+		initType = _type;
 		
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Type, kVfxPlugType_Int);
 		addInput(kInput_A, kVfxPlugType_Float);
 		addInput(kInput_B, kVfxPlugType_Float);
 		addOutput(kOutput_R, kVfxPlugType_Float, &result);
@@ -89,6 +91,7 @@ struct VfxNodeMath : VfxNodeBase
 	
 	virtual void tick(const float dt) override
 	{
+		const Type type = initType == kType_Unknown ? (Type)getInputInt(kInput_Type, kType_Add) : initType;
 		const float a = getInputFloat(kInput_A, 0.f);
 		const float b = getInputFloat(kInput_B, 0.f);
 		
