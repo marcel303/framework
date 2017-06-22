@@ -10,24 +10,36 @@
 
 @interface MacWebcamImpl : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 
+@property (assign) AVCaptureSession * session;
+@property (assign) AVCaptureDevice * device;
+@property (assign) AVCaptureDeviceInput * deviceInput;
+@property (assign) AVCaptureVideoDataOutput * videoOutput;
+@property (assign) dispatch_queue_t queue;
+@property MacWebcamContext * webcamContext;
+@property int nextImageIndex;
+
 @end
 
 @implementation MacWebcamImpl
 
-AVCaptureSession * session;
-AVCaptureVideoDataOutput * videoOutput;
-dispatch_queue_t queue;
-MacWebcam * webcam = nullptr;
-int nextImageIndex = 0;
+@synthesize session;
+@synthesize device;
+@synthesize deviceInput;
+@synthesize videoOutput;
+@synthesize queue;
+@synthesize webcamContext;
+@synthesize nextImageIndex;
 
 - (id)init
 {
+	[super init];
+	
 	return self;
 }
 
-- (bool)initWebcam:(MacWebcam*)webcam
+- (bool)initWebcam:(MacWebcamContext*)_webcamContext
 {
-	if ([self doInitWebcam:webcam] == false)
+	if ([self initContext:_webcamContext] == false || [self initSession] == false)
 	{
 		[self shut];
 		
@@ -39,12 +51,24 @@ int nextImageIndex = 0;
 	}
 }
 
-- (void)configureSession
+- (bool)initContext:(MacWebcamContext*)_webcamContext
+{
+	Assert(webcamContext == nullptr);
+	webcamContext = _webcamContext;
+	
+	Assert(queue == 0);
+	queue = dispatch_queue_create("VideoOutputQueue", DISPATCH_QUEUE_SERIAL);
+	
+	return true;
+}
+
+- (bool)initSession
 {
 	NSError * error = nullptr;
 	
 	uint64_t ts1 = g_TimerRT.TimeUS_get();
 	
+	Assert(session == nullptr);
 	session = [[AVCaptureSession alloc] init];
 	
 	uint64_t ts2 = g_TimerRT.TimeUS_get();
@@ -64,7 +88,7 @@ int nextImageIndex = 0;
 	}
 	else
 	{
-		return;
+		return false;
 	}
 	
 	[session commitConfiguration];
@@ -74,33 +98,27 @@ int nextImageIndex = 0;
 	
 	uint64_t td1 = g_TimerRT.TimeUS_get();
 	
-	AVCaptureDevice * device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+	device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
 	
 	if (device == nullptr)
 	{
-		return;
+		return false;
 	}
 	
 	uint64_t td2 = g_TimerRT.TimeUS_get();
 	
 	uint64_t ti1 = g_TimerRT.TimeUS_get();
 	
-	AVCaptureDeviceInput * input = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
+	deviceInput = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
 	
-	if (input == nullptr)
+	if (deviceInput == nullptr)
 	{
-		return;
+		return false;
 	}
 	
-	[session addInput:input];
+	[session addInput:deviceInput];
 	
 	uint64_t ti2 = g_TimerRT.TimeUS_get();
-	
-	uint64_t tq1 = g_TimerRT.TimeUS_get();
-	
-	//queue = dispatch_queue_create("VideoOutputQueue", DISPATCH_QUEUE_SERIAL);
-	
-	uint64_t tq2 = g_TimerRT.TimeUS_get();
 	
 	uint64_t to1 = g_TimerRT.TimeUS_get();
 	
@@ -157,7 +175,7 @@ NSDictionary * newSettings =
 	}
 	else
 	{
-		return;
+		return false;
 	}
 	
 	uint64_t to2 = g_TimerRT.TimeUS_get();
@@ -168,12 +186,11 @@ NSDictionary * newSettings =
 	
 	uint64_t tr2 = g_TimerRT.TimeUS_get();
 	
-	LOG_DBG("ts: %.2fms, td: %.2fms, ti: %.2fms, to: %.2fms, tq: %.2fms, tr: %.2fms",
+	LOG_DBG("ts: %.2fms, td: %.2fms, ti: %.2fms, to: %.2fms, tr: %.2fms",
 		(ts2 - ts1) / 1000.0,
 		(td2 - td1) / 1000.0,
 		(ti2 - ti1) / 1000.0,
 		(to2 - ti1) / 1000.0,
-		(tq2 - tq1) / 1000.0,
 		(tr2 - tr1) / 1000.0);
 	
 	NSArray * supportedFrameRateRanges = device.activeFormat.videoSupportedFrameRateRanges;
@@ -182,23 +199,28 @@ NSDictionary * newSettings =
 	{
 		LOG_DBG("frateRateRange: %.2f - %.2f", frr.minFrameRate, frr.maxFrameRate);
 	}
-}
-
-- (bool)doInitWebcam:(MacWebcam*)_webcam
-{
-	webcam = _webcam;
-	
-	queue = dispatch_queue_create("VideoOutputQueue", DISPATCH_QUEUE_SERIAL);
-	
-	dispatch_async( queue, ^{
-		[self configureSession];
-    });
 	
 	return true;
 }
 
 - (void)shut
 {
+	LOG_DBG("shut", 0);
+	
+	[self shutSession];
+	
+	if (queue != 0)
+	{
+		dispatch_barrier_sync(queue, ^{});
+	}
+	
+	[self shutContext];
+}
+
+- (void)shutSession
+{
+	LOG_DBG("shutSession", 0);
+	
 	if (session != nullptr)
 	{
 		[session stopRunning];
@@ -209,19 +231,17 @@ NSDictionary * newSettings =
 		[videoOutput release];
 		videoOutput = nullptr;
 	}
-
-    if (queue != 0)
-    {
-		dispatch_sync(queue, ^{ });
-		
-        dispatch_release(queue);
-        queue = 0;
-    }
 	
-	if (videoOutput != nullptr)
+	if (deviceInput != nullptr)
 	{
-		[videoOutput release];
-		videoOutput = nullptr;
+		//[deviceInput release];
+		deviceInput = nullptr;
+	}
+	
+	if (device != nullptr)
+	{
+		//[device release];
+		device = nullptr;
 	}
 	
 	if (session != nullptr)
@@ -229,29 +249,60 @@ NSDictionary * newSettings =
 		[session release];
 		session = nullptr;
 	}
+}
+
+- (void)shutContext
+{
+	LOG_DBG("shutContext", 0);
 	
-	webcam = nullptr;
+    if (queue != 0)
+    {
+        dispatch_release(queue);
+        queue = 0;
+    }
+}
+
+static __m128i swizzle(const __m128i src)
+{
+	__m128i srcL = _mm_unpacklo_epi8(src, _mm_setzero_si128());
+	__m128i srcH = _mm_unpackhi_epi8(src, _mm_setzero_si128());
+	
+	srcL = _mm_shufflelo_epi16(srcL, (2 << 0) | (1 << 2) | (0 << 4) | (3 << 6));
+	srcL = _mm_shufflehi_epi16(srcL, (2 << 0) | (1 << 2) | (0 << 4) | (3 << 6));
+	
+	srcH = _mm_shufflelo_epi16(srcH, (2 << 0) | (1 << 2) | (0 << 4) | (3 << 6));
+	srcH = _mm_shufflehi_epi16(srcH, (2 << 0) | (1 << 2) | (0 << 4) | (3 << 6));
+	
+	return _mm_packus_epi16(srcL, srcH);
 }
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput
      didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
      fromConnection:(AVCaptureConnection *)connection
 {
+	//LOG_DBG("captureOutput", 0);
+	
 	CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-	CVPixelBufferLockBaseAddress(imageBuffer, 0);
 	
 	const size_t bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer);
     const size_t sx = CVPixelBufferGetWidth(imageBuffer);
     const size_t sy = CVPixelBufferGetHeight(imageBuffer);
-
-	uint8_t * baseAddress = (uint8_t*)CVPixelBufferGetBaseAddress(imageBuffer);
+	
+	//
 	
 	MacWebcamImage * image = new MacWebcamImage(sx, sy);
 	
 	image->pitch = (sx * 4 + 15) & (~15);
 	image->index = nextImageIndex++;
 	
-	// todo : benchmark SSE optimized version
+	//
+
+	CVPixelBufferLockBaseAddress(imageBuffer, 0);
+	uint8_t * baseAddress = (uint8_t*)CVPixelBufferGetBaseAddress(imageBuffer);
+	
+	//
+	
+	uint64_t t1 = g_TimerRT.TimeUS_get();
 	
 #if 1
 	for (int y = 0; y < sy; ++y)
@@ -266,33 +317,22 @@ NSDictionary * newSettings =
 		
 		for (int x = 0; x < sx8; ++x)
 		{
-			const __m128i src1 = _mm_load_si128(srcItr++);
-			const __m128i src2 = _mm_load_si128(srcItr++);
+			const __m128i src1 = _mm_load_si128(srcItr + 0);
+			const __m128i src2 = _mm_load_si128(srcItr + 1);
+			
+			srcItr += 2;
 			
 			//
 			
-			__m128i srcL1 = _mm_unpacklo_epi8(src1, _mm_setzero_si128());
-			__m128i srcH1 = _mm_unpackhi_epi8(src1, _mm_setzero_si128());
-			srcL1 = _mm_shufflelo_epi16(srcL1, (2 << 0) | (1 << 2) | (0 << 4) | (3 << 6));
-			srcL1 = _mm_shufflehi_epi16(srcL1, (2 << 0) | (1 << 2) | (0 << 4) | (3 << 6));
-			srcH1 = _mm_shufflelo_epi16(srcH1, (2 << 0) | (1 << 2) | (0 << 4) | (3 << 6));
-			srcH1 = _mm_shufflehi_epi16(srcH1, (2 << 0) | (1 << 2) | (0 << 4) | (3 << 6));
-			const __m128i dst1 = _mm_packus_epi16(srcL1, srcH1);
+			const __m128i dst1 = swizzle(src1);
+			const __m128i dst2 = swizzle(src2);
 			
 			//
 			
-			__m128i srcL2 = _mm_unpacklo_epi8(src2, _mm_setzero_si128());
-			__m128i srcH2 = _mm_unpackhi_epi8(src2, _mm_setzero_si128());
-			srcL2 = _mm_shufflelo_epi16(srcL2, (2 << 0) | (1 << 2) | (0 << 4) | (3 << 6));
-			srcL2 = _mm_shufflehi_epi16(srcL2, (2 << 0) | (1 << 2) | (0 << 4) | (3 << 6));
-			srcH2 = _mm_shufflelo_epi16(srcH2, (2 << 0) | (1 << 2) | (0 << 4) | (3 << 6));
-			srcH2 = _mm_shufflehi_epi16(srcH2, (2 << 0) | (1 << 2) | (0 << 4) | (3 << 6));
-			const __m128i dst2 = _mm_packus_epi16(srcL2, srcH2);
+			_mm_store_si128(dstItr + 0, dst1);
+			_mm_store_si128(dstItr + 1, dst2);
 			
-			//
-			
-			_mm_store_si128(&dstItr[x * 2 + 0], dst1);
-			_mm_store_si128(&dstItr[x * 2 + 1], dst2);
+			dstItr += 2;
 		}
 		
 		for (int x = sx8 * 8; x < sx; ++x)
@@ -319,23 +359,33 @@ NSDictionary * newSettings =
 	}
 #endif
 	
+	const uint64_t t2 = g_TimerRT.TimeUS_get();
+	const uint64_t dt = t2 - t1;
+	webcamContext->conversionTimeUsAvg = (webcamContext->conversionTimeUsAvg * 90 + dt * 10) / 100;
+	
+	//
+	
 	CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
+	
+	//
 	
 	MacWebcamImage * oldImage1 = nullptr;
 	MacWebcamImage * oldImage2 = nullptr;
 	
-	SDL_LockMutex(webcam->mutex);
+	SDL_LockMutex(webcamContext->mutex);
 	{
-		oldImage1 = webcam->newImage;
-		webcam->newImage = nullptr;
+		oldImage1 = webcamContext->newImage;
+		webcamContext->newImage = nullptr;
 		
-		oldImage2 = webcam->oldImage;
-		webcam->oldImage = nullptr;
+		oldImage2 = webcamContext->oldImage;
+		webcamContext->oldImage = nullptr;
 		
-		Assert(webcam->newImage == nullptr);
-		webcam->newImage = image;
+		Assert(webcamContext->newImage == nullptr);
+		webcamContext->newImage = image;
 	}
-	SDL_UnlockMutex(webcam->mutex);
+	SDL_UnlockMutex(webcamContext->mutex);
+	
+	//
 	
 	delete oldImage1;
 	oldImage1 = nullptr;
@@ -362,12 +412,91 @@ MacWebcamImage::~MacWebcamImage()
 	data = nullptr;
 }
 
-MacWebcam::MacWebcam()
-	: webcamImpl(nullptr)
-	, image(nullptr)
-	, newImage(nullptr)
+//
+
+MacWebcamContext::MacWebcamContext()
+	: newImage(nullptr)
 	, oldImage(nullptr)
+	, cond(nullptr)
 	, mutex(nullptr)
+	, stop(false)
+	, conversionTimeUsAvg(0)
+
+{
+	cond = SDL_CreateCond();
+	
+	mutex = SDL_CreateMutex();
+}
+
+MacWebcamContext::~MacWebcamContext()
+{
+	SDL_DestroyMutex(mutex);
+	mutex = nullptr;
+	
+	SDL_DestroyCond(cond);
+	cond = nullptr;
+	
+	delete newImage;
+	newImage = nullptr;
+	
+	delete oldImage;
+	oldImage = nullptr;
+}
+
+//
+
+static int MacWebcamThreadMain(void * obj)
+{
+	MacWebcamContext * context = (MacWebcamContext*)obj;
+	
+	MacWebcamImpl * webcamImpl = [[MacWebcamImpl alloc] init];
+
+	if ([webcamImpl initWebcam:context] == false)
+	{
+		LOG_DBG("failed to init webcam", 0);
+		
+		[webcamImpl release];
+		webcamImpl = nullptr;
+		
+		SDL_LockMutex(context->mutex);
+		{
+			if (context->stop == false)
+			{
+				SDL_CondWait(context->cond, context->mutex);
+			}
+		}
+		SDL_UnlockMutex(context->mutex);
+	}
+	else
+	{
+		SDL_LockMutex(context->mutex);
+		{
+			if (context->stop == false)
+			{
+				SDL_CondWait(context->cond, context->mutex);
+			}
+		}
+		SDL_UnlockMutex(context->mutex);
+		
+		[webcamImpl shut];
+		
+		[webcamImpl release];
+		webcamImpl = nullptr;
+	}
+	
+	delete context;
+	context = nullptr;
+	
+	return 0;
+}
+
+//
+
+MacWebcam::MacWebcam(const bool _threaded)
+	: context(nullptr)
+	, image(nullptr)
+	, threaded(_threaded)
+	, nonThreadedWebcamImpl(nullptr)
 {
 }
 
@@ -382,62 +511,89 @@ bool MacWebcam::init()
 	
 	//
 	
-	mutex = SDL_CreateMutex();
+	Assert(context == nullptr);
+	context = new MacWebcamContext();
 	
-	MacWebcamImpl * impl = [[MacWebcamImpl alloc] init];
-
-	if ([impl initWebcam:this] == false)
+	if (threaded)
 	{
-		[impl release];
-		impl = nullptr;
+		SDL_Thread * thread = SDL_CreateThread(MacWebcamThreadMain, "MacWebcam", context);
+		SDL_DetachThread(thread);
 	}
+	else
+	{
+		MacWebcamImpl * webcamImpl = [[MacWebcamImpl alloc] init];
 
-	webcamImpl = impl;
+		if ([webcamImpl initWebcam:context] == false)
+		{
+			LOG_DBG("failed to init webcam", 0);
+			
+			[webcamImpl release];
+			webcamImpl = nullptr;
+		}
+		
+		nonThreadedWebcamImpl = webcamImpl;
+	}
 	
-	return impl != nullptr;
+	return true;
 }
 
 void MacWebcam::shut()
 {
-	MacWebcamImpl * impl = (MacWebcamImpl*)webcamImpl;
-
-	if (impl != nullptr)
+	if (context != nullptr)
 	{
-		[impl shut];
-		
-		[impl release];
-		impl = nullptr;
+		if (threaded)
+		{
+			// tell webcam thread to clean up after itself
+			
+			SDL_LockMutex(context->mutex);
+			{
+				context->stop = true;
+				
+				SDL_CondSignal(context->cond);
+			}
+			SDL_UnlockMutex(context->mutex);
+			
+			context = nullptr;
+		}
+		else
+		{
+			MacWebcamImpl * webcamImpl = (MacWebcamImpl*)nonThreadedWebcamImpl;
+			
+			[webcamImpl shut];
+			
+			[webcamImpl release];
+			webcamImpl = nullptr;
+			
+			nonThreadedWebcamImpl = nullptr;
+			
+			delete context;
+			context = nullptr;
+		}
 	}
-
-	webcamImpl = impl;
 	
-	SDL_DestroyMutex(mutex);
-	mutex = nullptr;
+	// clean up our own stuff
 	
 	delete image;
 	image = nullptr;
-	
-	delete newImage;
-	newImage = nullptr;
-	
-	delete oldImage;
-	oldImage = nullptr;
 }
 
 void MacWebcam::tick()
 {
-	SDL_LockMutex(mutex);
+	if (context == nullptr)
+		return;
+	
+	SDL_LockMutex(context->mutex);
 	{
-		if (newImage != nullptr)
+		if (context->newImage != nullptr)
 		{
-			Assert(oldImage == nullptr);
-			oldImage = image;
+			Assert(context->oldImage == nullptr);
+			context->oldImage = image;
 			
-			image = newImage;
-			newImage = nullptr;
+			image = context->newImage;
+			context->newImage = nullptr;
 		}
 	}
-	SDL_UnlockMutex(mutex);
+	SDL_UnlockMutex(context->mutex);
 }
 
 #endif

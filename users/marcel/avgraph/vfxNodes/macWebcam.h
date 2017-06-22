@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+struct SDL_cond;
 struct SDL_mutex;
 
 struct MacWebcamImage
@@ -18,17 +19,32 @@ struct MacWebcamImage
 	~MacWebcamImage();
 };
 
-struct MacWebcam
+struct MacWebcamContext
 {
-	void * webcamImpl;
-	
-	MacWebcamImage * image;
 	MacWebcamImage * newImage;
 	MacWebcamImage * oldImage;
 	
+	SDL_cond * cond;
 	SDL_mutex * mutex;
+	bool stop;
 	
-	MacWebcam();
+	uint64_t conversionTimeUsAvg;
+	
+	MacWebcamContext();
+	~MacWebcamContext();
+};
+
+struct MacWebcam
+{
+	MacWebcamContext * context;
+	
+	MacWebcamImage * image;
+	
+	bool threaded;
+	
+	void * nonThreadedWebcamImpl;
+	
+	MacWebcam(const bool threaded = true);
 	~MacWebcam();
 
 	bool init();
