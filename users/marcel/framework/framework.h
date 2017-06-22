@@ -1331,6 +1331,7 @@ enum HQ_TYPE
 	HQ_FILLED_TRIANGLES,
 	HQ_FILLED_CIRCLES,
 	HQ_FILLED_RECTS,
+	HQ_FILLED_ROUNDED_RECTS,
 	HQ_STROKED_TRIANGLES,
 	HQ_STROKED_CIRCLES,
 	HQ_STROKED_RECTS
@@ -1347,6 +1348,7 @@ void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float str
 void hqFillTriangle(float x1, float y1, float x2, float y2, float x3, float y3);
 void hqFillCircle(float x, float y, float radius);
 void hqFillRect(float x1, float y1, float x2, float y2);
+void hqFillRoundedRect(float x1, float y1, float x2, float y2, float radius);
 
 void hqStrokeTriangle(float x1, float y1, float x2, float y2, float x3, float y3, float stroke);
 void hqStrokeCircle(float x, float y, float radius, float stroke);

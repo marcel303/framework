@@ -6794,6 +6794,11 @@ static void setShader_HqFilledRects()
 	setShader(globals.builtinShaders->hqFilledRect);
 }
 
+static void setShader_HqFilledRoundedRects()
+{
+	setShader(globals.builtinShaders->hqFilledRoundedRect);
+}
+
 static void setShader_HqStrokedTriangles()
 {
 	setShader(globals.builtinShaders->hqStrokeTriangle);
@@ -6831,6 +6836,11 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 	case HQ_FILLED_RECTS:
 		gxBegin(GL_QUADS);
 		setShader_HqFilledRects();
+		break;
+	
+	case HQ_FILLED_ROUNDED_RECTS:
+		gxBegin(GL_QUADS);
+		setShader_HqFilledRoundedRects();
 		break;
 
 	case HQ_STROKED_TRIANGLES:
@@ -6885,6 +6895,10 @@ void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 		break;
 
 	case HQ_FILLED_RECTS:
+		gxBegin(GL_QUADS);
+		break;
+	
+	case HQ_FILLED_ROUNDED_RECTS:
 		gxBegin(GL_QUADS);
 		break;
 
@@ -6952,6 +6966,13 @@ void hqFillCircle(float x, float y, float radius)
 
 void hqFillRect(float x1, float y1, float x2, float y2)
 {
+	for (int i = 0; i < 4; ++i)
+		gxVertex4f(x1, y1, x2, y2);
+}
+
+void hqFillRoundedRect(float x1, float y1, float x2, float y2, float radius)
+{
+	gxNormal3f(radius, 0.f, 0.f);
 	for (int i = 0; i < 4; ++i)
 		gxVertex4f(x1, y1, x2, y2);
 }

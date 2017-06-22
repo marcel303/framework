@@ -53,6 +53,8 @@
 #include "data/engine/builtin-hq-filled-circle.vs"
 #include "data/engine/builtin-hq-filled-rect.ps"
 #include "data/engine/builtin-hq-filled-rect.vs"
+#include "data/engine/builtin-hq-filled-rounded-rect.ps"
+#include "data/engine/builtin-hq-filled-rounded-rect.vs"
 #include "data/engine/builtin-hq-filled-triangle.ps"
 #include "data/engine/builtin-hq-filled-triangle.vs"
 #include "data/engine/builtin-hq-line.ps"
@@ -119,6 +121,8 @@ void registerBuiltinShaders()
 	shaderSource("engine/builtin-hq-filled-circle.vs", s_hqFilledCircleVs);
 	shaderSource("engine/builtin-hq-filled-rect.ps", s_hqFilledRectPs);
 	shaderSource("engine/builtin-hq-filled-rect.vs", s_hqFilledRectVs);
+	shaderSource("engine/builtin-hq-filled-rounded-rect.ps", s_hqFilledRoundedRectPs);
+	shaderSource("engine/builtin-hq-filled-rounded-rect.vs", s_hqFilledRoundedRectVs);
 	shaderSource("engine/builtin-hq-filled-triangle.ps", s_hqFilledTrianglePs);
 	shaderSource("engine/builtin-hq-filled-triangle.vs", s_hqFilledTriangleVs);
 	shaderSource("engine/builtin-hq-line.ps", s_hqLinePs);

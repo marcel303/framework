@@ -695,6 +695,7 @@ public:
 	Shader hqFilledTriangle;
 	Shader hqFilledCircle;
 	Shader hqFilledRect;
+	Shader hqFilledRoundedRect;
 	Shader hqStrokeTriangle;
 	Shader hqStrokedCircle;
 	Shader hqStrokedRect;
