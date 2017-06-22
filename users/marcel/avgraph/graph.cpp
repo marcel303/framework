@@ -4242,14 +4242,14 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 #if 1
 	hqBegin(HQ_FILLED_ROUNDED_RECTS);
 	{
-		const int border = 3;
-		const int radius = 5;
+		const float border = 3.f;
+		const float radius = 5.f;
 		
 		setColor(isSelected ? colorWhite : colorBlack);
-		hqFillRoundedRect(-border, -border, definition.sx + border, nodeSy + border, radius + border);
+		hqFillRoundedRect(-border/2, -border/2, definition.sx + border/2, nodeSy + border/2, radius + border/2);
 		
 		setColor(color);
-		hqFillRoundedRect(0.f, 0.f, definition.sx, nodeSy, radius);
+		hqFillRoundedRect(0.f + border/2, 0.f + border/2, definition.sx - border/2, nodeSy - border/2, radius);
 	}
 	hqEnd();
 #else
