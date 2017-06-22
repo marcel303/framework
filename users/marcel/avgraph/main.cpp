@@ -585,7 +585,7 @@ static void testMacWebcam()
 		
 		return;
 	}
-	
+
 	OpenglTexture texture;
 	
 	int lastImageIndex = -1;
@@ -619,12 +619,37 @@ static void testMacWebcam()
 				gxTranslatef(0, 0, 0);
 				gxSetTexture(texture.id);
 				drawRect(0, 0, texture.sx, texture.sy);
+				gxSetTexture(0);
 				gxPopMatrix();
 			}
+			
+			gxPushMatrix();
+			{
+				const float scale = std::cos(framework.time * .1f);
+				//const float scale = 1.f;
+				
+				gxTranslatef(100, 100, 0);
+				gxRotatef(framework.time * 10, 0, 0, 1);
+				gxScalef(scale, scale, 1);
+				gxTranslatef(-30, -30, 0);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				{
+					const int border = 8;
+					
+					setColor(colorWhite);
+					hqFillRoundedRect(-border, -border, 100+border, 100+border, 10+border);
+					
+					setColor(200, 200, 255);
+					hqFillRoundedRect(0, 0, 100, 100, 10);
+				}
+				hqEnd();
+			}
+			gxPopMatrix();
 			
 			setFontMSDF("calibri.ttf");
 			setColor(colorGreen);
 			drawTextMSDF(GFX_SX/2, GFX_SY/2, 20, 0, 0, "webcam image index: %d", webcam->image ? webcam->image->index : -1);
+			drawTextMSDF(GFX_SX/2, GFX_SY/2 + 30, 20, 0, 0, "conversion time: %.2fms", webcam->context->conversionTimeUsAvg / 1000.0);
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
