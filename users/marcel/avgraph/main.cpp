@@ -64,7 +64,6 @@
 #include "vfxNodes/vfxNodeLogicSwitch.h"
 #include "vfxNodes/vfxNodeMapEase.h"
 #include "vfxNodes/vfxNodeMapRange.h"
-#include "vfxNodes/vfxNodeMath.h"
 #include "vfxNodes/vfxNodeMouse.h"
 #include "vfxNodes/vfxNodeNoiseSimplex2D.h"
 #include "vfxNodes/vfxNodeOsc.h"
@@ -227,28 +226,6 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("physical.spring", VfxNodePhysicalSpring)
 	DefineNodeImpl("map.range", VfxNodeMapRange)
 	DefineNodeImpl("ease", VfxNodeMapEase)
-	DefineNodeImpl("math.add", VfxNodeMathAdd)
-	DefineNodeImpl("math.sub", VfxNodeMathSub)
-	DefineNodeImpl("math.mul", VfxNodeMathMul)
-	DefineNodeImpl("math.sin", VfxNodeMathSin)
-	DefineNodeImpl("math.cos", VfxNodeMathCos)
-	DefineNodeImpl("math.abs", VfxNodeMathAbs)
-	DefineNodeImpl("math.min", VfxNodeMathMin)
-	DefineNodeImpl("math.max", VfxNodeMathMax)
-	DefineNodeImpl("math.sat", VfxNodeMathSat)
-	DefineNodeImpl("math.neg", VfxNodeMathNeg)
-	DefineNodeImpl("math.sqrt", VfxNodeMathSqrt)
-	DefineNodeImpl("math.pow", VfxNodeMathPow)
-	DefineNodeImpl("math.exp", VfxNodeMathExp)
-	DefineNodeImpl("math.mod", VfxNodeMathMod)
-	DefineNodeImpl("math.fract", VfxNodeMathFract)
-	DefineNodeImpl("math.floor", VfxNodeMathFloor)
-	DefineNodeImpl("math.ceil", VfxNodeMathCeil)
-	DefineNodeImpl("math.round", VfxNodeMathRound)
-	DefineNodeImpl("math.sign", VfxNodeMathSign)
-	DefineNodeImpl("math.hypot", VfxNodeMathHypot)
-	DefineNodeImpl("math.pitch", VfxNodeMathPitch)
-	DefineNodeImpl("math.semitone", VfxNodeMathSemitone)
 	DefineNodeImpl("osc.sine", VfxNodeOscSine)
 	DefineNodeImpl("osc.saw", VfxNodeOscSaw)
 	DefineNodeImpl("osc.triangle", VfxNodeOscTriangle)
