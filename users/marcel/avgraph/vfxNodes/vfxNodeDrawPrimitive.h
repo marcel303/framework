@@ -35,6 +35,9 @@ struct VfxNodeDrawPrimitive : VfxNodeBase
 	{
 		kInput_Type,
 		kInput_Channels,
+		kInput_Size,
+		kInput_Color,
+		kInput_Image,
 		kInput_COUNT
 	};
 	

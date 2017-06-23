@@ -55,6 +55,9 @@ VFX_NODE_TYPE(draw_primitive, VfxNodeDrawPrimitive)
 	
 	inEnum("type", "drawPrimitiveType");
 	in("channels", "channels");
+	in("size", "float", "1");
+	in("color", "color");
+	in("image", "image");
 	out("any", "any");
 }
 
@@ -64,6 +67,9 @@ VfxNodeDrawPrimitive::VfxNodeDrawPrimitive()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Type, kVfxPlugType_Int);
 	addInput(kInput_Channels, kVfxPlugType_Channels);
+	addInput(kInput_Size, kVfxPlugType_Float);
+	addInput(kInput_Color, kVfxPlugType_Color);
+	addInput(kInput_Image, kVfxPlugType_Image);
 	addOutput(kOutput_Any, kVfxPlugType_DontCare, nullptr);
 }
 
@@ -74,11 +80,20 @@ void VfxNodeDrawPrimitive::draw() const
 	
 	const PrimtiveType type = (PrimtiveType)getInputInt(kInput_Type, kPrimtiveType_Cirle);
 	const VfxChannels * channels = getInputChannels(kInput_Channels, nullptr);
+	const float size = getInputFloat(kInput_Size, 1.f);
+	const VfxColor * color = getInputColor(kInput_Color, nullptr);
+	const VfxImageBase * image = getInputImage(kInput_Image, nullptr);
 	
 	if (channels == nullptr)
 		return;
 	
-	setColor(colorWhite);
+	if (color)
+		setColorf(color->r, color->g, color->b, color->a);
+	else
+		setColor(colorWhite);
+	
+	if (image)
+		gxSetTexture(image->getTexture());
 	
 	switch (type)
 	{
@@ -94,7 +109,7 @@ void VfxNodeDrawPrimitive::draw() const
 					const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
 					const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
 					
-					hqFillCircle(x, y, r);
+					hqFillCircle(x, y, r * size);
 				}
 			}
 			hqEnd();
@@ -114,7 +129,7 @@ void VfxNodeDrawPrimitive::draw() const
 					const float rx = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
 					const float ry = channels->numChannels >= 4 ? channels->channels[3].data[i] : rx;
 					
-					hqFillRect(x - rx, y - ry, x + rx, y + ry);
+					hqFillRect(x - rx * size, y - ry * size, x + rx * size, y + ry * size);
 				}
 			}
 			hqEnd();
@@ -132,7 +147,7 @@ void VfxNodeDrawPrimitive::draw() const
 					const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
 					const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
 					
-					hqFillTriangle(x, y - 1.f, x - 1.f, y + 1.f, x + 1.f, y + 1.f);
+					hqFillTriangle(x, y - size, x - size, y + size, x + size, y + size);
 				}
 			}
 			hqEnd();
@@ -150,7 +165,7 @@ void VfxNodeDrawPrimitive::draw() const
 					const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
 					const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
 					
-					hqFillTriangle(x, y + 1.f, x - 1.f, y - 1.f, x + 1.f, y - 1.f);
+					hqFillTriangle(x, y + size, x - size, y - size, x + size, y - size);
 				}
 			}
 			hqEnd();
@@ -170,7 +185,7 @@ void VfxNodeDrawPrimitive::draw() const
 					const float s1 = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
 					const float s2 = channels->numChannels >= 4 ? channels->channels[3].data[i] : s1;
 					
-					hqLine(x - 1.f, y, s1, x + 1.f, y, s2);
+					hqLine(x - size, y, s1, x + size, y, s2);
 				}
 			}
 			hqEnd();
@@ -190,11 +205,13 @@ void VfxNodeDrawPrimitive::draw() const
 					const float s1 = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
 					const float s2 = channels->numChannels >= 4 ? channels->channels[3].data[i] : s1;
 					
-					hqLine(x, y - 1.f, s1, x, y + 1.f, s2);
+					hqLine(x, y - size, s1, x, y + size, s2);
 				}
 			}
 			hqEnd();
 			break;
 		}
 	}
+	
+	gxSetTexture(0);
 }
