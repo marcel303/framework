@@ -101,7 +101,8 @@ using namespace tinyxml2;
 //#define FILENAME "kinect.xml"
 //#define FILENAME "yuvtest.xml"
 //#define FILENAME "timeline.xml"
-#define FILENAME "channels.xml"
+//#define FILENAME "channels.xml"
+#define FILENAME "drawtest.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -723,6 +724,7 @@ int main(int argc, char * argv[])
 		
 		//
 		
+		createVfxEnumTypeDefinitions(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList);
 		createVfxNodeTypeDefinitions(*typeDefinitionLibrary, g_vfxNodeTypeRegistrationList);
 		
 		//

@@ -709,6 +709,46 @@ struct VfxNodeBase
 
 //
 
+struct VfxEnumTypeRegistration
+{
+	struct Elem
+	{
+		std::string name;
+		int value;
+	};
+	
+	VfxEnumTypeRegistration * next;
+	
+	std::string enumName;
+	int nextValue;
+	
+	std::vector<Elem> elems;
+	
+	VfxEnumTypeRegistration();
+	
+	void elem(const char * name, const int value = -1);
+};
+
+extern VfxEnumTypeRegistration * g_vfxEnumTypeRegistrationList;
+
+void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, VfxEnumTypeRegistration * registrationList);
+
+#define VFX_ENUM_TYPE(name) \
+	struct name ## __registration : VfxEnumTypeRegistration \
+	{ \
+		name ## __registration() \
+		{ \
+			enumName = # name; \
+			init(); \
+		} \
+		void init(); \
+	}; \
+	extern name ## __registration name ## __registrationInstance; \
+	name ## __registration name ## __registrationInstance; \
+	void name ## __registration :: init()
+
+//
+
 struct VfxNodeTypeRegistration
 {
 	struct Input

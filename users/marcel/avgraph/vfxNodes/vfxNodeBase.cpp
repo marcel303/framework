@@ -687,6 +687,54 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 
 //
 
+VfxEnumTypeRegistration * g_vfxEnumTypeRegistrationList = nullptr;
+
+VfxEnumTypeRegistration::VfxEnumTypeRegistration()
+	: enumName()
+	, nextValue(0)
+	, elems()
+{
+	next = g_vfxEnumTypeRegistrationList;
+	g_vfxEnumTypeRegistrationList = this;
+}
+	
+void VfxEnumTypeRegistration::elem(const char * name, const int value)
+{
+	Elem e;
+	e.name = name;
+	e.value = value == -1 ? nextValue : value;
+	
+	elems.push_back(e);
+	
+	nextValue = e.value + 1;
+}
+
+// todo : move elsewhere ?
+
+#include "graph.h"
+
+void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, VfxEnumTypeRegistration * registrationList)
+{
+	for (VfxEnumTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
+	{
+		auto & enumDefinition = typeDefinitionLibrary.enumDefinitions[registration->enumName];
+		
+		enumDefinition.enumName = registration->enumName;
+		
+		for (auto & src : registration->elems)
+		{
+			GraphEdit_EnumDefinition::Elem dst;
+			
+			dst.name = src.name;
+			dst.value = src.value;
+			
+			enumDefinition.enumElems.push_back(dst);
+		}
+	}
+}
+
+//
+
 VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList = nullptr;
 
 VfxNodeTypeRegistration::VfxNodeTypeRegistration()
