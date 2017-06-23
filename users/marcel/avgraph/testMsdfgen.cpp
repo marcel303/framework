@@ -62,8 +62,7 @@ void testMsdfgen()
 			setFont("calibri.ttf");
 			drawText(5, GFX_SY - 5, 18, +1, -1, "super sampling: %d, sample method: %d - %s", useSuperSampling, sampleMethod, sampleMethodNames[sampleMethod]);
 			
-			setFontMSDF("calibri.ttf");
-			
+			setFont("calibri.ttf");
 			gxPushMatrix();
 			{
 				gxTranslatef(200, 100, 0);
@@ -88,8 +87,10 @@ void testMsdfgen()
 				
 				bool verify = keyboard.isDown(SDLK_v);
 				
+				pushFontMode(verify ? FONT_BITMAP : FONT_SDF);
+				
 				if (!verify)
-					beginTextBatchMSDF();
+					beginTextBatch();
 				{
 					int x = 0;
 					int y = 0;
@@ -97,24 +98,20 @@ void testMsdfgen()
 					for (int i = 0; i < 10; ++i)
 					{
 						setColor(colorBlue);
-						if (verify)
-							drawText(x, y, 24, +1, +1, "Hello - World");
-						else
-							drawTextMSDF(x, y, 24, +1, +1, "Hello - World");
+						drawText(x, y, 24, +1, +1, "Hello - World");
 						y += 15;
 						
 						setColor(colorRed);
-						if (verify)
-							drawText(x, y, 24, +1, +1, "Lalala / %s", sampleMethodNames[sampleMethod]);
-						else
-							drawTextMSDF(x, y, 24, +1, +1, "Lalala / %s", sampleMethodNames[sampleMethod]);
+						drawText(x, y, 24, +1, +1, "Lalala / %s", sampleMethodNames[sampleMethod]);
 						y += 15;
 						
 						x += 10;
 					}
 				}
 				if (!verify)
-					endTextBatchMSDF();
+					endTextBatch();
+				
+				popFontMode();
 			}
 			gxPopMatrix();
 		}

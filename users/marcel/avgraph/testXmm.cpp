@@ -355,9 +355,11 @@ void testXmm()
 					const Vec2 viewMid = (viewMin + viewMax) / 2.f;
 					
 					setColor(colorWhite);
-					setFontMSDF("calibri.ttf");
-					drawTextMSDF(viewMid[0] + 5, viewMid[1] + 5, 20, +1, +1, "gfd %.2f",
-					recording.gestureFollower.models["a"].results.progress);
+					setFont("calibri.ttf");
+					pushFontMode(FONT_SDF);
+					drawText(viewMid[0] + 5, viewMid[1] + 5, 20, +1, +1, "gfd %.2f",
+						recording.gestureFollower.models["a"].results.progress);
+					popFontMode();
 				}
 			};
 			
@@ -396,9 +398,11 @@ void testXmm()
 			}
 			
 			setColor(200, 200, 200);
-			setFontMSDF("calibri.ttf");
-			drawTextMSDF(GFX_SX/2, GFX_SY-20, 18, 0, 0, "%s", isRecording ? "RECORDING" : "RECOGNIZING");
-			drawTextMSDF(GFX_SX/2, GFX_SY-80, 18, 0, 0, "%s", isRecording ? "(n/a)" : hhmm.results.likeliest.c_str());
+			setFont("calibri.ttf");
+			pushFontMode(FONT_SDF);
+			drawText(GFX_SX/2, GFX_SY-20, 18, 0, 0, "%s", isRecording ? "RECORDING" : "RECOGNIZING");
+			drawText(GFX_SX/2, GFX_SY-80, 18, 0, 0, "%s", isRecording ? "(n/a)" : hhmm.results.likeliest.c_str());
+			popFontMode();
 		}
 		framework.endDraw();
 		

@@ -228,7 +228,6 @@ void testDeepbelief()
 			gxPopMatrix();
 			
 			setFont("calibri.ttf");
-			setFontMSDF("calibri.ttf");
 			setColor(colorGreen);
 			
 			drawText(20, 20, 14, +1, +1, "initialized: %d, automaticProcessing: %d", d->state && d->state->isInitialized, automaticUpdates);
@@ -263,8 +262,10 @@ void testDeepbelief()
 				const float scale = 1.f + std::sin(framework.time / 1.234f) * .2f;
 				gxScalef(scale, scale, 1);
 				gxRotatef(std::sin(framework.time / 2.345f) * 5.f, 0, 0, 1);
+				pushFontMode(FONT_SDF);
 				setColor(200, 200, 200);
-				drawTextMSDF(0, 0, 48, 0, 0, "%s", result.predictions.front().label.c_str());
+				drawText(0, 0, 48, 0, 0, "%s", result.predictions.front().label.c_str());
+				popFontMode();
 				gxPopMatrix();
 			}
 		}

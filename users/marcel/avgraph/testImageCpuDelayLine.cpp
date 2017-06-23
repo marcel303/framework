@@ -213,7 +213,6 @@ void testImageCpuDelayLine()
 			}
 			
 			setFont("calibri.ttf");
-			setFontMSDF("calibri.ttf");
 			setColor(textColor);
 			ImageCpuDelayLine::MemoryUsage memoryUsage = d->getMemoryUsage();
 			drawText(10, 10, fontSize, +1, +1, "memory usage: %.2f Mb", memoryUsage.numBytes / 1024.0 / 1024.0);
@@ -231,7 +230,9 @@ void testImageCpuDelayLine()
 			setColor(150, 150, 250);
 			drawRect(x, y, x + 400 * memoryUsage.historySize / d->maxHistorySize, y + 20);
 			setColor(colorWhite);
-			drawTextMSDF(x + 5, y + 20/2, 10, +1, 0, "delay line FIFO");
+			pushFontMode(FONT_SDF);
+			drawText(x + 5, y + 20/2, 10, +1, 0, "delay line FIFO");
+			popFontMode();
 			setColor(colorRed);
 			drawLine(
 				x + 400 * offset, y +  0,

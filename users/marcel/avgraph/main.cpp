@@ -623,10 +623,11 @@ static void testMacWebcam()
 			}
 			gxPopMatrix();
 			
-			setFontMSDF("calibri.ttf");
+			setFont("calibri.ttf");
+			setFontMode(FONT_SDF);
 			setColor(colorGreen);
-			drawTextMSDF(GFX_SX/2, GFX_SY/2, 20, 0, 0, "webcam image index: %d", webcam->image ? webcam->image->index : -1);
-			drawTextMSDF(GFX_SX/2, GFX_SY/2 + 30, 20, 0, 0, "conversion time: %.2fms", webcam->context->conversionTimeUsAvg / 1000.0);
+			drawText(GFX_SX/2, GFX_SY/2, 20, 0, 0, "webcam image index: %d", webcam->image ? webcam->image->index : -1);
+			drawText(GFX_SX/2, GFX_SY/2 + 30, 20, 0, 0, "conversion time: %.2fms", webcam->context->conversionTimeUsAvg / 1000.0);
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
@@ -804,8 +805,8 @@ int main(int argc, char * argv[])
 				graphEdit->save(FILENAME);
 				
 				// todo : remove !
-				FontMSDF("calibri.ttf").saveCache();
-				FontMSDF("calibri.ttf").loadCache();
+				Font("calibri.ttf").saveCache();
+				Font("calibri.ttf").loadCache();
 			}
 			else if (keyboard.wentDown(SDLK_l))
 			{
