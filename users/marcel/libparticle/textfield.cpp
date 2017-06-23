@@ -244,7 +244,7 @@ void EditorTextField::addChar(const char c)
 	if (m_bufferSize < kMaxBufferSize && m_bufferSize < m_maxBufferSize)
 	{
 		if (m_caretPosition < m_bufferSize)
-			memcpy(&m_buffer[m_caretPosition + 1], &m_buffer[m_caretPosition], m_bufferSize - m_caretPosition);
+			memmove(&m_buffer[m_caretPosition + 1], &m_buffer[m_caretPosition], m_bufferSize - m_caretPosition);
 
 		m_buffer[m_caretPosition] = c;
 
@@ -260,7 +260,7 @@ void EditorTextField::removeChar()
 
 	if (m_caretPosition > 0)
 	{
-		memcpy(&m_buffer[m_caretPosition - 1], &m_buffer[m_caretPosition], m_bufferSize - 1);
+		memmove(&m_buffer[m_caretPosition - 1], &m_buffer[m_caretPosition], m_bufferSize - 1);
 
 		m_bufferSize--;
 		m_buffer[m_bufferSize] = 0;

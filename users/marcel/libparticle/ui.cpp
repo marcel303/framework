@@ -400,6 +400,7 @@ void makeActive(UiState * state, const bool doActions, const bool doDraw)
 	g_drawY = state->y;
 	
 	setFont(state->font.c_str());
+	setFontMode(FONT_SDF);
 }
 
 //
@@ -1050,7 +1051,6 @@ bool doDropdownDrawer(bool & value, const char * name, const char * valueName)
 	
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
-	const int kCheckButtonRadius = kCheckButtonSize/2;
 	const int kCollapseIconSx = kCheckButtonSize;
 	const int kCollapseIconSy = kCheckButtonSize * 2 / 5;
 
