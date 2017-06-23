@@ -3490,27 +3490,22 @@ void Music::setVolume(int volume)
 Font::Font(const char * filename)
 {
 	m_font = &g_fontCache.findOrCreate(filename);
-}
-
-// -----
-
-FontMSDF::FontMSDF(const char * filename)
-{
-	m_font = &g_fontCacheMSDF.findOrCreate(filename);
-}
-
-bool FontMSDF::saveCache(const char * _filename) const
-{
-	const std::string filename = _filename ? _filename : (m_font->m_filename + ".cache");
 	
-	return m_font->m_glyphCache->saveCache(filename.c_str());
+	m_fontMSDF = &g_fontCacheMSDF.findOrCreate(filename);
 }
 
-bool FontMSDF::loadCache(const char * _filename)
+bool Font::saveCache(const char * _filename) const
 {
-	const std::string filename = _filename ? _filename : (m_font->m_filename + ".cache");
+	const std::string filename = _filename ? _filename : (m_fontMSDF->m_filename + ".cache");
 	
-	return m_font->m_glyphCache->loadCache(filename.c_str());
+	return m_fontMSDF->m_glyphCache->saveCache(filename.c_str());
+}
+
+bool Font::loadCache(const char * _filename)
+{
+	const std::string filename = _filename ? _filename : (m_fontMSDF->m_filename + ".cache");
+	
+	return m_fontMSDF->m_glyphCache->loadCache(filename.c_str());
 }
 
 // -----
@@ -4835,6 +4830,8 @@ void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, fl
 void setFont(const Font & font)
 {
 	globals.font = const_cast<Font&>(font).getFont();
+	
+	globals.fontMSDF = const_cast<Font&>(font).getFontMSDF();
 }
 
 void setFont(const char * font)
@@ -4842,14 +4839,29 @@ void setFont(const char * font)
 	setFont(Font(font));
 }
 
-void setFontMSDF(const FontMSDF & font)
+void setFontMode(FONT_MODE fontMode)
 {
-	globals.fontMSDF = const_cast<FontMSDF&>(font).getFont();
+	globals.fontMode = fontMode;
 }
 
-void setFontMSDF(const char * font)
+static const int kMaxFontModeStackSize = 32;
+static FONT_MODE fontModeStack[kMaxFontModeStackSize] = { FONT_BITMAP };
+static int fontModeStackSize = 0;
+
+void pushFontMode(FONT_MODE fontMode)
 {
-	setFontMSDF(FontMSDF(font));
+	fassert(fontModeStackSize < kMaxFontModeStackSize);
+	fontModeStack[fontModeStackSize++] = globals.fontMode;
+	setFontMode(fontMode);
+}
+
+void popFontMode()
+{
+	fassert(fontModeStackSize > 0);
+	--fontModeStackSize;
+	const FONT_MODE fontMode = fontModeStack[fontModeStackSize];
+	fontModeStack[fontModeStackSize] = FONT_BITMAP;
+	setFontMode(fontMode);
 }
 
 void setShader(const ShaderBase & shader)
@@ -5137,194 +5149,6 @@ static void drawTextInternal(FT_Face face, int size, const GlyphCacheElem ** gly
 #endif
 }
 
-void measureText(int size, float & sx, float & sy, const char * format, ...)
-{
-	char _text[MAX_TEXT_LENGTH];
-	va_list args;
-	va_start(args, format);
-	vsprintf_s(_text, sizeof(text), format, args);
-	va_end(args);
-	
-#if ENABLE_UTF8_SUPPORT
-	unicode_t text[MAX_TEXT_LENGTH];
-	const size_t textLength = utf8toutf32(_text, strlen(_text), text, MAX_TEXT_LENGTH * 4, 0) / 4;
-#else
-	const char * text = _text;
-	const size_t textLength = strlen(_text);
-#endif
-
-	auto face = globals.font->face;
-	
-	const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
-	
-	for (size_t i = 0; i < textLength; ++i)
-	{
-		glyphs[i] = &g_glyphCache.findOrCreate(face, size, text[i]);
-	}
-	
-	float yTop;
-
-	measureText(face, size, glyphs, textLength, sx, sy, yTop);
-}
-
-void beginTextBatch()
-{
-#if USE_GLYPH_ATLAS
-	Assert(!globals.isInTextBatch);
-	globals.isInTextBatch = true;
-	
-	gxSetTexture(globals.font->textureAtlas->texture);
-	gxBegin(GL_QUADS);
-#endif
-}
-
-void endTextBatch()
-{
-#if USE_GLYPH_ATLAS
-	Assert(globals.isInTextBatch);
-	globals.isInTextBatch = false;
-	
-	gxEnd();
-	gxSetTexture(0);
-#endif
-}
-
-void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
-{
-	char _text[MAX_TEXT_LENGTH];
-	va_list args;
-	va_start(args, format);
-	vsprintf_s(_text, sizeof(text), format, args);
-	va_end(args);
-	
-#if ENABLE_UTF8_SUPPORT
-	unicode_t text[MAX_TEXT_LENGTH];
-	const size_t textLength = utf8toutf32(_text, strlen(_text), text, MAX_TEXT_LENGTH * 4, 0) / 4;
-#else
-	const char * text = _text;
-	const size_t textLength = strlen(_text);
-#endif
-	
-	auto face = globals.font->face;
-	
-	const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
-	
-	for (size_t i = 0; i < textLength; ++i)
-	{
-		glyphs[i] = &g_glyphCache.findOrCreate(face, size, text[i]);
-	}
-	
-	float sx, sy, yTop;
-	measureText(face, size, glyphs, textLength, sx, sy, yTop);
-	
-#if USE_GLYPH_ATLAS
-	x += sx * (alignX - 1.f) / 2.f;
-	y += sy * (alignY - 1.f) / 2.f;
-	//y += sy * (alignY - 2.f) / 2.f;
-	//y += size * (alignY - 1.f) / 2.f;
-	
-	y -= yTop;
-	
-	drawTextInternal(face, size, glyphs, textLength, x, y);
-#else
-	gxMatrixMode(GL_MODELVIEW);
-	gxPushMatrix();
-	{
-		x += sx * (alignX - 1.f) / 2.f;
-		y += sy * (alignY - 1.f) / 2.f;
-		//y += sy * (alignY - 2.f) / 2.f;
-		//y += size * (alignY - 1.f) / 2.f;
-		
-		y -= yTop;
-
- 		gxTranslatef(x, y, 0.f);
-		
-		drawTextInternal(globals.font->face, size, glyphs, textLength, 0.f, 0.f);
-	}
-	gxPopMatrix();
-#endif
-}
-
-static char * eatWord(char * str)
-{
-	while (*str && *str != ' ')
-		str++;
-	while (*str && *str == ' ')
-		str++;
-	return str;
-}
-
-void drawTextArea(float x, float y, float sx, int size, const char * format, ...)
-{
-	char text[MAX_TEXT_LENGTH];
-	va_list args;
-	va_start(args, format);
-	vsprintf_s(text, sizeof(text), format, args);
-	va_end(args);
-
-	drawTextArea(x, y, sx, 0.f, size, +1.f, +1.f, text);
-}
-
-void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, float alignY, const char * format, ...)
-{
-	char text[MAX_TEXT_LENGTH];
-	va_list args;
-	va_start(args, format);
-	vsprintf_s(text, sizeof(text), format, args);
-	va_end(args);
-	
-	const int kMaxLines = 64;
-	char lines[kMaxLines][1024];
-	int numLines = 0;
-
-	char * textend = text + strlen(text);
-	char * textptr = text;
-	
-	auto face = globals.font->face;
-	
-	float tsx = 0.f;
-
-	while (textptr != textend && numLines < kMaxLines)
-	{
-		char * nextptr = eatWord(textptr);
-		while (*nextptr)
-		{
-			char * tempptr = eatWord(nextptr);
-			float _sx, _sy, _yTop;
-			const GlyphCacheElem * glyph = &g_glyphCache.findOrCreate(face, size, *tempptr);
-			measureText(globals.font->face, size, &glyph, 1, _sx, _sy, _yTop);
-
-			if (_sx > tsx)
-				tsx = _sx;
-
-			if (_sx >= sx)
-			{
-				break;
-			}
-			else
-				nextptr = tempptr;
-		}
-
-		char temp = *nextptr;
-		*nextptr = 0;
-		strcpy_s(lines[numLines++], sizeof(lines[0]), textptr);
-		*nextptr = temp;
-
-		textptr = nextptr;
-	}
-
-	const float tsy = size * (numLines - 1);
-
-	x += (sx      ) * (-alignX + 1.f) / 2.f;
-	y += (sy - tsy) * (-alignY + 1.f) / 2.f;
-
-	for (int i = 0; i < numLines; ++i)
-	{
-		drawText(x, y, size, alignX, alignY, lines[i]);
-		y += size;
-	}
-}
-
 //
 
 #if ENABLE_MSDF_FONTS
@@ -5332,37 +5156,6 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 // fixme : settle on one method
 static int sampleMethod = 3;
 static bool useSuperSampling = true;
-
-void beginTextBatchMSDF()
-{
-	fassert(globals.isInTextBatchMSDF == false);
-	if (globals.isInTextBatchMSDF == true)
-		return;
-	
-	globals.isInTextBatchMSDF = true;
-	
-	Shader & shader = globals.builtinShaders->msdfText;
-	setShader(shader);
-	
-	shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture);
-	shader.setImmediate("sampleMethod", sampleMethod);
-	shader.setImmediate("useSuperSampling", useSuperSampling);
-	
-	gxBegin(GL_QUADS);
-}
-
-void endTextBatchMSDF()
-{
-	fassert(globals.isInTextBatchMSDF == true);
-	if (globals.isInTextBatchMSDF == false)
-		return;
-	
-	globals.isInTextBatchMSDF = false;
-
-	gxEnd();
-	
-	clearShader();
-}
 
 static void measureTextMSDFInternal(const stbtt_fontinfo & fontInfo, const float size, const MsdfGlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
 
@@ -5516,7 +5309,11 @@ static void drawTextMSDFInternal(MsdfGlyphCache & glyphCache, const float _x, co
 	}
 }
 
-void drawTextMSDF(float _x, float _y, float size, float alignX, float alignY, const char * format, ...)
+#endif
+
+//
+
+void measureText(int size, float & sx, float & sy, const char * format, ...)
 {
 	char _text[MAX_TEXT_LENGTH];
 	va_list args;
@@ -5532,24 +5329,96 @@ void drawTextMSDF(float _x, float _y, float size, float alignX, float alignY, co
 	const size_t textLength = strlen(_text);
 #endif
 
-	MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
-	const MsdfGlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
-	
-	for (size_t i = 0; i < textLength; ++i)
+	if (globals.fontMode == FONT_BITMAP)
 	{
-		glyphs[i] = &glyphCache.findOrCreate(text[i]);
-	}
-	
-	float sx, sy, yTop;
-	measureTextMSDFInternal(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
-	
-	const float x = _x + sx * (alignX - 1.f) / 2.f;
-	const float y = _y + sy * (alignY - 1.f) / 2.f - yTop;
+		auto face = globals.font->face;
+		
+		const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+		
+		for (size_t i = 0; i < textLength; ++i)
+		{
+			glyphs[i] = &g_glyphCache.findOrCreate(face, size, text[i]);
+		}
+		
+		float yTop;
 
-	drawTextMSDFInternal(glyphCache, x, y, size, text, glyphs, textLength);
+		measureText(face, size, glyphs, textLength, sx, sy, yTop);
+	}
+	else if (globals.fontMode == FONT_SDF)
+	{
+		MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
+		
+		const MsdfGlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+		
+		for (size_t i = 0; i < textLength; ++i)
+		{
+			glyphs[i] = &glyphCache.findOrCreate(text[i]);
+		}
+		
+		float yTop;
+		
+		measureTextMSDFInternal(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
+	}
 }
 
-void measureTextMSDF(float size, float & sx, float & sy, const char * format, ...)
+void beginTextBatch()
+{
+	if (globals.fontMode == FONT_BITMAP)
+	{
+	#if USE_GLYPH_ATLAS
+		Assert(!globals.isInTextBatch);
+		globals.isInTextBatch = true;
+		
+		gxSetTexture(globals.font->textureAtlas->texture);
+		gxBegin(GL_QUADS);
+	#endif
+	}
+	else if (globals.fontMode == FONT_SDF)
+	{
+		fassert(globals.isInTextBatchMSDF == false);
+		if (globals.isInTextBatchMSDF == true)
+			return;
+		
+		globals.isInTextBatchMSDF = true;
+		
+		Shader & shader = globals.builtinShaders->msdfText;
+		setShader(shader);
+		
+		shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture);
+		shader.setImmediate("sampleMethod", sampleMethod);
+		shader.setImmediate("useSuperSampling", useSuperSampling);
+		
+		gxBegin(GL_QUADS);
+	}
+}
+
+void endTextBatch()
+{
+	if (globals.fontMode == FONT_BITMAP)
+	{
+	#if USE_GLYPH_ATLAS
+		Assert(globals.isInTextBatch);
+		globals.isInTextBatch = false;
+		
+		gxEnd();
+		gxSetTexture(0);
+	#endif
+	}
+	else if (globals.fontMode == FONT_SDF)
+	{
+		fassert(globals.isInTextBatchMSDF == true);
+		if (globals.isInTextBatchMSDF == false)
+			return;
+		
+		globals.isInTextBatchMSDF = false;
+
+		gxEnd();
+		
+		clearShader();
+	}
+}
+
+void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
 {
 	char _text[MAX_TEXT_LENGTH];
 	va_list args;
@@ -5564,24 +5433,146 @@ void measureTextMSDF(float size, float & sx, float & sy, const char * format, ..
 	const char * text = _text;
 	const size_t textLength = strlen(_text);
 #endif
-
-	MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
-	const MsdfGlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
 	
-	for (size_t i = 0; i < textLength; ++i)
+	if (globals.fontMode == FONT_BITMAP)
 	{
-		glyphs[i] = &glyphCache.findOrCreate(text[i]);
+		auto face = globals.font->face;
+		
+		const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+		
+		for (size_t i = 0; i < textLength; ++i)
+		{
+			glyphs[i] = &g_glyphCache.findOrCreate(face, size, text[i]);
+		}
+		
+		float sx, sy, yTop;
+		measureText(face, size, glyphs, textLength, sx, sy, yTop);
+		
+	#if USE_GLYPH_ATLAS
+		x += sx * (alignX - 1.f) / 2.f;
+		y += sy * (alignY - 1.f) / 2.f;
+		
+		y -= yTop;
+		
+		drawTextInternal(face, size, glyphs, textLength, x, y);
+	#else
+		gxMatrixMode(GL_MODELVIEW);
+		gxPushMatrix();
+		{
+			x += sx * (alignX - 1.f) / 2.f;
+			y += sy * (alignY - 1.f) / 2.f;
+			
+			y -= yTop;
+
+			gxTranslatef(x, y, 0.f);
+			
+			drawTextInternal(globals.font->face, size, glyphs, textLength, 0.f, 0.f);
+		}
+		gxPopMatrix();
+	#endif
 	}
-	
-	float yTop;
-	measureTextMSDFInternal(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
+	else
+	{
+		MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
+		
+		const MsdfGlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+		
+		for (size_t i = 0; i < textLength; ++i)
+		{
+			glyphs[i] = &glyphCache.findOrCreate(text[i]);
+		}
+		
+		float sx, sy, yTop;
+		measureTextMSDFInternal(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
+		
+		x += sx * (alignX - 1.f) / 2.f;
+		y += sy * (alignY - 1.f) / 2.f;
+		
+		y -= yTop;
+
+		drawTextMSDFInternal(glyphCache, x, y, size, text, glyphs, textLength);
+	}
 }
 
-#else
+static char * eatWord(char * str)
+{
+	while (*str && *str != ' ')
+		str++;
+	while (*str && *str == ' ')
+		str++;
+	return str;
+}
 
-	// todo : route calls to regular drawText routines
+void drawTextArea(float x, float y, float sx, int size, const char * format, ...)
+{
+	char text[MAX_TEXT_LENGTH];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(text, sizeof(text), format, args);
+	va_end(args);
 
-#endif
+	drawTextArea(x, y, sx, 0.f, size, +1.f, +1.f, text);
+}
+
+void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, float alignY, const char * format, ...)
+{
+	char text[MAX_TEXT_LENGTH];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(text, sizeof(text), format, args);
+	va_end(args);
+	
+	const int kMaxLines = 64;
+	char lines[kMaxLines][1024];
+	int numLines = 0;
+
+	char * textend = text + strlen(text);
+	char * textptr = text;
+	
+	auto face = globals.font->face;
+	
+	float tsx = 0.f;
+
+	while (textptr != textend && numLines < kMaxLines)
+	{
+		char * nextptr = eatWord(textptr);
+		while (*nextptr)
+		{
+			char * tempptr = eatWord(nextptr);
+			float _sx, _sy, _yTop;
+			const GlyphCacheElem * glyph = &g_glyphCache.findOrCreate(face, size, *tempptr);
+			measureText(globals.font->face, size, &glyph, 1, _sx, _sy, _yTop);
+
+			if (_sx > tsx)
+				tsx = _sx;
+
+			if (_sx >= sx)
+			{
+				break;
+			}
+			else
+				nextptr = tempptr;
+		}
+
+		char temp = *nextptr;
+		*nextptr = 0;
+		strcpy_s(lines[numLines++], sizeof(lines[0]), textptr);
+		*nextptr = temp;
+
+		textptr = nextptr;
+	}
+
+	const float tsy = size * (numLines - 1);
+
+	x += (sx      ) * (-alignX + 1.f) / 2.f;
+	y += (sy - tsy) * (-alignY + 1.f) / 2.f;
+
+	for (int i = 0; i < numLines; ++i)
+	{
+		drawText(x, y, size, alignX, alignY, lines[i]);
+		y += size;
+	}
+}
 
 //
 

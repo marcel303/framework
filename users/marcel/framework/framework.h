@@ -110,6 +110,12 @@ enum COLOR_MODE // setColorMode
 	COLOR_IGNORE
 };
 
+enum FONT_MODE // setFontMode
+{
+	FONT_BITMAP,
+	FONT_SDF
+};
+
 enum BUTTON
 {
 	BUTTON_LEFT,
@@ -856,27 +862,18 @@ public:
 		return m_font;
 	}
 	
-private:
-	class FontCacheElem * m_font;
-};
-
-//
-
-class FontMSDF
-{
-public:
-	FontMSDF(const char * filename);
+	class MsdfFontCacheElem * getFontMSDF()
+	{
+		return m_fontMSDF;
+	}
 	
 	bool saveCache(const char * filename = nullptr) const;
 	bool loadCache(const char * filename = nullptr);
 	
-	class MsdfFontCacheElem * getFont()
-	{
-		return m_font;
-	}
-	
 private:
-	class MsdfFontCacheElem * m_font;
+	class FontCacheElem * m_font;
+	
+	class MsdfFontCacheElem * m_fontMSDF;
 };
 
 //
@@ -1161,8 +1158,9 @@ void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, 
 void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, float x2, float y2, float r2, float g2, float b2, float a2);
 void setFont(const Font & font);
 void setFont(const char * font);
-void setFontMSDF(const FontMSDF & font);
-void setFontMSDF(const char * font);
+void setFontMode(FONT_MODE fontMode);
+void pushFontMode(FONT_MODE fontMode);
+void popFontMode();
 void setShader(const ShaderBase & shader);
 void clearShader();
 void shaderSource(const char * filename, const char * text);
@@ -1180,11 +1178,6 @@ void endTextBatch();
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 void drawTextArea(float x, float y, float sx, int size, const char * format, ...);
 void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, float alignY, const char * format, ...);
-void measureTextMSDF(float size, float & sx, float & sy, const char * format, ...);
-void beginTextBatchMSDF();
-void endTextBatchMSDF();
-void drawTextMSDF(float x, float y, float size, float alignX, float alignY, const char * format, ...);
-
 void drawPath(const Path2d & path);
 
 GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);

@@ -88,6 +88,7 @@ public:
 		memset(this, 0, sizeof(Globals));
 		blendMode = BLEND_ALPHA;
 		colorMode = COLOR_MUL;
+		fontMode = FONT_BITMAP;
 		transform = TRANSFORM_SCREEN;
 		transformScreen.MakeIdentity();
 		transform2d.MakeIdentity();
@@ -107,6 +108,7 @@ public:
 	int resourceVersion;
 	BLEND_MODE blendMode;
 	COLOR_MODE colorMode;
+	FONT_MODE fontMode;
 	Color color;
 	Gradient gradient;
 	FontCacheElem * font;
