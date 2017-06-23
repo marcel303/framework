@@ -31,6 +31,20 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
+VFX_NODE_TYPE(surface, VfxNodeSurface)
+{
+	typeName = "surface";
+	
+	in("source", "any");
+	in("clear", "bool", "1");
+	in("clearColor", "color", "fff");
+	in("darken", "bool", "0");
+	in("darkenColor", "color", "111");
+	in("multiply", "bool", "0");
+	in("multiplyColor", "color", "eee");
+	out("image", "image");
+}
+
 VfxNodeSurface::VfxNodeSurface()
 	: VfxNodeBase()
 	, surface(nullptr)
@@ -39,6 +53,10 @@ VfxNodeSurface::VfxNodeSurface()
 	addInput(kInput_DontCare, kVfxPlugType_DontCare);
 	addInput(kInput_Clear, kVfxPlugType_Bool);
 	addInput(kInput_ClearColor, kVfxPlugType_Color);
+	addInput(kInput_Darken, kVfxPlugType_Bool);
+	addInput(kInput_DarkenColor, kVfxPlugType_Color);
+	addInput(kInput_Multiply, kVfxPlugType_Bool);
+	addInput(kInput_MultiplyColor, kVfxPlugType_Color);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
 
 	surface = new Surface(GFX_SX, GFX_SY, true);
@@ -56,6 +74,10 @@ void VfxNodeSurface::beforeDraw() const
 {
 	const bool clear = getInputBool(kInput_Clear, true);
 	const VfxColor * clearColor = getInputColor(kInput_ClearColor, nullptr);
+	const bool darken = getInputBool(kInput_Darken, false);
+	const VfxColor * darkenColor = getInputColor(kInput_DarkenColor, nullptr);
+	const bool multiply = getInputBool(kInput_Multiply, false);
+	const VfxColor * multiplyColor = getInputColor(kInput_MultiplyColor, nullptr);
 	
 	pushSurface(surface);
 	
@@ -65,6 +87,22 @@ void VfxNodeSurface::beforeDraw() const
 			surface->clearf(clearColor->r, clearColor->g, clearColor->b, clearColor->a);
 		else
 			surface->clear();
+	}
+	
+	if (darken && darkenColor)
+	{
+		pushBlend(BLEND_SUBTRACT);
+		setColorf(darkenColor->r, darkenColor->g, darkenColor->b, darkenColor->a);
+		drawRect(0, 0, surface->getWidth(), surface->getHeight());
+		popBlend();
+	}
+	
+	if (multiply && multiplyColor)
+	{
+		pushBlend(BLEND_MUL);
+		setColorf(multiplyColor->r, multiplyColor->g, multiplyColor->b, multiplyColor->a);
+		drawRect(0, 0, surface->getWidth(), surface->getHeight());
+		popBlend();
 	}
 }
 

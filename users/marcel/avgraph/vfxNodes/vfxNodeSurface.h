@@ -38,6 +38,10 @@ struct VfxNodeSurface : VfxNodeBase
 		kInput_DontCare,
 		kInput_Clear,
 		kInput_ClearColor,
+		kInput_Darken,
+		kInput_DarkenColor,
+		kInput_Multiply,
+		kInput_MultiplyColor,
 		kInput_COUNT
 	};
 
