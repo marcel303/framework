@@ -40,6 +40,7 @@ struct VfxNodeTransform2D : VfxNodeBase
 		kInput_ScaleX,
 		kInput_ScaleY,
 		kInput_Angle,
+		kInput_AngleNorm,
 		kInput_COUNT
 	};
 	

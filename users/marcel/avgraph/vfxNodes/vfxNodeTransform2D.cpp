@@ -41,6 +41,7 @@ VFX_NODE_TYPE(transform_2d, VfxNodeTransform2D)
 	in("scaleX", "float", "1");
 	in("scaleY", "float", "1");
 	in("angle", "float");
+	in("angle_norm", "float");
 	out("transform", "transform");
 }
 
@@ -56,6 +57,7 @@ VfxNodeTransform2D::VfxNodeTransform2D()
 	addInput(kInput_ScaleX, kVfxPlugType_Float);
 	addInput(kInput_ScaleY, kVfxPlugType_Float);
 	addInput(kInput_Angle, kVfxPlugType_Float);
+	addInput(kInput_AngleNorm, kVfxPlugType_Float);
 	addOutput(kOutput_Transform, kVfxPlugType_Transform, &transform);
 }
 
@@ -73,7 +75,10 @@ void VfxNodeTransform2D::tick(const float dt)
 	const float scale = getInputFloat(kInput_Scale, 1.f);
 	const float scaleX = getInputFloat(kInput_ScaleX, 1.f);
 	const float scaleY = getInputFloat(kInput_ScaleY, 1.f);
-	const float angle = getInputFloat(kInput_Angle, 0.f);
+	const float angle =
+		tryGetInput(kInput_AngleNorm)->isConnected()
+			? getInputFloat(kInput_AngleNorm, 0.f) * 360.f
+			: getInputFloat(kInput_Angle, 0.f);
 	
 	Mat4x4 t;
 	Mat4x4 s;
