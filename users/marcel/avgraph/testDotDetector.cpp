@@ -32,7 +32,7 @@
 #include "vfxNodes/dotTracker.h"
 #include "../avpaint/video.h"
 
-#define USE_READPIXELS_OPTIMIZE 1
+#define USE_READPIXELS_OPTIMIZE 0
 #define USE_READPIXELS_FENCES 0
 
 extern const int GFX_SX;
@@ -99,7 +99,7 @@ void testDotDetector()
 		c.randomize();
 	}
 	
-	bool useVideo = false;
+	bool useVideo = true;
 	
 	MediaPlayer mp;
 	
@@ -141,6 +141,11 @@ void testDotDetector()
 	}
 #endif
 
+	const int kMaxIslands = 1024;
+	
+	TrackedDot trackedDots[kMaxIslands];
+	float lastFrameTime = framework.time;
+
 	do
 	{
 		framework.process();
@@ -169,11 +174,13 @@ void testDotDetector()
 		
 		//
 		
+		bool gotNewFrame = false;
+		
 		if (mp.isActive(mp.context))
 		{
 			mp.presentTime += dt;
 			
-			mp.tick(mp.context, true);
+			gotNewFrame = mp.tick(mp.context, true);
 			
 			if (mp.context->hasPresentedLastFrame)
 			{
@@ -185,6 +192,11 @@ void testDotDetector()
 				
 				mp.openAsync(filename.c_str(), MP::kOutputMode_RGBA);
 			}
+		}
+		
+		if (useVideo == false)
+		{
+			gotNewFrame = true;
 		}
 		
 		// generate a new pattern of moving dots
@@ -313,7 +325,6 @@ void testDotDetector()
 		
 		// detect dots
 		
-		const int kMaxIslands = 1024;
 		DotIsland islands[kMaxIslands];
 		
 		const int radius = mouse.isDown(BUTTON_LEFT) ? (1 + mouse.x / 30) : maxRadius;
@@ -330,8 +341,6 @@ void testDotDetector()
 		
 		// track dots
 		
-		TrackedDot trackedDots[kMaxIslands];
-		
 		for (int i = 0; i < numIslands; ++i)
 		{
 			trackedDots[i].x = islands[i].x;
@@ -345,7 +354,14 @@ void testDotDetector()
 		
 		if (useDotTracker)
 		{
-			dotTracker.identify(trackedDots, numIslands, dt, 50.f, true, nullptr, &numAdded, nullptr, &numRemoved);
+			const float dtFrame = framework.time - lastFrameTime;
+			
+			dotTracker.identify(trackedDots, numIslands, dtFrame, 50.f, gotNewFrame, nullptr, &numAdded, nullptr, &numRemoved);
+		}
+		
+		if (gotNewFrame)
+		{
+			lastFrameTime = framework.time;
 		}
 		
 		// visualize the dot detection results!
@@ -392,9 +408,8 @@ void testDotDetector()
 				{
 					for (int i = 0; i < numIslands; ++i)
 					{
-						auto & island = islands[i];
-						
-						drawText(island.x, island.y + maxRadius + 4, 12, 0, +1, "%d", trackedDots[i].id);
+						drawText(trackedDots[i].x, trackedDots[i].y + maxRadius + 4, 12, 0, +1, "%d", trackedDots[i].id);
+						drawText(trackedDots[i].x, trackedDots[i].y + maxRadius + 4 + 16, 12, 0, +1, "(%.2f, %.2f)", trackedDots[i].speedX, trackedDots[i].speedY);
 					}
 				}
 				endTextBatch();
