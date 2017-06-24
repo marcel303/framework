@@ -127,6 +127,9 @@ extern void testMsdfgen();
 extern void testDeepbelief();
 extern void testImageCpuDelayLine();
 extern void testXmm();
+extern void testHqPrimitives();
+
+extern void testMain();
 
 struct VfxNodeTriggerAsFloat : VfxNodeBase
 {
@@ -699,7 +702,11 @@ int main(int argc, char * argv[])
 		
 		//testXmm();
 		
-		testMacWebcam();
+		//testMacWebcam();
+		
+		//testHqPrimitives();
+		
+		testMain();
 		
 		//
 		
