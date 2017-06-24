@@ -628,10 +628,11 @@ static void testMacWebcam()
 			gxPopMatrix();
 			
 			setFont("calibri.ttf");
-			setFontMode(FONT_SDF);
+			pushFontMode(FONT_SDF);
 			setColor(colorGreen);
 			drawText(GFX_SX/2, GFX_SY/2, 20, 0, 0, "webcam image index: %d", webcam->image ? webcam->image->index : -1);
 			drawText(GFX_SX/2, GFX_SY/2 + 30, 20, 0, 0, "conversion time: %.2fms", webcam->context->conversionTimeUsAvg / 1000.0);
+			popFontMode();
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
