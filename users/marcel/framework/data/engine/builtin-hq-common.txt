@@ -1,4 +1,4 @@
-static const char * s_hqCommon = R"SHADER(
+static const char * s_hqCommonPs = R"SHADER(
 
 #if _SHADER_DEBUGGING_
 	uniform float disableOptimizations;
@@ -14,12 +14,21 @@ static const char * s_hqCommon = R"SHADER(
 	#define debugHq false
 #endif
 
+shader_in vec2 v_texcoord;
+
+uniform sampler2D source;
+uniform float sourceEnabled;
+
 float computeDistance(vec2 p);
 float distanceFade(float distance);
+
+bool sampleDistanceFunctionHasBeenCalled = false;
 
 float sampleDistanceFunction(vec2 p)
 {
 	float v = 0.0;
+
+	sampleDistanceFunctionHasBeenCalled = true;
 	
 	if (enableAA)
 	{
@@ -49,12 +58,25 @@ vec4 hqColor(float v, vec4 color)
 	
 	if (debugHq)
 	{
-		if (v == 0.0)
+		if (sampleDistanceFunctionHasBeenCalled == false)
 		{
-			color = vec4(0.0, 1.0, 1.0, 0.5);
+			color.rgb += vec3(0.0, 0.2, 0.5);
+			color.a += 0.5;
 		}
+		else
+		{
+			color.rgb += vec3(0.5, 0.0, 0.0);
+			color.a += 0.5;
+		}
+
+		color = clamp(color, vec4(0.0), vec4(1.0));
 	}
 	
+	if (sourceEnabled != 0.0)
+	{
+		color *= texture(source, v_texcoord);
+	}
+
 	return color;
 }
 

@@ -1,0 +1,5 @@
+static const char * s_hqCommonVs = R"SHADER(
+
+uniform sampler2D source;
+
+)SHADER";
