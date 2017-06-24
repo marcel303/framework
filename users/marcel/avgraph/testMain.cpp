@@ -365,6 +365,8 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 		hqEnd();
 	}
 
+	if (doButton("KOAS", "Chaos Game"))
+		testChaosGame();
 	if (doButton("DaGu", "DatGUI"))
 		testDatGui();
 	if (doButton("DdBe", "Deep Belief SDK"))
@@ -373,6 +375,8 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 		testDotDetector();
 	if (doButton("DtTr", "Dot Tracker"))
 		testDotTracker();
+	if (doButton("DTAtl", "Dynamic Texture Atlas"))
+		testDynamicTextureAtlas();
 	if (doButton("Fr1D", "1D Fourier Analysis"))
 		testFourier1d();
 	if (doButton("Fr2D", "2D Fourier Analysis"))
