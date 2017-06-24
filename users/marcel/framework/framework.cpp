@@ -1540,13 +1540,14 @@ void Surface::setAlphaf(float a)
 {
 	pushSurface(this);
 	{
-		setBlend(BLEND_OPAQUE);
+		pushBlend(BLEND_OPAQUE);
 		setColorf(1.f, 1.f, 1.f, a);
 		glColorMask(0, 0, 0, 1);
 		{
 			drawRect(0.f, 0.f, m_size[0], m_size[1]);
 		}
 		glColorMask(1, 1, 1, 1);
+		popBlend();
 	}
 	popSurface();
 }
@@ -1555,9 +1556,10 @@ void Surface::mulf(float r, float g, float b, float a)
 {
 	pushSurface(this);
 	{
-		setBlend(BLEND_MUL);
+		pushBlend(BLEND_MUL);
 		setColorf(r, g, b, a);
 		drawRect(0.f, 0.f, m_size[0], m_size[1]);
+		popBlend();
 	}
 	popSurface();
 }
@@ -1592,9 +1594,10 @@ void Surface::invert()
 {
 	pushSurface(this);
 	{
-		setBlend(BLEND_INVERT);
+		pushBlend(BLEND_INVERT);
 		setColorf(1.f, 1.f, 1.f, 1.f);
 		drawRect(0.f, 0.f, m_size[0], m_size[1]);
+		popBlend();
 	}
 	popSurface();
 }
@@ -1640,6 +1643,17 @@ void Surface::blitTo(Surface * surface) const
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, oldReadBuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
 	checkErrorGL();
+}
+
+void Surface::blit(BLEND_MODE blendMode) const
+{
+	pushBlend(blendMode);
+	{
+		gxSetTexture(getTexture());
+		drawRect(0, 0, getWidth(), getHeight());
+		gxSetTexture(0);
+	}
+	popBlend();
 }
 
 void blitBackBufferToSurface(Surface * surface)
@@ -1778,6 +1792,12 @@ void Shader::setImmediateMatrix4x4(GLint index, const float * matrix)
 	fassert(index != -1);
 	fassert(globals.shader == this);
 	glUniformMatrix4fv(index, 1, GL_FALSE, matrix);
+	checkErrorGL();
+}
+
+void Shader::setTextureUnit(const char * name, int unit)
+{
+	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
 }
 
@@ -6859,6 +6879,10 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 		Shader * shader = static_cast<Shader*>(globals.shader);
 
 		shader->setImmediate("useScreenSize", useScreenSize ? 1.f : 0.f);
+		
+		if (s_gxTextureEnabled)
+			shader->setTextureUnit("source", 0);
+		shader->setImmediate("sourceEnabled", s_gxTextureEnabled ? 1.f : 0.f);
 
 		//shader->setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
 		//shader->setImmediate("disableAA", cos(framework.time) < 0.f ? 0.f : 1.f);

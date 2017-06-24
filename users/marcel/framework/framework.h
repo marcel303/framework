@@ -378,6 +378,7 @@ public:
 	void invertColor();
 	void invertAlpha();
 	void blitTo(Surface * surface) const;
+	void blit(BLEND_MODE blendMode) const;
 };
 
 void blitBackBufferToSurface(Surface * surface);
