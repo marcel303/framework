@@ -377,6 +377,8 @@ public:
 	void invert();
 	void invertColor();
 	void invertAlpha();
+	void gaussianBlur(const float strengthH, const float strengthV, const int kernelSize = -1);
+	
 	void blitTo(Surface * surface) const;
 	void blit(BLEND_MODE blendMode) const;
 };
@@ -1159,7 +1161,6 @@ void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, 
 void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, float x2, float y2, float r2, float g2, float b2, float a2);
 void setFont(const Font & font);
 void setFont(const char * font);
-void setFontMode(FONT_MODE fontMode);
 void pushFontMode(FONT_MODE fontMode);
 void popFontMode();
 void setShader(const ShaderBase & shader);
@@ -1173,12 +1174,12 @@ void drawRectLine(float x1, float y1, float x2, float y2);
 void drawRectGradient(float x1, float y1, float x2, float y2);
 void drawCircle(float x, float y, float radius, int numSegments);
 void fillCircle(float x, float y, float radius, int numSegments);
-void measureText(int size, float & sx, float & sy, const char * format, ...);
+void measureText(float size, float & sx, float & sy, const char * format, ...);
 void beginTextBatch();
 void endTextBatch();
-void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
-void drawTextArea(float x, float y, float sx, int size, const char * format, ...);
-void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, float alignY, const char * format, ...);
+void drawText(float x, float y, float size, float alignX, float alignY, const char * format, ...);
+void drawTextArea(float x, float y, float sx, float size, const char * format, ...);
+void drawTextArea(float x, float y, float sx, float sy, float size, float alignX, float alignY, const char * format, ...);
 void drawPath(const Path2d & path);
 
 GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);

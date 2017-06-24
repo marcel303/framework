@@ -1620,6 +1620,32 @@ void Surface::invertAlpha()
 	glColorMask(1, 1, 1, 1);
 }
 
+void Surface::gaussianBlur(const float strengthH, const float strengthV, const int _kernelSize)
+{
+	const int kernelSize = _kernelSize < 0 ? int(std::ceilf(std::max(strengthH, strengthV))) : _kernelSize;
+	
+	if (kernelSize == 0)
+		return;
+	
+	if (strengthH > 0.f)
+	{
+		pushBlend(BLEND_OPAQUE);
+		setShader_GaussianBlurH(getTexture(), kernelSize, strengthH);
+		postprocess();
+		clearShader();
+		popBlend();
+	}
+	
+	if (strengthV > 0.f)
+	{
+		pushBlend(BLEND_OPAQUE);
+		setShader_GaussianBlurV(getTexture(), kernelSize, strengthV);
+		postprocess();
+		clearShader();
+		popBlend();
+	}
+}
+
 void Surface::blitTo(Surface * surface) const
 {
 	int oldReadBuffer = 0;
@@ -4859,7 +4885,7 @@ void setFont(const char * font)
 	setFont(Font(font));
 }
 
-void setFontMode(FONT_MODE fontMode)
+static void setFontMode(FONT_MODE fontMode)
 {
 	globals.fontMode = fontMode;
 }
@@ -5333,7 +5359,7 @@ static void drawTextMSDFInternal(MsdfGlyphCache & glyphCache, const float _x, co
 
 //
 
-void measureText(int size, float & sx, float & sy, const char * format, ...)
+void measureText(float size, float & sx, float & sy, const char * format, ...)
 {
 	char _text[MAX_TEXT_LENGTH];
 	va_list args;
@@ -5351,13 +5377,15 @@ void measureText(int size, float & sx, float & sy, const char * format, ...)
 
 	if (globals.fontMode == FONT_BITMAP)
 	{
+		const int sizei = int(std::ceilf(size));
+		
 		auto face = globals.font->face;
 		
 		const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
 		
 		for (size_t i = 0; i < textLength; ++i)
 		{
-			glyphs[i] = &g_glyphCache.findOrCreate(face, size, text[i]);
+			glyphs[i] = &g_glyphCache.findOrCreate(face, sizei, text[i]);
 		}
 		
 		float yTop;
@@ -5438,7 +5466,7 @@ void endTextBatch()
 	}
 }
 
-void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
+void drawText(float x, float y, float size, float alignX, float alignY, const char * format, ...)
 {
 	char _text[MAX_TEXT_LENGTH];
 	va_list args;
@@ -5456,6 +5484,8 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 	
 	if (globals.fontMode == FONT_BITMAP)
 	{
+		const int sizei = int(std::ceilf(size));
+		
 		auto face = globals.font->face;
 		
 		const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
@@ -5466,7 +5496,7 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 		}
 		
 		float sx, sy, yTop;
-		measureText(face, size, glyphs, textLength, sx, sy, yTop);
+		measureText(face, sizei, glyphs, textLength, sx, sy, yTop);
 		
 	#if USE_GLYPH_ATLAS
 		x += sx * (alignX - 1.f) / 2.f;
@@ -5474,7 +5504,7 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 		
 		y -= yTop;
 		
-		drawTextInternal(face, size, glyphs, textLength, x, y);
+		drawTextInternal(face, sizei, glyphs, textLength, x, y);
 	#else
 		gxMatrixMode(GL_MODELVIEW);
 		gxPushMatrix();
@@ -5486,7 +5516,7 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 
 			gxTranslatef(x, y, 0.f);
 			
-			drawTextInternal(globals.font->face, size, glyphs, textLength, 0.f, 0.f);
+			drawTextInternal(globals.font->face, sizei, glyphs, textLength, 0.f, 0.f);
 		}
 		gxPopMatrix();
 	#endif
@@ -5523,7 +5553,7 @@ static char * eatWord(char * str)
 	return str;
 }
 
-void drawTextArea(float x, float y, float sx, int size, const char * format, ...)
+void drawTextArea(float x, float y, float sx, float size, const char * format, ...)
 {
 	char text[MAX_TEXT_LENGTH];
 	va_list args;
@@ -5534,7 +5564,7 @@ void drawTextArea(float x, float y, float sx, int size, const char * format, ...
 	drawTextArea(x, y, sx, 0.f, size, +1.f, +1.f, text);
 }
 
-void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, float alignY, const char * format, ...)
+void drawTextArea(float x, float y, float sx, float sy, float size, float alignX, float alignY, const char * format, ...)
 {
 	char text[MAX_TEXT_LENGTH];
 	va_list args;
@@ -6572,19 +6602,35 @@ static void makeGaussianKernel(const int kernelSize, ShaderBuffer & kernel)
 	
 	float * values = (float*)alloca(sizeof(float) * kernelSize);
 	
-	for (int i = 0; i < kernelSize; ++i)
+	if (kernelSize > 0)
 	{
-		const float x1 = (i - .5f) / float(kernelSize - 1.f);
-		const float x2 = (i + .5f) / float(kernelSize - 1.f);
+		for (int i = 0; i < kernelSize; ++i)
+		{
+			const float x1 = (i - .5f) / float(kernelSize - 1.f);
+			const float x2 = (i + .5f) / float(kernelSize - 1.f);
+			
+			const float y1 = dist(x1 * s);
+			const float y2 = dist(x2 * s);
+			
+			const float dy = y2 - y1;
+			
+			//printf("%02.2f - %02.2f : %02.4f\n", x1, x2, dy);
+			
+			values[i] = dy;
+		}
 		
-		const float y1 = dist(x1 * s);
-		const float y2 = dist(x2 * s);
+		float total = values[0];
 		
-		const float dy = y2 - y1;
+		for (int i = 1; i < kernelSize; ++i)
+			total += values[i] * 2.f;
 		
-		//printf("%02.2f - %02.2f : %02.4f\n", x1, x2, dy);
-		
-		values[i] = dy;
+		if (total > 0.f)
+		{
+			for (int i = 0; i < kernelSize; ++i)
+			{
+				values[i] /= total;
+			}
+		}
 	}
 	
 	kernel.setData(values, sizeof(float) * kernelSize);
