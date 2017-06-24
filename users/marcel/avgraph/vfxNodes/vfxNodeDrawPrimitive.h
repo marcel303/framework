@@ -33,11 +33,16 @@ struct VfxNodeDrawPrimitive : VfxNodeBase
 {
 	enum Input
 	{
+		kInput_Before,
 		kInput_Type,
 		kInput_Channels,
 		kInput_Size,
-		kInput_Color,
+		kInput_Fill,
+		kInput_FillColor,
 		kInput_Image,
+		kInput_Stroke,
+		kInput_StrokeSize,
+		kInput_StrokeColor,
 		kInput_COUNT
 	};
 	

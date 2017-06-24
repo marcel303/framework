@@ -53,11 +53,16 @@ VFX_NODE_TYPE(draw_primitive, VfxNodeDrawPrimitive)
 {
 	typeName = "draw.primitive";
 	
+	in("before", "any");
 	inEnum("type", "drawPrimitiveType");
 	in("channels", "channels");
 	in("size", "float", "1");
+	in("fill", "bool", "1");
 	in("color", "color");
 	in("image", "image");
+	in("stroke", "bool");
+	in("strokeSize", "float", "1.0");
+	in("strokeColor", "color");
 	out("any", "any");
 }
 
@@ -65,11 +70,16 @@ VfxNodeDrawPrimitive::VfxNodeDrawPrimitive()
 	: VfxNodeBase()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	addInput(kInput_Before, kVfxPlugType_DontCare);
 	addInput(kInput_Type, kVfxPlugType_Int);
 	addInput(kInput_Channels, kVfxPlugType_Channels);
 	addInput(kInput_Size, kVfxPlugType_Float);
-	addInput(kInput_Color, kVfxPlugType_Color);
+	addInput(kInput_Fill, kVfxPlugType_Bool);
+	addInput(kInput_FillColor, kVfxPlugType_Color);
 	addInput(kInput_Image, kVfxPlugType_Image);
+	addInput(kInput_Stroke, kVfxPlugType_Bool);
+	addInput(kInput_StrokeSize, kVfxPlugType_Float);
+	addInput(kInput_StrokeColor, kVfxPlugType_Color);
 	addOutput(kOutput_Any, kVfxPlugType_DontCare, nullptr);
 }
 
@@ -81,134 +91,231 @@ void VfxNodeDrawPrimitive::draw() const
 	const PrimtiveType type = (PrimtiveType)getInputInt(kInput_Type, kPrimtiveType_Cirle);
 	const VfxChannels * channels = getInputChannels(kInput_Channels, nullptr);
 	const float size = getInputFloat(kInput_Size, 1.f);
-	const VfxColor * color = getInputColor(kInput_Color, nullptr);
+	const bool fill = getInputBool(kInput_Fill, true);
+	const VfxColor * fillColor = getInputColor(kInput_FillColor, nullptr);
 	const VfxImageBase * image = getInputImage(kInput_Image, nullptr);
+	const bool stroke = getInputBool(kInput_Stroke, false);
+	const float strokeSize = getInputFloat(kInput_StrokeSize, 1.f);
+	const VfxColor * strokeColor = getInputColor(kInput_StrokeColor, nullptr);
 	
 	if (channels == nullptr)
 		return;
 	
-	if (color)
-		setColorf(color->r, color->g, color->b, color->a);
+	if (fillColor)
+		setColorf(fillColor->r, fillColor->g, fillColor->b, fillColor->a);
 	else
 		setColor(colorWhite);
 	
 	if (image)
 		gxSetTexture(image->getTexture());
 	
-	switch (type)
+	if (fill)
 	{
-	case kPrimtiveType_Cirle:
+		switch (type)
 		{
-			hqBegin(HQ_FILLED_CIRCLES);
+		case kPrimtiveType_Cirle:
 			{
-				const int num = channels->size;
-				
-				for (int i = 0; i < num; ++i)
+				hqBegin(HQ_FILLED_CIRCLES);
 				{
-					const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-					const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-					const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+					const int num = channels->size;
 					
-					hqFillCircle(x, y, r * size);
+					for (int i = 0; i < num; ++i)
+					{
+						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
+						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						
+						hqFillCircle(x, y, r * size);
+					}
 				}
+				hqEnd();
+				break;
 			}
-			hqEnd();
-			break;
+			
+		case kPrimtiveType_Quad:
+			{
+				hqBegin(HQ_FILLED_RECTS);
+				{
+					const int num = channels->size;
+					
+					for (int i = 0; i < num; ++i)
+					{
+						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
+						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						const float rx = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float ry = channels->numChannels >= 4 ? channels->channels[3].data[i] : rx;
+						
+						hqFillRect(x - rx * size, y - ry * size, x + rx * size, y + ry * size);
+					}
+				}
+				hqEnd();
+				break;
+			}
+			
+		case kPrimtiveType_TriangleUp:
+			{
+				hqBegin(HQ_FILLED_TRIANGLES);
+				{
+					const int num = channels->size;
+					
+					for (int i = 0; i < num; ++i)
+					{
+						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
+						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						
+						hqFillTriangle(x, y - size, x - size, y + size, x + size, y + size);
+					}
+				}
+				hqEnd();
+				break;
+			}
+			
+		case kPrimtiveType_TriangleDown:
+			{
+				hqBegin(HQ_FILLED_TRIANGLES);
+				{
+					const int num = channels->size;
+					
+					for (int i = 0; i < num; ++i)
+					{
+						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
+						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						
+						hqFillTriangle(x, y + size, x - size, y - size, x + size, y - size);
+					}
+				}
+				hqEnd();
+				break;
+			}
+			
+		case kPrimtiveType_HLine:
+			{
+				hqBegin(HQ_LINES);
+				{
+					const int num = channels->size;
+					
+					for (int i = 0; i < num; ++i)
+					{
+						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
+						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						const float s1 = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float s2 = channels->numChannels >= 4 ? channels->channels[3].data[i] : s1;
+						
+						hqLine(x - size, y, s1 * strokeSize, x + size, y, s2 * strokeSize);
+					}
+				}
+				hqEnd();
+				break;
+			}
+			
+		case kPrimtiveType_VLine:
+			{
+				hqBegin(HQ_LINES);
+				{
+					const int num = channels->size;
+					
+					for (int i = 0; i < num; ++i)
+					{
+						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
+						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						const float s1 = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float s2 = channels->numChannels >= 4 ? channels->channels[3].data[i] : s1;
+						
+						hqLine(x, y - size, s1 * strokeSize, x, y + size, s2 * strokeSize);
+					}
+				}
+				hqEnd();
+				break;
+			}
 		}
+	}
+	
+	if (stroke)
+	{
+		if (strokeColor)
+			setColorf(strokeColor->r, strokeColor->g, strokeColor->b, strokeColor->a);
+		else
+			setColor(colorWhite);
 		
-	case kPrimtiveType_Quad:
+		switch (type)
 		{
-			hqBegin(HQ_FILLED_RECTS);
+		case kPrimtiveType_Cirle:
 			{
-				const int num = channels->size;
-				
-				for (int i = 0; i < num; ++i)
+				hqBegin(HQ_STROKED_CIRCLES);
 				{
-					const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-					const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-					const float rx = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
-					const float ry = channels->numChannels >= 4 ? channels->channels[3].data[i] : rx;
+					const int num = channels->size;
 					
-					hqFillRect(x - rx * size, y - ry * size, x + rx * size, y + ry * size);
+					for (int i = 0; i < num; ++i)
+					{
+						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
+						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						
+						hqStrokeCircle(x, y, r * size, strokeSize);
+					}
 				}
+				hqEnd();
+				break;
 			}
-			hqEnd();
-			break;
-		}
-		
-	case kPrimtiveType_TriangleUp:
-		{
-			hqBegin(HQ_FILLED_TRIANGLES);
+			
+		case kPrimtiveType_Quad:
 			{
-				const int num = channels->size;
-				
-				for (int i = 0; i < num; ++i)
+				hqBegin(HQ_STROKED_RECTS);
 				{
-					const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-					const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+					const int num = channels->size;
 					
-					hqFillTriangle(x, y - size, x - size, y + size, x + size, y + size);
+					for (int i = 0; i < num; ++i)
+					{
+						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
+						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						const float rx = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float ry = channels->numChannels >= 4 ? channels->channels[3].data[i] : rx;
+						
+						hqStrokeRect(x - rx * size, y - ry * size, x + rx * size, y + ry * size, strokeSize);
+					}
 				}
+				hqEnd();
+				break;
 			}
-			hqEnd();
-			break;
-		}
-		
-	case kPrimtiveType_TriangleDown:
-		{
-			hqBegin(HQ_FILLED_TRIANGLES);
+			
+		case kPrimtiveType_TriangleUp:
 			{
-				const int num = channels->size;
-				
-				for (int i = 0; i < num; ++i)
+				hqBegin(HQ_STROKED_TRIANGLES);
 				{
-					const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-					const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+					const int num = channels->size;
 					
-					hqFillTriangle(x, y + size, x - size, y - size, x + size, y - size);
+					for (int i = 0; i < num; ++i)
+					{
+						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
+						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						
+						hqStrokeTriangle(x, y - size, x - size, y + size, x + size, y + size, strokeSize);
+					}
 				}
+				hqEnd();
+				break;
 			}
-			hqEnd();
-			break;
-		}
-		
-	case kPrimtiveType_HLine:
-		{
-			hqBegin(HQ_LINES);
+			
+		case kPrimtiveType_TriangleDown:
 			{
-				const int num = channels->size;
-				
-				for (int i = 0; i < num; ++i)
+				hqBegin(HQ_STROKED_TRIANGLES);
 				{
-					const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-					const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-					const float s1 = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
-					const float s2 = channels->numChannels >= 4 ? channels->channels[3].data[i] : s1;
+					const int num = channels->size;
 					
-					hqLine(x - size, y, s1, x + size, y, s2);
+					for (int i = 0; i < num; ++i)
+					{
+						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
+						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						
+						hqStrokeTriangle(x, y + size, x - size, y - size, x + size, y - size, strokeSize);
+					}
 				}
+				hqEnd();
+				break;
 			}
-			hqEnd();
-			break;
-		}
-		
-	case kPrimtiveType_VLine:
-		{
-			hqBegin(HQ_LINES);
-			{
-				const int num = channels->size;
-				
-				for (int i = 0; i < num; ++i)
-				{
-					const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-					const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-					const float s1 = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
-					const float s2 = channels->numChannels >= 4 ? channels->channels[3].data[i] : s1;
-					
-					hqLine(x, y - size, s1, x, y + size, s2);
-				}
-			}
-			hqEnd();
+			
+		case kPrimtiveType_HLine:
+		case kPrimtiveType_VLine:
 			break;
 		}
 	}
