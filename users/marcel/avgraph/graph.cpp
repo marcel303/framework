@@ -1626,12 +1626,18 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		
 		if (texture != 0)
 		{
+			glBlendEquation(GL_FUNC_ADD);
+			glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ZERO);
+			
 			setColor(colorWhite);
 			gxSetTexture(texture);
 			{
 				drawRect(textureX, y + textureY, textureX + textureSx, y + textureY + textureSy);
 			}
 			gxSetTexture(0);
+			
+			glBlendEquation(GL_FUNC_ADD);
+			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
 		}
 		
 		setColor(colorWhite);
