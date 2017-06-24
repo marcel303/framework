@@ -24,30 +24,50 @@ extern void testHqPrimitives();
 
 //
 
+#define NUM_LINKS 5
+
+struct ButtonState;
+
+struct ButtonLink
+{
+	ButtonState * b = nullptr;
+	float d;
+	float a;
+};
+
 struct ButtonState
 {
 	float x = 0.f;
 	float y = 0.f;
+	float r = 50.f;
 	float sx = 200.f;
 	float sy = 100.f;
 	
+	float speedX = 0.f;
+	float speedY = 0.f;
 	float ax = 0.f;
 	float ay = 0.f;
 	
+	std::string caption;
 	std::string text;
 	
 	bool hover = false;
 	bool isDown = false;
 	
+	float hoverAnim = 0.f;
+	
+	ButtonLink links[NUM_LINKS];
+	
 	ButtonState()
 	{
 	}
 	
-	ButtonState(const char * _text)
+	ButtonState(const char * _caption, const char * _text)
 	{
 		x = random(0, GFX_SX);
 		y = random(0, GFX_SY);
 		
+		caption = _caption;
 		text = _text;
 	}
 	
@@ -56,11 +76,29 @@ struct ButtonState
 		const float mx = mouse.x - x;
 		const float my = mouse.y - y;
 		
-		const bool isInside =
-			mx >= 0.f &&
-			mx < sx &&
-			my >= 0.f &&
-			my < sy;
+		bool isInside;
+		
+		if (hover)
+		{
+			isInside =
+				mx > -sx/2 &&
+				mx < +sx/2 &&
+				my > -sy/2 &&
+				my < +sy/2;
+		}
+		else
+		{
+			isInside = std::hypotf(mx, my) < r;
+		}
+		
+		if (hover)
+		{
+			hoverAnim = std::min(hoverAnim + dt / .3f, 1.f);
+		}
+		else
+		{
+			hoverAnim = std::max(hoverAnim - dt / .15f, 0.f);
+		}
 		
 		bool clicked = false;
 		
@@ -103,20 +141,58 @@ struct ButtonState
 		{
 			gxTranslatef(x, y, 0);
 			
-			hqBegin(HQ_FILLED_ROUNDED_RECTS);
-			{
-				if (hover && isDown)
-					setColor(100, 100, 200);
-				else if (hover)
-					setColor(255, 255, 255);
-				else
-					setColor(200, 200, 255);
-				hqFillRoundedRect(0, 0, sx, sy, 10);
-			}
-			hqEnd();
+			Color color;
 			
-			setColor(0, 0, 100);
-			drawText(sx/2, sy/2, 20, 0, 0, "%s", text.c_str());
+			if (hover && isDown)
+				color = Color(100, 100, 200);
+			else if (hover)
+				color = Color(255, 255, 255);
+			else
+				color = Color(200, 200, 255);
+			
+			gxPushMatrix();
+			{
+				gxScalef(1.f - hoverAnim, 1.f - hoverAnim, 1);
+				
+				hqBegin(HQ_FILLED_CIRCLES);
+				{
+					setColor(color);
+					hqFillCircle(0, 0, r);
+				}
+				hqEnd();
+				
+				setColor(0, 0, 100);
+				drawText(0, 0, 32, 0, 0, "%s", caption.c_str());
+				
+				hqBegin(HQ_STROKED_CIRCLES);
+				{
+					setColor(0, 0, 100);
+					hqStrokeCircle(0, 0, r, 2.5f);
+				}
+				hqEnd();
+			}
+			gxPopMatrix();
+			
+			gxPushMatrix();
+			{
+				gxScalef(hoverAnim, hoverAnim, 1);
+				
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				{
+					const int border = 2;
+					
+					setColor(0, 0, 100);
+					hqFillRoundedRect(-sx/2 - border, -sy/2 - border, sx/2 + border, sy/2 + border, 10 + border);
+					
+					setColor(color);
+					hqFillRoundedRect(-sx/2, -sy/2, sx/2, sy/2, 10);
+				}
+				hqEnd();
+				
+				setColor(0, 0, 100);
+				drawText(0, 0, 20, 0, 0, "%s", text.c_str());
+			}
+			gxPopMatrix();
 		}
 		gxPopMatrix();
 	}
@@ -127,8 +203,9 @@ static std::map<std::string, ButtonState> buttonStates;
 static bool menuTick;
 static bool menuDraw;
 static float menuDt;
+static bool buttonPressed = false;
 
-static bool doButton(const char * name)
+static bool doButton(const char * caption, const char * name)
 {
 	bool clicked = false;
 	
@@ -136,7 +213,7 @@ static bool doButton(const char * name)
 	
 	if (i == buttonStates.end())
 	{
-		ButtonState state(name);
+		ButtonState state(caption, name);
 		
 		i = buttonStates.insert(std::make_pair(name, state)).first;
 	}
@@ -158,7 +235,31 @@ static bool doButton(const char * name)
 		popFontMode();
 	}
 	
+	buttonPressed |= clicked;
+	
 	return clicked;
+}
+
+static void addSpringForce(
+	const float x1,
+	const float y1,
+	const float x2,
+	const float y2,
+	const float targetDistance,
+	const float springConstant,
+	float & ax, float & ay)
+{
+	const float dx = x1 - x2;
+	const float dy = y1 - y2;
+	
+	const float ds = std::hypotf(dx, dy) + .1f;
+	const float dd = ds - targetDistance;
+	
+	const float f = - dd * springConstant;
+	const float a = f;
+	
+	ax += (dx / ds) * a;
+	ay += (dy / ds) * a;
 }
 
 static bool doMenus(const bool tick, const bool draw, const float dt)
@@ -166,6 +267,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	menuTick = tick;
 	menuDraw = draw;
 	menuDt = dt;
+	buttonPressed = false;
 	
 	if (tick)
 	{
@@ -173,74 +275,128 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 		{
 			auto & b = bi.second;
 			
-			float ax = 0.f;
-			float ay = 0.f;
+			std::vector<ButtonLink> links;
 			
-			for (auto & otheri : buttonStates)
+			for (auto & oi : buttonStates)
 			{
-				auto &other = otheri.second;
+				auto & o = oi.second;
 				
-				if (&b == &other)
+				if (&o == &b)
 					continue;
 				
-				const float dx = b.x - other.x;
-				const float dy = b.y - other.y;
-				const float dsSq = dx * dx + dy * dy;
-				const float ds = std::sqrtf(dsSq) + .1f;
+				const float dx = o.x - b.x;
+				const float dy = o.y - b.y;
+				const float ds = std::sqrtf(dx * dx + dy * dy);
 				
-				const float dd = ds - 500.f;
-				const float f = - dd / 100.f;
-				const float a = f;
+				ButtonLink bl;
+				bl.b = &o;
+				bl.d = ds;
 				
-				ax += (dx / ds) * a;
-				ay += (dy / ds) * a;
+				links.push_back(bl);
 			}
 			
-			b.ax = ax;
-			b.ay = ay;
+			std::sort(links.begin(), links.end(), [](auto & bl1, auto & bl2) { return bl1.d < bl2.d; });
+			
+			for (int i = 0; i < NUM_LINKS; ++i)
+				b.links[i] = ButtonLink();
+			for (int i = 0; i < NUM_LINKS && i < links.size(); ++i)
+				b.links[i] = links[i];
 		}
 		
 		for (auto & bi : buttonStates)
 		{
 			auto & b = bi.second;
 			
-			b.x += b.ax * dt;
-			b.y += b.ay * dt;
+			float ax = 0.f;
+			float ay = 0.f;
+			
+			addSpringForce(b.x, b.y, GFX_SX/2, GFX_SY/2, 0.f, 1.f / 10.f, ax, ay);
+			
+			for (int i = 0; i < NUM_LINKS; ++i)
+			{
+				auto * o = b.links[i].b;
+				
+				if (o == nullptr)
+					continue;
+				
+				addSpringForce(b.x, b.y, b.links[i].b->x, b.links[i].b->y, o->hover ? 300.f : 200.f, 1.f / 1.f, ax, ay);
+			}
+			
+			b.ax = ax;
+			b.ay = ay;
+		}
+		
+		const float falloff = std::powf(.2f, dt);
+		
+		for (auto & bi : buttonStates)
+		{
+			auto & b = bi.second;
+			
+			b.speedX += b.ax * dt;
+			b.speedY += b.ay * dt;
+			
+			b.speedX *= falloff;
+			b.speedY *= falloff;
+			
+			b.x += b.speedX * dt;
+			b.y += b.speedY * dt;
 		}
 	}
+	
+	if (draw)
+	{
+		setColor(200, 200, 255);
+		
+		hqBegin(HQ_LINES);
+		{
+			for (auto & bi : buttonStates)
+			{
+				auto & b = bi.second;
+				
+				for (int i = 0; i < NUM_LINKS; ++i)
+				{
+					if (b.links[i].b == nullptr)
+						continue;
+					
+					hqLine(b.x, b.y, 3.f, b.links[i].b->x, b.links[i].b->y, 0.f);
+				}
+			}
+		}
+		hqEnd();
+	}
 
-	if (doButton("DatGUI"))
+	if (doButton("DaGu", "DatGUI"))
 		testDatGui();
-	if (doButton("Deep Belief SDK"))
+	if (doButton("DdBe", "Deep Belief SDK"))
 		testDeepbelief();
-	if (doButton("Dot Detector"))
+	if (doButton("DtDt", "Dot Detector"))
 		testDotDetector();
-	if (doButton("Dot Tracker"))
+	if (doButton("DtTr", "Dot Tracker"))
 		testDotTracker();
-	if (doButton("1D Fourier Analysis"))
+	if (doButton("Fr1D", "1D Fourier Analysis"))
 		testFourier1d();
-	if (doButton("2D Fourier Analysis"))
+	if (doButton("Fr2D", "2D Fourier Analysis"))
 		testFourier2d();
-	if (doButton("CPU-image delay line"))
+	if (doButton("ImDL", "CPU-image delay line"))
 		testImageCpuDelayLine();
-	if (doButton("Drawing Primitives"))
+	if (doButton("DrPr", "Drawing Primitives"))
 		testHqPrimitives();
-	if (doButton("Impulse Response measurement"))
+	if (doButton("IRm", "Impulse Response measurement"))
 		testImpulseResponseMeasurement();
-	if (doButton("MSDFGEN"))
+	if (doButton("MSDF", "MSDFGEN"))
 		testMsdfgen();
-	if (doButton("NanoVG"))
+	if (doButton("NVg", "NanoVG"))
 		testNanovg();
-	if (doButton("STB TrueType"))
+	if (doButton("TT", "STB TrueType"))
 		testStbTruetype();
-	if (doButton("Texture Atlas"))
+	if (doButton("TAtl", "Texture Atlas"))
 		testTextureAtlas();
-	if (doButton("Threading"))
+	if (doButton("Thr", "Threading"))
 		testThreading();
-	if (doButton("XMM Gesture Follower"))
+	if (doButton("XMM", "XMM Gesture Follower"))
 		testXmm();
 
-	return doButton("Quit");
+	return doButton("QUIT", "Quit");
 }
 
 void testMain()
@@ -248,6 +404,8 @@ void testMain()
 	Surface surface(GFX_SX, GFX_SY, true);
 	
 	bool stop = false;
+	
+	double blurStrength = 0.f;
 	
 	do
 	{
@@ -257,21 +415,27 @@ void testMain()
 
 		//
 
-		stop = doMenus(true, false, dt);
+		stop = doMenus(true, false, dt) || keyboard.wentDown(SDLK_ESCAPE);
 
+		if (buttonPressed)
+			blurStrength = 1.0;
+		
+		blurStrength *= std::pow(.01, double(dt * 4.0));
+		
 		//
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			pushSurface(&surface);
 			{
-				surface.clear();
+				surface.clear(230, 230, 230, 0);
 				
 				doMenus(false, true, dt);
 			}
 			popSurface();
 			
-			surface.invert();
+			//surface.invert();
+			surface.gaussianBlur(blurStrength * 100.f, blurStrength * 100.f, std::ceilf(blurStrength * 100.f));
 			
 			setColor(colorWhite);
 			surface.blit(BLEND_OPAQUE);
