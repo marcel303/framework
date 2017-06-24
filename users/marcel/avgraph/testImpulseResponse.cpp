@@ -85,15 +85,15 @@ void testImpulseResponseMeasurement()
 		if (mouse.dx || mouse.dy)
 			measurementPhaseAnimSpeed = 0.0;
 		else
-			measurementPhaseAnimSpeed = std::min(1.0, measurementPhaseAnimSpeed + framework.timeStep / 2.5);
+			measurementPhaseAnimSpeed = std::min(1.0, measurementPhaseAnimSpeed + framework.timeStep / 2.0);
 		
 		// animate the signal by changing the signal's initial phase
 		
-		measurementPhaseAnim += - measurementPhaseAnimSpeed * framework.timeStep;
+		measurementPhaseAnim += -1.5 * measurementPhaseAnimSpeed * framework.timeStep;
 		
 		// construct the signal for which we will do the impulse-response measurement
 		
-		const int kNumSamples = 1000;
+		const int kNumSamples = GFX_SX;
 		
 		double samples[kNumSamples];
 		
@@ -175,7 +175,7 @@ void testImpulseResponseMeasurement()
 			
 			setFont("calibri.ttf");
 			
-			setColorf(1, 1, 1, impulseResponse * .5f + .5f);
+			setColorf(1, 1, 1, impulseResponse * .8f + .2f);
 			const char * text;
 			if (impulseResponse < 0.05)
 				text = "no match";

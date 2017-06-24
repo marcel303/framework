@@ -28,6 +28,9 @@ extern void testHqPrimitives();
 
 struct ButtonState;
 
+static bool hasMouseHover = false;
+static SDL_Cursor * handCursor = nullptr;
+
 struct ButtonLink
 {
 	ButtonState * b = nullptr;
@@ -104,6 +107,9 @@ struct ButtonState
 		
 		if (isInside)
 		{
+			if (hover == false)
+				Sound("menuselect.ogg").play();
+			
 			hover = true;
 		}
 		else
@@ -131,6 +137,11 @@ struct ButtonState
 				}
 			}
 		}
+		
+		if (clicked)
+			Sound("menuselect.ogg").play();
+		
+		hasMouseHover |= hover;
 		
 		return clicked;
 	}
@@ -267,7 +278,6 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	menuTick = tick;
 	menuDraw = draw;
 	menuDt = dt;
-	buttonPressed = false;
 	
 	if (tick)
 	{
@@ -364,7 +374,13 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 		}
 		hqEnd();
 	}
-
+	
+	if (menuTick)
+	{
+		hasMouseHover = false;
+		buttonPressed = false;
+	}
+	
 	if (doButton("KOAS", "Chaos Game"))
 		testChaosGame();
 	if (doButton("DaGu", "DatGUI"))
@@ -385,7 +401,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 		testImageCpuDelayLine();
 	if (doButton("DrPr", "Drawing Primitives"))
 		testHqPrimitives();
-	if (doButton("IRm", "Impulse Response measurement"))
+	if (doButton("IRm", "Impulse-Response"))
 		testImpulseResponseMeasurement();
 	if (doButton("MSDF", "MSDFGEN"))
 		testMsdfgen();
@@ -399,12 +415,24 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 		testThreading();
 	if (doButton("XMM", "XMM Gesture Follower"))
 		testXmm();
-
-	return doButton("QUIT", "Quit");
+	
+	const bool result = doButton("QUIT", "Quit");
+	
+	if (menuTick)
+	{
+		if (hasMouseHover)
+			SDL_SetCursor(handCursor);
+		else
+			SDL_SetCursor(SDL_GetDefaultCursor());
+	}
+	
+	return result;
 }
 
 void testMain()
 {
+	handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+	
 	Surface surface(GFX_SX, GFX_SY, true);
 	
 	bool stop = false;
@@ -446,4 +474,7 @@ void testMain()
 		}
 		framework.endDraw();
 	} while (stop == false);
+	
+	SDL_FreeCursor(handCursor);
+	handCursor = nullptr;
 }
