@@ -228,6 +228,7 @@ void testDeepbelief()
 			gxPopMatrix();
 			
 			setFont("calibri.ttf");
+			pushFontMode(FONT_SDF);
 			setColor(colorGreen);
 			
 			drawText(20, 20, 14, +1, +1, "initialized: %d, automaticProcessing: %d", d->state && d->state->isInitialized, automaticUpdates);
@@ -239,8 +240,9 @@ void testDeepbelief()
 			drawText(GFX_SX/2, 40, 14, +1, +1, "W: do single classification (wait). notice the animation hitches");
 			drawText(GFX_SX/2, 60, 14, +1, +1, "I: initialize deep belief object");
 			drawText(GFX_SX/2, 80, 14, +1, +1, "S: shut down deep belief object");
-			drawText(GFX_SX/2, 100, 14, +1, +1, "A: toggle automatic processing");
+			drawText(GFX_SX/2, 100, 14, +1, +1, "A: toggle automatic processing (%s)", automaticUpdates ? "on" : "off");
 			drawText(GFX_SX/2, 120, 14, +1, +1, "R: process (continuously)");
+			popFontMode();
 			
 			int index = 0;
 			
