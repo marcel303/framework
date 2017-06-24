@@ -30,15 +30,68 @@
 extern int GFX_SX;
 extern int GFX_SY;
 
+static void drawSamples(const int numSamples, const double * samples, const bool doSummation)
+{
+	if (numSamples < 2)
+		return;
+	
+	if (doSummation)
+	{
+		double sum = samples[0];
+		
+		hqBegin(HQ_LINES);
+		{
+			for (int i = 1; i < numSamples; ++i)
+			{
+				const double v1 = sum;
+				
+				sum += samples[i];
+				
+				const double v2 = sum;
+				
+				hqLine(
+					i + 0, v1, 1.f,
+					i + 1, v2, 1.f);
+			}
+		}
+		hqEnd();
+	}
+	else
+	{
+		hqBegin(HQ_LINES);
+		{
+			for (int i = 0; i < numSamples - 1; ++i)
+			{
+				hqLine(
+					i + 0, samples[i + 0] * 20.f, 1.f,
+					i + 1, samples[i + 1] * 20.f, 1.f);
+			}
+		}
+		hqEnd();
+	}
+}
+
 void testImpulseResponseMeasurement()
 {
-	// todo : generate signal
-	
-	// todo : do impulse response measurement over time
+	double measurementPhaseAnim = 0.0;
+	double measurementPhaseAnimSpeed = 0.0;
 	
 	do
 	{
 		framework.process();
+		
+		// stop animating the signal when the mouse moves, and slowly start animating it again once the movement stops
+		
+		if (mouse.dx || mouse.dy)
+			measurementPhaseAnimSpeed = 0.0;
+		else
+			measurementPhaseAnimSpeed = std::min(1.0, measurementPhaseAnimSpeed + framework.timeStep / 2.5);
+		
+		// animate the signal by changing the signal's initial phase
+		
+		measurementPhaseAnim += - measurementPhaseAnimSpeed * framework.timeStep;
+		
+		// construct the signal for which we will do the impulse-response measurement
 		
 		const int kNumSamples = 1000;
 		
@@ -49,15 +102,19 @@ void testImpulseResponseMeasurement()
 		
 		double twoPi = M_PI * 2.0;
 		
-		double samplePhase = 0.0;
+		double samplePhase = measurementPhaseAnim;
 		double sampleStep = twoPi / 87.65;
 		
 		for (int i = 0; i < kNumSamples; ++i)
 		{
 			samples[i] = std::cos(samplePhase);
 			
-			samplePhase = std::fmod(samplePhase + sampleStep, twoPi);
+			samplePhase = std::fmod(samplePhase + sampleStep + twoPi, twoPi);
 		}
+		
+		// do the impulse-response measurement, by convolving a secondary signal with the signal to be measured
+		// if the signals measure in frequency, the impulse-response will be a large number. if they do not
+		// match at all, the impulse-response will be close to zero
 		
 		double measurementPhase = twoPi * (mouse.y / double(GFX_SY));
 		double measurementStep = twoPi / (150.0 * mouse.x / double(GFX_SX));
@@ -92,62 +149,52 @@ void testImpulseResponseMeasurement()
 		
 		double impulseResponse = std::hypot(avgX, avgY) * 2.0;
 		
+		//
+		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			setFont("calibri.ttf");
-			setColor(colorWhite);
-			drawText(GFX_SX/2, GFX_SY/2, 24, 0, 0, "impulse response: %f (%f^8)", impulseResponse, std::pow(impulseResponse, 8.0));
-			drawText(GFX_SX/2, GFX_SY/2 + 30, 24, 0, 0, "sampleFreq=%f, measurementFreq=%f", 1.f / sampleStep, 1.f / measurementStep);
-			drawText(GFX_SX/2, GFX_SY/2 + 60, 24, 0, 0, "sumS=%f, sumX=%f, sumY=%f", sumS, sumX, sumY);
-			
 			gxPushMatrix();
 			{
 				gxTranslatef(0, GFX_SY/2, 0);
 				gxScalef(GFX_SX / float(kNumSamples), 1.f, 0.f);
 				
 				setColor(255, 255, 255);
-				gxBegin(GL_POINTS);
-				{
-					for (int i = 0; i < kNumSamples; ++i)
-					{
-						gxVertex2f(i, samples[i] * 20.f);
-					}
-				}
-				gxEnd();
+				drawSamples(kNumSamples, samples, false);
 				
 				setColor(colorRed);
-				gxBegin(GL_POINTS);
-				{
-					float rsum = 0.f;
-					
-					for (int i = 0; i < kNumSamples; ++i)
-					{
-						rsum += responseX[i];
-						
-						gxVertex2f(i, rsum);
-						
-						gxVertex2f(i, responseX[i] * 20.f);
-					}
-				}
-				gxEnd();
+				drawSamples(kNumSamples, responseX, false);
+				drawSamples(kNumSamples, responseX, true);
 				
 				setColor(colorGreen);
-				gxBegin(GL_POINTS);
-				{
-					float rsum = 0.f;
-					
-					for (int i = 0; i < kNumSamples; ++i)
-					{
-						rsum += responseY[i];
-						
-						gxVertex2f(i, rsum);
-						
-						gxVertex2f(i, responseY[i] * 20.f);
-					}
-				}
-				gxEnd();
+				drawSamples(kNumSamples, responseY, false);
+				drawSamples(kNumSamples, responseY, true);
 			}
 			gxPopMatrix();
+			
+			//
+			
+			setFont("calibri.ttf");
+			
+			setColorf(1, 1, 1, impulseResponse * .5f + .5f);
+			const char * text;
+			if (impulseResponse < 0.05)
+				text = "no match";
+			else if (impulseResponse < 0.1)
+				text = "getting closer";
+			else if (impulseResponse < 0.7)
+				text = "close...";
+			else
+				text = "high impulse-response!";
+			drawText(GFX_SX/2, GFX_SX*1/5, 32, 0, 0, "%s", text);
+			
+			setColor(200, 200, 255);
+			drawText(GFX_SX/2, GFX_SY*3/4, 24, 0, 0, "impulse response: %f (%f^8)", impulseResponse, std::pow(impulseResponse, 8.0));
+			drawText(GFX_SX/2, GFX_SY*3/4 + 30, 24, 0, 0, "sampleFreq=%f, measurementFreq=%f", 1.f / sampleStep, 1.f / measurementStep);
+			drawText(GFX_SX/2, GFX_SY*3/4 + 60, 24, 0, 0, "sumS=%f, sumX=%f, sumY=%f", sumS, sumX, sumY);
+			
+			setColor(colorWhite);
+			drawText(GFX_SX/2, GFX_SY*3/4 + 90, 24, 1, 0, "MOUSE = change frequency");
+			drawText(GFX_SX/2, GFX_SY*3/4 + 120, 24, 1, 0, "SPACE = quit");
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
