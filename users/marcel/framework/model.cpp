@@ -1114,7 +1114,7 @@ void Model::updateAnimationSegment()
 		
 		if (!m_animSegment)
 		{
-			log("unable to find animation: %s", m_animSegmentName.c_str());
+			logInfo("unable to find animation: %s", m_animSegmentName.c_str());
 			animIsActive = false;
 			animTime = 0.f;
 		}
@@ -1515,7 +1515,7 @@ void ModelCacheElem::load(const char * filename)
 			
 			const std::string actions = record.args.getString("actions", "");
 			
-			//log("added anim trigger. time=%g, actions=%s", time, actions.c_str());
+			//logInfo("added anim trigger. time=%g, actions=%s", time, actions.c_str());
 			
 			AnimTrigger trigger;
 			trigger.time = time;

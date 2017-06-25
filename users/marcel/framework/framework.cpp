@@ -293,7 +293,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 			if (foundMode)
 			{
-				log("found suitable display mode: %d x %d @ %d Hz", closest.w, closest.h, closest.refresh_rate);
+				logInfo("found suitable display mode: %d x %d @ %d Hz", closest.w, closest.h, closest.refresh_rate);
 				actualSx = closest.w;
 				actualSy = closest.h;
 				if (i == 1)
@@ -364,7 +364,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 			return false;
 		}
 
-		log("using OpenGL %s, %s, GLEW %s", glGetString(GL_VERSION), glGetString(GL_VENDOR), glewGetString(GLEW_VERSION));
+		logInfo("using OpenGL %s, %s, GLEW %s", glGetString(GL_VERSION), glGetString(GL_VENDOR), glewGetString(GLEW_VERSION));
 	
 		if (!GLEW_VERSION_3_2)
 		{
@@ -378,7 +378,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
 	if (GLEW_ARB_debug_output)
 	{
-		log("using OpenGL debug output");
+		logInfo("using OpenGL debug output");
 		glDebugMessageCallbackARB(debugOutputGL, stderr);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 	}
@@ -3056,7 +3056,7 @@ void Sprite::updateAnimationSegment()
 		
 		if (!m_animSegment)
 		{
-			log("unable to find animation: %s", m_animSegmentName.c_str());
+			logInfo("unable to find animation: %s", m_animSegmentName.c_str());
 			animIsActive = false;
 			m_animFramef = 0.f;
 			m_animFrame = 0;
@@ -3115,7 +3115,7 @@ void Sprite::updateAnimation(float timeStep)
 		}
 		
 		//if (m_animSegmentName == "default")
-		//	log("%d (%d)", m_animFrame, anim->numFrames);
+		//	logInfo("%d (%d)", m_animFrame, anim->numFrames);
 	}
 }
 
@@ -3143,7 +3143,7 @@ void Sprite::processAnimationTriggersForFrame(int frame, int event)
 		
 		if (trigger.event == event)
 		{
-			//log("event == this->event");
+			//logInfo("event == this->event");
 			
 			Dictionary args = trigger.args;
 			args.setPtr("obj", animActionHandlerObj);
@@ -4283,14 +4283,14 @@ void Stage::removeObject(int objectId)
 	
 	if (i != m_objects.end())
 	{
-		log("removing object with object ID %d", objectId);
+		logInfo("removing object with object ID %d", objectId);
 		StageObject * obj = i->second;
 		delete obj;
 		m_objects.erase(i);
 	}
 	else
 	{
-		log("removing object with object ID %d (but already dead)", objectId);
+		logInfo("removing object with object ID %d (but already dead)", objectId);
 	}
 }
 
@@ -7192,7 +7192,7 @@ void logDebug(const char * format, ...)
 
 #endif
 
-void log(const char * format, ...)
+void logInfo(const char * format, ...)
 {
 	if (logLevel > 1)
 		return;

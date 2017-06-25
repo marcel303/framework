@@ -441,7 +441,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 				this->gridSy = gridSy;
 			}
 			
-			log("loaded %s (%dx%d)", filename, gridSx, gridSy);
+			logInfo("loaded %s (%dx%d)", filename, gridSx, gridSy);
 		}
 		
 		delete imageData;
@@ -767,7 +767,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 
 	if (result)
 	{
-		log("loaded shader %s", filename);
+		logInfo("loaded shader %s", filename);
 	}
 	else
 	{
@@ -900,7 +900,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	
 	if (result)
 	{
-		log("loaded shader program %s", name.c_str());
+		logInfo("loaded shader program %s", name.c_str());
 	}
 	else
 	{
@@ -1037,7 +1037,7 @@ void ComputeShaderCacheElem::load(const char * _name, const int _groupSx, const 
 
 	if (result)
 	{
-		log("loaded shader program %s", name.c_str());
+		logInfo("loaded shader program %s", name.c_str());
 	}
 	else
 	{
@@ -1341,7 +1341,7 @@ void AnimCacheElem::load(const char * filename)
 					continue;
 				}
 				
-				//log("added frame trigger. frame=%d, on=%s, action=%s", frame, event.c_str(), action.c_str());
+				//logInfo("added frame trigger. frame=%d, on=%s, action=%s", frame, event.c_str(), action.c_str());
 				
 				AnimTrigger trigger;
 				trigger.event = eventEnum;
@@ -1426,7 +1426,7 @@ void SpriterCacheElem::load(const char * filename)
 	
 	if (m_scene->load(filename))
 	{
-		log("loaded spriter %s", filename);
+		logInfo("loaded spriter %s", filename);
 	}
 	else
 	{
@@ -1541,7 +1541,7 @@ void SoundCacheElem::load(const char * filename)
 				alBufferData(buffer, bufferFormat, soundData->sampleData, bufferSize, bufferSampleRate);
 				g_soundPlayer.checkError();
 				
-				log("loaded %s", filename);
+				logInfo("loaded %s", filename);
 			}
 			else
 			{
@@ -1648,7 +1648,7 @@ void FontCacheElem::load(const char * filename)
 	}
 	else
 	{
-		log("loaded %s", filename);
+		logInfo("loaded %s", filename);
 
 		// fixme : this is a work around for FreeType returning monochrome data in FT_Load_Char, instead of the 8 gray scale
 		// data it should be returning, when it find a stored glyph bitmap in the font itself. since we cannot directly upload
@@ -1854,7 +1854,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
-		//log("added glyph cache element. face=%p, size=%d, character=%c, texture=%u. count=%d\n", face, size, c, elem.texture, (int)m_map.size());
+		//logInfo("added glyph cache element. face=%p, size=%d, character=%c, texture=%u. count=%d\n", face, size, c, elem.texture, (int)m_map.size());
 		
 		return i->second;
 	}
@@ -2564,7 +2564,7 @@ void UiCacheElem::load(const char * filename)
 			}
 		}
 		
-		log("loaded %s", filename);
+		logInfo("loaded %s", filename);
 	}
 }
 

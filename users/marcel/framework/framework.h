@@ -1412,11 +1412,11 @@ static T random(T min, T max)
 #endif
 
 #if ENABLE_LOGGING
-	void log(const char * format, ...);
+	void logInfo(const char * format, ...);
 	void logWarning(const char * format, ...);
 	void logError(const char * format, ...);
 #else
-	#define log(...) do { } while (false)
+	#define logInfo(...) do { } while (false)
 	#define logWarning(...) do { } while (false)
 	#define logError(...) do { } while (false)
 #endif

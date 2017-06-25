@@ -88,7 +88,7 @@ static void fbxLog(int logIndent, const char * fmt, ...)
 		vsprintf_s(temp, sizeof(temp), fmt, va);
 		va_end(va);
 		
-		log("%s%s", tabs, temp);
+		logInfo("%s%s", tabs, temp);
 	}
 }
 
