@@ -50,7 +50,7 @@ public:
 		}
 	}
 	
-	int channelSize;  // 1 or 2 bytes
+	int channelSize;  // 1 or 2 bytes = int8 or int16, 4 bytes = float32
 	int channelCount; // 1 for mono, 2 for stereo
 	int sampleCount;
 	int sampleRate;
