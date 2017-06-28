@@ -400,7 +400,6 @@ void makeActive(UiState * state, const bool doActions, const bool doDraw)
 	g_drawY = state->y;
 	
 	setFont(state->font.c_str());
-	setFontMode(FONT_SDF);
 }
 
 //
