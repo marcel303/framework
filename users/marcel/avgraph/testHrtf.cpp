@@ -422,6 +422,25 @@ struct AudioSource_Binaural : AudioSource
 
 //
 
+struct PortAudioObject
+{
+	PaStream * stream;
+	
+	PortAudioObject()
+		: stream(nullptr)
+	{
+	}
+	
+	~PortAudioObject()
+	{
+		shut();
+	}
+	
+	bool init(AudioSource * audioSource);
+	bool initImpl(AudioSource * audioSource);
+	bool shut();
+};
+
 static int portaudioCallback(
 	const void * inputBuffer,
 	      void * outputBuffer,
@@ -454,9 +473,21 @@ static int portaudioCallback(
 	return paContinue;
 }
 
-static PaStream * stream = nullptr;
+bool PortAudioObject::init(AudioSource * audioSource)
+{
+	if (initImpl(audioSource) == false)
+	{
+		shut();
+		
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
 
-static bool initAudioOutput(void * userData)
+bool PortAudioObject::initImpl(AudioSource * audioSource)
 {
 	PaError err;
 	
@@ -493,7 +524,7 @@ static bool initAudioOutput(void * userData)
 	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
 	outputParameters.hostApiSpecificStreamInfo = nullptr;
 	
-	if ((err = Pa_OpenStream(&stream, nullptr, &outputParameters, SAMPLE_RATE, AUDIO_UPDATE_SIZE, paDitherOff, portaudioCallback, userData)) != paNoError)
+	if ((err = Pa_OpenStream(&stream, nullptr, &outputParameters, SAMPLE_RATE, AUDIO_UPDATE_SIZE, paDitherOff, portaudioCallback, audioSource)) != paNoError)
 	{
 		logError("portaudio: failed to open stream: %s", Pa_GetErrorText(err));
 		return false;
@@ -508,7 +539,7 @@ static bool initAudioOutput(void * userData)
 	return true;
 }
 
-static bool shutAudioOutput()
+bool PortAudioObject::shut()
 {
 	PaError err;
 	
@@ -540,6 +571,8 @@ static bool shutAudioOutput()
 	
 	return true;
 }
+
+//
 
 struct HRTFFilterAndDistance
 {
@@ -796,7 +829,9 @@ void testHrtf()
 	
 	audioSource_Binaural.source = &audioSource_Sound;
 	
-	if (initAudioOutput(&audioSource_Binaural) == false)
+	PortAudioObject pa;
+	
+	if (pa.init(&audioSource_Binaural) == false)
 	{
 		logError("failed to initialize audio output");
 	}
@@ -890,10 +925,7 @@ void testHrtf()
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
 	
-	if (shutAudioOutput() == false)
-	{
-		logError("failed to shut down audio output");
-	}
+	pa.shut();
 	
 	exit(0);
 }
