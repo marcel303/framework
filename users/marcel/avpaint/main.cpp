@@ -248,11 +248,13 @@ struct VideoEffect
 				}
 				clearShader();
 				
+			#if 0
 				pushBlend(BLEND_OPAQUE);
-				//applyFsfx(*surface, "fsfx/godrays.ps");
-				//const float luminanceStrength = (-std::cosf(framework.time / 4.567f) + 1.f) / 2.f;
-				//applyFsfx(*surface, "fsfx/luminance.ps", luminanceStrength);
+				applyFsfx(*surface, "fsfx/godrays.ps");
+				const float luminanceStrength = (-std::cosf(framework.time / 4.567f) + 1.f) / 2.f;
+				applyFsfx(*surface, "fsfx/luminance.ps", luminanceStrength);
 				popBlend();
+			#endif
 			}
 		}
 	}
