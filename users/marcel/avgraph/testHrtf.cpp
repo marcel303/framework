@@ -14,7 +14,6 @@
 #define AUDIO_UPDATE_SIZE (AUDIO_BUFFER_SIZE/2)
 
 #define SAMPLE_RATE 44100
-#define MAX_FILTERS 187
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -242,6 +241,8 @@ static bool convertSoundDataToHRTF(
 	return true;
 }
 
+//
+
 struct AudioSource
 {
 	virtual int getChannelCount() const = 0;
@@ -331,8 +332,6 @@ struct AudioSource_Sound : AudioSource
 	}
 };
 
-static HRTFFilter hrtfFilters[MAX_FILTERS];
-
 struct AudioSource_Binaural : AudioSource
 {
 	AudioBuffer overlapBuffer;
@@ -421,11 +420,7 @@ struct AudioSource_Binaural : AudioSource
 	}
 };
 
-static AudioSource_Sine audioSource_Sine;
-static AudioSource_Sound audioSource_Sound;
-static AudioSource_Binaural audioSource_Binaural;
-
-static PaStream * stream = nullptr;
+//
 
 static int portaudioCallback(
 	const void * inputBuffer,
@@ -440,11 +435,13 @@ static int portaudioCallback(
 	Assert(framesPerBuffer == AUDIO_UPDATE_SIZE);
 	Assert(AUDIO_BUFFER_SIZE == AUDIO_UPDATE_SIZE * 2);
 	
+	AudioSource * audioSource = (AudioSource*)userData;
+	
 	float channelL[AUDIO_UPDATE_SIZE];
 	float channelR[AUDIO_UPDATE_SIZE];
 	
-	audioSource_Binaural.generate(0, channelL, AUDIO_UPDATE_SIZE);
-	audioSource_Binaural.generate(1, channelR, AUDIO_UPDATE_SIZE);
+	audioSource->generate(0, channelL, AUDIO_UPDATE_SIZE);
+	audioSource->generate(1, channelR, AUDIO_UPDATE_SIZE);
 	
 	float * __restrict destinationBuffer = (float*)outputBuffer;
 	
@@ -457,7 +454,9 @@ static int portaudioCallback(
 	return paContinue;
 }
 
-static bool initAudioOutput()
+static PaStream * stream = nullptr;
+
+static bool initAudioOutput(void * userData)
 {
 	PaError err;
 	
@@ -494,7 +493,7 @@ static bool initAudioOutput()
 	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
 	outputParameters.hostApiSpecificStreamInfo = nullptr;
 	
-	if ((err = Pa_OpenStream(&stream, nullptr, &outputParameters, SAMPLE_RATE, AUDIO_UPDATE_SIZE, paDitherOff, portaudioCallback, nullptr)) != paNoError)
+	if ((err = Pa_OpenStream(&stream, nullptr, &outputParameters, SAMPLE_RATE, AUDIO_UPDATE_SIZE, paDitherOff, portaudioCallback, userData)) != paNoError)
 	{
 		logError("portaudio: failed to open stream: %s", Pa_GetErrorText(err));
 		return false;
@@ -542,27 +541,39 @@ static bool shutAudioOutput()
 	return true;
 }
 
-struct FilterAndDistance
+struct HRTFFilterAndDistance
 {
 	HRTFFilter * filter;
 	float distance;
 	
-	bool operator<(const FilterAndDistance & other) const
+	bool operator<(const HRTFFilterAndDistance & other) const
 	{
 		return distance < other.distance;
 	}
 };
 
-static int findNearestFilters(const float x, const float y, const float z, FilterAndDistance * out, const int outSize)
+struct HRTFFilterSet
 {
-	std::vector<FilterAndDistance> set;
+	std::vector<HRTFFilter> filters;
 	
-	set.reserve(MAX_FILTERS);
+	int findNearestFilters(const float x, const float y, const float z, HRTFFilterAndDistance * out, const int outSize);
 	
-	for (int i = 0; i < MAX_FILTERS; ++i)
+	bool addHrtfFromSoundData(const SoundData & soundData, const int elevation, const int azimuth, const bool swapLR);
+	
+	bool loadIrcamDatabase(const char * path);
+	bool loadMitDatabase(const char * path);
+};
+
+int HRTFFilterSet::findNearestFilters(const float x, const float y, const float z, HRTFFilterAndDistance * out, const int outSize)
+{
+	std::vector<HRTFFilterAndDistance> set;
+	
+	set.resize(filters.size());
+	
+	int index = 0;
+	
+	for (auto & f : filters)
 	{
-		auto & f = hrtfFilters[i];
-		
 		if (f.initialized == false)
 			continue;
 		
@@ -570,9 +581,7 @@ static int findNearestFilters(const float x, const float y, const float z, Filte
 		const float dy = f.y - y;
 		const float ds = std::hypotf(dx, dy);
 		
-		set.resize(set.size() + 1);
-		
-		FilterAndDistance & fd = set.back();
+		HRTFFilterAndDistance & fd = set[index++];
 		
 		fd.filter = &f;
 		fd.distance = ds;
@@ -590,11 +599,11 @@ static int findNearestFilters(const float x, const float y, const float z, Filte
 	return numOut;
 }
 
-static int nextAllocIndex = 0;
-
-static bool addHrtfFromSoundData(const SoundData & soundData, const int elevation, const int azimuth, const bool swapLR)
+bool HRTFFilterSet::addHrtfFromSoundData(const SoundData & soundData, const int elevation, const int azimuth, const bool swapLR)
 {
-	HRTFFilter & filter = hrtfFilters[nextAllocIndex];
+	filters.resize(filters.size() + 1);
+	
+	HRTFFilter & filter = filters.back();
 	
 	if (convertSoundDataToHRTF(soundData,
 		swapLR == false ? filter.data.lFilter : filter.data.rFilter,
@@ -602,12 +611,12 @@ static bool addHrtfFromSoundData(const SoundData & soundData, const int elevatio
 	{
 		filter.init(elevation, azimuth);
 		
-		nextAllocIndex++;
-		
 		return true;
 	}
 	else
 	{
+		filters.resize(filters.size() - 1);
+		
 		return false;
 	}
 }
@@ -644,9 +653,13 @@ static bool parseIrcamFilename(const char * filename, int & subjectId, int & rad
 	return true;
 }
 
-static void loadIrcamDatabase(const char * path)
+bool HRTFFilterSet::loadIrcamDatabase(const char * path)
 {
 	std::vector<std::string> files = listFiles(path, false);
+	
+	filters.reserve(filters.size() + files.size());
+	
+	int numAdded = 0;
 	
 	for (auto & filename : files)
 	{
@@ -675,12 +688,17 @@ static void loadIrcamDatabase(const char * path)
 		}
 		else
 		{
-			addHrtfFromSoundData(*soundData, elevation, azimuth, false);
+			if (addHrtfFromSoundData(*soundData, elevation, azimuth, false))
+			{
+				numAdded++;
+			}
 			
 			delete soundData;
 			soundData = nullptr;
 		}
 	}
+	
+	return numAdded > 0;
 }
 
 static bool parseMitFilename(const char * filename, int & elevation, int & azimuth)
@@ -714,9 +732,11 @@ static bool parseMitFilename(const char * filename, int & elevation, int & azimu
 	return true;
 }
 
-static void loadMitDatabase(const char * path)
+bool HRTFFilterSet::loadMitDatabase(const char * path)
 {
 	std::vector<std::string> files = listFiles(path, false);
+	
+	int numAdded = 0;
 	
 	for (auto & filename : files)
 	{
@@ -738,28 +758,45 @@ static void loadMitDatabase(const char * path)
 		}
 		else
 		{
-			addHrtfFromSoundData(*soundData, elevation, -azimuth, false);
-			addHrtfFromSoundData(*soundData, elevation, +azimuth, true);
+			if (addHrtfFromSoundData(*soundData, elevation, -azimuth, false))
+			{
+				numAdded++;
+			}
+			
+			if (addHrtfFromSoundData(*soundData, elevation, +azimuth, true))
+			{
+				numAdded++;
+			}
 			
 			delete soundData;
 			soundData = nullptr;
 		}
 	}
+	
+	return numAdded > 0;
 }
+
+//
+
+static AudioSource_Sine audioSource_Sine;
+static AudioSource_Sound audioSource_Sound;
+static AudioSource_Binaural audioSource_Binaural;
 
 void testHrtf()
 {
 	// load impulse-response audio files
 	
-	//loadIrcamDatabase("hrtf/IRC_1057");
+	HRTFFilterSet filterSet;
 	
-	loadMitDatabase("hrtf/MIT");
+	//filterSet.loadIrcamDatabase("hrtf/IRC_1057");
+	
+	filterSet.loadMitDatabase("hrtf/MIT");
 	
 	audioSource_Sound.load("hrtf/music.ogg");
 	
 	audioSource_Binaural.source = &audioSource_Sound;
 	
-	if (initAudioOutput() == false)
+	if (initAudioOutput(&audioSource_Binaural) == false)
 	{
 		logError("failed to initialize audio output");
 	}
@@ -782,9 +819,9 @@ void testHrtf()
 		int closestIndex = -1;
 		float closestDistance = std::numeric_limits<float>::max();
 		
-		for (int i = 0; i < MAX_FILTERS; ++i)
+		for (int i = 0; i < filterSet.filters.size(); ++i)
 		{
-			auto & f = hrtfFilters[i];
+			auto & f = filterSet.filters[i];
 			
 			if (f.initialized == false)
 				continue;
@@ -806,12 +843,12 @@ void testHrtf()
 		}
 		else
 		{
-			audioSource_Binaural.setActiveFilter(&hrtfFilters[closestIndex]);
+			audioSource_Binaural.setActiveFilter(&filterSet.filters[closestIndex]);
 		}
 		
-		FilterAndDistance fd[1];
+		HRTFFilterAndDistance fd[1];
 		
-		if (findNearestFilters(mousePosition[0], mousePosition[1], 0, fd, 1) == 1)
+		if (filterSet.findNearestFilters(mousePosition[0], mousePosition[1], 0, fd, 1) == 1)
 		{
 			// todo : interpolate filters
 			
@@ -828,14 +865,9 @@ void testHrtf()
 			{
 				gxMultMatrixf(worldToView.m_v);
 				
-				for (int i = 0; i < MAX_FILTERS; ++i)
+				for (auto & f : filterSet.filters)
 				{
-					auto & f = hrtfFilters[i];
-					
-					if (f.initialized == false)
-						continue;
-					
-					const bool isActive = i == closestIndex;
+					const bool isActive = &f == audioSource_Binaural.filterCur;
 					
 					if (isActive)
 						setColor(colorYellow);
