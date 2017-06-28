@@ -23,6 +23,27 @@ extern const int GFX_SY;
 
 extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
+//
+
+struct AudioBuffer;
+struct HRTFData;
+
+//
+
+static void convolveAudio(
+	AudioBuffer & source,
+	const HRTFData & lFilter,
+	const HRTFData & rFilter,
+	AudioBuffer & lResult,
+	AudioBuffer & rResult);
+
+static bool convertSoundDataToHRTF(
+	const SoundData & soundData,
+	HRTFData & lFilter,
+	HRTFData & rFilter);
+
+//
+
 struct HRTFData
 {
 	float real[HRTF_BUFFER_SIZE];
@@ -40,6 +61,43 @@ struct HRTFDataStereo
 {
 	HRTFData lFilter;
 	HRTFData rFilter;
+};
+
+struct HRTFFilter
+{
+	bool initialized;
+	
+	HRTFDataStereo data;
+	
+	float elevation;
+	float azimuth;
+	
+	float x;
+	float y;
+	float z;
+	
+	HRTFFilter()
+		: initialized(false)
+		, data()
+		, elevation(0.f)
+		, azimuth(0.f)
+		, x(0.f)
+		, y(0.f)
+		, z(0.f)
+	{
+	}
+	
+	void init(const float _elevation, const float _azimuth)
+	{
+		initialized = true;
+		
+		elevation = _elevation;
+		azimuth = _azimuth;
+		
+		x = -std::sin(Calc::DegToRad(azimuth));
+		y = -std::cos(Calc::DegToRad(azimuth));
+		z = std::sin(Calc::DegToRad(elevation));
+	}
 };
 
 struct AudioBuffer
@@ -113,52 +171,156 @@ static void convolveAudio(
 	rResult.transformToTimeDomain();
 }
 
-struct HRTFFilter
+static bool convertSoundDataToHRTF(
+	const SoundData & soundData,
+	HRTFData & lFilter,
+	HRTFData & rFilter)
 {
-	bool initialized;
-	
-	HRTFDataStereo data;
-	
-	float elevation;
-	float azimuth;
-	
-	float x;
-	float y;
-	float z;
-	
-	HRTFFilter()
-		: initialized(false)
-		, data()
-		, elevation(0.f)
-		, azimuth(0.f)
-		, x(0.f)
-		, y(0.f)
-		, z(0.f)
+	if (soundData.channelCount != 2)
 	{
+		// sample data must be stereo as it must contain data for both the left and right ear impulse responses
+		
+		return false;
 	}
 	
-	void init(const float _elevation, const float _azimuth)
+	// ideally the number of samples in the sound data and HRTF buffer would match
+	// however, clamp the number of samples in case the sound data contains more samples,
+	// and pad with zeroes in case it's less
+	
+	const int numSamplesToCopy = std::min(soundData.sampleCount, HRTF_BUFFER_SIZE);
+	
+	if (soundData.channelSize == 2)
 	{
-		initialized = true;
+		// 16-bit signed integers. convert the sample data to [-1..+1] floating point and
+		// de-interleave into left/right ear HRIR data
 		
-		elevation = _elevation;
-		azimuth = _azimuth;
+		const int16_t * __restrict sampleData = (const int16_t*)soundData.sampleData;
 		
-		x = -std::sin(Calc::DegToRad(azimuth));
-		y = -std::cos(Calc::DegToRad(azimuth));
-		z = std::sin(Calc::DegToRad(elevation));
+		for (int i = 0; i < numSamplesToCopy; ++i)
+		{
+			lFilter.real[i] = sampleData[i * 2 + 0] / float(1 << 15);
+			rFilter.real[i] = sampleData[i * 2 + 1] / float(1 << 15);
+		}
+	}
+	else if (soundData.channelSize == 4)
+	{
+		// 32-bit floating point data. de-interleave into left/right ear HRIR data
+		
+		const float * __restrict sampleData = (const float*)soundData.sampleData;
+		
+		for (int i = 0; i < numSamplesToCopy; ++i)
+		{
+			lFilter.real[i] = sampleData[i * 2 + 0];
+			rFilter.real[i] = sampleData[i * 2 + 1];
+		}
+	}
+	else
+	{
+		// unknown sample format
+		
+		return false;
+	}
+	
+	// pad the HRIR data with zeroes when necessary
+	
+	for (int i = numSamplesToCopy; i < HRTF_BUFFER_SIZE; ++i)
+	{
+		lFilter.real[i] = 0.f;
+		rFilter.real[i] = 0.f;
+	}
+	
+	// initialize the imaginary components to zeroes
+	
+	memset(lFilter.imag, 0, sizeof(lFilter.imag));
+	memset(rFilter.imag, 0, sizeof(rFilter.imag));
+	
+	// convert the HRIR (head-related impulse-response) to HRTF (head-related transfer function)
+	
+	lFilter.transformToFrequencyDomain();
+	rFilter.transformToFrequencyDomain();
+	
+	return true;
+}
+
+struct AudioSource
+{
+	virtual void generate(float * __restrict audioBuffer, const int numSamples) = 0;
+};
+
+struct AudioSource_Sine : AudioSource
+{
+	float phase = 0.f;
+	float phaseStep = 800.f / SAMPLE_RATE;
+
+	virtual void generate(float * __restrict audioBuffer, const int numSamples) override
+	{
+		for (int i = 0; i < numSamples; ++i)
+		{
+			audioBuffer[i] = std::sin(phase * 2.f * M_PI);
+			
+			phase = std::fmodf(phase + phaseStep, 1.f);
+		}
 	}
 };
 
-static float phase = 0.f;
-static float phaseStep = 800.f / SAMPLE_RATE;
+struct AudioSource_Sound : AudioSource
+{
+	SoundData * sound;
+	int position;
+	
+	AudioSource_Sound()
+		: sound(nullptr)
+		, position(0)
+	{
+	}
+	
+	~AudioSource_Sound()
+	{
+		delete sound;
+		sound = nullptr;
+		
+		position = 0;
+	}
+	
+	void load(const char * filename)
+	{
+		sound = loadSound(filename);
+	}
+	
+	virtual void generate(float * __restrict audioBuffer, const int numSamples) override
+	{
+		if (sound == nullptr)
+		{
+			for (int i = 0; i < numSamples; ++i)
+				audioBuffer[i] = 0.f;
+			return;
+		}
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			if (sound->channelSize == 2)
+			{
+				const int16_t * __restrict sampleData = (const int16_t*)sound->sampleData;
+				
+				audioBuffer[i] = sampleData[position * sound->channelCount + 0] / float(1 << 15);
+				
+				position += 1;
+				position %= sound->sampleCount;
+			}
+			else
+			{
+				audioBuffer[i] = 0.f;
+			}
+		}
+	}
+};
+
+static AudioSource_Sine audioSource_Sine;
+static AudioSource_Sound audioSource_Sound;
 
 static HRTFFilter hrtfFilters[MAX_FILTERS];
 
 static HRTFFilter * activeHrtfFilter = nullptr;
-
-static SoundData * sound = nullptr;
-static int soundPosition = 0;
 
 static PaStream * stream = nullptr;
 
@@ -202,31 +364,14 @@ static int portaudioCallback(
 	
 	float * __restrict sourceBuffer = overlapBuffer.real + AUDIO_UPDATE_SIZE;
 	
-#if 0
-	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-	{
-		sourceBuffer[i] = std::sin(phase * 2.f * M_PI);
-		
-		phase = std::fmodf(phase + phaseStep, 1.f);
-	}
-#else
-	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-	{
-		if (sound->channelSize == 2)
-		{
-			const int16_t * __restrict sampleData = (const int16_t*)sound->sampleData;
-			
-			sourceBuffer[i] = sampleData[soundPosition * sound->channelCount + 0] / float(1 << 15);
-			
-			soundPosition += 1;
-			soundPosition %= sound->sampleCount;
-		}
-		else
-		{
-			sourceBuffer[i] = 0.f;
-		}
-	}
-#endif
+	AudioSource * audioSource;
+	
+	if (false)
+		audioSource = &audioSource_Sine;
+	else
+		audioSource = &audioSource_Sound;
+	
+	audioSource->generate(sourceBuffer, AUDIO_UPDATE_SIZE);
 
 	const uint64_t t1 = g_TimerRT.TimeUS_get();
 	
@@ -336,74 +481,6 @@ static bool shutAudioOutput()
 		logError("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
 		return false;
 	}
-	
-	return true;
-}
-
-static bool convertSoundDataToHRTF(const SoundData & soundData, HRTFData & lFilter, HRTFData & rFilter)
-{
-	if (soundData.channelCount != 2)
-	{
-		// sample data must be stereo as it must contain data for both the left and right ear impulse responses
-		
-		return false;
-	}
-	
-	// ideally the number of samples in the sound data and HRTF buffer would match
-	// however, clamp the number of samples in case the sound data contains more samples,
-	// and pad with zeroes in case it's less
-	
-	const int numSamplesToCopy = std::min(soundData.sampleCount, HRTF_BUFFER_SIZE);
-	
-	if (soundData.channelSize == 2)
-	{
-		// 16-bit signed integers. convert the sample data to [-1..+1] floating point and
-		// de-interleave into left/right ear HRIR data
-		
-		const int16_t * __restrict sampleData = (const int16_t*)soundData.sampleData;
-		
-		for (int i = 0; i < numSamplesToCopy; ++i)
-		{
-			lFilter.real[i] = sampleData[i * 2 + 0] / float(1 << 15);
-			rFilter.real[i] = sampleData[i * 2 + 1] / float(1 << 15);
-		}
-	}
-	else if (soundData.channelSize == 4)
-	{
-		// 32-bit floating point data. de-interleave into left/right ear HRIR data
-		
-		const float * __restrict sampleData = (const float*)soundData.sampleData;
-		
-		for (int i = 0; i < numSamplesToCopy; ++i)
-		{
-			lFilter.real[i] = sampleData[i * 2 + 0];
-			rFilter.real[i] = sampleData[i * 2 + 1];
-		}
-	}
-	else
-	{
-		// unknown sample format
-		
-		return false;
-	}
-	
-	// pad the HRIR data with zeroes when necessary
-	
-	for (int i = numSamplesToCopy; i < HRTF_BUFFER_SIZE; ++i)
-	{
-		lFilter.real[i] = 0.f;
-		rFilter.real[i] = 0.f;
-	}
-	
-	// initialize the imaginary components to zeroes
-	
-	memset(lFilter.imag, 0, sizeof(lFilter.imag));
-	memset(rFilter.imag, 0, sizeof(rFilter.imag));
-	
-	// convert the HRIR (head-related impulse-response) to HRTF (head-related transfer function)
-	
-	lFilter.transformToFrequencyDomain();
-	rFilter.transformToFrequencyDomain();
 	
 	return true;
 }
@@ -621,7 +698,7 @@ void testHrtf()
 	
 	loadMitDatabase("hrtf/MIT");
 	
-	sound = loadSound("hrtf/music.ogg");
+	audioSource_Sound.load("hrtf/music.ogg");
 	
 	memset(&overlapBuffer, 0, sizeof(overlapBuffer));
 	
@@ -728,9 +805,6 @@ void testHrtf()
 	{
 		logError("failed to shut down audio output");
 	}
-	
-	delete sound;
-	sound = nullptr;
 	
 	exit(0);
 }
