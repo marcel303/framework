@@ -495,7 +495,7 @@ struct SpringOsc2D : BaseOsc
 				}
 			}
 			
-		#if 1
+		#if 0
 			__m256d _mm_dt = _mm256_set1_pd(dt);
 			__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
 			__m256d _mm_vRetain = _mm256_set1_pd(vRetain);
