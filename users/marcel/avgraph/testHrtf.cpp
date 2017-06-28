@@ -43,6 +43,330 @@ static bool convertSoundDataToHRTF(
 
 //
 
+struct HRIRSampleLocation
+{
+	float lSamples[HRTF_BUFFER_SIZE];
+	float rSamples[HRTF_BUFFER_SIZE];
+	
+	float elevation;
+	float azimuth;
+	
+	float x;
+	float y;
+	float z;
+	
+	void init(const float _elevation, const float _azimuth)
+	{
+		elevation = _elevation;
+		azimuth = _azimuth;
+		
+		x = -std::sin(Calc::DegToRad(azimuth));
+		y = -std::cos(Calc::DegToRad(azimuth));
+		z = std::sin(Calc::DegToRad(elevation));
+	}
+};
+
+struct HRIRSampleLocationAndDistance
+{
+	HRIRSampleLocation * sampleLocation;
+	float distance;
+	
+	bool operator<(const HRIRSampleLocationAndDistance & other) const
+	{
+		return distance < other.distance;
+	}
+};
+
+struct HRIRSet
+{
+	std::vector<HRIRSampleLocation> sampleLocations;
+	
+	int findNearestSampleLocations(const float x, const float y, const float z, HRIRSampleLocationAndDistance * out, const int outSize);
+	
+	bool addHrirFromSoundData(const SoundData & soundData, const int elevation, const int azimuth, const bool swapLR);
+	
+	bool loadIrcamDatabase(const char * path);
+	bool loadMitDatabase(const char * path);
+};
+
+static bool convertSoundDataToHRIR(const SoundData & soundData, float * __restrict lSamples, float * __restrict rSamples)
+{
+	if (soundData.channelCount != 2)
+	{
+		// sample data must be stereo as it must contain data for both the left and right ear impulse responses
+		
+		return false;
+	}
+	
+	// ideally the number of samples in the sound data and HRTF buffer would match
+	// however, clamp the number of samples in case the sound data contains more samples,
+	// and pad with zeroes in case it's less
+	
+	const int numSamplesToCopy = std::min(soundData.sampleCount, HRTF_BUFFER_SIZE);
+	
+	if (soundData.channelSize == 2)
+	{
+		// 16-bit signed integers. convert the sample data to [-1..+1] floating point and
+		// de-interleave into left/right ear HRIR data
+		
+		const int16_t * __restrict sampleData = (const int16_t*)soundData.sampleData;
+		
+		for (int i = 0; i < numSamplesToCopy; ++i)
+		{
+			lSamples[i] = sampleData[i * 2 + 0] / float(1 << 15);
+			rSamples[i] = sampleData[i * 2 + 1] / float(1 << 15);
+		}
+	}
+	else if (soundData.channelSize == 4)
+	{
+		// 32-bit floating point data. de-interleave into left/right ear HRIR data
+		
+		const float * __restrict sampleData = (const float*)soundData.sampleData;
+		
+		for (int i = 0; i < numSamplesToCopy; ++i)
+		{
+			lSamples[i] = sampleData[i * 2 + 0];
+			rSamples[i] = sampleData[i * 2 + 1];
+		}
+	}
+	else
+	{
+		// unknown sample format
+		
+		return false;
+	}
+	
+	// pad the HRIR data with zeroes when necessary
+	
+	for (int i = numSamplesToCopy; i < HRTF_BUFFER_SIZE; ++i)
+	{
+		lSamples[i] = 0.f;
+		rSamples[i] = 0.f;
+	}
+	
+	return true;
+}
+
+int HRIRSet::findNearestSampleLocations(const float x, const float y, const float z, HRIRSampleLocationAndDistance * out, const int outSize)
+{
+	std::vector<HRIRSampleLocationAndDistance> set;
+	
+	set.resize(sampleLocations.size());
+	
+	int index = 0;
+	
+	for (auto & s : sampleLocations)
+	{
+		const float dx = s.x - x;
+		const float dy = s.y - y;
+		const float ds = std::hypotf(dx, dy);
+		
+		HRIRSampleLocationAndDistance & sd = set[index++];
+		
+		sd.sampleLocation = &s;
+		sd.distance = ds;
+	}
+	
+	std::sort(set.begin(), set.end());
+	
+	const int numOut = std::min(outSize, (int)set.size());
+	
+	for (int i = 0; i < numOut; ++i)
+	{
+		out[i] = set[i];
+	}
+	
+	return numOut;
+}
+
+bool HRIRSet::addHrirFromSoundData(const SoundData & soundData, const int elevation, const int azimuth, const bool swapLR)
+{
+	sampleLocations.resize(sampleLocations.size() + 1);
+	
+	HRIRSampleLocation & sampleLocation = sampleLocations.back();
+	
+	if (convertSoundDataToHRIR(soundData,
+		swapLR == false ? sampleLocation.lSamples : sampleLocation.rSamples,
+		swapLR == false ? sampleLocation.rSamples : sampleLocation.lSamples))
+	{
+		sampleLocation.init(elevation, azimuth);
+		
+		return true;
+	}
+	else
+	{
+		sampleLocations.resize(sampleLocations.size() - 1);
+		
+		return false;
+	}
+}
+
+static bool parseIrcamFilename(const char * filename, int & subjectId, int & radius, int & elevation, int & azimuth)
+{
+	std::string name = Path::StripExtension(Path::GetBaseName(filename));
+		
+	// IRC_<subject_ID>_<status>_R<radius>_T<azimuth>_P<elevation>.wav;
+	
+	std::vector<std::string> parts;
+	
+	splitString(name, parts, '_');
+	
+	if (parts.size() != 6)
+	{
+		logDebug("error: filename doesn't match conversion: IRC_<subject_ID>_<status>_R<radius>_T<azimuth>_P<elevation>.wav");
+		return false;
+	}
+	
+	Assert(parts[0] == "IRC");
+	if (parts[0] != "IRC")
+		return false;
+	
+	subjectId = Parse::Int32(parts[1]);
+	
+	radius = parts[3][0] == 'R' ? Parse::Int32(String::SubString(parts[3], 1)) : -1;
+	azimuth = parts[4][0] == 'T' ? Parse::Int32(String::SubString(parts[4], 1)) : -1;
+	elevation = parts[5][0] == 'P' ? Parse::Int32(String::SubString(parts[5], 1)) : -1;
+	
+	if (radius < 0 || azimuth < 0 || elevation < 0)
+		return false;
+	
+	return true;
+}
+
+bool HRIRSet::loadIrcamDatabase(const char * path)
+{
+	std::vector<std::string> files = listFiles(path, false);
+	
+	sampleLocations.reserve(sampleLocations.size() + files.size());
+	
+	int numAdded = 0;
+	
+	for (auto & filename : files)
+	{
+		int subjectId;
+		int radius;
+		int elevation;
+		int azimuth;
+		
+		if (parseIrcamFilename(filename.c_str(), subjectId, radius, elevation, azimuth) == false)
+		{
+			continue;
+		}
+		
+		if (elevation != 0)
+		{
+			continue;
+		}
+		
+		logDebug("subjectId: %d, radius: %d, azimuth: %d, elevation: %d", subjectId, radius, azimuth, elevation);
+		
+		SoundData * soundData = loadSound(filename.c_str());
+		
+		if (soundData == nullptr)
+		{
+			logDebug("failed to load sound data");
+		}
+		else
+		{
+			if (addHrirFromSoundData(*soundData, elevation, azimuth, false))
+			{
+				numAdded++;
+			}
+			
+			delete soundData;
+			soundData = nullptr;
+		}
+	}
+	
+	return numAdded > 0;
+}
+
+static bool parseMitFilename(const char * filename, int & elevation, int & azimuth)
+{
+	std::string name = Path::StripExtension(Path::GetBaseName(filename));
+	
+	int offset = 0;
+	
+	if (offset == name.size())
+		return false;
+	if (name[offset] != 'H')
+		return false;
+	offset++;
+	
+	int begin = offset;
+	while (offset < name.size() && name[offset] != 'e')
+		offset++;
+	if (offset == name.size())
+		return false;
+	elevation = Parse::Int32(name.substr(begin, offset - begin));
+	offset++;
+	
+	begin = offset;
+	while (offset < name.size() && name[offset] != 'a')
+		offset++;
+	if (offset == name.size())
+		return false;
+	azimuth = Parse::Int32(name.substr(begin, offset - begin));
+	offset++;
+	
+	return true;
+}
+
+bool HRIRSet::loadMitDatabase(const char * path)
+{
+	std::vector<std::string> files = listFiles(path, false);
+	
+	sampleLocations.reserve(sampleLocations.size() + files.size());
+	
+	int numAdded = 0;
+	
+	for (auto & filename : files)
+	{
+		// "hrtf/MIT/mit-H0e070a.wav"
+		
+		int elevation;
+		int azimuth;
+		
+		if (parseMitFilename(filename.c_str(), elevation, azimuth) == false)
+		{
+			continue;
+		}
+		
+		SoundData * soundData = loadSound(filename.c_str());
+		
+		if (soundData == nullptr)
+		{
+			logDebug("failed to load sound data");
+		}
+		else
+		{
+			if (addHrirFromSoundData(*soundData, elevation, -azimuth, false))
+			{
+				numAdded++;
+			}
+			
+			if (azimuth != 0 && azimuth != 180)
+			{
+				if (addHrirFromSoundData(*soundData, elevation, +azimuth, true))
+				{
+					numAdded++;
+				}
+			}
+			else
+			{
+				logDebug("skipping HRIR mirroring for %s", filename.c_str());
+			}
+			
+			delete soundData;
+			soundData = nullptr;
+		}
+	}
+	
+	return numAdded > 0;
+}
+
+//
+
 struct HRTFData
 {
 	float real[HRTF_BUFFER_SIZE];
@@ -64,8 +388,6 @@ struct HRTFDataStereo
 
 struct HRTFFilter
 {
-	bool initialized;
-	
 	HRTFDataStereo data;
 	
 	float elevation;
@@ -76,8 +398,7 @@ struct HRTFFilter
 	float z;
 	
 	HRTFFilter()
-		: initialized(false)
-		, data()
+		: data()
 		, elevation(0.f)
 		, azimuth(0.f)
 		, x(0.f)
@@ -88,8 +409,6 @@ struct HRTFFilter
 	
 	void init(const float _elevation, const float _azimuth)
 	{
-		initialized = true;
-		
 		elevation = _elevation;
 		azimuth = _azimuth;
 		
@@ -466,19 +785,49 @@ struct AudioSource_Binaural : AudioSource
 	AudioBuffer lResult;
 	AudioBuffer rResult;
 	
+	HRTFFilter filter;
+	
 	const HRTFFilter * filterOld;
 	const HRTFFilter * filterCur;
 	
 	uint64_t processTimeAvg;
 	
+	SDL_mutex * mutex;
+	
 	AudioSource_Binaural()
 		: overlapBuffer()
 		, source(nullptr)
+		, filter()
 		, filterOld(nullptr)
 		, filterCur(nullptr)
 		, processTimeAvg(0)
+		, mutex(nullptr)
 	{
 		memset(&overlapBuffer, 0, sizeof(overlapBuffer));
+		
+		memset(&filter, 0, sizeof(filter));
+		
+		mutex = SDL_CreateMutex();
+	}
+	
+	~AudioSource_Binaural()
+	{
+		if (mutex != nullptr)
+		{
+			SDL_DestroyMutex(mutex);
+			mutex = nullptr;
+		}
+	}
+	
+	void setFilter(const HRTFFilter & _filter, const bool threadSafe)
+	{
+		if (threadSafe)
+			SDL_LockMutex(mutex);
+		
+		filter = _filter;
+		
+		if (threadSafe)
+			SDL_UnlockMutex(mutex);
 	}
 	
 	void setActiveFilter(const HRTFFilter * filter)
@@ -527,7 +876,13 @@ struct AudioSource_Binaural : AudioSource
 			memcpy(source.real, overlapBuffer.real, AUDIO_BUFFER_SIZE * sizeof(float));
 			memset(source.imag, 0, AUDIO_BUFFER_SIZE * sizeof(float));
 			
-			convolveAudio(source, hrtfFilter->data.lFilter, hrtfFilter->data.rFilter, lResult, rResult);
+			//convolveAudio(source, hrtfFilter->data.lFilter, hrtfFilter->data.rFilter, lResult, rResult);
+			
+			SDL_LockMutex(mutex);
+			{
+				convolveAudio(source, filter.data.lFilter, filter.data.rFilter, lResult, rResult);
+			}
+			SDL_UnlockMutex(mutex);
 			
 			const uint64_t t2 = g_TimerRT.TimeUS_get();
 			
@@ -732,9 +1087,6 @@ int HRTFFilterSet::findNearestFilters(const float x, const float y, const float 
 	
 	for (auto & f : filters)
 	{
-		if (f.initialized == false)
-			continue;
-		
 		const float dx = f.x - x;
 		const float dy = f.y - y;
 		const float ds = std::hypotf(dx, dy);
@@ -777,38 +1129,6 @@ bool HRTFFilterSet::addHrtfFromSoundData(const SoundData & soundData, const int 
 		
 		return false;
 	}
-}
-
-static bool parseIrcamFilename(const char * filename, int & subjectId, int & radius, int & elevation, int & azimuth)
-{
-	std::string name = Path::StripExtension(Path::GetBaseName(filename));
-		
-	// IRC_<subject_ID>_<status>_R<radius>_T<azimuth>_P<elevation>.wav;
-	
-	std::vector<std::string> parts;
-	
-	splitString(name, parts, '_');
-	
-	if (parts.size() != 6)
-	{
-		logDebug("error: filename doesn't match conversion: IRC_<subject_ID>_<status>_R<radius>_T<azimuth>_P<elevation>.wav");
-		return false;
-	}
-	
-	Assert(parts[0] == "IRC");
-	if (parts[0] != "IRC")
-		return false;
-	
-	subjectId = Parse::Int32(parts[1]);
-	
-	radius = parts[3][0] == 'R' ? Parse::Int32(String::SubString(parts[3], 1)) : -1;
-	azimuth = parts[4][0] == 'T' ? Parse::Int32(String::SubString(parts[4], 1)) : -1;
-	elevation = parts[5][0] == 'P' ? Parse::Int32(String::SubString(parts[5], 1)) : -1;
-	
-	if (radius < 0 || azimuth < 0 || elevation < 0)
-		return false;
-	
-	return true;
 }
 
 bool HRTFFilterSet::loadIrcamDatabase(const char * path)
@@ -859,37 +1179,6 @@ bool HRTFFilterSet::loadIrcamDatabase(const char * path)
 	return numAdded > 0;
 }
 
-static bool parseMitFilename(const char * filename, int & elevation, int & azimuth)
-{
-	std::string name = Path::StripExtension(Path::GetBaseName(filename));
-	
-	int offset = 0;
-	
-	if (offset == name.size())
-		return false;
-	if (name[offset] != 'H')
-		return false;
-	offset++;
-	
-	int begin = offset;
-	while (offset < name.size() && name[offset] != 'e')
-		offset++;
-	if (offset == name.size())
-		return false;
-	elevation = Parse::Int32(name.substr(begin, offset - begin));
-	offset++;
-	
-	begin = offset;
-	while (offset < name.size() && name[offset] != 'a')
-		offset++;
-	if (offset == name.size())
-		return false;
-	azimuth = Parse::Int32(name.substr(begin, offset - begin));
-	offset++;
-	
-	return true;
-}
-
 bool HRTFFilterSet::loadMitDatabase(const char * path)
 {
 	std::vector<std::string> files = listFiles(path, false);
@@ -921,9 +1210,16 @@ bool HRTFFilterSet::loadMitDatabase(const char * path)
 				numAdded++;
 			}
 			
-			if (addHrtfFromSoundData(*soundData, elevation, +azimuth, true))
+			if (azimuth != 0 && azimuth != 180)
 			{
-				numAdded++;
+				if (addHrtfFromSoundData(*soundData, elevation, +azimuth, true))
+				{
+					numAdded++;
+				}
+			}
+			else
+			{
+				logDebug("skipping HRTF mirroring for %s", filename.c_str());
 			}
 			
 			delete soundData;
@@ -940,10 +1236,11 @@ void testHrtf()
 {
 	// load impulse-response audio files
 	
+	HRIRSet hrirSet;
+	hrirSet.loadMitDatabase("hrtf/MIT");
+	
 	HRTFFilterSet filterSet;
-	
 	//filterSet.loadIrcamDatabase("hrtf/IRC_1057");
-	
 	filterSet.loadMitDatabase("hrtf/MIT");
 	
 	AudioSource_Sine sine;
@@ -959,7 +1256,7 @@ void testHrtf()
 	
 	AudioSource_Mix mix;
 	mix.normalizeGain = true;
-	mix.add(&binaural1, .1f);
+	mix.add(&binaural1, .05f);
 	mix.add(&binaural2, 1.f);
 	
 	PortAudioObject pa;
@@ -991,9 +1288,6 @@ void testHrtf()
 		{
 			auto & f = filterSet.filters[i];
 			
-			if (f.initialized == false)
-				continue;
-			
 			const float dx = f.x - mousePosition[0];
 			const float dy = f.y - mousePosition[1];
 			const float ds = std::hypotf(dx, dy);
@@ -1018,11 +1312,76 @@ void testHrtf()
 		
 		HRTFFilterAndDistance fd[1];
 		
-		if (filterSet.findNearestFilters(mousePosition[0], mousePosition[1], 0, fd, 1) == 1)
+		if (filterSet.findNearestFilters(mousePosition[0], mousePosition[1], 0.f, fd, 1) == 1)
 		{
 			// todo : interpolate filters
 			
 			Assert(fd[0].filter == binaural1.filterCur);
+		}
+		
+		//
+		
+		const int kMaxSampleLocations = 2;
+		
+		HRIRSampleLocationAndDistance sampleLocations[kMaxSampleLocations];
+		
+		const float cr = std::hypot(mousePosition[0], mousePosition[1]);
+		const float cx = mousePosition[0] / cr;
+		const float cy = mousePosition[1] / cr;
+		
+		const int numSampleLocations = hrirSet.findNearestSampleLocations(cx, cy, 0.f, sampleLocations, kMaxSampleLocations);
+		
+		if (numSampleLocations > 0)
+		{
+			float totalDistance = 0.f;
+			
+			for (int i = 0; i < numSampleLocations; ++i)
+			{
+				totalDistance += sampleLocations[i].distance;
+			}
+			
+			float weights[kMaxSampleLocations];
+			
+			const float distanceScale = totalDistance > 0.f ? 1.f / totalDistance : 1.f;
+			
+			float totalWeight = 0.f;
+			
+			for (int i = 0; i < numSampleLocations; ++i)
+			{
+				const float weight = 1.f - sampleLocations[i].distance * distanceScale;
+				
+				weights[i] = weight;
+				
+				totalWeight += weight;
+			}
+			
+			if (totalWeight > 0.f)
+			{
+				for (int i = 0; i < numSampleLocations; ++i)
+				{
+					weights[i] /= totalWeight;
+				}
+			}
+			
+			//logDebug("HRIR weights: %.2f, %.2f", weights[0], weights[1]);
+			
+			HRTFFilter filter;
+			memset(&filter, 0, sizeof(filter));
+			
+			float * lSamples = filter.data.lFilter.real;
+			float * rSamples = filter.data.rFilter.real;
+			
+			for (int i = 0; i < numSampleLocations; ++i)
+			{
+				audioBufferAdd(lSamples, sampleLocations[i].sampleLocation->lSamples, HRTF_BUFFER_SIZE, weights[i], lSamples);
+				audioBufferAdd(rSamples, sampleLocations[i].sampleLocation->rSamples, HRTF_BUFFER_SIZE, weights[i], rSamples);
+			}
+			
+			filter.data.lFilter.transformToFrequencyDomain();
+			filter.data.rFilter.transformToFrequencyDomain();
+			
+			binaural1.setFilter(filter, true);
+			binaural2.setFilter(filter, true);
 		}
 			
 		//
