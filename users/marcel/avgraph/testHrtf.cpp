@@ -243,6 +243,25 @@ static bool convertSoundDataToHRTF(
 
 //
 
+static void audioBufferMul(float * __restrict audioBuffer, const int numSamples, const float scale)
+{
+	for (int i = 0; i < numSamples; ++i)
+	{
+		audioBuffer[i] *= scale;
+	}
+}
+
+
+static void audioBufferAdd(const float * __restrict audioBuffer1, const float * __restrict audioBuffer2, const int numSamples, const float scale, float * __restrict destinationBuffer)
+{
+	for (int i = 0; i < numSamples; ++i)
+	{
+		destinationBuffer[i] = audioBuffer1[i] + audioBuffer2[i] * scale;
+	}
+}
+
+//
+
 struct AudioSource
 {
 	virtual int getChannelCount() const = 0;
@@ -250,11 +269,117 @@ struct AudioSource
 	virtual void generate(const int channelIndex, float * __restrict audioBuffer, const int numSamples) = 0;
 };
 
+struct AudioSource_Mix : AudioSource
+{
+	struct Input
+	{
+		AudioSource * source;
+		float gain;
+	};
+	
+	std::vector<Input> inputs;
+	
+	bool normalizeGain;
+	
+	AudioSource_Mix()
+		: inputs()
+		, normalizeGain(false)
+	{
+	}
+	
+	void add(AudioSource * source, const float gain)
+	{
+		Input input;
+		input.source = source;
+		input.gain = gain;
+		
+		inputs.push_back(input);
+	}
+	
+	virtual int getChannelCount() const
+	{
+		return 2;
+	}
+	
+	virtual void generate(const int channelIndex, float * __restrict audioBuffer, const int numSamples)
+	{
+		Assert(channelIndex < getChannelCount());
+		
+		if (inputs.empty())
+		{
+			for (int i = 0; i < numSamples; ++i)
+				audioBuffer[i] = 0.f;
+			return;
+		}
+		
+		bool isFirst = true;
+		
+		float gainScale = 1.f;
+		
+		if (normalizeGain)
+		{
+			float totalGain = 0.f;
+			
+			for (auto & input : inputs)
+			{
+				totalGain += input.gain;
+			}
+			
+			if (totalGain > 0.f)
+			{
+				gainScale = 1.f / totalGain;
+			}
+		}
+		
+		for (auto & input : inputs)
+		{
+			if (channelIndex < input.source->getChannelCount())
+			{
+				if (isFirst)
+				{
+					isFirst = false;
+					
+					input.source->generate(channelIndex, audioBuffer, numSamples);
+					
+					const float gain = input.gain * gainScale;
+					
+					if (gain != 1.f)
+					{
+						audioBufferMul(audioBuffer, numSamples, gain);
+					}
+				}
+				else
+				{
+					float tempBuffer[AUDIO_UPDATE_SIZE];
+					
+					input.source->generate(channelIndex, tempBuffer, numSamples);
+					
+					const float gain = input.gain * gainScale;
+					
+					audioBufferAdd(audioBuffer, tempBuffer, numSamples, gain, audioBuffer);
+				}
+			}
+		}
+	}
+};
+
 struct AudioSource_Sine : AudioSource
 {
-	float phase = 0.f;
-	float phaseStep = 800.f / SAMPLE_RATE;
-
+	float phase;
+	float phaseStep;
+	
+	AudioSource_Sine()
+		: phase(0.f)
+		, phaseStep(0.f)
+	{
+	}
+	
+	void init(const float _phase, const float _frequency)
+	{
+		phase = _phase;
+		phaseStep = _frequency / SAMPLE_RATE;
+	}
+	
 	virtual int getChannelCount() const override
 	{
 		return 1;
@@ -811,10 +936,6 @@ bool HRTFFilterSet::loadMitDatabase(const char * path)
 
 //
 
-static AudioSource_Sine audioSource_Sine;
-static AudioSource_Sound audioSource_Sound;
-static AudioSource_Binaural audioSource_Binaural;
-
 void testHrtf()
 {
 	// load impulse-response audio files
@@ -825,13 +946,25 @@ void testHrtf()
 	
 	filterSet.loadMitDatabase("hrtf/MIT");
 	
-	audioSource_Sound.load("hrtf/music.ogg");
+	AudioSource_Sine sine;
+	sine.init(0.f, 800.f);
 	
-	audioSource_Binaural.source = &audioSource_Sound;
+	AudioSource_Sound sound;
+	sound.load("hrtf/music.ogg");
+	
+	AudioSource_Binaural binaural1;
+	AudioSource_Binaural binaural2;
+	binaural1.source = &sine;
+	binaural2.source = &sound;
+	
+	AudioSource_Mix mix;
+	mix.normalizeGain = true;
+	mix.add(&binaural1, .1f);
+	mix.add(&binaural2, 1.f);
 	
 	PortAudioObject pa;
 	
-	if (pa.init(&audioSource_Binaural) == false)
+	if (pa.init(&mix) == false)
 	{
 		logError("failed to initialize audio output");
 	}
@@ -874,11 +1007,13 @@ void testHrtf()
 		
 		if (closestIndex < 0)
 		{
-			audioSource_Binaural.setActiveFilter(nullptr);
+			binaural1.setActiveFilter(nullptr);
+			binaural2.setActiveFilter(nullptr);
 		}
 		else
 		{
-			audioSource_Binaural.setActiveFilter(&filterSet.filters[closestIndex]);
+			binaural1.setActiveFilter(&filterSet.filters[closestIndex]);
+			binaural2.setActiveFilter(&filterSet.filters[closestIndex]);
 		}
 		
 		HRTFFilterAndDistance fd[1];
@@ -887,7 +1022,7 @@ void testHrtf()
 		{
 			// todo : interpolate filters
 			
-			Assert(fd[0].filter == audioSource_Binaural.filterCur);
+			Assert(fd[0].filter == binaural1.filterCur);
 		}
 			
 		//
@@ -902,7 +1037,7 @@ void testHrtf()
 				
 				for (auto & f : filterSet.filters)
 				{
-					const bool isActive = &f == audioSource_Binaural.filterCur;
+					const bool isActive = &f == binaural1.filterCur;
 					
 					if (isActive)
 						setColor(colorYellow);
@@ -920,7 +1055,7 @@ void testHrtf()
 			setFont("calibri.ttf");
 			setColor(colorWhite);
 			
-			drawText(10, 10, 24, 1, 1, "time: %.4fms", audioSource_Binaural.processTimeAvg / 1000.0);
+			drawText(10, 10, 24, 1, 1, "time: %.4fms", binaural1.processTimeAvg / 1000.0);
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
