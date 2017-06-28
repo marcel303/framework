@@ -244,7 +244,9 @@ static bool convertSoundDataToHRTF(
 
 struct AudioSource
 {
-	virtual void generate(float * __restrict audioBuffer, const int numSamples) = 0;
+	virtual int getChannelCount() const = 0;
+	
+	virtual void generate(const int channelIndex, float * __restrict audioBuffer, const int numSamples) = 0;
 };
 
 struct AudioSource_Sine : AudioSource
@@ -252,8 +254,15 @@ struct AudioSource_Sine : AudioSource
 	float phase = 0.f;
 	float phaseStep = 800.f / SAMPLE_RATE;
 
-	virtual void generate(float * __restrict audioBuffer, const int numSamples) override
+	virtual int getChannelCount() const override
 	{
+		return 1;
+	}
+	
+	virtual void generate(const int channelIndex, float * __restrict audioBuffer, const int numSamples) override
+	{
+		Assert(channelIndex == 0);
+		
 		for (int i = 0; i < numSamples; ++i)
 		{
 			audioBuffer[i] = std::sin(phase * 2.f * M_PI);
@@ -287,8 +296,15 @@ struct AudioSource_Sound : AudioSource
 		sound = loadSound(filename);
 	}
 	
-	virtual void generate(float * __restrict audioBuffer, const int numSamples) override
+	virtual int getChannelCount() const override
 	{
+		return sound->channelCount;
+	}
+	
+	virtual void generate(const int channelIndex, float * __restrict audioBuffer, const int numSamples) override
+	{
+		Assert(channelIndex < sound->channelCount);
+		
 		if (sound == nullptr)
 		{
 			for (int i = 0; i < numSamples; ++i)
@@ -302,7 +318,7 @@ struct AudioSource_Sound : AudioSource
 			{
 				const int16_t * __restrict sampleData = (const int16_t*)sound->sampleData;
 				
-				audioBuffer[i] = sampleData[position * sound->channelCount + 0] / float(1 << 15);
+				audioBuffer[i] = sampleData[position * sound->channelCount + channelIndex] / float(1 << 15);
 				
 				position += 1;
 				position %= sound->sampleCount;
@@ -315,18 +331,92 @@ struct AudioSource_Sound : AudioSource
 	}
 };
 
-static AudioSource_Sine audioSource_Sine;
-static AudioSource_Sound audioSource_Sound;
-
 static HRTFFilter hrtfFilters[MAX_FILTERS];
 
 static HRTFFilter * activeHrtfFilter = nullptr;
 
+struct AudioSource_Binaural : AudioSource
+{
+	AudioBuffer overlapBuffer;
+	
+	AudioSource * source;
+	
+	AudioBuffer lResult;
+	AudioBuffer rResult;
+	
+	uint64_t processTimeAvg;
+	
+	AudioSource_Binaural()
+		: overlapBuffer()
+		, source(nullptr)
+		, processTimeAvg(0)
+	{
+		memset(&overlapBuffer, 0, sizeof(overlapBuffer));
+	}
+	
+	virtual int getChannelCount() const override
+	{
+		return 2;
+	}
+	
+	virtual void generate(const int channelIndex, float * __restrict audioBuffer, const int numSamples) override
+	{
+		Assert(channelIndex < 2);
+		
+		const HRTFFilter * hrtfFilter = activeHrtfFilter;
+	
+		if (hrtfFilter == nullptr || source == nullptr)
+		{
+			for (int i = 0; i < numSamples; ++i)
+			{
+				audioBuffer[i] = 0.f;
+			}
+			
+			return;
+		}
+		
+		if (channelIndex == 0)
+		{
+			// copy the previous source data to the lower part of the overlap buffer
+			
+			memcpy(overlapBuffer.real, overlapBuffer.real + AUDIO_UPDATE_SIZE, AUDIO_UPDATE_SIZE * sizeof(float));
+			
+			// generate new source data into the upper part of the overlap buffer
+			
+			float * __restrict sourceBuffer = overlapBuffer.real + AUDIO_UPDATE_SIZE;
+			
+			source->generate(0, sourceBuffer, AUDIO_UPDATE_SIZE);
+
+			const uint64_t t1 = g_TimerRT.TimeUS_get();
+			
+			AudioBuffer source;
+			
+			memcpy(source.real, overlapBuffer.real, AUDIO_BUFFER_SIZE * sizeof(float));
+			memset(source.imag, 0, AUDIO_BUFFER_SIZE * sizeof(float));
+			
+			convolveAudio(source, hrtfFilter->data.lFilter, hrtfFilter->data.rFilter, lResult, rResult);
+			
+			const uint64_t t2 = g_TimerRT.TimeUS_get();
+			
+			processTimeAvg = (processTimeAvg * 90 + (t2 - t1) * 10) / 100;
+		}
+		
+		if (channelIndex == 0)
+		{
+			memcpy(audioBuffer, lResult.real + AUDIO_UPDATE_SIZE, numSamples * sizeof(float));
+		}
+		else
+		{
+			memcpy(audioBuffer, rResult.real + AUDIO_UPDATE_SIZE, numSamples * sizeof(float));
+		}
+	}
+};
+
+static AudioSource_Sine audioSource_Sine;
+static AudioSource_Sound audioSource_Sound;
+static AudioSource_Binaural audioSource_Binaural;
+
 static PaStream * stream = nullptr;
-
-static AudioBuffer overlapBuffer;
-
-static uint64_t hrtfTimeAvg = 0;
 
 static int portaudioCallback(
 	const void * inputBuffer,
@@ -356,45 +446,18 @@ static int portaudioCallback(
 		return paContinue;
 	}
 	
-	// copy the previous source data to the lower part of the overlap buffer
+	float channelL[AUDIO_UPDATE_SIZE];
+	float channelR[AUDIO_UPDATE_SIZE];
 	
-	memcpy(overlapBuffer.real, overlapBuffer.real + AUDIO_UPDATE_SIZE, AUDIO_UPDATE_SIZE * sizeof(float));
-	
-	// generate new source data into the upper part of the overlap buffer
-	
-	float * __restrict sourceBuffer = overlapBuffer.real + AUDIO_UPDATE_SIZE;
-	
-	AudioSource * audioSource;
-	
-	if (false)
-		audioSource = &audioSource_Sine;
-	else
-		audioSource = &audioSource_Sound;
-	
-	audioSource->generate(sourceBuffer, AUDIO_UPDATE_SIZE);
-
-	const uint64_t t1 = g_TimerRT.TimeUS_get();
-	
-	AudioBuffer source;
-	
-	memcpy(source.real, overlapBuffer.real, AUDIO_BUFFER_SIZE * sizeof(float));
-	memset(source.imag, 0, AUDIO_BUFFER_SIZE * sizeof(float));
-	
-	AudioBuffer lResult;
-	AudioBuffer rResult;
-	
-	convolveAudio(source, hrtfFilter->data.lFilter, hrtfFilter->data.rFilter, lResult, rResult);
-	
-	const uint64_t t2 = g_TimerRT.TimeUS_get();
-	
-	hrtfTimeAvg = (hrtfTimeAvg * 90 + (t2 - t1) * 10) / 100;
+	audioSource_Binaural.generate(0, channelL, AUDIO_UPDATE_SIZE);
+	audioSource_Binaural.generate(1, channelR, AUDIO_UPDATE_SIZE);
 	
 	float * __restrict destinationBuffer = (float*)outputBuffer;
 	
 	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 	{
-		destinationBuffer[i * 2 + 0] = lResult.real[i + AUDIO_UPDATE_SIZE];
-		destinationBuffer[i * 2 + 1] = rResult.real[i + AUDIO_UPDATE_SIZE];
+		destinationBuffer[i * 2 + 0] = channelL[i];
+		destinationBuffer[i * 2 + 1] = channelR[i];
 	}
 	
 	return paContinue;
@@ -700,7 +763,7 @@ void testHrtf()
 	
 	audioSource_Sound.load("hrtf/music.ogg");
 	
-	memset(&overlapBuffer, 0, sizeof(overlapBuffer));
+	audioSource_Binaural.source = &audioSource_Sound;
 	
 	if (initAudioOutput() == false)
 	{
@@ -796,7 +859,7 @@ void testHrtf()
 			setFont("calibri.ttf");
 			setColor(colorWhite);
 			
-			drawText(10, 10, 24, 1, 1, "time: %.4fms", hrtfTimeAvg / 1000.0);
+			drawText(10, 10, 24, 1, 1, "time: %.4fms", audioSource_Binaural.processTimeAvg / 1000.0);
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
