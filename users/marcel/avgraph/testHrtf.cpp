@@ -333,8 +333,6 @@ struct AudioSource_Sound : AudioSource
 
 static HRTFFilter hrtfFilters[MAX_FILTERS];
 
-static HRTFFilter * activeHrtfFilter = nullptr;
-
 struct AudioSource_Binaural : AudioSource
 {
 	AudioBuffer overlapBuffer;
@@ -344,14 +342,25 @@ struct AudioSource_Binaural : AudioSource
 	AudioBuffer lResult;
 	AudioBuffer rResult;
 	
+	const HRTFFilter * filterOld;
+	const HRTFFilter * filterCur;
+	
 	uint64_t processTimeAvg;
 	
 	AudioSource_Binaural()
 		: overlapBuffer()
 		, source(nullptr)
+		, filterOld(nullptr)
+		, filterCur(nullptr)
 		, processTimeAvg(0)
 	{
 		memset(&overlapBuffer, 0, sizeof(overlapBuffer));
+	}
+	
+	void setActiveFilter(const HRTFFilter * filter)
+	{
+		filterOld = filterCur;
+		filterCur = filter;
 	}
 	
 	virtual int getChannelCount() const override
@@ -363,7 +372,7 @@ struct AudioSource_Binaural : AudioSource
 	{
 		Assert(channelIndex < 2);
 		
-		const HRTFFilter * hrtfFilter = activeHrtfFilter;
+		const HRTFFilter * hrtfFilter = filterCur;
 	
 		if (hrtfFilter == nullptr || source == nullptr)
 		{
@@ -430,21 +439,6 @@ static int portaudioCallback(
 	
 	Assert(framesPerBuffer == AUDIO_UPDATE_SIZE);
 	Assert(AUDIO_BUFFER_SIZE == AUDIO_UPDATE_SIZE * 2);
-	
-	const HRTFFilter * hrtfFilter = activeHrtfFilter;
-	
-	if (hrtfFilter == nullptr)
-	{
-		float * __restrict buffer = (float*)outputBuffer;
-		
-		for (int i = 0; i < framesPerBuffer; ++i)
-		{
-			buffer[i * 2 + 0] = 0.f;
-			buffer[i * 2 + 1] = 0.f;
-		}
-		
-		return paContinue;
-	}
 	
 	float channelL[AUDIO_UPDATE_SIZE];
 	float channelR[AUDIO_UPDATE_SIZE];
@@ -808,11 +802,11 @@ void testHrtf()
 		
 		if (closestIndex < 0)
 		{
-			activeHrtfFilter = nullptr;
+			audioSource_Binaural.setActiveFilter(nullptr);
 		}
 		else
 		{
-			activeHrtfFilter = &hrtfFilters[closestIndex];
+			audioSource_Binaural.setActiveFilter(&hrtfFilters[closestIndex]);
 		}
 		
 		FilterAndDistance fd[1];
@@ -821,7 +815,7 @@ void testHrtf()
 		{
 			// todo : interpolate filters
 			
-			Assert(fd[0].filter == activeHrtfFilter);
+			Assert(fd[0].filter == audioSource_Binaural.filterCur);
 		}
 			
 		//
