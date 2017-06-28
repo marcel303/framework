@@ -128,6 +128,7 @@ extern void testDeepbelief();
 extern void testImageCpuDelayLine();
 extern void testXmm();
 extern void testHqPrimitives();
+extern void testHrtf();
 
 extern void testMain();
 
@@ -667,45 +668,13 @@ int main(int argc, char * argv[])
 		
 		vfxSetThreadName("Main Thread");
 		
-		//testDatGui();
-		
-		//testNanovg();
-		
-		//testChaosGame();
-		
-		//testFourier1d();
-		
-		//testFourier2d();
-		
-		//testImpulseResponseMeasurement();
-		
-		//testTextureAtlas();
-		
-		//testDynamicTextureAtlas();
-		
-		//testDotDetector();
-		
-		//testDotTracker();
-		
 		//testAudioMixing();
 
 		//testAudiochannels();
 		
-		//testThreading();
-		
-		//testStbTruetype();
-		
-		//testMsdfgen();
-		
-		//testDeepbelief();
-		
-		//testImageCpuDelayLine();
-		
-		//testXmm();
-		
 		//testMacWebcam();
 		
-		//testHqPrimitives();
+		testHrtf();
 		
 		testMain();
 		
