@@ -10,8 +10,6 @@ shader_in vec3 v_edgePlane3;
 shader_in vec4 v_color;
 shader_in float v_strokeSize;
 
-uniform sampler2D source;
-
 float computeDistance(vec2 p)
 {
 	float d1 = dot(v_edgePlane1, vec3(p, 1.0));

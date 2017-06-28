@@ -11,8 +11,6 @@ shader_in vec3 v_edgePlane;
 shader_in vec3 v_perpPlane;
 shader_in vec4 v_color;
 
-uniform sampler2D source;
-
 float computeDistance(vec2 p)
 {
 	float de = dot(v_edgePlane, vec3(p, 1.0));

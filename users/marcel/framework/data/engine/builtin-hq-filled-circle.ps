@@ -8,8 +8,6 @@ shader_in vec2 v_center;
 shader_in float v_radius;
 shader_in vec4 v_color;
 
-uniform sampler2D source;
-
 float computeDistance(vec2 p)
 {
 	float d = v_radius - length(p - v_center);
