@@ -8,12 +8,15 @@
 #include "Timer.h"
 #include "vfxNodes/fourier.h"
 #include <complex>
+#include <xmmintrin.h>
 
 #define HRTF_BUFFER_SIZE 512
 #define AUDIO_BUFFER_SIZE 512
 #define AUDIO_UPDATE_SIZE (AUDIO_BUFFER_SIZE/2)
 
 #define SAMPLE_RATE 44100
+
+#define ALIGN16 __attribute__((aligned(16)))
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -25,6 +28,7 @@ extern void splitString(const std::string & str, std::vector<std::string> & resu
 //
 
 struct AudioBuffer;
+struct HRIRSampleLocation;
 struct HRTFData;
 
 //
@@ -41,12 +45,23 @@ static bool convertSoundDataToHRTF(
 	HRTFData & lFilter,
 	HRTFData & rFilter);
 
+static void audioBufferMul(float * __restrict audioBuffer, const int numSamples, const float scale);
+static void audioBufferAdd(const float * __restrict audioBuffer1, const float * __restrict audioBuffer2, const int numSamples, const float scale, float * __restrict destinationBuffer);
+
+static void blendHrirSamples(HRIRSampleLocation const * const * samples, const float * sampleWeights, const int numSampleLocations, float * __restrict lResult, float * __restrict rResult);
+
+static void azimuthElevationToXYZ(const float azimuth, const float elevation, float & x, float & y, float & z);
+
+//
+
+static int fftIndices[HRTF_BUFFER_SIZE];
+
 //
 
 struct HRIRSampleLocation
 {
-	float lSamples[HRTF_BUFFER_SIZE];
-	float rSamples[HRTF_BUFFER_SIZE];
+	ALIGN16 float lSamples[HRTF_BUFFER_SIZE];
+	ALIGN16 float rSamples[HRTF_BUFFER_SIZE];
 	
 	float elevation;
 	float azimuth;
@@ -60,9 +75,7 @@ struct HRIRSampleLocation
 		elevation = _elevation;
 		azimuth = _azimuth;
 		
-		x = -std::sin(Calc::DegToRad(azimuth));
-		y = -std::cos(Calc::DegToRad(azimuth));
-		z = std::sin(Calc::DegToRad(elevation));
+		azimuthElevationToXYZ(azimuth, elevation, x, y, z);
 	}
 };
 
@@ -147,6 +160,18 @@ static bool convertSoundDataToHRIR(const SoundData & soundData, float * __restri
 	return true;
 }
 
+static void blendHrirSamples(HRIRSampleLocation const * const * samples, const float * sampleWeights, const int numSampleLocations, float * __restrict lResult, float * __restrict rResult)
+{
+	memset(lResult, 0, HRTF_BUFFER_SIZE * sizeof(float));
+	memset(rResult, 0, HRTF_BUFFER_SIZE * sizeof(float));
+	
+	for (int i = 0; i < numSampleLocations; ++i)
+	{
+		audioBufferAdd(lResult, samples[i]->lSamples, HRTF_BUFFER_SIZE, sampleWeights[i], lResult);
+		audioBufferAdd(rResult, samples[i]->rSamples, HRTF_BUFFER_SIZE, sampleWeights[i], rResult);
+	}
+}
+
 int HRIRSet::findNearestSampleLocations(const float x, const float y, const float z, HRIRSampleLocationAndDistance * out, const int outSize)
 {
 	std::vector<HRIRSampleLocationAndDistance> set;
@@ -159,7 +184,8 @@ int HRIRSet::findNearestSampleLocations(const float x, const float y, const floa
 	{
 		const float dx = s.x - x;
 		const float dy = s.y - y;
-		const float ds = std::hypotf(dx, dy);
+		const float dz = s.z - z;
+		const float ds = std::sqrtf(dx * dx + dy * dy + dz * dz);
 		
 		HRIRSampleLocationAndDistance & sd = set[index++];
 		
@@ -314,7 +340,7 @@ static bool parseMitFilename(const char * filename, int & elevation, int & azimu
 
 bool HRIRSet::loadMitDatabase(const char * path)
 {
-	std::vector<std::string> files = listFiles(path, false);
+	std::vector<std::string> files = listFiles(path, true);
 	
 	sampleLocations.reserve(sampleLocations.size() + files.size());
 	
@@ -322,7 +348,7 @@ bool HRIRSet::loadMitDatabase(const char * path)
 	
 	for (auto & filename : files)
 	{
-		// "hrtf/MIT/mit-H0e070a.wav"
+		// "H0e070a.wav"
 		
 		int elevation;
 		int azimuth;
@@ -369,8 +395,8 @@ bool HRIRSet::loadMitDatabase(const char * path)
 
 struct HRTFData
 {
-	float real[HRTF_BUFFER_SIZE];
-	float imag[HRTF_BUFFER_SIZE];
+	ALIGN16 float real[HRTF_BUFFER_SIZE];
+	ALIGN16 float imag[HRTF_BUFFER_SIZE];
 	
 	void transformToFrequencyDomain()
 	{
@@ -412,28 +438,86 @@ struct HRTFFilter
 		elevation = _elevation;
 		azimuth = _azimuth;
 		
-		x = -std::sin(Calc::DegToRad(azimuth));
-		y = -std::cos(Calc::DegToRad(azimuth));
-		z = std::sin(Calc::DegToRad(elevation));
+		azimuthElevationToXYZ(azimuth, elevation, x, y, z);
 	}
 };
 
 struct AudioBuffer
 {
-	float real[AUDIO_BUFFER_SIZE];
-	float imag[AUDIO_BUFFER_SIZE];
+	ALIGN16 float real[AUDIO_BUFFER_SIZE];
+	ALIGN16 float imag[AUDIO_BUFFER_SIZE];
 	
-	void transformToFrequencyDomain()
+	void transformToFrequencyDomain(const bool fast = false)
 	{
-		Fourier::fft1D_slow(real, imag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, false, false);
+		if (fast)
+			Fourier::fft1D(real, imag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, false, false);
+		else
+			Fourier::fft1D_slow(real, imag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, false, false);
 	}
 	
-	void transformToTimeDomain()
+	void transformToTimeDomain(const bool fast = false)
 	{
-		Fourier::fft1D_slow(real, imag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, true, true);
+		if (fast)
+			Fourier::fft1D(real, imag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, true, true);
+		else
+			Fourier::fft1D_slow(real, imag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, true, true);
 	}
 	
 	void convolve(const HRTFData & filter, AudioBuffer & output)
+	{
+		// todo : SSE optimize this code
+		
+		const float * __restrict sReal = real;
+		const float * __restrict sImag = imag;
+		
+		const float * __restrict fReal = filter.real;
+		const float * __restrict fImag = filter.imag;
+		
+		float * __restrict oReal = output.real;
+		float * __restrict oImag = output.imag;
+		
+		const float fi = fImag[0];
+		const float si = sImag[0];
+		
+		*(float*)fImag = 0.f;
+		*(float*)sImag = 0.f;
+		
+	#if 0
+		const int size4 = HRTF_BUFFER_SIZE/4;
+		
+		const __m128 * __restrict vsReal = (__m128*)sReal;
+		const __m128 * __restrict vsImag = (__m128*)sImag;
+		
+		const __m128 * __restrict vfReal = (__m128*)fReal;
+		const __m128 * __restrict vfImag = (__m128*)fImag;
+		
+		__m128 * __restrict voReal = (__m128*)oReal;
+		__m128 * __restrict voImag = (__m128*)oImag;
+		
+		for (int i = 0; i < size4; ++i)
+		{
+			// complex multiply both arrays of complex values and store the result in output
+			
+			voReal[i] = vsReal[i] * vfReal[i] - vsImag[i] * vfImag[i];
+			voImag[i] = vsReal[i] * vfImag[i] + vsImag[i] * vfReal[i];
+		}
+	#else
+		for (int i = 0; i < HRTF_BUFFER_SIZE; ++i)
+		{
+			// complex multiply both arrays of complex values and store the result in output
+			
+			oReal[i] = sReal[i] * fReal[i] - sImag[i] * fImag[i];
+			oImag[i] = sReal[i] * fImag[i] + sImag[i] * fReal[i];
+		}
+	#endif
+		
+		oImag[0] = fi * si;
+		
+		*(float*)fImag = fi;
+		*(float*)sImag = si;
+	}
+	
+	void convolveAndReverseIndices(const HRTFData & filter, AudioBuffer & output)
 	{
 		// todo : SSE optimize this code
 		
@@ -456,8 +540,8 @@ struct AudioBuffer
 		{
 			// complex multiply both arrays of complex values and store the result in output
 			
-			oReal[i] = sReal[i] * fReal[i] - sImag[i] * fImag[i];
-			oImag[i] = sReal[i] * fImag[i] + sImag[i] * fReal[i];
+			oReal[fftIndices[i]] = sReal[i] * fReal[i] - sImag[i] * fImag[i];
+			oImag[fftIndices[i]] = sReal[i] * fImag[i] + sImag[i] * fReal[i];
 		}
 		
 		oImag[0] = fi * si;
@@ -476,17 +560,17 @@ static void convolveAudio(
 {
 	// transform audio data from the time-domain into the frequency-domain
 	
-	source.transformToFrequencyDomain();
+	source.transformToFrequencyDomain(true);
 	
 	// convolve audio data with impulse-response data in the frequency-domain
 	
-	source.convolve(lFilter, lResult);
-	source.convolve(rFilter, rResult);
+	source.convolveAndReverseIndices(lFilter, lResult);
+	source.convolveAndReverseIndices(rFilter, rResult);
 	
 	// transform convolved audio data back to the time-domain
 	
-	lResult.transformToTimeDomain();
-	rResult.transformToTimeDomain();
+	lResult.transformToTimeDomain(true);
+	rResult.transformToTimeDomain(true);
 }
 
 static bool convertSoundDataToHRTF(
@@ -669,7 +753,7 @@ struct AudioSource_Mix : AudioSource
 				}
 				else
 				{
-					float tempBuffer[AUDIO_UPDATE_SIZE];
+					ALIGN16 float tempBuffer[AUDIO_UPDATE_SIZE];
 					
 					input.source->generate(channelIndex, tempBuffer, numSamples);
 					
@@ -787,9 +871,6 @@ struct AudioSource_Binaural : AudioSource
 	
 	HRTFFilter filter;
 	
-	const HRTFFilter * filterOld;
-	const HRTFFilter * filterCur;
-	
 	uint64_t processTimeAvg;
 	
 	SDL_mutex * mutex;
@@ -798,8 +879,6 @@ struct AudioSource_Binaural : AudioSource
 		: overlapBuffer()
 		, source(nullptr)
 		, filter()
-		, filterOld(nullptr)
-		, filterCur(nullptr)
 		, processTimeAvg(0)
 		, mutex(nullptr)
 	{
@@ -830,12 +909,6 @@ struct AudioSource_Binaural : AudioSource
 			SDL_UnlockMutex(mutex);
 	}
 	
-	void setActiveFilter(const HRTFFilter * filter)
-	{
-		filterOld = filterCur;
-		filterCur = filter;
-	}
-	
 	virtual int getChannelCount() const override
 	{
 		return 2;
@@ -845,9 +918,7 @@ struct AudioSource_Binaural : AudioSource
 	{
 		Assert(channelIndex < 2);
 		
-		const HRTFFilter * hrtfFilter = filterCur;
-	
-		if (hrtfFilter == nullptr || source == nullptr)
+		if (source == nullptr)
 		{
 			for (int i = 0; i < numSamples; ++i)
 			{
@@ -873,10 +944,12 @@ struct AudioSource_Binaural : AudioSource
 			
 			AudioBuffer source;
 			
-			memcpy(source.real, overlapBuffer.real, AUDIO_BUFFER_SIZE * sizeof(float));
-			memset(source.imag, 0, AUDIO_BUFFER_SIZE * sizeof(float));
+			for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+			{
+				source.real[fftIndices[i]] = overlapBuffer.real[i];
+			}
 			
-			//convolveAudio(source, hrtfFilter->data.lFilter, hrtfFilter->data.rFilter, lResult, rResult);
+			memset(source.imag, 0, AUDIO_BUFFER_SIZE * sizeof(float));
 			
 			SDL_LockMutex(mutex);
 			{
@@ -936,8 +1009,8 @@ static int portaudioCallback(
 	
 	AudioSource * audioSource = (AudioSource*)userData;
 	
-	float channelL[AUDIO_UPDATE_SIZE];
-	float channelR[AUDIO_UPDATE_SIZE];
+	ALIGN16 float channelL[AUDIO_UPDATE_SIZE];
+	ALIGN16 float channelR[AUDIO_UPDATE_SIZE];
 	
 	audioSource->generate(0, channelL, AUDIO_UPDATE_SIZE);
 	audioSource->generate(1, channelR, AUDIO_UPDATE_SIZE);
@@ -1151,11 +1224,6 @@ bool HRTFFilterSet::loadIrcamDatabase(const char * path)
 			continue;
 		}
 		
-		if (elevation != 0)
-		{
-			continue;
-		}
-		
 		logDebug("subjectId: %d, radius: %d, azimuth: %d, elevation: %d", subjectId, radius, azimuth, elevation);
 		
 		SoundData * soundData = loadSound(filename.c_str());
@@ -1181,13 +1249,13 @@ bool HRTFFilterSet::loadIrcamDatabase(const char * path)
 
 bool HRTFFilterSet::loadMitDatabase(const char * path)
 {
-	std::vector<std::string> files = listFiles(path, false);
+	std::vector<std::string> files = listFiles(path, true);
 	
 	int numAdded = 0;
 	
 	for (auto & filename : files)
 	{
-		// "hrtf/MIT/mit-H0e070a.wav"
+		// "H0e070a.wav"
 		
 		int elevation;
 		int azimuth;
@@ -1232,27 +1300,72 @@ bool HRTFFilterSet::loadMitDatabase(const char * path)
 
 //
 
+static void azimuthElevationToXYZ(const float azimuth, const float elevation, float & x, float & y, float & z)
+{
+	z = std::sin(Calc::DegToRad(elevation));
+	
+	const float radius = std::sqrtf(1.f - z * z);
+	
+	x = std::cos(Calc::DegToRad(azimuth)) * radius;
+	y = std::sin(Calc::DegToRad(azimuth)) * radius;
+	
+	//printf("z = %.2f, radius = %.2f\n", z, radius);
+}
+
+static float mapFloat(const float value, const float minInput, const float maxInput, const float minOutput, const float maxOutput)
+{
+	if (minOutput == maxOutput)
+		return minOutput;
+	if (minInput == maxInput)
+		return (minOutput + maxOutput) * .5f;
+	else
+	{
+		const float t2 = std::max(0.f, std::min(1.f, (value - minInput) / (maxInput - minInput)));
+		const float t1 = 1.f - t2;
+		
+		return minOutput * t1 + maxOutput * t2;
+	}
+}
+
+static void gxMap2f(
+	const float minInputX, const float maxInputX, const float minOutputX, const float maxOutputX,
+	const float minInputY, const float maxInputY, const float minOutputY, const float maxOutputY)
+{
+	gxTranslatef(+minOutputX, +minOutputY, 0.f);
+	gxScalef(
+		(maxOutputX - minOutputX) / (maxInputX - minInputX),
+		(maxOutputY - minOutputY) / (maxInputY - minInputY), 1.f);
+	gxTranslatef(-minInputX, -minInputY, 0.f);
+}
+
 void testHrtf()
 {
+	const int numBits = Fourier::integerLog2(HRTF_BUFFER_SIZE);
+	
+	for (int i = 0; i < HRTF_BUFFER_SIZE; ++i)
+	{
+		fftIndices[i] = Fourier::reverseBits(i, numBits);
+	}
+
 	// load impulse-response audio files
 	
 	HRIRSet hrirSet;
-	hrirSet.loadMitDatabase("hrtf/MIT");
-	
-	HRTFFilterSet filterSet;
-	//filterSet.loadIrcamDatabase("hrtf/IRC_1057");
-	filterSet.loadMitDatabase("hrtf/MIT");
+	hrirSet.loadMitDatabase("hrtf/MIT-HRTF-DIFFUSE");
 	
 	AudioSource_Sine sine;
 	sine.init(0.f, 800.f);
 	
-	AudioSource_Sound sound;
-	sound.load("hrtf/music.ogg");
+	AudioSource_Sound sound1;
+	sound1.load("hrtf/music.ogg");
+	
+	AudioSource_Sound sound2;
+	sound2.load("hrtf/music2.ogg");
 	
 	AudioSource_Binaural binaural1;
 	AudioSource_Binaural binaural2;
-	binaural1.source = &sine;
-	binaural2.source = &sound;
+	//binaural1.source = &sine;
+	binaural1.source = &sound1;
+	binaural2.source = &sound2;
 	
 	AudioSource_Mix mix;
 	mix.normalizeGain = true;
@@ -1272,64 +1385,44 @@ void testHrtf()
 		
 		//
 		
-		const Mat4x4 worldToView = Mat4x4(true).Translate(GFX_SX/2, GFX_SY/2, 0).Scale(100, 100, 1);
-		const Mat4x4 viewToWorld = worldToView.Invert();
+		const Mat4x4 worldToView =
+			Mat4x4(true).
+			Translate(0, 0, 200).
+			Scale(100, 100, 100).
+			RotateZ(Calc::DegToRad(90)).
+			RotateX(Calc::DegToRad(180));
+		
+		const Mat4x4 object =
+			Mat4x4(true).
+			RotateZ(Calc::DegToRad(framework.time * 9.01f)).
+			RotateY(Calc::DegToRad(framework.time * 7.89f)).
+			RotateX(Calc::DegToRad(framework.time * 4.56f));
+		
+		const Mat4x4 objectToView =
+			worldToView *
+			object;
+		
+		const Mat4x4 viewToObject = objectToView.Invert();
 		
 		//
 		
-		const Vec2 mousePosition = viewToWorld * Vec2(mouse.x, mouse.y);
+		const float mouseViewX = mapFloat(mouse.x, 0.f, GFX_SX, -100.f, +100.f);
+		const float mouseViewY = mapFloat(mouse.y, 0.f, GFX_SY, +100.f, -100.f);
 		
-		// calculate closest HRTF filter
-		
-		int closestIndex = -1;
-		float closestDistance = std::numeric_limits<float>::max();
-		
-		for (int i = 0; i < filterSet.filters.size(); ++i)
-		{
-			auto & f = filterSet.filters[i];
-			
-			const float dx = f.x - mousePosition[0];
-			const float dy = f.y - mousePosition[1];
-			const float ds = std::hypotf(dx, dy);
-			
-			if (ds < closestDistance)
-			{
-				closestIndex = i;
-				closestDistance = ds;
-			}
-		}
-		
-		if (closestIndex < 0)
-		{
-			binaural1.setActiveFilter(nullptr);
-			binaural2.setActiveFilter(nullptr);
-		}
-		else
-		{
-			binaural1.setActiveFilter(&filterSet.filters[closestIndex]);
-			binaural2.setActiveFilter(&filterSet.filters[closestIndex]);
-		}
-		
-		HRTFFilterAndDistance fd[1];
-		
-		if (filterSet.findNearestFilters(mousePosition[0], mousePosition[1], 0.f, fd, 1) == 1)
-		{
-			// todo : interpolate filters
-			
-			Assert(fd[0].filter == binaural1.filterCur);
-		}
+		const Vec3 mousePosition = viewToObject * Vec3(mouseViewX, mouseViewY, +200.f);
+		const Vec3 mousePositionNorm = mousePosition.CalcNormalized();
 		
 		//
 		
-		const int kMaxSampleLocations = 2;
+		const int kMaxSampleLocations = 3;
 		
 		HRIRSampleLocationAndDistance sampleLocations[kMaxSampleLocations];
-		
-		const float cr = std::hypot(mousePosition[0], mousePosition[1]);
-		const float cx = mousePosition[0] / cr;
-		const float cy = mousePosition[1] / cr;
-		
-		const int numSampleLocations = hrirSet.findNearestSampleLocations(cx, cy, 0.f, sampleLocations, kMaxSampleLocations);
+
+		const int numSampleLocations = hrirSet.findNearestSampleLocations(
+			mousePositionNorm[0],
+			mousePositionNorm[1],
+			mousePositionNorm[2],
+			sampleLocations, kMaxSampleLocations);
 		
 		if (numSampleLocations > 0)
 		{
@@ -1363,19 +1456,18 @@ void testHrtf()
 				}
 			}
 			
+			HRIRSampleLocation * samples[kMaxSampleLocations];
+			for (int i = 0; i < numSampleLocations; ++i)
+				samples[i] = sampleLocations->sampleLocation;
+			
 			//logDebug("HRIR weights: %.2f, %.2f", weights[0], weights[1]);
 			
 			HRTFFilter filter;
-			memset(&filter, 0, sizeof(filter));
 			
 			float * lSamples = filter.data.lFilter.real;
 			float * rSamples = filter.data.rFilter.real;
 			
-			for (int i = 0; i < numSampleLocations; ++i)
-			{
-				audioBufferAdd(lSamples, sampleLocations[i].sampleLocation->lSamples, HRTF_BUFFER_SIZE, weights[i], lSamples);
-				audioBufferAdd(rSamples, sampleLocations[i].sampleLocation->rSamples, HRTF_BUFFER_SIZE, weights[i], rSamples);
-			}
+			blendHrirSamples(samples, weights, numSampleLocations, lSamples, rSamples);
 			
 			filter.data.lFilter.transformToFrequencyDomain();
 			filter.data.rFilter.transformToFrequencyDomain();
@@ -1388,27 +1480,85 @@ void testHrtf()
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			Mat4x4 projectionMatrix;
+			projectionMatrix.MakePerspectiveLH(Calc::DegToRad(90.f), GFX_SY / float(GFX_SX), .01f, 1000.f);
+			gxMatrixMode(GL_PROJECTION);
+			gxPushMatrix();
+			gxLoadMatrixf(projectionMatrix.m_v);
+			gxMatrixMode(GL_MODELVIEW);
+			gxPushMatrix();
+			gxLoadIdentity();
+			
+		#if 0
+			gxPushMatrix();
+			{
+				gxMap2f(-40, 180, 0, GFX_SX, 0, 360, 0, GFX_SY);
+				
+				hqBegin(HQ_FILLED_CIRCLES, true);
+				{
+					for (int elevation = -40; elevation <= 180; elevation += 20)
+					{
+						for (int azimuth = 0; azimuth <= 360; azimuth += 15)
+						{
+							setColor(colorWhite);
+							hqFillCircle(elevation, azimuth, 5.f);
+						}
+					}
+				}
+				hqEnd();
+			}
+			gxPopMatrix();
+		#endif
+			
 			// todo : show source and head position
 			
 			gxPushMatrix();
 			{
-				gxMultMatrixf(worldToView.m_v);
+				gxMultMatrixf(objectToView.m_v);
 				
-				for (auto & f : filterSet.filters)
+				gxBegin(GL_LINES);
 				{
-					const bool isActive = &f == binaural1.filterCur;
+					setColor(colorRed);
+					gxVertex3f(-1.f, 0.f, 0.f);
+					gxVertex3f(+1.f, 0.f, 0.f);
 					
-					if (isActive)
-						setColor(colorYellow);
-					else
-						setColor(colorWhite);
+					setColor(colorGreen);
+					gxVertex3f(0.f, -1.f, 0.f);
+					gxVertex3f(0.f, +1.f, 0.f);
 					
-					drawCircle(f.x, f.y, .1f, 10);
+					setColor(colorBlue);
+					gxVertex3f(0.f, 0.f, -1.f);
+					gxVertex3f(0.f, 0.f, +1.f);
 				}
+				gxEnd();
 				
-				setColor(colorGreen);
-				fillCircle(mousePosition[0], mousePosition[1], .1f, 10);
+				glPointSize(5.f);
+				gxBegin(GL_POINTS);
+				{
+					for (auto & s : hrirSet.sampleLocations)
+					{
+						setColor(100, 100, 100);
+						gxVertex3f(s.x, s.y, s.z);
+					}
+					
+					for (int i = 0; i < numSampleLocations; ++i)
+					{
+						auto s = sampleLocations[i].sampleLocation;
+						
+						setColor(colorGreen);
+						gxVertex3f(s->x, s->y, s->z);
+					}
+					
+					setColor(colorGreen);
+					gxVertex3f(mousePosition[0], mousePosition[1], mousePosition[2]);
+				}
+				gxEnd();
 			}
+			gxPopMatrix();
+			
+			gxMatrixMode(GL_PROJECTION);
+			gxPopMatrix();
+			gxMatrixMode(GL_MODELVIEW);
 			gxPopMatrix();
 			
 			setFont("calibri.ttf");
