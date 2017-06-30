@@ -112,7 +112,7 @@ std::string Path::GetBaseName(const std::string& _path)
 		return path;
 }
 
-std::string Path::GetExtension(const std::string& path)
+std::string Path::GetExtension(const std::string& path, const bool toLower)
 {
 	size_t pos = path.find_last_of('.');
 	
@@ -121,7 +121,10 @@ std::string Path::GetExtension(const std::string& path)
 	else
 		pos++;
 	
-	return path.substr(pos);
+	if (toLower)
+		return String::ToLower(path.substr(pos));
+	else
+		return path.substr(pos);
 }
 
 std::string Path::GetDirectory(const std::string& path)
