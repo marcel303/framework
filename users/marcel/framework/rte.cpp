@@ -37,7 +37,7 @@
 
 static void handleFileChange(const std::string & filename)
 {
-	const std::string extension = Path::GetExtension(filename);
+	const std::string extension = Path::GetExtension(filename, true);
 
 	if (extension == "vs")
 	{
