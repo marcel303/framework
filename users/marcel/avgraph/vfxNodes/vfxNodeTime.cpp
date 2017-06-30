@@ -33,6 +33,8 @@ VFX_NODE_TYPE(time, VfxNodeTime)
 {
 	typeName = "time";
 	
+	in("scale", "float", "1");
+	in("offset", "float");
 	out("time", "float");
 }
 
@@ -41,10 +43,15 @@ VfxNodeTime::VfxNodeTime()
 	, time(0.f)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	addInput(kInput_Scale, kVfxPlugType_Float);
+	addInput(kInput_Offset, kVfxPlugType_Float);
 	addOutput(kOutput_Time, kVfxPlugType_Float, &time);
 }
 
 void VfxNodeTime::tick(const float dt)
 {
-	time = g_currentVfxGraph->time;
+	const float scale = getInputFloat(kInput_Scale, 1.f);
+	const float offset = getInputFloat(kInput_Offset, 0.f);
+
+	time = offset + g_currentVfxGraph->time * scale;
 }

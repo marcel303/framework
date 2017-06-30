@@ -33,6 +33,8 @@ struct VfxNodeTime : VfxNodeBase
 {
 	enum Input
 	{
+		kInput_Scale,
+		kInput_Offset,
 		kInput_COUNT
 	};
 	
