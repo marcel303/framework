@@ -35,7 +35,7 @@ todo :
 	- open container when double clicking container node
 - add sub-graph container node. to help organize complex graphs
 - add mouse cursor to user interface
-- make nodes use rounded rectangles
++ make nodes use rounded rectangles
 - make links use bezier curves
 # add buffer type and add buffer input(s) to fsfx node ?
 	-> I'm trying to use mostly textures to improve remixability
@@ -53,7 +53,9 @@ todo :
 - add new node type selection memu. make it a pop-over ?
 - fix issue where freeing texture here can result in issues when drawing visualizer. tick of visualizer should always happen after cpuToGpu tick, but there's no link connecting visualizer to the node it references, so tick order is undefined .. ! -> maybe update visualizer in draw. or never capture references (to textures ID's or whatever) in visualizer. only let it copy values by value (as needed for graph) but capture everything else on draw
 - add ability to add node between nodes ?
-+ add ability to route connections
+- add ability to route connections
+	+ add route point editing
+	- save/load route points
 
 todo : nodes :
 - add sample.float node
@@ -71,7 +73,7 @@ todo : nodes :
 	- add time! input trigger. performs seek operation
 - add MIDI node
 - add pitch control to oscillators ?
-- add 'window' size to square oscillator
+- add pulse size to square oscillator
 - add audio playback node
 	+ add play! trigger
 	+ add pause! trigger
@@ -87,19 +89,12 @@ todo : nodes :
 	- fix issue with output time not reset on filename change or looping. remember start time? -> capture time on next provide
 - add note (like C1) to MIDI note
 - add adsr node
-+ add dot tracker node
-+ let nodes that allocate a surface push their surface as the current surface, so rendering in dep nodes happens in these surfaces ?
-	+ add surface node
-- add draw points node
-- add draw circles node
-	- xyz channels input
-	- radius channels input
-	- radius literal input
+- add draw primitive node
+	+ xyz channels input
+	- add size literal input (to be used when 3rd channel is missing
 	- screen size input (if true, scaling doesn't affect circle size)
 	- texture
-	- color
-- add channel swizzle node. allow it to reorder one or more channels into a new channels object
-- add channel combiner node. allow multiple input channels to be merged into one
+	- color. use white when missing
 - perhaps add string names to channels, for more convenient selection ? would reduce remixing capability I fear .. maybe let nodes which produce channels to document in their node description what those channels represent, semantically .. but not let the user use those semantics to select channels
 - add image to image_cpu node. default behaviour is to delay by a few frames
 - add integral image node. expose integral as 2d channels object
@@ -109,17 +104,17 @@ todo : nodes :
 		- has a filter option?
 		- has a normalized coords option
 		- has an option to fix coords so it always specified min/max for box or not ?
-+ add CPU image delay node
-	+ use a list of images as history
-	+ max history size is set as input. re-allocate history on change
-	+ current history delay is set a input [0..1]. default=1
-	+ store to jpeg optionally to save memory
-	+ make jpeg compression optional
-+ add jpeg glitch node. in combination with capturing from image would be awesome!
+- add jpeg glitch node. in combination with capturing from image would be awesome!
 - add yuvToRgb node
 	+ add node and shader
 	+ let user select colour space
 	- verify color spaces. check what avcodec does, QuickTime player, etc .. there's many ways to go from yuv -> rgb !
+- add depth data treshold node. actually this is more like a general purpose channel value treshold node ..
+	- select which channel contains depth
+	- remove items from channels where depth at index fails test
+		- allocate new channels object to store results
+	- add range min/max range + pass if inside or outside boolean
+- add data table node. read data from CSV, text or XML file
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -143,10 +138,8 @@ todo : UI
 - add ability to set node to horizontal or vertical mode. vertical mode hides socket names/is more condensed
 	- maybe also a sphere mode ?
 	*** I think I like the lilly idea better
-+ touch zoom on moving fingers treshold distance apart. also, try to convert normalized touch coords into inches or cms
 
 todo : framework
-- add ability to save MSDF texture atlas and load/supplement it
 
 
 
@@ -319,10 +312,27 @@ todo : nodes :
 	+ add image_cpu output for video data
 	+ add channels output for depth data
 	+ add point cloud xyz output image. or make a node which can calculate this for us, giving (optional) rgb, depth data, and an enum which controls the projection params (should be set to Kinect1 or Kinect2)
++ add dot tracker node
++ let nodes that allocate a surface push their surface as the current surface, so rendering in dep nodes happens in these surfaces ?
+	+ add surface node
++ add channel swizzle node. allow it to reorder one or more channels into a new channels object
++ add channel combiner node. allow multiple input channels to be merged into one
++ add CPU image delay node
+	+ use a list of images as history
+	+ max history size is set as input. re-allocate history on change
+	+ current history delay is set a input [0..1]. default=1
+	+ store to jpeg optionally to save memory
+	+ make jpeg compression optional
++ add color node. from RGB or HSV (select mode)
++ change math node so operation type becomes a configurable enum
++ add integration node. keeps integrating input value over time and sets it as output
 
 todo : framework :
 + optimize text rendering. use a dynamic texture atlas instead of one separate texture for each glyph. drawText should only emit a single draw call
 + add MSDF font rendering support
++ add ability to save MSDF texture atlas and load/supplement it
++ added HQ rounded rect method
++ add method to push/pop MSDF font rendering bit
 
 todo : media player
 + for image analysis we often only need luminance. make it an option to output YUV Y-channel only?
@@ -342,5 +352,6 @@ todo : media player
 todo : UI
 + add drop down list for (large) enums
 + add load/save notifications to UI., maybe a UI message that briefly appears on the bottom. white text on dark background ?
++ touch zoom on moving fingers treshold distance apart. also, try to convert normalized touch coords into inches or cms
 
 */
