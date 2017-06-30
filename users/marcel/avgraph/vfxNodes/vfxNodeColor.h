@@ -31,11 +31,18 @@
 
 struct VfxNodeColor : VfxNodeBase
 {
+	enum Mode
+	{
+		kMode_HSB,
+		kMode_RGB
+	};
+	
 	enum Input
 	{
-		kInput_Hue,
-		kInput_Saturation,
-		kInput_Lightness,
+		kInput_Mode,
+		kInput_X,
+		kInput_Y,
+		kInput_Z,
 		kInput_Opacity,
 		kInput_Inversion,
 		kInput_COUNT

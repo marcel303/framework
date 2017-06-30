@@ -28,13 +28,20 @@
 #include "framework.h"
 #include "vfxNodeColor.h"
 
+VFX_ENUM_TYPE(colorMode)
+{
+	elem("hsl");
+	elem("rgb");
+}
+
 VFX_NODE_TYPE(color, VfxNodeColor)
 {
 	typeName = "color";
 	
-	in("hue", "float");
-	in("saturation", "float", "1");
-	in("lightness", "float", "0.5");
+	inEnum("mode", "colorMode");
+	in("X", "float");
+	in("Y", "float");
+	in("Z", "float");
 	in("opacity", "float", "1");
 	in("inversion", "float");
 	out("color", "color");
@@ -45,9 +52,10 @@ VfxNodeColor::VfxNodeColor()
 	, outputColor()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Hue, kVfxPlugType_Float);
-	addInput(kInput_Saturation, kVfxPlugType_Float);
-	addInput(kInput_Lightness, kVfxPlugType_Float);
+	addInput(kInput_Mode, kVfxPlugType_Int);
+	addInput(kInput_X, kVfxPlugType_Float);
+	addInput(kInput_Y, kVfxPlugType_Float);
+	addInput(kInput_Z, kVfxPlugType_Float);
 	addInput(kInput_Opacity, kVfxPlugType_Float);
 	addInput(kInput_Inversion, kVfxPlugType_Float);
 	addOutput(kOutput_Color, kVfxPlugType_Color, &outputColor);
@@ -57,9 +65,10 @@ void VfxNodeColor::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeColor);
 	
-	const float hue = getInputFloat(kInput_Hue, 0.f);
-	const float saturation = getInputFloat(kInput_Saturation, 1.f);
-	const float lightness = getInputFloat(kInput_Lightness, 0.5f);
+	const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
+	const float x = getInputFloat(kInput_X, 0.f);
+	const float y = getInputFloat(kInput_Y, 1.f);
+	const float z = getInputFloat(kInput_Z, 0.5f);
 	const float opacity = getInputFloat(kInput_Opacity, 1.f);
 	const float inversion = getInputFloat(kInput_Inversion, 0.f);
 	
@@ -68,13 +77,22 @@ void VfxNodeColor::tick(const float dt)
 		outputColor.setRgba(0.f, 0.f, 0.f, 0.f);
 		return;
 	}
-
-	Color color = Color::fromHSL(hue, saturation, lightness);
+	
+	Color color;
+	
+	if (mode == kMode_HSB)
+	{
+		color = Color::fromHSL(x, y, z);
+	}
+	else
+	{
+		color = Color(x, y, z);
+	}
 
 	color.a = opacity;
 
 	//
-	
+
 	if (inversion != 0.f)
 	{
 		const float t1 = 1.f - inversion;
