@@ -2344,12 +2344,16 @@ Color Color::fromHex(const char * str)
 
 Color Color::fromHSL(float hue, float sat, float lum)
 {
+	hue = fmod(hue, 1.f) * 6.f;
+	sat = sat < 0.f ? 0.f : sat > 1.f ? 1.f : sat;
+	lum = lum < 0.f ? 0.f : lum > 1.f ? 1.f : lum;
+	
+	//
+	
 	float r, g, b;
 
 	float m2 = (lum <= .5f) ? (lum + (lum * sat)) : (lum + sat - lum * sat);
 	float m1 = lum + lum - m2;
-
-	hue = fmod(hue, 1.f) * 6.f;
 
 	if (hue < 0.f)
 	{
