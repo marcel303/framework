@@ -29,6 +29,21 @@
 #include "vfxNodeDotDetector.h"
 #include <xmmintrin.h>
 
+VFX_ENUM_TYPE(dotDetectorChannel)
+{
+	elem("rgb");
+	elem("r");
+	elem("g");
+	elem("b");
+	elem("a");
+}
+
+VFX_ENUM_TYPE(dotDetectorTresholdTest)
+{
+	elem("greaterEqual");
+	elem("lessEqual");
+}
+
 VFX_NODE_TYPE(image_dots, VfxNodeDotDetector)
 {
 	typeName = "image.dots";

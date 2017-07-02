@@ -34,6 +34,16 @@
 
 #include <list>
 
+VFX_NODE_TYPE(osc_receive, VfxNodeOsc)
+{
+	typeName = "osc";
+	
+	in("port", "int");
+	in("ipAddress", "string");
+	in("trigger", "trigger");
+	out("event", "trigger");
+}
+
 struct OscMessage
 {
 	OscMessage()

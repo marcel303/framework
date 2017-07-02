@@ -30,6 +30,13 @@
 
 // todo : get YUV to RGB constants from avcodec, pass them to this node from video node
 
+VFX_ENUM_TYPE(yuvToRgbColorSpace)
+{
+	elem("NTSC");
+	elem("BT.601");
+	elem("BT.709");
+}
+
 VFX_NODE_TYPE(yuvToRgb, VfxNodeYuvToRgb)
 {
 	typeName = "yuvToRgb";

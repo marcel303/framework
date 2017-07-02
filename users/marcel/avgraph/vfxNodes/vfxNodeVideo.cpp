@@ -30,6 +30,12 @@
 #include "../avpaint/video.h"
 #include "mediaplayer_new/MPVideoBuffer.h"
 
+VFX_ENUM_TYPE(videoOutputMode)
+{
+	elem("rgba");
+	elem("yuv");
+}
+
 VFX_NODE_TYPE(video, VfxNodeVideo)
 {
 	typeName = "video";

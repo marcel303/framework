@@ -38,19 +38,12 @@
 
 #include "vfxNodes/vfxNodeBase.h"
 #include "vfxNodes/vfxNodeComposite.h"
-#include "vfxNodes/vfxNodeDisplay.h"
 #include "vfxNodes/vfxNodeFsfx.h"
 #include "vfxNodes/vfxNodeLiteral.h"
-#include "vfxNodes/vfxNodeOsc.h"
-#include "vfxNodes/vfxNodeOscSend.h"
-#include "vfxNodes/vfxNodeSequence.h"
-#include "vfxNodes/vfxNodeSurface.h"
-#include "vfxNodes/vfxNodeYuvToRgb.h"
 
 #include "mediaplayer_new/MPUtil.h"
 #include "../libparticle/ui.h"
 #include "Timer.h"
-#include "vfxNodeTest.h"
 
 using namespace tinyxml2;
 
@@ -139,6 +132,17 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 		}
 	}
 	
+	if (typeName == "display")
+	{
+		Assert(vfxNode != nullptr);
+		if (vfxNode != nullptr)
+		{
+			// fixme : move display node id handling out of here. remove nodeId and vfxGraph passed in to this function
+			Assert(vfxGraph->displayNodeId == kGraphNodeIdInvalid);
+			vfxGraph->displayNodeId = nodeId;
+		}
+	}
+	
 #define DefineNodeImpl(_typeName, _type) \
 	else if (typeName == _typeName) \
 		vfxNode = new _type();
@@ -147,8 +151,6 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	{
 	}
 	
-	DefineNodeImpl("test", VfxNodeTest)
-	
 	DefineNodeImpl("intBool", VfxNodeBoolLiteral)
 	DefineNodeImpl("intLiteral", VfxNodeIntLiteral)
 	DefineNodeImpl("floatLiteral", VfxNodeFloatLiteral)
@@ -156,21 +158,8 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("stringLiteral", VfxNodeStringLiteral)
 	DefineNodeImpl("colorLiteral", VfxNodeColorLiteral)
 	DefineNodeImpl("trigger.asFloat", VfxNodeTriggerAsFloat)
-	else if (typeName == "display")
-	{
-		vfxNode = new VfxNodeDisplay();
-		
-		// fixme : move display node id handling out of here. remove nodeId and vfxGraph passed in to this function
-		Assert(vfxGraph->displayNodeId == kGraphNodeIdInvalid);
-		vfxGraph->displayNodeId = nodeId;
-	}
-	DefineNodeImpl("surface", VfxNodeSurface)
-	DefineNodeImpl("sequence", VfxNodeSequence)
-	DefineNodeImpl("osc", VfxNodeOsc)
-	DefineNodeImpl("osc.send", VfxNodeOscSend)
 	DefineNodeImpl("composite", VfxNodeComposite)
 	DefineNodeImpl("fsfx", VfxNodeFsfx)
-	DefineNodeImpl("yuvToRgb", VfxNodeYuvToRgb)
 	else
 	{
 		logError("unknown node type: %s", typeName.c_str());

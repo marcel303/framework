@@ -31,6 +31,13 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
+VFX_NODE_TYPE(test, VfxNodeTest)
+{
+	in("xyz", "channels");
+	in("scale", "float", "1");
+	out("any", "int");
+}
+
 VfxNodeTest::VfxNodeTest()
 	: VfxNodeBase()
 	, anyOutput(0)

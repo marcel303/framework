@@ -31,6 +31,21 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
+VFX_NODE_TYPE(sequence, VfxNodeSequence)
+{
+	typeName = "sequence";
+	
+	in("01", "any");
+	in("02", "any");
+	in("03", "any");
+	in("04", "any");
+	in("05", "any");
+	in("06", "any");
+	in("07", "any");
+	in("08", "any");
+	out("any", "int");
+}
+
 VfxNodeSequence::VfxNodeSequence()
 	: VfxNodeBase()
 	, anyOutput(0)

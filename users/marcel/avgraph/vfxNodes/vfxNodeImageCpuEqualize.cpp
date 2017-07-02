@@ -40,6 +40,16 @@
 	typedef int LookupElem;
 #endif
 
+VFX_ENUM_TYPE(imageCpuEqualizeChannel)
+{
+	elem("rgba");
+	elem("rgb");
+	elem("r");
+	elem("g");
+	elem("b");
+	elem("a");
+}
+
 VFX_NODE_TYPE(image_cpu_equalize, VfxNodeImageCpuEqualize)
 {
 	typeName = "image_cpu.equalize";

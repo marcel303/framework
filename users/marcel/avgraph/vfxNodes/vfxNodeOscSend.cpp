@@ -32,6 +32,17 @@
 
 #define OSC_BUFFER_SIZE 1024
 
+VFX_NODE_TYPE(osc_send, VfxNodeOscSend)
+{
+	typeName = "osc.send";
+	
+	in("port", "int");
+	in("ipAddress", "string");
+	in("event", "string");
+	in("baseId", "int");
+	in("trigger!", "trigger");
+}
+
 VfxNodeOscSend::VfxNodeOscSend()
 	: VfxNodeBase()
 	, transmitSocket(nullptr)
