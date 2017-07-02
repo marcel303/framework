@@ -39,7 +39,6 @@
 #include "vfxNodes/vfxNodeBase.h"
 #include "vfxNodes/vfxNodeComposite.h"
 #include "vfxNodes/vfxNodeFsfx.h"
-#include "vfxNodes/vfxNodeLiteral.h"
 
 #include "mediaplayer_new/MPUtil.h"
 #include "../libparticle/ui.h"
@@ -151,12 +150,6 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	{
 	}
 	
-	DefineNodeImpl("intBool", VfxNodeBoolLiteral)
-	DefineNodeImpl("intLiteral", VfxNodeIntLiteral)
-	DefineNodeImpl("floatLiteral", VfxNodeFloatLiteral)
-	DefineNodeImpl("transformLiteral", VfxNodeTransformLiteral)
-	DefineNodeImpl("stringLiteral", VfxNodeStringLiteral)
-	DefineNodeImpl("colorLiteral", VfxNodeColorLiteral)
 	DefineNodeImpl("trigger.asFloat", VfxNodeTriggerAsFloat)
 	DefineNodeImpl("composite", VfxNodeComposite)
 	DefineNodeImpl("fsfx", VfxNodeFsfx)
@@ -237,9 +230,9 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 			if (input == nullptr || output == nullptr)
 			{
 				if (input == nullptr)
-					logError("input node socket doesn't exist");
+					logError("input node socket doesn't exist. name=%s, index=%d", link.srcNodeSocketName.c_str(), link.srcNodeSocketIndex);
 				if (output == nullptr)
-					logError("output node socket doesn't exist");
+					logError("output node socket doesn't exist. name=%s, index=%d", link.dstNodeSocketName.c_str(), link.dstNodeSocketIndex);
 			}
 			else
 			{

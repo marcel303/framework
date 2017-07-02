@@ -28,6 +28,7 @@
 #pragma once
 
 #include "vfxNodeBase.h"
+#include "vfxTypes.h"
 
 struct VfxNodeBoolLiteral : VfxNodeBase
 {
@@ -39,18 +40,9 @@ struct VfxNodeBoolLiteral : VfxNodeBase
 	
 	bool value;
 	
-	VfxNodeBoolLiteral()
-		: VfxNodeBase()
-		, value(false)
-	{
-		resizeSockets(0, kOutput_COUNT);
-		addOutput(kOutput_Value, kVfxPlugType_Bool, &value);
-	}
+	VfxNodeBoolLiteral();
 	
-	virtual void initSelf(const GraphNode & node) override
-	{
-		value = Parse::Bool(node.editorValue);
-	}
+	virtual void initSelf(const GraphNode & node) override;
 };
 
 struct VfxNodeIntLiteral : VfxNodeBase
@@ -63,18 +55,9 @@ struct VfxNodeIntLiteral : VfxNodeBase
 	
 	int value;
 	
-	VfxNodeIntLiteral()
-		: VfxNodeBase()
-		, value(0)
-	{
-		resizeSockets(0, kOutput_COUNT);
-		addOutput(kOutput_Value, kVfxPlugType_Int, &value);
-	}
+	VfxNodeIntLiteral();
 	
-	virtual void initSelf(const GraphNode & node) override
-	{
-		value = Parse::Int32(node.editorValue);
-	}
+	virtual void initSelf(const GraphNode & node) override;
 };
 
 struct VfxNodeFloatLiteral : VfxNodeBase
@@ -87,18 +70,9 @@ struct VfxNodeFloatLiteral : VfxNodeBase
 	
 	float value;
 	
-	VfxNodeFloatLiteral()
-		: VfxNodeBase()
-		, value(0)
-	{
-		resizeSockets(0, kOutput_COUNT);
-		addOutput(kOutput_Value, kVfxPlugType_Float, &value);
-	}
+	VfxNodeFloatLiteral();
 	
-	virtual void initSelf(const GraphNode & node) override
-	{
-		value = Parse::Float(node.editorValue);
-	}
+	virtual void initSelf(const GraphNode & node) override;
 };
 
 struct VfxNodeTransformLiteral : VfxNodeBase
@@ -111,18 +85,9 @@ struct VfxNodeTransformLiteral : VfxNodeBase
 	
 	VfxTransform value;
 	
-	VfxNodeTransformLiteral()
-		: VfxNodeBase()
-		, value()
-	{
-		resizeSockets(0, kOutput_COUNT);
-		addOutput(kOutput_Value, kVfxPlugType_Transform, &value);
-	}
+	VfxNodeTransformLiteral();
 	
-	virtual void initSelf(const GraphNode & node) override
-	{
-		// todo : parse node.editorValue;
-	}
+	virtual void initSelf(const GraphNode & node) override;
 };
 
 struct VfxNodeStringLiteral : VfxNodeBase
@@ -135,18 +100,9 @@ struct VfxNodeStringLiteral : VfxNodeBase
 	
 	std::string value;
 	
-	VfxNodeStringLiteral()
-		: VfxNodeBase()
-		, value()
-	{
-		resizeSockets(0, kOutput_COUNT);
-		addOutput(kOutput_Value, kVfxPlugType_String, &value);
-	}
+	VfxNodeStringLiteral();
 	
-	virtual void initSelf(const GraphNode & node) override
-	{
-		value = node.editorValue;
-	}
+	virtual void initSelf(const GraphNode & node) override;
 };
 
 struct VfxNodeColorLiteral : VfxNodeBase
@@ -157,18 +113,9 @@ struct VfxNodeColorLiteral : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	Color value;
+	VfxColor value;
 	
-	VfxNodeColorLiteral()
-		: VfxNodeBase()
-		, value(1.f, 1.f, 1.f, 1.f)
-	{
-		resizeSockets(0, kOutput_COUNT);
-		addOutput(kOutput_Value, kVfxPlugType_Color, &value);
-	}
+	VfxNodeColorLiteral();
 	
-	virtual void initSelf(const GraphNode & node) override
-	{
-		value = Color::fromHex(node.editorValue.c_str());
-	}
+	virtual void initSelf(const GraphNode & node) override;
 };

@@ -276,7 +276,7 @@ VFX_NODE_TYPE(name, name) \
 	typeName = _typeName; \
 	in("a", "float"); \
 	in("b", "float"); \
-	out("r", "float"); \
+	out("result", "float"); \
 }
 
 DefineMathNode(VfxNodeMathAdd, kType_Add, "math.add");

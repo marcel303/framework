@@ -773,6 +773,15 @@ struct VfxNodeTypeRegistration
 		std::string typeName;
 		std::string name;
 		std::string displayName;
+		bool isEditable;
+		
+		Output()
+			: typeName()
+			, name()
+			, displayName()
+			, isEditable(false)
+		{
+		}
 	};
 	
 	VfxNodeTypeRegistration * next;
@@ -795,6 +804,7 @@ struct VfxNodeTypeRegistration
 	void in(const char * name, const char * typeName, const char * defaultValue = "", const char * displayName = "");
 	void inEnum(const char * name, const char * enumName, const char * defaultValue = "", const char * displayName = "");
 	void out(const char * name, const char * typeName, const char * displayName = "");
+	void outEditable(const char * name);
 };
 
 extern VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList;

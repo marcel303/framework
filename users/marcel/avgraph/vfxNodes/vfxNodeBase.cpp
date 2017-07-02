@@ -781,6 +781,13 @@ void VfxNodeTypeRegistration::out(const char * name, const char * typeName, cons
 	outputs.push_back(o);
 }
 
+void VfxNodeTypeRegistration::outEditable(const char * name)
+{
+	for (auto & o : outputs)
+		if (o.name == name)
+			o.isEditable = true;
+}
+
 //
 
 // todo : move elsewhere ?
@@ -817,6 +824,7 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 			GraphEdit_TypeDefinition::OutputSocket outputSocket;
 			outputSocket.typeName = src.typeName;
 			outputSocket.name = src.name;
+			outputSocket.isEditable = src.isEditable;
 			outputSocket.index = i;
 			
 			typeDefinition.outputSockets.push_back(outputSocket);
