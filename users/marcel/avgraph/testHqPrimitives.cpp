@@ -44,7 +44,7 @@ void testHqPrimitives()
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			pushSurface(&surface);
-			surface.clear();
+			surface.clear(5, 5, 5);
 			
 			if (enableTexturing)
 				gxSetTexture(getTexture("picture.jpg"));
