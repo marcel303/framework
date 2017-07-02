@@ -56,6 +56,9 @@ todo :
 - add ability to route connections
 	+ add route point editing
 	- save/load route points
+- add third 'node minification' option: show only active inputs and outputs
+	so we have three options then: show everything, show only active i/o and fully collapsed
+- add ability to reference nodes? makes graph organization more easy
 
 todo : nodes :
 - add sample.float node
@@ -114,7 +117,8 @@ todo : nodes :
 	- remove items from channels where depth at index fails test
 		- allocate new channels object to store results
 	- add range min/max range + pass if inside or outside boolean
-- add data table node. read data from CSV, text or XML file
++ add data table node. read data from CSV, text or XML file
+- add memory node ? get/set named variables. how to ensure processing order ?
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader

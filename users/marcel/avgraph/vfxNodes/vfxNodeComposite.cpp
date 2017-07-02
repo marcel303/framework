@@ -31,6 +31,21 @@
 extern int GFX_SX;
 extern int GFX_SY;
 
+VFX_NODE_TYPE(composite, VfxNodeComposite)
+{
+	typeName = "composite";
+	
+	in("image1", "image");
+	in("transform1", "transform");
+	in("image2", "image");
+	in("transform2", "transform");
+	in("image3", "image");
+	in("transform3", "transform");
+	in("image4", "image");
+	in("transform4", "transform");
+	out("image", "image");
+}
+
 VfxNodeComposite::VfxNodeComposite()
 	: VfxNodeBase()
 	, surface(nullptr)

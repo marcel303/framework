@@ -33,9 +33,6 @@
 #include "Parse.h"
 #include "StringEx.h"
 
-extern VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
-extern VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName, VfxGraph * vfxGraph);
-
 void RealTimeConnection::loadBegin()
 {
 	Assert(g_currentVfxGraph == vfxGraph);

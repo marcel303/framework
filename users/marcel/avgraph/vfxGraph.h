@@ -98,3 +98,9 @@ struct VfxGraph
 	void tick(const float dt);
 	void draw() const;
 };
+
+//
+
+VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName, VfxGraph * vfxGraph);
+
+VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);

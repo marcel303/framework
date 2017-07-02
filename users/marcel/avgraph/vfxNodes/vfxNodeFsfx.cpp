@@ -32,6 +32,26 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
+VFX_NODE_TYPE(fsfx, VfxNodeFsfx)
+{
+	typeName = "fsfx";
+	
+	in("image", "image");
+	in("shader", "string");
+	in("width", "int");
+	in("height", "int");
+	in("color1", "color");
+	in("color2", "color");
+	in("param1", "float");
+	in("param2", "float");
+	in("param3", "float");
+	in("param4", "float");
+	in("opacity", "float", "1");
+	in("image1", "image");
+	in("image2", "image");
+	out("image", "image");
+}
+
 VfxNodeFsfx::VfxNodeFsfx()
 	: VfxNodeBase()
 	, surface(nullptr)

@@ -324,3 +324,191 @@ void VfxGraph::draw() const
 	
 	g_currentVfxGraph = nullptr;
 }
+
+//
+
+VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName, VfxGraph * vfxGraph)
+{
+	VfxNodeBase * vfxNode = nullptr;
+	
+	for (VfxNodeTypeRegistration * r = g_vfxNodeTypeRegistrationList; r != nullptr; r = r->next)
+	{
+		if (r->typeName == typeName)
+		{
+		#if VFX_GRAPH_ENABLE_TIMING
+			const uint64_t t1 = g_TimerRT.TimeUS_get();
+		#endif
+		
+			vfxNode = r->create();
+			
+		#if VFX_GRAPH_ENABLE_TIMING
+			const uint64_t t2 = g_TimerRT.TimeUS_get();
+			logDebug("create %s took %.2fms", typeName.c_str(), (t2 - t1) / 1000.0);
+		#endif
+		
+			break;
+		}
+	}
+	
+	if (typeName == "display")
+	{
+		Assert(vfxNode != nullptr);
+		if (vfxNode != nullptr)
+		{
+			// fixme : move display node id handling out of here. remove nodeId and vfxGraph passed in to this function
+			Assert(vfxGraph->displayNodeId == kGraphNodeIdInvalid);
+			vfxGraph->displayNodeId = nodeId;
+		}
+	}
+	
+	return vfxNode;
+}
+
+//
+
+VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary)
+{
+	VfxGraph * vfxGraph = new VfxGraph();
+	
+	for (auto nodeItr : graph.nodes)
+	{
+		auto & node = nodeItr.second;
+		
+		if (node.nodeType != kGraphNodeType_Regular)
+		{
+			continue;
+		}
+		
+		if (node.isEnabled == false)
+		{
+			continue;
+		}
+		
+		VfxNodeBase * vfxNode = createVfxNode(node.id, node.typeName, vfxGraph);
+		
+		Assert(vfxNode != nullptr);
+		if (vfxNode == nullptr)
+		{
+			logError("unable to create node");
+		}
+		else
+		{
+			vfxNode->isPassthrough = node.isPassthrough;
+			
+			vfxNode->initSelf(node);
+			
+			vfxGraph->nodes[node.id] = vfxNode;
+		}
+	}
+	
+	for (auto & linkItr : graph.links)
+	{
+		auto & link = linkItr.second;
+		
+		if (link.isEnabled == false)
+		{
+			continue;
+		}
+		
+		auto srcNodeItr = vfxGraph->nodes.find(link.srcNodeId);
+		auto dstNodeItr = vfxGraph->nodes.find(link.dstNodeId);
+		
+		Assert(srcNodeItr != vfxGraph->nodes.end() && dstNodeItr != vfxGraph->nodes.end());
+		if (srcNodeItr == vfxGraph->nodes.end() || dstNodeItr == vfxGraph->nodes.end())
+		{
+			if (srcNodeItr == vfxGraph->nodes.end())
+				logError("source node doesn't exist");
+			if (dstNodeItr == vfxGraph->nodes.end())
+				logError("destination node doesn't exist");
+		}
+		else
+		{
+			auto srcNode = srcNodeItr->second;
+			auto dstNode = dstNodeItr->second;
+			
+			auto input = srcNode->tryGetInput(link.srcNodeSocketIndex);
+			auto output = dstNode->tryGetOutput(link.dstNodeSocketIndex);
+			
+			Assert(input != nullptr && output != nullptr);
+			if (input == nullptr || output == nullptr)
+			{
+				if (input == nullptr)
+					logError("input node socket doesn't exist. name=%s, index=%d", link.srcNodeSocketName.c_str(), link.srcNodeSocketIndex);
+				if (output == nullptr)
+					logError("output node socket doesn't exist. name=%s, index=%d", link.dstNodeSocketName.c_str(), link.dstNodeSocketIndex);
+			}
+			else
+			{
+				input->connectTo(*output);
+				
+				// note : this may add the same node multiple times to the list of predeps. note that this
+				//        is ok as nodes will be traversed once through the travel id + it works nicely
+				//        with the live connection as we can just remove the predep and still have one or
+				//        references to the predep if the predep was referenced more than once
+				srcNode->predeps.push_back(dstNode);
+				
+				// if this is a trigger, add a trigger target to dstNode
+				if (output->type == kVfxPlugType_Trigger)
+				{
+					VfxNodeBase::TriggerTarget triggerTarget;
+					triggerTarget.srcNode = srcNode;
+					triggerTarget.srcSocketIndex = link.srcNodeSocketIndex;
+					triggerTarget.dstSocketIndex = link.dstNodeSocketIndex;
+					
+					dstNode->triggerTargets.push_back(triggerTarget);
+				}
+			}
+		}
+	}
+	
+	for (auto nodeItr : graph.nodes)
+	{
+		auto & node = nodeItr.second;
+		
+		auto typeDefintion = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+		
+		if (typeDefintion == nullptr)
+			continue;
+		
+		auto vfxNodeItr = vfxGraph->nodes.find(node.id);
+		
+		if (vfxNodeItr == vfxGraph->nodes.end())
+			continue;
+		
+		VfxNodeBase * vfxNode = vfxNodeItr->second;
+		
+		auto & vfxNodeInputs = vfxNode->inputs;
+		
+		for (auto inputValueItr : node.editorInputValues)
+		{
+			const std::string & inputName = inputValueItr.first;
+			const std::string & inputValue = inputValueItr.second;
+			
+			for (size_t i = 0; i < typeDefintion->inputSockets.size(); ++i)
+			{
+				if (typeDefintion->inputSockets[i].name == inputName)
+				{
+					if (i < vfxNodeInputs.size())
+					{
+						if (vfxNodeInputs[i].isConnected() == false)
+						{
+							vfxGraph->connectToInputLiteral(vfxNodeInputs[i], inputValue);
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	for (auto vfxNodeItr : vfxGraph->nodes)
+	{
+		auto nodeId = vfxNodeItr.first;
+		auto nodeItr = graph.nodes.find(nodeId);
+		auto & node = nodeItr->second;
+		auto vfxNode = vfxNodeItr.second;
+		
+		vfxNode->init(node);
+	}
+	
+	return vfxGraph;
+}
