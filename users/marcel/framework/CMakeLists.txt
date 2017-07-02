@@ -24,6 +24,8 @@ file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
 	"${CMAKE_CURRENT_SOURCE_DIR}/audiostream/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/audiostream/*.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/audiostream/*.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/msdfgen/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/msdfgen/*.h"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../fbx1/*.cpp")
 list(REMOVE_ITEM source aniplay.cpp)
 list(REMOVE_ITEM source example.cpp)
