@@ -37,58 +37,14 @@
 #include "vfxTypes.h"
 
 #include "vfxNodes/vfxNodeBase.h"
-#include "vfxNodes/vfxNodeBinaryOutput.h"
-#include "vfxNodes/vfxNodeChannelSelect.h"
-#include "vfxNodes/vfxNodeChannelSlice.h"
-#include "vfxNodes/vfxNodeChannelToGpu.h"
 #include "vfxNodes/vfxNodeComposite.h"
-#include "vfxNodes/vfxNodeDeepbelief.h"
-#include "vfxNodes/vfxNodeDelayLine.h"
 #include "vfxNodes/vfxNodeDisplay.h"
-#include "vfxNodes/vfxNodeDotDetector.h"
-#include "vfxNodes/vfxNodeDotTracker.h"
 #include "vfxNodes/vfxNodeFsfx.h"
-#include "vfxNodes/vfxNodeImageCpuCrop.h"
-#include "vfxNodes/vfxNodeImageCpuDelayLine.h"
-#include "vfxNodes/vfxNodeImageCpuDownsample.h"
-#include "vfxNodes/vfxNodeImageCpuEqualize.h"
-#include "vfxNodes/vfxNodeImageCpuToGpu.h"
-#include "vfxNodes/vfxNodeImageDelayLine.h"
-#include "vfxNodes/vfxNodeImageDownsample.h"
-#include "vfxNodes/vfxNodeImageScale.h"
-#include "vfxNodes/vfxNodeImpulseResponse.h"
-#include "vfxNodes/vfxNodeKinect1.h"
-#include "vfxNodes/vfxNodeKinect2.h"
-#include "vfxNodes/vfxNodeLeapMotion.h"
 #include "vfxNodes/vfxNodeLiteral.h"
-#include "vfxNodes/vfxNodeLogicSwitch.h"
-#include "vfxNodes/vfxNodeMapEase.h"
-#include "vfxNodes/vfxNodeMapRange.h"
-#include "vfxNodes/vfxNodeMouse.h"
-#include "vfxNodes/vfxNodeNoiseSimplex2D.h"
 #include "vfxNodes/vfxNodeOsc.h"
-#include "vfxNodes/vfxNodeOscPrimitives.h"
 #include "vfxNodes/vfxNodeOscSend.h"
-#include "vfxNodes/vfxNodePhysicalSpring.h"
-#include "vfxNodes/vfxNodePicture.h"
-#include "vfxNodes/vfxNodePictureCpu.h"
-#include "vfxNodes/vfxNodePointcloud.h"
-#include "vfxNodes/vfxNodeSampleAndHold.h"
 #include "vfxNodes/vfxNodeSequence.h"
-#include "vfxNodes/vfxNodeSound.h"
-#include "vfxNodes/vfxNodeSpectrum1D.h"
-#include "vfxNodes/vfxNodeSpectrum2D.h"
 #include "vfxNodes/vfxNodeSurface.h"
-#include "vfxNodes/vfxNodeTime.h"
-#include "vfxNodes/vfxNodeTimeline.h"
-#include "vfxNodes/vfxNodeTransform2D.h"
-#include "vfxNodes/vfxNodeTriggerOnchange.h"
-#include "vfxNodes/vfxNodeTriggerTimer.h"
-#include "vfxNodes/vfxNodeTriggerTreshold.h"
-#include "vfxNodes/vfxNodeTouches.h"
-#include "vfxNodes/vfxNodeVideo.h"
-#include "vfxNodes/vfxNodeWebcam.h"
-#include "vfxNodes/vfxNodeXinput.h"
 #include "vfxNodes/vfxNodeYuvToRgb.h"
 
 #include "mediaplayer_new/MPUtil.h"
@@ -110,25 +66,9 @@ extern const int GFX_SY;
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
 
-extern void testDatGui();
-extern void testNanovg();
-extern void testFourier1d();
-extern void testFourier2d();
-extern void testChaosGame();
-extern void testImpulseResponseMeasurement();
-extern void testTextureAtlas();
-extern void testDynamicTextureAtlas();
-extern void testDotDetector();
-extern void testDotTracker();
 extern void testAudiochannels();
-extern void testThreading();
-extern void testStbTruetype();
-extern void testMsdfgen();
-extern void testDeepbelief();
-extern void testImageCpuDelayLine();
-extern void testXmm();
-extern void testHqPrimitives();
 extern void testHrtf();
+extern void testCatmullRom();
 
 extern void testMain();
 
@@ -216,26 +156,6 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	DefineNodeImpl("stringLiteral", VfxNodeStringLiteral)
 	DefineNodeImpl("colorLiteral", VfxNodeColorLiteral)
 	DefineNodeImpl("trigger.asFloat", VfxNodeTriggerAsFloat)
-	DefineNodeImpl("time", VfxNodeTime)
-	DefineNodeImpl("timeline", VfxNodeTimeline)
-	DefineNodeImpl("sampleAndHold", VfxNodeSampleAndHold)
-	DefineNodeImpl("binary.output", VfxNodeBinaryOutput)
-	DefineNodeImpl("transform.2d", VfxNodeTransform2D)
-	DefineNodeImpl("trigger.onchange", VfxNodeTriggerOnchange)
-	DefineNodeImpl("trigger.timer", VfxNodeTriggerTimer)
-	DefineNodeImpl("trigger.treshold", VfxNodeTriggerTreshold)
-	DefineNodeImpl("logic.switch", VfxNodeLogicSwitch)
-	DefineNodeImpl("noise.simplex2d", VfxNodeNoiseSimplex2D)
-	DefineNodeImpl("sample.delay", VfxNodeDelayLine)
-	DefineNodeImpl("impulse.response", VfxNodeImpulseResponse)
-	DefineNodeImpl("physical.spring", VfxNodePhysicalSpring)
-	DefineNodeImpl("map.range", VfxNodeMapRange)
-	DefineNodeImpl("ease", VfxNodeMapEase)
-	DefineNodeImpl("osc.sine", VfxNodeOscSine)
-	DefineNodeImpl("osc.saw", VfxNodeOscSaw)
-	DefineNodeImpl("osc.triangle", VfxNodeOscTriangle)
-	DefineNodeImpl("osc.square", VfxNodeOscSquare)
-	DefineNodeImpl("osc.random", VfxNodeOscRandom)
 	else if (typeName == "display")
 	{
 		vfxNode = new VfxNodeDisplay();
@@ -246,39 +166,11 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 	}
 	DefineNodeImpl("surface", VfxNodeSurface)
 	DefineNodeImpl("sequence", VfxNodeSequence)
-	DefineNodeImpl("mouse", VfxNodeMouse)
-	DefineNodeImpl("xinput", VfxNodeXinput)
-	DefineNodeImpl("touches", VfxNodeTouches)
-	DefineNodeImpl("leap", VfxNodeLeapMotion)
-	DefineNodeImpl("kinect1", VfxNodeKinect1)
-	DefineNodeImpl("kinect2", VfxNodeKinect2)
-	DefineNodeImpl("pointcloud", VfxNodePointcloud)
-	DefineNodeImpl("deepbelief", VfxNodeDeepbelief)
 	DefineNodeImpl("osc", VfxNodeOsc)
 	DefineNodeImpl("osc.send", VfxNodeOscSend)
 	DefineNodeImpl("composite", VfxNodeComposite)
-	DefineNodeImpl("picture", VfxNodePicture)
-	DefineNodeImpl("picture.cpu", VfxNodePictureCpu)
-	DefineNodeImpl("video", VfxNodeVideo)
-	DefineNodeImpl("webcam", VfxNodeWebcam)
-	DefineNodeImpl("sound", VfxNodeSound)
-	DefineNodeImpl("spectrum.1d", VfxNodeSpectrum1D)
-	DefineNodeImpl("spectrum.2d", VfxNodeSpectrum2D)
 	DefineNodeImpl("fsfx", VfxNodeFsfx)
-	DefineNodeImpl("image.dots", VfxNodeDotDetector)
-	DefineNodeImpl("image.dotTracker", VfxNodeDotTracker)
-	DefineNodeImpl("image.toGpu", VfxNodeImageCpuToGpu)
-	DefineNodeImpl("image.delay", VfxNodeImageDelayLine)
-	DefineNodeImpl("image_cpu.equalize", VfxNodeImageCpuEqualize)
-	DefineNodeImpl("image_cpu.crop", VfxNodeImageCpuCrop)
-	DefineNodeImpl("image_cpu.delay", VfxNodeImageCpuDelayLine)
-	DefineNodeImpl("image_cpu.downsample", VfxNodeImageCpuDownsample)
-	DefineNodeImpl("image.downsample", VfxNodeImageDownsample)
-	DefineNodeImpl("image.scale", VfxNodeImageScale)
 	DefineNodeImpl("yuvToRgb", VfxNodeYuvToRgb)
-	DefineNodeImpl("channel.select", VfxNodeChannelSelect)
-	DefineNodeImpl("channel.slice", VfxNodeChannelSlice)
-	DefineNodeImpl("channel.toGpu", VfxNodeChannelToGpu)
 	else
 	{
 		logError("unknown node type: %s", typeName.c_str());
@@ -675,6 +567,8 @@ int main(int argc, char * argv[])
 		//testMacWebcam();
 		
 		testHrtf();
+
+		//testCatmullRom();
 		
 		testMain();
 		

@@ -28,6 +28,23 @@
 #include "Ease.h"
 #include "vfxNodeMapEase.h"
 
+VFX_ENUM_TYPE(easeType)
+{
+	elem("linear", 0);
+	elem("powIn");
+	elem("powOut");
+	elem("powInOut");
+	elem("sineIn");
+	elem("sineOut");
+	elem("sineInOut");
+	elem("backIn");
+	elem("backOut");
+	elem("backInOut");
+	elem("bounceIn");
+	elem("bounceOut");
+	elem("bounceInOut");
+}
+
 VFX_NODE_TYPE(map_ease, VfxNodeMapEase)
 {
 	typeName = "ease";

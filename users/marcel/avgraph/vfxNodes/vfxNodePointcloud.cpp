@@ -27,6 +27,21 @@
 
 #include "vfxNodePointcloud.h"
 
+VFX_ENUM_TYPE(pointcloudMode)
+{
+	elem("Kinect V1");
+	elem("Kinect V2");
+}
+
+VFX_NODE_TYPE(pointcloud, VfxNodePointcloud)
+{
+	typeName = "pointcloud";
+	
+	in("depth", "channels");
+	inEnum("mode", "pointcloudMode");
+	out("xyz", "channels");
+}
+
 VfxNodePointcloud::VfxNodePointcloud()
 	: VfxNodeBase()
 	, xyzChannelData()

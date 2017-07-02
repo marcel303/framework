@@ -29,6 +29,15 @@
 #include "vfxNodeSpectrum1D.h"
 #include <GL/glew.h>
 
+VFX_ENUM_TYPE(spectrumOutputMode)
+{
+	elem("channel 1+2");
+	elem("channel 1");
+	elem("channel 2");
+	elem("magnitude");
+	elem("squared magnitude");
+}
+
 VFX_NODE_TYPE(spectrum1D, VfxNodeSpectrum1D)
 {
 	typeName = "spectrum.1d";

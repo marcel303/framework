@@ -182,6 +182,32 @@ static float evalMathOp(const float a, const float b, const VfxNodeMath::Type ty
 
 //
 
+VFX_ENUM_TYPE(mathType)
+{
+	elem("add", 1);
+	elem("sub");
+	elem("mul");
+	elem("sin");
+	elem("cos");
+	elem("abs");
+	elem("min");
+	elem("max");
+	elem("sat");
+	elem("neg");
+	elem("sqrt");
+	elem("pow");
+	elem("exp");
+	elem("mod");
+	elem("fract");
+	elem("floor");
+	elem("ceil");
+	elem("round");
+	elem("sign");
+	elem("hypot");
+	elem("pitch");
+	elem("semitone");
+}
+
 VFX_NODE_TYPE(math, VfxNodeMath)
 {
 	typeName = "math";

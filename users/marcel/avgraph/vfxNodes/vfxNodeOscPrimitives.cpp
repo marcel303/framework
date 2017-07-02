@@ -28,6 +28,53 @@
 #include "framework.h"
 #include "vfxNodeOscPrimitives.h"
 
+VFX_NODE_TYPE(osc_sine, VfxNodeOscSine)
+{
+	typeName = "osc.sine";
+	in("frequency", "float", "1");
+	in("phase", "float");
+	in("restart", "float");
+	out("value", "float");
+	
+}
+
+VFX_NODE_TYPE(osc_saw, VfxNodeOscSaw)
+{
+	typeName = "osc.saw";
+	in("frequency", "float", "1");
+	in("phase", "float");
+	in("restart", "float");
+	out("value", "float");
+}
+
+VFX_NODE_TYPE(osc_triangle, VfxNodeOscTriangle)
+{
+	typeName = "osc.triangle";
+	in("frequency", "float", "1");
+	in("phase", "float");
+	in("restart", "float");
+	out("value", "float");
+	
+}
+
+VFX_NODE_TYPE(osc_square, VfxNodeOscSquare)
+{
+	typeName = "osc.square";
+	in("frequency", "float", "1");
+	in("phase", "float");
+	in("restart", "float");
+	out("value", "float");
+	
+}
+
+VFX_NODE_TYPE(osc_random, VfxNodeOscRandom)
+{
+	typeName = "osc.random";
+	in("frequency", "float", "1");
+	out("value", "float");
+	
+}
+
 VfxNodeOscSine::VfxNodeOscSine()
 	: VfxNodeBase()
 	, phaseHelper(0.f)

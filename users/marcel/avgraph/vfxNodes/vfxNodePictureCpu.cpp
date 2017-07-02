@@ -28,6 +28,14 @@
 #include "image.h"
 #include "vfxNodePictureCpu.h"
 
+VFX_NODE_TYPE(picture_cpu, VfxNodePictureCpu)
+{
+	typeName = "picture.cpu";
+	
+	in("source", "string");
+	out("image_cpu", "image");
+}
+
 VfxNodePictureCpu::VfxNodePictureCpu()
 	: VfxNodeBase()
 	, image()

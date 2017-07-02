@@ -29,6 +29,16 @@
 #include <GL/glew.h>
 #include <xmmintrin.h>
 
+VFX_ENUM_TYPE(imageCpuToGpuChannel)
+{
+	elem("rgba", 0);
+	elem("rgb");
+	elem("r");
+	elem("g");
+	elem("b");
+	elem("a");
+}
+
 VFX_NODE_TYPE(image_cpu_to_gpu, VfxNodeImageCpuToGpu)
 {
 	typeName = "image.toGpu";

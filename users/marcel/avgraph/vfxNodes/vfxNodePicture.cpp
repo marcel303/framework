@@ -28,6 +28,14 @@
 #include "framework.h"
 #include "vfxNodePicture.h"
 
+VFX_NODE_TYPE(picture, VfxNodePicture)
+{
+	typeName = "picture";
+	
+	in("source", "string");
+	out("image", "image");
+}
+
 VfxNodePicture::VfxNodePicture()
 	: VfxNodeBase()
 	, image(nullptr)
