@@ -38,10 +38,11 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
+static const int sx = 768;
+static const int sy = 512;
+
 void testDotDetector()
 {
-	const int sx = 768;
-	const int sy = 512;
 	Surface surface(sx, sy, false, false, SURFACE_R8);
 	
 	// make sure the surface turns up black and white instead of shades of red when we draw it, by applying a swizzle mask

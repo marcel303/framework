@@ -82,7 +82,7 @@ static void sumChannels_fast(float ** channels, const int numChannels, const int
 		
 		for (int i = 0; i < channelSize4; ++i)
 		{
-			output128[i] += channel128[i];
+			output128[i] = _mm_add_ps(output128[i], channel128[i]);
 		}
 	}
 #else
@@ -98,7 +98,7 @@ static void sumChannels_fast(float ** channels, const int numChannels, const int
 		
 		for (int i = 0; i < channelSize8; ++i)
 		{
-			outputVec[i] += channelVec[i];
+			outputVec[i] = _mm256_add_ps(outputVec[i], channelVec[i]);
 		}
 	}
 #endif
@@ -176,6 +176,8 @@ static void testAudioMixing()
 }
 
 //
+
+#ifdef __MACOS__
 
 #include "vfxNodes/macWebcam.h"
 #include "vfxNodes/openglTexture.h"
@@ -269,6 +271,8 @@ static void testMacWebcam()
 	delete webcam;
 	webcam = nullptr;
 }
+
+#endif
 
 //
 

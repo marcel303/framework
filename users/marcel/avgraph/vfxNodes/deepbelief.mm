@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#ifdef __MACOS__
+
 #include "Debugging.h"
 #include "deepbelief.h"
 #include "Log.h"
@@ -377,3 +379,5 @@ void Deepbelief::threadMain(State * state)
 	
 	SDL_UnlockMutex(state->mutex);
 }
+
+#endif

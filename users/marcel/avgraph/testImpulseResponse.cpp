@@ -93,7 +93,7 @@ void testImpulseResponseMeasurement()
 		
 		// construct the signal for which we will do the impulse-response measurement
 		
-		const int kNumSamples = GFX_SX;
+		const int kNumSamples = 1000;
 		
 		double samples[kNumSamples];
 		

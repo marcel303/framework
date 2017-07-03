@@ -1,3 +1,5 @@
+#ifdef __MACOS__
+
 #import "Debugging.h"
 #import "Log.h"
 #import "macWebcam.h"
@@ -545,3 +547,5 @@ void MacWebcam::tick()
 	}
 	SDL_UnlockMutex(context->mutex);
 }
+
+#endif

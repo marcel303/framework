@@ -26,6 +26,9 @@
 */
 
 #include "kinect1.h"
+
+#if ENABLE_KINECT1
+
 #include "vfxNodeKinect1.h"
 
 #include "framework.h" // todo : use OpenGL texture object and remove this dependency
@@ -127,3 +130,5 @@ void VfxNodeKinect1::tick(const float dt)
 	}
 	kinect->unlockBuffers();
 }
+
+#endif

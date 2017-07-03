@@ -27,7 +27,11 @@
 
 #pragma once
 
-#define ENABLE_KINECT1 0
+#ifdef __MACOS__
+	#define ENABLE_KINECT1 0
+#else
+	#define ENABLE_KINECT1 0
+#endif
 
 #if ENABLE_KINECT1
 

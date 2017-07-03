@@ -305,7 +305,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 				links.push_back(bl);
 			}
 			
-			std::sort(links.begin(), links.end(), [](auto & bl1, auto & bl2) { return bl1.d < bl2.d; });
+			std::sort(links.begin(), links.end(), [](const ButtonLink & bl1, const ButtonLink & bl2) { return bl1.d < bl2.d; });
 			
 			for (int i = 0; i < NUM_LINKS; ++i)
 				b.links[i] = ButtonLink();

@@ -27,6 +27,8 @@
 
 #pragma once
 
+#ifdef __MACOS__
+
 #include "deepbelief.h"
 #include "vfxNodeBase.h"
 
@@ -66,3 +68,5 @@ struct VfxNodeDeepbelief : VfxNodeBase
 	
 	virtual void getDescription(VfxNodeDescription & d) override;
 };
+
+#endif

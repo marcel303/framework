@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#ifdef __MACOS__
+
 #include "framework.h"
 #include "kinect2FrameListener.h"
 
@@ -96,3 +98,5 @@ void DoubleBufferedFrameListener::unlockBuffers()
 {
 	SDL_UnlockMutex(mutex);
 }
+
+#endif

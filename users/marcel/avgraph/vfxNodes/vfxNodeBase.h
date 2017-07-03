@@ -30,6 +30,7 @@
 #include "Debugging.h"
 #include "Mat4x4.h"
 #include "vfxProfiling.h"
+#include <algorithm>
 #include <stdint.h>
 #include <string>
 #include <vector>

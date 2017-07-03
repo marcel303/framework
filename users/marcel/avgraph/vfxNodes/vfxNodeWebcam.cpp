@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#ifdef __MACOS__
+
 #include "macWebcam.h"
 #include "vfxNodeWebcam.h"
 #include <GL/glew.h>
@@ -136,3 +138,5 @@ void VfxNodeWebcam::allocateImage(const int sx, const int sy)
 	
 	imageOutput.texture = texture.id;
 }
+
+#endif
