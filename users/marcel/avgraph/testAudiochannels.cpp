@@ -25,10 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#define DO_AUDIOCHANNELS 1
-
-#if DO_AUDIOCHANNELS
-
 #include "Calc.h"
 #include "framework.h"
 #include <cmath>
@@ -251,11 +247,3 @@ void testAudiochannels()
 	
 	shutAudioOutput();
 }
-
-#else
-
-void testAudiochannels()
-{
-}
-
-#endif
