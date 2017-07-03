@@ -212,8 +212,11 @@ class ofxDatGuiWaveMonitor : public ofxDatGuiTimeGraph {
     
         void update(bool ignoreMouseEvents)
         {
-            pts[0].y = pts[pts.size()-1].y;
-            for (int i=mPlotterRect.width-1; i>0; i--) pts[i].y = pts[i-1].y;
+			if (!pts.empty())
+			{
+				pts[0].y = pts[pts.size()-1].y;
+				for (int i=mPlotterRect.width-1; i>0; i--) pts[i].y = pts[i-1].y;
+			}
         }
     
     private:

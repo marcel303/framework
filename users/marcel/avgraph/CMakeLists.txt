@@ -64,6 +64,10 @@ source_group("3rdparty\\macos" FILES ${source_macos})
 source_group("3rdparty\\leap" FILES ${source_leap})
 source_group("3rdparty\\xmm" FILES ${source_xmm})
 
+if (WIN32)
+	list(REMOVE_ITEM source ${source_xmm})
+endif (WIN32)
+
 add_executable(avgraph ${source})
 
 target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT)
@@ -100,7 +104,8 @@ if (MSVC)
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/lib/swresample.lib)
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/lib/swscale.lib)
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/lib/Leap.lib)
-	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/win32/lib/libportaudio.a)
+	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/win32/lib/portaudio_x86.lib)
+	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/win32/lib/turbojpeg.lib)
 	
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)

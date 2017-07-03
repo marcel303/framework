@@ -27,8 +27,8 @@
 
 #include "framework.h"
 
-extern int GFX_SX;
-extern int GFX_SY;
+extern const int GFX_SX;
+extern const int GFX_SY;
 
 static void drawSamples(const int numSamples, const double * samples, const bool doSummation)
 {

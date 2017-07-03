@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#ifndef WIN32 // todo : fix XMM compiler errors on Win32 ?
+
 #include "framework.h"
 #include "xmm/xmm.h"
 
@@ -410,3 +412,5 @@ void testXmm()
 		
 	} while (!keyboard.wentDown(SDLK_SPACE));
 }
+
+#endif

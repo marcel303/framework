@@ -17,9 +17,13 @@ extern void testAudiochannels();
 extern void testThreading();
 extern void testStbTruetype();
 extern void testMsdfgen();
+#ifdef __MACOS__
 extern void testDeepbelief();
+#endif
 extern void testImageCpuDelayLine();
+#ifndef WIN32
 extern void testXmm();
+#endif
 extern void testHqPrimitives();
 
 //
@@ -385,8 +389,10 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 		testChaosGame();
 	if (doButton("DaGu", "DatGUI"))
 		testDatGui();
+#ifdef __MACOS__
 	if (doButton("DdBe", "Deep Belief SDK"))
 		testDeepbelief();
+#endif
 	if (doButton("DtDt", "Dot Detector"))
 		testDotDetector();
 	if (doButton("DtTr", "Dot Tracker"))
@@ -413,9 +419,11 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 		testTextureAtlas();
 	if (doButton("Thr", "Threading"))
 		testThreading();
+#ifndef WIN32
 	if (doButton("XMM", "XMM Gesture Follower"))
 		testXmm();
-	
+#endif
+
 	const bool result = doButton("QUIT", "Quit");
 	
 	if (menuTick)
