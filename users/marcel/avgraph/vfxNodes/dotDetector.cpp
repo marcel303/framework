@@ -150,8 +150,17 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 	const int gridSx = sx / cellSx + 1;
 	const int gridSy = sy / cellSy + 1;
 	
+#ifdef WIN32 // todo : use same code path on Win32
+	uint16_t ** grid = (uint16_t**)alloca(gridSx * sizeof(uint16_t*));
+	for (int x = 0; x < gridSx; ++x)
+	{
+		grid[x] = (uint16_t*)alloca(gridSy * sizeof(uint16_t));
+		memset(grid[x], 0xff, gridSy * sizeof(uint16_t));
+	}
+#else
 	uint16_t grid[gridSx][gridSy];
 	memset(grid, 0xff, sizeof(grid));
+#endif
 #endif
 	
 	for (int y = 0; y < sy; ++y)

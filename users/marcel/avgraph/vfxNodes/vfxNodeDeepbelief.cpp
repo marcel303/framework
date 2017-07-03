@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#ifdef __MACOS__
+
 #include "vfxNodeDeepbelief.h"
 
 #include "FileStream.h"
@@ -135,3 +137,5 @@ void VfxNodeDeepbelief::getDescription(VfxNodeDescription & d)
 		d.add("certainty: %1.3f, label: %s", p.certainty, p.label.c_str());
 	}
 }
+
+#endif

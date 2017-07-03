@@ -16,7 +16,11 @@
 
 #define SAMPLE_RATE 44100
 
-#define ALIGN16 __attribute__((aligned(16)))
+#ifdef __MACOS__
+	#define ALIGN16 __attribute__((aligned(16)))
+#else
+	#define ALIGN16
+#endif
 
 extern const int GFX_SX;
 extern const int GFX_SY;

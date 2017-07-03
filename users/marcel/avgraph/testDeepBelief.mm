@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#ifdef __MACOS__
+
 #include "framework.h"
 #include "image.h"
 #include "Timer.h"
@@ -284,3 +286,5 @@ void testDeepbelief()
 	delete image;
 	image = nullptr;
 }
+
+#endif

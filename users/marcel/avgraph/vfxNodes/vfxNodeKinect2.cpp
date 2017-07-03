@@ -26,6 +26,9 @@
 */
 
 #include "kinect2.h"
+
+#if ENABLE_KINECT2
+
 #include "kinect2FrameListener.h"
 #include "openglTexture.h"
 #include "vfxNodeKinect2.h"
@@ -224,3 +227,5 @@ void VfxNodeKinect2::getDescription(VfxNodeDescription & d)
 	
 	d.add("video image", videoImageCpu);
 }
+
+#endif

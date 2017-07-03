@@ -27,6 +27,10 @@
 
 #pragma once
 
+#include "kinect1.h"
+
+#if ENABLE_KINECT1
+
 #include "vfxNodeBase.h"
 
 struct Kinect1;
@@ -59,3 +63,5 @@ struct VfxNodeKinect1 : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 };
+
+#endif

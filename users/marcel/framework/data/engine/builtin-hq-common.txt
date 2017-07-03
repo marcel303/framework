@@ -74,7 +74,7 @@ vec4 hqColor(float v, vec4 color)
 	
 	if (sourceEnabled != 0.0)
 	{
-		color *= texture(source, v_texcoord);
+		//color *= texture(source, v_texcoord);
 	}
 
 	return color;

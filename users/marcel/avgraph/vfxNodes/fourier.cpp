@@ -26,8 +26,8 @@
 */
 
 #include "fourier.h"
-#include <alloca.h>
 #include <cmath>
+#include <malloc.h>
 #include <string.h>
 
 template <typename real>

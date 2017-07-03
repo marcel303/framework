@@ -227,7 +227,7 @@ void testDynamicTextureAtlas()
 		const int sx = random(8, 32);
 		const int sy = random(8, 32);
 		
-		uint8_t values[sx * sy];
+		uint8_t * values = (uint8_t*)alloca(sx * sy * sizeof(uint8_t));
 		
 		for (int i = 0; i < sx * sy; ++i)
 			values[i] = i;
@@ -294,7 +294,7 @@ void testDynamicTextureAtlas()
 			const int sx = random(4, 100);
 			const int sy = random(4, 100);
 			
-			uint8_t values[sx * sy];
+			uint8_t * values = (uint8_t*)alloca(sx * sy * sizeof(uint8_t));
 			
 			for (int i = 0; i < sx * sy; ++i)
 				values[i] = i;

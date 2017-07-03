@@ -28,8 +28,8 @@
 #include "framework.h"
 #include "Timer.h"
 
-extern int GFX_SX;
-extern int GFX_SY;
+extern const int GFX_SX;
+extern const int GFX_SY;
 
 void testChaosGame()
 {

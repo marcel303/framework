@@ -27,8 +27,8 @@
 
 #include "framework.h"
 
-extern int GFX_SX;
-extern int GFX_SY;
+extern const int GFX_SX;
+extern const int GFX_SY;
 
 static void drawSamples(const int numSamples, const double * samples, const bool doSummation)
 {
@@ -93,7 +93,7 @@ void testImpulseResponseMeasurement()
 		
 		// construct the signal for which we will do the impulse-response measurement
 		
-		const int kNumSamples = GFX_SX;
+		const int kNumSamples = 1000;
 		
 		double samples[kNumSamples];
 		

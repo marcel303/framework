@@ -32,6 +32,7 @@
 #include "StringEx.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
+#include <algorithm>
 #include <cmath>
 
 #include "vfxProfiling.h" // fixme : remove !!
@@ -3946,7 +3947,7 @@ void GraphEdit::draw() const
 		sortedNodes[nodeIndex++] = &node;
 	}
 	
-	std::sort(sortedNodes, sortedNodes + numNodes, [](auto n1, auto n2) { return n1->editorZKey < n2->editorZKey; });
+	std::sort(sortedNodes, sortedNodes + numNodes, [](const GraphNode *  n1, const GraphNode * n2) { return n1->editorZKey < n2->editorZKey; });
 	
 	for (int i = 0; i < numNodes; ++i)
 	{

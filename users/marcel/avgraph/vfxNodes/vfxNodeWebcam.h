@@ -27,6 +27,8 @@
 
 #pragma once
 
+#ifdef __MACOS__
+
 #include "openglTexture.h"
 #include "vfxNodeBase.h"
 
@@ -66,3 +68,5 @@ struct VfxNodeWebcam : VfxNodeBase
 	void freeImage();
 	void allocateImage(const int sx, const int sy);
 };
+
+#endif

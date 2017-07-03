@@ -27,6 +27,9 @@
 
 #pragma once
 
+#ifdef __MACOS__
+
+#include <atomic>
 #include <string>
 #include <vector>
 
@@ -135,3 +138,5 @@ struct Deepbelief
 	static void threadShut(State * state);
 	static void threadMain(State * state);
 };
+
+#endif

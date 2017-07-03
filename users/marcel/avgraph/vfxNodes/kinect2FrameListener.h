@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#ifdef __MACOS__
+
 #include <libfreenect2/frame_listener_impl.h> // FrameListener
 
 struct SDL_cond;
@@ -47,3 +49,5 @@ struct DoubleBufferedFrameListener : public libfreenect2::FrameListener
 	void lockBuffers();
 	void unlockBuffers();
 };
+
+#endif

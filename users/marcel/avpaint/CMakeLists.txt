@@ -37,7 +37,7 @@ file(GLOB_RECURSE source_mediaplayer_new "../vfxpro/mediaplayer_new/*.*")
 
 if (MSVC)
 	list(REMOVE_ITEM source ${source_mediaplayer})
-	list(REMOVE_ITEM source ${source_mediaplayer_new})
+	list(REMOVE_ITEM source ${source_mediaplayer_old})
 endif (MSVC)
 
 if (APPLE)
@@ -83,6 +83,7 @@ if (MSVC)
 	target_link_libraries(avpaint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/lib/swresample.lib)
 	target_link_libraries(avpaint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/lib/swscale.lib)
 	target_link_libraries(avpaint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/lib/Leap.lib)
+	target_link_libraries(avpaint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/win32/lib/portaudio_x86.lib)
 	
 	target_link_libraries(avpaint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
 	target_link_libraries(avpaint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)

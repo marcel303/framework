@@ -30,6 +30,7 @@
 #include "Debugging.h"
 #include "Mat4x4.h"
 #include "vfxProfiling.h"
+#include <algorithm>
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -136,6 +137,8 @@ struct VfxTriggerData
 		case kVfxTriggerDataType_Float:
 			return floatValue != 0.f;
 		}
+
+		return false;
 	}
 	
 	int asInt() const
@@ -151,6 +154,8 @@ struct VfxTriggerData
 		case kVfxTriggerDataType_Float:
 			return std::round(floatValue);
 		}
+
+		return 0;
 	}
 	
 	float asFloat() const
@@ -166,6 +171,8 @@ struct VfxTriggerData
 		case kVfxTriggerDataType_Float:
 			return floatValue;
 		}
+
+		return 0.f;
 	}
 };
 

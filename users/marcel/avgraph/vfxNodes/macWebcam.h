@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef __MACOS__
+
 #include <stdint.h>
 
 struct SDL_cond;
@@ -52,3 +54,5 @@ struct MacWebcam
 	
 	void tick();
 };
+
+#endif

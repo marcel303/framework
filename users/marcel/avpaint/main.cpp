@@ -711,7 +711,11 @@ int main(int argc, char * argv[])
 	{
 		testPortaudio();
 		
+	#ifdef WIN32
+		changeDirectory("C:/Users/Marcel/Google Drive/The Grooop - Welcome");
+	#else
 		changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome");
+	#endif
 	
 		framework.fillCachesWithPath(".", false);
 

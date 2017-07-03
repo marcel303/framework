@@ -27,6 +27,10 @@
 
 #pragma once
 
+#include "kinect2.h"
+
+#if ENABLE_KINECT2
+
 #include "vfxNodeBase.h"
 
 struct Kinect2;
@@ -64,3 +68,5 @@ struct VfxNodeKinect2 : VfxNodeBase
 	
 	virtual void getDescription(VfxNodeDescription & d) override;
 };
+
+#endif
