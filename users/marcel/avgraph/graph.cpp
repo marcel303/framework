@@ -3826,7 +3826,7 @@ void GraphEdit::draw() const
 		}
 	}
 
-	// traverse links and draw
+	// traverse and draw links
 	
 	hqBegin(HQ_LINES);
 	{
@@ -3872,6 +3872,41 @@ void GraphEdit::draw() const
 	}
 	hqEnd();
 	
+#if 1 // todo : remove. test bezier control points
+	gxBegin(GL_POINTS);
+	{
+		for (auto & linkItr : graph->links)
+		{
+			auto linkId = linkItr.first;
+			auto & link = linkItr.second;
+			
+			LinkPath path;
+			
+			if (getLinkPath(linkId, path))
+			{
+				setColor(colorWhite);
+				
+				float x1 = path.points[0].x;
+				float y1 = path.points[0].y;
+				
+				for (int i = 1; i < path.points.size(); ++i)
+				{
+					const float x2 = path.points[i].x;
+					const float y2 = path.points[i].y;
+					
+					hqLine(
+						x1, y1, 2.f,
+						x2, y2, 2.f);
+					
+					x1 = x2;
+					y1 = y2;
+				}
+			}
+		}
+	}
+	gxEnd();
+#endif
+	
 	hqBegin(HQ_FILLED_CIRCLES);
 	{
 		for (auto & linkItr : graph->links)
@@ -3896,7 +3931,7 @@ void GraphEdit::draw() const
 	}
 	hqEnd();
 	
-	// traverse nodes and draw
+	// traverse and draw nodes
 	
 	const int numNodes = graph->nodes.size();
 	
