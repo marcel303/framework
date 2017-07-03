@@ -1,5 +1,29 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
 
-// Copyright (C) 2013 Grannies Games - All rights reserved
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
 
 #include "audio.h"
 #include "audiostream/AudioOutput.h"
@@ -70,7 +94,7 @@ SoundData * loadSound_WAV(const char * filename)
 	int16_t fmtCompressionType;
 	int16_t fmtChannelCount;
 	int32_t fmtSampleRate;
-	int16_t fmtByteRate;
+	int32_t fmtByteRate;
 	int16_t fmtBlockAlign;
 	int16_t fmtBitDepth;
 	int16_t fmtExtraLength;
@@ -82,7 +106,10 @@ SoundData * loadSound_WAV(const char * filename)
 	ok &= r.read(fmtByteRate);
 	ok &= r.read(fmtBlockAlign);
 	ok &= r.read(fmtBitDepth);
-	ok &= r.read(fmtExtraLength);
+	if (fmtCompressionType != 1)
+		ok &= r.read(fmtExtraLength);
+	else
+		fmtExtraLength = 0;
 	
 	if (!ok)
 		return 0;
@@ -111,7 +138,7 @@ SoundData * loadSound_WAV(const char * filename)
 		logError("channel count not supported: %d", fmtChannelCount);
 		ok = false;
 	}
-	if (fmtBitDepth != 1 && fmtBitDepth != 2)
+	if (fmtBitDepth != 8 && fmtBitDepth != 16 && fmtBitDepth != 24)
 	{
 		logError("bit depth not supported: %d", fmtBitDepth);
 		ok = false;
@@ -129,8 +156,8 @@ SoundData * loadSound_WAV(const char * filename)
 		if (!r.read(byteCount))
 			return 0;
 		
-		//log("wave loader: skipping %d bytes of filler", byteCount);
-		r.skip(byteCount + 2);
+		//logInfo("wave loader: skipping %d bytes of filler", byteCount);
+		r.skip(byteCount);
 		
 		if (!r.read(id, 4)) // 'data'
 			return 0;
@@ -155,10 +182,35 @@ SoundData * loadSound_WAV(const char * filename)
 		return 0;
 	}
 	
+	// convert data if necessary
+	
+	if (fmtBitDepth == 24)
+	{
+		const int sampleCount = byteCount / 3;
+		float * samplesData = new float[sampleCount];
+		
+		for (int i = 0; i < sampleCount; ++i)
+		{
+			int32_t value = (bytes[i * 3 + 0] << 8) | (bytes[i * 3 + 1] << 16) | (bytes[i * 3 + 2] << 24);
+			
+			value >>= 8;
+			
+			samplesData[i] = value / float(1 << 23);
+		}
+		
+		delete[] bytes;
+		bytes = nullptr;
+		
+		bytes = (uint8_t*)samplesData;
+		
+		fmtBitDepth = 32;
+		byteCount = byteCount * 4 / 3;
+	}
+	
 	SoundData * soundData = new SoundData;
-	soundData->channelSize = fmtBitDepth;
+	soundData->channelSize = fmtBitDepth / 8;
 	soundData->channelCount = fmtChannelCount;
-	soundData->sampleCount = byteCount / (fmtBitDepth * fmtChannelCount);
+	soundData->sampleCount = byteCount / (fmtBitDepth / 8 * fmtChannelCount);
 	soundData->sampleRate = fmtSampleRate;
 	soundData->sampleData = bytes;
 	

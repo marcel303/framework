@@ -1,3 +1,30 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #include "MPAudioBuffer.h"
 #include "MPAudioContext.h"
 #include "MPContext.h"
@@ -17,6 +44,7 @@ namespace MP
 {
 	Context::Context()
 		: m_begun(false)
+		, m_filename()
 		, m_eof(false)
 		, m_time(0.0)
 		, m_formatContext(nullptr)
@@ -24,8 +52,20 @@ namespace MP
 		, m_videoContext(nullptr)
 	{
 	}
+	
+	Context::~Context()
+	{
+		Assert(m_begun == false);
+		Assert(m_filename.empty());
+		Assert(m_eof == false);
+		Assert(m_time == 0.0);
+		
+		Assert(m_formatContext == nullptr);
+		Assert(m_audioContext == nullptr);
+		Assert(m_videoContext == nullptr);
+	}
 
-	bool Context::Begin(const std::string & filename, const bool enableAudioStream, const bool enableVideoStream, const bool outputYuv)
+	bool Context::Begin(const std::string & filename, const bool enableAudioStream, const bool enableVideoStream, const OutputMode outputMode)
 	{
 		Assert(m_begun == false);
 
@@ -89,7 +129,7 @@ namespace MP
 			{
 				// Initialize video stream/context.
 				m_videoContext = new VideoContext();
-				if (!m_videoContext->Initialize(this, videoStreamIndex, outputYuv))
+				if (!m_videoContext->Initialize(this, videoStreamIndex, outputMode))
 					result &= false;
 			}
 		}
@@ -409,7 +449,6 @@ namespace MP
 
 		// Read packet.
 		AVPacket packet;
-		av_init_packet(&packet);
 
 		if (ReadPacket(packet))
 		{
@@ -449,9 +488,7 @@ namespace MP
 	bool Context::ProcessPacket(AVPacket & packet)
 	{
 		bool result = true;
-
-		bool captured = false;
-
+		
 		Debug::Print("ProcessPacket: stream_index=%d.", packet.stream_index);
 
 		if (m_audioContext != nullptr)
@@ -459,7 +496,6 @@ namespace MP
 			if (packet.stream_index == m_audioContext->GetStreamIndex())
 			{
 				result &= m_audioContext->AddPacket(packet);
-				captured = true;
 			}
 		}
 
@@ -468,7 +504,6 @@ namespace MP
 			if (packet.stream_index == m_videoContext->GetStreamIndex())
 			{
 				result &= m_videoContext->AddPacket(packet);
-				captured = true;
 			}
 		}
 
@@ -478,8 +513,10 @@ namespace MP
 	bool Context::ReadPacket(AVPacket & out_packet)
 	{
 		// Read packet.
+		av_init_packet(&out_packet);
 		out_packet.buf = nullptr;
-
+		out_packet.size = 0;
+		
 		const int readResult = av_read_frame(m_formatContext, &out_packet);
 
 		if (readResult < 0)

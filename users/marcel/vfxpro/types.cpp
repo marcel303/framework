@@ -149,10 +149,10 @@ void ParticleSystem::draw(const float alpha)
 				const float c_sx_2 = c * sx_2;
 				const float c_sy_2 = c * sy_2;
 
-				gxTexCoord2f(0.f, 1.f); gxVertex2f(x[i] + (-c_sx_2 - s_sy_2), y[i] + (+s_sx_2 - c_sy_2));
-				gxTexCoord2f(1.f, 1.f); gxVertex2f(x[i] + (+c_sx_2 - s_sy_2), y[i] + (-s_sx_2 - c_sy_2));
-				gxTexCoord2f(1.f, 0.f); gxVertex2f(x[i] + (+c_sx_2 + s_sy_2), y[i] + (-s_sx_2 + c_sy_2));
-				gxTexCoord2f(0.f, 0.f); gxVertex2f(x[i] + (-c_sx_2 + s_sy_2), y[i] + (+s_sx_2 + c_sy_2));
+				gxTexCoord2f(0.f, 0.f); gxVertex2f(x[i] + (-c_sx_2 - s_sy_2), y[i] + (+s_sx_2 - c_sy_2));
+				gxTexCoord2f(1.f, 0.f); gxVertex2f(x[i] + (+c_sx_2 - s_sy_2), y[i] + (-s_sx_2 - c_sy_2));
+				gxTexCoord2f(1.f, 1.f); gxVertex2f(x[i] + (+c_sx_2 + s_sy_2), y[i] + (-s_sx_2 + c_sy_2));
+				gxTexCoord2f(0.f, 1.f); gxVertex2f(x[i] + (-c_sx_2 + s_sy_2), y[i] + (+s_sx_2 + c_sy_2));
 			}
 		}
 	}

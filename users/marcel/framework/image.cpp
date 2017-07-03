@@ -1,12 +1,67 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
 
-// Copyright (C) 2013 Grannies Games - All rights reserved
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
 
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+#include "framework.h"
+#include "image.h"
 #ifdef WIN32
 	#include <Windows.h>
 #endif
 #include <FreeImage.h>
-#include "framework.h"
-#include "image.h"
+#include <xmmintrin.h>
+
+//
+
+ImageData::ImageData()
+{
+	memset(this, 0, sizeof(ImageData));
+}
+
+ImageData::ImageData(int sx, int sy)
+{
+	memset(this, 0, sizeof(ImageData));
+
+	this->sx = sx;
+	this->sy = sy;
+
+	imageData = (ImageData::Pixel*)_mm_malloc(sx * sy * 4, 16);
+}
+
+ImageData::~ImageData()
+{
+	if (imageData)
+	{
+		_mm_free(imageData);
+		imageData = 0;
+		
+		sx = sy = 0;
+	}
+}
+
+//
 
 ImageData * loadImage(const char * filename)
 {
@@ -30,12 +85,12 @@ ImageData * loadImage(const char * filename)
 		const int sx = FreeImage_GetWidth(bmp);
 		const int sy = FreeImage_GetHeight(bmp);
 
-		data = malloc(sx * sy * 4);
+		data = _mm_malloc(sx * sy * 4, 16);
 		char * dest = (char*)data;
 		
 		for (int y = 0; y < sy; ++y)
 		{
-			uint8_t * source = (uint8_t*)FreeImage_GetScanLine(bmp, y);
+			uint8_t * source = (uint8_t*)FreeImage_GetScanLine(bmp, sy - 1 - y);
 			
 			for (int x = 0; x < sx; ++x)
 			{
@@ -63,12 +118,12 @@ ImageData * loadImage(const char * filename)
 			return 0;
 		}
 
-		data = malloc(sx * sy * 4);
+		data = _mm_malloc(sx * sy * 4, 16);
 		char * dest = (char*)data;
 		
 		for (int y = 0; y < sy; ++y)
 		{
-			uint32_t * source = (uint32_t*)FreeImage_GetScanLine(bmp32, y);
+			uint32_t * source = (uint32_t*)FreeImage_GetScanLine(bmp32, sy - 1 - y);
 			
 			for (int x = 0; x < sx; ++x)
 			{
@@ -91,7 +146,7 @@ ImageData * loadImage(const char * filename)
 	
 	FreeImage_Unload(bmp);
 	
-	ImageData * imageData = new ImageData;
+	ImageData * imageData = new ImageData();
 	imageData->sx = sx;
 	imageData->sy = sy;
 	imageData->imageData = (ImageData::Pixel*)data;
@@ -99,13 +154,14 @@ ImageData * loadImage(const char * filename)
 	return imageData;
 }
 
-ImageData *  imagePremultiplyAlpha(ImageData * image)
+ImageData *  imagePremultiplyAlpha(const ImageData * image)
 {
 	const int numPixels = image->sx * image->sy;
+	
 	ImageData * result = new ImageData();
 	result->sx = image->sx;
 	result->sy = image->sy;
-	result->imageData = new ImageData::Pixel[numPixels];
+	result->imageData = (ImageData::Pixel*)_mm_malloc(numPixels * 4, 16);
 
 	for (int i = 0; i < numPixels; ++i)
 	{
@@ -118,7 +174,7 @@ ImageData *  imagePremultiplyAlpha(ImageData * image)
 	return result;
 }
 
-static bool getPixel(ImageData * image, int x, int y, ImageData::Pixel & pixel)
+static bool getPixel(const ImageData * image, const int x, const int y, ImageData::Pixel & pixel)
 {
 	if (x < 0 || y < 0 || x >= image->sx || y >= image->sy)
 		return false;
@@ -129,24 +185,29 @@ static bool getPixel(ImageData * image, int x, int y, ImageData::Pixel & pixel)
 	}
 }
 
-ImageData * imageFixAlphaFilter(ImageData * image)
+ImageData * imageFixAlphaFilter(const ImageData * image)
 {
 	ImageData * result = new ImageData();
 	result->sx = image->sx;
 	result->sy = image->sy;
-	result->imageData = new ImageData::Pixel[image->sx * image->sy];
+	result->imageData = (ImageData::Pixel*)_mm_malloc(image->sx * image->sy * 4, 16);
 
-	for (int x = 0; x < image->sx; ++x)
+	for (int y = 0; y < image->sy; ++y)
 	{
-		for (int y = 0; y < image->sy; ++y)
+		for (int x = 0; x < image->sx; ++x)
 		{
-			if (image->getLine(y)[x].a != 0)
+			const ImageData::Pixel * __restrict srcLine = image->getLine(y);
+				  ImageData::Pixel * __restrict dstLine = result->getLine(y);
+			
+			if (srcLine[x].a != 0)
 			{
-				result->getLine(y)[x] = image->getLine(y)[x];
+				dstLine[x] = srcLine[x];
 			}
 			else
 			{
-				ImageData::Pixel temp;
+				int tempR = 0;
+				int tempG = 0;
+				int tempB = 0;
 				int numAdded = 0;
 
 				for (int dx = -1; dx <= +1; ++dx)
@@ -162,17 +223,9 @@ ImageData * imageFixAlphaFilter(ImageData * image)
 						{
 							if (pixel.a != 0)
 							{
-								if (numAdded == 0)
-								{
-									temp = pixel;
-								}
-								else
-								{
-									temp.r += pixel.r;
-									temp.g += pixel.g;
-									temp.b += pixel.b;
-									temp.a += pixel.a;
-								}
+								tempR += pixel.r;
+								tempG += pixel.g;
+								tempB += pixel.b;
 
 								numAdded++;
 							}
@@ -182,16 +235,18 @@ ImageData * imageFixAlphaFilter(ImageData * image)
 
 				if (numAdded != 0)
 				{
-					temp.r /= numAdded;
-					temp.g /= numAdded;
-					temp.b /= numAdded;
-					temp.a = 0;
+					tempR /= numAdded;
+					tempG /= numAdded;
+					tempB /= numAdded;
 
-					result->getLine(y)[x] = temp;
+					dstLine[x].r = tempR;
+					dstLine[x].g = tempG;
+					dstLine[x].b = tempB;
+					dstLine[x].a = 0;
 				}
 				else
 				{
-					result->getLine(y)[x] = image->getLine(y)[x];
+					dstLine[x] = srcLine[x];
 				}
 			}
 		}

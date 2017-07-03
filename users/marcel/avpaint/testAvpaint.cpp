@@ -15,7 +15,7 @@
 #endif
 
 #define MAX_LAYERS 3
-#define NUM_LAYERS 1
+#define NUM_LAYERS 3
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -94,10 +94,10 @@ static void applyMask(GLuint a, GLuint b, GLuint mask)
 		shader.setTexture("mask", 2, mask);
 		gxBegin(GL_QUADS);
 		{
-			gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f * GFX_SX, 0.f * GFX_SY);
-			gxTexCoord2f(1.f, 1.f); gxVertex2f(1.f * GFX_SX, 0.f * GFX_SY);
-			gxTexCoord2f(1.f, 0.f); gxVertex2f(1.f * GFX_SX, 1.f * GFX_SY);
-			gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f * GFX_SX, 1.f * GFX_SY);
+			gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f * GFX_SX, 0.f * GFX_SY);
+			gxTexCoord2f(1.f, 0.f); gxVertex2f(1.f * GFX_SX, 0.f * GFX_SY);
+			gxTexCoord2f(1.f, 1.f); gxVertex2f(1.f * GFX_SX, 1.f * GFX_SY);
+			gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f * GFX_SX, 1.f * GFX_SY);
 		}
 		gxEnd();
 	}
@@ -600,10 +600,10 @@ void testAvpaint()
 								setShader_GaussianBlurH(texture, 63, radius);
 								gxBegin(GL_QUADS);
 								{
-									gxTexCoord2f(0.f, 1.f - t1); gxVertex2f(0,      y1);
-									gxTexCoord2f(1.f, 1.f - t1); gxVertex2f(GFX_SX, y1);
-									gxTexCoord2f(1.f, 1.f - t2); gxVertex2f(GFX_SX, y2);
-									gxTexCoord2f(0.f, 1.f - t2); gxVertex2f(0,      y2);
+									gxTexCoord2f(0.f, t1); gxVertex2f(0,      y1);
+									gxTexCoord2f(1.f, t1); gxVertex2f(GFX_SX, y1);
+									gxTexCoord2f(1.f, t2); gxVertex2f(GFX_SX, y2);
+									gxTexCoord2f(0.f, t2); gxVertex2f(0,      y2);
 								}
 								gxEnd();
 								clearShader();
@@ -637,10 +637,10 @@ void testAvpaint()
 							setShader_GaussianBlurV(texture, 63, radius);
 							gxBegin(GL_QUADS);
 							{
-								gxTexCoord2f(t1, 1.f); gxVertex2f(x1, 0.f);
-								gxTexCoord2f(t2, 1.f); gxVertex2f(x2, 0.f);
-								gxTexCoord2f(t2, 0.f); gxVertex2f(x2, GFX_SY);
-								gxTexCoord2f(t1, 0.f); gxVertex2f(x1, GFX_SY);
+								gxTexCoord2f(t1, 0.f); gxVertex2f(x1, 0.f);
+								gxTexCoord2f(t2, 0.f); gxVertex2f(x2, 0.f);
+								gxTexCoord2f(t2, 1.f); gxVertex2f(x2, GFX_SY);
+								gxTexCoord2f(t1, 1.f); gxVertex2f(x1, GFX_SY);
 							}
 							gxEnd();
 							clearShader();

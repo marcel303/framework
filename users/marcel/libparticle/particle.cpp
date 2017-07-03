@@ -6,6 +6,7 @@
 #include <xmmintrin.h>
 
 #include "StringEx.h" // _s functions
+#include "ui.h" // srgb <-> linear
 
 //#pragma optimize("", off)
 
@@ -100,7 +101,27 @@ void ParticleColor::interpolateBetween(const ParticleColor & v1, const ParticleC
 		rgba[i] = v1.rgba[i] * t1 + v2.rgba[i] * t2;
 }
 
-void ParticleColor::save(XMLPrinter * printer)
+void ParticleColor::interpolateBetweenLinear(const ParticleColor & v1, const ParticleColor & v2, const float t)
+{
+	const float t1 = 1.f - t;
+	const float t2 =       t;
+	
+	float linear1[3];
+	float linear2[3];
+	float linear[3];
+	
+	srgbToLinear(v1.rgba[0], v1.rgba[1], v1.rgba[2], linear1[0], linear1[1], linear1[2]);
+	srgbToLinear(v2.rgba[0], v2.rgba[1], v2.rgba[2], linear2[0], linear2[1], linear2[2]);
+	
+	for (int i = 0; i < 3; ++i)
+		linear[i] = linear1[i] * t1 + linear2[i] * t2;
+	for (int i = 3; i < 4; ++i)
+		rgba[i] = v1.rgba[i] * t1 + v2.rgba[i] * t2;
+	
+	linearToSrgb(linear[0], linear[1], linear[2], rgba[0], rgba[1], rgba[2]);
+}
+
+void ParticleColor::save(XMLPrinter * printer) const
 {
 	printer->PushAttribute("r", rgba[0]);
 	printer->PushAttribute("g", rgba[1]);
@@ -108,7 +129,7 @@ void ParticleColor::save(XMLPrinter * printer)
 	printer->PushAttribute("a", rgba[3]);
 }
 
-void ParticleColor::load(XMLElement * elem)
+void ParticleColor::load(const XMLElement * elem)
 {
 	*this = ParticleColor();
 
@@ -171,7 +192,7 @@ float ParticleCurve::sample(const float _t) const
 	}
 }
 
-void ParticleCurve::save(XMLPrinter * printer)
+void ParticleCurve::save(XMLPrinter * printer) const
 {
 	printer->PushAttribute("numKeys", numKeys);
 	for (int i = 0; i < numKeys; ++i)
@@ -186,11 +207,11 @@ void ParticleCurve::save(XMLPrinter * printer)
 	}
 }
 
-void ParticleCurve::load(XMLElement * elem)
+void ParticleCurve::load(const XMLElement * elem)
 {
 	memset(this, 0, sizeof(*this));
 
-	for (XMLElement * keyElem = elem->FirstChildElement("key"); keyElem; keyElem = keyElem->NextSiblingElement())
+	for (const XMLElement * keyElem = elem->FirstChildElement("key"); keyElem; keyElem = keyElem->NextSiblingElement())
 	{
 		if (numKeys < kMaxKeys)
 		{
@@ -234,6 +255,7 @@ bool ParticleColorCurve::Key::operator!=(const Key & other) const
 
 ParticleColorCurve::ParticleColorCurve()
 	: numKeys(0)
+	, useLinearColorSpace(true)
 {
 }
 
@@ -349,7 +371,7 @@ void ParticleColorCurve::setLinearAlpha(float v1, float v2)
 	sortKeys();
 }
 
-void ParticleColorCurve::sample(const float t, ParticleColor & result) const
+void ParticleColorCurve::sample(const float t, const bool linearColorSpace, ParticleColor & result) const
 {
 	if (numKeys == 0)
 		result.set(1.f, 1.f, 1.f, 1.f);
@@ -377,13 +399,18 @@ void ParticleColorCurve::sample(const float t, ParticleColor & result) const
 			const ParticleColor & c1 = keys[startKey].color;
 			const ParticleColor & c2 = keys[endKey].color;
 			const float t2 = (t - keys[startKey].t) / (keys[endKey].t - keys[startKey].t);
-			result.interpolateBetween(c1, c2, t2);
+			if (linearColorSpace)
+				result.interpolateBetweenLinear(c1, c2, t2);
+			else
+				result.interpolateBetween(c1, c2, t2);
 		}
 	}
 }
 
-void ParticleColorCurve::save(XMLPrinter * printer)
+void ParticleColorCurve::save(XMLPrinter * printer) const
 {
+	printer->PushAttribute("useLinearColorSpace", useLinearColorSpace);
+	
 	for (int i = 0; i < numKeys; ++i)
 	{
 		printer->OpenElement("key");
@@ -395,10 +422,14 @@ void ParticleColorCurve::save(XMLPrinter * printer)
 	}
 }
 
-void ParticleColorCurve::load(XMLElement * elem)
+void ParticleColorCurve::load(const XMLElement * elem)
 {
 	clearKeys();
-
+	
+	//
+	
+	useLinearColorSpace = boolAttrib(elem, "useLinearColorSpace", true);
+	
 	for (auto keyElem = elem->FirstChildElement("key"); keyElem; keyElem = keyElem->NextSiblingElement())
 	{
 		Key * key;
@@ -448,7 +479,7 @@ bool ParticleEmitterInfo::operator!=(const ParticleEmitterInfo & other) const
 	return !(*this == other);
 }
 
-void ParticleEmitterInfo::save(XMLPrinter * printer)
+void ParticleEmitterInfo::save(XMLPrinter * printer) const
 {
 	printer->PushAttribute("name", name);
 	printer->PushAttribute("duration", duration);
@@ -472,7 +503,7 @@ void ParticleEmitterInfo::save(XMLPrinter * printer)
 	printer->CloseElement();
 }
 
-void ParticleEmitterInfo::load(XMLElement * elem)
+void ParticleEmitterInfo::load(const XMLElement * elem)
 {
 	*this = ParticleEmitterInfo();
 
@@ -591,7 +622,7 @@ void ParticleInfo::clearBursts()
 	numBursts = 0;
 }
 
-void ParticleInfo::save(XMLPrinter * printer)
+void ParticleInfo::save(XMLPrinter * printer) const
 {
 	// emission
 	printer->PushAttribute("rate", rate);
@@ -713,7 +744,7 @@ void ParticleInfo::save(XMLPrinter * printer)
 	}
 }
 
-void ParticleInfo::load(XMLElement * elem)
+void ParticleInfo::load(const XMLElement * elem)
 {
 	*this = ParticleInfo();
 
@@ -814,7 +845,7 @@ ParticleInfo::SubEmitter::SubEmitter()
 	memset(emitterName, 0, sizeof(emitterName));
 }
 
-void ParticleInfo::SubEmitter::save(XMLPrinter * printer)
+void ParticleInfo::SubEmitter::save(XMLPrinter * printer) const
 {
 	printer->PushAttribute("enabled", enabled);
 	printer->PushAttribute("count", count);
@@ -822,7 +853,7 @@ void ParticleInfo::SubEmitter::save(XMLPrinter * printer)
 	printer->PushAttribute("emitterName", emitterName);
 }
 
-void ParticleInfo::SubEmitter::load(XMLElement * elem)
+void ParticleInfo::SubEmitter::load(const XMLElement * elem)
 {
 	enabled = boolAttrib(elem, "enabled", enabled);
 	count = intAttrib(elem, "count", count);
@@ -1225,7 +1256,7 @@ void computeParticleColor(const ParticleEmitterInfo & pei, const ParticleInfo & 
 	if (pi.colorOverLifetime)
 	{
 		ParticleColor temp(true);
-		pi.colorOverLifetimeCurve.sample(particleLife, temp);
+		pi.colorOverLifetimeCurve.sample(particleLife, pi.colorOverLifetimeCurve.useLinearColorSpace, temp);
 		result.modulateWith(temp);
 	}
 
@@ -1233,7 +1264,7 @@ void computeParticleColor(const ParticleEmitterInfo & pei, const ParticleInfo & 
 	{
 		const float t = (particleSpeed - pi.colorBySpeedRangeMin) / (pi.colorBySpeedRangeMax - pi.colorBySpeedRangeMin);
 		ParticleColor temp(true);
-		pi.colorBySpeedCurve.sample(t, temp);
+		pi.colorBySpeedCurve.sample(t, pi.colorBySpeedCurve.useLinearColorSpace, temp);
 		result.modulateWith(temp);
 	}
 }

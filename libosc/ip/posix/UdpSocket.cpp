@@ -57,6 +57,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include <atomic>
+
 #include "ip/PacketListener.h"
 #include "ip/TimerListener.h"
 
@@ -337,7 +339,7 @@ class SocketReceiveMultiplexer::Implementation{
 	std::vector< std::pair< PacketListener*, UdpSocket* > > socketListeners_;
 	std::vector< AttachedTimerListener > timerListeners_;
 
-	volatile bool break_;
+	std::atomic_bool break_;
 	int breakPipe_[2]; // [0] is the reader descriptor and [1] the writer
 
 	double GetCurrentTimeMs() const

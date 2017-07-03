@@ -714,8 +714,8 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 		{ \
 			pos[numVerts * 2 + 0] = dx + (x  + OFFSET_X[v]) * BLOCK_SX; \
 			pos[numVerts * 2 + 1] = dy + (y  + OFFSET_Y[v]) * BLOCK_SY; \
-			uv[numVerts * 2 + 0]  =               (tx + OFFSET_X[v]) * BLOCK_SX + (OFFSET_X[v] ? -.1f : +.1f); \
-			uv[numVerts * 2 + 1]  = m_textureSy - (ty + OFFSET_Y[v]) * BLOCK_SY + (OFFSET_Y[v] ? +.1f : -.1f); \
+			uv[numVerts * 2 + 0]  = (tx + OFFSET_X[v]) * BLOCK_SX + (OFFSET_X[v] ? -.1f : +.1f); \
+			uv[numVerts * 2 + 1]  = (ty + OFFSET_Y[v]) * BLOCK_SY + (OFFSET_Y[v] ? -.1f : +.1f); \
 			c[numVerts] = tc; \
 		} \
 	}

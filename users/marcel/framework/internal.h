@@ -1,3 +1,30 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #pragma once
 
 #include <ft2build.h>
@@ -8,8 +35,23 @@
 #include <SDL2/SDL.h>
 #include <string>
 #include "framework.h"
+#include "stb_truetype.h"
 
 #define MAX_MIDI_KEYS 256
+
+#define USE_GLYPH_ATLAS 1
+
+#define ENABLE_MSDF_FONTS 1
+
+#if USE_GLYPH_ATLAS
+	#define GLYPH_ATLAS_BORDER 1
+#endif
+
+#if ENABLE_MSDF_FONTS
+	#define MSDF_GLYPH_PADDING_INNER 3
+	#define MSDF_GLYPH_PADDING_OUTER 4
+	#define MSDF_SCALE .04f
+#endif
 
 #ifndef WIN32
 static int fopen_s(FILE ** file, const char * filename, const char * mode)
@@ -30,7 +72,11 @@ void splitString(const std::string & str, std::vector<std::string> & result, cha
 
 //
 
+struct BoxAtlasElem;
 class BuiltinShaders;
+class FontCacheElem;
+class MsdfFontCache;
+struct TextureAtlas;
 
 //
 
@@ -42,6 +88,7 @@ public:
 		memset(this, 0, sizeof(Globals));
 		blendMode = BLEND_ALPHA;
 		colorMode = COLOR_MUL;
+		fontMode = FONT_BITMAP;
 		transform = TRANSFORM_SCREEN;
 		transformScreen.MakeIdentity();
 		transform2d.MakeIdentity();
@@ -61,9 +108,13 @@ public:
 	int resourceVersion;
 	BLEND_MODE blendMode;
 	COLOR_MODE colorMode;
+	FONT_MODE fontMode;
 	Color color;
 	Gradient gradient;
 	FontCacheElem * font;
+	bool isInTextBatch;
+	MsdfFontCacheElem * fontMSDF;
+	bool isInTextBatchMSDF;
 	bool mouseDown[BUTTON_MAX];
 	bool mouseChange[BUTTON_MAX];
 	bool hasOldMousePosition;
@@ -380,6 +431,9 @@ class FontCacheElem
 {
 public:
 	FT_Face face;
+#if USE_GLYPH_ATLAS
+	TextureAtlas * textureAtlas;
+#endif
 	
 	FontCacheElem();
 	void free();
@@ -405,7 +459,11 @@ class GlyphCacheElem
 {
 public:
 	FT_GlyphSlotRec g;
+#if USE_GLYPH_ATLAS
+	BoxAtlasElem * textureAtlasElem;
+#else
 	GLuint texture;
+#endif
 };
 
 class GlyphCache
@@ -435,6 +493,106 @@ public:
 	void clear();
 	GlyphCacheElem & findOrCreate(FT_Face face, int size, int c);
 };
+
+//
+
+#if ENABLE_MSDF_FONTS
+
+class StbFont
+{
+public:
+	uint8_t * buffer;
+	int bufferSize;
+	
+	stbtt_fontinfo fontInfo;
+	
+	StbFont();
+	~StbFont();
+	
+	bool load(const char * filename);
+	void free();
+};
+
+//
+
+#if ENABLE_UTF8_SUPPORT
+	typedef uint32_t MsdfGlyphCode;
+#else
+	typedef char MsdfGlyphCode;
+#endif
+
+namespace msdfgen
+{
+	class Shape;
+}
+
+class MsdfGlyphCacheElem
+{
+public:
+	BoxAtlasElem * textureAtlasElem;
+	int y;
+	int sx;
+	int sy;
+	float scale;
+	int advance;
+	bool isInitialized;
+	
+	MsdfGlyphCacheElem();
+};
+
+class MsdfGlyphCache
+{
+public:
+	typedef std::map<int, MsdfGlyphCacheElem> Map;
+	
+	bool m_isLoaded;
+	StbFont m_font;
+	TextureAtlas * m_textureAtlas;
+	
+	Map m_map;
+	
+	MsdfGlyphCache();
+	~MsdfGlyphCache();
+	
+	void free();
+	void allocTextureAtlas();
+	void load(const char * filename);
+	const MsdfGlyphCacheElem & findOrCreate(int c);
+	
+	bool stbGlyphToMsdfShape(const int codePoint, msdfgen::Shape & shape);
+	void makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph);
+	
+	bool saveCache(const char * filename) const;
+	bool loadCache(const char * filename);
+};
+
+//
+
+class MsdfFontCacheElem
+{
+public:
+	std::string m_filename;
+	MsdfGlyphCache * m_glyphCache;
+	
+	MsdfFontCacheElem();
+	void free();
+	void load(const char * filename);
+};
+
+class MsdfFontCache
+{
+public:
+	typedef std::string Key;
+	typedef std::map<Key, MsdfFontCacheElem> Map;
+	
+	Map m_map;
+	
+	void clear();
+	void reload();
+	MsdfFontCacheElem & findOrCreate(const char * name);
+};
+
+#endif
 
 //
 
@@ -539,11 +697,12 @@ public:
 	Shader hqFilledTriangle;
 	Shader hqFilledCircle;
 	Shader hqFilledRect;
+	Shader hqFilledRoundedRect;
 	Shader hqStrokeTriangle;
 	Shader hqStrokedCircle;
 	Shader hqStrokedRect;
 	
-	Shader invert;
+	Shader msdfText;
 };
 
 //
@@ -557,5 +716,6 @@ extern AnimCache g_animCache;
 extern SpriterCache g_spriterCache;
 extern SoundCache g_soundCache;
 extern FontCache g_fontCache;
+extern MsdfFontCache g_fontCacheMSDF;
 extern GlyphCache g_glyphCache;
 extern UiCache g_uiCache;

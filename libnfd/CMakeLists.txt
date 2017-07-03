@@ -11,7 +11,7 @@ project(libnfd)
 
 # --- libnfd ---
 
-file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.c" "*.cpp" "*.h")
+file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.c" "*.cpp" "*.h" "*.m")
 if (MSVC)
 	list(REMOVE_ITEM source nfd_cocoa.m nfd_gtk.c)
 endif (MSVC)

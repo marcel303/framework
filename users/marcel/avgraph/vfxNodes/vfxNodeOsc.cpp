@@ -1,3 +1,31 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+#include "framework.h"
 #include "vfxNodeOsc.h"
 
 #include "ip/UdpSocket.h"
@@ -6,9 +34,15 @@
 
 #include <list>
 
-// todo : use port & ip address from socket inputs
-
-#define OSC_RECV_PORT 7000
+VFX_NODE_TYPE(osc_receive, VfxNodeOsc)
+{
+	typeName = "osc";
+	
+	in("port", "int");
+	in("ipAddress", "string");
+	in("trigger", "trigger");
+	out("event", "trigger");
+}
 
 struct OscMessage
 {
@@ -152,11 +186,11 @@ void VfxNodeOsc::init(const GraphNode & node)
 			// IpEndpointName::ANY_ADDRESS
 			
 			oscReceiveSocket = new UdpListeningReceiveSocket(IpEndpointName(ipAddress.c_str(), udpPort), oscPacketListener);
+			
+			logDebug("creating OSC receive thread");
+		
+			oscMessageThread = SDL_CreateThread(executeOscThread, "OSC thread", this);
 		}
-		
-		logDebug("creating OSC receive thread");
-		
-		oscMessageThread = SDL_CreateThread(executeOscThread, "OSC thread", this);
 	}
 	catch (std::exception & e)
 	{
@@ -166,6 +200,8 @@ void VfxNodeOsc::init(const GraphNode & node)
 
 void VfxNodeOsc::tick(const float dt)
 {
+	vfxCpuTimingBlock(VfxNodeOscReceive);
+	
 	// update network input
 
 	SDL_LockMutex(oscPacketListener->oscMessageMtx);
@@ -181,11 +217,33 @@ void VfxNodeOsc::tick(const float dt)
 				// todo : store OSC values in trigger mem
 				
 				trigger(kOutput_Trigger);
+				
+				//
+	
+				HistoryItem historyItem;
+				historyItem.eventName = message.event;
+				history.push_front(historyItem);
+				
+				while (history.size() > kMaxHistory)
+					history.pop_back();
 			}
 			SDL_LockMutex(oscPacketListener->oscMessageMtx);
 		}
 	}
 	SDL_UnlockMutex(oscPacketListener->oscMessageMtx);
+}
+
+void VfxNodeOsc::getDescription(VfxNodeDescription & d)
+{
+	const char * ipAddress = getInputString(kInput_IpAddress, "");
+	const int udpPort = getInputInt(kInput_Port, 0);
+	
+	d.add("target: %s:%d", ipAddress, udpPort);
+	d.newline();
+	
+	d.add("received messages:");
+	for (auto & h : history)
+		d.add("%s", h.eventName.c_str());
 }
 
 int VfxNodeOsc::executeOscThread(void * data)

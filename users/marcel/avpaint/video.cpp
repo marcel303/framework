@@ -1,8 +1,36 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #include "framework.h"
 #include "video.h"
 #include <atomic>
 
 #include "mediaplayer_new/MPVideoBuffer.h"
+#include "StringEx.h"
 
 static SDL_mutex * s_avcodecMutex = nullptr;
 static std::atomic_int s_numVideoThreads;
@@ -11,6 +39,12 @@ static const int kMaxVideoThreads = 64;
 static int ExecMediaPlayerThread(void * param)
 {
 	MediaPlayer::Context * context = (MediaPlayer::Context*)param;
+	
+	{
+		char threadName[1024];
+		sprintf_s(threadName, sizeof(threadName), "Media Player (%s)", context->openParams.filename.c_str());
+		cpuTimingSetThreadName(threadName);
+	}
 
 	SDL_LockMutex(context->mpTickMutex);
 
@@ -18,7 +52,11 @@ static int ExecMediaPlayerThread(void * param)
 
 	SDL_LockMutex(s_avcodecMutex);
 	{
-		context->hasBegun = context->mpContext.Begin(context->openParams.filename, false, true, context->openParams.yuv);
+		context->hasBegun = context->mpContext.Begin(
+			context->openParams.filename,
+			context->openParams.enableAudioStream,
+			context->openParams.enableVideoStream,
+			context->openParams.outputMode);
 	}
 	SDL_UnlockMutex(s_avcodecMutex);
 
@@ -30,6 +68,8 @@ static int ExecMediaPlayerThread(void * param)
 		
 		if (context->hasBegun)
 		{
+			cpuTimingBlock(tickMediaPlayer);
+			
 			context->tick();
 		}
 		
@@ -58,7 +98,7 @@ static int ExecMediaPlayerThread(void * param)
 
 		logDebug("MP context end took %dms", t2 - t1);
 	}
-
+	
 	s_numVideoThreads--;
 
 	return 0;
@@ -94,7 +134,7 @@ bool MediaPlayer::Context::presentedLastFrame() const
 
 //
 
-void MediaPlayer::openAsync(const char * filename, const bool yuv)
+void MediaPlayer::openAsync(const OpenParams & openParams)
 {
 	Assert(context == nullptr);
 
@@ -102,8 +142,7 @@ void MediaPlayer::openAsync(const char * filename, const bool yuv)
 
 	context = new Context();
 
-	context->openParams.filename = filename;
-	context->openParams.yuv = yuv;
+	context->openParams = openParams;
 
 	const int t2 = SDL_GetTicks();
 
@@ -115,31 +154,56 @@ void MediaPlayer::openAsync(const char * filename, const bool yuv)
 	logDebug("MP thread start took %dms", t3 - t2);
 }
 
-void MediaPlayer::close()
+void MediaPlayer::openAsync(const char * filename, const MP::OutputMode outputMode)
+{
+	OpenParams openParams;
+	openParams.filename = filename;
+	openParams.outputMode = outputMode;
+	openParams.enableAudioStream = false;
+	
+	openAsync(openParams);
+}
+
+void MediaPlayer::close(const bool _freeTexture)
 {
 	if (mpThread)
 	{
 		stopMediaPlayerThread();
 	}
-
-	const int t1 = SDL_GetTicks();
-
-	if (texture)
+	
+	videoFrame = nullptr;
+	
+	if (_freeTexture)
 	{
-		glDeleteTextures(1, &texture);
-		texture = 0;
+		const int t1 = SDL_GetTicks();
+
+		freeTexture();
+
+		const int t2 = SDL_GetTicks();
+
+		logDebug("MP texture delete took %dms", t2 - t1);
 	}
-
-	const int t2 = SDL_GetTicks();
-
-	logDebug("MP texture delete took %dms", t2 - t1);
 }
 
-void MediaPlayer::tick(Context * context)
+bool MediaPlayer::tick(Context * context, const bool wantsTexture)
 {
-	updateTexture();
+	const bool gotVideoFrame = updateVideoFrame();
+	
+	if (wantsTexture)
+	{
+		if (gotVideoFrame)
+		{
+			updateTexture();
+		}
+	}
+	else
+	{
+		freeTexture();
+	}
 
 	updateAudio();
+	
+	return gotVideoFrame;
 }
 
 bool MediaPlayer::isActive(Context * context) const
@@ -163,66 +227,85 @@ void MediaPlayer::seek(const double time)
 	SDL_UnlockMutex(context->mpTickMutex);
 }
 
-void MediaPlayer::updateTexture()
+bool MediaPlayer::updateVideoFrame()
 {
 	if (!context->hasBegun)
 	{
-		Assert(texture == 0);
-		return;
+		return false;
 	}
 
 	Assert(context->mpContext.HasBegun());
 
 	const double time = presentTime >= 0.0 ? presentTime : context->mpContext.GetAudioTime();
-
-	MP::VideoFrame * videoFrame = nullptr;
+	
 	bool gotVideo = false;
 	context->mpContext.RequestVideo(time, &videoFrame, gotVideo);
-
-	if (gotVideo)
+	
+	// fixme : there seems to be an issues with signalling .. it's possible to never awaken the media player thread again under certain conditions, so just signal it each update for now ..
+	//if (gotVideo)
 	{
 		SDL_CondSignal(context->mpTickEvent);
-
-		textureSx = videoFrame->m_width;
-		textureSy = videoFrame->m_height;
-
-		//logDebug("gotVideo. t=%06dms, sx=%d, sy=%d", int(time * 1000.0), textureSx, textureSy);
-
-		if (!texture)
-		{
-			glGenTextures(1, &texture);
-		}
 		
-		if (texture)
+		//logDebug("gotVideo. t=%06dms, sx=%d, sy=%d", int(time * 1000.0), textureSx, textureSy);
+	}
+	
+	return gotVideo;
+}
+
+void MediaPlayer::updateTexture()
+{
+	if (!context->hasBegun)
+	{
+		return;
+	}
+	
+	if (true)
+	{
+		Assert(videoFrame->m_isValidForRead);
+		
+		const void * bytes = nullptr;
+		int sx = 0;
+		int sy = 0;
+		int pitch = 0;
+		
+		GLenum internalFormat = 0;
+		GLenum uploadFormat = 0;
+		
+		if (context->openParams.outputMode == MP::kOutputMode_PlanarYUV)
 		{
-			const void * source = videoFrame->m_frameBuffer;
-			const int sx = videoFrame->m_width;
-			const int sy = videoFrame->m_height;
-			const GLenum internalFormat = GL_RGBA8;
-			const GLenum uploadFormat = GL_RGBA;
+			bytes = videoFrame->getY(sx, sy, pitch);
+			
+			internalFormat = GL_R8;
+			uploadFormat = GL_RED;
+		}
+		else
+		{
+			bytes = videoFrame->m_frameBuffer;
+			sx = videoFrame->m_width;
+			sy = videoFrame->m_height;
 			
 			const int alignment = 16;
 			const int alignmentMask = ~(alignment - 1);
-			const int numBytesPerRow = ((sx * 4) + alignment - 1) & alignmentMask;
-			const int numPixelsPerRow = numBytesPerRow / 4;
 			
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, numPixelsPerRow);
-			checkErrorGL();
+			pitch = (((sx * 4) + alignment - 1) & alignmentMask) / 4;
 			
-			// copy image data
-
+			internalFormat = GL_RGBA8;
+			uploadFormat = GL_RGBA;
+		}
+		
+		if (texture == 0 || sx != textureSx || sy != textureSy)
+		{
+			glGenTextures(1, &texture);
 			glBindTexture(GL_TEXTURE_2D, texture);
-			glTexImage2D(
-				GL_TEXTURE_2D,
-				0,
-				internalFormat,
-				sx,
-				sy,
-				0,
-				uploadFormat,
-				GL_UNSIGNED_BYTE,
-				source);
+			glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, sx, sy);
 			checkErrorGL();
+			
+			if (internalFormat == GL_R8)
+			{
+				GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
+				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+				checkErrorGL();
+			}
 			
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
@@ -234,11 +317,41 @@ void MediaPlayer::updateTexture()
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			checkErrorGL();
 			
+			textureSx = sx;
+			textureSy = sy;
+		}
+		
+		if (texture)
+		{
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch);
+			checkErrorGL();
+			
+			// copy image data
+
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glTexSubImage2D(
+				GL_TEXTURE_2D,
+				0, 0, 0,
+				sx, sy,
+				uploadFormat,
+				GL_UNSIGNED_BYTE,
+				bytes);
+			checkErrorGL();
+			
 			glBindTexture(GL_TEXTURE_2D, 0);
 			
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 			checkErrorGL();
 		}
+	}
+}
+
+void MediaPlayer::freeTexture()
+{
+	if (texture != 0)
+	{
+		glDeleteTextures(1, &texture);
+		texture = 0;
 	}
 }
 
@@ -271,7 +384,6 @@ void MediaPlayer::updateAudio()
 {
 	if (!context->hasBegun)
 	{
-		Assert(texture == 0);
 		return;
 	}
 

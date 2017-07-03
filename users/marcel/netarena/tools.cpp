@@ -178,6 +178,8 @@ OPTION_EXTERN(bool, g_windowed);
 static bool s_particleEditorIsActive = false;
 static bool s_particleEditorMenuIsVisible = true;
 
+static ParticleEditor s_particleEditor;
+
 static void mouseHack(bool b)
 {
 	static int oldX;
@@ -226,7 +228,7 @@ void particleEditorTick(float dt)
 	if (keyboard.wentDown(SDLK_TAB))
 		s_particleEditorMenuIsVisible = !s_particleEditorMenuIsVisible;
 
-	particleEditorTick(s_particleEditorMenuIsVisible, GFX_SX/2, GFX_SY/2, dt);
+	s_particleEditor.tick(s_particleEditorMenuIsVisible, GFX_SX/2, GFX_SY/2, dt);
 
 	mouseHack(false);
 }
@@ -246,7 +248,7 @@ void particleEditorDraw()
 
 		mouseHack(true);
 
-		particleEditorDraw(s_particleEditorMenuIsVisible, GFX_SX/2, GFX_SY/2);
+		s_particleEditor.draw(s_particleEditorMenuIsVisible, GFX_SX/2, GFX_SY/2);
 
 		mouseHack(false);
 	}

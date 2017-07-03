@@ -1,3 +1,30 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #include "framework.h"
 
 #if ENABLE_OPENGL
@@ -22,10 +49,13 @@
 #include "data/engine/builtin-guassian-v.ps"
 #include "data/engine/builtin-guassian-v.vs"
 #include "data/engine/builtin-hq-common.txt"
+#include "data/engine/builtin-hq-common-vs.txt"
 #include "data/engine/builtin-hq-filled-circle.ps"
 #include "data/engine/builtin-hq-filled-circle.vs"
 #include "data/engine/builtin-hq-filled-rect.ps"
 #include "data/engine/builtin-hq-filled-rect.vs"
+#include "data/engine/builtin-hq-filled-rounded-rect.ps"
+#include "data/engine/builtin-hq-filled-rounded-rect.vs"
 #include "data/engine/builtin-hq-filled-triangle.ps"
 #include "data/engine/builtin-hq-filled-triangle.vs"
 #include "data/engine/builtin-hq-line.ps"
@@ -36,8 +66,9 @@
 #include "data/engine/builtin-hq-stroked-rect.vs"
 #include "data/engine/builtin-hq-stroked-triangle.ps"
 #include "data/engine/builtin-hq-stroked-triangle.vs"
-//#include "data/engine/builtin-invert.ps"
-//#include "data/engine/builtin-invert.vs"
+
+#include "data/engine/builtin-msdf-text.ps"
+#include "data/engine/builtin-msdf-text.vs"
 
 void registerBuiltinShaders()
 {
@@ -86,11 +117,14 @@ void registerBuiltinShaders()
 	shaderSource("engine/builtin-gaussian-h.vs", s_guassianHVs);
 	shaderSource("engine/builtin-gaussian-v.ps", s_guassianVPs);
 	shaderSource("engine/builtin-gaussian-v.vs", s_guassianVVs);
-	shaderSource("engine/builtin-hq-common.txt", s_hqCommon);
+	shaderSource("engine/builtin-hq-common.txt", s_hqCommonPs);
+	shaderSource("engine/builtin-hq-common-vs.txt", s_hqCommonVs);
 	shaderSource("engine/builtin-hq-filled-circle.ps", s_hqFilledCirclePs);
 	shaderSource("engine/builtin-hq-filled-circle.vs", s_hqFilledCircleVs);
 	shaderSource("engine/builtin-hq-filled-rect.ps", s_hqFilledRectPs);
 	shaderSource("engine/builtin-hq-filled-rect.vs", s_hqFilledRectVs);
+	shaderSource("engine/builtin-hq-filled-rounded-rect.ps", s_hqFilledRoundedRectPs);
+	shaderSource("engine/builtin-hq-filled-rounded-rect.vs", s_hqFilledRoundedRectVs);
 	shaderSource("engine/builtin-hq-filled-triangle.ps", s_hqFilledTrianglePs);
 	shaderSource("engine/builtin-hq-filled-triangle.vs", s_hqFilledTriangleVs);
 	shaderSource("engine/builtin-hq-line.ps", s_hqLinePs);
@@ -101,8 +135,9 @@ void registerBuiltinShaders()
 	shaderSource("engine/builtin-hq-stroked-rect.vs", s_hqStrokedRectVs);
 	shaderSource("engine/builtin-hq-stroked-triangle.ps", s_hqStrokedTrianglePs);
 	shaderSource("engine/builtin-hq-stroked-triangle.vs", s_hqStrokedTriangleVs);
-	//shaderSource("engine/builtin-invert.ps", s_invertPs);
-	//shaderSource("engine/builtin-invert.vs", s_invertVs);
+	
+	shaderSource("engine/builtin-msdf-text.ps", s_msdfTextPs);
+	shaderSource("engine/builtin-msdf-text.vs", s_msdfTextVs);
 }
 
 #endif

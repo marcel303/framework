@@ -1,3 +1,30 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #define NOMINMAX
 
 #include <cmath>
@@ -32,6 +59,10 @@
 #include "shaders.h"
 #include "spriter.h"
 
+#if USE_GLYPH_ATLAS
+	#include "textureatlas.h"
+#endif
+
 #include "StringEx.h"
 #include "Timer.h"
 
@@ -46,6 +77,8 @@
 #else
     #define INDEX_TYPE GL_UNSIGNED_SHORT
 #endif
+
+#define MAX_TEXT_LENGTH 2048
 
 #if INDEX_TYPE == GL_UNSIGNED_INT
 typedef unsigned int glindex_t;
@@ -101,6 +134,8 @@ Framework::Framework()
 	useClosestDisplayMode = false;
 	basicOpenGL = false;
 	enableDepthBuffer = false;
+	enableDrawTiming = true;
+	enableProfiling = false;
 	minification = 1;
 	enableMidi = false;
 	midiDeviceIndex = 0;
@@ -258,7 +293,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 			if (foundMode)
 			{
-				log("found suitable display mode: %d x %d @ %d Hz", closest.w, closest.h, closest.refresh_rate);
+				logInfo("found suitable display mode: %d x %d @ %d Hz", closest.w, closest.h, closest.refresh_rate);
 				actualSx = closest.w;
 				actualSy = closest.h;
 				if (i == 1)
@@ -329,7 +364,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 			return false;
 		}
 
-		log("using OpenGL %s, %s, GLEW %s", glGetString(GL_VERSION), glGetString(GL_VENDOR), glewGetString(GLEW_VERSION));
+		logInfo("using OpenGL %s, %s, GLEW %s", glGetString(GL_VERSION), glGetString(GL_VENDOR), glewGetString(GLEW_VERSION));
 	
 		if (!GLEW_VERSION_3_2)
 		{
@@ -343,7 +378,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
 	if (GLEW_ARB_debug_output)
 	{
-		log("using OpenGL debug output");
+		logInfo("using OpenGL debug output");
 		glDebugMessageCallbackARB(debugOutputGL, stderr);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 	}
@@ -364,9 +399,12 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	gxInitialize();
 
 #if ENABLE_PROFILING
-	if (rmt_CreateGlobalInstance(&globals.rmt) != RMT_ERROR_NONE)
-		return false;
-	rmt_BindOpenGL();
+	if (framework.enableProfiling)
+	{
+		if (rmt_CreateGlobalInstance(&globals.rmt) != RMT_ERROR_NONE)
+			return false;
+		rmt_BindOpenGL();
+	}
 #endif
 
 	globals.builtinShaders = new BuiltinShaders();
@@ -460,6 +498,7 @@ bool Framework::shutdown()
 	g_modelCache.clear();
 	g_soundCache.clear();
 	g_fontCache.clear();
+	g_fontCacheMSDF.clear();
 	g_glyphCache.clear();
 	g_uiCache.clear();
 	
@@ -481,9 +520,12 @@ bool Framework::shutdown()
 	globals.builtinShaders = nullptr;
 
 #if ENABLE_PROFILING
-	rmt_UnbindOpenGL();
-	rmt_DestroyGlobalInstance(globals.rmt);
-	globals.rmt = 0;
+	if (framework.enableProfiling)
+	{
+		rmt_UnbindOpenGL();
+		rmt_DestroyGlobalInstance(globals.rmt);
+		globals.rmt = 0;
+	}
 #endif
 
 	gxShutdown();
@@ -528,6 +570,8 @@ bool Framework::shutdown()
 	useClosestDisplayMode = false;
 	basicOpenGL = false;
 	enableDepthBuffer = false;
+	enableDrawTiming = true;
+	enableProfiling = false;
 	minification = 1;
 	enableMidi = false;
 	midiDeviceIndex = 0;
@@ -594,6 +638,8 @@ void Framework::process()
 	
 	const int oldMouseX = mouse.x;
 	const int oldMouseY = mouse.y;
+	
+	events.clear();
 
 	SDL_Event e;
 	
@@ -621,6 +667,8 @@ void Framework::process()
 				break;
 		}
 
+		events.push_back(e);
+		
 		if (e.type == SDL_KEYDOWN)
 		{
 			keyboard.events.push_back(e);
@@ -853,6 +901,7 @@ void Framework::reloadCaches()
 	g_modelCache.reload();
 	g_soundCache.reload();
 	g_fontCache.reload();
+	g_fontCacheMSDF.reload();
 	g_glyphCache.clear();
 	g_uiCache.reload();
 	
@@ -997,7 +1046,10 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 			}
 		}
 		else if (e == "ttf")
+		{
 			g_fontCache.findOrCreate(f);
+			g_fontCacheMSDF.findOrCreate(f);
+		}
 		else if (e == "txt")
 		{
 			FileReader r;
@@ -1049,7 +1101,8 @@ void Framework::setFullscreen(bool fullscreen)
 void Framework::beginDraw(int r, int g, int b, int a)
 {
 #if ENABLE_OPENGL
-	gpuTimingBegin(frameworkDraw);
+	if (enableDrawTiming)
+		gpuTimingBegin(frameworkDraw);
 
 	// clear back buffer
 	
@@ -1099,7 +1152,8 @@ void Framework::endDraw()
 	
 	globals.debugDraw.numLines = 0;
 	
-	gpuTimingEnd();
+	if (enableDrawTiming)
+		gpuTimingEnd();
 
 	// check for errors
 	
@@ -1486,13 +1540,14 @@ void Surface::setAlphaf(float a)
 {
 	pushSurface(this);
 	{
-		setBlend(BLEND_OPAQUE);
+		pushBlend(BLEND_OPAQUE);
 		setColorf(1.f, 1.f, 1.f, a);
 		glColorMask(0, 0, 0, 1);
 		{
 			drawRect(0.f, 0.f, m_size[0], m_size[1]);
 		}
 		glColorMask(1, 1, 1, 1);
+		popBlend();
 	}
 	popSurface();
 }
@@ -1501,9 +1556,10 @@ void Surface::mulf(float r, float g, float b, float a)
 {
 	pushSurface(this);
 	{
-		setBlend(BLEND_MUL);
+		pushBlend(BLEND_MUL);
 		setColorf(r, g, b, a);
 		drawRect(0.f, 0.f, m_size[0], m_size[1]);
+		popBlend();
 	}
 	popSurface();
 }
@@ -1538,9 +1594,10 @@ void Surface::invert()
 {
 	pushSurface(this);
 	{
-		setBlend(BLEND_INVERT);
+		pushBlend(BLEND_INVERT);
 		setColorf(1.f, 1.f, 1.f, 1.f);
 		drawRect(0.f, 0.f, m_size[0], m_size[1]);
+		popBlend();
 	}
 	popSurface();
 }
@@ -1561,6 +1618,32 @@ void Surface::invertAlpha()
 		invert();
 	}
 	glColorMask(1, 1, 1, 1);
+}
+
+void Surface::gaussianBlur(const float strengthH, const float strengthV, const int _kernelSize)
+{
+	const int kernelSize = _kernelSize < 0 ? int(std::ceilf(std::max(strengthH, strengthV))) : _kernelSize;
+	
+	if (kernelSize == 0)
+		return;
+	
+	if (strengthH > 0.f)
+	{
+		pushBlend(BLEND_OPAQUE);
+		setShader_GaussianBlurH(getTexture(), kernelSize, strengthH);
+		postprocess();
+		clearShader();
+		popBlend();
+	}
+	
+	if (strengthV > 0.f)
+	{
+		pushBlend(BLEND_OPAQUE);
+		setShader_GaussianBlurV(getTexture(), kernelSize, strengthV);
+		postprocess();
+		clearShader();
+		popBlend();
+	}
 }
 
 void Surface::blitTo(Surface * surface) const
@@ -1586,6 +1669,17 @@ void Surface::blitTo(Surface * surface) const
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, oldReadBuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
 	checkErrorGL();
+}
+
+void Surface::blit(BLEND_MODE blendMode) const
+{
+	pushBlend(blendMode);
+	{
+		gxSetTexture(getTexture());
+		drawRect(0, 0, getWidth(), getHeight());
+		gxSetTexture(0);
+	}
+	popBlend();
 }
 
 void blitBackBufferToSurface(Surface * surface)
@@ -1724,6 +1818,12 @@ void Shader::setImmediateMatrix4x4(GLint index, const float * matrix)
 	fassert(index != -1);
 	fassert(globals.shader == this);
 	glUniformMatrix4fv(index, 1, GL_FALSE, matrix);
+	checkErrorGL();
+}
+
+void Shader::setTextureUnit(const char * name, int unit)
+{
+	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
 }
 
@@ -2212,7 +2312,13 @@ Color::Color(float r, float g, float b, float a)
 
 Color Color::fromHex(const char * str)
 {
-	if (strlen(str) == 6)
+	const size_t len = strlen(str);
+	
+	if (len == 0)
+	{
+		return Color(0.f, 0.f, 0.f, 0.f);
+	}
+	else if (len == 6)
 	{
 		const uint32_t hex = std::stoul(str, 0, 16);
 		const float r = scale255((hex >> 16) & 0xff);
@@ -2221,7 +2327,7 @@ Color Color::fromHex(const char * str)
 		const float a = 1.f;
 		return Color(r, g, b, a);
 	}
-	else
+	else if (len == 8)
 	{
 		const uint32_t hex = std::stoul(str, 0, 16);
 		const float r = scale255((hex >> 24) & 0xff);
@@ -2230,16 +2336,24 @@ Color Color::fromHex(const char * str)
 		const float a = scale255((hex >>  0) & 0xff);
 		return Color(r, g, b, a);
 	}
+	else
+	{
+		return colorBlack;
+	}
 }
 
 Color Color::fromHSL(float hue, float sat, float lum)
 {
+	hue = fmod(hue, 1.f) * 6.f;
+	sat = sat < 0.f ? 0.f : sat > 1.f ? 1.f : sat;
+	lum = lum < 0.f ? 0.f : lum > 1.f ? 1.f : lum;
+	
+	//
+	
 	float r, g, b;
 
 	float m2 = (lum <= .5f) ? (lum + (lum * sat)) : (lum + sat - lum * sat);
 	float m1 = lum + lum - m2;
-
-	hue = fmod(hue, 1.f) * 6.f;
 
 	if (hue < 0.f)
 	{
@@ -2356,6 +2470,23 @@ uint32_t Color::toRGBA() const
 	const int ib = b < 0.f ? 0 : b > 1.f ? 255 : int(b * 255.f);
 	const int ia = a < 0.f ? 0 : a > 1.f ? 255 : int(a * 255.f);
 	return (ir << 24) | (ig << 16) | (ib << 8) | (ia << 0);
+}
+
+std::string Color::toHexString(const bool withAlpha) const
+{
+	const int ir = r < 0.f ? 0 : r > 1.f ? 255 : int(r * 255.f);
+	const int ig = g < 0.f ? 0 : g > 1.f ? 255 : int(g * 255.f);
+	const int ib = b < 0.f ? 0 : b > 1.f ? 255 : int(b * 255.f);
+	const int ia = a < 0.f ? 0 : a > 1.f ? 255 : int(a * 255.f);
+	
+	char text[64];
+	
+	if (withAlpha)
+		sprintf_s(text, sizeof(text), "%02x%02x%02x%02x", ir, ig, ib, ia);
+	else
+		sprintf_s(text, sizeof(text), "%02x%02x%02x", ir, ig, ib);
+	
+	return text;
 }
 
 void Color::set(const float r, const float g, const float b, const float a)
@@ -2615,7 +2746,7 @@ float Dictionary::getFloat(const char * name, float _default) const
 
 void * Dictionary::getPtr(const char * name, void * _default) const
 {
-	// fixme : right now this only works with 32 bit pointers
+	// fixme : right now this only works with 32 or 64 bit bit pointers
 
 	return reinterpret_cast<void*>(getInt64(name, (int)(reinterpret_cast<intptr_t>(_default))));
 }
@@ -2835,10 +2966,10 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 		#else
 			gxBegin(GL_QUADS);
 			{
-				gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f, 0.f);
-				gxTexCoord2f(1.f, 1.f); gxVertex2f(rsx, 0.f);
-				gxTexCoord2f(1.f, 0.f); gxVertex2f(rsx, rsy);
-				gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f, rsy);
+				gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f, 0.f);
+				gxTexCoord2f(1.f, 0.f); gxVertex2f(rsx, 0.f);
+				gxTexCoord2f(1.f, 1.f); gxVertex2f(rsx, rsy);
+				gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f, rsy);
 			}
 			gxEnd();
 		#endif
@@ -2929,7 +3060,7 @@ void Sprite::updateAnimationSegment()
 		
 		if (!m_animSegment)
 		{
-			log("unable to find animation: %s", m_animSegmentName.c_str());
+			logInfo("unable to find animation: %s", m_animSegmentName.c_str());
 			animIsActive = false;
 			m_animFramef = 0.f;
 			m_animFrame = 0;
@@ -2988,7 +3119,7 @@ void Sprite::updateAnimation(float timeStep)
 		}
 		
 		//if (m_animSegmentName == "default")
-		//	log("%d (%d)", m_animFrame, anim->numFrames);
+		//	logInfo("%d (%d)", m_animFrame, anim->numFrames);
 	}
 }
 
@@ -3016,7 +3147,7 @@ void Sprite::processAnimationTriggersForFrame(int frame, int event)
 		
 		if (trigger.event == event)
 		{
-			//log("event == this->event");
+			//logInfo("event == this->event");
 			
 			Dictionary args = trigger.args;
 			args.setPtr("obj", animActionHandlerObj);
@@ -3409,6 +3540,22 @@ void Music::setVolume(int volume)
 Font::Font(const char * filename)
 {
 	m_font = &g_fontCache.findOrCreate(filename);
+	
+	m_fontMSDF = &g_fontCacheMSDF.findOrCreate(filename);
+}
+
+bool Font::saveCache(const char * _filename) const
+{
+	const std::string filename = _filename ? _filename : (m_fontMSDF->m_filename + ".cache");
+	
+	return m_fontMSDF->m_glyphCache->saveCache(filename.c_str());
+}
+
+bool Font::loadCache(const char * _filename)
+{
+	const std::string filename = _filename ? _filename : (m_fontMSDF->m_filename + ".cache");
+	
+	return m_fontMSDF->m_glyphCache->loadCache(filename.c_str());
 }
 
 // -----
@@ -3461,6 +3608,7 @@ void Path2d::PathElem::curveEval(float & x, float & y, const float t) const
 void Path2d::PathElem::curveSubdiv(const float t1, const float t2, float *& xy, float *& hxy, int & numPoints) const
 {
 	const float eps = .1f;
+	const float flatnessEps = .1f;
 
 	const float tm = (t1 + t2) * .5f;
 	
@@ -3495,7 +3643,7 @@ void Path2d::PathElem::curveSubdiv(const float t1, const float t2, float *& xy, 
 
 		const float dd = d2 - d1;
 
-		if (std::abs(dd) <= eps)
+		if (std::abs(dd) <= flatnessEps)
 			needsSubdiv = false;
 	}
 
@@ -3661,6 +3809,34 @@ void Path2d::curveTo(const float x, const float y, const float tx1, const float 
 
 	elem.v3.x = x2 + tx2;
 	elem.v3.y = y2 + ty2;
+
+	elem.v4.x = x2;
+	elem.v4.y = y2;
+
+	this->x = x2;
+	this->y = y2;
+}
+
+void Path2d::curveToAbs(const float x, const float y, const float cx1, const float cy1, const float cx2, const float cy2)
+{
+	fassert(hasMove);
+
+	PathElem & elem = allocElem();
+	elem.type = ELEM_CURVE;
+
+	const float x1 = this->x;
+	const float y1 = this->y;
+	const float x2 = x;
+	const float y2 = y;
+
+	elem.v1.x = x1;
+	elem.v1.y = y1;
+
+	elem.v2.x = cx1;
+	elem.v2.y = cy1;
+
+	elem.v3.x = cx2;
+	elem.v3.y = cy2;
 
 	elem.v4.x = x2;
 	elem.v4.y = y2;
@@ -3881,6 +4057,11 @@ void Mouse::setRelative(bool isRelative)
 {
 	SDL_SetRelativeMouseMode(isRelative ? SDL_TRUE : SDL_FALSE);
 	SDL_CaptureMouse(isRelative ? SDL_TRUE : SDL_FALSE);
+}
+
+bool Mouse::isIdle() const
+{
+	return dx == 0 && dy == 0 && !globals.mouseChange[0] && !globals.mouseChange[1];
 }
 
 // -----
@@ -4106,14 +4287,14 @@ void Stage::removeObject(int objectId)
 	
 	if (i != m_objects.end())
 	{
-		log("removing object with object ID %d", objectId);
+		logInfo("removing object with object ID %d", objectId);
 		StageObject * obj = i->second;
 		delete obj;
 		m_objects.erase(i);
 	}
 	else
 	{
-		log("removing object with object ID %d (but already dead)", objectId);
+		logInfo("removing object with object ID %d (but already dead)", objectId);
 	}
 }
 
@@ -4329,6 +4510,9 @@ void clearCaches(int caches)
 		g_fontCache.clear();
 		g_glyphCache.clear();
 	}
+	
+	if (caches & CACHE_FONT_MSDF)
+		g_fontCacheMSDF.clear();
 
 	if (caches & CACHE_SHADER)
 		g_shaderCache.clear();
@@ -4376,8 +4560,11 @@ void applyTransformWithViewportSize(const float sx, const float sy)
 		{
 			gxLoadIdentity();
 			
-			// flip Y axis so the vertical axis runs top to bottom
-			gxScalef(1.f, -1.f, 1.f);
+			if (surfaceStackSize == 0)
+			{
+				// flip Y axis so the vertical axis runs top to bottom
+				gxScalef(1.f, -1.f, 1.f);
+			}
 		
 			// convert from (0,0),(1,1) to (-1,-1),(+1+1)
 			gxTranslatef(-1.f, -1.f, 0.f);
@@ -4693,11 +4880,38 @@ void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, fl
 void setFont(const Font & font)
 {
 	globals.font = const_cast<Font&>(font).getFont();
+	
+	globals.fontMSDF = const_cast<Font&>(font).getFontMSDF();
 }
 
 void setFont(const char * font)
 {
 	setFont(Font(font));
+}
+
+static void setFontMode(FONT_MODE fontMode)
+{
+	globals.fontMode = fontMode;
+}
+
+static const int kMaxFontModeStackSize = 32;
+static FONT_MODE fontModeStack[kMaxFontModeStackSize] = { FONT_BITMAP };
+static int fontModeStackSize = 0;
+
+void pushFontMode(FONT_MODE fontMode)
+{
+	fassert(fontModeStackSize < kMaxFontModeStackSize);
+	fontModeStack[fontModeStackSize++] = globals.fontMode;
+	setFontMode(fontMode);
+}
+
+void popFontMode()
+{
+	fassert(fontModeStackSize > 0);
+	--fontModeStackSize;
+	const FONT_MODE fontMode = fontModeStack[fontModeStackSize];
+	fontModeStack[fontModeStackSize] = FONT_BITMAP;
+	setFontMode(fontMode);
 }
 
 void setShader(const ShaderBase & shader)
@@ -4750,10 +4964,10 @@ void drawRect(float x1, float y1, float x2, float y2)
 {
 	gxBegin(GL_QUADS);
 	{
-		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y1);
-		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y1);
-		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y2);
-		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y2);
+		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
+		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
 	}
 	gxEnd();
 }
@@ -4762,10 +4976,10 @@ void drawRectLine(float x1, float y1, float x2, float y2)
 {
 	gxBegin(GL_LINE_LOOP);
 	{
-		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y1);
-		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y1);
-		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y2);
-		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y2);
+		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
+		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
 	}
 	gxEnd();
 }
@@ -4839,18 +5053,8 @@ void fillCircle(float x, float y, float radius, int numSegments)
 	gxEnd();
 }
 
-static void measureText(FT_Face face, int size, const char * _text, float & sx, float & sy, float & yTop)
+static void measureText(FT_Face face, int size, const GlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
 {
-#if ENABLE_UTF8_SUPPORT
-	// fixme : convert in calling function
-	const int kMaxTextSize = 2048;
-	unicode_t text[kMaxTextSize];
-	const size_t textLength = utf8toutf32(_text, strlen(_text), text, kMaxTextSize * 4, 0) / 4;
-#else
-	const char * text = _text;
-	const size_t textLength = strlen(_text);
-#endif
-
 	float minX = std::numeric_limits<float>::max();
 	float minY = std::numeric_limits<float>::max();
 	float maxX = std::numeric_limits<float>::min();
@@ -4861,13 +5065,17 @@ static void measureText(FT_Face face, int size, const char * _text, float & sx, 
 	
 	//y += size;
 	
-	for (size_t i = 0; i < textLength; ++i)
+	for (size_t i = 0; i < numGlyphs; ++i)
 	{
 		// find or create glyph. skip current character if the element is invalid
 		
-		const GlyphCacheElem & elem = g_glyphCache.findOrCreate(face, size, text[i]);
+		const GlyphCacheElem & elem = *glyphs[i];
 		
+	#if USE_GLYPH_ATLAS
+		if (elem.textureAtlasElem != nullptr)
+	#else
 		if (elem.texture != 0)
+	#endif
 		{
 			const float bsx = float(elem.g.bitmap.width);
 			const float bsy = float(elem.g.bitmap.rows);
@@ -4900,30 +5108,67 @@ static void measureText(FT_Face face, int size, const char * _text, float & sx, 
 	yTop = minY;
 }
 
-static void drawTextInternal(FT_Face face, int size, const char * _text)
+static void drawTextInternal(FT_Face face, int size, const GlyphCacheElem ** glyphs, const int numGlyphs, float x, float y)
 {
-#if ENABLE_UTF8_SUPPORT
-	const int kMaxTextSize = 2048;
-	unicode_t text[kMaxTextSize];
-	const size_t textLength = utf8toutf32(_text, strlen(_text), text, kMaxTextSize * 4, 0) / 4;
-#else
-	const char * text = _text;
-	const size_t textLength = strlen(_text);
-#endif
-
-	float x = 0.f;
-	float y = 0.f;
-	
 	// the (0,0) coordinate represents the lower left corner of a glyph
 	// we want to render the glyph using its top left corner at (0,0)
 	
 	//y += size;
 	
-	for (size_t i = 0; i < textLength; ++i)
+#if USE_GLYPH_ATLAS
+	if (globals.isInTextBatch == false)
+	{
+		gxSetTexture(globals.font->textureAtlas->texture);
+		
+		gxBegin(GL_QUADS);
+	}
+	
+	for (size_t i = 0; i < numGlyphs; ++i)
+	{
+		const GlyphCacheElem & elem = *glyphs[i];
+		
+		// skip current character if the element is invalid
+		
+		if (elem.textureAtlasElem != nullptr)
+		{
+			const float bsx = float(elem.g.bitmap.width);
+			const float bsy = float(elem.g.bitmap.rows);
+			const float x1 = x + elem.g.bitmap_left;
+			const float y1 = y - elem.g.bitmap_top;
+			const float x2 = x1 + bsx;
+			const float y2 = y1 + bsy;
+			
+			const int iu1 = elem.textureAtlasElem->x + GLYPH_ATLAS_BORDER;
+			const int iu2 = elem.textureAtlasElem->x - GLYPH_ATLAS_BORDER + elem.textureAtlasElem->sx;
+			const int iv1 = elem.textureAtlasElem->y + GLYPH_ATLAS_BORDER;
+			const int iv2 = elem.textureAtlasElem->y - GLYPH_ATLAS_BORDER + elem.textureAtlasElem->sy;
+			const float u1 = iu1 / float(globals.font->textureAtlas->a.sx);
+			const float u2 = iu2 / float(globals.font->textureAtlas->a.sx);
+			const float v1 = iv1 / float(globals.font->textureAtlas->a.sy);
+			const float v2 = iv2 / float(globals.font->textureAtlas->a.sy);
+			
+			gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
+			gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);
+			gxTexCoord2f(u2, v2); gxVertex2f(x2, y2);
+			gxTexCoord2f(u1, v2); gxVertex2f(x1, y2);
+		}
+		
+		x += (elem.g.advance.x / float(1 << 6));
+		y += (elem.g.advance.y / float(1 << 6));
+	}
+	
+	if (globals.isInTextBatch == false)
+	{
+		gxEnd();
+		
+		gxSetTexture(0);
+	}
+#else
+	for (size_t i = 0; i < numGlyphs; ++i)
 	{
 		// find or create glyph. skip current character if the element is invalid
 		
-		const GlyphCacheElem & elem = g_glyphCache.findOrCreate(face, size, text[i]);
+		const GlyphCacheElem & elem = *glyphs[i];
 		
 		if (elem.texture != 0)
 		{
@@ -4951,47 +5196,356 @@ static void drawTextInternal(FT_Face face, int size, const char * _text)
 	}
 
 	gxSetTexture(0);
+#endif
 }
 
-void measureText(int size, float & sx, float & sy, const char * format, ...)
-{
-	char text[1024];
-	va_list args;
-	va_start(args, format);
-	vsprintf_s(text, sizeof(text), format, args);
-	va_end(args);
-	
-	float yTop;
+//
 
-	measureText(globals.font->face, size, text, sx, sy, yTop);
-}
+#if ENABLE_MSDF_FONTS
 
-void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
+// fixme : settle on one method
+static int sampleMethod = 3;
+static bool useSuperSampling = true;
+
+static void measureTextMSDFInternal(const stbtt_fontinfo & fontInfo, const float size, const MsdfGlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
+
 {
-	char text[1024];
-	va_list args;
-	va_start(args, format);
-	vsprintf_s(text, sizeof(text), format, args);
-	va_end(args);
+	int x1 = 0;
+	int y1 = 0;
+	int x2 = 0;
+	int y2 = 0;
 	
-	gxMatrixMode(GL_MODELVIEW);
-	gxPushMatrix();
+	//
+	
+	int lastCodepoint = -1;
+	
+	int x = 0;
+	
+	bool isFirst = true;
+	
+	for (int i = 0; i < numGlyphs; ++i)
 	{
+		const int codepoint = codepoints[i];
+		const MsdfGlyphCacheElem & glyph = *glyphs[i];
+		
+		//
+		
+		if (glyph.textureAtlasElem != nullptr)
+		{
+			int gsx = glyph.sx;
+			int gsy = glyph.sy;
+			
+			int dx1 = x - MSDF_GLYPH_PADDING_INNER;
+			int dy1 = 0 + MSDF_GLYPH_PADDING_INNER;
+			int dx2 = dx1 + gsx;
+			int dy2 = dy1 - gsy;
+			
+			dy1 -= glyph.y;
+			dy2 -= glyph.y;
+			
+			// note: as natively the Y axis runs up, not down for STB/TrueType fonts we need to swap these. note also that while drawing we don't have to do this, as it neatly compensates for the glyphs being drawn 'upside down' as well
+			
+			std::swap(dy1, dy2);
+			
+			if (isFirst)
+			{
+				isFirst = false;
+				
+				x1 = dx1;
+				y1 = dy1;
+				x2 = dx2;
+				y2 = dy2;
+			}
+			else
+			{
+				x1 = std::min(x1, dx1);
+				y1 = std::min(y1, dy1);
+				x2 = std::max(x2, dx2);
+				y2 = std::max(y2, dy2);
+			}
+		}
+	
+		const int advance = glyph.advance + stbtt_GetCodepointKernAdvance(&fontInfo, lastCodepoint, codepoint);
+		
+		x += advance;
+		
+		lastCodepoint = codepoint;
+	}
+	
+	//
+	
+	const float scale = stbtt_ScaleForPixelHeight(&fontInfo, size);
+	
+	sx = (x2 - x1) * scale;
+	sy = (y2 - y1) * scale;
+	yTop = y1 * scale;
+}
+
+static void drawTextMSDFInternal(MsdfGlyphCache & glyphCache, const float _x, const float _y, const float size, const MsdfGlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs)
+{
+	if (globals.isInTextBatchMSDF == false)
+	{
+		Shader & shader = globals.builtinShaders->msdfText;
+		setShader(shader);
+		
+		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture);
+		shader.setImmediate("sampleMethod", sampleMethod);
+		shader.setImmediate("useSuperSampling", useSuperSampling);
+		
+		gxBegin(GL_QUADS);
+	}
+	
+	const float scale = stbtt_ScaleForPixelHeight(&glyphCache.m_font.fontInfo, size);
+	
+	int lastCodepoint = -1;
+	
+	float x = _x / scale;
+	float y = _y / scale;
+	
+	const int atlasSx = glyphCache.m_textureAtlas->a.sx;
+	const int atlasSy = glyphCache.m_textureAtlas->a.sy;
+	
+	for (int i = 0; i < numGlyphs; ++i)
+	{
+		const int codepoint = codepoints[i];
+		const MsdfGlyphCacheElem & glyph = *glyphs[i];
+		
+		//
+		
+		if (glyph.textureAtlasElem != nullptr)
+		{
+			const int sx = glyph.textureAtlasElem->sx;
+			const int sy = glyph.textureAtlasElem->sy;
+			
+			const int u1i = glyph.textureAtlasElem->x + MSDF_GLYPH_PADDING_INNER;
+			const int v1i = glyph.textureAtlasElem->y + MSDF_GLYPH_PADDING_INNER;
+			const int u2i = glyph.textureAtlasElem->x + sx - MSDF_GLYPH_PADDING_INNER;
+			const int v2i = glyph.textureAtlasElem->y + sy - MSDF_GLYPH_PADDING_INNER;
+			
+			const float u1 = u1i / float(atlasSx);
+			const float v1 = v1i / float(atlasSy);
+			const float u2 = u2i / float(atlasSx);
+			const float v2 = v2i / float(atlasSy);
+			
+			int gsx = glyph.sx;
+			int gsy = glyph.sy;
+			
+			int dx1 = x - MSDF_GLYPH_PADDING_INNER;
+			int dy1 = 0 + MSDF_GLYPH_PADDING_INNER;
+			int dx2 = dx1 + gsx;
+			int dy2 = dy1 - gsy;
+			
+			dy1 += y - glyph.y;
+			dy2 += y - glyph.y;
+			
+			gxTexCoord2f(u1, v1); gxVertex2f(dx1 * scale, dy1 * scale);
+			gxTexCoord2f(u2, v1); gxVertex2f(dx2 * scale, dy1 * scale);
+			gxTexCoord2f(u2, v2); gxVertex2f(dx2 * scale, dy2 * scale);
+			gxTexCoord2f(u1, v2); gxVertex2f(dx1 * scale, dy2 * scale);
+		}
+	
+		const int advance = glyph.advance + stbtt_GetCodepointKernAdvance(&glyphCache.m_font.fontInfo, lastCodepoint, codepoint);
+		
+		x += advance;
+		
+		lastCodepoint = codepoint;
+	}
+	
+	if (globals.isInTextBatchMSDF == false)
+	{
+		gxEnd();
+		
+		clearShader();
+	}
+}
+
+#endif
+
+//
+
+void measureText(float size, float & sx, float & sy, const char * format, ...)
+{
+	char _text[MAX_TEXT_LENGTH];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(_text, sizeof(text), format, args);
+	va_end(args);
+	
+#if ENABLE_UTF8_SUPPORT
+	unicode_t text[MAX_TEXT_LENGTH];
+	const size_t textLength = utf8toutf32(_text, strlen(_text), text, MAX_TEXT_LENGTH * 4, 0) / 4;
+#else
+	const char * text = _text;
+	const size_t textLength = strlen(_text);
+#endif
+
+	if (globals.fontMode == FONT_BITMAP)
+	{
+		const int sizei = int(std::ceilf(size));
+		
+		auto face = globals.font->face;
+		
+		const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+		
+		for (size_t i = 0; i < textLength; ++i)
+		{
+			glyphs[i] = &g_glyphCache.findOrCreate(face, sizei, text[i]);
+		}
+		
+		float yTop;
+
+		measureText(face, size, glyphs, textLength, sx, sy, yTop);
+	}
+	else if (globals.fontMode == FONT_SDF)
+	{
+		MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
+		
+		const MsdfGlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+		
+		for (size_t i = 0; i < textLength; ++i)
+		{
+			glyphs[i] = &glyphCache.findOrCreate(text[i]);
+		}
+		
+		float yTop;
+		
+		measureTextMSDFInternal(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
+	}
+}
+
+void beginTextBatch()
+{
+	if (globals.fontMode == FONT_BITMAP)
+	{
+	#if USE_GLYPH_ATLAS
+		Assert(!globals.isInTextBatch);
+		globals.isInTextBatch = true;
+		
+		gxSetTexture(globals.font->textureAtlas->texture);
+		gxBegin(GL_QUADS);
+	#endif
+	}
+	else if (globals.fontMode == FONT_SDF)
+	{
+		fassert(globals.isInTextBatchMSDF == false);
+		if (globals.isInTextBatchMSDF == true)
+			return;
+		
+		globals.isInTextBatchMSDF = true;
+		
+		Shader & shader = globals.builtinShaders->msdfText;
+		setShader(shader);
+		
+		shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture);
+		shader.setImmediate("sampleMethod", sampleMethod);
+		shader.setImmediate("useSuperSampling", useSuperSampling);
+		
+		gxBegin(GL_QUADS);
+	}
+}
+
+void endTextBatch()
+{
+	if (globals.fontMode == FONT_BITMAP)
+	{
+	#if USE_GLYPH_ATLAS
+		Assert(globals.isInTextBatch);
+		globals.isInTextBatch = false;
+		
+		gxEnd();
+		gxSetTexture(0);
+	#endif
+	}
+	else if (globals.fontMode == FONT_SDF)
+	{
+		fassert(globals.isInTextBatchMSDF == true);
+		if (globals.isInTextBatchMSDF == false)
+			return;
+		
+		globals.isInTextBatchMSDF = false;
+
+		gxEnd();
+		
+		clearShader();
+	}
+}
+
+void drawText(float x, float y, float size, float alignX, float alignY, const char * format, ...)
+{
+	char _text[MAX_TEXT_LENGTH];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(_text, sizeof(text), format, args);
+	va_end(args);
+	
+#if ENABLE_UTF8_SUPPORT
+	unicode_t text[MAX_TEXT_LENGTH];
+	const size_t textLength = utf8toutf32(_text, strlen(_text), text, MAX_TEXT_LENGTH * 4, 0) / 4;
+#else
+	const char * text = _text;
+	const size_t textLength = strlen(_text);
+#endif
+	
+	if (globals.fontMode == FONT_BITMAP)
+	{
+		const int sizei = int(std::ceilf(size));
+		
+		auto face = globals.font->face;
+		
+		const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+		
+		for (size_t i = 0; i < textLength; ++i)
+		{
+			glyphs[i] = &g_glyphCache.findOrCreate(face, size, text[i]);
+		}
+		
 		float sx, sy, yTop;
-		measureText(globals.font->face, size, text, sx, sy, yTop);
+		measureText(face, sizei, glyphs, textLength, sx, sy, yTop);
+		
+	#if USE_GLYPH_ATLAS
+		x += sx * (alignX - 1.f) / 2.f;
+		y += sy * (alignY - 1.f) / 2.f;
+		
+		y -= yTop;
+		
+		drawTextInternal(face, sizei, glyphs, textLength, x, y);
+	#else
+		gxMatrixMode(GL_MODELVIEW);
+		gxPushMatrix();
+		{
+			x += sx * (alignX - 1.f) / 2.f;
+			y += sy * (alignY - 1.f) / 2.f;
+			
+			y -= yTop;
+
+			gxTranslatef(x, y, 0.f);
+			
+			drawTextInternal(globals.font->face, sizei, glyphs, textLength, 0.f, 0.f);
+		}
+		gxPopMatrix();
+	#endif
+	}
+	else
+	{
+		MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
+		
+		const MsdfGlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+		
+		for (size_t i = 0; i < textLength; ++i)
+		{
+			glyphs[i] = &glyphCache.findOrCreate(text[i]);
+		}
+		
+		float sx, sy, yTop;
+		measureTextMSDFInternal(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
 		
 		x += sx * (alignX - 1.f) / 2.f;
 		y += sy * (alignY - 1.f) / 2.f;
-		//y += sy * (alignY - 2.f) / 2.f;
-		//y += size * (alignY - 1.f) / 2.f;
 		
 		y -= yTop;
 
- 		gxTranslatef(x, y, 0.f);
-		
-		drawTextInternal(globals.font->face, size, text);
+		drawTextMSDFInternal(glyphCache, x, y, size, text, glyphs, textLength);
 	}
-	gxPopMatrix();
 }
 
 static char * eatWord(char * str)
@@ -5003,9 +5557,9 @@ static char * eatWord(char * str)
 	return str;
 }
 
-void drawTextArea(float x, float y, float sx, int size, const char * format, ...)
+void drawTextArea(float x, float y, float sx, float size, const char * format, ...)
 {
-	char text[1024];
+	char text[MAX_TEXT_LENGTH];
 	va_list args;
 	va_start(args, format);
 	vsprintf_s(text, sizeof(text), format, args);
@@ -5014,9 +5568,9 @@ void drawTextArea(float x, float y, float sx, int size, const char * format, ...
 	drawTextArea(x, y, sx, 0.f, size, +1.f, +1.f, text);
 }
 
-void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, float alignY, const char * format, ...)
+void drawTextArea(float x, float y, float sx, float sy, float size, float alignX, float alignY, const char * format, ...)
 {
-	char text[1024];
+	char text[MAX_TEXT_LENGTH];
 	va_list args;
 	va_start(args, format);
 	vsprintf_s(text, sizeof(text), format, args);
@@ -5028,7 +5582,9 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 
 	char * textend = text + strlen(text);
 	char * textptr = text;
-
+	
+	auto face = globals.font->face;
+	
 	float tsx = 0.f;
 
 	while (textptr != textend && numLines < kMaxLines)
@@ -5038,10 +5594,8 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 		{
 			char * tempptr = eatWord(nextptr);
 			float _sx, _sy, _yTop;
-			char temp = *tempptr;
-			*tempptr = 0;
-			measureText(globals.font->face, size, textptr, _sx, _sy, _yTop);
-			*tempptr = temp;
+			const GlyphCacheElem * glyph = &g_glyphCache.findOrCreate(face, size, *tempptr);
+			measureText(globals.font->face, size, &glyph, 1, _sx, _sy, _yTop);
 
 			if (_sx > tsx)
 				tsx = _sx;
@@ -5074,6 +5628,8 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 	}
 }
 
+//
+
 void drawPath(const Path2d & path)
 {
 	const int kMaxPoints = 16 * 1024;
@@ -5086,8 +5642,6 @@ void drawPath(const Path2d & path)
 
 	int numPoints = 0;
 	path.generatePoints(pxy, hxy, kMaxPoints, 1.f, numPoints);
-
-	glLineWidth(3.f);
 
 	gxBegin(GL_LINES);
 	{
@@ -5129,7 +5683,8 @@ void drawPath(const Path2d & path)
 #if 0
 	pxy = pxyStorage;
 
-	glPointSize(10.f);
+	glPointSize(5.f);
+	setColor(255, 255, 255, 31);
 
 	gxBegin(GL_POINTS);
 	{
@@ -5146,7 +5701,7 @@ void drawPath(const Path2d & path)
 #endif
 }
 
-static GLuint createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat)
+static GLuint createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat, GLenum uploadElementType)
 {
 	checkErrorGL();
 
@@ -5180,7 +5735,7 @@ static GLuint createTexture(const void * source, int sx, int sy, bool filter, bo
 			sy,
 			0,
 			uploadFormat,
-			GL_UNSIGNED_BYTE,
+			uploadElementType,
 			source);
 
 		// set filtering
@@ -5204,17 +5759,32 @@ static GLuint createTexture(const void * source, int sx, int sy, bool filter, bo
 
 GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
-	return createTexture(source, sx, sy, filter, clamp, GL_RGBA8, GL_RGBA);
+	return createTexture(source, sx, sy, filter, clamp, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
 }
 
 GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
-	return createTexture(source, sx, sy, filter, clamp, GL_RGB8, GL_RGB);
+	return createTexture(source, sx, sy, filter, clamp, GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE);
 }
 
 GLuint createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
-	return createTexture(source, sx, sy, filter, clamp, GL_R8, GL_RED);
+	return createTexture(source, sx, sy, filter, clamp, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
+}
+
+GLuint createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	return createTexture(source, sx, sy, filter, clamp, GL_RGB32F, GL_RGB, GL_FLOAT);
+}
+
+GLuint createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	return createTexture(source, sx, sy, filter, clamp, GL_R16, GL_RED, GL_UNSIGNED_SHORT);
+}
+
+GLuint createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	return createTexture(source, sx, sy, filter, clamp, GL_R32F, GL_RED, GL_FLOAT);
 }
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
@@ -5757,7 +6327,8 @@ static void gxFlush(bool endOfBatch)
 					break;
 				case GL_TRIANGLE_FAN:
 					s_gxVertices[0] = s_gxVertices[0];
-					s_gxVertexCount = 1;
+					s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+					s_gxVertexCount = 2;
 					break;
 				case GL_TRIANGLE_STRIP:
 					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 2];
@@ -6035,19 +6606,35 @@ static void makeGaussianKernel(const int kernelSize, ShaderBuffer & kernel)
 	
 	float * values = (float*)alloca(sizeof(float) * kernelSize);
 	
-	for (int i = 0; i < kernelSize; ++i)
+	if (kernelSize > 0)
 	{
-		const float x1 = (i - .5f) / float(kernelSize - 1.f);
-		const float x2 = (i + .5f) / float(kernelSize - 1.f);
+		for (int i = 0; i < kernelSize; ++i)
+		{
+			const float x1 = (i - .5f) / float(kernelSize - 1.f);
+			const float x2 = (i + .5f) / float(kernelSize - 1.f);
+			
+			const float y1 = dist(x1 * s);
+			const float y2 = dist(x2 * s);
+			
+			const float dy = y2 - y1;
+			
+			//printf("%02.2f - %02.2f : %02.4f\n", x1, x2, dy);
+			
+			values[i] = dy;
+		}
 		
-		const float y1 = dist(x1 * s);
-		const float y2 = dist(x2 * s);
+		float total = values[0];
 		
-		const float dy = y2 - y1;
+		for (int i = 1; i < kernelSize; ++i)
+			total += values[i] * 2.f;
 		
-		//printf("%02.2f - %02.2f : %02.4f\n", x1, x2, dy);
-		
-		values[i] = dy;
+		if (total > 0.f)
+		{
+			for (int i = 0; i < kernelSize; ++i)
+			{
+				values[i] /= total;
+			}
+		}
 	}
 	
 	kernel.setData(values, sizeof(float) * kernelSize);
@@ -6079,15 +6666,6 @@ void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const fl
 	shader.setImmediate("kernelSize", kernelSize);
 	shader.setImmediate("radius", radius);
 	shader.setBuffer("kernel", kernel);
-}
-
-void setShader_Invert(const GLuint source, const float opacity)
-{
-	Shader & shader = globals.builtinShaders->invert;
-	setShader(shader);
-	
-	shader.setImmediate("opacity", opacity);
-	shader.setTexture("source", 0, source, true, true);
 }
 
 // todo : move these shaders to BuiltinShaders and supply shader source
@@ -6277,6 +6855,11 @@ static void setShader_HqFilledRects()
 	setShader(globals.builtinShaders->hqFilledRect);
 }
 
+static void setShader_HqFilledRoundedRects()
+{
+	setShader(globals.builtinShaders->hqFilledRoundedRect);
+}
+
 static void setShader_HqStrokedTriangles()
 {
 	setShader(globals.builtinShaders->hqStrokeTriangle);
@@ -6315,6 +6898,11 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 		gxBegin(GL_QUADS);
 		setShader_HqFilledRects();
 		break;
+	
+	case HQ_FILLED_ROUNDED_RECTS:
+		gxBegin(GL_QUADS);
+		setShader_HqFilledRoundedRects();
+		break;
 
 	case HQ_STROKED_TRIANGLES:
 		gxBegin(GL_TRIANGLES);
@@ -6335,6 +6923,68 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 		fassert(false);
 		break;
 	}
+
+	if (globals.shader != nullptr && globals.shader->getType() == SHADER_VSPS)
+	{
+		Shader * shader = static_cast<Shader*>(globals.shader);
+
+		shader->setImmediate("useScreenSize", useScreenSize ? 1.f : 0.f);
+		
+		if (s_gxTextureEnabled)
+			shader->setTextureUnit("source", 0);
+		shader->setImmediate("sourceEnabled", s_gxTextureEnabled ? 1.f : 0.f);
+
+		//shader->setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
+		//shader->setImmediate("disableAA", cos(framework.time) < 0.f ? 0.f : 1.f);
+
+		shader->setImmediate("disableOptimizations", 0.f);
+		shader->setImmediate("disableAA", 0.f);
+		shader->setImmediate("_debugHq", 0.f);
+	}
+}
+
+void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
+{
+	switch (type)
+	{
+	case HQ_LINES:
+		gxBegin(GL_QUADS);
+		break;
+
+	case HQ_FILLED_TRIANGLES:
+		gxBegin(GL_TRIANGLES);
+		break;
+
+	case HQ_FILLED_CIRCLES:
+		gxBegin(GL_QUADS);
+		break;
+
+	case HQ_FILLED_RECTS:
+		gxBegin(GL_QUADS);
+		break;
+	
+	case HQ_FILLED_ROUNDED_RECTS:
+		gxBegin(GL_QUADS);
+		break;
+
+	case HQ_STROKED_TRIANGLES:
+		gxBegin(GL_TRIANGLES);
+		break;
+
+	case HQ_STROKED_CIRCLES:
+		gxBegin(GL_QUADS);
+		break;
+
+	case HQ_STROKED_RECTS:
+		gxBegin(GL_QUADS);
+		break;
+
+	default:
+		fassert(false);
+		break;
+	}
+	
+	setShader(shader);
 
 	if (globals.shader != nullptr && globals.shader->getType() == SHADER_VSPS)
 	{
@@ -6381,6 +7031,13 @@ void hqFillCircle(float x, float y, float radius)
 
 void hqFillRect(float x1, float y1, float x2, float y2)
 {
+	for (int i = 0; i < 4; ++i)
+		gxVertex4f(x1, y1, x2, y2);
+}
+
+void hqFillRoundedRect(float x1, float y1, float x2, float y2, float radius)
+{
+	gxNormal3f(radius, 0.f, 0.f);
 	for (int i = 0; i < 4; ++i)
 		gxVertex4f(x1, y1, x2, y2);
 }
@@ -6539,7 +7196,7 @@ void logDebug(const char * format, ...)
 
 #endif
 
-void log(const char * format, ...)
+void logInfo(const char * format, ...)
 {
 	if (logLevel > 1)
 		return;

@@ -1,3 +1,30 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #pragma once
 
 #include <GL/glew.h>
@@ -27,14 +54,14 @@
 #if defined(DEBUG)
 	#define ENABLE_LOGGING_DBG 1
 	#define ENABLE_LOGGING 1
-	#define ENABLE_PROFILING 0
+	#define ENABLE_PROFILING 1
 
 	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 1
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 1
 #else
 	#define ENABLE_LOGGING_DBG 0 // do not alter
 	#define ENABLE_LOGGING 0 // do not alter
-	#define ENABLE_PROFILING 0 // do not alter
+	#define ENABLE_PROFILING 1 // do not alter
 
 	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 0 // do not alter
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0 // do not alter
@@ -81,6 +108,12 @@ enum COLOR_MODE // setColorMode
 	COLOR_ADD,
 	COLOR_SUB,
 	COLOR_IGNORE
+};
+
+enum FONT_MODE // setFontMode
+{
+	FONT_BITMAP,
+	FONT_SDF
 };
 
 enum BUTTON
@@ -139,11 +172,12 @@ enum SHADER_TYPE
 enum RESOURCE_CACHE
 {
 	CACHE_FONT = 1 << 0,
-	CACHE_SHADER = 1 << 1,
-	CACHE_SOUND = 1 << 2,
-	CACHE_SPRITE = 1 << 3,
-	CACHE_SPRITER = 1 << 4,
-	CACHE_TEXTURE = 1 << 5
+	CACHE_FONT_MSDF = 1 << 1,
+	CACHE_SHADER = 1 << 2,
+	CACHE_SOUND = 1 << 3,
+	CACHE_SPRITE = 1 << 4,
+	CACHE_SPRITER = 1 << 5,
+	CACHE_TEXTURE = 1 << 6
 };
 
 enum INIT_ERROR
@@ -250,6 +284,8 @@ public:
 	bool exclusiveFullscreen;
 	bool basicOpenGL;
 	bool enableDepthBuffer;
+	bool enableDrawTiming;
+	bool enableProfiling;
 	int minification;
 	bool enableMidi;
 	int midiDeviceIndex;
@@ -271,6 +307,8 @@ public:
 	FillCachesUnknownResourceCallback fillCachesUnknownResourceCallback;
 	RealTimeEditCallback realTimeEditCallback;
 	InitErrorHandler initErrorHandler;
+	
+	std::vector<SDL_Event> events;
 	
 private:
 	typedef std::set<Model*> ModelSet;
@@ -339,7 +377,10 @@ public:
 	void invert();
 	void invertColor();
 	void invertAlpha();
+	void gaussianBlur(const float strengthH, const float strengthV, const int kernelSize = -1);
+	
 	void blitTo(Surface * surface) const;
+	void blit(BLEND_MODE blendMode) const;
 };
 
 void blitBackBufferToSurface(Surface * surface);
@@ -498,6 +539,7 @@ public:
 	Color hueShift(float shift) const;
 
 	uint32_t toRGBA() const;
+	std::string toHexString(const bool withAlpha) const;
 
 	void set(const float r, const float g, const float b, const float a);
 	Color addRGB(const Color & other) const;
@@ -823,8 +865,18 @@ public:
 		return m_font;
 	}
 	
+	class MsdfFontCacheElem * getFontMSDF()
+	{
+		return m_fontMSDF;
+	}
+	
+	bool saveCache(const char * filename = nullptr) const;
+	bool loadCache(const char * filename = nullptr);
+	
 private:
 	class FontCacheElem * m_font;
+	
+	class MsdfFontCacheElem * m_fontMSDF;
 };
 
 //
@@ -928,6 +980,7 @@ public:
 	void lineTo(const float x, const float y);
 	void line(const float dx, const float dy);
 	void curveTo(const float x, const float y, const float tx1, const float ty1, const float tx2, const float ty2);
+	void curveToAbs(const float x, const float y, const float cx1, const float cy1, const float cx2, const float cy2);
 	void curve(const float dx, const float dy, const float tx1, const float ty1, const float tx2, const float ty2);
 	void arc(const float angle, const float radius);
 	void close();
@@ -954,6 +1007,8 @@ public:
 	bool wentUp(BUTTON button) const;
 	void showCursor(bool enabled);
 	void setRelative(bool isRelative);
+	
+	bool isIdle() const; // return true when there is no mouse movement and there are no buttons being pressed
 };
 
 class Keyboard
@@ -1106,6 +1161,8 @@ void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, 
 void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, float x2, float y2, float r2, float g2, float b2, float a2);
 void setFont(const Font & font);
 void setFont(const char * font);
+void pushFontMode(FONT_MODE fontMode);
+void popFontMode();
 void setShader(const ShaderBase & shader);
 void clearShader();
 void shaderSource(const char * filename, const char * text);
@@ -1117,15 +1174,20 @@ void drawRectLine(float x1, float y1, float x2, float y2);
 void drawRectGradient(float x1, float y1, float x2, float y2);
 void drawCircle(float x, float y, float radius, int numSegments);
 void fillCircle(float x, float y, float radius, int numSegments);
-void measureText(int size, float & sx, float & sy, const char * format, ...);
-void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
-void drawTextArea(float x, float y, float sx, int size, const char * format, ...);
-void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, float alignY, const char * format, ...);
+void measureText(float size, float & sx, float & sy, const char * format, ...);
+void beginTextBatch();
+void endTextBatch();
+void drawText(float x, float y, float size, float alignX, float alignY, const char * format, ...);
+void drawTextArea(float x, float y, float sx, float size, const char * format, ...);
+void drawTextArea(float x, float y, float sx, float sy, float size, float alignX, float alignY, const char * format, ...);
 void drawPath(const Path2d & path);
 
 GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
 GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp);
 GLuint createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp);
+GLuint createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp);
+GLuint createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp);
+GLuint createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp);
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 
@@ -1242,7 +1304,6 @@ void showErrorMessage(const char * caption, const char * format, ...);
 
 void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius);
 void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius);
-void setShader_Invert(const GLuint source, const float opacity);
 void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity);
 void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor, const float opacity);
 void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor, const float opacity);
@@ -1265,6 +1326,7 @@ enum HQ_TYPE
 	HQ_FILLED_TRIANGLES,
 	HQ_FILLED_CIRCLES,
 	HQ_FILLED_RECTS,
+	HQ_FILLED_ROUNDED_RECTS,
 	HQ_STROKED_TRIANGLES,
 	HQ_STROKED_CIRCLES,
 	HQ_STROKED_RECTS
@@ -1273,6 +1335,7 @@ enum HQ_TYPE
 };
 
 void hqBegin(HQ_TYPE type, bool useScreenSize = false);
+void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize = false);
 void hqEnd();
 
 void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2);
@@ -1280,6 +1343,7 @@ void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float str
 void hqFillTriangle(float x1, float y1, float x2, float y2, float x3, float y3);
 void hqFillCircle(float x, float y, float radius);
 void hqFillRect(float x1, float y1, float x2, float y2);
+void hqFillRoundedRect(float x1, float y1, float x2, float y2, float radius);
 
 void hqStrokeTriangle(float x1, float y1, float x2, float y2, float x3, float y3, float stroke);
 void hqStrokeCircle(float x, float y, float radius, float stroke);
@@ -1348,11 +1412,11 @@ static T random(T min, T max)
 #endif
 
 #if ENABLE_LOGGING
-	void log(const char * format, ...);
+	void logInfo(const char * format, ...);
 	void logWarning(const char * format, ...);
 	void logError(const char * format, ...);
 #else
-	#define log(...) do { } while (false)
+	#define logInfo(...) do { } while (false)
 	#define logWarning(...) do { } while (false)
 	#define logError(...) do { } while (false)
 #endif
@@ -1361,6 +1425,7 @@ static T random(T min, T max)
 
 #if ENABLE_PROFILING
 	#include "remotery.h"
+	#define cpuTimingSetThreadName(name) rmt_SetCurrentThreadName(name)
 	#define cpuTimingBlock(name) rmt_ScopedCPUSample(name)
 	#define cpuTimingBegin(name) rmt_BeginCPUSample(name)
 	#define cpuTimingEnd() rmt_EndCPUSample()
@@ -1368,6 +1433,7 @@ static T random(T min, T max)
 	#define gpuTimingBegin(name) rmt_BeginOpenGLSample(name)
 	#define gpuTimingEnd() rmt_EndOpenGLSample()
 #else
+	#define cpuTimingSetThreadName(name) do { } while (false)
 	#define cpuTimingBlock(name) do { } while (false)
 	#define cpuTimingBegin(name) do { } while (false)
 	#define cpuTimingEnd() do { } while (false)

@@ -1,3 +1,30 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #include <GL/glew.h>
 #include "audio.h"
 #include "data/engine/ShaderCommon.txt"
@@ -5,6 +32,16 @@
 #include "internal.h"
 #include "spriter.h"
 #include "StringEx.h"
+
+#if USE_GLYPH_ATLAS
+	#include "textureatlas.h"
+#endif
+
+#if ENABLE_MSDF_FONTS
+	#define STB_TRUETYPE_IMPLEMENTATION
+	#include "stb_truetype.h"
+	#include "msdfgen/msdfgen.h"
+#endif
 
 #if defined(WIN32)
 	#include <Windows.h>
@@ -27,6 +64,7 @@ AnimCache g_animCache;
 SpriterCache g_spriterCache;
 SoundCache g_soundCache;
 FontCache g_fontCache;
+MsdfFontCache g_fontCacheMSDF;
 GlyphCache g_glyphCache;
 UiCache g_uiCache;
 
@@ -311,9 +349,12 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 	else
 	{
 	#if 1
-		ImageData * temp = imageFixAlphaFilter(imageData);
-		delete imageData;
-		imageData = temp;
+		if (String::EndsWith(filename, ".png") || String::EndsWith(filename, ".gif"))
+		{
+			ImageData * temp = imageFixAlphaFilter(imageData);
+			delete imageData;
+			imageData = temp;
+		}
 	#endif
 
 	#if 0
@@ -391,6 +432,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 					glBindTexture(GL_TEXTURE_2D, restoreTexture);
 					glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpackAlignment);
 					glPixelStorei(GL_UNPACK_ROW_LENGTH, restoreUnpackRowLength);
+					checkErrorGL();
 				}
 				
 				this->sx = imageData->sx;
@@ -399,7 +441,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 				this->gridSy = gridSy;
 			}
 			
-			log("loaded %s (%dx%d)", filename, gridSx, gridSy);
+			logInfo("loaded %s (%dx%d)", filename, gridSx, gridSy);
 		}
 		
 		delete imageData;
@@ -725,7 +767,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 
 	if (result)
 	{
-		log("loaded shader %s", filename);
+		logInfo("loaded shader %s", filename);
 	}
 	else
 	{
@@ -858,7 +900,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	
 	if (result)
 	{
-		log("loaded shader program %s", name.c_str());
+		logInfo("loaded shader program %s", name.c_str());
 	}
 	else
 	{
@@ -995,7 +1037,7 @@ void ComputeShaderCacheElem::load(const char * _name, const int _groupSx, const 
 
 	if (result)
 	{
-		log("loaded shader program %s", name.c_str());
+		logInfo("loaded shader program %s", name.c_str());
 	}
 	else
 	{
@@ -1299,7 +1341,7 @@ void AnimCacheElem::load(const char * filename)
 					continue;
 				}
 				
-				//log("added frame trigger. frame=%d, on=%s, action=%s", frame, event.c_str(), action.c_str());
+				//logInfo("added frame trigger. frame=%d, on=%s, action=%s", frame, event.c_str(), action.c_str());
 				
 				AnimTrigger trigger;
 				trigger.event = eventEnum;
@@ -1384,7 +1426,7 @@ void SpriterCacheElem::load(const char * filename)
 	
 	if (m_scene->load(filename))
 	{
-		log("loaded spriter %s", filename);
+		logInfo("loaded spriter %s", filename);
 	}
 	else
 	{
@@ -1499,7 +1541,7 @@ void SoundCacheElem::load(const char * filename)
 				alBufferData(buffer, bufferFormat, soundData->sampleData, bufferSize, bufferSampleRate);
 				g_soundPlayer.checkError();
 				
-				log("loaded %s", filename);
+				logInfo("loaded %s", filename);
 			}
 			else
 			{
@@ -1567,6 +1609,9 @@ SoundCacheElem & SoundCache::findOrCreate(const char * name)
 FontCacheElem::FontCacheElem()
 {
 	face = 0;
+#if USE_GLYPH_ATLAS
+	textureAtlas = nullptr;
+#endif
 }
 
 void FontCacheElem::free()
@@ -1580,6 +1625,14 @@ void FontCacheElem::free()
 		
 		face = 0;
 	}
+	
+#if USE_GLYPH_ATLAS
+	if (textureAtlas != nullptr)
+	{
+		delete textureAtlas;
+		textureAtlas = nullptr;
+	}
+#endif
 }
 
 void FontCacheElem::load(const char * filename)
@@ -1595,7 +1648,7 @@ void FontCacheElem::load(const char * filename)
 	}
 	else
 	{
-		log("loaded %s", filename);
+		logInfo("loaded %s", filename);
 
 		// fixme : this is a work around for FreeType returning monochrome data in FT_Load_Char, instead of the 8 gray scale
 		// data it should be returning, when it find a stored glyph bitmap in the font itself. since we cannot directly upload
@@ -1603,6 +1656,13 @@ void FontCacheElem::load(const char * filename)
 		// num_fixed_sizes to zero here
 		face->num_fixed_sizes = 0;
 	}
+	
+#if USE_GLYPH_ATLAS
+	const GLint swizzleMask[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
+	
+	textureAtlas = new TextureAtlas();
+	textureAtlas->init(256, 16, GL_R8, false, false, swizzleMask);
+#endif
 }
 
 void FontCache::clear()
@@ -1649,6 +1709,9 @@ FontCacheElem & FontCache::findOrCreate(const char * name)
 
 void GlyphCache::clear()
 {
+#if USE_GLYPH_ATLAS
+	// todo : free texture atlas elements
+#else
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
 		if (i->second.texture != 0)
@@ -1657,12 +1720,15 @@ void GlyphCache::clear()
 			checkErrorGL();
 		}
 	}
+#endif
 	
 	m_map.clear();
 }
 
 GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 {
+	fassert(face == globals.font->face);
+	
 	Key key;
 	key.face = face;
 	key.size = size;
@@ -1682,8 +1748,29 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 		
 		FT_Set_Pixel_Sizes(face, 0, size);
 
-		if (FT_Load_Char(face, c, FT_LOAD_RENDER | FT_LOAD_TARGET_NORMAL) == 0)
+		if (FT_Load_Char(face, c, FT_LOAD_RENDER | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL) == 0)
 		{
+		#if USE_GLYPH_ATLAS
+			elem.g = *face->glyph;
+			
+			BoxAtlasElem * e = nullptr;
+			
+			for (;;)
+			{
+				e = globals.font->textureAtlas->tryAlloc(elem.g.bitmap.buffer, elem.g.bitmap.width, elem.g.bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, GLYPH_ATLAS_BORDER);
+				
+				if (e != nullptr)
+					break;
+				
+				logDebug("glyph allocation failed. growing texture atlas to twice the old height");
+				
+				// note : texture atlas re-allocation shouldn't happen in draw code; make sure to cache each glyph elem first before calling gxBegin!
+				
+				globals.font->textureAtlas->makeBiggerAndOptimize(globals.font->textureAtlas->a.sx, globals.font->textureAtlas->a.sy * 2);
+			}
+			
+			elem.textureAtlasElem = e;
+		#else
 			// capture current OpenGL states before we change them
 			
 			GLuint restoreTexture;
@@ -1751,22 +1838,677 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 			glBindTexture(GL_TEXTURE_2D, restoreTexture);
 			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
 			checkErrorGL();
+		#endif
 		}
 		else
 		{
 			// failed to render the glyph. return the NULL texture handle
 			
 			logError("failed to render glyph");
+		#if USE_GLYPH_ATLAS
+			elem.textureAtlasElem = nullptr;
+		#else
 			elem.texture = 0;
+		#endif
 		}
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
-		//log("added glyph cache element. face=%p, size=%d, character=%c, texture=%u. count=%d\n", face, size, c, elem.texture, (int)m_map.size());
+		//logInfo("added glyph cache element. face=%p, size=%d, character=%c, texture=%u. count=%d\n", face, size, c, elem.texture, (int)m_map.size());
 		
 		return i->second;
 	}
 }
+
+// -----
+
+StbFont::StbFont()
+	: buffer(nullptr)
+	, bufferSize(0)
+{
+}
+
+StbFont::~StbFont()
+{
+	free();
+}
+
+bool StbFont::load(const char * filename)
+{
+	bool result = false;
+	
+	FILE * file = fopen(filename, "rb");
+	
+	if (file != nullptr)
+	{
+		// load source from file
+
+		fseek(file, 0, SEEK_END);
+		bufferSize = ftell(file);
+		fseek(file, 0, SEEK_SET);
+
+		buffer = new uint8_t[bufferSize];
+
+		if (fread(buffer, 1, bufferSize, file) == (size_t)bufferSize)
+		{
+			if (stbtt_InitFont(&fontInfo, buffer, 0) != 0)
+			{
+				result = true;
+			}
+		}
+		
+		fclose(file);
+		file = nullptr;
+	}
+	
+	if (result == false)
+	{
+		free();
+	}
+	
+	return result;
+}
+
+void StbFont::free()
+{
+	delete[] buffer;
+	buffer = nullptr;
+	
+	bufferSize = 0;
+}
+
+//
+
+#if ENABLE_MSDF_FONTS
+
+MsdfGlyphCacheElem::MsdfGlyphCacheElem()
+	: textureAtlasElem(nullptr)
+	, y(0)
+	, sx(0)
+	, sy(0)
+	, scale(1.f)
+	, advance(0)
+	, isInitialized(false)
+{
+}
+
+MsdfGlyphCache::MsdfGlyphCache()
+	: m_isLoaded(false)
+	, m_font()
+	, m_textureAtlas(nullptr)
+	, m_map()
+{
+}
+
+MsdfGlyphCache::~MsdfGlyphCache()
+{
+	free();
+}
+
+//
+
+void MsdfGlyphCache::free()
+{
+	m_map.clear();
+	
+	delete m_textureAtlas;
+	m_textureAtlas = nullptr;
+	
+	m_font.free();
+	
+	//
+	
+	m_isLoaded = false;
+}
+
+void MsdfGlyphCache::allocTextureAtlas()
+{
+	const int kAtlasSx = 512;
+	const int kAtlasSy = 512;
+	
+	delete m_textureAtlas;
+	m_textureAtlas = nullptr;
+	
+	m_textureAtlas = new TextureAtlas();
+	m_textureAtlas->init(kAtlasSx, kAtlasSy, GL_RGB32F, true, true, nullptr);
+	
+	m_map.clear();
+}
+
+void MsdfGlyphCache::load(const char * filename)
+{
+	free();
+	
+	//
+	
+	if (m_font.load(filename))
+	{
+		const std::string cacheFilename = std::string(filename) + ".cache";
+		
+		if (loadCache(cacheFilename.c_str()))
+		{
+			// done
+		}
+		else
+		{
+			allocTextureAtlas();
+		}
+		
+		m_isLoaded = true;
+	}
+	
+	if (m_isLoaded == false)
+	{
+		free();
+	}
+}
+
+const MsdfGlyphCacheElem & MsdfGlyphCache::findOrCreate(const int codepoint)
+{
+	MsdfGlyphCacheElem & glyph = m_map[codepoint];
+	
+	// glyph is new. make sure it gets initialized here
+				
+	if (glyph.isInitialized == false && m_isLoaded)
+	{
+		makeGlyph(codepoint, glyph);
+	}
+	
+	return glyph;
+}
+
+bool MsdfGlyphCache::stbGlyphToMsdfShape(const int codePoint, msdfgen::Shape & shape)
+{
+	stbtt_vertex * vertices = nullptr;
+	
+	const int numVertices = stbtt_GetCodepointShape(&m_font.fontInfo, codePoint, &vertices);
+	
+	msdfgen::Contour * contour = nullptr;
+	
+	msdfgen::Point2 old_p;
+	
+	for (int i = 0; i < numVertices; ++i)
+	{
+		stbtt_vertex & v = vertices[i];
+		
+		if (v.type == STBTT_vmove)
+		{
+			//logDebug("moveTo: %d, %d", v.x, v.y);
+			
+			contour = &shape.addContour();
+			
+			old_p.set(v.x, v.y);
+			
+		}
+		else if (v.type == STBTT_vline)
+		{
+			//logDebug("lineTo: %d, %d", v.x, v.y);
+			
+			msdfgen::Point2 new_p(v.x, v.y);
+			
+			contour->addEdge(new msdfgen::LinearSegment(old_p, new_p));
+			
+			old_p = new_p;
+		}
+		else if (v.type == STBTT_vcurve)
+		{
+			//logDebug("quadraticTo: %d, %d", v.x, v.y);
+			
+			const msdfgen::Point2 new_p(v.x, v.y);
+			const msdfgen::Point2 control_p(v.cx, v.cy);
+			
+			contour->addEdge(new msdfgen::QuadraticSegment(old_p, control_p, new_p));
+			
+			old_p = new_p;
+		}
+		else if (v.type == STBTT_vcubic)
+		{
+			//logDebug("cubicTo: %d, %d", v.x, v.y);
+			
+			const msdfgen::Point2 new_p(v.x, v.y);
+			const msdfgen::Point2 control_p1(v.cx, v.cy);
+			const msdfgen::Point2 control_p2(v.cx1, v.cy1);
+			
+			contour->addEdge(new msdfgen::CubicSegment(old_p, control_p1, control_p2, new_p));
+			
+			old_p = new_p;
+		}
+		else
+		{
+			logDebug("unknown vertex type: %d", v.type);
+		}
+	}
+	
+	stbtt_FreeShape(&m_font.fontInfo, vertices);
+	vertices = nullptr;
+	
+	return true;
+}
+
+void MsdfGlyphCache::makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph)
+{
+	msdfgen::Shape shape;
+	
+	stbGlyphToMsdfShape(codepoint, shape);
+	
+	int x1, y1;
+	int x2, y2;
+	if (stbtt_GetCodepointBox(&m_font.fontInfo, codepoint, &x1, &y1, &x2, &y2) != 0)
+	{
+		//logDebug("glyph box: (%d, %d) - (%d, %d)", x1, y1, x2, y2);
+		
+		if (x2 < x1)
+			std::swap(x1, x2);
+		if (y2 < y1)
+			std::swap(y1, y2);
+		
+		const int sx = x2 - x1 + 1;
+		const int sy = y2 - y1 + 1;
+		
+		const float scale = MSDF_SCALE;
+		const float sx1 = x1 * scale;
+		const float sy1 = y1 * scale;
+		const float sx2 = (x1 + sx) * scale;
+		const float sy2 = (y1 + sy) * scale;
+		
+		const float ssx = sx2 - sx1;
+		const float ssy = sy2 - sy1;
+		
+		const int bitmapSx = std::ceil(ssx) + MSDF_GLYPH_PADDING_OUTER * 2;
+		const int bitmapSy = std::ceil(ssy) + MSDF_GLYPH_PADDING_OUTER * 2;
+		logDebug("bitmap size: %d x %d", bitmapSx, bitmapSy);
+		
+		msdfgen::edgeColoringSimple(shape, 3.f);
+		msdfgen::Bitmap<msdfgen::FloatRGB> msdf(bitmapSx, bitmapSy);
+		
+		const msdfgen::Vector2 scaleVec(scale, scale);
+		const msdfgen::Vector2 transVec(
+			-x1 + int(MSDF_GLYPH_PADDING_OUTER / scale),
+			-y1 + int(MSDF_GLYPH_PADDING_OUTER / scale));
+		msdfgen::generateMSDF(msdf, shape, 1.f / scale, scaleVec, transVec);
+		
+		glyph.sx = (bitmapSx - MSDF_GLYPH_PADDING_INNER * 2) / MSDF_SCALE;
+		glyph.sy = (bitmapSy - MSDF_GLYPH_PADDING_INNER * 2) / MSDF_SCALE;
+		
+		for (;;)
+		{
+			glyph.textureAtlasElem = m_textureAtlas->tryAlloc((uint8_t*)&msdf(0, 0), bitmapSx, bitmapSy, GL_RGB, GL_FLOAT);
+			
+			if (glyph.textureAtlasElem != nullptr)
+				break;
+			
+			logDebug("glyph allocation failed. growing texture atlas to twice the old height");
+				
+			// note : texture atlas re-allocation shouldn't happen in draw code; make sure to cache each glyph elem first before calling gxBegin!
+			
+			m_textureAtlas->makeBiggerAndOptimize(m_textureAtlas->a.sx, m_textureAtlas->a.sy * 2);
+		}
+	}
+	
+	int advance;
+	int lsb;
+	stbtt_GetCodepointHMetrics(&m_font.fontInfo, codepoint, &advance, &lsb);
+	
+	glyph.isInitialized = true;
+	glyph.advance = advance;
+	glyph.y = y1;
+}
+
+bool MsdfGlyphCache::loadCache(const char * filename)
+{
+	bool result = true;
+	
+	FILE * file = nullptr;
+	
+	if (result == true)
+	{
+		file = fopen(filename, "rb");
+		
+		if (file == nullptr)
+		{
+			logDebug("loadCache: failed to open file");
+			result = false;
+		}
+	}
+	
+	if (result == false)
+	{
+		return result;
+	}
+	
+	//
+	
+	if (result == true)
+	{
+		int32_t version;
+		
+		result &= fread(&version, 4, 1, file);
+		
+		if (version != 1)
+		{
+			logDebug("loadCache: version mismatch");
+			result = false;
+		}
+	}
+	
+	allocTextureAtlas();
+	
+	if (result == true)
+	{
+		// load glyphs
+		
+		int32_t numGlyphs = 0;
+		
+		result &= fread(&numGlyphs, 4, 1, file);
+		
+		for (int i = 0; result && i < numGlyphs; ++i)
+		{
+			int32_t c = 0;
+			
+			result &= fread(&c, 4, 1, file);
+			
+			//
+			
+			int32_t y;
+			int32_t sx;
+			int32_t sy;
+			float scale;
+			int32_t advance;
+			
+			result &= fread(&y, 4, 1, file);
+			result &= fread(&sx, 4, 1, file);
+			result &= fread(&sy, 4, 1, file);
+			result &= fread(&scale, 4, 1, file);
+			result &= fread(&advance, 4, 1, file);
+			
+			//
+			
+			int32_t atlasElemSx;
+			int32_t atlasElemSy;
+			
+			result &= fread(&atlasElemSx, 4, 1, file);
+			result &= fread(&atlasElemSy, 4, 1, file);
+			
+			//
+			
+			if (result == false)
+			{
+				logDebug("loadCache: failed to load glyph info");
+			}
+			
+			//
+			
+			BoxAtlasElem * ae = nullptr;
+			
+			if (atlasElemSx > 0 && atlasElemSy > 0)
+			{
+				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 3;
+				uint8_t * bytes = new uint8_t[numBytes];
+				
+				result &= fread(bytes, numBytes, 1, file);
+				
+				if (result)
+				{
+					ae = m_textureAtlas->tryAlloc(bytes, atlasElemSx, atlasElemSy, GL_RGB, GL_FLOAT);
+					
+					result &= ae != nullptr;
+				}
+				
+				delete[] bytes;
+				
+				if (result == false)
+				{
+					logDebug("loadCache: failed to load glyph data");
+				}
+			}
+			
+			if (result == true)
+			{
+				auto & glyph = m_map[c];
+						
+				glyph.textureAtlasElem = ae;
+				glyph.y = y;
+				glyph.sx = sx;
+				glyph.sy = sy;
+				glyph.scale = scale;
+				glyph.advance = advance;
+				glyph.isInitialized = true;
+			}
+		}
+	}
+	
+	if (file != nullptr)
+	{
+		fclose(file);
+		file = nullptr;
+	}
+	
+	if (result == false)
+	{
+		logDebug("loadCache: failed to load cache");
+		
+		allocTextureAtlas();
+	}
+	
+	return result;
+}
+
+bool MsdfGlyphCache::saveCache(const char * filename) const
+{
+	bool result = true;
+	
+	FILE * file = nullptr;
+	
+	if (result == true)
+	{
+		file = fopen(filename, "wb");
+		
+		if (file == nullptr)
+		{
+			logDebug("saveCache: failed to open file");
+			result = false;
+		}
+	}
+	
+	if (result == false)
+	{
+		return result;
+	}
+	
+	//
+	
+	if (result == true)
+	{
+		const int32_t version = 1;
+		
+		result &= fwrite(&version, 4, 1, file);
+	}
+	
+	if (result == true)
+	{
+		// save glyphs
+		
+		GLuint oldBuffer = 0;
+		glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
+		checkErrorGL();
+		
+		//
+
+		GLuint frameBuffer = 0;
+		
+		glGenFramebuffers(1, &frameBuffer);
+		checkErrorGL();
+		
+		result &= frameBuffer != 0;
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureAtlas->texture, 0);
+		checkErrorGL();
+		
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		
+		//
+		
+		const int32_t numGlyphs = m_map.size();
+		
+		result &= fwrite(&numGlyphs, 4, 1, file);
+		
+		for (auto & i : m_map)
+		{
+			const int32_t c = i.first;
+			
+			result &= fwrite(&c, 4, 1, file);
+			
+			//
+			
+			const MsdfGlyphCacheElem & e = i.second;
+			
+			const int32_t y = e.y;
+			const int32_t sx = e.sx;
+			const int32_t sy = e.sy;
+			const float scale = e.scale;
+			const int32_t advance = e.advance;
+			
+			result &= fwrite(&y, 4, 1, file);
+			result &= fwrite(&sx, 4, 1, file);
+			result &= fwrite(&sy, 4, 1, file);
+			result &= fwrite(&scale, 4, 1, file);
+			result &= fwrite(&advance, 4, 1, file);
+			
+			//
+			
+			const BoxAtlasElem * ae = e.textureAtlasElem;
+			
+			const int32_t atlasElemSx = ae ? ae->sx : 0;
+			const int32_t atlasElemSy = ae ? ae->sy : 0;
+			
+			result &= fwrite(&atlasElemSx, 4, 1, file);
+			result &= fwrite(&atlasElemSy, 4, 1, file);
+			
+			//
+			
+			if (result == false)
+			{
+				logDebug("saveCache: failed to save glyph info");
+			}
+			
+			//
+			
+			if (atlasElemSx > 0 && atlasElemSy > 0)
+			{
+				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 3;
+				uint8_t * bytes = new uint8_t[numBytes];
+				
+				glReadPixels(ae->x, ae->y, ae->sx, ae->sy, GL_RGB, GL_FLOAT, bytes);
+				checkErrorGL();
+				
+				result &= fwrite(bytes, numBytes, 1, file);
+				
+				delete[] bytes;
+				
+				if (result == false)
+				{
+					logDebug("saveCache: failed to save glyph data");
+				}
+			}
+		}
+		
+		//
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+		checkErrorGL();
+		
+		//
+		
+		glDeleteFramebuffers(1, &frameBuffer);
+		frameBuffer = 0;
+	}
+	
+	if (file != nullptr)
+	{
+		fclose(file);
+		file = nullptr;
+	}
+	
+	if (result == false)
+	{
+		logDebug("saveCache: failed to save cache");
+	}
+	
+	return result;
+}
+
+// -----
+
+MsdfFontCacheElem::MsdfFontCacheElem()
+	: m_filename()
+	, m_glyphCache()
+{
+}
+
+void MsdfFontCacheElem::free()
+{
+	delete m_glyphCache;
+	m_glyphCache = nullptr;
+	
+	m_filename.clear();
+}
+
+void MsdfFontCacheElem::load(const char * filename)
+{
+	ScopedLoadTimer loadTimer(filename);
+
+	free();
+	
+	m_filename = filename;
+	
+	m_glyphCache = new MsdfGlyphCache();
+	m_glyphCache->load(filename);
+}
+
+//
+
+void MsdfFontCache::clear()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.free();
+	}
+	
+	m_map.clear();
+}
+
+void MsdfFontCache::reload()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.load(i->first.c_str());
+	}
+}
+
+MsdfFontCacheElem & MsdfFontCache::findOrCreate(const char * name)
+{
+	Key key = name;
+	
+	Map::iterator i = m_map.find(key);
+	
+	if (i != m_map.end())
+	{
+		return i->second;
+	}
+	else
+	{
+		MsdfFontCacheElem elem;
+		
+		elem.load(name);
+		
+		i = m_map.insert(Map::value_type(key, elem)).first;
+		
+		return i->second;
+	}
+}
+
+#endif
 
 //
 
@@ -1822,7 +2564,7 @@ void UiCacheElem::load(const char * filename)
 			}
 		}
 		
-		log("loaded %s", filename);
+		logInfo("loaded %s", filename);
 	}
 }
 
@@ -1870,9 +2612,10 @@ BuiltinShaders::BuiltinShaders()
 	, hqFilledTriangle("engine/builtin-hq-filled-triangle")
 	, hqFilledCircle("engine/builtin-hq-filled-circle")
 	, hqFilledRect("engine/builtin-hq-filled-rect")
+	, hqFilledRoundedRect("engine/builtin-hq-filled-rounded-rect")
 	, hqStrokeTriangle("engine/builtin-hq-stroked-triangle")
 	, hqStrokedCircle("engine/builtin-hq-stroked-circle")
 	, hqStrokedRect("engine/builtin-hq-stroked-rect")
-	, invert("engine/builtin-invert")
+	, msdfText("engine/builtin-msdf-text")
 {
 }

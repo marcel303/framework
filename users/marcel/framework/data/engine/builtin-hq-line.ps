@@ -11,8 +11,6 @@ shader_in vec3 v_edgePlane;
 shader_in vec3 v_perpPlane;
 shader_in vec4 v_color;
 
-uniform sampler2D source;
-
 float computeDistance(vec2 p)
 {
 	float de = dot(v_edgePlane, vec3(p, 1.0));
@@ -34,7 +32,6 @@ float computeDistance(vec2 p)
 
 float distanceFade(float distance)
 {
-	//return clamp(v_strokeSize * abs(v_p.x-750.0)/100.0 - distance, 0.0, 1.0);
 	return clamp(v_strokeSize - distance, 0.0, 1.0);
 }
 

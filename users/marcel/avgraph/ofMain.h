@@ -1,3 +1,30 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #pragma once
 
 /*
@@ -30,6 +57,34 @@ static const float PI = float(M_PI);
 
 #define OF_EVENT_ORDER_BEFORE_APP 0
 #define OF_EVENT_ORDER_AFTER_APP 1
+
+struct ofBuffer
+{
+	unsigned char * bytes;
+	int numBytes;
+	
+	ofBuffer()
+		: bytes(nullptr)
+		, numBytes(0)
+	{
+	}
+	
+	ofBuffer(unsigned char * _bytes, int _numBytes)
+		: bytes(_bytes)
+		, numBytes(_numBytes)
+	{
+	}
+	
+	unsigned char * getBinaryBuffer()
+	{
+		return bytes;
+	}
+	
+	int size() const
+	{
+		return numBytes;
+	}
+};
 
 struct ofColor
 {
@@ -315,6 +370,8 @@ float ofToFloat(const std::string & s);
 
 int ofHexToInt(const std::string & s);
 
+float ofRandom(const float min, const float max);
+
 //
 
 #include <functional>
@@ -400,3 +457,56 @@ void ofRemoveListener(Event & event, ListenerClass  * listenerClass, void (Liste
 {
     event.remove(listenerClass, listenerMethod, prio);
 }
+
+#if 0
+
+void ofxTick(const float dt)
+{
+	// todo : move event triggering to ofMain
+	
+	for (auto & e : keyboard.events)
+	{
+		if (e.type == SDL_KEYDOWN)
+		{
+			ofKeyEventArgs args;
+			
+			int c = e.key.keysym.sym;
+			
+			int caps = 0;
+			
+			if (e.key.keysym.mod & (KMOD_LSHIFT | KMOD_RSHIFT))
+				caps = +1;
+			if (e.key.keysym.mod & (KMOD_CAPS))
+				caps = caps ? -1 : +1;
+			
+			if (caps == -1)
+				c = tolower(c);
+			if (caps == +1)
+				c = toupper(c);
+			
+			args.key = c;
+			
+			ofEvents().keyPressed.notify(args);
+		}
+	}
+	
+	{
+		ofMouseEventArgs args;
+		ofEvents().mouseScrolled.notify(args);
+	}
+	
+	ofEventArgs e;
+	
+	ofEvents().update.notify(e);
+}
+
+void ofxDraw()
+{
+	// todo : move event triggering to ofMain
+	
+	ofEventArgs e;
+	
+	ofEvents().draw.notify(e);
+}
+
+#endif

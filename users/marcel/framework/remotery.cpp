@@ -45,7 +45,7 @@
 */
 
 #define RMT_IMPL
-#include "Remotery.h"
+#include "remotery.h"
 
 #ifdef RMT_PLATFORM_WINDOWS
   #pragma comment(lib, "ws2_32.lib")
@@ -506,6 +506,7 @@ static void WriteFence()
 }
 
 
+/*
 // Get a shared value with acquire semantics, ensuring the read is complete
 // before the function returns.
 static void* LoadAcquire(void* volatile const* addr)
@@ -525,6 +526,7 @@ static void StoreRelease(void* volatile*  addr, void* v)
     WriteFence();
     *addr = v;
 }
+*/
 
 
 
@@ -5336,7 +5338,7 @@ RMT_API void _rmt_EndD3D11Sample(void)
 #ifdef RMT_USE_OPENGL
 
 #include <GL/glew.h>
-//#include <SDL/SDL_opengl.h>
+#include <SDL2/SDL.h>
 
 /*
 #ifndef APIENTRY
@@ -5398,7 +5400,7 @@ GLAPI GLenum GLAPIENTRY glGetError(void);
 #if defined(_WIN32)
 #  define rmtGetProcAddress(name) wglGetProcAddress((LPCSTR)name)
 #elif defined(__APPLE__) && !defined(GLEW_APPLE_GLX)
-#  define rmtGetProcAddress(name) NSGLGetProcAddress(name)
+#  define rmtGetProcAddress(name) SDL_GL_GetProcAddress((char*)name)
 #elif defined(__sgi) || defined(__sun)
 #  define rmtGetProcAddress(name) dlGetProcAddress(name)
 #elif defined(__ANDROID__)

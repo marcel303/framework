@@ -1,3 +1,30 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #include "framework.h"
 
 #define NANOVG_GL3_IMPLEMENTATION
@@ -200,7 +227,7 @@ static void drawParagraph(NVGcontext* vg, float x, float y, float width, float h
 
 	if (gutter) {
 		char txt[16];
-		sprintf_s(txt, sizeof(txt), "%d", gutter);
+		snprintf(txt, sizeof(txt), "%d", gutter);
 		nvgFontSize(vg, 13.0f);
 		nvgTextAlign(vg, NVG_ALIGN_RIGHT|NVG_ALIGN_MIDDLE);
 
@@ -249,9 +276,9 @@ void testNanovg()
 {
 	struct NVGcontext * vg = nvgCreateGL3(NVG_ANTIALIAS | NVG_STENCIL_STROKES);
 	
-	auto calibri = nvgCreateFont(vg, "calibri", "calibri.ttf");
+	nvgCreateFont(vg, "calibri", "calibri.ttf");
 	
-	while (!framework.quitRequested)
+	do
 	{
 		framework.process();
 		
@@ -266,6 +293,19 @@ void testNanovg()
 				nvgFill(vg);
 			#endif
 				
+				nvgSave(vg);
+				{
+					nvgScale(vg, 3.f, 3.f);
+					nvgFillColor(vg, nvgRGBf(0.f, 0.f, 0.f));
+					nvgStrokeWidth(vg, 1.5f);
+					nvgStrokeColor(vg, nvgRGBf(1.f, 0.f, 0.f));
+					nvgBeginPath(vg);
+					nvgRoundedRect(vg, 10.f, 10.f, 200.f, 400.f, 20.f);
+					nvgFill(vg);
+					nvgStroke(vg);
+				}
+				nvgRestore(vg);
+				
 				nvgBeginPath(vg);
 				nvgRect(vg, 100,100, 120,30);
 				nvgCircle(vg, 120,120, 5);
@@ -277,13 +317,13 @@ void testNanovg()
 				
 				drawGraph(vg, 200, 200, 400, 400, framework.time);
 				
-				//nvgScale(vg, 1.2f, 1.2f);
+				//nvgFontBlur(vg, mouse.x/100);
 				drawParagraph(vg, 400, 200, 400, 400, mouse.x, mouse.y);
 			}
 			nvgEndFrame(vg);
 		}
 		framework.endDraw();
-	}
+	} while (!keyboard.wentDown(SDLK_SPACE));
 	
 	nvgDeleteGL3(vg);
 	vg = nullptr;
