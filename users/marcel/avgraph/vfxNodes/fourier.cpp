@@ -27,7 +27,11 @@
 
 #include "fourier.h"
 #include <cmath>
-#include <malloc.h>
+#ifdef WIN32
+	#include <malloc.h>
+#else
+	#include <alloca.h>
+#endif
 #include <string.h>
 
 template <typename real>

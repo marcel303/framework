@@ -177,7 +177,7 @@ static void testAudioMixing()
 
 //
 
-#ifdef __MACOS__
+#ifdef MACOS
 
 #include "vfxNodes/macWebcam.h"
 #include "vfxNodes/openglTexture.h"

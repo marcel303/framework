@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#ifdef __MACOS__
+#ifdef MACOS
 
 #include "framework.h"
 #include "kinect2FrameListener.h"

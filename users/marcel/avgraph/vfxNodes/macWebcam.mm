@@ -1,4 +1,4 @@
-#ifdef __MACOS__
+#ifdef MACOS
 
 #import "Debugging.h"
 #import "Log.h"

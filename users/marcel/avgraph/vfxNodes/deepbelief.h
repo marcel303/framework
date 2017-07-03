@@ -27,7 +27,7 @@
 
 #pragma once
 
-#ifdef __MACOS__
+#ifdef MACOS
 
 #include <atomic>
 #include <string>

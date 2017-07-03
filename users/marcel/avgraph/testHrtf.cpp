@@ -16,7 +16,7 @@
 
 #define SAMPLE_RATE 44100
 
-#ifdef __MACOS__
+#ifdef MACOS
 	#define ALIGN16 __attribute__((aligned(16)))
 #else
 	#define ALIGN16
@@ -1575,5 +1575,5 @@ void testHrtf()
 	
 	pa.shut();
 	
-	exit(0);
+	//exit(0);
 }

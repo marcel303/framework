@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#ifdef __MACOS__
+#ifdef MACOS
 
 #include "vfxNodeDeepbelief.h"
 

@@ -17,7 +17,7 @@ extern void testAudiochannels();
 extern void testThreading();
 extern void testStbTruetype();
 extern void testMsdfgen();
-#ifdef __MACOS__
+#ifdef MACOS
 extern void testDeepbelief();
 #endif
 extern void testImageCpuDelayLine();
@@ -389,7 +389,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 		testChaosGame();
 	if (doButton("DaGu", "DatGUI"))
 		testDatGui();
-#ifdef __MACOS__
+#ifdef MACOS
 	if (doButton("DdBe", "Deep Belief SDK"))
 		testDeepbelief();
 #endif
