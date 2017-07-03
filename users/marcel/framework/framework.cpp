@@ -5368,7 +5368,7 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 	char _text[MAX_TEXT_LENGTH];
 	va_list args;
 	va_start(args, format);
-	vsprintf_s(_text, sizeof(text), format, args);
+	vsprintf_s(_text, sizeof(_text), format, args);
 	va_end(args);
 	
 #if ENABLE_UTF8_SUPPORT
@@ -5475,7 +5475,7 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 	char _text[MAX_TEXT_LENGTH];
 	va_list args;
 	va_start(args, format);
-	vsprintf_s(_text, sizeof(text), format, args);
+	vsprintf_s(_text, sizeof(_text), format, args);
 	va_end(args);
 	
 #if ENABLE_UTF8_SUPPORT
