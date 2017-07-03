@@ -1,6 +1,7 @@
 static const char * s_hqFilledTriangleVs = R"SHADER(
 
 include engine/ShaderVS.txt
+include engine/builtin-hq-common-vs.txt
 
 shader_out vec2 v_p;
 shader_out vec3 v_edgePlane1;
@@ -21,7 +22,7 @@ void main()
 {
 	vec4 params1 = in_position4;
 	vec4 params2 = unpackNormal();
-	
+
 	// unpack
 	
 	vec2 p1 = params1.xy;

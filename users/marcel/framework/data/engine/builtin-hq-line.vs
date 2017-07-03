@@ -1,6 +1,7 @@
 static const char * s_hqLineVs = R"SHADER(
 
 include engine/ShaderVS.txt
+include engine/builtin-hq-common-vs.txt
 
 shader_out vec2 v_p;
 shader_out vec2 v_p1;

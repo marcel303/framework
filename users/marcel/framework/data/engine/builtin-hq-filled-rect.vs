@@ -1,6 +1,7 @@
 static const char * s_hqFilledRectVs = R"SHADER(
 
 include engine/ShaderVS.txt
+include engine/builtin-hq-common-vs.txt
 
 shader_out vec2 v_p;
 shader_out vec3 v_edgePlane1;
@@ -23,6 +24,8 @@ void main()
 {
 	vec4 params1 = in_position4;
 	
+	int index = gl_VertexID % 4;
+
 	// unpack
 	
 	vec2 p11 = params1.xy;
@@ -42,7 +45,7 @@ void main()
 	vec2 p2 = vec2(p12.x, p11.y);
 	vec2 p3 = vec2(p12.x, p12.y);
 	vec2 p4 = vec2(p11.x, p12.y);
-	
+
 	// transform
 	
 	p1 = (ModelViewMatrix * vec4(p1, 0.0, 1.0)).xy;
@@ -62,8 +65,6 @@ void main()
 	float borderSize = 1.0;
 	
 	vec2 basePosition;
-	
-	int index = gl_VertexID % 4;
 	
 	if (index == 0)
 	{
