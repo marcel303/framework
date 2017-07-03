@@ -76,9 +76,16 @@ void VfxNodeImageCpuCrop::tick(const float dt)
 	{
 		const int sx = Calc::Clamp(int(std::round(image->sx * (1.0 - (amountX >= 0.f ? amountX : amount)))), 0, image->sx);
 		const int sy = Calc::Clamp(int(std::round(image->sy * (1.0 - (amountY >= 0.f ? amountY : amount)))), 0, image->sy);
+	#if 1
+		const int ox = 0; // fixme : shifting x voids guarantee data is sy * pitch number of bytes
+	#else
 		const int ox = Calc::Clamp(int(std::round(image->sx - sx) * alignX), 0, image->sx - sx);
+	#endif
 		const int oy = Calc::Clamp(int(std::round(image->sy - sy) * alignY), 0, image->sy - sy);
-
+		
+		Assert(ox + sx <= image->sx);
+		Assert(oy + sy <= image->sy);
+		
 		imageOutput = *image;
 
 		imageOutput.sx = sx;
