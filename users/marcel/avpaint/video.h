@@ -56,10 +56,17 @@ struct MediaPlayer : public AudioStream
 			: mpTickEvent(nullptr)
 			, mpTickMutex(nullptr)
 			, mpThreadId(-1)
+		#ifndef __WIN32__ // todo : do it like this on Win32 too
 			, hasBegun(false)
 			, stopMpThread(false)
 			, hasPresentedLastFrame(false)
+		#endif
 		{
+		#ifdef __WIN32__
+			hasBegun = false;
+			stopMpThread = false;
+			hasPresentedLastFrame = false;
+		#endif
 		}
 
 		~Context()
