@@ -31,6 +31,10 @@
 #include "nanovg/nanovg.h"
 #include "nanovg/nanovg_gl.h"
 
+#ifdef WIN32
+	#define snprintf sprintf_s
+#endif
+
 static void drawLines(NVGcontext* vg, float x, float y, float w, float h, float t)
 {
 	int i, j;
