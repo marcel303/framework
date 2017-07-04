@@ -31,9 +31,18 @@
 
 struct VfxNodeSampleAndHold : VfxNodeBase
 {
+	enum TriggerMode
+	{
+		kTrigger_Any,
+		kTrigger_Equal,
+		kTrigger_NotEqual
+	};
+	
 	enum Input
 	{
 		kInput_Trigger,
+		kInput_TriggerMode,
+		kInput_TriggerValue,
 		kInput_Value,
 		kInput_COUNT
 	};
