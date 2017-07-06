@@ -52,8 +52,10 @@ struct AudioGraph
 		enum Type
 		{
 			kType_Unknown,
+			kType_Int,
 			kType_Float,
-			kType_String
+			kType_String,
+			kType_AudioValue
 		};
 		
 		Type type;

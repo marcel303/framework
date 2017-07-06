@@ -64,11 +64,17 @@ void AudioGraph::destroy()
 	{
 		switch (i.type)
 		{
+		case ValueToFree::kType_Int:
+			delete (int*)i.mem;
+			break;
 		case ValueToFree::kType_Float:
 			delete (float*)i.mem;
 			break;
 		case ValueToFree::kType_String:
 			delete (std::string*)i.mem;
+			break;
+		case ValueToFree::kType_AudioValue:
+			delete (AudioValue*)i.mem;
 			break;
 		default:
 			Assert(false);
@@ -104,7 +110,17 @@ void AudioGraph::destroy()
 
 void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & inputValue)
 {
-	if (input.type == kAudioPlugType_Float)
+	if (input.type == kAudioPlugType_Int)
+	{
+		int * value = new int();
+		
+		*value = Parse::Int32(inputValue);
+		
+		input.connectTo(value, kAudioPlugType_Int);
+		
+		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_Int, value));
+	}
+	else if (input.type == kAudioPlugType_Float)
 	{
 		float * value = new float();
 		
@@ -123,6 +139,16 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 		input.connectTo(value, kAudioPlugType_String);
 		
 		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_String, value));
+	}
+	else if (input.type == kAudioPlugType_AudioValue)
+	{
+		const float scalarValue = Parse::Float(inputValue);
+		
+		AudioValue * value = new AudioValue(scalarValue);
+		
+		input.connectTo(value, kAudioPlugType_AudioValue);
+		
+		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_AudioValue, value));
 	}
 	else
 	{

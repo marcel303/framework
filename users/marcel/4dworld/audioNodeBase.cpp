@@ -46,6 +46,91 @@ AudioTriggerData::AudioTriggerData()
 
 //
 
+void AudioBuffer::setZero()
+{
+	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		samples[i] = 0.f;
+}
+
+void AudioBuffer::set(const AudioBuffer & other)
+{
+	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		samples[i] = other.samples[i];
+}
+
+void AudioBuffer::setMul(const AudioBuffer & other, const float gain)
+{
+	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		samples[i] = other.samples[i] * gain;
+}
+
+void AudioBuffer::setMul(const AudioBuffer & other, const AudioValue & gain)
+{
+	if (gain.isScalar)
+	{
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			samples[i] = other.samples[0];
+	}
+	else
+	{
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			samples[i] = other.samples[i];
+	}
+}
+
+void AudioBuffer::add(const AudioBuffer & other)
+{
+	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		samples[i] += other.samples[i];
+}
+
+void AudioBuffer::addMul(const AudioBuffer & other, const float gain)
+{
+	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		samples[i] += other.samples[i] * gain;
+}
+
+void AudioBuffer::addMul(const AudioBuffer & other, const AudioValue & gain)
+{
+	if (gain.isScalar)
+	{
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			samples[i] += other.samples[i] * gain.samples[0];
+	}
+	else
+	{
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			samples[i] += other.samples[i] * gain.samples[i];
+	}
+}
+
+void AudioBuffer::mulMul(const AudioBuffer & other, const float gain)
+{
+	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		samples[i] *= other.samples[i] * gain;
+}
+
+void AudioBuffer::mulMul(const AudioBuffer & other, const AudioValue & gain)
+{
+	if (gain.isScalar)
+	{
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			samples[i] *= other.samples[i] * gain.samples[0];
+	}
+	else
+	{
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			samples[i] *= other.samples[i] * gain.samples[i];
+	}
+}
+
+//
+
+AudioValue AudioValue::Zero(0.0);
+AudioValue AudioValue::One(1.0);
+
+//
+
 void AudioPlug::connectTo(AudioPlug & dst)
 {
 	if (dst.type != type)
@@ -370,14 +455,56 @@ AUDIO_NODE_TYPE(audioSourceMix, AudioNodeSourceMix)
 	typeName = "audio.mix";
 	
 	in("source1", "audioBuffer");
-	in("gain1", "float", "1");
+	in("gain1", "audioValue", "1");
 	in("source2", "audioBuffer");
-	in("gain2", "float", "1");
+	in("gain2", "audioValue", "1");
 	in("source3", "audioBuffer");
-	in("gain3", "float", "1");
+	in("gain3", "audioValue", "1");
 	in("source4", "audioBuffer");
-	in("gain4", "float", "1");
+	in("gain4", "audioValue", "1");
 	out("audio", "audioBuffer");
+}
+
+AUDIO_NODE_TYPE(audioSourceSine, AudioNodeSourceSine)
+{
+	typeName = "audio.sine";
+	
+	in("frequency", "float");
+	in("phase", "float");
+	out("audio", "audioBuffer");
+}
+
+AUDIO_ENUM_TYPE(audioMixMode)
+{
+	elem("add");
+	elem("mul");
+}
+
+AUDIO_NODE_TYPE(audioMix, AudioNodeMix)
+{
+	typeName = "mix";
+	
+	inEnum("mode", "audioMixMode");
+	in("sourceA", "audioBuffer");
+	in("gainA", "audioValue", "1");
+	in("sourceB", "audioBuffer");
+	in("gainB", "audioValue", "1");
+	out("audio", "audioBuffer");
+}
+
+AUDIO_NODE_TYPE(time, AudioNodeTime)
+{
+	typeName = "time";
+	
+	out("time", "audioValue");
+}
+
+AUDIO_NODE_TYPE(sine, AudioNodeMathSine)
+{
+	typeName = "math.sine";
+	
+	in("value", "audioValue");
+	out("result", "audioValue");
 }
 
 //
