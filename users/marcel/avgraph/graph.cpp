@@ -2763,6 +2763,17 @@ bool GraphEdit::tick(const float dt)
 				}
 			}
 			
+			//
+			
+			if (selectedNodes.empty() == false)
+			{
+				const GraphNodeId nodeId = *selectedNodes.begin();
+					
+				propertyEditor->setNode(nodeId);
+			}
+			
+			//
+			
 			if (keyboard.wentDown(SDLK_TAB))
 			{
 				state = kState_Hidden;

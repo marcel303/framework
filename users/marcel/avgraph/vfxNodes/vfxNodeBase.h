@@ -712,8 +712,6 @@ struct VfxNodeBase
 	virtual void initSelf(const GraphNode & node) { }
 	virtual void init(const GraphNode & node) { }
 	virtual void tick(const float dt) { }
-	virtual void beforeTick() { }
-	virtual void afterTick() { }
 	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) { }
 	virtual void draw() const { }
 	virtual void beforeDraw() const { }

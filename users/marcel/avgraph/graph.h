@@ -247,8 +247,8 @@ struct GraphEdit_ValueTypeDefinition
 		: typeName()
 		, multipleInputs(false)
 		, editor()
-		, editorMin()
-		, editorMax()
+		, editorMin("0")
+		, editorMax("1")
 		, visualizer()
 		, typeValidation(true)
 	{

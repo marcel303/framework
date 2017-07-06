@@ -594,10 +594,6 @@ void VfxNodeBase::traverseTick(const int traversalId, const float dt)
 	
 	//
 	
-	beforeTick();
-	
-	//
-	
 	for (auto predep : predeps)
 	{
 		if (predep->lastTickTraversalId != traversalId)
@@ -619,10 +615,6 @@ void VfxNodeBase::traverseTick(const int traversalId, const float dt)
 	//
 	
 	tickTimeAvg = (tickTimeAvg * 99 + (t2 - t1)) / 100;
-	
-	//
-	
-	afterTick();
 }
 
 void VfxNodeBase::traverseDraw(const int traversalId)
