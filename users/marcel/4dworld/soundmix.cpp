@@ -1,12 +1,7 @@
 #include "audio.h"
+#include "Debugging.h"
 #include "soundmix.h"
 #include <cmath>
-
-#define AUDIO_UPDATE_SIZE 256
-
-#define SAMPLE_RATE 44100
-
-#define ALIGN16 __attribute__((aligned(16)))
 
 static void audioBufferMul(float * __restrict audioBuffer, const int numSamples, const float scale)
 {
@@ -16,7 +11,12 @@ static void audioBufferMul(float * __restrict audioBuffer, const int numSamples,
 	}
 }
 
-static void audioBufferAdd(const float * __restrict audioBuffer1, const float * __restrict audioBuffer2, const int numSamples, const float scale, float * __restrict destinationBuffer)
+static void audioBufferAdd(
+	const float * __restrict audioBuffer1,
+	const float * __restrict audioBuffer2,
+	const int numSamples,
+	const float scale,
+	float * __restrict destinationBuffer)
 {
 	for (int i = 0; i < numSamples; ++i)
 	{
@@ -120,7 +120,7 @@ AudioSourceMix::Input * AudioSourceMix::add(AudioSource * source, const float ga
 	return &inputs.back();
 }
 
-void AudioSourceMix::generate(float * __restrict samples, const int numSamples)
+void AudioSourceMix::generate(ALIGN16 float * __restrict samples, const int numSamples)
 {
 	if (inputs.empty())
 	{
@@ -191,7 +191,7 @@ void AudioSourceSine::init(const float _phase, const float _frequency)
 	phaseStep = _frequency / SAMPLE_RATE;
 }
 
-void AudioSourceSine::generate(float * __restrict samples, const int numSamples)
+void AudioSourceSine::generate(ALIGN16 float * __restrict samples, const int numSamples)
 {
 	for (int i = 0; i < numSamples; ++i)
 	{
@@ -207,30 +207,115 @@ AudioSourcePcm::AudioSourcePcm()
 	: AudioSource()
 	, pcmData(nullptr)
 	, samplePosition(0)
+	, isPlaying(false)
+	, hasRange(false)
+	, rangeBegin(0)
+	, rangeEnd(0)
 {
 }
 
 void AudioSourcePcm::init(const PcmData * _pcmData, const int _samplePosition)
 {
+	Assert(_pcmData != nullptr);
+	
 	pcmData = _pcmData;
 	samplePosition = _samplePosition;
+	
+	clearRange();
 }
 
-void AudioSourcePcm::generate(float * __restrict samples, const int numSamples)
+void AudioSourcePcm::setRange(const int begin, const int length)
 {
-	if (pcmData == nullptr || pcmData->numSamples == 0)
+	hasRange = true;
+	
+	rangeBegin = begin;
+	rangeEnd = begin + length;
+}
+
+void AudioSourcePcm::setRangeNorm(const float begin, const float length)
+{
+	hasRange = true;
+	
+	rangeBegin = int(begin * pcmData->numSamples);
+	rangeEnd = int((begin + length) * pcmData->numSamples);
+}
+
+void AudioSourcePcm::clearRange()
+{
+	hasRange = false;
+	
+	rangeBegin = 0;
+	rangeEnd = pcmData->numSamples;
+}
+
+void AudioSourcePcm::play()
+{
+	isPlaying = true;
+}
+
+void AudioSourcePcm::stop()
+{
+	isPlaying = false;
+	
+	resetSamplePosition();
+}
+
+void AudioSourcePcm::pause()
+{
+	isPlaying = false;
+}
+
+void AudioSourcePcm::resume()
+{
+	isPlaying = true;
+}
+
+void AudioSourcePcm::resetSamplePosition()
+{
+	samplePosition = rangeBegin;
+}
+
+void AudioSourcePcm::setSamplePosition(const int position)
+{
+	samplePosition = position;
+}
+
+void AudioSourcePcm::setSamplePositionNorm(const float position)
+{
+	samplePosition = rangeBegin + int((rangeEnd - rangeBegin) * position);
+}
+
+void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numSamples)
+{
+	bool generateSilence = false;
+	
+	if (pcmData->numSamples == 0 ||
+		isPlaying == false ||
+		rangeBegin >= rangeEnd)
+	{
+		generateSilence = true;
+	}
+	
+	if (generateSilence)
 	{
 		for (int i = 0; i < numSamples; ++i)
 			samples[i] = 0.f;
-		return;
 	}
-	
-	for (int i = 0; i < numSamples; ++i)
+	else
 	{
-		samplePosition %= pcmData->numSamples;
-		
-		samples[i] = pcmData->samples[samplePosition];
-		
-		samplePosition += 1;
+		for (int i = 0; i < numSamples; ++i)
+		{
+			if (samplePosition < 0 || samplePosition >= pcmData->numSamples)
+				samples[i] = 0.f;
+			else
+				samples[i] = pcmData->samples[samplePosition];
+			
+			samplePosition += 1;
+			
+			if (samplePosition < rangeBegin)
+				samplePosition = rangeBegin;
+			if (samplePosition >= rangeEnd)
+				samplePosition = rangeBegin;
+		}
 	}
 }
