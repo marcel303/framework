@@ -178,7 +178,7 @@ void AudioGraph::tick(const float dt)
 	g_currentAudioGraph = nullptr;
 }
 
-void AudioGraph::draw() const
+void AudioGraph::draw(AudioBuffer & outputBuffer) const
 {
 	audioCpuTimingBlock(AudioGraph_Draw);
 	
@@ -197,9 +197,11 @@ void AudioGraph::draw() const
 			
 			AudioNodeDisplay * displayNode = static_cast<AudioNodeDisplay*>(node);
 			
-			displayNode->traverseDraw(nextDrawTraversalId);
-			
-			const AudioBuffer & audioBuffer = displayNode->getAudioBuffer();
+			displayNode->outputBuffer = &outputBuffer;
+			{
+				displayNode->traverseDraw(nextDrawTraversalId);
+			}
+			displayNode->outputBuffer = nullptr;
 		}
 	}
 	

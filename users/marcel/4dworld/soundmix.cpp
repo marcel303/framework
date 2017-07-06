@@ -289,9 +289,9 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 {
 	bool generateSilence = false;
 	
-	if (pcmData->numSamples == 0 ||
-		isPlaying == false ||
-		rangeBegin >= rangeEnd)
+	if (isPlaying == false ||
+		rangeBegin >= rangeEnd ||
+		pcmData->numSamples == 0)
 	{
 		generateSilence = true;
 	}

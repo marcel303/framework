@@ -370,12 +370,26 @@ AUDIO_NODE_TYPE(audioSourceMix, AudioNodeSourceMix)
 	typeName = "audio.mix";
 	
 	in("source1", "audioBuffer");
-	in("gain1", "float");
+	in("gain1", "float", "1");
 	in("source2", "audioBuffer");
-	in("gain2", "float");
+	in("gain2", "float", "1");
 	in("source3", "audioBuffer");
-	in("gain3", "float");
+	in("gain3", "float", "1");
 	in("source4", "audioBuffer");
-	in("gain4", "float");
+	in("gain4", "float", "1");
 	out("audio", "audioBuffer");
+}
+
+//
+
+void AudioNodePcmData::tick(const float dt)
+{
+	const char * filename = getInputString(kInput_Filename, "");
+	
+	if (filename != currentFilename)
+	{
+		currentFilename = filename;
+		
+		pcmData.load(filename, 0);
+	}
 }

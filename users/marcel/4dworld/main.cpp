@@ -1,4 +1,5 @@
 #include "audioGraph.h"
+#include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
 #include "framework.h"
 #include "graph.h"
@@ -10,6 +11,14 @@ extern const int GFX_SY;
 
 const int GFX_SX = 1300;
 const int GFX_SY = 800;
+
+//
+
+#define USE_AUDIO_GRAPH 1
+
+//
+
+static SDL_mutex * mutex = nullptr;
 
 //
 
@@ -49,7 +58,7 @@ static int portaudioCallback(
 	float * __restrict destinationBuffer = (float*)outputBuffer;
 	
 	audioSource->generate(destinationBuffer, AUDIO_UPDATE_SIZE);
-	
+
 	return paContinue;
 }
 
@@ -203,11 +212,44 @@ struct AudioSource4DWorld : AudioSource
 
 //
 
+struct AudioSourceAudioGraph : AudioSource
+{
+	AudioGraph * audioGraph;
+	
+	AudioSourceAudioGraph()
+		: audioGraph(nullptr)
+	{
+	}
+	
+	virtual void generate(ALIGN16 float * __restrict samples, const int numSamples) override
+	{
+		if (audioGraph == nullptr)
+		{
+			for (int i = 0; i < numSamples; ++i)
+				samples[i] = 0.f;
+		}
+		else
+		{
+			SDL_LockMutex(mutex);
+			{
+				Assert(numSamples == AUDIO_UPDATE_SIZE);
+				AudioBuffer & audioBuffer = *(AudioBuffer*)samples;
+				
+				audioGraph->tick(AUDIO_UPDATE_SIZE / double(SAMPLE_RATE));
+				audioGraph->draw(audioBuffer);
+			}
+			SDL_UnlockMutex(mutex);
+		}
+	}
+};
+
+//
+
 int main(int argc, char * argv[])
 {
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
-		bool stop = false;
+		mutex = SDL_CreateMutex();
 		
 		GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
 		
@@ -232,8 +274,29 @@ int main(int argc, char * argv[])
 		
 		GraphEdit graphEdit(&typeDefinitionLibrary);
 		
+		AudioGraph * audioGraph = new AudioGraph();
+		
+		AudioRealTimeConnection realTimeConnection;
+		realTimeConnection.audioGraph = audioGraph;
+		realTimeConnection.audioGraphPtr = &audioGraph;
+		
+		graphEdit.realTimeConnection = &realTimeConnection;
+		
+		g_currentAudioGraph = realTimeConnection.audioGraph;
+		
 		graphEdit.load("audioGraph.xml");
 		
+		g_currentAudioGraph = nullptr;
+		
+	#if USE_AUDIO_GRAPH
+		AudioSourceAudioGraph audioSource;
+		
+		audioSource.audioGraph = audioGraph;
+		
+		PortAudioObject pa;
+		
+		pa.init(&audioSource);
+	#else
 		AudioSource4DWorld world;
 		
 		world.init();
@@ -241,6 +304,9 @@ int main(int argc, char * argv[])
 		PortAudioObject pa;
 		
 		pa.init(&world);
+	#endif
+		
+		bool stop = false;
 		
 		do
 		{
@@ -256,7 +322,17 @@ int main(int argc, char * argv[])
 				stop = true;
 			else
 			{
-				graphEdit.tick(dt);
+				SDL_LockMutex(mutex);
+				{
+					g_currentAudioGraph = realTimeConnection.audioGraph;
+					
+					graphEdit.tick(dt);
+					
+					g_currentAudioGraph = nullptr;
+					
+					audioSource.audioGraph = audioGraph;
+				}
+				SDL_UnlockMutex(mutex);
 			}
 			
 			//
@@ -278,7 +354,10 @@ int main(int argc, char * argv[])
 		} while (stop == false);
 		
 		pa.shut();
-
+		
+		SDL_DestroyMutex(mutex);
+		mutex = nullptr;
+		
 		framework.shutdown();
 	}
 

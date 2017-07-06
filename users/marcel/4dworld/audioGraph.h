@@ -38,6 +38,7 @@
 	#define AUDIO_GRAPH_ENABLE_TIMING 0
 #endif
 
+struct AudioBuffer;
 struct AudioGraph;
 struct AudioNodeBase;
 struct AudioPlug;
@@ -91,7 +92,7 @@ struct AudioGraph
 	void connectToInputLiteral(AudioPlug & input, const std::string & inputValue);
 	
 	void tick(const float dt);
-	void draw() const;
+	void draw(AudioBuffer & outputBuffer) const;
 };
 
 //
