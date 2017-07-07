@@ -520,18 +520,6 @@ int main(int argc, char * argv[])
 			if (graphEdit->tick(dt))
 			{
 			}
-			else if (keyboard.wentDown(SDLK_s))
-			{
-				graphEdit->save(FILENAME);
-				
-				// todo : remove !
-				Font("calibri.ttf").saveCache();
-				Font("calibri.ttf").loadCache();
-			}
-			else if (keyboard.wentDown(SDLK_l))
-			{
-				graphEdit->load(FILENAME);
-			}
 			else if (keyboard.wentDown(SDLK_p) && keyboard.isDown(SDLK_LGUI))
 			{
 				isPaused = !isPaused;
@@ -619,6 +607,8 @@ int main(int argc, char * argv[])
 			}
 			framework.endDraw();
 		}
+		
+		Font("calibri.ttf").saveCache();
 		
 		delete graphEditSurface;
 		graphEditSurface = nullptr;
