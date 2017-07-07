@@ -69,12 +69,12 @@ void AudioBuffer::setMul(const AudioBuffer & other, const AudioValue & gain)
 	if (gain.isScalar)
 	{
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			samples[i] = other.samples[0];
+			samples[i] = other.samples[i] * gain.samples[0];
 	}
 	else
 	{
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			samples[i] = other.samples[i];
+			samples[i] = other.samples[i] * gain.samples[i];
 	}
 }
 
@@ -492,11 +492,34 @@ AUDIO_NODE_TYPE(audioMix, AudioNodeMix)
 	out("audio", "audioBuffer");
 }
 
+AUDIO_NODE_TYPE(mapRange, AudioNodeMapRange)
+{
+	typeName = "map.range";
+	
+	in("value", "audioValue");
+	in("inMin", "audioValue");
+	in("inMax", "audioValue", "1");
+	in("outMin", "audioValue");
+	in("outMax", "audioValue", "1");
+	out("result", "audioValue");
+}
+
 AUDIO_NODE_TYPE(time, AudioNodeTime)
 {
 	typeName = "time";
 	
+	in("fine", "bool", "1");
 	out("time", "audioValue");
+}
+
+AUDIO_NODE_TYPE(phase, AudioNodePhase)
+{
+	typeName = "phase";
+	
+	in("fine", "bool", "1");
+	in("frequency", "audioValue");
+	in("offset", "audioValue");
+	out("phase", "audioValue");
 }
 
 AUDIO_NODE_TYPE(sine, AudioNodeMathSine)

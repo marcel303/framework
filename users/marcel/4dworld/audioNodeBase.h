@@ -132,6 +132,7 @@ struct AudioValue
 enum AudioPlugType
 {
 	kAudioPlugType_None,
+	kAudioPlugType_Bool,
 	kAudioPlugType_Int,
 	kAudioPlugType_Float,
 	kAudioPlugType_String,
@@ -166,6 +167,12 @@ struct AudioPlug
 	bool isConnected() const
 	{
 		return mem != nullptr;
+	}
+	
+	int getBool() const
+	{
+		Assert(type == kAudioPlugType_Bool);
+		return *((bool*)mem);
 	}
 	
 	int getInt() const
@@ -336,6 +343,16 @@ struct AudioNodeBase
 			return nullptr;
 		else
 			return &outputs[index];
+	}
+	
+	int getInputBool(const int index, const bool defaultValue) const
+	{
+		const AudioPlug * plug = tryGetInput(index);
+		
+		if (plug == nullptr || !plug->isConnected())
+			return defaultValue;
+		else
+			return plug->getBool();
 	}
 	
 	int getInputInt(const int index, const int defaultValue) const
@@ -797,7 +814,7 @@ struct AudioNodeSourceSine : AudioNodeBase
 	
 	AudioBuffer audioBufferOutput;
 	
-	double phase;
+	float phase;
 	
 	AudioNodeSourceSine()
 		: AudioNodeBase()
@@ -819,13 +836,14 @@ struct AudioNodeSourceSine : AudioNodeBase
 		const float frequency = getInputFloat(kInput_Frequency, 0.f);
 		const float phaseOffset = getInputFloat(kInput_Phase, 0.f);
 		const float phaseStep = frequency / double(SAMPLE_RATE);
+		const float twoPi = 2.f * M_PI;
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			audioBufferOutput.samples[i] = std::sin((phase + phaseOffset) * 2.0 * M_PI);
+			audioBufferOutput.samples[i] = std::sinf((phase + phaseOffset) * twoPi);
 			
 			phase += phaseStep;
-			phase = std::fmod(phase, 1.0);
+			phase = std::fmodf(phase, 1.f);
 		}
 	}
 };
@@ -879,7 +897,18 @@ struct AudioNodeMix : AudioNodeBase
 		
 		if (audioBufferA == nullptr || audioBufferB == nullptr)
 		{
-			audioBufferOutput.setZero();
+			if (audioBufferA != nullptr)
+			{
+				audioBufferOutput.setMul(*audioBufferA, *gainA);
+			}
+			else if (audioBufferB != nullptr)
+			{
+				audioBufferOutput.setMul(*audioBufferB, *gainB);
+			}
+			else
+			{
+				audioBufferOutput.setZero();
+			}
 		}
 		else
 		{
@@ -901,10 +930,111 @@ struct AudioNodeMix : AudioNodeBase
 	}
 };
 
+struct AudioNodeMapRange : AudioNodeBase
+{
+	enum Input
+	{
+		kInput_Value,
+		kInput_InMin,
+		kInput_InMax,
+		kInput_OutMin,
+		kInput_OutMax,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Result,
+		kOutput_COUNT
+	};
+	
+	AudioValue resultOutput;
+	
+	AudioNodeMapRange()
+		: AudioNodeBase()
+		, resultOutput()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Value, kAudioPlugType_AudioValue);
+		addInput(kInput_InMin, kAudioPlugType_AudioValue);
+		addInput(kInput_InMax, kAudioPlugType_AudioValue);
+		addInput(kInput_OutMin, kAudioPlugType_AudioValue);
+		addInput(kInput_OutMax, kAudioPlugType_AudioValue);
+		addOutput(kOutput_Result, kAudioPlugType_AudioValue, &resultOutput);
+	}
+	
+	virtual void draw()
+	{
+		const AudioValue * value = getInputAudioValue(kInput_Value, &AudioValue::Zero);
+		const AudioValue * inMin = getInputAudioValue(kInput_InMin, &AudioValue::Zero);
+		const AudioValue * inMax = getInputAudioValue(kInput_InMax, &AudioValue::One);
+		const AudioValue * outMin = getInputAudioValue(kInput_OutMin, &AudioValue::Zero);
+		const AudioValue * outMax = getInputAudioValue(kInput_OutMax, &AudioValue::One);
+		
+		const bool scalarRange =
+			inMin->isScalar &&
+			inMax->isScalar &&
+			outMin->isScalar &&
+			outMax->isScalar;
+		
+		if (scalarRange)
+		{
+			const float _inMin = inMin->getValue(0);
+			const float _inMax = inMax->getValue(0);
+			const float _outMin = outMin->getValue(0);
+			const float _outMax = outMax->getValue(0);
+			const float scale = 1.f / (_inMax - _inMin);
+			
+			if (value->isScalar)
+			{
+				const float t2 = (value->getValue(0) - _inMin) * scale;
+				const float t1 = 1.f - t2;
+				const float result = t1 * _outMin + t2 * _outMax;
+				
+				resultOutput.setScalar(result);
+			}
+			else
+			{
+				resultOutput.setVector();
+				
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+				{
+					const float t2 = (value->samples[i] - _inMin) * scale;
+					const float t1 = 1.f - t2;
+					const float result = t1 * _outMin + t2 * _outMax;
+					
+					resultOutput.samples[i] = result;
+				}
+			}
+		}
+		else
+		{
+			resultOutput.setVector();
+			
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			{
+				const float _inMin = inMin->getValue(i);
+				const float _inMax = inMax->getValue(i);
+				const float _outMin = outMin->getValue(i);
+				const float _outMax = outMax->getValue(i);
+				const float scale = 1.f / (_inMax - _inMin);
+				const float _value = value->getValue(i);
+				
+				const float t2 = (_value - _inMin) * scale;
+				const float t1 = 1.f - t2;
+				const float result = t1 * _outMin + t2 * _outMax;
+				
+				resultOutput.samples[i] = result;
+			}
+		}
+	}
+};
+
 struct AudioNodeTime : AudioNodeBase
 {
 	enum Input
 	{
+		kInput_FineGrained,
 		kInput_COUNT
 	};
 	
@@ -924,17 +1054,115 @@ struct AudioNodeTime : AudioNodeBase
 		, resultOutput()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_FineGrained, kAudioPlugType_Bool);
 		addOutput(kOutput_Result, kAudioPlugType_AudioValue, &resultOutput);
 	}
 	
 	virtual void draw()
 	{
-		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		const bool fineGrained = getInputBool(kInput_FineGrained, true);
+		
+		if (fineGrained)
 		{
-			resultOutput.samples[i] = time;
+			resultOutput.setVector();
 			
-			time += 1.0 / SAMPLE_RATE;
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			{
+				resultOutput.samples[i] = time;
+				
+				time += 1.0 / SAMPLE_RATE;
+			}
 		}
+		else
+		{
+			resultOutput.setScalar(time);
+			
+			time += AUDIO_UPDATE_SIZE / double(SAMPLE_RATE);
+		}
+	}
+};
+
+struct AudioNodePhase : AudioNodeBase
+{
+	enum Input
+	{
+		kInput_FineGrained,
+		kInput_Frequency,
+		kInput_PhaseOffset,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Result,
+		kOutput_COUNT
+	};
+	
+	float phase;
+	
+	AudioValue resultOutput;
+	
+	AudioNodePhase()
+		: AudioNodeBase()
+		, phase(0.0)
+		, resultOutput()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_FineGrained, kAudioPlugType_Bool);
+		addInput(kInput_Frequency, kAudioPlugType_AudioValue);
+		addInput(kInput_PhaseOffset, kAudioPlugType_AudioValue);
+		addOutput(kOutput_Result, kAudioPlugType_AudioValue, &resultOutput);
+	}
+	
+	virtual void draw()
+	{
+		const bool fineGrained = getInputBool(kInput_FineGrained, true);
+		const AudioValue * frequency = getInputAudioValue(kInput_Frequency, &AudioValue::Zero);
+		const AudioValue * phaseOffset = getInputAudioValue(kInput_PhaseOffset, &AudioValue::Zero);
+		
+		const bool scalarInputs = frequency->isScalar && phaseOffset->isScalar;
+		
+		if (fineGrained)
+		{
+			resultOutput.setVector();
+			
+			if (scalarInputs)
+			{
+				const float _frequency = frequency->getValue(0);
+				const float _phaseOffset = phaseOffset->getValue(0);
+				const float phaseStep = _frequency / SAMPLE_RATE;
+				
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+				{
+					resultOutput.samples[i] = phase + _phaseOffset;
+					
+					phase += phaseStep;
+				}
+			}
+			else
+			{
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+				{
+					const float _frequency = frequency->getValue(i);
+					const float _phaseOffset = phaseOffset->getValue(i);
+					
+					resultOutput.samples[i] = phase + _phaseOffset;
+					
+					phase += _frequency / SAMPLE_RATE;
+				}
+			}
+		}
+		else
+		{
+			const float _frequency = frequency->getValue(0);
+			const float _phaseOffset = phaseOffset->getValue(0);
+			
+			resultOutput.setScalar(phase + _phaseOffset);
+			
+			phase += _frequency / SAMPLE_RATE * AUDIO_UPDATE_SIZE;
+		}
+		
+		phase = std::fmodf(phase, 1.f);
 	}
 };
 
@@ -966,10 +1194,11 @@ struct AudioNodeMathSine : AudioNodeBase
 	virtual void draw()
 	{
 		const AudioValue * value = getInputAudioValue(kInput_Value, &AudioValue::Zero);
+		const float twoPi = 2.f * M_PI;
 		
 		if (value->isScalar)
 		{
-			resultOutput.setScalar(std::sin(value->samples[0]));
+			resultOutput.setScalar(std::sinf(value->samples[0] * twoPi));
 		}
 		else
 		{
@@ -977,7 +1206,7 @@ struct AudioNodeMathSine : AudioNodeBase
 			
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{
-				resultOutput.samples[i] = std::sin(value->samples[i]);
+				resultOutput.samples[i] = std::sinf(value->samples[i] * twoPi);
 			}
 		}
 	}

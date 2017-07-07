@@ -64,6 +64,9 @@ void AudioGraph::destroy()
 	{
 		switch (i.type)
 		{
+		case ValueToFree::kType_Bool:
+			delete (bool*)i.mem;
+			break;
 		case ValueToFree::kType_Int:
 			delete (int*)i.mem;
 			break;
@@ -110,7 +113,17 @@ void AudioGraph::destroy()
 
 void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & inputValue)
 {
-	if (input.type == kAudioPlugType_Int)
+	if (input.type == kAudioPlugType_Bool)
+	{
+		bool * value = new bool();
+		
+		*value = Parse::Bool(inputValue);
+		
+		input.connectTo(value, kAudioPlugType_Bool);
+		
+		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_Bool, value));
+	}
+	else if (input.type == kAudioPlugType_Int)
 	{
 		int * value = new int();
 		
