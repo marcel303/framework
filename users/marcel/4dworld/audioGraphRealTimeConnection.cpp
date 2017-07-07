@@ -736,6 +736,11 @@ int AudioRealTimeConnection::linkIsActive(const GraphLinkId linkId)
 	return false;
 }
 
+int AudioRealTimeConnection::getNodeCpuHeatMax() const
+{
+	return 1000 * 2;
+}
+
 int AudioRealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const
 {
 		if (isLoading)
@@ -753,5 +758,5 @@ int AudioRealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const
 	
 	auto node = nodeItr->second;
 	
-	return node->tickTimeAvg;
+	return node->tickTimeAvg + node->drawTimeAvg;
 }

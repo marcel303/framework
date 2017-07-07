@@ -1,3 +1,30 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #pragma once
 
 #include "audioProfiling.h"
@@ -623,26 +650,34 @@ struct AudioNodeSourcePcm : AudioNodeBase
 	enum Input
 	{
 		kInput_PcmData,
+		kInput_RangeBegin,
+		kInput_RangeLength,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
 		kOutput_AudioBuffer,
+		kOutput_Length,
 		kOutput_COUNT
 	};
 	
 	AudioSourcePcm audioSource;
 	AudioBuffer audioBufferOutput;
+	float lengthOutput;
 	
 	AudioNodeSourcePcm()
 		: AudioNodeBase()
 		, audioSource()
 		, audioBufferOutput()
+		, lengthOutput(0.f)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_PcmData, kAudioPlugType_PcmData);
+		addInput(kInput_RangeBegin, kAudioPlugType_AudioValue);
+		addInput(kInput_RangeLength, kAudioPlugType_AudioValue);
 		addOutput(kOutput_AudioBuffer, kAudioPlugType_AudioBuffer, &audioBufferOutput);
+		addOutput(kOutput_Length, kAudioPlugType_Float, &lengthOutput);
 		
 		audioSource.play();
 	}
@@ -650,10 +685,33 @@ struct AudioNodeSourcePcm : AudioNodeBase
 	virtual void tick(const float dt) override
 	{
 		const PcmData * pcmData = getInputPcmData(kInput_PcmData);
+		const AudioValue * rangeBegin = getInputAudioValue(kInput_RangeBegin, nullptr);
+		const AudioValue * rangeLength = getInputAudioValue(kInput_RangeLength, nullptr);
 		
 		if (pcmData != audioSource.pcmData)
 		{
 			audioSource.init(pcmData, 0);
+		}
+		
+		if (rangeBegin == nullptr || rangeLength == nullptr)
+		{
+			audioSource.clearRange();
+		}
+		else
+		{
+			const int _rangeBegin = rangeBegin->getValue(0) * SAMPLE_RATE;
+			const int _rangeLength = rangeLength->getValue(0) * SAMPLE_RATE;
+			
+			audioSource.setRange(_rangeBegin, _rangeLength);
+		}
+		
+		if (pcmData == nullptr)
+		{
+			lengthOutput = 0.f;
+		}
+		else
+		{
+			lengthOutput = pcmData->numSamples / float(SAMPLE_RATE);
 		}
 	}
 	
@@ -1035,6 +1093,8 @@ struct AudioNodeTime : AudioNodeBase
 	enum Input
 	{
 		kInput_FineGrained,
+		kInput_Scale,
+		kInput_Offset,
 		kInput_COUNT
 	};
 	
@@ -1055,12 +1115,16 @@ struct AudioNodeTime : AudioNodeBase
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_FineGrained, kAudioPlugType_Bool);
+		addInput(kInput_Scale, kAudioPlugType_Float);
+		addInput(kInput_Offset, kAudioPlugType_Float);
 		addOutput(kOutput_Result, kAudioPlugType_AudioValue, &resultOutput);
 	}
 	
 	virtual void draw()
 	{
 		const bool fineGrained = getInputBool(kInput_FineGrained, true);
+		const float scale = getInputFloat(kInput_Scale, 1.f);
+		const float offset = getInputFloat(kInput_Offset, 0.f);
 		
 		if (fineGrained)
 		{
@@ -1068,14 +1132,14 @@ struct AudioNodeTime : AudioNodeBase
 			
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{
-				resultOutput.samples[i] = time;
+				resultOutput.samples[i] = time * scale + offset;
 				
 				time += 1.0 / SAMPLE_RATE;
 			}
 		}
 		else
 		{
-			resultOutput.setScalar(time);
+			resultOutput.setScalar(time * scale + offset);
 			
 			time += AUDIO_UPDATE_SIZE / double(SAMPLE_RATE);
 		}

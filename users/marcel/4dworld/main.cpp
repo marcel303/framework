@@ -1,3 +1,30 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #include "audioGraph.h"
 #include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
@@ -5,6 +32,7 @@
 #include "graph.h"
 #include "portaudio/portaudio.h"
 #include "soundmix.h"
+#include "../libparticle/ui.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -249,24 +277,50 @@ int main(int argc, char * argv[])
 {
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
+		initUi();
+		
 		mutex = SDL_CreateMutex();
 		
 		GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
 		
 		{
-			GraphEdit_ValueTypeDefinition floatType;
-			floatType.typeName = "float";
-			floatType.editor = "textbox_float";
-			floatType.visualizer = "graph";
-			typeDefinitionLibrary.valueTypeDefinitions[floatType.typeName] = floatType;
+			GraphEdit_ValueTypeDefinition typeDefinition;
+			typeDefinition.typeName = "bool";
+			typeDefinition.editor = "checkbox";
+			typeDefinition.visualizer = "graph";
+			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 		}
 		
 		{
-			GraphEdit_ValueTypeDefinition stringType;
-			stringType.typeName = "string";
-			stringType.editor = "textbox";
-			stringType.visualizer = "graph";
-			typeDefinitionLibrary.valueTypeDefinitions[stringType.typeName] = stringType;
+			GraphEdit_ValueTypeDefinition typeDefinition;
+			typeDefinition.typeName = "int";
+			typeDefinition.editor = "textbox_int";
+			typeDefinition.visualizer = "graph";
+			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
+		}
+		
+		{
+			GraphEdit_ValueTypeDefinition typeDefinition;
+			typeDefinition.typeName = "float";
+			typeDefinition.editor = "textbox_float";
+			typeDefinition.visualizer = "graph";
+			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
+		}
+		
+		{
+			GraphEdit_ValueTypeDefinition typeDefinition;
+			typeDefinition.typeName = "string";
+			typeDefinition.editor = "textbox";
+			typeDefinition.visualizer = "graph";
+			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
+		}
+		
+		{
+			GraphEdit_ValueTypeDefinition typeDefinition;
+			typeDefinition.typeName = "audioValue";
+			typeDefinition.editor = "textbox_float";
+			typeDefinition.visualizer = "graph";
+			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 		}
 		
 		createAudioEnumTypeDefinitions(typeDefinitionLibrary, g_audioEnumTypeRegistrationList);
@@ -353,10 +407,14 @@ int main(int argc, char * argv[])
 			framework.endDraw();
 		} while (stop == false);
 		
+		Font("calibri.ttf").saveCache();
+		
 		pa.shut();
 		
 		SDL_DestroyMutex(mutex);
 		mutex = nullptr;
+		
+		shutUi();
 		
 		framework.shutdown();
 	}

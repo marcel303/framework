@@ -1,7 +1,3 @@
-#include "audioNodeBase.h"
-
-//
-
 /*
 	Copyright (C) 2017 Marcel Smit
 	marcel303@gmail.com
@@ -219,7 +215,7 @@ void AudioNodeBase::traverseTick(const int traversalId, const float dt)
 	
 	//
 	
-	tickTimeAvg = (tickTimeAvg * 99 + (t2 - t1)) / 100;
+	tickTimeAvg = (tickTimeAvg * 99 + (t2 - t1) * 1 * (SAMPLE_RATE / AUDIO_UPDATE_SIZE)) / 100;
 }
 
 void AudioNodeBase::traverseDraw(const int traversalId)
@@ -243,7 +239,7 @@ void AudioNodeBase::traverseDraw(const int traversalId)
 	
 	//
 	
-	drawTimeAvg = (drawTimeAvg * 95 + (t2 - t1) * 5) / 100;
+	drawTimeAvg = (drawTimeAvg * 95 + (t2 - t1) * 5 * (SAMPLE_RATE / AUDIO_UPDATE_SIZE)) / 100;
 }
 
 void AudioNodeBase::trigger(const int outputSocketIndex)
@@ -447,7 +443,10 @@ AUDIO_NODE_TYPE(audioSourcePcm, AudioNodeSourcePcm)
 	typeName = "audio.pcm";
 	
 	in("pcm", "pcmData");
+	in("rangeBegin", "audioValue");
+	in("rangeLength", "audioValue", "-1");
 	out("audio", "audioBuffer");
+	out("duration", "float");
 }
 
 AUDIO_NODE_TYPE(audioSourceMix, AudioNodeSourceMix)
@@ -509,6 +508,8 @@ AUDIO_NODE_TYPE(time, AudioNodeTime)
 	typeName = "time";
 	
 	in("fine", "bool", "1");
+	in("scale", "float", "1");
+	in("offset", "float");
 	out("time", "audioValue");
 }
 
