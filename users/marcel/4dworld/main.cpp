@@ -287,7 +287,6 @@ int main(int argc, char * argv[])
 			GraphEdit_ValueTypeDefinition typeDefinition;
 			typeDefinition.typeName = "bool";
 			typeDefinition.editor = "checkbox";
-			typeDefinition.visualizer = "graph";
 			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 		}
 		
@@ -295,7 +294,7 @@ int main(int argc, char * argv[])
 			GraphEdit_ValueTypeDefinition typeDefinition;
 			typeDefinition.typeName = "int";
 			typeDefinition.editor = "textbox_int";
-			typeDefinition.visualizer = "graph";
+			typeDefinition.visualizer = "valueplotter";
 			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 		}
 		
@@ -303,7 +302,7 @@ int main(int argc, char * argv[])
 			GraphEdit_ValueTypeDefinition typeDefinition;
 			typeDefinition.typeName = "float";
 			typeDefinition.editor = "textbox_float";
-			typeDefinition.visualizer = "graph";
+			typeDefinition.visualizer = "valueplotter";
 			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 		}
 		
@@ -311,7 +310,6 @@ int main(int argc, char * argv[])
 			GraphEdit_ValueTypeDefinition typeDefinition;
 			typeDefinition.typeName = "string";
 			typeDefinition.editor = "textbox";
-			typeDefinition.visualizer = "graph";
 			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 		}
 		
@@ -319,7 +317,7 @@ int main(int argc, char * argv[])
 			GraphEdit_ValueTypeDefinition typeDefinition;
 			typeDefinition.typeName = "audioValue";
 			typeDefinition.editor = "textbox_float";
-			typeDefinition.visualizer = "graph";
+			typeDefinition.visualizer = "valueplotter";
 			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 		}
 		

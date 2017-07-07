@@ -578,6 +578,7 @@ struct AudioNodeDisplay : AudioNodeBase
 	enum Input
 	{
 		kInput_AudioBuffer,
+		kInput_Gain,
 		kInput_COUNT
 	};
 	
@@ -594,6 +595,7 @@ struct AudioNodeDisplay : AudioNodeBase
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_AudioBuffer, kAudioPlugType_AudioBuffer);
+		addInput(kInput_Gain, kAudioPlugType_Float);
 	}
 	
 	virtual void draw() override
@@ -601,6 +603,7 @@ struct AudioNodeDisplay : AudioNodeBase
 		if (outputBuffer != nullptr)
 		{
 			const AudioBuffer * audioBuffer = getInputAudioBuffer(kInput_AudioBuffer);
+			const float gain = getInputFloat(kInput_Gain, 1.f);
 			
 			if (audioBuffer == nullptr)
 			{
@@ -608,7 +611,7 @@ struct AudioNodeDisplay : AudioNodeBase
 			}
 			else
 			{
-				outputBuffer->set(*audioBuffer);
+				outputBuffer->setMul(*audioBuffer, gain);
 			}
 		}
 	}

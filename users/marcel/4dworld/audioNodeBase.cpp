@@ -428,6 +428,7 @@ AUDIO_NODE_TYPE(display, AudioNodeDisplay)
 	typeName = "display";
 	
 	in("audio", "audioBuffer");
+	in("gain", "float", "1");
 }
 
 AUDIO_NODE_TYPE(pcmData, AudioNodePcmData)
