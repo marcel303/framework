@@ -754,6 +754,11 @@ struct GraphEdit_RealTimeConnection
 		return kActivity_Inactive;
 	}
 	
+	virtual int getNodeCpuHeatMax() const
+	{
+		return 1000;
+	}
+	
 	virtual int getNodeCpuTimeUs(const GraphNodeId nodeId) const
 	{
 		return 0;

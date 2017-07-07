@@ -1100,6 +1100,11 @@ int RealTimeConnection::linkIsActive(const GraphLinkId linkId)
 	return false;
 }
 
+int RealTimeConnection::getNodeCpuHeatMax() const
+{
+	return 1000 * (1000 / 30);
+}
+
 int RealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const
 {
 		if (isLoading)

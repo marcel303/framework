@@ -4288,7 +4288,7 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 	if (editorOptions.showCpuHeat && realTimeConnection != nullptr && node.isEnabled && node.nodeType == kGraphNodeType_Regular)
 	{
 		const int timeUs = realTimeConnection->getNodeCpuTimeUs(node.id);
-		const float t = timeUs / 1000.0 / 33.0;
+		const float t = timeUs / float(realTimeConnection->getNodeCpuHeatMax());
 		
 		ParticleColor particleColor;
 		editorOptions.cpuHeatColors.sample(t, true, particleColor);
