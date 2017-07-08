@@ -22,6 +22,8 @@
 	#define ALIGN16
 #endif
 
+#define HACK2D 1
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 
@@ -361,6 +363,13 @@ bool HRIRSet::loadMitDatabase(const char * path)
 		{
 			continue;
 		}
+	
+	#if HACK2D
+		if (elevation != 0)
+		{
+			continue;
+		}
+	#endif
 		
 		SoundData * soundData = loadSound(filename.c_str());
 		
@@ -1396,12 +1405,16 @@ void testHrtf()
 			RotateZ(Calc::DegToRad(90)).
 			RotateX(Calc::DegToRad(180));
 		
+	#if HACK2D
+		const Mat4x4 object = Mat4x4(true);
+	#else
 		const Mat4x4 object =
 			Mat4x4(true).
 			RotateZ(Calc::DegToRad(framework.time * 9.01f)).
 			RotateY(Calc::DegToRad(framework.time * 7.89f)).
 			RotateX(Calc::DegToRad(framework.time * 4.56f));
-		
+	#endif
+	
 		const Mat4x4 objectToView =
 			worldToView *
 			object;
@@ -1418,7 +1431,11 @@ void testHrtf()
 		
 		//
 		
+	#if HACK2D
+		const int kMaxSampleLocations = 2;
+	#else
 		const int kMaxSampleLocations = 3;
+	#endif
 		
 		HRIRSampleLocationAndDistance sampleLocations[kMaxSampleLocations];
 

@@ -25,6 +25,7 @@ extern void testImageCpuDelayLine();
 extern void testXmm();
 #endif
 extern void testHqPrimitives();
+extern void testHrtf();
 
 //
 
@@ -407,6 +408,8 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 		testImageCpuDelayLine();
 	if (doButton("DrPr", "Drawing Primitives"))
 		testHqPrimitives();
+	if (doButton("HRTF", "Binaural Sound"))
+		testHrtf();
 	if (doButton("IRm", "Impulse-Response"))
 		testImpulseResponseMeasurement();
 	if (doButton("MSDF", "MSDFGEN"))
