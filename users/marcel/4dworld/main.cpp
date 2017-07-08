@@ -136,7 +136,7 @@ bool PortAudioObject::initImpl(AudioSource * audioSource)
 		return false;
 	}
 	
-	outputParameters.channelCount = 1;
+	outputParameters.channelCount = 2;
 	outputParameters.sampleFormat = paFloat32;
 	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
 	outputParameters.hostApiSpecificStreamInfo = nullptr;
@@ -261,10 +261,16 @@ struct AudioSourceAudioGraph : AudioSource
 			SDL_LockMutex(mutex);
 			{
 				Assert(numSamples == AUDIO_UPDATE_SIZE);
-				AudioBuffer & audioBuffer = *(AudioBuffer*)samples;
+				AudioOutputChannel channels[2];
+				
+				channels[0].samples = samples + 0;
+				channels[0].stride = 2;
+				
+				channels[1].samples = samples + 1;
+				channels[1].stride = 2;
 				
 				audioGraph->tick(AUDIO_UPDATE_SIZE / double(SAMPLE_RATE));
-				audioGraph->draw(audioBuffer);
+				audioGraph->draw(channels, 2);
 			}
 			SDL_UnlockMutex(mutex);
 		}

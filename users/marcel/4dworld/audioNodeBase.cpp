@@ -427,7 +427,8 @@ AUDIO_NODE_TYPE(display, AudioNodeDisplay)
 {
 	typeName = "display";
 	
-	in("audio", "audioBuffer");
+	in("audioL", "audioBuffer");
+	in("audioR", "audioBuffer");
 	in("gain", "float", "1");
 }
 

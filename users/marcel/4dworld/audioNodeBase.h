@@ -573,11 +573,24 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 
 //
 
+struct AudioOutputChannel
+{
+	float * samples;
+	int stride;
+	
+	AudioOutputChannel()
+		: samples(nullptr)
+		, stride(0)
+	{
+	}
+};
+
 struct AudioNodeDisplay : AudioNodeBase
 {
 	enum Input
 	{
-		kInput_AudioBuffer,
+		kInput_AudioBufferL,
+		kInput_AudioBufferR,
 		kInput_Gain,
 		kInput_COUNT
 	};
@@ -587,31 +600,55 @@ struct AudioNodeDisplay : AudioNodeBase
 		kOutput_COUNT
 	};
 	
-	AudioBuffer * outputBuffer;
+	AudioOutputChannel * outputChannelL;
+	AudioOutputChannel * outputChannelR;
 	
 	AudioNodeDisplay()
 		: AudioNodeBase()
-		, outputBuffer(nullptr)
+		, outputChannelL(nullptr)
+		, outputChannelR(nullptr)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_AudioBuffer, kAudioPlugType_AudioBuffer);
+		addInput(kInput_AudioBufferL, kAudioPlugType_AudioBuffer);
+		addInput(kInput_AudioBufferR, kAudioPlugType_AudioBuffer);
 		addInput(kInput_Gain, kAudioPlugType_Float);
 	}
 	
 	virtual void draw() override
 	{
-		if (outputBuffer != nullptr)
+		const AudioBuffer * audioBufferL = getInputAudioBuffer(kInput_AudioBufferL);
+		const AudioBuffer * audioBufferR = getInputAudioBuffer(kInput_AudioBufferR);
+		const float gain = getInputFloat(kInput_Gain, 1.f);
+	
+		if (outputChannelL != nullptr)
 		{
-			const AudioBuffer * audioBuffer = getInputAudioBuffer(kInput_AudioBuffer);
-			const float gain = getInputFloat(kInput_Gain, 1.f);
-			
-			if (audioBuffer == nullptr)
+			if (audioBufferL == nullptr)
 			{
-				outputBuffer->setZero();
+				float * channelPtr = outputChannelL->samples;
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += outputChannelL->stride)
+					*channelPtr = 0;
 			}
 			else
 			{
-				outputBuffer->setMul(*audioBuffer, gain);
+				float * channelPtr = outputChannelL->samples;
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += outputChannelL->stride)
+					*channelPtr = audioBufferL->samples[i] * gain;
+			}
+		}
+		
+		if (outputChannelR != nullptr)
+		{
+			if (audioBufferR == nullptr)
+			{
+				float * channelPtr = outputChannelR->samples;
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += outputChannelR->stride)
+					*channelPtr = 0;
+			}
+			else
+			{
+				float * channelPtr = outputChannelR->samples;
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += outputChannelR->stride)
+					*channelPtr = audioBufferR->samples[i] * gain;
 			}
 		}
 	}
@@ -1277,4 +1314,18 @@ struct AudioNodeMathSine : AudioNodeBase
 			}
 		}
 	}
+};
+
+// todo : use delay line object found in vfxNodes and copy most stuff from vfxNodeDelayLine
+struct AudioNodeDelay
+{
+};
+
+// perform the computation needed to get the gain values for two audio sources, given various parameters
+struct AudioNodePan2
+{
+};
+
+struct AudioNodeBinauralize
+{
 };

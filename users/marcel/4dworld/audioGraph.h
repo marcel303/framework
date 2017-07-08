@@ -41,6 +41,7 @@
 struct AudioBuffer;
 struct AudioGraph;
 struct AudioNodeBase;
+struct AudioOutputChannel;
 struct AudioPlug;
 
 extern AudioGraph * g_currentAudioGraph;
@@ -95,7 +96,7 @@ struct AudioGraph
 	void connectToInputLiteral(AudioPlug & input, const std::string & inputValue);
 	
 	void tick(const float dt);
-	void draw(AudioBuffer & outputBuffer) const;
+	void draw(AudioOutputChannel * outputChannels, const int numOutputChannels) const;
 };
 
 //
