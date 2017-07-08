@@ -42,26 +42,50 @@ AudioTriggerData::AudioTriggerData()
 
 //
 
-void AudioBuffer::setZero()
+AudioFloat AudioFloat::Zero(0.0);
+AudioFloat AudioFloat::One(1.0);
+
+void AudioFloat::setZero()
 {
-	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-		samples[i] = 0.f;
+	setScalar(0.f);
 }
 
-void AudioBuffer::set(const AudioBuffer & other)
+void AudioFloat::set(const AudioFloat & other)
 {
-	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-		samples[i] = other.samples[i];
+	if (other.isScalar)
+	{
+		setScalar(other.getScalar());
+	}
+	else
+	{
+		setVector();
+		
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			samples[i] = other.samples[i];
+	}
 }
 
-void AudioBuffer::setMul(const AudioBuffer & other, const float gain)
+void AudioFloat::setMul(const AudioFloat & other, const float gain)
 {
+	other.expand();
+	
+	//
+	
+	setVector();
+	
 	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		samples[i] = other.samples[i] * gain;
 }
 
-void AudioBuffer::setMul(const AudioBuffer & other, const AudioValue & gain)
+void AudioFloat::setMul(const AudioFloat & other, const AudioFloat & gain)
 {
+	other.expand();
+	gain.expand();
+	
+	//
+	
+	setVector();
+	
 	if (gain.isScalar)
 	{
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
@@ -74,20 +98,38 @@ void AudioBuffer::setMul(const AudioBuffer & other, const AudioValue & gain)
 	}
 }
 
-void AudioBuffer::add(const AudioBuffer & other)
+void AudioFloat::add(const AudioFloat & other)
 {
+	other.expand();
+	
+	//
+	
+	expand();
+	
 	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		samples[i] += other.samples[i];
 }
 
-void AudioBuffer::addMul(const AudioBuffer & other, const float gain)
+void AudioFloat::addMul(const AudioFloat & other, const float gain)
 {
+	other.expand();
+	
+	//
+	
+	expand();
+	
 	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		samples[i] += other.samples[i] * gain;
 }
 
-void AudioBuffer::addMul(const AudioBuffer & other, const AudioValue & gain)
+void AudioFloat::addMul(const AudioFloat & other, const AudioFloat & gain)
 {
+	other.expand();
+	
+	//
+	
+	expand();
+	
 	if (gain.isScalar)
 	{
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
@@ -100,14 +142,26 @@ void AudioBuffer::addMul(const AudioBuffer & other, const AudioValue & gain)
 	}
 }
 
-void AudioBuffer::mulMul(const AudioBuffer & other, const float gain)
+void AudioFloat::mulMul(const AudioFloat & other, const float gain)
 {
+	other.expand();
+	
+	//
+	
+	expand();
+	
 	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		samples[i] *= other.samples[i] * gain;
 }
 
-void AudioBuffer::mulMul(const AudioBuffer & other, const AudioValue & gain)
+void AudioFloat::mulMul(const AudioFloat & other, const AudioFloat & gain)
 {
+	other.expand();
+	
+	//
+	
+	expand();
+	
 	if (gain.isScalar)
 	{
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
@@ -119,11 +173,6 @@ void AudioBuffer::mulMul(const AudioBuffer & other, const AudioValue & gain)
 			samples[i] *= other.samples[i] * gain.samples[i];
 	}
 }
-
-//
-
-AudioValue AudioValue::Zero(0.0);
-AudioValue AudioValue::One(1.0);
 
 //
 
@@ -427,8 +476,8 @@ AUDIO_NODE_TYPE(display, AudioNodeDisplay)
 {
 	typeName = "display";
 	
-	in("audioL", "audioBuffer");
-	in("audioR", "audioBuffer");
+	in("audioL", "audioValue");
+	in("audioR", "audioValue");
 	in("gain", "float", "1");
 }
 
@@ -447,7 +496,7 @@ AUDIO_NODE_TYPE(audioSourcePcm, AudioNodeSourcePcm)
 	in("pcm", "pcmData");
 	in("rangeBegin", "audioValue");
 	in("rangeLength", "audioValue", "-1");
-	out("audio", "audioBuffer");
+	out("audio", "audioValue");
 	out("duration", "float");
 }
 
@@ -455,24 +504,31 @@ AUDIO_NODE_TYPE(audioSourceMix, AudioNodeSourceMix)
 {
 	typeName = "audio.mix";
 	
-	in("source1", "audioBuffer");
+	in("source1", "audioValue");
 	in("gain1", "audioValue", "1");
-	in("source2", "audioBuffer");
+	in("source2", "audioValue");
 	in("gain2", "audioValue", "1");
-	in("source3", "audioBuffer");
+	in("source3", "audioValue");
 	in("gain3", "audioValue", "1");
-	in("source4", "audioBuffer");
+	in("source4", "audioValue");
 	in("gain4", "audioValue", "1");
-	out("audio", "audioBuffer");
+	out("audio", "audioValue");
+}
+
+AUDIO_ENUM_TYPE(audioSineMode)
+{
+	elem("signed");
+	elem("unsigned");
 }
 
 AUDIO_NODE_TYPE(audioSourceSine, AudioNodeSourceSine)
 {
 	typeName = "audio.sine";
 	
+	inEnum("mode", "audioSineMode");
 	in("frequency", "float");
 	in("phase", "float");
-	out("audio", "audioBuffer");
+	out("audio", "audioValue");
 }
 
 AUDIO_ENUM_TYPE(audioMixMode)
@@ -486,11 +542,11 @@ AUDIO_NODE_TYPE(audioMix, AudioNodeMix)
 	typeName = "mix";
 	
 	inEnum("mode", "audioMixMode");
-	in("sourceA", "audioBuffer");
+	in("sourceA", "audioValue");
 	in("gainA", "audioValue", "1");
-	in("sourceB", "audioBuffer");
+	in("sourceB", "audioValue");
 	in("gainB", "audioValue", "1");
-	out("audio", "audioBuffer");
+	out("audio", "audioValue");
 }
 
 AUDIO_NODE_TYPE(mapRange, AudioNodeMapRange)

@@ -77,7 +77,7 @@ void AudioGraph::destroy()
 			delete (std::string*)i.mem;
 			break;
 		case ValueToFree::kType_AudioValue:
-			delete (AudioValue*)i.mem;
+			delete (AudioFloat*)i.mem;
 			break;
 		default:
 			Assert(false);
@@ -153,13 +153,13 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 		
 		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_String, value));
 	}
-	else if (input.type == kAudioPlugType_AudioValue)
+	else if (input.type == kAudioPlugType_FloatVec)
 	{
 		const float scalarValue = Parse::Float(inputValue);
 		
-		AudioValue * value = new AudioValue(scalarValue);
+		AudioFloat * value = new AudioFloat(scalarValue);
 		
-		input.connectTo(value, kAudioPlugType_AudioValue);
+		input.connectTo(value, kAudioPlugType_FloatVec);
 		
 		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_AudioValue, value));
 	}

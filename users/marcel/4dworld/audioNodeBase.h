@@ -37,8 +37,7 @@
 struct GraphEdit_TypeDefinitionLibrary;
 struct GraphNode;
 
-struct AudioBuffer;
-struct AudioValue;
+struct AudioFloat;
 
 enum AudioTriggerDataType
 {
@@ -104,37 +103,25 @@ struct AudioTriggerData
 	}
 };
 
-struct AudioBuffer
+struct AudioFloat
 {
-	ALIGN16 float samples[AUDIO_UPDATE_SIZE];
-	
-	void setZero();
-	void set(const AudioBuffer & other);
-	void setMul(const AudioBuffer & other, const float gain);
-	void setMul(const AudioBuffer & other, const AudioValue & gain);
-	void add(const AudioBuffer & other);
-	void addMul(const AudioBuffer & other, const float gain);
-	void addMul(const AudioBuffer & other, const AudioValue & gain);
-	void mulMul(const AudioBuffer & other, const float gain);
-	void mulMul(const AudioBuffer & other, const AudioValue & gain);
-};
-
-struct AudioValue
-{
-	static AudioValue Zero;
-	static AudioValue One;
+	static AudioFloat Zero;
+	static AudioFloat One;
 	
 	bool isScalar;
+	bool isExpanded;
 	
-	float samples[AUDIO_UPDATE_SIZE];
+	ALIGN16 float samples[AUDIO_UPDATE_SIZE];
 	
-	AudioValue()
+	AudioFloat()
 		: isScalar(false)
+		, isExpanded(true)
 	{
 	}
 	
-	AudioValue(const double value)
+	AudioFloat(const float value)
 		: isScalar(true)
+		, isExpanded(false)
 	{
 		samples[0] = value;
 	}
@@ -142,18 +129,56 @@ struct AudioValue
 	void setScalar(const float value)
 	{
 		isScalar = true;
+		isExpanded = false;
+		
 		samples[0] = value;
 	}
 	
 	void setVector()
 	{
 		isScalar = false;
+		isExpanded = true;
+	}
+	
+	float getScalar() const
+	{
+		return samples[0];
 	}
 	
 	float getValue(const int index) const
 	{
 		return isScalar ? samples[0] : samples[index];
 	}
+	
+	void expand() const
+	{
+		AudioFloat * self = const_cast<AudioFloat*>(this);
+		
+		if (isScalar)
+		{
+			if (isExpanded == false)
+			{
+				self->isExpanded = true;
+				
+				for (int i = 1; i < AUDIO_UPDATE_SIZE; ++i)
+					self->samples[i] = samples[0];
+			}
+		}
+		else
+		{
+			Assert(isExpanded);
+		}
+	}
+	
+	void setZero();
+	void set(const AudioFloat & other);
+	void setMul(const AudioFloat & other, const float gain);
+	void setMul(const AudioFloat & other, const AudioFloat & gain);
+	void add(const AudioFloat & other);
+	void addMul(const AudioFloat & other, const float gain);
+	void addMul(const AudioFloat & other, const AudioFloat & gain);
+	void mulMul(const AudioFloat & other, const float gain);
+	void mulMul(const AudioFloat & other, const AudioFloat & gain);
 };
 
 enum AudioPlugType
@@ -163,8 +188,7 @@ enum AudioPlugType
 	kAudioPlugType_Int,
 	kAudioPlugType_Float,
 	kAudioPlugType_String,
-	kAudioPlugType_AudioBuffer,
-	kAudioPlugType_AudioValue,
+	kAudioPlugType_FloatVec,
 	kAudioPlugType_PcmData,
 	kAudioPlugType_Trigger
 };
@@ -220,16 +244,10 @@ struct AudioPlug
 		return *((std::string*)mem);
 	}
 	
-	const AudioBuffer & getAudioBuffer() const
+	const AudioFloat & getAudioFloat() const
 	{
-		Assert(type == kAudioPlugType_AudioBuffer);
-		return *((AudioBuffer*)mem);
-	}
-	
-	const AudioValue & getAudioValue() const
-	{
-		Assert(type == kAudioPlugType_AudioValue);
-		return *((AudioValue*)mem);
+		Assert(type == kAudioPlugType_FloatVec);
+		return *((AudioFloat*)mem);
 	}
 	
 	const PcmData & getPcmData() const
@@ -258,10 +276,10 @@ struct AudioPlug
 		return *((std::string*)mem);
 	}
 	
-	AudioValue & getRwAudioValue()
+	AudioFloat & getRwAudioFloat()
 	{
-		Assert(type == kAudioPlugType_AudioValue);
-		return *((AudioValue*)mem);
+		Assert(type == kAudioPlugType_FloatVec);
+		return *((AudioFloat*)mem);
 	}
 };
 
@@ -412,24 +430,14 @@ struct AudioNodeBase
 			return plug->getString().c_str();
 	}
 	
-	const AudioBuffer * getInputAudioBuffer(const int index) const
-	{
-		const AudioPlug * plug = tryGetInput(index);
-		
-		if (plug == nullptr || !plug->isConnected())
-			return nullptr;
-		else
-			return &plug->getAudioBuffer();
-	}
-	
-	const AudioValue * getInputAudioValue(const int index, const AudioValue * defaultValue) const
+	const AudioFloat * getInputAudioFloat(const int index, const AudioFloat * defaultValue) const
 	{
 		const AudioPlug * plug = tryGetInput(index);
 		
 		if (plug == nullptr || !plug->isConnected())
 			return defaultValue;
 		else
-			return &plug->getAudioValue();
+			return &plug->getAudioFloat();
 	}
 	
 	const PcmData * getInputPcmData(const int index) const
@@ -488,18 +496,18 @@ extern AudioEnumTypeRegistration * g_audioEnumTypeRegistrationList;
 void createAudioEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, AudioEnumTypeRegistration * registrationList);
 
 #define AUDIO_ENUM_TYPE(name) \
-	struct name ## __registration : AudioEnumTypeRegistration \
+	struct name ## __audio_registration : AudioEnumTypeRegistration \
 	{ \
-		name ## __registration() \
+		name ## __audio_registration() \
 		{ \
 			enumName = # name; \
 			init(); \
 		} \
 		void init(); \
 	}; \
-	extern name ## __registration name ## __registrationInstance; \
-	name ## __registration name ## __registrationInstance; \
-	void name ## __registration :: init()
+	extern name ## __audio_registration name ## __audio_registrationInstance; \
+	name ## __audio_registration name ## __audio_registrationInstance; \
+	void name ## __audio_registration :: init()
 
 //
 
@@ -589,8 +597,8 @@ struct AudioNodeDisplay : AudioNodeBase
 {
 	enum Input
 	{
-		kInput_AudioBufferL,
-		kInput_AudioBufferR,
+		kInput_AudioL,
+		kInput_AudioR,
 		kInput_Gain,
 		kInput_COUNT
 	};
@@ -609,46 +617,50 @@ struct AudioNodeDisplay : AudioNodeBase
 		, outputChannelR(nullptr)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_AudioBufferL, kAudioPlugType_AudioBuffer);
-		addInput(kInput_AudioBufferR, kAudioPlugType_AudioBuffer);
+		addInput(kInput_AudioL, kAudioPlugType_FloatVec);
+		addInput(kInput_AudioR, kAudioPlugType_FloatVec);
 		addInput(kInput_Gain, kAudioPlugType_Float);
 	}
 	
 	virtual void draw() override
 	{
-		const AudioBuffer * audioBufferL = getInputAudioBuffer(kInput_AudioBufferL);
-		const AudioBuffer * audioBufferR = getInputAudioBuffer(kInput_AudioBufferR);
+		const AudioFloat * audioL = getInputAudioFloat(kInput_AudioL, nullptr);
+		const AudioFloat * audioR = getInputAudioFloat(kInput_AudioR, nullptr);
 		const float gain = getInputFloat(kInput_Gain, 1.f);
 	
 		if (outputChannelL != nullptr)
 		{
-			if (audioBufferL == nullptr)
+			if (audioL == nullptr)
 			{
 				float * channelPtr = outputChannelL->samples;
 				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += outputChannelL->stride)
-					*channelPtr = 0;
+					*channelPtr = 0.f;
 			}
 			else
 			{
+				audioL->expand();
+				
 				float * channelPtr = outputChannelL->samples;
 				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += outputChannelL->stride)
-					*channelPtr = audioBufferL->samples[i] * gain;
+					*channelPtr = audioL->samples[i] * gain;
 			}
 		}
 		
 		if (outputChannelR != nullptr)
 		{
-			if (audioBufferR == nullptr)
+			if (audioR == nullptr)
 			{
 				float * channelPtr = outputChannelR->samples;
 				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += outputChannelR->stride)
-					*channelPtr = 0;
+					*channelPtr = 0.f;
 			}
 			else
 			{
+				audioR->expand();
+				
 				float * channelPtr = outputChannelR->samples;
 				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += outputChannelR->stride)
-					*channelPtr = audioBufferR->samples[i] * gain;
+					*channelPtr = audioR->samples[i] * gain;
 			}
 		}
 	}
@@ -697,26 +709,26 @@ struct AudioNodeSourcePcm : AudioNodeBase
 	
 	enum Output
 	{
-		kOutput_AudioBuffer,
+		kOutput_Audio,
 		kOutput_Length,
 		kOutput_COUNT
 	};
 	
 	AudioSourcePcm audioSource;
-	AudioBuffer audioBufferOutput;
+	AudioFloat audioOutput;
 	float lengthOutput;
 	
 	AudioNodeSourcePcm()
 		: AudioNodeBase()
 		, audioSource()
-		, audioBufferOutput()
+		, audioOutput()
 		, lengthOutput(0.f)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_PcmData, kAudioPlugType_PcmData);
-		addInput(kInput_RangeBegin, kAudioPlugType_AudioValue);
-		addInput(kInput_RangeLength, kAudioPlugType_AudioValue);
-		addOutput(kOutput_AudioBuffer, kAudioPlugType_AudioBuffer, &audioBufferOutput);
+		addInput(kInput_RangeBegin, kAudioPlugType_FloatVec);
+		addInput(kInput_RangeLength, kAudioPlugType_FloatVec);
+		addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 		addOutput(kOutput_Length, kAudioPlugType_Float, &lengthOutput);
 		
 		audioSource.play();
@@ -725,8 +737,8 @@ struct AudioNodeSourcePcm : AudioNodeBase
 	virtual void tick(const float dt) override
 	{
 		const PcmData * pcmData = getInputPcmData(kInput_PcmData);
-		const AudioValue * rangeBegin = getInputAudioValue(kInput_RangeBegin, nullptr);
-		const AudioValue * rangeLength = getInputAudioValue(kInput_RangeLength, nullptr);
+		const AudioFloat * rangeBegin = getInputAudioFloat(kInput_RangeBegin, nullptr);
+		const AudioFloat * rangeLength = getInputAudioFloat(kInput_RangeLength, nullptr);
 		
 		if (pcmData != audioSource.pcmData)
 		{
@@ -757,7 +769,7 @@ struct AudioNodeSourcePcm : AudioNodeBase
 	
 	virtual void draw() override
 	{
-		audioSource.generate(audioBufferOutput.samples, AUDIO_UPDATE_SIZE);
+		audioSource.generate(audioOutput.samples, AUDIO_UPDATE_SIZE);
 	}
 };
 
@@ -778,48 +790,48 @@ struct AudioNodeSourceMix : AudioNodeBase
 	
 	enum Output
 	{
-		kOutput_AudioBuffer,
+		kOutput_Audio,
 		kOutput_COUNT
 	};
 	
-	AudioBuffer audioBufferOutput;
+	AudioFloat audioOutput;
 	
 	AudioNodeSourceMix()
 		: AudioNodeBase()
-		, audioBufferOutput()
+		, audioOutput()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_Source1, kAudioPlugType_AudioBuffer);
-		addInput(kInput_Gain1, kAudioPlugType_AudioValue);
-		addInput(kInput_Source2, kAudioPlugType_AudioBuffer);
-		addInput(kInput_Gain2, kAudioPlugType_AudioValue);
-		addInput(kInput_Source3, kAudioPlugType_AudioBuffer);
-		addInput(kInput_Gain3, kAudioPlugType_AudioValue);
-		addInput(kInput_Source4, kAudioPlugType_AudioBuffer);
-		addInput(kInput_Gain4, kAudioPlugType_AudioValue);
-		addOutput(kOutput_AudioBuffer, kAudioPlugType_AudioBuffer, &audioBufferOutput);
+		addInput(kInput_Source1, kAudioPlugType_FloatVec);
+		addInput(kInput_Gain1, kAudioPlugType_FloatVec);
+		addInput(kInput_Source2, kAudioPlugType_FloatVec);
+		addInput(kInput_Gain2, kAudioPlugType_FloatVec);
+		addInput(kInput_Source3, kAudioPlugType_FloatVec);
+		addInput(kInput_Gain3, kAudioPlugType_FloatVec);
+		addInput(kInput_Source4, kAudioPlugType_FloatVec);
+		addInput(kInput_Gain4, kAudioPlugType_FloatVec);
+		addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 	}
 	
 	virtual void draw() override
 	{
-		const AudioBuffer * source1 = getInputAudioBuffer(kInput_Source1);
-		const AudioBuffer * source2 = getInputAudioBuffer(kInput_Source2);
-		const AudioBuffer * source3 = getInputAudioBuffer(kInput_Source3);
-		const AudioBuffer * source4 = getInputAudioBuffer(kInput_Source4);
+		const AudioFloat * source1 = getInputAudioFloat(kInput_Source1, nullptr);
+		const AudioFloat * source2 = getInputAudioFloat(kInput_Source2, nullptr);
+		const AudioFloat * source3 = getInputAudioFloat(kInput_Source3, nullptr);
+		const AudioFloat * source4 = getInputAudioFloat(kInput_Source4, nullptr);
 		
-		const AudioValue * gain1 = getInputAudioValue(kInput_Gain1, &AudioValue::One);
-		const AudioValue * gain2 = getInputAudioValue(kInput_Gain2, &AudioValue::One);
-		const AudioValue * gain3 = getInputAudioValue(kInput_Gain3, &AudioValue::One);
-		const AudioValue * gain4 = getInputAudioValue(kInput_Gain4, &AudioValue::One);
+		const AudioFloat * gain1 = getInputAudioFloat(kInput_Gain1, &AudioFloat::One);
+		const AudioFloat * gain2 = getInputAudioFloat(kInput_Gain2, &AudioFloat::One);
+		const AudioFloat * gain3 = getInputAudioFloat(kInput_Gain3, &AudioFloat::One);
+		const AudioFloat * gain4 = getInputAudioFloat(kInput_Gain4, &AudioFloat::One);
 		
 		const bool normalizeGain = false;
 		
 		struct Input
 		{
-			const AudioBuffer * source;
-			const AudioValue * gain;
+			const AudioFloat * source;
+			const AudioFloat * gain;
 			
-			void set(const AudioBuffer * _source, const AudioValue * _gain)
+			void set(const AudioFloat * _source, const AudioFloat * _gain)
 			{
 				source = _source;
 				gain = _gain;
@@ -841,7 +853,7 @@ struct AudioNodeSourceMix : AudioNodeBase
 		if (numInputs == 0)
 		{
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-				audioBufferOutput.samples[i] = 0.f;
+				audioOutput.samples[i] = 0.f;
 			return;
 		}
 		
@@ -879,9 +891,9 @@ struct AudioNodeSourceMix : AudioNodeBase
 				isFirst = false;
 				
 				if (gain == 1.f)
-					audioBufferOutput.set(*input.source);
+					audioOutput.set(*input.source);
 				else
-					audioBufferOutput.setMul(*input.source, gain);
+					audioOutput.setMul(*input.source, gain);
 			}
 			else
 			{
@@ -889,7 +901,7 @@ struct AudioNodeSourceMix : AudioNodeBase
 				
 				const float gain = input.gain->getValue(0) * gainScale;
 				
-				audioBufferOutput.addMul(*input.source, gain);
+				audioOutput.addMul(*input.source, gain);
 			}
 		}
 	}
@@ -897,8 +909,15 @@ struct AudioNodeSourceMix : AudioNodeBase
 
 struct AudioNodeSourceSine : AudioNodeBase
 {
+	enum Mode
+	{
+		kMode_SNorm,
+		kMode_UNorm
+	};
+	
 	enum Input
 	{
+		kInput_Mode,
 		kInput_Frequency,
 		kInput_Phase,
 		kInput_COUNT
@@ -906,23 +925,24 @@ struct AudioNodeSourceSine : AudioNodeBase
 	
 	enum Output
 	{
-		kOutput_AudioBuffer,
+		kOutput_Audio,
 		kOutput_COUNT
 	};
 	
-	AudioBuffer audioBufferOutput;
+	AudioFloat audioOutput;
 	
 	float phase;
 	
 	AudioNodeSourceSine()
 		: AudioNodeBase()
-		, audioBufferOutput()
+		, audioOutput()
 		, phase(0.0)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Mode, kAudioPlugType_Int);
 		addInput(kInput_Frequency, kAudioPlugType_Float);
 		addInput(kInput_Phase, kAudioPlugType_Float);
-		addOutput(kOutput_AudioBuffer, kAudioPlugType_AudioBuffer, &audioBufferOutput);
+		addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 	}
 	
 	virtual void tick(const float dt) override
@@ -931,17 +951,31 @@ struct AudioNodeSourceSine : AudioNodeBase
 	
 	virtual void draw() override
 	{
+		const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
 		const float frequency = getInputFloat(kInput_Frequency, 0.f);
 		const float phaseOffset = getInputFloat(kInput_Phase, 0.f);
 		const float phaseStep = frequency / double(SAMPLE_RATE);
 		const float twoPi = 2.f * M_PI;
 		
-		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		if (mode == kMode_SNorm)
 		{
-			audioBufferOutput.samples[i] = std::sinf((phase + phaseOffset) * twoPi);
-			
-			phase += phaseStep;
-			phase = std::fmodf(phase, 1.f);
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			{
+				audioOutput.samples[i] = std::sinf((phase + phaseOffset) * twoPi);
+				
+				phase += phaseStep;
+				phase = std::fmodf(phase, 1.f);
+			}
+		}
+		else if (mode == kMode_UNorm)
+		{
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			{
+				audioOutput.samples[i] = .5f + .5f * std::sinf((phase + phaseOffset) * twoPi);
+				
+				phase += phaseStep;
+				phase = std::fmodf(phase, 1.f);
+			}
 		}
 	}
 };
@@ -957,68 +991,68 @@ struct AudioNodeMix : AudioNodeBase
 	enum Input
 	{
 		kInput_Mode,
-		kInput_AudioBufferA,
+		kInput_AudioA,
 		kInput_GainA,
-		kInput_AudioBufferB,
+		kInput_AudioB,
 		kInput_GainB,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
-		kOutput_AudioBuffer,
+		kOutput_Audio,
 		kOutput_COUNT
 	};
 	
-	AudioBuffer audioBufferOutput;
+	AudioFloat audioOutput;
 	
 	AudioNodeMix()
 		: AudioNodeBase()
-		, audioBufferOutput()
+		, audioOutput()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Mode, kAudioPlugType_Int);
-		addInput(kInput_AudioBufferA, kAudioPlugType_AudioBuffer);
-		addInput(kInput_GainA, kAudioPlugType_AudioValue);
-		addInput(kInput_AudioBufferB, kAudioPlugType_AudioBuffer);
-		addInput(kInput_GainB, kAudioPlugType_AudioValue);
-		addOutput(kOutput_AudioBuffer, kAudioPlugType_AudioBuffer, &audioBufferOutput);
+		addInput(kInput_AudioA, kAudioPlugType_FloatVec);
+		addInput(kInput_GainA, kAudioPlugType_FloatVec);
+		addInput(kInput_AudioB, kAudioPlugType_FloatVec);
+		addInput(kInput_GainB, kAudioPlugType_FloatVec);
+		addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 	}
 	
 	virtual void draw() override
 	{
 		const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
-		const AudioBuffer * audioBufferA = getInputAudioBuffer(kInput_AudioBufferA);
-		const AudioValue * gainA = getInputAudioValue(kInput_GainA, &AudioValue::One);
-		const AudioBuffer * audioBufferB = getInputAudioBuffer(kInput_AudioBufferB);
-		const AudioValue * gainB = getInputAudioValue(kInput_GainB, &AudioValue::One);
+		const AudioFloat * audioA = getInputAudioFloat(kInput_AudioA, nullptr);
+		const AudioFloat * gainA = getInputAudioFloat(kInput_GainA, &AudioFloat::One);
+		const AudioFloat * audioB = getInputAudioFloat(kInput_AudioB, nullptr);
+		const AudioFloat * gainB = getInputAudioFloat(kInput_GainB, &AudioFloat::One);
 		
-		if (audioBufferA == nullptr || audioBufferB == nullptr)
+		if (audioA == nullptr || audioB == nullptr)
 		{
-			if (audioBufferA != nullptr)
+			if (audioA != nullptr)
 			{
-				audioBufferOutput.setMul(*audioBufferA, *gainA);
+				audioOutput.setMul(*audioA, *gainA);
 			}
-			else if (audioBufferB != nullptr)
+			else if (audioB != nullptr)
 			{
-				audioBufferOutput.setMul(*audioBufferB, *gainB);
+				audioOutput.setMul(*audioB, *gainB);
 			}
 			else
 			{
-				audioBufferOutput.setZero();
+				audioOutput.setZero();
 			}
 		}
 		else
 		{
 			if (mode == kMode_Add)
 			{
-				audioBufferOutput.setMul(*audioBufferA, *gainA);
-				audioBufferOutput.addMul(*audioBufferB, *gainB);
+				audioOutput.setMul(*audioA, *gainA);
+				audioOutput.addMul(*audioB, *gainB);
 			}
 			else if (mode == kMode_Mul)
 			{
-				audioBufferOutput.setMul(*audioBufferA, *gainA);
-				audioBufferOutput.mulMul(*audioBufferB, *gainB);
+				audioOutput.setMul(*audioA, *gainA);
+				audioOutput.mulMul(*audioB, *gainB);
 			}
 			else
 			{
@@ -1046,28 +1080,28 @@ struct AudioNodeMapRange : AudioNodeBase
 		kOutput_COUNT
 	};
 	
-	AudioValue resultOutput;
+	AudioFloat resultOutput;
 	
 	AudioNodeMapRange()
 		: AudioNodeBase()
 		, resultOutput()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_Value, kAudioPlugType_AudioValue);
-		addInput(kInput_InMin, kAudioPlugType_AudioValue);
-		addInput(kInput_InMax, kAudioPlugType_AudioValue);
-		addInput(kInput_OutMin, kAudioPlugType_AudioValue);
-		addInput(kInput_OutMax, kAudioPlugType_AudioValue);
-		addOutput(kOutput_Result, kAudioPlugType_AudioValue, &resultOutput);
+		addInput(kInput_Value, kAudioPlugType_FloatVec);
+		addInput(kInput_InMin, kAudioPlugType_FloatVec);
+		addInput(kInput_InMax, kAudioPlugType_FloatVec);
+		addInput(kInput_OutMin, kAudioPlugType_FloatVec);
+		addInput(kInput_OutMax, kAudioPlugType_FloatVec);
+		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 	}
 	
 	virtual void draw()
 	{
-		const AudioValue * value = getInputAudioValue(kInput_Value, &AudioValue::Zero);
-		const AudioValue * inMin = getInputAudioValue(kInput_InMin, &AudioValue::Zero);
-		const AudioValue * inMax = getInputAudioValue(kInput_InMax, &AudioValue::One);
-		const AudioValue * outMin = getInputAudioValue(kInput_OutMin, &AudioValue::Zero);
-		const AudioValue * outMax = getInputAudioValue(kInput_OutMax, &AudioValue::One);
+		const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
+		const AudioFloat * inMin = getInputAudioFloat(kInput_InMin, &AudioFloat::Zero);
+		const AudioFloat * inMax = getInputAudioFloat(kInput_InMax, &AudioFloat::One);
+		const AudioFloat * outMin = getInputAudioFloat(kInput_OutMin, &AudioFloat::Zero);
+		const AudioFloat * outMax = getInputAudioFloat(kInput_OutMax, &AudioFloat::One);
 		
 		const bool scalarRange =
 			inMin->isScalar &&
@@ -1146,7 +1180,7 @@ struct AudioNodeTime : AudioNodeBase
 	
 	double time;
 	
-	AudioValue resultOutput;
+	AudioFloat resultOutput;
 	
 	AudioNodeTime()
 		: AudioNodeBase()
@@ -1157,7 +1191,7 @@ struct AudioNodeTime : AudioNodeBase
 		addInput(kInput_FineGrained, kAudioPlugType_Bool);
 		addInput(kInput_Scale, kAudioPlugType_Float);
 		addInput(kInput_Offset, kAudioPlugType_Float);
-		addOutput(kOutput_Result, kAudioPlugType_AudioValue, &resultOutput);
+		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 	}
 	
 	virtual void draw()
@@ -1204,7 +1238,7 @@ struct AudioNodePhase : AudioNodeBase
 	
 	float phase;
 	
-	AudioValue resultOutput;
+	AudioFloat resultOutput;
 	
 	AudioNodePhase()
 		: AudioNodeBase()
@@ -1213,16 +1247,16 @@ struct AudioNodePhase : AudioNodeBase
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_FineGrained, kAudioPlugType_Bool);
-		addInput(kInput_Frequency, kAudioPlugType_AudioValue);
-		addInput(kInput_PhaseOffset, kAudioPlugType_AudioValue);
-		addOutput(kOutput_Result, kAudioPlugType_AudioValue, &resultOutput);
+		addInput(kInput_Frequency, kAudioPlugType_FloatVec);
+		addInput(kInput_PhaseOffset, kAudioPlugType_FloatVec);
+		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 	}
 	
 	virtual void draw()
 	{
 		const bool fineGrained = getInputBool(kInput_FineGrained, true);
-		const AudioValue * frequency = getInputAudioValue(kInput_Frequency, &AudioValue::Zero);
-		const AudioValue * phaseOffset = getInputAudioValue(kInput_PhaseOffset, &AudioValue::Zero);
+		const AudioFloat * frequency = getInputAudioFloat(kInput_Frequency, &AudioFloat::Zero);
+		const AudioFloat * phaseOffset = getInputAudioFloat(kInput_PhaseOffset, &AudioFloat::Zero);
 		
 		const bool scalarInputs = frequency->isScalar && phaseOffset->isScalar;
 		
@@ -1284,20 +1318,20 @@ struct AudioNodeMathSine : AudioNodeBase
 		kOutput_COUNT
 	};
 	
-	AudioValue resultOutput;
+	AudioFloat resultOutput;
 	
 	AudioNodeMathSine()
 		: AudioNodeBase()
 		, resultOutput()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_Value, kAudioPlugType_AudioValue);
-		addOutput(kOutput_Result, kAudioPlugType_AudioValue, &resultOutput);
+		addInput(kInput_Value, kAudioPlugType_FloatVec);
+		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 	}
 	
 	virtual void draw()
 	{
-		const AudioValue * value = getInputAudioValue(kInput_Value, &AudioValue::Zero);
+		const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 		const float twoPi = 2.f * M_PI;
 		
 		if (value->isScalar)
@@ -1314,11 +1348,6 @@ struct AudioNodeMathSine : AudioNodeBase
 			}
 		}
 	}
-};
-
-// todo : use delay line object found in vfxNodes and copy most stuff from vfxNodeDelayLine
-struct AudioNodeDelay
-{
 };
 
 // perform the computation needed to get the gain values for two audio sources, given various parameters

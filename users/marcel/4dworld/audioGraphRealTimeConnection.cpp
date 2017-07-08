@@ -322,11 +322,9 @@ bool AudioRealTimeConnection::setPlugValue(AudioPlug * plug, const std::string &
 		
 	case kAudioPlugType_PcmData:
 		return false;
-	case kAudioPlugType_AudioBuffer:
-		return false;
 		
-	case kAudioPlugType_AudioValue:
-		plug->getRwAudioValue().setScalar(Parse::Float(value));
+	case kAudioPlugType_FloatVec:
+		plug->getRwAudioFloat().setScalar(Parse::Float(value));
 		return true;
 
 	case kAudioPlugType_Trigger:
@@ -355,10 +353,8 @@ bool AudioRealTimeConnection::getPlugValue(AudioPlug * plug, std::string & value
 		return true;
 	case kAudioPlugType_PcmData:
 		return false;
-	case kAudioPlugType_AudioBuffer:
-		return false;
-	case kAudioPlugType_AudioValue:
-		value = String::FormatC("%f", plug->getAudioValue().samples[0]);
+	case kAudioPlugType_FloatVec:
+		value = String::FormatC("%f", plug->getAudioFloat().samples[0]);
 		return true;
 	case kAudioPlugType_Trigger:
 		{
