@@ -25,8 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "delayLine.h"
 #include "vfxNodeImpulseResponse.h"
-#include "vfxTypes.h"
 
 VFX_NODE_TYPE(impulse_response, VfxNodeImpulseResponse)
 {

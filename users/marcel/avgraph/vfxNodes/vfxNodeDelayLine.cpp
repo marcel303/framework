@@ -25,8 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "delayLine.h"
 #include "vfxNodeDelayLine.h"
-#include "vfxTypes.h"
 
 VFX_NODE_TYPE(sample_delay, VfxNodeDelayLine)
 {
@@ -54,6 +54,7 @@ VfxNodeDelayLine::VfxNodeDelayLine()
 
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Value, kVfxPlugType_Float);
+	addInput(kInput_MaxDelay, kVfxPlugType_Float);
 	addInput(kInput_Delay1, kVfxPlugType_Float);
 	addInput(kInput_Delay2, kVfxPlugType_Float);
 	addInput(kInput_Delay3, kVfxPlugType_Float);
