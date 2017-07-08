@@ -42,6 +42,9 @@ const int GFX_SY = 800;
 
 //
 
+//#define FILENAME "audioGraph.xml"
+#define FILENAME "audioTest1.xml"
+
 #define USE_AUDIO_GRAPH 1
 
 //
@@ -253,7 +256,7 @@ struct AudioSourceAudioGraph : AudioSource
 	{
 		if (audioGraph == nullptr)
 		{
-			for (int i = 0; i < numSamples; ++i)
+			for (int i = 0; i < numSamples * 2; ++i)
 				samples[i] = 0.f;
 		}
 		else
@@ -342,7 +345,7 @@ int main(int argc, char * argv[])
 		
 		g_currentAudioGraph = realTimeConnection.audioGraph;
 		
-		graphEdit.load("audioGraph.xml");
+		graphEdit.load(FILENAME);
 		
 		g_currentAudioGraph = nullptr;
 		
