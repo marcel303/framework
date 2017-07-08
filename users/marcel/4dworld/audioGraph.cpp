@@ -27,6 +27,7 @@
 
 #include "audioGraph.h"
 #include "audioNodeBase.h"
+#include "audioNodes/audioNodeDisplay.h"
 #include "framework.h"
 #include "Parse.h"
 

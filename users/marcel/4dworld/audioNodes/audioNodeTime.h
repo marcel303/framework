@@ -29,38 +29,27 @@
 
 #include "audioNodeBase.h"
 
-struct DelayLine;
-
-struct AudioNodeDelayLine : AudioNodeBase
+struct AudioNodeTime : AudioNodeBase
 {
 	enum Input
 	{
-		kInput_Value,
-		kInput_MaxDelay,
-		kInput_Delay1,
-		kInput_Delay2,
-		kInput_Delay3,
-		kInput_Delay4,
+		kInput_FineGrained,
+		kInput_Scale,
+		kInput_Offset,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
-		kOutput_Value1,
-		kOutput_Value2,
-		kOutput_Value3,
-		kOutput_Value4,
+		kOutput_Result,
 		kOutput_COUNT
 	};
 	
-	AudioFloat outputValue[4];
+	double time;
 	
-	float dtRemaining;
+	AudioFloat resultOutput;
 	
-	DelayLine * delayLine;
-	
-	AudioNodeDelayLine();
-	virtual ~AudioNodeDelayLine() override;
+	AudioNodeTime();
 	
 	virtual void draw() override;
 };

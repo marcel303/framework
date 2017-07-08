@@ -354,7 +354,7 @@ bool AudioRealTimeConnection::getPlugValue(AudioPlug * plug, std::string & value
 	case kAudioPlugType_PcmData:
 		return false;
 	case kAudioPlugType_FloatVec:
-		value = String::FormatC("%f", plug->getAudioFloat().samples[0]);
+		value = String::FormatC("%f", plug->getAudioFloat().getScalar());
 		return true;
 	case kAudioPlugType_Trigger:
 		{

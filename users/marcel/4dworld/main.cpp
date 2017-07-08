@@ -28,6 +28,7 @@
 #include "audioGraph.h"
 #include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
+#include "audioNodes/audioNodeDisplay.h"
 #include "framework.h"
 #include "graph.h"
 #include "portaudio/portaudio.h"

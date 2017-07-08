@@ -89,7 +89,7 @@ void AudioFloat::setMul(const AudioFloat & other, const AudioFloat & gain)
 	if (gain.isScalar)
 	{
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			samples[i] = other.samples[i] * gain.samples[0];
+			samples[i] = other.samples[i] * gain.getScalar();
 	}
 	else
 	{
@@ -133,7 +133,7 @@ void AudioFloat::addMul(const AudioFloat & other, const AudioFloat & gain)
 	if (gain.isScalar)
 	{
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			samples[i] += other.samples[i] * gain.samples[0];
+			samples[i] += other.samples[i] * gain.getScalar();
 	}
 	else
 	{
@@ -165,7 +165,7 @@ void AudioFloat::mulMul(const AudioFloat & other, const AudioFloat & gain)
 	if (gain.isScalar)
 	{
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			samples[i] *= other.samples[i] * gain.samples[0];
+			samples[i] *= other.samples[i] * gain.getScalar();
 	}
 	else
 	{
@@ -472,15 +472,6 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 
 //
 
-AUDIO_NODE_TYPE(display, AudioNodeDisplay)
-{
-	typeName = "display";
-	
-	in("audioL", "audioValue");
-	in("audioR", "audioValue");
-	in("gain", "float", "1");
-}
-
 AUDIO_NODE_TYPE(pcmData, AudioNodePcmData)
 {
 	typeName = "pcm.fromFile";
@@ -559,26 +550,6 @@ AUDIO_NODE_TYPE(mapRange, AudioNodeMapRange)
 	in("outMin", "audioValue");
 	in("outMax", "audioValue", "1");
 	out("result", "audioValue");
-}
-
-AUDIO_NODE_TYPE(time, AudioNodeTime)
-{
-	typeName = "time";
-	
-	in("fine", "bool", "1");
-	in("scale", "float", "1");
-	in("offset", "float");
-	out("time", "audioValue");
-}
-
-AUDIO_NODE_TYPE(phase, AudioNodePhase)
-{
-	typeName = "phase";
-	
-	in("fine", "bool", "1");
-	in("frequency", "audioValue");
-	in("offset", "audioValue");
-	out("phase", "audioValue");
 }
 
 AUDIO_NODE_TYPE(sine, AudioNodeMathSine)

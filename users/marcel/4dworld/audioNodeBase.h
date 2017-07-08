@@ -114,9 +114,10 @@ struct AudioFloat
 	ALIGN16 float samples[AUDIO_UPDATE_SIZE];
 	
 	AudioFloat()
-		: isScalar(false)
-		, isExpanded(true)
+		: isScalar(true)
+		, isExpanded(false)
 	{
+		samples[0] = 0.f;
 	}
 	
 	AudioFloat(const float value)
@@ -143,11 +144,6 @@ struct AudioFloat
 	float getScalar() const
 	{
 		return samples[0];
-	}
-	
-	float getValue(const int index) const
-	{
-		return isScalar ? samples[0] : samples[index];
 	}
 	
 	void expand() const
@@ -581,91 +577,6 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 
 //
 
-struct AudioOutputChannel
-{
-	float * samples;
-	int stride;
-	
-	AudioOutputChannel()
-		: samples(nullptr)
-		, stride(0)
-	{
-	}
-};
-
-struct AudioNodeDisplay : AudioNodeBase
-{
-	enum Input
-	{
-		kInput_AudioL,
-		kInput_AudioR,
-		kInput_Gain,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_COUNT
-	};
-	
-	AudioOutputChannel * outputChannelL;
-	AudioOutputChannel * outputChannelR;
-	
-	AudioNodeDisplay()
-		: AudioNodeBase()
-		, outputChannelL(nullptr)
-		, outputChannelR(nullptr)
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_AudioL, kAudioPlugType_FloatVec);
-		addInput(kInput_AudioR, kAudioPlugType_FloatVec);
-		addInput(kInput_Gain, kAudioPlugType_Float);
-	}
-	
-	virtual void draw() override
-	{
-		const AudioFloat * audioL = getInputAudioFloat(kInput_AudioL, nullptr);
-		const AudioFloat * audioR = getInputAudioFloat(kInput_AudioR, nullptr);
-		const float gain = getInputFloat(kInput_Gain, 1.f);
-	
-		if (outputChannelL != nullptr)
-		{
-			if (audioL == nullptr)
-			{
-				float * channelPtr = outputChannelL->samples;
-				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += outputChannelL->stride)
-					*channelPtr = 0.f;
-			}
-			else
-			{
-				audioL->expand();
-				
-				float * channelPtr = outputChannelL->samples;
-				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += outputChannelL->stride)
-					*channelPtr = audioL->samples[i] * gain;
-			}
-		}
-		
-		if (outputChannelR != nullptr)
-		{
-			if (audioR == nullptr)
-			{
-				float * channelPtr = outputChannelR->samples;
-				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += outputChannelR->stride)
-					*channelPtr = 0.f;
-			}
-			else
-			{
-				audioR->expand();
-				
-				float * channelPtr = outputChannelR->samples;
-				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += outputChannelR->stride)
-					*channelPtr = audioR->samples[i] * gain;
-			}
-		}
-	}
-};
-
 struct AudioNodePcmData : AudioNodeBase
 {
 	enum Input
@@ -751,8 +662,8 @@ struct AudioNodeSourcePcm : AudioNodeBase
 		}
 		else
 		{
-			const int _rangeBegin = rangeBegin->getValue(0) * SAMPLE_RATE;
-			const int _rangeLength = rangeLength->getValue(0) * SAMPLE_RATE;
+			const int _rangeBegin = rangeBegin->getScalar() * SAMPLE_RATE;
+			const int _rangeLength = rangeLength->getScalar() * SAMPLE_RATE;
 			
 			audioSource.setRange(_rangeBegin, _rangeLength);
 		}
@@ -869,7 +780,7 @@ struct AudioNodeSourceMix : AudioNodeBase
 			{
 				// todo : do this on a per-sample basis !
 				
-				totalGain += input.gain->getValue(0);
+				totalGain += input.gain->getScalar();
 			}
 			
 			if (totalGain > 0.f)
@@ -884,7 +795,7 @@ struct AudioNodeSourceMix : AudioNodeBase
 			
 			// todo : do this on a per-sample basis !
 			
-			const float gain = input.gain->getValue(0) * gainScale;
+			const float gain = input.gain->getScalar() * gainScale;
 			
 			if (isFirst)
 			{
@@ -899,7 +810,7 @@ struct AudioNodeSourceMix : AudioNodeBase
 			{
 				// todo : do this on a per-sample basis !
 				
-				const float gain = input.gain->getValue(0) * gainScale;
+				const float gain = input.gain->getScalar() * gainScale;
 				
 				audioOutput.addMul(*input.source, gain);
 			}
@@ -1111,15 +1022,15 @@ struct AudioNodeMapRange : AudioNodeBase
 		
 		if (scalarRange)
 		{
-			const float _inMin = inMin->getValue(0);
-			const float _inMax = inMax->getValue(0);
-			const float _outMin = outMin->getValue(0);
-			const float _outMax = outMax->getValue(0);
+			const float _inMin = inMin->getScalar();
+			const float _inMax = inMax->getScalar();
+			const float _outMin = outMin->getScalar();
+			const float _outMax = outMax->getScalar();
 			const float scale = 1.f / (_inMax - _inMin);
 			
 			if (value->isScalar)
 			{
-				const float t2 = (value->getValue(0) - _inMin) * scale;
+				const float t2 = (value->getScalar() - _inMin) * scale;
 				const float t1 = 1.f - t2;
 				const float result = t1 * _outMin + t2 * _outMax;
 				
@@ -1143,14 +1054,21 @@ struct AudioNodeMapRange : AudioNodeBase
 		{
 			resultOutput.setVector();
 			
+			value->expand();
+			
+			inMin->expand();
+			inMax->expand();
+			outMin->expand();
+			outMax->expand();
+			
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{
-				const float _inMin = inMin->getValue(i);
-				const float _inMax = inMax->getValue(i);
-				const float _outMin = outMin->getValue(i);
-				const float _outMax = outMax->getValue(i);
+				const float _inMin = inMin->samples[i];
+				const float _inMax = inMax->samples[i];
+				const float _outMin = outMin->samples[i];
+				const float _outMax = outMax->samples[i];
 				const float scale = 1.f / (_inMax - _inMin);
-				const float _value = value->getValue(i);
+				const float _value = value->samples[i];
 				
 				const float t2 = (_value - _inMin) * scale;
 				const float t1 = 1.f - t2;
@@ -1159,148 +1077,6 @@ struct AudioNodeMapRange : AudioNodeBase
 				resultOutput.samples[i] = result;
 			}
 		}
-	}
-};
-
-struct AudioNodeTime : AudioNodeBase
-{
-	enum Input
-	{
-		kInput_FineGrained,
-		kInput_Scale,
-		kInput_Offset,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Result,
-		kOutput_COUNT
-	};
-	
-	double time;
-	
-	AudioFloat resultOutput;
-	
-	AudioNodeTime()
-		: AudioNodeBase()
-		, time(0.0)
-		, resultOutput()
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_FineGrained, kAudioPlugType_Bool);
-		addInput(kInput_Scale, kAudioPlugType_Float);
-		addInput(kInput_Offset, kAudioPlugType_Float);
-		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
-	}
-	
-	virtual void draw()
-	{
-		const bool fineGrained = getInputBool(kInput_FineGrained, true);
-		const float scale = getInputFloat(kInput_Scale, 1.f);
-		const float offset = getInputFloat(kInput_Offset, 0.f);
-		
-		if (fineGrained)
-		{
-			resultOutput.setVector();
-			
-			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			{
-				resultOutput.samples[i] = time * scale + offset;
-				
-				time += 1.0 / SAMPLE_RATE;
-			}
-		}
-		else
-		{
-			resultOutput.setScalar(time * scale + offset);
-			
-			time += AUDIO_UPDATE_SIZE / double(SAMPLE_RATE);
-		}
-	}
-};
-
-struct AudioNodePhase : AudioNodeBase
-{
-	enum Input
-	{
-		kInput_FineGrained,
-		kInput_Frequency,
-		kInput_PhaseOffset,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Result,
-		kOutput_COUNT
-	};
-	
-	float phase;
-	
-	AudioFloat resultOutput;
-	
-	AudioNodePhase()
-		: AudioNodeBase()
-		, phase(0.0)
-		, resultOutput()
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_FineGrained, kAudioPlugType_Bool);
-		addInput(kInput_Frequency, kAudioPlugType_FloatVec);
-		addInput(kInput_PhaseOffset, kAudioPlugType_FloatVec);
-		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
-	}
-	
-	virtual void draw()
-	{
-		const bool fineGrained = getInputBool(kInput_FineGrained, true);
-		const AudioFloat * frequency = getInputAudioFloat(kInput_Frequency, &AudioFloat::Zero);
-		const AudioFloat * phaseOffset = getInputAudioFloat(kInput_PhaseOffset, &AudioFloat::Zero);
-		
-		const bool scalarInputs = frequency->isScalar && phaseOffset->isScalar;
-		
-		if (fineGrained)
-		{
-			resultOutput.setVector();
-			
-			if (scalarInputs)
-			{
-				const float _frequency = frequency->getValue(0);
-				const float _phaseOffset = phaseOffset->getValue(0);
-				const float phaseStep = _frequency / SAMPLE_RATE;
-				
-				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-				{
-					resultOutput.samples[i] = phase + _phaseOffset;
-					
-					phase += phaseStep;
-				}
-			}
-			else
-			{
-				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-				{
-					const float _frequency = frequency->getValue(i);
-					const float _phaseOffset = phaseOffset->getValue(i);
-					
-					resultOutput.samples[i] = phase + _phaseOffset;
-					
-					phase += _frequency / SAMPLE_RATE;
-				}
-			}
-		}
-		else
-		{
-			const float _frequency = frequency->getValue(0);
-			const float _phaseOffset = phaseOffset->getValue(0);
-			
-			resultOutput.setScalar(phase + _phaseOffset);
-			
-			phase += _frequency / SAMPLE_RATE * AUDIO_UPDATE_SIZE;
-		}
-		
-		phase = std::fmodf(phase, 1.f);
 	}
 };
 
@@ -1336,7 +1112,7 @@ struct AudioNodeMathSine : AudioNodeBase
 		
 		if (value->isScalar)
 		{
-			resultOutput.setScalar(std::sinf(value->samples[0] * twoPi));
+			resultOutput.setScalar(std::sinf(value->getScalar() * twoPi));
 		}
 		else
 		{
