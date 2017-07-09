@@ -516,6 +516,7 @@ AUDIO_NODE_TYPE(audioSourceSine, AudioNodeSourceSine)
 {
 	typeName = "audio.sine";
 	
+	in("fine", "bool", "1");
 	inEnum("mode", "audioSineMode");
 	in("frequency", "float");
 	in("phase", "float");
@@ -538,18 +539,6 @@ AUDIO_NODE_TYPE(audioMix, AudioNodeMix)
 	in("sourceB", "audioValue");
 	in("gainB", "audioValue", "1");
 	out("audio", "audioValue");
-}
-
-AUDIO_NODE_TYPE(mapRange, AudioNodeMapRange)
-{
-	typeName = "map.range";
-	
-	in("value", "audioValue");
-	in("inMin", "audioValue");
-	in("inMax", "audioValue", "1");
-	in("outMin", "audioValue");
-	in("outMax", "audioValue", "1");
-	out("result", "audioValue");
 }
 
 AUDIO_NODE_TYPE(sine, AudioNodeMathSine)

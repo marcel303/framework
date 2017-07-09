@@ -572,20 +572,19 @@ bool AudioRealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, 
 	if (input->isConnected() == false)
 		return false;
 	
-	return false;
-	
-	// todo : return channel data for audio buffers
-	
-	/*
-	auto inputChannels = input->getChannels();
-	
-	for (int i = 0; i < inputChannels->numChannels; ++i)
+	if (input->type == kAudioPlugType_FloatVec)
 	{
-		channels.addChannel(inputChannels->channels[i].data, inputChannels->sx * inputChannels->sy, inputChannels->channels[i].continuous);
+		const AudioFloat & value = input->getAudioFloat();
+		
+		channels.addChannel(value.samples, value.isScalar ? 1 : AUDIO_UPDATE_SIZE, true);
+		channels.historySize = 1;
+		
+		return true;
 	}
-	
-	return true;
-	*/
+	else
+	{
+		return false;
+	}
 }
 
 bool AudioRealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, GraphEdit_ChannelData & channels)
@@ -611,20 +610,19 @@ bool AudioRealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, 
 	if (output == nullptr)
 		return false;
 	
-	return false;
-	
-	// todo : return channel data for audio buffers
-	
-	/*
-	auto outputChannels = output->getChannels();
-	
-	for (int i = 0; i < outputChannels->numChannels; ++i)
+	if (output->type == kAudioPlugType_FloatVec)
 	{
-		channels.addChannel(outputChannels->channels[i].data, outputChannels->sx * outputChannels->sy, outputChannels->channels[i].continuous);
+		const AudioFloat & value = output->getAudioFloat();
+		
+		channels.addChannel(value.samples, value.isScalar ? 1 : AUDIO_UPDATE_SIZE, true);
+		channels.historySize = 1;
+		
+		return true;
 	}
-	
-	return true;
-	*/
+	else
+	{
+		return false;
+	}
 }
 
 void AudioRealTimeConnection::handleSrcSocketPressed(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName)

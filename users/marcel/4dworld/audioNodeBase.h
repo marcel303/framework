@@ -662,6 +662,8 @@ struct AudioNodeSourcePcm : AudioNodeBase
 		}
 		else
 		{
+			// todo : do this on a per-sample basis !
+			
 			const int _rangeBegin = rangeBegin->getScalar() * SAMPLE_RATE;
 			const int _rangeLength = rangeLength->getScalar() * SAMPLE_RATE;
 			
@@ -680,6 +682,7 @@ struct AudioNodeSourcePcm : AudioNodeBase
 	
 	virtual void draw() override
 	{
+		audioOutput.setVector();
 		audioSource.generate(audioOutput.samples, AUDIO_UPDATE_SIZE);
 	}
 };
@@ -793,6 +796,8 @@ struct AudioNodeSourceMix : AudioNodeBase
 		{
 			auto & input = inputs[i];
 			
+			input.source->expand();
+			
 			// todo : do this on a per-sample basis !
 			
 			const float gain = input.gain->getScalar() * gainScale;
@@ -828,6 +833,7 @@ struct AudioNodeSourceSine : AudioNodeBase
 	
 	enum Input
 	{
+		kInput_Fine,
 		kInput_Mode,
 		kInput_Frequency,
 		kInput_Phase,
@@ -850,6 +856,7 @@ struct AudioNodeSourceSine : AudioNodeBase
 		, phase(0.0)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Fine, kAudioPlugType_Bool);
 		addInput(kInput_Mode, kAudioPlugType_Int);
 		addInput(kInput_Frequency, kAudioPlugType_Float);
 		addInput(kInput_Phase, kAudioPlugType_Float);
@@ -862,29 +869,52 @@ struct AudioNodeSourceSine : AudioNodeBase
 	
 	virtual void draw() override
 	{
+		const bool fine = getInputBool(kInput_Fine, true);
 		const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
 		const float frequency = getInputFloat(kInput_Frequency, 0.f);
 		const float phaseOffset = getInputFloat(kInput_Phase, 0.f);
 		const float phaseStep = frequency / double(SAMPLE_RATE);
 		const float twoPi = 2.f * M_PI;
 		
-		if (mode == kMode_SNorm)
+		if (fine)
 		{
-			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			audioOutput.setVector();
+			
+			if (mode == kMode_SNorm)
 			{
-				audioOutput.samples[i] = std::sinf((phase + phaseOffset) * twoPi);
-				
-				phase += phaseStep;
-				phase = std::fmodf(phase, 1.f);
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+				{
+					audioOutput.samples[i] = std::sinf((phase + phaseOffset) * twoPi);
+					
+					phase += phaseStep;
+					phase = std::fmodf(phase, 1.f);
+				}
+			}
+			else if (mode == kMode_UNorm)
+			{
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+				{
+					audioOutput.samples[i] = .5f + .5f * std::sinf((phase + phaseOffset) * twoPi);
+					
+					phase += phaseStep;
+					phase = std::fmodf(phase, 1.f);
+				}
 			}
 		}
-		else if (mode == kMode_UNorm)
+		else
 		{
-			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			if (mode == kMode_SNorm)
 			{
-				audioOutput.samples[i] = .5f + .5f * std::sinf((phase + phaseOffset) * twoPi);
+				audioOutput.setScalar(std::sinf((phase + phaseOffset) * twoPi));
 				
-				phase += phaseStep;
+				phase += phaseStep * AUDIO_UPDATE_SIZE;
+				phase = std::fmodf(phase, 1.f);
+			}
+			else if (mode == kMode_UNorm)
+			{
+				audioOutput.setScalar(.5f + .5f * std::sinf((phase + phaseOffset) * twoPi));
+				
+				phase += phaseStep * AUDIO_UPDATE_SIZE;
 				phase = std::fmodf(phase, 1.f);
 			}
 		}
@@ -968,113 +998,6 @@ struct AudioNodeMix : AudioNodeBase
 			else
 			{
 				Assert(false);
-			}
-		}
-	}
-};
-
-struct AudioNodeMapRange : AudioNodeBase
-{
-	enum Input
-	{
-		kInput_Value,
-		kInput_InMin,
-		kInput_InMax,
-		kInput_OutMin,
-		kInput_OutMax,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Result,
-		kOutput_COUNT
-	};
-	
-	AudioFloat resultOutput;
-	
-	AudioNodeMapRange()
-		: AudioNodeBase()
-		, resultOutput()
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_Value, kAudioPlugType_FloatVec);
-		addInput(kInput_InMin, kAudioPlugType_FloatVec);
-		addInput(kInput_InMax, kAudioPlugType_FloatVec);
-		addInput(kInput_OutMin, kAudioPlugType_FloatVec);
-		addInput(kInput_OutMax, kAudioPlugType_FloatVec);
-		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
-	}
-	
-	virtual void draw()
-	{
-		const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
-		const AudioFloat * inMin = getInputAudioFloat(kInput_InMin, &AudioFloat::Zero);
-		const AudioFloat * inMax = getInputAudioFloat(kInput_InMax, &AudioFloat::One);
-		const AudioFloat * outMin = getInputAudioFloat(kInput_OutMin, &AudioFloat::Zero);
-		const AudioFloat * outMax = getInputAudioFloat(kInput_OutMax, &AudioFloat::One);
-		
-		const bool scalarRange =
-			inMin->isScalar &&
-			inMax->isScalar &&
-			outMin->isScalar &&
-			outMax->isScalar;
-		
-		if (scalarRange)
-		{
-			const float _inMin = inMin->getScalar();
-			const float _inMax = inMax->getScalar();
-			const float _outMin = outMin->getScalar();
-			const float _outMax = outMax->getScalar();
-			const float scale = 1.f / (_inMax - _inMin);
-			
-			if (value->isScalar)
-			{
-				const float t2 = (value->getScalar() - _inMin) * scale;
-				const float t1 = 1.f - t2;
-				const float result = t1 * _outMin + t2 * _outMax;
-				
-				resultOutput.setScalar(result);
-			}
-			else
-			{
-				resultOutput.setVector();
-				
-				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-				{
-					const float t2 = (value->samples[i] - _inMin) * scale;
-					const float t1 = 1.f - t2;
-					const float result = t1 * _outMin + t2 * _outMax;
-					
-					resultOutput.samples[i] = result;
-				}
-			}
-		}
-		else
-		{
-			resultOutput.setVector();
-			
-			value->expand();
-			
-			inMin->expand();
-			inMax->expand();
-			outMin->expand();
-			outMax->expand();
-			
-			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			{
-				const float _inMin = inMin->samples[i];
-				const float _inMax = inMax->samples[i];
-				const float _outMin = outMin->samples[i];
-				const float _outMax = outMax->samples[i];
-				const float scale = 1.f / (_inMax - _inMin);
-				const float _value = value->samples[i];
-				
-				const float t2 = (_value - _inMin) * scale;
-				const float t1 = 1.f - t2;
-				const float result = t1 * _outMin + t2 * _outMax;
-				
-				resultOutput.samples[i] = result;
 			}
 		}
 	}

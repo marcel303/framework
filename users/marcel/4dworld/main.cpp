@@ -46,8 +46,6 @@ const int GFX_SY = 800;
 //#define FILENAME "audioGraph.xml"
 #define FILENAME "audioTest1.xml"
 
-#define USE_AUDIO_GRAPH 1
-
 //
 
 static SDL_mutex * mutex = nullptr;
@@ -195,55 +193,6 @@ bool PortAudioObject::shut()
 
 //
 
-struct AudioSource4DWorld : AudioSource
-{
-	double time;
-	
-	PcmData sound1;
-	PcmData sound2;
-	
-	AudioSourcePcm pcm1;
-	AudioSourcePcm pcm2;
-	AudioSourceSine sine;
-	AudioSourceMix mix;
-	
-	void init()
-	{
-		sound1.load("sound.ogg", 0);
-		sound2.load("sound.ogg", 0);
-		//sound2.load("music2.ogg", 0);
-		
-		pcm1.init(&sound1, 0);
-		pcm1.play();
-		pcm2.init(&sound2, 0);
-		pcm2.play();
-		sine.init(0.f, 400.f);
-		//mix.add(&pcm1, 1.f);
-		mix.add(&pcm2, 1.f);
-		//mix.add(&sine, 1.f);
-	}
-	
-	void tick(const double dt)
-	{
-		time += dt;
-	}
-	
-	virtual void generate(ALIGN16 float * __restrict samples, const int numSamples) override
-	{
-		const double dt = numSamples / double(SAMPLE_RATE);
-		
-		tick(dt);
-		
-		pcm1.setRangeNorm((std::sin(time / 1.234) + 1.0) * 0.5, std::fmod(time / 1.345, 1.0));
-		pcm2.setRangeNorm((std::sin(time / 12.345) + 1.0) * 0.5, std::fmod(time / 0.345, 1.0));
-		//pcm2.setRange(pcm2.samplePosition % pcm2.pcmData->numSamples, int(time * 20.0) % (AUDIO_UPDATE_SIZE * 2));
-		
-		mix.generate(samples, numSamples);
-	}
-};
-
-//
-
 struct AudioSourceAudioGraph : AudioSource
 {
 	AudioGraph * audioGraph;
@@ -327,7 +276,7 @@ int main(int argc, char * argv[])
 			GraphEdit_ValueTypeDefinition typeDefinition;
 			typeDefinition.typeName = "audioValue";
 			typeDefinition.editor = "textbox_float";
-			typeDefinition.visualizer = "valueplotter";
+			typeDefinition.visualizer = "channels";
 			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 		}
 		
@@ -350,7 +299,6 @@ int main(int argc, char * argv[])
 		
 		g_currentAudioGraph = nullptr;
 		
-	#if USE_AUDIO_GRAPH
 		AudioSourceAudioGraph audioSource;
 		
 		audioSource.audioGraph = audioGraph;
@@ -358,15 +306,6 @@ int main(int argc, char * argv[])
 		PortAudioObject pa;
 		
 		pa.init(&audioSource);
-	#else
-		AudioSource4DWorld world;
-		
-		world.init();
-		
-		PortAudioObject pa;
-		
-		pa.init(&world);
-	#endif
 		
 		bool stop = false;
 		
