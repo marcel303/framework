@@ -30,11 +30,14 @@
 #include "graph.h"
 
 struct AudioGraph;
+struct SDL_mutex;
 
 struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
 {
 	AudioGraph * audioGraph;
 	AudioGraph ** audioGraphPtr;
+	
+	SDL_mutex * audioMutex;
 	
 	bool isLoading;
 	
@@ -42,9 +45,12 @@ struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
 		: GraphEdit_RealTimeConnection()
 		, audioGraph(nullptr)
 		, audioGraphPtr(nullptr)
+		, audioMutex(nullptr)
 		, isLoading(false)
 	{
 	}
+	
+	void updateAudioValues();
 	
 	virtual void loadBegin() override;
 	virtual void loadEnd(GraphEdit & graphEdit) override;

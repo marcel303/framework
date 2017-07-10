@@ -194,12 +194,9 @@ struct AudioPlug
 	AudioPlugType type;
 	void * mem;
 	
-	int referencedByRealTimeConnectionTick;
-	
 	AudioPlug()
 		: type(kAudioPlugType_None)
 		, mem(nullptr)
-		, referencedByRealTimeConnectionTick(-1)
 	{
 	}
 	
@@ -259,6 +256,18 @@ struct AudioPlug
 	}
 	
 	//
+	
+	bool & getRwBool()
+	{
+		Assert(type == kAudioPlugType_Bool);
+		return *((bool*)mem);
+	}
+	
+	int & getRwInt()
+	{
+		Assert(type == kAudioPlugType_Int);
+		return *((int*)mem);
+	}
 	
 	float & getRwFloat()
 	{

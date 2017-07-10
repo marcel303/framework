@@ -44,8 +44,6 @@ struct AudioNodeBase;
 struct AudioOutputChannel;
 struct AudioPlug;
 
-extern AudioGraph * g_currentAudioGraph;
-
 struct AudioGraph
 {
 	struct ValueToFree

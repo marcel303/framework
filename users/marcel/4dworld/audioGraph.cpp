@@ -37,10 +37,6 @@
 
 //
 
-AudioGraph * g_currentAudioGraph = nullptr;
-
-//
-
 AudioGraph::AudioGraph()
 	: nodes()
 	, displayNodeId(kGraphNodeIdInvalid)
@@ -174,9 +170,6 @@ void AudioGraph::tick(const float dt)
 {
 	audioCpuTimingBlock(AudioGraph_Tick);
 	
-	Assert(g_currentAudioGraph == nullptr);
-	g_currentAudioGraph = this;
-	
 	// use traversalId, start update at display node
 	
 	if (displayNodeId != kGraphNodeIdInvalid)
@@ -212,18 +205,11 @@ void AudioGraph::tick(const float dt)
 	//
 	
 	time += dt;
-	
-	//
-	
-	g_currentAudioGraph = nullptr;
 }
 
 void AudioGraph::draw(AudioOutputChannel * outputChannels, const int numOutputChannels) const
 {
 	audioCpuTimingBlock(AudioGraph_Draw);
-	
-	Assert(g_currentAudioGraph == nullptr);
-	g_currentAudioGraph = const_cast<AudioGraph*>(this);
 	
 	// start traversal at the display node and traverse to leafs following predeps and and back up the tree again to draw
 	
@@ -248,8 +234,6 @@ void AudioGraph::draw(AudioOutputChannel * outputChannels, const int numOutputCh
 	}
 	
 	++nextDrawTraversalId;
-	
-	g_currentAudioGraph = nullptr;
 }
 
 //

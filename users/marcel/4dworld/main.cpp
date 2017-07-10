@@ -49,6 +49,8 @@ const int GFX_SY = 800;
 //
 
 static SDL_mutex * mutex = nullptr;
+static GraphEdit * graphEdit = nullptr;
+static AudioRealTimeConnection * realTimeConnection = nullptr;
 
 //
 
@@ -195,16 +197,16 @@ bool PortAudioObject::shut()
 
 struct AudioSourceAudioGraph : AudioSource
 {
-	AudioGraph * audioGraph;
+	AudioGraph ** audioGraphPtr;
 	
 	AudioSourceAudioGraph()
-		: audioGraph(nullptr)
+		: audioGraphPtr(nullptr)
 	{
 	}
 	
 	virtual void generate(ALIGN16 float * __restrict samples, const int numSamples) override
 	{
-		if (audioGraph == nullptr)
+		if (*audioGraphPtr == nullptr)
 		{
 			for (int i = 0; i < numSamples * 2; ++i)
 				samples[i] = 0.f;
@@ -214,16 +216,20 @@ struct AudioSourceAudioGraph : AudioSource
 			SDL_LockMutex(mutex);
 			{
 				Assert(numSamples == AUDIO_UPDATE_SIZE);
-				AudioOutputChannel channels[2];
 				
+				const double dt = AUDIO_UPDATE_SIZE / double(SAMPLE_RATE);
+				
+				AudioOutputChannel channels[2];
 				channels[0].samples = samples + 0;
 				channels[0].stride = 2;
-				
 				channels[1].samples = samples + 1;
 				channels[1].stride = 2;
 				
-				audioGraph->tick(AUDIO_UPDATE_SIZE / double(SAMPLE_RATE));
+				AudioGraph * audioGraph = *audioGraphPtr;
+				audioGraph->tick(dt);
 				audioGraph->draw(channels, 2);
+				
+				realTimeConnection->updateAudioValues();
 			}
 			SDL_UnlockMutex(mutex);
 		}
@@ -283,25 +289,23 @@ int main(int argc, char * argv[])
 		createAudioEnumTypeDefinitions(typeDefinitionLibrary, g_audioEnumTypeRegistrationList);
 		createAudioNodeTypeDefinitions(typeDefinitionLibrary, g_audioNodeTypeRegistrationList);
 		
-		GraphEdit graphEdit(&typeDefinitionLibrary);
+		graphEdit = new GraphEdit(&typeDefinitionLibrary);
+		
+		realTimeConnection = new AudioRealTimeConnection();
 		
 		AudioGraph * audioGraph = new AudioGraph();
 		
-		AudioRealTimeConnection realTimeConnection;
-		realTimeConnection.audioGraph = audioGraph;
-		realTimeConnection.audioGraphPtr = &audioGraph;
+		realTimeConnection->audioGraph = audioGraph;
+		realTimeConnection->audioGraphPtr = &audioGraph;
+		realTimeConnection->audioMutex = mutex;
 		
-		graphEdit.realTimeConnection = &realTimeConnection;
+		graphEdit->realTimeConnection = realTimeConnection;
 		
-		g_currentAudioGraph = realTimeConnection.audioGraph;
-		
-		graphEdit.load(FILENAME);
-		
-		g_currentAudioGraph = nullptr;
+		graphEdit->load(FILENAME);
 		
 		AudioSourceAudioGraph audioSource;
 		
-		audioSource.audioGraph = audioGraph;
+		audioSource.audioGraphPtr = &audioGraph;
 		
 		PortAudioObject pa;
 		
@@ -323,24 +327,14 @@ int main(int argc, char * argv[])
 				stop = true;
 			else
 			{
-				SDL_LockMutex(mutex);
-				{
-					g_currentAudioGraph = realTimeConnection.audioGraph;
-					
-					graphEdit.tick(dt);
-					
-					g_currentAudioGraph = nullptr;
-					
-					audioSource.audioGraph = audioGraph;
-				}
-				SDL_UnlockMutex(mutex);
+				graphEdit->tick(dt);
 			}
 			
 			//
 
 			framework.beginDraw(0, 0, 0, 0);
 			{
-				graphEdit.draw();
+				graphEdit->draw();
 				
 				pushFontMode(FONT_SDF);
 				{
@@ -357,6 +351,17 @@ int main(int argc, char * argv[])
 		Font("calibri.ttf").saveCache();
 		
 		pa.shut();
+		
+		delete audioGraph;
+		audioGraph = nullptr;
+		realTimeConnection->audioGraph = nullptr;
+		realTimeConnection->audioGraphPtr = nullptr;
+		
+		delete realTimeConnection;
+		realTimeConnection = nullptr;
+		
+		delete graphEdit;
+		graphEdit = nullptr;
 		
 		SDL_DestroyMutex(mutex);
 		mutex = nullptr;
