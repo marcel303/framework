@@ -167,7 +167,7 @@ void AudioRealTimeConnection::updateAudioValues()
 				if (input == nullptr)
 					continue;
 				
-				if (input->type == kAudioPlugType_FloatVec)
+				if (input->isConnected() && input->type == kAudioPlugType_FloatVec)
 				{
 					const AudioFloat & value = input->getAudioFloat();
 					
@@ -190,7 +190,7 @@ void AudioRealTimeConnection::updateAudioValues()
 				if (output == nullptr)
 					continue;
 				
-				if (output->type == kAudioPlugType_FloatVec)
+				if (output->isConnected() && output->type == kAudioPlugType_FloatVec)
 				{
 					const AudioFloat & value = output->getAudioFloat();
 					
@@ -233,7 +233,6 @@ void AudioRealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::strin
 	if (isLoading)
 		return;
 	
-	AUDIO_SCOPE;
 	logDebug("nodeAdd");
 	
 	Assert(audioGraph != nullptr);
@@ -254,6 +253,8 @@ void AudioRealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::strin
 	
 	//
 	
+	AUDIO_SCOPE;
+	
 	AudioNodeBase * audioNode = createAudioNode(nodeId, typeName, audioGraph);
 	
 	if (audioNode == nullptr)
@@ -273,7 +274,6 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	if (isLoading)
 		return;
 	
-	AUDIO_SCOPE;
 	logDebug("nodeRemove");
 	
 	Assert(audioGraph != nullptr);
@@ -294,6 +294,8 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	//	Assert(!input.isConnected()); // may be a literal value node with a non-accounted for (in the graph) connection when created directly from socket value
 	// todo : iterate all other nodes, to ensure there are no nodes with references back to this node?
 	
+	AUDIO_SCOPE;
+	
 	delete node;
 	node = nullptr;
 	
@@ -310,7 +312,6 @@ void AudioRealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeI
 	if (isLoading)
 		return;
 	
-	AUDIO_SCOPE;
 	logDebug("linkAdd");
 	
 	Assert(audioGraph != nullptr);
@@ -348,6 +349,8 @@ void AudioRealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeI
 		return;
 	}
 	
+	AUDIO_SCOPE;
+	
 	input->connectTo(*output);
 	
 	// note : this may add the same node multiple times to the list of predeps. note that this
@@ -373,7 +376,6 @@ void AudioRealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNo
 	if (isLoading)
 		return;
 	
-	AUDIO_SCOPE;
 	logDebug("linkRemove");
 	
 	Assert(audioGraph != nullptr);
@@ -393,6 +395,8 @@ void AudioRealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNo
 	Assert(input != nullptr);
 	if (input == nullptr)
 		return;
+	
+	AUDIO_SCOPE;
 	
 	Assert(input->isConnected());
 	input->disconnect();
@@ -462,7 +466,6 @@ void AudioRealTimeConnection::setNodeIsPassthrough(const GraphNodeId nodeId, con
 	if (isLoading)
 		return;
 	
-	AUDIO_SCOPE;
 	//logDebug("setNodeIsPassthrough called for nodeId=%d, isPassthrough=%d", int(nodeId), int(isPassthrough));
 	
 	Assert(audioGraph != nullptr);
@@ -476,6 +479,8 @@ void AudioRealTimeConnection::setNodeIsPassthrough(const GraphNodeId nodeId, con
 		return;
 	
 	auto node = nodeItr->second;
+	
+	AUDIO_SCOPE;
 	
 	node->isPassthrough = isPassthrough;
 }
@@ -695,7 +700,6 @@ void AudioRealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, cons
 	if (isLoading)
 		return;
 	
-	AUDIO_SCOPE;
 	//logDebug("clearSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
 	
 	Assert(audioGraph != nullptr);
@@ -728,6 +732,8 @@ void AudioRealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, cons
 		
 		if (isImmediate)
 		{
+			AUDIO_SCOPE;
+			
 			input->disconnect();
 		}
 	}
@@ -872,13 +878,13 @@ bool AudioRealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::
 	if (nodeItr == audioGraph->nodes.end())
 		return false;
 	
-	AUDIO_SCOPE;
-	
 	auto node = nodeItr->second;
 	
 	AudioNodeDescription d;
 	
 	// todo : restore getDescription !
+	
+	AUDIO_SCOPE;
 	
 	//node->getDescription(d);
 	
