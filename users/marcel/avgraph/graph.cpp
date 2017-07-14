@@ -200,6 +200,11 @@ void GraphNode::EditorVisualizer::tick(const GraphEdit & graphEdit)
 {
 	visualizer->tick(graphEdit);
 	
+	updateSize(graphEdit);
+}
+
+void GraphNode::EditorVisualizer::updateSize(const GraphEdit & graphEdit)
+{
 	if (sx == 0 || sy == 0)
 	{
 		if (visualizer->hasValue)
@@ -1120,7 +1125,7 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 	
 	texture = 0;
 	
-	channels.clear();
+	channelData.clear();
 	
 	if (srcSocket != nullptr)
 	{
@@ -1134,7 +1139,7 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 		{
 			if (valueTypeDefinition->visualizer == "channels")
 			{
-				hasValue = graphEdit.realTimeConnection->getSrcSocketChannelData(nodeId, srcSocketIndex, srcSocket->name, channels);
+				hasValue = graphEdit.realTimeConnection->getSrcSocketChannelData(nodeId, srcSocketIndex, srcSocket->name, channelData);
 			}
 			else
 			{
@@ -1164,7 +1169,7 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 			
 			texture = 0;
 			
-			channels.clear();
+			channelData.clear();
 		}
 	}
 	
@@ -1180,7 +1185,7 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 		{
 			if (valueTypeDefinition->visualizer == "channels")
 			{
-				hasValue = graphEdit.realTimeConnection->getDstSocketChannelData(nodeId, dstSocketIndex, dstSocket->name, channels);
+				hasValue = graphEdit.realTimeConnection->getDstSocketChannelData(nodeId, dstSocketIndex, dstSocket->name, channelData);
 			}
 			else
 			{
@@ -1192,19 +1197,16 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 		{
 			//logDebug("real time srcSocket value: %s", value.c_str());
 			
-			if (valueTypeDefinition != nullptr)
+			if (valueTypeDefinition->visualizer == "valueplotter")
 			{
-				if (valueTypeDefinition->visualizer == "valueplotter")
-				{
-					const float valueAsFloat = Parse::Float(value);
-					
-					history.add(valueAsFloat);
-				}
+				const float valueAsFloat = Parse::Float(value);
 				
-				if (valueTypeDefinition->visualizer == "opengl-texture")
-				{
-					texture = Parse::Int32(value);
-				}
+				history.add(valueAsFloat);
+			}
+			
+			if (valueTypeDefinition->visualizer == "opengl-texture")
+			{
+				texture = Parse::Int32(value);
 			}
 		}
 		else
@@ -1213,7 +1215,7 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 			
 			texture = 0;
 			
-			channels.clear();
+			channelData.clear();
 		}
 	}
 	
@@ -1330,7 +1332,7 @@ void GraphEdit_Visualizer::measure(
 	
 	//
 	
-	const bool hasChannels = channels.channels.empty() == false;
+	const bool hasChannels = channelData.hasChannels();
 	
 	if (hasChannels)
 	{
@@ -1436,7 +1438,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	//
 	
-	const bool hasChannels = channels.channels.empty() == false;
+	const bool hasChannels = channelData.hasChannels();
 	
 	//
 	
@@ -1668,7 +1670,15 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		
 		bool isFirst = true;
 		
-		for (auto & channel : channels.channels)
+		if (hasChannelDataMinMax)
+		{
+			isFirst = false;
+			
+			min = channelDataMin;
+			max = channelDataMax;
+		}
+		
+		for (auto & channel : channelData.channels)
 		{
 			if (channel.numValues > 0)
 			{
@@ -1689,11 +1699,29 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 				}
 			}
 		}
+		
+		if (min != max)
+		{
+			hasChannelDataMinMax = true;
+			channelDataMin = min;
+			channelDataMax = max;
+		}
 					
 		setColor(127, 127, 255);
-		for (int i = 0; i < channels.channels.size(); ++i)
+		
+		const float strokeSize = 1.f * graphEdit.dragAndZoom.zoom;
+		
+		for (int c = 0; c < channelData.channels.size(); ++c)
 		{
-			auto & channel = channels.channels[i];
+			auto & channel = channelData.channels[c];
+			
+			float lastX = 0.f;
+			float lastY = 0.f;
+			
+			if (channel.numValues == 0)
+				continue;
+		
+			setColor(Color::fromHSL(c / float(channelData.channels.size()), .5f, .5f));
 			
 			if (channel.continuous)
 			{
@@ -1709,16 +1737,11 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 						const float plotX2 = channelsDataX + channelsDataSx;
 						const float plotY = dataY + (min == max ? .5f : 1.f - (value - min) / (max - min)) * channelsDataSy;
 						
-						hqLine(plotX1, plotY, 1.5f, plotX2, plotY, 1.5f);
+						hqLine(plotX1, plotY, strokeSize, plotX2, plotY, strokeSize);
 					}
-					else if (channel.numValues >= 2)
+					else
 					{
 						// connected lines between each sample
-						
-						float lastX = 0.f;
-						float lastY = 0.f;
-						
-						setColor(Color::fromHSL(i / float(channels.channels.size()), .5f, .5f));
 						
 						for (int i = 0; i < channel.numValues; ++i)
 						{
@@ -1729,7 +1752,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 							
 							if (i > 0)
 							{
-								hqLine(lastX, lastY, 1.f, plotX, plotY, 1.f);
+								hqLine(lastX, lastY, strokeSize, plotX, plotY, strokeSize);
 							}
 							
 							lastX = plotX;
@@ -1741,8 +1764,6 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 			}
 			else
 			{
-				setColor(Color::fromHSL(i / float(channels.channels.size()), .5f, .5f));
-				
 				hqBegin(HQ_FILLED_CIRCLES);
 				{
 					for (int i = 0; i < channel.numValues; ++i)
@@ -1761,7 +1782,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		
 		setColor(255, 255, 255);
 		beginTextBatch();
-		drawText(channelsDataX                  + 3, dataY                  + 4, 10, +1.f, +1.f, "%d x %d", channels.channels.size(), channels.channels[0].numValues);
+		drawText(channelsDataX                  + 3, dataY                  + 4, 10, +1.f, +1.f, "%d x %d", channelData.channels.size(), channelData.channels[0].numValues);
 		drawText(channelsDataX + channelsDataSx - 3, dataY                  + 4, 10, -1.f, +1.f, "%0.03f", max);
 		drawText(channelsDataX + channelsDataSx - 3, dataY + channelsDataSy - 3, 10, -1.f, -1.f, "%0.03f", min);
 		endTextBatch();

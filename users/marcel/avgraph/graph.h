@@ -95,6 +95,7 @@ struct GraphNode
 		void allocVisualizer();
 		
 		void tick(const GraphEdit & graphEdit);
+		void updateSize(const GraphEdit & graphEdit);
 		
 		// nodes (and thus also visualizers) get copied around. we want to copy parameters but not the
 		// dynamically allocated visualizer object. so we need a copy constructor/assignment operator
@@ -500,6 +501,11 @@ struct GraphEdit_ChannelData
 	{
 		channels.clear();
 	}
+	
+	bool hasChannels() const
+	{
+		return !channels.empty();
+	}
 };
 
 //
@@ -617,7 +623,10 @@ struct GraphEdit_Visualizer
 	
 	uint32_t texture;
 	
-	GraphEdit_ChannelData channels;
+	GraphEdit_ChannelData channelData;
+	mutable bool hasChannelDataMinMax;
+	mutable float channelDataMin;
+	mutable float channelDataMax;
 	
 	GraphEdit_Visualizer()
 		: nodeId(kGraphNodeIdInvalid)
@@ -629,7 +638,10 @@ struct GraphEdit_Visualizer
 		, hasValue(false)
 		, history()
 		, texture(0)
-		, channels()
+		, channelData()
+		, hasChannelDataMinMax(false)
+		, channelDataMin(0.f)
+		, channelDataMax(0.f)
 	{
 	}
 	
