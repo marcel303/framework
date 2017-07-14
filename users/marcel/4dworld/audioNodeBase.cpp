@@ -506,6 +506,13 @@ AUDIO_NODE_TYPE(audioSourceMix, AudioNodeSourceMix)
 	out("audio", "audioValue");
 }
 
+AUDIO_ENUM_TYPE(audioSineType)
+{
+	elem("sine");
+	elem("triangle");
+	elem("square");
+}
+
 AUDIO_ENUM_TYPE(audioSineMode)
 {
 	elem("signed");
@@ -517,9 +524,10 @@ AUDIO_NODE_TYPE(audioSourceSine, AudioNodeSourceSine)
 	typeName = "audio.sine";
 	
 	in("fine", "bool", "1");
+	inEnum("type", "audioSineType");
 	inEnum("mode", "audioSineMode");
 	in("frequency", "float");
-	in("phase", "float");
+	in("skew", "float", "0.5");
 	out("audio", "audioValue");
 }
 

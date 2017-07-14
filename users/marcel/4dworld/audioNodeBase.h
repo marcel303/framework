@@ -834,6 +834,13 @@ struct AudioNodeSourceMix : AudioNodeBase
 
 struct AudioNodeSourceSine : AudioNodeBase
 {
+	enum Type
+	{
+		kType_Sine,
+		kType_Triangle,
+		kType_Square
+	};
+	
 	enum Mode
 	{
 		kMode_SNorm,
@@ -843,9 +850,10 @@ struct AudioNodeSourceSine : AudioNodeBase
 	enum Input
 	{
 		kInput_Fine,
+		kInput_Type,
 		kInput_Mode,
 		kInput_Frequency,
-		kInput_Phase,
+		kInput_Skew,
 		kInput_COUNT
 	};
 	
@@ -866,9 +874,10 @@ struct AudioNodeSourceSine : AudioNodeBase
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Fine, kAudioPlugType_Bool);
+		addInput(kInput_Type, kAudioPlugType_Int);
 		addInput(kInput_Mode, kAudioPlugType_Int);
 		addInput(kInput_Frequency, kAudioPlugType_Float);
-		addInput(kInput_Phase, kAudioPlugType_Float);
+		addInput(kInput_Skew, kAudioPlugType_Float);
 		addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 	}
 	
@@ -876,12 +885,11 @@ struct AudioNodeSourceSine : AudioNodeBase
 	{
 	}
 	
-	virtual void draw() override
+	void drawSine()
 	{
-		const bool fine = getInputBool(kInput_Fine, true);
 		const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
+		const bool fine = getInputBool(kInput_Fine, true);
 		const float frequency = getInputFloat(kInput_Frequency, 0.f);
-		const float phaseOffset = getInputFloat(kInput_Phase, 0.f);
 		const float phaseStep = frequency / double(SAMPLE_RATE);
 		const float twoPi = 2.f * M_PI;
 		
@@ -893,20 +901,20 @@ struct AudioNodeSourceSine : AudioNodeBase
 			{
 				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 				{
-					audioOutput.samples[i] = std::sinf((phase + phaseOffset) * twoPi);
+					audioOutput.samples[i] = std::sinf(phase * twoPi);
 					
 					phase += phaseStep;
-					phase = std::fmodf(phase, 1.f);
+					phase = phase - std::floorf(phase);
 				}
 			}
 			else if (mode == kMode_UNorm)
 			{
 				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 				{
-					audioOutput.samples[i] = .5f + .5f * std::sinf((phase + phaseOffset) * twoPi);
+					audioOutput.samples[i] = .5f + .5f * std::sinf(phase * twoPi);
 					
 					phase += phaseStep;
-					phase = std::fmodf(phase, 1.f);
+					phase = phase - std::floorf(phase);
 				}
 			}
 		}
@@ -914,18 +922,140 @@ struct AudioNodeSourceSine : AudioNodeBase
 		{
 			if (mode == kMode_SNorm)
 			{
-				audioOutput.setScalar(std::sinf((phase + phaseOffset) * twoPi));
+				audioOutput.setScalar(std::sinf(phase * twoPi));
 				
 				phase += phaseStep * AUDIO_UPDATE_SIZE;
 				phase = std::fmodf(phase, 1.f);
 			}
 			else if (mode == kMode_UNorm)
 			{
-				audioOutput.setScalar(.5f + .5f * std::sinf((phase + phaseOffset) * twoPi));
+				audioOutput.setScalar(.5f + .5f * std::sinf(phase * twoPi));
 				
 				phase += phaseStep * AUDIO_UPDATE_SIZE;
 				phase = std::fmodf(phase, 1.f);
 			}
+		}
+	}
+	
+	void drawTriangle()
+	{
+		const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
+		const bool fine = getInputBool(kInput_Fine, true);
+		const float frequency = getInputFloat(kInput_Frequency, 0.f);
+		const float skew = getInputFloat(kInput_Skew, .5f);
+		const float phaseStep = frequency / double(SAMPLE_RATE);
+		
+		if (fine || true)
+		{
+			audioOutput.setVector();
+			
+			if (mode == kMode_SNorm)
+			{
+				const float mulA = 1.f / skew;
+				const float mulB = 2.f / (1.f - skew);
+				
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+				{
+					float value;
+					
+					if (phase < skew)
+					{
+						value = -1.f + 2.f * phase * mulA;
+					}
+					else
+					{
+						value = +1.f - (phase - skew) * mulB;
+					}
+					
+					audioOutput.samples[i] = value;
+					
+					phase += phaseStep;
+					phase = phase - std::floorf(phase);
+				}
+			}
+			else if (mode == kMode_UNorm)
+			{
+				const float mulA = 1.f / skew;
+				const float mulB = 1.f / (1.f - skew);
+				
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+				{
+					float value;
+					
+					if (phase < skew)
+					{
+						value = phase * mulA;
+					}
+					else
+					{
+						value = 1.f - (phase - skew) * mulB;
+					}
+					
+					audioOutput.samples[i] = value;
+					
+					phase += phaseStep;
+					phase = phase - std::floorf(phase);
+				}
+			}
+		}
+	}
+	
+	void drawSquare()
+	{
+		const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
+		const bool fine = getInputBool(kInput_Fine, true);
+		const float frequency = getInputFloat(kInput_Frequency, 0.f);
+		const float skew = getInputFloat(kInput_Skew, .5f);
+		const float phaseStep = frequency / double(SAMPLE_RATE);
+		
+		if (fine || true)
+		{
+			audioOutput.setVector();
+			
+			if (mode == kMode_SNorm)
+			{
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+				{
+					audioOutput.samples[i] = phase < skew ? -1.f : +1.f;
+					
+					phase += phaseStep;
+					phase = phase - std::floorf(phase);
+				}
+			}
+			else if (mode == kMode_UNorm)
+			{
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+				{
+					audioOutput.samples[i] = phase < skew ? 0.f : 1.f;
+					
+					phase += phaseStep;
+					phase = phase - std::floorf(phase);
+				}
+			}
+		}
+	}
+	
+	virtual void draw() override
+	{
+		const Type type = (Type)getInputInt(kInput_Type, 0);
+		
+		if (type == kType_Sine)
+		{
+			drawSine();
+		}
+		else if (type == kType_Triangle)
+		{
+			drawTriangle();
+		}
+		else if (type == kType_Square)
+		{
+			drawSquare();
+		}
+		else
+		{
+			Assert(false);
+			
+			audioOutput.setScalar(0.f);
 		}
 	}
 };
