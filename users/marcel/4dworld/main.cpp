@@ -35,11 +35,18 @@
 #include "soundmix.h"
 #include "../libparticle/ui.h"
 
+#define FULLSCREEN 0
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 
-const int GFX_SX = 1300;
-const int GFX_SY = 800;
+#if FULLSCREEN
+	const int GFX_SX = 2560/2;
+	const int GFX_SY = 1600/2;
+#else
+	const int GFX_SX = 1300;
+	const int GFX_SY = 800;
+#endif
 
 //
 
@@ -226,8 +233,8 @@ struct AudioSourceAudioGraph : AudioSource
 				channels[1].stride = 2;
 				
 				AudioGraph * audioGraph = *audioGraphPtr;
-				audioGraph->tick(dt);
-				audioGraph->draw(channels, 2);
+				audioGraph->tick(dt, true);
+				audioGraph->draw(channels, 2, true);
 				
 				realTimeConnection->updateAudioValues();
 			}
@@ -240,6 +247,10 @@ struct AudioSourceAudioGraph : AudioSource
 
 int main(int argc, char * argv[])
 {
+#if FULLSCREEN
+	framework.fullscreen = true;
+#endif
+	
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
 		initUi();
