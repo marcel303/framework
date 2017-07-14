@@ -93,8 +93,8 @@ struct AudioGraph
 	void destroy();
 	void connectToInputLiteral(AudioPlug & input, const std::string & inputValue);
 	
-	void tick(const float dt);
-	void draw(AudioOutputChannel * outputChannels, const int numOutputChannels) const;
+	void tick(const float dt, const bool traverseUnreferenced);
+	void draw(AudioOutputChannel * outputChannels, const int numOutputChannels, const bool traverseUnreferenced) const;
 };
 
 //

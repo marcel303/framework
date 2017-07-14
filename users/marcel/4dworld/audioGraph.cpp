@@ -166,7 +166,7 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 	}
 }
 
-void AudioGraph::tick(const float dt)
+void AudioGraph::tick(const float dt, const bool traverseUnreferenced)
 {
 	audioCpuTimingBlock(AudioGraph_Tick);
 	
@@ -186,17 +186,18 @@ void AudioGraph::tick(const float dt)
 		}
 	}
 	
-	// process nodes that aren't connected to the display node
-
-	// todo : perhaps process unconnected nodes as islands, following predeps ?
-	
-	for (auto i : nodes)
+	if (traverseUnreferenced)
 	{
-		AudioNodeBase * node = i.second;
+		// process nodes that aren't connected to the display node
 		
-		if (node->lastTickTraversalId != nextTickTraversalId)
+		for (auto i : nodes)
 		{
-			node->traverseTick(nextTickTraversalId, dt);
+			AudioNodeBase * node = i.second;
+			
+			if (node->lastTickTraversalId != nextTickTraversalId)
+			{
+				node->traverseTick(nextTickTraversalId, dt);
+			}
 		}
 	}
 	
@@ -207,7 +208,7 @@ void AudioGraph::tick(const float dt)
 	time += dt;
 }
 
-void AudioGraph::draw(AudioOutputChannel * outputChannels, const int numOutputChannels) const
+void AudioGraph::draw(AudioOutputChannel * outputChannels, const int numOutputChannels, const bool traverseUnreferenced) const
 {
 	audioCpuTimingBlock(AudioGraph_Draw);
 	
@@ -230,6 +231,21 @@ void AudioGraph::draw(AudioOutputChannel * outputChannels, const int numOutputCh
 			}
 			displayNode->outputChannelL = nullptr;
 			displayNode->outputChannelR = nullptr;
+		}
+	}
+	
+	if (traverseUnreferenced)
+	{
+		// process nodes that aren't connected to the display node
+		
+		for (auto i : nodes)
+		{
+			AudioNodeBase * node = i.second;
+			
+			if (node->lastDrawTraversalId != nextDrawTraversalId)
+			{
+				node->traverseDraw(nextDrawTraversalId);
+			}
 		}
 	}
 	
