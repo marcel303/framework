@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include "testBase.h"
 #include "vfxNodes/imageCpuDelayLine.h"
 #include "vfxNodes/openglTexture.h"
 #include "vfxNodes/vfxNodeBase.h"
@@ -38,6 +39,8 @@ extern const int GFX_SY;
 
 void testImageCpuDelayLine()
 {
+	setAbout("This example shows the usage of the 'image delay line'. The image delay line records a history of N images and allows random access to these images. To conserve memory, the image delay line has optional support for JPEG compression.");
+	
 	const char * videoFilename = "mocapc.mp4";
 	const int saveBufferSize = 256 * 1024;
 	
@@ -247,9 +250,11 @@ void testImageCpuDelayLine()
 			drawText(x, y + 20, fontSize, +1, +1, "C: clear delay line FIFO");
 			drawText(x, y + 40, fontSize, +1, +1, "R: set a random delay line size");
 			drawText(x, y + 60, fontSize, +1, +1, "SPACE: quit test");
+			
+			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 	
 	delete mediaPlayer;
 	mediaPlayer = nullptr;

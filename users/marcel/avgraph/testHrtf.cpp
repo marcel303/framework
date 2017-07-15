@@ -5,6 +5,7 @@
 #include "Path.h"
 #include "portaudio/portaudio.h"
 #include "StringEx.h"
+#include "testBase.h"
 #include "Timer.h"
 #include "vfxNodes/fourier.h"
 #include <complex>
@@ -543,11 +544,11 @@ struct AudioBuffer
 		float * __restrict oReal = output.real;
 		float * __restrict oImag = output.imag;
 		
-		const float fi = fImag[0];
-		const float si = sImag[0];
+		//const float fi = fImag[0];
+		//const float si = sImag[0];
 		
-		*(float*)fImag = 0.f;
-		*(float*)sImag = 0.f;
+		//*(float*)fImag = 0.f;
+		//*(float*)sImag = 0.f;
 		
 		for (int i = 0; i < HRTF_BUFFER_SIZE; ++i)
 		{
@@ -557,10 +558,10 @@ struct AudioBuffer
 			oImag[fftIndices[i]] = sReal[i] * fImag[i] + sImag[i] * fReal[i];
 		}
 		
-		oImag[0] = fi * si;
+		//oImag[0] = fi * si;
 		
-		*(float*)fImag = fi;
-		*(float*)sImag = si;
+		//*(float*)fImag = fi;
+		//*(float*)sImag = si;
 	}
 };
 
@@ -571,6 +572,8 @@ static void convolveAudio(
 	AudioBuffer & lResult,
 	AudioBuffer & rResult)
 {
+	const uint64_t t1 = g_TimerRT.TimeUS_get();
+	
 	// transform audio data from the time-domain into the frequency-domain
 	
 	source.transformToFrequencyDomain(true);
@@ -584,6 +587,10 @@ static void convolveAudio(
 	
 	lResult.transformToTimeDomain(true);
 	rResult.transformToTimeDomain(true);
+	
+	const uint64_t t2 = g_TimerRT.TimeUS_get();
+	
+	printf("convolveAudio took %gms\n", (t2 - t1) / 1000.0);
 }
 
 static bool convertSoundDataToHRTF(
@@ -1353,6 +1360,8 @@ static void gxMap2f(
 
 void testHrtf()
 {
+	setAbout("-- Please Use Headphones -- This example demonstrates the use of the HRTF binauralizer object. The binauralizer makes it possible to spatialize audio, giving a mono sound with a virtual XYZ-position the appearence of having a spatial orientation in relationship to the listener. HRTF stands for Head-Related Transfer Function, and is a technique which uses a series of orientation-dependent audio filters captured by measuring the impulse-response of sound as it propagates through the ears (pinnae) of human test subjects. The result of applying these filters is that the spectrum of the audio arriving in the left and right ears is slightly different, which the brain interprets as the result of the attenuation due to the pinnae.");
+	
 	const int numBits = Fourier::integerLog2(HRTF_BUFFER_SIZE);
 	
 	for (int i = 0; i < HRTF_BUFFER_SIZE; ++i)
@@ -1391,6 +1400,8 @@ void testHrtf()
 	{
 		logError("failed to initialize audio output");
 	}
+	
+	framework.process();
 	
 	do
 	{
@@ -1586,9 +1597,11 @@ void testHrtf()
 			setColor(colorWhite);
 			
 			drawText(10, 10, 24, 1, 1, "time: %.4fms", binaural1.processTimeAvg / 1000.0);
+			
+			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 	
 	pa.shut();
 	

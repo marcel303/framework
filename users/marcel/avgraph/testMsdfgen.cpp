@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include "testBase.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -114,7 +115,9 @@ void testMsdfgen()
 				popFontMode();
 			}
 			gxPopMatrix();
+			
+			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 }

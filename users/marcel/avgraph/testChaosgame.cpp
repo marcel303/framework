@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include "testBase.h"
 #include "Timer.h"
 
 extern const int GFX_SX;
@@ -94,38 +95,45 @@ void testChaosGame()
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			const float scale = mouse.isDown(BUTTON_LEFT) ? 1.f : (.1f + mouse.x / float(GFX_SX) * (20.f - .1f));
-			const float xOffset = mouse.isDown(BUTTON_LEFT) ? 0.f : mouse.y;
-			gxScalef(scale, scale, 1.f);
-			gxTranslatef(-xOffset, 0.f, 0.f);
-			
-			setBlend(BLEND_ADD);
-			setColorf(.3f, .2f, .1f, 1.f);
-			//gxBegin(GL_POINTS);
-			hqBegin(HQ_FILLED_CIRCLES);
+			gxPushMatrix();
 			{
-				const int64_t * __restrict outputItr = output;
+				const float scale = mouse.isDown(BUTTON_LEFT) ? 1.f : (.1f + mouse.x / float(GFX_SX) * (20.f - .1f));
+				const float xOffset = mouse.isDown(BUTTON_LEFT) ? 0.f : mouse.y;
+				gxScalef(scale, scale, 1.f);
+				gxTranslatef(-xOffset, 0.f, 0.f);
 				
-				//const float percentage = std::fmod(framework.time / 4.f, 1.f);
-				//const int numPointsToDraw = kNumIterations * percentage;
-				const int numPointsToDraw = kNumIterations;
+				pushBlend(BLEND_ADD);
+				setColorf(.3f, .2f, .1f, 1.f);
 				
-				for (int i = 0; i < numPointsToDraw; ++i)
+				hqBegin(HQ_FILLED_CIRCLES);
 				{
-					const int x = outputItr[0] >> 32;
-					const int y = outputItr[1] >> 32;
+					const int64_t * __restrict outputItr = output;
 					
-					//gxVertex2f(x, y);
-					hqFillCircle(x, y, .4f);
+					//const float percentage = std::fmod(framework.time / 4.f, 1.f);
+					//const int numPointsToDraw = kNumIterations * percentage;
+					const int numPointsToDraw = kNumIterations;
 					
-					outputItr += 2;
+					for (int i = 0; i < numPointsToDraw; ++i)
+					{
+						const int x = outputItr[0] >> 32;
+						const int y = outputItr[1] >> 32;
+						
+						//gxVertex2f(x, y);
+						hqFillCircle(x, y, .4f);
+						
+						outputItr += 2;
+					}
 				}
+				hqEnd();
+				
+				popBlend();
 			}
-			//gxEnd();
-			hqEnd();
+			gxPopMatrix();
+			
+			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 	
 	delete[] output;
 	output = nullptr;

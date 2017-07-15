@@ -26,6 +26,7 @@
 */
 
 #include "ofxDatGui/ofxDatGui.h"
+#include "testBase.h"
 
 struct ofApp
 {
@@ -229,6 +230,8 @@ struct ofApp
 
 void testDatGui()
 {
+	setAbout("This example shows how to use ofxDatGui from within Framework. The example uses an OpenFrameworks to Framework wrapper to allow it to use ofx addons");
+	
 	ofApp app;
 	
 	app.setup();
@@ -265,7 +268,9 @@ void testDatGui()
 			ofEvents().update.notify(e);
 
 			app.draw();
+			
+			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 }

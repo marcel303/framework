@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "stb_truetype.h"
+#include "testBase.h"
 
 static stbtt_bakedchar cdata[96]; // ASCII 32..126 is 95 glyphs
 
@@ -104,8 +105,10 @@ void testStbTruetype()
 				//hqDrawPath(path);
 			}
 			gxPopMatrix();
+			
+			drawTestUi();
 		}
 		framework.endDraw();
 	}
-	while (!keyboard.wentDown(SDLK_SPACE));
+	while (tickTestUi());
 }

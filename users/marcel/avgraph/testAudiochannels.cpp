@@ -27,6 +27,7 @@
 
 #include "Calc.h"
 #include "framework.h"
+#include "testBase.h"
 #include <cmath>
 #include <portaudio/portaudio.h>
 
@@ -240,9 +241,10 @@ void testAudiochannels()
 			
 			framework.beginDraw(0, 0, 63, 0);
 			{
+				drawTestUi();
 			}
 			framework.endDraw();
-		} while (!keyboard.wentDown(SDLK_SPACE));
+		} while (tickTestUi());
 	}
 	
 	shutAudioOutput();

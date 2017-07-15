@@ -29,6 +29,7 @@
 
 #include "framework.h"
 #include "image.h"
+#include "testBase.h"
 #include "Timer.h"
 #include "vfxNodes/deepbelief.h"
 #include "../avpaint/video.h"
@@ -39,6 +40,8 @@ extern const int GFX_SY;
 
 void testDeepbelief()
 {
+	setAbout("This example demonstrates the use of the Deep Belief SDK. The Deep Belief SDK uses machine learning to classify images. In this example Deep Belief is asked to classify objects in a video being shown to it. Can you guess the right object before Deep Belief does?");
+	
 	const char * networkFilename = "deepbelief/jetpac.ntwk";
 	//const char * networkFilename = "deepbelief/ccv2010.ntwk";
 	//const char * imageFilename = "deepbelief/dog.jpg";
@@ -272,9 +275,11 @@ void testDeepbelief()
 				popFontMode();
 				gxPopMatrix();
 			}
+			
+			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 	
 	d->shut();
 	

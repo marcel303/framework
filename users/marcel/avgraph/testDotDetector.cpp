@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "image.h"
+#include "testBase.h"
 #include "Timer.h"
 #include "vfxNodes/dotDetector.h"
 #include "vfxNodes/dotTracker.h"
@@ -440,10 +441,11 @@ void testDotDetector()
 			y += spacing;
 			drawText(5, y, fontSize, +1, +1, "tracking %d dots, numAdded: %d, numRemoved: %d", useDotTracker ? numIslands : 0, numAdded, numRemoved);
 			y += spacing;
+			
+			drawTestUi();
 		}
-		
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 	
 #if USE_READPIXELS_OPTIMIZE
 	for (int i = 0; i < kNumPixelBuffers; ++i)

@@ -27,6 +27,7 @@
 
 #include "vfxNodes/dotTracker.h"
 #include "framework.h"
+#include "testBase.h"
 #include "Timer.h"
 #include <algorithm>
 
@@ -160,7 +161,9 @@ void testDotTracker()
 			setColor(0, 0, 0);
 			drawText(5, 5, 14, +1, +1, "nextAllocId: %d, delay: %dms, time: %.2fms", dotTracker.nextAllocId, delay, timeAvg / 1000.0);
 			drawText(5, 25, 14, +1, +1, "validate: %d [V to toggle]. validationPassed: %d. fast: %d (F to toggle)", validateReference, validationPassed, fast);
+			
+			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 }

@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "image.h"
+#include "testBase.h"
 #include "Timer.h"
 #include "vfxNodes/fourier.h"
 #include <math.h>
@@ -400,7 +401,7 @@ static void fft2D_draw(const real * __restrict dreal, const real * __restrict di
 	
 	setFont("calibri.ttf");
 	setColor(colorWhite);
-	drawText(5, 5, 18, +1, +1, "method: %s. time=%gms", impl, usecs / 1000.0);
+	drawText(5, -25, 18, +1, +1, "method: %s. time=%.2fms", impl, usecs / 1000.0);
 }
 
 template <typename real>
@@ -543,19 +544,43 @@ void testFourier2dImpl()
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			Sprite sprite(filename);
+			
+			const int kPadding = 60;
+			const int sx = kPadding * 4 + sprite.getWidth() * 3;
+			const int sy = kPadding * 3 + sprite.getHeight() * 2;
+			const float scaleX = GFX_SX / float(sx);
+			const float scaleY = GFX_SY / float(sy);
+			const float scale = std::min(1.f, std::min(scaleX, scaleY));
+			
 			gxPushMatrix();
 			{
-				fft2D_draw(dreal_reference, dimag_reference, transformSx_reference, transformSy_reference, "reference", t_reference);
-				gxTranslatef(0, transformSy_reference, 0);
-				fft2D_draw(dreal_fast, dimag_fast, transformSx_fast, transformSy_fast, "fast", t_fast);
-				gxTranslatef(0, transformSy_fast, 0);
-				fft2D_draw(dreal_slow, dimag_slow, transformSx_slow, transformSy_slow, "slow", t_slow);
-				gxTranslatef(0, transformSy_slow, 0);
+				gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
+				gxScalef(scale, scale, scale);
+				gxTranslatef(-sx/2, -sy/2, 0);
+				
+				gxPushMatrix();
+				{
+					gxTranslatef(kPadding, kPadding, 0);
+					fft2D_draw(dreal_reference, dimag_reference, transformSx_reference, transformSy_reference, "reference", t_reference);
+					gxTranslatef(kPadding + sprite.getWidth(), 0, 0);
+					fft2D_draw(dreal_fast, dimag_fast, transformSx_fast, transformSy_fast, "fast", t_fast);
+					gxTranslatef(kPadding + sprite.getWidth(), 0, 0);
+					fft2D_draw(dreal_slow, dimag_slow, transformSx_slow, transformSy_slow, "slow", t_slow);
+					gxTranslatef(kPadding, 0, 0);
+				}
+				gxPopMatrix();
+				
+				gxPushMatrix();
+				{
+					gxTranslatef(sx/2 - sprite.getWidth()/2, kPadding * 2 + sprite.getWidth(), 0);
+					sprite.draw();
+				}
+				gxPopMatrix();
 			}
 			gxPopMatrix();
 			
-			gxTranslatef(transformSx_reference, 0, 0);
-			Sprite(filename).draw();
+			drawTestUi();
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE) && false);
@@ -566,7 +591,7 @@ void testFourier2dImpl()
 	delete[] dimag_fast;
 	delete[] dreal_slow;
 	delete[] dimag_slow;
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 	
 	delete image;
 	image = nullptr;

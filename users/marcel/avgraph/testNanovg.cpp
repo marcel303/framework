@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include "testBase.h"
 
 #define NANOVG_GL3_IMPLEMENTATION
 #include "nanovg/nanovg.h"
@@ -325,9 +326,13 @@ void testNanovg()
 				drawParagraph(vg, 400, 200, 400, 400, mouse.x, mouse.y);
 			}
 			nvgEndFrame(vg);
+			
+			setBlend(BLEND_ALPHA);
+			
+			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 	
 	nvgDeleteGL3(vg);
 	vg = nullptr;

@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include "testBase.h"
 
 static SDL_atomic_t activeCount;
 static SDL_atomic_t numRunning;

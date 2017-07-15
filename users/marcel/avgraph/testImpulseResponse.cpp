@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include "testBase.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -73,6 +74,8 @@ static void drawSamples(const int numSamples, const double * samples, const bool
 
 void testImpulseResponseMeasurement()
 {
+	setAbout("This example demonstrates performance a so called impulse-response measurement. The impulse-response measurement calculates a number between 0 and 1 indicating to what extent two signals share the same frequency.");
+	
 	double measurementPhaseAnim = 0.0;
 	double measurementPhaseAnimSpeed = 0.0;
 	
@@ -195,7 +198,9 @@ void testImpulseResponseMeasurement()
 			setColor(colorWhite);
 			drawText(GFX_SX/2, GFX_SY*3/4 + 90, 24, 1, 0, "MOUSE = change frequency");
 			drawText(GFX_SX/2, GFX_SY*3/4 + 120, 24, 1, 0, "SPACE = quit");
+			
+			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 }

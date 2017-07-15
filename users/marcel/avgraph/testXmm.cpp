@@ -28,6 +28,7 @@
 #ifndef WIN32 // todo : fix XMM compiler errors on Win32 ?
 
 #include "framework.h"
+#include "testBase.h"
 #include "xmm/xmm.h"
 
 extern const int GFX_SX;
@@ -57,6 +58,8 @@ struct Recording
 
 void testXmm()
 {
+	setAbout("This example demonstrates how to use the XMM gesture following library. XMM can be trained to recognize various gestures, and guesses which gesture is being performed in recognition mode. In addition to guessing which gesture is being performaned, it also gives an estimate of the percentage the gesture has been completed.");
+	
 	{
 		// build training set
 		
@@ -405,12 +408,14 @@ void testXmm()
 			drawText(GFX_SX/2, GFX_SY-20, 18, 0, 0, "%s", isRecording ? "RECORDING" : "RECOGNIZING");
 			drawText(GFX_SX/2, GFX_SY-80, 18, 0, 0, "%s", isRecording ? "(n/a)" : hhmm.results.likeliest.c_str());
 			popFontMode();
+			
+			drawTestUi();
 		}
 		framework.endDraw();
 		
 		frameIndex++;
 		
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 }
 
 #endif

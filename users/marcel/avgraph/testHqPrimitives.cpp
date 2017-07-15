@@ -1,4 +1,5 @@
 #include "framework.h"
+#include "testBase.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -9,6 +10,8 @@ extern const int GFX_SY;
 
 void testHqPrimitives()
 {
+	setAbout("This example demonstrates how to draw high quality primitives like lines and circles using Framework.");
+	
 	Surface surface(GFX_SX, GFX_SY, false);
 	
 	bool doTransform = true;
@@ -316,7 +319,9 @@ void testHqPrimitives()
 			drawRect(0, 0, GFX_SX, GFX_SY);
 			gxSetTexture(0);
 			popBlend();
+			
+			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 }

@@ -1,4 +1,5 @@
 #include "framework.h"
+#include "testBase.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -27,6 +28,8 @@ extern void testXmm();
 extern void testHqPrimitives();
 extern void testHrtf();
 
+extern void testMain();
+
 //
 
 #define NUM_LINKS 5
@@ -34,7 +37,7 @@ extern void testHrtf();
 struct ButtonState;
 
 static bool hasMouseHover = false;
-static SDL_Cursor * handCursor = nullptr;
+SDL_Cursor * handCursor = nullptr;
 
 struct ButtonLink
 {
@@ -221,7 +224,7 @@ static bool menuDraw;
 static float menuDt;
 static bool buttonPressed = false;
 
-static bool doButton(const char * caption, const char * name)
+static bool doButton(const char * caption, const char * name, TestFunction testFunction)
 {
 	bool clicked = false;
 	
@@ -252,6 +255,17 @@ static bool doButton(const char * caption, const char * name)
 	}
 	
 	buttonPressed |= clicked;
+	
+	if (clicked && testFunction != nullptr)
+	{
+		SDL_SetCursor(SDL_GetDefaultCursor());
+		
+		beginTest(testFunction);
+		
+		testFunction();
+		
+		endTest(testFunction);
+	}
 	
 	return clicked;
 }
@@ -386,48 +400,30 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 		buttonPressed = false;
 	}
 	
-	if (doButton("KOAS", "Chaos Game"))
-		testChaosGame();
-	if (doButton("DaGu", "DatGUI"))
-		testDatGui();
+	doButton("KOAS", "Chaos Game", testChaosGame);
+	doButton("DaGu", "DatGUI", testDatGui);
 #ifdef MACOS
-	if (doButton("DdBe", "Deep Belief SDK"))
-		testDeepbelief();
+	doButton("DdBe", "Deep Belief SDK", testDeepbelief);
 #endif
-	if (doButton("DtDt", "Dot Detector"))
-		testDotDetector();
-	if (doButton("DtTr", "Dot Tracker"))
-		testDotTracker();
-	if (doButton("DTAtl", "Dynamic Texture Atlas"))
-		testDynamicTextureAtlas();
-	if (doButton("Fr1D", "1D Fourier Analysis"))
-		testFourier1d();
-	if (doButton("Fr2D", "2D Fourier Analysis"))
-		testFourier2d();
-	if (doButton("ImDL", "CPU-image delay line"))
-		testImageCpuDelayLine();
-	if (doButton("DrPr", "Drawing Primitives"))
-		testHqPrimitives();
-	if (doButton("HRTF", "Binaural Sound"))
-		testHrtf();
-	if (doButton("IRm", "Impulse-Response"))
-		testImpulseResponseMeasurement();
-	if (doButton("MSDF", "MSDFGEN"))
-		testMsdfgen();
-	if (doButton("NVg", "NanoVG"))
-		testNanovg();
-	if (doButton("TT", "STB TrueType"))
-		testStbTruetype();
-	if (doButton("TAtl", "Texture Atlas"))
-		testTextureAtlas();
-	if (doButton("Thr", "Threading"))
-		testThreading();
+	doButton("DtDt", "Dot Detector", testDotDetector);
+	doButton("DtTr", "Dot Tracker", testDotTracker);
+	doButton("DTAtl", "Dynamic Texture Atlas", testDynamicTextureAtlas);
+	doButton("Fr1D", "1D Fourier Analysis", testFourier1d);
+	doButton("Fr2D", "2D Fourier Analysis", testFourier2d);
+	doButton("ImDL", "CPU-image delay line", testImageCpuDelayLine);
+	doButton("DrPr", "Drawing Primitives", testHqPrimitives);
+	doButton("HRTF", "Binaural Sound", testHrtf);
+	doButton("IRm", "Impulse-Response", testImpulseResponseMeasurement);
+	doButton("MSDF", "MSDFGEN", testMsdfgen);
+	doButton("NVg", "NanoVG", testNanovg);
+	doButton("TT", "STB TrueType", testStbTruetype);
+	doButton("TAtl", "Texture Atlas", testTextureAtlas);
+	doButton("Thr", "Threading", testThreading);
 #ifndef WIN32
-	if (doButton("XMM", "XMM Gesture Follower"))
-		testXmm();
+	doButton("XMM", "XMM Gesture Follower", testXmm);
 #endif
 
-	const bool result = doButton("QUIT", "Quit");
+	const bool result = doButton("QUIT", "Quit", nullptr);
 	
 	if (menuTick)
 	{
@@ -442,6 +438,8 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 
 void testMain()
 {
+	beginTest(testMain);
+	
 	handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 	
 	Surface surface(GFX_SX, GFX_SY, true);

@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "testBase.h"
 #include "textureatlas.h"
 #include "Timer.h"
 
@@ -99,9 +100,11 @@ void testTextureAtlas()
 					if (e.isAllocated)
 						drawRectLine(e.x, e.y, e.x + e.sx, e.y + e.sy);
 			#endif
+				
+				drawTestUi();
 			}
 			framework.endDraw();
-		} while (!keyboard.wentDown(SDLK_SPACE));
+		} while (tickTestUi());
 	}
 }
 
@@ -268,7 +271,7 @@ void testDynamicTextureAtlas()
 		
 		//
 		
-		if (mouse.isDown(BUTTON_LEFT))
+		if (mouse.isDown(BUTTON_RIGHT))
 			SDL_Delay(500);
 		
 		//
@@ -367,9 +370,9 @@ void testDynamicTextureAtlas()
 				if (e.isAllocated)
 					drawRectLine(e.x, e.y, e.x + e.sx, e.y + e.sy);
 		#endif
+		
+			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
-	
-	logDebug("done!");
+	} while (tickTestUi());
 }

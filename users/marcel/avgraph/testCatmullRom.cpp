@@ -1,4 +1,5 @@
 #include "framework.h"
+#include "testBase.h"
 #include <iostream>
 #include <cmath>
 
@@ -197,9 +198,11 @@ void testCatmullRom()
 				}
 				hqEnd();
 			}
+			
+			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (tickTestUi());
 	
 	exit(0);
 }
