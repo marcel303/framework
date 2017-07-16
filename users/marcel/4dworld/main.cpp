@@ -112,6 +112,9 @@ struct AudioSourceAudioGraph : PortAudioHandler
 
 //
 
+#include "soundmix.h"
+#include "wavefield.h"
+
 static AudioVoiceManager * g_voiceMgr = nullptr;
 
 struct Creature
@@ -178,9 +181,101 @@ struct World
 	
 	void removeCreature()
 	{
-		creatures.pop_front();
+		if (creatures.empty() == false)
+		{
+			creatures.pop_front();
+		}
 	}
 };
+
+static void drawWaterSim1D(const WaterSim1D & w, const float sampleLocation)
+{
+	gxPushMatrix();
+	gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
+	gxScalef(GFX_SX / float(w.numElems - 1), 40.f, 1.f);
+	gxTranslatef(-(w.numElems-1)/2.f, 0.f, 0.f);
+	
+	hqBegin(HQ_FILLED_CIRCLES, true);
+	{
+		for (int i = 0; i < w.numElems; ++i)
+		{
+			const float p = w.p[i];
+			const float a = w.f[i] / 2.f;
+			
+			setColorf(1.f, 1.f, 1.f, a);
+			hqFillCircle(i, p, .5f);
+		}
+	}
+	hqEnd();
+	
+	hqBegin(HQ_LINES, true);
+	{
+		for (int i = 0; i < w.numElems; ++i)
+		{
+			const float p = w.p[i];
+			const float a = w.f[i] / 2.f;
+			
+			setColorf(1.f, 1.f, 1.f, a);
+			hqLine(i, 0.f, 3.f, i, p, 1.f);
+		}
+	}
+	hqEnd();
+	
+	hqBegin(HQ_FILLED_CIRCLES);
+	{
+		const float p = w.sample(sampleLocation);
+		const float a = 1.f;
+		
+		setColorf(1.f, 1.f, 0.f, a);
+		hqFillCircle(sampleLocation, p, 1.f);
+	}
+	hqEnd();
+	
+	hqBegin(HQ_LINES);
+	{
+		setColor(colorGreen);
+		hqLine(0.f, -1.f, 1.f, w.numElems - 1, -1.f, 1.f);
+		hqLine(0.f, +1.f, 1.f, w.numElems - 1, +1.f, 1.f);
+	}
+	hqEnd();
+	
+	gxPopMatrix();
+}
+
+static void drawWaterSim2D(const WaterSim2D & w, const float sampleLocationX, const float sampleLocationY)
+{
+	gxPushMatrix();
+	gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
+	const int gfxSize = std::min(GFX_SX, GFX_SY);
+	gxScalef(gfxSize / float(w.numElems - 1), gfxSize / float(w.numElems - 1), 1.f);
+	gxTranslatef(-(w.numElems-1)/2.f, -(w.numElems-1)/2.f, 0.f);
+	
+	hqBegin(HQ_FILLED_CIRCLES);
+	{
+		for (int x = 0; x < w.numElems; ++x)
+		{
+			for (int y = 0; y < w.numElems; ++y)
+			{
+				const float p = w.sample(x, y);
+				const float a = saturate(w.f[x][y]);
+				
+				setColorf(1.f, 1.f, 1.f, a);
+				hqFillCircle(x, y, .2f + std::abs(p));
+			}
+		}
+		
+		{
+			const float p = w.sample(sampleLocationX, sampleLocationY);
+			const float a = 1.f;
+			
+			setColorf(1.f, 1.f, 0.f, a);
+			hqFillCircle(sampleLocationX, sampleLocationY, 1.f + std::abs(p));
+		}
+	}
+	hqEnd();
+	
+	gxPopMatrix();
+}
 
 static void testAudioVoiceManager()
 {
@@ -210,6 +305,20 @@ static void testAudioVoiceManager()
 	
 	//
 	
+	AudioSourceWavefield1D wavefield1D;
+	wavefield1D.init(256);
+	AudioVoice * wavefield1DVoice = nullptr;
+	//voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D);
+	
+	//
+	
+	AudioSourceWavefield2D wavefield2D;
+	wavefield2D.init(32);
+	AudioVoice * wavefield2DVoice = nullptr;
+	voiceMgr.allocVoice(wavefield2DVoice, &wavefield2D);
+	
+	//
+	
 	do
 	{
 		framework.process();
@@ -226,11 +335,84 @@ static void testAudioVoiceManager()
 			world->removeCreature();
 		}
 		
+		//
+		
+		static int frameIndex = 0;
+		frameIndex++;
+		//if (mouse.wentDown(BUTTON_LEFT))
+		if (mouse.isDown(BUTTON_LEFT) && (frameIndex % 10) == 0)
+		{
+			//const int r = 1 + mouse.x * 30 / GFX_SX;
+			const int r = 6;
+			const double strength = random(0.f, +1.f) * 10.0;
+			
+			const int gfxSize = std::min(GFX_SX, GFX_SY);
+			
+			const int spotX = (mouse.x - GFX_SX/2.0) / gfxSize * (wavefield2D.m_waterSim.numElems - 1) + (wavefield2D.m_waterSim.numElems-1)/2.f;
+			const int spotY = (mouse.y - GFX_SY/2.0) / gfxSize * (wavefield2D.m_waterSim.numElems - 1) + (wavefield2D.m_waterSim.numElems-1)/2.f;
+			
+			AudioSourceWavefield2D::Command command;
+			command.x = spotX;
+			command.y = spotY;
+			command.radius = r;
+			command.strength = strength;
+			wavefield2D.m_commandQueue.push(command);
+		}
+	
+		//
+		
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			{
+				WaterSim1D w;
+				float sampleLocation;
+				
+				SDL_LockMutex(voiceMgr.mutex);
+				{
+					w = wavefield1D.m_waterSim;
+					sampleLocation = wavefield1D.m_sampleLocation;
+				}
+				SDL_UnlockMutex(voiceMgr.mutex);
+				
+				drawWaterSim1D(w, sampleLocation);
+			}
+			
+			//
+			
+			{
+				WaterSim2D w;
+				float sampleLocationX;
+				float sampleLocationY;
+			
+				SDL_LockMutex(voiceMgr.mutex);
+				{
+					w = wavefield2D.m_waterSim;
+					sampleLocationX = wavefield2D.m_sampleLocation[0];
+					sampleLocationY = wavefield2D.m_sampleLocation[1];
+				}
+				SDL_UnlockMutex(voiceMgr.mutex);
+				
+				drawWaterSim2D(w, sampleLocationX, sampleLocationY);
+			}
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
+	
+	exit(0);
+	
+	//
+	
+	if (wavefield2DVoice != nullptr)
+	{
+		voiceMgr.freeVoice(wavefield2DVoice);
+	}
+	
+	//
+	
+	if (wavefield1DVoice != nullptr)
+	{
+		voiceMgr.freeVoice(wavefield1DVoice);
+	}
 	
 	//
 	
