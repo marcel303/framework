@@ -35,6 +35,14 @@
 #include "soundmix.h"
 #include "../libparticle/ui.h"
 
+/*
+
+todo :
+	- make it possible to instantiate audio graphs manually. use the entire graph as a source
+	- add editor support for listing active graphs and edit them in real-time. requires multiple graph editor instances. one per loaded graph. so maybe add a graph instance manager, which maintains a list of loaded graphs and makes sure edits to a graph through the graph editor are applied to each graph instance. for simplicity: add a real time connection for each instance. add a top-level real time connection for each graph by filename
+
+*/
+
 #define FULLSCREEN 0
 
 #define OSC_BUFFER_SIZE (64*1024)
@@ -179,6 +187,25 @@ struct Creature
 			hqFillCircle(pos[0], pos[1], 5.f);
 		}
 		hqEnd();
+	}
+};
+
+struct RicePaddy
+{
+	AudioSourceWavefield2D source;
+	AudioVoice * voice;
+	
+	RicePaddy()
+		: voice(nullptr)
+	{
+		source.init(32);
+		
+		g_voiceMgr->allocVoice(voice, &source);
+	}
+	
+	~RicePaddy()
+	{
+		g_voiceMgr->freeVoice(voice);
 	}
 };
 
@@ -379,31 +406,34 @@ struct AudioUpdateHandler : PortAudioHandler
 			
 			//
 			
-			char buffer[OSC_BUFFER_SIZE];
-			
-			osc::OutboundPacketStream stream(buffer, OSC_BUFFER_SIZE);
-			
-			bool isValid = true;
-			
-			stream << osc::BeginBundleImmediate;
+			if (true)
 			{
-				isValid &= voiceMgr->generateOsc(stream);
-			}
-			stream << osc::EndBundle;
-			
-			isValid &= stream.IsReady();
-			
-			//
-			
-			Assert(isValid);
-			if (isValid)
-			{
-				const char * ipAddress = "127.0.0.1";
-				const int udpPort = 7000;
+				char buffer[OSC_BUFFER_SIZE];
 				
-				IpEndpointName endpointName(ipAddress, udpPort);
+				osc::OutboundPacketStream stream(buffer, OSC_BUFFER_SIZE);
+				
+				bool isValid = true;
+				
+				stream << osc::BeginBundleImmediate;
+				{
+					isValid &= voiceMgr->generateOsc(stream);
+				}
+				stream << osc::EndBundle;
+				
+				isValid &= stream.IsReady();
+				
+				//
+				
+				Assert(isValid);
+				if (isValid)
+				{
+					const char * ipAddress = "127.0.0.1";
+					const int udpPort = 7000;
+					
+					IpEndpointName endpointName(ipAddress, udpPort);
 
-				transmitSocket->SendTo(endpointName, stream.Data(), stream.Size());
+					transmitSocket->SendTo(endpointName, stream.Data(), stream.Size());
+				}
 			}
 		}
 	}
@@ -445,14 +475,14 @@ static void testAudioVoiceManager()
 	AudioSourceWavefield1D wavefield1D;
 	wavefield1D.init(256);
 	AudioVoice * wavefield1DVoice = nullptr;
-	//voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D);
+	voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D);
 	
 	//
 	
 	AudioSourceWavefield2D wavefield2D;
 	wavefield2D.init(32);
 	AudioVoice * wavefield2DVoice = nullptr;
-	voiceMgr.allocVoice(wavefield2DVoice, &wavefield2D);
+	//voiceMgr.allocVoice(wavefield2DVoice, &wavefield2D);
 	
 	//
 	
@@ -479,14 +509,16 @@ static void testAudioVoiceManager()
 		//if (mouse.wentDown(BUTTON_LEFT))
 		if (mouse.isDown(BUTTON_LEFT) && (frameIndex % 10) == 0)
 		{
-			//const int r = 1 + mouse.x * 30 / GFX_SX;
-			const int r = 6;
+			//const int r = 1 + mouse.x * 10 / GFX_SX;
+			//const int r = 6;
 			const double strength = random(0.f, +1.f) * 10.0;
 			
 			const int gfxSize = std::min(GFX_SX, GFX_SY);
 			
 			const int spotX = (mouse.x - GFX_SX/2.0) / gfxSize * (wavefield2D.m_waterSim.numElems - 1) + (wavefield2D.m_waterSim.numElems-1)/2.f;
 			const int spotY = (mouse.y - GFX_SY/2.0) / gfxSize * (wavefield2D.m_waterSim.numElems - 1) + (wavefield2D.m_waterSim.numElems-1)/2.f;
+			
+			const int r = spotX / float(wavefield2D.m_waterSim.numElems - 1.f) * 10 + 1;
 			
 			AudioSourceWavefield2D::Command command;
 			command.x = spotX;
@@ -504,12 +536,12 @@ static void testAudioVoiceManager()
 				WaterSim1D w;
 				float sampleLocation;
 				
-				SDL_LockMutex(voiceMgr.mutex);
+				//SDL_LockMutex(voiceMgr.mutex);
 				{
 					w = wavefield1D.m_waterSim;
 					sampleLocation = wavefield1D.m_sampleLocation;
 				}
-				SDL_UnlockMutex(voiceMgr.mutex);
+				//SDL_UnlockMutex(voiceMgr.mutex);
 				
 				drawWaterSim1D(w, sampleLocation);
 			}
@@ -540,7 +572,7 @@ static void testAudioVoiceManager()
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
 	
-	exit(0);
+	//exit(0);
 	
 	//
 	
@@ -570,6 +602,48 @@ static void testAudioVoiceManager()
 
 //
 
+#include "audioGraphManager.h"
+
+static void testAudioGraphManager()
+{
+	AudioGraphManager audioGraphMgr;
+	
+	AudioGraphInstance * instance1 = audioGraphMgr.createInstance("audioTest1.xml");
+	AudioGraphInstance * instance2 = audioGraphMgr.createInstance("audioTest1.xml");
+	AudioGraphInstance * instance3 = audioGraphMgr.createInstance("audioGraph.xml");
+	
+	audioGraphMgr.free(instance1);
+	audioGraphMgr.free(instance2);
+	audioGraphMgr.free(instance3);
+	
+	instance1 = audioGraphMgr.createInstance("audioTest1.xml");
+	instance2 = audioGraphMgr.createInstance("audioGraph.xml");
+	
+	do
+	{
+		framework.process();
+		
+		//
+		
+		const float dt = framework.timeStep;
+		
+		audioGraphMgr.tickEditor(dt);
+		
+		//
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			audioGraphMgr.drawEditor();
+		}
+		framework.endDraw();
+	} while (!keyboard.wentDown(SDLK_SPACE));
+	
+	audioGraphMgr.free(instance1);
+	audioGraphMgr.free(instance2);
+}
+
+//
+
 int main(int argc, char * argv[])
 {
 #if FULLSCREEN
@@ -582,7 +656,8 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		testAudioVoiceManager();
+		//testAudioVoiceManager();
+		testAudioGraphManager();
 		
 		//
 		

@@ -220,8 +220,6 @@ void AudioRealTimeConnection::loadEnd(GraphEdit & graphEdit)
 	audioGraph = constructAudioGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary);
 	*audioGraphPtr = audioGraph;
 	
-	audioGraph->graph = graphEdit.graph;
-	
 	isLoading = false;
 	
 	Assert(audioMutex != nullptr);

@@ -297,6 +297,8 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 {
 	AudioGraph * audioGraph = new AudioGraph();
 	
+	audioGraph->graph = const_cast<Graph*>(&graph);
+	
 	for (auto nodeItr : graph.nodes)
 	{
 		auto & node = nodeItr.second;
