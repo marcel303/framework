@@ -37,6 +37,8 @@
 
 #define FULLSCREEN 0
 
+#define OSC_BUFFER_SIZE (64*1024)
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 
@@ -122,9 +124,14 @@ struct Creature
 	AudioSourceSine sine;
 	AudioVoice * voice;
 	
+	Vec3 pos;
+	Vec3 vel;
+	
 	Creature()
 		: sine()
 		, voice(nullptr)
+		, pos()
+		, vel()
 	{
 	}
 	
@@ -138,6 +145,15 @@ struct Creature
 		sine.init(0.f, random(100.f, 400.f));
 		
 		g_voiceMgr->allocVoice(voice, &sine);
+		
+		pos[0] = random<float>(0.f, GFX_SX);
+		pos[1] = random<float>(0.f, GFX_SY);
+		
+		const float angle = random<float>(0.f, M_PI * 2.f);
+		const float speed = 10.f;
+		
+		vel[0] = std::cosf(angle) * speed;
+		vel[1] = std::sinf(angle) * speed;
 	}
 	
 	void shut()
@@ -146,6 +162,23 @@ struct Creature
 		{
 			g_voiceMgr->freeVoice(voice);
 		}
+	}
+	
+	void tick(const float dt)
+	{
+		pos += vel * dt;
+		
+		voice->pos = pos;
+	}
+	
+	void draw() const
+	{
+		hqBegin(HQ_FILLED_CIRCLES);
+		{
+			setColor(colorWhite);
+			hqFillCircle(pos[0], pos[1], 5.f);
+		}
+		hqEnd();
 	}
 };
 
@@ -167,6 +200,22 @@ struct World
 			Creature & creature = creatures.back();
 			
 			creature.init();
+		}
+	}
+	
+	void tick(const float dt)
+	{
+		for (auto & creature : creatures)
+		{
+			creature.tick(dt);
+		}
+	}
+	
+	void draw() const
+	{
+		for (auto & creature : creatures)
+		{
+			creature.draw();
 		}
 	}
 	
@@ -277,6 +326,89 @@ static void drawWaterSim2D(const WaterSim2D & w, const float sampleLocationX, co
 	gxPopMatrix();
 }
 
+#include "ip/UdpSocket.h"
+#include "osc/OscOutboundPacketStream.h"
+
+struct AudioUpdateHandler : PortAudioHandler
+{
+	World * world;
+	
+	AudioVoiceManager * voiceMgr;
+	
+	UdpTransmitSocket * transmitSocket;
+	
+	AudioUpdateHandler()
+		: world(nullptr)
+		, voiceMgr(nullptr)
+		, transmitSocket(nullptr)
+	{
+		init();
+	}
+	
+	~AudioUpdateHandler()
+	{
+		shut();
+	}
+	
+	void init()
+	{
+		transmitSocket = new UdpTransmitSocket(IpEndpointName("127.0.0.1", 8000));
+	}
+	
+	void shut()
+	{
+		delete transmitSocket;
+		transmitSocket = nullptr;
+	}
+	
+	virtual void portAudioCallback(
+		const void * inputBuffer,
+		void * outputBuffer,
+		int framesPerBuffer) override
+	{
+		const float dt = framesPerBuffer / float(SAMPLE_RATE);
+		
+		if (world != nullptr)
+		{
+			world->tick(dt);
+		}
+		
+		if (voiceMgr != nullptr)
+		{
+			voiceMgr->portAudioCallback(inputBuffer, outputBuffer, framesPerBuffer);
+			
+			//
+			
+			char buffer[OSC_BUFFER_SIZE];
+			
+			osc::OutboundPacketStream stream(buffer, OSC_BUFFER_SIZE);
+			
+			bool isValid = true;
+			
+			stream << osc::BeginBundleImmediate;
+			{
+				isValid &= voiceMgr->generateOsc(stream);
+			}
+			stream << osc::EndBundle;
+			
+			isValid &= stream.IsReady();
+			
+			//
+			
+			Assert(isValid);
+			if (isValid)
+			{
+				const char * ipAddress = "127.0.0.1";
+				const int udpPort = 7000;
+				
+				IpEndpointName endpointName(ipAddress, udpPort);
+
+				transmitSocket->SendTo(endpointName, stream.Data(), stream.Size());
+			}
+		}
+	}
+};
+
 static void testAudioVoiceManager()
 {
 	const int kNumChannels = 16;
@@ -293,15 +425,20 @@ static void testAudioVoiceManager()
 	
 	//
 	
-	PortAudioObject pa;
-	
-	pa.init(SAMPLE_RATE, 1, AUDIO_UPDATE_SIZE, &voiceMgr);
-	
-	//
-	
 	World * world = new World();
 	
 	world->init(1);
+	
+	//
+	
+	AudioUpdateHandler audioUpdateHandler;
+	
+	audioUpdateHandler.world = world;
+	audioUpdateHandler.voiceMgr = &voiceMgr;
+	
+	PortAudioObject pa;
+	
+	pa.init(SAMPLE_RATE, 1, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 	
 	//
 	
@@ -380,20 +517,25 @@ static void testAudioVoiceManager()
 			//
 			
 			{
-				WaterSim2D w;
+				const WaterSim2D & w = wavefield2D.m_waterSim;
+				//WaterSim2D w;
 				float sampleLocationX;
 				float sampleLocationY;
-			
-				SDL_LockMutex(voiceMgr.mutex);
+				
+				//SDL_LockMutex(voiceMgr.mutex);
 				{
-					w = wavefield2D.m_waterSim;
+					//w.copyFrom(wavefield2D.m_waterSim, true, false, true);
 					sampleLocationX = wavefield2D.m_sampleLocation[0];
 					sampleLocationY = wavefield2D.m_sampleLocation[1];
 				}
-				SDL_UnlockMutex(voiceMgr.mutex);
+				//SDL_UnlockMutex(voiceMgr.mutex);
 				
 				drawWaterSim2D(w, sampleLocationX, sampleLocationY);
 			}
+			
+			//
+			
+			world->draw();
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));

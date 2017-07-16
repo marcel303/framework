@@ -27,6 +27,7 @@
 
 #include "audio.h"
 #include "Debugging.h"
+#include "osc/OscOutboundPacketStream.h"
 #include "soundmix.h"
 #include <cmath>
 
@@ -474,18 +475,26 @@ void AudioVoiceManager::portAudioCallback(
 		memset(samples, 0, numSamples * numChannels * sizeof(float));
 	}
 	
+	bool isFirst = true;
+	
 	SDL_LockMutex(mutex);
 	{
 		for (auto & voice : voices)
 		{
 			if (voice.channelIndex != -1)
 			{
-				float voiceSamples[numSamples];
-				
-				voice.source->generate(voiceSamples, numSamples);
-				
-				if (outputMono)
+				if (outputMono && isFirst)
 				{
+					isFirst = false;
+					
+					voice.source->generate(samples, numSamples);
+				}
+				else if (outputMono)
+				{
+					ALIGN32 float voiceSamples[numSamples];
+				
+					voice.source->generate(voiceSamples, numSamples);
+				
 					for (int i = 0; i < numSamples; ++i)
 					{
 						samples[i] += voiceSamples[i];
@@ -493,6 +502,10 @@ void AudioVoiceManager::portAudioCallback(
 				}
 				else
 				{
+					ALIGN32 float voiceSamples[numSamples];
+				
+					voice.source->generate(voiceSamples, numSamples);
+					
 					float * __restrict dstPtr = samples + voice.channelIndex;
 					
 					for (int i = 0; i < numSamples; ++i)
@@ -508,6 +521,35 @@ void AudioVoiceManager::portAudioCallback(
 	SDL_UnlockMutex(mutex);
 }
 
-void AudioVoiceManager::generateOsc()
+#include "ip/UdpSocket.h"
+#include "Log.h"
+
+bool AudioVoiceManager::generateOsc(osc::OutboundPacketStream & stream)
 {
+	try
+	{
+		for (auto & voice : voices)
+		{
+			if (voice.channelIndex == -1)
+				continue;
+			
+			const char * eventName = "test";
+			const int eventId = 10;
+			
+			stream << osc::BeginMessage(eventName);
+
+			stream << eventId;
+			
+			stream
+				<< osc::EndMessage;
+		}
+		
+		return true;
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("%s", e.what());
+		
+		return false;
+	}
 }

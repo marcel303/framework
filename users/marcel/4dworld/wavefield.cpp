@@ -4,6 +4,8 @@
 #include "Calc.h"
 #include "framework.h" // todo : remove
 #include "Noise.h"
+#include <emmintrin.h>
+#include <immintrin.h>
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -268,39 +270,55 @@ void WaterSim2D::shut()
 {
 }
 
-void WaterSim2D::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool _closedEnds)
+void WaterSim2D::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
 {
-	const double vRetain = std::pow(vRetainPerSecond, dt);
-	const double pRetain = std::pow(pRetainPerSecond, dt);
+	tickForces(dt, c, closedEnds);
 	
+	tickVelocity(dt, vRetainPerSecond, pRetainPerSecond);
+}
+
+void WaterSim2D::tickForces(const double dt, const double c, const bool _closedEnds)
+{
+	const double cTimesDt = c * dt;
 	const bool closedEnds = _closedEnds && false;
 	
-	for (int x = 0; x < numElems; ++x)
+	const int sx = numElems;
+	const int sy = numElems;
+	
+	for (int x = 0; x < sx; ++x)
 	{
-		for (int y = 0; y < numElems; ++y)
+		int x0, x1, x2;
+		
+		if (closedEnds)
 		{
-			const double p0 = p[x][y];
+			x0 = x > 0      ? x - 1 : 0;
+			x1 = x;
+			x2 = x < sx - 1 ? x + 1 : sx - 1;
+		}
+		else
+		{
+			x0 = x == 0 ? sx - 1 : x - 1;
+			x1 = x;
+			x2 = x == sx - 1 ? 0 : x + 1;
+		}
+		
+		for (int y = 0; y < sy; ++y)
+		{
+			const double pMid = p[x][y];
 			
-			int x0, x1, x2;
 			int y0, y1, y2;
 			
 			if (closedEnds)
 			{
-				x0 = x > 0            ? x - 1 : 0;
-				x1 = x;
-				x2 = x < numElems - 1 ? x + 1 : numElems - 1;
-				y0 = y > 0            ? y - 1 : 0;
+				y0 = y > 0      ? y - 1 : 0;
 				y1 = y;
-				y2 = y < numElems - 1 ? y + 1 : numElems - 1;
+				y2 = y < sy - 1 ? y + 1 : sy - 1;
 			}
 			else
 			{
-				x0 = (x + numElems - 1) & (numElems - 1);
-				x1 = x;
-				x2 = (x            + 1) & (numElems - 1);
-				y0 = (y + numElems - 1) & (numElems - 1);
+				y0 = y == 0 ? sy - 1 : y - 1;
 				y1 = y;
-				y2 = (y            + 1) & (numElems - 1);
+				y2 = y == sy - 1 ? 0 : y + 1;
 			}
 			
 			double pt = 0.0;
@@ -315,27 +333,27 @@ void WaterSim2D::tick(const double dt, const double c, const double vRetainPerSe
 			pt += p[x1][y2];
 			pt += p[x2][y2];
 			
-			const double d = pt - p0 * 8.0;
+			const double d = pt - pMid * 8.0;
 		#elif 0
 			pt += p[x0][y0];
 			pt += p[x2][y0];
 			pt += p[x0][y2];
 			pt += p[x2][y2];
 			
-			//const double d = pt - p0 * 4.0;
-			const double d = pt - p0 * 16.0;
+			//const double d = pt - pMid * 4.0;
+			const double d = pt - pMid * 16.0;
 		#else
 			pt += p[x0][y1];
-			pt += p[x2][y1];
 			pt += p[x1][y0];
 			pt += p[x1][y2];
+			pt += p[x2][y1];
 			
-			const double d = pt - p0 * 4.0;
+			const double d = pt - pMid * 4.0;
 		#endif
 			
-			double a = d * c;
+			const double a = d * cTimesDt;
 			
-			v[x][y] += a * dt * f[x][y];
+			v[x][y] += a * f[x][y];
 		}
 	}
 	
@@ -353,8 +371,14 @@ void WaterSim2D::tick(const double dt, const double c, const double vRetainPerSe
 			v[numElems - 1][y] = 0.f;
 		}
 	}
+}
+
+void WaterSim2D::tickVelocity(const double dt, const double vRetainPerSecond, const double pRetainPerSecond)
+{
+	const double vRetain = std::pow(vRetainPerSecond, dt);
+	const double pRetain = std::pow(pRetainPerSecond, dt);
 	
-#if 0
+#if 1
 	__m256d _mm_dt = _mm256_set1_pd(dt);
 	__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
 	__m256d _mm_vRetain = _mm256_set1_pd(vRetain);
@@ -470,6 +494,29 @@ float WaterSim2D::sample(const float x, const float y) const
 	return v;
 }
 
+void WaterSim2D::copyFrom(const WaterSim2D & other, const bool copyP, const bool copyV, const bool copyF)
+{
+	numElems = other.numElems;
+	
+	if (copyP)
+	{
+		for (int x = 0; x < numElems; ++x)
+			memcpy(p[x], other.p[x], numElems * sizeof(double));
+	}
+	
+	if (copyV)
+	{
+		for (int x = 0; x < numElems; ++x)
+			memcpy(v[x], other.v[x], numElems * sizeof(double));
+	}
+	
+	if (copyF)
+	{
+		for (int x = 0; x < numElems; ++x)
+			memcpy(f[x], other.f[x], numElems * sizeof(double));
+	}
+}
+
 //
 
 AudioSourceWavefield2D::AudioSourceWavefield2D()
@@ -561,9 +608,10 @@ void AudioSourceWavefield2D::generate(float * __restrict samples, const int numS
 	const double c = 1000000000.0;
 #else
 	const double dt = 1.0 / SAMPLE_RATE * (m_slowMotion ? 0.001 : 1.0);
-	//const double m1 = mouse.y / double(GFX_SY - 1);
-	const double m1 = 0.75;
+	const double m1 = mouse.y / double(GFX_SY - 1);
+	//const double m1 = 0.75;
 	const double m2 = 1.0 - m1;
+	//const double c = 10000.0 * m2 + 1000000000.0 * m1;
 	const double c = 10000.0 * m2 + 1000000000.0 * m1;
 #endif
 

@@ -35,9 +35,16 @@
 
 #ifdef MACOS
 	#define ALIGN16 __attribute__((aligned(16)))
+	#define ALIGN32 __attribute__((aligned(32)))
 #else
 	#define ALIGN16
+	#define ALIGN32
 #endif
+
+namespace osc
+{
+	class OutboundPacketStream;
+}
 
 struct PcmData
 {
@@ -170,5 +177,5 @@ struct AudioVoiceManager : PortAudioHandler
 		void * outputBuffer,
 		int framesPerBuffer) override;
 	
-	void generateOsc();
+	bool generateOsc(osc::OutboundPacketStream & stream);
 };
