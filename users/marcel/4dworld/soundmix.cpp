@@ -346,3 +346,168 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 		}
 	}
 }
+
+//
+
+AudioVoiceManager::AudioVoiceManager()
+	: mutex(nullptr)
+	, numChannels(0)
+	, voices()
+	, outputMono(false)
+{
+}
+	
+void AudioVoiceManager::init(const int _numChannels)
+{
+	Assert(voices.empty());
+	
+	Assert(numChannels == 0);
+	numChannels = _numChannels;
+	
+	Assert(mutex == nullptr);
+	mutex = SDL_CreateMutex();
+}
+
+void AudioVoiceManager::shut()
+{
+	Assert(voices.empty());
+	
+	if (mutex != nullptr)
+	{
+		SDL_DestroyMutex(mutex);
+		mutex= nullptr;
+	}
+	
+	voices.clear();
+	
+	numChannels = 0;
+}
+
+bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source)
+{
+	Assert(voice == nullptr);
+	Assert(source != nullptr);
+	
+	SDL_LockMutex(mutex);
+	{
+		voices.push_back(AudioVoice());
+		voice = &voices.back();
+		voice->source = source;
+		
+		updateChannelIndices();
+	}
+	SDL_UnlockMutex(mutex);
+	
+	return true;
+}
+
+void AudioVoiceManager::freeVoice(AudioVoice *& voice)
+{
+	Assert(voice != nullptr);
+	
+	SDL_LockMutex(mutex);
+	{
+		auto i = voices.end();
+		for (auto j = voices.begin(); j != voices.end(); ++j)
+			if (&(*j) == voice)
+				i = j;
+		
+		Assert(i != voices.end());
+		if (i != voices.end())
+		{
+			voices.erase(i);
+			
+			updateChannelIndices();
+		}
+	}
+	SDL_UnlockMutex(mutex);
+}
+
+void AudioVoiceManager::updateChannelIndices()
+{
+	// todo : mute a voice for a while after allocating channel index ? to ensure there is no issue with OSC position vs audio signal
+	
+	bool used[numChannels];
+	memset(used, 0, sizeof(used));
+	
+	for (auto & voice : voices)
+	{
+		if (voice.channelIndex != -1)
+		{
+			used[voice.channelIndex] = true;
+		}
+	}
+	
+	for (auto & voice : voices)
+	{
+		if (voice.channelIndex == -1)
+		{
+			for (int i = 0; i < numChannels; ++i)
+			{
+				if (used[i] == false)
+				{
+					used[i] = true;
+					
+					voice.channelIndex = i;
+					
+					break;
+				}
+			}
+		}
+	}
+}
+
+void AudioVoiceManager::portAudioCallback(
+	const void * inputBuffer,
+	void * outputBuffer,
+	int framesPerBuffer)
+{
+	float * samples = (float*)outputBuffer;
+	const int numSamples = framesPerBuffer;
+	
+	if (outputMono)
+	{
+		memset(samples, 0, numSamples * sizeof(float));
+	}
+	else
+	{
+		memset(samples, 0, numSamples * numChannels * sizeof(float));
+	}
+	
+	SDL_LockMutex(mutex);
+	{
+		for (auto & voice : voices)
+		{
+			if (voice.channelIndex != -1)
+			{
+				float voiceSamples[numSamples];
+				
+				voice.source->generate(voiceSamples, numSamples);
+				
+				if (outputMono)
+				{
+					for (int i = 0; i < numSamples; ++i)
+					{
+						samples[i] += voiceSamples[i];
+					}
+				}
+				else
+				{
+					float * __restrict dstPtr = samples + voice.channelIndex;
+					
+					for (int i = 0; i < numSamples; ++i)
+					{
+						*dstPtr = voiceSamples[i];
+						
+						dstPtr += numChannels;
+					}
+				}
+			}
+		}
+	}
+	SDL_UnlockMutex(mutex);
+}
+
+void AudioVoiceManager::generateOsc()
+{
+}

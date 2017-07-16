@@ -31,7 +31,7 @@
 #include "audioNodes/audioNodeDisplay.h"
 #include "framework.h"
 #include "graph.h"
-#include "portaudio/portaudio.h"
+#include "paobject.h"
 #include "soundmix.h"
 #include "../libparticle/ui.h"
 
@@ -61,148 +61,7 @@ static AudioRealTimeConnection * realTimeConnection = nullptr;
 
 //
 
-struct PortAudioObject
-{
-	PaStream * stream;
-	
-	PortAudioObject()
-		: stream(nullptr)
-	{
-	}
-	
-	~PortAudioObject()
-	{
-		shut();
-	}
-	
-	bool init(AudioSource * audioSource);
-	bool initImpl(AudioSource * audioSource);
-	bool shut();
-};
-
-static int portaudioCallback(
-	const void * inputBuffer,
-	      void * outputBuffer,
-	unsigned long framesPerBuffer,
-	const PaStreamCallbackTimeInfo * timeInfo,
-	PaStreamCallbackFlags statusFlags,
-	void * userData)
-{
-	//logDebug("portaudioCallback!");
-	
-	Assert(framesPerBuffer == AUDIO_UPDATE_SIZE);
-	
-	AudioSource * audioSource = (AudioSource*)userData;
-	
-	float * __restrict destinationBuffer = (float*)outputBuffer;
-	
-	audioSource->generate(destinationBuffer, AUDIO_UPDATE_SIZE);
-
-	return paContinue;
-}
-
-bool PortAudioObject::init(AudioSource * audioSource)
-{
-	if (initImpl(audioSource) == false)
-	{
-		shut();
-		
-		return false;
-	}
-	else
-	{
-		return true;
-	}
-}
-
-bool PortAudioObject::initImpl(AudioSource * audioSource)
-{
-	PaError err;
-	
-	if ((err = Pa_Initialize()) != paNoError)
-	{
-		logError("portaudio: failed to initialize: %s", Pa_GetErrorText(err));
-		return false;
-	}
-	
-	logDebug("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
-	
-#if 0
-	const int numDevices = Pa_GetDeviceCount();
-	
-	for (int i = 0; i < numDevices; ++i)
-	{
-		const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(i);
-	}
-#endif
-	
-	PaStreamParameters outputParameters;
-	memset(&outputParameters, 0, sizeof(outputParameters));
-	
-	outputParameters.device = Pa_GetDefaultOutputDevice();
-	
-	if (outputParameters.device == paNoDevice)
-	{
-		logError("portaudio: failed to find output device");
-		return false;
-	}
-	
-	outputParameters.channelCount = 2;
-	outputParameters.sampleFormat = paFloat32;
-	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
-	outputParameters.hostApiSpecificStreamInfo = nullptr;
-	
-	if ((err = Pa_OpenStream(&stream, nullptr, &outputParameters, SAMPLE_RATE, AUDIO_UPDATE_SIZE, paDitherOff, portaudioCallback, audioSource)) != paNoError)
-	{
-		logError("portaudio: failed to open stream: %s", Pa_GetErrorText(err));
-		return false;
-	}
-	
-	if ((err = Pa_StartStream(stream)) != paNoError)
-	{
-		logError("portaudio: failed to start stream: %s", Pa_GetErrorText(err));
-		return false;
-	}
-	
-	return true;
-}
-
-bool PortAudioObject::shut()
-{
-	PaError err;
-	
-	if (stream != nullptr)
-	{
-		if (Pa_IsStreamActive(stream) != 0)
-		{
-			if ((err = Pa_StopStream(stream)) != paNoError)
-			{
-				logError("portaudio: failed to stop stream: %s", Pa_GetErrorText(err));
-				return false;
-			}
-		}
-		
-		if ((err = Pa_CloseStream(stream)) != paNoError)
-		{
-			logError("portaudio: failed to close stream: %s", Pa_GetErrorText(err));
-			return false;
-		}
-		
-		stream = nullptr;
-	}
-	
-	if ((err = Pa_Terminate()) != paNoError)
-	{
-		logError("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
-		return false;
-	}
-	
-	return true;
-}
-
-//
-
-struct AudioSourceAudioGraph : AudioSource
+struct AudioSourceAudioGraph : PortAudioHandler
 {
 	AudioGraph ** audioGraphPtr;
 	
@@ -211,8 +70,16 @@ struct AudioSourceAudioGraph : AudioSource
 	{
 	}
 	
-	virtual void generate(ALIGN16 float * __restrict samples, const int numSamples) override
+	virtual void portAudioCallback(
+		const void * inputBuffer,
+		void * outputBuffer,
+		int framesPerBuffer)
 	{
+		Assert(framesPerBuffer == AUDIO_UPDATE_SIZE);
+
+		float * samples = (float*)outputBuffer;
+		const int numSamples = framesPerBuffer;
+
 		if (*audioGraphPtr == nullptr)
 		{
 			for (int i = 0; i < numSamples * 2; ++i)
@@ -245,6 +112,140 @@ struct AudioSourceAudioGraph : AudioSource
 
 //
 
+static AudioVoiceManager * g_voiceMgr = nullptr;
+
+struct Creature
+{
+	AudioSourceSine sine;
+	AudioVoice * voice;
+	
+	Creature()
+		: sine()
+		, voice(nullptr)
+	{
+	}
+	
+	~Creature()
+	{
+		shut();
+	}
+	
+	void init()
+	{
+		sine.init(0.f, random(100.f, 400.f));
+		
+		g_voiceMgr->allocVoice(voice, &sine);
+	}
+	
+	void shut()
+	{
+		if (voice != nullptr)
+		{
+			g_voiceMgr->freeVoice(voice);
+		}
+	}
+};
+
+struct World
+{
+	std::list<Creature> creatures;
+	
+	World()
+		: creatures()
+	{
+	}
+	
+	void init(const int numCreatures)
+	{
+		for (int i = 0; i < numCreatures; ++i)
+		{
+			creatures.push_back(Creature());
+			
+			Creature & creature = creatures.back();
+			
+			creature.init();
+		}
+	}
+	
+	void addCreature()
+	{
+		creatures.push_back(Creature());
+			
+		Creature & creature = creatures.back();
+		
+		creature.init();
+	}
+	
+	void removeCreature()
+	{
+		creatures.pop_front();
+	}
+};
+
+static void testAudioVoiceManager()
+{
+	const int kNumChannels = 16;
+	
+	//
+	
+	AudioVoiceManager voiceMgr;
+	
+	voiceMgr.init(kNumChannels);
+	
+	voiceMgr.outputMono = true;
+	
+	g_voiceMgr = &voiceMgr;
+	
+	//
+	
+	PortAudioObject pa;
+	
+	pa.init(SAMPLE_RATE, 1, AUDIO_UPDATE_SIZE, &voiceMgr);
+	
+	//
+	
+	World * world = new World();
+	
+	world->init(1);
+	
+	//
+	
+	do
+	{
+		framework.process();
+		
+		//
+		
+		if (keyboard.wentDown(SDLK_a))
+		{
+			world->addCreature();
+		}
+		
+		if (keyboard.wentDown(SDLK_z))
+		{
+			world->removeCreature();
+		}
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+		}
+		framework.endDraw();
+	} while (!keyboard.wentDown(SDLK_SPACE));
+	
+	//
+	
+	delete world;
+	world = nullptr;
+	
+	//
+	
+	pa.shut();
+	
+	voiceMgr.shut();
+}
+
+//
+
 int main(int argc, char * argv[])
 {
 #if FULLSCREEN
@@ -254,6 +255,12 @@ int main(int argc, char * argv[])
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
 		initUi();
+		
+		//
+		
+		testAudioVoiceManager();
+		
+		//
 		
 		mutex = SDL_CreateMutex();
 		
@@ -320,7 +327,7 @@ int main(int argc, char * argv[])
 		
 		PortAudioObject pa;
 		
-		pa.init(&audioSource);
+		pa.init(SAMPLE_RATE, 2, AUDIO_UPDATE_SIZE, &audioSource);
 		
 		bool stop = false;
 		

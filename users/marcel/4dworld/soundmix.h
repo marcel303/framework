@@ -124,3 +124,51 @@ struct AudioSourcePcm : AudioSource
 
 	virtual void generate(ALIGN16 float * __restrict samples, const int numSamples) override;
 };
+
+//
+
+#include "paobject.h"
+#include "Vec3.h"
+
+struct SDL_mutex;
+
+struct AudioVoice
+{
+	int channelIndex;
+	
+	Vec3 pos;
+	AudioSource * source;
+	
+	AudioVoice()
+		: channelIndex(-1)
+		, pos()
+		, source(nullptr)
+	{
+	}
+};
+
+struct AudioVoiceManager : PortAudioHandler
+{
+	SDL_mutex * mutex;
+	
+	int numChannels;
+	std::list<AudioVoice> voices;
+	bool outputMono;
+	
+	AudioVoiceManager();
+	
+	void init(const int numChannels);
+	void shut();
+	
+	bool allocVoice(AudioVoice *& voice, AudioSource * source);
+	void freeVoice(AudioVoice *& voice);
+	
+	void updateChannelIndices();
+	
+	virtual void portAudioCallback(
+		const void * inputBuffer,
+		void * outputBuffer,
+		int framesPerBuffer) override;
+	
+	void generateOsc();
+};
