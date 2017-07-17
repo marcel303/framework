@@ -534,9 +534,15 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 			stream.setSource(voice.channelIndex);
 			
 			stream.sourcePosition(voice.pos[0], voice.pos[1], voice.pos[2]);
-			stream.sourceRotation(voice.rot[0], voice.rot[1], voice.rot[2]);
 			stream.sourceDimensions(voice.size[0], voice.size[1], voice.size[2]);
-			stream.sourceDoppler(voice.dopplerScale != 0.f, voice.dopplerScale, voice.dopplerSmooth);
+			stream.sourceRotation(voice.rot[0], voice.rot[1], voice.rot[2]);
+			stream.sourceOrientationMode(voice.orientationMode, voice.orientationCenter[0], voice.orientationCenter[1], voice.orientationCenter[2]);
+			stream.sourceSpatialCompressor(voice.spatialCompressor.enable, voice.spatialCompressor.attack, voice.spatialCompressor.release, voice.spatialCompressor.minimum, voice.spatialCompressor.maximum, voice.spatialCompressor.curve, voice.spatialCompressor.invert);
+			stream.sourceDoppler(voice.dopplerEnable, voice.dopplerScale, voice.dopplerSmooth);
+			stream.sourceDistanceIntensity(voice.distanceIntensity.enable, voice.distanceIntensity.threshold, voice.distanceIntensity.curve);
+			stream.sourceDistanceDamping(voice.distanceDampening.enable, voice.distanceDampening.threshold, voice.distanceDampening.curve);
+			stream.sourceDistanceDiffusion(voice.distanceDiffusion.enable, voice.distanceDiffusion.threshold, voice.distanceDiffusion.curve);
+			stream.sourceGlobalEnable(voice.globalEnable);
 		}
 		
 		return true;

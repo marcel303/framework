@@ -131,6 +131,7 @@ struct AudioSourcePcm : AudioSource
 
 //
 
+#include "osc4d.h"
 #include "paobject.h"
 #include "Vec3.h"
 
@@ -138,23 +139,72 @@ struct SDL_mutex;
 
 struct AudioVoice
 {
+	struct SpatialCompressor
+	{
+		bool enable = false;
+		float attack = 1.f;
+		float release = 1.f;
+		float minimum = 0.f;
+		float maximum = 1.f;
+		float curve = 0.f;
+		bool invert = false;
+	};
+	
+	struct DistanceIntensity
+	{
+		bool enable = false;
+		float threshold = 0.f;
+		float curve = 0.f;
+	};
+	
+	struct DistanceDamping
+	{
+		bool enable = false;
+		float threshold = 0.f;
+		float curve = 0.f;
+	};
+	
+	struct DistanceDiffusion
+	{
+		bool enable = false;
+		float threshold = 0.f;
+		float curve = 0.f;
+	};
+	
 	int channelIndex;
 	
 	Vec3 pos;
-	Vec3 rot;
 	Vec3 size;
+	Vec3 rot;
+	Osc4D::OrientationMode orientationMode;
+	Vec3 orientationCenter;
+	
+	SpatialCompressor spatialCompressor;
+	bool dopplerEnable;
 	float dopplerScale;
 	float dopplerSmooth;
+	DistanceIntensity distanceIntensity;
+	DistanceDamping distanceDampening;
+	DistanceDiffusion distanceDiffusion;
+	bool globalEnable;
 	
 	AudioSource * source;
 	
 	AudioVoice()
 		: channelIndex(-1)
 		, pos()
-		, rot()
 		, size()
+		, rot()
+		, orientationMode(Osc4D::kOrientation_Static)
+		, orientationCenter()
+		, spatialCompressor()
+		, dopplerEnable(true)
 		, dopplerScale(0.f)
 		, dopplerSmooth(0.f)
+		, distanceIntensity()
+		, distanceDampening()
+		, distanceDiffusion()
+		, globalEnable(true)
 		, source(nullptr)
 	{
 	}

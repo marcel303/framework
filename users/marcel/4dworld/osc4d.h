@@ -62,8 +62,10 @@ struct Osc4D
 
 	void sourceSpatialCompressor(const bool enable, const float attack, const float release, const float minimum, const float maximum, const float curve, const bool invert);
 	void sourceDoppler(const bool enable, const float scale, const float smooth);
-
-	// todo : sourceDistance###
+	
+	void sourceDistanceIntensity(const bool enable, const float treshold, const float curve);
+	void sourceDistanceDamping(const bool enable, const float treshold, const float curve);
+	void sourceDistanceDiffusion(const bool enable, const float treshold, const float curve);
 
 	// todo : sourceAngleFilter
 

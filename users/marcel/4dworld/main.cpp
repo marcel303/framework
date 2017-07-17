@@ -42,9 +42,15 @@ todo :
 	- make it possible to instantiate audio graphs manually. use the entire graph as a source
 	- add editor support for listing active graphs and edit them in real-time. requires multiple graph editor instances. one per loaded graph. so maybe add a graph instance manager, which maintains a list of loaded graphs and makes sure edits to a graph through the graph editor are applied to each graph instance. for simplicity: add a real time connection for each instance. add a top-level real time connection for each graph by filename
 
+todo : editor :
+	- let outputs specify their output range, so input -> output mapping can know the input min and max automatically
+	- allow setting input -> output mapping on each link
+	
 */
 
 #define FULLSCREEN 0
+
+#define OSC_TEST 1
 
 #define OSC_BUFFER_SIZE (64*1024)
 
@@ -210,12 +216,125 @@ struct RicePaddy
 	}
 };
 
+struct TestObject
+{
+	AudioSourceSine sine;
+	float sineFrequency;
+	AudioVoice * voice;
+	
+	UiState uiState;
+	
+	TestObject()
+		: sine()
+		, sineFrequency(300.f)
+		, voice(nullptr)
+		, uiState()
+	{
+		sine.init(0.f, sineFrequency);
+		
+		g_voiceMgr->allocVoice(voice, &sine);
+		
+		uiState.sx = 300.f;
+	}
+	
+	~TestObject()
+	{
+		g_voiceMgr->freeVoice(voice);
+	}
+	
+	void tickAndDraw(const float dt)
+	{
+		makeActive(&uiState, true, true);
+		pushMenu("testObject");
+		
+		g_drawX += 40;
+		g_drawY += 40;
+		
+		if (doTextBox(sineFrequency, "sine.frequency", dt) == kUiTextboxResult_EditingComplete)
+		{
+			sine.init(0.f, sineFrequency);
+		}
+		
+		doTextBox(voice->pos[0], "pos.x", dt);
+		doTextBox(voice->pos[1], "pos.y", dt);
+		doTextBox(voice->pos[2], "pos.z", dt);
+		
+		doTextBox(voice->size[0], "dim.x", dt);
+		doTextBox(voice->size[1], "dim.y", dt);
+		doTextBox(voice->size[2], "dim.z", dt);
+		
+		doTextBox(voice->rot[0], "rot.x", dt);
+		doTextBox(voice->rot[1], "rot.y", dt);
+		doTextBox(voice->rot[2], "rot.z", dt);
+		
+		std::vector<EnumValue> orientationModes;
+		orientationModes.push_back(EnumValue(Osc4D::kOrientation_Static, "static"));
+		orientationModes.push_back(EnumValue(Osc4D::kOrientation_Movement, "movement"));
+		orientationModes.push_back(EnumValue(Osc4D::kOrientation_Center, "center"));
+		doEnum(voice->orientationMode, "orientation.mode", orientationModes);
+		doTextBox(voice->orientationCenter[0], "orientation.center.x", dt);
+		doTextBox(voice->orientationCenter[1], "orientation.center.y", dt);
+		doTextBox(voice->orientationCenter[2], "orientation.center.z", dt);
+		
+		doCheckBox(voice->globalEnable, "global.enable", false);
+		
+		if (doCheckBox(voice->spatialCompressor.enable, "spatialCompressor", true))
+		{
+			pushMenu("spatialCompressor");
+			doTextBox(voice->spatialCompressor.attack, "attack", dt);
+			doTextBox(voice->spatialCompressor.release, "release", dt);
+			doTextBox(voice->spatialCompressor.minimum, "minimum", dt);
+			doTextBox(voice->spatialCompressor.maximum, "maximum", dt);
+			doTextBox(voice->spatialCompressor.curve, "curve", dt);
+			doCheckBox(voice->spatialCompressor.invert, "invert", false);
+			popMenu();
+		}
+		
+		if (doCheckBox(voice->dopplerEnable, "doppler", true))
+		{
+			pushMenu("doppler");
+			doTextBox(voice->dopplerScale, "scale", dt);
+			doTextBox(voice->dopplerSmooth, "smooth", dt);
+			popMenu();
+		}
+		
+		if (doCheckBox(voice->distanceIntensity.enable, "distance.intensity", true))
+		{
+			pushMenu("distance.intensity");
+			doTextBox(voice->distanceIntensity.threshold, "treshold", dt);
+			doTextBox(voice->distanceIntensity.curve, "curve", dt);
+			popMenu();
+		}
+		
+		if (doCheckBox(voice->distanceDampening.enable, "distance.dampening", true))
+		{
+			pushMenu("distance.dampening");
+			doTextBox(voice->distanceDampening.threshold, "treshold", dt);
+			doTextBox(voice->distanceDampening.curve, "curve", dt);
+			popMenu();
+		}
+		
+		if (doCheckBox(voice->distanceDiffusion.enable, "distance.diffusion", true))
+		{
+			pushMenu("distance.diffusion");
+			doTextBox(voice->distanceDiffusion.threshold, "treshold", dt);
+			doTextBox(voice->distanceDiffusion.curve, "curve", dt);
+			popMenu();
+		}
+		
+		popMenu();
+	}
+};
+
 struct World
 {
 	std::list<Creature> creatures;
 	
+	TestObject testObject;
+	
 	World()
 		: creatures()
+		, testObject()
 	{
 	}
 	
@@ -245,6 +364,8 @@ struct World
 		{
 			creature.draw();
 		}
+		
+		const_cast<TestObject&>(testObject).tickAndDraw(framework.timeStep);
 	}
 	
 	void addCreature()
@@ -380,6 +501,9 @@ struct AudioUpdateHandler : PortAudioHandler
 	
 	void init()
 	{
+		shut();
+		
+		Assert(transmitSocket == nullptr);
 		transmitSocket = new UdpTransmitSocket(IpEndpointName("127.0.0.1", 8000));
 	}
 	
@@ -431,11 +555,13 @@ struct AudioUpdateHandler : PortAudioHandler
 				if (isValid)
 				{
 					const char * ipAddress = "127.0.0.1";
-					const int udpPort = 7000;
+					//const char * ipAddress = "192.168.10.16";
+					const int udpPort = 7012;
 					
-					IpEndpointName endpointName(ipAddress, udpPort);
+					//const IpEndpointName endpointName(ipAddress, udpPort);
 
-					transmitSocket->SendTo(endpointName, stream.Data(), stream.Size());
+					//transmitSocket->SendTo(endpointName, stream.Data(), stream.Size());
+					transmitSocket->Send(stream.Data(), stream.Size());
 				}
 			}
 		}
@@ -460,7 +586,7 @@ static void testAudioVoiceManager()
 	
 	World * world = new World();
 	
-	world->init(1);
+	world->init(0);
 	
 	//
 	
@@ -495,6 +621,7 @@ static void testAudioVoiceManager()
 		
 		//
 		
+	#if OSC_TEST == 0
 		if (keyboard.wentDown(SDLK_a))
 		{
 			world->addCreature();
@@ -504,6 +631,7 @@ static void testAudioVoiceManager()
 		{
 			world->removeCreature();
 		}
+	#endif
 		
 		//
 		

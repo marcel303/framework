@@ -1,13 +1,10 @@
 #include "osc4d.h"
 #include "StringEx.h"
 
-// todo : OSC sheet : document default value
-// todo : OSC sheet : document common values
-
 void Osc4D::beginSource(const char * name)
 {
 	char text[1024];
-	sprintf_s(text, sizeof(text), "source%d/%s", source, name);
+	sprintf_s(text, sizeof(text), "/source%d/%s", source + 1, name);
 	begin(text);
 }
 
@@ -166,7 +163,59 @@ void Osc4D::sourceDoppler(const bool enable, const float scale, const float smoo
 	}
 }
 
-// todo : sourceDistance###
+void Osc4D::sourceDistanceIntensity(const bool enable, const float treshold, const float curve)
+{
+	beginSource("distanceIntensity/enable");
+	b(enable);
+	end();
+
+	if (enable)
+	{
+		beginSource("distanceIntensity/treshold");
+		f(treshold);
+		end();
+
+		beginSource("distanceIntensity/curve");
+		f(curve);
+		end();
+	}
+}
+
+void Osc4D::sourceDistanceDamping(const bool enable, const float treshold, const float curve)
+{
+	beginSource("distanceDamping/enable");
+	b(enable);
+	end();
+
+	if (enable)
+	{
+		beginSource("distanceDamping/treshold");
+		f(treshold);
+		end();
+
+		beginSource("distanceDamping/curve");
+		f(curve);
+		end();
+	}
+}
+
+void Osc4D::sourceDistanceDiffusion(const bool enable, const float treshold, const float curve)
+{
+	beginSource("distanceDiffusion/enable");
+	b(enable);
+	end();
+
+	if (enable)
+	{
+		beginSource("distanceDiffusion/treshold");
+		f(treshold);
+		end();
+
+		beginSource("distanceDiffusion/curve");
+		f(curve);
+		end();
+	}
+}
 
 // todo : sourceAngleFilter
 
@@ -226,42 +275,42 @@ void Osc4D::sourceSpatialDelay(const bool enable, const SpatialDelayMode mode, c
 
 void Osc4D::globalPosition(const float x, const float y, const float z)
 {
-	begin("global/position");
+	begin("/global/position");
 	f3(x, y, z);
 	end();
 }
 
 void Osc4D::globalDimensions(const float x, const float y, const float z)
 {
-	begin("global/dimensions");
+	begin("/global/dimensions");
 	f3(x, y, z);
 	end();
 }
 
 void Osc4D::globalRotation(const float x, const float y, const float z)
 {
-	begin("global/rotation");
+	begin("/global/rotation");
 	f3(x, y, z);
 	end();
 }
 
 void Osc4D::globalPlode(const float x, const float y, const float z)
 {
-	begin("global/plode");
+	begin("/global/plode");
 	f3(x, y, z);
 	end();
 }
 
 void Osc4D::globalOrigin(const float x, const float y, const float z)
 {
-	begin("global/origin");
+	begin("/global/origin");
 	f3(x, y, z);
 	end();
 }
 
 void Osc4D::globalMasterPhase(const float v)
 {
-	begin("global/masterPhase");
+	begin("/global/masterPhase");
 	f(v);
 	end();
 }
