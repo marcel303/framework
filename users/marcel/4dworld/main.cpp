@@ -250,6 +250,8 @@ struct TestObject
 		g_drawX += 40;
 		g_drawY += 40;
 		
+		doLabel("4D.source", 0.f);
+		
 		if (doTextBox(sineFrequency, "sine.frequency", dt) == kUiTextboxResult_EditingComplete)
 		{
 			sine.init(0.f, sineFrequency);
@@ -637,9 +639,10 @@ static void testAudioVoiceManager()
 	//
 	
 	UiState uiState;
-	uiState.sx = 300;
-	uiState.x = GFX_SX - 300 - 40;
-	uiState.y - 40;
+	uiState.sx = 150;
+	uiState.textBoxTextOffset = 50;
+	uiState.x = GFX_SX - 150 - 40;
+	uiState.y = 40;
 	
 	do
 	{
@@ -737,6 +740,7 @@ static void testAudioVoiceManager()
 			makeActive(&uiState, true, true);
 			pushMenu("osc");
 			{
+				doLabel("OSC endpoint", 0.f);
 				if (doTextBox(oscIpAddress, "ip", dt) == kUiTextboxResult_EditingComplete ||
 					doTextBox(oscUdpPort, "port", dt) == kUiTextboxResult_EditingComplete)
 				{
