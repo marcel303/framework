@@ -27,7 +27,8 @@
 
 #include "audio.h"
 #include "Debugging.h"
-#include "osc/OscOutboundPacketStream.h"
+#include "Log.h"
+#include "osc4d.h"
 #include "soundmix.h"
 #include <cmath>
 
@@ -521,10 +522,7 @@ void AudioVoiceManager::portAudioCallback(
 	SDL_UnlockMutex(mutex);
 }
 
-#include "ip/UdpSocket.h"
-#include "Log.h"
-
-bool AudioVoiceManager::generateOsc(osc::OutboundPacketStream & stream)
+bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 {
 	try
 	{
@@ -533,15 +531,12 @@ bool AudioVoiceManager::generateOsc(osc::OutboundPacketStream & stream)
 			if (voice.channelIndex == -1)
 				continue;
 			
-			const char * eventName = "test";
-			const int eventId = 10;
+			stream.setSource(voice.channelIndex);
 			
-			stream << osc::BeginMessage(eventName);
-
-			stream << eventId;
-			
-			stream
-				<< osc::EndMessage;
+			stream.sourcePosition(voice.pos[0], voice.pos[1], voice.pos[2]);
+			stream.sourceRotation(voice.rot[0], voice.rot[1], voice.rot[2]);
+			stream.sourceDimensions(voice.size[0], voice.size[1], voice.size[2]);
+			stream.sourceDoppler(voice.dopplerScale != 0.f, voice.dopplerScale, voice.dopplerSmooth);
 		}
 		
 		return true;

@@ -41,10 +41,7 @@
 	#define ALIGN32
 #endif
 
-namespace osc
-{
-	class OutboundPacketStream;
-}
+struct Osc4DStream;
 
 struct PcmData
 {
@@ -144,11 +141,20 @@ struct AudioVoice
 	int channelIndex;
 	
 	Vec3 pos;
+	Vec3 rot;
+	Vec3 size;
+	float dopplerScale;
+	float dopplerSmooth;
+	
 	AudioSource * source;
 	
 	AudioVoice()
 		: channelIndex(-1)
 		, pos()
+		, rot()
+		, size()
+		, dopplerScale(0.f)
+		, dopplerSmooth(0.f)
 		, source(nullptr)
 	{
 	}
@@ -177,5 +183,5 @@ struct AudioVoiceManager : PortAudioHandler
 		void * outputBuffer,
 		int framesPerBuffer) override;
 	
-	bool generateOsc(osc::OutboundPacketStream & stream);
+	bool generateOsc(Osc4DStream & stream);
 };

@@ -31,6 +31,7 @@
 #include "audioNodes/audioNodeDisplay.h"
 #include "framework.h"
 #include "graph.h"
+#include "osc4d.h"
 #include "paobject.h"
 #include "soundmix.h"
 #include "../libparticle/ui.h"
@@ -414,9 +415,11 @@ struct AudioUpdateHandler : PortAudioHandler
 				
 				bool isValid = true;
 				
+				Osc4DStream stream4D(stream);
+				
 				stream << osc::BeginBundleImmediate;
 				{
-					isValid &= voiceMgr->generateOsc(stream);
+					isValid &= voiceMgr->generateOsc(stream4D);
 				}
 				stream << osc::EndBundle;
 				
@@ -656,8 +659,8 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		//testAudioVoiceManager();
-		testAudioGraphManager();
+		testAudioVoiceManager();
+		//testAudioGraphManager();
 		
 		//
 		
