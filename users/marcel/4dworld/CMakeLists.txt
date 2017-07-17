@@ -62,6 +62,7 @@ source_group("3rdparty\\xmm" FILES ${source_xmm})
 add_executable(avgraph ${source})
 
 target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT)
+
 target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT ENABLE_KINECT1=0 ENABLE_KINECT2=0 ENABLE_TURBOJPEG=0 ENABLE_DEEPBELIEF=0)
 
 if (WIN32)

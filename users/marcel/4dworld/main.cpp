@@ -501,7 +501,6 @@ struct AudioUpdateHandler : PortAudioHandler
 		, voiceMgr(nullptr)
 		, transmitSocket(nullptr)
 	{
-		init();
 	}
 	
 	~AudioUpdateHandler()
@@ -509,18 +508,29 @@ struct AudioUpdateHandler : PortAudioHandler
 		shut();
 	}
 	
-	void init()
+	void init(const char * ipAddress, const int udpPort)
 	{
 		shut();
 		
 		Assert(transmitSocket == nullptr);
-		transmitSocket = new UdpTransmitSocket(IpEndpointName("127.0.0.1", 8000));
+		transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPort));
 	}
 	
 	void shut()
 	{
 		delete transmitSocket;
 		transmitSocket = nullptr;
+	}
+	
+	void setOscEndpoint(const char * ipAddress, const int udpPort)
+	{
+		SDL_LockMutex(mutex);
+		{
+			shut();
+			
+			init(ipAddress, udpPort);
+		}
+		SDL_UnlockMutex(mutex);
 	}
 	
 	virtual void portAudioCallback(
@@ -564,14 +574,11 @@ struct AudioUpdateHandler : PortAudioHandler
 				Assert(isValid);
 				if (isValid)
 				{
-					const char * ipAddress = "127.0.0.1";
-					//const char * ipAddress = "192.168.10.16";
-					const int udpPort = 7012;
-					
-					//const IpEndpointName endpointName(ipAddress, udpPort);
-
-					//transmitSocket->SendTo(endpointName, stream.Data(), stream.Size());
-					transmitSocket->Send(stream.Data(), stream.Size());
+					SDL_LockMutex(mutex);
+					{
+						transmitSocket->Send(stream.Data(), stream.Size());
+					}
+					SDL_UnlockMutex(mutex);
 				}
 			}
 		}
@@ -600,8 +607,12 @@ static void testAudioVoiceManager()
 	
 	//
 	
+	std::string oscIpAddress = "127.0.0.1";
+	int oscUdpPort = 7000;
+	
 	AudioUpdateHandler audioUpdateHandler;
 	
+	audioUpdateHandler.init(oscIpAddress.c_str(), oscUdpPort);
 	audioUpdateHandler.world = world;
 	audioUpdateHandler.voiceMgr = &voiceMgr;
 	
@@ -624,6 +635,11 @@ static void testAudioVoiceManager()
 	//voiceMgr.allocVoice(wavefield2DVoice, &wavefield2D);
 	
 	//
+	
+	UiState uiState;
+	uiState.sx = 300;
+	uiState.x = GFX_SX - 300 - 40;
+	uiState.y - 40;
 	
 	do
 	{
@@ -668,7 +684,11 @@ static void testAudioVoiceManager()
 			command.strength = strength;
 			wavefield2D.m_commandQueue.push(command);
 		}
-	
+		
+		//
+		
+		const float dt = framework.timeStep;
+		
 		//
 		
 		framework.beginDraw(0, 0, 0, 0);
@@ -712,6 +732,19 @@ static void testAudioVoiceManager()
 			
 			world->draw();
 			
+			//
+			
+			makeActive(&uiState, true, true);
+			pushMenu("osc");
+			{
+				if (doTextBox(oscIpAddress, "ip", dt) == kUiTextboxResult_EditingComplete ||
+					doTextBox(oscUdpPort, "port", dt) == kUiTextboxResult_EditingComplete)
+				{
+					audioUpdateHandler.setOscEndpoint(oscIpAddress.c_str(), oscUdpPort);
+				}
+			}
+			popMenu();
+		
 			//
 			
 			popFontMode();
@@ -805,14 +838,14 @@ int main(int argc, char * argv[])
 	{
 		initUi();
 		
+		mutex = SDL_CreateMutex();
+		
 		//
 		
 		testAudioVoiceManager();
 		//testAudioGraphManager();
 		
 		//
-		
-		mutex = SDL_CreateMutex();
 		
 		GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
 		
