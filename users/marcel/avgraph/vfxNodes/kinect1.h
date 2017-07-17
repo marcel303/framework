@@ -27,12 +27,6 @@
 
 #pragma once
 
-#ifdef MACOS
-	#define ENABLE_KINECT1 0
-#else
-	#define ENABLE_KINECT1 0
-#endif
-
 #if ENABLE_KINECT1
 
 #include "libfreenect.h"

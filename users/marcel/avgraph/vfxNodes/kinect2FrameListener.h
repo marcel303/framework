@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#ifdef MACOS
+#if ENABLE_KINECT2
 
 #include <libfreenect2/frame_listener_impl.h> // FrameListener
 

@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if ENABLE_TURBOJPEG
+
 #include "imageCpuDelayLine.h"
 #include "jpegLoader.h"
 #include "ofxJpegGlitch/ofxJpegGlitch.h"
@@ -675,3 +677,5 @@ void ImageCpuDelayLine::compressWait()
 	
 	SDL_UnlockMutex(mutex);
 }
+
+#endif

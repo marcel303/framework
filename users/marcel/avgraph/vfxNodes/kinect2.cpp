@@ -25,12 +25,10 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "kinect2.h"
-
 #if ENABLE_KINECT2
 
 #include "framework.h"
-
+#include "kinect2.h"
 #include "kinect2FrameListener.h"
 
 #include <libfreenect2/libfreenect2.hpp>

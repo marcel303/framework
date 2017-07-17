@@ -1,5 +1,7 @@
 #pragma once
 
+#if ENABLE_TURBOJPEG
+
 struct JpegLoadData
 {
 	// optional parameters when loading images
@@ -51,3 +53,5 @@ bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const in
 
 // compresses the image data contained in srcBuffer of srcBufferSize bytes, and stores the encoded image in dstBuffer
 bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, const bool srcIsColor, const int dstQualityLevel);
+
+#endif

@@ -27,6 +27,8 @@
 
 #pragma once
 
+#if ENABLE_TURBOJPEG
+
 #include "vfxNodeBase.h"
 
 struct ImageCpuDelayLine;
@@ -66,3 +68,5 @@ struct VfxNodeImageCpuDelayLine : VfxNodeBase
 	
 	virtual void getDescription(VfxNodeDescription & d) override;
 };
+
+#endif

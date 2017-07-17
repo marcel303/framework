@@ -27,6 +27,8 @@
 
 #pragma once
 
+#if ENABLE_TURBOJPEG
+
 #include <stdint.h>
 #include <deque>
 
@@ -134,3 +136,5 @@ struct ImageCpuDelayLine
 	void compressWork(const VfxImageCpu & image, const int jpegQualityLevel, const double timestamp);
 	void compressWait();
 };
+
+#endif

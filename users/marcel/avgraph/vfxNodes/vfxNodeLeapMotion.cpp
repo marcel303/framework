@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if ENABLE_LEAPMOTION
+
 #include "vfxNodeLeapMotion.h"
 #include "leap/Leap.h"
 #include <SDL2/SDL.h>
@@ -197,3 +199,5 @@ void VfxNodeLeapMotion::getDescription(VfxNodeDescription & d)
 	d.add("Leap Motion connected: %d", leapController->isConnected());
 	d.add("Leap Motion has focus: %d", leapController->hasFocus());
 }
+
+#endif

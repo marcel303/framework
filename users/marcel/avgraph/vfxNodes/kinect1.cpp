@@ -25,12 +25,11 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "kinect1.h"
-
 #if ENABLE_KINECT1
 
 #include "framework.h"
 #include "freenect_internal.h" // for access to freenect_device.registration.zero_plane_info
+#include "kinect1.h"
 
 Kinect1::~Kinect1()
 {

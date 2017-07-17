@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if ENABLE_TURBOJPEG
+
 #include "imageCpuDelayLine.h"
 #include "vfxNodeImageCpuDelayLine.h"
 
@@ -159,3 +161,5 @@ void VfxNodeImageCpuDelayLine::getDescription(VfxNodeDescription & d)
 		d.newline();
 	}
 }
+
+#endif

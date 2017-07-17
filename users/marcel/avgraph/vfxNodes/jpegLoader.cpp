@@ -1,3 +1,5 @@
+#if ENABLE_TURBOJPEG
+
 #include "Debugging.h"
 #include "jpegLoader.h"
 #include "Log.h"
@@ -383,3 +385,5 @@ bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const in
 	
 	return result;
 }
+
+#endif

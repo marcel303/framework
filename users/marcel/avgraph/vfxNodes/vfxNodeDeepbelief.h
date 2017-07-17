@@ -27,7 +27,7 @@
 
 #pragma once
 
-#ifdef MACOS
+#if ENABLE_DEEPBELIEF
 
 #include "deepbelief.h"
 #include "vfxNodeBase.h"

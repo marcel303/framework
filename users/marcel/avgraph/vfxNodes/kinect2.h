@@ -27,12 +27,6 @@
 
 #pragma once
 
-#ifdef MACOS
-	#define ENABLE_KINECT2 1
-#else
-	#define ENABLE_KINECT2 0
-#endif
-
 #if ENABLE_KINECT2
 
 struct SDL_mutex;

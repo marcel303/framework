@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#ifdef MACOS
+#if ENABLE_DEEPBELIEF
 
 #include "Debugging.h"
 #include "deepbelief.h"

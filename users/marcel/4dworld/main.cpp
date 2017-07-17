@@ -280,6 +280,7 @@ struct TestObject
 		
 		if (doCheckBox(voice->spatialCompressor.enable, "spatialCompressor", true))
 		{
+			g_drawX += 20;
 			pushMenu("spatialCompressor");
 			doTextBox(voice->spatialCompressor.attack, "attack", dt);
 			doTextBox(voice->spatialCompressor.release, "release", dt);
@@ -288,38 +289,47 @@ struct TestObject
 			doTextBox(voice->spatialCompressor.curve, "curve", dt);
 			doCheckBox(voice->spatialCompressor.invert, "invert", false);
 			popMenu();
+			g_drawX -= 20;
 		}
 		
 		if (doCheckBox(voice->dopplerEnable, "doppler", true))
 		{
+			g_drawX += 20;
 			pushMenu("doppler");
 			doTextBox(voice->dopplerScale, "scale", dt);
 			doTextBox(voice->dopplerSmooth, "smooth", dt);
 			popMenu();
+			g_drawX -= 20;
 		}
 		
 		if (doCheckBox(voice->distanceIntensity.enable, "distance.intensity", true))
 		{
+			g_drawX += 20;
 			pushMenu("distance.intensity");
 			doTextBox(voice->distanceIntensity.threshold, "treshold", dt);
 			doTextBox(voice->distanceIntensity.curve, "curve", dt);
 			popMenu();
+			g_drawX -= 20;
 		}
 		
 		if (doCheckBox(voice->distanceDampening.enable, "distance.dampening", true))
 		{
+			g_drawX += 20;
 			pushMenu("distance.dampening");
 			doTextBox(voice->distanceDampening.threshold, "treshold", dt);
 			doTextBox(voice->distanceDampening.curve, "curve", dt);
 			popMenu();
+			g_drawX -= 20;
 		}
 		
 		if (doCheckBox(voice->distanceDiffusion.enable, "distance.diffusion", true))
 		{
+			g_drawX += 20;
 			pushMenu("distance.diffusion");
 			doTextBox(voice->distanceDiffusion.threshold, "treshold", dt);
 			doTextBox(voice->distanceDiffusion.curve, "curve", dt);
 			popMenu();
+			g_drawX -= 20;
 		}
 		
 		popMenu();
@@ -663,6 +673,8 @@ static void testAudioVoiceManager()
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			pushFontMode(FONT_SDF);
+			
 			{
 				WaterSim1D w;
 				float sampleLocation;
@@ -699,11 +711,15 @@ static void testAudioVoiceManager()
 			//
 			
 			world->draw();
+			
+			//
+			
+			popFontMode();
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
 	
-	//exit(0);
+	exit(0);
 	
 	//
 	
@@ -764,7 +780,11 @@ static void testAudioGraphManager()
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			audioGraphMgr.drawEditor();
+			pushFontMode(FONT_SDF);
+			{
+				audioGraphMgr.drawEditor();
+			}
+			popFontMode();
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));

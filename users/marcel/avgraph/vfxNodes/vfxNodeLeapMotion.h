@@ -27,6 +27,8 @@
 
 #pragma once
 
+#if ENABLE_LEAPMOTION
+
 #include "vfxNodeBase.h"
 
 struct LeapListener;
@@ -73,3 +75,5 @@ struct VfxNodeLeapMotion : VfxNodeBase
 	
 	virtual void getDescription(VfxNodeDescription & d) override;
 };
+
+#endif
