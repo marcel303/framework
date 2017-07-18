@@ -691,7 +691,7 @@ static bool doFileDialog(const std::string & extension, std::string & filename)
 	auto files = listFiles("tracks", false);
 	for (auto i = files.begin(); i != files.end(); )
 	{
-		if (Path::GetExtension(*i) != extension)
+		if (Path::GetExtension(*i, true) != extension)
 			i = files.erase(i);
 		else
 			++i;
