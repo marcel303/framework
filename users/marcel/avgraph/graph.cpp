@@ -3778,6 +3778,81 @@ void GraphEdit::snapToGrid(GraphNode & node) const
 	snapToGrid(node.editorX, node.editorY);
 }
 
+void GraphEdit::cancelEditing()
+{
+	switch (state)
+	{
+	case kState_Idle:
+		break;
+
+	case kState_NodeSelect:
+		{
+			nodeSelectEnd();
+
+			state = kState_Idle;
+			break;
+		}
+
+	case kState_NodeDrag:
+		{
+			nodeDragEnd();
+
+			state = kState_Idle;
+			break;
+		}
+
+		
+	case kState_InputSocketConnect:
+		{
+			socketConnectEnd();
+			
+			state = kState_Idle;
+			break;
+		}
+		
+	case kState_OutputSocketConnect:
+		{
+			socketConnectEnd();
+			
+			state = kState_Idle;
+			break;
+		}
+		
+	case kState_NodeResize:
+		{
+			nodeResize = NodeResize();
+			
+			state = kState_Idle;
+			break;
+		}
+		
+	case kState_TouchDrag:
+		{
+			touches = Touches();
+
+			state = kState_Idle;
+			break;
+		}
+		
+	case kState_TouchZoom:
+		{
+			touches = Touches();
+			
+			state = kState_Idle;
+			break;
+		}
+		break;
+			
+	case kState_Hidden:
+		state = kState_Idle;
+		break;
+		
+	case kState_HiddenIdle:
+		state = kState_Idle;
+		break;
+	}
+}
+
 void GraphEdit::showNotification(const char * format, ...)
 {
 	char text[1024];
