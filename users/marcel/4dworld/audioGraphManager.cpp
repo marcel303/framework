@@ -165,8 +165,10 @@ AudioGraphFile::AudioGraphFile()
 
 AudioGraphFile::~AudioGraphFile()
 {
+	Assert(instanceList.empty());
 	instanceList.clear();
 	
+	Assert(activeInstance == nullptr);
 	activeInstance = nullptr;
 	
 	delete realTimeConnection;
@@ -181,6 +183,8 @@ AudioGraphFile::~AudioGraphFile()
 AudioGraphManager::AudioGraphManager()
 	: typeDefinitionLibrary(nullptr)
 	, files()
+	, selectedFile(nullptr)
+	, audioMutex(nullptr)
 {
 	typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
 	
@@ -228,12 +232,49 @@ AudioGraphManager::AudioGraphManager()
 
 AudioGraphManager::~AudioGraphManager()
 {
+	audioMutex = nullptr;
+	
 	for (auto & file : files)
 		delete file.second;
 	files.clear();
 	
 	delete typeDefinitionLibrary;
 	typeDefinitionLibrary = nullptr;
+}
+
+void AudioGraphManager::selectFile(const char * filename)
+{
+	if (selectedFile != nullptr)
+	{
+		selectedFile->graphEdit->cancelEditing();
+		
+		selectedFile = nullptr;
+	}
+	
+	auto fileItr = files.find(filename);
+	
+	if (fileItr != files.end())
+	{
+		selectedFile = fileItr->second;
+	}
+}
+
+void AudioGraphManager::selectInstance(const AudioGraphInstance * instance)
+{
+	for (auto & fileItr : files)
+	{
+		auto file = fileItr.second;
+		
+		for (auto & instanceInFile : file->instanceList)
+		{
+			if (instance == &instanceInFile)
+			{
+				selectFile(fileItr.first.c_str());
+				
+				file->activeInstance = instance;
+			}
+		}
+	}
 }
 
 AudioGraphInstance * AudioGraphManager::createInstance(const char * filename)
@@ -260,6 +301,7 @@ AudioGraphInstance * AudioGraphManager::createInstance(const char * filename)
 	
 	instance.audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary);
 	instance.realTimeConnection = new AudioRealTimeConnection();
+	instance.realTimeConnection->audioMutex = audioMutex;
 	instance.realTimeConnection->audioGraph = instance.audioGraph;
 	instance.realTimeConnection->audioGraphPtr = &instance.audioGraph;
 	
@@ -284,13 +326,25 @@ void AudioGraphManager::free(AudioGraphInstance *& instance)
 				file->instanceList.erase(instanceItr);
 				instance = nullptr;
 				
+			#if 1
 				if (file->instanceList.empty())
 				{
+					if (file == selectedFile)
+					{
+						selectedFile = nullptr;
+					}
+					
 					delete file;
 					file = nullptr;
 					
 					files.erase(fileItr);
 				}
+			#else
+				if (instance == file->activeInstance)
+				{
+					file->activeInstance = nullptr;
+				}
+			#endif
 				
 				return;
 			}
@@ -314,12 +368,16 @@ void AudioGraphManager::draw() const
 
 void AudioGraphManager::tickEditor(const float dt)
 {
-	for (auto & file : files)
-		file.second->graphEdit->tick(dt);
+	if (selectedFile != nullptr)
+	{
+		selectedFile->graphEdit->tick(dt);
+	}
 }
 
 void AudioGraphManager::drawEditor()
 {
-	for (auto & file : files)
-		file.second->graphEdit->draw();
+	if (selectedFile != nullptr)
+	{
+		selectedFile->graphEdit->draw();
+	}
 }

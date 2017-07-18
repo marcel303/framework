@@ -11,6 +11,8 @@ struct Graph;
 struct GraphEdit;
 struct GraphEdit_TypeDefinitionLibrary;
 
+struct SDL_mutex;
+
 struct AudioGraphInstance
 {
 	AudioGraph * audioGraph;
@@ -26,7 +28,7 @@ struct AudioGraphFile
 	
 	std::list<AudioGraphInstance> instanceList;
 
-	AudioGraphInstance * activeInstance;
+	const AudioGraphInstance * activeInstance;
 
 	AudioGraphFileRTC * realTimeConnection;
 	
@@ -42,15 +44,22 @@ struct AudioGraphManager
 	
 	std::map<std::string, AudioGraphFile*> files;
 	
+	AudioGraphFile * selectedFile;
+	
+	SDL_mutex * audioMutex;
+	
 	AudioGraphManager();
 	~AudioGraphManager();
+	
+	void selectFile(const char * filename);
+	void selectInstance(const AudioGraphInstance * instance);
 	
 	AudioGraphInstance * createInstance(const char * filename);
 	void free(AudioGraphInstance *& instance);
 
 	void tick(const float dt);
 	void draw() const;
-
+	
 	void tickEditor(const float dt);
 	void drawEditor();
 };

@@ -34,6 +34,7 @@
 #include "osc4d.h"
 #include "paobject.h"
 #include "soundmix.h"
+#include "StringEx.h"
 #include "../libparticle/ui.h"
 
 /*
@@ -344,9 +345,12 @@ struct World
 	
 	TestObject testObject;
 	
+	UiState uiState;
+	
 	World()
 		: creatures()
 		, testObject()
+		, uiState()
 	{
 	}
 	
@@ -748,6 +752,26 @@ static void testAudioVoiceManager()
 				}
 			}
 			popMenu();
+			
+			doBreak();
+			
+			pushMenu("globals");
+			{
+				doLabel("globals", 0.f);
+				doTextBox(g_voiceMgr->globalPos[0], "pos.x", dt);
+				doTextBox(g_voiceMgr->globalPos[1], "pos.y", dt);
+				doTextBox(g_voiceMgr->globalPos[2], "pos.z", dt);
+				doTextBox(g_voiceMgr->globalRot[0], "rot.x", dt);
+				doTextBox(g_voiceMgr->globalRot[1], "rot.y", dt);
+				doTextBox(g_voiceMgr->globalRot[2], "rot.z", dt);
+				doTextBox(g_voiceMgr->globalPlode[0], "plode.x", dt);
+				doTextBox(g_voiceMgr->globalPlode[1], "plode.y", dt);
+				doTextBox(g_voiceMgr->globalPlode[2], "plode.z", dt);
+				doTextBox(g_voiceMgr->globalOrigin[0], "origin.x", dt);
+				doTextBox(g_voiceMgr->globalOrigin[1], "origin.y", dt);
+				doTextBox(g_voiceMgr->globalOrigin[2], "origin.z", dt);
+			}
+			popMenu();
 		
 			//
 			
@@ -792,6 +816,8 @@ static void testAudioGraphManager()
 {
 	AudioGraphManager audioGraphMgr;
 	
+	audioGraphMgr.audioMutex = mutex;
+	
 	AudioGraphInstance * instance1 = audioGraphMgr.createInstance("audioTest1.xml");
 	AudioGraphInstance * instance2 = audioGraphMgr.createInstance("audioTest1.xml");
 	AudioGraphInstance * instance3 = audioGraphMgr.createInstance("audioGraph.xml");
@@ -802,6 +828,42 @@ static void testAudioGraphManager()
 	
 	instance1 = audioGraphMgr.createInstance("audioTest1.xml");
 	instance2 = audioGraphMgr.createInstance("audioGraph.xml");
+	instance3 = audioGraphMgr.createInstance("audioGraph.xml");
+	
+	UiState uiState;
+	
+	std::string activeFile;
+	
+	auto doMenus = [&](const bool doActions, const bool doDraw)
+	{
+		uiState.sx = 200;
+		uiState.x = GFX_SX - uiState.sx - 10;
+		uiState.y = GFX_SY - 300;
+		
+		makeActive(&uiState, doActions, doDraw);
+		pushMenu("instanceList");
+		for (auto & fileItr : audioGraphMgr.files)
+		{
+			auto & filename = fileItr.first;
+			auto file = fileItr.second;
+			
+			for (auto & instance : file->instanceList)
+			{
+				std::string name = String::FormatC("%s: %p", filename.c_str(), instance.audioGraph);
+				
+				if (doButton(name.c_str()))
+				{
+					if (filename != activeFile)
+					{
+						activeFile = filename;
+						
+						audioGraphMgr.selectInstance(&instance);
+					}
+				}
+			}
+		}
+		popMenu();
+	};
 	
 	do
 	{
@@ -810,6 +872,8 @@ static void testAudioGraphManager()
 		//
 		
 		const float dt = framework.timeStep;
+		
+		doMenus(true, false);
 		
 		audioGraphMgr.tickEditor(dt);
 		
@@ -820,6 +884,8 @@ static void testAudioGraphManager()
 			pushFontMode(FONT_SDF);
 			{
 				audioGraphMgr.drawEditor();
+				
+				doMenus(false, true);
 			}
 			popFontMode();
 		}
@@ -828,6 +894,7 @@ static void testAudioGraphManager()
 	
 	audioGraphMgr.free(instance1);
 	audioGraphMgr.free(instance2);
+	audioGraphMgr.free(instance3);
 }
 
 //
@@ -846,8 +913,8 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		testAudioVoiceManager();
-		//testAudioGraphManager();
+		//testAudioVoiceManager();
+		testAudioGraphManager();
 		
 		//
 		
