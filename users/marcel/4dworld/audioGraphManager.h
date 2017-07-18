@@ -59,6 +59,7 @@ struct AudioGraphManager
 
 	void tick(const float dt);
 	void draw() const;
+	void updateAudioValues();
 	
 	void tickEditor(const float dt);
 	void drawEditor();

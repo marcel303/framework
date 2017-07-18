@@ -241,3 +241,5 @@ struct AudioVoiceManager : PortAudioHandler
 	
 	bool generateOsc(Osc4DStream & stream);
 };
+
+extern AudioVoiceManager * g_voiceMgr;

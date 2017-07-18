@@ -320,6 +320,7 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 	
 	if (isPlaying == false ||
 		rangeBegin >= rangeEnd ||
+		pcmData == nullptr ||
 		pcmData->numSamples == 0)
 	{
 		generateSilence = true;
@@ -350,6 +351,8 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 }
 
 //
+
+AudioVoiceManager * g_voiceMgr = nullptr;
 
 AudioVoiceManager::AudioVoiceManager()
 	: mutex(nullptr)

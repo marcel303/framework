@@ -133,8 +133,6 @@ struct AudioSourceAudioGraph : PortAudioHandler
 #include "soundmix.h"
 #include "wavefield.h"
 
-static AudioVoiceManager * g_voiceMgr = nullptr;
-
 struct Creature
 {
 	AudioSourceSine sine;
@@ -491,6 +489,7 @@ static void drawWaterSim2D(const WaterSim2D & w, const float sampleLocationX, co
 	gxPopMatrix();
 }
 
+#include "audioGraphManager.h"
 #include "ip/UdpSocket.h"
 #include "osc/OscOutboundPacketStream.h"
 
@@ -500,11 +499,14 @@ struct AudioUpdateHandler : PortAudioHandler
 	
 	AudioVoiceManager * voiceMgr;
 	
+	AudioGraphManager * audioGraphMgr;
+	
 	UdpTransmitSocket * transmitSocket;
 	
 	AudioUpdateHandler()
 		: world(nullptr)
 		, voiceMgr(nullptr)
+		, audioGraphMgr(nullptr)
 		, transmitSocket(nullptr)
 	{
 	}
@@ -549,6 +551,18 @@ struct AudioUpdateHandler : PortAudioHandler
 		if (world != nullptr)
 		{
 			world->tick(dt);
+		}
+		
+		if (audioGraphMgr != nullptr)
+		{
+			SDL_LockMutex(mutex);
+			{
+				audioGraphMgr->tick(dt);
+				audioGraphMgr->draw();
+			}
+			SDL_UnlockMutex(mutex);
+			
+			audioGraphMgr->updateAudioValues();
 		}
 		
 		if (voiceMgr != nullptr)
@@ -814,6 +828,18 @@ static void testAudioVoiceManager()
 
 static void testAudioGraphManager()
 {
+	const int kNumChannels = 16;
+	
+	AudioVoiceManager voiceMgr;
+	
+	voiceMgr.init(kNumChannels);
+	
+	voiceMgr.outputMono = true;
+	
+	g_voiceMgr = &voiceMgr;
+	
+	//
+	
 	AudioGraphManager audioGraphMgr;
 	
 	audioGraphMgr.audioMutex = mutex;
@@ -828,7 +854,24 @@ static void testAudioGraphManager()
 	
 	instance1 = audioGraphMgr.createInstance("audioTest1.xml");
 	instance2 = audioGraphMgr.createInstance("audioGraph.xml");
-	instance3 = audioGraphMgr.createInstance("audioGraph.xml");
+	instance3 = audioGraphMgr.createInstance("voiceTest.xml");
+	
+	//
+	
+	std::string oscIpAddress = "127.0.0.1";
+	int oscUdpPort = 7000;
+	
+	AudioUpdateHandler audioUpdateHandler;
+	
+	audioUpdateHandler.init(oscIpAddress.c_str(), oscUdpPort);
+	audioUpdateHandler.voiceMgr = &voiceMgr;
+	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
+	
+	PortAudioObject pa;
+	
+	pa.init(SAMPLE_RATE, 1, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
+	
+	//
 	
 	UiState uiState;
 	

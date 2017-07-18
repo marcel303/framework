@@ -361,9 +361,15 @@ void AudioGraphManager::tick(const float dt)
 
 void AudioGraphManager::draw() const
 {
-	//for (auto & file : files)
-	//	for (auto & instance : file.second.instanceList)
-	//		instance.audioGraph->draw(..);
+	for (auto & file : files)
+		for (auto & instance : file.second->instanceList)
+			instance.audioGraph->draw(nullptr, 0, true);
+}
+
+void AudioGraphManager::updateAudioValues()
+{
+	if (selectedFile && selectedFile->activeInstance)
+		selectedFile->activeInstance->realTimeConnection->updateAudioValues();
 }
 
 void AudioGraphManager::tickEditor(const float dt)
