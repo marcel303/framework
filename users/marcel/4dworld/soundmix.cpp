@@ -356,6 +356,11 @@ AudioVoiceManager::AudioVoiceManager()
 	, numChannels(0)
 	, voices()
 	, outputMono(false)
+	, globalPos()
+	, globalSize()
+	, globalRot()
+	, globalPlode()
+	, globalOrigin()
 {
 }
 	
@@ -544,6 +549,12 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 			stream.sourceDistanceDiffusion(voice.distanceDiffusion.enable, voice.distanceDiffusion.threshold, voice.distanceDiffusion.curve);
 			stream.sourceGlobalEnable(voice.globalEnable);
 		}
+		
+		stream.globalOrigin(globalOrigin[0], globalOrigin[1], globalOrigin[2]);
+		stream.globalDimensions(globalSize[0], globalSize[1], globalSize[2]);
+		stream.globalRotation(globalRot[0], globalRot[1], globalRot[2]);
+		stream.globalPlode(globalPlode[0], globalPlode[1], globalPlode[2]);
+		stream.globalOrigin(globalOrigin[0], globalOrigin[1], globalOrigin[2]);
 		
 		return true;
 	}

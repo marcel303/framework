@@ -218,6 +218,12 @@ struct AudioVoiceManager : PortAudioHandler
 	std::list<AudioVoice> voices;
 	bool outputMono;
 	
+	Vec3 globalPos;
+	Vec3 globalSize;
+	Vec3 globalRot;
+	Vec3 globalPlode;
+	Vec3 globalOrigin;
+	
 	AudioVoiceManager();
 	
 	void init(const int numChannels);
