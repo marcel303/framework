@@ -82,9 +82,11 @@ static AudioRealTimeConnection * realTimeConnection = nullptr;
 struct AudioSourceAudioGraph : PortAudioHandler
 {
 	AudioGraph ** audioGraphPtr;
+	int numChannels;
 	
 	AudioSourceAudioGraph()
 		: audioGraphPtr(nullptr)
+		, numChannels(0)
 	{
 	}
 	
@@ -97,13 +99,10 @@ struct AudioSourceAudioGraph : PortAudioHandler
 
 		float * samples = (float*)outputBuffer;
 		const int numSamples = framesPerBuffer;
-
-		if (*audioGraphPtr == nullptr)
-		{
-			for (int i = 0; i < numSamples * 2; ++i)
-				samples[i] = 0.f;
-		}
-		else
+		
+		memset(samples, 0, numSamples * numChannels * sizeof(float));
+		
+		if (*audioGraphPtr != nullptr)
 		{
 			SDL_LockMutex(mutex);
 			{
@@ -111,15 +110,17 @@ struct AudioSourceAudioGraph : PortAudioHandler
 				
 				const double dt = AUDIO_UPDATE_SIZE / double(SAMPLE_RATE);
 				
-				AudioOutputChannel channels[2];
-				channels[0].samples = samples + 0;
-				channels[0].stride = 2;
-				channels[1].samples = samples + 1;
-				channels[1].stride = 2;
+				AudioOutputChannel channels[numChannels];
+				
+				for (int i = 0; i < numChannels; ++i)
+				{
+					channels[i].samples = samples + i;
+					channels[i].stride = numChannels;
+				}
 				
 				AudioGraph * audioGraph = *audioGraphPtr;
 				audioGraph->tick(dt, true);
-				audioGraph->draw(channels, 2, true);
+				audioGraph->draw(channels, numChannels, true);
 				
 				realTimeConnection->updateAudioValues();
 			}
@@ -820,6 +821,7 @@ static void testAudioVoiceManager()
 	pa.shut();
 	
 	voiceMgr.shut();
+	g_voiceMgr = nullptr;
 }
 
 //
@@ -880,11 +882,12 @@ static void testAudioGraphManager()
 	auto doMenus = [&](const bool doActions, const bool doDraw)
 	{
 		uiState.sx = 200;
-		uiState.x = GFX_SX - uiState.sx - 10;
-		uiState.y = GFX_SY - 300;
+		uiState.x = GFX_SX - uiState.sx - 10 - 200 - 10;
+		uiState.y = 10;
 		
 		makeActive(&uiState, doActions, doDraw);
 		pushMenu("instanceList");
+		doLabel("instances", 0.f);
 		for (auto & fileItr : audioGraphMgr.files)
 		{
 			auto & filename = fileItr.first;
@@ -933,11 +936,24 @@ static void testAudioGraphManager()
 			popFontMode();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (!keyboard.wentDown(SDLK_ESCAPE));
+	
+	pa.shut();
+	
+	//
+	
+	audioUpdateHandler.shut();
+	
+	//
 	
 	audioGraphMgr.free(instance1);
 	audioGraphMgr.free(instance2);
 	audioGraphMgr.free(instance3);
+	
+	//
+	
+	voiceMgr.shut();
+	g_voiceMgr = nullptr;
 }
 
 //
@@ -958,6 +974,15 @@ int main(int argc, char * argv[])
 		
 		//testAudioVoiceManager();
 		testAudioGraphManager();
+		
+		//
+		
+		const int kNumChannels = 2;
+		
+		AudioVoiceManager voiceMgr;
+		voiceMgr.init(kNumChannels);
+		
+		g_voiceMgr = &voiceMgr;
 		
 		//
 		
@@ -1019,12 +1044,13 @@ int main(int argc, char * argv[])
 		graphEdit->load(FILENAME);
 		
 		AudioSourceAudioGraph audioSource;
+		audioSource.numChannels = kNumChannels;
 		
 		audioSource.audioGraphPtr = &audioGraph;
 		
 		PortAudioObject pa;
 		
-		pa.init(SAMPLE_RATE, 2, AUDIO_UPDATE_SIZE, &audioSource);
+		pa.init(SAMPLE_RATE, kNumChannels, AUDIO_UPDATE_SIZE, &audioSource);
 		
 		bool stop = false;
 		
@@ -1077,6 +1103,9 @@ int main(int argc, char * argv[])
 		
 		delete graphEdit;
 		graphEdit = nullptr;
+		
+		voiceMgr.shut();
+		g_voiceMgr = nullptr;
 		
 		SDL_DestroyMutex(mutex);
 		mutex = nullptr;

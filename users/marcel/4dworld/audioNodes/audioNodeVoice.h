@@ -54,5 +54,58 @@ struct AudioNodeVoice : AudioNodeBase
 	AudioVoice * voice;
 	
 	AudioNodeVoice();
-	~AudioNodeVoice();
+	~AudioNodeVoice() override;
+};
+
+//
+
+struct AudioNodeVoice4D : AudioNodeBase
+{
+	struct AudioSourceVoice : AudioSource
+	{
+		AudioNodeVoice4D * voiceNode;
+		
+		virtual void generate(ALIGN16 float * __restrict samples, const int numSamples);
+	};
+
+	enum Input
+	{
+		kInput_Audio,
+		kInput_Global,
+		kInput_PosX,
+		kInput_PosY,
+		kInput_PosZ,
+		kInput_RotX,
+		kInput_RotY,
+		kInput_RotZ,
+		kInput_DimX,
+		kInput_DimY,
+		kInput_DimZ,
+		kInput_Doppler,
+		kInput_DopplerScale,
+		kInput_DopplerSmooth,
+		kInput_DistanceIntensity,
+		kInput_DistanceIntensityTreshold,
+		kInput_DistanceIntensityCurve,
+		kInput_DistanceDampening,
+		kInput_DistanceDampeningTreshold,
+		kInput_DistanceDampeningCurve,
+		kInput_DistanceDiffusion,
+		kInput_DistanceDiffusionTreshold,
+		kInput_DistanceDiffusionCurve,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_COUNT
+	};
+	
+	AudioSourceVoice source;
+	AudioVoice * voice;
+	
+	AudioNodeVoice4D();
+	~AudioNodeVoice4D() override;
+
+	virtual void tick(const float dt) override;
 };

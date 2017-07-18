@@ -146,6 +146,25 @@ struct AudioFloat
 		return samples[0];
 	}
 	
+	float getMean() const
+	{
+		if (isScalar)
+			return getScalar();
+		else
+		{
+			float sum = 0.f;
+			
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			{
+				sum += samples[i];
+			}
+			
+			sum /= AUDIO_UPDATE_SIZE;
+			
+			return sum;
+		}
+	}
+	
 	void expand() const
 	{
 		AudioFloat * self = const_cast<AudioFloat*>(this);

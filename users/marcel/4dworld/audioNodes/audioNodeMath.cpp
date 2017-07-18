@@ -28,6 +28,8 @@
 #include "audioNodeMath.h"
 #include <cmath>
 
+static const float twoPi = M_PI * 2.f;
+
 static float evalMathOp(const float a, const float b, const AudioNodeMath::Type type, const bool isPassthrough)
 {
 	float r = 0.f;
@@ -54,14 +56,14 @@ static float evalMathOp(const float a, const float b, const AudioNodeMath::Type 
 		if (isPassthrough)
 			r = a;
 		else
-			r = std::sin(a);
+			r = std::sin(a * twoPi);
 		break;
 		
 	case AudioNodeMath::kType_Cos:
 		if (isPassthrough)
 			r = a;
 		else
-			r = std::cos(a);
+			r = std::cos(a * twoPi);
 		break;
 		
 	case AudioNodeMath::kType_Abs:
