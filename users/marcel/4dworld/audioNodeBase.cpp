@@ -559,6 +559,8 @@ AUDIO_NODE_TYPE(sine, AudioNodeMathSine)
 
 //
 
+#include "FileStream.h"
+
 void AudioNodePcmData::tick(const float dt)
 {
 	const char * filename = getInputString(kInput_Filename, "");
@@ -567,6 +569,13 @@ void AudioNodePcmData::tick(const float dt)
 	{
 		currentFilename = filename;
 		
-		pcmData.load(filename, 0);
+		if (FileStream::Exists(filename))
+		{
+			pcmData.load(filename, 0);
+		}
+		else
+		{
+			pcmData.free();
+		}
 	}
 }

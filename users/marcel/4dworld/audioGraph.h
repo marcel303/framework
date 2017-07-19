@@ -33,7 +33,7 @@
 #include <vector>
 
 #if defined(DEBUG)
-	#define AUDIO_GRAPH_ENABLE_TIMING 1
+	#define AUDIO_GRAPH_ENABLE_TIMING 0
 #else
 	#define AUDIO_GRAPH_ENABLE_TIMING 0
 #endif

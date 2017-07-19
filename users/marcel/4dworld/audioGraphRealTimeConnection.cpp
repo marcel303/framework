@@ -249,7 +249,7 @@ void AudioRealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::strin
 	if (isLoading)
 		return;
 	
-	logDebug("nodeAdd");
+	//logDebug("nodeAdd");
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -290,7 +290,7 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	if (isLoading)
 		return;
 	
-	logDebug("nodeRemove");
+	//logDebug("nodeRemove");
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -342,7 +342,7 @@ void AudioRealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeI
 	if (isLoading)
 		return;
 	
-	logDebug("linkAdd");
+	//logDebug("linkAdd");
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -406,7 +406,7 @@ void AudioRealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNo
 	if (isLoading)
 		return;
 	
-	logDebug("linkRemove");
+	//logDebug("linkRemove");
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
