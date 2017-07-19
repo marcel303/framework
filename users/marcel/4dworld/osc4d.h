@@ -22,9 +22,11 @@ struct Osc4D
 	};
 
 	int source;
+	char sourceOscName[64];
 
 	Osc4D()
 		: source(0)
+		, sourceOscName()
 	{
 	}
 

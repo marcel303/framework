@@ -532,39 +532,49 @@ void AudioVoiceManager::portAudioCallback(
 
 bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 {
-	try
+	bool result = true;
+	
+	SDL_LockMutex(mutex);
 	{
-		for (auto & voice : voices)
+		try
 		{
-			if (voice.channelIndex == -1)
-				continue;
+			for (auto & voice : voices)
+			{
+				if (voice.channelIndex == -1)
+					continue;
+				
+				stream.setSource(voice.channelIndex);
+				
+				stream.sourcePosition(voice.pos[0], voice.pos[1], voice.pos[2]);
+				stream.sourceDimensions(voice.size[0], voice.size[1], voice.size[2]);
+				stream.sourceRotation(voice.rot[0], voice.rot[1], voice.rot[2]);
+				stream.sourceOrientationMode(voice.orientationMode, voice.orientationCenter[0], voice.orientationCenter[1], voice.orientationCenter[2]);
+				stream.sourceSpatialCompressor(voice.spatialCompressor.enable, voice.spatialCompressor.attack, voice.spatialCompressor.release, voice.spatialCompressor.minimum, voice.spatialCompressor.maximum, voice.spatialCompressor.curve, voice.spatialCompressor.invert);
+				stream.sourceDoppler(voice.dopplerEnable, voice.dopplerScale, voice.dopplerSmooth);
+				stream.sourceDistanceIntensity(voice.distanceIntensity.enable, voice.distanceIntensity.threshold, voice.distanceIntensity.curve);
+				stream.sourceDistanceDamping(voice.distanceDampening.enable, voice.distanceDampening.threshold, voice.distanceDampening.curve);
+				stream.sourceDistanceDiffusion(voice.distanceDiffusion.enable, voice.distanceDiffusion.threshold, voice.distanceDiffusion.curve);
+				stream.sourceGlobalEnable(voice.globalEnable);
+			}
 			
-			stream.setSource(voice.channelIndex);
+			//
 			
-			stream.sourcePosition(voice.pos[0], voice.pos[1], voice.pos[2]);
-			stream.sourceDimensions(voice.size[0], voice.size[1], voice.size[2]);
-			stream.sourceRotation(voice.rot[0], voice.rot[1], voice.rot[2]);
-			stream.sourceOrientationMode(voice.orientationMode, voice.orientationCenter[0], voice.orientationCenter[1], voice.orientationCenter[2]);
-			stream.sourceSpatialCompressor(voice.spatialCompressor.enable, voice.spatialCompressor.attack, voice.spatialCompressor.release, voice.spatialCompressor.minimum, voice.spatialCompressor.maximum, voice.spatialCompressor.curve, voice.spatialCompressor.invert);
-			stream.sourceDoppler(voice.dopplerEnable, voice.dopplerScale, voice.dopplerSmooth);
-			stream.sourceDistanceIntensity(voice.distanceIntensity.enable, voice.distanceIntensity.threshold, voice.distanceIntensity.curve);
-			stream.sourceDistanceDamping(voice.distanceDampening.enable, voice.distanceDampening.threshold, voice.distanceDampening.curve);
-			stream.sourceDistanceDiffusion(voice.distanceDiffusion.enable, voice.distanceDiffusion.threshold, voice.distanceDiffusion.curve);
-			stream.sourceGlobalEnable(voice.globalEnable);
+			stream.globalOrigin(globalOrigin[0], globalOrigin[1], globalOrigin[2]);
+			stream.globalDimensions(globalSize[0], globalSize[1], globalSize[2]);
+			stream.globalRotation(globalRot[0], globalRot[1], globalRot[2]);
+			stream.globalPlode(globalPlode[0], globalPlode[1], globalPlode[2]);
+			stream.globalOrigin(globalOrigin[0], globalOrigin[1], globalOrigin[2]);
+			
+			result = true;
 		}
-		
-		stream.globalOrigin(globalOrigin[0], globalOrigin[1], globalOrigin[2]);
-		stream.globalDimensions(globalSize[0], globalSize[1], globalSize[2]);
-		stream.globalRotation(globalRot[0], globalRot[1], globalRot[2]);
-		stream.globalPlode(globalPlode[0], globalPlode[1], globalPlode[2]);
-		stream.globalOrigin(globalOrigin[0], globalOrigin[1], globalOrigin[2]);
-		
-		return true;
+		catch (std::exception & e)
+		{
+			LOG_ERR("%s", e.what());
+			
+			result = false;
+		}
 	}
-	catch (std::exception & e)
-	{
-		LOG_ERR("%s", e.what());
-		
-		return false;
-	}
+	SDL_UnlockMutex(mutex);
+	
+	return result;
 }

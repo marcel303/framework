@@ -4,7 +4,13 @@
 void Osc4D::beginSource(const char * name)
 {
 	char text[1024];
-	sprintf_s(text, sizeof(text), "/source%d/%s", source + 1, name);
+	int textLength = 0;
+	for (int i = 0; sourceOscName[i]; ++i)
+		text[textLength++] = sourceOscName[i];
+	for (int i = 0; name[i]; ++i)
+		text[textLength++] = name[i];
+	text[textLength] = 0;
+	
 	begin(text);
 }
 
@@ -18,6 +24,8 @@ void Osc4D::f3(const float x, const float y, const float z)
 void Osc4D::setSource(const int _source)
 {
 	source = _source;
+	
+	sprintf_s(sourceOscName, sizeof(sourceOscName), "/source%d/", source);
 }
 
 void Osc4D::sourceColor(const float r, const float g, const float b)

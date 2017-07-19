@@ -104,9 +104,10 @@ struct SocketRef
 	}
 };
 
-// todo : make this a member of AudioRealTimeConnection
-
-static std::map<SocketRef, AudioValueHistory> s_audioValues;
+struct AudioValueHistorySet
+{
+	std::map<SocketRef, AudioValueHistory> s_audioValues;
+};
 
 //
 
@@ -132,6 +133,23 @@ struct AudioScope
 
 //
 
+AudioRealTimeConnection::AudioRealTimeConnection()
+	: GraphEdit_RealTimeConnection()
+	, audioGraph(nullptr)
+	, audioGraphPtr(nullptr)
+	, audioMutex(nullptr)
+	, isLoading(false)
+	, audioValueHistorySet(nullptr)
+{
+	audioValueHistorySet = new AudioValueHistorySet();
+}
+
+AudioRealTimeConnection::~AudioRealTimeConnection()
+{
+	delete audioValueHistorySet;
+	audioValueHistorySet = nullptr;
+}
+
 void AudioRealTimeConnection::updateAudioValues()
 {
 	Assert(audioGraph != nullptr);
@@ -140,14 +158,14 @@ void AudioRealTimeConnection::updateAudioValues()
 
 	AUDIO_SCOPE;
 	
-	for (auto i = s_audioValues.begin(); i != s_audioValues.end(); )
+	for (auto i = audioValueHistorySet->s_audioValues.begin(); i != audioValueHistorySet->s_audioValues.end(); )
 	{
 		auto & socketRef = i->first;
 		auto & audioValueHistory = i->second;
 		
 		if (audioValueHistory.isActive() == false)
 		{
-			i = s_audioValues.erase(i);
+			i = audioValueHistorySet->s_audioValues.erase(i);
 		}
 		else
 		{
@@ -634,6 +652,8 @@ bool AudioRealTimeConnection::getSrcSocketValue(const GraphNodeId nodeId, const 
 	if (input->isConnected() == false)
 		return false;
 	
+	AUDIO_SCOPE;
+	
 	return getPlugValue(input, value);
 }
 
@@ -689,6 +709,8 @@ bool AudioRealTimeConnection::getDstSocketValue(const GraphNodeId nodeId, const 
 	Assert(output != nullptr);
 	if (output == nullptr)
 		return false;
+	
+	AUDIO_SCOPE;
 	
 	return getPlugValue(output, value);
 }
@@ -771,10 +793,12 @@ bool AudioRealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, 
 		ref.nodeId = nodeId;
 		ref.srcSocketIndex = srcSocketIndex;
 		
-		auto & history = s_audioValues[ref];
+		auto & history = audioValueHistorySet->s_audioValues[ref];
 		history.lastUpdateTime = g_TimerRT.TimeUS_get();
 		
 		channels.addChannel(history.samples, history.kNumSamples, true);
+		
+		// todo : let channel own data
 		
 		return true;
 	}
@@ -815,10 +839,12 @@ bool AudioRealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, 
 		ref.nodeId = nodeId;
 		ref.dstSocketIndex = dstSocketIndex;
 		
-		auto & history = s_audioValues[ref];
+		auto & history = audioValueHistorySet->s_audioValues[ref];
 		history.lastUpdateTime = g_TimerRT.TimeUS_get();
 		
 		channels.addChannel(history.samples, history.kNumSamples, true);
+		
+		// todo : let channel own data
 		
 		return true;
 	}
@@ -914,6 +940,8 @@ int AudioRealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 	
 	auto node = nodeItr->second;
 	
+	AUDIO_SCOPE;
+	
 	int result = 0;
 	
 	if (node->lastDrawTraversalId + 1 == audioGraph->nextDrawTraversalId)
@@ -944,12 +972,14 @@ int AudioRealTimeConnection::getNodeCpuHeatMax() const
 
 int AudioRealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const
 {
-		if (isLoading)
+	if (isLoading)
 		return false;
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
 		return false;
+	
+	AUDIO_SCOPE;
 	
 	auto nodeItr = audioGraph->nodes.find(nodeId);
 	

@@ -3,6 +3,7 @@
 #include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
 #include "graph.h"
+#include <SDL2/SDL.h>
 
 //
 
@@ -261,20 +262,24 @@ void AudioGraphManager::selectFile(const char * filename)
 
 void AudioGraphManager::selectInstance(const AudioGraphInstance * instance)
 {
-	for (auto & fileItr : files)
+	SDL_LockMutex(audioMutex);
 	{
-		auto file = fileItr.second;
-		
-		for (auto & instanceInFile : file->instanceList)
+		for (auto & fileItr : files)
 		{
-			if (instance == &instanceInFile)
+			auto file = fileItr.second;
+			
+			for (auto & instanceInFile : file->instanceList)
 			{
-				selectFile(fileItr.first.c_str());
-				
-				file->activeInstance = instance;
+				if (instance == &instanceInFile)
+				{
+					selectFile(fileItr.first.c_str());
+					
+					file->activeInstance = instance;
+				}
 			}
 		}
 	}
+	SDL_UnlockMutex(audioMutex);
 }
 
 AudioGraphInstance * AudioGraphManager::createInstance(const char * filename)

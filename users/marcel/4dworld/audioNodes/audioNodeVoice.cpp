@@ -78,21 +78,21 @@ AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
 	in("rot.x", "audioValue");
 	in("rot.y", "audioValue");
 	in("rot.z", "audioValue");
-	in("dim.x", "audioValue");
-	in("dim.y", "audioValue");
-	in("dim.z", "audioValue");
-	in("dopp", "bool");
+	in("dim.x", "audioValue", "1");
+	in("dim.y", "audioValue", "1");
+	in("dim.z", "audioValue", "1");
+	in("dopp", "bool", "1");
 	in("dopp.scale", "audioValue", "1");
-	in("dopp.smooth", "audioValue");
-	in("dint", "bool");
-	in("dint.tresh", "treshold", "1");
-	in("dint.curve", "curve");
-	in("ddamp", "bool");
-	in("ddamp.tresh", "audioValue", "1");
-	in("ddamp.curve", "audioValue");
+	in("dopp.smooth", "audioValue", "0.2");
+	in("dint", "bool", "1");
+	in("dint.tresh", "treshold", "100");
+	in("dint.curve", "curve", "-0.4");
+	in("ddamp", "bool", "1");
+	in("ddamp.tresh", "audioValue", "100");
+	in("ddamp.curve", "audioValue", "-0.4");
 	in("ddiff", "bool");
-	in("ddiff.tresh", "audioValue", "1");
-	in("ddiff.curve", "audioValue");
+	in("ddiff.tresh", "audioValue", "50");
+	in("ddiff.curve", "audioValue", "0.2");
 }
 
 void AudioNodeVoice4D::AudioSourceVoice::generate(ALIGN16 float * __restrict samples, const int numSamples)
@@ -162,27 +162,47 @@ void AudioNodeVoice4D::tick(const float dt)
 	voice->rot[2] = getInputAudioFloat(kInput_RotZ, &AudioFloat::Zero)->getMean();
 	
 	// dimensions
-	voice->size[0] = getInputAudioFloat(kInput_DimX, &AudioFloat::Zero)->getMean();
-	voice->size[1] = getInputAudioFloat(kInput_DimY, &AudioFloat::Zero)->getMean();
-	voice->size[2] = getInputAudioFloat(kInput_DimZ, &AudioFloat::Zero)->getMean();
+	voice->size[0] = getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();
+	voice->size[1] = getInputAudioFloat(kInput_DimY, &AudioFloat::One)->getMean();
+	voice->size[2] = getInputAudioFloat(kInput_DimZ, &AudioFloat::One)->getMean();
 	
 	// doppler
-	voice->dopplerEnable = getInputBool(kInput_Doppler, false);
-	voice->dopplerScale = getInputAudioFloat(kInput_DopplerScale, &AudioFloat::One)->getMean();
-	voice->dopplerSmooth = getInputAudioFloat(kInput_DopplerSmooth, &AudioFloat::Zero)->getMean();
+	{
+		const AudioFloat scale(1.f);
+		const AudioFloat smooth(.2f);
+		
+		voice->dopplerEnable = getInputBool(kInput_Doppler, true);
+		voice->dopplerScale = getInputAudioFloat(kInput_DopplerScale, &scale)->getMean();
+		voice->dopplerSmooth = getInputAudioFloat(kInput_DopplerSmooth, &smooth)->getMean();
+	}
 	
 	// distance intensity
-	voice->distanceIntensity.enable = getInputBool(kInput_DistanceIntensity, false);
-	voice->distanceIntensity.threshold = getInputAudioFloat(kInput_DistanceIntensityTreshold, &AudioFloat::One)->getMean();
-	voice->distanceIntensity.curve = getInputAudioFloat(kInput_DistanceIntensityCurve, &AudioFloat::One)->getMean();
+	{
+		const AudioFloat treshold(100.f);
+		const AudioFloat curve(-.4f);
+		
+		voice->distanceIntensity.enable = getInputBool(kInput_DistanceIntensity, true);
+		voice->distanceIntensity.threshold = getInputAudioFloat(kInput_DistanceIntensityTreshold, &treshold)->getMean();
+		voice->distanceIntensity.curve = getInputAudioFloat(kInput_DistanceIntensityCurve, &curve)->getMean();
+	}
 	
 	// distance dampening
-	voice->distanceDampening.enable = getInputBool(kInput_DistanceDampening, false);
-	voice->distanceDampening.threshold = getInputAudioFloat(kInput_DistanceDampeningTreshold, &AudioFloat::One)->getMean();
-	voice->distanceDampening.curve = getInputAudioFloat(kInput_DistanceDampeningCurve, &AudioFloat::One)->getMean();
+	{
+		const AudioFloat treshold(100.f);
+		const AudioFloat curve(-.4f);
+		
+		voice->distanceDampening.enable = getInputBool(kInput_DistanceDampening, true);
+		voice->distanceDampening.threshold = getInputAudioFloat(kInput_DistanceDampeningTreshold, &treshold)->getMean();
+		voice->distanceDampening.curve = getInputAudioFloat(kInput_DistanceDampeningCurve, &curve)->getMean();
+	}
 	
 	// distance diffusion
-	voice->distanceDiffusion.enable = getInputBool(kInput_DistanceDiffusion, false);
-	voice->distanceDiffusion.threshold = getInputAudioFloat(kInput_DistanceDiffusionTreshold, &AudioFloat::One)->getMean();
-	voice->distanceDiffusion.curve = getInputAudioFloat(kInput_DistanceDiffusionCurve, &AudioFloat::One)->getMean();
+	{
+		const AudioFloat treshold(50.f);
+		const AudioFloat curve(.2f);
+		
+		voice->distanceDiffusion.enable = getInputBool(kInput_DistanceDiffusion, false);
+		voice->distanceDiffusion.threshold = getInputAudioFloat(kInput_DistanceDiffusionTreshold, &treshold)->getMean();
+		voice->distanceDiffusion.curve = getInputAudioFloat(kInput_DistanceDiffusionCurve, &curve)->getMean();
+	}
 }

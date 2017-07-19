@@ -30,6 +30,8 @@
 #include "graph.h"
 
 struct AudioGraph;
+struct AudioValueHistorySet;
+
 struct SDL_mutex;
 
 struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
@@ -41,14 +43,10 @@ struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
 	
 	bool isLoading;
 	
-	AudioRealTimeConnection()
-		: GraphEdit_RealTimeConnection()
-		, audioGraph(nullptr)
-		, audioGraphPtr(nullptr)
-		, audioMutex(nullptr)
-		, isLoading(false)
-	{
-	}
+	AudioValueHistorySet * audioValueHistorySet;
+	
+	AudioRealTimeConnection();
+	virtual ~AudioRealTimeConnection() override;
 	
 	void updateAudioValues();
 	

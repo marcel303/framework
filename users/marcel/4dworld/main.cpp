@@ -560,10 +560,10 @@ struct AudioUpdateHandler : PortAudioHandler
 			{
 				audioGraphMgr->tick(dt);
 				audioGraphMgr->draw();
+				
+				audioGraphMgr->updateAudioValues();
 			}
 			SDL_UnlockMutex(mutex);
-			
-			audioGraphMgr->updateAudioValues();
 		}
 		
 		if (voiceMgr != nullptr)
@@ -854,9 +854,9 @@ static void testAudioGraphManager()
 	audioGraphMgr.free(instance2);
 	audioGraphMgr.free(instance3);
 	
-	instance1 = audioGraphMgr.createInstance("audioTest1.xml");
-	instance2 = audioGraphMgr.createInstance("audioGraph.xml");
-	instance3 = audioGraphMgr.createInstance("voiceTest.xml");
+	instance1 = audioGraphMgr.createInstance("voiceTest1.xml");
+	instance2 = audioGraphMgr.createInstance("voiceTest2.xml");
+	instance3 = audioGraphMgr.createInstance("voiceTest3.xml");
 	
 	//
 	
