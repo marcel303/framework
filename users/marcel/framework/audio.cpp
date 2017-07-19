@@ -245,10 +245,12 @@ SoundData * loadSound_OGG(const char * filename)
 
 SoundData * loadSound(const char * filename)
 {
-	if (strstr(filename, ".ogg"))
+	if (strcasestr(filename, ".ogg"))
 		return loadSound_OGG(filename);
-	else
+	else if (strcasestr(filename, ".wav"))
 		return loadSound_WAV(filename);
+	else
+		return nullptr;
 }
 
 //
