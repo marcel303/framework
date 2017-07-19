@@ -49,6 +49,8 @@ void AudioNodeVoice::AudioSourceVoice::generate(ALIGN16 float * __restrict sampl
 
 AudioNodeVoice::AudioNodeVoice()
 	: AudioNodeBase()
+	, source()
+	, voice(nullptr)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);
@@ -110,6 +112,8 @@ void AudioNodeVoice4D::AudioSourceVoice::generate(ALIGN16 float * __restrict sam
 
 AudioNodeVoice4D::AudioNodeVoice4D()
 	: AudioNodeBase()
+	, source()
+	, voice(nullptr)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);

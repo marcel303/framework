@@ -203,7 +203,8 @@ struct RicePaddy
 	AudioVoice * voice;
 	
 	RicePaddy()
-		: voice(nullptr)
+		: source()
+		, voice(nullptr)
 	{
 		source.init(32);
 		

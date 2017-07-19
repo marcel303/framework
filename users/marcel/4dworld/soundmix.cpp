@@ -245,8 +245,6 @@ AudioSourcePcm::AudioSourcePcm()
 
 void AudioSourcePcm::init(const PcmData * _pcmData, const int _samplePosition)
 {
-	Assert(_pcmData != nullptr);
-	
 	pcmData = _pcmData;
 	samplePosition = _samplePosition;
 	

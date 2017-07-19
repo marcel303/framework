@@ -321,6 +321,20 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	{
 		audioGraph->displayNodeId = kGraphNodeIdInvalid;
 	}
+	
+	for (auto audioValueItr = audioValueHistorySet->s_audioValues.begin(); audioValueItr != audioValueHistorySet->s_audioValues.end(); )
+	{
+		auto & socketRef = audioValueItr->first;
+		
+		if (socketRef.nodeId == nodeId)
+		{
+			audioValueItr = audioValueHistorySet->s_audioValues.erase(audioValueItr);
+		}
+		else
+		{
+			audioValueItr++;
+		}
+	}
 }
 
 void AudioRealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)

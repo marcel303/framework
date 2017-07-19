@@ -328,6 +328,11 @@ void AudioGraphManager::free(AudioGraphInstance *& instance)
 		{
 			if (&(*instanceItr) == instance)
 			{
+				if (instance == file->activeInstance)
+				{
+					file->activeInstance = nullptr;
+				}
+				
 				file->instanceList.erase(instanceItr);
 				instance = nullptr;
 				
@@ -343,11 +348,6 @@ void AudioGraphManager::free(AudioGraphInstance *& instance)
 					file = nullptr;
 					
 					files.erase(fileItr);
-				}
-			#else
-				if (instance == file->activeInstance)
-				{
-					file->activeInstance = nullptr;
 				}
 			#endif
 				
