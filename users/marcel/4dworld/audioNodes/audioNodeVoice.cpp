@@ -68,13 +68,25 @@ AudioNodeVoice::~AudioNodeVoice()
 
 //
 
+AUDIO_ENUM_TYPE(subboost)
+{
+	enumName = "4d.subBoost";
+	
+	elem("off");
+	elem("1");
+	elem("2");
+	elem("3");
+}
+
 AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
 {
 	typeName = "voice.4d";
 	
 	in("audio", "audioValue");
-	in("global", "bool", "1");
 	in("gain", "audioValue", "1");
+	in("global", "bool", "1");
+	in("color", "string", "ff0000");
+	in("name", "string");
 	in("pos.x", "audioValue");
 	in("pos.y", "audioValue");
 	in("pos.z", "audioValue");
@@ -84,6 +96,7 @@ AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
 	in("dim.x", "audioValue", "1");
 	in("dim.y", "audioValue", "1");
 	in("dim.z", "audioValue", "1");
+	in("articulation", "audioValue");
 	in("dopp", "bool", "1");
 	in("dopp.scale", "audioValue", "1");
 	in("dopp.smooth", "audioValue", "0.2");
@@ -96,6 +109,7 @@ AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
 	in("ddiff", "bool");
 	in("ddiff.tresh", "audioValue", "50");
 	in("ddiff.curve", "audioValue", "0.2");
+	inEnum("sub.boost", "4d.subBoost");
 }
 
 void AudioNodeVoice4D::AudioSourceVoice::generate(ALIGN16 float * __restrict samples, const int numSamples)
@@ -118,8 +132,10 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);
-	addInput(kInput_Global, kAudioPlugType_Bool);
 	addInput(kInput_Gain, kAudioPlugType_FloatVec);
+	addInput(kInput_Global, kAudioPlugType_Bool);
+	addInput(kInput_Color, kAudioPlugType_String);
+	addInput(kInput_Name, kAudioPlugType_String);
 	addInput(kInput_PosX, kAudioPlugType_FloatVec);
 	addInput(kInput_PosY, kAudioPlugType_FloatVec);
 	addInput(kInput_PosZ, kAudioPlugType_FloatVec);
@@ -129,6 +145,7 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_DimX, kAudioPlugType_FloatVec);
 	addInput(kInput_DimY, kAudioPlugType_FloatVec);
 	addInput(kInput_DimZ, kAudioPlugType_FloatVec);
+	addInput(kInput_Articulation, kAudioPlugType_FloatVec);
 	addInput(kInput_Doppler, kAudioPlugType_Bool);
 	addInput(kInput_DopplerScale, kAudioPlugType_FloatVec);
 	addInput(kInput_DopplerSmooth, kAudioPlugType_FloatVec);
@@ -141,6 +158,7 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_DistanceDiffusion, kAudioPlugType_Bool);
 	addInput(kInput_DistanceDiffusionTreshold, kAudioPlugType_FloatVec);
 	addInput(kInput_DistanceDiffusionCurve, kAudioPlugType_FloatVec);
+	addInput(kInput_SubBoost, kAudioPlugType_Int);
 	
 	//
 	
@@ -156,6 +174,9 @@ AudioNodeVoice4D::~AudioNodeVoice4D()
 void AudioNodeVoice4D::tick(const float dt)
 {
 	voice->spat.globalEnable = getInputBool(kInput_Global, true);
+	
+	//voice->spat.color = getInputString(kInput_Color, "ff0000");
+	voice->spat.name = getInputString(kInput_Name, "");
 	voice->spat.gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
 	
 	// position
@@ -172,6 +193,8 @@ void AudioNodeVoice4D::tick(const float dt)
 	voice->spat.size[0] = getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();
 	voice->spat.size[1] = getInputAudioFloat(kInput_DimY, &AudioFloat::One)->getMean();
 	voice->spat.size[2] = getInputAudioFloat(kInput_DimZ, &AudioFloat::One)->getMean();
+	
+	voice->spat.articulation = getInputAudioFloat(kInput_Articulation, &AudioFloat::Zero)->getMean();
 	
 	// doppler
 	{
@@ -212,6 +235,8 @@ void AudioNodeVoice4D::tick(const float dt)
 		voice->spat.distanceDiffusion.threshold = getInputAudioFloat(kInput_DistanceDiffusionTreshold, &treshold)->getMean();
 		voice->spat.distanceDiffusion.curve = getInputAudioFloat(kInput_DistanceDiffusionCurve, &curve)->getMean();
 	}
+	
+	voice->spat.subBoost = (Osc4D::SubBoost)getInputInt(kInput_SubBoost, 0);
 }
 
 //

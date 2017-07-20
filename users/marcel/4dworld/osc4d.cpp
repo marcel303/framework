@@ -277,7 +277,12 @@ void Osc4D::sourceSpatialDelay(const bool enable, const SpatialDelayMode mode, c
 	}
 }
 
-// todo : sourceSub###
+void Osc4D::sourceSubBoost(const SubBoost boost)
+{
+	beginSource("subBoost");
+	i(boost);
+	end();
+}
 
 // todo : return###
 

@@ -71,8 +71,10 @@ struct AudioNodeVoice4D : AudioNodeBase
 	enum Input
 	{
 		kInput_Audio,
-		kInput_Global,
 		kInput_Gain,
+		kInput_Global,
+		kInput_Color,
+		kInput_Name,
 		kInput_PosX,
 		kInput_PosY,
 		kInput_PosZ,
@@ -82,6 +84,7 @@ struct AudioNodeVoice4D : AudioNodeBase
 		kInput_DimX,
 		kInput_DimY,
 		kInput_DimZ,
+		kInput_Articulation,
 		kInput_Doppler,
 		kInput_DopplerScale,
 		kInput_DopplerSmooth,
@@ -94,6 +97,7 @@ struct AudioNodeVoice4D : AudioNodeBase
 		kInput_DistanceDiffusion,
 		kInput_DistanceDiffusionTreshold,
 		kInput_DistanceDiffusionCurve,
+		kInput_SubBoost,
 		kInput_COUNT
 	};
 	

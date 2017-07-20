@@ -551,6 +551,19 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 				
 				stream.setSource(voice.channelIndex);
 				
+				if (voice.spat.color != voice.lastSentSpat.color)
+				{
+					stream.sourceColor(
+						voice.spat.color[0],
+						voice.spat.color[1],
+						voice.spat.color[2]);
+				}
+				
+				if (voice.spat.name != voice.lastSentSpat.name)
+				{
+					stream.sourceName(voice.spat.name.c_str());
+				}
+				
 				if (voice.spat.pos != voice.lastSentSpat.pos)
 				{
 					stream.sourcePosition(
@@ -597,6 +610,12 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 						voice.spat.spatialCompressor.invert);
 				}
 				
+				if (voice.spat.articulation != voice.lastSentSpat.articulation)
+				{
+					stream.sourceArticulation(
+						voice.spat.articulation);
+				}
+				
 				if (voice.spat.doppler != voice.lastSentSpat.doppler)
 				{
 					stream.sourceDoppler(
@@ -627,6 +646,11 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 						voice.spat.distanceDiffusion.enable,
 						voice.spat.distanceDiffusion.threshold,
 						voice.spat.distanceDiffusion.curve);
+				}
+				
+				if (voice.spat.subBoost != voice.lastSentSpat.subBoost)
+				{
+					stream.sourceSubBoost(voice.spat.subBoost);
 				}
 				
 				if (voice.spat.globalEnable != voice.lastSentSpat.globalEnable)

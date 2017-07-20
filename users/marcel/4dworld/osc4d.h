@@ -20,6 +20,14 @@ struct Osc4D
 		kSpatialDelay_Random = 0,
 		kSpatialDelay_Grid = 1
 	};
+	
+	enum SubBoost
+	{
+		kBoost_None,
+		kBoost_Level1,
+		kBoost_Level2,
+		kBoost_Level3
+	};
 
 	int source;
 	char sourceOscName[64];
@@ -74,8 +82,10 @@ struct Osc4D
 	// todo : sourceElevationFilter
 
 	void sourceSpatialDelay(const bool enable, const SpatialDelayMode mode, const int times, const float feedback, const float drywet, const float smooth, const float scale, const float noiseDepth, const float noiseFrequency);
-
-	// todo : sourceSub###
+	
+	// todo : subReduction###
+	
+	void sourceSubBoost(const SubBoost boost);
 
 	// todo : return###
 

@@ -28,6 +28,7 @@
 #pragma once
 
 #include <list>
+#include <string>
 
 #define AUDIO_UPDATE_SIZE 256
 
@@ -224,6 +225,8 @@ struct AudioVoice
 	
 	struct Spatialisation
 	{
+		Vec3 color;
+		std::string name;
 		float gain;
 		
 		Vec3 pos;
@@ -233,24 +236,31 @@ struct AudioVoice
 		Vec3 orientationCenter;
 		
 		SpatialCompressor spatialCompressor;
+		float articulation;
 		Doppler doppler;
 		DistanceIntensity distanceIntensity;
 		DistanceDamping distanceDampening;
 		DistanceDiffusion distanceDiffusion;
+		Osc4D::SubBoost subBoost;
+		
 		bool globalEnable;
 		
 		Spatialisation()
-			: gain(1.f)
+			: color(1.f, 0.f, 0.f)
+			, name()
+			, gain(1.f)
 			, pos()
 			, size(1.f, 1.f, 1.f)
 			, rot()
 			, orientationMode(Osc4D::kOrientation_Static)
 			, orientationCenter(0.f, 2.f, 0.f)
 			, spatialCompressor()
+			, articulation(0.f)
 			, doppler()
 			, distanceIntensity()
 			, distanceDampening()
 			, distanceDiffusion()
+			, subBoost(Osc4D::kBoost_None)
 			, globalEnable(true)
 		{
 		}
