@@ -862,8 +862,8 @@ struct AudioNodeSourceSine : AudioNodeBase
 	
 	enum Mode
 	{
-		kMode_SNorm,
-		kMode_UNorm
+		kMode_BaseScale,
+		kMode_MinMax
 	};
 	
 	enum Input
@@ -873,6 +873,8 @@ struct AudioNodeSourceSine : AudioNodeBase
 		kInput_Mode,
 		kInput_Frequency,
 		kInput_Skew,
+		kInput_A,
+		kInput_B,
 		kInput_COUNT
 	};
 	
@@ -897,6 +899,8 @@ struct AudioNodeSourceSine : AudioNodeBase
 		addInput(kInput_Mode, kAudioPlugType_Int);
 		addInput(kInput_Frequency, kAudioPlugType_Float);
 		addInput(kInput_Skew, kAudioPlugType_Float);
+		addInput(kInput_A, kAudioPlugType_FloatVec);
+		addInput(kInput_B, kAudioPlugType_FloatVec);
 		addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 	}
 	
@@ -911,26 +915,31 @@ struct AudioNodeSourceSine : AudioNodeBase
 		const float frequency = getInputFloat(kInput_Frequency, 0.f);
 		const float phaseStep = frequency / double(SAMPLE_RATE);
 		const float twoPi = 2.f * M_PI;
+		const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
+		const AudioFloat * b = getInputAudioFloat(kInput_B, &AudioFloat::One);
 		
 		if (fine)
 		{
 			audioOutput.setVector();
 			
-			if (mode == kMode_SNorm)
+			a->expand();
+			b->expand();
+			
+			if (mode == kMode_BaseScale)
 			{
 				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 				{
-					audioOutput.samples[i] = std::sinf(phase * twoPi);
+					audioOutput.samples[i] = a->samples[i] + std::sinf(phase * twoPi) * b->samples[i];
 					
 					phase += phaseStep;
 					phase = phase - std::floorf(phase);
 				}
 			}
-			else if (mode == kMode_UNorm)
+			else if (mode == kMode_MinMax)
 			{
 				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 				{
-					audioOutput.samples[i] = .5f + .5f * std::sinf(phase * twoPi);
+					audioOutput.samples[i] = a->samples[i] + (.5f + .5f * std::sinf(phase * twoPi)) * (b->samples[i] - a->samples[i]);
 					
 					phase += phaseStep;
 					phase = phase - std::floorf(phase);
@@ -939,16 +948,23 @@ struct AudioNodeSourceSine : AudioNodeBase
 		}
 		else
 		{
-			if (mode == kMode_SNorm)
+			if (mode == kMode_BaseScale)
 			{
-				audioOutput.setScalar(std::sinf(phase * twoPi));
+				const float value = a->getMean() + std::sinf(phase * twoPi) * b->getMean();
+				
+				audioOutput.setScalar(value);
 				
 				phase += phaseStep * AUDIO_UPDATE_SIZE;
 				phase = std::fmodf(phase, 1.f);
 			}
-			else if (mode == kMode_UNorm)
+			else if (mode == kMode_MinMax)
 			{
-				audioOutput.setScalar(.5f + .5f * std::sinf(phase * twoPi));
+				const float aMean = a->getMean();
+				const float bMean = b->getMean();
+				
+				const float value = aMean + (.5f + .5f * std::sinf(phase * twoPi)) * (bMean - aMean);
+				
+				audioOutput.setScalar(value);
 				
 				phase += phaseStep * AUDIO_UPDATE_SIZE;
 				phase = std::fmodf(phase, 1.f);
@@ -963,12 +979,17 @@ struct AudioNodeSourceSine : AudioNodeBase
 		const float frequency = getInputFloat(kInput_Frequency, 0.f);
 		const float skew = getInputFloat(kInput_Skew, .5f);
 		const float phaseStep = frequency / double(SAMPLE_RATE);
+		const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
+		const AudioFloat * b = getInputAudioFloat(kInput_B, &AudioFloat::One);
 		
 		if (fine || true)
 		{
 			audioOutput.setVector();
 			
-			if (mode == kMode_SNorm)
+			a->expand();
+			b->expand();
+			
+			if (mode == kMode_BaseScale)
 			{
 				const float mulA = 1.f / skew;
 				const float mulB = 2.f / (1.f - skew);
@@ -986,13 +1007,13 @@ struct AudioNodeSourceSine : AudioNodeBase
 						value = +1.f - (phase - skew) * mulB;
 					}
 					
-					audioOutput.samples[i] = value;
+					audioOutput.samples[i] = a->samples[i] + value * b->samples[i];
 					
 					phase += phaseStep;
 					phase = phase - std::floorf(phase);
 				}
 			}
-			else if (mode == kMode_UNorm)
+			else if (mode == kMode_MinMax)
 			{
 				const float mulA = 1.f / skew;
 				const float mulB = 1.f / (1.f - skew);
@@ -1010,7 +1031,7 @@ struct AudioNodeSourceSine : AudioNodeBase
 						value = 1.f - (phase - skew) * mulB;
 					}
 					
-					audioOutput.samples[i] = value;
+					audioOutput.samples[i] = a->samples[i] + value * (b->samples[i] - a->samples[i]);
 					
 					phase += phaseStep;
 					phase = phase - std::floorf(phase);
@@ -1026,26 +1047,38 @@ struct AudioNodeSourceSine : AudioNodeBase
 		const float frequency = getInputFloat(kInput_Frequency, 0.f);
 		const float skew = getInputFloat(kInput_Skew, .5f);
 		const float phaseStep = frequency / double(SAMPLE_RATE);
+		const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
+		const AudioFloat * b = getInputAudioFloat(kInput_B, &AudioFloat::One);
 		
 		if (fine || true)
 		{
 			audioOutput.setVector();
 			
-			if (mode == kMode_SNorm)
+			a->expand();
+			b->expand();
+			
+			if (mode == kMode_BaseScale)
 			{
 				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 				{
-					audioOutput.samples[i] = phase < skew ? -1.f : +1.f;
+					float value = a->samples[i];
+					
+					if (phase < skew)
+						value -= b->samples[i];
+					else
+						value += b->samples[i];
+					
+					audioOutput.samples[i] = value;
 					
 					phase += phaseStep;
 					phase = phase - std::floorf(phase);
 				}
 			}
-			else if (mode == kMode_UNorm)
+			else if (mode == kMode_MinMax)
 			{
 				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 				{
-					audioOutput.samples[i] = phase < skew ? 0.f : 1.f;
+					audioOutput.samples[i] = phase < skew ? a->samples[i] : b->samples[i];
 					
 					phase += phaseStep;
 					phase = phase - std::floorf(phase);

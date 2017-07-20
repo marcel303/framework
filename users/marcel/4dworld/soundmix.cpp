@@ -518,9 +518,19 @@ void AudioVoiceManager::portAudioCallback(
 			}
 		}
 		
-		for (int i = 0; i < numSamples * numChannels; ++i)
+		if (outputMono)
 		{
-			samples[i] *= spat.globalGain;
+			for (int i = 0; i < numSamples; ++i)
+			{
+				samples[i] *= spat.globalGain;
+			}
+		}
+		else
+		{
+			for (int i = 0; i < numSamples * numChannels; ++i)
+			{
+				samples[i] *= spat.globalGain;
+			}
 		}
 	}
 	SDL_UnlockMutex(mutex);
