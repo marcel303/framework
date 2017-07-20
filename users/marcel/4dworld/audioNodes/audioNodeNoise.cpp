@@ -55,35 +55,53 @@ void AudioNodeNoise::draw()
 	const double numSamplesPerSecond = sampleRate;
 	const double numSamplesPerTick = AUDIO_UPDATE_SIZE / double(SAMPLE_RATE) * numSamplesPerSecond;
 
-	const int nearestSampleCount = std::max(1, int(std::round(numSamplesPerTick)));
-	const int nearestSamplingInterval = AUDIO_UPDATE_SIZE / nearestSampleCount;
-	
-	scale->expand();
-	persistence->expand();
-	min->expand();
-	max->expand();
-	x->expand();
-	
-	resultOutput.setVector();
-	
-	for (int i = 0; i < AUDIO_UPDATE_SIZE; i += nearestSamplingInterval)
-	{
-		const int i1 = i;
-		const int i2 = std::min(AUDIO_UPDATE_SIZE, i1 + nearestSamplingInterval);
+	const int nearestSampleCount = int(std::round(numSamplesPerTick));
 
-		const int iMid = (i1 + i2) / 2;
+	if (nearestSampleCount <= 1)
+	{
+		const int iMid = AUDIO_UPDATE_SIZE/2;
 
 		const float value = scaled_octave_noise_1d(
 			numOctaves,
-			persistence->samples[iMid],
-			scale->samples[iMid],
-			min->samples[iMid],
-			max->samples[iMid],
-			x->samples[i]);
+			persistence->isScalar ? persistence->getScalar() : persistence->samples[iMid],
+			scale->isScalar ? scale->getScalar() : scale->samples[iMid],
+			min->isScalar ? min->getScalar() : min->samples[iMid],
+			max->isScalar ? max->getScalar() : max->samples[iMid],
+			x->isScalar ? x->getScalar() : x->samples[iMid]);
 		
-		for (int j = i1; j < i2; ++j)
+		resultOutput.setScalar(value);
+	}
+	else
+	{
+		const int nearestSamplingInterval = AUDIO_UPDATE_SIZE / nearestSampleCount;
+		
+		scale->expand();
+		persistence->expand();
+		min->expand();
+		max->expand();
+		x->expand();
+		
+		resultOutput.setVector();
+		
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; i += nearestSamplingInterval)
 		{
-			resultOutput.samples[j] = value;
+			const int i1 = i;
+			const int i2 = std::min(AUDIO_UPDATE_SIZE, i1 + nearestSamplingInterval);
+
+			const int iMid = (i1 + i2) / 2;
+
+			const float value = scaled_octave_noise_1d(
+				numOctaves,
+				persistence->samples[iMid],
+				scale->samples[iMid],
+				min->samples[iMid],
+				max->samples[iMid],
+				x->samples[iMid]);
+			
+			for (int j = i1; j < i2; ++j)
+			{
+				resultOutput.samples[j] = value;
+			}
 		}
 	}
 }
