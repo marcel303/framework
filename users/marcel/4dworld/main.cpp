@@ -134,6 +134,10 @@ struct AudioSourceAudioGraph : PortAudioHandler
 #include "soundmix.h"
 #include "wavefield.h"
 
+const static float kWorldSx = 20.f;
+const static float kWorldSy = 8.f;
+const static float kWorldSz = 16.f;
+
 struct Creature
 {
 	AudioSourceSine sine;
@@ -161,14 +165,16 @@ struct Creature
 		
 		g_voiceMgr->allocVoice(voice, &sine);
 		
-		pos[0] = random<float>(0.f, GFX_SX);
-		pos[1] = random<float>(0.f, GFX_SY);
+		pos[0] = random<float>(-kWorldSx, +kWorldSx);
+		pos[1] = random(0.f, kWorldSy);
+		pos[2] = random<float>(-kWorldSz, +kWorldSz);
 		
 		const float angle = random<float>(0.f, M_PI * 2.f);
-		const float speed = 10.f;
+		const float speed = 1.f;
 		
 		vel[0] = std::cosf(angle) * speed;
-		vel[1] = std::sinf(angle) * speed;
+		vel[1] = 0.f;
+		vel[2] = std::sinf(angle) * speed;
 	}
 	
 	void shut()
@@ -188,12 +194,19 @@ struct Creature
 	
 	void draw() const
 	{
-		hqBegin(HQ_FILLED_CIRCLES);
+		gxPushMatrix();
 		{
-			setColor(colorWhite);
-			hqFillCircle(pos[0], pos[1], 5.f);
+			gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
+			gxScalef(20, 20, 1);
+			
+			hqBegin(HQ_FILLED_CIRCLES, true);
+			{
+				setColor(colorYellow);
+				hqFillCircle(pos[0], pos[2], 5.f);
+			}
+			hqEnd();
 		}
-		hqEnd();
+		gxPopMatrix();
 	}
 };
 
@@ -647,7 +660,7 @@ static void testAudioVoiceManager()
 	AudioSourceWavefield1D wavefield1D;
 	wavefield1D.init(256);
 	AudioVoice * wavefield1DVoice = nullptr;
-	voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D);
+	//voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D);
 	
 	//
 	
@@ -788,6 +801,22 @@ static void testAudioVoiceManager()
 				doTextBox(g_voiceMgr->globalOrigin[2], "origin.z", dt);
 			}
 			popMenu();
+			
+			doBreak();
+			
+			pushMenu("creatures");
+			{
+				if (doButton("add"))
+				{
+					world->addCreature();
+				}
+		
+				if (doButton("remove"))
+				{
+					world->removeCreature();
+				}
+			}
+			popMenu();
 		
 			//
 			
@@ -795,8 +824,6 @@ static void testAudioVoiceManager()
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
-	
-	exit(0);
 	
 	//
 	
@@ -973,8 +1000,8 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		//testAudioVoiceManager();
-		testAudioGraphManager();
+		testAudioVoiceManager();
+		//testAudioGraphManager();
 		
 		//
 		
