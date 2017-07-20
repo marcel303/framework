@@ -129,13 +129,13 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 
 float Wavefield1D::sample(const float x) const
 {
-	const int x1 = int(x);
-	const int x2 = (x1 + 1) % numElems;
+	const int x1 = int(x) ;
+	const int x2 = x1 + 1;
 	const float tx2 = x - x1;
 	const float tx1 = 1.f - tx2;
 	
-	const float v0 = p[x1];
-	const float v1 = p[x2];
+	const float v0 = p[x1 % numElems];
+	const float v1 = p[x2 % numElems];
 	const float v = v0 * tx1 + v1 * tx2;
 	
 	return v;
