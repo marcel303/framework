@@ -174,7 +174,23 @@ public:
 
 		return r;
 	}
-
+	
+	inline bool operator==(const Vec3 & other) const
+	{
+		return
+			m_v[0] == other.m_v[0] &&
+			m_v[1] == other.m_v[1] &&
+			m_v[2] == other.m_v[2];
+	}
+	
+	inline bool operator!=(const Vec3 & other) const
+	{
+		return
+			m_v[0] != other.m_v[0] ||
+			m_v[1] != other.m_v[1] ||
+			m_v[2] != other.m_v[2];
+	}
+	
 	inline float & operator[](int index)
 	{
 		return m_v[index];
