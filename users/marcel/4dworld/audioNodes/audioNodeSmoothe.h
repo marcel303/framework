@@ -31,10 +31,17 @@
 
 struct AudioNodeSmoothe : AudioNodeBase
 {
+	enum SmoothingUnit
+	{
+		kSmoothingUnit_PerSecond,
+		kSmoothingUnit_PerMillisecond
+	};
+	
 	enum Input
 	{
 		kInput_Value,
-		kInput_Decay,
+		kInput_SmoothingUnit,
+		kInput_Smoothness,
 		kInput_COUNT
 	};
 	
@@ -55,7 +62,8 @@ struct AudioNodeSmoothe : AudioNodeBase
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Value, kAudioPlugType_FloatVec);
-		addInput(kInput_Decay, kAudioPlugType_FloatVec);
+		addInput(kInput_SmoothingUnit, kAudioPlugType_Int);
+		addInput(kInput_Smoothness, kAudioPlugType_FloatVec);
 		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 	}
 	

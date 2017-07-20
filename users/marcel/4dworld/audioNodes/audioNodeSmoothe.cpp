@@ -28,11 +28,18 @@
 #include "audioNodeSmoothe.h"
 #include "Noise.h"
 
+AUDIO_ENUM_TYPE(smoothing_mode)
+{
+	elem("perSecond");
+	elem("perMillisecond");
+}
+
 AUDIO_NODE_TYPE(smoothe, AudioNodeSmoothe)
 {
 	typeName = "smoothe";
 	
 	in("value", "audioValue");
+	inEnum("smoothing", "smoothing_mode");
 	in("smoothness", "audioValue", "0.5");
 	out("result", "audioValue");
 }
@@ -40,7 +47,8 @@ AUDIO_NODE_TYPE(smoothe, AudioNodeSmoothe)
 void AudioNodeSmoothe::draw()
 {
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
-	const AudioFloat * decay = getInputAudioFloat(kInput_Decay, &AudioFloat::Half);
+	const SmoothingUnit smoothingUnit = (SmoothingUnit)getInputInt(kInput_SmoothingUnit, 0);
+	const AudioFloat * retain = getInputAudioFloat(kInput_Smoothness, &AudioFloat::Half);
 	
 	//
 	
@@ -48,13 +56,13 @@ void AudioNodeSmoothe::draw()
 	
 	//
 	
-	const double dt = 1.0 / SAMPLE_RATE;
+	const double dt = (smoothingUnit == kSmoothingUnit_PerSecond ? 1.0 : 1000.0) / SAMPLE_RATE;
 	
-	if (decay->isScalar)
+	if (retain->isScalar)
 	{
-		const double decayPerSecond = std::min(1.f, std::max(0.f, decay->getScalar()));
-		const double decayPerSample = std::pow(decayPerSecond, dt);
-		const double followPerSample = 1.0 - decayPerSample;
+		const double retainPerSecond = std::min(1.f, std::max(0.f, retain->getScalar()));
+		const double retainPerSample = std::pow(retainPerSecond, dt);
+		const double followPerSample = 1.0 - retainPerSample;
 		
 		resultOutput.setVector();
 		
@@ -62,7 +70,7 @@ void AudioNodeSmoothe::draw()
 		{
 			resultOutput.samples[i] = currentValue;
 			
-			currentValue = currentValue * decayPerSample + value->samples[i] * followPerSample;
+			currentValue = currentValue * retainPerSample + value->samples[i] * followPerSample;
 		}
 	}
 	else
@@ -71,13 +79,13 @@ void AudioNodeSmoothe::draw()
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			const double decayPerSecond = std::min(1.f, std::max(0.f, decay->samples[i]));
-			const double decayPerSample = std::pow(decayPerSecond, dt);
-			const double followPerSample = 1.0 - decayPerSample;
+			const double retainPerSecond = std::min(1.f, std::max(0.f, retain->samples[i]));
+			const double retainPerSample = std::pow(retainPerSecond, dt);
+			const double followPerSample = 1.0 - retainPerSample;
 		
 			resultOutput.samples[i] = currentValue;
 			
-			currentValue = currentValue * decayPerSample + value->samples[i] * followPerSample;
+			currentValue = currentValue * retainPerSample + value->samples[i] * followPerSample;
 		}
 	}
 }
