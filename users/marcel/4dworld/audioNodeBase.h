@@ -915,7 +915,7 @@ struct AudioNodeSourceSine : AudioNodeBase
 	{
 		const Mode mode = (Mode)getInputInt(kInput_Mode, kMode_MinMax);
 		const bool fine = getInputBool(kInput_Fine, true);
-		const float frequency = getInputFloat(kInput_Frequency, 0.f);
+		const float frequency = getInputFloat(kInput_Frequency, 1.f);
 		const float phaseStep = frequency / double(SAMPLE_RATE);
 		const float twoPi = 2.f * M_PI;
 		const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
@@ -979,7 +979,7 @@ struct AudioNodeSourceSine : AudioNodeBase
 	{
 		const Mode mode = (Mode)getInputInt(kInput_Mode, kMode_MinMax);
 		const bool fine = getInputBool(kInput_Fine, true);
-		const float frequency = getInputFloat(kInput_Frequency, 0.f);
+		const float frequency = getInputFloat(kInput_Frequency, 1.f);
 		const float skew = getInputFloat(kInput_Skew, .5f);
 		const float phaseStep = frequency / double(SAMPLE_RATE);
 		const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
@@ -1047,7 +1047,7 @@ struct AudioNodeSourceSine : AudioNodeBase
 	{
 		const Mode mode = (Mode)getInputInt(kInput_Mode, kMode_MinMax);
 		const bool fine = getInputBool(kInput_Fine, true);
-		const float frequency = getInputFloat(kInput_Frequency, 0.f);
+		const float frequency = getInputFloat(kInput_Frequency, 1.f);
 		const float skew = getInputFloat(kInput_Skew, .5f);
 		const float phaseStep = frequency / double(SAMPLE_RATE);
 		const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
