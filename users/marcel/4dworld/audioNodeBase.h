@@ -107,6 +107,7 @@ struct AudioFloat
 {
 	static AudioFloat Zero;
 	static AudioFloat One;
+	static AudioFloat Half;
 	
 	bool isScalar;
 	bool isExpanded;
@@ -1221,7 +1222,7 @@ struct AudioNodeMathSine : AudioNodeBase
 		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 	}
 	
-	virtual void draw()
+	virtual void draw() override
 	{
 		const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 		const float twoPi = 2.f * M_PI;

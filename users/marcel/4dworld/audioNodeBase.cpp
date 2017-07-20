@@ -44,6 +44,7 @@ AudioTriggerData::AudioTriggerData()
 
 AudioFloat AudioFloat::Zero(0.0);
 AudioFloat AudioFloat::One(1.0);
+AudioFloat AudioFloat::Half(0.5);
 
 void AudioFloat::setZero()
 {
