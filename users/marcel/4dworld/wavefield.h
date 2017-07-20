@@ -69,6 +69,7 @@ struct Wavefield1D
 	ALIGN32 double p[kMaxElems];
 	ALIGN32 double v[kMaxElems];
 	ALIGN32 double f[kMaxElems];
+	ALIGN32 double d[kMaxElems];
 	
 	Wavefield1D();
 	

@@ -495,6 +495,8 @@ struct AudioNodeBase
 
 //
 
+void createAudioValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
+
 struct AudioEnumTypeRegistration
 {
 	struct Elem
@@ -910,7 +912,7 @@ struct AudioNodeSourceSine : AudioNodeBase
 	
 	void drawSine()
 	{
-		const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
+		const Mode mode = (Mode)getInputInt(kInput_Mode, kMode_MinMax);
 		const bool fine = getInputBool(kInput_Fine, true);
 		const float frequency = getInputFloat(kInput_Frequency, 0.f);
 		const float phaseStep = frequency / double(SAMPLE_RATE);
@@ -974,7 +976,7 @@ struct AudioNodeSourceSine : AudioNodeBase
 	
 	void drawTriangle()
 	{
-		const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
+		const Mode mode = (Mode)getInputInt(kInput_Mode, kMode_MinMax);
 		const bool fine = getInputBool(kInput_Fine, true);
 		const float frequency = getInputFloat(kInput_Frequency, 0.f);
 		const float skew = getInputFloat(kInput_Skew, .5f);
@@ -1042,7 +1044,7 @@ struct AudioNodeSourceSine : AudioNodeBase
 	
 	void drawSquare()
 	{
-		const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
+		const Mode mode = (Mode)getInputInt(kInput_Mode, kMode_MinMax);
 		const bool fine = getInputBool(kInput_Fine, true);
 		const float frequency = getInputFloat(kInput_Frequency, 0.f);
 		const float skew = getInputFloat(kInput_Skew, .5f);

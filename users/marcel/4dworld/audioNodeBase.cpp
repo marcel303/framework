@@ -347,6 +347,55 @@ void AudioEnumTypeRegistration::elem(const char * name, const int value)
 
 #include "graph.h"
 
+void createAudioValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
+{
+	{
+		GraphEdit_ValueTypeDefinition typeDefinition;
+		typeDefinition.typeName = "bool";
+		typeDefinition.editor = "checkbox";
+		typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
+	}
+	
+	{
+		GraphEdit_ValueTypeDefinition typeDefinition;
+		typeDefinition.typeName = "int";
+		typeDefinition.editor = "textbox_int";
+		typeDefinition.visualizer = "valueplotter";
+		typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
+	}
+	
+	{
+		GraphEdit_ValueTypeDefinition typeDefinition;
+		typeDefinition.typeName = "float";
+		typeDefinition.editor = "textbox_float";
+		typeDefinition.visualizer = "valueplotter";
+		typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
+	}
+	
+	{
+		GraphEdit_ValueTypeDefinition typeDefinition;
+		typeDefinition.typeName = "string";
+		typeDefinition.editor = "textbox";
+		typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
+	}
+	
+	{
+		GraphEdit_ValueTypeDefinition typeDefinition;
+		typeDefinition.typeName = "audioValue";
+		typeDefinition.editor = "textbox_float";
+		typeDefinition.visualizer = "channels";
+		typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
+	}
+	
+	{
+		GraphEdit_ValueTypeDefinition typeDefinition;
+		typeDefinition.typeName = "trigger";
+		typeDefinition.editor = "button";
+		typeDefinition.multipleInputs = true;
+		typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
+	}
+}
+
 void createAudioEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, AudioEnumTypeRegistration * registrationList)
 {
 	for (AudioEnumTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
@@ -515,8 +564,8 @@ AUDIO_ENUM_TYPE(audioSineType)
 
 AUDIO_ENUM_TYPE(audioSineMode)
 {
-	elem("signed");
-	elem("unsigned");
+	elem("baseScale");
+	elem("minMax");
 }
 
 AUDIO_NODE_TYPE(audioSourceSine, AudioNodeSourceSine)
@@ -525,8 +574,8 @@ AUDIO_NODE_TYPE(audioSourceSine, AudioNodeSourceSine)
 	
 	in("fine", "bool", "1");
 	inEnum("type", "audioSineType");
-	inEnum("mode", "audioSineMode");
-	in("frequency", "float");
+	inEnum("mode", "audioSineMode", "1");
+	in("frequency", "float", "1");
 	in("skew", "float", "0.5");
 	in("a", "audioValue", "0");
 	in("b", "audioValue", "1");

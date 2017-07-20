@@ -877,9 +877,11 @@ static void testAudioGraphManager()
 	audioGraphMgr.free(instance2);
 	audioGraphMgr.free(instance3);
 	
-	instance1 = audioGraphMgr.createInstance("voiceTest1.xml");
-	instance2 = audioGraphMgr.createInstance("voiceTest2.xml");
-	instance3 = audioGraphMgr.createInstance("voiceTest3.xml");
+	instance1 = audioGraphMgr.createInstance("wavefieldTest.xml");
+	
+	//instance1 = audioGraphMgr.createInstance("voiceTest1.xml");
+	//instance2 = audioGraphMgr.createInstance("voiceTest2.xml");
+	//instance3 = audioGraphMgr.createInstance("voiceTest3.xml");
 	
 	//
 	
@@ -977,6 +979,8 @@ static void testAudioGraphManager()
 	
 	voiceMgr.shut();
 	g_voiceMgr = nullptr;
+	
+	exit(0);
 }
 
 //
@@ -1011,44 +1015,7 @@ int main(int argc, char * argv[])
 		
 		GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
 		
-		{
-			GraphEdit_ValueTypeDefinition typeDefinition;
-			typeDefinition.typeName = "bool";
-			typeDefinition.editor = "checkbox";
-			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
-		}
-		
-		{
-			GraphEdit_ValueTypeDefinition typeDefinition;
-			typeDefinition.typeName = "int";
-			typeDefinition.editor = "textbox_int";
-			typeDefinition.visualizer = "valueplotter";
-			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
-		}
-		
-		{
-			GraphEdit_ValueTypeDefinition typeDefinition;
-			typeDefinition.typeName = "float";
-			typeDefinition.editor = "textbox_float";
-			typeDefinition.visualizer = "valueplotter";
-			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
-		}
-		
-		{
-			GraphEdit_ValueTypeDefinition typeDefinition;
-			typeDefinition.typeName = "string";
-			typeDefinition.editor = "textbox";
-			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
-		}
-		
-		{
-			GraphEdit_ValueTypeDefinition typeDefinition;
-			typeDefinition.typeName = "audioValue";
-			typeDefinition.editor = "textbox_float";
-			typeDefinition.visualizer = "channels";
-			typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
-		}
-		
+		createAudioValueTypeDefinitions(typeDefinitionLibrary);
 		createAudioEnumTypeDefinitions(typeDefinitionLibrary, g_audioEnumTypeRegistrationList);
 		createAudioNodeTypeDefinitions(typeDefinitionLibrary, g_audioNodeTypeRegistrationList);
 		

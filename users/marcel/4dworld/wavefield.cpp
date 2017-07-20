@@ -10,6 +10,8 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
+const int Wavefield1D::kMaxElems;
+
 Wavefield1D::Wavefield1D()
 {
 	init(128);
@@ -17,13 +19,15 @@ Wavefield1D::Wavefield1D()
 
 void Wavefield1D::init(const int _numElems)
 {
-	numElems = _numElems;
+	numElems = std::min(_numElems, kMaxElems);
 	
 	memset(p, 0, sizeof(p));
 	memset(v, 0, sizeof(v));
 	
 	for (int i = 0; i < numElems; ++i)
 		f[i] = 1.0;
+	
+	memset(d, 0, sizeof(d));
 }
 
 void Wavefield1D::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
@@ -90,23 +94,35 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	__m128d _mm_dt = _mm_set1_pd(dt);
 	__m128d _mm_pRetain = _mm_set1_pd(pRetain);
 	__m128d _mm_vRetain = _mm_set1_pd(vRetain);
+	__m128d _mm_dMin = _mm_set1_pd(-5000.0 * dt);
+	__m128d _mm_dMax = _mm_set1_pd(+5000.0 * dt);
 	
 	__m128d * __restrict _mm_p = (__m128d*)p;
 	__m128d * __restrict _mm_v = (__m128d*)v;
 	__m128d * __restrict _mm_f = (__m128d*)f;
+	__m128d * __restrict _mm_d = (__m128d*)d;
 	
 	for (int i = 0; i < numElems/2; ++i)
 	{
-		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i];
+		const __m128d _mm_d_clamped = _mm_max_pd(_mm_min_pd(_mm_d[i], _mm_dMax), _mm_dMin);
+		
+		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
 		_mm_v[i] = _mm_v[i] * _mm_vRetain;
+		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 	}
 #else
+	const double dMin = -5000.0 * dt;
+	const double dMax = +5000.0 * dt;
+	
 	for (int i = 0; i < kNumElems; ++i)
 	{
-		p[i] += v[i] * dt * f[i];
+		const double d_clamped = std::max(std::min(d[i], dMax), dMin);
+		
+		p[i] += v[i] * dt * f[i] + d_clamped;
 		
 		p[i] *= pRetain;
 		v[i] *= vRetain;
+		d[i] -= d_clamped;
 	}
 #endif
 }
@@ -404,7 +420,8 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	__m128d _mm_dt = _mm_set1_pd(dt);
 	__m128d _mm_pRetain = _mm_set1_pd(pRetain);
 	__m128d _mm_vRetain = _mm_set1_pd(vRetain);
-	__m128d _mm_dMax = _mm_set1_pd(5000.0 * dt);
+	__m128d _mm_dMin = _mm_set1_pd(-5000.0 * dt);
+	__m128d _mm_dMax = _mm_set1_pd(+5000.0 * dt);
 	
 	for (int x = 0; x < numElems; ++x)
 	{
@@ -415,7 +432,7 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 		
 		for (int i = 0; i < numElems/2; ++i)
 		{
-			const __m128d _mm_d_clamped = _mm_min_pd(_mm_d[i], _mm_dMax);
+			const __m128d _mm_d_clamped = _mm_max_pd(_mm_min_pd(_mm_d[i], _mm_dMax), _mm_dMin);
 			
 			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
 			_mm_v[i] = _mm_v[i] * _mm_vRetain;
@@ -423,12 +440,18 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 		}
 	}
 #else
+	const double dMin = -5000.0 * dt;
+	const double dMax = +5000.0 * dt;
+	
 	for (int i = 0; i < kNumElems; ++i)
 	{
-		p[i] += v[i] * dt * f[i];
+		const double d_clamped = std::max(std::min(d[i], dMax), dMin);
+		
+		p[i] += v[i] * dt * f[i] + dClamped;
 		
 		p[i] *= pRetain;
 		v[i] *= vRetain;
+		d[i] -= d_clamped;
 	}
 #endif
 }

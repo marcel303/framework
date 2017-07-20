@@ -227,6 +227,15 @@ AudioGraphManager::AudioGraphManager()
 		typeDefinitionLibrary->valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 	}
 	
+	{
+		GraphEdit_ValueTypeDefinition typeDefinition;
+		typeDefinition.typeName = "trigger";
+		typeDefinition.editor = "button";
+		typeDefinition.multipleInputs = true;
+		typeDefinitionLibrary->valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
+	}
+
+	
 	createAudioEnumTypeDefinitions(*typeDefinitionLibrary, g_audioEnumTypeRegistrationList);
 	createAudioNodeTypeDefinitions(*typeDefinitionLibrary, g_audioNodeTypeRegistrationList);
 }
@@ -320,6 +329,11 @@ AudioGraphInstance * AudioGraphManager::createInstance(const char * filename)
 
 void AudioGraphManager::free(AudioGraphInstance *& instance)
 {
+	if (instance == nullptr)
+	{
+		return;
+	}
+	
 	for (auto fileItr = files.begin(); fileItr != files.end(); ++fileItr)
 	{
 		auto & file = fileItr->second;
