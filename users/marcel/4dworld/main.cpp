@@ -414,7 +414,7 @@ struct World
 	}
 };
 
-static void drawWaterSim1D(const WaterSim1D & w, const float sampleLocation)
+static void drawWavefield1D(const Wavefield1D & w, const float sampleLocation)
 {
 	gxPushMatrix();
 	gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
@@ -468,7 +468,7 @@ static void drawWaterSim1D(const WaterSim1D & w, const float sampleLocation)
 	gxPopMatrix();
 }
 
-static void drawWaterSim2D(const WaterSim2D & w, const float sampleLocationX, const float sampleLocationY)
+static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, const float sampleLocationY)
 {
 	gxPushMatrix();
 	gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
@@ -703,10 +703,10 @@ static void testAudioVoiceManager()
 			
 			const int gfxSize = std::min(GFX_SX, GFX_SY);
 			
-			const int spotX = (mouse.x - GFX_SX/2.0) / gfxSize * (wavefield2D.m_waterSim.numElems - 1) + (wavefield2D.m_waterSim.numElems-1)/2.f;
-			const int spotY = (mouse.y - GFX_SY/2.0) / gfxSize * (wavefield2D.m_waterSim.numElems - 1) + (wavefield2D.m_waterSim.numElems-1)/2.f;
+			const int spotX = (mouse.x - GFX_SX/2.0) / gfxSize * (wavefield2D.m_wavefield.numElems - 1) + (wavefield2D.m_wavefield.numElems-1)/2.f;
+			const int spotY = (mouse.y - GFX_SY/2.0) / gfxSize * (wavefield2D.m_wavefield.numElems - 1) + (wavefield2D.m_wavefield.numElems-1)/2.f;
 			
-			const int r = spotX / float(wavefield2D.m_waterSim.numElems - 1.f) * 10 + 1;
+			const int r = spotX / float(wavefield2D.m_wavefield.numElems - 1.f) * 10 + 1;
 			
 			AudioSourceWavefield2D::Command command;
 			command.x = spotX;
@@ -727,36 +727,36 @@ static void testAudioVoiceManager()
 			pushFontMode(FONT_SDF);
 			
 			{
-				WaterSim1D w;
+				Wavefield1D w;
 				float sampleLocation;
 				
 				//SDL_LockMutex(voiceMgr.mutex);
 				{
-					w = wavefield1D.m_waterSim;
+					w = wavefield1D.m_wavefield;
 					sampleLocation = wavefield1D.m_sampleLocation;
 				}
 				//SDL_UnlockMutex(voiceMgr.mutex);
 				
-				drawWaterSim1D(w, sampleLocation);
+				drawWavefield1D(w, sampleLocation);
 			}
 			
 			//
 			
 			{
-				const WaterSim2D & w = wavefield2D.m_waterSim;
-				//WaterSim2D w;
+				const Wavefield2D & w = wavefield2D.m_wavefield;
+				//Wavefield2D w;
 				float sampleLocationX;
 				float sampleLocationY;
 				
 				//SDL_LockMutex(voiceMgr.mutex);
 				{
-					//w.copyFrom(wavefield2D.m_waterSim, true, false, true);
+					//w.copyFrom(wavefield2D.m_wavefield, true, false, true);
 					sampleLocationX = wavefield2D.m_sampleLocation[0];
 					sampleLocationY = wavefield2D.m_sampleLocation[1];
 				}
 				//SDL_UnlockMutex(voiceMgr.mutex);
 				
-				drawWaterSim2D(w, sampleLocationX, sampleLocationY);
+				drawWavefield2D(w, sampleLocationX, sampleLocationY);
 			}
 			
 			//

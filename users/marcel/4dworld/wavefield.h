@@ -60,7 +60,7 @@ struct CommandQueue
 
 //
 
-struct WaterSim1D
+struct Wavefield1D
 {
 	const static int kMaxElems = 2048;
 	
@@ -70,7 +70,7 @@ struct WaterSim1D
 	ALIGN32 double v[kMaxElems];
 	ALIGN32 double f[kMaxElems];
 	
-	WaterSim1D();
+	Wavefield1D();
 	
 	void init(const int numElems);
 	
@@ -81,7 +81,7 @@ struct WaterSim1D
 
 struct AudioSourceWavefield1D : AudioSource
 {
-	WaterSim1D m_waterSim;
+	Wavefield1D m_wavefield;
 	double m_sampleLocation;
 	double m_sampleLocationSpeed;
 	bool m_closedEnds;
@@ -97,7 +97,7 @@ struct AudioSourceWavefield1D : AudioSource
 
 //
 
-struct WaterSim2D
+struct Wavefield2D
 {
 	static const int kMaxElems = 64;
 	
@@ -111,7 +111,7 @@ struct WaterSim2D
 	void init(const int numElems);
 	void shut();
 	
-	WaterSim2D();
+	Wavefield2D();
 	
 	void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool _closedEnds);
 	void tickForces(const double dt, const double c, const bool _closedEnds);
@@ -120,7 +120,7 @@ struct WaterSim2D
 	void doGaussianImpact(const int _x, const int _y, const int _radius, const double strength);
 	float sample(const float x, const float y) const;
 	
-	void copyFrom(const WaterSim2D & other, const bool copyP, const bool copyV, const bool copyF);
+	void copyFrom(const Wavefield2D & other, const bool copyP, const bool copyV, const bool copyF);
 };
 
 struct AudioSourceWavefield2D : AudioSource
@@ -141,7 +141,7 @@ struct AudioSourceWavefield2D : AudioSource
 	
 	//
 	
-	WaterSim2D m_waterSim;
+	Wavefield2D m_wavefield;
 	double m_sampleLocation[2];
 	double m_sampleLocationSpeed[2];
 	bool m_slowMotion;

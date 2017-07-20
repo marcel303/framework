@@ -10,12 +10,12 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
-WaterSim1D::WaterSim1D()
+Wavefield1D::Wavefield1D()
 {
 	init(128);
 }
 
-void WaterSim1D::init(const int _numElems)
+void Wavefield1D::init(const int _numElems)
 {
 	numElems = _numElems;
 	
@@ -26,7 +26,7 @@ void WaterSim1D::init(const int _numElems)
 		f[i] = 1.0;
 }
 
-void WaterSim1D::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
+void Wavefield1D::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
 {
 	const double vRetain = std::pow(vRetainPerSecond, dt);
 	const double pRetain = std::pow(pRetainPerSecond, dt);
@@ -111,7 +111,7 @@ void WaterSim1D::tick(const double dt, const double c, const double vRetainPerSe
 #endif
 }
 
-float WaterSim1D::sample(const float x) const
+float Wavefield1D::sample(const float x) const
 {
 	const int x1 = int(x);
 	const int x2 = (x1 + 1) % numElems;
@@ -128,7 +128,7 @@ float WaterSim1D::sample(const float x) const
 //
 
 AudioSourceWavefield1D::AudioSourceWavefield1D()
-	: m_waterSim()
+	: m_wavefield()
 	, m_sampleLocation(0.0)
 	, m_sampleLocationSpeed(0.0)
 	, m_closedEnds(true)
@@ -137,7 +137,7 @@ AudioSourceWavefield1D::AudioSourceWavefield1D()
 
 void AudioSourceWavefield1D::init(const int numElems)
 {
-	m_waterSim.init(numElems);
+	m_wavefield.init(numElems);
 	
 	m_sampleLocation = 0.0;
 	m_sampleLocationSpeed = 0.0;
@@ -149,7 +149,7 @@ void AudioSourceWavefield1D::tick(const double dt)
 	{
 		//const int r = random(1, 5);
 		const int r = 1 + mouse.x * 30 / GFX_SX;
-		const int v = m_waterSim.numElems - r * 2;
+		const int v = m_wavefield.numElems - r * 2;
 		
 		if (v > 0)
 		{
@@ -163,8 +163,8 @@ void AudioSourceWavefield1D::tick(const double dt)
 				const int x = spot + i;
 				const double value = std::pow((1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0, 2.0);
 				
-				if (x >= 0 && x < m_waterSim.numElems)
-					m_waterSim.p[x] += value * s;
+				if (x >= 0 && x < m_wavefield.numElems)
+					m_wavefield.p[x] += value * s;
 			}
 		}
 	}
@@ -176,17 +176,17 @@ void AudioSourceWavefield1D::tick(const double dt)
 	if (keyboard.isDown(SDLK_RIGHT))
 		m_sampleLocationSpeed += 10.0;
 	
-	const int editLocation = int(m_sampleLocation) % m_waterSim.numElems;
+	const int editLocation = int(m_sampleLocation) % m_wavefield.numElems;
 	
 	if (keyboard.isDown(SDLK_a))
-		m_waterSim.f[editLocation] = 1.f;
+		m_wavefield.f[editLocation] = 1.f;
 	if (keyboard.isDown(SDLK_z))
-		m_waterSim.f[editLocation] /= 1.01;
+		m_wavefield.f[editLocation] /= 1.01;
 	if (keyboard.isDown(SDLK_n))
-		m_waterSim.f[editLocation] *= random(.95f, 1.f);
+		m_wavefield.f[editLocation] *= random(.95f, 1.f);
 	
 	if (keyboard.wentDown(SDLK_r))
-		m_waterSim.p[rand() % m_waterSim.numElems] = random(-1.f, +1.f) * (keyboard.isDown(SDLK_LSHIFT) ? 40.f : 4.f);
+		m_wavefield.p[rand() % m_wavefield.numElems] = random(-1.f, +1.f) * (keyboard.isDown(SDLK_LSHIFT) ? 40.f : 4.f);
 	
 	if (keyboard.wentDown(SDLK_c))
 		m_closedEnds = !m_closedEnds;
@@ -199,16 +199,16 @@ void AudioSourceWavefield1D::tick(const double dt)
 		const double cosFactor = 0.0;
 		const double perlinFactor = random(0.0, 1.0);
 		
-		for (int x = 0; x < m_waterSim.numElems; ++x)
+		for (int x = 0; x < m_wavefield.numElems; ++x)
 		{
-			m_waterSim.f[x] = 1.0;
+			m_wavefield.f[x] = 1.0;
 			
-			m_waterSim.f[x] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
-			m_waterSim.f[x] *= Calc::Lerp(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
-			//m_waterSim.f[x] = 1.0 - std::pow(m_waterSim.f[x], 2.0);
+			m_wavefield.f[x] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
+			m_wavefield.f[x] *= Calc::Lerp(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
+			//m_wavefield.f[x] = 1.0 - std::pow(m_wavefield.f[x], 2.0);
 			
-			//m_waterSim.f[x] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
-			m_waterSim.f[x] *= Calc::Lerp(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
+			//m_wavefield.f[x] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
+			m_wavefield.f[x] *= Calc::Lerp(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
 		}
 	}
 }
@@ -239,20 +239,20 @@ void AudioSourceWavefield1D::generate(float * __restrict samples, const int numS
 	{
 		m_sampleLocation += m_sampleLocationSpeed * dt;
 		
-		samples[i] = m_waterSim.sample(m_sampleLocation);
+		samples[i] = m_wavefield.sample(m_sampleLocation);
 		
-		m_waterSim.tick(dt, c, vRetainPerSecond, pRetainPerSecond, closedEnds);
+		m_wavefield.tick(dt, c, vRetainPerSecond, pRetainPerSecond, closedEnds);
 	}
 }
 
 //
 
-WaterSim2D::WaterSim2D()
+Wavefield2D::Wavefield2D()
 {
 	init(32);
 }
 
-void WaterSim2D::init(const int _numElems)
+void Wavefield2D::init(const int _numElems)
 {
 	numElems = _numElems;
 	
@@ -266,18 +266,18 @@ void WaterSim2D::init(const int _numElems)
 	memset(d, 0, sizeof(d));
 }
 
-void WaterSim2D::shut()
+void Wavefield2D::shut()
 {
 }
 
-void WaterSim2D::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
+void Wavefield2D::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
 {
 	tickForces(dt, c, closedEnds);
 	
 	tickVelocity(dt, vRetainPerSecond, pRetainPerSecond);
 }
 
-void WaterSim2D::tickForces(const double dt, const double c, const bool _closedEnds)
+void Wavefield2D::tickForces(const double dt, const double c, const bool _closedEnds)
 {
 	const double cTimesDt = c * dt;
 	const bool closedEnds = _closedEnds && false;
@@ -373,12 +373,12 @@ void WaterSim2D::tickForces(const double dt, const double c, const bool _closedE
 	}
 }
 
-void WaterSim2D::tickVelocity(const double dt, const double vRetainPerSecond, const double pRetainPerSecond)
+void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, const double pRetainPerSecond)
 {
 	const double vRetain = std::pow(vRetainPerSecond, dt);
 	const double pRetain = std::pow(pRetainPerSecond, dt);
 	
-#if 1
+#if 0
 	__m256d _mm_dt = _mm256_set1_pd(dt);
 	__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
 	__m256d _mm_vRetain = _mm256_set1_pd(vRetain);
@@ -433,7 +433,7 @@ void WaterSim2D::tickVelocity(const double dt, const double vRetainPerSecond, co
 #endif
 }
 
-void WaterSim2D::doGaussianImpact(const int _x, const int _y, const int _radius, const double strength)
+void Wavefield2D::doGaussianImpact(const int _x, const int _y, const int _radius, const double strength)
 {
 	if (_x - _radius < 0 ||
 		_y - _radius < 0 ||
@@ -472,7 +472,7 @@ void WaterSim2D::doGaussianImpact(const int _x, const int _y, const int _radius,
 	}
 }
 
-float WaterSim2D::sample(const float x, const float y) const
+float Wavefield2D::sample(const float x, const float y) const
 {
 	const int x1 = int(x);
 	const int y1 = int(y);
@@ -494,7 +494,7 @@ float WaterSim2D::sample(const float x, const float y) const
 	return v;
 }
 
-void WaterSim2D::copyFrom(const WaterSim2D & other, const bool copyP, const bool copyV, const bool copyF)
+void Wavefield2D::copyFrom(const Wavefield2D & other, const bool copyP, const bool copyV, const bool copyF)
 {
 	numElems = other.numElems;
 	
@@ -520,17 +520,17 @@ void WaterSim2D::copyFrom(const WaterSim2D & other, const bool copyP, const bool
 //
 
 AudioSourceWavefield2D::AudioSourceWavefield2D()
-	: m_waterSim()
+	: m_wavefield()
 	, m_sampleLocation()
 	, m_slowMotion(false)
 	, m_commandQueue()
 {
-	init(m_waterSim.kMaxElems);
+	init(m_wavefield.kMaxElems);
 }
 
 void AudioSourceWavefield2D::init(const int numElems)
 {
-	m_waterSim.init(numElems);
+	m_wavefield.init(numElems);
 	
 	m_sampleLocation[0] = 0.0;
 	m_sampleLocation[1] = 0.0;
@@ -544,7 +544,7 @@ void AudioSourceWavefield2D::tick(const double dt)
 
 	while (m_commandQueue.pop(command))
 	{
-		m_waterSim.doGaussianImpact(command.x, command.y, command.radius, command.strength);
+		m_wavefield.doGaussianImpact(command.x, command.y, command.radius, command.strength);
 	}
 	
 	m_sampleLocationSpeed[0] = 0.0;
@@ -562,18 +562,18 @@ void AudioSourceWavefield2D::tick(const double dt)
 		m_sampleLocationSpeed[1] += speed;
 	
 	if (keyboard.isDown(SDLK_a))
-		//m_waterSim.f[m_sampleLocation[0]][m_sampleLocation[1]] *= 1.3;
-		m_waterSim.f[int(m_sampleLocation[0])][int(m_sampleLocation[1])] = 1.0;
+		//m_wavefield.f[m_sampleLocation[0]][m_sampleLocation[1]] *= 1.3;
+		m_wavefield.f[int(m_sampleLocation[0])][int(m_sampleLocation[1])] = 1.0;
 	if (keyboard.isDown(SDLK_z))
-		//m_waterSim.f[m_sampleLocation[0]][m_sampleLocation[1]] /= 1.3;
-		m_waterSim.f[int(m_sampleLocation[0])][int(m_sampleLocation[1])] = 0.0;
+		//m_wavefield.f[m_sampleLocation[0]][m_sampleLocation[1]] /= 1.3;
+		m_wavefield.f[int(m_sampleLocation[0])][int(m_sampleLocation[1])] = 0.0;
 	
 	if (keyboard.wentDown(SDLK_s))
 		m_slowMotion = !m_slowMotion;
 	
 	//if (keyboard.wentDown(SDLK_r))
 	if (keyboard.isDown(SDLK_r))
-		m_waterSim.p[rand() % m_waterSim.numElems][rand() % m_waterSim.numElems] = random(-1.f, +1.f) * 5.f;
+		m_wavefield.p[rand() % m_wavefield.numElems][rand() % m_wavefield.numElems] = random(-1.f, +1.f) * 5.f;
 	
 	if (keyboard.wentDown(SDLK_t))
 	{
@@ -584,18 +584,18 @@ void AudioSourceWavefield2D::tick(const double dt)
 		const double cosFactor = 0.0;
 		const double perlinFactor = random(0.0, 1.0);
 		
-		for (int x = 0; x < m_waterSim.numElems; ++x)
+		for (int x = 0; x < m_wavefield.numElems; ++x)
 		{
-			for (int y = 0; y < m_waterSim.numElems; ++y)
+			for (int y = 0; y < m_wavefield.numElems; ++y)
 			{
-				m_waterSim.f[x][y] = 1.0;
+				m_wavefield.f[x][y] = 1.0;
 				
-				m_waterSim.f[x][y] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
-				m_waterSim.f[x][y] *= Calc::Lerp(1.0, (std::cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
-				//m_waterSim.f[x][y] = 1.0 - std::pow(m_waterSim.f[x][y], 2.0);
+				m_wavefield.f[x][y] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
+				m_wavefield.f[x][y] *= Calc::Lerp(1.0, (std::cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
+				//m_wavefield.f[x][y] = 1.0 - std::pow(m_wavefield.f[x][y], 2.0);
 				
-				//m_waterSim.f[x][y] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
-				m_waterSim.f[x][y] *= Calc::Lerp(1.0, scaled_octave_noise_2d(16, .4f, 1.f / 20.f, 0.f, 1.f, x, y), perlinFactor);
+				//m_wavefield.f[x][y] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
+				m_wavefield.f[x][y] *= Calc::Lerp(1.0, scaled_octave_noise_2d(16, .4f, 1.f / 20.f, 0.f, 1.f, x, y), perlinFactor);
 			}
 		}
 	}
@@ -625,8 +625,8 @@ void AudioSourceWavefield2D::generate(float * __restrict samples, const int numS
 		m_sampleLocation[0] += m_sampleLocationSpeed[0] * dt;
 		m_sampleLocation[1] += m_sampleLocationSpeed[1] * dt;
 		
-		samples[i] = m_waterSim.sample(m_sampleLocation[0], m_sampleLocation[1]);
+		samples[i] = m_wavefield.sample(m_sampleLocation[0], m_sampleLocation[1]);
 		
-		m_waterSim.tick(dt, c, vRetainPerSecond, pRetainPerSecond, true);
+		m_wavefield.tick(dt, c, vRetainPerSecond, pRetainPerSecond, true);
 	}
 }
