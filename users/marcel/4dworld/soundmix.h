@@ -148,6 +148,33 @@ struct AudioVoice
 		float maximum = 1.f;
 		float curve = 0.f;
 		bool invert = false;
+		
+		bool operator!=(const SpatialCompressor & other) const
+		{
+			return
+				enable != other.enable ||
+				attack != other.attack ||
+				release != other.release ||
+				minimum != other.minimum ||
+				maximum != other.maximum ||
+				curve != other.curve ||
+				invert != other.invert;
+		}
+	};
+	
+	struct Doppler
+	{
+		bool enable = true;
+		float scale = 1.f;
+		float smooth = .2f;
+		
+		bool operator!=(const Doppler & other) const
+		{
+			return
+				enable != other.enable ||
+				scale != other.scale ||
+				smooth != other.smooth;
+		}
 	};
 	
 	struct DistanceIntensity
@@ -155,6 +182,14 @@ struct AudioVoice
 		bool enable = false;
 		float threshold = 0.f;
 		float curve = 0.f;
+		
+		bool operator!=(const DistanceIntensity & other) const
+		{
+			return
+				enable != other.enable ||
+				threshold != other.threshold ||
+				curve != other.curve;
+		}
 	};
 	
 	struct DistanceDamping
@@ -162,6 +197,14 @@ struct AudioVoice
 		bool enable = false;
 		float threshold = 0.f;
 		float curve = 0.f;
+		
+		bool operator!=(const DistanceDamping & other) const
+		{
+			return
+				enable != other.enable ||
+				threshold != other.threshold ||
+				curve != other.curve;
+		}
 	};
 	
 	struct DistanceDiffusion
@@ -169,42 +212,61 @@ struct AudioVoice
 		bool enable = false;
 		float threshold = 0.f;
 		float curve = 0.f;
+		
+		bool operator!=(const DistanceDiffusion & other) const
+		{
+			return
+				enable != other.enable ||
+				threshold != other.threshold ||
+				curve != other.curve;
+		}
+	};
+	
+	struct Spatialisation
+	{
+		float gain;
+		
+		Vec3 pos;
+		Vec3 size;
+		Vec3 rot;
+		Osc4D::OrientationMode orientationMode;
+		Vec3 orientationCenter;
+		
+		SpatialCompressor spatialCompressor;
+		Doppler doppler;
+		DistanceIntensity distanceIntensity;
+		DistanceDamping distanceDampening;
+		DistanceDiffusion distanceDiffusion;
+		bool globalEnable;
+		
+		Spatialisation()
+			: gain(1.f)
+			, pos()
+			, size(1.f, 1.f, 1.f)
+			, rot()
+			, orientationMode(Osc4D::kOrientation_Static)
+			, orientationCenter(0.f, 2.f, 0.f)
+			, spatialCompressor()
+			, doppler()
+			, distanceIntensity()
+			, distanceDampening()
+			, distanceDiffusion()
+			, globalEnable(true)
+		{
+		}
 	};
 	
 	int channelIndex;
 	
-	Vec3 pos;
-	Vec3 size;
-	Vec3 rot;
-	Osc4D::OrientationMode orientationMode;
-	Vec3 orientationCenter;
-	
-	SpatialCompressor spatialCompressor;
-	bool dopplerEnable;
-	float dopplerScale;
-	float dopplerSmooth;
-	DistanceIntensity distanceIntensity;
-	DistanceDamping distanceDampening;
-	DistanceDiffusion distanceDiffusion;
-	bool globalEnable;
+	Spatialisation spat;
+	Spatialisation lastSentSpat;
 	
 	AudioSource * source;
 	
 	AudioVoice()
 		: channelIndex(-1)
-		, pos()
-		, size(1.f, 1.f, 1.f)
-		, rot()
-		, orientationMode(Osc4D::kOrientation_Static)
-		, orientationCenter(0.f, 2.f, 0.f)
-		, spatialCompressor()
-		, dopplerEnable(true)
-		, dopplerScale(1.f)
-		, dopplerSmooth(.2f)
-		, distanceIntensity()
-		, distanceDampening()
-		, distanceDiffusion()
-		, globalEnable(true)
+		, spat()
+		, lastSentSpat()
 		, source(nullptr)
 	{
 	}
@@ -218,11 +280,28 @@ struct AudioVoiceManager : PortAudioHandler
 	std::list<AudioVoice> voices;
 	bool outputMono;
 	
-	Vec3 globalPos;
-	Vec3 globalSize;
-	Vec3 globalRot;
-	Vec3 globalPlode;
-	Vec3 globalOrigin;
+	struct Spatialisation
+	{
+		float globalGain;
+		Vec3 globalPos;
+		Vec3 globalSize;
+		Vec3 globalRot;
+		Vec3 globalPlode;
+		Vec3 globalOrigin;
+		
+		Spatialisation()
+			: globalGain(1.f)
+			, globalPos()
+			, globalSize()
+			, globalRot()
+			, globalPlode(1.f, 1.f, 1.f)
+			, globalOrigin()
+		{
+		}
+	};
+	
+	Spatialisation spat;
+	Spatialisation lastSentSpat;
 	
 	AudioVoiceManager();
 	

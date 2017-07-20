@@ -87,15 +87,34 @@ struct Osc4D
 	void globalMasterPhase(const float v);
 };
 
+#include "ip/UdpSocket.h"
 #include "osc/OscOutboundPacketStream.h"
+
+#define OSC_BUFFER_SIZE (64*1024)
 
 struct Osc4DStream : Osc4D
 {
-	osc::OutboundPacketStream & stream;
+	char buffer[OSC_BUFFER_SIZE];
+	
+	osc::OutboundPacketStream stream;
+	UdpTransmitSocket * transmitSocket;
 
-	Osc4DStream(osc::OutboundPacketStream & _stream)
-		: stream(_stream)
+	Osc4DStream(UdpTransmitSocket * _transmitSocket)
+		: stream(buffer, OSC_BUFFER_SIZE)
+		, transmitSocket(_transmitSocket)
 	{
+	}
+	
+	void beginBundle()
+	{
+		stream = osc::OutboundPacketStream(buffer, OSC_BUFFER_SIZE);
+		
+		stream << osc::BeginBundleImmediate;
+	}
+	
+	void endBundle()
+	{
+		stream << osc::EndBundle;
 	}
 
 	virtual void begin(const char * name) override

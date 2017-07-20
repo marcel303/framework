@@ -72,6 +72,7 @@ struct AudioNodeVoice4D : AudioNodeBase
 	{
 		kInput_Audio,
 		kInput_Global,
+		kInput_Gain,
 		kInput_PosX,
 		kInput_PosY,
 		kInput_PosZ,
@@ -107,5 +108,62 @@ struct AudioNodeVoice4D : AudioNodeBase
 	AudioNodeVoice4D();
 	~AudioNodeVoice4D() override;
 
+	virtual void tick(const float dt) override;
+};
+
+//
+
+struct AudioNodeVoice4DGlobals : AudioNodeBase
+{
+	enum Input
+	{
+		kInput_MonoOutput,
+		kInput_Gain,
+		kInput_PosX,
+		kInput_PosY,
+		kInput_PosZ,
+		kInput_DimX,
+		kInput_DimY,
+		kInput_DimZ,
+		kInput_RotX,
+		kInput_RotY,
+		kInput_RotZ,
+		kInput_PlodeX,
+		kInput_PlodeY,
+		kInput_PlodeZ,
+		kInput_OriginX,
+		kInput_OriginY,
+		kInput_OriginZ,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_COUNT
+	};
+	
+	AudioNodeVoice4DGlobals()
+		: AudioNodeBase()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_MonoOutput, kAudioPlugType_Bool);
+		addInput(kInput_Gain, kAudioPlugType_FloatVec);
+		addInput(kInput_PosX, kAudioPlugType_FloatVec);
+		addInput(kInput_PosY, kAudioPlugType_FloatVec);
+		addInput(kInput_PosZ, kAudioPlugType_FloatVec);
+		addInput(kInput_DimX, kAudioPlugType_FloatVec);
+		addInput(kInput_DimY, kAudioPlugType_FloatVec);
+		addInput(kInput_DimZ, kAudioPlugType_FloatVec);
+		addInput(kInput_RotX, kAudioPlugType_FloatVec);
+		addInput(kInput_RotY, kAudioPlugType_FloatVec);
+		addInput(kInput_RotZ, kAudioPlugType_FloatVec);
+		addInput(kInput_PlodeX, kAudioPlugType_FloatVec);
+		addInput(kInput_PlodeY, kAudioPlugType_FloatVec);
+		addInput(kInput_PlodeZ, kAudioPlugType_FloatVec);
+		addInput(kInput_OriginX, kAudioPlugType_FloatVec);
+		addInput(kInput_OriginY, kAudioPlugType_FloatVec);
+		addInput(kInput_OriginZ, kAudioPlugType_FloatVec);
+	}
+	
 	virtual void tick(const float dt) override;
 };

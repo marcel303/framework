@@ -25,7 +25,7 @@ void Osc4D::setSource(const int _source)
 {
 	source = _source;
 	
-	sprintf_s(sourceOscName, sizeof(sourceOscName), "/source%d/", source);
+	sprintf_s(sourceOscName, sizeof(sourceOscName), "/source%d/", source + 1);
 }
 
 void Osc4D::sourceColor(const float r, const float g, const float b)

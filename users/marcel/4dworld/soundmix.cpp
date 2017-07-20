@@ -357,11 +357,8 @@ AudioVoiceManager::AudioVoiceManager()
 	, numChannels(0)
 	, voices()
 	, outputMono(false)
-	, globalPos()
-	, globalSize()
-	, globalRot()
-	, globalPlode()
-	, globalOrigin()
+	, spat()
+	, lastSentSpat()
 {
 }
 	
@@ -482,29 +479,23 @@ void AudioVoiceManager::portAudioCallback(
 		memset(samples, 0, numSamples * numChannels * sizeof(float));
 	}
 	
-	bool isFirst = true;
-	
 	SDL_LockMutex(mutex);
 	{
 		for (auto & voice : voices)
 		{
 			if (voice.channelIndex != -1)
 			{
-				if (outputMono && isFirst)
-				{
-					isFirst = false;
-					
-					voice.source->generate(samples, numSamples);
-				}
-				else if (outputMono)
+				if (outputMono)
 				{
 					ALIGN32 float voiceSamples[numSamples];
 				
 					voice.source->generate(voiceSamples, numSamples);
-				
+					
+					const float gain = voice.spat.gain;
+					
 					for (int i = 0; i < numSamples; ++i)
 					{
-						samples[i] += voiceSamples[i];
+						samples[i] += voiceSamples[i] * gain;
 					}
 				}
 				else
@@ -513,16 +504,23 @@ void AudioVoiceManager::portAudioCallback(
 				
 					voice.source->generate(voiceSamples, numSamples);
 					
+					const float gain = voice.spat.gain;
+					
 					float * __restrict dstPtr = samples + voice.channelIndex;
 					
 					for (int i = 0; i < numSamples; ++i)
 					{
-						*dstPtr = voiceSamples[i];
+						*dstPtr = voiceSamples[i] * gain;
 						
 						dstPtr += numChannels;
 					}
 				}
 			}
+		}
+		
+		for (int i = 0; i < numSamples * numChannels; ++i)
+		{
+			samples[i] *= spat.globalGain;
 		}
 	}
 	SDL_UnlockMutex(mutex);
@@ -543,25 +541,108 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 				
 				stream.setSource(voice.channelIndex);
 				
-				stream.sourcePosition(voice.pos[0], voice.pos[1], voice.pos[2]);
-				stream.sourceDimensions(voice.size[0], voice.size[1], voice.size[2]);
-				stream.sourceRotation(voice.rot[0], voice.rot[1], voice.rot[2]);
-				stream.sourceOrientationMode(voice.orientationMode, voice.orientationCenter[0], voice.orientationCenter[1], voice.orientationCenter[2]);
-				stream.sourceSpatialCompressor(voice.spatialCompressor.enable, voice.spatialCompressor.attack, voice.spatialCompressor.release, voice.spatialCompressor.minimum, voice.spatialCompressor.maximum, voice.spatialCompressor.curve, voice.spatialCompressor.invert);
-				stream.sourceDoppler(voice.dopplerEnable, voice.dopplerScale, voice.dopplerSmooth);
-				stream.sourceDistanceIntensity(voice.distanceIntensity.enable, voice.distanceIntensity.threshold, voice.distanceIntensity.curve);
-				stream.sourceDistanceDamping(voice.distanceDampening.enable, voice.distanceDampening.threshold, voice.distanceDampening.curve);
-				stream.sourceDistanceDiffusion(voice.distanceDiffusion.enable, voice.distanceDiffusion.threshold, voice.distanceDiffusion.curve);
-				stream.sourceGlobalEnable(voice.globalEnable);
+				if (voice.spat.pos != voice.lastSentSpat.pos)
+				{
+					stream.sourcePosition(
+						voice.spat.pos[0],
+						voice.spat.pos[1],
+						voice.spat.pos[2]);
+				}
+				
+				if (voice.spat.size != voice.lastSentSpat.size)
+				{
+					stream.sourceDimensions(
+						voice.spat.size[0],
+						voice.spat.size[1],
+						voice.spat.size[2]);
+				}
+				
+				if (voice.spat.rot != voice.lastSentSpat.rot)
+				{
+					stream.sourceRotation(
+						voice.spat.rot[0],
+						voice.spat.rot[1],
+						voice.spat.rot[2]);
+				}
+				
+				if (voice.spat.orientationMode != voice.lastSentSpat.orientationMode ||
+					voice.spat.orientationCenter != voice.lastSentSpat.orientationCenter)
+				{
+					stream.sourceOrientationMode(
+						voice.spat.orientationMode,
+						voice.spat.orientationCenter[0],
+						voice.spat.orientationCenter[1],
+						voice.spat.orientationCenter[2]);
+				}
+				
+				if (voice.spat.spatialCompressor != voice.lastSentSpat.spatialCompressor)
+				{
+					stream.sourceSpatialCompressor(
+						voice.spat.spatialCompressor.enable,
+						voice.spat.spatialCompressor.attack,
+						voice.spat.spatialCompressor.release,
+						voice.spat.spatialCompressor.minimum,
+						voice.spat.spatialCompressor.maximum,
+						voice.spat.spatialCompressor.curve,
+						voice.spat.spatialCompressor.invert);
+				}
+				
+				if (voice.spat.doppler != voice.lastSentSpat.doppler)
+				{
+					stream.sourceDoppler(
+						voice.spat.doppler.enable,
+						voice.spat.doppler.scale,
+						voice.spat.doppler.smooth);
+				}
+				
+				if (voice.spat.distanceIntensity != voice.lastSentSpat.distanceIntensity)
+				{
+					stream.sourceDistanceIntensity(
+						voice.spat.distanceIntensity.enable,
+						voice.spat.distanceIntensity.threshold,
+						voice.spat.distanceIntensity.curve);
+				}
+				
+				if (voice.spat.distanceDampening != voice.lastSentSpat.distanceDampening)
+				{
+					stream.sourceDistanceDamping(
+						voice.spat.distanceDampening.enable,
+						voice.spat.distanceDampening.threshold,
+						voice.spat.distanceDampening.curve);
+				}
+				
+				if (voice.spat.distanceDiffusion != voice.lastSentSpat.distanceDiffusion)
+				{
+					stream.sourceDistanceDiffusion(
+						voice.spat.distanceDiffusion.enable,
+						voice.spat.distanceDiffusion.threshold,
+						voice.spat.distanceDiffusion.curve);
+				}
+				
+				if (voice.spat.globalEnable != voice.lastSentSpat.globalEnable)
+				{
+					stream.sourceGlobalEnable(voice.spat.globalEnable);
+				}
+				
+				voice.lastSentSpat = voice.spat;
 			}
 			
 			//
 			
-			stream.globalOrigin(globalOrigin[0], globalOrigin[1], globalOrigin[2]);
-			stream.globalDimensions(globalSize[0], globalSize[1], globalSize[2]);
-			stream.globalRotation(globalRot[0], globalRot[1], globalRot[2]);
-			stream.globalPlode(globalPlode[0], globalPlode[1], globalPlode[2]);
-			stream.globalOrigin(globalOrigin[0], globalOrigin[1], globalOrigin[2]);
+			if (spat.globalPos != lastSentSpat.globalPos)
+				stream.globalPosition(spat.globalPos[0], spat.globalPos[1], spat.globalPos[2]);
+			if (spat.globalSize != lastSentSpat.globalSize)
+				stream.globalDimensions(spat.globalSize[0], spat.globalSize[1], spat.globalSize[2]);
+			if (spat.globalRot != lastSentSpat.globalRot)
+				stream.globalRotation(spat.globalRot[0], spat.globalRot[1], spat.globalRot[2]);
+			if (spat.globalPlode != lastSentSpat.globalPlode)
+				stream.globalPlode(spat.globalPlode[0], spat.globalPlode[1], spat.globalPlode[2]);
+			if (spat.globalOrigin != lastSentSpat.globalOrigin)
+				stream.globalOrigin(spat.globalOrigin[0], spat.globalOrigin[1], spat.globalOrigin[2]);
+			
+			lastSentSpat = spat;
+			
+			//
 			
 			result = true;
 		}
