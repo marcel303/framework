@@ -273,13 +273,22 @@ struct AudioVoice
 	
 	AudioSource * source;
 	
+	bool rampUp;
+	bool rampDown;
+	bool isRamped;
+	
 	AudioVoice()
 		: channelIndex(-1)
 		, spat()
 		, lastSentSpat()
 		, source(nullptr)
+		, rampUp(false)
+		, rampDown(false)
+		, isRamped(true)
 	{
 	}
+	
+	void applyRamping(float * __restrict samples, const int numSamples);
 };
 
 struct AudioVoiceManager : PortAudioHandler
@@ -318,7 +327,7 @@ struct AudioVoiceManager : PortAudioHandler
 	void init(const int numChannels);
 	void shut();
 	
-	bool allocVoice(AudioVoice *& voice, AudioSource * source);
+	bool allocVoice(AudioVoice *& voice, AudioSource * source, const bool doRamping);
 	void freeVoice(AudioVoice *& voice);
 	
 	void updateChannelIndices();

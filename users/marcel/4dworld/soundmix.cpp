@@ -350,6 +350,54 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 
 //
 
+void AudioVoice::applyRamping(float * __restrict samples, const int numSamples)
+{
+	if (rampUp)
+	{
+		if (isRamped == false)
+		{
+			isRamped = true;
+			
+			//
+			
+			const float gainStep = 1.f / numSamples;
+			float gain = 0.f;
+			
+			for (int i = 0; i < numSamples; ++i)
+			{
+				samples[i] *= gain;
+				
+				gain += gainStep;
+			}
+		}
+	}
+	else if (rampDown)
+	{
+		if (isRamped == true)
+		{
+			isRamped = false;
+			
+			//
+			
+			const float gainStep = -1.f / numSamples;
+			float gain = 1.f;
+			
+			for (int i = 0; i < numSamples; ++i)
+			{
+				samples[i] *= gain;
+				
+				gain += gainStep;
+			}
+		}
+	}
+	else
+	{
+		isRamped = true;
+	}
+}
+
+//
+
 AudioVoiceManager * g_voiceMgr = nullptr;
 
 AudioVoiceManager::AudioVoiceManager()
@@ -388,7 +436,7 @@ void AudioVoiceManager::shut()
 	numChannels = 0;
 }
 
-bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source)
+bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, const bool doRamping)
 {
 	Assert(voice == nullptr);
 	Assert(source != nullptr);
@@ -400,6 +448,19 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source)
 		voice->source = source;
 		
 		updateChannelIndices();
+		
+		if (doRamping)
+		{
+			voice->rampUp = true;
+			voice->rampDown = false;
+			voice->isRamped = false;
+		}
+		else
+		{
+			voice->rampUp = false;
+			voice->rampDown = false;
+			voice->isRamped = true;
+		}
 	}
 	SDL_UnlockMutex(mutex);
 	
@@ -491,6 +552,8 @@ void AudioVoiceManager::portAudioCallback(
 				
 					voice.source->generate(voiceSamples, numSamples);
 					
+					voice.applyRamping(voiceSamples, numSamples);
+					
 					const float gain = voice.spat.gain;
 					
 					for (int i = 0; i < numSamples; ++i)
@@ -503,6 +566,8 @@ void AudioVoiceManager::portAudioCallback(
 					ALIGN32 float voiceSamples[numSamples];
 				
 					voice.source->generate(voiceSamples, numSamples);
+					
+					voice.applyRamping(voiceSamples, numSamples);
 					
 					const float gain = voice.spat.gain;
 					
