@@ -556,11 +556,28 @@ static int countDecimals(const char * text)
 	return numDecimals;
 }
 
+static bool stringToDouble(const char * s, double & d)
+{
+	try
+	{
+		d = std::stod(s);
+		
+		return true;
+	}
+	catch (std::exception &)
+	{
+		return false;
+	}
+}
+
 static void increment(char * dst, int dstSize, int direction, float & _value)
 {
 	const int numDecimals = countDecimals(dst);
 	
-	double value = std::stod(dst);
+	double value = 0.0;
+	
+	if (stringToDouble(dst, value) == false)
+		return;
 	
 	value += direction / double(std::pow(10, numDecimals));
 	
