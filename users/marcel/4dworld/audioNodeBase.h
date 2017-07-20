@@ -63,43 +63,43 @@ struct AudioTriggerData
 		floatValue = value;
 	}
 	
-	bool asBool() const
+	bool asBool(const bool defaultValue = false) const
 	{
 		switch (type)
 		{
 		case kAudioTriggerDataType_None:
-			return false;
+			return defaultValue;
 		case kAudioTriggerDataType_Float:
 			return floatValue != 0.f;
 		}
 
-		return false;
+		return defaultValue;
 	}
 	
-	int asInt() const
+	int asInt(const int defaultValue = 0) const
 	{
 		switch (type)
 		{
 		case kAudioTriggerDataType_None:
-			return 0;
+			return defaultValue;
 		case kAudioTriggerDataType_Float:
 			return std::round(floatValue);
 		}
 
-		return 0;
+		return defaultValue;
 	}
 	
-	float asFloat() const
+	float asFloat(const float defaultValue = 0.f) const
 	{
 		switch (type)
 		{
 		case kAudioTriggerDataType_None:
-			return 0.f;
+			return defaultValue;
 		case kAudioTriggerDataType_Float:
 			return floatValue;
 		}
 
-		return 0.f;
+		return defaultValue;
 	}
 };
 
