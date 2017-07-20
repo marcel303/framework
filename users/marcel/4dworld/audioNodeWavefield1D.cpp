@@ -39,7 +39,10 @@ AUDIO_NODE_TYPE(wavefield_1d, AudioNodeWavefield1D)
 	in("vel.dampen", "audioValue");
 	in("tension", "audioValue", "1");
 	in("wrap", "bool", "0");
+	in("sample.pos", "audioValue", "0.5");
 	in("trigger", "trigger");
+	in("trigger.pos", "audioValue", "0.5");
+	in("trigger.amount", "audioValue", "0.5");
 	out("audio", "audioValue");
 }
 
@@ -54,7 +57,10 @@ AudioNodeWavefield1D::AudioNodeWavefield1D()
 	addInput(kInput_VelocityDampening, kAudioPlugType_FloatVec);
 	addInput(kInput_Tension, kAudioPlugType_FloatVec);
 	addInput(kInput_Wrap, kAudioPlugType_Bool);
+	addInput(kInput_SampleLocation, kAudioPlugType_FloatVec);
 	addInput(kInput_Trigger, kAudioPlugType_Trigger);
+	addInput(kInput_TriggerLocation, kAudioPlugType_FloatVec);
+	addInput(kInput_TriggerAmount, kAudioPlugType_FloatVec);
 	addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 
 	wavefield = new Wavefield1D();
@@ -69,11 +75,13 @@ AudioNodeWavefield1D::~AudioNodeWavefield1D()
 void AudioNodeWavefield1D::draw()
 {
 	const AudioFloat defaultTension(1.f);
+	const AudioFloat defaultSampleLocation(.5f);
 	
 	const AudioFloat * positionDampening = getInputAudioFloat(kInput_PositionDampening, &AudioFloat::Zero);
 	const AudioFloat * velocityDampening = getInputAudioFloat(kInput_VelocityDampening, &AudioFloat::Zero);
 	const AudioFloat * tension = getInputAudioFloat(kInput_Tension, &defaultTension);
 	const bool wrap = getInputBool(kInput_Wrap, false);
+	const AudioFloat * sampleLocation = getInputAudioFloat(kInput_SampleLocation, &defaultSampleLocation);
 	const int size = getInputInt(kInput_Size, 16);
 	
 	//
@@ -90,6 +98,7 @@ void AudioNodeWavefield1D::draw()
 	positionDampening->expand();
 	velocityDampening->expand();
 	tension->expand();
+	sampleLocation->expand();
 	
 	//
 	
@@ -103,7 +112,7 @@ void AudioNodeWavefield1D::draw()
 		
 		wavefield->tick(dt, c, 1.0 - positionDampening->samples[i], 1.0 - velocityDampening->samples[i], wrap == false);
 		
-		audioOutput.samples[i] = wavefield->sample(0.5 * wavefield->numElems);
+		audioOutput.samples[i] = wavefield->sample(sampleLocation->samples[i] * wavefield->numElems);
 	}
 }
 
@@ -111,9 +120,16 @@ void AudioNodeWavefield1D::handleTrigger(const int inputSocketIndex, const Audio
 {
 	if (inputSocketIndex == kInput_Trigger)
 	{
+		const AudioFloat defaultTriggerPosition(.5f);
+		const AudioFloat defaultTriggerAmount(.5f);
+		const float triggerPosition = getInputAudioFloat(kInput_TriggerLocation, &defaultTriggerPosition)->getMean();
+		const float triggerAmount = getInputAudioFloat(kInput_TriggerAmount, &defaultTriggerAmount)->getMean();
+		
 		if (wavefield->numElems > 0)
 		{
-			wavefield->d[rand() % wavefield->numElems] += random(-1.f, +1.f);
+			const int elemIndex = int(std::round(triggerPosition * wavefield->numElems)) % wavefield->numElems;
+			
+			wavefield->d[elemIndex] += triggerAmount;
 		}
 	}
 }

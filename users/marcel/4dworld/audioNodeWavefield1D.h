@@ -40,7 +40,10 @@ struct AudioNodeWavefield1D : AudioNodeBase
 		kInput_VelocityDampening,
 		kInput_Tension,
 		kInput_Wrap,
+		kInput_SampleLocation,
 		kInput_Trigger,
+		kInput_TriggerLocation,
+		kInput_TriggerAmount,
 		kInput_COUNT
 	};
 	
