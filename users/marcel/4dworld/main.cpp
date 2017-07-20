@@ -51,9 +51,8 @@ todo : editor :
 
 #define FULLSCREEN 0
 
+#define MONO_OUTPUT true
 #define OSC_TEST 1
-
-#define OSC_BUFFER_SIZE (64*1024)
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -134,9 +133,9 @@ struct AudioSourceAudioGraph : PortAudioHandler
 #include "soundmix.h"
 #include "wavefield.h"
 
-const static float kWorldSx = 20.f;
+const static float kWorldSx = 10.f;
 const static float kWorldSy = 8.f;
-const static float kWorldSz = 16.f;
+const static float kWorldSz = 8.f;
 
 struct Creature
 {
@@ -189,7 +188,7 @@ struct Creature
 	{
 		pos += vel * dt;
 		
-		voice->pos = pos;
+		voice->spat.pos = pos;
 	}
 	
 	void draw() const
@@ -271,79 +270,79 @@ struct TestObject
 			sine.init(0.f, sineFrequency);
 		}
 		
-		doTextBox(voice->pos[0], "pos.x", dt);
-		doTextBox(voice->pos[1], "pos.y", dt);
-		doTextBox(voice->pos[2], "pos.z", dt);
+		doTextBox(voice->spat.pos[0], "pos.x", dt);
+		doTextBox(voice->spat.pos[1], "pos.y", dt);
+		doTextBox(voice->spat.pos[2], "pos.z", dt);
 		
-		doTextBox(voice->size[0], "dim.x", dt);
-		doTextBox(voice->size[1], "dim.y", dt);
-		doTextBox(voice->size[2], "dim.z", dt);
+		doTextBox(voice->spat.size[0], "dim.x", dt);
+		doTextBox(voice->spat.size[1], "dim.y", dt);
+		doTextBox(voice->spat.size[2], "dim.z", dt);
 		
-		doTextBox(voice->rot[0], "rot.x", dt);
-		doTextBox(voice->rot[1], "rot.y", dt);
-		doTextBox(voice->rot[2], "rot.z", dt);
+		doTextBox(voice->spat.rot[0], "rot.x", dt);
+		doTextBox(voice->spat.rot[1], "rot.y", dt);
+		doTextBox(voice->spat.rot[2], "rot.z", dt);
 		
 		std::vector<EnumValue> orientationModes;
 		orientationModes.push_back(EnumValue(Osc4D::kOrientation_Static, "static"));
 		orientationModes.push_back(EnumValue(Osc4D::kOrientation_Movement, "movement"));
 		orientationModes.push_back(EnumValue(Osc4D::kOrientation_Center, "center"));
-		doEnum(voice->orientationMode, "orientation.mode", orientationModes);
-		doTextBox(voice->orientationCenter[0], "orientation.center.x", dt);
-		doTextBox(voice->orientationCenter[1], "orientation.center.y", dt);
-		doTextBox(voice->orientationCenter[2], "orientation.center.z", dt);
+		doEnum(voice->spat.orientationMode, "orientation.mode", orientationModes);
+		doTextBox(voice->spat.orientationCenter[0], "orientation.center.x", dt);
+		doTextBox(voice->spat.orientationCenter[1], "orientation.center.y", dt);
+		doTextBox(voice->spat.orientationCenter[2], "orientation.center.z", dt);
 		
-		doCheckBox(voice->globalEnable, "global.enable", false);
+		doCheckBox(voice->spat.globalEnable, "global.enable", false);
 		
-		if (doCheckBox(voice->spatialCompressor.enable, "spatialCompressor", true))
+		if (doCheckBox(voice->spat.spatialCompressor.enable, "spatialCompressor", true))
 		{
 			g_drawX += 20;
 			pushMenu("spatialCompressor");
-			doTextBox(voice->spatialCompressor.attack, "attack", dt);
-			doTextBox(voice->spatialCompressor.release, "release", dt);
-			doTextBox(voice->spatialCompressor.minimum, "minimum", dt);
-			doTextBox(voice->spatialCompressor.maximum, "maximum", dt);
-			doTextBox(voice->spatialCompressor.curve, "curve", dt);
-			doCheckBox(voice->spatialCompressor.invert, "invert", false);
+			doTextBox(voice->spat.spatialCompressor.attack, "attack", dt);
+			doTextBox(voice->spat.spatialCompressor.release, "release", dt);
+			doTextBox(voice->spat.spatialCompressor.minimum, "minimum", dt);
+			doTextBox(voice->spat.spatialCompressor.maximum, "maximum", dt);
+			doTextBox(voice->spat.spatialCompressor.curve, "curve", dt);
+			doCheckBox(voice->spat.spatialCompressor.invert, "invert", false);
 			popMenu();
 			g_drawX -= 20;
 		}
 		
-		if (doCheckBox(voice->dopplerEnable, "doppler", true))
+		if (doCheckBox(voice->spat.doppler.enable, "doppler", true))
 		{
 			g_drawX += 20;
 			pushMenu("doppler");
-			doTextBox(voice->dopplerScale, "scale", dt);
-			doTextBox(voice->dopplerSmooth, "smooth", dt);
+			doTextBox(voice->spat.doppler.scale, "scale", dt);
+			doTextBox(voice->spat.doppler.smooth, "smooth", dt);
 			popMenu();
 			g_drawX -= 20;
 		}
 		
-		if (doCheckBox(voice->distanceIntensity.enable, "distance.intensity", true))
+		if (doCheckBox(voice->spat.distanceIntensity.enable, "distance.intensity", true))
 		{
 			g_drawX += 20;
 			pushMenu("distance.intensity");
-			doTextBox(voice->distanceIntensity.threshold, "treshold", dt);
-			doTextBox(voice->distanceIntensity.curve, "curve", dt);
+			doTextBox(voice->spat.distanceIntensity.threshold, "treshold", dt);
+			doTextBox(voice->spat.distanceIntensity.curve, "curve", dt);
 			popMenu();
 			g_drawX -= 20;
 		}
 		
-		if (doCheckBox(voice->distanceDampening.enable, "distance.dampening", true))
+		if (doCheckBox(voice->spat.distanceDampening.enable, "distance.dampening", true))
 		{
 			g_drawX += 20;
 			pushMenu("distance.dampening");
-			doTextBox(voice->distanceDampening.threshold, "treshold", dt);
-			doTextBox(voice->distanceDampening.curve, "curve", dt);
+			doTextBox(voice->spat.distanceDampening.threshold, "treshold", dt);
+			doTextBox(voice->spat.distanceDampening.curve, "curve", dt);
 			popMenu();
 			g_drawX -= 20;
 		}
 		
-		if (doCheckBox(voice->distanceDiffusion.enable, "distance.diffusion", true))
+		if (doCheckBox(voice->spat.distanceDiffusion.enable, "distance.diffusion", true))
 		{
 			g_drawX += 20;
 			pushMenu("distance.diffusion");
-			doTextBox(voice->distanceDiffusion.threshold, "treshold", dt);
-			doTextBox(voice->distanceDiffusion.curve, "curve", dt);
+			doTextBox(voice->spat.distanceDiffusion.threshold, "treshold", dt);
+			doTextBox(voice->spat.distanceDiffusion.curve, "curve", dt);
 			popMenu();
 			g_drawX -= 20;
 		}
@@ -588,21 +587,17 @@ struct AudioUpdateHandler : PortAudioHandler
 			
 			if (true)
 			{
-				char buffer[OSC_BUFFER_SIZE];
-				
-				osc::OutboundPacketStream stream(buffer, OSC_BUFFER_SIZE);
-				
 				bool isValid = true;
 				
-				Osc4DStream stream4D(stream);
+				Osc4DStream stream4D(transmitSocket);
 				
-				stream << osc::BeginBundleImmediate;
+				stream4D.beginBundle();
 				{
 					isValid &= voiceMgr->generateOsc(stream4D);
 				}
-				stream << osc::EndBundle;
+				stream4D.endBundle();
 				
-				isValid &= stream.IsReady();
+				isValid &= stream4D.stream.IsReady();
 				
 				//
 				
@@ -611,7 +606,7 @@ struct AudioUpdateHandler : PortAudioHandler
 				{
 					SDL_LockMutex(mutex);
 					{
-						transmitSocket->Send(stream.Data(), stream.Size());
+						transmitSocket->Send(stream4D.stream.Data(), stream4D.stream.Size());
 					}
 					SDL_UnlockMutex(mutex);
 				}
@@ -630,7 +625,7 @@ static void testAudioVoiceManager()
 	
 	voiceMgr.init(kNumChannels);
 	
-	voiceMgr.outputMono = true;
+	voiceMgr.outputMono = MONO_OUTPUT;
 	
 	g_voiceMgr = &voiceMgr;
 	
@@ -642,8 +637,8 @@ static void testAudioVoiceManager()
 	
 	//
 	
-	std::string oscIpAddress = "127.0.0.1";
-	int oscUdpPort = 7000;
+	std::string oscIpAddress = "192.168.1.10";
+	int oscUdpPort = 2000;
 	
 	AudioUpdateHandler audioUpdateHandler;
 	
@@ -653,14 +648,14 @@ static void testAudioVoiceManager()
 	
 	PortAudioObject pa;
 	
-	pa.init(SAMPLE_RATE, 1, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
+	pa.init(SAMPLE_RATE, MONO_OUTPUT ? 1 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 	
 	//
 	
 	AudioSourceWavefield1D wavefield1D;
 	wavefield1D.init(256);
 	AudioVoice * wavefield1DVoice = nullptr;
-	//voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D);
+	voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D);
 	
 	//
 	
@@ -787,18 +782,18 @@ static void testAudioVoiceManager()
 			pushMenu("globals");
 			{
 				doLabel("globals", 0.f);
-				doTextBox(g_voiceMgr->globalPos[0], "pos.x", dt);
-				doTextBox(g_voiceMgr->globalPos[1], "pos.y", dt);
-				doTextBox(g_voiceMgr->globalPos[2], "pos.z", dt);
-				doTextBox(g_voiceMgr->globalRot[0], "rot.x", dt);
-				doTextBox(g_voiceMgr->globalRot[1], "rot.y", dt);
-				doTextBox(g_voiceMgr->globalRot[2], "rot.z", dt);
-				doTextBox(g_voiceMgr->globalPlode[0], "plode.x", dt);
-				doTextBox(g_voiceMgr->globalPlode[1], "plode.y", dt);
-				doTextBox(g_voiceMgr->globalPlode[2], "plode.z", dt);
-				doTextBox(g_voiceMgr->globalOrigin[0], "origin.x", dt);
-				doTextBox(g_voiceMgr->globalOrigin[1], "origin.y", dt);
-				doTextBox(g_voiceMgr->globalOrigin[2], "origin.z", dt);
+				doTextBox(g_voiceMgr->spat.globalPos[0], "pos.x", dt);
+				doTextBox(g_voiceMgr->spat.globalPos[1], "pos.y", dt);
+				doTextBox(g_voiceMgr->spat.globalPos[2], "pos.z", dt);
+				doTextBox(g_voiceMgr->spat.globalRot[0], "rot.x", dt);
+				doTextBox(g_voiceMgr->spat.globalRot[1], "rot.y", dt);
+				doTextBox(g_voiceMgr->spat.globalRot[2], "rot.z", dt);
+				doTextBox(g_voiceMgr->spat.globalPlode[0], "plode.x", dt);
+				doTextBox(g_voiceMgr->spat.globalPlode[1], "plode.y", dt);
+				doTextBox(g_voiceMgr->spat.globalPlode[2], "plode.z", dt);
+				doTextBox(g_voiceMgr->spat.globalOrigin[0], "origin.x", dt);
+				doTextBox(g_voiceMgr->spat.globalOrigin[1], "origin.y", dt);
+				doTextBox(g_voiceMgr->spat.globalOrigin[2], "origin.z", dt);
 			}
 			popMenu();
 			
@@ -864,7 +859,7 @@ static void testAudioGraphManager()
 	
 	voiceMgr.init(kNumChannels);
 	
-	voiceMgr.outputMono = true;
+	voiceMgr.outputMono = MONO_OUTPUT;
 	
 	g_voiceMgr = &voiceMgr;
 	
@@ -888,8 +883,8 @@ static void testAudioGraphManager()
 	
 	//
 	
-	std::string oscIpAddress = "127.0.0.1";
-	int oscUdpPort = 7000;
+	std::string oscIpAddress = "192.168.1.10";
+	int oscUdpPort = 2000;
 	
 	AudioUpdateHandler audioUpdateHandler;
 	
@@ -899,7 +894,7 @@ static void testAudioGraphManager()
 	
 	PortAudioObject pa;
 	
-	pa.init(SAMPLE_RATE, 1, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
+	pa.init(SAMPLE_RATE, MONO_OUTPUT ? 1 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 	
 	//
 	
@@ -1000,8 +995,8 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		testAudioVoiceManager();
-		//testAudioGraphManager();
+		//testAudioVoiceManager();
+		testAudioGraphManager();
 		
 		//
 		
@@ -1078,7 +1073,7 @@ int main(int argc, char * argv[])
 		
 		PortAudioObject pa;
 		
-		pa.init(SAMPLE_RATE, kNumChannels, AUDIO_UPDATE_SIZE, &audioSource);
+		pa.init(SAMPLE_RATE, MONO_OUTPUT ? 1 : kNumChannels, AUDIO_UPDATE_SIZE, &audioSource);
 		
 		bool stop = false;
 		
