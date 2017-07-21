@@ -29,6 +29,7 @@
 
 #include "graph.h"
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -43,6 +44,10 @@ struct AudioGraph;
 struct AudioNodeBase;
 struct AudioOutputChannel;
 struct AudioPlug;
+
+struct SDL_mutex;
+
+extern AudioGraph * g_currentAudioGraph;
 
 struct AudioGraph
 {
@@ -87,6 +92,10 @@ struct AudioGraph
 	
 	double time;
 	
+	std::set<std::string> activeFlags;
+	
+	SDL_mutex * mutex;
+	
 	AudioGraph();
 	~AudioGraph();
 	
@@ -95,6 +104,10 @@ struct AudioGraph
 	
 	void tick(const float dt, const bool traverseUnreferenced);
 	void draw(AudioOutputChannel * outputChannels, const int numOutputChannels, const bool traverseUnreferenced) const;
+	
+	void setFlag(const char * name, const bool value = true);
+	void resetFlag(const char * name);
+	bool isFLagSet(const char * name) const;
 };
 
 //

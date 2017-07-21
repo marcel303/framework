@@ -37,6 +37,10 @@
 
 //
 
+AudioGraph * g_currentAudioGraph = nullptr;
+
+//
+
 AudioGraph::AudioGraph()
 	: nodes()
 	, displayNodeId(kGraphNodeIdInvalid)
@@ -45,12 +49,20 @@ AudioGraph::AudioGraph()
 	, graph(nullptr)
 	, valuesToFree()
 	, time(0.0)
+	, activeFlags()
+	, mutex(nullptr)
 {
+	mutex = SDL_CreateMutex();
+	Assert(mutex != nullptr);
 }
 
 AudioGraph::~AudioGraph()
 {
 	destroy();
+	
+	Assert(mutex != nullptr);
+	SDL_DestroyMutex(mutex);
+	mutex = nullptr;
 }
 
 void AudioGraph::destroy()
@@ -170,6 +182,9 @@ void AudioGraph::tick(const float dt, const bool traverseUnreferenced)
 {
 	audioCpuTimingBlock(AudioGraph_Tick);
 	
+	Assert(g_currentAudioGraph == nullptr);
+	g_currentAudioGraph = this;
+	
 	// use traversalId, start update at display node
 	
 	if (displayNodeId != kGraphNodeIdInvalid)
@@ -206,6 +221,10 @@ void AudioGraph::tick(const float dt, const bool traverseUnreferenced)
 	//
 	
 	time += dt;
+	
+	//
+	
+	g_currentAudioGraph = nullptr;
 }
 
 void AudioGraph::draw(AudioOutputChannel * outputChannels, const int numOutputChannels, const bool traverseUnreferenced) const
@@ -250,6 +269,40 @@ void AudioGraph::draw(AudioOutputChannel * outputChannels, const int numOutputCh
 	}
 	
 	++nextDrawTraversalId;
+}
+
+void AudioGraph::setFlag(const char * name, const bool value)
+{
+	SDL_LockMutex(mutex);
+	{
+		if (value)
+			activeFlags.insert(name);
+		else
+			activeFlags.erase(name);
+	}
+	SDL_UnlockMutex(mutex);
+}
+
+void AudioGraph::resetFlag(const char * name)
+{
+	SDL_LockMutex(mutex);
+	{
+		activeFlags.erase(name);
+	}
+	SDL_UnlockMutex(mutex);
+}
+
+bool AudioGraph::isFLagSet(const char * name) const
+{
+	bool result = false;
+	
+	SDL_LockMutex(mutex);
+	{
+		result = activeFlags.count(name) != 0;
+	}
+	SDL_UnlockMutex(mutex);
+	
+	return result;
 }
 
 //

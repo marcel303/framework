@@ -898,7 +898,11 @@ void AudioRealTimeConnection::handleSrcSocketPressed(const GraphNodeId nodeId, c
 	AudioTriggerData data;
 	data.setFloat(0.f);
 	
+	g_currentAudioGraph = audioGraph;
+	
 	node->handleTrigger(srcSocketIndex, data);
+	
+	g_currentAudioGraph = nullptr;
 }
 
 bool AudioRealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines)
