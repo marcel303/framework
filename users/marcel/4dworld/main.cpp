@@ -948,6 +948,18 @@ static void testAudioGraphManager()
 		
 		audioGraphMgr.tickEditor(dt);
 		
+		if (instance1 != nullptr)
+		{
+			const bool value = (rand() % 100) == 0;
+			
+			instance1->audioGraph->setFlag("test", value);
+			
+			if (instance1->audioGraph->isFLagSet("kill"))
+			{
+				audioGraphMgr.free(instance1);
+			}
+		}
+		
 		//
 		
 		framework.beginDraw(0, 0, 0, 0);
