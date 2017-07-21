@@ -26,6 +26,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "audioNodeWavefield1D.h"
+#include "Noise.h"
 #include "wavefield.h"
 
 #include "framework.h" // random. todo : remove
@@ -40,9 +41,10 @@ AUDIO_NODE_TYPE(wavefield_1d, AudioNodeWavefield1D)
 	in("tension", "audioValue", "1");
 	in("wrap", "bool", "0");
 	in("sample.pos", "audioValue", "0.5");
-	in("trigger", "trigger");
+	in("trigger!", "trigger");
 	in("trigger.pos", "audioValue", "0.5");
 	in("trigger.amount", "audioValue", "0.5");
+	in("randomize!", "trigger");
 	out("audio", "audioValue");
 }
 
@@ -75,13 +77,12 @@ AudioNodeWavefield1D::~AudioNodeWavefield1D()
 void AudioNodeWavefield1D::draw()
 {
 	const AudioFloat defaultTension(1.f);
-	const AudioFloat defaultSampleLocation(.5f);
 	
 	const AudioFloat * positionDampening = getInputAudioFloat(kInput_PositionDampening, &AudioFloat::Zero);
 	const AudioFloat * velocityDampening = getInputAudioFloat(kInput_VelocityDampening, &AudioFloat::Zero);
 	const AudioFloat * tension = getInputAudioFloat(kInput_Tension, &defaultTension);
 	const bool wrap = getInputBool(kInput_Wrap, false);
-	const AudioFloat * sampleLocation = getInputAudioFloat(kInput_SampleLocation, &defaultSampleLocation);
+	const AudioFloat * sampleLocation = getInputAudioFloat(kInput_SampleLocation, &AudioFloat::Half);
 	const int size = getInputInt(kInput_Size, 16);
 	
 	//
@@ -120,16 +121,38 @@ void AudioNodeWavefield1D::handleTrigger(const int inputSocketIndex, const Audio
 {
 	if (inputSocketIndex == kInput_Trigger)
 	{
-		const AudioFloat defaultTriggerPosition(.5f);
-		const AudioFloat defaultTriggerAmount(.5f);
-		const float triggerPosition = getInputAudioFloat(kInput_TriggerLocation, &defaultTriggerPosition)->getMean();
-		const float triggerAmount = getInputAudioFloat(kInput_TriggerAmount, &defaultTriggerAmount)->getMean();
+		const float triggerPosition = getInputAudioFloat(kInput_TriggerLocation, &AudioFloat::Half)->getMean();
+		const float triggerAmount = getInputAudioFloat(kInput_TriggerAmount, &AudioFloat::Half)->getMean();
 		
 		if (wavefield->numElems > 0)
 		{
 			const int elemIndex = int(std::round(triggerPosition * wavefield->numElems)) % wavefield->numElems;
 			
 			wavefield->d[elemIndex] += triggerAmount;
+		}
+	}
+	else if (inputSocketIndex == kInput_Randomize)
+	{
+		const double xRatio = random(0.0, 1.0 / 10.0);
+		const double randomFactor = random(0.0, 1.0);
+		//const double cosFactor = random(0.0, 1.0);
+		const double cosFactor = 0.0;
+		const double perlinFactor = random(0.0, 1.0);
+		
+		for (int x = 0; x < wavefield->numElems; ++x)
+		{
+			wavefield->p[x] = 0.0;
+			wavefield->v[x] = 0.0;
+			wavefield->d[x] = 0.0;
+			
+			wavefield->f[x] = 1.0;
+			wavefield->f[x] *= lerp<double>(1.0, random(0.0, 1.0), randomFactor);
+			wavefield->f[x] *= lerp<double>(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
+			
+			//wavefield->f[x] = 1.0 - std::pow(m_wavefield.f[x], 2.0);
+			//wavefield->f[x] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
+			
+			wavefield->f[x] *= lerp<double>(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
 		}
 	}
 }
