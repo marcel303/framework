@@ -314,7 +314,7 @@ struct AudioVoiceManager : PortAudioHandler
 		Spatialisation()
 			: globalGain(1.f)
 			, globalPos()
-			, globalSize()
+			, globalSize(1.f, 1.f, 1.f)
 			, globalRot()
 			, globalPlode(1.f, 1.f, 1.f)
 			, globalOrigin()

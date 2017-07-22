@@ -210,9 +210,9 @@ AUDIO_NODE_TYPE(globals_4d, AudioNodeVoice4DGlobals)
 	in("pos.x", "audioValue");
 	in("pos.y", "audioValue");
 	in("pos.z", "audioValue");
-	in("dim.x", "audioValue");
-	in("dim.y", "audioValue");
-	in("dim.z", "audioValue");
+	in("dim.x", "audioValue", "1");
+	in("dim.y", "audioValue", "1");
+	in("dim.z", "audioValue", "1");
 	in("rot.x", "audioValue");
 	in("rot.y", "audioValue");
 	in("rot.z", "audioValue");
@@ -232,9 +232,9 @@ void AudioNodeVoice4DGlobals::tick(const float dt)
 	g_voiceMgr->spat.globalPos[0] = getInputAudioFloat(kInput_PosX, &AudioFloat::Zero)->getMean();
 	g_voiceMgr->spat.globalPos[1] = getInputAudioFloat(kInput_PosY, &AudioFloat::Zero)->getMean();
 	g_voiceMgr->spat.globalPos[2] = getInputAudioFloat(kInput_PosZ, &AudioFloat::Zero)->getMean();
-	g_voiceMgr->spat.globalSize[0] = getInputAudioFloat(kInput_DimX, &AudioFloat::Zero)->getMean();
-	g_voiceMgr->spat.globalSize[1] = getInputAudioFloat(kInput_DimY, &AudioFloat::Zero)->getMean();
-	g_voiceMgr->spat.globalSize[2] = getInputAudioFloat(kInput_DimZ, &AudioFloat::Zero)->getMean();
+	g_voiceMgr->spat.globalSize[0] = getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();
+	g_voiceMgr->spat.globalSize[1] = getInputAudioFloat(kInput_DimY, &AudioFloat::One)->getMean();
+	g_voiceMgr->spat.globalSize[2] = getInputAudioFloat(kInput_DimZ, &AudioFloat::One)->getMean();
 	g_voiceMgr->spat.globalRot[0] = getInputAudioFloat(kInput_RotX, &AudioFloat::Zero)->getMean();
 	g_voiceMgr->spat.globalRot[1] = getInputAudioFloat(kInput_RotY, &AudioFloat::Zero)->getMean();
 	g_voiceMgr->spat.globalRot[2] = getInputAudioFloat(kInput_RotZ, &AudioFloat::Zero)->getMean();
@@ -250,14 +250,12 @@ void AudioNodeVoice4DGlobals::handleTrigger(const int inputSocketIndex, const Au
 {
 	if (inputSocketIndex == kInput_SyncOsc)
 	{
-		Osc4DStream stream4D;
-		
 		// todo : move transmit socket ownership over to voice mgr
 		
-		stream4D.beginBundle();
+		g_oscStream->beginBundle();
 		{
-			g_voiceMgr->generateOsc(stream4D, true);
+			g_voiceMgr->generateOsc(*g_oscStream, true);
 		}
-		stream4D.endBundle();
+		g_oscStream->endBundle();
 	}
 }

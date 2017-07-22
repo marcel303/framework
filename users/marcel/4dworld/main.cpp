@@ -94,6 +94,8 @@ struct AudioUpdateTask
 	virtual void audioUpdate(const float dt) = 0;
 };
 
+Osc4DStream * g_oscStream = nullptr;
+
 struct AudioUpdateHandler : PortAudioHandler
 {
 	struct Command
@@ -118,16 +120,16 @@ struct AudioUpdateHandler : PortAudioHandler
 	
 	AudioGraphManager * audioGraphMgr;
 	
-	UdpTransmitSocket * transmitSocket;
-	
 	CommandQueue<Command> commandQueue;
+	
+	Osc4DStream oscStream;
 	
 	AudioUpdateHandler()
 		: updateTasks()
 		, voiceMgr(nullptr)
 		, audioGraphMgr(nullptr)
-		, transmitSocket(nullptr)
 		, commandQueue()
+		, oscStream()
 	{
 	}
 	
@@ -140,23 +142,24 @@ struct AudioUpdateHandler : PortAudioHandler
 	{
 		shut();
 		
-		Assert(transmitSocket == nullptr);
-		transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPort));
+		oscStream.init(ipAddress, udpPort);
+		
+		Assert(g_oscStream == nullptr);
+		g_oscStream = &oscStream;
 	}
 	
 	void shut()
 	{
-		delete transmitSocket;
-		transmitSocket = nullptr;
+		g_oscStream = nullptr;
+		
+		oscStream.shut();
 	}
 	
 	void setOscEndpoint(const char * ipAddress, const int udpPort)
 	{
 		SDL_LockMutex(mutex);
 		{
-			shut();
-			
-			init(ipAddress, udpPort);
+			oscStream.setEndpoint(ipAddress, udpPort);
 		}
 		SDL_UnlockMutex(mutex);
 	}
@@ -210,23 +213,13 @@ struct AudioUpdateHandler : PortAudioHandler
 			static int limiter = 0;
 			limiter++;
 			
-			if ((limiter % 10) == 0)
+			if ((limiter % 4) == 0)
 			{
-				Osc4DStream stream4D;
-				
-				stream4D.send = [&](osc::OutboundPacketStream & stream)
+				oscStream.beginBundle();
 				{
-					if (transmitSocket != nullptr)
-					{
-						transmitSocket->Send(stream.Data(), stream.Size());
-					}
-				};
-				
-				stream4D.beginBundle();
-				{
-					voiceMgr->generateOsc(stream4D, false);
+					voiceMgr->generateOsc(oscStream, false);
 				}
-				stream4D.endBundle();
+				oscStream.endBundle();
 			}
 		}
 	}
@@ -941,16 +934,33 @@ static void testAudioGraphManager()
 	Assert(g_audioGraphMgr == nullptr);
 	g_audioGraphMgr = &audioGraphMgr;
 	
-	AudioGraphInstance * instance1 = audioGraphMgr.createInstance("audioTest1.xml");
-	AudioGraphInstance * instance2 = audioGraphMgr.createInstance("audioTest1.xml");
-	AudioGraphInstance * instance3 = audioGraphMgr.createInstance("audioGraph.xml");
+	AudioGraphInstance * instance1 = nullptr;// = audioGraphMgr.createInstance("audioTest1.xml");
+	AudioGraphInstance * instance2 = nullptr;// = audioGraphMgr.createInstance("audioTest1.xml");
+	AudioGraphInstance * instance3 = nullptr;// = audioGraphMgr.createInstance("audioGraph.xml");
+	AudioGraphInstance * instance4 = nullptr;
+	AudioGraphInstance * instance5 = nullptr;
 	
-	audioGraphMgr.free(instance1);
-	audioGraphMgr.free(instance2);
-	audioGraphMgr.free(instance3);
+	//audioGraphMgr.free(instance1);
+	//audioGraphMgr.free(instance2);
+	//audioGraphMgr.free(instance3);
 	
 	//instance1 = audioGraphMgr.createInstance("wavefieldTest.xml");
-	instance1 = audioGraphMgr.createInstance("lowpassTest.xml");
+	
+	instance1 = audioGraphMgr.createInstance("lowpassTest5.xml");
+	instance1->audioGraph->setMemf("int", 100);
+	instance1->audioGraph->triggerEvent("type1");
+	
+	instance2 = audioGraphMgr.createInstance("lowpassTest5.xml");
+	instance2->audioGraph->setMemf("int", 78);
+	instance2->audioGraph->triggerEvent("type2");
+	
+	instance3 = audioGraphMgr.createInstance("lowpassTest5.xml");
+	instance3->audioGraph->setMemf("int", 52);
+	instance3->audioGraph->triggerEvent("type1");
+	
+	//instance4 = audioGraphMgr.createInstance("lowpassTest5.xml");
+	//instance4->audioGraph->setMemf("int", 35);
+	//instance4->audioGraph->triggerEvent("type2");
 	
 	//instance1 = audioGraphMgr.createInstance("voiceTest1.xml");
 	//instance2 = audioGraphMgr.createInstance("voiceTest2.xml");
@@ -1084,11 +1094,13 @@ static void testAudioGraphManager()
 	
 	balls.clear();
 	
-	//`a
+	//
 	
 	audioGraphMgr.free(instance1);
 	audioGraphMgr.free(instance2);
 	audioGraphMgr.free(instance3);
+	audioGraphMgr.free(instance4);
+	audioGraphMgr.free(instance5);
 	
 	//
 	

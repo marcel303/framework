@@ -30,7 +30,7 @@ struct Osc4D
 		kBoost_Level2,
 		kBoost_Level3
 	};
-
+	
 	int source;
 	char sourceOscName[64];
 
@@ -39,7 +39,7 @@ struct Osc4D
 		, sourceOscName()
 	{
 	}
-
+	
 	virtual void begin(const char * name) = 0;
 	virtual void end() = 0;
 	virtual void b(const bool v) = 0;
@@ -99,6 +99,7 @@ struct Osc4D
 	void globalMasterPhase(const float v);
 };
 
+#include "Debugging.h"
 #include "ip/UdpSocket.h"
 #include "osc/OscOutboundPacketStream.h"
 #include <functional>
@@ -108,18 +109,45 @@ struct Osc4D
 struct Osc4DStream : Osc4D
 {
 	char buffer[OSC_BUFFER_SIZE];
-	
 	osc::OutboundPacketStream stream;
 	
-	bool hasMessage;
+	UdpTransmitSocket * transmitSocket;
 	
-	std::function<void(osc::OutboundPacketStream & stream)> send;
+	bool hasMessage;
 
 	Osc4DStream()
 		: stream(buffer, OSC_BUFFER_SIZE)
+		, transmitSocket(nullptr)
 		, hasMessage(false)
-		, send()
 	{
+	}
+	
+	~Osc4DStream()
+	{
+		shut();
+	}
+	
+	void init(const char * ipAddress, const int udpPort)
+	{
+		shut();
+		
+		//
+		
+		Assert(transmitSocket == nullptr);
+		transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPort));
+	}
+	
+	void shut()
+	{
+		delete transmitSocket;
+		transmitSocket = nullptr;
+	}
+	
+	void setEndpoint(const char * ipAddress, const int udpPort)
+	{
+		shut();
+		
+		init(ipAddress, udpPort);
 	}
 	
 	void beginBundle()
@@ -142,7 +170,7 @@ struct Osc4DStream : Osc4D
 	{
 		if (hasMessage && stream.IsReady())
 		{
-			send(stream);
+			transmitSocket->Send(stream.Data(), stream.Size());
 		}
 		
 		stream = osc::OutboundPacketStream(buffer, OSC_BUFFER_SIZE);
@@ -191,3 +219,5 @@ struct Osc4DStream : Osc4D
 		stream << v;
 	}
 };
+
+extern Osc4DStream * g_oscStream;

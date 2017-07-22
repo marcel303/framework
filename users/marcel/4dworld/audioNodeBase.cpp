@@ -557,7 +557,7 @@ AUDIO_NODE_TYPE(audioSourceSine, AudioNodeSourceSine)
 	in("fine", "bool", "1");
 	inEnum("type", "audioSineType");
 	inEnum("mode", "audioSineMode", "1");
-	in("frequency", "float", "1");
+	in("frequency", "audioValue", "1");
 	in("skew", "float", "0.5");
 	in("a", "audioValue", "0");
 	in("b", "audioValue", "1");
