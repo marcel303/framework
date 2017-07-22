@@ -26,6 +26,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "audioNodeVoice4D.h"
+#include "Calc.h"
+#include "Mat4x4.h"
 
 AUDIO_ENUM_TYPE(subboost)
 {
@@ -55,6 +57,7 @@ AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
 	in("dim.x", "audioValue", "1");
 	in("dim.y", "audioValue", "1");
 	in("dim.z", "audioValue", "1");
+	in("originRot.y", "audioValue");
 	in("articulation", "audioValue");
 	in("dopp", "bool", "1");
 	in("dopp.scale", "audioValue", "1");
@@ -102,6 +105,7 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_DimX, kAudioPlugType_FloatVec);
 	addInput(kInput_DimY, kAudioPlugType_FloatVec);
 	addInput(kInput_DimZ, kAudioPlugType_FloatVec);
+	addInput(kInput_OriginRotY, kAudioPlugType_FloatVec);
 	addInput(kInput_Articulation, kAudioPlugType_FloatVec);
 	addInput(kInput_Doppler, kAudioPlugType_Bool);
 	addInput(kInput_DopplerScale, kAudioPlugType_FloatVec);
@@ -132,6 +136,11 @@ void AudioNodeVoice4D::tick(const float dt)
 {
 	voice->spat.globalEnable = getInputBool(kInput_Global, true);
 	
+	const float originRotY = getInputAudioFloat(kInput_OriginRotY, &AudioFloat::Zero)->getMean();
+	
+	Mat4x4 originMatrix;
+	originMatrix.MakeRotationY(Calc::DegToRad(originRotY));
+	
 	//voice->spat.color = getInputString(kInput_Color, "ff0000");
 	voice->spat.name = getInputString(kInput_Name, "");
 	voice->spat.gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
@@ -140,11 +149,13 @@ void AudioNodeVoice4D::tick(const float dt)
 	voice->spat.pos[0] = getInputAudioFloat(kInput_PosX, &AudioFloat::Zero)->getMean();
 	voice->spat.pos[1] = getInputAudioFloat(kInput_PosY, &AudioFloat::Zero)->getMean();
 	voice->spat.pos[2] = getInputAudioFloat(kInput_PosZ, &AudioFloat::Zero)->getMean();
+	voice->spat.pos = originMatrix.Mul4(voice->spat.pos);
 	
 	// rotation
 	voice->spat.rot[0] = getInputAudioFloat(kInput_RotX, &AudioFloat::Zero)->getMean();
 	voice->spat.rot[1] = getInputAudioFloat(kInput_RotY, &AudioFloat::Zero)->getMean();
 	voice->spat.rot[2] = getInputAudioFloat(kInput_RotZ, &AudioFloat::Zero)->getMean();
+	voice->spat.rot = originMatrix.Mul3(voice->spat.rot);
 	
 	// dimensions
 	voice->spat.size[0] = getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();

@@ -55,6 +55,7 @@ struct AudioNodeVoice4D : AudioNodeBase
 		kInput_DimX,
 		kInput_DimY,
 		kInput_DimZ,
+		kInput_OriginRotY,
 		kInput_Articulation,
 		kInput_Doppler,
 		kInput_DopplerScale,
