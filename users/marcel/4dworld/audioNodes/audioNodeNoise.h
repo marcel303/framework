@@ -28,11 +28,21 @@
 #pragma once
 
 #include "audioNodeBase.h"
+#include <stdlib.h>
 
 struct AudioNodeNoise : AudioNodeBase
 {
+	enum Type
+	{
+		kType_Octave,
+		kType_White,
+		kType_Pink,
+		kType_Brown
+	};
+	
 	enum Input
 	{
+		kInput_Type,
 		kInput_NumOctaves,
 		kInput_SampleRate,
 		kInput_Scale,
@@ -49,13 +59,73 @@ struct AudioNodeNoise : AudioNodeBase
 		kOutput_COUNT
 	};
 	
+	// Voss' pink number object to be used for pink noise generation
+	
+	struct PinkNumber
+	{
+		int maxKey;
+		int key; 
+		int whiteValues[5];
+		int range;
+		
+		PinkNumber(const int _range = 128)
+		{
+			maxKey = 0x1f; // five bits set
+			
+			range = _range;
+			key = 0;
+			
+			for (int i = 0; i < 5; ++i)
+			{
+				whiteValues[i] = rand() % (range/5);
+			}
+		}
+		
+		int next()
+		{ 
+			const int lastKey = key;
+
+			key++;
+			
+			if (key > maxKey)
+				key = 0;
+			
+			// exclusive-or previous value with current value. this gives a list of bits that have changed
+			
+			int diff = lastKey ^ key;
+			
+			int sum = 0;
+			
+			for (int i = 0; i < 5; ++i)
+			{ 
+				// if bit changed get new random number for corresponding whiteValue
+				
+				if (diff & (1 << i))
+				{
+					whiteValues[i] = rand() % (range/5);
+				}
+				
+				sum += whiteValues[i];
+			}
+			
+			return sum; 
+		}
+	};
+	
 	AudioFloat resultOutput;
+	
+	PinkNumber pinkNumber;
+	
+	double brownValue;
 	
 	AudioNodeNoise()
 		: AudioNodeBase()
 		, resultOutput()
+		, pinkNumber(1 << 16)
+		, brownValue(0.0)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Type, kAudioPlugType_Int);
 		addInput(kInput_NumOctaves, kAudioPlugType_Int);
 		addInput(kInput_SampleRate, kAudioPlugType_Int);
 		addInput(kInput_Scale, kAudioPlugType_FloatVec);
@@ -65,6 +135,11 @@ struct AudioNodeNoise : AudioNodeBase
 		addInput(kInput_X, kAudioPlugType_FloatVec);
 		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 	}
+	
+	void drawOctave();
+	void drawWhite();
+	void drawPink();
+	void drawBrown();
 	
 	virtual void draw() override;
 };
