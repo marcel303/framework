@@ -224,6 +224,9 @@ AudioGraphManager::AudioGraphManager()
 		typeDefinition.typeName = "audioValue";
 		typeDefinition.editor = "textbox_float";
 		typeDefinition.visualizer = "channels";
+	#if MULTIPLE_AUDIO_INPUT
+		typeDefinition.multipleInputs = true;
+	#endif
 		typeDefinitionLibrary->valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 	}
 	

@@ -34,6 +34,8 @@
 #include <string>
 #include <vector>
 
+#define MULTIPLE_AUDIO_INPUT 1
+
 struct GraphEdit_TypeDefinitionLibrary;
 struct GraphNode;
 
@@ -197,6 +199,35 @@ struct AudioFloat
 	void mulMul(const AudioFloat & other, const AudioFloat & gain);
 };
 
+#if MULTIPLE_AUDIO_INPUT
+
+struct AudioFloatArray
+{
+	AudioFloat * sum;
+	std::vector<AudioFloat*> array;
+	
+	int lastUpdateTick;
+	
+	AudioFloatArray()
+		: sum(nullptr)
+		, array()
+		, lastUpdateTick(-1)
+	{
+	}
+	
+	~AudioFloatArray()
+	{
+		delete sum;
+		sum = nullptr;
+	}
+	
+	void update();
+	
+	AudioFloat * get();
+};
+
+#endif
+
 enum AudioPlugType
 {
 	kAudioPlugType_None,
@@ -214,9 +245,16 @@ struct AudioPlug
 	AudioPlugType type;
 	void * mem;
 	
+#if MULTIPLE_AUDIO_INPUT
+	mutable AudioFloatArray floatArray;
+#endif
+
 	AudioPlug()
 		: type(kAudioPlugType_None)
 		, mem(nullptr)
+	#if MULTIPLE_AUDIO_INPUT
+		, floatArray()
+	#endif
 	{
 	}
 	
@@ -226,11 +264,24 @@ struct AudioPlug
 	void disconnect()
 	{
 		mem = nullptr;
+		
+	#if MULTIPLE_AUDIO_INPUT
+		// fixme : this is not correct. we should erase the affected element only
+		floatArray.array.clear();
+	#endif
 	}
 	
 	bool isConnected() const
 	{
-		return mem != nullptr;
+		if (mem != nullptr)
+			return true;
+		
+	#if MULTIPLE_AUDIO_INPUT
+		if (floatArray.array.empty() == false)
+			return true;
+	#endif
+	
+		return false;
 	}
 	
 	int getBool() const
@@ -260,6 +311,10 @@ struct AudioPlug
 	const AudioFloat & getAudioFloat() const
 	{
 		Assert(type == kAudioPlugType_FloatVec);
+	#if MULTIPLE_AUDIO_INPUT
+		if (mem == nullptr)
+			return *floatArray.get();
+	#endif
 		return *((AudioFloat*)mem);
 	}
 	
@@ -304,6 +359,10 @@ struct AudioPlug
 	AudioFloat & getRwAudioFloat()
 	{
 		Assert(type == kAudioPlugType_FloatVec);
+	#if MULTIPLE_AUDIO_INPUT
+		if (mem == nullptr)
+			return *floatArray.get();
+	#endif
 		return *((AudioFloat*)mem);
 	}
 };

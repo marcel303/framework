@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "audioGraph.h"
 #include "audioNodeBase.h"
 #include "framework.h"
 #include "graph.h"
@@ -175,6 +176,85 @@ void AudioFloat::mulMul(const AudioFloat & other, const AudioFloat & gain)
 	}
 }
 
+void AudioFloatArray::update()
+{
+	const int num = array.size();
+	
+	if (num <= 1)
+	{
+		if (sum != nullptr)
+		{
+			delete sum;
+			sum = nullptr;
+		}
+		
+		//
+		
+		return;
+	}
+	
+	//
+	
+	if (sum == nullptr)
+	{
+		sum = new AudioFloat();
+	}
+	
+	bool allScalar = true;
+	
+	for (auto & a : array)
+		allScalar &= a->isScalar;
+	
+	if (allScalar)
+	{
+		float s = 0.f;
+		
+		for (auto & a : array)
+		{
+			s += a->getScalar();
+		}
+		
+		sum->setScalar(s);
+	}
+	else
+	{
+		sum->setVector();
+		
+		sum->set(*array[0]);
+		
+		for (int i = 1; i < num; ++i)
+		{
+			auto * a = array[i];
+			
+			sum->add(*a);
+		}
+	}
+}
+
+AudioFloat * AudioFloatArray::get()
+{
+	// fixme : g_currentAudioGraph should always be valid here? right now we just validate without checking traversal id when g_currentAudioGraph is nullptr. potetially doing this work twice (or more). on the other hand, if get is called after the update, it may set the traversal id to that of the next frame, without working on the array that will be updated in the future. this would be even worse..
+	
+	if (g_currentAudioGraph == nullptr || lastUpdateTick != g_currentAudioGraph->nextTickTraversalId)
+	{
+		if (g_currentAudioGraph != nullptr)
+		{
+			lastUpdateTick = g_currentAudioGraph->nextTickTraversalId;
+		}
+		
+		update();
+	}
+	
+	const int num = array.size();
+	
+	if (num == 0)
+		return nullptr;
+	else if (num == 1)
+		return array[0];
+	else
+		return sum;
+}
+
 //
 
 void AudioPlug::connectTo(AudioPlug & dst)
@@ -185,7 +265,16 @@ void AudioPlug::connectTo(AudioPlug & dst)
 	}
 	else
 	{
-		mem = dst.mem;
+	#if MULTIPLE_AUDIO_INPUT
+		if (dst.type == kAudioPlugType_FloatVec)
+		{
+			floatArray.array.push_back((AudioFloat*)dst.mem);
+		}
+		else
+	#endif
+		{
+			mem = dst.mem;
+		}
 	}
 }
 
@@ -197,7 +286,16 @@ void AudioPlug::connectTo(void * dstMem, const AudioPlugType dstType)
 	}
 	else
 	{
-		mem = dstMem;
+	#if MULTIPLE_AUDIO_INPUT
+		if (dstType == kAudioPlugType_FloatVec)
+		{
+			floatArray.array.push_back((AudioFloat*)dstMem);
+		}
+		else
+	#endif
+		{
+			mem = dstMem;
+		}
 	}
 }
 
@@ -360,6 +458,9 @@ void createAudioValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefin
 		typeDefinition.typeName = "audioValue";
 		typeDefinition.editor = "textbox_float";
 		typeDefinition.visualizer = "channels";
+	#if MULTIPLE_AUDIO_INPUT
+		typeDefinition.multipleInputs = true;
+	#endif
 		typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 	}
 	
