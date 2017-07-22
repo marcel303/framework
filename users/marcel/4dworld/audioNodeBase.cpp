@@ -522,25 +522,6 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 
 //
 
-AUDIO_NODE_TYPE(pcmData, AudioNodePcmData)
-{
-	typeName = "pcm.fromFile";
-	
-	in("filename", "string");
-	out("pcm", "pcmData");
-}
-
-AUDIO_NODE_TYPE(audioSourcePcm, AudioNodeSourcePcm)
-{
-	typeName = "audio.pcm";
-	
-	in("pcm", "pcmData");
-	in("rangeBegin", "audioValue");
-	in("rangeLength", "audioValue", "-1");
-	out("audio", "audioValue");
-	out("duration", "float");
-}
-
 AUDIO_NODE_TYPE(audioSourceMix, AudioNodeSourceMix)
 {
 	typeName = "audio.mix";
@@ -607,27 +588,4 @@ AUDIO_NODE_TYPE(sine, AudioNodeMathSine)
 	
 	in("value", "audioValue");
 	out("result", "audioValue");
-}
-
-//
-
-#include "FileStream.h"
-
-void AudioNodePcmData::tick(const float dt)
-{
-	const char * filename = getInputString(kInput_Filename, "");
-	
-	if (filename != currentFilename)
-	{
-		currentFilename = filename;
-		
-		if (FileStream::Exists(filename))
-		{
-			pcmData.load(filename, 0);
-		}
-		else
-		{
-			pcmData.free();
-		}
-	}
 }
