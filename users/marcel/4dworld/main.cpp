@@ -1004,7 +1004,7 @@ static void testAudioGraphManager()
 	
 	UiState uiState;
 	
-	std::string activeFile;
+	std::string activeInstanceName;
 	
 	auto doMenus = [&](const bool doActions, const bool doDraw)
 	{
@@ -1026,9 +1026,9 @@ static void testAudioGraphManager()
 				
 				if (doButton(name.c_str()))
 				{
-					if (filename != activeFile)
+					if (name != activeInstanceName)
 					{
-						activeFile = filename;
+						activeInstanceName = name;
 						
 						audioGraphMgr.selectInstance(&instance);
 					}
