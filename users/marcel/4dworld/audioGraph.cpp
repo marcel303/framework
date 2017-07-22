@@ -50,6 +50,7 @@ AudioGraph::AudioGraph()
 	, valuesToFree()
 	, time(0.0)
 	, activeFlags()
+	, events()
 	, mutex(nullptr)
 {
 	mutex = SDL_CreateMutex();
@@ -222,6 +223,8 @@ void AudioGraph::tick(const float dt, const bool traverseUnreferenced)
 	
 	time += dt;
 	
+	events.clear();
+	
 	//
 	
 	g_currentAudioGraph = nullptr;
@@ -303,6 +306,47 @@ bool AudioGraph::isFLagSet(const char * name) const
 	SDL_UnlockMutex(mutex);
 	
 	return result;
+}
+
+void AudioGraph::setMemf(const char * name, const float v1, const float v2, const float v3, const float v4)
+{
+	SDL_LockMutex(mutex);
+	{
+		auto & mem = memf[name];
+		
+		mem.v1 = v1;
+		mem.v2 = v2;
+		mem.v3 = v3;
+		mem.v4 = v4;
+	}
+	SDL_UnlockMutex(mutex);
+}
+
+AudioGraph::Memf AudioGraph::getMemf(const char * name) const
+{
+	AudioGraph::Memf result;
+	
+	SDL_LockMutex(mutex);
+	{
+		auto memfItr = memf.find(name);
+		
+		if (memfItr != memf.end())
+		{
+			result = memfItr->second;
+		}
+	}
+	SDL_UnlockMutex(mutex);
+	
+	return result;
+}
+
+void AudioGraph::triggerEvent(const char * event)
+{
+	SDL_LockMutex(mutex);
+	{
+		events.push_back(event);
+	}
+	SDL_UnlockMutex(mutex);
 }
 
 //

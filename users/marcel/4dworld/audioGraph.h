@@ -79,6 +79,22 @@ struct AudioGraph
 		}
 	};
 	
+	struct Memf
+	{
+		float v1;
+		float v2;
+		float v3;
+		float v4;
+		
+		Memf()
+			: v1(0.f)
+			, v2(0.f)
+			, v3(0.f)
+			, v4(0.f)
+		{
+		}
+	};
+	
 	std::map<GraphNodeId, AudioNodeBase*> nodes;
 	
 	GraphNodeId displayNodeId;
@@ -93,6 +109,8 @@ struct AudioGraph
 	double time;
 	
 	std::set<std::string> activeFlags;
+	std::map<std::string, Memf> memf;
+	std::vector<std::string> events;
 	
 	SDL_mutex * mutex;
 	
@@ -108,6 +126,11 @@ struct AudioGraph
 	void setFlag(const char * name, const bool value = true);
 	void resetFlag(const char * name);
 	bool isFLagSet(const char * name) const;
+	
+	void setMemf(const char * name, const float v1, const float v2 = 0.f, const float v3 = 0.f, const float v4 = 0.f);
+	Memf getMemf(const char * name) const;
+	
+	void triggerEvent(const char * event);
 };
 
 //
