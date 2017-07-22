@@ -32,7 +32,7 @@
 
 struct AudioNodeVoice : AudioNodeBase
 {
-	struct AudioSourceVoice : AudioSource
+	struct AudioSourceVoiceNode : AudioSource
 	{
 		AudioNodeVoice * voiceNode;
 		
@@ -50,124 +50,9 @@ struct AudioNodeVoice : AudioNodeBase
 		kOutput_COUNT
 	};
 	
-	AudioSourceVoice source;
+	AudioSourceVoiceNode source;
 	AudioVoice * voice;
 	
 	AudioNodeVoice();
 	~AudioNodeVoice() override;
-};
-
-//
-
-struct AudioNodeVoice4D : AudioNodeBase
-{
-	struct AudioSourceVoice : AudioSource
-	{
-		AudioNodeVoice4D * voiceNode;
-		
-		virtual void generate(ALIGN16 float * __restrict samples, const int numSamples);
-	};
-
-	enum Input
-	{
-		kInput_Audio,
-		kInput_Gain,
-		kInput_Global,
-		kInput_Color,
-		kInput_Name,
-		kInput_PosX,
-		kInput_PosY,
-		kInput_PosZ,
-		kInput_RotX,
-		kInput_RotY,
-		kInput_RotZ,
-		kInput_DimX,
-		kInput_DimY,
-		kInput_DimZ,
-		kInput_Articulation,
-		kInput_Doppler,
-		kInput_DopplerScale,
-		kInput_DopplerSmooth,
-		kInput_DistanceIntensity,
-		kInput_DistanceIntensityTreshold,
-		kInput_DistanceIntensityCurve,
-		kInput_DistanceDampening,
-		kInput_DistanceDampeningTreshold,
-		kInput_DistanceDampeningCurve,
-		kInput_DistanceDiffusion,
-		kInput_DistanceDiffusionTreshold,
-		kInput_DistanceDiffusionCurve,
-		kInput_SubBoost,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_COUNT
-	};
-	
-	AudioSourceVoice source;
-	AudioVoice * voice;
-	
-	AudioNodeVoice4D();
-	~AudioNodeVoice4D() override;
-
-	virtual void tick(const float dt) override;
-};
-
-//
-
-struct AudioNodeVoice4DGlobals : AudioNodeBase
-{
-	enum Input
-	{
-		kInput_MonoOutput,
-		kInput_Gain,
-		kInput_PosX,
-		kInput_PosY,
-		kInput_PosZ,
-		kInput_DimX,
-		kInput_DimY,
-		kInput_DimZ,
-		kInput_RotX,
-		kInput_RotY,
-		kInput_RotZ,
-		kInput_PlodeX,
-		kInput_PlodeY,
-		kInput_PlodeZ,
-		kInput_OriginX,
-		kInput_OriginY,
-		kInput_OriginZ,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_COUNT
-	};
-	
-	AudioNodeVoice4DGlobals()
-		: AudioNodeBase()
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_MonoOutput, kAudioPlugType_Bool);
-		addInput(kInput_Gain, kAudioPlugType_FloatVec);
-		addInput(kInput_PosX, kAudioPlugType_FloatVec);
-		addInput(kInput_PosY, kAudioPlugType_FloatVec);
-		addInput(kInput_PosZ, kAudioPlugType_FloatVec);
-		addInput(kInput_DimX, kAudioPlugType_FloatVec);
-		addInput(kInput_DimY, kAudioPlugType_FloatVec);
-		addInput(kInput_DimZ, kAudioPlugType_FloatVec);
-		addInput(kInput_RotX, kAudioPlugType_FloatVec);
-		addInput(kInput_RotY, kAudioPlugType_FloatVec);
-		addInput(kInput_RotZ, kAudioPlugType_FloatVec);
-		addInput(kInput_PlodeX, kAudioPlugType_FloatVec);
-		addInput(kInput_PlodeY, kAudioPlugType_FloatVec);
-		addInput(kInput_PlodeZ, kAudioPlugType_FloatVec);
-		addInput(kInput_OriginX, kAudioPlugType_FloatVec);
-		addInput(kInput_OriginY, kAudioPlugType_FloatVec);
-		addInput(kInput_OriginZ, kAudioPlugType_FloatVec);
-	}
-	
-	virtual void tick(const float dt) override;
 };
