@@ -49,7 +49,7 @@ AudioNodeTime::AudioNodeTime()
 	addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 }
 
-void AudioNodeTime::draw()
+void AudioNodeTime::tick(const float dt)
 {
 	const bool fineGrained = getInputBool(kInput_FineGrained, true);
 	const float scale = getInputFloat(kInput_Scale, 1.f);

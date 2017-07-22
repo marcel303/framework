@@ -37,7 +37,7 @@ AUDIO_NODE_TYPE(interpolate_scalar, AudioNodeInterpolateScalar)
 	out("result", "audioValue");
 }
 
-void AudioNodeInterpolateScalar::draw()
+void AudioNodeInterpolateScalar::tick(const float dt)
 {
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 	

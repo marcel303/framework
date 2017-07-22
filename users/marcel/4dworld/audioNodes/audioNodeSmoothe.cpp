@@ -44,7 +44,7 @@ AUDIO_NODE_TYPE(smoothe, AudioNodeSmoothe)
 	out("result", "audioValue");
 }
 
-void AudioNodeSmoothe::draw()
+void AudioNodeSmoothe::tick(const float _dt)
 {
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 	const SmoothingUnit smoothingUnit = (SmoothingUnit)getInputInt(kInput_SmoothingUnit, 0);

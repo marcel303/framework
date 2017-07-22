@@ -47,7 +47,7 @@ AudioNodeDisplay::AudioNodeDisplay()
 	addInput(kInput_Gain, kAudioPlugType_Float);
 }
 
-void AudioNodeDisplay::draw()
+void AudioNodeDisplay::tick(const float dt)
 {
 	const AudioFloat * audioL = getInputAudioFloat(kInput_AudioL, nullptr);
 	const AudioFloat * audioR = getInputAudioFloat(kInput_AudioR, nullptr);

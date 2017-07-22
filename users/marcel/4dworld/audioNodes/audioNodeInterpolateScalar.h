@@ -56,5 +56,5 @@ struct AudioNodeInterpolateScalar : AudioNodeBase
 		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 	}
 	
-	virtual void draw() override;
+	virtual void tick(const float dt) override;
 };

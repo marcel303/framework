@@ -78,7 +78,7 @@ AudioNodeWavefield2D::~AudioNodeWavefield2D()
 	wavefield = nullptr;
 }
 
-void AudioNodeWavefield2D::draw()
+void AudioNodeWavefield2D::tick(const float _dt)
 {
 	const AudioFloat defaultTension(1.f);
 	

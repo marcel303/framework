@@ -341,7 +341,6 @@ struct AudioNodeBase
 	bool isPassthrough;
 	
 	int tickTimeAvg;
-	int drawTimeAvg;
 	
 	AudioNodeBase();
 	
@@ -350,7 +349,6 @@ struct AudioNodeBase
 	}
 	
 	void traverseTick(const int traversalId, const float dt);
-	void traverseDraw(const int traversalId);
 	
 	void trigger(const int outputSocketIndex);
 	
@@ -489,7 +487,6 @@ struct AudioNodeBase
 	virtual void init(const GraphNode & node) { }
 	virtual void tick(const float dt) { }
 	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) { }
-	virtual void draw() { }
 	
 	//virtual void getDescription(AudioNodeDescription & d) { }
 };
@@ -647,7 +644,7 @@ struct AudioNodeSourceMix : AudioNodeBase
 		addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 	}
 	
-	virtual void draw() override
+	virtual void tick(const float dt) override
 	{
 		const AudioFloat * source1 = getInputAudioFloat(kInput_Source1, nullptr);
 		const AudioFloat * source2 = getInputAudioFloat(kInput_Source2, nullptr);
@@ -795,10 +792,6 @@ struct AudioNodeSourceSine : AudioNodeBase
 		addInput(kInput_A, kAudioPlugType_FloatVec);
 		addInput(kInput_B, kAudioPlugType_FloatVec);
 		addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
-	}
-	
-	virtual void tick(const float dt) override
-	{
 	}
 	
 	void drawSine()
@@ -987,7 +980,7 @@ struct AudioNodeSourceSine : AudioNodeBase
 		}
 	}
 	
-	virtual void draw() override
+	virtual void tick(const float dt) override
 	{
 		const Type type = (Type)getInputInt(kInput_Type, 0);
 		
@@ -1051,7 +1044,7 @@ struct AudioNodeMix : AudioNodeBase
 		addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 	}
 	
-	virtual void draw() override
+	virtual void tick(const float dt) override
 	{
 		const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
 		const AudioFloat * audioA = getInputAudioFloat(kInput_AudioA, nullptr);
@@ -1119,7 +1112,7 @@ struct AudioNodeMathSine : AudioNodeBase
 		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 	}
 	
-	virtual void draw() override
+	virtual void tick(const float dt) override
 	{
 		const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 		const float twoPi = 2.f * M_PI;

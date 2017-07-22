@@ -51,5 +51,5 @@ struct AudioNodeTime : AudioNodeBase
 	
 	AudioNodeTime();
 	
-	virtual void draw() override;
+	virtual void tick(const float dt) override;
 };

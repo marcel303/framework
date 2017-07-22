@@ -71,7 +71,7 @@ AudioNodeDelayLine::~AudioNodeDelayLine()
 	delayLine = nullptr;
 }
 
-void AudioNodeDelayLine::draw()
+void AudioNodeDelayLine::tick(const float dt)
 {
 	audioCpuTimingBlock(AudioNodeDelayLine);
 	

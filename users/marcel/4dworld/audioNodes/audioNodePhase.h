@@ -51,5 +51,5 @@ struct AudioNodePhase : AudioNodeBase
 	
 	AudioNodePhase();
 	
-	virtual void draw() override;
+	virtual void tick(const float dt) override;
 };

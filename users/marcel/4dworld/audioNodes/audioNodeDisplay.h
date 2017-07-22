@@ -60,5 +60,5 @@ struct AudioNodeDisplay : AudioNodeBase
 	AudioOutputChannel * outputChannelR;
 	
 	AudioNodeDisplay();
-	virtual void draw() override;
+	virtual void tick(const float dt) override;
 };

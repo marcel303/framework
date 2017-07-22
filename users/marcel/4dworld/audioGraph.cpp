@@ -45,7 +45,6 @@ AudioGraph::AudioGraph()
 	: nodes()
 	, displayNodeId(kGraphNodeIdInvalid)
 	, nextTickTraversalId(0)
-	, nextDrawTraversalId(0)
 	, graph(nullptr)
 	, valuesToFree()
 	, time(0.0)
@@ -228,50 +227,6 @@ void AudioGraph::tick(const float dt, const bool traverseUnreferenced)
 	//
 	
 	g_currentAudioGraph = nullptr;
-}
-
-void AudioGraph::draw(AudioOutputChannel * outputChannels, const int numOutputChannels, const bool traverseUnreferenced) const
-{
-	audioCpuTimingBlock(AudioGraph_Draw);
-	
-	// start traversal at the display node and traverse to leafs following predeps and and back up the tree again to draw
-	
-	if (displayNodeId != kGraphNodeIdInvalid)
-	{
-		auto nodeItr = nodes.find(displayNodeId);
-		Assert(nodeItr != nodes.end());
-		if (nodeItr != nodes.end())
-		{
-			auto node = nodeItr->second;
-			
-			AudioNodeDisplay * displayNode = static_cast<AudioNodeDisplay*>(node);
-			
-			displayNode->outputChannelL = numOutputChannels >= 1 ? &outputChannels[0] : nullptr;
-			displayNode->outputChannelR = numOutputChannels >= 2 ? &outputChannels[1] : nullptr;
-			{
-				displayNode->traverseDraw(nextDrawTraversalId);
-			}
-			displayNode->outputChannelL = nullptr;
-			displayNode->outputChannelR = nullptr;
-		}
-	}
-	
-	if (traverseUnreferenced)
-	{
-		// process nodes that aren't connected to the display node
-		
-		for (auto i : nodes)
-		{
-			AudioNodeBase * node = i.second;
-			
-			if (node->lastDrawTraversalId != nextDrawTraversalId)
-			{
-				node->traverseDraw(nextDrawTraversalId);
-			}
-		}
-	}
-	
-	++nextDrawTraversalId;
 }
 
 void AudioGraph::setFlag(const char * name, const bool value)

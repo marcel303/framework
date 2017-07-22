@@ -238,7 +238,6 @@ AudioNodeBase::AudioNodeBase()
 	, editorIsTriggered(false)
 	, isPassthrough(false)
 	, tickTimeAvg(0)
-	, drawTimeAvg(0)
 {
 }
 
@@ -266,30 +265,6 @@ void AudioNodeBase::traverseTick(const int traversalId, const float dt)
 	//
 	
 	tickTimeAvg = (tickTimeAvg * 99 + (t2 - t1) * 1 * (SAMPLE_RATE / AUDIO_UPDATE_SIZE)) / 100;
-}
-
-void AudioNodeBase::traverseDraw(const int traversalId)
-{
-	Assert(lastDrawTraversalId != traversalId);
-	lastDrawTraversalId = traversalId;
-	
-	//
-	
-	for (auto predep : predeps)
-	{
-		if (predep->lastDrawTraversalId != traversalId)
-			predep->traverseDraw(traversalId);
-	}
-	
-	const uint64_t t1 = g_TimerRT.TimeUS_get();
-	
-	draw();
-	
-	const uint64_t t2 = g_TimerRT.TimeUS_get();
-	
-	//
-	
-	drawTimeAvg = (drawTimeAvg * 95 + (t2 - t1) * 5 * (SAMPLE_RATE / AUDIO_UPDATE_SIZE)) / 100;
 }
 
 void AudioNodeBase::trigger(const int outputSocketIndex)

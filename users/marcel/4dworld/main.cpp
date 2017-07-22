@@ -196,7 +196,6 @@ struct AudioUpdateHandler : PortAudioHandler
 			SDL_LockMutex(mutex);
 			{
 				audioGraphMgr->tick(dt);
-				audioGraphMgr->draw();
 				
 				audioGraphMgr->updateAudioValues();
 			}
@@ -1182,7 +1181,6 @@ int main(int argc, char * argv[])
 					SDL_LockMutex(mutex);
 					{
 						audioGraph->tick(dt, true);
-						audioGraph->draw(nullptr, 0, true);
 						
 						realTimeConnection->updateAudioValues();
 					}

@@ -49,7 +49,7 @@ AudioNodePhase::AudioNodePhase()
 	addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 }
 
-void AudioNodePhase::draw()
+void AudioNodePhase::tick(const float dt)
 {
 	const bool fineGrained = getInputBool(kInput_FineGrained, true);
 	const AudioFloat * frequency = getInputAudioFloat(kInput_Frequency, &AudioFloat::Zero);

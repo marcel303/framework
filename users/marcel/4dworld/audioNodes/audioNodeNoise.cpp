@@ -236,7 +236,7 @@ void AudioNodeNoise::drawBrown()
 	}
 }
 
-void AudioNodeNoise::draw()
+void AudioNodeNoise::tick(const float dt)
 {
 	const Type type = (Type)getInputInt(kInput_Type, 0);
 	

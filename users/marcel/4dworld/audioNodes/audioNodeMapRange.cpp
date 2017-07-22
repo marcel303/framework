@@ -52,7 +52,7 @@ AudioNodeMapRange::AudioNodeMapRange()
 	addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 }
 
-void AudioNodeMapRange::draw()
+void AudioNodeMapRange::tick(const float dt)
 {
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 	const AudioFloat * inMin = getInputAudioFloat(kInput_InMin, &AudioFloat::Zero);

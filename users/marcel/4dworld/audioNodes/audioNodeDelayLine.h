@@ -62,5 +62,5 @@ struct AudioNodeDelayLine : AudioNodeBase
 	AudioNodeDelayLine();
 	virtual ~AudioNodeDelayLine() override;
 	
-	virtual void draw() override;
+	virtual void tick(const float dt) override;
 };

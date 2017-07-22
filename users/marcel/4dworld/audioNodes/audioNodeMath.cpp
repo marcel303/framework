@@ -231,7 +231,7 @@ AudioNodeMath::AudioNodeMath()
 	addOutput(kOutput_R, kAudioPlugType_FloatVec, &result);
 }
 
-void AudioNodeMath::draw()
+void AudioNodeMath::tick(const float dt)
 {
 	const Type type = (Type)getInputInt(kInput_Type, kType_Add);
 	const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
@@ -270,7 +270,7 @@ AudioNodeMathBase::AudioNodeMathBase(AudioNodeMath::Type _type)
 	addOutput(kOutput_R, kAudioPlugType_FloatVec, &result);
 }
 
-void AudioNodeMathBase::draw()
+void AudioNodeMathBase::tick(const float dt)
 {
 	const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
 	const AudioFloat * b = getInputAudioFloat(kInput_B, &AudioFloat::Zero);

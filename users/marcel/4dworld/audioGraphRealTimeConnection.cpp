@@ -934,7 +934,6 @@ bool AudioRealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::
 		d.add("");
 	
 	d.add("tick: %.3fms", node->tickTimeAvg / 1000.0);
-	d.add("draw: %.3fms", node->drawTimeAvg / 1000.0);
 	
 	std::swap(lines, d.lines);
 	
@@ -962,7 +961,7 @@ int AudioRealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 	
 	int result = 0;
 	
-	if (node->lastDrawTraversalId + 1 == audioGraph->nextDrawTraversalId)
+	if (node->lastTickTraversalId + 1 == audioGraph->nextTickTraversalId)
 		result |= kActivity_Continuous;
 	
 	if (node->editorIsTriggered)
@@ -1007,5 +1006,5 @@ int AudioRealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const
 	
 	auto node = nodeItr->second;
 	
-	return node->tickTimeAvg + node->drawTimeAvg;
+	return node->tickTimeAvg;
 }

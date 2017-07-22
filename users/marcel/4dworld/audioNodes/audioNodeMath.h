@@ -76,7 +76,7 @@ struct AudioNodeMath : AudioNodeBase
 	
 	AudioNodeMath();
 	
-	virtual void draw() override;
+	virtual void tick(const float dt) override;
 };
 
 struct AudioNodeMathBase : AudioNodeBase
@@ -99,5 +99,5 @@ struct AudioNodeMathBase : AudioNodeBase
 	
 	AudioNodeMathBase(AudioNodeMath::Type type);
 	
-	virtual void draw() override;
+	virtual void tick(const float dt) override;
 };

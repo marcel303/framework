@@ -68,5 +68,5 @@ struct AudioNodeEnvelope : AudioNodeBase
 	
 	void process();
 	
-	virtual void draw() override;
+	virtual void tick(const float dt) override;
 };

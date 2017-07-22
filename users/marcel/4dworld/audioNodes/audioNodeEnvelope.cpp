@@ -55,7 +55,7 @@ AudioNodeEnvelope::AudioNodeEnvelope()
 	addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 }
 
-void AudioNodeEnvelope::draw()
+void AudioNodeEnvelope::tick(const float dt)
 {
 	const AudioFloat * signal = getInputAudioFloat(kInput_Signal, &AudioFloat::Zero);
 	const AudioFloat * attack = getInputAudioFloat(kInput_Attack, &AudioFloat::Zero);

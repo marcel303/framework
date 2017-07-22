@@ -141,5 +141,5 @@ struct AudioNodeNoise : AudioNodeBase
 	void drawPink();
 	void drawBrown();
 	
-	virtual void draw() override;
+	virtual void tick(const float dt) override;
 };
