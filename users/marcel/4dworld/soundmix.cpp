@@ -237,6 +237,9 @@ AudioSourcePcm::AudioSourcePcm()
 	, pcmData(nullptr)
 	, samplePosition(0)
 	, isPlaying(false)
+	, loop(true)
+	, hasLooped(false)
+	, isDone(false)
 	, hasRange(false)
 	, rangeBegin(0)
 	, rangeEnd(0)
@@ -314,6 +317,11 @@ void AudioSourcePcm::setSamplePositionNorm(const float position)
 
 void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numSamples)
 {
+	hasLooped = false;
+	isDone = false;
+	
+	//
+	
 	bool generateSilence = false;
 	
 	if (isPlaying == false ||
@@ -324,26 +332,72 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 		generateSilence = true;
 	}
 	
+	//
+	
 	if (generateSilence)
 	{
 		for (int i = 0; i < numSamples; ++i)
 			samples[i] = 0.f;
+		
+		if (loop == false)
+		{
+			isDone = true;
+		}
 	}
 	else
 	{
-		for (int i = 0; i < numSamples; ++i)
+		if (loop)
 		{
-			if (samplePosition < 0 || samplePosition >= pcmData->numSamples)
-				samples[i] = 0.f;
-			else
-				samples[i] = pcmData->samples[samplePosition];
-			
-			samplePosition += 1;
-			
+			for (int i = 0; i < numSamples; ++i)
+			{
+				if (samplePosition < rangeBegin)
+					samplePosition = rangeBegin;
+				if (samplePosition >= rangeEnd)
+				{
+					samplePosition = rangeBegin;
+					hasLooped = true;
+				}
+				
+				if (samplePosition < 0 || samplePosition >= pcmData->numSamples)
+					samples[i] = 0.f;
+				else
+					samples[i] = pcmData->samples[samplePosition];
+				
+				samplePosition += 1;
+			}
+		}
+		else
+		{
 			if (samplePosition < rangeBegin)
 				samplePosition = rangeBegin;
 			if (samplePosition >= rangeEnd)
-				samplePosition = rangeBegin;
+				samplePosition = rangeEnd;
+			
+			for (int i = 0; i < numSamples; ++i)
+			{
+				if (samplePosition < 0)
+				{
+					samples[i] = 0.f;
+				}
+				else if (samplePosition < pcmData->numSamples)
+				{
+					samples[i] = pcmData->samples[samplePosition];
+				}
+				else
+				{
+					samples[i] = 0.f;
+				}
+				
+				if (samplePosition < rangeEnd)
+				{
+					samplePosition++;
+				}
+			}
+			
+			if (samplePosition == rangeEnd)
+			{
+				isDone = true;
+			}
 		}
 	}
 }
@@ -601,7 +655,7 @@ void AudioVoiceManager::portAudioCallback(
 	SDL_UnlockMutex(mutex);
 }
 
-bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
+bool AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool forceSync)
 {
 	bool result = true;
 	
@@ -616,7 +670,7 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 				
 				stream.setSource(voice.channelIndex);
 				
-				if (voice.spat.color != voice.lastSentSpat.color)
+				if (forceSync || voice.spat.color != voice.lastSentSpat.color)
 				{
 					stream.sourceColor(
 						voice.spat.color[0],
@@ -624,12 +678,12 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 						voice.spat.color[2]);
 				}
 				
-				if (voice.spat.name != voice.lastSentSpat.name)
+				if (forceSync || voice.spat.name != voice.lastSentSpat.name)
 				{
 					stream.sourceName(voice.spat.name.c_str());
 				}
 				
-				if (voice.spat.pos != voice.lastSentSpat.pos)
+				if (forceSync || voice.spat.pos != voice.lastSentSpat.pos)
 				{
 					stream.sourcePosition(
 						voice.spat.pos[0],
@@ -637,7 +691,7 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 						voice.spat.pos[2]);
 				}
 				
-				if (voice.spat.size != voice.lastSentSpat.size)
+				if (forceSync || voice.spat.size != voice.lastSentSpat.size)
 				{
 					stream.sourceDimensions(
 						voice.spat.size[0],
@@ -645,7 +699,7 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 						voice.spat.size[2]);
 				}
 				
-				if (voice.spat.rot != voice.lastSentSpat.rot)
+				if (forceSync || voice.spat.rot != voice.lastSentSpat.rot)
 				{
 					stream.sourceRotation(
 						voice.spat.rot[0],
@@ -653,7 +707,8 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 						voice.spat.rot[2]);
 				}
 				
-				if (voice.spat.orientationMode != voice.lastSentSpat.orientationMode ||
+				if (forceSync ||
+					voice.spat.orientationMode != voice.lastSentSpat.orientationMode ||
 					voice.spat.orientationCenter != voice.lastSentSpat.orientationCenter)
 				{
 					stream.sourceOrientationMode(
@@ -663,7 +718,7 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 						voice.spat.orientationCenter[2]);
 				}
 				
-				if (voice.spat.spatialCompressor != voice.lastSentSpat.spatialCompressor)
+				if (forceSync || voice.spat.spatialCompressor != voice.lastSentSpat.spatialCompressor)
 				{
 					stream.sourceSpatialCompressor(
 						voice.spat.spatialCompressor.enable,
@@ -675,13 +730,13 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 						voice.spat.spatialCompressor.invert);
 				}
 				
-				if (voice.spat.articulation != voice.lastSentSpat.articulation)
+				if (forceSync || voice.spat.articulation != voice.lastSentSpat.articulation)
 				{
 					stream.sourceArticulation(
 						voice.spat.articulation);
 				}
 				
-				if (voice.spat.doppler != voice.lastSentSpat.doppler)
+				if (forceSync || voice.spat.doppler != voice.lastSentSpat.doppler)
 				{
 					stream.sourceDoppler(
 						voice.spat.doppler.enable,
@@ -689,7 +744,7 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 						voice.spat.doppler.smooth);
 				}
 				
-				if (voice.spat.distanceIntensity != voice.lastSentSpat.distanceIntensity)
+				if (forceSync || voice.spat.distanceIntensity != voice.lastSentSpat.distanceIntensity)
 				{
 					stream.sourceDistanceIntensity(
 						voice.spat.distanceIntensity.enable,
@@ -697,7 +752,7 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 						voice.spat.distanceIntensity.curve);
 				}
 				
-				if (voice.spat.distanceDampening != voice.lastSentSpat.distanceDampening)
+				if (forceSync || voice.spat.distanceDampening != voice.lastSentSpat.distanceDampening)
 				{
 					stream.sourceDistanceDamping(
 						voice.spat.distanceDampening.enable,
@@ -705,7 +760,7 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 						voice.spat.distanceDampening.curve);
 				}
 				
-				if (voice.spat.distanceDiffusion != voice.lastSentSpat.distanceDiffusion)
+				if (forceSync || voice.spat.distanceDiffusion != voice.lastSentSpat.distanceDiffusion)
 				{
 					stream.sourceDistanceDiffusion(
 						voice.spat.distanceDiffusion.enable,
@@ -713,12 +768,12 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 						voice.spat.distanceDiffusion.curve);
 				}
 				
-				if (voice.spat.subBoost != voice.lastSentSpat.subBoost)
+				if (forceSync || voice.spat.subBoost != voice.lastSentSpat.subBoost)
 				{
 					stream.sourceSubBoost(voice.spat.subBoost);
 				}
 				
-				if (voice.spat.globalEnable != voice.lastSentSpat.globalEnable)
+				if (forceSync || voice.spat.globalEnable != voice.lastSentSpat.globalEnable)
 				{
 					stream.sourceGlobalEnable(voice.spat.globalEnable);
 				}
@@ -728,15 +783,15 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream)
 			
 			//
 			
-			if (spat.globalPos != lastSentSpat.globalPos)
+			if (forceSync || spat.globalPos != lastSentSpat.globalPos)
 				stream.globalPosition(spat.globalPos[0], spat.globalPos[1], spat.globalPos[2]);
-			if (spat.globalSize != lastSentSpat.globalSize)
+			if (forceSync || spat.globalSize != lastSentSpat.globalSize)
 				stream.globalDimensions(spat.globalSize[0], spat.globalSize[1], spat.globalSize[2]);
-			if (spat.globalRot != lastSentSpat.globalRot)
+			if (forceSync || spat.globalRot != lastSentSpat.globalRot)
 				stream.globalRotation(spat.globalRot[0], spat.globalRot[1], spat.globalRot[2]);
-			if (spat.globalPlode != lastSentSpat.globalPlode)
+			if (forceSync || spat.globalPlode != lastSentSpat.globalPlode)
 				stream.globalPlode(spat.globalPlode[0], spat.globalPlode[1], spat.globalPlode[2]);
-			if (spat.globalOrigin != lastSentSpat.globalOrigin)
+			if (forceSync || spat.globalOrigin != lastSentSpat.globalOrigin)
 				stream.globalOrigin(spat.globalOrigin[0], spat.globalOrigin[1], spat.globalOrigin[2]);
 			
 			lastSentSpat = spat;

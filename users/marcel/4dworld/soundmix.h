@@ -106,6 +106,9 @@ struct AudioSourcePcm : AudioSource
 	int samplePosition;
 	
 	bool isPlaying;
+	bool loop;
+	bool hasLooped;
+	bool isDone;
 	
 	bool hasRange;
 	int rangeBegin;
@@ -337,7 +340,7 @@ struct AudioVoiceManager : PortAudioHandler
 		void * outputBuffer,
 		int framesPerBuffer) override;
 	
-	bool generateOsc(Osc4DStream & stream);
+	bool generateOsc(Osc4DStream & stream, const bool forceSync);
 };
 
 extern AudioVoiceManager * g_voiceMgr;
