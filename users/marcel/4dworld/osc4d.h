@@ -1,5 +1,7 @@
 #pragma once
 
+#define OSC_SEND_BUNDLES 1
+
 struct Osc4D
 {
 	enum OrientationMode
@@ -99,6 +101,7 @@ struct Osc4D
 
 #include "ip/UdpSocket.h"
 #include "osc/OscOutboundPacketStream.h"
+#include <functional>
 
 #define OSC_BUFFER_SIZE (64*1024)
 
@@ -107,33 +110,65 @@ struct Osc4DStream : Osc4D
 	char buffer[OSC_BUFFER_SIZE];
 	
 	osc::OutboundPacketStream stream;
-	UdpTransmitSocket * transmitSocket;
+	
+	bool hasMessage;
+	
+	std::function<void(osc::OutboundPacketStream & stream)> send;
 
-	Osc4DStream(UdpTransmitSocket * _transmitSocket)
+	Osc4DStream()
 		: stream(buffer, OSC_BUFFER_SIZE)
-		, transmitSocket(_transmitSocket)
+		, hasMessage(false)
+		, send()
 	{
 	}
 	
 	void beginBundle()
 	{
-		stream = osc::OutboundPacketStream(buffer, OSC_BUFFER_SIZE);
-		
+	#if OSC_SEND_BUNDLES
 		stream << osc::BeginBundleImmediate;
+	#endif
 	}
 	
 	void endBundle()
 	{
+	#if OSC_SEND_BUNDLES
 		stream << osc::EndBundle;
+		
+		flush();
+	#endif
+	}
+	
+	void flush()
+	{
+		if (hasMessage && stream.IsReady())
+		{
+			send(stream);
+		}
+		
+		stream = osc::OutboundPacketStream(buffer, OSC_BUFFER_SIZE);
+		hasMessage = false;
 	}
 
 	virtual void begin(const char * name) override
 	{
+	#if OSC_SEND_BUNDLES == 0
+		stream << osc::BeginBundleImmediate;
+	#endif
+	
 		stream << osc::BeginMessage(name);
+		
+		hasMessage = true;
 	}
+	
 	virtual void end() override
 	{
 		stream << osc::EndMessage;
+		
+	#if OSC_SEND_BUNDLES == 0
+		stream << osc::EndBundle;
+		
+		flush();
+	#endif
 	}
 
 	virtual void b(const bool v) override

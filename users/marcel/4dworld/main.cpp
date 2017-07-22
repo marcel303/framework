@@ -51,7 +51,7 @@ todo : editor :
 
 #define FULLSCREEN 0
 
-#define MONO_OUTPUT true
+#define MONO_OUTPUT 1
 #define OSC_TEST 1
 
 extern const int GFX_SX;
@@ -78,52 +78,156 @@ static AudioRealTimeConnection * realTimeConnection = nullptr;
 
 //
 
-struct AudioSourceAudioGraph : PortAudioHandler
+#include "audioGraphManager.h"
+#include "ip/UdpSocket.h"
+#include "osc/OscOutboundPacketStream.h"
+#include <vector>
+
+#include "wavefield.h" // fixme : for CommandQueue
+
+struct AudioUpdateTask
 {
-	AudioGraph ** audioGraphPtr;
-	int numChannels;
-	
-	AudioSourceAudioGraph()
-		: audioGraphPtr(nullptr)
-		, numChannels(0)
+	virtual ~AudioUpdateTask()
 	{
+	}
+	
+	virtual void audioUpdate(const float dt) = 0;
+};
+
+struct AudioUpdateHandler : PortAudioHandler
+{
+	struct Command
+	{
+		enum Type
+		{
+			kType_None,
+			kType_ForceOscSync
+		};
+		
+		Type type;
+		
+		Command()
+			: type(kType_None)
+		{
+		}
+	};
+	
+	std::vector<AudioUpdateTask*> updateTasks;
+	
+	AudioVoiceManager * voiceMgr;
+	
+	AudioGraphManager * audioGraphMgr;
+	
+	UdpTransmitSocket * transmitSocket;
+	
+	CommandQueue<Command> commandQueue;
+	
+	AudioUpdateHandler()
+		: updateTasks()
+		, voiceMgr(nullptr)
+		, audioGraphMgr(nullptr)
+		, transmitSocket(nullptr)
+		, commandQueue()
+	{
+	}
+	
+	~AudioUpdateHandler()
+	{
+		shut();
+	}
+	
+	void init(const char * ipAddress, const int udpPort)
+	{
+		shut();
+		
+		Assert(transmitSocket == nullptr);
+		transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPort));
+	}
+	
+	void shut()
+	{
+		delete transmitSocket;
+		transmitSocket = nullptr;
+	}
+	
+	void setOscEndpoint(const char * ipAddress, const int udpPort)
+	{
+		SDL_LockMutex(mutex);
+		{
+			shut();
+			
+			init(ipAddress, udpPort);
+		}
+		SDL_UnlockMutex(mutex);
 	}
 	
 	virtual void portAudioCallback(
 		const void * inputBuffer,
 		void * outputBuffer,
-		int framesPerBuffer)
+		int framesPerBuffer) override
 	{
-		Assert(framesPerBuffer == AUDIO_UPDATE_SIZE);
-
-		float * samples = (float*)outputBuffer;
-		const int numSamples = framesPerBuffer;
+		Command command;
 		
-		memset(samples, 0, numSamples * numChannels * sizeof(float));
+		while (commandQueue.pop(command))
+		{
+			switch (command.type)
+			{
+			case Command::kType_None:
+				break;
+			case Command::kType_ForceOscSync:
+				break;
+			}
+		}
 		
-		if (*audioGraphPtr != nullptr)
+		//
+		
+		const float dt = framesPerBuffer / float(SAMPLE_RATE);
+		
+		for (auto updateTask : updateTasks)
+		{
+			updateTask->audioUpdate(dt);
+		}
+		
+		if (audioGraphMgr != nullptr)
 		{
 			SDL_LockMutex(mutex);
 			{
-				Assert(numSamples == AUDIO_UPDATE_SIZE);
+				audioGraphMgr->tick(dt);
+				audioGraphMgr->draw();
 				
-				const double dt = AUDIO_UPDATE_SIZE / double(SAMPLE_RATE);
-				
-				AudioOutputChannel channels[numChannels];
-				
-				for (int i = 0; i < numChannels; ++i)
-				{
-					channels[i].samples = samples + i;
-					channels[i].stride = numChannels;
-				}
-				
-				AudioGraph * audioGraph = *audioGraphPtr;
-				audioGraph->tick(dt, true);
-				audioGraph->draw(channels, numChannels, true);
-				
-				realTimeConnection->updateAudioValues();
+				audioGraphMgr->updateAudioValues();
 			}
 			SDL_UnlockMutex(mutex);
+		}
+		
+		if (voiceMgr != nullptr)
+		{
+			voiceMgr->portAudioCallback(inputBuffer, outputBuffer, framesPerBuffer);
+			
+			//
+			
+			// todo : remove limiter hack
+			static int limiter = 0;
+			limiter++;
+			
+			if ((limiter % 10) == 0)
+			{
+				Osc4DStream stream4D;
+				
+				stream4D.send = [&](osc::OutboundPacketStream & stream)
+				{
+					if (transmitSocket != nullptr)
+					{
+						transmitSocket->Send(stream.Data(), stream.Size());
+					}
+				};
+				
+				stream4D.beginBundle();
+				{
+					voiceMgr->generateOsc(stream4D, false);
+				}
+				stream4D.endBundle();
+			}
 		}
 	}
 };
@@ -351,7 +455,7 @@ struct TestObject
 	}
 };
 
-struct World
+struct World : AudioUpdateTask
 {
 	std::list<Creature> creatures;
 	
@@ -411,6 +515,11 @@ struct World
 		{
 			creatures.pop_front();
 		}
+	}
+	
+	virtual void audioUpdate(const float dt) override
+	{
+		tick(dt);
 	}
 };
 
@@ -503,117 +612,7 @@ static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, 
 	gxPopMatrix();
 }
 
-#include "audioGraphManager.h"
-#include "ip/UdpSocket.h"
-#include "osc/OscOutboundPacketStream.h"
-
-struct AudioUpdateHandler : PortAudioHandler
-{
-	World * world;
-	
-	AudioVoiceManager * voiceMgr;
-	
-	AudioGraphManager * audioGraphMgr;
-	
-	UdpTransmitSocket * transmitSocket;
-	
-	AudioUpdateHandler()
-		: world(nullptr)
-		, voiceMgr(nullptr)
-		, audioGraphMgr(nullptr)
-		, transmitSocket(nullptr)
-	{
-	}
-	
-	~AudioUpdateHandler()
-	{
-		shut();
-	}
-	
-	void init(const char * ipAddress, const int udpPort)
-	{
-		shut();
-		
-		Assert(transmitSocket == nullptr);
-		transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPort));
-	}
-	
-	void shut()
-	{
-		delete transmitSocket;
-		transmitSocket = nullptr;
-	}
-	
-	void setOscEndpoint(const char * ipAddress, const int udpPort)
-	{
-		SDL_LockMutex(mutex);
-		{
-			shut();
-			
-			init(ipAddress, udpPort);
-		}
-		SDL_UnlockMutex(mutex);
-	}
-	
-	virtual void portAudioCallback(
-		const void * inputBuffer,
-		void * outputBuffer,
-		int framesPerBuffer) override
-	{
-		const float dt = framesPerBuffer / float(SAMPLE_RATE);
-		
-		if (world != nullptr)
-		{
-			world->tick(dt);
-		}
-		
-		if (audioGraphMgr != nullptr)
-		{
-			SDL_LockMutex(mutex);
-			{
-				audioGraphMgr->tick(dt);
-				audioGraphMgr->draw();
-				
-				audioGraphMgr->updateAudioValues();
-			}
-			SDL_UnlockMutex(mutex);
-		}
-		
-		if (voiceMgr != nullptr)
-		{
-			voiceMgr->portAudioCallback(inputBuffer, outputBuffer, framesPerBuffer);
-			
-			//
-			
-			if (true)
-			{
-				bool isValid = true;
-				
-				Osc4DStream stream4D(transmitSocket);
-				
-				stream4D.beginBundle();
-				{
-					isValid &= voiceMgr->generateOsc(stream4D);
-				}
-				stream4D.endBundle();
-				
-				isValid &= stream4D.stream.IsReady();
-				
-				//
-				
-				Assert(isValid);
-				if (isValid)
-				{
-					SDL_LockMutex(mutex);
-					{
-						transmitSocket->Send(stream4D.stream.Data(), stream4D.stream.Size());
-					}
-					SDL_UnlockMutex(mutex);
-				}
-			}
-		}
-	}
-};
+//
 
 static void testAudioVoiceManager()
 {
@@ -643,7 +642,7 @@ static void testAudioVoiceManager()
 	AudioUpdateHandler audioUpdateHandler;
 	
 	audioUpdateHandler.init(oscIpAddress.c_str(), oscUdpPort);
-	audioUpdateHandler.world = world;
+	audioUpdateHandler.updateTasks.push_back(world);
 	audioUpdateHandler.voiceMgr = &voiceMgr;
 	
 	PortAudioObject pa;
@@ -782,6 +781,14 @@ static void testAudioVoiceManager()
 			pushMenu("globals");
 			{
 				doLabel("globals", 0.f);
+				
+				if (doButton("force OSC sync"))
+				{
+					AudioUpdateHandler::Command command;
+					command.type = AudioUpdateHandler::Command::kType_ForceOscSync;
+					audioUpdateHandler.commandQueue.push(command);
+				}
+				
 				doTextBox(g_voiceMgr->spat.globalPos[0], "pos.x", dt);
 				doTextBox(g_voiceMgr->spat.globalPos[1], "pos.y", dt);
 				doTextBox(g_voiceMgr->spat.globalPos[2], "pos.z", dt);
@@ -851,6 +858,69 @@ static void testAudioVoiceManager()
 
 #include "audioGraphManager.h"
 
+AudioGraphManager * g_audioGraphMgr = nullptr;
+
+struct Ball : AudioUpdateTask
+{
+	AudioGraphInstance * graphInstance;
+	Vec3 pos;
+	Vec3 vel;
+	
+	Ball()
+		: graphInstance(nullptr)
+		, pos(0.f, 10.f, 0.f)
+		, vel(0.f, 0.f, 0.f)
+	{
+		graphInstance = g_audioGraphMgr->createInstance("ballTest.xml");
+	}
+	
+	~Ball()
+	{
+		g_audioGraphMgr->free(graphInstance);
+	}
+	
+	void tick(const float dt)
+	{
+		vel[1] += -10.f * dt;
+		
+		pos += vel * dt;
+		
+		if (pos[1] < 0.f)
+		{
+			pos[1] *= -1.f;
+			vel[1] *= -1.f;
+			
+			graphInstance->audioGraph->triggerEvent("bounce");
+		}
+		
+		for (int i = 0; i < 3; ++i)
+		{
+			if (i == 1)
+				continue;
+			
+			if (pos[i] < -3.f)
+			{
+				pos[i] = -3.f;
+				vel[i] *= -1.f;
+			}
+			else if (pos[i] > +3.f)
+			{
+				pos[i] = +3.f;
+				vel[i] *= -1.f;
+			}
+		}
+		
+		
+		graphInstance->audioGraph->setMemf("pos", pos[0], pos[1], pos[2]);
+		graphInstance->audioGraph->setMemf("vel", pos[0], pos[1], pos[2]);
+	}
+	
+	virtual void audioUpdate(const float dt)
+	{
+		tick(dt);
+	}
+};
+
 static void testAudioGraphManager()
 {
 	const int kNumChannels = 16;
@@ -866,8 +936,10 @@ static void testAudioGraphManager()
 	//
 	
 	AudioGraphManager audioGraphMgr;
-	
 	audioGraphMgr.audioMutex = mutex;
+	
+	Assert(g_audioGraphMgr == nullptr);
+	g_audioGraphMgr = &audioGraphMgr;
 	
 	AudioGraphInstance * instance1 = audioGraphMgr.createInstance("audioTest1.xml");
 	AudioGraphInstance * instance2 = audioGraphMgr.createInstance("audioTest1.xml");
@@ -877,11 +949,27 @@ static void testAudioGraphManager()
 	audioGraphMgr.free(instance2);
 	audioGraphMgr.free(instance3);
 	
-	instance1 = audioGraphMgr.createInstance("wavefieldTest.xml");
+	//instance1 = audioGraphMgr.createInstance("wavefieldTest.xml");
+	instance1 = audioGraphMgr.createInstance("lowpassTest.xml");
 	
 	//instance1 = audioGraphMgr.createInstance("voiceTest1.xml");
 	//instance2 = audioGraphMgr.createInstance("voiceTest2.xml");
 	//instance3 = audioGraphMgr.createInstance("voiceTest3.xml");
+	
+	std::vector<Ball*> balls;
+	
+	//for (int i = 0; i < 3; ++i)
+	for (int i = 0; i < 0; ++i)
+	{
+		Ball * ball = new Ball();
+		
+		ball->pos[1] = random(10.f, 20.f);
+		ball->vel[0] = random(-2.f, +2.f);
+		ball->vel[1] = random(-5.f, +5.f);
+		ball->vel[2] = random(-2.f, +2.f);
+		
+		balls.push_back(ball);
+	}
 	
 	//
 	
@@ -893,6 +981,11 @@ static void testAudioGraphManager()
 	audioUpdateHandler.init(oscIpAddress.c_str(), oscUdpPort);
 	audioUpdateHandler.voiceMgr = &voiceMgr;
 	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
+	
+	for (auto ball : balls)
+	{
+		audioUpdateHandler.updateTasks.push_back(ball);
+	}
 	
 	PortAudioObject pa;
 	
@@ -983,9 +1076,24 @@ static void testAudioGraphManager()
 	
 	//
 	
+	for (auto ball : balls)
+	{
+		delete ball;
+		ball = nullptr;
+	}
+	
+	balls.clear();
+	
+	//`a
+	
 	audioGraphMgr.free(instance1);
 	audioGraphMgr.free(instance2);
 	audioGraphMgr.free(instance3);
+	
+	//
+	
+	Assert(g_audioGraphMgr == nullptr);
+	g_audioGraphMgr = nullptr;
 	
 	//
 	
@@ -1020,6 +1128,7 @@ int main(int argc, char * argv[])
 		
 		AudioVoiceManager voiceMgr;
 		voiceMgr.init(kNumChannels);
+		voiceMgr.outputMono = MONO_OUTPUT;
 		
 		g_voiceMgr = &voiceMgr;
 		
@@ -1045,14 +1154,38 @@ int main(int argc, char * argv[])
 		
 		graphEdit->load(FILENAME);
 		
-		AudioSourceAudioGraph audioSource;
-		audioSource.numChannels = kNumChannels;
+		AudioUpdateHandler audioUpdateHandler;
+		audioUpdateHandler.voiceMgr = &voiceMgr;
 		
-		audioSource.audioGraphPtr = &audioGraph;
+		struct AudioGraphAudioUpdateTask : AudioUpdateTask
+		{
+			AudioGraph ** audioGraphPtr;
+			
+			virtual void audioUpdate(const float dt)
+			{
+				auto audioGraph = *audioGraphPtr;
+				
+				if (audioGraph != nullptr)
+				{
+					SDL_LockMutex(mutex);
+					{
+						audioGraph->tick(dt, true);
+						audioGraph->draw(nullptr, 0, true);
+						
+						realTimeConnection->updateAudioValues();
+					}
+					SDL_UnlockMutex(mutex);
+				}
+			}
+		};
+		
+		AudioGraphAudioUpdateTask audioGraphUpdateTask;
+		audioGraphUpdateTask.audioGraphPtr = &audioGraph;
+		audioUpdateHandler.updateTasks.push_back(&audioGraphUpdateTask);
 		
 		PortAudioObject pa;
 		
-		pa.init(SAMPLE_RATE, MONO_OUTPUT ? 1 : kNumChannels, AUDIO_UPDATE_SIZE, &audioSource);
+		pa.init(SAMPLE_RATE, MONO_OUTPUT ? 1 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 		
 		bool stop = false;
 		
