@@ -945,6 +945,7 @@ static void testAudioGraphManager()
 	
 	//instance1 = audioGraphMgr.createInstance("wavefieldTest.xml");
 	
+#if 0
 	instance1 = audioGraphMgr.createInstance("lowpassTest5.xml");
 	instance1->audioGraph->setMemf("int", 100);
 	instance1->audioGraph->triggerEvent("type1");
@@ -956,7 +957,10 @@ static void testAudioGraphManager()
 	instance3 = audioGraphMgr.createInstance("lowpassTest5.xml");
 	instance3->audioGraph->setMemf("int", 52);
 	instance3->audioGraph->triggerEvent("type1");
-	
+#elif 1
+	instance1 = audioGraphMgr.createInstance("mixtest1.xml");
+#endif
+
 	//instance4 = audioGraphMgr.createInstance("lowpassTest5.xml");
 	//instance4->audioGraph->setMemf("int", 35);
 	//instance4->audioGraph->triggerEvent("type2");

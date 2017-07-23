@@ -62,39 +62,46 @@ void AudioFloat::set(const AudioFloat & other)
 	{
 		setVector();
 		
-		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			samples[i] = other.samples[i];
+		memcpy(samples, other.samples, AUDIO_UPDATE_SIZE * sizeof(float));
 	}
 }
 
 void AudioFloat::setMul(const AudioFloat & other, const float gain)
 {
-	other.expand();
-	
-	//
-	
-	setVector();
-	
-	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-		samples[i] = other.samples[i] * gain;
+	if (other.isScalar)
+	{
+		setScalar(other.getScalar());
+	}
+	else
+	{
+		setVector();
+		
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			samples[i] = other.samples[i] * gain;
+	}
 }
 
 void AudioFloat::setMul(const AudioFloat & other, const AudioFloat & gain)
 {
-	other.expand();
-	gain.expand();
-	
-	//
-	
-	setVector();
-	
-	if (gain.isScalar)
+	if (other.isScalar && gain.isScalar)
 	{
+		setScalar(other.getScalar() * gain.getScalar());
+	}
+	else if (gain.isScalar)
+	{
+		Assert(other.isScalar == false);
+		
+		setVector();
+		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			samples[i] = other.samples[i] * gain.getScalar();
 	}
 	else
 	{
+		Assert(other.isScalar == false && gain.isScalar == false);
+		
+		setVector();
+		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			samples[i] = other.samples[i] * gain.samples[i];
 	}
@@ -102,45 +109,71 @@ void AudioFloat::setMul(const AudioFloat & other, const AudioFloat & gain)
 
 void AudioFloat::add(const AudioFloat & other)
 {
-	other.expand();
-	
-	//
-	
-	expand();
-	
-	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-		samples[i] += other.samples[i];
+	if (isScalar && other.isScalar)
+	{
+		setScalar(getScalar() + other.getScalar());
+	}
+	else
+	{
+		other.expand();
+		
+		expand();
+		
+		//
+		
+		setVector();
+		
+		audioBufferAdd(samples, other.samples, AUDIO_UPDATE_SIZE);
+	}
 }
 
 void AudioFloat::addMul(const AudioFloat & other, const float gain)
 {
-	other.expand();
-	
-	//
-	
-	expand();
-	
-	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-		samples[i] += other.samples[i] * gain;
+	if (isScalar && other.isScalar)
+	{
+		setScalar(getScalar() + other.getScalar() * gain);
+	}
+	else
+	{
+		other.expand();
+		
+		expand();
+		
+		//
+		
+		setVector();
+		
+		audioBufferAdd(samples, other.samples, AUDIO_UPDATE_SIZE, gain);
+	}
 }
 
 void AudioFloat::addMul(const AudioFloat & other, const AudioFloat & gain)
 {
-	other.expand();
-	
-	//
-	
-	expand();
-	
-	if (gain.isScalar)
+	if (isScalar && other.isScalar && gain.isScalar)
 	{
-		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			samples[i] += other.samples[i] * gain.getScalar();
+		setScalar(getScalar() + other.getScalar() * gain.getScalar());
 	}
 	else
 	{
-		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			samples[i] += other.samples[i] * gain.samples[i];
+		other.expand();
+		
+		expand();
+		
+		//
+		
+		setVector();
+		
+		if (gain.isScalar)
+		{
+			audioBufferAdd(samples, other.samples, AUDIO_UPDATE_SIZE, gain.getScalar());
+		}
+		else
+		{
+			// todo : write SSE code path for this case
+			
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+				samples[i] += other.samples[i] * gain.samples[i];
+		}
 	}
 }
 
@@ -148,9 +181,11 @@ void AudioFloat::mulMul(const AudioFloat & other, const float gain)
 {
 	other.expand();
 	
+	expand();
+	
 	//
 	
-	expand();
+	setVector();
 	
 	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		samples[i] *= other.samples[i] * gain;
@@ -160,9 +195,11 @@ void AudioFloat::mulMul(const AudioFloat & other, const AudioFloat & gain)
 {
 	other.expand();
 	
+	expand();
+	
 	//
 	
-	expand();
+	setVector();
 	
 	if (gain.isScalar)
 	{

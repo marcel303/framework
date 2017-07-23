@@ -29,6 +29,7 @@
 
 #include <list>
 #include <string>
+#include "limiter.h"
 
 #define AUDIO_UPDATE_SIZE 256
 
@@ -280,6 +281,8 @@ struct AudioVoice
 	bool rampDown;
 	bool isRamped;
 	
+	Limiter limiter;
+	
 	AudioVoice()
 		: channelIndex(-1)
 		, spat()
@@ -288,10 +291,12 @@ struct AudioVoice
 		, rampUp(false)
 		, rampDown(false)
 		, isRamped(true)
+		, limiter()
 	{
 	}
 	
 	void applyRamping(float * __restrict samples, const int numSamples);
+	void applyLimiter(float * __restrict samples, const int numSamples);
 };
 
 struct AudioVoiceManager : PortAudioHandler
@@ -342,5 +347,32 @@ struct AudioVoiceManager : PortAudioHandler
 	
 	bool generateOsc(Osc4DStream & stream, const bool forceSync);
 };
+
+//
+
+extern void audioBufferMul(
+	float * __restrict audioBuffer,
+	const int numSamples,
+	const float scale);
+
+extern void audioBufferAdd(
+	      float * __restrict audioBufferDst,
+	const float * __restrict audioBufferSrc,
+	const int numSamples);
+
+extern void audioBufferAdd(
+	      float * __restrict audioBufferDst,
+	const float * __restrict audioBufferSrc,
+	const int numSamples,
+	const float scale);
+
+extern void audioBufferAdd(
+	const float * __restrict audioBuffer1,
+	const float * __restrict audioBuffer2,
+	const int numSamples,
+	const float scale,
+	float * __restrict destinationBuffer);
+
+//
 
 extern AudioVoiceManager * g_voiceMgr;

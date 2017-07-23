@@ -31,23 +31,124 @@
 #include "osc4d.h"
 #include "soundmix.h"
 #include <cmath>
+#include <xmmintrin.h>
 
-static void audioBufferMul(float * __restrict audioBuffer, const int numSamples, const float scale)
+void audioBufferMul(
+	float * __restrict audioBuffer,
+	const int numSamples,
+	const float scale)
 {
-	for (int i = 0; i < numSamples; ++i)
+	int begin = 0;
+	
+#if 1
+	Assert((uintptr_t(audioBuffer) & 15) == 0);
+	
+	__m128 * __restrict audioBuffer4 = (__m128*)audioBuffer;
+	const int numSamples4 = numSamples / 4;
+	const __m128 scale4 = _mm_load1_ps(&scale);
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		audioBuffer4[i] = audioBuffer4[i] * scale4;
+	}
+	
+	begin = numSamples4 * 4;
+#endif
+
+	for (int i = begin; i < numSamples; ++i)
 	{
 		audioBuffer[i] *= scale;
 	}
 }
 
-static void audioBufferAdd(
+void audioBufferAdd(
+	      float * __restrict audioBufferDst,
+	const float * __restrict audioBufferSrc,
+	const int numSamples)
+{
+	int begin = 0;
+	
+#if 1
+	Assert((uintptr_t(audioBufferDst) & 15) == 0);
+	Assert((uintptr_t(audioBufferSrc) & 15) == 0);
+	
+	__m128 * __restrict audioBufferDst4 = (__m128*)audioBufferDst;
+	__m128 * __restrict audioBufferSrc4 = (__m128*)audioBufferSrc;
+	const int numSamples4 = numSamples / 4;
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		audioBufferDst4[i] = audioBufferDst4[i] + audioBufferSrc4[i];
+	}
+	
+	begin = numSamples4 * 4;
+#endif
+
+	for (int i = begin; i < numSamples; ++i)
+	{
+		audioBufferDst[i] = audioBufferDst[i] + audioBufferSrc[i];
+	}
+}
+
+void audioBufferAdd(
+	      float * __restrict audioBufferDst,
+	const float * __restrict audioBufferSrc,
+	const int numSamples,
+	const float scale)
+{
+	int begin = 0;
+	
+#if 1
+	Assert((uintptr_t(audioBufferDst) & 15) == 0);
+	Assert((uintptr_t(audioBufferSrc) & 15) == 0);
+	
+	__m128 * __restrict audioBufferDst4 = (__m128*)audioBufferDst;
+	__m128 * __restrict audioBufferSrc4 = (__m128*)audioBufferSrc;
+	const int numSamples4 = numSamples / 4;
+	const __m128 scale4 = _mm_load1_ps(&scale);
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		audioBufferDst4[i] = audioBufferDst4[i] + audioBufferSrc4[i] * scale4;
+	}
+	
+	begin = numSamples4 * 4;
+#endif
+
+	for (int i = begin; i < numSamples; ++i)
+	{
+		audioBufferDst[i] = audioBufferDst[i] + audioBufferSrc[i] * scale;
+	}
+}
+
+void audioBufferAdd(
 	const float * __restrict audioBuffer1,
 	const float * __restrict audioBuffer2,
 	const int numSamples,
 	const float scale,
 	float * __restrict destinationBuffer)
 {
-	for (int i = 0; i < numSamples; ++i)
+	int begin = 0;
+	
+#if 1
+	Assert((uintptr_t(audioBuffer1) & 15) == 0);
+	Assert((uintptr_t(audioBuffer2) & 15) == 0);
+	
+	__m128 * __restrict audioBuffer1_4 = (__m128*)audioBuffer1;
+	__m128 * __restrict audioBuffer2_4 = (__m128*)audioBuffer2;
+	const int numSamples4 = numSamples / 4;
+	const __m128 scale4 = _mm_load1_ps(&scale);
+	__m128 * __restrict destinationBuffer4 = (__m128*)destinationBuffer;
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		destinationBuffer4[i] = audioBuffer1_4[i] + audioBuffer2_4[i] * scale4;
+	}
+	
+	begin = numSamples4 * 4;
+#endif
+
+	for (int i = begin; i < numSamples; ++i)
 	{
 		destinationBuffer[i] = audioBuffer1[i] + audioBuffer2[i] * scale;
 	}
@@ -450,6 +551,11 @@ void AudioVoice::applyRamping(float * __restrict samples, const int numSamples)
 	}
 }
 
+void AudioVoice::applyLimiter(float * __restrict samples, const int numSamples)
+{
+	limiter.apply(samples, numSamples, .99f, 1.f);
+}
+
 //
 
 AudioVoiceManager * g_voiceMgr = nullptr;
@@ -600,55 +706,45 @@ void AudioVoiceManager::portAudioCallback(
 		{
 			if (voice.channelIndex != -1)
 			{
+				// generate samples
+				
+				ALIGN32 float voiceSamples[numSamples];
+				
+				voice.source->generate(voiceSamples, numSamples);
+				
+				// apply gain
+				
+				const float gain = voice.spat.gain * spat.globalGain;
+				
+				audioBufferMul(voiceSamples, numSamples, gain);
+				
+				// apply limiting
+				
+				voice.applyLimiter(voiceSamples, numSamples);
+				
+				// apply volume ramping
+				
+				voice.applyRamping(voiceSamples, numSamples);
+				
 				if (outputMono)
 				{
-					ALIGN32 float voiceSamples[numSamples];
-				
-					voice.source->generate(voiceSamples, numSamples);
+					// accumulate samples into mono buffer
 					
-					voice.applyRamping(voiceSamples, numSamples);
-					
-					const float gain = voice.spat.gain;
-					
-					for (int i = 0; i < numSamples; ++i)
-					{
-						samples[i] += voiceSamples[i] * gain;
-					}
+					audioBufferAdd(samples, voiceSamples, numSamples);
 				}
 				else
 				{
-					ALIGN32 float voiceSamples[numSamples];
-				
-					voice.source->generate(voiceSamples, numSamples);
-					
-					voice.applyRamping(voiceSamples, numSamples);
-					
-					const float gain = voice.spat.gain;
+					// interleave voice samples into destination buffer
 					
 					float * __restrict dstPtr = samples + voice.channelIndex;
 					
 					for (int i = 0; i < numSamples; ++i)
 					{
-						*dstPtr = voiceSamples[i] * gain;
+						*dstPtr = voiceSamples[i];
 						
 						dstPtr += numChannels;
 					}
 				}
-			}
-		}
-		
-		if (outputMono)
-		{
-			for (int i = 0; i < numSamples; ++i)
-			{
-				samples[i] *= spat.globalGain;
-			}
-		}
-		else
-		{
-			for (int i = 0; i < numSamples * numChannels; ++i)
-			{
-				samples[i] *= spat.globalGain;
 			}
 		}
 	}
