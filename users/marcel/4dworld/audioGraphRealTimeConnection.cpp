@@ -761,8 +761,14 @@ void AudioRealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, cons
 		bool isImmediate = false;
 		
 		for (auto & i : audioGraph->valuesToFree)
+		{
 			if (i.mem == input->mem)
 				isImmediate = true;
+				
+			for (auto & a : input->floatArray.array)
+				if (i.mem == a)
+					isImmediate = true;
+		}
 		
 		if (isImmediate)
 		{
