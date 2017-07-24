@@ -10,6 +10,8 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
+#define MAX_IMPULSE_PER_SECOND 1000.f
+
 const int Wavefield1D::kMaxElems;
 
 Wavefield1D::Wavefield1D()
@@ -94,8 +96,8 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	__m128d _mm_dt = _mm_set1_pd(dt);
 	__m128d _mm_pRetain = _mm_set1_pd(pRetain);
 	__m128d _mm_vRetain = _mm_set1_pd(vRetain);
-	__m128d _mm_dMin = _mm_set1_pd(-5000.0 * dt);
-	__m128d _mm_dMax = _mm_set1_pd(+5000.0 * dt);
+	__m128d _mm_dMin = _mm_set1_pd(-MAX_IMPULSE_PER_SECOND * dt);
+	__m128d _mm_dMax = _mm_set1_pd(+MAX_IMPULSE_PER_SECOND * dt);
 	
 	__m128d * __restrict _mm_p = (__m128d*)p;
 	__m128d * __restrict _mm_v = (__m128d*)v;
@@ -111,8 +113,8 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 	}
 #else
-	const double dMin = -5000.0 * dt;
-	const double dMax = +5000.0 * dt;
+	const double dMin = -MAX_IMPULSE_PER_SECOND * dt;
+	const double dMax = +MAX_IMPULSE_PER_SECOND * dt;
 	
 	for (int i = 0; i < kNumElems; ++i)
 	{
@@ -398,7 +400,7 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	__m256d _mm_dt = _mm256_set1_pd(dt);
 	__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
 	__m256d _mm_vRetain = _mm256_set1_pd(vRetain);
-	__m256d _mm_dMax = _mm256_set1_pd(5000.0 * dt);
+	__m256d _mm_dMax = _mm256_set1_pd(+MAX_IMPULSE_PER_SECOND * dt);
 	
 	for (int x = 0; x < numElems; ++x)
 	{
@@ -420,8 +422,8 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	__m128d _mm_dt = _mm_set1_pd(dt);
 	__m128d _mm_pRetain = _mm_set1_pd(pRetain);
 	__m128d _mm_vRetain = _mm_set1_pd(vRetain);
-	__m128d _mm_dMin = _mm_set1_pd(-5000.0 * dt);
-	__m128d _mm_dMax = _mm_set1_pd(+5000.0 * dt);
+	__m128d _mm_dMin = _mm_set1_pd(-MAX_IMPULSE_PER_SECOND * dt);
+	__m128d _mm_dMax = _mm_set1_pd(+MAX_IMPULSE_PER_SECOND * dt);
 	
 	for (int x = 0; x < numElems; ++x)
 	{
@@ -440,8 +442,8 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 		}
 	}
 #else
-	const double dMin = -5000.0 * dt;
-	const double dMax = +5000.0 * dt;
+	const double dMin = -MAX_IMPULSE_PER_SECOND * dt;
+	const double dMax = +MAX_IMPULSE_PER_SECOND * dt;
 	
 	for (int i = 0; i < kNumElems; ++i)
 	{
@@ -546,7 +548,6 @@ AudioSourceWavefield2D::AudioSourceWavefield2D()
 	: m_wavefield()
 	, m_sampleLocation()
 	, m_slowMotion(false)
-	, m_commandQueue()
 {
 	init(m_wavefield.kMaxElems);
 }
@@ -563,13 +564,6 @@ void AudioSourceWavefield2D::init(const int numElems)
 
 void AudioSourceWavefield2D::tick(const double dt)
 {
-	Command command;
-
-	while (m_commandQueue.pop(command))
-	{
-		m_wavefield.doGaussianImpact(command.x, command.y, command.radius, command.strength);
-	}
-	
 	m_sampleLocationSpeed[0] = 0.0;
 	m_sampleLocationSpeed[1] = 0.0;
 	
