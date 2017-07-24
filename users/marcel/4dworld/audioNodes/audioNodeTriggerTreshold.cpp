@@ -71,16 +71,18 @@ void AudioNodeTriggerTreshold::tick(const float dt)
 	const bool isUp = value > treshold;
 
 	oldValue = value;
-
-	if (wasDown && isUp)
+	
+	if (isPassthrough)
+	{
+	}
+	else if (wasDown && isUp)
 	{
 		const float triggerValue = getInputAudioFloat(kInput_UpValue, &AudioFloat::Zero)->getMean();
 		
 		wentUp.setFloat(triggerValue);
 		trigger(kOutput_WentUp);
 	}
-
-	if (wasUp && isDown)
+	else if (wasUp && isDown)
 	{
 		const float triggerValue = getInputAudioFloat(kInput_DownValue, &AudioFloat::Zero)->getMean();
 		

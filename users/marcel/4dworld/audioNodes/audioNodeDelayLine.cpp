@@ -95,7 +95,14 @@ void AudioNodeDelayLine::tick(const float dt)
 		}
 	}
 	
-	if (delayLine->getLength() > 0)
+	if (isPassthrough)
+	{
+		outputValue[0].set(*value);
+		outputValue[1].set(*value);
+		outputValue[2].set(*value);
+		outputValue[3].set(*value);
+	}
+	else if (delayLine->getLength() > 0)
 	{
 		int nextWriteIndex = delayLine->nextWriteIndex;
 		

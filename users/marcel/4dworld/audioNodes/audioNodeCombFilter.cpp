@@ -84,7 +84,11 @@ void AudioNodeCombFilter::tick(const float dt)
 		}
 	}
 	
-	if (delayLine->getLength() > 0)
+	if (isPassthrough)
+	{
+		valueOutput.set(*value);
+	}
+	else if (delayLine->getLength() > 0)
 	{
 		value->expand();
 		delay->expand();

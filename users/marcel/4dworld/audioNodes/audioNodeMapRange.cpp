@@ -66,7 +66,11 @@ void AudioNodeMapRange::tick(const float dt)
 		outMin->isScalar &&
 		outMax->isScalar;
 	
-	if (scalarRange)
+	if (isPassthrough)
+	{
+		resultOutput.set(*value);
+	}
+	else if (scalarRange)
 	{
 		const float _inMin = inMin->getScalar();
 		const float _inMax = inMax->getScalar();

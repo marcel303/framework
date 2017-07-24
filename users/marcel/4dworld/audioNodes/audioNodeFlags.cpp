@@ -57,6 +57,9 @@ AudioNodeFlags::AudioNodeFlags()
 
 void AudioNodeFlags::tick(const float dt)
 {
+	if (isPassthrough)
+		return;
+		
 	const char * flag = getInputString(kInput_Flag, nullptr);
 	
 	bool isSet = false;

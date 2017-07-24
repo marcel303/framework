@@ -63,16 +63,20 @@ void AudioNodeEnvelope::tick(const float dt)
 	const AudioFloat * sustain = getInputAudioFloat(kInput_Sustain, &AudioFloat::Zero);
 	const AudioFloat * release = getInputAudioFloat(kInput_Release, &AudioFloat::Zero);
 	
-	signal->expand();
-	
 	const bool scalarInputs =
 		attack->isScalar &&
 		decay->isScalar &&
 		sustain->isScalar &&
 		release->isScalar;
 	
-	if (scalarInputs)
+	if (isPassthrough)
 	{
+		resultOutput.set(*signal);
+	}
+	else if (scalarInputs)
+	{
+		signal->expand();
+		
 		resultOutput.setVector();
 		
 		const double dt = 1.0 / SAMPLE_RATE;
@@ -151,6 +155,8 @@ void AudioNodeEnvelope::tick(const float dt)
 	}
 	else
 	{
+		signal->expand();
+		
 		attack->expand();
 		decay->expand();
 		sustain->expand();

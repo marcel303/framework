@@ -50,16 +50,16 @@ void AudioNodeSmoothe::tick(const float _dt)
 	const SmoothingUnit smoothingUnit = (SmoothingUnit)getInputInt(kInput_SmoothingUnit, 0);
 	const AudioFloat * retain = getInputAudioFloat(kInput_Smoothness, &AudioFloat::Half);
 	
-	//
-	
-	value->expand();
-	
-	//
-	
 	const double dt = (smoothingUnit == kSmoothingUnit_PerSecond ? 1.0 : 1000.0) / SAMPLE_RATE;
 	
-	if (retain->isScalar)
+	if (isPassthrough)
 	{
+		resultOutput.set(*value);
+	}
+	else if (retain->isScalar)
+	{
+		value->expand();
+		
 		const double retainPerSecond = std::min(1.f, std::max(0.f, retain->getScalar()));
 		const double retainPerSample = std::pow(retainPerSecond, dt);
 		const double followPerSample = 1.0 - retainPerSample;
@@ -75,6 +75,8 @@ void AudioNodeSmoothe::tick(const float _dt)
 	}
 	else
 	{
+		value->expand();
+		
 		resultOutput.setVector();
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)

@@ -50,8 +50,11 @@ AudioNodeTriggerDenom::AudioNodeTriggerDenom()
 void AudioNodeTriggerDenom::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
 {
 	const int interval = getInputInt(kInput_Interval, 1);
-
-	if (interval > 0)
+	
+	if (isPassthrough)
+	{
+	}
+	else if (interval > 0)
 	{
 		if ((count % interval) == 0)
 		{

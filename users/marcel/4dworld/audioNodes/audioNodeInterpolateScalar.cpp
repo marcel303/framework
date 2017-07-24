@@ -41,23 +41,30 @@ void AudioNodeInterpolateScalar::tick(const float dt)
 {
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 	
-	//
-
-	const float oldValue = previousValue;
-	const float newValue = value->getScalar();
-
-	const float tStep = 1.f / AUDIO_UPDATE_SIZE;
-	float t = 0.f;
-
-	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+	if (isPassthrough)
 	{
-		const float w2 = t;
-		const float w1 = 1.f - t;
-
-		resultOutput.samples[i] = oldValue * w1 + newValue * w2;
-
-		t += tStep;
+		resultOutput.set(*value);
+		
+		previousValue = value->getScalar();
 	}
+	else
+	{
+		const float oldValue = previousValue;
+		const float newValue = value->getScalar();
 
-	previousValue = newValue;
+		const float tStep = 1.f / AUDIO_UPDATE_SIZE;
+		float t = 0.f;
+
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		{
+			const float w2 = t;
+			const float w1 = 1.f - t;
+
+			resultOutput.samples[i] = oldValue * w1 + newValue * w2;
+
+			t += tStep;
+		}
+
+		previousValue = newValue;
+	}
 }

@@ -47,6 +47,9 @@ AudioNodeEventTrigger::AudioNodeEventTrigger()
 
 void AudioNodeEventTrigger::tick(const float dt)
 {
+	if (isPassthrough)
+		return;
+	
 	const char * name = getInputString(kInput_Name, nullptr);
 
 	if (name != nullptr)

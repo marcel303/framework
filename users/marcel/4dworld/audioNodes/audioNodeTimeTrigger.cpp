@@ -55,7 +55,11 @@ void AudioNodeTimeTrigger::tick(const float dt)
 	const float minInterval = getInputFloat(kInput_IntervalMin, 0.f);
 	const float maxInterval = getInputFloat(kInput_IntervalMax, minInterval);
 	
-	if (time >= interval)
+	if (isPassthrough)
+	{
+		time = 0.f;
+	}
+	else if (time >= interval)
 	{
 		if (interval != 0.0)
 		{
