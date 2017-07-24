@@ -1,64 +1,6 @@
 #pragma once
 
 #include "soundmix.h"
-#include <list>
-#include <SDL2/SDL.h> // fixme
-
-struct SDL_mutex;
-
-template <typename Command>
-struct CommandQueue
-{
-	SDL_mutex * mutex;
-	
-	std::list<Command> commandList;
-
-	CommandQueue()
-		: mutex(nullptr)
-	{
-		mutex = SDL_CreateMutex();
-	}
-
-	~CommandQueue()
-	{
-		if (mutex != nullptr)
-		{
-			SDL_DestroyMutex(mutex);
-			mutex = nullptr;
-		}
-	}
-
-	void push(const Command & command)
-	{
-		SDL_LockMutex(mutex);
-		{
-			commandList.push_back(command);
-		}
-		SDL_UnlockMutex(mutex);
-	}
-
-	bool pop(Command & command)
-	{
-		bool result = false;
-
-		SDL_LockMutex(mutex);
-		{
-			if (commandList.empty() == false)
-			{
-				result = true;
-
-				command = commandList.front();
-
-				commandList.pop_front();
-			}
-		}
-		SDL_UnlockMutex(mutex);
-
-		return result;
-	}
-};
-
-//
 
 struct Wavefield1D
 {
@@ -126,27 +68,10 @@ struct Wavefield2D
 
 struct AudioSourceWavefield2D : AudioSource
 {
-	struct Command
-	{
-		int x;
-		int y;
-		int radius;
-		
-		double strength;
-		
-		Command()
-		{
-			memset(this, 0, sizeof(*this));
-		}
-	};
-	
-	//
-	
 	Wavefield2D m_wavefield;
 	double m_sampleLocation[2];
 	double m_sampleLocationSpeed[2];
 	bool m_slowMotion;
-	CommandQueue<Command> m_commandQueue;
 	
 	AudioSourceWavefield2D();
 	
