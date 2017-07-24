@@ -296,7 +296,7 @@ struct AudioVoice
 	}
 	
 	void applyRamping(float * __restrict samples, const int numSamples);
-	void applyLimiter(float * __restrict samples, const int numSamples);
+	void applyLimiter(float * __restrict samples, const int numSamples, const float maxGain);
 };
 
 struct AudioVoiceManager : PortAudioHandler
@@ -306,6 +306,7 @@ struct AudioVoiceManager : PortAudioHandler
 	int numChannels;
 	std::list<AudioVoice> voices;
 	bool outputMono;
+	int colorIndex;
 	
 	struct Spatialisation
 	{

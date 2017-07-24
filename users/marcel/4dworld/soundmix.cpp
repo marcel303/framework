@@ -33,6 +33,8 @@
 #include <cmath>
 #include <xmmintrin.h>
 
+#include "framework.h" // for color hsl
+
 #define ENABLE_SSE 1
 
 void audioBufferMul(
@@ -553,9 +555,13 @@ void AudioVoice::applyRamping(float * __restrict samples, const int numSamples)
 	}
 }
 
-void AudioVoice::applyLimiter(float * __restrict samples, const int numSamples)
+void AudioVoice::applyLimiter(float * __restrict samples, const int numSamples, const float maxGain)
 {
-	limiter.apply(samples, numSamples, .999f, 1.f);
+	const float decayPerMs = .001f;
+	const float dtMs = 1000.f / SAMPLE_RATE;
+	const float retainPerSample = std::powf(1.f - decayPerMs, dtMs);
+	
+	limiter.apply(samples, numSamples, retainPerSample, maxGain);
 }
 
 //
@@ -567,6 +573,7 @@ AudioVoiceManager::AudioVoiceManager()
 	, numChannels(0)
 	, voices()
 	, outputMono(false)
+	, colorIndex(0)
 	, spat()
 	, lastSentSpat()
 {
@@ -608,6 +615,13 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, co
 		voices.push_back(AudioVoice());
 		voice = &voices.back();
 		voice->source = source;
+		
+		const Color color = Color::fromHSL(colorIndex / 31.f, 1.f, .5f);
+		colorIndex++;
+		
+		voice->spat.color[0] = color.r * 255.f;
+		voice->spat.color[1] = color.g * 255.f;
+		voice->spat.color[2] = color.b * 255.f;
 		
 		updateChannelIndices();
 		
@@ -722,7 +736,14 @@ void AudioVoiceManager::portAudioCallback(
 				
 				// apply limiting
 				
-				voice.applyLimiter(voiceSamples, numSamples);
+				if (outputMono)
+				{
+					voice.applyLimiter(voiceSamples, numSamples, .1f);
+				}
+				else
+				{
+					voice.applyLimiter(voiceSamples, numSamples, .4f);
+				}
 				
 				// apply volume ramping
 				
