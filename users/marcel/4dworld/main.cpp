@@ -29,6 +29,7 @@
 #include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
 #include "audioNodes/audioNodeDisplay.h"
+#include "audioUpdateHandler.h"
 #include "framework.h"
 #include "graph.h"
 #include "osc4d.h"
@@ -75,154 +76,6 @@ extern const int GFX_SY;
 static SDL_mutex * mutex = nullptr;
 static GraphEdit * graphEdit = nullptr;
 static AudioRealTimeConnection * realTimeConnection = nullptr;
-
-//
-
-#include "audioGraphManager.h"
-#include "ip/UdpSocket.h"
-#include "osc/OscOutboundPacketStream.h"
-#include <vector>
-
-#include "wavefield.h" // fixme : for CommandQueue
-
-struct AudioUpdateTask
-{
-	virtual ~AudioUpdateTask()
-	{
-	}
-	
-	virtual void audioUpdate(const float dt) = 0;
-};
-
-Osc4DStream * g_oscStream = nullptr;
-
-struct AudioUpdateHandler : PortAudioHandler
-{
-	struct Command
-	{
-		enum Type
-		{
-			kType_None,
-			kType_ForceOscSync
-		};
-		
-		Type type;
-		
-		Command()
-			: type(kType_None)
-		{
-		}
-	};
-	
-	std::vector<AudioUpdateTask*> updateTasks;
-	
-	AudioVoiceManager * voiceMgr;
-	
-	AudioGraphManager * audioGraphMgr;
-	
-	CommandQueue<Command> commandQueue;
-	
-	Osc4DStream oscStream;
-	
-	AudioUpdateHandler()
-		: updateTasks()
-		, voiceMgr(nullptr)
-		, audioGraphMgr(nullptr)
-		, commandQueue()
-		, oscStream()
-	{
-	}
-	
-	~AudioUpdateHandler()
-	{
-		shut();
-	}
-	
-	void init(const char * ipAddress, const int udpPort)
-	{
-		shut();
-		
-		oscStream.init(ipAddress, udpPort);
-		
-		Assert(g_oscStream == nullptr);
-		g_oscStream = &oscStream;
-	}
-	
-	void shut()
-	{
-		g_oscStream = nullptr;
-		
-		oscStream.shut();
-	}
-	
-	void setOscEndpoint(const char * ipAddress, const int udpPort)
-	{
-		SDL_LockMutex(mutex);
-		{
-			oscStream.setEndpoint(ipAddress, udpPort);
-		}
-		SDL_UnlockMutex(mutex);
-	}
-	
-	virtual void portAudioCallback(
-		const void * inputBuffer,
-		void * outputBuffer,
-		int framesPerBuffer) override
-	{
-		Command command;
-		
-		while (commandQueue.pop(command))
-		{
-			switch (command.type)
-			{
-			case Command::kType_None:
-				break;
-			case Command::kType_ForceOscSync:
-				break;
-			}
-		}
-		
-		//
-		
-		const float dt = framesPerBuffer / float(SAMPLE_RATE);
-		
-		for (auto updateTask : updateTasks)
-		{
-			updateTask->audioUpdate(dt);
-		}
-		
-		if (audioGraphMgr != nullptr)
-		{
-			SDL_LockMutex(mutex);
-			{
-				audioGraphMgr->tick(dt);
-				
-				audioGraphMgr->updateAudioValues();
-			}
-			SDL_UnlockMutex(mutex);
-		}
-		
-		if (voiceMgr != nullptr)
-		{
-			voiceMgr->portAudioCallback(inputBuffer, outputBuffer, framesPerBuffer);
-			
-			//
-			
-			// todo : remove limiter hack
-			static int limiter = 0;
-			limiter++;
-			
-			if ((limiter % 4) == 0)
-			{
-				oscStream.beginBundle();
-				{
-					voiceMgr->generateOsc(oscStream, false);
-				}
-				oscStream.endBundle();
-			}
-		}
-	}
-};
 
 //
 
@@ -633,7 +486,7 @@ static void testAudioVoiceManager()
 	
 	AudioUpdateHandler audioUpdateHandler;
 	
-	audioUpdateHandler.init(oscIpAddress.c_str(), oscUdpPort);
+	audioUpdateHandler.init(mutex, oscIpAddress.c_str(), oscUdpPort);
 	audioUpdateHandler.updateTasks.push_back(world);
 	audioUpdateHandler.voiceMgr = &voiceMgr;
 	
@@ -699,12 +552,15 @@ static void testAudioVoiceManager()
 			
 			const int r = spotX / float(wavefield2D.m_wavefield.numElems - 1.f) * 10 + 1;
 			
+			/*
+			// todo : restore. but do it from the audio thread
 			AudioSourceWavefield2D::Command command;
 			command.x = spotX;
 			command.y = spotY;
 			command.radius = r;
 			command.strength = strength;
 			wavefield2D.m_commandQueue.push(command);
+			*/
 		}
 		
 		//
@@ -991,7 +847,7 @@ static void testAudioGraphManager()
 	
 	AudioUpdateHandler audioUpdateHandler;
 	
-	audioUpdateHandler.init(oscIpAddress.c_str(), oscUdpPort);
+	audioUpdateHandler.init(mutex, oscIpAddress.c_str(), oscUdpPort);
 	audioUpdateHandler.voiceMgr = &voiceMgr;
 	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
 	
@@ -1120,6 +976,131 @@ static void testAudioGraphManager()
 
 //
 
+#include "delaunay/delaunay.h"
+#include "delaunay/triangle.h"
+#include "delaunay/vector2.h"
+
+void testDelaunay()
+{
+	const int numPoints = 20;
+	
+	typedef Vector2<float> Pointf;
+	typedef Triangle<float> Trianglef;
+	typedef Edge<float> Edgef;
+	
+	Delaunay<float> triangulation;
+	std::vector<Trianglef> triangles;
+	std::vector<Edgef> edges;
+	
+	bool randomize = true;
+	
+	do
+	{
+		framework.process();
+		
+		//
+		
+		if (keyboard.wentDown(SDLK_r))
+		{
+			randomize = true;
+		}
+		
+		//
+		
+		const float dt = framework.timeStep;
+		
+		if (randomize)
+		{
+			randomize = false;
+			
+			//
+			
+			std::vector<Pointf> points;
+			
+			for (int azimuth = -180; azimuth <= 180; azimuth += 5)
+			{
+				points.push_back(Pointf(azimuth, -90));
+			}
+			
+			for (int elevation = -40; elevation <= 90; elevation += 10)
+			{
+				for (int azimuth = 0; azimuth <= 180; azimuth += 5)
+				{
+					Pointf p(azimuth, elevation);
+					
+					points.push_back(p);
+					
+					if (azimuth != 0)
+					{
+						Pointf pMirrored(-azimuth, elevation);
+						
+						points.push_back(pMirrored);
+					}
+				}
+			}
+			
+			/*
+			points.push_back(Pointf(0.f,    0.f   ));
+			points.push_back(Pointf(GFX_SX, 0.f   ));
+			points.push_back(Pointf(0.f,    GFX_SY));
+			points.push_back(Pointf(GFX_SX, GFX_SY));
+			
+			for (int i = 0; i < numPoints; ++i)
+			{
+				Pointf p;
+				p.x = random<float>(0.f, GFX_SX);
+				p.y = random<float>(0.f, GFX_SY);
+				points.push_back(p);
+			}
+			*/
+			
+			triangulation = Delaunay<float>();
+			
+			triangles = triangulation.triangulate(points);
+			edges = triangulation.getEdges();
+		}
+		
+		//
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			hqBegin(HQ_FILLED_TRIANGLES);
+			{
+				for (auto & triangle : triangles)
+				{
+					auto toScreen = [](Pointf in)
+					{
+						in.x = (in.x + 180.f) / 360.f * GFX_SX;
+						in.y = (in.y + 90.f) / 180.f * GFX_SY;
+						
+						return in;
+					};
+					
+					Pointf p1 = toScreen(triangle.p1);
+					Pointf p2 = toScreen(triangle.p2);
+					Pointf p3 = toScreen(triangle.p3);
+					
+					setColorf(
+						p1.x / GFX_SX,
+						p1.y / GFX_SY,
+						0.f);
+					
+					hqFillTriangle(
+						p2.x, p2.y,
+						p1.x, p1.y,
+						p3.x, p3.y);
+				}
+			}
+			hqEnd();
+		}
+		framework.endDraw();
+	} while (!keyboard.wentDown(SDLK_SPACE));
+	
+	exit(0);
+}
+
+//
+
 int main(int argc, char * argv[])
 {
 #if FULLSCREEN
@@ -1134,6 +1115,7 @@ int main(int argc, char * argv[])
 		
 		//
 		
+		testDelaunay();
 		//testAudioVoiceManager();
 		testAudioGraphManager();
 		

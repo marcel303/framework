@@ -40,6 +40,10 @@ struct Osc4D
 	{
 	}
 	
+	virtual ~Osc4D()
+	{
+	}
+	
 	virtual void begin(const char * name) = 0;
 	virtual void end() = 0;
 	virtual void b(const bool v) = 0;
@@ -122,7 +126,7 @@ struct Osc4DStream : Osc4D
 	{
 	}
 	
-	~Osc4DStream()
+	virtual ~Osc4DStream() override
 	{
 		shut();
 	}
