@@ -274,9 +274,27 @@ void AudioGraphManager::selectInstance(const AudioGraphInstance * instance)
 
 AudioGraphInstance * AudioGraphManager::createInstance(const char * filename)
 {
-	AudioGraphFile *& file = files[filename];
+	AudioGraphFile * file;
+	bool isNew;
 	
-	if (file == nullptr)
+	SDL_LockMutex(audioMutex);
+	{
+		auto fileItr = files.find(filename);
+		
+		if (fileItr == files.end())
+		{
+			file = nullptr;
+			isNew = true;
+		}
+		else
+		{
+			file = fileItr->second;
+			isNew = false;
+		}
+	}
+	SDL_UnlockMutex(audioMutex);
+	
+	if (isNew)
 	{
 		file = new AudioGraphFile();
 		file->filename = filename;
@@ -287,21 +305,40 @@ AudioGraphInstance * AudioGraphManager::createInstance(const char * filename)
 		file->graphEdit->load(filename);
 	}
 	
-	file->instanceList.push_back(AudioGraphInstance());
-	AudioGraphInstance & instance = file->instanceList.back();
+	//
 	
-	instance.audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary);
-	instance.realTimeConnection = new AudioRealTimeConnection();
-	instance.realTimeConnection->audioMutex = audioMutex;
-	instance.realTimeConnection->audioGraph = instance.audioGraph;
-	instance.realTimeConnection->audioGraphPtr = &instance.audioGraph;
+	auto audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary);
+	auto realTimeConnection = new AudioRealTimeConnection();
 	
-	if (file->activeInstance == nullptr)
+	//
+	
+	AudioGraphInstance * instance;
+	
+	SDL_LockMutex(audioMutex);
 	{
-		file->activeInstance = &instance;
+		if (isNew)
+		{
+			files[filename] = file;
+		}
+		
+		file->instanceList.push_back(AudioGraphInstance());
+		
+		instance = &file->instanceList.back();
+		
+		instance->audioGraph = audioGraph;
+		instance->realTimeConnection = realTimeConnection;
+		instance->realTimeConnection->audioMutex = audioMutex;
+		instance->realTimeConnection->audioGraph = instance->audioGraph;
+		instance->realTimeConnection->audioGraphPtr = &instance->audioGraph;
+		
+		if (file->activeInstance == nullptr)
+		{
+			file->activeInstance = instance;
+		}
 	}
+	SDL_UnlockMutex(audioMutex);
 	
-	return &instance;
+	return instance;
 }
 
 void AudioGraphManager::free(AudioGraphInstance *& instance)
@@ -311,41 +348,47 @@ void AudioGraphManager::free(AudioGraphInstance *& instance)
 		return;
 	}
 	
-	for (auto fileItr = files.begin(); fileItr != files.end(); ++fileItr)
+	// todo : move audio graph free outside of mutex scope
+	
+	SDL_LockMutex(audioMutex);
 	{
-		auto & file = fileItr->second;
-		
-		for (auto instanceItr = file->instanceList.begin(); instanceItr != file->instanceList.end(); ++instanceItr)
+		for (auto fileItr = files.begin(); fileItr != files.end(); ++fileItr)
 		{
-			if (&(*instanceItr) == instance)
+			auto & file = fileItr->second;
+			
+			for (auto instanceItr = file->instanceList.begin(); instanceItr != file->instanceList.end(); ++instanceItr)
 			{
-				if (instance == file->activeInstance)
+				if (&(*instanceItr) == instance)
 				{
-					file->activeInstance = nullptr;
-				}
-				
-				file->instanceList.erase(instanceItr);
-				instance = nullptr;
-				
-			#if 1
-				if (file->instanceList.empty())
-				{
-					if (file == selectedFile)
+					if (instance == file->activeInstance)
 					{
-						selectedFile = nullptr;
+						file->activeInstance = nullptr;
 					}
 					
-					delete file;
-					file = nullptr;
+					file->instanceList.erase(instanceItr);
+					instance = nullptr;
 					
-					files.erase(fileItr);
+				#if 1
+					if (file->instanceList.empty())
+					{
+						if (file == selectedFile)
+						{
+							selectedFile = nullptr;
+						}
+						
+						delete file;
+						file = nullptr;
+						
+						files.erase(fileItr);
+					}
+				#endif
+					
+					return;
 				}
-			#endif
-				
-				return;
 			}
 		}
 	}
+	SDL_UnlockMutex(audioMutex);
 }
 
 void AudioGraphManager::tick(const float dt)
