@@ -70,21 +70,29 @@ struct AudioNodeVoice4D : AudioNodeBase
 		kInput_DistanceDiffusionTreshold,
 		kInput_DistanceDiffusionCurve,
 		kInput_SubBoost,
+		kInput_RampUp,
+		kInput_RampDown,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
+		kOutput_RampedUp,
+		kOutput_RampedDown,
 		kOutput_COUNT
 	};
 	
 	AudioSourceVoiceNode source;
 	AudioVoice * voice;
 	
+	AudioTriggerData dummyTriggerData;
+	
 	AudioNodeVoice4D();
 	~AudioNodeVoice4D() override;
 
 	virtual void tick(const float dt) override;
+	
+	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) override;
 };
 
 //

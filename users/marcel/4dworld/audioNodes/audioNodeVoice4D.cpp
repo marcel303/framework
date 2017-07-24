@@ -72,6 +72,10 @@ AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
 	in("ddiff.tresh", "audioValue", "50");
 	in("ddiff.curve", "audioValue", "0.2");
 	inEnum("sub.boost", "4d.subBoost");
+	in("rampUp!", "trigger");
+	in("rampDown!", "trigger");
+	out("rampedUp!", "trigger");
+	out("rampedDown!", "trigger");
 }
 
 void AudioNodeVoice4D::AudioSourceVoiceNode::generate(ALIGN16 float * __restrict samples, const int numSamples)
@@ -89,6 +93,7 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	: AudioNodeBase()
 	, source()
 	, voice(nullptr)
+	, dummyTriggerData()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);
@@ -120,6 +125,10 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_DistanceDiffusionTreshold, kAudioPlugType_FloatVec);
 	addInput(kInput_DistanceDiffusionCurve, kAudioPlugType_FloatVec);
 	addInput(kInput_SubBoost, kAudioPlugType_Int);
+	addInput(kInput_RampUp, kAudioPlugType_Trigger);
+	addInput(kInput_RampDown, kAudioPlugType_Trigger);
+	addOutput(kOutput_RampedUp, kAudioPlugType_Trigger, &dummyTriggerData);
+	addOutput(kOutput_RampedDown, kAudioPlugType_Trigger, &dummyTriggerData);
 	
 	//
 	
@@ -205,6 +214,32 @@ void AudioNodeVoice4D::tick(const float dt)
 	}
 	
 	voice->spat.subBoost = (Osc4D::SubBoost)getInputInt(kInput_SubBoost, 0);
+	
+	//
+	
+	if (voice->hasRamped)
+	{
+		if (voice->ramp)
+		{
+			trigger(kOutput_RampedUp);
+		}
+		else
+		{
+			trigger(kOutput_RampedDown);
+		}
+	}
+}
+
+void AudioNodeVoice4D::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
+{
+	if (inputSocketIndex == kInput_RampUp)
+	{
+		voice->ramp = true;
+	}
+	else if (inputSocketIndex == kInput_RampDown)
+	{
+		voice->ramp = false;
+	}
 }
 
 //
