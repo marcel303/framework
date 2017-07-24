@@ -229,19 +229,25 @@ void AudioGraphManager::shut()
 
 void AudioGraphManager::selectFile(const char * filename)
 {
-	if (selectedFile != nullptr)
+	SDL_LockMutex(audioMutex);
 	{
-		selectedFile->graphEdit->cancelEditing();
+		if (selectedFile != nullptr)
+		{
+			selectedFile->graphEdit->cancelEditing();
+			
+			selectedFile = nullptr;
+		}
 		
-		selectedFile = nullptr;
+		//
+		
+		auto fileItr = files.find(filename);
+		
+		if (fileItr != files.end())
+		{
+			selectedFile = fileItr->second;
+		}
 	}
-	
-	auto fileItr = files.find(filename);
-	
-	if (fileItr != files.end())
-	{
-		selectedFile = fileItr->second;
-	}
+	SDL_UnlockMutex(audioMutex);
 }
 
 void AudioGraphManager::selectInstance(const AudioGraphInstance * instance)
@@ -273,10 +279,6 @@ AudioGraphInstance * AudioGraphManager::createInstance(const char * filename)
 	if (file == nullptr)
 	{
 		file = new AudioGraphFile();
-	}
-	
-	if (file->graphEdit == nullptr)
-	{
 		file->filename = filename;
 		
 		file->graphEdit = new GraphEdit(typeDefinitionLibrary);
@@ -348,15 +350,25 @@ void AudioGraphManager::free(AudioGraphInstance *& instance)
 
 void AudioGraphManager::tick(const float dt)
 {
-	for (auto & file : files)
-		for (auto & instance : file.second->instanceList)
-			instance.audioGraph->tick(dt, true);
+	SDL_LockMutex(audioMutex);
+	{
+		for (auto & file : files)
+			for (auto & instance : file.second->instanceList)
+				instance.audioGraph->tick(dt, true);
+	}
+	SDL_UnlockMutex(audioMutex);
 }
 
 void AudioGraphManager::updateAudioValues()
 {
-	if (selectedFile && selectedFile->activeInstance)
-		selectedFile->activeInstance->realTimeConnection->updateAudioValues();
+	SDL_LockMutex(audioMutex);
+	{
+		if (selectedFile && selectedFile->activeInstance)
+		{
+			selectedFile->activeInstance->realTimeConnection->updateAudioValues();
+		}
+	}
+	SDL_UnlockMutex(audioMutex);
 }
 
 void AudioGraphManager::tickEditor(const float dt)

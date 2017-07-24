@@ -122,13 +122,9 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	if (audioGraphMgr != nullptr)
 	{
-		SDL_LockMutex(mutex);
-		{
-			audioGraphMgr->tick(dt);
-			
-			audioGraphMgr->updateAudioValues();
-		}
-		SDL_UnlockMutex(mutex);
+		audioGraphMgr->tick(dt);
+		
+		audioGraphMgr->updateAudioValues();
 	}
 	
 	if (voiceMgr != nullptr)
