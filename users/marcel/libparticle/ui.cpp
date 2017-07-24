@@ -521,12 +521,18 @@ static bool stringToValue(const char * src, std::string & dst)
 
 static bool stringToValue(const char * src, int & dst)
 {
+	if (src[0] == 0)
+		return false;
+	
 	dst = atoi(src);
 	return true;
 }
 
 static bool stringToValue(const char * src, float & dst)
 {
+	if (src[0] == 0)
+		return false;
+	
 	dst = (float)atof(src);
 	return true;
 }
