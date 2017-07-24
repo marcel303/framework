@@ -317,11 +317,6 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	
 	audioGraph->nodes.erase(nodeItr);
 	
-	if (nodeId == audioGraph->displayNodeId)
-	{
-		audioGraph->displayNodeId = kGraphNodeIdInvalid;
-	}
-	
 	for (auto audioValueItr = audioValueHistorySet->s_audioValues.begin(); audioValueItr != audioValueHistorySet->s_audioValues.end(); )
 	{
 		auto & socketRef = audioValueItr->first;

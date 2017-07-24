@@ -352,39 +352,54 @@ void AudioGraphManager::free(AudioGraphInstance *& instance)
 	
 	SDL_LockMutex(audioMutex);
 	{
-		for (auto fileItr = files.begin(); fileItr != files.end(); ++fileItr)
+		for (auto fileItr = files.begin(); fileItr != files.end(); )
 		{
 			auto & file = fileItr->second;
 			
-			for (auto instanceItr = file->instanceList.begin(); instanceItr != file->instanceList.end(); ++instanceItr)
+			for (auto instanceItr = file->instanceList.begin(); instanceItr != file->instanceList.end(); )
 			{
 				if (&(*instanceItr) == instance)
 				{
-					if (instance == file->activeInstance)
-					{
-						file->activeInstance = nullptr;
-					}
+					const bool isActiveInstance = instance == file->activeInstance;
 					
-					file->instanceList.erase(instanceItr);
+					instanceItr = file->instanceList.erase(instanceItr);
 					instance = nullptr;
 					
-				#if 1
-					if (file->instanceList.empty())
+					if (isActiveInstance)
 					{
-						if (file == selectedFile)
+						if (file->instanceList.empty())
 						{
-							selectedFile = nullptr;
+							file->activeInstance = nullptr;
 						}
-						
-						delete file;
-						file = nullptr;
-						
-						files.erase(fileItr);
+						else
+						{
+							file->activeInstance = &file->instanceList.front();
+						}
 					}
-				#endif
-					
-					return;
 				}
+				else
+				{
+					instanceItr++;
+				}
+			}
+			
+		#if 1
+			if (file->instanceList.empty())
+			{
+				if (file == selectedFile)
+				{
+					selectedFile = nullptr;
+				}
+				
+				delete file;
+				file = nullptr;
+				
+				fileItr = files.erase(fileItr);
+			}
+			else
+		#endif
+			{
+				fileItr++;
 			}
 		}
 	}
@@ -397,7 +412,7 @@ void AudioGraphManager::tick(const float dt)
 	{
 		for (auto & file : files)
 			for (auto & instance : file.second->instanceList)
-				instance.audioGraph->tick(dt, true);
+				instance.audioGraph->tick(dt);
 	}
 	SDL_UnlockMutex(audioMutex);
 }

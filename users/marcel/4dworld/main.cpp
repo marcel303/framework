@@ -28,7 +28,6 @@
 #include "audioGraph.h"
 #include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
-#include "audioNodes/audioNodeDisplay.h"
 #include "audioUpdateHandler.h"
 #include "framework.h"
 #include "graph.h"
@@ -153,7 +152,7 @@ int main(int argc, char * argv[])
 				{
 					SDL_LockMutex(mutex);
 					{
-						audioGraph->tick(dt, true);
+						audioGraph->tick(dt);
 						
 						realTimeConnection->updateAudioValues();
 					}

@@ -97,8 +97,6 @@ struct AudioGraph
 	
 	std::map<GraphNodeId, AudioNodeBase*> nodes;
 	
-	GraphNodeId displayNodeId;
-	
 	mutable int nextTickTraversalId;
 	
 	Graph * graph; // todo : remove ?
@@ -119,7 +117,7 @@ struct AudioGraph
 	void destroy();
 	void connectToInputLiteral(AudioPlug & input, const std::string & inputValue);
 	
-	void tick(const float dt, const bool traverseUnreferenced);
+	void tick(const float dt);
 	
 	void setFlag(const char * name, const bool value = true);
 	void resetFlag(const char * name);

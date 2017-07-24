@@ -27,7 +27,6 @@
 
 #include "audioGraph.h"
 #include "audioNodeBase.h"
-#include "audioNodes/audioNodeDisplay.h"
 #include "framework.h"
 #include "Parse.h"
 
@@ -43,7 +42,6 @@ AudioGraph * g_currentAudioGraph = nullptr;
 
 AudioGraph::AudioGraph()
 	: nodes()
-	, displayNodeId(kGraphNodeIdInvalid)
 	, nextTickTraversalId(0)
 	, graph(nullptr)
 	, valuesToFree()
@@ -67,8 +65,6 @@ AudioGraph::~AudioGraph()
 
 void AudioGraph::destroy()
 {
-	displayNodeId = kGraphNodeIdInvalid;
-	
 	for (auto i : valuesToFree)
 	{
 		switch (i.type)
@@ -178,41 +174,22 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 	}
 }
 
-void AudioGraph::tick(const float dt, const bool traverseUnreferenced)
+void AudioGraph::tick(const float dt)
 {
 	audioCpuTimingBlock(AudioGraph_Tick);
 	
 	Assert(g_currentAudioGraph == nullptr);
 	g_currentAudioGraph = this;
 	
-	// use traversalId, start update at display node
+	// process nodes
 	
-	if (displayNodeId != kGraphNodeIdInvalid)
+	for (auto i : nodes)
 	{
-		auto nodeItr = nodes.find(displayNodeId);
-		Assert(nodeItr != nodes.end());
-		if (nodeItr != nodes.end())
-		{
-			auto node = nodeItr->second;
-			
-			AudioNodeDisplay * displayNode = static_cast<AudioNodeDisplay*>(node);
-			
-			displayNode->traverseTick(nextTickTraversalId, dt);
-		}
-	}
-	
-	if (traverseUnreferenced)
-	{
-		// process nodes that aren't connected to the display node
+		AudioNodeBase * node = i.second;
 		
-		for (auto i : nodes)
+		if (node->lastTickTraversalId != nextTickTraversalId)
 		{
-			AudioNodeBase * node = i.second;
-			
-			if (node->lastTickTraversalId != nextTickTraversalId)
-			{
-				node->traverseTick(nextTickTraversalId, dt);
-			}
+			node->traverseTick(nextTickTraversalId, dt);
 		}
 	}
 	
@@ -326,17 +303,6 @@ AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & ty
 		#endif
 		
 			break;
-		}
-	}
-	
-	if (typeName == "display")
-	{
-		Assert(audioNode != nullptr);
-		if (audioNode != nullptr)
-		{
-			// fixme : move display node id handling out of here. remove nodeId and audioGraph passed in to this function
-			Assert(audioGraph->displayNodeId == kGraphNodeIdInvalid);
-			audioGraph->displayNodeId = nodeId;
 		}
 	}
 	
