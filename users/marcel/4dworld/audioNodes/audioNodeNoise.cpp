@@ -240,7 +240,11 @@ void AudioNodeNoise::tick(const float dt)
 {
 	const Type type = (Type)getInputInt(kInput_Type, 0);
 	
-	if (type == kType_Octave)
+	if (isPassthrough)
+	{
+		resultOutput.setScalar(0.f);
+	}
+	else if (type == kType_Octave)
 	{
 		drawOctave();
 	}

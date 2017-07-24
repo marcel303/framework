@@ -705,6 +705,13 @@ struct AudioNodeSourceMix : AudioNodeBase
 	
 	virtual void tick(const float dt) override
 	{
+		if (isPassthrough)
+		{
+			audioOutput.setScalar(0.f);
+			
+			return;
+		}
+		
 		const AudioFloat * source1 = getInputAudioFloat(kInput_Source1, nullptr);
 		const AudioFloat * source2 = getInputAudioFloat(kInput_Source2, nullptr);
 		const AudioFloat * source3 = getInputAudioFloat(kInput_Source3, nullptr);
@@ -1043,7 +1050,11 @@ struct AudioNodeSourceSine : AudioNodeBase
 	{
 		const Type type = (Type)getInputInt(kInput_Type, 0);
 		
-		if (type == kType_Sine)
+		if (isPassthrough)
+		{
+			audioOutput.setScalar(0.f);
+		}
+		else if (type == kType_Sine)
 		{
 			drawSine();
 		}

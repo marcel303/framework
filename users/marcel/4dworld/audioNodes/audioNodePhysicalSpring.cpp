@@ -61,6 +61,13 @@ void AudioNodePhysicalSpring::tick(const float _dt)
 {
 	audioCpuTimingBlock(AudioNodePhysicalSpring);
 	
+	if (isPassthrough)
+	{
+		outputValue.setScalar(0.f);
+		
+		return;
+	}
+
 	const AudioFloat * strength = getInputAudioFloat(kInput_Strength, &AudioFloat::One);
 	const AudioFloat * dampen = getInputAudioFloat(kInput_Dampen, &AudioFloat::Half);
 	const AudioFloat * externalForce = getInputAudioFloat(kInput_Force, &AudioFloat::Zero);

@@ -57,7 +57,11 @@ void AudioNodePhase::tick(const float dt)
 	
 	const bool scalarInputs = frequency->isScalar && phaseOffset->isScalar;
 	
-	if (fineGrained)
+	if (isPassthrough)
+	{
+		resultOutput.setScalar(0.f);
+	}
+	else if (fineGrained)
 	{
 		resultOutput.setVector();
 		

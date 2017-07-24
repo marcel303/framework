@@ -55,7 +55,7 @@ void AudioNodeMemf::tick(const float dt)
 {
 	const char * name = getInputString(kInput_Name, nullptr);
 
-	if (name == nullptr)
+	if (isPassthrough || name == nullptr)
 	{
 		valueOutput[0].setScalar(0.f);
 		valueOutput[1].setScalar(0.f);

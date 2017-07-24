@@ -118,7 +118,11 @@ void AudioNodeSourcePcm::tick(const float dt)
 		audioSource.setRange(_rangeBegin, _rangeLength);
 	}
 	
-	if (isPlaying)
+	if (isPassthrough)
+	{
+		audioOutput.setScalar(0.f);
+	}
+	else if (isPlaying)
 	{
 		audioOutput.setVector();
 		
