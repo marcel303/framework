@@ -6,6 +6,50 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
+static float dot(const Vec2 & V1, const Vec2 & V2)
+{
+	return V1 * V2;
+}
+
+// @see http://blackpawn.com/texts/pointinpoly/
+static bool baryPointInTriangle(
+	const Vec2 & A,
+	const Vec2 & B,
+	const Vec2 & C,
+	const Vec2 & P,
+	float & baryU, float & baryV)
+{
+	// Compute vectors
+	const Vec2 v0 = C - A;
+	const Vec2 v1 = B - A;
+	const Vec2 v2 = P - A;
+
+	// Compute dot products
+	const float dot00 = dot(v0, v0);
+	const float dot01 = dot(v0, v1);
+	const float dot02 = dot(v0, v2);
+	const float dot11 = dot(v1, v1);
+	const float dot12 = dot(v1, v2);
+
+	// Compute barycentric coordinates
+	const float invDenom = 1.f / (dot00 * dot11 - dot01 * dot01);
+	const float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+	const float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+	// Check if point is in triangle
+	if ((u >= 0.f) && (v >= 0.f) && (u + v < 1.f))
+	{
+		baryU = u;
+		baryV = v;
+		
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 void testDelaunay()
 {
 	const int numPoints = 20;
@@ -20,6 +64,22 @@ void testDelaunay()
 	
 	bool randomize = true;
 	
+	auto toScreen = [](Pointf in)
+	{
+		in.x = (in.x + 180.f) / 360.f * GFX_SX;
+		in.y = (in.y + 90.f) / 180.f * GFX_SY;
+		
+		return in;
+	};
+	
+	auto toPolar = [](Pointf in)
+	{
+		in.x = in.x / GFX_SX * 360.f - 180.f;
+		in.y = in.y / GFX_SY * 180.f - 90.f;
+		
+		return in;
+	};
+	
 	do
 	{
 		framework.process();
@@ -30,6 +90,8 @@ void testDelaunay()
 		{
 			randomize = true;
 		}
+		
+		const Pointf polar = toPolar(Pointf(mouse.x, mouse.y));
 		
 		//
 		
@@ -86,6 +148,25 @@ void testDelaunay()
 			edges = triangulation.getEdges();
 		}
 		
+		// find active triangle
+		
+		Trianglef * activeTriangle = nullptr;
+		float baryU = 0.f;
+		float baryV = 0.f;
+		
+		for (auto & triangle : triangles)
+		{
+			const Vec2 p1(triangle.p1.x, triangle.p1.y);
+			const Vec2 p2(triangle.p2.x, triangle.p2.y);
+			const Vec2 p3(triangle.p3.x, triangle.p3.y);
+			const Vec2 p(polar.x, polar.y);
+			
+			if (baryPointInTriangle(p1, p2, p3, p, baryU, baryV))
+			{
+				activeTriangle = &triangle;
+			}
+		}
+		
 		//
 		
 		framework.beginDraw(0, 0, 0, 0);
@@ -94,22 +175,21 @@ void testDelaunay()
 			{
 				for (auto & triangle : triangles)
 				{
-					auto toScreen = [](Pointf in)
-					{
-						in.x = (in.x + 180.f) / 360.f * GFX_SX;
-						in.y = (in.y + 90.f) / 180.f * GFX_SY;
-						
-						return in;
-					};
-					
 					Pointf p1 = toScreen(triangle.p1);
 					Pointf p2 = toScreen(triangle.p2);
 					Pointf p3 = toScreen(triangle.p3);
 					
-					setColorf(
-						p1.x / GFX_SX,
-						p1.y / GFX_SY,
-						0.f);
+					if (&triangle == activeTriangle)
+					{
+						setColor(colorYellow);
+					}
+					else
+					{
+						setColorf(
+							p1.x / GFX_SX,
+							p1.y / GFX_SY,
+							0.f);
+					}
 					
 					hqFillTriangle(
 						p2.x, p2.y,
@@ -118,6 +198,15 @@ void testDelaunay()
 				}
 			}
 			hqEnd();
+			
+			setFont("calibri.ttf");
+			setColor(colorWhite);
+			drawText(mouse.x, mouse.y, 16, 0, 0, "%d, %d", int(polar.x), int(polar.y));
+			
+			if (activeTriangle != nullptr)
+			{
+				drawText(mouse.x, mouse.y, 16, 0, 20, "%.2f, %.2f, %.2f", baryU, baryV, 1.f - baryU - baryV);
+			}
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
