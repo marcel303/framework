@@ -28,28 +28,31 @@ project(avgraph)
 # --- avgraph ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
-file(GLOB_RECURSE source_vfxgraph "../avgraph/graph.cpp" "../avgraph/graph.h")
+file(GLOB_RECURSE source_graph "../avgraph/graph.cpp" "../avgraph/graph.h")
 
 file(GLOB_RECURSE source_audioNodes "audioNodes/*.*")
+file(GLOB_RECURSE source_objects "objects/*.*" ${source_graph})
 file(GLOB_RECURSE source_macos "macos/*.*")
 file(GLOB_RECURSE source_leap "leap/*.*")
 file(GLOB_RECURSE source_xmm "xmm/*.*")
+file(GLOB_RECURSE source_delaunay "delaunay/*.*")
 
 file(GLOB source_tests "test*.*")
 
 file(GLOB_RECURSE source_ui "../libparticle/ui.cpp" "../libparticle/ui.h" "../libparticle/textfield.cpp" "../libparticle/textfield.h" "../libparticle/colorwheel.cpp" "../libparticle/colorwheel.h" "../libparticle/particle.cpp" "../libparticle/particle.h")
 
-list(APPEND source ${source_vfxgraph})
+list(APPEND source ${source_graph})
 list(APPEND source ${source_ui})
 
 source_group("4DWorld" FILES ${source})
 source_group("audioNodes" FILES ${source_audioNodes})
-source_group("vfxgraph" FILES ${source_vfxgraph})
+source_group("objects" FILES ${source_objects})
 source_group("tests" FILES ${source_tests})
 source_group("ui" FILES ${source_ui})
 source_group("3rdparty\\macos" FILES ${source_macos})
 source_group("3rdparty\\leap" FILES ${source_leap})
 source_group("3rdparty\\xmm" FILES ${source_xmm})
+source_group("3rdparty\\delaunay" FILES ${source_delaunay})
 
 add_executable(avgraph ${source})
 
@@ -62,6 +65,7 @@ if (WIN32)
 endif (WIN32)
 
 target_include_directories(avgraph PRIVATE "${PROJECT_SOURCE_DIR}")
+target_include_directories(avgraph PRIVATE "objects")
 
 if (APPLE)
 	target_include_directories(avgraph PRIVATE "../avgraph")
