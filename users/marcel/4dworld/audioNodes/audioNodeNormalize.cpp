@@ -45,7 +45,7 @@ void AudioNodeNormalize::tick(const float dt)
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 	const float level = getInputFloat(kInput_Level, 1.f);
 	const float maxAmp = getInputFloat(kInput_MaxAmplification, 10.f);
-	const float decayPerMs = std::max(0.f, std::min(1.f, getInputFloat(kInput_Decay, .001f)));
+	const float decayPerMs = std::max(0.f, std::min(1.f, getInputFloat(kInput_DecayPerMillisecond, .001f)));
 	
 	//
 
@@ -54,7 +54,11 @@ void AudioNodeNormalize::tick(const float dt)
 
 	//
 	
-	if (level <= 0.f || maxAmp <= 0.f)
+	if (isPassthrough)
+	{
+		resultOutput.set(*value);
+	}
+	else if (level <= 0.f || maxAmp <= 0.f)
 	{
 		resultOutput.setScalar(0.f);
 	}

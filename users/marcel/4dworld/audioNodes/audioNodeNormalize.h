@@ -36,7 +36,7 @@ struct AudioNodeNormalize : AudioNodeBase
 		kInput_Value,
 		kInput_Level,
 		kInput_MaxAmplification,
-		kInput_Decay,
+		kInput_DecayPerMillisecond,
 		kInput_COUNT
 	};
 	
@@ -59,7 +59,7 @@ struct AudioNodeNormalize : AudioNodeBase
 		addInput(kInput_Value, kAudioPlugType_FloatVec);
 		addInput(kInput_Level, kAudioPlugType_Float);
 		addInput(kInput_MaxAmplification, kAudioPlugType_Float);
-		addInput(kInput_Decay, kAudioPlugType_Float);
+		addInput(kInput_DecayPerMillisecond, kAudioPlugType_Float);
 		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 	}
 	

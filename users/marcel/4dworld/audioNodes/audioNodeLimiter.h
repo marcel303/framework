@@ -28,6 +28,7 @@
 #pragma once
 
 #include "audioNodeBase.h"
+#include "limiter.h"
 
 struct AudioNodeLimiter : AudioNodeBase
 {
@@ -35,7 +36,7 @@ struct AudioNodeLimiter : AudioNodeBase
 	{
 		kInput_Value,
 		kInput_Max,
-		kInput_Decay,
+		kInput_DecayPerMillisecond,
 		kInput_COUNT
 	};
 	
@@ -47,19 +48,19 @@ struct AudioNodeLimiter : AudioNodeBase
 	
 	AudioFloat resultOutput;
 	
-	double measuredMax;
+	Limiter limiter;
 	
 	AudioNodeLimiter()
 		: AudioNodeBase()
 		, resultOutput()
-		, measuredMax(0.0)
+		, limiter()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Value, kAudioPlugType_FloatVec);
 		addInput(kInput_Max, kAudioPlugType_Float);
-		addInput(kInput_Decay, kAudioPlugType_Float);
+		addInput(kInput_DecayPerMillisecond, kAudioPlugType_Float);
 		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
 	}
 	
-	virtual void draw() override;
+	virtual void tick(const float dt) override;
 };

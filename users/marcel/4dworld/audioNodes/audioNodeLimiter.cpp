@@ -35,42 +35,40 @@ AUDIO_NODE_TYPE(limiter, AudioNodeLimiter)
 	
 	in("value", "audioValue");
 	in("max", "float", "1");
-	in("decay", "float", "0.5");
+	in("decay", "float", "0.001");
 	out("result", "audioValue");
 }
 
-void AudioNodeLimiter::draw()
+void AudioNodeLimiter::tick(const float dt)
 {
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 	const float max = getInputFloat(kInput_Max, 1.f);
-	const double decayPerSecond = std::max(0.f, std::min(1.f, getInputFloat(kInput_Decay, .5f)));
+	const double decayPerMs = std::max(0.f, std::min(1.f, getInputFloat(kInput_DecayPerMillisecond, .001f)));
 	
 	//
 
-	if (value->isScalar)
+	if (isPassthrough)
 	{
-		const double dt = 1.0 / SAMPLE_RATE;
-		const double retainPerTick = std::pow(1.0 - decayPerSecond, dt);
+		resultOutput.set(*value);
+	}
+	else if (value->isScalar)
+	{
+		const double dtMs = AUDIO_UPDATE_SIZE * 1000.0 / double(SAMPLE_RATE);
+		const double retainPerTick = std::pow(1.0 - decayPerMs, dtMs);
 
 		//
-
-		float currentValue = value->getScalar();
-
-		measuredMax = std::max<double>(measuredMax, std::abs(currentValue));
-
-		if (measuredMax > max)
-		{
-			currentValue = currentValue * max / measuredMax;
-		}
-
-		resultOutput.setScalar(currentValue);
-
-		measuredMax = measuredMax * retainPerTick;
+		
+		const float limitedValue = limiter.next(
+			value->getScalar(),
+			retainPerTick,
+			max);
+		
+		resultOutput.setScalar(limitedValue);
 	}
 	else
 	{
-		const double dt = 1.0 / SAMPLE_RATE;
-		const double retainPerSample = std::pow(1.0 - decayPerSecond, dt);
+		const double dtMs = 1000.0 / SAMPLE_RATE;
+		const double retainPerSample = std::pow(1.0 - decayPerMs, dtMs);
 
 		//
 
@@ -78,18 +76,12 @@ void AudioNodeLimiter::draw()
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			float currentValue = value->samples[i];
+			const float limitedValue = limiter.next(
+				value->samples[i],
+				retainPerSample,
+				max);
 
-			measuredMax = std::max<double>(measuredMax, std::abs(currentValue));
-
-			if (measuredMax > max)
-			{
-				currentValue = currentValue * max / measuredMax;
-			}
-
-			resultOutput.samples[i] = currentValue;
-
-			measuredMax = measuredMax * retainPerSample;
+			resultOutput.samples[i] = limitedValue;
 		}
 	}
 }
