@@ -277,9 +277,9 @@ struct AudioVoice
 	
 	AudioSource * source;
 	
-	bool rampUp;
-	bool rampDown;
+	bool ramp;
 	bool isRamped;
+	bool hasRamped;
 	
 	Limiter limiter;
 	
@@ -288,9 +288,9 @@ struct AudioVoice
 		, spat()
 		, lastSentSpat()
 		, source(nullptr)
-		, rampUp(false)
-		, rampDown(false)
-		, isRamped(true)
+		, ramp(true)
+		, isRamped(false)
+		, hasRamped(false)
 		, limiter()
 	{
 	}
@@ -350,6 +350,10 @@ struct AudioVoiceManager : PortAudioHandler
 };
 
 //
+
+extern void audioBufferSetZero(
+	float * __restrict audioBuffer,
+	const int numSamples);
 
 extern void audioBufferMul(
 	float * __restrict audioBuffer,

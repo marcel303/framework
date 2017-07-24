@@ -37,6 +37,33 @@
 
 #define ENABLE_SSE 1
 
+void audioBufferSetZero(
+	float * __restrict audioBuffer,
+	const int numSamples)
+{
+	int begin = 0;
+	
+#if ENABLE_SSE
+	Assert((uintptr_t(audioBuffer) & 15) == 0);
+	
+	__m128 * __restrict audioBuffer4 = (__m128*)audioBuffer;
+	const int numSamples4 = numSamples / 4;
+	const __m128 zero4 = _mm_set1_ps(0.f);
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		audioBuffer4[i] = zero4;
+	}
+	
+	begin = numSamples4 * 4;
+#endif
+
+	for (int i = begin; i < numSamples; ++i)
+	{
+		audioBuffer[i] = 0.f;
+	}
+}
+
 void audioBufferMul(
 	float * __restrict audioBuffer,
 	const int numSamples,
@@ -511,7 +538,9 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 
 void AudioVoice::applyRamping(float * __restrict samples, const int numSamples)
 {
-	if (rampUp)
+	hasRamped = false;
+	
+	if (ramp)
 	{
 		if (isRamped == false)
 		{
@@ -528,9 +557,11 @@ void AudioVoice::applyRamping(float * __restrict samples, const int numSamples)
 				
 				gain += gainStep;
 			}
+			
+			hasRamped = true;
 		}
 	}
-	else if (rampDown)
+	else
 	{
 		if (isRamped == true)
 		{
@@ -547,11 +578,13 @@ void AudioVoice::applyRamping(float * __restrict samples, const int numSamples)
 				
 				gain += gainStep;
 			}
+			
+			hasRamped = true;
 		}
-	}
-	else
-	{
-		isRamped = true;
+		else
+		{
+			audioBufferSetZero(samples, numSamples);
+		}
 	}
 }
 
@@ -627,14 +660,12 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, co
 		
 		if (doRamping)
 		{
-			voice->rampUp = true;
-			voice->rampDown = false;
+			voice->ramp = true;
 			voice->isRamped = false;
 		}
 		else
 		{
-			voice->rampUp = false;
-			voice->rampDown = false;
+			voice->ramp = true;
 			voice->isRamped = true;
 		}
 	}
