@@ -104,6 +104,8 @@ struct Limiter
 			
 			i++;
 		}
+		
+		i = i * 16;
 	#endif
 	
 		while (i < numSamples)
