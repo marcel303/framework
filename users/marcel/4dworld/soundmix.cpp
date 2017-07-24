@@ -33,6 +33,8 @@
 #include <cmath>
 #include <xmmintrin.h>
 
+#define ENABLE_SSE 1
+
 void audioBufferMul(
 	float * __restrict audioBuffer,
 	const int numSamples,
@@ -40,7 +42,7 @@ void audioBufferMul(
 {
 	int begin = 0;
 	
-#if 1
+#if ENABLE_SSE
 	Assert((uintptr_t(audioBuffer) & 15) == 0);
 	
 	__m128 * __restrict audioBuffer4 = (__m128*)audioBuffer;
@@ -68,7 +70,7 @@ void audioBufferAdd(
 {
 	int begin = 0;
 	
-#if 1
+#if ENABLE_SSE
 	Assert((uintptr_t(audioBufferDst) & 15) == 0);
 	Assert((uintptr_t(audioBufferSrc) & 15) == 0);
 	
@@ -98,7 +100,7 @@ void audioBufferAdd(
 {
 	int begin = 0;
 	
-#if 1
+#if ENABLE_SSE
 	Assert((uintptr_t(audioBufferDst) & 15) == 0);
 	Assert((uintptr_t(audioBufferSrc) & 15) == 0);
 	
@@ -130,7 +132,7 @@ void audioBufferAdd(
 {
 	int begin = 0;
 	
-#if 1
+#if ENABLE_SSE
 	Assert((uintptr_t(audioBuffer1) & 15) == 0);
 	Assert((uintptr_t(audioBuffer2) & 15) == 0);
 	
@@ -553,7 +555,7 @@ void AudioVoice::applyRamping(float * __restrict samples, const int numSamples)
 
 void AudioVoice::applyLimiter(float * __restrict samples, const int numSamples)
 {
-	limiter.apply(samples, numSamples, .99f, 1.f);
+	limiter.apply(samples, numSamples, .999f, 1.f);
 }
 
 //
