@@ -51,6 +51,9 @@ struct AudioGraphManager
 	AudioGraphManager();
 	~AudioGraphManager();
 	
+	void init(SDL_mutex * mutex);
+	void shut();
+	
 	void selectFile(const char * filename);
 	void selectInstance(const AudioGraphInstance * instance);
 	
@@ -63,3 +66,5 @@ struct AudioGraphManager
 	void tickEditor(const float dt);
 	void drawEditor();
 };
+
+extern AudioGraphManager * g_audioGraphMgr;

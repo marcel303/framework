@@ -7,6 +7,10 @@
 
 //
 
+AudioGraphManager * g_audioGraphMgr = nullptr;
+
+//
+
 struct AudioGraphFileRTC : GraphEdit_RealTimeConnection
 {
 	AudioGraphFile * file;
@@ -187,65 +191,33 @@ AudioGraphManager::AudioGraphManager()
 	, selectedFile(nullptr)
 	, audioMutex(nullptr)
 {
-	typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
-	
-	{
-		GraphEdit_ValueTypeDefinition typeDefinition;
-		typeDefinition.typeName = "bool";
-		typeDefinition.editor = "checkbox";
-		typeDefinitionLibrary->valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
-	}
-	
-	{
-		GraphEdit_ValueTypeDefinition typeDefinition;
-		typeDefinition.typeName = "int";
-		typeDefinition.editor = "textbox_int";
-		typeDefinition.visualizer = "valueplotter";
-		typeDefinitionLibrary->valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
-	}
-	
-	{
-		GraphEdit_ValueTypeDefinition typeDefinition;
-		typeDefinition.typeName = "float";
-		typeDefinition.editor = "textbox_float";
-		typeDefinition.visualizer = "valueplotter";
-		typeDefinitionLibrary->valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
-	}
-	
-	{
-		GraphEdit_ValueTypeDefinition typeDefinition;
-		typeDefinition.typeName = "string";
-		typeDefinition.editor = "textbox";
-		typeDefinitionLibrary->valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
-	}
-	
-	{
-		GraphEdit_ValueTypeDefinition typeDefinition;
-		typeDefinition.typeName = "audioValue";
-		typeDefinition.editor = "textbox_float";
-		typeDefinition.visualizer = "channels";
-	#if MULTIPLE_AUDIO_INPUT
-		typeDefinition.multipleInputs = true;
-	#endif
-		typeDefinitionLibrary->valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
-	}
-	
-	{
-		GraphEdit_ValueTypeDefinition typeDefinition;
-		typeDefinition.typeName = "trigger";
-		typeDefinition.editor = "button";
-		typeDefinition.multipleInputs = true;
-		typeDefinitionLibrary->valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
-	}
-
-	
-	createAudioEnumTypeDefinitions(*typeDefinitionLibrary, g_audioEnumTypeRegistrationList);
-	createAudioNodeTypeDefinitions(*typeDefinitionLibrary, g_audioNodeTypeRegistrationList);
 }
 
 AudioGraphManager::~AudioGraphManager()
 {
+	shut();
+}
+
+void AudioGraphManager::init(SDL_mutex * mutex)
+{
+	shut();
+	
+	//
+	
+	typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+	
+	createAudioValueTypeDefinitions(*typeDefinitionLibrary);
+	createAudioEnumTypeDefinitions(*typeDefinitionLibrary, g_audioEnumTypeRegistrationList);
+	createAudioNodeTypeDefinitions(*typeDefinitionLibrary, g_audioNodeTypeRegistrationList);
+	
+	audioMutex = mutex;
+}
+
+void AudioGraphManager::shut()
+{
 	audioMutex = nullptr;
+	
+	selectedFile = nullptr;
 	
 	for (auto & file : files)
 		delete file.second;

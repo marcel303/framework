@@ -73,11 +73,15 @@ void AudioUpdateHandler::init(SDL_mutex * _mutex, const char * ipAddress, const 
 
 void AudioUpdateHandler::shut()
 {
+	Assert(g_oscStream == oscStream);
 	g_oscStream = nullptr;
 	
-	oscStream->shut();
-	delete oscStream;
-	oscStream = nullptr;
+	if (oscStream != nullptr)
+	{
+		oscStream->shut();
+		delete oscStream;
+		oscStream = nullptr;
+	}
 }
 
 void AudioUpdateHandler::setOscEndpoint(const char * ipAddress, const int udpPort)
