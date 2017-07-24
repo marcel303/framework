@@ -424,7 +424,39 @@ void AudioRealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNo
 	AUDIO_SCOPE;
 	
 	Assert(input->isConnected());
-	input->disconnect();
+	
+	if (input->type == kAudioPlugType_FloatVec)
+	{
+		auto dstNodeItr = audioGraph->nodes.find(dstNodeId);
+		
+		Assert(dstNodeItr != audioGraph->nodes.end());
+		if (dstNodeItr == audioGraph->nodes.end())
+			return;
+		
+		auto dstNode = dstNodeItr->second;
+		
+		auto output = dstNode->tryGetOutput(dstSocketIndex);
+		
+		Assert(output != nullptr);
+		if (output == nullptr)
+			return;
+		
+		bool removed = false;
+		for (auto arrayItr = input->floatArray.array.begin(); arrayItr != input->floatArray.array.end(); ++arrayItr)
+		{
+			if (*arrayItr == output->mem)
+			{
+				arrayItr = input->floatArray.array.erase(arrayItr);
+				removed = true;
+				break;
+			}
+		}
+		Assert(removed);
+	}
+	else
+	{
+		input->disconnect();
+	}
 	
 	// todo : we should reconnect with the node socket's editor value when set here
 	
