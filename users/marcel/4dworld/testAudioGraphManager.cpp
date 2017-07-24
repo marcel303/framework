@@ -11,7 +11,9 @@ extern const int GFX_SX;
 extern const int GFX_SY;
 extern const bool MONO_OUTPUT;
 
-struct Ball : AudioUpdateTask
+//
+
+struct Ball
 {
 	AudioGraphInstance * graphInstance;
 	Vec3 pos;
@@ -65,29 +67,90 @@ struct Ball : AudioUpdateTask
 		graphInstance->audioGraph->setMemf("pos", pos[0], pos[1], pos[2]);
 		graphInstance->audioGraph->setMemf("vel", pos[0], pos[1], pos[2]);
 	}
+};
+
+//
+
+struct World
+{
+	std::vector<Ball*> balls;
 	
-	virtual void audioUpdate(const float dt)
+	World()
+		: balls()
 	{
-		tick(dt);
+	}
+	
+	void init()
+	{
+		//for (int i = 0; i < 3; ++i)
+		for (int i = 0; i < 0; ++i)
+		{
+			Ball * ball = new Ball();
+			
+			ball->pos[1] = random(10.f, 20.f);
+			ball->vel[0] = random(-2.f, +2.f);
+			ball->vel[1] = random(-5.f, +5.f);
+			ball->vel[2] = random(-2.f, +2.f);
+			
+			balls.push_back(ball);
+		}
+	}
+	
+	void shut()
+	{
+		for (auto ball : balls)
+		{
+			delete ball;
+			ball = nullptr;
+		}
+		
+		balls.clear();
+	}
+	
+	void tick(const float dt)
+	{
+		if (keyboard.wentDown(SDLK_a))
+		{
+			Ball * ball = new Ball();
+			
+			balls.push_back(ball);
+		}
+		
+		if (keyboard.wentDown(SDLK_z))
+		{
+			if (balls.empty() == false)
+			{
+				Ball *& ball = balls.back();
+				
+				delete ball;
+				ball = nullptr;
+				
+				balls.pop_back();
+			}
+		}
+		
+		//
+		
+		for (auto ball : balls)
+		{
+			ball->tick(dt);
+		}
 	}
 };
 
+//
+
 void testAudioGraphManager()
 {
-	const int kNumChannels = 16;
-	
-	//
-	
 	SDL_mutex * mutex = SDL_CreateMutex();
 	
 	//
 	
+	const int kNumChannels = 16;
+	
 	AudioVoiceManager voiceMgr;
-	
 	voiceMgr.init(kNumChannels);
-	
 	voiceMgr.outputMono = MONO_OUTPUT;
-	
 	g_voiceMgr = &voiceMgr;
 	
 	//
@@ -98,17 +161,11 @@ void testAudioGraphManager()
 	Assert(g_audioGraphMgr == nullptr);
 	g_audioGraphMgr = &audioGraphMgr;
 	
-	AudioGraphInstance * instance1 = nullptr;// = audioGraphMgr.createInstance("audioTest1.xml");
-	AudioGraphInstance * instance2 = nullptr;// = audioGraphMgr.createInstance("audioTest1.xml");
-	AudioGraphInstance * instance3 = nullptr;// = audioGraphMgr.createInstance("audioGraph.xml");
+	AudioGraphInstance * instance1 = nullptr;
+	AudioGraphInstance * instance2 = nullptr;
+	AudioGraphInstance * instance3 = nullptr;
 	AudioGraphInstance * instance4 = nullptr;
 	AudioGraphInstance * instance5 = nullptr;
-	
-	//audioGraphMgr.free(instance1);
-	//audioGraphMgr.free(instance2);
-	//audioGraphMgr.free(instance3);
-	
-	//instance1 = audioGraphMgr.createInstance("wavefieldTest.xml");
 	
 #if 0
 	instance1 = audioGraphMgr.createInstance("lowpassTest5.xml");
@@ -122,32 +179,14 @@ void testAudioGraphManager()
 	instance3 = audioGraphMgr.createInstance("lowpassTest5.xml");
 	instance3->audioGraph->setMemf("int", 52);
 	instance3->audioGraph->triggerEvent("type1");
-#elif 1
+#elif 0
 	instance1 = audioGraphMgr.createInstance("mixtest1.xml");
 #endif
-
-	//instance4 = audioGraphMgr.createInstance("lowpassTest5.xml");
-	//instance4->audioGraph->setMemf("int", 35);
-	//instance4->audioGraph->triggerEvent("type2");
 	
-	//instance1 = audioGraphMgr.createInstance("voiceTest1.xml");
-	//instance2 = audioGraphMgr.createInstance("voiceTest2.xml");
-	//instance3 = audioGraphMgr.createInstance("voiceTest3.xml");
+	//
 	
-	std::vector<Ball*> balls;
-	
-	//for (int i = 0; i < 3; ++i)
-	for (int i = 0; i < 0; ++i)
-	{
-		Ball * ball = new Ball();
-		
-		ball->pos[1] = random(10.f, 20.f);
-		ball->vel[0] = random(-2.f, +2.f);
-		ball->vel[1] = random(-5.f, +5.f);
-		ball->vel[2] = random(-2.f, +2.f);
-		
-		balls.push_back(ball);
-	}
+	World world;
+	world.init();
 	
 	//
 	
@@ -160,10 +199,7 @@ void testAudioGraphManager()
 	audioUpdateHandler.voiceMgr = &voiceMgr;
 	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
 	
-	for (auto ball : balls)
-	{
-		audioUpdateHandler.updateTasks.push_back(ball);
-	}
+	//
 	
 	PortAudioObject pa;
 	
@@ -215,10 +251,13 @@ void testAudioGraphManager()
 		
 		const float dt = framework.timeStep;
 		
+		world.tick(dt);
+		
 		doMenus(true, false);
 		
 		audioGraphMgr.tickEditor(dt);
 		
+	#if 0
 		if (instance1 != nullptr)
 		{
 			const bool value = (rand() % 100) == 0;
@@ -230,6 +269,7 @@ void testAudioGraphManager()
 				audioGraphMgr.free(instance1);
 			}
 		}
+	#endif
 		
 		//
 		
@@ -240,6 +280,14 @@ void testAudioGraphManager()
 				audioGraphMgr.drawEditor();
 				
 				doMenus(false, true);
+				
+				if (audioGraphMgr.selectedFile && audioGraphMgr.selectedFile->activeInstance)
+				{
+					setColor(colorGreen);
+					drawText(GFX_SX/2, 20, 20, 0, 0, "- 4DWORLD :: %s: %p -",
+						audioGraphMgr.selectedFile->filename.c_str(),
+						audioGraphMgr.selectedFile->activeInstance->audioGraph);
+				}
 			}
 			popFontMode();
 		}
@@ -254,13 +302,7 @@ void testAudioGraphManager()
 	
 	//
 	
-	for (auto ball : balls)
-	{
-		delete ball;
-		ball = nullptr;
-	}
-	
-	balls.clear();
+	world.shut();
 	
 	//
 	
