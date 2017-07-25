@@ -104,7 +104,7 @@ void audioBufferAdd(
 	Assert((uintptr_t(audioBufferSrc) & 15) == 0);
 	
 	__m128 * __restrict audioBufferDst4 = (__m128*)audioBufferDst;
-	__m128 * __restrict audioBufferSrc4 = (__m128*)audioBufferSrc;
+	const __m128 * __restrict audioBufferSrc4 = (__m128*)audioBufferSrc;
 	const int numSamples4 = numSamples / 4;
 	
 	for (int i = 0; i < numSamples4; ++i)
@@ -134,7 +134,7 @@ void audioBufferAdd(
 	Assert((uintptr_t(audioBufferSrc) & 15) == 0);
 	
 	__m128 * __restrict audioBufferDst4 = (__m128*)audioBufferDst;
-	__m128 * __restrict audioBufferSrc4 = (__m128*)audioBufferSrc;
+	const __m128 * __restrict audioBufferSrc4 = (__m128*)audioBufferSrc;
 	const int numSamples4 = numSamples / 4;
 	const __m128 scale4 = _mm_load1_ps(&scale);
 	
@@ -165,8 +165,8 @@ void audioBufferAdd(
 	Assert((uintptr_t(audioBuffer1) & 15) == 0);
 	Assert((uintptr_t(audioBuffer2) & 15) == 0);
 	
-	__m128 * __restrict audioBuffer1_4 = (__m128*)audioBuffer1;
-	__m128 * __restrict audioBuffer2_4 = (__m128*)audioBuffer2;
+	const __m128 * __restrict audioBuffer1_4 = (__m128*)audioBuffer1;
+	const __m128 * __restrict audioBuffer2_4 = (__m128*)audioBuffer2;
 	const int numSamples4 = numSamples / 4;
 	const __m128 scale4 = _mm_load1_ps(&scale);
 	__m128 * __restrict destinationBuffer4 = (__m128*)destinationBuffer;
@@ -182,6 +182,92 @@ void audioBufferAdd(
 	for (int i = begin; i < numSamples; ++i)
 	{
 		destinationBuffer[i] = audioBuffer1[i] + audioBuffer2[i] * scale;
+	}
+}
+
+void audioBufferDryWet(
+	float * dstBuffer,
+	const float * __restrict dryBuffer,
+	const float * __restrict wetBuffer,
+	const int numSamples,
+	const float * __restrict wetnessBuffer)
+{
+	int begin = 0;
+	
+#if ENABLE_SSE
+	Assert((uintptr_t(dstBuffer) & 15) == 0);
+	Assert((uintptr_t(dryBuffer) & 15) == 0);
+	Assert((uintptr_t(wetBuffer) & 15) == 0);
+	Assert((uintptr_t(wetnessBuffer) & 15) == 0);
+	
+	__m128 * __restrict dstBuffer4 = (__m128*)dstBuffer;
+	const __m128 * __restrict dryBuffer4 = (__m128*)dryBuffer;
+	const __m128 * __restrict wetBuffer4 = (__m128*)wetBuffer;
+	const __m128 * __restrict wetnessBuffer4 = (__m128*)wetnessBuffer;
+	const int numSamples4 = numSamples / 4;
+	
+	const __m128 one4 = _mm_set1_ps(1.f);
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		const __m128 dry = dryBuffer4[i];
+		const __m128 wet = wetBuffer4[i];
+		const __m128 wetness = wetnessBuffer4[i];
+		const __m128 dryness = one4 - wetness;
+		
+		dstBuffer4[i] = dry * dryness + wet * wetness;
+	}
+	
+	begin = numSamples4 * 4;
+#endif
+
+	for (int i = begin; i < numSamples; ++i)
+	{
+		dstBuffer[i] =
+			dryBuffer[i] * (1.f - wetnessBuffer[i]) +
+			wetBuffer[i] * wetnessBuffer[i];
+	}
+}
+
+void audioBufferDryWet(
+	float * dstBuffer,
+	const float * __restrict dryBuffer,
+	const float * __restrict wetBuffer,
+	const int numSamples,
+	const float wetness)
+{
+	int begin = 0;
+	
+#if ENABLE_SSE
+	Assert((uintptr_t(dstBuffer) & 15) == 0);
+	Assert((uintptr_t(dryBuffer) & 15) == 0);
+	Assert((uintptr_t(wetBuffer) & 15) == 0);
+	
+	__m128 * __restrict dstBuffer4 = (__m128*)dstBuffer;
+	const __m128 * __restrict dryBuffer4 = (__m128*)dryBuffer;
+	const __m128 * __restrict wetBuffer4 = (__m128*)wetBuffer;
+	const __m128 wetness4 = _mm_set1_ps(wetness);
+	const __m128 dryness4 = _mm_set1_ps(1.f - wetness);
+	const int numSamples4 = numSamples / 4;
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		const __m128 dry = dryBuffer4[i];
+		const __m128 wet = wetBuffer4[i];
+		
+		dstBuffer4[i] = dry * dryness4 + wet * wetness4;
+	}
+	
+	begin = numSamples4 * 4;
+#endif
+
+	const float dryness = (1.f - wetness);
+	
+	for (int i = begin; i < numSamples; ++i)
+	{
+		dstBuffer[i] =
+			dryBuffer[i] * dryness +
+			wetBuffer[i] * wetness;
 	}
 }
 

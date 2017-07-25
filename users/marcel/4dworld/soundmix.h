@@ -378,6 +378,20 @@ extern void audioBufferAdd(
 	const float scale,
 	float * __restrict destinationBuffer);
 
+extern void audioBufferDryWet(
+	float * dstBuffer,
+	const float * __restrict dryBuffer,
+	const float * __restrict wetBuffer,
+	const int numSamples,
+	const float * __restrict wetnessBuffer);
+
+extern void audioBufferDryWet(
+	float * dstBuffer,
+	const float * __restrict dryBuffer,
+	const float * __restrict wetBuffer,
+	const int numSamples,
+	const float wetness);
+
 //
 
 extern AudioVoiceManager * g_voiceMgr;
