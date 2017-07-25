@@ -148,6 +148,30 @@ namespace binaural
 					numAdded++;
 				}
 				
+				if (elevation == 0)
+				{
+					if (sampleSet.addHrirSampleFromSoundData(*soundData, 360, azimuth, false))
+					{
+						numAdded++;
+					}
+				}
+				
+				if (azimuth == 0)
+				{
+					if (sampleSet.addHrirSampleFromSoundData(*soundData, elevation, 360, false))
+					{
+						numAdded++;
+					}
+				}
+				
+				if (elevation == 0 && azimuth == 0)
+				{
+					if (sampleSet.addHrirSampleFromSoundData(*soundData, 360, 360, false))
+					{
+						numAdded++;
+					}
+				}
+				
 				delete soundData;
 				soundData = nullptr;
 			}

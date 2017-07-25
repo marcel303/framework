@@ -84,7 +84,7 @@ namespace binaural
 					numAdded++;
 				}
 				
-				if (azimuth != 0 && azimuth != 180)
+				if (azimuth != 0)
 				{
 					if (sampleSet.addHrirSampleFromSoundData(*soundData, elevation, +azimuth, true))
 					{
@@ -94,6 +94,19 @@ namespace binaural
 				else
 				{
 					//debugLog("skipping HRIR mirroring for %s", filename.c_str());
+				}
+				
+				if (elevation == 90)
+				{
+					if (sampleSet.addHrirSampleFromSoundData(*soundData, elevation, -180, false))
+					{
+						numAdded++;
+					}
+					
+					if (sampleSet.addHrirSampleFromSoundData(*soundData, elevation, +180, false))
+					{
+						numAdded++;
+					}
 				}
 				
 				delete soundData;
