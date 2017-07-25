@@ -8,13 +8,15 @@
 #include "../avgraph/vfxNodes/fourier.cpp" // fixme
 
 #define ENABLE_SSE 1
+#define ENABLE_DEBUGGING 1
 
 #define USE_FRAMEWORK 1
 
 #if USE_FRAMEWORK
+	#include "audio.h"
 	#include "framework.h"
 	#include "Parse.h"
-	#include "audio.h"
+	#include "Timer.h"
 #endif
 
 namespace binaural
@@ -196,7 +198,7 @@ namespace binaural
 	
 	//
 	
-#if USE_FRAMEWORK
+#if ENABLE_DEBUGGING && USE_FRAMEWORK
 	void debugAssert(const bool condition)
 	{
 		fassert(condition);
@@ -217,10 +219,50 @@ namespace binaural
 		logDebug(text);
 	}
 	
+	static std::map<std::string, uint64_t> debugTimers;
+	
+	void debugTimerBegin(const char * name)
+	{
+		auto & debugTimer = debugTimers[name];
+		
+		debugTimer = 0;
+		debugTimer -= g_TimerRT.TimeUS_get();
+	}
+	
+	void debugTimerEnd(const char * name)
+	{
+		auto & debugTimer = debugTimers[name];
+		
+		debugTimer += g_TimerRT.TimeUS_get();
+		
+		debugLog("timer %s took %.2fms", name, debugTimer / 1000.f);
+	}
+#else
+	void debugAssert(const bool condition)
+	{
+	}
+	
+	void debugLog(const char * format, ...)
+	{
+	}
+	
+	void debugTimerBegin(const char * name)
+	{
+	}
+	
+	void debugTimerEnd(const char * name)
+	{
+	}
+#endif
+	
+#if USE_FRAMEWORK
 	void listFiles(const char * path, bool recurse, std::vector<std::string> & result)
 	{
+		debugTimerBegin("list_files");
+		
 		result = ::listFiles(path, recurse);
 		
+		debugTimerEnd("list_files");
 	}
 	
 	bool parseInt32(const std::string & text, int & result)
@@ -330,8 +372,36 @@ namespace binaural
 	
 	void HRIRSampleSet::finalize()
 	{
-		// todo : perform Delaunay triangulation
+		// perform Delaunay triangulation
 		
+		debugTimerBegin("triangulation");
+		
+	#if 0
+		std::vector<SampleLocation> sampleLocations;
+		sampleLocations.resize(samples.size() * 4);
+		
+		int offset[4][2] =
+		{
+			{   0,   0 },
+			{ 360,   0 },
+			{ 360, 180 },
+			{   0, 180 },
+		};
+		
+		for (auto & sample : samples)
+		{
+			sample->azimuth   = (sample->azimuth   + 360) % 360;
+			sample->elevation = (sample->elevation + 180) % 180;
+			
+			for (int i = 0; i < 4; ++i)
+			{
+				SampleLocation & sampleLocation = sampleLocations[index++];
+				
+				sampleLocation.x = (sample->azimuth   + offset[i][0]) % 360;
+				sampleLocation.y = (sample->elevation + offset[i][1]) % 180;
+			}
+		}
+	#else
 		std::vector<SampleLocation> sampleLocations;
 		sampleLocations.resize(samples.size());
 		
@@ -344,18 +414,26 @@ namespace binaural
 			sampleLocation.x = sample->azimuth;
 			sampleLocation.y = sample->elevation;
 		}
-		
+	#endif
+	
 		Delaunay<int> delaunay;
-		std::vector<SampleTriangle> triangles = delaunay.triangulate(sampleLocations);
+		const std::vector<SampleTriangle> triangles = delaunay.triangulate(sampleLocations);
+		
+		debugTimerEnd("triangulation");
 		
 		debugLog("got a bunch of triangles back from the triangulator! numTriangles=%d", triangles.size());
+		
+		debugTimerBegin("grid_insertion");
+		
+		// now we've got the triangulation.. store the triangles into a grid for fast lookups
 		
 		for (auto & triangle : triangles)
 		{
 			// find matching HRIR samples
+			
 			// todo : use a faster lookup mechanism here
 			
-			SampleLocation triangleLocations[3] =
+			const SampleLocation triangleLocations[3] =
 			{
 				triangle.p1,
 				triangle.p2,
@@ -374,6 +452,8 @@ namespace binaural
 				{
 					if (sample->azimuth == triangleLocation.x && sample->elevation == triangleLocation.y)
 					{
+						debugAssert(triangleSamples[i] == nullptr);
+						
 						triangleSamples[i] = sample;
 					}
 				}
@@ -401,6 +481,8 @@ namespace binaural
 				sampleGrid.cells.push_back(cell);
 			}
 		}
+		
+		debugTimerEnd("grid_insertion");
 	}
 	
 	// @see http://blackpawn.com/texts/pointinpoly/
@@ -444,7 +526,11 @@ namespace binaural
 	}
 	bool HRIRSampleSet::lookup_3(const int elevation, const int azimuth, HRIRSampleData const * * samples, float * sampleWeights) const
 	{
+		debugTimerBegin("lookup_hrir");
+		
 		// todo : lookup HRIR sample points using triangulation result
+		
+		bool result = false;
 		
 		HRIRSampleGrid::CellLocation sampleLocation;
 		sampleLocation.elevation = elevation;
@@ -470,10 +556,14 @@ namespace binaural
 				sampleWeights[1] = baryV;
 				sampleWeights[2] = 1.f - baryU - baryV;
 				
-				return true;
+				result = true;
+				
+				break;
 			}
 		}
 		
-		return false;
+		debugTimerEnd("lookup_hrir");
+		
+		return result;
 	}
 }

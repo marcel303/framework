@@ -204,6 +204,9 @@ namespace binaural
 	
 	void debugAssert(const bool condition);
 	void debugLog(const char * format, ...);
+	void debugTimerBegin(const char * name);
+	void debugTimerEnd(const char * name);
+	
 	void listFiles(const char * path, bool recurse, std::vector<std::string> & result);
 	bool parseInt32(const std::string & text, int & result);
 	SoundData * loadSound(const char * filename);

@@ -51,6 +51,8 @@ namespace binaural
 		std::vector<std::string> files;
 		listFiles(path, true, files);
 		
+		debugTimerBegin("load_hrir_from_audio");
+		
 		sampleSet.samples.reserve(sampleSet.samples.size() + files.size());
 		
 		int numAdded = 0;
@@ -67,7 +69,7 @@ namespace binaural
 				continue;
 			}
 			
-			debugLog("sample: azimuth=%d, elevation=%d", azimuth, elevation);
+			//debugLog("sample: azimuth=%d, elevation=%d", azimuth, elevation);
 			
 			SoundData * soundData = loadSound(filename.c_str());
 			
@@ -91,13 +93,15 @@ namespace binaural
 				}
 				else
 				{
-					debugLog("skipping HRIR mirroring for %s", filename.c_str());
+					//debugLog("skipping HRIR mirroring for %s", filename.c_str());
 				}
 				
 				delete soundData;
 				soundData = nullptr;
 			}
 		}
+		
+		debugTimerEnd("load_hrir_from_audio");
 		
 		debugLog("done loading sample set. %d samples added in total", numAdded);
 		

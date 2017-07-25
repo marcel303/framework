@@ -115,6 +115,8 @@ namespace binaural
 		std::vector<std::string> files;
 		listFiles(path, false, files);
 		
+		debugTimerBegin("load_hrir_from_audio");
+		
 		sampleSet.samples.reserve(sampleSet.samples.size() + files.size());
 		
 		int numAdded = 0;
@@ -131,7 +133,7 @@ namespace binaural
 				continue;
 			}
 			
-			debugLog("sample: subjectId=%d, radius=%d, azimuth=%d, elevation=%d", subjectId, radius, azimuth, elevation);
+			//debugLog("sample: subjectId=%d, radius=%d, azimuth=%d, elevation=%d", subjectId, radius, azimuth, elevation);
 			
 			SoundData * soundData = loadSound(filename.c_str());
 			
@@ -150,6 +152,8 @@ namespace binaural
 				soundData = nullptr;
 			}
 		}
+		
+		debugTimerEnd("load_hrir_from_audio");
 		
 		debugLog("done loading sample set. %d samples added in total", numAdded);
 		
