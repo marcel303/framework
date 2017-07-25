@@ -397,6 +397,8 @@ namespace binaural
 				baryU, baryV))
 			{
 				result = &cell;
+				
+				break;
 			}
 		}
 		
@@ -561,9 +563,9 @@ namespace binaural
 			samples[1] = cell->vertex[1].sampleData;
 			samples[2] = cell->vertex[2].sampleData;
 			
-			sampleWeights[0] = baryU;
+			sampleWeights[0] = 1.f - baryU - baryV;
 			sampleWeights[1] = baryV;
-			sampleWeights[2] = 1.f - baryU - baryV;
+			sampleWeights[2] = baryU;
 		
 			result = true;
 		}
