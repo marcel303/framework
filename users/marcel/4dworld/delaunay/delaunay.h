@@ -41,10 +41,16 @@ class Delaunay
 			float midx = (minX + maxX) / 2.f;
 			float midy = (minY + maxY) / 2.f;
 
+		#if 1 // triangulation was giving wrong results ..
+			// fixme : find proper solution. for now, use this work-around
+			VertexType p1(midx - 20 * deltaMax, midy - deltaMax * 20);
+			VertexType p2(midx, midy + 20 * deltaMax);
+			VertexType p3(midx + 20 * deltaMax, midy - deltaMax * 20);
+		#else
 			VertexType p1(midx - 20 * deltaMax, midy - deltaMax);
 			VertexType p2(midx, midy + 20 * deltaMax);
 			VertexType p3(midx + 20 * deltaMax, midy - deltaMax);	
-
+		#endif
 			//std::cout << "Super triangle " << std::endl << Triangle(p1, p2, p3) << std::endl;
 			
 			// Create a list of triangles, and add the supertriangle in it
