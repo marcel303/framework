@@ -262,9 +262,9 @@ AUDIO_NODE_TYPE(globals_4d, AudioNodeVoice4DGlobals)
 	in("rot.x", "audioValue");
 	in("rot.y", "audioValue");
 	in("rot.z", "audioValue");
-	in("plode.x", "audioValue");
-	in("plode.y", "audioValue");
-	in("plode.z", "audioValue");
+	in("plode.x", "audioValue", "1");
+	in("plode.y", "audioValue", "1");
+	in("plode.z", "audioValue", "1");
 	in("origin.x", "audioValue");
 	in("origin.y", "audioValue");
 	in("origin.z", "audioValue");
