@@ -32,7 +32,7 @@ namespace binaural
 		return result;
 	}
 	
-	int dot(const HRIRSampleGrid::CellLocation & a, const HRIRSampleGrid::CellLocation & b)
+	float dot(const HRIRSampleGrid::CellLocation & a, const HRIRSampleGrid::CellLocation & b)
 	{
 		return
 			a.elevation * b.elevation +
