@@ -82,17 +82,34 @@ void testBinaural()
 		
 		sampleSet.finalize();
 		
+		float scale = 1.f;
+		Vec2 translation;
+		
 		do
 		{
 			framework.process();
 			
 			//
 			
-			//const float scale = 1.f + mouse.y * 5.f / GFX_SY;
-			const float scale = 2.f;
+			if (mouse.isDown(BUTTON_LEFT))
+			{
+				if (mouse.dy > 0.f)
+					scale *= 1.f + std::fabsf(mouse.dy) / 100.f;
+				else
+					scale /= 1.f + std::fabsf(mouse.dy) / 100.f;
+			}
 			
-			Mat4x4 transform;
-			transform = Mat4x4(true).Translate(GFX_SX/2, GFX_SY/2, 0).Scale(+scale, -scale, 1.f);
+			if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+			{
+				translation[0] += mouse.dx / scale;
+				translation[1] -= mouse.dy / scale;
+			}
+			
+			const Mat4x4 transform =
+				Mat4x4(true).
+				Translate(GFX_SX/2, GFX_SY/2, 0).
+				Scale(+scale, -scale, 1.f).
+				Translate(translation[0], translation[1], 0);
 			
 			//
 			
@@ -129,7 +146,7 @@ void testBinaural()
 			
 			//
 			
-			framework.beginDraw(0, 0, 0, 0);
+			framework.beginDraw(230, 230, 230, 0);
 			{
 				gxPushMatrix();
 				{
@@ -175,7 +192,7 @@ void testBinaural()
 				
 				gxPushMatrix();
 				{
-					gxTranslatef(HRIR_BUFFER_SIZE + 16, 0, 0);
+					gxTranslatef(0, GFX_SY - 100, 0);
 					
 					const int sx = HRTF_BUFFER_SIZE;
 					const int sy = 100;
@@ -185,7 +202,8 @@ void testBinaural()
 					pushBlend(BLEND_ADD);
 					for (int i = 0; i < sx; ++i)
 					{
-						const float power = std::hypotf(hrtf.lFilter.real[i], hrtf.lFilter.imag[i]);
+						const int j = (i + sx/2) % sx;
+						const float power = std::hypotf(hrtf.lFilter.real[j], hrtf.lFilter.imag[j]);
 						setColorf(1.f, 0.f, 0.f, power);
 						drawLine(i, 0, i, sy);
 					}
@@ -195,7 +213,7 @@ void testBinaural()
 				
 				gxPushMatrix();
 				{
-					gxTranslatef(HRIR_BUFFER_SIZE + 16, 110, 0);
+					gxTranslatef(GFX_SX - HRIR_BUFFER_SIZE, GFX_SY - 100, 0);
 					
 					const int sx = HRTF_BUFFER_SIZE;
 					const int sy = 100;
@@ -205,7 +223,8 @@ void testBinaural()
 					pushBlend(BLEND_ADD);
 					for (int i = 0; i < sx; ++i)
 					{
-						const float power = std::hypotf(hrtf.rFilter.real[i], hrtf.rFilter.imag[i]);
+						const int j = (i + sx/2) % sx;
+						const float power = std::hypotf(hrtf.rFilter.real[j], hrtf.rFilter.imag[j]);
 						setColorf(0.f, 1.f, 0.f, power);
 						drawLine(i, 0, i, sy);
 					}
@@ -215,12 +234,22 @@ void testBinaural()
 				
 				//
 				
-				setFont("calibri.ttf");
-	
-				if (hoverCell != nullptr)
+				for (int offset = 1; offset >= 0; --offset)
 				{
-					setColor(63, 255, 0, 191);
-					drawText(mouse.x, mouse.y + 20, 14, 0, 1, "%.2f, %.2f", baryU, baryV);
+					gxPushMatrix();
+					gxTranslatef(offset, offset, 0);
+					
+					setFont("calibri.ttf");
+					setColor(offset == 0 ? colorWhite : Color(0, 0, 0, 127));
+					
+					drawText(mouse.x, mouse.y + 20, 14, 0, 1, "azimuth=%.2f, elevation=%.2f", hoverLocation[0], hoverLocation[1]);
+					
+					if (hoverCell != nullptr)
+					{
+						drawText(mouse.x, mouse.y + 40, 14, 0, 1, "bary=(%.2f, %.2f, %.2f)", baryU, baryV, 1.f - baryU - baryV);
+					}
+					
+					gxPopMatrix();
 				}
 			}
 			framework.endDraw();
@@ -230,7 +259,7 @@ void testBinaural()
 
 static void drawHrirSampleGrid(const HRIRSampleSet & sampleSet, const Vec2 & hoverLocation, const HRIRSampleGrid::Cell * hoverCell)
 {
-	gxBegin(GL_TRIANGLES);
+	hqBegin(HQ_FILLED_TRIANGLES);
 	{
 		int index = 0;
 		
@@ -252,14 +281,12 @@ static void drawHrirSampleGrid(const HRIRSampleSet & sampleSet, const Vec2 & hov
 					1.f);
 			}
 			
-			gxVertex2f(p2.azimuth, p2.elevation);
-			gxVertex2f(p1.azimuth, p1.elevation);
-			gxVertex2f(p3.azimuth, p3.elevation);
+			hqFillTriangle(p2.azimuth, p2.elevation, p1.azimuth, p1.elevation, p3.azimuth, p3.elevation);
 			
 			index++;
 		}
 	}
-	gxEnd();
+	hqEnd();
 	
 	gxBegin(GL_POINTS);
 	{
@@ -270,11 +297,4 @@ static void drawHrirSampleGrid(const HRIRSampleSet & sampleSet, const Vec2 & hov
 		}
 	}
 	gxEnd();
-	
-	hqBegin(HQ_FILLED_CIRCLES);
-	{
-		setColor(colorWhite);
-		hqFillCircle(hoverLocation[0], hoverLocation[1], 1.f);
-	}
-	hqEnd();
 }
