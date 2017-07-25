@@ -47,11 +47,6 @@ static void convolveAudio(
 	AudioBuffer & lResult,
 	AudioBuffer & rResult);
 
-static bool convertSoundDataToHRTF(
-	const SoundData & soundData,
-	HRTFData & lFilter,
-	HRTFData & rFilter);
-
 static void audioBufferMul(float * __restrict audioBuffer, const int numSamples, const float scale);
 static void audioBufferAdd(const float * __restrict audioBuffer1, const float * __restrict audioBuffer2, const int numSamples, const float scale, float * __restrict destinationBuffer);
 
@@ -420,40 +415,10 @@ struct HRTFData
 	}
 };
 
-struct HRTFDataStereo
+struct HRTF
 {
 	HRTFData lFilter;
 	HRTFData rFilter;
-};
-
-struct HRTFFilter
-{
-	HRTFDataStereo data;
-	
-	float elevation;
-	float azimuth;
-	
-	float x;
-	float y;
-	float z;
-	
-	HRTFFilter()
-		: data()
-		, elevation(0.f)
-		, azimuth(0.f)
-		, x(0.f)
-		, y(0.f)
-		, z(0.f)
-	{
-	}
-	
-	void init(const float _elevation, const float _azimuth)
-	{
-		elevation = _elevation;
-		azimuth = _azimuth;
-		
-		azimuthElevationToXYZ(azimuth, elevation, x, y, z);
-	}
 };
 
 struct AudioBuffer
@@ -591,77 +556,6 @@ static void convolveAudio(
 	const uint64_t t2 = g_TimerRT.TimeUS_get();
 	
 	printf("convolveAudio took %gms\n", (t2 - t1) / 1000.0);
-}
-
-static bool convertSoundDataToHRTF(
-	const SoundData & soundData,
-	HRTFData & lFilter,
-	HRTFData & rFilter)
-{
-	if (soundData.channelCount != 2)
-	{
-		// sample data must be stereo as it must contain data for both the left and right ear impulse responses
-		
-		return false;
-	}
-	
-	// ideally the number of samples in the sound data and HRTF buffer would match
-	// however, clamp the number of samples in case the sound data contains more samples,
-	// and pad with zeroes in case it's less
-	
-	const int numSamplesToCopy = std::min(soundData.sampleCount, HRTF_BUFFER_SIZE);
-	
-	if (soundData.channelSize == 2)
-	{
-		// 16-bit signed integers. convert the sample data to [-1..+1] floating point and
-		// de-interleave into left/right ear HRIR data
-		
-		const int16_t * __restrict sampleData = (const int16_t*)soundData.sampleData;
-		
-		for (int i = 0; i < numSamplesToCopy; ++i)
-		{
-			lFilter.real[i] = sampleData[i * 2 + 0] / float(1 << 15);
-			rFilter.real[i] = sampleData[i * 2 + 1] / float(1 << 15);
-		}
-	}
-	else if (soundData.channelSize == 4)
-	{
-		// 32-bit floating point data. de-interleave into left/right ear HRIR data
-		
-		const float * __restrict sampleData = (const float*)soundData.sampleData;
-		
-		for (int i = 0; i < numSamplesToCopy; ++i)
-		{
-			lFilter.real[i] = sampleData[i * 2 + 0];
-			rFilter.real[i] = sampleData[i * 2 + 1];
-		}
-	}
-	else
-	{
-		// unknown sample format
-		
-		return false;
-	}
-	
-	// pad the HRIR data with zeroes when necessary
-	
-	for (int i = numSamplesToCopy; i < HRTF_BUFFER_SIZE; ++i)
-	{
-		lFilter.real[i] = 0.f;
-		rFilter.real[i] = 0.f;
-	}
-	
-	// initialize the imaginary components to zeroes
-	
-	memset(lFilter.imag, 0, sizeof(lFilter.imag));
-	memset(rFilter.imag, 0, sizeof(rFilter.imag));
-	
-	// convert the HRIR (head-related impulse-response) to HRTF (head-related transfer function)
-	
-	lFilter.transformToFrequencyDomain();
-	rFilter.transformToFrequencyDomain();
-	
-	return true;
 }
 
 //
@@ -889,7 +783,7 @@ struct AudioSource_Binaural : AudioSource
 	AudioBuffer lResult;
 	AudioBuffer rResult;
 	
-	HRTFFilter filter;
+	HRTF hrtf;
 	
 	uint64_t processTimeAvg;
 	
@@ -898,13 +792,13 @@ struct AudioSource_Binaural : AudioSource
 	AudioSource_Binaural()
 		: overlapBuffer()
 		, source(nullptr)
-		, filter()
+		, hrtf()
 		, processTimeAvg(0)
 		, mutex(nullptr)
 	{
 		memset(&overlapBuffer, 0, sizeof(overlapBuffer));
 		
-		memset(&filter, 0, sizeof(filter));
+		memset(&hrtf, 0, sizeof(hrtf));
 		
 		mutex = SDL_CreateMutex();
 	}
@@ -918,12 +812,12 @@ struct AudioSource_Binaural : AudioSource
 		}
 	}
 	
-	void setFilter(const HRTFFilter & _filter, const bool threadSafe)
+	void setHrtf(const HRTF & _hrtf, const bool threadSafe)
 	{
 		if (threadSafe)
 			SDL_LockMutex(mutex);
 		
-		filter = _filter;
+		hrtf = _hrtf;
 		
 		if (threadSafe)
 			SDL_UnlockMutex(mutex);
@@ -973,7 +867,7 @@ struct AudioSource_Binaural : AudioSource
 			
 			SDL_LockMutex(mutex);
 			{
-				convolveAudio(source, filter.data.lFilter, filter.data.rFilter, lResult, rResult);
+				convolveAudio(source, hrtf.lFilter, hrtf.rFilter, lResult, rResult);
 			}
 			SDL_UnlockMutex(mutex);
 			
@@ -1143,179 +1037,6 @@ bool PortAudioObject::shut()
 	}
 	
 	return true;
-}
-
-//
-
-struct HRTFFilterAndDistance
-{
-	HRTFFilter * filter;
-	float distance;
-	
-	bool operator<(const HRTFFilterAndDistance & other) const
-	{
-		return distance < other.distance;
-	}
-};
-
-struct HRTFFilterSet
-{
-	std::vector<HRTFFilter> filters;
-	
-	int findNearestFilters(const float x, const float y, const float z, HRTFFilterAndDistance * out, const int outSize);
-	
-	bool addHrtfFromSoundData(const SoundData & soundData, const int elevation, const int azimuth, const bool swapLR);
-	
-	bool loadIrcamDatabase(const char * path);
-	bool loadMitDatabase(const char * path);
-};
-
-int HRTFFilterSet::findNearestFilters(const float x, const float y, const float z, HRTFFilterAndDistance * out, const int outSize)
-{
-	std::vector<HRTFFilterAndDistance> set;
-	
-	set.resize(filters.size());
-	
-	int index = 0;
-	
-	for (auto & f : filters)
-	{
-		const float dx = f.x - x;
-		const float dy = f.y - y;
-		const float ds = std::hypotf(dx, dy);
-		
-		HRTFFilterAndDistance & fd = set[index++];
-		
-		fd.filter = &f;
-		fd.distance = ds;
-	}
-	
-	std::sort(set.begin(), set.end());
-	
-	const int numOut = std::min(outSize, (int)set.size());
-	
-	for (int i = 0; i < numOut; ++i)
-	{
-		out[i] = set[i];
-	}
-	
-	return numOut;
-}
-
-bool HRTFFilterSet::addHrtfFromSoundData(const SoundData & soundData, const int elevation, const int azimuth, const bool swapLR)
-{
-	filters.resize(filters.size() + 1);
-	
-	HRTFFilter & filter = filters.back();
-	
-	if (convertSoundDataToHRTF(soundData,
-		swapLR == false ? filter.data.lFilter : filter.data.rFilter,
-		swapLR == false ? filter.data.rFilter : filter.data.lFilter))
-	{
-		filter.init(elevation, azimuth);
-		
-		return true;
-	}
-	else
-	{
-		filters.resize(filters.size() - 1);
-		
-		return false;
-	}
-}
-
-bool HRTFFilterSet::loadIrcamDatabase(const char * path)
-{
-	std::vector<std::string> files = listFiles(path, false);
-	
-	filters.reserve(filters.size() + files.size());
-	
-	int numAdded = 0;
-	
-	for (auto & filename : files)
-	{
-		int subjectId;
-		int radius;
-		int elevation;
-		int azimuth;
-		
-		if (parseIrcamFilename(filename.c_str(), subjectId, radius, elevation, azimuth) == false)
-		{
-			continue;
-		}
-		
-		logDebug("subjectId: %d, radius: %d, azimuth: %d, elevation: %d", subjectId, radius, azimuth, elevation);
-		
-		SoundData * soundData = loadSound(filename.c_str());
-		
-		if (soundData == nullptr)
-		{
-			logDebug("failed to load sound data");
-		}
-		else
-		{
-			if (addHrtfFromSoundData(*soundData, elevation, azimuth, false))
-			{
-				numAdded++;
-			}
-			
-			delete soundData;
-			soundData = nullptr;
-		}
-	}
-	
-	return numAdded > 0;
-}
-
-bool HRTFFilterSet::loadMitDatabase(const char * path)
-{
-	std::vector<std::string> files = listFiles(path, true);
-	
-	int numAdded = 0;
-	
-	for (auto & filename : files)
-	{
-		// "H0e070a.wav"
-		
-		int elevation;
-		int azimuth;
-		
-		if (parseMitFilename(filename.c_str(), elevation, azimuth) == false)
-		{
-			continue;
-		}
-		
-		SoundData * soundData = loadSound(filename.c_str());
-		
-		if (soundData == nullptr)
-		{
-			logDebug("failed to load sound data");
-		}
-		else
-		{
-			if (addHrtfFromSoundData(*soundData, elevation, -azimuth, false))
-			{
-				numAdded++;
-			}
-			
-			if (azimuth != 0 && azimuth != 180)
-			{
-				if (addHrtfFromSoundData(*soundData, elevation, +azimuth, true))
-				{
-					numAdded++;
-				}
-			}
-			else
-			{
-				logDebug("skipping HRTF mirroring for %s", filename.c_str());
-			}
-			
-			delete soundData;
-			soundData = nullptr;
-		}
-	}
-	
-	return numAdded > 0;
 }
 
 //
@@ -1494,18 +1215,18 @@ void testHrtf()
 			
 			//logDebug("HRIR weights: %.2f, %.2f", weights[0], weights[1]);
 			
-			HRTFFilter filter;
+			HRTF hrtf;
 			
-			float * lSamples = filter.data.lFilter.real;
-			float * rSamples = filter.data.rFilter.real;
+			float * lSamples = hrtf.lFilter.real;
+			float * rSamples = hrtf.rFilter.real;
 			
 			blendHrirSamples(samples, weights, numSampleLocations, lSamples, rSamples);
 			
-			filter.data.lFilter.transformToFrequencyDomain();
-			filter.data.rFilter.transformToFrequencyDomain();
+			hrtf.lFilter.transformToFrequencyDomain();
+			hrtf.rFilter.transformToFrequencyDomain();
 			
-			binaural1.setFilter(filter, true);
-			binaural2.setFilter(filter, true);
+			binaural1.setHrtf(hrtf, true);
+			binaural2.setHrtf(hrtf, true);
 		}
 			
 		//
