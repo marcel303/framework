@@ -76,8 +76,8 @@ namespace binaural
 	{
 		HRIRSampleData sampleData;
 
-		int elevation;
-		int azimuth;
+		float elevation;
+		float azimuth;
 
 		HRIRSample()
 			: sampleData()
@@ -86,7 +86,7 @@ namespace binaural
 		{
 		}
 		
-		void init(const int _elevation, const int _azimuth)
+		void init(const float _elevation, const float _azimuth)
 		{
 			elevation = _elevation;
 			azimuth = _azimuth;
@@ -97,8 +97,8 @@ namespace binaural
 	{
 		struct CellLocation
 		{
-			int elevation;
-			int azimuth;
+			float elevation;
+			float azimuth;
 		};
 		
 		struct CellVertex
@@ -114,6 +114,8 @@ namespace binaural
 		};
 		
 		std::vector<Cell> cells;
+		
+		const Cell * lookup(const float elevation, const float azimuth, float & baryU, float & baryV) const;
 	};
 	
 	struct HRIRSampleSet
@@ -141,13 +143,13 @@ namespace binaural
 		
 		bool addHrirSampleFromSoundData(
 			const SoundData & soundData,
-			const int elevation,
-			const int azimuth,
+			const float elevation,
+			const float azimuth,
 			const bool swapLR);
 		
 		void finalize();
 		
-		bool lookup_3(const int elevation, const int azimuth, HRIRSampleData const * * samples, float * sampleWeights) const;
+		bool lookup_3(const float elevation, const float azimuth, HRIRSampleData const * * samples, float * sampleWeights) const;
 	};
 
 	struct HRTFData
@@ -192,6 +194,17 @@ namespace binaural
 		const HRIRSampleData & b, const float weightB,
 		const HRIRSampleData & c, const float weightC,
 		HRIRSampleData & result);
+	
+	void blendHrirSamples_3(
+		HRIRSampleData const * const * samples,
+		const float * sampleWeights,
+		HRIRSampleData & result);
+	
+	void hrirToHrtf(
+		const float * __restrict lSamples,
+		const float * __restrict rSamples,
+		HRTFData & lFilter,
+		HRTFData & rFilter);
 
 	void convolveAudio(
 		AudioBuffer & source,
@@ -199,6 +212,46 @@ namespace binaural
 		const HRTFData & rFilter,
 		AudioBuffer & lResult,
 		AudioBuffer & rResult);
+	
+	// @see http://blackpawn.com/texts/pointinpoly/
+	template <typename Vector>
+	inline bool baryPointInTriangle(
+		const Vector & A,
+		const Vector & B,
+		const Vector & C,
+		const Vector & P,
+		float & baryU, float & baryV)
+	{
+		// Compute vectors
+		const Vector v0 = C - A;
+		const Vector v1 = B - A;
+		const Vector v2 = P - A;
+
+		// Compute dot products
+		const auto dot00 = dot(v0, v0);
+		const auto dot01 = dot(v0, v1);
+		const auto dot02 = dot(v0, v2);
+		const auto dot11 = dot(v1, v1);
+		const auto dot12 = dot(v1, v2);
+
+		// Compute barycentric coordinates
+		const float invDenom = 1.f / float(dot00 * dot11 - dot01 * dot01);
+		const float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+		const float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+		// Check if point is in triangle
+		if ((u >= 0.f) && (v >= 0.f) && (u + v < 1.f))
+		{
+			baryU = u;
+			baryV = v;
+			
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
 	
 	//
 	

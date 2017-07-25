@@ -21,8 +21,8 @@
 
 namespace binaural
 {
-	typedef Vector2<int> SampleLocation;
-	typedef Triangle<int> SampleTriangle;
+	typedef Vector2<float> SampleLocation;
+	typedef Triangle<float> SampleTriangle;
 	
 	HRIRSampleGrid::CellLocation operator-(const HRIRSampleGrid::CellLocation & a, const HRIRSampleGrid::CellLocation & b)
 	{
@@ -172,6 +172,39 @@ namespace binaural
 				c.rSamples[i] * cWeight;
 		}
 	#endif
+	}
+	
+	void blendHrirSamples_3(
+		HRIRSampleData const * const * samples,
+		const float * sampleWeights,
+		HRIRSampleData & result)
+	{
+		blendHrirSamples_3(
+			*samples[0], sampleWeights[0],
+			*samples[1], sampleWeights[1],
+			*samples[2], sampleWeights[2],
+			result);
+	}
+	
+	void hrirToHrtf(
+		const float * __restrict lSamples,
+		const float * __restrict rSamples,
+		HRTFData & lFilter,
+		HRTFData & rFilter)
+	{
+		// this will generate the HRTF from the HRIR samples
+		
+		memset(lFilter.imag, 0, sizeof(lFilter.imag));
+		memset(rFilter.imag, 0, sizeof(rFilter.imag));
+		
+		for (int i = 0; i < HRIR_BUFFER_SIZE; ++i)
+		{
+			lFilter.real[fftIndices.indices[i]] = lSamples[i];
+			rFilter.real[fftIndices.indices[i]] = rSamples[i];
+		}
+		
+		Fourier::fft1D(lFilter.real, lFilter.imag, HRTF_BUFFER_SIZE, HRTF_BUFFER_SIZE, false, false);
+		Fourier::fft1D(rFilter.real, rFilter.imag, HRTF_BUFFER_SIZE, HRTF_BUFFER_SIZE, false, false);
 	}
 
 	void convolveAudio(
@@ -345,8 +378,32 @@ namespace binaural
 			oImag[fftIndices.indices[i]] = sReal[i] * fImag[i] + sImag[i] * fReal[i];
 		}
 	}
-
-	bool HRIRSampleSet::addHrirSampleFromSoundData(const SoundData & soundData, const int elevation, const int azimuth, const bool swapLR)
+	
+	const HRIRSampleGrid::Cell * HRIRSampleGrid::lookup(const float elevation, const float azimuth, float & baryU, float & baryV) const
+	{
+		CellLocation sampleLocation;
+		sampleLocation.elevation = elevation;
+		sampleLocation.azimuth = azimuth;
+		
+		const Cell * result = nullptr;
+		
+		for (auto & cell : cells)
+		{
+			if (baryPointInTriangle(
+				cell.vertex[0].location,
+				cell.vertex[1].location,
+				cell.vertex[2].location,
+				sampleLocation,
+				baryU, baryV))
+			{
+				result = &cell;
+			}
+		}
+		
+		return result;
+	}
+	
+	bool HRIRSampleSet::addHrirSampleFromSoundData(const SoundData & soundData, const float elevation, const float azimuth, const bool swapLR)
 	{
 		HRIRSample * sample = new HRIRSample();
 		
@@ -390,15 +447,15 @@ namespace binaural
 		
 		for (auto & sample : samples)
 		{
-			sample->azimuth   = (sample->azimuth   + 360) % 360;
 			sample->elevation = (sample->elevation + 180) % 180;
+			sample->azimuth   = (sample->azimuth   + 360) % 360;
 			
 			for (int i = 0; i < 4; ++i)
 			{
 				SampleLocation & sampleLocation = sampleLocations[index++];
 				
-				sampleLocation.x = (sample->azimuth   + offset[i][0]) % 360;
-				sampleLocation.y = (sample->elevation + offset[i][1]) % 180;
+				sampleLocation.x = (sample->elevation + offset[i][1]) % 180;
+				sampleLocation.y = (sample->azimuth   + offset[i][0]) % 360;
 			}
 		}
 	#else
@@ -411,12 +468,12 @@ namespace binaural
 		{
 			SampleLocation & sampleLocation = sampleLocations[index++];
 			
-			sampleLocation.x = sample->azimuth;
-			sampleLocation.y = sample->elevation;
+			sampleLocation.x = sample->elevation;
+			sampleLocation.y = sample->azimuth;
 		}
 	#endif
 	
-		Delaunay<int> delaunay;
+		Delaunay<float> delaunay;
 		const std::vector<SampleTriangle> triangles = delaunay.triangulate(sampleLocations);
 		
 		debugTimerEnd("triangulation");
@@ -450,7 +507,7 @@ namespace binaural
 				
 				for (auto & sample : samples)
 				{
-					if (sample->azimuth == triangleLocation.x && sample->elevation == triangleLocation.y)
+					if (sample->elevation == triangleLocation.x && sample->azimuth == triangleLocation.y)
 					{
 						debugAssert(triangleSamples[i] == nullptr);
 						
@@ -473,8 +530,8 @@ namespace binaural
 				
 				for (int i = 0; i < 3; ++i)
 				{
-					cell.vertex[i].location.azimuth = triangleSamples[i]->azimuth;
 					cell.vertex[i].location.elevation = triangleSamples[i]->elevation;
+					cell.vertex[i].location.azimuth = triangleSamples[i]->azimuth;
 					cell.vertex[i].sampleData = &triangleSamples[i]->sampleData;
 				}
 				
@@ -485,46 +542,7 @@ namespace binaural
 		debugTimerEnd("grid_insertion");
 	}
 	
-	// @see http://blackpawn.com/texts/pointinpoly/
-	template <typename Vector>
-	static bool baryPointInTriangle(
-		const Vector & A,
-		const Vector & B,
-		const Vector & C,
-		const Vector & P,
-		float & baryU, float & baryV)
-	{
-		// Compute vectors
-		const Vector v0 = C - A;
-		const Vector v1 = B - A;
-		const Vector v2 = P - A;
-
-		// Compute dot products
-		const auto dot00 = dot(v0, v0);
-		const auto dot01 = dot(v0, v1);
-		const auto dot02 = dot(v0, v2);
-		const auto dot11 = dot(v1, v1);
-		const auto dot12 = dot(v1, v2);
-
-		// Compute barycentric coordinates
-		const float invDenom = 1.f / float(dot00 * dot11 - dot01 * dot01);
-		const float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
-		const float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
-
-		// Check if point is in triangle
-		if ((u >= 0.f) && (v >= 0.f) && (u + v < 1.f))
-		{
-			baryU = u;
-			baryV = v;
-			
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-	bool HRIRSampleSet::lookup_3(const int elevation, const int azimuth, HRIRSampleData const * * samples, float * sampleWeights) const
+	bool HRIRSampleSet::lookup_3(const float elevation, const float azimuth, HRIRSampleData const * * samples, float * sampleWeights) const
 	{
 		debugTimerBegin("lookup_hrir");
 		
@@ -532,34 +550,22 @@ namespace binaural
 		
 		bool result = false;
 		
-		HRIRSampleGrid::CellLocation sampleLocation;
-		sampleLocation.elevation = elevation;
-		sampleLocation.azimuth = azimuth;
+		float baryU;
+		float baryV;
 		
-		for (auto & cell : sampleGrid.cells)
+		auto cell = sampleGrid.lookup(elevation, azimuth, baryU, baryV);
+		
+		if (cell != nullptr)
 		{
-			float baryU;
-			float baryV;
+			samples[0] = cell->vertex[0].sampleData;
+			samples[1] = cell->vertex[1].sampleData;
+			samples[2] = cell->vertex[2].sampleData;
 			
-			if (baryPointInTriangle(
-				cell.vertex[0].location,
-				cell.vertex[1].location,
-				cell.vertex[2].location,
-				sampleLocation,
-				baryU, baryV))
-			{
-				samples[0] = cell.vertex[0].sampleData;
-				samples[1] = cell.vertex[1].sampleData;
-				samples[2] = cell.vertex[2].sampleData;
-				
-				sampleWeights[0] = baryU;
-				sampleWeights[1] = baryV;
-				sampleWeights[2] = 1.f - baryU - baryV;
-				
-				result = true;
-				
-				break;
-			}
+			sampleWeights[0] = baryU;
+			sampleWeights[1] = baryV;
+			sampleWeights[2] = 1.f - baryU - baryV;
+		
+			result = true;
 		}
 		
 		debugTimerEnd("lookup_hrir");
