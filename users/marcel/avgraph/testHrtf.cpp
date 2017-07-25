@@ -1217,6 +1217,8 @@ void testHrtf()
 			
 			HRTF hrtf;
 			
+			memset(&hrtf, 0, sizeof(hrtf));
+			
 			float * lSamples = hrtf.lFilter.real;
 			float * rSamples = hrtf.rFilter.real;
 			
