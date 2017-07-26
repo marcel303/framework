@@ -13,27 +13,55 @@ extern const bool MONO_OUTPUT;
 
 //
 
-struct Ball
+#define BALL_CAGE_SIZE 16
+
+//
+
+struct EntityBase
+{
+	bool dead;
+	
+	EntityBase()
+		: dead(false)
+	{
+	}
+	
+	virtual ~EntityBase()
+	{
+	}
+	
+	virtual void tick(const float dt) = 0;
+	
+	virtual void kill()
+	{
+		dead = true;
+	}
+};
+
+struct Ball : EntityBase
 {
 	AudioGraphInstance * graphInstance;
 	Vec3 pos;
 	Vec3 vel;
 	
 	Ball()
-		: graphInstance(nullptr)
+		: EntityBase()
+		, graphInstance(nullptr)
 		, pos(0.f, 10.f, 0.f)
 		, vel(0.f, 0.f, 0.f)
 	{
 		graphInstance = g_audioGraphMgr->createInstance("ballTest.xml");
 	}
 	
-	~Ball()
+	virtual ~Ball() override
 	{
 		g_audioGraphMgr->free(graphInstance);
 	}
 	
-	void tick(const float dt)
+	virtual void tick(const float dt) override
 	{
+		// physics
+		
 		vel[1] += -10.f * dt;
 		
 		pos += vel * dt;
@@ -51,60 +79,124 @@ struct Ball
 			if (i == 1)
 				continue;
 			
-			if (pos[i] < -3.f)
+			if (pos[i] < -BALL_CAGE_SIZE)
 			{
-				pos[i] = -3.f;
+				pos[i] = -BALL_CAGE_SIZE;
 				vel[i] *= -1.f;
 			}
-			else if (pos[i] > +3.f)
+			else if (pos[i] > +BALL_CAGE_SIZE)
 			{
-				pos[i] = +3.f;
+				pos[i] = +BALL_CAGE_SIZE;
 				vel[i] *= -1.f;
 			}
 		}
 		
 		
 		graphInstance->audioGraph->setMemf("pos", pos[0], pos[1], pos[2]);
-		graphInstance->audioGraph->setMemf("vel", pos[0], pos[1], pos[2]);
+		graphInstance->audioGraph->setMemf("vel", vel[0], vel[1], vel[2]);
+		
+		// alive state
+		
+		if (graphInstance->audioGraph->isFLagSet("dead"))
+		{
+			dead = true;
+		}
 	}
+	
+	virtual void kill() override
+	{
+		graphInstance->audioGraph->setFlag("kill");
+	}
+};
+
+struct Oneshot : EntityBase
+{
+	AudioGraphInstance * instance;
+	
+	Vec3 pos;
+	Vec3 vel;
+	float velGrow;
+	Vec3 dim;
+	float dimGrow;
+	
+	float timer;
+	
+	Oneshot(const char * filename, const float time)
+		: EntityBase()
+		, pos()
+		, vel()
+		, velGrow(1.f)
+		, dim(1.f, 1.f, 1.f)
+		, dimGrow(1.f)
+		, timer(time)
+	{
+		instance = g_audioGraphMgr->createInstance(filename);
+	}
+	
+	virtual ~Oneshot() override
+	{
+		g_audioGraphMgr->free(instance);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		pos += vel * dt;
+		vel *= std::powf(velGrow, dt);
+		dim *= std::powf(dimGrow, dt);
+		
+		instance->audioGraph->setMemf("pos", pos[0], pos[1], pos[2]);
+		instance->audioGraph->setMemf("vel", vel[0], vel[1], vel[2]);
+		instance->audioGraph->setMemf("dim", dim[0], dim[1], dim[2]);
+		
+		//
+		
+		if (timer != -1.f)
+		{
+			timer -= dt;
+			
+			if (timer <= 0.f)
+			{
+				instance->audioGraph->setFlag("voice.4d.rampDown");
+			}
+		}
+		
+		if (instance->audioGraph->isFLagSet("voice.4d.rampedDown"))
+		{
+			kill();
+		}
+	}
+};
+
+struct BirdGroup
+{
+	// todo : have multiple voices combined as one ?
+	
 };
 
 //
 
 struct World
 {
-	std::vector<Ball*> balls;
+	std::vector<EntityBase*> entities;
 	
 	World()
-		: balls()
+		: entities()
 	{
 	}
 	
 	void init()
 	{
-		//for (int i = 0; i < 3; ++i)
-		for (int i = 0; i < 0; ++i)
-		{
-			Ball * ball = new Ball();
-			
-			ball->pos[1] = random(10.f, 20.f);
-			ball->vel[0] = random(-2.f, +2.f);
-			ball->vel[1] = random(-5.f, +5.f);
-			ball->vel[2] = random(-2.f, +2.f);
-			
-			balls.push_back(ball);
-		}
 	}
 	
 	void shut()
 	{
-		for (auto ball : balls)
+		for (auto entity : entities)
 		{
-			delete ball;
-			ball = nullptr;
+			delete entity;
+			entity = nullptr;
 		}
 		
-		balls.clear();
+		entities.clear();
 	}
 	
 	void tick(const float dt)
@@ -113,27 +205,79 @@ struct World
 		{
 			Ball * ball = new Ball();
 			
-			balls.push_back(ball);
+			ball->pos[0] = random(-20.f, +20.f);
+			ball->pos[1] = random(+10.f, +20.f);
+			ball->pos[2] = random(-20.f, +20.f);
+			ball->vel[0] = random(-3.f, +3.f);
+			ball->vel[1] = random(-5.f, +5.f);
+			ball->vel[2] = random(-3.f, +3.f);
+			
+			entities.push_back(ball);
 		}
 		
 		if (keyboard.wentDown(SDLK_z))
 		{
-			if (balls.empty() == false)
+			if (entities.empty() == false)
 			{
-				Ball *& ball = balls.back();
+				EntityBase *& entity = entities.back();
 				
-				delete ball;
-				ball = nullptr;
-				
-				balls.pop_back();
+				entity->kill();
 			}
+		}
+		
+		if (keyboard.wentDown(SDLK_o) || entities.size() < 3)
+		{
+			const char * filename = (rand() % 2) == 0 ? "oneshotTest.xml" : "oneshotTest2.xml";
+			
+			//Oneshot * oneshot = new Oneshot(filename, -1.f);
+			Oneshot * oneshot = new Oneshot(filename, random(1.f, 5.f));
+			
+			const float sizeX = 6.f;
+			const float sizeY = 1.f;
+			const float sizeZ = 6.f;
+			
+			oneshot->pos = Vec3(
+				random(-sizeX, +sizeX),
+				random(-sizeY, +sizeY),
+				random(-sizeZ, +sizeZ));
+			oneshot->pos *= 2.f;
+			
+			oneshot->vel[0] = random(-10.f, +10.f);
+			oneshot->vel[1] = 6.f;
+			oneshot->vel[2] = random(-10.f, +10.f);
+			oneshot->velGrow = 2.f;
+			
+			oneshot->dimGrow = 2.f;
+			
+			
+			oneshot->instance->audioGraph->setMemf("delay", random(0.0002f, 0.2f));
+			entities.push_back(oneshot);
 		}
 		
 		//
 		
-		for (auto ball : balls)
+		for (auto entity : entities)
 		{
-			ball->tick(dt);
+			entity->tick(dt);
+		}
+		
+		//
+		
+		for (auto entityItr = entities.begin(); entityItr != entities.end(); )
+		{
+			EntityBase *& entity = *entityItr;
+			
+			if ((*entityItr)->dead)
+			{
+				delete entity;
+				entity = nullptr;
+				
+				entityItr = entities.erase(entityItr);
+			}
+			else
+			{
+				entityItr++;
+			}
 		}
 	}
 };
@@ -181,6 +325,8 @@ void testAudioGraphManager()
 	instance3->audioGraph->triggerEvent("type1");
 #elif 0
 	instance1 = audioGraphMgr.createInstance("mixtest1.xml");
+#elif 1
+	instance1 = audioGraphMgr.createInstance("globals.xml");
 #endif
 	
 	//

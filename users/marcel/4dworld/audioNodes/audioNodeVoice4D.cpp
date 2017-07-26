@@ -25,9 +25,11 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "audioGraph.h"
 #include "audioNodeVoice4D.h"
 #include "Calc.h"
 #include "Mat4x4.h"
+#include "StringEx.h"
 
 AUDIO_ENUM_TYPE(subboost)
 {
@@ -133,7 +135,7 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	//
 	
 	source.voiceNode = this;
-	g_voiceMgr->allocVoice(voice, &source, true);
+	g_voiceMgr->allocVoice(voice, &source, "voice.4d", true);
 }
 
 AudioNodeVoice4D::~AudioNodeVoice4D()
@@ -151,7 +153,7 @@ void AudioNodeVoice4D::tick(const float dt)
 	originMatrix.MakeRotationY(Calc::DegToRad(originRotY));
 	
 	//voice->spat.color = getInputString(kInput_Color, "ff0000");
-	voice->spat.name = getInputString(kInput_Name, "");
+	voice->spat.name = String::FormatC("%s(%d)", getInputString(kInput_Name, ""), voice->channelIndex + 1);
 	voice->spat.gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
 	
 	// position
@@ -217,15 +219,28 @@ void AudioNodeVoice4D::tick(const float dt)
 	
 	//
 	
+	if (g_currentAudioGraph->isFLagSet("voice.4d.rampUp"))
+	{
+		voice->ramp = false;
+	}
+	else if (g_currentAudioGraph->isFLagSet("voice.4d.rampDown"))
+	{
+		voice->ramp = false;
+	}
+	
 	if (voice->hasRamped)
 	{
 		if (voice->ramp)
 		{
 			trigger(kOutput_RampedUp);
+			
+			g_currentAudioGraph->setFlag("voice.4d.rampedUp");
 		}
 		else
 		{
 			trigger(kOutput_RampedDown);
+			
+			g_currentAudioGraph->setFlag("voice.4d.rampedDown");
 		}
 	}
 }
