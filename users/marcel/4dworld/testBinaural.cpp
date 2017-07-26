@@ -5,6 +5,8 @@
 
 using namespace binaural;
 
+#define BLEND_PREVIOUS_HRTF 1
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 
@@ -85,6 +87,11 @@ void testBinaural()
 		float scale = 1.f;
 		Vec2 translation;
 		
+	#if BLEND_PREVIOUS_HRTF
+		HRTF previousHrtf;
+		memset(&previousHrtf, 0, sizeof(previousHrtf));
+	#endif
+		
 		do
 		{
 			framework.process();
@@ -94,9 +101,9 @@ void testBinaural()
 			if (mouse.isDown(BUTTON_LEFT))
 			{
 				if (mouse.dy > 0.f)
-					scale *= 1.f + std::fabsf(mouse.dy) / 100.f;
+					scale *= 1.f + std::abs(float(mouse.dy)) / 100.f;
 				else
-					scale /= 1.f + std::fabsf(mouse.dy) / 100.f;
+					scale /= 1.f + std::abs(float(mouse.dy)) / 100.f;
 			}
 			
 			if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
@@ -111,7 +118,7 @@ void testBinaural()
 				Scale(+scale, -scale, 1.f).
 				Translate(translation[0], translation[1], 0);
 			
-			//
+			// mouse picking
 			
 			const Vec2 hoverLocation = transform.Invert() * Vec2(mouse.x, mouse.y);
 			
@@ -120,7 +127,7 @@ void testBinaural()
 			
 			auto hoverCell = sampleSet.sampleGrid.lookup(hoverLocation[1], hoverLocation[0], baryU, baryV);
 			
-			//
+			// compute the HRIR, a blend between three sample points in a Delaunay triangulation of all sample points
 			
 			HRIRSampleData hrir;
 			
@@ -138,11 +145,60 @@ void testBinaural()
 				}
 			}
 			
-			//
+			// compute the HRTF from the HRIR
 			
 			HRTF hrtf;
 			
 			hrirToHrtf(hrir.lSamples, hrir.rSamples, hrtf.lFilter, hrtf.rFilter);
+			
+			// apply HRTF
+			
+			// todo : get real audio data from somewhere
+			AudioBuffer audioBuffer;
+			memset(&audioBuffer, 0, sizeof(audioBuffer));
+			
+			AudioBuffer audioBufferL;
+			AudioBuffer audioBufferR;
+			
+		#if BLEND_PREVIOUS_HRTF
+			// convolve audio in the frequency domain
+			
+			const HRTF & oldHrtf = previousHrtf;
+			const HRTF & newHrtf = hrtf;
+			
+			AudioBuffer oldAudioBufferL;
+			AudioBuffer oldAudioBufferR;
+			
+			AudioBuffer newAudioBufferL;
+			AudioBuffer newAudioBufferR;
+			
+			convolveAudio_2(
+				audioBuffer,
+				oldHrtf.lFilter,
+				oldHrtf.rFilter,
+				newHrtf.lFilter,
+				newHrtf.rFilter,
+				oldAudioBufferL,
+				oldAudioBufferR,
+				newAudioBufferL,
+				newAudioBufferR);
+			
+			// ramp from old to new audio buffer
+			
+			rampAudioBuffers(oldAudioBufferL.real, newAudioBufferL.real, audioBufferL.real);
+			rampAudioBuffers(oldAudioBufferR.real, newAudioBufferR.real, audioBufferR.real);
+			
+			previousHrtf = hrtf;
+		#else
+			// convolve audio in the frequency domain
+			
+			convolveAudio(
+				audioBuffer,
+				hrtf.lFilter,
+				hrtf.rFilter,
+				audioBufferL,
+				audioBufferR);
+		#endif
 			
 			//
 			
