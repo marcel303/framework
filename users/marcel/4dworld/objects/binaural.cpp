@@ -323,6 +323,27 @@ namespace binaural
 		const float * __restrict array4,
 		float4 * __restrict result)
 	{
+	#if ENABLE_SSE
+		const float4 * __restrict array1_4 = (float4*)array1;
+		const float4 * __restrict array2_4 = (float4*)array2;
+		const float4 * __restrict array3_4 = (float4*)array3;
+		const float4 * __restrict array4_4 = (float4*)array4;
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE / 4; ++i)
+		{
+			float4 value1 = array1_4[i];
+			float4 value2 = array2_4[i];
+			float4 value3 = array3_4[i];
+			float4 value4 = array4_4[i];
+			
+			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
+			
+			result[i * 4 + 0] = value1;
+			result[i * 4 + 1] = value2;
+			result[i * 4 + 2] = value3;
+			result[i * 4 + 3] = value4;
+		}
+	#else
 		float * __restrict resultScalar = (float*)result;
 		
 		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
@@ -337,6 +358,7 @@ namespace binaural
 			resultScalar[i * 4 + 2] = value3;
 			resultScalar[i * 4 + 3] = value4;
 		}
+	#endif
 	}
 	
 	void deinterleaveAudioBuffers_4(
@@ -346,6 +368,27 @@ namespace binaural
 		float * __restrict array3,
 		float * __restrict array4)
 	{
+	#if ENABLE_SSE
+		float4 * __restrict array1_4 = (float4*)array1;
+		float4 * __restrict array2_4 = (float4*)array2;
+		float4 * __restrict array3_4 = (float4*)array3;
+		float4 * __restrict array4_4 = (float4*)array4;
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE / 4; ++i)
+		{
+			float4 value1 = interleaved[i * 4 + 0];
+			float4 value2 = interleaved[i * 4 + 1];
+			float4 value3 = interleaved[i * 4 + 2];
+			float4 value4 = interleaved[i * 4 + 3];
+			
+			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
+			
+			array1_4[i] = value1;
+			array2_4[i] = value2;
+			array3_4[i] = value3;
+			array4_4[i] = value4;
+		}
+	#else
 		const float * __restrict interleavedScalar = (float*)interleaved;
 		
 		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
@@ -355,11 +398,36 @@ namespace binaural
 			array3[i] = interleavedScalar[i * 4 + 2];
 			array4[i] = interleavedScalar[i * 4 + 3];
 		}
+	#endif
+	}
+	
+	//
+	
+	void elevationAndAzimuthToCartesian(const float elevation, const float azimuth, float & x, float & y, float & z)
+	{
+		const float degToRad = M_PI / 180.f;
+		
+		y = std::sin(elevation * degToRad);
+		
+		const float radius = std::sqrtf(1.f - y * y);
+		
+		x = std::cos(azimuth * degToRad) * radius;
+		z = std::sin(azimuth * degToRad) * radius;
+	}
+	
+	void cartesianToElevationAndAzimuth(const float x, const float y, const float z, float & elevation, float & azimuth)
+	{
+		const float radToDeg = 180.f / M_PI;
+		
+		azimuth = std::atan2(z, x) * radToDeg;
+		elevation = std::asin(y) * radToDeg;
 	}
 	
 	//
 	
 #if ENABLE_DEBUGGING && USE_FRAMEWORK
+	static std::map<std::string, uint64_t> debugTimers;
+	
 	void debugAssert(const bool condition)
 	{
 		fassert(condition);
@@ -380,8 +448,6 @@ namespace binaural
 		//logDebug(text);
 		printf("%s\n", text);
 	}
-	
-	static std::map<std::string, uint64_t> debugTimers;
 	
 	void debugTimerBegin(const char * name)
 	{

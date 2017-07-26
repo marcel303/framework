@@ -297,6 +297,9 @@ namespace binaural
 		}
 	}
 	
+	void elevationAndAzimuthToCartesian(const float elevation, const float azimuth, float & x, float & y, float & z);
+	void cartesianToElevationAndAzimuth(const float x, const float y, const float z, float & elevation, float & azimuth);
+	
 	//
 	
 	void debugAssert(const bool condition);
