@@ -5,6 +5,8 @@
 
 using namespace binaural;
 
+#define AUDIO_UPDATE_SIZE (AUDIO_BUFFER_SIZE/2)
+
 #define BLEND_PREVIOUS_HRTF 1
 
 extern const int GFX_SX;
@@ -134,9 +136,9 @@ void testBinaural()
 			
 			// generate audio signal
 			
-			memcpy(overlapBuffer.real, overlapBuffer.real + AUDIO_UPDATE_SIZE, AUDIO_UPDATE_SIZE * sizeof(float));
+			memcpy(overlapBuffer.real, overlapBuffer.real + AUDIO_UPDATE_SIZE, (AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE) * sizeof(float));
 			
-			float * __restrict samples = overlapBuffer.real + AUDIO_UPDATE_SIZE;
+			float * __restrict samples = overlapBuffer.real + AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE;
 			
 			float oscillatorPhaseStep = 1.f / 50.f;
 			const float twoPi = M_PI * 2.f;
@@ -230,6 +232,12 @@ void testBinaural()
 			
 			framework.beginDraw(230, 230, 230, 0);
 			{
+				setFont("calibri.ttf");
+				pushFontMode(FONT_SDF);
+				const int fontSize = 14;
+				
+				//
+				
 				gxPushMatrix();
 				{
 					gxMultMatrixf(transform.m_v);
@@ -267,6 +275,9 @@ void testBinaural()
 						}
 					}
 					popBlend();
+					
+					setColor(50, 50, 50);
+					drawText(5, 5, fontSize, +1, +1, "HRIR left & right ear");
 				}
 				gxPopMatrix();
 				
@@ -277,7 +288,7 @@ void testBinaural()
 					gxTranslatef(GFX_SX - AUDIO_BUFFER_SIZE, 0, 0);
 					
 					const int sx = AUDIO_BUFFER_SIZE;
-					const int sy = 100;
+					const int sy = 50;
 					
 					setColor(colorBlack);
 					drawRect(0, 0, sx, sy);
@@ -299,6 +310,9 @@ void testBinaural()
 						}
 					}
 					popBlend();
+					
+					setColor(50, 50, 50);
+					drawText(5, 5, fontSize, +1, +1, "audio left & right ear (stereo) ");
 				}
 				gxPopMatrix();
 				
@@ -306,31 +320,27 @@ void testBinaural()
 				
 				gxPushMatrix();
 				{
-					gxTranslatef(GFX_SX - AUDIO_BUFFER_SIZE, 100, 0);
+					gxTranslatef(GFX_SX - AUDIO_BUFFER_SIZE, 50, 0);
 					
 					const int sx = AUDIO_BUFFER_SIZE;
-					const int sy = 100;
+					const int sy = 50;
 					
 					setColor(colorBlack);
 					drawRect(0, 0, sx, sy);
 					
-					pushBlend(BLEND_OPAQUE);
+					pushBlend(BLEND_ADD);
 					{
 						setColor(colorRed);
 						for (int i = 0; i < sx; ++i)
 						{
-							setColorf(1.f, 0.f, .5f);
-							drawLine(i, 0, i, sy/2 + overlapBuffer.real[i] * sy/2);
-						}
-						
-						setColor(colorGreen);
-						for (int i = 0; i < sx; ++i)
-						{
-							setColorf(0.f, 1.f, .5f);
+							setColorf(1., 0.f, .5f);
 							drawLine(i, 0, i, sy/2 + overlapBuffer.real[i] * sy/2);
 						}
 					}
 					popBlend();
+					
+					setColor(230, 230, 230);
+					drawText(5, 5, fontSize, +1, +1, "source audio (mono)");
 				}
 				gxPopMatrix();
 				
@@ -354,6 +364,9 @@ void testBinaural()
 						drawLine(i, 0, i, sy);
 					}
 					popBlend();
+					
+					setColor(230, 230, 230);
+					drawText(5, 5, fontSize, +1, +1, "HRTF (left ear)");
 				}
 				gxPopMatrix();
 				
@@ -375,6 +388,9 @@ void testBinaural()
 						drawLine(i, 0, i, sy);
 					}
 					popBlend();
+					
+					setColor(230, 230, 230);
+					drawText(5, 5, fontSize, +1, +1, "HRTF (right ear)");
 				}
 				gxPopMatrix();
 				
@@ -385,18 +401,19 @@ void testBinaural()
 					gxPushMatrix();
 					gxTranslatef(offset, offset, 0);
 					
-					setFont("calibri.ttf");
 					setColor(offset == 0 ? colorWhite : Color(0, 0, 0, 127));
 					
-					drawText(mouse.x, mouse.y + 20, 14, 0, 1, "azimuth=%.2f, elevation=%.2f", hoverLocation[0], hoverLocation[1]);
+					drawText(mouse.x, mouse.y + 20, fontSize, 0, 1, "azimuth=%.2f, elevation=%.2f", hoverLocation[0], hoverLocation[1]);
 					
 					if (hoverCell != nullptr)
 					{
-						drawText(mouse.x, mouse.y + 40, 14, 0, 1, "bary=(%.2f, %.2f, %.2f)", baryU, baryV, 1.f - baryU - baryV);
+						drawText(mouse.x, mouse.y + 40, fontSize, 0, 1, "bary=(%.2f, %.2f, %.2f)", baryU, baryV, 1.f - baryU - baryV);
 					}
 					
 					gxPopMatrix();
 				}
+				
+				popFontMode();
 			}
 			framework.endDraw();
 		} while (!keyboard.wentDown(SDLK_SPACE));
