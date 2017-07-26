@@ -275,6 +275,8 @@ struct AudioVoice
 	Spatialisation spat;
 	Spatialisation lastSentSpat;
 	
+	bool initOsc;
+	
 	AudioSource * source;
 	
 	bool ramp;
@@ -287,6 +289,7 @@ struct AudioVoice
 		: channelIndex(-1)
 		, spat()
 		, lastSentSpat()
+		, initOsc(true)
 		, source(nullptr)
 		, ramp(true)
 		, isRamped(false)
@@ -336,7 +339,7 @@ struct AudioVoiceManager : PortAudioHandler
 	void init(const int numChannels);
 	void shut();
 	
-	bool allocVoice(AudioVoice *& voice, AudioSource * source, const bool doRamping);
+	bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping);
 	void freeVoice(AudioVoice *& voice);
 	
 	void updateChannelIndices();
@@ -346,7 +349,7 @@ struct AudioVoiceManager : PortAudioHandler
 		void * outputBuffer,
 		int framesPerBuffer) override;
 	
-	bool generateOsc(Osc4DStream & stream, const bool forceSync);
+	void generateOsc(Osc4DStream & stream, const bool forceSync);
 };
 
 //

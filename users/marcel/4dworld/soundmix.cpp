@@ -724,7 +724,7 @@ void AudioVoiceManager::shut()
 	numChannels = 0;
 }
 
-bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, const bool doRamping)
+bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping)
 {
 	Assert(voice == nullptr);
 	Assert(source != nullptr);
@@ -735,12 +735,14 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, co
 		voice = &voices.back();
 		voice->source = source;
 		
-		const Color color = Color::fromHSL(colorIndex / 31.f, 1.f, .5f);
+		const Color color = Color::fromHSL(colorIndex / 16.f, 1.f, .5f);
 		colorIndex++;
 		
 		voice->spat.color[0] = color.r * 255.f;
 		voice->spat.color[1] = color.g * 255.f;
 		voice->spat.color[2] = color.b * 255.f;
+		
+		voice->spat.name = name;
 		
 		updateChannelIndices();
 		
@@ -891,20 +893,24 @@ void AudioVoiceManager::portAudioCallback(
 	SDL_UnlockMutex(mutex);
 }
 
-bool AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool forceSync)
+void AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool _forceSync)
 {
-	bool result = true;
-	
 	SDL_LockMutex(mutex);
 	{
 		try
 		{
+			// generate OSC messages for each voice
+			
 			for (auto & voice : voices)
 			{
 				if (voice.channelIndex == -1)
 					continue;
 				
 				stream.setSource(voice.channelIndex);
+				
+				const bool forceSync = _forceSync || voice.initOsc;
+				
+				voice.initOsc = false;
 				
 				if (forceSync || voice.spat.color != voice.lastSentSpat.color)
 				{
@@ -1017,33 +1023,29 @@ bool AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool forceSync)
 				voice.lastSentSpat = voice.spat;
 			}
 			
-			//
+			// generate OSC messages for the global parameters
 			
-			if (forceSync || spat.globalPos != lastSentSpat.globalPos)
-				stream.globalPosition(spat.globalPos[0], spat.globalPos[1], spat.globalPos[2]);
-			if (forceSync || spat.globalSize != lastSentSpat.globalSize)
-				stream.globalDimensions(spat.globalSize[0], spat.globalSize[1], spat.globalSize[2]);
-			if (forceSync || spat.globalRot != lastSentSpat.globalRot)
-				stream.globalRotation(spat.globalRot[0], spat.globalRot[1], spat.globalRot[2]);
-			if (forceSync || spat.globalPlode != lastSentSpat.globalPlode)
-				stream.globalPlode(spat.globalPlode[0], spat.globalPlode[1], spat.globalPlode[2]);
-			if (forceSync || spat.globalOrigin != lastSentSpat.globalOrigin)
-				stream.globalOrigin(spat.globalOrigin[0], spat.globalOrigin[1], spat.globalOrigin[2]);
-			
-			lastSentSpat = spat;
-			
-			//
-			
-			result = true;
+			{
+				const bool forceSync = _forceSync;
+				
+				if (forceSync || spat.globalPos != lastSentSpat.globalPos)
+					stream.globalPosition(spat.globalPos[0], spat.globalPos[1], spat.globalPos[2]);
+				if (forceSync || spat.globalSize != lastSentSpat.globalSize)
+					stream.globalDimensions(spat.globalSize[0], spat.globalSize[1], spat.globalSize[2]);
+				if (forceSync || spat.globalRot != lastSentSpat.globalRot)
+					stream.globalRotation(spat.globalRot[0], spat.globalRot[1], spat.globalRot[2]);
+				if (forceSync || spat.globalPlode != lastSentSpat.globalPlode)
+					stream.globalPlode(spat.globalPlode[0], spat.globalPlode[1], spat.globalPlode[2]);
+				if (forceSync || spat.globalOrigin != lastSentSpat.globalOrigin)
+					stream.globalOrigin(spat.globalOrigin[0], spat.globalOrigin[1], spat.globalOrigin[2]);
+				
+				lastSentSpat = spat;
+			}
 		}
 		catch (std::exception & e)
 		{
 			LOG_ERR("%s", e.what());
-			
-			result = false;
 		}
 	}
 	SDL_UnlockMutex(mutex);
-	
-	return result;
 }
