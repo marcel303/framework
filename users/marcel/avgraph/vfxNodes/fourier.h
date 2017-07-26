@@ -97,8 +97,12 @@ example usage:
 
 */
 
+#include <xmmintrin.h>
+
 struct Fourier
 {
+	typedef __m128 float4;
+	
 	static void fft1D(
 		double * __restrict dreal,
 		double * __restrict dimag,
@@ -120,6 +124,18 @@ struct Fourier
 	static void fft1D_slow(
 		float * __restrict dreal,
 		float * __restrict dimag,
+		const int size, const int transformSize,
+		const bool inverse, const bool normalize);
+	
+	static void fft1D(
+		float4 * __restrict dreal,
+		float4 * __restrict dimag,
+		const int size,
+		const int transformSize,
+		const bool inverse, const bool normalize);
+	static void fft1D_slow(
+		float4 * __restrict dreal,
+		float4 * __restrict dimag,
 		const int size, const int transformSize,
 		const bool inverse, const bool normalize);
 	

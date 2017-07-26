@@ -34,6 +34,115 @@
 #endif
 #include <string.h>
 
+//
+
+struct float4impl
+{
+	__m128 value;
+	
+	float4impl()
+	{
+	}
+	
+	float4impl(const float _value)
+	{
+		value = _mm_set1_ps(_value);
+	}
+	
+	float4impl(const double _value)
+	{
+		value = _mm_set1_ps(float(_value));
+	}
+	
+	explicit float4impl(const __m128 _value)
+	{
+		value = _value;
+	}
+	
+	float4impl & operator=(const float _value)
+	{
+		value = _mm_set1_ps(_value);
+		
+		return *this;
+	}
+	
+	float4impl & operator=(const double _value)
+	{
+		value = _mm_set1_ps(float(_value));
+		
+		return *this;
+	}
+	
+	float4impl operator-() const
+	{
+		return float4impl(_mm_sub_ps(_mm_setzero_ps(), value));
+	}
+	
+	float4impl operator+(const float4impl & other) const
+	{
+		return float4impl(_mm_add_ps(value, other.value));
+	}
+	
+	float4impl operator-(const float4impl & other) const
+	{
+		return float4impl(_mm_sub_ps(value, other.value));
+	}
+	
+	void operator+=(const float4impl & other)
+	{
+		value = _mm_add_ps(value, other.value);
+	}
+	
+	float4impl operator*(const float4impl & other) const
+	{
+		return float4impl(_mm_mul_ps(value, other.value));
+	}
+	
+	void operator*=(const float4impl & other)
+	{
+		value = _mm_mul_ps(value, other.value);
+	}
+	
+	float4impl operator*(const double other) const
+	{
+		return float4impl(_mm_mul_ps(value, _mm_set1_ps(float(other))));
+	}
+	
+	float4impl operator/(const int other) const
+	{
+		return float4impl(_mm_div_ps(value, _mm_set1_ps(float(other))));
+	}
+};
+
+//
+
+static float sine(const float angle)
+{
+	return std::sin(angle);
+}
+
+static double sine(const double angle)
+{
+	return std::sin(angle);
+}
+
+static float4impl sine(const float4impl angle)
+{
+	float4impl result;
+	
+	float * resultScalar = (float*)&result;
+	float * angleScalar = (float*)&angle;
+	
+	for (int i = 0; i < 4; ++i)
+	{
+		resultScalar[i] = std::sin(angleScalar[i]);
+	}
+	
+	return result;
+}
+
+//
+
 template <typename real>
 static void fft1DImpl(
 	real * __restrict dreal,
@@ -67,9 +176,9 @@ static void fft1DImpl(
 		
 		const real angle = (inverse) ? pi2 / n : -pi2 / n;
 
-		real wtmp = std::sin(0.5 * angle);
-		real wpr = -2.0 * wtmp * wtmp;
-		real wpi = std::sin(angle);
+		real wtmp = sine(real(0.5) * angle);
+		real wpr = real(-2.0) * wtmp * wtmp;
+		real wpi = sine(angle);
 		real wr = 1.0;
 		real wi = 0.0;
 
@@ -182,6 +291,31 @@ void Fourier::fft1D_slow(
 	const bool inverse, const bool normalize)
 {
 	fft1D_slowImpl(dreal, dimag, size, transformSize, inverse, normalize);
+}
+
+void Fourier::fft1D(
+	float4 * __restrict dreal,
+	float4 * __restrict dimag,
+	const int size,
+	const int transformSize,
+	const bool inverse, const bool normalize)
+{
+	float4impl * __restrict dreal_impl = (float4impl*)dreal;
+	float4impl * __restrict dimag_impl = (float4impl*)dimag;
+	
+	fft1DImpl(dreal_impl, dimag_impl, size, transformSize, inverse, normalize);
+}
+
+void Fourier::fft1D_slow(
+	float4 * __restrict dreal,
+	float4 * __restrict dimag,
+	const int size, const int transformSize,
+	const bool inverse, const bool normalize)
+{
+	float4impl * __restrict dreal_impl = (float4impl*)dreal;
+	float4impl * __restrict dimag_impl = (float4impl*)dimag;
+	
+	fft1D_slowImpl(dreal_impl, dimag_impl, size, transformSize, inverse, normalize);
 }
 
 template <typename real>
