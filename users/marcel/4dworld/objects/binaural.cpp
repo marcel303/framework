@@ -229,6 +229,56 @@ namespace binaural
 		rResult.transformToTimeDomain(true);
 	}
 	
+	void convolveAudio_2(
+		AudioBuffer & source,
+		const HRTFData & lFilterOld,
+		const HRTFData & rFilterOld,
+		const HRTFData & lFilterNew,
+		const HRTFData & rFilterNew,
+		AudioBuffer & lResultOld,
+		AudioBuffer & rResultOld,
+		AudioBuffer & lResultNew,
+		AudioBuffer & rResultNew)
+	{
+		// transform audio data from the time-domain into the frequency-domain
+		
+		source.transformToFrequencyDomain(true);
+		
+		// convolve audio data with impulse-response data in the frequency-domain
+		
+		source.convolveAndReverseIndices(lFilterOld, lResultOld);
+		source.convolveAndReverseIndices(rFilterOld, rResultOld);
+		source.convolveAndReverseIndices(lFilterNew, lResultNew);
+		source.convolveAndReverseIndices(rFilterNew, rResultNew);
+		
+		// transform convolved audio data back to the time-domain
+		
+		lResultOld.transformToTimeDomain(true);
+		rResultOld.transformToTimeDomain(true);
+		lResultNew.transformToTimeDomain(true);
+		rResultNew.transformToTimeDomain(true);
+	}
+	
+	void rampAudioBuffers(
+		const float * __restrict from,
+		const float * __restrict to,
+		float * __restrict result)
+	{
+		const float tStep = 1.f / AUDIO_BUFFER_SIZE;
+		
+		float t = 0.f;
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+		{
+			const float fromWeight = 1.f - t;
+			const float toWeight = t;
+			
+			result[i] = from[i] * fromWeight + to[i] * toWeight;
+			
+			t += tStep;
+		}
+	}
+	
 	//
 	
 #if ENABLE_DEBUGGING && USE_FRAMEWORK

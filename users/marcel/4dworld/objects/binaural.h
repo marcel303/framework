@@ -213,6 +213,22 @@ namespace binaural
 		AudioBuffer & lResult,
 		AudioBuffer & rResult);
 	
+	void convolveAudio_2(
+		AudioBuffer & source,
+		const HRTFData & lFilterOld,
+		const HRTFData & rFilterOld,
+		const HRTFData & lFilterNew,
+		const HRTFData & rFilterNew,
+		AudioBuffer & lResultOld,
+		AudioBuffer & rResultOld,
+		AudioBuffer & lResultNew,
+		AudioBuffer & rResultNew);
+	
+	void rampAudioBuffers(
+		const float * __restrict from,
+		const float * __restrict to,
+		float * __restrict result);
+	
 	// @see http://blackpawn.com/texts/pointinpoly/
 	template <typename Vector>
 	inline bool baryPointInTriangle(
