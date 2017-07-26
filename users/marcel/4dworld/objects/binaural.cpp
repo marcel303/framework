@@ -9,6 +9,7 @@
 
 #define ENABLE_SSE 1
 #define ENABLE_DEBUGGING 1
+#define ENABLE_FOURIER4 1
 
 #define USE_FRAMEWORK 1
 
@@ -250,10 +251,33 @@ namespace binaural
 		AudioBuffer & lResultNew,
 		AudioBuffer & rResultNew)
 	{
+		debugTimerBegin("convolveAudio_2");
+		
 		// transform audio data from the time-domain into the frequency-domain
 		
 		source.transformToFrequencyDomain(true);
 		
+	#if ENABLE_FOURIER4
+		float4 filterReal[HRTF_BUFFER_SIZE];
+		float4 filterImag[HRTF_BUFFER_SIZE];
+		
+		interleaveAudioBuffers_4(lFilterOld.real, rFilterOld.real, lFilterNew.real, rFilterNew.real, filterReal);
+		interleaveAudioBuffers_4(lFilterOld.imag, rFilterOld.imag, lFilterNew.imag, rFilterNew.imag, filterImag);
+		
+		// convolve audio data with impulse-response data in the frequency-domain
+		
+		float4 convolvedReal[HRTF_BUFFER_SIZE];
+		float4 convolvedImag[HRTF_BUFFER_SIZE];
+		
+		source.convolveAndReverseIndices_4(filterReal, filterImag, convolvedReal, convolvedImag);
+		
+		// transform convolved audio data back to the time-domain
+		
+		Fourier::fft1D((Fourier::float4*)convolvedReal, (Fourier::float4*)convolvedImag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, true, true);
+		
+		deinterleaveAudioBuffers_4(convolvedReal, lResultOld.real, rResultOld.real, lResultNew.real, rResultNew.real);
+		deinterleaveAudioBuffers_4(convolvedImag, lResultOld.imag, rResultOld.imag, lResultNew.imag, rResultNew.imag);
+	#else
 		// convolve audio data with impulse-response data in the frequency-domain
 		
 		source.convolveAndReverseIndices(lFilterOld, lResultOld);
@@ -267,6 +291,9 @@ namespace binaural
 		rResultOld.transformToTimeDomain(true);
 		lResultNew.transformToTimeDomain(true);
 		rResultNew.transformToTimeDomain(true);
+	#endif
+	
+		debugTimerEnd("convolveAudio_2");
 	}
 	
 	void rampAudioBuffers(
@@ -286,6 +313,47 @@ namespace binaural
 			result[i] = from[i] * fromWeight + to[i] * toWeight;
 			
 			t += tStep;
+		}
+	}
+	
+	void interleaveAudioBuffers_4(
+		const float * __restrict array1,
+		const float * __restrict array2,
+		const float * __restrict array3,
+		const float * __restrict array4,
+		float4 * __restrict result)
+	{
+		float * __restrict resultScalar = (float*)result;
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+		{
+			const float value1 = array1[i];
+			const float value2 = array2[i];
+			const float value3 = array3[i];
+			const float value4 = array4[i];
+			
+			resultScalar[i * 4 + 0] = value1;
+			resultScalar[i * 4 + 1] = value2;
+			resultScalar[i * 4 + 2] = value3;
+			resultScalar[i * 4 + 3] = value4;
+		}
+	}
+	
+	void deinterleaveAudioBuffers_4(
+		const float4 * __restrict interleaved,
+		float * __restrict array1,
+		float * __restrict array2,
+		float * __restrict array3,
+		float * __restrict array4)
+	{
+		const float * __restrict interleavedScalar = (float*)interleaved;
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+		{
+			array1[i] = interleavedScalar[i * 4 + 0];
+			array2[i] = interleavedScalar[i * 4 + 1];
+			array3[i] = interleavedScalar[i * 4 + 2];
+			array4[i] = interleavedScalar[i * 4 + 3];
 		}
 	}
 	
@@ -309,7 +377,8 @@ namespace binaural
 	#endif
 		va_end(args);
 		
-		logDebug(text);
+		//logDebug(text);
+		printf("%s\n", text);
 	}
 	
 	static std::map<std::string, uint64_t> debugTimers;
@@ -328,7 +397,7 @@ namespace binaural
 		
 		debugTimer += g_TimerRT.TimeUS_get();
 		
-		debugLog("timer %s took %.2fms", name, debugTimer / 1000.f);
+		debugLog("timer %s took %.3fms", name, debugTimer / 1000.f);
 	}
 #else
 	void debugAssert(const bool condition)
@@ -439,6 +508,35 @@ namespace binaural
 		}
 	}
 	
+	void AudioBuffer::convolveAndReverseIndices_4(
+		const float4 * __restrict filterReal,
+		const float4 * __restrict filterImag,
+		float4 * __restrict outputReal,
+		float4 * __restrict outputImag)
+	{
+		// todo : SSE optimize this code
+		
+		const float * __restrict sReal = real;
+		const float * __restrict sImag = imag;
+		
+		const float4 * __restrict fReal = filterReal;
+		const float4 * __restrict fImag = filterImag;
+		
+		float4 * __restrict oReal = outputReal;
+		float4 * __restrict oImag = outputImag;
+		
+		for (int i = 0; i < HRTF_BUFFER_SIZE; ++i)
+		{
+			// complex multiply both arrays of complex values and store the result in output
+			
+			float4 sReal4 = _mm_load1_ps(&sReal[i]);
+			float4 sImag4 = _mm_load1_ps(&sImag[i]);
+			
+			oReal[fftIndices.indices[i]] = sReal4 * fReal[i] - sImag4 * fImag[i];
+			oImag[fftIndices.indices[i]] = sReal4 * fImag[i] + sImag4 * fReal[i];
+		}
+	}
+	
 	const HRIRSampleGrid::Cell * HRIRSampleGrid::lookup(const float elevation, const float azimuth, float & baryU, float & baryV) const
 	{
 		CellLocation sampleLocation;
@@ -495,32 +593,6 @@ namespace binaural
 		
 		debugTimerBegin("triangulation");
 		
-	#if 0
-		std::vector<SampleLocation> sampleLocations;
-		sampleLocations.resize(samples.size() * 4);
-		
-		int offset[4][2] =
-		{
-			{   0,   0 },
-			{ 360,   0 },
-			{ 360, 180 },
-			{   0, 180 },
-		};
-		
-		for (auto & sample : samples)
-		{
-			sample->elevation = (sample->elevation + 180) % 180;
-			sample->azimuth   = (sample->azimuth   + 360) % 360;
-			
-			for (int i = 0; i < 4; ++i)
-			{
-				SampleLocation & sampleLocation = sampleLocations[index++];
-				
-				sampleLocation.x = (sample->elevation + offset[i][1]) % 180;
-				sampleLocation.y = (sample->azimuth   + offset[i][0]) % 360;
-			}
-		}
-	#else
 		std::vector<SampleLocation> sampleLocations;
 		sampleLocations.resize(samples.size());
 		
@@ -533,7 +605,6 @@ namespace binaural
 			sampleLocation.x = sample->elevation;
 			sampleLocation.y = sample->azimuth;
 		}
-	#endif
 	
 		Delaunay<float> delaunay;
 		const std::vector<SampleTriangle> triangles = delaunay.triangulate(sampleLocations);

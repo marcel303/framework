@@ -30,6 +30,7 @@ within the triangle.
 
 #include <string>
 #include <vector>
+#include <xmmintrin.h>
 
 #ifndef ALIGN16
 	#ifdef MACOS
@@ -42,7 +43,6 @@ within the triangle.
 #define AUDIO_BUFFER_SIZE 512
 #define HRIR_BUFFER_SIZE 512
 #define HRTF_BUFFER_SIZE 512
-#define AUDIO_UPDATE_SIZE 256
 
 namespace binaural
 {
@@ -54,7 +54,11 @@ namespace binaural
 	struct HRTF;
 	struct HRTFData;
 	struct SoundData;
-
+	
+	// value types
+	
+	typedef __m128 float4;
+	
 	// structures
 
 	struct AudioBuffer
@@ -65,6 +69,11 @@ namespace binaural
 		void transformToFrequencyDomain(const bool fast = false);
 		void transformToTimeDomain(const bool fast = false);
 		void convolveAndReverseIndices(const HRTFData & filter, AudioBuffer & output);
+		void convolveAndReverseIndices_4(
+			const float4 * __restrict filterReal,
+			const float4 * __restrict filterImag,
+			float4 * __restrict outputReal,
+			float4 * __restrict outputImag);
 	};
 
 	struct HRIRSampleData
@@ -233,6 +242,20 @@ namespace binaural
 		const float * __restrict from,
 		const float * __restrict to,
 		float * __restrict result);
+	
+	void interleaveAudioBuffers_4(
+		const float * __restrict array1,
+		const float * __restrict array2,
+		const float * __restrict array3,
+		const float * __restrict array4,
+		float4 * __restrict result);
+	
+	void deinterleaveAudioBuffers_4(
+		const float4 * __restrict interleaved,
+		float * __restrict array1,
+		float * __restrict array2,
+		float * __restrict array3,
+		float * __restrict array4);
 	
 	// @see http://blackpawn.com/texts/pointinpoly/
 	template <typename Vector>
