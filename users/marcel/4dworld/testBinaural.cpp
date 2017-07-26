@@ -92,6 +92,11 @@ void testBinaural()
 		memset(&previousHrtf, 0, sizeof(previousHrtf));
 	#endif
 		
+		AudioBuffer overlapBuffer;
+		memset(&overlapBuffer, 0, sizeof(overlapBuffer));
+		
+		float oscillatorPhase = 0.f;
+		
 		do
 		{
 			framework.process();
@@ -127,6 +132,22 @@ void testBinaural()
 			
 			auto hoverCell = sampleSet.sampleGrid.lookup(hoverLocation[1], hoverLocation[0], baryU, baryV);
 			
+			// generate audio signal
+			
+			memcpy(overlapBuffer.real, overlapBuffer.real + AUDIO_UPDATE_SIZE, AUDIO_UPDATE_SIZE * sizeof(float));
+			
+			float * __restrict samples = overlapBuffer.real + AUDIO_UPDATE_SIZE;
+			
+			float oscillatorPhaseStep = 1.f / 50.f;
+			const float twoPi = M_PI * 2.f;
+			
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			{
+				samples[i] = std::sin(oscillatorPhase * twoPi);
+				
+				oscillatorPhase = std::fmod(oscillatorPhase + oscillatorPhaseStep, 1.f);
+			}
+			
 			// compute the HRIR, a blend between three sample points in a Delaunay triangulation of all sample points
 			
 			HRIRSampleData hrir;
@@ -151,16 +172,21 @@ void testBinaural()
 			
 			hrirToHrtf(hrir.lSamples, hrir.rSamples, hrtf.lFilter, hrtf.rFilter);
 			
-			// apply HRTF
+			// prepare audio signal for HRTF application
 			
-			// todo : get real audio data from somewhere
 			AudioBuffer audioBuffer;
-			memset(&audioBuffer, 0, sizeof(audioBuffer));
+			reverseSampleIndices(overlapBuffer.real, audioBuffer.real);
+			memset(audioBuffer.imag, 0, AUDIO_BUFFER_SIZE * sizeof(float));
+			
+			// apply HRTF
 			
 			AudioBuffer audioBufferL;
 			AudioBuffer audioBufferR;
 			
-		#if BLEND_PREVIOUS_HRTF
+		#if 0
+			audioBufferL = audioBuffer;
+			audioBufferR = audioBuffer;
+		#elif BLEND_PREVIOUS_HRTF
 			// convolve audio in the frequency domain
 			
 			const HRTF & oldHrtf = previousHrtf;
@@ -238,6 +264,70 @@ void testBinaural()
 							const float v = .5f + hrir.rSamples[i];
 							setColorf(0.f, v, v / 4.f);
 							drawLine(i, 0, i, sy/2 + hrir.rSamples[i] * sy/2);
+						}
+					}
+					popBlend();
+				}
+				gxPopMatrix();
+				
+				//
+				
+				gxPushMatrix();
+				{
+					gxTranslatef(GFX_SX - AUDIO_BUFFER_SIZE, 0, 0);
+					
+					const int sx = AUDIO_BUFFER_SIZE;
+					const int sy = 100;
+					
+					setColor(colorBlack);
+					drawRect(0, 0, sx, sy);
+					
+					pushBlend(BLEND_ADD);
+					{
+						setColor(colorRed);
+						for (int i = 0; i < sx; ++i)
+						{
+							setColorf(1.f, 0.f, .5f);
+							drawLine(i, 0, i, sy/2 + audioBufferL.real[i] * sy/2);
+						}
+						
+						setColor(colorGreen);
+						for (int i = 0; i < sx; ++i)
+						{
+							setColorf(0.f, 1.f, .5f);
+							drawLine(i, 0, i, sy/2 + audioBufferR.real[i] * sy/2);
+						}
+					}
+					popBlend();
+				}
+				gxPopMatrix();
+				
+				//
+				
+				gxPushMatrix();
+				{
+					gxTranslatef(GFX_SX - AUDIO_BUFFER_SIZE, 100, 0);
+					
+					const int sx = AUDIO_BUFFER_SIZE;
+					const int sy = 100;
+					
+					setColor(colorBlack);
+					drawRect(0, 0, sx, sy);
+					
+					pushBlend(BLEND_OPAQUE);
+					{
+						setColor(colorRed);
+						for (int i = 0; i < sx; ++i)
+						{
+							setColorf(1.f, 0.f, .5f);
+							drawLine(i, 0, i, sy/2 + overlapBuffer.real[i] * sy/2);
+						}
+						
+						setColor(colorGreen);
+						for (int i = 0; i < sx; ++i)
+						{
+							setColorf(0.f, 1.f, .5f);
+							drawLine(i, 0, i, sy/2 + overlapBuffer.real[i] * sy/2);
 						}
 					}
 					popBlend();

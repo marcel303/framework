@@ -39,9 +39,10 @@ within the triangle.
 	#endif
 #endif
 
-#define AUDIO_BUFFER_SIZE 256
+#define AUDIO_BUFFER_SIZE 512
 #define HRIR_BUFFER_SIZE 512
 #define HRTF_BUFFER_SIZE 512
+#define AUDIO_UPDATE_SIZE 256
 
 namespace binaural
 {
@@ -205,7 +206,11 @@ namespace binaural
 		const float * __restrict rSamples,
 		HRTFData & lFilter,
 		HRTFData & rFilter);
-
+	
+	void reverseSampleIndices(
+		const float * __restrict src,
+		float * __restrict dst);
+		
 	void convolveAudio(
 		AudioBuffer & source,
 		const HRTFData & lFilter,

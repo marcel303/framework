@@ -206,6 +206,16 @@ namespace binaural
 		Fourier::fft1D(lFilter.real, lFilter.imag, HRTF_BUFFER_SIZE, HRTF_BUFFER_SIZE, false, false);
 		Fourier::fft1D(rFilter.real, rFilter.imag, HRTF_BUFFER_SIZE, HRTF_BUFFER_SIZE, false, false);
 	}
+	
+	void reverseSampleIndices(
+		const float * __restrict src,
+		float * __restrict dst)
+	{
+		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+		{
+			dst[fftIndices.indices[i]] = src[i];
+		}
+	}
 
 	void convolveAudio(
 		AudioBuffer & source,
