@@ -25,15 +25,15 @@ namespace binaural
 	typedef Vector2<float> SampleLocation;
 	typedef Triangle<float> SampleTriangle;
 	
-	HRIRSampleGrid::CellLocation operator-(const HRIRSampleGrid::CellLocation & a, const HRIRSampleGrid::CellLocation & b)
+	HRIRSampleGrid::Location operator-(const HRIRSampleGrid::Location & a, const HRIRSampleGrid::Location & b)
 	{
-		HRIRSampleGrid::CellLocation result;
+		HRIRSampleGrid::Location result;
 		result.elevation = a.elevation - b.elevation;
 		result.azimuth = a.azimuth - b.azimuth;
 		return result;
 	}
 	
-	float dot(const HRIRSampleGrid::CellLocation & a, const HRIRSampleGrid::CellLocation & b)
+	float dot(const HRIRSampleGrid::Location & a, const HRIRSampleGrid::Location & b)
 	{
 		return
 			a.elevation * b.elevation +
@@ -700,24 +700,45 @@ namespace binaural
 		}
 	}
 	
-	const HRIRSampleGrid::Cell * HRIRSampleGrid::lookup(const float elevation, const float azimuth, float & baryU, float & baryV) const
+	const HRIRSampleGrid::Cell * HRIRSampleGrid::lookupCell(const float elevation, const float azimuth) const
 	{
-		CellLocation sampleLocation;
+		const int cellX = (int(std::floor(elevation / 180.f * HRIRSampleGrid::kGridSx)) + HRIRSampleGrid::kGridSx) % HRIRSampleGrid::kGridSx;
+		const int cellY = (int(std::floor(azimuth   / 360.f * HRIRSampleGrid::kGridSy)) + HRIRSampleGrid::kGridSy) % HRIRSampleGrid::kGridSy;
+		
+		debugAssert(cellX >= 0 && cellX < HRIRSampleGrid::kGridSx);
+		debugAssert(cellY >= 0 && cellY < HRIRSampleGrid::kGridSy);
+		
+		if (cellX < 0 || cellY < 0)
+			return nullptr;
+		else
+			return &cells[cellX][cellY];
+	}
+	
+	const HRIRSampleGrid::Triangle * HRIRSampleGrid::lookupTriangle(const float elevation, const float azimuth, float & baryU, float & baryV) const
+	{
+		auto cell = lookupCell(elevation, azimuth);
+		
+		if (cell == nullptr)
+		{
+			return nullptr;
+		}
+		
+		Location sampleLocation;
 		sampleLocation.elevation = elevation;
 		sampleLocation.azimuth = azimuth;
 		
-		const Cell * result = nullptr;
+		const Triangle * result = nullptr;
 		
-		for (auto & cell : cells)
+		for (auto triangle : cell->triangles)
 		{
 			if (baryPointInTriangle(
-				cell.vertex[0].location,
-				cell.vertex[1].location,
-				cell.vertex[2].location,
+				triangle->vertex[0].location,
+				triangle->vertex[1].location,
+				triangle->vertex[2].location,
 				sampleLocation,
 				baryU, baryV))
 			{
-				result = &cell;
+				result = triangle;
 				
 				break;
 			}
@@ -822,16 +843,62 @@ namespace binaural
 			}
 			else
 			{
-				HRIRSampleGrid::Cell cell;
+				HRIRSampleGrid::Triangle triangle;
 				
 				for (int i = 0; i < 3; ++i)
 				{
-					cell.vertex[i].location.elevation = triangleSamples[i]->elevation;
-					cell.vertex[i].location.azimuth = triangleSamples[i]->azimuth;
-					cell.vertex[i].sampleData = &triangleSamples[i]->sampleData;
+					triangle.vertex[i].location.elevation = triangleSamples[i]->elevation;
+					triangle.vertex[i].location.azimuth = triangleSamples[i]->azimuth;
+					triangle.vertex[i].sampleData = &triangleSamples[i]->sampleData;
 				}
 				
-				sampleGrid.cells.push_back(cell);
+				sampleGrid.triangles.push_back(triangle);
+				
+				auto trianglePtr = &sampleGrid.triangles.back();
+				
+				float minE = triangle.vertex[0].location.elevation;
+				float minA = triangle.vertex[0].location.azimuth;
+				
+				float maxE = triangle.vertex[0].location.elevation;
+				float maxA = triangle.vertex[0].location.azimuth;
+				
+				for (int i = 1; i < 3; ++i)
+				{
+					minE = std::min(minE, triangle.vertex[i].location.elevation);
+					minA = std::min(minA, triangle.vertex[i].location.azimuth);
+					
+					maxE = std::max(maxE, triangle.vertex[i].location.elevation);
+					maxA = std::max(maxA, triangle.vertex[i].location.azimuth);
+				}
+				
+				const int cellX1 = int(std::floor(minE / 180.f * HRIRSampleGrid::kGridSx));
+				const int cellY1 = int(std::floor(minA / 360.f * HRIRSampleGrid::kGridSy));
+				
+				const int cellX2 = int(std::floor(maxE / 180.f * HRIRSampleGrid::kGridSx));
+				const int cellY2 = int(std::floor(maxA / 360.f * HRIRSampleGrid::kGridSy));
+				
+				debugAssert(cellX1 <= cellX2);
+				debugAssert(cellY1 <= cellY2);
+				
+				debugLog("insert triangle into cells: (%d, %d) -> (%d, %d)",
+					cellX1, cellY1,
+					cellX2, cellY2);
+				
+				for (int x = cellX1; x <= cellX2; ++x)
+				{
+					for (int y = cellY1; y <= cellY2; ++y)
+					{
+						const int xi = (x + HRIRSampleGrid::kGridSx) % HRIRSampleGrid::kGridSx;
+						const int yi = (y + HRIRSampleGrid::kGridSy) % HRIRSampleGrid::kGridSy;
+						
+						debugAssert(xi >= 0 && xi < HRIRSampleGrid::kGridSx);
+						debugAssert(yi >= 0 && yi < HRIRSampleGrid::kGridSy);
+						
+						HRIRSampleGrid::Cell & cell = sampleGrid.cells[xi][yi];
+						
+						cell.triangles.push_back(trianglePtr);
+					}
+				}
 			}
 		}
 		
@@ -849,13 +916,13 @@ namespace binaural
 		float baryU;
 		float baryV;
 		
-		auto cell = sampleGrid.lookup(elevation, azimuth, baryU, baryV);
+		auto triangle = sampleGrid.lookupTriangle(elevation, azimuth, baryU, baryV);
 		
-		if (cell != nullptr)
+		if (triangle != nullptr)
 		{
-			samples[0] = cell->vertex[0].sampleData;
-			samples[1] = cell->vertex[1].sampleData;
-			samples[2] = cell->vertex[2].sampleData;
+			samples[0] = triangle->vertex[0].sampleData;
+			samples[1] = triangle->vertex[1].sampleData;
+			samples[2] = triangle->vertex[2].sampleData;
 			
 			sampleWeights[0] = 1.f - baryU - baryV;
 			sampleWeights[1] = baryV;

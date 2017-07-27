@@ -18,7 +18,7 @@ extern const int GFX_SY;
 
 static SDL_mutex * g_audioMutex = nullptr;
 
-static void drawHrirSampleGrid(const HRIRSampleSet & dataSet, const Vec2 & hoverLocation, const HRIRSampleGrid::Cell * hoverCell);
+static void drawHrirSampleGrid(const HRIRSampleSet & dataSet, const Vec2 & hoverLocation, const HRIRSampleGrid::Cell * hoverCell, const HRIRSampleGrid::Triangle * hoverTriangle);
 
 struct BinauralObject
 {
@@ -397,8 +397,11 @@ struct MyPortAudioHandler : PortAudioHandler
 {
 	std::vector<BinauralSound*> sounds;
 	
+	float gain;
+	
 	MyPortAudioHandler()
 		: sounds()
+		, gain(1.f)
 	{
 	}
 	
@@ -427,8 +430,6 @@ struct MyPortAudioHandler : PortAudioHandler
 		void * outputBuffer,
 		int framesPerBuffer) override
 	{
-		const float gain = 1.f / 1.f;
-		
 		float * __restrict samples = (float*)outputBuffer;
 		
 		memset(samples, 0, framesPerBuffer * 2 * sizeof(float));
@@ -441,8 +442,13 @@ struct MyPortAudioHandler : PortAudioHandler
 			
 			for (int i = 0; i < AUDIO_UPDATE_SIZE * 2; ++i)
 			{
-				samples[i] += soundSamples[i] * gain;
+				samples[i] += soundSamples[i];
 			}
+		}
+		
+		for (int i = 0; i < AUDIO_UPDATE_SIZE * 2; ++i)
+		{
+			samples[i] *= gain;
 		}
 	}
 };
@@ -564,11 +570,16 @@ void testBinaural()
 		pcmData.init("music2.ogg");
 		
 		MyPortAudioHandler audio;
-		//for (int i = 0; i < 100; ++i)
-		for (int i = 0; i < 1; ++i)
+		int numSources = 0;
+		for (int i = 0; i < 100; ++i)
+		//for (int i = 0; i < 1; ++i)
 		{
 			audio.addBinauralSound(&sampleSet, &pcmData);
+			
+			numSources++;
 		}
+		
+		audio.gain = 1.f / numSources;
 		
 		PortAudioObject pa;
 		pa.init(44100, 2, AUDIO_UPDATE_SIZE, &audio);
@@ -615,7 +626,8 @@ void testBinaural()
 			float baryU;
 			float baryV;
 			
-			auto hoverCell = sampleSet.sampleGrid.lookup(hoverLocation[1], hoverLocation[0], baryU, baryV);
+			auto hoverCell = sampleSet.sampleGrid.lookupCell(hoverLocation[1], hoverLocation[0]);
+			auto hoverTriangle = sampleSet.sampleGrid.lookupTriangle(hoverLocation[1], hoverLocation[0], baryU, baryV);
 			
 			// generate audio signal
 			
@@ -729,7 +741,7 @@ void testBinaural()
 				{
 					gxMultMatrixf(transform.m_v);
 					
-					drawHrirSampleGrid(sampleSet, hoverLocation, hoverCell);
+					drawHrirSampleGrid(sampleSet, hoverLocation, hoverCell, hoverTriangle);
 				}
 				gxPopMatrix();
 				
@@ -962,9 +974,14 @@ void testBinaural()
 					
 					drawText(mouse.x, mouse.y + 20, fontSize, 0, 1, "azimuth=%.2f, elevation=%.2f", hoverLocation[0], hoverLocation[1]);
 					
-					if (hoverCell != nullptr)
+					if (hoverTriangle != nullptr)
 					{
 						drawText(mouse.x, mouse.y + 40, fontSize, 0, 1, "bary=(%.2f, %.2f, %.2f)", baryU, baryV, 1.f - baryU - baryV);
+					}
+					
+					if (hoverCell != nullptr)
+					{
+						drawText(mouse.x, mouse.y + 60, fontSize, 0, 1, "cell.numTriangles=%d", int(hoverCell->triangles.size()));
 					}
 					
 					gxPopMatrix();
@@ -983,21 +1000,34 @@ void testBinaural()
 	g_audioMutex = nullptr;
 }
 
-static void drawHrirSampleGrid(const HRIRSampleSet & sampleSet, const Vec2 & hoverLocation, const HRIRSampleGrid::Cell * hoverCell)
+static void drawHrirSampleGrid(const HRIRSampleSet & sampleSet, const Vec2 & hoverLocation, const HRIRSampleGrid::Cell * hoverCell, const HRIRSampleGrid::Triangle * hoverTriangle)
 {
 	hqBegin(HQ_FILLED_TRIANGLES);
 	{
 		int index = 0;
 		
-		for (auto & cell : sampleSet.sampleGrid.cells)
+		for (auto & triangle : sampleSet.sampleGrid.triangles)
 		{
-			auto & p1 = cell.vertex[0].location;
-			auto & p2 = cell.vertex[1].location;
-			auto & p3 = cell.vertex[2].location;
+			auto & p1 = triangle.vertex[0].location;
+			auto & p2 = triangle.vertex[1].location;
+			auto & p3 = triangle.vertex[2].location;
 			
-			if (&cell == hoverCell)
+			bool isInHoverCell = false;
+			
+			if (hoverCell != nullptr)
+			{
+				for (auto cellTriangle : hoverCell->triangles)
+					if (&triangle == cellTriangle)
+						isInHoverCell = true;
+			}
+			
+			if (&triangle == hoverTriangle)
 			{
 				setColor(colorYellow);
+			}
+			else if (isInHoverCell)
+			{
+				setColor(200, 200, 255);
 			}
 			else
 			{

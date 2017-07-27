@@ -28,6 +28,7 @@ within the triangle.
 
 */
 
+#include <list>
 #include <string>
 #include <vector>
 #include <xmmintrin.h>
@@ -105,27 +106,45 @@ namespace binaural
 
 	struct HRIRSampleGrid
 	{
-		struct CellLocation
+		static const int kGridSx = 20;
+		static const int kGridSy = 40;
+		
+		struct Location
 		{
 			float elevation;
 			float azimuth;
 		};
 		
-		struct CellVertex
+		struct Vertex
 		{
-			CellLocation location;
+			Location location;
 			
 			HRIRSampleData * sampleData;
 		};
 		
-		struct Cell
+		struct Triangle
 		{
-			CellVertex vertex[3];
+			Vertex vertex[3];
 		};
 		
-		std::vector<Cell> cells;
+		struct Cell
+		{
+			std::vector<Triangle*> triangles;
+		};
 		
-		const Cell * lookup(const float elevation, const float azimuth, float & baryU, float & baryV) const;
+		std::list<Triangle> triangles;
+		
+		Cell cells[kGridSx][kGridSy];
+		
+		HRIRSampleGrid()
+			: triangles()
+			, cells()
+		{
+		}
+		
+		const Cell * lookupCell(const float elevation, const float azimuth) const;
+		
+		const Triangle * lookupTriangle(const float elevation, const float azimuth, float & baryU, float & baryV) const;
 	};
 	
 	struct HRIRSampleSet
