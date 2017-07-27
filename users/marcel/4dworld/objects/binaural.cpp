@@ -130,24 +130,22 @@ namespace binaural
 		HRIRSampleData & r)
 	{
 	#if ENABLE_SSE
-		const int bufferSize4 = HRIR_BUFFER_SIZE / 4;
+		const float4 * __restrict a_lSamples = (float4*)a.lSamples;
+		const float4 * __restrict b_lSamples = (float4*)b.lSamples;
+		const float4 * __restrict c_lSamples = (float4*)c.lSamples;
 
-		const __m128 * __restrict a_lSamples = (__m128*)a.lSamples;
-		const __m128 * __restrict b_lSamples = (__m128*)b.lSamples;
-		const __m128 * __restrict c_lSamples = (__m128*)c.lSamples;
+		const float4 * __restrict a_rSamples = (float4*)a.rSamples;
+		const float4 * __restrict b_rSamples = (float4*)b.rSamples;
+		const float4 * __restrict c_rSamples = (float4*)c.rSamples;
 
-		const __m128 * __restrict a_rSamples = (__m128*)a.rSamples;
-		const __m128 * __restrict b_rSamples = (__m128*)b.rSamples;
-		const __m128 * __restrict c_rSamples = (__m128*)c.rSamples;
+		const float4 aWeight4 = _mm_set1_ps(aWeight);
+		const float4 bWeight4 = _mm_set1_ps(bWeight);
+		const float4 cWeight4 = _mm_set1_ps(cWeight);
 
-		const __m128 aWeight4 = _mm_set1_ps(aWeight);
-		const __m128 bWeight4 = _mm_set1_ps(bWeight);
-		const __m128 cWeight4 = _mm_set1_ps(cWeight);
+		float4 * __restrict r_lSamples = (float4*)r.lSamples;
+		float4 * __restrict r_rSamples = (float4*)r.rSamples;
 
-		__m128 * __restrict r_lSamples = (__m128*)r.lSamples;
-		__m128 * __restrict r_rSamples = (__m128*)r.rSamples;
-
-		for (int i = 0; i < bufferSize4; ++i)
+		for (int i = 0; i < HRIR_BUFFER_SIZE / 4; ++i)
 		{
 			r_lSamples[i] =
 				a_lSamples[i] * aWeight4 +
@@ -193,19 +191,42 @@ namespace binaural
 		HRTFData & lFilter,
 		HRTFData & rFilter)
 	{
+		debugTimerBegin("hrirToHrtf");
+		
+	#if ENABLE_FOURIER4
+		// this will generate the HRTF from the HRIR samples
+		
+		float4 filterReal[HRTF_BUFFER_SIZE];
+		float4 filterImag[HRTF_BUFFER_SIZE];
+		
+		interleaveAudioBuffersAndReverseIndices_4(lSamples, rSamples, lSamples, rSamples, filterReal);
+		memset(filterImag, 0, sizeof(filterImag));
+		
+		Fourier::fft1D(filterReal, filterImag, HRTF_BUFFER_SIZE, HRTF_BUFFER_SIZE, false, false);
+		
+		float temp[HRTF_BUFFER_SIZE];
+		deinterleaveAudioBuffers_4(filterReal, lFilter.real, rFilter.real, temp, temp);
+		deinterleaveAudioBuffers_4(filterImag, lFilter.imag, rFilter.imag, temp, temp);
+	#else
 		// this will generate the HRTF from the HRIR samples
 		
 		memset(lFilter.imag, 0, sizeof(lFilter.imag));
 		memset(rFilter.imag, 0, sizeof(rFilter.imag));
 		
+		float * __restrict lFilterReal = lFilter.real;
+		float * __restrict rFilterReal = rFilter.real;
+		
 		for (int i = 0; i < HRIR_BUFFER_SIZE; ++i)
 		{
-			lFilter.real[fftIndices.indices[i]] = lSamples[i];
-			rFilter.real[fftIndices.indices[i]] = rSamples[i];
+			lFilterReal[fftIndices.indices[i]] = lSamples[i];
+			rFilterReal[fftIndices.indices[i]] = rSamples[i];
 		}
 		
 		Fourier::fft1D(lFilter.real, lFilter.imag, HRTF_BUFFER_SIZE, HRTF_BUFFER_SIZE, false, false);
 		Fourier::fft1D(rFilter.real, rFilter.imag, HRTF_BUFFER_SIZE, HRTF_BUFFER_SIZE, false, false);
+	#endif
+	
+		debugTimerEnd("hrirToHrtf");
 	}
 	
 	void reverseSampleIndices(
@@ -301,6 +322,29 @@ namespace binaural
 		const float * __restrict to,
 		float * __restrict result)
 	{
+	#if ENABLE_SSE && 0 // todo : test for correctness
+		const float tStepScalar = 1.f / AUDIO_BUFFER_SIZE;
+		
+		const __m128 tStep = _mm_set1_ps(tStepScalar);
+		__m128 t = _mm_set_ps(tStepScalar * 3.f, tStepScalar * 2.f, tStepScalar * 1.f, tStepScalar * 0.f);
+		
+		const __m128 * __restrict from4 = (__m128*)from;
+		const __m128 * __restrict to4 = (__m128*)to;
+		__m128 * __restrict result4 = (__m128*)result;
+		
+		const __m128 one = _mm_set1_ps(1.f);
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE / 4; ++i)
+		{
+			const __m128 fromWeight = one - t;
+			const __m128 toWeight = t;
+			
+			result4[i] = from4[i] * fromWeight + to4[i] * toWeight;
+			
+			t += tStep;
+		}
+		
+	#else
 		const float tStep = 1.f / AUDIO_BUFFER_SIZE;
 		
 		float t = 0.f;
@@ -314,6 +358,7 @@ namespace binaural
 			
 			t += tStep;
 		}
+	#endif
 	}
 	
 	void interleaveAudioBuffers_4(
@@ -357,6 +402,58 @@ namespace binaural
 			resultScalar[i * 4 + 1] = value2;
 			resultScalar[i * 4 + 2] = value3;
 			resultScalar[i * 4 + 3] = value4;
+		}
+	#endif
+	}
+	
+	void interleaveAudioBuffersAndReverseIndices_4(
+		const float * __restrict array1,
+		const float * __restrict array2,
+		const float * __restrict array3,
+		const float * __restrict array4,
+		float4 * __restrict result)
+	{
+	#if ENABLE_SSE
+		const float4 * __restrict array1_4 = (float4*)array1;
+		const float4 * __restrict array2_4 = (float4*)array2;
+		const float4 * __restrict array3_4 = (float4*)array3;
+		const float4 * __restrict array4_4 = (float4*)array4;
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE / 4; ++i)
+		{
+			float4 value1 = array1_4[i];
+			float4 value2 = array2_4[i];
+			float4 value3 = array3_4[i];
+			float4 value4 = array4_4[i];
+			
+			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
+			
+			const int index1 = fftIndices.indices[i * 4 + 0];
+			const int index2 = fftIndices.indices[i * 4 + 1];
+			const int index3 = fftIndices.indices[i * 4 + 2];
+			const int index4 = fftIndices.indices[i * 4 + 3];
+			
+			result[index1] = value1;
+			result[index2] = value2;
+			result[index3] = value3;
+			result[index4] = value4;
+		}
+	#else
+		float * __restrict resultScalar = (float*)result;
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+		{
+			const float value1 = array1[i];
+			const float value2 = array2[i];
+			const float value3 = array3[i];
+			const float value4 = array4[i];
+			
+			const int index = fftIndices.indices[i];
+			
+			resultScalar[index * 4 + 0] = value1;
+			resultScalar[index * 4 + 1] = value2;
+			resultScalar[index * 4 + 2] = value3;
+			resultScalar[index * 4 + 3] = value4;
 		}
 	#endif
 	}

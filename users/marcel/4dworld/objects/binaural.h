@@ -40,9 +40,9 @@ within the triangle.
 	#endif
 #endif
 
-#define AUDIO_BUFFER_SIZE 512
-#define HRIR_BUFFER_SIZE 512
-#define HRTF_BUFFER_SIZE 512
+#define HRIR_BUFFER_SIZE 256
+#define HRTF_BUFFER_SIZE HRIR_BUFFER_SIZE
+#define AUDIO_BUFFER_SIZE HRIR_BUFFER_SIZE
 
 namespace binaural
 {
@@ -244,6 +244,13 @@ namespace binaural
 		float * __restrict result);
 	
 	void interleaveAudioBuffers_4(
+		const float * __restrict array1,
+		const float * __restrict array2,
+		const float * __restrict array3,
+		const float * __restrict array4,
+		float4 * __restrict result);
+	
+	void interleaveAudioBuffersAndReverseIndices_4(
 		const float * __restrict array1,
 		const float * __restrict array2,
 		const float * __restrict array3,
