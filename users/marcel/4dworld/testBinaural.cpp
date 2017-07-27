@@ -13,6 +13,8 @@ using namespace binaural;
 
 #define OPTIMIZED_SAMPLE_COPIES 1
 
+#define AUDIO_RAMPING_FIX 1
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 
@@ -250,8 +252,15 @@ struct BinauralObject
 		
 		// ramp from old to new audio buffer
 		
-		rampAudioBuffers(oldAudioBufferL.real, newAudioBufferL.real, audioBufferL.real);
-		rampAudioBuffers(oldAudioBufferR.real, newAudioBufferR.real, audioBufferR.real);
+	#if AUDIO_RAMPING_FIX
+		const int offset = AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE;
+		
+		rampAudioBuffers(oldAudioBufferL.real + offset, newAudioBufferL.real + offset, AUDIO_UPDATE_SIZE, audioBufferL.real + offset);
+		rampAudioBuffers(oldAudioBufferR.real + offset, newAudioBufferR.real + offset, AUDIO_UPDATE_SIZE, audioBufferR.real + offset);
+	#else
+		rampAudioBuffers(oldAudioBufferL.real, newAudioBufferL.real, AUDIO_BUFFER_SIZE, audioBufferL.real);
+		rampAudioBuffers(oldAudioBufferR.real, newAudioBufferR.real, AUDIO_BUFFER_SIZE, audioBufferR.real);
+	#endif
 	#else
 		AudioBuffer tempL;
 		AudioBuffer tempR;
@@ -571,8 +580,8 @@ void testBinaural()
 		
 		MyPortAudioHandler audio;
 		int numSources = 0;
-		for (int i = 0; i < 100; ++i)
-		//for (int i = 0; i < 1; ++i)
+		//for (int i = 0; i < 100; ++i)
+		for (int i = 0; i < 1; ++i)
 		{
 			audio.addBinauralSound(&sampleSet, &pcmData);
 			
@@ -710,8 +719,8 @@ void testBinaural()
 			
 			debugTimerBegin("rampAudioBuffers");
 			
-			rampAudioBuffers(oldAudioBufferL.real, newAudioBufferL.real, audioBufferL.real);
-			rampAudioBuffers(oldAudioBufferR.real, newAudioBufferR.real, audioBufferR.real);
+			rampAudioBuffers(oldAudioBufferL.real, newAudioBufferL.real, AUDIO_BUFFER_SIZE, audioBufferL.real);
+			rampAudioBuffers(oldAudioBufferR.real, newAudioBufferR.real, AUDIO_BUFFER_SIZE, audioBufferR.real);
 			
 			debugTimerEnd("rampAudioBuffers");
 			
@@ -955,6 +964,48 @@ void testBinaural()
 						const float power = std::hypotf(hrtf.rFilter.real[j], hrtf.rFilter.imag[j]);
 						setColorf(0.f, 1.f, 0.f, power);
 						drawLine(i, 0, i, sy);
+					}
+					popBlend();
+					
+					setColor(230, 230, 230);
+					drawText(5, 5, fontSize, +1, +1, "HRTF (right ear)");
+				}
+				gxPopMatrix();
+				
+				
+				gxPushMatrix();
+				{
+					gxTranslatef((GFX_SX - AUDIO_BUFFER_SIZE) / 2, GFX_SY - 50, 0);
+					
+					float samples0[AUDIO_BUFFER_SIZE];
+					float samples1[AUDIO_BUFFER_SIZE];
+					float samples[AUDIO_BUFFER_SIZE];
+					
+					for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+					{
+						samples0[i] = 0.f;
+						samples1[i] = 1.f;
+						samples[i] = random(0.f, 1.f);
+					}
+					
+					rampAudioBuffers(samples0, samples1, AUDIO_BUFFER_SIZE, samples);
+					
+					const int sx = AUDIO_BUFFER_SIZE;
+					const int sy = 50;
+					
+					setColor(colorBlack);
+					drawRect(0, 0, sx, sy);
+					pushBlend(BLEND_ADD);
+					for (int i = 0; i < sx; ++i)
+					{
+						setColorf(1.f, 0.f, 0.f);
+						drawLine(i, 0, i, sy * samples0[i]);
+						
+						setColorf(0.f, 1.f, 0.f);
+						drawLine(i, 0, i, sy * samples1[i]);
+						
+						setColorf(0.f, 0.f, 1.f);
+						drawLine(i, 0, i, sy * samples[i]);
 					}
 					popBlend();
 					

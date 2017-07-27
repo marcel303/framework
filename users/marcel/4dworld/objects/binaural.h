@@ -41,7 +41,7 @@ within the triangle.
 	#endif
 #endif
 
-#define HRIR_BUFFER_SIZE 256
+#define HRIR_BUFFER_SIZE 512
 #define HRTF_BUFFER_SIZE HRIR_BUFFER_SIZE
 #define AUDIO_BUFFER_SIZE HRIR_BUFFER_SIZE
 
@@ -260,6 +260,7 @@ namespace binaural
 	void rampAudioBuffers(
 		const float * __restrict from,
 		const float * __restrict to,
+		const int numSamples,
 		float * __restrict result);
 	
 	void interleaveAudioBuffers_4(

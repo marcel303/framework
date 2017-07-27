@@ -8,7 +8,7 @@
 #include "../avgraph/vfxNodes/fourier.cpp" // fixme
 
 #define ENABLE_SSE 1
-#define ENABLE_DEBUGGING 1
+#define ENABLE_DEBUGGING 0
 #define ENABLE_FOURIER4 1
 
 #define USE_FRAMEWORK 1
@@ -320,10 +320,13 @@ namespace binaural
 	void rampAudioBuffers(
 		const float * __restrict from,
 		const float * __restrict to,
+		const int numSamples,
 		float * __restrict result)
 	{
+		debugAssert((numSamples % 4) == 0);
+		
 	#if ENABLE_SSE && 0 // todo : test for correctness
-		const float tStepScalar = 1.f / AUDIO_BUFFER_SIZE;
+		const float tStepScalar = 1.f / numSamples;
 		
 		const __m128 tStep = _mm_set1_ps(tStepScalar);
 		__m128 t = _mm_set_ps(tStepScalar * 3.f, tStepScalar * 2.f, tStepScalar * 1.f, tStepScalar * 0.f);
@@ -345,11 +348,11 @@ namespace binaural
 		}
 		
 	#else
-		const float tStep = 1.f / AUDIO_BUFFER_SIZE;
+		const float tStep = 1.f / numSamples;
 		
 		float t = 0.f;
 		
-		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+		for (int i = 0; i < numSamples; ++i)
 		{
 			const float fromWeight = 1.f - t;
 			const float toWeight = t;
