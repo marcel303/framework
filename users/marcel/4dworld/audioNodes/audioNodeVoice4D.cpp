@@ -56,6 +56,7 @@ AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
 	in("rot.x", "audioValue");
 	in("rot.y", "audioValue");
 	in("rot.z", "audioValue");
+	in("dim", "audioValue", "1");
 	in("dim.x", "audioValue", "1");
 	in("dim.y", "audioValue", "1");
 	in("dim.z", "audioValue", "1");
@@ -109,6 +110,7 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_RotX, kAudioPlugType_FloatVec);
 	addInput(kInput_RotY, kAudioPlugType_FloatVec);
 	addInput(kInput_RotZ, kAudioPlugType_FloatVec);
+	addInput(kInput_Dim, kAudioPlugType_FloatVec);
 	addInput(kInput_DimX, kAudioPlugType_FloatVec);
 	addInput(kInput_DimY, kAudioPlugType_FloatVec);
 	addInput(kInput_DimZ, kAudioPlugType_FloatVec);
@@ -169,9 +171,10 @@ void AudioNodeVoice4D::tick(const float dt)
 	voice->spat.rot = originMatrix.Mul3(voice->spat.rot);
 	
 	// dimensions
-	voice->spat.size[0] = getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();
-	voice->spat.size[1] = getInputAudioFloat(kInput_DimY, &AudioFloat::One)->getMean();
-	voice->spat.size[2] = getInputAudioFloat(kInput_DimZ, &AudioFloat::One)->getMean();
+	const float size = getInputAudioFloat(kInput_Dim, &AudioFloat::One)->getMean();
+	voice->spat.size[0] = size * getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();
+	voice->spat.size[1] = size * getInputAudioFloat(kInput_DimY, &AudioFloat::One)->getMean();
+	voice->spat.size[2] = size * getInputAudioFloat(kInput_DimZ, &AudioFloat::One)->getMean();
 	
 	voice->spat.articulation = getInputAudioFloat(kInput_Articulation, &AudioFloat::Zero)->getMean();
 	
@@ -271,12 +274,14 @@ AUDIO_NODE_TYPE(globals_4d, AudioNodeVoice4DGlobals)
 	in("pos.x", "audioValue");
 	in("pos.y", "audioValue");
 	in("pos.z", "audioValue");
+	in("dim", "audioValue", "1");
 	in("dim.x", "audioValue", "1");
 	in("dim.y", "audioValue", "1");
 	in("dim.z", "audioValue", "1");
 	in("rot.x", "audioValue");
 	in("rot.y", "audioValue");
 	in("rot.z", "audioValue");
+	in("plode", "audioValue", "1");
 	in("plode.x", "audioValue", "1");
 	in("plode.y", "audioValue", "1");
 	in("plode.z", "audioValue", "1");
@@ -289,19 +294,22 @@ void AudioNodeVoice4DGlobals::tick(const float dt)
 {
 	//g_voiceMgr->outputMono = getInputBool(kInput_MonoOutput, false);
 	
+	const float size = getInputAudioFloat(kInput_Dim, &AudioFloat::One)->getMean();
+	const float plode = getInputAudioFloat(kInput_Plode, &AudioFloat::One)->getMean();
+	
 	g_voiceMgr->spat.globalGain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
 	g_voiceMgr->spat.globalPos[0] = getInputAudioFloat(kInput_PosX, &AudioFloat::Zero)->getMean();
 	g_voiceMgr->spat.globalPos[1] = getInputAudioFloat(kInput_PosY, &AudioFloat::Zero)->getMean();
 	g_voiceMgr->spat.globalPos[2] = getInputAudioFloat(kInput_PosZ, &AudioFloat::Zero)->getMean();
-	g_voiceMgr->spat.globalSize[0] = getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();
-	g_voiceMgr->spat.globalSize[1] = getInputAudioFloat(kInput_DimY, &AudioFloat::One)->getMean();
-	g_voiceMgr->spat.globalSize[2] = getInputAudioFloat(kInput_DimZ, &AudioFloat::One)->getMean();
+	g_voiceMgr->spat.globalSize[0] = size * getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();
+	g_voiceMgr->spat.globalSize[1] = size * getInputAudioFloat(kInput_DimY, &AudioFloat::One)->getMean();
+	g_voiceMgr->spat.globalSize[2] = size * getInputAudioFloat(kInput_DimZ, &AudioFloat::One)->getMean();
 	g_voiceMgr->spat.globalRot[0] = getInputAudioFloat(kInput_RotX, &AudioFloat::Zero)->getMean();
 	g_voiceMgr->spat.globalRot[1] = getInputAudioFloat(kInput_RotY, &AudioFloat::Zero)->getMean();
 	g_voiceMgr->spat.globalRot[2] = getInputAudioFloat(kInput_RotZ, &AudioFloat::Zero)->getMean();
-	g_voiceMgr->spat.globalPlode[0] = getInputAudioFloat(kInput_PlodeX, &AudioFloat::One)->getMean();
-	g_voiceMgr->spat.globalPlode[1] = getInputAudioFloat(kInput_PlodeY, &AudioFloat::One)->getMean();
-	g_voiceMgr->spat.globalPlode[2] = getInputAudioFloat(kInput_PlodeZ, &AudioFloat::One)->getMean();
+	g_voiceMgr->spat.globalPlode[0] = plode * getInputAudioFloat(kInput_PlodeX, &AudioFloat::One)->getMean();
+	g_voiceMgr->spat.globalPlode[1] = plode * getInputAudioFloat(kInput_PlodeY, &AudioFloat::One)->getMean();
+	g_voiceMgr->spat.globalPlode[2] = plode * getInputAudioFloat(kInput_PlodeZ, &AudioFloat::One)->getMean();
 	g_voiceMgr->spat.globalOrigin[0] = getInputAudioFloat(kInput_OriginX, &AudioFloat::Zero)->getMean();
 	g_voiceMgr->spat.globalOrigin[1] = getInputAudioFloat(kInput_OriginY, &AudioFloat::Zero)->getMean();
 	g_voiceMgr->spat.globalOrigin[2] = getInputAudioFloat(kInput_OriginZ, &AudioFloat::Zero)->getMean();

@@ -52,6 +52,7 @@ struct AudioNodeVoice4D : AudioNodeBase
 		kInput_RotX,
 		kInput_RotY,
 		kInput_RotZ,
+		kInput_Dim,
 		kInput_DimX,
 		kInput_DimY,
 		kInput_DimZ,
@@ -107,12 +108,14 @@ struct AudioNodeVoice4DGlobals : AudioNodeBase
 		kInput_PosX,
 		kInput_PosY,
 		kInput_PosZ,
+		kInput_Dim,
 		kInput_DimX,
 		kInput_DimY,
 		kInput_DimZ,
 		kInput_RotX,
 		kInput_RotY,
 		kInput_RotZ,
+		kInput_Plode,
 		kInput_PlodeX,
 		kInput_PlodeY,
 		kInput_PlodeZ,
@@ -137,12 +140,14 @@ struct AudioNodeVoice4DGlobals : AudioNodeBase
 		addInput(kInput_PosX, kAudioPlugType_FloatVec);
 		addInput(kInput_PosY, kAudioPlugType_FloatVec);
 		addInput(kInput_PosZ, kAudioPlugType_FloatVec);
+		addInput(kInput_Dim, kAudioPlugType_FloatVec);
 		addInput(kInput_DimX, kAudioPlugType_FloatVec);
 		addInput(kInput_DimY, kAudioPlugType_FloatVec);
 		addInput(kInput_DimZ, kAudioPlugType_FloatVec);
 		addInput(kInput_RotX, kAudioPlugType_FloatVec);
 		addInput(kInput_RotY, kAudioPlugType_FloatVec);
 		addInput(kInput_RotZ, kAudioPlugType_FloatVec);
+		addInput(kInput_Plode, kAudioPlugType_FloatVec);
 		addInput(kInput_PlodeX, kAudioPlugType_FloatVec);
 		addInput(kInput_PlodeY, kAudioPlugType_FloatVec);
 		addInput(kInput_PlodeZ, kAudioPlugType_FloatVec);
