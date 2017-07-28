@@ -209,6 +209,12 @@ namespace binaural
 			, sampleData(nullptr)
 		{
 		}
+		
+		~SoundData()
+		{
+			free(sampleData);
+			sampleData = nullptr;
+		}
 	};
 
 	// functions
