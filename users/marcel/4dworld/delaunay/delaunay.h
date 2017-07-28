@@ -18,6 +18,9 @@ class Delaunay
 		
 		const std::vector<TriangleType>& triangulate(std::vector<VertexType> &vertices)
 		{
+			if(vertices.empty())
+				return _triangles;
+			
 			// Store the vertices localy
 			_vertices = vertices;
 
