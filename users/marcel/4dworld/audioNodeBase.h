@@ -203,14 +203,26 @@ struct AudioFloat
 
 struct AudioFloatArray
 {
+	struct Elem
+	{
+		AudioFloat* audioFloat;
+		
+		Elem()
+			: audioFloat(nullptr)
+		{
+		}
+	};
+	
 	AudioFloat * sum;
-	std::vector<AudioFloat*> array;
+	std::vector<Elem> elems;
+	AudioFloat * immediateValue;
 	
 	int lastUpdateTick;
 	
 	AudioFloatArray()
 		: sum(nullptr)
-		, array()
+		, elems()
+		, immediateValue(nullptr)
 		, lastUpdateTick(-1)
 	{
 	}
@@ -259,15 +271,14 @@ struct AudioPlug
 	}
 	
 	void connectTo(AudioPlug & dst);
-	void connectTo(void * dstMem, const AudioPlugType dstType);
+	void connectTo(void * dstMem, const AudioPlugType dstType, const bool isImmediate);
 	
 	void disconnect()
 	{
 		mem = nullptr;
 		
 	#if MULTIPLE_AUDIO_INPUT
-		// fixme : this is not correct. we should erase the affected element only
-		floatArray.array.clear();
+		floatArray.immediateValue = nullptr;
 	#endif
 	}
 	
@@ -277,7 +288,9 @@ struct AudioPlug
 			return true;
 		
 	#if MULTIPLE_AUDIO_INPUT
-		if (floatArray.array.empty() == false)
+		if (floatArray.elems.empty() == false)
+			return true;
+		if (floatArray.immediateValue != nullptr)
 			return true;
 	#endif
 	

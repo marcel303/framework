@@ -442,14 +442,16 @@ void AudioRealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNo
 			return;
 		
 		bool removed = false;
-		for (auto arrayItr = input->floatArray.array.begin(); arrayItr != input->floatArray.array.end(); ++arrayItr)
+		for (auto elemItr = input->floatArray.elems.begin(); elemItr != input->floatArray.elems.end(); )
 		{
-			if (*arrayItr == output->mem)
+			if (elemItr->audioFloat == output->mem)
 			{
-				arrayItr = input->floatArray.array.erase(arrayItr);
+				elemItr = input->floatArray.elems.erase(elemItr);
 				removed = true;
 				break;
 			}
+			
+			++elemItr;
 		}
 		Assert(removed);
 	}
@@ -792,9 +794,11 @@ void AudioRealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, cons
 			if (i.mem == input->mem)
 				isImmediate = true;
 				
-			for (auto & a : input->floatArray.array)
-				if (i.mem == a)
+			for (auto & elem : input->floatArray.elems)
+				if (i.mem == elem.audioFloat)
 					isImmediate = true;
+			if (i.mem == input->floatArray.immediateValue)
+				isImmediate = true;
 		}
 		
 		if (isImmediate)

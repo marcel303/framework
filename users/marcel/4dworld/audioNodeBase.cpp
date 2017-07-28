@@ -215,9 +215,9 @@ void AudioFloat::mulMul(const AudioFloat & other, const AudioFloat & gain)
 
 void AudioFloatArray::update()
 {
-	const int num = array.size();
+	const int numElems = elems.size();
 	
-	if (num <= 1)
+	if (numElems <= 1)
 	{
 		if (sum != nullptr)
 		{
@@ -239,16 +239,17 @@ void AudioFloatArray::update()
 	
 	bool allScalar = true;
 	
-	for (auto & a : array)
-		allScalar &= a->isScalar;
+	for (auto & elem : elems)
+		allScalar &= elem.audioFloat->isScalar;
+	
 	
 	if (allScalar)
 	{
 		float s = 0.f;
 		
-		for (auto & a : array)
+		for (auto & elem : elems)
 		{
-			s += a->getScalar();
+			s += elem.audioFloat->getScalar();
 		}
 		
 		sum->setScalar(s);
@@ -257,11 +258,11 @@ void AudioFloatArray::update()
 	{
 		sum->setVector();
 		
-		sum->set(*array[0]);
+		sum->set(*elems[0].audioFloat);
 		
-		for (int i = 1; i < num; ++i)
+		for (int i = 1; i < numElems; ++i)
 		{
-			auto * a = array[i];
+			auto * a = elems[i].audioFloat;
 			
 			sum->add(*a);
 		}
@@ -282,12 +283,12 @@ AudioFloat * AudioFloatArray::get()
 		update();
 	}
 	
-	const int num = array.size();
+	const int numElems = elems.size();
 	
-	if (num == 0)
-		return nullptr;
-	else if (num == 1)
-		return array[0];
+	if (numElems == 0)
+		return immediateValue;
+	else if (numElems == 1)
+		return elems[0].audioFloat;
 	else
 		return sum;
 }
@@ -305,7 +306,9 @@ void AudioPlug::connectTo(AudioPlug & dst)
 	#if MULTIPLE_AUDIO_INPUT
 		if (dst.type == kAudioPlugType_FloatVec)
 		{
-			floatArray.array.push_back((AudioFloat*)dst.mem);
+			AudioFloatArray::Elem elem;
+			elem.audioFloat = (AudioFloat*)dst.mem;
+			floatArray.elems.push_back(elem);
 		}
 		else
 	#endif
@@ -315,7 +318,7 @@ void AudioPlug::connectTo(AudioPlug & dst)
 	}
 }
 
-void AudioPlug::connectTo(void * dstMem, const AudioPlugType dstType)
+void AudioPlug::connectTo(void * dstMem, const AudioPlugType dstType, const bool isImmediate)
 {
 	if (dstType != type)
 	{
@@ -326,7 +329,16 @@ void AudioPlug::connectTo(void * dstMem, const AudioPlugType dstType)
 	#if MULTIPLE_AUDIO_INPUT
 		if (dstType == kAudioPlugType_FloatVec)
 		{
-			floatArray.array.push_back((AudioFloat*)dstMem);
+			if (isImmediate)
+			{
+				floatArray.immediateValue = (AudioFloat*)dstMem;
+			}
+			else
+			{
+				AudioFloatArray::Elem elem;
+				elem.audioFloat = (AudioFloat*)dstMem;
+				floatArray.elems.push_back(elem);
+			}
 		}
 		else
 	#endif
