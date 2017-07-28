@@ -2,6 +2,8 @@
 
 #define OSC_SEND_BUNDLES 1
 
+#include "Log.h" // todo : move to cpp
+
 struct Osc4D
 {
 	enum OrientationMode
@@ -137,14 +139,27 @@ struct Osc4DStream : Osc4D
 		
 		//
 		
-		Assert(transmitSocket == nullptr);
-		transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPort));
+		try
+		{
+			Assert(transmitSocket == nullptr);
+			transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPort));
+		}
+		catch (std::exception & e)
+		{
+			LOG_ERR("failed to create UDP transmit socket: %s", e.what());
+			Assert(transmitSocket == nullptr);
+		}
 	}
 	
 	void shut()
 	{
 		delete transmitSocket;
 		transmitSocket = nullptr;
+	}
+	
+	bool isReady() const
+	{
+		return transmitSocket != nullptr;
 	}
 	
 	void setEndpoint(const char * ipAddress, const int udpPort)
