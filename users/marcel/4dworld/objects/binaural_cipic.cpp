@@ -197,7 +197,13 @@ namespace binaural
 				
 				const float elevation = -45 + 5.625 * i;
 				
-				if (sampleSet.addHrirSampleFromSoundData(soundData, elevation, azimuth, false))
+				float x, y, z;
+				elevationAndAzimuthToCartesian(elevation, azimuth, x, y, z);
+				float newElevation;
+				float newAzimuth;
+				cartesianToElevationAndAzimuth(x, y, z, newElevation, newAzimuth);
+				
+				if (sampleSet.addHrirSampleFromSoundData(soundData, newElevation, newAzimuth, false))
 				{
 					numAdded++;
 				}
