@@ -509,10 +509,8 @@ namespace binaural
 		
 		y = std::sin(elevation * degToRad);
 		
-		const float radius = std::sqrtf(1.f - y * y);
-		
-		x = std::cos(azimuth * degToRad) * radius;
-		z = std::sin(azimuth * degToRad) * radius;
+		x = std::cos(azimuth * degToRad) * std::cos(elevation * degToRad);
+		z = std::sin(azimuth * degToRad) * std::cos(elevation * degToRad);
 	}
 	
 	void cartesianToElevationAndAzimuth(const float x, const float y, const float z, float & elevation, float & azimuth)
@@ -883,9 +881,11 @@ namespace binaural
 				debugAssert(cellX1 <= cellX2);
 				debugAssert(cellY1 <= cellY2);
 				
+			#if 0
 				debugLog("insert triangle into cells: (%d, %d) -> (%d, %d)",
 					cellX1, cellY1,
 					cellX2, cellY2);
+			#endif
 				
 				for (int x = cellX1; x <= cellX2; ++x)
 				{
