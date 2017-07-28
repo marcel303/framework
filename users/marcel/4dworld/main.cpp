@@ -65,7 +65,7 @@ const bool MONO_OUTPUT = true;
 	const int GFX_SY = 1600/2;
 #else
 	const int GFX_SX = 1300;
-	const int GFX_SY = 800;
+	const int GFX_SY = 750;
 #endif
 
 //
@@ -78,6 +78,7 @@ const bool MONO_OUTPUT = true;
 extern void testAudioGraphManager();
 extern void testAudioVoiceManager();
 extern void testDelaunay();
+extern void testBinaural();
 
 //
 
@@ -93,7 +94,8 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		testDelaunay();
+		testBinaural();
+		//testDelaunay();
 		//testAudioVoiceManager();
 		testAudioGraphManager();
 		
@@ -179,7 +181,7 @@ int main(int argc, char * argv[])
 			
 			//
 			
-			const float dt = framework.timeStep;
+			const float dt = std::min(1.f / 20.f, framework.timeStep);
 			
 			//
 			

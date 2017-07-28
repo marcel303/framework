@@ -497,7 +497,7 @@ void testAudioVoiceManager()
 		
 		//
 		
-		const float dt = framework.timeStep;
+		const float dt = std::min(1.f / 20.f, framework.timeStep);
 		
 		//
 		
