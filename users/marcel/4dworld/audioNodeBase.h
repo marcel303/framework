@@ -195,6 +195,7 @@ struct AudioFloat
 	void add(const AudioFloat & other);
 	void addMul(const AudioFloat & other, const float gain);
 	void addMul(const AudioFloat & other, const AudioFloat & gain);
+	void mul(const AudioFloat & other);
 	void mulMul(const AudioFloat & other, const float gain);
 	void mulMul(const AudioFloat & other, const AudioFloat & gain);
 };

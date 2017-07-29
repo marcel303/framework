@@ -177,6 +177,27 @@ void AudioFloat::addMul(const AudioFloat & other, const AudioFloat & gain)
 	}
 }
 
+void AudioFloat::mul(const AudioFloat & other)
+{
+	if (isScalar && other.isScalar)
+	{
+		setScalar(getScalar() * other.getScalar());
+	}
+	else
+	{
+		other.expand();
+	
+		expand();
+		
+		//
+		
+		setVector();
+		
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			samples[i] *= other.samples[i];
+	}
+}
+
 void AudioFloat::mulMul(const AudioFloat & other, const float gain)
 {
 	other.expand();
