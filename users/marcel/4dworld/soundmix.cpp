@@ -306,8 +306,14 @@ void PcmData::free()
 
 void PcmData::alloc(const int _numSamples)
 {
-	free();
+	if (ownData)
+		free();
+	else
+		reset();
 	
+	Assert(ownData == false);
+	Assert(samples == nullptr);
+	Assert(numSamples == 0);
 	samples = new float[_numSamples];
 	numSamples = _numSamples;
 }
@@ -315,11 +321,13 @@ void PcmData::alloc(const int _numSamples)
 void PcmData::set(float * _samples, const int _numSamples)
 {
 	if (ownData)
-	{
 		free();
-	}
+	else
+		reset();
 	
 	Assert(ownData == false);
+	Assert(samples == nullptr);
+	Assert(numSamples == 0);
 	samples = _samples;
 	numSamples = _numSamples;
 }
@@ -365,30 +373,27 @@ bool PcmData::load(const char * filename, const int channel)
 		if (sound == nullptr)
 		{
 			result = false;
+			
+			LOG_ERR("failed to load sound: %s", filename);
 		}
 		else
 		{
 			alloc(sound->sampleCount);
 			
-			if (sound->channelSize == 2)
+			if (channel < 0 || channel >= sound->channelCount)
 			{
-				if (channel < 0 || channel >= sound->channelCount)
-				{
-					result = false;
-				}
-				else
-				{
-					for (int i = 0; i < sound->sampleCount; ++i)
-					{
-						const int16_t * __restrict sampleData = (const int16_t*)sound->sampleData;
-						
-						samples[i] = sampleData[i * sound->channelCount + channel] / float(1 << 15);
-					}
-				}
+				result = false;
+				
+				LOG_ERR("channel index is out of range. channel=%d, numChannels=%d", channel, sound->channelCount);
 			}
 			else
 			{
-				result = false;
+				for (int i = 0; i < sound->sampleCount; ++i)
+				{
+					const int16_t * __restrict sampleData = (const int16_t*)sound->sampleData;
+					
+					samples[i] = sampleData[i * sound->channelCount + channel] / float(1 << 15);
+				}
 			}
 			
 			delete sound;
@@ -417,7 +422,10 @@ bool PcmData::load(const char * filename, const int channel)
 	
 	if (result == false)
 	{
-		free();
+		if (ownData)
+		{
+			free();
+		}
 	}
 	
 	return result;
