@@ -94,7 +94,7 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		testBinaural();
+		//testBinaural();
 		//testDelaunay();
 		//testAudioVoiceManager();
 		testAudioGraphManager();
@@ -135,7 +135,11 @@ int main(int argc, char * argv[])
 		
 		graphEdit->load(FILENAME);
 		
+		std::string oscIpAddress = "192.168.1.10";
+		int oscUdpPort = 2000;
+		
 		AudioUpdateHandler audioUpdateHandler;
+		audioUpdateHandler.init(mutex, oscIpAddress.c_str(), oscUdpPort);
 		audioUpdateHandler.voiceMgr = &voiceMgr;
 		
 		struct AudioGraphAudioUpdateTask : AudioUpdateTask
@@ -148,18 +152,18 @@ int main(int argc, char * argv[])
 			
 			virtual void audioUpdate(const float dt)
 			{
-				auto audioGraph = *audioGraphPtr;
-				
-				if (audioGraph != nullptr)
+				SDL_LockMutex(mutex);
 				{
-					SDL_LockMutex(mutex);
+					auto audioGraph = *audioGraphPtr;
+					
+					if (audioGraph != nullptr)
 					{
 						audioGraph->tick(dt);
 						
 						realTimeConnection->updateAudioValues();
 					}
-					SDL_UnlockMutex(mutex);
 				}
+				SDL_UnlockMutex(mutex);
 			}
 		};
 		
@@ -189,7 +193,7 @@ int main(int argc, char * argv[])
 				stop = true;
 			else
 			{
-				graphEdit->tick(dt);
+				graphEdit->tick(dt, false);
 			}
 			
 			//

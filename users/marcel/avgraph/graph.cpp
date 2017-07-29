@@ -2156,7 +2156,7 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 	return false;
 }
 
-bool GraphEdit::tick(const float dt)
+bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 {
 	cpuTimingBlock(GraphEdit_Tick);
 	
@@ -2238,7 +2238,7 @@ bool GraphEdit::tick(const float dt)
 	
 	//
 	
-	bool inputIsCaptured = (state != kState_Idle);
+	bool inputIsCaptured = _inputIsCaptured || (state != kState_Idle);
 	
 	if (inputIsCaptured == false || state == kState_TouchDrag || state == kState_TouchZoom)
 	{

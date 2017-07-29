@@ -1146,7 +1146,7 @@ struct GraphEdit : GraphEditConnection
 	
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
 	
-	bool tick(const float dt);
+	bool tick(const float dt, const bool inputIsCaptured);
 	bool tickTouches();
 	void tickMouseScroll(const float dt);
 	void tickKeyboardScroll();
