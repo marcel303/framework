@@ -71,7 +71,10 @@ struct AudioGraphFileRTC : GraphEdit_RealTimeConnection
 
 	virtual bool getSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, std::string & value) override
 	{
-		return file->activeInstance->realTimeConnection->getSrcSocketValue(nodeId, srcSocketIndex, srcSocketName, value);
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getSrcSocketValue(nodeId, srcSocketIndex, srcSocketName, value);
 	}
 
 	virtual void setDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, const std::string & value) override
@@ -82,7 +85,10 @@ struct AudioGraphFileRTC : GraphEdit_RealTimeConnection
 
 	virtual bool getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value) override
 	{
-		return file->activeInstance->realTimeConnection->getDstSocketValue(nodeId, dstSocketIndex, dstSocketName, value);
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getDstSocketValue(nodeId, dstSocketIndex, dstSocketName, value);
 	}
 	
 	virtual void clearSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName) override
@@ -93,42 +99,64 @@ struct AudioGraphFileRTC : GraphEdit_RealTimeConnection
 	
 	virtual bool getSrcSocketChannelData(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, GraphEdit_ChannelData & channels) override
 	{
-		return file->activeInstance->realTimeConnection->getSrcSocketChannelData(nodeId, srcSocketIndex, srcSocketName, channels);
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getSrcSocketChannelData(nodeId, srcSocketIndex, srcSocketName, channels);
 	}
 
 	virtual bool getDstSocketChannelData(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, GraphEdit_ChannelData & channels) override
 	{
-		return file->activeInstance->realTimeConnection->getDstSocketChannelData(nodeId, dstSocketIndex, dstSocketName, channels);
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getDstSocketChannelData(nodeId, dstSocketIndex, dstSocketName, channels);
 	}
 	
 	virtual void handleSrcSocketPressed(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName) override
 	{
-		file->activeInstance->realTimeConnection->handleSrcSocketPressed(nodeId, srcSocketIndex, srcSocketName);
+		if (file->activeInstance != nullptr)
+			file->activeInstance->realTimeConnection->handleSrcSocketPressed(nodeId, srcSocketIndex, srcSocketName);
 	}
 	
 	virtual bool getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines) override
 	{
-		return file->activeInstance->realTimeConnection->getNodeDescription(nodeId, lines);
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getNodeDescription(nodeId, lines);
 	}
 	
 	virtual int nodeIsActive(const GraphNodeId nodeId) override
 	{
-		return file->activeInstance->realTimeConnection->nodeIsActive(nodeId);
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->nodeIsActive(nodeId);
 	}
 
 	virtual int linkIsActive(const GraphLinkId linkId) override
 	{
-		return file->activeInstance->realTimeConnection->linkIsActive(linkId);
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->linkIsActive(linkId);
 	}
 
 	virtual int getNodeCpuHeatMax() const override
 	{
-		return file->activeInstance->realTimeConnection->getNodeCpuHeatMax();
+		if (file->activeInstance == nullptr)
+			return 0;
+		else
+			return file->activeInstance->realTimeConnection->getNodeCpuHeatMax();
 	}
 
 	virtual int getNodeCpuTimeUs(const GraphNodeId nodeId) const override
 	{
-		return file->activeInstance->realTimeConnection->getNodeCpuTimeUs(nodeId);
+		if (file->activeInstance == nullptr)
+			return 0;
+		else
+			return file->activeInstance->realTimeConnection->getNodeCpuTimeUs(nodeId);
 	}
 };
 
@@ -383,7 +411,7 @@ void AudioGraphManager::free(AudioGraphInstance *& instance)
 				}
 			}
 			
-		#if 1
+		#if 0
 			if (file->instanceList.empty())
 			{
 				if (file == selectedFile)
