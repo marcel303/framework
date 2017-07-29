@@ -178,9 +178,11 @@ struct BirdGroup
 struct World
 {
 	std::vector<EntityBase*> entities;
+	float oneshotTimer;
 	
 	World()
 		: entities()
+		, oneshotTimer(0.f)
 	{
 	}
 	
@@ -253,9 +255,20 @@ struct World
 	
 	void tick(const float dt)
 	{
+		/*
 		if (entities.size() < 3)
 		{
 			doOneshot();
+		}
+		*/
+		
+		oneshotTimer -= dt;
+		
+		if (oneshotTimer <= 0.f)
+		{
+			doOneshot();
+			
+			oneshotTimer = random(.3f, 1.f);
 		}
 		
 		//
@@ -378,6 +391,23 @@ void testAudioGraphManager()
 				world.killEntity();
 			if (doButton("do oneshot"))
 				world.doOneshot();
+		}
+		popMenu();
+		
+		doBreak();
+		
+		pushMenu("graphList");
+		{
+			doLabel("graphs", 0.f);
+			for (auto & fileItr : audioGraphMgr.files)
+			{
+				auto & filename = fileItr.first;
+				
+				if (doButton(filename.c_str()))
+				{
+					audioGraphMgr.selectFile(filename.c_str());
+				}
+			}
 		}
 		popMenu();
 		
