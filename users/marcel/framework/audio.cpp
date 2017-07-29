@@ -30,6 +30,7 @@
 #include "audiostream/AudioStreamVorbis.h"
 #include "framework.h"
 #include "internal.h"
+#include "Path.h"
 
 //
 
@@ -133,11 +134,6 @@ SoundData * loadSound_WAV(const char * filename)
 		logError("invalid channel count: %d", fmtChannelCount);
 		ok = false;
 	}
-	if (fmtChannelCount > 2)
-	{
-		logError("channel count not supported: %d", fmtChannelCount);
-		ok = false;
-	}
 	if (fmtBitDepth != 8 && fmtBitDepth != 16 && fmtBitDepth != 24)
 	{
 		logError("bit depth not supported: %d", fmtBitDepth);
@@ -219,6 +215,33 @@ SoundData * loadSound_WAV(const char * filename)
 
 SoundData * loadSound_OGG(const char * filename)
 {
+#if 1
+	static const int kMaxSamples = (1 << 16) * sizeof(short);
+	AudioSample samples[kMaxSamples];
+	
+	std::vector<AudioSample> readBuffer;
+	
+	AudioStream_Vorbis stream;
+	stream.Open(filename, false);
+	const int sampleRate = stream.mSampleRate;
+	for (;;)
+	{
+		const int numSamples = stream.Provide(kMaxSamples, samples);
+		if (numSamples == 0)
+			break;
+		else
+		{
+			readBuffer.resize(readBuffer.size() + numSamples);
+			memcpy(&readBuffer[0] + readBuffer.size() - numSamples, samples, numSamples * sizeof(AudioSample));
+		}
+	}
+	stream.Close();
+	
+	const int numSamples = readBuffer.size();
+	const int numBytes = numSamples * sizeof(AudioSample);
+	void * bytes = new char[numBytes];
+	memcpy(bytes, &readBuffer[0], numBytes);
+#else
 	static const int kMaxSamples = 44100 * sizeof(short) * 2 * 120;
 	
 	AudioStream_Vorbis stream;
@@ -232,6 +255,7 @@ SoundData * loadSound_OGG(const char * filename)
 	void * bytes = new char[numBytes];
 	memcpy(bytes, samples, numBytes);
 	delete [] samples;
+#endif
 	
 	SoundData * soundData = new SoundData;
 	soundData->channelSize = 2;
@@ -245,9 +269,11 @@ SoundData * loadSound_OGG(const char * filename)
 
 SoundData * loadSound(const char * filename)
 {
-	if (strcasestr(filename, ".ogg"))
+	const std::string extension = Path::GetExtension(filename, true);
+	
+	if (extension == "ogg")
 		return loadSound_OGG(filename);
-	else if (strcasestr(filename, ".wav"))
+	else if (extension == "wav")
 		return loadSound_WAV(filename);
 	else
 		return nullptr;
