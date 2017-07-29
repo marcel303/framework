@@ -34,6 +34,7 @@ AUDIO_NODE_TYPE(audioSourcePcm, AudioNodeSourcePcm)
 	
 	in("pcm", "pcmData");
 	in("filename", "string");
+	in("gain", "audioValue", "1");
 	in("autoPlay", "bool", "1");
 	in("loop", "bool", "1");
 	in("loopCount", "int");
@@ -60,6 +61,7 @@ AudioNodeSourcePcm::AudioNodeSourcePcm()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_PcmData, kAudioPlugType_PcmData);
 	addInput(kInput_Filename, kAudioPlugType_String);
+	addInput(kInput_Gain, kAudioPlugType_FloatVec);
 	addInput(kInput_AutoPlay, kAudioPlugType_Bool);
 	addInput(kInput_Loop, kAudioPlugType_Bool);
 	addInput(kInput_LoopCount, kAudioPlugType_Int);
@@ -86,6 +88,7 @@ void AudioNodeSourcePcm::tick(const float dt)
 {
 	const PcmData * pcmData = getInputPcmData(kInput_PcmData);
 	const char * filename = getInputString(kInput_Filename, nullptr);
+	const AudioFloat * gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One);
 	const bool loop = getInputBool(kInput_Loop, true);
 	const int loopCount = getInputInt(kInput_LoopCount, 0);
 	const AudioFloat * rangeBegin = getInputAudioFloat(kInput_RangeBegin, nullptr);
@@ -137,6 +140,8 @@ void AudioNodeSourcePcm::tick(const float dt)
 		audioOutput.setVector();
 		
 		audioSource.generate(audioOutput.samples, AUDIO_UPDATE_SIZE);
+		
+		audioOutput.mul(*gain);
 		
 		if (audioSource.hasLooped)
 		{
