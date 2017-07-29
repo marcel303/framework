@@ -115,6 +115,9 @@ struct AudioSourcePcm : AudioSource
 	int rangeBegin;
 	int rangeEnd;
 	
+	int maxLoopCount;
+	int loopCount;
+	
 	AudioSourcePcm();
 	
 	void init(const PcmData * pcmData, const int samplePosition);
@@ -130,6 +133,7 @@ struct AudioSourcePcm : AudioSource
 	void resetSamplePosition();
 	void setSamplePosition(const int position);
 	void setSamplePositionNorm(const float position);
+	void resetLoopCount();
 
 	virtual void generate(ALIGN16 float * __restrict samples, const int numSamples) override;
 };

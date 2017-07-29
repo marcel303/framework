@@ -461,6 +461,8 @@ AudioSourcePcm::AudioSourcePcm()
 	, hasRange(false)
 	, rangeBegin(0)
 	, rangeEnd(0)
+	, maxLoopCount(0)
+	, loopCount(0)
 {
 }
 
@@ -499,6 +501,9 @@ void AudioSourcePcm::clearRange()
 void AudioSourcePcm::play()
 {
 	isPlaying = true;
+	
+	resetSamplePosition();
+	resetLoopCount();
 }
 
 void AudioSourcePcm::stop()
@@ -506,6 +511,7 @@ void AudioSourcePcm::stop()
 	isPlaying = false;
 	
 	resetSamplePosition();
+	resetLoopCount();
 }
 
 void AudioSourcePcm::pause()
@@ -531,6 +537,11 @@ void AudioSourcePcm::setSamplePosition(const int position)
 void AudioSourcePcm::setSamplePositionNorm(const float position)
 {
 	samplePosition = rangeBegin + int((rangeEnd - rangeBegin) * position);
+}
+
+void AudioSourcePcm::resetLoopCount()
+{
+	loopCount = 0;
 }
 
 void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numSamples)
@@ -572,8 +583,17 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 					samplePosition = rangeBegin;
 				if (samplePosition >= rangeEnd)
 				{
-					samplePosition = rangeBegin;
-					hasLooped = true;
+					if (maxLoopCount == 0 || loopCount + 1 < maxLoopCount)
+					{
+						samplePosition = rangeBegin;
+						hasLooped = true;
+						loopCount++;
+					}
+					else
+					{
+						isDone = true;
+						isPlaying = false;
+					}
 				}
 				
 				if (samplePosition < 0 || samplePosition >= pcmData->numSamples)
@@ -615,6 +635,7 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 			if (samplePosition == rangeEnd)
 			{
 				isDone = true;
+				isPlaying = false;
 			}
 		}
 	}
@@ -839,7 +860,10 @@ void AudioVoiceManager::portAudioCallback(
 	{
 		for (auto & voice : voices)
 		{
-			if (voice.channelIndex != -1)
+			// note : we need to call applyRamping or else ramping flags may not be updated appropriately
+			//        as an optimize we could skip some processing here, but for now it seems unnecessary
+			
+			//if (voice.channelIndex != -1)
 			{
 				// generate samples
 				
@@ -868,23 +892,26 @@ void AudioVoiceManager::portAudioCallback(
 				
 				voice.applyRamping(voiceSamples, numSamples);
 				
-				if (outputMono)
+				if (voice.channelIndex != -1)
 				{
-					// accumulate samples into mono buffer
-					
-					audioBufferAdd(samples, voiceSamples, numSamples);
-				}
-				else
-				{
-					// interleave voice samples into destination buffer
-					
-					float * __restrict dstPtr = samples + voice.channelIndex;
-					
-					for (int i = 0; i < numSamples; ++i)
+					if (outputMono)
 					{
-						*dstPtr = voiceSamples[i];
+						// accumulate samples into mono buffer
 						
-						dstPtr += numChannels;
+						audioBufferAdd(samples, voiceSamples, numSamples);
+					}
+					else
+					{
+						// interleave voice samples into destination buffer
+						
+						float * __restrict dstPtr = samples + voice.channelIndex;
+						
+						for (int i = 0; i < numSamples; ++i)
+						{
+							*dstPtr = voiceSamples[i];
+							
+							dstPtr += numChannels;
+						}
 					}
 				}
 			}
