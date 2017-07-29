@@ -32,9 +32,8 @@ AUDIO_NODE_TYPE(trigger_treshold, AudioNodeTriggerTreshold)
 	typeName = "trigger.treshold";
 	
 	in("value", "audioValue");
-	in("treshold", "audioValue");
-	in("upValue", "audioValue");
-	in("downValue", "audioValue");
+	in("tresh.up", "audioValue", "0.5");
+	in("tresh.down", "audioValue", "-1");
 	out("wentUp!", "trigger");
 	out("wentDown!", "trigger");
 }
@@ -43,13 +42,13 @@ AudioNodeTriggerTreshold::AudioNodeTriggerTreshold()
 	: AudioNodeBase()
 	, wentUp()
 	, wentDown()
-	, oldValue(0.f)
+	, wasUp(false)
+	, wasDown(false)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Value, kAudioPlugType_FloatVec);
-	addInput(kInput_Treshold, kAudioPlugType_FloatVec);
-	addInput(kInput_UpValue, kAudioPlugType_FloatVec);
-	addInput(kInput_DownValue, kAudioPlugType_FloatVec);
+	addInput(kInput_UpTreshold, kAudioPlugType_FloatVec);
+	addInput(kInput_DownTreshold, kAudioPlugType_FloatVec);
 	addOutput(kOutput_WentUp, kAudioPlugType_Trigger, &wentUp);
 	addOutput(kOutput_WentDown, kAudioPlugType_Trigger, &wentDown);
 	
@@ -62,31 +61,25 @@ void AudioNodeTriggerTreshold::tick(const float dt)
 	audioCpuTimingBlock(AudioNodeTriggerTreshold);
 	
 	const float value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero)->getMean();
-	const float treshold = getInputAudioFloat(kInput_Treshold, &AudioFloat::Zero)->getMean();
-	
-	const bool wasDown = oldValue < treshold;
-	const bool wasUp = oldValue > treshold;
+	const float upTreshold = getInputAudioFloat(kInput_UpTreshold, &AudioFloat::Half)->getMean();
+	auto downTresholdVec = getInputAudioFloat(kInput_DownTreshold, nullptr);
+	const float downTreshold = downTresholdVec == nullptr ? upTreshold : downTresholdVec->getMean();
 
-	const bool isDown = value < treshold;
-	const bool isUp = value > treshold;
-
-	oldValue = value;
+	const bool isUp = value > upTreshold;
+	const bool isDown = value < downTreshold;
 	
 	if (isPassthrough)
 	{
 	}
-	else if (wasDown && isUp)
+	else if (wasUp == false && isUp == true)
 	{
-		const float triggerValue = getInputAudioFloat(kInput_UpValue, &AudioFloat::Zero)->getMean();
-		
-		wentUp.setFloat(triggerValue);
 		trigger(kOutput_WentUp);
 	}
-	else if (wasUp && isDown)
+	else if (wasDown == false && isDown == true)
 	{
-		const float triggerValue = getInputAudioFloat(kInput_DownValue, &AudioFloat::Zero)->getMean();
-		
-		wentDown.setFloat(triggerValue);
 		trigger(kOutput_WentDown);
 	}
+	
+	wasUp = isUp;
+	wasDown = isDown;
 }

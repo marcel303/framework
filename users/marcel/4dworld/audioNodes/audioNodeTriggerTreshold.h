@@ -34,9 +34,8 @@ struct AudioNodeTriggerTreshold : AudioNodeBase
 	enum Input
 	{
 		kInput_Value,
-		kInput_Treshold,
-		kInput_UpValue,
-		kInput_DownValue,
+		kInput_UpTreshold,
+		kInput_DownTreshold,
 		kInput_COUNT
 	};
 	
@@ -50,7 +49,8 @@ struct AudioNodeTriggerTreshold : AudioNodeBase
 	AudioTriggerData wentUp;
 	AudioTriggerData wentDown;
 
-	float oldValue;
+	bool wasUp;
+	bool wasDown;
 	
 	AudioNodeTriggerTreshold();
 	
