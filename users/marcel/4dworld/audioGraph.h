@@ -49,6 +49,8 @@ struct SDL_mutex;
 
 extern AudioGraph * g_currentAudioGraph;
 
+extern double g_currentAudioTime;
+
 struct AudioGraph
 {
 	struct ValueToFree

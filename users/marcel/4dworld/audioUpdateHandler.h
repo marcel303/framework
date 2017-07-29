@@ -85,6 +85,8 @@ struct AudioUpdateHandler : PortAudioHandler
 	
 	Osc4DStream * oscStream;
 	
+	double time;
+	
 	SDL_mutex * mutex;
 	
 	AudioUpdateHandler();

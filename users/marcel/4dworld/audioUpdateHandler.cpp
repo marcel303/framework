@@ -25,6 +25,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
 #include "audioGraphManager.h"
@@ -41,6 +42,7 @@ AudioUpdateHandler::AudioUpdateHandler()
 	, audioGraphMgr(nullptr)
 	, commandQueue()
 	, oscStream(nullptr)
+	, time(0.0)
 	, mutex(nullptr)
 {
 }
@@ -98,6 +100,10 @@ void AudioUpdateHandler::portAudioCallback(
 	void * outputBuffer,
 	int framesPerBuffer)
 {
+	bool forceSyncOsc = false;
+	
+	//
+	
 	Command command;
 	
 	while (commandQueue.pop(command))
@@ -107,6 +113,7 @@ void AudioUpdateHandler::portAudioCallback(
 		case Command::kType_None:
 			break;
 		case Command::kType_ForceOscSync:
+			forceSyncOsc = true;
 			break;
 		}
 	}
@@ -114,6 +121,8 @@ void AudioUpdateHandler::portAudioCallback(
 	//
 	
 	const float dt = framesPerBuffer / float(SAMPLE_RATE);
+	
+	g_currentAudioTime = time;
 	
 	for (auto updateTask : updateTasks)
 	{
@@ -143,10 +152,14 @@ void AudioUpdateHandler::portAudioCallback(
 			{
 				oscStream->beginBundle();
 				{
-					voiceMgr->generateOsc(*oscStream, false);
+					voiceMgr->generateOsc(*oscStream, forceSyncOsc);
 				}
 				oscStream->endBundle();
 			}
 		}
 	}
+	
+	g_currentAudioTime = 0.0;
+	
+	time += dt;
 }

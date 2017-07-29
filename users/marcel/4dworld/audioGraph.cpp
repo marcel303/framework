@@ -38,6 +38,8 @@
 
 AudioGraph * g_currentAudioGraph = nullptr;
 
+double g_currentAudioTime = 0.0;
+
 //
 
 AudioGraph::AudioGraph()
