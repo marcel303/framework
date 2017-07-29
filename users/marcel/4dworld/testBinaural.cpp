@@ -1,5 +1,6 @@
 #include "audio.h"
 #include "binaural.h"
+#include "binaural_cipic.h"
 #include "binaural_ircam.h"
 #include "binaural_mit.h"
 #include "framework.h"
@@ -487,7 +488,18 @@ void testBinaural()
 		sampleSet.finalize();
 	}
 	
-	if (false)
+	if (true)
+	{
+		// try loading a CIPIC sample set
+
+		HRIRSampleSet sampleSet;
+
+		loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
+		
+		sampleSet.finalize();
+	}
+	
+	if (true)
 	{
 		// try loading a sample set and performing lookups
 
@@ -554,9 +566,11 @@ void testBinaural()
 
 		HRIRSampleSet sampleSet;
 
-		loadHRIRSampleSet_Mit("binaural/MIT-HRTF-DIFFUSE", sampleSet);
+		//loadHRIRSampleSet_Mit("binaural/MIT-HRTF-DIFFUSE", sampleSet);
 		
 		//loadHRIRSampleSet_Ircam("binaural/IRC_1057", sampleSet);
+		
+		loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
 		
 		sampleSet.finalize();
 		
@@ -625,9 +639,16 @@ void testBinaural()
 			
 			SDL_LockMutex(g_audioMutex);
 			{
+				int index = 0;
+				
 				for (auto & sound : audio.sounds)
 				{
-					sound->binauralObject.setSampleLocation(hoverLocation[1], hoverLocation[0]);
+					const float elevation = hoverLocation[1] + std::sin(framework.time * index / 98.f) * 60.f;
+					index++;
+					const float azimuth = hoverLocation[0] + std::cos(framework.time * index / 87.f) * 60.f;
+					index++;
+					
+					sound->binauralObject.setSampleLocation(elevation, azimuth);
 				}
 			}
 			SDL_UnlockMutex(g_audioMutex);
@@ -751,6 +772,30 @@ void testBinaural()
 					gxMultMatrixf(transform.m_v);
 					
 					drawHrirSampleGrid(sampleSet, hoverLocation, hoverCell, hoverTriangle);
+					
+					std::vector<Vec2> sampleLocations;
+					sampleLocations.resize(audio.sounds.size());
+					SDL_LockMutex(g_audioMutex);
+					{
+						int index = 0;
+						for (auto & sound : audio.sounds)
+						{
+							sampleLocations[index][0] = sound->binauralObject.sampleLocation.elevation;
+							sampleLocations[index][1] = sound->binauralObject.sampleLocation.azimuth;
+							index++;
+						}
+					}
+					SDL_UnlockMutex(g_audioMutex);
+					
+					hqBegin(HQ_FILLED_CIRCLES);
+					{
+						for (int i = 0; i < sampleLocations.size(); ++i)
+						{
+							setColor(colorYellow);
+							hqFillCircle(sampleLocations[i][1], sampleLocations[i][0], 1.f);
+						}
+					}
+					hqEnd();
 				}
 				gxPopMatrix();
 				
@@ -780,16 +825,16 @@ void testBinaural()
 					glPointSize(2.f);
 					gxBegin(GL_POINTS);
 					{
-						for (int elevation = -90; elevation < +90; elevation += 10)
+						for (auto & sample : sampleSet.samples)
 						{
-							for (int azimuth = -180; azimuth < +180; azimuth += 10)
-							{
-								float x, y, z;
-								elevationAndAzimuthToCartesian(elevation, azimuth, x, y, z);
-								
-								setColor(150, 150, 150);
-								gxVertex3f(x, y, z);
-							}
+							const float elevation = sample->elevation;
+							const float azimuth = sample->azimuth;
+							
+							float x, y, z;
+							elevationAndAzimuthToCartesian(elevation, azimuth, x, y, z);
+							
+							setColor(150, 150, 150);
+							gxVertex3f(x, y, z);
 						}
 					}
 					gxEnd();
@@ -975,22 +1020,22 @@ void testBinaural()
 				
 				gxPushMatrix();
 				{
-					gxTranslatef((GFX_SX - AUDIO_BUFFER_SIZE) / 2, GFX_SY - 50, 0);
+					gxTranslatef((GFX_SX - AUDIO_UPDATE_SIZE) / 2, GFX_SY - 50, 0);
 					
-					float samples0[AUDIO_BUFFER_SIZE];
-					float samples1[AUDIO_BUFFER_SIZE];
-					float samples[AUDIO_BUFFER_SIZE];
+					float samples0[AUDIO_UPDATE_SIZE];
+					float samples1[AUDIO_UPDATE_SIZE];
+					float samples[AUDIO_UPDATE_SIZE];
 					
-					for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+					for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 					{
 						samples0[i] = 0.f;
 						samples1[i] = 1.f;
 						samples[i] = random(0.f, 1.f);
 					}
 					
-					rampAudioBuffers(samples0, samples1, AUDIO_BUFFER_SIZE, samples);
+					rampAudioBuffers(samples0, samples1, AUDIO_UPDATE_SIZE, samples);
 					
-					const int sx = AUDIO_BUFFER_SIZE;
+					const int sx = AUDIO_UPDATE_SIZE;
 					const int sy = 50;
 					
 					setColor(colorBlack);
