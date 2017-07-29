@@ -515,7 +515,9 @@ void clearPcmDataCache()
 
 PcmData * getPcmData(const char * filename)
 {
-	auto i = s_pcmDataCache.find(filename);
+	const std::string filenameLower = String::ToLower(filename);
+	
+	auto i = s_pcmDataCache.find(filenameLower);
 	
 	if (i == s_pcmDataCache.end())
 	{
