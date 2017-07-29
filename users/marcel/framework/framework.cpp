@@ -5548,13 +5548,81 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 	}
 }
 
-static char * eatWord(char * str)
+struct TextAreaData
+{
+	const static int kMaxLines = 64;
+	
+	char lines[kMaxLines][1024];
+	int numLines;
+	
+	TextAreaData()
+		: numLines(0)
+	{
+	}
+};
+
+static const char * eatWord(const char * str)
 {
 	while (*str && *str != ' ')
 		str++;
 	while (*str && *str == ' ')
 		str++;
 	return str;
+}
+
+static void prepareTextArea(const float size, const char * text, const float maxSx, float & sx, float & sy, TextAreaData & data)
+{
+	const char * textend = text + strlen(text);
+	const char * textptr = text;
+	
+	sx = 0.f;
+	sy = 0.f;
+
+	while (textptr != textend && data.numLines < TextAreaData::kMaxLines)
+	{
+		const char * nextptr = eatWord(textptr);
+		while (*nextptr)
+		{
+			const char * tempptr = eatWord(nextptr);
+			
+			const char temp = *tempptr;
+			*(char*)tempptr = 0;
+			float _sx, _sy;
+			measureText(size, _sx, _sy, "%s", textptr);
+			*(char*)tempptr = temp;
+
+			if (_sx >= maxSx)
+			{
+				break;
+			}
+			
+			if (_sx > sx)
+				sx = _sx;
+			
+			nextptr = tempptr;
+		}
+
+		const char temp = *nextptr;
+		*(char*)nextptr = 0;
+		strcpy_s(data.lines[data.numLines++], sizeof(data.lines[0]), textptr);
+		*(char*)nextptr = temp;
+
+		textptr = nextptr;
+	}
+
+	sy = size * data.numLines;
+}
+
+void measureTextArea(float size, float maxSx, float & sx, float & sy, const char * format, ...)
+{
+	char text[MAX_TEXT_LENGTH];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(text, sizeof(text), format, args);
+	va_end(args);
+	
+	TextAreaData data;
+	prepareTextArea(size, text, maxSx, sx, sy, data);
 }
 
 void drawTextArea(float x, float y, float sx, float size, const char * format, ...)
@@ -5576,57 +5644,22 @@ void drawTextArea(float x, float y, float sx, float sy, float size, float alignX
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 	
-	const int kMaxLines = 64;
-	char lines[kMaxLines][1024];
-	int numLines = 0;
-
-	char * textend = text + strlen(text);
-	char * textptr = text;
+	float tsx;
+	float tsy;
 	
-	auto face = globals.font->face;
+	TextAreaData data;
+	prepareTextArea(size, text, sx, tsx, tsy, data);
 	
-	float tsx = 0.f;
-
-	while (textptr != textend && numLines < kMaxLines)
-	{
-		char * nextptr = eatWord(textptr);
-		while (*nextptr)
-		{
-			char * tempptr = eatWord(nextptr);
-			float _sx, _sy, _yTop;
-			const GlyphCacheElem * glyph = &g_glyphCache.findOrCreate(face, size, *tempptr);
-			measureText(globals.font->face, size, &glyph, 1, _sx, _sy, _yTop);
-
-			if (_sx > tsx)
-				tsx = _sx;
-
-			if (_sx >= sx)
-			{
-				break;
-			}
-			else
-				nextptr = tempptr;
-		}
-
-		char temp = *nextptr;
-		*nextptr = 0;
-		strcpy_s(lines[numLines++], sizeof(lines[0]), textptr);
-		*nextptr = temp;
-
-		textptr = nextptr;
-	}
-
-	const float tsy = size * (numLines - 1);
-
 	x += (sx      ) * (-alignX + 1.f) / 2.f;
 	y += (sy - tsy) * (-alignY + 1.f) / 2.f;
 
-	for (int i = 0; i < numLines; ++i)
+	for (int i = 0; i < data.numLines; ++i)
 	{
-		drawText(x, y, size, alignX, alignY, lines[i]);
+		drawText(x, y, size, alignX, 1, data.lines[i]);
 		y += size;
 	}
 }
+
 
 //
 

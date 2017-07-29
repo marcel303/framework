@@ -1178,6 +1178,7 @@ void measureText(float size, float & sx, float & sy, const char * format, ...);
 void beginTextBatch();
 void endTextBatch();
 void drawText(float x, float y, float size, float alignX, float alignY, const char * format, ...);
+void measureTextArea(float size, float maxSx, float & sx, float & sy, const char * format, ...);
 void drawTextArea(float x, float y, float sx, float size, const char * format, ...);
 void drawTextArea(float x, float y, float sx, float sy, float size, float alignX, float alignY, const char * format, ...);
 void drawPath(const Path2d & path);
