@@ -25,25 +25,41 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "audioGraph.h"
 #include "audioNodeTime.h"
+
+AUDIO_ENUM_TYPE(timeMode)
+{
+	elem("graph");
+	elem("audio");
+}
 
 AUDIO_NODE_TYPE(time, AudioNodeTime)
 {
 	typeName = "time";
 	
 	in("fine", "bool", "1");
+	inEnum("mode", "timeMode");
 	in("scale", "float", "1");
 	in("offset", "float");
 	out("time", "audioValue");
 }
 
+static double getAudioTime(const AudioNodeTime::Mode mode)
+{
+	if (mode == AudioNodeTime::kMode_AudioLocal)
+		return g_currentAudioTime;
+	else
+		return g_currentAudioGraph->time;
+}
+
 AudioNodeTime::AudioNodeTime()
 	: AudioNodeBase()
-	, time(0.0)
 	, resultOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_FineGrained, kAudioPlugType_Bool);
+	addInput(kInput_Mode, kAudioPlugType_Int);
 	addInput(kInput_Scale, kAudioPlugType_Float);
 	addInput(kInput_Offset, kAudioPlugType_Float);
 	addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
@@ -52,8 +68,11 @@ AudioNodeTime::AudioNodeTime()
 void AudioNodeTime::tick(const float dt)
 {
 	const bool fineGrained = getInputBool(kInput_FineGrained, true);
+	const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
 	const float scale = getInputFloat(kInput_Scale, 1.f);
 	const float offset = getInputFloat(kInput_Offset, 0.f);
+	
+	double time = getAudioTime(mode);
 	
 	if (fineGrained)
 	{
@@ -68,8 +87,8 @@ void AudioNodeTime::tick(const float dt)
 	}
 	else
 	{
-		resultOutput.setScalar(time * scale + offset);
+		time += 1.0 / SAMPLE_RATE * (AUDIO_UPDATE_SIZE / 2);
 		
-		time += AUDIO_UPDATE_SIZE / double(SAMPLE_RATE);
+		resultOutput.setScalar(time * scale + offset);
 	}
 }

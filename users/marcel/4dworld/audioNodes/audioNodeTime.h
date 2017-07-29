@@ -31,9 +31,16 @@
 
 struct AudioNodeTime : AudioNodeBase
 {
+	enum Mode
+	{
+		kMode_GraphLocal,
+		kMode_AudioLocal
+	};
+	
 	enum Input
 	{
 		kInput_FineGrained,
+		kInput_Mode,
 		kInput_Scale,
 		kInput_Offset,
 		kInput_COUNT
@@ -44,8 +51,6 @@ struct AudioNodeTime : AudioNodeBase
 		kOutput_Result,
 		kOutput_COUNT
 	};
-	
-	double time;
 	
 	AudioFloat resultOutput;
 	
