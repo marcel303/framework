@@ -95,8 +95,6 @@ void testDelaunay()
 		
 		//
 		
-		const float dt = framework.timeStep;
-		
 		if (randomize)
 		{
 			randomize = false;
@@ -201,11 +199,11 @@ void testDelaunay()
 			
 			setFont("calibri.ttf");
 			setColor(colorWhite);
-			drawText(mouse.x, mouse.y, 16, 0, 0, "%d, %d", int(polar.x), int(polar.y));
+			drawText(mouse.x, mouse.y, 16, 0, +1, "%d, %d", int(polar.x), int(polar.y));
 			
 			if (activeTriangle != nullptr)
 			{
-				drawText(mouse.x, mouse.y, 16, 0, 20, "%.2f, %.2f, %.2f", baryU, baryV, 1.f - baryU - baryV);
+				drawText(mouse.x, mouse.y + 20, 16, 0, +1, "%.2f, %.2f, %.2f", baryU, baryV, 1.f - baryU - baryV);
 			}
 		}
 		framework.endDraw();
