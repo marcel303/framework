@@ -42,7 +42,9 @@ struct AudioNodeSourcePcmSelect : AudioNodeBase
 	{
 		kInput_Path,
 		kInput_Mode,
+		kInput_Gain,
 		kInput_AutoPlay,
+		kInput_MaxLoopCount,
 		kInput_Play,
 		kInput_COUNT
 	};
@@ -50,6 +52,7 @@ struct AudioNodeSourcePcmSelect : AudioNodeBase
 	enum Output
 	{
 		kOutput_Audio,
+		kOutput_Loop,
 		kOutput_Done,
 		kOutput_COUNT
 	};
@@ -58,8 +61,11 @@ struct AudioNodeSourcePcmSelect : AudioNodeBase
 	std::vector<PcmData*> files;
 	int fileIndex;
 	int samplePosition;
+	
+	int loopCount;
 
 	AudioFloat audioOutput;
+	AudioTriggerData loopTrigger;
 	AudioTriggerData doneTrigger;
 
 	AudioNodeSourcePcmSelect();

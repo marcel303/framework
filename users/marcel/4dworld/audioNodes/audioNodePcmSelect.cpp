@@ -42,9 +42,12 @@ AUDIO_NODE_TYPE(audioSourcePcmSelect, AudioNodeSourcePcmSelect)
 	
 	in("path", "string");
 	inEnum("mode", "pcmSelectMode");
+	in("gain", "audioValue", "1");
 	in("autoPlay", "bool");
+	in("loopCount", "int");
 	in("play!", "trigger");
 	out("audio", "audioValue");
+	out("loop!", "trigger");
 	out("done!", "trigger");
 }
 
@@ -53,15 +56,20 @@ AudioNodeSourcePcmSelect::AudioNodeSourcePcmSelect()
 	, currentPath()
 	, fileIndex(-1)
 	, samplePosition(0)
+	, loopCount(0)
 	, audioOutput()
+	, loopTrigger()
 	, doneTrigger()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Path, kAudioPlugType_String);
 	addInput(kInput_Mode, kAudioPlugType_Int);
+	addInput(kInput_Gain, kAudioPlugType_FloatVec);
 	addInput(kInput_AutoPlay, kAudioPlugType_Bool);
+	addInput(kInput_MaxLoopCount, kAudioPlugType_Int);
 	addInput(kInput_Play, kAudioPlugType_Trigger);
 	addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
+	addOutput(kOutput_Loop, kAudioPlugType_Trigger, &loopTrigger);
 	addOutput(kOutput_Done, kAudioPlugType_Trigger, &doneTrigger);
 }
 
@@ -72,12 +80,6 @@ AudioNodeSourcePcmSelect::~AudioNodeSourcePcmSelect()
 
 void AudioNodeSourcePcmSelect::freeFiles()
 {
-	for (auto & file : files)
-	{
-		delete file;
-		file = nullptr;
-	}
-
 	files.clear();
 
 	//
@@ -110,7 +112,10 @@ void AudioNodeSourcePcmSelect::nextFile(const Mode mode)
 void AudioNodeSourcePcmSelect::tick(const float dt)
 {
 	const char * path = getInputString(kInput_Path, "");
+	const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
+	const AudioFloat * gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One);
 	const bool autoPlay = getInputBool(kInput_AutoPlay, false);
+	const int maxLoopCount = getInputInt(kInput_MaxLoopCount, 0);
 	
 	if (path != currentPath)
 	{
@@ -173,10 +178,23 @@ void AudioNodeSourcePcmSelect::tick(const float dt)
 
 				if (samplePosition == pcmData->numSamples)
 				{
-					trigger(kOutput_Done);
+					if (maxLoopCount < 0 || loopCount < maxLoopCount)
+					{
+						loopCount++;
+						
+						nextFile(mode);
+						
+						trigger(kOutput_Loop);
+					}
+					else
+					{
+						trigger(kOutput_Done);
+					}
 				}
 			}
 		}
+		
+		audioOutput.mul(*gain);
 	}
 }
 
