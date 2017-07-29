@@ -476,6 +476,9 @@ void fillPcmDataCache(const char * path, const bool recurse, const bool stripPat
 	
 	for (auto & filename : filenames)
 	{
+		if (Path::GetExtension(filename, true) == "cache")
+			continue;
+		
 		const std::string filenameLower = String::ToLower(filename);
 		
 		PcmData * pcmData = new PcmData();
