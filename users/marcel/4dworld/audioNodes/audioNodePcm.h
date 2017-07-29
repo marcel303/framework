@@ -36,6 +36,7 @@ struct AudioNodeSourcePcm : AudioNodeBase
 		kInput_PcmData,
 		kInput_AutoPlay,
 		kInput_Loop,
+		kInput_LoopCount,
 		kInput_Play,
 		kInput_Pause,
 		kInput_Resume,
@@ -53,7 +54,6 @@ struct AudioNodeSourcePcm : AudioNodeBase
 		kOutput_COUNT
 	};
 	
-	bool isPlaying;
 	bool wasDone;
 	
 	AudioSourcePcm audioSource;

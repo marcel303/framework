@@ -34,6 +34,7 @@ AUDIO_NODE_TYPE(audioSourcePcm, AudioNodeSourcePcm)
 	in("pcm", "pcmData");
 	in("autoPlay", "bool", "1");
 	in("loop", "bool", "1");
+	in("loopCount", "int");
 	in("play!", "trigger");
 	in("pause!", "trigger");
 	in("resume!", "trigger");
@@ -47,7 +48,6 @@ AUDIO_NODE_TYPE(audioSourcePcm, AudioNodeSourcePcm)
 
 AudioNodeSourcePcm::AudioNodeSourcePcm()
 	: AudioNodeBase()
-	, isPlaying(false)
 	, wasDone(false)
 	, audioSource()
 	, audioOutput()
@@ -59,6 +59,7 @@ AudioNodeSourcePcm::AudioNodeSourcePcm()
 	addInput(kInput_PcmData, kAudioPlugType_PcmData);
 	addInput(kInput_AutoPlay, kAudioPlugType_Bool);
 	addInput(kInput_Loop, kAudioPlugType_Bool);
+	addInput(kInput_LoopCount, kAudioPlugType_Int);
 	addInput(kInput_Play, kAudioPlugType_Trigger);
 	addInput(kInput_Pause, kAudioPlugType_Trigger);
 	addInput(kInput_Resume, kAudioPlugType_Trigger);
@@ -68,15 +69,13 @@ AudioNodeSourcePcm::AudioNodeSourcePcm()
 	addOutput(kOutput_Length, kAudioPlugType_Float, &lengthOutput);
 	addOutput(kOutput_Done, kAudioPlugType_Trigger, &doneTriggerData);
 	addOutput(kOutput_Loop, kAudioPlugType_Trigger, &loopTriggerData);
-	
-	audioSource.play();
 }
 
 void AudioNodeSourcePcm::init(const GraphNode & node)
 {
 	if (getInputBool(kInput_AutoPlay, true))
 	{
-		isPlaying = true;
+		audioSource.isPlaying = true;
 	}
 }
 
@@ -84,6 +83,7 @@ void AudioNodeSourcePcm::tick(const float dt)
 {
 	const PcmData * pcmData = getInputPcmData(kInput_PcmData);
 	const bool loop = getInputBool(kInput_Loop, true);
+	const int loopCount = getInputBool(kInput_LoopCount, 0);
 	const AudioFloat * rangeBegin = getInputAudioFloat(kInput_RangeBegin, nullptr);
 	const AudioFloat * rangeLength = getInputAudioFloat(kInput_RangeLength, nullptr);
 	
@@ -103,6 +103,7 @@ void AudioNodeSourcePcm::tick(const float dt)
 	//
 	
 	audioSource.loop = loop;
+	audioSource.maxLoopCount = loopCount;
 	
 	if ((rangeBegin == nullptr && rangeLength == nullptr) || pcmData == nullptr)
 	{
@@ -122,7 +123,7 @@ void AudioNodeSourcePcm::tick(const float dt)
 	{
 		audioOutput.setScalar(0.f);
 	}
-	else if (isPlaying)
+	else if (audioSource.isPlaying)
 	{
 		audioOutput.setVector();
 		
@@ -150,17 +151,18 @@ void AudioNodeSourcePcm::handleTrigger(const int inputSocketIndex, const AudioTr
 {
 	if (inputSocketIndex == kInput_Play)
 	{
-		isPlaying = true;
-		wasDone = false;
-		
+		audioSource.isPlaying = true;
 		audioSource.samplePosition = audioSource.rangeBegin;
+		audioSource.loopCount = 0;
+		
+		wasDone = false;
 	}
 	else if (inputSocketIndex == kInput_Pause)
 	{
-		isPlaying = false;
+		audioSource.isPlaying = false;
 	}
 	else if (inputSocketIndex == kInput_Resume)
 	{
-		isPlaying = true;
+		audioSource.isPlaying = true;
 	}
 }
