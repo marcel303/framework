@@ -199,59 +199,63 @@ struct World
 		entities.clear();
 	}
 	
+	void addBall()
+	{
+		Ball * ball = new Ball();
+			
+		ball->pos[0] = random(-20.f, +20.f);
+		ball->pos[1] = random(+10.f, +20.f);
+		ball->pos[2] = random(-20.f, +20.f);
+		ball->vel[0] = random(-3.f, +3.f);
+		ball->vel[1] = random(-5.f, +5.f);
+		ball->vel[2] = random(-3.f, +3.f);
+		
+		entities.push_back(ball);
+	}
+	
+	void killEntity()
+	{
+		if (entities.empty() == false)
+		{
+			EntityBase *& entity = entities.back();
+			
+			entity->kill();
+		}
+	}
+	
+	void doOneshot()
+	{
+		const char * filename = (rand() % 2) == 0 ? "oneshotTest.xml" : "oneshotTest2.xml";
+		
+		//Oneshot * oneshot = new Oneshot(filename, -1.f);
+		Oneshot * oneshot = new Oneshot(filename, random(1.f, 5.f));
+		
+		const float sizeX = 6.f;
+		const float sizeY = 1.f;
+		const float sizeZ = 6.f;
+		
+		oneshot->pos = Vec3(
+			random(-sizeX, +sizeX),
+			random(-sizeY, +sizeY),
+			random(-sizeZ, +sizeZ));
+		oneshot->pos *= 2.f;
+		
+		oneshot->vel[0] = random(-10.f, +10.f);
+		oneshot->vel[1] = 6.f;
+		oneshot->vel[2] = random(-10.f, +10.f);
+		oneshot->velGrow = 2.f;
+		
+		oneshot->dimGrow = 2.f;
+		
+		oneshot->instance->audioGraph->setMemf("delay", random(0.0002f, 0.2f));
+		entities.push_back(oneshot);
+	}
+	
 	void tick(const float dt)
 	{
-		if (keyboard.wentDown(SDLK_a))
+		if (entities.size() < 3)
 		{
-			Ball * ball = new Ball();
-			
-			ball->pos[0] = random(-20.f, +20.f);
-			ball->pos[1] = random(+10.f, +20.f);
-			ball->pos[2] = random(-20.f, +20.f);
-			ball->vel[0] = random(-3.f, +3.f);
-			ball->vel[1] = random(-5.f, +5.f);
-			ball->vel[2] = random(-3.f, +3.f);
-			
-			entities.push_back(ball);
-		}
-		
-		if (keyboard.wentDown(SDLK_z))
-		{
-			if (entities.empty() == false)
-			{
-				EntityBase *& entity = entities.back();
-				
-				entity->kill();
-			}
-		}
-		
-		if (keyboard.wentDown(SDLK_o) || entities.size() < 3)
-		{
-			const char * filename = (rand() % 2) == 0 ? "oneshotTest.xml" : "oneshotTest2.xml";
-			
-			//Oneshot * oneshot = new Oneshot(filename, -1.f);
-			Oneshot * oneshot = new Oneshot(filename, random(1.f, 5.f));
-			
-			const float sizeX = 6.f;
-			const float sizeY = 1.f;
-			const float sizeZ = 6.f;
-			
-			oneshot->pos = Vec3(
-				random(-sizeX, +sizeX),
-				random(-sizeY, +sizeY),
-				random(-sizeZ, +sizeZ));
-			oneshot->pos *= 2.f;
-			
-			oneshot->vel[0] = random(-10.f, +10.f);
-			oneshot->vel[1] = 6.f;
-			oneshot->vel[2] = random(-10.f, +10.f);
-			oneshot->velGrow = 2.f;
-			
-			oneshot->dimGrow = 2.f;
-			
-			
-			oneshot->instance->audioGraph->setMemf("delay", random(0.0002f, 0.2f));
-			entities.push_back(oneshot);
+			doOneshot();
 		}
 		
 		//
@@ -357,36 +361,55 @@ void testAudioGraphManager()
 	
 	std::string activeInstanceName;
 	
-	auto doMenus = [&](const bool doActions, const bool doDraw)
+	auto doMenus = [&](const bool doActions, const bool doDraw) -> bool
 	{
 		uiState.sx = 200;
 		uiState.x = GFX_SX - uiState.sx - 10 - 200 - 10;
 		uiState.y = 10;
 		
 		makeActive(&uiState, doActions, doDraw);
-		pushMenu("instanceList");
-		doLabel("instances", 0.f);
-		for (auto & fileItr : audioGraphMgr.files)
+		
+		pushMenu("interact");
 		{
-			auto & filename = fileItr.first;
-			auto file = fileItr.second;
-			
-			for (auto & instance : file->instanceList)
+			doLabel("interact", 0.f);
+			if (doButton("add ball"))
+				world.addBall();
+			if (doButton("kill entity"))
+				world.killEntity();
+			if (doButton("do oneshot"))
+				world.doOneshot();
+		}
+		popMenu();
+		
+		doBreak();
+		
+		pushMenu("instanceList");
+		{
+			doLabel("instances", 0.f);
+			for (auto & fileItr : audioGraphMgr.files)
 			{
-				std::string name = String::FormatC("%s: %p", filename.c_str(), instance.audioGraph);
+				auto & filename = fileItr.first;
+				auto file = fileItr.second;
 				
-				if (doButton(name.c_str()))
+				for (auto & instance : file->instanceList)
 				{
-					if (name != activeInstanceName)
+					std::string name = String::FormatC("%s: %p", filename.c_str(), instance.audioGraph);
+					
+					if (doButton(name.c_str()))
 					{
-						activeInstanceName = name;
-						
-						audioGraphMgr.selectInstance(&instance);
+						if (name != activeInstanceName)
+						{
+							activeInstanceName = name;
+							
+							audioGraphMgr.selectInstance(&instance);
+						}
 					}
 				}
 			}
 		}
 		popMenu();
+		
+		return uiState.activeElem != nullptr;
 	};
 	
 	do
@@ -399,9 +422,18 @@ void testAudioGraphManager()
 		
 		world.tick(dt);
 		
-		doMenus(true, false);
+		bool graphEditHasInputCapture =
+			audioGraphMgr.selectedFile != nullptr &&
+			audioGraphMgr.selectedFile->graphEdit->state != GraphEdit::kState_Idle;
 		
-		audioGraphMgr.tickEditor(dt);
+		bool menuHasInputCapture = false;
+		
+		if (graphEditHasInputCapture == false)
+		{
+			menuHasInputCapture = doMenus(true, false);
+		}
+		
+		audioGraphMgr.tickEditor(dt, menuHasInputCapture);
 		
 	#if 0
 		if (instance1 != nullptr)
