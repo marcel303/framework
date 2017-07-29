@@ -133,17 +133,20 @@ void AudioUpdateHandler::portAudioCallback(
 		
 		//
 		
-		// todo : remove limiter hack
-		static int limiter = 0;
-		limiter++;
-		
-		if ((limiter % 4) == 0)
+		if (oscStream->isReady())
 		{
-			oscStream->beginBundle();
+			// todo : remove limiter hack
+			static int limiter = 0;
+			limiter++;
+			
+			if ((limiter % 4) == 0)
 			{
-				voiceMgr->generateOsc(*oscStream, false);
+				oscStream->beginBundle();
+				{
+					voiceMgr->generateOsc(*oscStream, false);
+				}
+				oscStream->endBundle();
 			}
-			oscStream->endBundle();
 		}
 	}
 }
