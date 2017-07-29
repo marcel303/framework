@@ -134,3 +134,11 @@ struct AudioGraph
 AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & typeName, AudioGraph * audioGraph);
 
 AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
+
+//
+
+struct PcmData;
+
+void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths);
+void clearPcmDataCache();
+PcmData * getPcmData(const char * filename);

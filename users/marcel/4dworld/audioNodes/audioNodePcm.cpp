@@ -25,6 +25,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "audioGraph.h"
 #include "audioNodePcm.h"
 
 AUDIO_NODE_TYPE(audioSourcePcm, AudioNodeSourcePcm)
@@ -32,6 +33,7 @@ AUDIO_NODE_TYPE(audioSourcePcm, AudioNodeSourcePcm)
 	typeName = "audio.pcm";
 	
 	in("pcm", "pcmData");
+	in("filename", "string");
 	in("autoPlay", "bool", "1");
 	in("loop", "bool", "1");
 	in("loopCount", "int");
@@ -57,6 +59,7 @@ AudioNodeSourcePcm::AudioNodeSourcePcm()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_PcmData, kAudioPlugType_PcmData);
+	addInput(kInput_Filename, kAudioPlugType_String);
 	addInput(kInput_AutoPlay, kAudioPlugType_Bool);
 	addInput(kInput_Loop, kAudioPlugType_Bool);
 	addInput(kInput_LoopCount, kAudioPlugType_Int);
@@ -82,12 +85,18 @@ void AudioNodeSourcePcm::init(const GraphNode & node)
 void AudioNodeSourcePcm::tick(const float dt)
 {
 	const PcmData * pcmData = getInputPcmData(kInput_PcmData);
+	const char * filename = getInputString(kInput_Filename, nullptr);
 	const bool loop = getInputBool(kInput_Loop, true);
-	const int loopCount = getInputBool(kInput_LoopCount, 0);
+	const int loopCount = getInputInt(kInput_LoopCount, 0);
 	const AudioFloat * rangeBegin = getInputAudioFloat(kInput_RangeBegin, nullptr);
 	const AudioFloat * rangeLength = getInputAudioFloat(kInput_RangeLength, nullptr);
 	
 	// update PCM data and length output. note : same pcmData doesn't necessarily mean the PCM data hasn't changed. it could have been re-allocated at the same address. just always update the length here instead of trying to be clever and detect changes
+	
+	if (filename != nullptr)
+	{
+		pcmData = getPcmData(filename);
+	}
 	
 	audioSource.pcmData = pcmData;
 	

@@ -273,23 +273,35 @@ void audioBufferDryWet(
 
 //
 
+#include "FileStream.h"
+#include "StreamReader.h"
+#include "StreamWriter.h"
+
 PcmData::PcmData()
 	: samples(nullptr)
 	, numSamples(0)
+	, ownData(false)
 {
 }
 
 PcmData::~PcmData()
 {
-	free();
+	if (ownData)
+	{
+		free();
+	}
 }
 
 void PcmData::free()
 {
+	Assert(ownData);
+	
 	delete[] samples;
 	samples = nullptr;
 	
 	numSamples = 0;
+	
+	ownData = false;
 }
 
 void PcmData::alloc(const int _numSamples)
@@ -300,43 +312,107 @@ void PcmData::alloc(const int _numSamples)
 	numSamples = _numSamples;
 }
 
+void PcmData::set(float * _samples, const int _numSamples)
+{
+	if (ownData)
+	{
+		free();
+	}
+	
+	Assert(ownData == false);
+	samples = _samples;
+	numSamples = _numSamples;
+}
+
+void PcmData::reset()
+{
+	Assert(ownData == false);
+	samples = nullptr;
+	numSamples = 0;
+}
+
 bool PcmData::load(const char * filename, const int channel)
 {
 	bool result = true;
 	
-	SoundData * sound = loadSound(filename);
+	const std::string cachedFilename = std::string(filename) + ".cache";
 	
-	if (sound == nullptr)
+	if (FileStream::Exists(cachedFilename.c_str()))
 	{
-		result = false;
+		try
+		{
+			FileStream stream;
+			
+			stream.Open(cachedFilename.c_str(), OpenMode_Read);
+			
+			StreamReader reader(&stream, false);
+			
+			const int numSamples = reader.ReadInt32();
+			
+			alloc(numSamples);
+			
+			reader.ReadBytes(samples, numSamples * sizeof(float));
+		}
+		catch (std::exception & e)
+		{
+			LOG_ERR("failed to load cached PCM data: %s", e.what());
+		}
 	}
 	else
 	{
-		alloc(sound->sampleCount);
+		SoundData * sound = loadSound(filename);
 		
-		if (sound->channelSize == 2)
-		{
-			if (channel < 0 || channel >= sound->channelCount)
-			{
-				result = false;
-			}
-			else
-			{
-				for (int i = 0; i < sound->sampleCount; ++i)
-				{
-					const int16_t * __restrict sampleData = (const int16_t*)sound->sampleData;
-					
-					samples[i] = sampleData[i * sound->channelCount + channel] / float(1 << 15);
-				}
-			}
-		}
-		else
+		if (sound == nullptr)
 		{
 			result = false;
 		}
+		else
+		{
+			alloc(sound->sampleCount);
+			
+			if (sound->channelSize == 2)
+			{
+				if (channel < 0 || channel >= sound->channelCount)
+				{
+					result = false;
+				}
+				else
+				{
+					for (int i = 0; i < sound->sampleCount; ++i)
+					{
+						const int16_t * __restrict sampleData = (const int16_t*)sound->sampleData;
+						
+						samples[i] = sampleData[i * sound->channelCount + channel] / float(1 << 15);
+					}
+				}
+			}
+			else
+			{
+				result = false;
+			}
+			
+			delete sound;
+			sound = nullptr;
+		}
 		
-		delete sound;
-		sound = nullptr;
+		if (result == true)
+		{
+			try
+			{
+				FileStream stream;
+				
+				stream.Open(cachedFilename.c_str(), OpenMode_Write);
+				
+				StreamWriter writer(&stream, false);
+				
+				writer.WriteInt32(numSamples);
+				writer.WriteBytes(samples, numSamples * sizeof(float));
+			}
+			catch (std::exception & e)
+			{
+				LOG_ERR("failed to save cached PCM data: %s", e.what());
+			}
+		}
 	}
 	
 	if (result == false)

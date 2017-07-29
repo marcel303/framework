@@ -25,6 +25,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "audioGraph.h"
 #include "audioNodePcmData.h"
 #include "FileStream.h"
 
@@ -44,13 +45,15 @@ void AudioNodePcmData::tick(const float dt)
 	{
 		currentFilename = filename;
 		
-		if (FileStream::Exists(filename))
+		const PcmData * newPcmData = getPcmData(filename);
+		
+		if (newPcmData == nullptr)
 		{
-			pcmData.load(filename, 0);
+			pcmData.reset();
 		}
 		else
 		{
-			pcmData.free();
+			pcmData.set(newPcmData->samples, newPcmData->numSamples);
 		}
 	}
 }

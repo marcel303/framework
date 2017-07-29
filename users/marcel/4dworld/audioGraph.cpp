@@ -459,3 +459,65 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 	
 	return audioGraph;
 }
+
+//
+
+#include "Path.h"
+#include "StringEx.h"
+#include <map>
+
+static std::map<std::string, PcmData*> s_pcmDataCache;
+
+void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths)
+{
+	const auto filenames = listFiles(path, recurse);
+	
+	for (auto & filename : filenames)
+	{
+		const std::string filenameLower = String::ToLower(filename);
+		
+		PcmData * pcmData = new PcmData();
+		
+		if (pcmData->load(filenameLower.c_str(), 0) == false)
+		{
+			delete pcmData;
+			pcmData = nullptr;
+		}
+		else
+		{
+			const std::string name = stripPaths ? Path::GetFileName(filenameLower) : filenameLower;
+			
+			auto & elem = s_pcmDataCache[name];
+			
+			delete elem;
+			elem = nullptr;
+			
+			elem = pcmData;
+		}
+	}
+}
+
+void clearPcmDataCache()
+{
+	for (auto & i : s_pcmDataCache)
+	{
+		delete i.second;
+		i.second = nullptr;
+	}
+	
+	s_pcmDataCache.clear();
+}
+
+PcmData * getPcmData(const char * filename)
+{
+	auto i = s_pcmDataCache.find(filename);
+	
+	if (i == s_pcmDataCache.end())
+	{
+		return nullptr;
+	}
+	else
+	{
+		return i->second;
+	}
+}

@@ -25,6 +25,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "audioGraph.h"
 #include "audioNodePcmSelect.h"
 #include "framework.h"
 
@@ -117,18 +118,13 @@ void AudioNodeSourcePcmSelect::tick(const float dt)
 		
 		//
 		
-		std::vector<std::string> filenames = listFiles(path, false);
+		const std::vector<std::string> filenames = listFiles(path, false);
 
 		for (auto & filename : filenames)
 		{
-			PcmData * pcmData = new PcmData();
+			PcmData * pcmData = getPcmData(filename.c_str());
 			
-			if (pcmData->load(filename.c_str(), 0) == false || pcmData->numSamples == 0)
-			{
-				delete pcmData;
-				pcmData = nullptr;
-			}
-			else
+			if (pcmData != nullptr && pcmData->numSamples > 0)
 			{
 				files.push_back(pcmData);
 			}

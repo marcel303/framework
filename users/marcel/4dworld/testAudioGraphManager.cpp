@@ -307,6 +307,12 @@ void testAudioGraphManager()
 	
 	//
 	
+	fillPcmDataCache("birds", true, false);
+	fillPcmDataCache("testsounds", true, true);
+	fillPcmDataCache("voices", true, false);
+	
+	//
+	
 	const int kNumChannels = 16;
 	
 	AudioVoiceManager voiceMgr;

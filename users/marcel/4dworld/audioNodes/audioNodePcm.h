@@ -34,6 +34,7 @@ struct AudioNodeSourcePcm : AudioNodeBase
 	enum Input
 	{
 		kInput_PcmData,
+		kInput_Filename,
 		kInput_AutoPlay,
 		kInput_Loop,
 		kInput_LoopCount,

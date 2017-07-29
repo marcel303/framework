@@ -49,12 +49,16 @@ struct PcmData
 {
 	float * samples;
 	int numSamples;
+	bool ownData;
 
 	PcmData();
 	~PcmData();
 
 	void free();
 	void alloc(const int numSamples);
+	
+	void set(float * samples, const int numSamples);
+	void reset();
 
 	bool load(const char * filename, const int channel);
 };
