@@ -2,14 +2,11 @@
 #include "../avgraph/vfxNodes/fourier.h"
 #include <stdarg.h>
 #include <xmmintrin.h>
+#include <immintrin.h>
 
 #include "delaunay/delaunay.h"
 
 #include "../avgraph/vfxNodes/fourier.cpp" // fixme
-
-#define ENABLE_SSE 1
-#define ENABLE_DEBUGGING 0
-#define ENABLE_FOURIER4 1
 
 #define USE_FRAMEWORK 1
 
@@ -129,6 +126,8 @@ namespace binaural
 		const HRIRSampleData & c, const float cWeight,
 		HRIRSampleData & r)
 	{
+		debugTimerBegin("blendHrirSamples_3");
+		
 	#if ENABLE_SSE
 		const float4 * __restrict a_lSamples = (float4*)a.lSamples;
 		const float4 * __restrict b_lSamples = (float4*)b.lSamples;
@@ -171,6 +170,8 @@ namespace binaural
 				c.rSamples[i] * cWeight;
 		}
 	#endif
+	
+		debugTimerEnd("blendHrirSamples_3");
 	}
 	
 	void blendHrirSamples_3(
@@ -204,9 +205,8 @@ namespace binaural
 		
 		Fourier::fft1D(filterReal, filterImag, HRTF_BUFFER_SIZE, HRTF_BUFFER_SIZE, false, false);
 		
-		float temp[HRTF_BUFFER_SIZE];
-		deinterleaveAudioBuffers_4(filterReal, lFilter.real, rFilter.real, temp, temp);
-		deinterleaveAudioBuffers_4(filterImag, lFilter.imag, rFilter.imag, temp, temp);
+		deinterleaveAudioBuffers_4_to_2(filterReal, lFilter.real, rFilter.real);
+		deinterleaveAudioBuffers_4_to_2(filterImag, lFilter.imag, rFilter.imag);
 	#else
 		// this will generate the HRTF from the HRIR samples
 		
@@ -267,10 +267,10 @@ namespace binaural
 		const HRTFData & rFilterOld,
 		const HRTFData & lFilterNew,
 		const HRTFData & rFilterNew,
-		AudioBuffer & lResultOld,
-		AudioBuffer & rResultOld,
-		AudioBuffer & lResultNew,
-		AudioBuffer & rResultNew)
+		float * __restrict lResultOld,
+		float * __restrict rResultOld,
+		float * __restrict lResultNew,
+		float * __restrict rResultNew)
 	{
 		debugTimerBegin("convolveAudio_2");
 		
@@ -294,10 +294,9 @@ namespace binaural
 		
 		// transform convolved audio data back to the time-domain
 		
-		Fourier::fft1D((Fourier::float4*)convolvedReal, (Fourier::float4*)convolvedImag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, true, true);
+		Fourier::fft1D(convolvedReal, convolvedImag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, true, true);
 		
-		deinterleaveAudioBuffers_4(convolvedReal, lResultOld.real, rResultOld.real, lResultNew.real, rResultNew.real);
-		deinterleaveAudioBuffers_4(convolvedImag, lResultOld.imag, rResultOld.imag, lResultNew.imag, rResultNew.imag);
+		deinterleaveAudioBuffers_4(convolvedReal, lResultOld, rResultOld, lResultNew, rResultNew);
 	#else
 		// convolve audio data with impulse-response data in the frequency-domain
 		
@@ -318,33 +317,38 @@ namespace binaural
 	}
 	
 	void rampAudioBuffers(
-		const float * __restrict from,
-		const float * __restrict to,
+		const float * __restrict a,
+		const float * __restrict b,
 		const int numSamples,
-		float * __restrict result)
+		float * __restrict r)
 	{
 		debugAssert((numSamples % 4) == 0);
 		
-	#if ENABLE_SSE && 0 // todo : test for correctness
+	#if ENABLE_SSE
 		const float tStepScalar = 1.f / numSamples;
+		const float4 tStep = _mm_set1_ps(8.f / numSamples);
+		float4 t1 = _mm_set_ps(tStepScalar * 3.f, tStepScalar * 2.f, tStepScalar * 1.f, tStepScalar * 0.f);
+		float4 t2 = _mm_set_ps(tStepScalar * 7.f, tStepScalar * 6.f, tStepScalar * 5.f, tStepScalar * 4.f);
 		
-		const __m128 tStep = _mm_set1_ps(tStepScalar);
-		__m128 t = _mm_set_ps(tStepScalar * 3.f, tStepScalar * 2.f, tStepScalar * 1.f, tStepScalar * 0.f);
+		const float4 * __restrict a4 = (float4*)a;
+		const float4 * __restrict b4 = (float4*)b;
+		      float4 * __restrict r4 = (float4*)r;
 		
-		const __m128 * __restrict from4 = (__m128*)from;
-		const __m128 * __restrict to4 = (__m128*)to;
-		__m128 * __restrict result4 = (__m128*)result;
+		const float4 one = _mm_set1_ps(1.f);
 		
-		const __m128 one = _mm_set1_ps(1.f);
-		
-		for (int i = 0; i < AUDIO_BUFFER_SIZE / 4; ++i)
+		for (int i = 0; i < numSamples / 8; ++i)
 		{
-			const __m128 fromWeight = one - t;
-			const __m128 toWeight = t;
+			const float4 aWeight1 = one - t1;
+			const float4 bWeight1 = t1;
 			
-			result4[i] = from4[i] * fromWeight + to4[i] * toWeight;
+			const float4 aWeight2 = one - t2;
+			const float4 bWeight2 = t2;
 			
-			t += tStep;
+			r4[i * 2 + 0] = a4[i * 2 + 0] * aWeight1 + b4[i * 2 + 0] * bWeight1;
+			r4[i * 2 + 1] = a4[i * 2 + 1] * aWeight2 + b4[i * 2 + 1] * bWeight2;
+			
+			t1 += tStep;
+			t2 += tStep;
 		}
 		
 	#else
@@ -354,10 +358,10 @@ namespace binaural
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
-			const float fromWeight = 1.f - t;
-			const float toWeight = t;
+			const float aWeight = 1.f - t;
+			const float bWeight = t;
 			
-			result[i] = from[i] * fromWeight + to[i] * toWeight;
+			r[i] = a[i] * aWeight + b[i] * bWeight;
 			
 			t += tStep;
 		}
@@ -372,6 +376,38 @@ namespace binaural
 		float4 * __restrict result)
 	{
 	#if ENABLE_SSE
+	#if 1
+		const float4 * __restrict array1_4 = (float4*)array1;
+		const float4 * __restrict array2_4 = (float4*)array2;
+		const float4 * __restrict array3_4 = (float4*)array3;
+		const float4 * __restrict array4_4 = (float4*)array4;
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE / 8; ++i)
+		{
+			float4 value1a = array1_4[i * 2 + 0];
+			float4 value2a = array2_4[i * 2 + 0];
+			float4 value3a = array3_4[i * 2 + 0];
+			float4 value4a = array4_4[i * 2 + 0];
+			
+			float4 value1b = array1_4[i * 2 + 1];
+			float4 value2b = array2_4[i * 2 + 1];
+			float4 value3b = array3_4[i * 2 + 1];
+			float4 value4b = array4_4[i * 2 + 1];
+			
+			_MM_TRANSPOSE4_PS(value1a, value2a, value3a, value4a);
+			_MM_TRANSPOSE4_PS(value1b, value2b, value3b, value4b);
+			
+			result[i * 8 + 0] = value1a;
+			result[i * 8 + 1] = value2a;
+			result[i * 8 + 2] = value3a;
+			result[i * 8 + 3] = value4a;
+			
+			result[i * 8 + 4] = value1b;
+			result[i * 8 + 5] = value2b;
+			result[i * 8 + 6] = value3b;
+			result[i * 8 + 7] = value4b;
+		}
+	#else
 		const float4 * __restrict array1_4 = (float4*)array1;
 		const float4 * __restrict array2_4 = (float4*)array2;
 		const float4 * __restrict array3_4 = (float4*)array3;
@@ -391,6 +427,7 @@ namespace binaural
 			result[i * 4 + 2] = value3;
 			result[i * 4 + 3] = value4;
 		}
+	#endif
 	#else
 		float * __restrict resultScalar = (float*)result;
 		
@@ -501,6 +538,65 @@ namespace binaural
 	#endif
 	}
 	
+	void deinterleaveAudioBuffers_4_to_2(
+		const float4 * __restrict interleaved,
+		float * __restrict array1,
+		float * __restrict array2)
+	{
+	#if ENABLE_SSE
+	#if 1
+		float4 * __restrict array1_4 = (float4*)array1;
+		float4 * __restrict array2_4 = (float4*)array2;
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE / 8; ++i)
+		{
+			float4 value1a = interleaved[i * 8 + 0];
+			float4 value2a = interleaved[i * 8 + 1];
+			float4 value3a = interleaved[i * 8 + 2];
+			float4 value4a = interleaved[i * 8 + 3];
+			
+			float4 value1b = interleaved[i * 8 + 4];
+			float4 value2b = interleaved[i * 8 + 5];
+			float4 value3b = interleaved[i * 8 + 6];
+			float4 value4b = interleaved[i * 8 + 7];
+			
+			_MM_TRANSPOSE4_PS(value1a, value2a, value3a, value4a);
+			_MM_TRANSPOSE4_PS(value1b, value2b, value3b, value4b);
+			
+			array1_4[i * 2 + 0] = value1a;
+			array2_4[i * 2 + 0] = value2a;
+			
+			array1_4[i * 2 + 1] = value1b;
+			array2_4[i * 2 + 1] = value2b;
+		}
+	#else
+		float4 * __restrict array1_4 = (float4*)array1;
+		float4 * __restrict array2_4 = (float4*)array2;
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE / 4; ++i)
+		{
+			float4 value1 = interleaved[i * 4 + 0];
+			float4 value2 = interleaved[i * 4 + 1];
+			float4 value3 = interleaved[i * 4 + 2];
+			float4 value4 = interleaved[i * 4 + 3];
+			
+			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
+			
+			array1_4[i] = value1;
+			array2_4[i] = value2;
+		}
+	#endif
+	#else
+		const float * __restrict interleavedScalar = (float*)interleaved;
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+		{
+			array1[i] = interleavedScalar[i * 4 + 0];
+			array2[i] = interleavedScalar[i * 4 + 1];
+		}
+	#endif
+	}
+	
 	//
 	
 	void elevationAndAzimuthToCartesian(const float elevation, const float azimuth, float & x, float & y, float & z)
@@ -529,6 +625,9 @@ namespace binaural
 	void debugAssert(const bool condition)
 	{
 		fassert(condition);
+		
+		if (condition == false)
+			debugLog("assert failed!");
 	}
 	
 	void debugLog(const char * format, ...)
@@ -562,22 +661,6 @@ namespace binaural
 		debugTimer += g_TimerRT.TimeUS_get();
 		
 		debugLog("timer %s took %.3fms", name, debugTimer / 1000.f);
-	}
-#else
-	void debugAssert(const bool condition)
-	{
-	}
-	
-	void debugLog(const char * format, ...)
-	{
-	}
-	
-	void debugTimerBegin(const char * name)
-	{
-	}
-	
-	void debugTimerEnd(const char * name)
-	{
 	}
 #endif
 	
@@ -730,8 +813,12 @@ namespace binaural
 		
 		const Triangle * result = nullptr;
 		
-		for (auto triangle : cell->triangles)
+		const int numTriangles = cell->triangles.size();
+		
+		for (int i = 0; i < numTriangles; ++i)
 		{
+			auto triangle = cell->triangles[i];
+			
 			if (baryPointInTriangle(
 				triangle->vertex[0].location,
 				triangle->vertex[1].location,
@@ -740,6 +827,14 @@ namespace binaural
 				baryU, baryV))
 			{
 				result = triangle;
+				
+				if (i != 0)
+				{
+					auto tempCell = const_cast<Cell*>(cell);
+					auto tempTriangle = tempCell->triangles[0];
+					tempCell->triangles[0] = tempCell->triangles[i];
+					tempCell->triangles[i] = tempTriangle;
+				}
 				
 				break;
 			}

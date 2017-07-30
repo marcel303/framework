@@ -41,9 +41,14 @@ within the triangle.
 	#endif
 #endif
 
+#define ENABLE_SSE 1
+#define ENABLE_DEBUGGING 1
+#define ENABLE_FOURIER4 1
+
 #define HRIR_BUFFER_SIZE 512
 #define HRTF_BUFFER_SIZE HRIR_BUFFER_SIZE
 #define AUDIO_BUFFER_SIZE HRIR_BUFFER_SIZE
+#define AUDIO_UPDATE_SIZE (AUDIO_BUFFER_SIZE/2)
 
 namespace binaural
 {
@@ -75,6 +80,11 @@ namespace binaural
 			const float4 * __restrict filterImag,
 			float4 * __restrict outputReal,
 			float4 * __restrict outputImag);
+	};
+	
+	struct AudioBuffer_Real
+	{
+		ALIGN16 float samples[AUDIO_BUFFER_SIZE];
 	};
 
 	struct HRIRSampleData
@@ -216,6 +226,12 @@ namespace binaural
 			sampleData = nullptr;
 		}
 	};
+	
+	struct Mutex
+	{
+		virtual void lock() = 0;
+		virtual void unlock() = 0;
+	};
 
 	// functions
 
@@ -258,10 +274,10 @@ namespace binaural
 		const HRTFData & rFilterOld,
 		const HRTFData & lFilterNew,
 		const HRTFData & rFilterNew,
-		AudioBuffer & lResultOld,
-		AudioBuffer & rResultOld,
-		AudioBuffer & lResultNew,
-		AudioBuffer & rResultNew);
+		float * __restrict lResultOld,
+		float * __restrict rResultOld,
+		float * __restrict lResultNew,
+		float * __restrict rResultNew);
 	
 	void rampAudioBuffers(
 		const float * __restrict from,
@@ -289,6 +305,11 @@ namespace binaural
 		float * __restrict array2,
 		float * __restrict array3,
 		float * __restrict array4);
+	
+	void deinterleaveAudioBuffers_4_to_2(
+		const float4 * __restrict interleaved,
+		float * __restrict array1,
+		float * __restrict array2);
 	
 	// @see http://blackpawn.com/texts/pointinpoly/
 	template <typename Vector>
@@ -335,10 +356,28 @@ namespace binaural
 	
 	//
 	
+#if ENABLE_DEBUGGING
 	void debugAssert(const bool condition);
 	void debugLog(const char * format, ...);
 	void debugTimerBegin(const char * name);
 	void debugTimerEnd(const char * name);
+#else
+	inline void debugAssert(const bool condition)
+	{
+	}
+	
+	inline void debugLog(const char * format, ...)
+	{
+	}
+	
+	inline void debugTimerBegin(const char * name)
+	{
+	}
+	
+	inline void debugTimerEnd(const char * name)
+	{
+	}
+#endif
 	
 	void listFiles(const char * path, bool recurse, std::vector<std::string> & result);
 	bool parseInt32(const std::string & text, int & result);
