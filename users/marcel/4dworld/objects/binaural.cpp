@@ -22,6 +22,12 @@ namespace binaural
 	typedef Vector2<float> SampleLocation;
 	typedef Triangle<float> SampleTriangle;
 	
+	//
+	
+	__thread bool enableDebugLog = false;
+	
+	//
+	
 	HRIRSampleGrid::Location operator-(const HRIRSampleGrid::Location & a, const HRIRSampleGrid::Location & b)
 	{
 		HRIRSampleGrid::Location result;
@@ -632,6 +638,9 @@ namespace binaural
 	
 	void debugLog(const char * format, ...)
 	{
+		if (enableDebugLog == false)
+			return;
+			
 		char text[1024];
 		va_list args;
 		va_start(args, format);
@@ -789,8 +798,8 @@ namespace binaural
 		const int cellX = (int(std::floor(elevation / 180.f * HRIRSampleGrid::kGridSx)) + HRIRSampleGrid::kGridSx) % HRIRSampleGrid::kGridSx;
 		const int cellY = (int(std::floor(azimuth   / 360.f * HRIRSampleGrid::kGridSy)) + HRIRSampleGrid::kGridSy) % HRIRSampleGrid::kGridSy;
 		
-		debugAssert(cellX >= 0 && cellX < HRIRSampleGrid::kGridSx);
-		debugAssert(cellY >= 0 && cellY < HRIRSampleGrid::kGridSy);
+		//debugAssert(cellX >= 0 && cellX < HRIRSampleGrid::kGridSx);
+		//debugAssert(cellY >= 0 && cellY < HRIRSampleGrid::kGridSy);
 		
 		if (cellX < 0 || cellY < 0)
 			return nullptr;

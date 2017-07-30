@@ -61,6 +61,10 @@ namespace binaural
 	struct HRTFData;
 	struct SoundData;
 	
+	// values
+	
+	extern __thread bool enableDebugLog;
+	
 	// value types
 	
 	typedef __m128 float4;

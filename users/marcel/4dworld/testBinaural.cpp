@@ -3,18 +3,14 @@
 #include "binaural_cipic.h"
 #include "binaural_ircam.h"
 #include "binaural_mit.h"
+#include "binauralizer.h"
 #include "framework.h"
 #include "paobject.h"
+#include <xmmintrin.h>
 
 using namespace binaural;
 
-#define AUDIO_UPDATE_SIZE (AUDIO_BUFFER_SIZE/2)
-
 #define BLEND_PREVIOUS_HRTF 1
-
-#define OPTIMIZED_SAMPLE_COPIES 1
-
-#define AUDIO_RAMPING_FIX 1
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -23,280 +19,16 @@ static SDL_mutex * g_audioMutex = nullptr;
 
 static void drawHrirSampleGrid(const HRIRSampleSet & dataSet, const Vec2 & hoverLocation, const HRIRSampleGrid::Cell * hoverCell, const HRIRSampleGrid::Triangle * hoverTriangle);
 
-struct BinauralObject
+struct AudioMutex : Mutex
 {
-	struct SampleLocation
-	{
-		float elevation;
-		float azimuth;
-		
-		SampleLocation()
-			: elevation(0.f)
-			, azimuth(0.f)
-		{
-		}
-	};
-	
-	struct SampleBuffer
-	{
-		static const int kBufferSize = AUDIO_BUFFER_SIZE * 2;
-		
-		float samples[kBufferSize];
-		int nextWriteIndex;
-		int nextReadIndex;
-		
-		SampleBuffer()
-			: nextWriteIndex(0)
-			, nextReadIndex(0)
-		{
-		}
-	};
-	
-	HRIRSampleSet * sampleSet;
-	
-	SampleBuffer sampleBuffer;
-	
-	float overlapBuffer[AUDIO_BUFFER_SIZE];
-	
-	SampleLocation sampleLocation;
-	
-#if BLEND_PREVIOUS_HRTF
-	HRTF hrtfs[2];
-	int nextHrtfIndex;
-#endif
-
-	AudioBuffer audioBufferL;
-	AudioBuffer audioBufferR;
-	int nextReadLocation;
-	
-	BinauralObject()
-		: sampleSet(nullptr)
-		, sampleBuffer()
-		, overlapBuffer()
-		, sampleLocation()
-	#if BLEND_PREVIOUS_HRTF
-		, hrtfs()
-		, nextHrtfIndex(0)
-	#endif
-		, audioBufferL()
-		, audioBufferR()
-		, nextReadLocation(AUDIO_BUFFER_SIZE)
-	{
-	#if BLEND_PREVIOUS_HRTF
-		memset(hrtfs, 0, sizeof(hrtfs));
-	#endif
-	}
-	
-	void init(HRIRSampleSet * _sampleSet)
-	{
-		sampleSet = _sampleSet;
-	}
-	
-	void setSampleLocation(const float elevation, const float azimuth)
+	virtual void lock() override
 	{
 		SDL_LockMutex(g_audioMutex);
-		{
-			sampleLocation.elevation = elevation;
-			sampleLocation.azimuth = azimuth;
-		}
+	}
+	
+	virtual void unlock() override
+	{
 		SDL_UnlockMutex(g_audioMutex);
-	}
-	
-	void provide(const float * __restrict samples, const int numSamples)
-	{
-	#if OPTIMIZED_SAMPLE_COPIES
-		int left = numSamples;
-		int done = 0;
-		
-		while (left != 0)
-		{
-			if (sampleBuffer.nextWriteIndex == SampleBuffer::kBufferSize)
-			{
-				sampleBuffer.nextWriteIndex = 0;
-			}
-			
-			const int todo = std::min(left, SampleBuffer::kBufferSize - sampleBuffer.nextWriteIndex);
-			
-			memcpy(sampleBuffer.samples + sampleBuffer.nextWriteIndex, samples + done, todo * sizeof(float));
-			
-			sampleBuffer.nextWriteIndex += todo;
-			
-			left -= todo;
-			done += todo;
-		}
-	#else
-		for (int i = 0; i < numSamples; ++i)
-		{
-			if (sampleBuffer.nextWriteIndex == SampleBuffer::kBufferSize)
-			{
-				sampleBuffer.nextWriteIndex = 0;
-			}
-			
-			sampleBuffer.samples[sampleBuffer.nextWriteIndex] = samples[i];
-			
-			sampleBuffer.nextWriteIndex++;
-		}
-	#endif
-	}
-	
-	void fillReadBuffer()
-	{
-		// move the old audio signal to the start of the overlap buffer
-		
-		memcpy(overlapBuffer, overlapBuffer + AUDIO_UPDATE_SIZE, (AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE) * sizeof(float));
-		
-		// generate audio signal
-		
-		float * __restrict samples = overlapBuffer + AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE;
-		
-	#if OPTIMIZED_SAMPLE_COPIES
-		int left = AUDIO_UPDATE_SIZE;
-		int done = 0;
-		
-		while (left != 0)
-		{
-			if (sampleBuffer.nextReadIndex == SampleBuffer::kBufferSize)
-			{
-				sampleBuffer.nextReadIndex = 0;
-			}
-			
-			const int todo = std::min(left, SampleBuffer::kBufferSize - sampleBuffer.nextReadIndex);
-			
-			memcpy(samples + done, sampleBuffer.samples + sampleBuffer.nextReadIndex, todo * sizeof(float));
-			
-			sampleBuffer.nextReadIndex += todo;
-			
-			left -= todo;
-			done += todo;
-		}
-	#else
-		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-		{
-			if (sampleBuffer.nextReadIndex == SampleBuffer::kBufferSize)
-				sampleBuffer.nextReadIndex = 0;
-			
-			Assert(sampleBuffer.nextReadIndex != sampleBuffer.nextWriteIndex);
-			
-			samples[i] = sampleBuffer.samples[sampleBuffer.nextReadIndex];
-			
-			sampleBuffer.nextReadIndex++;
-		}
-	#endif
-		
-		// compute the HRIR, a blend between three sample points in a Delaunay triangulation of all sample points
-		
-		HRIRSampleData hrir;
-		
-		{
-			const HRIRSampleData * samples[3];
-			float sampleWeights[3];
-			
-			float elevation;
-			float azimuth;
-			
-			SDL_LockMutex(g_audioMutex);
-			{
-				elevation = sampleLocation.elevation;
-				azimuth = sampleLocation.azimuth;
-			}
-			SDL_UnlockMutex(g_audioMutex);
-			
-			if (sampleSet != nullptr && sampleSet->lookup_3(elevation, azimuth, samples, sampleWeights))
-			{
-				blendHrirSamples_3(samples, sampleWeights, hrir);
-			}
-			else
-			{
-				memset(&hrir, 0, sizeof(hrir));
-			}
-		}
-		
-		// compute the HRTF from the HRIR
-		
-	#if BLEND_PREVIOUS_HRTF
-		const HRTF & oldHrtf = hrtfs[1 - nextHrtfIndex];
-		HRTF & newHrtf = hrtfs[nextHrtfIndex];
-		nextHrtfIndex = (nextHrtfIndex + 1) % 2;
-	#else
-		HRTF newHrtf;
-	#endif
-		
-		hrirToHrtf(hrir.lSamples, hrir.rSamples, newHrtf.lFilter, newHrtf.rFilter);
-		
-		// prepare audio signal for HRTF application
-		
-		AudioBuffer audioBuffer;
-		reverseSampleIndices(overlapBuffer, audioBuffer.real);
-		memset(audioBuffer.imag, 0, AUDIO_BUFFER_SIZE * sizeof(float));
-		
-		// apply HRTF
-		
-		// convolve audio in the frequency domain
-		
-	#if BLEND_PREVIOUS_HRTF
-		AudioBuffer oldAudioBufferL;
-		AudioBuffer oldAudioBufferR;
-		
-		AudioBuffer newAudioBufferL;
-		AudioBuffer newAudioBufferR;
-		
-		convolveAudio_2(
-			audioBuffer,
-			oldHrtf.lFilter,
-			oldHrtf.rFilter,
-			newHrtf.lFilter,
-			newHrtf.rFilter,
-			oldAudioBufferL,
-			oldAudioBufferR,
-			newAudioBufferL,
-			newAudioBufferR);
-		
-		// ramp from old to new audio buffer
-		
-	#if AUDIO_RAMPING_FIX
-		const int offset = AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE;
-		
-		rampAudioBuffers(oldAudioBufferL.real + offset, newAudioBufferL.real + offset, AUDIO_UPDATE_SIZE, audioBufferL.real + offset);
-		rampAudioBuffers(oldAudioBufferR.real + offset, newAudioBufferR.real + offset, AUDIO_UPDATE_SIZE, audioBufferR.real + offset);
-	#else
-		rampAudioBuffers(oldAudioBufferL.real, newAudioBufferL.real, AUDIO_BUFFER_SIZE, audioBufferL.real);
-		rampAudioBuffers(oldAudioBufferR.real, newAudioBufferR.real, AUDIO_BUFFER_SIZE, audioBufferR.real);
-	#endif
-	#else
-		AudioBuffer tempL;
-		AudioBuffer tempR;
-		
-		convolveAudio_2(
-			audioBuffer,
-			newHrtf.lFilter,
-			newHrtf.rFilter,
-			newHrtf.lFilter,
-			newHrtf.rFilter,
-			audioBufferL,
-			audioBufferR,
-			tempL,
-			tempR);
-	#endif
-	
-		nextReadLocation = AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE;
-	}
-	
-	void generate(
-		float * __restrict samples,
-		const int numSamples)
-	{
-		for (int i = 0; i < numSamples; ++i)
-		{
-			if (nextReadLocation == AUDIO_BUFFER_SIZE)
-			{
-				fillReadBuffer();
-			}
-			
-			samples[i * 2 + 0] = audioBufferL.real[nextReadLocation];
-			samples[i * 2 + 1] = audioBufferR.real[nextReadLocation];
-			
-			nextReadLocation++;
-		}
 	}
 };
 
@@ -376,18 +108,19 @@ struct PcmObject
 
 struct BinauralSound
 {
-	BinauralObject binauralObject;
+	Binauralizer binauralizer;
 	PcmObject pcmObject;
+	AudioMutex mutex;
 	
 	BinauralSound()
-		: binauralObject()
+		: binauralizer()
 		, pcmObject()
 	{
 	}
 	
 	void init(HRIRSampleSet * sampleSet, PcmData * pcmData)
 	{
-		binauralObject.init(sampleSet);
+		binauralizer.init(sampleSet, &mutex);
 		
 		pcmObject.init(pcmData);
 	}
@@ -397,9 +130,9 @@ struct BinauralSound
 		float pcmSamples[AUDIO_UPDATE_SIZE];
 		pcmObject.generate(pcmSamples, AUDIO_UPDATE_SIZE);
 		
-		binauralObject.provide(pcmSamples, AUDIO_UPDATE_SIZE);
+		binauralizer.provide(pcmSamples, AUDIO_UPDATE_SIZE);
 		
-		binauralObject.generate(samples, AUDIO_UPDATE_SIZE);
+		binauralizer.generateInterleaved(samples, AUDIO_UPDATE_SIZE);
 	}
 };
 
@@ -467,6 +200,8 @@ void testBinaural()
 {
 	fassert(g_audioMutex == nullptr);
 	g_audioMutex = SDL_CreateMutex();
+	
+	enableDebugLog = true;
 	
 	if (false)
 	{
@@ -590,19 +325,25 @@ void testBinaural()
 		Surface view3D(200, 200, false);
 		
 		PcmData pcmData;
-		pcmData.init("music2.ogg");
+		pcmData.init("testsounds/music2.ogg");
 		
 		MyPortAudioHandler audio;
 		int numSources = 0;
-		//for (int i = 0; i < 100; ++i)
+	#if ENABLE_DEBUGGING && 0
 		for (int i = 0; i < 1; ++i)
+	#else
+		for (int i = 0; i < 135; ++i)
+	#endif
 		{
 			audio.addBinauralSound(&sampleSet, &pcmData);
 			
 			numSources++;
 		}
 		
-		audio.gain = 1.f / numSources;
+		if (numSources == 0)
+			audio.gain = 0.f;
+		else
+			audio.gain = 1.f / numSources;
 		
 		PortAudioObject pa;
 		pa.init(44100, 2, AUDIO_UPDATE_SIZE, &audio);
@@ -648,7 +389,7 @@ void testBinaural()
 					const float azimuth = hoverLocation[0] + std::cos(framework.time * index / 87.f) * 60.f;
 					index++;
 					
-					sound->binauralObject.setSampleLocation(elevation, azimuth);
+					sound->binauralizer.setSampleLocation(elevation, azimuth);
 				}
 			}
 			SDL_UnlockMutex(g_audioMutex);
@@ -676,6 +417,8 @@ void testBinaural()
 			}
 			
 			// compute the HRIR, a blend between three sample points in a Delaunay triangulation of all sample points
+			
+			debugTimerBegin("applyHrtf");
 			
 			HRIRSampleData hrir;
 			
@@ -707,8 +450,8 @@ void testBinaural()
 			
 			// apply HRTF
 			
-			AudioBuffer audioBufferL;
-			AudioBuffer audioBufferR;
+			AudioBuffer_Real audioBufferL;
+			AudioBuffer_Real audioBufferR;
 			
 		#if 0
 			audioBufferL = audioBuffer;
@@ -719,11 +462,11 @@ void testBinaural()
 			const HRTF & oldHrtf = previousHrtf;
 			const HRTF & newHrtf = hrtf;
 			
-			AudioBuffer oldAudioBufferL;
-			AudioBuffer oldAudioBufferR;
+			AudioBuffer_Real oldAudioBufferL;
+			AudioBuffer_Real oldAudioBufferR;
 			
-			AudioBuffer newAudioBufferL;
-			AudioBuffer newAudioBufferR;
+			AudioBuffer_Real newAudioBufferL;
+			AudioBuffer_Real newAudioBufferR;
 			
 			convolveAudio_2(
 				audioBuffer,
@@ -731,17 +474,17 @@ void testBinaural()
 				oldHrtf.rFilter,
 				newHrtf.lFilter,
 				newHrtf.rFilter,
-				oldAudioBufferL,
-				oldAudioBufferR,
-				newAudioBufferL,
-				newAudioBufferR);
+				oldAudioBufferL.samples,
+				oldAudioBufferR.samples,
+				newAudioBufferL.samples,
+				newAudioBufferR.samples);
 			
 			// ramp from old to new audio buffer
 			
 			debugTimerBegin("rampAudioBuffers");
 			
-			rampAudioBuffers(oldAudioBufferL.real, newAudioBufferL.real, AUDIO_BUFFER_SIZE, audioBufferL.real);
-			rampAudioBuffers(oldAudioBufferR.real, newAudioBufferR.real, AUDIO_BUFFER_SIZE, audioBufferR.real);
+			rampAudioBuffers(oldAudioBufferL.samples, newAudioBufferL.samples, AUDIO_BUFFER_SIZE, audioBufferL.samples);
+			rampAudioBuffers(oldAudioBufferR.samples, newAudioBufferR.samples, AUDIO_BUFFER_SIZE, audioBufferR.samples);
 			
 			debugTimerEnd("rampAudioBuffers");
 			
@@ -756,6 +499,8 @@ void testBinaural()
 				audioBufferL,
 				audioBufferR);
 		#endif
+		
+			debugTimerEnd("applyHrtf");
 			
 			//
 			
@@ -780,8 +525,8 @@ void testBinaural()
 						int index = 0;
 						for (auto & sound : audio.sounds)
 						{
-							sampleLocations[index][0] = sound->binauralObject.sampleLocation.elevation;
-							sampleLocations[index][1] = sound->binauralObject.sampleLocation.azimuth;
+							sampleLocations[index][0] = sound->binauralizer.sampleLocation.elevation;
+							sampleLocations[index][1] = sound->binauralizer.sampleLocation.azimuth;
 							index++;
 						}
 					}
@@ -922,14 +667,14 @@ void testBinaural()
 						for (int i = 0; i < sx; ++i)
 						{
 							setColorf(1.f, 0.f, .5f);
-							drawLine(i, 0, i, sy/2 + audioBufferL.real[i] * sy/2);
+							drawLine(i, 0, i, sy/2 + audioBufferL.samples[i] * sy/2);
 						}
 						
 						setColor(colorGreen);
 						for (int i = 0; i < sx; ++i)
 						{
 							setColorf(0.f, 1.f, .5f);
-							drawLine(i, 0, i, sy/2 + audioBufferR.real[i] * sy/2);
+							drawLine(i, 0, i, sy/2 + audioBufferR.samples[i] * sy/2);
 						}
 					}
 					popBlend();
