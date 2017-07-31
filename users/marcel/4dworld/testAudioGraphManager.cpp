@@ -17,8 +17,16 @@ extern const bool MONO_OUTPUT;
 
 //
 
+enum EntityType
+{
+	kEntity_Unknown,
+	kEntity_Bird
+};
+
 struct EntityBase
 {
+	EntityType type;
+	
 	bool dead;
 	
 	EntityBase()
@@ -120,8 +128,11 @@ struct Oneshot : EntityBase
 	float dimGrow;
 	
 	float timer;
+	bool doRampDown;
 	
-	Oneshot(const char * filename, const float time)
+	std::function<void()> onKill;
+	
+	Oneshot(const char * filename, const float time, const bool _doRampDown)
 		: EntityBase()
 		, pos()
 		, vel()
@@ -129,6 +140,7 @@ struct Oneshot : EntityBase
 		, dim(1.f, 1.f, 1.f)
 		, dimGrow(1.f)
 		, timer(time)
+		, doRampDown(_doRampDown)
 	{
 		instance = g_audioGraphMgr->createInstance(filename);
 	}
@@ -156,7 +168,14 @@ struct Oneshot : EntityBase
 			
 			if (timer <= 0.f)
 			{
-				instance->audioGraph->setFlag("voice.4d.rampDown");
+				if (doRampDown)
+				{
+					instance->audioGraph->setFlag("voice.4d.rampDown");
+				}
+				else
+				{
+					kill();
+				}
 			}
 		}
 		
@@ -165,29 +184,156 @@ struct Oneshot : EntityBase
 			kill();
 		}
 	}
+	
+	virtual void kill() override
+	{
+		onKill();
+		
+		EntityBase::kill();
+	}
 };
 
-struct BirdGroup
+struct Bird : EntityBase
 {
-	// todo : have multiple voices combined as one ?
+	Vec3 currentPos;
+	Vec3 desiredPos;
 	
+	AudioGraphInstance * instance;
+	
+	float songTimer;
+	float songAnimTimer;
+	float songAnimTimerRcp;
+	float moveTimer;
+	
+	Bird()
+		: EntityBase()
+		, currentPos()
+		, desiredPos()
+		, instance(nullptr)
+		, songTimer(0.f)
+		, songAnimTimer(0.f)
+		, songAnimTimerRcp(0.f)
+		, moveTimer(0.f)
+	{
+		type = kEntity_Bird;
+		
+		instance = g_audioGraphMgr->createInstance("birdTest2.xml");
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const float retain = std::powf(.3f, dt);
+		
+		currentPos = lerp(desiredPos, currentPos, retain);
+		
+		moveTimer -= dt;
+		
+		if (moveTimer <= 0.f)
+		{
+			moveTimer = random(3.f, 20.f);
+			
+			desiredPos[0] = random(-20.f, +20.f);
+			desiredPos[1] = random(6.f, 8.f);
+			desiredPos[2] = random(-20.f, +20.f);
+		}
+		
+		if ((currentPos - desiredPos).CalcSize() <= .5f)
+		{
+			songTimer -= dt;
+			
+			if (songTimer <= 0.f)
+			{
+				songTimer = random(3.f, 3.3f);
+				
+				songAnimTimer = 1.f;
+				songAnimTimerRcp = 1.f / songAnimTimer;
+			}
+		}
+		else
+		{
+			songTimer = random(3.f, 3.3f);
+			
+			songAnimTimer = 0.f;
+			songAnimTimerRcp = 0.f;
+		}
+		
+		songAnimTimer = std::max(0.f, songAnimTimer - dt);
+	}
 };
+
+//extern BirdField g_birdField;
 
 //
 
+#include "wavefield.h"
+
 struct World
 {
+	enum InputState
+	{
+		kInputState_Idle,
+		kInputState_Wavefield
+	};
+	
 	std::vector<EntityBase*> entities;
+	
 	float oneshotTimer;
+	int numOneshots;
+	
+	Mat4x4 worldToScreen;
+	
+	Wavefield2D wavefield;
+	Mat4x4 wavefieldToWorld;
+	Mat4x4 wavefieldToScreen;
+	
+	InputState inputState;
+	
+	struct Parameters
+	{
+		float wavefieldC;
+		float wavefieldD;
+		
+		Parameters()
+			: wavefieldC(1000.f)
+			, wavefieldD(1.f)
+		{
+		}
+		
+		void lerpTo(const Parameters & other, const float dt)
+		{
+			const float retain = std::powf(.1f, dt);
+			
+			wavefieldC = lerp(other.wavefieldC, wavefieldC, retain);
+			wavefieldD = lerp(other.wavefieldD, wavefieldD, retain);
+		}
+	};
+	
+	Parameters desiredParams;
+	Parameters currentParams;
 	
 	World()
 		: entities()
 		, oneshotTimer(0.f)
+		, numOneshots(0)
+		, wavefield()
+		//, wavefieldToScreen(true)
+		, wavefieldToWorld()
+		, worldToScreen()
+		, inputState(kInputState_Idle)
+		, desiredParams()
+		, currentParams()
 	{
 	}
 	
 	void init()
 	{
+		worldToScreen = Mat4x4(true).Translate(GFX_SX/2, GFX_SY/2, 0).Scale(16.f, 16.f, 1.f);
+		
+		wavefield.init(64);
+		wavefield.randomize();
+		
+		wavefieldToWorld = Mat4x4(true).Scale(20.f, 20.f, 1.f).Translate(-1.f, -1.f, 0.f).Scale(2.f, 2.f, 1.f).Scale(1.f / wavefield.numElems, 1.f / wavefield.numElems, 1.f);
+		wavefieldToScreen = worldToScreen * wavefieldToWorld;
 	}
 	
 	void shut()
@@ -215,6 +361,17 @@ struct World
 		entities.push_back(ball);
 	}
 	
+	void addBird()
+	{
+		Bird * bird = new Bird();
+			
+		bird->desiredPos[0] = random(-20.f, +20.f);
+		bird->desiredPos[1] = random(6.f, 8.f);
+		bird->desiredPos[2] = random(-20.f, +20.f);
+		
+		entities.push_back(bird);
+	}
+	
 	void killEntity()
 	{
 		if (entities.empty() == false)
@@ -230,7 +387,7 @@ struct World
 		const char * filename = (rand() % 2) == 0 ? "oneshotTest.xml" : "oneshotTest2.xml";
 		
 		//Oneshot * oneshot = new Oneshot(filename, -1.f);
-		Oneshot * oneshot = new Oneshot(filename, random(1.f, 5.f));
+		Oneshot * oneshot = new Oneshot(filename, random(1.f, 5.f), true);
 		
 		const float sizeX = 6.f;
 		const float sizeY = 1.f;
@@ -251,24 +408,83 @@ struct World
 		
 		oneshot->instance->audioGraph->setMemf("delay", random(0.0002f, 0.2f));
 		entities.push_back(oneshot);
+		
+		oneshot->onKill = [&]
+			{
+				numOneshots--;
+			};
 	}
 	
-	void tick(const float dt)
+	bool tick(const float dt, const bool inputIsCaptured)
 	{
-		/*
-		if (entities.size() < 3)
+		bool result = false;
+		
+		if (inputIsCaptured == false)
 		{
+			switch (inputState)
+			{
+			case kInputState_Idle:
+				{
+					if (mouse.wentDown(BUTTON_LEFT))
+					{
+						inputState = kInputState_Wavefield;
+						break;
+					}
+				}
+				break;
+			
+			case kInputState_Wavefield:
+				{
+					const Vec2 mouseScreen(mouse.x, mouse.y);
+					const Vec2 mouseWavefield = wavefieldToScreen.Invert().Mul4(mouseScreen);
+					
+					const float impactX = mouseWavefield[0];
+					const float impactY = mouseWavefield[1];
+					
+					wavefield.doGaussianImpact(impactX, impactY, 3, currentParams.wavefieldD);
+					
+					if (mouse.wentUp(BUTTON_LEFT))
+					{
+						inputState = kInputState_Idle;
+						break;
+					}
+				}
+				break;
+			}
+		}
+		
+		//
+		
+		currentParams.lerpTo(desiredParams, dt);
+		
+		//
+		
+		if (numOneshots < 3)
+		{
+			numOneshots++;
+			
 			doOneshot();
 		}
-		*/
 		
+		/*
 		oneshotTimer -= dt;
 		
 		if (oneshotTimer <= 0.f)
 		{
+			numOneshots++;
+			
 			doOneshot();
 			
-			oneshotTimer = random(.3f, 1.f);
+			//oneshotTimer = random(.3f, 1.f);
+			oneshotTimer = 3.f;
+		}
+		*/
+		
+		//
+		
+		for (int i = 0; i < 10; ++i)
+		{
+			wavefield.tick(dt / 10.f, currentParams.wavefieldC, 0.2, 0.5, false);
 		}
 		
 		//
@@ -296,6 +512,83 @@ struct World
 				entityItr++;
 			}
 		}
+		
+		return (inputState != kInputState_Idle);
+	}
+	
+	void draw()
+	{
+		gxPushMatrix();
+		{
+			gxMultMatrixf(wavefieldToScreen.m_v);
+			
+			hqBegin(HQ_FILLED_CIRCLES);
+			{
+				for (int x = 0; x < wavefield.numElems; ++x)
+				{
+					for (int y = 0; y < wavefield.numElems; ++y)
+					{
+						const float pValue = saturate(.5f + wavefield.p[x][y] / 1.f);
+						const float fValue = saturate(wavefield.f[x][y] / 1.f);
+						const float vValue = saturate(.5f + wavefield.v[x][y] * .5f);
+						setColorf(0.1f, pValue, fValue, 1.f);
+						hqFillCircle(x + .5f, y + .5f, vValue * .25f);
+					}
+				}
+			}
+			hqEnd();
+			
+			for (int ox = 0; ox < 2; ++ox)
+			{
+				for (int oy = 0; oy < 2; ++oy)
+				{
+					const Vec2 world = wavefieldToWorld.Mul4(Vec2(wavefield.numElems * ox, wavefield.numElems * oy));
+					
+					setColor(colorWhite);
+					drawText(
+						ox * wavefield.numElems,
+						oy * wavefield.numElems,
+						1.5f,
+						0, 0,
+						"(%.2f, %.2f)",
+						world[0], world[1]);
+				}
+			}
+		}
+		gxPopMatrix();
+		
+		gxPushMatrix();
+		{
+			gxMultMatrixf(worldToScreen.m_v);
+			
+			for (auto entity : entities)
+			{
+				if (entity->type == kEntity_Bird)
+				{
+					Bird * bird = (Bird*)entity;
+					
+					if (bird->songAnimTimer > 0.f)
+					{
+						hqBegin(HQ_STROKED_CIRCLES);
+						{
+							const float t = 1.f - bird->songAnimTimer * bird->songAnimTimerRcp;
+							
+							setColorf(1.f, 1.f, 1.f, 1.f - t);
+							hqStrokeCircle(bird->currentPos[0], bird->currentPos[2], .5f + 5.f * t, 3.f);
+						}
+						hqEnd();
+					}
+					
+					hqBegin(HQ_FILLED_CIRCLES);
+					{
+						setColor(colorWhite);
+						hqFillCircle(bird->currentPos[0], bird->currentPos[2], .5f);
+					}
+					hqEnd();
+				}
+			}
+		}
+		gxPopMatrix();
 	}
 };
 
@@ -354,12 +647,12 @@ void testAudioGraphManager()
 	
 	//
 	
-	World world;
-	world.init();
+	World * world = nullptr;
 	
 	//
 	
-	std::string oscIpAddress = "192.168.1.10";
+	//std::string oscIpAddress = "192.168.1.10";
+	std::string oscIpAddress = "127.0.0.1";
 	int oscUdpPort = 2000;
 	
 	AudioUpdateHandler audioUpdateHandler;
@@ -380,7 +673,7 @@ void testAudioGraphManager()
 	
 	std::string activeInstanceName;
 	
-	auto doMenus = [&](const bool doActions, const bool doDraw) -> bool
+	auto doMenus = [&](const bool doActions, const bool doDraw, const float dt) -> bool
 	{
 		uiState.sx = 200;
 		uiState.x = GFX_SX - uiState.sx - 10 - 200 - 10;
@@ -391,12 +684,30 @@ void testAudioGraphManager()
 		pushMenu("interact");
 		{
 			doLabel("interact", 0.f);
-			if (doButton("add ball"))
-				world.addBall();
-			if (doButton("kill entity"))
-				world.killEntity();
-			if (doButton("do oneshot"))
-				world.doOneshot();
+			if (world == nullptr)
+			{
+				if (doButton("create world"))
+				{
+					world = new World();
+					world->init();
+				}
+			}
+			else
+			{
+				if (doButton("randomize wavefield"))
+					world->wavefield.randomize();
+				if (doButton("add ball"))
+					world->addBall();
+				if (doButton("add bird"))
+					world->addBird();
+				if (doButton("kill entity"))
+					world->killEntity();
+				if (doButton("do oneshot"))
+					world->doOneshot();
+				doBreak();
+				doTextBox(world->desiredParams.wavefieldC, "wavefield.c", dt);
+				doTextBox(world->desiredParams.wavefieldD, "wavefield.d", dt);
+			}
 		}
 		popMenu();
 		
@@ -456,20 +767,30 @@ void testAudioGraphManager()
 		
 		const float dt = std::min(1.f / 20.f, framework.timeStep);
 		
-		world.tick(dt);
-		
 		bool graphEditHasInputCapture =
 			audioGraphMgr.selectedFile != nullptr &&
-			audioGraphMgr.selectedFile->graphEdit->state != GraphEdit::kState_Idle;
+			audioGraphMgr.selectedFile->graphEdit->state != GraphEdit::kState_Idle &&
+			audioGraphMgr.selectedFile->graphEdit->state != GraphEdit::kState_Hidden &&
+			audioGraphMgr.selectedFile->graphEdit->state != GraphEdit::kState_HiddenIdle;
 		
-		bool menuHasInputCapture = false;
+		bool inputIsCaptured = false;
 		
 		if (graphEditHasInputCapture == false)
 		{
-			menuHasInputCapture = doMenus(true, false);
+			inputIsCaptured |= doMenus(true, false, dt);
 		}
 		
-		audioGraphMgr.tickEditor(dt, menuHasInputCapture);
+		inputIsCaptured |= audioGraphMgr.tickEditor(dt, inputIsCaptured);
+		
+		if (audioGraphMgr.selectedFile)
+		{
+			inputIsCaptured |= audioGraphMgr.selectedFile->graphEdit->state != GraphEdit::kState_Hidden;
+		}
+		
+		if (world != nullptr)
+		{
+			inputIsCaptured |= world->tick(dt, inputIsCaptured);
+		}
 		
 	#if 0
 		if (instance1 != nullptr)
@@ -491,9 +812,14 @@ void testAudioGraphManager()
 		{
 			pushFontMode(FONT_SDF);
 			{
+				if (world != nullptr)
+				{
+					world->draw();
+				}
+				
 				audioGraphMgr.drawEditor();
 				
-				doMenus(false, true);
+				doMenus(false, true, dt);
 				
 				if (audioGraphMgr.selectedFile && audioGraphMgr.selectedFile->activeInstance)
 				{
@@ -516,7 +842,13 @@ void testAudioGraphManager()
 	
 	//
 	
-	world.shut();
+	if (world != nullptr)
+	{
+		world->shut();
+		
+		delete world;
+		world = nullptr;
+	}
 	
 	//
 	
