@@ -63,7 +63,7 @@ struct AudioGraphManager
 	void tick(const float dt);
 	void updateAudioValues();
 	
-	void tickEditor(const float dt, const bool isInputCaptured);
+	bool tickEditor(const float dt, const bool isInputCaptured);
 	void drawEditor();
 };
 

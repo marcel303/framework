@@ -457,12 +457,16 @@ void AudioGraphManager::updateAudioValues()
 	SDL_UnlockMutex(audioMutex);
 }
 
-void AudioGraphManager::tickEditor(const float dt, const bool isInputCaptured)
+bool AudioGraphManager::tickEditor(const float dt, const bool isInputCaptured)
 {
+	bool result = false;
+	
 	if (selectedFile != nullptr)
 	{
-		selectedFile->graphEdit->tick(dt, isInputCaptured);
+		result |= selectedFile->graphEdit->tick(dt, isInputCaptured);
 	}
+	
+	return result;
 }
 
 void AudioGraphManager::drawEditor()
