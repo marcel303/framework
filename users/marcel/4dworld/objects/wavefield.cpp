@@ -458,6 +458,31 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 #endif
 }
 
+void Wavefield2D::randomize()
+{
+	const double xRatio = random(0.0, 1.0 / 10.0);
+	const double yRatio = random(0.0, 1.0 / 10.0);
+	const double randomFactor = random(0.0, 1.0);
+	//const double cosFactor = random(0.0, 1.0);
+	const double cosFactor = 0.0;
+	const double perlinFactor = random(0.0, 1.0);
+	
+	for (int x = 0; x < numElems; ++x)
+	{
+		for (int y = 0; y < numElems; ++y)
+		{
+			f[x][y] = 1.0;
+			
+			f[x][y] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
+			f[x][y] *= Calc::Lerp(1.0, (std::cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
+			//f[x][y] = 1.0 - std::pow(f[x][y], 2.0);
+			
+			//f[x][y] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
+			f[x][y] *= Calc::Lerp(1.0, scaled_octave_noise_2d(16, .4f, 1.f / 20.f, 0.f, 1.f, x, y), perlinFactor);
+		}
+	}
+}
+
 void Wavefield2D::doGaussianImpact(const int _x, const int _y, const int _radius, const double strength)
 {
 	if (_x - _radius < 0 ||
@@ -594,27 +619,7 @@ void AudioSourceWavefield2D::tick(const double dt)
 	
 	if (keyboard.wentDown(SDLK_t))
 	{
-		const double xRatio = random(0.0, 1.0 / 10.0);
-		const double yRatio = random(0.0, 1.0 / 10.0);
-		const double randomFactor = random(0.0, 1.0);
-		//const double cosFactor = random(0.0, 1.0);
-		const double cosFactor = 0.0;
-		const double perlinFactor = random(0.0, 1.0);
-		
-		for (int x = 0; x < m_wavefield.numElems; ++x)
-		{
-			for (int y = 0; y < m_wavefield.numElems; ++y)
-			{
-				m_wavefield.f[x][y] = 1.0;
-				
-				m_wavefield.f[x][y] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
-				m_wavefield.f[x][y] *= Calc::Lerp(1.0, (std::cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
-				//m_wavefield.f[x][y] = 1.0 - std::pow(m_wavefield.f[x][y], 2.0);
-				
-				//m_wavefield.f[x][y] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
-				m_wavefield.f[x][y] *= Calc::Lerp(1.0, scaled_octave_noise_2d(16, .4f, 1.f / 20.f, 0.f, 1.f, x, y), perlinFactor);
-			}
-		}
+		m_wavefield.randomize();
 	}
 }
 

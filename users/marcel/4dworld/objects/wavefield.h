@@ -60,6 +60,8 @@ struct Wavefield2D
 	void tickForces(const double dt, const double c, const bool _closedEnds);
 	void tickVelocity(const double dt, const double vRetainPerSecond, const double pRetainPerSecond);
 	
+	void randomize();
+	
 	void doGaussianImpact(const int _x, const int _y, const int _radius, const double strength);
 	float sample(const float x, const float y) const;
 	
