@@ -3139,6 +3139,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 	
 	SDL_SetCursor(cursor);
 	
+	inputIsCaptured &= (state != kState_Hidden);
+	
 	return inputIsCaptured;
 }
 
