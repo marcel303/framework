@@ -301,7 +301,7 @@ public:
 	{
 		Vec2 r;
 
-		for (int i = 0; i < 3; ++i)
+		for (int i = 0; i < 2; ++i)
 		{
 			r[i] =
 				m_v[INDEX(0, i)] * vec[0] +
