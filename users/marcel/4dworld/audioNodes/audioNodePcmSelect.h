@@ -46,6 +46,7 @@ struct AudioNodeSourcePcmSelect : AudioNodeBase
 		kInput_AutoPlay,
 		kInput_MaxLoopCount,
 		kInput_Play,
+		kInput_Stop,
 		kInput_COUNT
 	};
 	

@@ -46,6 +46,7 @@ AUDIO_NODE_TYPE(audioSourcePcmSelect, AudioNodeSourcePcmSelect)
 	in("autoPlay", "bool");
 	in("loopCount", "int");
 	in("play!", "trigger");
+	in("stop!", "trigger");
 	out("audio", "audioValue");
 	out("loop!", "trigger");
 	out("done!", "trigger");
@@ -68,6 +69,7 @@ AudioNodeSourcePcmSelect::AudioNodeSourcePcmSelect()
 	addInput(kInput_AutoPlay, kAudioPlugType_Bool);
 	addInput(kInput_MaxLoopCount, kAudioPlugType_Int);
 	addInput(kInput_Play, kAudioPlugType_Trigger);
+	addInput(kInput_Stop, kAudioPlugType_Trigger);
 	addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 	addOutput(kOutput_Loop, kAudioPlugType_Trigger, &loopTrigger);
 	addOutput(kOutput_Done, kAudioPlugType_Trigger, &doneTrigger);
@@ -205,5 +207,12 @@ void AudioNodeSourcePcmSelect::handleTrigger(const int inputSocketIndex, const A
 		const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
 		
 		nextFile(mode);
+	}
+	else if (inputSocketIndex == kInput_Stop)
+	{
+		fileIndex = -1;
+		samplePosition = 0;
+		
+		trigger(kOutput_Done);
 	}
 }
