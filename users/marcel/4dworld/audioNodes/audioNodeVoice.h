@@ -32,6 +32,13 @@
 
 struct AudioNodeVoice : AudioNodeBase
 {
+	enum Speaker
+	{
+		kSpeaker_LeftAndRight,
+		kSpeaker_Left,
+		kSpeaker_Right
+	};
+	
 	struct AudioSourceVoiceNode : AudioSource
 	{
 		AudioNodeVoice * voiceNode;
@@ -42,6 +49,7 @@ struct AudioNodeVoice : AudioNodeBase
 	enum Input
 	{
 		kInput_Audio,
+		kInput_Speaker,
 		kInput_COUNT
 	};
 	
@@ -54,5 +62,7 @@ struct AudioNodeVoice : AudioNodeBase
 	AudioVoice * voice;
 	
 	AudioNodeVoice();
-	~AudioNodeVoice() override;
+	virtual ~AudioNodeVoice() override;
+	
+	virtual void tick(const float dt) override;
 };

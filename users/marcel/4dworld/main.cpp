@@ -52,11 +52,11 @@ todo : editor :
 
 extern const int GFX_SX;
 extern const int GFX_SY;
-extern const bool MONO_OUTPUT;
+extern const bool STEREO_OUTPUT;
 
 #define FULLSCREEN 0
 
-const bool MONO_OUTPUT = true;
+const bool STEREO_OUTPUT = true;
 
 //
 
@@ -109,7 +109,7 @@ int main(int argc, char * argv[])
 		
 		AudioVoiceManager voiceMgr;
 		voiceMgr.init(kNumChannels);
-		voiceMgr.outputMono = MONO_OUTPUT;
+		voiceMgr.outputStereo = STEREO_OUTPUT;
 		
 		g_voiceMgr = &voiceMgr;
 		
@@ -175,7 +175,7 @@ int main(int argc, char * argv[])
 		
 		PortAudioObject pa;
 		
-		pa.init(SAMPLE_RATE, MONO_OUTPUT ? 1 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
+		pa.init(SAMPLE_RATE, STEREO_OUTPUT ? 2 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 		
 		bool stop = false;
 		

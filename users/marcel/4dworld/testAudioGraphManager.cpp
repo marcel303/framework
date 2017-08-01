@@ -10,7 +10,7 @@
 
 extern const int GFX_SX;
 extern const int GFX_SY;
-extern const bool MONO_OUTPUT;
+extern const bool STEREO_OUTPUT;
 
 //
 
@@ -22,6 +22,10 @@ extern const bool MONO_OUTPUT;
 
 struct WorldInterface
 {
+	virtual ~WorldInterface()
+	{
+	}
+	
 	virtual void rippleSound(const Vec3 & p) = 0;
 	virtual void rippleFlight(const Vec3 & p) = 0;
 	
@@ -74,7 +78,7 @@ struct TestInstance : EntityBase
 		graphInstance = g_audioGraphMgr->createInstance(filename);
 	}
 	
-	~TestInstance()
+	virtual ~TestInstance() override
 	{
 		g_audioGraphMgr->free(graphInstance);
 	}
@@ -288,7 +292,7 @@ struct Bird : EntityBase
 		graphInstance = g_audioGraphMgr->createInstance("e-bird1.xml");
 	}
 	
-	~Bird()
+	virtual ~Bird() override
 	{
 		g_audioGraphMgr->free(graphInstance);
 	}
@@ -538,7 +542,25 @@ struct Bird : EntityBase
 	}
 };
 
-//extern BirdField g_birdField;
+struct Voices : EntityBase
+{
+	AudioGraphInstance * graphInstance;
+	
+	Voices()
+		: EntityBase()
+	{
+		graphInstance = g_audioGraphMgr->createInstance("e-voices1.xml");
+	}
+	
+	virtual ~Voices() override
+	{
+		g_audioGraphMgr->free(graphInstance);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+	}
+};
 
 //
 
@@ -650,6 +672,13 @@ struct World : WorldInterface
 		bird->state = Bird::kState_Flying;
 		
 		entities.push_back(bird);
+	}
+	
+	void addVoices()
+	{
+		Voices * voices = new Voices();
+		
+		entities.push_back(voices);
 	}
 	
 	void killEntity()
@@ -963,7 +992,7 @@ void testAudioGraphManager()
 	
 	AudioVoiceManager voiceMgr;
 	voiceMgr.init(kNumChannels);
-	voiceMgr.outputMono = MONO_OUTPUT;
+	voiceMgr.outputStereo = STEREO_OUTPUT;
 	g_voiceMgr = &voiceMgr;
 	
 	//
@@ -1018,7 +1047,7 @@ void testAudioGraphManager()
 	
 	PortAudioObject pa;
 	
-	pa.init(SAMPLE_RATE, MONO_OUTPUT ? 1 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
+	pa.init(SAMPLE_RATE, STEREO_OUTPUT ? 2 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 	
 	//
 	
@@ -1064,6 +1093,8 @@ void testAudioGraphManager()
 						world->addBall();
 					if (doButton("add bird"))
 						world->addBird();
+					if (doButton("add voices"))
+						world->addVoices();
 					if (doButton("kill entity"))
 						world->killEntity();
 					if (doButton("do oneshot"))
@@ -1079,13 +1110,13 @@ void testAudioGraphManager()
 					bool addTestInstance = false;
 					bool killTestInstances = false;
 					
-					if (doTextBox(testInstanceFilename, "filename", dt) == kUiTextboxResult_EditingComplete)
+					if (doTextBox(testInstanceFilename, "filename", dt) == kUiTextboxResult_EditingComplete && !testInstanceFilename.empty())
 					{
 						addTestInstance = true;
 						killTestInstances = true;
 					}
 					
-					addTestInstance |= doButton("add test instance");
+					addTestInstance |= doButton("add test instance") && !testInstanceFilename.empty();
 					killTestInstances |= doButton("kill test instances");
 					
 					if (killTestInstances)

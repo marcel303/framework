@@ -27,11 +27,19 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioNodeVoice.h"
 
+AUDIO_ENUM_TYPE(voiceSpeaker)
+{
+	elem("left+right");
+	elem("left");
+	elem("right");
+}
+
 AUDIO_NODE_TYPE(voice, AudioNodeVoice)
 {
 	typeName = "voice";
 	
 	in("audio", "audioValue");
+	inEnum("speaker", "voiceSpeaker");
 }
 
 void AudioNodeVoice::AudioSourceVoiceNode::generate(ALIGN16 float * __restrict samples, const int numSamples)
@@ -54,6 +62,7 @@ AudioNodeVoice::AudioNodeVoice()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);
+	addInput(kInput_Speaker, kAudioPlugType_Int);
 	
 	//
 	
@@ -64,4 +73,16 @@ AudioNodeVoice::AudioNodeVoice()
 AudioNodeVoice::~AudioNodeVoice()
 {
 	g_voiceMgr->freeVoice(voice);
+}
+
+void AudioNodeVoice::tick(const float dt)
+{
+	const Speaker speaker = (Speaker)getInputInt(kInput_Speaker, 0);
+	
+	if (speaker == kSpeaker_LeftAndRight)
+		voice->speaker = AudioVoice::kSpeaker_LeftAndRight;
+	else if (speaker == kSpeaker_Left)
+		voice->speaker = AudioVoice::kSpeaker_Left;
+	else if (speaker == kSpeaker_Right)
+		voice->speaker = AudioVoice::kSpeaker_Right;
 }

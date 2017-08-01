@@ -152,6 +152,14 @@ struct SDL_mutex;
 
 struct AudioVoice
 {
+	enum Speaker
+	{
+		kSpeaker_None,
+		kSpeaker_LeftAndRight,
+		kSpeaker_Left,
+		kSpeaker_Right
+	};
+	
 	struct SpatialCompressor
 	{
 		bool enable = false;
@@ -280,6 +288,8 @@ struct AudioVoice
 	
 	int channelIndex;
 	
+	Speaker speaker;
+	
 	Spatialisation spat;
 	Spatialisation lastSentSpat;
 	
@@ -295,6 +305,7 @@ struct AudioVoice
 	
 	AudioVoice()
 		: channelIndex(-1)
+		, speaker(kSpeaker_None)
 		, spat()
 		, lastSentSpat()
 		, initOsc(true)
@@ -316,7 +327,7 @@ struct AudioVoiceManager : PortAudioHandler
 	
 	int numChannels;
 	std::list<AudioVoice> voices;
-	bool outputMono;
+	bool outputStereo;
 	int colorIndex;
 	
 	struct Spatialisation

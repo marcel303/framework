@@ -6,7 +6,7 @@
 
 extern const int GFX_SX;
 extern const int GFX_SY;
-extern const bool MONO_OUTPUT;
+extern const bool STEREO_OUTPUT;
 
 const static float kWorldSx = 10.f;
 const static float kWorldSy = 8.f;
@@ -401,7 +401,7 @@ void testAudioVoiceManager()
 	
 	voiceMgr.init(kNumChannels);
 	
-	voiceMgr.outputMono = MONO_OUTPUT;
+	voiceMgr.outputStereo = STEREO_OUTPUT;
 	
 	g_voiceMgr = &voiceMgr;
 	
@@ -424,7 +424,7 @@ void testAudioVoiceManager()
 	
 	PortAudioObject pa;
 	
-	pa.init(SAMPLE_RATE, MONO_OUTPUT ? 1 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
+	pa.init(SAMPLE_RATE, STEREO_OUTPUT ? 2 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 	
 	//
 	

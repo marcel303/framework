@@ -796,7 +796,7 @@ AudioVoiceManager::AudioVoiceManager()
 	: mutex(nullptr)
 	, numChannels(0)
 	, voices()
-	, outputMono(false)
+	, outputStereo(false)
 	, colorIndex(0)
 	, spat()
 	, lastSentSpat()
@@ -931,9 +931,9 @@ void AudioVoiceManager::portAudioCallback(
 	float * samples = (float*)outputBuffer;
 	const int numSamples = framesPerBuffer;
 	
-	if (outputMono)
+	if (outputStereo)
 	{
-		memset(samples, 0, numSamples * sizeof(float));
+		memset(samples, 0, numSamples * 2 * sizeof(float));
 	}
 	else
 	{
@@ -963,7 +963,7 @@ void AudioVoiceManager::portAudioCallback(
 				
 				// apply limiting
 				
-				if (outputMono)
+				if (outputStereo)
 				{
 					voice.applyLimiter(voiceSamples, numSamples, .1f);
 				}
@@ -978,11 +978,42 @@ void AudioVoiceManager::portAudioCallback(
 				
 				if (voice.channelIndex != -1)
 				{
-					if (outputMono)
+					if (outputStereo)
 					{
-						// accumulate samples into mono buffer
-						
-						audioBufferAdd(samples, voiceSamples, numSamples);
+						if (voice.speaker == AudioVoice::kSpeaker_Left)
+						{
+							// interleave voice samples into destination buffer
+							
+							float * __restrict dstPtr = samples;
+							
+							for (int i = 0; i < numSamples; ++i)
+							{
+								dstPtr[i * 2 + 0] += voiceSamples[i];
+							}
+						}
+						else if (voice.speaker == AudioVoice::kSpeaker_Right)
+						{
+							// interleave voice samples into destination buffer
+							
+							float * __restrict dstPtr = samples;
+							
+							for (int i = 0; i < numSamples; ++i)
+							{
+								dstPtr[i * 2 + 1] += voiceSamples[i];
+							}
+						}
+						else
+						{
+							// interleave voice samples into destination buffer
+							
+							float * __restrict dstPtr = samples + voice.channelIndex;
+							
+							for (int i = 0; i < numSamples; ++i)
+							{
+								dstPtr[i * 2 + 0] += voiceSamples[i];
+								dstPtr[i * 2 + 1] += voiceSamples[i];
+							}
+						}
 					}
 					else
 					{
