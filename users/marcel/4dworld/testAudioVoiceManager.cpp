@@ -228,7 +228,7 @@ struct TestObject
 	}
 };
 
-struct World : AudioUpdateTask
+struct VoiceWorld : AudioUpdateTask
 {
 	std::list<Creature> creatures;
 	
@@ -236,7 +236,7 @@ struct World : AudioUpdateTask
 	
 	UiState uiState;
 	
-	World()
+	VoiceWorld()
 		: creatures()
 		, testObject()
 		, uiState()
@@ -407,7 +407,7 @@ void testAudioVoiceManager()
 	
 	//
 	
-	World * world = new World();
+	VoiceWorld * world = new VoiceWorld();
 	
 	world->init(0);
 	
