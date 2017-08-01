@@ -240,6 +240,7 @@ struct Bird : EntityBase
 	{
 		kState_Idle, // lookout for danger. and sing or call if it's safe to do so
 		kState_Singing, // sing a song. temporarily blind for any dangers
+		kState_Calling, // perform a single call. temporarily blind for any dangers
 		kState_Flying, // move to a new spot which seems safe
 		kState_Settle // settle after flying
 	};
@@ -254,6 +255,8 @@ struct Bird : EntityBase
 	float songTimer;
 	float songAnimTimer;
 	float songAnimTimerRcp;
+	float callAnimTimer;
+	float callAnimTimerRcp;
 	float moveTimer;
 	float settleTimer;
 	
@@ -271,6 +274,8 @@ struct Bird : EntityBase
 		, songTimer(0.f)
 		, songAnimTimer(0.f)
 		, songAnimTimerRcp(0.f)
+		, callAnimTimer(0.f)
+		, callAnimTimerRcp(0.f)
 		, moveTimer(0.f)
 		, settleTimer(0.f)
 		, previousSoundLevel(0.f)
@@ -307,6 +312,23 @@ struct Bird : EntityBase
 	{
 		songAnimTimer = 0.f;
 		songAnimTimerRcp = 0.f;
+	}
+	
+	void beginCall()
+	{
+		// todo : trigger call-begin
+		graphInstance->audioGraph->triggerEvent("sing-begin");
+		
+		g_world->rippleSound(currentPos);
+		
+		callAnimTimer = 2.f;
+		callAnimTimerRcp = 1.f / callAnimTimer;
+	}
+	
+	void endCall()
+	{
+		callAnimTimer = 0.f;
+		callAnimTimerRcp = 0.f;
 	}
 	
 	void beginFlyTimer()
@@ -384,11 +406,22 @@ struct Bird : EntityBase
 				
 				if (songTimer == 0.f)
 				{
-					beginSong();
-					
-					logDebug("idle -> singing");
-					state = kState_Singing;
-					break;
+					if ((rand() % 8) == 0)
+					{
+						beginCall();
+						
+						logDebug("idle -> calling");
+						state = kState_Calling;
+						break;
+					}
+					else
+					{
+						beginSong();
+						
+						logDebug("idle -> singing");
+						state = kState_Singing;
+						break;
+					}
 				}
 				
 				//
@@ -412,6 +445,8 @@ struct Bird : EntityBase
 				
 				if (songAnimTimer == 0.f)
 				{
+					endSong();
+					
 					beginSongTimer();
 					
 					logDebug("singing -> idle");
@@ -431,6 +466,23 @@ struct Bird : EntityBase
 					break;
 				}
 				*/
+			}
+			break;
+			
+		case kState_Calling:
+			{
+				callAnimTimer = std::max(0.f, callAnimTimer - dt);
+				
+				if (callAnimTimer == 0.f)
+				{
+					endCall();
+					
+					beginSongTimer();
+					
+					logDebug("calling -> idle");
+					state = kState_Idle;
+					break;
+				}
 			}
 			break;
 			
@@ -823,6 +875,18 @@ struct World : WorldInterface
 							const float t = 1.f - std::fmodf(bird->songAnimTimer * bird->songAnimTimerRcp * 3.f, 1.f);
 							
 							setColorf(1.f, 1.f, 1.f, 1.f - t);
+							hqStrokeCircle(bird->currentPos[0], bird->currentPos[2], .5f + 5.f * t, 3.f);
+						}
+						hqEnd();
+					}
+					
+					if (bird->callAnimTimer > 0.f)
+					{
+						hqBegin(HQ_STROKED_CIRCLES);
+						{
+							const float t = 1.f - bird->callAnimTimer * bird->callAnimTimerRcp;
+							
+							setColorf(.5f, .5f, 1.f, 1.f - t);
 							hqStrokeCircle(bird->currentPos[0], bird->currentPos[2], .5f + 5.f * t, 3.f);
 						}
 						hqEnd();
