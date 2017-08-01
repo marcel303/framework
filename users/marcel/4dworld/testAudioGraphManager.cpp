@@ -2,6 +2,7 @@
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
 #include "framework.h"
+#include "Path.h"
 #include "soundmix.h" // AudioVoiceManager. todo : move to its own source file
 #include "StringEx.h"
 #include "Vec3.h"
@@ -26,7 +27,7 @@ struct WorldInterface
 	virtual float measureFlight(const Vec3 & p) = 0;
 };
 
-WorldInterface * g_world = nullptr;
+static WorldInterface * g_world = nullptr;
 
 enum EntityType
 {
@@ -768,6 +769,11 @@ void testAudioGraphManager()
 	
 	std::string activeInstanceName;
 	
+	bool interact = true;
+	std::string testInstanceFilename;
+	bool graphList = true;
+	bool instanceList = false;
+	
 	auto doMenus = [&](const bool doActions, const bool doDraw, const float dt) -> bool
 	{
 		uiState.sx = 200;
@@ -778,47 +784,67 @@ void testAudioGraphManager()
 		
 		pushMenu("interact");
 		{
-			doLabel("interact", 0.f);
-			if (world == nullptr)
+			doDrawer(interact, "interact");
+			if (interact)
 			{
-				if (doButton("create world"))
+				if (world == nullptr)
 				{
-					world = new World();
-					world->init();
-					
-					g_world = world;
-				}
-			}
-			else
-			{
-				if (doButton("randomize wavefield"))
-					world->wavefield.randomize();
-				if (doButton("add ball"))
-					world->addBall();
-				if (doButton("add bird"))
-					world->addBird();
-				if (doButton("kill entity"))
-					world->killEntity();
-				if (doButton("do oneshot"))
-					world->doOneshot();
-				doBreak();
-				doTextBox(world->desiredNumOneshots, "oneshots.num", dt);
-				doTextBox(world->desiredParams.wavefieldC, "wavefield.c", dt);
-				doTextBox(world->desiredParams.wavefieldD, "wavefield.d", dt);
-				doBreak();
-				
-				static std::string filename;
-				doTextBox(filename, "filename", dt);
-				if (doButton("add test instance"))
-				{
-					TestInstance * instance = new TestInstance(filename.c_str());
-					world->entities.push_back(instance);
-				}
-				if (doButton("kill test instances"))
-				{
-					for (auto & entity : world->entities)
+					if (doButton("create world"))
 					{
-						entity->kill();
+						world = new World();
+						world->init();
+						
+						g_world = world;
+					}
+				}
+				else
+				{
+					if (doButton("randomize wavefield"))
+						world->wavefield.randomize();
+					if (doButton("add ball"))
+						world->addBall();
+					if (doButton("add bird"))
+						world->addBird();
+					if (doButton("kill entity"))
+						world->killEntity();
+					if (doButton("do oneshot"))
+						world->doOneshot();
+					doBreak();
+					doTextBox(world->desiredNumOneshots, "oneshots.num", dt);
+					doTextBox(world->desiredParams.wavefieldC, "wavefield.c", dt);
+					doTextBox(world->desiredParams.wavefieldD, "wavefield.d", dt);
+					doBreak();
+					
+					//
+					
+					bool addTestInstance = false;
+					bool killTestInstances = false;
+					
+					if (doTextBox(testInstanceFilename, "filename", dt) == kUiTextboxResult_EditingComplete)
+					{
+						addTestInstance = true;
+						killTestInstances = true;
+					}
+					
+					addTestInstance |= doButton("add test instance");
+					killTestInstances |= doButton("kill test instances");
+					
+					if (killTestInstances)
+					{
+						for (auto & entity : world->entities)
+						{
+							entity->kill();
+						}
+					}
+					
+					if (addTestInstance)
+					{
+						std::string fullFilename = testInstanceFilename;
+						if (Path::GetExtension(fullFilename, true) != "xml")
+							fullFilename = Path::ReplaceExtension(fullFilename, "xml");
+						TestInstance * instance = new TestInstance(fullFilename.c_str());
+						world->entities.push_back(instance);
+						g_audioGraphMgr->selectInstance(instance->graphInstance);
 					}
 				}
 			}
@@ -829,14 +855,17 @@ void testAudioGraphManager()
 		
 		pushMenu("graphList");
 		{
-			doLabel("graphs", 0.f);
-			for (auto & fileItr : audioGraphMgr.files)
+			doDrawer(graphList, "graphs");
+			if (graphList)
 			{
-				auto & filename = fileItr.first;
-				
-				if (doButton(filename.c_str()))
+				for (auto & fileItr : audioGraphMgr.files)
 				{
-					audioGraphMgr.selectFile(filename.c_str());
+					auto & filename = fileItr.first;
+					
+					if (doButton(filename.c_str()))
+					{
+						audioGraphMgr.selectFile(filename.c_str());
+					}
 				}
 			}
 		}
@@ -846,23 +875,26 @@ void testAudioGraphManager()
 		
 		pushMenu("instanceList");
 		{
-			doLabel("instances", 0.f);
-			for (auto & fileItr : audioGraphMgr.files)
+			doDrawer(instanceList, "instances");
+			if (instanceList)
 			{
-				auto & filename = fileItr.first;
-				auto file = fileItr.second;
-				
-				for (auto & instance : file->instanceList)
+				for (auto & fileItr : audioGraphMgr.files)
 				{
-					std::string name = String::FormatC("%s: %p", filename.c_str(), instance.audioGraph);
+					auto & filename = fileItr.first;
+					auto file = fileItr.second;
 					
-					if (doButton(name.c_str()))
+					for (auto & instance : file->instanceList)
 					{
-						if (name != activeInstanceName)
+						std::string name = String::FormatC("%s: %p", filename.c_str(), instance.audioGraph);
+						
+						if (doButton(name.c_str()))
 						{
-							activeInstanceName = name;
-							
-							audioGraphMgr.selectInstance(&instance);
+							if (name != activeInstanceName)
+							{
+								activeInstanceName = name;
+								
+								audioGraphMgr.selectInstance(&instance);
+							}
 						}
 					}
 				}
