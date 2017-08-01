@@ -86,6 +86,14 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	const int size = getInputInt(kInput_Size, 16);
 	
 	//
+
+	if (isPassthrough)
+	{
+		audioOutput.setScalar(0.f);
+		return;
+	}
+	
+	//
 	
 	if (size != wavefield->numElems)
 	{
