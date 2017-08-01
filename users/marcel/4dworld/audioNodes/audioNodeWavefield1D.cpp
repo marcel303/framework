@@ -111,7 +111,7 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	{
 		const double c = clamp<double>(tension->samples[i] * 1000000.0, -maxTension, +maxTension);
 		
-		wavefield->tick(dt, c, 1.0 - positionDampening->samples[i], 1.0 - velocityDampening->samples[i], wrap == false);
+		wavefield->tick(dt, c, 1.0 - velocityDampening->samples[i], 1.0 - positionDampening->samples[i], wrap == false);
 		
 		audioOutput.samples[i] = wavefield->sample(sampleLocation->samples[i] * wavefield->numElems);
 	}
