@@ -295,10 +295,9 @@ void Wavefield2D::tick(const double dt, const double c, const double vRetainPerS
 	tickVelocity(dt, vRetainPerSecond, pRetainPerSecond);
 }
 
-void Wavefield2D::tickForces(const double dt, const double c, const bool _closedEnds)
+void Wavefield2D::tickForces(const double dt, const double c, const bool closedEnds)
 {
 	const double cTimesDt = c * dt;
-	const bool closedEnds = _closedEnds && false;
 	
 	const int sx = numElems;
 	const int sy = numElems;
