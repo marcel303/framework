@@ -53,7 +53,11 @@ void AudioNodeGate::tick(const float dt)
 {
 	const AudioFloat * input = getInputAudioFloat(kInput_Input, &AudioFloat::Zero);
 
-	if (isOpen)
+	if (isPassthrough)
+	{
+		resultOutput.set(*input);
+	}
+	else if (isOpen)
 	{
 		resultOutput.set(*input);
 	}
