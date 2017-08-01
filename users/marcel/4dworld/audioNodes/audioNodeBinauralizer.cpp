@@ -32,6 +32,8 @@ AUDIO_NODE_TYPE(binauralizer, AudioNodeBinauralizer)
 	typeName = "binauralizer";
 	
 	in("audio", "audioValue");
+	in("elevation", "audioValue");
+	in("azimuth", "audioValue");
 	out("leftEar", "audioValue");
 	out("rightEar", "audioValue");
 }
@@ -39,6 +41,8 @@ AUDIO_NODE_TYPE(binauralizer, AudioNodeBinauralizer)
 void AudioNodeBinauralizer::tick(const float dt)
 {
 	const AudioFloat * audio = getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
+	const float elevation = getInputAudioFloat(kInput_Elevation, &AudioFloat::Zero)->getMean();
+	const float azimuth = getInputAudioFloat(kInput_Azimuth, &AudioFloat::Zero)->getMean();
 
 	if (isPassthrough)
 	{
@@ -47,7 +51,13 @@ void AudioNodeBinauralizer::tick(const float dt)
 		
 		return;
 	}
-
-	audioOutputL.setScalar(0.f);
-	audioOutputR.setScalar(0.f);
+	
+	binauralizer.setSampleLocation(elevation, azimuth);
+	
+	binauralizer.provide(audio->samples, AUDIO_UPDATE_SIZE);
+	
+	audioOutputL.setVector();
+	audioOutputR.setVector();
+	
+	binauralizer.generateLR(audioOutputL.samples, audioOutputR.samples, AUDIO_UPDATE_SIZE);
 }

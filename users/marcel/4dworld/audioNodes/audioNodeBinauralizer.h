@@ -28,12 +28,22 @@
 #pragma once
 
 #include "audioNodeBase.h"
+#include "binauralizer.h"
+#include "binaural_cipic.h"
 
 struct AudioNodeBinauralizer : AudioNodeBase
 {
+	struct Mutex : binaural::Mutex
+	{
+		virtual void lock() override { }
+		virtual void unlock() override { }
+	};
+	
 	enum Input
 	{
 		kInput_Audio,
+		kInput_Elevation,
+		kInput_Azimuth,
 		kInput_COUNT
 	};
 	
@@ -43,6 +53,10 @@ struct AudioNodeBinauralizer : AudioNodeBase
 		kOutput_AudioR,
 		kOutput_COUNT
 	};
+	
+	binaural::HRIRSampleSet sampleSet;
+	binaural::Binauralizer binauralizer;
+	Mutex mutex;
 	
 	AudioFloat audioOutputL;
 	AudioFloat audioOutputR;
@@ -54,8 +68,16 @@ struct AudioNodeBinauralizer : AudioNodeBase
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Audio, kAudioPlugType_FloatVec);
+		addInput(kInput_Elevation, kAudioPlugType_FloatVec);
+		addInput(kInput_Azimuth, kAudioPlugType_FloatVec);
 		addOutput(kOutput_AudioL, kAudioPlugType_FloatVec, &audioOutputL);
 		addOutput(kOutput_AudioR, kAudioPlugType_FloatVec, &audioOutputR);
+		
+		binaural::loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
+		
+		sampleSet.finalize();
+		
+		binauralizer.init(&sampleSet, &mutex);
 	}
 	
 	virtual void tick(const float dt) override;
