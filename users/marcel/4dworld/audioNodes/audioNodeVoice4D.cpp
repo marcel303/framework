@@ -292,6 +292,11 @@ AUDIO_NODE_TYPE(globals_4d, AudioNodeVoice4DGlobals)
 
 void AudioNodeVoice4DGlobals::tick(const float dt)
 {
+	if (isPassthrough)
+	{
+		return;
+	}
+	
 	//g_voiceMgr->outputMono = getInputBool(kInput_MonoOutput, false);
 	
 	const float size = getInputAudioFloat(kInput_Dim, &AudioFloat::One)->getMean();
