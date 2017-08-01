@@ -14,7 +14,9 @@ extern const bool MONO_OUTPUT;
 
 //
 
-#define BALL_CAGE_SIZE 16
+#define BALL_CAGE_SIZE 16.f
+#define FIELD_SIZE 20.f
+#define FIELD_SIZE_FOR_FLYING (FIELD_SIZE * .9f)
 
 //
 
@@ -223,7 +225,10 @@ struct Oneshot : EntityBase
 	
 	virtual void kill() override
 	{
-		onKill();
+		if (onKill != nullptr)
+		{
+			onKill();
+		}
 		
 		EntityBase::kill();
 	}
@@ -231,6 +236,16 @@ struct Oneshot : EntityBase
 
 struct Bird : EntityBase
 {
+	enum State
+	{
+		kState_Idle, // lookout for danger. and sing or call if it's safe to do so
+		kState_Singing, // sing a song. temporarily blind for any dangers
+		kState_Flying, // move to a new spot which seems safe
+		kState_Settle // settle after flying
+	};
+	
+	State state;
+	
 	Vec3 currentPos;
 	Vec3 desiredPos;
 	
@@ -240,9 +255,16 @@ struct Bird : EntityBase
 	float songAnimTimer;
 	float songAnimTimerRcp;
 	float moveTimer;
+	float settleTimer;
+	
+	float previousSoundLevel;
+	float soundLevelSlowChanging;
+	float soundLevelFastChanging;
+	float soundPerturbance;
 	
 	Bird()
 		: EntityBase()
+		, state(kState_Idle)
 		, currentPos()
 		, desiredPos()
 		, graphInstance(nullptr)
@@ -250,6 +272,11 @@ struct Bird : EntityBase
 		, songAnimTimer(0.f)
 		, songAnimTimerRcp(0.f)
 		, moveTimer(0.f)
+		, settleTimer(0.f)
+		, previousSoundLevel(0.f)
+		, soundLevelSlowChanging(0.f)
+		, soundLevelFastChanging(0.f)
+		, soundPerturbance(0.f)
 	{
 		type = kEntity_Bird;
 		
@@ -261,8 +288,71 @@ struct Bird : EntityBase
 		g_audioGraphMgr->free(graphInstance);
 	}
 	
+	void beginSongTimer()
+	{
+		songTimer = 5.f + random(0.f, 2.f);
+	}
+	
+	void beginSong()
+	{
+		graphInstance->audioGraph->triggerEvent("sing-begin");
+		
+		g_world->rippleSound(currentPos);
+		
+		songAnimTimer = 5.f;
+		songAnimTimerRcp = 1.f / songAnimTimer;
+	}
+	
+	void endSong()
+	{
+		songAnimTimer = 0.f;
+		songAnimTimerRcp = 0.f;
+	}
+	
+	void beginFlyTimer()
+	{
+		moveTimer = random(60.f, 100.f);
+	}
+	
+	void beginFlying()
+	{
+		desiredPos[0] = random(-FIELD_SIZE_FOR_FLYING, +FIELD_SIZE_FOR_FLYING);
+		desiredPos[1] = random(6.f, 8.f);
+		desiredPos[2] = random(-FIELD_SIZE_FOR_FLYING, +FIELD_SIZE_FOR_FLYING);
+		
+		graphInstance->audioGraph->triggerEvent("sing-end");
+	}
+	
+	void endFlying()
+	{
+	}
+	
+	void beginSettleTimer()
+	{
+		settleTimer = random(3.f, 5.f);
+	}
+	
+	void tickSoundLevels(const float measuredSoundLevel, const float dt)
+	{
+		{
+			const float soundLevelAbs = std::abs(measuredSoundLevel);
+			const float soundLevelRetain = std::powf(.75f, dt);
+			soundLevelSlowChanging = lerp(soundLevelAbs, soundLevelSlowChanging, soundLevelRetain);
+		}
+		
+		{
+			const float soundLevelAbs = std::abs(measuredSoundLevel);
+			const float soundLevelRetain = std::powf(.5f, dt);
+			soundLevelFastChanging = lerp(soundLevelAbs, soundLevelFastChanging, soundLevelRetain);
+		}
+		
+		soundPerturbance = std::max(0.f, soundLevelFastChanging - soundLevelSlowChanging);
+	}
+	
 	virtual void tick(const float dt) override
 	{
+		// update movement
+		
 		const float retain = std::powf(.3f, dt);
 		
 		const auto oldPos = currentPos;
@@ -271,59 +361,128 @@ struct Bird : EntityBase
 		
 		const auto newPos = currentPos;
 		
+		float speed = 0.f;
+		
 		if (dt > 0.f)
 		{
-			const float speed = (newPos - oldPos).CalcSize() / dt;
-			
-			const float strength = speed * dt;
-			
-			g_world->rippleFlight(oldPos);
+			speed = (newPos - oldPos).CalcSize() / dt;
 		}
 		
-		moveTimer -= dt;
+		//
 		
-		if (moveTimer <= 0.f)
-		{
-			moveTimer = random(3.f, 20.f);
-			
-			desiredPos[0] = random(-20.f, +20.f);
-			desiredPos[1] = random(6.f, 8.f);
-			desiredPos[2] = random(-20.f, +20.f);
-			
-			graphInstance->audioGraph->triggerEvent("sing-end");
-		}
+		const float soundLevel = g_world->measureSound(currentPos);
 		
-		if ((currentPos - desiredPos).CalcSize() <= .5f)
+		tickSoundLevels(soundLevel, dt);
+		
+		// evaluate based on current state
+		
+		switch (state)
 		{
-			songTimer -= dt;
-			
-			if (songTimer <= 0.f)
+		case kState_Idle:
 			{
-				songTimer = random(3.f, 3.3f);
+				songTimer = std::max(0.f, songTimer - dt);
 				
-				songAnimTimer = 1.f;
-				songAnimTimerRcp = 1.f / songAnimTimer;
+				if (songTimer == 0.f)
+				{
+					beginSong();
+					
+					logDebug("idle -> singing");
+					state = kState_Singing;
+					break;
+				}
 				
 				//
 				
-				graphInstance->audioGraph->triggerEvent("sing-begin");
+				moveTimer = std::max(0.f, moveTimer - dt);
 				
-				g_world->rippleSound(currentPos);
+				if (soundLevelFastChanging > soundLevelSlowChanging * 1.2f || moveTimer == 0.f)
+				{
+					beginFlying();
+					
+					logDebug("idle -> flying");
+					state = kState_Flying;
+					break;
+				}
 			}
-		}
-		else
-		{
-			songTimer = random(3.f, 3.3f);
+			break;
 			
-			songAnimTimer = 0.f;
-			songAnimTimerRcp = 0.f;
+		case kState_Singing:
+			{
+				songAnimTimer = std::max(0.f, songAnimTimer - dt);
+				
+				if (songAnimTimer == 0.f)
+				{
+					beginSongTimer();
+					
+					logDebug("singing -> idle");
+					state = kState_Idle;
+					break;
+				}
+				
+				/*
+				if (songAnimTimer * songAnimTimerRcp <= .5f && soundLevelFastChanging > soundLevelSlowChanging * 1.5f)
+				{
+					endSong();
+					
+					beginFlying();
+					
+					logDebug("singing -> flying");
+					state = kState_Flying;
+					break;
+				}
+				*/
+			}
+			break;
+			
+		case kState_Flying:
+			{
+				const float strength = speed * dt;
+				
+				if (strength > 0.f)
+				{
+					g_world->rippleFlight(oldPos);
+				}
+				
+				//
+				
+				if ((currentPos - desiredPos).CalcSize() <= .5f)
+				{
+					endFlying();
+					
+					beginSettleTimer();
+					
+					logDebug("flying -> settle");
+					state = kState_Settle;
+					break;
+				}
+			}
+			break;
+			
+		case kState_Settle:
+			{
+				settleTimer = std::max(0.f, settleTimer - dt);
+				
+				if (settleTimer == 0.f)
+				{
+					beginSongTimer();
+					
+					beginFlyTimer();
+					
+					logDebug("settle -> idle");
+					state = kState_Idle;
+					break;
+				}
+			}
+			break;
 		}
-		
-		songAnimTimer = std::max(0.f, songAnimTimer - dt);
 		
 		//
 		
 		graphInstance->audioGraph->setMemf("pos", currentPos[0], currentPos[1], currentPos[2]);
+		
+		//
+		
+		previousSoundLevel = soundLevel;
 	}
 };
 
@@ -363,7 +522,6 @@ struct World : WorldInterface
 	
 	std::vector<EntityBase*> entities;
 	
-	float oneshotTimer;
 	int currentNumOneshots;
 	int desiredNumOneshots;
 	
@@ -378,9 +536,10 @@ struct World : WorldInterface
 	Parameters desiredParams;
 	Parameters currentParams;
 	
+	bool showBirdDebugs;
+	
 	World()
 		: entities()
-		, oneshotTimer(0.f)
 		, currentNumOneshots(0)
 		, desiredNumOneshots(0)
 		, worldToScreen(true)
@@ -390,6 +549,7 @@ struct World : WorldInterface
 		, inputState(kInputState_Idle)
 		, desiredParams()
 		, currentParams()
+		, showBirdDebugs(false)
 	{
 	}
 	
@@ -400,7 +560,7 @@ struct World : WorldInterface
 		wavefield.init(64);
 		wavefield.randomize();
 		
-		wavefieldToWorld = Mat4x4(true).Scale(20.f, 20.f, 1.f).Translate(-1.f, -1.f, 0.f).Scale(2.f, 2.f, 1.f).Scale(1.f / wavefield.numElems, 1.f / wavefield.numElems, 1.f);
+		wavefieldToWorld = Mat4x4(true).Scale(FIELD_SIZE, FIELD_SIZE, 1.f).Translate(-1.f, -1.f, 0.f).Scale(2.f, 2.f, 1.f).Scale(1.f / wavefield.numElems, 1.f / wavefield.numElems, 1.f);
 		wavefieldToScreen = worldToScreen * wavefieldToWorld;
 	}
 	
@@ -432,10 +592,10 @@ struct World : WorldInterface
 	void addBird()
 	{
 		Bird * bird = new Bird();
-			
-		bird->desiredPos[0] = random(-20.f, +20.f);
-		bird->desiredPos[1] = random(6.f, 8.f);
-		bird->desiredPos[2] = random(-20.f, +20.f);
+		
+		bird->beginFlying();
+		
+		bird->state = Bird::kState_Flying;
 		
 		entities.push_back(bird);
 	}
@@ -450,7 +610,7 @@ struct World : WorldInterface
 		}
 	}
 	
-	void doOneshot()
+	Oneshot * doOneshot()
 	{
 		const char * filename = (rand() % 2) == 0 ? "oneshotTest.xml" : "oneshotTest2.xml";
 		
@@ -477,16 +637,11 @@ struct World : WorldInterface
 		oneshot->instance->audioGraph->setMemf("delay", random(0.0002f, 0.2f));
 		entities.push_back(oneshot);
 		
-		oneshot->onKill = [&]
-			{
-				currentNumOneshots--;
-			};
+		return oneshot;
 	}
 	
 	bool tick(const float dt, const bool inputIsCaptured)
 	{
-		bool result = false;
-		
 		if (inputIsCaptured == false)
 		{
 			switch (inputState)
@@ -531,28 +686,19 @@ struct World : WorldInterface
 		{
 			currentNumOneshots++;
 			
-			doOneshot();
-		}
-		
-		/*
-		oneshotTimer -= dt;
-		
-		if (oneshotTimer <= 0.f)
-		{
-			numOneshots++;
+			auto oneshot = doOneshot();
 			
-			doOneshot();
-			
-			//oneshotTimer = random(.3f, 1.f);
-			oneshotTimer = 3.f;
+			oneshot->onKill = [&]
+			{
+				currentNumOneshots--;
+			};
 		}
-		*/
 		
 		//
 		
 		for (int i = 0; i < 10; ++i)
 		{
-			wavefield.tick(dt / 10.f, currentParams.wavefieldC, 0.2, 0.5, false);
+			wavefield.tick(dt / 10.f, currentParams.wavefieldC, 0.2, 0.5, true);
 		}
 		
 		//
@@ -629,6 +775,41 @@ struct World : WorldInterface
 		{
 			gxMultMatrixf(worldToScreen.m_v);
 			
+			const float rect[4][2] =
+			{
+				{ -6, -6 },
+				{ +6, -6 },
+				{ +6, +6 },
+				{ -6, +6 }
+			};
+			
+			hqBegin(HQ_LINES, true);
+			{
+				for (int i = 0; i < 4; ++i)
+				{
+					const auto v1 = rect[(i + 0) % 4];
+					const auto v2 = rect[(i + 1) % 4];
+					
+					setColor(255, 255, 255, 127);
+					hqLine(v1[0], v1[1], 1.f, v2[0], v2[1], 1.f);
+				}
+			}
+			hqEnd();
+			
+			for (int i = 0; i < 4; ++i)
+			{
+				const auto v = rect[(i + 0) % 4];
+				
+				setColor(colorWhite);
+				drawText(
+					v[0],
+					v[1],
+					.8f,
+					0, 0,
+					"(%.2f, %.2f)",
+					v[0], v[1]);
+			}
+			
 			for (auto entity : entities)
 			{
 				if (entity->type == kEntity_Bird)
@@ -639,7 +820,7 @@ struct World : WorldInterface
 					{
 						hqBegin(HQ_STROKED_CIRCLES);
 						{
-							const float t = 1.f - bird->songAnimTimer * bird->songAnimTimerRcp;
+							const float t = 1.f - std::fmodf(bird->songAnimTimer * bird->songAnimTimerRcp * 3.f, 1.f);
 							
 							setColorf(1.f, 1.f, 1.f, 1.f - t);
 							hqStrokeCircle(bird->currentPos[0], bird->currentPos[2], .5f + 5.f * t, 3.f);
@@ -653,6 +834,18 @@ struct World : WorldInterface
 						hqFillCircle(bird->currentPos[0], bird->currentPos[2], .5f);
 					}
 					hqEnd();
+					
+					if (showBirdDebugs)
+					{
+						drawText(
+							bird->currentPos[0],
+							bird->currentPos[2] + 1.f,
+							1.2f, 0, 1,
+							"lFast=%.2f, lSlow=%.2f, p=%.2f",
+							bird->soundLevelFastChanging,
+							bird->soundLevelSlowChanging,
+							bird->soundPerturbance);
+					}
 				}
 			}
 		}
@@ -677,14 +870,14 @@ struct World : WorldInterface
 	{
 		const Vec2 samplePosition = wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2]));
 		
-		return 0.f;
+		return wavefield.sample(samplePosition[0], samplePosition[1]);
 	}
 	
 	virtual float measureFlight(const Vec3 & p) override
 	{
 		const Vec2 samplePosition = wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2]));
 		
-		return 0.f;
+		return wavefield.sample(samplePosition[0], samplePosition[1]);
 	}
 };
 
@@ -799,6 +992,8 @@ void testAudioGraphManager()
 				}
 				else
 				{
+					doCheckBox(world->showBirdDebugs, "show bird debugs", false);
+					
 					if (doButton("randomize wavefield"))
 						world->wavefield.randomize();
 					if (doButton("add ball"))
@@ -833,7 +1028,10 @@ void testAudioGraphManager()
 					{
 						for (auto & entity : world->entities)
 						{
-							entity->kill();
+							if (entity->type == kEntity_TestInstance)
+							{
+								entity->kill();
+							}
 						}
 					}
 					
