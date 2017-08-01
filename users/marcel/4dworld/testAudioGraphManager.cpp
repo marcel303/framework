@@ -17,9 +17,21 @@ extern const bool MONO_OUTPUT;
 
 //
 
+struct WorldInterface
+{
+	virtual void rippleSound(const Vec3 & p) = 0;
+	virtual void rippleFlight(const Vec3 & p) = 0;
+	
+	virtual float measureSound(const Vec3 & p) = 0;
+	virtual float measureFlight(const Vec3 & p) = 0;
+};
+
+WorldInterface * g_world = nullptr;
+
 enum EntityType
 {
 	kEntity_Unknown,
+	kEntity_TestInstance,
 	kEntity_Bird
 };
 
@@ -43,6 +55,29 @@ struct EntityBase
 	virtual void kill()
 	{
 		dead = true;
+	}
+};
+
+struct TestInstance : EntityBase
+{
+	AudioGraphInstance * graphInstance;
+	
+	TestInstance(const char * filename)
+		: EntityBase()
+		, graphInstance(nullptr)
+	{
+		type = kEntity_TestInstance;
+		
+		graphInstance = g_audioGraphMgr->createInstance(filename);
+	}
+	
+	~TestInstance()
+	{
+		g_audioGraphMgr->free(graphInstance);
+	}
+	
+	virtual void tick(const float dt) override
+	{
 	}
 };
 
@@ -198,7 +233,7 @@ struct Bird : EntityBase
 	Vec3 currentPos;
 	Vec3 desiredPos;
 	
-	AudioGraphInstance * instance;
+	AudioGraphInstance * graphInstance;
 	
 	float songTimer;
 	float songAnimTimer;
@@ -209,7 +244,7 @@ struct Bird : EntityBase
 		: EntityBase()
 		, currentPos()
 		, desiredPos()
-		, instance(nullptr)
+		, graphInstance(nullptr)
 		, songTimer(0.f)
 		, songAnimTimer(0.f)
 		, songAnimTimerRcp(0.f)
@@ -217,14 +252,32 @@ struct Bird : EntityBase
 	{
 		type = kEntity_Bird;
 		
-		instance = g_audioGraphMgr->createInstance("birdTest2.xml");
+		graphInstance = g_audioGraphMgr->createInstance("e-bird1.xml");
+	}
+	
+	~Bird()
+	{
+		g_audioGraphMgr->free(graphInstance);
 	}
 	
 	virtual void tick(const float dt) override
 	{
 		const float retain = std::powf(.3f, dt);
 		
+		const auto oldPos = currentPos;
+		
 		currentPos = lerp(desiredPos, currentPos, retain);
+		
+		const auto newPos = currentPos;
+		
+		if (dt > 0.f)
+		{
+			const float speed = (newPos - oldPos).CalcSize() / dt;
+			
+			const float strength = speed * dt;
+			
+			g_world->rippleFlight(oldPos);
+		}
 		
 		moveTimer -= dt;
 		
@@ -235,6 +288,8 @@ struct Bird : EntityBase
 			desiredPos[0] = random(-20.f, +20.f);
 			desiredPos[1] = random(6.f, 8.f);
 			desiredPos[2] = random(-20.f, +20.f);
+			
+			graphInstance->audioGraph->triggerEvent("sing-end");
 		}
 		
 		if ((currentPos - desiredPos).CalcSize() <= .5f)
@@ -247,6 +302,12 @@ struct Bird : EntityBase
 				
 				songAnimTimer = 1.f;
 				songAnimTimerRcp = 1.f / songAnimTimer;
+				
+				//
+				
+				graphInstance->audioGraph->triggerEvent("sing-begin");
+				
+				g_world->rippleSound(currentPos);
 			}
 		}
 		else
@@ -258,6 +319,10 @@ struct Bird : EntityBase
 		}
 		
 		songAnimTimer = std::max(0.f, songAnimTimer - dt);
+		
+		//
+		
+		graphInstance->audioGraph->setMemf("pos", currentPos[0], currentPos[1], currentPos[2]);
 	}
 };
 
@@ -267,7 +332,7 @@ struct Bird : EntityBase
 
 #include "wavefield.h"
 
-struct World
+struct World : WorldInterface
 {
 	enum InputState
 	{
@@ -275,20 +340,7 @@ struct World
 		kInputState_Wavefield
 	};
 	
-	std::vector<EntityBase*> entities;
-	
-	float oneshotTimer;
-	int numOneshots;
-	
-	Mat4x4 worldToScreen;
-	
-	Wavefield2D wavefield;
-	Mat4x4 wavefieldToWorld;
-	Mat4x4 wavefieldToScreen;
-	
-	InputState inputState;
-	
-	struct Parameters
+		struct Parameters
 	{
 		float wavefieldC;
 		float wavefieldD;
@@ -308,17 +360,32 @@ struct World
 		}
 	};
 	
+	std::vector<EntityBase*> entities;
+	
+	float oneshotTimer;
+	int currentNumOneshots;
+	int desiredNumOneshots;
+	
+	Mat4x4 worldToScreen;
+	
+	Wavefield2D wavefield;
+	Mat4x4 wavefieldToWorld;
+	Mat4x4 wavefieldToScreen;
+	
+	InputState inputState;
+	
 	Parameters desiredParams;
 	Parameters currentParams;
 	
 	World()
 		: entities()
 		, oneshotTimer(0.f)
-		, numOneshots(0)
+		, currentNumOneshots(0)
+		, desiredNumOneshots(0)
+		, worldToScreen(true)
 		, wavefield()
-		//, wavefieldToScreen(true)
-		, wavefieldToWorld()
-		, worldToScreen()
+		, wavefieldToWorld(true)
+		, wavefieldToScreen(true)
 		, inputState(kInputState_Idle)
 		, desiredParams()
 		, currentParams()
@@ -411,7 +478,7 @@ struct World
 		
 		oneshot->onKill = [&]
 			{
-				numOneshots--;
+				currentNumOneshots--;
 			};
 	}
 	
@@ -459,9 +526,9 @@ struct World
 		
 		//
 		
-		if (numOneshots < 3)
+		if (currentNumOneshots < desiredNumOneshots)
 		{
-			numOneshots++;
+			currentNumOneshots++;
 			
 			doOneshot();
 		}
@@ -590,6 +657,34 @@ struct World
 		}
 		gxPopMatrix();
 	}
+	
+	virtual void rippleSound(const Vec3 & p) override
+	{
+		const Vec2 samplePosition = wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2]));
+		
+		wavefield.doGaussianImpact(samplePosition[0], samplePosition[1], 3, 1.f);
+	}
+	
+	virtual void rippleFlight(const Vec3 & p) override
+	{
+		const Vec2 samplePosition = wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2]));
+		
+		wavefield.doGaussianImpact(samplePosition[0], samplePosition[1], 2, .05f);
+	}
+	
+	virtual float measureSound(const Vec3 & p) override
+	{
+		const Vec2 samplePosition = wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2]));
+		
+		return 0.f;
+	}
+	
+	virtual float measureFlight(const Vec3 & p) override
+	{
+		const Vec2 samplePosition = wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2]));
+		
+		return 0.f;
+	}
 };
 
 //
@@ -651,8 +746,8 @@ void testAudioGraphManager()
 	
 	//
 	
-	//std::string oscIpAddress = "192.168.1.10";
-	std::string oscIpAddress = "127.0.0.1";
+	std::string oscIpAddress = "192.168.1.10";
+	//std::string oscIpAddress = "127.0.0.1";
 	int oscUdpPort = 2000;
 	
 	AudioUpdateHandler audioUpdateHandler;
@@ -690,6 +785,8 @@ void testAudioGraphManager()
 				{
 					world = new World();
 					world->init();
+					
+					g_world = world;
 				}
 			}
 			else
@@ -705,8 +802,25 @@ void testAudioGraphManager()
 				if (doButton("do oneshot"))
 					world->doOneshot();
 				doBreak();
+				doTextBox(world->desiredNumOneshots, "oneshots.num", dt);
 				doTextBox(world->desiredParams.wavefieldC, "wavefield.c", dt);
 				doTextBox(world->desiredParams.wavefieldD, "wavefield.d", dt);
+				doBreak();
+				
+				static std::string filename;
+				doTextBox(filename, "filename", dt);
+				if (doButton("add test instance"))
+				{
+					TestInstance * instance = new TestInstance(filename.c_str());
+					world->entities.push_back(instance);
+				}
+				if (doButton("kill test instances"))
+				{
+					for (auto & entity : world->entities)
+					{
+						entity->kill();
+					}
+				}
 			}
 		}
 		popMenu();
@@ -844,6 +958,8 @@ void testAudioGraphManager()
 	
 	if (world != nullptr)
 	{
+		g_world = nullptr;
+		
 		world->shut();
 		
 		delete world;
