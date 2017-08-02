@@ -42,6 +42,7 @@ struct AudioNodeBinauralizer : AudioNodeBase
 	enum Input
 	{
 		kInput_Audio,
+		kInput_SampleSetLocation,
 		kInput_Elevation,
 		kInput_Azimuth,
 		kInput_COUNT
@@ -54,6 +55,8 @@ struct AudioNodeBinauralizer : AudioNodeBase
 		kOutput_COUNT
 	};
 	
+	std::string sampleSetLocation;
+	
 	binaural::HRIRSampleSet sampleSet;
 	binaural::Binauralizer binauralizer;
 	Mutex mutex;
@@ -63,21 +66,20 @@ struct AudioNodeBinauralizer : AudioNodeBase
 	
 	AudioNodeBinauralizer()
 		: AudioNodeBase()
+		, sampleSetLocation()
+		, sampleSet()
+		, binauralizer()
+		, mutex()
 		, audioOutputL()
 		, audioOutputR()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Audio, kAudioPlugType_FloatVec);
+		addInput(kInput_SampleSetLocation, kAudioPlugType_String);
 		addInput(kInput_Elevation, kAudioPlugType_FloatVec);
 		addInput(kInput_Azimuth, kAudioPlugType_FloatVec);
 		addOutput(kOutput_AudioL, kAudioPlugType_FloatVec, &audioOutputL);
 		addOutput(kOutput_AudioR, kAudioPlugType_FloatVec, &audioOutputR);
-		
-		binaural::loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
-		
-		sampleSet.finalize();
-		
-		binauralizer.init(&sampleSet, &mutex);
 	}
 	
 	virtual void tick(const float dt) override;

@@ -32,6 +32,7 @@ AUDIO_NODE_TYPE(binauralizer, AudioNodeBinauralizer)
 	typeName = "binauralizer";
 	
 	in("audio", "audioValue");
+	in("sampleSet", "string");
 	in("elevation", "audioValue");
 	in("azimuth", "audioValue");
 	out("leftEar", "audioValue");
@@ -41,6 +42,7 @@ AUDIO_NODE_TYPE(binauralizer, AudioNodeBinauralizer)
 void AudioNodeBinauralizer::tick(const float dt)
 {
 	const AudioFloat * audio = getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
+	const char * location = getInputString(kInput_SampleSetLocation, "");
 	const float elevation = getInputAudioFloat(kInput_Elevation, &AudioFloat::Zero)->getMean();
 	const float azimuth = getInputAudioFloat(kInput_Azimuth, &AudioFloat::Zero)->getMean();
 
@@ -52,8 +54,24 @@ void AudioNodeBinauralizer::tick(const float dt)
 		return;
 	}
 	
+	if (location != sampleSetLocation)
+	{
+		sampleSetLocation = std::string("binaural/CIPIC/") + location;
+		
+		//
+		
+		sampleSet = binaural::HRIRSampleSet();
+		
+		binaural::loadHRIRSampleSet_Cipic(sampleSetLocation.c_str(), sampleSet);
+		
+		sampleSet.finalize();
+		
+		binauralizer.init(&sampleSet, &mutex);
+	}
+	
 	binauralizer.setSampleLocation(elevation, azimuth);
 	
+	audio->expand();
 	binauralizer.provide(audio->samples, AUDIO_UPDATE_SIZE);
 	
 	audioOutputL.setVector();
