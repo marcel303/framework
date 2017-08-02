@@ -17,6 +17,17 @@
 	#include "Timer.h"
 #endif
 
+/*
+
+todo : quality :
+- the audio seems to have a tin-can feel after being processed. todo : find out why. perhaps we need a low-pass filter ?
+
+todo : performance :
+- batch binaural object : most of the remaining cost is in performing the fourier transformations prior and after the convolution step is performed. for the source to frequency <-> time domain transformations, it's possible to do four source of them at once when we create a batch binauralizer object. this object would then perform binauralization on four streams at a time. convolution etc which operates on the left and right channels separately could be made to use 8-component AVX instructions, for additional gains
+- optimize the time domain to frequency domain transformation by using a FFT optimized for working with real-values inputs. since the last 50% of the fourier transformation is a mirror of the first 50% (symmetry), the algortihm could be optimized to only compute the first half
+
+*/
+
 namespace binaural
 {
 	typedef Vector2<float> SampleLocation;
@@ -382,7 +393,6 @@ namespace binaural
 		float4 * __restrict result)
 	{
 	#if ENABLE_SSE
-	#if 1
 		const float4 * __restrict array1_4 = (float4*)array1;
 		const float4 * __restrict array2_4 = (float4*)array2;
 		const float4 * __restrict array3_4 = (float4*)array3;
@@ -413,27 +423,6 @@ namespace binaural
 			result[i * 8 + 6] = value3b;
 			result[i * 8 + 7] = value4b;
 		}
-	#else
-		const float4 * __restrict array1_4 = (float4*)array1;
-		const float4 * __restrict array2_4 = (float4*)array2;
-		const float4 * __restrict array3_4 = (float4*)array3;
-		const float4 * __restrict array4_4 = (float4*)array4;
-		
-		for (int i = 0; i < AUDIO_BUFFER_SIZE / 4; ++i)
-		{
-			float4 value1 = array1_4[i];
-			float4 value2 = array2_4[i];
-			float4 value3 = array3_4[i];
-			float4 value4 = array4_4[i];
-			
-			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
-			
-			result[i * 4 + 0] = value1;
-			result[i * 4 + 1] = value2;
-			result[i * 4 + 2] = value3;
-			result[i * 4 + 3] = value4;
-		}
-	#endif
 	#else
 		float * __restrict resultScalar = (float*)result;
 		
@@ -550,7 +539,6 @@ namespace binaural
 		float * __restrict array2)
 	{
 	#if ENABLE_SSE
-	#if 1
 		float4 * __restrict array1_4 = (float4*)array1;
 		float4 * __restrict array2_4 = (float4*)array2;
 		
@@ -575,23 +563,6 @@ namespace binaural
 			array1_4[i * 2 + 1] = value1b;
 			array2_4[i * 2 + 1] = value2b;
 		}
-	#else
-		float4 * __restrict array1_4 = (float4*)array1;
-		float4 * __restrict array2_4 = (float4*)array2;
-		
-		for (int i = 0; i < AUDIO_BUFFER_SIZE / 4; ++i)
-		{
-			float4 value1 = interleaved[i * 4 + 0];
-			float4 value2 = interleaved[i * 4 + 1];
-			float4 value3 = interleaved[i * 4 + 2];
-			float4 value4 = interleaved[i * 4 + 3];
-			
-			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
-			
-			array1_4[i] = value1;
-			array2_4[i] = value2;
-		}
-	#endif
 	#else
 		const float * __restrict interleavedScalar = (float*)interleaved;
 		

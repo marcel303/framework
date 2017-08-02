@@ -26,9 +26,12 @@ namespace binaural
 			int nextWriteIndex;
 			int nextReadIndex;
 			
+			int totalWriteSize;
+			
 			SampleBuffer()
 				: nextWriteIndex(0)
 				, nextReadIndex(0)
+				, totalWriteSize(0)
 			{
 			}
 		};

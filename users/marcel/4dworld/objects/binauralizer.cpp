@@ -1,11 +1,12 @@
-#include "binauralizer.h"
-
-#pragma once
-
 #include "binaural.h"
+#include "binauralizer.h"
 
 namespace binaural
 {
+	static const int AUDIO_UPDATE_SIZE = AUDIO_BUFFER_SIZE/2;
+	
+	//
+	
 	Binauralizer::Binauralizer()
 		: sampleSet(nullptr)
 		, sampleBuffer()
@@ -59,10 +60,19 @@ namespace binaural
 			left -= todo;
 			done += todo;
 		}
+		
+		sampleBuffer.totalWriteSize += numSamples;
 	}
 	
 	void Binauralizer::fillReadBuffer()
 	{
+		if (sampleBuffer.totalWriteSize < AUDIO_UPDATE_SIZE)
+		{
+			memset(audioBufferL.samples, 0, sizeof(audioBufferL));
+			memset(audioBufferR.samples, 0, sizeof(audioBufferR));
+			return;
+		}
+		
 		// move the old audio signal to the start of the overlap buffer
 		
 		memcpy(overlapBuffer, overlapBuffer + AUDIO_UPDATE_SIZE, (AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE) * sizeof(float));
@@ -220,7 +230,6 @@ namespace binaural
 		float * __restrict samplesR,
 		const int numSamples)
 	{
-	#if 1
 		int left = numSamples;
 		int done = 0;
 		
@@ -241,19 +250,5 @@ namespace binaural
 			left -= todo;
 			done += todo;
 		}
-	#else
-		for (int i = 0; i < numSamples; ++i)
-		{
-			if (nextReadLocation == AUDIO_BUFFER_SIZE)
-			{
-				fillReadBuffer();
-			}
-			
-			samplesL[i] = audioBufferL.samples[nextReadLocation];
-			samplesR[i] = audioBufferR.samples[nextReadLocation];
-			
-			nextReadLocation++;
-		}
-	#endif
 	}
 }

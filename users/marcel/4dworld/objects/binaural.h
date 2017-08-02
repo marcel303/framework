@@ -42,16 +42,15 @@ within the triangle.
 #endif
 
 #define ENABLE_SSE 1
-#define ENABLE_DEBUGGING 1
+#define ENABLE_DEBUGGING 0
 #define ENABLE_FOURIER4 1
-
-#define HRIR_BUFFER_SIZE 512
-#define HRTF_BUFFER_SIZE HRIR_BUFFER_SIZE
-#define AUDIO_BUFFER_SIZE HRIR_BUFFER_SIZE
-#define AUDIO_UPDATE_SIZE (AUDIO_BUFFER_SIZE/2)
 
 namespace binaural
 {
+	static const int HRIR_BUFFER_SIZE = 512;
+	static const int HRTF_BUFFER_SIZE = HRIR_BUFFER_SIZE;
+	static const int AUDIO_BUFFER_SIZE = HRIR_BUFFER_SIZE;
+
 	// forward declarations
 
 	struct AudioBuffer;
