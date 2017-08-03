@@ -731,46 +731,58 @@ void AudioVoice::applyRamping(float * __restrict samples, const int numSamples)
 {
 	hasRamped = false;
 	
+	//
+	
 	if (ramp)
 	{
 		if (isRamped == false)
 		{
-			isRamped = true;
-			
-			//
-			
 			const float gainStep = 1.f / numSamples;
-			float gain = 0.f;
 			
 			for (int i = 0; i < numSamples; ++i)
 			{
-				samples[i] *= gain;
+				samples[i] *= rampValue;
 				
-				gain += gainStep;
+				rampDelay = std::max(0.f, rampDelay - numSamples / float(SAMPLE_RATE));
+				
+				if (rampDelay == 0.f)
+				{
+					rampValue = std::min(1.f, rampValue + gainStep);
+				}
 			}
 			
-			hasRamped = true;
+			if (rampValue == 1.f)
+			{
+				isRamped = true;
+				
+				hasRamped = true;
+			}
 		}
 	}
 	else
 	{
 		if (isRamped == true)
 		{
-			isRamped = false;
-			
-			//
-			
 			const float gainStep = -1.f / numSamples;
-			float gain = 1.f;
 			
 			for (int i = 0; i < numSamples; ++i)
 			{
-				samples[i] *= gain;
+				samples[i] *= rampValue;
 				
-				gain += gainStep;
+				rampDelay = std::max(0.f, rampDelay - numSamples / float(SAMPLE_RATE));
+				
+				if (rampDelay == 0.f)
+				{
+					rampValue = std::max(0.f, rampValue + gainStep);
+				}
 			}
 			
-			hasRamped = true;
+			if (rampValue == 0.f)
+			{
+				isRamped = false;
+				
+				hasRamped = true;
+			}
 		}
 		else
 		{
@@ -829,7 +841,7 @@ void AudioVoiceManager::shut()
 	numChannels = 0;
 }
 
-bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping)
+bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay)
 {
 	Assert(voice == nullptr);
 	Assert(source != nullptr);
@@ -854,11 +866,15 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, co
 		if (doRamping)
 		{
 			voice->ramp = true;
+			voice->rampValue = 0.f;
+			voice->rampDelay = rampDelay;
 			voice->isRamped = false;
 		}
 		else
 		{
 			voice->ramp = true;
+			voice->rampValue = 1.f;
+			voice->rampDelay = 0.f;
 			voice->isRamped = true;
 		}
 	}
@@ -921,6 +937,17 @@ void AudioVoiceManager::updateChannelIndices()
 			}
 		}
 	}
+}
+
+int AudioVoiceManager::numChannelsUsed() const
+{
+	int result = 0;
+	
+	for (auto & voice : voices)
+		if (voice.channelIndex != -1)
+			result++;
+	
+	return result;
 }
 
 void AudioVoiceManager::portAudioCallback(
