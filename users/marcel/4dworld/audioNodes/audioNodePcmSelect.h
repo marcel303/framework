@@ -59,7 +59,7 @@ struct AudioNodeSourcePcmSelect : AudioNodeBase
 	};
 	
 	std::string currentPath;
-	std::vector<PcmData*> files;
+	std::vector<const PcmData*> files;
 	int fileIndex;
 	int samplePosition;
 	

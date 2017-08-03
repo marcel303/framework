@@ -129,7 +129,7 @@ void AudioNodeSourcePcmSelect::tick(const float dt)
 
 		for (auto & filename : filenames)
 		{
-			PcmData * pcmData = getPcmData(filename.c_str());
+			const PcmData * pcmData = getPcmData(filename.c_str());
 			
 			if (pcmData != nullptr && pcmData->numSamples > 0)
 			{
