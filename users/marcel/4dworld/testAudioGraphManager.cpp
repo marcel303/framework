@@ -16,7 +16,7 @@ extern const bool STEREO_OUTPUT;
 
 #define BALL_CAGE_SIZE 16.f
 #define FIELD_SIZE 20.f
-#define FIELD_SIZE_FOR_FLYING (FIELD_SIZE * .9f)
+#define FIELD_SIZE_FOR_FLYING (FIELD_SIZE * .8f)
 
 //
 
@@ -48,8 +48,12 @@ struct EntityBase
 	
 	bool dead;
 	
+	AudioGraphInstance * graphInstance;
+	
 	EntityBase()
-		: dead(false)
+		: type(kEntity_Unknown)
+		, dead(false)
+		, graphInstance(nullptr)
 	{
 	}
 	
@@ -67,11 +71,8 @@ struct EntityBase
 
 struct TestInstance : EntityBase
 {
-	AudioGraphInstance * graphInstance;
-	
 	TestInstance(const char * filename)
 		: EntityBase()
-		, graphInstance(nullptr)
 	{
 		type = kEntity_TestInstance;
 		
@@ -90,13 +91,11 @@ struct TestInstance : EntityBase
 
 struct Ball : EntityBase
 {
-	AudioGraphInstance * graphInstance;
 	Vec3 pos;
 	Vec3 vel;
 	
 	Ball()
 		: EntityBase()
-		, graphInstance(nullptr)
 		, pos(0.f, 10.f, 0.f)
 		, vel(0.f, 0.f, 0.f)
 	{
@@ -161,8 +160,6 @@ struct Ball : EntityBase
 
 struct Oneshot : EntityBase
 {
-	AudioGraphInstance * instance;
-	
 	Vec3 pos;
 	Vec3 vel;
 	float velGrow;
@@ -184,12 +181,12 @@ struct Oneshot : EntityBase
 		, timer(time)
 		, doRampDown(_doRampDown)
 	{
-		instance = g_audioGraphMgr->createInstance(filename);
+		graphInstance = g_audioGraphMgr->createInstance(filename);
 	}
 	
 	virtual ~Oneshot() override
 	{
-		g_audioGraphMgr->free(instance);
+		g_audioGraphMgr->free(graphInstance);
 	}
 	
 	virtual void tick(const float dt) override
@@ -198,9 +195,9 @@ struct Oneshot : EntityBase
 		vel *= std::powf(velGrow, dt);
 		dim *= std::powf(dimGrow, dt);
 		
-		instance->audioGraph->setMemf("pos", pos[0], pos[1], pos[2]);
-		instance->audioGraph->setMemf("vel", vel[0], vel[1], vel[2]);
-		instance->audioGraph->setMemf("dim", dim[0], dim[1], dim[2]);
+		graphInstance->audioGraph->setMemf("pos", pos[0], pos[1], pos[2]);
+		graphInstance->audioGraph->setMemf("vel", vel[0], vel[1], vel[2]);
+		graphInstance->audioGraph->setMemf("dim", dim[0], dim[1], dim[2]);
 		
 		//
 		
@@ -212,7 +209,7 @@ struct Oneshot : EntityBase
 			{
 				if (doRampDown)
 				{
-					instance->audioGraph->setFlag("voice.4d.rampDown");
+					graphInstance->audioGraph->setFlag("voice.4d.rampDown");
 				}
 				else
 				{
@@ -221,7 +218,7 @@ struct Oneshot : EntityBase
 			}
 		}
 		
-		if (instance->audioGraph->isFLagSet("voice.4d.rampedDown"))
+		if (graphInstance->audioGraph->isFLagSet("voice.4d.rampedDown"))
 		{
 			kill();
 		}
@@ -254,8 +251,6 @@ struct Bird : EntityBase
 	Vec3 currentPos;
 	Vec3 desiredPos;
 	
-	AudioGraphInstance * graphInstance;
-	
 	float songTimer;
 	float songAnimTimer;
 	float songAnimTimerRcp;
@@ -274,7 +269,6 @@ struct Bird : EntityBase
 		, state(kState_Idle)
 		, currentPos()
 		, desiredPos()
-		, graphInstance(nullptr)
 		, songTimer(0.f)
 		, songAnimTimer(0.f)
 		, songAnimTimerRcp(0.f)
@@ -320,8 +314,7 @@ struct Bird : EntityBase
 	
 	void beginCall()
 	{
-		// todo : trigger call-begin
-		graphInstance->audioGraph->triggerEvent("sing-begin");
+		graphInstance->audioGraph->triggerEvent("call-begin");
 		
 		g_world->rippleSound(currentPos);
 		
@@ -342,15 +335,25 @@ struct Bird : EntityBase
 	
 	void beginFlying()
 	{
-		desiredPos[0] = random(-FIELD_SIZE_FOR_FLYING, +FIELD_SIZE_FOR_FLYING);
+		const float desiredRadius = random(FIELD_SIZE_FOR_FLYING/4.f, FIELD_SIZE_FOR_FLYING);
+		const float desiredAngle = random(0.f, float(M_PI) * 2.f);
+		
+		desiredPos[0] = std::cos(desiredAngle) * desiredRadius;
+		desiredPos[2] = std::sin(desiredAngle) * desiredRadius;
+		
+		//desiredPos[0] = random(-FIELD_SIZE_FOR_FLYING, +FIELD_SIZE_FOR_FLYING);
 		desiredPos[1] = random(6.f, 8.f);
-		desiredPos[2] = random(-FIELD_SIZE_FOR_FLYING, +FIELD_SIZE_FOR_FLYING);
+		//desiredPos[2] = random(-FIELD_SIZE_FOR_FLYING, +FIELD_SIZE_FOR_FLYING);
 		
 		graphInstance->audioGraph->triggerEvent("sing-end");
+		graphInstance->audioGraph->triggerEvent("call-end");
+		
+		graphInstance->audioGraph->triggerEvent("fly-begin");
 	}
 	
 	void endFlying()
 	{
+		graphInstance->audioGraph->triggerEvent("fly-end");
 	}
 	
 	void beginSettleTimer()
@@ -544,8 +547,6 @@ struct Bird : EntityBase
 
 struct Voices : EntityBase
 {
-	AudioGraphInstance * graphInstance;
-	
 	Voices()
 		: EntityBase()
 	{
@@ -559,6 +560,17 @@ struct Voices : EntityBase
 	
 	virtual void tick(const float dt) override
 	{
+		// alive state
+		
+		if (graphInstance->audioGraph->isFLagSet("dead"))
+		{
+			dead = true;
+		}
+	}
+	
+	virtual void kill() override
+	{
+		graphInstance->audioGraph->setFlag("kill");
 	}
 };
 
@@ -715,7 +727,7 @@ struct World : WorldInterface
 		
 		oneshot->dimGrow = 2.f;
 		
-		oneshot->instance->audioGraph->setMemf("delay", random(0.0002f, 0.2f));
+		oneshot->graphInstance->audioGraph->setMemf("delay", random(0.0002f, 0.2f));
 		entities.push_back(oneshot);
 		
 		return oneshot;
@@ -988,6 +1000,13 @@ void testAudioGraphManager()
 	
 	//
 	
+	//fillHrirSampleSetCache("binaural/CIPIC/subject10", "cipic.10", kHRIRSampleSetType_Cipic);
+	//fillHrirSampleSetCache("binaural/CIPIC/subject11", "cipic.11", kHRIRSampleSetType_Cipic);
+	//fillHrirSampleSetCache("binaural/CIPIC/subject12", "cipic.12", kHRIRSampleSetType_Cipic);
+	//fillHrirSampleSetCache("binaural/CIPIC/subject147", "cipic.147", kHRIRSampleSetType_Cipic);
+	
+	//
+	
 	const int kNumChannels = 16;
 	
 	AudioVoiceManager voiceMgr;
@@ -1099,6 +1118,19 @@ void testAudioGraphManager()
 						world->killEntity();
 					if (doButton("do oneshot"))
 						world->doOneshot();
+					if (doButton("kill selected"))
+					{
+						if (g_audioGraphMgr->selectedFile && g_audioGraphMgr->selectedFile->activeInstance)
+						{
+							auto graphInstance = g_audioGraphMgr->selectedFile->activeInstance;
+							
+							for (auto e : world->entities)
+							{
+								if (e->graphInstance == graphInstance)
+									e->kill();
+							}
+						}
+					}
 					doBreak();
 					doTextBox(world->desiredNumOneshots, "oneshots.num", dt);
 					doTextBox(world->desiredParams.wavefieldC, "wavefield.c", dt);
