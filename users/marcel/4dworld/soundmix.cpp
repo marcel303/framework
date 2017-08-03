@@ -1033,7 +1033,7 @@ void AudioVoiceManager::portAudioCallback(
 						{
 							// interleave voice samples into destination buffer
 							
-							float * __restrict dstPtr = samples + voice.channelIndex;
+							float * __restrict dstPtr = samples;
 							
 							for (int i = 0; i < numSamples; ++i)
 							{
