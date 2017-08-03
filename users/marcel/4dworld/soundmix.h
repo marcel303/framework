@@ -243,6 +243,31 @@ struct AudioVoice
 		}
 	};
 	
+	struct SpatialDelay
+	{
+		bool enable = false;
+		Osc4D::SpatialDelayMode mode = Osc4D::kSpatialDelay_Grid;
+		float feedback = .5f;
+		float wetness = .5f;
+		float smooth = 0.f;
+		float scale = 1.f;
+		float noiseDepth = 0.f;
+		float noiseFrequency = 1.f;
+		
+		bool operator!=(const SpatialDelay & other) const
+		{
+			return
+				enable != other.enable ||
+				mode != other.mode ||
+				feedback != other.feedback ||
+				wetness != other.wetness ||
+				smooth != other.smooth ||
+				scale != other.scale ||
+				noiseDepth != other.noiseDepth ||
+				noiseFrequency != other.noiseFrequency;
+		}
+	};
+	
 	struct Spatialisation
 	{
 		Vec3 color;
@@ -261,6 +286,7 @@ struct AudioVoice
 		DistanceIntensity distanceIntensity;
 		DistanceDamping distanceDampening;
 		DistanceDiffusion distanceDiffusion;
+		SpatialDelay spatialDelay;
 		Osc4D::SubBoost subBoost;
 		
 		bool globalEnable;
@@ -280,6 +306,7 @@ struct AudioVoice
 			, distanceIntensity()
 			, distanceDampening()
 			, distanceDiffusion()
+			, spatialDelay()
 			, subBoost(Osc4D::kBoost_None)
 			, globalEnable(true)
 		{

@@ -1152,6 +1152,20 @@ void AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool _forceSync)
 						voice.spat.distanceDiffusion.curve);
 				}
 				
+				if (forceSync || voice.spat.spatialDelay != voice.lastSentSpat.spatialDelay)
+				{
+					stream.sourceSpatialDelay(
+						voice.spat.spatialDelay.enable,
+						voice.spat.spatialDelay.mode,
+						0,
+						voice.spat.spatialDelay.feedback,
+						voice.spat.spatialDelay.wetness,
+						voice.spat.spatialDelay.smooth,
+						voice.spat.spatialDelay.scale,
+						voice.spat.spatialDelay.noiseDepth,
+						voice.spat.spatialDelay.noiseFrequency);
+				}
+				
 				if (forceSync || voice.spat.subBoost != voice.lastSentSpat.subBoost)
 				{
 					stream.sourceSubBoost(voice.spat.subBoost);

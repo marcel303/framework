@@ -70,6 +70,14 @@ struct AudioNodeVoice4D : AudioNodeBase
 		kInput_DistanceDiffusion,
 		kInput_DistanceDiffusionTreshold,
 		kInput_DistanceDiffusionCurve,
+		kInput_SpatialDelay,
+		kInput_SpatialDelayMode,
+		kInput_SpatialDelayFeedback,
+		kInput_SpatialDelayWetness,
+		kInput_SpatialDelaySmooth,
+		kInput_SpatialDelayScale,
+		kInput_SpatialDelayNoiseDepth,
+		kInput_SpatialDelayNoiseFreq,
 		kInput_SubBoost,
 		kInput_RampUp,
 		kInput_RampDown,
@@ -103,7 +111,6 @@ struct AudioNodeVoice4DGlobals : AudioNodeBase
 	enum Input
 	{
 		kInput_SyncOsc,
-		kInput_MonoOutput,
 		kInput_Gain,
 		kInput_PosX,
 		kInput_PosY,
@@ -135,7 +142,6 @@ struct AudioNodeVoice4DGlobals : AudioNodeBase
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_SyncOsc, kAudioPlugType_Trigger);
-		addInput(kInput_MonoOutput, kAudioPlugType_Bool);
 		addInput(kInput_Gain, kAudioPlugType_FloatVec);
 		addInput(kInput_PosX, kAudioPlugType_FloatVec);
 		addInput(kInput_PosY, kAudioPlugType_FloatVec);

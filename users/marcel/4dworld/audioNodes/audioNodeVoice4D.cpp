@@ -31,6 +31,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "Mat4x4.h"
 #include "StringEx.h"
 
+AUDIO_ENUM_TYPE(spatialDelayMode)
+{
+	enumName = "4d.spatialDelayMode";
+	
+	elem("random");
+	elem("grid");
+}
+
 AUDIO_ENUM_TYPE(subboost)
 {
 	enumName = "4d.subBoost";
@@ -74,6 +82,13 @@ AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
 	in("ddiff", "bool");
 	in("ddiff.tresh", "audioValue", "50");
 	in("ddiff.curve", "audioValue", "0.2");
+	in("spatd", "bool");
+	inEnum("spatd.mode", "4d.spatialDelayMode", "grid");
+	in("spatd.feedback", "audioValue", "0.5");
+	in("spatd.wetness", "audioValue", "0.5");
+	in("spatd.scale", "audioValue", "1");
+	in("spatd.noise.depth", "audioValue", "0");
+	in("spatd.noise.freq", "audioValue", "1");
 	inEnum("sub.boost", "4d.subBoost");
 	in("rampUp!", "trigger");
 	in("rampDown!", "trigger");
@@ -128,6 +143,14 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_DistanceDiffusion, kAudioPlugType_Bool);
 	addInput(kInput_DistanceDiffusionTreshold, kAudioPlugType_FloatVec);
 	addInput(kInput_DistanceDiffusionCurve, kAudioPlugType_FloatVec);
+	addInput(kInput_SpatialDelay, kAudioPlugType_Bool);
+	addInput(kInput_SpatialDelayMode, kAudioPlugType_Int);
+	addInput(kInput_SpatialDelayFeedback, kAudioPlugType_FloatVec);
+	addInput(kInput_SpatialDelayWetness, kAudioPlugType_FloatVec);
+	addInput(kInput_SpatialDelaySmooth, kAudioPlugType_FloatVec);
+	addInput(kInput_SpatialDelayScale, kAudioPlugType_FloatVec);
+	addInput(kInput_SpatialDelayNoiseDepth, kAudioPlugType_FloatVec);
+	addInput(kInput_SpatialDelayNoiseFreq, kAudioPlugType_FloatVec);
 	addInput(kInput_SubBoost, kAudioPlugType_Int);
 	addInput(kInput_RampUp, kAudioPlugType_Trigger);
 	addInput(kInput_RampDown, kAudioPlugType_Trigger);
@@ -218,13 +241,28 @@ void AudioNodeVoice4D::tick(const float dt)
 		voice->spat.distanceDiffusion.curve = getInputAudioFloat(kInput_DistanceDiffusionCurve, &curve)->getMean();
 	}
 	
+	// spatial delay
+	
+	{
+		voice->spat.spatialDelay.enable = getInputBool(kInput_SpatialDelay, false);
+		voice->spat.spatialDelay.mode = (Osc4D::SpatialDelayMode)getInputInt(kInput_SpatialDelayMode, Osc4D::kSpatialDelay_Grid);
+		voice->spat.spatialDelay.feedback = getInputAudioFloat(kInput_SpatialDelayFeedback, &AudioFloat::Half)->getMean();
+		voice->spat.spatialDelay.wetness = getInputAudioFloat(kInput_SpatialDelayWetness, &AudioFloat::Half)->getMean();
+		voice->spat.spatialDelay.smooth = getInputAudioFloat(kInput_SpatialDelaySmooth, &AudioFloat::Zero)->getMean();
+		voice->spat.spatialDelay.scale = getInputAudioFloat(kInput_SpatialDelayScale, &AudioFloat::One)->getMean();
+		voice->spat.spatialDelay.noiseDepth = getInputAudioFloat(kInput_SpatialDelayNoiseDepth, &AudioFloat::Zero)->getMean();
+		voice->spat.spatialDelay.noiseFrequency = getInputAudioFloat(kInput_SpatialDelayNoiseFreq, &AudioFloat::One)->getMean();
+	}
+	
+	// sub boost
+	
 	voice->spat.subBoost = (Osc4D::SubBoost)getInputInt(kInput_SubBoost, 0);
 	
 	//
 	
 	if (g_currentAudioGraph->isFLagSet("voice.4d.rampUp"))
 	{
-		voice->ramp = false;
+		voice->ramp = true;
 	}
 	else if (g_currentAudioGraph->isFLagSet("voice.4d.rampDown"))
 	{
@@ -269,7 +307,6 @@ AUDIO_NODE_TYPE(globals_4d, AudioNodeVoice4DGlobals)
 	typeName = "globals.4d";
 	
 	in("syncOsc", "trigger");
-	in("mono", "bool");
 	in("gain", "audioValue", "1");
 	in("pos.x", "audioValue");
 	in("pos.y", "audioValue");
@@ -296,8 +333,6 @@ void AudioNodeVoice4DGlobals::tick(const float dt)
 	{
 		return;
 	}
-	
-	//g_voiceMgr->outputMono = getInputBool(kInput_MonoOutput, false);
 	
 	const float size = getInputAudioFloat(kInput_Dim, &AudioFloat::One)->getMean();
 	const float plode = getInputAudioFloat(kInput_Plode, &AudioFloat::One)->getMean();
