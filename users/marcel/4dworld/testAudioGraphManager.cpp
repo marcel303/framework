@@ -39,7 +39,10 @@ enum EntityType
 {
 	kEntity_Unknown,
 	kEntity_TestInstance,
-	kEntity_Bird
+	kEntity_Ball,
+	kEntity_Bird,
+	kEntity_Machine,
+	kEntity_Voice
 };
 
 struct EntityBase
@@ -99,6 +102,8 @@ struct Ball : EntityBase
 		, pos(0.f, 10.f, 0.f)
 		, vel(0.f, 0.f, 0.f)
 	{
+		type = kEntity_Ball;
+		
 		graphInstance = g_audioGraphMgr->createInstance("ballTest.xml");
 	}
 	
@@ -558,6 +563,8 @@ struct Voices : EntityBase
 	Voices()
 		: EntityBase()
 	{
+		type = kEntity_Voice;
+		
 		graphInstance = g_audioGraphMgr->createInstance("e-voices1.xml");
 	}
 	
@@ -584,15 +591,34 @@ struct Voices : EntityBase
 
 struct Machine : EntityBase
 {
+	Vec3 pos;
+	
 	Machine()
 		: EntityBase()
+		, pos()
 	{
+		type = kEntity_Machine;
+		
 		graphInstance = g_audioGraphMgr->createInstance("e-machine1.xml");
+		
+		randomize();
 	}
 	
 	virtual ~Machine() override
 	{
 		g_audioGraphMgr->free(graphInstance);
+	}
+	
+	void randomize()
+	{
+		const float angle = random(0.f, 2.f * float(M_PI));
+		const float distance = random(FIELD_SIZE * .8f, FIELD_SIZE);
+		
+		pos[0] = std::cos(angle) * distance;
+		pos[2] = std::sin(angle) * distance;
+		pos[1] = 2.f;
+		
+		graphInstance->audioGraph->setMemf("pos", pos[0], pos[1], pos[2]);
 	}
 	
 	virtual void tick(const float dt) override
@@ -945,6 +971,21 @@ struct World : WorldInterface
 					0, 0,
 					"(%.2f, %.2f)",
 					v[0], v[1]);
+			}
+			
+			for (auto entity : entities)
+			{
+				if (entity->type == kEntity_Machine)
+				{
+					Machine * machine = (Machine*)entity;
+					
+					hqBegin(HQ_STROKED_CIRCLES);
+					{
+						setColorf(1.f, 0.f, 0.f);
+						hqStrokeCircle(machine->pos[0], machine->pos[2], 1.f, 3.f);
+					}
+					hqEnd();
+				}
 			}
 			
 			for (auto entity : entities)
