@@ -561,7 +561,7 @@ struct AudioNodeBase
 	virtual void tick(const float dt) { }
 	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) { }
 	
-	//virtual void getDescription(AudioNodeDescription & d) { }
+	virtual void getDescription(AudioNodeDescription & d) { }
 };
 
 //

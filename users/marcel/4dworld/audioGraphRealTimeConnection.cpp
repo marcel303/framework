@@ -961,11 +961,9 @@ bool AudioRealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::
 	
 	AudioNodeDescription d;
 	
-	// todo : restore getDescription !
-	
 	AUDIO_SCOPE;
 	
-	//node->getDescription(d);
+	node->getDescription(d);
 	
 	if (!d.lines.empty())
 		d.add("");
