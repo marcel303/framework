@@ -39,7 +39,7 @@ AUDIO_NODE_TYPE(gate, AudioNodeGate)
 
 AudioNodeGate::AudioNodeGate()
 	: AudioNodeBase()
-	, isOpen(true)
+	, isOpen(false)
 	, resultOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -77,4 +77,9 @@ void AudioNodeGate::handleTrigger(const int inputSocketIndex, const AudioTrigger
 	{
 		isOpen = false;
 	}
+}
+
+void AudioNodeGate::getDescription(AudioNodeDescription & d)
+{
+	d.add("state: %s", isOpen ? "open" : "closed");
 }

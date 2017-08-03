@@ -54,4 +54,6 @@ struct AudioNodeGate : AudioNodeBase
 	virtual void tick(const float dt) override;
 
 	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) override;
+	
+	virtual void getDescription(AudioNodeDescription & d) override;
 };
