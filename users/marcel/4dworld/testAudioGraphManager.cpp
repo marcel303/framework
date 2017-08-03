@@ -284,6 +284,14 @@ struct Bird : EntityBase
 		type = kEntity_Bird;
 		
 		graphInstance = g_audioGraphMgr->createInstance("e-bird1.xml");
+		
+		const int birdType = rand() % 3;
+		if (birdType == 0)
+			graphInstance->audioGraph->triggerEvent("bird1");
+		if (birdType == 1)
+			graphInstance->audioGraph->triggerEvent("bird2");
+		if (birdType == 2)
+			graphInstance->audioGraph->triggerEvent("bird3");
 	}
 	
 	virtual ~Bird() override
@@ -574,6 +582,35 @@ struct Voices : EntityBase
 	}
 };
 
+struct Machine : EntityBase
+{
+	Machine()
+		: EntityBase()
+	{
+		graphInstance = g_audioGraphMgr->createInstance("e-machine1.xml");
+	}
+	
+	virtual ~Machine() override
+	{
+		g_audioGraphMgr->free(graphInstance);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		// alive state
+		
+		if (graphInstance->audioGraph->isFLagSet("dead"))
+		{
+			dead = true;
+		}
+	}
+	
+	virtual void kill() override
+	{
+		graphInstance->audioGraph->setFlag("kill");
+	}
+};
+
 //
 
 #include "wavefield.h"
@@ -691,6 +728,13 @@ struct World : WorldInterface
 		Voices * voices = new Voices();
 		
 		entities.push_back(voices);
+	}
+	
+	void addMachine()
+	{
+		Machine * machine = new Machine();
+		
+		entities.push_back(machine);
 	}
 	
 	void killEntity()
@@ -1114,6 +1158,8 @@ void testAudioGraphManager()
 						world->addBird();
 					if (doButton("add voices"))
 						world->addVoices();
+					if (doButton("add machine"))
+						world->addMachine();
 					if (doButton("kill entity"))
 						world->killEntity();
 					if (doButton("do oneshot"))
@@ -1203,6 +1249,9 @@ void testAudioGraphManager()
 			doDrawer(instanceList, "instances");
 			if (instanceList)
 			{
+				const std::string voiceCount = String::FormatC("voices: %d", voiceMgr.numChannelsUsed());
+				doLabel(voiceCount.c_str(), 0.f);
+				
 				for (auto & fileItr : audioGraphMgr.files)
 				{
 					auto & filename = fileItr.first;
