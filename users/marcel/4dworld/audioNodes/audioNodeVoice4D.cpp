@@ -56,15 +56,15 @@ AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
 	in("audio", "audioValue");
 	in("gain", "audioValue", "1");
 	in("global", "bool", "1");
-	in("color", "string", "ff0000");
-	in("name", "string");
+	//in("color", "string", "ff0000");
+	//in("name", "string");
 	in("pos.x", "audioValue");
 	in("pos.y", "audioValue");
 	in("pos.z", "audioValue");
 	in("rot.x", "audioValue");
 	in("rot.y", "audioValue");
 	in("rot.z", "audioValue");
-	in("dim", "audioValue", "1");
+	//in("dim", "audioValue", "1");
 	in("dim.x", "audioValue", "1");
 	in("dim.y", "audioValue", "1");
 	in("dim.z", "audioValue", "1");
@@ -117,15 +117,15 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);
 	addInput(kInput_Gain, kAudioPlugType_FloatVec);
 	addInput(kInput_Global, kAudioPlugType_Bool);
-	addInput(kInput_Color, kAudioPlugType_String);
-	addInput(kInput_Name, kAudioPlugType_String);
+	//addInput(kInput_Color, kAudioPlugType_String);
+	//addInput(kInput_Name, kAudioPlugType_String);
 	addInput(kInput_PosX, kAudioPlugType_FloatVec);
 	addInput(kInput_PosY, kAudioPlugType_FloatVec);
 	addInput(kInput_PosZ, kAudioPlugType_FloatVec);
 	addInput(kInput_RotX, kAudioPlugType_FloatVec);
 	addInput(kInput_RotY, kAudioPlugType_FloatVec);
 	addInput(kInput_RotZ, kAudioPlugType_FloatVec);
-	addInput(kInput_Dim, kAudioPlugType_FloatVec);
+	//addInput(kInput_Dim, kAudioPlugType_FloatVec);
 	addInput(kInput_DimX, kAudioPlugType_FloatVec);
 	addInput(kInput_DimY, kAudioPlugType_FloatVec);
 	addInput(kInput_DimZ, kAudioPlugType_FloatVec);
@@ -147,7 +147,7 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_SpatialDelayMode, kAudioPlugType_Int);
 	addInput(kInput_SpatialDelayFeedback, kAudioPlugType_FloatVec);
 	addInput(kInput_SpatialDelayWetness, kAudioPlugType_FloatVec);
-	addInput(kInput_SpatialDelaySmooth, kAudioPlugType_FloatVec);
+	//addInput(kInput_SpatialDelaySmooth, kAudioPlugType_FloatVec);
 	addInput(kInput_SpatialDelayScale, kAudioPlugType_FloatVec);
 	addInput(kInput_SpatialDelayNoiseDepth, kAudioPlugType_FloatVec);
 	addInput(kInput_SpatialDelayNoiseFreq, kAudioPlugType_FloatVec);
@@ -160,7 +160,7 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	//
 	
 	source.voiceNode = this;
-	g_voiceMgr->allocVoice(voice, &source, "voice.4d", true);
+	g_voiceMgr->allocVoice(voice, &source, "voice.4d", true, .2f);
 }
 
 AudioNodeVoice4D::~AudioNodeVoice4D()
@@ -178,7 +178,8 @@ void AudioNodeVoice4D::tick(const float dt)
 	originMatrix.MakeRotationY(Calc::DegToRad(originRotY));
 	
 	//voice->spat.color = getInputString(kInput_Color, "ff0000");
-	voice->spat.name = String::FormatC("%s(%d)", getInputString(kInput_Name, ""), voice->channelIndex + 1);
+	//voice->spat.name = String::FormatC("%s(%d)", getInputString(kInput_Name, ""), voice->channelIndex + 1);
+	voice->spat.name = String::FormatC("%s(%d)", "channel", voice->channelIndex + 1);
 	voice->spat.gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
 	
 	// position
@@ -194,7 +195,8 @@ void AudioNodeVoice4D::tick(const float dt)
 	voice->spat.rot = originMatrix.Mul3(voice->spat.rot);
 	
 	// dimensions
-	const float size = getInputAudioFloat(kInput_Dim, &AudioFloat::One)->getMean();
+	//const float size = getInputAudioFloat(kInput_Dim, &AudioFloat::One)->getMean();
+	const float size = 1.f;
 	voice->spat.size[0] = size * getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();
 	voice->spat.size[1] = size * getInputAudioFloat(kInput_DimY, &AudioFloat::One)->getMean();
 	voice->spat.size[2] = size * getInputAudioFloat(kInput_DimZ, &AudioFloat::One)->getMean();
@@ -248,7 +250,8 @@ void AudioNodeVoice4D::tick(const float dt)
 		voice->spat.spatialDelay.mode = (Osc4D::SpatialDelayMode)getInputInt(kInput_SpatialDelayMode, Osc4D::kSpatialDelay_Grid);
 		voice->spat.spatialDelay.feedback = getInputAudioFloat(kInput_SpatialDelayFeedback, &AudioFloat::Half)->getMean();
 		voice->spat.spatialDelay.wetness = getInputAudioFloat(kInput_SpatialDelayWetness, &AudioFloat::Half)->getMean();
-		voice->spat.spatialDelay.smooth = getInputAudioFloat(kInput_SpatialDelaySmooth, &AudioFloat::Zero)->getMean();
+		//voice->spat.spatialDelay.smooth = getInputAudioFloat(kInput_SpatialDelaySmooth, &AudioFloat::Zero)->getMean();
+		voice->spat.spatialDelay.smooth = 0.f;
 		voice->spat.spatialDelay.scale = getInputAudioFloat(kInput_SpatialDelayScale, &AudioFloat::One)->getMean();
 		voice->spat.spatialDelay.noiseDepth = getInputAudioFloat(kInput_SpatialDelayNoiseDepth, &AudioFloat::Zero)->getMean();
 		voice->spat.spatialDelay.noiseFrequency = getInputAudioFloat(kInput_SpatialDelayNoiseFreq, &AudioFloat::One)->getMean();
