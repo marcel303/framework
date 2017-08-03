@@ -148,7 +148,7 @@ void AudioUpdateHandler::portAudioCallback(
 			static int limiter = 0;
 			limiter++;
 			
-			if ((limiter % 4) == 0)
+			//if ((limiter % 4) == 0)
 			{
 				oscStream->beginBundle();
 				{
