@@ -143,4 +143,22 @@ struct PcmData;
 
 void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths);
 void clearPcmDataCache();
-PcmData * getPcmData(const char * filename);
+const PcmData * getPcmData(const char * filename);
+
+//
+
+namespace binaural
+{
+	struct HRIRSampleSet;
+}
+
+enum HRIRSampleSetType
+{
+	kHRIRSampleSetType_Cipic,
+	kHRIRSampleSetType_Ircam,
+	kHRIRSampleSetType_Mit
+};
+
+void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSampleSetType type);
+void clearHrirSampleSetCache();
+const binaural::HRIRSampleSet * getHrirSampleSet(const char * name);

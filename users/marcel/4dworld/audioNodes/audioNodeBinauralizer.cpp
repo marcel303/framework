@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "audioGraph.h"
 #include "audioNodeBinauralizer.h"
 
 AUDIO_NODE_TYPE(binauralizer, AudioNodeBinauralizer)
@@ -56,26 +57,37 @@ void AudioNodeBinauralizer::tick(const float dt)
 	
 	if (location != sampleSetLocation)
 	{
-		sampleSetLocation = std::string("binaural/CIPIC/") + location;
+		sampleSetLocation = location;
 		
 		//
 		
-		sampleSet = binaural::HRIRSampleSet();
+		sampleSet = getHrirSampleSet(location);
 		
-		binaural::loadHRIRSampleSet_Cipic(sampleSetLocation.c_str(), sampleSet);
-		
-		sampleSet.finalize();
-		
-		binauralizer.init(&sampleSet, &mutex);
+		if (sampleSet != nullptr)
+		{
+			binauralizer.init(sampleSet, &mutex);
+		}
+		else
+		{
+			binauralizer.shut();
+		}
 	}
 	
-	binauralizer.setSampleLocation(elevation, azimuth);
-	
-	audio->expand();
-	binauralizer.provide(audio->samples, AUDIO_UPDATE_SIZE);
-	
-	audioOutputL.setVector();
-	audioOutputR.setVector();
-	
-	binauralizer.generateLR(audioOutputL.samples, audioOutputR.samples, AUDIO_UPDATE_SIZE);
+	if (binauralizer.isInit() == false)
+	{
+		audioOutputL.setScalar(0.f);
+		audioOutputR.setScalar(0.f);
+	}
+	else
+	{
+		binauralizer.setSampleLocation(elevation, azimuth);
+		
+		audio->expand();
+		binauralizer.provide(audio->samples, AUDIO_UPDATE_SIZE);
+		
+		audioOutputL.setVector();
+		audioOutputR.setVector();
+		
+		binauralizer.generateLR(audioOutputL.samples, audioOutputR.samples, AUDIO_UPDATE_SIZE);
+	}
 }

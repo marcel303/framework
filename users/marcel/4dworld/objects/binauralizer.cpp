@@ -23,10 +23,23 @@ namespace binaural
 		memset(hrtfs, 0, sizeof(hrtfs));
 	}
 	
-	void Binauralizer::init(HRIRSampleSet * _sampleSet, Mutex * _mutex)
+	void Binauralizer::init(const HRIRSampleSet * _sampleSet, Mutex * _mutex)
 	{
 		sampleSet = _sampleSet;
 		mutex = _mutex;
+	}
+	
+	void Binauralizer::shut()
+	{
+		sampleSet = nullptr;
+		mutex = nullptr;
+	}
+	
+	bool Binauralizer::isInit() const
+	{
+		return
+			sampleSet != nullptr &&
+			mutex != nullptr;
 	}
 	
 	void Binauralizer::setSampleLocation(const float elevation, const float azimuth)
@@ -66,7 +79,7 @@ namespace binaural
 	
 	void Binauralizer::fillReadBuffer()
 	{
-		if (sampleBuffer.totalWriteSize < AUDIO_UPDATE_SIZE)
+		if (sampleBuffer.totalWriteSize < AUDIO_UPDATE_SIZE || sampleSet == nullptr)
 		{
 			memset(audioBufferL.samples, 0, sizeof(audioBufferL));
 			memset(audioBufferR.samples, 0, sizeof(audioBufferR));

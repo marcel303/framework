@@ -57,7 +57,7 @@ struct AudioNodeBinauralizer : AudioNodeBase
 	
 	std::string sampleSetLocation;
 	
-	binaural::HRIRSampleSet sampleSet;
+	const binaural::HRIRSampleSet * sampleSet;
 	binaural::Binauralizer binauralizer;
 	Mutex mutex;
 	

@@ -11,6 +11,7 @@
 using namespace binaural;
 
 #define BLEND_PREVIOUS_HRTF 1
+static const int AUDIO_UPDATE_SIZE = AUDIO_BUFFER_SIZE/2;
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -332,7 +333,9 @@ void testBinaural()
 	#if ENABLE_DEBUGGING && 0
 		for (int i = 0; i < 1; ++i)
 	#else
-		for (int i = 0; i < 135; ++i)
+		for (int i = 0; i < 1; ++i)
+		//for (int i = 0; i < 100; ++i)
+		//for (int i = 0; i < 135; ++i)
 	#endif
 		{
 			audio.addBinauralSound(&sampleSet, &pcmData);

@@ -36,7 +36,7 @@ namespace binaural
 			}
 		};
 		
-		HRIRSampleSet * sampleSet;
+		const HRIRSampleSet * sampleSet;
 		
 		SampleBuffer sampleBuffer;
 		
@@ -55,7 +55,10 @@ namespace binaural
 		
 		Binauralizer();
 		
-		void init(HRIRSampleSet * _sampleSet, Mutex * _mutex);
+		void init(const HRIRSampleSet * _sampleSet, Mutex * _mutex);
+		void shut();
+		
+		bool isInit() const;
 		
 		void setSampleLocation(const float elevation, const float azimuth);
 		void provide(const float * __restrict samples, const int numSamples);
