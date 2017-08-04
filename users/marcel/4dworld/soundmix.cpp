@@ -743,7 +743,7 @@ void AudioVoice::applyRamping(float * __restrict samples, const int numSamples)
 			{
 				samples[i] *= rampValue;
 				
-				rampDelay = std::max(0.f, rampDelay - numSamples / float(SAMPLE_RATE));
+				rampDelay = std::max(0.f, rampDelay - 1.f / SAMPLE_RATE);
 				
 				if (rampDelay == 0.f)
 				{
@@ -769,7 +769,7 @@ void AudioVoice::applyRamping(float * __restrict samples, const int numSamples)
 			{
 				samples[i] *= rampValue;
 				
-				rampDelay = std::max(0.f, rampDelay - numSamples / float(SAMPLE_RATE));
+				rampDelay = std::max(0.f, rampDelay - 1.f / float(SAMPLE_RATE));
 				
 				if (rampDelay == 0.f)
 				{
