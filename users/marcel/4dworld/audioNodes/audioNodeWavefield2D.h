@@ -46,6 +46,7 @@ struct AudioNodeWavefield2D : AudioNodeBase
 		kInput_TriggerLocationX,
 		kInput_TriggerLocationY,
 		kInput_TriggerAmount,
+		kInput_TriggerSize,
 		kInput_Randomize,
 		kInput_COUNT
 	};

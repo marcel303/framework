@@ -46,6 +46,7 @@ AUDIO_NODE_TYPE(wavefield_2d, AudioNodeWavefield2D)
 	in("trigger.pos.x", "audioValue", "0.5");
 	in("trigger.pos.y", "audioValue", "0.5");
 	in("trigger.amount", "audioValue", "0.5");
+	in("trigger.size", "audioValue", "1");
 	in("randomize!", "trigger");
 	out("audio", "audioValue");
 }
@@ -67,6 +68,7 @@ AudioNodeWavefield2D::AudioNodeWavefield2D()
 	addInput(kInput_TriggerLocationX, kAudioPlugType_FloatVec);
 	addInput(kInput_TriggerLocationY, kAudioPlugType_FloatVec);
 	addInput(kInput_TriggerAmount, kAudioPlugType_FloatVec);
+	addInput(kInput_TriggerSize, kAudioPlugType_FloatVec);
 	addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 
 	wavefield = new Wavefield2D();
@@ -140,13 +142,17 @@ void AudioNodeWavefield2D::handleTrigger(const int inputSocketIndex, const Audio
 		const float triggerPositionX = getInputAudioFloat(kInput_TriggerLocationX, &AudioFloat::Half)->getMean();
 		const float triggerPositionY = getInputAudioFloat(kInput_TriggerLocationY, &AudioFloat::Half)->getMean();
 		const float triggerAmount = getInputAudioFloat(kInput_TriggerAmount, &AudioFloat::Half)->getMean();
+		const float triggerSize = getInputAudioFloat(kInput_TriggerSize, &AudioFloat::One)->getMean();
 		
 		if (wavefield->numElems > 0)
 		{
 			const int elemX = int(std::round(std::abs(triggerPositionX) * wavefield->numElems)) % wavefield->numElems;
 			const int elemY = int(std::round(std::abs(triggerPositionY) * wavefield->numElems)) % wavefield->numElems;
 			
-			wavefield->d[elemX][elemY] += triggerAmount;
+			if (triggerSize == 1.f)
+				wavefield->d[elemX][elemY] += triggerAmount;
+			else
+				wavefield->doGaussianImpact(elemX, elemX, triggerSize, triggerAmount);
 		}
 	}
 	else if (inputSocketIndex == kInput_Randomize)
