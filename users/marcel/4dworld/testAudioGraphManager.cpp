@@ -1,6 +1,7 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "Calc.h"
 #include "framework.h"
 #include "Path.h"
 #include "soundmix.h" // AudioVoiceManager. todo : move to its own source file
@@ -26,7 +27,7 @@ struct WorldInterface
 	{
 	}
 	
-	virtual void rippleSound(const Vec3 & p) = 0;
+	virtual void rippleSound(const Vec3 & p, const float amount = 1.f) = 0;
 	virtual void rippleFlight(const Vec3 & p) = 0;
 	
 	virtual float measureSound(const Vec3 & p) = 0;
@@ -592,10 +593,14 @@ struct Voices : EntityBase
 struct Machine : EntityBase
 {
 	Vec3 pos;
+	Vec3 worldPos;
+	float workTimer;
 	
 	Machine()
 		: EntityBase()
 		, pos()
+		, worldPos()
+		, workTimer(0.f)
 	{
 		type = kEntity_Machine;
 		
@@ -612,17 +617,34 @@ struct Machine : EntityBase
 	void randomize()
 	{
 		const float angle = random(0.f, 2.f * float(M_PI));
-		const float distance = random(FIELD_SIZE * .8f, FIELD_SIZE);
+		const float distance = random(8.f, 12.f);
 		
-		pos[0] = std::cos(angle) * distance;
-		pos[2] = std::sin(angle) * distance;
+		pos[0] = 0.f;
 		pos[1] = 2.f;
+		pos[2] = distance;
 		
 		graphInstance->audioGraph->setMemf("pos", pos[0], pos[1], pos[2]);
+		graphInstance->audioGraph->setMemf("rot", Calc::RadToDeg(angle));
+		
+		const Mat4x4 toWorld = Mat4x4(true).RotateY(angle).Translate(pos);
+		worldPos = toWorld * pos;
 	}
 	
 	virtual void tick(const float dt) override
 	{
+		workTimer = std::max(0.f, workTimer - dt);
+		
+		if (workTimer == 0.f)
+		{
+			workTimer = random(4.f, 6.f);
+			
+			const float rippleStrength = 50.f;
+			
+			g_world->rippleSound(worldPos, random(-rippleStrength, +rippleStrength));
+			
+			graphInstance->audioGraph->triggerEvent("work");
+		}
+		
 		// alive state
 		
 		if (graphInstance->audioGraph->isFLagSet("dead"))
@@ -982,7 +1004,7 @@ struct World : WorldInterface
 					hqBegin(HQ_STROKED_CIRCLES);
 					{
 						setColorf(1.f, 0.f, 0.f);
-						hqStrokeCircle(machine->pos[0], machine->pos[2], 1.f, 3.f);
+						hqStrokeCircle(machine->worldPos[0], machine->worldPos[2], 1.f, 3.f);
 					}
 					hqEnd();
 				}
@@ -1042,16 +1064,21 @@ struct World : WorldInterface
 		gxPopMatrix();
 	}
 	
-	virtual void rippleSound(const Vec3 & p) override
+	Vec2 constrainSamplePosition(const Vec2 & p, const int edge) const
 	{
-		const Vec2 samplePosition = wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2]));
+		return p.Max(Vec2(edge, edge)).Min(Vec2(wavefield.numElems-1-edge, wavefield.numElems-1-edge));
+	}
+	
+	virtual void rippleSound(const Vec3 & p, const float amount) override
+	{
+		const Vec2 samplePosition = constrainSamplePosition(wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2])), 3);
 		
-		wavefield.doGaussianImpact(samplePosition[0], samplePosition[1], 3, 1.f);
+		wavefield.doGaussianImpact(samplePosition[0], samplePosition[1], 3, amount);
 	}
 	
 	virtual void rippleFlight(const Vec3 & p) override
 	{
-		const Vec2 samplePosition = wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2]));
+		const Vec2 samplePosition = constrainSamplePosition(wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2])), 2);
 		
 		wavefield.doGaussianImpact(samplePosition[0], samplePosition[1], 2, .05f);
 	}
