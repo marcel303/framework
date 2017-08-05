@@ -43,6 +43,7 @@ AUDIO_NODE_TYPE(noise, AudioNodeNoise)
 	typeName = "noise.1d";
 	
 	inEnum("type", "noiseType");
+	in("fine", "bool", "1");
 	in("octaves", "int", "6");
 	in("sample.rate", "int", "100");
 	in("scale", "audioValue", "1");
@@ -57,6 +58,7 @@ void AudioNodeNoise::drawOctave()
 {
 	const int numOctaves = getInputInt(kInput_NumOctaves, 6);
 	const int sampleRate = std::max(1, getInputInt(kInput_SampleRate, 100));
+	const bool fine = getInputBool(kInput_Fine, true);
 	const AudioFloat * scale = getInputAudioFloat(kInput_Scale, &AudioFloat::One);
 	const AudioFloat * persistence = getInputAudioFloat(kInput_Persistence, &AudioFloat::Half);
 	const AudioFloat * min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero);
@@ -66,7 +68,7 @@ void AudioNodeNoise::drawOctave()
 	const double numSamplesPerSecond = sampleRate;
 	const double numSamplesPerTick = AUDIO_UPDATE_SIZE / double(SAMPLE_RATE) * numSamplesPerSecond;
 
-	const int nearestSampleCount = int(std::round(numSamplesPerTick));
+	const int nearestSampleCount = fine ? int(std::round(numSamplesPerTick)) : 1;
 
 	if (nearestSampleCount <= 1)
 	{
@@ -119,10 +121,18 @@ void AudioNodeNoise::drawOctave()
 
 void AudioNodeNoise::drawWhite()
 {
+	const bool fine = getInputBool(kInput_Fine, true);
 	const AudioFloat * min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero);
 	const AudioFloat * max = getInputAudioFloat(kInput_Max, &AudioFloat::One);
 	
-	if (min->isScalar && max->isScalar)
+	if (fine == false)
+	{
+		const float minValue = min->getMean();
+		const float maxValue = max->getMean();
+		
+		resultOutput.setScalar(random(minValue, maxValue));
+	}
+	else if (min->isScalar && max->isScalar)
 	{
 		resultOutput.setVector();
 		
@@ -155,10 +165,20 @@ void AudioNodeNoise::drawPink()
 {
 	// pink noise (-3dB/octave) using Voss' method of a sample-and-hold random number generator
 	
+	const bool fine = getInputBool(kInput_Fine, true);
 	const AudioFloat * min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero);
 	const AudioFloat * max = getInputAudioFloat(kInput_Max, &AudioFloat::One);
 	
-	if (min->isScalar && max->isScalar)
+	if (fine == false)
+	{
+		const float minValue = min->getMean();
+		const float maxValue = max->getMean();
+		
+		const float t = pinkNumber.next() / float(1 << 16);
+		
+		resultOutput.setScalar(minValue + (maxValue - minValue) * t);
+	}
+	else if (min->isScalar && max->isScalar)
 	{
 		resultOutput.setVector();
 		
@@ -195,13 +215,24 @@ void AudioNodeNoise::drawBrown()
 {
 	// brown noise (-6dB/octave) by integrating brownian motion, using a leaky integrator to ensure the signal doesn't drift off too much from zero
 	
+	const bool fine = getInputBool(kInput_Fine, true);
 	const AudioFloat * min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero);
 	const AudioFloat * max = getInputAudioFloat(kInput_Max, &AudioFloat::One);
 	
 	const double falloffPerSample = 0.98;
 	const double wanderPerSample = 0.1;
 	
-	if (min->isScalar && max->isScalar)
+	if (fine == false)
+	{
+		const float minValue = min->getMean();
+		const float maxValue = max->getMean();
+		
+		resultOutput.setScalar(((minValue + maxValue) + brownValue * (maxValue - minValue)) * .5f);
+		
+		brownValue *= falloffPerSample;
+		brownValue += random(-wanderPerSample, +wanderPerSample);
+	}
+	else if (min->isScalar && max->isScalar)
 	{
 		resultOutput.setVector();
 		

@@ -43,6 +43,7 @@ struct AudioNodeNoise : AudioNodeBase
 	enum Input
 	{
 		kInput_Type,
+		kInput_Fine,
 		kInput_NumOctaves,
 		kInput_SampleRate,
 		kInput_Scale,
@@ -126,6 +127,7 @@ struct AudioNodeNoise : AudioNodeBase
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Type, kAudioPlugType_Int);
+		addInput(kInput_Fine, kAudioPlugType_Bool);
 		addInput(kInput_NumOctaves, kAudioPlugType_Int);
 		addInput(kInput_SampleRate, kAudioPlugType_Int);
 		addInput(kInput_Scale, kAudioPlugType_FloatVec);
