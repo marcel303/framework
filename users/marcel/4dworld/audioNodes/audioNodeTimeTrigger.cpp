@@ -29,47 +29,66 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "framework.h" // todo : remove. here for random
 
+// todo : make it possible to have multiple delayed triggers pile up
+
 AUDIO_NODE_TYPE(trigger_time, AudioNodeTimeTrigger)
 {
 	typeName = "trigger.time";
 	
-	in("interval.min", "float");
-	in("interval.max", "float");
+	in("auto", "bool", "1");
+	in("interval.min", "audioValue", "1");
+	in("interval.max", "audioValue", "1");
+	in("trigger!", "trigger");
 	out("trigger!", "trigger");
 }
 
 AudioNodeTimeTrigger::AudioNodeTimeTrigger()
 	: AudioNodeBase()
 	, time(0.0)
-	, interval(0.0)
 	, triggerData()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_IntervalMin, kAudioPlugType_Float);
-	addInput(kInput_IntervalMax, kAudioPlugType_Float);
+	addInput(kInput_Automatic, kAudioPlugType_Bool);
+	addInput(kInput_IntervalMin, kAudioPlugType_FloatVec);
+	addInput(kInput_IntervalMax, kAudioPlugType_FloatVec);
+	addInput(kInput_Trigger, kAudioPlugType_Trigger);
 	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, &triggerData);
 }
 
 void AudioNodeTimeTrigger::tick(const float dt)
 {
-	const float minInterval = getInputFloat(kInput_IntervalMin, 0.f);
-	const float maxInterval = getInputFloat(kInput_IntervalMax, minInterval);
+	const bool automatic = getInputBool(kInput_Automatic, true);
+	const float minInterval = getInputAudioFloat(kInput_IntervalMin, &AudioFloat::One)->getMean();
+	const float maxInterval = getInputAudioFloat(kInput_IntervalMax, &AudioFloat::One)->getMean();
 	
 	if (isPassthrough)
 	{
-		time = 0.f;
+		time = 0.0;
 	}
-	else if (time >= interval)
+	else if (time > 0.0)
 	{
-		if (interval != 0.0)
+		time = std::max(0.0, time - dt);
+
+		if (time == 0.0)
 		{
 			trigger(kOutput_Trigger);
 		}
-
-		time = 0.0;
-
-		interval = random(minInterval, maxInterval);
 	}
+	
+	if (time == 0.0 && automatic == true)
+	{
+		time = random(minInterval, maxInterval);
+	}
+}
 
-	time += dt;
+void AudioNodeTimeTrigger::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
+{
+	const bool automatic = getInputBool(kInput_Automatic, true);
+	const float minInterval = getInputAudioFloat(kInput_IntervalMin, &AudioFloat::One)->getMean();
+	const float maxInterval = getInputAudioFloat(kInput_IntervalMax, &AudioFloat::One)->getMean();
+
+	if (automatic == false)
+	{
+		time = random(minInterval, maxInterval);
+	}
 }

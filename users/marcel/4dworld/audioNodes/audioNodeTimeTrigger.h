@@ -33,8 +33,10 @@ struct AudioNodeTimeTrigger : AudioNodeBase
 {
 	enum Input
 	{
+		kInput_Automatic,
 		kInput_IntervalMin,
 		kInput_IntervalMax,
+		kInput_Trigger,
 		kInput_COUNT
 	};
 	
@@ -45,11 +47,12 @@ struct AudioNodeTimeTrigger : AudioNodeBase
 	};
 	
 	double time;
-	double interval;
 	
 	AudioTriggerData triggerData;
 	
 	AudioNodeTimeTrigger();
 	
 	virtual void tick(const float dt) override;
+
+	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) override;
 };
