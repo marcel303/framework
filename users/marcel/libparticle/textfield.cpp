@@ -36,15 +36,16 @@ bool EditorTextField::tick(const float dt)
 		fassert(m_caretPosition <= m_bufferSize);
 
 		m_caretTimer += dt;
-
-		for (int i = 0; i < 256; ++i)
+		
+		for (auto & e : framework.events)
 		{
-			SDLKey key = (SDLKey)i;
-
-			if (keyboard.wentDown(key, true) && isAllowed(i))
+			if (e.type != SDL_KEYDOWN)
+				continue;
+			
+			int c = e.key.keysym.sym;
+			
+			if (isAllowed(c))
 			{
-				int c = i;
-
 				if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
 				{
 					c = toupper(c);
