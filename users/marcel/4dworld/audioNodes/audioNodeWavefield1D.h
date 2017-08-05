@@ -44,6 +44,7 @@ struct AudioNodeWavefield1D : AudioNodeBase
 		kInput_Trigger,
 		kInput_TriggerLocation,
 		kInput_TriggerAmount,
+		kInput_TriggerSize,
 		kInput_Randomize,
 		kInput_COUNT
 	};

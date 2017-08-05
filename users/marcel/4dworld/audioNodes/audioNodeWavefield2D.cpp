@@ -69,6 +69,7 @@ AudioNodeWavefield2D::AudioNodeWavefield2D()
 	addInput(kInput_TriggerLocationY, kAudioPlugType_FloatVec);
 	addInput(kInput_TriggerAmount, kAudioPlugType_FloatVec);
 	addInput(kInput_TriggerSize, kAudioPlugType_FloatVec);
+	addInput(kInput_Randomize, kAudioPlugType_Trigger);
 	addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 
 	wavefield = new Wavefield2D();

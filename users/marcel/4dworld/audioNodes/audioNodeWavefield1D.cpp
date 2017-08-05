@@ -44,6 +44,7 @@ AUDIO_NODE_TYPE(wavefield_1d, AudioNodeWavefield1D)
 	in("trigger!", "trigger");
 	in("trigger.pos", "audioValue", "0.5");
 	in("trigger.amount", "audioValue", "0.5");
+	in("trigger.size", "1");
 	in("randomize!", "trigger");
 	out("audio", "audioValue");
 }
@@ -63,6 +64,8 @@ AudioNodeWavefield1D::AudioNodeWavefield1D()
 	addInput(kInput_Trigger, kAudioPlugType_Trigger);
 	addInput(kInput_TriggerLocation, kAudioPlugType_FloatVec);
 	addInput(kInput_TriggerAmount, kAudioPlugType_FloatVec);
+	addInput(kInput_TriggerSize, kAudioPlugType_FloatVec);
+	addInput(kInput_Randomize, kAudioPlugType_Trigger);
 	addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 
 	wavefield = new Wavefield1D();
@@ -131,12 +134,16 @@ void AudioNodeWavefield1D::handleTrigger(const int inputSocketIndex, const Audio
 	{
 		const float triggerPosition = getInputAudioFloat(kInput_TriggerLocation, &AudioFloat::Half)->getMean();
 		const float triggerAmount = getInputAudioFloat(kInput_TriggerAmount, &AudioFloat::Half)->getMean();
+		const float triggerSize = getInputAudioFloat(kInput_TriggerSize, &AudioFloat::One)->getMean();
 		
 		if (wavefield->numElems > 0)
 		{
 			const int elemIndex = int(std::round(triggerPosition * wavefield->numElems)) % wavefield->numElems;
 			
-			wavefield->d[elemIndex] += triggerAmount;
+			if (triggerSize == 1.f)
+				wavefield->d[elemIndex] += triggerAmount;
+			else
+				wavefield->d[elemIndex] += triggerAmount; // todo : implement gaussian impact
 		}
 	}
 	else if (inputSocketIndex == kInput_Randomize)
@@ -164,4 +171,3 @@ void AudioNodeWavefield1D::handleTrigger(const int inputSocketIndex, const Audio
 		}
 	}
 }
-
