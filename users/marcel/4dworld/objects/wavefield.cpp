@@ -10,7 +10,9 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
-#define MAX_IMPULSE_PER_SECOND 1000.f
+#define MAX_IMPULSE_PER_SECOND 1000.0
+
+//
 
 const int Wavefield1D::kMaxElems;
 
@@ -131,16 +133,23 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 
 float Wavefield1D::sample(const float x) const
 {
-	const int x1 = int(x) ;
-	const int x2 = x1 + 1;
-	const float tx2 = x - x1;
-	const float tx1 = 1.f - tx2;
-	
-	const float v0 = p[x1 % numElems];
-	const float v1 = p[x2 % numElems];
-	const float v = v0 * tx1 + v1 * tx2;
-	
-	return v;
+	if (numElems == 0)
+	{
+		return 0.f;
+	}
+	else
+	{
+		const int x1 = int(x) ;
+		const int x2 = x1 + 1;
+		const float tx2 = x - x1;
+		const float tx1 = 1.f - tx2;
+		
+		const float v0 = p[x1 % numElems];
+		const float v1 = p[x2 % numElems];
+		const float v = v0 * tx1 + v1 * tx2;
+		
+		return v;
+	}
 }
 
 //
@@ -523,24 +532,31 @@ void Wavefield2D::doGaussianImpact(const int _x, const int _y, const int _radius
 
 float Wavefield2D::sample(const float x, const float y) const
 {
-	const int x1 = int(x);
-	const int y1 = int(y);
-	const int x2 = (x1 + 1) % numElems;
-	const int y2 = (y1 + 1) % numElems;
-	const float tx2 = x - x1;
-	const float ty2 = y - y1;
-	const float tx1 = 1.f - tx2;
-	const float ty1 = 1.f - ty2;
-	
-	const float v00 = p[x1][y1];
-	const float v10 = p[x2][y1];
-	const float v01 = p[x1][y2];
-	const float v11 = p[x2][y2];
-	const float v0 = v00 * tx1 + v10 * tx2;
-	const float v1 = v01 * tx1 + v11 * tx2;
-	const float v = v0 * ty1 + v1 * ty2;
-	
-	return v;
+	if (numElems == 0)
+	{
+		return 0.f;
+	}
+	else
+	{
+		const int x1 = int(x);
+		const int y1 = int(y);
+		const int x2 = (x1 + 1) % numElems;
+		const int y2 = (y1 + 1) % numElems;
+		const float tx2 = x - x1;
+		const float ty2 = y - y1;
+		const float tx1 = 1.f - tx2;
+		const float ty1 = 1.f - ty2;
+		
+		const float v00 = p[x1][y1];
+		const float v10 = p[x2][y1];
+		const float v01 = p[x1][y2];
+		const float v11 = p[x2][y2];
+		const float v0 = v00 * tx1 + v10 * tx2;
+		const float v1 = v01 * tx1 + v11 * tx2;
+		const float v = v0 * ty1 + v1 * ty2;
+		
+		return v;
+	}
 }
 
 void Wavefield2D::copyFrom(const Wavefield2D & other, const bool copyP, const bool copyV, const bool copyF)
