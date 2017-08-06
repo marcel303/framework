@@ -19,6 +19,82 @@ extern const bool STEREO_OUTPUT;
 #define FIELD_SIZE 20.f
 #define FIELD_SIZE_FOR_FLYING (FIELD_SIZE * .8f)
 
+#define MACHINE_V2 1
+
+//
+
+static bool inputIsCaptured = false;
+
+//
+
+static void doSlider(float & value, const char * name, const float smoothness, const float dt)
+{
+	UiElem & elem = g_menu->getElem(name);
+	
+	bool & isDragging = elem.getBool(0, false);
+	float & desiredValue = elem.getFloat(1, value);
+	
+	const int sx = g_uiState->sx;
+	const int sy = 16;
+	
+	const int x1 = g_drawX;
+	const int y1 = g_drawY;
+	const int x2 = x1 + sx;
+	const int y2 = y1 + sy - 1;
+	
+	if (g_doActions)
+	{
+		elem.tick(x1, y1, x2, y2);
+		
+		if (elem.isActive)
+		{
+			if (mouse.wentDown(BUTTON_LEFT))
+			{
+				isDragging = true;
+			}
+			
+			if (mouse.wentUp(BUTTON_LEFT))
+			{
+				isDragging = false;
+			}
+			
+			if (isDragging)
+			{
+				desiredValue = saturate((mouse.x - x1) / float(x2 - x1));
+			}
+		}
+		else
+		{
+			isDragging = false;
+		}
+		
+		//
+		
+		const float retain = std::powf(smoothness, dt);
+		
+		value = lerp(desiredValue, value, retain);
+	}
+	
+	if (g_doDraw)
+	{
+		setColor(0, 0, 255/2);
+		drawRect(x1, y1, x1 + (x2 - x1) * desiredValue, y2);
+		
+		pushBlend(BLEND_ADD);
+		setColor(0, 100, 255/2);
+		drawRect(x1, y1, x1 + (x2 - x1) * value, y2);
+		popBlend();
+		
+		setColor(colorWhite);
+		drawTextArea(x1, y1, x2 - x1, y2 - y1, 12, 0, 0, "%s", name);
+		
+		setColor(0, 0, 255);
+		drawRectLine(x1, y1, x2, y2);
+	}
+	
+	g_drawY += sy;
+}
+
 //
 
 struct WorldInterface
@@ -26,6 +102,9 @@ struct WorldInterface
 	virtual ~WorldInterface()
 	{
 	}
+	
+	virtual Vec2 xformWorldToScreen(const Vec3 & p) = 0;
+	virtual Vec3 xformScreenToWorld(const float x, const float y, const float worldY) = 0;
 	
 	virtual void rippleSound(const Vec3 & p, const float amount = 1.f) = 0;
 	virtual void rippleFlight(const Vec3 & p) = 0;
@@ -349,15 +428,29 @@ struct Bird : EntityBase
 	
 	void beginFlying()
 	{
-		const float desiredRadius = random(FIELD_SIZE_FOR_FLYING/4.f, FIELD_SIZE_FOR_FLYING);
-		const float desiredAngle = random(0.f, float(M_PI) * 2.f);
+		const float currentRadius = Vec2(currentPos[0], currentPos[1]).CalcSize();
+		const float currentAngle = std::atan2f(currentPos[2], currentPos[0]);
+		
+		float desiredRadius;
+		float desiredAngle;
+		
+		if (currentRadius == 0.f)
+		{
+			desiredRadius = random(FIELD_SIZE_FOR_FLYING/4.f, FIELD_SIZE_FOR_FLYING);
+			desiredAngle = random(0.f, float(M_PI) * 2.f);
+		}
+		else
+		{
+			desiredRadius = random(FIELD_SIZE_FOR_FLYING/4.f, FIELD_SIZE_FOR_FLYING);
+			desiredAngle = random(0.f, float(M_PI) * 2.f);
+			
+			//desiredRadius = clamp(currentRadius + random(-FIELD_SIZE_FOR_FLYING/5.f, +FIELD_SIZE_FOR_FLYING/5.f), FIELD_SIZE_FOR_FLYING/4.f, FIELD_SIZE_FOR_FLYING);
+			//desiredAngle = currentAngle + random(-2.f, +2.f);
+		}
 		
 		desiredPos[0] = std::cos(desiredAngle) * desiredRadius;
 		desiredPos[2] = std::sin(desiredAngle) * desiredRadius;
-		
-		//desiredPos[0] = random(-FIELD_SIZE_FOR_FLYING, +FIELD_SIZE_FOR_FLYING);
 		desiredPos[1] = random(6.f, 8.f);
-		//desiredPos[2] = random(-FIELD_SIZE_FOR_FLYING, +FIELD_SIZE_FOR_FLYING);
 		
 		graphInstance->audioGraph->triggerEvent("sing-end");
 		graphInstance->audioGraph->triggerEvent("call-end");
@@ -592,19 +685,55 @@ struct Voices : EntityBase
 
 struct Machine : EntityBase
 {
+	enum InputState
+	{
+		kInputState_Idle,
+		kInputState_Drag,
+		kInputState_Tension
+	};
+	
+	struct DragState
+	{
+		Vec3 dragPos;
+	};
+	
+#if MACHINE_V2 == 0
 	Vec3 pos;
+#endif
 	Vec3 worldPos;
+	Vec3 desiredWorldPos;
 	float workTimer;
+	float walkTimer;
+	float currentTension;
+	float desiredTension;
+	
+	DragState dragState;
+	
+	InputState inputState;
+	bool mouseHover;
 	
 	Machine()
 		: EntityBase()
+	#if MACHINE_V2 == 0
 		, pos()
+	#endif
 		, worldPos()
+		, desiredWorldPos()
 		, workTimer(0.f)
+		, walkTimer(0.f)
+		, currentTension(.5f)
+		, desiredTension(.5f)
+		, dragState()
+		, inputState(kInputState_Idle)
+		, mouseHover(false)
 	{
 		type = kEntity_Machine;
 		
+	#if MACHINE_V2
+		graphInstance = g_audioGraphMgr->createInstance("machines1.xml");
+	#else
 		graphInstance = g_audioGraphMgr->createInstance("e-machine1.xml");
+	#endif
 		
 		randomize();
 	}
@@ -619,6 +748,13 @@ struct Machine : EntityBase
 		const float angle = random(0.f, 2.f * float(M_PI));
 		const float distance = random(8.f, 12.f);
 		
+	#if MACHINE_V2
+		worldPos[0] = std::cos(angle) * distance;
+		worldPos[2] = std::cos(angle) * distance;
+		worldPos[1] = 3.f;
+		
+		desiredWorldPos = worldPos;
+	#else
 		pos[0] = 0.f;
 		pos[1] = 2.f;
 		pos[2] = distance;
@@ -628,10 +764,35 @@ struct Machine : EntityBase
 		
 		const Mat4x4 toWorld = Mat4x4(true).RotateY(angle).Translate(pos);
 		worldPos = toWorld * pos;
+		
+		desiredWorldPos = worldPos;
+	#endif
 	}
 	
 	virtual void tick(const float dt) override
 	{
+		{
+			const float retain = std::powf(.2f, dt);
+			
+			auto oldPos = worldPos;
+			
+			worldPos = lerp(desiredWorldPos, worldPos, retain);
+			
+			auto newPos = worldPos;
+			
+			const float rippleStrength = (newPos - oldPos).CalcSize() * 10.f;
+			
+			g_world->rippleSound(newPos, random(-rippleStrength, +rippleStrength));
+		}
+		
+		{
+			const float retain = std::powf(.85f, dt);
+			
+			currentTension = lerp(desiredTension, currentTension, retain);
+		}
+		
+		//
+		
 		workTimer = std::max(0.f, workTimer - dt);
 		
 		if (workTimer == 0.f)
@@ -643,7 +804,88 @@ struct Machine : EntityBase
 			g_world->rippleSound(worldPos, random(-rippleStrength, +rippleStrength));
 			
 			graphInstance->audioGraph->triggerEvent("work");
+			
+			graphInstance->audioGraph->triggerEvent("next");
 		}
+		
+		workTimer = std::max(0.f, workTimer - dt);
+		
+		//
+		
+		if (walkTimer == 0.f)
+		{
+			walkTimer = random(5.f, 8.f);
+			
+			desiredWorldPos[0] += random(-5.f, +5.f);
+			desiredWorldPos[2] += random(-5.f, +5.f);
+		}
+		
+		walkTimer = std::max(0.f, walkTimer - dt);
+		
+		// update input state
+		
+		if (inputIsCaptured)
+		{
+			inputState = kInputState_Idle;
+			
+			mouseHover = false;
+		}
+		else
+		{
+			// update mouse hover state
+		
+			const float distanceToMouse = (worldPos - g_world->xformScreenToWorld(mouse.x, mouse.y, worldPos[1])).CalcSize();
+			
+			mouseHover = distanceToMouse < 1.f;
+			
+			if (inputState == kInputState_Idle)
+			{
+				if (mouseHover && mouse.wentDown(BUTTON_LEFT))
+				{
+					dragState.dragPos = worldPos;
+					
+					inputState = kInputState_Drag;
+				}
+				else if (mouseHover && mouse.wentDown(BUTTON_RIGHT))
+				{
+					inputState = kInputState_Tension;
+				}
+			}
+			else if (inputState == kInputState_Drag)
+			{
+				dragState.dragPos = g_world->xformScreenToWorld(mouse.x, mouse.y, dragState.dragPos[1]);
+				
+				if (mouse.wentUp(BUTTON_LEFT))
+				{
+					desiredWorldPos = dragState.dragPos;
+					
+					dragState = DragState();
+					
+					inputState = kInputState_Idle;
+				}
+			}
+			else if (inputState == kInputState_Tension)
+			{
+				desiredTension = saturate(desiredTension - mouse.dy / 100.f);
+				
+				if (mouse.wentUp(BUTTON_RIGHT))
+				{
+					inputState = kInputState_Idle;
+				}
+			}
+		}
+		
+	#if MACHINE_V2
+		graphInstance->audioGraph->setMemf("pos", worldPos[0], worldPos[1], worldPos[2]);
+	#else
+		const float angle = atan2f(worldPos[2], worldPos[0]);
+		const float distance = worldPos.CalcSize();
+		pos[2] = distance;
+		graphInstance->audioGraph->setMemf("pos", pos[0], pos[1], pos[2]);
+		graphInstance->audioGraph->setMemf("rot", Calc::RadToDeg(angle));
+	#endif
+	
+		graphInstance->audioGraph->setMemf("tension", currentTension);
 		
 		// alive state
 		
@@ -651,6 +893,10 @@ struct Machine : EntityBase
 		{
 			dead = true;
 		}
+		
+		//
+		
+		inputIsCaptured |= (inputState != kInputState_Idle);
 	}
 	
 	virtual void kill() override
@@ -671,23 +917,36 @@ struct World : WorldInterface
 		kInputState_Wavefield
 	};
 	
-		struct Parameters
+	struct Parameters
 	{
 		float wavefieldC;
 		float wavefieldD;
 		
+		float birdVolume;
+		float voiceVolume;
+		float machineVolume;
+		
 		Parameters()
 			: wavefieldC(1000.f)
 			, wavefieldD(1.f)
+			, birdVolume(1.f)
+			, voiceVolume(1.f)
+			, machineVolume(1.f)
 		{
 		}
 		
 		void lerpTo(const Parameters & other, const float dt)
 		{
-			const float retain = std::powf(.1f, dt);
+			{
+				const float retain = std::powf(.1f, dt);
+				
+				wavefieldC = lerp(other.wavefieldC, wavefieldC, retain);
+				wavefieldD = lerp(other.wavefieldD, wavefieldD, retain);
+			}
 			
-			wavefieldC = lerp(other.wavefieldC, wavefieldC, retain);
-			wavefieldD = lerp(other.wavefieldD, wavefieldD, retain);
+			birdVolume = other.birdVolume;
+			voiceVolume = other.voiceVolume;
+			machineVolume = other.machineVolume;
 		}
 	};
 	
@@ -726,7 +985,7 @@ struct World : WorldInterface
 	
 	void init()
 	{
-		worldToScreen = Mat4x4(true).Translate(GFX_SX/2, GFX_SY/2, 0).Scale(16.f, 16.f, 1.f);
+		worldToScreen = Mat4x4(true).Translate(GFX_SX/3, GFX_SY/2, 0).Scale(16.f, 16.f, 1.f);
 		
 		wavefield.init(64);
 		wavefield.randomize();
@@ -799,7 +1058,6 @@ struct World : WorldInterface
 	{
 		const char * filename = (rand() % 2) == 0 ? "oneshotTest.xml" : "oneshotTest2.xml";
 		
-		//Oneshot * oneshot = new Oneshot(filename, -1.f);
 		Oneshot * oneshot = new Oneshot(filename, random(1.f, 5.f), true);
 		
 		const float sizeX = 6.f;
@@ -825,9 +1083,21 @@ struct World : WorldInterface
 		return oneshot;
 	}
 	
-	bool tick(const float dt, const bool inputIsCaptured)
+	bool tick(const float dt)
 	{
-		if (inputIsCaptured == false)
+		if (inputIsCaptured == true)
+		{
+			switch (inputState)
+			{
+			case kInputState_Idle:
+				break;
+			
+			case kInputState_Wavefield:
+				inputState = kInputState_Idle;
+				break;
+			}
+		}
+		else
 		{
 			switch (inputState)
 			{
@@ -891,6 +1161,21 @@ struct World : WorldInterface
 		for (auto entity : entities)
 		{
 			entity->tick(dt);
+			
+			if (entity->type == kEntity_Bird)
+			{
+				entity->graphInstance->audioGraph->setMemf("vol", currentParams.birdVolume);
+			}
+			
+			if (entity->type == kEntity_Voice)
+			{
+				entity->graphInstance->audioGraph->setMemf("vol", currentParams.voiceVolume);
+			}
+			
+			if (entity->type == kEntity_Machine)
+			{
+				entity->graphInstance->audioGraph->setMemf("vol", currentParams.machineVolume);
+			}
 		}
 		
 		//
@@ -1001,9 +1286,36 @@ struct World : WorldInterface
 				{
 					Machine * machine = (Machine*)entity;
 					
+					if (machine->inputState == Machine::kInputState_Drag)
+					{
+						hqBegin(HQ_LINES);
+						{
+							setColorf(1, 1, 1, .5f);
+							hqLine(machine->worldPos[0], machine->worldPos[2], 1.f, machine->dragState.dragPos[0], machine->dragState.dragPos[2], 1.f);
+						}
+						hqEnd();
+					}
+
+					hqBegin(HQ_FILLED_CIRCLES);
+					{
+						setColorf(1.f, 1.f, 1.f, .7f);
+						hqFillCircle(machine->worldPos[0], machine->worldPos[2], .1f + .8f * machine->currentTension);
+					}
+					hqEnd();
+					
 					hqBegin(HQ_STROKED_CIRCLES);
 					{
-						setColorf(1.f, 0.f, 0.f);
+						setColorf(1.f, 1.f, 1.f, 1.f);
+						hqStrokeCircle(machine->worldPos[0], machine->worldPos[2], .1f + .8f * machine->desiredTension, 3.f);
+					}
+					hqEnd();
+					
+					hqBegin(HQ_STROKED_CIRCLES);
+					{
+						if (machine->mouseHover)
+							setColor(colorWhite);
+						else
+							setColorf(1.f, 0.f, 0.f);
 						hqStrokeCircle(machine->worldPos[0], machine->worldPos[2], 1.f, 3.f);
 					}
 					hqEnd();
@@ -1067,6 +1379,17 @@ struct World : WorldInterface
 	Vec2 constrainSamplePosition(const Vec2 & p, const int edge) const
 	{
 		return p.Max(Vec2(edge, edge)).Min(Vec2(wavefield.numElems-1-edge, wavefield.numElems-1-edge));
+	}
+	
+	virtual Vec2 xformWorldToScreen(const Vec3 & p) override
+	{
+		return worldToScreen.Mul4(Vec2(p[0], p[2]));
+	}
+	
+	virtual Vec3 xformScreenToWorld(const float x, const float y, const float worldY) override
+	{
+		auto r = worldToScreen.Invert().Mul4(Vec2(x, y));
+		return Vec3(r[0], worldY, r[1]);
 	}
 	
 	virtual void rippleSound(const Vec3 & p, const float amount) override
@@ -1134,29 +1457,9 @@ void testAudioGraphManager()
 	Assert(g_audioGraphMgr == nullptr);
 	g_audioGraphMgr = &audioGraphMgr;
 	
-	AudioGraphInstance * instance1 = nullptr;
-	AudioGraphInstance * instance2 = nullptr;
-	AudioGraphInstance * instance3 = nullptr;
-	AudioGraphInstance * instance4 = nullptr;
-	AudioGraphInstance * instance5 = nullptr;
+	//
 	
-#if 0
-	instance1 = audioGraphMgr.createInstance("lowpassTest5.xml");
-	instance1->audioGraph->setMemf("int", 100);
-	instance1->audioGraph->triggerEvent("type1");
-	
-	instance2 = audioGraphMgr.createInstance("lowpassTest5.xml");
-	instance2->audioGraph->setMemf("int", 78);
-	instance2->audioGraph->triggerEvent("type2");
-	
-	instance3 = audioGraphMgr.createInstance("lowpassTest5.xml");
-	instance3->audioGraph->setMemf("int", 52);
-	instance3->audioGraph->triggerEvent("type1");
-#elif 0
-	instance1 = audioGraphMgr.createInstance("mixtest1.xml");
-#elif 1
-	instance1 = audioGraphMgr.createInstance("globals.xml");
-#endif
+	AudioGraphInstance * globalsInstance = audioGraphMgr.createInstance("globals.xml");
 	
 	//
 	
@@ -1187,6 +1490,7 @@ void testAudioGraphManager()
 	std::string activeInstanceName;
 	
 	bool interact = true;
+	bool developer = false;
 	std::string testInstanceFilename;
 	bool graphList = true;
 	bool instanceList = false;
@@ -1199,9 +1503,9 @@ void testAudioGraphManager()
 		
 		makeActive(&uiState, doActions, doDraw);
 		
-		pushMenu("interact");
+		pushMenu("control");
 		{
-			doDrawer(interact, "interact");
+			doDrawer(interact, "control");
 			if (interact)
 			{
 				if (world == nullptr)
@@ -1216,10 +1520,9 @@ void testAudioGraphManager()
 				}
 				else
 				{
-					doCheckBox(world->showBirdDebugs, "show bird debugs", false);
-					
 					if (doButton("randomize wavefield"))
 						world->wavefield.randomize();
+					doTextBox(world->desiredNumOneshots, "oneshots.num", dt);
 					if (doButton("add ball"))
 						world->addBall();
 					if (doButton("add bird"))
@@ -1228,10 +1531,6 @@ void testAudioGraphManager()
 						world->addVoices();
 					if (doButton("add machine"))
 						world->addMachine();
-					if (doButton("kill entity"))
-						world->killEntity();
-					if (doButton("do oneshot"))
-						world->doOneshot();
 					if (doButton("kill selected"))
 					{
 						if (g_audioGraphMgr->selectedFile && g_audioGraphMgr->selectedFile->activeInstance)
@@ -1246,45 +1545,68 @@ void testAudioGraphManager()
 						}
 					}
 					doBreak();
-					doTextBox(world->desiredNumOneshots, "oneshots.num", dt);
-					doTextBox(world->desiredParams.wavefieldC, "wavefield.c", dt);
-					doTextBox(world->desiredParams.wavefieldD, "wavefield.d", dt);
+					
+					doSlider(world->desiredParams.birdVolume, "bird volume", .5f, dt);
 					doBreak();
-					
-					//
-					
-					bool addTestInstance = false;
-					bool killTestInstances = false;
-					
-					if (doTextBox(testInstanceFilename, "filename", dt) == kUiTextboxResult_EditingComplete && !testInstanceFilename.empty())
+					doSlider(world->desiredParams.voiceVolume, "voice volume", .5f, dt);
+					doBreak();
+					doSlider(world->desiredParams.machineVolume, "machine volume", .5f, dt);
+					doBreak();
+				}
+			}
+		}
+		popMenu();
+		
+		doBreak();
+		
+		pushMenu("developer");
+		{
+			if (world != nullptr && doDrawer(developer, "developer"))
+			{
+				doCheckBox(world->showBirdDebugs, "show bird debugs", false);
+				
+				doTextBox(world->desiredParams.wavefieldC, "wavefield.c", dt);
+				doTextBox(world->desiredParams.wavefieldD, "wavefield.d", dt);
+				doBreak();
+		
+				if (doButton("kill entity"))
+					world->killEntity();
+				if (doButton("do oneshot"))
+					world->doOneshot();
+				doBreak();
+				//
+				
+				bool addTestInstance = false;
+				bool killTestInstances = false;
+				
+				if (doTextBox(testInstanceFilename, "filename", dt) == kUiTextboxResult_EditingComplete && !testInstanceFilename.empty())
+				{
+					addTestInstance = true;
+					killTestInstances = true;
+				}
+				
+				addTestInstance |= doButton("add test instance") && !testInstanceFilename.empty();
+				killTestInstances |= doButton("kill test instances");
+				
+				if (killTestInstances)
+				{
+					for (auto & entity : world->entities)
 					{
-						addTestInstance = true;
-						killTestInstances = true;
-					}
-					
-					addTestInstance |= doButton("add test instance") && !testInstanceFilename.empty();
-					killTestInstances |= doButton("kill test instances");
-					
-					if (killTestInstances)
-					{
-						for (auto & entity : world->entities)
+						if (entity->type == kEntity_TestInstance)
 						{
-							if (entity->type == kEntity_TestInstance)
-							{
-								entity->kill();
-							}
+							entity->kill();
 						}
 					}
-					
-					if (addTestInstance)
-					{
-						std::string fullFilename = testInstanceFilename;
-						if (Path::GetExtension(fullFilename, true) != "xml")
-							fullFilename = Path::ReplaceExtension(fullFilename, "xml");
-						TestInstance * instance = new TestInstance(fullFilename.c_str());
-						world->entities.push_back(instance);
-						g_audioGraphMgr->selectInstance(instance->graphInstance);
-					}
+				}
+				
+				if (addTestInstance)
+				{
+					std::string fullFilename = testInstanceFilename;
+					if (Path::GetExtension(fullFilename, true) != "xml")
+						fullFilename = Path::ReplaceExtension(fullFilename, "xml");
+					TestInstance * instance = new TestInstance(fullFilename.c_str());
+					world->entities.push_back(instance);
+					g_audioGraphMgr->selectInstance(instance->graphInstance);
 				}
 			}
 		}
@@ -1310,10 +1632,14 @@ void testAudioGraphManager()
 		}
 		popMenu();
 		
+		/*
 		doBreak();
 		
 		pushMenu("instanceList");
 		{
+			static float sliderValue = 0.f;
+			doSlider(sliderValue, "slider");
+			
 			doDrawer(instanceList, "instances");
 			if (instanceList)
 			{
@@ -1343,6 +1669,7 @@ void testAudioGraphManager()
 			}
 		}
 		popMenu();
+		*/
 		
 		return uiState.activeElem != nullptr;
 	};
@@ -1355,6 +1682,9 @@ void testAudioGraphManager()
 		
 		const float dt = std::min(1.f / 20.f, framework.timeStep);
 		
+		inputIsCaptured = false;
+		
+		/*
 		bool graphEditHasInputCapture =
 			audioGraphMgr.selectedFile != nullptr &&
 			audioGraphMgr.selectedFile->graphEdit->state != GraphEdit::kState_Idle &&
@@ -1362,8 +1692,9 @@ void testAudioGraphManager()
 			audioGraphMgr.selectedFile->graphEdit->state != GraphEdit::kState_HiddenIdle;
 		
 		bool inputIsCaptured = false;
+		*/
 		
-		if (graphEditHasInputCapture == false)
+		//if (graphEditHasInputCapture == false)
 		{
 			inputIsCaptured |= doMenus(true, false, dt);
 		}
@@ -1377,22 +1708,8 @@ void testAudioGraphManager()
 		
 		if (world != nullptr)
 		{
-			inputIsCaptured |= world->tick(dt, inputIsCaptured);
+			inputIsCaptured |= world->tick(dt);
 		}
-		
-	#if 0
-		if (instance1 != nullptr)
-		{
-			const bool value = (rand() % 100) == 0;
-			
-			instance1->audioGraph->setFlag("test", value);
-			
-			if (instance1->audioGraph->isFLagSet("kill"))
-			{
-				audioGraphMgr.free(instance1);
-			}
-		}
-	#endif
 		
 		//
 		
@@ -1442,11 +1759,7 @@ void testAudioGraphManager()
 	
 	//
 	
-	audioGraphMgr.free(instance1);
-	audioGraphMgr.free(instance2);
-	audioGraphMgr.free(instance3);
-	audioGraphMgr.free(instance4);
-	audioGraphMgr.free(instance5);
+	audioGraphMgr.free(globalsInstance);
 	
 	//
 	
