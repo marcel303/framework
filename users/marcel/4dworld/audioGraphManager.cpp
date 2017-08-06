@@ -273,6 +273,8 @@ void AudioGraphManager::selectFile(const char * filename)
 		if (fileItr != files.end())
 		{
 			selectedFile = fileItr->second;
+			
+			selectedFile->graphEdit->beginEditing();
 		}
 	}
 	SDL_UnlockMutex(audioMutex);
