@@ -1178,6 +1178,7 @@ struct GraphEdit : GraphEditConnection
 	void undo();
 	void redo();
 	
+	void beginEditing();
 	void cancelEditing();
 	
 	void showNotification(const char * format, ...);

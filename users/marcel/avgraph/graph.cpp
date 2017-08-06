@@ -2160,6 +2160,11 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 {
 	cpuTimingBlock(GraphEdit_Tick);
 	
+	if (_inputIsCaptured)
+	{
+		cancelEditing();
+	}
+	
 	{
 		mousePosition.uiX = mouse.x;
 		mousePosition.uiY = mouse.y;
@@ -2577,18 +2582,46 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						newNode.editorInputValues.clear();
 						newNode.editorValue.clear();
 						
-						if (commandMod())
-						{
-							// deep copy node including values
-							newNode.editorInputValues = node->editorInputValues;
-							newNode.editorValue = node->editorValue;
-							
-							// todo : deep copy doesn't work nicely with real-time editing for now. we need to tell the run-time the socket values
-						}
-						
 						graph->addNode(newNode);
 						
 						newSelectedNodes.insert(newNode.id);
+						
+						if (commandMod())
+						{
+							auto newNodePtr = tryGetNode(newNode.id);
+							Assert(newNodePtr != nullptr);
+							
+							// deep copy node including values
+							
+							auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(newNode.typeName);
+							Assert(typeDefinition != nullptr);
+							
+							// let real-time editing know the socket values have changed
+							for (auto & inputValueItr : node->editorInputValues)
+							{
+								auto & srcSocketName = inputValueItr.first;
+								auto & srcSocketValue = inputValueItr.second;
+								
+								newNodePtr->editorInputValues[srcSocketName] = srcSocketValue;
+								
+								if (typeDefinition != nullptr)
+								{
+									for (auto & srcSocket : typeDefinition->inputSockets)
+									{
+										if (srcSocket.name == srcSocketName)
+										{
+											if (realTimeConnection != nullptr)
+											{
+												realTimeConnection->setSrcSocketValue(newNode.id, srcSocket.index, srcSocket.name, srcSocketValue);
+											}
+										}
+									}
+								}
+							}
+							
+							// fixme : copy editor value too and let real-time connection know its value is changed
+							//newNode.editorValue = node->editorValue;
+						}
 					}
 				}
 				
@@ -3780,6 +3813,14 @@ void GraphEdit::snapToGrid(GraphNode & node) const
 	snapToGrid(node.editorX, node.editorY);
 }
 
+void GraphEdit::beginEditing()
+{
+	if (state == kState_Hidden)
+	{
+		state = kState_Idle;
+	}
+}
+
 void GraphEdit::cancelEditing()
 {
 	switch (state)
@@ -3846,11 +3887,11 @@ void GraphEdit::cancelEditing()
 		break;
 			
 	case kState_Hidden:
-		state = kState_Idle;
+		//state = kState_Idle;
 		break;
 		
 	case kState_HiddenIdle:
-		state = kState_Idle;
+		//state = kState_Idle;
 		break;
 	}
 }
@@ -4790,6 +4831,18 @@ void GraphEdit::linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId
 		dstNode->nodeType == kGraphNodeType_Regular)
 	{
 		realTimeConnection->linkRemove(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
+		
+		//
+		
+		auto srcSocket = tryGetInputSocket(srcNodeId, srcSocketIndex);
+		Assert(srcSocket != nullptr);
+		
+		if (srcSocket != nullptr)
+		{
+			auto valueText = srcNode->editorInputValues.find(srcSocket->name);
+			if (valueText != srcNode->editorInputValues.end())
+				realTimeConnection->setSrcSocketValue(srcNodeId, srcSocket->index, srcSocket->name, valueText->second);
+		}
 	}
 }
 
