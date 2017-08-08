@@ -51,6 +51,8 @@ struct PortAudioObject
 		shut();
 	}
 	
+	bool isSupported(const int numInputChannels, const int numOutputChannels) const;
+	
 	bool init(const int sampleRate, const int numChannels, const int bufferSize, PortAudioHandler * audioSource);
 	bool initImpl(const int sampleRate, const int numChannels, const int bufferSize, PortAudioHandler * audioSource);
 	bool shut();

@@ -11,13 +11,51 @@ static int portaudioCallback(
 	PaStreamCallbackFlags statusFlags,
 	void * userData)
 {
-	//LOG_DBG("portaudioCallback!", 0);
-	
 	PortAudioHandler * handler = (PortAudioHandler*)userData;
 
 	handler->portAudioCallback(inputBuffer, outputBuffer, framesPerBuffer);
 
 	return paContinue;
+}
+
+bool PortAudioObject::isSupported(const int numInputChannels, const int numOutputChannels) const
+{
+	PaError err;
+	
+	if ((err = Pa_Initialize()) != paNoError)
+	{
+		LOG_ERR("portaudio: failed to initialize: %s", Pa_GetErrorText(err));
+		return false;
+	}
+	
+	//
+	
+	bool result = false;
+	
+	const PaDeviceIndex defaultDeviceIndex = Pa_GetDefaultOutputDevice();
+	
+	if (defaultDeviceIndex == paNoDevice)
+	{
+		LOG_ERR("Pa_GetDefaultOutputDevice returned paNoDevice", 0);
+	}
+	else
+	{
+		const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(defaultDeviceIndex);
+		
+		if (deviceInfo == nullptr)
+		{
+			LOG_ERR("Pa_GetDeviceInfo returned null", 0);
+		}
+		else
+		{
+			if (deviceInfo->maxInputChannels >= numInputChannels && deviceInfo->maxOutputChannels >= numOutputChannels)
+			{
+				result = true;
+			}
+		}
+	}
+	
+	return result;
 }
 
 bool PortAudioObject::init(const int sampleRate, const int numChannels, const int bufferSize, PortAudioHandler * handler)
