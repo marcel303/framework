@@ -659,75 +659,38 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 	}
 	else
 	{
-		if (loop)
-		{
-			for (int i = 0; i < numSamples; ++i)
-			{
-				if (samplePosition < rangeBegin)
-					samplePosition = rangeBegin;
-				if (samplePosition >= rangeEnd)
-				{
-					if (maxLoopCount == 0 || loopCount + 1 < maxLoopCount)
-					{
-						samplePosition = rangeBegin;
-						hasLooped = true;
-						loopCount++;
-					}
-					else
-					{
-						isDone = true;
-						isPlaying = false;
-					}
-				}
-				
-				if (samplePosition < 0 || samplePosition >= pcmData->numSamples)
-					samples[i] = 0.f;
-				else
-					samples[i] = pcmData->samples[samplePosition];
-				
-				samplePosition += 1;
-			}
-		}
-		else
+		for (int i = 0; i < numSamples; ++i)
 		{
 			if (samplePosition < rangeBegin)
 				samplePosition = rangeBegin;
 			if (samplePosition >= rangeEnd)
-				samplePosition = rangeEnd;
-			
-			for (int i = 0; i < numSamples; ++i)
 			{
-				if (samplePosition < 0)
+				if (loop && (maxLoopCount == 0 || loopCount + 1 < maxLoopCount))
 				{
-					samples[i] = 0.f;
-				}
-				else if (samplePosition < pcmData->numSamples)
-				{
-					samples[i] = pcmData->samples[samplePosition];
+					samplePosition = rangeBegin;
+					hasLooped = true;
+					loopCount++;
 				}
 				else
 				{
-					samples[i] = 0.f;
-				}
-				
-				if (samplePosition < rangeEnd)
-				{
-					samplePosition++;
+					isDone = true;
+					isPlaying = false;
 				}
 			}
 			
-			if (samplePosition == rangeEnd)
-			{
-				isDone = true;
-				isPlaying = false;
-			}
+			if (samplePosition < 0 || samplePosition >= pcmData->numSamples)
+				samples[i] = 0.f;
+			else
+				samples[i] = pcmData->samples[samplePosition];
+			
+			samplePosition += 1;
 		}
 	}
 }
 
 //
 
-void AudioVoice::applyRamping(float * __restrict samples, const int numSamples)
+void AudioVoice::applyRamping(float * __restrict samples, const int numSamples, const int durationInSamples)
 {
 	hasRamped = false;
 	
@@ -735,9 +698,9 @@ void AudioVoice::applyRamping(float * __restrict samples, const int numSamples)
 	
 	if (ramp)
 	{
-		if (isRamped == false)
+		if (rampValue < 1.f)
 		{
-			const float gainStep = 1.f / numSamples;
+			const float gainStep = 1.f / durationInSamples;
 			
 			for (int i = 0; i < numSamples; ++i)
 			{
@@ -761,9 +724,9 @@ void AudioVoice::applyRamping(float * __restrict samples, const int numSamples)
 	}
 	else
 	{
-		if (isRamped == true)
+		if (rampValue > 0.f)
 		{
-			const float gainStep = -1.f / numSamples;
+			const float gainStep = -1.f / durationInSamples;
 			
 			for (int i = 0; i < numSamples; ++i)
 			{
@@ -1001,7 +964,7 @@ void AudioVoiceManager::portAudioCallback(
 				
 				// apply volume ramping
 				
-				voice.applyRamping(voiceSamples, numSamples);
+				voice.applyRamping(voiceSamples, numSamples, SAMPLE_RATE * 3);
 				
 				if (voice.channelIndex != -1)
 				{

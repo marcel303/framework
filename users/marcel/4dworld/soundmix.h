@@ -348,7 +348,7 @@ struct AudioVoice
 	{
 	}
 	
-	void applyRamping(float * __restrict samples, const int numSamples);
+	void applyRamping(float * __restrict samples, const int numSamples, const int durationInSamples);
 	void applyLimiter(float * __restrict samples, const int numSamples, const float maxGain);
 };
 
