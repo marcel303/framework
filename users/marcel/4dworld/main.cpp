@@ -52,20 +52,21 @@ todo : editor :
 
 extern const int GFX_SX;
 extern const int GFX_SY;
-extern const bool STEREO_OUTPUT;
+
+extern bool STEREO_OUTPUT;
 
 #define FULLSCREEN 0
 
-const bool STEREO_OUTPUT = true;
+bool STEREO_OUTPUT = true;
 
 //
 
 #if FULLSCREEN
 	const int GFX_SX = 2560/2;
-	const int GFX_SY = 1600/2;
+	const int GFX_SY = 1600	/2;
 #else
 	const int GFX_SX = 1300;
-	const int GFX_SY = 750;
+	const int GFX_SY = 760;
 #endif
 
 //
@@ -87,6 +88,8 @@ int main(int argc, char * argv[])
 #if FULLSCREEN
 	framework.fullscreen = true;
 #endif
+
+	//framework.waitForEvents = true;
 	
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{

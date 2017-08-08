@@ -6,7 +6,8 @@
 
 extern const int GFX_SX;
 extern const int GFX_SY;
-extern const bool STEREO_OUTPUT;
+
+extern bool STEREO_OUTPUT;
 
 const static float kWorldSx = 10.f;
 const static float kWorldSy = 8.f;

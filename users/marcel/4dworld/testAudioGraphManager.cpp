@@ -11,7 +11,8 @@
 
 extern const int GFX_SX;
 extern const int GFX_SY;
-extern const bool STEREO_OUTPUT;
+
+extern bool STEREO_OUTPUT;
 
 //
 
@@ -349,6 +350,8 @@ struct Bird : EntityBase
 	float soundLevelFastChanging;
 	float soundPerturbance;
 	
+	bool mouseHover;
+	
 	Bird()
 		: EntityBase()
 		, state(kState_Idle)
@@ -365,6 +368,7 @@ struct Bird : EntityBase
 		, soundLevelSlowChanging(0.f)
 		, soundLevelFastChanging(0.f)
 		, soundPerturbance(0.f)
+		, mouseHover(false)
 	{
 		type = kEntity_Bird;
 		
@@ -510,6 +514,19 @@ struct Bird : EntityBase
 		
 		tickSoundLevels(soundLevel, dt);
 		
+		// update mouse hover state
+		
+		const float distanceToMouse = (currentPos - g_world->xformScreenToWorld(mouse.x, mouse.y, currentPos[1])).CalcSize();
+		
+		mouseHover = distanceToMouse < 1.f;
+		
+		// kill ?
+		
+		if (mouseHover && keyboard.wentDown(SDLK_BACKSPACE))
+		{
+			kill();
+		}
+		
 		// evaluate based on current state
 		
 		switch (state)
@@ -642,6 +659,13 @@ struct Bird : EntityBase
 			break;
 		}
 		
+		// alive state
+		
+		if (graphInstance->audioGraph->isFLagSet("dead"))
+		{
+			dead = true;
+		}
+		
 		//
 		
 		graphInstance->audioGraph->setMemf("pos", currentPos[0], currentPos[1], currentPos[2]);
@@ -649,6 +673,11 @@ struct Bird : EntityBase
 		//
 		
 		previousSoundLevel = soundLevel;
+	}
+	
+	virtual void kill() override
+	{
+		graphInstance->audioGraph->setFlag("kill");
 	}
 };
 
@@ -767,6 +796,8 @@ struct Machine : EntityBase
 		
 		desiredWorldPos = worldPos;
 	#endif
+	
+		desiredTension = random(0.f, 1.f);
 	}
 	
 	virtual void tick(const float dt) override
@@ -850,6 +881,10 @@ struct Machine : EntityBase
 				{
 					inputState = kInputState_Tension;
 				}
+				else if (mouseHover && keyboard.wentDown(SDLK_BACKSPACE))
+				{
+					kill();
+				}
 			}
 			else if (inputState == kInputState_Drag)
 			{
@@ -925,6 +960,7 @@ struct World : WorldInterface
 		float birdVolume;
 		float voiceVolume;
 		float machineVolume;
+		float craziness;
 		
 		Parameters()
 			: wavefieldC(1000.f)
@@ -932,6 +968,7 @@ struct World : WorldInterface
 			, birdVolume(1.f)
 			, voiceVolume(1.f)
 			, machineVolume(1.f)
+			, craziness(0.f)
 		{
 		}
 		
@@ -947,8 +984,11 @@ struct World : WorldInterface
 			birdVolume = other.birdVolume;
 			voiceVolume = other.voiceVolume;
 			machineVolume = other.machineVolume;
+			craziness = other.craziness;
 		}
 	};
+	
+	AudioGraphInstance * globalsInstance;
 	
 	std::vector<EntityBase*> entities;
 	
@@ -969,7 +1009,8 @@ struct World : WorldInterface
 	bool showBirdDebugs;
 	
 	World()
-		: entities()
+		: globalsInstance(nullptr)
+		, entities()
 		, currentNumOneshots(0)
 		, desiredNumOneshots(0)
 		, worldToScreen(true)
@@ -985,6 +1026,10 @@ struct World : WorldInterface
 	
 	void init()
 	{
+		globalsInstance = g_audioGraphMgr->createInstance("globals.xml");
+		
+		//
+		
 		worldToScreen = Mat4x4(true).Translate(GFX_SX/3, GFX_SY/2, 0).Scale(16.f, 16.f, 1.f);
 		
 		wavefield.init(64);
@@ -1003,6 +1048,8 @@ struct World : WorldInterface
 		}
 		
 		entities.clear();
+		
+		g_audioGraphMgr->free(globalsInstance);
 	}
 	
 	void addBall()
@@ -1134,6 +1181,10 @@ struct World : WorldInterface
 		//
 		
 		currentParams.lerpTo(desiredParams, dt);
+		
+		//
+		
+		globalsInstance->audioGraph->setMemf("crazy", currentParams.craziness);
 		
 		//
 		
@@ -1354,7 +1405,7 @@ struct World : WorldInterface
 					
 					hqBegin(HQ_FILLED_CIRCLES);
 					{
-						setColor(colorWhite);
+						setColor(bird->mouseHover ? colorYellow : colorWhite);
 						hqFillCircle(bird->currentPos[0], bird->currentPos[2], .5f);
 					}
 					hqEnd();
@@ -1442,6 +1493,14 @@ void testAudioGraphManager()
 	
 	//
 	
+	{
+		PortAudioObject pa;
+		if (pa.isSupported(0, 16))
+			STEREO_OUTPUT = false;
+	}
+	
+	//
+	
 	const int kNumChannels = 16;
 	
 	AudioVoiceManager voiceMgr;
@@ -1456,10 +1515,6 @@ void testAudioGraphManager()
 	
 	Assert(g_audioGraphMgr == nullptr);
 	g_audioGraphMgr = &audioGraphMgr;
-	
-	//
-	
-	AudioGraphInstance * globalsInstance = audioGraphMgr.createInstance("globals.xml");
 	
 	//
 	
@@ -1546,12 +1601,13 @@ void testAudioGraphManager()
 					}
 					doBreak();
 					
-					doSlider(world->desiredParams.birdVolume, "bird volume", .5f, dt);
+					doSlider(world->desiredParams.birdVolume, "bird volume", .6f, dt);
 					doBreak();
-					doSlider(world->desiredParams.voiceVolume, "voice volume", .5f, dt);
+					doSlider(world->desiredParams.voiceVolume, "voice volume", .6f, dt);
 					doBreak();
-					doSlider(world->desiredParams.machineVolume, "machine volume", .5f, dt);
+					doSlider(world->desiredParams.machineVolume, "machine volume", .6f, dt);
 					doBreak();
+					doSlider(world->desiredParams.craziness, "craziness", .6f, dt);
 				}
 			}
 		}
@@ -1728,10 +1784,19 @@ void testAudioGraphManager()
 				
 				if (audioGraphMgr.selectedFile && audioGraphMgr.selectedFile->activeInstance)
 				{
+					int64_t audioCpuTime = 0;
+					
+					SDL_LockMutex(audioUpdateHandler.mutex);
+					{
+						audioCpuTime = audioUpdateHandler.cpuTime;
+					}
+					SDL_UnlockMutex(audioUpdateHandler.mutex);
+					
 					setColor(colorGreen);
-					drawText(GFX_SX/2, 20, 20, 0, 0, "- 4DWORLD :: %s: %p -",
+					drawText(GFX_SX/2, 20, 20, 0, 0, "- 4DWORLD :: %s: %p :: %.2f%% -",
 						audioGraphMgr.selectedFile->filename.c_str(),
-						audioGraphMgr.selectedFile->activeInstance->audioGraph);
+						audioGraphMgr.selectedFile->activeInstance->audioGraph,
+						audioCpuTime / 1000000.f * 100.f);
 				}
 			}
 			popFontMode();
@@ -1756,10 +1821,6 @@ void testAudioGraphManager()
 		delete world;
 		world = nullptr;
 	}
-	
-	//
-	
-	audioGraphMgr.free(globalsInstance);
 	
 	//
 	
