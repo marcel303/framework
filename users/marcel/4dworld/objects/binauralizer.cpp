@@ -110,6 +110,7 @@ namespace binaural
 		{
 			memset(audioBufferL.samples, 0, sizeof(audioBufferL));
 			memset(audioBufferR.samples, 0, sizeof(audioBufferR));
+			nextReadLocation = AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE;
 			return;
 		}
 		

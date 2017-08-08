@@ -259,6 +259,10 @@ namespace binaural
 	
 	struct Mutex
 	{
+		virtual ~Mutex()
+		{
+		}
+		
 		virtual void lock() = 0;
 		virtual void unlock() = 0;
 	};
