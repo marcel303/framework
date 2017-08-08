@@ -73,12 +73,43 @@ AudioNodeWavefield2D::AudioNodeWavefield2D()
 	addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 
 	wavefield = new Wavefield2D();
+	
+	randomize();
 }
 
 AudioNodeWavefield2D::~AudioNodeWavefield2D()
 {
 	delete wavefield;
 	wavefield = nullptr;
+}
+
+void AudioNodeWavefield2D::randomize()
+{
+	const double xRatio = random(0.0, 1.0 / 10.0);
+	const double yRatio = random(0.0, 1.0 / 10.0);
+	const double randomFactor = random(0.0, 1.0);
+	//const double cosFactor = random(0.0, 1.0);
+	const double cosFactor = 0.0;
+	const double perlinFactor = random(0.0, 1.0);
+	
+	for (int x = 0; x < wavefield->numElems; ++x)
+	{
+		for (int y = 0; y < wavefield->numElems; ++y)
+		{
+			wavefield->p[x][y] = 0.0;
+			wavefield->v[x][y] = 0.0;
+			wavefield->d[x][y] = 0.0;
+			
+			wavefield->f[x][y] = 1.0;
+			
+			wavefield->f[x][y] *= lerp<double>(1.0, random(0.f, 1.f), randomFactor);
+			wavefield->f[x][y] *= lerp<double>(1.0, (std::cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
+			//wavefield->f[x][y] = 1.0 - std::pow(wavefield->f[x][y], 2.0);
+			
+			//wavefield->f[x][y] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
+			wavefield->f[x][y] *= lerp<double>(1.0, scaled_octave_noise_2d(16, .4f, 1.f / 20.f, 0.f, 1.f, x, y), perlinFactor);
+		}
+	}
 }
 
 void AudioNodeWavefield2D::tick(const float _dt)
@@ -158,31 +189,7 @@ void AudioNodeWavefield2D::handleTrigger(const int inputSocketIndex, const Audio
 	}
 	else if (inputSocketIndex == kInput_Randomize)
 	{
-		const double xRatio = random(0.0, 1.0 / 10.0);
-		const double yRatio = random(0.0, 1.0 / 10.0);
-		const double randomFactor = random(0.0, 1.0);
-		//const double cosFactor = random(0.0, 1.0);
-		const double cosFactor = 0.0;
-		const double perlinFactor = random(0.0, 1.0);
-		
-		for (int x = 0; x < wavefield->numElems; ++x)
-		{
-			for (int y = 0; y < wavefield->numElems; ++y)
-			{
-				wavefield->p[x][y] = 0.0;
-				wavefield->v[x][y] = 0.0;
-				wavefield->d[x][y] = 0.0;
-				
-				wavefield->f[x][y] = 1.0;
-				
-				wavefield->f[x][y] *= lerp<double>(1.0, random(0.f, 1.f), randomFactor);
-				wavefield->f[x][y] *= lerp<double>(1.0, (std::cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
-				//wavefield->f[x][y] = 1.0 - std::pow(wavefield->f[x][y], 2.0);
-				
-				//wavefield->f[x][y] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
-				wavefield->f[x][y] *= lerp<double>(1.0, scaled_octave_noise_2d(16, .4f, 1.f / 20.f, 0.f, 1.f, x, y), perlinFactor);
-			}
-		}
+		randomize();
 	}
 }
 

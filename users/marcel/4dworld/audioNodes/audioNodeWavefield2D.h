@@ -64,6 +64,8 @@ struct AudioNodeWavefield2D : AudioNodeBase
 	AudioNodeWavefield2D();
 	virtual ~AudioNodeWavefield2D() override;
 	
+	void randomize();
+	
 	virtual void tick(const float dt) override;
 	
 	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) override;
