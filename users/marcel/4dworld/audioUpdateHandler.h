@@ -89,6 +89,10 @@ struct AudioUpdateHandler : PortAudioHandler
 	
 	SDL_mutex * mutex;
 	
+	int64_t cpuTime;
+	int64_t cpuTimeTotal;
+	int64_t nextCpuTimeUpdate;
+	
 	AudioUpdateHandler();
 	~AudioUpdateHandler();
 	

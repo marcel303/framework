@@ -31,6 +31,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioGraphManager.h"
 #include "osc4d.h"
 #include "soundmix.h"
+#include "Timer.h"
 #include <SDL2/SDL.h>
 #include <vector>
 
@@ -44,6 +45,8 @@ AudioUpdateHandler::AudioUpdateHandler()
 	, oscStream(nullptr)
 	, time(0.0)
 	, mutex(nullptr)
+	, cpuTime(0)
+	, nextCpuTimeUpdate()
 {
 }
 
@@ -100,6 +103,10 @@ void AudioUpdateHandler::portAudioCallback(
 	void * outputBuffer,
 	int framesPerBuffer)
 {
+	cpuTimeTotal -= g_TimerRT.TimeUS_get();
+	
+	//
+	
 	bool forceSyncOsc = false;
 	
 	//
@@ -162,4 +169,22 @@ void AudioUpdateHandler::portAudioCallback(
 	g_currentAudioTime = 0.0;
 	
 	time += dt;
+	
+	//
+	
+	const int64_t currentTimeUs = g_TimerRT.TimeUS_get();
+	
+	cpuTimeTotal += currentTimeUs;
+	
+	if (currentTimeUs >= nextCpuTimeUpdate)
+	{
+		SDL_LockMutex(mutex);
+		{
+			cpuTime = cpuTimeTotal;
+			cpuTimeTotal = 0;
+		}
+		SDL_UnlockMutex(mutex);
+		
+		nextCpuTimeUpdate = currentTimeUs + 1000000;
+	}
 }
