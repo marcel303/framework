@@ -56,6 +56,7 @@ AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
 	in("audio", "audioValue");
 	in("gain", "audioValue", "1");
 	in("global", "bool", "1");
+	in("rampTime", "audioValue", "1");
 	//in("color", "string", "ff0000");
 	//in("name", "string");
 	in("pos.x", "audioValue");
@@ -116,6 +117,7 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);
 	addInput(kInput_Gain, kAudioPlugType_FloatVec);
+	addInput(kInput_RampTime, kAudioPlugType_FloatVec);
 	addInput(kInput_Global, kAudioPlugType_Bool);
 	//addInput(kInput_Color, kAudioPlugType_String);
 	//addInput(kInput_Name, kAudioPlugType_String);
@@ -156,16 +158,19 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_RampDown, kAudioPlugType_Trigger);
 	addOutput(kOutput_RampedUp, kAudioPlugType_Trigger, &dummyTriggerData);
 	addOutput(kOutput_RampedDown, kAudioPlugType_Trigger, &dummyTriggerData);
-	
-	//
-	
-	source.voiceNode = this;
-	g_voiceMgr->allocVoice(voice, &source, "voice.4d", true, .2f);
 }
 
 AudioNodeVoice4D::~AudioNodeVoice4D()
 {
 	g_voiceMgr->freeVoice(voice);
+}
+
+void AudioNodeVoice4D::init(const GraphNode & node)
+{
+	const float rampTime = getInputAudioFloat(kInput_RampTime, &AudioFloat::One)->getMean();
+	
+	source.voiceNode = this;
+	g_voiceMgr->allocVoice(voice, &source, "voice.4d", true, .2f, rampTime);
 }
 
 void AudioNodeVoice4D::tick(const float dt)

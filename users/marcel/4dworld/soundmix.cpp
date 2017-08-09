@@ -804,7 +804,7 @@ void AudioVoiceManager::shut()
 	numChannels = 0;
 }
 
-bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay)
+bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime)
 {
 	Assert(voice == nullptr);
 	Assert(source != nullptr);
@@ -831,6 +831,7 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, co
 			voice->ramp = true;
 			voice->rampValue = 0.f;
 			voice->rampDelay = rampDelay;
+			voice->rampTime = rampTime;
 			voice->isRamped = false;
 		}
 		else
@@ -838,6 +839,7 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, co
 			voice->ramp = true;
 			voice->rampValue = 1.f;
 			voice->rampDelay = 0.f;
+			voice->rampTime = 0.f;
 			voice->isRamped = true;
 		}
 	}
@@ -964,7 +966,7 @@ void AudioVoiceManager::portAudioCallback(
 				
 				// apply volume ramping
 				
-				voice.applyRamping(voiceSamples, numSamples, SAMPLE_RATE * 3);
+				voice.applyRamping(voiceSamples, numSamples, SAMPLE_RATE * voice.rampTime);
 				
 				if (voice.channelIndex != -1)
 				{

@@ -327,6 +327,7 @@ struct AudioVoice
 	bool ramp;
 	float rampValue;
 	float rampDelay;
+	float rampTime;
 	bool isRamped;
 	bool hasRamped;
 	
@@ -340,9 +341,10 @@ struct AudioVoice
 		, initOsc(true)
 		, source(nullptr)
 		, ramp(true)
-		, rampValue(0.f)
+		, rampValue(1.f)
 		, rampDelay(0.f)
-		, isRamped(false)
+		, rampTime(0.f)
+		, isRamped(true)
 		, hasRamped(false)
 		, limiter()
 	{
@@ -389,7 +391,7 @@ struct AudioVoiceManager : PortAudioHandler
 	void init(const int numChannels);
 	void shut();
 	
-	bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay);
+	bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime);
 	void freeVoice(AudioVoice *& voice);
 	
 	void updateChannelIndices();

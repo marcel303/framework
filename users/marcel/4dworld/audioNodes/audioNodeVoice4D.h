@@ -44,6 +44,7 @@ struct AudioNodeVoice4D : AudioNodeBase
 		kInput_Audio,
 		kInput_Gain,
 		kInput_Global,
+		kInput_RampTime,
 		//kInput_Color,
 		//kInput_Name,
 		kInput_PosX,
@@ -98,7 +99,9 @@ struct AudioNodeVoice4D : AudioNodeBase
 	
 	AudioNodeVoice4D();
 	~AudioNodeVoice4D() override;
-
+	
+	virtual void init(const GraphNode & node) override;
+	
 	virtual void tick(const float dt) override;
 	
 	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) override;
