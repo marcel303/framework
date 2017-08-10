@@ -40,11 +40,37 @@ struct AudioGraphFile
 
 struct AudioGraphManager
 {
+	struct ControlValue
+	{
+		std::string name;
+		int refCount = 0;
+		
+		float min;
+		float max;
+		float defaultX;
+		float defaultY;
+		
+		float x;
+		float y;
+	};
+	
+	struct Memf
+	{
+		float value1 = 0.f;
+		float value2 = 0.f;
+		float value3 = 0.f;
+		float value4 = 0.f;
+	};
+	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
+	
+	std::vector<ControlValue> controlValues;
 	
 	std::map<std::string, AudioGraphFile*> files;
 	
 	AudioGraphFile * selectedFile;
+	
+	std::map<std::string, Memf> memf;
 	
 	SDL_mutex * audioMutex;
 	
@@ -59,6 +85,13 @@ struct AudioGraphManager
 	
 	AudioGraphInstance * createInstance(const char * filename);
 	void free(AudioGraphInstance *& instance);
+	
+	void registerControlValue(const char * name, const float min, const float max, const float defaultX, const float defaultY);
+	void unregisterControlValue(const char * name);
+	void exportControlValues();
+	
+	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
+	Memf getMemf(const char * name);
 
 	void tick(const float dt);
 	void updateAudioValues();

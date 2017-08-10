@@ -243,13 +243,19 @@ void AudioGraphManager::init(SDL_mutex * mutex)
 
 void AudioGraphManager::shut()
 {
+	g_audioGraphMgr = this;
+	{
+		for (auto & file : files)
+			delete file.second;
+		files.clear();
+		
+		selectedFile = nullptr;
+	}
+	g_audioGraphMgr = nullptr;
+	
+	//
+	
 	audioMutex = nullptr;
-	
-	selectedFile = nullptr;
-	
-	for (auto & file : files)
-		delete file.second;
-	files.clear();
 	
 	delete typeDefinitionLibrary;
 	typeDefinitionLibrary = nullptr;
@@ -436,10 +442,126 @@ void AudioGraphManager::free(AudioGraphInstance *& instance)
 	SDL_UnlockMutex(audioMutex);
 }
 
+void AudioGraphManager::registerControlValue(const char * name, const float min, const float max, const float defaultX, const float defaultY)
+{
+	SDL_LockMutex(audioMutex);
+	{
+		bool exists = false;
+		
+		for (auto & controlValue : controlValues)
+		{
+			if (controlValue.name == name)
+			{
+				controlValue.refCount++;
+				exists = true;
+				break;
+			}
+		}
+		
+		if (exists == false)
+		{
+			controlValues.resize(controlValues.size() + 1);
+			
+			auto & controlValue = controlValues.back();
+			
+			controlValue.name = name;
+			controlValue.refCount = 1;
+			controlValue.min = min;
+			controlValue.max = max;
+			controlValue.defaultX = defaultX;
+			controlValue.defaultY = defaultY;
+			controlValue.x = defaultX;
+			controlValue.y = defaultY;
+		}
+	}
+	SDL_UnlockMutex(audioMutex);
+}
+
+void AudioGraphManager::unregisterControlValue(const char * name)
+{
+	SDL_LockMutex(audioMutex);
+	{
+		bool exists = false;
+		
+		for (auto controlValueItr = controlValues.begin(); controlValueItr != controlValues.end(); ++controlValueItr)
+		{
+			auto & controlValue = *controlValueItr;
+			
+			if (controlValue.name == name)
+			{
+				controlValue.refCount--;
+				
+				if (controlValue.refCount == 0)
+				{
+					//LOG_DBG("erasing control value %s", name);
+					
+					controlValues.erase(controlValueItr);
+				}
+				
+				exists = true;
+				break;
+			}
+		}
+		
+		Assert(exists);
+		if (exists == false)
+		{
+			LOG_WRN("failed to unregister control value %s", name);
+		}
+	}
+	SDL_UnlockMutex(audioMutex);
+}
+
+void AudioGraphManager::exportControlValues()
+{
+	SDL_LockMutex(audioMutex);
+	{
+		for (auto & controlValue : controlValues)
+		{
+			setMemf(controlValue.name.c_str(), controlValue.x, controlValue.y);
+		}
+	}
+	SDL_UnlockMutex(audioMutex);
+}
+
+void AudioGraphManager::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
+{
+	SDL_LockMutex(audioMutex);
+	{
+		auto & mem = memf[name];
+		
+		mem.value1 = value1;
+		mem.value2 = value2;
+		mem.value3 = value3;
+		mem.value4 = value4;
+	}
+	SDL_UnlockMutex(audioMutex);
+}
+
+AudioGraphManager::Memf AudioGraphManager::getMemf(const char * name)
+{
+	Memf result;
+	
+	SDL_LockMutex(audioMutex);
+	{
+		auto memfItr = memf.find(name);
+		
+		if (memfItr != memf.end())
+		{
+			result = memfItr->second;
+		}
+	}
+	SDL_UnlockMutex(audioMutex);
+	
+	return result;
+}
+
 void AudioGraphManager::tick(const float dt)
 {
 	SDL_LockMutex(audioMutex);
 	{
+		exportControlValues();
+		
 		for (auto & file : files)
 			for (auto & instance : file.second->instanceList)
 				instance.audioGraph->tick(dt);

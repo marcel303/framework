@@ -258,7 +258,7 @@ void AudioGraph::setMemf(const char * name, const float v1, const float v2, cons
 
 AudioGraph::Memf AudioGraph::getMemf(const char * name) const
 {
-	AudioGraph::Memf result;
+	Memf result;
 	
 	SDL_LockMutex(mutex);
 	{
