@@ -22,6 +22,8 @@ extern bool STEREO_OUTPUT;
 
 #define MACHINE_V2 1
 
+#define BINAURAL_DEMO 0
+
 //
 
 static bool inputIsCaptured = false;
@@ -940,6 +942,19 @@ struct Machine : EntityBase
 	}
 };
 
+struct AlwaysThere : EntityBase
+{
+	AlwaysThere(const char * filename)
+		: EntityBase()
+	{
+		graphInstance = g_audioGraphMgr->createInstance(filename);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+	}
+};
+
 //
 
 #include "wavefield.h"
@@ -960,6 +975,7 @@ struct World : WorldInterface
 		float birdVolume;
 		float voiceVolume;
 		float machineVolume;
+		float machineSecondary;
 		float craziness;
 		
 		Parameters()
@@ -968,6 +984,7 @@ struct World : WorldInterface
 			, birdVolume(1.f)
 			, voiceVolume(1.f)
 			, machineVolume(1.f)
+			, machineSecondary(0.f)
 			, craziness(0.f)
 		{
 		}
@@ -984,6 +1001,7 @@ struct World : WorldInterface
 			birdVolume = other.birdVolume;
 			voiceVolume = other.voiceVolume;
 			machineVolume = other.machineVolume;
+			machineSecondary = other.machineSecondary;
 			craziness = other.craziness;
 		}
 	};
@@ -1026,7 +1044,12 @@ struct World : WorldInterface
 	
 	void init()
 	{
+	#if BINAURAL_DEMO
+		globalsInstance = g_audioGraphMgr->createInstance("binaural1.xml");
+		g_audioGraphMgr->selectInstance(globalsInstance);
+	#else
 		globalsInstance = g_audioGraphMgr->createInstance("globals.xml");
+	#endif
 		
 		//
 		
@@ -1037,6 +1060,12 @@ struct World : WorldInterface
 		
 		wavefieldToWorld = Mat4x4(true).Scale(FIELD_SIZE, FIELD_SIZE, 1.f).Translate(-1.f, -1.f, 0.f).Scale(2.f, 2.f, 1.f).Scale(1.f / wavefield.numElems, 1.f / wavefield.numElems, 1.f);
 		wavefieldToScreen = worldToScreen * wavefieldToWorld;
+		
+		//
+		
+		entities.push_back(new AlwaysThere("combTest4.xml")); // pulsing sound with heavy comb filter
+		
+		entities.push_back(new AlwaysThere("combTest5.xml")); // heavy bass pulsing sound with comb filter
 	}
 	
 	void shut()
@@ -1226,6 +1255,13 @@ struct World : WorldInterface
 			if (entity->type == kEntity_Machine)
 			{
 				entity->graphInstance->audioGraph->setMemf("vol", currentParams.machineVolume);
+				
+				entity->graphInstance->audioGraph->setMemf("secondary", currentParams.machineSecondary);
+			}
+			
+			if (entity->graphInstance != nullptr)
+			{
+				entity->graphInstance->audioGraph->setMemf("crazy", currentParams.craziness);
 			}
 		}
 		
@@ -1488,7 +1524,7 @@ void testAudioGraphManager()
 	
 	//fillHrirSampleSetCache("binaural/CIPIC/subject10", "cipic.10", kHRIRSampleSetType_Cipic);
 	//fillHrirSampleSetCache("binaural/CIPIC/subject11", "cipic.11", kHRIRSampleSetType_Cipic);
-	//fillHrirSampleSetCache("binaural/CIPIC/subject12", "cipic.12", kHRIRSampleSetType_Cipic);
+	fillHrirSampleSetCache("binaural/CIPIC/subject12", "cipic.12", kHRIRSampleSetType_Cipic);
 	//fillHrirSampleSetCache("binaural/CIPIC/subject147", "cipic.147", kHRIRSampleSetType_Cipic);
 	
 	//
@@ -1520,6 +1556,11 @@ void testAudioGraphManager()
 	
 	World * world = nullptr;
 	
+#if BINAURAL_DEMO
+	world = new World();
+	world->init();
+#endif
+	
 	//
 	
 	std::string oscIpAddress = "192.168.1.10";
@@ -1550,6 +1591,10 @@ void testAudioGraphManager()
 	bool graphList = true;
 	bool instanceList = false;
 	
+#if BINAURAL_DEMO
+	instanceList = true;
+#endif
+	
 	auto doMenus = [&](const bool doActions, const bool doDraw, const float dt) -> bool
 	{
 		uiState.sx = 200;
@@ -1558,6 +1603,7 @@ void testAudioGraphManager()
 		
 		makeActive(&uiState, doActions, doDraw);
 		
+	#if !BINAURAL_DEMO
 		pushMenu("control");
 		{
 			doDrawer(interact, "control");
@@ -1599,6 +1645,30 @@ void testAudioGraphManager()
 							}
 						}
 					}
+					if (doButton("kill selected type"))
+					{
+						if (g_audioGraphMgr->selectedFile && g_audioGraphMgr->selectedFile->activeInstance)
+						{
+							auto graphInstance = g_audioGraphMgr->selectedFile->activeInstance;
+							
+							EntityType type = kEntity_Unknown;
+							
+							for (auto e : world->entities)
+							{
+								if (e->graphInstance == graphInstance)
+									type = e->type;
+							}
+							
+							if (type != kEntity_Unknown)
+							{
+								for (auto e : world->entities)
+								{
+									if (e->type == type)
+										e->kill();
+								}
+							}
+						}
+					}
 					doBreak();
 					
 					doSlider(world->desiredParams.birdVolume, "bird volume", .6f, dt);
@@ -1606,8 +1676,19 @@ void testAudioGraphManager()
 					doSlider(world->desiredParams.voiceVolume, "voice volume", .6f, dt);
 					doBreak();
 					doSlider(world->desiredParams.machineVolume, "machine volume", .6f, dt);
+					doSlider(world->desiredParams.machineSecondary, "machine secondary", .6f, dt);
 					doBreak();
 					doSlider(world->desiredParams.craziness, "craziness", .6f, dt);
+					doBreak();
+					
+					doLabel("shared memory", 0.f);
+					SDL_LockMutex(g_audioGraphMgr->audioMutex);
+					// fixme !! since this code here contains drawing it make cause random stalls as the driver flushes draw calls, which may negatively affect audio processing !!! should copy the values and patch them back in after doing all the sliders ?
+					for (auto & controlValue : g_audioGraphMgr->controlValues)
+					{
+						doSlider(controlValue.x, controlValue.name.c_str(), 0.f, dt);
+					}
+					SDL_UnlockMutex(g_audioGraphMgr->audioMutex);
 				}
 			}
 		}
@@ -1665,10 +1746,14 @@ void testAudioGraphManager()
 					g_audioGraphMgr->selectInstance(instance->graphInstance);
 				}
 			}
+			
+			const std::string voiceCount = String::FormatC("voices: %d", voiceMgr.numChannelsUsed());
+			doLabel(voiceCount.c_str(), 0.f);
 		}
 		popMenu();
 		
 		doBreak();
+	#endif
 		
 		pushMenu("graphList");
 		{
@@ -1688,20 +1773,14 @@ void testAudioGraphManager()
 		}
 		popMenu();
 		
-		/*
+	#if 0 || BINAURAL_DEMO
 		doBreak();
 		
 		pushMenu("instanceList");
 		{
-			static float sliderValue = 0.f;
-			doSlider(sliderValue, "slider");
-			
 			doDrawer(instanceList, "instances");
 			if (instanceList)
 			{
-				const std::string voiceCount = String::FormatC("voices: %d", voiceMgr.numChannelsUsed());
-				doLabel(voiceCount.c_str(), 0.f);
-				
 				for (auto & fileItr : audioGraphMgr.files)
 				{
 					auto & filename = fileItr.first;
@@ -1725,7 +1804,7 @@ void testAudioGraphManager()
 			}
 		}
 		popMenu();
-		*/
+	#endif
 		
 		return uiState.activeElem != nullptr;
 	};
