@@ -85,6 +85,12 @@ extern void testBinaural();
 
 int main(int argc, char * argv[])
 {
+#if 0
+	char * basePath = SDL_GetBasePath();
+	changeDirectory(basePath);
+	SDL_free(basePath);
+#endif
+
 #if FULLSCREEN
 	framework.fullscreen = true;
 #endif
