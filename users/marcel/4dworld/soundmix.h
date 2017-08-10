@@ -416,6 +416,11 @@ extern void audioBufferMul(
 	const int numSamples,
 	const float scale);
 
+extern void audioBufferMul(
+	float * __restrict audioBuffer,
+	const int numSamples,
+	const float * __restrict scale);
+
 extern void audioBufferAdd(
 	      float * __restrict audioBufferDst,
 	const float * __restrict audioBufferSrc,

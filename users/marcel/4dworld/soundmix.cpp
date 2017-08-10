@@ -92,6 +92,34 @@ void audioBufferMul(
 	}
 }
 
+void audioBufferMul(
+	float * __restrict audioBuffer,
+	const int numSamples,
+	const float * __restrict scale)
+{
+	int begin = 0;
+	
+#if ENABLE_SSE
+	Assert((uintptr_t(audioBuffer) & 15) == 0);
+	
+	__m128 * __restrict audioBuffer4 = (__m128*)audioBuffer;
+	const int numSamples4 = numSamples / 4;
+	const __m128 * __restrict scale4 = (__m128*)scale;
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		audioBuffer4[i] = audioBuffer4[i] * scale4[i];
+	}
+	
+	begin = numSamples4 * 4;
+#endif
+
+	for (int i = begin; i < numSamples; ++i)
+	{
+		audioBuffer[i] *= scale[i];
+	}
+}
+
 void audioBufferAdd(
 	      float * __restrict audioBufferDst,
 	const float * __restrict audioBufferSrc,
