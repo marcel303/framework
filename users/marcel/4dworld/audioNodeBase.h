@@ -189,6 +189,7 @@ struct AudioFloat
 	}
 	
 	void setZero();
+	void setOne();
 	void set(const AudioFloat & other);
 	void setMul(const AudioFloat & other, const float gain);
 	void setMul(const AudioFloat & other, const AudioFloat & gain);

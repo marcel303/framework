@@ -52,6 +52,11 @@ void AudioFloat::setZero()
 	setScalar(0.f);
 }
 
+void AudioFloat::setOne()
+{
+	setScalar(1.f);
+}
+
 void AudioFloat::set(const AudioFloat & other)
 {
 	if (other.isScalar)
@@ -181,20 +186,76 @@ void AudioFloat::mul(const AudioFloat & other)
 {
 	if (isScalar && other.isScalar)
 	{
+		// both are scalar
+		
 		setScalar(getScalar() * other.getScalar());
+	}
+	else if (isScalar)
+	{
+		// we are scalar, other is vector
+		
+		Assert(isScalar == true);
+		Assert(other.isScalar == false);
+		
+		const float value = getScalar();
+		
+		if (value == 0.f)
+		{
+			// multiplying everything by zero just results in all zeroes
+			
+			setZero();
+		}
+		else if (value == 1.f)
+		{
+			// multiplying everything by one is the same as a straight copy
+			
+			set(other);
+		}
+		else
+		{
+			expand();
+			
+			setVector();
+			
+			//
+			
+			audioBufferMul(samples, AUDIO_UPDATE_SIZE, other.samples);
+		}
+	}
+	else if (other.isScalar)
+	{
+		// we are vector, other is scalar
+		
+		Assert(isScalar == false);
+		Assert(other.isScalar == true);
+		
+		const float otherValue = other.getScalar();
+		
+		if (otherValue == 0.f)
+		{
+			// multiplying everything by zero just results in all zeroes
+			
+			setZero();
+		}
+		else if (otherValue == 1.f)
+		{
+			// we don't have to do anything. this is quite a common case !
+		}
+		else
+		{
+			audioBufferMul(samples, AUDIO_UPDATE_SIZE, otherValue);
+		}
 	}
 	else
 	{
-		other.expand();
-	
-		expand();
+		// both are vector
+		
+		Assert(isScalar == false);
+		Assert(other.isScalar == false);
 		
 		//
 		
-		setVector();
-		
-		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			samples[i] *= other.samples[i];
+		audioBufferMul(samples, AUDIO_UPDATE_SIZE, other.samples);
 	}
 }
 
