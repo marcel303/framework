@@ -36,6 +36,7 @@ AUDIO_NODE_TYPE(wavefield_2d, AudioNodeWavefield2D)
 	typeName = "wavefield.2d";
 	
 	in("size", "int", "16");
+	in("gain", "audioValue", "1");
 	in("pos.dampen", "audioValue");
 	in("vel.dampen", "audioValue");
 	in("tension", "audioValue", "1");
@@ -58,6 +59,7 @@ AudioNodeWavefield2D::AudioNodeWavefield2D()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Size, kAudioPlugType_Int);
+	addInput(kInput_Gain, kAudioPlugType_FloatVec);
 	addInput(kInput_PositionDampening, kAudioPlugType_FloatVec);
 	addInput(kInput_VelocityDampening, kAudioPlugType_FloatVec);
 	addInput(kInput_Tension, kAudioPlugType_FloatVec);
@@ -116,6 +118,7 @@ void AudioNodeWavefield2D::tick(const float _dt)
 {
 	const AudioFloat defaultTension(1.f);
 	
+	const AudioFloat * gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One);
 	const AudioFloat * positionDampening = getInputAudioFloat(kInput_PositionDampening, &AudioFloat::Zero);
 	const AudioFloat * velocityDampening = getInputAudioFloat(kInput_VelocityDampening, &AudioFloat::Zero);
 	const AudioFloat * tension = getInputAudioFloat(kInput_Tension, &defaultTension);
@@ -165,6 +168,8 @@ void AudioNodeWavefield2D::tick(const float _dt)
 			sampleLocationX->samples[i] * wavefield->numElems,
 			sampleLocationY->samples[i] * wavefield->numElems);
 	}
+	
+	audioOutput.mul(*gain);
 }
 
 void AudioNodeWavefield2D::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)

@@ -36,6 +36,7 @@ struct AudioNodeWavefield1D : AudioNodeBase
 	enum Input
 	{
 		kInput_Size,
+		kInput_Gain,
 		kInput_PositionDampening,
 		kInput_VelocityDampening,
 		kInput_Tension,
