@@ -47,11 +47,14 @@ struct AudioGraphManager
 		
 		float min;
 		float max;
+		float smoothness;
 		float defaultX;
 		float defaultY;
 		
-		float x;
-		float y;
+		float desiredX;
+		float desiredY;
+		float currentX;
+		float currentY;
 	};
 	
 	struct Memf
@@ -86,8 +89,9 @@ struct AudioGraphManager
 	AudioGraphInstance * createInstance(const char * filename);
 	void free(AudioGraphInstance *& instance);
 	
-	void registerControlValue(const char * name, const float min, const float max, const float defaultX, const float defaultY);
+	void registerControlValue(const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY);
 	void unregisterControlValue(const char * name);
+	bool findControlValue(const char * name, ControlValue & result) const;
 	void exportControlValues();
 	
 	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);

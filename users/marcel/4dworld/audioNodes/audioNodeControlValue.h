@@ -53,6 +53,7 @@ struct AudioNodeControlValue : AudioNodeBase
 		kInput_Exposed,
 		kInput_Min,
 		kInput_Max,
+		kInput_Smoothness,
 		kInput_DefaultX,
 		kInput_DefaultY,
 		kInput_COUNT

@@ -53,6 +53,7 @@ AUDIO_NODE_TYPE(controlValue, AudioNodeControlValue)
 	in("exposed", "bool", "1");
 	in("min", "audioValue", "0");
 	in("max", "audioValue", "1");
+	in("smoothness", "audioValue", "0");
 	in("defaultX", "audioValue", "0");
 	in("defaultY", "audioValue", "0");
 	out("valueX", "audioValue");
@@ -72,6 +73,7 @@ AudioNodeControlValue::AudioNodeControlValue()
 	addInput(kInput_Exposed, kAudioPlugType_Bool);
 	addInput(kInput_Min, kAudioPlugType_FloatVec);
 	addInput(kInput_Max, kAudioPlugType_FloatVec);
+	addInput(kInput_Smoothness, kAudioPlugType_FloatVec);
 	addInput(kInput_DefaultX, kAudioPlugType_FloatVec);
 	addInput(kInput_DefaultY, kAudioPlugType_FloatVec);
 	addOutput(kOutput_ValueX, kAudioPlugType_FloatVec, &valueOutput[0]);
@@ -89,31 +91,63 @@ AudioNodeControlValue::~AudioNodeControlValue()
 void AudioNodeControlValue::tick(const float dt)
 {
 	const char * name = getInputString(kInput_Name, "");
+	const Type type = (Type)getInputInt(kInput_Type, 0);
 	const Scope scope = (Scope)getInputInt(kInput_Scope, 0);
-	
-	if (name != currentName)
+	const bool exposed = getInputBool(kInput_Exposed, true);
+	const float min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero)->getMean();
+	const float max = getInputAudioFloat(kInput_Max, &AudioFloat::One)->getMean();
+	const float smoothness = getInputAudioFloat(kInput_Smoothness, &AudioFloat::Zero)->getMean();
+	const float defaultX = getInputAudioFloat(kInput_DefaultX, &AudioFloat::Zero)->getMean();
+	const float defaultY = getInputAudioFloat(kInput_DefaultY, &AudioFloat::Zero)->getMean();
+
+	if (scope == kScope_Shared)
 	{
-		const Type type = (Type)getInputInt(kInput_Type, 0);
-		const Scope scope = (Scope)getInputInt(kInput_Scope, 0);
-		const bool exposed = getInputBool(kInput_Exposed, true);
-		const float min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero)->getMean();
-		const float max = getInputAudioFloat(kInput_Max, &AudioFloat::One)->getMean();
-		const float defaultX = getInputAudioFloat(kInput_DefaultX, &AudioFloat::Zero)->getMean();
-		const float defaultY = getInputAudioFloat(kInput_DefaultY, &AudioFloat::Zero)->getMean();
+		bool changed = false;
 		
-		if (isRegistered)
+		if (name != currentName)
 		{
-			g_audioGraphMgr->unregisterControlValue(currentName.c_str());
-			isRegistered = false;
+			changed = true;
+		}
+		else
+		{
+			AudioGraphManager::ControlValue controlValue;
+			
+			if (g_audioGraphMgr->findControlValue(name, controlValue) == false)
+			{
+				changed = true;
+			}
+			else
+			{
+				const float min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero)->getMean();
+				const float max = getInputAudioFloat(kInput_Max, &AudioFloat::One)->getMean();
+				const float smoothness = getInputAudioFloat(kInput_Smoothness, &AudioFloat::Zero)->getMean();
+				const float defaultX = getInputAudioFloat(kInput_DefaultX, &AudioFloat::Zero)->getMean();
+				const float defaultY = getInputAudioFloat(kInput_DefaultY, &AudioFloat::Zero)->getMean();
+				
+				if (min != controlValue.min ||
+					max != controlValue.max ||
+					smoothness != controlValue.smoothness ||
+					defaultX != controlValue.defaultX ||
+					defaultY != controlValue.defaultY)
+				{
+					changed = true;
+				}
+			}
 		}
 		
-		currentName = name;
-		
-		if (exposed == true && !currentName.empty())
+		if (changed)
 		{
-			if (scope == kScope_Shared)
+			if (isRegistered)
 			{
-				g_audioGraphMgr->registerControlValue(currentName.c_str(), min, max, defaultX, defaultY);
+				g_audioGraphMgr->unregisterControlValue(currentName.c_str());
+				isRegistered = false;
+			}
+			
+			currentName = name;
+			
+			if (exposed == true && !currentName.empty())
+			{
+				g_audioGraphMgr->registerControlValue(currentName.c_str(), min, max, smoothness, defaultX, defaultY);
 				isRegistered = true;
 			}
 		}

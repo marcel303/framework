@@ -98,6 +98,67 @@ static void doSlider(float & value, const char * name, const float smoothness, c
 	g_drawY += sy;
 }
 
+static void doSliderWithPreview(float & desiredValue, const char * name, const float currentValue, const float dt)
+{
+	UiElem & elem = g_menu->getElem(name);
+	
+	bool & isDragging = elem.getBool(0, false);
+	
+	const int sx = g_uiState->sx;
+	const int sy = 16;
+	
+	const int x1 = g_drawX;
+	const int y1 = g_drawY;
+	const int x2 = x1 + sx;
+	const int y2 = y1 + sy - 1;
+	
+	if (g_doActions)
+	{
+		elem.tick(x1, y1, x2, y2);
+		
+		if (elem.isActive)
+		{
+			if (mouse.wentDown(BUTTON_LEFT))
+			{
+				isDragging = true;
+			}
+			
+			if (mouse.wentUp(BUTTON_LEFT))
+			{
+				isDragging = false;
+			}
+			
+			if (isDragging)
+			{
+				desiredValue = saturate((mouse.x - x1) / float(x2 - x1));
+			}
+		}
+		else
+		{
+			isDragging = false;
+		}
+	}
+	
+	if (g_doDraw)
+	{
+		setColor(0, 0, 255/2);
+		drawRect(x1, y1, x1 + (x2 - x1) * desiredValue, y2);
+		
+		pushBlend(BLEND_ADD);
+		setColor(0, 100, 255/2);
+		drawRect(x1, y1, x1 + (x2 - x1) * currentValue, y2);
+		popBlend();
+		
+		setColor(colorWhite);
+		drawTextArea(x1, y1, x2 - x1, y2 - y1, 12, 0, 0, "%s", name);
+		
+		setColor(0, 0, 255);
+		drawRectLine(x1, y1, x2, y2);
+	}
+	
+	g_drawY += sy;
+}
+
 //
 
 struct WorldInterface
@@ -1683,10 +1744,24 @@ void testAudioGraphManager()
 					
 					doLabel("shared memory", 0.f);
 					SDL_LockMutex(g_audioGraphMgr->audioMutex);
-					// fixme !! since this code here contains drawing it make cause random stalls as the driver flushes draw calls, which may negatively affect audio processing !!! should copy the values and patch them back in after doing all the sliders ?
-					for (auto & controlValue : g_audioGraphMgr->controlValues)
+					auto controlValues = g_audioGraphMgr->controlValues;
+					SDL_UnlockMutex(g_audioGraphMgr->audioMutex);
+					for (auto & controlValue : controlValues)
 					{
-						doSlider(controlValue.x, controlValue.name.c_str(), 0.f, dt);
+						doSliderWithPreview(controlValue.desiredX, controlValue.name.c_str(), controlValue.currentX, dt);
+					}
+					SDL_LockMutex(g_audioGraphMgr->audioMutex);
+					for (auto & srcControlValue : controlValues)
+					{
+						for (auto & dstControlValue : g_audioGraphMgr->controlValues)
+						{
+							if (srcControlValue.name == dstControlValue.name)
+							{
+								dstControlValue.desiredX = srcControlValue.desiredX;
+								dstControlValue.desiredY = srcControlValue.desiredY;
+								break;
+							}
+						}
 					}
 					SDL_UnlockMutex(g_audioGraphMgr->audioMutex);
 				}
