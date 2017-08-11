@@ -159,7 +159,7 @@ static void doSliderWithPreview(float & desiredValue, const char * name, const f
 	g_drawY += sy;
 }
 
-static void doPad(float & desiredX, float & desiredY, const char * name, const float currentX, const float currentY, const float offsetX, const float scale, const float dt)
+static void doPad(float & desiredX, float & desiredY, const char * name, const float currentX, const float currentY, const float offsetX, const float scale, const bool doLineBreak, const float dt)
 {
 	UiElem & elem = g_menu->getElem(name);
 	
@@ -232,7 +232,10 @@ static void doPad(float & desiredX, float & desiredY, const char * name, const f
 		drawRectLine(x1, y1, x2, y2);
 	}
 	
-	g_drawY += sy;
+	if (doLineBreak)
+	{
+		g_drawY += sy;
+	}
 }
 
 //
@@ -1087,6 +1090,11 @@ struct AlwaysThere : EntityBase
 		graphInstance = g_audioGraphMgr->createInstance(filename);
 	}
 	
+	virtual ~AlwaysThere() override
+	{
+		g_audioGraphMgr->free(graphInstance);
+	}
+	
 	virtual void tick(const float dt) override
 	{
 	}
@@ -1822,28 +1830,33 @@ void testAudioGraphManager()
 					SDL_LockMutex(g_audioGraphMgr->audioMutex);
 					auto controlValues = g_audioGraphMgr->controlValues;
 					SDL_UnlockMutex(g_audioGraphMgr->audioMutex);
-					for (auto & controlValue : controlValues)
+					int padIndex = 0;
+					for (int i = 0; i < controlValues.size(); ++i)
 					{
+						auto & controlValue = controlValues[i];
+						
 						if (controlValue.type == AudioControlValue::kType_Vector1d)
 						{
 							doSliderWithPreview(controlValue.desiredX, controlValue.name.c_str(), controlValue.currentX, dt);
 						}
-					}
-					int padIndex = 0;
-					for (auto & controlValue : controlValues)
-					{
-						if (controlValue.type == AudioControlValue::kType_Vector2d)
+						else if (controlValue.type == AudioControlValue::kType_Vector2d)
 						{
+							const bool nextIsPad = i + 1 < controlValues.size() && controlValues[i + 1].type == AudioControlValue::kType_Vector2d;
+							
 							doPad(
 								controlValue.desiredX,
 								controlValue.desiredY,
 								controlValue.name.c_str(),
 								controlValue.currentX,
 								controlValue.currentY,
-								(padIndex % 2) * .5f, .5f,
+								(padIndex % 3) / 3.f, 1.f / 3.f,
+								(padIndex % 3) == 2 || nextIsPad == false,
 								dt);
 							
-							padIndex++;
+							if (nextIsPad)
+								padIndex++;
+							else
+								padIndex = 0;
 						}
 					}
 					SDL_LockMutex(g_audioGraphMgr->audioMutex);
