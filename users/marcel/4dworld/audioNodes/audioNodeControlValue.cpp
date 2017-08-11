@@ -50,7 +50,6 @@ AUDIO_NODE_TYPE(controlValue, AudioNodeControlValue)
 	in("name", "string");
 	inEnum("type", "controlValueType");
 	inEnum("scope", "controlValueScope");
-	in("exposed", "bool", "1");
 	in("min", "audioValue", "0");
 	in("max", "audioValue", "1");
 	in("smoothness", "audioValue", "0");
@@ -70,7 +69,6 @@ AudioNodeControlValue::AudioNodeControlValue()
 	addInput(kInput_Name, kAudioPlugType_String);
 	addInput(kInput_Type, kAudioPlugType_Int);
 	addInput(kInput_Scope, kAudioPlugType_Int);
-	addInput(kInput_Exposed, kAudioPlugType_Bool);
 	addInput(kInput_Min, kAudioPlugType_FloatVec);
 	addInput(kInput_Max, kAudioPlugType_FloatVec);
 	addInput(kInput_Smoothness, kAudioPlugType_FloatVec);
@@ -88,12 +86,12 @@ AudioNodeControlValue::~AudioNodeControlValue()
 		isRegistered = false;
 	}
 }
+
 void AudioNodeControlValue::tick(const float dt)
 {
 	const char * name = getInputString(kInput_Name, "");
 	const Type type = (Type)getInputInt(kInput_Type, 0);
 	const Scope scope = (Scope)getInputInt(kInput_Scope, 0);
-	const bool exposed = getInputBool(kInput_Exposed, true);
 	const float min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero)->getMean();
 	const float max = getInputAudioFloat(kInput_Max, &AudioFloat::One)->getMean();
 	const float smoothness = getInputAudioFloat(kInput_Smoothness, &AudioFloat::Zero)->getMean();
@@ -145,7 +143,7 @@ void AudioNodeControlValue::tick(const float dt)
 			
 			currentName = name;
 			
-			if (exposed == true && !currentName.empty())
+			if (!currentName.empty())
 			{
 				g_audioGraphMgr->registerControlValue(currentName.c_str(), min, max, smoothness, defaultX, defaultY);
 				isRegistered = true;
