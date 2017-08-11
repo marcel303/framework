@@ -38,25 +38,34 @@ struct AudioGraphFile
 	~AudioGraphFile();
 };
 
-struct AudioGraphManager
+struct AudioControlValue
 {
-	struct ControlValue
+	enum Type
 	{
-		std::string name;
-		int refCount = 0;
-		
-		float min;
-		float max;
-		float smoothness;
-		float defaultX;
-		float defaultY;
-		
-		float desiredX;
-		float desiredY;
-		float currentX;
-		float currentY;
+		kType_Vector1d,
+		kType_Vector2d,
+		kType_Random1d,
+		kType_Random2d,
 	};
 	
+	Type type;
+	std::string name;
+	int refCount = 0;
+	
+	float min;
+	float max;
+	float smoothness;
+	float defaultX;
+	float defaultY;
+	
+	float desiredX;
+	float desiredY;
+	float currentX;
+	float currentY;
+};
+
+struct AudioGraphManager
+{
 	struct Memf
 	{
 		float value1 = 0.f;
@@ -67,7 +76,7 @@ struct AudioGraphManager
 	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
 	
-	std::vector<ControlValue> controlValues;
+	std::vector<AudioControlValue> controlValues;
 	
 	std::map<std::string, AudioGraphFile*> files;
 	
@@ -89,9 +98,9 @@ struct AudioGraphManager
 	AudioGraphInstance * createInstance(const char * filename);
 	void free(AudioGraphInstance *& instance);
 	
-	void registerControlValue(const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY);
+	void registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY);
 	void unregisterControlValue(const char * name);
-	bool findControlValue(const char * name, ControlValue & result) const;
+	bool findControlValue(const char * name, AudioControlValue & result) const;
 	void exportControlValues();
 	
 	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);

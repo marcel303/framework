@@ -443,7 +443,7 @@ void AudioGraphManager::free(AudioGraphInstance *& instance)
 	SDL_UnlockMutex(audioMutex);
 }
 
-void AudioGraphManager::registerControlValue(const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY)
+void AudioGraphManager::registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY)
 {
 	SDL_LockMutex(audioMutex);
 	{
@@ -465,6 +465,7 @@ void AudioGraphManager::registerControlValue(const char * name, const float min,
 			
 			auto & controlValue = controlValues.back();
 			
+			controlValue.type = type;
 			controlValue.name = name;
 			controlValue.refCount = 1;
 			controlValue.min = min;
@@ -518,7 +519,7 @@ void AudioGraphManager::unregisterControlValue(const char * name)
 	SDL_UnlockMutex(audioMutex);
 }
 
-bool AudioGraphManager::findControlValue(const char * name, ControlValue & result) const
+bool AudioGraphManager::findControlValue(const char * name, AudioControlValue & result) const
 {
 	bool found = false;
 	

@@ -90,13 +90,20 @@ AudioNodeControlValue::~AudioNodeControlValue()
 void AudioNodeControlValue::tick(const float dt)
 {
 	const char * name = getInputString(kInput_Name, "");
-	const Type type = (Type)getInputInt(kInput_Type, 0);
+	const Type _type = (Type)getInputInt(kInput_Type, 0);
 	const Scope scope = (Scope)getInputInt(kInput_Scope, 0);
 	const float min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero)->getMean();
 	const float max = getInputAudioFloat(kInput_Max, &AudioFloat::One)->getMean();
 	const float smoothness = getInputAudioFloat(kInput_Smoothness, &AudioFloat::Zero)->getMean();
 	const float defaultX = getInputAudioFloat(kInput_DefaultX, &AudioFloat::Zero)->getMean();
 	const float defaultY = getInputAudioFloat(kInput_DefaultY, &AudioFloat::Zero)->getMean();
+	
+	AudioControlValue::Type type =
+		_type == kType_Vector1D ? AudioControlValue::kType_Vector1d :
+		_type == kType_Vector2D ? AudioControlValue::kType_Vector2d :
+		_type == kType_Random1D ? AudioControlValue::kType_Random1d :
+		_type == kType_Random2D ? AudioControlValue::kType_Random2d :
+		AudioControlValue::kType_Vector1d;
 
 	if (scope == kScope_Shared)
 	{
@@ -108,7 +115,7 @@ void AudioNodeControlValue::tick(const float dt)
 		}
 		else
 		{
-			AudioGraphManager::ControlValue controlValue;
+			AudioControlValue controlValue;
 			
 			if (g_audioGraphMgr->findControlValue(name, controlValue) == false)
 			{
@@ -122,7 +129,8 @@ void AudioNodeControlValue::tick(const float dt)
 				const float defaultX = getInputAudioFloat(kInput_DefaultX, &AudioFloat::Zero)->getMean();
 				const float defaultY = getInputAudioFloat(kInput_DefaultY, &AudioFloat::Zero)->getMean();
 				
-				if (min != controlValue.min ||
+				if (type != controlValue.type ||
+					min != controlValue.min ||
 					max != controlValue.max ||
 					smoothness != controlValue.smoothness ||
 					defaultX != controlValue.defaultX ||
@@ -145,7 +153,7 @@ void AudioNodeControlValue::tick(const float dt)
 			
 			if (!currentName.empty())
 			{
-				g_audioGraphMgr->registerControlValue(currentName.c_str(), min, max, smoothness, defaultX, defaultY);
+				g_audioGraphMgr->registerControlValue(type, currentName.c_str(), min, max, smoothness, defaultX, defaultY);
 				isRegistered = true;
 			}
 		}

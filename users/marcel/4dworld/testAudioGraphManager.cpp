@@ -159,6 +159,82 @@ static void doSliderWithPreview(float & desiredValue, const char * name, const f
 	g_drawY += sy;
 }
 
+static void doPad(float & desiredX, float & desiredY, const char * name, const float currentX, const float currentY, const float offsetX, const float scale, const float dt)
+{
+	UiElem & elem = g_menu->getElem(name);
+	
+	bool & isDragging = elem.getBool(0, false);
+	
+	const int sx = g_uiState->sx * scale;
+	const int sy = g_uiState->sx * scale;
+	
+	const int x1 = g_drawX + g_uiState->sx * offsetX;
+	const int y1 = g_drawY;
+	const int x2 = x1 + sx;
+	const int y2 = y1 + sy - 1;
+	
+	if (g_doActions)
+	{
+		elem.tick(x1, y1, x2, y2);
+		
+		if (elem.isActive)
+		{
+			if (mouse.wentDown(BUTTON_LEFT))
+			{
+				isDragging = true;
+			}
+			
+			if (mouse.wentUp(BUTTON_LEFT))
+			{
+				isDragging = false;
+			}
+			
+			if (isDragging)
+			{
+				desiredX = saturate((mouse.x - x1) / float(x2 - x1));
+				desiredY = saturate((mouse.y - y1) / float(y2 - y1));
+			}
+		}
+		else
+		{
+			isDragging = false;
+		}
+	}
+	
+	if (g_doDraw)
+	{
+		hqBegin(HQ_LINES);
+		{
+			setColor(0, 100, 255, 127);
+			hqLine(
+				x1 + (x2 - x1) * currentX,
+				y1 + (y2 - y1) * currentY, 5.f,
+				x1 + (x2 - x1) * desiredX,
+				y1 + (y2 - y1) * desiredY, 5.f);
+			
+			setColor(0, 0, 255/2);
+			hqLine(x1 + (x2 - x1) * currentX, y1, 1.f, x1 + (x2 - x1) * currentX, y2, 1.f);
+			hqLine(x1, y1 + (y2 - y1) * currentY, 1.f, x2, y1 + (y2 - y1) * currentY, 1.f);
+		}
+		hqEnd();
+		
+		hqBegin(HQ_FILLED_CIRCLES);
+		{
+			setColor(0, 100, 255/2);
+			hqFillCircle(x1 + (x2 - x1) * currentX, y1 + (y2 - y1) * currentY, 5.f);
+		}
+		hqEnd();
+		
+		setColor(colorWhite);
+		drawTextArea(x1, y1, x2 - x1, y2 - y1, 12, 0, 0, "%s", name);
+		
+		setColor(0, 0, 255);
+		drawRectLine(x1, y1, x2, y2);
+	}
+	
+	g_drawY += sy;
+}
+
 //
 
 struct WorldInterface
@@ -1748,7 +1824,27 @@ void testAudioGraphManager()
 					SDL_UnlockMutex(g_audioGraphMgr->audioMutex);
 					for (auto & controlValue : controlValues)
 					{
-						doSliderWithPreview(controlValue.desiredX, controlValue.name.c_str(), controlValue.currentX, dt);
+						if (controlValue.type == AudioControlValue::kType_Vector1d)
+						{
+							doSliderWithPreview(controlValue.desiredX, controlValue.name.c_str(), controlValue.currentX, dt);
+						}
+					}
+					int padIndex = 0;
+					for (auto & controlValue : controlValues)
+					{
+						if (controlValue.type == AudioControlValue::kType_Vector2d)
+						{
+							doPad(
+								controlValue.desiredX,
+								controlValue.desiredY,
+								controlValue.name.c_str(),
+								controlValue.currentX,
+								controlValue.currentY,
+								(padIndex % 2) * .5f, .5f,
+								dt);
+							
+							padIndex++;
+						}
 					}
 					SDL_LockMutex(g_audioGraphMgr->audioMutex);
 					for (auto & srcControlValue : controlValues)
