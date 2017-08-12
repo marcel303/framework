@@ -33,16 +33,23 @@ struct PortAudioHandler
 {
 	virtual void portAudioCallback(
 		const void * inputBuffer,
+		const int numInputChannels,
 		void * outputBuffer,
-		int framesPerBuffer) = 0;
+		const int framesPerBuffer) = 0;
 };
 
 struct PortAudioObject
 {
 	PaStream * stream;
+	PortAudioHandler * handler;
+	int numOutputChannels;
+	int numInputChannels;
 	
 	PortAudioObject()
 		: stream(nullptr)
+		, handler(nullptr)
+		, numOutputChannels(0)
+		, numInputChannels(0)
 	{
 	}
 	
@@ -53,7 +60,7 @@ struct PortAudioObject
 	
 	bool isSupported(const int numInputChannels, const int numOutputChannels) const;
 	
-	bool init(const int sampleRate, const int numChannels, const int bufferSize, PortAudioHandler * audioSource);
-	bool initImpl(const int sampleRate, const int numChannels, const int bufferSize, PortAudioHandler * audioSource);
+	bool init(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * audioSource);
+	bool initImpl(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * audioSource);
 	bool shut();
 };

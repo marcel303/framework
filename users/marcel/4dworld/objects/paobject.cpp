@@ -11,9 +11,9 @@ static int portaudioCallback(
 	PaStreamCallbackFlags statusFlags,
 	void * userData)
 {
-	PortAudioHandler * handler = (PortAudioHandler*)userData;
-
-	handler->portAudioCallback(inputBuffer, outputBuffer, framesPerBuffer);
+	PortAudioObject * pa = (PortAudioObject*)userData;
+	
+	pa->handler->portAudioCallback(inputBuffer, pa->numInputChannels, outputBuffer, framesPerBuffer);
 
 	return paContinue;
 }
@@ -58,9 +58,9 @@ bool PortAudioObject::isSupported(const int numInputChannels, const int numOutpu
 	return result;
 }
 
-bool PortAudioObject::init(const int sampleRate, const int numChannels, const int bufferSize, PortAudioHandler * handler)
+bool PortAudioObject::init(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * handler)
 {
-	if (initImpl(sampleRate, numChannels, bufferSize, handler) == false)
+	if (initImpl(sampleRate, numOutputChannels, numInputChannels, bufferSize, handler) == false)
 	{
 		shut();
 		
@@ -72,8 +72,12 @@ bool PortAudioObject::init(const int sampleRate, const int numChannels, const in
 	}
 }
 
-bool PortAudioObject::initImpl(const int sampleRate, const int numChannels, const int bufferSize, PortAudioHandler * handler)
+bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannels, const int _numInputChannels, const int bufferSize, PortAudioHandler * _handler)
 {
+	handler = _handler;
+	numOutputChannels = _numOutputChannels;
+	numInputChannels = _numInputChannels;
+	
 	PaError err;
 	
 	if ((err = Pa_Initialize()) != paNoError)
@@ -104,12 +108,30 @@ bool PortAudioObject::initImpl(const int sampleRate, const int numChannels, cons
 		return false;
 	}
 	
-	outputParameters.channelCount = numChannels;
+	outputParameters.channelCount = numOutputChannels;
 	outputParameters.sampleFormat = paFloat32;
 	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
 	outputParameters.hostApiSpecificStreamInfo = nullptr;
 	
-	if ((err = Pa_OpenStream(&stream, nullptr, &outputParameters, sampleRate, bufferSize, paDitherOff, portaudioCallback, handler)) != paNoError)
+	//
+	
+	PaStreamParameters inputParameters;
+	memset(&inputParameters, 0, sizeof(inputParameters));
+	
+	inputParameters.device = Pa_GetDefaultInputDevice();
+	
+	if (inputParameters.device == paNoDevice)
+	{
+		LOG_ERR("portaudio: failed to find input device", 0);
+		return false;
+	}
+	
+	inputParameters.channelCount = numInputChannels;
+	inputParameters.sampleFormat = paFloat32;
+	inputParameters.suggestedLatency = Pa_GetDeviceInfo(inputParameters.device)->defaultLowInputLatency;
+	inputParameters.hostApiSpecificStreamInfo = nullptr;
+	
+	if ((err = Pa_OpenStream(&stream, &inputParameters, &outputParameters, sampleRate, bufferSize, paDitherOff, portaudioCallback, this)) != paNoError)
 	{
 		LOG_ERR("portaudio: failed to open stream: %s", Pa_GetErrorText(err));
 		return false;
@@ -153,6 +175,10 @@ bool PortAudioObject::shut()
 		LOG_ERR("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
 		return false;
 	}
+	
+	handler = nullptr;
+	numOutputChannels = 0;
+	numInputChannels = 0;
 	
 	return true;
 }
