@@ -16,6 +16,9 @@ extern bool STEREO_OUTPUT;
 
 //
 
+#define CHANNEL_COUNT 64
+#define DYNAMIC_CHANNEL_COUNT 24
+
 #define BALL_CAGE_SIZE 16.f
 #define FIELD_SIZE 20.f
 #define FIELD_SIZE_FOR_FLYING (FIELD_SIZE * .8f)
@@ -1682,10 +1685,10 @@ void testAudioGraphManager()
 	
 	//
 	
-	const int kNumChannels = 16;
+	const int kNumChannels = CHANNEL_COUNT;
 	
 	AudioVoiceManager voiceMgr;
-	voiceMgr.init(kNumChannels);
+	voiceMgr.init(CHANNEL_COUNT, DYNAMIC_CHANNEL_COUNT);
 	voiceMgr.outputStereo = STEREO_OUTPUT;
 	g_voiceMgr = &voiceMgr;
 	
@@ -1931,7 +1934,7 @@ void testAudioGraphManager()
 				}
 			}
 			
-			const std::string voiceCount = String::FormatC("voices: %d", voiceMgr.numChannelsUsed());
+			const std::string voiceCount = String::FormatC("voices: %d / %d", voiceMgr.numDynamicChannelsUsed(), voiceMgr.numDynamicChannels);
 			doLabel(voiceCount.c_str(), 0.f);
 		}
 		popMenu();

@@ -67,7 +67,7 @@ AudioNodeVoice::AudioNodeVoice()
 	//
 	
 	source.voiceNode = this;
-	g_voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f);
+	g_voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, -1);
 }
 
 AudioNodeVoice::~AudioNodeVoice()

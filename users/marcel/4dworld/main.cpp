@@ -117,7 +117,7 @@ int main(int argc, char * argv[])
 		const int kNumChannels = 2;
 		
 		AudioVoiceManager voiceMgr;
-		voiceMgr.init(kNumChannels);
+		voiceMgr.init(kNumChannels, kNumChannels);
 		voiceMgr.outputStereo = STEREO_OUTPUT;
 		
 		g_voiceMgr = &voiceMgr;

@@ -359,6 +359,7 @@ struct AudioVoiceManager : PortAudioHandler
 	SDL_mutex * mutex;
 	
 	int numChannels;
+	int numDynamicChannels;
 	std::list<AudioVoice> voices;
 	bool outputStereo;
 	int colorIndex;
@@ -388,14 +389,14 @@ struct AudioVoiceManager : PortAudioHandler
 	
 	AudioVoiceManager();
 	
-	void init(const int numChannels);
+	void init(const int numChannels, const int numDynamicChannels);
 	void shut();
 	
-	bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime);
+	bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex);
 	void freeVoice(AudioVoice *& voice);
 	
 	void updateChannelIndices();
-	int numChannelsUsed() const;
+	int numDynamicChannelsUsed() const;
 	
 	virtual void portAudioCallback(
 		const void * inputBuffer,

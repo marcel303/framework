@@ -798,6 +798,7 @@ AudioVoiceManager * g_voiceMgr = nullptr;
 AudioVoiceManager::AudioVoiceManager()
 	: mutex(nullptr)
 	, numChannels(0)
+	, numDynamicChannels(0)
 	, voices()
 	, outputStereo(false)
 	, colorIndex(0)
@@ -806,12 +807,15 @@ AudioVoiceManager::AudioVoiceManager()
 {
 }
 	
-void AudioVoiceManager::init(const int _numChannels)
+void AudioVoiceManager::init(const int _numChannels, const int _numDynamicChannels)
 {
 	Assert(voices.empty());
 	
 	Assert(numChannels == 0);
 	numChannels = _numChannels;
+	
+	Assert(numDynamicChannels == 0);
+	numDynamicChannels = _numDynamicChannels;
 	
 	Assert(mutex == nullptr);
 	mutex = SDL_CreateMutex();
@@ -830,13 +834,18 @@ void AudioVoiceManager::shut()
 	voices.clear();
 	
 	numChannels = 0;
+	numDynamicChannels = 0;
 }
 
-bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime)
+bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
 {
 	Assert(voice == nullptr);
 	Assert(source != nullptr);
-	
+	Assert(channelIndex < 0 || (channelIndex >= 0 && channelIndex < numChannels));
+
+	if (channelIndex >= numChannels)
+		return false;
+
 	SDL_LockMutex(mutex);
 	{
 		voices.push_back(AudioVoice());
@@ -852,7 +861,14 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, co
 		
 		voice->spat.name = name;
 		
-		updateChannelIndices();
+		if (channelIndex < 0)
+		{
+			updateChannelIndices();
+		}
+		else
+		{
+			voice->channelIndex = channelIndex;
+		}
 		
 		if (doRamping)
 		{
@@ -902,12 +918,12 @@ void AudioVoiceManager::updateChannelIndices()
 {
 	// todo : mute a voice for a while after allocating channel index ? to ensure there is no issue with OSC position vs audio signal
 	
-	bool used[numChannels];
+	bool used[numDynamicChannels];
 	memset(used, 0, sizeof(used));
 	
 	for (auto & voice : voices)
 	{
-		if (voice.channelIndex != -1)
+		if (voice.channelIndex != -1 && voice.channelIndex < numDynamicChannels)
 		{
 			used[voice.channelIndex] = true;
 		}
@@ -917,7 +933,7 @@ void AudioVoiceManager::updateChannelIndices()
 	{
 		if (voice.channelIndex == -1)
 		{
-			for (int i = 0; i < numChannels; ++i)
+			for (int i = 0; i < numDynamicChannels; ++i)
 			{
 				if (used[i] == false)
 				{
@@ -932,12 +948,12 @@ void AudioVoiceManager::updateChannelIndices()
 	}
 }
 
-int AudioVoiceManager::numChannelsUsed() const
+int AudioVoiceManager::numDynamicChannelsUsed() const
 {
 	int result = 0;
 	
 	for (auto & voice : voices)
-		if (voice.channelIndex != -1)
+		if (voice.channelIndex != -1 && voice.channelIndex < numDynamicChannels)
 			result++;
 	
 	return result;

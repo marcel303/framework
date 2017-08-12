@@ -40,7 +40,7 @@ struct Creature
 	{
 		sine.init(0.f, random(100.f, 400.f));
 		
-		g_voiceMgr->allocVoice(voice, &sine, "creature", true, 0.f, 1.f);
+		g_voiceMgr->allocVoice(voice, &sine, "creature", true, 0.f, 1.f, -1);
 		
 		pos[0] = random<float>(-kWorldSx, +kWorldSx);
 		pos[1] = random(0.f, kWorldSy);
@@ -98,7 +98,7 @@ struct RicePaddy
 	{
 		source.init(32);
 		
-		g_voiceMgr->allocVoice(voice, &source, "ricePaddy", true, 0.f, 1.f);
+		g_voiceMgr->allocVoice(voice, &source, "ricePaddy", true, 0.f, 1.f, -1);
 	}
 	
 	~RicePaddy()
@@ -123,7 +123,7 @@ struct TestObject
 	{
 		sine.init(0.f, sineFrequency);
 		
-		g_voiceMgr->allocVoice(voice, &sine, "testObject", true, 0.f, 1.f);
+		g_voiceMgr->allocVoice(voice, &sine, "testObject", true, 0.f, 1.f, -1);
 		
 		uiState.sx = 300.f;
 	}
@@ -400,7 +400,7 @@ void testAudioVoiceManager()
 	
 	AudioVoiceManager voiceMgr;
 	
-	voiceMgr.init(kNumChannels);
+	voiceMgr.init(kNumChannels, kNumChannels);
 	
 	voiceMgr.outputStereo = STEREO_OUTPUT;
 	
@@ -432,7 +432,7 @@ void testAudioVoiceManager()
 	AudioSourceWavefield1D wavefield1D;
 	wavefield1D.init(256);
 	AudioVoice * wavefield1DVoice = nullptr;
-	voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D, "wavefield1D", true, 0.f, 1.f);
+	voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D, "wavefield1D", true, 0.f, 1.f, -1);
 	
 	//
 	
