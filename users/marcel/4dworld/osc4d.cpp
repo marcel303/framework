@@ -14,6 +14,19 @@ void Osc4D::beginSource(const char * name)
 	begin(text);
 }
 
+void Osc4D::beginReturn(const char * name)
+{
+	char text[1024];
+	int textLength = 0;
+	for (int i = 0; returnOscName[i]; ++i)
+		text[textLength++] = returnOscName[i];
+	for (int i = 0; name[i]; ++i)
+		text[textLength++] = name[i];
+	text[textLength] = 0;
+	
+	begin(text);
+}
+
 void Osc4D::f3(const float x, const float y, const float z)
 {
 	f(x);
@@ -284,7 +297,72 @@ void Osc4D::sourceSubBoost(const SubBoost boost)
 	end();
 }
 
-// todo : return###
+void Osc4D::setReturn(const int index, const char * side)
+{
+	sprintf_s(returnOscName, sizeof(returnOscName), "/return%d/%s/", index + 1, side);
+}
+
+void Osc4D::returnDistanceIntensity(const int index, const bool enable, const float treshold, const float curve)
+{
+	setReturn(index, "distanceIntensity");
+	
+	beginReturn("enable");
+	b(enable);
+	end();
+	
+	if (enable)
+	{
+		beginReturn("threshold");
+		f(treshold);
+		end();
+		
+		beginReturn("curve");
+		f(curve);
+		end();
+	}
+}
+
+void Osc4D::returnDistanceDamping(const int index, const bool enable, const float treshold, const float curve)
+{
+	setReturn(index, "distanceDamping");
+	
+	beginReturn("enable");
+	b(enable);
+	end();
+	
+	if (enable)
+	{
+		beginReturn("threshold");
+		f(treshold);
+		end();
+		
+		beginReturn("curve");
+		f(curve);
+		end();
+	}
+}
+
+void Osc4D::returnSide(const int index, const char * side, const bool enable, const float distance, const float scatter)
+{
+	// valid sides: left, right, top, bottom, front, back
+	
+	setReturn(index, side);
+	
+	beginReturn("enable");
+	b(enable);
+	end();
+	
+	if (enable)
+	{
+		beginReturn("distance");
+		f(distance);
+		end();
+		
+		beginReturn("scatter");
+		f(scatter);
+		end();
+	}
+}
 
 void Osc4D::globalPosition(const float x, const float y, const float z)
 {

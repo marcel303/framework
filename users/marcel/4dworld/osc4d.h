@@ -35,10 +35,12 @@ struct Osc4D
 	
 	int source;
 	char sourceOscName[64];
+	char returnOscName[64];
 
 	Osc4D()
 		: source(0)
 		, sourceOscName()
+		, returnOscName()
 	{
 	}
 	
@@ -54,6 +56,7 @@ struct Osc4D
 	virtual void s(const char * v) = 0;
 
 	void beginSource(const char * name);
+	void beginReturn(const char * name);
 	void f3(const float x, const float y, const float z);
 
 	//
@@ -94,8 +97,11 @@ struct Osc4D
 	// todo : subReduction###
 	
 	void sourceSubBoost(const SubBoost boost);
-
-	// todo : return###
+	
+	void setReturn(const int index, const char * side);
+	void returnDistanceIntensity(const int index, const bool enable, const float treshold, const float curve);
+	void returnDistanceDamping(const int index, const bool enable, const float treshold, const float curve);
+	void returnSide(const int index, const char * name, const bool enable, const float distance, const float scatter);
 
 	void globalPosition(const float x, const float y, const float z);
 	void globalDimensions(const float x, const float y, const float z);
