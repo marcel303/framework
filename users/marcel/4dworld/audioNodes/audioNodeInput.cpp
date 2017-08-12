@@ -35,7 +35,7 @@ AUDIO_NODE_TYPE(input, AudioNodeInput)
 	typeName = "audio.in";
 	
 	in("channel", "int");
-	in("gain", "audioValue");
+	in("gain", "audioValue", "1");
 	out("audio", "audioValue");
 }
 
@@ -55,7 +55,9 @@ void AudioNodeInput::tick(const float dt)
 		audioOutput.setVector();
 
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += g_numAudioInputChannels)
+		{
 			audioOutput.samples[i] = *channelPtr;
+		}
 		
 		audioOutput.mul(*gain);
 	}
