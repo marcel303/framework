@@ -27,6 +27,7 @@
 
 #include "audioNodeCombFilter.h"
 #include "vfxNodes/delayLine.h"
+#include <xmmintrin.h>
 
 AUDIO_NODE_TYPE(filter_comb, AudioNodeCombFilter)
 {
@@ -96,7 +97,9 @@ void AudioNodeCombFilter::tick(const float dt)
 		feedBack->expand();
 
 		valueOutput.setVector();
-
+		
+		_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
 			//const float offset = std::min(float(delayLine->getLength() - 1),  ((maxDelay - delay->samples[i]) * SAMPLE_RATE));
@@ -114,6 +117,8 @@ void AudioNodeCombFilter::tick(const float dt)
 
 			valueOutput.samples[i] = output;
 		}
+		
+		_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF);
 	}
 	else
 	{

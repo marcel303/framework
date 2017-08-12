@@ -36,6 +36,8 @@ void Wavefield1D::init(const int _numElems)
 
 void Wavefield1D::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
 {
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+	
 	const double vRetain = std::pow(vRetainPerSecond, dt);
 	const double pRetain = std::pow(pRetainPerSecond, dt);
 	
@@ -129,6 +131,8 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 		d[i] -= d_clamped;
 	}
 #endif
+
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF);
 }
 
 float Wavefield1D::sample(const float x) const
@@ -299,9 +303,13 @@ void Wavefield2D::shut()
 
 void Wavefield2D::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
 {
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+	
 	tickForces(dt, c, closedEnds);
 	
 	tickVelocity(dt, vRetainPerSecond, pRetainPerSecond);
+	
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF);
 }
 
 void Wavefield2D::tickForces(const double dt, const double c, const bool closedEnds)

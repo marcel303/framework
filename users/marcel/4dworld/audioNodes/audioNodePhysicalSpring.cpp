@@ -26,6 +26,7 @@
 */
 
 #include "audioNodePhysicalSpring.h"
+#include <xmmintrin.h>
 
 AUDIO_NODE_TYPE(physical_spring, AudioNodePhysicalSpring)
 {
@@ -87,6 +88,8 @@ void AudioNodePhysicalSpring::tick(const float _dt)
 		dampenThisTick = std::pow(1.0 - dampen->getScalar(), dt);
 	}
 	
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+	
 	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 	{
 		if (dampen->isScalar == false)
@@ -105,6 +108,8 @@ void AudioNodePhysicalSpring::tick(const float _dt)
 		outputValue.samples[i] = value;
 		outputSpeed.samples[i] = speed;
 	}
+	
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF);
 }
 
 void AudioNodePhysicalSpring::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
