@@ -220,7 +220,7 @@ static void doPad(float & desiredX, float & desiredY, const char * name, const f
 		
 		hqBegin(HQ_FILLED_CIRCLES);
 		{
-			setColor(0, 100, 255/2);
+			setColor(0, 100, 255);
 			hqFillCircle(x1 + (x2 - x1) * currentX, y1 + (y2 - y1) * currentY, 5.f);
 		}
 		hqEnd();
@@ -1722,7 +1722,7 @@ void testAudioGraphManager()
 	
 	PortAudioObject pa;
 	
-	pa.init(SAMPLE_RATE, STEREO_OUTPUT ? 2 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
+	pa.init(SAMPLE_RATE, STEREO_OUTPUT ? 2 : kNumChannels, STEREO_OUTPUT ? 2 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 	
 	//
 	

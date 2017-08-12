@@ -171,8 +171,9 @@ struct MyPortAudioHandler : PortAudioHandler
 	
 	virtual void portAudioCallback(
 		const void * inputBuffer,
+		const int numInputChannels,
 		void * outputBuffer,
-		int framesPerBuffer) override
+		const int framesPerBuffer) override
 	{
 		float * __restrict samples = (float*)outputBuffer;
 		
@@ -349,7 +350,7 @@ void testBinaural()
 			audio.gain = 1.f / numSources;
 		
 		PortAudioObject pa;
-		pa.init(44100, 2, AUDIO_UPDATE_SIZE, &audio);
+		pa.init(44100, 2, 0, AUDIO_UPDATE_SIZE, &audio);
 		
 		do
 		{

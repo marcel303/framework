@@ -945,8 +945,9 @@ int AudioVoiceManager::numChannelsUsed() const
 
 void AudioVoiceManager::portAudioCallback(
 	const void * inputBuffer,
+	const int numInputChannels,
 	void * outputBuffer,
-	int framesPerBuffer)
+	const int framesPerBuffer)
 {
 	float * samples = (float*)outputBuffer;
 	const int numSamples = framesPerBuffer;

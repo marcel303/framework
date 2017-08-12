@@ -37,6 +37,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 Osc4DStream * g_oscStream = nullptr;
 
+float * g_audioInputChannels = nullptr;
+int g_numAudioInputChannels = 0;
+
 AudioUpdateHandler::AudioUpdateHandler()
 	: updateTasks()
 	, voiceMgr(nullptr)
@@ -100,8 +103,9 @@ void AudioUpdateHandler::setOscEndpoint(const char * ipAddress, const int udpPor
 
 void AudioUpdateHandler::portAudioCallback(
 	const void * inputBuffer,
+	const int numInputChannels,
 	void * outputBuffer,
-	int framesPerBuffer)
+	const int framesPerBuffer)
 {
 	cpuTimeTotal -= g_TimerRT.TimeUS_get();
 	
@@ -131,6 +135,9 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	g_currentAudioTime = time;
 	
+	g_audioInputChannels = (float*)inputBuffer;
+	g_numAudioInputChannels = numInputChannels;
+	
 	for (auto updateTask : updateTasks)
 	{
 		updateTask->audioUpdate(dt);
@@ -143,9 +150,12 @@ void AudioUpdateHandler::portAudioCallback(
 		audioGraphMgr->updateAudioValues();
 	}
 	
+	g_audioInputChannels = nullptr;
+	g_numAudioInputChannels = 0;
+	
 	if (voiceMgr != nullptr)
 	{
-		voiceMgr->portAudioCallback(inputBuffer, outputBuffer, framesPerBuffer);
+		voiceMgr->portAudioCallback(inputBuffer, numInputChannels, outputBuffer, framesPerBuffer);
 		
 		//
 		

@@ -399,8 +399,9 @@ struct AudioVoiceManager : PortAudioHandler
 	
 	virtual void portAudioCallback(
 		const void * inputBuffer,
+		const int numInputChannels,
 		void * outputBuffer,
-		int framesPerBuffer) override;
+		const int framesPerBuffer) override;
 	
 	void generateOsc(Osc4DStream & stream, const bool forceSync);
 };

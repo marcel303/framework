@@ -103,6 +103,10 @@ struct AudioUpdateHandler : PortAudioHandler
 	
 	virtual void portAudioCallback(
 		const void * inputBuffer,
+		const int numInputChannels,
 		void * outputBuffer,
-		int framesPerBuffer) override;
+		const int framesPerBuffer) override;
 };
+
+extern float * g_audioInputChannels;
+extern int g_numAudioInputChannels;
