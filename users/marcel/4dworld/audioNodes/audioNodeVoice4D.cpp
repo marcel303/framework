@@ -328,27 +328,27 @@ AUDIO_NODE_TYPE(return_4d, AudioNodeVoice4DReturn)
 	in("index", "int", "-1");
 	in("rampTime", "audioValue");
 	
-	in("left.enabled", "bool");
+	in("left", "bool");
 	in("left.distance", "audioValue", "100");
 	in("left.scatter", "audioValue", "0");
 	
-	in("right.enabled", "bool");
+	in("right", "bool");
 	in("right.distance", "audioValue", "100");
 	in("right.scatter", "audioValue", "0");
 	
-	in("top.enabled", "bool");
+	in("top", "bool");
 	in("top.distance", "audioValue", "100");
 	in("top.scatter", "audioValue", "0");
 	
-	in("bottom.enabled", "bool");
+	in("bottom", "bool");
 	in("bottom.distance", "audioValue", "100");
 	in("bottom.scatter", "audioValue", "0");
 	
-	in("front.enabled", "bool");
+	in("front", "bool");
 	in("front.distance", "audioValue", "100");
 	in("front.scatter", "audioValue", "0");
 	
-	in("back.enabled", "bool");
+	in("back", "bool");
 	in("back.distance", "audioValue", "100");
 	in("back.scatter", "audioValue", "0");
 }
