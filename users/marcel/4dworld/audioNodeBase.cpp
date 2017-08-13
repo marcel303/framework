@@ -466,6 +466,7 @@ AudioNodeBase::AudioNodeBase()
 	, lastDrawTraversalId(-1)
 	, editorIsTriggered(false)
 	, isPassthrough(false)
+	, isDeprecated(false)
 	, tickTimeAvg(0)
 {
 }
@@ -729,6 +730,155 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 
 //
 
+#include <cmath>
+
+// note : AudioNodeSourceMix is deprecated
+
+struct AudioNodeSourceMix : AudioNodeBase
+{
+	enum Input
+	{
+		kInput_Source1,
+		kInput_Gain1,
+		kInput_Source2,
+		kInput_Gain2,
+		kInput_Source3,
+		kInput_Gain3,
+		kInput_Source4,
+		kInput_Gain4,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Audio,
+		kOutput_COUNT
+	};
+	
+	AudioFloat audioOutput;
+	
+	AudioNodeSourceMix()
+		: AudioNodeBase()
+		, audioOutput()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Source1, kAudioPlugType_FloatVec);
+		addInput(kInput_Gain1, kAudioPlugType_FloatVec);
+		addInput(kInput_Source2, kAudioPlugType_FloatVec);
+		addInput(kInput_Gain2, kAudioPlugType_FloatVec);
+		addInput(kInput_Source3, kAudioPlugType_FloatVec);
+		addInput(kInput_Gain3, kAudioPlugType_FloatVec);
+		addInput(kInput_Source4, kAudioPlugType_FloatVec);
+		addInput(kInput_Gain4, kAudioPlugType_FloatVec);
+		addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
+		
+		isDeprecated = true;
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		if (isPassthrough)
+		{
+			audioOutput.setScalar(0.f);
+			
+			return;
+		}
+		
+		const AudioFloat * source1 = getInputAudioFloat(kInput_Source1, nullptr);
+		const AudioFloat * source2 = getInputAudioFloat(kInput_Source2, nullptr);
+		const AudioFloat * source3 = getInputAudioFloat(kInput_Source3, nullptr);
+		const AudioFloat * source4 = getInputAudioFloat(kInput_Source4, nullptr);
+		
+		const AudioFloat * gain1 = getInputAudioFloat(kInput_Gain1, &AudioFloat::One);
+		const AudioFloat * gain2 = getInputAudioFloat(kInput_Gain2, &AudioFloat::One);
+		const AudioFloat * gain3 = getInputAudioFloat(kInput_Gain3, &AudioFloat::One);
+		const AudioFloat * gain4 = getInputAudioFloat(kInput_Gain4, &AudioFloat::One);
+		
+		const bool normalizeGain = false;
+		
+		struct Input
+		{
+			const AudioFloat * source;
+			const AudioFloat * gain;
+			
+			void set(const AudioFloat * _source, const AudioFloat * _gain)
+			{
+				source = _source;
+				gain = _gain;
+			}
+		};
+		
+		Input inputs[4];
+		int numInputs = 0;
+		
+		if (source1 != nullptr)
+			inputs[numInputs++].set(source1, gain1);
+		if (source2 != nullptr)
+			inputs[numInputs++].set(source2, gain2);
+		if (source3 != nullptr)
+			inputs[numInputs++].set(source3, gain3);
+		if (source4 != nullptr)
+			inputs[numInputs++].set(source4, gain4);
+		
+		if (numInputs == 0)
+		{
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+				audioOutput.samples[i] = 0.f;
+			return;
+		}
+		
+		bool isFirst = true;
+		
+		float gainScale = 1.f;
+		
+		if (normalizeGain)
+		{
+			float totalGain = 0.f;
+			
+			for (auto & input : inputs)
+			{
+				// todo : do this on a per-sample basis !
+				
+				totalGain += input.gain->getScalar();
+			}
+			
+			if (totalGain > 0.f)
+			{
+				gainScale = 1.f / totalGain;
+			}
+		}
+		
+		for (int i = 0; i < numInputs; ++i)
+		{
+			auto & input = inputs[i];
+			
+			input.source->expand();
+			
+			// todo : do this on a per-sample basis !
+			
+			const float gain = input.gain->getScalar() * gainScale;
+			
+			if (isFirst)
+			{
+				isFirst = false;
+				
+				if (gain == 1.f)
+					audioOutput.set(*input.source);
+				else
+					audioOutput.setMul(*input.source, gain);
+			}
+			else
+			{
+				// todo : do this on a per-sample basis !
+				
+				const float gain = input.gain->getScalar() * gainScale;
+				
+				audioOutput.addMul(*input.source, gain);
+			}
+		}
+	}
+};
+
 AUDIO_NODE_TYPE(audioSourceMix, AudioNodeSourceMix)
 {
 	typeName = "audio.mix";
@@ -744,18 +894,91 @@ AUDIO_NODE_TYPE(audioSourceMix, AudioNodeSourceMix)
 	out("audio", "audioValue");
 }
 
-AUDIO_ENUM_TYPE(audioSineType)
-{
-	elem("sine");
-	elem("triangle");
-	elem("square");
-}
+// note : AudioNodeMix is deprecated
 
-AUDIO_ENUM_TYPE(audioSineMode)
+struct AudioNodeMix : AudioNodeBase
 {
-	elem("baseScale");
-	elem("minMax");
-}
+	enum Mode
+	{
+		kMode_Add,
+		kMode_Mul,
+	};
+	
+	enum Input
+	{
+		kInput_Mode,
+		kInput_AudioA,
+		kInput_GainA,
+		kInput_AudioB,
+		kInput_GainB,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Audio,
+		kOutput_COUNT
+	};
+	
+	AudioFloat audioOutput;
+	
+	AudioNodeMix()
+		: AudioNodeBase()
+		, audioOutput()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Mode, kAudioPlugType_Int);
+		addInput(kInput_AudioA, kAudioPlugType_FloatVec);
+		addInput(kInput_GainA, kAudioPlugType_FloatVec);
+		addInput(kInput_AudioB, kAudioPlugType_FloatVec);
+		addInput(kInput_GainB, kAudioPlugType_FloatVec);
+		addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
+		
+		isDeprecated = true;
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
+		const AudioFloat * audioA = getInputAudioFloat(kInput_AudioA, nullptr);
+		const AudioFloat * gainA = getInputAudioFloat(kInput_GainA, &AudioFloat::One);
+		const AudioFloat * audioB = getInputAudioFloat(kInput_AudioB, nullptr);
+		const AudioFloat * gainB = getInputAudioFloat(kInput_GainB, &AudioFloat::One);
+		
+		if (audioA == nullptr || audioB == nullptr)
+		{
+			if (audioA != nullptr)
+			{
+				audioOutput.setMul(*audioA, *gainA);
+			}
+			else if (audioB != nullptr)
+			{
+				audioOutput.setMul(*audioB, *gainB);
+			}
+			else
+			{
+				audioOutput.setZero();
+			}
+		}
+		else
+		{
+			if (mode == kMode_Add)
+			{
+				audioOutput.setMul(*audioA, *gainA);
+				audioOutput.addMul(*audioB, *gainB);
+			}
+			else if (mode == kMode_Mul)
+			{
+				audioOutput.setMul(*audioA, *gainA);
+				audioOutput.mulMul(*audioB, *gainB);
+			}
+			else
+			{
+				Assert(false);
+			}
+		}
+	}
+};
 
 AUDIO_ENUM_TYPE(audioMixMode)
 {
@@ -774,6 +997,54 @@ AUDIO_NODE_TYPE(audioMix, AudioNodeMix)
 	in("gainB", "audioValue", "1");
 	out("audio", "audioValue");
 }
+
+// note : AudioNodeMathSine is deprecated
+
+struct AudioNodeMathSine : AudioNodeBase
+{
+	enum Input
+	{
+		kInput_Value,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Result,
+		kOutput_COUNT
+	};
+	
+	AudioFloat resultOutput;
+	
+	AudioNodeMathSine()
+		: AudioNodeBase()
+		, resultOutput()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Value, kAudioPlugType_FloatVec);
+		addOutput(kOutput_Result, kAudioPlugType_FloatVec, &resultOutput);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
+		const float twoPi = 2.f * M_PI;
+		
+		if (value->isScalar)
+		{
+			resultOutput.setScalar(std::sinf(value->getScalar() * twoPi));
+		}
+		else
+		{
+			resultOutput.setVector();
+			
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			{
+				resultOutput.samples[i] = std::sinf(value->samples[i] * twoPi);
+			}
+		}
+	}
+};
 
 AUDIO_NODE_TYPE(sine, AudioNodeMathSine)
 {
