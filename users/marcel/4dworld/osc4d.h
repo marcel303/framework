@@ -33,6 +33,17 @@ struct Osc4D
 		kBoost_Level3
 	};
 	
+	enum ReturnSide
+	{
+		kReturnSide_Left,
+		kReturnSide_Right,
+		kReturnSide_Top,
+		kReturnSide_Bottom,
+		kReturnSide_Front,
+		kReturnSide_Back,
+		kReturnSide_COUNT
+	};
+	
 	int source;
 	char sourceOscName[64];
 	char returnOscName[64];
@@ -101,7 +112,7 @@ struct Osc4D
 	void setReturn(const int index, const char * side);
 	void returnDistanceIntensity(const int index, const bool enable, const float treshold, const float curve);
 	void returnDistanceDamping(const int index, const bool enable, const float treshold, const float curve);
-	void returnSide(const int index, const char * name, const bool enable, const float distance, const float scatter);
+	void returnSide(const int index, const ReturnSide side, const bool enable, const float distance, const float scatter);
 
 	void globalPosition(const float x, const float y, const float z);
 	void globalDimensions(const float x, const float y, const float z);

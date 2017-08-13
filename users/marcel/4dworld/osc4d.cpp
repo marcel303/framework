@@ -297,9 +297,9 @@ void Osc4D::sourceSubBoost(const SubBoost boost)
 	end();
 }
 
-void Osc4D::setReturn(const int index, const char * side)
+void Osc4D::setReturn(const int index, const char * path)
 {
-	sprintf_s(returnOscName, sizeof(returnOscName), "/return%d/%s/", index + 1, side);
+	sprintf_s(returnOscName, sizeof(returnOscName), "/return%d/%s/", index + 1, path);
 }
 
 void Osc4D::returnDistanceIntensity(const int index, const bool enable, const float treshold, const float curve)
@@ -342,11 +342,28 @@ void Osc4D::returnDistanceDamping(const int index, const bool enable, const floa
 	}
 }
 
-void Osc4D::returnSide(const int index, const char * side, const bool enable, const float distance, const float scatter)
+void Osc4D::returnSide(const int index, const ReturnSide side, const bool enable, const float distance, const float scatter)
 {
-	// valid sides: left, right, top, bottom, front, back
+	/*
+	kReturnSide_Left,
+	kReturnSide_Right,
+	kReturnSide_Top,
+	kReturnSide_Bottom,
+	kReturnSide_Front,
+	kReturnSide_Back,
+	*/
 	
-	setReturn(index, side);
+	const char * sideName[kReturnSide_COUNT] =
+	{
+		"left",
+		"right",
+		"top",
+		"bottom",
+		"front",
+		"back"
+	};
+	
+	setReturn(index, sideName[side]);
 	
 	beginReturn("enable");
 	b(enable);
