@@ -29,6 +29,7 @@
 #include "Debugging.h"
 #include "Log.h"
 #include "osc4d.h"
+#include "Path.h"
 #include "soundmix.h"
 #include <cmath>
 #include <xmmintrin.h>
@@ -428,7 +429,7 @@ bool PcmData::load(const char * filename, const int channel)
 			sound = nullptr;
 		}
 		
-		if (result == true)
+		if (result == true && Path::GetExtension(filename, true) != "wav")
 		{
 			try
 			{
