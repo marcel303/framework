@@ -17,7 +17,7 @@ extern bool STEREO_OUTPUT;
 //
 
 #define CHANNEL_COUNT 64
-#define DYNAMIC_CHANNEL_COUNT 24
+#define DYNAMIC_CHANNEL_COUNT 16
 
 #define BALL_CAGE_SIZE 16.f
 #define FIELD_SIZE 20.f

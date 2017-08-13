@@ -41,6 +41,7 @@ struct Creature
 		sine.init(0.f, random(100.f, 400.f));
 		
 		g_voiceMgr->allocVoice(voice, &sine, "creature", true, 0.f, 1.f, -1);
+		voice->isSpatial = true;
 		
 		pos[0] = random<float>(-kWorldSx, +kWorldSx);
 		pos[1] = random(0.f, kWorldSy);
@@ -99,6 +100,7 @@ struct RicePaddy
 		source.init(32);
 		
 		g_voiceMgr->allocVoice(voice, &source, "ricePaddy", true, 0.f, 1.f, -1);
+		voice->isSpatial = true;
 	}
 	
 	~RicePaddy()
@@ -124,6 +126,7 @@ struct TestObject
 		sine.init(0.f, sineFrequency);
 		
 		g_voiceMgr->allocVoice(voice, &sine, "testObject", true, 0.f, 1.f, -1);
+		voice->isSpatial = true;
 		
 		uiState.sx = 300.f;
 	}
@@ -433,6 +436,7 @@ void testAudioVoiceManager()
 	wavefield1D.init(256);
 	AudioVoice * wavefield1DVoice = nullptr;
 	voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D, "wavefield1D", true, 0.f, 1.f, -1);
+	wavefield1DVoice->isSpatial = true;
 	
 	//
 	
@@ -440,6 +444,7 @@ void testAudioVoiceManager()
 	wavefield2D.init(32);
 	AudioVoice * wavefield2DVoice = nullptr;
 	//voiceMgr.allocVoice(wavefield2DVoice, &wavefield2D, true);
+	//wavefield2DVoice->isSpatial = true;
 	
 	//
 	
