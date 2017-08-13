@@ -109,6 +109,66 @@ struct AudioNodeVoice4D : AudioNodeBase
 
 //
 
+struct AudioNodeVoice4DReturn : AudioNodeBase
+{
+	struct AudioSourceReturnNode : AudioSource
+	{
+		AudioNodeVoice4DReturn * returnNode;
+		
+		virtual void generate(ALIGN16 float * __restrict samples, const int numSamples);
+	};
+
+	enum Input
+	{
+		kInput_Audio,
+		kInput_Index,
+		kInput_RampTime,
+		
+		kInput_LeftEnabled,
+		kInput_LeftDistance,
+		kInput_LeftScatter,
+		
+		kInput_RightEnabled,
+		kInput_RightDistance,
+		kInput_RightScatter,
+		
+		kInput_TopEnabled,
+		kInput_TopDistance,
+		kInput_TopScatter,
+		
+		kInput_BottomEnabled,
+		kInput_BottomDistance,
+		kInput_BottomScatter,
+		
+		kInput_FrontEnabled,
+		kInput_FrontDistance,
+		kInput_FrontScatter,
+		
+		kInput_BackEnabled,
+		kInput_BackDistance,
+		kInput_BackScatter,
+		
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_COUNT
+	};
+
+	AudioSourceReturnNode source;
+	AudioVoice * voice;
+
+	AudioFloat audioOutput;
+	
+	AudioNodeVoice4DReturn();
+	virtual ~AudioNodeVoice4DReturn() override;
+	
+	virtual void tick(const float dt) override;
+};
+
+//
+
 struct AudioNodeVoice4DGlobals : AudioNodeBase
 {
 	enum Input

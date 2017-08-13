@@ -31,6 +31,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "Mat4x4.h"
 #include "StringEx.h"
 
+static const int kReturnBase = 41;
+static const int kMaxReturns = 4;
+
 AUDIO_ENUM_TYPE(spatialDelayMode)
 {
 	enumName = "4d.spatialDelayMode";
@@ -101,11 +104,18 @@ void AudioNodeVoice4D::AudioSourceVoiceNode::generate(ALIGN16 float * __restrict
 {
 	Assert(numSamples == AUDIO_UPDATE_SIZE);
 	
-	const AudioFloat * audio = voiceNode->getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
-	
-	audio->expand();
-	
-	memcpy(samples, audio->samples, numSamples * sizeof(float));
+	if (voiceNode->isPassthrough)
+	{
+		memset(samples, 0, numSamples * sizeof(float));
+	}
+	else
+	{
+		const AudioFloat * audio = voiceNode->getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
+		
+		audio->expand();
+		
+		memcpy(samples, audio->samples, numSamples * sizeof(float));
+	}
 }
 
 AudioNodeVoice4D::AudioNodeVoice4D()
@@ -162,7 +172,8 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 
 AudioNodeVoice4D::~AudioNodeVoice4D()
 {
-	g_voiceMgr->freeVoice(voice);
+	if (voice != nullptr)
+		g_voiceMgr->freeVoice(voice);
 }
 
 void AudioNodeVoice4D::init(const GraphNode & node)
@@ -170,7 +181,8 @@ void AudioNodeVoice4D::init(const GraphNode & node)
 	const float rampTime = getInputAudioFloat(kInput_RampTime, &AudioFloat::One)->getMean();
 	
 	source.voiceNode = this;
-	g_voiceMgr->allocVoice(voice, &source, "voice.4d", true, .2f, rampTime);
+	g_voiceMgr->allocVoice(voice, &source, "voice.4d", true, .2f, rampTime, -1);
+	voice->isSpatial = true;
 }
 
 void AudioNodeVoice4D::tick(const float dt)
@@ -303,6 +315,159 @@ void AudioNodeVoice4D::handleTrigger(const int inputSocketIndex, const AudioTrig
 	else if (inputSocketIndex == kInput_RampDown)
 	{
 		voice->ramp = false;
+	}
+}
+
+//
+
+AUDIO_NODE_TYPE(return_4d, AudioNodeVoice4DReturn)
+{
+	typeName = "return.4d";
+	
+	in("audio", "audioValue");
+	in("index", "int", "-1");
+	in("rampTime", "audioValue");
+	
+	in("left.enabled", "bool");
+	in("left.distance", "audioValue", "100");
+	in("left.scatter", "audioValue", "0");
+	
+	in("right.enabled", "bool");
+	in("right.distance", "audioValue", "100");
+	in("right.scatter", "audioValue", "0");
+	
+	in("top.enabled", "bool");
+	in("top.distance", "audioValue", "100");
+	in("top.scatter", "audioValue", "0");
+	
+	in("bottom.enabled", "bool");
+	in("bottom.distance", "audioValue", "100");
+	in("bottom.scatter", "audioValue", "0");
+	
+	in("front.enabled", "bool");
+	in("front.distance", "audioValue", "100");
+	in("front.scatter", "audioValue", "0");
+	
+	in("back.enabled", "bool");
+	in("back.distance", "audioValue", "100");
+	in("back.scatter", "audioValue", "0");
+}
+
+void AudioNodeVoice4DReturn::AudioSourceReturnNode::generate(ALIGN16 float * __restrict samples, const int numSamples)
+{
+	Assert(numSamples == AUDIO_UPDATE_SIZE);
+	
+	if (returnNode->isPassthrough)
+	{
+		memset(samples, 0, numSamples * sizeof(float));
+	}
+	else
+	{
+		const AudioFloat * audio = returnNode->getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
+		
+		audio->expand();
+		
+		memcpy(samples, audio->samples, numSamples * sizeof(float));
+	}
+}
+
+AudioNodeVoice4DReturn::AudioNodeVoice4DReturn()
+	: AudioNodeBase()
+	, source()
+	, voice(nullptr)
+	, audioOutput()
+{
+	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	
+	addInput(kInput_Audio, kAudioPlugType_FloatVec);
+	addInput(kInput_Index, kAudioPlugType_Int);
+	addInput(kInput_RampTime, kAudioPlugType_FloatVec);
+	
+	addInput(kInput_LeftEnabled, kAudioPlugType_Bool);
+	addInput(kInput_LeftDistance, kAudioPlugType_FloatVec);
+	addInput(kInput_LeftScatter, kAudioPlugType_FloatVec);
+	
+	addInput(kInput_RightEnabled, kAudioPlugType_Bool);
+	addInput(kInput_RightDistance, kAudioPlugType_FloatVec);
+	addInput(kInput_RightScatter, kAudioPlugType_FloatVec);
+	
+	addInput(kInput_TopEnabled, kAudioPlugType_Bool);
+	addInput(kInput_TopDistance, kAudioPlugType_FloatVec);
+	addInput(kInput_TopScatter, kAudioPlugType_FloatVec);
+	
+	addInput(kInput_BottomEnabled, kAudioPlugType_Bool);
+	addInput(kInput_BottomDistance, kAudioPlugType_FloatVec);
+	addInput(kInput_BottomScatter, kAudioPlugType_FloatVec);
+	
+	addInput(kInput_FrontEnabled, kAudioPlugType_Bool);
+	addInput(kInput_FrontDistance, kAudioPlugType_FloatVec);
+	addInput(kInput_FrontScatter, kAudioPlugType_FloatVec);
+	
+	addInput(kInput_BackEnabled, kAudioPlugType_Bool);
+	addInput(kInput_BackDistance, kAudioPlugType_FloatVec);
+	addInput(kInput_BackScatter, kAudioPlugType_FloatVec);
+}
+
+AudioNodeVoice4DReturn::~AudioNodeVoice4DReturn()
+{
+	if (voice != nullptr)
+	{
+		g_voiceMgr->freeVoice(voice);
+	}
+}
+
+void AudioNodeVoice4DReturn::tick(const float dt)
+{
+	const int index = getInputInt(kInput_Index, 0);
+	
+	if (index >= 0 && index < kMaxReturns)
+	{
+		const int absoluteIndex = kReturnBase + index;
+		
+		if (voice == nullptr || absoluteIndex != voice->channelIndex)
+		{
+			if (voice != nullptr)
+			{
+				g_voiceMgr->freeVoice(voice);
+			}
+			
+			//
+			
+			const float rampTime = getInputAudioFloat(kInput_RampTime, &AudioFloat::One)->getMean();
+			
+			source.returnNode = this;
+			if (g_voiceMgr->allocVoice(voice, &source, "return.4d", true, .2f, rampTime, absoluteIndex))
+			{
+				voice->isReturn = true;
+				voice->speaker = AudioVoice::kSpeaker_LeftAndRight;
+			}
+		}
+	}
+	
+	//
+	
+	if (voice != nullptr)
+	{
+		voice->returnInfo.returnIndex = getInputInt(kInput_Index, -1);
+		
+		const int inputOffset[Osc4D::kReturnSide_COUNT] =
+		{
+			kInput_LeftEnabled,
+			kInput_RightEnabled,
+			kInput_TopEnabled,
+			kInput_BottomEnabled,
+			kInput_FrontEnabled,
+			kInput_BackEnabled
+		};
+		
+		const AudioFloat distanceDefault(100.f);
+		
+		for (int i = 0; i < Osc4D::kReturnSide_COUNT; ++i)
+		{
+			voice->returnInfo.sides[i].enabled = getInputBool(inputOffset[i] + 0, false);
+			voice->returnInfo.sides[i].distance = getInputAudioFloat(inputOffset[i] + 1, &distanceDefault)->getMean();
+			voice->returnInfo.sides[i].scatter = getInputAudioFloat(inputOffset[i] + 2, &AudioFloat::Zero)->getMean();
+		}
 	}
 }
 
