@@ -27,6 +27,19 @@
 
 #include "audioNodeSourceGenerator.h"
 
+AUDIO_ENUM_TYPE(audioSineType)
+{
+	elem("sine");
+	elem("triangle");
+	elem("square");
+}
+
+AUDIO_ENUM_TYPE(audioSineMode)
+{
+	elem("baseScale");
+	elem("minMax");
+}
+
 AUDIO_NODE_TYPE(audioSourceSine, AudioNodeSourceSine)
 {
 	typeName = "audio.sine";
