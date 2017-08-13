@@ -46,11 +46,18 @@ void AudioNodeVoice::AudioSourceVoiceNode::generate(ALIGN16 float * __restrict s
 {
 	Assert(numSamples == AUDIO_UPDATE_SIZE);
 	
-	const AudioFloat * audio = voiceNode->getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
-	
-	audio->expand();
-	
-	memcpy(samples, audio->samples, numSamples * sizeof(float));
+	if (voiceNode->isPassthrough)
+	{
+		memset(samples, 0, numSamples * sizeof(float));
+	}
+	else
+	{
+		const AudioFloat * audio = voiceNode->getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
+		
+		audio->expand();
+		
+		memcpy(samples, audio->samples, numSamples * sizeof(float));
+	}
 }
 
 //
@@ -85,4 +92,9 @@ void AudioNodeVoice::tick(const float dt)
 		voice->speaker = AudioVoice::kSpeaker_Left;
 	else if (speaker == kSpeaker_Right)
 		voice->speaker = AudioVoice::kSpeaker_Right;
+	else
+	{
+		Assert(false);
+		voice->speaker = AudioVoice::kSpeaker_None;
+	}
 }
