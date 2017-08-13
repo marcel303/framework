@@ -313,12 +313,37 @@ struct AudioVoice
 		}
 	};
 	
+	struct ReturnSideInfo
+	{
+		bool enabled = false;
+		float distance = 100.f;
+		float scatter = 0.f;
+	};
+	
+	struct ReturnInfo
+	{
+		int returnIndex;
+		
+		ReturnSideInfo sides[Osc4D::kReturnSide_COUNT];
+		
+		ReturnInfo()
+			: returnIndex(-1)
+			, sides()
+		{
+		}
+	};
+	
 	int channelIndex;
+	
+	bool isSpatial;
+	bool isReturn;
 	
 	Speaker speaker;
 	
 	Spatialisation spat;
 	Spatialisation lastSentSpat;
+	
+	ReturnInfo returnInfo;
 	
 	bool initOsc;
 	
@@ -335,9 +360,12 @@ struct AudioVoice
 	
 	AudioVoice()
 		: channelIndex(-1)
+		, isSpatial(false)
+		, isReturn(false)
 		, speaker(kSpeaker_None)
 		, spat()
 		, lastSentSpat()
+		, returnInfo()
 		, initOsc(true)
 		, source(nullptr)
 		, ramp(true)

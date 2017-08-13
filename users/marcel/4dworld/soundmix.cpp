@@ -1078,11 +1078,13 @@ void AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool _forceSync)
 	{
 		try
 		{
-			// generate OSC messages for each voice
+			// generate OSC messages for each spatial voice
 			
 			for (auto & voice : voices)
 			{
 				if (voice.channelIndex == -1)
+					continue;
+				if (voice.isSpatial == false)
 					continue;
 				
 				stream.setSource(voice.channelIndex);
@@ -1214,6 +1216,28 @@ void AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool _forceSync)
 				}
 				
 				voice.lastSentSpat = voice.spat;
+			}
+			
+			// generate OSC messages for each return voice
+			
+			for (auto & voice : voices)
+			{
+				if (voice.channelIndex == -1)
+					continue;
+				if (voice.isReturn == false)
+					continue;
+				if (voice.returnInfo.returnIndex == -1)
+					continue;
+				
+				for (int i = 0; i < Osc4D::kReturnSide_COUNT; ++i)
+				{
+					stream.returnSide(
+						voice.returnInfo.returnIndex,
+						(Osc4D::ReturnSide)i,
+						voice.returnInfo.sides[i].enabled,
+						voice.returnInfo.sides[i].distance,
+						voice.returnInfo.sides[i].scatter);
+				}
 			}
 			
 			// generate OSC messages for the global parameters
