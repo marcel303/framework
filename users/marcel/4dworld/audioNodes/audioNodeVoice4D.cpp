@@ -29,7 +29,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioNodeVoice4D.h"
 #include "Calc.h"
 #include "Mat4x4.h"
-#include "StringEx.h"
+#include "StringBuilder.h"
 
 static const int kReturnBase = 41;
 static const int kMaxReturns = 4;
@@ -196,9 +196,14 @@ void AudioNodeVoice4D::tick(const float dt)
 	Mat4x4 originMatrix;
 	originMatrix.MakeRotationY(Calc::DegToRad(originRotY));
 	
+	StringBuilder<64> name;
+	name.Append("channel(");
+	name.Append(voice->channelIndex + 1);
+	name.Append(")");
+	
 	//voice->spat.color = getInputString(kInput_Color, "ff0000");
-	//voice->spat.name = String::FormatC("%s(%d)", getInputString(kInput_Name, ""), voice->channelIndex + 1);
-	voice->spat.name = String::FormatC("%s(%d)", "channel", voice->channelIndex + 1);
+	if (voice->spat.name != name.ToString())
+		voice->spat.name = name.ToString();
 	voice->spat.gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
 	
 	// position
