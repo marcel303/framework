@@ -833,7 +833,7 @@ struct Voices : EntityBase
 	{
 		type = kEntity_Voice;
 		
-		graphInstance = g_audioGraphMgr->createInstance("e-voices1.xml");
+		graphInstance = g_audioGraphMgr->createInstance("e-voices2.xml");
 	}
 	
 	virtual ~Voices() override
@@ -1214,6 +1214,8 @@ struct World : WorldInterface
 		entities.push_back(new AlwaysThere("combTest4.xml")); // pulsing sound with heavy comb filter
 		
 		entities.push_back(new AlwaysThere("combTest5.xml")); // heavy bass pulsing sound with comb filter
+		
+		addVoices();
 	}
 	
 	void shut()
@@ -1662,6 +1664,41 @@ struct World : WorldInterface
 
 //
 
+static int voiceButtonIndex = 0;
+
+static void doVoiceButton(const char * name, const char * file, const bool isLast)
+{
+	const int numButtonsPerRow = 6;
+	
+	const float xOffset = (voiceButtonIndex % numButtonsPerRow) / float(numButtonsPerRow);
+	const float xScale = 1.f / numButtonsPerRow;
+	const bool lineBreak = isLast || ((voiceButtonIndex % numButtonsPerRow) == numButtonsPerRow - 1);
+	
+	if (doButton(name, xOffset, xScale, lineBreak))
+	{
+		World * world = (World*)g_world;
+		
+		for (auto e : world->entities)
+		{
+			if (e->type != kEntity_Voice)
+				continue;
+			
+			const std::string filename = std::string("voice-fragments/") + file + ".ogg";
+			
+			e->graphInstance->audioGraph->setMems("voices.src", filename.c_str());
+			
+			e->graphInstance->audioGraph->triggerEvent("voices.play");
+		}
+	}
+	
+	if (isLast)
+		voiceButtonIndex = 0;
+	else
+		voiceButtonIndex++;
+}
+
+//
+
 void testAudioGraphManager()
 {
 	SDL_mutex * mutex = SDL_CreateMutex();
@@ -1671,6 +1708,7 @@ void testAudioGraphManager()
 	fillPcmDataCache("birds", true, false);
 	fillPcmDataCache("testsounds", true, true);
 	fillPcmDataCache("voices", true, false);
+	fillPcmDataCache("voice-fragments", false, false);
 	
 	//
 	
@@ -1823,13 +1861,23 @@ void testAudioGraphManager()
 					}
 					doBreak();
 					
+					doVoiceButton("m1", "marcel1", false);
+					doVoiceButton("m2", "marcel2", false);
+					doVoiceButton("m3", "marcel3", false);
+					doVoiceButton("m4", "marcel4", false);
+					doVoiceButton("m5", "marcel5", false);
+					doVoiceButton("m6", "marcel6", false);
+					doVoiceButton("h1", "hendry1", false);
+					doVoiceButton("h2", "hendry2", false);
+					doVoiceButton("h3", "hendry3", false);
+					doVoiceButton("h4", "hendry4", false);
+					doVoiceButton("h5", "hendry5", true);
+					doBreak();
+					
 					doSlider(world->desiredParams.birdVolume, "bird volume", .6f, dt);
-					doBreak();
 					doSlider(world->desiredParams.voiceVolume, "voice volume", .6f, dt);
-					doBreak();
 					doSlider(world->desiredParams.machineVolume, "machine volume", .6f, dt);
 					doSlider(world->desiredParams.machineSecondary, "machine secondary", .6f, dt);
-					doBreak();
 					doSlider(world->desiredParams.craziness, "craziness", .6f, dt);
 					doBreak();
 					

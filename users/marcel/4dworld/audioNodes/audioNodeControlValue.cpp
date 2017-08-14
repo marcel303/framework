@@ -177,8 +177,8 @@ void AudioNodeControlValue::tick(const float dt)
 		{
 			AudioGraph::Memf memf = g_currentAudioGraph->getMemf(name);
 
-			valueOutput[0].setScalar(memf.v1);
-			valueOutput[1].setScalar(memf.v2);
+			valueOutput[0].setScalar(memf.value1);
+			valueOutput[1].setScalar(memf.value2);
 		}
 		else
 		{

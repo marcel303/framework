@@ -26,49 +26,37 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "audioGraph.h"
-#include "audioNodeMemf.h"
+#include "audioNodeMems.h"
 
-AUDIO_NODE_TYPE(memf, AudioNodeMemf)
+AUDIO_NODE_TYPE(mems, AudioNodeMems)
 {
-	typeName = "memf";
+	typeName = "mems";
 	
 	in("name", "string");
-	out("value1", "audioValue");
-	out("value2", "audioValue");
-	out("value3", "audioValue");
-	out("value4", "audioValue");
+	out("value", "string");
 }
 
-AudioNodeMemf::AudioNodeMemf()
+AudioNodeMems::AudioNodeMems()
 	: AudioNodeBase()
 	, valueOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Name, kAudioPlugType_String);
-	addOutput(kOutput_Value1, kAudioPlugType_FloatVec, &valueOutput[0]);
-	addOutput(kOutput_Value2, kAudioPlugType_FloatVec, &valueOutput[1]);
-	addOutput(kOutput_Value3, kAudioPlugType_FloatVec, &valueOutput[2]);
-	addOutput(kOutput_Value4, kAudioPlugType_FloatVec, &valueOutput[3]);
+	addOutput(kOutput_Value, kAudioPlugType_String, &valueOutput);
 }
 
-void AudioNodeMemf::tick(const float dt)
+void AudioNodeMems::tick(const float dt)
 {
 	const char * name = getInputString(kInput_Name, nullptr);
 
 	if (isPassthrough || name == nullptr)
 	{
-		valueOutput[0].setScalar(0.f);
-		valueOutput[1].setScalar(0.f);
-		valueOutput[2].setScalar(0.f);
-		valueOutput[3].setScalar(0.f);
+		valueOutput.clear();
 	}
 	else
 	{
-		const AudioGraph::Memf memf = g_currentAudioGraph->getMemf(name);
+		const AudioGraph::Mems mems = g_currentAudioGraph->getMems(name);
 
-		valueOutput[0].setScalar(memf.value1);
-		valueOutput[1].setScalar(memf.value2);
-		valueOutput[2].setScalar(memf.value3);
-		valueOutput[3].setScalar(memf.value4);
+		valueOutput = mems.value;
 	}
 }

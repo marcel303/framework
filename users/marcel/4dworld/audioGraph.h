@@ -83,18 +83,23 @@ struct AudioGraph
 	
 	struct Memf
 	{
-		float v1;
-		float v2;
-		float v3;
-		float v4;
+		float value1;
+		float value2;
+		float value3;
+		float value4;
 		
 		Memf()
-			: v1(0.f)
-			, v2(0.f)
-			, v3(0.f)
-			, v4(0.f)
+			: value1(0.f)
+			, value2(0.f)
+			, value3(0.f)
+			, value4(0.f)
 		{
 		}
+	};
+	
+	struct Mems
+	{
+		std::string value;
 	};
 	
 	std::map<GraphNodeId, AudioNodeBase*> nodes;
@@ -109,6 +114,7 @@ struct AudioGraph
 	
 	std::set<std::string> activeFlags;
 	std::map<std::string, Memf> memf;
+	std::map<std::string, Mems> mems;
 	std::vector<std::string> events;
 	
 	SDL_mutex * mutex;
@@ -125,8 +131,11 @@ struct AudioGraph
 	void resetFlag(const char * name);
 	bool isFLagSet(const char * name) const;
 	
-	void setMemf(const char * name, const float v1, const float v2 = 0.f, const float v3 = 0.f, const float v4 = 0.f);
+	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
 	Memf getMemf(const char * name) const;
+	
+	void setMems(const char * name, const char * value);
+	Mems getMems(const char * name) const;
 	
 	void triggerEvent(const char * event);
 };

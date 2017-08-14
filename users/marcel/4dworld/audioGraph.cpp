@@ -242,16 +242,16 @@ bool AudioGraph::isFLagSet(const char * name) const
 	return result;
 }
 
-void AudioGraph::setMemf(const char * name, const float v1, const float v2, const float v3, const float v4)
+void AudioGraph::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
 	SDL_LockMutex(mutex);
 	{
 		auto & mem = memf[name];
 		
-		mem.v1 = v1;
-		mem.v2 = v2;
-		mem.v3 = v3;
-		mem.v4 = v4;
+		mem.value1 = value1;
+		mem.value2 = value2;
+		mem.value3 = value3;
+		mem.value4 = value4;
 	}
 	SDL_UnlockMutex(mutex);
 }
@@ -262,11 +262,40 @@ AudioGraph::Memf AudioGraph::getMemf(const char * name) const
 	
 	SDL_LockMutex(mutex);
 	{
-		auto memfItr = memf.find(name);
+		auto memItr = memf.find(name);
 		
-		if (memfItr != memf.end())
+		if (memItr != memf.end())
 		{
-			result = memfItr->second;
+			result = memItr->second;
+		}
+	}
+	SDL_UnlockMutex(mutex);
+	
+	return result;
+}
+
+void AudioGraph::setMems(const char * name, const char * value)
+{
+	SDL_LockMutex(mutex);
+	{
+		auto & mem = mems[name];
+		
+		mem.value = value;
+	}
+	SDL_UnlockMutex(mutex);
+}
+
+AudioGraph::Mems AudioGraph::getMems(const char * name) const
+{
+	Mems result;
+	
+	SDL_LockMutex(mutex);
+	{
+		auto memItr = mems.find(name);
+		
+		if (memItr != mems.end())
+		{
+			result = memItr->second;
 		}
 	}
 	SDL_UnlockMutex(mutex);

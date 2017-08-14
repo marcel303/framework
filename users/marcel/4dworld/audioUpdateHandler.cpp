@@ -27,8 +27,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioGraph.h"
 #include "audioGraphManager.h"
+#include "audioProfiling.h"
 #include "audioUpdateHandler.h"
-#include "audioGraphManager.h"
 #include "osc4d.h"
 #include "soundmix.h"
 #include "Timer.h"
@@ -107,6 +107,8 @@ void AudioUpdateHandler::portAudioCallback(
 	void * outputBuffer,
 	const int framesPerBuffer)
 {
+	audioCpuTimingBlock(audioUpdateHandler);
+	
 	cpuTimeTotal -= g_TimerRT.TimeUS_get();
 	
 	//
