@@ -1707,16 +1707,18 @@ void testAudioGraphManager()
 	
 	fillPcmDataCache("birds", true, false);
 	fillPcmDataCache("testsounds", true, true);
-	fillPcmDataCache("voices", true, false);
+	//fillPcmDataCache("voices", true, false);
 	fillPcmDataCache("voice-fragments", false, false);
 	
 	//
 	
+#if BINAURAL_DEMO
 	//fillHrirSampleSetCache("binaural/CIPIC/subject10", "cipic.10", kHRIRSampleSetType_Cipic);
 	//fillHrirSampleSetCache("binaural/CIPIC/subject11", "cipic.11", kHRIRSampleSetType_Cipic);
 	fillHrirSampleSetCache("binaural/CIPIC/subject12", "cipic.12", kHRIRSampleSetType_Cipic);
 	//fillHrirSampleSetCache("binaural/CIPIC/subject147", "cipic.147", kHRIRSampleSetType_Cipic);
-	
+#endif
+
 	//
 	
 	{
