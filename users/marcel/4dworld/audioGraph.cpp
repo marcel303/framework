@@ -494,6 +494,7 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 //
 
 #include "Path.h"
+#include "soundmix.h"
 #include "StringEx.h"
 #include <map>
 
@@ -501,6 +502,8 @@ static std::map<std::string, PcmData*> s_pcmDataCache;
 
 void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths)
 {
+	logDebug("filling data cache with path: %s", path);
+	
 	const auto filenames = listFiles(path, recurse);
 	
 	for (auto & filename : filenames)

@@ -26,6 +26,7 @@
 */
 
 #include "audioNodeDryWet.h"
+#include "soundmix.h"
 
 AUDIO_NODE_TYPE(drywet, AudioNodeDryWet)
 {

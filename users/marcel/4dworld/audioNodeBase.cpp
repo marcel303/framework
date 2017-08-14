@@ -29,9 +29,11 @@
 #include "audioNodeBase.h"
 #include "framework.h"
 #include "graph.h"
+#include "soundmix.h"
 #include "StringEx.h"
 #include "Timer.h"
 #include <string.h>
+#include <xmmintrin.h>
 
 //
 
@@ -46,6 +48,67 @@ AudioTriggerData::AudioTriggerData()
 AudioFloat AudioFloat::Zero(0.0);
 AudioFloat AudioFloat::One(1.0);
 AudioFloat AudioFloat::Half(0.5);
+
+float AudioFloat::getMean() const
+{
+	if (isScalar)
+		return getScalar();
+	else
+	{
+		// todo : add audioBuffer*** function to calculate the mean value of a buffer
+		
+	#if 0
+		const __m128 * __restrict samples4 = (__m128*)samples;
+		
+		__m128 sum4 = _mm_setzero_ps();
+		
+		for (int i = 0; i < AUDIO_UPDATE_SIZE / 4; ++i)
+		{
+			sum4 += samples4[i];
+		}
+		
+		__m128 x = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(0, 0, 0, 0));
+		__m128 y = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(1, 1, 1, 1));
+		__m128 z = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(2, 2, 2, 2));
+		__m128 w = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(3, 3, 3, 3));
+		
+		__m128 sum1 = _mm_add_ps(_mm_add_ps(x, y), _mm_add_ps(z, w));
+		
+		const float sum = _mm_cvtss_f32(_mm_mul_ps(sum1, _mm_set1_ps(1.f / AUDIO_UPDATE_SIZE)));
+	#else
+		float sum = 0.f;
+		
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		{
+			sum += samples[i];
+		}
+		
+		sum /= AUDIO_UPDATE_SIZE;
+	#endif
+		
+		return sum;
+	}
+}
+
+void AudioFloat::expand() const
+{
+	AudioFloat * self = const_cast<AudioFloat*>(this);
+	
+	if (isScalar)
+	{
+		if (isExpanded == false)
+		{
+			self->isExpanded = true;
+			
+			for (int i = 1; i < AUDIO_UPDATE_SIZE; ++i)
+				self->samples[i] = samples[0];
+		}
+	}
+	else
+	{
+		Assert(isExpanded);
+	}
+}
 
 void AudioFloat::setZero()
 {

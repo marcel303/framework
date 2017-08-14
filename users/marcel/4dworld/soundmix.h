@@ -29,19 +29,8 @@
 
 #include <list>
 #include <string>
+#include "audioTypes.h"
 #include "limiter.h"
-
-#define AUDIO_UPDATE_SIZE 256
-
-#define SAMPLE_RATE 44100
-
-#ifdef MACOS
-	#define ALIGN16 __attribute__((aligned(16)))
-	#define ALIGN32 __attribute__((aligned(32)))
-#else
-	#define ALIGN16
-	#define ALIGN32
-#endif
 
 struct Osc4DStream;
 

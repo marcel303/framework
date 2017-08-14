@@ -27,36 +27,14 @@
 
 #pragma once
 
-#include "audioNodeBase.h"
-#include "soundmix.h"
+#define AUDIO_UPDATE_SIZE 256
 
-struct AudioNodePcmData : AudioNodeBase
-{
-	enum Input
-	{
-		kInput_Filename,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_PcmData,
-		kOutput_COUNT
-	};
-	
-	PcmData pcmData;
-	
-	std::string currentFilename;
-	
-	AudioNodePcmData()
-		: AudioNodeBase()
-		, pcmData()
-		, currentFilename()
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_Filename, kAudioPlugType_String);
-		addOutput(kOutput_PcmData, kAudioPlugType_PcmData, &pcmData);
-	}
-	
-	virtual void tick(const float dt) override;
-};
+#define SAMPLE_RATE 44100
+
+#ifdef MACOS
+	#define ALIGN16 __attribute__((aligned(16)))
+	#define ALIGN32 __attribute__((aligned(32)))
+#else
+	#define ALIGN16
+	#define ALIGN32
+#endif

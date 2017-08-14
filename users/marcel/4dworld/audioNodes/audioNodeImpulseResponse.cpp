@@ -26,6 +26,7 @@
 */
 
 #include "audioNodeImpulseResponse.h"
+#include <cmath>
 
 AUDIO_NODE_TYPE(impulse_response, AudioNodeImpulseResponse)
 {

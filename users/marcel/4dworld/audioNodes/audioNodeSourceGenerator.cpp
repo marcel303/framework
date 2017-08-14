@@ -26,6 +26,7 @@
 */
 
 #include "audioNodeSourceGenerator.h"
+#include <cmath>
 
 AUDIO_ENUM_TYPE(audioSineType)
 {

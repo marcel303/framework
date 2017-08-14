@@ -26,6 +26,7 @@
 */
 
 #include "audioNodePhysicalSpring.h"
+#include <cmath>
 #include <xmmintrin.h>
 
 AUDIO_NODE_TYPE(physical_spring, AudioNodePhysicalSpring)

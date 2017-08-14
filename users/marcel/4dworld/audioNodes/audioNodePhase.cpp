@@ -26,6 +26,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "audioNodePhase.h"
+#include <cmath>
 
 AUDIO_NODE_TYPE(phase, AudioNodePhase)
 {

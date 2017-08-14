@@ -28,12 +28,10 @@
 #pragma once
 
 #include "audioProfiling.h"
+#include "audioTypes.h"
 #include "Debugging.h"
-#include "soundmix.h" // todo : remove
 #include <string>
 #include <vector>
-
-#include <xmmintrin.h>
 
 #define MULTIPLE_AUDIO_INPUT 1
 
@@ -41,6 +39,7 @@ struct GraphEdit_TypeDefinitionLibrary;
 struct GraphNode;
 
 struct AudioFloat;
+struct PcmData;
 
 enum AudioTriggerDataType
 {
@@ -66,6 +65,7 @@ struct AudioTriggerData
 		floatValue = value;
 	}
 	
+	/*
 	bool asBool(const bool defaultValue = false) const
 	{
 		switch (type)
@@ -91,6 +91,7 @@ struct AudioTriggerData
 
 		return defaultValue;
 	}
+	*/
 	
 	float asFloat(const float defaultValue = 0.f) const
 	{
@@ -150,66 +151,8 @@ struct AudioFloat
 		return samples[0];
 	}
 	
-	float getMean() const
-	{
-		if (isScalar)
-			return getScalar();
-		else
-		{
-			// todo : add audioBuffer*** function to calculate the mean value of a buffer
-			
-		#if 0
-			const __m128 * __restrict samples4 = (__m128*)samples;
-			
-			__m128 sum4 = _mm_setzero_ps();
-			
-			for (int i = 0; i < AUDIO_UPDATE_SIZE / 4; ++i)
-			{
-				sum4 += samples4[i];
-			}
-			
-			__m128 x = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(0, 0, 0, 0));
-			__m128 y = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(1, 1, 1, 1));
-			__m128 z = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(2, 2, 2, 2));
-			__m128 w = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(3, 3, 3, 3));
-			
-			__m128 sum1 = _mm_add_ps(_mm_add_ps(x, y), _mm_add_ps(z, w));
-			
-			const float sum = _mm_cvtss_f32(_mm_mul_ps(sum1, _mm_set1_ps(1.f / AUDIO_UPDATE_SIZE)));
-		#else
-			float sum = 0.f;
-			
-			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			{
-				sum += samples[i];
-			}
-			
-			sum /= AUDIO_UPDATE_SIZE;
-		#endif
-			
-			return sum;
-		}
-	}
-	
-	void expand() const
-	{
-		AudioFloat * self = const_cast<AudioFloat*>(this);
-		
-		if (isScalar)
-		{
-			if (isExpanded == false)
-			{
-				self->isExpanded = true;
-				
-				for (int i = 1; i < AUDIO_UPDATE_SIZE; ++i)
-					self->samples[i] = samples[0];
-			}
-		}
-		else
-		{
-			Assert(isExpanded);
-		}
-	}
+	float getMean() const;
+	void expand() const;
 	
 	void setZero();
 	void setOne();

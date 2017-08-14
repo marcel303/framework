@@ -27,6 +27,7 @@
 
 #include "audioNodeSmoothe.h"
 #include "Noise.h"
+#include <cmath>
 #include <xmmintrin.h>
 
 AUDIO_ENUM_TYPE(smoothing_mode)
