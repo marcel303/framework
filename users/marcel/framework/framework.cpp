@@ -5285,7 +5285,7 @@ static void drawTextMSDFInternal(MsdfGlyphCache & glyphCache, const float _x, co
 {
 	if (globals.isInTextBatchMSDF == false)
 	{
-		Shader & shader = globals.builtinShaders->msdfText;
+		Shader & shader = globals.builtinShaders->msdfText.get();
 		setShader(shader);
 		
 		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture);
@@ -5433,7 +5433,7 @@ void beginTextBatch()
 		
 		globals.isInTextBatchMSDF = true;
 		
-		Shader & shader = globals.builtinShaders->msdfText;
+		Shader & shader = globals.builtinShaders->msdfText.get();
 		setShader(shader);
 		
 		shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture);
@@ -6675,7 +6675,7 @@ static void makeGaussianKernel(const int kernelSize, ShaderBuffer & kernel)
 
 void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius)
 {
-	Shader & shader = globals.builtinShaders->gaussianBlurH;
+	Shader & shader = globals.builtinShaders->gaussianBlurH.get();
 	setShader(shader);
 
 	static ShaderBuffer kernel;
@@ -6689,7 +6689,7 @@ void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const fl
 
 void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius)
 {
-	Shader & shader = globals.builtinShaders->gaussianBlurV;
+	Shader & shader = globals.builtinShaders->gaussianBlurV.get();
 	setShader(shader);
 	
 	static ShaderBuffer kernel;
@@ -6847,7 +6847,7 @@ void setShader_Premultiply(const GLuint source)
 
 void setShader_ColorMultiply(const GLuint source, const Color & color, const float opacity)
 {
-	Shader & shader = globals.builtinShaders->colorMultiply;
+	Shader & shader = globals.builtinShaders->colorMultiply.get();
 	setShader(shader);
 	
 	shader.setTexture("source", 0, source);
@@ -6858,7 +6858,7 @@ void setShader_ColorMultiply(const GLuint source, const Color & color, const flo
 
 void setShader_ColorTemperature(const GLuint source, const float temperature, const float opacity)
 {
-	Shader & shader = globals.builtinShaders->colorTemperature;
+	Shader & shader = globals.builtinShaders->colorTemperature.get();
 	setShader(shader);
 	
 	shader.setTexture("source", 0, source);
@@ -6870,42 +6870,42 @@ void setShader_ColorTemperature(const GLuint source, const float temperature, co
 
 static void setShader_HqLines()
 {
-	setShader(globals.builtinShaders->hqLine);
+	setShader(globals.builtinShaders->hqLine.get());
 }
 
 static void setShader_HqFilledTriangles()
 {
-	setShader(globals.builtinShaders->hqFilledTriangle);
+	setShader(globals.builtinShaders->hqFilledTriangle.get());
 }
 
 static void setShader_HqFilledCircles()
 {
-	setShader(globals.builtinShaders->hqFilledCircle);
+	setShader(globals.builtinShaders->hqFilledCircle.get());
 }
 
 static void setShader_HqFilledRects()
 {
-	setShader(globals.builtinShaders->hqFilledRect);
+	setShader(globals.builtinShaders->hqFilledRect.get());
 }
 
 static void setShader_HqFilledRoundedRects()
 {
-	setShader(globals.builtinShaders->hqFilledRoundedRect);
+	setShader(globals.builtinShaders->hqFilledRoundedRect.get());
 }
 
 static void setShader_HqStrokedTriangles()
 {
-	setShader(globals.builtinShaders->hqStrokeTriangle);
+	setShader(globals.builtinShaders->hqStrokeTriangle.get());
 }
 
 static void setShader_HqStrokedCircles()
 {
-	setShader(globals.builtinShaders->hqStrokedCircle);
+	setShader(globals.builtinShaders->hqStrokedCircle.get());
 }
 
 static void setShader_HqStrokedRects()
 {
-	setShader(globals.builtinShaders->hqStrokedRect);
+	setShader(globals.builtinShaders->hqStrokedRect.get());
 }
 
 void hqBegin(HQ_TYPE type, bool useScreenSize)

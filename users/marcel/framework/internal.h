@@ -683,26 +683,56 @@ public:
 
 //
 
+class BuiltinShader
+{
+	std::string filename;
+	bool shaderIsInit;
+	Shader shader;
+	
+public:
+	BuiltinShader(const char * _filename)
+		: filename(_filename)
+		, shaderIsInit(false)
+		, shader()
+	{
+	}
+	
+	Shader & get()
+	{
+		if (shaderIsInit == false)
+		{
+			shaderIsInit = true;
+			
+			const std::string vs = std::string(filename) + ".vs";
+			const std::string ps = std::string(filename) + ".ps";
+			
+			shader.load(filename.c_str(), vs.c_str(), ps.c_str());
+		}
+		
+		return shader;
+	}
+};
+
 class BuiltinShaders
 {
 public:
 	BuiltinShaders();
 	
-	Shader gaussianBlurH;
-	Shader gaussianBlurV;
-	Shader colorMultiply;
-	Shader colorTemperature;
+	BuiltinShader gaussianBlurH;
+	BuiltinShader gaussianBlurV;
+	BuiltinShader colorMultiply;
+	BuiltinShader colorTemperature;
 	
-	Shader hqLine;
-	Shader hqFilledTriangle;
-	Shader hqFilledCircle;
-	Shader hqFilledRect;
-	Shader hqFilledRoundedRect;
-	Shader hqStrokeTriangle;
-	Shader hqStrokedCircle;
-	Shader hqStrokedRect;
+	BuiltinShader hqLine;
+	BuiltinShader hqFilledTriangle;
+	BuiltinShader hqFilledCircle;
+	BuiltinShader hqFilledRect;
+	BuiltinShader hqFilledRoundedRect;
+	BuiltinShader hqStrokeTriangle;
+	BuiltinShader hqStrokedCircle;
+	BuiltinShader hqStrokedRect;
 	
-	Shader msdfText;
+	BuiltinShader msdfText;
 };
 
 //
