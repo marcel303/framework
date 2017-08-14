@@ -176,17 +176,19 @@ AudioNodeVoice4D::~AudioNodeVoice4D()
 		g_voiceMgr->freeVoice(voice);
 }
 
-void AudioNodeVoice4D::init(const GraphNode & node)
-{
-	const float rampTime = getInputAudioFloat(kInput_RampTime, &AudioFloat::One)->getMean();
-	
-	source.voiceNode = this;
-	g_voiceMgr->allocVoice(voice, &source, "voice.4d", true, .2f, rampTime, -1);
-	voice->isSpatial = true;
-}
-
 void AudioNodeVoice4D::tick(const float dt)
 {
+	audioCpuTimingBlock(AudioNodeVoice4D);
+	
+	if (voice == nullptr)
+	{
+		const float rampTime = getInputAudioFloat(kInput_RampTime, &AudioFloat::One)->getMean();
+		
+		source.voiceNode = this;
+		g_voiceMgr->allocVoice(voice, &source, "voice.4d", true, .2f, rampTime, -1);
+		voice->isSpatial = true;
+	}
+	
 	voice->spat.globalEnable = getInputBool(kInput_Global, true);
 	
 	const float originRotY = getInputAudioFloat(kInput_OriginRotY, &AudioFloat::Zero)->getMean();
