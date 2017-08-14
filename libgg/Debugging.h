@@ -1,8 +1,5 @@
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
-
 #ifdef DEBUG
 void HandleAssert(const char * func, int line, const char * expr, ...);
 #define Assert(x) do { if (!(x)) { HandleAssert(__FUNCTION__, __LINE__, #x); } } while (false)
@@ -19,14 +16,16 @@ void HandleAssert(const char * func, int line, const char * expr, ...);
 class AllocState
 {
 public:
+	typedef unsigned long long counter_t;
+	
 	AllocState();
 	
-	size_t allocationCount;
-	size_t allocationSize;
-	size_t totalAllocationCount;
-	size_t totalAllocationSize;
-	size_t maxAllocationCount;
-	size_t maxAllocationSize;
+	counter_t allocationCount;
+	counter_t allocationSize;
+	counter_t totalAllocationCount;
+	counter_t totalAllocationSize;
+	counter_t maxAllocationCount;
+	counter_t maxAllocationSize;
 };
 
 AllocState GetAllocState();
