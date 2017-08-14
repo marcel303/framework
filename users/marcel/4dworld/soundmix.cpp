@@ -953,9 +953,13 @@ int AudioVoiceManager::numDynamicChannelsUsed() const
 {
 	int result = 0;
 	
-	for (auto & voice : voices)
-		if (voice.channelIndex != -1 && voice.channelIndex < numDynamicChannels)
-			result++;
+	SDL_LockMutex(mutex);
+	{
+		for (auto & voice : voices)
+			if (voice.channelIndex != -1 && voice.channelIndex < numDynamicChannels)
+				result++;
+	}
+	SDL_UnlockMutex(mutex);
 	
 	return result;
 }
