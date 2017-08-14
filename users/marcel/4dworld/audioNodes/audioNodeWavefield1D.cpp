@@ -108,6 +108,8 @@ void AudioNodeWavefield1D::randomize()
 
 void AudioNodeWavefield1D::tick(const float _dt)
 {
+	audioCpuTimingBlock(AudioNodeWavefield1D);
+	
 	const AudioFloat defaultTension(1.f);
 	
 	const AudioFloat * gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One);

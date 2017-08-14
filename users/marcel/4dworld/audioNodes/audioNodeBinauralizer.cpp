@@ -42,6 +42,8 @@ AUDIO_NODE_TYPE(binauralizer, AudioNodeBinauralizer)
 
 void AudioNodeBinauralizer::tick(const float dt)
 {
+	audioCpuTimingBlock(AudioNodeBinauralizer);
+	
 	const AudioFloat * audio = getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
 	const char * location = getInputString(kInput_SampleSetLocation, "");
 	const float elevation = getInputAudioFloat(kInput_Elevation, &AudioFloat::Zero)->getMean();

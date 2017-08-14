@@ -42,6 +42,8 @@ AUDIO_NODE_TYPE(normalize, AudioNodeNormalize)
 
 void AudioNodeNormalize::tick(const float dt)
 {
+	audioCpuTimingBlock(AudioNodeNormalize);
+	
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 	const float level = getInputFloat(kInput_Level, 1.f);
 	const float maxAmp = getInputFloat(kInput_MaxAmplification, 10.f);

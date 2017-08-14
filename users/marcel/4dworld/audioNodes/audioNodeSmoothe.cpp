@@ -47,6 +47,8 @@ AUDIO_NODE_TYPE(smoothe, AudioNodeSmoothe)
 
 void AudioNodeSmoothe::tick(const float _dt)
 {
+	audioCpuTimingBlock(AudioNodeSmoothe);
+	
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 	const SmoothingUnit smoothingUnit = (SmoothingUnit)getInputInt(kInput_SmoothingUnit, 0);
 	const AudioFloat * retain = getInputAudioFloat(kInput_Smoothness, &AudioFloat::Half);

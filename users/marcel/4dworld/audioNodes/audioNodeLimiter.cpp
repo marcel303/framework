@@ -41,6 +41,8 @@ AUDIO_NODE_TYPE(limiter, AudioNodeLimiter)
 
 void AudioNodeLimiter::tick(const float dt)
 {
+	audioCpuTimingBlock(AudioNodeLimiter);
+	
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 	const float max = getInputFloat(kInput_Max, 1.f);
 	const double decayPerMs = std::max(0.f, std::min(1.f, getInputFloat(kInput_DecayPerMillisecond, .001f)));
