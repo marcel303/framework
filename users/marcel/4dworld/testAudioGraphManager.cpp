@@ -1457,6 +1457,7 @@ struct World : WorldInterface
 			}
 			hqEnd();
 			
+			beginTextBatch();
 			for (int ox = 0; ox < 2; ++ox)
 			{
 				for (int oy = 0; oy < 2; ++oy)
@@ -1473,6 +1474,7 @@ struct World : WorldInterface
 						world[0], world[1]);
 				}
 			}
+			endTextBatch();
 		}
 		gxPopMatrix();
 		
@@ -1501,6 +1503,7 @@ struct World : WorldInterface
 			}
 			hqEnd();
 			
+			beginTextBatch();
 			for (int i = 0; i < 4; ++i)
 			{
 				const auto v = rect[(i + 0) % 4];
@@ -1514,6 +1517,7 @@ struct World : WorldInterface
 					"(%.2f, %.2f)",
 					v[0], v[1]);
 			}
+			endTextBatch();
 			
 			for (auto entity : entities)
 			{
@@ -2108,6 +2112,8 @@ void testAudioGraphManager()
 	mutex = nullptr;
 	
 	//
+	
+	Font("calibri.ttf").saveCache();
 	
 	exit(0);
 }
