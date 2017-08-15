@@ -63,13 +63,21 @@ void AudioNodeDryWet::tick(const float dt)
 	{
 		dry->expand();
 		wet->expand();
-
+		
+		//
+		
+		audioOutput.setVector();
+		
 		audioBufferDryWet(audioOutput.samples, dry->samples, wet->samples, AUDIO_UPDATE_SIZE, wetness->getScalar());
 	}
 	else
 	{
 		dry->expand();
 		wet->expand();
+		
+		//
+		
+		audioOutput.setVector();
 		
 		audioBufferDryWet(audioOutput.samples, dry->samples, wet->samples, AUDIO_UPDATE_SIZE, wetness->samples);
 	}
