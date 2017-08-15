@@ -171,7 +171,6 @@ struct AudioNodeVoice4DGlobals : AudioNodeBase
 {
 	enum Input
 	{
-		kInput_SyncOsc,
 		kInput_Gain,
 		kInput_PosX,
 		kInput_PosY,
@@ -202,7 +201,6 @@ struct AudioNodeVoice4DGlobals : AudioNodeBase
 		: AudioNodeBase()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_SyncOsc, kAudioPlugType_Trigger);
 		addInput(kInput_Gain, kAudioPlugType_FloatVec);
 		addInput(kInput_PosX, kAudioPlugType_FloatVec);
 		addInput(kInput_PosY, kAudioPlugType_FloatVec);
@@ -224,6 +222,4 @@ struct AudioNodeVoice4DGlobals : AudioNodeBase
 	}
 	
 	virtual void tick(const float dt) override;
-	
-	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) override;
 };

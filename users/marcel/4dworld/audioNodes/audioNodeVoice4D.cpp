@@ -168,23 +168,35 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_RampDown, kAudioPlugType_Trigger);
 	addOutput(kOutput_RampedUp, kAudioPlugType_Trigger, &dummyTriggerData);
 	addOutput(kOutput_RampedDown, kAudioPlugType_Trigger, &dummyTriggerData);
+	
+	source.voiceNode = this;
 }
 
 AudioNodeVoice4D::~AudioNodeVoice4D()
 {
 	if (voice != nullptr)
+	{
 		g_voiceMgr->freeVoice(voice);
+	}
 }
 
 void AudioNodeVoice4D::tick(const float dt)
 {
 	audioCpuTimingBlock(AudioNodeVoice4D);
 	
-	if (voice == nullptr)
+	if (isPassthrough)
+	{
+		if (voice != nullptr)
+		{
+			g_voiceMgr->freeVoice(voice);
+		}
+		
+		return;
+	}
+	else if (voice == nullptr)
 	{
 		const float rampTime = getInputAudioFloat(kInput_RampTime, &AudioFloat::One)->getMean();
 		
-		source.voiceNode = this;
 		g_voiceMgr->allocVoice(voice, &source, "voice.4d", true, .2f, rampTime, -1);
 		voice->isSpatial = true;
 	}
@@ -486,7 +498,6 @@ AUDIO_NODE_TYPE(globals_4d, AudioNodeVoice4DGlobals)
 {
 	typeName = "globals.4d";
 	
-	in("syncOsc", "trigger");
 	in("gain", "audioValue", "1");
 	in("pos.x", "audioValue");
 	in("pos.y", "audioValue");
@@ -533,18 +544,4 @@ void AudioNodeVoice4DGlobals::tick(const float dt)
 	g_voiceMgr->spat.globalOrigin[0] = getInputAudioFloat(kInput_OriginX, &AudioFloat::Zero)->getMean();
 	g_voiceMgr->spat.globalOrigin[1] = getInputAudioFloat(kInput_OriginY, &AudioFloat::Zero)->getMean();
 	g_voiceMgr->spat.globalOrigin[2] = getInputAudioFloat(kInput_OriginZ, &AudioFloat::Zero)->getMean();
-}
-
-void AudioNodeVoice4DGlobals::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
-{
-	if (inputSocketIndex == kInput_SyncOsc)
-	{
-		// todo : move transmit socket ownership over to voice mgr
-		
-		g_oscStream->beginBundle();
-		{
-			g_voiceMgr->generateOsc(*g_oscStream, true);
-		}
-		g_oscStream->endBundle();
-	}
 }
