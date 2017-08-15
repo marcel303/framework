@@ -27,8 +27,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioGraph.h"
 #include "audioNodePcmSelect.h"
-#include "framework.h"
-#include "soundmix.h"
+#include "framework.h" // listFiles
+#include "soundmix.h" // PcmData
 
 AUDIO_ENUM_TYPE(pcmSelectMode)
 {

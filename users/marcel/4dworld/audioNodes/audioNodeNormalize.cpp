@@ -26,8 +26,7 @@
 */
 
 #include "audioNodeNormalize.h"
-#include "Noise.h"
-#include <cmath>
+#include <math.h>
 
 AUDIO_NODE_TYPE(normalize, AudioNodeNormalize)
 {
@@ -47,12 +46,12 @@ void AudioNodeNormalize::tick(const float dt)
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 	const float level = getInputFloat(kInput_Level, 1.f);
 	const float maxAmp = getInputFloat(kInput_MaxAmplification, 10.f);
-	const float decayPerMs = std::max(0.f, std::min(1.f, getInputFloat(kInput_DecayPerMillisecond, .001f)));
+	const float decayPerMs = fmaxf(0.f, fminf(1.f, getInputFloat(kInput_DecayPerMillisecond, .001f)));
 	
 	//
 
 	const float dtMs = 1000.f / SAMPLE_RATE;
-	const float retainPerSample = std::pow(1.f - decayPerMs, dtMs);
+	const float retainPerSample = powf(1.f - decayPerMs, dtMs);
 
 	//
 	
@@ -74,7 +73,7 @@ void AudioNodeNormalize::tick(const float dt)
 		{
 			const float input = value->samples[i];
 
-			const float inputMag = std::fmaxf(level / maxAmp, std::fabsf(input));
+			const float inputMag = fmaxf(level / maxAmp, fabsf(input));
 
 			if (inputMag > measuredMax)
 			{

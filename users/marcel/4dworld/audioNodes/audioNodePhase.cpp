@@ -26,7 +26,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "audioNodePhase.h"
-#include <cmath>
+#include <math.h>
 
 AUDIO_NODE_TYPE(phase, AudioNodePhase)
 {
@@ -77,7 +77,7 @@ void AudioNodePhase::tick(const float dt)
 				resultOutput.samples[i] = phase + _phaseOffset;
 				
 				phase += phaseStep;
-				phase = phase - std::floorf(phase);
+				phase = phase - floorf(phase);
 			}
 		}
 		else
@@ -93,7 +93,7 @@ void AudioNodePhase::tick(const float dt)
 				resultOutput.samples[i] = phase + _phaseOffset;
 				
 				phase += _frequency / SAMPLE_RATE;
-				phase = phase - std::floorf(phase);
+				phase = phase - floorf(phase);
 			}
 		}
 	}
@@ -105,6 +105,6 @@ void AudioNodePhase::tick(const float dt)
 		resultOutput.setScalar(phase + _phaseOffset);
 		
 		phase += _frequency / SAMPLE_RATE * AUDIO_UPDATE_SIZE;
-		phase = phase - std::floorf(phase);
+		phase = phase - floorf(phase);
 	}
 }

@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "audioGraph.h"
+#include "audioGraph.h" // getHrirSampleSet
 #include "audioNodeBinauralizer.h"
 
 AUDIO_NODE_TYPE(binauralizer, AudioNodeBinauralizer)

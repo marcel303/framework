@@ -26,8 +26,6 @@
 */
 
 #include "audioNodeInterpolateScalar.h"
-#include "Noise.h"
-#include <cmath>
 
 AUDIO_NODE_TYPE(interpolate_scalar, AudioNodeInterpolateScalar)
 {

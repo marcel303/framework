@@ -29,7 +29,6 @@
 
 #include "audioNodeBase.h"
 #include "binauralizer.h"
-#include "binaural_cipic.h"
 
 struct AudioNodeBinauralizer : AudioNodeBase
 {

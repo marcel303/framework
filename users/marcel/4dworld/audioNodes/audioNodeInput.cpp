@@ -27,8 +27,6 @@
 
 #include "audioNodeInput.h"
 #include "audioUpdateHandler.h"
-#include "Noise.h"
-#include <cmath>
 
 AUDIO_NODE_TYPE(input, AudioNodeInput)
 {

@@ -26,7 +26,7 @@
 */
 
 #include "audioNodeSourceGenerator.h"
-#include <cmath>
+#include <math.h>
 
 AUDIO_ENUM_TYPE(audioSineType)
 {
@@ -95,20 +95,20 @@ void AudioNodeSourceSine::drawSine()
 		{
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{
-				audioOutput.samples[i] = a->samples[i] + std::sinf(phase * twoPi) * b->samples[i];
+				audioOutput.samples[i] = a->samples[i] + sinf(phase * twoPi) * b->samples[i];
 				
 				phase += dt * frequency->samples[i];
-				phase = phase - std::floorf(phase);
+				phase = phase - floorf(phase);
 			}
 		}
 		else if (mode == kMode_MinMax)
 		{
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{
-				audioOutput.samples[i] = a->samples[i] + (.5f + .5f * std::sinf(phase * twoPi)) * (b->samples[i] - a->samples[i]);
+				audioOutput.samples[i] = a->samples[i] + (.5f + .5f * sinf(phase * twoPi)) * (b->samples[i] - a->samples[i]);
 				
 				phase += dt * frequency->samples[i];
-				phase = phase - std::floorf(phase);
+				phase = phase - floorf(phase);
 			}
 		}
 	}
@@ -116,24 +116,24 @@ void AudioNodeSourceSine::drawSine()
 	{
 		if (mode == kMode_BaseScale)
 		{
-			const float value = a->getMean() + std::sinf(phase * twoPi) * b->getMean();
+			const float value = a->getMean() + sinf(phase * twoPi) * b->getMean();
 			
 			audioOutput.setScalar(value);
 			
 			phase += dt * frequency->getMean() * AUDIO_UPDATE_SIZE;
-			phase = std::fmodf(phase, 1.f);
+			phase = fmodf(phase, 1.f);
 		}
 		else if (mode == kMode_MinMax)
 		{
 			const float aMean = a->getMean();
 			const float bMean = b->getMean();
 			
-			const float value = aMean + (.5f + .5f * std::sinf(phase * twoPi)) * (bMean - aMean);
+			const float value = aMean + (.5f + .5f * sinf(phase * twoPi)) * (bMean - aMean);
 			
 			audioOutput.setScalar(value);
 			
 			phase += dt * frequency->getMean() * AUDIO_UPDATE_SIZE;
-			phase = std::fmodf(phase, 1.f);
+			phase = fmodf(phase, 1.f);
 		}
 	}
 }
@@ -178,7 +178,7 @@ void AudioNodeSourceSine::drawTriangle()
 				audioOutput.samples[i] = a->samples[i] + value * b->samples[i];
 				
 				phase += dt * frequency->samples[i];
-				phase = phase - std::floorf(phase);
+				phase = phase - floorf(phase);
 			}
 		}
 		else if (mode == kMode_MinMax)
@@ -202,7 +202,7 @@ void AudioNodeSourceSine::drawTriangle()
 				audioOutput.samples[i] = a->samples[i] + value * (b->samples[i] - a->samples[i]);
 				
 				phase += dt * frequency->samples[i];
-				phase = phase - std::floorf(phase);
+				phase = phase - floorf(phase);
 			}
 		}
 	}
@@ -241,7 +241,7 @@ void AudioNodeSourceSine::drawSquare()
 				audioOutput.samples[i] = value;
 				
 				phase += dt * frequency->samples[i];
-				phase = phase - std::floorf(phase);
+				phase = phase - floorf(phase);
 			}
 		}
 		else if (mode == kMode_MinMax)
@@ -251,7 +251,7 @@ void AudioNodeSourceSine::drawSquare()
 				audioOutput.samples[i] = phase < skew ? a->samples[i] : b->samples[i];
 				
 				phase += dt * frequency->samples[i];
-				phase = phase - std::floorf(phase);
+				phase = phase - floorf(phase);
 			}
 		}
 	}

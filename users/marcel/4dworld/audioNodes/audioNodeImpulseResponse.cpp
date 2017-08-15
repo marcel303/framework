@@ -26,7 +26,7 @@
 */
 
 #include "audioNodeImpulseResponse.h"
-#include <cmath>
+#include <math.h>
 
 AUDIO_NODE_TYPE(impulse_response, AudioNodeImpulseResponse)
 {
@@ -64,7 +64,7 @@ void AudioNodeImpulseResponse::tick(const float _dt)
 	{
 		const double dt = 1.0 / SAMPLE_RATE;
 		const double twoPi = 2.0 * M_PI;
-		const double retain = std::pow(0.5, dt * 1000.0);
+		const double retain = pow(0.5, dt * 1000.0);
 		
 		impulseResponseOutput.setVector();
 		
@@ -76,15 +76,15 @@ void AudioNodeImpulseResponse::tick(const float _dt)
 			const double measurementValue = value->samples[i];
 			const double measurementFrequency = frequency->samples[i];
 			
-			const double x = std::cos(measurementPhase * twoPi);
-			const double y = std::sin(measurementPhase * twoPi);
+			const double x = cos(measurementPhase * twoPi);
+			const double y = sin(measurementPhase * twoPi);
 			
 			runningImpulseResponseX += measurementValue * x;
 			runningImpulseResponseY += measurementValue * y;
 			
-			measurementPhase = std::fmod(measurementPhase + measurementFrequency * dt, 1.0);
+			measurementPhase = fmod(measurementPhase + measurementFrequency * dt, 1.0);
 			
-			impulseResponseOutput.samples[i] = float(std::hypot(runningImpulseResponseX, runningImpulseResponseY));
+			impulseResponseOutput.samples[i] = float(hypotf(runningImpulseResponseX, runningImpulseResponseY));
 		}
 	}
 }

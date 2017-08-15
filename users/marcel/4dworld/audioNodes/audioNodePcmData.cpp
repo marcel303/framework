@@ -27,7 +27,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioGraph.h"
 #include "audioNodePcmData.h"
-#include "FileStream.h"
 
 AUDIO_NODE_TYPE(pcmData, AudioNodePcmData)
 {

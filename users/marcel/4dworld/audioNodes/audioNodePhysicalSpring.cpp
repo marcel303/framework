@@ -26,7 +26,7 @@
 */
 
 #include "audioNodePhysicalSpring.h"
-#include <cmath>
+#include <math.h>
 #include <xmmintrin.h>
 
 AUDIO_NODE_TYPE(physical_spring, AudioNodePhysicalSpring)
@@ -86,7 +86,7 @@ void AudioNodePhysicalSpring::tick(const float _dt)
 	
 	if (dampen->isScalar)
 	{
-		dampenThisTick = std::pow(1.0 - dampen->getScalar(), dt);
+		dampenThisTick = pow(1.0 - dampen->getScalar(), dt);
 	}
 	
 	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
@@ -95,7 +95,7 @@ void AudioNodePhysicalSpring::tick(const float _dt)
 	{
 		if (dampen->isScalar == false)
 		{
-			dampenThisTick = std::pow(1.0 - dampen->samples[i], dt);
+			dampenThisTick = pow(1.0 - dampen->samples[i], dt);
 		}
 
 		const double delta = value;

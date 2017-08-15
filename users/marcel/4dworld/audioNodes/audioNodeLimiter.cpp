@@ -26,8 +26,7 @@
 */
 
 #include "audioNodeLimiter.h"
-#include "Noise.h"
-#include <cmath>
+#include <math.h>
 
 AUDIO_NODE_TYPE(limiter, AudioNodeLimiter)
 {
@@ -45,7 +44,7 @@ void AudioNodeLimiter::tick(const float dt)
 	
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 	const float max = getInputFloat(kInput_Max, 1.f);
-	const double decayPerMs = std::max(0.f, std::min(1.f, getInputFloat(kInput_DecayPerMillisecond, .001f)));
+	const double decayPerMs = fmaxf(0.f, fminf(1.f, getInputFloat(kInput_DecayPerMillisecond, .001f)));
 	
 	//
 
@@ -56,7 +55,7 @@ void AudioNodeLimiter::tick(const float dt)
 	else if (value->isScalar)
 	{
 		const double dtMs = AUDIO_UPDATE_SIZE * 1000.0 / double(SAMPLE_RATE);
-		const double retainPerTick = std::pow(1.0 - decayPerMs, dtMs);
+		const double retainPerTick = pow(1.0 - decayPerMs, dtMs);
 
 		//
 		
@@ -70,7 +69,7 @@ void AudioNodeLimiter::tick(const float dt)
 	else
 	{
 		const double dtMs = 1000.0 / SAMPLE_RATE;
-		const double retainPerSample = std::pow(1.0 - decayPerMs, dtMs);
+		const double retainPerSample = pow(1.0 - decayPerMs, dtMs);
 
 		//
 

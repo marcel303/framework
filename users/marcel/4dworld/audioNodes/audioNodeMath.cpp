@@ -26,7 +26,7 @@
 */
 
 #include "audioNodeMath.h"
-#include <cmath>
+#include <math.h>
 
 static const float twoPi = M_PI * 2.f;
 
@@ -56,36 +56,36 @@ static float evalMathOp(const float a, const float b, const AudioNodeMath::Type 
 		if (isPassthrough)
 			r = a;
 		else
-			r = std::sin(a * twoPi);
+			r = sinf(a * twoPi);
 		break;
 		
 	case AudioNodeMath::kType_Cos:
 		if (isPassthrough)
 			r = a;
 		else
-			r = std::cos(a * twoPi);
+			r = cosf(a * twoPi);
 		break;
 		
 	case AudioNodeMath::kType_Abs:
 		if (isPassthrough)
 			r = a;
 		else
-			r = std::abs(a);
+			r = fabsf(a);
 		break;
 		
 	case AudioNodeMath::kType_Min:
-		r = std::min(a, b);
+		r = fminf(a, b);
 		break;
 		
 	case AudioNodeMath::kType_Max:
-		r = std::max(a, b);
+		r = fmaxf(a, b);
 		break;
 		
 	case AudioNodeMath::kType_Sat:
 		if (isPassthrough)
 			r = a;
 		else
-			r = std::max(0.f, std::min(1.f, a));
+			r = fmaxf(0.f, fminf(1.f, a));
 		break;
 		
 	case AudioNodeMath::kType_Neg:
@@ -99,58 +99,58 @@ static float evalMathOp(const float a, const float b, const AudioNodeMath::Type 
 		if (isPassthrough)
 			r = a;
 		else
-			r = std::sqrt(a);
+			r = sqrtf(a);
 		break;
 		
 	case AudioNodeMath::kType_Pow:
 		if (isPassthrough)
 			r = a;
 		else
-			r = std::pow(a, b);
+			r = powf(a, b);
 		break;
 		
 	case AudioNodeMath::kType_Exp:
 		if (isPassthrough)
 			r = a;
 		else
-			r = std::exp(a);
+			r = expf(a);
 		break;
 		
 	case AudioNodeMath::kType_Mod:
 		if (isPassthrough)
 			r = a;
 		else
-			r = std::fmod(a, b);
+			r = fmodf(a, b);
 		break;
 		
 	case AudioNodeMath::kType_Fract:
 		if (isPassthrough)
 			r = a;
 		else if (a >= 0.f)
-			r = a - std::floor(a);
+			r = a - floorf(a);
 		else
-			r = a - std::ceil(a);
+			r = a - ceilf(a);
 		break;
 		
 	case AudioNodeMath::kType_Floor:
 		if (isPassthrough)
 			r = a;
 		else
-			r = std::floor(a);
+			r = floorf(a);
 		break;
 		
 	case AudioNodeMath::kType_Ceil:
 		if (isPassthrough)
 			r = a;
 		else
-			r = std::ceil(a);
+			r = ceilf(a);
 		break;
 		
 	case AudioNodeMath::kType_Round:
 		if (isPassthrough)
 			r = a;
 		else
-			r = std::round(a);
+			r = roundf(a);
 		break;
 		
 	case AudioNodeMath::kType_Sign:
@@ -161,21 +161,21 @@ static float evalMathOp(const float a, const float b, const AudioNodeMath::Type 
 		break;
 		
 	case AudioNodeMath::kType_Hypot:
-		r = std::hypot(a, b);
+		r = hypotf(a, b);
 		break;
 	
 	case AudioNodeMath::kType_Pitch:
 		if (isPassthrough)
 			r = a;
 		else
-			r = a * std::powf(2.f, b);
+			r = a * powf(2.f, b);
 		break;
 		
 	case AudioNodeMath::kType_Semitone:
 		if (isPassthrough)
 			r = a;
 		else
-			r = a * std::powf(2.f, b / 12.f);
+			r = a * powf(2.f, b / 12.f);
 		break;
 	}
 	

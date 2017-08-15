@@ -26,8 +26,7 @@
 */
 
 #include "audioNodeSmoothe.h"
-#include "Noise.h"
-#include <cmath>
+#include <math.h>
 #include <xmmintrin.h>
 
 AUDIO_ENUM_TYPE(smoothing_mode)
@@ -64,8 +63,8 @@ void AudioNodeSmoothe::tick(const float _dt)
 	{
 		value->expand();
 		
-		const double retainPerSecond = std::min(1.f, std::max(0.f, retain->getScalar()));
-		const double retainPerSample = std::pow(retainPerSecond, dt);
+		const double retainPerSecond = fminf(1.f, fmaxf(0.f, retain->getScalar()));
+		const double retainPerSample = pow(retainPerSecond, dt);
 		const double followPerSample = 1.0 - retainPerSample;
 		
 		resultOutput.setVector();
@@ -89,8 +88,8 @@ void AudioNodeSmoothe::tick(const float _dt)
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			const double retainPerSecond = std::min(1.f, std::max(0.f, retain->samples[i]));
-			const double retainPerSample = std::pow(retainPerSecond, dt);
+			const double retainPerSecond = fminf(1.f, fmaxf(0.f, retain->samples[i]));
+			const double retainPerSample = pow(retainPerSecond, dt);
 			const double followPerSample = 1.0 - retainPerSample;
 		
 			resultOutput.samples[i] = currentValue;
