@@ -25,60 +25,30 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#pragma once
+#include "commandQueue.h"
+#include <SDL2/SDL.h>
 
-#include <list>
-
-struct SDL_mutex;
-
-struct CommandQueueBase
+CommandQueueBase::CommandQueueBase()
+	: mutex(nullptr)
 {
-	SDL_mutex * mutex;
-	
-	CommandQueueBase();
-	~CommandQueueBase();
+	mutex = SDL_CreateMutex();
+}
 
-	void lockMutex();
-	void unlockMutex();
-};
-
-template <typename Command>
-struct CommandQueue : CommandQueueBase
+CommandQueueBase::~CommandQueueBase()
 {
-	std::list<Command> commandList;
-
-	CommandQueue()
-		: CommandQueueBase()
-		, commandList()
+	if (mutex != nullptr)
 	{
+		SDL_DestroyMutex(mutex);
+		mutex = nullptr;
 	}
+}
 
-	void push(const Command & command)
-	{
-		lockMutex();
-		{
-			commandList.push_back(command);
-		}
-		unlockMutex();
-	}
+void CommandQueueBase::lockMutex()
+{
+	SDL_LockMutex(mutex);
+}
 
-	bool pop(Command & command)
-	{
-		bool result = false;
-
-		lockMutex();
-		{
-			if (commandList.empty() == false)
-			{
-				result = true;
-
-				command = commandList.front();
-
-				commandList.pop_front();
-			}
-		}
-		unlockMutex();
-
-		return result;
-	}
-};
+void CommandQueueBase::unlockMutex()
+{
+	SDL_UnlockMutex(mutex);
+}
