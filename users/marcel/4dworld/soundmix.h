@@ -262,6 +262,7 @@ struct AudioVoice
 		Vec3 color;
 		std::string name;
 		float gain;
+		int sendIndex;
 		
 		Vec3 pos;
 		Vec3 size;
@@ -284,6 +285,7 @@ struct AudioVoice
 			: color(1.f, 0.f, 0.f)
 			, name()
 			, gain(1.f)
+			, sendIndex(-1)
 			, pos()
 			, size(1.f, 1.f, 1.f)
 			, rot()
@@ -365,6 +367,7 @@ struct AudioVoice
 		, hasRamped(false)
 		, limiter()
 	{
+		spat.sendIndex = 0;
 	}
 	
 	void applyRamping(float * __restrict samples, const int numSamples, const int durationInSamples);

@@ -1215,6 +1215,11 @@ void AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool _forceSync)
 					stream.sourceSubBoost(voice.spat.subBoost);
 				}
 				
+				if (forceSync || voice.spat.sendIndex != voice.lastSentSpat.sendIndex)
+				{
+					stream.sourceSend(voice.spat.sendIndex >= 0);
+				}
+				
 				if (forceSync || voice.spat.globalEnable != voice.lastSentSpat.globalEnable)
 				{
 					stream.sourceGlobalEnable(voice.spat.globalEnable);

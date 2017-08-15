@@ -290,6 +290,13 @@ void Osc4D::sourceSpatialDelay(const bool enable, const SpatialDelayMode mode, c
 	}
 }
 
+void Osc4D::sourceSend(const bool enabled)
+{
+	beginSource("send1");
+	f(enabled ? 1.f : 0.f);
+	end();
+}
+
 void Osc4D::sourceSubBoost(const SubBoost boost)
 {
 	beginSource("subBoost/mode");

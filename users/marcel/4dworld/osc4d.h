@@ -105,6 +105,8 @@ struct Osc4D
 
 	void sourceSpatialDelay(const bool enable, const SpatialDelayMode mode, const int times, const float feedback, const float drywet, const float smooth, const float scale, const float noiseDepth, const float noiseFrequency);
 	
+	void sourceSend(const bool enabled);
+	
 	// todo : subReduction###
 	
 	void sourceSubBoost(const SubBoost boost);
