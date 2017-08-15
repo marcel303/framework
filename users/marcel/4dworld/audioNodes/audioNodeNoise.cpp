@@ -169,12 +169,14 @@ void AudioNodeNoise::drawPink()
 	const AudioFloat * min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero);
 	const AudioFloat * max = getInputAudioFloat(kInput_Max, &AudioFloat::One);
 	
+	const float scale = 1.f / float(1 << 16);
+	
 	if (fine == false)
 	{
 		const float minValue = min->getMean();
 		const float maxValue = max->getMean();
 		
-		const float t = pinkNumber.next() / float(1 << 16);
+		const float t = pinkNumber.next() * scale;
 		
 		resultOutput.setScalar(minValue + (maxValue - minValue) * t);
 	}
@@ -185,9 +187,18 @@ void AudioNodeNoise::drawPink()
 		const float minValue = min->getScalar();
 		const float maxValue = max->getScalar();
 		
+		ALIGN16 int values[AUDIO_UPDATE_SIZE];
+		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			const float t = pinkNumber.next() / float(1 << 16);
+			values[i] = pinkNumber.next();
+		}
+		
+		// todo : write (SSE) optimized routine to convert, scale and map values from integer to floating point
+		
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		{
+			const float t = values[i] * scale;
 			
 			resultOutput.samples[i] = minValue + (maxValue - minValue) * t;
 		}
