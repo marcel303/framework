@@ -1820,6 +1820,18 @@ void testAudioGraphManager()
 				{
 					if (doButton("randomize wavefield"))
 						world->wavefield.randomize();
+					if (doButton("randomize machine"))
+					{
+						std::vector<Machine*> machines;
+						for (auto e : world->entities)
+							if (e->type == kEntity_Machine)
+								machines.push_back((Machine*)e);
+						if (machines.empty() == false)
+						{
+							const int index = rand() % machines.size();
+							machines[index]->graphInstance->audioGraph->triggerEvent("next");
+						}
+					}
 					doTextBox(world->desiredNumOneshots, "oneshots.num", dt);
 					if (doButton("add ball"))
 						world->addBall();
