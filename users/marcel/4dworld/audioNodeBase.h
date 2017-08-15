@@ -134,6 +134,14 @@ struct AudioFloat
 	
 	void setScalar(const float value)
 	{
+		if (isScalar && isExpanded)
+		{
+			// if this scalar is already expanded, avoid to cost of re-expanding it when the value didn't change
+			
+			if (getScalar() == value)
+				return;
+		}
+		
 		isScalar = true;
 		isExpanded = false;
 		
