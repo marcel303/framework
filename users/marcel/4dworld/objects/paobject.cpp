@@ -131,7 +131,7 @@ bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannel
 	inputParameters.suggestedLatency = Pa_GetDeviceInfo(inputParameters.device)->defaultLowInputLatency;
 	inputParameters.hostApiSpecificStreamInfo = nullptr;
 	
-	if ((err = Pa_OpenStream(&stream, &inputParameters, &outputParameters, sampleRate, bufferSize, paDitherOff, portaudioCallback, this)) != paNoError)
+	if ((err = Pa_OpenStream(&stream, numInputChannels == 0 ? nullptr : &inputParameters, numOutputChannels == 0 ? nullptr : &outputParameters, sampleRate, bufferSize, paDitherOff, portaudioCallback, this)) != paNoError)
 	{
 		LOG_ERR("portaudio: failed to open stream: %s", Pa_GetErrorText(err));
 		return false;
