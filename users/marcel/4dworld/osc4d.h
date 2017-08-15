@@ -129,7 +129,7 @@ struct Osc4D
 #include "osc/OscOutboundPacketStream.h"
 #include <functional>
 
-#define OSC_BUFFER_SIZE (64*1024)
+#define OSC_BUFFER_SIZE (2*1024)
 
 struct Osc4DStream : Osc4D
 {
@@ -139,11 +139,13 @@ struct Osc4DStream : Osc4D
 	UdpTransmitSocket * transmitSocket;
 	
 	bool hasMessage;
+	bool bundleIsInvalid;
 
 	Osc4DStream()
 		: stream(buffer, OSC_BUFFER_SIZE)
 		, transmitSocket(nullptr)
 		, hasMessage(false)
+		, bundleIsInvalid(false)
 	{
 	}
 	
@@ -191,14 +193,34 @@ struct Osc4DStream : Osc4D
 	void beginBundle()
 	{
 	#if OSC_SEND_BUNDLES
-		stream << osc::BeginBundleImmediate;
+		try
+		{
+			bundleIsInvalid = false;
+			
+			stream << osc::BeginBundleImmediate;
+		}
+		catch (std::exception & e)
+		{
+			LOG_ERR("beginBundle failed: %s", e.what());
+			
+			bundleIsInvalid = true;
+		}
 	#endif
 	}
 	
 	void endBundle()
 	{
 	#if OSC_SEND_BUNDLES
-		stream << osc::EndBundle;
+		try
+		{
+			stream << osc::EndBundle;
+		}
+		catch (std::exception & e)
+		{
+			LOG_ERR("endBundle failed: %s", e.what());
+			
+			bundleIsInvalid = true;
+		}
 		
 		flush();
 	#endif
@@ -206,7 +228,7 @@ struct Osc4DStream : Osc4D
 	
 	void flush()
 	{
-		if (hasMessage && stream.IsReady())
+		if (hasMessage && stream.IsReady() && bundleIsInvalid == false)
 		{
 			transmitSocket->Send(stream.Data(), stream.Size());
 		}

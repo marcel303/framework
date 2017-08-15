@@ -101,6 +101,13 @@ void AudioUpdateHandler::setOscEndpoint(const char * ipAddress, const int udpPor
 	SDL_UnlockMutex(mutex);
 }
 
+void AudioUpdateHandler::scheduleForceSyncOsc()
+{
+	Command command;
+	command.type = Command::kType_ForceOscSync;
+	commandQueue.push(command);
+}
+
 void AudioUpdateHandler::portAudioCallback(
 	const void * inputBuffer,
 	const int numInputChannels,
@@ -126,10 +133,13 @@ void AudioUpdateHandler::portAudioCallback(
 		case Command::kType_None:
 			break;
 		case Command::kType_ForceOscSync:
+			LOG_WRN("force syncing OSC!", 0);
 			forceSyncOsc = true;
 			break;
 		}
 	}
+	
+	//forceSyncOsc = true;
 	
 	//
 	
@@ -169,11 +179,7 @@ void AudioUpdateHandler::portAudioCallback(
 			
 			//if ((limiter % 4) == 0)
 			{
-				oscStream->beginBundle();
-				{
-					voiceMgr->generateOsc(*oscStream, forceSyncOsc);
-				}
-				oscStream->endBundle();
+				voiceMgr->generateOsc(*oscStream, forceSyncOsc);
 			}
 		}
 	}

@@ -100,6 +100,7 @@ struct AudioUpdateHandler : PortAudioHandler
 	void shut();
 	
 	void setOscEndpoint(const char * ipAddress, const int udpPort);
+	void scheduleForceSyncOsc();
 	
 	virtual void portAudioCallback(
 		const void * inputBuffer,

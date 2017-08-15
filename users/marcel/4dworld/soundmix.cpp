@@ -934,6 +934,8 @@ void AudioVoiceManager::freeVoice(AudioVoice *& voice)
 		}
 	}
 	SDL_UnlockMutex(mutex);
+	
+	voice = nullptr;
 }
 
 void AudioVoiceManager::updateChannelIndices()
@@ -1113,6 +1115,8 @@ void AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool _forceSync)
 				if (voice.isSpatial == false)
 					continue;
 				
+				stream.beginBundle();
+				
 				stream.setSource(voice.channelIndex);
 				
 				const bool forceSync = _forceSync || voice.initOsc;
@@ -1247,7 +1251,11 @@ void AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool _forceSync)
 				}
 				
 				voice.lastSentSpat = voice.spat;
+				
+				stream.endBundle();
 			}
+			
+			stream.beginBundle();
 			
 			// generate OSC messages for each return voice
 			
@@ -1289,6 +1297,8 @@ void AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool _forceSync)
 				
 				lastSentSpat = spat;
 			}
+			
+			stream.endBundle();
 		}
 		catch (std::exception & e)
 		{
