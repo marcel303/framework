@@ -268,7 +268,8 @@ enum EntityType
 	kEntity_Ball,
 	kEntity_Bird,
 	kEntity_Machine,
-	kEntity_Voice
+	kEntity_Voice,
+	kEntity_AlwaysThere
 };
 
 struct EntityBase
@@ -1090,6 +1091,8 @@ struct AlwaysThere : EntityBase
 	AlwaysThere(const char * filename)
 		: EntityBase()
 	{
+		type = kEntity_AlwaysThere;
+		
 		graphInstance = g_audioGraphMgr->createInstance(filename);
 	}
 	
@@ -1214,6 +1217,8 @@ struct World : WorldInterface
 		entities.push_back(new AlwaysThere("combTest4.xml")); // pulsing sound with heavy comb filter
 		
 		entities.push_back(new AlwaysThere("combTest5.xml")); // heavy bass pulsing sound with comb filter
+		
+		entities.push_back(new AlwaysThere("feedback1.xml")); // room effects
 		
 		addVoices();
 	}
@@ -1832,6 +1837,9 @@ void testAudioGraphManager()
 							
 							for (auto e : world->entities)
 							{
+								if (e->type == kEntity_AlwaysThere)
+									continue;
+								
 								if (e->graphInstance == graphInstance)
 									e->kill();
 							}
@@ -1847,6 +1855,9 @@ void testAudioGraphManager()
 							
 							for (auto e : world->entities)
 							{
+								if (e->type == kEntity_AlwaysThere)
+									continue;
+								
 								if (e->graphInstance == graphInstance)
 									type = e->type;
 							}
