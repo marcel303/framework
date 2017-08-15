@@ -1825,8 +1825,6 @@ void testAudioGraphManager()
 						world->addBall();
 					if (doButton("add bird"))
 						world->addBird();
-					if (doButton("add voices"))
-						world->addVoices();
 					if (doButton("add machine"))
 						world->addMachine();
 					if (doButton("kill selected"))
