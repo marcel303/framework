@@ -47,6 +47,7 @@ void PsdDisplayInfo::ReadResource(PsdInfo* pi, Stream* stream)
 	const uint16_t opacity = SwapU16(reader.ReadUInt16());
 	bool kind = reader.ReadUInt8() != 0x00;
 	const uint8_t padding = reader.ReadUInt8();
+	(void)padding;
 
 	Setup("", colorSpace, color[0], color[1], color[2], color[3], opacity, kind);
 	

@@ -162,6 +162,7 @@ void PsdChannel::ReadChannelData(Stream* stream, uint16_t compression, PsdImageM
 				const int size = end - begin;
 				
 				Assert(size > 0);
+				(void)size;
 
 				PSD_LOG_DBG("RLE size read: %d/%d", size, (int)mRleHeader[y]);
 			}

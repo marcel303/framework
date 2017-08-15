@@ -78,6 +78,7 @@ void PsdLayer::ReadHeader(PsdInfo* pi, Stream* stream)
 	mClipping = reader.ReadUInt8();
 	mFlags = reader.ReadUInt8();
 	uint8_t padding = reader.ReadUInt8();
+	(void)padding;
 
 	PSD_LOG_DBG("layer: read: blendKey: %c%c%c%c", mBlendKey[0], mBlendKey[1], mBlendKey[2], mBlendKey[3]);
 	PSD_LOG_DBG("layer: read: opacity: %d", (int)mOpacity);

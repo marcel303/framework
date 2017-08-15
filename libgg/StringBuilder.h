@@ -38,6 +38,7 @@ public:
 #if defined(WIN32) && 0
 		_itoa(v, temp, 10);
 #else
+	// todo : make this faster
 		sprintf(temp, "%d", v);
 		//itoa(v, temp, 10);
 #endif
