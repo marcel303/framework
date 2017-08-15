@@ -343,6 +343,7 @@ struct AudioVoice
 	bool ramp;
 	float rampValue;
 	float rampDelay;
+	bool rampDelayIsZero;
 	float rampTime;
 	bool isRamped;
 	bool hasRamped;
@@ -362,6 +363,7 @@ struct AudioVoice
 		, ramp(true)
 		, rampValue(1.f)
 		, rampDelay(0.f)
+		, rampDelayIsZero(false)
 		, rampTime(0.f)
 		, isRamped(true)
 		, hasRamped(false)

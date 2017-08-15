@@ -75,14 +75,6 @@ void AudioNodeLimiter::tick(const float dt)
 
 		resultOutput.setVector();
 		
-		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-		{
-			const float limitedValue = limiter.next(
-				value->samples[i],
-				retainPerSample,
-				max);
-
-			resultOutput.samples[i] = limitedValue;
-		}
+		limiter.apply(value->samples, AUDIO_UPDATE_SIZE, retainPerSample, max, resultOutput.samples);
 	}
 }

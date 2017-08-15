@@ -31,7 +31,6 @@
 #include "osc4d.h"
 #include "Path.h"
 #include "soundmix.h"
-#include <cmath>
 #include <xmmintrin.h>
 
 #include "framework.h" // for color hsl
@@ -555,9 +554,9 @@ void AudioSourceSine::generate(ALIGN16 float * __restrict samples, const int num
 {
 	for (int i = 0; i < numSamples; ++i)
 	{
-		samples[i] = std::sin(phase * 2.f * M_PI);
+		samples[i] = sinf(phase * 2.f * M_PI);
 		
-		phase = std::fmodf(phase + phaseStep, 1.f);
+		phase = fmodf(phase + phaseStep, 1.f);
 	}
 }
 
@@ -688,6 +687,8 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 	}
 	else
 	{
+		const float * __restrict pcmDataSamples = pcmData->samples;
+		
 		for (int i = 0; i < numSamples; ++i)
 		{
 			if (samplePosition < rangeBegin)
@@ -710,7 +711,7 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 			if (samplePosition < 0 || samplePosition >= pcmData->numSamples)
 				samples[i] = 0.f;
 			else
-				samples[i] = pcmData->samples[samplePosition];
+				samples[i] = pcmDataSamples[samplePosition];
 			
 			samplePosition += 1;
 		}
@@ -735,11 +736,20 @@ void AudioVoice::applyRamping(float * __restrict samples, const int numSamples, 
 			{
 				samples[i] *= rampValue;
 				
-				rampDelay = std::max(0.f, rampDelay - 1.f / SAMPLE_RATE);
-				
-				if (rampDelay == 0.f)
+				if (rampDelayIsZero)
 				{
-					rampValue = std::min(1.f, rampValue + gainStep);
+					rampValue = fminf(1.f, rampValue + gainStep);
+				}
+				else
+				{
+					rampDelay = rampDelay - 1.f / SAMPLE_RATE;
+					
+					if (rampDelay <= 0.f)
+					{
+						rampDelay = 0.f;
+						
+						rampDelayIsZero = true;
+					}
 				}
 			}
 			
@@ -761,11 +771,20 @@ void AudioVoice::applyRamping(float * __restrict samples, const int numSamples, 
 			{
 				samples[i] *= rampValue;
 				
-				rampDelay = std::max(0.f, rampDelay - 1.f / float(SAMPLE_RATE));
-				
-				if (rampDelay == 0.f)
+				if (rampDelayIsZero)
 				{
-					rampValue = std::max(0.f, rampValue + gainStep);
+					rampValue = fmaxf(0.f, rampValue + gainStep);
+				}
+				else
+				{
+					rampDelay = rampDelay - 1.f / float(SAMPLE_RATE);
+					
+					if (rampDelay <= 0.f)
+					{
+						rampDelay = 0.f;
+						
+						rampDelayIsZero = true;
+					}
 				}
 			}
 			
@@ -787,9 +806,9 @@ void AudioVoice::applyLimiter(float * __restrict samples, const int numSamples, 
 {
 	const float decayPerMs = .001f;
 	const float dtMs = 1000.f / SAMPLE_RATE;
-	const float retainPerSample = std::powf(1.f - decayPerMs, dtMs);
+	const float retainPerSample = powf(1.f - decayPerMs, dtMs);
 	
-	limiter.apply(samples, numSamples, retainPerSample, maxGain);
+	limiter.applyInPlace(samples, numSamples, retainPerSample, maxGain);
 }
 
 //
@@ -876,6 +895,7 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, co
 			voice->ramp = true;
 			voice->rampValue = 0.f;
 			voice->rampDelay = rampDelay;
+			voice->rampDelayIsZero = rampDelay == 0.f;
 			voice->rampTime = rampTime;
 			voice->isRamped = false;
 		}
@@ -884,6 +904,7 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, co
 			voice->ramp = true;
 			voice->rampValue = 1.f;
 			voice->rampDelay = 0.f;
+			voice->rampDelayIsZero = true;
 			voice->rampTime = 0.f;
 			voice->isRamped = true;
 		}

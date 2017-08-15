@@ -67,7 +67,7 @@ struct Limiter
 		return result;
 	}
 
-	void apply(float * __restrict samples, const int numSamples, const float retain, const float outputMax)
+	void applyInPlace(float * __restrict samples, const int numSamples, const float retain, const float outputMax)
 	{
 		int i = 0;
 
@@ -111,6 +111,60 @@ struct Limiter
 		while (i < numSamples)
 		{
 			samples[i] = next(samples[i], retain, outputMax);
+
+			i++;
+		}
+	}
+	
+	void apply(const float * __restrict samples, const int numSamples, const float retain, const float outputMax, float * __restrict outputSamples)
+	{
+		int i = 0;
+
+	#if 1
+		const float retain16 = std::powf(retain, 16);
+
+		while (i * 16 < numSamples)
+		{
+			for (int j = 0; j < 16; ++j)
+			{
+				const float value = samples[i * 16 + j];
+
+				const float valueMag = std::fabsf(value);
+
+				if (valueMag > measuredMax)
+					measuredMax = valueMag;
+			}
+
+			if (measuredMax > outputMax)
+			{
+				const float outputScale = outputMax / measuredMax;
+
+				for (int j = 0; j < 16; ++j)
+				{
+					outputSamples[i * 16 + j] = samples[i * 16 + j] * outputScale;
+				}
+
+				measuredMax *= retain16;
+			}
+			else
+			{
+				// already within the maximum output range
+				
+				for (int j = 0; j < 16; ++j)
+				{
+					outputSamples[i * 16 + j] = samples[i * 16 + j];
+				}
+			}
+			
+			i++;
+		}
+		
+		i = i * 16;
+	#endif
+	
+		while (i < numSamples)
+		{
+			outputSamples[i] = next(samples[i], retain, outputMax);
 
 			i++;
 		}
