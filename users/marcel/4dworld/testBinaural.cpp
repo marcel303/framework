@@ -86,24 +86,34 @@ struct PcmObject
 	
 	void generate(float * __restrict samples, const int numSamples)
 	{
-		for (int i = 0; i < numSamples; ++i)
+		if (pcmData == nullptr || pcmData->numSamples == 0)
 		{
-			if (pcmData == nullptr || pcmData->numSamples == 0)
-			{
-				samples[i] = 0.f;
-			}
-			else
+			memset(samples, 0, numSamples * sizeof(float));
+		}
+		else
+		{
+			int left = numSamples;
+			int done = 0;
+			
+			while (left != 0)
 			{
 				if (nextSampleIndex == pcmData->numSamples)
+				{
 					nextSampleIndex = 0;
+				}
 				
-				samples[i] = pcmData->samples[nextSampleIndex];
+				const int todo = std::min(left, pcmData->numSamples - nextSampleIndex);
 				
-				nextSampleIndex++;
+				memcpy(samples + done, pcmData->samples + nextSampleIndex, todo * sizeof(float));
+				
+				nextSampleIndex += todo;
+				
+				left -= todo;
+				done += todo;
 			}
-			
-			//samples[i] = random(-.1f, +.1f);
 		}
+		
+		//samples[i] = random(-.1f, +.1f);
 	}
 };
 
@@ -334,9 +344,9 @@ void testBinaural()
 	#if ENABLE_DEBUGGING && 0
 		for (int i = 0; i < 1; ++i)
 	#else
-		for (int i = 0; i < 1; ++i)
+		//for (int i = 0; i < 1; ++i)
 		//for (int i = 0; i < 100; ++i)
-		//for (int i = 0; i < 135; ++i)
+		for (int i = 0; i < 135; ++i)
 	#endif
 		{
 			audio.addBinauralSound(&sampleSet, &pcmData);
