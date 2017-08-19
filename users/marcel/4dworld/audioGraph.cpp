@@ -498,11 +498,15 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 #include "StringEx.h"
 #include <map>
 
+#include "Timer.h" // todo : add routines for capturing and logging timing data
+
 static std::map<std::string, PcmData*> s_pcmDataCache;
 
 void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths)
 {
 	logDebug("filling data cache with path: %s", path);
+	
+	const auto t1 = g_TimerRT.TimeUS_get();
 	
 	const auto filenames = listFiles(path, recurse);
 	
@@ -532,6 +536,10 @@ void fillPcmDataCache(const char * path, const bool recurse, const bool stripPat
 			elem = pcmData;
 		}
 	}
+	
+	const auto t2 = g_TimerRT.TimeUS_get();
+	
+	printf("load PCM from %s took %.2fms\n", path, (t2 - t1) / 1000.0);
 }
 
 void clearPcmDataCache()
