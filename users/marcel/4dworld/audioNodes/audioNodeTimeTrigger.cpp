@@ -45,14 +45,13 @@ AUDIO_NODE_TYPE(trigger_time, AudioNodeTimeTrigger)
 AudioNodeTimeTrigger::AudioNodeTimeTrigger()
 	: AudioNodeBase()
 	, time(0.0)
-	, triggerData()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Automatic, kAudioPlugType_Bool);
 	addInput(kInput_IntervalMin, kAudioPlugType_FloatVec);
 	addInput(kInput_IntervalMax, kAudioPlugType_FloatVec);
 	addInput(kInput_Trigger, kAudioPlugType_Trigger);
-	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, &triggerData);
+	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, nullptr);
 }
 
 void AudioNodeTimeTrigger::tick(const float dt)
@@ -81,7 +80,7 @@ void AudioNodeTimeTrigger::tick(const float dt)
 	}
 }
 
-void AudioNodeTimeTrigger::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
+void AudioNodeTimeTrigger::handleTrigger(const int inputSocketIndex)
 {
 	const bool automatic = getInputBool(kInput_Automatic, true);
 	const float minInterval = getInputAudioFloat(kInput_IntervalMin, &AudioFloat::One)->getMean();

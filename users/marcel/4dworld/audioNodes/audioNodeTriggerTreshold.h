@@ -45,9 +45,6 @@ struct AudioNodeTriggerTreshold : AudioNodeBase
 		kOutput_WentDown,
 		kOutput_COUNT
 	};
-	
-	AudioTriggerData wentUp;
-	AudioTriggerData wentDown;
 
 	bool wasUp;
 	bool wasDown;

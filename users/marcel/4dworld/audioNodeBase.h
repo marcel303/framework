@@ -41,72 +41,6 @@ struct GraphNode;
 struct AudioFloat;
 struct PcmData;
 
-enum AudioTriggerDataType
-{
-	kAudioTriggerDataType_None,
-	kAudioTriggerDataType_Float
-};
-
-struct AudioTriggerData
-{
-	AudioTriggerDataType type;
-	
-	union
-	{
-		float floatValue;
-		uint8_t mem[8];
-	};
-	
-	AudioTriggerData();
-	
-	void setFloat(const float value)
-	{
-		type = kAudioTriggerDataType_Float;
-		floatValue = value;
-	}
-	
-	/*
-	bool asBool(const bool defaultValue = false) const
-	{
-		switch (type)
-		{
-		case kAudioTriggerDataType_None:
-			return defaultValue;
-		case kAudioTriggerDataType_Float:
-			return floatValue != 0.f;
-		}
-
-		return defaultValue;
-	}
-	
-	int asInt(const int defaultValue = 0) const
-	{
-		switch (type)
-		{
-		case kAudioTriggerDataType_None:
-			return defaultValue;
-		case kAudioTriggerDataType_Float:
-			return std::round(floatValue);
-		}
-
-		return defaultValue;
-	}
-	*/
-	
-	float asFloat(const float defaultValue = 0.f) const
-	{
-		switch (type)
-		{
-		case kAudioTriggerDataType_None:
-			return defaultValue;
-		case kAudioTriggerDataType_Float:
-			return floatValue;
-		}
-
-		return defaultValue;
-	}
-};
-
 struct AudioFloat
 {
 	static AudioFloat Zero;
@@ -313,12 +247,6 @@ struct AudioPlug
 		return *((PcmData*)mem);
 	}
 	
-	AudioTriggerData & getTriggerData() const
-	{
-		Assert(type == kAudioPlugType_Trigger);
-		return *((AudioTriggerData*)mem);
-	}
-	
 	//
 	
 	bool & getRwBool()
@@ -522,20 +450,10 @@ struct AudioNodeBase
 			return &plug->getPcmData();
 	}
 	
-	const AudioTriggerData * getInputTriggerData(const int index) const
-	{
-		const AudioPlug * plug = tryGetInput(index);
-		
-		if (plug == nullptr || !plug->isConnected())
-			return nullptr;
-		else
-			return &plug->getTriggerData();
-	}
-	
 	virtual void initSelf(const GraphNode & node) { }
 	virtual void init(const GraphNode & node) { }
 	virtual void tick(const float dt) { }
-	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) { }
+	virtual void handleTrigger(const int inputSocketIndex) { }
 	
 	virtual void getDescription(AudioNodeDescription & d) { }
 };

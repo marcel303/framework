@@ -62,8 +62,6 @@ struct AudioNodeSourcePcm : AudioNodeBase
 	AudioSourcePcm audioSource;
 	AudioFloat audioOutput;
 	float lengthOutput;
-	AudioTriggerData doneTriggerData;
-	AudioTriggerData loopTriggerData;
 	
 	AudioNodeSourcePcm();
 
@@ -71,5 +69,5 @@ struct AudioNodeSourcePcm : AudioNodeBase
 	
 	virtual void tick(const float dt) override;
 	
-	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) override;
+	virtual void handleTrigger(const int inputSocketIndex) override;
 };

@@ -46,9 +46,7 @@ struct AudioNodeTriggerDenom : AudioNodeBase
 	
 	int count;
 	
-	AudioTriggerData triggerData;
-	
 	AudioNodeTriggerDenom();
 	
-	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) override;
+	virtual void handleTrigger(const int inputSocketIndex) override;
 };

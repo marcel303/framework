@@ -39,15 +39,14 @@ AUDIO_NODE_TYPE(trigger_denom, AudioNodeTriggerDenom)
 AudioNodeTriggerDenom::AudioNodeTriggerDenom()
 	: AudioNodeBase()
 	, count(0)
-	, triggerData()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Interval, kAudioPlugType_Int);
 	addInput(kInput_Trigger, kAudioPlugType_Trigger);
-	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, &triggerData);
+	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, nullptr);
 }
 
-void AudioNodeTriggerDenom::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
+void AudioNodeTriggerDenom::handleTrigger(const int inputSocketIndex)
 {
 	const int interval = getInputInt(kInput_Interval, 1);
 	
@@ -58,8 +57,6 @@ void AudioNodeTriggerDenom::handleTrigger(const int inputSocketIndex, const Audi
 	{
 		if ((count % interval) == 0)
 		{
-			triggerData = data;
-
 			trigger(kOutput_Trigger);
 		}
 	}

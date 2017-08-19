@@ -101,7 +101,7 @@ void AudioNodeRamp::init(const GraphNode & node)
 	}
 }
 
-void AudioNodeRamp::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
+void AudioNodeRamp::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_RampUp)
 	{

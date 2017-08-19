@@ -607,24 +607,6 @@ bool AudioRealTimeConnection::getPlugValue(AudioPlug * plug, std::string & value
 		value = String::FormatC("%f", plug->getAudioFloat().getScalar());
 		return true;
 	case kAudioPlugType_Trigger:
-		{
-			const AudioTriggerData & triggerData = plug->getTriggerData();
-			
-			if (triggerData.type == kAudioTriggerDataType_Float)
-			{
-				value = String::FormatC("%f", triggerData.asFloat());
-				return true;
-			}
-			else if (triggerData.type == kAudioTriggerDataType_None)
-			{
-				return false;
-			}
-			else
-			{
-				Assert(false);
-				return false;
-			}
-		}
 		return false;
 	}
 	
@@ -932,12 +914,9 @@ void AudioRealTimeConnection::handleSrcSocketPressed(const GraphNodeId nodeId, c
 	
 	AUDIO_SCOPE;
 	
-	AudioTriggerData data;
-	data.setFloat(0.f);
-	
 	g_currentAudioGraph = audioGraph;
 	
-	node->handleTrigger(srcSocketIndex, data);
+	node->handleTrigger(srcSocketIndex);
 	
 	g_currentAudioGraph = nullptr;
 }

@@ -122,7 +122,6 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	: AudioNodeBase()
 	, source()
 	, voice(nullptr)
-	, dummyTriggerData()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);
@@ -166,8 +165,8 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_SubBoost, kAudioPlugType_Int);
 	addInput(kInput_RampUp, kAudioPlugType_Trigger);
 	addInput(kInput_RampDown, kAudioPlugType_Trigger);
-	addOutput(kOutput_RampedUp, kAudioPlugType_Trigger, &dummyTriggerData);
-	addOutput(kOutput_RampedDown, kAudioPlugType_Trigger, &dummyTriggerData);
+	addOutput(kOutput_RampedUp, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_RampedDown, kAudioPlugType_Trigger, nullptr);
 	
 	source.voiceNode = this;
 }
@@ -197,7 +196,7 @@ void AudioNodeVoice4D::tick(const float dt)
 	{
 		const float rampTime = getInputAudioFloat(kInput_RampTime, &AudioFloat::One)->getMean();
 		
-		g_voiceMgr->allocVoice(voice, &source, "voice.4d", true, .2f, rampTime, -1);
+		g_voiceMgr->allocVoice(voice, &source, "voice.4d", true, .3f, rampTime, -1);
 		voice->isSpatial = true;
 	}
 	
@@ -325,7 +324,7 @@ void AudioNodeVoice4D::tick(const float dt)
 	}
 }
 
-void AudioNodeVoice4D::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
+void AudioNodeVoice4D::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_RampUp)
 	{

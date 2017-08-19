@@ -40,8 +40,6 @@ AUDIO_NODE_TYPE(trigger_treshold, AudioNodeTriggerTreshold)
 
 AudioNodeTriggerTreshold::AudioNodeTriggerTreshold()
 	: AudioNodeBase()
-	, wentUp()
-	, wentDown()
 	, wasUp(false)
 	, wasDown(false)
 {
@@ -49,11 +47,8 @@ AudioNodeTriggerTreshold::AudioNodeTriggerTreshold()
 	addInput(kInput_Value, kAudioPlugType_FloatVec);
 	addInput(kInput_UpTreshold, kAudioPlugType_FloatVec);
 	addInput(kInput_DownTreshold, kAudioPlugType_FloatVec);
-	addOutput(kOutput_WentUp, kAudioPlugType_Trigger, &wentUp);
-	addOutput(kOutput_WentDown, kAudioPlugType_Trigger, &wentDown);
-	
-	wentUp.setFloat(0.f);
-	wentDown.setFloat(0.f);
+	addOutput(kOutput_WentUp, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_WentDown, kAudioPlugType_Trigger, nullptr);
 }
 
 void AudioNodeTriggerTreshold::tick(const float dt)

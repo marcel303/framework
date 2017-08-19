@@ -113,7 +113,7 @@ void AudioNodePhysicalSpring::tick(const float _dt)
 	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF);
 }
 
-void AudioNodePhysicalSpring::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
+void AudioNodePhysicalSpring::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_ImpulseTrigger)
 	{

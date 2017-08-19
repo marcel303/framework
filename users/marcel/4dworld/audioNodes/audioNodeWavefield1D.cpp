@@ -162,7 +162,7 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	audioOutput.mul(*gain);
 }
 
-void AudioNodeWavefield1D::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
+void AudioNodeWavefield1D::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_Trigger)
 	{

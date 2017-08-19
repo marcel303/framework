@@ -53,14 +53,12 @@ struct AudioNodeRamp : AudioNodeBase
 	double value;
 	
 	AudioFloat valueOutput;
-	AudioTriggerData dummyTriggerData;
 	
 	AudioNodeRamp()
 		: AudioNodeBase()
 		, ramp(false)
 		, value(0.0)
 		, valueOutput()
-		, dummyTriggerData()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_StartRamped, kAudioPlugType_Bool);
@@ -69,13 +67,13 @@ struct AudioNodeRamp : AudioNodeBase
 		addInput(kInput_RampUp, kAudioPlugType_Trigger);
 		addInput(kInput_RampDown, kAudioPlugType_Trigger);
 		addOutput(kOutput_Value, kAudioPlugType_FloatVec, &valueOutput);
-		addOutput(kOutput_RampedUp, kAudioPlugType_Trigger, &dummyTriggerData);
-		addOutput(kOutput_RampedDown, kAudioPlugType_Trigger, &dummyTriggerData);
+		addOutput(kOutput_RampedUp, kAudioPlugType_Trigger, nullptr);
+		addOutput(kOutput_RampedDown, kAudioPlugType_Trigger, nullptr);
 	}
 	
 	virtual void tick(const float dt) override;
 	
 	virtual void init(const GraphNode & node) override;
 
-	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) override;
+	virtual void handleTrigger(const int inputSocketIndex) override;
 };

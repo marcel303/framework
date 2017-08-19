@@ -43,8 +43,6 @@ struct AudioNodeEventTrigger : AudioNodeBase
 		kOutput_COUNT
 	};
 	
-	AudioTriggerData triggerData;
-	
 	AudioNodeEventTrigger();
 	
 	virtual void tick(const float dt) override;

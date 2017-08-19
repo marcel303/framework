@@ -58,5 +58,5 @@ struct AudioNodePhysicalSpring : AudioNodeBase
 	
 	virtual void tick(const float dt) override;
 	
-	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) override;
+	virtual void handleTrigger(const int inputSocketIndex) override;
 };

@@ -37,14 +37,6 @@
 
 //
 
-AudioTriggerData::AudioTriggerData()
-	: type(kAudioTriggerDataType_None)
-{
-	memset(mem, 0, sizeof(mem));
-}
-
-//
-
 AudioFloat AudioFloat::Zero(0.0);
 AudioFloat AudioFloat::One(1.0);
 AudioFloat AudioFloat::Half(0.5);
@@ -573,15 +565,13 @@ void AudioNodeBase::trigger(const int outputSocketIndex)
 		{
 			// iterate the list of outgoing connections, call handleTrigger on nodes with correct outputSocketIndex
 			
-			const AudioTriggerData & triggerData = outputSocket.getTriggerData();
-			
 			for (auto & triggerTarget : triggerTargets)
 			{
 				if (triggerTarget.dstSocketIndex == outputSocketIndex)
 				{
 					triggerTarget.srcNode->editorIsTriggered = true;
 					
-					triggerTarget.srcNode->handleTrigger(triggerTarget.srcSocketIndex, triggerData);
+					triggerTarget.srcNode->handleTrigger(triggerTarget.srcSocketIndex);
 				}
 			}
 		}

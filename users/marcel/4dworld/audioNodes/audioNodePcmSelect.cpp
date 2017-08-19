@@ -60,8 +60,6 @@ AudioNodeSourcePcmSelect::AudioNodeSourcePcmSelect()
 	, samplePosition(0)
 	, loopCount(0)
 	, audioOutput()
-	, loopTrigger()
-	, doneTrigger()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Path, kAudioPlugType_String);
@@ -72,8 +70,8 @@ AudioNodeSourcePcmSelect::AudioNodeSourcePcmSelect()
 	addInput(kInput_Play, kAudioPlugType_Trigger);
 	addInput(kInput_Stop, kAudioPlugType_Trigger);
 	addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
-	addOutput(kOutput_Loop, kAudioPlugType_Trigger, &loopTrigger);
-	addOutput(kOutput_Done, kAudioPlugType_Trigger, &doneTrigger);
+	addOutput(kOutput_Loop, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_Done, kAudioPlugType_Trigger, nullptr);
 }
 
 AudioNodeSourcePcmSelect::~AudioNodeSourcePcmSelect()
@@ -201,7 +199,7 @@ void AudioNodeSourcePcmSelect::tick(const float dt)
 	}
 }
 
-void AudioNodeSourcePcmSelect::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
+void AudioNodeSourcePcmSelect::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_Play)
 	{

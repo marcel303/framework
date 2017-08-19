@@ -67,7 +67,7 @@ void AudioNodeGate::tick(const float dt)
 	}
 }
 
-void AudioNodeGate::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
+void AudioNodeGate::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_Open)
 	{

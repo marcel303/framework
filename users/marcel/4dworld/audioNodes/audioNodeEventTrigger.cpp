@@ -38,11 +38,10 @@ AUDIO_NODE_TYPE(trigger_event, AudioNodeEventTrigger)
 
 AudioNodeEventTrigger::AudioNodeEventTrigger()
 	: AudioNodeBase()
-	, triggerData()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Name, kAudioPlugType_String);
-	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, &triggerData);
+	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, nullptr);
 }
 
 void AudioNodeEventTrigger::tick(const float dt)

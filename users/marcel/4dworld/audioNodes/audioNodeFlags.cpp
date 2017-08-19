@@ -44,15 +44,14 @@ AudioNodeFlags::AudioNodeFlags()
 	: AudioNodeBase()
 	, wasSet(false)
 	, isSetOutput(false)
-	, triggerData()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Flag, kAudioPlugType_String);
 	addInput(kInput_Set, kAudioPlugType_Trigger);
 	addInput(kInput_Reset, kAudioPlugType_Trigger);
 	addOutput(kOutput_IsSet, kAudioPlugType_Bool, &isSetOutput);
-	addOutput(kOutput_Set, kAudioPlugType_Trigger, &triggerData);
-	addOutput(kOutput_Reset, kAudioPlugType_Trigger, &triggerData);
+	addOutput(kOutput_Set, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_Reset, kAudioPlugType_Trigger, nullptr);
 }
 
 void AudioNodeFlags::tick(const float dt)
@@ -84,7 +83,7 @@ void AudioNodeFlags::tick(const float dt)
 	}
 }
 
-void AudioNodeFlags::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
+void AudioNodeFlags::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_Set)
 	{

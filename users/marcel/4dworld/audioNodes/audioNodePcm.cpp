@@ -55,8 +55,6 @@ AudioNodeSourcePcm::AudioNodeSourcePcm()
 	, audioSource()
 	, audioOutput()
 	, lengthOutput(0.f)
-	, doneTriggerData()
-	, loopTriggerData()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_PcmData, kAudioPlugType_PcmData);
@@ -72,8 +70,8 @@ AudioNodeSourcePcm::AudioNodeSourcePcm()
 	addInput(kInput_RangeLength, kAudioPlugType_FloatVec);
 	addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 	addOutput(kOutput_Length, kAudioPlugType_Float, &lengthOutput);
-	addOutput(kOutput_Done, kAudioPlugType_Trigger, &doneTriggerData);
-	addOutput(kOutput_Loop, kAudioPlugType_Trigger, &loopTriggerData);
+	addOutput(kOutput_Done, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_Loop, kAudioPlugType_Trigger, nullptr);
 }
 
 void AudioNodeSourcePcm::init(const GraphNode & node)
@@ -161,7 +159,7 @@ void AudioNodeSourcePcm::tick(const float dt)
 	}
 }
 
-void AudioNodeSourcePcm::handleTrigger(const int inputSocketIndex, const AudioTriggerData & data)
+void AudioNodeSourcePcm::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_Play)
 	{

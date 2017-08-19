@@ -48,11 +48,9 @@ struct AudioNodeTimeTrigger : AudioNodeBase
 	
 	double time;
 	
-	AudioTriggerData triggerData;
-	
 	AudioNodeTimeTrigger();
 	
 	virtual void tick(const float dt) override;
 
-	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) override;
+	virtual void handleTrigger(const int inputSocketIndex) override;
 };

@@ -95,14 +95,12 @@ struct AudioNodeVoice4D : AudioNodeBase
 	AudioSourceVoiceNode source;
 	AudioVoice * voice;
 	
-	AudioTriggerData dummyTriggerData;
-	
 	AudioNodeVoice4D();
 	~AudioNodeVoice4D() override;
 	
 	virtual void tick(const float dt) override;
 	
-	virtual void handleTrigger(const int inputSocketIndex, const AudioTriggerData & data) override;
+	virtual void handleTrigger(const int inputSocketIndex) override;
 };
 
 //
