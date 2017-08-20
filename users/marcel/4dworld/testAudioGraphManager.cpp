@@ -433,9 +433,9 @@ struct Oneshot : EntityBase
 		
 		//
 		
-		if (timer != -1.f)
+		if (timer > 0.f)
 		{
-			timer -= dt;
+			timer = fmaxf(0.f, timer - dt);
 			
 			if (timer <= 0.f)
 			{
@@ -687,7 +687,7 @@ struct Bird : EntityBase
 					{
 						beginCall();
 						
-						logDebug("idle -> calling");
+						//logDebug("idle -> calling");
 						state = kState_Calling;
 						break;
 					}
@@ -695,7 +695,7 @@ struct Bird : EntityBase
 					{
 						beginSong();
 						
-						logDebug("idle -> singing");
+						//logDebug("idle -> singing");
 						state = kState_Singing;
 						break;
 					}
@@ -709,7 +709,7 @@ struct Bird : EntityBase
 				{
 					beginFlying();
 					
-					logDebug("idle -> flying");
+					//logDebug("idle -> flying");
 					state = kState_Flying;
 					break;
 				}
@@ -726,7 +726,7 @@ struct Bird : EntityBase
 					
 					beginSongTimer();
 					
-					logDebug("singing -> idle");
+					//logDebug("singing -> idle");
 					state = kState_Idle;
 					break;
 				}
@@ -738,7 +738,7 @@ struct Bird : EntityBase
 					
 					beginFlying();
 					
-					logDebug("singing -> flying");
+					//logDebug("singing -> flying");
 					state = kState_Flying;
 					break;
 				}
@@ -756,7 +756,7 @@ struct Bird : EntityBase
 					
 					beginSongTimer();
 					
-					logDebug("calling -> idle");
+					//logDebug("calling -> idle");
 					state = kState_Idle;
 					break;
 				}
@@ -780,7 +780,7 @@ struct Bird : EntityBase
 					
 					beginSettleTimer();
 					
-					logDebug("flying -> settle");
+					//logDebug("flying -> settle");
 					state = kState_Settle;
 					break;
 				}
@@ -797,7 +797,7 @@ struct Bird : EntityBase
 					
 					beginFlyTimer();
 					
-					logDebug("settle -> idle");
+					//logDebug("settle -> idle");
 					state = kState_Idle;
 					break;
 				}
@@ -1289,7 +1289,7 @@ struct World : WorldInterface
 	{
 		const char * filename = (rand() % 2) == 0 ? "oneshotTest.xml" : "oneshotTest2.xml";
 		
-		Oneshot * oneshot = new Oneshot(filename, random(1.f, 5.f), true);
+		Oneshot * oneshot = new Oneshot(filename, random(2.f, 5.f), true);
 		
 		const float sizeX = 6.f;
 		const float sizeY = 1.f;
@@ -1304,9 +1304,9 @@ struct World : WorldInterface
 		oneshot->vel[0] = random(-10.f, +10.f);
 		oneshot->vel[1] = 6.f;
 		oneshot->vel[2] = random(-10.f, +10.f);
-		oneshot->velGrow = 2.f;
+		oneshot->velGrow = 1.3f;
 		
-		oneshot->dimGrow = 2.f;
+		oneshot->dimGrow = 1.2f;
 		
 		oneshot->graphInstance->audioGraph->setMemf("delay", random(0.0002f, 0.2f));
 		entities.push_back(oneshot);
@@ -1688,7 +1688,7 @@ static void doVoiceButton(const char * name, const char * file, const bool isLas
 			if (e->type != kEntity_Voice)
 				continue;
 			
-			const std::string filename = std::string("voice-fragments/") + file + ".ogg";
+			const std::string filename = std::string("voice-fragments/") + file + ".wav";
 			
 			e->graphInstance->audioGraph->setMems("voices.src", filename.c_str());
 			
@@ -1704,8 +1704,12 @@ static void doVoiceButton(const char * name, const char * file, const bool isLas
 
 //
 
+#include "Timer.h"
+
 void testAudioGraphManager()
 {
+	const auto t1 = g_TimerRT.TimeUS_get();
+	
 	SDL_mutex * mutex = SDL_CreateMutex();
 	
 	//
@@ -1716,6 +1720,8 @@ void testAudioGraphManager()
 	fillPcmDataCache("voice-fragments", false, false);
 	
 	//
+	
+	//fillHrirSampleSetCache("binaural/CIPIC/subject12", "cipic.12", kHRIRSampleSetType_Cipic);
 	
 #if BINAURAL_DEMO
 	//fillHrirSampleSetCache("binaural/CIPIC/subject10", "cipic.10", kHRIRSampleSetType_Cipic);
@@ -1778,6 +1784,12 @@ void testAudioGraphManager()
 	
 	//
 	
+	const auto t2 = g_TimerRT.TimeUS_get();
+	
+	printf("init took %.2fms\n", (t2 - t1) / 1000.0);
+	
+	//
+	
 	UiState uiState;
 	
 	std::string activeInstanceName;
@@ -1829,17 +1841,17 @@ void testAudioGraphManager()
 						if (machines.empty() == false)
 						{
 							const int index = rand() % machines.size();
-							machines[index]->graphInstance->audioGraph->triggerEvent("next");
+							machines[index]->graphInstance->audioGraph->triggerEvent("randomize");
 						}
 					}
 					doTextBox(world->desiredNumOneshots, "oneshots.num", dt);
-					if (doButton("add ball"))
-						world->addBall();
-					if (doButton("add bird"))
+					if (doButton("add bird", 0/2.f, 1/2.f, false))
 						world->addBird();
+					if (doButton("add ball", 1/2.f, 1/2.f, true))
+						world->addBall();
 					if (doButton("add machine"))
 						world->addMachine();
-					if (doButton("kill selected"))
+					if (doButton("kill selected", 0.f, .5f, false))
 					{
 						if (g_audioGraphMgr->selectedFile && g_audioGraphMgr->selectedFile->activeInstance)
 						{
@@ -1855,7 +1867,7 @@ void testAudioGraphManager()
 							}
 						}
 					}
-					if (doButton("kill selected type"))
+					if (doButton("kill selected type", .5f, .5f, true))
 					{
 						if (g_audioGraphMgr->selectedFile && g_audioGraphMgr->selectedFile->activeInstance)
 						{
@@ -1894,7 +1906,15 @@ void testAudioGraphManager()
 					doVoiceButton("h2", "hendry2", false);
 					doVoiceButton("h3", "hendry3", false);
 					doVoiceButton("h4", "hendry4", false);
-					doVoiceButton("h5", "hendry5", true);
+					doVoiceButton("h5", "hendry5", false);
+					doVoiceButton("b1", "bernie1", false);
+					doVoiceButton("b2", "bernie2", false);
+					doVoiceButton("b3", "bernie3", false);
+					doVoiceButton("b4", "bernie4", false);
+					doVoiceButton("b5", "bernie5", false);
+					doVoiceButton("b6", "bernie6", false);
+					doVoiceButton("d1", "dude1", false);
+					doVoiceButton("d2", "dude2", true);
 					doBreak();
 					
 					doSlider(world->desiredParams.birdVolume, "bird volume", .6f, dt);
@@ -1963,16 +1983,13 @@ void testAudioGraphManager()
 			if (world != nullptr && doDrawer(developer, "developer"))
 			{
 				doCheckBox(world->showBirdDebugs, "show bird debugs", false);
+				if (doButton("force sync OSC"))
+					audioUpdateHandler.scheduleForceSyncOsc();
 				
 				doTextBox(world->desiredParams.wavefieldC, "wavefield.c", dt);
 				doTextBox(world->desiredParams.wavefieldD, "wavefield.d", dt);
 				doBreak();
 		
-				if (doButton("kill entity"))
-					world->killEntity();
-				if (doButton("do oneshot"))
-					world->doOneshot();
-				doBreak();
 				//
 				
 				bool addTestInstance = false;
@@ -1984,8 +2001,8 @@ void testAudioGraphManager()
 					killTestInstances = true;
 				}
 				
-				addTestInstance |= doButton("add test instance") && !testInstanceFilename.empty();
-				killTestInstances |= doButton("kill test instances");
+				addTestInstance |= doButton("add test instance", 0.f, .5f, false) && !testInstanceFilename.empty();
+				killTestInstances |= doButton("kill test instances", .5f, .5f, true);
 				
 				if (killTestInstances)
 				{
