@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 #include "framework.h"
+#include "Mat4x4.h"
 #include "Quat.h"
 #include "Vec3.h"
 

@@ -37,6 +37,8 @@
 
 #define ENABLE_SSE 1
 
+static void generateOscForVoice(AudioVoice & voice, Osc4DStream & stream, const bool forceSync);
+
 void audioBufferSetZero(
 	float * __restrict audioBuffer,
 	const int numSamples)
@@ -416,10 +418,10 @@ bool PcmData::load(const char * filename, const int channel)
 			}
 			else
 			{
+				const int16_t * __restrict sampleData = (const int16_t*)sound->sampleData;
+				
 				for (int i = 0; i < sound->sampleCount; ++i)
 				{
-					const int16_t * __restrict sampleData = (const int16_t*)sound->sampleData;
-					
 					samples[i] = sampleData[i * sound->channelCount + channel] / float(1 << 15);
 				}
 			}
@@ -920,6 +922,28 @@ void AudioVoiceManager::freeVoice(AudioVoice *& voice)
 	
 	SDL_LockMutex(mutex);
 	{
+		if (voice->channelIndex != -1 && g_oscStream != nullptr)
+		{
+		#if 0
+			AudioVoice tempVoice;
+			tempVoice.channelIndex = voice->channelIndex;
+			
+			g_oscStream->beginBundle();
+			{
+				generateOscForVoice(tempVoice, *g_oscStream, true);
+			}
+			g_oscStream->endBundle();
+		#else
+			g_oscStream->beginBundle();
+			{
+				g_oscStream->setSource(voice->channelIndex);
+				g_oscStream->sourceName("");
+				g_oscStream->sourceColor(0.f, 0.f, 0.f);
+			}
+			g_oscStream->endBundle();
+		#endif
+		}
+		
 		auto i = voices.end();
 		for (auto j = voices.begin(); j != voices.end(); ++j)
 			if (&(*j) == voice)
@@ -1100,6 +1124,137 @@ void AudioVoiceManager::portAudioCallback(
 	SDL_UnlockMutex(mutex);
 }
 
+static void generateOscForVoice(AudioVoice & voice, Osc4DStream & stream, const bool forceSync)
+{
+	stream.setSource(voice.channelIndex);
+	if (forceSync || voice.spat.color != voice.lastSentSpat.color)
+	{
+		stream.sourceColor(
+			voice.spat.color[0],
+			voice.spat.color[1],
+			voice.spat.color[2]);
+	}
+	
+	if (forceSync || voice.spat.name != voice.lastSentSpat.name)
+	{
+		stream.sourceName(voice.spat.name.c_str());
+	}
+	
+	if (forceSync || voice.spat.pos != voice.lastSentSpat.pos)
+	{
+		stream.sourcePosition(
+			voice.spat.pos[0],
+			voice.spat.pos[1],
+			voice.spat.pos[2]);
+	}
+	
+	if (forceSync || voice.spat.size != voice.lastSentSpat.size)
+	{
+		stream.sourceDimensions(
+			voice.spat.size[0],
+			voice.spat.size[1],
+			voice.spat.size[2]);
+	}
+	
+	if (forceSync || voice.spat.rot != voice.lastSentSpat.rot)
+	{
+		stream.sourceRotation(
+			voice.spat.rot[0],
+			voice.spat.rot[1],
+			voice.spat.rot[2]);
+	}
+	
+	if (forceSync ||
+		voice.spat.orientationMode != voice.lastSentSpat.orientationMode ||
+		voice.spat.orientationCenter != voice.lastSentSpat.orientationCenter)
+	{
+		stream.sourceOrientationMode(
+			voice.spat.orientationMode,
+			voice.spat.orientationCenter[0],
+			voice.spat.orientationCenter[1],
+			voice.spat.orientationCenter[2]);
+	}
+	
+	if (forceSync || voice.spat.spatialCompressor != voice.lastSentSpat.spatialCompressor)
+	{
+		stream.sourceSpatialCompressor(
+			voice.spat.spatialCompressor.enable,
+			voice.spat.spatialCompressor.attack,
+			voice.spat.spatialCompressor.release,
+			voice.spat.spatialCompressor.minimum,
+			voice.spat.spatialCompressor.maximum,
+			voice.spat.spatialCompressor.curve,
+			voice.spat.spatialCompressor.invert);
+	}
+	
+	if (forceSync || voice.spat.articulation != voice.lastSentSpat.articulation)
+	{
+		stream.sourceArticulation(
+			voice.spat.articulation);
+	}
+	
+	if (forceSync || voice.spat.doppler != voice.lastSentSpat.doppler)
+	{
+		stream.sourceDoppler(
+			voice.spat.doppler.enable,
+			voice.spat.doppler.scale,
+			voice.spat.doppler.smooth);
+	}
+	
+	if (forceSync || voice.spat.distanceIntensity != voice.lastSentSpat.distanceIntensity)
+	{
+		stream.sourceDistanceIntensity(
+			voice.spat.distanceIntensity.enable,
+			voice.spat.distanceIntensity.threshold,
+			voice.spat.distanceIntensity.curve);
+	}
+	
+	if (forceSync || voice.spat.distanceDampening != voice.lastSentSpat.distanceDampening)
+	{
+		stream.sourceDistanceDamping(
+			voice.spat.distanceDampening.enable,
+			voice.spat.distanceDampening.threshold,
+			voice.spat.distanceDampening.curve);
+	}
+	
+	if (forceSync || voice.spat.distanceDiffusion != voice.lastSentSpat.distanceDiffusion)
+	{
+		stream.sourceDistanceDiffusion(
+			voice.spat.distanceDiffusion.enable,
+			voice.spat.distanceDiffusion.threshold,
+			voice.spat.distanceDiffusion.curve);
+	}
+	
+	if (forceSync || voice.spat.spatialDelay != voice.lastSentSpat.spatialDelay)
+	{
+		stream.sourceSpatialDelay(
+			voice.spat.spatialDelay.enable,
+			voice.spat.spatialDelay.mode,
+			0,
+			voice.spat.spatialDelay.feedback,
+			voice.spat.spatialDelay.wetness,
+			voice.spat.spatialDelay.smooth,
+			voice.spat.spatialDelay.scale,
+			voice.spat.spatialDelay.noiseDepth,
+			voice.spat.spatialDelay.noiseFrequency);
+	}
+	
+	if (forceSync || voice.spat.subBoost != voice.lastSentSpat.subBoost)
+	{
+		stream.sourceSubBoost(voice.spat.subBoost);
+	}
+	
+	if (forceSync || voice.spat.sendIndex != voice.lastSentSpat.sendIndex)
+	{
+		stream.sourceSend(voice.spat.sendIndex >= 0);
+	}
+	
+	if (forceSync || voice.spat.globalEnable != voice.lastSentSpat.globalEnable)
+	{
+		stream.sourceGlobalEnable(voice.spat.globalEnable);
+	}
+}
+
 void AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool _forceSync)
 {
 	SDL_LockMutex(mutex);
@@ -1115,143 +1270,16 @@ void AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool _forceSync)
 				if (voice.isSpatial == false)
 					continue;
 				
-				stream.beginBundle();
-				
-				stream.setSource(voice.channelIndex);
-				
 				const bool forceSync = _forceSync || voice.initOsc;
 				
 				voice.initOsc = false;
 				
-				if (forceSync || voice.spat.color != voice.lastSentSpat.color)
+				stream.beginBundle();
 				{
-					stream.sourceColor(
-						voice.spat.color[0],
-						voice.spat.color[1],
-						voice.spat.color[2]);
+					generateOscForVoice(voice, stream, forceSync);
+					
+					voice.lastSentSpat = voice.spat;
 				}
-				
-				if (forceSync || voice.spat.name != voice.lastSentSpat.name)
-				{
-					stream.sourceName(voice.spat.name.c_str());
-				}
-				
-				if (forceSync || voice.spat.pos != voice.lastSentSpat.pos)
-				{
-					stream.sourcePosition(
-						voice.spat.pos[0],
-						voice.spat.pos[1],
-						voice.spat.pos[2]);
-				}
-				
-				if (forceSync || voice.spat.size != voice.lastSentSpat.size)
-				{
-					stream.sourceDimensions(
-						voice.spat.size[0],
-						voice.spat.size[1],
-						voice.spat.size[2]);
-				}
-				
-				if (forceSync || voice.spat.rot != voice.lastSentSpat.rot)
-				{
-					stream.sourceRotation(
-						voice.spat.rot[0],
-						voice.spat.rot[1],
-						voice.spat.rot[2]);
-				}
-				
-				if (forceSync ||
-					voice.spat.orientationMode != voice.lastSentSpat.orientationMode ||
-					voice.spat.orientationCenter != voice.lastSentSpat.orientationCenter)
-				{
-					stream.sourceOrientationMode(
-						voice.spat.orientationMode,
-						voice.spat.orientationCenter[0],
-						voice.spat.orientationCenter[1],
-						voice.spat.orientationCenter[2]);
-				}
-				
-				if (forceSync || voice.spat.spatialCompressor != voice.lastSentSpat.spatialCompressor)
-				{
-					stream.sourceSpatialCompressor(
-						voice.spat.spatialCompressor.enable,
-						voice.spat.spatialCompressor.attack,
-						voice.spat.spatialCompressor.release,
-						voice.spat.spatialCompressor.minimum,
-						voice.spat.spatialCompressor.maximum,
-						voice.spat.spatialCompressor.curve,
-						voice.spat.spatialCompressor.invert);
-				}
-				
-				if (forceSync || voice.spat.articulation != voice.lastSentSpat.articulation)
-				{
-					stream.sourceArticulation(
-						voice.spat.articulation);
-				}
-				
-				if (forceSync || voice.spat.doppler != voice.lastSentSpat.doppler)
-				{
-					stream.sourceDoppler(
-						voice.spat.doppler.enable,
-						voice.spat.doppler.scale,
-						voice.spat.doppler.smooth);
-				}
-				
-				if (forceSync || voice.spat.distanceIntensity != voice.lastSentSpat.distanceIntensity)
-				{
-					stream.sourceDistanceIntensity(
-						voice.spat.distanceIntensity.enable,
-						voice.spat.distanceIntensity.threshold,
-						voice.spat.distanceIntensity.curve);
-				}
-				
-				if (forceSync || voice.spat.distanceDampening != voice.lastSentSpat.distanceDampening)
-				{
-					stream.sourceDistanceDamping(
-						voice.spat.distanceDampening.enable,
-						voice.spat.distanceDampening.threshold,
-						voice.spat.distanceDampening.curve);
-				}
-				
-				if (forceSync || voice.spat.distanceDiffusion != voice.lastSentSpat.distanceDiffusion)
-				{
-					stream.sourceDistanceDiffusion(
-						voice.spat.distanceDiffusion.enable,
-						voice.spat.distanceDiffusion.threshold,
-						voice.spat.distanceDiffusion.curve);
-				}
-				
-				if (forceSync || voice.spat.spatialDelay != voice.lastSentSpat.spatialDelay)
-				{
-					stream.sourceSpatialDelay(
-						voice.spat.spatialDelay.enable,
-						voice.spat.spatialDelay.mode,
-						0,
-						voice.spat.spatialDelay.feedback,
-						voice.spat.spatialDelay.wetness,
-						voice.spat.spatialDelay.smooth,
-						voice.spat.spatialDelay.scale,
-						voice.spat.spatialDelay.noiseDepth,
-						voice.spat.spatialDelay.noiseFrequency);
-				}
-				
-				if (forceSync || voice.spat.subBoost != voice.lastSentSpat.subBoost)
-				{
-					stream.sourceSubBoost(voice.spat.subBoost);
-				}
-				
-				if (forceSync || voice.spat.sendIndex != voice.lastSentSpat.sendIndex)
-				{
-					stream.sourceSend(voice.spat.sendIndex >= 0);
-				}
-				
-				if (forceSync || voice.spat.globalEnable != voice.lastSentSpat.globalEnable)
-				{
-					stream.sourceGlobalEnable(voice.spat.globalEnable);
-				}
-				
-				voice.lastSentSpat = voice.spat;
-				
 				stream.endBundle();
 			}
 			

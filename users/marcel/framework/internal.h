@@ -31,7 +31,6 @@
 #include FT_FREETYPE_H
 #include <map>
 #include <OpenAL/al.h>
-#include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <string>
 #include "framework.h"

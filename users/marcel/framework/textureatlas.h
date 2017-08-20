@@ -28,7 +28,7 @@
 #pragma once
 
 #include "BoxAtlas.h"
-#include "framework.h"
+#include <SDL2/SDL_opengl.h>
 
 struct TextureAtlas
 {

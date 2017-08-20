@@ -21,6 +21,7 @@ static const int kColorHeight = 20;
 static const int kColorCurveHeight = 20;
 #define kBackgroundFocusColor Color(0.f, 0.f, 1.f, g_uiState->opacity * .7f)
 #define kBackgroundColor Color(0.f, 0.f, 0.f, g_uiState->opacity * .8f)
+#define kBackgroundFocusColor2 Color(0.f, 0.f, 1.f, g_uiState->opacity * .9f)
 
 // ui draw state
 bool g_doActions;
@@ -938,7 +939,10 @@ bool doDrawer(bool & value, const char * name)
 
 	if (g_doDraw)
 	{
-		setColor(kBackgroundFocusColor);
+		if (elem.hasFocus)
+			setColor(kBackgroundFocusColor2);
+		else
+			setColor(kBackgroundFocusColor);
 		drawRect(x1, y1, x2, y2);
 		setColor(colorBlue);
 		drawRectLine(x1, y1, x2, y2);
