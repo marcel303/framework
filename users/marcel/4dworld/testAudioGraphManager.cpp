@@ -1806,6 +1806,10 @@ void testAudioGraphManager()
 	
 	//
 	
+	Surface surface(GFX_SX, GFX_SY, false);
+	
+	//
+	
 	const auto t2 = g_TimerRT.TimeUS_get();
 	
 	printf("init took %.2fms\n", (t2 - t1) / 1000.0);
@@ -2158,7 +2162,52 @@ void testAudioGraphManager()
 					world->draw();
 				}
 				
-				audioGraphMgr.drawEditor();
+				pushSurface(&surface);
+				{
+					surface.clear(0, 0, 0, 255);
+					pushBlend(BLEND_ADD);
+					
+					glBlendEquation(GL_FUNC_ADD);
+					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
+					
+					audioGraphMgr.drawEditor();
+					
+					popBlend();
+				}
+				popSurface();
+				
+				const float hideTime = audioGraphMgr.selectedFile ? audioGraphMgr.selectedFile->graphEdit->hideTime : 1.f;
+				
+				if (hideTime > 0.f)
+				{
+					//else if (graphEdit->state == GraphEdit::kState_HiddenIdle)
+					if (hideTime < 1.f)
+					{
+						pushBlend(BLEND_OPAQUE);
+						{
+							const float radius = std::pow(1.f - hideTime, 2.f) * 200.f;
+							
+							setShader_GaussianBlurH(surface.getTexture(), 32, radius);
+							surface.postprocess();
+							clearShader();
+						}
+						popBlend();
+					}
+					
+					Shader composite("background/composite");
+					setShader(composite);
+					{
+						setBlend(BLEND_ALPHA);
+						composite.setTexture("source", 0, surface.getTexture());
+						composite.setTexture("overlay1", 1, getTexture("background/woodpecker.jpg"));
+						composite.setImmediate("opacity", hideTime);
+						
+						drawRect(0, 0, GFX_SX, GFX_SY);
+					}
+					clearShader();
+				}
+				
+				//
 				
 				doMenus(false, true, dt);
 				
