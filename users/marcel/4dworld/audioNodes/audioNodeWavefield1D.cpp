@@ -71,8 +71,6 @@ AudioNodeWavefield1D::AudioNodeWavefield1D()
 	addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 
 	wavefield = new Wavefield1D();
-	
-	randomize();
 }
 
 AudioNodeWavefield1D::~AudioNodeWavefield1D()
@@ -133,6 +131,8 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	if (size != wavefield->numElems)
 	{
 		wavefield->init(size);
+		
+		randomize();
 	}
 	
 	//
