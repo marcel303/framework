@@ -829,8 +829,15 @@ struct Bird : EntityBase
 
 struct Voices : EntityBase
 {
+	int randomX;
+	int randomZ;
+	float randomTimer;
+	
 	Voices()
 		: EntityBase()
+		, randomX(0)
+		, randomZ(0)
+		, randomTimer(0.f)
 	{
 		type = kEntity_Voice;
 		
@@ -844,6 +851,21 @@ struct Voices : EntityBase
 	
 	virtual void tick(const float dt) override
 	{
+		randomTimer = fmaxf(0.f, randomTimer - dt);
+		
+		if (randomTimer == 0.f)
+		{
+			randomTimer = 4.f;
+			
+			do
+			{
+				randomX = (rand() % 3) - 1;
+				randomZ = (rand() % 3) - 1;
+			} while (randomX == 0 && randomZ == 0);
+		}
+		
+		graphInstance->audioGraph->setMemf("pos.random", randomX, 0, randomZ);
+		
 		// alive state
 		
 		if (graphInstance->audioGraph->isFLagSet("dead"))
@@ -1913,7 +1935,7 @@ void testAudioGraphManager()
 					doVoiceButton("b4", "bernie4", false);
 					doVoiceButton("b5", "bernie5", false);
 					doVoiceButton("b6", "bernie6", false);
-					doVoiceButton("d1", "dude1", false);
+					//doVoiceButton("d1", "dude1", false);
 					doVoiceButton("d2", "dude2", true);
 					doBreak();
 					
