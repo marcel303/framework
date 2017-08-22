@@ -162,9 +162,6 @@ void AudioUpdateHandler::portAudioCallback(
 		audioGraphMgr->updateAudioValues();
 	}
 	
-	g_audioInputChannels = nullptr;
-	g_numAudioInputChannels = 0;
-	
 	if (voiceMgr != nullptr)
 	{
 		voiceMgr->portAudioCallback(inputBuffer, numInputChannels, outputBuffer, framesPerBuffer);
@@ -173,18 +170,16 @@ void AudioUpdateHandler::portAudioCallback(
 		
 		if (oscStream->isReady())
 		{
-			// todo : remove limiter hack
-			static int limiter = 0;
-			limiter++;
-			
-			//if ((limiter % 4) == 0)
-			{
-				voiceMgr->generateOsc(*oscStream, forceSyncOsc);
-			}
+			voiceMgr->generateOsc(*oscStream, forceSyncOsc);
 		}
 	}
 	
+	g_audioInputChannels = nullptr;
+	g_numAudioInputChannels = 0;
+	
 	g_currentAudioTime = 0.0;
+	
+	//
 	
 	time += dt;
 	
