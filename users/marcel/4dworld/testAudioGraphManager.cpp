@@ -2199,7 +2199,7 @@ void testAudioGraphManager()
 					{
 						setBlend(BLEND_ALPHA);
 						composite.setTexture("source", 0, surface.getTexture());
-						composite.setTexture("overlay1", 1, getTexture("background/woodpecker.jpg"));
+						composite.setTexture("overlay1", 1, getTexture("background/sabana.jpg"), true, true);
 						composite.setImmediate("opacity", hideTime);
 						
 						drawRect(0, 0, GFX_SX, GFX_SY);
