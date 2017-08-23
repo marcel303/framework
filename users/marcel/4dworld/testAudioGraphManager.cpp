@@ -1933,14 +1933,14 @@ void testAudioGraphManager()
 					doVoiceButton("h3", "hendry3", false);
 					doVoiceButton("h4", "hendry4", false);
 					doVoiceButton("h5", "hendry5", false);
+					//doVoiceButton("d1", "dude1", false);
+					doVoiceButton("d2", "dude2", false);
 					doVoiceButton("b1", "bernie1", false);
 					doVoiceButton("b2", "bernie2", false);
 					doVoiceButton("b3", "bernie3", false);
 					doVoiceButton("b4", "bernie4", false);
 					doVoiceButton("b5", "bernie5", false);
-					doVoiceButton("b6", "bernie6", false);
-					//doVoiceButton("d1", "dude1", false);
-					doVoiceButton("d2", "dude2", true);
+					doVoiceButton("b6", "bernie6", true);
 					doBreak();
 					
 					doSlider(world->desiredParams.birdVolume, "bird volume", .6f, dt);
