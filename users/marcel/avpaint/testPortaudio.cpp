@@ -234,7 +234,7 @@ struct SpringOsc1D : BaseOsc
 				p[kNumElems - 1] = 0.f;
 			}
 			
-		#if 1
+		#if 0
 			__m256d _mm_dt = _mm256_set1_pd(dt);
 			__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
 			__m256d _mm_vRetain = _mm256_set1_pd(vRetain);
@@ -518,15 +518,20 @@ struct SpringOsc2D : BaseOsc
 			__m128d _mm_dt = _mm_set1_pd(dt);
 			__m128d _mm_pRetain = _mm_set1_pd(pRetain);
 			__m128d _mm_vRetain = _mm_set1_pd(vRetain);
+			__m128d _mm_dMax = _mm_set1_pd(5000.0 * dt);
 			
 			__m128d * __restrict _mm_p = (__m128d*)p;
 			__m128d * __restrict _mm_v = (__m128d*)v;
 			__m128d * __restrict _mm_f = (__m128d*)f;
+			__m128d * __restrict _mm_d = (__m128d*)d;
 			
 			for (int i = 0; i < kNumElems*kNumElems/2; ++i)
 			{
-				_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i];
+				const __m128d _mm_d_clamped = _mm_min_pd(_mm_d[i], _mm_dMax);
+				
+				_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
 				_mm_v[i] = _mm_v[i] * _mm_vRetain;
+				_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 			}
 		#else
 			for (int i = 0; i < kNumElems; ++i)
