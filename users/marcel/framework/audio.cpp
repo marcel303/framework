@@ -143,8 +143,21 @@ SoundData * loadSound_WAV(const char * filename)
 	if (!ok)
 		return 0;
 	
-	if (!r.read(id, 4)) // "fllr" or "data"
+	if (!r.read(id, 4)) // "LIST", "FLLR" or "data"
 		return 0;
+	
+	if (id[0] == 'L' && id[1] == 'I' && id[2] == 'S' && id[3] == 'T')
+	{
+		int32_t byteCount;
+		if (!r.read(byteCount))
+			return 0;
+		
+		//logInfo("wave loader: skipping %d bytes of list chunk", byteCount);
+		r.skip(byteCount);
+		
+		if (!r.read(id, 4))
+			return 0;
+	}
 	
 	if (id[0] == 'F' && id[1] == 'L' && id[2] == 'L' && id[3] == 'R')
 	{
@@ -152,10 +165,10 @@ SoundData * loadSound_WAV(const char * filename)
 		if (!r.read(byteCount))
 			return 0;
 		
-		//logInfo("wave loader: skipping %d bytes of filler", byteCount);
+		//logInfo("wave loader: skipping %d bytes of filler chunk", byteCount);
 		r.skip(byteCount);
 		
-		if (!r.read(id, 4)) // 'data'
+		if (!r.read(id, 4))
 			return 0;
 	}
 	
