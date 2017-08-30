@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "framework.h"
 #include "testBase.h"
 #include "textureatlas.h"
 #include "Timer.h"
