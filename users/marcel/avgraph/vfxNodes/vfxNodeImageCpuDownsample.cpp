@@ -29,6 +29,10 @@
 #include <immintrin.h>
 #include <xmmintrin.h>
 
+#if !__AVX__
+	#warning AVX support disabled. wave field methods will use slower SSE code paths
+#endif
+
 //#define ENABLE_SSE_INTERLEAVED ((rand() % 2) == 0)
 #define ENABLE_SSE_INTERLEAVED 1
 
@@ -425,7 +429,7 @@ static int downsampleLine4x4_4channel_SSE(const uint8_t * __restrict _srcLine1, 
 	return numIterations * 1;
 }
 
-#if 0 // todo : check for AVX support somehow
+#if __AVX__
 
 static int downsampleLine2x2_AVX(const uint8_t * __restrict _srcLine1, const uint8_t * __restrict _srcLine2, const int numPixels, uint8_t * __restrict dstLine)
 {
@@ -503,8 +507,11 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 				#if 1
 					if (srcChannel.stride == 1 && dstChannel.stride == 1 && ((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(dstItr)) & 0xf) == 0)
 					{
+					#if __AVX__
+						numPixelsProcessed = downsampleLine2x2_AVX(srcItr1, srcItr2, downsampledSx, dstItr);
+					#else
 						numPixelsProcessed = downsampleLine2x2_SSE(srcItr1, srcItr2, downsampledSx, dstItr);
-						//numPixelsProcessed = downsampleLine2x2_AVX(srcItr1, srcItr2, downsampledSx, dstItr);
+					#endif
 						
 						srcItr1 += numPixelsProcessed * 2;
 						srcItr2 += numPixelsProcessed * 2;
