@@ -349,6 +349,8 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 		if (vfxNode == nullptr)
 		{
 			logError("unable to create node");
+			
+			vfxGraph->nodesFailedToCreate.insert(node.id);
 		}
 		else
 		{

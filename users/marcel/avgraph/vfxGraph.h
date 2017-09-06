@@ -76,6 +76,7 @@ struct VfxGraph
 	};
 	
 	std::map<GraphNodeId, VfxNodeBase*> nodes;
+	std::set<GraphNodeId> nodesFailedToCreate;
 	
 	GraphNodeId displayNodeId;
 	

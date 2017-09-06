@@ -86,7 +86,11 @@ void RealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::string & t
 	VfxNodeBase * vfxNode = createVfxNode(nodeId, typeName, vfxGraph);
 	
 	if (vfxNode == nullptr)
+	{
+		vfxGraph->nodesFailedToCreate.insert(nodeId);
+		
 		return;
+	}
 	
 	vfxNode->initSelf(node);
 	
@@ -1044,9 +1048,15 @@ int RealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 	
 	auto nodeItr = vfxGraph->nodes.find(nodeId);
 	
-	Assert(nodeItr != vfxGraph->nodes.end());
 	if (nodeItr == vfxGraph->nodes.end())
+	{
+		if (vfxGraph->nodesFailedToCreate.count(nodeId) == 0)
+		{
+			Assert(nodeItr != vfxGraph->nodes.end());
+		}
+		
 		return false;
+	}
 	
 	auto node = nodeItr->second;
 	
