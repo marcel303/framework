@@ -115,7 +115,7 @@ struct AudioFloatArray
 {
 	struct Elem
 	{
-		AudioFloat* audioFloat;
+		AudioFloat * audioFloat;
 		
 		Elem()
 			: audioFloat(nullptr)

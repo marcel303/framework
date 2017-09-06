@@ -350,6 +350,8 @@ void AudioFloat::mulMul(const AudioFloat & other, const AudioFloat & gain)
 	}
 }
 
+//
+
 void AudioFloatArray::update()
 {
 	const int numElems = elems.size();
