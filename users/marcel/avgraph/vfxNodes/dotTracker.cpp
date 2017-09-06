@@ -37,6 +37,15 @@
 	#include <stdio.h>
 #endif
 
+static int wrapInteger(const int value, const int wrap)
+{
+	int result = value;
+	while (result < 0)
+		result += wrap << 10;
+	result %= wrap;
+	return result;
+}
+
 void DotTracker::HGrid::init(HistoryElem * history, const int historySize, const int cellSize)
 {
 	memset(elems, 0, sizeof(elems));
@@ -45,8 +54,8 @@ void DotTracker::HGrid::init(HistoryElem * history, const int historySize, const
 	{
 		HistoryElem & h = history[i];
 		
-		const int cellX = (int(std::round(h.projectedX / cellSize)) + (kGridSize << 10)) % kGridSize;
-		const int cellY = (int(std::round(h.projectedY / cellSize)) + (kGridSize << 10)) % kGridSize;
+		const int cellX = wrapInteger(int(std::round(h.projectedX / cellSize)), kGridSize);
+		const int cellY = wrapInteger(int(std::round(h.projectedY / cellSize)), kGridSize);
 		Assert(cellX >= 0);
 		Assert(cellY >= 0);
 		
@@ -98,8 +107,8 @@ void DotTracker::DGrid::init(TrackedDot * dots, const int numDots, const int cel
 	{
 		TrackedDot & d = dots[i];
 		
-		const int cellX = (int(std::round(d.x / cellSize)) + (kGridSize << 10)) % kGridSize;
-		const int cellY = (int(std::round(d.y / cellSize)) + (kGridSize << 10)) % kGridSize;
+		const int cellX = wrapInteger(int(std::round(d.x / cellSize)), kGridSize);
+		const int cellY = wrapInteger(int(std::round(d.y / cellSize)), kGridSize);
 		Assert(cellX >= 0);
 		Assert(cellY >= 0);
 		
@@ -195,8 +204,8 @@ void DotTracker::identify(TrackedDot * dots, const int numDots, const float dt, 
 		const int hbaseCellX = int(std::round(h.projectedX / cellSize));
 		const int hbaseCellY = int(std::round(h.projectedY / cellSize));
 		
-		const int hcellX1 = hbaseCellX - 1 + kGridSize;
-		const int hcellY1 = hbaseCellY - 1 + kGridSize;
+		const int hcellX1 = wrapInteger(hbaseCellX - 1, kGridSize);
+		const int hcellY1 = wrapInteger(hbaseCellY - 1, kGridSize);
 		
 		const int hcellX2 = hcellX1 + 2;
 		const int hcellY2 = hcellY1 + 2;
