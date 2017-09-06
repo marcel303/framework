@@ -43,7 +43,7 @@ VFX_NODE_TYPE(sound, VfxNodeSound)
 	in("play!", "trigger");
 	in("pause!", "trigger");
 	in("resume!", "trigger");
-	in("time", "float");
+	out("time", "float");
 	out("play!", "trigger");
 	out("pause!", "trigger");
 	out("beat!", "trigger");
