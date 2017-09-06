@@ -698,9 +698,13 @@ bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vecto
 	
 	auto nodeItr = vfxGraph->nodes.find(nodeId);
 	
-	Assert(nodeItr != vfxGraph->nodes.end());
 	if (nodeItr == vfxGraph->nodes.end())
+	{
+		if (vfxGraph->nodesFailedToCreate.count(nodeId) == 0)
+			Assert(nodeItr != vfxGraph->nodes.end());
+		
 		return false;
+	}
 	
 	auto node = nodeItr->second;
 	
@@ -1051,9 +1055,7 @@ int RealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 	if (nodeItr == vfxGraph->nodes.end())
 	{
 		if (vfxGraph->nodesFailedToCreate.count(nodeId) == 0)
-		{
 			Assert(nodeItr != vfxGraph->nodes.end());
-		}
 		
 		return false;
 	}
