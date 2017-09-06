@@ -127,7 +127,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = Parse::Bool(inputValue);
 		
-		input.connectTo(value, kVfxPlugType_Bool);
+		input.connectTo(value, kVfxPlugType_Bool, true);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Bool, value));
 	}
@@ -137,7 +137,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = Parse::Int32(inputValue);
 		
-		input.connectTo(value, kVfxPlugType_Int);
+		input.connectTo(value, kVfxPlugType_Int, true);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Int, value));
 	}
@@ -147,7 +147,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = Parse::Float(inputValue);
 		
-		input.connectTo(value, kVfxPlugType_Float);
+		input.connectTo(value, kVfxPlugType_Float, true);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Float, value));
 	}
@@ -157,7 +157,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		// todo : parse inputValue
 		
-		input.connectTo(value, kVfxPlugType_Transform);
+		input.connectTo(value, kVfxPlugType_Transform, true);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Transform, value));
 	}
@@ -167,7 +167,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = inputValue;
 		
-		input.connectTo(value, kVfxPlugType_String);
+		input.connectTo(value, kVfxPlugType_String, true);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_String, value));
 	}
@@ -177,7 +177,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = Color::fromHex(inputValue.c_str());
 		
-		input.connectTo(value, kVfxPlugType_Color);
+		input.connectTo(value, kVfxPlugType_Color, true);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Color, value));
 	}

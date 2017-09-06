@@ -35,6 +35,8 @@
 #include <string>
 #include <vector>
 
+#define EXTENDED_INPUTS 1
+
 struct GraphEdit_TypeDefinitionLibrary;
 struct GraphNode;
 class Surface;
@@ -254,6 +256,53 @@ enum VfxPlugType
 	kVfxPlugType_Trigger
 };
 
+#if EXTENDED_INPUTS
+
+struct VfxFloatArray
+{
+	struct Elem
+	{
+		float * value;
+		
+		// todo : add per-link range support
+		bool hasRange;
+		float inMin;
+		float inMax;
+		float outMin;
+		float outMax;
+		
+		Elem()
+			: value(nullptr)
+			, hasRange(false)
+			, inMin(0.f)
+			, inMax(1.f)
+			, outMin(0.f)
+			, outMax(0.f)
+		{
+		}
+	};
+	
+	float sum;
+	std::vector<Elem> elems;
+	float * immediateValue;
+	
+	int lastUpdateTick;
+	
+	VfxFloatArray()
+		: sum(0.f)
+		, elems()
+		, immediateValue(nullptr)
+		, lastUpdateTick(-1)
+	{
+	}
+	
+	void update();
+	
+	float * get();
+};
+
+#endif
+
 struct VfxPlug
 {
 	VfxPlugType type;
@@ -263,6 +312,10 @@ struct VfxPlug
 	void * mem;
 	VfxPlugType memType;
 	
+#if EXTENDED_INPUTS
+	mutable VfxFloatArray floatArray;
+#endif
+	
 	VfxPlug()
 		: type(kVfxPlugType_None)
 		, isValid(true)
@@ -270,21 +323,38 @@ struct VfxPlug
 		, referencedByRealTimeConnectionTick(-1)
 		, mem(nullptr)
 		, memType(kVfxPlugType_None)
+	#if EXTENDED_INPUTS
+		, floatArray()
+	#endif
 	{
 	}
 	
 	void connectTo(VfxPlug & dst);
-	void connectTo(void * dstMem, const VfxPlugType dstType);
+	void connectTo(void * dstMem, const VfxPlugType dstType, const bool isImmediate);
 	
 	void disconnect()
 	{
 		mem = nullptr;
 		memType = type;
+		
+	#if EXTENDED_INPUTS
+		floatArray.immediateValue = nullptr;
+	#endif
 	}
 	
 	bool isConnected() const
 	{
-		return mem != nullptr;
+		if (mem != nullptr)
+			return true;
+		
+	#if EXTENDED_INPUTS
+		if (floatArray.elems.empty() == false)
+			return true;
+		if (floatArray.immediateValue != nullptr)
+			return true;
+	#endif
+		
+		return false;
 	}
 	
 	bool isReferenced() const;
@@ -304,6 +374,10 @@ struct VfxPlug
 	float getFloat() const
 	{
 		Assert(memType == kVfxPlugType_Float);
+	#if EXTENDED_INPUTS
+		if (mem == nullptr)
+			return *floatArray.get();
+	#endif
 		return *((float*)mem);
 	}
 	
@@ -360,6 +434,10 @@ struct VfxPlug
 	float & getRwFloat()
 	{
 		Assert(memType == kVfxPlugType_Float);
+	#if EXTENDED_INPUTS
+		if (mem == nullptr)
+			return *floatArray.get();
+	#endif
 		return *((float*)mem);
 	}
 	

@@ -7,6 +7,14 @@ top priority items from list below:
 - add timeline node
 + add OSC history to node description
 - add buttons that can trigger inputs
+- port compose shader from 4dworld to avgraph. fix graph editor fade when idle
+- add ability to add multiple connections to input sockets ? similar to 4dworld ?
+- add ability to specify in/out mapping on a per-link basis. make it operate similar to how adding multiply connections to input sockets works in 4dworld
+	- have a single floating point connection (float pointer). this is how things currently work
+	- have multiply floating point connections. store float pointers in array. allocate storage for calculating sum. make update() method to update summed value
+	- have optional remapping enabled per link. combine this with summing support. store mapping and float pointer in summed value element
+- determine how OSC send and receive nodes should function
+- add support for custom editors to graph editor
 
 todo :
 - add undo/redo support. just serialize/deserialize graph for every action?
@@ -119,6 +127,9 @@ todo : nodes :
 	- add range min/max range + pass if inside or outside boolean
 + add data table node. read data from CSV, text or XML file
 - add memory node ? get/set named variables. how to ensure processing order ?
+- add queue system for triggers ? ensure predeps have finished processing before handling triggers
+- remove trigger data
+- add ability for nodes to trigger again (process a partial time slice ?). but this will re-introduce again the issue of execution order of triggers ..
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader

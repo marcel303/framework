@@ -396,6 +396,57 @@ void VfxChannels::reset()
 
 //
 
+#if EXTENDED_INPUTS
+
+void VfxFloatArray::update()
+{
+	const int numElems = elems.size();
+	
+	if (numElems <= 1)
+	{
+		return;
+	}
+	
+	//
+	
+	float s = 0.f;
+	
+	for (auto & elem : elems)
+	{
+		s += *elem.value;
+	}
+	
+	sum = s;
+}
+
+float * VfxFloatArray::get()
+{
+	// fixme : g_currentVfxGraph should always be valid here? right now we just validate without checking traversal id when g_currentVfxGraph is nullptr. potetially doing this work twice (or more). on the other hand, if get is called after the update, it may set the traversal id to that of the next frame, without working on the array that will be updated in the future. this would be even worse..
+	
+	if (g_currentVfxGraph == nullptr || lastUpdateTick != g_currentVfxGraph->nextTickTraversalId)
+	{
+		if (g_currentVfxGraph != nullptr)
+		{
+			lastUpdateTick = g_currentVfxGraph->nextTickTraversalId;
+		}
+		
+		update();
+	}
+	
+	const int numElems = elems.size();
+	
+	if (numElems == 0)
+		return immediateValue;
+	else if (numElems == 1)
+		return elems[0].value;
+	else
+		return &sum;
+}
+
+#endif
+
+//
+
 void VfxPlug::connectTo(VfxPlug & dst)
 {
 	if (type == kVfxPlugType_DontCare)
@@ -409,6 +460,17 @@ void VfxPlug::connectTo(VfxPlug & dst)
 	{
 		logError("node connection failed. type mismatch");
 	}
+#if EXTENDED_INPUTS
+	else if (dst.type == kVfxPlugType_Float)
+	{
+		VfxFloatArray::Elem elem;
+		elem.value = (float*)dst.mem;
+		floatArray.elems.push_back(elem);
+		memType = dst.type;
+		
+		dst.isReferencedByLink = true;
+	}
+#endif
 	else
 	{
 		mem = dst.mem;
@@ -418,7 +480,7 @@ void VfxPlug::connectTo(VfxPlug & dst)
 	}
 }
 
-void VfxPlug::connectTo(void * dstMem, const VfxPlugType dstType)
+void VfxPlug::connectTo(void * dstMem, const VfxPlugType dstType, const bool isImmediate)
 {
 	if (type == kVfxPlugType_DontCare)
 	{
@@ -429,6 +491,23 @@ void VfxPlug::connectTo(void * dstMem, const VfxPlugType dstType)
 	{
 		logError("node connection failed. type mismatch");
 	}
+#if EXTENDED_INPUTS
+	else if (dstType == kVfxPlugType_Float)
+	{
+		if (isImmediate)
+		{
+			floatArray.immediateValue = (float*)dstMem;
+		}
+		else
+		{
+			VfxFloatArray::Elem elem;
+			elem.value = (float*)dstMem;
+			floatArray.elems.push_back(elem);
+		}
+		
+		memType = dstType;
+	}
+#endif
 	else
 	{
 		mem = dstMem;
