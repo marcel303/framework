@@ -54,11 +54,15 @@ struct VfxNodeTriggerAsFloat : VfxNodeBase
 	
 	virtual void tick(const float dt) override
 	{
+		/*
 		const VfxTriggerData * triggerData = getInputTriggerData(kInput_Trigger);
 		
 		if (triggerData != nullptr)
 			outputValue = triggerData->asFloat();
 		else
 			outputValue = 0.f;
+		*/
+		
+		outputValue = 0.f;
 	}
 };

@@ -47,5 +47,5 @@ struct VfxNodeLogicSwitch : VfxNodeBase
 	
 	VfxNodeLogicSwitch();
 	
-	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) override;
+	virtual void handleTrigger(const int inputSocketIndex) override;
 };

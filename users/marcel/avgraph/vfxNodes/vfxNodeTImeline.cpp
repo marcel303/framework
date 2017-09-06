@@ -44,6 +44,7 @@ VFX_NODE_TYPE(timeline, VfxNodeTimeline)
 	in("resume!", "trigger");
 	in("time", "float");
 	out("event!", "trigger");
+	out("eventId", "int");
 	out("beat!", "trigger");
 }
 
@@ -51,9 +52,8 @@ VfxNodeTimeline::VfxNodeTimeline()
 	: VfxNodeBase()
 	, time(0.0)
 	, isPlaying(false)
-	, eventTriggerData()
-	, beatTriggerData()
 	, timeline()
+	, eventIdOutput(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Timeline, kVfxPlugType_String);
@@ -66,8 +66,9 @@ VfxNodeTimeline::VfxNodeTimeline()
 	addInput(kInput_Pause, kVfxPlugType_Trigger);
 	addInput(kInput_Resume, kVfxPlugType_Trigger);
 	addInput(kInput_Time, kVfxPlugType_Float);
-	addOutput(kOutput_EventTrigger, kVfxPlugType_Trigger, &eventTriggerData);
-	addOutput(kOutput_BeatTrigger, kVfxPlugType_Trigger, &beatTriggerData);
+	addOutput(kOutput_EventTrigger, kVfxPlugType_Trigger, nullptr);
+	addOutput(kOutput_EventId, kVfxPlugType_Int, &eventIdOutput);
+	addOutput(kOutput_BeatTrigger, kVfxPlugType_Trigger, nullptr);
 }
 
 void VfxNodeTimeline::tick(const float dt)
@@ -160,7 +161,7 @@ void VfxNodeTimeline::init(const GraphNode & node)
 	}
 }
 
-void VfxNodeTimeline::handleTrigger(const int srcSocketIndex, const VfxTriggerData & data)
+void VfxNodeTimeline::handleTrigger(const int srcSocketIndex)
 {
 	if (srcSocketIndex == kInput_Play)
 	{
@@ -207,7 +208,7 @@ void VfxNodeTimeline::handleTimeSegment(const double oldTime, const double newTi
 		{
 			const VfxTimeline::Key & keyToTrigger = timeline.keys[i + 1];
 			
-			eventTriggerData.setInt(keyToTrigger.id);
+			eventIdOutput = keyToTrigger.id;
 			
 			trigger(kOutput_EventTrigger);
 		}
@@ -218,7 +219,7 @@ void VfxNodeTimeline::handleTimeSegment(const double oldTime, const double newTi
 		{
 			const VfxTimeline::Key & keyToTrigger = timeline.keys[i];
 			
-			eventTriggerData.setInt(keyToTrigger.id);
+			eventIdOutput = keyToTrigger.id;
 			
 			trigger(kOutput_EventTrigger);
 		}

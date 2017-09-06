@@ -57,5 +57,5 @@ struct VfxNodeSampleAndHold : VfxNodeBase
 	
 	VfxNodeSampleAndHold();
 	
-	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) override;
+	virtual void handleTrigger(const int inputSocketIndex) override;
 };

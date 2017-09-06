@@ -36,6 +36,7 @@ struct VfxNodePhysicalSpring : VfxNodeBase
 		kInput_Strength,
 		kInput_Dampen,
 		kInput_Force,
+		kInput_ImpulseValue,
 		kInput_ImpulseTrigger,
 		kInput_COUNT
 	};
@@ -54,5 +55,5 @@ struct VfxNodePhysicalSpring : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 	
-	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) override;
+	virtual void handleTrigger(const int inputSocketIndex) override;
 };

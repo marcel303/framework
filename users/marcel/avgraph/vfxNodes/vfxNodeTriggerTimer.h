@@ -40,12 +40,13 @@ struct VfxNodeTriggerTimer : VfxNodeBase
 	enum Output
 	{
 		kOutput_Trigger,
+		kOutput_TriggerCount,
 		kOutput_COUNT
 	};
 	
-	VfxTriggerData triggerCount;
-	
 	float timer;
+	
+	int triggerCountOutput;
 	
 	VfxNodeTriggerTimer();
 	

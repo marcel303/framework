@@ -42,14 +42,6 @@ VfxTransform::VfxTransform()
 
 //
 
-VfxTriggerData::VfxTriggerData()
-	: type(kVfxTriggerDataType_None)
-{
-	memset(mem, 0, sizeof(mem));
-}
-
-//
-
 VfxImage_Texture::VfxImage_Texture()
 	: VfxImageBase()
 	, texture(0)
@@ -662,15 +654,13 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 		{
 			// iterate the list of outgoing connections, call handleTrigger on nodes with correct outputSocketIndex
 			
-			const VfxTriggerData & triggerData = outputSocket.getTriggerData();
-			
 			for (auto & triggerTarget : triggerTargets)
 			{
 				if (triggerTarget.dstSocketIndex == outputSocketIndex)
 				{
 					triggerTarget.srcNode->editorIsTriggered = true;
 					
-					triggerTarget.srcNode->handleTrigger(triggerTarget.srcSocketIndex, triggerData);
+					triggerTarget.srcNode->handleTrigger(triggerTarget.srcSocketIndex);
 				}
 			}
 		}

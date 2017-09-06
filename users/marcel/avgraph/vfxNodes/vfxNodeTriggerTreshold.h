@@ -42,15 +42,14 @@ struct VfxNodeTriggerTreshold : VfxNodeBase
 	
 	enum Output
 	{
+		kOutput_Value,
 		kOutput_WentUp,
 		kOutput_WentDown,
 		kOutput_COUNT
 	};
 	
-	VfxTriggerData wentUp;
-	VfxTriggerData wentDown;
-
 	float oldValue;
+	float outputValue;
 	
 	VfxNodeTriggerTreshold();
 	

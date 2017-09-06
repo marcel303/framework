@@ -96,7 +96,7 @@ void VfxNodePhysicalMover::tick(const float dt)
 	outputPositionZ += outputSpeedZ * timeStep;
 }
 
-void VfxNodePhysicalMover::handleTrigger(const int inputSocketIndex, const VfxTriggerData & data)
+void VfxNodePhysicalMover::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_ResetTrigger)
 	{

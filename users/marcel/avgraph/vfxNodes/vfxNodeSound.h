@@ -53,18 +53,18 @@ struct VfxNodeSound : VfxNodeBase
 		kOutput_Play,
 		kOutput_Pause,
 		kOutput_Beat,
+		kOutput_BeatCount,
 		kOutput_COUNT
 	};
 
-	VfxTriggerData playTrigger;
-	VfxTriggerData pauseTrigger;
 	float timeOutput;
-	VfxTriggerData beatTrigger;
 	
 	AudioOutput_OpenAL * audioOutput;
 	AudioStream_Vorbis * audioStream;
 	
 	bool isPaused;
+	
+	int outputBeatCount;
 
 	VfxNodeSound();
 	virtual ~VfxNodeSound() override;
@@ -73,5 +73,5 @@ struct VfxNodeSound : VfxNodeBase
 	
 	virtual void init(const GraphNode & node) override;
 	
-	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) override;
+	virtual void handleTrigger(const int inputSocketIndex) override;
 };

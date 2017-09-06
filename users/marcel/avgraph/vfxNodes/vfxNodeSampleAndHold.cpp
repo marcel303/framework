@@ -57,21 +57,19 @@ VfxNodeSampleAndHold::VfxNodeSampleAndHold()
 	addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
 }
 
-void VfxNodeSampleAndHold::handleTrigger(const int inputSocketIndex, const VfxTriggerData & data)
+void VfxNodeSampleAndHold::handleTrigger(const int inputSocketIndex)
 {
 	const TriggerMode triggerMode = (TriggerMode)getInputInt(kInput_TriggerMode, 0);
 	const float triggerValue = getInputFloat(kInput_TriggerValue, 0.f);
+	const float sampleValue = getInputFloat(kInput_Value, 0.f);
 	
 	const bool pass =
 		triggerMode == kTrigger_Any ||
-		(triggerMode == kTrigger_Equal && data.asFloat() == triggerValue) ||
-		(triggerMode == kTrigger_NotEqual && data.asFloat() != triggerValue);
+		(triggerMode == kTrigger_Equal && sampleValue == triggerValue) ||
+		(triggerMode == kTrigger_NotEqual && sampleValue != triggerValue);
 	
 	if (pass)
 	{
-		if (inputs[kInput_Value].isConnected())
-			outputValue = getInputFloat(kInput_Value, 0.f);
-		else
-			outputValue = data.asFloat();
+		outputValue = sampleValue;
 	}
 }

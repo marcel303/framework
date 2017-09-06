@@ -47,6 +47,7 @@ VFX_NODE_TYPE(sound, VfxNodeSound)
 	out("play!", "trigger");
 	out("pause!", "trigger");
 	out("beat!", "trigger");
+	out("beatCount", "int");
 }
 
 class AudioStreamNULL : public AudioStream
@@ -60,13 +61,11 @@ public:
 
 VfxNodeSound::VfxNodeSound()
 	: VfxNodeBase()
-	, playTrigger()
-	, pauseTrigger()
 	, timeOutput(0.f)
-	, beatTrigger()
 	, audioOutput(nullptr)
 	, audioStream(nullptr)
 	, isPaused(false)
+	, outputBeatCount(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Source, kVfxPlugType_String);
@@ -78,9 +77,10 @@ VfxNodeSound::VfxNodeSound()
 	addInput(kInput_Pause, kVfxPlugType_Trigger);
 	addInput(kInput_Resume, kVfxPlugType_Trigger);
 	addOutput(kOutput_Time, kVfxPlugType_Float, &timeOutput);
-	addOutput(kOutput_Play, kVfxPlugType_Trigger, &playTrigger);
-	addOutput(kOutput_Pause, kVfxPlugType_Trigger, &pauseTrigger);
-	addOutput(kOutput_Beat, kVfxPlugType_Trigger, &beatTrigger);
+	addOutput(kOutput_Play, kVfxPlugType_Trigger, nullptr);
+	addOutput(kOutput_Pause, kVfxPlugType_Trigger, nullptr);
+	addOutput(kOutput_Beat, kVfxPlugType_Trigger, nullptr);
+	addOutput(kOutput_BeatCount, kVfxPlugType_Int, &outputBeatCount);
 }
 
 VfxNodeSound::~VfxNodeSound()
@@ -151,7 +151,8 @@ void VfxNodeSound::tick(const float dt)
 			
 			if (beat1 != beat2)
 			{
-				beatTrigger.setInt(beat2);
+				outputBeatCount = beat2;
+				
 				trigger(kOutput_Beat);
 			}
 		}
@@ -181,27 +182,24 @@ void VfxNodeSound::init(const GraphNode & node)
 	}
 }
 
-void VfxNodeSound::handleTrigger(const int inputSocketIndex, const VfxTriggerData & data)
+void VfxNodeSound::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_Play)
 	{
 		isPaused = false;
 		
-		playTrigger.setBool(true);
 		trigger(kOutput_Play);
 	}
 	else if (inputSocketIndex == kInput_Pause)
 	{
 		isPaused = true;
 		
-		pauseTrigger.setBool(false);
 		trigger(kOutput_Pause);
 	}
 	else if (inputSocketIndex == kInput_Resume)
 	{
 		isPaused = false;
 		
-		playTrigger.setBool(true);
 		trigger(kOutput_Play);
 	}
 }

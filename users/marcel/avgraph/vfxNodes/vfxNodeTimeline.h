@@ -51,6 +51,7 @@ struct VfxNodeTimeline : VfxNodeBase
 	enum Output
 	{
 		kOutput_EventTrigger,
+		kOutput_EventId,
 		kOutput_BeatTrigger,
 		kOutput_COUNT
 	};
@@ -59,10 +60,9 @@ struct VfxNodeTimeline : VfxNodeBase
 	
 	bool isPlaying;
 	
-	VfxTriggerData eventTriggerData;
-	VfxTriggerData beatTriggerData;
-	
 	VfxTimeline timeline;
+	
+	int eventIdOutput;
 
 	VfxNodeTimeline();
 	
@@ -70,7 +70,7 @@ struct VfxNodeTimeline : VfxNodeBase
 	
 	virtual void init(const GraphNode & node) override;
 	
-	virtual void handleTrigger(const int srcSocketIndex, const VfxTriggerData & data) override;
+	virtual void handleTrigger(const int srcSocketIndex) override;
 
 	virtual void getDescription(VfxNodeDescription & d) override;
 	

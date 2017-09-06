@@ -68,7 +68,7 @@ void VfxNodeOscSend::init(const GraphNode & node)
 	transmitSocket = new UdpTransmitSocket(IpEndpointName("127.0.0.1", 8000));
 }
 
-void VfxNodeOscSend::handleTrigger(const int inputSocketIndex, const VfxTriggerData & data)
+void VfxNodeOscSend::handleTrigger(const int inputSocketIndex)
 {
 	vfxCpuTimingBlock(VfxNodeOscSend);
 	
@@ -78,7 +78,7 @@ void VfxNodeOscSend::handleTrigger(const int inputSocketIndex, const VfxTriggerD
 		const int udpPort = getInputInt(kInput_Port, 0);
 		const char * eventName = getInputString(kInput_Event, "");
 		const int baseId = getInputInt(kInput_BaseId, 0);
-		const int eventId = data.asInt();
+		const int eventId = 0; // todo : get event ID from input socket
 		
 		sendOscEvent(eventName, baseId + eventId, ipAddress, udpPort);
 	}

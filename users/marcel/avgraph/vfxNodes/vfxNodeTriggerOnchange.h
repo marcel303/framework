@@ -39,13 +39,14 @@ struct VfxNodeTriggerOnchange : VfxNodeBase
 	
 	enum Output
 	{
+		kOutput_Value,
 		kOutput_Trigger,
 		kOutput_COUNT
 	};
 	
 	float oldValue;
-
-	VfxTriggerData triggerValue;
+	
+	float valueOutput;
 	
 	VfxNodeTriggerOnchange();
 	

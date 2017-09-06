@@ -34,7 +34,8 @@ VFX_NODE_TYPE(physical_spring, VfxNodePhysicalSpring)
 	in("strength", "float", "1.0");
 	in("dampen", "float", "0.5");
 	in("force", "float");
-	in("force!", "trigger");
+	in("impulse", "float");
+	in("impulse!", "trigger");
 	out("value", "float");
 	out("speed", "float");
 }
@@ -48,6 +49,7 @@ VfxNodePhysicalSpring::VfxNodePhysicalSpring()
 	addInput(kInput_Strength, kVfxPlugType_Float);
 	addInput(kInput_Dampen, kVfxPlugType_Float);
 	addInput(kInput_Force, kVfxPlugType_Float);
+	addInput(kInput_ImpulseValue, kVfxPlugType_Float);
 	addInput(kInput_ImpulseTrigger, kVfxPlugType_Trigger);
 	addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
 	addOutput(kOutput_Speed, kVfxPlugType_Float, &outputSpeed);
@@ -72,11 +74,11 @@ void VfxNodePhysicalSpring::tick(const float dt)
 	outputValue += outputSpeed * dt;
 }
 
-void VfxNodePhysicalSpring::handleTrigger(const int inputSocketIndex, const VfxTriggerData & data)
+void VfxNodePhysicalSpring::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_ImpulseTrigger)
 	{
-		const float impulse = data.asFloat();
+		const float impulse = getInputFloat(kInput_ImpulseValue, 0.f);
 		
 		outputSpeed += impulse;
 	}

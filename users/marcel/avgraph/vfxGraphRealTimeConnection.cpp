@@ -415,30 +415,6 @@ bool RealTimeConnection::getPlugValue(VfxPlug * plug, std::string & value)
 			}
 		}
 	case kVfxPlugType_Trigger:
-		{
-			const VfxTriggerData & triggerData = plug->getTriggerData();
-			
-			if (triggerData.type == kVfxTriggerDataType_Bool ||
-				triggerData.type == kVfxTriggerDataType_Int)
-			{
-				value = String::FormatC("%d", triggerData.asInt());
-				return true;
-			}
-			else if (triggerData.type == kVfxTriggerDataType_Float)
-			{
-				value = String::FormatC("%f", triggerData.asFloat());
-				return true;
-			}
-			else if (triggerData.type == kVfxTriggerDataType_None)
-			{
-				return false;
-			}
-			else
-			{
-				Assert(false);
-				return false;
-			}
-		}
 		return false;
 	}
 	
@@ -704,10 +680,7 @@ void RealTimeConnection::handleSrcSocketPressed(const GraphNodeId nodeId, const 
 	
 	node->editorIsTriggered = true;
 	
-	VfxTriggerData data;
-	data.setInt(0);
-	
-	node->handleTrigger(srcSocketIndex, data);
+	node->handleTrigger(srcSocketIndex);
 }
 
 bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines)

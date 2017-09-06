@@ -72,7 +72,7 @@ struct VfxNodeOscSend : VfxNodeBase
 	
 	virtual void init(const GraphNode & node) override;
 	
-	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) override;
+	virtual void handleTrigger(const int inputSocketIndex) override;
 	
 	virtual void getDescription(VfxNodeDescription & d) override;
 	

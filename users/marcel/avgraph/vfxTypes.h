@@ -27,12 +27,6 @@
 
 #pragma once
 
-#include "Debugging.h"
-#include <cmath>
-#include <string.h>
-
-// todo : remove cmath and string.h dependency
-
 namespace tinyxml2
 {
 	class XMLElement;

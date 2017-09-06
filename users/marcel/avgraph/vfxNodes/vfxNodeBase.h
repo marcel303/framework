@@ -84,100 +84,6 @@ struct VfxTransform
 
 //
 
-enum VfxTriggerDataType
-{
-	kVfxTriggerDataType_None,
-	kVfxTriggerDataType_Bool,
-	kVfxTriggerDataType_Int,
-	kVfxTriggerDataType_Float
-};
-
-struct VfxTriggerData
-{
-	VfxTriggerDataType type;
-	
-	union
-	{
-		bool boolValue;
-		int intValue;
-		float floatValue;
-		uint8_t mem[8];
-	};
-	
-	VfxTriggerData();
-	
-	void setBool(const bool value)
-	{
-		type = kVfxTriggerDataType_Bool;
-		boolValue = value;
-	}
-	
-	void setInt(const int value)
-	{
-		type = kVfxTriggerDataType_Int;
-		intValue = value;
-	}
-	
-	void setFloat(const float value)
-	{
-		type = kVfxTriggerDataType_Float;
-		floatValue = value;
-	}
-	
-	bool asBool() const
-	{
-		switch (type)
-		{
-		case kVfxTriggerDataType_None:
-			return false;
-		case kVfxTriggerDataType_Bool:
-			return boolValue;
-		case kVfxTriggerDataType_Int:
-			return intValue != 0;
-		case kVfxTriggerDataType_Float:
-			return floatValue != 0.f;
-		}
-
-		return false;
-	}
-	
-	int asInt() const
-	{
-		switch (type)
-		{
-		case kVfxTriggerDataType_None:
-			return 0;
-		case kVfxTriggerDataType_Bool:
-			return boolValue ? 1 : 0;
-		case kVfxTriggerDataType_Int:
-			return intValue;
-		case kVfxTriggerDataType_Float:
-			return std::round(floatValue);
-		}
-
-		return 0;
-	}
-	
-	float asFloat() const
-	{
-		switch (type)
-		{
-		case kVfxTriggerDataType_None:
-			return 0.f;
-		case kVfxTriggerDataType_Bool:
-			return boolValue ? 1.f : 0.f;
-		case kVfxTriggerDataType_Int:
-			return float(intValue);
-		case kVfxTriggerDataType_Float:
-			return floatValue;
-		}
-
-		return 0.f;
-	}
-};
-
-//
-
 struct VfxImageBase
 {
 	VfxImageBase()
@@ -437,12 +343,6 @@ struct VfxPlug
 		return (VfxChannels*)mem;
 	}
 	
-	VfxTriggerData & getTriggerData() const
-	{
-		Assert(memType == kVfxPlugType_Trigger);
-		return *((VfxTriggerData*)mem);
-	}
-	
 	//
 	
 	bool & getRwBool()
@@ -686,16 +586,6 @@ struct VfxNodeBase
 			return plug->getChannels();
 	}
 	
-	const VfxTriggerData * getInputTriggerData(const int index) const
-	{
-		const VfxPlug * plug = tryGetInput(index);
-		
-		if (plug == nullptr || !plug->isConnected())
-			return nullptr;
-		else
-			return &plug->getTriggerData();
-	}
-	
 	void setOuputIsValid(const int index, const bool isValid)
 	{
 		VfxPlug * plug = tryGetOutput(index);
@@ -712,7 +602,7 @@ struct VfxNodeBase
 	virtual void initSelf(const GraphNode & node) { }
 	virtual void init(const GraphNode & node) { }
 	virtual void tick(const float dt) { }
-	virtual void handleTrigger(const int inputSocketIndex, const VfxTriggerData & data) { }
+	virtual void handleTrigger(const int inputSocketIndex) { }
 	virtual void draw() const { }
 	virtual void beforeDraw() const { }
 	virtual void afterDraw() const { }

@@ -35,26 +35,24 @@ VFX_NODE_TYPE(trigger_treshold, VfxNodeTriggerTreshold)
 	in("treshold", "float");
 	in("upValue", "float");
 	in("downValue", "float");
+	out("value", "float");
 	out("wentUp!", "trigger");
 	out("wentDown!", "trigger");
 }
 
 VfxNodeTriggerTreshold::VfxNodeTriggerTreshold()
 	: VfxNodeBase()
-	, wentUp()
-	, wentDown()
 	, oldValue(0.f)
+	, outputValue(0.f)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Value, kVfxPlugType_Float);
 	addInput(kInput_Treshold, kVfxPlugType_Float);
 	addInput(kInput_UpValue, kVfxPlugType_Float);
 	addInput(kInput_DownValue, kVfxPlugType_Float);
-	addOutput(kOutput_WentUp, kVfxPlugType_Trigger, &wentUp);
-	addOutput(kOutput_WentDown, kVfxPlugType_Trigger, &wentDown);
-	
-	wentUp.setFloat(0.f);
-	wentDown.setFloat(0.f);
+	addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
+	addOutput(kOutput_WentUp, kVfxPlugType_Trigger, nullptr);
+	addOutput(kOutput_WentDown, kVfxPlugType_Trigger, nullptr);
 }
 
 void VfxNodeTriggerTreshold::tick(const float dt)
@@ -74,17 +72,15 @@ void VfxNodeTriggerTreshold::tick(const float dt)
 
 	if (wasDown && isUp)
 	{
-		const float triggerValue = getInputFloat(kInput_UpValue, 0.f);
+		outputValue = getInputFloat(kInput_UpValue, 0.f);
 		
-		wentUp.setFloat(triggerValue);
 		trigger(kOutput_WentUp);
 	}
 
 	if (wasUp && isDown)
 	{
-		const float triggerValue = getInputFloat(kInput_DownValue, 0.f);
+		outputValue = getInputFloat(kInput_DownValue, 0.f);
 		
-		wentDown.setFloat(triggerValue);
 		trigger(kOutput_WentDown);
 	}
 }

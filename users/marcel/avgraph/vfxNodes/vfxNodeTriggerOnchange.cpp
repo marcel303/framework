@@ -32,19 +32,19 @@ VFX_NODE_TYPE(trigger_onchange, VfxNodeTriggerOnchange)
 	typeName = "trigger.onchange";
 	
 	in("value", "float");
+	out("value", "float");
 	out("trigger!", "trigger");
 }
 
 VfxNodeTriggerOnchange::VfxNodeTriggerOnchange()
 	: VfxNodeBase()
 	, oldValue(0.f)
-	, triggerValue()
+	, valueOutput(0.f)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Value, kVfxPlugType_Float);
-	addOutput(kOutput_Trigger, kVfxPlugType_Trigger, &triggerValue);
-	
-	triggerValue.setFloat(0.f);
+	addOutput(kOutput_Value, kVfxPlugType_Float, &valueOutput);
+	addOutput(kOutput_Trigger, kVfxPlugType_Trigger, nullptr);
 }
 
 void VfxNodeTriggerOnchange::tick(const float dt)
@@ -59,7 +59,7 @@ void VfxNodeTriggerOnchange::tick(const float dt)
 
 		//
 		
-		triggerValue.setFloat(value);
+		valueOutput = value;
 
 		trigger(kOutput_Trigger);
 	}

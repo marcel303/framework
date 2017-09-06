@@ -43,7 +43,7 @@ VfxNodeLogicSwitch::VfxNodeLogicSwitch()
 	addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
 }
 
-void VfxNodeLogicSwitch::handleTrigger(const int inputSocketIndex, const VfxTriggerData & data)
+void VfxNodeLogicSwitch::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_Trigger)
 	{
