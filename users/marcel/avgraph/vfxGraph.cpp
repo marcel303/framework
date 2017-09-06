@@ -281,47 +281,6 @@ void VfxGraph::draw() const
 	
 	//
 	
-#if 0 // todo : remove this code ?
-	struct SortedNode
-	{
-		GraphNodeId nodeId;
-		const VfxNodeBase * vfxNode;
-	};
-	SortedNode * sortedNodes = (SortedNode*)alloca((sizeof(SortedNode) * nodes.size()));
-	int numSortedNodes = 0;
-	for (auto i : nodes)
-	{
-		if (i.second->tickOrder == -1)
-			continue;
-		sortedNodes[numSortedNodes].nodeId = i.first;
-		sortedNodes[numSortedNodes].vfxNode = i.second;
-		numSortedNodes++;
-	}
-	std::sort(sortedNodes, sortedNodes + numSortedNodes, [](auto & n1, auto & n2) { return n1.vfxNode->tickOrder < n2.vfxNode->tickOrder; });
-	
-	setFont("calibri.ttf");
-	beginTextBatch();
-	{
-		int x = GFX_SX/2;
-		int y = 10;
-		
-		for (int i = 0; i < numSortedNodes; ++i)
-		{
-			const GraphNodeId nodeId = sortedNodes[i].nodeId;
-			const GraphNode * node = graph->tryGetNode(nodeId);
-			const VfxNodeBase * vfxNode = sortedNodes[i].vfxNode;
-			
-			setColor(colorWhite);
-			drawText(x, y, 12, 0, 0, "node %d / %s: tickOrder: %d, tick: %.2fms, draw %.2fms", nodeId, node ? node->getDisplayName().c_str() : "n/a", vfxNode->tickOrder, vfxNode->tickTimeAvg/1000.0, vfxNode->drawTimeAvg/1000.0);
-			
-			y += 18;
-		}
-	}
-	endTextBatch();
-#endif
-	
-	//
-	
 	g_currentVfxGraph = nullptr;
 }
 
