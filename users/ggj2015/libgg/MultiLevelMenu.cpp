@@ -47,7 +47,7 @@ void MultiLevelMenuBase::Create()
 		{
 			const char * path1 = menu->GetPath(menuItem);
 			const char * path2 = menu->GetPath(other.menuItem);
-			while (*path1 == *path2)
+			while (*path1 == *path2 && *path1)
 			{
 				path1++;
 				path2++;

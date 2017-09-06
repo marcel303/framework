@@ -22,3 +22,7 @@ target_include_directories(libgg PUBLIC "${PROJECT_SOURCE_DIR}")
 if (MSVC)
 	set_property(TARGET libgg APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
 endif (MSVC)
+
+if (APPLE)
+	target_compile_definitions(libgg PUBLIC MACOS)
+endif (APPLE)

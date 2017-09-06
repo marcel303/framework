@@ -70,6 +70,12 @@ TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
 
 //
 
+#ifndef WIN32
+	#define sprintf_s(s, ss, f, ...) sprintf(s, f, __VA_ARGS__)
+#endif
+
+//
+
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
 std::string getRaceName(int r);
 

@@ -1244,7 +1244,7 @@ void * Dictionary::getPtr(const char * name, void * _default) const
 {
 	// fixme : right now this only works with 32 bit pointers
 
-	return reinterpret_cast<void*>(getInt(name, reinterpret_cast<int>(_default)));
+	return reinterpret_cast<void*>(getPtr(name, _default));
 }
 
 std::string & Dictionary::operator[](const char * name)
