@@ -164,7 +164,7 @@ void VfxNodeLeapMotion::tick(const float dt)
 	
 	if (isConnected)
 	{
-		// todo : read latest Leap Motion state
+		// read latest Leap Motion state
 		
 		const LeapListener::State state = leapListener->getState();
 		
@@ -181,6 +181,7 @@ void VfxNodeLeapMotion::tick(const float dt)
 		leftHandX = 0.f;
 		leftHandY = 0.f;
 		leftHandZ = 0.f;
+		
 		rightHandX = 0.f;
 		rightHandY = 0.f;
 		rightHandZ = 0.f;

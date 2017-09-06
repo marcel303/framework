@@ -70,7 +70,7 @@ void VfxNodeDatatable::tick(const float dt)
 	const bool newHasHeader = getInputBool(kInput_HasHeader, false);
 	const bool newTranspose = getInputBool(kInput_Transpose, false);
 
-	// todo : reloud data when filename changes
+	// reload data when filename changes or when we're asked to interpret the data differently
 	
 	if (newFilename != filename || newHasHeader != hasHeader || newTranspose != transpose)
 	{

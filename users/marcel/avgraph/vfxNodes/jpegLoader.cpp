@@ -3,6 +3,7 @@
 #include "Debugging.h"
 #include "jpegLoader.h"
 #include "Log.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <turbojpeg/turbojpeg.h>
 
