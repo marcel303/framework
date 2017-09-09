@@ -59,6 +59,7 @@ const int GFX_SY = 768;
 extern void testAudiochannels();
 extern void testHrtf();
 extern void testCatmullRom();
+extern void testReactionDiffusion();
 
 extern void testMain();
 
@@ -89,7 +90,6 @@ struct VfxNodeMidiOsc : VfxNodeBase, OscReceiveHandler
 	int controllerOutput;
 	int controllerValueOutput;
 	float controllerValueNormOutput;
-	VfxTriggerData controllerTriggerData;
 	
 	VfxNodeMidiOsc()
 		: VfxNodeBase()
@@ -104,7 +104,7 @@ struct VfxNodeMidiOsc : VfxNodeBase, OscReceiveHandler
 		addOutput(kOutput_Controller, kVfxPlugType_Int, &controllerOutput);
 		addOutput(kOutput_Value, kVfxPlugType_Int, &controllerValueOutput);
 		addOutput(kOutput_ValueNorm, kVfxPlugType_Float, &controllerValueNormOutput);
-		addOutput(kOutput_ControllerTrigger, kVfxPlugType_Trigger, &controllerTriggerData);
+		addOutput(kOutput_ControllerTrigger, kVfxPlugType_Trigger, nullptr);
 	}
 	
 	virtual void tick(const float dt) override
@@ -147,7 +147,6 @@ struct VfxNodeMidiOsc : VfxNodeBase, OscReceiveHandler
 				controllerOutput = controller;
 				controllerValueOutput = controllerValue;
 				controllerValueNormOutput = controllerValue / 127.f;
-				controllerTriggerData.setInt(controller);
 				
 				trigger(kOutput_ControllerTrigger);
 			}
@@ -417,6 +416,8 @@ int main(int argc, char * argv[])
 
 		//testCatmullRom();
 		
+		//testReactionDiffusion();
+		
 		//testMain();
 		
 		//
@@ -517,7 +518,7 @@ int main(int argc, char * argv[])
 			
 			g_currentVfxGraph = realTimeConnection->vfxGraph;
 			
-			if (graphEdit->tick(dt))
+			if (graphEdit->tick(dt, false))
 			{
 			}
 			else if (keyboard.wentDown(SDLK_p) && keyboard.isDown(SDLK_LGUI))
@@ -569,41 +570,39 @@ int main(int argc, char * argv[])
 				}
 				popSurface();
 				
-				if (graphEdit->hideTime == 1.f)
-					setColor(colorWhite);
-				else if (graphEdit->hideTime == 0.f)
-					setColor(colorBlack);
-				else if (graphEdit->state == GraphEdit::kState_HiddenIdle)
+				const float hideTime = graphEdit->hideTime;
+				
+				if (hideTime > 0.f)
 				{
-					pushBlend(BLEND_OPAQUE);
+					//else if (graphEdit->state == GraphEdit::kState_HiddenIdle)
+					if (hideTime < 1.f)
 					{
-						const float radius = std::pow(1.f - graphEdit->hideTime, 2.f) * 200.f;
+						pushBlend(BLEND_OPAQUE);
+						{
+							const float radius = std::pow(1.f - hideTime, 2.f) * 200.f;
+							
+							setShader_GaussianBlurH(graphEditSurface->getTexture(), 32, radius);
+							graphEditSurface->postprocess();
+							clearShader();
+						}
+						popBlend();
+					}
+					
+					Shader composite("composite");
+					setShader(composite);
+					pushBlend(BLEND_ADD);
+					{
+						glBlendEquation(GL_FUNC_ADD);
+						glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 						
-						setShader_GaussianBlurH(graphEditSurface->getTexture(), 32, radius);
-						graphEditSurface->postprocess();
-						clearShader();
+						composite.setTexture("source", 0, graphEditSurface->getTexture(), true);
+						composite.setImmediate("opacity", hideTime);
+						
+						drawRect(0, 0, GFX_SX, GFX_SY);
 					}
 					popBlend();
-					
-					setColorf(1.f, 1.f, 1.f, graphEdit->hideTime);
+					clearShader();
 				}
-				else
-				{
-					setColorf(1.f, 1.f, 1.f, graphEdit->hideTime);
-				}
-				
-				gxSetTexture(graphEditSurface->getTexture());
-				{
-					pushBlend(BLEND_ADD);
-					
-					glBlendEquation(GL_FUNC_ADD);
-					glBlendFuncSeparate(GL_ONE, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO);
-					
-					drawRect(0, 0, GFX_SX, GFX_SY);
-					
-					popBlend();
-				}
-				gxSetTexture(0);
 			}
 			framework.endDraw();
 		}

@@ -2196,14 +2196,18 @@ void testAudioGraphManager()
 					
 					Shader composite("background/composite");
 					setShader(composite);
+					pushBlend(BLEND_ADD);
 					{
-						setBlend(BLEND_ALPHA);
+						glBlendEquation(GL_FUNC_ADD);
+						glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+						
 						composite.setTexture("source", 0, surface.getTexture());
 						composite.setTexture("overlay1", 1, getTexture("background/sabana.jpg"), true, true);
 						composite.setImmediate("opacity", hideTime);
 						
 						drawRect(0, 0, GFX_SX, GFX_SY);
 					}
+					popBlend();
 					clearShader();
 				}
 				
