@@ -40,6 +40,8 @@
 
 #define USE_GLYPH_ATLAS 1
 
+#define USE_STBFONT 1
+
 #define ENABLE_MSDF_FONTS 1
 
 #if USE_GLYPH_ATLAS
@@ -76,6 +78,14 @@ class BuiltinShaders;
 class FontCacheElem;
 class MsdfFontCache;
 struct TextureAtlas;
+
+//
+
+#if ENABLE_UTF8_SUPPORT
+	typedef uint32_t GlyphCode;
+#else
+	typedef char GlyphCode;
+#endif
 
 //
 
@@ -171,6 +181,23 @@ struct VsInput
 };
 
 void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride);
+
+//
+
+class StbFont
+{
+public:
+	uint8_t * buffer;
+	int bufferSize;
+	
+	stbtt_fontinfo fontInfo;
+	
+	StbFont();
+	~StbFont();
+	
+	bool load(const char * filename);
+	void free();
+};
 
 //
 
@@ -429,7 +456,11 @@ public:
 class FontCacheElem
 {
 public:
+#if USE_STBFONT
+	StbFont * font;
+#else
 	FT_Face face;
+#endif
 #if USE_GLYPH_ATLAS
 	TextureAtlas * textureAtlas;
 #endif
@@ -457,7 +488,17 @@ public:
 class GlyphCacheElem
 {
 public:
+#if USE_STBFONT
+	int y;
+	int sx;
+	int sy;
+
+	int advance;
+	int lsb;
+#else
 	FT_GlyphSlotRec g;
+#endif
+
 #if USE_GLYPH_ATLAS
 	BoxAtlasElem * textureAtlasElem;
 #else
@@ -471,14 +512,24 @@ public:
 	class Key
 	{
 	public:
+	#if USE_STBFONT
+		const StbFont * font;
+	#else
 		FT_Face face;
+	#endif
 		int size;
 		int c;
 		
 		inline bool operator<(const Key & other) const
 		{
+		#if USE_STBFONT
+			if (font != other.font)
+				return font < other.font;
+		#else
 			if (face != other.face)
 				return face < other.face;
+		#endif
+
 			if (size != other.size)
 				return size < other.size;
 			return c < other.c;
@@ -490,35 +541,16 @@ public:
 	Map m_map;
 	
 	void clear();
+#if USE_STBFONT
+	GlyphCacheElem & findOrCreate(const StbFont * font, int size, int c);
+#else
 	GlyphCacheElem & findOrCreate(FT_Face face, int size, int c);
+#endif
 };
 
 //
 
 #if ENABLE_MSDF_FONTS
-
-class StbFont
-{
-public:
-	uint8_t * buffer;
-	int bufferSize;
-	
-	stbtt_fontinfo fontInfo;
-	
-	StbFont();
-	~StbFont();
-	
-	bool load(const char * filename);
-	void free();
-};
-
-//
-
-#if ENABLE_UTF8_SUPPORT
-	typedef uint32_t MsdfGlyphCode;
-#else
-	typedef char MsdfGlyphCode;
-#endif
 
 namespace msdfgen
 {
@@ -534,6 +566,7 @@ public:
 	int sy;
 	float scale;
 	int advance;
+	int lsb;
 	bool isInitialized;
 	
 	MsdfGlyphCacheElem();

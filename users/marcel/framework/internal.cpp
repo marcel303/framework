@@ -198,6 +198,63 @@ void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride)
 }
 
 // -----
+
+StbFont::StbFont()
+	: buffer(nullptr)
+	, bufferSize(0)
+{
+}
+
+StbFont::~StbFont()
+{
+	free();
+}
+
+bool StbFont::load(const char * filename)
+{
+	bool result = false;
+	
+	FILE * file = fopen(filename, "rb");
+	
+	if (file != nullptr)
+	{
+		// load source from file
+
+		fseek(file, 0, SEEK_END);
+		bufferSize = ftell(file);
+		fseek(file, 0, SEEK_SET);
+
+		buffer = new uint8_t[bufferSize];
+
+		if (fread(buffer, 1, bufferSize, file) == (size_t)bufferSize)
+		{
+			if (stbtt_InitFont(&fontInfo, buffer, 0) != 0)
+			{
+				result = true;
+			}
+		}
+		
+		fclose(file);
+		file = nullptr;
+	}
+	
+	if (result == false)
+	{
+		free();
+	}
+	
+	return result;
+}
+
+void StbFont::free()
+{
+	delete[] buffer;
+	buffer = nullptr;
+	
+	bufferSize = 0;
+}
+
+// -----
 	
 TextureCacheElem::TextureCacheElem()
 {
@@ -1608,7 +1665,12 @@ SoundCacheElem & SoundCache::findOrCreate(const char * name)
 
 FontCacheElem::FontCacheElem()
 {
+#if USE_STBFONT
+	font = nullptr;
+#else
 	face = 0;
+#endif
+
 #if USE_GLYPH_ATLAS
 	textureAtlas = nullptr;
 #endif
@@ -1616,6 +1678,15 @@ FontCacheElem::FontCacheElem()
 
 void FontCacheElem::free()
 {
+#if USE_STBFONT
+	if (font != nullptr)
+	{
+		font->free();
+		
+		delete font;
+		font = nullptr;
+	}
+#else
 	if (face != 0)
 	{
 		if (FT_Done_Face(face) != 0)
@@ -1625,6 +1696,7 @@ void FontCacheElem::free()
 		
 		face = 0;
 	}
+#endif
 	
 #if USE_GLYPH_ATLAS
 	if (textureAtlas != nullptr)
@@ -1641,6 +1713,11 @@ void FontCacheElem::load(const char * filename)
 
 	free();
 	
+#if USE_STBFONT
+	font = new StbFont();
+	
+	font->load(filename);
+#else
 	if (FT_New_Face(globals.freeType, filename, 0, &face) != 0)
 	{
 		logError("%s: unable to open font", filename);
@@ -1656,6 +1733,7 @@ void FontCacheElem::load(const char * filename)
 		// num_fixed_sizes to zero here
 		face->num_fixed_sizes = 0;
 	}
+#endif
 	
 #if USE_GLYPH_ATLAS
 	const GLint swizzleMask[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
@@ -1724,6 +1802,88 @@ void GlyphCache::clear()
 	
 	m_map.clear();
 }
+
+#if USE_STBFONT
+
+GlyphCacheElem & GlyphCache::findOrCreate(const StbFont * font, int size, int c)
+{
+	fassert(font == globals.font->font);
+	
+	Key key;
+	key.font = font;
+	key.size = size;
+	key.c = c;
+	
+	Map::iterator i = m_map.find(key);
+	
+	if (i != m_map.end())
+	{
+		return i->second;
+	}
+	else
+	{
+		// lookup failed. render the glyph and add the new element to the cache
+		
+		GlyphCacheElem elem;
+		
+		const float scale = stbtt_ScaleForPixelHeight(&font->fontInfo, size);
+		
+		int x1;
+		int y1;
+		int x2;
+		int y2;
+		
+		// todo : check return codes for failure
+		
+		stbtt_GetCodepointBitmapBox(&font->fontInfo, c, scale, scale, &x1, &y1, &x2, &y2);
+		
+		const int sx = x2 - x1;
+		const int sy = y2 - y1;
+		
+		uint8_t * values = (uint8_t*)alloca(sx * sy);
+		
+		stbtt_MakeCodepointBitmap(
+			&font->fontInfo,
+			values,
+			sx,
+			sy,
+			sx, scale, scale, c);
+		
+		for (int i = 0; i < sx * sy; ++i)
+			values[i] = rand();
+		
+		for (;;)
+		{
+			elem.textureAtlasElem = globals.font->textureAtlas->tryAlloc(values, sx, sy, GL_RED, GL_UNSIGNED_BYTE, GLYPH_ATLAS_BORDER);
+			
+			if (elem.textureAtlasElem != nullptr)
+				break;
+			
+			// note : texture atlas re-allocation shouldn't happen in draw code; make sure to cache each glyph elem first before calling gxBegin!
+				
+			globals.font->textureAtlas->makeBiggerAndOptimize(globals.font->textureAtlas->a.sx, globals.font->textureAtlas->a.sy * 2);
+		}
+		
+		elem.sx = sx;
+		elem.sy = sy;
+		elem.y = y1;
+		
+		int advance;
+		int lsb;
+		stbtt_GetCodepointHMetrics(&font->fontInfo, c, &advance, &lsb);
+
+		elem.advance = advance;
+		elem.lsb = lsb;
+		
+		i = m_map.insert(Map::value_type(key, elem)).first;
+		
+		//logInfo("added glyph cache element. face=%p, size=%d, character=%c, texture=%u. count=%d\n", face, size, c, elem.texture, (int)m_map.size());
+		
+		return i->second;
+	}
+}
+
+#else
 
 GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 {
@@ -1860,62 +2020,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 	}
 }
 
-// -----
-
-StbFont::StbFont()
-	: buffer(nullptr)
-	, bufferSize(0)
-{
-}
-
-StbFont::~StbFont()
-{
-	free();
-}
-
-bool StbFont::load(const char * filename)
-{
-	bool result = false;
-	
-	FILE * file = fopen(filename, "rb");
-	
-	if (file != nullptr)
-	{
-		// load source from file
-
-		fseek(file, 0, SEEK_END);
-		bufferSize = ftell(file);
-		fseek(file, 0, SEEK_SET);
-
-		buffer = new uint8_t[bufferSize];
-
-		if (fread(buffer, 1, bufferSize, file) == (size_t)bufferSize)
-		{
-			if (stbtt_InitFont(&fontInfo, buffer, 0) != 0)
-			{
-				result = true;
-			}
-		}
-		
-		fclose(file);
-		file = nullptr;
-	}
-	
-	if (result == false)
-	{
-		free();
-	}
-	
-	return result;
-}
-
-void StbFont::free()
-{
-	delete[] buffer;
-	buffer = nullptr;
-	
-	bufferSize = 0;
-}
+#endif
 
 //
 
@@ -1928,6 +2033,7 @@ MsdfGlyphCacheElem::MsdfGlyphCacheElem()
 	, sy(0)
 	, scale(1.f)
 	, advance(0)
+	, lsb(0)
 	, isInitialized(false)
 {
 }
@@ -2151,6 +2257,7 @@ void MsdfGlyphCache::makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph)
 	
 	glyph.isInitialized = true;
 	glyph.advance = advance;
+	glyph.lsb = lsb;
 	glyph.y = y1;
 }
 

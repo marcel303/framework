@@ -5053,7 +5053,73 @@ void fillCircle(float x, float y, float radius, int numSegments)
 	gxEnd();
 }
 
-static void measureText(FT_Face face, int size, const GlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
+#if USE_STBFONT
+
+static void measureText_STBTT(const StbFont * font, int size, const GlyphCacheElem ** glyphs, const GlyphCode * codepoints, const int numGlyphs, float & sx, float & sy, float & yTop)
+{
+	int x1 = 0;
+	int y1 = 0;
+	int x2 = 0;
+	int y2 = 0;
+	
+	int x = 0;
+	
+	bool isFirst = true;
+	
+	const float scale = stbtt_ScaleForPixelHeight(&font->fontInfo, size);
+	
+	for (size_t i = 0; i < numGlyphs; ++i)
+	{
+		// find or create glyph. skip current character if the element is invalid
+		
+		const GlyphCacheElem & elem = *glyphs[i];
+		const int codepoint = codepoints[i];
+		
+		if (elem.textureAtlasElem != nullptr)
+		{
+			int gsx = elem.sx;
+			int gsy = elem.sy;
+			
+			int dx1 = x;
+			int dy1 = 0 + elem.y;
+			int dx2 = dx1 + gsx;
+			int dy2 = dy1 + gsy;
+
+			if (isFirst)
+			{
+				isFirst = false;
+				
+				x1 = dx1;
+				y1 = dy1;
+				x2 = dx2;
+				y2 = dy2;
+			}
+			else
+			{
+				x1 = std::min(x1, dx1);
+				y1 = std::min(y1, dy1);
+				x2 = std::max(x2, dx2);
+				y2 = std::max(y2, dy2);
+			}
+
+			const int advance = elem.advance + stbtt_GetCodepointKernAdvance(&font->fontInfo, codepoint, i + 1 < numGlyphs ? codepoints[i + 1] : 0);
+		
+			const int advancePixels = std::max(1, int(std::ceilf(advance * scale)));
+		
+			x += advancePixels;
+		}
+	}
+	
+	//
+	
+	sx = x2 - x1;
+	sy = y2 - y1;
+	yTop = y1;
+}
+
+#else
+
+static void measureText_FreeType(FT_Face face, int size, const GlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
 {
 	float minX = std::numeric_limits<float>::max();
 	float minY = std::numeric_limits<float>::max();
@@ -5108,7 +5174,78 @@ static void measureText(FT_Face face, int size, const GlyphCacheElem ** glyphs, 
 	yTop = minY;
 }
 
-static void drawTextInternal(FT_Face face, int size, const GlyphCacheElem ** glyphs, const int numGlyphs, float x, float y)
+#endif
+
+#if USE_STBFONT
+
+static void drawText_STBTT(const StbFont * font, int size, const GlyphCacheElem ** glyphs, const GlyphCode * codepoints, const int numGlyphs, float x, float y)
+{
+	if (globals.isInTextBatch == false)
+	{
+		gxSetTexture(globals.font->textureAtlas->texture);
+		
+		gxBegin(GL_QUADS);
+	}
+	
+	const float scale = stbtt_ScaleForPixelHeight(&font->fontInfo, size);
+
+	const int atlasSx = globals.font->textureAtlas->a.sx;
+	const int atlasSy = globals.font->textureAtlas->a.sy;
+	
+	for (size_t i = 0; i < numGlyphs; ++i)
+	{
+		const GlyphCode codepoint = codepoints[i];
+		const GlyphCacheElem & elem = *glyphs[i];
+		
+		// skip current character if the element is invalid
+		
+		if (elem.textureAtlasElem != nullptr)
+		{
+			const int sx = elem.textureAtlasElem->sx;
+			const int sy = elem.textureAtlasElem->sy;
+			
+			const int u1i = elem.textureAtlasElem->x + GLYPH_ATLAS_BORDER;
+			const int v1i = elem.textureAtlasElem->y + GLYPH_ATLAS_BORDER;
+			const int u2i = elem.textureAtlasElem->x + sx - GLYPH_ATLAS_BORDER;
+			const int v2i = elem.textureAtlasElem->y + sy - GLYPH_ATLAS_BORDER;
+			
+			const float u1 = u1i / float(atlasSx);
+			const float v1 = v1i / float(atlasSy);
+			const float u2 = u2i / float(atlasSx);
+			const float v2 = v2i / float(atlasSy);
+			
+			int gsx = elem.sx;
+			int gsy = elem.sy;
+			
+			int dx1 = x;
+			int dy1 = y + elem.y;
+			int dx2 = dx1 + gsx;
+			int dy2 = dy1 + gsy;
+			
+			gxTexCoord2f(u1, v1); gxVertex2f(dx1, dy1);
+			gxTexCoord2f(u2, v1); gxVertex2f(dx2, dy1);
+			gxTexCoord2f(u2, v2); gxVertex2f(dx2, dy2);
+			gxTexCoord2f(u1, v2); gxVertex2f(dx1, dy2);
+		}
+		
+		const int advance = elem.advance + stbtt_GetCodepointKernAdvance(&font->fontInfo, codepoint, i + 1 < numGlyphs ? codepoints[i + 1] : 0);
+		
+		const int advancePixels = std::max(1, int(std::ceilf(advance * scale)));
+		
+		x += advancePixels;
+	}
+	
+	if (globals.isInTextBatch == false)
+	{
+		gxEnd();
+		
+		gxSetTexture(0);
+	}
+}
+
+#else
+
+static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** glyphs, const int numGlyphs, float x, float y)
 {
 	// the (0,0) coordinate represents the lower left corner of a glyph
 	// we want to render the glyph using its top left corner at (0,0)
@@ -5199,6 +5336,8 @@ static void drawTextInternal(FT_Face face, int size, const GlyphCacheElem ** gly
 #endif
 }
 
+#endif
+
 //
 
 #if ENABLE_MSDF_FONTS
@@ -5207,7 +5346,7 @@ static void drawTextInternal(FT_Face face, int size, const GlyphCacheElem ** gly
 static int sampleMethod = 3;
 static bool useSuperSampling = true;
 
-static void measureTextMSDFInternal(const stbtt_fontinfo & fontInfo, const float size, const MsdfGlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
+static void measureText_MSDF(const stbtt_fontinfo & fontInfo, const float size, const GlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
 
 {
 	int x1 = 0;
@@ -5216,8 +5355,6 @@ static void measureTextMSDFInternal(const stbtt_fontinfo & fontInfo, const float
 	int y2 = 0;
 	
 	//
-	
-	int lastCodepoint = -1;
 	
 	int x = 0;
 	
@@ -5235,7 +5372,7 @@ static void measureTextMSDFInternal(const stbtt_fontinfo & fontInfo, const float
 			int gsx = glyph.sx;
 			int gsy = glyph.sy;
 			
-			int dx1 = x - MSDF_GLYPH_PADDING_INNER;
+			int dx1 = x - MSDF_GLYPH_PADDING_INNER + glyph.lsb;
 			int dy1 = 0 + MSDF_GLYPH_PADDING_INNER;
 			int dx2 = dx1 + gsx;
 			int dy2 = dy1 - gsy;
@@ -5265,11 +5402,9 @@ static void measureTextMSDFInternal(const stbtt_fontinfo & fontInfo, const float
 			}
 		}
 	
-		const int advance = glyph.advance + stbtt_GetCodepointKernAdvance(&fontInfo, lastCodepoint, codepoint);
+		const int advance = glyph.advance + stbtt_GetCodepointKernAdvance(&fontInfo, codepoint, i + 1 < numGlyphs ? codepoints[i + 1] : 0);
 		
 		x += advance;
-		
-		lastCodepoint = codepoint;
 	}
 	
 	//
@@ -5281,7 +5416,7 @@ static void measureTextMSDFInternal(const stbtt_fontinfo & fontInfo, const float
 	yTop = y1 * scale;
 }
 
-static void drawTextMSDFInternal(MsdfGlyphCache & glyphCache, const float _x, const float _y, const float size, const MsdfGlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs)
+static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const float _y, const float size, const GlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs)
 {
 	if (globals.isInTextBatchMSDF == false)
 	{
@@ -5296,8 +5431,6 @@ static void drawTextMSDFInternal(MsdfGlyphCache & glyphCache, const float _x, co
 	}
 	
 	const float scale = stbtt_ScaleForPixelHeight(&glyphCache.m_font.fontInfo, size);
-	
-	int lastCodepoint = -1;
 	
 	float x = _x / scale;
 	float y = _y / scale;
@@ -5314,13 +5447,16 @@ static void drawTextMSDFInternal(MsdfGlyphCache & glyphCache, const float _x, co
 		
 		if (glyph.textureAtlasElem != nullptr)
 		{
+			const int PADDING = MSDF_GLYPH_PADDING_OUTER - MSDF_GLYPH_PADDING_INNER;
+			//const int PADDING = MSDF_GLYPH_PADDING_INNER;
+			
 			const int sx = glyph.textureAtlasElem->sx;
 			const int sy = glyph.textureAtlasElem->sy;
 			
-			const int u1i = glyph.textureAtlasElem->x + MSDF_GLYPH_PADDING_INNER;
-			const int v1i = glyph.textureAtlasElem->y + MSDF_GLYPH_PADDING_INNER;
-			const int u2i = glyph.textureAtlasElem->x + sx - MSDF_GLYPH_PADDING_INNER;
-			const int v2i = glyph.textureAtlasElem->y + sy - MSDF_GLYPH_PADDING_INNER;
+			const int u1i = glyph.textureAtlasElem->x + PADDING;
+			const int v1i = glyph.textureAtlasElem->y + PADDING;
+			const int u2i = glyph.textureAtlasElem->x + sx - PADDING;
+			const int v2i = glyph.textureAtlasElem->y + sy - PADDING;
 			
 			const float u1 = u1i / float(atlasSx);
 			const float v1 = v1i / float(atlasSy);
@@ -5330,13 +5466,13 @@ static void drawTextMSDFInternal(MsdfGlyphCache & glyphCache, const float _x, co
 			int gsx = glyph.sx;
 			int gsy = glyph.sy;
 			
-			int dx1 = x - MSDF_GLYPH_PADDING_INNER;
-			int dy1 = 0 + MSDF_GLYPH_PADDING_INNER;
+			int dx1 = x - MSDF_GLYPH_PADDING_INNER + glyph.lsb;
+			int dy1 = y + MSDF_GLYPH_PADDING_INNER;
 			int dx2 = dx1 + gsx;
 			int dy2 = dy1 - gsy;
 			
-			dy1 += y - glyph.y;
-			dy2 += y - glyph.y;
+			dy1 -= glyph.y;
+			dy2 -= glyph.y;
 			
 			gxTexCoord2f(u1, v1); gxVertex2f(dx1 * scale, dy1 * scale);
 			gxTexCoord2f(u2, v1); gxVertex2f(dx2 * scale, dy1 * scale);
@@ -5344,11 +5480,9 @@ static void drawTextMSDFInternal(MsdfGlyphCache & glyphCache, const float _x, co
 			gxTexCoord2f(u1, v2); gxVertex2f(dx1 * scale, dy2 * scale);
 		}
 	
-		const int advance = glyph.advance + stbtt_GetCodepointKernAdvance(&glyphCache.m_font.fontInfo, lastCodepoint, codepoint);
+		const int advance = glyph.advance + stbtt_GetCodepointKernAdvance(&glyphCache.m_font.fontInfo, codepoint, i + 1 < numGlyphs ? codepoints[i + 1] : 0);
 		
 		x += advance;
-		
-		lastCodepoint = codepoint;
 	}
 	
 	if (globals.isInTextBatchMSDF == false)
@@ -5381,6 +5515,22 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 
 	if (globals.fontMode == FONT_BITMAP)
 	{
+	#if USE_STBFONT
+		const int sizei = int(std::ceilf(size));
+		
+		auto font = globals.font->font;
+		
+		const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+		
+		for (size_t i = 0; i < textLength; ++i)
+		{
+			glyphs[i] = &g_glyphCache.findOrCreate(font, sizei, text[i]);
+		}
+		
+		float yTop;
+
+		measureText_STBTT(font, size, glyphs, text, textLength, sx, sy, yTop);
+	#else
 		const int sizei = int(std::ceilf(size));
 		
 		auto face = globals.font->face;
@@ -5394,7 +5544,8 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 		
 		float yTop;
 
-		measureText(face, size, glyphs, textLength, sx, sy, yTop);
+		measureText_FreeType(face, size, glyphs, textLength, sx, sy, yTop);
+	#endif
 	}
 	else if (globals.fontMode == FONT_SDF)
 	{
@@ -5409,7 +5560,7 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 		
 		float yTop;
 		
-		measureTextMSDFInternal(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
+		measureText_MSDF(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
 	}
 }
 
@@ -5490,6 +5641,26 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 	{
 		const int sizei = int(std::ceilf(size));
 		
+	#if USE_STBFONT
+		auto & font = globals.font->font;
+		
+		const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+		
+		for (size_t i = 0; i < textLength; ++i)
+		{
+			glyphs[i] = &g_glyphCache.findOrCreate(font, size, text[i]);
+		}
+		
+		float sx, sy, yTop;
+		measureText_STBTT(font, sizei, glyphs, text, textLength, sx, sy, yTop);
+		
+		x += int(sx * (alignX - 1.f) / 2.f);
+		y += int(sy * (alignY - 1.f) / 2.f);
+		
+		y -= int(yTop);
+		
+		drawText_STBTT(font, sizei, glyphs, text, textLength, x, y);
+	#else
 		auto face = globals.font->face;
 		
 		const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
@@ -5500,7 +5671,7 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 		}
 		
 		float sx, sy, yTop;
-		measureText(face, sizei, glyphs, textLength, sx, sy, yTop);
+		measureText_FreeType(face, sizei, glyphs, textLength, sx, sy, yTop);
 		
 	#if USE_GLYPH_ATLAS
 		x += sx * (alignX - 1.f) / 2.f;
@@ -5508,7 +5679,7 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 		
 		y -= yTop;
 		
-		drawTextInternal(face, sizei, glyphs, textLength, x, y);
+		drawText_FreeType(face, sizei, glyphs, textLength, x, y);
 	#else
 		gxMatrixMode(GL_MODELVIEW);
 		gxPushMatrix();
@@ -5520,9 +5691,10 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 
 			gxTranslatef(x, y, 0.f);
 			
-			drawTextInternal(globals.font->face, sizei, glyphs, textLength, 0.f, 0.f);
+			drawText_FreeType(globals.font->face, sizei, glyphs, textLength, 0.f, 0.f);
 		}
 		gxPopMatrix();
+	#endif
 	#endif
 	}
 	else
@@ -5537,14 +5709,14 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 		}
 		
 		float sx, sy, yTop;
-		measureTextMSDFInternal(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
+		measureText_MSDF(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
 		
 		x += sx * (alignX - 1.f) / 2.f;
 		y += sy * (alignY - 1.f) / 2.f;
 		
 		y -= yTop;
 
-		drawTextMSDFInternal(glyphCache, x, y, size, text, glyphs, textLength);
+		drawText_MSDF(glyphCache, x, y, size, text, glyphs, textLength);
 	}
 }
 
