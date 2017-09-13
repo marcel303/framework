@@ -1,6 +1,6 @@
 #pragma once
 
-#include "soundmix.h"
+#include "audioTypes.h"
 
 struct Wavefield1D
 {
@@ -20,22 +20,6 @@ struct Wavefield1D
 	void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds);
 	
 	float sample(const float x) const;
-};
-
-struct AudioSourceWavefield1D : AudioSource
-{
-	Wavefield1D m_wavefield;
-	double m_sampleLocation;
-	double m_sampleLocationSpeed;
-	bool m_closedEnds;
-	
-	AudioSourceWavefield1D();
-	
-	void init(const int numElems);
-
-	void tick(const double dt);
-
-	virtual void generate(float * __restrict samples, const int numSamples) override;
 };
 
 //
@@ -66,20 +50,4 @@ struct Wavefield2D
 	float sample(const float x, const float y) const;
 	
 	void copyFrom(const Wavefield2D & other, const bool copyP, const bool copyV, const bool copyF);
-};
-
-struct AudioSourceWavefield2D : AudioSource
-{
-	Wavefield2D m_wavefield;
-	double m_sampleLocation[2];
-	double m_sampleLocationSpeed[2];
-	bool m_slowMotion;
-	
-	AudioSourceWavefield2D();
-	
-	void init(const int numElems);
-	
-	void tick(const double dt);
-	
-	virtual void generate(float * __restrict samples, const int numSamples) override;
 };

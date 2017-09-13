@@ -5,12 +5,19 @@
 #include "framework.h" // todo : remove
 #include "Noise.h"
 #include <emmintrin.h>
-#include <immintrin.h>
 
 extern const int GFX_SX;
 extern const int GFX_SY;
 
 #define MAX_IMPULSE_PER_SECOND 1000.0
+
+//
+
+#if __AVX__
+	#include <immintrin.h>
+#else
+	#warning AVX support disabled. wave field methods will use slower SSE code paths
+#endif
 
 //
 
@@ -23,7 +30,8 @@ Wavefield1D::Wavefield1D()
 
 void Wavefield1D::init(const int _numElems)
 {
-	numElems = std::min(_numElems, kMaxElems);
+	numElems = (_numElems + 3) & (~3);
+	numElems = std::min(numElems, kMaxElems);
 	
 	memset(p, 0, sizeof(p));
 	memset(v, 0, sizeof(v));
@@ -34,12 +42,79 @@ void Wavefield1D::init(const int _numElems)
 	memset(d, 0, sizeof(d));
 }
 
+template <typename T> inline T _mm_load(const double v);
+
+template <> inline __m128d _mm_load<__m128d>(const double v)
+{
+	return _mm_set1_pd(v);
+}
+
+#if __AVX__
+template <> inline __m256d _mm_load<__m256d>(const double v)
+{
+	return _mm256_set1_pd(v);
+}
+#endif
+
+template <typename T>
+void tickForces(const double * __restrict p, const double c, double * __restrict v, double * __restrict f, const double dt, const int numElems, const bool closedEnds)
+{
+	const int vectorSize = sizeof(T) / 8;
+	
+	ALIGN16 double p1[numElems];
+	const double * __restrict p2 = p;
+	ALIGN16 double p3[numElems];
+	
+	memcpy(p1 + 1, p, (numElems - 1) * sizeof(double));
+	memcpy(p3, p + 1, (numElems - 1) * sizeof(double));
+	
+	if (closedEnds)
+	{
+		p1[0] = p1[1];
+		p3[numElems - 1] = p3[numElems - 2];
+	}
+	else
+	{
+		p1[0] = p1[numElems - 1];
+		p3[numElems - 1] = p3[0];
+	}
+	
+	//
+	
+	const T _mm_cTimesDt = _mm_load<T>(c * dt);
+	
+	T * __restrict _mm_p1 = (T*)p1;
+	T * __restrict _mm_p2 = (T*)p2;
+	T * __restrict _mm_p3 = (T*)p3;
+	T * __restrict _mm_v = (T*)v;
+	T * __restrict _mm_f = (T*)f;
+	
+	const int numElemsVec = numElems / vectorSize;
+	
+	for (int i = 0; i < numElemsVec; ++i)
+	{
+		const T d1 = _mm_p1[i] - _mm_p2[i];
+		const T d2 = _mm_p3[i] - _mm_p2[i];
+		
+		const T a = d1 + d2;
+		
+		_mm_v[i] += a * _mm_cTimesDt * _mm_f[i];
+	}
+}
+
 void Wavefield1D::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
 {
 	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 	
 	const double vRetain = std::pow(vRetainPerSecond, dt);
 	const double pRetain = std::pow(pRetainPerSecond, dt);
+	
+#if __AVX__
+	tickForces<__m256d>(p, c, v, f, dt, numElems, closedEnds);
+#elif 1
+	tickForces<__m128d>(p, c, v, f, dt, numElems, closedEnds);
+#else
+	const double cTimesDt = c * dt;
 	
 	for (int i = 0; i < numElems; ++i)
 	{
@@ -65,13 +140,11 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 		const double d1 = p1 - p2;
 		const double d2 = p3 - p2;
 		
-		double a = 0.f;
+		const double a = d1 + d2;
 		
-		a += d1 * c;
-		a += d2 * c;
-		
-		v[i] += a * dt * f[i];
+		v[i] += a * cTimesDt * f[i];
 	}
+#endif
 	
 	if (closedEnds)
 	{
@@ -82,19 +155,27 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 		p[numElems - 1] = 0.f;
 	}
 	
-#if 0
+#if __AVX__
 	__m256d _mm_dt = _mm256_set1_pd(dt);
 	__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
 	__m256d _mm_vRetain = _mm256_set1_pd(vRetain);
+	__m256d _mm_dMin = _mm256_set1_pd(-MAX_IMPULSE_PER_SECOND * dt);
+	__m256d _mm_dMax = _mm256_set1_pd(+MAX_IMPULSE_PER_SECOND * dt);
 	
 	__m256d * __restrict _mm_p = (__m256d*)p;
 	__m256d * __restrict _mm_v = (__m256d*)v;
 	__m256d * __restrict _mm_f = (__m256d*)f;
+	__m256d * __restrict _mm_d = (__m256d*)d;
 	
-	for (int i = 0; i < kNumElems/4; ++i)
+	const int numElems4 = numElems / 4;
+	
+	for (int i = 0; i < numElems4; ++i)
 	{
-		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i];
+		const __m256d _mm_d_clamped = _mm256_max_pd(_mm256_min_pd(_mm_d[i], _mm_dMax), _mm_dMin);
+		
+		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
 		_mm_v[i] = _mm_v[i] * _mm_vRetain;
+		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 	}
 #elif 1
 	__m128d _mm_dt = _mm_set1_pd(dt);
@@ -108,7 +189,9 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	__m128d * __restrict _mm_f = (__m128d*)f;
 	__m128d * __restrict _mm_d = (__m128d*)d;
 	
-	for (int i = 0; i < numElems/2; ++i)
+	const int numElems2 = numElems / 2;
+	
+	for (int i = 0; i < numElems2; ++i)
 	{
 		const __m128d _mm_d_clamped = _mm_max_pd(_mm_min_pd(_mm_d[i], _mm_dMax), _mm_dMin);
 		
@@ -143,13 +226,16 @@ float Wavefield1D::sample(const float x) const
 	}
 	else
 	{
-		const int x1 = int(x) ;
+		const int x1 = int(x);
 		const int x2 = x1 + 1;
 		const float tx2 = x - x1;
 		const float tx1 = 1.f - tx2;
 		
-		const float v0 = p[x1 % numElems];
-		const float v1 = p[x2 % numElems];
+		const int x1Clamped = x1 >= numElems ? x1 - numElems : x1;
+		const int x2Clamped = x2 >= numElems ? x2 - numElems : x2;
+		
+		const float v0 = p[x1Clamped];
+		const float v1 = p[x2Clamped];
 		const float v = v0 * tx1 + v1 * tx2;
 		
 		return v;
@@ -158,125 +244,7 @@ float Wavefield1D::sample(const float x) const
 
 //
 
-AudioSourceWavefield1D::AudioSourceWavefield1D()
-	: m_wavefield()
-	, m_sampleLocation(0.0)
-	, m_sampleLocationSpeed(0.0)
-	, m_closedEnds(true)
-{
-}
-
-void AudioSourceWavefield1D::init(const int numElems)
-{
-	m_wavefield.init(numElems);
-	
-	m_sampleLocation = 0.0;
-	m_sampleLocationSpeed = 0.0;
-}
-
-void AudioSourceWavefield1D::tick(const double dt)
-{
-	if (mouse.isDown(BUTTON_LEFT))
-	{
-		//const int r = random(1, 5);
-		const int r = 1 + mouse.x * 30 / GFX_SX;
-		const int v = m_wavefield.numElems - r * 2;
-		
-		if (v > 0)
-		{
-			const int spot = r + (rand() % v);
-			
-			const double s = random(-1.f, +1.f) * .5f;
-			//const double s = 1.0;
-			
-			for (int i = -r; i <= +r; ++i)
-			{
-				const int x = spot + i;
-				const double value = std::pow((1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0, 2.0);
-				
-				if (x >= 0 && x < m_wavefield.numElems)
-					m_wavefield.p[x] += value * s;
-			}
-		}
-	}
-	
-	m_sampleLocationSpeed = 0.0;
-	
-	if (keyboard.isDown(SDLK_LEFT))
-		m_sampleLocationSpeed -= 10.0;
-	if (keyboard.isDown(SDLK_RIGHT))
-		m_sampleLocationSpeed += 10.0;
-	
-	const int editLocation = int(m_sampleLocation) % m_wavefield.numElems;
-	
-	if (keyboard.isDown(SDLK_a))
-		m_wavefield.f[editLocation] = 1.f;
-	if (keyboard.isDown(SDLK_z))
-		m_wavefield.f[editLocation] /= 1.01;
-	if (keyboard.isDown(SDLK_n))
-		m_wavefield.f[editLocation] *= random(.95f, 1.f);
-	
-	if (keyboard.wentDown(SDLK_r))
-		m_wavefield.p[rand() % m_wavefield.numElems] = random(-1.f, +1.f) * (keyboard.isDown(SDLK_LSHIFT) ? 40.f : 4.f);
-	
-	if (keyboard.wentDown(SDLK_c))
-		m_closedEnds = !m_closedEnds;
-	
-	if (keyboard.wentDown(SDLK_t))
-	{
-		const double xRatio = random(0.0, 1.0 / 10.0);
-		const double randomFactor = random(0.0, 1.0);
-		//const double cosFactor = random(0.0, 1.0);
-		const double cosFactor = 0.0;
-		const double perlinFactor = random(0.0, 1.0);
-		
-		for (int x = 0; x < m_wavefield.numElems; ++x)
-		{
-			m_wavefield.f[x] = 1.0;
-			
-			m_wavefield.f[x] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
-			m_wavefield.f[x] *= Calc::Lerp(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
-			//m_wavefield.f[x] = 1.0 - std::pow(m_wavefield.f[x], 2.0);
-			
-			//m_wavefield.f[x] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
-			m_wavefield.f[x] *= Calc::Lerp(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
-		}
-	}
-}
-
-void AudioSourceWavefield1D::generate(float * __restrict samples, const int numSamples)
-{
-#if 0
-	const double dt = 1.0 / SAMPLE_RATE * Calc::Lerp(0.0, 1.0, mouse.y / double(GFX_SY - 1));
-	const double c = 1000000000.0;
-#else
-	const double dt = 1.0 / SAMPLE_RATE;
-	const double m2 = mouse.y / double(GFX_SY - 1);
-	const double m1 = 1.0 - m2;
-	const double c1 = 100000.0;
-	const double c2 = 1000000000.0;
-	const double c = c1 * m1 + c2 * m2;
-#endif
-
-	tick(dt);
-	
-	//const double vRetainPerSecond = 0.45;
-	const double vRetainPerSecond = 0.05;
-	const double pRetainPerSecond = 0.95;
-	
-	const bool closedEnds = m_closedEnds;
-	
-	for (int i = 0; i < numSamples; ++i)
-	{
-		m_sampleLocation += m_sampleLocationSpeed * dt;
-		
-		samples[i] = m_wavefield.sample(m_sampleLocation);
-		
-		m_wavefield.tick(dt, c, vRetainPerSecond, pRetainPerSecond, closedEnds);
-	}
-}
-
-//
+const int Wavefield2D::kMaxElems;
 
 Wavefield2D::Wavefield2D()
 {
@@ -285,7 +253,8 @@ Wavefield2D::Wavefield2D()
 
 void Wavefield2D::init(const int _numElems)
 {
-	numElems = _numElems;
+	numElems = (_numElems + 3) & (~3);
+	numElems = std::min(numElems, kMaxElems);
 	
 	memset(p, 0, sizeof(p));
 	memset(v, 0, sizeof(v));
@@ -412,10 +381,11 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	const double vRetain = std::pow(vRetainPerSecond, dt);
 	const double pRetain = std::pow(pRetainPerSecond, dt);
 	
-#if 0
+#if __AVX__
 	__m256d _mm_dt = _mm256_set1_pd(dt);
 	__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
 	__m256d _mm_vRetain = _mm256_set1_pd(vRetain);
+	__m256d _mm_dMin = _mm256_set1_pd(-MAX_IMPULSE_PER_SECOND * dt);
 	__m256d _mm_dMax = _mm256_set1_pd(+MAX_IMPULSE_PER_SECOND * dt);
 	
 	for (int x = 0; x < numElems; ++x)
@@ -427,7 +397,7 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 		
 		for (int i = 0; i < numElems/4; ++i)
 		{
-			const __m256d _mm_d_clamped = _mm256_min_pd(_mm_d[i], _mm_dMax);
+			const __m256d _mm_d_clamped = _mm256_max_pd(_mm256_min_pd(_mm_d[i], _mm_dMax), _mm_dMin);
 			
 			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
 			_mm_v[i] = _mm_v[i] * _mm_vRetain;
@@ -465,11 +435,9 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	{
 		const double d_clamped = std::max(std::min(d[i], dMax), dMin);
 		
-		p[i] += v[i] * dt * f[i] + dClamped;
-		
-		p[i] *= pRetain;
-		v[i] *= vRetain;
-		d[i] -= d_clamped;
+		p[i] = p[i] * pRetain + v[i] * dt * f[i] + d_clamped;
+		v[i] = v[i] * vRetain;
+		d[i] = d[i] - d_clamped;
 	}
 #endif
 }
@@ -587,91 +555,5 @@ void Wavefield2D::copyFrom(const Wavefield2D & other, const bool copyP, const bo
 	{
 		for (int x = 0; x < numElems; ++x)
 			memcpy(f[x], other.f[x], numElems * sizeof(double));
-	}
-}
-
-//
-
-AudioSourceWavefield2D::AudioSourceWavefield2D()
-	: m_wavefield()
-	, m_sampleLocation()
-	, m_slowMotion(false)
-{
-	init(m_wavefield.kMaxElems);
-}
-
-void AudioSourceWavefield2D::init(const int numElems)
-{
-	m_wavefield.init(numElems);
-	
-	m_sampleLocation[0] = 0.0;
-	m_sampleLocation[1] = 0.0;
-	m_sampleLocationSpeed[0] = 0.0;
-	m_sampleLocationSpeed[1] = 0.0;
-}
-
-void AudioSourceWavefield2D::tick(const double dt)
-{
-	m_sampleLocationSpeed[0] = 0.0;
-	m_sampleLocationSpeed[1] = 0.0;
-	
-	const float speed = 5.f;
-	
-	if (keyboard.isDown(SDLK_LEFT))
-		m_sampleLocationSpeed[0] -= speed;
-	if (keyboard.isDown(SDLK_RIGHT))
-		m_sampleLocationSpeed[0] += speed;
-	if (keyboard.isDown(SDLK_UP))
-		m_sampleLocationSpeed[1] -= speed;
-	if (keyboard.isDown(SDLK_DOWN))
-		m_sampleLocationSpeed[1] += speed;
-	
-	if (keyboard.isDown(SDLK_a))
-		//m_wavefield.f[m_sampleLocation[0]][m_sampleLocation[1]] *= 1.3;
-		m_wavefield.f[int(m_sampleLocation[0])][int(m_sampleLocation[1])] = 1.0;
-	if (keyboard.isDown(SDLK_z))
-		//m_wavefield.f[m_sampleLocation[0]][m_sampleLocation[1]] /= 1.3;
-		m_wavefield.f[int(m_sampleLocation[0])][int(m_sampleLocation[1])] = 0.0;
-	
-	if (keyboard.wentDown(SDLK_s))
-		m_slowMotion = !m_slowMotion;
-	
-	//if (keyboard.wentDown(SDLK_r))
-	if (keyboard.isDown(SDLK_r))
-		m_wavefield.p[rand() % m_wavefield.numElems][rand() % m_wavefield.numElems] = random(-1.f, +1.f) * 5.f;
-	
-	if (keyboard.wentDown(SDLK_t))
-	{
-		m_wavefield.randomize();
-	}
-}
-
-void AudioSourceWavefield2D::generate(float * __restrict samples, const int numSamples)
-{
-#if 0
-	const double dt = 1.0 / SAMPLE_RATE * Calc::Lerp(0.0, 1.0, mouse.y / double(GFX_SY - 1));
-	const double c = 1000000000.0;
-#else
-	const double dt = 1.0 / SAMPLE_RATE * (m_slowMotion ? 0.001 : 1.0);
-	const double m1 = mouse.y / double(GFX_SY - 1);
-	//const double m1 = 0.75;
-	const double m2 = 1.0 - m1;
-	//const double c = 10000.0 * m2 + 1000000000.0 * m1;
-	const double c = 10000.0 * m2 + 1000000000.0 * m1;
-#endif
-
-	tick(dt);
-	
-	const double vRetainPerSecond = 0.05;
-	const double pRetainPerSecond = 0.05;
-	
-	for (int i = 0; i < numSamples; ++i)
-	{
-		m_sampleLocation[0] += m_sampleLocationSpeed[0] * dt;
-		m_sampleLocation[1] += m_sampleLocationSpeed[1] * dt;
-		
-		samples[i] = m_wavefield.sample(m_sampleLocation[0], m_sampleLocation[1]);
-		
-		m_wavefield.tick(dt, c, vRetainPerSecond, pRetainPerSecond, true);
 	}
 }
