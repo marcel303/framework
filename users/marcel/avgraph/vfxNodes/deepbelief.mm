@@ -199,15 +199,22 @@ bool Deepbelief::threadInit(State * state)
 {
 	LOG_DBG("creating deepbelief network", 0);
 	
-	state->network = jpcnn_create_network(state->networkFilename.c_str());
-	Assert(state->network);
-	
-	if (state->network == nullptr)
+	if (state->networkFilename.empty())
+	{
 		return false;
-	
-	state->isInitialized = true;
-	
-	return true;
+	}
+	else
+	{
+		state->network = jpcnn_create_network(state->networkFilename.c_str());
+		Assert(state->network);
+		
+		if (state->network == nullptr)
+			return false;
+		
+		state->isInitialized = true;
+		
+		return true;
+	}
 }
 
 void Deepbelief::threadShut(State * state)
