@@ -1835,6 +1835,15 @@ GlyphCacheElem & GlyphCache::findOrCreate(const StbFont * font, int size, int c)
 		
 		// todo : check return codes for failure
 		
+		// todo : STBTT packing routines contain oversampling and filtering support ..
+		//        but there's no way to access this functionality officially bypassing
+		//        the packing routines. copy the implementation ? or use STBTT packing
+		//        and texture atlas management ? I would rather not .. as the current
+		//        implementation allows the texture atlas to grow and 'intelligently'
+		//        updates the texture. also STBTT's packing seems to be oriented towards
+		//        packing entire unicode ranges at once, while we want to just generate
+		//        glyphs as we go for now (and the foreseeable future)
+		
 		stbtt_GetCodepointBitmapBox(&font->fontInfo, c, scale, scale, &x1, &y1, &x2, &y2);
 		
 		const int sx = x2 - x1;
@@ -1848,9 +1857,6 @@ GlyphCacheElem & GlyphCache::findOrCreate(const StbFont * font, int size, int c)
 			sx,
 			sy,
 			sx, scale, scale, c);
-		
-		for (int i = 0; i < sx * sy; ++i)
-			values[i] = rand();
 		
 		for (;;)
 		{
