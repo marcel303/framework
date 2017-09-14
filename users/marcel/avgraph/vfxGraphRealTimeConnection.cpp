@@ -287,6 +287,155 @@ void RealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNodeId 
 	}
 }
 
+void RealTimeConnection::setLinkParameter(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex, const std::string & name, const std::string & value)
+{
+	if (isLoading)
+		return;
+	
+	logDebug("setLinkParameter");
+	
+	Assert(vfxGraph != nullptr);
+	if (vfxGraph == nullptr)
+		return;
+	
+	// get src & dst node. check link type
+	
+	auto srcNodeItr = vfxGraph->nodes.find(srcNodeId);
+	auto dstNodeItr = vfxGraph->nodes.find(dstNodeId);
+	
+	Assert(srcNodeItr != vfxGraph->nodes.end());
+	Assert(dstNodeItr != vfxGraph->nodes.end());
+	
+	if (srcNodeItr == vfxGraph->nodes.end())
+		return;
+	if (dstNodeItr == vfxGraph->nodes.end())
+		return;
+	
+	auto srcNode = srcNodeItr->second;
+	auto dstNode = dstNodeItr->second;
+	
+	//
+	
+	auto srcSocket = srcNode->tryGetInput(srcSocketIndex);
+	auto dstSocket = dstNode->tryGetOutput(dstSocketIndex);
+	
+	Assert(srcSocket != nullptr);
+	Assert(dstSocket != nullptr);
+	
+	if (srcSocket == nullptr)
+		return;
+	if (dstSocket == nullptr)
+		return;
+	
+#if EXTENDED_INPUTS
+	if (srcSocket->type == kVfxPlugType_Float && dstSocket->type == kVfxPlugType_Float)
+	{
+		const bool isRemap =
+			name == "in.min" ||
+			name == "in.max" ||
+			name == "out.min" ||
+			name == "out.max";
+		
+		if (isRemap)
+		{
+			for (auto & elem : srcSocket->floatArray.elems)
+			{
+				if (elem.value == dstSocket->mem)
+				{
+					const float inMin = name == "in.min" ? Parse::Float(value) : elem.inMin;
+					const float inMax = name == "in.max" ? Parse::Float(value) : elem.inMax;
+					const float outMin = name == "out.min" ? Parse::Float(value) : elem.outMin;
+					const float outMax = name == "out.max" ? Parse::Float(value) : elem.outMax;
+					
+					srcSocket->setMap(dstSocket->mem, inMin, inMax, outMin, outMax);
+				}
+			}
+		}
+	}
+#endif
+}
+
+void RealTimeConnection::clearLinkParameter(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex, const std::string & name)
+{
+	if (isLoading)
+		return;
+	
+	logDebug("clearLinkParameter");
+	
+	Assert(vfxGraph != nullptr);
+	if (vfxGraph == nullptr)
+		return;
+	
+	// get src & dst node. check link type
+	
+	auto srcNodeItr = vfxGraph->nodes.find(srcNodeId);
+	auto dstNodeItr = vfxGraph->nodes.find(dstNodeId);
+	
+	Assert(srcNodeItr != vfxGraph->nodes.end());
+	Assert(dstNodeItr != vfxGraph->nodes.end());
+	
+	if (srcNodeItr == vfxGraph->nodes.end())
+		return;
+	if (dstNodeItr == vfxGraph->nodes.end())
+		return;
+	
+	auto srcNode = srcNodeItr->second;
+	auto dstNode = dstNodeItr->second;
+	
+	//
+	
+	auto srcSocket = srcNode->tryGetInput(srcSocketIndex);
+	auto dstSocket = dstNode->tryGetOutput(dstSocketIndex);
+	
+	Assert(srcSocket != nullptr);
+	Assert(dstSocket != nullptr);
+	
+	if (srcSocket == nullptr)
+		return;
+	if (dstSocket == nullptr)
+		return;
+	
+#if EXTENDED_INPUTS
+	if (srcSocket->type == kVfxPlugType_Float && dstSocket->type == kVfxPlugType_Float)
+	{
+		const bool isRemap =
+			name == "in.min" ||
+			name == "in.max" ||
+			name == "out.min" ||
+			name == "out.max";
+		
+		if (isRemap)
+		{
+			for (auto & elem : srcSocket->floatArray.elems)
+			{
+				if (elem.value == dstSocket->mem)
+				{
+					if (name == "in.min")
+						elem.inMin = 0.f;
+					if (name == "in.max")
+						elem.inMax = 1.f;
+					if (name == "out.min")
+						elem.outMin = 0.f;
+					if (name == "out.max")
+						elem.outMax = 1.f;
+					
+					const bool isDefault =
+						elem.inMin == 0.f &&
+						elem.inMax == 1.f &&
+						elem.outMin == 0.f &&
+						elem.outMax == 1.f;
+					
+					if (isDefault)
+					{
+						srcSocket->clearMap(dstSocket->mem);
+					}
+				}
+			}
+		}
+	}
+#endif
+}
+
 void RealTimeConnection::setNodeIsPassthrough(const GraphNodeId nodeId, const bool isPassthrough)
 {
 	if (isLoading)

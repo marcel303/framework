@@ -402,10 +402,10 @@ void VfxFloatArray::update()
 {
 	const int numElems = elems.size();
 	
-	if (numElems <= 1)
-	{
+	if (numElems == 0)
 		return;
-	}
+	if (numElems == 1 && elems[0].hasRange == false)
+		return;
 	
 	//
 	
@@ -413,7 +413,30 @@ void VfxFloatArray::update()
 	
 	for (auto & elem : elems)
 	{
-		s += *elem.value;
+		float value;
+		
+		if (elem.hasRange)
+		{
+			const float in = *elem.value;
+			
+			float t;
+			
+			if (elem.inMin == elem.inMax)
+				t = 0.f;
+			else
+				t = (in - elem.inMin) / (elem.inMax - elem.inMin);
+			
+			const float t1 = t;
+			const float t2 = 1.f - t;
+			
+			value = elem.outMax * t1 + elem.outMin * t2;
+		}
+		else
+		{
+			value = *elem.value;
+		}
+		
+		s += value;
 	}
 	
 	sum = s;
@@ -437,7 +460,7 @@ float * VfxFloatArray::get()
 	
 	if (numElems == 0)
 		return immediateValue;
-	else if (numElems == 1)
+	else if (numElems == 1 && elems[0].hasRange == false)
 		return elems[0].value;
 	else
 		return &sum;
@@ -513,6 +536,44 @@ void VfxPlug::connectTo(void * dstMem, const VfxPlugType dstType, const bool isI
 		mem = dstMem;
 		memType = dstType;
 	}
+}
+
+void VfxPlug::setMap(const void * dst, const float inMin, const float inMax, const float outMin, const float outMax)
+{
+#if EXTENDED_INPUTS
+	logDebug("map: %.2f, %.2f -> %.2f, %.2f", inMin, inMax, outMin, outMax);
+	
+	for (auto & elem : floatArray.elems)
+	{
+		if (elem.value == dst)
+		{
+			elem.hasRange = true;
+			elem.inMin = inMin;
+			elem.inMax = inMax;
+			elem.outMin = outMin;
+			elem.outMax = outMax;
+			
+			floatArray.lastUpdateTick = -1;
+		}
+	}
+#endif
+}
+
+void VfxPlug::clearMap(const void * dst)
+{
+#if EXTENDED_INPUTS
+	logDebug("clearMap");
+	
+	for (auto & elem : floatArray.elems)
+	{
+		if (elem.value == dst)
+		{
+			elem.hasRange = false;
+			
+			floatArray.lastUpdateTick = -1;
+		}
+	}
+#endif
 }
 
 bool VfxPlug::isReferenced() const

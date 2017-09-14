@@ -402,6 +402,34 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 			{
 				input->connectTo(*output);
 				
+				// apply optional remapping parameters
+				
+				if (link.params.empty() == false &&
+					input->type == kVfxPlugType_Float &&
+					output->type == kVfxPlugType_Float)
+				{
+					auto inMinItr = link.params.find("in.min");
+					auto inMaxItr = link.params.find("in.max");
+					auto outMinItr = link.params.find("out.min");
+					auto outMaxItr = link.params.find("out.max");
+					
+					const bool hasRemap =
+						inMinItr != link.params.end() ||
+						inMaxItr != link.params.end() ||
+						outMinItr != link.params.end() ||
+						outMaxItr != link.params.end();
+					
+					if (hasRemap)
+					{
+						const float inMin = inMinItr == link.params.end() ? 0.f : Parse::Float(inMinItr->second);
+						const float inMax = inMaxItr == link.params.end() ? 1.f : Parse::Float(inMaxItr->second);
+						const float outMin = outMinItr == link.params.end() ? 0.f : Parse::Float(outMinItr->second);
+						const float outMax = outMaxItr == link.params.end() ? 1.f : Parse::Float(outMaxItr->second);
+						
+						input->setMap(output->mem, inMin, inMax, outMin, outMax);
+					}
+				}
+				
 				// note : this may add the same node multiple times to the list of predeps. note that this
 				//        is ok as nodes will be traversed once through the travel id + it works nicely
 				//        with the live connection as we can just remove the predep and still have one or

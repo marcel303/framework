@@ -264,7 +264,7 @@ struct VfxFloatArray
 	{
 		float * value;
 		
-		// todo : add per-link range support
+		// per-link range support
 		bool hasRange;
 		float inMin;
 		float inMax;
@@ -277,7 +277,7 @@ struct VfxFloatArray
 			, inMin(0.f)
 			, inMax(1.f)
 			, outMin(0.f)
-			, outMax(0.f)
+			, outMax(1.f)
 		{
 		}
 	};
@@ -331,6 +331,9 @@ struct VfxPlug
 	
 	void connectTo(VfxPlug & dst);
 	void connectTo(void * dstMem, const VfxPlugType dstType, const bool isImmediate);
+	
+	void setMap(const void * dst, const float inMin, const float inMax, const float outMin, const float outMax);
+	void clearMap(const void * dst);
 	
 	void disconnect()
 	{
