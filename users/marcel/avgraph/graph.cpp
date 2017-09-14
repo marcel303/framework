@@ -320,6 +320,7 @@ GraphNodeSocketLink::GraphNodeSocketLink()
 	, dstNodeId(kGraphNodeIdInvalid)
 	, dstNodeSocketName()
 	, dstNodeSocketIndex(-1)
+	, params()
 {
 }
 
@@ -549,6 +550,18 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		link.dstNodeId = intAttrib(xmlLink, "dstNodeId", link.dstNodeId);
 		link.dstNodeSocketName = stringAttrib(xmlLink, "dstNodeSocketName", link.dstNodeSocketName.c_str());
 		
+		for (const XMLElement * xmlParam = xmlLink->FirstChildElement("param"); xmlParam != nullptr; xmlParam = xmlParam->NextSiblingElement("param"))
+		{
+			const std::string name = stringAttrib(xmlParam, "name", "");
+			const std::string value = stringAttrib(xmlParam, "value", "");
+			
+			Assert(name.empty() == false);
+			if (name.empty() == false)
+			{
+				link.params[name] = value;
+			}
+		}
+		
 		addLink(link, false);
 		
 		nextLinkId = std::max(nextLinkId, link.id + 1);
@@ -737,6 +750,19 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 			xmlGraph.PushAttribute("srcNodeSocketName", link.srcNodeSocketName.c_str());
 			xmlGraph.PushAttribute("dstNodeId", link.dstNodeId);
 			xmlGraph.PushAttribute("dstNodeSocketName", link.dstNodeSocketName.c_str());
+			
+			for (auto & paramItr : link.params)
+			{
+				auto & name = paramItr.first;
+				auto & value = paramItr.second;
+				
+				xmlGraph.OpenElement("param");
+				{
+					xmlGraph.PushAttribute("name", name.c_str());
+					xmlGraph.PushAttribute("value", value.c_str());
+				}
+				xmlGraph.CloseElement();
+			}
 		}
 		xmlGraph.CloseElement();
 	}
@@ -1044,6 +1070,18 @@ const GraphEdit_TypeDefinition * GraphEdit_TypeDefinitionLibrary::tryGetTypeDefi
 		return nullptr;
 }
 
+const GraphEdit_LinkTypeDefinition * GraphEdit_TypeDefinitionLibrary::tryGetLinkTypeDefinition(const std::string & srcTypeName, const std::string & dstTypeName) const
+{
+	auto key = std::make_pair(srcTypeName, dstTypeName);
+	
+	auto i = linkTypeDefinitions.find(key);
+	
+	if (i != linkTypeDefinitions.end())
+		return &i->second;
+	else
+		return nullptr;
+}
+
 bool GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 {
 	bool result = true;
@@ -1076,6 +1114,35 @@ bool GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 		result &= itr == enumDefinitions.end();
 		
 		enumDefinitions[enumDefinition.enumName] = enumDefinition;
+	}
+	
+	for (auto xmlType = xmlLibrary->FirstChildElement("linkType"); xmlType != nullptr; xmlType = xmlType->NextSiblingElement("linkType"))
+	{
+		GraphEdit_LinkTypeDefinition typeDefinition;
+		
+		typeDefinition.srcTypeName = stringAttrib(xmlType, "srcTypeName", "");
+		typeDefinition.dstTypeName = stringAttrib(xmlType, "dstTypeName", "");
+		
+		result &= typeDefinition.srcTypeName.empty() == false;
+		result &= typeDefinition.dstTypeName.empty() == false;
+		
+		for (auto xmlParam = xmlType->FirstChildElement("param"); xmlParam != nullptr; xmlParam = xmlParam->NextSiblingElement("param"))
+		{
+			GraphEdit_LinkTypeDefinition::Param param;
+			
+			param.typeName = stringAttrib(xmlParam, "typeName", "");
+			param.name = stringAttrib(xmlParam, "name", "");
+			param.defaultValue = stringAttrib(xmlParam, "default", "");
+			
+			result &= param.typeName.empty() == false;
+			result &= param.name.empty() == false;
+			
+			typeDefinition.params.push_back(param);
+		}
+		
+		auto key = std::make_pair(typeDefinition.srcTypeName, typeDefinition.dstTypeName);
+		
+		linkTypeDefinitions[key] = typeDefinition;
 	}
 	
 	for (auto xmlType = xmlLibrary->FirstChildElement("type"); xmlType != nullptr; xmlType = xmlType->NextSiblingElement("type"))
@@ -2003,6 +2070,32 @@ bool GraphEdit::getLinkPath(const GraphLinkId linkId, LinkPath & path) const
 	}
 }
 
+const GraphEdit_LinkTypeDefinition * GraphEdit::tryGetLinkTypeDefinition(const GraphLinkId linkId) const
+{
+	const GraphEdit_LinkTypeDefinition * result = nullptr;
+	
+	auto link = tryGetLink(linkId);
+	Assert(link != nullptr);
+	
+	if (link != nullptr)
+	{
+		auto srcSocket = tryGetInputSocket(link->srcNodeId, link->srcNodeSocketIndex);
+		auto dstSocket = tryGetOutputSocket(link->dstNodeId, link->dstNodeSocketIndex);
+		
+		Assert(srcSocket != nullptr);
+		Assert(dstSocket != nullptr);
+		
+		if (srcSocket != nullptr && dstSocket != nullptr)
+		{
+			result = typeDefinitionLibrary->tryGetLinkTypeDefinition(
+				srcSocket->typeName,
+				dstSocket->typeName);
+		}
+	}
+	
+	return result;
+}
+
 bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) const
 {
 	result = HitTestResult();
@@ -2264,6 +2357,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 	if (inputIsCaptured == false)
 	{
 		doMenu(dt);
+		
+		doLinkParams(dt);
 		
 		doEditorOptions(dt);
 		
@@ -3627,6 +3722,97 @@ void GraphEdit::doEditorOptions(const float dt)
 		uiState->activeColor = nullptr;
 }
 
+static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, const std::string & name, const std::string & defaultValue, const std::string & editor, const float dt, const int index, ParticleColor * uiColors, const int maxUiColors, const GraphEdit_EnumDefinition * enumDefinition, bool & pressed);
+
+void GraphEdit::doLinkParams(const float dt)
+{
+	pushMenu("linkParams");
+	{
+		if (selectedLinks.size() == 1)
+		{
+			auto linkId = *selectedLinks.begin();
+			
+			auto link = tryGetLink(linkId);
+			Assert(link != nullptr);
+			
+			auto linkTypeDefinition = tryGetLinkTypeDefinition(linkId);
+			
+			if (linkTypeDefinition != nullptr)
+			{
+				int menuItemIndex = 0;
+				
+				for (auto & param : linkTypeDefinition->params)
+				{
+					auto valueTextItr = link->params.find(param.name);
+				
+					const bool isPreExisting = valueTextItr != link->params.end();
+					
+					std::string oldValueText;
+					
+					if (isPreExisting)
+						oldValueText = valueTextItr->second;
+					else
+						oldValueText = param.defaultValue;
+					
+					std::string newValueText = oldValueText;
+					
+					const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeDefinitionLibrary->tryGetValueTypeDefinition(param.typeName);
+					
+					//const GraphEdit_EnumDefinition * enumDefinition = typeLibrary->tryGetEnumDefinition(param.enumName);
+					const GraphEdit_EnumDefinition * enumDefinition = nullptr;
+					
+					bool pressed = false;
+					
+					const bool hasValue = doMenuItem(*this, newValueText, param.name, param.defaultValue,
+						enumDefinition != nullptr
+						? "enum"
+						: valueTypeDefinition != nullptr
+						? valueTypeDefinition->editor
+						: "textbox",
+						dt, menuItemIndex, nullptr, 0, enumDefinition, pressed);
+					
+					menuItemIndex++;
+					
+					if (isPreExisting)
+					{
+						if (!hasValue)
+						{
+							link->params.erase(param.name);
+							
+							if (realTimeConnection)
+							{
+								realTimeConnection->clearLinkParameter(linkId, param.name);
+							}
+						}
+						else
+							valueTextItr->second = newValueText;
+					}
+					else
+					{
+						if (hasValue)
+							link->params[param.name] = newValueText;
+					}
+					
+					// todo : detect if text has changed. if so, notify graph edit of change and let it take care of callbacks and undo/redo
+					
+					if (realTimeConnection)
+					{
+						if (newValueText != oldValueText && hasValue)
+						{
+							realTimeConnection->setLinkParameter(linkId, param.name, newValueText);
+						}
+					}
+					
+					++menuItemIndex;
+				}
+			}
+		}
+		
+		doBreak();
+	}
+	popMenu();
+}
+
 bool GraphEdit::isInputIdle() const
 {
 	bool result = true;
@@ -4278,6 +4464,8 @@ void GraphEdit::draw() const
 	GraphEdit * self = const_cast<GraphEdit*>(this);
 	
 	self->doMenu(0.f);
+	
+	self->doLinkParams(0.f);
 	
 	self->doEditorOptions(0.f);
 	

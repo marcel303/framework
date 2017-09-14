@@ -166,6 +166,8 @@ struct GraphNodeSocketLink
 	std::string dstNodeSocketName;
 	int dstNodeSocketIndex;
 	
+	std::map<std::string, std::string> params;
+	
 	// editor
 	
 	std::list<GraphLinkRoutePoint> editorRoutePoints;
@@ -391,22 +393,46 @@ struct GraphEdit_TypeDefinition
 	bool loadXml(const tinyxml2::XMLElement * xmlNode);
 };
 
+struct GraphEdit_LinkTypeDefinition
+{
+	struct Param
+	{
+		std::string typeName;
+		std::string name;
+		std::string defaultValue;
+		
+		Param()
+			: typeName()
+			, name()
+			, defaultValue()
+		{
+		}
+	};
+	
+	std::string srcTypeName;
+	std::string dstTypeName;
+	std::vector<Param> params;
+};
+
 struct GraphEdit_TypeDefinitionLibrary
 {
 	std::map<std::string, GraphEdit_ValueTypeDefinition> valueTypeDefinitions;
 	std::map<std::string, GraphEdit_EnumDefinition> enumDefinitions;
 	std::map<std::string, GraphEdit_TypeDefinition> typeDefinitions;
+	std::map<std::pair<std::string, std::string>, GraphEdit_LinkTypeDefinition> linkTypeDefinitions;
 	
 	GraphEdit_TypeDefinitionLibrary()
 		: valueTypeDefinitions()
 		, enumDefinitions()
 		, typeDefinitions()
+		, linkTypeDefinitions()
 	{
 	}
 	
 	const GraphEdit_ValueTypeDefinition * tryGetValueTypeDefinition(const std::string & typeName) const;
 	const GraphEdit_EnumDefinition * tryGetEnumDefinition(const std::string & typeName) const;
 	const GraphEdit_TypeDefinition * tryGetTypeDefinition(const std::string & typeName) const;
+	const GraphEdit_LinkTypeDefinition * tryGetLinkTypeDefinition(const std::string & srcTypeName, const std::string & dstTypeName) const;
 	
 	bool loadXml(const tinyxml2::XMLElement * xmlLibrary);
 };
@@ -699,6 +725,14 @@ struct GraphEdit_RealTimeConnection
 	}
 	
 	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
+	{
+	}
+	
+	virtual void setLinkParameter(const GraphLinkId linkId, const std::string & name, const std::string & value)
+	{
+	}
+	
+	virtual void clearLinkParameter(const GraphLinkId linkId, const std::string & name)
 	{
 	}
 	
@@ -1143,6 +1177,7 @@ struct GraphEdit : GraphEditConnection
 	const GraphEdit_TypeDefinition::InputSocket * tryGetInputSocket(const GraphNodeId nodeId, const int socketIndex) const;
 	const GraphEdit_TypeDefinition::OutputSocket * tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const;
 	bool getLinkPath(const GraphLinkId linkId, LinkPath & path) const;
+	const GraphEdit_LinkTypeDefinition * tryGetLinkTypeDefinition(const GraphLinkId linkId) const;
 	
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
 	
@@ -1157,6 +1192,8 @@ struct GraphEdit : GraphEditConnection
 	
 	void doMenu(const float dt);
 	void doEditorOptions(const float dt);
+	
+	void doLinkParams(const float dt);
 	
 	bool isInputIdle() const;
 	
