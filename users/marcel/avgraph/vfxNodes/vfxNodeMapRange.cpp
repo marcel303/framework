@@ -75,9 +75,16 @@ void VfxNodeMapRange::tick(const float dt)
 	const float outCurvePow = getInputFloat(kInput_OutCurvePow, 1.f);
 	const bool clamp = getInputBool(kInput_Clamp, false);
 	
-	float t = (in - inMin) / (inMax - inMin);
+	float t;
+	
+	if (inMin == inMax)
+		t = 0.f;
+	else
+		t = (in - inMin) / (inMax - inMin);
+	
 	if (clamp)
 		t = t < 0.f ? 0.f : t > 1.f ? 1.f : t;
+		
 	t = std::powf(t, outCurvePow);
 	
 	const float t1 = t;
