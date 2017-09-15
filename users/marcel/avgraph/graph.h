@@ -103,11 +103,20 @@ struct GraphNode
 		void operator=(const EditorVisualizer & other);
 	};
 	
+	struct Resource
+	{
+		std::string type;
+		std::string name;
+		std::string data;
+	};
+	
 	GraphNodeId id;
 	GraphNodeType nodeType;
 	std::string typeName;
 	bool isEnabled;
 	bool isPassthrough;
+	
+	std::map<std::string, Resource> resources;
 	
 	std::string editorName;
 	float editorX;
@@ -137,6 +146,10 @@ struct GraphNode
 	void setIsFolded(const bool isFolded);
 	
 	void setVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
+	
+	void setResource(const char * type, const char * name, const char * data);
+	void clearResource(const char * type, const char * name);
+	const char * getResource(const char * type, const char * name, const char * defaultValue) const;
 };
 
 struct GraphLinkRoutePoint
@@ -712,6 +725,10 @@ struct GraphEdit_RealTimeConnection
 	{
 	}
 	
+	virtual void saveBegin(GraphEdit & graphEdit)
+	{
+	}
+	
 	virtual void nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
 	{
 	}
@@ -728,11 +745,11 @@ struct GraphEdit_RealTimeConnection
 	{
 	}
 	
-	virtual void setLinkParameter(const GraphLinkId linkId, const std::string & name, const std::string & value)
+	virtual void setLinkParameter(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex, const std::string & name, const std::string & value)
 	{
 	}
 	
-	virtual void clearLinkParameter(const GraphLinkId linkId, const std::string & name)
+	virtual void clearLinkParameter(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex, const std::string & name)
 	{
 	}
 	

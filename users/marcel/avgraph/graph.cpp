@@ -245,6 +245,7 @@ GraphNode::GraphNode()
 	, typeName()
 	, isEnabled(true)
 	, isPassthrough(false)
+	, resources()
 	, editorName()
 	, editorX(0.f)
 	, editorY(0.f)
@@ -307,6 +308,46 @@ void GraphNode::setVisualizer(const GraphNodeId nodeId, const std::string & srcS
 	editorVisualizer.dstSocketName = dstSocketName;
 	editorVisualizer.dstSocketIndex = dstSocketIndex;
 	editorVisualizer.allocVisualizer();
+}
+
+void GraphNode::setResource(const char * type, const char * name, const char * data)
+{
+	auto & resource = resources[name];
+	
+	resource = Resource();
+	resource.type = type;
+	resource.name = name;
+	resource.data = data;
+}
+
+void GraphNode::clearResource(const char * type, const char * name)
+{
+	auto resourceItr = resources.find(name);
+	
+	if (resourceItr == resources.end())
+		return;
+	
+	auto & resource = resourceItr->second;
+	
+	if (resource.type != type)
+		return;
+	
+	resources.erase(resourceItr);
+}
+
+const char * GraphNode::getResource(const char * type, const char * name, const char * defaultValue) const
+{
+	auto resourceItr = resources.find(name);
+	
+	if (resourceItr == resources.end())
+		return defaultValue;
+	
+	auto & resource = resourceItr->second;
+	
+	if (resource.type != type)
+		return defaultValue;
+	
+	return resource.data.c_str();
 }
 
 //
@@ -534,6 +575,17 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 			node.editorInputValues[socket] = value;
 		}
 		
+		for (const XMLElement * xmlResource = xmlNode->FirstChildElement("resource"); xmlResource != nullptr; xmlResource = xmlResource->NextSiblingElement("resource"))
+		{
+			GraphNode::Resource resource;
+			
+			resource.type = stringAttrib(xmlResource, "type", "");
+			resource.name = stringAttrib(xmlResource, "name", "");
+			resource.data = xmlResource->GetText();
+			
+			node.resources[resource.name] = resource;
+		}
+		
 		addNode(node);
 		
 		nextNodeId = std::max(nextNodeId, node.id + 1);
@@ -709,6 +761,20 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 				xmlGraph.PushAttribute("folded", node.editorIsFolded);
 			if (!node.editorValue.empty())
 				xmlGraph.PushAttribute("editorValue", node.editorValue.c_str());
+			
+			for (auto & resourceItr : node.resources)
+			{
+				auto & resource = resourceItr.second;
+				
+				xmlGraph.OpenElement("resource");
+				{
+					xmlGraph.PushAttribute("type", resource.type.c_str());
+					xmlGraph.PushAttribute("name", resource.name.c_str());
+					
+					xmlGraph.PushText(resource.data.c_str(), true);
+				}
+				xmlGraph.CloseElement();
+			}
 			
 			if (node.nodeType == kGraphNodeType_Visualizer)
 			{
@@ -3781,7 +3847,13 @@ void GraphEdit::doLinkParams(const float dt)
 							
 							if (realTimeConnection)
 							{
-								realTimeConnection->clearLinkParameter(linkId, param.name);
+								realTimeConnection->clearLinkParameter(
+									linkId,
+									link->srcNodeId,
+									link->srcNodeSocketIndex,
+									link->dstNodeId,
+									link->dstNodeSocketIndex,
+									param.name);
 							}
 						}
 						else
@@ -3799,7 +3871,14 @@ void GraphEdit::doLinkParams(const float dt)
 					{
 						if (newValueText != oldValueText && hasValue)
 						{
-							realTimeConnection->setLinkParameter(linkId, param.name, newValueText);
+							realTimeConnection->setLinkParameter(
+								link->id,
+								link->srcNodeId,
+								link->srcNodeSocketIndex,
+								link->dstNodeId,
+								link->dstNodeSocketIndex,
+								param.name,
+								newValueText);
 						}
 					}
 					
@@ -4829,6 +4908,9 @@ bool GraphEdit::save(const char * filename)
 	
 	if (result)
 	{
+		if (realTimeConnection)
+			realTimeConnection->saveBegin(*this);
+		
 		XMLPrinter xmlGraph(file);;
 		
 		xmlGraph.OpenElement("graph");
