@@ -48,7 +48,8 @@ using namespace tinyxml2;
 //#define FILENAME "yuvtest.xml"
 //#define FILENAME "timeline.xml"
 //#define FILENAME "channels.xml"
-#define FILENAME "drawtest.xml"
+//#define FILENAME "drawtest.xml"
+#define FILENAME "resourceTest.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -168,6 +169,89 @@ VFX_NODE_TYPE(midi_osc, VfxNodeMidiOsc)
 	out("value", "int");
 	out("value_norm", "float");
 	out("trigger", "trigger");
+}
+
+//
+
+struct VfxNodeResourceTest : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Randomize,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	float value;
+	
+	VfxNodeResourceTest()
+		: VfxNodeBase()
+		, value(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Randomize, kVfxPlugType_Trigger);
+		addOutput(kOutput_Value, kVfxPlugType_Float, &value);
+	}
+	
+	virtual void initSelf(const GraphNode & node) override
+	{
+		const char * resourceData = node.getResource("float", "value", nullptr);
+		
+		if (resourceData != nullptr)
+		{
+			XMLDocument d;
+			
+			if (d.Parse(resourceData) == XML_SUCCESS)
+			{
+				auto e = d.FirstChildElement("float");
+				
+				if (e != nullptr)
+				{
+					value = e->FloatAttribute("value");
+				}
+			}
+		}
+	}
+	
+	virtual void handleTrigger(const int socketIndex) override
+	{
+		value = random(0.f, 1.f);
+	}
+	
+	virtual void beforeSave(GraphNode & node) const override
+	{
+		if (value == 0.f)
+		{
+			node.clearResource("float", "value");
+		}
+		else
+		{
+			XMLPrinter p;
+			
+			p.OpenElement("float");
+			{
+				p.PushAttribute("value", value);
+			}
+			p.CloseElement();
+			
+			const char * resourceData = p.CStr();
+			
+			node.setResource("float", "value", resourceData);
+		}
+	}
+};
+
+VFX_NODE_TYPE(resource_test, VfxNodeResourceTest)
+{
+	typeName = "test.resource";
+	
+	in("randomize!", "trigger");
+	out("value", "float");
 }
 
 //

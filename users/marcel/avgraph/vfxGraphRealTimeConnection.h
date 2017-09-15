@@ -49,6 +49,8 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	virtual void loadBegin() override;
 	virtual void loadEnd(GraphEdit & graphEdit) override;
 	
+	virtual void saveBegin(GraphEdit & graphEdit) override;
+	
 	virtual void nodeAdd(const GraphNodeId nodeId, const std::string & typeName) override;
 	virtual void nodeRemove(const GraphNodeId nodeId) override;
 

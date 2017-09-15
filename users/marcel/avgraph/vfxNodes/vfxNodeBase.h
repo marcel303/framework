@@ -687,8 +687,9 @@ struct VfxNodeBase
 	virtual void draw() const { }
 	virtual void beforeDraw() const { }
 	virtual void afterDraw() const { }
+	virtual void beforeSave(GraphNode & node) const { }
 	
-	virtual void getDescription(VfxNodeDescription & d) { }
+	virtual void getDescription(VfxNodeDescription & d) { } 
 };
 
 //

@@ -58,6 +58,25 @@ void RealTimeConnection::loadEnd(GraphEdit & graphEdit)
 	g_currentVfxGraph = vfxGraph;
 }
 
+void RealTimeConnection::saveBegin(GraphEdit & graphEdit)
+{
+	for (auto & vfxNodeItr : vfxGraph->nodes)
+	{
+		const GraphNodeId nodeId = vfxNodeItr.first;
+		const VfxNodeBase * vfxNode = vfxNodeItr.second;
+		
+		auto nodeItr = graphEdit.graph->nodes.find(nodeId);
+		
+		Assert(nodeItr != graphEdit.graph->nodes.end());
+		if (nodeItr != graphEdit.graph->nodes.end())
+		{
+			GraphNode & node = nodeItr->second;
+			
+			vfxNode->beforeSave(node);
+		}
+	}
+}
+
 void RealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
 {
 	if (isLoading)
