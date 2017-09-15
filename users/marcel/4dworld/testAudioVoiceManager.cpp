@@ -1,6 +1,7 @@
 #include "audioUpdateHandler.h"
 #include "framework.h"
 #include "soundmix.h"
+#include "soundmix_wavefield.h"
 #include "wavefield.h"
 #include "../libparticle/ui.h"
 
@@ -435,16 +436,20 @@ void testAudioVoiceManager()
 	AudioSourceWavefield1D wavefield1D;
 	wavefield1D.init(256);
 	AudioVoice * wavefield1DVoice = nullptr;
+#if 1
 	voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D, "wavefield1D", true, 0.f, 1.f, -1);
 	wavefield1DVoice->isSpatial = true;
-	
+#endif
+
 	//
 	
 	AudioSourceWavefield2D wavefield2D;
 	wavefield2D.init(32);
 	AudioVoice * wavefield2DVoice = nullptr;
-	//voiceMgr.allocVoice(wavefield2DVoice, &wavefield2D, true);
-	//wavefield2DVoice->isSpatial = true;
+#if 0
+	voiceMgr.allocVoice(wavefield2DVoice, &wavefield2D, true);
+	wavefield2DVoice->isSpatial = true;
+#endif
 	
 	//
 	
@@ -489,7 +494,7 @@ void testAudioVoiceManager()
 			const int spotY = (mouse.y - GFX_SY/2.0) / gfxSize * (wavefield2D.m_wavefield.numElems - 1) + (wavefield2D.m_wavefield.numElems-1)/2.f;
 			
 			const int r = spotX / float(wavefield2D.m_wavefield.numElems - 1.f) * 10 + 1;
-			
+		
 			/*
 			// todo : restore. but do it from the audio thread
 			AudioSourceWavefield2D::Command command;
@@ -543,7 +548,7 @@ void testAudioVoiceManager()
 				
 				drawWavefield2D(w, sampleLocationX, sampleLocationY);
 			}
-			
+		
 			//
 			
 			world->draw();
