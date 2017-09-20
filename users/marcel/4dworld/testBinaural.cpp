@@ -1,3 +1,30 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #include "audio.h"
 #include "binaural.h"
 #include "binaural_cipic.h"
@@ -317,7 +344,8 @@ void testBinaural()
 		
 		//loadHRIRSampleSet_Ircam("binaural/IRC_1057", sampleSet);
 		
-		loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
+		//loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
+		loadHRIRSampleSet_Cipic("binaural/CIPIC/subject12", sampleSet);
 		
 		sampleSet.finalize();
 		
@@ -337,16 +365,17 @@ void testBinaural()
 		Surface view3D(200, 200, false);
 		
 		PcmData pcmData;
-		pcmData.init("testsounds/music2.ogg");
+		//pcmData.init("testsounds/music2.ogg");
+		pcmData.init("testsounds/sound.ogg");
 		
 		MyPortAudioHandler audio;
 		int numSources = 0;
 	#if ENABLE_DEBUGGING && 0
 		for (int i = 0; i < 1; ++i)
 	#else
-		//for (int i = 0; i < 1; ++i)
+		for (int i = 0; i < 1; ++i)
 		//for (int i = 0; i < 100; ++i)
-		for (int i = 0; i < 135; ++i)
+		//for (int i = 0; i < 135; ++i)
 	#endif
 		{
 			audio.addBinauralSound(&sampleSet, &pcmData);
