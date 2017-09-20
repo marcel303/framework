@@ -704,6 +704,35 @@ struct GraphEdit_Visualizer
 
 //
 
+struct GraphEdit_NodeEditorBase
+{
+	virtual ~GraphEdit_NodeEditorBase()
+	{
+	}
+	
+	virtual void getSize(int & sx, int & sy) const = 0;
+	virtual void setPosition(const int x, const int y) = 0;
+	
+	virtual bool tick(const float dt, const bool inputIsCaptured) = 0;
+	virtual void draw() const = 0;
+	
+	virtual void deserialize(const char * text) = 0;
+	virtual bool serialize(std::string & text) const = 0;
+	
+	void getPositionForViewCenter(int & x, int & y) const
+	{
+		int sx;
+		int sy;
+		
+		getSize(sx, sy);
+		
+		x = (GFX_SX - sx) / 2;
+		y = (GFX_SY - sy) / 2;
+	}
+};
+
+//
+
 struct GraphEdit_RealTimeConnection
 {
 	enum ActivityFlags
@@ -843,6 +872,7 @@ struct GraphEdit : GraphEditConnection
 		kState_Idle,
 		kState_NodeSelect,
 		kState_NodeDrag,
+		kState_NodeEdit,
 		kState_InputSocketConnect,
 		kState_OutputSocketConnect,
 		kState_NodeResize,
@@ -1027,6 +1057,26 @@ struct GraphEdit : GraphEditConnection
 		}
 	};
 	
+	struct NodeEditor
+	{
+		GraphNodeId nodeId;
+		std::string resourceName;
+		GraphEdit_NodeEditorBase * editor;
+		
+		NodeEditor()
+			: nodeId(kGraphNodeIdInvalid)
+			, resourceName()
+			, editor(nullptr)
+		{
+		}
+		
+		~NodeEditor()
+		{
+			delete editor;
+			editor = nullptr;
+		}
+	};
+	
 	// state support structures
 	
 	struct NodeSelect
@@ -1161,6 +1211,8 @@ struct GraphEdit : GraphEditConnection
 	SocketConnect socketConnect;
 	NodeResize nodeResize;
 	
+	float nodeDoubleClickTime;
+	
 	Touches touches;
 	
 	GraphEditMouse mousePosition;
@@ -1176,6 +1228,8 @@ struct GraphEdit : GraphEditConnection
 	GraphUi::PropEdit * propertyEditor;
 	
 	GraphUi::NodeTypeNameSelect * nodeTypeNameSelect;
+	
+	NodeEditor nodeEditor;
 	
 	std::list<Notification> notifications;
 	
@@ -1205,6 +1259,9 @@ struct GraphEdit : GraphEditConnection
 	
 	void nodeSelectEnd();
 	void nodeDragEnd();
+	void nodeEditBegin(const GraphNodeId nodeId);
+	void nodeEditSave();
+	void nodeEditEnd();
 	void socketConnectEnd();
 	
 	void doMenu(const float dt);

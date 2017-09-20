@@ -1947,6 +1947,7 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, nodeDrag()
 	, socketConnect()
 	, nodeResize()
+	, nodeDoubleClickTime(0.f)
 	, touches()
 	, mousePosition()
 	, dragAndZoom()
@@ -1955,6 +1956,7 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, editorOptions()
 	, propertyEditor(nullptr)
 	, nodeTypeNameSelect(nullptr)
+	, nodeEditor()
 	, uiState(nullptr)
 	, cursorHand(nullptr)
 	, idleTime(0.f)
@@ -2402,7 +2404,14 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 	
 	//
 	
-	bool inputIsCaptured = _inputIsCaptured || (state != kState_Idle);
+	bool inputIsCaptured = _inputIsCaptured;
+	
+	if (nodeEditor.editor != nullptr)
+	{
+		inputIsCaptured |= nodeEditor.editor->tick(dt, inputIsCaptured);
+	}
+	
+	inputIsCaptured |= (state != kState_Idle);
 	
 	if (inputIsCaptured == false || state == kState_TouchDrag || state == kState_TouchZoom)
 	{
@@ -2576,8 +2585,22 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								}
 							}
 							
-							state = kState_NodeDrag;
-							break;
+							if (appendSelection == false && nodeDoubleClickTime > 0.f)
+							{
+								nodeDoubleClickTime = 0.f;
+								
+								nodeEditBegin(hitTestResult.node->id);
+								
+								state = kState_NodeEdit;
+								break;
+							}
+							else
+							{
+								nodeDoubleClickTime = .4f;
+								
+								state = kState_NodeDrag;
+								break;
+							}
 						}
 					}
 					
@@ -3130,6 +3153,18 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		}
 		break;
 		
+	case kState_NodeEdit:
+		{
+			if (mouse.wentDown(BUTTON_RIGHT))
+			{
+				nodeEditEnd();
+				
+				state = kState_Idle;
+				break;
+			}
+		}
+		break;
+		
 	case kState_InputSocketConnect:
 		{
 			tickMouseScroll(dt);
@@ -3280,6 +3315,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 	}
 	
 	// update UI
+	
+	nodeDoubleClickTime = std::max(0.f, nodeDoubleClickTime - dt);
 	
 	dragAndZoom.tick(dt);
 	
@@ -3672,6 +3709,145 @@ void GraphEdit::nodeDragEnd()
 	}
 	
 	nodeDrag = NodeDrag();
+}
+
+// todo : remove test node editor and add a mechanism to create node specific node editors
+struct TestNodeEditor : GraphEdit_NodeEditorBase
+{
+	mutable UiState state;
+	
+	float value;
+	
+	TestNodeEditor()
+		: state()
+		, value(0.f)
+	{
+		state.sx = 300;
+		state.opacity = 1.f;
+	}
+	
+	void doUi(const bool doActions, const bool doDraw, const float dt)
+	{
+		makeActive(&state, doActions, doDraw);
+		
+		pushMenu("editor");
+		{
+			if (doButton("randomize"))
+			{
+				value = random(0.f, 1.f);
+			}
+			
+			auto text = String::FormatC("value: %.2f", value);
+			
+			doLabel(text.c_str(), 0.f);
+		}
+		popMenu();
+	}
+	
+	virtual void getSize(int & sx, int & sy) const override
+	{
+		sx = state.sx;
+		sy = 50;
+	}
+	
+	virtual void setPosition(const int x, const int y) override
+	{
+		state.x = x;
+		state.y = y;
+	}
+	
+	virtual bool tick(const float dt, const bool inputIsCaptured) override
+	{
+		doUi(true, false, dt);
+		
+		return state.activeElem != nullptr;
+	}
+	
+	virtual void draw() const override
+	{
+		const_cast<TestNodeEditor*>(this)->doUi(false, true, 0.f);
+	}
+	
+	virtual void deserialize(const char * text) override
+	{
+		value = Parse::Float(text);
+	}
+	
+	virtual bool serialize(std::string & text) const override
+	{
+		text = String::FormatC("%f", value);
+		
+		return true;
+	}
+};
+
+void GraphEdit::nodeEditBegin(const GraphNodeId nodeId)
+{
+	nodeEditEnd();
+	
+	//
+	
+	// todo : how to solve the issue of updating all graph instances with the newly edited data ?
+	//        perhaps add the notion of graph-local resources. it would be easiest to solve if each
+	//        graph instance just references the data instead of owning it
+	
+	auto node = tryGetNode(nodeId);
+	
+	Assert(node != nullptr);
+	if (node != nullptr)
+	{
+		nodeEditor.nodeId = nodeId;
+		nodeEditor.resourceName = "editorData";
+		nodeEditor.editor = new TestNodeEditor();
+		
+		// deserialize resource data if set
+		
+		auto resourceData = node->getResource("resource", "editorData", nullptr);
+		
+		if (resourceData != nullptr)
+		{
+			nodeEditor.editor->deserialize(resourceData);
+		}
+		
+		// calculate the position based on size and move the editor over there
+		
+		int x;
+		int y;
+		nodeEditor.editor->getPositionForViewCenter(x, y);
+		
+		nodeEditor.editor->setPosition(x, y);
+	}
+}
+
+void GraphEdit::nodeEditSave()
+{
+	if (nodeEditor.editor != nullptr)
+	{
+		auto node = tryGetNode(nodeEditor.nodeId);
+		
+		if (node != nullptr)
+		{
+			std::string resourceData;
+			
+			if (nodeEditor.editor->serialize(resourceData))
+			{
+				node->setResource("resource", nodeEditor.resourceName.c_str(), resourceData.c_str());
+			}
+			else
+			{
+				node->clearResource("resource", nodeEditor.resourceName.c_str());
+			}
+		}
+	}
+}
+
+void GraphEdit::nodeEditEnd()
+{
+	nodeEditSave();
+	
+	//
+	
+	nodeEditor = NodeEditor();
 }
 
 void GraphEdit::socketConnectEnd()
@@ -4108,7 +4284,14 @@ void GraphEdit::cancelEditing()
 			state = kState_Idle;
 			break;
 		}
-
+		
+	case kState_NodeEdit:
+		{
+			nodeEditEnd();
+			
+			state = kState_Idle;
+			break;
+		}
 		
 	case kState_InputSocketConnect:
 		{
@@ -4421,6 +4604,9 @@ void GraphEdit::draw() const
 	
 	case kState_NodeDrag:
 		break;
+		
+	case kState_NodeEdit:
+		break;
 	
 	case kState_InputSocketConnect:
 		{
@@ -4511,6 +4697,9 @@ void GraphEdit::draw() const
 	case kState_NodeDrag:
 		break;
 		
+	case kState_NodeEdit:
+		break;
+		
 	case kState_InputSocketConnect:
 		break;
 		
@@ -4555,6 +4744,20 @@ void GraphEdit::draw() const
 	
 	//
 	
+	if (state == kState_NodeEdit)
+	{
+		setColor(0, 0, 0, 127);
+		drawRect(0, 0, GFX_SX, GFX_SY);
+	}
+	
+	if (nodeEditor.editor != nullptr)
+	{
+		setColor(colorWhite);
+		nodeEditor.editor->draw();
+	}
+	
+	//
+	
 	if (!notifications.empty())
 	{
 		const int kWidth = 200;
@@ -4588,7 +4791,7 @@ void GraphEdit::draw() const
 	
 	HitTestResult hitTestResult;
 	
-	if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
+	if (state == kState_Idle && hitTest(mousePosition.x, mousePosition.y, hitTestResult))
 	{
 		if (hitTestResult.hasNode &&
 			hitTestResult.nodeHitTestResult.background &&
@@ -4910,6 +5113,8 @@ bool GraphEdit::save(const char * filename)
 	{
 		if (realTimeConnection)
 			realTimeConnection->saveBegin(*this);
+		
+		nodeEditSave();
 		
 		XMLPrinter xmlGraph(file);;
 		
