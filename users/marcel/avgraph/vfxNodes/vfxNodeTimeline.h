@@ -35,7 +35,6 @@ struct VfxNodeTimeline : VfxNodeBase
 {
 	enum Input
 	{
-		kInput_Timeline,
 		kInput_Duration,
 		kInput_Bpm,
 		kInput_Loop,
@@ -60,11 +59,12 @@ struct VfxNodeTimeline : VfxNodeBase
 	
 	bool isPlaying;
 	
-	VfxTimeline timeline;
+	VfxTimeline * timeline;
 	
 	int eventIdOutput;
 
 	VfxNodeTimeline();
+	virtual ~VfxNodeTimeline() override;
 	
 	virtual void tick(const float dt) override;
 	
