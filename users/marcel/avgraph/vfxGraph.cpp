@@ -505,7 +505,10 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 //
 
 #include "StringEx.h"
+#include "tinyxml2.h"
 #include "vfxTypes.h"
+
+using namespace tinyxml2;
 
 struct VfxResourcePath
 {
@@ -576,12 +579,33 @@ bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const 
 	}
 	else
 	{
+		const char * resourceData = node.getResource(type, name, nullptr);
+		
+		XMLDocument d;
+		bool hasXml = false;
+		
+		if (resourceData != nullptr)
+		{
+			hasXml = d.Parse(resourceData) == XML_SUCCESS;
+		}
+		
+		//
+		
 		resource = nullptr;
 		
 		if (strcmp(type, "timeline") == 0)
 		{
-			resource = new VfxTimeline();
+			auto timeline = new VfxTimeline();
+			
+			if (hasXml)
+			{
+				timeline->load(d.RootElement());
+			}
+			
+			resource = timeline;
 		}
+		
+		//
 		
 		Assert(resource != nullptr);
 		if (resource == nullptr)
@@ -642,6 +666,10 @@ bool freeVfxNodeResourceImpl(void * resource)
 				pathsByResource.erase(i);
 				
 				result = true;
+			}
+			else
+			{
+				logDebug("decremented refCount for resource %s", path.toString().c_str());
 			}
 		}
 	}
