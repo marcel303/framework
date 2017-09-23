@@ -1069,6 +1069,8 @@ bool GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 	
 	displayName = stringAttrib(xmlType, "displayName", "");
 	
+	resourceTypeName = stringAttrib(xmlType, "resourceTypeName", "");
+	
 	for (auto xmlInput = xmlType->FirstChildElement("input"); xmlInput != nullptr; xmlInput = xmlInput->NextSiblingElement("input"))
 	{
 		InputSocket socket;
@@ -3768,18 +3770,24 @@ struct TestNodeEditor : GraphEdit_NodeEditorBase
 		const_cast<TestNodeEditor*>(this)->doUi(false, true, 0.f);
 	}
 	
-	virtual void deserialize(const char * text) override
+	virtual void setResource(const GraphNode & node, const char * type, const char * name, const char * text) override
 	{
 		value = Parse::Float(text);
 	}
 	
-	virtual bool serialize(std::string & text) const override
+	virtual bool serializeResource(std::string & text) const override
 	{
 		text = String::FormatC("%f", value);
 		
 		return true;
 	}
 };
+
+#define TEST_TIMELINE_EDITOR 1
+
+#if TEST_TIMELINE_EDITOR
+	#include "editor_vfxTimeline.h"
+#endif
 
 void GraphEdit::nodeEditBegin(const GraphNodeId nodeId)
 {
@@ -3796,26 +3804,48 @@ void GraphEdit::nodeEditBegin(const GraphNodeId nodeId)
 	Assert(node != nullptr);
 	if (node != nullptr)
 	{
-		nodeEditor.nodeId = nodeId;
-		nodeEditor.resourceName = "editorData";
-		nodeEditor.editor = new TestNodeEditor();
+		auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->typeName);
 		
-		// deserialize resource data if set
-		
-		auto resourceData = node->getResource("resource", "editorData", nullptr);
-		
-		if (resourceData != nullptr)
+		Assert(typeDefinition != nullptr);
+		if (typeDefinition != nullptr)
 		{
-			nodeEditor.editor->deserialize(resourceData);
+			auto & resourceTypeName = typeDefinition->resourceTypeName;
+			
+			if (resourceTypeName.empty() == false)
+			{
+				nodeEditor.nodeId = nodeId;
+				nodeEditor.resourceTypeName = resourceTypeName;
+			#if TEST_TIMELINE_EDITOR
+				if (resourceTypeName == "timeline")
+					nodeEditor.editor = new Editor_VfxTimeline();
+			#else
+				nodeEditor.editor = new TestNodeEditor();
+			#endif
+				
+				Assert(nodeEditor.editor != nullptr);
+				if (nodeEditor.editor != nullptr)
+				{
+					// deserialize resource data if set
+					
+					auto resourceData = node->getResource(resourceTypeName.c_str(), "editorData", nullptr);
+					
+					// todo : separate setResource and setResourceData calls ?
+					
+					//if (resourceData != nullptr)
+					{
+						nodeEditor.editor->setResource(*node, resourceTypeName.c_str(), "editorData", resourceData);
+					}
+					
+					// calculate the position based on size and move the editor over there
+					
+					int x;
+					int y;
+					nodeEditor.editor->getPositionForViewCenter(x, y);
+					
+					nodeEditor.editor->setPosition(x, y);
+				}
+			}
 		}
-		
-		// calculate the position based on size and move the editor over there
-		
-		int x;
-		int y;
-		nodeEditor.editor->getPositionForViewCenter(x, y);
-		
-		nodeEditor.editor->setPosition(x, y);
 	}
 }
 
@@ -3829,13 +3859,13 @@ void GraphEdit::nodeEditSave()
 		{
 			std::string resourceData;
 			
-			if (nodeEditor.editor->serialize(resourceData))
+			if (nodeEditor.editor->serializeResource(resourceData))
 			{
-				node->setResource("resource", nodeEditor.resourceName.c_str(), resourceData.c_str());
+				node->setResource(nodeEditor.resourceTypeName.c_str(), "editorData", resourceData.c_str());
 			}
 			else
 			{
-				node->clearResource("resource", nodeEditor.resourceName.c_str());
+				node->clearResource(nodeEditor.resourceTypeName.c_str(), "editorData");
 			}
 		}
 	}
@@ -3846,6 +3876,9 @@ void GraphEdit::nodeEditEnd()
 	nodeEditSave();
 	
 	//
+	
+	delete nodeEditor.editor;
+	nodeEditor.editor = nullptr;
 	
 	nodeEditor = NodeEditor();
 }

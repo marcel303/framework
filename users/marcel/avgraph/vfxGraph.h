@@ -105,3 +105,25 @@ struct VfxGraph
 VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName, VfxGraph * vfxGraph);
 
 VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
+
+bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const char * name, void *& resource);
+
+template <typename T> bool createVfxNodeResource(const GraphNode & node, const char * type, const char * name, T *& resource)
+{
+	return createVfxNodeResourceImpl(node, type, name, (void*&)resource);
+}
+
+bool freeVfxNodeResourceImpl(void * resource);
+
+template <typename T> void freeVfxNodeResource(T *& resource)
+{
+	if (resource != nullptr)
+	{
+		if (freeVfxNodeResourceImpl(resource))
+		{
+			delete resource;
+		}
+		
+		resource = nullptr;
+	}
+}

@@ -384,6 +384,8 @@ struct GraphEdit_TypeDefinition
 	
 	std::string displayName;
 	
+	std::string resourceTypeName;
+	
 	float sx;
 	float sy;
 	float syFolded;
@@ -393,6 +395,7 @@ struct GraphEdit_TypeDefinition
 		, inputSockets()
 		, outputSockets()
 		, displayName()
+		, resourceTypeName()
 		, sx(0.f)
 		, sy(0.f)
 		, syFolded(0.f)
@@ -716,8 +719,12 @@ struct GraphEdit_NodeEditorBase
 	virtual bool tick(const float dt, const bool inputIsCaptured) = 0;
 	virtual void draw() const = 0;
 	
-	virtual void deserialize(const char * text) = 0;
-	virtual bool serialize(std::string & text) const = 0;
+	// todo : introduce the concept of a resource path ? perhaps name node-specific resources "<type>:node/<id>"
+	// todo : rename NodeEditorBase to ResourceEditorBase ?
+	virtual void setResource(const GraphNode & node, const char * type, const char * name, const char * text) = 0;
+	virtual bool serializeResource(std::string & text) const = 0;
+	
+	//
 	
 	void getPositionForViewCenter(int & x, int & y) const
 	{
@@ -1060,20 +1067,14 @@ struct GraphEdit : GraphEditConnection
 	struct NodeEditor
 	{
 		GraphNodeId nodeId;
-		std::string resourceName;
+		std::string resourceTypeName; // todo : should be path ?
 		GraphEdit_NodeEditorBase * editor;
 		
 		NodeEditor()
 			: nodeId(kGraphNodeIdInvalid)
-			, resourceName()
+			, resourceTypeName()
 			, editor(nullptr)
 		{
-		}
-		
-		~NodeEditor()
-		{
-			delete editor;
-			editor = nullptr;
 		}
 	};
 	

@@ -501,3 +501,150 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 	
 	return vfxGraph;
 }
+
+//
+
+#include "StringEx.h"
+#include "vfxTypes.h"
+
+struct VfxResourcePath
+{
+	GraphNodeId nodeId;
+	std::string type;
+	std::string name;
+	
+	VfxResourcePath()
+		: nodeId(kGraphNodeIdInvalid)
+		, type()
+		, name()
+	{
+	}
+	
+	bool operator<(const VfxResourcePath & other) const
+	{
+		if (nodeId != other.nodeId)
+			return nodeId < other.nodeId;
+		if (type != other.type)
+			return type < other.type;
+		if (name != other.name)
+			return name < other.name;
+		
+		return false;
+	}
+	
+	std::string toString() const
+	{
+		return String::FormatC("%s:%s/%d/%s", type.c_str(), "nodes", nodeId, name.c_str());
+	}
+};
+
+struct VfxResourceElem
+{
+	void * resource;
+	int refCount;
+	
+	VfxResourceElem()
+		: resource(nullptr)
+		, refCount(0)
+	{
+	}
+};
+
+static std::map<VfxResourcePath, VfxResourceElem> resourcesByPath;
+static std::map<void*, VfxResourcePath> pathsByResource;
+
+bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const char * name, void *& resource)
+{
+	VfxResourcePath path;
+	path.nodeId = node.id;
+	path.type = type;
+	path.name = name;
+	
+	auto i = resourcesByPath.find(path);
+	
+	if (i != resourcesByPath.end())
+	{
+		logDebug("incremented refCount for resource %s", path.toString().c_str());
+		
+		auto & e = i->second;
+		
+		e.refCount++;
+		
+		resource = e.resource;
+		
+		return true;
+	}
+	else
+	{
+		resource = nullptr;
+		
+		if (strcmp(type, "timeline") == 0)
+		{
+			resource = new VfxTimeline();
+		}
+		
+		Assert(resource != nullptr);
+		if (resource == nullptr)
+		{
+			logError("failed to create resource %s", path.toString().c_str());
+			
+			return false;
+		}
+		else
+		{
+			logDebug("created resource %s", path.toString().c_str());
+			
+			VfxResourceElem e;
+			e.resource = resource;
+			e.refCount = 1;
+			
+			resourcesByPath[path] = e;
+			pathsByResource[resource] = path;
+			
+			return true;
+		}
+	}
+}
+
+bool freeVfxNodeResourceImpl(void * resource)
+{
+	bool result = false;
+	
+	auto i = pathsByResource.find(resource);
+	
+	Assert(i != pathsByResource.end());
+	if (i == pathsByResource.end())
+	{
+		logError("failed to find resource %p", resource);
+	}
+	else
+	{
+		auto & path = i->second;
+		
+		auto j = resourcesByPath.find(path);
+		
+		Assert(j != resourcesByPath.end());
+		if (j == resourcesByPath.end())
+		{
+			logError("failed to find resource elem for resource %s", path.toString().c_str());
+		}
+		else
+		{
+			auto & e = j->second;
+			
+			e.refCount--;
+			
+			if (e.refCount == 0)
+			{
+				logDebug("refCount reached zero for resource %s. resource will be freed", path.toString().c_str());
+				
+				resourcesByPath.erase(j);
+				pathsByResource.erase(i);
+				
+				result = true;
+			}
+		}
+	}
+	
+	return result;
+}

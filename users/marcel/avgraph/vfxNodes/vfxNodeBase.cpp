@@ -925,6 +925,8 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 		typeDefinition.typeName = registration->typeName;
 		typeDefinition.displayName = registration->displayName;
 		
+		typeDefinition.resourceTypeName = registration->resourceTypeName;
+		
 		for (int i = 0; i < registration->inputs.size(); ++i)
 		{
 			auto & src = registration->inputs[i];

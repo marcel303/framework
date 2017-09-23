@@ -8,11 +8,11 @@ top priority items from list below:
 + add OSC history to node description
 - add buttons that can trigger inputs
 - port compose shader from 4dworld to avgraph. fix graph editor fade when idle
-- add ability to add multiple connections to input sockets ? similar to 4dworld ?
-- add ability to specify in/out mapping on a per-link basis. make it operate similar to how adding multiply connections to input sockets works in 4dworld
-	- have a single floating point connection (float pointer). this is how things currently work
-	- have multiply floating point connections. store float pointers in array. allocate storage for calculating sum. make update() method to update summed value
-	- have optional remapping enabled per link. combine this with summing support. store mapping and float pointer in summed value element
++ add ability to add multiple connections to input sockets ? similar to 4dworld ?
++ add ability to specify in/out mapping on a per-link basis. make it operate similar to how adding multiply connections to input sockets works in 4dworld
+	+ have a single floating point connection (float pointer). this is how things currently work
+	+ have multiply floating point connections. store float pointers in array. allocate storage for calculating sum. make update() method to update summed value
+	+ have optional remapping enabled per link. combine this with summing support. store mapping and float pointer in summed value element
 - determine how OSC send and receive nodes should function
 - add support for custom editors to graph editor
 
@@ -67,6 +67,9 @@ todo :
 - add third 'node minification' option: show only active inputs and outputs
 	so we have three options then: show everything, show only active i/o and fully collapsed
 - add ability to reference nodes? makes graph organization more easy
+- add ability to store resource data in nodes, so nodes can persist their own data when editing
+- add node editors. when double clicking a node (or some other gesture/interaction), show the node editor. let the node editor operate on the node's data.
+	- let the node editor be independent of the implementation ? it should be possible to have a fully functional graph, graph node and resource editing environment without a live version of the graph running in the background. this means the saveBegin real-time editing callback should be removed again once we got this working
 
 todo : nodes :
 - add sample.float node

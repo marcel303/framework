@@ -768,6 +768,8 @@ struct VfxNodeTypeRegistration
 	std::string typeName;
 	std::string displayName;
 	
+	std::string resourceTypeName;
+	
 	std::string author;
 	std::string copyright;
 	std::string description;
