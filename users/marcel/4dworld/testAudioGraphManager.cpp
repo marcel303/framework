@@ -1763,6 +1763,16 @@ void testAudioGraphManager()
 	
 	//
 	
+	for (int i = 0; i < 4; ++i)
+	{
+		framework.process();
+		framework.beginDraw(0, 0, 0, 0);
+		setFont("calibri.ttf");
+		setColor(colorWhite);
+		drawText(GFX_SX/2, GFX_SY/2, 24, 0, 0, "Loading audio files.. This may take a while..");
+		framework.endDraw();
+	}
+	
 	fillPcmDataCache("birds", true, false);
 	fillPcmDataCache("testsounds", true, true);
 	//fillPcmDataCache("voices", true, false);
