@@ -303,9 +303,6 @@ void drawTestUi()
 	const float scrollTime = s.scrollTimer * s.scrollTimerRcp;
 	const float scroll = EvalEase(scrollTime, kEaseType_SineIn, 0.f);
 	
-	const float uiTime = s.uiTimer * s.uiTimerRcp;
-	const float offset = uiTime < .3f ? uiTime / .3f : 1.f;
-	
 	gxPushMatrix();
 	{
 		if (scroll > 0.f)
@@ -345,24 +342,6 @@ void drawTestUi()
 		setColor(0, 0, 100, alpha);
 		drawText(0, 0, 20, 0, 0, "Help");
 	#endif
-	}
-	gxPopMatrix();
-	
-	gxPushMatrix();
-	{
-		gxTranslatef(0.f, -50 * (1.f - offset), 0.f);
-		
-		setColor(colorWhite);
-		drawRect(0, 0, GFX_SX, 40);
-		setColor(colorBlack);
-		drawRectLine(0, 0, GFX_SX, 40);
-
-		pushFontMode(FONT_SDF);
-		{
-			setColor(colorRed);
-			drawText(GFX_SX/2, 20, 20, 0, 0, "test");
-		}
-		popFontMode();
 	}
 	gxPopMatrix();
 	
