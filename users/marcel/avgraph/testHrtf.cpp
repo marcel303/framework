@@ -1122,25 +1122,15 @@ void testHrtf()
 	HRIRSet hrirSet;
 	hrirSet.loadMitDatabase("hrtf/MIT-HRTF-DIFFUSE");
 	
-	AudioSource_Sine sine;
-	sine.init(0.f, 800.f);
+	AudioSource_Sound sound;
+	sound.load("hrtf/music2.ogg");
 	
-	AudioSource_Sound sound1;
-	sound1.load("hrtf/music.ogg");
-	
-	AudioSource_Sound sound2;
-	sound2.load("hrtf/music2.ogg");
-	
-	AudioSource_Binaural binaural1;
-	AudioSource_Binaural binaural2;
-	//binaural1.source = &sine;
-	binaural1.source = &sound1;
-	binaural2.source = &sound2;
+	AudioSource_Binaural binaural;
+	binaural.source = &sound;
 	
 	AudioSource_Mix mix;
 	mix.normalizeGain = true;
-	mix.add(&binaural1, .05f);
-	mix.add(&binaural2, 1.f);
+	mix.add(&binaural, 1.f);
 	
 	PortAudioObject pa;
 	
@@ -1254,8 +1244,7 @@ void testHrtf()
 			hrtf.lFilter.transformToFrequencyDomain();
 			hrtf.rFilter.transformToFrequencyDomain();
 			
-			binaural1.setHrtf(hrtf, true);
-			binaural2.setHrtf(hrtf, true);
+			binaural.setHrtf(hrtf, true);
 		}
 			
 		//
@@ -1346,7 +1335,7 @@ void testHrtf()
 			setFont("calibri.ttf");
 			setColor(colorWhite);
 			
-			drawText(10, 10, 24, 1, 1, "time: %.4fms", binaural1.processTimeAvg / 1000.0);
+			drawText(10, 10, 24, 1, 1, "time: %.4fms", binaural.processTimeAvg / 1000.0);
 			
 			drawTestUi();
 		}
