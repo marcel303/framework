@@ -297,14 +297,14 @@ void testHqPrimitives()
 			
 			gxPushMatrix();
 			{
-				setColor(colorWhite);
+				setColor(127, 127, 127);
 				
 				gxTranslatef(GFX_SX - 10, GFX_SY - 100, 0);
 				
 				gxTranslatef(-60, 0, 0);
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
-					hqFillRoundedRect(0, 0, 50, 90, 5);
+					hqFillRoundedRect(0, 0, 50, 90, 10);
 				}
 				hqEnd();
 				
