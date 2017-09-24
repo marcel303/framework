@@ -46,7 +46,7 @@ VFX_NODE_TYPE(timeline, VfxNodeTimeline)
 	in("resume!", "trigger");
 	in("time", "float");
 	out("event!", "trigger");
-	out("eventId", "int");
+	out("eventId", "float");
 	out("beat!", "trigger");
 }
 
@@ -55,7 +55,7 @@ VfxNodeTimeline::VfxNodeTimeline()
 	, time(0.0)
 	, isPlaying(false)
 	, timeline(nullptr)
-	, eventIdOutput(0)
+	, eventIdOutput(0.f)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Duration, kVfxPlugType_Float);
@@ -68,7 +68,7 @@ VfxNodeTimeline::VfxNodeTimeline()
 	addInput(kInput_Resume, kVfxPlugType_Trigger);
 	addInput(kInput_Time, kVfxPlugType_Float);
 	addOutput(kOutput_EventTrigger, kVfxPlugType_Trigger, nullptr);
-	addOutput(kOutput_EventId, kVfxPlugType_Int, &eventIdOutput);
+	addOutput(kOutput_EventId, kVfxPlugType_Float, &eventIdOutput);
 	addOutput(kOutput_BeatTrigger, kVfxPlugType_Trigger, nullptr);
 }
 

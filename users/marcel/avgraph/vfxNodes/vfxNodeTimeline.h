@@ -61,7 +61,7 @@ struct VfxNodeTimeline : VfxNodeBase
 	
 	VfxTimeline * timeline;
 	
-	int eventIdOutput;
+	float eventIdOutput;
 
 	VfxNodeTimeline();
 	virtual ~VfxNodeTimeline() override;
