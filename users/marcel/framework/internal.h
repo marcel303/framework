@@ -40,7 +40,7 @@
 
 #define USE_GLYPH_ATLAS 1
 
-#define USE_STBFONT 1
+#define USE_STBFONT 0
 
 #define ENABLE_MSDF_FONTS 1
 
