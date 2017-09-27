@@ -30,6 +30,7 @@
 #include "MPVideoBuffer.h"
 #include <libavcodec/avcodec.h>
 #include <libavutil/imgutils.h>
+#include <xmmintrin.h>
 
 #if DEBUG_MEDIAPLAYER
 #include <atomic>

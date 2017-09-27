@@ -31,8 +31,6 @@
 #include "MPMutex.h"
 #include <list>
 
-#include <SDL2/SDL.h> // fixme : abstract away
-
 namespace MP
 {
 	class VideoFrame
