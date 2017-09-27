@@ -289,16 +289,17 @@ void testDynamicTextureAtlas()
 			animItr = 0;
 		}
 		
-		const int numToAdd = mouse.x * 50 / GFX_SX;
+		const int numToAdd = mouse.x * 100 / GFX_SX;
 		
 	//for (int i = 0; i < kAnimSize; ++i)
 	for (int i = 0; i < numToAdd; ++i)
 		if (numElems < kMaxElems && animItr < kAnimSize)
 		{
-			const int sx = random(4, 100);
-			const int sy = random(4, 100);
+			const int kMaxSize = 100;
+			const int sx = random(4, kMaxSize);
+			const int sy = random(4, kMaxSize);
 			
-			uint8_t * values = (uint8_t*)alloca(sx * sy * sizeof(uint8_t));
+			uint8_t values[kMaxSize * kMaxSize];
 			
 			for (int i = 0; i < sx * sy; ++i)
 				values[i] = i;

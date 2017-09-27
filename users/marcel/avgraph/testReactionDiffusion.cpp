@@ -165,11 +165,11 @@ struct ReactionDiffusion
 
 void testReactionDiffusion()
 {
-	ReactionDiffusion rd;
+	ReactionDiffusion * rd = new ReactionDiffusion();
 
-	//rd.randomize();
-	//rd.randomize();
-	//rd.randomize();
+	//rd->randomize();
+	//rd->randomize();
+	//rd->randomize();
 
 	do
 	{
@@ -179,25 +179,25 @@ void testReactionDiffusion()
 		
 		if (mouse.isDown(BUTTON_LEFT) && mouse.x >= 0 && mouse.x < Grid::kGridSx && mouse.y >= 0 && mouse.y < Grid::kGridSy)
 		{
-			rd.grid[rd.curGridIndex].cell[mouse.x][mouse.y].a = 1.f;
-			rd.grid[rd.curGridIndex].cell[mouse.x][mouse.y].b = 1.f;
+			rd->grid[rd->curGridIndex].cell[mouse.x][mouse.y].a = 1.f;
+			rd->grid[rd->curGridIndex].cell[mouse.x][mouse.y].b = 1.f;
 		}
 
 		const float dt = std::min(1.f / 30.f, framework.timeStep) * 10.f;
 		
 		for (int i = 0; i < 10; ++i)
 		{
-			rd.tick(dt);
+			rd->tick(dt);
 		}
 		
 		if (keyboard.wentDown(SDLK_r))
-			rd.randomize();
+			rd->randomize();
 
 		//
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			const Grid & grid = rd.grid[rd.curGridIndex];
+			const Grid & grid = rd->grid[rd->curGridIndex];
 
 			gxBegin(GL_POINTS);
 			{
@@ -219,4 +219,7 @@ void testReactionDiffusion()
 		}
 		framework.endDraw();
 	} while (tickTestUi());
+	
+	delete rd;
+	rd = nullptr;
 }
