@@ -224,7 +224,7 @@ class ofxDatGuiTheme{
         struct Font {
 			Font()
 			{
-				file = AssetPath + "ofxbraitsch/fonts/Verdana.ttf";
+				file = AssetPath + "calibri.ttf";
 			}
 
             int size = 6;
