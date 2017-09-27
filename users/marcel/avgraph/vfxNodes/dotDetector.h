@@ -36,7 +36,7 @@
 // difference is neglicable. the quality of the search should be slightly better, as the grid based
 // solution picks the nearest island, not just the first island it sees within the maximum radius
 
-#define USE_GRID 1 // improves matching result as we find the closes island when enabled. also greatly increases detection speed when there's many dots being detected
+#define USE_GRID 1 // improves matching result as we find the closest island when enabled. also greatly increases detection speed when there's many dots being detected
 #define USE_SSE2 1 // improves tresholding and detection speed
 
 struct DotIsland
