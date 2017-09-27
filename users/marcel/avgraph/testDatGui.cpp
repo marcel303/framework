@@ -86,7 +86,7 @@ struct ofApp
 	   
 	// add a wave monitor //
 	// take a look inside example-TimeGraph for more examples of this component and the value plotter //
-	    gui->addWaveMonitor("wave\nmonitor", 3, .2f);
+	    gui->addWaveMonitor("wave monitor", 3, .2f);
 
 	    valuePlotter = gui->addValuePlotter("value plotter", -1.f, +1.f);
 	    
