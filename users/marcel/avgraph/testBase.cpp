@@ -42,7 +42,7 @@ enum ButtonResult
 	kButtonPress
 };
 
-struct ButtonState
+struct TestButtonState
 {
 	float fadeTimer = .2f;
 	float fadeTimerRcp = 1.f / fadeTimer;
@@ -60,7 +60,7 @@ struct TestState
 	float scrollTimer;
 	float scrollTimerRcp;
 	
-	std::map<std::string, ButtonState> buttonState;
+	std::map<std::string, TestButtonState> buttonState;
 	
 	bool tickMenu;
 	bool drawMenu;
@@ -109,7 +109,7 @@ void endTest(TestFunction t)
 
 static ButtonResult doButton(const int _x, const int _y, const int alignX, const int alignY, const char * text)
 {
-	ButtonState & buttonState = s_testState.buttonState[text];
+	TestButtonState & buttonState = s_testState.buttonState[text];
 	buttonState.fadeTimer = std::max(0.f, buttonState.fadeTimer - framework.timeStep);
 	
 	bool clicked = false;

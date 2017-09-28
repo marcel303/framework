@@ -27,6 +27,8 @@
 
 #include "framework.h"
 #include "testBase.h"
+#include <map>
+#include <string>
 
 extern const int GFX_SX;
 extern const int GFX_SY;
