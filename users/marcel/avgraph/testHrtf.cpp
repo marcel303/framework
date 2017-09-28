@@ -26,6 +26,7 @@
 */
 
 #include "audio.h"
+#include "audiostream/AudioStreamVorbis.h"
 #include "Calc.h"
 #include "framework.h"
 #include "Parse.h"
@@ -707,21 +708,18 @@ struct AudioSource_Mix : AudioSource
 	}
 };
 
-struct AudioSource_Sine : AudioSource
+struct AudioSource_StreamOgg : AudioSource
 {
-	float phase;
-	float phaseStep;
+	AudioStream_Vorbis stream;
 	
-	AudioSource_Sine()
-		: phase(0.f)
-		, phaseStep(0.f)
+	AudioSource_StreamOgg()
+		: stream()
 	{
 	}
 	
-	void init(const float _phase, const float _frequency)
+	void load(const char * filename)
 	{
-		phase = _phase;
-		phaseStep = _frequency / SAMPLE_RATE;
+		stream.Open(filename, true);
 	}
 	
 	virtual int getChannelCount() const override
@@ -731,73 +729,15 @@ struct AudioSource_Sine : AudioSource
 	
 	virtual void generate(const int channelIndex, float * __restrict audioBuffer, const int numSamples) override
 	{
-		Assert(channelIndex == 0);
+		AudioSample samples[numSamples];
 		
-		for (int i = 0; i < numSamples; ++i)
-		{
-			audioBuffer[i] = std::sin(phase * 2.f * M_PI);
-			
-			phase = std::fmodf(phase + phaseStep, 1.f);
-		}
-	}
-};
-
-struct AudioSource_Sound : AudioSource
-{
-	SoundData * sound;
-	int position;
-	
-	AudioSource_Sound()
-		: sound(nullptr)
-		, position(0)
-	{
-	}
-	
-	~AudioSource_Sound()
-	{
-		delete sound;
-		sound = nullptr;
+		const int numProvided = stream.Provide(numSamples, samples);
 		
-		position = 0;
-	}
-	
-	void load(const char * filename)
-	{
-		sound = loadSound(filename);
-	}
-	
-	virtual int getChannelCount() const override
-	{
-		return sound->channelCount;
-	}
-	
-	virtual void generate(const int channelIndex, float * __restrict audioBuffer, const int numSamples) override
-	{
-		Assert(channelIndex < sound->channelCount);
+		for (int i = 0; i < numProvided; ++i)
+			audioBuffer[i] = (int(samples[i].channel[0]) + int(samples[i].channel[1])) / float(1 << 16);
 		
-		if (sound == nullptr)
-		{
-			for (int i = 0; i < numSamples; ++i)
-				audioBuffer[i] = 0.f;
-			return;
-		}
-		
-		for (int i = 0; i < numSamples; ++i)
-		{
-			if (sound->channelSize == 2)
-			{
-				const int16_t * __restrict sampleData = (const int16_t*)sound->sampleData;
-				
-				audioBuffer[i] = sampleData[position * sound->channelCount + channelIndex] / float(1 << 15);
-				
-				position += 1;
-				position %= sound->sampleCount;
-			}
-			else
-			{
-				audioBuffer[i] = 0.f;
-			}
-		}
+		for (int i = numProvided; i < numSamples; ++i)
+			audioBuffer[i] = 0.f;
 	}
 };
 
@@ -1122,7 +1062,7 @@ void testHrtf()
 	HRIRSet hrirSet;
 	hrirSet.loadMitDatabase("hrtf/MIT-HRTF-DIFFUSE");
 	
-	AudioSource_Sound sound;
+	AudioSource_StreamOgg sound;
 	sound.load("hrtf/music2.ogg");
 	
 	AudioSource_Binaural binaural;
