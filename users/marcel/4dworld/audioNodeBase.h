@@ -207,7 +207,7 @@ struct AudioPlug
 		return false;
 	}
 	
-	int getBool() const
+	bool getBool() const
 	{
 		Assert(type == kAudioPlugType_Bool);
 		return *((bool*)mem);
@@ -337,8 +337,8 @@ struct AudioNodeBase
 	
 	void addInput(const int index, AudioPlugType type)
 	{
-		Assert(index >= 0 && index < inputs.size());
-		if (index >= 0 && index < inputs.size())
+		Assert(index >= 0 && index < (int)inputs.size());
+		if (index >= 0 && index < (int)inputs.size())
 		{
 			inputs[index].type = type;
 		}
@@ -346,8 +346,8 @@ struct AudioNodeBase
 	
 	void addOutput(const int index, AudioPlugType type, void * mem)
 	{
-		Assert(index >= 0 && index < outputs.size());
-		if (index >= 0 && index < outputs.size())
+		Assert(index >= 0 && index < (int)outputs.size());
+		if (index >= 0 && index < (int)outputs.size())
 		{
 			outputs[index].type = type;
 			outputs[index].mem = mem;
@@ -356,8 +356,8 @@ struct AudioNodeBase
 	
 	AudioPlug * tryGetInput(const int index)
 	{
-		Assert(index >= 0 && index <= inputs.size());
-		if (index < 0 || index >= inputs.size())
+		Assert(index >= 0 && index <= (int)inputs.size());
+		if (index < 0 || index >= (int)inputs.size())
 			return nullptr;
 		else
 			return &inputs[index];
@@ -365,8 +365,8 @@ struct AudioNodeBase
 	
 	AudioPlug * tryGetOutput(const int index)
 	{
-		Assert(index >= 0 && index <= outputs.size());
-		if (index < 0 || index >= outputs.size())
+		Assert(index >= 0 && index <= (int)outputs.size());
+		if (index < 0 || index >= (int)outputs.size())
 			return nullptr;
 		else
 			return &outputs[index];
@@ -374,8 +374,8 @@ struct AudioNodeBase
 	
 	const AudioPlug * tryGetInput(const int index) const
 	{
-		Assert(index >= 0 && index <= inputs.size());
-		if (index < 0 || index >= inputs.size())
+		Assert(index >= 0 && index <= (int)inputs.size());
+		if (index < 0 || index >= (int)inputs.size())
 			return nullptr;
 		else
 			return &inputs[index];
@@ -383,14 +383,14 @@ struct AudioNodeBase
 	
 	const AudioPlug * tryGetOutput(const int index) const
 	{
-		Assert(index >= 0 && index <= outputs.size());
-		if (index < 0 || index >= outputs.size())
+		Assert(index >= 0 && index <= (int)outputs.size());
+		if (index < 0 || index >= (int)outputs.size())
 			return nullptr;
 		else
 			return &outputs[index];
 	}
 	
-	int getInputBool(const int index, const bool defaultValue) const
+	bool getInputBool(const int index, const bool defaultValue) const
 	{
 		const AudioPlug * plug = tryGetInput(index);
 		

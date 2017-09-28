@@ -558,8 +558,8 @@ void AudioNodeBase::trigger(const int outputSocketIndex)
 {
 	editorIsTriggered = true;
 	
-	Assert(outputSocketIndex >= 0 && outputSocketIndex < outputs.size());
-	if (outputSocketIndex >= 0 && outputSocketIndex < outputs.size())
+	Assert(outputSocketIndex >= 0 && outputSocketIndex < (int)outputs.size());
+	if (outputSocketIndex >= 0 && outputSocketIndex < (int)outputs.size())
 	{
 		auto & outputSocket = outputs[outputSocketIndex];
 		Assert(outputSocket.type == kAudioPlugType_Trigger);
@@ -750,7 +750,7 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 		typeDefinition.typeName = registration->typeName;
 		typeDefinition.displayName = registration->displayName;
 		
-		for (int i = 0; i < registration->inputs.size(); ++i)
+		for (int i = 0; i < (int)registration->inputs.size(); ++i)
 		{
 			auto & src = registration->inputs[i];
 			
@@ -764,7 +764,7 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 			typeDefinition.inputSockets.push_back(inputSocket);
 		}
 		
-		for (int i = 0; i < registration->outputs.size(); ++i)
+		for (int i = 0; i < (int)registration->outputs.size(); ++i)
 		{
 			auto & src = registration->outputs[i];
 			

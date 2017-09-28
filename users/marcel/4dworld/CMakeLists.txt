@@ -79,6 +79,7 @@ if (WIN32)
 	target_include_directories(avgraph PRIVATE "../avgraph")
 	target_include_directories(avgraph PRIVATE "../vfxpro/win32/include")
 	target_include_directories(avgraph PRIVATE "../vfxpro/")
+	target_include_directories(avgraph PRIVATE "../avpaint/win32/include")
 endif (WIN32)
 
 target_link_libraries(avgraph PRIVATE framework)
@@ -86,6 +87,8 @@ target_link_libraries(avgraph PRIVATE libosc)
 target_link_libraries(avgraph PRIVATE libgg)
 
 if (MSVC)
+	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/win32/lib/portaudio_x86.lib)
+	
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib)

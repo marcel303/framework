@@ -47,6 +47,9 @@ static SDL_mutex * g_audioMutex = nullptr;
 
 static void drawHrirSampleGrid(const HRIRSampleSet & dataSet, const Vec2 & hoverLocation, const HRIRSampleGrid::Cell * hoverCell, const HRIRSampleGrid::Triangle * hoverTriangle);
 
+namespace BinauralTestTypes
+{
+
 struct AudioMutex : Mutex
 {
 	virtual void lock() override
@@ -234,6 +237,10 @@ struct MyPortAudioHandler : PortAudioHandler
 		}
 	}
 };
+
+}
+
+using namespace BinauralTestTypes;
 
 void testBinaural()
 {
