@@ -102,6 +102,9 @@ void beginTest(TestFunction t)
 
 void endTest(TestFunction t)
 {
+	// process framework so mouse and keyboard wentDown events are cleared
+	
+	framework.process();
 }
 
 static ButtonResult doButton(const int _x, const int _y, const int alignX, const int alignY, const char * text)
@@ -244,9 +247,11 @@ static bool doMenu(const bool tickMenu, const bool drawMenu)
 	s_testState.drawMenu = drawMenu;
 	
 	s_testState.drawX = 25;
-	if (doButton(s_testState.drawX, GFX_SY - 25, +1, -1, "Back") == kButtonPress)
+	if (doButton(s_testState.drawX, GFX_SY - 25, +1, -1, "Back (SPACE)") == kButtonPress)
 	{
 		result = false;
+		
+		Sound("menuselect.ogg").play();
 	}
 	
 	if (s_testState.about.empty() == false)

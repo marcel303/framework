@@ -56,6 +56,7 @@ extern void testHqPrimitives();
 extern void testHrtf();
 
 extern void testMain();
+extern void testMenu();
 
 //
 
@@ -88,6 +89,8 @@ struct ButtonState
 	
 	std::string caption;
 	std::string text;
+	
+	bool isBack = false;
 	
 	bool hover = false;
 	bool isDown = false;
@@ -193,6 +196,8 @@ struct ButtonState
 				color = Color(100, 100, 200);
 			else if (hover)
 				color = Color(255, 255, 255);
+			else if (isBack)
+				color = Color(255, 200, 200);
 			else
 				color = Color(200, 200, 255);
 			
@@ -251,7 +256,7 @@ static bool menuDraw;
 static float menuDt;
 static bool buttonPressed = false;
 
-static bool doButton(const char * caption, const char * name, TestFunction testFunction)
+static bool doButton(const char * caption, const char * name, TestFunction testFunction, const bool isBack = false)
 {
 	bool clicked = false;
 	
@@ -260,6 +265,8 @@ static bool doButton(const char * caption, const char * name, TestFunction testF
 	if (i == buttonStates.end())
 	{
 		ButtonState state(caption, name);
+		
+		state.isBack = isBack;
 		
 		i = buttonStates.insert(std::make_pair(name, state)).first;
 	}
@@ -435,7 +442,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	doButton("DtDt", "Dot Detector", testDotDetector);
 	doButton("DtTr", "Dot Tracker", testDotTracker);
 	doButton("DTAtl", "Dynamic Texture Atlas", testDynamicTextureAtlas);
-	doButton("Fr1D", "1D Fourier Analysis", testFourier1d);
+	//doButton("Fr1D", "1D Fourier Analysis", testFourier1d);
 	doButton("Fr2D", "2D Fourier Analysis", testFourier2d);
 	doButton("ImDL", "CPU-image delay line", testImageCpuDelayLine);
 	doButton("DrPr", "Drawing Primitives", testHqPrimitives);
@@ -443,14 +450,14 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	doButton("IRm", "Impulse-Response", testImpulseResponseMeasurement);
 	doButton("MSDF", "MSDFGEN", testMsdfgen);
 	doButton("NVg", "NanoVG", testNanovg);
-	doButton("TT", "STB TrueType", testStbTruetype);
-	doButton("TAtl", "Texture Atlas", testTextureAtlas);
-	doButton("Thr", "Threading", testThreading);
+	//doButton("TT", "STB TrueType", testStbTruetype);
+	//doButton("TAtl", "Texture Atlas", testTextureAtlas);
+	//doButton("Thr", "Threading", testThreading);
 #ifndef WIN32
 	doButton("XMM", "XMM Gesture Follower", testXmm);
 #endif
 
-	const bool result = doButton("QUIT", "Quit", nullptr);
+	const bool result = doButton("BACK", "Back", nullptr, true);
 	
 	if (menuTick)
 	{
@@ -463,11 +470,271 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	return result;
 }
 
+struct MainButton
+{
+	std::string caption;
+	std::string image;
+	
+	float currentX;
+	float currentY;
+	
+	float desiredX;
+	float desiredY;
+	
+	float sx;
+	float sy;
+	
+	bool hover;
+	bool isDown;
+	bool clicked;
+	
+	MainButton()
+		: caption()
+		, image()
+		, currentX(0.f)
+		, currentY(0.f)
+		, desiredX(100.f)
+		, desiredY(100.f)
+		, sx(500.f)
+		, sy(200.f)
+		, hover(false)
+		, isDown(false)
+		, clicked(false)
+	{
+	}
+	
+	bool process(const bool tick, const bool draw, const float dt)
+	{
+		clicked = false;
+		
+		if (tick)
+		{
+			const float retainPerSecond = .2f;
+			const float retainThisFrame = std::powf(retainPerSecond, dt);
+			
+			currentX = lerp(desiredX, currentX, retainThisFrame);
+			currentY = lerp(desiredY, currentY, retainThisFrame);
+			
+			const bool isInside =
+				mouse.x > currentX &&
+				mouse.y > currentY &&
+				mouse.x < currentX + sx &&
+				mouse.y < currentY + sy;
+			
+			if (isInside)
+			{
+				if (hover == false)
+				{
+					hover = true;
+					
+					Sound("menuselect.ogg").play();
+				}
+			}
+			else
+			{
+				if (hover == true)
+				{
+					hover = false;
+					
+					Sound("menuselect.ogg").play();
+				}
+			}
+				
+			if (hover)
+			{
+				if (mouse.wentDown(BUTTON_LEFT))
+					isDown = true;
+			}
+			
+			if (isDown)
+			{
+				if (mouse.wentUp(BUTTON_LEFT))
+				{
+					isDown = false;
+					
+					if (hover)
+					{
+						clicked = true;
+						
+						Sound("menuselect.ogg").play();
+					}
+				}
+			}
+			
+			hasMouseHover |= hover;
+		}
+		
+		if (draw)
+		{
+			gxPushMatrix();
+			gxTranslatef(currentX, currentY, 0);
+			
+			if (hover)
+			{
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				setColor(colorWhite);
+				const float border = 10.f;
+				hqFillRoundedRect(-border, -border, sx+border, sy+border, 20+border);
+				hqEnd();
+			}
+			
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			if (isDown)
+				setColor(100, 0, 0);
+			else if (hover)
+				setColor(200, 100, 100);
+			else
+				setColor(200, 0, 0);
+			hqFillRoundedRect(0, 0, sx, sy, 20);
+			hqEnd();
+			
+			setFont("calibri.ttf");
+			pushFontMode(FONT_SDF);
+			{
+				setColor(colorWhite);
+				drawText(sx/2, sy/2, 48, 0, 0, "%s", caption.c_str());
+			}
+			popFontMode();
+			
+			gxPopMatrix();
+		}
+		
+		return clicked;
+	}
+};
+
+struct MainButtons
+{
+	MainButton avgraphButton;
+	MainButton testsButton;
+	
+	MainButtons()
+		: avgraphButton()
+		, testsButton()
+	{
+		avgraphButton.caption = "A/V Graph Editor";
+		avgraphButton.currentX = 100.f;
+		avgraphButton.currentY = 200.f;
+		avgraphButton.desiredX = (GFX_SX - avgraphButton.sx) / 2.f;
+		avgraphButton.desiredY = avgraphButton.currentY;
+		
+		testsButton.caption = "Tests Portal";
+		testsButton.currentX = GFX_SX - testsButton.sx - 100.f;
+		testsButton.currentY = 450.f;
+		testsButton.desiredX = (GFX_SX - testsButton.sx) / 2.f;
+		testsButton.desiredY = testsButton.currentY;
+	}
+	
+	bool process(const bool tick, const bool draw, const float dt)
+	{
+		bool result = false;
+		
+		if (tick)
+		{
+			hasMouseHover = false;
+			buttonPressed = false;
+			
+			if (keyboard.wentDown(SDLK_ESCAPE))
+				result = true;
+		}
+		
+		if (avgraphButton.process(tick, draw, dt))
+		{
+			result = true;
+		}
+		
+		if (testsButton.process(tick, draw, dt))
+		{
+			testMenu();
+			
+			framework.process();
+		}
+		
+		if (draw)
+		{
+			setFont("calibri.ttf");
+			setColor(100, 100, 130);
+			drawText(GFX_SX/2, 100, 48, 0, 0, "Where do you want to go today?");
+		}
+		
+		if (tick)
+		{
+			if (hasMouseHover)
+				SDL_SetCursor(handCursor);
+			else
+				SDL_SetCursor(SDL_GetDefaultCursor());
+		}
+		
+		return result;
+	}
+};
+
+static MainButtons mainButtons;
+
+static bool doMainButtons(const bool tick, const bool draw, const float dt)
+{
+	return mainButtons.process(tick, draw, dt);
+}
+
 void testMain()
 {
 	beginTest(testMain);
 	
 	handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+	
+	Surface surface(GFX_SX, GFX_SY, true);
+	
+	bool stop = false;
+	
+	double blurStrength = 0.f;
+	
+	do
+	{
+		framework.process();
+
+		const float dt = framework.timeStep;
+
+		//
+
+		stop = doMainButtons(true, false, dt) || keyboard.wentDown(SDLK_ESCAPE);
+
+		if (buttonPressed)
+		{
+			mainButtons = MainButtons();
+			
+			blurStrength = 1.0;
+		}
+		
+		blurStrength *= std::pow(.01, double(dt * 4.0));
+		
+		//
+
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			pushSurface(&surface);
+			{
+				surface.clear(230, 230, 230, 0);
+				
+				doMainButtons(false, true, dt);
+			}
+			popSurface();
+			
+			//surface.invert();
+			surface.gaussianBlur(blurStrength * 100.f, blurStrength * 100.f, std::ceilf(blurStrength * 100.f));
+			
+			setColor(colorWhite);
+			surface.blit(BLEND_OPAQUE);
+		}
+		framework.endDraw();
+	} while (stop == false);
+	
+	SDL_FreeCursor(handCursor);
+	handCursor = nullptr;
+}
+
+void testMenu()
+{
+	beginTest(testMenu);
 	
 	Surface surface(GFX_SX, GFX_SY, true);
 	
@@ -510,7 +777,4 @@ void testMain()
 		}
 		framework.endDraw();
 	} while (stop == false);
-	
-	SDL_FreeCursor(handCursor);
-	handCursor = nullptr;
 }
