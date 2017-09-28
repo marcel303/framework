@@ -27,6 +27,7 @@
 
 #include "binaural.h"
 #include "binauralizer.h"
+#include <algorithm>
 
 namespace binaural
 {

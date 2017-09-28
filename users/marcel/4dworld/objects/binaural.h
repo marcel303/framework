@@ -89,7 +89,11 @@ namespace binaural
 	
 	// values
 	
+#ifdef WIN32
+	extern __declspec(thread) bool enableDebugLog;
+#else
 	extern __thread bool enableDebugLog;
+#endif
 	
 	// value types
 	

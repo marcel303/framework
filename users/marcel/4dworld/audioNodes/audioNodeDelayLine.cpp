@@ -27,6 +27,7 @@
 
 #include "audioNodeDelayLine.h"
 #include "vfxNodes/delayLine.h"
+#include <algorithm>
 
 AUDIO_NODE_TYPE(sample_delay, AudioNodeDelayLine)
 {

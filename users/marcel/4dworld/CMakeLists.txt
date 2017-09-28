@@ -76,6 +76,7 @@ if (APPLE)
 endif (APPLE)
 
 if (WIN32)
+	target_include_directories(avgraph PRIVATE "../avgraph")
 	target_include_directories(avgraph PRIVATE "../vfxpro/win32/include")
 	target_include_directories(avgraph PRIVATE "../vfxpro/")
 endif (WIN32)

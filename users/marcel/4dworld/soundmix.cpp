@@ -966,7 +966,11 @@ void AudioVoiceManager::updateChannelIndices()
 {
 	// todo : mute a voice for a while after allocating channel index ? to ensure there is no issue with OSC position vs audio signal
 	
+#ifdef WIN32
+	bool used[1024]; // fixme : use a general fix for variable sized arrays
+#else
 	bool used[numDynamicChannels];
+#endif
 	memset(used, 0, sizeof(used));
 	
 	for (auto & voice : voices)
@@ -1040,7 +1044,12 @@ void AudioVoiceManager::portAudioCallback(
 			{
 				// generate samples
 				
+			#ifdef WIN32
+				// fixme : use a general fix for variable sized arrays
+				float * voiceSamples = (float*)alloca(numSamples * sizeof(float));
+			#else
 				ALIGN32 float voiceSamples[numSamples];
+			#endif
 				
 				voice.source->generate(voiceSamples, numSamples);
 				

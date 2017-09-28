@@ -60,8 +60,33 @@ namespace binaural
 	
 	//
 	
+#ifdef WIN32
+	__declspec(thread) bool enableDebugLog;
+#else
 	__thread bool enableDebugLog = false;
-	
+#endif
+
+	//
+
+#ifdef WIN32
+
+	inline __m128 operator+(__m128 a, __m128 b)
+	{
+		return _mm_add_ps(a, b);
+	}
+
+	inline __m128 operator-(__m128 a, __m128 b)
+	{
+		return _mm_sub_ps(a, b);
+	}
+
+	inline __m128 operator*(__m128 a, __m128 b)
+	{
+		return _mm_mul_ps(a, b);
+	}
+
+#endif
+
 	//
 	
 	HRIRSampleGrid::Location operator-(const HRIRSampleGrid::Location & a, const HRIRSampleGrid::Location & b)
@@ -389,8 +414,8 @@ namespace binaural
 			r4[i * 2 + 0] = a4[i * 2 + 0] * aWeight1 + b4[i * 2 + 0] * bWeight1;
 			r4[i * 2 + 1] = a4[i * 2 + 1] * aWeight2 + b4[i * 2 + 1] * bWeight2;
 			
-			t1 += tStep;
-			t2 += tStep;
+			t1 = t1 + tStep;
+			t2 = t2 + tStep;
 		}
 		
 	#else

@@ -43,7 +43,9 @@ extern const int GFX_SY;
 #if __AVX__
 	#include <immintrin.h>
 #else
-	#warning AVX support disabled. wave field methods will use slower SSE code paths
+	#ifndef WIN32
+		#warning AVX support disabled. wave field methods will use slower SSE code paths
+	#endif
 #endif
 
 //
@@ -88,9 +90,16 @@ void tickForces(const double * __restrict p, const double c, double * __restrict
 {
 	const int vectorSize = sizeof(T) / 8;
 	
+#ifdef WIN32
+	// fixme : use a general fix for variable sized arrays
+	ALIGN16 double p1[Wavefield1D::kMaxElems];
+	const double * __restrict p2 = p;
+	ALIGN16 double p3[Wavefield1D::kMaxElems];
+#else
 	ALIGN16 double p1[numElems];
 	const double * __restrict p2 = p;
 	ALIGN16 double p3[numElems];
+#endif
 	
 	memcpy(p1 + 1, p, (numElems - 1) * sizeof(double));
 	memcpy(p3, p + 1, (numElems - 1) * sizeof(double));
@@ -125,7 +134,7 @@ void tickForces(const double * __restrict p, const double c, double * __restrict
 		
 		const T a = d1 + d2;
 		
-		_mm_v[i] += a * _mm_cTimesDt * _mm_f[i];
+		_mm_v[i] = _mm_v[i] + a * _mm_cTimesDt * _mm_f[i];
 	}
 }
 

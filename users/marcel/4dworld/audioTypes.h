@@ -35,6 +35,42 @@
 	#define ALIGN16 __attribute__((aligned(16)))
 	#define ALIGN32 __attribute__((aligned(32)))
 #else
-	#define ALIGN16
-	#define ALIGN32
+	#define ALIGN16 __declspec(align(16))
+	#define ALIGN32 __declspec(align(32))
+#endif
+
+#ifdef WIN32
+
+// Clang and GCC support this nice syntax where vector types support the same basic operations as floats or integers. on Windows we need to re-implement a subset here to make the code compile
+
+inline __m128 operator+(__m128 a, __m128 b)
+{
+	return _mm_add_ps(a, b);
+}
+
+inline __m128 operator-(__m128 a, __m128 b)
+{
+	return _mm_sub_ps(a, b);
+}
+
+inline __m128 operator*(__m128 a, __m128 b)
+{
+	return _mm_mul_ps(a, b);
+}
+
+inline __m128d operator+(__m128d a, __m128d b)
+{
+	return _mm_add_pd(a, b);
+}
+
+inline __m128d operator-(__m128d a, __m128d b)
+{
+	return _mm_sub_pd(a, b);
+}
+
+inline __m128d operator*(__m128d a, __m128d b)
+{
+	return _mm_mul_pd(a, b);
+}
+
 #endif

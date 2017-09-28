@@ -26,6 +26,7 @@
 */
 
 #include "audioNodeRamp.h"
+#include <algorithm>
 
 AUDIO_NODE_TYPE(ramp, AudioNodeRamp)
 {

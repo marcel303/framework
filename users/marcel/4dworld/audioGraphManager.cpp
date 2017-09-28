@@ -506,7 +506,7 @@ void AudioGraphManager::registerControlValue(AudioControlValue::Type type, const
 			controlValue.currentX = defaultX;
 			controlValue.currentY = defaultY;
 			
-			std::sort(controlValues.begin(), controlValues.end(), [](auto & a, auto & b) { return a.name < b.name; });
+			std::sort(controlValues.begin(), controlValues.end(), [](const AudioControlValue & a, const AudioControlValue & b) { return a.name < b.name; });
 		}
 	}
 	SDL_UnlockMutex(audioMutex);

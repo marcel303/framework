@@ -27,6 +27,7 @@
 
 #include "audioNodeCombFilter.h"
 #include "vfxNodes/delayLine.h"
+#include <algorithm>
 #include <xmmintrin.h>
 
 AUDIO_NODE_TYPE(filter_comb, AudioNodeCombFilter)

@@ -30,6 +30,7 @@
 #include "commandQueue.h"
 #include "osc4d.h"
 #include "paobject.h"
+#include <stdint.h>
 #include <vector>
 
 //
