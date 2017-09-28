@@ -30,7 +30,9 @@
 #include <xmmintrin.h>
 
 #if !__AVX__
-	#warning AVX support disabled. wave field methods will use slower SSE code paths
+	#ifndef WIN32
+		#warning AVX support disabled. wave field methods will use slower SSE code paths
+	#endif
 #endif
 
 //#define ENABLE_SSE_INTERLEAVED ((rand() % 2) == 0)

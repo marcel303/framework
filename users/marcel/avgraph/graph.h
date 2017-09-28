@@ -31,6 +31,7 @@
 #include <list>
 #include <map>
 #include <set>
+#include <stdint.h>
 #include <string>
 #include <vector>
 

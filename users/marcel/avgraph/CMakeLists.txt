@@ -72,7 +72,7 @@ add_executable(avgraph ${source})
 
 target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT)
 
-target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT ENABLE_KINECT1=0 ENABLE_KINECT2=1 ENABLE_TURBOJPEG=1 ENABLE_DEEPBELIEF=1)
+target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT ENABLE_KINECT1=0 ENABLE_KINECT2=1 ENABLE_TURBOJPEG=1)
 
 if (WIN32)
 	target_compile_definitions(avgraph PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
@@ -85,12 +85,16 @@ if (APPLE)
 	target_include_directories(avgraph PRIVATE "../vfxpro/macos/include")
 	target_include_directories(avgraph PRIVATE "../vfxpro/")
 	target_include_directories(avgraph PRIVATE "../../../libfreenect2/macos/include")
+
+	target_compile_definitions(avgraph PRIVATE ENABLE_DEEPBELIEF=1)
 endif (APPLE)
 
 if (WIN32)
 	target_include_directories(avgraph PRIVATE "../vfxpro/win32/include")
 	target_include_directories(avgraph PRIVATE "../vfxpro/")
 	target_include_directories(avgraph PRIVATE "../avpaint/win32/include")
+
+	target_compile_definitions(avgraph PRIVATE ENABLE_DEEPBELIEF=0)
 endif (WIN32)
 
 target_link_libraries(avgraph PRIVATE framework)

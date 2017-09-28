@@ -126,7 +126,7 @@ static double sine(const double angle)
 	return std::sin(angle);
 }
 
-static float4impl sine(const float4impl angle)
+static float4impl sine(const float4impl & angle)
 {
 	float4impl result;
 	

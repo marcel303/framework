@@ -2295,7 +2295,7 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 	{
 		int32_t version;
 		
-		result &= fread(&version, 4, 1, file);
+		result &= fread(&version, 4, 1, file) == 1;
 		
 		if (version != 1)
 		{
@@ -2312,13 +2312,13 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 		
 		int32_t numGlyphs = 0;
 		
-		result &= fread(&numGlyphs, 4, 1, file);
+		result &= fread(&numGlyphs, 4, 1, file) == 1;
 		
 		for (int i = 0; result && i < numGlyphs; ++i)
 		{
 			int32_t c = 0;
 			
-			result &= fread(&c, 4, 1, file);
+			result &= fread(&c, 4, 1, file) == 1;
 			
 			//
 			
@@ -2328,19 +2328,19 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 			float scale;
 			int32_t advance;
 			
-			result &= fread(&y, 4, 1, file);
-			result &= fread(&sx, 4, 1, file);
-			result &= fread(&sy, 4, 1, file);
-			result &= fread(&scale, 4, 1, file);
-			result &= fread(&advance, 4, 1, file);
+			result &= fread(&y, 4, 1, file) == 1;
+			result &= fread(&sx, 4, 1, file) == 1;
+			result &= fread(&sy, 4, 1, file) == 1;
+			result &= fread(&scale, 4, 1, file) == 1;
+			result &= fread(&advance, 4, 1, file) == 1;
 			
 			//
 			
 			int32_t atlasElemSx;
 			int32_t atlasElemSy;
 			
-			result &= fread(&atlasElemSx, 4, 1, file);
-			result &= fread(&atlasElemSy, 4, 1, file);
+			result &= fread(&atlasElemSx, 4, 1, file) == 1;
+			result &= fread(&atlasElemSy, 4, 1, file) == 1;
 			
 			//
 			
@@ -2358,7 +2358,7 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 3;
 				uint8_t * bytes = new uint8_t[numBytes];
 				
-				result &= fread(bytes, numBytes, 1, file);
+				result &= fread(bytes, numBytes, 1, file) == 1;
 				
 				if (result)
 				{
@@ -2434,7 +2434,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 	{
 		const int32_t version = 1;
 		
-		result &= fwrite(&version, 4, 1, file);
+		result &= fwrite(&version, 4, 1, file) == 1;
 	}
 	
 	if (result == true)
@@ -2464,13 +2464,13 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 		
 		const int32_t numGlyphs = m_map.size();
 		
-		result &= fwrite(&numGlyphs, 4, 1, file);
+		result &= fwrite(&numGlyphs, 4, 1, file) == 1;
 		
 		for (auto & i : m_map)
 		{
 			const int32_t c = i.first;
 			
-			result &= fwrite(&c, 4, 1, file);
+			result &= fwrite(&c, 4, 1, file) == 1;
 			
 			//
 			
@@ -2482,11 +2482,11 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 			const float scale = e.scale;
 			const int32_t advance = e.advance;
 			
-			result &= fwrite(&y, 4, 1, file);
-			result &= fwrite(&sx, 4, 1, file);
-			result &= fwrite(&sy, 4, 1, file);
-			result &= fwrite(&scale, 4, 1, file);
-			result &= fwrite(&advance, 4, 1, file);
+			result &= fwrite(&y, 4, 1, file) == 1;
+			result &= fwrite(&sx, 4, 1, file) == 1;
+			result &= fwrite(&sy, 4, 1, file) == 1;
+			result &= fwrite(&scale, 4, 1, file) == 1;
+			result &= fwrite(&advance, 4, 1, file) == 1;
 			
 			//
 			
@@ -2495,8 +2495,8 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 			const int32_t atlasElemSx = ae ? ae->sx : 0;
 			const int32_t atlasElemSy = ae ? ae->sy : 0;
 			
-			result &= fwrite(&atlasElemSx, 4, 1, file);
-			result &= fwrite(&atlasElemSy, 4, 1, file);
+			result &= fwrite(&atlasElemSx, 4, 1, file) == 1;
+			result &= fwrite(&atlasElemSy, 4, 1, file) == 1;
 			
 			//
 			
@@ -2515,7 +2515,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 				glReadPixels(ae->x, ae->y, ae->sx, ae->sy, GL_RGB, GL_FLOAT, bytes);
 				checkErrorGL();
 				
-				result &= fwrite(bytes, numBytes, 1, file);
+				result &= fwrite(bytes, numBytes, 1, file) == 1;
 				
 				delete[] bytes;
 				

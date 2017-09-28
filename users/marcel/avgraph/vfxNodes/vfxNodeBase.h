@@ -522,8 +522,8 @@ struct VfxNodeBase
 	
 	void addInput(const int index, VfxPlugType type)
 	{
-		Assert(index >= 0 && index < inputs.size());
-		if (index >= 0 && index < inputs.size())
+		Assert(index >= 0 && index < (int)inputs.size());
+		if (index >= 0 && index < (int)inputs.size())
 		{
 			inputs[index].type = type;
 			inputs[index].memType = type;
@@ -532,8 +532,8 @@ struct VfxNodeBase
 	
 	void addOutput(const int index, VfxPlugType type, void * mem)
 	{
-		Assert(index >= 0 && index < outputs.size());
-		if (index >= 0 && index < outputs.size())
+		Assert(index >= 0 && index < (int)outputs.size());
+		if (index >= 0 && index < (int)outputs.size())
 		{
 			outputs[index].type = type;
 			outputs[index].mem = mem;
@@ -543,8 +543,8 @@ struct VfxNodeBase
 	
 	VfxPlug * tryGetInput(const int index)
 	{
-		Assert(index >= 0 && index <= inputs.size());
-		if (index < 0 || index >= inputs.size())
+		Assert(index >= 0 && index <= (int)inputs.size());
+		if (index < 0 || index >= (int)inputs.size())
 			return nullptr;
 		else
 			return &inputs[index];
@@ -552,8 +552,8 @@ struct VfxNodeBase
 	
 	VfxPlug * tryGetOutput(const int index)
 	{
-		Assert(index >= 0 && index <= outputs.size());
-		if (index < 0 || index >= outputs.size())
+		Assert(index >= 0 && index <= (int)outputs.size());
+		if (index < 0 || index >= (int)outputs.size())
 			return nullptr;
 		else
 			return &outputs[index];
@@ -561,8 +561,8 @@ struct VfxNodeBase
 	
 	const VfxPlug * tryGetInput(const int index) const
 	{
-		Assert(index >= 0 && index <= inputs.size());
-		if (index < 0 || index >= inputs.size())
+		Assert(index >= 0 && index <= (int)inputs.size());
+		if (index < 0 || index >= (int)inputs.size())
 			return nullptr;
 		else
 			return &inputs[index];
@@ -570,8 +570,8 @@ struct VfxNodeBase
 	
 	const VfxPlug * tryGetOutput(const int index) const
 	{
-		Assert(index >= 0 && index <= outputs.size());
-		if (index < 0 || index >= outputs.size())
+		Assert(index >= 0 && index <= (int)outputs.size());
+		if (index < 0 || index >= (int)outputs.size())
 			return nullptr;
 		else
 			return &outputs[index];

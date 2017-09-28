@@ -140,8 +140,8 @@ struct VfxNodeMidiOsc : VfxNodeBase, OscReceiveHandler
 			
 			if (message != nullptr && strcmp(message, "controller_change") == 0)
 			{
-				int controller;
-				int controllerValue;
+				osc::int32 controller;
+				osc::int32 controllerValue;
 				a >> controller;
 				a >> controllerValue;
 				
@@ -504,7 +504,7 @@ int main(int argc, char * argv[])
 		
 		//testReactionDiffusion();
 		
-		//testMain();
+		testMain();
 		
 		//
 		
