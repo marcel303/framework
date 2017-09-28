@@ -61,12 +61,16 @@ void testChaosGame()
 		pointY[i] = int64_t(rand() % 600) << 32ll;
 	}
 	
+	bool showInstructions = true;
+	
 	do
 	{
 		framework.process();
 		
 		if (mouse.isDown(BUTTON_LEFT))
 		{
+			showInstructions = false;
+			
 			auto t1 = g_TimerRT.TimeUS_get();
 			
 			pointX[2] = int64_t(mouse.x) << 32ll;
@@ -129,6 +133,14 @@ void testChaosGame()
 				popBlend();
 			}
 			gxPopMatrix();
+			
+			if (showInstructions)
+			{
+				setFont("calibri.ttf");
+				setColorf(.9f, .6f, .3f);
+				drawText(GFX_SX/2, GFX_SY/2, 48, 0, 0, "Click anywhere to engage in the chaos game!");
+				drawText(GFX_SX/2, GFX_SY/2+40, 24, 0, 0, "(Search YouTube for 'numberphile' and 'chaos game')");
+			}
 			
 			drawTestUi();
 		}

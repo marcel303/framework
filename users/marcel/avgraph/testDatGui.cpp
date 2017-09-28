@@ -193,7 +193,7 @@ struct ofApp
 	{
 		setFont("calibri.ttf");
 		setColor(colorWhite);
-		drawText(5, 5, 20, +1, +1, "Theme: %s", themes[tIndex].name);
+		drawText(5, 5, 20, +1, +1, "Theme: %s (press T to cycle themes)", themes[tIndex].name);
 	}
 	
 	void update()

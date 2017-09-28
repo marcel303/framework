@@ -362,7 +362,8 @@ void testXmm()
 					setColor(colorWhite);
 					setFont("calibri.ttf");
 					pushFontMode(FONT_SDF);
-					drawText(viewMid[0] + 5, viewMid[1] + 5, 20, +1, +1, "gfd %.2f",
+					drawText(viewMid[0], viewMid[1] - 7, 14, 0, 0, "- progress -");
+					drawText(viewMid[0], viewMid[1] + 7, 14, 0, 0, "%.2f",
 						recording.gestureFollower.models["a"].results.progress);
 					popFontMode();
 				}
@@ -405,8 +406,8 @@ void testXmm()
 			setColor(200, 200, 200);
 			setFont("calibri.ttf");
 			pushFontMode(FONT_SDF);
-			drawText(GFX_SX/2, GFX_SY-20, 18, 0, 0, "%s", isRecording ? "RECORDING" : "RECOGNIZING");
-			drawText(GFX_SX/2, GFX_SY-80, 18, 0, 0, "%s", isRecording ? "(n/a)" : hhmm.results.likeliest.c_str());
+			drawText(GFX_SX/2, GFX_SY-40, 12, 0, 0, "press R to switch between gersture recording and gesture recognition");
+			drawText(GFX_SX/2, GFX_SY-80, 48, 0, 0, "%s", isRecording ? "(n/a)" : hhmm.results.likeliest.c_str());
 			popFontMode();
 			
 			drawTestUi();
