@@ -74,6 +74,7 @@ struct ButtonLink
 	ButtonState * b = nullptr;
 	float d;
 	float a;
+	float introAnim = 0.f;
 };
 
 struct ButtonState
@@ -98,6 +99,7 @@ struct ButtonState
 	bool isDown = false;
 	
 	float hoverAnim = 0.f;
+	float introAnim = 0.f;
 	
 	ButtonLink links[NUM_LINKS];
 	
@@ -142,6 +144,8 @@ struct ButtonState
 		{
 			hoverAnim = std::max(hoverAnim - dt / .15f, 0.f);
 		}
+		
+		introAnim = std::min(introAnim + dt / 1.f, 1.f);
 		
 		bool clicked = false;
 		
@@ -206,6 +210,7 @@ struct ButtonState
 			gxPushMatrix();
 			{
 				gxScalef(1.f - hoverAnim, 1.f - hoverAnim, 1);
+				gxScalef(introAnim, introAnim, 1);
 				
 				hqBegin(HQ_FILLED_CIRCLES);
 				{
@@ -229,6 +234,7 @@ struct ButtonState
 			gxPushMatrix();
 			{
 				gxScalef(hoverAnim, hoverAnim, 1);
+				gxScalef(introAnim, introAnim, 1);
 				
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
@@ -357,6 +363,12 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 				bl.b = &o;
 				bl.d = ds;
 				
+				for (auto & obl : b.links)
+				{
+					if (bl.b == obl.b)
+						bl.introAnim = obl.introAnim;
+				}
+				
 				links.push_back(bl);
 			}
 			
@@ -385,6 +397,8 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 					continue;
 				
 				addSpringForce(b.x, b.y, b.links[i].b->x, b.links[i].b->y, o->hover ? 300.f : 200.f, 1.f / 1.f, ax, ay);
+				
+				b.links[i].introAnim = std::min(b.links[i].introAnim + dt / 1.f, 1.f);
 			}
 			
 			b.ax = ax;
@@ -423,7 +437,14 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 					if (b.links[i].b == nullptr)
 						continue;
 					
-					hqLine(b.x, b.y, 3.f, b.links[i].b->x, b.links[i].b->y, 0.f);
+					auto & b1 = b;
+					auto & b2 = *b.links[i].b;
+					
+					const float strokeScale = std::min(b1.introAnim, b2.introAnim) * b.links[i].introAnim;
+					
+					hqLine(
+						b1.x, b1.y, 3.f * strokeScale,
+						b2.x, b2.y, .5f * strokeScale);
 				}
 			}
 		}
@@ -779,4 +800,6 @@ void testMenu()
 		}
 		framework.endDraw();
 	} while (stop == false);
+	
+	buttonStates.clear();
 }
