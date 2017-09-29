@@ -244,7 +244,41 @@ void RealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNodeId 
 		return;
 	
 	Assert(input->isConnected());
-	input->disconnect();
+	
+	if (input->type == kVfxPlugType_Float)
+	{
+		auto dstNodeItr = vfxGraph->nodes.find(dstNodeId);
+		
+		Assert(dstNodeItr != vfxGraph->nodes.end());
+		if (dstNodeItr == vfxGraph->nodes.end())
+			return;
+		
+		auto dstNode = dstNodeItr->second;
+		
+		auto output = dstNode->tryGetOutput(dstSocketIndex);
+		
+		Assert(output != nullptr);
+		if (output == nullptr)
+			return;
+		
+		bool removed = false;
+		for (auto elemItr = input->floatArray.elems.begin(); elemItr != input->floatArray.elems.end(); )
+		{
+			if (elemItr->value == output->mem)
+			{
+				elemItr = input->floatArray.elems.erase(elemItr);
+				removed = true;
+				break;
+			}
+			
+			++elemItr;
+		}
+		Assert(removed);
+	}
+	else
+	{
+		input->disconnect();
+	}
 	
 	// todo : we should reconnect with the node socket's editor value when set here
 	
