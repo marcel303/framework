@@ -782,8 +782,16 @@ void RealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, const int
 		bool isImmediate = false;
 		
 		for (auto & i : vfxGraph->valuesToFree)
+		{
 			if (i.mem == input->mem)
 				isImmediate = true;
+			
+			for (auto & elem : input->floatArray.elems)
+				if (i.mem == elem.value)
+					isImmediate = true;
+			if (i.mem == input->floatArray.immediateValue)
+				isImmediate = true;
+		}
 		
 		if (isImmediate)
 		{
