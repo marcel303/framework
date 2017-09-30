@@ -32,6 +32,7 @@
 #include "framework.h" // todo : remove
 #include "Noise.h"
 #include <emmintrin.h>
+#include <xmmintrin.h>
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -276,6 +277,16 @@ float Wavefield1D::sample(const float x) const
 		
 		return v;
 	}
+}
+
+void * Wavefield1D::operator new(size_t size)
+{
+	return _mm_malloc(size, 32);
+}
+
+void Wavefield1D::operator delete(void * mem)
+{
+	_mm_free(mem);
 }
 
 //
@@ -592,4 +603,14 @@ void Wavefield2D::copyFrom(const Wavefield2D & other, const bool copyP, const bo
 		for (int x = 0; x < numElems; ++x)
 			memcpy(f[x], other.f[x], numElems * sizeof(double));
 	}
+}
+
+void * Wavefield2D::operator new(size_t size)
+{
+	return _mm_malloc(size, 32);
+}
+
+void Wavefield2D::operator delete(void * mem)
+{
+	_mm_free(mem);
 }

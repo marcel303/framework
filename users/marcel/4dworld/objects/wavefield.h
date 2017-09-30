@@ -28,6 +28,7 @@
 #pragma once
 
 #include "audioTypes.h"
+#include <stddef.h>
 
 struct Wavefield1D
 {
@@ -47,6 +48,9 @@ struct Wavefield1D
 	void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds);
 	
 	float sample(const float x) const;
+	
+	void * operator new(size_t size);
+	void operator delete(void * mem);
 };
 
 //
@@ -77,4 +81,7 @@ struct Wavefield2D
 	float sample(const float x, const float y) const;
 	
 	void copyFrom(const Wavefield2D & other, const bool copyP, const bool copyV, const bool copyF);
+	
+	void * operator new(size_t size);
+	void operator delete(void * mem);
 };

@@ -1714,6 +1714,9 @@ struct World : WorldInterface
 		
 		return wavefield.sample(samplePosition[0], samplePosition[1]);
 	}
+	
+	void * operator new(size_t size) { return _mm_malloc(size, 32); }
+	void operator delete(void * mem) { _mm_free(mem); }
 };
 
 //

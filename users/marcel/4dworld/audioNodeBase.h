@@ -107,6 +107,9 @@ struct AudioFloat
 	void mul(const AudioFloat & other);
 	void mulMul(const AudioFloat & other, const float gain);
 	void mulMul(const AudioFloat & other, const AudioFloat & gain);
+	
+	void * operator new(size_t size);
+	void operator delete(void * mem);
 };
 
 #if MULTIPLE_AUDIO_INPUT
@@ -449,6 +452,9 @@ struct AudioNodeBase
 		else
 			return &plug->getPcmData();
 	}
+	
+	void * operator new(size_t size);
+	void operator delete(void * mem);
 	
 	virtual void initSelf(const GraphNode & node) { }
 	virtual void init(const GraphNode & node) { }

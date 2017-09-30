@@ -350,6 +350,16 @@ void AudioFloat::mulMul(const AudioFloat & other, const AudioFloat & gain)
 	}
 }
 
+void * AudioFloat::operator new(size_t size)
+{
+	return _mm_malloc(size, 16);
+}
+
+void AudioFloat::operator delete(void * mem)
+{
+	_mm_free(mem);
+}
+
 //
 
 void AudioFloatArray::update()
@@ -578,6 +588,16 @@ void AudioNodeBase::trigger(const int outputSocketIndex)
 			}
 		}
 	}
+}
+
+void * AudioNodeBase::operator new(size_t size)
+{
+	return _mm_malloc(size, 16);
+}
+
+void AudioNodeBase::operator delete(void * mem)
+{
+	_mm_free(mem);
 }
 
 //
