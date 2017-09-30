@@ -76,7 +76,55 @@ target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT ENABLE_KINECT1=0 ENABLE_
 
 if (WIN32)
 	target_compile_definitions(avgraph PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
+	
+	# set the current working directory
+	
+	set_target_properties(avgraph PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
+	
+	# copy DLL files to the Debug and Release folders
+	
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/FreeImage.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/glew32.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/OpenAL32.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/SDL2.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/XInput9_1_0.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/win32/dll/portaudio_x86.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/win32/dll/turbojpeg.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/avcodec-57.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/avdevice-57.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/avfilter-6.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/avformat-57.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/avutil-55.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/postproc-54.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/swresample-2.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/swscale-4.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/FreeImage.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/glew32.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/OpenAL32.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/SDL2.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/XInput9_1_0.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/win32/dll/portaudio_x86.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/win32/dll/turbojpeg.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/avcodec-57.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/avdevice-57.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/avfilter-6.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/avformat-57.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/avutil-55.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/postproc-54.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/swresample-2.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/dll/swscale-4.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
 endif (WIN32)
+
+if (APPLE)
+	# copy dylib and framework files to the Debug and Release folders
+
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Deepbelief.framework DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libturbojpeg.0.dylib DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
+
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Deepbelief.framework DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libturbojpeg.0.dylib DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+endif (APPLE)
 
 target_include_directories(avgraph PRIVATE "${PROJECT_SOURCE_DIR}")
 
