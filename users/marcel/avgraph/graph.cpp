@@ -849,7 +849,11 @@ static bool selectionMod()
 
 static bool commandMod()
 {
+#ifdef WIN32
+	return keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
+#else
 	return keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI);
+#endif
 }
 
 static ParticleColor toParticleColor(const Color & color)
