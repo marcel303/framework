@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>AV Graph</title>
+		<style>
+body
+{
+	margin: 0;
+	background-color: #444;
+	color: #fff;
+
+	font-family: 'Roboto';
+	font-size: 1.0em;
+	font-weight: 100;
+	text-align: left;
+	text-rendering: optimizeLegibility;
+	line-height: 1.5em;
+}
+
+h1
+{
+	margin: 0.7em;
+}
+
+h2
+{
+	margin: 0.7em;	
+	font-style: italic;
+}
+
+p, ul
+{
+	margin: 2em;
+}
+
+table, th, td
+{
+	margin: 2em;
+	border: solid 1px #666;
+	border-collapse: collapse;
+	padding: 0.2em;
+}
+
+img.sampleImage
+{
+	width: 100%;
+	margin-bottom: 1.0em;
+}
+
+video
+{
+	#padding-bottom: 1.5em;
+}
+
+a
+{
+	color: #ddd;
+}
+
+a:hover
+{
+	color: #fff;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 100;
+  src: local('Roboto Thin'), local('Roboto-Thin'), url(roboto-100.woff), url(https://fonts.gstatic.com/s/roboto/v15/vzIUHo9z-oJ4WgkpPOtg1_esZW2xOQ-xsNqO47m55DA.woff) format('woff');
+}
+		</style>
+	</head>
+	<body>
+		<h1>AV Graph</h1>
+			<p>
+				The 'AV Graph' project is an initiative to build a reusable visual node-based editor for various backends. It runs on top of 'framework', a C++ creative coding library. Currently AV Graph ships with a visuals-oriented backend (vfxGraph and vfxNodes) and an audio synthesis backend (audioGraph and audioNodes). The intent is for it to be easily extendible with custom node types, and to be friendly towards creators by allowing the user of the library to freely hack into any part of the editor and/or the provided backends, as well as letting them write their own backends.
+			<p>
+			<ul>
+				<li><a href="#controls">Controls</a></li>
+				<li><a href="#folding-nodes">Folding nodes</a></li>
+				<li><a href="#passthrough-mode">Passthrough mode</a></li>
+				<li><a href="#duplicating-nodes">Duplicating nodes</a></li>
+				<li><a href="#resetting-viewport">Resetting the viewport</a></li>
+			</ul>
+			<p>
+				AV Graph (working title) embraces the paradigm of dataflow programming. Dataflow programming has been around for ages, and became popular in the creative fields through numerous efforts by media artists and game developers. AV Graph can be compared to environments such as Max/MSP, VVVV, Touch Designer and Blueprints. Contrary to the aforementioned environments, AV Graph makes no assumptions about the use-cases for the editor. It just provides a node-based editor and lets the user decide what to built with it. Also contrary to the aforementioned environments, AV Graph is shipped as a library on top of 'framework', and can be integrated directly into any creative coding apps created with this library, creating a new space for exploration in the field of media art.
+			</p>
+			<img src="avGraph1.png" style="width: 100%;" alt="">
+			<p>
+				AV Graph writes the graph to an XML based format. The 'Graph' object can be used to read this XML description and contains members describing the nodes and socket connections needed to instantiate the backend structure. In addition to the XML interface, AV Graph exposes a real-time editing interface. When implemented, the user's backend gets notified of changes to the graph as it gets edited. The real-time editing facility allows for real-time feedback when making changes to a graph, enabling rapid experimentation and increased creativity.
+			</p>
+			<iframe src="sampleGraph.html" style="width: 100%;"></iframe>
+			<p>
+				Below you will find some essential documentation. In case you find an error or an omission in the documentation, or if something isn't very clear to you, please don't hesitate to send me an e-mail at 'marcel303 at gmail dot com'.
+			</p>
+
+			<h2 id="controls">Controls</h2>
+			<table>
+				<tr>
+					<td style="width:15em;">Space</td><td>Toggle folding for the selected nodes.</td>
+				</tr>
+				<tr>
+					<td>Backspace or Delete</td><td>Remove the selected nodes or links.</td>
+				</tr>
+				<tr>
+					<td>Shift</td><td>(Modifier) Append or remove from selection.</td>
+				</tr>
+				<tr>
+					<td>i</td><td>Insert node.</td>
+				</tr>
+				<tr>
+					<td>Command or Control + a</td><td>Select all nodes and links.</td>
+				</tr>
+				<tr>
+					<td>A</td><td>Snap to grid.</td>
+				</tr>
+				<tr>
+					<td>Command or Control + o</td><td>Reset viewport zoom.</td>
+				</tr>
+				<tr>
+					<td>Command or Control + Shift + o</td><td>Reset viewport zoom and origin.</td>
+				</tr>
+				<tr>
+					<td>Command or Control + '+'</td><td>Zoom in.</td>
+				</tr>
+				<tr>
+					<td>Command or Control + '-'</td><td>Zoom out.</td>
+				</tr>
+				<tr>
+					<td>d</td><td>Duplicate selected nodes.</td>
+				</tr>
+				<tr>
+					<td>Command or Control + d</td><td>Duplicate selected nodes with deep copy of input values.</td>
+				</tr>
+				<tr>
+					<td>p</td><td>Switch passthrough on selected nodes.</td>
+				</tr>
+				<tr>
+					<td>Arrow keys</td><td>Move the viewport origin around.</td>
+				</tr>
+				<tr>
+					<td>Left click socket</td><td>Make a new connection from one socket to another. Compatible sockets will light up white while making the connection.</td>
+				</tr>
+				<tr>
+					<td>Right click link</td><td>Add a route point to the link between two sockets. Use this to organize your graphs.</td>
+				</tr>
+				<tr>
+					<td>Right click socket</td><td>Add a persistent visualizer for the socket input or output value.</td>
+				</tr>
+				<tr>
+					<td>Left click visualizer border</td><td>Resize visualizer.</td>
+				</tr>
+				<tr>
+					<td>Mouse hover</td><td>Hover over nodes to get a node description. Each node will display its CPU and GPU processing time. Some nodes also reveal some addition details about their internal processing.</td>
+				</tr>
+				<tr>
+					<td>Tab</td><td>Toggle graph editor visibility.</td>
+				</tr>
+				<tr>
+					<td>Control + Mouse or Right click + Mouse</td><td>Move the viewport origin around.</td>
+				</tr>
+				<tr>
+					<td>Alt + Mouse (vertical)</td><td>Change the viewport zoom level.</td>
+				</tr>
+				<tr>
+					<td>Touch pad</td><td>The graph editor supports pinch to zoom and moving the viewport around using two fingers on the touchpad.</td>
+				</tr>
+			</table>
+
+			<p>
+				Press the arrow keys to scroll the viewport around.
+
+				The viewport will also scroll around when the mouse cursor reaches the edge of the screen when dragging nodes.
+			</p>
+
+			<h2 id="folding-nodes">Folding nodes</h2>
+			<p>
+				To save workspace and create overview you may wish to fold nodes. When a node is folded its input and output sockets are hidden and the node will take up less space. To fold or unfold a node, press 'space' when the node is selected.
+			</p>
+			<img src="folded.png" class="sampleImage" alt="Ziggy-zagg.">
+
+			<h2 id="passthrough-mode">Passthrough mode</h2>
+			<p>
+				Sometimes it's useful to see what happens when a node is disabled, without actually removing it. Press 'p' to toggle passthrough mode. Not all nodes support passthrough mode, but most do. When a node in set to passthrough mode, a 'P' appears in the top-right corner of the node.
+			</p>
+			<img src="passthroughMode.png" class="sampleImage" alt="Pass the comb please.">
+
+			<h2 id="duplicating-nodes">Duplicating nodes</h2>
+			<p>
+				Nodes can be duplicated by pressing 'd'. By default, a 'shallow' copy is performed. To perform a 'deep' copy, press 'command or control + d'. This will also copy the node's input socket values.
+			</p>
+			<img src="copying.png" class="sampleImage" alt="Lot's of noise indeed.">
+
+			<h2 id="resetting-viewport">Resetting the viewport</h2>
+			<p>
+				Sometimes it's possible to get lost when moving the viewport around. In those cases it may be useful to reset the viewport. The viewport's zoom level can be reset by pressing 'command or control + o' or 'command or control + 0'. To also reset the origin, press 'command or control + shift + o' or 'command or control + shift + 0'.
+			</p>
+	</body>
+</html>
