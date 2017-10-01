@@ -45,29 +45,25 @@ static int portaudioCallback(
 	return paContinue;
 }
 
-bool PortAudioObject::isSupported(const int numInputChannels, const int numOutputChannels) const
+int PortAudioObject::findSupportedDevice(const int numInputChannels, const int numOutputChannels) const
 {
 	PaError err;
 	
 	if ((err = Pa_Initialize()) != paNoError)
 	{
 		LOG_ERR("portaudio: failed to initialize: %s", Pa_GetErrorText(err));
-		return false;
+		return paNoDevice;
 	}
 	
 	//
 	
-	bool result = false;
+	int result = paNoDevice;
 	
-	const PaDeviceIndex defaultDeviceIndex = Pa_GetDefaultOutputDevice();
+	const int numDevices = Pa_GetDeviceCount();
 	
-	if (defaultDeviceIndex == paNoDevice)
+	for (int i = 0; i < numDevices; ++i)
 	{
-		LOG_ERR("Pa_GetDefaultOutputDevice returned paNoDevice", 0);
-	}
-	else
-	{
-		const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(defaultDeviceIndex);
+		const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(i);
 		
 		if (deviceInfo == nullptr)
 		{
@@ -77,12 +73,24 @@ bool PortAudioObject::isSupported(const int numInputChannels, const int numOutpu
 		{
 			if (deviceInfo->maxInputChannels >= numInputChannels && deviceInfo->maxOutputChannels >= numOutputChannels)
 			{
-				result = true;
+				result = i;
+				
+				break;
 			}
 		}
 	}
 	
 	return result;
+}
+
+bool PortAudioObject::isSupported(const int numInputChannels, const int numOutputChannels) const
+{
+	const int deviceIndex = findSupportedDevice(numInputChannels, numOutputChannels);
+	
+	if (deviceIndex == paNoDevice)
+		return false;
+	else
+		return true;
 }
 
 bool PortAudioObject::init(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * handler)
@@ -115,26 +123,18 @@ bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannel
 	
 	LOG_DBG("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
 	
-#if 0
-	const int numDevices = Pa_GetDeviceCount();
+	const int deviceIndex = findSupportedDevice(numInputChannels, numOutputChannels);
 	
-	for (int i = 0; i < numDevices; ++i)
+	if (deviceIndex == paNoDevice)
 	{
-		const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(i);
+		LOG_ERR("portaudio: failed to find input/output device", 0);
+		return false;
 	}
-#endif
 	
 	PaStreamParameters outputParameters;
 	memset(&outputParameters, 0, sizeof(outputParameters));
 	
-	outputParameters.device = Pa_GetDefaultOutputDevice();
-	
-	if (outputParameters.device == paNoDevice)
-	{
-		LOG_ERR("portaudio: failed to find output device", 0);
-		return false;
-	}
-	
+	outputParameters.device = deviceIndex;
 	outputParameters.channelCount = numOutputChannels;
 	outputParameters.sampleFormat = paFloat32;
 	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
@@ -145,14 +145,7 @@ bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannel
 	PaStreamParameters inputParameters;
 	memset(&inputParameters, 0, sizeof(inputParameters));
 	
-	inputParameters.device = Pa_GetDefaultInputDevice();
-	
-	if (inputParameters.device == paNoDevice)
-	{
-		LOG_ERR("portaudio: failed to find input device", 0);
-		return false;
-	}
-	
+	inputParameters.device = deviceIndex;
 	inputParameters.channelCount = numInputChannels;
 	inputParameters.sampleFormat = paFloat32;
 	inputParameters.suggestedLatency = Pa_GetDeviceInfo(inputParameters.device)->defaultLowInputLatency;
