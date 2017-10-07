@@ -35,7 +35,7 @@ namespace tinyxml2
 
 struct VfxTimeline
 {
-	static const int kMaxKeys = 10;
+	static const int kMaxKeys = 1024;
 
 	struct Key
 	{
