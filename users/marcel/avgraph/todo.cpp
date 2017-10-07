@@ -14,9 +14,13 @@ top priority items from list below:
 	+ have multiply floating point connections. store float pointers in array. allocate storage for calculating sum. make update() method to update summed value
 	+ have optional remapping enabled per link. combine this with summing support. store mapping and float pointer in summed value element
 - determine how OSC send and receive nodes should function
+	- would very much like an option to 'learn' OSC event paths. perhaps double click to open custom editor and click 'learn' to let it receive a message and capture to path
+	- decouple OSC endpoints from OSC values and paths? perhaps add an OSC endpoint node which receive messages, add them to a list, let OSC value nodes iterate. add find method to OSC manager. if tick ID != last tick ID, clear old messages, receive new messages, find and return value (if any)
 - add support for custom editors to graph editor
 
 todo :
+- add scroll wheel support to zoom in or out
+- fix socket link mapping parameters UI not refreshing when selecting another link
 - add undo/redo support. just serialize/deserialize graph for every action?
 	- note : serialize/deserialize entire graph doesn't work nicely with real-time connection
 			 we will need to serialize node on remove and re-add/restore it during undo (also invoking real-time connection)
@@ -37,6 +41,8 @@ todo :
 	- like the BANG node in max
 	- add ability to trigger any input/output trigger (?)
 - investigate VVVV's ability to turn everything into vectors of values and to combine lists
+	- add channels combine method (for now?)
+	- add node where channel values can be added to a list -> allow to experiment with combine node
 - double click node to perform node-specific action
 	- add real-time editing callback for double click event
 	- open text editor for ps/vs when double clicking fsfx node
@@ -158,7 +164,9 @@ todo : UI
 	*** I think I like the lilly idea better
 
 todo : framework
-
+- add easy 3D perspective camera with manual control over input. make it easy to set matrices
+- add scoped** objects
+- add drawCube and drawSphere?
 
 
 --- ARCHIVED TODOS ---
