@@ -2,17 +2,20 @@
 <html lang="en">
 	<head>
 		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width">
 		<title>AV Graph</title>
 		<style>
 body
 {
-	margin: 0;
-	background-color: #444;
-	color: #fff;
+	background-color: #fff;
+}
 
-	font-family: 'Roboto';
+div.content
+{
+	color: #111;
+
+	font-family: sans-serif;
 	font-size: 1.0em;
-	font-weight: 100;
 	text-align: left;
 	text-rendering: optimizeLegibility;
 	line-height: 1.5em;
@@ -20,26 +23,50 @@ body
 
 h1
 {
-	margin: 0.7em;
+	margin: 0;
+	padding: 0.7em;
 }
 
 h2
 {
-	margin: 0.7em;	
+	margin: 0;
+	padding: 0.4em;	
 	font-style: italic;
 }
 
-p, ul
+p
 {
-	margin: 2em;
+	margin-top: 0.5em;
+	margin-bottom: 1em;
+	margin-left: 1.5em;
+	margin-right: 1.5em;
+	padding: 0;
 }
 
-table, th, td
+ul
 {
-	margin: 2em;
+	margin-top: 0.5em;
+	margin-bottom: 1em;
+	margin-left: 1.5em;
+	margin-right: 1em;
+}
+
+table
+{
+	margin-top: 0.5em;
+	margin-bottom: 1em;
+	margin-left: 1.5em;
+	margin-right: 1.5em;
+	padding: 0;
 	border: solid 1px #666;
 	border-collapse: collapse;
+}
+
+th, td
+{
+	margin: 0;
 	padding: 0.2em;
+	border: solid 1px #666;
 }
 
 img.sampleImage
@@ -55,27 +82,21 @@ video
 
 a
 {
-	color: #ddd;
+	color: #111;
 }
 
 a:hover
 {
-	color: #fff;
-}
-
-@font-face {
-  font-family: 'Roboto';
-  font-style: normal;
-  font-weight: 100;
-  src: local('Roboto Thin'), local('Roboto-Thin'), url(roboto-100.woff), url(https://fonts.gstatic.com/s/roboto/v15/vzIUHo9z-oJ4WgkpPOtg1_esZW2xOQ-xsNqO47m55DA.woff) format('woff');
+	color: #22f;
 }
 		</style>
 	</head>
 	<body>
-		<h1>AV Graph</h1>
+		<div class="content">
+			<h1>AV Graph</h1>
 			<p>
 				The 'AV Graph' project is an initiative to build a reusable visual node-based editor for various backends. It runs on top of 'framework', a C++ creative coding library. Currently AV Graph ships with a visuals-oriented backend (vfxGraph and vfxNodes) and an audio synthesis backend (audioGraph and audioNodes). The intent is for it to be easily extendible with custom node types, and to be friendly towards creators by allowing the user of the library to freely hack into any part of the editor and/or the provided backends, as well as letting them write their own backends.
-			<p>
+			</p>
 			<ul>
 				<li><a href="#controls">Controls</a></li>
 				<li><a href="#folding-nodes">Folding nodes</a></li>
@@ -90,7 +111,7 @@ a:hover
 			<p>
 				AV Graph writes the graph to an XML based format. The 'Graph' object can be used to read this XML description and contains members describing the nodes and socket connections needed to instantiate the backend structure. In addition to the XML interface, AV Graph exposes a real-time editing interface. When implemented, the user's backend gets notified of changes to the graph as it gets edited. The real-time editing facility allows for real-time feedback when making changes to a graph, enabling rapid experimentation and increased creativity.
 			</p>
-			<iframe src="sampleGraph.html" style="width: 100%;"></iframe>
+			<iframe src="sampleGraph.html" style="width: 100%; border: 0;"></iframe>
 			<p>
 				Below you will find some essential documentation. In case you find an error or an omission in the documentation, or if something isn't very clear to you, please don't hesitate to send me an e-mail at 'marcel303 at gmail dot com'.
 			</p>
@@ -98,7 +119,7 @@ a:hover
 			<h2 id="controls">Controls</h2>
 			<table>
 				<tr>
-					<td style="width:15em;">Space</td><td>Toggle folding for the selected nodes.</td>
+					<td style="width:40%;">Space</td><td>Toggle folding for the selected nodes.</td>
 				</tr>
 				<tr>
 					<td>Backspace or Delete</td><td>Remove the selected nodes or links.</td>
@@ -110,28 +131,28 @@ a:hover
 					<td>i</td><td>Insert node.</td>
 				</tr>
 				<tr>
-					<td>Command or Control + a</td><td>Select all nodes and links.</td>
+					<td>&#8984 + a or Control + a</td><td>Select all nodes and links.</td>
 				</tr>
 				<tr>
 					<td>A</td><td>Snap to grid.</td>
 				</tr>
 				<tr>
-					<td>Command or Control + o</td><td>Reset viewport zoom.</td>
+					<td>&#8984 + o or Control + o</td><td>Reset viewport zoom.</td>
 				</tr>
 				<tr>
-					<td>Command or Control + Shift + o</td><td>Reset viewport zoom and origin.</td>
+					<td>&#8984 + shift + o or Control + shift + o</td><td>Reset viewport zoom and origin.</td>
 				</tr>
 				<tr>
-					<td>Command or Control + '+'</td><td>Zoom in.</td>
+					<td>&#8984 + '+' or Control + '+'</td><td>Zoom in.</td>
 				</tr>
 				<tr>
-					<td>Command or Control + '-'</td><td>Zoom out.</td>
+					<td>&#8984 + '-' or Control + '-'</td><td>Zoom out.</td>
 				</tr>
 				<tr>
 					<td>d</td><td>Duplicate selected nodes.</td>
 				</tr>
 				<tr>
-					<td>Command or Control + d</td><td>Duplicate selected nodes with deep copy of input values.</td>
+					<td>&#8984 + d or Control + d</td><td>Duplicate selected nodes with deep copy of input values.</td>
 				</tr>
 				<tr>
 					<td>p</td><td>Switch passthrough on selected nodes.</td>
@@ -188,13 +209,14 @@ a:hover
 
 			<h2 id="duplicating-nodes">Duplicating nodes</h2>
 			<p>
-				Nodes can be duplicated by pressing 'd'. By default, a 'shallow' copy is performed. To perform a 'deep' copy, press 'command or control + d'. This will also copy the node's input socket values.
+				Nodes can be duplicated by pressing 'd'. By default, a 'shallow' copy is performed. To perform a 'deep' copy, press &#8984 + d or Control + d. This will also copy the node's input socket values.
 			</p>
 			<img src="copying.png" class="sampleImage" alt="Lot's of noise indeed.">
 
 			<h2 id="resetting-viewport">Resetting the viewport</h2>
 			<p>
-				Sometimes it's possible to get lost when moving the viewport around. In those cases it may be useful to reset the viewport. The viewport's zoom level can be reset by pressing 'command or control + o' or 'command or control + 0'. To also reset the origin, press 'command or control + shift + o' or 'command or control + shift + 0'.
+				Sometimes it's possible to get lost when moving the viewport around. In those cases it may be useful to reset the viewport. The viewport's zoom level can be reset by pressing &#8984 + o or Control + o or &#8984 + 0 or Control + 0. To also resets the origin, press &#8984 + shift + o or Control + shift + o or &#8984 + shift + 0 or Control + shift + 0.
 			</p>
+		</div>
 	</body>
 </html>

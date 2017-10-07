@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width">
+		<title>Vfx Graph</title>
+		<style>
+body
+{
+	background-color: #fff;
+}
+
+div.content
+{
+	color: #111;
+
+	font-family: sans-serif;
+	font-size: 1.0em;
+	text-align: left;
+	text-rendering: optimizeLegibility;
+	line-height: 1.5em;
+}
+
+h1
+{
+	margin: 0;
+	padding: 0.7em;
+}
+
+h2
+{
+	margin: 0;
+	padding: 0.4em;	
+	font-style: italic;
+}
+
+h3
+{
+	margin: 0;
+	padding: 0.7em;
+}
+
+p
+{
+	margin-top: 0.5em;
+	margin-bottom: 1em;
+	margin-left: 1.5em;
+	margin-right: 1.5em;
+	padding: 0;
+}
+
+ul
+{
+	margin-top: 0.5em;
+	margin-bottom: 1em;
+	margin-left: 1.5em;
+	margin-right: 1em;
+}
+
+table
+{
+	margin-top: 0.5em;
+	margin-bottom: 1em;
+	margin-left: 1.5em;
+	margin-right: 1.5em;
+	padding: 0;
+	border: solid 1px #666;
+	border-collapse: collapse;
+}
+
+th, td
+{
+	margin: 0;
+	padding: 0.2em;
+	border: solid 1px #666;
+}
+
+img.sampleImage
+{
+	width: 100%;
+	margin-bottom: 1.0em;
+}
+
+video
+{
+	#padding-bottom: 1.5em;
+}
+
+a
+{
+	color: #111;
+}
+
+a:hover
+{
+	color: #22f;
+}
+		</style>
+	</head>
+	<body>
+		<div class="content">
+			<h1>Vfx Graph</h1>
+			<p>
+				'Vfx Graph' is an implementation of a node-based representation for generating visuals. It includes a VfxGraph structure and many VfxNode type implementations. It comes with a real-time editing interface for use with 'AV Graph'. The AV Graph node-based editor coupled with Vfx Graph create together a real-time synthesis environment for creating visuals. Vfx Graph is the result of a personal on-going process of explorations and collaborations with media artists and a desire to create a powerful tool for creative coders to use in their practice. A primary focus for Vfx Graph and the AV Graph project in general is to let coders harness the power of the data flow paradigm directly in their apps. As such, Vfx Graph is designed in such a way the coder has full control over when and how to create graphs from within their apps. Another focus for Vfx Graph is the attention being paid to the performance and quality of the implementations of both the various algortihms it encapsulates and drawing the visuals.
+			</p>
+			<ul>
+				<li><a href="#nodes-and-sockets">Nodes and sockets</a></li>
+				<li><a href="#images">Images</a></li>
+				<li><a href="#channels">Channels</a></li>
+				<li><a href="#common-nodes">Common node types</a></li>
+				<li><a href="#creating-nodes">Creating your own nodes</a></li>
+				<li><a href="#speed-considerations">Speed considerations</a></li>
+				<li><a href="#hacking">Hacking Vfx Graph</a></li>
+			</ul>
+
+			<h2 id="nodes-and-sockets">Nodes and sockets</h2>
+			<p>
+				Vfx Graph defines many node types representing the basic ingredients for making visuals. Broadly speaking, nodes can be categorized as either math, logic, media, drawing, vision or communication types. Examples of math nodes are nodes which perform basic operations like adding two numbers together or oscillator nodes such as the sinewave, sawtooth or triangle generators. Examples of logic nodes are the sample and hold node and the various trigger nodes. Media is represented primarily by the picture and video nodes. The drawing subset contains various nodes for drawing primitives, working with surfaces and running shaders. Vision nodes encapsulate algorithms to perform for instance dot detection within images. Finally, communication is handled by event nodes to communicate with C++ and OSC send and receive nodes to communicate with external processes and apps.
+			</p>
+			<p>
+				In addition to the various node types, Vfx Graph defines a few types which can be used to connect input to output sockets. These types are:
+			</p>
+			<ul>
+				<li>bool</li>
+				<li>int</li>
+				<li>float</li>
+				<li>string</li>
+				<li>color</li>
+				<li>trigger</li>
+				<li>image</li>
+				<li>image_cpu</li>
+				<li>channels</li>
+				<li>any</li>
+			</ul>
+			<p>
+				The bool, int, float, string and color types pretty much speak for themselves. The trigger type is used to connect a node generating events to nodes reacting to events. Examples of trigger inputs are play!, pause! and resume! on the sound node and switch! on the logic.switch node. Examples of trigger outputs are the event! and beat! triggers on a timeline node and wentUp! and wentDown! on a trigger.treshold node.
+			</p>
+			<p>
+				The image type represents a GPU-accessible image (a texture) and is output by the picture, video, image.downsample and various other nodes.
+			</p>
+			<p>
+				The image_cpu type represents a CPU-accessible image (a bitmap) and is output by the picture.cpu, video, spectrum.1d, spectrum.2d and various other nodes.
+			</p>
+			<p>
+				The channels type represents one or more arrays of floating point data. The channels type is used to share for instance the results of the dot detector (x, y, radius) and pointcloud (x, y, z) nodes.
+			</p>
+
+			<h2 id="images">Images</h2>
+			<p>
+				One of the basic building blocks for making visuals are, of course, images. Images may come from a variety of sources: they can be static images, loaded from for instance jpegs or pngs. They can be still from a video, streamed from a mpeg or mp4 file. They can also be captured in real-time using a webcam or kinect sensor.
+			</p>
+			<p>
+				Vfx Graph defines two types of images:
+				<ul>
+					<li>CPU-accessible images.</li>
+					<li>GPU-accessible images.</li>
+				</ul>
+
+				The distinction between these two types of images is made for performance reasons. CPU-accessible images are ideal for use in visions algorithms or other tasks which require the CPU to access its pixels. GPU-accessible images are suited for drawing and access from within shaders.
+			</p>
+			<p>
+				For vision algorithms its enticing to use video or real-time capture data as input. Nodes which output images suchs as the video and webcam nodes, will typically expose both a CPU-accessible image output as well as a GPU-accessible output.
+			</p>
+			<p>
+				The flow of data is considered one-way between CPU and GPU. Data is processed and streamed from the CPU to the GPU, which in turn will process pixels and run shaders and output its results to the screen. To stream CPU-accessible images to the GPU, the image.toGpu node is to be used. The flow back from the GPU to the CPU is explicitly denied for now, as it typically causes the GPU to stall and the frame rate to drop significantly.
+			</p>
+
+			<h2 id="channels">Channels</h2>
+			<p>
+			</p>
+
+			<h2 id="common-nodes">Common node types</h2>
+			todo : rename this section to nodes to explore and list only a few interesting nodes
+			<h3>Channels</h3>
+			<p>
+				channels.merge
+				channel.select
+				channel.slice
+				channel.swizzle
+				channel.toGpu
+				channels.fromFile
+			</p>
+
+			<h3>Math and numbers</h3>
+			<p>
+				sample.delay
+				impulse.response
+				map.ease
+				map.range
+				math.add, math.sub, math.mul, math.sin, math.cos, math.abs, math.min, math.max, math.saturate, math.negate, math.sqrt, math.pow, math.exp, math.mod, math.fract, math.floor, math.ceil, math.round, math.sign, math.hypot, math.pitch, math.semiton
+			</p>
+
+			<h3>Oscillators</h3>
+			<p>
+				noise.simplex2d
+				osc.sine, osc.saw, osc.square, osc.triangle, osc.random
+				physical.mover
+				physical.spring
+			</p>
+
+			<h3>Logic</h3>
+			<p>
+				logic.switch
+				sampleAndHold
+				timeline
+				trigger.onchange
+				trigger.timer
+				trigger.treshold
+			</p>
+
+			<h3>Drawing</h3>
+			<p>
+				color
+				display
+				draw.primitive
+				fsfx
+				surface
+				transform.2d
+				image.downsample
+				image.scale
+			</p>
+
+			<h3>Image sources</h3>
+			<p>
+				picture
+				picture.cpu
+				video
+				webcam
+			</p>
+
+			<h3>Vision and image operations</h3>
+			<p>
+				deepbelief
+				images.dots
+				image.dotTracker
+				image_cpu.crop
+				image_cpu.delay
+				image_cpu.downsample
+				image_cpu.equalize
+				image.toGpu
+				pointcloud
+				spectrum.1d
+				spectrum.2d
+				yuvToRgb
+			</p>
+
+			<h3>Sensors and actuators</h3>
+			<p>
+				kinect1
+				kinect2
+				leap
+				mouse
+				osc.receive
+				osc.send
+				touches
+				xinput
+			</p>
+
+			<h2 id="creating-nodes">Creating your own nodes</h2>
+			<p>
+				VfxNodeBase
+				VFX_NODE_TYPE
+				VFX_ENUM_TYPE
+			</p>
+
+			<h2 id="speed-considerations">Speed considerations</h2>
+			<p>
+			</p>
+
+			<h2 id="hacking">Hacking Vfx Graph</h2>
+			<p>
+			</p>
+		</div>
+	</body>
+</html>
