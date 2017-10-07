@@ -71,6 +71,7 @@ VFX_NODE_TYPE(osc_random, VfxNodeOscRandom)
 {
 	typeName = "osc.random";
 	in("frequency", "float", "1");
+	in("next!", "trigger");
 	out("value", "float");
 	
 }
@@ -274,10 +275,16 @@ VfxNodeOscRandom::VfxNodeOscRandom()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Frequency, kVfxPlugType_Float);
+	addInput(kInput_Next, kVfxPlugType_Trigger);
 	addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
 	
 	//
 	
+	outputValue = random(0.f, 1.f);
+}
+
+void VfxNodeOscRandom::next()
+{
 	outputValue = random(0.f, 1.f);
 }
 
@@ -291,8 +298,16 @@ void VfxNodeOscRandom::tick(const float dt)
 	
 	if (phase > 1.f)
 	{
-		outputValue = random(0.f, 1.f);
+		next();
 		
 		phase = std::fmodf(phase, 1.f);
+	}
+}
+
+void VfxNodeOscRandom::handleTrigger(const int socketIndex)
+{
+	if (socketIndex == kInput_Next)
+	{
+		next();
 	}
 }

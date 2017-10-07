@@ -166,6 +166,7 @@ struct VfxNodeOscRandom : VfxNodeBase
 	enum Input
 	{
 		kInput_Frequency,
+		kInput_Next,
 		kInput_COUNT
 	};
 	
@@ -181,5 +182,8 @@ struct VfxNodeOscRandom : VfxNodeBase
 	
 	VfxNodeOscRandom();
 	
+	void next();
+	
 	virtual void tick(const float dt) override;
+	virtual void handleTrigger(const int socketIndex) override;
 };
