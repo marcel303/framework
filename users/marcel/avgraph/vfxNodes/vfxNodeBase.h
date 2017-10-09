@@ -37,6 +37,7 @@
 
 #define EXTENDED_INPUTS 1
 
+struct GraphEdit_ResourceEditorBase;
 struct GraphEdit_TypeDefinitionLibrary;
 struct GraphNode;
 class Surface;
@@ -763,7 +764,9 @@ struct VfxNodeTypeRegistration
 	
 	VfxNodeTypeRegistration * next;
 	
-	VfxNodeBase* (*create)();
+	VfxNodeBase * (*create)();
+	
+	GraphEdit_ResourceEditorBase * (*createResourceEditor)();
 	
 	std::string typeName;
 	std::string displayName;

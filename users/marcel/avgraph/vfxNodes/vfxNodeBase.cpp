@@ -865,6 +865,7 @@ VfxNodeTypeRegistration::VfxNodeTypeRegistration()
 	, typeName()
 	, inputs()
 	, outputs()
+	, createResourceEditor(nullptr)
 {
 	next = g_vfxNodeTypeRegistrationList;
 	g_vfxNodeTypeRegistrationList = this;
@@ -953,6 +954,8 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 			
 			typeDefinition.outputSockets.push_back(outputSocket);
 		}
+		
+		typeDefinition.resourceEditor.create = registration->createResourceEditor;
 		
 		typeDefinition.createUi();
 		
