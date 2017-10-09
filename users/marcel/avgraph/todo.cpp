@@ -4,7 +4,7 @@ top priority items from list below:
 + add channels visualizer
 + add node description callback
 + add buffer type and channels.toGpu node
-- add timeline node
++ add timeline node
 + add OSC history to node description
 - add buttons that can trigger inputs
 - port compose shader from 4dworld to avgraph. fix graph editor fade when idle
@@ -19,14 +19,15 @@ top priority items from list below:
 - add support for custom editors to graph editor
 
 todo :
-- add scroll wheel support to zoom in or out
-- fix socket link mapping parameters UI not refreshing when selecting another link
+- add draw.image node. let the user control sizing (similar to object-fit in html)
++ add scroll wheel support to zoom in or out
++ fix socket link mapping parameters UI not refreshing when selecting another link
 - add undo/redo support. just serialize/deserialize graph for every action?
 	- note : serialize/deserialize entire graph doesn't work nicely with real-time connection
 			 we will need to serialize node on remove and re-add/restore it during undo (also invoking real-time connection)
 			 same for links and all other actions. we need to perform the opposite action on undo
 - add ability to randomize input values
-- add drag and drop support string literals
+# add drag and drop support string literals
 - add suggestion based purely on matching first part of string (no fuzzy string comparison)
 	- order of listing should be : pure matches, fuzzy matches, history. show history once type name text box is made active
 	- clear type name text box when adding node
@@ -44,10 +45,13 @@ todo :
 	- add channels combine method (for now?)
 	- add node where channel values can be added to a list -> allow to experiment with combine node
 - double click node to perform node-specific action
-	- add real-time editing callback for double click event
+	# add real-time editing callback for double click event
+		+ add an editor callback to the node type definition instead. the graph editor should be fully functional without real-time editing interface and an implementation running in the backgroup, meaning resource editing should work regardless of real-time interface
 	- open text editor for ps/vs when double clicking fsfx node
-	- open container when double clicking container node
 - add sub-graph container node. to help organize complex graphs
+	- open container when double clicking container node
+	- determine how to save nodes hierarchically contained
+	- the inputs and outputs of the container node and how it all works should all be implementation-defined I think
 - add mouse cursor to user interface
 + make nodes use rounded rectangles
 - make links use bezier curves
@@ -67,13 +71,13 @@ todo :
 - add new node type selection memu. make it a pop-over ?
 - fix issue where freeing texture here can result in issues when drawing visualizer. tick of visualizer should always happen after cpuToGpu tick, but there's no link connecting visualizer to the node it references, so tick order is undefined .. ! -> maybe update visualizer in draw. or never capture references (to textures ID's or whatever) in visualizer. only let it copy values by value (as needed for graph) but capture everything else on draw
 - add ability to add node between nodes ?
-- add ability to route connections
++ add ability to route connections
 	+ add route point editing
-	- save/load route points
+	+ save/load route points
 - add third 'node minification' option: show only active inputs and outputs
 	so we have three options then: show everything, show only active i/o and fully collapsed
 - add ability to reference nodes? makes graph organization more easy
-- add ability to store resource data in nodes, so nodes can persist their own data when editing
++ add ability to store resource data in nodes, so nodes can persist their own data when editing
 - add node editors. when double clicking a node (or some other gesture/interaction), show the node editor. let the node editor operate on the node's data.
 	- let the node editor be independent of the implementation ? it should be possible to have a fully functional graph, graph node and resource editing environment without a live version of the graph running in the background. this means the saveBegin real-time editing callback should be removed again once we got this working
 
