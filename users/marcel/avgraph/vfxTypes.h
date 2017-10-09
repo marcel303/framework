@@ -40,7 +40,7 @@ struct VfxTimeline
 	struct Key
 	{
 		float beat;
-		int id;
+		float value;
 
 		Key();
 
@@ -83,4 +83,16 @@ struct VfxSwizzle
 
 	void reset();
 	bool parse(const char * text);
+};
+
+struct VfxOscPath
+{
+	static const int kMaxPath = 256;
+	
+	char path[kMaxPath];
+	
+	VfxOscPath();
+	
+	void save(tinyxml2::XMLPrinter * printer);
+	void load(tinyxml2::XMLElement * elem);
 };

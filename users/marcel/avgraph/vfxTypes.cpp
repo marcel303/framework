@@ -26,6 +26,7 @@
 */
 
 #include "Parse.h"
+#include "StringEx.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
 #include "vfxTypes.h"
@@ -38,8 +39,8 @@ using namespace tinyxml2;
 extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
 VfxTimeline::Key::Key()
-	: beat(0.0)
-	, id(0)
+	: beat(0.f)
+	, value(0.f)
 {
 }
 
@@ -138,7 +139,7 @@ void VfxTimeline::save(XMLPrinter * printer)
 		printer->OpenElement("key");
 		{
 			printer->PushAttribute("beat", keys[i].beat);
-			printer->PushAttribute("id", keys[i].id);
+			printer->PushAttribute("value", keys[i].value);
 		}
 		printer->CloseElement();
 	}
@@ -163,7 +164,7 @@ void VfxTimeline::load(XMLElement * elem)
 		if (allocKey(key))
 		{
 			key->beat = floatAttrib(keyElem, "beat", 0.f);
-			key->id = intAttrib(keyElem, "id", 0);
+			key->value = floatAttrib(keyElem, "value", 0.f);
 		}
 		else
 		{
@@ -232,3 +233,19 @@ bool VfxSwizzle::parse(const char * text)
 	return result;
 }
 
+//
+
+VfxOscPath::VfxOscPath()
+{
+	path[0] = 0;
+}
+
+void VfxOscPath::save(tinyxml2::XMLPrinter * printer)
+{
+	printer->PushAttribute("path", path);
+}
+
+void VfxOscPath::load(tinyxml2::XMLElement * elem)
+{
+	strcpy_s(path, sizeof(path), stringAttrib(elem, "path", ""));
+}
