@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width">
+		<title>Audio Graph</title>
+		<style>
+body
+{
+	background-color: #fff;
+}
+
+div.content
+{
+	color: #111;
+
+	font-family: sans-serif;
+	font-size: 1.0em;
+	text-align: left;
+	text-rendering: optimizeLegibility;
+	line-height: 1.5em;
+}
+
+h1
+{
+	margin: 0;
+	padding: 0.7em;
+}
+
+h2
+{
+	margin: 0;
+	padding: 0.4em;	
+	font-style: italic;
+}
+
+h3
+{
+	margin: 0;
+	padding: 0.7em;
+}
+
+p
+{
+	margin-top: 0.5em;
+	margin-bottom: 1em;
+	margin-left: 1.5em;
+	margin-right: 1.5em;
+	padding: 0;
+}
+
+ul
+{
+	margin-top: 0.5em;
+	margin-bottom: 1em;
+	margin-left: 1.5em;
+	margin-right: 1em;
+}
+
+table
+{
+	margin-top: 0.5em;
+	margin-bottom: 1em;
+	margin-left: 1.5em;
+	margin-right: 1.5em;
+	padding: 0;
+	border: solid 1px #666;
+	border-collapse: collapse;
+}
+
+th, td
+{
+	margin: 0;
+	padding: 0.2em;
+	border: solid 1px #666;
+}
+
+img.sampleImage
+{
+	width: 100%;
+	margin-bottom: 1.0em;
+}
+
+video
+{
+	#padding-bottom: 1.5em;
+}
+
+a
+{
+	color: #111;
+}
+
+a:hover
+{
+	color: #22f;
+}
+		</style>
+	</head>
+	<body>
+		<div class="content">
+			<h1>Audio Graph</h1>
+			<p>
+				'Audio Graph' is an implementation of a node-based system for making synthesized sound. It includes the AudioGraph data structure and many AudioNode type implementations. It comes with a real-time editing interface for use with 'AV Graph'. Together, the AV Graph editor and Audio Graph create a real-time synthesis environment for sound. Audio Graph is the result of a personal on-going process of explorations and collaborations with media artists and a desire to create a powerful tool for creative coders for use in their practice. A primary focus for Audio Graph and the AV Graph project in general is to let coders harness the power of the data flow paradigm directly from within their apps. As such, Audio Graph is designed in a way that the coder has full control over when and how graphs are used and instanced.
+			</p>
+			<ul>
+				<li><a href="#nodes-and-sockets">Nodes and sockets</a></li>
+				<li><a href="#audio-floats">Audio Floats</a></li>
+				<li><a href="#common-nodes">Common node types</a></li>
+				<li><a href="#creating-nodes">Creating your own nodes</a></li>
+				<li><a href="#speed-considerations">Speed considerations</a></li>
+			</ul>
+			<img src="audioGraph1.png" style="width: 100%;" alt="">
+
+			<h2 id="voices">Voices</h2>
+			<p>
+				For outputting sound, Audio Graph comes along with a 'voice manager' and a 'voice' node. It's the voice manager's responsibility to allocate voices from a limited pool of channels and to mix sounds across channels. On a typical stereo setup, the number of channels is fixed at two. Audio Graph however allows any type of channel and speaker configuration. Voices can be output as mono, mapped to all speakers, output to a specific channel, or dynamically allocated from any of the available channels. The voice manager respects the voice node's wish to be output to the left or right (named) channel, to output to all channels, or to be output on a specific channel. This ability makes it possible to render sound as mono, stereo, or a custom setup for multi-speaker installations.
+			</p>
+			<p>
+				Audio Graph was used at 4DSOUND to create a spatial sound design where individual sound objects moved through space, emitting sounds which were spatialized and mapped to speakers on the 4DSOUND system's speaker grid.
+			</p>
+
+			<h2 id="nodes-and-sockets">Nodes and sockets</h2>
+			<p>
+				Audio Graph defines a number of basic node types and a limited number of DSP and instrument nodes. Audio Graph is designed in such a way it's easy to add new nodes and make them work efficiently. Since audio synthesis usually happens in a real-time context, the system is designed to prevent run-time memory allocations, and to prefer optimized 'scalar' (control rate) type operations when possible. Audio Graph includes real-time visualisation of the synthesized PCM wave forms and statistics telling you how much of your CPU-budget is spent processing each node. Additional nodes exist to interface with C++. Nodes such as mems and memf allow one to push strings and floating point values to the graph.
+			</p>
+			<img src="audioNodesAndSockets.png" style="width: 100%;" alt="">
+			<p>
+				In addition to the various node types, Audio Graph defines a few types which can be used to connect input to output sockets. These types are:
+			</p>
+			<ul>
+				<li>float</li>
+				<li>audioFloat</li>
+				<li>trigger</li>
+				<li>any</li>
+			</ul>
+			<p>
+				The float type pretty much speaks for itself. The trigger type is used to connect a node generating events to nodes reacting to events. The audioFloat type is used for floating point data, which could either be output at control rate (scalar audio float) or sample rate (vector audio float). Internally, audio nodes are optimized to recognize scalar audio floats and to perform optimized calculations where possible. The any type basically allows any type of input or output to connect to the socket.
+			</p>
+
+			<h2 id="audio-floats">Audio Floats</h2>
+			<p>
+				Different from control rate (kr) and audio rate (ar) found typically in audio synthesis software.
+			</p>
+			<img src="audioVisualizer.png" style="width: 100%;" alt="">
+
+			<h2 id="common-nodes">Common node types</h2>
+			<h3>Math and numbers</h3>
+			<p>
+				math
+			</p>
+
+			<h3>Oscillators</h3>
+			<p>
+				osc
+			</p>
+
+			<h3>Logic</h3>
+			<p>
+				logic.switch
+			</p>
+
+			<h3>Audio input and output</h3>
+			<p>
+			</p>
+
+			<h3>DSP and instruments</h3>
+			<p>
+				filter.comb
+				wavefield.1d
+				wavefield.2d
+			</p>
+			<img src="audioDsp1.png" style="width: 100%;" alt="">
+
+			<h2 id="creating-nodes">Creating your own nodes</h2>
+			<p>
+				AudioNodeBase
+				AUDIO_NODE_TYPE
+				AUDIO_ENUM_TYPE
+			</p>
+
+			<h2 id="speed-considerations">Speed considerations</h2>
+			<p>
+			</p>
+		</div>
+	</body>
+</html>
