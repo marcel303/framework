@@ -82,6 +82,11 @@ struct UiMenu
 	{
 		return elems[name];
 	}
+	
+	void reset()
+	{
+		elems.clear();
+	}
 };
 
 struct UiState
@@ -131,6 +136,7 @@ void makeActive(UiState * state, const bool doActions, const bool doDraw);
 
 void pushMenu(const char * name, const int width = 0);
 void popMenu();
+void resetMenu();
 
 //
 

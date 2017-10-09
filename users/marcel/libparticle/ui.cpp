@@ -444,6 +444,11 @@ void popMenu()
 	}
 }
 
+void resetMenu()
+{
+	g_menu->reset();
+}
+
 //
 
 bool doButton(const char * name, const float xOffset, const float xScale, const bool lineBreak)
