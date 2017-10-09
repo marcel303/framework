@@ -40,8 +40,8 @@ VFX_NODE_TYPE(color, VfxNodeColor)
 	
 	inEnum("mode", "colorMode");
 	in("X", "float");
-	in("Y", "float");
-	in("Z", "float");
+	in("Y", "float", "1");
+	in("Z", "float", "0.5");
 	in("opacity", "float", "1");
 	in("inversion", "float");
 	out("color", "color");
@@ -68,7 +68,7 @@ void VfxNodeColor::tick(const float dt)
 	const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
 	const float x = getInputFloat(kInput_X, 0.f);
 	const float y = getInputFloat(kInput_Y, 1.f);
-	const float z = getInputFloat(kInput_Z, 0.5f);
+	const float z = getInputFloat(kInput_Z, .5f);
 	const float opacity = getInputFloat(kInput_Opacity, 1.f);
 	const float inversion = getInputFloat(kInput_Inversion, 0.f);
 	
