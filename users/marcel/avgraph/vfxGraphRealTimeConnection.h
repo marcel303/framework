@@ -78,8 +78,6 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual bool getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines) override;
 	
-	virtual bool doEditor(std::string & valueText, const std::string & name, const std::string & defaultValue, const bool doActions, const bool doDraw, const float dt) override;
-	
 	virtual int nodeIsActive(const GraphNodeId nodeId) override;
 	virtual int linkIsActive(const GraphLinkId linkId) override;
 	
