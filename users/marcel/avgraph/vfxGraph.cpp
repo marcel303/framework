@@ -604,6 +604,17 @@ bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const 
 			
 			resource = timeline;
 		}
+		else if (strcmp(type, "osc.path") == 0)
+		{
+			auto path = new VfxOscPath();
+			
+			if (hasXml)
+			{
+				path->load(d.RootElement());
+			}
+			
+			resource = path;
+		}
 		
 		//
 		
