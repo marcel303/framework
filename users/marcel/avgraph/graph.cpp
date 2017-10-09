@@ -614,6 +614,21 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 			}
 		}
 		
+		const XMLElement * xmlEditor = xmlLink->FirstChildElement("editor");
+		
+		if (xmlEditor != nullptr)
+		{
+			for (const XMLElement * xmlRoutePoint = xmlEditor->FirstChildElement("routePoint"); xmlRoutePoint != nullptr; xmlRoutePoint = xmlRoutePoint->NextSiblingElement("routePoint"))
+			{
+				GraphLinkRoutePoint routePoint;
+				routePoint.linkId = link.id;
+				routePoint.x = floatAttrib(xmlRoutePoint, "x", 0.f);
+				routePoint.y = floatAttrib(xmlRoutePoint, "y", 0.f);
+				
+				link.editorRoutePoints.push_back(routePoint);
+			}
+		}
+		
 		addLink(link, false);
 		
 		nextLinkId = std::max(nextLinkId, link.id + 1);
@@ -826,6 +841,26 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 				{
 					xmlGraph.PushAttribute("name", name.c_str());
 					xmlGraph.PushAttribute("value", value.c_str());
+				}
+				xmlGraph.CloseElement();
+			}
+			
+			if (link.editorRoutePoints.empty() == false)
+			{
+				xmlGraph.OpenElement("editor");
+				{
+					if (link.editorRoutePoints.empty() == false)
+					{
+						for (auto & routePoint : link.editorRoutePoints)
+						{
+							xmlGraph.OpenElement("routePoint");
+							{
+								xmlGraph.PushAttribute("x", routePoint.x);
+								xmlGraph.PushAttribute("y", routePoint.y);
+							}
+							xmlGraph.CloseElement();
+						}
+					}
 				}
 				xmlGraph.CloseElement();
 			}
@@ -1961,8 +1996,9 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, documentInfo()
 	, editorOptions()
 	, propertyEditor(nullptr)
+	, linkParamsEditorLinkId(kGraphLinkIdInvalid)
 	, nodeTypeNameSelect(nullptr)
-	, nodeEditor()
+	, nodeResourceEditor()
 	, uiState(nullptr)
 	, cursorHand(nullptr)
 	, idleTime(0.f)
@@ -2412,9 +2448,9 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 	
 	bool inputIsCaptured = _inputIsCaptured;
 	
-	if (nodeEditor.editor != nullptr)
+	if (nodeResourceEditor.resourceEditor != nullptr)
 	{
-		inputIsCaptured |= nodeEditor.editor->tick(dt, inputIsCaptured);
+		inputIsCaptured |= nodeResourceEditor.resourceEditor->tick(dt, inputIsCaptured);
 	}
 	
 	inputIsCaptured |= (state != kState_Idle);
@@ -2595,10 +2631,11 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							{
 								nodeDoubleClickTime = 0.f;
 								
-								nodeEditBegin(hitTestResult.node->id);
-								
-								state = kState_NodeEdit;
-								break;
+								if (nodeResourceEditBegin(hitTestResult.node->id))
+								{
+									state = kState_NodeResourceEdit;
+									break;
+								}
 							}
 							else
 							{
@@ -2738,6 +2775,20 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						dragAndZoom.desiredFocusX = 0.f;
 						dragAndZoom.desiredFocusY = 0.f;
 					}
+				}
+			}
+			
+			for (auto & e : framework.events)
+			{
+				// todo : add mouse wheel to framework mouse class
+				
+				if (e.type == SDL_MOUSEWHEEL)
+				{
+					const int amount = e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
+					
+					const float magnitude = std::powf(1.1f, amount);
+					
+					dragAndZoom.desiredZoom *= magnitude;
 				}
 			}
 			
@@ -2968,7 +3019,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				}
 			}
 			
-			if (keyboard.wentDown(SDLK_BACKSPACE))
+			if (keyboard.wentDown(SDLK_BACKSPACE) || keyboard.wentDown(SDLK_DELETE))
 			{
 				auto nodesToRemove = selectedNodes;
 				for (auto nodeId : nodesToRemove)
@@ -3034,7 +3085,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			// drag and zoom
 			
-			if (keyboard.isDown(SDLK_LCTRL) || mouse.isDown(BUTTON_RIGHT))
+			if (keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL) || mouse.isDown(BUTTON_RIGHT))
 			{
 				dragAndZoom.focusX -= mouse.dx / std::max(1.f, dragAndZoom.zoom);
 				dragAndZoom.focusY -= mouse.dy / std::max(1.f, dragAndZoom.zoom);
@@ -3042,7 +3093,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				dragAndZoom.desiredFocusY = dragAndZoom.focusY;
 			}
 			
-			if (keyboard.isDown(SDLK_LALT))
+			if (keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT))
 			{
 				dragAndZoom.desiredZoom += mouse.dy / 200.f * (std::abs(dragAndZoom.zoom) + .5f);
 				dragAndZoom.zoom = dragAndZoom.desiredZoom;
@@ -3159,11 +3210,11 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		}
 		break;
 		
-	case kState_NodeEdit:
+	case kState_NodeResourceEdit:
 		{
 			if (mouse.wentDown(BUTTON_RIGHT))
 			{
-				nodeEditEnd();
+				nodeResourceEditEnd();
 				
 				state = kState_Idle;
 				break;
@@ -3717,85 +3768,9 @@ void GraphEdit::nodeDragEnd()
 	nodeDrag = NodeDrag();
 }
 
-// todo : remove test node editor and add a mechanism to create node specific node editors
-struct TestNodeEditor : GraphEdit_NodeEditorBase
+bool GraphEdit::nodeResourceEditBegin(const GraphNodeId nodeId)
 {
-	mutable UiState state;
-	
-	float value;
-	
-	TestNodeEditor()
-		: state()
-		, value(0.f)
-	{
-		state.sx = 300;
-		state.opacity = 1.f;
-	}
-	
-	void doUi(const bool doActions, const bool doDraw, const float dt)
-	{
-		makeActive(&state, doActions, doDraw);
-		
-		pushMenu("editor");
-		{
-			if (doButton("randomize"))
-			{
-				value = random(0.f, 1.f);
-			}
-			
-			auto text = String::FormatC("value: %.2f", value);
-			
-			doLabel(text.c_str(), 0.f);
-		}
-		popMenu();
-	}
-	
-	virtual void getSize(int & sx, int & sy) const override
-	{
-		sx = state.sx;
-		sy = 50;
-	}
-	
-	virtual void setPosition(const int x, const int y) override
-	{
-		state.x = x;
-		state.y = y;
-	}
-	
-	virtual bool tick(const float dt, const bool inputIsCaptured) override
-	{
-		doUi(true, false, dt);
-		
-		return state.activeElem != nullptr;
-	}
-	
-	virtual void draw() const override
-	{
-		const_cast<TestNodeEditor*>(this)->doUi(false, true, 0.f);
-	}
-	
-	virtual void setResource(const GraphNode & node, const char * type, const char * name, const char * text) override
-	{
-		value = Parse::Float(text);
-	}
-	
-	virtual bool serializeResource(std::string & text) const override
-	{
-		text = String::FormatC("%f", value);
-		
-		return true;
-	}
-};
-
-#define TEST_TIMELINE_EDITOR 1
-
-#if TEST_TIMELINE_EDITOR
-	#include "editor_vfxTimeline.h"
-#endif
-
-void GraphEdit::nodeEditBegin(const GraphNodeId nodeId)
-{
-	nodeEditEnd();
+	nodeResourceEditEnd();
 	
 	//
 	
@@ -3817,74 +3792,63 @@ void GraphEdit::nodeEditBegin(const GraphNodeId nodeId)
 			
 			if (resourceTypeName.empty() == false)
 			{
-				nodeEditor.nodeId = nodeId;
-				nodeEditor.resourceTypeName = resourceTypeName;
-			#if TEST_TIMELINE_EDITOR
-				if (resourceTypeName == "timeline")
-					nodeEditor.editor = new Editor_VfxTimeline();
-			#else
-				nodeEditor.editor = new TestNodeEditor();
-			#endif
+				nodeResourceEditor.nodeId = nodeId;
+				nodeResourceEditor.resourceTypeName = resourceTypeName;
+				if (typeDefinition->resourceEditor.create != nullptr)
+					nodeResourceEditor.resourceEditor = typeDefinition->resourceEditor.create();
 				
-				Assert(nodeEditor.editor != nullptr);
-				if (nodeEditor.editor != nullptr)
+				Assert(nodeResourceEditor.resourceEditor != nullptr);
+				if (nodeResourceEditor.resourceEditor != nullptr)
 				{
-					// deserialize resource data if set
-					
-					auto resourceData = node->getResource(resourceTypeName.c_str(), "editorData", nullptr);
-					
-					// todo : separate setResource and setResourceData calls ?
-					
-					//if (resourceData != nullptr)
-					{
-						nodeEditor.editor->setResource(*node, resourceTypeName.c_str(), "editorData", resourceData);
-					}
+					nodeResourceEditor.resourceEditor->setResource(*node, resourceTypeName.c_str(), "editorData");
 					
 					// calculate the position based on size and move the editor over there
 					
 					int x;
 					int y;
-					nodeEditor.editor->getPositionForViewCenter(x, y);
+					nodeResourceEditor.resourceEditor->getPositionForViewCenter(x, y);
 					
-					nodeEditor.editor->setPosition(x, y);
+					nodeResourceEditor.resourceEditor->setPosition(x, y);
 				}
 			}
 		}
 	}
+	
+	return nodeResourceEditor.resourceEditor != nullptr;
 }
 
-void GraphEdit::nodeEditSave()
+void GraphEdit::nodeResourceEditSave()
 {
-	if (nodeEditor.editor != nullptr)
+	if (nodeResourceEditor.resourceEditor != nullptr)
 	{
-		auto node = tryGetNode(nodeEditor.nodeId);
+		auto node = tryGetNode(nodeResourceEditor.nodeId);
 		
 		if (node != nullptr)
 		{
 			std::string resourceData;
 			
-			if (nodeEditor.editor->serializeResource(resourceData))
+			if (nodeResourceEditor.resourceEditor->serializeResource(resourceData))
 			{
-				node->setResource(nodeEditor.resourceTypeName.c_str(), "editorData", resourceData.c_str());
+				node->setResource(nodeResourceEditor.resourceTypeName.c_str(), "editorData", resourceData.c_str());
 			}
 			else
 			{
-				node->clearResource(nodeEditor.resourceTypeName.c_str(), "editorData");
+				node->clearResource(nodeResourceEditor.resourceTypeName.c_str(), "editorData");
 			}
 		}
 	}
 }
 
-void GraphEdit::nodeEditEnd()
+void GraphEdit::nodeResourceEditEnd()
 {
-	nodeEditSave();
+	nodeResourceEditSave();
 	
 	//
 	
-	delete nodeEditor.editor;
-	nodeEditor.editor = nullptr;
+	delete nodeResourceEditor.resourceEditor;
+	nodeResourceEditor.resourceEditor = nullptr;
 	
-	nodeEditor = NodeEditor();
+	nodeResourceEditor = NodeResourceEditor();
 }
 
 void GraphEdit::socketConnectEnd()
@@ -3969,6 +3933,9 @@ void GraphEdit::doMenu(const float dt)
 
 void GraphEdit::doEditorOptions(const float dt)
 {
+	if (g_doActions && commandMod() && keyboard.wentDown(SDLK_g))
+		editorOptions.showGrid = !editorOptions.showGrid;
+	
 	pushMenu("editorOptions");
 	{
 		if (doDrawer(editorOptions.menuIsVisible, "editor options"))
@@ -4007,9 +3974,23 @@ void GraphEdit::doLinkParams(const float dt)
 {
 	pushMenu("linkParams");
 	{
-		if (selectedLinks.size() == 1)
+		if (selectedLinks.size() != 1)
+		{
+			if (g_doActions)
+			{
+				linkParamsEditorLinkId = kGraphLinkIdInvalid;
+			}
+		}
+		else
 		{
 			auto linkId = *selectedLinks.begin();
+			
+			if (g_doActions && linkId != linkParamsEditorLinkId)
+			{
+				linkParamsEditorLinkId = linkId;
+				
+				resetMenu();
+			}
 			
 			auto link = tryGetLink(linkId);
 			Assert(link != nullptr);
@@ -4322,9 +4303,9 @@ void GraphEdit::cancelEditing()
 			break;
 		}
 		
-	case kState_NodeEdit:
+	case kState_NodeResourceEdit:
 		{
-			nodeEditEnd();
+			nodeResourceEditEnd();
 			
 			state = kState_Idle;
 			break;
@@ -4642,7 +4623,7 @@ void GraphEdit::draw() const
 	case kState_NodeDrag:
 		break;
 		
-	case kState_NodeEdit:
+	case kState_NodeResourceEdit:
 		break;
 	
 	case kState_InputSocketConnect:
@@ -4734,7 +4715,7 @@ void GraphEdit::draw() const
 	case kState_NodeDrag:
 		break;
 		
-	case kState_NodeEdit:
+	case kState_NodeResourceEdit:
 		break;
 		
 	case kState_InputSocketConnect:
@@ -4781,16 +4762,16 @@ void GraphEdit::draw() const
 	
 	//
 	
-	if (state == kState_NodeEdit)
+	if (state == kState_NodeResourceEdit)
 	{
 		setColor(0, 0, 0, 127);
 		drawRect(0, 0, GFX_SX, GFX_SY);
 	}
 	
-	if (nodeEditor.editor != nullptr)
+	if (nodeResourceEditor.resourceEditor != nullptr)
 	{
 		setColor(colorWhite);
-		nodeEditor.editor->draw();
+		nodeResourceEditor.resourceEditor->draw();
 	}
 	
 	//
@@ -5151,7 +5132,7 @@ bool GraphEdit::save(const char * filename)
 		if (realTimeConnection)
 			realTimeConnection->saveBegin(*this);
 		
-		nodeEditSave();
+		nodeResourceEditSave();
 		
 		XMLPrinter xmlGraph(file);;
 		
@@ -5525,17 +5506,6 @@ static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, con
 		if (doButton(name.c_str()))
 		{
 			pressed = true;
-		}
-		
-		return false;
-	}
-	else if (editor == "custom")
-	{
-		if (graphEdit.realTimeConnection != nullptr)
-		{
-			graphEdit.realTimeConnection->doEditor(valueText, name, defaultValue, g_doActions, g_doDraw, dt);
-			
-			return valueText != defaultValue;
 		}
 		
 		return false;

@@ -57,6 +57,7 @@ namespace GraphUi
 
 //
 
+struct GraphEdit_ResourceEditorBase;
 struct GraphEdit_TypeDefinitionLibrary;
 struct GraphEdit_Visualizer;
 
@@ -376,10 +377,22 @@ struct GraphEdit_TypeDefinition
 		}
 	};
 	
+	struct ResourceEditor
+	{
+		GraphEdit_ResourceEditorBase * (*create)();
+		
+		ResourceEditor()
+			: create(nullptr)
+		{
+		}
+	};
+	
 	std::string typeName;
 	
 	std::vector<InputSocket> inputSockets;
 	std::vector<OutputSocket> outputSockets;
+	
+	ResourceEditor resourceEditor;
 	
 	// ui
 	
@@ -708,9 +721,9 @@ struct GraphEdit_Visualizer
 
 //
 
-struct GraphEdit_NodeEditorBase
+struct GraphEdit_ResourceEditorBase
 {
-	virtual ~GraphEdit_NodeEditorBase()
+	virtual ~GraphEdit_ResourceEditorBase()
 	{
 	}
 	
@@ -721,8 +734,7 @@ struct GraphEdit_NodeEditorBase
 	virtual void draw() const = 0;
 	
 	// todo : introduce the concept of a resource path ? perhaps name node-specific resources "<type>:node/<id>"
-	// todo : rename NodeEditorBase to ResourceEditorBase ?
-	virtual void setResource(const GraphNode & node, const char * type, const char * name, const char * text) = 0;
+	virtual void setResource(const GraphNode & node, const char * type, const char * name) = 0;
 	virtual bool serializeResource(std::string & text) const = 0;
 	
 	//
@@ -839,11 +851,6 @@ struct GraphEdit_RealTimeConnection
 		return false;
 	}
 	
-	virtual bool doEditor(std::string & valueText, const std::string & name, const std::string & defaultValue, const bool doActions, const bool doDraw, const float dt)
-	{
-		return false;
-	}
-	
 	virtual int nodeIsActive(const GraphNodeId nodeId)
 	{
 		return kActivity_Inactive;
@@ -880,7 +887,7 @@ struct GraphEdit : GraphEditConnection
 		kState_Idle,
 		kState_NodeSelect,
 		kState_NodeDrag,
-		kState_NodeEdit,
+		kState_NodeResourceEdit,
 		kState_InputSocketConnect,
 		kState_OutputSocketConnect,
 		kState_NodeResize,
@@ -1065,16 +1072,16 @@ struct GraphEdit : GraphEditConnection
 		}
 	};
 	
-	struct NodeEditor
+	struct NodeResourceEditor
 	{
 		GraphNodeId nodeId;
 		std::string resourceTypeName; // todo : should be path ?
-		GraphEdit_NodeEditorBase * editor;
+		GraphEdit_ResourceEditorBase * resourceEditor;
 		
-		NodeEditor()
+		NodeResourceEditor()
 			: nodeId(kGraphNodeIdInvalid)
 			, resourceTypeName()
-			, editor(nullptr)
+			, resourceEditor(nullptr)
 		{
 		}
 	};
@@ -1229,9 +1236,11 @@ struct GraphEdit : GraphEditConnection
 	
 	GraphUi::PropEdit * propertyEditor;
 	
+	GraphNodeId linkParamsEditorLinkId;
+	
 	GraphUi::NodeTypeNameSelect * nodeTypeNameSelect;
 	
-	NodeEditor nodeEditor;
+	NodeResourceEditor nodeResourceEditor;
 	
 	std::list<Notification> notifications;
 	
@@ -1261,9 +1270,9 @@ struct GraphEdit : GraphEditConnection
 	
 	void nodeSelectEnd();
 	void nodeDragEnd();
-	void nodeEditBegin(const GraphNodeId nodeId);
-	void nodeEditSave();
-	void nodeEditEnd();
+	bool nodeResourceEditBegin(const GraphNodeId nodeId);
+	void nodeResourceEditSave();
+	void nodeResourceEditEnd();
 	void socketConnectEnd();
 	
 	void doMenu(const float dt);
