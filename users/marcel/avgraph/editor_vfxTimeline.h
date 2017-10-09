@@ -31,14 +31,14 @@
 
 struct VfxTimeline;
 
-struct Editor_VfxTimeline : GraphEdit_NodeEditorBase
+struct ResourceEditor_VfxTimeline : GraphEdit_ResourceEditorBase
 {
 	UiState * uiState;
 	mutable VfxTimeline * timeline;
 	mutable int selectedKeyIndex;
 
-	Editor_VfxTimeline();
-	~Editor_VfxTimeline();
+	ResourceEditor_VfxTimeline();
+	~ResourceEditor_VfxTimeline();
 
 	virtual void getSize(int & sx, int & sy) const;
 	virtual void setPosition(const int x, const int y);
@@ -46,6 +46,6 @@ struct Editor_VfxTimeline : GraphEdit_NodeEditorBase
 	virtual bool tick(const float dt, const bool inputIsCaptured);
 	virtual void draw() const;
 	
-	virtual void setResource(const GraphNode & node, const char * type, const char * name, const char * text);
+	virtual void setResource(const GraphNode & node, const char * type, const char * name);
 	virtual bool serializeResource(std::string & text) const;
 };

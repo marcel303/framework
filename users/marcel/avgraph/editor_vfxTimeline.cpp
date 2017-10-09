@@ -42,8 +42,8 @@ static void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const 
 
 //
 
-Editor_VfxTimeline::Editor_VfxTimeline()
-	: GraphEdit_NodeEditorBase()
+ResourceEditor_VfxTimeline::ResourceEditor_VfxTimeline()
+	: GraphEdit_ResourceEditorBase()
 	, uiState(nullptr)
 	, timeline(nullptr)
 	, selectedKeyIndex(-1)
@@ -52,7 +52,7 @@ Editor_VfxTimeline::Editor_VfxTimeline()
 	uiState->sx = GFX_SX - 100;
 }
 
-Editor_VfxTimeline::~Editor_VfxTimeline()
+ResourceEditor_VfxTimeline::~ResourceEditor_VfxTimeline()
 {
 	freeVfxNodeResource(timeline);
 	
@@ -60,19 +60,19 @@ Editor_VfxTimeline::~Editor_VfxTimeline()
 	uiState = nullptr;
 }
 
-void Editor_VfxTimeline::getSize(int & sx, int & sy) const
+void ResourceEditor_VfxTimeline::getSize(int & sx, int & sy) const
 {
 	sx = uiState->sx;
 	sy = 200;
 }
 
-void Editor_VfxTimeline::setPosition(const int x, const int y)
+void ResourceEditor_VfxTimeline::setPosition(const int x, const int y)
 {
 	uiState->x = x;
 	uiState->y = y;
 }
 	
-bool Editor_VfxTimeline::tick(const float dt, const bool inputIsCaptured)
+bool ResourceEditor_VfxTimeline::tick(const float dt, const bool inputIsCaptured)
 {
 	makeActive(uiState, true, false);
 
@@ -84,7 +84,7 @@ bool Editor_VfxTimeline::tick(const float dt, const bool inputIsCaptured)
 	return uiState->activeElem != nullptr;
 }
 
-void Editor_VfxTimeline::draw() const
+void ResourceEditor_VfxTimeline::draw() const
 {
 	makeActive(uiState, false, true);
 
@@ -94,30 +94,17 @@ void Editor_VfxTimeline::draw() const
 	}
 }
 	
-void Editor_VfxTimeline::setResource(const GraphNode & node, const char * type, const char * name, const char * text)
+void ResourceEditor_VfxTimeline::setResource(const GraphNode & node, const char * type, const char * name)
 {
 	Assert(timeline == nullptr);
 	
 	if (createVfxNodeResource<VfxTimeline>(node, type, name, timeline))
 	{
-		if (text != nullptr)
-		{
-			XMLDocument d;
-			
-			if (d.Parse(text) == tinyxml2::XML_SUCCESS)
-			{
-				tinyxml2::XMLElement * e = d.FirstChildElement();
-				
-				if (e != nullptr)
-				{
-					timeline->load(e);
-				}
-			}
-		}
+		//
 	}
 }
 
-bool Editor_VfxTimeline::serializeResource(std::string & text) const
+bool ResourceEditor_VfxTimeline::serializeResource(std::string & text) const
 {
 	if (timeline != nullptr)
 	{
@@ -178,7 +165,7 @@ static VfxTimeline::Key * findNearestKey(VfxTimeline & timeline, const int x1, c
 static void resetSelectedKeyUi()
 {
 	g_menu->getElem("beat").reset();
-	g_menu->getElem("id").reset();
+	g_menu->getElem("value").reset();
 }
 
 static void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const char * name, const float dt)
@@ -243,7 +230,7 @@ static void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const 
 					if (timeline.allocKey(key))
 					{
 						key->beat = beat;
-						key->id = 0;
+						key->value = 0.f;
 
 						key = timeline.sortKeys(key);
 					}
@@ -335,13 +322,13 @@ static void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const 
 			
 			if (keyboard.wentDown(SDLK_UP, true))
 			{
-				selectedKey->id++;
+				selectedKey->value += 1.f;
 				resetSelectedKeyUi();
 			}
 			
 			if (keyboard.wentDown(SDLK_DOWN, true))
 			{
-				selectedKey->id--;
+				selectedKey->value -= 1.f;
 				resetSelectedKeyUi();
 			}
 		}
@@ -408,7 +395,7 @@ static void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const 
 	if (selectedKey != nullptr)
 	{
 		doTextBox(selectedKey->beat, "beat", 0.f, .3f, false, dt);
-		doTextBox(selectedKey->id, "id", .3f, .3f, true, dt);
+		doTextBox(selectedKey->value, "value", .3f, .3f, true, dt);
 		selectedKey = timeline.sortKeys(selectedKey);
 		fassert(selectedKey != nullptr);
 	}
