@@ -50,7 +50,7 @@ struct VfxNodeTimeline : VfxNodeBase
 	enum Output
 	{
 		kOutput_EventTrigger,
-		kOutput_EventId,
+		kOutput_EventValue,
 		kOutput_BeatTrigger,
 		kOutput_COUNT
 	};
@@ -61,7 +61,7 @@ struct VfxNodeTimeline : VfxNodeBase
 	
 	VfxTimeline * timeline;
 	
-	float eventIdOutput;
+	float eventValueOutput;
 
 	VfxNodeTimeline();
 	virtual ~VfxNodeTimeline() override;

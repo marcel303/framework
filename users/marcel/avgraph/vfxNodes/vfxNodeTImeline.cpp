@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "editor_vfxTimeline.h"
 #include "vfxGraph.h"
 #include "vfxNodeTimeline.h"
 
@@ -36,6 +37,11 @@ VFX_NODE_TYPE(timeline, VfxNodeTimeline)
 	
 	resourceTypeName = "timeline";
 	
+	createResourceEditor = []() -> GraphEdit_ResourceEditorBase*
+	{
+		return new ResourceEditor_VfxTimeline();
+	};
+	
 	in("duration", "float");
 	in("bpm", "float");
 	in("loop", "bool", "1");
@@ -46,7 +52,7 @@ VFX_NODE_TYPE(timeline, VfxNodeTimeline)
 	in("resume!", "trigger");
 	in("time", "float");
 	out("event!", "trigger");
-	out("eventId", "float");
+	out("eventValue", "float");
 	out("beat!", "trigger");
 }
 
@@ -55,7 +61,7 @@ VfxNodeTimeline::VfxNodeTimeline()
 	, time(0.0)
 	, isPlaying(false)
 	, timeline(nullptr)
-	, eventIdOutput(0.f)
+	, eventValueOutput(0.f)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Duration, kVfxPlugType_Float);
@@ -68,7 +74,7 @@ VfxNodeTimeline::VfxNodeTimeline()
 	addInput(kInput_Resume, kVfxPlugType_Trigger);
 	addInput(kInput_Time, kVfxPlugType_Float);
 	addOutput(kOutput_EventTrigger, kVfxPlugType_Trigger, nullptr);
-	addOutput(kOutput_EventId, kVfxPlugType_Float, &eventIdOutput);
+	addOutput(kOutput_EventValue, kVfxPlugType_Float, &eventValueOutput);
 	addOutput(kOutput_BeatTrigger, kVfxPlugType_Trigger, nullptr);
 }
 
@@ -203,7 +209,7 @@ void VfxNodeTimeline::handleTimeSegment(const double oldTime, const double newTi
 		{
 			const VfxTimeline::Key & keyToTrigger = timeline->keys[i + 1];
 			
-			eventIdOutput = keyToTrigger.id;
+			eventValueOutput = keyToTrigger.value;
 			
 			trigger(kOutput_EventTrigger);
 		}
@@ -214,7 +220,7 @@ void VfxNodeTimeline::handleTimeSegment(const double oldTime, const double newTi
 		{
 			const VfxTimeline::Key & keyToTrigger = timeline->keys[i];
 			
-			eventIdOutput = keyToTrigger.id;
+			eventValueOutput = keyToTrigger.value;
 			
 			trigger(kOutput_EventTrigger);
 		}
