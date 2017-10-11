@@ -630,18 +630,52 @@ namespace binaural
 	{
 		const float degToRad = M_PI / 180.f;
 		
+	#if 1
 		y = std::sin(elevation * degToRad);
 		
 		x = std::cos(azimuth * degToRad) * std::cos(elevation * degToRad);
-		z = std::sin(azimuth * degToRad) * std::cos(elevation * degToRad);
+		z = std::sin(azimuth * degToRad) * std::abs(std::cos(elevation * degToRad));
+	#else
+		Mat4x4 matA;
+		Mat4x4 matE;
+		
+		matA.MakeRotationY(azimuth * degToRad);
+		matE.MakeRotationZ(elevation * degToRad);
+		
+		Mat4x4 mat = matA * matE;
+		
+		Vec3 v = mat * Vec3(1.f, 0.f, 0.f);
+		
+		x = +v[0];
+		y = -v[1];
+		z = +v[2];
+	#endif
 	}
 	
 	void cartesianToElevationAndAzimuth(const float x, const float y, const float z, float & elevation, float & azimuth)
 	{
 		const float radToDeg = 180.f / M_PI;
 		
+	#if 1
+		const float zxHypot = std::hypot(z, x);
+		
+		azimuth = std::atan2(z, x) * radToDeg;
+		
+		if (zxHypot == 0.f)
+		{
+			if (y < 0.f)
+				elevation = -90.f;
+			else
+				elevation = +90.f;
+		}
+		else
+		{
+			elevation = std::atan(y / zxHypot) * radToDeg;
+		}
+	#else
 		azimuth = std::atan2(z, x) * radToDeg;
 		elevation = std::asin(y) * radToDeg;
+	#endif
 	}
 	
 	//
@@ -830,6 +864,8 @@ namespace binaural
 	
 	const HRIRSampleGrid::Triangle * HRIRSampleGrid::lookupTriangle(const float elevation, const float azimuth, float & baryU, float & baryV) const
 	{
+		const float eps = .001f;
+		
 		auto cell = lookupCell(elevation, azimuth);
 		
 		if (cell == nullptr)
@@ -854,6 +890,7 @@ namespace binaural
 				triangle->vertex[1].location,
 				triangle->vertex[2].location,
 				sampleLocation,
+				eps,
 				baryU, baryV))
 			{
 				result = triangle;
@@ -1037,7 +1074,7 @@ namespace binaural
 	{
 		debugTimerBegin("lookup_hrir");
 		
-		// todo : lookup HRIR sample points using triangulation result
+		// lookup HRIR sample points using triangulation result
 		
 		bool result = false;
 		

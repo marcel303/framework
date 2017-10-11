@@ -356,6 +356,7 @@ namespace binaural
 		const Vector & B,
 		const Vector & C,
 		const Vector & P,
+		const float eps,
 		float & baryU, float & baryV)
 	{
 		// Compute vectors
@@ -376,7 +377,7 @@ namespace binaural
 		const float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
 
 		// Check if point is in triangle
-		if ((u >= 0.f) && (v >= 0.f) && (u + v < 1.f))
+		if ((u >= 0.f - eps) && (v >= 0.f - eps) && (u + v < 1.f + eps))
 		{
 			baryU = u;
 			baryV = v;
