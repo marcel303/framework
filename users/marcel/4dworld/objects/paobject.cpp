@@ -73,9 +73,12 @@ int PortAudioObject::findSupportedDevice(const int numInputChannels, const int n
 		{
 			if (deviceInfo->maxInputChannels >= numInputChannels && deviceInfo->maxOutputChannels >= numOutputChannels)
 			{
-				result = i;
+				if (result == paNoDevice || i == Pa_GetDefaultOutputDevice())
+				{
+					result = i;
 				
-				break;
+					//break;
+				}
 			}
 		}
 	}
