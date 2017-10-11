@@ -240,11 +240,35 @@ namespace binaural
 					numAdded++;
 				}
 				
-				if (i == 0 || ((newElevation > -51.f && newElevation < -48.f) && (newAzimuth < -80 || newAzimuth > +80)))
+				// fixme : we duplicate samples below, while we should be wrapping them!
+				
+				// add samples for the missing -90 elevation
+				
+				bool addBelow = i == 0 || ((newElevation > -51.f && newElevation < -48.f) && (newAzimuth < -80 || newAzimuth > +80));
+				
+				if (addBelow)
 				{
 					if (sampleSet.addHrirSampleFromSoundData(soundData, -90, newAzimuth, false))
 					{
 						numAdded++;
+					}
+				}
+				
+				// add samples for the missing -180 azimuth
+				
+				if (newAzimuth >= +178.f)
+				{
+					if (sampleSet.addHrirSampleFromSoundData(soundData, newElevation, -180, false))
+					{
+						numAdded++;
+					}
+					
+					if (addBelow)
+					{
+						if (sampleSet.addHrirSampleFromSoundData(soundData, -90, -180, false))
+						{
+							numAdded++;
+						}
 					}
 				}
 				
