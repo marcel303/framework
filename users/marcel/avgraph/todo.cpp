@@ -1,33 +1,26 @@
 /*
 
-top priority items from list below:
-+ add channels visualizer
-+ add node description callback
-+ add buffer type and channels.toGpu node
-+ add timeline node
-+ add OSC history to node description
-- add buttons that can trigger inputs
+top priority items:
+- add new node type selection memu. make it a pop-over ?
 - port compose shader from 4dworld to avgraph. fix graph editor fade when idle
-+ add ability to add multiple connections to input sockets ? similar to 4dworld ?
-+ add ability to specify in/out mapping on a per-link basis. make it operate similar to how adding multiply connections to input sockets works in 4dworld
-	+ have a single floating point connection (float pointer). this is how things currently work
-	+ have multiply floating point connections. store float pointers in array. allocate storage for calculating sum. make update() method to update summed value
-	+ have optional remapping enabled per link. combine this with summing support. store mapping and float pointer in summed value element
+- add support for custom editors to graph editor
 - determine how OSC send and receive nodes should function
 	- would very much like an option to 'learn' OSC event paths. perhaps double click to open custom editor and click 'learn' to let it receive a message and capture to path
 	- decouple OSC endpoints from OSC values and paths? perhaps add an OSC endpoint node which receive messages, add them to a list, let OSC value nodes iterate. add find method to OSC manager. if tick ID != last tick ID, clear old messages, receive new messages, find and return value (if any)
-- add support for custom editors to graph editor
+- add buttons to manually trigger nodes
+	- like the BANG node in max
+	- add ability to trigger any input/output trigger (?)
+- add GPU performance markers
+- add editor option to disable real-time preview
+	- add time dilation effect on no input before stopping responding ?
+	- add way for UI/editor to tell update loop it's animating something (camera..)
 
 todo :
-- add draw.image node. let the user control sizing (similar to object-fit in html)
-+ add scroll wheel support to zoom in or out
-+ fix socket link mapping parameters UI not refreshing when selecting another link
 - add undo/redo support. just serialize/deserialize graph for every action?
 	- note : serialize/deserialize entire graph doesn't work nicely with real-time connection
 			 we will need to serialize node on remove and re-add/restore it during undo (also invoking real-time connection)
 			 same for links and all other actions. we need to perform the opposite action on undo
 - add ability to randomize input values
-# add drag and drop support string literals
 - add suggestion based purely on matching first part of string (no fuzzy string comparison)
 	- order of listing should be : pure matches, fuzzy matches, history. show history once type name text box is made active
 	- clear type name text box when adding node
@@ -38,9 +31,6 @@ todo :
 	- adapt OSC node to fit these products
 	- have a learning function, to setup mappings from inputs to outputs
 - visualize active links and show direction of data flow
-- add buttons to manually trigger nodes
-	- like the BANG node in max
-	- add ability to trigger any input/output trigger (?)
 - investigate VVVV's ability to turn everything into vectors of values and to combine lists
 	- add channels combine method (for now?)
 	- add node where channel values can be added to a list -> allow to experiment with combine node
@@ -53,31 +43,18 @@ todo :
 	- determine how to save nodes hierarchically contained
 	- the inputs and outputs of the container node and how it all works should all be implementation-defined I think
 - add mouse cursor to user interface
-+ make nodes use rounded rectangles
 - make links use bezier curves
-# add buffer type and add buffer input(s) to fsfx node ?
-	-> I'm trying to use mostly textures to improve remixability
-- add editor option to disable real-time preview
-	- add time dilation effect on no input before stopping responding ?
-	- add way for UI/editor to tell update loop it's animating something (camera..)
 - hide node text until mouse moves close to node ? makes the screen more serene and helps optimize UI drawing
 - look at Bitwig 2 for inspiration of node types
-- add GPU performance markers
-+ report OpenGL texture format and memory usage in node getDescription
 - automatically un-fold nodes (temporarily) when the mouse hovers over them ?
 	- (temporarily) un-fold node when it is the only selected node. allows connecting sockets
 	- (temporarily) un-fold hovered over node when connecting sockets
 - NanoVG includes an interesting blurring algortihm used for blurring fonts. integrate ?
-- add new node type selection memu. make it a pop-over ?
 - fix issue where freeing texture here can result in issues when drawing visualizer. tick of visualizer should always happen after cpuToGpu tick, but there's no link connecting visualizer to the node it references, so tick order is undefined .. ! -> maybe update visualizer in draw. or never capture references (to textures ID's or whatever) in visualizer. only let it copy values by value (as needed for graph) but capture everything else on draw
 - add ability to add node between nodes ?
-+ add ability to route connections
-	+ add route point editing
-	+ save/load route points
 - add third 'node minification' option: show only active inputs and outputs
 	so we have three options then: show everything, show only active i/o and fully collapsed
 - add ability to reference nodes? makes graph organization more easy
-+ add ability to store resource data in nodes, so nodes can persist their own data when editing
 - add node editors. when double clicking a node (or some other gesture/interaction), show the node editor. let the node editor operate on the node's data.
 	- let the node editor be independent of the implementation ? it should be possible to have a fully functional graph, graph node and resource editing environment without a live version of the graph running in the background. this means the saveBegin real-time editing callback should be removed again once we got this working
 
@@ -91,7 +68,7 @@ todo : nodes :
 	- add sequencer node. has multiple any type inputs. inputs are processed in socket order
 - investigate ways of composing/decomposing image data and masking
 	- is it possible to create a texture sharing data with a base texture and to just change the rgba swizzling?
-- add timeline node (?). trigger events based on markers on a timeline
+- timeline node updates:
 	- add (re)start input trigger
 	+ can be very very useful to trigger effects
 	- add time! input trigger. performs seek operation
@@ -143,6 +120,8 @@ todo : nodes :
 - add queue system for triggers ? ensure predeps have finished processing before handling triggers
 - remove trigger data
 - add ability for nodes to trigger again (process a partial time slice ?). but this will re-introduce again the issue of execution order of triggers ..
++ add draw.image node. let the user control sizing (similar to object-fit in html)
++ add draw.blend node
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -291,6 +270,23 @@ todo :
 		+ add editor option to show cpu/gpu cost
 	+ add color curve to editor options to use for coloring nodes. from 0 .. 33ms ?
 + render graph edit UI into a separate surface. use fade effect when the UI is being hidden
++ add scroll wheel support to zoom in or out
++ fix socket link mapping parameters UI not refreshing when selecting another link
+# add drag and drop support string literals
++ make nodes use rounded rectangles
+# add buffer type and add buffer input(s) to fsfx node ?
+	-> I'm trying to use mostly textures to improve remixability
++ add ability to route connections
+	+ add route point editing
+	+ save/load route points
++ report OpenGL texture format and memory usage in node getDescription
++ add ability to store resource data in nodes, so nodes can persist their own data when editing
++ add channels visualizer
++ add ability to add multiple connections to input sockets ? similar to 4dworld ?
++ add ability to specify in/out mapping on a per-link basis. make it operate similar to how adding multiply connections to input sockets works in 4dworld
+	+ have a single floating point connection (float pointer). this is how things currently work
+	+ have multiply floating point connections. store float pointers in array. allocate storage for calculating sum. make update() method to update summed value
+	+ have optional remapping enabled per link. combine this with summing support. store mapping and float pointer in summed value element
 
 todo : nodes :
 + add ease node
@@ -356,7 +352,9 @@ todo : nodes :
 + add color node. from RGB or HSV (select mode)
 + change math node so operation type becomes a configurable enum
 + add integration node. keeps integrating input value over time and sets it as output
-
++ add timeline node
++ add OSC history to node description
+ 
 todo : framework :
 + optimize text rendering. use a dynamic texture atlas instead of one separate texture for each glyph. drawText should only emit a single draw call
 + add MSDF font rendering support
