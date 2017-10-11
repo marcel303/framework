@@ -161,6 +161,24 @@ namespace binaural
 			}
 			mutex->unlock();
 			
+			{
+				// clamp elevation and azimuth to ensure it maps within the elevation and azimut topology
+				
+				const float eps = .01f;
+				
+				const float elevationMin = -90.f + eps;
+				const float elevationMax = +90.f - eps;
+				
+				const float azimuthMin = -180.f + eps;
+				const float azimuthMax = +180.f - eps;
+				
+				elevation = std::max(elevation, elevationMin);
+				elevation = std::min(elevation, elevationMax);
+				
+				azimuth = std::max(azimuth, azimuthMin);
+				azimuth = std::min(azimuth, azimuthMax);
+			}
+			
 			if (sampleSet != nullptr && sampleSet->lookup_3(elevation, azimuth, samples, sampleWeights))
 			{
 				blendHrirSamples_3(samples, sampleWeights, hrir);
