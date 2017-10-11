@@ -178,6 +178,15 @@ static void doStreamMenu(const bool tick, const bool draw, const float dt)
 
 int main(int argc, char * argv[])
 {
+#if 1
+	char * basePath = SDL_GetBasePath();
+	changeDirectory(basePath);
+	changeDirectory("data");
+	SDL_free(basePath);
+#endif
+
+	framework.waitForEvents = true;
+
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
 		PaError err;
@@ -240,6 +249,8 @@ int main(int argc, char * argv[])
 					
 					makeActive(&streamUiState, false, true);
 					doStreamMenu(false, true, framework.timeStep);
+					
+					SDL_Delay(50);
 				}
 			}
 			framework.endDraw();
