@@ -78,8 +78,8 @@ AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
 	in("dopp.scale", "audioValue", "1");
 	in("dopp.smooth", "audioValue", "0.2");
 	in("dint", "bool", "1");
-	in("dint.tresh", "treshold", "100");
-	in("dint.curve", "curve", "-0.4");
+	in("dint.tresh", "audioValue", "100");
+	in("dint.curve", "audioValue", "-0.4");
 	in("ddamp", "bool", "1");
 	in("ddamp.tresh", "audioValue", "100");
 	in("ddamp.curve", "audioValue", "-0.4");
