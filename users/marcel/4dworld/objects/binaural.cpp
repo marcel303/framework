@@ -28,6 +28,7 @@
 #include "binaural.h"
 #include "fourier.h"
 #include <stdarg.h>
+#include <stdio.h>
 #include <xmmintrin.h>
 #include <immintrin.h>
 
@@ -879,11 +880,9 @@ namespace binaural
 		
 		const Triangle * result = nullptr;
 		
-		const int numTriangles = cell->triangles.size();
-		
-		for (int i = 0; i < numTriangles; ++i)
+		for (auto triangleIndex : cell->triangleIndices)
 		{
-			auto triangle = cell->triangles[i];
+			auto triangle = &triangles[triangleIndex];
 			
 			if (baryPointInTriangle(
 				triangle->vertex[0].location,
@@ -895,15 +894,141 @@ namespace binaural
 			{
 				result = triangle;
 				
-				if (i != 0)
-				{
-					auto tempCell = const_cast<Cell*>(cell);
-					auto tempTriangle = tempCell->triangles[0];
-					tempCell->triangles[0] = tempCell->triangles[i];
-					tempCell->triangles[i] = tempTriangle;
-				}
-				
 				break;
+			}
+		}
+		
+		return result;
+	}
+	
+	static bool saveInt(FILE * file, const int value)
+	{
+		return fwrite(&value, sizeof(value), 1, file) == 1;
+	}
+	
+	static bool saveFloat(FILE * file, const float value)
+	{
+		return fwrite(&value, sizeof(value), 1, file) == 1;
+	}
+	
+	static bool loadInt(FILE * file, int & value)
+	{
+		return fread(&value, sizeof(value), 1, file) == 1;
+	}
+	
+	static bool loadFloat(FILE * file, float & value)
+	{
+		return fread(&value, sizeof(value), 1, file) == 1;
+	}
+	
+	bool HRIRSampleGrid::save(FILE * file) const
+	{
+		bool result = true;
+		
+		// write triangles
+		
+		result &= saveInt(file, triangles.size());
+		
+		for (auto & triangle : triangles)
+		{
+			for (auto & vertex : triangle.vertex)
+			{
+				result &= saveFloat(file, vertex.location.elevation);
+				result &= saveFloat(file, vertex.location.azimuth);
+				
+				result &= saveInt(file, vertex.sampleIndex);
+			}
+		}
+		
+		// write cells
+		
+		result &= saveInt(file, kGridSx);
+		result &= saveInt(file, kGridSy);
+		
+		for (int x = 0; x < kGridSx; ++x)
+		{
+			for (int y = 0; y < kGridSy; ++y)
+			{
+				result &= saveInt(file, cells[x][y].triangleIndices.size());
+				
+				for (auto triangleIndex : cells[x][y].triangleIndices)
+				{
+					result &= saveInt(file, triangleIndex);
+				}
+			}
+		}
+		
+		return result;
+	}
+	
+	bool HRIRSampleGrid::load(FILE * file)
+	{
+		debugAssert(triangles.empty());
+		
+		bool result = true;
+		
+		// read triangles
+		
+		int numTriangles = 0;
+		
+		result &= loadInt(file, numTriangles);
+		
+		if (numTriangles < 0)
+		{
+			result = false;
+		}
+		else
+		{
+			triangles.resize(numTriangles);
+			
+			for (auto & triangle : triangles)
+			{
+				for (auto & vertex : triangle.vertex)
+				{
+					result &= loadFloat(file, vertex.location.elevation);
+					result &= loadFloat(file, vertex.location.azimuth);
+					
+					result &= loadInt(file, vertex.sampleIndex);
+				}
+			}
+		}
+		
+		// read cells
+		
+		int gridSx = 0;
+		int gridSy = 0;
+		
+		result &= loadInt(file, gridSx);
+		result &= loadInt(file, gridSy);
+		
+		if (gridSx != kGridSx || gridSy != kGridSy)
+		{
+			result &= false;
+		}
+		else
+		{
+			for (int x = 0; x < kGridSx; ++x)
+			{
+				for (int y = 0; y < kGridSy; ++y)
+				{
+					int numTriangleIndices = 0;
+					
+					result &= loadInt(file, numTriangleIndices);
+					
+					if (numTriangleIndices < 0)
+					{
+						result &= false;
+					}
+					else
+					{
+						cells[x][y].triangleIndices.resize(numTriangleIndices);
+						
+						for (auto & triangleIndex : cells[x][y].triangleIndices)
+						{
+							result &= loadInt(file, triangleIndex);
+						}
+					}
+				}
 			}
 		}
 		
@@ -977,30 +1102,34 @@ namespace binaural
 				triangle.p3,
 			};
 			
-			HRIRSample * triangleSamples[3];
+			int triangleSamples[3];
 			
 			for (int i = 0; i < 3; ++i)
 			{
 				auto & triangleLocation = triangleLocations[i];
 				
-				triangleSamples[i] = nullptr;
+				triangleSamples[i] = -1;
+				
+				int sampleIndex = 0;
 				
 				for (auto & sample : samples)
 				{
 					if (sample->elevation == triangleLocation.x && sample->azimuth == triangleLocation.y)
 					{
-						debugAssert(triangleSamples[i] == nullptr);
+						debugAssert(triangleSamples[i] == -1);
 						
-						triangleSamples[i] = sample;
+						triangleSamples[i] = sampleIndex;
 					}
+					
+					sampleIndex++;
 				}
 				
-				debugAssert(triangleSamples[i] != nullptr);
+				debugAssert(triangleSamples[i] != -1);
 			}
 			
-			if (triangleSamples[0] == nullptr ||
-				triangleSamples[1] == nullptr ||
-				triangleSamples[2] == nullptr)
+			if (triangleSamples[0] == -1 ||
+				triangleSamples[1] == -1 ||
+				triangleSamples[2] == -1)
 			{
 				debugLog("failed to localize samples!");
 			}
@@ -1010,14 +1139,17 @@ namespace binaural
 				
 				for (int i = 0; i < 3; ++i)
 				{
-					triangle.vertex[i].location.elevation = triangleSamples[i]->elevation;
-					triangle.vertex[i].location.azimuth = triangleSamples[i]->azimuth;
-					triangle.vertex[i].sampleData = &triangleSamples[i]->sampleData;
+					const int sampleIndex = triangleSamples[i];
+					const HRIRSample * sample = samples[sampleIndex];
+					
+					triangle.vertex[i].location.elevation = sample->elevation;
+					triangle.vertex[i].location.azimuth = sample->azimuth;
+					triangle.vertex[i].sampleIndex = sampleIndex;
 				}
 				
-				sampleGrid.triangles.push_back(triangle);
+				const int triangleIndex = sampleGrid.triangles.size();
 				
-				auto trianglePtr = &sampleGrid.triangles.back();
+				sampleGrid.triangles.push_back(triangle);
 				
 				float minE = triangle.vertex[0].location.elevation;
 				float minA = triangle.vertex[0].location.azimuth;
@@ -1033,6 +1165,13 @@ namespace binaural
 					maxE = std::max(maxE, triangle.vertex[i].location.elevation);
 					maxA = std::max(maxA, triangle.vertex[i].location.azimuth);
 				}
+				
+			#if 0
+				minE -= 1.f;
+				maxE += 1.f;
+				minA -= 1.f;
+				maxA += 1.f;
+			#endif
 				
 				const int cellX1 = int(std::floor(minE / 180.f * HRIRSampleGrid::kGridSx));
 				const int cellY1 = int(std::floor(minA / 360.f * HRIRSampleGrid::kGridSy));
@@ -1061,7 +1200,7 @@ namespace binaural
 						
 						HRIRSampleGrid::Cell & cell = sampleGrid.cells[xi][yi];
 						
-						cell.triangles.push_back(trianglePtr);
+						cell.triangleIndices.push_back(triangleIndex);
 					}
 				}
 			}
@@ -1085,9 +1224,9 @@ namespace binaural
 		
 		if (triangle != nullptr)
 		{
-			samples[0] = triangle->vertex[0].sampleData;
-			samples[1] = triangle->vertex[1].sampleData;
-			samples[2] = triangle->vertex[2].sampleData;
+			samples[0] = &this->samples[triangle->vertex[0].sampleIndex]->sampleData;
+			samples[1] = &this->samples[triangle->vertex[1].sampleIndex]->sampleData;
+			samples[2] = &this->samples[triangle->vertex[2].sampleIndex]->sampleData;
 			
 			sampleWeights[0] = 1.f - baryU - baryV;
 			sampleWeights[1] = baryV;
@@ -1097,6 +1236,49 @@ namespace binaural
 		}
 		
 		debugTimerEnd("lookup_hrir");
+		
+		return result;
+	}
+	
+	bool HRIRSampleSet::save(FILE * file) const
+	{
+		bool result = true;
+		
+		result &= saveInt(file, samples.size());
+		
+		for (auto sample : samples)
+		{
+			result &= fwrite(sample, sizeof(*sample), 1, file) == 1;
+		}
+		
+		return result;
+	}
+	
+	bool HRIRSampleSet::load(FILE * file)
+	{
+		debugAssert(samples.empty());
+		
+		bool result = true;
+		
+		int numSamples = 0;
+		
+		result &= loadInt(file, numSamples);
+		
+		if (numSamples < 0)
+		{
+			result &= false;
+		}
+		else
+		{
+			samples.resize(numSamples);
+			
+			for (auto & sample : samples)
+			{
+				sample = new HRIRSample();
+				
+				result &= fread(sample, sizeof(*sample), 1, file) == 1;
+			}
+		}
 		
 		return result;
 	}

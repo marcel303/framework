@@ -163,7 +163,7 @@ namespace binaural
 		{
 			Location location;
 			
-			HRIRSampleData * sampleData;
+			int sampleIndex;
 		};
 		
 		struct Triangle
@@ -173,10 +173,10 @@ namespace binaural
 		
 		struct Cell
 		{
-			std::vector<Triangle*> triangles;
+			std::vector<int> triangleIndices;
 		};
 		
-		std::list<Triangle> triangles;
+		std::vector<Triangle> triangles;
 		
 		Cell cells[kGridSx][kGridSy];
 		
@@ -189,6 +189,9 @@ namespace binaural
 		const Cell * lookupCell(const float elevation, const float azimuth) const;
 		
 		const Triangle * lookupTriangle(const float elevation, const float azimuth, float & baryU, float & baryV) const;
+		
+		bool save(FILE * file) const;
+		bool load(FILE * file);
 	};
 	
 	struct HRIRSampleSet
@@ -223,6 +226,9 @@ namespace binaural
 		void finalize();
 		
 		bool lookup_3(const float elevation, const float azimuth, HRIRSampleData const * * samples, float * sampleWeights) const;
+		
+		bool save(FILE * file) const;
+		bool load(FILE * file);
 	};
 
 	struct HRTFData
@@ -256,8 +262,11 @@ namespace binaural
 		
 		~SoundData()
 		{
-			free(sampleData);
-			sampleData = nullptr;
+			if (sampleData != nullptr)
+			{
+				free(sampleData);
+				sampleData = nullptr;
+			}
 		}
 	};
 	
