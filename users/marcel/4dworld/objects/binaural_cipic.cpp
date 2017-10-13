@@ -27,6 +27,7 @@
 
 #include "binaural.h"
 #include "binaural_cipic.h"
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <string>
@@ -112,6 +113,8 @@ namespace binaural
 	{
 		std::vector<std::string> files;
 		listFiles(path, true, files);
+		
+		std::sort(files.begin(), files.end());
 		
 		debugTimerBegin("load_hrir_from_audio");
 		
