@@ -33,7 +33,6 @@
 #include "binauralizer.h"
 #include "framework.h"
 #include "paobject.h"
-#include <xmmintrin.h>
 
 using namespace binaural;
 

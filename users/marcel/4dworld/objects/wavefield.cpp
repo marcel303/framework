@@ -26,13 +26,12 @@
 */
 
 #include "wavefield.h"
+#include <math.h>
 #include <SDL2/SDL.h>
 
 #include "Calc.h"
 #include "framework.h" // todo : remove
 #include "Noise.h"
-#include <emmintrin.h>
-#include <xmmintrin.h>
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -41,12 +40,19 @@ extern const int GFX_SY;
 
 //
 
-#if __AVX__
-	#include <immintrin.h>
-#else
-	#ifndef WIN32
-		#warning AVX support disabled. wave field methods will use slower SSE code paths
+#if AUDIO_USE_SSE
+	#if __AVX__
+		#include <immintrin.h>
+	#else
+		#ifndef WIN32
+			#warning AVX support disabled. wave field methods will use slower SSE code paths
+		#endif
 	#endif
+#endif
+
+#if AUDIO_USE_SSE
+	#include <emmintrin.h>
+	#include <xmmintrin.h>
 #endif
 
 //
@@ -71,6 +77,8 @@ void Wavefield1D::init(const int _numElems)
 	
 	memset(d, 0, sizeof(d));
 }
+
+#if AUDIO_USE_SSE
 
 template <typename T> inline T _mm_load(const double v);
 
@@ -139,6 +147,8 @@ void tickForces(const double * __restrict p, const double c, double * __restrict
 	}
 }
 
+#endif
+
 void Wavefield1D::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
 {
 	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
@@ -148,7 +158,7 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	
 #if __AVX__
 	tickForces<__m256d>(p, c, v, f, dt, numElems, closedEnds);
-#elif 1
+#elif AUDIO_USE_SSE
 	tickForces<__m128d>(p, c, v, f, dt, numElems, closedEnds);
 #else
 	const double cTimesDt = c * dt;
@@ -192,7 +202,7 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 		p[numElems - 1] = 0.f;
 	}
 	
-#if __AVX__
+#if AUDIO_USE_SSE && __AVX__
 	__m256d _mm_dt = _mm256_set1_pd(dt);
 	__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
 	__m256d _mm_vRetain = _mm256_set1_pd(vRetain);
@@ -214,7 +224,7 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 		_mm_v[i] = _mm_v[i] * _mm_vRetain;
 		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 	}
-#elif 1
+#elif AUDIO_USE_SSE
 	__m128d _mm_dt = _mm_set1_pd(dt);
 	__m128d _mm_pRetain = _mm_set1_pd(pRetain);
 	__m128d _mm_vRetain = _mm_set1_pd(vRetain);
@@ -240,7 +250,7 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	const double dMin = -MAX_IMPULSE_PER_SECOND * dt;
 	const double dMax = +MAX_IMPULSE_PER_SECOND * dt;
 	
-	for (int i = 0; i < kNumElems; ++i)
+	for (int i = 0; i < numElems; ++i)
 	{
 		const double d_clamped = std::max(std::min(d[i], dMax), dMin);
 		
@@ -279,6 +289,8 @@ float Wavefield1D::sample(const float x) const
 	}
 }
 
+#if AUDIO_USE_SSE
+
 void * Wavefield1D::operator new(size_t size)
 {
 	return _mm_malloc(size, 32);
@@ -288,6 +300,8 @@ void Wavefield1D::operator delete(void * mem)
 {
 	_mm_free(mem);
 }
+
+#endif
 
 //
 
@@ -428,7 +442,7 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	const double vRetain = std::pow(vRetainPerSecond, dt);
 	const double pRetain = std::pow(pRetainPerSecond, dt);
 	
-#if __AVX__
+#if AUDIO_USE_SSE && __AVX__
 	__m256d _mm_dt = _mm256_set1_pd(dt);
 	__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
 	__m256d _mm_vRetain = _mm256_set1_pd(vRetain);
@@ -451,7 +465,7 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 			_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 		}
 	}
-#elif 1
+#elif AUDIO_USE_SSE
 	__m128d _mm_dt = _mm_set1_pd(dt);
 	__m128d _mm_pRetain = _mm_set1_pd(pRetain);
 	__m128d _mm_vRetain = _mm_set1_pd(vRetain);
@@ -478,13 +492,16 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	const double dMin = -MAX_IMPULSE_PER_SECOND * dt;
 	const double dMax = +MAX_IMPULSE_PER_SECOND * dt;
 	
-	for (int i = 0; i < kNumElems; ++i)
+	for (int x = 0; x < numElems; ++x)
 	{
-		const double d_clamped = std::max(std::min(d[i], dMax), dMin);
-		
-		p[i] = p[i] * pRetain + v[i] * dt * f[i] + d_clamped;
-		v[i] = v[i] * vRetain;
-		d[i] = d[i] - d_clamped;
+		for (int y = 0; y < numElems; ++y)
+		{
+			const double d_clamped = fmax(fmin(d[x][y], dMax), dMin);
+			
+			p[x][y] = p[x][y] * pRetain + v[x][y] * dt * f[x][y] + d_clamped;
+			v[x][y] = v[x][y] * vRetain;
+			d[x][y] = d[x][y] - d_clamped;
+		}
 	}
 #endif
 }
@@ -605,6 +622,8 @@ void Wavefield2D::copyFrom(const Wavefield2D & other, const bool copyP, const bo
 	}
 }
 
+#if AUDIO_USE_SSE
+
 void * Wavefield2D::operator new(size_t size)
 {
 	return _mm_malloc(size, 32);
@@ -614,3 +633,5 @@ void Wavefield2D::operator delete(void * mem)
 {
 	_mm_free(mem);
 }
+
+#endif

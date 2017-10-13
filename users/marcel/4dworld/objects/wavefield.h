@@ -49,8 +49,10 @@ struct Wavefield1D
 	
 	float sample(const float x) const;
 	
+#if AUDIO_USE_SSE
 	void * operator new(size_t size);
 	void operator delete(void * mem);
+#endif
 };
 
 //
@@ -82,6 +84,8 @@ struct Wavefield2D
 	
 	void copyFrom(const Wavefield2D & other, const bool copyP, const bool copyV, const bool copyF);
 	
+#if AUDIO_USE_SSE
 	void * operator new(size_t size);
 	void operator delete(void * mem);
+#endif
 };
