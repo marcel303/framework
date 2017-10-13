@@ -272,12 +272,104 @@ void testBinaural()
 	if (true)
 	{
 		// try loading a CIPIC sample set
-
+		
 		HRIRSampleSet sampleSet;
-
+		
 		loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
 		
 		sampleSet.finalize();
+		
+		if (true)
+		{
+			// save sample grid
+			
+			FILE * file = fopen("binaural/cipic_147.grid", "wb");
+			
+			if (file != nullptr)
+			{
+				debugTimerBegin("sampleGrid_save");
+				
+				if (sampleSet.sampleGrid.save(file) == false)
+				{
+					logError("failed to save sample grid");
+				}
+				
+				debugTimerEnd("sampleGrid_save");
+				
+				fclose(file);
+				file = nullptr;
+			}
+		}
+		
+		if (true)
+		{
+			// load sample grid
+			
+			HRIRSampleGrid sampleGrid;
+			
+			FILE * file = fopen("binaural/cipic_147.grid", "rb");
+			
+			if (file != nullptr)
+			{
+				debugTimerBegin("sampleGrid_load");
+				
+				if (sampleSet.sampleGrid.load(file) == false)
+				{
+					logError("failed to load sample grid");
+				}
+				
+				debugTimerEnd("sampleGrid_load");
+				
+				fclose(file);
+				file = nullptr;
+			}
+		}
+		
+		if (true)
+		{
+			// save sample set
+			
+			FILE * file = fopen("binaural/cipic_147", "wb");
+			
+			if (file != nullptr)
+			{
+				debugTimerBegin("sampleSet_save");
+				
+				if (sampleSet.save(file) == false)
+				{
+					logError("failed to save sample set");
+				}
+				
+				debugTimerEnd("sampleSet_save");
+				
+				fclose(file);
+				file = nullptr;
+			}
+		}
+		
+		if (true)
+		{
+			// load sample set
+			
+			HRIRSampleSet sampleSet;
+			
+			FILE * file = fopen("binaural/cipic_147", "rb");
+			
+			if (file != nullptr)
+			{
+				debugTimerBegin("sampleSet_load");
+				
+				if (sampleSet.load(file) == false)
+				{
+					logError("failed to load sample set");
+				}
+				
+				debugTimerEnd("sampleSet_load");
+				
+				fclose(file);
+				file = nullptr;
+			}
+		}
 	}
 	
 	if (true)
@@ -351,8 +443,8 @@ void testBinaural()
 		
 		//loadHRIRSampleSet_Ircam("binaural/IRC_1057", sampleSet);
 		
-		//loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
-		loadHRIRSampleSet_Cipic("binaural/CIPIC/subject12", sampleSet);
+		loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
+		//loadHRIRSampleSet_Cipic("binaural/CIPIC/subject12", sampleSet);
 		
 		sampleSet.finalize();
 		
@@ -372,8 +464,8 @@ void testBinaural()
 		Surface view3D(200, 200, false);
 		
 		PcmData pcmData;
-		//pcmData.init("testsounds/music2.ogg");
-		pcmData.init("testsounds/sound.ogg");
+		pcmData.init("testsounds/music2.ogg");
+		//pcmData.init("testsounds/sound.ogg");
 		
 		MyPortAudioHandler audio;
 		int numSources = 0;
@@ -434,10 +526,17 @@ void testBinaural()
 				
 				for (auto & sound : audio.sounds)
 				{
+				#if 0
 					const float elevation = hoverLocation[1] + std::sin(framework.time * index / 98.f) * 60.f;
 					index++;
 					const float azimuth = hoverLocation[0] + std::cos(framework.time * index / 87.f) * 60.f;
 					index++;
+				#else
+					const float elevation = hoverLocation[1] + (index <= 1 ? 0.f : std::sin(framework.time * index / 98.f) * 60.f);
+					index++;
+					const float azimuth = hoverLocation[0] + (index <= 1 ? 0.f : std::cos(framework.time * index / 87.f) * 60.f);
+					index++;
+				#endif
 					
 					sound->binauralizer.setSampleLocation(elevation, azimuth);
 				}
@@ -476,7 +575,28 @@ void testBinaural()
 				const HRIRSampleData * samples[3];
 				float sampleWeights[3];
 				
-				if (sampleSet.lookup_3(hoverLocation[1], hoverLocation[0], samples, sampleWeights))
+				float elevation = hoverLocation[1];
+				float azimuth = hoverLocation[0];
+				
+				{
+					// clamp elevation and azimuth to ensure it maps within the elevation and azimut topology
+					
+					const float eps = .01f;
+					
+					const float elevationMin = -90.f + eps;
+					const float elevationMax = +90.f - eps;
+					
+					const float azimuthMin = -180.f + eps;
+					const float azimuthMax = +180.f - eps;
+					
+					elevation = std::max(elevation, elevationMin);
+					elevation = std::min(elevation, elevationMax);
+					
+					azimuth = std::max(azimuth, azimuthMin);
+					azimuth = std::min(azimuth, azimuthMax);
+				}
+				
+				if (sampleSet.lookup_3(elevation, azimuth, samples, sampleWeights))
 				{
 					blendHrirSamples_3(samples, sampleWeights, hrir);
 				}
@@ -872,7 +992,7 @@ void testBinaural()
 					
 					if (hoverCell != nullptr)
 					{
-						drawText(mouse.x, mouse.y + 60, fontSize, 0, 1, "cell.numTriangles=%d", int(hoverCell->triangles.size()));
+						drawText(mouse.x, mouse.y + 60, fontSize, 0, 1, "cell.numTriangles=%d", int(hoverCell->triangleIndices.size()));
 					}
 					
 					gxPopMatrix();
@@ -907,9 +1027,13 @@ static void drawHrirSampleGrid(const HRIRSampleSet & sampleSet, const Vec2 & hov
 			
 			if (hoverCell != nullptr)
 			{
-				for (auto cellTriangle : hoverCell->triangles)
+				for (auto cellTriangleIndex : hoverCell->triangleIndices)
+				{
+					auto cellTriangle = &sampleSet.sampleGrid.triangles[cellTriangleIndex];
+					
 					if (&triangle == cellTriangle)
 						isInHoverCell = true;
+				}
 			}
 			
 			if (&triangle == hoverTriangle)
