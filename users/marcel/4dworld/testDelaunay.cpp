@@ -44,6 +44,7 @@ static bool baryPointInTriangle(
 	const Vec2 & B,
 	const Vec2 & C,
 	const Vec2 & P,
+	const float eps,
 	float & baryU, float & baryV)
 {
 	// Compute vectors
@@ -64,7 +65,7 @@ static bool baryPointInTriangle(
 	const float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
 
 	// Check if point is in triangle
-	if ((u >= 0.f) && (v >= 0.f) && (u + v < 1.f))
+	if ((u >= 0.f - eps) && (v >= 0.f - eps) && (u + v < 1.f + eps))
 	{
 		baryU = u;
 		baryV = v;
@@ -179,6 +180,8 @@ void testDelaunay()
 		float baryU = 0.f;
 		float baryV = 0.f;
 		
+		const float eps = .001f;
+		
 		for (auto & triangle : triangles)
 		{
 			const Vec2 p1(triangle.p1.x, triangle.p1.y);
@@ -186,7 +189,7 @@ void testDelaunay()
 			const Vec2 p3(triangle.p3.x, triangle.p3.y);
 			const Vec2 p(polar.x, polar.y);
 			
-			if (baryPointInTriangle(p1, p2, p3, p, baryU, baryV))
+			if (baryPointInTriangle(p1, p2, p3, p, eps, baryU, baryV))
 			{
 				activeTriangle = &triangle;
 			}
