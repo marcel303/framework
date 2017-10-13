@@ -33,7 +33,10 @@
 #include "StringEx.h"
 #include "Timer.h"
 #include <string.h>
-#include <xmmintrin.h>
+
+#if AUDIO_USE_SSE
+	#include <xmmintrin.h>
+#endif
 
 //
 
@@ -49,7 +52,7 @@ float AudioFloat::getMean() const
 	{
 		// todo : add audioBuffer*** function to calculate the mean value of a buffer
 		
-	#if 0
+	#if AUDIO_USE_SSE && 0
 		const __m128 * __restrict samples4 = (__m128*)samples;
 		
 		__m128 sum4 = _mm_setzero_ps();
@@ -350,6 +353,8 @@ void AudioFloat::mulMul(const AudioFloat & other, const AudioFloat & gain)
 	}
 }
 
+#if AUDIO_USE_SSE
+
 void * AudioFloat::operator new(size_t size)
 {
 	return _mm_malloc(size, 16);
@@ -359,6 +364,8 @@ void AudioFloat::operator delete(void * mem)
 {
 	_mm_free(mem);
 }
+
+#endif
 
 //
 
@@ -590,6 +597,8 @@ void AudioNodeBase::trigger(const int outputSocketIndex)
 	}
 }
 
+#if AUDIO_USE_SSE
+
 void * AudioNodeBase::operator new(size_t size)
 {
 	return _mm_malloc(size, 16);
@@ -599,6 +608,8 @@ void AudioNodeBase::operator delete(void * mem)
 {
 	_mm_free(mem);
 }
+
+#endif
 
 //
 

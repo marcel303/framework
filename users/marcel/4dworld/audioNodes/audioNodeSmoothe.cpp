@@ -27,7 +27,6 @@
 
 #include "audioNodeSmoothe.h"
 #include <math.h>
-#include <xmmintrin.h>
 
 AUDIO_ENUM_TYPE(smoothing_mode)
 {
@@ -69,7 +68,7 @@ void AudioNodeSmoothe::tick(const float _dt)
 		
 		resultOutput.setVector();
 		
-		_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+		SCOPED_FLUSH_DENORMALS;
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
@@ -77,8 +76,6 @@ void AudioNodeSmoothe::tick(const float _dt)
 			
 			currentValue = currentValue * retainPerSample + value->samples[i] * followPerSample;
 		}
-		
-		_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF);
 	}
 	else
 	{

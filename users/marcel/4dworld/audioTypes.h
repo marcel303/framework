@@ -31,6 +31,8 @@
 
 #define SAMPLE_RATE 44100
 
+#define AUDIO_USE_SSE 1
+
 #ifdef MACOS
 	#define ALIGN16 __attribute__((aligned(16)))
 	#define ALIGN32 __attribute__((aligned(32)))
@@ -39,7 +41,28 @@
 	#define ALIGN32 __declspec(align(32))
 #endif
 
-#ifdef WIN32
+#if AUDIO_USE_SSE
+	#include <xmmintrin.h>
+
+	struct ScopedFlushDenormalsObject
+	{
+		ScopedFlushDenormalsObject()
+		{
+			_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+		}
+		
+		~ScopedFlushDenormalsObject()
+		{
+			_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF);
+		}
+	};
+
+	#define SCOPED_FLUSH_DENORMALS ScopedFlushDenormalsObject scopedFlushDenormals
+#else
+	#define SCOPED_FLUSH_DENORMALS do { } while (false)
+#endif
+
+#if AUDIO_USE_SSE && defined(WIN32)
 
 // Clang and GCC support this nice syntax where vector types support the same basic operations as floats or integers. on Windows we need to re-implement a subset here to make the code compile
 

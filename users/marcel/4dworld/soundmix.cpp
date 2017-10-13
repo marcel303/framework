@@ -31,11 +31,14 @@
 #include "osc4d.h"
 #include "Path.h"
 #include "soundmix.h"
-#include <xmmintrin.h>
+
+#if AUDIO_USE_SSE
+	#include <xmmintrin.h>
+#endif
 
 #include "framework.h" // for color hsl
 
-#define ENABLE_SSE 1
+#define ENABLE_SSE (AUDIO_USE_SSE && 1)
 
 static void generateOscForVoice(AudioVoice & voice, Osc4DStream & stream, const bool forceSync);
 
