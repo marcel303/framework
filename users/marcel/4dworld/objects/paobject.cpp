@@ -45,55 +45,135 @@ static int portaudioCallback(
 	return paContinue;
 }
 
-int PortAudioObject::findSupportedDevice(const int numInputChannels, const int numOutputChannels) const
+bool PortAudioObject::findSupportedDevices(const int numInputChannels, const int numOutputChannels, int & inputDeviceIndex, int & outputDeviceIndex) const
 {
 	PaError err;
 	
 	if ((err = Pa_Initialize()) != paNoError)
 	{
 		LOG_ERR("portaudio: failed to initialize: %s", Pa_GetErrorText(err));
-		return paNoDevice;
+		return false;
 	}
 	
 	//
 	
-	int result = paNoDevice;
+	inputDeviceIndex = paNoDevice;
+	outputDeviceIndex = paNoDevice;
 	
-	const int numDevices = Pa_GetDeviceCount();
+	// first find the most desirable output device
 	
-	for (int i = 0; i < numDevices; ++i)
 	{
-		const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(i);
+		// is the default output device ok?
 		
-		if (deviceInfo == nullptr)
+		const int deviceIndex = Pa_GetDefaultOutputDevice();
+		
+		const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(deviceIndex);
+		
+		if (deviceInfo != nullptr)
 		{
-			LOG_ERR("Pa_GetDeviceInfo returned null", 0);
-		}
-		else
-		{
-			if (deviceInfo->maxInputChannels >= numInputChannels && deviceInfo->maxOutputChannels >= numOutputChannels)
+			if (deviceInfo->maxOutputChannels >= numOutputChannels)
 			{
-				if (result == paNoDevice || i == Pa_GetDefaultOutputDevice())
+				outputDeviceIndex = deviceIndex;
+			}
+		}
+	}
+	
+	if (outputDeviceIndex == paNoDevice)
+	{
+		// default output device was not ok. iterate all devices and find the first matching one
+		
+		const int numDevices = Pa_GetDeviceCount();
+		
+		for (int deviceIndex = 0; deviceIndex < numDevices; ++deviceIndex)
+		{
+			const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(deviceIndex);
+			
+			if (deviceInfo == nullptr)
+			{
+				LOG_ERR("Pa_GetDeviceInfo returned null", 0);
+			}
+			else
+			{
+				if (deviceInfo->maxOutputChannels >= numOutputChannels)
 				{
-					result = i;
-				
-					//break;
+					outputDeviceIndex = deviceIndex;
+					
+					break;
 				}
 			}
 		}
 	}
 	
-	return result;
+	// next find the most desirable input device
+	
+	{
+		// is the default input device ok?
+		
+		const int deviceIndex = Pa_GetDefaultInputDevice();
+		
+		const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(deviceIndex);
+		
+		if (deviceInfo != nullptr)
+		{
+			if (deviceInfo->maxInputChannels >= numInputChannels)
+			{
+				inputDeviceIndex = deviceIndex;
+			}
+		}
+	}
+	
+	if (inputDeviceIndex == paNoDevice && outputDeviceIndex != paNoDevice)
+	{
+		// default input device is not ok. can we instead use the output device we found?
+		
+		const int deviceIndex = outputDeviceIndex;
+		
+		const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(deviceIndex);
+		
+		if (deviceInfo != nullptr)
+		{
+			if (deviceInfo->maxInputChannels >= numInputChannels)
+			{
+				inputDeviceIndex = deviceIndex;
+			}
+		}
+	}
+	
+	if (inputDeviceIndex == paNoDevice)
+	{
+		// neither the default input device not the output device could be used. iterate all device and find the first one that's ok
+		
+		const int numDevices = Pa_GetDeviceCount();
+		
+		for (int deviceIndex = 0; deviceIndex < numDevices; ++deviceIndex)
+		{
+			const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(deviceIndex);
+			
+			if (deviceInfo == nullptr)
+			{
+				LOG_ERR("Pa_GetDeviceInfo returned null", 0);
+			}
+			else
+			{
+				if (deviceInfo->maxInputChannels >= numInputChannels)
+				{
+					inputDeviceIndex = deviceIndex;
+					
+					break;
+				}
+			}
+		}
+	}
+	
+	return inputDeviceIndex != paNoDevice && outputDeviceIndex != paNoDevice;
 }
 
 bool PortAudioObject::isSupported(const int numInputChannels, const int numOutputChannels) const
 {
-	const int deviceIndex = findSupportedDevice(numInputChannels, numOutputChannels);
+	int inputDeviceIndex = paNoDevice;
+	int outputDeviceIndex = paNoDevice;
 	
-	if (deviceIndex == paNoDevice)
-		return false;
-	else
-		return true;
+	return findSupportedDevices(numInputChannels, numOutputChannels, inputDeviceIndex, outputDeviceIndex) == true;
 }
 
 bool PortAudioObject::init(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * handler)
@@ -126,9 +206,10 @@ bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannel
 	
 	LOG_DBG("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
 	
-	const int deviceIndex = findSupportedDevice(numInputChannels, numOutputChannels);
+	int inputDeviceIndex = paNoDevice;
+	int outputDeviceIndex = paNoDevice;
 	
-	if (deviceIndex == paNoDevice)
+	if (findSupportedDevices(numInputChannels, numOutputChannels, inputDeviceIndex, outputDeviceIndex) == false)
 	{
 		LOG_ERR("portaudio: failed to find input/output device", 0);
 		return false;
@@ -137,7 +218,7 @@ bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannel
 	PaStreamParameters outputParameters;
 	memset(&outputParameters, 0, sizeof(outputParameters));
 	
-	outputParameters.device = deviceIndex;
+	outputParameters.device = outputDeviceIndex;
 	outputParameters.channelCount = numOutputChannels;
 	outputParameters.sampleFormat = paFloat32;
 	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
@@ -148,7 +229,7 @@ bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannel
 	PaStreamParameters inputParameters;
 	memset(&inputParameters, 0, sizeof(inputParameters));
 	
-	inputParameters.device = deviceIndex;
+	inputParameters.device = inputDeviceIndex;
 	inputParameters.channelCount = numInputChannels;
 	inputParameters.sampleFormat = paFloat32;
 	inputParameters.suggestedLatency = Pa_GetDeviceInfo(inputParameters.device)->defaultLowInputLatency;
