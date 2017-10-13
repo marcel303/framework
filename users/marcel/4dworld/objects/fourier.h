@@ -97,12 +97,16 @@ example usage:
 
 */
 
-#include <xmmintrin.h>
+#if BINAURAL_USE_SSE
+	#include <xmmintrin.h>
+#endif
 
 struct Fourier
 {
+#if BINAURAL_USE_SSE
 	typedef __m128 float4;
-	
+#endif
+
 	static void fft1D(
 		double * __restrict dreal,
 		double * __restrict dimag,
@@ -127,6 +131,7 @@ struct Fourier
 		const int size, const int transformSize,
 		const bool inverse, const bool normalize);
 	
+#if BINAURAL_USE_SSE
 	static void fft1D(
 		float4 * __restrict dreal,
 		float4 * __restrict dimag,
@@ -138,7 +143,8 @@ struct Fourier
 		float4 * __restrict dimag,
 		const int size, const int transformSize,
 		const bool inverse, const bool normalize);
-	
+#endif
+
 	static void fft2D(
 		double * __restrict dreal,
 		double * __restrict dimag,

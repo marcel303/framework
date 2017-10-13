@@ -26,13 +26,10 @@
 */
 
 #include "binaural.h"
+#include "delaunay/delaunay.h"
 #include "fourier.h"
 #include <stdarg.h>
 #include <stdio.h>
-#include <xmmintrin.h>
-#include <immintrin.h>
-
-#include "delaunay/delaunay.h"
 
 #define USE_FRAMEWORK 1
 
@@ -41,6 +38,11 @@
 	#include "framework.h"
 	#include "Parse.h"
 	#include "Timer.h"
+#endif
+
+#if BINAURAL_USE_SSE
+	#include <xmmintrin.h>
+	#include <immintrin.h>
 #endif
 
 /*
@@ -196,7 +198,7 @@ namespace binaural
 	{
 		debugTimerBegin("blendHrirSamples_3");
 		
-	#if ENABLE_SSE
+	#if BINAURAL_USE_SSE
 		const float4 * __restrict a_lSamples = (float4*)a.lSamples;
 		const float4 * __restrict b_lSamples = (float4*)b.lSamples;
 		const float4 * __restrict c_lSamples = (float4*)c.lSamples;
@@ -368,17 +370,22 @@ namespace binaural
 	#else
 		// convolve audio data with impulse-response data in the frequency-domain
 		
-		source.convolveAndReverseIndices(lFilterOld, lResultOld);
-		source.convolveAndReverseIndices(rFilterOld, rResultOld);
-		source.convolveAndReverseIndices(lFilterNew, lResultNew);
-		source.convolveAndReverseIndices(rFilterNew, rResultNew);
+		float lResultOldImag[HRTF_BUFFER_SIZE];
+		float rResultOldImag[HRTF_BUFFER_SIZE];
+		float lResultNewImag[HRTF_BUFFER_SIZE];
+		float rResultNewImag[HRTF_BUFFER_SIZE];
+		
+		source.convolveAndReverseIndices(lFilterOld, lResultOld, lResultOldImag);
+		source.convolveAndReverseIndices(rFilterOld, rResultOld, rResultOldImag);
+		source.convolveAndReverseIndices(lFilterNew, lResultNew, lResultNewImag);
+		source.convolveAndReverseIndices(rFilterNew, rResultNew, rResultNewImag);
 		
 		// transform convolved audio data back to the time-domain
 		
-		lResultOld.transformToTimeDomain(true);
-		rResultOld.transformToTimeDomain(true);
-		lResultNew.transformToTimeDomain(true);
-		rResultNew.transformToTimeDomain(true);
+		Fourier::fft1D(lResultOld, lResultOldImag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, true, true);
+		Fourier::fft1D(rResultOld, rResultOldImag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, true, true);
+		Fourier::fft1D(lResultNew, lResultNewImag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, true, true);
+		Fourier::fft1D(rResultNew, rResultNewImag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, true, true);
 	#endif
 	
 		debugTimerEnd("convolveAudio_2");
@@ -392,7 +399,7 @@ namespace binaural
 	{
 		debugAssert((numSamples % 4) == 0);
 		
-	#if ENABLE_SSE
+	#if BINAURAL_USE_SSE
 		const float tStepScalar = 1.f / numSamples;
 		const float4 tStep = _mm_set1_ps(8.f / numSamples);
 		float4 t1 = _mm_set_ps(tStepScalar * 3.f, tStepScalar * 2.f, tStepScalar * 1.f, tStepScalar * 0.f);
@@ -436,6 +443,7 @@ namespace binaural
 	#endif
 	}
 	
+#if ENABLE_FOURIER4
 	void interleaveAudioBuffers_4(
 		const float * __restrict array1,
 		const float * __restrict array2,
@@ -443,7 +451,7 @@ namespace binaural
 		const float * __restrict array4,
 		float4 * __restrict result)
 	{
-	#if ENABLE_SSE
+	#if BINAURAL_USE_SSE
 		const float4 * __restrict array1_4 = (float4*)array1;
 		const float4 * __restrict array2_4 = (float4*)array2;
 		const float4 * __restrict array3_4 = (float4*)array3;
@@ -499,7 +507,7 @@ namespace binaural
 		const float * __restrict array4,
 		float4 * __restrict result)
 	{
-	#if ENABLE_SSE
+	#if BINAURAL_USE_SSE
 		const float4 * __restrict array1_4 = (float4*)array1;
 		const float4 * __restrict array2_4 = (float4*)array2;
 		const float4 * __restrict array3_4 = (float4*)array3;
@@ -551,7 +559,7 @@ namespace binaural
 		float * __restrict array3,
 		float * __restrict array4)
 	{
-	#if ENABLE_SSE
+	#if BINAURAL_USE_SSE
 		float4 * __restrict array1_4 = (float4*)array1;
 		float4 * __restrict array2_4 = (float4*)array2;
 		float4 * __restrict array3_4 = (float4*)array3;
@@ -589,7 +597,7 @@ namespace binaural
 		float * __restrict array1,
 		float * __restrict array2)
 	{
-	#if ENABLE_SSE
+	#if BINAURAL_USE_SSE
 		float4 * __restrict array1_4 = (float4*)array1;
 		float4 * __restrict array2_4 = (float4*)array2;
 		
@@ -624,6 +632,7 @@ namespace binaural
 		}
 	#endif
 	}
+#endif
 	
 	//
 	
@@ -798,10 +807,8 @@ namespace binaural
 			Fourier::fft1D_slow(real, imag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, true, true);
 	}
 
-	void AudioBuffer::convolveAndReverseIndices(const HRTFData & filter, AudioBuffer & output)
+	void AudioBuffer::convolveAndReverseIndices(const HRTFData & filter, AudioBuffer & output) const
 	{
-		// todo : SSE optimize this code
-		
 		const float * __restrict sReal = real;
 		const float * __restrict sImag = imag;
 		
@@ -820,11 +827,35 @@ namespace binaural
 		}
 	}
 	
+	void AudioBuffer::convolveAndReverseIndices(
+		const HRTFData & filter,
+		float * __restrict outputReal,
+		float * __restrict outputImag) const
+	{
+		const float * __restrict sReal = real;
+		const float * __restrict sImag = imag;
+		
+		const float * __restrict fReal = filter.real;
+		const float * __restrict fImag = filter.imag;
+		
+		float * __restrict oReal = outputReal;
+		float * __restrict oImag = outputImag;
+		
+		for (int i = 0; i < HRTF_BUFFER_SIZE; ++i)
+		{
+			// complex multiply both arrays of complex values and store the result in output
+			
+			oReal[fftIndices.indices[i]] = sReal[i] * fReal[i] - sImag[i] * fImag[i];
+			oImag[fftIndices.indices[i]] = sReal[i] * fImag[i] + sImag[i] * fReal[i];
+		}
+	}
+	
+#if ENABLE_FOURIER4
 	void AudioBuffer::convolveAndReverseIndices_4(
 		const float4 * __restrict filterReal,
 		const float4 * __restrict filterImag,
 		float4 * __restrict outputReal,
-		float4 * __restrict outputImag)
+		float4 * __restrict outputImag) const
 	{
 		// todo : SSE optimize this code
 		
@@ -848,7 +879,8 @@ namespace binaural
 			oImag[fftIndices.indices[i]] = sReal4 * fImag[i] + sImag4 * fReal[i];
 		}
 	}
-	
+#endif
+
 	const HRIRSampleGrid::Cell * HRIRSampleGrid::lookupCell(const float elevation, const float azimuth) const
 	{
 		const int cellX = (int(std::floor(elevation / 180.f * HRIRSampleGrid::kGridSx)) + HRIRSampleGrid::kGridSx) % HRIRSampleGrid::kGridSx;

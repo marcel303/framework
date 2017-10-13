@@ -58,7 +58,6 @@ within the triangle.
 #include <list>
 #include <string>
 #include <vector>
-#include <xmmintrin.h>
 
 #ifndef ALIGN16
 	#ifdef MACOS
@@ -68,9 +67,16 @@ within the triangle.
 	#endif
 #endif
 
-#define ENABLE_SSE 1
+#if !defined(BINAURAL_USE_SSE)
+	#define BINAURAL_USE_SSE 1
+#endif
+
 #define ENABLE_DEBUGGING 0
-#define ENABLE_FOURIER4 1
+#define ENABLE_FOURIER4 (BINAURAL_USE_SSE && 1)
+
+#if BINAURAL_USE_SSE
+	#include <xmmintrin.h>
+#endif
 
 namespace binaural
 {
@@ -97,7 +103,9 @@ namespace binaural
 	
 	// value types
 	
+#if BINAURAL_USE_SSE
 	typedef __m128 float4;
+#endif
 	
 	// structures
 
@@ -108,12 +116,18 @@ namespace binaural
 		
 		void transformToFrequencyDomain(const bool fast = false);
 		void transformToTimeDomain(const bool fast = false);
-		void convolveAndReverseIndices(const HRTFData & filter, AudioBuffer & output);
+		void convolveAndReverseIndices(const HRTFData & filter, AudioBuffer & output) const;
+		void convolveAndReverseIndices(
+			const HRTFData & filter,
+			float * __restrict outputReal,
+			float * __restrict outputImag) const;
+	#if ENABLE_FOURIER4
 		void convolveAndReverseIndices_4(
 			const float4 * __restrict filterReal,
 			const float4 * __restrict filterImag,
 			float4 * __restrict outputReal,
-			float4 * __restrict outputImag);
+			float4 * __restrict outputImag) const;
+	#endif
 	};
 	
 	struct AudioBuffer_Real
@@ -332,6 +346,7 @@ namespace binaural
 		const int numSamples,
 		float * __restrict result);
 	
+#if ENABLE_FOURIER4
 	void interleaveAudioBuffers_4(
 		const float * __restrict array1,
 		const float * __restrict array2,
@@ -345,7 +360,7 @@ namespace binaural
 		const float * __restrict array3,
 		const float * __restrict array4,
 		float4 * __restrict result);
-	
+
 	void deinterleaveAudioBuffers_4(
 		const float4 * __restrict interleaved,
 		float * __restrict array1,
@@ -357,7 +372,8 @@ namespace binaural
 		const float4 * __restrict interleaved,
 		float * __restrict array1,
 		float * __restrict array2);
-	
+#endif
+
 	// @see http://blackpawn.com/texts/pointinpoly/
 	template <typename Vector>
 	inline bool baryPointInTriangle(
