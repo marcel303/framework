@@ -160,7 +160,7 @@ namespace binaural
 			}
 		}
 		
-		sampleSet.samples.reserve(1250);
+		sampleSet.samples.reserve(filesByAzimuth.size() * 2);
 		
 		int numAdded = 0;
 		
@@ -208,13 +208,13 @@ namespace binaural
 				const short * __restrict lSamples = (short*)file.l->sampleData;
 				const short * __restrict rSamples = (short*)file.r->sampleData;
 				
+				// transpose the sound data ..
+				
 				for (int c = 0; c < 200; ++c)
 				{
 					sampleData[c * 2 + 0] = lSamples[c + i * 200];
 					sampleData[c * 2 + 1] = rSamples[c + i * 200];
 				}
-				
-				// transpose the sound data ..
 				
 				SoundData soundData;
 				soundData.numChannels = 2;
