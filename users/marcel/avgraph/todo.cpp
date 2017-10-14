@@ -1,6 +1,7 @@
 /*
 
 top priority items:
+- add non-SSE versions for audio code
 - add new node type selection memu. make it a pop-over ?
 - port compose shader from 4dworld to avgraph. fix graph editor fade when idle
 - add support for custom editors to graph editor
