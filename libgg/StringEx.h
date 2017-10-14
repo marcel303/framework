@@ -33,6 +33,7 @@ public:
 };
 
 #if defined(PSP) || defined(__GNUC__)
+	// todo : use the safe versions here !
     #define sprintf_s(s, ss, f, ...) sprintf(s, f, __VA_ARGS__)
     #define vsprintf_s(s, ss, f, a) vsprintf(s, f, a)
     #define strcpy_s(d, ds, s) strcpy(d, s)
