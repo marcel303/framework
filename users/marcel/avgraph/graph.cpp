@@ -1719,16 +1719,20 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	//
 	
 	if (isSelected)
-		setColor(63, 63, 127, 255);
+		setColor(63, 63, 127, 191);
 	else
-		setColor(31, 31, 31);
-	drawRect(0, 0, sx, sy);
+		setColor(7, 7, 15, 191);
+	hqBegin(HQ_FILLED_ROUNDED_RECTS);
+	{
+		hqFillRoundedRect(0, 0, sx, sy, 12.f);
+	}
+	hqEnd();
 	
 	if (isSelected)
 		setColor(255, 255, 255);
 	else
 		setColor(191, 191, 191);
-	drawRectLine(0, 0, sx, sy);
+	//drawRectLine(0, 0, sx, sy);
 	
 	int y = kPadding;
 	
@@ -1787,7 +1791,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		drawText(graphX + graphSx - 3, y + graphSy - 3, 10, -1.f, -1.f, "%0.03f", graphMin);
 		
 		setColor(colorWhite);
-		drawRectLine(graphX, y, graphX + graphSx, y + graphSy);
+		//drawRectLine(graphX, y, graphX + graphSx, y + graphSy);
 		
 		y += graphSy;
 	}
@@ -1818,7 +1822,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		}
 		
 		setColor(colorWhite);
-		drawRectLine(textureX, y + textureY, textureX + textureSx, y + textureY + textureSy);
+		//drawRectLine(textureX, y + textureY, textureX + textureSx, y + textureY + textureSy);
 		
 		y += textureAreaSy;
 	}
@@ -1962,7 +1966,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		endTextBatch();
 		
 		setColor(colorWhite);
-		drawRectLine(channelsEdgeX, y, channelsEdgeX + channelsSx, y + channelsSy);
+		//drawRectLine(channelsEdgeX, y, channelsEdgeX + channelsSx, y + channelsSy);
 		
 		y += channelsSy;
 	}
@@ -3321,8 +3325,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			Assert(node != nullptr);
 			if (node != nullptr)
 			{
-				const float dragX = mouse.dx;
-				const float dragY = mouse.dy;
+				const float dragX = mousePosition.dx;
+				const float dragY = mousePosition.dy;
 				
 				if (node->nodeType == kGraphNodeType_Visualizer)
 				{
