@@ -58,6 +58,9 @@ VfxNodeDrawBlend::VfxNodeDrawBlend()
 
 void VfxNodeDrawBlend::beforeDraw() const
 {
+	if (isPassthrough)
+		return;
+	
 	const BlendMode blendMode = (BlendMode)getInputInt(kInput_BlendMode, 0);
 	
 	switch (blendMode)
@@ -91,9 +94,18 @@ void VfxNodeDrawBlend::beforeDraw() const
 		pushBlend(BLEND_ALPHA); // todo
 		break;
 	}
+	
+	const COLOR_POST colorPost = blendMode == kBlendMode_Mul ? POST_BLEND_MUL_FIX : POST_NONE;
+	
+	pushColorPost(colorPost);
 }
 
 void VfxNodeDrawBlend::afterDraw() const
 {
+	if (isPassthrough)
+		return;
+	
+	popColorPost();
+	
 	popBlend();
 }

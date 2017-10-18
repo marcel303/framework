@@ -62,6 +62,9 @@ VfxNodeDrawImage::VfxNodeDrawImage()
 
 void VfxNodeDrawImage::draw() const
 {
+	if (isPassthrough)
+		return;
+		
 	const VfxImageBase * image = getInputImage(kInput_Image, nullptr);
 	const SizeMode sizeMode = (SizeMode)getInputInt(kInput_SizeMode, 0);
 	const float opacity = getInputFloat(kInput_Opacity, 1.f);
