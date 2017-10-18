@@ -1984,6 +1984,7 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, selectedLinks()
 	, selectedLinkRoutePoints()
 	, state(kState_Idle)
+	, flags(kFlag_All)
 	, nodeSelect()
 	, nodeDrag()
 	, socketConnect()
@@ -2204,6 +2205,11 @@ const GraphEdit_LinkTypeDefinition * GraphEdit::tryGetLinkTypeDefinition(const G
 	}
 	
 	return result;
+}
+
+bool GraphEdit::enabled(const int flag) const
+{
+	return (flags & flag) == flag;
 }
 
 bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) const
@@ -2560,7 +2566,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					
 					if (hitTestResult.hasNode)
 					{
-						if (hitTestResult.nodeHitTestResult.inputSocket)
+						if (enabled(kFlag_LinkAdd) && hitTestResult.nodeHitTestResult.inputSocket)
 						{
 							socketConnect.srcNodeId = hitTestResult.node->id;
 							socketConnect.srcNodeSocket = hitTestResult.nodeHitTestResult.inputSocket;
@@ -2569,7 +2575,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							break;
 						}
 						
-						if (hitTestResult.nodeHitTestResult.outputSocket)
+						if (enabled(kFlag_LinkAdd) && hitTestResult.nodeHitTestResult.outputSocket)
 						{
 							socketConnect.dstNodeId = hitTestResult.node->id;
 							socketConnect.dstNodeSocket = hitTestResult.nodeHitTestResult.outputSocket;
@@ -2641,8 +2647,11 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							{
 								nodeDoubleClickTime = .4f;
 								
-								state = kState_NodeDrag;
-								break;
+								if (enabled(kFlag_NodeDrag))
+								{
+									state = kState_NodeDrag;
+									break;
+								}
 							}
 						}
 					}
@@ -2700,7 +2709,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				{
 					if (hitTestResult.hasNode)
 					{
-						if (hitTestResult.nodeHitTestResult.inputSocket)
+						if (enabled(kFlag_NodeAdd) && hitTestResult.nodeHitTestResult.inputSocket)
 						{
 							tryAddVisualizer(
 								hitTestResult.node->id,
@@ -2710,7 +2719,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								mousePosition.x, mousePosition.y, true);
 						}
 						
-						if (hitTestResult.nodeHitTestResult.outputSocket)
+						if (enabled(kFlag_NodeAdd) && hitTestResult.nodeHitTestResult.outputSocket)
 						{
 							tryAddVisualizer(
 								hitTestResult.node->id,
@@ -2721,7 +2730,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						}
 					}
 					
-					if (hitTestResult.hasLink)
+					if (enabled(kFlag_LinkAdd) && hitTestResult.hasLink)
 					{
 						GraphLinkRoutePoint routePoint;
 						routePoint.linkId = hitTestResult.link->id;
@@ -2802,7 +2811,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				dragAndZoom.desiredZoom *= 1.5f;
 			}
 			
-			if (keyboard.wentDown(SDLK_d))
+			if (enabled(kFlag_NodeAdd) && keyboard.wentDown(SDLK_d))
 			{
 				std::set<GraphNodeId> newSelectedNodes;
 				
@@ -2907,6 +2916,10 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			}
 			
 			if (selectedNodes.empty() && selectedLinkRoutePoints.empty())
+			{
+				tickKeyboardScroll();
+			}
+			else if (!enabled(kFlag_NodeDrag))
 			{
 				tickKeyboardScroll();
 			}
@@ -3021,38 +3034,47 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			if (keyboard.wentDown(SDLK_BACKSPACE) || keyboard.wentDown(SDLK_DELETE))
 			{
-				auto nodesToRemove = selectedNodes;
-				for (auto nodeId : nodesToRemove)
+				if (enabled(kFlag_NodeRemove))
 				{
-					graph->removeNode(nodeId);
-				}
-				
-				Assert(selectedNodes.empty());
-				selectedNodes.clear();
-				
-				auto linksToRemove = selectedLinks;
-				for (auto linkId : linksToRemove)
-				{
-					if (graph->tryGetLink(linkId) != nullptr)
-						graph->removeLink(linkId);
-				}
-				
-				Assert(selectedLinks.empty());
-				selectedLinks.clear();
-				
-				auto routePointsToRemove = selectedLinkRoutePoints;
-				for (auto routePoint : routePointsToRemove)
-				{
-					auto link = graph->tryGetLink(routePoint->linkId);
-					
-					for (auto routePointItr = link->editorRoutePoints.begin(); routePointItr != link->editorRoutePoints.end(); ++routePointItr)
+					auto nodesToRemove = selectedNodes;
+					for (auto nodeId : nodesToRemove)
 					{
-						auto routePoint2 = &(*routePointItr);
+						graph->removeNode(nodeId);
+					}
+					
+					Assert(selectedNodes.empty());
+					selectedNodes.clear();
+				}
+				
+				if (enabled(kFlag_LinkRemove))
+				{
+					auto linksToRemove = selectedLinks;
+					for (auto linkId : linksToRemove)
+					{
+						if (graph->tryGetLink(linkId) != nullptr)
+							graph->removeLink(linkId);
+					}
+					
+					Assert(selectedLinks.empty());
+					selectedLinks.clear();
+				}
+				
+				if (enabled(kFlag_LinkRemove))
+				{
+					auto routePointsToRemove = selectedLinkRoutePoints;
+					for (auto routePoint : routePointsToRemove)
+					{
+						auto link = graph->tryGetLink(routePoint->linkId);
 						
-						if (routePoint2 == routePoint)
+						for (auto routePointItr = link->editorRoutePoints.begin(); routePointItr != link->editorRoutePoints.end(); ++routePointItr)
 						{
-							link->editorRoutePoints.erase(routePointItr);
-							break;
+							auto routePoint2 = &(*routePointItr);
+							
+							if (routePoint2 == routePoint)
+							{
+								link->editorRoutePoints.erase(routePointItr);
+								break;
+							}
 						}
 					}
 				}
@@ -3441,8 +3463,8 @@ bool GraphEdit::tickTouches()
 		return false;
 	}
 	
-	const float sx = GFX_SX;
-	const float sy = GFX_SY;
+	const float sx = 1920/2;
+	const float sy = 1080/2;
 	
 	for (auto & event : framework.events)
 	{
@@ -3454,6 +3476,8 @@ bool GraphEdit::tickTouches()
 			{
 				if (touches.finger1.id == 0)
 				{
+					//logDebug("touch down: fingerId=%d, x=%.2f, y=%.2f", event.tfinger.fingerId, event.tfinger.x, event.tfinger.y);
+					
 					touches.finger1.id = event.tfinger.fingerId;
 					touches.finger1.position.Set(event.tfinger.x * sx, event.tfinger.y * sy);
 					touches.finger1.initialPosition = touches.finger1.position;
@@ -3877,7 +3901,18 @@ void GraphEdit::socketConnectEnd()
 		
 		selectLink(link.id, true);
 	}
-	else if (socketConnect.dstNodeId != kGraphNodeIdInvalid)
+	else if (enabled(kFlag_NodeAdd) && socketConnect.srcNodeId != kGraphNodeIdInvalid)
+	{
+		if (commandMod())
+		{
+			tryAddVisualizer(
+				socketConnect.srcNodeId,
+				String::Empty, -1,
+				socketConnect.srcNodeSocket->name, socketConnect.srcNodeSocket->index,
+				mousePosition.x, mousePosition.y, true);
+		}
+	}
+	else if (enabled(kFlag_NodeAdd) && socketConnect.dstNodeId != kGraphNodeIdInvalid)
 	{
 		if (commandMod())
 		{
@@ -3894,6 +3929,9 @@ void GraphEdit::socketConnectEnd()
 
 void GraphEdit::doMenu(const float dt)
 {
+	if (!enabled(kFlag_SaveLoad))
+		return;
+	
 	pushMenu("file");
 	{
 		const float size = 1.f / 3.f;
@@ -3933,6 +3971,9 @@ void GraphEdit::doMenu(const float dt)
 
 void GraphEdit::doEditorOptions(const float dt)
 {
+	if (!enabled(kFlag_EditorOptions))
+		return;
+	
 	if (g_doActions && commandMod() && keyboard.wentDown(SDLK_g))
 		editorOptions.showGrid = !editorOptions.showGrid;
 	
@@ -4156,18 +4197,6 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 		node.editorVisualizer.sy = 0;
 		
 		graph->addNode(node);
-		
-	#if 0 // todo : remove ?
-		GraphNodeSocketLink link;
-		link.id = graph->allocLinkId();
-		link.srcNodeId = node.id;
-		link.srcNodeSocketName = "";
-		link.srcNodeSocketIndex = 0;
-		link.dstNodeId = socketConnect.dstNodeId;
-		link.dstNodeSocketName = socketConnect.dstNodeSocket->name;
-		link.dstNodeSocketIndex = socketConnect.dstNodeSocket->index;
-		graph->addLink(link, false);
-	#endif
 		
 		if (select)
 		{
@@ -5520,6 +5549,13 @@ static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, con
 
 void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const float dt)
 {
+	if (!graphEdit->enabled(GraphEdit::kFlag_NodeProperties))
+	{
+		if (doActions)
+			uiState->reset();
+		return;
+	}
+	
 	makeActive(uiState, doActions, doDraw);
 	pushMenu("propEdit");
 	
@@ -5752,6 +5788,13 @@ void calculateTypeNamesAndScores(const std::string & typeName, const GraphEdit_T
 
 void GraphUi::NodeTypeNameSelect::doMenus(UiState * uiState, const float dt)
 {
+	if (!graphEdit->enabled(GraphEdit::kFlag_NodeAdd))
+	{
+		if (g_doActions)
+			uiState->reset();
+		return;
+	}
+	
 	pushMenu("nodeTypeSelect");
 	{
 		doLabel("insert", 0.f);

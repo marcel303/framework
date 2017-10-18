@@ -897,6 +897,20 @@ struct GraphEdit : GraphEditConnection
 		kState_HiddenIdle
 	};
 	
+	enum Flags
+	{
+		kFlag_None = 0,
+		kFlag_SaveLoad = 1 << 0,
+		kFlag_EditorOptions = 1 << 1,
+		kFlag_NodeAdd = 1 << 2,
+		kFlag_NodeRemove = 1 << 3,
+		kFlag_NodeProperties = 1 << 4,
+		kFlag_NodeDrag = 1 << 5,
+		kFlag_LinkAdd = 1 << 6,
+		kFlag_LinkRemove = 1 << 7,
+		kFlag_All = ~0
+	};
+	
 	struct HitTestResult
 	{
 		bool hasNode;
@@ -1215,6 +1229,8 @@ struct GraphEdit : GraphEditConnection
 	
 	State state;
 	
+	int flags;
+	
 	NodeSelect nodeSelect;
 	NodeDrag nodeDrag;
 	SocketConnect socketConnect;
@@ -1261,6 +1277,7 @@ struct GraphEdit : GraphEditConnection
 	bool getLinkPath(const GraphLinkId linkId, LinkPath & path) const;
 	const GraphEdit_LinkTypeDefinition * tryGetLinkTypeDefinition(const GraphLinkId linkId) const;
 	
+	bool enabled(const int flag) const;
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
 	
 	bool tick(const float dt, const bool inputIsCaptured);
