@@ -303,13 +303,16 @@ void AudioGraphManager::selectFile(const char * filename)
 		
 		//
 		
-		auto fileItr = files.find(filename);
-		
-		if (fileItr != files.end())
+		if (filename != nullptr)
 		{
-			selectedFile = fileItr->second;
+			auto fileItr = files.find(filename);
 			
-			selectedFile->graphEdit->beginEditing();
+			if (fileItr != files.end())
+			{
+				selectedFile = fileItr->second;
+				
+				selectedFile->graphEdit->beginEditing();
+			}
 		}
 	}
 	SDL_UnlockMutex(audioMutex);
@@ -319,17 +322,24 @@ void AudioGraphManager::selectInstance(const AudioGraphInstance * instance)
 {
 	SDL_LockMutex(audioMutex);
 	{
-		for (auto & fileItr : files)
+		if (instance == nullptr)
 		{
-			auto file = fileItr.second;
-			
-			for (auto & instanceInFile : file->instanceList)
+			selectFile(nullptr);
+		}
+		else
+		{
+			for (auto & fileItr : files)
 			{
-				if (instance == &instanceInFile)
+				auto file = fileItr.second;
+				
+				for (auto & instanceInFile : file->instanceList)
 				{
-					selectFile(fileItr.first.c_str());
-					
-					file->activeInstance = instance;
+					if (instance == &instanceInFile)
+					{
+						selectFile(fileItr.first.c_str());
+						
+						file->activeInstance = instance;
+					}
 				}
 			}
 		}

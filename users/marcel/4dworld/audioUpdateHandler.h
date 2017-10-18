@@ -95,7 +95,7 @@ struct AudioUpdateHandler : PortAudioHandler
 	int64_t nextCpuTimeUpdate;
 	
 	AudioUpdateHandler();
-	~AudioUpdateHandler();
+	virtual ~AudioUpdateHandler();
 	
 	void init(SDL_mutex * mutex, const char * ipAddress, const int udpPort);
 	void shut();

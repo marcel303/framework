@@ -30,6 +30,7 @@
 #include <list>
 #include <map>
 #include <string>
+#include <vector>
 
 struct AudioGraph;
 struct AudioGraphFileRTC;

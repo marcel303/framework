@@ -73,7 +73,8 @@ void AudioUpdateHandler::init(SDL_mutex * _mutex, const char * ipAddress, const 
 	
 	Assert(oscStream == nullptr);
 	oscStream = new Osc4DStream();
-	oscStream->init(ipAddress, udpPort);
+	if (ipAddress != nullptr)
+		oscStream->init(ipAddress, udpPort);
 	
 	Assert(g_oscStream == nullptr);
 	g_oscStream = oscStream;

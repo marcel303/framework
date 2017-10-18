@@ -31,6 +31,10 @@ typedef void PaStream;
 
 struct PortAudioHandler
 {
+	virtual ~PortAudioHandler()
+	{
+	}
+	
 	virtual void portAudioCallback(
 		const void * inputBuffer,
 		const int numInputChannels,
