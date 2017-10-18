@@ -46,6 +46,24 @@ void main()
 			result.a   = texColor.a;
 		}
 	}
+
+	/*
+	POST_NONE,
+	POST_RGB_MIX_ALPHA_TO_ZERO,
+	POST_RGB_MIX_ALPHA_TO_ONE
+	*/
+
+	if (params.z != 0)
+	{
+		if (params.z == 1)
+		{
+			result.rgb = mix(vec3(0.0), result.rgb, result.a);
+		}
+		else if (params.z == 2)
+		{
+			result.rgb = mix(vec3(1.0), result.rgb, result.a);
+		}
+	}
 	
 	shader_fragColor = result;
 }

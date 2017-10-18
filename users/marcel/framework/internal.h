@@ -97,6 +97,7 @@ public:
 		memset(this, 0, sizeof(Globals));
 		blendMode = BLEND_ALPHA;
 		colorMode = COLOR_MUL;
+		colorPost = POST_NONE;
 		fontMode = FONT_BITMAP;
 		transform = TRANSFORM_SCREEN;
 		transformScreen.MakeIdentity();
@@ -117,6 +118,7 @@ public:
 	int resourceVersion;
 	BLEND_MODE blendMode;
 	COLOR_MODE colorMode;
+	COLOR_POST colorPost;
 	FONT_MODE fontMode;
 	Color color;
 	Gradient gradient;
@@ -649,6 +651,45 @@ public:
 	void clear();
 	void reload();
 	UiCacheElem & findOrCreate(const char * filename);
+};
+
+//
+
+template <typename Type, int kMaxStackSize>
+struct Stack
+{
+	Type stack[kMaxStackSize];
+	int stackSize = 0;
+	
+	Stack()
+	{
+	}
+	
+	Stack(const Type defaultValue)
+	{
+		push(defaultValue);
+	}
+	
+	void push(Type value)
+	{
+		fassert(stackSize < kMaxStackSize);
+		stack[stackSize++] = value;
+	}
+
+	void pop()
+	{
+		fassert(stackSize > 0);
+		--stackSize;
+		stack[stackSize] = Type(0);
+	}
+	
+	Type popValue()
+	{
+		pop();
+		
+		fassert(stackSize >= 1);
+		return stack[stackSize - 1];
+	}
 };
 
 //

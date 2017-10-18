@@ -99,7 +99,9 @@ enum BLEND_MODE // setBlend
 	BLEND_ADD_OPAQUE,
 	BLEND_SUBTRACT,
 	BLEND_INVERT,
-	BLEND_MUL
+	BLEND_MUL,
+	BLEND_MIN,
+	BLEND_MAX
 };
 
 enum COLOR_MODE // setColorMode
@@ -108,6 +110,15 @@ enum COLOR_MODE // setColorMode
 	COLOR_ADD,
 	COLOR_SUB,
 	COLOR_IGNORE
+};
+
+enum COLOR_POST
+{
+	POST_NONE,
+	POST_RGB_MIX_ALPHA_TO_ZERO,
+	POST_RGB_MIX_ALPHA_TO_ONE,
+	POST_PREMULTIPLY_RGB_WITH_ALPHA = POST_RGB_MIX_ALPHA_TO_ZERO,
+	POST_BLEND_MUL_FIX = POST_RGB_MIX_ALPHA_TO_ONE
 };
 
 enum FONT_MODE // setFontMode
@@ -1141,6 +1152,10 @@ void applyTransform();
 void applyTransformWithViewportSize(const float sx, const float sy);
 void setTransform2d(const Mat4x4 & transform);
 void setTransform3d(const Mat4x4 & transform);
+void projectScreen2d();
+void projectOrtho3d(); // todo
+void projectPerspective3d(const float fov, const float nearZ, const float farZ);
+void viewLookat3d(const float originX, const float originY, const float originZ, const float targetX, const float targetY, const float targetZ, const float upX, const float upY, const float upZ);
 Vec2 transformToScreen(const Vec3 & v);
 
 void pushSurface(Surface * surface);
@@ -1152,6 +1167,9 @@ void setBlend(BLEND_MODE blendMode);
 void pushBlend(BLEND_MODE blendMode);
 void popBlend();
 void setColorMode(COLOR_MODE colorMode);
+void setColorPost(COLOR_POST colorPost);
+void pushColorPost(COLOR_POST colorPost);
+void popColorPost();
 void setColor(const Color & color);
 void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
 void setColorf(float r, float g, float b, float a = 1.f, float rgbMul = 1.f);

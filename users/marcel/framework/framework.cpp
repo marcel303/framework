@@ -4536,6 +4536,13 @@ static const int kMaxSurfaceStackSize = 32;
 static Surface * surfaceStack[kMaxSurfaceStackSize] = { };
 static int surfaceStackSize = 0;
 
+static void getViewportSize(float & sx, float & sy)
+{
+	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
+	sx = surface ? surface->getWidth() : globals.displaySize[0];
+	sy = surface ? surface->getHeight() : globals.displaySize[1];
+}
+
 void setTransform(TRANSFORM transform)
 {
 	globals.transform = transform;
@@ -4545,9 +4552,10 @@ void setTransform(TRANSFORM transform)
 
 void applyTransform()
 {
-	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
-	const float sx = surface ? surface->getWidth() : globals.displaySize[0];
-	const float sy = surface ? surface->getHeight() : globals.displaySize[1];
+	float sx;
+	float sy;
+	getViewportSize(sx, sy);
+	
 	applyTransformWithViewportSize(sx, sy);
 }
 
@@ -4611,6 +4619,7 @@ void applyTransformWithViewportSize(const float sx, const float sy)
 	
 	gxMatrixMode(GL_MODELVIEW);
 	gxLoadIdentity();
+	checkErrorGL();
 }
 
 void setTransform2d(const Mat4x4 & transform)
@@ -4621,6 +4630,39 @@ void setTransform2d(const Mat4x4 & transform)
 void setTransform3d(const Mat4x4 & transform)
 {
 	globals.transform3d = transform;
+	
+	setTransform(TRANSFORM_3D);
+}
+
+void projectScreen2d()
+{
+	setTransform(TRANSFORM_2D);
+}
+
+void projectPerspective3d(const float fov, const float nearZ, const float farZ)
+{
+	Mat4x4 transform;
+	
+	float sx;
+	float sy;
+	getViewportSize(sx, sy);
+	
+	transform.MakePerspectiveLH(fov, sy / sx, nearZ, farZ);
+	
+	globals.transform3d = transform;
+	
+	setTransform(TRANSFORM_3D);
+}
+
+void viewLookat3d(const float originX, const float originY, const float originZ, const float targetX, const float targetY, const float targetZ, const float upX, const float upY, const float upZ)
+{
+	Mat4x4 transform;
+	
+	transform.MakeLookat(Vec3(originX, originY, originZ), Vec3(targetX, targetY, targetZ), Vec3(upX, upY, upZ));
+	
+	globals.transform3d = globals.transform3d * transform;
+	
+	setTransform(TRANSFORM_3D);
 }
 
 Vec2 transformToScreen(const Vec3 & v)
@@ -4770,6 +4812,18 @@ void setBlend(BLEND_MODE blendMode)
 			glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_ZERO, GL_SRC_COLOR);
 		break;
+	case BLEND_MIN:
+		glEnable(GL_BLEND);
+		if (glBlendEquation)
+			glBlendEquation(GL_MIN);
+		glBlendFunc(GL_ONE, GL_ONE);
+		break;
+	case BLEND_MAX:
+		glEnable(GL_BLEND);
+		if (glBlendEquation)
+			glBlendEquation(GL_MAX);
+		glBlendFunc(GL_ONE, GL_ONE);
+		break;
 	default:
 		fassert(false);
 		break;
@@ -4820,6 +4874,27 @@ void setColorMode(COLOR_MODE colorMode)
 		break;
 	}
 #endif
+}
+
+void setColorPost(COLOR_POST colorPost)
+{
+	globals.colorPost = colorPost;
+}
+
+static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
+
+void pushColorPost(COLOR_POST colorPost)
+{
+	colorPostStack.push(colorPost);
+	
+	setColorPost(colorPost);
+}
+
+void popColorPost()
+{
+	const COLOR_POST value = colorPostStack.popValue();
+	
+	setColorPost(value);
 }
 
 void setColor(const Color & color)
@@ -6477,7 +6552,7 @@ static void gxFlush(bool endOfBatch)
 				shaderElem.params[ShaderCacheElem::kSp_Params].index,
 				s_gxTextureEnabled ? 1 : 0,
 				globals.colorMode,
-				0,
+				globals.colorPost,
 				0);
 		}
 
@@ -6622,7 +6697,7 @@ void gxEmitVertices(int primitiveType, int numVertices)
 			shaderElem.params[ShaderCacheElem::kSp_Params].index,
 			s_gxTextureEnabled ? 1 : 0,
 			globals.colorMode,
-			0,
+			globals.colorPost,
 			0);
 	}
 
