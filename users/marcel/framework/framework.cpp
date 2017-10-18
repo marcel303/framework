@@ -1027,7 +1027,7 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 		std::transform(e.begin(), e.end(), e.begin(), ::tolower);
 		const char * f = fs.c_str();
 		const size_t fl = strlen(f);
-		if (e == "png" || e == "bmp")
+		if (e == "png" || e == "bmp" || e == "jpg" || e == "jpeg")
 			Sprite s(f);
 		else if (e == "scml" && !strstr(f, "autosave"))
 			g_spriterCache.findOrCreate(f);
