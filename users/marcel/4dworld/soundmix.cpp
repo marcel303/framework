@@ -927,24 +927,16 @@ void AudioVoiceManager::freeVoice(AudioVoice *& voice)
 	{
 		if (voice->channelIndex != -1 && g_oscStream != nullptr)
 		{
-		#if 0
-			AudioVoice tempVoice;
-			tempVoice.channelIndex = voice->channelIndex;
-			
-			g_oscStream->beginBundle();
+			if (g_oscStream->isReady())
 			{
-				generateOscForVoice(tempVoice, *g_oscStream, true);
+				g_oscStream->beginBundle();
+				{
+					g_oscStream->setSource(voice->channelIndex);
+					g_oscStream->sourceName("");
+					g_oscStream->sourceColor(0.f, 0.f, 0.f);
+				}
+				g_oscStream->endBundle();
 			}
-			g_oscStream->endBundle();
-		#else
-			g_oscStream->beginBundle();
-			{
-				g_oscStream->setSource(voice->channelIndex);
-				g_oscStream->sourceName("");
-				g_oscStream->sourceColor(0.f, 0.f, 0.f);
-			}
-			g_oscStream->endBundle();
-		#endif
 		}
 		
 		auto i = voices.end();
