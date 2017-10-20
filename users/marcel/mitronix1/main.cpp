@@ -1,16 +1,23 @@
+#include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "audioNodeBase.h"
 #include "framework.h"
 #include "graph.h"
 #include "slideshow.h"
 #include "soundmix.h"
 
-#define DEVMODE 1
+#define DEVMODE 0
 
 extern const int GFX_SX;
 extern const int GFX_SY;
+#if DEVMODE
+const int GFX_SX = 800;
+const int GFX_SY = 700;
+#else
 const int GFX_SX = 800;
 const int GFX_SY = 300;
+#endif
 
 static SDL_Cursor * handCursor = nullptr;
 
@@ -169,12 +176,12 @@ struct MainButtons
 		, button2()
 		, button3()
 	{
-		const int numButtons = 2;
+		const int numButtons = 3;
 		const int buttonSx = button1.sx;
 		const int buttonSpacing = 30;
 		const int emptySpace = GFX_SX - buttonSpacing * (numButtons - 1) - buttonSx * numButtons;
 		
-		int x = emptySpace/2 - buttonSx/2;
+		int x = emptySpace/2;
 		
 		button1.caption = "Loop";
 		button1.currentX = x - 40;
@@ -238,6 +245,203 @@ struct MainButtons
 	}
 };
 
+struct InstrumentButtons
+{
+	struct Button
+	{
+		float x;
+		float y;
+		float radius;
+		
+		bool hover;
+		bool isDown;
+		bool clicked;
+		
+		Button()
+			: x(0.f)
+			, y(0.f)
+			, radius(0.f)
+			, hover(false)
+			, isDown(false)
+			, clicked(false)
+		{
+		}
+		
+		bool process(const bool tick, const bool draw, const float dt)
+		{
+			clicked = false;
+		
+			if (tick)
+			{
+				const float dx = mouse.x - x;
+				const float dy = mouse.y - y;
+				const float distance = std::hypot(dx, dy);
+				
+				const bool isInside = distance < radius;
+				
+				if (isInside)
+				{
+					if (hover == false)
+					{
+						hover = true;
+						
+						Sound("menuselect.ogg").play();
+					}
+				}
+				else
+				{
+					if (hover == true)
+					{
+						hover = false;
+						
+						Sound("menuselect.ogg").play();
+					}
+				}
+				
+				if (hover)
+				{
+					if (mouse.wentDown(BUTTON_LEFT))
+						isDown = true;
+				}
+				
+				if (isDown)
+				{
+					if (mouse.wentUp(BUTTON_LEFT))
+					{
+						isDown = false;
+						
+						if (hover)
+						{
+							clicked = true;
+							
+							Sound("menuselect.ogg").play();
+						}
+					}
+				}
+				
+				hasMouseHover |= hover;
+			}
+		
+			if (draw)
+			{
+				gxPushMatrix();
+				gxTranslatef(x, y, 0);
+				
+				if (hover)
+				{
+					hqBegin(HQ_STROKED_CIRCLES);
+					setColor(colorWhite);
+					hqStrokeCircle(0, 0, radius, 4.f);
+					hqEnd();
+				}
+				
+				hqBegin(HQ_FILLED_CIRCLES);
+				if (isDown)
+					setColor(100, 0, 0);
+				else if (hover)
+					setColor(200, 100, 100);
+				else
+					setColor(200, 0, 0);
+				hqFillCircle(0, 0, radius);
+				hqEnd();
+				
+				setFont("calibri.ttf");
+				pushFontMode(FONT_SDF);
+				{
+					setColor(colorWhite);
+					drawText(0, 0, 24, 0, 0, "%s", "Back");
+				}
+				popFontMode();
+				
+				gxPopMatrix();
+			}
+		
+			return clicked;
+		}
+	};
+	
+	Button backButton;
+	
+	InstrumentButtons()
+		: backButton()
+	{
+		backButton.radius = 34;
+		backButton.x = GFX_SX - 34*3/2;
+		backButton.y = GFX_SY - 34*3/2;
+	}
+	
+	int process(const bool tick, const bool draw, const float dt)
+	{
+		int result = -1;
+		
+		if (tick)
+		{
+			hasMouseHover = false;
+			buttonPressed = false;
+		}
+		
+		if (backButton.process(tick, draw, dt))
+		{
+			result = 0;
+		}
+		
+		if (tick)
+		{
+			if (hasMouseHover)
+				SDL_SetCursor(handCursor);
+			else
+				SDL_SetCursor(SDL_GetDefaultCursor());
+		}
+		
+		return result;
+	}
+};
+
+struct MitronixValues
+{
+	AudioFloat mouseX;
+	AudioFloat mouseY;
+	
+	MitronixValues()
+		: mouseX(0.f)
+		, mouseY(0.f)
+	{
+	}
+};
+
+static MitronixValues g_mitronixValues;
+
+struct AudioNodeMitronix : AudioNodeBase
+{
+	enum Input
+	{
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_MouseX,
+		kOutput_MouseY,
+		kOutput_COUNT
+	};
+	
+	AudioNodeMitronix()
+		: AudioNodeBase()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addOutput(kOutput_MouseX, kAudioPlugType_FloatVec, &g_mitronixValues.mouseX);
+		addOutput(kOutput_MouseY, kAudioPlugType_FloatVec, &g_mitronixValues.mouseY);
+	}
+};
+
+AUDIO_NODE_TYPE(mitronix, AudioNodeMitronix)
+{
+	typeName = "mitronix";
+	
+	out("mouse.x", "audioValue");
+	out("mouse.y", "audioValue");
+}
+
 struct Instrument
 {
 	AudioGraphInstance * audioGraphInstance;
@@ -258,7 +462,11 @@ int main(int argc, char * argv[])
 {
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
+	#if DEVMODE == 0
 		framework.fillCachesWithPath(".", true);
+	#endif
+		
+		fillHrirSampleSetCache("cipic.147", "cipic.147", kHRIRSampleSetType_Cipic);
 		
 		handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 		
@@ -287,12 +495,20 @@ int main(int argc, char * argv[])
 		Slideshow slideshow;
 		slideshow.pics = { "001.jpg", "002.jpg", "003.jpg", "004.jpg", "005.jpg", "006.jpg", "007.jpg" };
 		
+		// main view
+		
 		MainButtons mainButtons;
+		
 		Surface * mainButtonsSurface = new Surface(GFX_SX, GFX_SY, true);
+		
 		double mainButtonsOpacity = 0.0;
+		
+		// instrument view
 		
 		Instrument * instrument = new Instrument("mtx1.xml");
 		audioGraphMgr->selectInstance(instrument->audioGraphInstance);
+		
+		InstrumentButtons instrumentButtons;
 		
 		auto selectInstrument = [&](const int index)
 		{
@@ -305,8 +521,13 @@ int main(int argc, char * argv[])
 				instrument = new Instrument("mtx2.xml");
 			if (index == 2)
 				instrument = new Instrument("mtx3.xml");
+			
+			if (instrument != nullptr)
+				audioGraphMgr->selectInstance(instrument->audioGraphInstance);
 		};
-	
+		
+		//
+		
 		bool stop = false;
 		
 		double blurStrength = 0.0;
@@ -322,13 +543,21 @@ int main(int argc, char * argv[])
 			
 			const float dt = std::min(1.f / 15.f, framework.timeStep);
 			
+			MitronixValues values;
+			values.mouseX = mouse.x / float(GFX_SX);
+			values.mouseY = mouse.y / float(GFX_SY);;
+			
+			SDL_LockMutex(audioMutex);
+			{
+				g_mitronixValues = values;
+			}
+			SDL_UnlockMutex(audioMutex);
+			
 			slideshow.tick(dt);
 			
-			if (instrument != nullptr)
-				audioGraphMgr->selectInstance(instrument->audioGraphInstance);
 		#if DEVMODE == 0
 			if (audioGraphMgr->selectedFile != nullptr)
-				audioGraphMgr->selectedFile->graphEdit->flags = GraphEdit::kFlag_Drag | GraphEdit::kFlag_Zoom;
+				audioGraphMgr->selectedFile->graphEdit->flags = GraphEdit::kFlag_Drag | GraphEdit::kFlag_Zoom | GraphEdit::kFlag_ToggleIsPassthrough | GraphEdit::kFlag_ToggleIsFolded;
 		#endif
 		
 			audioGraphMgr->tickEditor(dt, false);
@@ -341,8 +570,6 @@ int main(int argc, char * argv[])
 				{
 					selectInstrument(button);
 					
-					mainButtons = MainButtons();
-					
 					blurStrength = 1.0;
 					
 					view = kView_Instrument;
@@ -350,6 +577,15 @@ int main(int argc, char * argv[])
 			}
 			else if (view == kView_Instrument)
 			{
+				const int button = instrumentButtons.process(true, false, dt);
+				
+				if (button == 0)
+				{
+					blurStrength = 1.0;
+					
+					view = kView_MainButtons;
+					mainButtons = MainButtons();
+				}
 			}
 			
 			if (view == kView_MainButtons)
@@ -363,16 +599,20 @@ int main(int argc, char * argv[])
 			{
 				pushSurface(surface);
 				{
-					surface->clear();
+					surface->clear(220, 220, 220);
 					
 					if (view == kView_Instrument)
 					{
+					#if DEVMODE == 0
 						pushBlend(BLEND_OPAQUE);
 						setColor(colorWhite);
 						slideshow.draw();
 						popBlend();
+					#endif
 						
 						audioGraphMgr->drawEditor();
+						
+						instrumentButtons.process(false, true, dt);
 					}
 					
 					pushSurface(mainButtonsSurface);
