@@ -125,7 +125,7 @@ struct GraphNode
 	float editorY;
 	int editorZKey;
 	bool editorIsFolded;
-	float editorFoldAnimTime;
+	float editorFoldAnimProgress;
 	float editorFoldAnimTimeRcp;
 	
 	std::map<std::string, std::string> editorInputValues;
@@ -908,6 +908,8 @@ struct GraphEdit : GraphEditConnection
 		kFlag_NodeDrag = 1 << 5,
 		kFlag_LinkAdd = 1 << 6,
 		kFlag_LinkRemove = 1 << 7,
+		kFlag_Drag = 1 << 8,
+		kFlag_Zoom = 1 << 9,
 		kFlag_All = ~0
 	};
 	

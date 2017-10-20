@@ -251,8 +251,8 @@ GraphNode::GraphNode()
 	, editorY(0.f)
 	, editorZKey(0)
 	, editorIsFolded(false)
-	, editorFoldAnimTime(0.f)
-	, editorFoldAnimTimeRcp(0.f)
+	, editorFoldAnimProgress(1.f)
+	, editorFoldAnimTimeRcp(1.f)
 	, editorInputValues()
 	, editorValue()
 	, editorIsActiveAnimTime(0.f)
@@ -264,7 +264,18 @@ GraphNode::GraphNode()
 
 void GraphNode::tick(const GraphEdit & graphEdit, const float dt)
 {
-	editorFoldAnimTime = Calc::Max(0.f, editorFoldAnimTime - dt);
+	if (editorIsFolded &&
+		graphEdit.state != GraphEdit::kState_InputSocketConnect &&
+		graphEdit.state != GraphEdit::kState_OutputSocketConnect)
+	{
+		// todo : receive automatic unfold flag from graph edit, store it, and integrate with hit testing code so it works when automatic unfold is in effect
+		editorFoldAnimProgress = Calc::Max(0.f, editorFoldAnimProgress - dt * editorFoldAnimTimeRcp);
+	}
+	else
+	{
+		editorFoldAnimProgress = Calc::Min(1.f, editorFoldAnimProgress + dt * editorFoldAnimTimeRcp);
+	}
+	
 	editorIsActiveAnimTime = Calc::Max(0.f, editorIsActiveAnimTime - dt);
 	
 	if (nodeType == kGraphNodeType_Visualizer)
@@ -294,8 +305,7 @@ void GraphNode::setIsFolded(const bool isFolded)
 		return;
 	
 	editorIsFolded = isFolded;
-	editorFoldAnimTime = isFolded ? .1f : .07f;
-	editorFoldAnimTimeRcp = 1.f / editorFoldAnimTime;
+	editorFoldAnimTimeRcp = 1.f / (isFolded ? .1f : .07f) / 2.f;
 }
 
 void GraphNode::setVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex)
@@ -2781,9 +2791,12 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			{
 				if (commandMod())
 				{
-					dragAndZoom.desiredZoom = 1.f;
+					if (enabled(kFlag_Zoom))
+					{
+						dragAndZoom.desiredZoom = 1.f;
+					}
 					
-					if (selectionMod())
+					if (enabled(kFlag_Drag) && selectionMod())
 					{
 						dragAndZoom.desiredFocusX = 0.f;
 						dragAndZoom.desiredFocusY = 0.f;
@@ -2795,8 +2808,9 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			{
 				// todo : add mouse wheel to framework mouse class
 				
-				if (e.type == SDL_MOUSEWHEEL)
+				if (enabled(kFlag_Zoom) && e.type == SDL_MOUSEWHEEL)
 				{
+					// fixme : mouse wheel event seems to trigger when interacting with the touch pad on MacOS
 					const int amount = e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
 					
 					const float magnitude = std::powf(1.1f, amount);
@@ -2805,12 +2819,12 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				}
 			}
 			
-			if (keyboard.wentDown(SDLK_MINUS) && commandMod())
+			if (enabled(kFlag_Zoom) && keyboard.wentDown(SDLK_MINUS) && commandMod())
 			{
 				dragAndZoom.desiredZoom /= 1.5f;
 			}
 			
-			if (keyboard.wentDown(SDLK_EQUALS) && commandMod())
+			if (enabled(kFlag_Zoom) && keyboard.wentDown(SDLK_EQUALS) && commandMod())
 			{
 				dragAndZoom.desiredZoom *= 1.5f;
 			}
@@ -3111,15 +3125,18 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			// drag and zoom
 			
-			if (keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL) || mouse.isDown(BUTTON_RIGHT))
+			if (enabled(kFlag_Drag))
 			{
-				dragAndZoom.focusX -= mouse.dx / std::max(1.f, dragAndZoom.zoom);
-				dragAndZoom.focusY -= mouse.dy / std::max(1.f, dragAndZoom.zoom);
-				dragAndZoom.desiredFocusX = dragAndZoom.focusX;
-				dragAndZoom.desiredFocusY = dragAndZoom.focusY;
+				if (keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL) || mouse.isDown(BUTTON_RIGHT))
+				{
+					dragAndZoom.focusX -= mouse.dx / std::max(1.f, dragAndZoom.zoom);
+					dragAndZoom.focusY -= mouse.dy / std::max(1.f, dragAndZoom.zoom);
+					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
+					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
+				}
 			}
 			
-			if (keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT))
+			if (enabled(kFlag_Zoom) && (keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT)))
 			{
 				dragAndZoom.desiredZoom += mouse.dy / 200.f * (std::abs(dragAndZoom.zoom) + .5f);
 				dragAndZoom.zoom = dragAndZoom.desiredZoom;
@@ -3581,7 +3598,7 @@ bool GraphEdit::tickTouches()
 					touches.distance = 0.f;
 					touches.initialDistance = 0.f;
 					
-					if (std::abs(std::abs(dragAndZoom.desiredZoom) - 1.f) < .1f)
+					if (enabled(kFlag_Zoom) && std::abs(std::abs(dragAndZoom.desiredZoom) - 1.f) < .1f)
 						dragAndZoom.desiredZoom = Calc::Sign(dragAndZoom.desiredZoom);
 					
 					//logDebug("touch down: TouchZoom -> TouchDrag");
@@ -3598,7 +3615,7 @@ bool GraphEdit::tickTouches()
 					touches.distance = 0.f;
 					touches.initialDistance = 0.f;
 					
-					if (std::abs(std::abs(dragAndZoom.desiredZoom) - 1.f) < .1f)
+					if (enabled(kFlag_Zoom) && std::abs(std::abs(dragAndZoom.desiredZoom) - 1.f) < .1f)
 						dragAndZoom.desiredZoom = Calc::Sign(dragAndZoom.desiredZoom);
 					
 					//logDebug("touch down: TouchZoom -> TouchDrag");
@@ -3651,6 +3668,7 @@ bool GraphEdit::tickTouches()
 			{
 				Assert(touches.finger1.id != 0);
 				
+				if (enabled(kFlag_Drag))
 				{
 					dragAndZoom.focusX -= delta[0] * dragSpeed;
 					dragAndZoom.focusY -= delta[1] * dragSpeed;
@@ -3702,17 +3720,23 @@ bool GraphEdit::tickTouches()
 						
 						// update zoom info
 						
-						dragAndZoom.zoom += zoomDelta * (std::abs(dragAndZoom.zoom) + .5f);
-						dragAndZoom.desiredZoom = dragAndZoom.zoom;
+						if (enabled(kFlag_Zoom))
+						{
+							dragAndZoom.zoom += zoomDelta * (std::abs(dragAndZoom.zoom) + .5f);
+							dragAndZoom.desiredZoom = dragAndZoom.zoom;
+						}
 					}
 				
 					// update movement
 					
-					dragAndZoom.focusX -= delta[0] * dragSpeed;
-					dragAndZoom.focusY -= delta[1] * dragSpeed;
-					
-					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
-					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
+					if (enabled(kFlag_Drag))
+					{
+						dragAndZoom.focusX -= delta[0] * dragSpeed;
+						dragAndZoom.focusY -= delta[1] * dragSpeed;
+						
+						dragAndZoom.desiredFocusX = dragAndZoom.focusX;
+						dragAndZoom.desiredFocusY = dragAndZoom.focusY;
+					}
 				}
 			}
 		}
@@ -3725,6 +3749,9 @@ bool GraphEdit::tickTouches()
 
 void GraphEdit::tickMouseScroll(const float dt)
 {
+	if (enabled(kFlag_Drag) == false)
+		return;
+	
 	const int kScrollBorder = 100;
 	const float kScrollSpeed = 600.f;
 	
@@ -3746,6 +3773,9 @@ void GraphEdit::tickMouseScroll(const float dt)
 
 void GraphEdit::tickKeyboardScroll()
 {
+	if (enabled(kFlag_Drag) == false)
+		return;
+	
 	int moveX = 0;
 	int moveY = 0;
 	
@@ -4918,9 +4948,9 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 	
 	const bool isEnabled = node.isEnabled;
 	const bool isSelected = selectedNodes.count(node.id) != 0;
-	const bool isFolded = node.editorIsFolded;
+	const bool isFolded = node.editorIsFolded && node.editorFoldAnimProgress != 1.f;
 	
-	const float nodeSy = Calc::Lerp(definition.syFolded, definition.sy, isFolded ? node.editorFoldAnimTime * node.editorFoldAnimTimeRcp : 1.f - node.editorFoldAnimTime * node.editorFoldAnimTimeRcp);
+	const float nodeSy = Calc::Lerp(definition.syFolded, definition.sy, node.editorFoldAnimProgress);
 	
 	Color color;
 	
