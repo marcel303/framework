@@ -38,7 +38,7 @@ void Slideshow::tick(const float dt)
 	if (picTimer < 0.f)
 		picTimer = 0.f;
 
-	if (picTimer == 0.f || mouse.wentDown(BUTTON_RIGHT))
+	if (picTimer == 0.f)
 	{
 		if (!pics.empty())
 		{
@@ -48,8 +48,7 @@ void Slideshow::tick(const float dt)
 				picInfo[1].index = rand() % pics.size();
 				picInfo[1].zoom1 = random(1.f, 1.5f);
 				picInfo[1].zoom2 = random(1.f, 1.5f);
-				//picTimer = 20.f;
-				picTimer = 4.f;
+				picTimer = 16.f;
 				picTimerRcp = 1.f / picTimer;
 			}
 			while (picInfo[1].index == picInfo[0].index && pics.size() != 1);
