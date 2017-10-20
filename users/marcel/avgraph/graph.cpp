@@ -2901,7 +2901,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				}
 			}
 			
-			if (keyboard.wentDown(SDLK_p))
+			if (enabled(kFlag_ToggleIsPassthrough) && keyboard.wentDown(SDLK_p))
 			{
 				bool allPassthrough = true;
 				
@@ -2980,7 +2980,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				}
 			}
 			
-			if (keyboard.wentDown(SDLK_SPACE))
+			if (enabled(kFlag_ToggleIsFolded) && keyboard.wentDown(SDLK_SPACE))
 			{
 				bool anyUnfolded = false;
 				

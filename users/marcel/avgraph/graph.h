@@ -910,6 +910,8 @@ struct GraphEdit : GraphEditConnection
 		kFlag_LinkRemove = 1 << 7,
 		kFlag_Drag = 1 << 8,
 		kFlag_Zoom = 1 << 9,
+		kFlag_ToggleIsPassthrough = 1 << 10,
+		kFlag_ToggleIsFolded = 1 << 1,
 		kFlag_All = ~0
 	};
 	
