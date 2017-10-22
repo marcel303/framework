@@ -2537,7 +2537,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 	highlightedLinks.clear();
 	highlightedLinkRoutePoints.clear();
 	
-	SDL_Cursor * cursor = SDL_GetDefaultCursor();
+	mousePosition.hover = false;
 	
 	switch (state)
 	{
@@ -2569,7 +2569,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						hitTestResult.nodeHitTestResult.borderT ||
 						hitTestResult.nodeHitTestResult.borderB)
 					{
-						cursor = cursorHand;
+						mousePosition.hover = true;
 					}
 				}
 				
@@ -2778,7 +2778,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						selectLinkRoutePoint(&(*result), true);
 					}
 				}
-				else
+				else if (enabled(kFlag_NodeAdd))
 				{
 					nodeInsert.x = mousePosition.x;
 					nodeInsert.y = mousePosition.y;
@@ -3406,7 +3406,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						node->editorVisualizer.sy += dragY;
 					}
 					
-					cursor = cursorHand;
+					mousePosition.hover = true;
 				}
 			}
 			
@@ -3549,7 +3549,10 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		}
 	}
 	
-	SDL_SetCursor(cursor);
+	if (enabled(kFlag_SetCursor))
+	{
+		SDL_SetCursor(mousePosition.hover ? cursorHand : SDL_GetDefaultCursor());
+	}
 	
 	inputIsCaptured &= (state != kState_Hidden);
 	

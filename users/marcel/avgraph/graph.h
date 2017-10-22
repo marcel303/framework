@@ -915,6 +915,7 @@ struct GraphEdit : GraphEditConnection
 		kFlag_Zoom = 1 << 9,
 		kFlag_ToggleIsPassthrough = 1 << 10,
 		kFlag_ToggleIsFolded = 1 << 11,
+		kFlag_SetCursor = 1 << 12,
 		kFlag_All = ~0
 	};
 	
@@ -969,6 +970,8 @@ struct GraphEdit : GraphEditConnection
 		float dx;
 		float dy;
 		
+		bool hover;
+		
 		GraphEditMouse()
 			: uiX(0.f)
 			, uiY(0.f)
@@ -976,6 +979,7 @@ struct GraphEdit : GraphEditConnection
 			, y(0.f)
 			, dx(0.f)
 			, dy(0.f)
+			, hover(false)
 		{
 		}
 	};
