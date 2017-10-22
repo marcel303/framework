@@ -128,6 +128,7 @@ struct GraphNode
 	bool editorIsFolded;
 	float editorFoldAnimProgress;
 	float editorFoldAnimTimeRcp;
+	bool editorIsCloseToConnectionSite; // true when a new connection is being made near this node
 	
 	std::map<std::string, std::string> editorInputValues;
 	std::string editorValue;
@@ -419,7 +420,7 @@ struct GraphEdit_TypeDefinition
 	
 	void createUi();
 	
-	bool hitTest(const float x, const float y, const bool isFolded, HitTestResult & result) const;
+	bool hitTest(const float x, const float y, const bool socketsAreVisible, HitTestResult & result) const;
 	
 	bool loadXml(const tinyxml2::XMLElement * xmlNode);
 };

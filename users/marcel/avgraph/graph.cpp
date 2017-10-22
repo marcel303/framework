@@ -64,6 +64,11 @@ static bool areCompatibleSocketLinkTypeNames(const std::string & srcTypeName, co
 	return false;
 }
 
+static bool areNodeSocketsVisible(const GraphNode & node)
+{
+	return node.editorFoldAnimProgress == 1.f;
+}
+
 static bool testRectOverlap(
 	const int _ax1, const int _ay1, const int _ax2, const int _ay2,
 	const int _bx1, const int _by1, const int _bx2, const int _by2)
@@ -254,6 +259,7 @@ GraphNode::GraphNode()
 	, editorIsFolded(false)
 	, editorFoldAnimProgress(1.f)
 	, editorFoldAnimTimeRcp(1.f)
+	, editorIsCloseToConnectionSite(false)
 	, editorInputValues()
 	, editorValue()
 	, editorIsActiveAnimTime(0.f)
@@ -265,9 +271,7 @@ GraphNode::GraphNode()
 
 void GraphNode::tick(const GraphEdit & graphEdit, const float dt)
 {
-	if (editorIsFolded &&
-		graphEdit.state != GraphEdit::kState_InputSocketConnect &&
-		graphEdit.state != GraphEdit::kState_OutputSocketConnect)
+	if (editorIsFolded && editorIsCloseToConnectionSite == false)
 	{
 		// todo : receive automatic unfold flag from graph edit, store it, and integrate with hit testing code so it works when automatic unfold is in effect
 		editorFoldAnimProgress = Calc::Max(0.f, editorFoldAnimProgress - dt * editorFoldAnimTimeRcp);
@@ -1068,11 +1072,11 @@ void GraphEdit_TypeDefinition::createUi()
 	syFolded = pf;
 }
 
-bool GraphEdit_TypeDefinition::hitTest(const float x, const float y, const bool isFolded, HitTestResult & result) const
+bool GraphEdit_TypeDefinition::hitTest(const float x, const float y, const bool socketsAreVisible, HitTestResult & result) const
 {
 	result = HitTestResult();
 	
-	if (isFolded == false)
+	if (socketsAreVisible)
 	{
 		for (auto & inputSocket : inputSockets)
 		{
@@ -1101,7 +1105,7 @@ bool GraphEdit_TypeDefinition::hitTest(const float x, const float y, const bool 
 		}
 	}
 	
-	if (x >= 0.f && y >= 0.f && x < sx && y < (isFolded ? syFolded : sy))
+	if (x >= 0.f && y >= 0.f && x < sx && y < (socketsAreVisible ? sy : syFolded))
 	{
 		result.background = true;
 		return true;
@@ -2178,10 +2182,13 @@ bool GraphEdit::getLinkPath(const GraphLinkId linkId, LinkPath & path) const
 		const float srcSy = srcTypeDefinition == nullptr ? 0.f : srcTypeDefinition->syFolded;
 		const float dstSy = dstTypeDefinition == nullptr ? 0.f : dstTypeDefinition->syFolded;
 		
+		const bool srcNodeSocketsAreVisible = areNodeSocketsVisible(*srcNode);
+		const bool dstNodeSocketsAreVisible = areNodeSocketsVisible(*dstNode);
+		
 		const float srcX = srcNode->editorX + inputSocket->px;
-		const float srcY = srcNode->editorY + (srcNode->editorIsFolded ? srcSy/2.f : inputSocket->py);
+		const float srcY = srcNode->editorY + (srcNodeSocketsAreVisible ? inputSocket->py  : srcSy/2.f);
 		const float dstX = dstNode->editorX + outputSocket->px;
-		const float dstY = dstNode->editorY + (dstNode->editorIsFolded ? dstSy/2.f : outputSocket->py);
+		const float dstY = dstNode->editorY + (dstNodeSocketsAreVisible ? outputSocket->py : dstSy/2.f);
 		
 		LinkPath::Point p;
 		
@@ -2255,7 +2262,9 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 			{
 				GraphEdit_TypeDefinition::HitTestResult hitTestResult;
 				
-				if (typeDefinition->hitTest(x - node.editorX, y - node.editorY, node.editorIsFolded, hitTestResult))
+				const bool socketsAreVisible = areNodeSocketsVisible(node);
+				
+				if (typeDefinition->hitTest(x - node.editorX, y - node.editorY, socketsAreVisible, hitTestResult))
 				{
 					result.hasNode = true;
 					result.node = &node;
@@ -3490,6 +3499,18 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				}
 				
 				node.editorIsActiveContinuous = (activity & GraphEdit_RealTimeConnection::kActivity_Continuous) != 0;
+			}
+			
+			//
+			
+			node.editorIsCloseToConnectionSite = false;
+			
+			if (state == kState_InputSocketConnect || state == kState_OutputSocketConnect)
+			{
+				if (node.nodeType == kGraphNodeType_Regular && node.isEnabled)
+				{
+					node.editorIsCloseToConnectionSite = true;
+				}
 			}
 			
 			//
@@ -5020,7 +5041,7 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 	
 	const bool isEnabled = node.isEnabled;
 	const bool isSelected = selectedNodes.count(node.id) != 0;
-	const bool isFolded = node.editorIsFolded && node.editorFoldAnimProgress != 1.f;
+	const bool socketsAreVisible = areNodeSocketsVisible(node);
 	
 	const float nodeSy = Calc::Lerp(definition.syFolded, definition.sy, node.editorFoldAnimProgress);
 	
@@ -5058,7 +5079,6 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 		color = color.interp(Color(particleColor.rgba[0], particleColor.rgba[1], particleColor.rgba[2]), particleColor.rgba[3]);
 	}
 	
-#if 1
 	hqBegin(HQ_FILLED_ROUNDED_RECTS);
 	{
 		const float border = 3.f;
@@ -5071,10 +5091,6 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 		hqFillRoundedRect(0.f + border/2, 0.f + border/2, definition.sx - border/2, nodeSy - border/2, radius);
 	}
 	hqEnd();
-#else
-	setColor(color);
-	drawRect(0.f, 0.f, definition.sx, nodeSy);
-#endif
 	
 	if (isSelected)
 		setColor(255, 255, 255, 255);
@@ -5092,7 +5108,7 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 		drawText(definition.sx - 8, 12, 14, -1.f, 0.f, "P");
 	}
 	
-	if (isFolded == false)
+	if (socketsAreVisible)
 	{
 		beginTextBatch();
 		{
