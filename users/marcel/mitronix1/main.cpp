@@ -4,8 +4,10 @@
 #include "audioNodeBase.h"
 #include "framework.h"
 #include "graph.h"
+#include "Noise.h"
 #include "slideshow.h"
 #include "soundmix.h"
+#include "wavefield.h"
 
 #define DEVMODE 0
 
@@ -112,6 +114,8 @@ struct MainButton
 			
 			if (isDown)
 			{
+				buttonPressed = true;
+				
 				if (mouse.wentUp(BUTTON_LEFT))
 				{
 					isDown = false;
@@ -185,7 +189,7 @@ struct MainButtons
 		
 		int x = emptySpace/2;
 		
-		button1.caption = "Loop";
+		button1.caption = "Play";
 		button1.currentX = x - 40;
 		button1.currentY = GFX_SY * 2/3;
 		button1.desiredX = x;
@@ -193,7 +197,7 @@ struct MainButtons
 		x += buttonSx;
 		x += buttonSpacing;
 		
-		button2.caption = "Play";
+		button2.caption = "Loop";
 		button2.currentX = x - 40;
 		button2.currentY = GFX_SY * 2/3;
 		button2.desiredX = x;
@@ -201,7 +205,7 @@ struct MainButtons
 		x += buttonSx;
 		x += buttonSpacing;
 		
-		button3.caption = "Echo";
+		button3.caption = "Replay";
 		button3.currentX = GFX_SX - button3.sx - 100.f;
 		button3.currentY = GFX_SY * 2/3;
 		button3.desiredX = x;
@@ -213,12 +217,6 @@ struct MainButtons
 	int process(const bool tick, const bool draw, const float dt)
 	{
 		int result = -1;
-		
-		if (tick)
-		{
-			hasMouseHover = false;
-			buttonPressed = false;
-		}
 		
 		if (button1.process(tick, draw, dt))
 		{
@@ -235,14 +233,6 @@ struct MainButtons
 			result = 2;
 		}
 		
-		if (tick)
-		{
-			if (hasMouseHover)
-				SDL_SetCursor(handCursor);
-			else
-				SDL_SetCursor(SDL_GetDefaultCursor());
-		}
-		
 		return result;
 	}
 };
@@ -254,6 +244,7 @@ struct InstrumentButtons
 		float x;
 		float y;
 		float radius;
+		float angle;
 		Color color;
 		std::string caption;
 		
@@ -261,15 +252,19 @@ struct InstrumentButtons
 		bool isDown;
 		bool clicked;
 		
+		float hoverAnim;
+		
 		Button()
 			: x(0.f)
 			, y(0.f)
 			, radius(0.f)
+			, angle(0.f)
 			, color()
 			, caption()
 			, hover(false)
 			, isDown(false)
 			, clicked(false)
+			, hoverAnim(0.f)
 		{
 		}
 		
@@ -304,14 +299,24 @@ struct InstrumentButtons
 					}
 				}
 				
+				hasMouseHover |= hover;
+				
 				if (hover)
 				{
 					if (mouse.wentDown(BUTTON_LEFT))
 						isDown = true;
+					
+					hoverAnim = std::min(1.f, hoverAnim + dt / .16f);
+				}
+				else
+				{
+					hoverAnim = std::max(0.f, hoverAnim - dt / .08f);
 				}
 				
 				if (isDown)
 				{
+					buttonPressed = true;
+					
 					if (mouse.wentUp(BUTTON_LEFT))
 					{
 						isDown = false;
@@ -332,11 +337,15 @@ struct InstrumentButtons
 			{
 				gxPushMatrix();
 				gxTranslatef(x, y, 0);
+				gxRotatef(angle, 0, 0, 1);
+				
+				const float scale = 1.f + hoverAnim * .1f;
+				gxScalef(scale, scale, 1);
 				
 				if (hover)
 				{
 					hqBegin(HQ_STROKED_CIRCLES);
-					setColor(colorWhite);
+					setColorf(1, 1, 1, hoverAnim);
 					hqStrokeCircle(0, 0, radius, 4.f);
 					hqEnd();
 				}
@@ -345,7 +354,7 @@ struct InstrumentButtons
 				if (isDown)
 					setColor(color.mulRGB(.5f));
 				else if (hover)
-					setColor(color.addRGB(colorWhite.mulRGB(.5f)));
+					setColor(color.addRGB(colorWhite.mulRGB(.1f)));
 				else
 					setColor(color);
 				hqFillCircle(0, 0, radius);
@@ -377,11 +386,14 @@ struct InstrumentButtons
 		std::string caption;
 		
 		float updateSpeed;
+		double defaultValue;
 		double desiredValue;
 		double currentValue;
 		
-		bool inside;
+		bool hover;
 		bool down;
+		
+		float hoverAnim;
 		
 		Slider()
 			: x(0.f)
@@ -392,10 +404,12 @@ struct InstrumentButtons
 			, color(colorBlue)
 			, caption()
 			, updateSpeed(1.f)
+			, defaultValue(0.0)
 			, desiredValue(0.0)
 			, currentValue(0.0)
-			, inside(false)
+			, hover(false)
 			, down(false)
+			, hoverAnim(0.f)
 		{
 		
 		}
@@ -410,11 +424,36 @@ struct InstrumentButtons
 				
 				//
 				
-				inside = mouse.x >= x && mouse.y >= y && mouse.x <= x + sx && mouse.y <= y + sy;
+				const bool isInside = mouse.x >= x && mouse.y >= y && mouse.x <= x + sx && mouse.y <= y + sy;
+				
+				if (isInside)
+				{
+					if (hover == false)
+					{
+						hover = true;
+						
+						playMenuSound();
+					}
+					
+					hoverAnim = std::min(1.f, hoverAnim + dt / .16f);
+				}
+				else
+				{
+					if (hover == true)
+					{
+						hover = false;
+						
+						playMenuSound();
+					}
+					
+					hoverAnim = std::max(0.f, hoverAnim - dt / .08f);
+				}
+				
+				hasMouseHover |= hover;
 				
 				//
 				
-				if (inside && mouse.wentDown(BUTTON_LEFT))
+				if (hover && mouse.wentDown(BUTTON_LEFT))
 					down = true;
 				
 				if (down && mouse.wentUp(BUTTON_LEFT))
@@ -422,6 +461,8 @@ struct InstrumentButtons
 				
 				if (down)
 				{
+					buttonPressed = true;
+					
 					desiredValue = (mouse.x - x) / double(sx);
 					
 					if (desiredValue < 0.0)
@@ -429,17 +470,25 @@ struct InstrumentButtons
 					if (desiredValue > 1.0)
 						desiredValue = 1.0;
 				}
+				
+				if (hover && mouse.wentDown(BUTTON_RIGHT))
+					desiredValue = defaultValue;
 			}
 			
 			if (draw)
 			{
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
+					const float border = 2.f;
+					setColorf(1, 1, 1, hoverAnim * .8f);
+					hqFillRoundedRect(x - border, y - border, x + sx + border, y + sy + border, radius + border);
+					
 					setColor(color.mulRGB(1.f/3.f));
 					hqFillRoundedRect(x, y, x + sx, y + sy, radius);
 					
+					const float size = std::max(radius * 2.f + 1.f, float(sx * currentValue));
 					setColor(color);
-					hqFillRoundedRect(x, y, x + sx * currentValue, y + sy, radius);
+					hqFillRoundedRect(x, y, x + size, y + sy, radius);
 				}
 				hqEnd();
 				
@@ -485,6 +534,7 @@ struct InstrumentButtons
 		recordBeginButton.radius = 34;
 		recordBeginButton.x = x;
 		recordBeginButton.y = GFX_SY - 34*3/2;
+		recordBeginButton.angle = -7;
 		recordBeginButton.color = Color(200, 0, 0);
 		recordBeginButton.caption = "Rec";
 		
@@ -492,6 +542,7 @@ struct InstrumentButtons
 		recordEndButton.radius = 34;
 		recordEndButton.x = x;
 		recordEndButton.y = GFX_SY - 34*3/2;
+		recordEndButton.angle = -7;
 		recordEndButton.color = Color(0, 0, 0);
 		recordEndButton.caption = "Stop";
 		
@@ -499,7 +550,8 @@ struct InstrumentButtons
 		playBeginButton.radius = 34;
 		playBeginButton.x = x;
 		playBeginButton.y = GFX_SY - 34*3/2;
-		playBeginButton.color = Color(200, 200, 0);
+		playBeginButton.angle = -7;
+		playBeginButton.color = Color(150, 150, 0);
 		playBeginButton.caption = "Play";
 		
 		x += 60;
@@ -510,20 +562,15 @@ struct InstrumentButtons
 		playSpeedSlider.radius = 10.f;
 		playSpeedSlider.color = colorBlue;
 		playSpeedSlider.caption = "Playback speed";
-		playSpeedSlider.desiredValue = 1.0;
+		playSpeedSlider.defaultValue = 0.25;
+		playSpeedSlider.desiredValue = 0.25;
 		playSpeedSlider.updateSpeed = 0.9;
 		playSpeedSlider.y -= playSpeedSlider.sy/2;
 	}
 	
-	int process(AudioGraph * audioGraph, const bool tick, const bool draw, const float dt, bool & inputIsCaptured)
+	int process(AudioGraph * audioGraph, const bool tick, const bool draw, const float dt)
 	{
 		int result = -1;
-		
-		if (tick)
-		{
-			hasMouseHover = false;
-			buttonPressed = false;
-		}
 		
 		if (backButton.process(tick, draw, dt))
 		{
@@ -558,22 +605,23 @@ struct InstrumentButtons
 			}
 			*/
 			
-			playSpeedSlider.process(tick, draw, dt);
+			if (draw)
+			{
+				const float x = playSpeedSlider.x + playSpeedSlider.sx / 4;
+				const float sx = 20.f;
+				
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				setColor(200, 200, 200);
+				hqFillRoundedRect(x-sx/2, playSpeedSlider.y - 5, x + sx/2, playSpeedSlider.y + playSpeedSlider.sy + 5, 8);
+				hqEnd();
+			}
 			
-			inputIsCaptured |= playSpeedSlider.down;
+			playSpeedSlider.process(tick, draw, dt);
 			
 			if (tick)
 			{
-				audioGraph->setMemf("playSpeed", playSpeedSlider.currentValue);
+				audioGraph->setMemf("playSpeed", playSpeedSlider.currentValue * 4);
 			}
-		}
-		
-		if (tick)
-		{
-			if (hasMouseHover)
-				SDL_SetCursor(handCursor);
-			else
-				SDL_SetCursor(SDL_GetDefaultCursor());
 		}
 		
 		return result;
@@ -849,6 +897,10 @@ int main(int argc, char * argv[])
 		
 		MainButtons mainButtons;
 		
+		Wavefield1D wavefield;
+		wavefield.init(128);
+		float wavefieldTimer = 2.f;
+		
 		Surface * mainButtonsSurface = new Surface(GFX_SX, GFX_SY, true);
 		
 		double mainButtonsOpacity = 0.0;
@@ -912,6 +964,9 @@ int main(int argc, char * argv[])
 			
 			bool inputIsCaptured = false;
 			
+			hasMouseHover = false;
+			buttonPressed = false;
+			
 			if (view == kView_MainButtons)
 			{
 				const int button = mainButtons.process(true, false, dt);
@@ -927,7 +982,7 @@ int main(int argc, char * argv[])
 			}
 			else if (view == kView_Instrument)
 			{
-				const int button = instrumentButtons.process(instrument->audioGraphInstance->audioGraph, true, false, dt, inputIsCaptured);
+				const int button = instrumentButtons.process(instrument->audioGraphInstance->audioGraph, true, false, dt);
 				
 				if (button == 0)
 				{
@@ -940,26 +995,48 @@ int main(int argc, char * argv[])
 				}
 			}
 			
+			inputIsCaptured |= buttonPressed;
+			
 			if (view == kView_MainButtons)
-				mainButtonsOpacity = std::min(1.0, mainButtonsOpacity + dt / 1.0);
+				mainButtonsOpacity = std::min(1.0, mainButtonsOpacity + dt * 1);
 			else
-				mainButtonsOpacity = std::max(0.0, mainButtonsOpacity - dt / 1.0);
+				mainButtonsOpacity = std::max(0.0, mainButtonsOpacity - dt * 1);
+			
+			for (int i = 0; i < 4; ++i)
+				wavefield.tick(dt / 4.0, 10.0, 0.9, 0.9, false);
+			
+			wavefieldTimer -= dt;
+			
+			if (wavefieldTimer <= 0.f)
+			{
+				wavefieldTimer = 2.f;
+				
+				wavefield.p[rand() % wavefield.numElems] = 1.0;
+			}
 			
 			blurStrength *= std::pow(.01, double(dt * 4.0));
 			
 		#if DEVMODE == 0
 			if (audioGraphMgr->selectedFile != nullptr)
 			{
-				audioGraphMgr->selectedFile->graphEdit->flags = GraphEdit::kFlag_Drag*0 | GraphEdit::kFlag_Zoom*0 | GraphEdit::kFlag_ToggleIsPassthrough | GraphEdit::kFlag_ToggleIsFolded;
+				audioGraphMgr->selectedFile->graphEdit->flags =
+					GraphEdit::kFlag_Drag*0 |
+					GraphEdit::kFlag_Zoom*0 |
+					GraphEdit::kFlag_ToggleIsPassthrough |
+					GraphEdit::kFlag_ToggleIsFolded;
 				
 				audioGraphMgr->selectedFile->graphEdit->editorOptions.showBackground = true;
-				audioGraphMgr->selectedFile->graphEdit->editorOptions.backgroundColor = ParticleColor(0.f, 0.f, 0.f, .5f);
 			}
 		#endif
 		
 			inputIsCaptured |= audioGraphMgr->tickEditor(dt, inputIsCaptured);
 			
 			slideshow.tick(dt);
+			
+			if (hasMouseHover || (audioGraphMgr->selectedFile && audioGraphMgr->selectedFile->graphEdit->mousePosition.hover))
+				SDL_SetCursor(handCursor);
+			else
+				SDL_SetCursor(SDL_GetDefaultCursor());
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
@@ -969,7 +1046,7 @@ int main(int argc, char * argv[])
 					
 					if (view == kView_Instrument)
 					{
-					#if DEVMODE == 0
+					#if DEVMODE == 0 || 1
 						pushBlend(BLEND_OPAQUE);
 						setColor(colorWhite);
 						slideshow.draw();
@@ -978,13 +1055,51 @@ int main(int argc, char * argv[])
 						
 						audioGraphMgr->drawEditor();
 						
-						instrumentButtons.process(nullptr, false, true, dt, inputIsCaptured);
+						instrumentButtons.process(nullptr, false, true, dt);
 					}
 					
 					pushSurface(mainButtonsSurface);
 					{
 						mainButtonsSurface->clear(0, 0, 0, 0);
 						mainButtons.process(false, true, dt);
+						
+						const int numWigglyDots = 7;
+						const int ws = 40;
+						const int sx = ws * (numWigglyDots - 1);
+						
+						gxPushMatrix();
+						{
+							gxTranslatef(GFX_SX/2, 60, 0);
+							setFont("calibri.ttf");
+							pushFontMode(FONT_SDF);
+							{
+								setColor(100, 100, 100);
+								drawText(0, 0, 16, 0, 0, "mtx-one");
+							}
+							popFontMode();
+							
+							gxTranslatef(0, 60, 0);
+							gxTranslatef(-sx/2, 0, 0);
+							
+							hqBegin(HQ_FILLED_CIRCLES);
+							{
+								setColor(127, 63, 255);
+								
+								for (int i = 0; i < numWigglyDots; ++i)
+								{
+									const float x = i * ws;
+									
+									const float offset01 = i / (numWigglyDots - 1.f);
+									const float offset11 = lerp(-1.f, +1.f, offset01);
+									const float offsetScale = lerp(.2f, 1.f, 1.f - std::abs(std::cos(offset01 * M_PI)));
+									const float waveValue = wavefield.p[i * wavefield.numElems / numWigglyDots];
+									const float waveScale = lerp(.5f, 2.f, waveValue);
+									hqFillCircle(x, 0, ws/3 * offsetScale * waveScale);
+								}
+							}
+							hqEnd();
+						}
+						gxPopMatrix();
 					}
 					popSurface();
 					
