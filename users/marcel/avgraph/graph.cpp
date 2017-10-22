@@ -3509,7 +3509,16 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			{
 				if (node.nodeType == kGraphNodeType_Regular && node.isEnabled)
 				{
-					node.editorIsCloseToConnectionSite = true;
+					// todo : calculate distance from node center. take node dimensions into account for maximum radius. keep node open when the mouse is over the node
+					
+					const float dx = node.editorX - mousePosition.x;
+					const float dy = node.editorY - mousePosition.y;
+					const float distance = std::hypot(dx, dy);
+					
+					if (distance <= 300.f)
+					{
+						node.editorIsCloseToConnectionSite = true;
+					}
 				}
 			}
 			
