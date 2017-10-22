@@ -44,7 +44,7 @@ VFX_NODE_TYPE(image_cpu_to_gpu, VfxNodeImageCpuToGpu)
 	typeName = "image.toGpu";
 	
 	in("image", "image_cpu");
-	in("channel", "imageCpuToGpuChannel");
+	inEnum("channel", "imageCpuToGpuChannel");
 	in("filter", "bool", "1");
 	in("clamp", "bool", "0");
 	out("image", "image");
