@@ -28,6 +28,7 @@
 #include "Calc.h"
 #include "Debugging.h"
 #include "graph.h"
+#include "graphEdit_nodeTypeSelect.h"
 #include "Parse.h"
 #include "StringEx.h"
 #include "tinyxml2.h"
@@ -2013,6 +2014,7 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, propertyEditor(nullptr)
 	, linkParamsEditorLinkId(kGraphLinkIdInvalid)
 	, nodeTypeNameSelect(nullptr)
+	, nodeTypeSelectMenu(nullptr)
 	, nodeResourceEditor()
 	, uiState(nullptr)
 	, cursorHand(nullptr)
@@ -2031,6 +2033,10 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	propertyEditor = new GraphUi::PropEdit(_typeDefinitionLibrary, this);
 	
 	nodeTypeNameSelect = new GraphUi::NodeTypeNameSelect(this);
+	
+	nodeTypeSelectMenu = new GraphEdit_NodeTypeSelect();
+	nodeTypeSelectMenu->x = (GFX_SX - nodeTypeSelectMenu->sx)/2;
+	nodeTypeSelectMenu->y = (GFX_SY - nodeTypeSelectMenu->sy)/2;
 	
 	uiState = new UiState();
 	
@@ -2056,6 +2062,9 @@ GraphEdit::~GraphEdit()
 	
 	delete uiState;
 	uiState = nullptr;
+	
+	delete nodeTypeSelectMenu;
+	nodeTypeSelectMenu = nullptr;
 	
 	delete nodeTypeNameSelect;
 	nodeTypeNameSelect = nullptr;
@@ -2760,13 +2769,26 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						selectLinkRoutePoint(&(*result), true);
 					}
 				}
+				else
+				{
+					state = kState_NodeTypeSelect;
+					break;
+				}
 			}
 			
-			if (keyboard.wentDown(SDLK_i))
+			if (enabled(kFlag_NodeAdd) && keyboard.wentDown(SDLK_i))
 			{
-				std::string typeName = nodeTypeNameSelect->getNodeTypeName();
-				
-				tryAddNode(typeName, mousePosition.x, mousePosition.x, true);
+				if (commandMod())
+				{
+					state = kState_NodeTypeSelect;
+					break;
+				}
+				else
+				{
+					std::string typeName = nodeTypeNameSelect->getNodeTypeName();
+					
+					tryAddNode(typeName, mousePosition.x, mousePosition.x, true);
+				}
 			}
 			
 			if (keyboard.wentDown(SDLK_a))
@@ -3378,6 +3400,26 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				nodeResize = NodeResize();
 				
 				state = kState_Idle;
+				break;
+			}
+		}
+		break;
+		
+	case kState_NodeTypeSelect:
+		{
+			std::string typeName;
+			
+			if (nodeTypeSelectMenu->tick(*this, *typeDefinitionLibrary, dt, typeName))
+			{
+				nodeTypeSelectMenu->cancel();
+				
+				state = kState_Idle;
+				
+				if (typeName.empty() == false)
+				{
+					nodeTypeNameSelect->selectTypeName(typeName);
+				}
+				
 				break;
 			}
 		}
@@ -4398,6 +4440,14 @@ void GraphEdit::cancelEditing()
 			break;
 		}
 		
+	case kState_NodeTypeSelect:
+		{
+			nodeTypeSelectMenu->cancel();
+			
+			state = kState_Idle;
+			break;
+		}
+		
 	case kState_TouchDrag:
 		{
 			touches = Touches();
@@ -4740,6 +4790,9 @@ void GraphEdit::draw() const
 	case kState_NodeResize:
 		break;
 		
+	case kState_NodeTypeSelect:
+		break;
+		
 	case kState_TouchDrag:
 		break;
 		
@@ -4790,6 +4843,9 @@ void GraphEdit::draw() const
 	case kState_NodeResize:
 		break;
 		
+	case kState_NodeTypeSelect:
+		break;
+		
 	case kState_TouchDrag:
 		break;
 		
@@ -4835,6 +4891,13 @@ void GraphEdit::draw() const
 	{
 		setColor(colorWhite);
 		nodeResourceEditor.resourceEditor->draw();
+	}
+	
+	//
+	
+	if (state == kState_NodeTypeSelect)
+	{
+		nodeTypeSelectMenu->draw(*this, *typeDefinitionLibrary);
 	}
 	
 	//

@@ -150,8 +150,10 @@ static bool doCategoryButton(const char * name, const bool isSelected)
 	return result;
 }
 
-static void doCategories(GraphEdit & graphEdit, TypeDefinitionsByCategory & categories, const int x, const int y, std::string & selectedCategoryName)
+static bool doCategories(GraphEdit & graphEdit, TypeDefinitionsByCategory & categories, const int x, const int y, std::string & selectedCategoryName, std::string & selectedNodeType)
 {
+	bool result = false;
+	
 	pushMenu("categories", g_uiState->sx - 40);
 	{
 		g_drawX = x + 20;
@@ -265,7 +267,9 @@ static void doCategories(GraphEdit & graphEdit, TypeDefinitionsByCategory & cate
 				
 				if (doButton(nodeType->typeName.c_str()))
 				{
-					graphEdit.nodeTypeNameSelect->selectTypeName(nodeType->typeName);
+					selectedNodeType = nodeType->typeName;
+					
+					result = true;
 				}
 				
 				numRows++;
@@ -273,6 +277,8 @@ static void doCategories(GraphEdit & graphEdit, TypeDefinitionsByCategory & cate
 		}
 	}
 	popMenu();
+	
+	return result;
 }
 
 GraphEdit_NodeTypeSelect::GraphEdit_NodeTypeSelect()
@@ -292,32 +298,33 @@ GraphEdit_NodeTypeSelect::~GraphEdit_NodeTypeSelect()
 	uiState = nullptr;
 }
 
-bool GraphEdit_NodeTypeSelect::tick(GraphEdit & graphEdit, const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const bool isOpen, const float dt)
+bool GraphEdit_NodeTypeSelect::tick(GraphEdit & graphEdit, const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const float dt, std::string & selectedNodeTypeName)
 {
-	if (isOpen)
-	{
-		makeActive(uiState, true, false);
-		doMenus(graphEdit, typeDefinitionLibrary);
-	}
-	else
-	{
-		uiState->reset();
-	}
+	bool result = false;
 	
-	return uiState->activeElem != nullptr;
+	makeActive(uiState, true, false);
+	result = doMenus(graphEdit, typeDefinitionLibrary, selectedNodeTypeName);
+	
+	return result;
 }
 
-void GraphEdit_NodeTypeSelect::draw(GraphEdit & graphEdit, const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const bool isOpen)
+void GraphEdit_NodeTypeSelect::draw(const GraphEdit & graphEdit, const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
 {
-	if (isOpen)
-	{
-		makeActive(uiState, false, true);
-		doMenus(graphEdit, typeDefinitionLibrary);
-	}
+	std::string selectedNodeTypeName;
+	
+	makeActive(uiState, false, true);
+	doMenus(const_cast<GraphEdit&>(graphEdit), typeDefinitionLibrary, selectedNodeTypeName);
 }
 
-void GraphEdit_NodeTypeSelect::doMenus(GraphEdit & graphEdit, const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
+void GraphEdit_NodeTypeSelect::cancel()
 {
+	uiState->reset();
+}
+
+bool GraphEdit_NodeTypeSelect::doMenus(GraphEdit & graphEdit, const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, std::string & selectedNodeTypeName)
+{
+	bool result = false;
+	
 	pushMenu("nodeTypeSelect");
 	pushFontMode(FONT_SDF);
 	{
@@ -330,15 +337,17 @@ void GraphEdit_NodeTypeSelect::doMenus(GraphEdit & graphEdit, const GraphEdit_Ty
 		{
 			doBackground(x, y, sx, sy);
 			
-			doCategories(graphEdit, typeDefinitionsByCategory, x, y, selectedCategoryName);
+			result = doCategories(graphEdit, typeDefinitionsByCategory, x, y, selectedCategoryName, selectedNodeTypeName);
 		}
 		else
 		{
 			doBackground(x, y, sx, sy);
 			
-			doCategories(graphEdit, typeDefinitionsByCategory, x, y, selectedCategoryName);
+			doCategories(graphEdit, typeDefinitionsByCategory, x, y, selectedCategoryName, selectedNodeTypeName);
 		}
 	}
 	popFontMode();
 	popMenu();
+	
+	return result;
 }

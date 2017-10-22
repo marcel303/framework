@@ -50,14 +50,16 @@ struct GraphEdit_NodeTypeSelect
 	bool tick(
 		GraphEdit & graphEdit,
 		const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary,
-		const bool isOpen,
-		const float dt);
+		const float dt,
+		std::string & selectedNodeType);
 	void draw(
+		const GraphEdit & graphEdit,
+		const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
+	
+	void cancel();
+
+	bool doMenus(
 		GraphEdit & graphEdit,
 		const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary,
-		const bool isOpen);
-
-	void doMenus(
-		GraphEdit & graphEdit,
-		const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
+		std::string & selectedNodeTypeName);
 };

@@ -57,6 +57,7 @@ namespace GraphUi
 
 //
 
+struct GraphEdit_NodeTypeSelect;
 struct GraphEdit_ResourceEditorBase;
 struct GraphEdit_TypeDefinitionLibrary;
 struct GraphEdit_Visualizer;
@@ -891,6 +892,7 @@ struct GraphEdit : GraphEditConnection
 		kState_InputSocketConnect,
 		kState_OutputSocketConnect,
 		kState_NodeResize,
+		kState_NodeTypeSelect,
 		kState_TouchDrag,
 		kState_TouchZoom,
 		kState_Hidden,
@@ -1259,6 +1261,8 @@ struct GraphEdit : GraphEditConnection
 	GraphNodeId linkParamsEditorLinkId;
 	
 	GraphUi::NodeTypeNameSelect * nodeTypeNameSelect;
+	
+	GraphEdit_NodeTypeSelect * nodeTypeSelectMenu;
 	
 	NodeResourceEditor nodeResourceEditor;
 	
