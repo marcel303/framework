@@ -4022,8 +4022,8 @@ void GraphEdit::socketConnectEnd()
 		{
 			tryAddVisualizer(
 				socketConnect.srcNodeId,
-				String::Empty, -1,
 				socketConnect.srcNodeSocket->name, socketConnect.srcNodeSocket->index,
+				String::Empty, -1,
 				mousePosition.x, mousePosition.y, true);
 		}
 	}
