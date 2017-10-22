@@ -28,7 +28,7 @@ project(4dworld)
 # --- 4dworld ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
-file(GLOB_RECURSE source_graph "../avgraph/graph.cpp" "../avgraph/graph.h")
+file(GLOB source_graph "../avgraph/graph*")
 
 file(GLOB_RECURSE source_audioNodes "audioNodes/*.*")
 file(GLOB_RECURSE source_objects "objects/*.*" ${source_graph})
