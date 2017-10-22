@@ -1849,7 +1849,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		const int channelsDataSx = channelsSx - kDataBorder * 2;
 		const int channelsDataSy = channelsSy - kDataBorder * 2;
 		
-		const int channelsEdgeX = (sx - channelsSx) / 2;
+		//const int channelsEdgeX = (sx - channelsSx) / 2;
 		const int channelsDataX = (sx - channelsDataSx) / 2;
 		
 		const int dataY = y + kDataBorder;
@@ -2004,6 +2004,7 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, nodeDrag()
 	, socketConnect()
 	, nodeResize()
+	, nodeInsert()
 	, nodeDoubleClickTime(0.f)
 	, touches()
 	, mousePosition()
@@ -2014,7 +2015,6 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, propertyEditor(nullptr)
 	, linkParamsEditorLinkId(kGraphLinkIdInvalid)
 	, nodeTypeNameSelect(nullptr)
-	, nodeTypeSelectMenu(nullptr)
 	, nodeResourceEditor()
 	, uiState(nullptr)
 	, cursorHand(nullptr)
@@ -2034,9 +2034,9 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	
 	nodeTypeNameSelect = new GraphUi::NodeTypeNameSelect(this);
 	
-	nodeTypeSelectMenu = new GraphEdit_NodeTypeSelect();
-	nodeTypeSelectMenu->x = (GFX_SX - nodeTypeSelectMenu->sx)/2;
-	nodeTypeSelectMenu->y = (GFX_SY - nodeTypeSelectMenu->sy)/2;
+	nodeInsert.menu = new GraphEdit_NodeTypeSelect();
+	nodeInsert.menu->x = (GFX_SX - nodeInsert.menu->sx)/2;
+	nodeInsert.menu->y = (GFX_SY - nodeInsert.menu->sy)/2;
 	
 	uiState = new UiState();
 	
@@ -2063,14 +2063,14 @@ GraphEdit::~GraphEdit()
 	delete uiState;
 	uiState = nullptr;
 	
-	delete nodeTypeSelectMenu;
-	nodeTypeSelectMenu = nullptr;
-	
 	delete nodeTypeNameSelect;
 	nodeTypeNameSelect = nullptr;
 	
 	delete propertyEditor;
 	propertyEditor = nullptr;
+	
+	delete nodeInsert.menu;
+	nodeInsert.menu = nullptr;
 	
 	delete graph;
 	graph = nullptr;
@@ -2771,7 +2771,10 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				}
 				else
 				{
-					state = kState_NodeTypeSelect;
+					nodeInsert.x = mousePosition.x;
+					nodeInsert.y = mousePosition.y;
+					
+					state = kState_NodeInsert;
 					break;
 				}
 			}
@@ -2780,7 +2783,10 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			{
 				if (commandMod())
 				{
-					state = kState_NodeTypeSelect;
+					nodeInsert.x = mousePosition.x;
+					nodeInsert.y = mousePosition.y;
+					
+					state = kState_NodeInsert;
 					break;
 				}
 				else
@@ -3405,19 +3411,22 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		}
 		break;
 		
-	case kState_NodeTypeSelect:
+	case kState_NodeInsert:
 		{
 			std::string typeName;
 			
-			if (nodeTypeSelectMenu->tick(*this, *typeDefinitionLibrary, dt, typeName))
+			if (nodeInsert.menu->tick(*this, *typeDefinitionLibrary, dt, typeName))
 			{
-				nodeTypeSelectMenu->cancel();
+				nodeInsert.menu->cancel();
 				
 				state = kState_Idle;
 				
 				if (typeName.empty() == false)
 				{
-					nodeTypeNameSelect->selectTypeName(typeName);
+					if (tryAddNode(typeName, nodeInsert.x, nodeInsert.y, true))
+					{
+						nodeTypeNameSelect->addToHistory(typeName);
+					}
 				}
 				
 				break;
@@ -4440,9 +4449,9 @@ void GraphEdit::cancelEditing()
 			break;
 		}
 		
-	case kState_NodeTypeSelect:
+	case kState_NodeInsert:
 		{
-			nodeTypeSelectMenu->cancel();
+			nodeInsert.menu->cancel();
 			
 			state = kState_Idle;
 			break;
@@ -4790,7 +4799,7 @@ void GraphEdit::draw() const
 	case kState_NodeResize:
 		break;
 		
-	case kState_NodeTypeSelect:
+	case kState_NodeInsert:
 		break;
 		
 	case kState_TouchDrag:
@@ -4843,7 +4852,7 @@ void GraphEdit::draw() const
 	case kState_NodeResize:
 		break;
 		
-	case kState_NodeTypeSelect:
+	case kState_NodeInsert:
 		break;
 		
 	case kState_TouchDrag:
@@ -4895,9 +4904,9 @@ void GraphEdit::draw() const
 	
 	//
 	
-	if (state == kState_NodeTypeSelect)
+	if (state == kState_NodeInsert)
 	{
-		nodeTypeSelectMenu->draw(*this, *typeDefinitionLibrary);
+		nodeInsert.menu->draw(*this, *typeDefinitionLibrary);
 	}
 	
 	//
@@ -5977,19 +5986,24 @@ void GraphUi::NodeTypeNameSelect::selectTypeName(const std::string & _typeName)
 	{
 		// update history
 		
-		for (auto i = history.begin(); i != history.end(); )
-		{
-			if ((*i) == typeName)
-				i = history.erase(i);
-			else
-				++i;
-		}
-		
-		history.push_front(_typeName);
-		
-		while (history.size() > kMaxHistory)
-			history.pop_back();
+		addToHistory(typeName);
 	}
+}
+
+void GraphUi::NodeTypeNameSelect::addToHistory(const std::string & typeName)
+{
+	for (auto i = history.begin(); i != history.end(); )
+	{
+		if ((*i) == typeName)
+			i = history.erase(i);
+		else
+			++i;
+	}
+
+	history.push_front(typeName);
+
+	while (history.size() > kMaxHistory)
+		history.pop_back();
 }
 
 std::string & GraphUi::NodeTypeNameSelect::getNodeTypeName()

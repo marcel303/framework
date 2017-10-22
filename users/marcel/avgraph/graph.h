@@ -892,7 +892,7 @@ struct GraphEdit : GraphEditConnection
 		kState_InputSocketConnect,
 		kState_OutputSocketConnect,
 		kState_NodeResize,
-		kState_NodeTypeSelect,
+		kState_NodeInsert,
 		kState_TouchDrag,
 		kState_TouchZoom,
 		kState_Hidden,
@@ -1172,6 +1172,21 @@ struct GraphEdit : GraphEditConnection
 		}
 	};
 	
+	struct NodeInsert
+	{
+		GraphEdit_NodeTypeSelect * menu;
+		
+		float x;
+		float y;
+		
+		NodeInsert()
+			: menu(nullptr)
+			, x(0.f)
+			, y(0.f)
+		{
+		}
+	};
+	
 	struct Touches
 	{
 		struct FingerInfo
@@ -1241,6 +1256,7 @@ struct GraphEdit : GraphEditConnection
 	NodeDrag nodeDrag;
 	SocketConnect socketConnect;
 	NodeResize nodeResize;
+	NodeInsert nodeInsert;
 	
 	float nodeDoubleClickTime;
 	
@@ -1261,8 +1277,6 @@ struct GraphEdit : GraphEditConnection
 	GraphNodeId linkParamsEditorLinkId;
 	
 	GraphUi::NodeTypeNameSelect * nodeTypeNameSelect;
-	
-	GraphEdit_NodeTypeSelect * nodeTypeSelectMenu;
 	
 	NodeResourceEditor nodeResourceEditor;
 	
@@ -1395,6 +1409,7 @@ namespace GraphUi
 		void doMenus(UiState * uiState, const float dt);
 		std::string findClosestMatch(const std::string & typeName) const;
 		void selectTypeName(const std::string & typeName);
+		void addToHistory(const std::string & typeName);
 		
 		std::string & getNodeTypeName();
 	};
