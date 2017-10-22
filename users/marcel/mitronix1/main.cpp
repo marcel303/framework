@@ -11,7 +11,7 @@
 
 extern const int GFX_SX;
 extern const int GFX_SY;
-#if DEVMODE
+#if DEVMODE && 0
 const int GFX_SX = 800;
 const int GFX_SY = 700;
 #else
@@ -252,6 +252,8 @@ struct InstrumentButtons
 		float x;
 		float y;
 		float radius;
+		Color color;
+		std::string caption;
 		
 		bool hover;
 		bool isDown;
@@ -261,6 +263,8 @@ struct InstrumentButtons
 			: x(0.f)
 			, y(0.f)
 			, radius(0.f)
+			, color()
+			, caption()
 			, hover(false)
 			, isDown(false)
 			, clicked(false)
@@ -337,11 +341,11 @@ struct InstrumentButtons
 				
 				hqBegin(HQ_FILLED_CIRCLES);
 				if (isDown)
-					setColor(100, 0, 0);
+					setColor(color.mulRGB(.5f));
 				else if (hover)
-					setColor(200, 100, 100);
+					setColor(color.addRGB(colorWhite.mulRGB(.5f)));
 				else
-					setColor(200, 0, 0);
+					setColor(color);
 				hqFillCircle(0, 0, radius);
 				hqEnd();
 				
@@ -349,7 +353,7 @@ struct InstrumentButtons
 				pushFontMode(FONT_SDF);
 				{
 					setColor(colorWhite);
-					drawText(0, 0, 24, 0, 0, "%s", "Back");
+					drawText(0, 0, 24, 0, 0, "%s", caption.c_str());
 				}
 				popFontMode();
 				
@@ -360,17 +364,156 @@ struct InstrumentButtons
 		}
 	};
 	
+	struct Slider
+	{
+		float x;
+		float y;
+		float sx;
+		float sy;
+		float radius;
+		Color color;
+		std::string caption;
+		
+		float updateSpeed;
+		double desiredValue;
+		double currentValue;
+		
+		bool inside;
+		bool down;
+		
+		Slider()
+			: x(0.f)
+			, y(0.f)
+			, sx(100.f)
+			, sy(100.f)
+			, radius(12.f)
+			, color(colorBlue)
+			, caption()
+			, updateSpeed(1.f)
+			, desiredValue(0.0)
+			, currentValue(0.0)
+			, inside(false)
+			, down(false)
+		{
+		
+		}
+		
+		void process(const bool tick, const bool draw, const float dt)
+		{
+			if (tick)
+			{
+				const double retain = std::pow(1.0 - updateSpeed, dt);
+				
+				currentValue = currentValue * retain + desiredValue * (1.0 - retain);
+				
+				//
+				
+				inside = mouse.x >= x && mouse.y >= y && mouse.x <= x + sx && mouse.y <= y + sy;
+				
+				//
+				
+				if (inside && mouse.wentDown(BUTTON_LEFT))
+					down = true;
+				
+				if (down && mouse.wentUp(BUTTON_LEFT))
+					down = false;
+				
+				if (down)
+				{
+					desiredValue = (mouse.x - x) / double(sx);
+					
+					if (desiredValue < 0.0)
+						desiredValue = 0.0;
+					if (desiredValue > 1.0)
+						desiredValue = 1.0;
+				}
+			}
+			
+			if (draw)
+			{
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				{
+					setColor(color.mulRGB(1.f/3.f));
+					hqFillRoundedRect(x, y, x + sx, y + sy, radius);
+					
+					setColor(color);
+					hqFillRoundedRect(x, y, x + sx * currentValue, y + sy, radius);
+				}
+				hqEnd();
+				
+				setFont("calibri.ttf");
+				pushFontMode(FONT_SDF);
+				{
+					setColor(colorWhite);
+					drawText(x + sx/2, y + sy/2, 24, 0, 0, "%s", caption.c_str());
+				}
+				popFontMode();
+			}
+		}
+	};
+	
 	Button backButton;
+	
+	Button recordBeginButton;
+	Button recordEndButton;
+	Button playBeginButton;
+	//Button playEndButton;
+	Slider playSpeedSlider;
+	
+	bool showRecordAndPlayback;
 	
 	InstrumentButtons()
 		: backButton()
+		, recordBeginButton()
+		, recordEndButton()
+		, playBeginButton()
+		//, playEndButton()
+		, showRecordAndPlayback(false)
 	{
 		backButton.radius = 34;
 		backButton.x = GFX_SX - 34*3/2;
 		backButton.y = GFX_SY - 34*3/2;
+		backButton.color = Color(200, 0, 0);
+		backButton.caption = "Back";
+		
+		//
+		
+		int x = 34*3/2;
+		
+		recordBeginButton.radius = 34;
+		recordBeginButton.x = x;
+		recordBeginButton.y = GFX_SY - 34*3/2;
+		recordBeginButton.color = Color(200, 0, 0);
+		recordBeginButton.caption = "Rec";
+		
+		x += 75;
+		recordEndButton.radius = 34;
+		recordEndButton.x = x;
+		recordEndButton.y = GFX_SY - 34*3/2;
+		recordEndButton.color = Color(0, 0, 0);
+		recordEndButton.caption = "Stop";
+		
+		x += 75;
+		playBeginButton.radius = 34;
+		playBeginButton.x = x;
+		playBeginButton.y = GFX_SY - 34*3/2;
+		playBeginButton.color = Color(200, 200, 0);
+		playBeginButton.caption = "Play";
+		
+		x += 60;
+		playSpeedSlider.x = x;
+		playSpeedSlider.y = GFX_SY - 34*3/2;
+		playSpeedSlider.sx = 300;
+		playSpeedSlider.sy = 60;
+		playSpeedSlider.radius = 10.f;
+		playSpeedSlider.color = colorBlue;
+		playSpeedSlider.caption = "Playback speed";
+		playSpeedSlider.desiredValue = 1.0;
+		playSpeedSlider.updateSpeed = 0.9;
+		playSpeedSlider.y -= playSpeedSlider.sy/2;
 	}
 	
-	int process(const bool tick, const bool draw, const float dt)
+	int process(AudioGraph * audioGraph, const bool tick, const bool draw, const float dt, bool & inputIsCaptured)
 	{
 		int result = -1;
 		
@@ -383,6 +526,44 @@ struct InstrumentButtons
 		if (backButton.process(tick, draw, dt))
 		{
 			result = 0;
+		}
+		
+		if (showRecordAndPlayback)
+		{
+			if (recordBeginButton.process(tick, draw, dt))
+			{
+				audioGraph->triggerEvent("record-begin");
+			}
+			
+			if (recordEndButton.process(tick, draw, dt))
+			{
+				audioGraph->triggerEvent("record-end");
+				
+				audioGraph->triggerEvent("play-end");
+			}
+			
+			if (playBeginButton.process(tick, draw, dt))
+			{
+				audioGraph->triggerEvent("record-end");
+				
+				audioGraph->triggerEvent("play-begin");
+			}
+			
+			/*
+			if (playEndButton.process(tick, draw, dt))
+			{
+				audioGraph->triggerEvent("play-end");
+			}
+			*/
+			
+			playSpeedSlider.process(tick, draw, dt);
+			
+			inputIsCaptured |= playSpeedSlider.down;
+			
+			if (tick)
+			{
+				audioGraph->setMemf("playSpeed", playSpeedSlider.currentValue);
+			}
 		}
 		
 		if (tick)
@@ -440,6 +621,166 @@ AUDIO_NODE_TYPE(mitronix, AudioNodeMitronix)
 	
 	out("mouse.x", "audioValue");
 	out("mouse.y", "audioValue");
+}
+
+//
+
+#include "soundmix.h"
+#include "vfxNodes/delayLine.h"
+
+struct AudioNodeRecordPlay : AudioNodeBase
+{
+	static const int kRecordBufferSize = SAMPLE_RATE * 60 * 10;
+	
+	enum Input
+	{
+		kInput_Audio,
+		kInput_RecordBegin,
+		kInput_RecordEnd,
+		kInput_PlayBegin,
+		kInput_PlayEnd,
+		kInput_PlaySpeed,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Audio,
+		kOutput_COUNT
+	};
+	
+	AudioFloat audioOutput;
+	
+	bool isRecording;
+	bool isPlaying;
+	
+	float recordBuffer[kRecordBufferSize];
+	int recordBufferSize;
+	
+	double playTime;
+	
+	AudioNodeRecordPlay()
+		: AudioNodeBase()
+		, audioOutput(0.f)
+		, isRecording(false)
+		, isPlaying(false)
+		, recordBufferSize(0)
+		, playTime(0.0)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Audio, kAudioPlugType_FloatVec);
+		addInput(kInput_RecordBegin, kAudioPlugType_Trigger);
+		addInput(kInput_RecordEnd, kAudioPlugType_Trigger);
+		addInput(kInput_PlayBegin, kAudioPlugType_Trigger);
+		addInput(kInput_PlayEnd, kAudioPlugType_Trigger);
+		addInput(kInput_PlaySpeed, kAudioPlugType_FloatVec);
+		addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const AudioFloat * audio = getInputAudioFloat(kInput_Audio, nullptr);
+		const float playSpeed = getInputAudioFloat(kInput_PlaySpeed, &AudioFloat::One)->getMean();
+		
+		if (isRecording && audio != nullptr)
+		{
+			audio->expand();
+			
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			{
+				if (recordBufferSize < kRecordBufferSize)
+				{
+					recordBuffer[recordBufferSize] = audio->samples[i];
+					
+					recordBufferSize++;
+				}
+			}
+		}
+		
+		if (isPlaying)
+		{
+			const double step = 1.0 / SAMPLE_RATE * playSpeed;
+			
+			audioOutput.setVector();
+			
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			{
+				const double sampleIndex = playTime * SAMPLE_RATE;
+				
+				const int sampleIndex1 = int(sampleIndex);
+				const int sampleIndex2 = int(sampleIndex) + 1;
+				
+				if (sampleIndex1 >= 0 && sampleIndex1 < recordBufferSize && sampleIndex2 >= 0 && sampleIndex2 < recordBufferSize)
+				{
+					const float sampleValue1 = recordBuffer[sampleIndex1];
+					const float sampleValue2 = recordBuffer[sampleIndex2];
+					
+					const float t = float(sampleIndex - sampleIndex1);
+					
+					audioOutput.samples[i] = sampleValue1 * (1.0 - t) + sampleValue2 * t;
+				}
+				else
+				{
+					audioOutput.samples[i] = 0.f;
+				}
+				
+				//
+				
+				playTime += step;
+			}
+		}
+		else
+		{
+			audioOutput.setScalar(0.f);
+		}
+	}
+	
+	virtual void handleTrigger(const int index) override
+	{
+		if (index == kInput_RecordBegin)
+		{
+			isRecording = true;
+			isPlaying = false;
+			
+			recordBufferSize = 0;
+		}
+		else if (index == kInput_RecordEnd)
+		{
+			if (isRecording)
+			{
+				isRecording = true;
+				Assert(isPlaying == false);
+			}
+		}
+		else if (index == kInput_PlayBegin)
+		{
+			isRecording = false;
+			isPlaying = true;
+			
+			playTime = 0.f;
+		}
+		else if (index == kInput_PlayEnd)
+		{
+			if (isPlaying)
+			{
+				Assert(isRecording == false);
+				isPlaying = false;
+			}
+		}
+	}
+};
+
+AUDIO_NODE_TYPE(record_play, AudioNodeRecordPlay)
+{
+	typeName = "recordAndPlay";
+	
+	in("audio", "audioValue");
+	in("recordBegin", "trigger");
+	in("recordEnd", "trigger");
+	in("play", "trigger");
+	in("playEnd", "trigger");
+	in("playSpeed", "audioValue");
+	out("audio", "audioValue");
 }
 
 struct Instrument
@@ -505,8 +846,7 @@ int main(int argc, char * argv[])
 		
 		// instrument view
 		
-		Instrument * instrument = new Instrument("mtx1.xml");
-		audioGraphMgr->selectInstance(instrument->audioGraphInstance);
+		Instrument * instrument = nullptr;
 		
 		InstrumentButtons instrumentButtons;
 		
@@ -515,12 +855,18 @@ int main(int argc, char * argv[])
 			delete instrument;
 			instrument = nullptr;
 			
+			instrumentButtons.showRecordAndPlayback = false;
+			
 			if (index == 0)
 				instrument = new Instrument("mtx1.xml");
 			if (index == 1)
 				instrument = new Instrument("mtx2.xml");
 			if (index == 2)
+			{
 				instrument = new Instrument("mtx3.xml");
+				
+				instrumentButtons.showRecordAndPlayback = true;
+			}
 			
 			if (instrument != nullptr)
 				audioGraphMgr->selectInstance(instrument->audioGraphInstance);
@@ -553,14 +899,9 @@ int main(int argc, char * argv[])
 			}
 			SDL_UnlockMutex(audioMutex);
 			
-			slideshow.tick(dt);
+			//
 			
-		#if DEVMODE == 0
-			if (audioGraphMgr->selectedFile != nullptr)
-				audioGraphMgr->selectedFile->graphEdit->flags = GraphEdit::kFlag_Drag | GraphEdit::kFlag_Zoom | GraphEdit::kFlag_ToggleIsPassthrough | GraphEdit::kFlag_ToggleIsFolded;
-		#endif
-		
-			audioGraphMgr->tickEditor(dt, false);
+			bool inputIsCaptured = false;
 			
 			if (view == kView_MainButtons)
 			{
@@ -577,7 +918,7 @@ int main(int argc, char * argv[])
 			}
 			else if (view == kView_Instrument)
 			{
-				const int button = instrumentButtons.process(true, false, dt);
+				const int button = instrumentButtons.process(instrument->audioGraphInstance->audioGraph, true, false, dt, inputIsCaptured);
 				
 				if (button == 0)
 				{
@@ -585,6 +926,8 @@ int main(int argc, char * argv[])
 					
 					view = kView_MainButtons;
 					mainButtons = MainButtons();
+					
+					selectInstrument(-1);
 				}
 			}
 			
@@ -594,6 +937,15 @@ int main(int argc, char * argv[])
 				mainButtonsOpacity = std::max(0.0, mainButtonsOpacity - dt / 1.0);
 			
 			blurStrength *= std::pow(.01, double(dt * 4.0));
+			
+		#if DEVMODE == 0
+			if (audioGraphMgr->selectedFile != nullptr)
+				audioGraphMgr->selectedFile->graphEdit->flags = GraphEdit::kFlag_Drag*0 | GraphEdit::kFlag_Zoom*0 | GraphEdit::kFlag_ToggleIsPassthrough | GraphEdit::kFlag_ToggleIsFolded;
+		#endif
+		
+			inputIsCaptured |= audioGraphMgr->tickEditor(dt, inputIsCaptured);
+			
+			slideshow.tick(dt);
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
@@ -612,7 +964,7 @@ int main(int argc, char * argv[])
 						
 						audioGraphMgr->drawEditor();
 						
-						instrumentButtons.process(false, true, dt);
+						instrumentButtons.process(nullptr, false, true, dt, inputIsCaptured);
 					}
 					
 					pushSurface(mainButtonsSurface);

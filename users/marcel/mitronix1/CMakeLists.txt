@@ -28,7 +28,7 @@ project(mitronix)
 # --- mitronix ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
-file(GLOB_RECURSE source_graph "../avgraph/graph.cpp" "../avgraph/graph.h")
+file(GLOB source_graph "../avgraph/graph*")
 
 file(GLOB source_audio "../4dworld/audio*.*" "../4dworld/soundmix*.*" "../4dworld/osc4d*.*")
 file(GLOB_RECURSE source_audioNodes "../4dworld/audioNodes/*.*")
