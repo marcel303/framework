@@ -32,6 +32,8 @@ static View view = kView_MainButtons;
 static bool buttonPressed = false;
 static bool hasMouseHover = false;
 
+static void playMenuSound();
+
 struct MainButton
 {
 	std::string caption;
@@ -89,7 +91,7 @@ struct MainButton
 				{
 					hover = true;
 					
-					Sound("menuselect.ogg").play();
+					playMenuSound();
 				}
 			}
 			else
@@ -98,7 +100,7 @@ struct MainButton
 				{
 					hover = false;
 					
-					Sound("menuselect.ogg").play();
+					playMenuSound();
 				}
 			}
 			
@@ -118,7 +120,7 @@ struct MainButton
 					{
 						clicked = true;
 						
-						Sound("menuselect.ogg").play();
+						playMenuSound();
 					}
 				}
 			}
@@ -289,7 +291,7 @@ struct InstrumentButtons
 					{
 						hover = true;
 						
-						Sound("menuselect.ogg").play();
+						playMenuSound();
 					}
 				}
 				else
@@ -298,7 +300,7 @@ struct InstrumentButtons
 					{
 						hover = false;
 						
-						Sound("menuselect.ogg").play();
+						playMenuSound();
 					}
 				}
 				
@@ -318,7 +320,7 @@ struct InstrumentButtons
 						{
 							clicked = true;
 							
-							Sound("menuselect.ogg").play();
+							playMenuSound();
 						}
 					}
 				}
@@ -799,6 +801,13 @@ struct Instrument
 	}
 };
 
+static void playMenuSound()
+{
+#if DEVMODE
+	Sound("menuselect.ogg").play();
+#endif
+}
+
 int main(int argc, char * argv[])
 {
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
@@ -940,7 +949,12 @@ int main(int argc, char * argv[])
 			
 		#if DEVMODE == 0
 			if (audioGraphMgr->selectedFile != nullptr)
+			{
 				audioGraphMgr->selectedFile->graphEdit->flags = GraphEdit::kFlag_Drag*0 | GraphEdit::kFlag_Zoom*0 | GraphEdit::kFlag_ToggleIsPassthrough | GraphEdit::kFlag_ToggleIsFolded;
+				
+				audioGraphMgr->selectedFile->graphEdit->editorOptions.showBackground = true;
+				audioGraphMgr->selectedFile->graphEdit->editorOptions.backgroundColor = ParticleColor(0.f, 0.f, 0.f, .5f);
+			}
 		#endif
 		
 			inputIsCaptured |= audioGraphMgr->tickEditor(dt, inputIsCaptured);
