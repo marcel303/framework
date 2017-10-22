@@ -49,7 +49,8 @@ using namespace tinyxml2;
 //#define FILENAME "timeline.xml"
 //#define FILENAME "channels.xml"
 //#define FILENAME "drawtest.xml"
-#define FILENAME "resourceTest.xml"
+//#define FILENAME "resourceTest.xml"
+#define FILENAME "drawImageTest.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -504,7 +505,7 @@ int main(int argc, char * argv[])
 		
 		//testReactionDiffusion();
 		
-		testMain();
+		//testMain();
 		
 		//
 		
@@ -602,17 +603,23 @@ int main(int argc, char * argv[])
 			
 			//
 			
+			bool inputIsCaptured = false;
+			
+			//
+			
 			g_currentVfxGraph = realTimeConnection->vfxGraph;
 			
-			if (graphEdit->tick(dt, false))
-			{
-			}
-			else if (keyboard.wentDown(SDLK_p) && keyboard.isDown(SDLK_LGUI))
-			{
-				isPaused = !isPaused;
-			}
+			inputIsCaptured |= graphEdit->tick(dt, inputIsCaptured);
 			
 			g_currentVfxGraph = nullptr;
+			
+			if (inputIsCaptured == false)
+			{
+				if (keyboard.wentDown(SDLK_p) && keyboard.isDown(SDLK_LGUI))
+				{
+					isPaused = !isPaused;
+				}
+			}
 			
 			if (graphEdit->state == GraphEdit::kState_Hidden)
 				SDL_ShowCursor(0);
