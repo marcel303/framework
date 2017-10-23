@@ -28,6 +28,7 @@
 #include "audiostream/AudioOutput.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "vfxNodeSound.h"
+#include <cmath>
 
 // todo : trigger on start to send beat 0
 

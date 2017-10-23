@@ -26,6 +26,7 @@
 */
 
 #include "vfxNodePhysicalMover.h"
+#include <cmath>
 
 VFX_NODE_TYPE(physical_mover, VfxNodePhysicalMover)
 {

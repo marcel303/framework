@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "vfxNodeComposite.h"
+#include "vfxTypes.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;

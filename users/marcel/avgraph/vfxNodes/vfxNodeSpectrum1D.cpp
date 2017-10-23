@@ -27,6 +27,7 @@
 
 #include "fourier.h"
 #include "vfxNodeSpectrum1D.h"
+#include <cmath>
 #include <GL/glew.h>
 
 VFX_ENUM_TYPE(spectrumOutputMode)

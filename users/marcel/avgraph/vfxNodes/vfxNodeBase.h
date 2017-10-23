@@ -28,9 +28,7 @@
 #pragma once
 
 #include "Debugging.h"
-#include "Mat4x4.h"
 #include "vfxProfiling.h"
-#include <algorithm>
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -41,6 +39,8 @@ struct GraphEdit_ResourceEditorBase;
 struct GraphEdit_TypeDefinitionLibrary;
 struct GraphNode;
 class Surface;
+
+struct VfxTransform;
 
 //
 
@@ -74,15 +74,6 @@ struct VfxColor
 		b = _b;
 		a = _a;
 	}
-};
-
-//
-
-struct VfxTransform
-{
-	Mat4x4 matrix;
-	
-	VfxTransform();
 };
 
 //

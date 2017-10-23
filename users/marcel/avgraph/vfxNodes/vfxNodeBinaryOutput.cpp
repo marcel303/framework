@@ -26,6 +26,7 @@
 */
 
 #include "vfxNodeBinaryOutput.h"
+#include <cmath>
 
 VFX_NODE_TYPE(binary_output, VfxNodeBinaryOutput)
 {

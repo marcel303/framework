@@ -27,6 +27,7 @@
 
 #include "dotDetector.h"
 #include "vfxNodeDotDetector.h"
+#include <cmath>
 #include <xmmintrin.h>
 
 VFX_ENUM_TYPE(dotDetectorChannel)

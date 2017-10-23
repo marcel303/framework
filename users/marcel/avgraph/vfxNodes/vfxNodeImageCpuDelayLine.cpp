@@ -29,6 +29,7 @@
 
 #include "imageCpuDelayLine.h"
 #include "vfxNodeImageCpuDelayLine.h"
+#include <cmath>
 
 VFX_NODE_TYPE(image_cpu_delay, VfxNodeImageCpuDelayLine)
 {

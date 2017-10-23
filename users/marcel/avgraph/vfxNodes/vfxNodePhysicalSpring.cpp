@@ -26,6 +26,7 @@
 */
 
 #include "vfxNodePhysicalSpring.h"
+#include <cmath>
 
 VFX_NODE_TYPE(physical_spring, VfxNodePhysicalSpring)
 {

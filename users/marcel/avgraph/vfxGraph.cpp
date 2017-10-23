@@ -30,6 +30,7 @@
 #include "vfxGraph.h"
 #include "vfxNodes/vfxNodeBase.h"
 #include "vfxNodes/vfxNodeDisplay.h"
+#include "vfxTypes.h"
 
 #if VFX_GRAPH_ENABLE_TIMING
 	#include "Timer.h"

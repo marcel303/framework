@@ -26,6 +26,7 @@
 */
 
 #include "vfxNodeMapRange.h"
+#include <cmath>
 
 VFX_NODE_TYPE(map_range, VfxNodeMapRange)
 {

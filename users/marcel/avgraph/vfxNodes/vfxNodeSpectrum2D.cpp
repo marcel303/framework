@@ -27,6 +27,7 @@
 
 #include "fourier.h"
 #include "vfxNodeSpectrum2D.h"
+#include <cmath>
 #include <GL/glew.h>
 
 // todo : add normalize option

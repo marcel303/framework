@@ -27,6 +27,7 @@
 
 #include "Ease.h"
 #include "vfxNodeMapEase.h"
+#include <cmath>
 
 VFX_ENUM_TYPE(easeType)
 {

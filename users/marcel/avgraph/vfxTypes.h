@@ -27,11 +27,20 @@
 
 #pragma once
 
+#include "Mat4x4.h"
+
 namespace tinyxml2
 {
 	class XMLElement;
 	class XMLPrinter;
 }
+
+struct VfxTransform
+{
+	Mat4x4 matrix;
+	
+	VfxTransform();
+};
 
 struct VfxTimeline
 {

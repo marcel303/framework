@@ -26,6 +26,7 @@
 */
 
 #include "vfxNodeChannelToGpu.h"
+#include <cmath>
 #include <GL/glew.h>
 
 VFX_NODE_TYPE(channel_togpu, VfxNodeChannelToGpu)

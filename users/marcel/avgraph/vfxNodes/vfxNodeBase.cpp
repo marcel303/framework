@@ -35,13 +35,6 @@
 
 //
 
-VfxTransform::VfxTransform()
-{
-	matrix.MakeIdentity();
-}
-
-//
-
 VfxImage_Texture::VfxImage_Texture()
 	: VfxImageBase()
 	, texture(0)

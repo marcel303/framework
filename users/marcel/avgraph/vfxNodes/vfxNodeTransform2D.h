@@ -28,6 +28,7 @@
 #pragma once
 
 #include "vfxNodeBase.h"
+#include "vfxTypes.h"
 
 struct VfxNodeTransform2D : VfxNodeBase
 {
