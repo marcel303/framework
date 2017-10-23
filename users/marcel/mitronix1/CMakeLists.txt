@@ -59,6 +59,7 @@ file(GLOB resources_cipic147 "/Users/thecat/Google Drive/Projects/mitronix1/cipi
 set_source_files_properties(${resources_root} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 set_source_files_properties(${resources_cipic147} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/cipic.147")
 message(STATUS "resource: " ${resources_cipic147})
+source_group("resources" FILES ${resources_root} ${resources_cipic147})
 
 add_executable(mitronix MACOSX_BUNDLE ${source} ${resources_root} ${resources_cipic147})
 
