@@ -51,7 +51,18 @@ source_group("tests" FILES ${source_tests})
 source_group("ui" FILES ${source_ui})
 source_group("3rdparty\\delaunay" FILES ${source_delaunay})
 
-add_executable(mitronix ${source})
+file(GLOB resources_root
+	"/Users/thecat/Google Drive/Projects/mitronix1/*.jpg"
+	"/Users/thecat/Google Drive/Projects/mitronix1/*.ttf*"
+	"/Users/thecat/Google Drive/Projects/mitronix1/*.xml")
+file(GLOB resources_cipic147 "/Users/thecat/Google Drive/Projects/mitronix1/cipic.147/*.wav")
+set_source_files_properties(${resources_root} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+set_source_files_properties(${resources_cipic147} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/cipic.147")
+message(STATUS "resource: " ${resources_cipic147})
+
+add_executable(mitronix MACOSX_BUNDLE ${source} ${resources_root} ${resources_cipic147})
+
+#set_target_properties(mitronix PROPERTIES RESOURCE "${resources}")
 
 target_compile_definitions(mitronix PRIVATE NO_SDL_GLEXT)
 
