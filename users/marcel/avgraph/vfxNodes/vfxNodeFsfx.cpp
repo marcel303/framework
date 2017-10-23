@@ -29,6 +29,8 @@
 #include "vfxGraph.h"
 #include "vfxNodeFsfx.h"
 
+// todo : use percentage of screen size for surface size instead of width/height
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 
@@ -62,6 +64,8 @@ VfxNodeFsfx::VfxNodeFsfx()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_Image);
 	addInput(kInput_Shader, kVfxPlugType_String);
+	addInput(kInput_Width, kVfxPlugType_Int);
+	addInput(kInput_Height, kVfxPlugType_Int);
 	addInput(kInput_Color1, kVfxPlugType_Color);
 	addInput(kInput_Color2, kVfxPlugType_Color);
 	addInput(kInput_Param1, kVfxPlugType_Float);
@@ -81,6 +85,33 @@ VfxNodeFsfx::~VfxNodeFsfx()
 	
 	delete surface;
 	surface = nullptr;
+}
+
+void VfxNodeFsfx::allocateSurface(const int _sx, const int _sy)
+{
+	const int sx = _sx ? _sx : GFX_SX;
+	const int sy = _sy ? _sy : GFX_SY;
+	
+	if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight())
+	{
+		delete surface;
+		surface = nullptr;
+		
+		surface = new Surface(sx, sy, true);
+		
+		surface->clear();
+		surface->swapBuffers();
+		surface->clear();
+		surface->swapBuffers();
+	}
+}
+
+void VfxNodeFsfx::tick(const float dt)
+{
+	const int sx = getInputInt(kInput_Width, 0);
+	const int sy = getInputInt(kInput_Height, 0);
+
+	allocateSurface(sx, sy);
 }
 
 void VfxNodeFsfx::draw() const
@@ -193,16 +224,8 @@ void VfxNodeFsfx::draw() const
 
 void VfxNodeFsfx::init(const GraphNode & node)
 {
-	const int w = getInputInt(kInput_Width, 0);
-	const int h = getInputInt(kInput_Height, 0);
+	const int sx = getInputInt(kInput_Width, 0);
+	const int sy = getInputInt(kInput_Height, 0);
 	
-	const int sx = w ? w : GFX_SX;
-	const int sy = h ? h : GFX_SY;
-	
-	surface = new Surface(sx, sy, true);
-	
-	surface->clear();
-	surface->swapBuffers();
-	surface->clear();
-	surface->swapBuffers();
+	allocateSurface(sx, sy);
 }

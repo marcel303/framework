@@ -63,7 +63,10 @@ struct VfxNodeFsfx : VfxNodeBase
 	
 	VfxNodeFsfx();
 	virtual ~VfxNodeFsfx() override;
-
+	
+	void allocateSurface(const int sx, const int sy);
+	
+	virtual void tick(const float dt) override;
 	virtual void draw() const override;
 	
 	virtual void init(const GraphNode & node) override;
