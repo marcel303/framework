@@ -858,6 +858,11 @@ static void playMenuSound()
 
 int main(int argc, char * argv[])
 {
+#if DEVMODE == 0
+	const char * basePath = SDL_GetBasePath();
+	changeDirectory(basePath);
+#endif
+	
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
 	#if DEVMODE == 0
@@ -1047,10 +1052,8 @@ int main(int argc, char * argv[])
 					if (view == kView_Instrument)
 					{
 					#if DEVMODE == 0 || 1
-						pushBlend(BLEND_OPAQUE);
 						setColor(colorWhite);
 						slideshow.draw();
-						popBlend();
 					#endif
 						
 						audioGraphMgr->drawEditor();
@@ -1074,7 +1077,7 @@ int main(int argc, char * argv[])
 							pushFontMode(FONT_SDF);
 							{
 								setColor(100, 100, 100);
-								drawText(0, 0, 16, 0, 0, "mtx-one");
+								drawText(0, 0, 16, 0, 0, "mtx one");
 							}
 							popFontMode();
 							
