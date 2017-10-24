@@ -599,22 +599,7 @@ bool Framework::shutdown()
 void Framework::process()
 {
 	cpuTimingBlock(frameworkProcess);
-
-	static int tstamp1 = SDL_GetTicks();
-	const int tstamp2 = SDL_GetTicks();
-	int delta = tstamp2 - tstamp1;
-	tstamp1 = tstamp2;
-	//if (delta == 0)
-	//	delta = 1;
-	timeStep = delta / 1000.f;
-
-	time += timeStep;
 	
-	if (enableRealTimeEditing)
-	{
-		tickRealTimeEditing();
-	}
-
 	g_soundPlayer.process();
 	
 	bool doReload = false;
@@ -855,8 +840,25 @@ void Framework::process()
 	{
 		reloadCaches();
 	}
+	
+	if (enableRealTimeEditing)
+	{
+		tickRealTimeEditing();
+	}
+	
+	//
+	
+	static int tstamp1 = SDL_GetTicks();
+	const int tstamp2 = SDL_GetTicks();
+	int delta = tstamp2 - tstamp1;
+	tstamp1 = tstamp2;
+	//if (delta == 0)
+	//	delta = 1;
+	timeStep = delta / 1000.f;
 
-	tickRealTimeEditing();
+	time += timeStep;
+	
+	//
 
 	for (Sprite * sprite = m_sprites; sprite; sprite = sprite->m_next)
 	{
@@ -7451,7 +7453,10 @@ void hqDrawPath(const Path2d & path)
 
 void changeDirectory(const char * path)
 {
-	_chdir(path);
+	const int error = _chdir(path);
+	
+	if (error != 0)
+		logError("failed to changeDirectory. errno=%d", errno);
 }
 
 #if ENABLE_LOGGING
