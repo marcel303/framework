@@ -988,7 +988,7 @@ int AudioRealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 	return result;
 }
 
-int AudioRealTimeConnection::linkIsActive(const GraphLinkId linkId)
+int AudioRealTimeConnection::linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 {
 	if (isLoading)
 		return false;

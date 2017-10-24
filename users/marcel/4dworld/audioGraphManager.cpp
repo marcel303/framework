@@ -164,12 +164,12 @@ struct AudioGraphFileRTC : GraphEdit_RealTimeConnection
 			return file->activeInstance->realTimeConnection->nodeIsActive(nodeId);
 	}
 
-	virtual int linkIsActive(const GraphLinkId linkId) override
+	virtual int linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
 	{
 		if (file->activeInstance == nullptr)
 			return false;
 		else
-			return file->activeInstance->realTimeConnection->linkIsActive(linkId);
+			return file->activeInstance->realTimeConnection->linkIsActive(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
 	}
 
 	virtual int getNodeCpuHeatMax() const override
