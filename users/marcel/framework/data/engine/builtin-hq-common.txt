@@ -14,10 +14,32 @@ static const char * s_hqCommonPs = R"SHADER(
 	#define debugHq false
 #endif
 
+shader_in vec2 v_p;
 shader_in vec2 v_texcoord;
 
+// color coordinate matrix
+uniform vec4 cmat1;
+uniform vec4 cmat2;
+uniform vec4 cmat3;
+uniform vec4 cmat4;
+
+// texture coordinate matrix
+uniform vec4 tmat1;
+uniform vec4 tmat2;
+uniform vec4 tmat3;
+uniform vec4 tmat4;
+
+// color gradient
+uniform vec4 gradientParams; // gradientType, bias, scale, clamp
+uniform vec4 gradientColor1;
+uniform vec4 gradientColor2;
+
+// texture
+uniform vec2 textureParams; // enable, <undefined>
 uniform sampler2D source;
-uniform float sourceEnabled;
+
+// global params
+uniform vec4 params;
 
 float computeDistance(vec2 p);
 float distanceFade(float distance);
@@ -52,10 +74,116 @@ float sampleDistanceFunction(vec2 p)
 	return v;
 }
 
+vec4 hqGradientColor()
+{
+	mat4x4 colorCoordMatrix = mat4x4(
+		cmat1,
+		cmat2,
+		cmat3,
+		cmat4);
+
+	vec4 colorCoord = colorCoordMatrix * vec4(v_p, 0.0, 1.0);
+
+	// use color gradient to determine color
+
+	float t = 0.0;
+
+	if (gradientParams.x == 1)
+	{
+		// linear gradient
+
+		t = colorCoord.x;
+	}
+	else
+	{
+		// radial gradient
+
+		t = length(colorCoord.xy);
+	}
+
+	t = (t - gradientParams.y) * gradientParams.z;
+
+	vec4 color = mix(gradientColor1, gradientColor2, t);
+
+	if (gradientParams.w == 1)
+	{
+		color = clamp(color, vec4(0.0), vec4(1.0));
+	}
+
+	return color;
+}
+
+vec4 hqTextureColor()
+{
+	mat4x4 textureCoordMatrix = mat4x4(
+		tmat1,
+		tmat2,
+		tmat3,
+		tmat4);
+
+	vec4 textureCoord = textureCoordMatrix * vec4(v_p, 0.0, 1.0);
+
+	vec4 color = texture(source, textureCoord.xy);
+
+	return color;
+}
+
+// todo : make this code reusable in ShaderPS
+
+vec4 hqApplyColorMode(vec4 color1, vec4 color2, float mode)
+{
+	/*
+	COLOR_MUL,
+	COLOR_ADD,
+	COLOR_SUB,
+	COLOR_IGNORE
+	*/
+
+	vec4 result = color1;
+	vec4 texColor = color2;
+
+	if (params.y == 0)
+	{
+		result.rgb = result.rgb * texColor.rgb;
+		result.a   = result.a   * texColor.a;
+	}
+	else if (params.y == 1)
+	{
+		result.rgb = result.rgb + texColor.rgb;
+		result.a   = result.a   * texColor.a;
+	}
+	else if (params.y == 2)
+	{
+		result.rgb = result.rgb - texColor.rgb;
+		result.a   = result.a   * texColor.a;
+	}
+	else if (params.y == 3)
+	{
+		result.rgb = texColor.rgb;
+		result.a   = texColor.a;
+	}
+
+	return result;
+}
+
 vec4 hqColor(float v, vec4 color)
 {
+	if (gradientParams.x != 0.0)
+	{
+		vec4 gradientColor = hqGradientColor();
+
+		color *= gradientColor;
+	}
+
+	if (textureParams.x != 0.0)
+	{
+		vec4 textureColor = hqTextureColor();
+
+		color = hqApplyColorMode(color, textureColor, params.y);
+	}
+
 	color.a *= v;
-	
+
 	if (debugHq)
 	{
 		if (sampleDistanceFunctionHasBeenCalled == false)
@@ -70,11 +198,6 @@ vec4 hqColor(float v, vec4 color)
 		}
 
 		color = clamp(color, vec4(0.0), vec4(1.0));
-	}
-	
-	if (sourceEnabled != 0.0)
-	{
-		//color *= texture(source, v_texcoord);
 	}
 
 	return color;

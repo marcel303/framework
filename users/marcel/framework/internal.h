@@ -122,6 +122,14 @@ public:
 	FONT_MODE fontMode;
 	Color color;
 	Gradient gradient;
+	GRADIENT_TYPE hqGradientType;
+	Mat4x4 hqGradientMatrix;
+	Color hqGradientColor1;
+	Color hqGradientColor2;
+	float hqGradientBias;
+	float hqGradientScale;
+	bool hqTextureEnabled;
+	Mat4x4 hqTextureMatrix;
 	FontCacheElem * font;
 	bool isInTextBatch;
 	MsdfFontCacheElem * fontMSDF;

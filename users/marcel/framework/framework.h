@@ -1353,9 +1353,22 @@ enum HQ_TYPE
 	// todo : rounded rectangle, ellipse, curve (?), arc (?)
 };
 
+enum GRADIENT_TYPE
+{
+	GRADIENT_NONE,
+	GRADIENT_LINEAR,
+	GRADIENT_RADIAL
+};
+
 void hqBegin(HQ_TYPE type, bool useScreenSize = false);
 void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize = false);
 void hqEnd();
+
+void hqSetGradient(GRADIENT_TYPE gradientType, const Mat4x4 & matrix, const Color & color1, const Color & color2, const float bias = 0.f, const float scale = 1.f);
+void hqClearGradient();
+
+void hqSetTexture(const Mat4x4 & matrix, const GLuint texture);
+void hqClearTexture();
 
 void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2);
 

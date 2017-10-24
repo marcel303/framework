@@ -7285,9 +7285,95 @@ void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 
 void hqEnd()
 {
+	{
+		Shader & shader = *static_cast<Shader*>(globals.shader);
+	
+		fassert(shader.getType() == SHADER_VSPS);
+		
+		if (globals.hqGradientType == GRADIENT_NONE)
+		{
+			shader.setImmediate("gradientParams", 0.f, 0.f, 0.f, 0.f);
+		}
+		else
+		{
+			const float gradientClampEnabled = 1.f;
+			
+			const Mat4x4 & cmat = globals.hqGradientMatrix;
+			
+			shader.setImmediate("gradientParams",
+				globals.hqGradientType,
+				globals.hqGradientBias,
+				globals.hqGradientScale,
+				gradientClampEnabled);
+			
+			shader.setImmediate("gradientColor1",
+				globals.hqGradientColor1.r,
+				globals.hqGradientColor1.g,
+				globals.hqGradientColor1.b,
+				globals.hqGradientColor1.a);
+			shader.setImmediate("gradientColor2",
+				globals.hqGradientColor2.r,
+				globals.hqGradientColor2.g,
+				globals.hqGradientColor2.b,
+				globals.hqGradientColor2.a);
+			
+			shader.setImmediate("cmat1", cmat(0, 0), cmat(0, 1), cmat(0, 2), cmat(0, 3));
+			shader.setImmediate("cmat2", cmat(1, 0), cmat(1, 1), cmat(1, 2), cmat(1, 3));
+			shader.setImmediate("cmat3", cmat(2, 0), cmat(2, 1), cmat(2, 2), cmat(2, 3));
+			shader.setImmediate("cmat4", cmat(3, 0), cmat(3, 1), cmat(3, 2), cmat(3, 3));
+		}
+		
+		if (globals.hqTextureEnabled)
+		{
+			const Mat4x4 & tmat = globals.hqTextureMatrix;
+			
+			shader.setImmediate("tmat1", tmat(0, 0), tmat(0, 1), tmat(0, 2), tmat(0, 3));
+			shader.setImmediate("tmat2", tmat(1, 0), tmat(1, 1), tmat(1, 2), tmat(1, 3));
+			shader.setImmediate("tmat3", tmat(2, 0), tmat(2, 1), tmat(2, 2), tmat(2, 3));
+			shader.setImmediate("tmat4", tmat(3, 0), tmat(3, 1), tmat(3, 2), tmat(3, 3));
+			
+			shader.setImmediate("textureParams", 1.f, 0.f);
+			shader.setTextureUnit("source", 0);
+		}
+		else
+		{
+			shader.setImmediate("textureParams", 0.f, 0.f);
+		}
+	}
+	
 	gxEnd();
 
 	clearShader();
+}
+
+void hqSetGradient(GRADIENT_TYPE gradientType, const Mat4x4 & matrix, const Color & color1, const Color & color2, const float bias, const float scale)
+{
+	globals.hqGradientType = gradientType;
+	globals.hqGradientMatrix = matrix;
+	globals.hqGradientColor1 = color1;
+	globals.hqGradientColor2 = color2;
+	globals.hqGradientBias = bias;
+	globals.hqGradientScale = scale;
+}
+
+void hqClearGradient()
+{
+	globals.hqGradientType = GRADIENT_NONE;
+}
+
+void hqSetTexture(const Mat4x4 & matrix, const GLuint texture)
+{
+	globals.hqTextureEnabled = true;
+	globals.hqTextureMatrix = matrix;
+	
+	gxSetTexture(texture);
+}
+
+void hqClearTexture()
+{
+	globals.hqTextureEnabled = false;
+	
+	gxSetTexture(0);
 }
 
 void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2)
