@@ -260,10 +260,53 @@ VFX_NODE_TYPE(resource_test, VfxNodeResourceTest)
 
 //
 
+static void testGradientShader()
+{
+	do
+	{
+		framework.process();
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			const Mat4x4 cmat = Mat4x4(true)
+				.Scale(1.f / 100.f, 1.f / 100.f, 1.f)
+				.RotateZ(-framework.time)
+				.Translate(-GFX_SX/2, -GFX_SY/2, 0);
+			const Mat4x4 tmat = Mat4x4(true)
+				.Translate(.5f, .5f, 0.f)
+				.Scale(1.f / 100.f, 1.f / 100.f, 1.f)
+				.RotateZ(+framework.time)
+				.Translate(-GFX_SX/2, -GFX_SY/2, 0);
+			
+			const float innerRadius = mouse.x / float(GFX_SX);
+			const float colorGradientType = mouse.isDown(BUTTON_LEFT) ? 2.f : 1.f;
+			
+			Shader shader("test-gradient");
+			setShader(shader);
+			shader.setImmediate("cmat1", cmat(0, 0), cmat(0, 1), cmat(0, 2), cmat(0, 3));
+			shader.setImmediate("cmat2", cmat(1, 0), cmat(1, 1), cmat(1, 2), cmat(1, 3));
+			shader.setImmediate("cmat3", cmat(2, 0), cmat(2, 1), cmat(2, 2), cmat(2, 3));
+			shader.setImmediate("cmat4", cmat(3, 0), cmat(3, 1), cmat(3, 2), cmat(3, 3));
+			shader.setImmediate("tmat1", tmat(0, 0), tmat(0, 1), tmat(0, 2), tmat(0, 3));
+			shader.setImmediate("tmat2", tmat(1, 0), tmat(1, 1), tmat(1, 2), tmat(1, 3));
+			shader.setImmediate("tmat3", tmat(2, 0), tmat(2, 1), tmat(2, 2), tmat(2, 3));
+			shader.setImmediate("tmat4", tmat(3, 0), tmat(3, 1), tmat(3, 2), tmat(3, 3));
+			shader.setImmediate("gradientParams", colorGradientType, innerRadius, 0, 1);
+			shader.setImmediate("color1", 1, 1, 1, 1);
+			shader.setImmediate("color2", 0, 0, 1, 1);
+			shader.setTexture("source", 0, getTexture("happysun.jpg"));
+			drawRect(0, 0, GFX_SX, GFX_SY);
+		}
+		framework.endDraw();
+		
+	}
+	while (!keyboard.wentDown(SDLK_SPACE));
+}
+
+//
+
 int main(int argc, char * argv[])
 {
-	//framework.waitForEvents = true;
-	
 	framework.enableRealTimeEditing = true;
 	
 	//framework.minification = 2;
@@ -291,6 +334,8 @@ int main(int argc, char * argv[])
 		//testCatmullRom();
 		
 		//testReactionDiffusion();
+		
+		testGradientShader();
 		
 		//testMain();
 		
