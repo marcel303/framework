@@ -260,119 +260,6 @@ VFX_NODE_TYPE(resource_test, VfxNodeResourceTest)
 
 //
 
-#include "Timer.h"
-#include <immintrin.h>
-
-static void sumChannels_fast(float ** channels, const int numChannels, const int channelSize, float * __restrict output)
-{
-#if 0
-	const int channelSize4 = channelSize / 4;
-	
-	__m128 * __restrict output128 = (__m128*)output;
-	
-	memset(output128, 0, sizeof(float) * channelSize);
-	
-	for (int c = 0; c < numChannels; ++c)
-	{
-		__m128 * __restrict channel128 = (__m128*)channels[c];
-		
-		for (int i = 0; i < channelSize4; ++i)
-		{
-			output128[i] = _mm_add_ps(output128[i], channel128[i]);
-		}
-	}
-#else
-	const int channelSize8 = channelSize / 8;
-	
-	__m256 * __restrict outputVec = (__m256*)output;
-	
-	memset(outputVec, 0, sizeof(float) * channelSize);
-	
-	for (int c = 0; c < numChannels; ++c)
-	{
-		__m256 * __restrict channelVec = (__m256*)channels[c];
-		
-		for (int i = 0; i < channelSize8; ++i)
-		{
-			outputVec[i] = _mm256_add_ps(outputVec[i], channelVec[i]);
-		}
-	}
-#endif
-}
-
-static void sumChannels_slow(const float * const * channels, const int numChannels, const int channelSize, float * output)
-{
-	memset(output, 0, sizeof(float) * channelSize);
-	
-	for (int c = 0; c < numChannels; ++c)
-	{
-		const float * channel = channels[c];
-		
-		for (int i = 0; i < channelSize; ++i)
-		{
-			output[i] += channel[i];
-		}
-	}
-}
-
-static void testAudioMixing()
-{
-	const int kNumChannels = 24;
-	const int kChannelSize = 64;
-	
-	float * channels[kNumChannels];
-	
-	for (int c = 0; c < kNumChannels; ++c)
-	{
-		channels[c] = (float*)_mm_malloc(sizeof(float) * kChannelSize, 16);
-	}
-	
-	for (int c = 0; c < kNumChannels; ++c)
-	{
-		float * channel = channels[c];
-		
-		for (int i = 0; i < kChannelSize; ++i)
-			channel[i] = c + i;
-	}
-	
-	float output[kChannelSize];
-	
-	for (int i = 0; i < 100; ++i)
-	{
-		uint64_t f1 = g_TimerRT.TimeUS_get();
-		
-		float q = 0.f;
-		
-		for (int n = 0; n < 200; ++n)
-		{
-			sumChannels_fast(channels, kNumChannels, kChannelSize, output);
-			
-			q += output[kChannelSize - 1];
-		}
-		
-		uint64_t f2 = g_TimerRT.TimeUS_get();
-		
-		//
-		
-		uint64_t s1 = g_TimerRT.TimeUS_get();
-		
-		for (int i = 0; i < 200; ++i)
-		{
-			sumChannels_slow(channels, kNumChannels, kChannelSize, output);
-			
-			q += output[kChannelSize - 1];
-		}
-		
-		uint64_t s2 = g_TimerRT.TimeUS_get();
-		
-		//
-		
-		printf("fast: %gms, slow: %gms (%g)\n", (f2 - f1) / 1000.0, (s2 - s1) / 1000.0, q);
-	}
-}
-
-//
-
 int main(int argc, char * argv[])
 {
 	//framework.waitForEvents = true;
@@ -395,8 +282,6 @@ int main(int argc, char * argv[])
 		
 		vfxSetThreadName("Main Thread");
 		
-		//testAudioMixing();
-
 		//testAudiochannels();
 		
 		//testMacWebcam();
