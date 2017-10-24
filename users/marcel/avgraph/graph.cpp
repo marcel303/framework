@@ -377,6 +377,9 @@ GraphNodeSocketLink::GraphNodeSocketLink()
 	, dstNodeSocketName()
 	, dstNodeSocketIndex(-1)
 	, params()
+	, editorRoutePoints()
+	, editorIsActiveAnimTime(0.f)
+	, editorIsActiveAnimTimeRcp(0.f)
 {
 }
 
@@ -1131,7 +1134,13 @@ bool GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 		socket.typeName = stringAttrib(xmlInput, "typeName", socket.typeName.c_str());
 		socket.enumName = stringAttrib(xmlInput, "enumName", socket.enumName.c_str());
 		socket.name = stringAttrib(xmlInput, "name", socket.name.c_str());
-		socket.defaultValue = stringAttrib(xmlInput, "default", socket.defaultValue.c_str());
+		
+		auto defaultValue = stringAttrib(xmlInput, "default", nullptr);
+		if (defaultValue != nullptr)
+		{
+			socket.defaultValue = defaultValue;
+			socket.hasDefaultValue = true;
+		}
 		
 		inputSockets.push_back(socket);
 		
@@ -1333,6 +1342,16 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 			else
 			{
 				hasValue = graphEdit.realTimeConnection->getSrcSocketValue(nodeId, srcSocketIndex, srcSocket->name, value);
+			}
+		}
+		
+		if (hasValue == false)
+		{
+			if (srcSocket->hasDefaultValue)
+			{
+				value = srcSocket->defaultValue;
+				
+				hasValue = true;
 			}
 		}
 		
@@ -2022,6 +2041,7 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, nodeResourceEditor()
 	, uiState(nullptr)
 	, cursorHand(nullptr)
+	, animationIsDone(true)
 	, idleTime(0.f)
 	, hideTime(1.f)
 {
@@ -3526,6 +3546,24 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			node.tick(*this, dt);
 		}
+		
+		for (auto & linkItr : graph->links)
+		{
+			auto & link = linkItr.second;
+			
+			link.editorIsActiveAnimTime = Calc::Max(0.f, link.editorIsActiveAnimTime - dt);
+			
+			if (link.isEnabled)
+			{
+				const bool isActive = realTimeConnection == nullptr ? false : realTimeConnection->linkIsActive(link.id, link.srcNodeId, link.srcNodeSocketIndex, link.dstNodeId, link.dstNodeSocketIndex);
+				
+				if (isActive)
+				{
+					link.editorIsActiveAnimTime = .6f;
+					link.editorIsActiveAnimTimeRcp = 1.f / link.editorIsActiveAnimTime;
+				}
+			}
+		}
 	}
 	
 	const bool doHideAnimation = state == kState_HiddenIdle;
@@ -3553,6 +3591,13 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 	{
 		SDL_SetCursor(mousePosition.hover ? cursorHand : SDL_GetDefaultCursor());
 	}
+	
+	animationIsDone =
+		(hideTime == 0.f || hideTime == 1.f) &&
+		notifications.empty() &&
+		dragAndZoom.animationIsDone();
+	
+	logDebug("animationIsDone: %d", animationIsDone);
 	
 	inputIsCaptured &= (state != kState_Hidden);
 	
@@ -4615,14 +4660,24 @@ void GraphEdit::draw() const
 				const bool isSelected = selectedLinks.count(linkId) != 0;
 				const bool isHighlighted = highlightedLinks.count(linkId) != 0;
 				
+				Color color;
+				
 				if (!isEnabled)
-					setColor(191, 191, 191);
+					color = Color(191, 191, 191);
 				else if (isSelected)
-					setColor(127, 127, 255);
+					color = Color(127, 127, 255);
 				else if (isHighlighted)
-					setColor(255, 255, 255);
+					color = Color(255, 255, 255);
 				else
-					setColor(255, 255, 0);
+					color = Color(255, 255, 0);
+				
+				if (editorOptions.showOneShotActivity)
+				{
+					const float activeAnim = link.editorIsActiveAnimTime * link.editorIsActiveAnimTimeRcp;
+					color = color.interp(Color(255, 63, 63), activeAnim);
+				}
+				
+				setColor(color);
 				
 				float x1 = path.points[0].x;
 				float y1 = path.points[0].y;

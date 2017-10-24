@@ -969,12 +969,39 @@ int RealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 	return result;
 }
 
-int RealTimeConnection::linkIsActive(const GraphLinkId linkId)
+int RealTimeConnection::linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 {
 	if (isLoading)
 		return false;
 	
-	return false;
+	auto dstNodeItr = vfxGraph->nodes.find(dstNodeId);
+	
+	Assert(dstNodeItr != vfxGraph->nodes.end());
+	if (dstNodeItr == vfxGraph->nodes.end())
+		return false;
+	
+	auto dstNode = dstNodeItr->second;
+	
+	auto dstInput = dstNode->tryGetOutput(dstSocketIndex);
+	
+	Assert(dstInput != nullptr);
+	if (dstInput == nullptr)
+		return false;
+	
+	// todo : check if the link was triggered
+	
+	bool result = false;
+	
+	if (dstInput->editorIsTriggered)
+	{
+		// fixme : setting this to false here won't work correctly when there's multiply outgoing connections for this socket. we should report true for all of these connections. we should, instead, clear all of these flags prior to processing the VfxGraph
+		
+		dstInput->editorIsTriggered = false;
+		
+		result = true;
+	}
+	
+	return result;
 }
 
 int RealTimeConnection::getNodeCpuHeatMax() const

@@ -79,7 +79,7 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	virtual bool getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines) override;
 	
 	virtual int nodeIsActive(const GraphNodeId nodeId) override;
-	virtual int linkIsActive(const GraphLinkId linkId) override;
+	virtual int linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override;
 	
 	virtual int getNodeCpuHeatMax() const override;
 	virtual int getNodeCpuTimeUs(const GraphNodeId nodeId) const override;

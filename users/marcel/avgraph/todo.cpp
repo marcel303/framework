@@ -1,9 +1,7 @@
 /*
 
 top priority items:
-- add non-SSE versions for audio code
-- add new node type selection memu. make it a pop-over ?
-- port compose shader from 4dworld to avgraph. fix graph editor fade when idle
++ port compose shader from 4dworld to avgraph. fix graph editor fade when idle
 - add support for custom editors to graph editor
 - determine how OSC send and receive nodes should function
 	- would very much like an option to 'learn' OSC event paths. perhaps double click to open custom editor and click 'learn' to let it receive a message and capture to path
@@ -12,9 +10,9 @@ top priority items:
 	- like the BANG node in max
 	- add ability to trigger any input/output trigger (?)
 - add GPU performance markers
-- add editor option to disable real-time preview
-	- add time dilation effect on no input before stopping responding ?
-	- add way for UI/editor to tell update loop it's animating something (camera..)
++ add editor option to disable real-time preview
+	+ add time dilation effect on no input before stopping responding ?
+	+ add way for UI/editor to tell update loop it's animating something (camera..)
 
 todo :
 - add undo/redo support. just serialize/deserialize graph for every action?
@@ -31,7 +29,8 @@ todo :
 	- figure out how to best interop with this software
 	- adapt OSC node to fit these products
 	- have a learning function, to setup mappings from inputs to outputs
-- visualize active links and show direction of data flow
++ visualize active links
+- visualize direction of link data flow
 - investigate VVVV's ability to turn everything into vectors of values and to combine lists
 	- add channels combine method (for now?)
 	- add node where channel values can be added to a list -> allow to experiment with combine node
@@ -58,6 +57,8 @@ todo :
 - add ability to reference nodes? makes graph organization more easy
 - add node editors. when double clicking a node (or some other gesture/interaction), show the node editor. let the node editor operate on the node's data.
 	- let the node editor be independent of the implementation ? it should be possible to have a fully functional graph, graph node and resource editing environment without a live version of the graph running in the background. this means the saveBegin real-time editing callback should be removed again once we got this working
++ add read-only mode. add flags for controlling editor behaviors
+- drag link into empty space = open node type selection menu
 
 todo : nodes :
 - add sample.float node
@@ -119,7 +120,7 @@ todo : nodes :
 + add data table node. read data from CSV, text or XML file
 - add memory node ? get/set named variables. how to ensure processing order ?
 - add queue system for triggers ? ensure predeps have finished processing before handling triggers
-- remove trigger data
++ remove trigger data
 - add ability for nodes to trigger again (process a partial time slice ?). but this will re-introduce again the issue of execution order of triggers ..
 + add draw.image node. let the user control sizing (similar to object-fit in html)
 + add draw.blend node
@@ -151,6 +152,9 @@ todo : framework
 - add easy 3D perspective camera with manual control over input. make it easy to set matrices
 - add scoped** objects
 - add drawCube and drawSphere?
+- add a simple camera class. pushMatrix, popMatrix
+- add hq shaded triangle to framework
+- add a generic way to shade and texture hq primitives. perhaps use texture and shading matrices ?
 
 
 --- ARCHIVED TODOS ---
@@ -288,6 +292,8 @@ todo :
 	+ have a single floating point connection (float pointer). this is how things currently work
 	+ have multiply floating point connections. store float pointers in array. allocate storage for calculating sum. make update() method to update summed value
 	+ have optional remapping enabled per link. combine this with summing support. store mapping and float pointer in summed value element
++ add non-SSE versions for audio code
++ add new node type selection memu. make it a pop-over ?
 
 todo : nodes :
 + add ease node

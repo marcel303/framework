@@ -785,6 +785,8 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 		Assert(outputSocket.type == kVfxPlugType_Trigger);
 		if (outputSocket.type == kVfxPlugType_Trigger)
 		{
+			outputSocket.editorIsTriggered = true;
+			
 			// iterate the list of outgoing connections, call handleTrigger on nodes with correct outputSocketIndex
 			
 			for (auto & triggerTarget : triggerTargets)
@@ -931,6 +933,7 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 			inputSocket.index = i;
 			inputSocket.enumName = src.enumName;
 			inputSocket.defaultValue = src.defaultValue;
+			inputSocket.hasDefaultValue = true;
 			
 			typeDefinition.inputSockets.push_back(inputSocket);
 		}

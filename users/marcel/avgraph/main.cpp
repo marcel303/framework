@@ -562,7 +562,7 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		bool isPaused = false; // todo : move to editor
+		float realtimePreviewAnim = 1.f;
 		
 		double vflip = 1.0;
 		
@@ -571,34 +571,47 @@ int main(int argc, char * argv[])
 			vfxCpuTimingBlock(tick);
 			vfxGpuTimingBlock(tick);
 			
-			if (graphEdit->editorOptions.realTimePreview)
-				framework.waitForEvents = false;
-			else
-			{
+			// when real-time preview is disabled and all animations are done, wait for events to arrive. otherwise just keep processing and drawing frames
+			
+			if (graphEdit->editorOptions.realTimePreview == false && realtimePreviewAnim == 0.f && graphEdit->animationIsDone)
 				framework.waitForEvents = true;
-			}
+			else
+				framework.waitForEvents = false;
 			
 			framework.process();
 			
-			if (!graphEdit->editorOptions.realTimePreview)
-			{
-				framework.timeStep = std::min(framework.timeStep, 1.f / 15.f);
-			}
+			// the time step may be large when waiting for events. to avoid animation hitches we set it to zero here. when the processing below activates an animation we'll use the actual time step we get
+			
+			if (framework.waitForEvents)
+				framework.timeStep = 0.f;
 			
 			//
 			
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
-			//
+			// avoid excessively large time steps by clamping it to 1/15th of a second, simulating a minimum of 15 fps
+			
+			framework.timeStep = std::min(framework.timeStep, 1.f / 15.f);
 			
 			const float dt = framework.timeStep;
 			
 			//
 			
+			if (graphEdit->editorOptions.realTimePreview)
+			{
+				realtimePreviewAnim = std::min(1.f, realtimePreviewAnim + dt / .3f);
+			}
+			else
+			{
+				realtimePreviewAnim = std::max(0.f, realtimePreviewAnim - dt / .5f);
+			}
+			
 			if (vfxGraph != nullptr)
 			{
-				vfxGraph->tick(isPaused ? 0.f : framework.timeStep);
+				const double timeStep = dt * realtimePreviewAnim;
+				
+				vfxGraph->tick(timeStep);
 			}
 			
 			//
@@ -617,7 +630,9 @@ int main(int argc, char * argv[])
 			{
 				if (keyboard.wentDown(SDLK_p) && keyboard.isDown(SDLK_LGUI))
 				{
-					isPaused = !isPaused;
+					inputIsCaptured = true;
+					
+					graphEdit->editorOptions.realTimePreview = !graphEdit->editorOptions.realTimePreview;
 				}
 			}
 			

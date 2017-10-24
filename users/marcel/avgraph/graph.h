@@ -121,6 +121,8 @@ struct GraphNode
 	
 	std::map<std::string, Resource> resources;
 	
+	// editor
+	
 	std::string editorName;
 	float editorX;
 	float editorY;
@@ -188,6 +190,9 @@ struct GraphNodeSocketLink
 	// editor
 	
 	std::list<GraphLinkRoutePoint> editorRoutePoints;
+	
+	float editorIsActiveAnimTime; // real-time connection node activation animation
+	float editorIsActiveAnimTimeRcp;
 	
 	GraphNodeSocketLink();
 	
@@ -308,6 +313,7 @@ struct GraphEdit_TypeDefinition
 		std::string enumName;
 		std::string name;
 		std::string defaultValue;
+		bool hasDefaultValue;
 		
 		// ui
 		
@@ -320,6 +326,8 @@ struct GraphEdit_TypeDefinition
 			: typeName()
 			, enumName()
 			, name()
+			, defaultValue()
+			, hasDefaultValue(false)
 			, index(-1)
 			, px(0.f)
 			, py(0.f)
@@ -858,7 +866,7 @@ struct GraphEdit_RealTimeConnection
 		return kActivity_Inactive;
 	}
 	
-	virtual int linkIsActive(const GraphLinkId linkId)
+	virtual int linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 	{
 		return kActivity_Inactive;
 	}
@@ -1047,6 +1055,18 @@ struct GraphEdit : GraphEditConnection
 		{
 			transform = Mat4x4(true).Translate(GFX_SX/2, GFX_SY/2, 0).Scale(zoom, zoom, 1.f).Translate(-focusX, -focusY, 0.f);
 			invTransform = transform.Invert();
+		}
+		
+		bool animationIsDone() const
+		{
+			const float deltaZoom = zoom / desiredZoom;
+			const float deltaFocusX = (focusX - desiredFocusX) * desiredZoom;
+			const float deltaFocusY = (focusY - desiredFocusY) * desiredZoom;
+			
+			return
+				std::abs(deltaZoom - 1.f) <= .001f &&
+				std::abs(deltaFocusX) <= .01f &&
+				std::abs(deltaFocusY) <= .01f;
 		}
 	};
 	
@@ -1290,6 +1310,8 @@ struct GraphEdit : GraphEditConnection
 	UiState * uiState;
 	
 	SDL_Cursor * cursorHand;
+	
+	bool animationIsDone;
 	
 	float idleTime;
 	float hideTime;
