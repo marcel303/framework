@@ -157,10 +157,11 @@ struct MainButton
 			hqEnd();
 			
 			setFont("calibri.ttf");
+			setFont("manus.ttf");
 			pushFontMode(FONT_SDF);
 			{
 				setColor(colorWhite);
-				drawText(sx/2, sy/2, 36, 0, 0, "%s", caption.c_str());
+				drawText(sx/2, sy/2, 66, 0, 0, "%s", caption.c_str());
 			}
 			popFontMode();
 			
@@ -865,6 +866,13 @@ int main(int argc, char * argv[])
 	
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
+		for (int i = 0; i < 4; ++i)
+		{
+			framework.process();
+			framework.beginDraw(220, 220, 220, 0);
+			framework.endDraw();
+		}
+		
 	#if DEVMODE == 0
 		framework.fillCachesWithPath(".", true);
 	#endif
@@ -944,6 +952,8 @@ int main(int argc, char * argv[])
 		
 		double blurStrength = 0.0;
 		
+		framework.process();
+		
 		do
 		{
 			framework.process();
@@ -1003,9 +1013,9 @@ int main(int argc, char * argv[])
 			inputIsCaptured |= buttonPressed;
 			
 			if (view == kView_MainButtons)
-				mainButtonsOpacity = std::min(1.0, mainButtonsOpacity + dt * 1);
+				mainButtonsOpacity = std::min(1.0, mainButtonsOpacity + dt / 1.5);
 			else
-				mainButtonsOpacity = std::max(0.0, mainButtonsOpacity - dt * 1);
+				mainButtonsOpacity = std::max(0.0, mainButtonsOpacity - dt / 1.0);
 			
 			for (int i = 0; i < 4; ++i)
 				wavefield.tick(dt / 4.0, 10.0, 0.9, 0.9, false);
