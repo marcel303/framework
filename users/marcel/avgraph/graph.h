@@ -924,6 +924,7 @@ struct GraphEdit : GraphEditConnection
 		kFlag_ToggleIsPassthrough = 1 << 10,
 		kFlag_ToggleIsFolded = 1 << 11,
 		kFlag_SetCursor = 1 << 12,
+		kFlag_Select = 1 << 13,
 		kFlag_All = ~0
 	};
 	

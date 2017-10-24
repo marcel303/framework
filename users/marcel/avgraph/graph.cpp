@@ -2636,23 +2636,26 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							break;
 						}
 						
-						if (appendSelection == false)
+						if (enabled(kFlag_Select))
 						{
-							// todo : implement the following bahvior: click + hold/move = drag, click + release = select single and discard the rest of the selection
-							
-							if (selectedNodes.count(hitTestResult.node->id) == 0)
+							if (appendSelection == false)
 							{
-								selectNode(hitTestResult.node->id, true);
+								// todo : implement the following bahvior: click + hold/move = drag, click + release = select single and discard the rest of the selection
 								
-								hitTestResult.node->editorZKey = graph->allocZKey();
+								if (selectedNodes.count(hitTestResult.node->id) == 0)
+								{
+									selectNode(hitTestResult.node->id, true);
+									
+									hitTestResult.node->editorZKey = graph->allocZKey();
+								}
 							}
-						}
-						else
-						{
-							if (selectedNodes.count(hitTestResult.node->id) == 0)
-								selectNode(hitTestResult.node->id, false);
 							else
-								selectedNodes.erase(hitTestResult.node->id);
+							{
+								if (selectedNodes.count(hitTestResult.node->id) == 0)
+									selectNode(hitTestResult.node->id, false);
+								else
+									selectedNodes.erase(hitTestResult.node->id);
+							}
 						}
 						
 						if (hitTestResult.nodeHitTestResult.borderL ||
@@ -2708,7 +2711,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						}
 					}
 					
-					if (hitTestResult.hasLink)
+					if (enabled(kFlag_Select) && hitTestResult.hasLink)
 					{
 						if (appendSelection == false)
 						{
@@ -2723,7 +2726,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						}
 					}
 					
-					if (hitTestResult.hasLinkRoutePoint)
+					if (enabled(kFlag_Select) && hitTestResult.hasLinkRoutePoint)
 					{
 						if (appendSelection == false)
 						{
@@ -2741,7 +2744,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						break;
 					}
 				}
-				else
+				else if (enabled(kFlag_Select))
 				{
 					nodeSelect.beginX = mousePosition.x;
 					nodeSelect.beginY = mousePosition.y;
@@ -2829,8 +2832,13 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			if (keyboard.wentDown(SDLK_a))
 			{
 				if (commandMod())
-					selectAll();
-				else
+				{
+					if (enabled(kFlag_Select))
+					{
+						selectAll();
+					}
+				}
+				else if (enabled(kFlag_Drag))
 				{
 					for (auto nodeId : selectedNodes)
 					{
@@ -3596,8 +3604,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		(hideTime == 0.f || hideTime == 1.f) &&
 		notifications.empty() &&
 		dragAndZoom.animationIsDone();
-	
-	logDebug("animationIsDone: %d", animationIsDone);
 	
 	inputIsCaptured &= (state != kState_Hidden);
 	
