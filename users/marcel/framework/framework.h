@@ -223,10 +223,7 @@ class Sound;
 class Sprite;
 class Spriter;
 struct SpriterState;
-class Stage;
-class StageObject;
 class Surface;
-class Ui;
 
 namespace spriter
 {
@@ -242,8 +239,6 @@ extern Mouse mouse;
 extern Keyboard keyboard;
 extern Gamepad gamepad[MAX_GAMEPAD];
 extern Midi midi;
-extern Stage stage;
-extern Ui ui;
 
 // event handlers
 
@@ -1073,76 +1068,6 @@ public:
 	bool wentDown(int key) const;
 	bool wentUp(int key) const;
 	float getValue(int key, float _default) const;
-};
-
-//
-
-class StageObject
-{
-public:
-	StageObject();
-	virtual ~StageObject();
-	
-	virtual void process(float timeStep);
-	virtual void draw();
-	
-	bool isDead;
-	Sprite * sprite;
-};
-
-class StageObject_SpriteAnim : public StageObject
-{
-public:
-	StageObject_SpriteAnim(const char * name, const char * anim, const char * sheet = 0);
-	
-	virtual void process(float timeStep);
-};
-
-class Stage
-{
-	typedef std::map<int, StageObject*> ObjectList;
-	
-	ObjectList m_objects;
-	
-	int m_objectId;
-	
-public:
-	Stage();
-	
-	void process(float timeStep);
-	void draw();
-	
-	int addObject(StageObject * object);
-	void removeObject(int objectId);
-};
-
-//
-
-class Ui
-{
-	class UiCacheElem * m_ui;
-	bool m_ownsUi;
-	
-	std::string m_over;
-	std::string m_down;
-	
-	std::string getImage(Dictionary & d);
-	bool getArea(Dictionary & d, int & x, int & y, int & sx, int & sy);
-	std::string findMouseOver();
-	
-public:
-	Ui();
-	Ui(const char * filename);
-	~Ui();
-	
-	void load(const char * filename);
-	void process();
-	void draw();
-	
-	void remove(const char * name);
-	void clear();
-
-	Dictionary & operator[](const char * name);
 };
 
 void clearCaches(int caches);
