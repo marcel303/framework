@@ -429,6 +429,7 @@ public:
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
 	void setImmediate(const char * name, float x, float y, float z, float w);
+	void setImmediate(GLint index, float x, float y);
 	void setImmediate(GLint index, float x, float y, float z, float w);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
 	void setImmediateMatrix4x4(GLint index, const float * matrix);
@@ -483,6 +484,7 @@ public:
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
 	void setImmediate(const char * name, float x, float y, float z, float w);
+	void setImmediate(GLint index, float x, float y);
 	void setImmediate(GLint index, float x, float y, float z, float w);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
 	void setImmediateMatrix4x4(GLint index, const float * matrix);

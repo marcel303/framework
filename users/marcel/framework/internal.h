@@ -269,6 +269,10 @@ public:
 		kSp_ProjectionMatrix,
 		kSp_Texture,
 		kSp_Params,
+		kSp_ShadingParams,
+		kSp_GradientInfo,
+		kSp_GradientMatrix,
+		kSp_TextureMatrix,
 		kSp_MAX
 	};
 

@@ -18,24 +18,22 @@ shader_in vec2 v_p;
 shader_in vec2 v_texcoord;
 
 // color coordinate matrix
-uniform vec4 cmat1;
-uniform vec4 cmat2;
-uniform vec4 cmat3;
-uniform vec4 cmat4;
+uniform mat4x4 gmat;
 
 // texture coordinate matrix
-uniform vec4 tmat1;
-uniform vec4 tmat2;
-uniform vec4 tmat3;
-uniform vec4 tmat4;
+uniform mat4x4 tmat;
+
+uniform vec2 shadingParams; // gradientType, textureEnabled
+float gradientType = shadingParams.x;
+float textureEnabled = shadingParams.y;
 
 // color gradient
-uniform vec4 gradientParams; // gradientType, bias, scale, clamp
-uniform vec4 gradientColor1;
-uniform vec4 gradientColor2;
+uniform mat4x4 gradientInfo;
+vec4 gradientParams = gradientInfo[0]; // <undefined>, bias, scale, clamp
+vec4 gradientColor1 = gradientInfo[1];
+vec4 gradientColor2 = gradientInfo[2];
 
 // texture
-uniform vec2 textureParams; // enable, <undefined>
 uniform sampler2D source;
 
 // global params
@@ -76,29 +74,25 @@ float sampleDistanceFunction(vec2 p)
 
 vec4 hqGradientColor()
 {
-	mat4x4 colorCoordMatrix = mat4x4(
-		cmat1,
-		cmat2,
-		cmat3,
-		cmat4);
+	mat4x4 gradientCoordMatrix = gmat;
 
-	vec4 colorCoord = colorCoordMatrix * vec4(v_p, 0.0, 1.0);
+	vec4 gradientCoord = gradientCoordMatrix * vec4(v_p, 0.0, 1.0);
 
 	// use color gradient to determine color
 
 	float t = 0.0;
 
-	if (gradientParams.x == 1)
+	if (gradientType == 1)
 	{
 		// linear gradient
 
-		t = colorCoord.x;
+		t = gradientCoord.x;
 	}
 	else
 	{
 		// radial gradient
 
-		t = length(colorCoord.xy);
+		t = length(gradientCoord.xy);
 	}
 
 	t = (t - gradientParams.y) * gradientParams.z;
@@ -115,11 +109,7 @@ vec4 hqGradientColor()
 
 vec4 hqTextureColor()
 {
-	mat4x4 textureCoordMatrix = mat4x4(
-		tmat1,
-		tmat2,
-		tmat3,
-		tmat4);
+	mat4x4 textureCoordMatrix = tmat;
 
 	vec4 textureCoord = textureCoordMatrix * vec4(v_p, 0.0, 1.0);
 
@@ -168,14 +158,14 @@ vec4 hqApplyColorMode(vec4 color1, vec4 color2, float mode)
 
 vec4 hqColor(float v, vec4 color)
 {
-	if (gradientParams.x != 0.0)
+	if (gradientType != 0.0)
 	{
 		vec4 gradientColor = hqGradientColor();
 
 		color *= gradientColor;
 	}
 
-	if (textureParams.x != 0.0)
+	if (textureEnabled != 0.0)
 	{
 		vec4 textureColor = hqTextureColor();
 
