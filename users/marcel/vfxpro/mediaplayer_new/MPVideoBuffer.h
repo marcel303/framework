@@ -30,6 +30,7 @@
 #include "MPForward.h"
 #include "MPMutex.h"
 #include <list>
+#include <stdint.h>
 
 namespace MP
 {

@@ -27,6 +27,7 @@
 
 #include "delayLine.h"
 #include "vfxNodeDelayLine.h"
+#include <algorithm>
 
 VFX_NODE_TYPE(sample_delay, VfxNodeDelayLine)
 {

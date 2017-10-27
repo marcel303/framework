@@ -26,6 +26,7 @@
 */
 
 #include "vfxNodeImageCpuEqualize.h"
+#include <algorithm>
 #include <emmintrin.h>
 #include <immintrin.h>
 

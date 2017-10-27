@@ -729,7 +729,7 @@ struct AudioSource_StreamOgg : AudioSource
 	
 	virtual void generate(const int channelIndex, float * __restrict audioBuffer, const int numSamples) override
 	{
-		AudioSample samples[numSamples];
+		AudioSample * samples = (AudioSample*)alloca(sizeof(AudioSample) * numSamples);
 		
 		const int numProvided = stream.Provide(numSamples, samples);
 		

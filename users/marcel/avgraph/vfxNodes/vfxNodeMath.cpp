@@ -26,6 +26,7 @@
 */
 
 #include "vfxNodeMath.h"
+#include <algorithm>
 #include <cmath>
 
 static float evalMathOp(const float a, const float b, const VfxNodeMath::Type type, const bool isPassthrough)

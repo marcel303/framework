@@ -26,6 +26,7 @@
 */
 
 #include "vfxNodeImageCpuDownsample.h"
+#include <algorithm>
 #include <immintrin.h>
 #include <xmmintrin.h>
 
