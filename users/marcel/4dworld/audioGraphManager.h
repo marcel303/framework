@@ -117,26 +117,33 @@ struct AudioGraphManager
 	AudioGraphManager();
 	~AudioGraphManager();
 	
+	// called from the app thread
 	void init(SDL_mutex * mutex);
 	void shut();
 	
+	// called from the app thread
 	void selectFile(const char * filename);
 	void selectInstance(const AudioGraphInstance * instance);
 	
+	// called from the app thread
 	AudioGraphInstance * createInstance(const char * filename);
 	void free(AudioGraphInstance *& instance);
 	
+	// called from any thread
 	void registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY);
 	void unregisterControlValue(const char * name);
 	bool findControlValue(const char * name, AudioControlValue & result) const;
 	void exportControlValues();
 	
+	// called from any thread
 	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
 	Memf getMemf(const char * name);
-
+	
+	// called from the audio thread
 	void tick(const float dt);
 	void updateAudioValues();
 	
+	// called from the app thread
 	bool tickEditor(const float dt, const bool isInputCaptured);
 	void drawEditor();
 };
