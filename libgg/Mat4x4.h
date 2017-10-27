@@ -242,6 +242,14 @@ public:
 			m_v[INDEX(3, 2)]);
 	}
 	
+	Vec3 GetAxis(int index) const
+	{
+		return Vec3(
+			m_v[INDEX(index, 0)],
+			m_v[INDEX(index, 1)],
+			m_v[INDEX(index, 2)]);
+	}
+	
 	inline Mat4x4 CalcTranspose() const
 	{
 		Mat4x4 r;
