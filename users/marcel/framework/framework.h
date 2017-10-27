@@ -1070,6 +1070,36 @@ public:
 	float getValue(int key, float _default) const;
 };
 
+class Camera3d
+{
+	double mouseDx;
+	double mouseDy;
+	
+public:
+	Vec3 position;
+	
+	float yaw;
+	float pitch;
+	
+	double mouseSmooth;
+	float mouseRotationSpeed;
+	float maxForwardSpeed;
+	float maxStrafeSpeed;
+	float maxUpSpeed;
+	
+	int gamepadIndex;
+	
+	Camera3d();
+	
+	void tick(float dt, bool enableInput);
+	
+	Mat4x4 getWorldMatrix() const;
+	Mat4x4 getViewMatrix() const;
+	
+	void pushViewMatrix();
+	void popViewMatrix();
+};
+
 void clearCaches(int caches);
 
 // drawing
@@ -1127,6 +1157,11 @@ void measureTextArea(float size, float maxSx, float & sx, float & sy, const char
 void drawTextArea(float x, float y, float sx, float size, const char * format, ...);
 void drawTextArea(float x, float y, float sx, float sy, float size, float alignX, float alignY, const char * format, ...);
 void drawPath(const Path2d & path);
+
+void drawLine3d(int axis = 0);
+void drawRect3d(int axis1 = 0, int axis2 = 1);
+void drawGrid3d(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1);
+void drawGrid3dLine(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1);
 
 GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
 GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp);

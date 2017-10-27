@@ -4202,6 +4202,116 @@ float Midi::getValue(int key, float _default) const
 
 // -----
 
+Camera3d::Camera3d()
+	: mouseDx(0.0)
+	, mouseDy(0.0)
+	, position(0.f, 0.f, 0.f)
+	, yaw(0.f)
+	, pitch(0.f)
+	, mouseSmooth(1.0 / 1.04)
+	, mouseRotationSpeed(1.f / 100.f)
+	, maxForwardSpeed(1.f)
+	, maxStrafeSpeed(1.f)
+	, maxUpSpeed(1.f)
+	, gamepadIndex(-1)
+{
+}
+
+void Camera3d::tick(float dt, bool enableInput)
+{
+	float forwardSpeed = 0.f;
+	float strafeSpeed = 0.f;
+	float upSpeed = 0.f;
+	
+	if (enableInput)
+	{
+		// keyboard
+		
+		if (keyboard.isDown(SDLK_DOWN) || keyboard.isDown(SDLK_s))
+			forwardSpeed -= 1.f;
+		if (keyboard.isDown(SDLK_UP) || keyboard.isDown(SDLK_w))
+			forwardSpeed += 1.f;
+		if (keyboard.isDown(SDLK_LEFT) || keyboard.isDown(SDLK_a))
+			strafeSpeed -= 1.f;
+		if (keyboard.isDown(SDLK_RIGHT) || keyboard.isDown(SDLK_d))
+			strafeSpeed += 1.f;
+		
+		// gamepad
+		
+		if (gamepadIndex >= 0 && gamepadIndex < MAX_GAMEPAD && gamepad[gamepadIndex].isConnected)
+		{
+			forwardSpeed += gamepad[gamepadIndex].getAnalog(0, ANALOG_Y);
+		
+			yaw += gamepad[gamepadIndex].getAnalog(1, ANALOG_Y);
+			pitch += gamepad[gamepadIndex].getAnalog(1, ANALOG_Y);
+		}
+		
+		// mouse + mouse smoothing
+		
+		mouseDx += mouse.dx;
+		mouseDy += mouse.dy;
+		
+		const double retain = std::pow(mouseSmooth, dt * 1000.0);
+		
+		const double newDx = mouseDx * retain;
+		const double newDy = mouseDy * retain;
+		
+		const double thisDx = mouseDx - newDx;
+		const double thisDy = mouseDy - newDy;
+		
+		mouseDx = newDx;
+		mouseDy = newDy;
+		
+		yaw -= thisDx * mouseRotationSpeed;
+		pitch -= thisDy * mouseRotationSpeed;
+	}
+	
+	// go from normalized input values to values directly used to add to position
+	
+	forwardSpeed *= maxForwardSpeed * dt;
+	strafeSpeed *= maxStrafeSpeed * dt;
+	upSpeed *= maxUpSpeed * dt;
+	
+	const Mat4x4 worldMatrix = getWorldMatrix();
+	
+	const Vec3 xAxis = worldMatrix.GetAxis(0);
+	const Vec3 yAxis = worldMatrix.GetAxis(1);
+	const Vec3 zAxis = worldMatrix.GetAxis(2);
+	
+	position = position + xAxis * strafeSpeed + yAxis * upSpeed + zAxis * forwardSpeed;
+}
+
+Mat4x4 Camera3d::getWorldMatrix() const
+{
+	return Mat4x4(true).Translate(position).RotateY(yaw).RotateX(pitch);
+}
+
+Mat4x4 Camera3d::getViewMatrix() const
+{
+	return getWorldMatrix().CalcInv();
+}
+
+void Camera3d::pushViewMatrix()
+{
+	const Mat4x4 matrix = getViewMatrix();
+	
+	gxMatrixMode(GL_MODELVIEW);
+	gxPushMatrix();
+	gxLoadMatrixf(matrix.m_v);
+	// todo : restore matrix mode
+	gxMatrixMode(GL_MODELVIEW);
+}
+
+void Camera3d::popViewMatrix()
+{
+	gxMatrixMode(GL_MODELVIEW);
+	gxPopMatrix();
+	// todo : restore matrix mode
+	gxMatrixMode(GL_MODELVIEW);
+}
+
+// -----
+
 void clearCaches(int caches)
 {
 	if (caches & CACHE_FONT)
@@ -4346,7 +4456,7 @@ void projectPerspective3d(const float fov, const float nearZ, const float farZ)
 	float sy;
 	getViewportSize(sx, sy);
 	
-	transform.MakePerspectiveLH(fov, sy / sx, nearZ, farZ);
+	transform.MakePerspectiveLH(fov / 180.f * M_PI, sy / sx, nearZ, farZ);
 	
 	globals.transform3d = transform;
 	
@@ -5678,6 +5788,118 @@ void drawPath(const Path2d & path)
 
 	glPointSize(1.f);
 #endif
+}
+
+void drawLine3d(int axis)
+{
+	gxBegin(GL_LINES);
+	{
+		gxTexCoord2f(0, 0); gxVertex3f(axis == 0 ? -1 : 0, axis == 1 ? -1 : 0, axis == 2 ? -1 : 0);
+		gxTexCoord2f(1, 1); gxVertex3f(axis == 0 ? +1 : 0, axis == 1 ? +1 : 0, axis == 2 ? +1 : 0);
+	}
+	gxEnd();
+}
+
+void drawRect3d(int axis1, int axis2)
+{
+	const int axis3 = 3 - axis1 - axis2;
+	
+	gxBegin(GL_QUADS);
+	{
+		float xyz[3];
+		
+		xyz[axis1] = -1;
+		xyz[axis2] = -1;
+		xyz[axis3] = 0;
+		gxTexCoord2f(0, 0); gxVertex3fv(xyz);
+		
+		xyz[axis1] = +1;
+		gxTexCoord2f(1, 0); gxVertex3fv(xyz);
+		
+		xyz[axis2] = +1;
+		gxTexCoord2f(1, 1); gxVertex3fv(xyz);
+		
+		xyz[axis1] = -1;
+		gxTexCoord2f(0, 1); gxVertex3fv(xyz);
+	}
+	gxEnd();
+}
+
+void drawGrid3d(int resolution1, int resolution2, int axis1, int axis2)
+{
+	const int axis3 = 3 - axis1 - axis2;
+	
+	gxBegin(GL_QUADS);
+	{
+		for (int i = 0; i < resolution1; ++i)
+		{
+			for (int j = 0; j < resolution2; ++j)
+			{
+				const float u1 = (i + 0) / float(resolution1);
+				const float u2 = (i + 1) / float(resolution1);
+				const float v1 = (j + 0) / float(resolution2);
+				const float v2 = (j + 1) / float(resolution2);
+				
+				const float x1 = (u1 - .5f) * 2.f;
+				const float x2 = (u2 - .5f) * 2.f;
+				const float y1 = (v1 - .5f) * 2.f;
+				const float y2 = (v2 - .5f) * 2.f;
+				
+				float p[3];
+				p[axis1] = x1;
+				p[axis2] = y1;
+				p[axis3] = 0.f;
+				gxTexCoord2f(u1, v1); gxVertex3fv(p);
+				
+				p[axis1] = x2;
+				gxTexCoord2f(u2, v1); gxVertex3fv(p);
+				
+				p[axis2] = y2;
+				gxTexCoord2f(u2, v2); gxVertex3fv(p);
+				
+				p[axis1] = x1;
+				gxTexCoord2f(u1, v2); gxVertex3fv(p);
+			}
+		}
+	}
+	gxEnd();
+}
+
+void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2)
+{
+	const int axis3 = 3 - axis1 - axis2;
+	
+	gxBegin(GL_LINES);
+	{
+		for (int i = 0; i <= resolution1; ++i)
+		{
+			const float u = i / float(resolution1);
+			const float x = (u - .5f) * 2.f;
+			
+			float p[3];
+			p[axis1] = x;
+			p[axis2] = -1.f;
+			gxTexCoord2f(u, 0.f); gxVertex3fv(p);
+			
+			p[axis2] = +1.f;
+			gxTexCoord2f(u, 1.f); gxVertex3fv(p);
+		}
+		
+		for (int j = 0; j <= resolution2; ++j)
+		{
+			const float v = j / float(resolution2);
+			const float y = (v - .5f) * 2.f;
+			
+			float p[3];
+			p[axis1] = -1.f;
+			p[axis2] = y;
+			gxTexCoord2f(0.f, v); gxVertex3fv(p);
+			
+			p[axis1] = +1.f;
+			gxTexCoord2f(1.f, v); gxVertex3fv(p);
+		}
+	}
+	gxEnd();
 }
 
 static GLuint createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat, GLenum uploadElementType)
