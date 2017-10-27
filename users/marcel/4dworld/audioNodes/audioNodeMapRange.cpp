@@ -76,7 +76,7 @@ void AudioNodeMapRange::tick(const float dt)
 		const float _inMax = inMax->getScalar();
 		const float _outMin = outMin->getScalar();
 		const float _outMax = outMax->getScalar();
-		const float scale = 1.f / (_inMax - _inMin);
+		const float scale = (_inMin == _inMax) ? 0.f : 1.f / (_inMax - _inMin);
 		
 		if (value->isScalar)
 		{
@@ -117,7 +117,7 @@ void AudioNodeMapRange::tick(const float dt)
 			const float _inMax = inMax->samples[i];
 			const float _outMin = outMin->samples[i];
 			const float _outMax = outMax->samples[i];
-			const float scale = 1.f / (_inMax - _inMin);
+			const float scale = (_inMin == _inMax) ? 0.f : 1.f / (_inMax - _inMin);
 			const float _value = value->samples[i];
 			
 			const float t2 = (_value - _inMin) * scale;
