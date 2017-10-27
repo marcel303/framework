@@ -26,6 +26,7 @@
 */
 
 #include "vfxNodeChannelToGpu.h"
+#include <algorithm>
 #include <cmath>
 #include <GL/glew.h>
 

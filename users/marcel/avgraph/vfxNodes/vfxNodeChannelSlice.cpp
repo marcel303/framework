@@ -26,6 +26,7 @@
 */
 
 #include "vfxNodeChannelSlice.h"
+#include <algorithm>
 #include <cmath>
 
 VFX_NODE_TYPE(channel_slice, VfxNodeChannelSlice)

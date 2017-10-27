@@ -27,6 +27,7 @@
 
 #include "dotTracker.h"
 #include "vfxNodeDotTracker.h"
+#include <algorithm>
 
 VFX_NODE_TYPE(dottracker, VfxNodeDotTracker)
 {

@@ -27,6 +27,7 @@
 
 #include "fourier.h"
 #include "vfxNodeSpectrum1D.h"
+#include <algorithm>
 #include <cmath>
 #include <GL/glew.h>
 

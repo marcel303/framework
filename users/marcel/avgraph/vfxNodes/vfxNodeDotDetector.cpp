@@ -27,6 +27,7 @@
 
 #include "dotDetector.h"
 #include "vfxNodeDotDetector.h"
+#include <algorithm>
 #include <cmath>
 #include <xmmintrin.h>
 
