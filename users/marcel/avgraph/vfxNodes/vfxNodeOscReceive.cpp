@@ -26,232 +26,408 @@
 */
 
 #include "framework.h"
-#include "vfxNodeOsc.h"
+#include "vfxNodeOscReceive.h"
+#include "vfxTypes.h"
 
-#include "ip/UdpSocket.h"
-#include "osc/OscOutboundPacketStream.h"
-#include "osc/OscPacketListener.h"
+// todo : refactor OSC receive node
+// - add OSC receiver resource. shared between VFX graph instances
+// - add OSC receive path resource editor. query OSC receiver resource and iterate messages
+// - OSC receiver should be created if no VFX graph is running in the background
+//	- but how will it know the IP address ? should IP address and port be options of the OSC receiver resource editor ?
+//	- perhaps OSC path editor should only work when VFX graph is active after all ..
 
-#include <list>
+#include "StringEx.h"
+#include "tinyxml2.h"
+#include "vfxGraph.h"
+#include "../libparticle/ui.h" // todo : remove
 
-VFX_NODE_TYPE(osc_receive, VfxNodeOsc)
+struct ResourceEditor_OscPath : GraphEdit_ResourceEditorBase
 {
-	typeName = "osc";
+	UiState * uiState;
+	VfxOscPath * path;
+	bool isLearning;
 	
-	in("port", "int");
-	in("ipAddress", "string");
-	in("trigger", "trigger");
-	out("event", "trigger");
-}
-
-struct OscMessage
-{
-	OscMessage()
-		: event()
-		, str()
+	ResourceEditor_OscPath()
+		: uiState(nullptr)
+		, path(nullptr)
+		, isLearning(false)
 	{
-		memset(param, 0, sizeof(param));
+		uiState = new UiState();
+		uiState->sx = 400; // todo : look at GFX_SX
 	}
 	
-	std::string event;
-	float param[4];
-	std::string str;
-};
-
-class MyOscPacketListener : public osc::OscPacketListener
-{
-public:
-	SDL_mutex * oscMessageMtx;
-	std::list<OscMessage> oscMessages;
-	
-	MyOscPacketListener()
-		: oscMessageMtx(nullptr)
-		, oscMessages()
+	~ResourceEditor_OscPath()
 	{
-		oscMessageMtx = SDL_CreateMutex();
+		freeVfxNodeResource(path);
+		Assert(path == nullptr);
+		
+		delete uiState;
+		uiState = nullptr;
 	}
 	
-	~MyOscPacketListener()
+	void getSize(int & sx, int & sy) const override
 	{
-		SDL_DestroyMutex(oscMessageMtx);
-		oscMessageMtx = nullptr;
+		sx = uiState->sx;
+		sy = 100;
+	}
+
+	void setPosition(const int x, const int y) override
+	{
+		uiState->x = x;
+		uiState->y = y;
 	}
 	
-protected:
-	virtual void ProcessBundle(const osc::ReceivedBundle & b, const IpEndpointName & remoteEndpoint) override
+	void doMenu(const float dt)
 	{
-		//logDebug("ProcessBundle: timeTag=%llu", b.TimeTag());
-
-		osc::OscPacketListener::ProcessBundle(b, remoteEndpoint);
-	}
-
-	virtual void ProcessMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) override
-	{
-		try
+		pushMenu("osc.path");
+		
+		if (path != nullptr)
 		{
-			//logDebug("ProcessMessage");
-
-			osc::ReceivedMessageArgumentStream args = m.ArgumentStream();
-
-			OscMessage message;
-
-			if (strcmp(m.AddressPattern(), "/event") == 0)
-			{
-				message.event = m.AddressPattern();
-				message.str = std::string(m.AddressPattern()).substr(1);
-			}
-			else
-			{
-				logWarning("unknown message type: %s", m.AddressPattern());
-			}
-
-			if (!message.event.empty())
-			{
-				SDL_LockMutex(oscMessageMtx);
-				{
-					logDebug("enqueue OSC message. event=%s", message.event.c_str());
-
-					oscMessages.push_back(message);
-				}
-				SDL_UnlockMutex(oscMessageMtx);
-			}
+			std::string value = path->path;
+			
+			doTextBox(value, "path", dt);
+			
+			strcpy_s(path->path, sizeof(path->path), value.c_str());
 		}
-		catch (osc::Exception & e)
+		
+		if (isLearning)
 		{
-			logError("error while parsing message: %s: %s", m.AddressPattern(), e.what());
-		}
-	}
-};
-
-VfxNodeOsc::VfxNodeOsc()
-	: VfxNodeBase()
-	, eventId()
-	, oscPacketListener(nullptr)
-	, oscReceiveSocket(nullptr)
-	, oscMessageThread(nullptr)
-{
-	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Port, kVfxPlugType_Int);
-	addInput(kInput_IpAddress, kVfxPlugType_String);
-	addOutput(kOutput_Trigger, kVfxPlugType_Trigger, &eventId);
-}
-
-VfxNodeOsc::~VfxNodeOsc()
-{
-	logDebug("terminating OSC receive thread");
-	
-	if (oscReceiveSocket != nullptr)
-	{
-		oscReceiveSocket->AsynchronousBreak();
-	}
-	
-	if (oscMessageThread != nullptr)
-	{
-		SDL_WaitThread(oscMessageThread, nullptr);
-		oscMessageThread = nullptr;
-	}
-	
-	logDebug("terminating OSC receive thread [done]");
-	
-	logDebug("terminating OSC UDP receive socket");
-	
-	delete oscReceiveSocket;
-	oscReceiveSocket = nullptr;
-	
-	logDebug("terminating OSC UDP receive socket [done]");
-	
-	delete oscPacketListener;
-	oscPacketListener = nullptr;
-}
-
-void VfxNodeOsc::init(const GraphNode & node)
-{
-	try
-	{
-		// create OSC client and listen
-		
-		oscPacketListener = new MyOscPacketListener();
-		
-		const std::string ipAddress = getInputString(kInput_IpAddress, "");
-		const int udpPort = getInputInt(kInput_Port, 0);
-		
-		if (ipAddress.empty() || udpPort == 0)
-		{
-			logWarning("invalid OSC bind address: %s:%d", ipAddress.c_str(), udpPort);
+			doLabel("learning..", 0.f);
+			
+			if (doButton("cancel"))
+				isLearning = false;
 		}
 		else
 		{
-			logDebug("creating OSC UDP receive socket @ %s:%d", ipAddress.c_str(), udpPort);
-			
-			// IpEndpointName::ANY_ADDRESS
-			
-			oscReceiveSocket = new UdpListeningReceiveSocket(IpEndpointName(ipAddress.c_str(), udpPort), oscPacketListener);
-			
-			logDebug("creating OSC receive thread");
-		
-			oscMessageThread = SDL_CreateThread(executeOscThread, "OSC thread", this);
-		}
-	}
-	catch (std::exception & e)
-	{
-		logError("failed to start OSC receive thread: %s", e.what());
-	}
-}
-
-void VfxNodeOsc::tick(const float dt)
-{
-	vfxCpuTimingBlock(VfxNodeOscReceive);
-	
-	// update network input
-
-	SDL_LockMutex(oscPacketListener->oscMessageMtx);
-	{
-		while (!oscPacketListener->oscMessages.empty())
-		{
-			const OscMessage message = oscPacketListener->oscMessages.front();
-			
-			oscPacketListener->oscMessages.pop_front();
-			
-			SDL_UnlockMutex(oscPacketListener->oscMessageMtx);
+			if (doButton("learn"))
 			{
-				// todo : store OSC values in trigger mem
-				
-				trigger(kOutput_Trigger);
-				
-				//
-	
-				HistoryItem historyItem;
-				historyItem.eventName = message.event;
-				history.push_front(historyItem);
-				
-				while (history.size() > kMaxHistory)
-					history.pop_back();
+				isLearning = true;
 			}
-			SDL_LockMutex(oscPacketListener->oscMessageMtx);
+		}
+		
+		popMenu();
+	}
+	
+	bool tick(const float dt, const bool inputIsCaptured) override
+	{
+		makeActive(uiState, true, false);
+		doMenu(dt);
+		
+		return uiState->activeElem != nullptr;
+	}
+
+	void draw() const override
+	{
+		makeActive(uiState, false, true);
+		const_cast<ResourceEditor_OscPath*>(this)->doMenu(0.f);
+	}
+	
+	void setResource(const GraphNode & node, const char * type, const char * name) override
+	{
+		Assert(path == nullptr);
+		
+		if (createVfxNodeResource<VfxOscPath>(node, type, name, path))
+		{
+			//
 		}
 	}
-	SDL_UnlockMutex(oscPacketListener->oscMessageMtx);
+
+	bool serializeResource(std::string & text) const override
+	{
+		if (path != nullptr)
+		{
+			tinyxml2::XMLPrinter p;
+			p.OpenElement("value");
+			{
+				path->save(&p);
+			}
+			p.CloseElement();
+			
+			text = p.CStr();
+			
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+};
+
+//
+
+#include "oscReceiver.h"
+#include <map>
+
+struct VfxOscEndpointMgr : OscReceiveHandler
+{
+	struct Receiver
+	{
+		OscReceiver receiver;
+		int refCount;
+		
+		Receiver()
+			: receiver()
+			, refCount(0)
+		{
+		}
+	};
+	
+	std::list<Receiver> receivers;
+	std::map<std::string, std::vector<float>> receivedValues;
+	int lastTraversalId;
+	
+	VfxOscEndpointMgr()
+		: receivers()
+		, receivedValues()
+		, lastTraversalId(-1)
+	{
+	}
+	
+	OscReceiver * alloc(const char * ipAddress, const int udpPort)
+	{
+		for (auto & r : receivers)
+		{
+			if (r.receiver.ipAddress == ipAddress && r.receiver.udpPort == udpPort)
+			{
+				r.refCount++;
+				
+				return &r.receiver;
+			}
+		}
+		
+		{
+			Receiver r;
+			
+			receivers.push_back(r);
+		}
+		
+		auto & r = receivers.back();
+		
+		r.receiver.init(ipAddress, udpPort);
+		
+		r.refCount++;
+		
+		return &r.receiver;
+	}
+	
+	void free(OscReceiver *& receiver)
+	{
+		for (auto rItr = receivers.begin(); rItr != receivers.end(); ++rItr)
+		{
+			auto & r = *rItr;
+			
+			if (receiver == &r.receiver)
+			{
+				r.refCount--;
+				
+				if (r.refCount == 0)
+				{
+					r.receiver.shut();
+					
+					receivers.erase(rItr);
+					
+					break;
+				}
+			}
+		}
+	}
+	
+	void tick()
+	{
+		if (g_currentVfxGraph->nextTickTraversalId != lastTraversalId)
+		{
+			lastTraversalId = g_currentVfxGraph->nextTickTraversalId;
+			
+			receivedValues.clear();
+			
+			for (auto & r : receivers)
+			{
+				r.receiver.tick(this);
+			}
+		}
+	}
+	
+	virtual void handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) override
+	{
+		const char * path = nullptr;
+		float value = 0.f;
+		
+		try
+		{
+			path = m.AddressPattern();
+			
+			auto args = m.ArgumentStream();
+			
+			args >> value;
+		}
+		catch (std::exception & e)
+		{
+			logError("failed to handle OSC message: %s", e.what());
+			
+			return;
+		}
+		
+		//
+		
+		auto & values = receivedValues[path];
+		
+		values.push_back(value);
+	}
+};
+
+static VfxOscEndpointMgr s_vfxOscEndpointMgr;
+
+//
+
+VFX_NODE_TYPE(osc_endpoint, VfxNodeOscEndpoint)
+{
+	typeName = "osc.endpoint";
+	
+	in("ipAddress", "string");
+	in("port", "int");
 }
 
-void VfxNodeOsc::getDescription(VfxNodeDescription & d)
+VfxNodeOscEndpoint::VfxNodeOscEndpoint()
+	: VfxNodeBase()
+	, oscReceiver(nullptr)
+	, history()
+{
+	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	addInput(kInput_IpAddress, kVfxPlugType_String);
+	addInput(kInput_Port, kVfxPlugType_Int);
+}
+
+VfxNodeOscEndpoint::~VfxNodeOscEndpoint()
+{
+	s_vfxOscEndpointMgr.free(oscReceiver);
+}
+
+void VfxNodeOscEndpoint::init(const GraphNode & node)
 {
 	const char * ipAddress = getInputString(kInput_IpAddress, "");
 	const int udpPort = getInputInt(kInput_Port, 0);
 	
-	d.add("target: %s:%d", ipAddress, udpPort);
+	oscReceiver = s_vfxOscEndpointMgr.alloc(ipAddress, udpPort);
+}
+
+void VfxNodeOscEndpoint::tick(const float dt)
+{
+	vfxCpuTimingBlock(VfxNodeOscReceive);
+	
+	const char * ipAddress = getInputString(kInput_IpAddress, "");
+	const int udpPort = getInputInt(kInput_Port, 0);
+	
+	if (oscReceiver->isAddressChange(ipAddress, udpPort))
+	{
+		s_vfxOscEndpointMgr.free(oscReceiver);
+		
+		oscReceiver = s_vfxOscEndpointMgr.alloc(ipAddress, udpPort);
+	}
+}
+
+void VfxNodeOscEndpoint::getDescription(VfxNodeDescription & d)
+{
+	const char * ipAddress = getInputString(kInput_IpAddress, "");
+	const int udpPort = getInputInt(kInput_Port, 0);
+	
+	d.add("bind address: %s:%d", ipAddress, udpPort);
 	d.newline();
 	
 	d.add("received messages:");
+	if (history.empty())
+		d.add("(none)");
 	for (auto & h : history)
-		d.add("%s", h.eventName.c_str());
+		d.add("%s", h.addressPattern.c_str());
 }
 
-int VfxNodeOsc::executeOscThread(void * data)
+//
+
+VFX_NODE_TYPE(osc_receive, VfxNodeOscReceive)
 {
-	VfxNodeOsc * self = (VfxNodeOsc*)data;
+	typeName = "osc.receive";
 	
-	self->oscReceiveSocket->Run();
+	resourceTypeName = "osc.path";
 	
-	return 0;
+	createResourceEditor = []() -> GraphEdit_ResourceEditorBase*
+	{
+		return new ResourceEditor_OscPath();
+	};
+	
+	in("ipAddress", "string");
+	in("port", "int");
+	out("receive!", "trigger");
+}
+
+VfxNodeOscReceive::VfxNodeOscReceive()
+	: VfxNodeBase()
+	, oscPath(nullptr)
+	, valueOutput(0.f)
+	, history()
+{
+	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	addInput(kInput_IpAddress, kVfxPlugType_String);
+	addInput(kInput_Port, kVfxPlugType_Int);
+	addOutput(kOutput_Value, kVfxPlugType_Float, &valueOutput);
+	addOutput(kOutput_Receive, kVfxPlugType_Trigger, nullptr);
+}
+
+VfxNodeOscReceive::~VfxNodeOscReceive()
+{
+	freeVfxNodeResource(oscPath);
+}
+
+void VfxNodeOscReceive::init(const GraphNode & node)
+{
+	const char * ipAddress = getInputString(kInput_IpAddress, "");
+	const int udpPort = getInputInt(kInput_Port, 0);
+	
+	createVfxNodeResource<VfxOscPath>(node, "osc.path", "editorData", oscPath);
+}
+
+void VfxNodeOscReceive::tick(const float dt)
+{
+	vfxCpuTimingBlock(VfxNodeOscReceive);
+	
+	s_vfxOscEndpointMgr.tick();
+	
+	auto i = s_vfxOscEndpointMgr.receivedValues.find(oscPath->path);
+	
+	if (i != s_vfxOscEndpointMgr.receivedValues.end())
+	{
+		auto & values = i->second;
+		
+		for (auto value : values)
+		{
+			valueOutput = value;
+	
+			trigger(kOutput_Receive);
+			
+			//
+
+			HistoryItem historyItem;
+			historyItem.value = value;
+			history.push_front(historyItem);
+			
+			while (history.size() > kMaxHistory)
+				history.pop_back();
+		}
+	}
+}
+
+void VfxNodeOscReceive::getDescription(VfxNodeDescription & d)
+{
+	const char * ipAddress = getInputString(kInput_IpAddress, "");
+	const int udpPort = getInputInt(kInput_Port, 0);
+	
+	d.add("bind address: %s:%d", ipAddress, udpPort);
+	d.newline();
+	
+	d.add("path: %s", oscPath->path);
+	d.add("received values:");
+	if (history.empty())
+		d.add("(none)");
+	for (auto & h : history)
+		d.add("%.2f", h.value);
 }
 

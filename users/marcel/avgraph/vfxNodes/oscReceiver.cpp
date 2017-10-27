@@ -60,6 +60,12 @@ public:
 	
 	~OscPacketListener()
 	{
+		for (auto & receivedMessage : receivedMessages)
+		{
+			delete receivedMessage.data;
+			receivedMessage.data = nullptr;
+		}
+		
 		receivedMessages.clear();
 		
 		SDL_DestroyMutex(receiveMutex);

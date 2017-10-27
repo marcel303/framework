@@ -29,51 +29,81 @@
 
 #include "vfxNodeBase.h"
 #include <list>
+#include <vector>
 
-class MyOscPacketListener;
-class UdpListeningReceiveSocket;
+struct OscReceiver;
+struct VfxOscPath;
 
-struct SDL_Thread;
-
-struct VfxNodeOsc : VfxNodeBase
+struct VfxNodeOscEndpoint : VfxNodeBase
 {
 	const int kMaxHistory = 10;
 	
 	struct HistoryItem
 	{
-		std::string eventName;
+		std::string addressPattern;
 	};
 	
 	enum Input
 	{
-		kInput_Port,
 		kInput_IpAddress,
+		kInput_Port,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
-		kOutput_Trigger,
 		kOutput_COUNT
 	};
 	
-	VfxTriggerData eventId;
-	
-	MyOscPacketListener * oscPacketListener;
-	UdpListeningReceiveSocket * oscReceiveSocket;
-	
-	SDL_Thread * oscMessageThread;
+	OscReceiver * oscReceiver;
 	
 	std::list<HistoryItem> history;
 	
-	VfxNodeOsc();
-	virtual ~VfxNodeOsc() override;
+	VfxNodeOscEndpoint();
+	virtual ~VfxNodeOscEndpoint() override;
 	
 	virtual void init(const GraphNode & node) override;
 	
 	virtual void tick(const float dt) override;
 	
 	virtual void getDescription(VfxNodeDescription & d) override;
+};
+
+struct VfxNodeOscReceive : VfxNodeBase
+{
+	const int kMaxHistory = 10;
 	
-	static int executeOscThread(void * data);
+	struct HistoryItem
+	{
+		float value;
+	};
+	
+	enum Input
+	{
+		kInput_IpAddress,
+		kInput_Port,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_Receive,
+		kOutput_COUNT
+	};
+	
+	VfxOscPath * oscPath;
+	
+	float valueOutput;
+	
+	std::list<HistoryItem> history;
+	
+	VfxNodeOscReceive();
+	virtual ~VfxNodeOscReceive() override;
+	
+	virtual void init(const GraphNode & node) override;
+	
+	virtual void tick(const float dt) override;
+	
+	virtual void getDescription(VfxNodeDescription & d) override;
 };
