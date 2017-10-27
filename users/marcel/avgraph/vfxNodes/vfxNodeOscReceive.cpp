@@ -29,14 +29,6 @@
 #include "vfxNodeOscReceive.h"
 #include "vfxTypes.h"
 
-// todo : refactor OSC receive node
-// - add OSC receiver resource. shared between VFX graph instances
-// - add OSC receive path resource editor. query OSC receiver resource and iterate messages
-// - OSC receiver should be created if no VFX graph is running in the background
-//	- but how will it know the IP address ? should IP address and port be options of the OSC receiver resource editor ?
-//	- perhaps OSC path editor should only work when VFX graph is active after all ..
-
-#include "StringEx.h"
 #include "tinyxml2.h"
 #include "vfxGraph.h"
 #include "../libparticle/ui.h" // todo : remove

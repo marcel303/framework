@@ -722,16 +722,25 @@ void testBinaural()
 					Mat4x4 matV;
 					Mat4x4 matO;
 					
+				#if 1
+					projectPerspective3d(M_PI/2.f, .001f, 10.f);
+					viewLookat3d(-2.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, -1.f, 0.f);
+					
+					matP.MakeIdentity();
+					matC.MakeIdentity();
+					matV.MakeIdentity();
+				#else
 					matP.MakePerspectiveLH(M_PI/2.f, 1.f, .001f, 10.f);
 					matC.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(1.f, 0.f, 0.f), Vec3(0.f, 1.f, 0.f));
 					matC = matC.Scale(1, -1, 1).Translate(0.f, 0.f, -2.f);
 					matV = matC.Invert();
+					
+					const Mat4x4 matPV = matP * matV;
+					gxLoadMatrixf(matPV.m_v);
+				#endif
+				
 					matO = Mat4x4(true).RotateY(framework.time * .1f);
 					
-					const Mat4x4 mat = matP * matV;
-					gxMatrixMode(GL_PROJECTION);
-					gxPushMatrix();
-					gxLoadMatrixf(mat.m_v);
 					gxMatrixMode(GL_MODELVIEW);
 					gxPushMatrix();
 					gxLoadMatrixf(matO.m_v);
@@ -762,10 +771,10 @@ void testBinaural()
 					}
 					gxEnd();
 					
-					gxMatrixMode(GL_PROJECTION);
-					gxPopMatrix();
 					gxMatrixMode(GL_MODELVIEW);
 					gxPopMatrix();
+					
+					projectScreen2d();
 				}
 				popSurface();
 				

@@ -50,7 +50,8 @@ using namespace tinyxml2;
 //#define FILENAME "channels.xml"
 //#define FILENAME "drawtest.xml"
 //#define FILENAME "resourceTest.xml"
-#define FILENAME "drawImageTest.xml"
+//#define FILENAME "drawImageTest.xml"
+#define FILENAME "oscpath.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -290,8 +291,8 @@ static void testGradientShader()
 				circles[i][2] = random(0.f, 5.f); // life
 			}
 			
-			circles[i][0] += scaled_octave_noise_3d(4, .5f, .01f, -500.f, +500.f, i, circles[i][0], circles[i][1]) * framework.timeStep;
-			circles[i][1] += scaled_octave_noise_3d(4, .5f, .01f, -500.f, +500.f, -i, circles[i][0], circles[i][1]) * framework.timeStep;
+			circles[i][0] += scaled_octave_noise_3d(4, .5f, .01f, -500.f, +500.f, framework.time * 20.f + i, circles[i][0], circles[i][1]) * framework.timeStep;
+			circles[i][1] += scaled_octave_noise_3d(4, .5f, .01f, -500.f, +500.f, framework.time * 20.f - i, circles[i][0], circles[i][1]) * framework.timeStep;
 		}
 		
 		framework.beginDraw(0, 0, 0, 0);
@@ -343,6 +344,65 @@ static void testGradientShader()
 
 //
 
+static void testCamera3d()
+{
+	Camera3d camera;
+	
+	camera.mouseSmooth = 1.0 / 1.005;
+	//camera.mouseSmooth = 0;
+	
+	do
+	{
+		framework.process();
+		
+		camera.tick(framework.timeStep, true);
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			projectPerspective3d(90.f, .001f, 1000.f);
+			
+			camera.pushViewMatrix();
+			{
+				glEnable(GL_DEPTH_TEST);
+				glDepthFunc(GL_LESS);
+				
+				gxPushMatrix();
+				{
+					Mat4x4 cameraMatrix = camera.getViewMatrix();
+					//Mat4x4 cameraMatrix = camera.getWorldMatrix();
+					cameraMatrix.SetTranslation(0, 0, 0);
+					gxMultMatrixf(cameraMatrix.m_v);
+					gxMultMatrixf(cameraMatrix.m_v);
+					gxMultMatrixf(cameraMatrix.m_v);
+					
+					setColor(colorWhite);
+					gxSetTexture(getTexture("happysun.jpg"));
+					drawRect3d(0, 1);
+					drawRect3d(2, 0);
+					gxSetTexture(0);
+				}
+				gxPopMatrix();
+				
+				setColor(colorWhite);
+				gxSetTexture(getTexture("picture.jpg"));
+				if (mouse.isDown(BUTTON_LEFT))
+					drawGrid3dLine(100, 100, 0, 2);
+				else
+					drawGrid3d(10, 10, 0, 2);
+				gxSetTexture(0);
+				
+				glDisable(GL_DEPTH_TEST);
+			}
+			camera.popViewMatrix();
+		}
+		framework.endDraw();
+
+	}
+	while (!keyboard.wentDown(SDLK_SPACE));
+}
+
+//
+
 int main(int argc, char * argv[])
 {
 	framework.enableRealTimeEditing = true;
@@ -373,7 +433,9 @@ int main(int argc, char * argv[])
 		
 		//testReactionDiffusion();
 		
-		testGradientShader();
+		//testGradientShader();
+		
+		testCamera3d();
 		
 		//testMain();
 		

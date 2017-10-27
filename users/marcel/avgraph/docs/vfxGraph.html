@@ -101,8 +101,9 @@ a:hover
 		<div class="content">
 			<h1>Vfx Graph</h1>
 			<p>
-				'Vfx Graph' is an implementation of a node-based representation for generating visuals. It includes a VfxGraph structure and many VfxNode type implementations. It comes with a real-time editing interface for use with 'AV Graph'. The AV Graph node-based editor coupled with Vfx Graph create together a real-time synthesis environment for creating visuals. Vfx Graph is the result of a personal on-going process of explorations and collaborations with media artists and a desire to create a powerful tool for creative coders to use in their practice. A primary focus for Vfx Graph and the AV Graph project in general is to let coders harness the power of the data flow paradigm directly in their apps. As such, Vfx Graph is designed in such a way the coder has full control over when and how to create graphs from within their apps. Another focus for Vfx Graph is the attention being paid to the performance and quality of the implementations of both the various algortihms it encapsulates and drawing the visuals.
+				'Vfx Graph' is an implementation of a node-based system for making visuals. It includes the VfxGraph data structure and many VfxNode type implementations. It comes with a real-time editing interface for use with 'AV Graph'. Together, the AV Graph editor and Vfx Graph create a real-time synthesis environment for visuals. Vfx Graph is the result of a personal on-going process of explorations and collaborations with media artists and a desire to create a powerful tool for creative coders for use in their practice. A primary focus for Vfx Graph and the AV Graph project in general is to let coders harness the power of the data flow paradigm directly from within their apps. As such, Vfx Graph is designed in a way that the coder has full control over when and how graphs are used and instanced. Another focus for Vfx Graph is the attention being paid to the performance and quality of the implementations of both the various algortihms it embeds and the drawing of the visuals.
 			</p>
+			<img src="vfxGraph2.jpeg" style="width: 100%;" alt="">
 			<ul>
 				<li><a href="#nodes-and-sockets">Nodes and sockets</a></li>
 				<li><a href="#images">Images</a></li>
@@ -117,6 +118,7 @@ a:hover
 			<p>
 				Vfx Graph defines many node types representing the basic ingredients for making visuals. Broadly speaking, nodes can be categorized as either math, logic, media, drawing, vision or communication types. Examples of math nodes are nodes which perform basic operations like adding two numbers together or oscillator nodes such as the sinewave, sawtooth or triangle generators. Examples of logic nodes are the sample and hold node and the various trigger nodes. Media is represented primarily by the picture and video nodes. The drawing subset contains various nodes for drawing primitives, working with surfaces and running shaders. Vision nodes encapsulate algorithms to perform for instance dot detection within images. Finally, communication is handled by event nodes to communicate with C++ and OSC send and receive nodes to communicate with external processes and apps.
 			</p>
+			<img src="vfxNodesAndSockets.png" style="width: 100%;" alt="">
 			<p>
 				In addition to the various node types, Vfx Graph defines a few types which can be used to connect input to output sockets. These types are:
 			</p>
@@ -147,7 +149,7 @@ a:hover
 
 			<h2 id="images">Images</h2>
 			<p>
-				One of the basic building blocks for making visuals are, of course, images. Images may come from a variety of sources: they can be static images, loaded from for instance jpegs or pngs. They can be still from a video, streamed from a mpeg or mp4 file. They can also be captured in real-time using a webcam or kinect sensor.
+				One of the main ingredients for making visuals are, of course, images. Images may come from a variety of sources; they may be static images, loaded from for instance jpegs or pngs. They may be a still from a video, streamed from an mpeg or mp4 file. Or they may be captured in real-time using a webcam or a kinect sensor.
 			</p>
 			<p>
 				Vfx Graph defines two types of images:
@@ -159,13 +161,14 @@ a:hover
 				The distinction between these two types of images is made for performance reasons. CPU-accessible images are ideal for use in visions algorithms or other tasks which require the CPU to access its pixels. GPU-accessible images are suited for drawing and access from within shaders.
 			</p>
 			<p>
-				For vision algorithms its enticing to use video or real-time capture data as input. Nodes which output images suchs as the video and webcam nodes, will typically expose both a CPU-accessible image output as well as a GPU-accessible output.
+				For vision algorithms it's enticing to use video or real-time capture data as input. Nodes which output images, suchs as the video and webcam nodes, will typically expose both a CPU-accessible image as well as a GPU-accessible image as outputs.
 			</p>
 			<p>
-				The flow of data is considered one-way between CPU and GPU. Data is processed and streamed from the CPU to the GPU, which in turn will process pixels and run shaders and output its results to the screen. To stream CPU-accessible images to the GPU, the image.toGpu node is to be used. The flow back from the GPU to the CPU is explicitly denied for now, as it typically causes the GPU to stall and the frame rate to drop significantly.
+				The flow of data is considered one-way between CPU and GPU. Data is generated and processed on the CPU and streamed to the GPU, which in turn will process pixels and run shaders and output the results to the screen. To stream CPU-accessible images to the GPU, the image.toGpu node is used. The flow of data from the GPU back to the CPU is explicitly denied for now, as it typically causes the CPU to stall as it waits for the GPU to flush its drawing, causing the frame rate to drop significantly.
 			</p>
 
 			<h2 id="channels">Channels</h2>
+			<img src="vfxChannels.png" style="width: 100%;" alt="">
 			<p>
 			</p>
 
@@ -191,6 +194,7 @@ a:hover
 			</p>
 
 			<h3>Oscillators</h3>
+			<img src="vfxOscillators.png" style="width: 100%;" alt="">
 			<p>
 				noise.simplex2d
 				osc.sine, osc.saw, osc.square, osc.triangle, osc.random

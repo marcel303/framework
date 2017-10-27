@@ -1,18 +1,11 @@
 /*
 
 top priority items:
-+ port compose shader from 4dworld to avgraph. fix graph editor fade when idle
 - add support for custom editors to graph editor
-- determine how OSC send and receive nodes should function
-	- would very much like an option to 'learn' OSC event paths. perhaps double click to open custom editor and click 'learn' to let it receive a message and capture to path
-	- decouple OSC endpoints from OSC values and paths? perhaps add an OSC endpoint node which receive messages, add them to a list, let OSC value nodes iterate. add find method to OSC manager. if tick ID != last tick ID, clear old messages, receive new messages, find and return value (if any)
 - add buttons to manually trigger nodes
 	- like the BANG node in max
 	- add ability to trigger any input/output trigger (?)
 - add GPU performance markers
-+ add editor option to disable real-time preview
-	+ add time dilation effect on no input before stopping responding ?
-	+ add way for UI/editor to tell update loop it's animating something (camera..)
 
 todo :
 - add undo/redo support. just serialize/deserialize graph for every action?
@@ -23,13 +16,6 @@ todo :
 - add suggestion based purely on matching first part of string (no fuzzy string comparison)
 	- order of listing should be : pure matches, fuzzy matches, history. show history once type name text box is made active
 	- clear type name text box when adding node
-- improve OSC node
-	# purchase and evaluate TouchOSC
-	+ purchase and evaluate Lemur (by Liine)
-	- figure out how to best interop with this software
-	- adapt OSC node to fit these products
-	- have a learning function, to setup mappings from inputs to outputs
-+ visualize active links
 - visualize direction of link data flow
 - investigate VVVV's ability to turn everything into vectors of values and to combine lists
 	- add channels combine method (for now?)
@@ -38,6 +24,7 @@ todo :
 	# add real-time editing callback for double click event
 		+ add an editor callback to the node type definition instead. the graph editor should be fully functional without real-time editing interface and an implementation running in the backgroup, meaning resource editing should work regardless of real-time interface
 	- open text editor for ps/vs when double clicking fsfx node
+	- open sub graph for container nodes
 - add sub-graph container node. to help organize complex graphs
 	- open container when double clicking container node
 	- determine how to save nodes hierarchically contained
@@ -57,8 +44,8 @@ todo :
 - add ability to reference nodes? makes graph organization more easy
 - add node editors. when double clicking a node (or some other gesture/interaction), show the node editor. let the node editor operate on the node's data.
 	- let the node editor be independent of the implementation ? it should be possible to have a fully functional graph, graph node and resource editing environment without a live version of the graph running in the background. this means the saveBegin real-time editing callback should be removed again once we got this working
-+ add read-only mode. add flags for controlling editor behaviors
 - drag link into empty space = open node type selection menu
+
 
 todo : nodes :
 - add sample.float node
@@ -117,13 +104,11 @@ todo : nodes :
 	- remove items from channels where depth at index fails test
 		- allocate new channels object to store results
 	- add range min/max range + pass if inside or outside boolean
-+ add data table node. read data from CSV, text or XML file
 - add memory node ? get/set named variables. how to ensure processing order ?
 - add queue system for triggers ? ensure predeps have finished processing before handling triggers
-+ remove trigger data
 - add ability for nodes to trigger again (process a partial time slice ?). but this will re-introduce again the issue of execution order of triggers ..
-+ add draw.image node. let the user control sizing (similar to object-fit in html)
-+ add draw.blend node
+- refactor math node so it's only one node with a subtype selection input
+
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -149,13 +134,18 @@ todo : UI
 	*** I think I like the lilly idea better
 
 todo : framework
-- add easy 3D perspective camera with manual control over input. make it easy to set matrices
++ add easy 3D perspective camera with manual control over input. make it easy to set matrices
 - add scoped** objects
++ add drawLine3d, drawRect3d and drawGrid3d
 - add drawCube and drawSphere?
-- add a simple camera class. pushMatrix, popMatrix
++ add a simple camera class. pushMatrix, popMatrix
 - add hq shaded triangle to framework
-- add a generic way to shade and texture hq primitives. perhaps use texture and shading matrices ?
-
++ add a generic way to shade and texture hq primitives. perhaps use texture and shading matrices ?
++ remove stage and UI classes
+- rewrite audio to use port audio instead of OpenAL
+	- rewrite sound effects
+	- rewrite music
+	- add API for custom sound processing and voices
 
 --- ARCHIVED TODOS ---
 
@@ -294,6 +284,11 @@ todo :
 	+ have optional remapping enabled per link. combine this with summing support. store mapping and float pointer in summed value element
 + add non-SSE versions for audio code
 + add new node type selection memu. make it a pop-over ?
++ port compose shader from 4dworld to avgraph. fix graph editor fade when idle
++ add editor option to disable real-time preview
+	+ add time dilation effect on no input before stopping responding ?
+	+ add way for UI/editor to tell update loop it's animating something (camera..)
+
 
 todo : nodes :
 + add ease node
@@ -361,7 +356,22 @@ todo : nodes :
 + add integration node. keeps integrating input value over time and sets it as output
 + add timeline node
 + add OSC history to node description
- 
+ + add data table node. read data from CSV, text or XML file
++ remove trigger data
++ add draw.image node. let the user control sizing (similar to object-fit in html)
++ add draw.blend node
++ determine how OSC send and receive nodes should function
+	+ would very much like an option to 'learn' OSC event paths. perhaps double click to open custom editor and click 'learn' to let it receive a message and capture to path
+	+ decouple OSC endpoints from OSC values and paths? perhaps add an OSC endpoint node which receive messages, add them to a list, let OSC value nodes iterate. add find method to OSC manager. if tick ID != last tick ID, clear old messages, receive new messages, find and return value (if any)
+ + improve OSC node
+	# purchase and evaluate TouchOSC
+	+ purchase and evaluate Lemur (by Liine)
+	+ figure out how to best interop with this software
+	+ adapt OSC node to fit these products
+	+ have a learning function, to setup mappings from inputs to outputs
++ visualize active links
++ add read-only mode. add flags for controlling editor behaviors
+
 todo : framework :
 + optimize text rendering. use a dynamic texture atlas instead of one separate texture for each glyph. drawText should only emit a single draw call
 + add MSDF font rendering support
