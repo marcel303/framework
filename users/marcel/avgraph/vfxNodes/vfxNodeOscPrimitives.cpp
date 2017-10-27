@@ -90,6 +90,12 @@ VfxNodeOscSine::VfxNodeOscSine()
 
 void VfxNodeOscSine::tick(const float dt)
 {
+	if (isPassthrough)
+	{
+		outputValue = 0.f;
+		return;
+	}
+	
 	const bool restart = getInputFloat(kInput_Restart, 0.f) > 0.f;
 	
 	if (restart)
@@ -138,6 +144,12 @@ VfxNodeOscSaw::VfxNodeOscSaw()
 
 void VfxNodeOscSaw::tick(const float dt)
 {
+	if (isPassthrough)
+	{
+		outputValue = 0.f;
+		return;
+	}
+	
 	const bool restart = getInputFloat(kInput_Restart, 0.f) > 0.f;
 	
 	if (restart)
@@ -186,6 +198,12 @@ VfxNodeOscTriangle::VfxNodeOscTriangle()
 
 void VfxNodeOscTriangle::tick(const float dt)
 {
+	if (isPassthrough)
+	{
+		outputValue = 0.f;
+		return;
+	}
+	
 	const bool restart = getInputFloat(kInput_Restart, 0.f) > 0.f;
 	
 	if (restart)
@@ -234,6 +252,12 @@ VfxNodeOscSquare::VfxNodeOscSquare()
 
 void VfxNodeOscSquare::tick(const float dt)
 {
+	if (isPassthrough)
+	{
+		outputValue = 0.f;
+		return;
+	}
+	
 	const bool restart = getInputFloat(kInput_Restart, 0.f) > 0.f;
 	
 	if (restart)
@@ -290,6 +314,12 @@ void VfxNodeOscRandom::next()
 
 void VfxNodeOscRandom::tick(const float dt)
 {
+	if (isPassthrough)
+	{
+		outputValue = 0.f;
+		return;
+	}
+	
 	const float frequency = getInputFloat(kInput_Frequency, 1.f);
 	
 	const float phaseDelta = dt * frequency;

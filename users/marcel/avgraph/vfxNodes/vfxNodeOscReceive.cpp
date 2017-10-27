@@ -41,121 +41,6 @@
 #include "vfxGraph.h"
 #include "../libparticle/ui.h" // todo : remove
 
-struct ResourceEditor_OscPath : GraphEdit_ResourceEditorBase
-{
-	UiState * uiState;
-	VfxOscPath * path;
-	bool isLearning;
-	
-	ResourceEditor_OscPath()
-		: uiState(nullptr)
-		, path(nullptr)
-		, isLearning(false)
-	{
-		uiState = new UiState();
-		uiState->sx = 400; // todo : look at GFX_SX
-	}
-	
-	~ResourceEditor_OscPath()
-	{
-		freeVfxNodeResource(path);
-		Assert(path == nullptr);
-		
-		delete uiState;
-		uiState = nullptr;
-	}
-	
-	void getSize(int & sx, int & sy) const override
-	{
-		sx = uiState->sx;
-		sy = 100;
-	}
-
-	void setPosition(const int x, const int y) override
-	{
-		uiState->x = x;
-		uiState->y = y;
-	}
-	
-	void doMenu(const float dt)
-	{
-		pushMenu("osc.path");
-		
-		if (path != nullptr)
-		{
-			std::string value = path->path;
-			
-			doTextBox(value, "path", dt);
-			
-			strcpy_s(path->path, sizeof(path->path), value.c_str());
-		}
-		
-		if (isLearning)
-		{
-			doLabel("learning..", 0.f);
-			
-			if (doButton("cancel"))
-				isLearning = false;
-		}
-		else
-		{
-			if (doButton("learn"))
-			{
-				isLearning = true;
-			}
-		}
-		
-		popMenu();
-	}
-	
-	bool tick(const float dt, const bool inputIsCaptured) override
-	{
-		makeActive(uiState, true, false);
-		doMenu(dt);
-		
-		return uiState->activeElem != nullptr;
-	}
-
-	void draw() const override
-	{
-		makeActive(uiState, false, true);
-		const_cast<ResourceEditor_OscPath*>(this)->doMenu(0.f);
-	}
-	
-	void setResource(const GraphNode & node, const char * type, const char * name) override
-	{
-		Assert(path == nullptr);
-		
-		if (createVfxNodeResource<VfxOscPath>(node, type, name, path))
-		{
-			//
-		}
-	}
-
-	bool serializeResource(std::string & text) const override
-	{
-		if (path != nullptr)
-		{
-			tinyxml2::XMLPrinter p;
-			p.OpenElement("value");
-			{
-				path->save(&p);
-			}
-			p.CloseElement();
-			
-			text = p.CStr();
-			
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-};
-
-//
-
 #include "oscReceiver.h"
 #include <map>
 
@@ -280,6 +165,127 @@ static VfxOscEndpointMgr s_vfxOscEndpointMgr;
 
 //
 
+struct ResourceEditor_OscPath : GraphEdit_ResourceEditorBase
+{
+	UiState * uiState;
+	VfxOscPath * path;
+	bool isLearning;
+	
+	ResourceEditor_OscPath()
+		: uiState(nullptr)
+		, path(nullptr)
+		, isLearning(false)
+	{
+		uiState = new UiState();
+		uiState->sx = 400; // todo : look at GFX_SX
+	}
+	
+	~ResourceEditor_OscPath()
+	{
+		freeVfxNodeResource(path);
+		Assert(path == nullptr);
+		
+		delete uiState;
+		uiState = nullptr;
+	}
+	
+	void getSize(int & sx, int & sy) const override
+	{
+		sx = uiState->sx;
+		sy = 100;
+	}
+
+	void setPosition(const int x, const int y) override
+	{
+		uiState->x = x;
+		uiState->y = y;
+	}
+	
+	void doMenu(const float dt)
+	{
+		pushMenu("osc.path");
+		
+		if (g_doActions && isLearning)
+		{
+			if (s_vfxOscEndpointMgr.receivedValues.empty() == false)
+			{
+				path->path = s_vfxOscEndpointMgr.receivedValues.begin()->first;
+				
+				isLearning = false;
+				
+				uiState->reset();
+			}
+		}
+		
+		if (path != nullptr)
+		{
+			doTextBox(path->path, "path", dt);
+		}
+		
+		if (isLearning)
+		{
+			doLabel("learning..", 0.f);
+			
+			if (doButton("cancel"))
+				isLearning = false;
+		}
+		else
+		{
+			if (doButton("learn"))
+				isLearning = true;
+		}
+		
+		popMenu();
+	}
+	
+	bool tick(const float dt, const bool inputIsCaptured) override
+	{
+		makeActive(uiState, true, false);
+		doMenu(dt);
+		
+		return uiState->activeElem != nullptr;
+	}
+
+	void draw() const override
+	{
+		makeActive(uiState, false, true);
+		const_cast<ResourceEditor_OscPath*>(this)->doMenu(0.f);
+	}
+	
+	void setResource(const GraphNode & node, const char * type, const char * name) override
+	{
+		Assert(path == nullptr);
+		
+		if (createVfxNodeResource<VfxOscPath>(node, type, name, path))
+		{
+			//
+		}
+	}
+
+	bool serializeResource(std::string & text) const override
+	{
+		if (path != nullptr)
+		{
+			tinyxml2::XMLPrinter p;
+			p.OpenElement("value");
+			{
+				path->save(&p);
+			}
+			p.CloseElement();
+			
+			text = p.CStr();
+			
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+};
+
+//
+
 VFX_NODE_TYPE(osc_endpoint, VfxNodeOscEndpoint)
 {
 	typeName = "osc.endpoint";
@@ -356,6 +362,7 @@ VFX_NODE_TYPE(osc_receive, VfxNodeOscReceive)
 	
 	in("ipAddress", "string");
 	in("port", "int");
+	out("value", "float");
 	out("receive!", "trigger");
 }
 
@@ -423,11 +430,11 @@ void VfxNodeOscReceive::getDescription(VfxNodeDescription & d)
 	d.add("bind address: %s:%d", ipAddress, udpPort);
 	d.newline();
 	
-	d.add("path: %s", oscPath->path);
+	d.add("path: %s", oscPath->path.c_str());
 	d.add("received values:");
 	if (history.empty())
 		d.add("(none)");
 	for (auto & h : history)
-		d.add("%.2f", h.value);
+		d.add("%.6f", h.value);
 }
 

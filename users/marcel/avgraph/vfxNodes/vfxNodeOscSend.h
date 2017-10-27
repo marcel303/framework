@@ -33,6 +33,8 @@
 class MyOscPacketListener;
 class UdpListeningReceiveSocket;
 
+struct OscSender;
+
 struct SDL_Thread;
 
 struct VfxNodeOscSend : VfxNodeBase
@@ -41,18 +43,26 @@ struct VfxNodeOscSend : VfxNodeBase
 	
 	struct HistoryItem
 	{
-		std::string eventName;
-		int eventId;
+		std::string path;
+		float value;
 		std::string ipAddress;
 		int udpPort;
 	};
 	
+	enum SendMode
+	{
+		kSend_OnTick,
+		kSend_OnChange,
+		kSend_OnEvent
+	};
+	
 	enum Input
 	{
-		kInput_Port,
 		kInput_IpAddress,
-		kInput_Event,
-		kInput_BaseId,
+		kInput_Port,
+		kInput_SendMode,
+		kInput_Path,
+		kInput_Value,
 		kInput_Trigger,
 		kInput_COUNT
 	};
@@ -62,7 +72,10 @@ struct VfxNodeOscSend : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	class UdpTransmitSocket * transmitSocket;
+	OscSender * oscSender;
+	
+	bool hasLastSentValue;
+	float lastSentValue;
 	
 	std::list<HistoryItem> history;
 	int numSends;
@@ -72,9 +85,10 @@ struct VfxNodeOscSend : VfxNodeBase
 	
 	virtual void init(const GraphNode & node) override;
 	
+	virtual void tick(const float dt) override;
 	virtual void handleTrigger(const int inputSocketIndex) override;
 	
 	virtual void getDescription(VfxNodeDescription & d) override;
 	
-	void sendOscEvent(const char * eventName, const int eventId, const char * ipAddress, const int udpPort);
+	void sendValue(const char * path, const float value);
 };

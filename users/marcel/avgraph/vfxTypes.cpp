@@ -251,10 +251,10 @@ VfxOscPath::VfxOscPath()
 
 void VfxOscPath::save(tinyxml2::XMLPrinter * printer)
 {
-	printer->PushAttribute("path", path);
+	printer->PushAttribute("path", path.c_str());
 }
 
 void VfxOscPath::load(tinyxml2::XMLElement * elem)
 {
-	strcpy_s(path, sizeof(path), stringAttrib(elem, "path", ""));
+	path = stringAttrib(elem, "path", "");
 }

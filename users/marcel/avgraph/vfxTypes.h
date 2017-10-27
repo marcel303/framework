@@ -28,6 +28,7 @@
 #pragma once
 
 #include "Mat4x4.h"
+#include <string>
 
 namespace tinyxml2
 {
@@ -96,9 +97,7 @@ struct VfxSwizzle
 
 struct VfxOscPath
 {
-	static const int kMaxPath = 256;
-	
-	char path[kMaxPath];
+	std::string path;
 	
 	VfxOscPath();
 	
