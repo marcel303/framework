@@ -76,8 +76,6 @@ struct DelayLine
 	
 	void push(const float value)
 	{
-		Assert(samples != nullptr);
-		
 		samples[nextWriteIndex] = value;
 		
 		nextWriteIndex++;
@@ -88,7 +86,12 @@ struct DelayLine
 	
 	float read(const int offset) const
 	{
-		const int index = (numSamples + nextWriteIndex + offset) % numSamples;
+		int index = nextWriteIndex + offset;
+		
+		if (index >= numSamples)
+			index -= numSamples;
+		if (index >= numSamples)
+			index %= numSamples;
 		
 		return samples[index];
 	}
