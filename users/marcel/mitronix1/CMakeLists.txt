@@ -61,13 +61,14 @@ set_source_files_properties(${resources_cipic147} PROPERTIES MACOSX_PACKAGE_LOCA
 message(STATUS "resource: " ${resources_cipic147})
 source_group("resources" FILES ${resources_root} ${resources_cipic147})
 
+#set(MACOSX_BUNDLE_ICON_FILE ${CMAKE_CURRENT_SOURCE_DIR}/appicon.icns)
 add_executable(mitronix MACOSX_BUNDLE ${source} ${resources_root} ${resources_cipic147})
 
 #set_target_properties(mitronix PROPERTIES RESOURCE "${resources}")
 
-target_compile_definitions(mitronix PRIVATE NO_SDL_GLEXT)
+target_compile_definitions(mitronix PRIVATE NO_SDL_GLEXT AUDIO_UPDATE_SIZE=64)
 
-target_compile_definitions(mitronix PRIVATE NO_SDL_GLEXT ENABLE_KINECT1=0 ENABLE_KINECT2=0 ENABLE_TURBOJPEG=0 ENABLE_DEEPBELIEF=0 ENABLE_AVCODEC=0 BINAURAL_USE_SSE=1)
+target_compile_definitions(mitronix PRIVATE ENABLE_KINECT1=0 ENABLE_KINECT2=0 ENABLE_TURBOJPEG=0 ENABLE_DEEPBELIEF=0 ENABLE_AVCODEC=0 BINAURAL_USE_SSE=1)
 
 if (WIN32)
 	target_compile_definitions(mitronix PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
