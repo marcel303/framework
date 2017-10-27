@@ -63,7 +63,7 @@ bool STEREO_OUTPUT = true;
 
 #if FULLSCREEN
 	const int GFX_SX = 2560/2;
-	const int GFX_SY = 1600	/2;
+	const int GFX_SY = 1600/2;
 #else
 	const int GFX_SX = 1300;
 	const int GFX_SY = 760;
@@ -83,11 +83,92 @@ extern void testBinaural();
 
 //
 
+#include "Timer.h"
+
+static void quicksort(int * values, const int start, const int end)
+{
+	int pivotValue;
+	
+#if 1
+	if (end - start >= 16)
+	{
+		const int pivotIndexL = start;
+		const int pivotIndexM = start + (end - start) / 2;
+		const int pivotIndexR = end;
+		
+		if (values[pivotIndexR] < values[pivotIndexL])
+			std::swap(values[pivotIndexR], values[pivotIndexL]);
+		if (values[pivotIndexM] < values[pivotIndexL])
+			std::swap(values[pivotIndexM], values[pivotIndexL]);
+		if (values[pivotIndexR] < values[pivotIndexM])
+			std::swap(values[pivotIndexR], values[pivotIndexM]);
+		
+		pivotValue = values[pivotIndexM];
+	}
+	else
+#endif
+	{
+		const int pivotIndex = start;
+		
+		pivotValue = values[pivotIndex];
+	}
+	
+	int i = start - 1;
+	int j = end + 1;
+	
+	for (;;)
+	{
+		do
+		{
+			i++;
+		} while (values[i] < pivotValue);
+		
+		do
+		{
+			j--;
+		} while (values[j] > pivotValue);
+		
+		if (i >= j)
+			break;
+		
+		std::swap(values[i], values[j]);
+	}
+	
+	const int newPivotIndex = j;
+	
+	if (start < newPivotIndex)
+		quicksort(values, start, newPivotIndex);
+	if (newPivotIndex + 1 < end)
+		quicksort(values, newPivotIndex + 1, end);
+}
+
+static void testQuicksort()
+{
+	int values[10000];
+	
+	for (int i = 0; i < 10000; ++i)
+		//values[i] = (rand() % 100000) + i;
+		values[i] = i;
+	
+	const auto t1 = g_TimerRT.TimeUS_get();
+	
+	quicksort(values, 0, 9999);
+	
+	const auto t2 = g_TimerRT.TimeUS_get();
+	
+	for (int i = 0; i < 10000; ++i)
+		printf("values[%03d] = %d\n", i, values[i]);
+	printf("total time = %.2fms\n", (t2 - t1) / 1000.0);
+}
+
+//
+
 int main(int argc, char * argv[])
 {
 #if 0
 	char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
+	changeDirectory("data");
 	SDL_free(basePath);
 #endif
 
