@@ -258,7 +258,7 @@ GraphNode::GraphNode()
 	, editorZKey(0)
 	, editorIsFolded(false)
 	, editorFoldAnimProgress(1.f)
-	, editorFoldAnimTimeRcp(1.f)
+	, editorFoldAnimTimeRcp(0.f)
 	, editorIsCloseToConnectionSite(false)
 	, editorInputValues()
 	, editorValue()
@@ -569,6 +569,8 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		node.editorY = floatAttrib(xmlNode, "editorY", node.editorY);
 		node.editorIsFolded = boolAttrib(xmlNode, "folded", node.editorIsFolded);
 		node.editorValue = stringAttrib(xmlNode, "editorValue", node.editorValue.c_str());
+		
+		node.editorFoldAnimProgress = node.editorIsFolded ? 0.f : 1.f;
 		
 		if (node.nodeType == kGraphNodeType_Visualizer)
 		{
