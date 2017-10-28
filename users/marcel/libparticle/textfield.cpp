@@ -75,17 +75,15 @@ bool EditorTextField::tick(const float dt)
 		{
 			for (auto & e : framework.events)
 			{
-				if (e.type != SDL_KEYDOWN)
+				if (e.type != SDL_TEXTINPUT)
 					continue;
 				
-				int c = e.key.keysym.sym;
-				
-				if (isAllowed(c))
+				for (int i = 0; e.text.text[i]; ++i)
 				{
-					if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
-					{
-						c = toupper(c);
-					}
+					const int c = e.text.text[i];
+					
+					//if (!isAllowed(c))
+					//	continue;
 					
 					if (m_textIsSelected)
 					{
@@ -229,11 +227,15 @@ void EditorTextField::open(const int maxLength, const bool canCancel, const bool
 	m_caretTimer = 0.f;
 	
 	m_textIsSelected = false;
+	
+	SDL_StartTextInput();
 }
 
 void EditorTextField::close()
 {
 	fassert(m_isActive);
+	
+	SDL_StopTextInput();
 
 	m_isActive = false;
 	m_canCancel = false;
