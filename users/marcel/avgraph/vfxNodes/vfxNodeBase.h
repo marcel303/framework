@@ -198,6 +198,7 @@ struct VfxChannelData
 	}
 	
 	void alloc(const int size);
+	void allocOnSizeChange(const int size);
 	void free();
 };
 

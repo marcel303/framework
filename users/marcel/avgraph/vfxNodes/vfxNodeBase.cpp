@@ -295,6 +295,14 @@ void VfxChannelData::alloc(const int _size)
 	}
 }
 
+void VfxChannelData::allocOnSizeChange(const int _size)
+{
+	if (_size != size)
+	{
+		alloc(_size);
+	}
+}
+
 void VfxChannelData::free()
 {
 	delete[] data;
