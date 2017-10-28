@@ -49,6 +49,7 @@ public:
 	OscReceiveHandler * receiveHandler;
 	
 	std::list<ReceivedMessage> receivedMessages;
+	std::list<ReceivedMessage> receivedMessagesCopy;
 	
 	OscPacketListener()
 		: receiveMutex(nullptr)
@@ -60,13 +61,9 @@ public:
 	
 	~OscPacketListener()
 	{
-		for (auto & receivedMessage : receivedMessages)
-		{
-			delete receivedMessage.data;
-			receivedMessage.data = nullptr;
-		}
-		
-		receivedMessages.clear();
+		freeMessages();
+		swapMessages();
+		freeMessages();
 		
 		SDL_DestroyMutex(receiveMutex);
 		receiveMutex = nullptr;
@@ -75,30 +72,50 @@ public:
 		receiveHandler = nullptr;
 	}
 	
-	void flushMessages()
+	void swapMessages()
 	{
-		std::list<ReceivedMessage> receivedMessagesCopy;
-		
 		SDL_LockMutex(receiveMutex);
 		{
 			receivedMessagesCopy = receivedMessages;
 			receivedMessages.clear();
 		}
 		SDL_UnlockMutex(receiveMutex);
+	}
+	
+	void freeMessages()
+	{
+		for (auto & receivedMessage : receivedMessagesCopy)
+		{
+			delete receivedMessage.data;
+			receivedMessage.data = nullptr;
+		}
 		
+		receivedMessagesCopy.clear();
+	}
+	
+	void pollMessages()
+	{
 		for (auto & receivedMessage : receivedMessagesCopy)
 		{
 			const osc::ReceivedPacket p(receivedMessage.data, receivedMessage.size);
 			const IpEndpointName & remoteEndpoint = receivedMessage.remoteEndpoint;
 			
-			if( p.IsBundle() )
-				ProcessBundle( osc::ReceivedBundle(p), remoteEndpoint );
+			if (p.IsBundle())
+			{
+				ProcessBundle(osc::ReceivedBundle(p), remoteEndpoint);
+			}
 			else
-				ProcessMessage( osc::ReceivedMessage(p), remoteEndpoint );
-			
-			delete receivedMessage.data;
-			receivedMessage.data = nullptr;
+			{
+				ProcessMessage(osc::ReceivedMessage(p), remoteEndpoint);
+			}
 		}
+	}
+	
+	void flushMessages()
+	{
+		swapMessages();
+		pollMessages();
+		freeMessages();
 	}
 	
 protected:
@@ -247,6 +264,35 @@ bool OscReceiver::shut()
 bool OscReceiver::isAddressChange(const char * _ipAddress, const int _udpPort) const
 {
 	return _ipAddress != ipAddress || _udpPort != udpPort;
+}
+
+void OscReceiver::recvMessages()
+{
+	if (packetListener != nullptr)
+	{
+		packetListener->swapMessages();
+	}
+}
+
+void OscReceiver::freeMessages()
+{
+	if (packetListener != nullptr)
+	{
+		packetListener->freeMessages();
+	}
+}
+
+void OscReceiver::pollMessages(OscReceiveHandler * receiveHandler)
+{
+	if (packetListener != nullptr)
+	{
+		Assert(packetListener->receiveHandler == nullptr);
+		packetListener->receiveHandler = receiveHandler;
+		{
+			packetListener->pollMessages();
+		}
+		packetListener->receiveHandler = nullptr;
+	}
 }
 
 void OscReceiver::tick(OscReceiveHandler * receiveHandler)

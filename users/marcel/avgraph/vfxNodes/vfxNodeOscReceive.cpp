@@ -25,137 +25,15 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "framework.h"
+#include "oscEndpointMgr.h"
 #include "vfxNodeOscReceive.h"
 #include "vfxTypes.h"
+
+//
 
 #include "tinyxml2.h"
 #include "vfxGraph.h"
 #include "../libparticle/ui.h" // todo : remove
-
-#include "oscReceiver.h"
-#include <map>
-
-struct VfxOscEndpointMgr : OscReceiveHandler
-{
-	struct Receiver
-	{
-		OscReceiver receiver;
-		int refCount;
-		
-		Receiver()
-			: receiver()
-			, refCount(0)
-		{
-		}
-	};
-	
-	std::list<Receiver> receivers;
-	std::map<std::string, std::vector<float>> receivedValues;
-	int lastTraversalId;
-	
-	VfxOscEndpointMgr()
-		: receivers()
-		, receivedValues()
-		, lastTraversalId(-1)
-	{
-	}
-	
-	OscReceiver * alloc(const char * ipAddress, const int udpPort)
-	{
-		for (auto & r : receivers)
-		{
-			if (r.receiver.ipAddress == ipAddress && r.receiver.udpPort == udpPort)
-			{
-				r.refCount++;
-				
-				return &r.receiver;
-			}
-		}
-		
-		{
-			Receiver r;
-			
-			receivers.push_back(r);
-		}
-		
-		auto & r = receivers.back();
-		
-		r.receiver.init(ipAddress, udpPort);
-		
-		r.refCount++;
-		
-		return &r.receiver;
-	}
-	
-	void free(OscReceiver *& receiver)
-	{
-		for (auto rItr = receivers.begin(); rItr != receivers.end(); ++rItr)
-		{
-			auto & r = *rItr;
-			
-			if (receiver == &r.receiver)
-			{
-				r.refCount--;
-				
-				if (r.refCount == 0)
-				{
-					r.receiver.shut();
-					
-					receivers.erase(rItr);
-					
-					break;
-				}
-			}
-		}
-	}
-	
-	void tick()
-	{
-		if (g_currentVfxGraph->nextTickTraversalId != lastTraversalId)
-		{
-			lastTraversalId = g_currentVfxGraph->nextTickTraversalId;
-			
-			receivedValues.clear();
-			
-			for (auto & r : receivers)
-			{
-				r.receiver.tick(this);
-			}
-		}
-	}
-	
-	virtual void handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) override
-	{
-		const char * path = nullptr;
-		float value = 0.f;
-		
-		try
-		{
-			path = m.AddressPattern();
-			
-			auto args = m.ArgumentStream();
-			
-			args >> value;
-		}
-		catch (std::exception & e)
-		{
-			logError("failed to handle OSC message: %s", e.what());
-			
-			return;
-		}
-		
-		//
-		
-		auto & values = receivedValues[path];
-		
-		values.push_back(value);
-	}
-};
-
-static VfxOscEndpointMgr s_vfxOscEndpointMgr;
-
-//
 
 struct ResourceEditor_OscPath : GraphEdit_ResourceEditorBase
 {
@@ -199,9 +77,9 @@ struct ResourceEditor_OscPath : GraphEdit_ResourceEditorBase
 		
 		if (g_doActions && isLearning)
 		{
-			if (s_vfxOscEndpointMgr.receivedValues.empty() == false)
+			if (g_oscEndpointMgr.receivedValues.empty() == false)
 			{
-				path->path = s_vfxOscEndpointMgr.receivedValues.begin()->first;
+				path->path = g_oscEndpointMgr.receivedValues.begin()->first;
 				
 				isLearning = false;
 				
@@ -278,69 +156,6 @@ struct ResourceEditor_OscPath : GraphEdit_ResourceEditorBase
 
 //
 
-VFX_NODE_TYPE(osc_endpoint, VfxNodeOscEndpoint)
-{
-	typeName = "osc.endpoint";
-	
-	in("ipAddress", "string");
-	in("port", "int");
-}
-
-VfxNodeOscEndpoint::VfxNodeOscEndpoint()
-	: VfxNodeBase()
-	, oscReceiver(nullptr)
-	, history()
-{
-	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_IpAddress, kVfxPlugType_String);
-	addInput(kInput_Port, kVfxPlugType_Int);
-}
-
-VfxNodeOscEndpoint::~VfxNodeOscEndpoint()
-{
-	s_vfxOscEndpointMgr.free(oscReceiver);
-}
-
-void VfxNodeOscEndpoint::init(const GraphNode & node)
-{
-	const char * ipAddress = getInputString(kInput_IpAddress, "");
-	const int udpPort = getInputInt(kInput_Port, 0);
-	
-	oscReceiver = s_vfxOscEndpointMgr.alloc(ipAddress, udpPort);
-}
-
-void VfxNodeOscEndpoint::tick(const float dt)
-{
-	vfxCpuTimingBlock(VfxNodeOscReceive);
-	
-	const char * ipAddress = getInputString(kInput_IpAddress, "");
-	const int udpPort = getInputInt(kInput_Port, 0);
-	
-	if (oscReceiver->isAddressChange(ipAddress, udpPort))
-	{
-		s_vfxOscEndpointMgr.free(oscReceiver);
-		
-		oscReceiver = s_vfxOscEndpointMgr.alloc(ipAddress, udpPort);
-	}
-}
-
-void VfxNodeOscEndpoint::getDescription(VfxNodeDescription & d)
-{
-	const char * ipAddress = getInputString(kInput_IpAddress, "");
-	const int udpPort = getInputInt(kInput_Port, 0);
-	
-	d.add("bind address: %s:%d", ipAddress, udpPort);
-	d.newline();
-	
-	d.add("received messages:");
-	if (history.empty())
-		d.add("(none)");
-	for (auto & h : history)
-		d.add("%s", h.addressPattern.c_str());
-}
-
-//
-
 VFX_NODE_TYPE(osc_receive, VfxNodeOscReceive)
 {
 	typeName = "osc.receive";
@@ -352,8 +167,6 @@ VFX_NODE_TYPE(osc_receive, VfxNodeOscReceive)
 		return new ResourceEditor_OscPath();
 	};
 	
-	in("ipAddress", "string");
-	in("port", "int");
 	out("value", "float");
 	out("receive!", "trigger");
 }
@@ -363,10 +176,9 @@ VfxNodeOscReceive::VfxNodeOscReceive()
 	, oscPath(nullptr)
 	, valueOutput(0.f)
 	, history()
+	, numReceives(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_IpAddress, kVfxPlugType_String);
-	addInput(kInput_Port, kVfxPlugType_Int);
 	addOutput(kOutput_Value, kVfxPlugType_Float, &valueOutput);
 	addOutput(kOutput_Receive, kVfxPlugType_Trigger, nullptr);
 }
@@ -378,9 +190,6 @@ VfxNodeOscReceive::~VfxNodeOscReceive()
 
 void VfxNodeOscReceive::init(const GraphNode & node)
 {
-	const char * ipAddress = getInputString(kInput_IpAddress, "");
-	const int udpPort = getInputInt(kInput_Port, 0);
-	
 	createVfxNodeResource<VfxOscPath>(node, "osc.path", "editorData", oscPath);
 }
 
@@ -388,11 +197,12 @@ void VfxNodeOscReceive::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeOscReceive);
 	
-	s_vfxOscEndpointMgr.tick();
+	if (isPassthrough)
+		return;
 	
-	auto i = s_vfxOscEndpointMgr.receivedValues.find(oscPath->path);
+	auto i = g_oscEndpointMgr.receivedValues.find(oscPath->path);
 	
-	if (i != s_vfxOscEndpointMgr.receivedValues.end())
+	if (i != g_oscEndpointMgr.receivedValues.end())
 	{
 		auto & values = i->second;
 		
@@ -410,20 +220,16 @@ void VfxNodeOscReceive::tick(const float dt)
 			
 			while (history.size() > kMaxHistory)
 				history.pop_back();
+			
+			numReceives++;
 		}
 	}
 }
 
 void VfxNodeOscReceive::getDescription(VfxNodeDescription & d)
 {
-	const char * ipAddress = getInputString(kInput_IpAddress, "");
-	const int udpPort = getInputInt(kInput_Port, 0);
-	
-	d.add("bind address: %s:%d", ipAddress, udpPort);
-	d.newline();
-	
 	d.add("path: %s", oscPath->path.c_str());
-	d.add("received values:");
+	d.add("received values (%d total):", numReceives);
 	if (history.empty())
 		d.add("(none)");
 	for (auto & h : history)

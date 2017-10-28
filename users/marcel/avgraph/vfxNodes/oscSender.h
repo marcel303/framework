@@ -27,45 +27,23 @@
 
 #pragma once
 
-#include "vfxNodeBase.h"
-#include <list>
+#include <string>
 
-struct VfxOscPath;
+struct UdpTransmitSocket;
 
-struct VfxNodeOscReceive : VfxNodeBase
+struct OscSender
 {
-	const int kMaxHistory = 10;
+	std::string ipAddress;
+	int udpPort;
 	
-	struct HistoryItem
-	{
-		float value;
-	};
+	UdpTransmitSocket * transmitSocket;
 	
-	enum Input
-	{
-		kInput_COUNT
-	};
+	OscSender();
 	
-	enum Output
-	{
-		kOutput_Value,
-		kOutput_Receive,
-		kOutput_COUNT
-	};
+	bool isAddressChange(const char * ipAddress, const int udpPort) const;
 	
-	VfxOscPath * oscPath;
+	bool init(const char * ipAddress, const int udpPort);
+	bool shut();
 	
-	float valueOutput;
-	
-	std::list<HistoryItem> history;
-	int numReceives;
-	
-	VfxNodeOscReceive();
-	virtual ~VfxNodeOscReceive() override;
-	
-	virtual void init(const GraphNode & node) override;
-	
-	virtual void tick(const float dt) override;
-	
-	virtual void getDescription(VfxNodeDescription & d) override;
+	void send(const void * data, const int dataSize);
 };

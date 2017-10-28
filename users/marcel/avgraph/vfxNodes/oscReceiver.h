@@ -59,6 +59,10 @@ struct OscReceiver
 	
 	bool isAddressChange(const char * ipAddress, const int udpPort) const;
 	
+	void recvMessages();
+	void freeMessages();
+	void pollMessages(OscReceiveHandler * receiveHandler);
+	
 	void tick(OscReceiveHandler * receiveHandler);
 
 	static int executeOscThread(void * data);

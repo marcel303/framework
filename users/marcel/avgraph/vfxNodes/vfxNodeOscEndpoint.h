@@ -28,40 +28,45 @@
 #pragma once
 
 #include "vfxNodeBase.h"
-#include <list>
+#include <string>
 
-struct VfxOscPath;
+struct OscReceiver;
+struct OscSender;
 
-struct VfxNodeOscReceive : VfxNodeBase
+struct VfxNodeOscEndpoint : VfxNodeBase
 {
 	const int kMaxHistory = 10;
 	
 	struct HistoryItem
 	{
-		float value;
+		std::string addressPattern;
 	};
 	
 	enum Input
 	{
+		kInput_Name,
+		kInput_RecvEnabled,
+		kInput_RecvIpAddress,
+		kInput_RecvPort,
+		kInput_SendEnabled,
+		kInput_SendIpAddress,
+		kInput_SendPort,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
-		kOutput_Value,
-		kOutput_Receive,
 		kOutput_COUNT
 	};
 	
-	VfxOscPath * oscPath;
+	std::string currentRecvName;
+	std::string currentSendName;
 	
-	float valueOutput;
+	OscReceiver * oscReceiver;
+	OscSender * oscSender;
 	
-	std::list<HistoryItem> history;
-	int numReceives;
-	
-	VfxNodeOscReceive();
-	virtual ~VfxNodeOscReceive() override;
+	VfxNodeOscEndpoint();
+	virtual ~VfxNodeOscEndpoint() override;
 	
 	virtual void init(const GraphNode & node) override;
 	

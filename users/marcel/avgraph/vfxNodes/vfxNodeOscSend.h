@@ -30,11 +30,6 @@
 #include "vfxNodeBase.h"
 #include <list>
 
-class MyOscPacketListener;
-class UdpListeningReceiveSocket;
-
-struct OscSender;
-
 struct SDL_Thread;
 
 struct VfxNodeOscSend : VfxNodeBase
@@ -58,8 +53,6 @@ struct VfxNodeOscSend : VfxNodeBase
 	
 	enum Input
 	{
-		kInput_IpAddress,
-		kInput_Port,
 		kInput_SendMode,
 		kInput_Path,
 		kInput_Value,
@@ -72,8 +65,6 @@ struct VfxNodeOscSend : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	OscSender * oscSender;
-	
 	bool hasLastSentValue;
 	float lastSentValue;
 	
@@ -81,9 +72,6 @@ struct VfxNodeOscSend : VfxNodeBase
 	int numSends;
 	
 	VfxNodeOscSend();
-	virtual ~VfxNodeOscSend() override;
-	
-	virtual void init(const GraphNode & node) override;
 	
 	virtual void tick(const float dt) override;
 	virtual void handleTrigger(const int inputSocketIndex) override;

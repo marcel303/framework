@@ -25,47 +25,72 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#pragma once
+#include "Log.h"
+#include "oscSender.h"
 
-#include "vfxNodeBase.h"
-#include <list>
+#include "ip/UdpSocket.h"
 
-struct VfxOscPath;
-
-struct VfxNodeOscReceive : VfxNodeBase
+OscSender::OscSender()
+	: ipAddress()
+	, udpPort(0)
+	, transmitSocket(nullptr)
 {
-	const int kMaxHistory = 10;
-	
-	struct HistoryItem
+}
+
+bool OscSender::isAddressChange(const char * _ipAddress, const int _udpPort) const
+{
+	return _ipAddress != ipAddress || _udpPort != udpPort;
+}
+
+bool OscSender::init(const char * _ipAddress, const int _udpPort)
+{
+	try
 	{
-		float value;
-	};
-	
-	enum Input
+		shut();
+		
+		//
+		
+		ipAddress = _ipAddress;
+		udpPort = _udpPort;
+		
+		transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress.c_str(), udpPort));
+		
+		return true;
+	}
+	catch (std::exception & e)
 	{
-		kInput_COUNT
-	};
-	
-	enum Output
+		LOG_ERR("failed to init OSC sender: %s", e.what());
+		
+		shut();
+		
+		return false;
+	}
+}
+
+bool OscSender::shut()
+{
+	try
 	{
-		kOutput_Value,
-		kOutput_Receive,
-		kOutput_COUNT
-	};
-	
-	VfxOscPath * oscPath;
-	
-	float valueOutput;
-	
-	std::list<HistoryItem> history;
-	int numReceives;
-	
-	VfxNodeOscReceive();
-	virtual ~VfxNodeOscReceive() override;
-	
-	virtual void init(const GraphNode & node) override;
-	
-	virtual void tick(const float dt) override;
-	
-	virtual void getDescription(VfxNodeDescription & d) override;
-};
+		if (transmitSocket != nullptr)
+		{
+			delete transmitSocket;
+			transmitSocket = nullptr;
+		}
+		
+		return true;
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("failed to shut down OSC sender: %s", e.what());
+		
+		return false;
+	}
+}
+
+void OscSender::send(const void * data, const int dataSize)
+{
+	if (transmitSocket != nullptr)
+	{
+		transmitSocket->Send((char*)data, dataSize);
+	}
+}

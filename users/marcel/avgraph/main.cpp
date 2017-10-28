@@ -36,6 +36,7 @@
 #include "vfxGraphRealTimeConnection.h"
 #include "vfxTypes.h"
 
+#include "vfxNodes/oscEndpointMgr.h"
 #include "vfxNodes/vfxNodeBase.h"
 
 #include "mediaplayer_new/MPUtil.h"
@@ -51,7 +52,8 @@ using namespace tinyxml2;
 //#define FILENAME "drawtest.xml"
 //#define FILENAME "resourceTest.xml"
 //#define FILENAME "drawImageTest.xml"
-#define FILENAME "oscpath.xml"
+//#define FILENAME "oscpath.xml"
+#define FILENAME "wekinatorTest.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -348,7 +350,7 @@ static void testCamera3d()
 {
 	Camera3d camera;
 	
-	camera.mouseSmooth = 1.0 / 1.005;
+	camera.mouseSmooth = 0.7;
 	//camera.mouseSmooth = 0;
 	
 	do
@@ -527,6 +529,10 @@ int main(int argc, char * argv[])
 			framework.timeStep = std::min(framework.timeStep, 1.f / 15.f);
 			
 			const float dt = framework.timeStep;
+			
+			//
+			
+			g_oscEndpointMgr.tick();
 			
 			//
 			

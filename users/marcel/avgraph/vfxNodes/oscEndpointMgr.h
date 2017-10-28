@@ -27,45 +27,62 @@
 
 #pragma once
 
-#include "vfxNodeBase.h"
+#include "oscReceiver.h"
+#include "oscSender.h"
+#include <map>
 #include <list>
 
-struct VfxOscPath;
-
-struct VfxNodeOscReceive : VfxNodeBase
+struct OscEndpointMgr : OscReceiveHandler
 {
-	const int kMaxHistory = 10;
-	
-	struct HistoryItem
+	struct Receiver
 	{
-		float value;
+		std::string name;
+		
+		OscReceiver receiver;
+		int refCount;
+		
+		Receiver()
+			: name()
+			, receiver()
+			, refCount(0)
+		{
+		}
 	};
 	
-	enum Input
+	struct Sender
 	{
-		kInput_COUNT
+		std::string name;
+		
+		OscSender sender;
+		int refCount;
+		
+		Sender()
+			: name()
+			, sender()
+			, refCount(0)
+		{
+		}
 	};
 	
-	enum Output
-	{
-		kOutput_Value,
-		kOutput_Receive,
-		kOutput_COUNT
-	};
+	std::list<Receiver> receivers;
+	std::map<std::string, std::vector<float>> receivedValues;
+	int lastTraversalId;
 	
-	VfxOscPath * oscPath;
+	std::list<Sender> senders;
 	
-	float valueOutput;
+	OscEndpointMgr();
 	
-	std::list<HistoryItem> history;
-	int numReceives;
+	OscReceiver * allocReceiver(const char * name, const char * ipAddress, const int udpPort);
+	void freeReceiver(OscReceiver *& receiver);
+	OscReceiver * findReceiver(const char * name);
 	
-	VfxNodeOscReceive();
-	virtual ~VfxNodeOscReceive() override;
+	OscSender * allocSender(const char * name, const char * ipAddress, const int udpPort);
+	void freeSender(OscSender *& sender);
+	OscSender * findSender(const char * name);
 	
-	virtual void init(const GraphNode & node) override;
+	void tick();
 	
-	virtual void tick(const float dt) override;
-	
-	virtual void getDescription(VfxNodeDescription & d) override;
+	virtual void handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) override;
 };
+
+extern OscEndpointMgr g_oscEndpointMgr;

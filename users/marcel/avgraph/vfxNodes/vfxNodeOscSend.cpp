@@ -26,79 +26,11 @@
 */
 
 #include "Log.h"
+#include "oscEndpointMgr.h"
+#include "osc/OscOutboundPacketStream.h"
 #include "vfxNodeOscSend.h"
 
-#include "ip/UdpSocket.h"
-#include "osc/OscOutboundPacketStream.h"
-
 #define OSC_BUFFER_SIZE 1024
-
-struct OscSender
-{
-	std::string ipAddress;
-	int udpPort;
-	
-	UdpTransmitSocket * transmitSocket;
-	
-	OscSender()
-		: ipAddress()
-		, udpPort(0)
-		, transmitSocket(nullptr)
-	{
-	}
-	
-	bool isAddressChange(const char * _ipAddress, const int _udpPort) const
-	{
-		return _ipAddress != ipAddress || _udpPort != udpPort;
-	}
-	
-	bool init(const char * _ipAddress, const int _udpPort)
-	{
-		try
-		{
-			shut();
-			
-			//
-			
-			ipAddress = _ipAddress;
-			udpPort = _udpPort;
-			
-			transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress.c_str(), udpPort));
-			
-			return true;
-		}
-		catch (std::exception & e)
-		{
-			LOG_ERR("failed to init OSC sender: %s", e.what());
-			
-			shut();
-			
-			return false;
-		}
-	}
-	
-	bool shut()
-	{
-		try
-		{
-			if (transmitSocket != nullptr)
-			{
-				delete transmitSocket;
-				transmitSocket = nullptr;
-			}
-			
-			return true;
-		}
-		catch (std::exception & e)
-		{
-			LOG_ERR("failed to shut down OSC sender: %s", e.what());
-			
-			return false;
-		}
-	}
-};
-
-//
 
 VFX_ENUM_TYPE(oscSendMode)
 {
@@ -111,8 +43,6 @@ VFX_NODE_TYPE(osc_send, VfxNodeOscSend)
 {
 	typeName = "osc.send";
 	
-	in("ipAddress", "string");
-	in("port", "int");
 	inEnum("sendMode", "oscSendMode");
 	in("path", "string");
 	in("value", "float");
@@ -121,52 +51,25 @@ VFX_NODE_TYPE(osc_send, VfxNodeOscSend)
 
 VfxNodeOscSend::VfxNodeOscSend()
 	: VfxNodeBase()
-	, oscSender(nullptr)
 	, hasLastSentValue(false)
 	, lastSentValue(0.f)
 	, history()
 	, numSends()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_IpAddress, kVfxPlugType_String);
-	addInput(kInput_Port, kVfxPlugType_Int);
 	addInput(kInput_SendMode, kVfxPlugType_Int);
 	addInput(kInput_Path, kVfxPlugType_String);
 	addInput(kInput_Value, kVfxPlugType_Float);
 	addInput(kInput_Trigger, kVfxPlugType_Trigger);
 }
 
-VfxNodeOscSend::~VfxNodeOscSend()
-{
-	oscSender->shut();
-	
-	delete oscSender;
-	oscSender = nullptr;
-}
-
-void VfxNodeOscSend::init(const GraphNode & node)
-{
-	const char * ipAddress = getInputString(kInput_IpAddress, "");
-	const int udpPort = getInputInt(kInput_Port, 0);
-	
-	oscSender = new OscSender();
-	oscSender->init(ipAddress, udpPort);
-}
-
 void VfxNodeOscSend::tick(const float dt)
 {
-	const char * ipAddress = getInputString(kInput_IpAddress, "");
-	const int udpPort = getInputInt(kInput_Port, 0);
+	vfxCpuTimingBlock(VfxNodeOscSend);
+	
 	const SendMode sendMode = (SendMode)getInputInt(kInput_SendMode, kSend_OnTick);
 	const char * path = getInputString(kInput_Path, nullptr);
 	const float value = getInputFloat(kInput_Value, 0.f);
-	
-	if (oscSender->isAddressChange(ipAddress, udpPort))
-	{
-		oscSender->shut();
-		
-		oscSender->init(ipAddress, udpPort);
-	}
 	
 	if (sendMode == kSend_OnTick)
 	{
@@ -207,19 +110,28 @@ void VfxNodeOscSend::handleTrigger(const int inputSocketIndex)
 
 void VfxNodeOscSend::getDescription(VfxNodeDescription & d)
 {
-	const char * ipAddress = getInputString(kInput_IpAddress, "");
-	const int udpPort = getInputInt(kInput_Port, 0);
+	//d.add("target: %s", "");
+	//d.newline();
 	
-	d.add("target: %s:%d", ipAddress, udpPort);
-	d.newline();
-	
-	d.add("sent messages: %d:", numSends);
+	d.add("sent messages (%d total):", numSends);
+	if (history.empty())
+		d.add("(none)");
 	for (auto & h : history)
 		d.add("%s:%d <- %s: %.6f", h.ipAddress.c_str(), h.udpPort, h.path.c_str(), h.value);
 }
 
 void VfxNodeOscSend::sendValue(const char * path, const float value)
 {
+	if (isPassthrough)
+		return;
+	if (path == nullptr)
+		return;
+	
+	OscSender * oscSender = g_oscEndpointMgr.findSender("");
+	
+	if (oscSender == nullptr)
+		return;
+	
 	try
 	{
 		char buffer[OSC_BUFFER_SIZE];
@@ -236,7 +148,7 @@ void VfxNodeOscSend::sendValue(const char * path, const float value)
 			<< osc::EndMessage
 			<< osc::EndBundle;
 		
-		oscSender->transmitSocket->Send(p.Data(), p.Size());
+		oscSender->send(p.Data(), p.Size());
 	}
 	catch (std::exception & e)
 	{
