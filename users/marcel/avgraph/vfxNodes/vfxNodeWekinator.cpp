@@ -42,6 +42,11 @@ VFX_NODE_TYPE(wekinator, VfxNodeWekinator)
 	in("recv", "bool", "1");
 	in("recvPath", "string", "/wek/outputs");
 	in("channels", "channels");
+	in("recordBegin", "trigger");
+	in("recordEnd", "trigger");
+	in("train", "trigger");
+	in("runBegin", "trigger");
+	in("runEnd", "trigger");
 	out("channels", "channels");
 }
 
@@ -56,6 +61,11 @@ VfxNodeWekinator::VfxNodeWekinator()
 	addInput(kInput_RecvEnabled, kVfxPlugType_Bool);
 	addInput(kInput_RecvPath, kVfxPlugType_String);
 	addInput(kInput_Channels, kVfxPlugType_Channels);
+	addInput(kInput_RecordBegin, kVfxPlugType_Trigger);
+	addInput(kInput_RecordEnd, kVfxPlugType_Trigger);
+	addInput(kInput_Train, kVfxPlugType_Trigger);
+	addInput(kInput_RunBegin, kVfxPlugType_Trigger);
+	addInput(kInput_RunEnd, kVfxPlugType_Trigger);
 	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
 }
 
@@ -119,6 +129,53 @@ void VfxNodeWekinator::tick(const float dt)
 		{
 			oscReceiver->pollMessages(this);
 		}
+	}
+}
+
+void VfxNodeWekinator::sendControlMessage(const char * path)
+{
+	const char * endpointName = getInputString(kInput_EndpointName, "");
+	OscSender * oscSender = g_oscEndpointMgr.findSender(endpointName);
+	
+	if (oscSender != nullptr)
+	{
+		char buffer[OSC_BUFFER_SIZE];
+		
+		osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
+
+		p
+			<< osc::BeginBundleImmediate
+			<< osc::BeginMessage(path);
+		
+		p
+			<< osc::EndMessage
+			<< osc::EndBundle;
+		
+		oscSender->send(p.Data(), p.Size());
+	}
+}
+
+void VfxNodeWekinator::handleTrigger(const int index)
+{
+	if (index == kInput_RecordBegin)
+	{
+		sendControlMessage("/wekinator/control/startRecording");
+	}
+	else if (index == kInput_RecordEnd)
+	{
+		sendControlMessage("/wekinator/control/stopRecording");
+	}
+	else if (index == kInput_Train)
+	{
+		sendControlMessage("/wekinator/control/train");
+	}
+	else if (index == kInput_RunBegin)
+	{
+		sendControlMessage("/wekinator/control/startRunning");
+	}
+	else if (index == kInput_RunEnd)
+	{
+		sendControlMessage("/wekinator/control/stopRunning");
 	}
 }
 

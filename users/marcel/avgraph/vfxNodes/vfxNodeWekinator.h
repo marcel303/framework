@@ -40,6 +40,11 @@ struct VfxNodeWekinator : VfxNodeBase, OscReceiveHandler
 		kInput_RecvEnabled,
 		kInput_RecvPath,
 		kInput_Channels,
+		kInput_RecordBegin,
+		kInput_RecordEnd,
+		kInput_Train,
+		kInput_RunBegin,
+		kInput_RunEnd,
 		kInput_COUNT
 	};
 	
@@ -57,6 +62,9 @@ struct VfxNodeWekinator : VfxNodeBase, OscReceiveHandler
 	virtual ~VfxNodeWekinator() override;
 	
 	virtual void tick(const float dt) override;
+	
+	void sendControlMessage(const char * path);
+	virtual void handleTrigger(const int index) override;
 	
 	virtual void handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) override;
 };
