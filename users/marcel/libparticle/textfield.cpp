@@ -37,27 +37,64 @@ bool EditorTextField::tick(const float dt)
 
 		m_caretTimer += dt;
 		
-		for (auto & e : framework.events)
+		const bool commandMod =
+			keyboard.isDown(SDLK_LGUI) ||
+			keyboard.isDown(SDLK_RGUI) ||
+			keyboard.isDown(SDLK_LCTRL) ||
+			keyboard.isDown(SDLK_RCTRL);
+		
+		if (commandMod && keyboard.wentDown(SDLK_c) && m_bufferSize != 0)
 		{
-			if (e.type != SDL_KEYDOWN)
-				continue;
+			SDL_SetClipboardText(m_buffer);
+		}
+		
+		if (commandMod && keyboard.wentDown(SDLK_v) && SDL_HasClipboardText())
+		{
+			char * text = SDL_GetClipboardText();
 			
-			int c = e.key.keysym.sym;
-			
-			if (isAllowed(c))
+			if (m_textIsSelected)
 			{
-				if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
-				{
-					c = toupper(c);
-				}
+				m_textIsSelected = false;
+				setText(text);
+			}
+			else
+			{
+				for (int i = 0; text[i]; ++i)
+					addChar(text[i]);
+			}
+			
+			SDL_free(text);
+		}
+		
+		if (commandMod && keyboard.wentDown(SDLK_a))
+		{
+			m_textIsSelected = true;
+		}
+		
+		if (commandMod == false)
+		{
+			for (auto & e : framework.events)
+			{
+				if (e.type != SDL_KEYDOWN)
+					continue;
 				
-				if (m_textIsSelected)
+				int c = e.key.keysym.sym;
+				
+				if (isAllowed(c))
 				{
-					m_textIsSelected = false;
-					setText("");
-				}
+					if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+					{
+						c = toupper(c);
+					}
+					
+					if (m_textIsSelected)
+					{
+						m_textIsSelected = false;
+						setText("");
+					}
 
-				addChar(c);
+					addChar(c);
+				}
 			}
 		}
 		
@@ -82,9 +119,9 @@ bool EditorTextField::tick(const float dt)
 		}
 		else
 		{
-			if (keyboard.wentDown(SDLK_HOME))
+			if (keyboard.wentDown(SDLK_HOME) || (commandMod && keyboard.wentDown(SDLK_LEFT)))
 				m_caretPosition = 0;
-			if (keyboard.wentDown(SDLK_END))
+			if (keyboard.wentDown(SDLK_END) || (commandMod && keyboard.wentDown(SDLK_RIGHT)))
 				m_caretPosition = m_bufferSize;
 
 			if (keyboard.wentDown(SDLK_LEFT, true) && m_caretPosition > 0)
@@ -101,7 +138,7 @@ bool EditorTextField::tick(const float dt)
 			if (keyboard.wentDown(SDLK_BACKSPACE, true) && m_caretPosition > 0)
 				removeChar();
 		}
-
+		
 		if (keyboard.wentDown(SDLK_RETURN))
 		{
 			result = true;
