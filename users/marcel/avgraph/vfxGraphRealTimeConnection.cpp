@@ -826,6 +826,8 @@ bool RealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, const
 	if (input->isConnected() == false)
 		return false;
 	
+	input->referencedByRealTimeConnectionTick = g_currentVfxGraph->nextTickTraversalId;
+	
 	auto inputChannels = input->getChannels();
 	
 	for (int i = 0; i < inputChannels->numChannels; ++i)
@@ -859,6 +861,8 @@ bool RealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, const
 	if (output == nullptr)
 		return false;
 
+	output->referencedByRealTimeConnectionTick = g_currentVfxGraph->nextTickTraversalId;
+	
 	auto outputChannels = output->getChannels();
 	
 	for (int i = 0; i < outputChannels->numChannels; ++i)
