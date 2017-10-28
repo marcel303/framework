@@ -43,6 +43,7 @@ VFX_NODE_TYPE(osc_send, VfxNodeOscSend)
 {
 	typeName = "osc.send";
 	
+	in("endpoint", "string");
 	inEnum("sendMode", "oscSendMode");
 	in("path", "string");
 	in("value", "float");
@@ -57,6 +58,7 @@ VfxNodeOscSend::VfxNodeOscSend()
 	, numSends()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	addInput(kInput_EndpointName, kVfxPlugType_String);
 	addInput(kInput_SendMode, kVfxPlugType_Int);
 	addInput(kInput_Path, kVfxPlugType_String);
 	addInput(kInput_Value, kVfxPlugType_Float);
@@ -127,7 +129,9 @@ void VfxNodeOscSend::sendValue(const char * path, const float value)
 	if (path == nullptr)
 		return;
 	
-	OscSender * oscSender = g_oscEndpointMgr.findSender("");
+	const char * endpointName = getInputString(kInput_EndpointName, "");
+	
+	OscSender * oscSender = g_oscEndpointMgr.findSender(endpointName);
 	
 	if (oscSender == nullptr)
 		return;

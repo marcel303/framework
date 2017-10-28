@@ -53,6 +53,7 @@ struct VfxNodeOscSend : VfxNodeBase
 	
 	enum Input
 	{
+		kInput_EndpointName,
 		kInput_SendMode,
 		kInput_Path,
 		kInput_Value,
