@@ -93,31 +93,38 @@ void VfxNodeWekinator::tick(const float dt)
 
 		if (oscSender != nullptr)
 		{
-			char buffer[OSC_BUFFER_SIZE];
-		
-			osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
-
-			p
-				<< osc::BeginBundleImmediate
-				<< osc::BeginMessage(sendPath);
-			
-			if (inputChannels->numChannels >= 1)
+			try
 			{
-				const VfxChannel & channel = inputChannels->channels[0];
+				char buffer[OSC_BUFFER_SIZE];
+			
+				osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
+
+				p
+					<< osc::BeginBundleImmediate
+					<< osc::BeginMessage(sendPath);
 				
-				for (int i = 0; i < inputChannels->size; ++i)
+				if (inputChannels->numChannels >= 1)
 				{
-					const float value = channel.data[i];
+					const VfxChannel & channel = inputChannels->channels[0];
 					
-					p << value;
+					for (int i = 0; i < inputChannels->size; ++i)
+					{
+						const float value = channel.data[i];
+						
+						p << value;
+					}
 				}
+				
+				p
+					<< osc::EndMessage
+					<< osc::EndBundle;
+				
+				oscSender->send(p.Data(), p.Size());
 			}
-			
-			p
-				<< osc::EndMessage
-				<< osc::EndBundle;
-			
-			oscSender->send(p.Data(), p.Size());
+			catch (std::exception & e)
+			{
+				LOG_ERR("failed to send OSC data message: %s", e.what());
+			}
 		}
 	}
 	
@@ -139,19 +146,26 @@ void VfxNodeWekinator::sendControlMessage(const char * path)
 	
 	if (oscSender != nullptr)
 	{
-		char buffer[OSC_BUFFER_SIZE];
+		try
+		{
+			char buffer[OSC_BUFFER_SIZE];
 		
-		osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
+			osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
 
-		p
-			<< osc::BeginBundleImmediate
-			<< osc::BeginMessage(path);
+			p
+				<< osc::BeginBundleImmediate
+				<< osc::BeginMessage(path);
 		
-		p
-			<< osc::EndMessage
-			<< osc::EndBundle;
+			p
+				<< osc::EndMessage
+				<< osc::EndBundle;
 		
-		oscSender->send(p.Data(), p.Size());
+			oscSender->send(p.Data(), p.Size());
+		}
+		catch (std::exception & e)
+		{
+			LOG_ERR("failed to send OSC control message: %s", e.what());
+		}
 	}
 }
 
@@ -204,7 +218,7 @@ void VfxNodeWekinator::handleOscMessage(const osc::ReceivedMessage & m, const Ip
 		}
 		catch (std::exception & e)
 		{
-			LOG_ERR("failed to read Wekinator output: %s", e.what());
+			LOG_ERR("failed to read Wekinator output message: %s", e.what());
 		}
 	}
 }
