@@ -76,7 +76,7 @@ void VfxNodeChannelSlice::tick(const float dt)
 		? int(std::round(getInputFloat(kInput_SliceCountNorm, 0.f) * channels->sy))
 		: getInputInt(kInput_SliceCount, 1);
 	
-	if (channels == nullptr || channels->sx == 0 || channels->sy == 0 || channels->numChannels == 0)
+	if (isPassthrough || channels == nullptr || channels->sx == 0 || channels->sy == 0 || channels->numChannels == 0)
 	{
 		channelsOutput.reset();
 	}

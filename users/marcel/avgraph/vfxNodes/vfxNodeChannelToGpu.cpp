@@ -63,7 +63,7 @@ void VfxNodeChannelToGpu::tick(const float dt)
 		? int(std::round(getInputFloat(kInput_ChannelIndexNorm, 0.f) * channels->numChannels))
 		: getInputInt(kInput_ChannelIndex, 0);
 	
-	if (channels == nullptr || channels->sx == 0 || channels->sy == 0 || channels->numChannels == 0)
+	if (isPassthrough || channels == nullptr || channels->sx == 0 || channels->sy == 0 || channels->numChannels == 0)
 	{
 		freeImage();
 	}

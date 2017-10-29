@@ -50,13 +50,13 @@ VfxNodeChannelSwizzle::VfxNodeChannelSwizzle()
 void VfxNodeChannelSwizzle::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeImageDownsample);
-
+	
 	const VfxChannels * channels = getInputChannels(kInput_Channels, nullptr);
 	const char * swizzleText = getInputString(kInput_Swizzle, nullptr);
 
 	channelsOutput.reset();
 	
-	if (channels != nullptr && channels->numChannels > 0 && swizzleText != nullptr)
+	if (isPassthrough == false && channels != nullptr && channels->numChannels > 0 && swizzleText != nullptr)
 	{
 		VfxSwizzle swizzle;
 
