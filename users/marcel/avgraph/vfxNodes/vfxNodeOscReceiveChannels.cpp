@@ -245,7 +245,7 @@ void VfxNodeOscReceiveChannels::tick(const float dt)
 		for (int i = 0; i < channelData.size; ++i)
 			channelData.data[i] = 0.f;
 		
-		channelsOutput.setData2DContiguous(channelData.data, false, 1, oscPathList->elems.size(), 1);
+		channelsOutput.setDataContiguous(channelData.data, false, 1, oscPathList->elems.size());
 	}
 	
 	int index = 0;
