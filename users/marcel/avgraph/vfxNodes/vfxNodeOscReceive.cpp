@@ -167,6 +167,7 @@ VFX_NODE_TYPE(osc_receive, VfxNodeOscReceive)
 		return new ResourceEditor_OscPath();
 	};
 	
+	in("path", "string");
 	out("value", "float");
 	out("receive!", "trigger");
 }
@@ -179,6 +180,7 @@ VfxNodeOscReceive::VfxNodeOscReceive()
 	, numReceives(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	addInput(kInput_Path, kVfxPlugType_String);
 	addOutput(kOutput_Value, kVfxPlugType_Float, &valueOutput);
 	addOutput(kOutput_Receive, kVfxPlugType_Trigger, nullptr);
 }
@@ -186,6 +188,16 @@ VfxNodeOscReceive::VfxNodeOscReceive()
 VfxNodeOscReceive::~VfxNodeOscReceive()
 {
 	freeVfxNodeResource(oscPath);
+}
+
+const char * VfxNodeOscReceive::getPath() const
+{
+	const char * path = getInputString(kInput_Path, nullptr);
+	
+	if (path != nullptr)
+		return path;
+	
+	return oscPath->path.c_str();
 }
 
 void VfxNodeOscReceive::init(const GraphNode & node)
@@ -200,7 +212,9 @@ void VfxNodeOscReceive::tick(const float dt)
 	if (isPassthrough)
 		return;
 	
-	auto i = g_oscEndpointMgr.receivedValues.find(oscPath->path);
+	const char * path = getPath();
+	
+	auto i = g_oscEndpointMgr.receivedValues.find(path);
 	
 	if (i != g_oscEndpointMgr.receivedValues.end())
 	{
@@ -228,7 +242,9 @@ void VfxNodeOscReceive::tick(const float dt)
 
 void VfxNodeOscReceive::getDescription(VfxNodeDescription & d)
 {
-	d.add("path: %s", oscPath->path.c_str());
+	const char * path = getPath();
+	
+	d.add("path: %s", path);
 	d.add("received values (%d total):", numReceives);
 	if (history.empty())
 		d.add("(none)");

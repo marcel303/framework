@@ -43,6 +43,7 @@ struct VfxNodeOscReceive : VfxNodeBase
 	
 	enum Input
 	{
+		kInput_Path,
 		kInput_COUNT
 	};
 	
@@ -62,6 +63,8 @@ struct VfxNodeOscReceive : VfxNodeBase
 	
 	VfxNodeOscReceive();
 	virtual ~VfxNodeOscReceive() override;
+	
+	const char * getPath() const;
 	
 	virtual void init(const GraphNode & node) override;
 	
