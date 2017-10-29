@@ -244,11 +244,6 @@ bool VfxSwizzle::parse(const char * text)
 
 //
 
-VfxOscPath::VfxOscPath()
-{
-	path[0] = 0;
-}
-
 void VfxOscPath::save(tinyxml2::XMLPrinter * printer)
 {
 	printer->PushAttribute("path", path.c_str());
@@ -257,4 +252,30 @@ void VfxOscPath::save(tinyxml2::XMLPrinter * printer)
 void VfxOscPath::load(tinyxml2::XMLElement * elem)
 {
 	path = stringAttrib(elem, "path", "");
+}
+
+//
+
+void VfxOscPathList::save(tinyxml2::XMLPrinter * printer)
+{
+	for (auto & elem : elems)
+	{
+		printer->OpenElement("elem");
+		{
+			printer->PushAttribute("path", elem.c_str());
+		}
+		printer->CloseElement();
+	}
+}
+
+void VfxOscPathList::load(tinyxml2::XMLElement * elem)
+{
+	elems.clear();
+	
+	for (auto xmlElem = elem->FirstChildElement("elem"); xmlElem != nullptr; xmlElem = xmlElem->NextSiblingElement("elem"))
+	{
+		const std::string path = stringAttrib(xmlElem, "path", "");
+		
+		elems.push_back(path);
+	}
 }

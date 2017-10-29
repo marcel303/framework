@@ -29,6 +29,7 @@
 
 #include "Mat4x4.h"
 #include <string>
+#include <vector>
 
 namespace tinyxml2
 {
@@ -99,7 +100,13 @@ struct VfxOscPath
 {
 	std::string path;
 	
-	VfxOscPath();
+	void save(tinyxml2::XMLPrinter * printer);
+	void load(tinyxml2::XMLElement * elem);
+};
+
+struct VfxOscPathList
+{
+	std::vector<std::string> elems;
 	
 	void save(tinyxml2::XMLPrinter * printer);
 	void load(tinyxml2::XMLElement * elem);
