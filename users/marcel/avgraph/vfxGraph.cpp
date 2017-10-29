@@ -616,6 +616,17 @@ bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const 
 			
 			resource = path;
 		}
+		else if (strcmp(type, "osc.pathList") == 0)
+		{
+			auto pathList = new VfxOscPathList();
+			
+			if (hasXml)
+			{
+				pathList->load(d.RootElement());
+			}
+			
+			resource = pathList;
+		}
 		
 		//
 		
