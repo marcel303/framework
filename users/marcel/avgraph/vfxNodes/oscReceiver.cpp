@@ -295,7 +295,7 @@ void OscReceiver::pollMessages(OscReceiveHandler * receiveHandler)
 	}
 }
 
-void OscReceiver::tick(OscReceiveHandler * receiveHandler)
+void OscReceiver::flushMessages(OscReceiveHandler * receiveHandler)
 {
 	// update network input
 	

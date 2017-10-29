@@ -63,7 +63,7 @@ struct OscReceiver
 	void freeMessages();
 	void pollMessages(OscReceiveHandler * receiveHandler);
 	
-	void tick(OscReceiveHandler * receiveHandler);
+	void flushMessages(OscReceiveHandler * receiveHandler);
 
 	static int executeOscThread(void * data);
 };
