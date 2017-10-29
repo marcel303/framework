@@ -1,11 +1,13 @@
 /*
 
 top priority items:
-- add support for custom editors to graph editor
 - add buttons to manually trigger nodes
 	- like the BANG node in max
 	- add ability to trigger any input/output trigger (?)
 - add GPU performance markers
++ fix issue with shift + <char> not resulting in desired character in text fields
+- fix issue with unable to close node type selection menu without selecting a node
+
 
 todo :
 - add undo/redo support. just serialize/deserialize graph for every action?
@@ -33,23 +35,38 @@ todo :
 - make links use bezier curves
 - hide node text until mouse moves close to node ? makes the screen more serene and helps optimize UI drawing
 - look at Bitwig 2 for inspiration of node types
-- automatically un-fold nodes (temporarily) when the mouse hovers over them ?
+- improve node auto un-folding and socket connect behaviors
 	- (temporarily) un-fold node when it is the only selected node. allows connecting sockets
-	- (temporarily) un-fold hovered over node when connecting sockets
+	- (temporarily) un-fold hovered over node when connecting sockets. currently based on distance, but should also include hit test
+	- move hovered over node in front of others?
+	- raise a menu when socket connect is released on a node itself. ask for which socket to connect to
 - NanoVG includes an interesting blurring algortihm used for blurring fonts. integrate ?
 - fix issue where freeing texture here can result in issues when drawing visualizer. tick of visualizer should always happen after cpuToGpu tick, but there's no link connecting visualizer to the node it references, so tick order is undefined .. ! -> maybe update visualizer in draw. or never capture references (to textures ID's or whatever) in visualizer. only let it copy values by value (as needed for graph) but capture everything else on draw
 - add ability to add node between nodes ?
 - add third 'node minification' option: show only active inputs and outputs
 	so we have three options then: show everything, show only active i/o and fully collapsed
 - add ability to reference nodes? makes graph organization more easy
-- add node editors. when double clicking a node (or some other gesture/interaction), show the node editor. let the node editor operate on the node's data.
-	- let the node editor be independent of the implementation ? it should be possible to have a fully functional graph, graph node and resource editing environment without a live version of the graph running in the background. this means the saveBegin real-time editing callback should be removed again once we got this working
 - drag link into empty space = open node type selection menu
++ add copy and paste text support
+- how to convert multiple channels to gpu image with channel(s).toGpu ?
+
+
+todo : creativity investigation :
+- add scratch mode. scratch over nodes and trigger real-time connection events
+- add string mode. drag mouse over screen, let node links react as if they were being pulled. add real-time connection callback for the string location. let links/strings vibrate for a while after being pulled
+- add fire mode. slowly 'deteriorate' node input values over time using a random walk. add a real-time connection callback to tell the system a node is burning
 
 
 todo : nodes :
 - add sample.float node
-- add sample.image node. outputs r/g/b/a. specify normalized vs screen coords?
+	- output value as float
+	- output value as channel
+- add sample.image node
+	- output rgba as floats
+	- output rgba as channels
+	- specify normalized vs screen coords?
+	- add filter and clamp options
+- add sample.channel node
 - add doValuePlotter to ui framework
 - add quantize node
 - investigate how to render 2D and 3D shapes
@@ -107,7 +124,12 @@ todo : nodes :
 - add memory node ? get/set named variables. how to ensure processing order ?
 - add queue system for triggers ? ensure predeps have finished processing before handling triggers
 - add ability for nodes to trigger again (process a partial time slice ?). but this will re-introduce again the issue of execution order of triggers ..
-- refactor math node so it's only one node with a subtype selection input
+# refactor math node so it's only one node with a subtype selection input
+- add channels.toImage node ?
+- add play/stop/pause/resume triggers to video node
+- add curl node
+- add text list node. next! prev! rand! custom editor for list of strings
++ add OSC node with a list of paths. output received values as channels
 
 
 todo : fsfx :
@@ -133,15 +155,13 @@ todo : UI
 	- maybe also a sphere mode ?
 	*** I think I like the lilly idea better
 
+todo : documentation
+- write about design philosophy
+
 todo : framework
-+ add easy 3D perspective camera with manual control over input. make it easy to set matrices
 - add scoped** objects
-+ add drawLine3d, drawRect3d and drawGrid3d
 - add drawCube and drawSphere?
-+ add a simple camera class. pushMatrix, popMatrix
 - add hq shaded triangle to framework
-+ add a generic way to shade and texture hq primitives. perhaps use texture and shading matrices ?
-+ remove stage and UI classes
 - rewrite audio to use port audio instead of OpenAL
 	- rewrite sound effects
 	- rewrite music
@@ -288,7 +308,9 @@ todo :
 + add editor option to disable real-time preview
 	+ add time dilation effect on no input before stopping responding ?
 	+ add way for UI/editor to tell update loop it's animating something (camera..)
-
++ add node editors. when double clicking a node (or some other gesture/interaction), show the node editor. let the node editor operate on the node's data.
+	+ let the node editor be independent of the implementation ? it should be possible to have a fully functional graph, graph node and resource editing environment without a live version of the graph running in the background. this means the saveBegin real-time editing callback should be removed again once we got this working
+ 
 
 todo : nodes :
 + add ease node
@@ -371,6 +393,10 @@ todo : nodes :
 	+ have a learning function, to setup mappings from inputs to outputs
 + visualize active links
 + add read-only mode. add flags for controlling editor behaviors
++ add image.toChannels node
++ add Wekinator node
++ add passthrough support OSC send and receive nodes
+
 
 todo : framework :
 + optimize text rendering. use a dynamic texture atlas instead of one separate texture for each glyph. drawText should only emit a single draw call
@@ -378,6 +404,11 @@ todo : framework :
 + add ability to save MSDF texture atlas and load/supplement it
 + added HQ rounded rect method
 + add method to push/pop MSDF font rendering bit
++ add easy 3D perspective camera with manual control over input. make it easy to set matrices
++ add drawLine3d, drawRect3d and drawGrid3d
++ add a simple camera class. pushMatrix, popMatrix
++ add a generic way to shade and texture hq primitives. perhaps use texture and shading matrices ?
++ remove stage and UI classes
 
 todo : media player
 + for image analysis we often only need luminance. make it an option to output YUV Y-channel only?

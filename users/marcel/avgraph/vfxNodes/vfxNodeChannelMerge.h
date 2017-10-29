@@ -31,8 +31,23 @@
 
 struct VfxNodeChannelMerge : VfxNodeBase
 {
+	enum MergeMode
+	{
+		kMergeMode_AppendChannels,
+		kMergeMode_ConcatenateValues,
+	};
+	
+	enum WrapMode
+	{
+		kWrapMode_Clamp,
+		kWrapMode_Cycle,
+		kWrapMode_PadZero
+	};
+	
 	enum Input
 	{
+		kInput_MergeMode,
+		kInput_WrapMode,
 		kInput_Channels1,
 		kInput_Channels2,
 		kInput_Channels3,
@@ -46,7 +61,9 @@ struct VfxNodeChannelMerge : VfxNodeBase
 		kOutput_Channels,
 		kOutput_COUNT
 	};
-
+	
+	VfxChannelData channelData;
+	
 	VfxChannels channelsOutput;
 
 	VfxNodeChannelMerge();
