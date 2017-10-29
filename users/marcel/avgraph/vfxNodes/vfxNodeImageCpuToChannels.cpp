@@ -106,7 +106,15 @@ void VfxNodeImageCpuToChannels::tick(const float dt)
 	
 	channelsOutput.reset();
 	
-	if (channel == kChannel_RGBA)
+	if (image->numChannels == 1)
+	{
+		channelData.allocOnSizeChange(image->sx * image->sy);
+		
+		fillFloats(channelData.data, image, 0);
+		
+		channelsOutput.setData2DContiguous(channelData.data, true, image->sx, image->sy, 1);
+	}
+	else if (channel == kChannel_RGBA)
 	{
 		channelData.allocOnSizeChange(image->sx * image->sy * 4);
 		
