@@ -59,7 +59,7 @@ VfxNodeBinaryOutput::VfxNodeBinaryOutput()
 
 void VfxNodeBinaryOutput::tick(const float dt)
 {
-	vfxGpuTimingBlock(VfxNodeBinaryOutput);
+	vfxCpuTimingBlock(VfxNodeBinaryOutput);
 	
 	double valueAsDouble = getInputFloat(kInput_Value, 0.f);
 	
