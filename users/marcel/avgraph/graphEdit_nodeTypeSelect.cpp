@@ -59,17 +59,10 @@ static void getTypeDefinitionsByCategory(const GraphEdit_TypeDefinitionLibrary &
 
 static void doBackground(const int x, const int y, const int sx, const int sy)
 {
-	UiElem & elem = g_menu->getElem("background");
-	
 	const int x1 = x;
 	const int y1 = y;
 	const int x2 = x1 + sx;
 	const int y2 = y1 + sy;
-	
-	if (g_doActions)
-	{
-		elem.tick(x1, y1, x2, y2);
-	}
 	
 	if (g_doDraw)
 	{
@@ -241,7 +234,7 @@ static bool doCategories(GraphEdit & graphEdit, TypeDefinitionsByCategory & cate
 	}
 	popMenu();
 	
-	pushMenu("nodeTypes", 200);
+	pushMenu("nodeTypes", 130);
 	{
 		g_drawX += 20;
 		g_drawY += 20;
@@ -256,7 +249,7 @@ static bool doCategories(GraphEdit & graphEdit, TypeDefinitionsByCategory & cate
 			
 			for (auto nodeType : list)
 			{
-				if (numRows == 10)
+				if (numRows == 8)
 				{
 					numRows = 0;
 					
@@ -284,8 +277,8 @@ static bool doCategories(GraphEdit & graphEdit, TypeDefinitionsByCategory & cate
 GraphEdit_NodeTypeSelect::GraphEdit_NodeTypeSelect()
 	: x(0)
 	, y(0)
-	, sx(400)
-	, sy(400)
+	, sx(600)
+	, sy(360)
 	, uiState(nullptr)
 	, selectedCategoryName()
 {
@@ -328,23 +321,25 @@ bool GraphEdit_NodeTypeSelect::doMenus(GraphEdit & graphEdit, const GraphEdit_Ty
 	pushMenu("nodeTypeSelect");
 	pushFontMode(FONT_SDF);
 	{
-		uiState->sx = sx;
+		uiState->sx = sx - 20;
 		
 		TypeDefinitionsByCategory typeDefinitionsByCategory;
 		getTypeDefinitionsByCategory(typeDefinitionLibrary, typeDefinitionsByCategory);
 		
-		if (g_doActions)
+		doBackground(x, y, sx, sy);
+		
+		result |= doCategories(graphEdit, typeDefinitionsByCategory, x, y, selectedCategoryName, selectedNodeTypeName);
+		
+		uiState->sx -= 20;
+		g_drawX = x + 10;
+		g_drawY = y + sy - 40;
+		
+		if (doButton("cancel") || keyboard.wentDown(SDLK_BACKSPACE) || mouse.wentDown(BUTTON_RIGHT))
 		{
-			doBackground(x, y, sx, sy);
-			
-			result = doCategories(graphEdit, typeDefinitionsByCategory, x, y, selectedCategoryName, selectedNodeTypeName);
+			result = true;
 		}
-		else
-		{
-			doBackground(x, y, sx, sy);
-			
-			doCategories(graphEdit, typeDefinitionsByCategory, x, y, selectedCategoryName, selectedNodeTypeName);
-		}
+		
+		uiState->sx += 20;
 	}
 	popFontMode();
 	popMenu();
