@@ -29,6 +29,8 @@
 #include "binauralizer.h"
 #include <algorithm>
 
+#undef AUDIO_UPDATE_SIZE
+
 namespace binaural
 {
 	static const int AUDIO_UPDATE_SIZE = AUDIO_BUFFER_SIZE/2;
