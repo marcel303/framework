@@ -50,8 +50,6 @@ void RealTimeConnection::loadEnd(GraphEdit & graphEdit)
 	vfxGraph = constructVfxGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary);
 	*vfxGraphPtr = vfxGraph;
 	
-	vfxGraph->graph = graphEdit.graph;
-	
 	isLoading = false;
 	
 	Assert(g_currentVfxGraph == nullptr);
@@ -150,9 +148,9 @@ void RealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	
 	vfxGraph->nodes.erase(nodeItr);
 	
-	if (nodeId == vfxGraph->displayNodeId)
+	if (vfxGraph->displayNodeIds.count(nodeId) != 0)
 	{
-		vfxGraph->displayNodeId = kGraphNodeIdInvalid;
+		vfxGraph->displayNodeIds.erase(nodeId);
 	}
 }
 

@@ -29,6 +29,7 @@
 
 #include "graph.h"
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -78,13 +79,11 @@ struct VfxGraph
 	std::map<GraphNodeId, VfxNodeBase*> nodes;
 	std::set<GraphNodeId> nodesFailedToCreate;
 	
-	GraphNodeId displayNodeId;
+	std::set<GraphNodeId> displayNodeIds;
 	
 	mutable int nextTickOrder;
 	mutable int nextTickTraversalId;
 	mutable int nextDrawTraversalId;
-	
-	Graph * graph; // todo : remove ?
 	
 	std::vector<ValueToFree> valuesToFree;
 	
@@ -98,6 +97,7 @@ struct VfxGraph
 	
 	void tick(const float dt);
 	void draw() const;
+	int traverseDraw() const;
 };
 
 //

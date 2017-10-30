@@ -47,11 +47,10 @@ VfxGraph * g_currentVfxGraph = nullptr;
 
 VfxGraph::VfxGraph()
 	: nodes()
-	, displayNodeId(kGraphNodeIdInvalid)
+	, displayNodeIds()
 	, nextTickOrder(0)
 	, nextTickTraversalId(0)
 	, nextDrawTraversalId(0)
-	, graph(nullptr)
 	, valuesToFree()
 	, time(0.0)
 {
@@ -64,7 +63,7 @@ VfxGraph::~VfxGraph()
 
 void VfxGraph::destroy()
 {
-	displayNodeId = kGraphNodeIdInvalid;
+	displayNodeIds.clear();
 	
 	for (auto i : valuesToFree)
 	{
@@ -107,7 +106,7 @@ void VfxGraph::destroy()
 		delete node;
 		node = nullptr;
 		
-	#if VFX_GRAPH_ENABLE_TIMING
+	#if VFX_GRAPH_ENABLE_TIMING && 0
 		const uint64_t t2 = g_TimerRT.TimeUS_get();
 		auto graphNode = graph->tryGetNode(i.first);
 		const std::string typeName = graphNode ? graphNode->typeName : "n/a";
@@ -116,8 +115,6 @@ void VfxGraph::destroy()
 	}
 	
 	nodes.clear();
-	
-	graph = nullptr;
 }
 
 void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputValue)
@@ -200,8 +197,10 @@ void VfxGraph::tick(const float dt)
 	
 	nextTickOrder = 0;
 	
-	if (displayNodeId != kGraphNodeIdInvalid)
+	if (displayNodeIds.empty() == false)
 	{
+		auto displayNodeId = *displayNodeIds.begin();
+		
 		auto nodeItr = nodes.find(displayNodeId);
 		Assert(nodeItr != nodes.end());
 		if (nodeItr != nodes.end())
@@ -244,16 +243,35 @@ void VfxGraph::tick(const float dt)
 
 void VfxGraph::draw() const
 {
+	const GLuint texture = traverseDraw();
+	
+	if (texture != 0)
+	{
+		gxSetTexture(texture);
+		pushBlend(BLEND_OPAQUE);
+		setColor(colorWhite);
+		drawRect(0, 0, GFX_SX, GFX_SY);
+		popBlend();
+		gxSetTexture(0);
+	}
+}
+
+int VfxGraph::traverseDraw() const
+{
 	vfxCpuTimingBlock(VfxGraph_Draw);
 	vfxGpuTimingBlock(VfxGraph_Draw);
+	
+	int result = 0;
 	
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = const_cast<VfxGraph*>(this);
 	
 	// start traversal at the display node and traverse to leafs following predeps and and back up the tree again to draw
 	
-	if (displayNodeId != kGraphNodeIdInvalid)
+	if (displayNodeIds.empty() == false)
 	{
+		auto displayNodeId = *displayNodeIds.begin();
+		
 		auto nodeItr = nodes.find(displayNodeId);
 		Assert(nodeItr != nodes.end());
 		if (nodeItr != nodes.end())
@@ -268,12 +286,7 @@ void VfxGraph::draw() const
 			
 			if (image != nullptr)
 			{
-				gxSetTexture(image->getTexture());
-				pushBlend(BLEND_OPAQUE);
-				setColor(colorWhite);
-				drawRect(0, 0, GFX_SX, GFX_SY);
-				popBlend();
-				gxSetTexture(0);
+				result = image->getTexture();
 			}
 		}
 	}
@@ -283,6 +296,8 @@ void VfxGraph::draw() const
 	//
 	
 	g_currentVfxGraph = nullptr;
+	
+	return result;
 }
 
 //
@@ -316,8 +331,8 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 		if (vfxNode != nullptr)
 		{
 			// fixme : move display node id handling out of here. remove nodeId and vfxGraph passed in to this function
-			Assert(vfxGraph->displayNodeId == kGraphNodeIdInvalid);
-			vfxGraph->displayNodeId = nodeId;
+			Assert(vfxGraph->displayNodeIds.count(nodeId) == 0);
+			vfxGraph->displayNodeIds.insert(nodeId);
 		}
 	}
 	
