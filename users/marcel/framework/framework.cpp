@@ -4208,8 +4208,8 @@ Camera3d::Camera3d()
 	, position(0.f, 0.f, 0.f)
 	, yaw(0.f)
 	, pitch(0.f)
-	, mouseSmooth(1.0 / 1.04)
-	, mouseRotationSpeed(1.f / 100.f)
+	, mouseSmooth(0.75)
+	, mouseRotationSpeed(1.f)
 	, maxForwardSpeed(1.f)
 	, maxStrafeSpeed(1.f)
 	, maxUpSpeed(1.f)
@@ -4251,7 +4251,7 @@ void Camera3d::tick(float dt, bool enableInput)
 		mouseDx += mouse.dx;
 		mouseDy += mouse.dy;
 		
-		const double retain = std::pow(mouseSmooth, dt * 1000.0);
+		const double retain = std::pow(mouseSmooth, dt * 100.0);
 		
 		const double newDx = mouseDx * retain;
 		const double newDy = mouseDy * retain;
@@ -4283,7 +4283,7 @@ void Camera3d::tick(float dt, bool enableInput)
 
 Mat4x4 Camera3d::getWorldMatrix() const
 {
-	return Mat4x4(true).Translate(position).RotateY(yaw).RotateX(pitch);
+	return Mat4x4(true).Translate(position).RotateY(yaw / 180.f * M_PI).RotateX(pitch / 180.f * M_PI);
 }
 
 Mat4x4 Camera3d::getViewMatrix() const
@@ -4445,7 +4445,7 @@ void setTransform3d(const Mat4x4 & transform)
 
 void projectScreen2d()
 {
-	setTransform(TRANSFORM_2D);
+	setTransform(TRANSFORM_SCREEN);
 }
 
 void projectPerspective3d(const float fov, const float nearZ, const float farZ)
@@ -4575,13 +4575,6 @@ void setBlend(BLEND_MODE blendMode)
 		if (glBlendEquation)
 			glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		break;
-	case BLEND_PREMULTIPLIED_ALPHA:
-		glEnable(GL_BLEND);
-		if (glBlendEquation)
-			glBlendEquation(GL_FUNC_ADD);
-		if (glBlendFuncSeparate)
-			glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		break;
 	case BLEND_PREMULTIPLIED_ALPHA_DRAW:
 		glEnable(GL_BLEND);
@@ -4734,11 +4727,7 @@ void setColorf(float r, float g, float b, float a, float rgbMul)
 	globals.color.b = b;
 	globals.color.a = a;
 	
-	#if 0
-	glColor4f(r, g, b, a);
-	#else
 	gxColor4f(r, g, b, a);
-	#endif
 }
 
 void setAlpha(int a)
