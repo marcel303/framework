@@ -1400,8 +1400,7 @@ namespace GraphUi
 		GraphEdit * graphEdit;
 		Graph * graph;
 		GraphNodeId nodeId;
-		
-		UiState * uiState;
+		GraphNodeId currentNodeId;
 		
 		static const int kMaxUiColors = 32;
 		ParticleColor * uiColors;
@@ -1409,14 +1408,10 @@ namespace GraphUi
 		PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary, GraphEdit * graphEdit);
 		~PropEdit();
 		
-		bool tick(const float dt);
-		void draw() const;
-		
 		void setGraph(Graph * graph);
 		void setNode(const GraphNodeId _nodeId);
 		
-		void doMenus(const bool doActions, const bool doDraw, const float dt);
-		void createUi();
+		void doMenus(UiState * uiState, const float dt);
 		
 		GraphNode * tryGetNode();
 	};

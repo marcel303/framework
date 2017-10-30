@@ -1843,8 +1843,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		
 		if (texture != 0)
 		{
-			glBlendEquation(GL_FUNC_ADD);
-			glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ZERO);
+			// todo : force alpha to one ?
 			
 			setColor(colorWhite);
 			gxSetTexture(texture);
@@ -1852,9 +1851,6 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 				drawRect(textureX, y + textureY, textureX + textureSx, y + textureY + textureSy);
 			}
 			gxSetTexture(0);
-			
-			glBlendEquation(GL_FUNC_ADD);
-			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
 		}
 		
 		setColor(colorWhite);
@@ -1920,8 +1916,6 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 			channelDataMin = min;
 			channelDataMax = max;
 		}
-					
-		setColor(127, 127, 255);
 		
 		const float strokeSize = 1.f * graphEdit.dragAndZoom.zoom;
 		
@@ -2268,9 +2262,28 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 {
 	result = HitTestResult();
 	
-	for (auto nodeItr = graph->nodes.rbegin(); nodeItr != graph->nodes.rend(); ++nodeItr)
+	// sort nodes according to Z key
+	
+	const int numNodes = graph->nodes.size();
+	
+	GraphNode ** sortedNodes = (GraphNode**)alloca(numNodes * sizeof(GraphNode*));
+	
+	int nodeIndex = 0;
+	
+	for (auto & nodeItr : graph->nodes)
 	{
-		auto & node = nodeItr->second;
+		auto & node = nodeItr.second;
+		
+		sortedNodes[nodeIndex++] = &node;
+	}
+	
+	std::sort(sortedNodes, sortedNodes + numNodes, [](const GraphNode *  n1, const GraphNode * n2) { return n2->editorZKey < n1->editorZKey; });
+	
+	// traverse nodes hit testing against the ones on top first
+	
+	for (int i = 0; i < numNodes; ++i)
+	{
+		auto & node = *sortedNodes[i];
 		
 		if (node.nodeType == kGraphNodeType_Regular)
 		{
@@ -2403,7 +2416,7 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 			const float x2 = path.points[i].x;
 			const float y2 = path.points[i].y;
 			
-			if (testLineOverlap(x1, y1, x2, y2, x, y, 10.f))
+			if (testLineOverlap(x1, y1, x2, y2, x, y, 5.f))
 			{
 				result.hasLink = true;
 				result.link = &link;
@@ -2524,11 +2537,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		touches = Touches();
 	}
 	
-	if (inputIsCaptured == false)
-	{
-		inputIsCaptured |= propertyEditor->tick(dt);
-	}
-	
 	makeActive(uiState, true, false);
 	
 	if (inputIsCaptured == false)
@@ -2540,6 +2548,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		doEditorOptions(dt);
 		
 		nodeTypeNameSelect->doMenus(uiState, dt);
+		
+		propertyEditor->doMenus(uiState, dt);
 		
 		inputIsCaptured |= uiState->activeElem != nullptr;
 	}
@@ -2871,11 +2881,12 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				}
 			}
 			
+		#if !defined(MACOS)
 			for (auto & e : framework.events)
 			{
 				// todo : add mouse wheel to framework mouse class
 				
-				if (enabled(kFlag_Zoom) && e.type == SDL_MOUSEWHEEL)
+				if (enabled(kFlag_Zoom) && e.type == SDL_MOUSEWHEEL && e.wheel.which != SDL_TOUCH_MOUSEID)
 				{
 					// fixme : mouse wheel event seems to trigger when interacting with the touch pad on MacOS
 					const int amount = e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
@@ -2885,6 +2896,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					dragAndZoom.desiredZoom *= magnitude;
 				}
 			}
+		#endif
 			
 			if (enabled(kFlag_Zoom) && keyboard.wentDown(SDLK_MINUS) && commandMod())
 			{
@@ -4713,7 +4725,6 @@ void GraphEdit::draw() const
 		for (auto & linkItr : graph->links)
 		{
 			auto linkId = linkItr.first;
-			auto & link = linkItr.second;
 			
 			LinkPath path;
 			
@@ -4964,11 +4975,6 @@ void GraphEdit::draw() const
 		break;
 	}
 	
-	if (propertyEditor != nullptr)
-	{
-		propertyEditor->draw();
-	}
-	
 	makeActive(uiState, false, true);
 	
 	GraphEdit * self = const_cast<GraphEdit*>(this);
@@ -4983,6 +4989,8 @@ void GraphEdit::draw() const
 	{
 		nodeTypeNameSelect->doMenus(uiState, 0.f);
 	}
+	
+	propertyEditor->doMenus(uiState, 0.f);
 	
 	//
 	
@@ -5572,18 +5580,10 @@ GraphUi::PropEdit::PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary, Grap
 	, graphEdit(_graphEdit)
 	, graph(nullptr)
 	, nodeId(kGraphNodeIdInvalid)
-	, uiState(nullptr)
+	, currentNodeId(kGraphNodeIdInvalid)
 	, uiColors(nullptr)
 {
 	typeLibrary = _typeLibrary;
-	
-	uiState = new UiState();
-	
-	const int kPadding = 10;
-	uiState->sx = 200;
-	uiState->x = GFX_SX - uiState->sx - kPadding;
-	uiState->y = kPadding;
-	uiState->textBoxTextOffset = 80;
 	
 	uiColors = new ParticleColor[kMaxUiColors];
 }
@@ -5592,35 +5592,11 @@ GraphUi::PropEdit::~PropEdit()
 {
 	delete[] uiColors;
 	uiColors = nullptr;
-	
-	delete uiState;
-	uiState = nullptr;
-}
-
-bool GraphUi::PropEdit::tick(const float dt)
-{	
-	if (nodeId == kGraphNodeIdInvalid)
-	{
-		return false;
-	}
-	else
-	{
-		doMenus(true, false, dt);
-		
-		return uiState->activeElem != nullptr;
-	}
-}
-
-void GraphUi::PropEdit::draw() const
-{
-	const_cast<PropEdit*>(this)->doMenus(false, true, 0.f);
 }
 
 void GraphUi::PropEdit::setGraph(Graph * _graph)
 {
 	graph = _graph;
-	
-	createUi();
 }
 
 void GraphUi::PropEdit::setNode(const GraphNodeId _nodeId)
@@ -5630,8 +5606,6 @@ void GraphUi::PropEdit::setNode(const GraphNodeId _nodeId)
 		//logDebug("setNode: %d", _nodeId);
 		
 		nodeId = _nodeId;
-		
-		createUi();
 	}
 }
 
@@ -5744,17 +5718,35 @@ static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, con
 	return false;
 }
 
-void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const float dt)
+void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 {
-	if (!graphEdit->enabled(GraphEdit::kFlag_NodeProperties))
+	if (!graphEdit->enabled(GraphEdit::kFlag_NodeProperties) || nodeId == kGraphNodeIdInvalid)
 	{
-		if (doActions)
-			uiState->reset();
+		if (g_doActions)
+		{
+			pushMenu("propEdit");
+			g_menu->reset();
+			popMenu();
+		}
+		
 		return;
 	}
 	
-	makeActive(uiState, doActions, doDraw);
+	const int kPadding = 10;
+	
+	g_drawX = GFX_SX - uiState->sx - kPadding;
+	g_drawY = kPadding;
+	
+	uiState->textBoxTextOffset = 80;
+	
 	pushMenu("propEdit");
+	
+	if (nodeId != currentNodeId)
+	{
+		currentNodeId = nodeId;
+		
+		g_menu->reset();
+	}
 	
 	GraphNode * node = tryGetNode();
 	
@@ -5891,11 +5883,6 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 	popMenu();
 }
 
-void GraphUi::PropEdit::createUi()
-{
-	uiState->reset();
-}
-
 GraphNode * GraphUi::PropEdit::tryGetNode()
 {
 	if (graph == nullptr)
@@ -5964,9 +5951,11 @@ void calculateTypeNamesAndScores(const std::string & typeName, const GraphEdit_T
 {
 	int index = 0;
 	
-	for (auto & typeDefenition : typeDefinitionLibrary->typeDefinitions)
+	for (auto & typeDefinitionItr : typeDefinitionLibrary->typeDefinitions)
 	{
-		const std::string & typeNameToMatch = typeDefenition.second.typeName;
+		auto & typeDefinition = typeDefinitionItr.second;
+		
+		const std::string & typeNameToMatch = typeDefinition.typeName;
 		
 		if (typeNameToMatch[0] != typeName[0])
 			continue;
