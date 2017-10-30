@@ -710,6 +710,7 @@ VfxNodeBase::VfxNodeBase()
 	, outputs()
 	, predeps()
 	, triggerTargets()
+	, flags(0)
 	, lastTickTraversalId(-1)
 	, lastDrawTraversalId(-1)
 	, editorIsTriggered(false)
@@ -757,29 +758,44 @@ void VfxNodeBase::traverseDraw(const int traversalId)
 	
 	//
 	
+	uint64_t t = 0;
+	
+	t -= g_TimerRT.TimeUS_get();
+	
 	beforeDraw();
 	
+	t += g_TimerRT.TimeUS_get();
+	
 	//
 	
-	for (auto predep : predeps)
+	if (flags & kFlag_CustomTraverseDraw)
 	{
-		if (predep->lastDrawTraversalId != traversalId)
-			predep->traverseDraw(traversalId);
+		customTraverseDraw(traversalId);
+	}
+	else
+	{
+		for (auto predep : predeps)
+		{
+			if (predep->lastDrawTraversalId != traversalId)
+				predep->traverseDraw(traversalId);
+		}
 	}
 	
-	const uint64_t t1 = g_TimerRT.TimeUS_get();
-	
-	draw();
-	
-	const uint64_t t2 = g_TimerRT.TimeUS_get();
-	
 	//
 	
-	drawTimeAvg = (drawTimeAvg * 95 + (t2 - t1) * 5) / 100;
+	t -= g_TimerRT.TimeUS_get();
+	
+	draw();
 	
 	//
 	
 	afterDraw();
+	
+	//
+	
+	t += g_TimerRT.TimeUS_get();
+	
+	drawTimeAvg = (drawTimeAvg * 95 + t * 5) / 100;
 }
 
 void VfxNodeBase::trigger(const int outputSocketIndex)
@@ -810,6 +826,33 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 	}
 }
 
+// todo : move elsewhere ?
+
+#include "graph.h"
+#include "tinyxml2.h"
+
+void createVfxValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
+{
+	// todo : create function to create value type definition and the entire type definition library
+	
+	// todo : remove file i/o and don't require types.xml
+	
+	tinyxml2::XMLDocument * document = new tinyxml2::XMLDocument();
+
+	if (document->LoadFile("types.xml") == tinyxml2::XML_SUCCESS)
+	{
+		const tinyxml2::XMLElement * xmlLibrary = document->FirstChildElement("library");
+		
+		if (xmlLibrary != nullptr)
+		{
+			typeDefinitionLibrary.loadXml(xmlLibrary);
+		}
+	}
+	
+	delete document;
+	document = nullptr;
+}
+
 //
 
 VfxEnumTypeRegistration * g_vfxEnumTypeRegistrationList = nullptr;
@@ -834,13 +877,11 @@ void VfxEnumTypeRegistration::elem(const char * name, const int value)
 	nextValue = e.value + 1;
 }
 
-// todo : move elsewhere ?
-
 #include "graph.h"
 
-void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, VfxEnumTypeRegistration * registrationList)
+void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList)
 {
-	for (VfxEnumTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
+	for (const VfxEnumTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
 	{
 		auto & enumDefinition = typeDefinitionLibrary.enumDefinitions[registration->enumName];
 		
@@ -865,10 +906,16 @@ VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList = nullptr;
 VfxNodeTypeRegistration::VfxNodeTypeRegistration()
 	: next(nullptr)
 	, create(nullptr)
+	, createResourceEditor(nullptr)
 	, typeName()
+	, displayName()
+	, resourceTypeName()
+	, author()
+	, copyright()
+	, description()
+	, helpText()
 	, inputs()
 	, outputs()
-	, createResourceEditor(nullptr)
 {
 	next = g_vfxNodeTypeRegistrationList;
 	g_vfxNodeTypeRegistrationList = this;
@@ -920,9 +967,9 @@ void VfxNodeTypeRegistration::outEditable(const char * name)
 
 #include "graph.h"
 
-void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, VfxNodeTypeRegistration * registrationList)
+void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxNodeTypeRegistration * registrationList)
 {
-	for (VfxNodeTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
+	for (const VfxNodeTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
 	{
 		GraphEdit_TypeDefinition typeDefinition;
 		
@@ -965,4 +1012,13 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 		
 		typeDefinitionLibrary.typeDefinitions[typeDefinition.typeName] = typeDefinition;
 	}
+}
+
+//
+
+void createVfxTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * enumRegistrationList, const VfxNodeTypeRegistration * nodeRegistrationList)
+{
+	createVfxValueTypeDefinitions(typeDefinitionLibrary);
+	createVfxEnumTypeDefinitions(typeDefinitionLibrary, enumRegistrationList);
+	createVfxNodeTypeDefinitions(typeDefinitionLibrary, nodeRegistrationList);
 }

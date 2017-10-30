@@ -30,6 +30,7 @@
 #include "vfxNodeBase.h"
 
 struct Graph;
+struct GraphEdit_TypeDefinitionLibrary;
 struct VfxGraph;
 
 struct VfxNodeVfxGraph : VfxNodeBase
@@ -46,6 +47,7 @@ struct VfxNodeVfxGraph : VfxNodeBase
 		kOutput_COUNT
 	};
 	
+	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
 	Graph * graph;
 	VfxGraph * vfxGraph;
 	std::string currentFilename;

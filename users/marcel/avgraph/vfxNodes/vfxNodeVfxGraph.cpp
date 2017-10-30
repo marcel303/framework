@@ -41,6 +41,7 @@ VFX_NODE_TYPE(vfxGraph, VfxNodeVfxGraph)
 
 VfxNodeVfxGraph::VfxNodeVfxGraph()
 	: VfxNodeBase()
+	, typeDefinitionLibrary(nullptr)
 	, graph(nullptr)
 	, vfxGraph(nullptr)
 	, currentFilename()
@@ -75,28 +76,9 @@ void VfxNodeVfxGraph::open(const char * filename)
 	{
 		graph = new Graph();
 		
-		GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+		typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
 		
-		{
-			// todo : create function to create value type definition and the entire type definition library
-			XMLDocument * document = new XMLDocument();
-		
-			if (document->LoadFile("types.xml") == XML_SUCCESS)
-			{
-				const XMLElement * xmlLibrary = document->FirstChildElement("library");
-				
-				if (xmlLibrary != nullptr)
-				{
-					typeDefinitionLibrary->loadXml(xmlLibrary);
-				}
-			}
-			
-			delete document;
-			document = nullptr;
-		}
-		
-		createVfxEnumTypeDefinitions(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList);
-		createVfxNodeTypeDefinitions(*typeDefinitionLibrary, g_vfxNodeTypeRegistrationList);
+		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
 		
 		if (graph->loadXml(d.RootElement(), typeDefinitionLibrary))
 		{
@@ -122,6 +104,9 @@ void VfxNodeVfxGraph::close()
 	
 	delete graph;
 	graph = nullptr;
+	
+	delete typeDefinitionLibrary;
+	typeDefinitionLibrary = nullptr;
 }
 
 void VfxNodeVfxGraph::tick(const float dt)

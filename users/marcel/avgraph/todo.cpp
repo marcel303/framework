@@ -130,6 +130,10 @@ todo : nodes :
 - add curl node
 - add text list node. next! prev! rand! custom editor for list of strings
 + add OSC node with a list of paths. output received values as channels
+- add audioGraph node
++ add vfxGraph node
+- show src socket value preview when hovering over a link
++ reduce hit size links
 
 
 todo : fsfx :

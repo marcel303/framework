@@ -334,7 +334,7 @@ struct VfxPlug
 	void disconnect()
 	{
 		mem = nullptr;
-		memType = type;
+		memType = kVfxPlugType_None;
 		
 	#if EXTENDED_INPUTS
 		floatArray.immediateValue = nullptr;
@@ -344,6 +344,8 @@ struct VfxPlug
 	bool isConnected() const
 	{
 		if (mem != nullptr)
+			return true;
+		if (memType != kVfxPlugType_None)
 			return true;
 		
 	#if EXTENDED_INPUTS
@@ -474,6 +476,11 @@ struct VfxNodeDescription
 
 struct VfxNodeBase
 {
+	enum Flag
+	{
+		kFlag_CustomTraverseDraw = 1 << 0
+	};
+	
 	struct TriggerTarget
 	{
 		VfxNodeBase * srcNode;
@@ -488,6 +495,8 @@ struct VfxNodeBase
 	
 	std::vector<VfxNodeBase*> predeps;
 	std::vector<TriggerTarget> triggerTargets;
+	
+	int flags;
 	
 	int lastTickTraversalId;
 	int lastDrawTraversalId;
@@ -522,13 +531,13 @@ struct VfxNodeBase
 		if (index >= 0 && index < (int)inputs.size())
 		{
 			inputs[index].type = type;
-			inputs[index].memType = type;
 		}
 	}
 	
 	void addOutput(const int index, VfxPlugType type, void * mem)
 	{
 		Assert(index >= 0 && index < (int)outputs.size());
+		Assert(mem != nullptr);
 		if (index >= 0 && index < (int)outputs.size())
 		{
 			outputs[index].type = type;
@@ -683,6 +692,7 @@ struct VfxNodeBase
 	virtual void draw() const { }
 	virtual void beforeDraw() const { }
 	virtual void afterDraw() const { }
+	virtual void customTraverseDraw(const int traversalId) const { }
 	virtual void beforeSave(GraphNode & node) const { }
 	
 	virtual void getDescription(VfxNodeDescription & d) { } 
@@ -709,10 +719,6 @@ struct VfxEnumTypeRegistration
 	
 	void elem(const char * name, const int value = -1);
 };
-
-extern VfxEnumTypeRegistration * g_vfxEnumTypeRegistrationList;
-
-void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, VfxEnumTypeRegistration * registrationList);
 
 #define VFX_ENUM_TYPE(name) \
 	struct name ## __registration : VfxEnumTypeRegistration \
@@ -784,8 +790,6 @@ struct VfxNodeTypeRegistration
 	void outEditable(const char * name);
 };
 
-extern VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList;
-
 #define VFX_NODE_TYPE(name, type) \
 	struct name ## __registration : VfxNodeTypeRegistration \
 	{ \
@@ -800,4 +804,13 @@ extern VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList;
 	name ## __registration name ## __registrationInstance; \
 	void name ## __registration :: init()
 
-void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, VfxNodeTypeRegistration * registrationList);
+//
+
+extern VfxEnumTypeRegistration * g_vfxEnumTypeRegistrationList;
+extern VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList;
+
+void createVfxValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
+void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList);
+void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxNodeTypeRegistration * registrationList);
+
+void createVfxTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * enumRegistrationList, const VfxNodeTypeRegistration * nodeRegistrationList);
