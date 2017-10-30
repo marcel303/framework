@@ -2508,6 +2508,27 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				
 				realTimeSocketCapture.visualizer.tick(*this);
 			}
+			
+			if (result.hasLink)
+			{
+				isValid = true;
+				
+				auto nodeId = result.link->dstNodeId;
+				auto & dstSocketName = result.link->dstNodeSocketName;
+				auto dstSocketIndex = result.link->dstNodeSocketIndex;
+				
+				if (nodeId != realTimeSocketCapture.visualizer.nodeId ||
+					dstSocketName != realTimeSocketCapture.visualizer.dstSocketName ||
+					dstSocketIndex != realTimeSocketCapture.visualizer.dstSocketIndex)
+				{
+					//logDebug("reset realTimeSocketCapture");
+					realTimeSocketCapture = RealTimeSocketCapture();
+					
+					realTimeSocketCapture.visualizer.init(nodeId, String::Empty, -1, dstSocketName, dstSocketIndex);
+				}
+				
+				realTimeSocketCapture.visualizer.tick(*this);
+			}
 		}
 		
 		if (isValid == false && realTimeSocketCapture.visualizer.nodeId != kGraphNodeIdInvalid)
