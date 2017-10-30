@@ -100,15 +100,44 @@ void VfxNodeChannelMerge::tick(const float dt)
 	
 	channelsOutput.reset();
 	
+	VfxSwizzle swizzle;
+	
+	bool swizzleIsValid;
+	
 	if (swizzleText == nullptr)
 	{
-		channelData.free();
+		swizzleIsValid = true;
+		
+		for (int i = 0; i < 4; ++i)
+		{
+			if (channels[i] != nullptr)
+			{
+				for (int c = 0; c < channels[i]->numChannels; ++c)
+				{
+					if (swizzle.numChannels < VfxSwizzle::kMaxChannels)
+					{
+						swizzle.channels[swizzle.numChannels].sourceIndex = i;
+						swizzle.channels[swizzle.numChannels].elemIndex = c;
+						
+						swizzle.numChannels++;
+					}
+				}
+			}
+		}
 	}
 	else
 	{
-		VfxSwizzle swizzle;
-
-		if (swizzle.parse(swizzleText))
+		swizzleIsValid = swizzle.parse(swizzleText);
+	}
+	
+	if (swizzleIsValid == false)
+	{
+		channelData.free();
+		
+		channelsOutput.reset();
+	}
+	else
+	{
 		{
 			bool isValid = true;
 			
@@ -181,14 +210,89 @@ void VfxNodeChannelMerge::tick(const float dt)
 				}
 			}
 			
-			const int size = sx * sy * numChannels;
+			// determine allocation size
 			
-			channelData.allocOnSizeChange(size);
+			int allocationSize = 0;
 			
-			channelsOutput.size = size;
+			for (int i = 0; i < swizzle.numChannels; ++i)
+			{
+				auto & c = swizzle.channels[i];
+
+				if (c.sourceIndex >= 0 && c.sourceIndex < 4 && channels[c.sourceIndex] != nullptr && c.elemIndex >= 0 && c.elemIndex < channels[c.sourceIndex]->numChannels)
+				{
+					const int csx = channels[c.sourceIndex]->sx;
+					const int csy = channels[c.sourceIndex]->sy;
+					
+					if (mergeMode == kMergeMode_AppendChannels && csx == sx && csy == sy)
+					{
+						// free !
+					}
+					else
+					{
+						for (int ay = 0; ay < sy; ++ay)
+						{
+							int y = ay;
+							
+							if (wrapMode == kWrapMode_Cycle)
+							{
+								y %= channels[c.sourceIndex]->sy;
+							}
+							
+							if (y < channels[c.sourceIndex]->sy)
+							{
+								if (mergeMode == kMergeMode_AppendChannels)
+								{
+									if (wrapMode == kWrapMode_Clamp)
+									{
+										Assert(sx <= csx);
+										
+										allocationSize += sx;
+									}
+									else if (wrapMode == kWrapMode_PadZero)
+									{
+										allocationSize += sx;
+									}
+									else if (wrapMode == kWrapMode_Cycle)
+									{
+										allocationSize += sx;
+									}
+								}
+								else if (mergeMode == kMergeMode_ConcatenateValues)
+								{
+									allocationSize += csx;
+								}
+							}
+							else
+							{
+								Assert(wrapMode == kWrapMode_PadZero);
+								
+								if (mergeMode == kMergeMode_AppendChannels)
+								{
+									allocationSize += sx;
+								}
+								else if (mergeMode == kMergeMode_ConcatenateValues)
+								{
+									allocationSize += csx;
+								}
+							}
+						}
+					}
+				}
+				else
+				{
+					isValid = false;
+				}
+			}
+			
+			//
+			
+			channelsOutput.size = sx * sy * numChannels;
 			channelsOutput.numChannels = 0;
+			
 			channelsOutput.sx = sx;
 			channelsOutput.sy = sy;
+			
+			channelData.allocOnSizeChange(allocationSize);
 			
 			// merge
 			
@@ -219,8 +323,6 @@ void VfxNodeChannelMerge::tick(const float dt)
 					if (mergeMode == kMergeMode_AppendChannels && csx == sx && csy == sy)
 					{
 						channelsOutput.channels[channelsOutput.numChannels++] = channel;
-						
-						channelDataPtr += csx * csy;
 					}
 					else
 					{
@@ -315,4 +417,10 @@ void VfxNodeChannelMerge::tick(const float dt)
 			}
 		}
 	}
+}
+
+void VfxNodeChannelMerge::getDescription(VfxNodeDescription & d)
+{
+	d.add("memory usage: %d values", channelData.size);
+	d.add("output size: %dx%d x %d channels", channelsOutput.sx, channelsOutput.sy, channelsOutput.numChannels);
 }
