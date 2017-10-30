@@ -126,9 +126,9 @@ void VfxNodeFsfx::draw() const
 		return;
 	}
 	
-	const std::string & shaderName = getInputString(kInput_Shader, "");
+	const char * shaderName = getInputString(kInput_Shader, nullptr);
 	
-	if (shaderName.empty())
+	if (shaderName == nullptr)
 	{
 		// todo : warn ?
 	}
@@ -136,7 +136,7 @@ void VfxNodeFsfx::draw() const
 	{
 		const VfxImageBase * inputImage = getInputImage(kInput_Image, nullptr);
 		const GLuint inputTexture = inputImage != nullptr ? inputImage->getTexture() : surface->getTexture();
-		Shader shader(shaderName.c_str());
+		Shader shader(shaderName);
 		
 		if (shader.isValid())
 		{
