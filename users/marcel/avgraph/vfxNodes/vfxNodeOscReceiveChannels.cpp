@@ -49,6 +49,7 @@ struct ResourceEditor_OscPathList : GraphEdit_ResourceEditorBase
 	{
 		uiState = new UiState();
 		uiState->sx = 400; // todo : look at GFX_SX
+		uiState->textBoxTextOffset = 40;
 	}
 	
 	~ResourceEditor_OscPathList()
