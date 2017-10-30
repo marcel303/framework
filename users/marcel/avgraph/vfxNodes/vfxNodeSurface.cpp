@@ -72,6 +72,9 @@ VfxNodeSurface::~VfxNodeSurface()
 
 void VfxNodeSurface::beforeDraw() const
 {
+	if (isPassthrough)
+		return;
+	
 	const bool clear = getInputBool(kInput_Clear, true);
 	const VfxColor * clearColor = getInputColor(kInput_ClearColor, nullptr);
 	const bool darken = getInputBool(kInput_Darken, false);
@@ -108,5 +111,8 @@ void VfxNodeSurface::beforeDraw() const
 
 void VfxNodeSurface::afterDraw() const
 {
+	if (isPassthrough)
+		return;
+		
 	popSurface();
 }
