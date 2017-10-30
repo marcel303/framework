@@ -1195,7 +1195,7 @@ App::App()
 #if ENABLE_NETWORKING_DISCOVERY
 	, m_discoveryService(0)
 #endif
-#if ENABLE_NETWORKING
+#if ENABLE_NETWORKING_UI
 	, m_discoveryUi(0)
 #endif
 	, m_selectedClient(-1)
@@ -1224,7 +1224,7 @@ App::~App()
 #if ENABLE_NETWORKING_DISCOVERY
 	Assert(m_discoveryService == 0);
 #endif
-#if ENABLE_NETWORKING
+#if ENABLE_NETWORKING_UI
 	Assert(m_discoveryUi == 0);
 #endif
 
@@ -1456,7 +1456,7 @@ bool App::init()
 		m_discoveryService = new NetSessionDiscovery::Service();
 		m_discoveryService->init(2, 10);
 	#endif
-	#if ENABLE_NETWORKING
+	#if ENABLE_NETWORKING_UI
 		m_discoveryUi = new Ui();
 	#endif
 
@@ -1610,7 +1610,7 @@ void App::shutdown()
 
 	//
 
-#if ENABLE_NETWORKING
+#if ENABLE_NETWORKING_UI
 	delete m_discoveryUi;
 	m_discoveryUi = 0;
 #endif
@@ -2143,7 +2143,7 @@ bool App::tick()
 #if ENABLE_NETWORKING_DISCOVERY
 	m_discoveryService->update(m_isHost);
 #endif
-#if ENABLE_NETWORKING	
+#if ENABLE_NETWORKING_UI
 	m_discoveryUi->process();
 #endif
 
@@ -3064,7 +3064,7 @@ void App::debugDraw()
 		#endif
 		}
 
-	#if ENABLE_NETWORKING
+	#if ENABLE_NETWORKING_UI
 		m_discoveryUi->clear();
 	
 		for (size_t i = 0; i < serverList.size(); ++i)
@@ -3603,7 +3603,7 @@ static int RealMain(int argc, char * argv[])
 #else
 	#error calculate g_buildId
 #endif
-	log("build ID: %0x8", g_buildId);
+	logInfo("build ID: %0x8", g_buildId);
 
 	changeDirectory("data");
 

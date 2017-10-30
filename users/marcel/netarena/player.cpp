@@ -549,7 +549,7 @@ void AnimData::load(const char * filename)
 					continue;
 				}
 				
-				//log("added frame trigger. frame=%d, on=%s, action=%s", frame, event.c_str(), action.c_str());
+				//logInfo("added frame trigger. frame=%d, on=%s, action=%s", frame, event.c_str(), action.c_str());
 				
 				AnimTrigger trigger;
 				trigger.action = args.getString("action", "");
@@ -630,7 +630,7 @@ void PlayerInstanceData::handleAnimationAction(const std::string & action, const
 	{
 		if (g_devMode)
 		{
-			log("action: %s", action.c_str());
+			logInfo("action: %s", action.c_str());
 		}
 
 		Player * player = self->m_player;
@@ -1299,7 +1299,7 @@ void Player::tick(GameSim & gameSim, float dt)
 
 						if (cancelled)
 						{
-							log("-> attack cancel");
+							logInfo("-> attack cancel");
 
 							Player * players[2] = { this, &other };
 
@@ -1329,7 +1329,7 @@ void Player::tick(GameSim & gameSim, float dt)
 						}
 						else if (absorbed)
 						{
-							log("-> attack absorbed");
+							logInfo("-> attack absorbed");
 
 							Player * players[2] = { this, &other };
 

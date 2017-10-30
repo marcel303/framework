@@ -34,7 +34,6 @@ struct PlayerInputState;
 class PlayerInstanceData;
 class StatTimerMenu;
 class Surface;
-class Ui;
 
 namespace NetSessionDiscovery
 {
@@ -86,7 +85,7 @@ public:
 #if ENABLE_NETWORKING_DISCOVERY
 	NetSessionDiscovery::Service * m_discoveryService;
 #endif
-#if ENABLE_NETWORKING
+#if ENABLE_NETWORKING_UI
 	Ui * m_discoveryUi;
 #endif
 
