@@ -675,6 +675,13 @@ static UiTextboxResult doTextBoxImpl(T & value, const char * name, const float x
 			textFieldIsInit = true;
 
 			textField.open(32, false, false);
+			
+			SDL_Rect inputRect;
+			inputRect.x = x1;
+			inputRect.y = y1;
+			inputRect.w = x2 - x1;
+			inputRect.h = y2 - y1;
+			SDL_SetTextInputRect(&inputRect);
 
 			char temp[32];
 			valueToString(value, temp, sizeof(temp));
@@ -700,6 +707,13 @@ static UiTextboxResult doTextBoxImpl(T & value, const char * name, const float x
 				textField.setText(temp);
 				
 				textField.setTextIsSelected(true);
+				
+				SDL_Rect inputRect;
+				inputRect.x = x1;
+				inputRect.y = y1;
+				inputRect.w = x2 - x1;
+				inputRect.h = y2 - y1;
+				SDL_SetTextInputRect(&inputRect);
 				
 				//
 				

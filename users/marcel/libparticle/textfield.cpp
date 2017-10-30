@@ -6,13 +6,6 @@
 #define CARET_PADDING_Y 5 // todo : look these up
 #define CARET_SX 2
 
-static bool isAllowed(const int c)
-{
-	if (c >= 32 && c <= 126)
-		return true;
-	return false;
-}
-
 EditorTextField::EditorTextField()
 	: m_isActive(false)
 	, m_canCancel(false)
