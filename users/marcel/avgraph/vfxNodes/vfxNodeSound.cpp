@@ -42,6 +42,8 @@ VFX_NODE_TYPE(sound, VfxNodeSound)
 	in("bpm", "float", "60");
 	in("volume", "float", "1");
 	in("play!", "trigger");
+	in("stop!", "trigger");
+	in("restart!", "trigger");
 	in("pause!", "trigger");
 	in("resume!", "trigger");
 	out("time", "float");
@@ -75,6 +77,8 @@ VfxNodeSound::VfxNodeSound()
 	addInput(kInput_BPM, kVfxPlugType_Float);
 	addInput(kInput_Volume, kVfxPlugType_Float);
 	addInput(kInput_Play, kVfxPlugType_Trigger);
+	addInput(kInput_Stop, kVfxPlugType_Trigger);
+	addInput(kInput_Restart, kVfxPlugType_Trigger);
 	addInput(kInput_Pause, kVfxPlugType_Trigger);
 	addInput(kInput_Resume, kVfxPlugType_Trigger);
 	addOutput(kOutput_Time, kVfxPlugType_Float, &timeOutput);
@@ -187,6 +191,31 @@ void VfxNodeSound::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_Play)
 	{
+		if (audioStream->IsOpen_get() == false)
+		{
+			const char * source = getInputString(kInput_Source, "");
+			const bool loop = getInputBool(kInput_Loop, true);
+			
+			audioStream->Open(source, loop);
+		}
+		
+		isPaused = false;
+		
+		trigger(kOutput_Play);
+	}
+	else if (inputSocketIndex == kInput_Stop)
+	{
+		audioStream->Close();
+	}
+	else if (inputSocketIndex == kInput_Restart)
+	{
+		const char * source = getInputString(kInput_Source, "");
+		const bool loop = getInputBool(kInput_Loop, true);
+		
+		audioStream->Close();
+		
+		audioStream->Open(source, loop);
+		
 		isPaused = false;
 		
 		trigger(kOutput_Play);

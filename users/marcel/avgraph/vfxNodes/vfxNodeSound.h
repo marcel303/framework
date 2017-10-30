@@ -42,6 +42,8 @@ struct VfxNodeSound : VfxNodeBase
 		kInput_BPM,
 		kInput_Volume,
 		kInput_Play,
+		kInput_Stop,
+		kInput_Restart,
 		kInput_Pause,
 		kInput_Resume,
 		kInput_COUNT
