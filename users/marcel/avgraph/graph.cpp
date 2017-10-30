@@ -2609,12 +2609,16 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					{
 						highlightedSockets.srcNodeId = hitTestResult.node->id;
 						highlightedSockets.srcNodeSocket = hitTestResult.nodeHitTestResult.inputSocket;
+						
+						mousePosition.hover = true;
 					}
 					
 					if (hitTestResult.nodeHitTestResult.outputSocket)
 					{
 						highlightedSockets.dstNodeId = hitTestResult.node->id;
 						highlightedSockets.dstNodeSocket = hitTestResult.nodeHitTestResult.outputSocket;
+						
+						mousePosition.hover = true;
 					}
 					
 					if (hitTestResult.nodeHitTestResult.borderL ||
@@ -2634,6 +2638,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				if (hitTestResult.hasLinkRoutePoint)
 				{
 					highlightedLinkRoutePoints.insert(hitTestResult.linkRoutePoint);
+					
+					mousePosition.hover = true;
 				}
 			}
 			
