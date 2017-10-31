@@ -80,7 +80,7 @@ VfxNodeDrawPrimitive::VfxNodeDrawPrimitive()
 	addInput(kInput_Stroke, kVfxPlugType_Bool);
 	addInput(kInput_StrokeSize, kVfxPlugType_Float);
 	addInput(kInput_StrokeColor, kVfxPlugType_Color);
-	addOutput(kOutput_Any, kVfxPlugType_DontCare, nullptr);
+	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
 }
 
 void VfxNodeDrawPrimitive::draw() const

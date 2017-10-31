@@ -53,7 +53,7 @@ VfxNodeDrawBlend::VfxNodeDrawBlend()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Any, kVfxPlugType_DontCare);
 	addInput(kInput_BlendMode, kVfxPlugType_Int);
-	addOutput(kOutput_Any, kVfxPlugType_DontCare, nullptr);
+	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
 }
 
 void VfxNodeDrawBlend::beforeDraw() const
@@ -81,12 +81,10 @@ void VfxNodeDrawBlend::beforeDraw() const
 		pushBlend(BLEND_MUL);
 		break;
 	case kBlendMode_Min:
-		pushBlend(BLEND_ALPHA); // todo
-		//pushBlend(BLEND_MIN);
+		pushBlend(BLEND_MIN);
 		break;
 	case kBlendMode_Max:
-		pushBlend(BLEND_ALPHA); // todo
-		//pushBlend(BLEND_MAX);
+		pushBlend(BLEND_MAX);
 		break;
 		
 	default:

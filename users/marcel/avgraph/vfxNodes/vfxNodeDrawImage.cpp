@@ -57,7 +57,7 @@ VfxNodeDrawImage::VfxNodeDrawImage()
 	addInput(kInput_Image, kVfxPlugType_Image);
 	addInput(kInput_SizeMode, kVfxPlugType_Int);
 	addInput(kInput_Opacity, kVfxPlugType_Float);
-	addOutput(kOutput_Any, kVfxPlugType_DontCare, nullptr);
+	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
 }
 
 void VfxNodeDrawImage::draw() const

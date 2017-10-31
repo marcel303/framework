@@ -418,6 +418,7 @@ struct GraphEdit_TypeDefinition
 		: typeName()
 		, inputSockets()
 		, outputSockets()
+		, resourceEditor()
 		, displayName()
 		, resourceTypeName()
 		, sx(0.f)
