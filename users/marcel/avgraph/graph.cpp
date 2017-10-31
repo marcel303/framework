@@ -1904,8 +1904,10 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 				{
 					const float value = channel.values[i];
 					
-					min = std::min(min, value);
-					max = std::max(max, value);
+					if (value < min)
+						min = value;
+					else if (value > max)
+						max = value;
 				}
 			}
 		}
@@ -1949,6 +1951,44 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 					}
 					else
 					{
+					#if 1
+						// connected lines between each sample
+						
+						const int kMaxValues = 1024;
+						
+						const int numValues = std::min(channel.numValues, kMaxValues);
+						
+						int total = 0;
+						
+						for (int i = 0; i < numValues; ++i)
+						{
+							const int s1 = (i + 0) * channel.numValues / numValues;
+							const int s2 = (i + 1) * channel.numValues / numValues;
+							
+							total += s2 - s1;
+							
+							float sum = 0.f;
+							
+							for (int s = s1; s < s2; ++s)
+								sum += channel.values[s];
+							
+							const float value = sum / (s2 - s1);
+							
+							const float plotX = channelsDataX + i * channelsDataSx / (numValues - 1.f);
+							const float plotY = dataY + (min == max ? .5f : 1.f - (value - min) / (max - min)) * channelsDataSy;
+							
+							if (i > 0)
+							{
+								hqLine(lastX, lastY, strokeSize, plotX, plotY, strokeSize);
+							}
+							
+							lastX = plotX;
+							lastY = plotY;
+						}
+						
+						Assert(total == channel.numValues);
+						
+					#else
 						// connected lines between each sample
 						
 						for (int i = 0; i < channel.numValues; ++i)
@@ -1966,6 +2006,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 							lastX = plotX;
 							lastY = plotY;
 						}
+					#endif
 					}
 				}
 				hqEnd();
