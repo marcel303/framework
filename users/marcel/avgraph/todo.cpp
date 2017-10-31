@@ -5,8 +5,10 @@ top priority items:
 	- like the BANG node in max
 	- add ability to trigger any input/output trigger (?)
 - add GPU performance markers
-+ fix issue with shift + <char> not resulting in desired character in text fields
-- fix issue with unable to close node type selection menu without selecting a node
++ fix issue with unable to close node type selection menu without selecting a node
+- add the ability to have dynamic input sockets. use cases: shaders, sub graphs
+- add the ability to have dynamic output sockets. use cases: sub graphs
+- add text field to node type select
 
 
 todo :
@@ -49,6 +51,7 @@ todo :
 - drag link into empty space = open node type selection menu
 + add copy and paste text support
 - how to convert multiple channels to gpu image with channel(s).toGpu ?
+- add ability for nodes to report warnings and errors
 
 
 todo : creativity investigation :
@@ -124,16 +127,12 @@ todo : nodes :
 - add memory node ? get/set named variables. how to ensure processing order ?
 - add queue system for triggers ? ensure predeps have finished processing before handling triggers
 - add ability for nodes to trigger again (process a partial time slice ?). but this will re-introduce again the issue of execution order of triggers ..
-# refactor math node so it's only one node with a subtype selection input
 - add channels.toImage node ?
 - add play/stop/pause/resume triggers to video node
 - add curl node
 - add text list node. next! prev! rand! custom editor for list of strings
-+ add OSC node with a list of paths. output received values as channels
 - add audioGraph node
-+ add vfxGraph node
-+ show src socket value preview when hovering over a link
-+ reduce hit size links
+- create separate and vfxGraph project with CMake files
 
 
 todo : fsfx :
@@ -400,6 +399,11 @@ todo : nodes :
 + add image.toChannels node
 + add Wekinator node
 + add passthrough support OSC send and receive nodes
+# refactor math node so it's only one node with a subtype selection input
++ add OSC node with a list of paths. output received values as channels
++ add vfxGraph node
++ show src socket value preview when hovering over a link
++ reduce hit size links
 
 
 todo : framework :
@@ -433,5 +437,6 @@ todo : UI
 + add drop down list for (large) enums
 + add load/save notifications to UI., maybe a UI message that briefly appears on the bottom. white text on dark background ?
 + touch zoom on moving fingers treshold distance apart. also, try to convert normalized touch coords into inches or cms
++ fix issue with shift + <char> not resulting in desired character in text fields
 
 */
