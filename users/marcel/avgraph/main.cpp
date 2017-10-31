@@ -53,7 +53,9 @@ using namespace tinyxml2;
 //#define FILENAME "resourceTest.xml"
 //#define FILENAME "drawImageTest.xml"
 //#define FILENAME "oscpath.xml"
-#define FILENAME "wekinatorTest.xml"
+//#define FILENAME "oscpathlist.xml"
+//#define FILENAME "wekinatorTest.xml"
+#define FILENAME "testVfxGraph.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -72,6 +74,8 @@ extern void testMain();
 //
 
 #include "vfxNodes/oscReceiver.h"
+
+// todo : rewrite using endpoints
 
 struct VfxNodeMidiOsc : VfxNodeBase, OscReceiveHandler
 {
@@ -127,7 +131,7 @@ struct VfxNodeMidiOsc : VfxNodeBase, OscReceiveHandler
 			oscReceiver.init(ipAddress, udpPort);
 		}
 		
-		oscReceiver.tick(this);
+		oscReceiver.flushMessages(this);
 	}
 	
 	virtual void handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) override
@@ -350,18 +354,59 @@ static void testCamera3d()
 {
 	Camera3d camera;
 	
-	camera.mouseSmooth = 0.7;
-	//camera.mouseSmooth = 0;
+	camera.position[0] = 0;
+	camera.position[1] = +.3f;
+	camera.position[2] = -1.f;
+	camera.pitch = 10.f;
+	
+	float fov = 90.f;
+	float near = .01f;
+	float far = 100.f;
+	
+	enum State
+	{
+		kState_Play,
+		kState_Menu
+	};
+	
+	State state = kState_Play;
+	
+	UiState uiState;
+	uiState.sx = 260;
+	uiState.x = (GFX_SX - uiState.sx) / 2;
+	uiState.y = GFX_SY * 2 / 3;
 	
 	do
 	{
 		framework.process();
 		
-		camera.tick(framework.timeStep, true);
+		const float dt = framework.timeStep;
+		
+		if (state == kState_Play)
+		{
+			if (keyboard.wentDown(SDLK_TAB))
+				state = kState_Menu;
+			else
+			{
+				camera.tick(dt, true);
+			}
+		}
+		else if (state == kState_Menu)
+		{
+			if (keyboard.wentDown(SDLK_TAB))
+				state = kState_Play;
+			else
+			{
+			 
+			}
+		}
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			projectPerspective3d(90.f, .001f, 1000.f);
+			setFont("calibri.ttf");
+			pushFontMode(FONT_SDF);
+			
+			projectPerspective3d(fov, near, far);
 			
 			camera.pushViewMatrix();
 			{
@@ -376,6 +421,7 @@ static void testCamera3d()
 					gxMultMatrixf(cameraMatrix.m_v);
 					gxMultMatrixf(cameraMatrix.m_v);
 					gxMultMatrixf(cameraMatrix.m_v);
+					gxScalef(.3f, .3f, .3f);
 					
 					setColor(colorWhite);
 					gxSetTexture(getTexture("happysun.jpg"));
@@ -396,6 +442,32 @@ static void testCamera3d()
 				glDisable(GL_DEPTH_TEST);
 			}
 			camera.popViewMatrix();
+			
+			//
+			
+			projectScreen2d();
+			
+			if (state == kState_Play)
+			{
+				drawText(30, 30, 24, +1, +1, "press TAB to open menu");
+			}
+			else if (state == kState_Menu)
+			{
+				setColor(31, 63, 127, 127);
+				drawRect(0, 0, GFX_SX, GFX_SY);
+				
+				makeActive(&uiState, true, true);
+				pushMenu("camera");
+				{
+					doLabel("camera", 0.f);
+					doTextBox(fov, "field of view", dt);
+					doTextBox(near, "near distance", dt);
+					doTextBox(far, "far distance", dt);
+				}
+				popMenu();
+			}
+			
+			popFontMode();
 		}
 		framework.endDraw();
 
@@ -445,27 +517,7 @@ int main(int argc, char * argv[])
 		
 		GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
 		
-		{
-			XMLDocument * document = new XMLDocument();
-			
-			if (document->LoadFile("types.xml") == XML_SUCCESS)
-			{
-				const XMLElement * xmlLibrary = document->FirstChildElement("library");
-				
-				if (xmlLibrary != nullptr)
-				{
-					typeDefinitionLibrary->loadXml(xmlLibrary);
-				}
-			}
-			
-			delete document;
-			document = nullptr;
-		}
-		
-		//
-		
-		createVfxEnumTypeDefinitions(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList);
-		createVfxNodeTypeDefinitions(*typeDefinitionLibrary, g_vfxNodeTypeRegistrationList);
+		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
 		
 		//
 		
@@ -620,7 +672,6 @@ int main(int argc, char * argv[])
 				
 				if (hideTime > 0.f)
 				{
-					//else if (graphEdit->state == GraphEdit::kState_HiddenIdle)
 					if (hideTime < 1.f)
 					{
 						pushBlend(BLEND_OPAQUE);
@@ -639,9 +690,9 @@ int main(int argc, char * argv[])
 					pushBlend(BLEND_ADD);
 					{
 						glBlendEquation(GL_FUNC_ADD);
-						glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-						
-						composite.setTexture("source", 0, graphEditSurface->getTexture(), true);
+						glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
+					
+						composite.setTexture("source", 0, graphEditSurface->getTexture(), false, true);
 						composite.setImmediate("opacity", hideTime);
 						
 						drawRect(0, 0, GFX_SX, GFX_SY);
