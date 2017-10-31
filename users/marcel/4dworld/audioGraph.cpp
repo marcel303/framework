@@ -512,7 +512,12 @@ void fillPcmDataCache(const char * path, const bool recurse, const bool stripPat
 	
 	for (auto & filename : filenames)
 	{
-		if (Path::GetExtension(filename, true) == "cache")
+		const auto extension = Path::GetExtension(filename, true);
+		
+		if (extension == "cache")
+			continue;
+		
+		if (extension != "wav" && extension != "ogg")
 			continue;
 		
 		const std::string filenameLower = String::ToLower(filename);
