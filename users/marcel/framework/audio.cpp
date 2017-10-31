@@ -42,6 +42,70 @@ SoundPlayer g_soundPlayer;
 
 //
 
+enum Chunk
+{
+	kChunk_RIFF,
+	kChunk_WAVE,
+	kChunk_FMT,
+	kChunk_DATA,
+	kChunk_OTHER
+};
+
+static bool checkId(const char * id, const char * match)
+{
+	for (int i = 0; i < 4; ++i)
+		if (id[i] != match[i])
+			return false;
+	
+	return true;
+}
+
+static bool readChunk(FileReader & r, Chunk & chunk, int32_t & size)
+{
+	char id[4];
+	
+	if (!r.read(id, 4))
+		return false;
+	
+	logDebug("RIFF chunk: %c%c%c%c", id[0], id[1], id[2], id[3]);
+	
+	chunk = kChunk_OTHER;
+	size = 0;
+	
+	if (checkId(id, "WAVE"))
+	{
+		chunk = kChunk_WAVE;
+		return true;
+	}
+	else if (checkId(id, "fmt "))
+	{
+		chunk = kChunk_FMT;
+		return true;
+	}
+	else
+	{
+		if (checkId(id, "RIFF"))
+			chunk = kChunk_RIFF;
+		else if (checkId(id, "data"))
+			chunk = kChunk_DATA;
+		else if (checkId(id, "LIST") || checkId(id, "FLLR") || checkId(id, "JUNK") || checkId(id, "bext"))
+			chunk = kChunk_OTHER;
+		else
+		{
+			logError("unknown RIFF chunk: %c%c%c%c", id[0], id[1], id[2], id[3]);
+			return false; // unknown
+		}
+		
+		if (!r.read(size))
+			return false;
+		
+		if (size < 0)
+			return false;
+		
+		return true;
+	}
+}
+
 SoundData * loadSound_WAV(const char * filename)
 {
 	FileReader r;
@@ -52,45 +116,7 @@ SoundData * loadSound_WAV(const char * filename)
 		return 0;
 	}
 	
-	char id[4];
-	
-	if (!r.read(id, 4)) // 'RIFF'
-		return 0;
-	
-	if (id[0] != 'R' || id[1] != 'I' || id[2] != 'F' || id[3] != 'F')
-	{
-		logError("not a RIFF file");
-		return 0;
-	}
-	
-	int32_t size;
-	
-	if (!r.read(size))
-		return 0;
-	
-	if (size < 0)
-		return 0;
-
-	if (!r.read(id, 4)) // 'WAVE'
-		return 0;
-	
-	if (id[0] != 'W' || id[1] != 'A' || id[2] != 'V' || id[3] != 'E')
-	{
-		logError("not a WAVE file");
-		return 0;
-	}
-	
-	if (!r.read(id, 4)) // 'fmt '
-		return 0;
-	
-	if (id[0] != 'f' || id[1] != 'm' || id[2] != 't' || id[3] != ' ')
-	{
-		logError("WAVE loader got confused");
-		return 0;
-	}
-	
-	bool ok = true;
-	
+	bool hasFmt = false;
 	int32_t fmtLength;
 	int16_t fmtCompressionType;
 	int16_t fmtChannelCount;
@@ -100,20 +126,117 @@ SoundData * loadSound_WAV(const char * filename)
 	int16_t fmtBitDepth;
 	int16_t fmtExtraLength;
 	
-	ok &= r.read(fmtLength);
-	ok &= r.read(fmtCompressionType);
-	ok &= r.read(fmtChannelCount);
-	ok &= r.read(fmtSampleRate);
-	ok &= r.read(fmtByteRate);
-	ok &= r.read(fmtBlockAlign);
-	ok &= r.read(fmtBitDepth);
-	if (fmtCompressionType != 1)
-		ok &= r.read(fmtExtraLength);
-	else
-		fmtExtraLength = 0;
+	uint8_t * bytes = nullptr;
+	int numBytes = 0;
 	
-	if (!ok)
-		return 0;
+	bool done = false;
+	
+	do
+	{
+		Chunk chunk;
+		int32_t byteCount;
+		
+		if (!readChunk(r, chunk, byteCount))
+			return 0;
+		
+		if (chunk == kChunk_RIFF || chunk == kChunk_WAVE)
+		{
+			// just process sub chunks
+		}
+		else if (chunk == kChunk_FMT)
+		{
+			bool ok = true;
+			
+			ok &= r.read(fmtLength);
+			ok &= r.read(fmtCompressionType);
+			ok &= r.read(fmtChannelCount);
+			ok &= r.read(fmtSampleRate);
+			ok &= r.read(fmtByteRate);
+			ok &= r.read(fmtBlockAlign);
+			ok &= r.read(fmtBitDepth);
+			if (fmtCompressionType != 1)
+				ok &= r.read(fmtExtraLength);
+			else
+				fmtExtraLength = 0;
+			
+			if (!ok)
+			{
+				logError("failed to read FMT chunk");
+				return 0;
+			}
+			
+			if (fmtCompressionType != 1)
+			{
+				logError("only PCM is supported. type: %d", fmtCompressionType);
+				ok = false;
+			}
+			if (fmtChannelCount <= 0)
+			{
+				logError("invalid channel count: %d", fmtChannelCount);
+				ok = false;
+			}
+			if (fmtBitDepth != 8 && fmtBitDepth != 16 && fmtBitDepth != 24)
+			{
+				logError("bit depth not supported: %d", fmtBitDepth);
+				ok = false;
+			}
+			
+			if (!ok)
+				return 0;
+			
+			hasFmt = true;
+		}
+		else if (chunk == kChunk_DATA)
+		{
+			if (hasFmt == false)
+				return 0;
+			
+			bytes = new uint8_t[byteCount];
+			
+			if (!r.read(bytes, byteCount))
+			{
+				logError("failed to load WAVE data");
+				delete [] bytes;
+				return 0;
+			}
+			
+			// convert data if necessary
+			
+			if (fmtBitDepth == 24)
+			{
+				const int sampleCount = byteCount / 3;
+				float * samplesData = new float[sampleCount];
+				
+				for (int i = 0; i < sampleCount; ++i)
+				{
+					int32_t value = (bytes[i * 3 + 0] << 8) | (bytes[i * 3 + 1] << 16) | (bytes[i * 3 + 2] << 24);
+					
+					value >>= 8;
+					
+					samplesData[i] = value / float(1 << 23);
+				}
+				
+				delete[] bytes;
+				bytes = nullptr;
+				
+				bytes = (uint8_t*)samplesData;
+				
+				fmtBitDepth = 32;
+				byteCount = byteCount * 4 / 3;
+			}
+			
+			numBytes = byteCount;
+			
+			done = true;
+		}
+		else if (chunk == kChunk_OTHER)
+		{
+			//logDebug("wave loader: skipping %d bytes of list chunk", size);
+			
+			r.skip(byteCount);
+		}
+	}
+	while (!done);
 	
 	if (false)
 	{
@@ -124,102 +247,10 @@ SoundData * loadSound_WAV(const char * filename)
 		fmtExtraLength = 0;
 	}
 	
-	if (fmtCompressionType != 1)
-	{
-		logError("only PCM is supported. type: %d", fmtCompressionType);
-		ok = false;
-	}
-	if (fmtChannelCount <= 0)
-	{
-		logError("invalid channel count: %d", fmtChannelCount);
-		ok = false;
-	}
-	if (fmtBitDepth != 8 && fmtBitDepth != 16 && fmtBitDepth != 24)
-	{
-		logError("bit depth not supported: %d", fmtBitDepth);
-		ok = false;
-	}
-	
-	if (!ok)
-		return 0;
-	
-	if (!r.read(id, 4)) // "LIST", "FLLR" or "data"
-		return 0;
-	
-	if (id[0] == 'L' && id[1] == 'I' && id[2] == 'S' && id[3] == 'T')
-	{
-		int32_t byteCount;
-		if (!r.read(byteCount))
-			return 0;
-		
-		//logInfo("wave loader: skipping %d bytes of list chunk", byteCount);
-		r.skip(byteCount);
-		
-		if (!r.read(id, 4))
-			return 0;
-	}
-	
-	if (id[0] == 'F' && id[1] == 'L' && id[2] == 'L' && id[3] == 'R')
-	{
-		int32_t byteCount;
-		if (!r.read(byteCount))
-			return 0;
-		
-		//logInfo("wave loader: skipping %d bytes of filler chunk", byteCount);
-		r.skip(byteCount);
-		
-		if (!r.read(id, 4))
-			return 0;
-	}
-	
-	if (id[0] != 'd' || id[1] != 'a' || id[2] != 't' || id[3] != 'a')
-	{
-		logError("WAVE loader got confused: id=%.*s", 4, id);
-		return 0;
-	}
-	
-	int32_t byteCount;
-	if (!r.read(byteCount))
-		return 0;
-	
-	uint8_t * bytes = new uint8_t[byteCount];
-	
-	if (!r.read(bytes, byteCount))
-	{
-		logError("failed to load WAVE data");
-		delete [] bytes;
-		return 0;
-	}
-	
-	// convert data if necessary
-	
-	if (fmtBitDepth == 24)
-	{
-		const int sampleCount = byteCount / 3;
-		float * samplesData = new float[sampleCount];
-		
-		for (int i = 0; i < sampleCount; ++i)
-		{
-			int32_t value = (bytes[i * 3 + 0] << 8) | (bytes[i * 3 + 1] << 16) | (bytes[i * 3 + 2] << 24);
-			
-			value >>= 8;
-			
-			samplesData[i] = value / float(1 << 23);
-		}
-		
-		delete[] bytes;
-		bytes = nullptr;
-		
-		bytes = (uint8_t*)samplesData;
-		
-		fmtBitDepth = 32;
-		byteCount = byteCount * 4 / 3;
-	}
-	
 	SoundData * soundData = new SoundData;
 	soundData->channelSize = fmtBitDepth / 8;
 	soundData->channelCount = fmtChannelCount;
-	soundData->sampleCount = byteCount / (fmtBitDepth / 8 * fmtChannelCount);
+	soundData->sampleCount = numBytes / (fmtBitDepth / 8 * fmtChannelCount);
 	soundData->sampleRate = fmtSampleRate;
 	soundData->sampleData = bytes;
 	
@@ -229,7 +260,7 @@ SoundData * loadSound_WAV(const char * filename)
 SoundData * loadSound_OGG(const char * filename)
 {
 #if 1
-	static const int kMaxSamples = (1 << 16) * sizeof(short);
+	static const int kMaxSamples = (1 << 14) * sizeof(short);
 	AudioSample samples[kMaxSamples];
 	
 	std::vector<AudioSample> readBuffer;
