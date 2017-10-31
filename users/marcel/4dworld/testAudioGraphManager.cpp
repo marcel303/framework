@@ -2239,9 +2239,9 @@ void testAudioGraphManager()
 					pushBlend(BLEND_ADD);
 					{
 						glBlendEquation(GL_FUNC_ADD);
-						glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+						glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
 						
-						composite.setTexture("source", 0, surface.getTexture());
+						composite.setTexture("source", 0, surface.getTexture(), false, true);
 						composite.setTexture("overlay1", 1, getTexture("background/sabana.jpg"), true, true);
 						composite.setImmediate("opacity", hideTime);
 						
