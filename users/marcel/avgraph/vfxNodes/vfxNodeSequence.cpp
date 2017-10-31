@@ -60,10 +60,13 @@ VfxNodeSequence::VfxNodeSequence()
 	addInput(kInput_7, kVfxPlugType_DontCare);
 	addInput(kInput_8, kVfxPlugType_DontCare);
 	addOutput(kOutput_Any, kVfxPlugType_Int, &anyOutput);
+	
+	flags |= kFlag_CustomTraverseDraw;
 }
 
 void VfxNodeSequence::draw() const
 {
+#if 0
 	vfxGpuTimingBlock(VfxNodeSequence);
 	
 	for (int i = kInput_1; i <= kInput_8; ++i)
@@ -81,6 +84,42 @@ void VfxNodeSequence::draw() const
 					drawRect(0, 0, GFX_SX, GFX_SY);
 				}
 				gxSetTexture(0);
+			}
+		}
+	}
+#endif
+}
+
+void VfxNodeSequence::customTraverseDraw(const int traversalId) const
+{
+	vfxCpuTimingBlock(VfxNodeSequence);
+	
+	for (int i = kInput_1; i <= kInput_8; ++i)
+	{
+		const VfxPlug * plug = tryGetInput(i);
+		
+		if (plug && plug->isConnected())
+		{
+			for (auto & predep : predeps)
+			{
+				bool isConnectedToPlug = false;
+				
+				for (auto & output : predep->outputs)
+				{
+					if (output.mem == plug->mem)
+					{
+						isConnectedToPlug = true;
+						break;
+					}
+				}
+				
+				if (isConnectedToPlug)
+				{
+					if (predep->lastDrawTraversalId != traversalId)
+						predep->traverseDraw(traversalId);
+					
+					break;
+				}
 			}
 		}
 	}

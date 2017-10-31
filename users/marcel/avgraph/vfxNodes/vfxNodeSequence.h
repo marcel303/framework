@@ -57,4 +57,5 @@ struct VfxNodeSequence : VfxNodeBase
 	VfxNodeSequence();
 	
 	virtual void draw() const override;
+	virtual void customTraverseDraw(const int traversalId) const override;
 };
