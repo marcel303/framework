@@ -272,6 +272,12 @@ void RealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNodeId 
 			++elemItr;
 		}
 		Assert(removed);
+		
+		if (removed && input->floatArray.elems.empty())
+		{
+			Assert(input->mem == nullptr);
+			input->memType = kVfxPlugType_None;
+		}
 	}
 	else
 	{
