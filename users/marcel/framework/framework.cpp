@@ -2526,39 +2526,6 @@ Color Color::mulRGB(float t) const
 
 // -----
 
-Gradient::Gradient()
-{
-	x1 = y1 = 0.f;
-	x2 = y2 = 0.f;
-}
-
-Gradient::Gradient(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2)
-{
-	set(x1, y1, color1, x2, y2, color2);
-}
-
-void Gradient::set(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2)
-{
-	this->x1 = x1;
-	this->y1 = y1;
-	this->color1 = color1;
-	this->x2 = x2;
-	this->y2 = y2;
-	this->color2 = color2;
-}
-
-Color Gradient::eval(float x, float y) const
-{
-	const float dx = x2 - x1;
-	const float dy = y2 - y1;
-	const float ds = dx * dx + dy * dy;
-	const float pd = dx * x1 + dy * y1;
-	const float t = (dx * x + dy * y - pd) / ds;
-	return color1.interp(color2, t);
-}
-
-// -----
-
 bool Dictionary::load(const char * filename)
 {
 	bool result = true;
@@ -4345,6 +4312,10 @@ static const int kMaxSurfaceStackSize = 32;
 static Surface * surfaceStack[kMaxSurfaceStackSize] = { };
 static int surfaceStackSize = 0;
 
+static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
+static Stack<COLOR_MODE, 32> colorModeStack(COLOR_MUL);
+static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
+
 static void getViewportSize(float & sx, float & sy)
 {
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
@@ -4632,23 +4603,17 @@ void setBlend(BLEND_MODE blendMode)
 	}
 }
 
-static const int kMaxBlendStackSize = 32;
-static BLEND_MODE blendStack[kMaxBlendStackSize] = { BLEND_ALPHA };
-static int blendStackSize = 0;
-
 void pushBlend(BLEND_MODE blendMode)
 {
-	fassert(blendStackSize < kMaxBlendStackSize);
-	blendStack[blendStackSize++] = globals.blendMode;
+	blendModeStack.push(globals.blendMode);
+	
 	setBlend(blendMode);
 }
 
 void popBlend()
 {
-	fassert(blendStackSize > 0);
-	--blendStackSize;
-	const BLEND_MODE blendMode = blendStack[blendStackSize];
-	blendStack[blendStackSize] = BLEND_ALPHA;
+	const BLEND_MODE blendMode = blendModeStack.popValue();
+	
 	setBlend(blendMode);
 }
 
@@ -4678,16 +4643,28 @@ void setColorMode(COLOR_MODE colorMode)
 #endif
 }
 
+void pushColorMode(COLOR_MODE colorMode)
+{
+	colorModeStack.push(globals.colorMode);
+	
+	setColorMode(colorMode);
+}
+
+void popColorMode()
+{
+	const COLOR_MODE value = colorModeStack.popValue();
+	
+	setColorMode(value);
+}
+
 void setColorPost(COLOR_POST colorPost)
 {
 	globals.colorPost = colorPost;
 }
 
-static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
-
 void pushColorPost(COLOR_POST colorPost)
 {
-	colorPostStack.push(colorPost);
+	colorPostStack.push(globals.colorPost);
 	
 	setColorPost(colorPost);
 }
@@ -4740,14 +4717,18 @@ void setAlphaf(float a)
 	globals.color.a = a;
 }
 
-void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2)
+static Stack<Color, 32> colorStack;
+
+void pushColor()
 {
-	globals.gradient.set(x1, y1, color1, x2, y2, color2);
+	colorStack.push(globals.color);
 }
 
-void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, float x2, float y2, float r2, float g2, float b2, float a2)
+void popColor()
 {
-	setGradientf(x1, y1, Color(r1, g1, b1, a1), x2, y2, Color(r2, g2, b2, a2));
+	const Color color = colorStack.popValue();
+	
+	setColor(color);
 }
 
 void setFont(const Font & font)
@@ -4767,23 +4748,19 @@ static void setFontMode(FONT_MODE fontMode)
 	globals.fontMode = fontMode;
 }
 
-static const int kMaxFontModeStackSize = 32;
-static FONT_MODE fontModeStack[kMaxFontModeStackSize] = { FONT_BITMAP };
-static int fontModeStackSize = 0;
+static Stack<FONT_MODE, 32> fontModeStack(FONT_BITMAP);
 
 void pushFontMode(FONT_MODE fontMode)
 {
-	fassert(fontModeStackSize < kMaxFontModeStackSize);
-	fontModeStack[fontModeStackSize++] = globals.fontMode;
+	fontModeStack.push(globals.fontMode);
+	
 	setFontMode(fontMode);
 }
 
 void popFontMode()
 {
-	fassert(fontModeStackSize > 0);
-	--fontModeStackSize;
-	const FONT_MODE fontMode = fontModeStack[fontModeStackSize];
-	fontModeStack[fontModeStackSize] = FONT_BITMAP;
+	const FONT_MODE fontMode = fontModeStack.popValue();
+	
 	setFontMode(fontMode);
 }
 
@@ -4855,35 +4832,6 @@ void drawRectLine(float x1, float y1, float x2, float y2)
 		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
 	}
 	gxEnd();
-}
-
-void drawRectGradient(float x1, float y1, float x2, float y2)
-{
-	float oldColor[4];
-	glGetFloatv(GL_CURRENT_COLOR, oldColor);
-
-	const Color color[4] =
-	{
-		globals.gradient.eval(x1, y1),
-		globals.gradient.eval(x2, y1),
-		globals.gradient.eval(x2, y2),
-		globals.gradient.eval(x1, y2)
-	};
-	
-	gxBegin(GL_QUADS);
-	{
-		gxColor4f(color[0].r, color[0].g, color[0].b, color[0].a);
-		gxVertex2f(x1, y1);
-		gxColor4f(color[1].r, color[1].g, color[1].b, color[1].a);
-		gxVertex2f(x2, y1);
-		gxColor4f(color[2].r, color[2].g, color[2].b, color[2].a);
-		gxVertex2f(x2, y2);
-		gxColor4f(color[3].r, color[3].g, color[3].b, color[3].a);
-		gxVertex2f(x1, y2);
-	}
-	gxEnd();
-	
-	setColorf(oldColor[0], oldColor[1], oldColor[2], oldColor[3]);
 }
 
 void drawCircle(float x, float y, float radius, int numSegments)

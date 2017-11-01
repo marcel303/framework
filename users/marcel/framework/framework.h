@@ -209,7 +209,6 @@ class Dictionary;
 class Font;
 class Framework;
 class Gamepad;
-class Gradient;
 class Keyboard;
 class Midi;
 class Model;
@@ -554,25 +553,6 @@ public:
 	Color mulRGB(float t) const;
 	
 	float r, g, b, a;
-};
-
-//
-
-class Gradient
-{
-public:
-	float x1;
-	float y1;
-	Color color1;
-	float x2;
-	float y2;
-	Color color2;
-	
-	Gradient();
-	Gradient(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2);
-	
-	void set(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2);
-	Color eval(float x, float y) const;
 };
 
 //
@@ -1122,21 +1102,28 @@ void clearDrawRect();
 void setBlend(BLEND_MODE blendMode);
 void pushBlend(BLEND_MODE blendMode);
 void popBlend();
+
 void setColorMode(COLOR_MODE colorMode);
+void pushColorMode(COLOR_MODE colorMode);
+void popColorMode();
+
 void setColorPost(COLOR_POST colorPost);
 void pushColorPost(COLOR_POST colorPost);
 void popColorPost();
+
 void setColor(const Color & color);
 void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
 void setColorf(float r, float g, float b, float a = 1.f, float rgbMul = 1.f);
 void setAlpha(int a);
 void setAlphaf(float a);
-void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2);
-void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, float x2, float y2, float r2, float g2, float b2, float a2);
+void pushColor();
+void popColor();
+
 void setFont(const Font & font);
 void setFont(const char * font);
 void pushFontMode(FONT_MODE fontMode);
 void popFontMode();
+
 void setShader(const ShaderBase & shader);
 void clearShader();
 void shaderSource(const char * filename, const char * text);
@@ -1145,7 +1132,6 @@ void drawPoint(float x, float y);
 void drawLine(float x1, float y1, float x2, float y2);
 void drawRect(float x1, float y1, float x2, float y2);
 void drawRectLine(float x1, float y1, float x2, float y2);
-void drawRectGradient(float x1, float y1, float x2, float y2);
 void drawCircle(float x, float y, float radius, int numSegments);
 void fillCircle(float x, float y, float radius, int numSegments);
 void measureText(float size, float & sx, float & sy, const char * format, ...);

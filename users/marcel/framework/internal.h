@@ -121,7 +121,6 @@ public:
 	COLOR_POST colorPost;
 	FONT_MODE fontMode;
 	Color color;
-	Gradient gradient;
 	GRADIENT_TYPE hqGradientType;
 	Mat4x4 hqGradientMatrix;
 	Color hqGradientColor1;
@@ -692,7 +691,7 @@ struct Stack
 	{
 		fassert(stackSize > 0);
 		--stackSize;
-		stack[stackSize] = Type(0);
+		memset(&stack[stackSize], 0, sizeof(Type));
 	}
 	
 	Type popValue()
