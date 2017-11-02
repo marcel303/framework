@@ -3001,7 +3001,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						
 						newSelectedNodes.insert(newNode.id);
 						
-						if (commandMod())
+						if (commandMod() && node->nodeType == kGraphNodeType_Regular)
 						{
 							auto newNodePtr = tryGetNode(newNode.id);
 							Assert(newNodePtr != nullptr);
