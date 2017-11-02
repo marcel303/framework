@@ -107,6 +107,10 @@ void VfxNodeVfxGraph::close()
 	
 	delete typeDefinitionLibrary;
 	typeDefinitionLibrary = nullptr;
+	
+	//
+	
+	imageOutput->texture = 0;
 }
 
 void VfxNodeVfxGraph::tick(const float dt)
@@ -145,21 +149,15 @@ void VfxNodeVfxGraph::draw() const
 	
 	if (isPassthrough || vfxGraph == nullptr)
 	{
-		imageOutput->texture = 0;
 		return;
 	}
 	
-	imageOutput->texture = 0;
-	
-	if (vfxGraph != nullptr)
+	auto restore = g_currentVfxGraph;
+	g_currentVfxGraph = nullptr;
 	{
-		auto restore = g_currentVfxGraph;
-		g_currentVfxGraph = nullptr;
-		{
-			imageOutput->texture = vfxGraph->traverseDraw();
-		}
-		g_currentVfxGraph = restore;
+		imageOutput->texture = vfxGraph->traverseDraw();
 	}
+	g_currentVfxGraph = restore;
 }
 
 void VfxNodeVfxGraph::init(const GraphNode & node)

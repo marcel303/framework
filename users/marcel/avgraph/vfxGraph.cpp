@@ -48,7 +48,6 @@ VfxGraph * g_currentVfxGraph = nullptr;
 VfxGraph::VfxGraph()
 	: nodes()
 	, displayNodeIds()
-	, nextTickOrder(0)
 	, nextTickTraversalId(0)
 	, nextDrawTraversalId(0)
 	, valuesToFree()
@@ -195,8 +194,6 @@ void VfxGraph::tick(const float dt)
 	
 	// use traversalId, start update at display node
 	
-	nextTickOrder = 0;
-	
 	if (displayNodeIds.empty() == false)
 	{
 		auto displayNodeId = *displayNodeIds.begin();
@@ -216,9 +213,6 @@ void VfxGraph::tick(const float dt)
 	// process nodes that aren't connected to the display node
 
 	// todo : perhaps process unconnected nodes as islands, following predeps ?
-	
-	// todo : fix tick order for nodes without well defined tick order ..
-	nextTickOrder = -1000000;
 	
 	for (auto i : nodes)
 	{
@@ -291,6 +285,23 @@ int VfxGraph::traverseDraw() const
 		}
 	}
 	
+#if 1 // todo : make this depend on whether the graph editor is visible or not ? or whether the node is referenced by the editor ?
+
+	// draw nodes that aren't connected to the display node
+	
+	for (auto i : nodes)
+	{
+		VfxNodeBase * node = i.second;
+		
+		if (node->lastDrawTraversalId != nextDrawTraversalId)
+		{
+			//if (any input or output referencedByRealTimeConnectionTick)
+			
+			node->traverseDraw(nextDrawTraversalId);
+		}
+	}
+#endif
+
 	++nextDrawTraversalId;
 	
 	//
