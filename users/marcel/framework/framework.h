@@ -257,8 +257,6 @@ public:
 	Framework();
 	~Framework();
 	
-	void setActionHandler(ActionHandler actionHandler);
-	
 	bool init(int argc, const char * argv[], int sx, int sy);
 	bool shutdown();
 	void process();
@@ -1146,7 +1144,7 @@ void drawPath(const Path2d & path);
 void drawLine3d(int axis = 0);
 void drawRect3d(int axis1 = 0, int axis2 = 1);
 void drawGrid3d(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1);
-void drawGrid3dLine(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1);
+void drawGrid3dLine(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1, bool optimized = false);
 
 GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
 GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp);

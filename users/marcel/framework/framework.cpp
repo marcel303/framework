@@ -5802,41 +5802,88 @@ void drawGrid3d(int resolution1, int resolution2, int axis1, int axis2)
 	gxEnd();
 }
 
-void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2)
+void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool optimized)
 {
 	const int axis3 = 3 - axis1 - axis2;
 	
-	gxBegin(GL_LINES);
+	if (optimized)
 	{
-		for (int i = 0; i <= resolution1; ++i)
+		gxBegin(GL_LINES);
 		{
-			const float u = i / float(resolution1);
-			const float x = (u - .5f) * 2.f;
+			for (int i = 0; i <= resolution1; ++i)
+			{
+				const float u = i / float(resolution1);
+				const float x = (u - .5f) * 2.f;
+				
+				float p[3];
+				p[axis1] = x;
+				p[axis2] = -1.f;
+				gxTexCoord2f(u, 0.f); gxVertex3fv(p);
+				
+				p[axis2] = +1.f;
+				gxTexCoord2f(u, 1.f); gxVertex3fv(p);
+			}
 			
-			float p[3];
-			p[axis1] = x;
-			p[axis2] = -1.f;
-			gxTexCoord2f(u, 0.f); gxVertex3fv(p);
-			
-			p[axis2] = +1.f;
-			gxTexCoord2f(u, 1.f); gxVertex3fv(p);
+			for (int j = 0; j <= resolution2; ++j)
+			{
+				const float v = j / float(resolution2);
+				const float y = (v - .5f) * 2.f;
+				
+				float p[3];
+				p[axis1] = -1.f;
+				p[axis2] = y;
+				p[axis3] = 0.f;
+				gxTexCoord2f(0.f, v); gxVertex3fv(p);
+				
+				p[axis1] = +1.f;
+				gxTexCoord2f(1.f, v); gxVertex3fv(p);
+			}
 		}
-		
-		for (int j = 0; j <= resolution2; ++j)
-		{
-			const float v = j / float(resolution2);
-			const float y = (v - .5f) * 2.f;
-			
-			float p[3];
-			p[axis1] = -1.f;
-			p[axis2] = y;
-			gxTexCoord2f(0.f, v); gxVertex3fv(p);
-			
-			p[axis1] = +1.f;
-			gxTexCoord2f(1.f, v); gxVertex3fv(p);
-		}
+		gxEnd();
 	}
-	gxEnd();
+	else
+	{
+		gxBegin(GL_LINES);
+		{
+			for (int i = 0; i < resolution1; ++i)
+			{
+				for (int j = 0; j < resolution2; ++j)
+				{
+					const float u1 = (i + 0) / float(resolution1);
+					const float u2 = (i + 1) / float(resolution1);
+					const float v1 = (j + 0) / float(resolution2);
+					const float v2 = (j + 1) / float(resolution2);
+					
+					const float x1 = (u1 - .5f) * 2.f;
+					const float x2 = (u2 - .5f) * 2.f;
+					const float y1 = (v1 - .5f) * 2.f;
+					const float y2 = (v2 - .5f) * 2.f;
+					
+					float p[3];
+					p[axis1] = x1;
+					p[axis2] = y1;
+					p[axis3] = 0.f;
+					gxTexCoord2f(u1, v1); gxVertex3fv(p);
+					
+					p[axis1] = x2;
+					gxTexCoord2f(u2, v1); gxVertex3fv(p);
+					gxTexCoord2f(u2, v1); gxVertex3fv(p);
+					
+					p[axis2] = y2;
+					gxTexCoord2f(u2, v2); gxVertex3fv(p);
+					gxTexCoord2f(u2, v2); gxVertex3fv(p);
+					
+					p[axis1] = x1;
+					gxTexCoord2f(u1, v2); gxVertex3fv(p);
+					gxTexCoord2f(u1, v2); gxVertex3fv(p);
+					
+					p[axis2] = y1;
+					gxTexCoord2f(u1, v1); gxVertex3fv(p);
+				}
+			}
+		}
+		gxEnd();
+	}
 }
 
 static GLuint createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat, GLenum uploadElementType)
