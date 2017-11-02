@@ -60,8 +60,8 @@ static int fopen_s(FILE ** file, const char * filename, const char * mode)
 	*file = fopen(filename, mode);
 	return *file ? 0 : EINVAL;
 }
-#define sprintf_s(s, ss, f, ...) sprintf(s, f, __VA_ARGS__)
-#define vsprintf_s(s, ss, f, a) vsprintf(s, f, a)
+#define sprintf_s(s, ss, f, ...) snprintf(s, ss, f, __VA_ARGS__)
+#define vsprintf_s(s, ss, f, a) vsnprintf(s, ss, f, a)
 #endif
 
 void splitString(const std::string & str, std::vector<std::string> & result);
