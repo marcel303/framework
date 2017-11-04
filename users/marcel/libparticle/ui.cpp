@@ -145,7 +145,7 @@ void drawUiCircle(const float x, const float y, const float radius, const float 
 
 void drawUiShadedTriangle(float x1, float y1, float x2, float y2, float x3, float y3, const Color & c1, const Color & c2, const Color & c3)
 {
-	Shader shader("hq-shaded-triangle");
+	Shader shader("engine/builtin-hq-shaded-triangle");
 	setShader(shader);
 	
 	shader.setImmediate("color1", c1.r, c1.g, c1.b, c1.a);
