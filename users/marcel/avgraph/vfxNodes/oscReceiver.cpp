@@ -198,7 +198,7 @@ bool OscReceiver::doInit(const char * _ipAddress, const int _udpPort)
 	
 	try
 	{
-		if (ipAddress.empty() || udpPort == 0)
+		if (isAddressValid(ipAddress.c_str(), udpPort) == false)
 		{
 			LOG_WRN("invalid OSC bind address: %s:%d", ipAddress.c_str(), udpPort);
 			
@@ -225,7 +225,7 @@ bool OscReceiver::doInit(const char * _ipAddress, const int _udpPort)
 	}
 	catch (std::exception & e)
 	{
-		LOG_ERR("failed to start OSC receive thread: %s", e.what());
+		LOG_ERR("failed to start OSC receive thread: %s. ipAddress=%s, updPort=%d", e.what(), ipAddress.c_str(), udpPort);
 		
 		return false;
 	}
@@ -257,6 +257,16 @@ bool OscReceiver::shut()
 	
 	delete packetListener;
 	packetListener = nullptr;
+	
+	return true;
+}
+
+bool OscReceiver::isAddressValid(const char * ipAddress, const int udpPort) const
+{
+	if (ipAddress == nullptr || ipAddress[0] == 0)
+		return false;
+	if (udpPort == 0)
+		return false;
 	
 	return true;
 }

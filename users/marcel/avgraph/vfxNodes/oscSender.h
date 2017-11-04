@@ -40,6 +40,7 @@ struct OscSender
 	
 	OscSender();
 	
+	bool isAddressValid(const char * ipAddress, const int udpPort) const;
 	bool isAddressChange(const char * ipAddress, const int udpPort) const;
 	
 	bool init(const char * ipAddress, const int udpPort);

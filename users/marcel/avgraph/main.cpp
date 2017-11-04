@@ -55,7 +55,9 @@ using namespace tinyxml2;
 //#define FILENAME "oscpath.xml"
 //#define FILENAME "oscpathlist.xml"
 //#define FILENAME "wekinatorTest.xml"
-#define FILENAME "testVfxGraph.xml"
+//#define FILENAME "testVfxGraph.xml"
+//#define FILENAME "sampleTest.xml"
+#define FILENAME "midiTest.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -71,114 +73,7 @@ extern void testReactionDiffusion();
 
 extern void testMain();
 
-//
-
-#include "vfxNodes/oscReceiver.h"
-
-// todo : rewrite using endpoints
-
-struct VfxNodeMidiOsc : VfxNodeBase, OscReceiveHandler
-{
-	enum Input
-	{
-		kInput_IpAddress,
-		kInput_UdpPort,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Controller,
-		kOutput_Value,
-		kOutput_ValueNorm,
-		kOutput_ControllerTrigger,
-		kOutput_COUNT
-	};
-	
-	OscReceiver oscReceiver;
-	
-	int controllerOutput;
-	int controllerValueOutput;
-	float controllerValueNormOutput;
-	
-	VfxNodeMidiOsc()
-		: VfxNodeBase()
-		, oscReceiver()
-		, controllerOutput(0)
-		, controllerValueOutput(0)
-		, controllerValueNormOutput(0.f)
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_IpAddress, kVfxPlugType_String);
-		addInput(kInput_UdpPort, kVfxPlugType_Int);
-		addOutput(kOutput_Controller, kVfxPlugType_Int, &controllerOutput);
-		addOutput(kOutput_Value, kVfxPlugType_Int, &controllerValueOutput);
-		addOutput(kOutput_ValueNorm, kVfxPlugType_Float, &controllerValueNormOutput);
-		addOutput(kOutput_ControllerTrigger, kVfxPlugType_Trigger, nullptr);
-	}
-	
-	virtual void tick(const float dt) override
-	{
-		const char * ipAddress = getInputString(kInput_IpAddress, "");
-		const int udpPort = getInputInt(kInput_UdpPort, 0);
-		
-		if (oscReceiver.isAddressChange(ipAddress, udpPort))
-		{
-			logDebug("(re)initialising OSC receiver");
-			
-			oscReceiver.shut();
-			
-			oscReceiver.init(ipAddress, udpPort);
-		}
-		
-		oscReceiver.flushMessages(this);
-	}
-	
-	virtual void handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) override
-	{
-		logDebug("received OSC message!");
-		
-		try
-		{
-			auto a = m.ArgumentStream();
-			
-			//osc::ReceivedMessageArgument message;
-			//a >> message;
-			const char * message;
-			a >> message;
-			
-			if (message != nullptr && strcmp(message, "controller_change") == 0)
-			{
-				osc::int32 controller;
-				osc::int32 controllerValue;
-				a >> controller;
-				a >> controllerValue;
-				
-				controllerOutput = controller;
-				controllerValueOutput = controllerValue;
-				controllerValueNormOutput = controllerValue / 127.f;
-				
-				trigger(kOutput_ControllerTrigger);
-			}
-		}
-		catch (std::exception & e)
-		{
-			logError("failed to decode midiosc message: %s", e.what());
-		}
-	}
-};
-
-VFX_NODE_TYPE(midi_osc, VfxNodeMidiOsc)
-{
-	typeName = "midi.osc";
-	
-	in("ip", "string");
-	in("port", "int");
-	out("knob", "int");
-	out("value", "int");
-	out("value_norm", "float");
-	out("trigger", "trigger");
-}
+extern void codevember1();
 
 //
 
@@ -477,6 +372,18 @@ static void testCamera3d()
 
 //
 
+static std::string filedrop;
+
+static void handleAction(const std::string & action, const Dictionary & args)
+{
+	if (action == "filedrop")
+	{
+		filedrop = args.getString("file", "");
+	}
+}
+
+//
+
 int main(int argc, char * argv[])
 {
 	framework.enableRealTimeEditing = true;
@@ -488,6 +395,9 @@ int main(int argc, char * argv[])
 	//framework.enableProfiling = true;
 	
 	//framework.fullscreen = true;
+	
+	framework.filedrop = true;
+	framework.actionHandler = handleAction;
 	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
@@ -509,9 +419,11 @@ int main(int argc, char * argv[])
 		
 		//testGradientShader();
 		
-		testCamera3d();
+		//testCamera3d();
 		
 		//testMain();
+		
+		//codevember1();
 		
 		//
 		
@@ -607,6 +519,19 @@ int main(int argc, char * argv[])
 			//
 			
 			bool inputIsCaptured = false;
+			
+			//
+			
+			g_currentVfxGraph = realTimeConnection->vfxGraph;
+			
+			if (filedrop.empty() == false)
+			{
+				graphEdit->load(filedrop.c_str());
+				
+				filedrop.clear();
+			}
+			
+			g_currentVfxGraph = nullptr;
 			
 			//
 			

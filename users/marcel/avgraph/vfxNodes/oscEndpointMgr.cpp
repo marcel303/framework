@@ -60,7 +60,9 @@ OscReceiver * OscEndpointMgr::allocReceiver(const char * name, const char * ipAd
 	auto & r = receivers.back();
 	
 	r.name = name;
-	r.receiver.init(ipAddress, udpPort);
+	
+	if (r.receiver.isAddressValid(ipAddress, udpPort))
+		r.receiver.init(ipAddress, udpPort);
 	
 	r.refCount++;
 	
@@ -132,7 +134,9 @@ OscSender * OscEndpointMgr::allocSender(const char * name, const char * ipAddres
 	auto & s = senders.back();
 	
 	s.name = name;
-	s.sender.init(ipAddress, udpPort);
+	
+	if (s.sender.isAddressValid(ipAddress, udpPort))
+		s.sender.init(ipAddress, udpPort);
 	
 	s.refCount++;
 	
@@ -194,16 +198,26 @@ void OscEndpointMgr::tick()
 
 void OscEndpointMgr::handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint)
 {
-	const char * path = nullptr;
-	float value = 0.f;
-	
 	try
 	{
-		path = m.AddressPattern();
+		const char * path = m.AddressPattern();
 		
-		auto args = m.ArgumentStream();
+		auto & values = receivedValues[path];
 		
-		args >> value;
+		values.clear();
+		
+		int index = 0;
+		
+		for (auto i = m.ArgumentsBegin(); i != m.ArgumentsEnd(); ++i)
+		{
+			auto & a = *i;
+			
+			float value = a.IsFloat() ? a.AsFloat() : 0.f;
+			
+			values.push_back(value);
+			
+			index++;
+		}
 	}
 	catch (std::exception & e)
 	{
@@ -211,10 +225,4 @@ void OscEndpointMgr::handleOscMessage(const osc::ReceivedMessage & m, const IpEn
 		
 		return;
 	}
-	
-	//
-	
-	auto & values = receivedValues[path];
-	
-	values.push_back(value);
 }

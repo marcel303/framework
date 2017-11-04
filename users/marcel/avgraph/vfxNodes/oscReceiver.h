@@ -57,6 +57,7 @@ struct OscReceiver
 	bool doInit(const char * ipAddress, const int udpPort);
 	bool shut();
 	
+	bool isAddressValid(const char * ipAddress, const int udpPort) const;
 	bool isAddressChange(const char * ipAddress, const int udpPort) const;
 	
 	void recvMessages();

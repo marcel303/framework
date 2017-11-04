@@ -37,6 +37,16 @@ OscSender::OscSender()
 {
 }
 
+bool OscSender::isAddressValid(const char * ipAddress, const int udpPort) const
+{
+	if (ipAddress == nullptr || ipAddress[0] == 0)
+		return false;
+	if (udpPort == 0)
+		return false;
+	
+	return true;
+}
+
 bool OscSender::isAddressChange(const char * _ipAddress, const int _udpPort) const
 {
 	return _ipAddress != ipAddress || _udpPort != udpPort;
@@ -53,13 +63,24 @@ bool OscSender::init(const char * _ipAddress, const int _udpPort)
 		ipAddress = _ipAddress;
 		udpPort = _udpPort;
 		
-		transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress.c_str(), udpPort));
+		LOG_DBG("creating OSC UDP send socket @ %s:%d", ipAddress.c_str(), udpPort);
 		
-		return true;
+		if (isAddressValid(ipAddress.c_str(), udpPort) == false)
+		{
+			LOG_WRN("invalid OSC send address: %s:%d", ipAddress.c_str(), udpPort);
+			
+			return false;
+		}
+		else
+		{
+			transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress.c_str(), udpPort));
+			
+			return true;
+		}
 	}
 	catch (std::exception & e)
 	{
-		LOG_ERR("failed to init OSC sender: %s", e.what());
+		LOG_ERR("failed to init OSC sender: %s. ipAddress=%s, udpPort=%d", e.what(), ipAddress.c_str(), udpPort);
 		
 		shut();
 		
