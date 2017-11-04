@@ -66,8 +66,6 @@ VfxNodeMidi::~VfxNodeMidi()
 
 void VfxNodeMidi::close()
 {
-	currentPort = -1;
-	
 	try
 	{
 		delete midiIn;
@@ -85,6 +83,8 @@ void VfxNodeMidi::tick(const float dt)
 	
 	if (isPassthrough || port < 0)
 	{
+		currentPort = -1;
+		
 		close();
 		return;
 	}
