@@ -56,7 +56,7 @@ void VfxNodePictureCpu::init(const GraphNode & node)
 {
 	const char * filename = getInputString(kInput_Source, nullptr);
 	
-	if (filename != nullptr)
+	if (isPassthrough == false && filename != nullptr)
 	{
 		setImage(filename);
 	}
@@ -68,7 +68,7 @@ void VfxNodePictureCpu::tick(const float dt)
 	
 	const char * filename = getInputString(kInput_Source, nullptr);
 	
-	if (filename == nullptr)
+	if (isPassthrough || filename == nullptr)
 	{
 		setImage(nullptr);
 	}

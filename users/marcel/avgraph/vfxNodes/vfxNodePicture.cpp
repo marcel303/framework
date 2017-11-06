@@ -59,7 +59,7 @@ void VfxNodePicture::init(const GraphNode & node)
 	
 	const char * filename = getInputString(kInput_Source, nullptr);
 	
-	if (filename == nullptr)
+	if (isPassthrough || filename == nullptr)
 	{
 		image->texture = 0;
 	}
@@ -73,7 +73,7 @@ void VfxNodePicture::tick(const float dt)
 {
 	const char * filename = getInputString(kInput_Source, nullptr);
 	
-	if (filename == nullptr)
+	if (isPassthrough || filename == nullptr)
 	{
 		image->texture = 0;
 	}
