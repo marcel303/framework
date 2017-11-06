@@ -25,15 +25,23 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+// todo : implement custom draw to skip traversal when passthrough mode is set
+
 #include "framework.h"
 #include "vfxNodeSurface.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
 
+VFX_ENUM_TYPE(surfaceViewMode)
+{
+	elem("screen");
+	elem("perspective");
+}
+
 VFX_NODE_TYPE(surface, VfxNodeSurface)
 {
-	typeName = "surface";
+	typeName = "draw.surface";
 	
 	in("source", "any");
 	in("clear", "bool", "1");
@@ -42,6 +50,10 @@ VFX_NODE_TYPE(surface, VfxNodeSurface)
 	in("darkenColor", "color", "111");
 	in("multiply", "bool", "0");
 	in("multiplyColor", "color", "eee");
+	inEnum("viewMode", "surfaceViewMode");
+	in("fov", "float", "90");
+	in("zNear", "float", "0.01");
+	in("zFar", "float", "1000");
 	out("image", "image");
 }
 
@@ -57,17 +69,61 @@ VfxNodeSurface::VfxNodeSurface()
 	addInput(kInput_DarkenColor, kVfxPlugType_Color);
 	addInput(kInput_Multiply, kVfxPlugType_Bool);
 	addInput(kInput_MultiplyColor, kVfxPlugType_Color);
+	addInput(kInput_ViewMode, kVfxPlugType_Int);
+	addInput(kInput_FOV, kVfxPlugType_Float);
+	addInput(kInput_ZNear, kVfxPlugType_Float);
+	addInput(kInput_ZFar, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
-
-	surface = new Surface(GFX_SX, GFX_SY, true);
-
-	imageOutput.texture = surface->getTexture();
 }
 
 VfxNodeSurface::~VfxNodeSurface()
 {
+	freeSurface();
+}
+
+void VfxNodeSurface::allocSurface(const bool withDepthBuffer)
+{
+	freeSurface();
+	
+	//
+	
+	surface = new Surface(GFX_SX, GFX_SY, withDepthBuffer, false, SURFACE_RGBA16F);
+	
+	imageOutput.texture = surface->getTexture();
+}
+
+void VfxNodeSurface::freeSurface()
+{
+	imageOutput.texture = 0;
+	
 	delete surface;
 	surface = nullptr;
+}
+
+void VfxNodeSurface::init(const GraphNode & node)
+{
+	const ViewMode viewMode = (ViewMode)getInputInt(kInput_ViewMode, 0);
+	
+	const bool withDepthBuffer = (viewMode == kViewMode_Perspective);
+	
+	if (surface == nullptr || withDepthBuffer != surface->hasDepthTexture())
+		allocSurface(withDepthBuffer);
+}
+
+void VfxNodeSurface::tick(const float dt)
+{
+	if (isPassthrough)
+	{
+		freeSurface();
+		return;
+	}
+	
+	const ViewMode viewMode = (ViewMode)getInputInt(kInput_ViewMode, 0);
+	
+	const bool withDepthBuffer = (viewMode == kViewMode_Perspective);
+	
+	if (surface == nullptr || withDepthBuffer != surface->hasDepthTexture())
+		allocSurface(withDepthBuffer);
 }
 
 void VfxNodeSurface::beforeDraw() const
@@ -81,6 +137,10 @@ void VfxNodeSurface::beforeDraw() const
 	const VfxColor * darkenColor = getInputColor(kInput_DarkenColor, nullptr);
 	const bool multiply = getInputBool(kInput_Multiply, false);
 	const VfxColor * multiplyColor = getInputColor(kInput_MultiplyColor, nullptr);
+	const ViewMode viewMode = (ViewMode)getInputInt(kInput_ViewMode, 0);
+	const float fov = getInputFloat(kInput_FOV, 90.f);
+	const float zNear = getInputFloat(kInput_ZNear, .01f);
+	const float zFar = getInputFloat(kInput_ZFar, 1000.f);
 	
 	pushSurface(surface);
 	
@@ -90,6 +150,9 @@ void VfxNodeSurface::beforeDraw() const
 			surface->clearf(clearColor->r, clearColor->g, clearColor->b, clearColor->a);
 		else
 			surface->clear();
+		
+		if (viewMode == kViewMode_Perspective)
+			surface->clearDepth(1.f);
 	}
 	
 	if (darken && darkenColor)
@@ -107,12 +170,32 @@ void VfxNodeSurface::beforeDraw() const
 		drawRect(0, 0, surface->getWidth(), surface->getHeight());
 		popBlend();
 	}
+	
+	pushTransform();
+	
+	if (viewMode == kViewMode_Screen)
+		projectScreen2d();
+	if (viewMode == kViewMode_Perspective)
+		projectPerspective3d(fov, zNear, zFar);
+	
+	if (viewMode == kViewMode_Perspective)
+	{
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+	}
 }
 
 void VfxNodeSurface::afterDraw() const
 {
 	if (isPassthrough)
 		return;
-		
+	
+	const ViewMode viewMode = (ViewMode)getInputInt(kInput_ViewMode, 0);
+	
+	if (viewMode == kViewMode_Perspective)
+		glDisable(GL_DEPTH_TEST);
+	
+	popTransform();
+	
 	popSurface();
 }

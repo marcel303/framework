@@ -33,6 +33,12 @@ class Surface;
 
 struct VfxNodeSurface : VfxNodeBase
 {
+	enum ViewMode
+	{
+		kViewMode_Screen,
+		kViewMode_Perspective
+	};
+	
 	enum Input
 	{
 		kInput_DontCare,
@@ -42,6 +48,10 @@ struct VfxNodeSurface : VfxNodeBase
 		kInput_DarkenColor,
 		kInput_Multiply,
 		kInput_MultiplyColor,
+		kInput_ViewMode,
+		kInput_FOV,
+		kInput_ZNear,
+		kInput_ZFar,
 		kInput_COUNT
 	};
 
@@ -57,7 +67,14 @@ struct VfxNodeSurface : VfxNodeBase
 	
 	VfxNodeSurface();
 	virtual ~VfxNodeSurface() override;
-
+	
+	void allocSurface(const bool withDepthBuffer);
+	void freeSurface();
+	
+	virtual void init(const GraphNode & node) override;
+	
+	virtual void tick(const float dt) override;
+	
 	virtual void beforeDraw() const override;
 	virtual void afterDraw() const override;
 };
