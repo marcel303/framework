@@ -958,6 +958,8 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			
 			glBindVertexArray(0);
 		}
+		
+		clearShader();
 	}
 	
 	if (drawFlags & DrawNormals)
