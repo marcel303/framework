@@ -74,6 +74,8 @@ VfxNodeSurface::VfxNodeSurface()
 	addInput(kInput_ZNear, kVfxPlugType_Float);
 	addInput(kInput_ZFar, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
+	
+	flags |= kFlag_CustomTraverseDraw;
 }
 
 VfxNodeSurface::~VfxNodeSurface()
@@ -124,6 +126,18 @@ void VfxNodeSurface::tick(const float dt)
 	
 	if (surface == nullptr || withDepthBuffer != surface->hasDepthTexture())
 		allocSurface(withDepthBuffer);
+}
+
+void VfxNodeSurface::customTraverseDraw(const int traversalId) const
+{
+	if (isPassthrough)
+		return;
+	
+	for (auto predep : predeps)
+	{
+		if (predep->lastDrawTraversalId != traversalId)
+			predep->traverseDraw(traversalId);
+	}
 }
 
 void VfxNodeSurface::beforeDraw() const

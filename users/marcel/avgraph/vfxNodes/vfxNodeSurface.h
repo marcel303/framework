@@ -75,6 +75,7 @@ struct VfxNodeSurface : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 	
+	virtual void customTraverseDraw(const int traversalId) const override;
 	virtual void beforeDraw() const override;
 	virtual void afterDraw() const override;
 };
