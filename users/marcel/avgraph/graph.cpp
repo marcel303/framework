@@ -5417,6 +5417,23 @@ bool GraphEdit::load(const char * filename)
 	if (realTimeConnection)
 		realTimeConnection->loadEnd(*this);
 	
+	// draw a notification for each node which is not represented in the type definition library
+	
+	for (auto & nodeItr : graph->nodes)
+	{
+		auto & node = nodeItr.second;
+		
+		if (node.nodeType != kGraphNodeType_Regular)
+			continue;
+		
+		auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+		
+		if (typeDefinition == nullptr)
+		{
+			showNotification("no node type for node %d:%s", node.id, node.typeName.c_str());
+		}
+	}
+	
 	//
 	
 	return result;
