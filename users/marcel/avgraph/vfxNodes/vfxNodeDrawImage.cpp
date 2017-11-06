@@ -71,73 +71,148 @@ void VfxNodeDrawImage::draw() const
 	
 	if (image != nullptr)
 	{
-		float scaleX = 1.f;
-		float scaleY = 1.f;
+		const TRANSFORM transform = getTransform();
 		
-		const int imageSx = image->getSx();
-		const int imageSy = image->getSy();
-		
-		const float fillScaleX = GFX_SX / float(imageSx);
-		const float fillScaleY = GFX_SY / float(imageSy);
-		
-		if (sizeMode == kSizeMode_Fill)
+		if (transform == TRANSFORM_SCREEN)
 		{
-			const float scale = fmaxf(fillScaleX, fillScaleY);
+			float scaleX = 1.f;
+			float scaleY = 1.f;
 			
-			scaleX = scale;
-			scaleY = scale;
-		}
-		else if (sizeMode == kSizeMode_Contain)
-		{
-			const float scale = fminf(fillScaleX, fillScaleY);
+			const int imageSx = image->getSx();
+			const int imageSy = image->getSy();
 			
-			scaleX = scale;
-			scaleY = scale;
-		}
-		else if (sizeMode == kSizeMode_DontScale)
-		{
-			scaleX = 1.f;
-			scaleY = 1.f;
-		}
-		else if (sizeMode == kSizeMode_Stretch)
-		{
-			scaleX = fillScaleX;
-			scaleY = fillScaleY;
-		}
-		else if (sizeMode == kSizeMode_FitX)
-		{
-			const float scale = fillScaleX;
+			const float viewSx = GFX_SX;
+			const float viewSy = GFX_SY;
 			
-			scaleX = scale;
-			scaleY = scale;
-		}
-		else if (sizeMode == kSizeMode_FitY)
-		{
-			const float scale = fillScaleY;
+			const float fillScaleX = viewSx / float(imageSx);
+			const float fillScaleY = viewSy / float(imageSy);
 			
-			scaleX = scale;
-			scaleY = scale;
+			if (sizeMode == kSizeMode_Fill)
+			{
+				const float scale = fmaxf(fillScaleX, fillScaleY);
+				
+				scaleX = scale;
+				scaleY = scale;
+			}
+			else if (sizeMode == kSizeMode_Contain)
+			{
+				const float scale = fminf(fillScaleX, fillScaleY);
+				
+				scaleX = scale;
+				scaleY = scale;
+			}
+			else if (sizeMode == kSizeMode_DontScale)
+			{
+				scaleX = 1.f;
+				scaleY = 1.f;
+			}
+			else if (sizeMode == kSizeMode_Stretch)
+			{
+				scaleX = fillScaleX;
+				scaleY = fillScaleY;
+			}
+			else if (sizeMode == kSizeMode_FitX)
+			{
+				const float scale = fillScaleX;
+				
+				scaleX = scale;
+				scaleY = scale;
+			}
+			else if (sizeMode == kSizeMode_FitY)
+			{
+				const float scale = fillScaleY;
+				
+				scaleX = scale;
+				scaleY = scale;
+			}
+			else
+			{
+				Assert(false);
+			}
+			
+			const float offsetX = (viewSx - imageSx * scaleX) / 2.f;
+			const float offsetY = (viewSy - imageSy * scaleY) / 2.f;
+			
+			gxSetTexture(image->getTexture());
+			{
+				gxPushMatrix();
+				{
+					gxTranslatef(offsetX, offsetY, 0.f);
+					gxScalef(scaleX, scaleY, 1.f);
+					
+					setColorf(1.f, 1.f, 1.f, opacity);
+					drawRect(0, 0, imageSx, imageSy);
+				}
+				gxPopMatrix();
+			}
+			gxSetTexture(0);
 		}
 		else
 		{
-			Assert(false);
-		}
-		
-		const float offsetX = (GFX_SX - imageSx * scaleX) / 2.f;
-		const float offsetY = (GFX_SY - imageSy * scaleY) / 2.f;
-		
-		gxSetTexture(image->getTexture());
-		{
-			gxPushMatrix();
+			float scaleX = 1.f;
+			float scaleY = 1.f;
+			
+			const int imageSx = image->getSx();
+			const int imageSy = image->getSy();
+			
+			const float fillScaleX = 2.f / float(imageSx);
+			const float fillScaleY = 2.f / float(imageSy);
+			
+			if (sizeMode == kSizeMode_Fill)
 			{
-				gxTranslatef(offsetX, offsetY, 0.f);
-				gxScalef(scaleX, scaleY, 1.f);
+				const float scale = fmaxf(fillScaleX, fillScaleY);
 				
-				setColorf(1.f, 1.f, 1.f, opacity);
-				drawRect(0, 0, imageSx, imageSy);
+				scaleX = scale;
+				scaleY = scale;
 			}
-			gxPopMatrix();
+			else if (sizeMode == kSizeMode_Contain)
+			{
+				const float scale = fminf(fillScaleX, fillScaleY);
+				
+				scaleX = scale;
+				scaleY = scale;
+			}
+			else if (sizeMode == kSizeMode_DontScale)
+			{
+				scaleX = 1.f;
+				scaleY = 1.f;
+			}
+			else if (sizeMode == kSizeMode_Stretch)
+			{
+				scaleX = fillScaleX;
+				scaleY = fillScaleY;
+			}
+			else if (sizeMode == kSizeMode_FitX)
+			{
+				const float scale = fillScaleX;
+				
+				scaleX = scale;
+				scaleY = scale;
+			}
+			else if (sizeMode == kSizeMode_FitY)
+			{
+				const float scale = fillScaleY;
+				
+				scaleX = scale;
+				scaleY = scale;
+			}
+			else
+			{
+				Assert(false);
+			}
+			
+			gxSetTexture(image->getTexture());
+			{
+				gxPushMatrix();
+				{
+					gxScalef(scaleX, scaleY, 1.f);
+					
+					setColorf(1.f, 1.f, 1.f, opacity);
+					drawRect(-imageSx/2.f, -imageSy/2.f, +imageSx/2.f, +imageSy/2.f);
+				}
+				gxPopMatrix();
+			}
+			gxSetTexture(0);
 		}
-		gxSetTexture(0);
 	}
 }
