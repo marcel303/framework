@@ -64,35 +64,12 @@ VfxNodeSequence::VfxNodeSequence()
 	flags |= kFlag_CustomTraverseDraw;
 }
 
-void VfxNodeSequence::draw() const
-{
-#if 0
-	vfxGpuTimingBlock(VfxNodeSequence);
-	
-	for (int i = kInput_1; i <= kInput_8; ++i)
-	{
-		const VfxPlug * plug = tryGetInput(i);
-		
-		if (plug && plug->isConnected() && plug->memType == kVfxPlugType_Image)
-		{
-			const VfxImageBase * image = plug->getImage();
-			
-			if (image != nullptr)
-			{
-				gxSetTexture(image->getTexture());
-				{
-					drawRect(0, 0, GFX_SX, GFX_SY);
-				}
-				gxSetTexture(0);
-			}
-		}
-	}
-#endif
-}
-
 void VfxNodeSequence::customTraverseDraw(const int traversalId) const
 {
 	vfxCpuTimingBlock(VfxNodeSequence);
+	
+	if (isPassthrough)
+		return;
 	
 	for (int i = kInput_1; i <= kInput_8; ++i)
 	{
