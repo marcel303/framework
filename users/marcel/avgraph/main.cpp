@@ -57,7 +57,8 @@ using namespace tinyxml2;
 //#define FILENAME "wekinatorTest.xml"
 //#define FILENAME "testVfxGraph.xml"
 //#define FILENAME "sampleTest.xml"
-#define FILENAME "midiTest.xml"
+//#define FILENAME "midiTest.xml"
+#define FILENAME "draw3dTest.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -372,13 +373,21 @@ static void testCamera3d()
 
 //
 
+#include "Path.h"
+
 static std::string filedrop;
 
 static void handleAction(const std::string & action, const Dictionary & args)
 {
 	if (action == "filedrop")
 	{
-		filedrop = args.getString("file", "");
+		const Path basepath(getDirectory());
+		const Path filepath(args.getString("file", ""));
+		
+		Path relativePath;
+		relativePath.MakeRelative(basepath, filepath);
+		
+		filedrop = relativePath.ToString();
 	}
 }
 
