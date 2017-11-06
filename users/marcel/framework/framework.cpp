@@ -1482,6 +1482,11 @@ GLuint Surface::getTexture() const
 	return m_texture[m_bufferId];
 }
 
+bool Surface::hasDepthTexture() const
+{
+	return m_depthTexture != 0;
+}
+
 GLuint Surface::getDepthTexture() const
 {
 	return m_depthTexture;
@@ -4330,6 +4335,11 @@ void setTransform(TRANSFORM transform)
 	applyTransform();
 }
 
+TRANSFORM getTransform()
+{
+	return globals.transform;
+}
+
 void applyTransform()
 {
 	float sx;
@@ -4412,6 +4422,37 @@ void setTransform3d(const Mat4x4 & transform)
 	globals.transform3d = transform;
 	
 	setTransform(TRANSFORM_3D);
+}
+
+struct TransformData
+{
+	TRANSFORM transform;
+	Mat4x4 projection;
+	Mat4x4 modelView;
+};
+
+static Stack<TransformData, 32> s_transformStack;
+
+void pushTransform()
+{
+	TransformData t;
+	
+	t.transform = globals.transform;
+	gxGetMatrixf(GL_PROJECTION, t.projection.m_v);
+	gxGetMatrixf(GL_MODELVIEW, t.modelView.m_v);
+	
+	s_transformStack.push(t);
+}
+
+void popTransform()
+{
+	TransformData t = s_transformStack.popValue();
+	
+	setTransform(t.transform);
+	gxMatrixMode(GL_PROJECTION);
+	gxLoadMatrixf(t.projection.m_v);
+	gxMatrixMode(GL_MODELVIEW);
+	gxLoadMatrixf(t.modelView.m_v);
 }
 
 void projectScreen2d()
@@ -7452,6 +7493,15 @@ void changeDirectory(const char * path)
 	
 	if (error != 0)
 		logError("failed to changeDirectory. errno=%d", errno);
+}
+
+std::string getDirectory()
+{
+	char temp[1024];
+	
+	getcwd(temp, sizeof(temp));
+	
+	return temp;
 }
 
 #if ENABLE_LOGGING

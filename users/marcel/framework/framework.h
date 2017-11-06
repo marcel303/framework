@@ -361,6 +361,7 @@ public:
 	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered);
 	GLuint getFramebuffer() const;
 	GLuint getTexture() const;
+	bool hasDepthTexture() const;
 	GLuint getDepthTexture() const;
 	int getWidth() const;
 	int getHeight() const;
@@ -1082,10 +1083,14 @@ void clearCaches(int caches);
 // drawing
 
 void setTransform(TRANSFORM transform);
+TRANSFORM getTransform();
 void applyTransform();
 void applyTransformWithViewportSize(const float sx, const float sy);
 void setTransform2d(const Mat4x4 & transform);
 void setTransform3d(const Mat4x4 & transform);
+void pushTransform();
+void popTransform();
+
 void projectScreen2d();
 void projectOrtho3d(); // todo
 void projectPerspective3d(const float fov, const float nearZ, const float farZ);
@@ -1261,6 +1266,7 @@ void gxSetTexture(GLuint texture);
 // utility
 
 void changeDirectory(const char * path);
+std::string getDirectory();
 std::vector<std::string> listFiles(const char * path, bool recurse);
 void showErrorMessage(const char * caption, const char * format, ...);
 
