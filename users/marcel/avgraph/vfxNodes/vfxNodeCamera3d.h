@@ -49,10 +49,15 @@ struct VfxNodeCamera3d : VfxNodeBase
 	enum Output
 	{
 		kOutput_Any,
+		kOutput_WorldMatrix,
 		kOutput_COUNT
 	};
 
 	Camera3d * camera;
+	
+	Mat4x4 cameraWorldMatrix;
+	
+	VfxChannels cameraWorldMatrixOutput;
 	
 	VfxNodeCamera3d();
 	virtual ~VfxNodeCamera3d() override;

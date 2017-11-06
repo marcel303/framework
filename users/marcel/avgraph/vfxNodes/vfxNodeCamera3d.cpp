@@ -41,11 +41,14 @@ VFX_NODE_TYPE(draw_camera3d, VfxNodeCamera3d)
 	in("pitch", "float");
 	in("roll", "float");
 	out("any", "any");
+	out("mat.world", "channels");
 }
 
 VfxNodeCamera3d::VfxNodeCamera3d()
 	: VfxNodeBase()
 	, camera(nullptr)
+	, cameraWorldMatrix(true)
+	, cameraWorldMatrixOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Any, kVfxPlugType_DontCare);
@@ -57,6 +60,7 @@ VfxNodeCamera3d::VfxNodeCamera3d()
 	addInput(kInput_Pitch, kVfxPlugType_Float);
 	addInput(kInput_Roll, kVfxPlugType_Float);
 	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
+	addOutput(kOutput_WorldMatrix, kVfxPlugType_Channels, &cameraWorldMatrixOutput);
 	
 	camera = new Camera3d();
 }
@@ -72,7 +76,11 @@ void VfxNodeCamera3d::tick(const float dt)
 	vfxCpuTimingBlock(VfxNodeCamera3d);
 	
 	if (isPassthrough)
+	{
+		cameraWorldMatrix.MakeIdentity();
+		cameraWorldMatrixOutput.reset();
 		return;
+	}
 	
 	const bool interactive = getInputBool(kInput_Interactive, false);
 
@@ -94,6 +102,9 @@ void VfxNodeCamera3d::tick(const float dt)
 	}
 
 	camera->tick(dt, interactive);
+	
+	cameraWorldMatrix = camera->getWorldMatrix();
+	cameraWorldMatrixOutput.setData2DContiguous(cameraWorldMatrix.m_v, false, 4, 4, 1);
 }
 
 void VfxNodeCamera3d::beforeDraw() const
