@@ -28,7 +28,7 @@
 #include "delayLine.h"
 #include "vfxNodeImpulseResponse.h"
 
-VFX_NODE_TYPE(impulse_response, VfxNodeImpulseResponse)
+VFX_NODE_TYPE(VfxNodeImpulseResponse)
 {
 	typeName = "impulse.response";
 	

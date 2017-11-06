@@ -46,7 +46,7 @@ VFX_ENUM_TYPE(easeType)
 	elem("bounceInOut");
 }
 
-VFX_NODE_TYPE(map_ease, VfxNodeMapEase)
+VFX_NODE_TYPE(VfxNodeMapEase)
 {
 	typeName = "map.ease";
 	

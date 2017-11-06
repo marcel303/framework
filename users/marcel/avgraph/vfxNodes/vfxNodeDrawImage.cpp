@@ -41,7 +41,7 @@ VFX_ENUM_TYPE(drawImageSizeMode)
 	elem("fitY");
 }
 
-VFX_NODE_TYPE(draw_image, VfxNodeDrawImage)
+VFX_NODE_TYPE(VfxNodeDrawImage)
 {
 	typeName = "draw.image";
 	

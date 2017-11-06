@@ -31,7 +31,7 @@
 
 #include "tinyxml2.h" // fixme
 
-VFX_NODE_TYPE(timeline, VfxNodeTimeline)
+VFX_NODE_TYPE(VfxNodeTimeline)
 {
 	typeName = "timeline";
 	

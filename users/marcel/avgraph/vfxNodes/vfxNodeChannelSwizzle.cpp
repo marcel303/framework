@@ -29,7 +29,7 @@
 #include "vfxNodeChannelSwizzle.h"
 #include "vfxTypes.h"
 
-VFX_NODE_TYPE(channels_swizzle, VfxNodeChannelSwizzle)
+VFX_NODE_TYPE(VfxNodeChannelSwizzle)
 {
 	typeName = "channel.swizzle";
 	in("channels", "channels");

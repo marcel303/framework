@@ -39,7 +39,7 @@ VFX_ENUM_TYPE(imageCpuToGpuChannel)
 	elem("a");
 }
 
-VFX_NODE_TYPE(image_cpu_to_gpu, VfxNodeImageCpuToGpu)
+VFX_NODE_TYPE(VfxNodeImageCpuToGpu)
 {
 	typeName = "image_cpu.toGpu";
 	

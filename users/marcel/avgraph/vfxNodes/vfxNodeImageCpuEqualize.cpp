@@ -51,7 +51,7 @@ VFX_ENUM_TYPE(imageCpuEqualizeChannel)
 	elem("a");
 }
 
-VFX_NODE_TYPE(image_cpu_equalize, VfxNodeImageCpuEqualize)
+VFX_NODE_TYPE(VfxNodeImageCpuEqualize)
 {
 	typeName = "image_cpu.equalize";
 	

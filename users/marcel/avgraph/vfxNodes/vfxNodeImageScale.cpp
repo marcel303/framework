@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "vfxNodeImageScale.h"
 
-VFX_NODE_TYPE(image_scale, VfxNodeImageScale)
+VFX_NODE_TYPE(VfxNodeImageScale)
 {
 	typeName = "image.scale";
 	

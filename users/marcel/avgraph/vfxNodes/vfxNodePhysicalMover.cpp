@@ -28,7 +28,7 @@
 #include "vfxNodePhysicalMover.h"
 #include <cmath>
 
-VFX_NODE_TYPE(physical_mover, VfxNodePhysicalMover)
+VFX_NODE_TYPE(VfxNodePhysicalMover)
 {
 	typeName = "gen.physical.mover";
 	

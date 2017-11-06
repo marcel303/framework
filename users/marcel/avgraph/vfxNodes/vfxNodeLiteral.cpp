@@ -30,7 +30,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "Parse.h"
 #include "vfxNodeLiteral.h"
 
-VFX_NODE_TYPE(bool, VfxNodeBoolLiteral)
+VFX_NODE_TYPE(VfxNodeBoolLiteral)
 {
 	typeName = "literal.bool";
 	displayName = "bool";
@@ -39,7 +39,7 @@ VFX_NODE_TYPE(bool, VfxNodeBoolLiteral)
 	outEditable("value");
 }
 
-VFX_NODE_TYPE(int, VfxNodeIntLiteral)
+VFX_NODE_TYPE(VfxNodeIntLiteral)
 {
 	typeName = "literal.int";
 	displayName = "int";
@@ -48,7 +48,7 @@ VFX_NODE_TYPE(int, VfxNodeIntLiteral)
 	outEditable("value");
 }
 
-VFX_NODE_TYPE(float, VfxNodeFloatLiteral)
+VFX_NODE_TYPE(VfxNodeFloatLiteral)
 {
 	typeName = "literal.float";
 	displayName = "float";
@@ -57,7 +57,7 @@ VFX_NODE_TYPE(float, VfxNodeFloatLiteral)
 	outEditable("value");
 }
 
-VFX_NODE_TYPE(string, VfxNodeStringLiteral)
+VFX_NODE_TYPE(VfxNodeStringLiteral)
 {
 	typeName = "literal.string";
 	displayName = "string";
@@ -66,7 +66,7 @@ VFX_NODE_TYPE(string, VfxNodeStringLiteral)
 	outEditable("value");
 }
 
-VFX_NODE_TYPE(color_literal, VfxNodeColorLiteral)
+VFX_NODE_TYPE(VfxNodeColorLiteral)
 {
 	typeName = "literal.color";
 	displayName = "color";

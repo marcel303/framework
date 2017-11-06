@@ -46,7 +46,7 @@ static int pad16(const int v)
 	return (v + 15) & (~15);
 }
 
-VFX_NODE_TYPE(image_cpu_downsample, VfxNodeImageCpuDownsample)
+VFX_NODE_TYPE(VfxNodeImageCpuDownsample)
 {
 	typeName = "image_cpu.downsample";
 	

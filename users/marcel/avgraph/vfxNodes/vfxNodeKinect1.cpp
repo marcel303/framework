@@ -33,7 +33,7 @@
 
 #include "framework.h" // todo : use OpenGL texture object and remove this dependency
 
-VFX_NODE_TYPE(kinect1, VfxNodeKinect1)
+VFX_NODE_TYPE(VfxNodeKinect1)
 {
 	typeName = "kinect1";
 	

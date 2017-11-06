@@ -209,7 +209,7 @@ VFX_ENUM_TYPE(mathType)
 	elem("semitone");
 }
 
-VFX_NODE_TYPE(math, VfxNodeMath)
+VFX_NODE_TYPE(VfxNodeMath)
 {
 	typeName = "math";
 	
@@ -272,7 +272,7 @@ struct name : VfxNodeMathBase \
 	{ \
 	} \
 }; \
-VFX_NODE_TYPE(name, name) \
+VFX_NODE_TYPE(name) \
 { \
 	typeName = _typeName; \
 	in("a", "float"); \

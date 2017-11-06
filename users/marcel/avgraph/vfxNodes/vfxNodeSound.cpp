@@ -32,7 +32,7 @@
 
 // todo : trigger on start to send beat 0
 
-VFX_NODE_TYPE(sound, VfxNodeSound)
+VFX_NODE_TYPE(VfxNodeSound)
 {
 	typeName = "sound";
 	

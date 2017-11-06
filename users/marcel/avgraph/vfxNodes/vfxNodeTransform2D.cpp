@@ -30,7 +30,7 @@
 
 #include "Calc.h"
 
-VFX_NODE_TYPE(transform_2d, VfxNodeTransform2D)
+VFX_NODE_TYPE(VfxNodeTransform2D)
 {
 	typeName = "draw.transform2d";
 	

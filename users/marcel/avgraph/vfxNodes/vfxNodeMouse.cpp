@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "vfxNodeMouse.h"
 
-VFX_NODE_TYPE(mouse, VfxNodeMouse)
+VFX_NODE_TYPE(VfxNodeMouse)
 {
 	typeName = "mouse";
 	

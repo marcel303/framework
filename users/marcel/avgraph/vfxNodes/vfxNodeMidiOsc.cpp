@@ -29,7 +29,7 @@
 #include "vfxNodes/oscEndpointMgr.h"
 #include "vfxNodes/vfxNodeMidiOsc.h"
 
-VFX_NODE_TYPE(midiosc, VfxNodeMidiOsc)
+VFX_NODE_TYPE(VfxNodeMidiOsc)
 {
 	typeName = "midiosc";
 

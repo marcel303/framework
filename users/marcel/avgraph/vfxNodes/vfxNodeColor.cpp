@@ -34,7 +34,7 @@ VFX_ENUM_TYPE(colorMode)
 	elem("rgb");
 }
 
-VFX_NODE_TYPE(color, VfxNodeColor)
+VFX_NODE_TYPE(VfxNodeColor)
 {
 	typeName = "color";
 	

@@ -30,7 +30,7 @@
 #include "Path.h"
 #include "vfxNodeDatatable.h"
 
-VFX_NODE_TYPE(datatable, VfxNodeDatatable)
+VFX_NODE_TYPE(VfxNodeDatatable)
 {
 	typeName = "channel.fromFile";
 	

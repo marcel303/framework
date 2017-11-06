@@ -31,11 +31,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 // todo : interpret NOTE_OFF and NOTE_ON messages
 
-static const uint8_t NOTE_OFF = 0x80;
-static const uint8_t NOTE_ON = 0x90;
+//static const uint8_t NOTE_OFF = 0x80;
+//static const uint8_t NOTE_ON = 0x90;
 static const uint8_t CONTROLLER_CHANGE = 0xB0;
 
-VFX_NODE_TYPE(midi, VfxNodeMidi)
+VFX_NODE_TYPE(VfxNodeMidi)
 {
 	typeName = "midi";
 	

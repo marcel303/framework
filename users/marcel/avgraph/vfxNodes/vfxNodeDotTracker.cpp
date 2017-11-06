@@ -29,7 +29,7 @@
 #include "vfxNodeDotTracker.h"
 #include <algorithm>
 
-VFX_NODE_TYPE(dottracker, VfxNodeDotTracker)
+VFX_NODE_TYPE(VfxNodeDotTracker)
 {
 	typeName = "image_cpu.dotTracker";
 	

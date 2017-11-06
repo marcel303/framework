@@ -29,7 +29,7 @@
 #include "vfxNodeDelayLine.h"
 #include <algorithm>
 
-VFX_NODE_TYPE(sample_delay, VfxNodeDelayLine)
+VFX_NODE_TYPE(VfxNodeDelayLine)
 {
 	typeName = "scalar.delayLine";
 	

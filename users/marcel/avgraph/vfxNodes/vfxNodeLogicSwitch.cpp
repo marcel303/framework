@@ -27,7 +27,7 @@
 
 #include "vfxNodeLogicSwitch.h"
 
-VFX_NODE_TYPE(logic_switch, VfxNodeLogicSwitch)
+VFX_NODE_TYPE(VfxNodeLogicSwitch)
 {
 	typeName = "trigger.switch";
 	in("switch!", "trigger");

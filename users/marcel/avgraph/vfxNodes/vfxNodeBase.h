@@ -789,19 +789,19 @@ struct VfxNodeTypeRegistration
 	void outEditable(const char * name);
 };
 
-#define VFX_NODE_TYPE(name, type) \
-	struct name ## __registration : VfxNodeTypeRegistration \
+#define VFX_NODE_TYPE(type) \
+	struct type ## __registration : VfxNodeTypeRegistration \
 	{ \
-		name ## __registration() \
+		type ## __registration() \
 		{ \
 			create = []() -> VfxNodeBase* { return new type(); }; \
 			init(); \
 		} \
 		void init(); \
 	}; \
-	extern name ## __registration name ## __registrationInstance; \
-	name ## __registration name ## __registrationInstance; \
-	void name ## __registration :: init()
+	extern type ## __registration type ## __registrationInstance; \
+	type ## __registration type ## __registrationInstance; \
+	void type ## __registration :: init()
 
 //
 

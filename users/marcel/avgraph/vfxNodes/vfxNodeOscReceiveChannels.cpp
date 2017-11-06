@@ -190,7 +190,7 @@ struct ResourceEditor_OscPathList : GraphEdit_ResourceEditorBase
 
 //
 
-VFX_NODE_TYPE(osc_receive_channels, VfxNodeOscReceiveChannels)
+VFX_NODE_TYPE(VfxNodeOscReceiveChannels)
 {
 	typeName = "osc.receiveChannels";
 	

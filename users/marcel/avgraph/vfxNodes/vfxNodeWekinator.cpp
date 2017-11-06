@@ -32,7 +32,7 @@
 
 #define OSC_BUFFER_SIZE 1024
 
-VFX_NODE_TYPE(wekinator, VfxNodeWekinator)
+VFX_NODE_TYPE(VfxNodeWekinator)
 {
 	typeName = "wekinator";
 

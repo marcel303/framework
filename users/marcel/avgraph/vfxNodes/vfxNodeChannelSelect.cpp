@@ -29,7 +29,7 @@
 #include <algorithm>
 #include <cmath>
 
-VFX_NODE_TYPE(channel_select, VfxNodeChannelSelect)
+VFX_NODE_TYPE(VfxNodeChannelSelect)
 {
 	typeName = "channel.select";
 	

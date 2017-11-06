@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "vfxNodeXinput.h"
 
-VFX_NODE_TYPE(xinput, VfxNodeXinput)
+VFX_NODE_TYPE(VfxNodeXinput)
 {
 	typeName = "xinput";
 	

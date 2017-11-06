@@ -27,7 +27,7 @@
 
 #include "vfxNodeTriggerTreshold.h"
 
-VFX_NODE_TYPE(trigger_treshold, VfxNodeTriggerTreshold)
+VFX_NODE_TYPE(VfxNodeTriggerTreshold)
 {
 	typeName = "trigger.treshold";
 	

@@ -37,7 +37,7 @@ VFX_ENUM_TYPE(yuvToRgbColorSpace)
 	elem("BT.709");
 }
 
-VFX_NODE_TYPE(yuvToRgb, VfxNodeYuvToRgb)
+VFX_NODE_TYPE(VfxNodeYuvToRgb)
 {
 	typeName = "draw.yuvToRgb";
 	

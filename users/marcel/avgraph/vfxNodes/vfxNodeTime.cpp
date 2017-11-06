@@ -29,7 +29,7 @@
 #include "vfxGraph.h"
 #include "vfxNodeTime.h"
 
-VFX_NODE_TYPE(time, VfxNodeTime)
+VFX_NODE_TYPE(VfxNodeTime)
 {
 	typeName = "time";
 	

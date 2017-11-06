@@ -33,7 +33,7 @@ VFX_ENUM_TYPE(pointcloudMode)
 	elem("Kinect V2");
 }
 
-VFX_NODE_TYPE(pointcloud, VfxNodePointcloud)
+VFX_NODE_TYPE(VfxNodePointcloud)
 {
 	typeName = "pointcloud";
 	

@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "vfxNodeDrawModel.h"
 
-VFX_NODE_TYPE(drawModel, VfxNodeDrawModel)
+VFX_NODE_TYPE(VfxNodeDrawModel)
 {
 	typeName = "draw.model";
 	

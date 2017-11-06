@@ -39,7 +39,7 @@ VFX_ENUM_TYPE(drawImageBlendMode)
 	elem("max");
 }
 
-VFX_NODE_TYPE(draw_blend, VfxNodeDrawBlend)
+VFX_NODE_TYPE(VfxNodeDrawBlend)
 {
 	typeName = "draw.blend";
 	

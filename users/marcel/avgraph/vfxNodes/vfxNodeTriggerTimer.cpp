@@ -27,7 +27,7 @@
 
 #include "vfxNodeTriggerTimer.h"
 
-VFX_NODE_TYPE(trigger_timer, VfxNodeTriggerTimer)
+VFX_NODE_TYPE(VfxNodeTriggerTimer)
 {
 	typeName = "trigger.timer";
 	

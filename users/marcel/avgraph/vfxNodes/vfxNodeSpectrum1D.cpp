@@ -40,7 +40,7 @@ VFX_ENUM_TYPE(spectrumOutputMode)
 	elem("squared magnitude");
 }
 
-VFX_NODE_TYPE(spectrum1D, VfxNodeSpectrum1D)
+VFX_NODE_TYPE(VfxNodeSpectrum1D)
 {
 	typeName = "image_cpu.spectrum1d";
 	

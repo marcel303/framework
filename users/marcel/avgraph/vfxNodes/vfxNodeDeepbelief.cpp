@@ -31,7 +31,7 @@
 
 #include "FileStream.h"
 
-VFX_NODE_TYPE(deepbelief, VfxNodeDeepbelief)
+VFX_NODE_TYPE(VfxNodeDeepbelief)
 {
 	typeName = "deepbelief";
 	

@@ -31,7 +31,7 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
-VFX_NODE_TYPE(test, VfxNodeTest)
+VFX_NODE_TYPE(VfxNodeTest)
 {
 	typeName = "test";
 	

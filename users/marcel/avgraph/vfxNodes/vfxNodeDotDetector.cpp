@@ -46,7 +46,7 @@ VFX_ENUM_TYPE(dotDetectorTresholdTest)
 	elem("lessEqual");
 }
 
-VFX_NODE_TYPE(image_dots, VfxNodeDotDetector)
+VFX_NODE_TYPE(VfxNodeDotDetector)
 {
 	typeName = "image_cpu.dots";
 	

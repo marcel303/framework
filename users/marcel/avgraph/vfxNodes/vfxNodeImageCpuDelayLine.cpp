@@ -32,7 +32,7 @@
 #include <algorithm>
 #include <cmath>
 
-VFX_NODE_TYPE(image_cpu_delay, VfxNodeImageCpuDelayLine)
+VFX_NODE_TYPE(VfxNodeImageCpuDelayLine)
 {
 	typeName = "image_cpu.delay";
 	

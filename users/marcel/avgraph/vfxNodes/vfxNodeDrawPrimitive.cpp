@@ -49,7 +49,7 @@ VFX_ENUM_TYPE(drawPrimitiveType)
 	elem("vline", kPrimtiveType_VLine);
 }
 
-VFX_NODE_TYPE(draw_primitive, VfxNodeDrawPrimitive)
+VFX_NODE_TYPE(VfxNodeDrawPrimitive)
 {
 	typeName = "draw.primitive";
 	

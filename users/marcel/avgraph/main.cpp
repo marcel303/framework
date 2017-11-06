@@ -151,7 +151,7 @@ struct VfxNodeResourceTest : VfxNodeBase
 	}
 };
 
-VFX_NODE_TYPE(resource_test, VfxNodeResourceTest)
+VFX_NODE_TYPE(VfxNodeResourceTest)
 {
 	typeName = "test.resource";
 	

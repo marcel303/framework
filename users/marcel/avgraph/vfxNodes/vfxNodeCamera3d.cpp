@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "vfxNodeCamera3d.h"
 
-VFX_NODE_TYPE(draw_camera3d, VfxNodeCamera3d)
+VFX_NODE_TYPE(VfxNodeCamera3d)
 {
 	typeName = "draw.camera3d";
 	

@@ -30,7 +30,7 @@
 
 // todo : add wentDown, wentUp and moved triggers
 
-VFX_NODE_TYPE(touches, VfxNodeTouches)
+VFX_NODE_TYPE(VfxNodeTouches)
 {
 	typeName = "touches";
 	

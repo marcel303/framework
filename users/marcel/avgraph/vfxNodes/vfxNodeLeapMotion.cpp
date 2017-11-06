@@ -31,7 +31,7 @@
 #include "leap/Leap.h"
 #include <SDL2/SDL.h>
 
-VFX_NODE_TYPE(leap, VfxNodeLeapMotion)
+VFX_NODE_TYPE(VfxNodeLeapMotion)
 {
 	typeName = "leap";
 	

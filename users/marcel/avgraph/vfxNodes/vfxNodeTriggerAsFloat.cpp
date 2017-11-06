@@ -27,7 +27,7 @@
 
 #include "vfxNodeTriggerAsFloat.h"
 
-VFX_NODE_TYPE(trigger_asfloat, VfxNodeTriggerAsFloat)
+VFX_NODE_TYPE(VfxNodeTriggerAsFloat)
 {
 	typeName = "trigger.asFloat";
 	

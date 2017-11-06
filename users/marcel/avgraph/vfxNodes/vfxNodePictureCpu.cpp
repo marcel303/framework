@@ -28,7 +28,7 @@
 #include "image.h"
 #include "vfxNodePictureCpu.h"
 
-VFX_NODE_TYPE(picture_cpu, VfxNodePictureCpu)
+VFX_NODE_TYPE(VfxNodePictureCpu)
 {
 	typeName = "picture_cpu";
 	

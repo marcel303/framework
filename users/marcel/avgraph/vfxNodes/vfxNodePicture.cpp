@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "vfxNodePicture.h"
 
-VFX_NODE_TYPE(picture, VfxNodePicture)
+VFX_NODE_TYPE(VfxNodePicture)
 {
 	typeName = "picture";
 	

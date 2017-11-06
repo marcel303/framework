@@ -27,7 +27,7 @@
 
 #include "vfxNodeTriggerOnchange.h"
 
-VFX_NODE_TYPE(trigger_onchange, VfxNodeTriggerOnchange)
+VFX_NODE_TYPE(VfxNodeTriggerOnchange)
 {
 	typeName = "trigger.onchange";
 	

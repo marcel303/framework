@@ -39,7 +39,7 @@ VFX_ENUM_TYPE(oscSendMode)
 	elem("onTrigger");
 }
 
-VFX_NODE_TYPE(osc_send, VfxNodeOscSend)
+VFX_NODE_TYPE(VfxNodeOscSend)
 {
 	typeName = "osc.send";
 	

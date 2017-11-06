@@ -31,7 +31,7 @@
 
 using namespace tinyxml2;
 
-VFX_NODE_TYPE(vfxGraph, VfxNodeVfxGraph)
+VFX_NODE_TYPE(VfxNodeVfxGraph)
 {
 	typeName = "vfxGraph";
 	

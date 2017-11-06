@@ -36,7 +36,7 @@ VFX_ENUM_TYPE(videoOutputMode)
 	elem("yuv");
 }
 
-VFX_NODE_TYPE(video, VfxNodeVideo)
+VFX_NODE_TYPE(VfxNodeVideo)
 {
 	typeName = "video";
 	

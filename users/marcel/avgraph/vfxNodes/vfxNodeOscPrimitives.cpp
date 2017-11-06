@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "vfxNodeOscPrimitives.h"
 
-VFX_NODE_TYPE(osc_sine, VfxNodeOscSine)
+VFX_NODE_TYPE(VfxNodeOscSine)
 {
 	typeName = "gen.sine";
 	in("frequency", "float", "1");
@@ -38,7 +38,7 @@ VFX_NODE_TYPE(osc_sine, VfxNodeOscSine)
 	
 }
 
-VFX_NODE_TYPE(osc_saw, VfxNodeOscSaw)
+VFX_NODE_TYPE(VfxNodeOscSaw)
 {
 	typeName = "gen.saw";
 	in("frequency", "float", "1");
@@ -47,7 +47,7 @@ VFX_NODE_TYPE(osc_saw, VfxNodeOscSaw)
 	out("value", "float");
 }
 
-VFX_NODE_TYPE(osc_triangle, VfxNodeOscTriangle)
+VFX_NODE_TYPE(VfxNodeOscTriangle)
 {
 	typeName = "gen.triangle";
 	in("frequency", "float", "1");
@@ -57,7 +57,7 @@ VFX_NODE_TYPE(osc_triangle, VfxNodeOscTriangle)
 	
 }
 
-VFX_NODE_TYPE(osc_square, VfxNodeOscSquare)
+VFX_NODE_TYPE(VfxNodeOscSquare)
 {
 	typeName = "gen.square";
 	in("frequency", "float", "1");
@@ -67,7 +67,7 @@ VFX_NODE_TYPE(osc_square, VfxNodeOscSquare)
 	
 }
 
-VFX_NODE_TYPE(osc_random, VfxNodeOscRandom)
+VFX_NODE_TYPE(VfxNodeOscRandom)
 {
 	typeName = "gen.random";
 	in("frequency", "float", "1");

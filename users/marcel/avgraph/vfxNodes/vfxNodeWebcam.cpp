@@ -31,7 +31,7 @@
 #include "vfxNodeWebcam.h"
 #include <GL/glew.h>
 
-VFX_NODE_TYPE(webcam, VfxNodeWebcam)
+VFX_NODE_TYPE(VfxNodeWebcam)
 {
 	typeName = "webcam";
 	

@@ -32,7 +32,7 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
-VFX_NODE_TYPE(composite, VfxNodeComposite)
+VFX_NODE_TYPE(VfxNodeComposite)
 {
 	typeName = "draw.composite";
 	

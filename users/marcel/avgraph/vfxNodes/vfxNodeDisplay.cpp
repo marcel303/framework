@@ -27,7 +27,7 @@
 
 #include "vfxNodeDisplay.h"
 
-VFX_NODE_TYPE(display, VfxNodeDisplay)
+VFX_NODE_TYPE(VfxNodeDisplay)
 {
 	typeName = "draw.display";
 	

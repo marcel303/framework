@@ -30,7 +30,7 @@
 
 //
 
-VFX_NODE_TYPE(image_delay, VfxNodeImageDelayLine)
+VFX_NODE_TYPE(VfxNodeImageDelayLine)
 {
 	typeName = "image.delay";
 	

@@ -29,7 +29,7 @@
 #include "vfxNodeImageCpuCrop.h"
 #include <cmath>
 
-VFX_NODE_TYPE(image_cpu_crop, VfxNodeImageCpuCrop)
+VFX_NODE_TYPE(VfxNodeImageCpuCrop)
 {
 	typeName = "image_cpu.crop";
 	

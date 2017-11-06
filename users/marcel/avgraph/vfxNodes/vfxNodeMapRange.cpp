@@ -28,7 +28,7 @@
 #include "vfxNodeMapRange.h"
 #include <cmath>
 
-VFX_NODE_TYPE(map_range, VfxNodeMapRange)
+VFX_NODE_TYPE(VfxNodeMapRange)
 {
 	typeName = "map.range";
 	

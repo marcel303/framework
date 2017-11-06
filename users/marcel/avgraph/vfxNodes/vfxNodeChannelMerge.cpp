@@ -42,7 +42,7 @@ VFX_ENUM_TYPE(channelMergeWrapMode)
 	elem("padZero");
 }
 
-VFX_NODE_TYPE(channels_merge, VfxNodeChannelMerge)
+VFX_NODE_TYPE(VfxNodeChannelMerge)
 {
 	typeName = "channel.merge";
 	inEnum("mergeMode", "channelMergeMergeMode");

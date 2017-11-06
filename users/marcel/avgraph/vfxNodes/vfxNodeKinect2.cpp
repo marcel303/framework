@@ -51,7 +51,7 @@ static OpenglTexture depthTexture;
 
 //
 
-VFX_NODE_TYPE(kinect2, VfxNodeKinect2)
+VFX_NODE_TYPE(VfxNodeKinect2)
 {
 	typeName = "kinect2";
 	

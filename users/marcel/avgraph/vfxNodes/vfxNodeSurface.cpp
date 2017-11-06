@@ -39,7 +39,7 @@ VFX_ENUM_TYPE(surfaceViewMode)
 	elem("perspective");
 }
 
-VFX_NODE_TYPE(surface, VfxNodeSurface)
+VFX_NODE_TYPE(VfxNodeSurface)
 {
 	typeName = "draw.surface";
 	

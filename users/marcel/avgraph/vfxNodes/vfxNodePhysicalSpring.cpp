@@ -28,7 +28,7 @@
 #include "vfxNodePhysicalSpring.h"
 #include <cmath>
 
-VFX_NODE_TYPE(physical_spring, VfxNodePhysicalSpring)
+VFX_NODE_TYPE(VfxNodePhysicalSpring)
 {
 	typeName = "gen.physical.spring";
 	

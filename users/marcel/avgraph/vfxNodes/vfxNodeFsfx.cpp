@@ -34,7 +34,7 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
-VFX_NODE_TYPE(fsfx, VfxNodeFsfx)
+VFX_NODE_TYPE(VfxNodeFsfx)
 {
 	typeName = "draw.fsfx";
 	

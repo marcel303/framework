@@ -28,7 +28,7 @@
 #include "Noise.h"
 #include "vfxNodeNoiseSimplex2D.h"
 
-VFX_NODE_TYPE(noise_simplex2d, VfxNodeNoiseSimplex2D)
+VFX_NODE_TYPE(VfxNodeNoiseSimplex2D)
 {
 	typeName = "gen.noise2d";
 	
