@@ -31,7 +31,7 @@
 
 VFX_NODE_TYPE(sample_delay, VfxNodeDelayLine)
 {
-	typeName = "sample.delay";
+	typeName = "scalar.delayLine";
 	
 	in("value", "float");
 	in("maxDelay", "float");
