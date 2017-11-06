@@ -696,10 +696,12 @@ struct Stack
 	
 	Type popValue()
 	{
+		fassert(stackSize >= 1);
+		Type value = stack[stackSize - 1];
+		
 		pop();
 		
-		fassert(stackSize >= 1);
-		return stack[stackSize - 1];
+		return value;
 	}
 };
 
