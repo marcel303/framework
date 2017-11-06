@@ -854,7 +854,7 @@ static void handleRealTimeEdit(const std::string & filename)
 		reloadScene();
 	else
 	{
-		const std::string extension = Path::GetExtension(filename);
+		const std::string extension = Path::GetExtension(filename, true);
 
 		if (extension == "ps")
 		{

@@ -21,7 +21,7 @@ static int ExecMediaPlayerThread(void * param)
 
 	SDL_LockMutex(s_avcodecMutex);
 	{
-		context->hasBegun = context->mpContext.Begin(context->openParams.filename, false, true, context->openParams.yuv);
+		context->hasBegun = context->mpContext.Begin(context->openParams.filename, false, true, context->openParams.yuv ? MP::kOutputMode_PlanarYUV : MP::kOutputMode_RGBA);
 	}
 	SDL_UnlockMutex(s_avcodecMutex);
 
