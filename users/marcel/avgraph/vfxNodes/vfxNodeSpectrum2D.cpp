@@ -38,7 +38,7 @@
 
 VFX_NODE_TYPE(spectrum2d, VfxNodeSpectrum2D)
 {
-	typeName = "spectrum.2d";
+	typeName = "image_cpu.spectrum2d";
 	
 	in("image", "image_cpu");
 	inEnum("mode", "spectrumOutputMode");

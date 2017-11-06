@@ -32,7 +32,7 @@
 
 VFX_NODE_TYPE(transform_2d, VfxNodeTransform2D)
 {
-	typeName = "transform.2d";
+	typeName = "draw.transform2d";
 	
 	in("any", "any");
 	in("x", "float");
@@ -93,11 +93,17 @@ void VfxNodeTransform2D::tick(const float dt)
 
 void VfxNodeTransform2D::beforeDraw() const
 {
+	if (isPassthrough)
+		return;
+	
 	gxPushMatrix();
 	gxMultMatrixf(transform.matrix.m_v);
 }
 
 void VfxNodeTransform2D::afterDraw() const
 {
+	if (isPassthrough)
+		return;
+		
 	gxPopMatrix();
 }

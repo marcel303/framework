@@ -34,7 +34,7 @@ extern const int GFX_SY;
 
 VFX_NODE_TYPE(composite, VfxNodeComposite)
 {
-	typeName = "composite";
+	typeName = "draw.composite";
 	
 	in("image1", "image");
 	in("transform1", "transform");

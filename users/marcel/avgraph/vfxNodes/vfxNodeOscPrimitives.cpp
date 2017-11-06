@@ -30,7 +30,7 @@
 
 VFX_NODE_TYPE(osc_sine, VfxNodeOscSine)
 {
-	typeName = "osc.sine";
+	typeName = "gen.sine";
 	in("frequency", "float", "1");
 	in("phase", "float");
 	in("restart", "float");
@@ -40,7 +40,7 @@ VFX_NODE_TYPE(osc_sine, VfxNodeOscSine)
 
 VFX_NODE_TYPE(osc_saw, VfxNodeOscSaw)
 {
-	typeName = "osc.saw";
+	typeName = "gen.saw";
 	in("frequency", "float", "1");
 	in("phase", "float");
 	in("restart", "float");
@@ -49,7 +49,7 @@ VFX_NODE_TYPE(osc_saw, VfxNodeOscSaw)
 
 VFX_NODE_TYPE(osc_triangle, VfxNodeOscTriangle)
 {
-	typeName = "osc.triangle";
+	typeName = "gen.triangle";
 	in("frequency", "float", "1");
 	in("phase", "float");
 	in("restart", "float");
@@ -59,7 +59,7 @@ VFX_NODE_TYPE(osc_triangle, VfxNodeOscTriangle)
 
 VFX_NODE_TYPE(osc_square, VfxNodeOscSquare)
 {
-	typeName = "osc.square";
+	typeName = "gen.square";
 	in("frequency", "float", "1");
 	in("phase", "float");
 	in("restart", "float");
@@ -69,7 +69,7 @@ VFX_NODE_TYPE(osc_square, VfxNodeOscSquare)
 
 VFX_NODE_TYPE(osc_random, VfxNodeOscRandom)
 {
-	typeName = "osc.random";
+	typeName = "gen.random";
 	in("frequency", "float", "1");
 	in("next!", "trigger");
 	out("value", "float");

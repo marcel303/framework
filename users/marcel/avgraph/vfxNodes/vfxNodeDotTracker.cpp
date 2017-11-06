@@ -31,7 +31,7 @@
 
 VFX_NODE_TYPE(dottracker, VfxNodeDotTracker)
 {
-	typeName = "image.dotTracker";
+	typeName = "image_cpu.dotTracker";
 	
 	in("xy", "channels");
 	in("maxDistance", "float", "10");

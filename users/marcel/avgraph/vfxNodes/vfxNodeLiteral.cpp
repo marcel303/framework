@@ -32,7 +32,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 VFX_NODE_TYPE(bool, VfxNodeBoolLiteral)
 {
-	typeName = "boolLiteral";
+	typeName = "literal.bool";
 	displayName = "bool";
 	
 	out("value", "bool");
@@ -41,7 +41,7 @@ VFX_NODE_TYPE(bool, VfxNodeBoolLiteral)
 
 VFX_NODE_TYPE(int, VfxNodeIntLiteral)
 {
-	typeName = "intLiteral";
+	typeName = "literal.int";
 	displayName = "int";
 	
 	out("value", "int");
@@ -50,7 +50,7 @@ VFX_NODE_TYPE(int, VfxNodeIntLiteral)
 
 VFX_NODE_TYPE(float, VfxNodeFloatLiteral)
 {
-	typeName = "floatLiteral";
+	typeName = "literal.float";
 	displayName = "float";
 	
 	out("value", "float");
@@ -59,7 +59,7 @@ VFX_NODE_TYPE(float, VfxNodeFloatLiteral)
 
 VFX_NODE_TYPE(string, VfxNodeStringLiteral)
 {
-	typeName = "stringLiteral";
+	typeName = "literal.string";
 	displayName = "string";
 	
 	out("value", "string");
@@ -68,7 +68,7 @@ VFX_NODE_TYPE(string, VfxNodeStringLiteral)
 
 VFX_NODE_TYPE(color_literal, VfxNodeColorLiteral)
 {
-	typeName = "colorLiteral";
+	typeName = "literal.color";
 	displayName = "color";
 	
 	out("value", "color");

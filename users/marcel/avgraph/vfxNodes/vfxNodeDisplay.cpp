@@ -29,7 +29,7 @@
 
 VFX_NODE_TYPE(display, VfxNodeDisplay)
 {
-	typeName = "display";
+	typeName = "draw.display";
 	
 	in("image", "image");
 }

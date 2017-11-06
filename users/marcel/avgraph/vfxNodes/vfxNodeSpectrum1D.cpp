@@ -42,7 +42,7 @@ VFX_ENUM_TYPE(spectrumOutputMode)
 
 VFX_NODE_TYPE(spectrum1D, VfxNodeSpectrum1D)
 {
-	typeName = "spectrum.1d";
+	typeName = "image_cpu.spectrum1d";
 	
 	in("image", "image_cpu");
 	in("sample_y", "float", "0.5");

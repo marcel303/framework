@@ -39,7 +39,7 @@ VFX_ENUM_TYPE(yuvToRgbColorSpace)
 
 VFX_NODE_TYPE(yuvToRgb, VfxNodeYuvToRgb)
 {
-	typeName = "yuvToRgb";
+	typeName = "draw.yuvToRgb";
 	
 	in("y", "image");
 	in("u", "image");

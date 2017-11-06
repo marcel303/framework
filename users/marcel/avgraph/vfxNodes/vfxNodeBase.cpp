@@ -969,7 +969,20 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 		GraphEdit_TypeDefinition typeDefinition;
 		
 		typeDefinition.typeName = registration->typeName;
-		typeDefinition.displayName = registration->displayName;
+		
+		if (registration->displayName.empty())
+		{
+			auto pos = registration->typeName.rfind('.');
+			
+			if (pos == std::string::npos)
+				typeDefinition.displayName = registration->typeName;
+			else
+				typeDefinition.displayName = registration->typeName.substr(pos + 1);
+		}
+		else
+		{
+			typeDefinition.displayName = registration->displayName;
+		}
 		
 		typeDefinition.resourceTypeName = registration->resourceTypeName;
 		

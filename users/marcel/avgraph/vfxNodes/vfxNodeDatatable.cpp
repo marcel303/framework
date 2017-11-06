@@ -32,7 +32,7 @@
 
 VFX_NODE_TYPE(datatable, VfxNodeDatatable)
 {
-	typeName = "channels.fromFile";
+	typeName = "channel.fromFile";
 	
 	in("filename", "string");
 	in("hasHeader", "bool");

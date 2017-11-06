@@ -30,7 +30,7 @@
 
 VFX_NODE_TYPE(physical_mover, VfxNodePhysicalMover)
 {
-	typeName = "physical.mover";
+	typeName = "gen.physical.mover";
 	
 	in("speed_x", "float");
 	in("speed_y", "float");

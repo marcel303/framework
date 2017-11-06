@@ -9,6 +9,17 @@ top priority items:
 - add the ability to have dynamic input sockets. use cases: shaders, sub graphs
 - add the ability to have dynamic output sockets. use cases: sub graphs
 - add text field to node type select
+# add explicit categories to vfx nodes
+	# decided I don't like it. use first part of node type name to decide category
+	# use last part of node type name as the display name to keep the graph editor UI clean
+- remove registration instance name from VFX_NODE_TYPE
+- add passthrough mode sequence node
+- add custom draw surface node to enable better passthrough behavior
+- add a list of xml files to click on for more rapid testing
+- add automated error checking test for existing graph files ?
+- add support for showing multiple notifications
+- search node types based on display name. until a dot is included. switch to full type name when a period is present
+- fix SDL text input when selecting a text field before the previously active one (start before stop)
 
 
 todo :
@@ -65,11 +76,12 @@ todo : nodes :
 	- output value as float
 	- output value as channel
 - add sample.image node
-	- output rgba as floats
-	- output rgba as channels
+	+ output rgba as floats
+	+ output rgba as channels
 	- specify normalized vs screen coords?
-	- add filter and clamp options
+	+ add filter and clamp options
 - add sample.channel node
+	- filter is enum: auto, linear or off. auto will look at continuous flag of channels input
 - add doValuePlotter to ui framework
 - add quantize node
 - investigate how to render 2D and 3D shapes
@@ -162,7 +174,7 @@ todo : documentation
 - write about design philosophy
 
 todo : framework
-- add scoped** objects
+- add scoped** objects ? or prefer explicit push/pop ?
 - add drawCube and drawSphere?
 - add hq shaded triangle to framework
 - rewrite audio to use port audio instead of OpenAL

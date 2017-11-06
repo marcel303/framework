@@ -48,7 +48,7 @@ VFX_ENUM_TYPE(dotDetectorTresholdTest)
 
 VFX_NODE_TYPE(image_dots, VfxNodeDotDetector)
 {
-	typeName = "image.dots";
+	typeName = "image_cpu.dots";
 	
 	in("image", "image_cpu");
 	inEnum("channel", "dotDetectorChannel");

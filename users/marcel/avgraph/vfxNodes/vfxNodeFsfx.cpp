@@ -36,7 +36,7 @@ extern const int GFX_SY;
 
 VFX_NODE_TYPE(fsfx, VfxNodeFsfx)
 {
-	typeName = "fsfx";
+	typeName = "draw.fsfx";
 	
 	in("image", "image");
 	in("shader", "string");

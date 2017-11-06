@@ -30,7 +30,7 @@
 
 VFX_NODE_TYPE(physical_spring, VfxNodePhysicalSpring)
 {
-	typeName = "physical.spring";
+	typeName = "gen.physical.spring";
 	
 	in("strength", "float", "1.0");
 	in("dampen", "float", "0.5");

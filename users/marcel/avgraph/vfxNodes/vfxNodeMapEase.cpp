@@ -48,7 +48,7 @@ VFX_ENUM_TYPE(easeType)
 
 VFX_NODE_TYPE(map_ease, VfxNodeMapEase)
 {
-	typeName = "ease";
+	typeName = "map.ease";
 	
 	in("value", "float");
 	inEnum("type", "easeType");

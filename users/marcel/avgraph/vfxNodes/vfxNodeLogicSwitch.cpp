@@ -29,7 +29,7 @@
 
 VFX_NODE_TYPE(logic_switch, VfxNodeLogicSwitch)
 {
-	typeName = "logic.switch";
+	typeName = "trigger.switch";
 	in("switch!", "trigger");
 	out("value", "float");
 }

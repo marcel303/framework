@@ -41,7 +41,7 @@ VFX_ENUM_TYPE(imageCpuToChannelsChannel)
 
 VFX_NODE_TYPE(image_cpu_to_channels, VfxNodeImageCpuToChannels)
 {
-	typeName = "image.toChannels";
+	typeName = "image_cpu.toChannels";
 	
 	in("image", "image_cpu");
 	inEnum("channel", "imageCpuToChannelsChannel");

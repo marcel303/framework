@@ -33,7 +33,7 @@ extern const int GFX_SY;
 
 VFX_NODE_TYPE(sequence, VfxNodeSequence)
 {
-	typeName = "sequence";
+	typeName = "draw.sequence";
 	
 	in("01", "any");
 	in("02", "any");

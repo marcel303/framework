@@ -336,7 +336,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 		}
 	}
 	
-	if (typeName == "display")
+	if (typeName == "draw.display")
 	{
 		Assert(vfxNode != nullptr);
 		if (vfxNode != nullptr)

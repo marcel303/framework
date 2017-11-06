@@ -30,7 +30,7 @@
 
 VFX_NODE_TYPE(picture_cpu, VfxNodePictureCpu)
 {
-	typeName = "picture.cpu";
+	typeName = "picture_cpu";
 	
 	in("source", "string");
 	out("image", "image_cpu");

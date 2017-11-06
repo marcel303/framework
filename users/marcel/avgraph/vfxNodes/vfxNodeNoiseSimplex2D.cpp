@@ -30,7 +30,7 @@
 
 VFX_NODE_TYPE(noise_simplex2d, VfxNodeNoiseSimplex2D)
 {
-	typeName = "noise.simplex2d";
+	typeName = "gen.noise2d";
 	
 	in("x", "float");
 	in("y", "float");
