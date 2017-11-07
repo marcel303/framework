@@ -291,6 +291,8 @@ UiElem::~UiElem()
 
 void UiElem::tick(const int x1, const int y1, const int x2, const int y2)
 {
+	Assert(g_doActions);
+	
 	clicked = false;
 	
 	hasFocus = mouse.x >= x1 && mouse.x <= x2 && mouse.y >= y1 && mouse.y <= y2;
@@ -673,7 +675,8 @@ static UiTextboxResult doTextBoxImpl(T & value, const char * name, const float x
 		if (!textFieldIsInit)
 		{
 			textFieldIsInit = true;
-
+			
+			// fixme : it's not technically correct to open and close just to init. also, SDL text input ..
 			textField.open(32, false, false);
 			
 			SDL_Rect inputRect;
@@ -855,8 +858,6 @@ bool doCheckBox(bool & value, const char * name, const bool isCollapsable)
 
 	g_drawY += kCheckBoxHeight;
 
-	elem.tick(x1, y1, x2, y2);
-
 	const int cx1 = x1 + kPadding;
 	const int cx2 = x1 + kPadding + kCheckButtonSize;
 	const int cy1 = y1 + kPadding;
@@ -864,6 +865,8 @@ bool doCheckBox(bool & value, const char * name, const bool isCollapsable)
 
 	if (g_doActions)
 	{
+		elem.tick(x1, y1, x2, y2);
+		
 		if (elem.isActive && elem.hasFocus && mouse.wentUp(BUTTON_LEFT))
 		{
 			value = !value;
@@ -945,11 +948,11 @@ bool doDrawer(bool & value, const char * name)
 	const int y2 = g_drawY + kCheckBoxHeight;
 
 	g_drawY += kCheckBoxHeight;
-
-	elem.tick(x1, y1, x2, y2);
-
+	
 	if (g_doActions)
 	{
+		elem.tick(x1, y1, x2, y2);
+		
 		if (elem.isActive && elem.hasFocus && mouse.wentUp(BUTTON_LEFT))
 		{
 			value = !value;
@@ -1106,10 +1109,10 @@ bool doDropdownDrawer(bool & value, const char * name, const char * valueName)
 
 	g_drawY += kCheckBoxHeight;
 
-	elem.tick(x1, y1, x2, y2);
-
 	if (g_doActions)
 	{
+		elem.tick(x1, y1, x2, y2);
+		
 		if (elem.isActive && elem.hasFocus && mouse.wentUp(BUTTON_LEFT))
 		{
 			value = !value;
