@@ -4671,6 +4671,8 @@ void GraphEdit::showNotification(const char * format, ...)
 	n.displayTimeRcp = 1.f / n.displayTime;
 	
 	notifications.push_back(n);
+	
+	logDebug("notification: %s", text);
 }
 
 void GraphEdit::draw() const
@@ -5058,10 +5060,7 @@ void GraphEdit::draw() const
 	
 	self->doEditorOptions(0.f);
 	
-	if (nodeTypeNameSelect != nullptr)
-	{
-		nodeTypeNameSelect->doMenus(uiState, 0.f);
-	}
+	nodeTypeNameSelect->doMenus(uiState, 0.f);
 	
 	propertyEditor->doMenus(uiState, 0.f);
 	
@@ -6098,7 +6097,11 @@ void GraphUi::NodeTypeNameSelect::doMenus(UiState * uiState, const float dt)
 	if (!graphEdit->enabled(GraphEdit::kFlag_NodeAdd))
 	{
 		if (g_doActions)
-			uiState->reset();
+		{
+			typeName.clear();
+			showSuggestions = false;
+		}
+		
 		return;
 	}
 	
@@ -6113,12 +6116,6 @@ void GraphUi::NodeTypeNameSelect::doMenus(UiState * uiState, const float dt)
 			
 			uiState->reset();
 			showSuggestions = false;
-		}
-		
-		if (g_doActions)
-		{
-			if (g_menu->getElem("type").clicked)
-				showSuggestions = true;
 		}
 		
 		if (!typeName.empty() && showSuggestions)
@@ -6174,6 +6171,14 @@ void GraphUi::NodeTypeNameSelect::doMenus(UiState * uiState, const float dt)
 		}
 		
 		doBreak();
+		
+		if (g_doActions)
+		{
+			if (g_menu->getElem("type").clicked)
+				showSuggestions = true;
+			if (g_uiState->activeElem == nullptr)
+				showSuggestions = false;
+		}
 	}
 	popMenu();
 }
