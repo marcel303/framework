@@ -373,6 +373,33 @@ static void testCamera3d()
 
 //
 
+static void testVfxNodeCreation()
+{
+	for (VfxNodeTypeRegistration * registration = g_vfxNodeTypeRegistrationList; registration != nullptr; registration = registration->next)
+	{
+		const int64_t t1 = g_TimerRT.TimeUS_get();
+		
+		VfxNodeBase * vfxNode = registration->create();
+		
+		GraphNode node;
+		
+		vfxNode->initSelf(node);
+		
+		vfxNode->init(node);
+		
+		// todo : check if vfx node is created properly
+		
+		delete vfxNode;
+		vfxNode = nullptr;
+		
+		const int64_t t2 = g_TimerRT.TimeUS_get();
+		
+		logDebug("node create/destroy took %dus. nodeType=%s", t2 - t1, registration->typeName.c_str());
+	}
+}
+
+//
+
 #include "Path.h"
 
 static std::string filedrop;
@@ -431,6 +458,8 @@ int main(int argc, char * argv[])
 		//testCamera3d();
 		
 		//testMain();
+		
+		testVfxNodeCreation();
 		
 		//codevember1();
 		
