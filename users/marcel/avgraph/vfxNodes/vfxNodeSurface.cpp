@@ -90,6 +90,8 @@ void VfxNodeSurface::allocSurface(const bool withDepthBuffer)
 	//
 	
 	surface = new Surface(GFX_SX, GFX_SY, withDepthBuffer, false, SURFACE_RGBA16F);
+	surface->clear();
+	surface->clearDepth(1.f);
 	
 	imageOutput.texture = surface->getTexture();
 }
