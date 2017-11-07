@@ -4395,7 +4395,7 @@ bool GraphEdit::isInputIdle() const
 	return result;
 }
 
-bool GraphEdit::tryAddNode(const std::string & typeName, const int x, const int y, const bool select)
+bool GraphEdit::tryAddNode(const std::string & typeName, const float x, const float y, const bool select)
 {
 	if (state != kState_Idle)
 	{
@@ -4417,6 +4417,11 @@ bool GraphEdit::tryAddNode(const std::string & typeName, const int x, const int 
 		node.editorX = x;
 		node.editorY = y;
 		node.editorZKey = graph->allocZKey();
+		
+		if (editorOptions.snapToGrid)
+		{
+			snapToGrid(node.editorX, node.editorY);
+		}
 		
 		graph->addNode(node);
 		
@@ -5980,6 +5985,8 @@ GraphNode * GraphUi::PropEdit::tryGetNode()
 
 GraphUi::NodeTypeNameSelect::NodeTypeNameSelect(GraphEdit * _graphEdit)
 	: graphEdit(_graphEdit)
+	, typeName()
+	, showSuggestions(false)
 	, history()
 {
 }
@@ -6018,6 +6025,29 @@ static uint32_t fuzzyStringDistance(const std::string & s1, const std::string & 
 	return d[len1][len2];
 }
 
+static uint32_t literalStringDistance(const std::string & s1, const std::string & s2)
+{
+	const uint32_t len1 = s1.size();
+	const uint32_t len2 = s2.size();
+
+	const uint32_t len = std::min(len1, len2);
+
+	if (len == 0)
+		return UINT32_MAX;
+
+	bool equal = true;
+
+	for (uint32_t i = 0; i < len; ++i)
+		equal &= s1[i] == s2[i];
+
+	if (equal == false)
+		return UINT32_MAX;
+
+	const uint32_t score = len2 > len1 ? len2 - len1 : len1 - len2;
+	
+	return score;
+}
+
 struct TypeNameAndScore
 {
 	std::string typeName;
@@ -6040,15 +6070,21 @@ void calculateTypeNamesAndScores(const std::string & typeName, const GraphEdit_T
 	{
 		auto & typeDefinition = typeDefinitionItr.second;
 		
-		const std::string & typeNameToMatch = typeDefinition.typeName;
+		const uint32_t fuzzyScore =
+			typeDefinition.typeName[0] == typeName[0]
+			? 1000 + fuzzyStringDistance(typeDefinition.typeName, typeName)
+			: UINT32_MAX;
 		
-		if (typeNameToMatch[0] != typeName[0])
-			continue;
+		const uint32_t literalScore = literalStringDistance(
+			typeDefinition.displayName.empty()
+			? typeDefinition.typeName
+			: typeDefinition.displayName,
+			typeName);
 		
-		const uint32_t score = fuzzyStringDistance(typeNameToMatch, typeName);
+		const uint32_t score = std::min(fuzzyScore, literalScore);
 		
 		typeNamesAndScores.resize(index + 1);
-		typeNamesAndScores[index].typeName = typeNameToMatch;
+		typeNamesAndScores[index].typeName = typeDefinition.typeName;
 		typeNamesAndScores[index].score = score;
 		
 		++index;
@@ -6074,9 +6110,18 @@ void GraphUi::NodeTypeNameSelect::doMenus(UiState * uiState, const float dt)
 		{
 			typeName = findClosestMatch(typeName);
 			selectTypeName(typeName);
+			
+			uiState->reset();
+			showSuggestions = false;
 		}
 		
-		if (!typeName.empty())
+		if (g_doActions)
+		{
+			if (g_menu->getElem("type").clicked)
+				showSuggestions = true;
+		}
+		
+		if (!typeName.empty() && showSuggestions)
 		{
 			// list recommendations
 			
@@ -6095,8 +6140,10 @@ void GraphUi::NodeTypeNameSelect::doMenus(UiState * uiState, const float dt)
 				{
 					if (doButton(typeNamesAndScores[i].typeName.c_str()))
 					{
-						uiState->reset();
 						selectTypeName(typeNamesAndScores[i].typeName);
+						
+						uiState->reset();
+						showSuggestions = false;
 					}
 				}
 				popMenu();

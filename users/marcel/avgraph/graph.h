@@ -1350,7 +1350,7 @@ struct GraphEdit : GraphEditConnection
 	
 	bool isInputIdle() const;
 	
-	bool tryAddNode(const std::string & typeName, const int x, const int y, const bool select);
+	bool tryAddNode(const std::string & typeName, const float x, const float y, const bool select);
 	bool tryAddVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex, const int x, const int y, const bool select);
 	
 	void selectNode(const GraphNodeId nodeId, const bool clearSelection);
@@ -1424,6 +1424,8 @@ namespace GraphUi
 		GraphEdit * graphEdit;
 		
 		std::string typeName;
+		
+		bool showSuggestions;
 		
 		std::list<std::string> history;
 		
