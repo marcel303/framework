@@ -49,7 +49,7 @@ VfxNodeMidiOsc::VfxNodeMidiOsc()
 	addInput(kInput_OscEndpointName, kVfxPlugType_String);
 	addOutput(kOutput_Key, kVfxPlugType_Float, &keyOutput);
 	addOutput(kOutput_Value, kVfxPlugType_Float, &valueOutput);
-	addOutput(kOutput_Trigger, kVfxPlugType_Trigger, this);
+	addOutput(kOutput_Trigger, kVfxPlugType_Trigger, nullptr);
 }
 
 void VfxNodeMidiOsc::tick(const float dt)

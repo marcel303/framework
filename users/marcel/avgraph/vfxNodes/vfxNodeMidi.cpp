@@ -56,7 +56,7 @@ VfxNodeMidi::VfxNodeMidi()
 	addInput(kInput_Port, kVfxPlugType_Int);
 	addOutput(kOutput_Key, kVfxPlugType_Float, &keyOutput);
 	addOutput(kOutput_Value, kVfxPlugType_Float, &valueOutput);
-	addOutput(kOutput_Trigger, kVfxPlugType_Trigger, this);
+	addOutput(kOutput_Trigger, kVfxPlugType_Trigger, nullptr);
 }
 
 VfxNodeMidi::~VfxNodeMidi()
