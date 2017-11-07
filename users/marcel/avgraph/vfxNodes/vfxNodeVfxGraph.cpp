@@ -70,9 +70,15 @@ void VfxNodeVfxGraph::open(const char * filename)
 	
 	bool success = false;
 	
+	clearEditorIssue();
+	
 	XMLDocument d;
 	
-	if (d.LoadFile(filename) == XML_SUCCESS)
+	if (d.LoadFile(filename) != XML_SUCCESS)
+	{
+		setEditorIssue("failed to open file");
+	}
+	else
 	{
 		graph = new Graph();
 		
@@ -80,11 +86,19 @@ void VfxNodeVfxGraph::open(const char * filename)
 		
 		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
 		
-		if (graph->loadXml(d.RootElement(), typeDefinitionLibrary))
+		if (graph->loadXml(d.RootElement(), typeDefinitionLibrary) == false)
+		{
+			setEditorIssue("failed to parse XML");
+		}
+		else
 		{
 			vfxGraph = constructVfxGraph(*graph, typeDefinitionLibrary);
 			
-			if (vfxGraph != nullptr)
+			if (vfxGraph == nullptr)
+			{
+				setEditorIssue("failed to create vfx graph");
+			}
+			else
 			{
 				success = true;
 			}
@@ -123,9 +137,15 @@ void VfxNodeVfxGraph::tick(const float dt)
 		return;
 	}
 	
-	const char * filename = getInputString(kInput_Filename, "");
+	const char * filename = getInputString(kInput_Filename, nullptr);
 	
-	if (filename != currentFilename)
+	if (filename == nullptr)
+	{
+		currentFilename.clear();
+		
+		close();
+	}
+	else if (filename != currentFilename)
 	{
 		currentFilename = filename;
 		
@@ -162,6 +182,9 @@ void VfxNodeVfxGraph::draw() const
 
 void VfxNodeVfxGraph::init(const GraphNode & node)
 {
+	if (isPassthrough)
+		return;
+	
 	const char * filename = getInputString(kInput_Filename, nullptr);
 	
 	if (filename != nullptr)
