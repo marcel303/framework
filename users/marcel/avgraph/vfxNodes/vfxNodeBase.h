@@ -501,6 +501,7 @@ struct VfxNodeBase
 	int lastTickTraversalId;
 	int lastDrawTraversalId;
 	bool editorIsTriggered; // only here for real-time connection with graph editor
+	mutable std::string editorIssue;
 	
 	bool isPassthrough;
 	
@@ -683,6 +684,16 @@ struct VfxNodeBase
 		{
 			plug->isValid = isValid;
 		}
+	}
+	
+	void clearEditorIssue() const
+	{
+		editorIssue.clear();
+	}
+	
+	void setEditorIssue(const char * text) const
+	{
+		editorIssue = text;
 	}
 	
 	virtual void initSelf(const GraphNode & node) { }

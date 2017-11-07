@@ -76,6 +76,7 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual void handleSrcSocketPressed(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName) override;
 	
+	virtual bool getNodeIssues(const GraphNodeId nodeId, std::vector<std::string> & issues) override;
 	virtual bool getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines) override;
 	
 	virtual int nodeIsActive(const GraphNodeId nodeId) override;

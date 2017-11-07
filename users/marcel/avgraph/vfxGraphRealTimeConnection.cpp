@@ -905,6 +905,39 @@ void RealTimeConnection::handleSrcSocketPressed(const GraphNodeId nodeId, const 
 	node->handleTrigger(srcSocketIndex);
 }
 
+bool RealTimeConnection::getNodeIssues(const GraphNodeId nodeId, std::vector<std::string> & issues)
+{
+	if (isLoading)
+		return false;
+	
+	Assert(vfxGraph != nullptr);
+	if (vfxGraph == nullptr)
+		return false;
+	
+	auto nodeItr = vfxGraph->nodes.find(nodeId);
+	
+	if (nodeItr == vfxGraph->nodes.end())
+	{
+		if (vfxGraph->nodesFailedToCreate.count(nodeId) == 0)
+			Assert(nodeItr != vfxGraph->nodes.end());
+		
+		return false;
+	}
+	
+	auto node = nodeItr->second;
+	
+	if (node->editorIssue.empty())
+	{
+		return false;
+	}
+	else
+	{
+		issues.push_back(node->editorIssue);
+		
+		return true;
+	}
+}
+
 bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines)
 {
 	if (isLoading)
@@ -935,6 +968,12 @@ bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vecto
 	
 	d.add("tick: %.3fms", node->tickTimeAvg / 1000.0);
 	d.add("draw: %.3fms", node->drawTimeAvg / 1000.0);
+	
+	if (node->editorIssue.empty() == false)
+	{
+		d.newline();
+		d.add("issue: %s", node->editorIssue.c_str());
+	}
 	
 	std::swap(lines, d.lines);
 	
