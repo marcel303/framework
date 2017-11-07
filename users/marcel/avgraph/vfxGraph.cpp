@@ -48,11 +48,13 @@ VfxGraph * g_currentVfxGraph = nullptr;
 VfxGraph::VfxGraph()
 	: nodes()
 	, displayNodeIds()
+	, dummySurface(nullptr)
 	, nextTickTraversalId(0)
 	, nextDrawTraversalId(0)
 	, valuesToFree()
 	, time(0.0)
 {
+	dummySurface = new Surface(1, 1, false);
 }
 
 VfxGraph::~VfxGraph()
@@ -62,6 +64,9 @@ VfxGraph::~VfxGraph()
 
 void VfxGraph::destroy()
 {
+	delete dummySurface;
+	dummySurface = nullptr;
+	
 	displayNodeIds.clear();
 	
 	for (auto i : valuesToFree)
@@ -211,8 +216,6 @@ void VfxGraph::tick(const float dt)
 	}
 	
 	// process nodes that aren't connected to the display node
-
-	// todo : perhaps process unconnected nodes as islands, following predeps ?
 	
 	for (auto i : nodes)
 	{
@@ -286,21 +289,24 @@ int VfxGraph::traverseDraw() const
 	}
 	
 #if 1 // todo : make this depend on whether the graph editor is visible or not ? or whether the node is referenced by the editor ?
-// todo : push a discard surface
 
-	// draw nodes that aren't connected to the display node
-	
-	for (auto i : nodes)
+	pushSurface(dummySurface);
 	{
-		VfxNodeBase * node = i.second;
+		// draw nodes that aren't connected to the display node
 		
-		if (node->lastDrawTraversalId != nextDrawTraversalId)
+		for (auto i : nodes)
 		{
-			//if (any input or output referencedByRealTimeConnectionTick)
+			VfxNodeBase * node = i.second;
 			
-			node->traverseDraw(nextDrawTraversalId);
+			if (node->lastDrawTraversalId != nextDrawTraversalId)
+			{
+				//if (any input or output referencedByRealTimeConnectionTick)
+				
+				node->traverseDraw(nextDrawTraversalId);
+			}
 		}
 	}
+	popSurface();
 #endif
 
 	++nextDrawTraversalId;

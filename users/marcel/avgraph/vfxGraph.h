@@ -39,6 +39,8 @@
 	#define VFX_GRAPH_ENABLE_TIMING 0
 #endif
 
+class Surface;
+
 struct VfxGraph;
 struct VfxNodeBase;
 struct VfxPlug;
@@ -80,6 +82,8 @@ struct VfxGraph
 	std::set<GraphNodeId> nodesFailedToCreate;
 	
 	std::set<GraphNodeId> displayNodeIds;
+	
+	mutable Surface * dummySurface;
 	
 	mutable int nextTickOrder;
 	mutable int nextTickTraversalId;
