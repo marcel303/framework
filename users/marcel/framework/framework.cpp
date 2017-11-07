@@ -7260,7 +7260,7 @@ void hqEnd()
 				gradientInfo(0, 0) = globals.hqGradientType;
 				gradientInfo(0, 1) = globals.hqGradientBias;
 				gradientInfo(0, 2) = globals.hqGradientScale;
-				gradientInfo(0, 3) = gradientClampEnabled;
+				gradientInfo(0, 3) = globals.hqGradientColorMode;
 				gradientInfo(1, 0) = globals.hqGradientColor1.r;
 				gradientInfo(1, 1) = globals.hqGradientColor1.g;
 				gradientInfo(1, 2) = globals.hqGradientColor1.b;
@@ -7296,12 +7296,13 @@ void hqEnd()
 	clearShader();
 }
 
-void hqSetGradient(GRADIENT_TYPE gradientType, const Mat4x4 & matrix, const Color & color1, const Color & color2, const float bias, const float scale)
+void hqSetGradient(GRADIENT_TYPE gradientType, const Mat4x4 & matrix, const Color & color1, const Color & color2, const COLOR_MODE colorMode, const float bias, const float scale)
 {
 	globals.hqGradientType = gradientType;
 	globals.hqGradientMatrix = matrix;
 	globals.hqGradientColor1 = color1;
 	globals.hqGradientColor2 = color2;
+	globals.hqGradientColorMode = colorMode;
 	globals.hqGradientBias = bias;
 	globals.hqGradientScale = scale;
 }

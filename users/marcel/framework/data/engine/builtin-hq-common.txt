@@ -29,7 +29,7 @@ float textureEnabled = shadingParams.y;
 
 // color gradient
 uniform mat4x4 gradientInfo;
-vec4 gradientParams = gradientInfo[0]; // <undefined>, bias, scale, clamp
+vec4 gradientParams = gradientInfo[0]; // type, bias, scale, colorMode
 vec4 gradientColor1 = gradientInfo[1];
 vec4 gradientColor2 = gradientInfo[2];
 
@@ -99,7 +99,8 @@ vec4 hqGradientColor()
 
 	vec4 color = mix(gradientColor1, gradientColor2, t);
 
-	if (gradientParams.w == 1)
+	//if (gradientParams.w == 1)
+	if (true)
 	{
 		color = clamp(color, vec4(0.0), vec4(1.0));
 	}
@@ -132,22 +133,22 @@ vec4 hqApplyColorMode(vec4 color1, vec4 color2, float mode)
 	vec4 result = color1;
 	vec4 texColor = color2;
 
-	if (params.y == 0)
+	if (mode == 0)
 	{
 		result.rgb = result.rgb * texColor.rgb;
 		result.a   = result.a   * texColor.a;
 	}
-	else if (params.y == 1)
+	else if (mode == 1)
 	{
 		result.rgb = result.rgb + texColor.rgb;
 		result.a   = result.a   * texColor.a;
 	}
-	else if (params.y == 2)
+	else if (mode == 2)
 	{
 		result.rgb = result.rgb - texColor.rgb;
 		result.a   = result.a   * texColor.a;
 	}
-	else if (params.y == 3)
+	else if (mode == 3)
 	{
 		result.rgb = texColor.rgb;
 		result.a   = texColor.a;
@@ -162,7 +163,7 @@ vec4 hqColor(float v, vec4 color)
 	{
 		vec4 gradientColor = hqGradientColor();
 
-		color *= gradientColor;
+		color = hqApplyColorMode(color, gradientColor, gradientParams.w);
 	}
 
 	if (textureEnabled != 0.0)

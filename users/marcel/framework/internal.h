@@ -125,6 +125,7 @@ public:
 	Mat4x4 hqGradientMatrix;
 	Color hqGradientColor1;
 	Color hqGradientColor2;
+	COLOR_MODE hqGradientColorMode;
 	float hqGradientBias;
 	float hqGradientScale;
 	bool hqTextureEnabled;
