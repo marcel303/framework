@@ -5223,6 +5223,22 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 		}
 	}
 	
+	std::vector<std::string> issues;
+	
+	const bool hasIssues =
+		realTimeConnection == nullptr
+		? false
+		: realTimeConnection->getNodeIssues(node.id, issues);
+	
+	if (hasIssues)
+	{
+		const Color color1(255, 0, 0, 255);
+		const Color color2(127, 0, 0, 255);
+		Mat4x4 cmat = Mat4x4(true).Scale(1.f / GFX_SX, 1.f / GFX_SX, 1.f).RotateZ(45);
+		
+		hqSetGradient(GRADIENT_LINEAR, cmat, color1, color2, COLOR_ADD);
+	}
+	
 	if (editorOptions.showCpuHeat && realTimeConnection != nullptr && node.isEnabled && node.nodeType == kGraphNodeType_Regular)
 	{
 		const int timeUs = realTimeConnection->getNodeCpuTimeUs(node.id);
@@ -5246,6 +5262,9 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 		hqFillRoundedRect(0.f + border/2, 0.f + border/2, definition.sx - border/2, nodeSy - border/2, radius);
 	}
 	hqEnd();
+	
+	if (hasIssues)
+		hqClearGradient();
 	
 	if (isSelected)
 		setColor(255, 255, 255, 255);

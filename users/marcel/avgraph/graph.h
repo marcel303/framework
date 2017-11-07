@@ -857,6 +857,11 @@ struct GraphEdit_RealTimeConnection
 	{
 	}
 	
+	virtual bool getNodeIssues(const GraphNodeId nodeId, std::vector<std::string> & issues)
+	{
+		return false;
+	}
+	
 	virtual bool getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines)
 	{
 		return false;
