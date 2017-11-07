@@ -98,7 +98,7 @@ void VfxGraph::destroy()
 	{
 		VfxNodeBase * node = i.second;
 		
-	#if VFX_GRAPH_ENABLE_TIMING
+	#if VFX_GRAPH_ENABLE_TIMING && 0
 		const uint64_t t1 = g_TimerRT.TimeUS_get();
 	#endif
 		
@@ -286,6 +286,7 @@ int VfxGraph::traverseDraw() const
 	}
 	
 #if 1 // todo : make this depend on whether the graph editor is visible or not ? or whether the node is referenced by the editor ?
+// todo : push a discard surface
 
 	// draw nodes that aren't connected to the display node
 	
@@ -375,7 +376,7 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 		Assert(vfxNode != nullptr);
 		if (vfxNode == nullptr)
 		{
-			logError("unable to create node");
+			logError("unable to create node. nodeId=%d, typeName=%s", node.id, node.typeName.c_str());
 			
 			vfxGraph->nodesFailedToCreate.insert(node.id);
 		}
@@ -421,9 +422,9 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 			if (input == nullptr || output == nullptr)
 			{
 				if (input == nullptr)
-					logError("input node socket doesn't exist. name=%s, index=%d", link.srcNodeSocketName.c_str(), link.srcNodeSocketIndex);
+					logError("input node socket doesn't exist. name=%s, index=%d, nodeId=%d", link.srcNodeSocketName.c_str(), link.srcNodeSocketIndex, link.srcNodeId);
 				if (output == nullptr)
-					logError("output node socket doesn't exist. name=%s, index=%d", link.dstNodeSocketName.c_str(), link.dstNodeSocketIndex);
+					logError("output node socket doesn't exist. name=%s, index=%d, nodeId=%d", link.dstNodeSocketName.c_str(), link.dstNodeSocketIndex, link.dstNodeId);
 			}
 			else
 			{
