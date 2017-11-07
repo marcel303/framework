@@ -118,6 +118,8 @@ void VfxNodeFsfx::draw() const
 {
 	vfxCpuTimingBlock(VfxNodeFsfx);
 	
+	clearEditorIssue();
+	
 	if (isPassthrough)
 	{
 		const VfxImageBase * inputImage = getInputImage(kInput_Image, nullptr);
@@ -131,6 +133,8 @@ void VfxNodeFsfx::draw() const
 	if (shaderName == nullptr)
 	{
 		// todo : warn ?
+		
+		surface->clear();
 	}
 	else
 	{
@@ -194,6 +198,8 @@ void VfxNodeFsfx::draw() const
 		}
 		else
 		{
+			setEditorIssue("shader is invalid");
+			
 			pushSurface(surface);
 			{
 				if (inputImage == nullptr)
