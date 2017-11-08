@@ -78,34 +78,6 @@ enum GraphNodeType
 
 struct GraphNode
 {
-	struct EditorVisualizer
-	{
-		GraphNodeId nodeId;
-		std::string srcSocketName;
-		int srcSocketIndex;
-		std::string dstSocketName;
-		int dstSocketIndex;
-		
-		GraphEdit_Visualizer * visualizer;
-		
-		float sx;
-		float sy;
-		
-		EditorVisualizer();
-		EditorVisualizer(const EditorVisualizer & other);
-		~EditorVisualizer();
-		
-		void allocVisualizer();
-		
-		void tick(const GraphEdit & graphEdit);
-		void updateSize(const GraphEdit & graphEdit);
-		
-		// nodes (and thus also visualizers) get copied around. we want to copy parameters but not the
-		// dynamically allocated visualizer object. so we need a copy constructor/assignment operator
-		// to address this and copy the parameters manually and allocate a new visualizer object
-		void operator=(const EditorVisualizer & other);
-	};
-	
 	struct Resource
 	{
 		std::string type;
@@ -123,35 +95,13 @@ struct GraphNode
 	
 	// editor
 	
-	std::string editorName;
-	float editorX;
-	float editorY;
-	int editorZKey;
-	bool editorIsFolded;
-	float editorFoldAnimProgress;
-	float editorFoldAnimTimeRcp;
-	bool editorIsCloseToConnectionSite; // true when a new connection is being made near this node
-	
 	std::map<std::string, std::string> editorInputValues;
 	std::string editorValue;
 	
-	float editorIsActiveAnimTime; // real-time connection node activation animation
-	float editorIsActiveAnimTimeRcp;
-	bool editorIsActiveContinuous;
-	
-	EditorVisualizer editorVisualizer;
-	
 	GraphNode();
-	
-	void tick(const GraphEdit & graphEdit, const float dt);
-	
-	const std::string & getDisplayName() const;
 	
 	void setIsEnabled(const bool isEnabled);
 	void setIsPassthrough(const bool isPassthrough);
-	void setIsFolded(const bool isFolded);
-	
-	void setVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 	
 	void setResource(const char * type, const char * name, const char * data);
 	void clearResource(const char * type, const char * name);
@@ -773,6 +723,16 @@ struct GraphEdit_RealTimeConnection
 		kActivity_Continuous  = 1 << 1
 	};
 	
+	struct DynamicInput
+	{
+		std::string name;
+	};
+	
+	struct DynamicOutput
+	{
+		std::string name;
+	};
+	
 	virtual ~GraphEdit_RealTimeConnection()
 	{
 	}
@@ -877,6 +837,11 @@ struct GraphEdit_RealTimeConnection
 		return kActivity_Inactive;
 	}
 	
+	virtual bool getNodeDynamicSockets(std::vector<DynamicInput> & inputs, std::vector<DynamicOutput> & outputs)
+	{
+		return false;
+	}
+	
 	virtual int getNodeCpuHeatMax() const
 	{
 		return 1000;
@@ -932,6 +897,74 @@ struct GraphEdit : GraphEditConnection
 		kFlag_SetCursor = 1 << 12,
 		kFlag_Select = 1 << 13,
 		kFlag_All = ~0
+	};
+	
+	struct NodeData
+	{
+		struct EditorVisualizer
+		{
+			GraphNodeId nodeId;
+			std::string srcSocketName;
+			int srcSocketIndex;
+			std::string dstSocketName;
+			int dstSocketIndex;
+			
+			GraphEdit_Visualizer * visualizer;
+			
+			float sx;
+			float sy;
+			
+			EditorVisualizer();
+			EditorVisualizer(const EditorVisualizer & other);
+			~EditorVisualizer();
+			
+			void allocVisualizer();
+			
+			void tick(const GraphEdit & graphEdit);
+			void updateSize(const GraphEdit & graphEdit);
+			
+			// nodes (and thus also visualizers) get copied around. we want to copy parameters but not the
+			// dynamically allocated visualizer object. so we need a copy constructor/assignment operator
+			// to address this and copy the parameters manually and allocate a new visualizer object
+			void operator=(const EditorVisualizer & other);
+		};
+	
+		float x;
+		float y;
+		
+		std::string editorName;
+		int editorZKey;
+		
+		bool editorIsFolded;
+		float editorFoldAnimProgress;
+		float editorFoldAnimTimeRcp;
+		bool editorIsCloseToConnectionSite; // true when a new connection is being made near this node
+
+		float editorIsActiveAnimTime; // real-time connection node activation animation
+		float editorIsActiveAnimTimeRcp;
+		bool editorIsActiveContinuous;
+		
+		EditorVisualizer editorVisualizer;
+		
+		NodeData()
+			: x(0.f)
+			, y(0.f)
+			, editorName()
+			, editorZKey(0)
+			, editorIsFolded(false)
+			, editorFoldAnimProgress(1.f)
+			, editorFoldAnimTimeRcp(0.f)
+			, editorIsCloseToConnectionSite(false)
+			, editorIsActiveAnimTime(0.f)
+			, editorIsActiveAnimTimeRcp(0.f)
+			, editorIsActiveContinuous(false)
+			, editorVisualizer()
+		{
+		}
+		
+		void setIsFolded(const bool isFolded);
+		
+		void setVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 	};
 	
 	struct HitTestResult
@@ -1266,6 +1299,8 @@ struct GraphEdit : GraphEditConnection
 	
 	Graph * graph;
 	
+	std::map<GraphNodeId, NodeData> nodeDatas;
+	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
 	GraphEdit_TypeDefinition typeDefinition_visualizer;
 	
@@ -1327,6 +1362,7 @@ struct GraphEdit : GraphEditConnection
 	~GraphEdit();
 	
 	GraphNode * tryGetNode(const GraphNodeId id) const;
+	NodeData * tryGetNodeData(const GraphNodeId id) const;
 	GraphNodeSocketLink * tryGetLink(const GraphLinkId id) const;
 	const GraphEdit_TypeDefinition::InputSocket * tryGetInputSocket(const GraphNodeId nodeId, const int socketIndex) const;
 	const GraphEdit_TypeDefinition::OutputSocket * tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const;
@@ -1337,6 +1373,7 @@ struct GraphEdit : GraphEditConnection
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
 	
 	bool tick(const float dt, const bool inputIsCaptured);
+	void tickNodeDatas(const float dt);
 	bool tickTouches();
 	void tickMouseScroll(const float dt);
 	void tickKeyboardScroll();
@@ -1368,7 +1405,7 @@ struct GraphEdit : GraphEditConnection
 	
 	void snapToGrid(float & x, float & y) const;
 	void snapToGrid(GraphLinkRoutePoint & routePoint) const;
-	void snapToGrid(GraphNode & node) const;
+	void snapToGrid(NodeData & nodeData) const;
 	
 	void undo();
 	void redo();
@@ -1379,8 +1416,8 @@ struct GraphEdit : GraphEditConnection
 	void showNotification(const char * format, ...);
 	
 	void draw() const;
-	void drawNode(const GraphNode & node, const GraphEdit_TypeDefinition & typeDefinition) const;
-	void drawVisualizer(const GraphNode & node) const;
+	void drawNode(const GraphNode & node, const NodeData & nodeData, const GraphEdit_TypeDefinition & typeDefinition) const;
+	void drawVisualizer(const GraphNode & node, const NodeData & nodeData) const;
 	
 	bool load(const char * filename);
 	bool save(const char * filename);
