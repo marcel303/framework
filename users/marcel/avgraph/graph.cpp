@@ -68,12 +68,12 @@ static bool areCompatibleSocketLinkTypeNames(const std::string & srcTypeName, co
 
 static bool areNodeSocketsVisible(const GraphEdit::NodeData & nodeData)
 {
-	return nodeData.editorFoldAnimProgress == 1.f;
+	return nodeData.foldAnimProgress == 1.f;
 }
 
 static const std::string & getDisplayName(const GraphNode & node, const GraphEdit::NodeData & nodeData)
 {
-	return !nodeData.editorName.empty() ? nodeData.editorName : node.typeName;
+	return !nodeData.displayName.empty() ? nodeData.displayName : node.typeName;
 }
 
 static bool testRectOverlap(
@@ -446,7 +446,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		
 		nextNodeId = std::max(nextNodeId, node.id + 1);
 		// todo : move this to graph edit
-		//nextZKey = std::max(nextZKey, node.editorZKey + 1);
+		//nextZKey = std::max(nextZKey, node.zKey + 1);
 	}
 	
 	for (const XMLElement * xmlLink = xmlGraph->FirstChildElement("link"); xmlLink != nullptr; xmlLink = xmlLink->NextSiblingElement("link"))
@@ -1908,23 +1908,23 @@ void GraphEdit::NodeData::EditorVisualizer::operator=(const EditorVisualizer & o
 	allocVisualizer();
 }
 
-void GraphEdit::NodeData::setIsFolded(const bool isFolded)
+void GraphEdit::NodeData::setIsFolded(const bool _isFolded)
 {
-	if (editorIsFolded == isFolded)
+	if (_isFolded == isFolded)
 		return;
 	
-	editorIsFolded = isFolded;
-	editorFoldAnimTimeRcp = 1.f / (isFolded ? .1f : .07f) / 2.f;
+	isFolded = _isFolded;
+	foldAnimTimeRcp = 1.f / (_isFolded ? .1f : .07f) / 2.f;
 }
 
 void GraphEdit::NodeData::setVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex)
 {
-	editorVisualizer.nodeId = nodeId;
-	editorVisualizer.srcSocketName = srcSocketName;
-	editorVisualizer.srcSocketIndex = srcSocketIndex;
-	editorVisualizer.dstSocketName = dstSocketName;
-	editorVisualizer.dstSocketIndex = dstSocketIndex;
-	editorVisualizer.allocVisualizer();
+	visualizer.nodeId = nodeId;
+	visualizer.srcSocketName = srcSocketName;
+	visualizer.srcSocketIndex = srcSocketIndex;
+	visualizer.dstSocketName = dstSocketName;
+	visualizer.dstSocketIndex = dstSocketIndex;
+	visualizer.allocVisualizer();
 }
 
 //
@@ -2225,7 +2225,7 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 		nodeIndex++;
 	}
 	
-	std::sort(sortedNodes, sortedNodes + numNodes, [](const SortedGraphNode & n1, const SortedGraphNode & n2) { return n2.nodeData->editorZKey < n1.nodeData->editorZKey; });
+	std::sort(sortedNodes, sortedNodes + numNodes, [](const SortedGraphNode & n1, const SortedGraphNode & n2) { return n2.nodeData->zKey < n1.nodeData->zKey; });
 	
 	// traverse nodes hit testing against the ones on top first
 	
@@ -2264,8 +2264,8 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				x, y,
 				nodeData.x,
 				nodeData.y,
-				nodeData.x + nodeData.editorVisualizer.sx,
-				nodeData.y + nodeData.editorVisualizer.sy))
+				nodeData.x + nodeData.visualizer.sx,
+				nodeData.y + nodeData.visualizer.sy))
 			{
 				GraphEdit_TypeDefinition::HitTestResult hitTestResult;
 				
@@ -2274,10 +2274,10 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				if (testRectOverlap(
 					x, y,
 					x, y,
-					nodeData.x + borderSize * +0 + nodeData.editorVisualizer.sx * 0,
-					nodeData.y + borderSize * +0 + nodeData.editorVisualizer.sy * 0,
-					nodeData.x + borderSize * +1 + nodeData.editorVisualizer.sx * 0,
-					nodeData.y + borderSize * +0 + nodeData.editorVisualizer.sy * 1))
+					nodeData.x + borderSize * +0 + nodeData.visualizer.sx * 0,
+					nodeData.y + borderSize * +0 + nodeData.visualizer.sy * 0,
+					nodeData.x + borderSize * +1 + nodeData.visualizer.sx * 0,
+					nodeData.y + borderSize * +0 + nodeData.visualizer.sy * 1))
 				{
 					hitTestResult.borderL = true;
 				}
@@ -2285,10 +2285,10 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				if (testRectOverlap(
 					x, y,
 					x, y,
-					nodeData.x + borderSize * -1 + nodeData.editorVisualizer.sx * 1,
-					nodeData.y + borderSize * +0 + nodeData.editorVisualizer.sy * 0,
-					nodeData.x + borderSize * +0 + nodeData.editorVisualizer.sx * 1,
-					nodeData.y + borderSize * +0 + nodeData.editorVisualizer.sy * 1))
+					nodeData.x + borderSize * -1 + nodeData.visualizer.sx * 1,
+					nodeData.y + borderSize * +0 + nodeData.visualizer.sy * 0,
+					nodeData.x + borderSize * +0 + nodeData.visualizer.sx * 1,
+					nodeData.y + borderSize * +0 + nodeData.visualizer.sy * 1))
 				{
 					hitTestResult.borderR = true;
 				}
@@ -2296,10 +2296,10 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				if (testRectOverlap(
 					x, y,
 					x, y,
-					nodeData.x + borderSize * +0 + nodeData.editorVisualizer.sx * 0,
-					nodeData.y + borderSize * +0 + nodeData.editorVisualizer.sy * 0,
-					nodeData.x + borderSize * +0 + nodeData.editorVisualizer.sx * 1,
-					nodeData.y + borderSize * +1 + nodeData.editorVisualizer.sy * 0))
+					nodeData.x + borderSize * +0 + nodeData.visualizer.sx * 0,
+					nodeData.y + borderSize * +0 + nodeData.visualizer.sy * 0,
+					nodeData.x + borderSize * +0 + nodeData.visualizer.sx * 1,
+					nodeData.y + borderSize * +1 + nodeData.visualizer.sy * 0))
 				{
 					hitTestResult.borderT = true;
 				}
@@ -2307,10 +2307,10 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				if (testRectOverlap(
 					x, y,
 					x, y,
-					nodeData.x + borderSize * +0 + nodeData.editorVisualizer.sx * 0,
-					nodeData.y + borderSize * -1 + nodeData.editorVisualizer.sy * 1,
-					nodeData.x + borderSize * +0 + nodeData.editorVisualizer.sx * 1,
-					nodeData.y + borderSize * +0 + nodeData.editorVisualizer.sy * 1))
+					nodeData.x + borderSize * +0 + nodeData.visualizer.sx * 0,
+					nodeData.y + borderSize * -1 + nodeData.visualizer.sy * 1,
+					nodeData.x + borderSize * +0 + nodeData.visualizer.sx * 1,
+					nodeData.y + borderSize * +0 + nodeData.visualizer.sy * 1))
 				{
 					hitTestResult.borderB = true;
 				}
@@ -2635,7 +2635,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 									selectNode(hitTestResult.node->id, true);
 									
 									auto nodeData = tryGetNodeData(hitTestResult.node->id);
-									nodeData->editorZKey = graph->allocZKey();
+									nodeData->zKey = graph->allocZKey();
 								}
 							}
 							else
@@ -2910,10 +2910,11 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						Assert(newNodeData != nullptr);
 						if (newNodeData != nullptr)
 						{
+							*newNodeData = *nodeData;
+							
 							newNodeData->x = nodeData->x + kGridSize;
 							newNodeData->y = nodeData->y + kGridSize;
-							newNodeData->editorZKey = graph->allocZKey();
-							newNodeData->editorIsFolded = nodeData->editorIsFolded;
+							newNodeData->zKey = graph->allocZKey();
 						}
 						
 						newSelectedNodes.insert(newNode.id);
@@ -3053,7 +3054,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					auto nodeData = tryGetNodeData(nodeId);
 					
 					Assert(nodeData != nullptr);
-					if (nodeData != nullptr && !nodeData->editorIsFolded)
+					if (nodeData != nullptr && !nodeData->isFolded)
 					{
 						anyUnfolded = true;
 					}
@@ -3243,7 +3244,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							nodeData.x,
 							nodeData.y,
 							nodeData.x + typeDefinition->sx,
-							nodeData.y + (nodeData.editorIsFolded ? typeDefinition->syFolded : typeDefinition->sy)))
+							nodeData.y + (nodeData.isFolded ? typeDefinition->syFolded : typeDefinition->sy)))
 						{
 							nodeSelect.nodeIds.insert(node.id);
 						}
@@ -3258,8 +3259,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						nodeSelect.endY,
 						nodeData.x,
 						nodeData.y,
-						nodeData.x + nodeData.editorVisualizer.sx,
-						nodeData.y + nodeData.editorVisualizer.sy))
+						nodeData.x + nodeData.visualizer.sx,
+						nodeData.y + nodeData.visualizer.sy))
 					{
 						nodeSelect.nodeIds.insert(node.id);
 					}
@@ -3419,23 +3420,23 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					if (nodeResize.dragL)
 					{
 						nodeData->x += dragX;
-						nodeData->editorVisualizer.sx -= dragX;
+						nodeData->visualizer.sx -= dragX;
 					}
 					
 					if (nodeResize.dragR)
 					{
-						nodeData->editorVisualizer.sx += dragX;
+						nodeData->visualizer.sx += dragX;
 					}
 					
 					if (nodeResize.dragT)
 					{
 						nodeData->y += dragY;
-						nodeData->editorVisualizer.sy -= dragY;
+						nodeData->visualizer.sy -= dragY;
 					}
 					
 					if (nodeResize.dragB)
 					{
-						nodeData->editorVisualizer.sy += dragY;
+						nodeData->visualizer.sy += dragY;
 					}
 					
 					mousePosition.hover = true;
@@ -3528,16 +3529,16 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				
 				if (activity & GraphEdit_RealTimeConnection::kActivity_OneShot)
 				{
-					nodeData.editorIsActiveAnimTime = .2f;
-					nodeData.editorIsActiveAnimTimeRcp = 1.f / nodeData.editorIsActiveAnimTime;
+					nodeData.isActiveAnimTime = .2f;
+					nodeData.isActiveAnimTimeRcp = 1.f / nodeData.isActiveAnimTime;
 				}
 				
-				nodeData.editorIsActiveContinuous = (activity & GraphEdit_RealTimeConnection::kActivity_Continuous) != 0;
+				nodeData.isActiveContinuous = (activity & GraphEdit_RealTimeConnection::kActivity_Continuous) != 0;
 			}
 			
 			//
 			
-			nodeData.editorIsCloseToConnectionSite = false;
+			nodeData.isCloseToConnectionSite = false;
 			
 			if (state == kState_InputSocketConnect || state == kState_OutputSocketConnect)
 			{
@@ -3551,7 +3552,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					
 					if (distance <= 300.f)
 					{
-						nodeData.editorIsCloseToConnectionSite = true;
+						nodeData.isCloseToConnectionSite = true;
 					}
 				}
 			}
@@ -3894,21 +3895,21 @@ void GraphEdit::tickNodeDatas(const float dt)
 		auto & node = graph->nodes[nodeId];
 		auto & nodeData = nodeDataItr.second;
 		
-		if (nodeData.editorIsFolded && nodeData.editorIsCloseToConnectionSite == false)
+		if (nodeData.isFolded && nodeData.isCloseToConnectionSite == false)
 		{
 			// todo : receive automatic unfold flag from graph edit, store it, and integrate with hit testing code so it works when automatic unfold is in effect
-			nodeData.editorFoldAnimProgress = Calc::Max(0.f, nodeData.editorFoldAnimProgress - dt * nodeData.editorFoldAnimTimeRcp);
+			nodeData.foldAnimProgress = Calc::Max(0.f, nodeData.foldAnimProgress - dt * nodeData.foldAnimTimeRcp);
 		}
 		else
 		{
-			nodeData.editorFoldAnimProgress = Calc::Min(1.f, nodeData.editorFoldAnimProgress + dt * nodeData.editorFoldAnimTimeRcp);
+			nodeData.foldAnimProgress = Calc::Min(1.f, nodeData.foldAnimProgress + dt * nodeData.foldAnimTimeRcp);
 		}
 		
-		nodeData.editorIsActiveAnimTime = Calc::Max(0.f, nodeData.editorIsActiveAnimTime - dt);
+		nodeData.isActiveAnimTime = Calc::Max(0.f, nodeData.isActiveAnimTime - dt);
 		
 		if (node.nodeType == kGraphNodeType_Visualizer)
 		{
-			nodeData.editorVisualizer.tick(*this);
+			nodeData.visualizer.tick(*this);
 		}
 	}
 }
@@ -4373,7 +4374,7 @@ bool GraphEdit::tryAddNode(const std::string & typeName, const float x, const fl
 		{
 			nodeData->x = x;
 			nodeData->y = y;
-			nodeData->editorZKey = graph->allocZKey();
+			nodeData->zKey = graph->allocZKey();
 		
 			if (editorOptions.snapToGrid)
 			{
@@ -4410,10 +4411,10 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 		{
 			nodeData->x = mousePosition.x;
 			nodeData->y = mousePosition.y;
-			nodeData->editorZKey = graph->allocZKey();
+			nodeData->zKey = graph->allocZKey();
 			nodeData->setVisualizer(nodeId, srcSocketName, srcSocketIndex, dstSocketName, dstSocketIndex);
-			nodeData->editorVisualizer.sx = 0;
-			nodeData->editorVisualizer.sy = 0;
+			nodeData->visualizer.sx = 0;
+			nodeData->visualizer.sy = 0;
 		}
 		
 		if (select)
@@ -4833,7 +4834,7 @@ void GraphEdit::draw() const
 		nodeIndex++;
 	}
 	
-	std::sort(sortedNodes, sortedNodes + numNodes, [](const SortedGraphNode & n1, const SortedGraphNode & n2) { return n1.nodeData->editorZKey < n2.nodeData->editorZKey; });
+	std::sort(sortedNodes, sortedNodes + numNodes, [](const SortedGraphNode & n1, const SortedGraphNode & n2) { return n1.nodeData->zKey < n2.nodeData->zKey; });
 	
 	for (int i = 0; i < numNodes; ++i)
 	{
@@ -5165,7 +5166,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	const bool isSelected = selectedNodes.count(node.id) != 0;
 	const bool socketsAreVisible = areNodeSocketsVisible(nodeData);
 	
-	const float nodeSy = Calc::Lerp(definition.syFolded, definition.sy, nodeData.editorFoldAnimProgress);
+	const float nodeSy = Calc::Lerp(definition.syFolded, definition.sy, nodeData.foldAnimProgress);
 	
 	Color color;
 	
@@ -5178,13 +5179,13 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	
 	if (editorOptions.showOneShotActivity)
 	{
-		const float activeAnim = nodeData.editorIsActiveAnimTime * nodeData.editorIsActiveAnimTimeRcp;
+		const float activeAnim = nodeData.isActiveAnimTime * nodeData.isActiveAnimTimeRcp;
 		color = color.interp(Color(63, 63, 255), activeAnim);
 	}
 	
 	if (editorOptions.showContinuousActivity)
 	{
-		if (nodeData.editorIsActiveContinuous)
+		if (nodeData.isActiveContinuous)
 		{
 			color = color.interp(Color(63, 63, 255), .5f + .5f * (std::cos(framework.time * 8.f) + 1.f) / 2.f);
 		}
@@ -5241,7 +5242,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	
 	setFont("calibri.ttf");
 	setColor(255, 255, 255);
-	drawText(definition.sx/2, 12, 14, 0.f, 0.f, "%s", !nodeData.editorName.empty() ? nodeData.editorName.c_str() : definition.displayName.empty() ? definition.typeName.c_str() : definition.displayName.c_str());
+	drawText(definition.sx/2, 12, 14, 0.f, 0.f, "%s", !nodeData.displayName.empty() ? nodeData.displayName.c_str() : definition.displayName.empty() ? definition.typeName.c_str() : definition.displayName.c_str());
 	
 	if (node.isPassthrough)
 	{
@@ -5329,18 +5330,18 @@ void GraphEdit::drawVisualizer(const GraphNode & node, const NodeData & nodeData
 	
 	const bool isSelected = selectedNodes.count(node.id) != 0;
 	
-	auto srcNode = tryGetNode(nodeData.editorVisualizer.nodeId);
-	auto srcNodeData = tryGetNodeData(nodeData.editorVisualizer.nodeId);
+	auto srcNode = tryGetNode(nodeData.visualizer.nodeId);
+	auto srcNodeData = tryGetNodeData(nodeData.visualizer.nodeId);
 	
 	const std::string & nodeName = srcNode != nullptr && srcNodeData != nullptr ? getDisplayName(*srcNode, *srcNodeData) : String::Empty;
 	
-	const int visualizerSx = int(std::ceil(nodeData.editorVisualizer.sx));
-	const int visualizerSy = int(std::ceil(nodeData.editorVisualizer.sy));
-	nodeData.editorVisualizer.visualizer->draw(*this, nodeName, isSelected, &visualizerSx, &visualizerSy);
+	const int visualizerSx = int(std::ceil(nodeData.visualizer.sx));
+	const int visualizerSy = int(std::ceil(nodeData.visualizer.sy));
+	nodeData.visualizer.visualizer->draw(*this, nodeName, isSelected, &visualizerSx, &visualizerSy);
 	
 #if 0
 	setColor(255, 255, 255, 63); // fixme : remove this drawRect call! only here to test node resizing
-	drawRect(0, 0, node.editorVisualizer.sx, node.editorVisualizer.sy);
+	drawRect(0, 0, nodeData.visualizer.sx, nodeData.visualizer.sy);
 #endif
 }
 
@@ -5401,9 +5402,9 @@ bool GraphEdit::load(const char * filename)
 				
 				nodeData.x = floatAttrib(xmlNode, "editorX", nodeData.x);
 				nodeData.y = floatAttrib(xmlNode, "editorY", nodeData.y);
-				nodeData.editorIsFolded = boolAttrib(xmlNode, "folded", nodeData.editorIsFolded);
+				nodeData.isFolded = boolAttrib(xmlNode, "folded", nodeData.isFolded);
 				
-				nodeData.editorName = stringAttrib(xmlNode, "editorName", nodeData.editorName.c_str());
+				nodeData.displayName = stringAttrib(xmlNode, "editorName", nodeData.displayName.c_str());
 				
 				if (node.nodeType == kGraphNodeType_Visualizer)
 				{
@@ -5411,11 +5412,11 @@ bool GraphEdit::load(const char * filename)
 					
 					if (xmlVisualizer != nullptr)
 					{
-						nodeData.editorVisualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", nodeData.editorVisualizer.nodeId);
-						nodeData.editorVisualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", nodeData.editorVisualizer.srcSocketName.c_str());
-						nodeData.editorVisualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", nodeData.editorVisualizer.dstSocketName.c_str());
-						nodeData.editorVisualizer.sx = floatAttrib(xmlVisualizer, "sx", nodeData.editorVisualizer.sx);
-						nodeData.editorVisualizer.sy = floatAttrib(xmlVisualizer, "sy", nodeData.editorVisualizer.sy);
+						nodeData.visualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", nodeData.visualizer.nodeId);
+						nodeData.visualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", nodeData.visualizer.srcSocketName.c_str());
+						nodeData.visualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", nodeData.visualizer.dstSocketName.c_str());
+						nodeData.visualizer.sx = floatAttrib(xmlVisualizer, "sx", nodeData.visualizer.sx);
+						nodeData.visualizer.sy = floatAttrib(xmlVisualizer, "sy", nodeData.visualizer.sy);
 					}
 				}
 			}
@@ -5441,7 +5442,7 @@ bool GraphEdit::load(const char * filename)
 			
 			if (node.nodeType == kGraphNodeType_Visualizer)
 			{
-				auto linkedNode = tryGetNode(nodeData.editorVisualizer.nodeId);
+				auto linkedNode = tryGetNode(nodeData.visualizer.nodeId);
 				Assert(linkedNode != nullptr);
 				
 				if (linkedNode != nullptr)
@@ -5451,25 +5452,25 @@ bool GraphEdit::load(const char * filename)
 					
 					if (typeDefinition != nullptr)
 					{
-						if (!nodeData.editorVisualizer.srcSocketName.empty())
+						if (!nodeData.visualizer.srcSocketName.empty())
 						{
 							for (auto & inputSocket : typeDefinition->inputSockets)
 							{
-								if (inputSocket.name == nodeData.editorVisualizer.srcSocketName)
+								if (inputSocket.name == nodeData.visualizer.srcSocketName)
 								{
-									nodeData.editorVisualizer.srcSocketIndex = inputSocket.index;
+									nodeData.visualizer.srcSocketIndex = inputSocket.index;
 									break;
 								}
 							}
 						}
 						
-						if (!nodeData.editorVisualizer.dstSocketName.empty())
+						if (!nodeData.visualizer.dstSocketName.empty())
 						{
 							for (auto & outputSocket : typeDefinition->outputSockets)
 							{
-								if (outputSocket.name == nodeData.editorVisualizer.dstSocketName)
+								if (outputSocket.name == nodeData.visualizer.dstSocketName)
 								{
-									nodeData.editorVisualizer.dstSocketIndex = outputSocket.index;
+									nodeData.visualizer.dstSocketIndex = outputSocket.index;
 									break;
 								}
 							}
@@ -5477,7 +5478,7 @@ bool GraphEdit::load(const char * filename)
 					}
 				}
 				
-				nodeData.editorVisualizer.allocVisualizer();
+				nodeData.visualizer.allocVisualizer();
 			}
 		}
 	}
@@ -5599,10 +5600,11 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 			
 			nodeData.x = floatAttrib(nodeDataElem, "x", nodeData.x);
 			nodeData.y = floatAttrib(nodeDataElem, "y", nodeData.y);
-			nodeData.editorIsFolded = boolAttrib(nodeDataElem, "folded", nodeData.editorIsFolded);
+			nodeData.isFolded = boolAttrib(nodeDataElem, "folded", nodeData.isFolded);
 			
-			nodeData.editorName = stringAttrib(nodeDataElem, "displayName", nodeData.editorName.c_str());
-			nodeData.editorZKey = intAttrib(nodeDataElem, "zKey", nodeData.editorZKey);
+			nodeData.zKey = intAttrib(nodeDataElem, "zKey", nodeData.zKey);
+			nodeData.displayName = stringAttrib(nodeDataElem, "displayName", nodeData.displayName.c_str());
+			
 			
 			//
 			
@@ -5610,11 +5612,11 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 			
 			if (xmlVisualizer != nullptr)
 			{
-				nodeData.editorVisualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", nodeData.editorVisualizer.nodeId);
-				nodeData.editorVisualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", nodeData.editorVisualizer.srcSocketName.c_str());
-				nodeData.editorVisualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", nodeData.editorVisualizer.dstSocketName.c_str());
-				nodeData.editorVisualizer.sx = floatAttrib(xmlVisualizer, "sx", nodeData.editorVisualizer.sx);
-				nodeData.editorVisualizer.sy = floatAttrib(xmlVisualizer, "sy", nodeData.editorVisualizer.sy);
+				nodeData.visualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", nodeData.visualizer.nodeId);
+				nodeData.visualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", nodeData.visualizer.srcSocketName.c_str());
+				nodeData.visualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", nodeData.visualizer.dstSocketName.c_str());
+				nodeData.visualizer.sx = floatAttrib(xmlVisualizer, "sx", nodeData.visualizer.sx);
+				nodeData.visualizer.sy = floatAttrib(xmlVisualizer, "sy", nodeData.visualizer.sy);
 			}
 		}
 	}
@@ -5679,23 +5681,23 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 				editorElem.PushAttribute("nodeId", nodeId);
 				editorElem.PushAttribute("x", nodeData.x);
 				editorElem.PushAttribute("y", nodeData.y);
-				if (!nodeData.editorName.empty())
-					editorElem.PushAttribute("displayName", nodeData.editorName.c_str());
-				editorElem.PushAttribute("zKey", nodeData.editorZKey);
-				if (nodeData.editorIsFolded)
-					editorElem.PushAttribute("folded", nodeData.editorIsFolded);
+				if (!nodeData.displayName.empty())
+					editorElem.PushAttribute("displayName", nodeData.displayName.c_str());
+				editorElem.PushAttribute("zKey", nodeData.zKey);
+				if (nodeData.isFolded)
+					editorElem.PushAttribute("folded", nodeData.isFolded);
 				
 				if (node->nodeType == kGraphNodeType_Visualizer)
 				{
 					editorElem.OpenElement("visualizer");
 					{
-						editorElem.PushAttribute("nodeId", nodeData.editorVisualizer.nodeId);
-						if (!nodeData.editorVisualizer.srcSocketName.empty())
-							editorElem.PushAttribute("srcSocketName", nodeData.editorVisualizer.srcSocketName.c_str());
-						if (!nodeData.editorVisualizer.dstSocketName.empty())
-							editorElem.PushAttribute("dstSocketName", nodeData.editorVisualizer.dstSocketName.c_str());
-						editorElem.PushAttribute("sx", nodeData.editorVisualizer.sx);
-						editorElem.PushAttribute("sy", nodeData.editorVisualizer.sy);
+						editorElem.PushAttribute("nodeId", nodeData.visualizer.nodeId);
+						if (!nodeData.visualizer.srcSocketName.empty())
+							editorElem.PushAttribute("srcSocketName", nodeData.visualizer.srcSocketName.c_str());
+						if (!nodeData.visualizer.dstSocketName.empty())
+							editorElem.PushAttribute("dstSocketName", nodeData.visualizer.dstSocketName.c_str());
+						editorElem.PushAttribute("sx", nodeData.visualizer.sx);
+						editorElem.PushAttribute("sy", nodeData.visualizer.sy);
 					}
 					editorElem.CloseElement();
 				}
@@ -6022,7 +6024,7 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 			
 			doLabel(headerText.c_str(), 0.f);
 			
-			doTextBox(nodeData->editorName, "display name", dt);
+			doTextBox(nodeData->displayName, "display name", dt);
 			
 			int menuItemIndex = 0;
 			

@@ -931,34 +931,34 @@ struct GraphEdit : GraphEditConnection
 	
 		float x;
 		float y;
+		int zKey;
 		
-		std::string editorName;
-		int editorZKey;
+		std::string displayName;
 		
-		bool editorIsFolded;
-		float editorFoldAnimProgress;
-		float editorFoldAnimTimeRcp;
-		bool editorIsCloseToConnectionSite; // true when a new connection is being made near this node
+		bool isFolded;
+		float foldAnimProgress;
+		float foldAnimTimeRcp;
+		bool isCloseToConnectionSite; // true when a new connection is being made near this node
 
-		float editorIsActiveAnimTime; // real-time connection node activation animation
-		float editorIsActiveAnimTimeRcp;
-		bool editorIsActiveContinuous;
+		float isActiveAnimTime; // real-time connection node activation animation
+		float isActiveAnimTimeRcp;
+		bool isActiveContinuous;
 		
-		EditorVisualizer editorVisualizer;
+		EditorVisualizer visualizer;
 		
 		NodeData()
 			: x(0.f)
 			, y(0.f)
-			, editorName()
-			, editorZKey(0)
-			, editorIsFolded(false)
-			, editorFoldAnimProgress(1.f)
-			, editorFoldAnimTimeRcp(0.f)
-			, editorIsCloseToConnectionSite(false)
-			, editorIsActiveAnimTime(0.f)
-			, editorIsActiveAnimTimeRcp(0.f)
-			, editorIsActiveContinuous(false)
-			, editorVisualizer()
+			, zKey(0)
+			, displayName()
+			, isFolded(false)
+			, foldAnimProgress(1.f)
+			, foldAnimTimeRcp(0.f)
+			, isCloseToConnectionSite(false)
+			, isActiveAnimTime(0.f)
+			, isActiveAnimTimeRcp(0.f)
+			, isActiveContinuous(false)
+			, visualizer()
 		{
 		}
 		
