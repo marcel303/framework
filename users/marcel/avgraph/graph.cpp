@@ -164,17 +164,11 @@ GraphNode::GraphNode()
 	: id(kGraphNodeIdInvalid)
 	, nodeType(kGraphNodeType_Regular)
 	, typeName()
-	, isEnabled(true)
 	, isPassthrough(false)
 	, resources()
 	, editorInputValues()
 	, editorValue()
 {
-}
-
-void GraphNode::setIsEnabled(const bool _isEnabled)
-{
-	isEnabled = _isEnabled;
 }
 
 void GraphNode::setIsPassthrough(const bool _isPassthrough)
@@ -412,7 +406,6 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		node.id = intAttrib(xmlNode, "id", node.id);
 		node.nodeType = (GraphNodeType)intAttrib(xmlNode, "nodeType", node.nodeType);
 		node.typeName = stringAttrib(xmlNode, "typeName", node.typeName.c_str());
-		node.isEnabled = boolAttrib(xmlNode, "enabled", node.isEnabled);
 		node.isPassthrough = boolAttrib(xmlNode, "passthrough", node.isPassthrough);
 		node.editorValue = stringAttrib(xmlNode, "editorValue", node.editorValue.c_str());
 		
@@ -562,8 +555,6 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 			
 			xmlGraph.PushAttribute("typeName", node.typeName.c_str());
 			
-			if (!node.isEnabled)
-				xmlGraph.PushAttribute("enabled", node.isEnabled);
 			if (node.isPassthrough)
 				xmlGraph.PushAttribute("passthrough", node.isPassthrough);
 			
@@ -604,11 +595,13 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 		xmlGraph.OpenElement("link");
 		{
 			xmlGraph.PushAttribute("id", link.id);
-			xmlGraph.PushAttribute("enabled", link.isEnabled);
 			xmlGraph.PushAttribute("srcNodeId", link.srcNodeId);
 			xmlGraph.PushAttribute("srcNodeSocketName", link.srcNodeSocketName.c_str());
 			xmlGraph.PushAttribute("dstNodeId", link.dstNodeId);
 			xmlGraph.PushAttribute("dstNodeSocketName", link.dstNodeSocketName.c_str());
+			
+			if (!link.isEnabled)
+				xmlGraph.PushAttribute("enabled", link.isEnabled);
 			
 			for (auto & paramItr : link.params)
 			{
@@ -2376,6 +2369,13 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 {
 	cpuTimingBlock(GraphEdit_Tick);
 	
+#if 1 // todo : remove
+	for (auto & nodeItr : graph->nodes)
+		Assert(nodeDatas.count(nodeItr.first) != 0);
+	for (auto & nodeDataItr : nodeDatas)
+		Assert(graph->nodes.count(nodeDataItr.first) != 0);
+#endif
+
 	if (_inputIsCaptured)
 	{
 		cancelEditing();
@@ -2890,7 +2890,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					{
 						GraphNode newNode = *node;
 						newNode.id = graph->allocNodeId();
-						newNode.isEnabled = true;
 						newNode.isPassthrough = false;
 						newNode.editorInputValues.clear();
 						newNode.editorValue.clear();
@@ -3059,51 +3058,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					if (nodeData != nullptr)
 					{
 						nodeData->setIsFolded(anyUnfolded ? true : false);
-					}
-				}
-			}
-			
-			if (keyboard.wentDown(SDLK_e))
-			{
-				bool anyEnabled = false;
-				
-				for (auto nodeId : selectedNodes)
-				{
-					auto node = tryGetNode(nodeId);
-					
-					if (node != nullptr && node->isEnabled)
-					{
-						anyEnabled = true;
-					}
-				}
-				
-				for (auto linkId : selectedLinks)
-				{
-					auto link = tryGetLink(linkId);
-					
-					if (link != nullptr && link->isEnabled)
-					{
-						anyEnabled = true;
-					}
-				}
-				
-				for (auto nodeId : selectedNodes)
-				{
-					auto node = tryGetNode(nodeId);
-					
-					if (node != nullptr)
-					{
-						node->setIsEnabled(anyEnabled ? false : true);
-					}
-				}
-				
-				for (auto linkId : selectedLinks)
-				{
-					auto link = tryGetLink(linkId);
-					
-					if (link != nullptr)
-					{
-						link->setIsEnabled(anyEnabled ? false : true);
 					}
 				}
 			}
@@ -3514,7 +3468,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			//
 			
-			if (node.nodeType == kGraphNodeType_Regular && node.isEnabled)
+			if (node.nodeType == kGraphNodeType_Regular)
 			{
 				const int activity = realTimeConnection == nullptr ? 0 : realTimeConnection->nodeIsActive(node.id);
 				
@@ -3533,7 +3487,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			if (state == kState_InputSocketConnect || state == kState_OutputSocketConnect)
 			{
-				if (node.nodeType == kGraphNodeType_Regular && node.isEnabled)
+				if (node.nodeType == kGraphNodeType_Regular)
 				{
 					// todo : calculate distance from node center. take node dimensions into account for maximum radius. keep node open when the mouse is over the node
 					
@@ -5153,7 +5107,6 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 {
 	vfxCpuTimingBlock(drawNode);
 	
-	const bool isEnabled = node.isEnabled;
 	const bool isSelected = selectedNodes.count(node.id) != 0;
 	const bool socketsAreVisible = areNodeSocketsVisible(nodeData);
 	
@@ -5161,9 +5114,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	
 	Color color;
 	
-	if (!isEnabled)
-		color = Color(191, 191, 191, 255);
-	else if (isSelected)
+	if (isSelected)
 		color = Color(63, 63, 127, 255);
 	else
 		color = Color(63, 63, 63, 255);
@@ -5185,7 +5136,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	std::vector<std::string> issues;
 	
 	const bool hasIssues =
-		(node.isEnabled && node.nodeType == kGraphNodeType_Regular && realTimeConnection != nullptr)
+		(node.nodeType == kGraphNodeType_Regular && realTimeConnection != nullptr)
 		? realTimeConnection->getNodeIssues(node.id, issues)
 		: false;
 	
@@ -5198,7 +5149,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 		hqSetGradient(GRADIENT_LINEAR, cmat, color1, color2, COLOR_ADD);
 	}
 	
-	if (editorOptions.showCpuHeat && realTimeConnection != nullptr && node.isEnabled && node.nodeType == kGraphNodeType_Regular)
+	if (editorOptions.showCpuHeat && realTimeConnection != nullptr && node.nodeType == kGraphNodeType_Regular)
 	{
 		const int timeUs = realTimeConnection->getNodeCpuTimeUs(node.id);
 		const float t = timeUs / float(realTimeConnection->getNodeCpuHeatMax());

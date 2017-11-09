@@ -88,7 +88,6 @@ struct GraphNode
 	GraphNodeId id;
 	GraphNodeType nodeType;
 	std::string typeName;
-	bool isEnabled;
 	bool isPassthrough;
 	
 	std::map<std::string, Resource> resources;
@@ -100,7 +99,6 @@ struct GraphNode
 	
 	GraphNode();
 	
-	void setIsEnabled(const bool isEnabled);
 	void setIsPassthrough(const bool isPassthrough);
 	
 	void setResource(const char * type, const char * name, const char * data);

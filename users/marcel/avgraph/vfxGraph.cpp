@@ -372,11 +372,6 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 			continue;
 		}
 		
-		if (node.isEnabled == false)
-		{
-			continue;
-		}
-		
 		VfxNodeBase * vfxNode = createVfxNode(node.id, node.typeName, vfxGraph);
 		
 		Assert(vfxNode != nullptr);
