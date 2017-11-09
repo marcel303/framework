@@ -48,6 +48,11 @@ static libfreenect2::Frame * videoFrame = nullptr;
 static libfreenect2::Frame * depthFrame = nullptr;
 static OpenglTexture videoTexture;
 static OpenglTexture depthTexture;
+static int tickId = 0;
+static int videoFrameTickId = 0;
+static int depthFrameTickId = 0;
+static int videoTextureTickId = 0;
+static int depthTextureTickId = 0;
 
 //
 
@@ -93,9 +98,6 @@ VfxNodeKinect2::~VfxNodeKinect2()
 		videoTexture.free();
 		depthTexture.free();
 		
-		videoImageCpu.reset();
-		depthChannels.reset();
-		
 		//
 		
 		kinect->shut();
@@ -130,74 +132,108 @@ void VfxNodeKinect2::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeKinect2);
 	
-	// todo : this check is no longer sufficient : need to also check CPU image and depth channels output
-	//        BUT if only CPU image and/or depth channels is referenced, we aren't interested in making textures
-	//        UNLESS! there is another node that has video and/or depth image references
-	//        so we should let the first node that wants textures to update textures, if they're not up to date yet
-	
-	const bool wantsVideo = outputs[kOutput_VideoImage].isReferenced();
-	const bool wantsDepth = outputs[kOutput_DepthImage].isReferenced();
-	
-	if (kinect->isInit == false || (wantsVideo == false && wantsDepth == false))
+	if (isPassthrough || kinect->isInit == false)
 	{
 		videoImage.texture = 0;
 		depthImage.texture = 0;
+		
 		videoImageCpu.reset();
 		depthChannels.reset();
 		
 		return;
 	}
 	
+	const bool wantsVideoTexture = outputs[kOutput_VideoImage].isReferenced();
+	const bool wantsDepthTexture = outputs[kOutput_DepthImage].isReferenced();
+	const bool wantsVideoData = outputs[kOutput_VideoImageCpu].isReferenced();
+	const bool wantsDepthData = outputs[kOutput_DepthChannels].isReferenced();
+	
+	tickId++;
+	
+	libfreenect2::Frame * videoFrameToFree = nullptr;
+	libfreenect2::Frame * depthFrameToFree = nullptr;
+	
 	kinect->listener->lockBuffers();
 	{
-		if (kinect->listener->video && wantsVideo)
+		if (kinect->listener->video && (wantsVideoTexture || wantsVideoData))
 		{
-			vfxGpuTimingBlock(VfxNodeKinect2_VideoTextureUpload);
-			
-			// create texture from video data
-			
-			if (videoTexture.isChanged(kinect->listener->video->width, kinect->listener->video->height, GL_RGBA8))
-			{
-				videoTexture.allocate(kinect->listener->video->width, kinect->listener->video->height, GL_RGBA8, true, true);
-				videoTexture.setSwizzle(GL_BLUE, GL_GREEN, GL_RED, GL_ONE);
-			}
-			
-			videoTexture.upload(kinect->listener->video->data, 16, kinect->listener->video->width, GL_RGBA, GL_UNSIGNED_BYTE);
-			
 			// consume video data
 			
-			delete videoFrame;
+			videoFrameToFree = videoFrame;
 			videoFrame = kinect->listener->video;
 			kinect->listener->video = nullptr;
+			
+			videoFrameTickId = tickId;
 		}
 		
-		if (kinect->listener->depth && wantsDepth)
+		if (kinect->listener->depth && (wantsDepthTexture || wantsDepthData))
 		{
-			vfxGpuTimingBlock(VfxNodeKinect2_DepthTextureUpload);
-			
-			// create texture from depth data
-			
-			if (depthTexture.isChanged(kinect->listener->depth->width, kinect->listener->depth->height, GL_R32F))
-			{
-				depthTexture.allocate(kinect->listener->depth->width, kinect->listener->depth->height, GL_R32F, true, true);
-				depthTexture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
-			}
-			
-			depthTexture.upload(kinect->listener->depth->data, 16, kinect->listener->depth->width, GL_RED, GL_FLOAT);
-			
 			// consume depth data
 			
-			delete depthFrame;
+			depthFrameToFree = depthFrame;
 			depthFrame = kinect->listener->depth;
 			kinect->listener->depth = nullptr;
+			
+			depthFrameTickId = tickId;
 		}
 	}
 	kinect->listener->unlockBuffers();
 	
+	// free data outside of the lock so we don't block the Kinect processing too much
+	
+	delete videoFrameToFree;
+	videoFrameToFree = nullptr;
+	
+	delete depthFrameToFree;
+	depthFrameToFree = nullptr;
+	
+	// has the video texture been updated ?
+	
+	if (wantsVideoTexture && videoTextureTickId != videoFrameTickId)
+	{
+		vfxGpuTimingBlock(VfxNodeKinect2_VideoTextureUpload);
+		
+		// create texture from video data
+		
+		if (videoTexture.isChanged(videoFrame->width, videoFrame->height, GL_RGBA8))
+		{
+			videoTexture.allocate(videoFrame->width, videoFrame->height, GL_RGBA8, true, true);
+			videoTexture.setSwizzle(GL_BLUE, GL_GREEN, GL_RED, GL_ONE);
+		}
+		
+		videoTexture.upload(videoFrame->data, 16, videoFrame->width, GL_RGBA, GL_UNSIGNED_BYTE);
+		
+		videoTextureTickId = videoFrameTickId;
+	}
+	
+	if (wantsDepthTexture && depthTextureTickId != depthFrameTickId)
+	{
+		vfxGpuTimingBlock(VfxNodeKinect2_DepthTextureUpload);
+		
+		// create texture from depth data
+		
+		if (depthTexture.isChanged(depthFrame->width, depthFrame->height, GL_R32F))
+		{
+			depthTexture.allocate(depthFrame->width, depthFrame->height, GL_R32F, true, true);
+			depthTexture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+		}
+		
+		depthTexture.upload(depthFrame->data, 16, depthFrame->width, GL_RED, GL_FLOAT);
+		
+		depthTextureTickId = depthFrameTickId;
+	}
+	
 	// update outputs
 	
-	videoImage.texture = videoTexture.id;
-	depthImage.texture = depthTexture.id;
+	if (wantsVideoTexture)
+		videoImage.texture = videoTexture.id;
+	else
+		videoImage.texture = 0;
+	
+	if (wantsDepthTexture)
+		depthImage.texture = depthTexture.id;
+	else
+		depthImage.texture = 0;
 	
 	if (videoFrame != nullptr)
 		videoImageCpu.setDataRGBA8(videoFrame->data, videoFrame->width, videoFrame->height, 16, videoFrame->width * 4);
