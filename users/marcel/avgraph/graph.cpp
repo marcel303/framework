@@ -252,7 +252,6 @@ Graph::Graph()
 	, links()
 	, nextNodeId(1)
 	, nextLinkId(1)
-	, nextZKey(1)
 	, graphEditConnection(nullptr)
 {
 }
@@ -281,11 +280,6 @@ GraphNodeId Graph::allocLinkId()
 	Assert(links.find(result) == links.end());
 	
 	return result;
-}
-
-int Graph::allocZKey()
-{
-	return nextZKey++;
 }
 
 void Graph::addNode(GraphNode & node)
@@ -411,7 +405,6 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 {
 	nextNodeId = intAttrib(xmlGraph, "nextNodeId", nextNodeId);
 	nextLinkId = intAttrib(xmlGraph, "nextLinkId", nextLinkId);
-	nextZKey = intAttrib(xmlGraph, "nextZKey", nextZKey);
 	
 	for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
 	{
@@ -445,8 +438,6 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		addNode(node);
 		
 		nextNodeId = std::max(nextNodeId, node.id + 1);
-		// todo : move this to graph edit
-		//nextZKey = std::max(nextZKey, node.zKey + 1);
 	}
 	
 	for (const XMLElement * xmlLink = xmlGraph->FirstChildElement("link"); xmlLink != nullptr; xmlLink = xmlLink->NextSiblingElement("link"))
@@ -557,7 +548,6 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 	
 	xmlGraph.PushAttribute("nextNodeId", nextNodeId);
 	xmlGraph.PushAttribute("nextLinkId", nextLinkId);
-	xmlGraph.PushAttribute("nextZKey", nextZKey);
 	
 	for (auto & nodeItr : nodes)
 	{
@@ -1931,6 +1921,7 @@ void GraphEdit::NodeData::setVisualizer(const GraphNodeId nodeId, const std::str
 
 GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	: graph(nullptr)
+	, nextZKey(1)
 	, nodeDatas()
 	, typeDefinitionLibrary(nullptr)
 	, typeDefinition_visualizer()
@@ -2635,7 +2626,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 									selectNode(hitTestResult.node->id, true);
 									
 									auto nodeData = tryGetNodeData(hitTestResult.node->id);
-									nodeData->zKey = graph->allocZKey();
+									nodeData->zKey = nextZKey++;
 								}
 							}
 							else
@@ -2914,7 +2905,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							
 							newNodeData->x = nodeData->x + kGridSize;
 							newNodeData->y = nodeData->y + kGridSize;
-							newNodeData->zKey = graph->allocZKey();
+							newNodeData->zKey = nextZKey++;
 						}
 						
 						newSelectedNodes.insert(newNode.id);
@@ -4374,7 +4365,7 @@ bool GraphEdit::tryAddNode(const std::string & typeName, const float x, const fl
 		{
 			nodeData->x = x;
 			nodeData->y = y;
-			nodeData->zKey = graph->allocZKey();
+			nodeData->zKey = nextZKey++;
 		
 			if (editorOptions.snapToGrid)
 			{
@@ -4411,7 +4402,7 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 		{
 			nodeData->x = mousePosition.x;
 			nodeData->y = mousePosition.y;
-			nodeData->zKey = graph->allocZKey();
+			nodeData->zKey = nextZKey++;
 			nodeData->setVisualizer(nodeId, srcSocketName, srcSocketIndex, dstSocketName, dstSocketIndex);
 			nodeData->visualizer.sx = 0;
 			nodeData->visualizer.sy = 0;
@@ -5366,6 +5357,8 @@ bool GraphEdit::load(const char * filename)
 	
 	nodeDatas.clear();
 	
+	nextZKey = 1;
+	
 	delete graph;
 	graph = nullptr;
 	
@@ -5386,6 +5379,10 @@ bool GraphEdit::load(const char * filename)
 			result &= graph->loadXml(xmlGraph, typeDefinitionLibrary);
 			
 		#if ENABLE_FILE_FIXUPS
+			// fixup zkey allocation
+			
+			nextZKey = intAttrib(xmlGraph, "nextZKey", nextZKey);
+			
 			// fixup node datas. todo : remove these fixups
 			
 			for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
@@ -5402,6 +5399,7 @@ bool GraphEdit::load(const char * filename)
 				
 				nodeData.x = floatAttrib(xmlNode, "editorX", nodeData.x);
 				nodeData.y = floatAttrib(xmlNode, "editorY", nodeData.y);
+				nodeData.zKey = intAttrib(xmlNode, "zKey", nodeData.zKey);
 				nodeData.isFolded = boolAttrib(xmlNode, "folded", nodeData.isFolded);
 				
 				nodeData.displayName = stringAttrib(xmlNode, "editorName", nodeData.displayName.c_str());
@@ -5572,6 +5570,8 @@ bool GraphEdit::save(const char * filename)
 
 bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 {
+	nextZKey = intAttrib(editorElem, "nextZKey", nextZKey);
+	
 	auto dragAndZoomElem = editorElem->FirstChildElement("dragAndZoom");
 	
 	if (dragAndZoomElem != nullptr)
@@ -5605,6 +5605,7 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 			nodeData.zKey = intAttrib(nodeDataElem, "zKey", nodeData.zKey);
 			nodeData.displayName = stringAttrib(nodeDataElem, "displayName", nodeData.displayName.c_str());
 			
+			nextZKey = std::max(nextZKey, nodeData.zKey + 1);
 			
 			//
 			
@@ -5656,6 +5657,8 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 
 bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 {
+	editorElem.PushAttribute("nextZKey", nextZKey);
+	
 	editorElem.OpenElement("dragAndZoom");
 	{
 		editorElem.PushAttribute("x", dragAndZoom.desiredFocusX);

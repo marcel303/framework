@@ -179,7 +179,6 @@ struct Graph
 	
 	GraphNodeId nextNodeId;
 	GraphLinkId nextLinkId;
-	int nextZKey;
 	
 	GraphEditConnection * graphEditConnection;
 	
@@ -188,7 +187,6 @@ struct Graph
 	
 	GraphNodeId allocNodeId();
 	GraphLinkId allocLinkId();
-	int allocZKey();
 	
 	void addNode(GraphNode & node);
 	void removeNode(const GraphNodeId nodeId);
@@ -1298,6 +1296,8 @@ struct GraphEdit : GraphEditConnection
 	};
 	
 	Graph * graph;
+	
+	int nextZKey;
 	
 	std::map<GraphNodeId, NodeData> nodeDatas;
 	
