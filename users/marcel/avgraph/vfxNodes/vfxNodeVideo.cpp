@@ -163,10 +163,12 @@ void VfxNodeVideo::tick(const float dt)
 			}
 			else if (mediaPlayer->context->openParams.outputMode == MP::kOutputMode_RGBA)
 			{
-				imageCpuOutputRGBA.setDataRGBA8(
-					(uint8_t*)mediaPlayer->videoFrame->m_frameBuffer,
-					mediaPlayer->videoFrame->m_width,
-					mediaPlayer->videoFrame->m_height, 16, 0);
+				int sx;
+				int sy;
+				int pitch;
+				const uint8_t * bytes = mediaPlayer->videoFrame->getRGBA(sx, sy, pitch);
+				
+				imageCpuOutputRGBA.setDataRGBA8(bytes, sx, sy, 16, pitch);
 			}
 		}
 	}
