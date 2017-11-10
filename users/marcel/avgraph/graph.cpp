@@ -76,6 +76,46 @@ static const std::string & getDisplayName(const GraphNode & node, const GraphEdi
 	return !nodeData.displayName.empty() ? nodeData.displayName : node.typeName;
 }
 
+//
+
+static const float kNodeSx = 100.f;
+static const float kNodePadding = 5.f;
+static const float kNodeLabelSy = 15.f;
+static const float kNodeSocketPaddingSy = 20.f;
+static const float kNodeSocketRadius = 6.f;
+
+static void getNodeRect(const int numInputs, const int numOutputs, const bool isFolded, float & sx, float & sy)
+{
+	if (isFolded)
+	{
+		sx = kNodeSx;
+		sy = kNodePadding + kNodeLabelSy + kNodePadding;
+	}
+	else
+	{
+		const int numSockets = std::max(numInputs, numOutputs);
+		
+		sx = kNodeSx;
+		sy = kNodePadding + kNodeLabelSy + kNodeSocketPaddingSy * numSockets + kNodePadding;
+	}
+}
+
+static void getNodeInputSocketCircle(const int index, float & x, float & y, float & radius)
+{
+	x = 0.f;
+	y = kNodePadding + kNodeLabelSy + kNodeSocketPaddingSy * (index + .5f);
+	
+	radius = kNodeSocketRadius;
+}
+
+static void getNodeOutputSocketCircle(const int index, float & x, float & y, float & radius)
+{
+	x = kNodeSx;
+	y = kNodePadding + kNodeLabelSy + kNodeSocketPaddingSy * (index + .5f);
+	
+	radius = kNodeSocketRadius;
+}
+
 static bool testRectOverlap(
 	const int _ax1, const int _ay1, const int _ax2, const int _ay2,
 	const int _bx1, const int _by1, const int _bx2, const int _by2)
@@ -759,40 +799,14 @@ bool GraphEdit_TypeDefinition::OutputSocket::canConnectTo(const GraphEdit_TypeDe
 
 void GraphEdit_TypeDefinition::createUi()
 {
-	float py = 0.f;
-	float pf = 0.f;
-	
-	py += 5.f;
-	pf += 5.f;
-	
-	// (typeName label)
-	
-	py += 15.f;
-	pf += 15.f;
-	
-	// (sockets)
-	
-	const float socketPaddingY = 20.f;
-	const float socketRadius = 6.f;
-	const float socketPyBegin = py;
-	
 	// setup input sockets
 	
 	{
 		int index = 0;
-		float px = 0.f;
-		float socketPy = socketPyBegin;
 		
 		for (auto & inputSocket : inputSockets)
 		{
-			inputSocket.index = index;
-			inputSocket.px = px;
-			inputSocket.py = socketPy + socketPaddingY / 2.f;
-			inputSocket.radius = socketRadius;
-			
-			++index;
-			socketPy += socketPaddingY;
-			py = std::max(py, socketPy);
+			inputSocket.index = index++;
 		}
 	}
 	
@@ -800,74 +814,12 @@ void GraphEdit_TypeDefinition::createUi()
 	
 	{
 		int index = 0;
-		float px = 100.f;
-		float socketPy = socketPyBegin;
 		
 		for (auto & outputSocket : outputSockets)
 		{
-			outputSocket.index = index;
-			outputSocket.px = px;
-			outputSocket.py = socketPy + socketPaddingY / 2.f;
-			outputSocket.radius = socketRadius;
-			
-			++index;
-			socketPy += socketPaddingY;
-			py = std::max(py, socketPy);
+			outputSocket.index = index++;
 		}
 	}
-	
-	//
-	
-	py += 5.f;
-	pf += 5.f;
-	
-	//
-	
-	sx = 100.f;
-	sy = py;
-	syFolded = pf;
-}
-
-bool GraphEdit_TypeDefinition::hitTest(const float x, const float y, const bool socketsAreVisible, HitTestResult & result) const
-{
-	result = HitTestResult();
-	
-	if (socketsAreVisible)
-	{
-		for (auto & inputSocket : inputSockets)
-		{
-			const float dx = x - inputSocket.px;
-			const float dy = y - inputSocket.py;
-			const float ds = std::hypotf(dx, dy);
-			
-			if (ds <= inputSocket.radius)
-			{
-				result.inputSocket = &inputSocket;
-				return true;
-			}
-		}
-		
-		for (auto & outputSocket : outputSockets)
-		{
-			const float dx = x - outputSocket.px;
-			const float dy = y - outputSocket.py;
-			const float ds = std::hypotf(dx, dy);
-			
-			if (ds <= outputSocket.radius)
-			{
-				result.outputSocket = &outputSocket;
-				return true;
-			}
-		}
-	}
-	
-	if (x >= 0.f && y >= 0.f && x < sx && y < (socketsAreVisible ? sy : syFolded))
-	{
-		result.background = true;
-		return true;
-	}
-	
-	return false;
 }
 
 bool GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
@@ -2117,16 +2069,32 @@ bool GraphEdit::getLinkPath(const GraphLinkId linkId, LinkPath & path) const
 		auto srcTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
 		auto dstTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
 		
-		const float srcSy = srcTypeDefinition == nullptr ? 0.f : srcTypeDefinition->syFolded;
-		const float dstSy = dstTypeDefinition == nullptr ? 0.f : dstTypeDefinition->syFolded;
+		float srcSx, srcSy;
+		float dstSx, dstSy;
+		
+		if (srcTypeDefinition)
+			getNodeRect(srcTypeDefinition->inputSockets.size(), srcTypeDefinition->outputSockets.size(), true, srcSx, srcSy);
+		else
+			srcSx = srcSy = 0.f;
+		
+		if (dstTypeDefinition)
+			getNodeRect(dstTypeDefinition->inputSockets.size(), dstTypeDefinition->outputSockets.size(), true, dstSx, dstSy);
+		else
+			dstSx = dstSy = 0.f;
 		
 		const bool srcNodeSocketsAreVisible = areNodeSocketsVisible(*srcNodeData);
 		const bool dstNodeSocketsAreVisible = areNodeSocketsVisible(*dstNodeData);
 		
-		const float srcX = srcNodeData->x + inputSocket->px;
-		const float srcY = srcNodeData->y + (srcNodeSocketsAreVisible ? inputSocket->py  : srcSy/2.f);
-		const float dstX = dstNodeData->x + outputSocket->px;
-		const float dstY = dstNodeData->y + (dstNodeSocketsAreVisible ? outputSocket->py : dstSy/2.f);
+		float srcSocketX, srcSocketY, srcSocketRadius;
+		getNodeInputSocketCircle(inputSocket->index, srcSocketX, srcSocketY, srcSocketRadius);
+		
+		float dstSocketX, dstSocketY, dstSocketRadius;
+		getNodeOutputSocketCircle(outputSocket->index, dstSocketX, dstSocketY, dstSocketRadius);
+		
+		const float srcX = srcNodeData->x + srcSocketX;
+		const float srcY = srcNodeData->y + (srcNodeSocketsAreVisible ? srcSocketY : srcSy/2.f);
+		const float dstX = dstNodeData->x + dstSocketX;
+		const float dstY = dstNodeData->y + (dstNodeSocketsAreVisible ? dstSocketY : dstSy/2.f);
 		
 		LinkPath::Point p;
 		
@@ -2228,11 +2196,11 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 			}
 			else
 			{
-				GraphEdit_TypeDefinition::HitTestResult hitTestResult;
+				NodeHitTestResult hitTestResult;
 				
 				const bool socketsAreVisible = areNodeSocketsVisible(nodeData);
 				
-				if (typeDefinition->hitTest(x - nodeData.x, y - nodeData.y, socketsAreVisible, hitTestResult))
+				if (hitTestNode(*typeDefinition, x - nodeData.x, y - nodeData.y, socketsAreVisible, hitTestResult))
 				{
 					result.hasNode = true;
 					result.node = &node;
@@ -2251,7 +2219,7 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				nodeData.x + nodeData.visualizer.sx,
 				nodeData.y + nodeData.visualizer.sy))
 			{
-				GraphEdit_TypeDefinition::HitTestResult hitTestResult;
+				NodeHitTestResult hitTestResult;
 				
 				const int borderSize = 6;
 				
@@ -2360,6 +2328,58 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 			x1 = x2;
 			y1 = y2;
 		}
+	}
+	
+	return false;
+}
+
+bool GraphEdit::hitTestNode(const GraphEdit_TypeDefinition & typeDefinition, const float x, const float y, const bool socketsAreVisible, NodeHitTestResult & result) const
+{
+	result = NodeHitTestResult();
+	
+	if (socketsAreVisible)
+	{
+		for (auto & inputSocket : typeDefinition.inputSockets)
+		{
+			float socketX, socketY, socketRadius;
+			getNodeInputSocketCircle(inputSocket.index, socketX, socketY, socketRadius);
+			
+			const float dx = x - socketX;
+			const float dy = y - socketY;
+			const float ds = std::hypotf(dx, dy);
+			
+			if (ds <= socketRadius)
+			{
+				result.inputSocket = &inputSocket;
+				return true;
+			}
+		}
+		
+		for (auto & outputSocket : typeDefinition.outputSockets)
+		{
+			float socketX, socketY, socketRadius;
+			getNodeOutputSocketCircle(outputSocket.index, socketX, socketY, socketRadius);
+			
+			const float dx = x - socketX;
+			const float dy = y - socketY;
+			const float ds = std::hypotf(dx, dy);
+			
+			if (ds <= socketRadius)
+			{
+				result.outputSocket = &outputSocket;
+				return true;
+			}
+		}
+	}
+	
+	float sx;
+	float sy;
+	getNodeRect(typeDefinition.inputSockets.size(), typeDefinition.outputSockets.size(), !socketsAreVisible, sx, sy);
+	
+	if (x >= 0.f && y >= 0.f && x < sx && y < sy)
+	{
+		result.background = true;
+		return true;
 	}
 	
 	return false;
@@ -3181,6 +3201,10 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					Assert(typeDefinition != nullptr);
 					if (typeDefinition != nullptr)
 					{
+						float sx;
+						float sy;
+						getNodeRect(typeDefinition->inputSockets.size(), typeDefinition->outputSockets.size(), nodeData.isFolded, sx, sy);
+						
 						if (testRectOverlap(
 							nodeSelect.beginX,
 							nodeSelect.beginY,
@@ -3188,8 +3212,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							nodeSelect.endY,
 							nodeData.x,
 							nodeData.y,
-							nodeData.x + typeDefinition->sx,
-							nodeData.y + (nodeData.isFolded ? typeDefinition->syFolded : typeDefinition->sy)))
+							nodeData.x + sx,
+							nodeData.y + sy))
 						{
 							nodeSelect.nodeIds.insert(node.id);
 						}
@@ -3855,6 +3879,21 @@ void GraphEdit::tickNodeDatas(const float dt)
 		if (node.nodeType == kGraphNodeType_Visualizer)
 		{
 			nodeData.visualizer.tick(*this);
+		}
+		
+		if (node.nodeType == kGraphNodeType_Regular)
+		{
+			std::vector<GraphEdit_RealTimeConnection::DynamicInput> inputs;
+			std::vector<GraphEdit_RealTimeConnection::DynamicOutput> outputs;
+			
+			if (realTimeConnection == nullptr || realTimeConnection->getNodeDynamicSockets(node.id, inputs, outputs) == false)
+			{
+				nodeData.dynamicSockets.reset();
+			}
+			else
+			{
+				nodeData.dynamicSockets.update(inputs, outputs);
+			}
 		}
 	}
 }
@@ -4856,10 +4895,13 @@ void GraphEdit::draw() const
 			{
 				hqBegin(HQ_LINES);
 				{
+					float socketX, socketY, socketRadius;
+					getNodeInputSocketCircle(socketConnect.srcNodeSocket->index, socketX, socketY, socketRadius);
+					
 					setColor(255, 255, 0);
 					hqLine(
-						nodeData->x + socketConnect.srcNodeSocket->px,
-						nodeData->y + socketConnect.srcNodeSocket->py, 1.5f,
+						nodeData->x + socketX,
+						nodeData->y + socketY, 1.5f,
 						mousePosition.x, mousePosition.y, 1.5f);
 				}
 				hqEnd();
@@ -4880,10 +4922,13 @@ void GraphEdit::draw() const
 			{
 				hqBegin(HQ_LINES);
 				{
+					float socketX, socketY, socketRadius;
+					getNodeOutputSocketCircle(socketConnect.dstNodeSocket->index, socketX, socketY, socketRadius);
+					
 					setColor(255, 255, 0);
 					hqLine(
-						nodeData->x + socketConnect.dstNodeSocket->px,
-						nodeData->y + socketConnect.dstNodeSocket->py, 1.5f,
+						nodeData->x + socketX,
+						nodeData->y + socketY, 1.5f,
 						mousePosition.x, mousePosition.y, 1.5f);
 				}
 				hqEnd();
@@ -5110,7 +5155,26 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	const bool isSelected = selectedNodes.count(node.id) != 0;
 	const bool socketsAreVisible = areNodeSocketsVisible(nodeData);
 	
-	const float nodeSy = Calc::Lerp(definition.syFolded, definition.sy, nodeData.foldAnimProgress);
+	float sx;
+	float sy;
+	
+	if (nodeData.foldAnimProgress == 0.f)
+		getNodeRect(definition.inputSockets.size(), definition.outputSockets.size(), true, sx, sy);
+	else if (nodeData.foldAnimProgress == 1.f)
+		getNodeRect(definition.inputSockets.size(), definition.outputSockets.size(), false, sx, sy);
+	else
+	{
+		float sx1;
+		float sy1;
+		float sx2;
+		float sy2;
+		
+		getNodeRect(definition.inputSockets.size(), definition.outputSockets.size(), true, sx1, sy1);
+		getNodeRect(definition.inputSockets.size(), definition.outputSockets.size(), false, sx2, sy2);
+		
+		sx = lerp(sx1, sx2, nodeData.foldAnimProgress);
+		sy = lerp(sy1, sy2, nodeData.foldAnimProgress);
+	}
 	
 	Color color;
 	
@@ -5166,10 +5230,10 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 		const float radius = 5.f;
 		
 		setColor(isSelected ? colorWhite : colorBlack);
-		hqFillRoundedRect(-border/2, -border/2, definition.sx + border/2, nodeSy + border/2, radius + border/2);
+		hqFillRoundedRect(-border/2, -border/2, sx + border/2, sy + border/2, radius + border/2);
 		
 		setColor(color);
-		hqFillRoundedRect(0.f + border/2, 0.f + border/2, definition.sx - border/2, nodeSy - border/2, radius);
+		hqFillRoundedRect(0.f + border/2, 0.f + border/2, sx - border/2, sy - border/2, radius);
 	}
 	hqEnd();
 	
@@ -5180,16 +5244,16 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 		setColor(255, 255, 255, 255);
 	else
 		setColor(127, 127, 127, 255);
-	//drawRectLine(0.f, 0.f, definition.sx, nodeSy);
+	//drawRectLine(0.f, 0.f, sx, sy);
 	
 	setFont("calibri.ttf");
 	setColor(255, 255, 255);
-	drawText(definition.sx/2, 12, 14, 0.f, 0.f, "%s", !nodeData.displayName.empty() ? nodeData.displayName.c_str() : definition.displayName.empty() ? definition.typeName.c_str() : definition.displayName.c_str());
+	drawText(sx/2, 12, 14, 0.f, 0.f, "%s", !nodeData.displayName.empty() ? nodeData.displayName.c_str() : definition.displayName.empty() ? definition.typeName.c_str() : definition.displayName.c_str());
 	
 	if (node.isPassthrough)
 	{
 		setColor(127, 127, 255);
-		drawText(definition.sx - 8, 12, 14, -1.f, 0.f, "P");
+		drawText(sx - 8, 12, 14, -1.f, 0.f, "P");
 	}
 	
 	if (socketsAreVisible)
@@ -5198,14 +5262,20 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 		{
 			for (auto & inputSocket : definition.inputSockets)
 			{
+				float x, y, radius;
+				getNodeInputSocketCircle(inputSocket.index, x, y, radius);
+				
 				setColor(255, 255, 255);
-				drawText(inputSocket.px + inputSocket.radius + 2, inputSocket.py, 12, +1.f, 0.f, "%s", inputSocket. name.c_str());
+				drawText(x + radius + 2, y, 12, +1.f, 0.f, "%s", inputSocket. name.c_str());
 			}
 			
 			for (auto & outputSocket : definition.outputSockets)
 			{
+				float x, y, radius;
+				getNodeOutputSocketCircle(outputSocket.index, x, y, radius);
+				
 				setColor(255, 255, 255);
-				drawText(outputSocket.px - outputSocket.radius - 2, outputSocket.py, 12, -1.f, 0.f, "%s", outputSocket.name.c_str());
+				drawText(x - radius - 2, y, 12, -1.f, 0.f, "%s", outputSocket.name.c_str());
 			}
 		}
 		endTextBatch();
@@ -5231,12 +5301,15 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 					setColor(255, 0, 0);
 				}
 				
-				hqFillCircle(inputSocket.px, inputSocket.py, inputSocket.radius);
+				float x, y, radius;
+				getNodeInputSocketCircle(inputSocket.index, x, y, radius);
+				
+				hqFillCircle(x, y, radius);
 				
 				if (node.editorInputValues.count(inputSocket.name) != 0)
 				{
 					setColor(255, 255, 255);
-					hqFillCircle(inputSocket.px, inputSocket.py, inputSocket.radius / 3.f);
+					hqFillCircle(x, y, radius / 3.f);
 				}
 			}
 			
@@ -5259,10 +5332,57 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 					setColor(0, 255, 0);
 				}
 				
-				hqFillCircle(outputSocket.px, outputSocket.py, outputSocket.radius);
+				float x, y, radius;
+				getNodeOutputSocketCircle(outputSocket.index, x, y, radius);
+				
+				hqFillCircle(x, y, radius);
+			}
+			
+			// todo : should fetch dynamic sockets in tick, compare with previous, allocate and update in node data, and visually represent them here
+			
+			if (nodeData.dynamicSockets.inputs.empty() == false)
+			{
+				float angle = framework.time;
+				float angleStep = 1.f / nodeData.dynamicSockets.inputs.size();
+				angleStep *= Calc::m2PI;
+				
+				for (auto & input : nodeData.dynamicSockets.inputs)
+				{
+					const float radius = 30.f;
+					const float x = std::cos(angle) * radius;
+					const float y = std::sin(angle) * radius;
+					
+					setColor(colorYellow);
+					hqFillCircle(x, y, 5.f);
+					
+					angle += angleStep;
+				}
 			}
 		}
 		hqEnd();
+		
+		beginTextBatch();
+		{
+			if (nodeData.dynamicSockets.inputs.empty() == false)
+			{
+				float angle = framework.time;
+				float angleStep = 1.f / nodeData.dynamicSockets.inputs.size();
+				angleStep *= Calc::m2PI;
+				
+				for (auto & input : nodeData.dynamicSockets.inputs)
+				{
+					const float radius = 30.f;
+					const float x = std::cos(angle) * radius;
+					const float y = std::sin(angle) * radius;
+					
+					setColor(colorWhite);
+					drawText(x, y + 10.f, 12.f, 0.f, 0.f, "%s", input.name.c_str());
+					
+					angle += angleStep;
+				}
+			}
+		}
+		endTextBatch();
 	}
 }
 
@@ -5352,6 +5472,7 @@ bool GraphEdit::load(const char * filename)
 				nodeData.y = floatAttrib(xmlNode, "editorY", nodeData.y);
 				nodeData.zKey = intAttrib(xmlNode, "zKey", nodeData.zKey);
 				nodeData.isFolded = boolAttrib(xmlNode, "folded", nodeData.isFolded);
+				nodeData.foldAnimProgress = nodeData.isFolded ? 0.f : 1.f;
 				
 				nodeData.displayName = stringAttrib(xmlNode, "editorName", nodeData.displayName.c_str());
 				
@@ -5531,9 +5652,11 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 		dragAndZoom.desiredFocusY = floatAttrib(dragAndZoomElem, "y", 0.f);
 		dragAndZoom.desiredZoom = floatAttrib(dragAndZoomElem, "zoom", 1.f);
 		
+		/*
 		dragAndZoom.focusX = dragAndZoom.desiredFocusX;
 		dragAndZoom.focusY = dragAndZoom.desiredFocusY;
 		dragAndZoom.zoom = dragAndZoom.desiredZoom;
+		*/
 	}
 	
 	auto nodeDatasElem = editorElem->FirstChildElement("nodeDatas");
@@ -5552,6 +5675,7 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 			nodeData.x = floatAttrib(nodeDataElem, "x", nodeData.x);
 			nodeData.y = floatAttrib(nodeDataElem, "y", nodeData.y);
 			nodeData.isFolded = boolAttrib(nodeDataElem, "folded", nodeData.isFolded);
+			nodeData.foldAnimProgress = nodeData.isFolded ? 0.f : 1.f;
 			
 			nodeData.zKey = intAttrib(nodeDataElem, "zKey", nodeData.zKey);
 			nodeData.displayName = stringAttrib(nodeDataElem, "displayName", nodeData.displayName.c_str());

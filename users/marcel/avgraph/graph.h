@@ -264,9 +264,6 @@ struct GraphEdit_TypeDefinition
 		// ui
 		
 		int index;
-		float px;
-		float py;
-		float radius;
 		
 		InputSocket()
 			: typeName()
@@ -275,9 +272,6 @@ struct GraphEdit_TypeDefinition
 			, defaultValue()
 			, hasDefaultValue(false)
 			, index(-1)
-			, px(0.f)
-			, py(0.f)
-			, radius(0.f)
 		{
 		}
 		
@@ -293,44 +287,16 @@ struct GraphEdit_TypeDefinition
 		// ui
 		
 		int index;
-		float px;
-		float py;
-		float radius;
 		
 		OutputSocket()
 			: typeName()
 			, name()
 			, isEditable(false)
 			, index(-1)
-			, px(0.f)
-			, py(0.f)
-			, radius(0.f)
 		{
 		}
 		
 		bool canConnectTo(const GraphEdit_TypeDefinitionLibrary * typeDefintionLibrary, const InputSocket & socket) const;
-	};
-	
-	struct HitTestResult
-	{
-		const InputSocket * inputSocket;
-		const OutputSocket * outputSocket;
-		bool background;
-		bool borderL;
-		bool borderR;
-		bool borderT;
-		bool borderB;
-		
-		HitTestResult()
-			: inputSocket(nullptr)
-			, outputSocket(nullptr)
-			, background(false)
-			, borderL(false)
-			, borderR(false)
-			, borderT(false)
-			, borderB(false)
-		{
-		}
 	};
 	
 	struct ResourceEditor
@@ -356,10 +322,6 @@ struct GraphEdit_TypeDefinition
 	
 	std::string resourceTypeName;
 	
-	float sx;
-	float sy;
-	float syFolded;
-	
 	GraphEdit_TypeDefinition()
 		: typeName()
 		, inputSockets()
@@ -367,15 +329,10 @@ struct GraphEdit_TypeDefinition
 		, resourceEditor()
 		, displayName()
 		, resourceTypeName()
-		, sx(0.f)
-		, sy(0.f)
-		, syFolded(0.f)
 	{
 	}
 	
 	void createUi();
-	
-	bool hitTest(const float x, const float y, const bool socketsAreVisible, HitTestResult & result) const;
 	
 	bool loadXml(const tinyxml2::XMLElement * xmlNode);
 };
@@ -722,11 +679,13 @@ struct GraphEdit_RealTimeConnection
 	struct DynamicInput
 	{
 		std::string name;
+		std::string type;
 	};
 	
 	struct DynamicOutput
 	{
 		std::string name;
+		std::string type;
 	};
 	
 	virtual ~GraphEdit_RealTimeConnection()
@@ -833,7 +792,7 @@ struct GraphEdit_RealTimeConnection
 		return kActivity_Inactive;
 	}
 	
-	virtual bool getNodeDynamicSockets(std::vector<DynamicInput> & inputs, std::vector<DynamicOutput> & outputs)
+	virtual bool getNodeDynamicSockets(const GraphNodeId nodeId, std::vector<DynamicInput> & inputs, std::vector<DynamicOutput> & outputs) const
 	{
 		return false;
 	}
@@ -897,6 +856,56 @@ struct GraphEdit : GraphEditConnection
 	
 	struct NodeData
 	{
+		struct DynamicSockets
+		{
+			struct Input
+			{
+				std::string name;
+				std::string type;
+			};
+			
+			struct Output
+			{
+				std::string name;
+				std::string type;
+			};
+			
+			std::vector<Input> inputs;
+			std::vector<Output> outputs;
+			
+			void reset()
+			{
+				inputs.clear();
+				outputs.clear();
+			}
+			
+			void update(
+				std::vector<GraphEdit_RealTimeConnection::DynamicInput> & newInputs,
+				std::vector<GraphEdit_RealTimeConnection::DynamicOutput> & newOutputs)
+			{
+				inputs.resize(newInputs.size());
+				outputs.resize(newOutputs.size());
+				
+				for (int i = 0; i < newInputs.size(); ++i)
+				{
+					auto & newInput = newInputs[i];
+					auto & input = inputs[i];
+					
+					input.name = newInput.name;
+					input.type = newInput.type;
+				}
+				
+				for (int i = 0; i < newOutputs.size(); ++i)
+				{
+					auto & newOutput = newOutputs[i];
+					auto & output = outputs[i];
+					
+					output.name = newOutput.name;
+					output.type = newOutput.type;
+				}
+			}
+		};
+		
 		struct EditorVisualizer
 		{
 			GraphNodeId nodeId;
@@ -940,6 +949,8 @@ struct GraphEdit : GraphEditConnection
 		float isActiveAnimTimeRcp;
 		bool isActiveContinuous;
 		
+		DynamicSockets dynamicSockets;
+		
 		EditorVisualizer visualizer;
 		
 		NodeData()
@@ -954,6 +965,7 @@ struct GraphEdit : GraphEditConnection
 			, isActiveAnimTime(0.f)
 			, isActiveAnimTimeRcp(0.f)
 			, isActiveContinuous(false)
+			, dynamicSockets()
 			, visualizer()
 		{
 		}
@@ -963,11 +975,33 @@ struct GraphEdit : GraphEditConnection
 		void setVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 	};
 	
+	struct NodeHitTestResult
+	{
+		const GraphEdit_TypeDefinition::InputSocket * inputSocket;
+		const GraphEdit_TypeDefinition::OutputSocket * outputSocket;
+		bool background;
+		bool borderL;
+		bool borderR;
+		bool borderT;
+		bool borderB;
+		
+		NodeHitTestResult()
+			: inputSocket(nullptr)
+			, outputSocket(nullptr)
+			, background(false)
+			, borderL(false)
+			, borderR(false)
+			, borderT(false)
+			, borderB(false)
+		{
+		}
+	};
+	
 	struct HitTestResult
 	{
 		bool hasNode;
 		GraphNode * node;
-		GraphEdit_TypeDefinition::HitTestResult nodeHitTestResult;
+		NodeHitTestResult nodeHitTestResult;
 		
 		bool hasLink;
 		GraphNodeSocketLink * link;
@@ -1369,6 +1403,7 @@ struct GraphEdit : GraphEditConnection
 	
 	bool enabled(const int flag) const;
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
+	bool hitTestNode(const GraphEdit_TypeDefinition & typeDefinition, const float x, const float y, const bool socketsAreVisible, NodeHitTestResult & result) const;
 	
 	bool tick(const float dt, const bool inputIsCaptured);
 	void tickNodeDatas(const float dt);
