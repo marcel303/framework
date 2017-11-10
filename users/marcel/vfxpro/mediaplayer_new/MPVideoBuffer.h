@@ -46,6 +46,7 @@ namespace MP
 		uint8_t * getY(int & sx, int & sy, int & pitch) const;
 		uint8_t * getU(int & sx, int & sy, int & pitch) const;
 		uint8_t * getV(int & sx, int & sy, int & pitch) const;
+		uint8_t * getRGBA(int & sx, int & sy, int & pitch) const;
 		
 		size_t m_width;
 		size_t m_height;

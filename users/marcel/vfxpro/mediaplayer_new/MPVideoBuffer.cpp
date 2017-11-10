@@ -195,6 +195,17 @@ namespace MP
 		
 		return m_frame->data[2];
 	}
+	
+	uint8_t * VideoFrame::getRGBA(int & sx, int & sy, int & pitch) const
+	{
+		Assert(m_isValidForRead && m_pixelFormat == AV_PIX_FMT_RGBA);
+		
+		sx = m_frame->width;
+		sy = m_frame->height;
+		pitch = m_frame->linesize[0];
+		
+		return m_frame->data[0];
+	}
 
 	// VideBuffer
 	VideoBuffer::VideoBuffer()
