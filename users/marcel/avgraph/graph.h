@@ -124,6 +124,7 @@ struct GraphNodeSocketLink
 {
 	GraphLinkId id;
 	bool isEnabled;
+	bool isDynamic;
 	
 	GraphNodeId srcNodeId;
 	std::string srcNodeSocketName;
@@ -260,6 +261,7 @@ struct GraphEdit_TypeDefinition
 		std::string name;
 		std::string defaultValue;
 		bool hasDefaultValue;
+		bool isDynamic;
 		
 		// ui
 		
@@ -271,6 +273,7 @@ struct GraphEdit_TypeDefinition
 			, name()
 			, defaultValue()
 			, hasDefaultValue(false)
+			, isDynamic(false)
 			, index(-1)
 		{
 		}
@@ -283,6 +286,7 @@ struct GraphEdit_TypeDefinition
 		std::string typeName;
 		std::string name;
 		bool isEditable;
+		bool isDynamic;
 		
 		// ui
 		
@@ -292,6 +296,7 @@ struct GraphEdit_TypeDefinition
 			: typeName()
 			, name()
 			, isEditable(false)
+			, isDynamic(false)
 			, index(-1)
 		{
 		}
@@ -679,13 +684,13 @@ struct GraphEdit_RealTimeConnection
 	struct DynamicInput
 	{
 		std::string name;
-		std::string type;
+		std::string typeName;
 	};
 	
 	struct DynamicOutput
 	{
 		std::string name;
-		std::string type;
+		std::string typeName;
 	};
 	
 	virtual ~GraphEdit_RealTimeConnection()
@@ -858,50 +863,52 @@ struct GraphEdit : GraphEditConnection
 	{
 		struct DynamicSockets
 		{
-			struct Input
-			{
-				std::string name;
-				std::string type;
-			};
+			bool hasDynamicSockets;
 			
-			struct Output
-			{
-				std::string name;
-				std::string type;
-			};
+			std::vector<GraphEdit_TypeDefinition::InputSocket> inputSockets;
+			int numStaticInputSockets;
 			
-			std::vector<Input> inputs;
-			std::vector<Output> outputs;
+			DynamicSockets()
+				: hasDynamicSockets(false)
+				, inputSockets()
+				, numStaticInputSockets(0)
+			{
+			}
 			
 			void reset()
 			{
-				inputs.clear();
-				outputs.clear();
+				if (hasDynamicSockets)
+				{
+					hasDynamicSockets = false;
+					
+					inputSockets.clear();
+					numStaticInputSockets = 0;
+				}
 			}
 			
 			void update(
-				std::vector<GraphEdit_RealTimeConnection::DynamicInput> & newInputs,
-				std::vector<GraphEdit_RealTimeConnection::DynamicOutput> & newOutputs)
+				const GraphEdit_TypeDefinition & typeDefinition,
+				const std::vector<GraphEdit_RealTimeConnection::DynamicInput> & newInputs)
 			{
-				inputs.resize(newInputs.size());
-				outputs.resize(newOutputs.size());
+				hasDynamicSockets = true;
+				
+				inputSockets.resize(typeDefinition.inputSockets.size() + newInputs.size());
+				numStaticInputSockets = typeDefinition.inputSockets.size();
+				
+				for (int i = 0; i < typeDefinition.inputSockets.size(); ++i)
+				{
+					inputSockets[i] = typeDefinition.inputSockets[i];
+				}
 				
 				for (int i = 0; i < newInputs.size(); ++i)
 				{
 					auto & newInput = newInputs[i];
-					auto & input = inputs[i];
+					auto & input = inputSockets[numStaticInputSockets + i];
 					
 					input.name = newInput.name;
-					input.type = newInput.type;
-				}
-				
-				for (int i = 0; i < newOutputs.size(); ++i)
-				{
-					auto & newOutput = newOutputs[i];
-					auto & output = outputs[i];
-					
-					output.name = newOutput.name;
-					output.type = newOutput.type;
+					input.typeName = newInput.typeName;
+					input.isDynamic = true;
+					input.index = numStaticInputSockets + i;
 				}
 			}
 		};
@@ -1403,7 +1410,7 @@ struct GraphEdit : GraphEditConnection
 	
 	bool enabled(const int flag) const;
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
-	bool hitTestNode(const GraphEdit_TypeDefinition & typeDefinition, const float x, const float y, const bool socketsAreVisible, NodeHitTestResult & result) const;
+	bool hitTestNode(const NodeData & nodeData, const GraphEdit_TypeDefinition & typeDefinition, const float x, const float y, const bool socketsAreVisible, NodeHitTestResult & result) const;
 	
 	bool tick(const float dt, const bool inputIsCaptured);
 	void tickNodeDatas(const float dt);

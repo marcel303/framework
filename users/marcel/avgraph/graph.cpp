@@ -76,6 +76,19 @@ static const std::string & getDisplayName(const GraphNode & node, const GraphEdi
 	return !nodeData.displayName.empty() ? nodeData.displayName : node.typeName;
 }
 
+const std::vector<GraphEdit_TypeDefinition::InputSocket> & getInputSockets(const GraphEdit_TypeDefinition & typeDefinition, const GraphEdit::NodeData & nodeData)
+{
+	return
+		nodeData.dynamicSockets.hasDynamicSockets
+		? nodeData.dynamicSockets.inputSockets
+		: typeDefinition.inputSockets;
+}
+
+const std::vector<GraphEdit_TypeDefinition::OutputSocket> & getOutputSockets(const GraphEdit_TypeDefinition & typeDefinition, const GraphEdit::NodeData & nodeData)
+{
+	return typeDefinition.outputSockets;
+}
+
 //
 
 static const float kNodeSx = 100.f;
@@ -261,6 +274,7 @@ const char * GraphNode::getResource(const char * type, const char * name, const 
 GraphNodeSocketLink::GraphNodeSocketLink()
 	: id(kGraphLinkIdInvalid)
 	, isEnabled(true)
+	, isDynamic(false)
 	, srcNodeId(kGraphNodeIdInvalid)
 	, srcNodeSocketName()
 	, srcNodeSocketIndex(-1)
@@ -477,11 +491,13 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 	{
 		GraphNodeSocketLink link;
 		link.id = intAttrib(xmlLink, "id", link.id);
-		link.isEnabled = boolAttrib(xmlLink, "enabled", link.isEnabled);
 		link.srcNodeId = intAttrib(xmlLink, "srcNodeId", link.srcNodeId);
 		link.srcNodeSocketName = stringAttrib(xmlLink, "srcNodeSocketName", link.srcNodeSocketName.c_str());
 		link.dstNodeId = intAttrib(xmlLink, "dstNodeId", link.dstNodeId);
 		link.dstNodeSocketName = stringAttrib(xmlLink, "dstNodeSocketName", link.dstNodeSocketName.c_str());
+		
+		link.isDynamic = boolAttrib(xmlLink, "dynamic", link.isDynamic);
+		link.isEnabled = boolAttrib(xmlLink, "enabled", link.isEnabled);
 		
 		for (const XMLElement * xmlParam = xmlLink->FirstChildElement("param"); xmlParam != nullptr; xmlParam = xmlParam->NextSiblingElement("param"))
 		{
@@ -640,6 +656,8 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 			xmlGraph.PushAttribute("dstNodeId", link.dstNodeId);
 			xmlGraph.PushAttribute("dstNodeSocketName", link.dstNodeSocketName.c_str());
 			
+			if (link.isDynamic)
+				xmlGraph.PushAttribute("dynamic", link.isDynamic);
 			if (!link.isEnabled)
 				xmlGraph.PushAttribute("enabled", link.isEnabled);
 			
@@ -1989,6 +2007,7 @@ const GraphEdit_TypeDefinition::InputSocket * GraphEdit::tryGetInputSocket(const
 {
 	auto node = tryGetNode(nodeId);
 	
+	Assert(node);
 	if (node == nullptr)
 		return nullptr;
 	
@@ -2009,23 +2028,45 @@ const GraphEdit_TypeDefinition::InputSocket * GraphEdit::tryGetInputSocket(const
 	
 	if (typeDefinition == nullptr)
 		return nullptr;
-	if (socketIndex < 0 || socketIndex >= typeDefinition->inputSockets.size())
+	
+	auto nodeData = tryGetNodeData(nodeId);
+	
+	Assert(nodeData);
+	if (nodeData == nullptr)
 		return nullptr;
-	return &typeDefinition->inputSockets[socketIndex];
+	
+	auto & inputSockets = getInputSockets(*typeDefinition, *nodeData);
+	
+	if (socketIndex < 0 || socketIndex >= inputSockets.size())
+		return nullptr;
+	return &inputSockets[socketIndex];
 }
 
 const GraphEdit_TypeDefinition::OutputSocket * GraphEdit::tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const
 {
 	auto node = tryGetNode(nodeId);
 	
+	Assert(node);
 	if (node == nullptr)
 		return nullptr;
+	
 	auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->typeName);
+	
+	Assert(typeDefinition);
 	if (typeDefinition == nullptr)
 		return nullptr;
-	if (socketIndex < 0 || socketIndex >= typeDefinition->outputSockets.size())
+	
+	auto nodeData = tryGetNodeData(nodeId);
+	
+	Assert(nodeData);
+	if (nodeData == nullptr)
 		return nullptr;
-	return &typeDefinition->outputSockets[socketIndex];
+	
+	auto & outputSockets = getOutputSockets(*typeDefinition, *nodeData);
+	
+	if (socketIndex < 0 || socketIndex >= outputSockets.size())
+		return nullptr;
+	return &outputSockets[socketIndex];
 }
 
 bool GraphEdit::getLinkPath(const GraphLinkId linkId, LinkPath & path) const
@@ -2073,12 +2114,22 @@ bool GraphEdit::getLinkPath(const GraphLinkId linkId, LinkPath & path) const
 		float dstSx, dstSy;
 		
 		if (srcTypeDefinition)
-			getNodeRect(srcTypeDefinition->inputSockets.size(), srcTypeDefinition->outputSockets.size(), true, srcSx, srcSy);
+		{
+			auto & inputSockets = getInputSockets(*srcTypeDefinition, *srcNodeData);
+			auto & outputSockets = getOutputSockets(*dstTypeDefinition, *dstNodeData);
+		
+			getNodeRect(inputSockets.size(), outputSockets.size(), true, srcSx, srcSy);
+		}
 		else
 			srcSx = srcSy = 0.f;
 		
 		if (dstTypeDefinition)
-			getNodeRect(dstTypeDefinition->inputSockets.size(), dstTypeDefinition->outputSockets.size(), true, dstSx, dstSy);
+		{
+			auto & inputSockets = getInputSockets(*dstTypeDefinition, *dstNodeData);
+			auto & outputSockets = getOutputSockets(*dstTypeDefinition, *dstNodeData);
+			
+			getNodeRect(inputSockets.size(), outputSockets.size(), true, dstSx, dstSy);
+		}
 		else
 			dstSx = dstSy = 0.f;
 		
@@ -2200,7 +2251,7 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				
 				const bool socketsAreVisible = areNodeSocketsVisible(nodeData);
 				
-				if (hitTestNode(*typeDefinition, x - nodeData.x, y - nodeData.y, socketsAreVisible, hitTestResult))
+				if (hitTestNode(nodeData, *typeDefinition, x - nodeData.x, y - nodeData.y, socketsAreVisible, hitTestResult))
 				{
 					result.hasNode = true;
 					result.node = &node;
@@ -2333,13 +2384,16 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 	return false;
 }
 
-bool GraphEdit::hitTestNode(const GraphEdit_TypeDefinition & typeDefinition, const float x, const float y, const bool socketsAreVisible, NodeHitTestResult & result) const
+bool GraphEdit::hitTestNode(const NodeData & nodeData, const GraphEdit_TypeDefinition & typeDefinition, const float x, const float y, const bool socketsAreVisible, NodeHitTestResult & result) const
 {
 	result = NodeHitTestResult();
 	
+	auto & inputSockets = getInputSockets(typeDefinition, nodeData);
+	auto & outputSockets = getOutputSockets(typeDefinition, nodeData);
+	
 	if (socketsAreVisible)
 	{
-		for (auto & inputSocket : typeDefinition.inputSockets)
+		for (auto & inputSocket : inputSockets)
 		{
 			float socketX, socketY, socketRadius;
 			getNodeInputSocketCircle(inputSocket.index, socketX, socketY, socketRadius);
@@ -2355,7 +2409,7 @@ bool GraphEdit::hitTestNode(const GraphEdit_TypeDefinition & typeDefinition, con
 			}
 		}
 		
-		for (auto & outputSocket : typeDefinition.outputSockets)
+		for (auto & outputSocket : outputSockets)
 		{
 			float socketX, socketY, socketRadius;
 			getNodeOutputSocketCircle(outputSocket.index, socketX, socketY, socketRadius);
@@ -2374,7 +2428,7 @@ bool GraphEdit::hitTestNode(const GraphEdit_TypeDefinition & typeDefinition, con
 	
 	float sx;
 	float sy;
-	getNodeRect(typeDefinition.inputSockets.size(), typeDefinition.outputSockets.size(), !socketsAreVisible, sx, sy);
+	getNodeRect(inputSockets.size(), outputSockets.size(), !socketsAreVisible, sx, sy);
 	
 	if (x >= 0.f && y >= 0.f && x < sx && y < sy)
 	{
@@ -2411,6 +2465,59 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		mousePosition.dy = dstMousePosition[1] - mousePosition.y;
 		mousePosition.x = dstMousePosition[0];
 		mousePosition.y = dstMousePosition[1];
+	}
+	
+	// update dynamic sockets
+	
+	for (auto & nodeDataItr : nodeDatas)
+	{
+		auto nodeId = nodeDataItr.first;
+		auto & nodeData = nodeDataItr.second;
+		auto & node = graph->nodes[nodeId];
+		
+		if (node.nodeType == kGraphNodeType_Regular)
+		{
+			std::vector<GraphEdit_RealTimeConnection::DynamicInput> inputs;
+			std::vector<GraphEdit_RealTimeConnection::DynamicOutput> outputs;
+				
+			if (realTimeConnection == nullptr || realTimeConnection->getNodeDynamicSockets(node.id, inputs, outputs) == false)
+			{
+				nodeData.dynamicSockets.reset();
+			}
+			else
+			{
+				auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+				
+				nodeData.dynamicSockets.update(*typeDefinition, inputs);
+			}
+		}
+	}
+	
+	// update dynamic links
+	
+	for (auto & linkItr : graph->links)
+	{
+		auto & link = linkItr.second;
+		
+		if (!link.isDynamic)
+			continue;
+		
+		auto srcNodeData = tryGetNodeData(link.srcNodeId);
+		
+		link.srcNodeSocketIndex = -1;
+		
+		Assert(srcNodeData);
+		if (srcNodeData)
+		{
+			int index = 0;
+			
+			for (auto & inputSocket : srcNodeData->dynamicSockets.inputSockets)
+			{
+				if (link.srcNodeSocketName == inputSocket.name)
+					link.srcNodeSocketIndex = index;
+				index++;
+			}
+		}
 	}
 	
 	//
@@ -2949,7 +3056,9 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								
 								if (typeDefinition != nullptr)
 								{
-									for (auto & srcSocket : typeDefinition->inputSockets)
+									auto & inputSockets = getInputSockets(*typeDefinition, *nodeData);
+									
+									for (auto & srcSocket : inputSockets)
 									{
 										if (srcSocket.name == srcSocketName)
 										{
@@ -3201,9 +3310,12 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					Assert(typeDefinition != nullptr);
 					if (typeDefinition != nullptr)
 					{
+						auto & inputSockets = getInputSockets(*typeDefinition, nodeData);
+						auto & outputSockets = getOutputSockets(*typeDefinition, nodeData);
+						
 						float sx;
 						float sy;
-						getNodeRect(typeDefinition->inputSockets.size(), typeDefinition->outputSockets.size(), nodeData.isFolded, sx, sy);
+						getNodeRect(inputSockets.size(), outputSockets.size(), nodeData.isFolded, sx, sy);
 						
 						if (testRectOverlap(
 							nodeSelect.beginX,
@@ -3880,21 +3992,6 @@ void GraphEdit::tickNodeDatas(const float dt)
 		{
 			nodeData.visualizer.tick(*this);
 		}
-		
-		if (node.nodeType == kGraphNodeType_Regular)
-		{
-			std::vector<GraphEdit_RealTimeConnection::DynamicInput> inputs;
-			std::vector<GraphEdit_RealTimeConnection::DynamicOutput> outputs;
-			
-			if (realTimeConnection == nullptr || realTimeConnection->getNodeDynamicSockets(node.id, inputs, outputs) == false)
-			{
-				nodeData.dynamicSockets.reset();
-			}
-			else
-			{
-				nodeData.dynamicSockets.update(inputs, outputs);
-			}
-		}
 	}
 }
 
@@ -4076,6 +4173,7 @@ void GraphEdit::socketConnectEnd()
 		
 		GraphNodeSocketLink link;
 		link.id = graph->allocLinkId();
+		link.isDynamic = socketConnect.srcNodeSocket->isDynamic || socketConnect.dstNodeSocket->isDynamic;
 		link.srcNodeId = socketConnect.srcNodeId;
 		link.srcNodeSocketName = socketConnect.srcNodeSocket->name;
 		link.srcNodeSocketIndex = socketConnect.srcNodeSocket->index;
@@ -5152,6 +5250,9 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 {
 	vfxCpuTimingBlock(drawNode);
 	
+	auto & inputSockets = getInputSockets(definition, nodeData);
+	auto & outputSockets = getOutputSockets(definition, nodeData);
+	
 	const bool isSelected = selectedNodes.count(node.id) != 0;
 	const bool socketsAreVisible = areNodeSocketsVisible(nodeData);
 	
@@ -5159,9 +5260,9 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	float sy;
 	
 	if (nodeData.foldAnimProgress == 0.f)
-		getNodeRect(definition.inputSockets.size(), definition.outputSockets.size(), true, sx, sy);
+		getNodeRect(inputSockets.size(), outputSockets.size(), true, sx, sy);
 	else if (nodeData.foldAnimProgress == 1.f)
-		getNodeRect(definition.inputSockets.size(), definition.outputSockets.size(), false, sx, sy);
+		getNodeRect(inputSockets.size(), outputSockets.size(), false, sx, sy);
 	else
 	{
 		float sx1;
@@ -5169,8 +5270,8 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 		float sx2;
 		float sy2;
 		
-		getNodeRect(definition.inputSockets.size(), definition.outputSockets.size(), true, sx1, sy1);
-		getNodeRect(definition.inputSockets.size(), definition.outputSockets.size(), false, sx2, sy2);
+		getNodeRect(inputSockets.size(), outputSockets.size(), true, sx1, sy1);
+		getNodeRect(inputSockets.size(), outputSockets.size(), false, sx2, sy2);
 		
 		sx = lerp(sx1, sx2, nodeData.foldAnimProgress);
 		sy = lerp(sy1, sy2, nodeData.foldAnimProgress);
@@ -5260,7 +5361,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	{
 		beginTextBatch();
 		{
-			for (auto & inputSocket : definition.inputSockets)
+			for (auto & inputSocket : inputSockets)
 			{
 				float x, y, radius;
 				getNodeInputSocketCircle(inputSocket.index, x, y, radius);
@@ -5269,7 +5370,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 				drawText(x + radius + 2, y, 12, +1.f, 0.f, "%s", inputSocket. name.c_str());
 			}
 			
-			for (auto & outputSocket : definition.outputSockets)
+			for (auto & outputSocket : outputSockets)
 			{
 				float x, y, radius;
 				getNodeOutputSocketCircle(outputSocket.index, x, y, radius);
@@ -5282,7 +5383,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 		
 		hqBegin(HQ_FILLED_CIRCLES);
 		{
-			for (auto & inputSocket : definition.inputSockets)
+			for (auto & inputSocket : inputSockets)
 			{
 				if ((state == kState_InputSocketConnect) && (node.id == socketConnect.srcNodeId) && (&inputSocket == socketConnect.srcNodeSocket))
 				{
@@ -5313,7 +5414,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 				}
 			}
 			
-			for (auto & outputSocket : definition.outputSockets)
+			for (auto & outputSocket : outputSockets)
 			{
 				if ((state == kState_OutputSocketConnect) && (node.id == socketConnect.dstNodeId) && (&outputSocket == socketConnect.dstNodeSocket))
 				{
@@ -5337,52 +5438,8 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 				
 				hqFillCircle(x, y, radius);
 			}
-			
-			// todo : should fetch dynamic sockets in tick, compare with previous, allocate and update in node data, and visually represent them here
-			
-			if (nodeData.dynamicSockets.inputs.empty() == false)
-			{
-				float angle = framework.time;
-				float angleStep = 1.f / nodeData.dynamicSockets.inputs.size();
-				angleStep *= Calc::m2PI;
-				
-				for (auto & input : nodeData.dynamicSockets.inputs)
-				{
-					const float radius = 30.f;
-					const float x = std::cos(angle) * radius;
-					const float y = std::sin(angle) * radius;
-					
-					setColor(colorYellow);
-					hqFillCircle(x, y, 5.f);
-					
-					angle += angleStep;
-				}
-			}
 		}
 		hqEnd();
-		
-		beginTextBatch();
-		{
-			if (nodeData.dynamicSockets.inputs.empty() == false)
-			{
-				float angle = framework.time;
-				float angleStep = 1.f / nodeData.dynamicSockets.inputs.size();
-				angleStep *= Calc::m2PI;
-				
-				for (auto & input : nodeData.dynamicSockets.inputs)
-				{
-					const float radius = 30.f;
-					const float x = std::cos(angle) * radius;
-					const float y = std::sin(angle) * radius;
-					
-					setColor(colorWhite);
-					drawText(x, y + 10.f, 12.f, 0.f, 0.f, "%s", input.name.c_str());
-					
-					angle += angleStep;
-				}
-			}
-		}
-		endTextBatch();
 	}
 }
 
@@ -5524,7 +5581,9 @@ bool GraphEdit::load(const char * filename)
 					{
 						if (!nodeData.visualizer.srcSocketName.empty())
 						{
-							for (auto & inputSocket : typeDefinition->inputSockets)
+							auto & inputSockets = getInputSockets(*typeDefinition, nodeData);
+							
+							for (auto & inputSocket : inputSockets)
 							{
 								if (inputSocket.name == nodeData.visualizer.srcSocketName)
 								{
@@ -5536,7 +5595,9 @@ bool GraphEdit::load(const char * filename)
 						
 						if (!nodeData.visualizer.dstSocketName.empty())
 						{
-							for (auto & outputSocket : typeDefinition->outputSockets)
+							auto & outputSockets = getOutputSockets(*typeDefinition, nodeData);
+							
+							for (auto & outputSocket : outputSockets)
 							{
 								if (outputSocket.name == nodeData.visualizer.dstSocketName)
 								{
@@ -5786,7 +5847,7 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 	editorElem.CloseElement();
 	
 	editorElem.OpenElement("editorOptions");
-	{	
+	{
 		editorElem.PushAttribute("menuIsVisible", editorOptions.menuIsVisible);
 		editorElem.PushAttribute("realTimePreview", editorOptions.realTimePreview);
 		editorElem.PushAttribute("autoHideUi", editorOptions.autoHideUi);
@@ -6106,7 +6167,9 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 			
 			int menuItemIndex = 0;
 			
-			for (auto & inputSocket : typeDefinition->inputSockets)
+			auto & inputSockets = getInputSockets(*typeDefinition, *nodeData);
+			
+			for (auto & inputSocket : inputSockets)
 			{
 				auto valueTextItr = node->editorInputValues.find(inputSocket.name);
 				
@@ -6173,7 +6236,9 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 				}
 			}
 			
-			for (auto & outputSocket : typeDefinition->outputSockets)
+			auto & outputSockets = getOutputSockets(*typeDefinition, *nodeData);
+			
+			for (auto & outputSocket : outputSockets)
 			{
 				if (!outputSocket.isEditable)
 					continue;
