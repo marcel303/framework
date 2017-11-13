@@ -58,7 +58,9 @@ using namespace tinyxml2;
 //#define FILENAME "testVfxGraph.xml"
 //#define FILENAME "sampleTest.xml"
 //#define FILENAME "midiTest.xml"
-#define FILENAME "draw3dTest.xml"
+//#define FILENAME "draw3dTest.xml"
+//#define FILENAME "nodeDataTest.xml"
+#define FILENAME "fsfxv2Test.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -212,7 +214,7 @@ static void testGradientShader()
 			const GRADIENT_TYPE gradientType = mouse.isDown(BUTTON_LEFT) ? GRADIENT_RADIAL : GRADIENT_LINEAR;
 			const float gradientBias = mouse.x / float(GFX_SX);
 			const float gradientScale = gradientBias == 1.f ? 0.f : 1.f / (1.f - gradientBias);
-			hqSetGradient(gradientType, cmat, colorWhite, colorBlack, gradientBias, gradientScale);
+			hqSetGradient(gradientType, cmat, colorWhite, colorBlack, COLOR_MUL, gradientBias, gradientScale);
 			hqSetTexture(tmat, getTexture("happysun.jpg"));
 			for (int i = 0; i < 360; i += 20)
 			{
@@ -400,6 +402,99 @@ static void testVfxNodeCreation()
 
 //
 
+static void testDynamicInputs()
+{
+	VfxGraph g;
+	
+	VfxNodeBase * node1 = new VfxNodeBase();
+	VfxNodeBase * node2 = new VfxNodeBase();
+	
+	g.nodes[0] = node1;
+	g.nodes[1] = node2;
+	
+	float values[32];
+	for (int i = 0; i < 32; ++i)
+		values[i] = i;
+	
+	node1->resizeSockets(1, 2);
+	node2->resizeSockets(2, 1);
+	
+	node1->addInput(0, kVfxPlugType_Float);
+	node1->addOutput(0, kVfxPlugType_Float, &values[0]);
+	node1->addOutput(1, kVfxPlugType_Float, &values[1]);
+	node2->addInput(0, kVfxPlugType_Float);
+	node2->addInput(1, kVfxPlugType_Float);
+	node2->addOutput(0, kVfxPlugType_Float, &values[16]);
+	
+	node1->tryGetInput(0)->connectTo(*node2->tryGetOutput(0));
+	node2->tryGetInput(0)->connectTo(*node1->tryGetOutput(0));
+	node2->tryGetInput(1)->connectTo(*node1->tryGetOutput(1));
+	
+	{
+		VfxNodeBase::DynamicLink link;
+		link.srcNodeId = 0;
+		link.srcSocketName = "a";
+		link.srcSocketIndex = -1;
+		link.dstNodeId = 1;
+		link.dstSocketIndex = 0;
+		node1->dynamicLinks.push_back(link);
+		node2->dynamicLinks.push_back(link);
+	}
+	
+	{
+		VfxNodeBase::DynamicLink link;
+		link.srcNodeId = 0;
+		link.srcSocketName = "b";
+		link.srcSocketIndex = -1;
+		link.dstNodeId = 1;
+		link.dstSocketIndex = 0;
+		node1->dynamicLinks.push_back(link);
+		node2->dynamicLinks.push_back(link);
+	}
+	
+	{
+		VfxNodeBase::DynamicLink link;
+		link.srcNodeId = 0;
+		link.srcSocketName = "b";
+		link.srcSocketIndex = -1;
+		link.dstNodeId = 1;
+		link.dstSocketName = "a";
+		link.dstSocketIndex = -1;
+		node1->dynamicLinks.push_back(link);
+		node2->dynamicLinks.push_back(link);
+	}
+	
+	g_currentVfxGraph = &g;
+	{
+		VfxNodeBase::DynamicPlug inputs[2];
+		inputs[0].name = "a";
+		inputs[0].type = kVfxPlugType_Float;
+		inputs[1].name = "b";
+		inputs[1].type = kVfxPlugType_Float;
+		
+		node1->setDynamicInputs(inputs, 2);
+		
+		node1->setDynamicInputs(nullptr, 0);
+		
+		node1->setDynamicInputs(inputs, 2);
+		
+		//
+		
+		VfxNodeBase::DynamicPlug outputs[2];
+		outputs[0].name = "a";
+		outputs[0].type = kVfxPlugType_Float;
+		
+		node2->setDynamicOutputs(outputs, 1);
+		
+		node2->setDynamicOutputs(nullptr, 0);
+		
+		node2->setDynamicOutputs(outputs, 1);
+	}
+	g_currentVfxGraph = nullptr;
+}
+
+//
+
 #include "Path.h"
 
 static std::string filedrop;
@@ -459,7 +554,9 @@ int main(int argc, char * argv[])
 		
 		//testMain();
 		
-		testVfxNodeCreation();
+		//testVfxNodeCreation();
+		
+		//testDynamicInputs();
 		
 		//codevember1();
 		
@@ -538,24 +635,6 @@ int main(int argc, char * argv[])
 			
 			//
 			
-			if (graphEdit->editorOptions.realTimePreview)
-			{
-				realtimePreviewAnim = std::min(1.f, realtimePreviewAnim + dt / .3f);
-			}
-			else
-			{
-				realtimePreviewAnim = std::max(0.f, realtimePreviewAnim - dt / .5f);
-			}
-			
-			if (vfxGraph != nullptr)
-			{
-				const double timeStep = dt * realtimePreviewAnim;
-				
-				vfxGraph->tick(timeStep);
-			}
-			
-			//
-			
 			bool inputIsCaptured = false;
 			
 			//
@@ -593,6 +672,24 @@ int main(int argc, char * argv[])
 				SDL_ShowCursor(0);
 			else
 				SDL_ShowCursor(1);
+			
+			//
+			
+			if (graphEdit->editorOptions.realTimePreview)
+			{
+				realtimePreviewAnim = std::min(1.f, realtimePreviewAnim + dt / .3f);
+			}
+			else
+			{
+				realtimePreviewAnim = std::max(0.f, realtimePreviewAnim - dt / .5f);
+			}
+			
+			if (vfxGraph != nullptr)
+			{
+				const double timeStep = dt * realtimePreviewAnim;
+				
+				vfxGraph->tick(timeStep);
+			}
 			
 			// update vflip effect
 			
