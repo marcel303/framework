@@ -1891,6 +1891,17 @@ void Shader::setTexture(const char * name, int unit, GLuint texture, bool filter
 	checkErrorGL();
 }
 
+void Shader::setTextureUniform(GLint index, int unit, GLuint texture)
+{
+	fassert(index != -1);
+	fassert(globals.shader == this);
+	glUniform1i(index, unit);
+	checkErrorGL();
+	
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_2D, texture);
+}
+
 void Shader::setTextureArray(const char * name, int unit, GLuint texture)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
