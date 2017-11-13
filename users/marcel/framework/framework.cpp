@@ -2381,6 +2381,15 @@ Color Color::fromHex(const char * str)
 		const float a = 1.f;
 		return Color(r, g, b, a);
 	}
+	else if (len == 4)
+	{
+		const uint32_t hex = std::stoul(str, 0, 16);
+		const float r = scale255(((hex >> 12) & 0xf) * 255/15);
+		const float g = scale255(((hex >>  8) & 0xf) * 255/15);
+		const float b = scale255(((hex >>  4) & 0xf) * 255/15);
+		const float a = scale255(((hex >>  0) & 0xf) * 255/15);
+		return Color(r, g, b, a);
+	}
 	else if (len == 6)
 	{
 		const uint32_t hex = std::stoul(str, 0, 16);
