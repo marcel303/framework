@@ -41,7 +41,7 @@ static void handleFileChange(const std::string & filename)
 
 	if (extension == "vs")
 	{
-		for (auto i : g_shaderCache.m_map)
+		for (auto & i : g_shaderCache.m_map)
 		{
 			ShaderCacheElem & elem = i.second;
 
@@ -51,7 +51,7 @@ static void handleFileChange(const std::string & filename)
 	}
 	else if (extension == "ps")
 	{
-		for (auto i : g_shaderCache.m_map)
+		for (auto & i : g_shaderCache.m_map)
 		{
 			ShaderCacheElem & elem = i.second;
 
@@ -61,7 +61,7 @@ static void handleFileChange(const std::string & filename)
 	}
 	else if (extension == "cs")
 	{
-		for (auto i : g_computeShaderCache.m_map)
+		for (auto & i : g_computeShaderCache.m_map)
 		{
 			ComputeShaderCacheElem & elem = i.second;
 
