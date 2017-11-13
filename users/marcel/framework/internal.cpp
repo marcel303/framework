@@ -839,6 +839,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 ShaderCacheElem::ShaderCacheElem()
 {
 	program = 0;
+	version = 0;
 
 	memset(params, -1, sizeof(params));
 }
@@ -865,6 +866,8 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	name = _name;
 	vs = filenameVs;
 	ps = filenamePs;
+	
+	version++;
 	
 	bool hasVs = fileExists(vs.c_str());
 	bool hasPs = fileExists(ps.c_str());
@@ -1027,6 +1030,8 @@ ComputeShaderCacheElem::ComputeShaderCacheElem()
 	groupSz = 0;
 
 	program = 0;
+	
+	version = 0;
 }
 
 void ComputeShaderCacheElem::free()
@@ -1050,6 +1055,8 @@ void ComputeShaderCacheElem::load(const char * _name, const int _groupSx, const 
 	groupSx = _groupSx;
 	groupSy = _groupSy;
 	groupSz = _groupSz;
+	
+	version++;
 
 	GLuint shaderCs = 0;
 

@@ -1751,6 +1751,11 @@ GLuint Shader::getProgram() const
 	return m_shader ? m_shader->program : 0;
 }
 
+int Shader::getVersion() const
+{
+	return m_shader ? m_shader->version : 0;
+}
+
 GLint Shader::getImmediate(const char * name)
 {
 	return glGetUniformLocation(getProgram(), name);
@@ -1800,11 +1805,27 @@ void Shader::setImmediate(const char * name, float x, float y, float z, float w)
 	checkErrorGL();
 }
 
+void Shader::setImmediate(GLint index, float x)
+{
+	fassert(index != -1);
+	fassert(globals.shader == this);
+	glUniform1f(index, x);
+	checkErrorGL();
+}
+
 void Shader::setImmediate(GLint index, float x, float y)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
 	glUniform2f(index, x, y);
+	checkErrorGL();
+}
+
+void Shader::setImmediate(GLint index, float x, float y, float z)
+{
+	fassert(index != -1);
+	fassert(globals.shader == this);
+	glUniform3f(index, x, y, z);
 	checkErrorGL();
 }
 
@@ -1979,6 +2000,11 @@ void ComputeShader::load(const char * filename, const int groupSx, const int gro
 GLuint ComputeShader::getProgram() const
 {
 	return m_shader ? m_shader->program : 0;
+}
+
+int ComputeShader::getVersion() const
+{
+	return m_shader ? m_shader->version : 0;
 }
 
 int ComputeShader::getGroupSx() const
@@ -2335,6 +2361,15 @@ Color Color::fromHex(const char * str)
 	{
 		return Color(0.f, 0.f, 0.f, 0.f);
 	}
+	else if (len == 3)
+	{
+		const uint32_t hex = std::stoul(str, 0, 16);
+		const float r = scale255(((hex >> 8) & 0xf) * 255/15);
+		const float g = scale255(((hex >> 4) & 0xf) * 255/15);
+		const float b = scale255(((hex >> 0) & 0xf) * 255/15);
+		const float a = 1.f;
+		return Color(r, g, b, a);
+	}
 	else if (len == 6)
 	{
 		const uint32_t hex = std::stoul(str, 0, 16);
@@ -2573,7 +2608,7 @@ bool Dictionary::save(const char * filename)
 	}
 	else
 	{
-		for (auto i : m_map)
+		for (auto & i : m_map)
 		{
 			const char * key = i.first.c_str();
 			const char * value = i.second.c_str();
@@ -7245,7 +7280,7 @@ void hqEnd()
 		
 		if (globals.hqGradientType != GRADIENT_NONE)
 		{
-			const float gradientClampEnabled = 1.f;
+			// todo : add option to disable gradient color clamp
 			
 			if (shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index != -1)
 			{

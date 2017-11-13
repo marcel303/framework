@@ -281,6 +281,8 @@ public:
 	std::string ps;
 
 	GLuint program;
+	
+	int version;
 
 	struct
 	{
@@ -321,6 +323,8 @@ public:
 	int groupSz;
 
 	GLuint program;
+	
+	int version;
 
 	ComputeShaderCacheElem();
 	void free();

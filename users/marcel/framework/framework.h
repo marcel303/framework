@@ -393,8 +393,11 @@ void blitBackBufferToSurface(Surface * surface);
 class ShaderBase
 {
 public:
+	virtual ~ShaderBase() { }
+	
 	virtual GLuint getProgram() const = 0;
 	virtual SHADER_TYPE getType() const = 0;
+	virtual int getVersion() const = 0;
 };
 
 //
@@ -407,12 +410,13 @@ public:
 	Shader();
 	Shader(const char * filename);
 	Shader(const char * name, const char * filenameVs, const char * filenamePs);
-	~Shader();
+	virtual ~Shader();
 	
 	void load(const char * name, const char * filenameVs, const char * filenamePs);
 	bool isValid() const;
 	virtual GLuint getProgram() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
+	virtual int getVersion() const override;
 	
 	GLint getImmediate(const char * name);
 	GLint getAttribute(const char * name);
@@ -421,7 +425,9 @@ public:
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
 	void setImmediate(const char * name, float x, float y, float z, float w);
+	void setImmediate(GLint index, float x);
 	void setImmediate(GLint index, float x, float y);
+	void setImmediate(GLint index, float x, float y, float z);
 	void setImmediate(GLint index, float x, float y, float z, float w);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
 	void setImmediateMatrix4x4(GLint index, const float * matrix);
@@ -455,12 +461,13 @@ public:
 
 	ComputeShader();
 	ComputeShader(const char * filename, const int groupSx = kDefaultGroupSx, const int groupSy = kDefaultGroupSy, const int groupSz = kDefaultGroupSz);
-	~ComputeShader();
+	virtual ~ComputeShader();
 
 	void load(const char * filename, const int groupSx = kDefaultGroupSx, const int groupSy = kDefaultGroupSy, const int groupSz = kDefaultGroupSz);
 	bool isValid() const { return m_shader != 0; }
 	virtual GLuint getProgram() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_CS; }
+	virtual int getVersion() const override;
 
 	int getGroupSx() const;
 	int getGroupSy() const;
