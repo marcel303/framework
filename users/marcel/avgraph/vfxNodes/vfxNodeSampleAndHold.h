@@ -40,10 +40,10 @@ struct VfxNodeSampleAndHold : VfxNodeBase
 	
 	enum Input
 	{
-		kInput_Trigger,
 		kInput_TriggerMode,
 		kInput_TriggerValue,
 		kInput_Value,
+		kInput_Trigger,
 		kInput_COUNT
 	};
 	

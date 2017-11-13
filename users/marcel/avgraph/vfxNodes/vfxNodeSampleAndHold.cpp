@@ -34,14 +34,14 @@ VFX_ENUM_TYPE(sampleAndHoldTriggerMode)
 	elem("notEqual");
 }
 
-VFX_NODE_TYPE(sample_andhold, VfxNodeSampleAndHold)
+VFX_NODE_TYPE(VfxNodeSampleAndHold)
 {
 	typeName = "sampleAndHold";
 	
-	in("trigger!", "trigger");
 	inEnum("triggerMode", "sampleAndHoldTriggerMode");
 	in("triggerValue", "float");
 	in("value", "float");
+	in("trigger!", "trigger");
 	out("value", "float");
 }
 
@@ -50,10 +50,10 @@ VfxNodeSampleAndHold::VfxNodeSampleAndHold()
 	, outputValue(0.f)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Trigger, kVfxPlugType_Trigger);
 	addInput(kInput_TriggerMode, kVfxPlugType_Int);
 	addInput(kInput_TriggerValue, kVfxPlugType_Float);
 	addInput(kInput_Value, kVfxPlugType_Float);
+	addInput(kInput_Trigger, kVfxPlugType_Trigger);
 	addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
 }
 
