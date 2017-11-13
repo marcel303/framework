@@ -38,6 +38,7 @@ extern const int GFX_SY;
 VFX_NODE_TYPE(VfxNodeFsfx)
 {
 	typeName = "draw.fsfx";
+	displayName = "fsfx-v1";
 	
 	in("image", "image");
 	in("shader", "string");
@@ -251,7 +252,12 @@ void VfxNodeFsfx::tick(const float dt)
 	if (isPassthrough)
 	{
 		allocateSurface(0, 0);
+		
 		freeShader();
+		
+		currentShader.clear();
+		currentShaderVersion = 0;
+		
 		return;
 	}
 	
@@ -266,19 +272,15 @@ void VfxNodeFsfx::tick(const float dt)
 	
 	if (shaderName == nullptr)
 	{
+		freeShader();
+		
 		currentShader.clear();
 		currentShaderVersion = 0;
-		
-		freeShader();
 	}
 	else
 	{
 		if (shaderName != currentShader || (shader && shader->getVersion() != currentShaderVersion))
 		{
-			freeShader();
-			
-			//
-			
 			loadShader(shaderName);
 			
 			currentShader = shaderName;
@@ -436,10 +438,10 @@ void VfxNodeFsfx::draw() const
 			{
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(inputTexture);
-				setColorMode(COLOR_ADD);
+				pushColorMode(COLOR_ADD);
 				setColor(127, 0, 127);
 				drawRect(0, 0, framework.windowSx, framework.windowSy);
-				setColorMode(COLOR_MUL);
+				popColorMode();
 				gxSetTexture(0);
 				popBlend();
 			}
