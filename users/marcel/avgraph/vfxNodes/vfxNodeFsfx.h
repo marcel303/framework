@@ -33,21 +33,27 @@ class Surface;
 
 struct VfxNodeFsfx : VfxNodeBase
 {
+	struct ShaderInput
+	{
+		int type;
+		VfxPlugType socketType;
+		int socketIndex;
+		int uniformLocation;
+	};
+	
 	enum Input
 	{
 		kInput_Image,
 		kInput_Shader,
 		kInput_Width,
 		kInput_Height,
-		kInput_Color1,
-		kInput_Color2,
-		kInput_Param1,
-		kInput_Param2,
-		kInput_Param3,
-		kInput_Param4,
-		kInput_Opacity,
 		kInput_Image1,
 		kInput_Image2,
+		kInput_Color1,
+		kInput_Param1,
+		kInput_Param2,
+		kInput_Time,
+		kInput_Opacity,
 		kInput_COUNT
 	};
 	
@@ -59,15 +65,24 @@ struct VfxNodeFsfx : VfxNodeBase
 	
 	Surface * surface;
 	
+	std::string currentShader;
+	int currentShaderVersion;
+	Shader * shader;
+	std::vector<ShaderInput> shaderInputs;
+	
 	VfxImage_Texture * image;
 	
 	VfxNodeFsfx();
 	virtual ~VfxNodeFsfx() override;
 	
 	void allocateSurface(const int sx, const int sy);
+	void loadShader(const char * filename);
+	void freeShader();
 	
 	virtual void tick(const float dt) override;
 	virtual void draw() const override;
 	
 	virtual void init(const GraphNode & node) override;
+	
+	virtual void getDescription(VfxNodeDescription & d) override;
 };
