@@ -47,9 +47,9 @@ VFX_NODE_TYPE(VfxNodeSurface)
 	in("clear", "bool", "1");
 	in("clearColor", "color", "fff");
 	in("darken", "bool", "0");
-	in("darkenColor", "color", "111");
+	in("darkenColor", "color", "000");
 	in("multiply", "bool", "0");
-	in("multiplyColor", "color", "eee");
+	in("multiplyColor", "color", "fff");
 	inEnum("viewMode", "surfaceViewMode");
 	in("fov", "float", "90");
 	in("zNear", "float", "0.01");
