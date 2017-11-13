@@ -1083,6 +1083,8 @@ void VfxEnumTypeRegistration::elem(const char * name, const int value)
 
 #include "graph.h"
 
+extern void getFsfxShaderList(std::vector<std::string> & shaderList);
+
 void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList)
 {
 	for (const VfxEnumTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
@@ -1099,6 +1101,24 @@ void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 			dst.value = src.value;
 			
 			enumDefinition.enumElems.push_back(dst);
+		}
+	}
+	
+	{
+		auto & enumDefinition = typeDefinitionLibrary.enumDefinitions["fsfxShader"];
+		
+		std::vector<std::string> shaderList;
+		getFsfxShaderList(shaderList);
+		
+		int index = 0;
+		
+		for (auto & shader : shaderList)
+		{
+			GraphEdit_EnumDefinition::Elem elem;
+			elem.name = shader;
+			elem.value = index++;
+			
+			enumDefinition.enumElems.push_back(elem);
 		}
 	}
 }
