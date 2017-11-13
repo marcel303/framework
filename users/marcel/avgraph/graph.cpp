@@ -557,7 +557,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 			}
 		}
 		
-		if (link.srcNodeSocketIndex == -1)
+		if (link.srcNodeSocketIndex == -1 && !link.isDynamic)
 		{
 			printf("failed to find srcSocketIndex. srcNodeId=%d, srcSocketName=%s\n", link.srcNodeId, link.srcNodeSocketName.c_str());
 		}
@@ -582,7 +582,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 			}
 		}
 		
-		if (link.dstNodeSocketIndex == -1)
+		if (link.dstNodeSocketIndex == -1 && !link.isDynamic)
 		{
 			printf("failed to find dstSocketIndex. dstNodeId=%d, dstSocketName=%s\n", link.dstNodeId, link.dstNodeSocketName.c_str());
 		}
