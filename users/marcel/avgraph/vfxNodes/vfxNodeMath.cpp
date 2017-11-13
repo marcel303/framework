@@ -31,6 +31,9 @@
 
 static float evalMathOp(const float a, const float b, const VfxNodeMath::Type type, const bool isPassthrough)
 {
+	if (isPassthrough)
+		return a;
+	
 	float r = 0.f;
 	
 	switch (type)
@@ -52,24 +55,15 @@ static float evalMathOp(const float a, const float b, const VfxNodeMath::Type ty
 		break;
 		
 	case VfxNodeMath::kType_Sin:
-		if (isPassthrough)
-			r = a;
-		else
-			r = std::sin(a);
+		r = std::sin(a);
 		break;
 		
 	case VfxNodeMath::kType_Cos:
-		if (isPassthrough)
-			r = a;
-		else
-			r = std::cos(a);
+		r = std::cos(a);
 		break;
 		
 	case VfxNodeMath::kType_Abs:
-		if (isPassthrough)
-			r = a;
-		else
-			r = std::abs(a);
+		r = std::abs(a);
 		break;
 		
 	case VfxNodeMath::kType_Min:
@@ -81,82 +75,50 @@ static float evalMathOp(const float a, const float b, const VfxNodeMath::Type ty
 		break;
 		
 	case VfxNodeMath::kType_Sat:
-		if (isPassthrough)
-			r = a;
-		else
-			r = std::max(0.f, std::min(1.f, a));
+		r = std::max(0.f, std::min(1.f, a));
 		break;
 		
 	case VfxNodeMath::kType_Neg:
-		if (isPassthrough)
-			r = a;
-		else
-			r = -a;
+		r = -a;
 		break;
 		
 	case VfxNodeMath::kType_Sqrt:
-		if (isPassthrough)
-			r = a;
-		else
-			r = std::sqrt(a);
+		r = std::sqrt(a);
 		break;
 		
 	case VfxNodeMath::kType_Pow:
-		if (isPassthrough)
-			r = a;
-		else
-			r = std::pow(a, b);
+		r = std::pow(a, b);
 		break;
 		
 	case VfxNodeMath::kType_Exp:
-		if (isPassthrough)
-			r = a;
-		else
-			r = std::exp(a);
+		r = std::exp(a);
 		break;
 		
 	case VfxNodeMath::kType_Mod:
-		if (isPassthrough)
-			r = a;
-		else
-			r = std::fmod(a, b);
+		r = std::fmod(a, b);
 		break;
 		
 	case VfxNodeMath::kType_Fract:
-		if (isPassthrough)
-			r = a;
-		else if (a >= 0.f)
+		if (a >= 0.f)
 			r = a - std::floor(a);
 		else
 			r = a - std::ceil(a);
 		break;
 		
 	case VfxNodeMath::kType_Floor:
-		if (isPassthrough)
-			r = a;
-		else
-			r = std::floor(a);
+		r = std::floor(a);
 		break;
 		
 	case VfxNodeMath::kType_Ceil:
-		if (isPassthrough)
-			r = a;
-		else
-			r = std::ceil(a);
+		r = std::ceil(a);
 		break;
 		
 	case VfxNodeMath::kType_Round:
-		if (isPassthrough)
-			r = a;
-		else
-			r = std::round(a);
+		r = std::round(a);
 		break;
 		
 	case VfxNodeMath::kType_Sign:
-		if (isPassthrough)
-			r = a;
-		else
-			r = a < 0.f ? -1.f : +1.f;
+		r = a < 0.f ? -1.f : +1.f;
 		break;
 		
 	case VfxNodeMath::kType_Hypot:
@@ -164,17 +126,11 @@ static float evalMathOp(const float a, const float b, const VfxNodeMath::Type ty
 		break;
 	
 	case VfxNodeMath::kType_Pitch:
-		if (isPassthrough)
-			r = a;
-		else
-			r = a * std::powf(2.f, b);
+		r = a * std::powf(2.f, b);
 		break;
 		
 	case VfxNodeMath::kType_Semitone:
-		if (isPassthrough)
-			r = a;
-		else
-			r = a * std::powf(2.f, b / 12.f);
+		r = a * std::powf(2.f, b / 12.f);
 		break;
 	}
 	
