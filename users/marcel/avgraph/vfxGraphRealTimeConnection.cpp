@@ -182,21 +182,57 @@ void RealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeId src
 	auto srcNode = srcNodeItr->second;
 	auto dstNode = dstNodeItr->second;
 	
+	// add a dynamic link if either the src or dst socket is dynamic
+	
+	const int numSrcStaticInputs = srcNode->inputs.size() - srcNode->dynamicInputs.size();
+	const int numDstStaticInputs = dstNode->outputs.size() - dstNode->dynamicOutputs.size();
+	const bool isDynamicLink = srcSocketIndex >= numSrcStaticInputs || dstSocketIndex >= numDstStaticInputs;
+	
+	if (isDynamicLink)
+	{
+		logDebug("adding dynamic link");
+		
+		VfxNodeBase::DynamicLink link;
+		
+		link.linkId = linkId;
+		link.srcNodeId = srcNodeId;
+		if (srcSocketIndex < numSrcStaticInputs)
+			link.srcSocketIndex = srcSocketIndex;
+		else
+			link.srcSocketName = srcNode->dynamicInputs[srcSocketIndex - numSrcStaticInputs].name;
+		
+		link.dstNodeId = dstNodeId;
+		if (dstSocketIndex < numDstStaticInputs)
+			link.dstSocketIndex = dstSocketIndex;
+		else
+			link.dstSocketName = dstNode->dynamicInputs[dstSocketIndex - numDstStaticInputs].name;
+		
+		srcNode->dynamicLinks.push_back(link);
+		dstNode->dynamicLinks.push_back(link);
+	}
+	
+	// link the input to the output, if possible
+	
 	auto input = srcNode->tryGetInput(srcSocketIndex);
 	auto output = dstNode->tryGetOutput(dstSocketIndex);
 	
-	Assert(input != nullptr && output != nullptr);
-	if (input == nullptr || output == nullptr)
+	if (input != nullptr && output != nullptr)
 	{
+		input->connectTo(*output);
+	}
+	else if (isDynamicLink)
+	{
+		// the dynamic inputs and/or outputs may be added later
+	}
+	else
+	{
+		Assert(input != nullptr && output != nullptr);
+		
 		if (input == nullptr)
 			logError("input node socket doesn't exist");
 		if (output == nullptr)
 			logError("output node socket doesn't exist");
-		
-		return;
 	}
-	
-	input->connectTo(*output);
 	
 	// note : this may add the same node multiple times to the list of predeps. note that this
 	//        is ok as nodes will be traversed once through the travel id + it works nicely
@@ -205,7 +241,8 @@ void RealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeId src
 	srcNode->predeps.push_back(dstNode);
 	
 	// if this is a trigger, add a trigger target to dstNode
-	if (output->type == kVfxPlugType_Trigger)
+	
+	if (output && output->type == kVfxPlugType_Trigger)
 	{
 		VfxNodeBase::TriggerTarget triggerTarget;
 		triggerTarget.srcNode = srcNode;
@@ -228,118 +265,107 @@ void RealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNodeId 
 		return;
 	
 	auto srcNodeItr = vfxGraph->nodes.find(srcNodeId);
+	auto dstNodeItr = vfxGraph->nodes.find(dstNodeId);
 	
-	Assert(srcNodeItr != vfxGraph->nodes.end());
-	if (srcNodeItr == vfxGraph->nodes.end())
+	Assert(srcNodeItr != vfxGraph->nodes.end() && dstNodeItr != vfxGraph->nodes.end());
+	if (srcNodeItr == vfxGraph->nodes.end() || dstNodeItr == vfxGraph->nodes.end())
+	{
+		if (srcNodeItr == vfxGraph->nodes.end())
+			logError("source node doesn't exist");
+		if (dstNodeItr == vfxGraph->nodes.end())
+			logError("destination node doesn't exist");
+		
 		return;
+	}
 	
 	auto srcNode = srcNodeItr->second;
-	
-	auto input = srcNode->tryGetInput(srcSocketIndex);
-	
-	Assert(input != nullptr);
-	if (input == nullptr)
-		return;
-	
-	Assert(input->isConnected());
-	
-	if (input->type == kVfxPlugType_Float)
-	{
-		auto dstNodeItr = vfxGraph->nodes.find(dstNodeId);
-		
-		Assert(dstNodeItr != vfxGraph->nodes.end());
-		if (dstNodeItr == vfxGraph->nodes.end())
-			return;
-		
-		auto dstNode = dstNodeItr->second;
-		
-		auto output = dstNode->tryGetOutput(dstSocketIndex);
-		
-		Assert(output != nullptr);
-		if (output == nullptr)
-			return;
-		
-		bool removed = false;
-		for (auto elemItr = input->floatArray.elems.begin(); elemItr != input->floatArray.elems.end(); )
-		{
-			if (elemItr->value == output->mem)
-			{
-				elemItr = input->floatArray.elems.erase(elemItr);
-				removed = true;
-				break;
-			}
-			
-			++elemItr;
-		}
-		Assert(removed);
-		
-		if (removed && input->floatArray.elems.empty())
-		{
-			Assert(input->mem == nullptr);
-			input->memType = kVfxPlugType_None;
-		}
-	}
-	else
-	{
-		input->disconnect();
-	}
-	
-	// todo : we should reconnect with the node socket's editor value when set here
+	auto dstNode = dstNodeItr->second;
 	
 	{
 		// attempt to remove dst node from predeps
 		
-		auto dstNodeItr = vfxGraph->nodes.find(dstNodeId);
+		bool foundPredep = false;
 		
-		Assert(dstNodeItr != vfxGraph->nodes.end());
-		if (dstNodeItr != vfxGraph->nodes.end())
+		for (auto i = srcNode->predeps.begin(); i != srcNode->predeps.end(); ++i)
 		{
-			auto dstNode = dstNodeItr->second;
+			VfxNodeBase * vfxNode = *i;
 			
-			bool foundPredep = false;
-			
-			for (auto i = srcNode->predeps.begin(); i != srcNode->predeps.end(); ++i)
+			if (vfxNode == dstNode)
 			{
-				VfxNodeBase * vfxNode = *i;
-				
-				if (vfxNode == dstNode)
-				{
-					srcNode->predeps.erase(i);
-					foundPredep = true;
-					break;
-				}
+				srcNode->predeps.erase(i);
+				foundPredep = true;
+				break;
 			}
-			
-			Assert(foundPredep);
+		}
+		
+		Assert(foundPredep);
+	}
+	
+	{
+		auto input = srcNode->tryGetInput(srcSocketIndex);
+		auto output = dstNode->tryGetOutput(dstSocketIndex);
+		
+		Assert(input != nullptr && input->isConnected());
+		Assert(output != nullptr);
+		
+		if (input != nullptr && output != nullptr)
+		{
+			input->disconnect(output->mem);
 		}
 	}
 	
+	// todo : we should reconnect with the node socket's editor value when set here
+	
 	// if this is a link hooked up to a trigger, remove the TriggerTarget from dstNode
 	
-	if (input->type == kVfxPlugType_Trigger)
+	auto input = srcNode->tryGetInput(srcSocketIndex);
+	
+	if (input != nullptr && input->type == kVfxPlugType_Trigger)
 	{
-		auto dstNodeItr = vfxGraph->nodes.find(dstNodeId);
+		bool foundTriggerTarget = false;
 		
-		Assert(dstNodeItr != vfxGraph->nodes.end());
-		if (dstNodeItr != vfxGraph->nodes.end())
+		for (auto triggerTargetItr = dstNode->triggerTargets.begin(); triggerTargetItr != dstNode->triggerTargets.end(); ++triggerTargetItr)
 		{
-			auto dstNode = dstNodeItr->second;
+			auto & triggerTarget = *triggerTargetItr;
 			
-			bool foundTriggerTarget = false;
-			
-			for (auto triggerTargetItr = dstNode->triggerTargets.begin(); triggerTargetItr != dstNode->triggerTargets.end(); ++triggerTargetItr)
+			if (triggerTarget.srcNode == srcNode && triggerTarget.srcSocketIndex == srcSocketIndex)
 			{
-				auto & triggerTarget = *triggerTargetItr;
-				
-				if (triggerTarget.srcNode == srcNode && triggerTarget.srcSocketIndex == srcSocketIndex)
-				{
-					dstNode->triggerTargets.erase(triggerTargetItr);
-					foundTriggerTarget = true;
-					break;
-				}
+				dstNode->triggerTargets.erase(triggerTargetItr);
+				foundTriggerTarget = true;
+				break;
 			}
+		}
+		
+		Assert(foundTriggerTarget);
+	}
+	
+	// remove a dynamic link if either the src or dst socket is dynamic
+	
+	{
+		for (auto i = srcNode->dynamicLinks.begin(); i != srcNode->dynamicLinks.end(); ++i)
+		{
+			auto & link = *i;
 			
-			Assert(foundTriggerTarget);
+			if (link.linkId == linkId)
+			{
+				logDebug("removing dynamic link from src node");
+				
+				srcNode->dynamicLinks.erase(i);
+				break;
+			}
+		}
+		
+		for (auto i = dstNode->dynamicLinks.begin(); i != dstNode->dynamicLinks.end(); ++i)
+		{
+			auto & link = *i;
+			
+			if (link.linkId == linkId)
+			{
+				logDebug("removing dynamic link from dst node");
+				
+				dstNode->dynamicLinks.erase(i);
+				break;
+			}
 		}
 	}
 }
@@ -1049,6 +1075,87 @@ int RealTimeConnection::linkIsActive(const GraphLinkId linkId, const GraphNodeId
 	}
 	
 	return result;
+}
+
+static std::string vfxPlugTypeToValueTypeName(const VfxPlugType plugType)
+{
+	switch (plugType)
+	{
+		case kVfxPlugType_None:
+			Assert(false);
+			return "";
+		case kVfxPlugType_DontCare:
+			return "any";
+		case kVfxPlugType_Bool:
+			return "bool";
+		case kVfxPlugType_Int:
+			return "int";
+		case kVfxPlugType_Float:
+			return "float";
+		case kVfxPlugType_Transform:
+			return "transform";
+		case kVfxPlugType_String:
+			return "string";
+		case kVfxPlugType_Color:
+			return "color";
+		case kVfxPlugType_Image:
+			return "image";
+		case kVfxPlugType_ImageCpu:
+			return "image_cpu";
+		case kVfxPlugType_Channels:
+			return "channels";
+		case kVfxPlugType_Trigger:
+			return "trigger";
+	}
+	
+	Assert(false);
+	return "";
+}
+
+bool RealTimeConnection::getNodeDynamicSockets(const GraphNodeId nodeId, std::vector<DynamicInput> & inputs, std::vector<DynamicOutput> & outputs) const
+{
+	if (isLoading)
+		return false;
+	
+	auto nodeItr = vfxGraph->nodes.find(nodeId);
+	
+	Assert(nodeItr != vfxGraph->nodes.end());
+	if (nodeItr == vfxGraph->nodes.end())
+		return false;
+	
+	auto node = nodeItr->second;
+	
+	if (node->dynamicInputs.empty() && node->dynamicOutputs.empty())
+	{
+		return false;
+	}
+	else
+	{
+		inputs.resize(node->dynamicInputs.size());
+		outputs.resize(node->dynamicOutputs.size());
+		
+		int index = 0;
+		
+		for (auto & input : node->dynamicInputs)
+		{
+			inputs[index].name = input.name;
+			inputs[index].typeName = vfxPlugTypeToValueTypeName(input.type);
+			
+			index++;
+		}
+		
+		index = 0;
+		
+		for (auto & output : node->dynamicOutputs)
+		{
+			outputs[index].name = output.name;
+			outputs[index].typeName = vfxPlugTypeToValueTypeName(output.type);
+			
+			index++;
+		}
+		
+		return true;
+	}
 }
 
 int RealTimeConnection::getNodeCpuHeatMax() const

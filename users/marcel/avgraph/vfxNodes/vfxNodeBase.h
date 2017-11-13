@@ -331,32 +331,10 @@ struct VfxPlug
 	void setMap(const void * dst, const float inMin, const float inMax, const float outMin, const float outMax);
 	void clearMap(const void * dst);
 	
-	void disconnect()
-	{
-		mem = nullptr;
-		memType = kVfxPlugType_None;
-		
-	#if EXTENDED_INPUTS
-		floatArray.immediateValue = nullptr;
-	#endif
-	}
+	void disconnect();
+	void disconnect(const void * dstMem);
 	
-	bool isConnected() const
-	{
-		if (mem != nullptr)
-			return true;
-		if (memType != kVfxPlugType_None)
-			return true;
-		
-	#if EXTENDED_INPUTS
-		if (floatArray.elems.empty() == false)
-			return true;
-		if (floatArray.immediateValue != nullptr)
-			return true;
-	#endif
-		
-		return false;
-	}
+	bool isConnected() const;
 	
 	bool isReferenced() const;
 	
@@ -490,11 +468,44 @@ struct VfxNodeBase
 		TriggerTarget();
 	};
 	
+	struct DynamicPlug
+	{
+		std::string name;
+		VfxPlugType type;
+	};
+	
+	struct DynamicLink
+	{
+		int linkId;
+		
+		int srcNodeId;
+		std::string srcSocketName;
+		int srcSocketIndex;
+		
+		int dstNodeId;
+		std::string dstSocketName;
+		int dstSocketIndex;
+		
+		DynamicLink()
+			: linkId(-1)
+			, srcNodeId(-1)
+			, srcSocketName()
+			, srcSocketIndex(-1)
+			, dstNodeId(-1)
+			, dstSocketName()
+			, dstSocketIndex(-1)
+		{
+		}
+	};
+	
 	std::vector<VfxPlug> inputs;
 	std::vector<VfxPlug> outputs;
 	
 	std::vector<VfxNodeBase*> predeps;
 	std::vector<TriggerTarget> triggerTargets;
+	std::vector<DynamicPlug> dynamicInputs;
+	std::vector<DynamicPlug> dynamicOutputs;
+	std::vector<DynamicLink> dynamicLinks;
 	
 	int flags;
 	
@@ -546,6 +557,10 @@ struct VfxNodeBase
 			outputs[index].memType = type;
 		}
 	}
+	
+	void reconnectDynamicInputs(const int dstNodeId = -1);
+	void setDynamicInputs(const DynamicPlug * newInputs, const int numInputs);
+	void setDynamicOutputs(const DynamicPlug * newOutputs, const int numOutputs);
 	
 	VfxPlug * tryGetInput(const int index)
 	{

@@ -577,6 +577,69 @@ void VfxPlug::clearMap(const void * dst)
 #endif
 }
 
+void VfxPlug::disconnect()
+{
+	mem = nullptr;
+	memType = kVfxPlugType_None;
+	
+#if EXTENDED_INPUTS
+	floatArray.immediateValue = nullptr;
+#endif
+}
+
+void VfxPlug::disconnect(const void * dstMem)
+{
+	if (type == kVfxPlugType_Float)
+	{
+		bool removed = false;
+		for (auto elemItr = floatArray.elems.begin(); elemItr != floatArray.elems.end(); )
+		{
+			if (elemItr->value == dstMem)
+			{
+				elemItr = floatArray.elems.erase(elemItr);
+				removed = true;
+				break;
+			}
+			
+			++elemItr;
+		}
+		Assert(removed);
+		
+		if (removed && floatArray.elems.empty())
+		{
+			Assert(mem == nullptr);
+			memType = kVfxPlugType_None;
+		}
+		
+	#if EXTENDED_INPUTS
+		floatArray.immediateValue = nullptr;
+	#endif
+	}
+	else
+	{
+		Assert(mem == dstMem);
+		
+		disconnect();
+	}
+}
+
+bool VfxPlug::isConnected() const
+{
+	if (mem != nullptr)
+		return true;
+	if (memType != kVfxPlugType_None)
+		return true;
+	
+#if EXTENDED_INPUTS
+	if (floatArray.elems.empty() == false)
+		return true;
+	if (floatArray.immediateValue != nullptr)
+		return true;
+#endif
+	
+	return false;
+}
+
 bool VfxPlug::isReferenced() const
 {
 	if (isReferencedByLink)
@@ -818,6 +881,151 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 					triggerTarget.srcNode->handleTrigger(triggerTarget.srcSocketIndex);
 				}
 			}
+		}
+	}
+}
+
+void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
+{
+	const int numStaticInputs = inputs.size() - dynamicInputs.size();
+	
+	for (int i = numStaticInputs; i < inputs.size(); ++i)
+	{
+		// note : we can safely reset vfx plugs like this. predeps only depend on the links and dynamic links established, not on actually hooking up memory. memory for literals has already been added to the free list, and we don't need to bother with memory allocations here
+		
+		const VfxPlugType type = inputs[i].type;
+		
+		inputs[i] = VfxPlug();
+		inputs[i].type = type;
+	}
+		
+	// hook up the dynamic links
+	
+	for (auto & link : dynamicLinks)
+	{
+		if (dstNodeId != -1 && link.dstNodeId != dstNodeId)
+			continue;
+		
+		if (link.srcSocketIndex == -1)
+		{
+			VfxPlug * input = nullptr;
+			
+			for (int i = 0; i < dynamicInputs.size(); ++i)
+			{
+				if (link.srcSocketName == dynamicInputs[i].name)
+					input = &inputs[numStaticInputs + i];
+			}
+			
+			if (input == nullptr)
+			{
+				logError("failed to find input node socket. nodeId=%d, socketName=%s", link.srcNodeId, link.srcSocketName.c_str());
+				continue;
+			}
+			
+			auto dstNodeItr = g_currentVfxGraph->nodes.find(link.dstNodeId);
+			
+			if (dstNodeItr == g_currentVfxGraph->nodes.end())
+			{
+				logError("failed to find output node. nodeId=%d", link.dstNodeId);
+				continue;
+			}
+			
+			auto dstNode = dstNodeItr->second;
+			
+			VfxPlug * output = nullptr;
+			
+			if (link.dstSocketIndex == -1)
+			{
+				const int numStaticOutputs = dstNode->outputs.size() - dstNode->dynamicOutputs.size();
+				
+				for (int i = 0; i < dstNode->dynamicOutputs.size(); ++i)
+				{
+					if (link.dstSocketName == dstNode->dynamicOutputs[i].name)
+						output = &dstNode->outputs[numStaticOutputs + i];
+				}
+			}
+			else
+			{
+				output = dstNode->tryGetOutput(link.dstSocketIndex);
+			}
+			
+			if (output == nullptr)
+			{
+				logError("failed to find output node socket. nodeId=%d, socketIndex=%d, socketName=%s", link.dstNodeId, link.dstSocketIndex, link.dstSocketName.c_str());
+				continue;
+			}
+			
+			input->connectTo(*output);
+		}
+	}
+}
+
+void VfxNodeBase::setDynamicInputs(const DynamicPlug * newInputs, const int numInputs)
+{
+	const int numStaticInputs = inputs.size() - dynamicInputs.size();
+	
+	// copy the list of dynamic inputs. we will need the definitions to reconnect inputs at a future time
+	
+	dynamicInputs.resize(numInputs);
+	
+	for (int i = 0; i < numInputs; ++i)
+	{
+		dynamicInputs[i] = newInputs[i];
+	}
+	
+	// allocate plugs for the dynamic inputs
+	
+	inputs.resize(numStaticInputs + numInputs);
+	
+	for (int i = 0; i < numInputs; ++i)
+	{
+		inputs[numStaticInputs + i].type = dynamicInputs[i].type;
+	}
+	
+	// re-establish socket connections
+	
+	reconnectDynamicInputs();
+}
+
+void VfxNodeBase::setDynamicOutputs(const DynamicPlug * newOutputs, const int numOutputs)
+{
+	const int numStaticOutputs = outputs.size() - dynamicOutputs.size();
+	
+	//
+	
+	dynamicOutputs.resize(numOutputs);
+	
+	for (int i = 0; i < numOutputs; ++i)
+	{
+		dynamicOutputs[i] = newOutputs[i];
+	}
+	
+	// allocate plugs for the dynamic outputs
+	
+	outputs.resize(numStaticOutputs + numOutputs);
+	
+	for (int i = 0; i < numOutputs; ++i)
+	{
+		outputs[numStaticOutputs + i] = VfxPlug();
+		outputs[numStaticOutputs + i].type = dynamicOutputs[i].type;
+		outputs[numStaticOutputs + i].mem = nullptr; // todo
+	}
+	
+	for (auto & link : dynamicLinks)
+	{
+		if (link.dstSocketIndex == -1)
+		{
+			auto srcNodeItr = g_currentVfxGraph->nodes.find(link.srcNodeId);
+			
+			if (srcNodeItr == g_currentVfxGraph->nodes.end())
+			{
+				logError("failed to find input node");
+				continue;
+			}
+			
+			auto srcNode = srcNodeItr->second;
+			
+			srcNode->reconnectDynamicInputs();
 		}
 	}
 }

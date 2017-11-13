@@ -416,6 +416,21 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 			auto srcNode = srcNodeItr->second;
 			auto dstNode = dstNodeItr->second;
 			
+			if (link.isDynamic)
+			{
+				VfxNodeBase::DynamicLink dlink;
+				dlink.linkId = link.id;
+				dlink.srcNodeId = link.srcNodeId;
+				dlink.srcSocketIndex = link.srcNodeSocketIndex;
+				dlink.srcSocketName = link.srcNodeSocketName;
+				dlink.dstNodeId = link.dstNodeId;
+				dlink.dstSocketIndex = link.dstNodeSocketIndex;
+				dlink.dstSocketName = link.dstNodeSocketName;
+				srcNode->dynamicLinks.push_back(dlink);
+				dstNode->dynamicLinks.push_back(dlink);
+				continue;
+			}
+			
 			auto input = srcNode->tryGetInput(link.srcNodeSocketIndex);
 			auto output = dstNode->tryGetOutput(link.dstNodeSocketIndex);
 			
@@ -518,6 +533,8 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 		}
 	}
 	
+	g_currentVfxGraph = vfxGraph;
+	
 	for (auto vfxNodeItr : vfxGraph->nodes)
 	{
 		auto nodeId = vfxNodeItr.first;
@@ -527,6 +544,8 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 		
 		vfxNode->init(node);
 	}
+	
+	g_currentVfxGraph = nullptr;
 	
 	return vfxGraph;
 }
