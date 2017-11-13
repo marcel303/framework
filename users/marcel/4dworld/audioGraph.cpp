@@ -357,11 +357,6 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 			continue;
 		}
 		
-		if (node.isEnabled == false)
-		{
-			continue;
-		}
-		
 		AudioNodeBase * audioNode = createAudioNode(node.id, node.typeName, audioGraph);
 		
 		Assert(audioNode != nullptr);
