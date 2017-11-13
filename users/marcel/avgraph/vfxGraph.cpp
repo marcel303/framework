@@ -43,6 +43,8 @@ extern const int GFX_SY;
 
 VfxGraph * g_currentVfxGraph = nullptr;
 
+Surface * g_currentVfxSurface = nullptr;
+
 //
 
 VfxGraph::VfxGraph()
@@ -262,6 +264,9 @@ int VfxGraph::traverseDraw() const
 	
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = const_cast<VfxGraph*>(this);
+	
+	Assert(g_currentVfxSurface == nullptr);
+	g_currentVfxSurface = nullptr;
 	
 	// start traversal at the display node and traverse to leafs following predeps and and back up the tree again to draw
 	

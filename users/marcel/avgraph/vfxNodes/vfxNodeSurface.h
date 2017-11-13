@@ -62,8 +62,10 @@ struct VfxNodeSurface : VfxNodeBase
 	};
 
 	Surface * surface;
-
-	VfxImage_Texture imageOutput;
+	
+	mutable Surface * oldSurface;
+	
+	mutable VfxImage_Texture imageOutput;
 	
 	VfxNodeSurface();
 	virtual ~VfxNodeSurface() override;

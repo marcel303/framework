@@ -46,6 +46,7 @@ struct VfxNodeBase;
 struct VfxPlug;
 
 extern VfxGraph * g_currentVfxGraph;
+extern Surface * g_currentVfxSurface;
 
 struct VfxGraph
 {

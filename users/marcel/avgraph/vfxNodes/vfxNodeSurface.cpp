@@ -33,6 +33,8 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
+extern Surface * g_currentVfxSurface;
+
 VFX_ENUM_TYPE(surfaceViewMode)
 {
 	elem("screen");
@@ -60,6 +62,7 @@ VFX_NODE_TYPE(VfxNodeSurface)
 VfxNodeSurface::VfxNodeSurface()
 	: VfxNodeBase()
 	, surface(nullptr)
+	, oldSurface(nullptr)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_DontCare, kVfxPlugType_DontCare);
@@ -89,11 +92,9 @@ void VfxNodeSurface::allocSurface(const bool withDepthBuffer)
 	
 	//
 	
-	surface = new Surface(GFX_SX, GFX_SY, withDepthBuffer, false, SURFACE_RGBA16F);
+	surface = new Surface(GFX_SX, GFX_SY, withDepthBuffer, true, SURFACE_RGBA16F);
 	surface->clear();
 	surface->clearDepth(1.f);
-	
-	imageOutput.texture = surface->getTexture();
 }
 
 void VfxNodeSurface::freeSurface()
@@ -158,6 +159,9 @@ void VfxNodeSurface::beforeDraw() const
 	const float zNear = getInputFloat(kInput_ZNear, .01f);
 	const float zFar = getInputFloat(kInput_ZFar, 1000.f);
 	
+	oldSurface = g_currentVfxSurface;
+	g_currentVfxSurface = surface;
+	
 	pushSurface(surface);
 	
 	if (clear)
@@ -214,4 +218,11 @@ void VfxNodeSurface::afterDraw() const
 	popTransform();
 	
 	popSurface();
+	
+	g_currentVfxSurface = oldSurface;
+	oldSurface = nullptr;
+	
+	//
+	
+	imageOutput.texture = surface->getTexture();
 }
