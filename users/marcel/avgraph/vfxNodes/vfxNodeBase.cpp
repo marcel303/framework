@@ -918,7 +918,11 @@ void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
 			
 			if (input == nullptr)
 			{
-				logError("failed to find input node socket. nodeId=%d, socketName=%s", link.srcNodeId, link.srcSocketName.c_str());
+				if (link.srcSocketIndex != -1)
+				{
+					logError("failed to find input node socket. nodeId=%d, socketName=%s", link.srcNodeId, link.srcSocketName.c_str());
+				}
+				
 				continue;
 			}
 			
@@ -951,7 +955,11 @@ void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
 			
 			if (output == nullptr)
 			{
-				logError("failed to find output node socket. nodeId=%d, socketIndex=%d, socketName=%s", link.dstNodeId, link.dstSocketIndex, link.dstSocketName.c_str());
+				if (link.dstSocketIndex != -1)
+				{
+					logError("failed to find output node socket. nodeId=%d, socketIndex=%d, socketName=%s", link.dstNodeId, link.dstSocketIndex, link.dstSocketName.c_str());
+				}
+				
 				continue;
 			}
 			
