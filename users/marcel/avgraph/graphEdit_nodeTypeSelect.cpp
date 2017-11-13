@@ -75,10 +75,10 @@ static void doBackground(const int x, const int y, const int sx, const int sy)
 	}
 }
 
-static const int kCategoryFontSize = 14;
+static const int kCategoryFontSize = 18;
 static const int kCategoryPadding = 7;
-static const int kCategoryHeight = 26;
-static const int kCategorySpacing = 10;
+static const int kCategoryHeight = 32;
+static const int kCategorySpacing = 12;
 
 static void measureCategoryButton(const char * name, int & sx, int & sy)
 {
