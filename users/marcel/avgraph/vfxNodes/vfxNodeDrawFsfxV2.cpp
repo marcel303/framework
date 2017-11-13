@@ -93,7 +93,7 @@ VfxNodeFsfxV2::VfxNodeFsfxV2()
 	addInput(kInput_Param2, kVfxPlugType_Float);
 	addInput(kInput_Time, kVfxPlugType_Float);
 	addInput(kInput_Opacity, kVfxPlugType_Float);
-	addOutput(kOutput_Any, kVfxPlugType_DontCare, nullptr);
+	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
 }
 
 VfxNodeFsfxV2::~VfxNodeFsfxV2()
@@ -243,6 +243,10 @@ void VfxNodeFsfxV2::tick(const float dt)
 	if (isPassthrough)
 	{
 		freeShader();
+		
+		currentShader.clear();
+		currentShaderVersion = 0;
+		
 		return;
 	}
 	
@@ -250,19 +254,15 @@ void VfxNodeFsfxV2::tick(const float dt)
 	
 	if (shaderName == nullptr)
 	{
+		freeShader();
+		
 		currentShader.clear();
 		currentShaderVersion = 0;
-		
-		freeShader();
 	}
 	else
 	{
 		if (shaderName != currentShader || (shader && shader->getVersion() != currentShaderVersion))
 		{
-			freeShader();
-			
-			//
-			
 			loadShader(shaderName);
 			
 			currentShader = shaderName;
