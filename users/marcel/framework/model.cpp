@@ -944,6 +944,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 					(drawFlags & DrawColorNormals)      ? 1.f : 0.f,
 					(drawFlags & DrawColorBlendIndices) ? 1.f : 0.f,
 					(drawFlags & DrawColorBlendWeights) ? 1.f : 0.f);
+				checkErrorGL();
 			}
 			
 			// bind vertex arrays
@@ -951,12 +952,14 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			fassert(mesh->m_vertexArray);
 			fassert(mesh->m_indexArray);
 			glBindVertexArray(mesh->m_vertexArrayObject);
+			checkErrorGL();
 			
 			GLenum indexType = mesh->m_numVertices < 65536 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
 			glDrawElements(GL_TRIANGLES, mesh->m_numIndices, indexType, 0);
 			checkErrorGL();
 			
 			glBindVertexArray(0);
+			checkErrorGL();
 		}
 		
 		clearShader();
@@ -1008,6 +1011,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 	{
 		// bone to object matrix translation
 		glDisable(GL_DEPTH_TEST);
+		checkErrorGL();
 		gxColor3ub(127, 127, 127);
 		gxBegin(GL_LINES);
 		{
@@ -1036,12 +1040,14 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		}
 		gxEnd();
 		glEnable(GL_DEPTH_TEST);
+		checkErrorGL();
 	}
 	
 	if (drawFlags & DrawPoseMatrices)
 	{
 		// object to bone matrix translation
 		glDisable(GL_DEPTH_TEST);
+		checkErrorGL();
 		gxColor3ub(127, 127, 127);
 		gxBegin(GL_LINES);
 		{
@@ -1060,6 +1066,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		gxEnd();
 		gxColor3ub(255, 0, 0);
 		glPointSize(7.f);
+		checkErrorGL();
 		gxBegin(GL_POINTS);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
@@ -1070,6 +1077,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		}
 		gxEnd();
 		glEnable(GL_DEPTH_TEST);
+		checkErrorGL();
 	}
 }
 

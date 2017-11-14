@@ -1345,6 +1345,7 @@ bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, 
 	
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
 	glGetIntegerv(GL_TEXTURE_BINDING_2D, (GLint*)&oldTexture);
+	checkErrorGL();
 	
 	//
 	
@@ -1513,6 +1514,7 @@ void Surface::clearf(float r, float g, float b, float a)
 	{
 		glClearColor(r, g, b, a);
 		glClear(GL_COLOR_BUFFER_BIT);
+		checkErrorGL();
 	}
 	popSurface();
 }
@@ -1523,6 +1525,7 @@ void Surface::clearDepth(float d)
 	{
 		glClearDepth(d);
 		glClear(GL_DEPTH_BUFFER_BIT);
+		checkErrorGL();
 	}
 	popSurface();
 }
