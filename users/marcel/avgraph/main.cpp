@@ -61,6 +61,7 @@ using namespace tinyxml2;
 //#define FILENAME "draw3dTest.xml"
 //#define FILENAME "nodeDataTest.xml"
 #define FILENAME "fsfxv2Test.xml"
+//#define FILENAME "kinectTest2.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -562,6 +563,12 @@ int main(int argc, char * argv[])
 		
 		//
 		
+	#ifndef DEBUG
+		framework.fillCachesWithPath(".", true);
+	#endif
+		
+		//
+		
 		GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
 		
 		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
@@ -644,6 +651,8 @@ int main(int argc, char * argv[])
 			if (filedrop.empty() == false)
 			{
 				graphEdit->load(filedrop.c_str());
+				
+				graphEdit->idleTime = 0.f;
 				
 				filedrop.clear();
 			}
