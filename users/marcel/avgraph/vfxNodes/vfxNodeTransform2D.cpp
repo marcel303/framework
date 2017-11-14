@@ -61,11 +61,6 @@ VfxNodeTransform2D::VfxNodeTransform2D()
 	addOutput(kOutput_Transform, kVfxPlugType_Transform, &transform);
 }
 
-void VfxNodeTransform2D::initSelf(const GraphNode & node)
-{
-	// todo : parse node.editorValue;
-}
-
 void VfxNodeTransform2D::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeTransform2D);

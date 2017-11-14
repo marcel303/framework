@@ -55,8 +55,6 @@ struct VfxNodeTransform2D : VfxNodeBase
 	
 	VfxNodeTransform2D();
 	
-	virtual void initSelf(const GraphNode & node) override;
-	
 	virtual void tick(const float dt) override;
 	
 	virtual void beforeDraw() const override;
