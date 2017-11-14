@@ -36,8 +36,6 @@
 #include <algorithm>
 #include <cmath>
 
-#include "vfxProfiling.h" // fixme : remove !!
-
 #define ENABLE_FILE_FIXUPS 1 // todo : remove
 
 extern const int GFX_SX; // fixme : make property of graph editor
@@ -705,6 +703,7 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 #include "framework.h"
 #include "../libparticle/particle.h"
 #include "../libparticle/ui.h"
+#include "vfxProfiling.h"
 
 static bool selectionMod()
 {
@@ -2443,7 +2442,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 {
 	cpuTimingBlock(GraphEdit_Tick);
 	
-#if 1 // todo : remove
+#if defined(DEBUG) // todo : remove
 	for (auto & nodeItr : graph->nodes)
 		Assert(nodeDatas.count(nodeItr.first) != 0);
 	for (auto & nodeDataItr : nodeDatas)
