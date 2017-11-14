@@ -29,8 +29,6 @@
 #include "vfxGraph.h"
 #include "vfxNodeTimeline.h"
 
-#include "tinyxml2.h" // fixme
-
 VFX_NODE_TYPE(VfxNodeTimeline)
 {
 	typeName = "timeline";
