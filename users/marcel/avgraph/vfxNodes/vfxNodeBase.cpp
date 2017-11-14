@@ -47,10 +47,17 @@ int VfxImage_Texture::getSx() const
 	
 	if (texture != 0)
 	{
-		// todo : nicely restore previously bound texture ?
+		// todo : use glGetTextureParameteriv ?
+		
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		checkErrorGL();
+		
 		gxSetTexture(texture);
 		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &result);
-		gxSetTexture(0);
+		checkErrorGL();
+		
+		gxSetTexture(restoreTexture);
 	}
 	
 	return result;
@@ -62,10 +69,17 @@ int VfxImage_Texture::getSy() const
 	
 	if (texture != 0)
 	{
-		// todo : nicely restore previously bound texture ?
+		// todo : use glGetTextureParameteriv ?
+		
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		checkErrorGL();
+		
 		gxSetTexture(texture);
 		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &result);
-		gxSetTexture(0);
+		checkErrorGL();
+		
+		gxSetTexture(restoreTexture);
 	}
 	
 	return result;
