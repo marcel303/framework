@@ -287,7 +287,7 @@ void VfxNodeOscSquare::tick(const float dt)
 		}
 	}
 	
-	outputValue = 0.f; // todo
+	outputValue = phaseHelper.phase < .5f ? 0.f : 1.f;
 }
 
 //
