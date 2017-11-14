@@ -1204,11 +1204,13 @@ static inline void gxSetTexture(GLuint texture) { }
 #elif !USE_LEGACY_OPENGL
 
 void gxMatrixMode(GLenum mode);
+GLenum gxGetMatrixMode();
 void gxPopMatrix();
 void gxPushMatrix();
 void gxLoadIdentity();
 void gxLoadMatrixf(const float * m);
 void gxGetMatrixf(GLenum mode, float * m);
+void gxSetMatrixf(GLenum mode, float * m);
 void gxMultMatrixf(const float * m);
 void gxTranslatef(float x, float y, float z);
 void gxRotatef(float angle, float x, float y, float z);

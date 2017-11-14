@@ -4321,19 +4321,23 @@ void Camera3d::pushViewMatrix()
 {
 	const Mat4x4 matrix = getViewMatrix();
 	
-	gxMatrixMode(GL_MODELVIEW);
-	gxPushMatrix();
-	gxLoadMatrixf(matrix.m_v);
-	// todo : restore matrix mode
-	gxMatrixMode(GL_MODELVIEW);
+	const GLenum restoreMatrixMode = gxGetMatrixMode();
+	{
+		gxMatrixMode(GL_MODELVIEW);
+		gxPushMatrix();
+		gxLoadMatrixf(matrix.m_v);
+	}
+	gxMatrixMode(restoreMatrixMode);
 }
 
 void Camera3d::popViewMatrix()
 {
-	gxMatrixMode(GL_MODELVIEW);
-	gxPopMatrix();
-	// todo : restore matrix mode
-	gxMatrixMode(GL_MODELVIEW);
+	const GLenum restoreMatrixMode = gxGetMatrixMode();
+	{
+		gxMatrixMode(GL_MODELVIEW);
+		gxPopMatrix();
+	}
+	gxMatrixMode(restoreMatrixMode);
 }
 
 // -----
@@ -6175,6 +6179,19 @@ void gxMatrixMode(GLenum mode)
 	}
 }
 
+GLenum gxGetMatrixMode()
+{
+	if (s_gxMatrixStack == &s_gxModelView)
+		return GL_MODELVIEW;
+	if (s_gxMatrixStack == &s_gxProjection)
+		return GL_PROJECTION;
+	else
+	{
+		Assert(false);
+		return GL_MODELVIEW;
+	}
+}
+
 void gxPopMatrix()
 {
 	s_gxMatrixStack->pop();
@@ -6204,6 +6221,22 @@ void gxGetMatrixf(GLenum mode, float * m)
 			break;
 		case GL_MODELVIEW:
 			memcpy(m, s_gxModelView.get().m_v, sizeof(float) * 16);
+			break;
+		default:
+			fassert(false);
+			break;
+	}
+}
+
+void gxSetMatrixf(GLenum mode, const float * m)
+{
+	switch (mode)
+	{
+		case GL_PROJECTION:
+			memcpy(s_gxProjection.getRw().m_v, m, sizeof(float) * 16);
+			break;
+		case GL_MODELVIEW:
+			memcpy(s_gxModelView.getRw().m_v, m, sizeof(float) * 16);
 			break;
 		default:
 			fassert(false);
