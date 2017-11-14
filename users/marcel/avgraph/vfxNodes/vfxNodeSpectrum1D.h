@@ -32,6 +32,14 @@
 
 struct VfxNodeSpectrum1D : VfxNodeBase
 {
+	enum ImageChannel
+	{
+		kImageChannel_R,
+		kImageChannel_G,
+		kImageChannel_B,
+		kImageChannel_A,
+	};
+	
 	enum OutputMode
 	{
 		kOutputMode_Channel1And2,
@@ -44,6 +52,7 @@ struct VfxNodeSpectrum1D : VfxNodeBase
 	enum Input
 	{
 		kInput_Image,
+		kInput_ImageChannel,
 		kInput_SampleY,
 		kInput_OutputMode,
 		kInput_Normalize,
@@ -53,16 +62,19 @@ struct VfxNodeSpectrum1D : VfxNodeBase
 	
 	enum Output
 	{
-		kOutput_Image,
+		kOutput_Image1,
+		kOutput_Image2,
 		kOutput_Channels,
 		kOutput_COUNT
 	};
 	
-	OpenglTexture texture;
+	OpenglTexture texture1;
+	OpenglTexture texture2;
 	float * dreal;
 	float * dimag;
 	
-	VfxImage_Texture imageOutput;
+	VfxImage_Texture image1Output;
+	VfxImage_Texture image2Output;
 	
 	VfxChannels channelsOutput;
 	
@@ -71,6 +83,6 @@ struct VfxNodeSpectrum1D : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 	
-	void allocateTexture(const int sx);
-	void freeTexture();
+	void allocateTextures(const int sx);
+	void freeTextures();
 };
