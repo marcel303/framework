@@ -46,8 +46,6 @@ struct DoubleBufferedFrameListener;
 
 struct Kinect2
 {
-	const static int width = 512; // fixme
-	const static int height = 424;
 	const static bool doVideo = true;
 	const static bool doDepth = true;
 	

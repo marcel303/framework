@@ -35,7 +35,7 @@
 #include <GL/glew.h>
 #include <libfreenect2/libfreenect2.hpp>
 
-#include <libfreenect2/frame_listener_impl.h> // fixme : remove
+//#include <libfreenect2/frame_listener_impl.h> // fixme : remove
 
 // kinect device and video frames/textures. note that these are all shared between kinect2 nodes, as
 // it would be senseless for each node to compute these over and over again with the same data coming
@@ -251,7 +251,10 @@ void VfxNodeKinect2::getDescription(VfxNodeDescription & d)
 	if (kinect != nullptr)
 	{
 		d.add("Kinect2 initialized: %d", kinect->isInit);
-		d.add("capture image size: %d x %d", kinect->width, kinect->height);
+		if (videoTexture.id != 0)
+			d.add("video capture size: %d x %d", videoTexture.sx, videoTexture.sy);
+		if (depthTexture.id != 0)
+			d.add("depth capture size: %d x %d", depthTexture.sx, depthTexture.sy);
 		d.newline();
 	}
 	
