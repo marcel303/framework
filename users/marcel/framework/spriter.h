@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include <vector> // fixme : remove dep
+#include <vector>
 
 namespace spriter
 {
