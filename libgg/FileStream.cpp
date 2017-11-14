@@ -110,8 +110,6 @@ void FileStream::Close()
 	if (m_FileId < 0)
 		throw ExceptionVA("file not open");
 
-	// todo: flush
-	// todo: close
 	if (sceIoClose(m_FileId) != SCE_KERNEL_ERROR_OK)
 		throw ExceptionVA("unable to close file");
 	m_FileId = -1;

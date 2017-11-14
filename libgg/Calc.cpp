@@ -12,8 +12,6 @@ namespace Calc
 	RNG::Random g_RandomHQ;
 	RNG::Random g_RandomHS;
 	
-	// todo: create a better sin/cos table implementation
-	
 #if !CALC_HQ_SINCOS
 	static float g_SinCosTable[SINCOS_TABLE_SIZE * 2];
 	
