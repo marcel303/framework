@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <cmath>
+#include <float.h>
 #include <map>
 #include <set>
 #include <string>
@@ -41,7 +42,6 @@
 #include "Mat4x4.h"
 #include "Vec3.h"
 #include "Vec4.h"
-#include <float.h>
 
 #if defined(DEBUG)
 	#define fassert(x) Assert(x)

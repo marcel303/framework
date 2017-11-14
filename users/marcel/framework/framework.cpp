@@ -2730,8 +2730,6 @@ void Dictionary::setFloat(const char * name, float value)
 
 void Dictionary::setPtr(const char * name, void * value)
 {
-	// fixme : right now this only works with 32 or 64 bit pointers
-
 	fassert(sizeof(intptr_t) <= sizeof(int64_t));
 
 	setInt64(name, reinterpret_cast<intptr_t>(value));
@@ -2788,8 +2786,6 @@ float Dictionary::getFloat(const char * name, float _default) const
 
 void * Dictionary::getPtr(const char * name, void * _default) const
 {
-	// fixme : right now this only works with 32 or 64 bit bit pointers
-
 	return reinterpret_cast<void*>(getInt64(name, (int)(reinterpret_cast<intptr_t>(_default))));
 }
 
