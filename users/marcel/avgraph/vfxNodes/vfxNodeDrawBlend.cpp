@@ -89,7 +89,7 @@ void VfxNodeDrawBlend::beforeDraw() const
 		
 	default:
 		Assert(false);
-		pushBlend(BLEND_ALPHA); // todo
+		pushBlend(BLEND_ALPHA);
 		break;
 	}
 	

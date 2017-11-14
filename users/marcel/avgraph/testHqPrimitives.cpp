@@ -31,10 +31,6 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
-// todo : how to specify gradients and texture coordinates?
-//        use a texture matrix, using screen-space coordinates of fragments as input ?
-//        use evaluated texture coordinate to sample texuture and/or calculate gradient ?
-
 void testHqPrimitives()
 {
 	setAbout("This example demonstrates how to draw high quality primitives like lines and circles using Framework.");

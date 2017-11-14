@@ -36,9 +36,6 @@ extern const int GFX_SY;
 
 const int kNumPoints = 256;
 
-// fixme : what happens when the glyph texture atlas grows during a text batch ?
-//         -> maybe only grow but not optimize texture atlas when in a batch ?
-
 void testDotTracker()
 {
 	TrackedDot dots[kNumPoints];

@@ -55,8 +55,6 @@ VfxNodeImageCpuToGpu::VfxNodeImageCpuToGpu()
 	, texture()
 	, imageOutput()
 {
-	// todo : make image filtering inputs
-	
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
 	addInput(kInput_Channel, kVfxPlugType_Int);

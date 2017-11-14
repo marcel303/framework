@@ -38,10 +38,12 @@ static void stbTruetype_Print(float x, float y, const char *text)
 	{
 		while (*text)
 		{
-			if (*text >= 32 && *text < 128)
+			const int c = *text;
+			
+			if (c >= 32 && c < 128)
 			{
 				stbtt_aligned_quad q;
-				stbtt_GetBakedQuad(cdata, 512,512, *text-32, &x,&y,&q,1);//1=opengl & d3d10+,0=d3d9
+				stbtt_GetBakedQuad(cdata, 512,512, c-32, &x,&y,&q,1);//1=opengl & d3d10+,0=d3d9
 				
 				gxTexCoord2f(q.s0,q.t1); gxVertex2f(q.x0,q.y1);
 				gxTexCoord2f(q.s1,q.t1); gxVertex2f(q.x1,q.y1);
