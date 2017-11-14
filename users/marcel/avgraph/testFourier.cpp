@@ -280,8 +280,6 @@ static uint64_t doFourier2D_reference(const ImageData * image, real *& dreal, re
 		
 		const ImageData::Pixel * __restrict line = image->getLine(y);
 		
-		// todo : do memset on rimag instead of explicitly setting every element to 0.0
-		
 		for (int x = 0; x < imageSx; ++x)
 		{
 			const auto & pixel = line[x];

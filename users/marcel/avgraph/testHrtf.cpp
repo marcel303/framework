@@ -472,8 +472,6 @@ struct AudioBuffer
 	
 	void convolve(const HRTFData & filter, AudioBuffer & output)
 	{
-		// todo : SSE optimize this code
-		
 		const float * __restrict sReal = real;
 		const float * __restrict sImag = imag;
 		
@@ -526,8 +524,6 @@ struct AudioBuffer
 	
 	void convolveAndReverseIndices(const HRTFData & filter, AudioBuffer & output)
 	{
-		// todo : SSE optimize this code
-		
 		const float * __restrict sReal = real;
 		const float * __restrict sImag = imag;
 		
