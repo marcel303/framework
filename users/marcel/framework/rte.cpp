@@ -88,13 +88,13 @@ static void handleFileChange(const std::string & filename)
 
 #if 1
 
-struct FileInfo
+struct RTEFileInfo
 {
 	std::string filename;
 	time_t time;
 };
 
-static std::vector<FileInfo> s_fileInfos;
+static std::vector<RTEFileInfo> s_fileInfos;
 
 static void fillFileInfos()
 {
@@ -110,7 +110,7 @@ static void fillFileInfos()
 			struct stat s;
 			if (fstat(fileno(f), &s) == 0)
 			{
-				FileInfo fi;
+				RTEFileInfo fi;
 				fi.filename = file;
 				fi.time = s.st_mtime;
 
@@ -221,6 +221,85 @@ void tickRealTimeEditing()
 	}
 }
 
+#elif defined(MACOS)
+
+#include <CoreServices/CoreServices.h>
+
+static FSEventStreamRef stream = nullptr;
+
+static bool anyChanges = false;
+
+static void callback(
+	ConstFSEventStreamRef stream,
+	void * callbackInfo,
+	size_t numEvents,
+	void * evPaths,
+	const FSEventStreamEventFlags evFlags[],
+	const FSEventStreamEventId evIds[])
+{
+	anyChanges = true;
+	
+	//
+
+#if 0
+	const char ** paths = (const char **)evPaths;
+	
+	for (int i = 0; i < numEvents; ++i)
+	{
+		printf("%d: %x, %s\n", (int)evIds[i], (int)evFlags[i], paths[i]);
+	}
+#endif
+}
+
+void initRealTimeEditing()
+{
+	Assert(stream == nullptr);
+	
+	fillFileInfos();
+	
+	const CFStringRef arg = CFStringCreateWithCString(
+    	kCFAllocatorDefault,
+    	".",
+    	kCFStringEncodingUTF8);
+	
+	const CFArrayRef paths = CFArrayCreate(nullptr, (const void**)&arg, 1, nullptr);
+	
+	const CFAbsoluteTime latency = 0.1;
+
+	stream = FSEventStreamCreate(
+		NULL,
+		&callback,
+		NULL,
+		paths,
+		kFSEventStreamEventIdSinceNow,
+		latency,
+		kFSEventStreamCreateFlagNone);
+	
+	FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+	FSEventStreamStart(stream);
+}
+
+void shutRealTimeEditing()
+{
+	if (stream != nullptr)
+	{
+		FSEventStreamInvalidate(stream);
+		FSEventStreamRelease(stream);
+		
+		stream = nullptr;
+	}
+}
+
+void tickRealTimeEditing()
+{
+	if (anyChanges)
+	{
+		anyChanges = false;
+		
+		checkFileInfos();
+	}
+}
+
 #else
 
 void initRealTimeEditing()
@@ -235,7 +314,7 @@ void shutRealTimeEditing()
 
 void tickRealTimeEditing()
 {
-	// todo : add something similar to watch api on platforms other than win32
+	// todo : add something similar to watch api on platforms other than win32 or osx
 	
 	static int x = 0;
 	x++;
