@@ -28,8 +28,6 @@
 #include "framework.h"
 #include "vfxNodeTransform2D.h"
 
-#include "Calc.h"
-
 VFX_NODE_TYPE(VfxNodeTransform2D)
 {
 	typeName = "draw.transform2d";
@@ -47,7 +45,7 @@ VFX_NODE_TYPE(VfxNodeTransform2D)
 
 VfxNodeTransform2D::VfxNodeTransform2D()
 	: VfxNodeBase()
-	, transform()
+	, matrix()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Any, kVfxPlugType_DontCare);
@@ -58,7 +56,6 @@ VfxNodeTransform2D::VfxNodeTransform2D()
 	addInput(kInput_ScaleY, kVfxPlugType_Float);
 	addInput(kInput_Angle, kVfxPlugType_Float);
 	addInput(kInput_AngleNorm, kVfxPlugType_Float);
-	addOutput(kOutput_Transform, kVfxPlugType_Transform, &transform);
 }
 
 void VfxNodeTransform2D::tick(const float dt)
@@ -81,9 +78,9 @@ void VfxNodeTransform2D::tick(const float dt)
 	
 	t.MakeTranslation(x, y, 0.f);
 	s.MakeScaling(scale * scaleX, scale * scaleY, 1.f);
-	r.MakeRotationZ(Calc::DegToRad(angle));
+	r.MakeRotationZ(angle * M_PI / 180.f);
 	
-	transform.matrix = t * r * s;
+	matrix = t * r * s;
 }
 
 void VfxNodeTransform2D::beforeDraw() const
@@ -92,7 +89,7 @@ void VfxNodeTransform2D::beforeDraw() const
 		return;
 	
 	gxPushMatrix();
-	gxMultMatrixf(transform.matrix.m_v);
+	gxMultMatrixf(matrix.m_v);
 }
 
 void VfxNodeTransform2D::afterDraw() const

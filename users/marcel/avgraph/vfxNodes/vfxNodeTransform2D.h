@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "Mat4x4.h"
 #include "vfxNodeBase.h"
 #include "vfxTypes.h"
 
@@ -47,13 +48,12 @@ struct VfxNodeTransform2D : VfxNodeBase
 	
 	enum Output
 	{
-		kOutput_Transform,
 		kOutput_COUNT
 	};
 	
-	VfxTransform transform;
-	
 	VfxNodeTransform2D();
+	
+	Mat4x4 matrix;
 	
 	virtual void tick(const float dt) override;
 	

@@ -41,13 +41,6 @@ extern void splitString(const std::string & str, std::vector<std::string> & resu
 
 //
 
-VfxTransform::VfxTransform()
-{
-	matrix.MakeIdentity();
-}
-
-//
-
 VfxTimeline::Key::Key()
 	: beat(0.f)
 	, value(0.f)

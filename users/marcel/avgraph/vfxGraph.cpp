@@ -84,9 +84,6 @@ void VfxGraph::destroy()
 		case ValueToFree::kType_Float:
 			delete (float*)i.mem;
 			break;
-		case ValueToFree::kType_Transform:
-			delete (VfxTransform*)i.mem;
-			break;
 		case ValueToFree::kType_String:
 			delete (std::string*)i.mem;
 			break;
@@ -155,17 +152,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Float, value));
 	}
-	else if (input.type == kVfxPlugType_Transform)
-	{
-		VfxTransform * value = new VfxTransform();
-		
-		// todo : parse inputValue
-		
-		input.connectTo(value, kVfxPlugType_Transform, true);
-		
-		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Transform, value));
-	}
-	else if (input.type == kVfxPlugType_String)
+	if (input.type == kVfxPlugType_String)
 	{
 		std::string * value = new std::string();
 		

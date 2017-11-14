@@ -27,6 +27,8 @@
 
 #pragma once
 
+#if 0 // todo : remove composite node. obsolete now we have a sequence node
+
 #include "vfxNodeBase.h"
 
 struct VfxNodeComposite : VfxNodeBase
@@ -59,3 +61,5 @@ struct VfxNodeComposite : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 };
+
+#endif

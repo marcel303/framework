@@ -75,21 +75,6 @@ struct VfxNodeFloatLiteral : VfxNodeBase
 	virtual void initSelf(const GraphNode & node) override;
 };
 
-struct VfxNodeTransformLiteral : VfxNodeBase
-{
-	enum Output
-	{
-		kOutput_Value,
-		kOutput_COUNT
-	};
-	
-	VfxTransform value;
-	
-	VfxNodeTransformLiteral();
-	
-	virtual void initSelf(const GraphNode & node) override;
-};
-
 struct VfxNodeStringLiteral : VfxNodeBase
 {
 	enum Output

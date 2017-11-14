@@ -240,7 +240,6 @@ enum VfxPlugType
 	kVfxPlugType_Bool,
 	kVfxPlugType_Int,
 	kVfxPlugType_Float,
-	kVfxPlugType_Transform,
 	kVfxPlugType_String,
 	kVfxPlugType_Color,
 	kVfxPlugType_Image,
@@ -360,12 +359,6 @@ struct VfxPlug
 		return *((float*)mem);
 	}
 	
-	const VfxTransform & getTransform() const
-	{
-		Assert(memType == kVfxPlugType_Transform);
-		return *((VfxTransform*)mem);
-	}
-	
 	const std::string & getString() const
 	{
 		Assert(memType == kVfxPlugType_String);
@@ -418,12 +411,6 @@ struct VfxPlug
 			return *floatArray.get();
 	#endif
 		return *((float*)mem);
-	}
-	
-	VfxTransform & getRwTransform()
-	{
-		Assert(memType == kVfxPlugType_Transform);
-		return *((VfxTransform*)mem);
 	}
 	
 	std::string & getRwString()
@@ -626,16 +613,6 @@ struct VfxNodeBase
 			return defaultValue;
 		else
 			return plug->getFloat();
-	}
-	
-	const VfxTransform & getInputTransform(const int index, const VfxTransform & defaultValue) const
-	{
-		const VfxPlug * plug = tryGetInput(index);
-		
-		if (plug == nullptr || !plug->isConnected())
-			return defaultValue;
-		else
-			return plug->getTransform();
 	}
 	
 	const char * getInputString(const int index, const char * defaultValue) const

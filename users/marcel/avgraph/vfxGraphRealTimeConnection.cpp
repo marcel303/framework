@@ -139,9 +139,13 @@ void RealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	
 	// all links should be removed at this point. there should be no remaining predeps or connected nodes
 	Assert(node->predeps.empty());
-	//for (auto & input : node->inputs)
-	//	Assert(!input.isConnected()); // may be a literal value node with a non-accounted for (in the graph) connection when created directly from socket value
+#if defined(DEBUG) && 0
+	for (auto & input : node->inputs)
+	{
+		Assert(!input.isConnected()); // may be a literal value node with a non-accounted for (in the graph) connection when created directly from socket value
+	}
 	// todo : iterate all other nodes, to ensure there are no nodes with references back to this node?
+#endif
 	
 	delete node;
 	node = nullptr;
@@ -560,9 +564,6 @@ bool RealTimeConnection::setPlugValue(VfxPlug * plug, const std::string & value)
 		plug->getRwFloat() = Parse::Float(value);
 		return true;
 		
-	case kVfxPlugType_Transform:
-		return false;
-		
 	case kVfxPlugType_String:
 		plug->getRwString() = value;
 		return true;
@@ -605,8 +606,6 @@ bool RealTimeConnection::getPlugValue(VfxPlug * plug, std::string & value)
 	case kVfxPlugType_Float:
 		value = String::FormatC("%f", plug->getFloat());
 		return true;
-	case kVfxPlugType_Transform:
-		return false;
 	case kVfxPlugType_String:
 		value = plug->getString();
 		return true;
@@ -1092,8 +1091,6 @@ static std::string vfxPlugTypeToValueTypeName(const VfxPlugType plugType)
 			return "int";
 		case kVfxPlugType_Float:
 			return "float";
-		case kVfxPlugType_Transform:
-			return "transform";
 		case kVfxPlugType_String:
 			return "string";
 		case kVfxPlugType_Color:

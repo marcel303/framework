@@ -122,21 +122,6 @@ void VfxNodeFloatLiteral::initSelf(const GraphNode & node)
 
 //
 
-VfxNodeTransformLiteral::VfxNodeTransformLiteral()
-	: VfxNodeBase()
-	, value()
-{
-	resizeSockets(0, kOutput_COUNT);
-	addOutput(kOutput_Value, kVfxPlugType_Transform, &value);
-}
-
-void VfxNodeTransformLiteral::initSelf(const GraphNode & node)
-{
-	// todo : parse node.editorValue;
-}
-
-//
-
 VfxNodeStringLiteral::VfxNodeStringLiteral()
 	: VfxNodeBase()
 	, value()

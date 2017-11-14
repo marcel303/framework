@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if 0
+
 #include "framework.h"
 #include "vfxNodeComposite.h"
 #include "vfxTypes.h"
@@ -126,3 +128,5 @@ void VfxNodeComposite::tick(const float dt)
 	
 	image.texture = surface->getTexture();
 }
+
+#endif
