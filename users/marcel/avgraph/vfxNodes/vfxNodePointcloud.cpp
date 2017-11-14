@@ -117,7 +117,7 @@ void VfxNodePointcloud::tick(const float dt)
 		      float * __restrict yItr = yChannel.dataRw();
 		      float * __restrict zItr = zChannel.dataRw();
 		
-		// todo : convert depth values into XYZ coordinates
+		// convert depth values into XYZ coordinates
 		
 		if (mode == kMode_Kinect1)
 		{

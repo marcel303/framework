@@ -25,8 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-// todo : implement custom draw to skip traversal when passthrough mode is set
-
 #include "framework.h"
 #include "vfxNodeSurface.h"
 
@@ -77,6 +75,8 @@ VfxNodeSurface::VfxNodeSurface()
 	addInput(kInput_ZNear, kVfxPlugType_Float);
 	addInput(kInput_ZFar, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
+	
+	// we implement custom draw to skip traversal when passthrough mode is set
 	
 	flags |= kFlag_CustomTraverseDraw;
 }

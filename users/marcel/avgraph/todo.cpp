@@ -7,19 +7,27 @@ top priority items:
 - add GPU performance markers
 + fix issue with unable to close node type selection menu without selecting a node
 - add the ability to have dynamic input sockets. use cases: shaders, sub graphs
+	- add support for recovering connections
+	- add support for recovering immediate values
 - add the ability to have dynamic output sockets. use cases: sub graphs
+	- add support for recovering connections
 - add text field to node type select
 # add explicit categories to vfx nodes
 	# decided I don't like it. use first part of node type name to decide category
 	# use last part of node type name as the display name to keep the graph editor UI clean
-- remove registration instance name from VFX_NODE_TYPE
-- add passthrough mode sequence node
-- add custom draw surface node to enable better passthrough behavior
++ remove registration instance name from VFX_NODE_TYPE
++ add passthrough mode sequence node
++ add custom draw surface node to enable better passthrough behavior
 - add a list of xml files to click on for more rapid testing
 - add automated error checking test for existing graph files ?
 - add support for showing multiple notifications
-- search node types based on display name. until a dot is included. switch to full type name when a period is present
++ search node types based on display name. until a dot is included. switch to full type name when a period is present
 - fix SDL text input when selecting a text field before the previously active one (start before stop)
++ push a dummy surface when drawing nodes not connected to the display node
+- add FSFX node which lets one select a shader from a drop down list
+- add a dedicated shader node. no pre-defined inputs at all
+- report shader error log (FSFX, FSFX v2 and shader nodes)
+- add FSFX shaders. use built-in shaders ?
 
 
 todo :
