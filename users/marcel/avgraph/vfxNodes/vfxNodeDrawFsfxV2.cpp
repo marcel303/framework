@@ -124,6 +124,7 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 			
 			GLsizei uniformCount = 0;
 			glGetProgramiv(shader->getProgram(), GL_ACTIVE_UNIFORMS, &uniformCount);
+			checkErrorGL();
 			
 			int socketIndex = VfxNodeBase::inputs.size();
 
@@ -137,6 +138,7 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 				GLenum type;
 				
 				glGetActiveUniform(shader->getProgram(), i, bufferSize, &length, &size, &type, name);
+				checkErrorGL();
 				
 				// built-in?
 				if (!strcmp(name, "screenSize") || !strcmp(name, "colormap"))
@@ -147,6 +149,7 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 					continue;
 				
 				const GLint location = glGetUniformLocation(shader->getProgram(), name);
+				checkErrorGL();
 				
 				//logDebug("uniform %d. name=%s, type=%d, size=%d", i, name, type, size);
 				

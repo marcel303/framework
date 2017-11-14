@@ -202,6 +202,7 @@ void VfxNodeSurface::beforeDraw() const
 	{
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
+		checkErrorGL();
 	}
 }
 
@@ -213,7 +214,10 @@ void VfxNodeSurface::afterDraw() const
 	const ViewMode viewMode = (ViewMode)getInputInt(kInput_ViewMode, 0);
 	
 	if (viewMode == kViewMode_Perspective)
+	{
 		glDisable(GL_DEPTH_TEST);
+		checkErrorGL();
+	}
 	
 	popTransform();
 	
