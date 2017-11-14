@@ -44,7 +44,7 @@ void getFsfxShaderList(std::vector<std::string> & shaderList)
 		for (auto & file : files)
 		{
 			if (Path::GetExtension(file, true) == "ps")
-				s_shaderList.push_back(Path::StripExtension(file));
+				s_shaderList.push_back(file);
 		}
 	}
 	
@@ -110,7 +110,7 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 	
 	if (filename)
 	{
-		shader = new Shader(filename);
+		shader = new Shader(filename, "fsfx/fsfx.vs", filename);
 		
 		//
 		
