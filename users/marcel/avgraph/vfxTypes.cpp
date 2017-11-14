@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "Log.h"
 #include "Parse.h"
 #include "StringEx.h"
 #include "tinyxml2.h"
@@ -177,7 +178,7 @@ void VfxTimeline::load(XMLElement * elem)
 		}
 		else
 		{
-			// todo : emit warning?
+			LOG_WRN("timeline key allocation failed", 0);
 		}
 	}
 
@@ -224,7 +225,8 @@ bool VfxSwizzle::parse(const char * text)
 			}
 			else
 			{
-				// todo : parse string before and after period
+				// parse string before and after period
+				
 				const std::string source = elem.substr(0, period - elem.c_str());
 				channel.sourceIndex = Parse::Int32(source);
 				
