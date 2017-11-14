@@ -28,46 +28,54 @@
 #include "fourier.h"
 #include "vfxNodeSpectrum2D.h"
 #include <cmath>
-#include <GL/glew.h>
+#include <GL/glew.h> // GL_RED
 
-// todo : add normalize option
-// todo : add scale option
-// todo : add channel option
-// todo : add output option : RG32F/real+imag or R32F/length(real, imag)
-// todo : add output channels for real and imag arrays
+VFX_ENUM_TYPE(spectrum2dImageChannel)
+{
+	elem("r");
+	elem("g");
+	elem("b");
+	elem("a");
+}
 
 VFX_NODE_TYPE(VfxNodeSpectrum2D)
 {
 	typeName = "image_cpu.spectrum2d";
 	
 	in("image", "image_cpu");
+	inEnum("channel", "spectrum2dImageChannel");
 	inEnum("mode", "spectrumOutputMode");
 	in("normalize", "bool", "1");
 	in("scale", "float", "1.0");
 	out("image", "image");
+	out("image2", "image");
 	out("channels", "channels");
 }
 
 VfxNodeSpectrum2D::VfxNodeSpectrum2D()
 	: VfxNodeBase()
-	, texture()
+	, texture1()
+	, texture2()
 	, dreal(nullptr)
 	, dimag(nullptr)
-	, imageOutput()
+	, image1Output()
+	, image2Output()
 	, channelsOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
+	addInput(kInput_ImageChannel, kVfxPlugType_Int);
 	addInput(kInput_OutputMode, kVfxPlugType_Int);
 	addInput(kInput_Normalize, kVfxPlugType_Bool);
 	addInput(kInput_Scale, kVfxPlugType_Float);
-	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
+	addOutput(kOutput_Image1, kVfxPlugType_Image, &image1Output);
+	addOutput(kOutput_Image2, kVfxPlugType_Image, &image2Output);
 	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
 }
 
 VfxNodeSpectrum2D::~VfxNodeSpectrum2D()
 {
-	freeTexture();
+	freeTextures();
 }
 
 void VfxNodeSpectrum2D::tick(const float dt)
@@ -75,27 +83,28 @@ void VfxNodeSpectrum2D::tick(const float dt)
 	vfxCpuTimingBlock(VfxNodeSpectrum2D);
 	
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
+	const ImageChannel imageChannel = (ImageChannel)getInputInt(kInput_ImageChannel, 0);
 	const int transformSx = image ? Fourier::upperPowerOf2(image->sx) : 0;
 	const int transformSy = image ? Fourier::upperPowerOf2(image->sy) : 0;
 	const OutputMode outputMode = (OutputMode)getInputInt(kInput_OutputMode, kOutputMode_Channel1And2);
 	const bool normalize = getInputBool(kInput_Normalize, true);
 	const float scale = getInputFloat(kInput_Scale, 1.f);
 	
-	if (image == nullptr || isPassthrough)
+	if (isPassthrough || image == nullptr)
 	{
-		freeTexture();
+		freeTextures();
 	}
-	else if (texture.isChanged(transformSx, transformSy, GL_R32F))
+	else if (texture1.isChanged(transformSx, transformSy, GL_R32F))
 	{
 		if (image->sx == 0 || image->sy == 0)
-			freeTexture();
+			freeTextures();
 		else
-			allocateTexture(transformSx, transformSy);
+			allocateTextures(transformSx, transformSy);
 	}
 	
-	if (texture.id != 0)
+	if (texture1.id != 0 && texture2.id != 0)
 	{
-		const VfxImageCpu::Channel & srcChannel = image->channel[0];
+		const VfxImageCpu::Channel & srcChannel = image->channel[imageChannel];
 		
 		for (int y = 0; y < image->sy; ++y)
 		{
@@ -122,7 +131,14 @@ void VfxNodeSpectrum2D::tick(const float dt)
 			
 			if (outputMode == kOutputMode_Channel1And2)
 			{
-				// nothing to do
+				if (scale != 1.f)
+				{
+					for (int x = 0; x < transformSx; ++x)
+					{
+						rreal[x] = rreal[x] * scale;
+						rimag[x] = rimag[x] * scale;
+					}
+				}
 			}
 			else if (outputMode == kOutputMode_Channel1)
 			{
@@ -162,9 +178,14 @@ void VfxNodeSpectrum2D::tick(const float dt)
 			}
 		}
 		
-		// combined channel mode requires tetxure format change
+		// combined channel mode requires texture format change
 		
-		texture.upload(dreal, 4, transformSx, GL_RED, GL_FLOAT);
+		texture1.upload(dreal, 4, transformSx, GL_RED, GL_FLOAT);
+		
+		if (outputMode == kOutputMode_Channel1And2)
+			texture2.upload(dimag, 4, transformSx, GL_RED, GL_FLOAT);
+		else
+			texture2.upload(dreal, 4, transformSx, GL_RED, GL_FLOAT);
 		
 		if (outputMode == kOutputMode_Channel1And2)
 		{
@@ -186,22 +207,27 @@ void VfxNodeSpectrum2D::getDescription(VfxNodeDescription & d)
 	d.add(channelsOutput);
 }
 
-void VfxNodeSpectrum2D::allocateTexture(const int sx, const int sy)
+void VfxNodeSpectrum2D::allocateTextures(const int sx, const int sy)
 {
-	freeTexture();
+	freeTextures();
 	
-	texture.allocate(sx, sy, GL_R32F, true, true);
-	texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+	texture1.allocate(sx, sy, GL_R32F, true, true);
+	texture2.allocate(sx, sy, GL_R32F, true, true);
+	
+	texture1.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+	texture2.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 	
 	dreal = new float[sx * sy];
 	dimag = new float[sx * sy];
 	
-	imageOutput.texture = texture.id;
+	image1Output.texture = texture1.id;
+	image2Output.texture = texture2.id;
 }
 
-void VfxNodeSpectrum2D::freeTexture()
+void VfxNodeSpectrum2D::freeTextures()
 {
-	texture.free();
+	texture1.free();
+	texture2.free();
 	
 	delete[] dreal;
 	dreal = nullptr;
@@ -209,7 +235,8 @@ void VfxNodeSpectrum2D::freeTexture()
 	delete[] dimag;
 	dimag = nullptr;
 	
-	imageOutput.texture = 0;
+	image1Output.texture = 0;
+	image2Output.texture = 0;
 	
 	channelsOutput.reset();
 }
