@@ -342,6 +342,7 @@ class Surface
 {
 	int m_size[2];
 	int m_bufferId;
+	SURFACE_FORMAT m_format;
 	bool m_doubleBuffered;
 	GLuint m_buffer[2];
 	GLuint m_texture[2];
@@ -365,6 +366,7 @@ public:
 	GLuint getDepthTexture() const;
 	int getWidth() const;
 	int getHeight() const;
+	SURFACE_FORMAT getFormat() const;
 	
 	void clear(int r = 0, int g = 0, int b = 0, int a = 0);
 	void clearf(float r = 0.f, float g = 0.f, float b = 0.f, float a = 0.f);

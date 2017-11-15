@@ -1259,6 +1259,8 @@ void Surface::construct()
 	
 	m_bufferId = 0;
 	
+	m_format = (SURFACE_FORMAT)-1;
+	
 	m_doubleBuffered = false;
 
 	m_buffer[0] = 0;
@@ -1298,7 +1300,9 @@ void Surface::destruct()
 		m_depthTexture = 0;
 		checkErrorGL();
 	}
-
+	
+	m_format = (SURFACE_FORMAT)-1;
+	
 	m_doubleBuffered = false;
 }
 
@@ -1353,6 +1357,8 @@ bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, 
 	
 	m_size[0] = sx * framework.minification;
 	m_size[1] = sy * framework.minification;
+	
+	m_format = format;
 	
 	m_doubleBuffered = doubleBuffered;
 
@@ -1501,6 +1507,11 @@ int Surface::getWidth() const
 int Surface::getHeight() const
 {
 	return m_size[1];
+}
+
+SURFACE_FORMAT Surface::getFormat() const
+{
+	return m_format;
 }
 
 void Surface::clear(int r, int g, int b, int a)
