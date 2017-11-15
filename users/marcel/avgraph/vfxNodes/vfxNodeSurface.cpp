@@ -33,6 +33,12 @@ extern const int GFX_SY;
 
 extern Surface * g_currentVfxSurface;
 
+VFX_ENUM_TYPE(surfaceFormat)
+{
+	elem("rgba8");
+	elem("rgba16f");
+}
+
 VFX_ENUM_TYPE(surfaceViewMode)
 {
 	elem("screen");
@@ -44,6 +50,7 @@ VFX_NODE_TYPE(VfxNodeSurface)
 	typeName = "draw.surface";
 	
 	in("source", "any");
+	inEnum("format", "surfaceFormat");
 	in("clear", "bool", "1");
 	in("clearColor", "color", "fff");
 	in("darken", "bool", "0");
@@ -64,6 +71,7 @@ VfxNodeSurface::VfxNodeSurface()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_DontCare, kVfxPlugType_DontCare);
+	addInput(kInput_Format, kVfxPlugType_Int);
 	addInput(kInput_Clear, kVfxPlugType_Bool);
 	addInput(kInput_ClearColor, kVfxPlugType_Color);
 	addInput(kInput_Darken, kVfxPlugType_Bool);
@@ -86,13 +94,13 @@ VfxNodeSurface::~VfxNodeSurface()
 	freeSurface();
 }
 
-void VfxNodeSurface::allocSurface(const bool withDepthBuffer)
+void VfxNodeSurface::allocSurface(const SURFACE_FORMAT format, const bool withDepthBuffer)
 {
 	freeSurface();
 	
 	//
 	
-	surface = new Surface(GFX_SX, GFX_SY, withDepthBuffer, true, SURFACE_RGBA16F);
+	surface = new Surface(GFX_SX, GFX_SY, withDepthBuffer, true, format);
 	surface->clear();
 	surface->clearDepth(1.f);
 }
@@ -105,16 +113,6 @@ void VfxNodeSurface::freeSurface()
 	surface = nullptr;
 }
 
-void VfxNodeSurface::init(const GraphNode & node)
-{
-	const ViewMode viewMode = (ViewMode)getInputInt(kInput_ViewMode, 0);
-	
-	const bool withDepthBuffer = (viewMode == kViewMode_Perspective);
-	
-	if (surface == nullptr || withDepthBuffer != surface->hasDepthTexture())
-		allocSurface(withDepthBuffer);
-}
-
 void VfxNodeSurface::tick(const float dt)
 {
 	if (isPassthrough)
@@ -123,12 +121,15 @@ void VfxNodeSurface::tick(const float dt)
 		return;
 	}
 	
+	const Format format = (Format)getInputInt(kInput_Format, 0);
 	const ViewMode viewMode = (ViewMode)getInputInt(kInput_ViewMode, 0);
+	
+	const SURFACE_FORMAT surfaceFormat = (format == kFormat_RGBA8) ? SURFACE_RGBA8 :  SURFACE_RGBA16F;
 	
 	const bool withDepthBuffer = (viewMode == kViewMode_Perspective);
 	
-	if (surface == nullptr || withDepthBuffer != surface->hasDepthTexture())
-		allocSurface(withDepthBuffer);
+	if (surface == nullptr || withDepthBuffer != surface->hasDepthTexture() || surfaceFormat != surface->getFormat())
+		allocSurface(surfaceFormat, withDepthBuffer);
 }
 
 void VfxNodeSurface::customTraverseDraw(const int traversalId) const

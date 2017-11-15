@@ -33,6 +33,12 @@ class Surface;
 
 struct VfxNodeSurface : VfxNodeBase
 {
+	enum Format
+	{
+		kFormat_RGBA8,
+		kFormat_RGBA16F
+	};
+	
 	enum ViewMode
 	{
 		kViewMode_Screen,
@@ -42,6 +48,7 @@ struct VfxNodeSurface : VfxNodeBase
 	enum Input
 	{
 		kInput_DontCare,
+		kInput_Format,
 		kInput_Clear,
 		kInput_ClearColor,
 		kInput_Darken,
@@ -70,10 +77,8 @@ struct VfxNodeSurface : VfxNodeBase
 	VfxNodeSurface();
 	virtual ~VfxNodeSurface() override;
 	
-	void allocSurface(const bool withDepthBuffer);
+	void allocSurface(const SURFACE_FORMAT format, const bool withDepthBuffer);
 	void freeSurface();
-	
-	virtual void init(const GraphNode & node) override;
 	
 	virtual void tick(const float dt) override;
 	
