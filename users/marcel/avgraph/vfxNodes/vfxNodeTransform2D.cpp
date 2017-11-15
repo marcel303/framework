@@ -28,6 +28,8 @@
 #include "framework.h"
 #include "vfxNodeTransform2D.h"
 
+// todo : rename transform output to any
+
 VFX_NODE_TYPE(VfxNodeTransform2D)
 {
 	typeName = "draw.transform2d";
@@ -40,7 +42,7 @@ VFX_NODE_TYPE(VfxNodeTransform2D)
 	in("scaleY", "float", "1");
 	in("angle", "float");
 	in("angle_norm", "float");
-	out("transform", "transform");
+	out("transform", "any");
 }
 
 VfxNodeTransform2D::VfxNodeTransform2D()
@@ -56,6 +58,7 @@ VfxNodeTransform2D::VfxNodeTransform2D()
 	addInput(kInput_ScaleY, kVfxPlugType_Float);
 	addInput(kInput_Angle, kVfxPlugType_Float);
 	addInput(kInput_AngleNorm, kVfxPlugType_Float);
+	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
 }
 
 void VfxNodeTransform2D::tick(const float dt)

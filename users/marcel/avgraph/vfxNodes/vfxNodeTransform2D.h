@@ -48,6 +48,7 @@ struct VfxNodeTransform2D : VfxNodeBase
 	
 	enum Output
 	{
+		kOutput_Any,
 		kOutput_COUNT
 	};
 	
