@@ -4707,8 +4707,6 @@ void GraphEdit::showNotification(const char * format, ...)
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 	
-	notifications.clear();
-	
 	Notification n;
 	n.text = text;
 	n.displayTime = 2.f;
@@ -5144,12 +5142,14 @@ void GraphEdit::draw() const
 	
 	if (!notifications.empty())
 	{
+		gxPushMatrix();
+		
 		const int kWidth = 200;
 		const int kHeight = 40;
 		
-		const Notification & n = notifications.front();
+		auto & firstNotification = notifications.front();
 		
-		const float t = n.displayTime * n.displayTimeRcp;
+		const float t = firstNotification.displayTime * firstNotification.displayTimeRcp;
 		const float tMoveUp = .05f;
 		const float tMoveDown = .05f;
 		
@@ -5162,15 +5162,25 @@ void GraphEdit::draw() const
 		
 		y *= 50;
 		
-		setColor(colorBlack);
-		drawRect(GFX_SX/2 - kWidth, GFX_SY - y, GFX_SX/2 + kWidth, GFX_SY - y + kHeight);
+		gxTranslatef(0, GFX_SY - y, 0);
 		
-		setColor(colorWhite);
-		drawRectLine(GFX_SX/2 - kWidth, GFX_SY - y, GFX_SX/2 + kWidth, GFX_SY - y + kHeight);
+		for (auto & n : notifications)
+		{
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			{
+				setColor(0, 0, 0, 191);
+				hqFillRoundedRect(GFX_SX/2 - kWidth, 0, GFX_SX/2 + kWidth, kHeight, 7.f);
+			}
+			hqEnd();
+			
+			setColor(colorWhite);
+			setFont("calibri.ttf");
+			drawText(GFX_SX/2, kHeight/2, 18, 0.f, 0.f, "%s", n.text.c_str());
+			
+			gxTranslatef(0, -50, 0);
+		}
 		
-		setColor(colorWhite);
-		setFont("calibri.ttf");
-		drawText(GFX_SX/2, GFX_SY - y + kHeight/2, 18, 0.f, 0.f, "%s", n.text.c_str());
+		gxPopMatrix();
 	}
 	
 	HitTestResult hitTestResult;
