@@ -478,6 +478,8 @@ void VfxNodeFsfx::init(const GraphNode & node)
 void VfxNodeFsfx::getDescription(VfxNodeDescription & d)
 {
 	d.add("shader constants:");
+	if (dynamicInputs.empty())
+		d.add("(none)");
 	for (int i = 0; i < dynamicInputs.size(); ++i)
 	{
 		auto & input = dynamicInputs[i];
@@ -495,5 +497,14 @@ void VfxNodeFsfx::getDescription(VfxNodeDescription & d)
 			Assert(false);
 			d.add("%s: n/a", input.name.c_str());
 		}
+	}
+	
+	std::vector<std::string> errorMessages;
+	if (shader && shader->getErrorMessages(errorMessages))
+	{
+		d.newline();
+		d.add("error messages:");
+		for (auto & errorMessage : errorMessages)
+			d.add("%s", errorMessage.c_str());
 	}
 }

@@ -141,11 +141,18 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 				checkErrorGL();
 				
 				// built-in?
-				if (!strcmp(name, "screenSize") || !strcmp(name, "colormap"))
+				if (!strcmp(name, "screenSize") ||
+					!strcmp(name, "colormap"))
 					continue;
 				
 				// standardized input?
-				if (!strcmp(name, "image1") || !strcmp(name, "image2") || !strcmp(name, "color1") || !strcmp(name, "param1") || !strcmp(name, "param2") || !strcmp(name, "time") || !strcmp(name, "opacity"))
+				if (!strcmp(name, "image1") ||
+					!strcmp(name, "image2") ||
+					!strcmp(name, "color1") ||
+					!strcmp(name, "param1") ||
+					!strcmp(name, "param2") ||
+					!strcmp(name, "time") ||
+					!strcmp(name, "opacity"))
 					continue;
 				
 				const GLint location = glGetUniformLocation(shader->getProgram(), name);
@@ -413,6 +420,8 @@ void VfxNodeFsfxV2::init(const GraphNode & node)
 void VfxNodeFsfxV2::getDescription(VfxNodeDescription & d)
 {
 	d.add("shader constants:");
+	if (dynamicInputs.empty())
+		d.add("(none)");
 	for (int i = 0; i < dynamicInputs.size(); ++i)
 	{
 		auto & input = dynamicInputs[i];
@@ -430,5 +439,14 @@ void VfxNodeFsfxV2::getDescription(VfxNodeDescription & d)
 			Assert(false);
 			d.add("%s: n/a", input.name.c_str());
 		}
+	}
+	
+	std::vector<std::string> errorMessages;
+	if (shader && shader->getErrorMessages(errorMessages))
+	{
+		d.newline();
+		d.add("error messages:");
+		for (auto & errorMessage : errorMessages)
+			d.add("%s", errorMessage.c_str());
 	}
 }
