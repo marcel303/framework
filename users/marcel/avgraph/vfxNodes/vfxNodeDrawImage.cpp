@@ -64,13 +64,17 @@ void VfxNodeDrawImage::draw() const
 {
 	if (isPassthrough)
 		return;
-		
+
+	vfxCpuTimingBlock(VfxNodeDrawImage);
+
 	const VfxImageBase * image = getInputImage(kInput_Image, nullptr);
 	const SizeMode sizeMode = (SizeMode)getInputInt(kInput_SizeMode, 0);
 	const float opacity = getInputFloat(kInput_Opacity, 1.f);
 	
 	if (image != nullptr)
 	{
+		vfxGpuTimingBlock(VfxNodeDrawImage);
+		
 		const TRANSFORM transform = getTransform();
 		
 		if (transform == TRANSFORM_SCREEN)
