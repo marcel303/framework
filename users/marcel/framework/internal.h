@@ -279,10 +279,11 @@ public:
 	std::string name;
 	std::string vs;
 	std::string ps;
-
+	
 	GLuint program;
 	
 	int version;
+	std::vector<std::string> errorMessages;
 
 	struct
 	{
@@ -325,6 +326,7 @@ public:
 	GLuint program;
 	
 	int version;
+	std::vector<std::string> errorMessages;
 
 	ComputeShaderCacheElem();
 	void free();

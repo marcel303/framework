@@ -1759,6 +1759,19 @@ int Shader::getVersion() const
 	return m_shader ? m_shader->version : 0;
 }
 
+bool Shader::getErrorMessages(std::vector<std::string> & errorMessages) const
+{
+	if (m_shader && !m_shader->errorMessages.empty())
+	{
+		errorMessages = m_shader->errorMessages;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 GLint Shader::getImmediate(const char * name)
 {
 	return glGetUniformLocation(getProgram(), name);
@@ -2019,6 +2032,19 @@ GLuint ComputeShader::getProgram() const
 int ComputeShader::getVersion() const
 {
 	return m_shader ? m_shader->version : 0;
+}
+
+bool ComputeShader::getErrorMessages(std::vector<std::string> & errorMessages) const
+{
+	if (m_shader && !m_shader->errorMessages.empty())
+	{
+		errorMessages = m_shader->errorMessages;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 int ComputeShader::getGroupSx() const

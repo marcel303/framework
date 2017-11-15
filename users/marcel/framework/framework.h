@@ -398,6 +398,7 @@ public:
 	virtual GLuint getProgram() const = 0;
 	virtual SHADER_TYPE getType() const = 0;
 	virtual int getVersion() const = 0;
+	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const = 0;
 };
 
 //
@@ -417,6 +418,7 @@ public:
 	virtual GLuint getProgram() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	virtual int getVersion() const override;
+	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
 	
 	GLint getImmediate(const char * name);
 	GLint getAttribute(const char * name);
@@ -469,6 +471,7 @@ public:
 	virtual GLuint getProgram() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_CS; }
 	virtual int getVersion() const override;
+	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
 
 	int getGroupSx() const;
 	int getGroupSy() const;

@@ -561,6 +561,64 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int
 
 // -----
 
+static void getShaderInfoLog(GLuint shader, const char * source, std::vector<std::string> & lines)
+{
+	GLint logSize = 0;
+
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logSize);
+
+	char * log = new char[logSize];
+
+	glGetShaderInfoLog(shader, logSize, &logSize, log);
+	
+	splitString(log, lines, '\n');
+	
+	delete [] log;
+	log = 0;
+	
+#if 0
+	bool newLine = true;
+	
+	std::string line;
+
+	for (int lineNumber = 1; *source; )
+	{
+		if (newLine)
+		{
+			line.append(String::FormatC("%04d: ", lineNumber));
+			newLine = false;
+		}
+
+		if (*source == '\n' || *source == '\r')
+		{
+			lines.push_back(line);
+			line.clear();
+			
+			newLine = true;
+			lineNumber++;
+		}
+		else
+		{
+			if (*source == '\t')
+			{
+				line.append("    ");
+			}
+			else
+			{
+				line.push_back(*source);
+			}
+		}
+
+		source++;
+	}
+	
+	if (!line.empty())
+	{
+		lines.push_back(line);
+	}
+#endif
+}
+
 static void showShaderInfoLog(GLuint shader, const char * source)
 {
 #if FRAMEWORK_ENABLE_GL_ERROR_LOG
@@ -600,20 +658,25 @@ static void showShaderInfoLog(GLuint shader, const char * source)
 #endif
 }
 
-static void showProgramInfoLog(GLuint program)
+static void getProgramInfoLog(GLuint program, std::string & line)
 {
 	GLint logSize = 0;
 
 	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logSize);
+	
+	line.resize(logSize);
 
-	char * log = new char[logSize];
+	glGetProgramInfoLog(program, logSize, &logSize, &line[0]);
+}
 
-	glGetProgramInfoLog(program, logSize, &logSize, log);
+static void showProgramInfoLog(GLuint program)
+{
+#if FRAMEWORK_ENABLE_GL_ERROR_LOG
+	std::string line;
+	getProgramInfoLog(program, line);
 
-	logError("OpenGL program link failed:\n%s", log);
-
-	delete [] log;
-	log = 0;
+	logError("OpenGL program link failed:\n%s", line.c_str());
+#endif
 }
 
 static bool fileExists(const char * filename)
@@ -702,7 +765,7 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 	return result;
 }
 
-static bool preprocessShader(const std::string & source, std::string & destination)
+static bool preprocessShader(const std::string & source, std::string & destination, std::vector<std::string> & errorMessages)
 {
 	bool result = true;
 
@@ -726,14 +789,17 @@ static bool preprocessShader(const std::string & source, std::string & destinati
 
 			if (!loadFileContents(filename, true, bytes, numBytes))
 			{
+				errorMessages.push_back(String::FormatC("failed to load include file %s", filename));
+				
 				logError("failed to load include file %s", filename);
+				
 				result = false;
 			}
 			else
 			{
 				std::string temp(bytes, numBytes);
 
-				if (!preprocessShader(temp, destination))
+				if (!preprocessShader(temp, destination, errorMessages))
 				{
 					result = false;
 				}
@@ -753,7 +819,7 @@ static bool preprocessShader(const std::string & source, std::string & destinati
 	return result;
 }
 
-static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines)
+static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines, std::vector<std::string> & errorMessages)
 {
 	bool result = true;
 
@@ -762,6 +828,8 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 
 	if (!loadFileContents(filename, true, bytes, numBytes))
 	{
+		errorMessages.push_back("failed to load file contents");
+		
 		result = false;
 	}
 	else
@@ -769,7 +837,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 		std::string source;
 		std::string temp(bytes, numBytes);
 
-		if (!preprocessShader(temp, source))
+		if (!preprocessShader(temp, source, errorMessages))
 		{
 			result = false;
 		}
@@ -818,6 +886,8 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 				result = false;
 
 				showShaderInfoLog(shader, source.c_str());
+				
+				getShaderInfoLog(shader, source.c_str(), errorMessages);
 			}
 		}
 	}
@@ -869,6 +939,8 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	
 	version++;
 	
+	errorMessages.clear();
+	
 	bool hasVs = fileExists(vs.c_str());
 	bool hasPs = fileExists(ps.c_str());
 	
@@ -876,16 +948,16 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	GLuint shaderPs = 0;
 	
 	if (hasVs)
-		result &= loadShader(vs.c_str(), shaderVs, GL_VERTEX_SHADER, "");
+		result &= loadShader(vs.c_str(), shaderVs, GL_VERTEX_SHADER, "", errorMessages);
 	else
 	{
+		errorMessages.push_back(String::Format("shader %s doesn't have a vertex shader. cannot load", _name));
 		logWarning("shader %s doesn't have a vertex shader. cannot load", _name);
-
 		result &= false;
 	}
 
 	if (hasPs)
-		result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER, "");
+		result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER, "", errorMessages);
 	
 	if (result)
 	{
@@ -931,6 +1003,11 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 		if (success != GL_TRUE)
 		{
 			result = false;
+			
+			std::string log;
+			getProgramInfoLog(program, log);
+			errorMessages.push_back("program log:");
+			errorMessages.push_back(log);
 			
 			showProgramInfoLog(program);
 		}
@@ -1057,6 +1134,8 @@ void ComputeShaderCacheElem::load(const char * _name, const int _groupSx, const 
 	groupSz = _groupSz;
 	
 	version++;
+	
+	errorMessages.clear();
 
 	GLuint shaderCs = 0;
 
@@ -1066,7 +1145,7 @@ void ComputeShaderCacheElem::load(const char * _name, const int _groupSx, const 
 		groupSy,
 		groupSz);
 
-	result &= loadShader(name.c_str(), shaderCs, GL_COMPUTE_SHADER, defines);
+	result &= loadShader(name.c_str(), shaderCs, GL_COMPUTE_SHADER, defines, errorMessages);
 
 	if (result)
 	{
