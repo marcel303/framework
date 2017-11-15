@@ -85,6 +85,9 @@ VfxNodeDrawPrimitive::VfxNodeDrawPrimitive()
 
 void VfxNodeDrawPrimitive::draw() const
 {
+	if (isPassthrough)
+		return;
+	
 	vfxCpuTimingBlock(VfxNodeDrawPrimitive);
 	vfxGpuTimingBlock(VfxNodeDrawPrimitive);
 	
