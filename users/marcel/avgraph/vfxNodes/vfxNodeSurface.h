@@ -71,6 +71,7 @@ struct VfxNodeSurface : VfxNodeBase
 	Surface * surface;
 	
 	mutable Surface * oldSurface;
+	mutable int oldDepthTestEnabled;
 	
 	mutable VfxImage_Texture imageOutput;
 	

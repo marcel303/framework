@@ -68,6 +68,7 @@ VfxNodeSurface::VfxNodeSurface()
 	: VfxNodeBase()
 	, surface(nullptr)
 	, oldSurface(nullptr)
+	, oldDepthTestEnabled(false)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_DontCare, kVfxPlugType_DontCare);
@@ -129,7 +130,11 @@ void VfxNodeSurface::tick(const float dt)
 	const bool withDepthBuffer = (viewMode == kViewMode_Perspective);
 	
 	if (surface == nullptr || withDepthBuffer != surface->hasDepthTexture() || surfaceFormat != surface->getFormat())
+	{
+		logDebug("allocating surface. withDepthBuffer=%d, format=%d", withDepthBuffer, surfaceFormat);
+		
 		allocSurface(surfaceFormat, withDepthBuffer);
+	}
 }
 
 void VfxNodeSurface::customTraverseDraw(const int traversalId) const
@@ -163,6 +168,8 @@ void VfxNodeSurface::beforeDraw() const
 	oldSurface = g_currentVfxSurface;
 	g_currentVfxSurface = surface;
 	
+	glGetIntegerv(GL_DEPTH_TEST, &oldDepthTestEnabled);
+	
 	pushSurface(surface);
 	
 	if (clear)
@@ -195,12 +202,17 @@ void VfxNodeSurface::beforeDraw() const
 	pushTransform();
 	
 	if (viewMode == kViewMode_Screen)
+	{
 		projectScreen2d();
-	if (viewMode == kViewMode_Perspective)
-		projectPerspective3d(fov, zNear, zFar);
+		
+		glDisable(GL_DEPTH_TEST);
+		checkErrorGL();
+	}
 	
 	if (viewMode == kViewMode_Perspective)
 	{
+		projectPerspective3d(fov, zNear, zFar);
+		
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
 		checkErrorGL();
@@ -212,9 +224,12 @@ void VfxNodeSurface::afterDraw() const
 	if (isPassthrough)
 		return;
 	
-	const ViewMode viewMode = (ViewMode)getInputInt(kInput_ViewMode, 0);
-	
-	if (viewMode == kViewMode_Perspective)
+	if (oldDepthTestEnabled)
+	{
+		glEnable(GL_DEPTH_TEST);
+		checkErrorGL();
+	}
+	else
 	{
 		glDisable(GL_DEPTH_TEST);
 		checkErrorGL();
