@@ -2506,18 +2506,49 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		
 		auto srcNodeData = tryGetNodeData(link.srcNodeId);
 		
-		link.srcNodeSocketIndex = -1;
-		
-		Assert(srcNodeData);
-		if (srcNodeData)
+		if (!srcNodeData->dynamicSockets.inputSockets.empty())
 		{
-			int index = 0;
-			
-			for (auto & inputSocket : srcNodeData->dynamicSockets.inputSockets)
+			if (link.srcNodeSocketIndex < 0 || link.srcNodeSocketIndex >= srcNodeData->dynamicSockets.numStaticInputSockets)
 			{
-				if (link.srcNodeSocketName == inputSocket.name)
-					link.srcNodeSocketIndex = index;
-				index++;
+				link.srcNodeSocketIndex = -1;
+				
+				Assert(srcNodeData);
+				if (srcNodeData)
+				{
+					int index = 0;
+					
+					for (auto & inputSocket : srcNodeData->dynamicSockets.inputSockets)
+					{
+						if (link.srcNodeSocketName == inputSocket.name)
+							link.srcNodeSocketIndex = index;
+						index++;
+					}
+				}
+			}
+		}
+		
+		//
+		
+		auto dstNodeData = tryGetNodeData(link.dstNodeId);
+		
+		if (!dstNodeData->dynamicSockets.outputSockets.empty())
+		{
+			if (link.dstNodeSocketIndex < 0 || link.dstNodeSocketIndex >= dstNodeData->dynamicSockets.numStaticOutputSockets)
+			{
+				link.dstNodeSocketIndex = -1;
+				
+				Assert(dstNodeData);
+				if (dstNodeData)
+				{
+					int index = 0;
+					
+					for (auto & outputSocket : dstNodeData->dynamicSockets.outputSockets)
+					{
+						if (link.dstNodeSocketName == outputSocket.name)
+							link.dstNodeSocketIndex = index;
+						index++;
+					}
+				}
 			}
 		}
 	}
@@ -5896,7 +5927,7 @@ void GraphEdit::nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
 	Assert(node != nullptr);
 	
 	// allocate nodeData
-	NodeData & nodeData = nodeDatas[nodeId];
+	nodeDatas[nodeId];
 	
 	if (realTimeConnection != nullptr && node->nodeType == kGraphNodeType_Regular)
 	{
