@@ -467,7 +467,7 @@ static void testDynamicInputs()
 	
 	g_currentVfxGraph = &g;
 	{
-		VfxNodeBase::DynamicPlug inputs[2];
+		VfxNodeBase::DynamicInput inputs[2];
 		inputs[0].name = "a";
 		inputs[0].type = kVfxPlugType_Float;
 		inputs[1].name = "b";
@@ -481,9 +481,12 @@ static void testDynamicInputs()
 		
 		//
 		
-		VfxNodeBase::DynamicPlug outputs[2];
+		float value = 1.f;
+		
+		VfxNodeBase::DynamicOutput outputs[1];
 		outputs[0].name = "a";
 		outputs[0].type = kVfxPlugType_Float;
+		outputs[0].mem = &value;
 		
 		node2->setDynamicOutputs(outputs, 1);
 		
@@ -514,6 +517,14 @@ static void handleAction(const std::string & action, const Dictionary & args)
 	}
 }
 
+static void handleRealTimeEdit(const std::string & filename)
+{
+	if (String::StartsWith(filename, "fsfx/"))
+	{
+		// todo : reload shader
+	}
+}
+
 //
 
 int main(int argc, char * argv[])
@@ -530,6 +541,7 @@ int main(int argc, char * argv[])
 	
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
+	framework.realTimeEditCallback = handleRealTimeEdit;
 	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{

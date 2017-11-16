@@ -5,7 +5,6 @@ top priority items:
 	- like the BANG node in max
 	- add ability to trigger any input/output trigger (?)
 - add GPU performance markers
-+ fix issue with unable to close node type selection menu without selecting a node
 - add the ability to have dynamic input sockets. use cases: shaders, sub graphs
 	- add support for recovering connections
 	- add support for recovering immediate values
@@ -15,19 +14,17 @@ top priority items:
 # add explicit categories to vfx nodes
 	# decided I don't like it. use first part of node type name to decide category
 	# use last part of node type name as the display name to keep the graph editor UI clean
-+ remove registration instance name from VFX_NODE_TYPE
-+ add passthrough mode sequence node
-+ add custom draw surface node to enable better passthrough behavior
 - add a list of xml files to click on for more rapid testing
 - add automated error checking test for existing graph files ?
-- add support for showing multiple notifications
-+ search node types based on display name. until a dot is included. switch to full type name when a period is present
 - fix SDL text input when selecting a text field before the previously active one (start before stop)
-+ push a dummy surface when drawing nodes not connected to the display node
 - add FSFX node which lets one select a shader from a drop down list
 - add a dedicated shader node. no pre-defined inputs at all
-- report shader error log (FSFX, FSFX v2 and shader nodes)
 - add FSFX shaders. use built-in shaders ?
+- add FSFX shaderSource which exposes main function and uses applyFsfx function from .fsfx file to change pixels. also exposes shared uniforms, applies alpha blended, opacity control, color mode and color post
+	+ used a format option instead
+- rename fsfx v1 to imfx ? redefine behavior to run shader over an image. expressly output as image
+- how to convert multiple channels to gpu image with channel(s).toGpu ?
+- add ability for nodes to report warnings and errors
 
 
 todo :
@@ -69,8 +66,6 @@ todo :
 - add ability to reference nodes? makes graph organization more easy
 - drag link into empty space = open node type selection menu
 + add copy and paste text support
-- how to convert multiple channels to gpu image with channel(s).toGpu ?
-- add ability for nodes to report warnings and errors
 
 
 todo : creativity investigation :
@@ -153,6 +148,7 @@ todo : nodes :
 - add text list node. next! prev! rand! custom editor for list of strings
 - add audioGraph node
 - create separate and vfxGraph project with CMake files
+- have the model node also expose channels ?
 
 
 todo : fsfx :
@@ -333,7 +329,17 @@ todo :
 	+ add way for UI/editor to tell update loop it's animating something (camera..)
 + add node editors. when double clicking a node (or some other gesture/interaction), show the node editor. let the node editor operate on the node's data.
 	+ let the node editor be independent of the implementation ? it should be possible to have a fully functional graph, graph node and resource editing environment without a live version of the graph running in the background. this means the saveBegin real-time editing callback should be removed again once we got this working
- 
+ + fix issue with unable to close node type selection menu without selecting a node
++ remove registration instance name from VFX_NODE_TYPE
++ add passthrough mode sequence node
++ add custom draw surface node to enable better passthrough behavior
++ add support for showing multiple notifications
++ search node types based on display name. until a dot is included. switch to full type name when a period is present
++ push a dummy surface when drawing nodes not connected to the display node
++ report shader error log (FSFX, FSFX v2 and shader nodes)
++ add 'float' boolean to surface node. default.. true ?
++ add draw.text class
+
 
 todo : nodes :
 + add ease node

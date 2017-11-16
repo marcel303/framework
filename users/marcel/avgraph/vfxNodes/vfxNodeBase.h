@@ -455,10 +455,17 @@ struct VfxNodeBase
 		TriggerTarget();
 	};
 	
-	struct DynamicPlug
+	struct DynamicInput
 	{
 		std::string name;
 		VfxPlugType type;
+	};
+	
+	struct DynamicOutput
+	{
+		std::string name;
+		VfxPlugType type;
+		void * mem;
 	};
 	
 	struct DynamicLink
@@ -490,8 +497,8 @@ struct VfxNodeBase
 	
 	std::vector<VfxNodeBase*> predeps;
 	std::vector<TriggerTarget> triggerTargets;
-	std::vector<DynamicPlug> dynamicInputs;
-	std::vector<DynamicPlug> dynamicOutputs;
+	std::vector<DynamicInput> dynamicInputs;
+	std::vector<DynamicOutput> dynamicOutputs;
 	std::vector<DynamicLink> dynamicLinks;
 	
 	int flags;
@@ -546,8 +553,8 @@ struct VfxNodeBase
 	}
 	
 	void reconnectDynamicInputs(const int dstNodeId = -1);
-	void setDynamicInputs(const DynamicPlug * newInputs, const int numInputs);
-	void setDynamicOutputs(const DynamicPlug * newOutputs, const int numOutputs);
+	void setDynamicInputs(const DynamicInput * newInputs, const int numInputs);
+	void setDynamicOutputs(const DynamicOutput * newOutputs, const int numOutputs);
 	
 	VfxPlug * tryGetInput(const int index)
 	{

@@ -31,6 +31,8 @@
 #include "vfxGraph.h"
 #include "vfxNodeDrawFsfxV2.h"
 
+static bool initialized = false;
+
 static std::vector<std::string> s_shaderList;
 static bool shaderListIsInitialized = false;
 
@@ -58,6 +60,40 @@ static const char * toShaderName(const int index)
 	else
 		return s_shaderList[index].c_str();
 }
+
+static const char * s_fsfxCommonInc = R"SHADER(
+	include engine/ShaderPS.txt
+	include engine/ShaderUtil.txt
+
+	uniform vec4 params;
+
+	uniform sampler2D colormap;
+	uniform sampler2D image1;
+	uniform sampler2D image2;
+	uniform vec4 color1;
+	uniform float param1;
+	uniform float param2;
+	uniform float time;
+	uniform float opacity;
+
+	shader_in vec2 texcoord;
+
+	vec4 fsfx();
+
+	void main()
+	{
+		vec4 baseColor = texture(colormap, texcoord);
+		
+		vec4 color = fsfx();
+		
+		color = applyColorPost(color, params.z);
+		
+		if (color.a != 1.0)
+			color = mix(baseColor, color, color.a);
+		
+		shader_fragColor = color;
+	}
+)SHADER";
 
 VFX_NODE_TYPE(VfxNodeFsfxV2)
 {
@@ -94,6 +130,13 @@ VfxNodeFsfxV2::VfxNodeFsfxV2()
 	addInput(kInput_Time, kVfxPlugType_Float);
 	addInput(kInput_Opacity, kVfxPlugType_Float);
 	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
+	
+	if (initialized == false)
+	{
+		initialized = true;
+		
+		shaderSource("fsfx/common.inc", s_fsfxCommonInc);
+	}
 }
 
 VfxNodeFsfxV2::~VfxNodeFsfxV2()
@@ -120,7 +163,7 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 		}
 		else
 		{
-			std::vector<DynamicPlug> inputs;
+			std::vector<DynamicInput> inputs;
 			
 			GLsizei uniformCount = 0;
 			glGetProgramiv(shader->getProgram(), GL_ACTIVE_UNIFORMS, &uniformCount);
@@ -142,7 +185,8 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 				
 				// built-in?
 				if (!strcmp(name, "screenSize") ||
-					!strcmp(name, "colormap"))
+					!strcmp(name, "colormap") ||
+					!strcmp(name, "params"))
 					continue;
 				
 				// standardized input?
@@ -162,42 +206,42 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 				
 				if (type == GL_FLOAT)
 				{
-					ShaderInput input;
-					input.type = type;
-					input.socketType = kVfxPlugType_Float;
-					input.socketIndex = socketIndex++;
-					input.uniformLocation = location;
-					shaderInputs.push_back(input);
+					ShaderInput shaderInput;
+					shaderInput.type = type;
+					shaderInput.socketType = kVfxPlugType_Float;
+					shaderInput.socketIndex = socketIndex++;
+					shaderInput.uniformLocation = location;
+					shaderInputs.push_back(shaderInput);
 					
-					DynamicPlug plug;
-					plug.name = name;
-					plug.type = kVfxPlugType_Float;
-					inputs.push_back(plug);
+					DynamicInput input;
+					input.name = name;
+					input.type = kVfxPlugType_Float;
+					inputs.push_back(input);
 				}
 				else if (type == GL_FLOAT_VEC2 || type == GL_FLOAT_VEC3 || type == GL_FLOAT_VEC4)
 				{
 					if (String::StartsWith(name, "color"))
 					{
-						ShaderInput input;
-						input.type = type;
-						input.socketType = kVfxPlugType_Color;
-						input.socketIndex = socketIndex++;
-						input.uniformLocation = location;
-						shaderInputs.push_back(input);
+						ShaderInput shaderInput;
+						shaderInput.type = type;
+						shaderInput.socketType = kVfxPlugType_Color;
+						shaderInput.socketIndex = socketIndex++;
+						shaderInput.uniformLocation = location;
+						shaderInputs.push_back(shaderInput);
 					
-						DynamicPlug plug;
-						plug.name = name;
-						plug.type = kVfxPlugType_Color;
-						inputs.push_back(plug);
+						DynamicInput input;
+						input.name = name;
+						input.type = kVfxPlugType_Color;
+						inputs.push_back(input);
 					}
 					else
 					{
-						ShaderInput input;
-						input.type = type;
-						input.socketType = kVfxPlugType_Float;
-						input.socketIndex = socketIndex;
-						input.uniformLocation = location;
-						shaderInputs.push_back(input);
+						ShaderInput shaderInput;
+						shaderInput.type = type;
+						shaderInput.socketType = kVfxPlugType_Float;
+						shaderInput.socketIndex = socketIndex;
+						shaderInput.uniformLocation = location;
+						shaderInputs.push_back(shaderInput);
 					
 						const int numElems = type == GL_FLOAT_VEC2 ? 2 : type == GL_FLOAT_VEC3 ? 3 : 4;
 						
@@ -205,10 +249,10 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 						
 						for (int i = 0; i < numElems; ++i)
 						{
-							DynamicPlug plug;
-							plug.name = String::Format("%s.%c", name, elementNames[i]);
-							plug.type = kVfxPlugType_Float;
-							inputs.push_back(plug);
+							DynamicInput input;
+							input.name = String::Format("%s.%c", name, elementNames[i]);
+							input.type = kVfxPlugType_Float;
+							inputs.push_back(input);
 						}
 						
 						socketIndex += numElems;
@@ -216,17 +260,17 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 				}
 				else if (type == GL_SAMPLER_2D)
 				{
-					ShaderInput input;
-					input.type = type;
-					input.socketType = kVfxPlugType_Image;
-					input.socketIndex = socketIndex++;
-					input.uniformLocation = location;
-					shaderInputs.push_back(input);
+					ShaderInput shaderInput;
+					shaderInput.type = type;
+					shaderInput.socketType = kVfxPlugType_Image;
+					shaderInput.socketIndex = socketIndex++;
+					shaderInput.uniformLocation = location;
+					shaderInputs.push_back(shaderInput);
 					
-					DynamicPlug plug;
-					plug.name = name;
-					plug.type = kVfxPlugType_Image;
-					inputs.push_back(plug);
+					DynamicInput input;
+					input.name = name;
+					input.type = kVfxPlugType_Image;
+					inputs.push_back(input);
 				}
 				else
 				{

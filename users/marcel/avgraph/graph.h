@@ -868,10 +868,15 @@ struct GraphEdit : GraphEditConnection
 			std::vector<GraphEdit_TypeDefinition::InputSocket> inputSockets;
 			int numStaticInputSockets;
 			
+			std::vector<GraphEdit_TypeDefinition::OutputSocket> outputSockets;
+			int numStaticOutputSockets;
+			
 			DynamicSockets()
 				: hasDynamicSockets(false)
 				, inputSockets()
 				, numStaticInputSockets(0)
+				, outputSockets()
+				, numStaticOutputSockets()
 			{
 			}
 			
@@ -883,12 +888,16 @@ struct GraphEdit : GraphEditConnection
 					
 					inputSockets.clear();
 					numStaticInputSockets = 0;
+					
+					outputSockets.clear();
+					numStaticOutputSockets = 0;
 				}
 			}
 			
 			void update(
 				const GraphEdit_TypeDefinition & typeDefinition,
-				const std::vector<GraphEdit_RealTimeConnection::DynamicInput> & newInputs)
+				const std::vector<GraphEdit_RealTimeConnection::DynamicInput> & newInputs,
+				const std::vector<GraphEdit_RealTimeConnection::DynamicOutput> & newOutputs)
 			{
 				hasDynamicSockets = true;
 				
@@ -909,6 +918,27 @@ struct GraphEdit : GraphEditConnection
 					input.typeName = newInput.typeName;
 					input.isDynamic = true;
 					input.index = numStaticInputSockets + i;
+				}
+				
+				//
+				
+				outputSockets.resize(typeDefinition.outputSockets.size() + newOutputs.size());
+				numStaticOutputSockets = typeDefinition.outputSockets.size();
+				
+				for (int i = 0; i < typeDefinition.outputSockets.size(); ++i)
+				{
+					outputSockets[i] = typeDefinition.outputSockets[i];
+				}
+				
+				for (int i = 0; i < newOutputs.size(); ++i)
+				{
+					auto & newOutput = newOutputs[i];
+					auto & output = outputSockets[numStaticOutputSockets + i];
+					
+					output.name = newOutput.name;
+					output.typeName = newOutput.typeName;
+					output.isDynamic = true;
+					output.index = numStaticOutputSockets + i;
 				}
 			}
 		};

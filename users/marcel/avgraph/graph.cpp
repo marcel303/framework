@@ -84,7 +84,10 @@ const std::vector<GraphEdit_TypeDefinition::InputSocket> & getInputSockets(const
 
 const std::vector<GraphEdit_TypeDefinition::OutputSocket> & getOutputSockets(const GraphEdit_TypeDefinition & typeDefinition, const GraphEdit::NodeData & nodeData)
 {
-	return typeDefinition.outputSockets;
+	return
+		nodeData.dynamicSockets.hasDynamicSockets
+		? nodeData.dynamicSockets.outputSockets
+		: typeDefinition.outputSockets;
 }
 
 //
@@ -2487,7 +2490,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			{
 				auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 				
-				nodeData.dynamicSockets.update(*typeDefinition, inputs);
+				nodeData.dynamicSockets.update(*typeDefinition, inputs, outputs);
 			}
 		}
 	}

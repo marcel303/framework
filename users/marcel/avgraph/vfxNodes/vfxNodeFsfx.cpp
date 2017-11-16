@@ -129,7 +129,7 @@ void VfxNodeFsfx::loadShader(const char * filename)
 		}
 		else
 		{
-			std::vector<DynamicPlug> inputs;
+			std::vector<DynamicInput> inputs;
 			
 			GLsizei uniformCount = 0;
 			glGetProgramiv(shader->getProgram(), GL_ACTIVE_UNIFORMS, &uniformCount);
@@ -164,42 +164,42 @@ void VfxNodeFsfx::loadShader(const char * filename)
 				
 				if (type == GL_FLOAT)
 				{
-					ShaderInput input;
-					input.type = type;
-					input.socketType = kVfxPlugType_Float;
-					input.socketIndex = socketIndex++;
-					input.uniformLocation = location;
-					shaderInputs.push_back(input);
+					ShaderInput shaderInput;
+					shaderInput.type = type;
+					shaderInput.socketType = kVfxPlugType_Float;
+					shaderInput.socketIndex = socketIndex++;
+					shaderInput.uniformLocation = location;
+					shaderInputs.push_back(shaderInput);
 					
-					DynamicPlug plug;
-					plug.name = name;
-					plug.type = kVfxPlugType_Float;
-					inputs.push_back(plug);
+					DynamicInput input;
+					input.name = name;
+					input.type = kVfxPlugType_Float;
+					inputs.push_back(input);
 				}
 				else if (type == GL_FLOAT_VEC2 || type == GL_FLOAT_VEC3 || type == GL_FLOAT_VEC4)
 				{
 					if (String::StartsWith(name, "color"))
 					{
-						ShaderInput input;
-						input.type = type;
-						input.socketType = kVfxPlugType_Color;
-						input.socketIndex = socketIndex++;
-						input.uniformLocation = location;
-						shaderInputs.push_back(input);
+						ShaderInput shaderInput;
+						shaderInput.type = type;
+						shaderInput.socketType = kVfxPlugType_Color;
+						shaderInput.socketIndex = socketIndex++;
+						shaderInput.uniformLocation = location;
+						shaderInputs.push_back(shaderInput);
 					
-						DynamicPlug plug;
-						plug.name = name;
-						plug.type = kVfxPlugType_Color;
-						inputs.push_back(plug);
+						DynamicInput input;
+						input.name = name;
+						input.type = kVfxPlugType_Color;
+						inputs.push_back(input);
 					}
 					else
 					{
-						ShaderInput input;
-						input.type = type;
-						input.socketType = kVfxPlugType_Float;
-						input.socketIndex = socketIndex;
-						input.uniformLocation = location;
-						shaderInputs.push_back(input);
+						ShaderInput shaderInput;
+						shaderInput.type = type;
+						shaderInput.socketType = kVfxPlugType_Float;
+						shaderInput.socketIndex = socketIndex;
+						shaderInput.uniformLocation = location;
+						shaderInputs.push_back(shaderInput);
 					
 						const int numElems = type == GL_FLOAT_VEC2 ? 2 : type == GL_FLOAT_VEC3 ? 3 : 4;
 						
@@ -207,10 +207,10 @@ void VfxNodeFsfx::loadShader(const char * filename)
 						
 						for (int i = 0; i < numElems; ++i)
 						{
-							DynamicPlug plug;
-							plug.name = String::Format("%s.%c", name, elementNames[i]);
-							plug.type = kVfxPlugType_Float;
-							inputs.push_back(plug);
+							DynamicInput input;
+							input.name = String::Format("%s.%c", name, elementNames[i]);
+							input.type = kVfxPlugType_Float;
+							inputs.push_back(input);
 						}
 						
 						socketIndex += numElems;
@@ -218,17 +218,17 @@ void VfxNodeFsfx::loadShader(const char * filename)
 				}
 				else if (type == GL_SAMPLER_2D)
 				{
-					ShaderInput input;
-					input.type = type;
-					input.socketType = kVfxPlugType_Image;
-					input.socketIndex = socketIndex++;
-					input.uniformLocation = location;
-					shaderInputs.push_back(input);
+					ShaderInput shaderInput;
+					shaderInput.type = type;
+					shaderInput.socketType = kVfxPlugType_Image;
+					shaderInput.socketIndex = socketIndex++;
+					shaderInput.uniformLocation = location;
+					shaderInputs.push_back(shaderInput);
 					
-					DynamicPlug plug;
-					plug.name = name;
-					plug.type = kVfxPlugType_Image;
-					inputs.push_back(plug);
+					DynamicInput input;
+					input.name = name;
+					input.type = kVfxPlugType_Image;
+					inputs.push_back(input);
 				}
 				else
 				{
@@ -290,12 +290,12 @@ void VfxNodeFsfx::tick(const float dt)
 			currentShaderVersion = shader->getVersion();
 		}
 		
-		/*
+	#if 0
 		// todo : remove. test dynamically growing and shrinking list of inputs as a stress test
 		
 		const int kNumInputs = std::round(std::sin(framework.time) * 4.f + 5.f);
 	
-		DynamicPlug inputs[kNumInputs];
+		DynamicInput inputs[kNumInputs];
 		
 		for (int i = 0; i < kNumInputs; ++i)
 		{
@@ -307,7 +307,29 @@ void VfxNodeFsfx::tick(const float dt)
 		}
 		
 		setDynamicInputs(inputs, kNumInputs);
-		*/
+	#endif
+	
+	#if 0
+		// todo : remove. test dynamically growing and shrinking list of inputs as a stress test
+		
+		const int kNumOutputs = std::round(std::sin(framework.time) * 4.f + 5.f);
+	
+		DynamicOutput outputs[kNumOutputs];
+		
+		static float value = 1.f;
+		
+		for (int i = 0; i < kNumOutputs; ++i)
+		{
+			char name[32];
+			sprintf_s(name, sizeof(name), "dynamic%d", i + 1);
+			
+			outputs[i].name = name;
+			outputs[i].type = kVfxPlugType_Float;
+			outputs[i].mem = &value;
+		}
+		
+		setDynamicOutputs(outputs, kNumOutputs);
+	#endif
 	}
 }
 

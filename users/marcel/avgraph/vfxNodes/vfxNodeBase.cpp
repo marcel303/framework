@@ -1002,7 +1002,7 @@ void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
 	}
 }
 
-void VfxNodeBase::setDynamicInputs(const DynamicPlug * newInputs, const int numInputs)
+void VfxNodeBase::setDynamicInputs(const DynamicInput * newInputs, const int numInputs)
 {
 	const int numStaticInputs = inputs.size() - dynamicInputs.size();
 	
@@ -1029,7 +1029,7 @@ void VfxNodeBase::setDynamicInputs(const DynamicPlug * newInputs, const int numI
 	reconnectDynamicInputs();
 }
 
-void VfxNodeBase::setDynamicOutputs(const DynamicPlug * newOutputs, const int numOutputs)
+void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int numOutputs)
 {
 	const int numStaticOutputs = outputs.size() - dynamicOutputs.size();
 	
@@ -1050,7 +1050,7 @@ void VfxNodeBase::setDynamicOutputs(const DynamicPlug * newOutputs, const int nu
 	{
 		outputs[numStaticOutputs + i] = VfxPlug();
 		outputs[numStaticOutputs + i].type = dynamicOutputs[i].type;
-		outputs[numStaticOutputs + i].mem = nullptr; // todo
+		outputs[numStaticOutputs + i].mem = dynamicOutputs[i].mem;
 	}
 	
 	for (auto & link : dynamicLinks)
