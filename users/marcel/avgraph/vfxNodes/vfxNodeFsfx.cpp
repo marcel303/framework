@@ -30,6 +30,8 @@
 #include "vfxGraph.h"
 #include "vfxNodeFsfx.h"
 
+// todo : use current surface size ?
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 
@@ -92,12 +94,15 @@ void VfxNodeFsfx::allocateSurface(const int sx, const int sy)
 	delete surface;
 	surface = nullptr;
 	
-	surface = new Surface(sx, sy, true);
-	
-	surface->clear();
-	surface->swapBuffers();
-	surface->clear();
-	surface->swapBuffers();
+	if (sx > 0 && sy > 0)
+	{
+		surface = new Surface(sx, sy, true);
+		
+		surface->clear();
+		surface->swapBuffers();
+		surface->clear();
+		surface->swapBuffers();
+	}
 }
 
 void VfxNodeFsfx::loadShader(const char * filename)
@@ -432,7 +437,7 @@ void VfxNodeFsfx::draw() const
 	{
 		setEditorIssue("shader is invalid");
 		
-		surface->clear(255, 0, 255);
+		surface->clear(255, 0, 255, 255);
 	}
 	
 	imageOutput.texture = surface->getTexture();
