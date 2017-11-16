@@ -487,6 +487,7 @@ static void AtomicSub(rmtS32 volatile* value, rmtS32 sub)
 }
 
 
+/*
 // Compiler read/write fences (windows implementation)
 static void ReadFence()
 {
@@ -496,6 +497,7 @@ static void ReadFence()
     asm volatile ("" : : : "memory");
 #endif
 }
+*/
 static void WriteFence()
 {
 #if defined(RMT_PLATFORM_WINDOWS) && !defined(__MINGW32__)
@@ -504,7 +506,6 @@ static void WriteFence()
     asm volatile ("" : : : "memory");
 #endif
 }
-
 
 /*
 // Get a shared value with acquire semantics, ensuring the read is complete

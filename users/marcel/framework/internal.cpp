@@ -130,7 +130,11 @@ static void formatDebugOutputGL(char * outStr, size_t outStrSize, GLenum source,
 	sprintf_s(outStr, outStrSize, "OpenGL: %s [source=%s type=%s severity=%s id=%d]", msg, sourceStr, typeStr, severityStr, id);
 }
 
+#if defined(WIN32)
 void __stdcall debugOutputGL(
+#else
+void debugOutputGL(
+#endif
 	GLenum source,
 	GLenum type,
 	GLuint id,
