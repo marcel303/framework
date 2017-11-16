@@ -289,6 +289,8 @@ void shutRealTimeEditing()
 		
 		stream = nullptr;
 	}
+	
+	clearFileInfos();
 }
 
 void tickRealTimeEditing()

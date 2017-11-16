@@ -231,24 +231,6 @@ bool ColorWheel::intersectWheel(const float x, const float y, float & hue) const
 	return true;
 }
 
-static const float computeEdgeValue(const float x1, const float y1, const float x2, const float y2, const float x, const float y)
-{
-	const float dx = x2 - x1;
-	const float dy = y2 - y1;
-	const float s = sqrtf(dx * dx + dy * dy);
-	if (s == 0.f)
-		return 0.f;
-	else
-	{
-		const float nx = dx / s;
-		const float ny = dy / s;
-		const float d1 = x1 * nx + y1 * ny;
-		const float d2 = x  * nx + y  * ny;
-		const float t = (d2 - d1) / s;
-		return t;
-	}
-}
-
 static void computeBarycentric(const float x1, const float y1, const float x2, const float y2, const float x3, const float y3, const float x, const float y, float & b1, float & b2, float & b3)
 {
 	b1 = ((y2 - y3) * (x - x3) + (x3 - x2) * (y - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
