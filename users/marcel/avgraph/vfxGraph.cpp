@@ -152,7 +152,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Float, value));
 	}
-	if (input.type == kVfxPlugType_String)
+	else if (input.type == kVfxPlugType_String)
 	{
 		std::string * value = new std::string();
 		

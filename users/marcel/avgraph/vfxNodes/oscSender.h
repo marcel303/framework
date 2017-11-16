@@ -29,7 +29,7 @@
 
 #include <string>
 
-struct UdpTransmitSocket;
+class UdpTransmitSocket;
 
 struct OscSender
 {
