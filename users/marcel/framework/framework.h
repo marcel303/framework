@@ -1287,6 +1287,8 @@ void showErrorMessage(const char * caption, const char * format, ...);
 
 // builtin shaders
 
+void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma = 1.632f);
+
 void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius);
 void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius);
 void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity);

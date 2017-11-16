@@ -6947,11 +6947,8 @@ void gxSetTexture(GLuint texture)
 
 // builtin shaders
 
-static void makeGaussianKernel(const int kernelSize, ShaderBuffer & kernel)
+void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma)
 {
-	const float s = 1.632f;
-	//const float s = 1.8355f;
-	
 	auto dist = [](const float x) { return .5f * erfcf(-x); };
 	
 	float * values = (float*)alloca(sizeof(float) * kernelSize);
@@ -6963,8 +6960,8 @@ static void makeGaussianKernel(const int kernelSize, ShaderBuffer & kernel)
 			const float x1 = (i - .5f) / float(kernelSize - 1.f);
 			const float x2 = (i + .5f) / float(kernelSize - 1.f);
 			
-			const float y1 = dist(x1 * s);
-			const float y2 = dist(x2 * s);
+			const float y1 = dist(x1 * sigma);
+			const float y2 = dist(x2 * sigma);
 			
 			const float dy = y2 - y1;
 			
