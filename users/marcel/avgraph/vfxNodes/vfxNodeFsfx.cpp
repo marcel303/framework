@@ -30,8 +30,6 @@
 #include "vfxGraph.h"
 #include "vfxNodeFsfx.h"
 
-// todo : use percentage of screen size for surface size instead of width/height
-
 extern const int GFX_SX;
 extern const int GFX_SY;
 
@@ -61,10 +59,8 @@ VfxNodeFsfx::VfxNodeFsfx()
 	, currentShaderVersion(0)
 	, shader(nullptr)
 	, shaderInputs()
-	, image(nullptr)
+	, imageOutput()
 {
-	image = new VfxImage_Texture();
-	
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_Image);
 	addInput(kInput_Shader, kVfxPlugType_String);
@@ -77,14 +73,11 @@ VfxNodeFsfx::VfxNodeFsfx()
 	addInput(kInput_Param2, kVfxPlugType_Float);
 	addInput(kInput_Time, kVfxPlugType_Float);
 	addInput(kInput_Opacity, kVfxPlugType_Float);
-	addOutput(kOutput_Image, kVfxPlugType_Image, image);
+	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
 }
 
 VfxNodeFsfx::~VfxNodeFsfx()
 {
-	delete image;
-	image = nullptr;
-	
 	delete surface;
 	surface = nullptr;
 	
@@ -92,23 +85,19 @@ VfxNodeFsfx::~VfxNodeFsfx()
 	shader = nullptr;
 }
 
-void VfxNodeFsfx::allocateSurface(const int _sx, const int _sy)
+void VfxNodeFsfx::allocateSurface(const int sx, const int sy)
 {
-	const int sx = _sx ? _sx : GFX_SX;
-	const int sy = _sy ? _sy : GFX_SY;
+	Assert(surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight());
 	
-	if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight())
-	{
-		delete surface;
-		surface = nullptr;
-		
-		surface = new Surface(sx, sy, true);
-		
-		surface->clear();
-		surface->swapBuffers();
-		surface->clear();
-		surface->swapBuffers();
-	}
+	delete surface;
+	surface = nullptr;
+	
+	surface = new Surface(sx, sy, true);
+	
+	surface->clear();
+	surface->swapBuffers();
+	surface->clear();
+	surface->swapBuffers();
 }
 
 void VfxNodeFsfx::loadShader(const char * filename)
@@ -252,7 +241,51 @@ void VfxNodeFsfx::freeShader()
 
 void VfxNodeFsfx::tick(const float dt)
 {
-	if (isPassthrough)
+#if 0
+	// todo : remove. test dynamically growing and shrinking list of inputs as a stress test
+	
+	const int kNumInputs = std::round(std::sin(framework.time) * 4.f + 5.f);
+
+	DynamicInput inputs[kNumInputs];
+	
+	for (int i = 0; i < kNumInputs; ++i)
+	{
+		char name[32];
+		sprintf_s(name, sizeof(name), "dynamic%d", i + 1);
+		
+		inputs[i].name = name;
+		inputs[i].type = kVfxPlugType_Float;
+	}
+	
+	setDynamicInputs(inputs, kNumInputs);
+#endif
+
+#if 0
+	// todo : remove. test dynamically growing and shrinking list of inputs as a stress test
+	
+	const int kNumOutputs = std::round(std::sin(framework.time) * 4.f + 5.f);
+
+	DynamicOutput outputs[kNumOutputs];
+	
+	static float value = 1.f;
+	
+	for (int i = 0; i < kNumOutputs; ++i)
+	{
+		char name[32];
+		sprintf_s(name, sizeof(name), "dynamic%d", i + 1);
+		
+		outputs[i].name = name;
+		outputs[i].type = kVfxPlugType_Float;
+		outputs[i].mem = &value;
+	}
+	
+	setDynamicOutputs(outputs, kNumOutputs);
+#endif
+
+	const VfxImageBase * image = getInputImage(kInput_Image, nullptr);
+	const char * shaderName = getInputString(kInput_Shader, nullptr);
+	
+	if (isPassthrough || shaderName == nullptr)
 	{
 		allocateSurface(0, 0);
 		
@@ -264,72 +297,22 @@ void VfxNodeFsfx::tick(const float dt)
 		return;
 	}
 	
-	const int sx = getInputInt(kInput_Width, 0);
-	const int sy = getInputInt(kInput_Height, 0);
-
-	allocateSurface(sx, sy);
+	const int sx = image ? image->getSx() : getInputInt(kInput_Width, GFX_SX);
+	const int sy = image ? image->getSy() : getInputInt(kInput_Height, GFX_SY);
+	
+	if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight())
+	{
+		allocateSurface(sx, sy);
+	}
 	
 	//
 	
-	const char * shaderName = getInputString(kInput_Shader, nullptr);
-	
-	if (shaderName == nullptr)
+	if (shaderName != currentShader || (shader != nullptr && shader->getVersion() != currentShaderVersion))
 	{
-		freeShader();
+		loadShader(shaderName);
 		
-		currentShader.clear();
-		currentShaderVersion = 0;
-	}
-	else
-	{
-		if (shaderName != currentShader || (shader && shader->getVersion() != currentShaderVersion))
-		{
-			loadShader(shaderName);
-			
-			currentShader = shaderName;
-			currentShaderVersion = shader->getVersion();
-		}
-		
-	#if 0
-		// todo : remove. test dynamically growing and shrinking list of inputs as a stress test
-		
-		const int kNumInputs = std::round(std::sin(framework.time) * 4.f + 5.f);
-	
-		DynamicInput inputs[kNumInputs];
-		
-		for (int i = 0; i < kNumInputs; ++i)
-		{
-			char name[32];
-			sprintf_s(name, sizeof(name), "dynamic%d", i + 1);
-			
-			inputs[i].name = name;
-			inputs[i].type = kVfxPlugType_Float;
-		}
-		
-		setDynamicInputs(inputs, kNumInputs);
-	#endif
-	
-	#if 0
-		// todo : remove. test dynamically growing and shrinking list of inputs as a stress test
-		
-		const int kNumOutputs = std::round(std::sin(framework.time) * 4.f + 5.f);
-	
-		DynamicOutput outputs[kNumOutputs];
-		
-		static float value = 1.f;
-		
-		for (int i = 0; i < kNumOutputs; ++i)
-		{
-			char name[32];
-			sprintf_s(name, sizeof(name), "dynamic%d", i + 1);
-			
-			outputs[i].name = name;
-			outputs[i].type = kVfxPlugType_Float;
-			outputs[i].mem = &value;
-		}
-		
-		setDynamicOutputs(outputs, kNumOutputs);
-	#endif
+		currentShader = shaderName;
+		currentShaderVersion = shader->getVersion();
 	}
 }
 
@@ -337,18 +320,17 @@ void VfxNodeFsfx::draw() const
 {
 	vfxCpuTimingBlock(VfxNodeFsfx);
 	
+	const VfxImageBase * image = getInputImage(kInput_Image, nullptr);
+	
 	clearEditorIssue();
 	
-	if (isPassthrough || shader == nullptr)
+	if (isPassthrough || surface == nullptr || shader == nullptr)
 	{
-		const VfxImageBase * inputImage = getInputImage(kInput_Image, nullptr);
-		const GLuint inputTexture = inputImage != nullptr ? inputImage->getTexture() : surface->getTexture();
-		image->texture = inputTexture;
+		imageOutput.texture = image != nullptr ? image->getTexture() : 0;
 		return;
 	}
 	
-	const VfxImageBase * inputImage = getInputImage(kInput_Image, nullptr);
-	const GLuint inputTexture = inputImage != nullptr ? inputImage->getTexture() : surface->getTexture();
+	const GLuint imageTexture = image != nullptr ? image->getTexture() : surface->getTexture();
 	
 	if (shader->isValid())
 	{
@@ -433,7 +415,7 @@ void VfxNodeFsfx::draw() const
 			const float opacity = getInputFloat(kInput_Opacity, 1.f);
 			
 			shader->setImmediate("screenSize", surface->getWidth(), surface->getHeight());
-			shader->setTexture("colormap", textureSlot++, inputTexture, true, false);
+			shader->setTexture("colormap", textureSlot++, imageTexture, true, false);
 			shader->setTexture("image1", textureSlot++, texture1, true, false);
 			shader->setTexture("image2", textureSlot++, texture2, true, false);
 			shader->setImmediate("color1", color->r, color->g, color->b, color->a);
@@ -450,51 +432,10 @@ void VfxNodeFsfx::draw() const
 	{
 		setEditorIssue("shader is invalid");
 		
-		pushSurface(surface);
-		{
-			if (inputImage == nullptr)
-			{
-				pushBlend(BLEND_OPAQUE);
-				setColor(0, 127, 0);
-				drawRect(0, 0, framework.windowSx, framework.windowSy);
-				popBlend();
-			}
-			else
-			{
-				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(inputTexture);
-				pushColorMode(COLOR_ADD);
-				setColor(127, 0, 127);
-				drawRect(0, 0, framework.windowSx, framework.windowSy);
-				popColorMode();
-				gxSetTexture(0);
-				popBlend();
-			}
-		}
-		popSurface();
+		surface->clear(255, 0, 255);
 	}
 	
-	image->texture = surface->getTexture();
-}
-
-void VfxNodeFsfx::init(const GraphNode & node)
-{
-	const int sx = getInputInt(kInput_Width, 0);
-	const int sy = getInputInt(kInput_Height, 0);
-	
-	allocateSurface(sx, sy);
-	
-	//
-	
-	const char * shaderName = getInputString(kInput_Shader, nullptr);
-	
-	if (shaderName)
-	{
-		loadShader(shaderName);
-		
-		currentShader = shaderName;
-		currentShaderVersion = shader->getVersion();
-	}
+	imageOutput.texture = surface->getTexture();
 }
 
 void VfxNodeFsfx::getDescription(VfxNodeDescription & d)

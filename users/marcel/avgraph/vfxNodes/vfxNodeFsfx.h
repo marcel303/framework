@@ -70,7 +70,7 @@ struct VfxNodeFsfx : VfxNodeBase
 	Shader * shader;
 	std::vector<ShaderInput> shaderInputs;
 	
-	VfxImage_Texture * image;
+	mutable VfxImage_Texture imageOutput;
 	
 	VfxNodeFsfx();
 	virtual ~VfxNodeFsfx() override;
@@ -81,8 +81,6 @@ struct VfxNodeFsfx : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 	virtual void draw() const override;
-	
-	virtual void init(const GraphNode & node) override;
 	
 	virtual void getDescription(VfxNodeDescription & d) override;
 };
