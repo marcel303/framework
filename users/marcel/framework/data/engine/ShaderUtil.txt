@@ -1,5 +1,66 @@
 static const char * s_shaderUtil = R"SHADER(
 
+vec4 applyColorMode(vec4 color1, vec4 color2, float mode)
+{
+	/*
+	COLOR_MUL,
+	COLOR_ADD,
+	COLOR_SUB,
+	COLOR_IGNORE
+	*/
+
+	vec4 result = color1;
+	vec4 texColor = color2;
+
+	if (mode == 0)
+	{
+		result.rgb = result.rgb * texColor.rgb;
+		result.a   = result.a   * texColor.a;
+	}
+	else if (mode == 1)
+	{
+		result.rgb = result.rgb + texColor.rgb;
+		result.a   = result.a   * texColor.a;
+	}
+	else if (mode == 2)
+	{
+		result.rgb = result.rgb - texColor.rgb;
+		result.a   = result.a   * texColor.a;
+	}
+	else if (mode == 3)
+	{
+		result.rgb = texColor.rgb;
+		result.a   = texColor.a;
+	}
+
+	return result;
+}
+
+vec4 applyColorPost(vec4 color, float post)
+{
+	/*
+	POST_NONE,
+	POST_RGB_MIX_ALPHA_TO_ZERO,
+	POST_RGB_MIX_ALPHA_TO_ONE
+	*/
+
+	vec4 result = color;
+
+	if (post != 0)
+	{
+		if (post == 1)
+		{
+			result.rgb = mix(vec3(0.0), result.rgb, result.a);
+		}
+		else if (post == 2)
+		{
+			result.rgb = mix(vec3(1.0), result.rgb, result.a);
+		}
+	}
+
+	return result;
+}
+
 float makeTaps(float v, float min, float max, float numTaps)
 {
 	numTaps -= 1.0;
