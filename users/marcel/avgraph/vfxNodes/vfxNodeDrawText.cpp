@@ -65,7 +65,7 @@ VfxNodeDrawText::VfxNodeDrawText()
 	addInput(kInput_Angle, kVfxPlugType_Float);
 	addInput(kInput_Color, kVfxPlugType_Color);
 	addInput(kInput_Opacity, kVfxPlugType_Float);
-	addOutput(kOutput_Any, kVfxPlugType_DontCare, nullptr);
+	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
 }
 
 void VfxNodeDrawText::draw() const
