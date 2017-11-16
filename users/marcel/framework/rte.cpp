@@ -283,6 +283,7 @@ void shutRealTimeEditing()
 {
 	if (stream != nullptr)
 	{
+		FSEventStreamStop(stream);
 		FSEventStreamInvalidate(stream);
 		FSEventStreamRelease(stream);
 		
