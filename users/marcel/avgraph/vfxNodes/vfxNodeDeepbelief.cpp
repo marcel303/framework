@@ -39,7 +39,6 @@ VFX_NODE_TYPE(VfxNodeDeepbelief)
 	in("image", "image_cpu");
 	in("treshold", "float", "0.01");
 	in("interval", "float");
-	in("show_result", "bool");
 	out("label", "string");
 	out("certainty", "float");
 }
@@ -58,7 +57,6 @@ VfxNodeDeepbelief::VfxNodeDeepbelief()
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
 	addInput(kInput_Treshold, kVfxPlugType_Float);
 	addInput(kInput_UpdateInterval, kVfxPlugType_Float);
-	addInput(kInput_ShowResult, kVfxPlugType_Bool);
 	addOutput(kOutput_Label, kVfxPlugType_String, &labelOutput);
 	addOutput(kOutput_Certainty, kVfxPlugType_Float, &certaintyOutput);
 }
@@ -116,13 +114,6 @@ void VfxNodeDeepbelief::tick(const float dt)
 			}
 		}
 	}
-}
-
-void VfxNodeDeepbelief::draw() const
-{
-	vfxCpuTimingBlock(VfxNodeDeepbelief);
-
-	const bool showResult = getInputBool(kInput_ShowResult, false);
 }
 
 void VfxNodeDeepbelief::getDescription(VfxNodeDescription & d)
