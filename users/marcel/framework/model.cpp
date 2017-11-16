@@ -1009,9 +1009,13 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 	
 	if (drawFlags & DrawBones)
 	{
-		// bone to object matrix translation
+		GLint restoreDepthTest;
+		glGetIntegerv(GL_DEPTH_TEST, &restoreDepthTest);
+		checkErrorGL();
 		glDisable(GL_DEPTH_TEST);
 		checkErrorGL();
+
+		// bone to object matrix translation
 		gxColor3ub(127, 127, 127);
 		gxBegin(GL_LINES);
 		{
@@ -1039,15 +1043,23 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			}
 		}
 		gxEnd();
-		glEnable(GL_DEPTH_TEST);
-		checkErrorGL();
+		
+		if (restoreDepthTest)
+		{
+			glEnable(GL_DEPTH_TEST);
+			checkErrorGL();
+		}
 	}
 	
 	if (drawFlags & DrawPoseMatrices)
 	{
-		// object to bone matrix translation
+		GLint restoreDepthTest;
+		glGetIntegerv(GL_DEPTH_TEST, &restoreDepthTest);
+		checkErrorGL();
 		glDisable(GL_DEPTH_TEST);
 		checkErrorGL();
+
+		// object to bone matrix translation
 		gxColor3ub(127, 127, 127);
 		gxBegin(GL_LINES);
 		{
@@ -1076,8 +1088,12 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			}
 		}
 		gxEnd();
-		glEnable(GL_DEPTH_TEST);
-		checkErrorGL();
+		
+		if (restoreDepthTest)
+		{
+			glEnable(GL_DEPTH_TEST);
+			checkErrorGL();
+		}
 	}
 }
 
