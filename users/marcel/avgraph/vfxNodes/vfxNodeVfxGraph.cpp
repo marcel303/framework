@@ -188,6 +188,8 @@ void VfxNodeVfxGraph::tick(const float dt)
 			
 			outputs.push_back(output);
 		}
+		
+		std::sort(outputs.begin(), outputs.end(), [](auto & o1, auto & o2) { return o1.name < o2.name; });
 	
 		setDynamicOutputs(&outputs[0], outputs.size());
 	}
