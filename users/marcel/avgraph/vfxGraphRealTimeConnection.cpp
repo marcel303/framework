@@ -40,9 +40,7 @@ void RealTimeConnection::loadBegin()
 	
 	isLoading = true;
 	
-	g_currentVfxGraph = vfxGraph;
 	delete vfxGraph;
-	g_currentVfxGraph = nullptr;
 	
 	vfxGraph = nullptr;
 	*vfxGraphPtr = nullptr;

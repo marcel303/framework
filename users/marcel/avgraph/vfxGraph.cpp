@@ -101,6 +101,9 @@ void VfxGraph::destroy()
 	
 	valuesToFree.clear();
 	
+	Assert(g_currentVfxGraph == nullptr);
+	g_currentVfxGraph = this;
+	
 	for (auto i : nodes)
 	{
 		VfxNodeBase * node = i.second;
@@ -119,6 +122,8 @@ void VfxGraph::destroy()
 		logDebug("delete %s took %.2fms", typeName.c_str(), (t2 - t1) / 1000.0);
 	#endif
 	}
+	
+	g_currentVfxGraph = nullptr;
 	
 	delete dynamicData;
 	dynamicData = nullptr;

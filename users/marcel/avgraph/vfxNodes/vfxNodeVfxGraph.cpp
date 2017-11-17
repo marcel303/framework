@@ -121,8 +121,13 @@ void VfxNodeVfxGraph::close()
 {
 	setDynamicOutputs(nullptr, 0);
 	
-	delete vfxGraph;
-	vfxGraph = nullptr;
+	auto restore = g_currentVfxGraph;
+	g_currentVfxGraph = nullptr;
+	{
+		delete vfxGraph;
+		vfxGraph = nullptr;
+	}
+	g_currentVfxGraph = restore;
 	
 	delete graph;
 	graph = nullptr;
@@ -197,12 +202,15 @@ void VfxNodeVfxGraph::draw() const
 		return;
 	}
 	
-	auto restore = g_currentVfxGraph;
+	auto restoreGraph = g_currentVfxGraph;
+	auto restoreSurface = g_currentVfxSurface;
 	g_currentVfxGraph = nullptr;
+	g_currentVfxSurface = nullptr;
 	{
 		imageOutput->texture = vfxGraph->traverseDraw();
 	}
-	g_currentVfxGraph = restore;
+	g_currentVfxGraph = restoreGraph;
+	g_currentVfxSurface = restoreSurface;
 }
 
 void VfxNodeVfxGraph::init(const GraphNode & node)
