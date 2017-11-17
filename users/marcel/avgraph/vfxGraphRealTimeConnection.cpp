@@ -109,6 +109,8 @@ void RealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::string & t
 		return;
 	}
 	
+	vfxNode->id = nodeId;
+	
 	vfxNode->initSelf(node);
 	
 	vfxGraph->nodes[node.id] = vfxNode;
@@ -196,7 +198,7 @@ void RealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeId src
 	{
 		logDebug("adding dynamic link");
 		
-		VfxNodeBase::DynamicLink link;
+		VfxDynamicLink link;
 		
 		link.linkId = linkId;
 		link.srcNodeId = srcNodeId;
@@ -211,8 +213,7 @@ void RealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeId src
 		else
 			link.dstSocketName = dstNode->dynamicInputs[dstSocketIndex - numDstStaticInputs].name;
 		
-		srcNode->dynamicLinks.push_back(link);
-		dstNode->dynamicLinks.push_back(link);
+		vfxGraph->dynamicData->links.push_back(link);
 	}
 	
 	// link the input to the output, if possible
@@ -346,28 +347,15 @@ void RealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNodeId 
 	// remove a dynamic link if either the src or dst socket is dynamic
 	
 	{
-		for (auto i = srcNode->dynamicLinks.begin(); i != srcNode->dynamicLinks.end(); ++i)
+		for (auto i = vfxGraph->dynamicData->links.begin(); i != vfxGraph->dynamicData->links.end(); ++i)
 		{
 			auto & link = *i;
 			
 			if (link.linkId == linkId)
 			{
-				logDebug("removing dynamic link from src node");
+				logDebug("removing dynamic link");
 				
-				srcNode->dynamicLinks.erase(i);
-				break;
-			}
-		}
-		
-		for (auto i = dstNode->dynamicLinks.begin(); i != dstNode->dynamicLinks.end(); ++i)
-		{
-			auto & link = *i;
-			
-			if (link.linkId == linkId)
-			{
-				logDebug("removing dynamic link from dst node");
-				
-				dstNode->dynamicLinks.erase(i);
+				vfxGraph->dynamicData->links.erase(i);
 				break;
 			}
 		}

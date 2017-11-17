@@ -59,8 +59,8 @@ using namespace tinyxml2;
 //#define FILENAME "sampleTest.xml"
 //#define FILENAME "midiTest.xml"
 //#define FILENAME "draw3dTest.xml"
-//#define FILENAME "nodeDataTest.xml"
-#define FILENAME "fsfxv2Test.xml"
+#define FILENAME "nodeDataTest.xml"
+//#define FILENAME "fsfxv2Test.xml"
 //#define FILENAME "kinectTest2.xml"
 
 extern const int GFX_SX;
@@ -432,37 +432,34 @@ static void testDynamicInputs()
 	node2->tryGetInput(1)->connectTo(*node1->tryGetOutput(1));
 	
 	{
-		VfxNodeBase::DynamicLink link;
+		VfxDynamicLink link;
 		link.srcNodeId = 0;
 		link.srcSocketName = "a";
 		link.srcSocketIndex = -1;
 		link.dstNodeId = 1;
 		link.dstSocketIndex = 0;
-		node1->dynamicLinks.push_back(link);
-		node2->dynamicLinks.push_back(link);
+		g.dynamicData->links.push_back(link);
 	}
 	
 	{
-		VfxNodeBase::DynamicLink link;
+		VfxDynamicLink link;
 		link.srcNodeId = 0;
 		link.srcSocketName = "b";
 		link.srcSocketIndex = -1;
 		link.dstNodeId = 1;
 		link.dstSocketIndex = 0;
-		node1->dynamicLinks.push_back(link);
-		node2->dynamicLinks.push_back(link);
+		g.dynamicData->links.push_back(link);
 	}
 	
 	{
-		VfxNodeBase::DynamicLink link;
+		VfxDynamicLink link;
 		link.srcNodeId = 0;
 		link.srcSocketName = "b";
 		link.srcSocketIndex = -1;
 		link.dstNodeId = 1;
 		link.dstSocketName = "a";
 		link.dstSocketIndex = -1;
-		node1->dynamicLinks.push_back(link);
-		node2->dynamicLinks.push_back(link);
+		g.dynamicData->links.push_back(link);
 	}
 	
 	g_currentVfxGraph = &g;
@@ -533,7 +530,7 @@ int main(int argc, char * argv[])
 	
 	//framework.minification = 2;
 	
-	framework.enableDepthBuffer = true;
+	//framework.enableDepthBuffer = true;
 	framework.enableDrawTiming = false;
 	//framework.enableProfiling = true;
 	

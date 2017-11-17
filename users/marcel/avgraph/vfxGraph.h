@@ -41,6 +41,9 @@
 
 class Surface;
 
+struct VfxDynamicLink;
+struct VfxDynamicData;
+
 struct VfxGraph;
 struct VfxNodeBase;
 struct VfxPlug;
@@ -82,6 +85,8 @@ struct VfxGraph
 	std::map<GraphNodeId, VfxNodeBase*> nodes;
 	std::set<GraphNodeId> nodesFailedToCreate;
 	
+	VfxDynamicData * dynamicData;
+	
 	std::set<GraphNodeId> displayNodeIds;
 	
 	mutable Surface * dummySurface;
@@ -103,6 +108,37 @@ struct VfxGraph
 	void tick(const float dt);
 	void draw() const;
 	int traverseDraw() const;
+};
+
+//
+
+struct VfxDynamicLink
+{
+	int linkId;
+	
+	int srcNodeId;
+	std::string srcSocketName;
+	int srcSocketIndex;
+	
+	int dstNodeId;
+	std::string dstSocketName;
+	int dstSocketIndex;
+	
+	VfxDynamicLink()
+		: linkId(-1)
+		, srcNodeId(-1)
+		, srcSocketName()
+		, srcSocketIndex(-1)
+		, dstNodeId(-1)
+		, dstSocketName()
+		, dstSocketIndex(-1)
+	{
+	}
+};
+
+struct VfxDynamicData
+{
+	std::vector<VfxDynamicLink> links;
 };
 
 //

@@ -50,12 +50,15 @@ Surface * g_currentVfxSurface = nullptr;
 VfxGraph::VfxGraph()
 	: nodes()
 	, displayNodeIds()
+	, dynamicData(nullptr)
 	, dummySurface(nullptr)
 	, nextTickTraversalId(0)
 	, nextDrawTraversalId(0)
 	, valuesToFree()
 	, time(0.0)
 {
+	dynamicData = new VfxDynamicData();
+	
 	dummySurface = new Surface(1, 1, false);
 }
 
@@ -116,6 +119,9 @@ void VfxGraph::destroy()
 		logDebug("delete %s took %.2fms", typeName.c_str(), (t2 - t1) / 1000.0);
 	#endif
 	}
+	
+	delete dynamicData;
+	dynamicData = nullptr;
 	
 	nodes.clear();
 }
@@ -375,6 +381,8 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 		}
 		else
 		{
+			vfxNode->id = node.id;
+			
 			vfxNode->isPassthrough = node.isPassthrough;
 			
 			vfxNode->initSelf(node);
@@ -410,7 +418,7 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 			
 			if (link.isDynamic)
 			{
-				VfxNodeBase::DynamicLink dlink;
+				VfxDynamicLink dlink;
 				dlink.linkId = link.id;
 				dlink.srcNodeId = link.srcNodeId;
 				dlink.srcSocketIndex = link.srcNodeSocketIndex;
@@ -418,8 +426,7 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 				dlink.dstNodeId = link.dstNodeId;
 				dlink.dstSocketIndex = link.dstNodeSocketIndex;
 				dlink.dstSocketName = link.dstNodeSocketName;
-				srcNode->dynamicLinks.push_back(dlink);
-				dstNode->dynamicLinks.push_back(dlink);
+				vfxGraph->dynamicData->links.push_back(dlink);
 				continue;
 			}
 			

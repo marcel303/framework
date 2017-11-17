@@ -803,7 +803,8 @@ VfxNodeBase::TriggerTarget::TriggerTarget()
 }
 
 VfxNodeBase::VfxNodeBase()
-	: inputs()
+	: id(kGraphNodeIdInvalid)
+	, inputs()
 	, outputs()
 	, predeps()
 	, triggerTargets()
@@ -935,8 +936,10 @@ void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
 		
 	// hook up the dynamic links
 	
-	for (auto & link : dynamicLinks)
+	for (auto & link : g_currentVfxGraph->dynamicData->links)
 	{
+		if (link.srcNodeId != id)
+			continue;
 		if (dstNodeId != -1 && link.dstNodeId != dstNodeId)
 			continue;
 		
@@ -1035,36 +1038,39 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 	
 	// remove connections to src nodes
 	
-	for (auto & link : dynamicLinks)
+	for (auto & link : g_currentVfxGraph->dynamicData->links)
 	{
-		if (link.dstSocketIndex == -1)
+		if (link.dstNodeId != id)
+			continue;
+		
+		if (link.dstSocketIndex != -1)
+			continue;
+		
+		VfxPlug * dstSocket = nullptr;
+		
+		for (int i = 0; i < dynamicOutputs.size(); ++i)
+			if (link.dstSocketName == dynamicOutputs[i].name)
+				dstSocket = &outputs[i + numStaticOutputs];
+		
+		if (dstSocket == nullptr)
+			continue; // can happen when the output for the link doesn't exist (yet)
+		
+		auto srcNodeItr = g_currentVfxGraph->nodes.find(link.srcNodeId);
+		
+		if (srcNodeItr == g_currentVfxGraph->nodes.end())
 		{
-			VfxPlug * dstSocket = nullptr;
-			
-			for (int i = 0; i < dynamicOutputs.size(); ++i)
-				if (link.dstSocketName == dynamicOutputs[i].name)
-					dstSocket = &outputs[i + numStaticOutputs];
-			
-			if (dstSocket == nullptr)
-				continue; // can happen when the output for the link doesn't exist (yet)
-			
-			auto srcNodeItr = g_currentVfxGraph->nodes.find(link.srcNodeId);
-			
-			if (srcNodeItr == g_currentVfxGraph->nodes.end())
-			{
-				logError("failed to find input node");
-				continue;
-			}
-			
-			auto srcNode = srcNodeItr->second;
-			
-			auto srcSocket = srcNode->tryGetInput(link.srcSocketIndex);
-			
-			if (srcSocket == nullptr)
-				continue; // can happen when the input for the link doesn't exist (yet)
-				
-			srcSocket->disconnect(dstSocket->mem);
+			logError("failed to find input node");
+			continue;
 		}
+		
+		auto srcNode = srcNodeItr->second;
+		
+		auto srcSocket = srcNode->tryGetInput(link.srcSocketIndex);
+		
+		if (srcSocket == nullptr)
+			continue; // can happen when the input for the link doesn't exist (yet)
+		
+		srcSocket->disconnect(dstSocket->mem);
 	}
 	
 	//
@@ -1089,36 +1095,39 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 	
 	// reconnect inputs to our outputs
 	
-	for (auto & link : dynamicLinks)
+	for (auto & link : g_currentVfxGraph->dynamicData->links)
 	{
-		if (link.dstSocketIndex == -1)
+		if (link.dstNodeId != id)
+			continue;
+		
+		if (link.dstSocketIndex != -1)
+			continue;
+		
+		VfxPlug * dstSocket = nullptr;
+		
+		for (int i = 0; i < dynamicOutputs.size(); ++i)
+			if (link.dstSocketName == dynamicOutputs[i].name)
+				dstSocket = &outputs[i + numStaticOutputs];
+		
+		if (dstSocket == nullptr)
+			continue; // can happen when the output for the link doesn't exist (yet)
+		
+		auto srcNodeItr = g_currentVfxGraph->nodes.find(link.srcNodeId);
+		
+		if (srcNodeItr == g_currentVfxGraph->nodes.end())
 		{
-			VfxPlug * dstSocket = nullptr;
-			
-			for (int i = 0; i < dynamicOutputs.size(); ++i)
-				if (link.dstSocketName == dynamicOutputs[i].name)
-					dstSocket = &outputs[i + numStaticOutputs];
-			
-			if (dstSocket == nullptr)
-				continue; // can happen when the output for the link doesn't exist (yet)
-			
-			auto srcNodeItr = g_currentVfxGraph->nodes.find(link.srcNodeId);
-			
-			if (srcNodeItr == g_currentVfxGraph->nodes.end())
-			{
-				logError("failed to find input node");
-				continue;
-			}
-			
-			auto srcNode = srcNodeItr->second;
-			
-			auto srcSocket = srcNode->tryGetInput(link.srcSocketIndex);
-			
-			if (srcSocket == nullptr)
-				continue; // can happen when the input for the link doesn't exist (yet)
-			
-			srcSocket->connectTo(*dstSocket);
+			logError("failed to find input node");
+			continue;
 		}
+		
+		auto srcNode = srcNodeItr->second;
+		
+		auto srcSocket = srcNode->tryGetInput(link.srcSocketIndex);
+		
+		if (srcSocket == nullptr)
+			continue; // can happen when the input for the link doesn't exist (yet)
+		
+		srcSocket->connectTo(*dstSocket);
 	}
 }
 

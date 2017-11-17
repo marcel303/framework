@@ -468,29 +468,7 @@ struct VfxNodeBase
 		void * mem;
 	};
 	
-	struct DynamicLink
-	{
-		int linkId;
-		
-		int srcNodeId;
-		std::string srcSocketName;
-		int srcSocketIndex;
-		
-		int dstNodeId;
-		std::string dstSocketName;
-		int dstSocketIndex;
-		
-		DynamicLink()
-			: linkId(-1)
-			, srcNodeId(-1)
-			, srcSocketName()
-			, srcSocketIndex(-1)
-			, dstNodeId(-1)
-			, dstSocketName()
-			, dstSocketIndex(-1)
-		{
-		}
-	};
+	int id;
 	
 	std::vector<VfxPlug> inputs;
 	std::vector<VfxPlug> outputs;
@@ -499,7 +477,6 @@ struct VfxNodeBase
 	std::vector<TriggerTarget> triggerTargets;
 	std::vector<DynamicInput> dynamicInputs;
 	std::vector<DynamicOutput> dynamicOutputs;
-	std::vector<DynamicLink> dynamicLinks;
 	
 	int flags;
 	
