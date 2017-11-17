@@ -26,10 +26,8 @@
 */
 
 #include "framework.h"
+#include "vfxGraph.h"
 #include "vfxNodeDrawImage.h"
-
-extern const int GFX_SX;
-extern const int GFX_SY;
 
 VFX_ENUM_TYPE(drawImageSizeMode)
 {
@@ -85,8 +83,8 @@ void VfxNodeDrawImage::draw() const
 			const int imageSx = image->getSx();
 			const int imageSy = image->getSy();
 			
-			const float viewSx = GFX_SX;
-			const float viewSy = GFX_SY;
+			const float viewSx = g_currentVfxSurface->getWidth();
+			const float viewSy = g_currentVfxSurface->getHeight();
 			
 			const float fillScaleX = viewSx / float(imageSx);
 			const float fillScaleY = viewSy / float(imageSy);
@@ -134,18 +132,14 @@ void VfxNodeDrawImage::draw() const
 				Assert(false);
 			}
 			
-			const float offsetX = (viewSx - imageSx * scaleX) / 2.f;
-			const float offsetY = (viewSy - imageSy * scaleY) / 2.f;
-			
 			gxSetTexture(image->getTexture());
 			{
 				gxPushMatrix();
 				{
-					gxTranslatef(offsetX, offsetY, 0.f);
 					gxScalef(scaleX, scaleY, 1.f);
 					
 					setColorf(1.f, 1.f, 1.f, opacity);
-					drawRect(0, 0, imageSx, imageSy);
+					drawRect(-imageSx/2.f, -imageSy/2.f, +imageSx/2.f, +imageSy/2.f);
 				}
 				gxPopMatrix();
 			}

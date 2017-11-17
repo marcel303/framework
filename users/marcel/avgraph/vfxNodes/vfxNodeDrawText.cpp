@@ -26,10 +26,8 @@
 */
 
 #include "framework.h"
+#include "vfxGraph.h"
 #include "vfxNodeDrawText.h"
-
-extern const int GFX_SX;
-extern const int GFX_SY;
 
 VFX_ENUM_TYPE(drawTextSizeMode)
 {
@@ -100,8 +98,8 @@ void VfxNodeDrawText::draw() const
 		float textSy;
 		measureText(fontSize, textSx, textSy, "%s", text);
 		
-		const float fillScaleX = GFX_SX / float(textSx);
-		const float fillScaleY = GFX_SY / float(textSy);
+		const float fillScaleX = g_currentVfxSurface->getWidth()  / float(textSx);
+		const float fillScaleY = g_currentVfxSurface->getHeight() / float(textSy);
 		
 		if (sizeMode == kSizeMode_Fill)
 		{
@@ -146,12 +144,8 @@ void VfxNodeDrawText::draw() const
 			Assert(false);
 		}
 		
-		const float offsetX = GFX_SX / 2.f;
-		const float offsetY = GFX_SY / 2.f;
-		
 		gxPushMatrix();
 		{
-			gxTranslatef(offsetX, offsetY, 0.f);
 			gxScalef(scaleX, scaleY, 1.f);
 			gxRotatef(angle, 0, 0, 1);
 			

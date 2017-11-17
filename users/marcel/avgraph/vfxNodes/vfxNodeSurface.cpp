@@ -71,7 +71,7 @@ VfxNodeSurface::VfxNodeSurface()
 	, oldDepthTestEnabled(false)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_DontCare, kVfxPlugType_DontCare);
+	addInput(kInput_Before, kVfxPlugType_DontCare);
 	addInput(kInput_Format, kVfxPlugType_Int);
 	addInput(kInput_Clear, kVfxPlugType_Bool);
 	addInput(kInput_ClearColor, kVfxPlugType_Color);
@@ -204,6 +204,8 @@ void VfxNodeSurface::beforeDraw() const
 	if (viewMode == kViewMode_Screen)
 	{
 		projectScreen2d();
+		
+		gxTranslatef(surface->getWidth()/2.f, surface->getHeight()/2.f, 0.f);
 		
 		glDisable(GL_DEPTH_TEST);
 		checkErrorGL();

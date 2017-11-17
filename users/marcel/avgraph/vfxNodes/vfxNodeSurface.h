@@ -47,7 +47,7 @@ struct VfxNodeSurface : VfxNodeBase
 	
 	enum Input
 	{
-		kInput_DontCare,
+		kInput_Before,
 		kInput_Format,
 		kInput_Clear,
 		kInput_ClearColor,
