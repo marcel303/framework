@@ -513,12 +513,7 @@ void VfxNodeFsfxV2::draw() const
 	{
 		setEditorIssue("shader is invalid");
 		
-		pushBlend(BLEND_ADD);
-		{
-			setColor(127, 0, 127);
-			drawRect(0, 0, g_currentVfxSurface->getWidth(), g_currentVfxSurface->getHeight());
-		}
-		popBlend();
+		g_currentVfxSurface->clear(127, 0, 127, 255);
 	}
 }
 

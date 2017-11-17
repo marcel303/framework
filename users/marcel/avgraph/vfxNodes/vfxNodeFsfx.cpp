@@ -496,7 +496,7 @@ void VfxNodeFsfx::draw() const
 	{
 		setEditorIssue("shader is invalid");
 		
-		surface->clear(255, 0, 255, 255);
+		surface->clear(127, 0, 127, 255);
 	}
 	
 	imageOutput.texture = surface->getTexture();
