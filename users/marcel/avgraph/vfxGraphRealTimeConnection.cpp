@@ -664,19 +664,56 @@ void RealTimeConnection::setSrcSocketValue(const GraphNodeId nodeId, const int s
 	
 	auto node = nodeItr->second;
 	
+	const int numStaticInputs = node->inputs.size() - node->dynamicInputs.size();
+	const bool isDynamicInput = srcSocketIndex >= numStaticInputs;
+	
+	if (isDynamicInput)
+	{
+		bool found = false;
+		
+		for (auto & inputSocketValue : vfxGraph->dynamicData->inputSocketValues)
+		{
+			if (inputSocketValue.nodeId == nodeId && inputSocketValue.socketName == srcSocketName)
+			{
+				logDebug("updating dynamic input socket value. socketName=%d, socketValue=%s",
+					srcSocketName.c_str(),
+					value.c_str());
+				
+				Assert(found == false);
+				found = true;
+				
+				inputSocketValue.value = value;
+			}
+		}
+		
+		if (found == false)
+		{
+			logDebug("adding dynamic input socket value. socketName=%d, socketValue=%s",
+				srcSocketName.c_str(),
+				value.c_str());
+			
+			VfxDynamicInputSocketValue inputSocketValue;
+			inputSocketValue.nodeId = nodeId;
+			inputSocketValue.socketName = srcSocketName;
+			inputSocketValue.value = value;
+			
+			vfxGraph->dynamicData->inputSocketValues.push_back(inputSocketValue);
+		}
+	}
+	
 	auto input = node->tryGetInput(srcSocketIndex);
 	
-	Assert(input != nullptr);
-	if (input == nullptr)
-		return;
-	
-	if (input->isConnected())
+	Assert(isDynamicInput || input != nullptr);
+	if (input != nullptr)
 	{
-		setPlugValue(input, value);
-	}
-	else
-	{
-		vfxGraph->connectToInputLiteral(*input, value);
+		if (input->isConnected())
+		{
+			setPlugValue(input, value);
+		}
+		else
+		{
+			vfxGraph->connectToInputLiteral(*input, value);
+		}
 	}
 }
 
@@ -786,13 +823,29 @@ void RealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, const int
 	
 	auto node = nodeItr->second;
 	
+	const int numStaticInputs = node->inputs.size() - node->dynamicInputs.size();
+	const bool isDynamicInput = srcSocketIndex >= numStaticInputs;
+	
+	if (isDynamicInput)
+	{
+		for (auto i = vfxGraph->dynamicData->inputSocketValues.begin(); i != vfxGraph->dynamicData->inputSocketValues.end(); ++i)
+		{
+			auto & inputSocketValue = *i;
+			
+			if (inputSocketValue.nodeId == nodeId && inputSocketValue.socketName == srcSocketName)
+			{
+				logDebug("removing dynamic input socket value");
+				
+				vfxGraph->dynamicData->inputSocketValues.erase(i);
+				break;
+			}
+		}
+	}
+	
 	auto input = node->tryGetInput(srcSocketIndex);
 	
-	Assert(input != nullptr);
-	if (input == nullptr)
-		return;
-	
-	if (input->isConnected())
+	Assert(isDynamicInput || input != nullptr);
+	if (input != nullptr && input->isConnected())
 	{
 		// check if this link is connected to a literal value
 		

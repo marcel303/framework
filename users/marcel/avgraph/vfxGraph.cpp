@@ -516,18 +516,34 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 			const std::string & inputName = inputValueItr.first;
 			const std::string & inputValue = inputValueItr.second;
 			
+			bool found = false;
+			
 			for (size_t i = 0; i < typeDefintion->inputSockets.size(); ++i)
 			{
 				if (typeDefintion->inputSockets[i].name == inputName)
 				{
 					if (i < vfxNodeInputs.size())
 					{
+						found = true;
+						
 						if (vfxNodeInputs[i].isConnected() == false)
 						{
 							vfxGraph->connectToInputLiteral(vfxNodeInputs[i], inputValue);
 						}
 					}
 				}
+			}
+			
+			if (found == false)
+			{
+				logDebug("adding dynamic input socket value. socketName=%s, socketValue=%s", inputName.c_str(), inputValue.c_str());
+				
+				VfxDynamicInputSocketValue inputSocketValue;
+				inputSocketValue.nodeId = node.id;
+				inputSocketValue.socketName = inputName;
+				inputSocketValue.value = inputValue;
+				
+				vfxGraph->dynamicData->inputSocketValues.push_back(inputSocketValue);
 			}
 		}
 	}

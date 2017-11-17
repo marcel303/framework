@@ -41,8 +41,9 @@
 
 class Surface;
 
-struct VfxDynamicLink;
 struct VfxDynamicData;
+struct VfxDynamicInputSocketValue;
+struct VfxDynamicLink;
 
 struct VfxGraph;
 struct VfxNodeBase;
@@ -136,9 +137,25 @@ struct VfxDynamicLink
 	}
 };
 
+struct VfxDynamicInputSocketValue
+{
+	int nodeId;
+	std::string socketName;
+	std::string value;
+	
+	VfxDynamicInputSocketValue()
+		: nodeId(-1)
+		, socketName()
+		, value()
+	{
+	}
+};
+
 struct VfxDynamicData
 {
 	std::vector<VfxDynamicLink> links;
+	
+	std::vector<VfxDynamicInputSocketValue> inputSocketValues;
 };
 
 //
