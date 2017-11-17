@@ -118,6 +118,7 @@ VfxNodeFsfxV2::VfxNodeFsfxV2()
 	, currentShaderVersion(0)
 	, shader(nullptr)
 	, shaderInputs()
+	, gaussianKernel(nullptr)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Before, kVfxPlugType_DontCare);
@@ -182,6 +183,18 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 				
 				glGetActiveUniform(shader->getProgram(), i, bufferSize, &length, &size, &type, name);
 				checkErrorGL();
+				
+				// special?
+				if (String::StartsWith(name, "gaussianKernel"))
+				{
+					if (gaussianKernel == nullptr)
+					{
+						gaussianKernel = new ShaderBuffer();
+						makeGaussianKernel(60, *gaussianKernel);
+					}
+					
+					continue;
+				}
 				
 				// built-in?
 				if (!strcmp(name, "screenSize") ||
@@ -284,6 +297,9 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 
 void VfxNodeFsfxV2::freeShader()
 {
+	delete gaussianKernel;
+	gaussianKernel = nullptr;
+	
 	delete shader;
 	shader = nullptr;
 	
@@ -429,6 +445,12 @@ void VfxNodeFsfxV2::draw() const
 			shader->setImmediate("param2", param2);
 			shader->setImmediate("opacity", opacity);
 			shader->setImmediate("time", time);
+			
+			if (gaussianKernel != nullptr)
+			{
+				shader->setBuffer("gaussianKernel", *gaussianKernel);
+				shader->setImmediate("gaussianKernelSize", 60.f);
+			}
 
 			g_currentVfxSurface->postprocess();
 		}
@@ -445,19 +467,6 @@ void VfxNodeFsfxV2::draw() const
 			drawRect(0, 0, g_currentVfxSurface->getWidth(), g_currentVfxSurface->getHeight());
 		}
 		popBlend();
-	}
-}
-
-void VfxNodeFsfxV2::init(const GraphNode & node)
-{
-	const char * shaderName = toShaderName(getInputInt(kInput_Shader, 0));
-	
-	if (shaderName)
-	{
-		loadShader(shaderName);
-		
-		currentShader = shaderName;
-		currentShaderVersion = shader->getVersion();
 	}
 }
 

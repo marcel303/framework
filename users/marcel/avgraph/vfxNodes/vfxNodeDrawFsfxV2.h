@@ -66,6 +66,8 @@ struct VfxNodeFsfxV2 : VfxNodeBase
 	Shader * shader;
 	std::vector<ShaderInput> shaderInputs;
 	
+	ShaderBuffer * gaussianKernel;
+	
 	VfxNodeFsfxV2();
 	virtual ~VfxNodeFsfxV2() override;
 	
@@ -74,8 +76,6 @@ struct VfxNodeFsfxV2 : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 	virtual void draw() const override;
-	
-	virtual void init(const GraphNode & node) override;
 	
 	virtual void getDescription(VfxNodeDescription & d) override;
 };
