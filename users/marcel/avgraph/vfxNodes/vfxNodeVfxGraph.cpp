@@ -27,6 +27,7 @@
 
 #include "tinyxml2.h"
 #include "vfxGraph.h"
+#include "vfxNodeOutput.h"
 #include "vfxNodeVfxGraph.h"
 
 using namespace tinyxml2;
@@ -92,7 +93,12 @@ void VfxNodeVfxGraph::open(const char * filename)
 		}
 		else
 		{
-			vfxGraph = constructVfxGraph(*graph, typeDefinitionLibrary);
+			auto restore = g_currentVfxGraph;
+			g_currentVfxGraph = nullptr;
+			{
+				vfxGraph = constructVfxGraph(*graph, typeDefinitionLibrary);
+			}
+			g_currentVfxGraph = restore;
 			
 			if (vfxGraph == nullptr)
 			{
@@ -113,6 +119,8 @@ void VfxNodeVfxGraph::open(const char * filename)
 
 void VfxNodeVfxGraph::close()
 {
+	setDynamicOutputs(nullptr, 0);
+	
 	delete vfxGraph;
 	vfxGraph = nullptr;
 	
@@ -160,6 +168,23 @@ void VfxNodeVfxGraph::tick(const float dt)
 			vfxGraph->tick(dt);
 		}
 		g_currentVfxGraph = restore;
+		
+		// update dynamic outputs
+		
+		std::vector<DynamicOutput> outputs;
+		outputs.reserve(vfxGraph->outputNodes.size());
+	
+		for (auto outputNode : vfxGraph->outputNodes)
+		{
+			DynamicOutput output;
+			output.name = outputNode->name;
+			output.type = kVfxPlugType_Float;
+			output.mem = &outputNode->value;
+			
+			outputs.push_back(output);
+		}
+	
+		setDynamicOutputs(&outputs[0], outputs.size());
 	}
 }
 

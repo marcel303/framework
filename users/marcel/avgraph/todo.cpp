@@ -5,11 +5,12 @@ top priority items:
 	- like the BANG node in max
 	- add ability to trigger any input/output trigger (?)
 - add GPU performance markers
-- add the ability to have dynamic input sockets. use cases: shaders, sub graphs
-	- add support for recovering connections
-	- add support for recovering immediate values
-- add the ability to have dynamic output sockets. use cases: sub graphs
-	- add support for recovering connections
++ add the ability to have dynamic input sockets. use cases: shaders, sub graphs
+	+ add support for recovering connections
+	+ add support for recovering immediate values
+	+ add dynamic stuff to VfxGraph so as not to bother each and every node with having to store dynamic links, immediate values, etc ?
++ add the ability to have dynamic output sockets. use cases: sub graphs
+	+ add support for recovering connections
 - add text field to node type select
 # add explicit categories to vfx nodes
 	# decided I don't like it. use first part of node type name to decide category
@@ -19,12 +20,17 @@ top priority items:
 - fix SDL text input when selecting a text field before the previously active one (start before stop)
 - add FSFX node which lets one select a shader from a drop down list
 - add a dedicated shader node. no pre-defined inputs at all
-- add FSFX shaders. use built-in shaders ?
-- add FSFX shaderSource which exposes main function and uses applyFsfx function from .fsfx file to change pixels. also exposes shared uniforms, applies alpha blended, opacity control, color mode and color post
+# add FSFX shaders. use built-in shaders ?
+	+ copied gaussian shadr to fsfx/ folder
++ add FSFX shaderSource which exposes main function and uses applyFsfx function from .fsfx file to change pixels. also exposes shared uniforms, applies alpha blended, opacity control, color mode and color post
 	+ used a format option instead
 - rename fsfx v1 to imfx ? redefine behavior to run shader over an image. expressly output as image
 - how to convert multiple channels to gpu image with channel(s).toGpu ?
 - add ability for nodes to report warnings and errors
+- add gen.osc. lt user slect shape. take inspiration from audio node version
+- add gen.random node with different modes. white, pink, brown
+- add gen.brownian
+- fix issue with link mappings not being restored updating dynamic sockts
 
 
 todo :
@@ -152,14 +158,14 @@ todo : nodes :
 
 
 todo : fsfx :
-- let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
-- expose uniforms/inputs from FSFX pixel shader
-- iterate FSFX pixel shaders and generate type definitions based on FSFX name and exposed uniforms
-	- OR: allow nodes to specify dynamic input sockets. use real-time callback to get the list of inputs
-	- store inputs by name in nodes (like regular inputs)
-	- let FSFX node  resize its inputs dynamically (?)
-	- match the dynamic sockets by name ? add to VfxNodeBase to try to get socket based on name if index lookup fails ?
-- add standard include file (shaderSource(..)) for FSFX nodes. include params, time, texture1 and 2 and maybe some common functions too
++ let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
++ expose uniforms/inputs from FSFX pixel shader
+ iterate FSFX pixel shaders and generate type definitions based on FSFX name and exposed uniforms
+	+ OR: allow nodes to specify dynamic input sockets. use real-time callback to get the list of inputs
+	+ store inputs by name in nodes (like regular inputs)
+	+ let FSFX node  resize its inputs dynamically (?)
+	+ match the dynamic sockets by name ? add to VfxNodeBase to try to get socket based on name if index lookup fails ?
++ add standard include file (shaderSource(..)) for FSFX nodes. include params, time, texture1 and 2 and maybe some common functions too
 
 todo : UI
 - make nodes into lilly shapes ?
@@ -185,6 +191,8 @@ todo : framework
 	- rewrite sound effects
 	- rewrite music
 	- add API for custom sound processing and voices
+- check ShaderUtil.txt. add functions
+
 
 --- ARCHIVED TODOS ---
 

@@ -49,6 +49,8 @@ struct VfxGraph;
 struct VfxNodeBase;
 struct VfxPlug;
 
+struct VfxNodeOutput;
+
 extern VfxGraph * g_currentVfxGraph;
 extern Surface * g_currentVfxSurface;
 
@@ -89,6 +91,7 @@ struct VfxGraph
 	VfxDynamicData * dynamicData;
 	
 	std::set<GraphNodeId> displayNodeIds;
+	std::set<VfxNodeOutput*> outputNodes;
 	
 	mutable Surface * dummySurface;
 	

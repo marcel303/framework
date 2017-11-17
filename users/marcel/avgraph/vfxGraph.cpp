@@ -361,6 +361,9 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 {
 	VfxGraph * vfxGraph = new VfxGraph();
 	
+	Assert(g_currentVfxGraph == nullptr);
+	g_currentVfxGraph = vfxGraph;
+	
 	for (auto nodeItr : graph.nodes)
 	{
 		auto & node = nodeItr.second;
@@ -390,6 +393,8 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 			vfxGraph->nodes[node.id] = vfxNode;
 		}
 	}
+	
+	g_currentVfxGraph = nullptr;
 	
 	for (auto & linkItr : graph.links)
 	{
