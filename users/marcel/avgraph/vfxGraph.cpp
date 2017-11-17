@@ -297,6 +297,9 @@ int VfxGraph::traverseDraw() const
 	{
 		// draw nodes that aren't connected to the display node
 		
+		Assert(g_currentVfxSurface == nullptr);
+		g_currentVfxSurface = dummySurface;
+		
 		for (auto i : nodes)
 		{
 			VfxNodeBase * node = i.second;
@@ -308,6 +311,8 @@ int VfxGraph::traverseDraw() const
 				node->traverseDraw(nextDrawTraversalId);
 			}
 		}
+		
+		g_currentVfxSurface = nullptr;
 	}
 	popSurface();
 #endif
