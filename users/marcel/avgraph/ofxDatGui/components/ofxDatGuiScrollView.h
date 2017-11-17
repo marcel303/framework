@@ -145,12 +145,12 @@ class ofxDatGuiScrollView : public ofxDatGuiComponent {
             return mRect.y;
         }
 
-        int getWidth()
+        int getWidth() override
         {
             return mRect.width;
         }
     
-        int getHeight()
+        int getHeight() override
         {
             return mRect.height;
         }
@@ -164,7 +164,7 @@ class ofxDatGuiScrollView : public ofxDatGuiComponent {
         list presentation
     */
 
-        void setTheme(const ofxDatGuiTheme* theme)
+        void setTheme(const ofxDatGuiTheme* theme) override
         {
             mTheme = theme;
             mSpacing = theme->layout.vMargin;
@@ -173,7 +173,7 @@ class ofxDatGuiScrollView : public ofxDatGuiComponent {
             setWidth(theme->layout.width, theme->layout.labelWidth);
         }
     
-        void setWidth(int width, float labelWidth = 1)
+        void setWidth(int width, float labelWidth = 1) override
         {
             mRect.width = width;
             for (auto i:children) i->setWidth(mRect.width, labelWidth);
@@ -187,7 +187,7 @@ class ofxDatGuiScrollView : public ofxDatGuiComponent {
             if (mRect.width > 0 && mRect.height > 0) mView.allocate( mRect.width, mRect.height );
         }
 
-        void setPosition(int x, int y)
+        void setPosition(int x, int y) override
         {
             mRect.x = x;
             mRect.y = y;
@@ -212,7 +212,7 @@ class ofxDatGuiScrollView : public ofxDatGuiComponent {
             for(auto i:children) i->update();
         }
     
-        void draw()
+        void draw() override
         {
             ofPushStyle();
                 ofFill();
