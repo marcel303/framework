@@ -1111,6 +1111,7 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 		outputs[numStaticOutputs + i] = VfxPlug();
 		outputs[numStaticOutputs + i].type = dynamicOutputs[i].type;
 		outputs[numStaticOutputs + i].mem = dynamicOutputs[i].mem;
+		outputs[numStaticOutputs + i].memType = dynamicOutputs[i].type;
 	}
 	
 	// reconnect inputs to our outputs
