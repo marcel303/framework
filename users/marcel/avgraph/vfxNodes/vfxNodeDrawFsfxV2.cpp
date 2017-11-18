@@ -95,6 +95,8 @@ static const char * s_fsfxCommonInc = R"SHADER(
 		
 		color = applyColorPost(color, params.z);
 		
+		color.a *= opacity;
+		
 		if (color.a != 1.0)
 			color = mix(baseColor, color, color.a);
 		
@@ -107,7 +109,7 @@ VFX_NODE_TYPE(VfxNodeFsfxV2)
 	typeName = "draw.fsfx-v2";
 	displayName = "fsfx";
 	
-	in("before", "any");
+	in("before", "draw", "", "draw");
 	inEnum("shader", "fsfxShader");
 	in("image1", "image");
 	in("image2", "image");
@@ -116,7 +118,7 @@ VFX_NODE_TYPE(VfxNodeFsfxV2)
 	in("param2", "float");
 	in("time", "float");
 	in("opacity", "float", "1");
-	out("any", "any");
+	out("any", "draw", "draw");
 }
 
 VfxNodeFsfxV2::VfxNodeFsfxV2()
