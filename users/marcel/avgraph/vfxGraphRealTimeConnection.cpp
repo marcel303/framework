@@ -985,8 +985,7 @@ bool RealTimeConnection::getNodeIssues(const GraphNodeId nodeId, std::vector<std
 	
 	if (nodeItr == vfxGraph->nodes.end())
 	{
-		if (vfxGraph->nodesFailedToCreate.count(nodeId) == 0)
-			Assert(nodeItr != vfxGraph->nodes.end());
+		Assert(vfxGraph->nodesFailedToCreate.count(nodeId) != 0 || nodeItr != vfxGraph->nodes.end());
 		
 		return false;
 	}
@@ -1018,8 +1017,7 @@ bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vecto
 	
 	if (nodeItr == vfxGraph->nodes.end())
 	{
-		if (vfxGraph->nodesFailedToCreate.count(nodeId) == 0)
-			Assert(nodeItr != vfxGraph->nodes.end());
+		Assert(vfxGraph->nodesFailedToCreate.count(nodeId) != 0 || nodeItr != vfxGraph->nodes.end());
 		
 		return false;
 	}
@@ -1060,8 +1058,7 @@ int RealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 	
 	if (nodeItr == vfxGraph->nodes.end())
 	{
-		if (vfxGraph->nodesFailedToCreate.count(nodeId) == 0)
-			Assert(nodeItr != vfxGraph->nodes.end());
+		Assert(vfxGraph->nodesFailedToCreate.count(nodeId) != 0 || nodeItr != vfxGraph->nodes.end());
 		
 		return false;
 	}
@@ -1090,7 +1087,7 @@ int RealTimeConnection::linkIsActive(const GraphLinkId linkId, const GraphNodeId
 	
 	auto dstNodeItr = vfxGraph->nodes.find(dstNodeId);
 	
-	Assert(dstNodeItr != vfxGraph->nodes.end());
+	Assert(vfxGraph->nodesFailedToCreate.count(dstNodeId) != 0 || dstNodeItr != vfxGraph->nodes.end());
 	if (dstNodeItr == vfxGraph->nodes.end())
 		return false;
 	
@@ -1158,7 +1155,7 @@ bool RealTimeConnection::getNodeDynamicSockets(const GraphNodeId nodeId, std::ve
 	
 	auto nodeItr = vfxGraph->nodes.find(nodeId);
 	
-	Assert(nodeItr != vfxGraph->nodes.end());
+	Assert(vfxGraph->nodesFailedToCreate.count(nodeId) != 0 || nodeItr != vfxGraph->nodes.end());
 	if (nodeItr == vfxGraph->nodes.end())
 		return false;
 	
@@ -1204,7 +1201,7 @@ int RealTimeConnection::getNodeCpuHeatMax() const
 
 int RealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const
 {
-		if (isLoading)
+	if (isLoading)
 		return false;
 	
 	Assert(vfxGraph != nullptr);
@@ -1213,7 +1210,7 @@ int RealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const
 	
 	auto nodeItr = vfxGraph->nodes.find(nodeId);
 	
-	Assert(nodeItr != vfxGraph->nodes.end());
+	Assert(vfxGraph->nodesFailedToCreate.count(nodeId) != 0 || nodeItr != vfxGraph->nodes.end());
 	if (nodeItr == vfxGraph->nodes.end())
 		return false;
 	
