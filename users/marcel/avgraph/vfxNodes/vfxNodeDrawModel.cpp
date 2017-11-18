@@ -38,7 +38,7 @@ VFX_NODE_TYPE(VfxNodeDrawModel)
 	in("loopCount", "float", "-1");
 	in("rootMotion", "bool");
 	in("scale", "float", "1");
-	out("any", "any");
+	out("any", "draw", "draw");
 }
 
 VfxNodeDrawModel::VfxNodeDrawModel()
@@ -106,6 +106,8 @@ void VfxNodeDrawModel::tick(const float dt)
 	model->animRootMotionEnabled = animRootMotionEnabled;
 	
 	// todo : tick model
+	
+	// todo : remove model tick from framework
 }
 
 void VfxNodeDrawModel::draw() const
@@ -113,19 +115,20 @@ void VfxNodeDrawModel::draw() const
 	if (isPassthrough || model == nullptr)
 		return;
 	
+	vfxCpuTimingBlock(VfxNodeDrawModel);
+	vfxGpuTimingBlock(VfxNodeDrawModel);
+
 	const float scale = getInputFloat(kInput_Scale, 1.f);
 
 	gxPushMatrix();
 	{
 		gxScalef(scale, scale, scale);
 		
-		const int drawFlags = DrawMesh | DrawBones | DrawNormals;
+		//const int drawFlags = DrawMesh | DrawBones | DrawNormals;
+		const int drawFlags = DrawMesh;
 		
 		setColor(colorWhite);
 		model->draw(drawFlags);
-		
-		setColor(colorWhite);
-		glEnable(GL_DEPTH_TEST);
 	}
 	gxPopMatrix();
 }
