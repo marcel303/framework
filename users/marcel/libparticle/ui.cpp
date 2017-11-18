@@ -680,13 +680,6 @@ static UiTextboxResult doTextBoxImpl(T & value, const char * name, const float x
 			
 			// fixme : it's not technically correct to open and close just to init. also, SDL text input ..
 			textField.open(32, false, false);
-			
-			SDL_Rect inputRect;
-			inputRect.x = x1;
-			inputRect.y = y1;
-			inputRect.w = x2 - x1;
-			inputRect.h = y2 - y1;
-			SDL_SetTextInputRect(&inputRect);
 
 			char temp[32];
 			valueToString(value, temp, sizeof(temp));

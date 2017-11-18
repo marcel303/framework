@@ -220,16 +220,12 @@ void EditorTextField::open(const int maxLength, const bool canCancel, const bool
 	m_caretTimer = 0.f;
 	
 	m_textIsSelected = false;
-	
-	SDL_StartTextInput();
 }
 
 void EditorTextField::close()
 {
 	fassert(m_isActive);
 	
-	SDL_StopTextInput();
-
 	m_isActive = false;
 	m_canCancel = false;
 
