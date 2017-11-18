@@ -50,7 +50,7 @@ VFX_NODE_TYPE(VfxNodeDrawText)
 	in("angle", "float");
 	in("color", "color", "ffff");
 	in("opacity", "float", "1");
-	out("any", "any");
+	out("any", "draw", "draw");
 }
 
 VfxNodeDrawText::VfxNodeDrawText()

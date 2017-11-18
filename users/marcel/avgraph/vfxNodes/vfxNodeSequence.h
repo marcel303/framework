@@ -52,8 +52,6 @@ struct VfxNodeSequence : VfxNodeBase
 		kOutput_COUNT
 	};
 
-	int anyOutput;
-	
 	VfxNodeSequence();
 	
 	virtual void customTraverseDraw(const int traversalId) const override;

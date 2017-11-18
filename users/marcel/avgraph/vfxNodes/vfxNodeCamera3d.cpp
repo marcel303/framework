@@ -32,7 +32,7 @@ VFX_NODE_TYPE(VfxNodeCamera3d)
 {
 	typeName = "draw.camera3d";
 	
-	in("any", "any");
+	in("any", "draw", "", "draw");
 	in("control", "bool");
 	in("x", "float");
 	in("y", "float");
@@ -40,7 +40,7 @@ VFX_NODE_TYPE(VfxNodeCamera3d)
 	in("yaw", "float");
 	in("pitch", "float");
 	in("roll", "float");
-	out("any", "any");
+	out("any", "draw", "draw");
 	out("mat.world", "channels");
 }
 

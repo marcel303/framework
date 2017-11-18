@@ -53,7 +53,7 @@ VFX_NODE_TYPE(VfxNodeDrawPrimitive)
 {
 	typeName = "draw.primitive";
 	
-	in("before", "any");
+	in("before", "draw");
 	inEnum("type", "drawPrimitiveType");
 	in("channels", "channels");
 	in("size", "float", "1");
@@ -63,7 +63,7 @@ VFX_NODE_TYPE(VfxNodeDrawPrimitive)
 	in("stroke", "bool");
 	in("strokeSize", "float", "1.0");
 	in("strokeColor", "color");
-	out("any", "any");
+	out("any", "draw", "draw");
 }
 
 VfxNodeDrawPrimitive::VfxNodeDrawPrimitive()

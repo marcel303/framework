@@ -43,9 +43,9 @@ VFX_NODE_TYPE(VfxNodeDrawBlend)
 {
 	typeName = "draw.blend";
 	
-	in("any", "any");
+	in("any", "draw", "", "draw");
 	inEnum("mode", "drawImageBlendMode");
-	out("any", "any");
+	out("any", "draw", "draw");
 }
 
 VfxNodeDrawBlend::VfxNodeDrawBlend()

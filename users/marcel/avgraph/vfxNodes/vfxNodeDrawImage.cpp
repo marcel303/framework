@@ -46,7 +46,7 @@ VFX_NODE_TYPE(VfxNodeDrawImage)
 	in("image", "image");
 	inEnum("sizeMode", "drawImageSizeMode");
 	in("opacity", "float", "1");
-	out("any", "any");
+	out("any", "draw", "draw");
 }
 
 VfxNodeDrawImage::VfxNodeDrawImage()

@@ -34,7 +34,7 @@ VFX_NODE_TYPE(VfxNodeTransform2D)
 {
 	typeName = "draw.transform2d";
 	
-	in("any", "any");
+	in("any", "draw", "", "draw");
 	in("x", "float");
 	in("y", "float");
 	in("scale", "float", "1");
@@ -42,7 +42,7 @@ VFX_NODE_TYPE(VfxNodeTransform2D)
 	in("scaleY", "float", "1");
 	in("angle", "float");
 	in("angle_norm", "float");
-	out("transform", "any");
+	out("transform", "draw", "draw");
 }
 
 VfxNodeTransform2D::VfxNodeTransform2D()

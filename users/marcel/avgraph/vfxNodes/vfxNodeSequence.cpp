@@ -35,20 +35,19 @@ VFX_NODE_TYPE(VfxNodeSequence)
 {
 	typeName = "draw.sequence";
 	
-	in("01", "any");
-	in("02", "any");
-	in("03", "any");
-	in("04", "any");
-	in("05", "any");
-	in("06", "any");
-	in("07", "any");
-	in("08", "any");
-	out("any", "int");
+	in("01", "draw", "", "draw");
+	in("02", "draw", "", "draw");
+	in("03", "draw", "", "draw");
+	in("04", "draw", "", "draw");
+	in("05", "draw", "", "draw");
+	in("06", "draw", "", "draw");
+	in("07", "draw", "", "draw");
+	in("08", "draw", "", "draw");
+	out("any", "draw", "draw");
 }
 
 VfxNodeSequence::VfxNodeSequence()
 	: VfxNodeBase()
-	, anyOutput(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_1, kVfxPlugType_DontCare);
@@ -59,7 +58,7 @@ VfxNodeSequence::VfxNodeSequence()
 	addInput(kInput_6, kVfxPlugType_DontCare);
 	addInput(kInput_7, kVfxPlugType_DontCare);
 	addInput(kInput_8, kVfxPlugType_DontCare);
-	addOutput(kOutput_Any, kVfxPlugType_Int, &anyOutput);
+	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
 	
 	flags |= kFlag_CustomTraverseDraw;
 }

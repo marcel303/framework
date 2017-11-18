@@ -49,7 +49,7 @@ VFX_NODE_TYPE(VfxNodeSurface)
 {
 	typeName = "draw.surface";
 	
-	in("source", "any");
+	in("source", "draw", "", "draw");
 	inEnum("format", "surfaceFormat");
 	in("clear", "bool", "1");
 	in("clearColor", "color", "fff");
