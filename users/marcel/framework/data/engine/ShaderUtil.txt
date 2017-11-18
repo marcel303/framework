@@ -1,5 +1,37 @@
 static const char * s_shaderUtil = R"SHADER(
 
+const float kSrgbToLinear = 2.2f;
+const float kLinearToSrgb = 1.f / kSrgbToLinear;
+
+// -- exposed functions --
+
+vec4 applyColorMode(vec4 color1, vec4 color2, float mode);
+vec4 applyColorPost(vec4 color, float post);
+
+float makeTaps(float v, float min, float max, float numTaps);
+vec3 makeTaps(vec3 v, float min, float max, float numTaps);
+
+float rgbLuminance(vec3 rgb);
+
+vec3 srgbToLinear(vec3 rgb);
+vec3 linearToSrgb(vec3 rgb);
+vec3 lerpSrgbLinear(vec3 a, vec3 b, float t);
+
+// todo : add functions for evaluating gradient color and matrix texturing
+// todo : add grayscaleLumi, grayscaleWeights
+// todo : add colorTemperature
+// todo : add treshold (with settable gradient)
+
+vec3 colorFromHSL(vec3 hsl);
+vec3 colorToHSL(vec3 rgb);
+vec3 hueShift(vec3 rgb, float amount);
+
+float colorDither8(sampler2D ditherTexture, vec2 sampleCoord);
+vec3 colorDither8ScreenSpace(vec2 sampleCoord);
+vec3 colorDitherScreenSpace(vec2 sampleCoord, float dither_bit);
+
+// -- implementation --
+
 vec4 applyColorMode(vec4 color1, vec4 color2, float mode)
 {
 	/*
@@ -73,6 +105,32 @@ vec3 makeTaps(vec3 v, float min, float max, float numTaps)
 		makeTaps(v.x, min, max, numTaps),
 		makeTaps(v.y, min, max, numTaps),
 		makeTaps(v.z, min, max, numTaps));
+}
+
+vec3 srgbToLinear(vec3 rgb)
+{
+	return vec3(
+		pow(rgb.r, kSrgbToLinear),
+		pow(rgb.g, kSrgbToLinear),
+		pow(rgb.b, kSrgbToLinear));
+}
+
+vec3 linearToSrgb(vec3 rgb)
+{
+	return vec3(
+		pow(rgb.r, kLinearToSrgb),
+		pow(rgb.g, kLinearToSrgb),
+		pow(rgb.b, kLinearToSrgb));
+}
+
+vec3 lerpSrgbLinear(vec3 a, vec3 b, float t)
+{
+	vec3 aLinear = srgbToLinear(a);
+	vec3 bLinear = srgbToLinear(b);
+
+	vec3 rLinear = mix(aLinear, bLinear, t);
+
+	return linearToSrgb(rLinear);
 }
 
 float rgbLuminance(vec3 rgb)
@@ -195,6 +253,15 @@ vec3 colorToHSL(vec3 rgb)
 	}
 
 	return vec3(hue, sat, lum);
+}
+
+vec3 hueShift(vec3 rgb, float amount)
+{
+	vec3 hsl = colorToHSL(rgb);
+
+	hsl.x += amount;
+
+	return colorFromHSL(hsl);
 }
 
 float colorDither8(sampler2D ditherTexture, vec2 sampleCoord)
