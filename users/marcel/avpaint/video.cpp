@@ -293,8 +293,10 @@ void MediaPlayer::updateTexture()
 			uploadFormat = GL_RGBA;
 		}
 		
-		if (texture == 0 || sx != textureSx || sy != textureSy)
+		if (texture == 0 || sx != textureSx || sy != textureSy || internalFormat != textureFormat)
 		{
+			freeTexture();
+			
 			glGenTextures(1, &texture);
 			glBindTexture(GL_TEXTURE_2D, texture);
 			glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, sx, sy);
@@ -319,6 +321,7 @@ void MediaPlayer::updateTexture()
 			
 			textureSx = sx;
 			textureSy = sy;
+			textureFormat = internalFormat;
 		}
 		
 		if (texture)
