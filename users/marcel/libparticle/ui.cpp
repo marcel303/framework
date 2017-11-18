@@ -158,6 +158,8 @@ void drawUiShadedTriangle(float x1, float y1, float x2, float y2, float x3, floa
 		hqFillTriangle(x1, y1, x2, y2, x3, y3);
 	}
 	hqEnd();
+	
+	clearShader();
 }
 
 void hlsToRGB(float hue, float lum, float sat, float & r, float & g, float & b)
