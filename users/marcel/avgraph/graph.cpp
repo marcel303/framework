@@ -1068,15 +1068,15 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 			{
 				hasValue = graphEdit.realTimeConnection->getSrcSocketValue(nodeId, srcSocketIndex, srcSocket->name, value);
 			}
-		}
-		
-		if (hasValue == false)
-		{
-			if (srcSocket->hasDefaultValue)
+			
+			if (hasValue == false)
 			{
-				value = srcSocket->defaultValue;
-				
-				hasValue = true;
+				if (srcSocket->hasDefaultValue)
+				{
+					value = srcSocket->defaultValue;
+					
+					hasValue = true;
+				}
 			}
 		}
 		
@@ -1312,7 +1312,11 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		auto srcSocket = graphEdit.tryGetInputSocket(nodeId, srcSocketIndex);
 		
 		if (srcSocket != nullptr)
-			caption = srcSocket->name;
+		{
+			caption = srcSocket->displayName.empty()
+				? srcSocket->name
+				: srcSocket->displayName;
+		}
 	}
 	
 	if (dstSocketIndex != -1)
@@ -1320,7 +1324,11 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		auto dstSocket = graphEdit.tryGetOutputSocket(nodeId, dstSocketIndex);
 		
 		if (dstSocket != nullptr)
-			caption = dstSocket->name;
+		{
+			caption = dstSocket->displayName.empty()
+				? dstSocket->name
+				: dstSocket->displayName;
+		}
 	}
 	
 	if (!nodeName.empty())
@@ -5392,7 +5400,12 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	
 	setFont("calibri.ttf");
 	setColor(255, 255, 255);
-	drawText(sx/2, 12, 14, 0.f, 0.f, "%s", !nodeData.displayName.empty() ? nodeData.displayName.c_str() : definition.displayName.empty() ? definition.typeName.c_str() : definition.displayName.c_str());
+	drawText(sx/2, 12, 14, 0.f, 0.f, "%s",
+		!nodeData.displayName.empty()
+		? nodeData.displayName.c_str()
+		: definition.displayName.empty()
+			? definition.typeName.c_str()
+			: definition.displayName.c_str());
 	
 	if (node.isPassthrough)
 	{
@@ -5409,8 +5422,12 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 				float x, y, radius;
 				getNodeInputSocketCircle(inputSocket.index, x, y, radius);
 				
+				const std::string name = inputSocket.displayName.empty()
+					? inputSocket.name
+					: inputSocket.displayName;
+				
 				setColor(255, 255, 255);
-				drawText(x + radius + 2, y, 12, +1.f, 0.f, "%s", inputSocket. name.c_str());
+				drawText(x + radius + 2, y, 12, +1.f, 0.f, "%s", name.c_str());
 			}
 			
 			for (auto & outputSocket : outputSockets)
@@ -5418,8 +5435,12 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 				float x, y, radius;
 				getNodeOutputSocketCircle(outputSocket.index, x, y, radius);
 				
+				const std::string name = outputSocket.displayName.empty()
+					? outputSocket.name
+					: outputSocket.displayName;
+				
 				setColor(255, 255, 255);
-				drawText(x - radius - 2, y, 12, -1.f, 0.f, "%s", outputSocket.name.c_str());
+				drawText(x - radius - 2, y, 12, -1.f, 0.f, "%s", name.c_str());
 			}
 		}
 		endTextBatch();

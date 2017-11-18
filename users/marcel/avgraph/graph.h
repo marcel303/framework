@@ -267,6 +267,8 @@ struct GraphEdit_TypeDefinition
 		
 		int index;
 		
+		std::string displayName;
+		
 		InputSocket()
 			: typeName()
 			, enumName()
@@ -275,6 +277,7 @@ struct GraphEdit_TypeDefinition
 			, hasDefaultValue(false)
 			, isDynamic(false)
 			, index(-1)
+			, displayName()
 		{
 		}
 		
@@ -292,12 +295,15 @@ struct GraphEdit_TypeDefinition
 		
 		int index;
 		
+		std::string displayName;
+		
 		OutputSocket()
 			: typeName()
 			, name()
 			, isEditable(false)
 			, isDynamic(false)
 			, index(-1)
+			, displayName()
 		{
 		}
 		

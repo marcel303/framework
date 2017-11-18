@@ -1348,6 +1348,7 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 			inputSocket.enumName = src.enumName;
 			inputSocket.defaultValue = src.defaultValue;
 			inputSocket.hasDefaultValue = true;
+			inputSocket.displayName = src.displayName;
 			
 			typeDefinition.inputSockets.push_back(inputSocket);
 		}
@@ -1361,6 +1362,7 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 			outputSocket.name = src.name;
 			outputSocket.isEditable = src.isEditable;
 			outputSocket.index = i;
+			outputSocket.displayName = src.displayName;
 			
 			typeDefinition.outputSockets.push_back(outputSocket);
 		}
