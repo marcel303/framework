@@ -55,11 +55,11 @@ using namespace tinyxml2;
 //#define FILENAME "oscpath.xml"
 //#define FILENAME "oscpathlist.xml"
 //#define FILENAME "wekinatorTest.xml"
-//#define FILENAME "testVfxGraph.xml"
+#define FILENAME "testVfxGraph.xml"
 //#define FILENAME "sampleTest.xml"
 //#define FILENAME "midiTest.xml"
 //#define FILENAME "draw3dTest.xml"
-#define FILENAME "nodeDataTest.xml"
+//#define FILENAME "nodeDataTest.xml"
 //#define FILENAME "fsfxv2Test.xml"
 //#define FILENAME "kinectTest2.xml"
 
@@ -530,7 +530,7 @@ int main(int argc, char * argv[])
 	
 	//framework.minification = 2;
 	
-	//framework.enableDepthBuffer = true;
+	framework.enableDepthBuffer = false;
 	framework.enableDrawTiming = false;
 	//framework.enableProfiling = true;
 	
@@ -614,6 +614,8 @@ int main(int argc, char * argv[])
 		float realtimePreviewAnim = 1.f;
 		
 		double vflip = 1.0;
+		
+		SDL_StartTextInput();
 		
 		while (!framework.quitRequested)
 		{
@@ -781,6 +783,8 @@ int main(int argc, char * argv[])
 			}
 			framework.endDraw();
 		}
+		
+		SDL_StopTextInput();
 		
 		Font("calibri.ttf").saveCache();
 		
