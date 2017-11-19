@@ -93,6 +93,7 @@ enum BLEND_MODE // setBlend
 {
 	BLEND_OPAQUE,
 	BLEND_ALPHA,
+	BLEND_PREMULTIPLIED_ALPHA,
 	BLEND_PREMULTIPLIED_ALPHA_DRAW,
 	BLEND_ADD,
 	BLEND_ADD_OPAQUE,
@@ -1289,6 +1290,7 @@ void showErrorMessage(const char * caption, const char * format, ...);
 
 void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma = 1.632f);
 
+// todo : implement these shaders .. ! and make source code shared/includable
 void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius);
 void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius);
 void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity);

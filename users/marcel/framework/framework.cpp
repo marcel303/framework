@@ -4683,7 +4683,15 @@ void setBlend(BLEND_MODE blendMode)
 			glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		break;
+	case BLEND_PREMULTIPLIED_ALPHA:
+		glEnable(GL_BLEND);
+		if (glBlendEquation)
+			glBlendEquation(GL_FUNC_ADD);
+		if (glBlendFuncSeparate)
+			glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+		break;
 	case BLEND_PREMULTIPLIED_ALPHA_DRAW:
+	// todo : remove ?
 		glEnable(GL_BLEND);
 		if (glBlendEquation)
 			glBlendEquation(GL_FUNC_ADD);
