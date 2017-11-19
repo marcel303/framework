@@ -183,6 +183,7 @@ void VfxNodeYuvToRgb::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeYuvToRgb);
 	
+	// todo : do drawing.. in draw() ?
 	const VfxImageBase * y = getInputImage(kInput_Y, nullptr);
 	const VfxImageBase * u = getInputImage(kInput_U, nullptr);
 	const VfxImageBase * v = getInputImage(kInput_V, nullptr);

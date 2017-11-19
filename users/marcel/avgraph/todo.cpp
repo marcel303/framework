@@ -5,32 +5,19 @@ top priority items:
 	- like the BANG node in max
 	- add ability to trigger any input/output trigger (?)
 - add GPU performance markers
-+ add the ability to have dynamic input sockets. use cases: shaders, sub graphs
-	+ add support for recovering connections
-	+ add support for recovering immediate values
-	+ add dynamic stuff to VfxGraph so as not to bother each and every node with having to store dynamic links, immediate values, etc ?
-+ add the ability to have dynamic output sockets. use cases: sub graphs
-	+ add support for recovering connections
 - add text field to node type select
-# add explicit categories to vfx nodes
-	# decided I don't like it. use first part of node type name to decide category
-	# use last part of node type name as the display name to keep the graph editor UI clean
 - add a list of xml files to click on for more rapid testing
 - add automated error checking test for existing graph files ?
-- fix SDL text input when selecting a text field before the previously active one (start before stop)
++ fix SDL text input when selecting a text field before the previously active one (start before stop). todo : test IME support
 - add FSFX node which lets one select a shader from a drop down list
-- add a dedicated shader node. no pre-defined inputs at all
-# add FSFX shaders. use built-in shaders ?
-	+ copied gaussian shadr to fsfx/ folder
-+ add FSFX shaderSource which exposes main function and uses applyFsfx function from .fsfx file to change pixels. also exposes shared uniforms, applies alpha blended, opacity control, color mode and color post
-	+ used a format option instead
+- add a dedicated shader node. no pre-defined inputs at all. output an image
 - rename fsfx v1 to imfx ? redefine behavior to run shader over an image. expressly output as image
 - how to convert multiple channels to gpu image with channel(s).toGpu ?
 - add ability for nodes to report warnings and errors
 - add gen.osc. lt user slect shape. take inspiration from audio node version
 - add gen.random node with different modes. white, pink, brown
 - add gen.brownian
-- fix issue with link mappings not being restored updating dynamic sockts
+- oscilloscope node
 
 
 todo :
@@ -55,7 +42,7 @@ todo :
 	- open container when double clicking container node
 	- determine how to save nodes hierarchically contained
 	- the inputs and outputs of the container node and how it all works should all be implementation-defined I think
-- add mouse cursor to user interface
++ add mouse cursor to user interface
 - make links use bezier curves
 - hide node text until mouse moves close to node ? makes the screen more serene and helps optimize UI drawing
 - look at Bitwig 2 for inspiration of node types
@@ -66,6 +53,7 @@ todo :
 	- raise a menu when socket connect is released on a node itself. ask for which socket to connect to
 - NanoVG includes an interesting blurring algortihm used for blurring fonts. integrate ?
 - fix issue where freeing texture here can result in issues when drawing visualizer. tick of visualizer should always happen after cpuToGpu tick, but there's no link connecting visualizer to the node it references, so tick order is undefined .. ! -> maybe update visualizer in draw. or never capture references (to textures ID's or whatever) in visualizer. only let it copy values by value (as needed for graph) but capture everything else on draw
+	- add a separate tickVisualizers(..) or similar ? it would run after evaluating the vfx graph, so get the latest values. conceptually, doing the regular tick before the vfx graph also makes sense, as it ensures vfx graph uses the latest version of the graph. so editor.tick, vfxGraph.tick/draw, editor.tickVisualizers. editor.draw, composite vfxGraph/editor
 - add ability to add node between nodes ?
 - add third 'node minification' option: show only active inputs and outputs
 	so we have three options then: show everything, show only active i/o and fully collapsed
@@ -156,16 +144,6 @@ todo : nodes :
 - create separate and vfxGraph project with CMake files
 - have the model node also expose channels ?
 
-
-todo : fsfx :
-+ let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
-+ expose uniforms/inputs from FSFX pixel shader
- iterate FSFX pixel shaders and generate type definitions based on FSFX name and exposed uniforms
-	+ OR: allow nodes to specify dynamic input sockets. use real-time callback to get the list of inputs
-	+ store inputs by name in nodes (like regular inputs)
-	+ let FSFX node  resize its inputs dynamically (?)
-	+ match the dynamic sockets by name ? add to VfxNodeBase to try to get socket based on name if index lookup fails ?
-+ add standard include file (shaderSource(..)) for FSFX nodes. include params, time, texture1 and 2 and maybe some common functions too
 
 todo : UI
 - make nodes into lilly shapes ?
@@ -346,7 +324,21 @@ todo :
 + push a dummy surface when drawing nodes not connected to the display node
 + report shader error log (FSFX, FSFX v2 and shader nodes)
 + add 'float' boolean to surface node. default.. true ?
+	+ used a format option instead
 + add draw.text class
++ add the ability to have dynamic input sockets. use cases: shaders, sub graphs
+	+ add support for recovering connections
+	+ add support for recovering immediate values
+	+ add dynamic stuff to VfxGraph so as not to bother each and every node with having to store dynamic links, immediate values, etc ?
++ add the ability to have dynamic output sockets. use cases: sub graphs
+	+ add support for recovering connections
+# add explicit categories to vfx nodes
+	# decided I don't like it. use first part of node type name to decide category
+	# use last part of node type name as the display name to keep the graph editor UI clean
+# add FSFX shaders. use built-in shaders ?
+	+ copied gaussian shadr to fsfx/ folder
+ + add FSFX shaderSource which exposes main function and uses applyFsfx function from .fsfx file to change pixels. also exposes shared uniforms, applies alpha blended, opacity control, color mode and color post
++ fix issue with link mappings not being restored updating dynamic sockets
 
 
 todo : nodes :
@@ -438,6 +430,17 @@ todo : nodes :
 + add vfxGraph node
 + show src socket value preview when hovering over a link
 + reduce hit size links
+
+
+todo : fsfx :
++ let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
++ expose uniforms/inputs from FSFX pixel shader
+ iterate FSFX pixel shaders and generate type definitions based on FSFX name and exposed uniforms
+	+ OR: allow nodes to specify dynamic input sockets. use real-time callback to get the list of inputs
+	+ store inputs by name in nodes (like regular inputs)
+	+ let FSFX node  resize its inputs dynamically (?)
+	+ match the dynamic sockets by name ? add to VfxNodeBase to try to get socket based on name if index lookup fails ?
++ add standard include file (shaderSource(..)) for FSFX nodes. include params, time, texture1 and 2 and maybe some common functions too
 
 
 todo : framework :
