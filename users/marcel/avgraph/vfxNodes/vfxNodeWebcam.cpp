@@ -65,6 +65,14 @@ VfxNodeWebcam::~VfxNodeWebcam()
 
 void VfxNodeWebcam::tick(const float dt)
 {
+	if (isPassthrough)
+	{
+		freeImage();
+		
+		return;
+	}
+	
+	vfxCpuTimingBlock(VfxNodeWebcam);
 	vfxGpuTimingBlock(VfxNodeWebcam);
 	
 	const int deviceIndex = getInputInt(kInput_DeviceIndex, 0);
@@ -72,6 +80,14 @@ void VfxNodeWebcam::tick(const float dt)
 	if (deviceIndex != currentDeviceIndex)
 	{
 		currentDeviceIndex = deviceIndex;
+		
+		if (webcam != nullptr)
+		{
+			webcam->shut();
+			
+			delete webcam;
+			webcam = nullptr;
+		}
 
 		webcam = new MacWebcam();
 
@@ -111,6 +127,10 @@ void VfxNodeWebcam::tick(const float dt)
 			imageCpuOutput.setDataRGBA8(webcam->image->data, webcam->image->sx, webcam->image->sy, 16, webcam->image->pitch);
 			
 			lastImageIndex = webcam->image->index;
+		}
+		else
+		{
+			freeImage();
 		}
 	}
 }
