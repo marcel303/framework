@@ -5,6 +5,7 @@
 #include "Ease.h"
 #include <list>
 #include <map>
+#include <string>
 
 class TweenFloat;
 
