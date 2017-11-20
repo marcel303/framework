@@ -692,7 +692,7 @@ struct VfxEnumTypeRegistration
 	struct Elem
 	{
 		std::string name;
-		int value;
+		std::string valueText;
 	};
 	
 	VfxEnumTypeRegistration * next;
@@ -705,6 +705,7 @@ struct VfxEnumTypeRegistration
 	VfxEnumTypeRegistration();
 	
 	void elem(const char * name, const int value = -1);
+	void elem(const char * name, const char * valueText);
 };
 
 #define VFX_ENUM_TYPE(name) \

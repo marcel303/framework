@@ -780,7 +780,7 @@ bool GraphEdit_EnumDefinition::loadXml(const XMLElement * xmlEnum)
 		
 		Elem elem;
 		
-		elem.value = value;
+		elem.valueText = String::FormatC("%d", value);
 		elem.name = stringAttrib(xmlElem, "name", "");
 		result &= !elem.name.empty();
 		
@@ -6115,20 +6115,28 @@ static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, con
 	{
 		Assert(enumDefinition != nullptr);
 		
-		int value = Parse::Int32(valueText);
+		int value = 0;
 		
 		std::vector<EnumValue> enumValues;
 		
 		for (auto & elem : enumDefinition->enumElems)
 		{
-			enumValues.push_back(EnumValue(elem.value, elem.name));
+			const int index = enumValues.size();
+			
+			if (elem.valueText == valueText)
+				value = index;
+			
+			enumValues.push_back(EnumValue(index, elem.name));
 		}
 		
 		doDropdown(value, name.c_str(), enumValues);
 		
-		valueText = String::ToString(value);
+		if (value < 0 || value >= enumDefinition->enumElems.size())
+			valueText.clear();
+		else
+			valueText = enumDefinition->enumElems[value].valueText;
 		
-		return value != Parse::Int32(defaultValue);
+		return valueText != defaultValue;
 	}
 	else if (editor == "slider")
 	{

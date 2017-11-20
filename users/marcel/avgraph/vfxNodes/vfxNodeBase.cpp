@@ -1194,13 +1194,26 @@ VfxEnumTypeRegistration::VfxEnumTypeRegistration()
 	
 void VfxEnumTypeRegistration::elem(const char * name, const int value)
 {
+	const int enumValue = value == -1 ? nextValue : value;
+	
 	Elem e;
 	e.name = name;
-	e.value = value == -1 ? nextValue : value;
+	e.valueText = String::FormatC("%d", enumValue);
 	
 	elems.push_back(e);
 	
-	nextValue = e.value + 1;
+	nextValue = enumValue + 1;
+}
+
+void VfxEnumTypeRegistration::elem(const char * name, const char * valueText)
+{
+	Elem e;
+	e.name = name;
+	e.valueText = valueText;
+	
+	elems.push_back(e);
+	
+	nextValue = nextValue + 1;
 }
 
 #include "graph.h"
@@ -1220,7 +1233,7 @@ void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 			GraphEdit_EnumDefinition::Elem dst;
 			
 			dst.name = src.name;
-			dst.value = src.value;
+			dst.valueText = src.valueText;
 			
 			enumDefinition.enumElems.push_back(dst);
 		}
@@ -1232,13 +1245,11 @@ void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 		std::vector<std::string> shaderList;
 		getFsfxShaderList(shaderList);
 		
-		int index = 0;
-		
 		for (auto & shader : shaderList)
 		{
 			GraphEdit_EnumDefinition::Elem elem;
 			elem.name = shader;
-			elem.value = index++;
+			elem.valueText = shader;
 			
 			enumDefinition.enumElems.push_back(elem);
 		}

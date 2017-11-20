@@ -233,7 +233,7 @@ struct GraphEdit_EnumDefinition
 {
 	struct Elem
 	{
-		int value;
+		std::string valueText;
 		std::string name;
 	};
 	
