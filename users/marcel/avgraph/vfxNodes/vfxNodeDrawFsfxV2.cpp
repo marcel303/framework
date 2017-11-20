@@ -55,6 +55,8 @@ void getFsfxShaderList(std::vector<std::string> & shaderList)
 			if (Path::GetExtension(file, true) == "ps")
 				s_shaderList.push_back(file);
 		}
+		
+		std::sort(files.begin(), files.end());
 	}
 	
 	shaderList = s_shaderList;
