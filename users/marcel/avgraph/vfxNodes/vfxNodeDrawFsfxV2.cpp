@@ -60,14 +60,6 @@ void getFsfxShaderList(std::vector<std::string> & shaderList)
 	shaderList = s_shaderList;
 }
 
-static const char * toShaderName(const int index)
-{
-	if (index < 0 || index >= s_shaderList.size())
-		return nullptr;
-	else
-		return s_shaderList[index].c_str();
-}
-
 static const char * s_fsfxCommonInc = R"SHADER(
 	include engine/ShaderPS.txt
 	include engine/ShaderUtil.txt
@@ -131,7 +123,7 @@ VfxNodeFsfxV2::VfxNodeFsfxV2()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Before, kVfxPlugType_DontCare);
-	addInput(kInput_Shader, kVfxPlugType_Int);
+	addInput(kInput_Shader, kVfxPlugType_String);
 	addInput(kInput_Image1, kVfxPlugType_Image);
 	addInput(kInput_Image2, kVfxPlugType_Image);
 	addInput(kInput_Color1, kVfxPlugType_Color);
@@ -347,7 +339,7 @@ void VfxNodeFsfxV2::tick(const float dt)
 		return;
 	}
 	
-	const char * shaderName = toShaderName(getInputInt(kInput_Shader, 0));
+	const char * shaderName = getInputString(kInput_Shader, nullptr);
 	
 	if (shaderName == nullptr)
 	{

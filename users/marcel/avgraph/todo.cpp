@@ -9,7 +9,7 @@ top priority items:
 - add a list of xml files to click on for more rapid testing
 - add automated error checking test for existing graph files ?
 + fix SDL text input when selecting a text field before the previously active one (start before stop). todo : test IME support
-- add FSFX node which lets one select a shader from a drop down list
++ add FSFX node which lets one select a shader from a drop down list
 - add a dedicated shader node. no pre-defined inputs at all. output an image
 - rename fsfx v1 to imfx ? redefine behavior to run shader over an image. expressly output as image
 - how to convert multiple channels to gpu image with channel(s).toGpu ?
