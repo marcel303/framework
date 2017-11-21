@@ -146,7 +146,10 @@ void VfxNodeVfxGraph::tick(const float dt)
 	
 	if (isPassthrough)
 	{
+		currentFilename.clear();
+		
 		close();
+		
 		return;
 	}
 	
