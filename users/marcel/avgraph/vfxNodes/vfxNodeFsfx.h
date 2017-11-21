@@ -76,6 +76,7 @@ struct VfxNodeFsfx : VfxNodeBase
 	virtual ~VfxNodeFsfx() override;
 	
 	void allocateSurface(const int sx, const int sy);
+	void freeSurface();
 	void loadShader(const char * filename);
 	void freeShader();
 	

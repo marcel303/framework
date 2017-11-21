@@ -98,8 +98,7 @@ void VfxNodeFsfx::allocateSurface(const int sx, const int sy)
 {
 	Assert(surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight());
 	
-	delete surface;
-	surface = nullptr;
+	freeSurface();
 	
 	if (sx > 0 && sy > 0)
 	{
@@ -110,6 +109,12 @@ void VfxNodeFsfx::allocateSurface(const int sx, const int sy)
 		surface->clear();
 		surface->swapBuffers();
 	}
+}
+
+void VfxNodeFsfx::freeSurface()
+{
+	delete surface;
+	surface = nullptr;
 }
 
 void VfxNodeFsfx::loadShader(const char * filename)
@@ -324,8 +329,7 @@ void VfxNodeFsfx::tick(const float dt)
 	
 	if (isPassthrough || shaderName == nullptr)
 	{
-		allocateSurface(0, 0);
-		
+		freeSurface();
 		freeShader();
 		
 		currentShader.clear();
@@ -363,11 +367,13 @@ void VfxNodeFsfx::draw() const
 	
 	if (isPassthrough || surface == nullptr || shader == nullptr)
 	{
-		imageOutput.texture = image != nullptr ? image->getTexture() : 0;
+		if (isPassthrough)
+			imageOutput.texture = image != nullptr ? image->getTexture() : 0;
+		else
+			imageOutput.texture = 0;
+		
 		return;
 	}
-	
-	const GLuint imageTexture = image != nullptr ? image->getTexture() : surface->getTexture();
 	
 	if (shader->isValid())
 	{
@@ -467,6 +473,7 @@ void VfxNodeFsfx::draw() const
 			
 			const VfxColor defaultColor(1.f, 1.f, 1.f, 1.f);
 			
+			const GLuint imageTexture = image != nullptr ? image->getTexture() : surface->getTexture();
 			const VfxImageBase * image1 = getInputImage(kInput_Image1, nullptr);
 			const VfxImageBase * image2 = getInputImage(kInput_Image2, nullptr);
 			const GLuint texture1 = image1 ? image1->getTexture() : 0;
