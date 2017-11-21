@@ -2590,8 +2590,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					
 					realTimeSocketCapture.visualizer.init(nodeId, srcSocketName, srcSocketIndex, String::Empty, -1);
 				}
-				
-				realTimeSocketCapture.visualizer.tick(*this);
 			}
 			
 			if (result.hasNode && result.nodeHitTestResult.outputSocket != nullptr)
@@ -2613,8 +2611,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					
 					realTimeSocketCapture.visualizer.init(nodeId, String::Empty, -1, dstSocketName, dstSocketIndex);
 				}
-				
-				realTimeSocketCapture.visualizer.tick(*this);
 			}
 			
 			if (result.hasLink)
@@ -2634,8 +2630,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					
 					realTimeSocketCapture.visualizer.init(nodeId, String::Empty, -1, dstSocketName, dstSocketIndex);
 				}
-				
-				realTimeSocketCapture.visualizer.tick(*this);
 			}
 		}
 		
@@ -2973,7 +2967,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				{
 					std::string typeName = nodeTypeNameSelect->getNodeTypeName();
 					
-					tryAddNode(typeName, mousePosition.x, mousePosition.x, true);
+					tryAddNode(typeName, mousePosition.x, mousePosition.x, true, nullptr);
 				}
 			}
 			
@@ -3587,7 +3581,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				
 				if (typeName.empty() == false)
 				{
-					if (tryAddNode(typeName, nodeInsert.x, nodeInsert.y, true))
+					if (tryAddNode(typeName, nodeInsert.x, nodeInsert.y, true, nullptr))
 					{
 						nodeTypeNameSelect->addToHistory(typeName);
 					}
@@ -4009,12 +4003,32 @@ bool GraphEdit::tickTouches()
 		state == kState_TouchZoom;
 }
 
+void GraphEdit::tickVisualizers(const float dt)
+{
+	if (realTimeSocketCapture.visualizer.nodeId != kGraphNodeIdInvalid)
+	{
+		realTimeSocketCapture.visualizer.tick(*this);
+	}
+	
+	for (auto & nodeDataItr : nodeDatas)
+	{
+		auto nodeId = nodeDataItr.first;
+		auto & node = *tryGetNode(nodeId);
+		auto & nodeData = nodeDataItr.second;
+		
+		if (node.nodeType == kGraphNodeType_Visualizer)
+		{
+			nodeData.visualizer.tick(*this);
+		}
+	}
+}
+
 void GraphEdit::tickNodeDatas(const float dt)
 {
 	for (auto & nodeDataItr : nodeDatas)
 	{
 		auto nodeId = nodeDataItr.first;
-		auto & node = graph->nodes[nodeId];
+		auto & node = *tryGetNode(nodeId);
 		auto & nodeData = nodeDataItr.second;
 		
 		if (nodeData.isFolded && nodeData.isCloseToConnectionSite == false)
@@ -4028,11 +4042,6 @@ void GraphEdit::tickNodeDatas(const float dt)
 		}
 		
 		nodeData.isActiveAnimTime = Calc::Max(0.f, nodeData.isActiveAnimTime - dt);
-		
-		if (node.nodeType == kGraphNodeType_Visualizer)
-		{
-			nodeData.visualizer.tick(*this);
-		}
 	}
 }
 
@@ -4469,7 +4478,7 @@ bool GraphEdit::isInputIdle() const
 	return result;
 }
 
-bool GraphEdit::tryAddNode(const std::string & typeName, const float x, const float y, const bool select)
+bool GraphEdit::tryAddNode(const std::string & typeName, const float x, const float y, const bool select, GraphNodeId * nodeId)
 {
 	if (state != kState_Idle)
 	{
@@ -4508,6 +4517,11 @@ bool GraphEdit::tryAddNode(const std::string & typeName, const float x, const fl
 		if (select)
 		{
 			selectNode(node.id, true);
+		}
+		
+		if (nodeId != nullptr)
+		{
+			*nodeId = node.id;
 		}
 		
 		return true;
@@ -6582,7 +6596,7 @@ void GraphUi::NodeTypeNameSelect::selectTypeName(const std::string & _typeName)
 {
 	typeName = _typeName;
 	
-	if (graphEdit->tryAddNode(typeName, graphEdit->dragAndZoom.focusX, graphEdit->dragAndZoom.focusY, true))
+	if (graphEdit->tryAddNode(typeName, graphEdit->dragAndZoom.focusX, graphEdit->dragAndZoom.focusY, true, nullptr))
 	{
 		// update history
 		

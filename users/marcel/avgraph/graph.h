@@ -1449,6 +1449,7 @@ struct GraphEdit : GraphEditConnection
 	bool hitTestNode(const NodeData & nodeData, const GraphEdit_TypeDefinition & typeDefinition, const float x, const float y, const bool socketsAreVisible, NodeHitTestResult & result) const;
 	
 	bool tick(const float dt, const bool inputIsCaptured);
+	void tickVisualizers(const float dt);
 	void tickNodeDatas(const float dt);
 	bool tickTouches();
 	void tickMouseScroll(const float dt);
@@ -1468,7 +1469,7 @@ struct GraphEdit : GraphEditConnection
 	
 	bool isInputIdle() const;
 	
-	bool tryAddNode(const std::string & typeName, const float x, const float y, const bool select);
+	bool tryAddNode(const std::string & typeName, const float x, const float y, const bool select, GraphNodeId * nodeId);
 	bool tryAddVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex, const int x, const int y, const bool select);
 	
 	void selectNode(const GraphNodeId nodeId, const bool clearSelection);

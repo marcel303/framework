@@ -680,6 +680,76 @@ int main(int argc, char * argv[])
 			
 			if (inputIsCaptured == false)
 			{
+				// todo : move this to graph edit ?
+				// todo : dynamically get src/dst socket indices from type definition
+				// todo : pop up a node type select dialog ?
+				
+				if (mouse.wentDown(BUTTON_LEFT) && keyboard.isDown(SDLK_RSHIFT))
+				{
+					GraphEdit::HitTestResult hitTestResult;
+					
+					if (graphEdit->hitTest(graphEdit->mousePosition.x, graphEdit->mousePosition.y, hitTestResult))
+					{
+						if (hitTestResult.hasLink)
+						{
+							auto linkTypeDefinition = graphEdit->tryGetLinkTypeDefinition(hitTestResult.link->id);
+							
+							if (linkTypeDefinition != nullptr)
+							{
+								if (linkTypeDefinition->srcTypeName == "draw" && linkTypeDefinition->dstTypeName == "draw")
+								{
+									GraphNodeSocketLink link = *hitTestResult.link;
+									
+									GraphEdit::LinkPath linkPath;
+									
+									if (graphEdit->getLinkPath(link.id, linkPath))
+									{
+										GraphNodeId nodeId;
+										
+										if (graphEdit->tryAddNode(
+											"draw.fsfx-v2",
+											graphEdit->mousePosition.x,
+											graphEdit->mousePosition.y,
+											true, &nodeId))
+										{
+											if (true)
+											{
+												GraphNodeSocketLink link1;
+												link1.id = graphEdit->graph->allocLinkId();
+												link1.srcNodeId = link.srcNodeId;
+												link1.srcNodeSocketIndex = link.srcNodeSocketIndex;
+												link1.srcNodeSocketName = link.srcNodeSocketName;
+												link1.dstNodeId = nodeId;
+												link1.dstNodeSocketIndex = 0;
+												link1.dstNodeSocketName = "any";
+												graphEdit->graph->addLink(link1, true);
+											}
+											
+											if (true)
+											{
+												GraphNodeSocketLink link2;
+												link2.id = graphEdit->graph->allocLinkId();
+												link2.srcNodeId = nodeId;
+												link2.srcNodeSocketIndex = 0;
+												link2.srcNodeSocketName = "before";
+												link2.dstNodeId = link.dstNodeId;
+												link2.dstNodeSocketIndex = link.dstNodeSocketIndex;
+												link2.dstNodeSocketName = link.dstNodeSocketName;
+												graphEdit->graph->addLink(link2, true);
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					
+					inputIsCaptured = true;
+				}
+			}
+			
+			if (inputIsCaptured == false)
+			{
 				if (keyboard.wentDown(SDLK_p) && keyboard.isDown(SDLK_LGUI))
 				{
 					inputIsCaptured = true;
@@ -733,6 +803,13 @@ int main(int argc, char * argv[])
 					}
 					gxPopMatrix();
 				}
+				
+				Assert(g_currentVfxGraph == nullptr);
+				g_currentVfxGraph = vfxGraph;
+				{
+					graphEdit->tickVisualizers(dt);
+				}
+				g_currentVfxGraph = nullptr;
 				
 				pushSurface(graphEditSurface);
 				{
