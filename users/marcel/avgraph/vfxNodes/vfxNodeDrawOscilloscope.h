@@ -44,6 +44,7 @@ struct VfxNodeDrawOscilloscope : VfxNodeBase
 	enum Input
 	{
 		kInput_SizeMode,
+		kInput_SampleRate,
 		kInput_StrokeSize,
 		kInput_Color,
 		kInput_Intensity,

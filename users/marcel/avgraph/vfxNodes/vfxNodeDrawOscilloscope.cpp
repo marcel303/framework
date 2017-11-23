@@ -44,6 +44,7 @@ VFX_NODE_TYPE(VfxNodeDrawOscilloscope)
 	typeName = "draw.oscilloscope";
 	
 	inEnum("sizeMode", "drawOscilloscopeSizeMode");
+	in("sampleRate", "float", "44100");
 	in("stroke", "float", "4");
 	in("color", "color", "ffff");
 	in("intensity", "float", "1");
@@ -56,6 +57,7 @@ VfxNodeDrawOscilloscope::VfxNodeDrawOscilloscope()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_SizeMode, kVfxPlugType_Int);
+	addInput(kInput_SampleRate, kVfxPlugType_Float);
 	addInput(kInput_StrokeSize, kVfxPlugType_Float);
 	addInput(kInput_Color, kVfxPlugType_Color);
 	addInput(kInput_Intensity, kVfxPlugType_Float);
@@ -222,7 +224,8 @@ void VfxNodeDrawOscilloscope::draw() const
 
 void VfxNodeDrawOscilloscope::customTraverseTick(const int traversalId, const float dt)
 {
-	const float sampleDt = 1.f / 40000.f;
+	const float sampleRate = getInputFloat(kInput_SampleRate, 44100.f);
+	const float sampleDt = 1.f / sampleRate;
 	
 	const int numSubsteps = std::max(1, (int)std::ceilf(dt / sampleDt));
 	
