@@ -443,7 +443,8 @@ struct VfxNodeBase
 {
 	enum Flag
 	{
-		kFlag_CustomTraverseDraw = 1 << 0
+		kFlag_CustomTraverseTick = 1 << 0,
+		kFlag_CustomTraverseDraw = 1 << 1
 	};
 	
 	struct TriggerTarget
@@ -679,6 +680,7 @@ struct VfxNodeBase
 	virtual void draw() const { }
 	virtual void beforeDraw() const { }
 	virtual void afterDraw() const { }
+	virtual void customTraverseTick(const int traversalId, const float dt) { }
 	virtual void customTraverseDraw(const int traversalId) const { }
 	virtual void beforeSave(GraphNode & node) const { }
 	
