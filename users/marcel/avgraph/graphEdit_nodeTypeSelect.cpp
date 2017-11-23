@@ -249,7 +249,7 @@ static bool doCategories(GraphEdit & graphEdit, TypeDefinitionsByCategory & cate
 			
 			for (auto nodeType : list)
 			{
-				if (numRows == 8)
+				if (numRows == 7)
 				{
 					numRows = 0;
 					
