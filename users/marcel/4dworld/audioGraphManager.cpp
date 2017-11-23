@@ -664,6 +664,8 @@ bool AudioGraphManager::tickEditor(const float dt, const bool isInputCaptured)
 	if (selectedFile != nullptr)
 	{
 		result |= selectedFile->graphEdit->tick(dt, isInputCaptured);
+		
+		selectedFile->graphEdit->tickVisualizers(dt);
 	}
 	
 	return result;

@@ -704,7 +704,7 @@ void createAudioEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 			GraphEdit_EnumDefinition::Elem dst;
 			
 			dst.name = src.name;
-			dst.value = src.value;
+			dst.valueText = String::FormatC("%d", src.value);
 			
 			enumDefinition.enumElems.push_back(dst);
 		}
