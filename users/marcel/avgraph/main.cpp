@@ -55,13 +55,15 @@ using namespace tinyxml2;
 //#define FILENAME "oscpath.xml"
 //#define FILENAME "oscpathlist.xml"
 //#define FILENAME "wekinatorTest.xml"
-#define FILENAME "testVfxGraph.xml"
+//#define FILENAME "testVfxGraph.xml"
 //#define FILENAME "sampleTest.xml"
 //#define FILENAME "midiTest.xml"
 //#define FILENAME "draw3dTest.xml"
 //#define FILENAME "nodeDataTest.xml"
 //#define FILENAME "fsfxv2Test.xml"
 //#define FILENAME "kinectTest2.xml"
+//#define FILENAME "testOscilloscope.xml"
+#define FILENAME "testVisualizers.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -496,6 +498,67 @@ static void testDynamicInputs()
 
 //
 
+static void testOscilloscope()
+{
+	do
+	{
+		framework.process();
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			// code : https://github.com/m1el/woscope
+			// demo : http://m1el.github.io/woscope/
+			
+			const int kNumPoints = 512;
+			float x[kNumPoints];
+			float y[kNumPoints];
+	
+			const float m1 = sinf(framework.time / 5.678f) / 10.f;
+			const float m2 = sinf(framework.time / 6.789f) / 10.f;
+	
+			for (int i = 0; i < kNumPoints; ++i)
+			{
+				x[i] = sinf(i * m1 + framework.time / 1.234f) * 100.f + GFX_SX/2.f;
+				y[i] = cosf(i * m2 + framework.time / 2.345f) * 100.f + GFX_SY/2.f;
+			}
+			
+			pushBlend(BLEND_ADD);
+			{
+				Shader shader("oscline");
+				setShader(shader);
+				shader.setImmediate("uInvert", 1.f);
+				shader.setImmediate("uSize", 4.f);
+				shader.setImmediate("uIntensity", .2f);
+				shader.setImmediate("uColor", 1.f, 1.f, 1.f, 1.f);
+				shader.setImmediate("uNumPoints", kNumPoints);
+				
+				gxBegin(GL_QUADS);
+				{
+					for (int i = 0; i < kNumPoints - 1; ++i)
+					{
+						float x1 = x[i + 0];
+						float y1 = y[i + 0];
+						float x2 = x[i + 1];
+						float y2 = y[i + 1];
+						
+						setColor(colorWhite);
+						for (int j = 0; j < 4; ++j)
+							gxVertex4f(x1, y1, x2, y2);
+					}
+				}
+				gxEnd();
+				
+				clearShader();
+			}
+			popBlend();
+		}
+		framework.endDraw();
+		
+	} while (!keyboard.wentDown(SDLK_SPACE));
+}
+
+//
+
 #include "Path.h"
 
 static std::string filedrop;
@@ -568,6 +631,8 @@ int main(int argc, char * argv[])
 		
 		//testDynamicInputs();
 		
+		testOscilloscope();
+		
 		//codevember1();
 		
 		//
@@ -621,6 +686,40 @@ int main(int argc, char * argv[])
 		{
 			vfxCpuTimingBlock(tick);
 			vfxGpuTimingBlock(tick);
+			
+			// todo : remove. test here to estimate how much memory using serialization as the undo/redo mechanism would use
+			if (false && keyboard.wentDown(SDLK_m))
+			{
+				std::vector<std::string> historyList;
+				historyList.resize(1000);
+				
+				for (auto & history : historyList)
+				{
+					bool result = true;
+					
+					tinyxml2::XMLPrinter xmlGraph;
+					
+					xmlGraph.OpenElement("graph");
+					{
+						result &= graphEdit->graph->saveXml(xmlGraph, graphEdit->typeDefinitionLibrary);
+						
+						xmlGraph.OpenElement("editor");
+						{
+							result &= graphEdit->saveXml(xmlGraph);
+						}
+						xmlGraph.CloseElement();
+					}
+					xmlGraph.CloseElement();
+					
+					Assert(result);
+					if (result)
+					{
+						history = xmlGraph.CStr();
+					}
+				}
+				
+				for (;;);
+			}
 			
 			// when real-time preview is disabled and all animations are done, wait for events to arrive. otherwise just keep processing and drawing frames
 			

@@ -8,16 +8,16 @@ top priority items:
 - add text field to node type select
 - add a list of xml files to click on for more rapid testing
 - add automated error checking test for existing graph files ?
-+ fix SDL text input when selecting a text field before the previously active one (start before stop). todo : test IME support
-+ add FSFX node which lets one select a shader from a drop down list
 - add a dedicated shader node. no pre-defined inputs at all. output an image
 - rename fsfx v1 to imfx ? redefine behavior to run shader over an image. expressly output as image
 - how to convert multiple channels to gpu image with channel(s).toGpu ?
 - add ability for nodes to report warnings and errors
-- add gen.osc. lt user slect shape. take inspiration from audio node version
++ add gen.osc. lt user select shape. take inspiration from audio node version
+	# renamed to gen.primitive
 - add gen.random node with different modes. white, pink, brown
 - add gen.brownian
-- oscilloscope node
++ oscilloscope node
++ decouple visualizers from nodes. when hit testing, sort elems by z-key, add ptr to node or visualizer
 
 
 todo :
@@ -31,8 +31,11 @@ todo :
 	- clear type name text box when adding node
 - visualize direction of link data flow
 - investigate VVVV's ability to turn everything into vectors of values and to combine lists
-	- add channels combine method (for now?)
+	# add channels combine method (for now?)
+		+ combine idea is pretty much covered by merge node
 	- add node where channel values can be added to a list -> allow to experiment with combine node
+ 	- add automatic combine behavior when connecting multiple channels to the same input ?
+ 		- default to cycle. add link map to override behavior ? (clamp, pad zero)
 - double click node to perform node-specific action
 	# add real-time editing callback for double click event
 		+ add an editor callback to the node type definition instead. the graph editor should be fully functional without real-time editing interface and an implementation running in the backgroup, meaning resource editing should work regardless of real-time interface
@@ -42,7 +45,6 @@ todo :
 	- open container when double clicking container node
 	- determine how to save nodes hierarchically contained
 	- the inputs and outputs of the container node and how it all works should all be implementation-defined I think
-+ add mouse cursor to user interface
 - make links use bezier curves
 - hide node text until mouse moves close to node ? makes the screen more serene and helps optimize UI drawing
 - look at Bitwig 2 for inspiration of node types
@@ -52,14 +54,11 @@ todo :
 	- move hovered over node in front of others?
 	- raise a menu when socket connect is released on a node itself. ask for which socket to connect to
 - NanoVG includes an interesting blurring algortihm used for blurring fonts. integrate ?
-- fix issue where freeing texture here can result in issues when drawing visualizer. tick of visualizer should always happen after cpuToGpu tick, but there's no link connecting visualizer to the node it references, so tick order is undefined .. ! -> maybe update visualizer in draw. or never capture references (to textures ID's or whatever) in visualizer. only let it copy values by value (as needed for graph) but capture everything else on draw
-	- add a separate tickVisualizers(..) or similar ? it would run after evaluating the vfx graph, so get the latest values. conceptually, doing the regular tick before the vfx graph also makes sense, as it ensures vfx graph uses the latest version of the graph. so editor.tick, vfxGraph.tick/draw, editor.tickVisualizers. editor.draw, composite vfxGraph/editor
 - add ability to add node between nodes ?
 - add third 'node minification' option: show only active inputs and outputs
 	so we have three options then: show everything, show only active i/o and fully collapsed
 - add ability to reference nodes? makes graph organization more easy
 - drag link into empty space = open node type selection menu
-+ add copy and paste text support
 
 
 todo : creativity investigation :
@@ -90,7 +89,7 @@ todo : nodes :
 	- add (re)start input trigger
 	+ can be very very useful to trigger effects
 	- add time! input trigger. performs seek operation
-- add MIDI node
++ add MIDI node
 - add pitch control to oscillators ?
 - add pulse size to square oscillator
 - add audio playback node
@@ -339,6 +338,11 @@ todo :
 	+ copied gaussian shadr to fsfx/ folder
  + add FSFX shaderSource which exposes main function and uses applyFsfx function from .fsfx file to change pixels. also exposes shared uniforms, applies alpha blended, opacity control, color mode and color post
 + fix issue with link mappings not being restored updating dynamic sockets
++ fix SDL text input when selecting a text field before the previously active one (start before stop). todo : test IME support
++ add mouse cursor to user interface
++ fix issue where freeing texture here can result in issues when drawing visualizer. tick of visualizer should always happen after cpuToGpu tick, but there's no link connecting visualizer to the node it references, so tick order is undefined .. ! -> maybe update visualizer in draw. or never capture references (to textures ID's or whatever) in visualizer. only let it copy values by value (as needed for graph) but capture everything else on draw
+	+ add a separate tickVisualizers(..) or similar ? it would run after evaluating the vfx graph, so get the latest values. conceptually, doing the regular tick before the vfx graph also makes sense, as it ensures vfx graph uses the latest version of the graph. so editor.tick, vfxGraph.tick/draw, editor.tickVisualizers. editor.draw, composite vfxGraph/editor
++ add copy and paste text support
 
 
 todo : nodes :
@@ -430,6 +434,7 @@ todo : nodes :
 + add vfxGraph node
 + show src socket value preview when hovering over a link
 + reduce hit size links
++ add FSFX node which lets one select a shader from a drop down list
 
 
 todo : fsfx :
