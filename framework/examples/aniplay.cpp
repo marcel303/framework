@@ -30,7 +30,7 @@
 static int GFX_SX = 640;
 static int GFX_SY = 480;
 static std::string s_filename;
-static Sprite * s_sprite = 0;
+static Sprite * s_sprite = nullptr;
 
 static std::string getBasePath(const char * path)
 {
@@ -55,8 +55,8 @@ static void loadSprite(const char * filename)
 	if (!s_filename.empty())
 	{
 		delete s_sprite;
-		s_sprite = 0;
-
+		s_sprite = nullptr;
+		
 		s_sprite = new Sprite(s_filename.c_str());
 	}
 }
@@ -71,32 +71,27 @@ static void handleAction(const std::string & action, const Dictionary & args)
 
 int main(int argc, char ** argv)
 {
-	changeDirectory("data");
-
-	framework.fullscreen = false;
-	framework.reloadCachesOnActivate = true;
 	framework.windowTitle = "aniplay";
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
 
-	log("drop a sprite onto the window to open the file");
-	log("UP/DOWN: selection animation from the animation list");
-	log("  SPACE: play/pause/resume animation");
-	log(" RETURN: play animation from start");
-	log("      A: increase animation speed");
-	log("      Z: decrease animation speed");
-	log("   1..3: set sprite scale");
-	log("      H: toggle horizontal flip");
-	log("      V: toggle vertical flip");
-	log("   LEFT: previous animation frame");
-	log("  RIGHT: next animation frame");
+	logDebug("drop a sprite onto the window to open the file");
+	logDebug("UP/DOWN: selection animation from the animation list");
+	logDebug("  SPACE: play/pause/resume animation");
+	logDebug(" RETURN: play animation from start");
+	logDebug("      A: increase animation speed");
+	logDebug("      Z: decrease animation speed");
+	logDebug("   1..3: set sprite scale");
+	logDebug("      H: toggle horizontal flip");
+	logDebug("      V: toggle vertical flip");
+	logDebug("   LEFT: previous animation frame");
+	logDebug("  RIGHT: next animation frame");
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
 		size_t selectedAnimIndex = 0;
 		bool mustRestartAnim = true;
 
-		changeDirectory(getBasePath(argv[0]).c_str());
 		Font font("calibri.ttf");
 
 		if (argc >= 2)
@@ -114,6 +109,11 @@ int main(int argc, char ** argv)
 			}
 
 			framework.process();
+			
+			if (s_sprite != nullptr)
+			{
+				s_sprite->update(framework.timeStep);
+			}
 
 			framework.beginDraw(20, 20, 20, 0);
 			{
@@ -205,6 +205,31 @@ int main(int argc, char ** argv)
 					s_sprite->x = GFX_SX/2.f;
 					s_sprite->y = GFX_SY/2.f;
 					s_sprite->draw();
+				}
+				
+				if (s_sprite == nullptr)
+				{
+					setColor(colorGreen);
+					setFont("calibri.ttf");
+					
+					const int fontSize = 16;
+					const int incrementY = fontSize + 6;
+					
+					int x = 50;
+					int y = (GFX_SY - 240)/2;
+					y -= incrementY;
+					
+					y += incrementY; drawText(x, y, fontSize, +1, +1, "drop a sprite onto the window to open the file");
+					y += incrementY; drawText(x, y, fontSize, +1, +1, "UP/DOWN: selection animation from the animation list");
+					y += incrementY; drawText(x, y, fontSize, +1, +1, "  SPACE: play/pause/resume animation");
+					y += incrementY; drawText(x, y, fontSize, +1, +1, " RETURN: play animation from start");
+					y += incrementY; drawText(x, y, fontSize, +1, +1, "      A: increase animation speed");
+					y += incrementY; drawText(x, y, fontSize, +1, +1, "      Z: decrease animation speed");
+					y += incrementY; drawText(x, y, fontSize, +1, +1, "   1..3: set sprite scale");
+					y += incrementY; drawText(x, y, fontSize, +1, +1, "      H: toggle horizontal flip");
+					y += incrementY; drawText(x, y, fontSize, +1, +1, "      V: toggle vertical flip");
+					y += incrementY; drawText(x, y, fontSize, +1, +1, "   LEFT: previous animation frame");
+					y += incrementY; drawText(x, y, fontSize, +1, +1, "  RIGHT: next animation frame");
 				}
 			}
 			framework.endDraw();
