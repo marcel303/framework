@@ -33,8 +33,6 @@
 
 int main(int argc, char * argv[])
 {
-	changeDirectory("data");
-	
 	framework.fullscreen = false;
 	if (!framework.init(argc, (const char**)argv, VIEW_SX, VIEW_SY))
 		return -1;
