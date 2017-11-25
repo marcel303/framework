@@ -449,8 +449,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 					const int cellY = i / gridSx;
 					const int sourceX = cellX * cellSx;
 					const int sourceY = cellY * cellSy;
-					//const int sourceOffset = sourceX + sourceY * imageData->sx;
-					const int sourceOffset = sourceX + (imageData->sy - (sourceY + cellSy)) * imageData->sx;
+					const int sourceOffset = sourceX + sourceY * imageData->sx;
 					
 					// capture current OpenGL states before we change them
 					
