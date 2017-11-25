@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 if (NOT HAS_LIBGG)
 	message("including libgg")
-	add_subdirectory(../../../../libgg libgg)
+	add_subdirectory(../../libgg libgg)
 endif (NOT HAS_LIBGG)
 if (NOT HAS_LIBPARTICLE)
 	message("including libparticle")
@@ -24,9 +24,6 @@ project(libparticle_test)
 # --- libparticle_test ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
-file(GLOB_RECURSE source_msdfgen "msdfgen/*.*")
-
-source_group("msdfgen" FILES ${source_msdfgen})
 
 add_executable(libparticle_test ${source})
 

@@ -316,6 +316,7 @@ int main(int argc, char * argv[])
 	if (framework.init(argc, (const char**)argv, windowSx, windowSy))
 	{
 		initUi();
+		pushFontMode(FONT_SDF);
 		
 		ParticleEditor * particleEditor = new ParticleEditor();
 		
@@ -351,6 +352,7 @@ int main(int argc, char * argv[])
 		delete particleEditor;
 		particleEditor = nullptr;
 		
+		popFontMode();
 		shutUi();
 
 		framework.shutdown();

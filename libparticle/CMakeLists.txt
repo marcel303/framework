@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
+set(CMAKE_CXX_STANDARD 14)
+
 set(HAS_LIBPARTICLE 1 PARENT_SCOPE)
 message("setting HAS_LIBPARTICLE")
 
@@ -7,11 +9,11 @@ message("setting HAS_LIBPARTICLE")
 
 if (NOT HAS_LIBGG)
 	message("including libgg")
-	add_subdirectory(../../../libgg libgg)
+	add_subdirectory(../libgg libgg)
 endif (NOT HAS_LIBGG)
 if (NOT HAS_LIBNFD)
 	message("including libnfd")
-	add_subdirectory(../../../libnfd libnfd)
+	add_subdirectory(../libnfd libnfd)
 endif (NOT HAS_LIBNFD)
 if (NOT HAS_FRAMEWORK)
 	message("including framework")
@@ -36,8 +38,8 @@ target_compile_definitions(libparticle PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_
 target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}/../framework") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
 target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}/../framework/win32/include") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
-target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}/../../../libgg") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
-target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}/../../../libnfd") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
+target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}/../libgg") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
+target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}/../libnfd") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
 
 add_dependencies(libparticle framework)
 add_dependencies(libparticle libnfd)
