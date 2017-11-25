@@ -67,7 +67,7 @@ static bool readChunk(FileReader & r, Chunk & chunk, int32_t & size)
 	if (!r.read(id, 4))
 		return false;
 	
-	logDebug("RIFF chunk: %c%c%c%c", id[0], id[1], id[2], id[3]);
+	//logDebug("RIFF chunk: %c%c%c%c", id[0], id[1], id[2], id[3]);
 	
 	chunk = kChunk_OTHER;
 	size = 0;
