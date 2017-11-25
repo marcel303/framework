@@ -32,8 +32,8 @@
 #include "testBase.h"
 #include "Timer.h"
 #include "vfxNodes/deepbelief.h"
-#include "../avpaint/video.h"
-#include "mediaplayer_new/MPVideoBuffer.h"
+#include "../libvideo/video.h"
+#include "mediaplayer/MPVideoBuffer.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;

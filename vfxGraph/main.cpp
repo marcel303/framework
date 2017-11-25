@@ -39,7 +39,7 @@
 #include "vfxNodes/oscEndpointMgr.h"
 #include "vfxNodes/vfxNodeBase.h"
 
-#include "mediaplayer_new/MPUtil.h"
+#include "mediaplayer/MPUtil.h"
 #include "../libparticle/ui.h"
 #include "Timer.h"
 

@@ -31,7 +31,7 @@
 #include "Timer.h"
 #include "vfxNodes/dotDetector.h"
 #include "vfxNodes/dotTracker.h"
-#include "../avpaint/video.h"
+#include "../libvideo/video.h"
 
 #define USE_READPIXELS_OPTIMIZE 0
 #define USE_READPIXELS_FENCES 0

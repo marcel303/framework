@@ -31,7 +31,7 @@
 #include "internal.h"
 #include "model_fbx.h"
 
-#include "../fbx1/fbx.h" // todo: move to framework
+#include "../libfbx/fbx.h" // todo: move to framework
 
 /*
 

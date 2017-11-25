@@ -28,7 +28,7 @@
 #pragma once
 
 #include "audiostream/AudioStream.h"
-#include "mediaplayer_new/MPContext.h"
+#include "mediaplayer/MPContext.h"
 #include <atomic>
 #include <stdint.h>
 

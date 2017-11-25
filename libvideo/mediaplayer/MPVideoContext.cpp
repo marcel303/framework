@@ -36,6 +36,7 @@
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
+#include <xmmintrin.h>
 
 #define QUEUE_SIZE (4 * 10)
 //#define QUEUE_SIZE (4 * 30)

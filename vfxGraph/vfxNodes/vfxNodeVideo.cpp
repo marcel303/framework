@@ -27,8 +27,8 @@
 
 #include "framework.h"
 #include "vfxNodeVideo.h"
-#include "../avpaint/video.h"
-#include "mediaplayer_new/MPVideoBuffer.h"
+#include "../libvideo/video.h"
+#include "mediaplayer/MPVideoBuffer.h"
 
 VFX_ENUM_TYPE(videoOutputMode)
 {

@@ -9,7 +9,7 @@ message("setting HAS_FRAMEWORK")
 
 if (NOT HAS_LIBGG)
 	message("including libgg")
-	add_subdirectory(../../../libgg libgg)
+	add_subdirectory(../libgg libgg)
 endif (NOT HAS_LIBGG)
 
 #
@@ -26,10 +26,10 @@ file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
 	"${CMAKE_CURRENT_SOURCE_DIR}/audiostream/*.h"
 	"${CMAKE_CURRENT_SOURCE_DIR}/msdfgen/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/msdfgen/*.h"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../fbx1/*.cpp")
+	"${CMAKE_CURRENT_SOURCE_DIR}/../libfbx/*.cpp")
 list(REMOVE_ITEM source aniplay.cpp)
 list(REMOVE_ITEM source example.cpp)
-list(REMOVE_ITEM source ../fbx1/main.cpp)
+list(REMOVE_ITEM source ../libfbx/main.cpp)
 
 if (APPLE)
 	#list(REMOVE_ITEM source remotery.cpp)
@@ -60,7 +60,7 @@ endif (APPLE)
 
 target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/audiostream")
-target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/../../../libgg") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
+target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/../libgg") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
 
 if (MSVC)
 	target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/win32/include")

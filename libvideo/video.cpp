@@ -29,7 +29,7 @@
 #include "video.h"
 #include <atomic>
 
-#include "mediaplayer_new/MPVideoBuffer.h"
+#include "mediaplayer/MPVideoBuffer.h"
 #include "StringEx.h"
 
 static SDL_mutex * s_avcodecMutex = nullptr;

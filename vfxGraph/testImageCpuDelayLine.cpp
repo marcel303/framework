@@ -31,8 +31,8 @@
 #include "vfxNodes/openglTexture.h"
 #include "vfxNodes/vfxNodeBase.h"
 
-#include "../avpaint/video.h"
-#include "mediaplayer_new/MPVideoBuffer.h"
+#include "../libvideo/video.h"
+#include "mediaplayer/MPVideoBuffer.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
