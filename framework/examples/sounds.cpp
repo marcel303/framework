@@ -32,9 +32,6 @@
 
 int main(int argc, char * argv[])
 {
-	changeDirectory("data");
-	
-	framework.fullscreen = false;
 	if (!framework.init(argc, (const char**)argv, VIEW_SX, VIEW_SY))
 		return -1;
 	
@@ -81,8 +78,7 @@ int main(int argc, char * argv[])
 		{
 			setBlend(BLEND_ALPHA);
 			
-			Font font("calibri.ttf");
-			setFont(font);
+			setFont("calibri.ttf");
 			
 			setColor(255, 255, 255, 255);
 			drawText(VIEW_SX/2, VIEW_SY/4, 30, 0, 0, "press 1, 2 or 3 to play a sound");
