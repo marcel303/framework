@@ -189,7 +189,7 @@ public:
 		m_gameOfLife.randomize();
 	}
 
-	void tick(const float dt)
+	virtual void tick(const float dt) override
 	{
 		if (m_ctx.keyWentDown(SDLK_LEFT))
 			m_bucketIndex = max(0, m_bucketIndex - 1);
@@ -279,7 +279,7 @@ public:
 			m_shootingStars[i].tick(dt, m_particleBuffer);
 	}
 
-	virtual void evaluateRaw(int x, int y, int z, float & value)
+	virtual void evaluateRaw(int x, int y, int z, float & value) override
 	{
 		value = max(value, m_particleBuffer.m_value[x][y][z]);
 
@@ -290,7 +290,7 @@ public:
 	#endif
 	}
 
-	virtual float evaluate(const Coord & c)
+	virtual float evaluate(const Coord & c) override
 	{
 		const float controlX = m_ctx.mouseX() / float(800.f);
 		const float controlY = m_ctx.mouseY() / float(800.f);
@@ -437,7 +437,7 @@ public:
 		return d;
 	}
 
-	virtual void debugDraw()
+	virtual void debugDraw() override
 	{
 		m_ctx.setColor(255, 255, 255);
 		m_ctx.drawText(m_ctx.mouseX(), m_ctx.mouseY() + 25, 12, 0, 1, "power:%.2f", m_ctx.fftBucketValue(m_bucketIndex));
@@ -445,6 +445,8 @@ public:
 };
 
 //
+
+#if defined(WIN32)
 
 extern "C"
 {
@@ -458,3 +460,5 @@ extern "C"
 		delete effect;
 	}
 }
+
+#endif

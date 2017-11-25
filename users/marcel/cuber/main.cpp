@@ -9,7 +9,13 @@
 #include "audiostream/AudioOutput.h"
 #include "audiostream/AudioStreamVorbis.h"
 
-#include <Windows.h>
+#if defined(WIN32)
+	#include <Windows.h>
+#endif
+
+#if !ENABLE_SCRIPT_EFFECT
+	#include "script.cpp"
+#endif
 
 // todo : move FFT code to somewhere else
 
@@ -85,6 +91,8 @@ int EffectCtxImpl::fftBucketCount() const
 }
 
 //
+
+#if ENABLE_SCRIPT_EFFECT
 
 #include "FileStream.h"
 #include "FileStreamExtends.h"
@@ -253,6 +261,8 @@ public:
 			m_effect->debugDraw();
 	}
 };
+
+#endif
 
 //
 
@@ -488,6 +498,8 @@ public:
 	AudioStream * mSource;
 };
 
+#if defined(WIN32)
+
 class AudioIn
 {
 	HWAVEIN m_waveIn;
@@ -623,6 +635,8 @@ public:
 	}
 };
 
+#endif
+
 int main(int argc, char * argv[])
 {
 #if USE_AUDIO_INPUT
@@ -634,8 +648,7 @@ int main(int argc, char * argv[])
 	framework.windowX = 0;
 	framework.windowY = 0;
 
-	//if (!framework.init(0, 0, 800, 800))
-	if (!framework.init(0, 0, 1600, 1600))
+	if (!framework.init(0, 0, 1100, 800))
 	{
 		showErrorMessage("Startup Error", "Failed to initialise framework.");
 	}
@@ -652,17 +665,21 @@ int main(int argc, char * argv[])
 
 		AudioOutput_OpenAL audioOutput;
 		audioOutput.Initialize(2, audioStreamOGG.mSampleRate, 1 << 14);
-		audioOutput.Volume_set(0.f);
+		audioOutput.Volume_set(1.f);
 		audioOutput.Play();
 	#endif
 
 		Cube cube;
 
 		EffectCtxImpl ctx;
+	#if ENABLE_SCRIPT_EFFECT
 	#ifdef DEBUG
 		ScriptEffect effect(ctx, "Debug/script.dll");
 	#else
 		ScriptEffect effect(ctx, "Release/script.dll");
+	#endif
+	#else
+		MyEffect effect(ctx);
 	#endif
 
 		float rotation[3] = { };

@@ -1,5 +1,6 @@
 #include "cube.h"
 #include "framework.h"
+#include "StringEx.h"
 
 bool EffectCtxImpl::keyIsDown(const SDLKey key) const
 {
