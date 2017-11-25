@@ -25,6 +25,14 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/*
+The code here uses shaders that come from,
+https://github.com/m1el/woscope
+
+There is a very nice live demo of this code in action available here,
+http://m1el.github.io/woscope/
+*/
+
 #include "framework.h"
 #include "vfxGraph.h"
 #include "vfxNodeDrawOscilloscope.h"
@@ -144,9 +152,6 @@ void VfxNodeDrawOscilloscope::draw() const
 			{
 				Assert(false);
 			}
-			
-			// code : https://github.com/m1el/woscope
-			// demo : http://m1el.github.io/woscope/
 		
 			gxPushMatrix();
 			{
@@ -161,8 +166,8 @@ void VfxNodeDrawOscilloscope::draw() const
 						shader.setImmediate("uSize", strokeSize / scaleX);
 						shader.setImmediate("uIntensity", intensity);
 						shader.setImmediate("uColor", color->r, color->g, color->b, color->a);
+						shader.setImmediate("uNumPoints", values.size());
 						
-					#if 1
 						if (!values.empty())
 						{
 							gxBegin(GL_QUADS);
@@ -183,35 +188,6 @@ void VfxNodeDrawOscilloscope::draw() const
 							}
 							gxEnd();
 						}
-					#else
-						gxBegin(GL_QUADS);
-						{
-							const int kNumPoints = 512;
-							float x[kNumPoints];
-							float y[kNumPoints];
-							
-							const float m1 = sinf(framework.time / 5.678f) / 10.f;
-							const float m2 = sinf(framework.time / 6.789f) / 10.f;
-							
-							for (int i = 0; i < kNumPoints; ++i)
-							{
-								x[i] = sinf(i * m1 + framework.time / 1.234f) * 100.f;
-								y[i] = cosf(i * m2 + framework.time / 2.345f) * 100.f;
-							}
-							
-							for (int i = 0; i < kNumPoints - 1; ++i)
-							{
-								float x1 = x[i + 0];
-								float y1 = y[i + 0];
-								float x2 = x[i + 1];
-								float y2 = y[i + 1];
-								
-								for (int j = 0; j < 4; ++j)
-									gxVertex4f(x1, y1, x2, y2);
-							}
-						}
-						gxEnd();
-					#endif
 					}
 					clearShader();
 				}
@@ -233,6 +209,8 @@ void VfxNodeDrawOscilloscope::customTraverseTick(const int traversalId, const fl
 	
 	values.clear();
 	values.resize(numSubsteps);
+	
+	// todo : figure out a better way to implement timestep subdivisions
 	
 	int substepTraversalId = traversalId;
 	
