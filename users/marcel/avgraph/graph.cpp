@@ -216,7 +216,6 @@ static bool testCircleOverlap(
 
 GraphNode::GraphNode()
 	: id(kGraphNodeIdInvalid)
-	, nodeType(kGraphNodeType_Regular)
 	, typeName()
 	, isPassthrough(false)
 	, resources()
@@ -459,7 +458,6 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 	{
 		GraphNode node;
 		node.id = intAttrib(xmlNode, "id", node.id);
-		node.nodeType = (GraphNodeType)intAttrib(xmlNode, "nodeType", node.nodeType);
 		node.typeName = stringAttrib(xmlNode, "typeName", node.typeName.c_str());
 		node.isPassthrough = boolAttrib(xmlNode, "passthrough", node.isPassthrough);
 		node.editorValue = stringAttrib(xmlNode, "editorValue", node.editorValue.c_str());
@@ -606,10 +604,6 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 		xmlGraph.OpenElement("node");
 		{
 			xmlGraph.PushAttribute("id", node.id);
-			
-			if (node.nodeType != kGraphNodeType_Regular)
-				xmlGraph.PushAttribute("nodeType", node.nodeType);
-			
 			xmlGraph.PushAttribute("typeName", node.typeName.c_str());
 			
 			if (node.isPassthrough)
@@ -1781,19 +1775,23 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 
 //
 
-GraphEdit::NodeData::EditorVisualizer::EditorVisualizer()
+GraphEdit::EditorVisualizer::EditorVisualizer()
 	: nodeId(kGraphNodeIdInvalid)
 	, srcSocketName()
 	, srcSocketIndex(-1)
 	, dstSocketName()
 	, dstSocketIndex(-1)
 	, visualizer(nullptr)
+	, id(kGraphNodeIdInvalid)
+	, x(0)
+	, y(0)
 	, sx(250)
 	, sy(250)
+	, zKey(-1)
 {
 }
 
-GraphEdit::NodeData::EditorVisualizer::EditorVisualizer(const EditorVisualizer & other)
+GraphEdit::EditorVisualizer::EditorVisualizer(const EditorVisualizer & other)
 	: nodeId(kGraphNodeIdInvalid)
 	, srcSocketName()
 	, srcSocketIndex(-1)
@@ -1806,13 +1804,13 @@ GraphEdit::NodeData::EditorVisualizer::EditorVisualizer(const EditorVisualizer &
 	*this = other;
 }
 
-GraphEdit::NodeData::EditorVisualizer::~EditorVisualizer()
+GraphEdit::EditorVisualizer::~EditorVisualizer()
 {
 	delete visualizer;
 	visualizer = nullptr;
 }
 
-void GraphEdit::NodeData::EditorVisualizer::allocVisualizer()
+void GraphEdit::EditorVisualizer::allocVisualizer()
 {
 	delete visualizer;
 	visualizer = nullptr;
@@ -1830,14 +1828,25 @@ void GraphEdit::NodeData::EditorVisualizer::allocVisualizer()
 	}
 }
 
-void GraphEdit::NodeData::EditorVisualizer::tick(const GraphEdit & graphEdit)
+void GraphEdit::EditorVisualizer::init(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex)
+{
+	this->nodeId = nodeId;
+	this->srcSocketName = srcSocketName;
+	this->srcSocketIndex = srcSocketIndex;
+	this->dstSocketName = dstSocketName;
+	this->dstSocketIndex = dstSocketIndex;
+	
+	allocVisualizer();
+}
+
+void GraphEdit::EditorVisualizer::tick(const GraphEdit & graphEdit)
 {
 	visualizer->tick(graphEdit);
 	
 	updateSize(graphEdit);
 }
 
-void GraphEdit::NodeData::EditorVisualizer::updateSize(const GraphEdit & graphEdit)
+void GraphEdit::EditorVisualizer::updateSize(const GraphEdit & graphEdit)
 {
 	if (sx == 0 || sy == 0)
 	{
@@ -1858,15 +1867,19 @@ void GraphEdit::NodeData::EditorVisualizer::updateSize(const GraphEdit & graphEd
 	}
 }
 
-void GraphEdit::NodeData::EditorVisualizer::operator=(const EditorVisualizer & other)
+void GraphEdit::EditorVisualizer::operator=(const EditorVisualizer & other)
 {
 	nodeId = other.nodeId;
 	srcSocketName = other.srcSocketName;
 	srcSocketIndex = other.srcSocketIndex;
 	dstSocketName = other.dstSocketName;
 	dstSocketIndex = other.dstSocketIndex;
+	id = other.id;
+	x = other.x;
+	y = other.y;
 	sx = other.sx;
 	sy = other.sy;
+	zKey = other.zKey;
 	
 	allocVisualizer();
 }
@@ -1880,16 +1893,6 @@ void GraphEdit::NodeData::setIsFolded(const bool _isFolded)
 	foldAnimTimeRcp = 1.f / (_isFolded ? .1f : .07f) / 2.f;
 }
 
-void GraphEdit::NodeData::setVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex)
-{
-	visualizer.nodeId = nodeId;
-	visualizer.srcSocketName = srcSocketName;
-	visualizer.srcSocketIndex = srcSocketIndex;
-	visualizer.dstSocketName = dstSocketName;
-	visualizer.dstSocketIndex = dstSocketIndex;
-	visualizer.allocVisualizer();
-}
-
 //
 
 GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
@@ -1897,15 +1900,14 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, nextZKey(1)
 	, nodeDatas()
 	, typeDefinitionLibrary(nullptr)
-	, typeDefinition_visualizer()
 	, realTimeConnection(nullptr)
 	, selectedNodes()
 	, selectedLinks()
 	, selectedLinkRoutePoints()
+	, selectedVisualizers()
 	, state(kState_Idle)
 	, flags(kFlag_All)
 	, nodeSelect()
-	, nodeDrag()
 	, socketConnect()
 	, nodeResize()
 	, nodeInsert()
@@ -1931,9 +1933,6 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	graph->graphEditConnection = this;
 	
 	typeDefinitionLibrary = _typeDefinitionLibrary;
-	
-	typeDefinition_visualizer.inputSockets.resize(1);
-	typeDefinition_visualizer.createUi();
 	
 	propertyEditor = new GraphUi::PropEdit(_typeDefinitionLibrary, this);
 	
@@ -2021,20 +2020,7 @@ const GraphEdit_TypeDefinition::InputSocket * GraphEdit::tryGetInputSocket(const
 	if (node == nullptr)
 		return nullptr;
 	
-	const GraphEdit_TypeDefinition * typeDefinition = nullptr;
-	
-	if (node->nodeType == kGraphNodeType_Regular)
-	{
-		typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->typeName);
-	}
-	else if (node->nodeType == kGraphNodeType_Visualizer)
-	{
-		typeDefinition = &typeDefinition_visualizer;
-	}
-	else
-	{
-		Assert(false);
-	}
+	const GraphEdit_TypeDefinition * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->typeName);
 	
 	if (typeDefinition == nullptr)
 		return nullptr;
@@ -2204,51 +2190,78 @@ const GraphEdit_LinkTypeDefinition * GraphEdit::tryGetLinkTypeDefinition(const G
 	return result;
 }
 
+GraphEdit::EditorVisualizer * GraphEdit::tryGetVisualizer(const GraphNodeId id) const
+{
+	auto i = visualizers.find(id);
+	
+	if (i != visualizers.end())
+		return const_cast<EditorVisualizer*>(&i->second);
+	else
+		return nullptr;
+}
+
 bool GraphEdit::enabled(const int flag) const
 {
 	return (flags & flag) == flag;
 }
 
-struct SortedGraphNode
+struct SortedGraphElem
 {
 	GraphNode * node;
 	GraphEdit::NodeData * nodeData;
+	GraphEdit::EditorVisualizer * visualizer;
+	
+	int zKey;
 };
 
 bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) const
 {
 	result = HitTestResult();
 	
-	// sort nodes according to Z key
+	// sort nodes and visualizers according to Z key
 	
-	const int numNodes = graph->nodes.size();
+	const int numElems = graph->nodes.size() + visualizers.size();
 	
-	SortedGraphNode * sortedNodes = (SortedGraphNode*)alloca(numNodes * sizeof(SortedGraphNode));
+	SortedGraphElem * sortedElems = (SortedGraphElem*)alloca(numElems * sizeof(SortedGraphElem));
+	memset(sortedElems, 0, numElems * sizeof(SortedGraphElem));
 	
-	int nodeIndex = 0;
+	int elemIndex = 0;
 	
 	for (auto & nodeItr : graph->nodes)
 	{
 		auto & node = nodeItr.second;
 		auto nodeData = tryGetNodeData(node.id);
 		
-		sortedNodes[nodeIndex].node = &node;
-		sortedNodes[nodeIndex].nodeData = nodeData;
+		sortedElems[elemIndex].node = &node;
+		sortedElems[elemIndex].nodeData = nodeData;
+		sortedElems[elemIndex].zKey = nodeData->zKey;
 		
-		nodeIndex++;
+		elemIndex++;
 	}
 	
-	std::sort(sortedNodes, sortedNodes + numNodes, [](const SortedGraphNode & n1, const SortedGraphNode & n2) { return n2.nodeData->zKey < n1.nodeData->zKey; });
-	
-	// traverse nodes hit testing against the ones on top first
-	
-	for (int i = 0; i < numNodes; ++i)
+	for (auto & visualizerItr : visualizers)
 	{
-		auto & node = *sortedNodes[i].node;
-		auto & nodeData = *sortedNodes[i].nodeData;
+		auto & visualizer = visualizerItr.second;
 		
-		if (node.nodeType == kGraphNodeType_Regular)
+		sortedElems[elemIndex].visualizer = const_cast<EditorVisualizer*>(&visualizer);
+		sortedElems[elemIndex].zKey = visualizer.zKey;
+		
+		elemIndex++;
+	}
+	
+	Assert(elemIndex == numElems);
+	
+	std::sort(sortedElems, sortedElems + numElems, [](const SortedGraphElem & e1, const SortedGraphElem & e2) { return e2.zKey < e1.zKey; });
+	
+	// traverse elements hit testing against the ones on top first
+	
+	for (int i = 0; i < numElems; ++i)
+	{
+		if (sortedElems[i].node != nullptr)
 		{
+			auto & node = *sortedElems[i].node;
+			auto & nodeData = *sortedElems[i].nodeData;
+			
 			const auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 			
 			if (typeDefinition == nullptr)
@@ -2270,15 +2283,17 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				}
 			}
 		}
-		else if (node.nodeType == kGraphNodeType_Visualizer)
+		else if (sortedElems[i].visualizer != nullptr)
 		{
+			auto & visualizer = *sortedElems[i].visualizer;
+			
 			if (testRectOverlap(
 				x, y,
 				x, y,
-				nodeData.x,
-				nodeData.y,
-				nodeData.x + nodeData.visualizer.sx,
-				nodeData.y + nodeData.visualizer.sy))
+				visualizer.x,
+				visualizer.y,
+				visualizer.x + visualizer.sx,
+				visualizer.y + visualizer.sy))
 			{
 				NodeHitTestResult hitTestResult;
 				
@@ -2287,10 +2302,10 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				if (testRectOverlap(
 					x, y,
 					x, y,
-					nodeData.x + borderSize * +0 + nodeData.visualizer.sx * 0,
-					nodeData.y + borderSize * +0 + nodeData.visualizer.sy * 0,
-					nodeData.x + borderSize * +1 + nodeData.visualizer.sx * 0,
-					nodeData.y + borderSize * +0 + nodeData.visualizer.sy * 1))
+					visualizer.x + borderSize * +0 + visualizer.sx * 0,
+					visualizer.y + borderSize * +0 + visualizer.sy * 0,
+					visualizer.x + borderSize * +1 + visualizer.sx * 0,
+					visualizer.y + borderSize * +0 + visualizer.sy * 1))
 				{
 					hitTestResult.borderL = true;
 				}
@@ -2298,10 +2313,10 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				if (testRectOverlap(
 					x, y,
 					x, y,
-					nodeData.x + borderSize * -1 + nodeData.visualizer.sx * 1,
-					nodeData.y + borderSize * +0 + nodeData.visualizer.sy * 0,
-					nodeData.x + borderSize * +0 + nodeData.visualizer.sx * 1,
-					nodeData.y + borderSize * +0 + nodeData.visualizer.sy * 1))
+					visualizer.x + borderSize * -1 + visualizer.sx * 1,
+					visualizer.y + borderSize * +0 + visualizer.sy * 0,
+					visualizer.x + borderSize * +0 + visualizer.sx * 1,
+					visualizer.y + borderSize * +0 + visualizer.sy * 1))
 				{
 					hitTestResult.borderR = true;
 				}
@@ -2309,10 +2324,10 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				if (testRectOverlap(
 					x, y,
 					x, y,
-					nodeData.x + borderSize * +0 + nodeData.visualizer.sx * 0,
-					nodeData.y + borderSize * +0 + nodeData.visualizer.sy * 0,
-					nodeData.x + borderSize * +0 + nodeData.visualizer.sx * 1,
-					nodeData.y + borderSize * +1 + nodeData.visualizer.sy * 0))
+					visualizer.x + borderSize * +0 + visualizer.sx * 0,
+					visualizer.y + borderSize * +0 + visualizer.sy * 0,
+					visualizer.x + borderSize * +0 + visualizer.sx * 1,
+					visualizer.y + borderSize * +1 + visualizer.sy * 0))
 				{
 					hitTestResult.borderT = true;
 				}
@@ -2320,10 +2335,10 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				if (testRectOverlap(
 					x, y,
 					x, y,
-					nodeData.x + borderSize * +0 + nodeData.visualizer.sx * 0,
-					nodeData.y + borderSize * -1 + nodeData.visualizer.sy * 1,
-					nodeData.x + borderSize * +0 + nodeData.visualizer.sx * 1,
-					nodeData.y + borderSize * +0 + nodeData.visualizer.sy * 1))
+					visualizer.x + borderSize * +0 + visualizer.sx * 0,
+					visualizer.y + borderSize * -1 + visualizer.sy * 1,
+					visualizer.x + borderSize * +0 + visualizer.sx * 1,
+					visualizer.y + borderSize * +0 + visualizer.sy * 1))
 				{
 					hitTestResult.borderB = true;
 				}
@@ -2337,9 +2352,9 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 					hitTestResult.background = true;
 				}
 				
-				result.hasNode = true;
-				result.node = &node;
-				result.nodeHitTestResult = hitTestResult;
+				result.hasVisualizer = true;
+				result.visualizer = &visualizer;
+				result.visualizerHitTestResult = hitTestResult;
 				
 				return true;
 			}
@@ -2485,21 +2500,18 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		auto & nodeData = nodeDataItr.second;
 		auto & node = graph->nodes[nodeId];
 		
-		if (node.nodeType == kGraphNodeType_Regular)
+		std::vector<GraphEdit_RealTimeConnection::DynamicInput> inputs;
+		std::vector<GraphEdit_RealTimeConnection::DynamicOutput> outputs;
+		
+		if (realTimeConnection == nullptr || realTimeConnection->getNodeDynamicSockets(node.id, inputs, outputs) == false)
 		{
-			std::vector<GraphEdit_RealTimeConnection::DynamicInput> inputs;
-			std::vector<GraphEdit_RealTimeConnection::DynamicOutput> outputs;
-				
-			if (realTimeConnection == nullptr || realTimeConnection->getNodeDynamicSockets(node.id, inputs, outputs) == false)
-			{
-				nodeData.dynamicSockets.reset();
-			}
-			else
-			{
-				auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
-				
-				nodeData.dynamicSockets.update(*typeDefinition, inputs, outputs);
-			}
+			nodeData.dynamicSockets.reset();
+		}
+		else
+		{
+			auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+			
+			nodeData.dynamicSockets.update(*typeDefinition, inputs, outputs);
 		}
 	}
 	
@@ -2722,14 +2734,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						
 						mousePosition.hover = true;
 					}
-					
-					if (hitTestResult.nodeHitTestResult.borderL ||
-						hitTestResult.nodeHitTestResult.borderR ||
-						hitTestResult.nodeHitTestResult.borderT ||
-						hitTestResult.nodeHitTestResult.borderB)
-					{
-						mousePosition.hover = true;
-					}
 				}
 				
 				if (hitTestResult.hasLink)
@@ -2742,6 +2746,17 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					highlightedLinkRoutePoints.insert(hitTestResult.linkRoutePoint);
 					
 					mousePosition.hover = true;
+				}
+				
+				if (hitTestResult.hasVisualizer)
+				{
+					if (hitTestResult.visualizerHitTestResult.borderL ||
+						hitTestResult.visualizerHitTestResult.borderR ||
+						hitTestResult.visualizerHitTestResult.borderT ||
+						hitTestResult.visualizerHitTestResult.borderB)
+					{
+						mousePosition.hover = true;
+					}
 				}
 			}
 			
@@ -2800,36 +2815,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							}
 						}
 						
-						if (hitTestResult.nodeHitTestResult.borderL ||
-							hitTestResult.nodeHitTestResult.borderR ||
-							hitTestResult.nodeHitTestResult.borderT ||
-							hitTestResult.nodeHitTestResult.borderB)
-						{
-							nodeResize.nodeId = hitTestResult.node->id;
-							nodeResize.dragL = hitTestResult.nodeHitTestResult.borderL;
-							nodeResize.dragR = hitTestResult.nodeHitTestResult.borderR;
-							nodeResize.dragT = hitTestResult.nodeHitTestResult.borderT;
-							nodeResize.dragB = hitTestResult.nodeHitTestResult.borderB;
-							
-							state = kState_NodeResize;
-							break;
-						}
-						
 						if (hitTestResult.nodeHitTestResult.background)
 						{
-							for (auto nodeId : selectedNodes)
-							{
-								auto nodeData = tryGetNodeData(nodeId);
-								
-								if (nodeData != nullptr)
-								{
-									auto & offset = nodeDrag.offsets[nodeId];
-									
-									offset[0] = mousePosition.x - nodeData->x;
-									offset[1] = mousePosition.y - nodeData->y;
-								}
-							}
-							
 							if (appendSelection == false && nodeDoubleClickTime > 0.f)
 							{
 								nodeDoubleClickTime = 0.f;
@@ -2882,8 +2869,52 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								selectedLinkRoutePoints.erase(hitTestResult.linkRoutePoint);
 						}
 						
-						state = kState_NodeDrag;
-						break;
+						if (enabled(kFlag_NodeDrag))
+						{
+							state = kState_NodeDrag;
+							break;
+						}
+					}
+					
+					if (enabled(kFlag_Select) && hitTestResult.hasVisualizer)
+					{
+						if (appendSelection == false)
+						{
+							if (selectedVisualizers.count(hitTestResult.visualizer) == 0)
+							{
+								selectVisualizer(hitTestResult.visualizer, true);
+								
+								hitTestResult.visualizer->zKey = nextZKey++;
+							}
+						}
+						else
+						{
+							if (selectedVisualizers.count(hitTestResult.visualizer) == 0)
+								selectVisualizer(hitTestResult.visualizer, false);
+							else
+								selectedVisualizers.erase(hitTestResult.visualizer);
+						}
+						
+						if (hitTestResult.visualizerHitTestResult.borderL ||
+							hitTestResult.visualizerHitTestResult.borderR ||
+							hitTestResult.visualizerHitTestResult.borderT ||
+							hitTestResult.visualizerHitTestResult.borderB)
+						{
+							nodeResize.nodeId = hitTestResult.visualizer->id;
+							nodeResize.dragL = hitTestResult.visualizerHitTestResult.borderL;
+							nodeResize.dragR = hitTestResult.visualizerHitTestResult.borderR;
+							nodeResize.dragT = hitTestResult.visualizerHitTestResult.borderT;
+							nodeResize.dragB = hitTestResult.visualizerHitTestResult.borderB;
+						 
+							state = kState_NodeResize;
+							break;
+						}
+						
+						if (enabled(kFlag_NodeDrag))
+						{
+							state = kState_NodeDrag;
+							break;
+						}
 					}
 				}
 				else if (enabled(kFlag_Select))
@@ -2988,8 +3019,13 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						
 						if (nodeData != nullptr)
 						{
-							snapToGrid(*nodeData);
+							snapToGrid(nodeData->x, nodeData->y);
 						}
+					}
+					
+					for (auto visualizer : selectedVisualizers)
+					{
+						snapToGrid(visualizer->x, visualizer->y);
 					}
 				}
 			}
@@ -3071,7 +3107,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						
 						newSelectedNodes.insert(newNode.id);
 						
-						if (commandMod() && node->nodeType == kGraphNodeType_Regular)
+						if (commandMod())
 						{
 							auto newNodePtr = tryGetNode(newNode.id);
 							Assert(newNodePtr != nullptr);
@@ -3112,11 +3148,14 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					}
 				}
 				
+				// todo : copy selected visualizers ?
+				
 				if (!newSelectedNodes.empty())
 				{
 					selectedNodes = newSelectedNodes;
 					selectedLinks.clear();
 					selectedLinkRoutePoints.clear();
+					selectedVisualizers.clear();
 				}
 			}
 			
@@ -3143,16 +3182,13 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						
 						if (realTimeConnection != nullptr)
 						{
-							if (node->nodeType == kGraphNodeType_Regular)
-							{
-								realTimeConnection->setNodeIsPassthrough(node->id, node->isPassthrough);
-							}
+							realTimeConnection->setNodeIsPassthrough(node->id, node->isPassthrough);
 						}
 					}
 				}
 			}
 			
-			if (selectedNodes.empty() && selectedLinkRoutePoints.empty())
+			if (selectedNodes.empty() && selectedLinkRoutePoints.empty() && selectedVisualizers.empty())
 			{
 				tickKeyboardScroll();
 			}
@@ -3195,6 +3231,12 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					{
 						routePoint->x += moveX;
 						routePoint->y += moveY;
+					}
+					
+					for (auto visualizer : selectedVisualizers)
+					{
+						visualizer->x += moveX;
+						visualizer->y += moveY;
 					}
 				}
 			}
@@ -3272,6 +3314,20 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						}
 					}
 				}
+				
+				if (enabled(kFlag_NodeRemove))
+				{
+					for (auto visualizer : selectedVisualizers)
+					{
+						auto i = visualizers.find(visualizer->id);
+						
+						Assert(i != visualizers.end());
+						if (i != visualizers.end())
+							visualizers.erase(i);
+					}
+					
+					selectedVisualizers.clear();
+				}
 			}
 			
 			//
@@ -3338,36 +3394,18 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				auto & node = nodeItr.second;
 				auto & nodeData = nodeDatas[node.id];
 				
-				if (node.nodeType == kGraphNodeType_Regular)
+				auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+				
+				Assert(typeDefinition != nullptr);
+				if (typeDefinition != nullptr)
 				{
-					auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+					auto & inputSockets = getInputSockets(*typeDefinition, nodeData);
+					auto & outputSockets = getOutputSockets(*typeDefinition, nodeData);
 					
-					Assert(typeDefinition != nullptr);
-					if (typeDefinition != nullptr)
-					{
-						auto & inputSockets = getInputSockets(*typeDefinition, nodeData);
-						auto & outputSockets = getOutputSockets(*typeDefinition, nodeData);
-						
-						float sx;
-						float sy;
-						getNodeRect(inputSockets.size(), outputSockets.size(), nodeData.isFolded, sx, sy);
-						
-						if (testRectOverlap(
-							nodeSelect.beginX,
-							nodeSelect.beginY,
-							nodeSelect.endX,
-							nodeSelect.endY,
-							nodeData.x,
-							nodeData.y,
-							nodeData.x + sx,
-							nodeData.y + sy))
-						{
-							nodeSelect.nodeIds.insert(node.id);
-						}
-					}
-				}
-				else if (node.nodeType == kGraphNodeType_Visualizer)
-				{
+					float sx;
+					float sy;
+					getNodeRect(inputSockets.size(), outputSockets.size(), nodeData.isFolded, sx, sy);
+					
 					if (testRectOverlap(
 						nodeSelect.beginX,
 						nodeSelect.beginY,
@@ -3375,17 +3413,37 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						nodeSelect.endY,
 						nodeData.x,
 						nodeData.y,
-						nodeData.x + nodeData.visualizer.sx,
-						nodeData.y + nodeData.visualizer.sy))
+						nodeData.x + sx,
+						nodeData.y + sy))
 					{
 						nodeSelect.nodeIds.insert(node.id);
 					}
 				}
-				else
+			}
+			
+			// hit test visualizers
+			
+			nodeSelect.visualizers.clear();
+			
+			for (auto & visualizerItr : visualizers)
+			{
+				auto & visualizer = visualizerItr.second;
+				
+				if (testRectOverlap(
+					nodeSelect.beginX,
+					nodeSelect.beginY,
+					nodeSelect.endX,
+					nodeSelect.endY,
+					visualizer.x,
+					visualizer.y,
+					visualizer.x + visualizer.sx,
+					visualizer.y + visualizer.sy))
 				{
-					Assert(false);
+					nodeSelect.visualizers.insert(&visualizer);
 				}
 			}
+			
+			//
 			
 			if (mouse.wentUp(BUTTON_LEFT))
 			{
@@ -3418,15 +3476,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				Assert(nodeData != nullptr);
 				if (nodeData != nullptr)
 				{
-					auto offsetItr = nodeDrag.offsets.find(nodeId);
-					
-					if (offsetItr != nodeDrag.offsets.end())
-					{
-						auto & offset = offsetItr->second;
-						
-						nodeData->x = mousePosition.x - offset[0];
-						nodeData->y = mousePosition.y - offset[1];
-					}
+					nodeData->x += mousePosition.dx;
+					nodeData->y += mousePosition.dy;
 				}
 			}
 			
@@ -3434,6 +3485,12 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			{
 				routePoint->x += mousePosition.dx;
 				routePoint->y += mousePosition.dy;
+			}
+			
+			for (auto & visualizer : selectedVisualizers)
+			{
+				visualizer->x += mousePosition.dx;
+				visualizer->y += mousePosition.dy;
 			}
 		}
 		break;
@@ -3522,41 +3579,37 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		
 	case kState_NodeResize:
 		{
-			GraphNode * node = tryGetNode(nodeResize.nodeId);
-			auto nodeData = tryGetNodeData(nodeResize.nodeId);
+			EditorVisualizer * visualizer = tryGetVisualizer(nodeResize.nodeId);
 			
-			Assert(node != nullptr && nodeData != nullptr);
-			if (node != nullptr && nodeData != nullptr)
+			Assert(visualizer != nullptr);
+			if (visualizer != nullptr)
 			{
 				const float dragX = mousePosition.dx;
 				const float dragY = mousePosition.dy;
 				
-				if (node->nodeType == kGraphNodeType_Visualizer)
+				if (nodeResize.dragL)
 				{
-					if (nodeResize.dragL)
-					{
-						nodeData->x += dragX;
-						nodeData->visualizer.sx -= dragX;
-					}
-					
-					if (nodeResize.dragR)
-					{
-						nodeData->visualizer.sx += dragX;
-					}
-					
-					if (nodeResize.dragT)
-					{
-						nodeData->y += dragY;
-						nodeData->visualizer.sy -= dragY;
-					}
-					
-					if (nodeResize.dragB)
-					{
-						nodeData->visualizer.sy += dragY;
-					}
-					
-					mousePosition.hover = true;
+					visualizer->x += dragX;
+					visualizer->sx -= dragX;
 				}
+				
+				if (nodeResize.dragR)
+				{
+					visualizer->sx += dragX;
+				}
+				
+				if (nodeResize.dragT)
+				{
+					visualizer->y += dragY;
+					visualizer->sy -= dragY;
+				}
+				
+				if (nodeResize.dragB)
+				{
+					visualizer->sy += dragY;
+				}
+				
+				mousePosition.hover = true;
 			}
 			
 			if (mouse.wentUp(BUTTON_LEFT))
@@ -3639,18 +3692,15 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			//
 			
-			if (node.nodeType == kGraphNodeType_Regular)
+			const int activity = realTimeConnection == nullptr ? 0 : realTimeConnection->nodeIsActive(node.id);
+			
+			if (activity & GraphEdit_RealTimeConnection::kActivity_OneShot)
 			{
-				const int activity = realTimeConnection == nullptr ? 0 : realTimeConnection->nodeIsActive(node.id);
-				
-				if (activity & GraphEdit_RealTimeConnection::kActivity_OneShot)
-				{
-					nodeData.isActiveAnimTime = .2f;
-					nodeData.isActiveAnimTimeRcp = 1.f / nodeData.isActiveAnimTime;
-				}
-				
-				nodeData.isActiveContinuous = (activity & GraphEdit_RealTimeConnection::kActivity_Continuous) != 0;
+				nodeData.isActiveAnimTime = .2f;
+				nodeData.isActiveAnimTimeRcp = 1.f / nodeData.isActiveAnimTime;
 			}
+			
+			nodeData.isActiveContinuous = (activity & GraphEdit_RealTimeConnection::kActivity_Continuous) != 0;
 			
 			//
 			
@@ -3658,18 +3708,15 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			if (state == kState_InputSocketConnect || state == kState_OutputSocketConnect)
 			{
-				if (node.nodeType == kGraphNodeType_Regular)
+				// todo : calculate distance from node center. take node dimensions into account for maximum radius. keep node open when the mouse is over the node
+				
+				const float dx = nodeData.x - mousePosition.x;
+				const float dy = nodeData.y - mousePosition.y;
+				const float distance = std::hypot(dx, dy);
+				
+				if (distance <= 300.f)
 				{
-					// todo : calculate distance from node center. take node dimensions into account for maximum radius. keep node open when the mouse is over the node
-					
-					const float dx = nodeData.x - mousePosition.x;
-					const float dy = nodeData.y - mousePosition.y;
-					const float distance = std::hypot(dx, dy);
-					
-					if (distance <= 300.f)
-					{
-						nodeData.isCloseToConnectionSite = true;
-					}
+					nodeData.isCloseToConnectionSite = true;
 				}
 			}
 		}
@@ -4010,16 +4057,11 @@ void GraphEdit::tickVisualizers(const float dt)
 		realTimeSocketCapture.visualizer.tick(*this);
 	}
 	
-	for (auto & nodeDataItr : nodeDatas)
+	for (auto & visualizerItr : visualizers)
 	{
-		auto nodeId = nodeDataItr.first;
-		auto & node = *tryGetNode(nodeId);
-		auto & nodeData = nodeDataItr.second;
+		auto & visualizer = visualizerItr.second;
 		
-		if (node.nodeType == kGraphNodeType_Visualizer)
-		{
-			nodeData.visualizer.tick(*this);
-		}
+		visualizer.tick(*this);
 	}
 }
 
@@ -4097,6 +4139,7 @@ void GraphEdit::nodeSelectEnd()
 	selectedNodes = nodeSelect.nodeIds;
 	selectedLinks.clear(); // todo : also select links
 	selectedLinkRoutePoints.clear(); // todo : also select route points
+	selectedVisualizers = nodeSelect.visualizers;
 	
 	nodeSelect = NodeSelect();
 }
@@ -4112,17 +4155,20 @@ void GraphEdit::nodeDragEnd()
 			Assert(nodeData != nullptr);
 			if (nodeData != nullptr)
 			{
-				snapToGrid(*nodeData);
+				snapToGrid(nodeData->x, nodeData->y);
 			}
 		}
 		
 		for (auto & routePoint : selectedLinkRoutePoints)
 		{
-			snapToGrid(*routePoint);
+			snapToGrid(routePoint->x, routePoint->y);
+		}
+		
+		for (auto & visualizer : selectedVisualizers)
+		{
+			snapToGrid(visualizer->x, visualizer->y);
 		}
 	}
-	
-	nodeDrag = NodeDrag();
 }
 
 bool GraphEdit::nodeResourceEditBegin(const GraphNodeId nodeId)
@@ -4536,27 +4582,20 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 	}
 	else
 	{
-		GraphNode node;
-		node.id = graph->allocNodeId();
-		node.nodeType = kGraphNodeType_Visualizer;
+		auto visualizerId = graph->allocNodeId();
+		EditorVisualizer & visualizer = visualizers[visualizerId];
 		
-		graph->addNode(node);
-		
-		auto nodeData = tryGetNodeData(node.id);
-		Assert(nodeData != nullptr);
-		if (nodeData != nullptr)
-		{
-			nodeData->x = mousePosition.x;
-			nodeData->y = mousePosition.y;
-			nodeData->zKey = nextZKey++;
-			nodeData->setVisualizer(nodeId, srcSocketName, srcSocketIndex, dstSocketName, dstSocketIndex);
-			nodeData->visualizer.sx = 0;
-			nodeData->visualizer.sy = 0;
-		}
+		visualizer.id = visualizerId;
+		visualizer.x = mousePosition.x;
+		visualizer.y = mousePosition.y;
+		visualizer.zKey = nextZKey++;
+		visualizer.init(nodeId, srcSocketName, srcSocketIndex, dstSocketName, dstSocketIndex);
+		visualizer.sx = 0;
+		visualizer.sy = 0;
 		
 		if (select)
 		{
-			selectNode(node.id, true);
+			selectVisualizer(&visualizer, true);
 		}
 		
 		return true;
@@ -4572,6 +4611,7 @@ void GraphEdit::selectNode(const GraphNodeId nodeId, const bool clearSelection)
 		selectedNodes.clear();
 		selectedLinks.clear();
 		selectedLinkRoutePoints.clear();
+		selectedVisualizers.clear();
 	}
 	
 	selectedNodes.insert(nodeId);
@@ -4586,6 +4626,7 @@ void GraphEdit::selectLink(const GraphLinkId linkId, const bool clearSelection)
 		selectedNodes.clear();
 		selectedLinks.clear();
 		selectedLinkRoutePoints.clear();
+		selectedVisualizers.clear();
 	}
 	
 	selectedLinks.insert(linkId);
@@ -4600,9 +4641,25 @@ void GraphEdit::selectLinkRoutePoint(GraphLinkRoutePoint * routePoint, const boo
 		selectedNodes.clear();
 		selectedLinks.clear();
 		selectedLinkRoutePoints.clear();
+		selectedVisualizers.clear();
 	}
 	
 	selectedLinkRoutePoints.insert(routePoint);
+}
+
+void GraphEdit::selectVisualizer(EditorVisualizer * visualizer, const bool clearSelection)
+{
+	Assert(selectedVisualizers.count(visualizer) == 0 || clearSelection);
+	
+	if (clearSelection)
+	{
+		selectedNodes.clear();
+		selectedLinks.clear();
+		selectedLinkRoutePoints.clear();
+		selectedVisualizers.clear();
+	}
+	
+	selectedVisualizers.insert(visualizer);
 }
 
 void GraphEdit::selectNodeAll()
@@ -4645,16 +4702,6 @@ void GraphEdit::snapToGrid(float & x, float & y) const
 {
 	x = std::round(x / float(kGridSize)) * kGridSize;
 	y = std::round(y / float(kGridSize)) * kGridSize;
-}
-
-void GraphEdit::snapToGrid(GraphLinkRoutePoint & routePoint) const
-{
-	snapToGrid(routePoint.x, routePoint.y);
-}
-
-void GraphEdit::snapToGrid(NodeData & nodeData) const
-{
-	snapToGrid(nodeData.x, nodeData.y);
 }
 
 void GraphEdit::beginEditing()
@@ -4892,7 +4939,7 @@ void GraphEdit::draw() const
 	}
 	hqEnd();
 	
-#if 1 // todo : remove. test bezier control points
+#if 0 // todo : remove. test bezier control points
 	gxBegin(GL_POINTS);
 	{
 		for (auto & linkItr : graph->links)
@@ -4952,63 +4999,85 @@ void GraphEdit::draw() const
 	
 	// traverse and draw nodes
 	
-	const int numNodes = graph->nodes.size();
+	const int numElems = graph->nodes.size() + visualizers.size();
 	
-	SortedGraphNode * sortedNodes = (SortedGraphNode*)alloca(numNodes * sizeof(SortedGraphNode));
+	SortedGraphElem * sortedElems = (SortedGraphElem*)alloca(numElems * sizeof(SortedGraphElem));
+	memset(sortedElems, 0, numElems * sizeof(SortedGraphElem));
 	
-	int nodeIndex = 0;
+	int elemIndex = 0;
 	
 	for (auto & nodeItr : graph->nodes)
 	{
 		auto & node = nodeItr.second;
 		auto nodeData = tryGetNodeData(node.id);
 		
-		sortedNodes[nodeIndex].node = &node;
-		sortedNodes[nodeIndex].nodeData = nodeData;
+		sortedElems[elemIndex].node = &node;
+		sortedElems[elemIndex].nodeData = nodeData;
+		sortedElems[elemIndex].zKey = nodeData->zKey;
 		
-		nodeIndex++;
+		elemIndex++;
 	}
 	
-	std::sort(sortedNodes, sortedNodes + numNodes, [](const SortedGraphNode & n1, const SortedGraphNode & n2) { return n1.nodeData->zKey < n2.nodeData->zKey; });
-	
-	for (int i = 0; i < numNodes; ++i)
+	for (auto & visualizerItr : visualizers)
 	{
-		auto & node = *sortedNodes[i].node;
-		auto & nodeData = *sortedNodes[i].nodeData;
+		auto & visualizer = visualizerItr.second;
 		
-		const auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+		sortedElems[elemIndex].visualizer = const_cast<EditorVisualizer*>(&visualizer);
+		sortedElems[elemIndex].zKey = visualizer.zKey;
 		
-		if (node.nodeType == kGraphNodeType_Regular && typeDefinition == nullptr)
+		elemIndex++;
+	}
+	
+	Assert(elemIndex == numElems);
+	
+	std::sort(sortedElems, sortedElems + numElems, [](const SortedGraphElem & e1, const SortedGraphElem & e2) { return e1.zKey < e2.zKey; });
+	
+	for (int i = 0; i < numElems; ++i)
+	{
+		if (sortedElems[i].node != nullptr)
 		{
-			// todo : draw error node ?
-			setColor(colorBlack);
-			drawRectLine(nodeData.x, nodeData.y, nodeData.x + 100, nodeData.y + 20);
-			setColor(colorRed);
-			drawRectLine(nodeData.x, nodeData.y, nodeData.x + 100, nodeData.y + 20);
-			setColor(colorWhite);
-			setFont("calibri.ttf");
-			drawText(nodeData.x + 100/2, nodeData.y + 20/2, 12, 0.f, 0.f, "%s", node.typeName.c_str());
+			auto & node = *sortedElems[i].node;
+			auto & nodeData = *sortedElems[i].nodeData;
+			
+			const auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+			
+			if (typeDefinition == nullptr)
+			{
+				// todo : draw error node ?
+				setColor(colorBlack);
+				drawRectLine(nodeData.x, nodeData.y, nodeData.x + 100, nodeData.y + 20);
+				setColor(colorRed);
+				drawRectLine(nodeData.x, nodeData.y, nodeData.x + 100, nodeData.y + 20);
+				setColor(colorWhite);
+				setFont("calibri.ttf");
+				drawText(nodeData.x + 100/2, nodeData.y + 20/2, 12, 0.f, 0.f, "%s", node.typeName.c_str());
+			}
+			else
+			{
+				gxPushMatrix();
+				{
+					gxTranslatef(nodeData.x, nodeData.y, 0.f);
+					
+					drawNode(node, nodeData, *typeDefinition);
+				}
+				gxPopMatrix();
+			}
+		}
+		else if (sortedElems[i].visualizer != nullptr)
+		{
+			auto & visualizer = *sortedElems[i].visualizer;
+			
+			gxPushMatrix();
+			{
+				gxTranslatef(visualizer.x, visualizer.y, 0.f);
+				
+				drawVisualizer(visualizer);
+			}
+			gxPopMatrix();
 		}
 		else
 		{
-			gxPushMatrix();
-			{
-				gxTranslatef(nodeData.x, nodeData.y, 0.f);
-				
-				if (node.nodeType == kGraphNodeType_Regular)
-				{
-					drawNode(node, nodeData, *typeDefinition);
-				}
-				else if (node.nodeType == kGraphNodeType_Visualizer)
-				{
-					drawVisualizer(node, nodeData);
-				}
-				else
-				{
-					Assert(false);
-				}
-			}
-			gxPopMatrix();
+			Assert(false);
 		}
 	}
 	
@@ -5244,8 +5313,7 @@ void GraphEdit::draw() const
 	if (state == kState_Idle && hitTest(mousePosition.x, mousePosition.y, hitTestResult))
 	{
 		if (hitTestResult.hasNode &&
-			hitTestResult.nodeHitTestResult.background &&
-			hitTestResult.node->nodeType == kGraphNodeType_Regular)
+			hitTestResult.nodeHitTestResult.background)
 		{
 			// draw node description
 			
@@ -5366,7 +5434,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	std::vector<std::string> issues;
 	
 	const bool hasIssues =
-		(node.nodeType == kGraphNodeType_Regular && realTimeConnection != nullptr)
+		realTimeConnection != nullptr
 		? realTimeConnection->getNodeIssues(node.id, issues)
 		: false;
 	
@@ -5379,7 +5447,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 		hqSetGradient(GRADIENT_LINEAR, cmat, color1, color2, COLOR_ADD);
 	}
 	
-	if (editorOptions.showCpuHeat && realTimeConnection != nullptr && node.nodeType == kGraphNodeType_Regular)
+	if (editorOptions.showCpuHeat && realTimeConnection != nullptr)
 	{
 		const int timeUs = realTimeConnection->getNodeCpuTimeUs(node.id);
 		const float t = timeUs / float(realTimeConnection->getNodeCpuHeatMax());
@@ -5521,24 +5589,24 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	}
 }
 
-void GraphEdit::drawVisualizer(const GraphNode & node, const NodeData & nodeData) const
+void GraphEdit::drawVisualizer(const EditorVisualizer & visualizer) const
 {
 	vfxCpuTimingBlock(drawVisualizer);
 	
-	const bool isSelected = selectedNodes.count(node.id) != 0;
+	const bool isSelected = selectedVisualizers.count(const_cast<EditorVisualizer*>(&visualizer)) != 0;
 	
-	auto srcNode = tryGetNode(nodeData.visualizer.nodeId);
-	auto srcNodeData = tryGetNodeData(nodeData.visualizer.nodeId);
+	auto srcNode = tryGetNode(visualizer.nodeId);
+	auto srcNodeData = tryGetNodeData(visualizer.nodeId);
 	
 	const std::string & nodeName = srcNode != nullptr && srcNodeData != nullptr ? getDisplayName(*srcNode, *srcNodeData) : String::Empty;
 	
-	const int visualizerSx = int(std::ceil(nodeData.visualizer.sx));
-	const int visualizerSy = int(std::ceil(nodeData.visualizer.sy));
-	nodeData.visualizer.visualizer->draw(*this, nodeName, isSelected, &visualizerSx, &visualizerSy);
+	const int visualizerSx = int(std::ceil(visualizer.sx));
+	const int visualizerSy = int(std::ceil(visualizer.sy));
+	visualizer.visualizer->draw(*this, nodeName, isSelected, &visualizerSx, &visualizerSy);
 	
 #if 0
 	setColor(255, 255, 255, 63); // fixme : remove this drawRect call! only here to test node resizing
-	drawRect(0, 0, nodeData.visualizer.sx, nodeData.visualizer.sy);
+	drawRect(0, 0, visualizer.sx, visualizer.sy);
 #endif
 }
 
@@ -5562,6 +5630,8 @@ bool GraphEdit::load(const char * filename)
 	//
 	
 	nodeDatas.clear();
+	
+	visualizers.clear();
 	
 	nextZKey = 1;
 	
@@ -5611,19 +5681,29 @@ bool GraphEdit::load(const char * filename)
 				
 				nodeData.displayName = stringAttrib(xmlNode, "editorName", nodeData.displayName.c_str());
 				
+				/*
 				if (node.nodeType == kGraphNodeType_Visualizer)
 				{
 					const XMLElement * xmlVisualizer = xmlNode->FirstChildElement("visualizer");
 					
 					if (xmlVisualizer != nullptr)
 					{
-						nodeData.visualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", nodeData.visualizer.nodeId);
-						nodeData.visualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", nodeData.visualizer.srcSocketName.c_str());
-						nodeData.visualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", nodeData.visualizer.dstSocketName.c_str());
-						nodeData.visualizer.sx = floatAttrib(xmlVisualizer, "sx", nodeData.visualizer.sx);
-						nodeData.visualizer.sy = floatAttrib(xmlVisualizer, "sy", nodeData.visualizer.sy);
+						auto visualizerId = graph->allocNodeId();
+						auto & visualizer = visualizers[visualizerId];
+						
+						visualizer.id = visualizerId;
+						visualizer.x = nodeData.x;
+						visualizer.y = nodeData.y;
+						visualizer.zKey = nodeData.zKey;
+						
+						visualizer.nodeId = visualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", visualizer.nodeId);
+						visualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", visualizer.srcSocketName.c_str());
+						visualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", visualizer.dstSocketName.c_str());
+						visualizer.sx = floatAttrib(xmlVisualizer, "sx", visualizer.sx);
+						visualizer.sy = floatAttrib(xmlVisualizer, "sy", visualizer.sy);
 					}
 				}
+				*/
 			}
 		#endif
 			
@@ -5639,56 +5719,53 @@ bool GraphEdit::load(const char * filename)
 	
 	if (result)
 	{
-		for (auto & nodeItr : graph->nodes)
+		for (auto & visualizerItr : visualizers)
 		{
-			auto nodeId = nodeItr.first;
-			auto & node = nodeItr.second;
-			auto & nodeData = nodeDatas[nodeId];
+			auto & visualizer = visualizerItr.second;
 			
-			if (node.nodeType == kGraphNodeType_Visualizer)
+			auto linkedNode = tryGetNode(visualizer.nodeId);
+			Assert(linkedNode != nullptr);
+			
+			if (linkedNode != nullptr)
 			{
-				auto linkedNode = tryGetNode(nodeData.visualizer.nodeId);
-				Assert(linkedNode != nullptr);
+				auto & nodeData = *tryGetNodeData(visualizer.nodeId);
 				
-				if (linkedNode != nullptr)
+				auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(linkedNode->typeName);
+				Assert(typeDefinition != nullptr);
+				
+				if (typeDefinition != nullptr)
 				{
-					auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(linkedNode->typeName);
-					Assert(typeDefinition != nullptr);
-					
-					if (typeDefinition != nullptr)
+					if (!visualizer.srcSocketName.empty())
 					{
-						if (!nodeData.visualizer.srcSocketName.empty())
+						auto & inputSockets = getInputSockets(*typeDefinition, nodeData);
+						
+						for (auto & inputSocket : inputSockets)
 						{
-							auto & inputSockets = getInputSockets(*typeDefinition, nodeData);
-							
-							for (auto & inputSocket : inputSockets)
+							if (inputSocket.name == visualizer.srcSocketName)
 							{
-								if (inputSocket.name == nodeData.visualizer.srcSocketName)
-								{
-									nodeData.visualizer.srcSocketIndex = inputSocket.index;
-									break;
-								}
+								visualizer.srcSocketIndex = inputSocket.index;
+								break;
 							}
 						}
+					}
+					
+					if (!visualizer.dstSocketName.empty())
+					{
+						auto & outputSockets = getOutputSockets(*typeDefinition, nodeData);
 						
-						if (!nodeData.visualizer.dstSocketName.empty())
+						for (auto & outputSocket : outputSockets)
 						{
-							auto & outputSockets = getOutputSockets(*typeDefinition, nodeData);
-							
-							for (auto & outputSocket : outputSockets)
+							if (outputSocket.name == visualizer.dstSocketName)
 							{
-								if (outputSocket.name == nodeData.visualizer.dstSocketName)
-								{
-									nodeData.visualizer.dstSocketIndex = outputSocket.index;
-									break;
-								}
+								visualizer.dstSocketIndex = outputSocket.index;
+								break;
 							}
 						}
 					}
 				}
-				
-				nodeData.visualizer.allocVisualizer();
 			}
+			
+			visualizer.allocVisualizer();
 		}
 	}
 	
@@ -5715,9 +5792,6 @@ bool GraphEdit::load(const char * filename)
 	for (auto & nodeItr : graph->nodes)
 	{
 		auto & node = nodeItr.second;
-		
-		if (node.nodeType != kGraphNodeType_Regular)
-			continue;
 		
 		auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 		
@@ -5746,7 +5820,7 @@ bool GraphEdit::save(const char * filename)
 		
 		nodeResourceEditSave();
 		
-		XMLPrinter xmlGraph(file);;
+		XMLPrinter xmlGraph(file);
 		
 		xmlGraph.OpenElement("graph");
 		{
@@ -5809,6 +5883,11 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 			if (nodeId == kGraphNodeIdInvalid)
 				continue;
 			
+			auto node = tryGetNode(nodeId);
+			Assert(node != nullptr);
+			if (node == nullptr)
+				continue;
+			
 			NodeData & nodeData = nodeDatas[nodeId];
 			
 			nodeData.x = floatAttrib(nodeDataElem, "x", nodeData.x);
@@ -5823,16 +5902,52 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 			
 			//
 			
+			// todo : remove support for visualizers stored in node datas
+			
 			const XMLElement * xmlVisualizer = nodeDataElem->FirstChildElement("visualizer");
 			
 			if (xmlVisualizer != nullptr)
 			{
-				nodeData.visualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", nodeData.visualizer.nodeId);
-				nodeData.visualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", nodeData.visualizer.srcSocketName.c_str());
-				nodeData.visualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", nodeData.visualizer.dstSocketName.c_str());
-				nodeData.visualizer.sx = floatAttrib(xmlVisualizer, "sx", nodeData.visualizer.sx);
-				nodeData.visualizer.sy = floatAttrib(xmlVisualizer, "sy", nodeData.visualizer.sy);
+				auto visualizerId = graph->allocNodeId();
+				auto & visualizer = visualizers[visualizerId];
+				
+				visualizer.id = visualizerId;
+				visualizer.x = nodeData.x;
+				visualizer.y = nodeData.y;
+				visualizer.zKey = nodeData.zKey;
+				
+				visualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", visualizer.nodeId);
+				visualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", visualizer.srcSocketName.c_str());
+				visualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", visualizer.dstSocketName.c_str());
+				visualizer.sx = floatAttrib(xmlVisualizer, "sx", visualizer.sx);
+				visualizer.sy = floatAttrib(xmlVisualizer, "sy", visualizer.sy);
 			}
+		}
+	}
+	
+	auto visualizersElem = editorElem->FirstChildElement("visualizers");
+	
+	if (visualizersElem != nullptr)
+	{
+		for (auto xmlVisualizer = visualizersElem->FirstChildElement("visualizer"); xmlVisualizer != nullptr; xmlVisualizer = xmlVisualizer->NextSiblingElement("visualizer"))
+		{
+			auto visualizerId = intAttrib(xmlVisualizer, "id", -1);
+			
+			if (visualizerId == -1)
+				continue;
+			
+			auto & visualizer = visualizers[visualizerId];
+			
+			visualizer.id = visualizerId;
+			visualizer.x = floatAttrib(xmlVisualizer, "x", visualizer.x);
+			visualizer.y = floatAttrib(xmlVisualizer, "y", visualizer.y);
+			visualizer.zKey = intAttrib(xmlVisualizer, "zKey", visualizer.zKey);
+			
+			visualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", visualizer.nodeId);
+			visualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", visualizer.srcSocketName.c_str());
+			visualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", visualizer.dstSocketName.c_str());
+			visualizer.sx = floatAttrib(xmlVisualizer, "sx", visualizer.sx);
+			visualizer.sy = floatAttrib(xmlVisualizer, "sy", visualizer.sy);
 		}
 	}
 	
@@ -5903,21 +6018,32 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 				editorElem.PushAttribute("zKey", nodeData.zKey);
 				if (nodeData.isFolded)
 					editorElem.PushAttribute("folded", nodeData.isFolded);
+			}
+			editorElem.CloseElement();
+		}
+	}
+	editorElem.CloseElement();
+	
+	editorElem.OpenElement("visualizers");
+	{
+		for (auto & visualizerItr : visualizers)
+		{
+			auto & visualizer = visualizerItr.second;
+			
+			editorElem.OpenElement("visualizer");
+			{
+				editorElem.PushAttribute("id", visualizer.id);
+				editorElem.PushAttribute("x", visualizer.x);
+				editorElem.PushAttribute("y", visualizer.y);
+				editorElem.PushAttribute("zKey", visualizer.zKey);
 				
-				if (node->nodeType == kGraphNodeType_Visualizer)
-				{
-					editorElem.OpenElement("visualizer");
-					{
-						editorElem.PushAttribute("nodeId", nodeData.visualizer.nodeId);
-						if (!nodeData.visualizer.srcSocketName.empty())
-							editorElem.PushAttribute("srcSocketName", nodeData.visualizer.srcSocketName.c_str());
-						if (!nodeData.visualizer.dstSocketName.empty())
-							editorElem.PushAttribute("dstSocketName", nodeData.visualizer.dstSocketName.c_str());
-						editorElem.PushAttribute("sx", nodeData.visualizer.sx);
-						editorElem.PushAttribute("sy", nodeData.visualizer.sy);
-					}
-					editorElem.CloseElement();
-				}
+				editorElem.PushAttribute("nodeId", visualizer.nodeId);
+				if (!visualizer.srcSocketName.empty())
+					editorElem.PushAttribute("srcSocketName", visualizer.srcSocketName.c_str());
+				if (!visualizer.dstSocketName.empty())
+					editorElem.PushAttribute("dstSocketName", visualizer.dstSocketName.c_str());
+				editorElem.PushAttribute("sx", visualizer.sx);
+				editorElem.PushAttribute("sy", visualizer.sy);
 			}
 			editorElem.CloseElement();
 		}
@@ -5964,7 +6090,7 @@ void GraphEdit::nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
 	// allocate nodeData
 	nodeDatas[nodeId];
 	
-	if (realTimeConnection != nullptr && node->nodeType == kGraphNodeType_Regular)
+	if (realTimeConnection != nullptr)
 	{
 		realTimeConnection->nodeAdd(nodeId, typeName);
 	}
@@ -5983,7 +6109,7 @@ void GraphEdit::nodeRemove(const GraphNodeId nodeId)
 	
 	nodeDatas.erase(nodeId);
 	
-	if (realTimeConnection != nullptr && node->nodeType == kGraphNodeType_Regular)
+	if (realTimeConnection != nullptr)
 	{
 		realTimeConnection->nodeRemove(nodeId);
 	}
@@ -5997,9 +6123,7 @@ void GraphEdit::linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, c
 	Assert(srcNode != nullptr);
 	Assert(dstNode != nullptr);
 	
-	if (realTimeConnection != nullptr &&
-		srcNode->nodeType == kGraphNodeType_Regular &&
-		dstNode->nodeType == kGraphNodeType_Regular)
+	if (realTimeConnection != nullptr)
 	{
 		realTimeConnection->linkAdd(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
 	}
@@ -6026,9 +6150,7 @@ void GraphEdit::linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId
 			++i;
 	}
 	
-	if (realTimeConnection != nullptr &&
-		srcNode->nodeType == kGraphNodeType_Regular &&
-		dstNode->nodeType == kGraphNodeType_Regular)
+	if (realTimeConnection != nullptr)
 	{
 		realTimeConnection->linkRemove(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
 		

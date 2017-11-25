@@ -70,12 +70,6 @@ typedef unsigned int GraphLinkId;
 extern GraphNodeId kGraphNodeIdInvalid;
 extern GraphLinkId kGraphLinkIdInvalid;
 
-enum GraphNodeType
-{
-	kGraphNodeType_Regular,
-	kGraphNodeType_Visualizer
-};
-
 struct GraphNode
 {
 	struct Resource
@@ -86,7 +80,6 @@ struct GraphNode
 	};
 	
 	GraphNodeId id;
-	GraphNodeType nodeType;
 	std::string typeName;
 	bool isPassthrough;
 	
@@ -948,34 +941,6 @@ struct GraphEdit : GraphEditConnection
 				}
 			}
 		};
-		
-		struct EditorVisualizer
-		{
-			GraphNodeId nodeId;
-			std::string srcSocketName;
-			int srcSocketIndex;
-			std::string dstSocketName;
-			int dstSocketIndex;
-			
-			GraphEdit_Visualizer * visualizer;
-			
-			float sx;
-			float sy;
-			
-			EditorVisualizer();
-			EditorVisualizer(const EditorVisualizer & other);
-			~EditorVisualizer();
-			
-			void allocVisualizer();
-			
-			void tick(const GraphEdit & graphEdit);
-			void updateSize(const GraphEdit & graphEdit);
-			
-			// nodes (and thus also visualizers) get copied around. we want to copy parameters but not the
-			// dynamically allocated visualizer object. so we need a copy constructor/assignment operator
-			// to address this and copy the parameters manually and allocate a new visualizer object
-			void operator=(const EditorVisualizer & other);
-		};
 	
 		float x;
 		float y;
@@ -994,8 +959,6 @@ struct GraphEdit : GraphEditConnection
 		
 		DynamicSockets dynamicSockets;
 		
-		EditorVisualizer visualizer;
-		
 		NodeData()
 			: x(0.f)
 			, y(0.f)
@@ -1009,13 +972,49 @@ struct GraphEdit : GraphEditConnection
 			, isActiveAnimTimeRcp(0.f)
 			, isActiveContinuous(false)
 			, dynamicSockets()
-			, visualizer()
 		{
 		}
 		
 		void setIsFolded(const bool isFolded);
 		
 		void setVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
+	};
+	
+	struct EditorVisualizer
+	{
+		GraphNodeId nodeId;
+		std::string srcSocketName;
+		int srcSocketIndex;
+		std::string dstSocketName;
+		int dstSocketIndex;
+		
+		GraphEdit_Visualizer * visualizer;
+		
+		GraphNodeId id;
+		
+		float x;
+		float y;
+		
+		float sx;
+		float sy;
+		
+		int zKey;
+		
+		EditorVisualizer();
+		EditorVisualizer(const EditorVisualizer & other);
+		~EditorVisualizer();
+		
+		void allocVisualizer();
+		
+		void init(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
+		
+		void tick(const GraphEdit & graphEdit);
+		void updateSize(const GraphEdit & graphEdit);
+		
+		// nodes (and thus also visualizers) get copied around. we want to copy parameters but not the
+		// dynamically allocated visualizer object. so we need a copy constructor/assignment operator
+		// to address this and copy the parameters manually and allocate a new visualizer object
+		void operator=(const EditorVisualizer & other);
 	};
 	
 	struct NodeHitTestResult
@@ -1053,6 +1052,10 @@ struct GraphEdit : GraphEditConnection
 		bool hasLinkRoutePoint;
 		GraphLinkRoutePoint * linkRoutePoint;
 		
+		bool hasVisualizer;
+		EditorVisualizer * visualizer;
+		NodeHitTestResult visualizerHitTestResult;
+		
 		HitTestResult()
 			: hasNode(false)
 			, node(nullptr)
@@ -1062,6 +1065,9 @@ struct GraphEdit : GraphEditConnection
 			, linkSegmentIndex(-1)
 			, hasLinkRoutePoint(false)
 			, linkRoutePoint(nullptr)
+			, hasVisualizer(false)
+			, visualizer(nullptr)
+			, visualizerHitTestResult()
 		{
 		}
 	};
@@ -1255,22 +1261,15 @@ struct GraphEdit : GraphEditConnection
 		
 		std::set<GraphNodeId> nodeIds;
 		
+		std::set<EditorVisualizer*> visualizers;
+		
 		NodeSelect()
 			: beginX(0)
 			, beginY(0)
 			, endX(0)
 			, endY(0)
 			, nodeIds()
-		{
-		}
-	};
-	
-	struct NodeDrag
-	{
-		std::map<GraphNodeId, Vec2> offsets;
-		
-		NodeDrag()
-			: offsets()
+			, visualizers()
 		{
 		}
 	};
@@ -1376,8 +1375,9 @@ struct GraphEdit : GraphEditConnection
 	
 	std::map<GraphNodeId, NodeData> nodeDatas;
 	
+	std::map<GraphNodeId, EditorVisualizer> visualizers;
+	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
-	GraphEdit_TypeDefinition typeDefinition_visualizer;
 	
 	GraphEdit_RealTimeConnection * realTimeConnection;
 	
@@ -1386,6 +1386,7 @@ struct GraphEdit : GraphEditConnection
 	std::set<GraphLinkId> selectedLinks;
 	std::set<GraphLinkRoutePoint*> highlightedLinkRoutePoints;
 	std::set<GraphLinkRoutePoint*> selectedLinkRoutePoints;
+	std::set<EditorVisualizer*> selectedVisualizers;
 	
 	SocketSelection highlightedSockets;
 	SocketSelection selectedSockets;
@@ -1395,7 +1396,6 @@ struct GraphEdit : GraphEditConnection
 	int flags;
 	
 	NodeSelect nodeSelect;
-	NodeDrag nodeDrag;
 	SocketConnect socketConnect;
 	NodeResize nodeResize;
 	NodeInsert nodeInsert;
@@ -1443,6 +1443,7 @@ struct GraphEdit : GraphEditConnection
 	const GraphEdit_TypeDefinition::OutputSocket * tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const;
 	bool getLinkPath(const GraphLinkId linkId, LinkPath & path) const;
 	const GraphEdit_LinkTypeDefinition * tryGetLinkTypeDefinition(const GraphLinkId linkId) const;
+	EditorVisualizer * tryGetVisualizer(const GraphNodeId id) const;
 	
 	bool enabled(const int flag) const;
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
@@ -1475,14 +1476,13 @@ struct GraphEdit : GraphEditConnection
 	void selectNode(const GraphNodeId nodeId, const bool clearSelection);
 	void selectLink(const GraphLinkId linkId, const bool clearSelection);
 	void selectLinkRoutePoint(GraphLinkRoutePoint * routePoint, const bool clearSelection);
+	void selectVisualizer(EditorVisualizer * visualizer, const bool clearSelection);
 	void selectNodeAll();
 	void selectLinkAll();
 	void selectLinkRoutePointAll();
 	void selectAll();
 	
 	void snapToGrid(float & x, float & y) const;
-	void snapToGrid(GraphLinkRoutePoint & routePoint) const;
-	void snapToGrid(NodeData & nodeData) const;
 	
 	void undo();
 	void redo();
@@ -1494,7 +1494,7 @@ struct GraphEdit : GraphEditConnection
 	
 	void draw() const;
 	void drawNode(const GraphNode & node, const NodeData & nodeData, const GraphEdit_TypeDefinition & typeDefinition) const;
-	void drawVisualizer(const GraphNode & node, const NodeData & nodeData) const;
+	void drawVisualizer(const EditorVisualizer & visualizer) const;
 	
 	bool load(const char * filename);
 	bool save(const char * filename);
