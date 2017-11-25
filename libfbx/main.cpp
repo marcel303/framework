@@ -170,11 +170,10 @@ int main(int argc, char * argv[])
 	
 	// parse command line
 	
-	bool dumpMeshes = false;
-	bool dumpAll = false;
+	bool dumpAll = true;
 	bool dumpAllButDoItSilently = false;
-	bool dumpHierarchy = false;
-	const char * filename = "";
+	bool dumpHierarchy = true;
+	const char * filename = "test.fbx";
 	
 	for (int i = 1; i < argc; ++i)
 	{
@@ -184,8 +183,6 @@ int main(int argc, char * argv[])
 			dumpAllButDoItSilently = true;
 		else if (!strcmp(argv[i], "-h"))
 			dumpHierarchy = true;
-		else if (!strcmp(argv[i], "-m"))
-			dumpMeshes = true;
 		else
 			filename = argv[i];
 	}
