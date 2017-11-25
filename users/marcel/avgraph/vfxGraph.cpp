@@ -378,11 +378,6 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 	{
 		auto & node = nodeItr.second;
 		
-		if (node.nodeType != kGraphNodeType_Regular)
-		{
-			continue;
-		}
-		
 		VfxNodeBase * vfxNode = createVfxNode(node.id, node.typeName, vfxGraph);
 		
 		Assert(vfxNode != nullptr);
