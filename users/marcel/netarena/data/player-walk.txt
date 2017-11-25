@@ -1,3 +1,0 @@
-sheet pivot_x:24 pivot_y:47 grid_sx:5 grid_sy:2
-
-animation name:walk grid_x:0 grid_y:0 frames:10 rate:12 loop:1

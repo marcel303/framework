@@ -1,1 +1,0 @@
-sheet pivot_x:20 pivot_y:7

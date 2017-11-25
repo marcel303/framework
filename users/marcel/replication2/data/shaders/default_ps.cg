@@ -1,4 +1,0 @@
-void main(out float4 out_color: COLOR)
-{
-	out_color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-}

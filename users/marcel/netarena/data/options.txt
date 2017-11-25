@@ -1,1 +1,0 @@
-maps=arena.txt,arena2.txt,arena3.txt,arena4.txt,testArena.txt,testArena2.txt

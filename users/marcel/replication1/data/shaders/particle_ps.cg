@@ -1,7 +1,0 @@
-void main(
-	in float4 in_texcoord : TEXCOORD0,
-	in const uniform sampler2D tex,
-	out float4 out_color : COLOR)
-{
-	out_color = tex2D(tex, in_texcoord.xy);
-}

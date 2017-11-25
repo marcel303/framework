@@ -1,3 +1,0 @@
-sox $< -b 16 temp.wav channels 1 rate 8000
-
-sox _missile2.wav -b 16 missile2.wav channels 1 rate 8000

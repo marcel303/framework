@@ -1,8 +1,0 @@
-void main(
-		  in float4 position : POSITION,
-		  in const uniform float4x4 wvp,
-
-		  out float4 out_position : POSITION)
-{
-	out_position = mul(position, wvp);
-}

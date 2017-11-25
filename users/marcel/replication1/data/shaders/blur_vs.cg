@@ -1,9 +1,0 @@
-void main(
-	in float4 position : POSITION,
-	in float2 texcoord : TEXCOORD0,
-	out float4 out_position : POSITION,
-	out float2 out_texcoord : TEXCOORD0)
-{
-	out_position = position;
-	out_texcoord = texcoord;
-}

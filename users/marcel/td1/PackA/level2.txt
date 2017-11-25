@@ -1,2 +1,0 @@
-author=Marcel
-name=Left to Right

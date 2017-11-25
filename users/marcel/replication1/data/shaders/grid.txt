@@ -1,6 +1,0 @@
-[root]
-{
-	blend_src = src
-	blend_dst = inv_src
-	write_depth = 0
-}

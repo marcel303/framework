@@ -1,3 +1,0 @@
-copyright=(C) 2010 Grannies Games
-name=Standard Level Pack
-description=Standard Level Pack

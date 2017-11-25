@@ -1,6 +1,0 @@
-// Override shader for plain rendering.
-
-void main(out half4 out_color : COLOR)
-{
-	out_color = half4(1.0f, 1.0f, 1.0f, 1.0f);
-}
