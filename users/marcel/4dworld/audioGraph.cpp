@@ -352,11 +352,6 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 	{
 		auto & node = nodeItr.second;
 		
-		if (node.nodeType != kGraphNodeType_Regular)
-		{
-			continue;
-		}
-		
 		AudioNodeBase * audioNode = createAudioNode(node.id, node.typeName, audioGraph);
 		
 		Assert(audioNode != nullptr);

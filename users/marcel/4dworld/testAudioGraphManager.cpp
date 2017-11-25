@@ -1756,6 +1756,67 @@ static void doVoiceButton(const char * name, const char * file, const bool isLas
 
 //
 
+#include "portaudio/portaudio.h"
+
+static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inputDeviceIndex, int & outputDeviceIndex)
+{
+	bool result = false;
+	
+	pushMenu("pa");
+	{
+		const int numDevices = Pa_GetDeviceCount();
+		
+		std::vector<EnumValue> inputDevices;
+		std::vector<EnumValue> outputDevices;
+		
+		for (int i = 0; i < numDevices; ++i)
+		{
+			const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(i);
+			
+			if (deviceInfo->maxInputChannels > 0)
+			{
+				EnumValue e;
+				e.name = deviceInfo->name;
+				e.value = i;
+				
+				inputDevices.push_back(e);
+			}
+			
+			if (deviceInfo->maxOutputChannels > 0)
+			{
+				EnumValue e;
+				e.name = deviceInfo->name;
+				e.value = i;
+				
+				outputDevices.push_back(e);
+			}
+		}
+		
+		if (tick)
+		{
+			if (inputDeviceIndex == paNoDevice && inputDevices.empty() == false)
+				inputDeviceIndex = inputDevices.front().value;
+			if (outputDeviceIndex == paNoDevice && outputDevices.empty() == false)
+				outputDeviceIndex = outputDevices.front().value;
+		}
+		
+		doDropdown(inputDeviceIndex, "Input", inputDevices);
+		doDropdown(outputDeviceIndex, "Output", outputDevices);
+		
+		doBreak();
+		
+		if (doButton("OK"))
+		{
+			result = true;
+		}
+	}
+	popMenu();
+	
+	return result;
+}
+
+//
+
 #include "Timer.h"
 
 void testAudioGraphManager()
@@ -1794,10 +1855,43 @@ void testAudioGraphManager()
 
 	//
 	
+	int inputDeviceIndex = paNoDevice;
+	int outputDeviceIndex = paNoDevice;
+	
+	if (Pa_Initialize() == paNoError)
 	{
-		PortAudioObject pa;
-		if (pa.isSupported(0, 16))
-			STEREO_OUTPUT = false;
+		UiState uiState;
+		uiState.sx = 400;
+		uiState.x = (GFX_SX - uiState.sx) / 2;
+		uiState.y = (GFX_SY - 200) / 2;
+		
+		for (;;)
+		{
+			framework.process();
+			
+			makeActive(&uiState, true, false);
+			if (doPaMenu(true, false, framework.timeStep, inputDeviceIndex, outputDeviceIndex))
+			{
+				break;
+			}
+			
+			framework.beginDraw(200, 200, 200, 255);
+			{
+				makeActive(&uiState, false, true);
+				doPaMenu(false, true, framework.timeStep, inputDeviceIndex, outputDeviceIndex);
+			}
+			framework.endDraw();
+		}
+		
+		if (outputDeviceIndex != paNoDevice)
+		{
+			const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(outputDeviceIndex);
+			
+			if (deviceInfo != nullptr && deviceInfo->maxOutputChannels >= 16)
+				STEREO_OUTPUT = false;
+		}
+		
+		Pa_Terminate();
 	}
 	
 	//
@@ -1842,7 +1936,7 @@ void testAudioGraphManager()
 	
 	PortAudioObject pa;
 	
-	pa.init(SAMPLE_RATE, STEREO_OUTPUT ? 2 : kNumChannels, STEREO_OUTPUT ? 2 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
+	pa.init(SAMPLE_RATE, STEREO_OUTPUT ? 2 : kNumChannels, STEREO_OUTPUT ? 2 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex);
 	
 	//
 	
