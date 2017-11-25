@@ -1,9 +1,0 @@
-brush
-	id 1000
-	picture brush01.psd
-	oriented 0
-	filtered 1
-	settings_size 7
-	settings_spacing 5
-	settings_strength 100
-	

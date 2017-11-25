@@ -1,9 +1,0 @@
-<div class="cms_item">News: Add news item</div>
-<form class="simpleform">
-<input type="text" style="display:none" name="action" value="news_item_add" />
-<span class="label">Headline</span><input name="news_item_headline" type="text" value="" /><br />
-<span class="label">Author</span><input name="news_item_author" type="text" value="admin" /><br />
-<span class="label">Date</span><input name="news_item_date" type="text" value="[date]" /><br />
-<span class="label">Text</span><textarea name="news_item_text" style="height:200px"></textarea><br />
-<span class="label">&nbsp;</span><input type="submit" value="Add news item" /><br />
-</form>

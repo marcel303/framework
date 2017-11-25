@@ -1,8 +1,0 @@
-+ Selection hit test: Start hit testing from currently selected index. This allows *all* objects to be selected, not just alternating between the first 2.
-+ Decouple selection from modification. (Modify using left or right mouse button?)
-- Build in normalization of geometry.
-+ Add panning to zoomed view.
-+ Add preview feature from within app.
-+ Add element delete feature ;)
-+ Add tag element save/load
-+ Add some way to select sub elements such as poly points

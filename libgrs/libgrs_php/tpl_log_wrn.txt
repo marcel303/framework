@@ -1,1 +1,0 @@
-<div style="background:#FFFFE0; color:black; border: 2px solid #C0C000; padding:8px; margin:2px">[text]</div>

@@ -1,1 +1,0 @@
-texture        texture01       test01.png

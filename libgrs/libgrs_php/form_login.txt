@@ -1,6 +1,0 @@
-<div class="cms_item">Login</div>
-<form class="simpleform" name="login" size="20" action="?page=cms">
-<span class="label">Username</span><input name="auth_user" type="text" value="" /><br />
-<span class="label">Password</span><input name="auth_pass" type="password" value="" /><br />
-<span class="label">&nbsp;</span><input type="submit" value="Login" /><br />
-</form>

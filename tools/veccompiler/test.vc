@@ -1,9 +1,0 @@
-link
-	name core
-	shape core
-link
-	wing_a
-	parent core
-	position 100 0
-	shape wing
-	flags = 2
