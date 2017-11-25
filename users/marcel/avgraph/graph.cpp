@@ -456,6 +456,12 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 	
 	for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
 	{
+	#if ENABLE_FILE_FIXUPS
+		const int nodeType = intAttrib(xmlNode, "nodeType", 0);
+		if (nodeType != 0)
+			continue;
+	#endif
+		
 		GraphNode node;
 		node.id = intAttrib(xmlNode, "id", node.id);
 		node.typeName = stringAttrib(xmlNode, "typeName", node.typeName.c_str());
@@ -5663,15 +5669,20 @@ bool GraphEdit::load(const char * filename)
 			
 			for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
 			{
+				const int nodeType = intAttrib(xmlNode, "nodeType", 0);
+				if (nodeType != 0)
+					continue;
+				
 				const GraphNodeId nodeId = intAttrib(xmlNode, "id", kGraphNodeIdInvalid);
 				if (nodeId == kGraphNodeIdInvalid)
 					continue;
 				
-				Assert(graph->nodes.count(nodeId) != 0);
-				Assert(nodeDatas.count(nodeId) != 0);
+				auto nodeDataPtr = tryGetNodeData(nodeId);
+				Assert(nodeDataPtr != nullptr);
+				if (nodeDataPtr == nullptr)
+					continue;
 				
-				auto & node = graph->nodes[nodeId];
-				auto & nodeData = nodeDatas[nodeId];
+				auto & nodeData = *nodeDataPtr;
 				
 				nodeData.x = floatAttrib(xmlNode, "editorX", nodeData.x);
 				nodeData.y = floatAttrib(xmlNode, "editorY", nodeData.y);
@@ -5680,30 +5691,37 @@ bool GraphEdit::load(const char * filename)
 				nodeData.foldAnimProgress = nodeData.isFolded ? 0.f : 1.f;
 				
 				nodeData.displayName = stringAttrib(xmlNode, "editorName", nodeData.displayName.c_str());
+			}
+			
+			// fixup visualizers
+			for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
+			{
+				const int nodeType = intAttrib(xmlNode, "nodeType", 0);
+				if (nodeType != 1)
+					continue;
 				
-				/*
-				if (node.nodeType == kGraphNodeType_Visualizer)
-				{
-					const XMLElement * xmlVisualizer = xmlNode->FirstChildElement("visualizer");
-					
-					if (xmlVisualizer != nullptr)
-					{
-						auto visualizerId = graph->allocNodeId();
-						auto & visualizer = visualizers[visualizerId];
-						
-						visualizer.id = visualizerId;
-						visualizer.x = nodeData.x;
-						visualizer.y = nodeData.y;
-						visualizer.zKey = nodeData.zKey;
-						
-						visualizer.nodeId = visualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", visualizer.nodeId);
-						visualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", visualizer.srcSocketName.c_str());
-						visualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", visualizer.dstSocketName.c_str());
-						visualizer.sx = floatAttrib(xmlVisualizer, "sx", visualizer.sx);
-						visualizer.sy = floatAttrib(xmlVisualizer, "sy", visualizer.sy);
-					}
-				}
-				*/
+				auto visualizerId = intAttrib(xmlNode, "id", kGraphNodeIdInvalid);
+				Assert(visualizerId != kGraphNodeIdInvalid);
+				if (visualizerId == kGraphNodeIdInvalid)
+					continue;
+				
+				const XMLElement * xmlVisualizer = xmlNode->FirstChildElement("visualizer");
+				Assert(xmlVisualizer != nullptr);
+				if (xmlVisualizer == nullptr)
+					continue;
+				
+				EditorVisualizer & visualizer = visualizers[visualizerId];
+				
+				visualizer.id = visualizerId;
+				visualizer.x = floatAttrib(xmlNode, "editorX", visualizer.x);
+				visualizer.y = floatAttrib(xmlNode, "editorY", visualizer.y);
+				visualizer.zKey = intAttrib(xmlNode, "zKey", visualizer.zKey);
+				
+				visualizer.nodeId = visualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", visualizer.nodeId);
+				visualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", visualizer.srcSocketName.c_str());
+				visualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", visualizer.dstSocketName.c_str());
+				visualizer.sx = floatAttrib(xmlVisualizer, "sx", visualizer.sx);
+				visualizer.sy = floatAttrib(xmlVisualizer, "sy", visualizer.sy);
 			}
 		#endif
 			
