@@ -14,7 +14,7 @@ void main()
 	vec2 offset;
 	offset.x = sin(gl_FragCoord.x / 20.0) / 200.0;
 	offset.y = sin(gl_FragCoord.y / 10.0) / 200.0;
-	vec4 result = tex2D(texture0, v_texcoord0.xy + offset);
+	vec4 result = texture(texture0, v_texcoord0.xy + offset);
 	result = vec4(result.xyz + modifier, result.w * alphaMul);
 	
 	shader_fragColor = result;

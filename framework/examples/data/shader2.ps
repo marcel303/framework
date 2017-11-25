@@ -6,7 +6,7 @@ shader_in vec2 v_texcoord0;
 
 void main()
 {
-	vec4 source = tex2D(texture0, v_texcoord0.xy);
+	vec4 source = texture(texture0, v_texcoord0.xy);
 	
 	float r = 0.0;
 	float a = 0.0;
@@ -20,7 +20,7 @@ void main()
 	{
 		for (int j = -kernelSize; j <= +kernelSize; ++j)
 		{
-			vec4 near = tex2D(texture0, v_texcoord0.xy + vec2(i, j) * sizeMul);
+			vec4 near = texture(texture0, v_texcoord0.xy + vec2(i, j) * sizeMul);
 			
 			float c = (near.r + near.g + near.b) / 3.0;
 			

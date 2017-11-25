@@ -25,17 +25,16 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <algorithm>
 #include "framework.h"
+#include "StringEx.h"
+#include <algorithm>
 
+#define FULLSCREEN 0
 #define TEST_SURFACE 1
 #define SPRITE_SCALE 1
 
 const int sx = 1920;
 const int sy = 1080;
-
-//const int sx = 1920/2;
-//const int sy = 1080/2;
 
 static Sprite * createRandomSprite()
 {
@@ -72,18 +71,21 @@ static void sortSprites(Sprite ** sprites, int numSprites)
 
 int main(int argc, char * argv[])
 {
-	changeDirectory("data");
-	
+#if FULLSCREEN
 	framework.fullscreen = true;
+#else
+	framework.minification = 2;
+#endif
+
 	for (int i = 1; i < argc; ++i)
 	{
 		if (std::string(argv[i]) =="devmode")
 		{
-			framework.reloadCachesOnActivate = true;
 			framework.minification = 2;
 			framework.fullscreen = false;
 		}
 	}
+
 	if (!framework.init(argc, (const char **)argv, sx, sy))
 		return -1;
 	framework.fillCachesWithPath(".", true);
@@ -97,49 +99,23 @@ int main(int argc, char * argv[])
 	float y = sy/4.f;
 	
 	Music bgm("bgm.ogg");
-	bgm.play();
+	//bgm.play();
 
 	Shader shader("shader1");
 	Shader postprocess("shader2");
 	
-	Sprite background("background.png");
-	background.startAnim("default");
-	
 	Sprite sprite("sprite.png");
 	sprite.startAnim("walk-l");
 	sprite.pauseAnim();
-	
-	Sprite sprite2("hawk.png");
-	sprite2.scale = 1.f;
-	sprite2.x = sx - (sprite2.getWidth() / 2) * sprite2.scale;
-	sprite2.y = sy - (sprite2.getHeight() / 2) * sprite2.scale;
-	sprite2.pivotX = sprite2.getWidth() / 2.f;
-	sprite2.pivotY = sprite2.getHeight() / 2.f;
-	sprite2.filter = FILTER_LINEAR;
 	
 	const int numSprites = 100;
 	Sprite * sprites[numSprites];
 	for (int i = 0; i < numSprites; ++i)
 		sprites[i] = createRandomSprite();
 	
-	ui.load("ui.txt");
-	for (int i = 0; i < 7; ++i)
-	{
-		char name[32];
-		sprintf(name, "button_%d", i);
-		Dictionary & button = ui[name];
-		button.parse("type:image image:button.png _image_over:button-over.png _image_down:button-down.png action:sound sound:test.wav");
-		button.setInt("x", 10);
-		button.setInt("y", 200 + i * 70);
-	}
-	
 	while (!keyboard.isDown(SDLK_ESCAPE))
 	{
 		framework.process();
-		
-		stage.process(framework.timeStep);
-		
-		ui.process();
 		
 		if (keyboard.isDown(SDLK_a))
 		{
@@ -148,13 +124,6 @@ int main(int argc, char * argv[])
 				delete sprites[i];
 				sprites[i] = createRandomSprite();
 			}
-		}
-		
-		if (keyboard.wentDown(SDLK_d))
-		{
-			static int uiId = 0;
-			uiId = (uiId + 1) % 2;
-			ui.load(uiId == 0 ? "ui.txt" : "ui2.txt");
 		}
 		
 		bool newDown = keyboard.isDown(SDLK_SPACE);
@@ -231,89 +200,26 @@ int main(int argc, char * argv[])
 		else
 			sprite.startAnim(wantAnim);
 		
+		sprite.update(framework.timeStep);
+		
 		x += dx;
 		y += dy;
-
-		if (keyboard.isDown(SDLK_s))
-		{
-			const char * name = "sprite.png";
-			const char * anim = "walk-once";
-			
-			for (int i = 0; i < 10; ++i)
-			{
-				StageObject * obj = new StageObject_SpriteAnim(name, anim);
-				obj->sprite->x = rand() % sx;
-				obj->sprite->y = rand() % sy;
-				obj->sprite->scale = 1.5f * SPRITE_SCALE;
-				
-				const int objectId = stage.addObject(obj);
-			
-				if (i == 0)
-					stage.removeObject(objectId);
-			}
-		}
 		
 		framework.beginDraw(165, 125, 65, 0);
 		{
-			#if TEST_SURFACE
+		#if TEST_SURFACE
 			if (keyboard.isDown(SDLK_e))
 			{
 				pushSurface(&surface);
 				surface.clear();
-				//surface.mulf(1.f, 1.f, 1.f, .9f);
 			}
-			#endif
+		#endif
 			
 			setBlend(BLEND_ALPHA);
 			
-			{
-				static float gradX1 = sx;
-				static float gradY1 = sy;
-				static float gradX2 = -sx/3;
-				static float gradY2 = -sy/3;
-				bool showLine = false;
-				if (mouse.isDown(BUTTON_LEFT))
-				{
-					gradX1 = mouse.x;
-					gradY1 = mouse.y;
-					showLine = true;
-				}
-				if (mouse.isDown(BUTTON_RIGHT))
-				{
-					gradX2 = mouse.x;
-					gradY2 = mouse.y;
-					showLine = true;
-				}
-				setGradientf(gradX1, gradY1, Color(1.f, 0.f, 0.f, 0.f), gradX2, gradY2, Color(1.f, 1.f, 1.f, 1.f));
-				const int border = 0;
-				const int x1 = border;
-				const int x2 = sx - border * 2;
-				const int y = sy / 2;
-				const int dy = sine<int>(0, sy, framework.time * 3.f);
-				int y1 = y - dy / 2;
-				int y2 = y + dy / 2;
-				if (y1 > y2)
-					std::swap(y1, y2);
-				setDrawRect(x1, y1, x2 - x1, y2 - y1);
-				gxSetTexture(0);
-				drawRectGradient(0.f, 0.f, sx, sy);
-				clearDrawRect();
-				if (showLine)
-				{
-					setColor(0, 255, 0, 127);
-					gxSetTexture(0);
-					drawLine(gradX1, gradY1, gradX2, gradY2);
-				}
-			}
-			
-			setColor(255, 255, 255);
-			background.drawEx(sx - 132, 132, 0, 2);
-			
-			stage.draw();
-			
 			sprite.x = x;
 			sprite.y = y;
-			sprite.scale = 4 * SPRITE_SCALE;
+			sprite.scale = 3 * SPRITE_SCALE;
 			
 			for (int i = 0; i < numSprites; ++i)
 			{
@@ -339,6 +245,8 @@ int main(int argc, char * argv[])
 					delete sprites[i];
 					sprites[i] = createRandomSprite();
 				}
+				
+				sprites[i]->update(framework.timeStep);
 			}
 			
 			const int numSortedSprites = numSprites + 1;
@@ -351,46 +259,40 @@ int main(int argc, char * argv[])
 
 			for (int i = 0; i < numSortedSprites; ++i)
 			{
-				if (sortedSprites[i] == &sprite || sortedSprites[i] == &sprite2)
+				if (sortedSprites[i] == &sprite)
 					setColorMode(COLOR_ADD);
 					
 				if (sortedSprites[i] == &sprite)
-					setColor(255, 191, 127, 255, sine<int>(0, 255, framework.time));
+					setColor(255, 191, 127, 255, sine<int>(0, 63, framework.time * 10.f * 180.f/M_PI));
 				else
 					setColor(255, 191, 127, 2048 * sortedSprites[i]->animSpeed);
 				
 				sortedSprites[i]->draw();
 				
-				if (sortedSprites[i] == &sprite || sortedSprites[i] == &sprite2)
+				if (sortedSprites[i] == &sprite)
 					setColorMode(COLOR_MUL);
 			}
 			
-			setColorMode(COLOR_ADD);
-			setColor(255, 191, 127, 255, sine<int>(0, 255, framework.time));
-			sprite2.draw();
-			setColorMode(COLOR_MUL);
-			
 			for (int i = 0; i < MAX_GAMEPAD; ++i)
 			{
-				Font font("calibri.ttf");
-				setFont(font);
+				setFont("calibri.ttf");
+				pushFontMode(FONT_SDF);
 
 				setColor(255, 255, 0, 255);
-				drawText(5.f, 5.f + i * 40.f, 35, 0, 0, "gamepad[%d]: %s", i, gamepad[i].isConnected ? "connected" : "not connected");
+				drawText(5.f, 5.f + i * 40.f, 35, +1, +1, "gamepad[%d]: %s", i, gamepad[i].isConnected ? "connected" : "not connected");
+				
+				popFontMode();
 			}
-
-			setColor(255, 255, 255, 255);
-			ui.draw();
 			
 			setColor(255, 0, 0, 255);
-			//drawLine(0, 0, sx, sy);
-			//drawLine(sx, 0, 0, sy);
 			
-			#if TEST_SURFACE
+		#if TEST_SURFACE
 			if (keyboard.isDown(SDLK_e))
 			{
 				popSurface();
 				
+				setShader(postprocess);
+				postprocess.setTexture("texture0", 0, surface.getTexture());
 				surface.postprocess(postprocess);
 				
 				setShader(shader);
@@ -422,7 +324,7 @@ int main(int argc, char * argv[])
 				
 				clearShader();
 			}
-			#endif
+		#endif
 			
 			Font font("calibri.ttf");
 			setFont(font);
