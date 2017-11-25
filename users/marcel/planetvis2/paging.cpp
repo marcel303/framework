@@ -1,6 +1,7 @@
 #include "Debugging.h"
 #include "framework.h"
 #include "paging.h"
+#include "StringEx.h"
 #include <stdio.h>
 #include <string.h>
 
