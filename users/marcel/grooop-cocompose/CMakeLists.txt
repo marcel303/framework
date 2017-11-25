@@ -24,10 +24,6 @@ project(grooop-cocompose)
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
 
-set(GAME_FILES
-	main.cpp)
-source_group("Game Files" FILES ${GAME_FILES})
-
 add_executable(grooop-cocompose ${source})
 
 target_compile_definitions(grooop-cocompose PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)

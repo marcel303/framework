@@ -29,13 +29,6 @@ project(vfxedit)
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
 
-file(GLOB_RECURSE source_osc "ip/*.*" "osc/*.*")
-list(REMOVE_ITEM source ${source_osc})
-
-set(GAME_FILES
-	main.cpp)
-source_group("Game Files" FILES ${GAME_FILES})
-
 file(GLOB_RECURSE source_midifile "midifile/*.*")
 source_group("midifile" FILES ${source_midifile})
 

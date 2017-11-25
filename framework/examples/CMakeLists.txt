@@ -26,14 +26,19 @@ add_executable(sounds sounds.cpp)
 add_executable(sprites sprites.cpp)
 
 if (MSVC)
-	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
-	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)
-	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib)
-	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/OpenAL32.lib)
-	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2.lib)
-	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2main.lib)
-	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/XInput9_1_0.lib)
-	target_link_libraries(libparticle_test PRIVATE Winmm.lib OpenGL32.lib WSock32.lib)
+	set(LIBRARIES
+		framework
+		libgg
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/OpenAL32.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2main.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/XInput9_1_0.lib
+		Winmm.lib
+		OpenGL32.lib
+		WSock32.lib)
 endif (MSVC)
 
 if (APPLE)
@@ -75,13 +80,13 @@ if (APPLE)
 		${FF_LIBRARY}
 		${ICONV_LIBRARY}
 		${BZ2_LIBRARY})
-
-	target_link_libraries(aniplay PRIVATE ${LIBRARIES})
-	target_link_libraries(example PRIVATE ${LIBRARIES})
-	target_link_libraries(model PRIVATE ${LIBRARIES})
-	target_link_libraries(sounds PRIVATE ${LIBRARIES})
-	target_link_libraries(sprites PRIVATE ${LIBRARIES})
 endif (APPLE)
+
+target_link_libraries(aniplay PRIVATE ${LIBRARIES})
+target_link_libraries(example PRIVATE ${LIBRARIES})
+target_link_libraries(model PRIVATE ${LIBRARIES})
+target_link_libraries(sounds PRIVATE ${LIBRARIES})
+target_link_libraries(sprites PRIVATE ${LIBRARIES})
 
 if (MSVC)
 	set_property(TARGET libparticle_test APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)

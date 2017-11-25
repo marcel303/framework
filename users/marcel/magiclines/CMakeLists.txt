@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
+set(CMAKE_CXX_STANDARD 14)
+
 set(HAS_LIBGG 0)
 set(HAS_FRAMEWORK 0)
 
@@ -21,10 +23,6 @@ project(anaglyphic)
 # --- anaglyphic ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
-
-set(GAME_FILES
-	main.cpp)
-source_group("Game Files" FILES ${GAME_FILES})
 
 add_executable(anaglyphic ${source})
 

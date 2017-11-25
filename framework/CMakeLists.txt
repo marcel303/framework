@@ -27,13 +27,7 @@ file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
 	"${CMAKE_CURRENT_SOURCE_DIR}/msdfgen/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/msdfgen/*.h"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../libfbx/*.cpp")
-list(REMOVE_ITEM source aniplay.cpp)
-list(REMOVE_ITEM source example.cpp)
 list(REMOVE_ITEM source ../libfbx/main.cpp)
-
-if (APPLE)
-	#list(REMOVE_ITEM source remotery.cpp)
-endif (APPLE)
 
 file(GLOB_RECURSE source_msdfgen "msdfgen/*.*")
 file(GLOB_RECURSE source_remotery "remotery*.*")
