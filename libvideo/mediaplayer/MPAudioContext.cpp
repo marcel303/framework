@@ -284,11 +284,6 @@ namespace MP
 		while (bytesRemaining > 0)
 		{
 			// Decode data.
-			int frameSize = 0;
-			
-			// todo : decode into segment
-			
-			AudioBufferSegment segment;
 			
 			int gotFrame = 0;
 			int bytesDecoded = avcodec_decode_audio4(
@@ -316,19 +311,29 @@ namespace MP
 				
 				//swr_convert(m_swrContext, out, out_count, in, in_count);
 				
-				if (frameSize > 0)
+				if (frame->nb_samples > 0)
 				{
 					if (m_codecContext->channels != 0)
 					{
-						size_t frameCount = frameSize / (m_codecContext->channels * sizeof(int16_t));
-
-						segment.m_numSamples = frameCount * m_codecContext->channels;
+						AudioBufferSegment segment;
+						
+						int16_t * __restrict dst = segment.m_samples;
+						
+						for (int i = 0; i < frame->nb_samples; ++i)
+						{
+							for (int c = 0; c < m_codecContext->channels; ++c)
+							{
+								const int16_t * __restrict src = (int16_t*)frame->data[c];
+								
+								*dst++ = src[i];
+							}
+						}
+						
+						segment.m_numSamples = frame->nb_samples * m_codecContext->channels;
 
 						m_audioBuffer->AddSegment(segment);
 
-						Assert(frameCount * (m_codecContext->channels * sizeof(int16_t)) == frameSize);
-
-						Debug::Print("\t\tAudio: decoded frame. got %d frames.", int(frameCount));
+						Debug::Print("\t\tAudio: decoded frame. got %d frames.", int(frame->nb_samples));
 					}
 				}
 				else
