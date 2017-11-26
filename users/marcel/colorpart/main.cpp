@@ -6,8 +6,8 @@
 #include "srt.h"
 #include "video.h"
 
-#define DO_VIDEO 0
-#define DO_LYRICS 0
+#define DO_VIDEO 1
+#define DO_LYRICS 1
 
 static int GFX_SX = 0;
 static int GFX_SY = 0;
@@ -238,6 +238,8 @@ class AudioOutputThread
 
 	void run()
 	{
+		SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+		
 		while (!m_stop)
 		{
 			m_output->Update(m_stream);
@@ -556,14 +558,15 @@ static void randomizeImage()
 
 int main(int argc, char * argv[])
 {
-	changeDirectory("data");
-
 	Srt srt;
 	
 	loadSrt("roar.srt", srt);
 
 	//image = loadImage("2.jpg");
 	image = loadImage("andreea.png");
+	
+	if (image == nullptr)
+		return -1;
 
 	GFX_SX = image->sx;
 	GFX_SY = image->sy;
@@ -581,7 +584,9 @@ int main(int argc, char * argv[])
 		mediaPlayer = new MediaPlayer();
 
 	#if DO_VIDEO
-		mediaPlayer->openAsync("roar.mpg", false);
+		MediaPlayer::OpenParams params;
+		params.filename = "roar.mpg";
+		mediaPlayer->openAsync(params);
 		//mediaPlayer->openAsync("haelos.mpg", false);
 		//mediaPlayer->openAsync("whilrwind.mpg", false);
 
@@ -627,7 +632,7 @@ int main(int argc, char * argv[])
 			if (mediaPlayer->isActive(mediaPlayer->context))
 			{
 				//mediaPlayer->presentTime = time;
-				mediaPlayer->tick(mediaPlayer->context);
+				mediaPlayer->tick(mediaPlayer->context, true);
 
 			#if DO_VIDEO
 				if (audioOutput == nullptr)

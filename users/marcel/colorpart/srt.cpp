@@ -3,6 +3,7 @@
 #include "Log.h"
 #include "srt.h"
 #include "StreamReader.h"
+#include "StringEx.h"
 
 const SrtFrame * Srt::findFrameByTime(const double time) const
 {
@@ -103,7 +104,7 @@ bool loadSrt(const char * filename, Srt & srt)
 	}
 	catch (std::exception & e)
 	{
-		LOG_ERR(e.what());
+		LOG_ERR("%s", e.what());
 		return false;
 	}
 }
