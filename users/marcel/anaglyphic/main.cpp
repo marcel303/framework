@@ -179,7 +179,7 @@ struct Pisu
 
 	void draw() const
 	{
-		setBlend(BLEND_ALPHA);
+		pushBlend(BLEND_ALPHA);
 		setColor(colorWhite);
 		//fillCircle(x, y, 20.f, 30);
 
@@ -187,6 +187,8 @@ struct Pisu
 		pisu.pivotX = pisu.getWidth()/2;
 		pisu.pivotY = pisu.getHeight();
 		pisu.drawEx(x, y, 0.f, .1f);
+		
+		popBlend();
 	}
 
 	float x;
@@ -436,7 +438,7 @@ static void drawExtrusion(const int numX, const int numY, const GLuint texture)
 	{
 		gxLoadIdentity();
 		gxTranslatef(lightPosition[0], lightPosition[1], lightPosition[2]);
-		setBlend(BLEND_OPAQUE);
+		pushBlend(BLEND_OPAQUE);
 		setColor(colorWhite);
 		for (int i = 0; i < 10; ++i)
 		{
@@ -446,6 +448,8 @@ static void drawExtrusion(const int numX, const int numY, const GLuint texture)
 			gxRotatef(5.f, 0.f, 1.f, 0.f);
 			gxRotatef(5.f, 0.f, 0.f, 1.f);
 		}
+		
+		popBlend();
 	}
 	gxPopMatrix();
 
@@ -453,7 +457,7 @@ static void drawExtrusion(const int numX, const int numY, const GLuint texture)
 	shader.setImmediate("mode", 0);
 	shader.setImmediate("lightPosition", lightPosition[0], lightPosition[1], lightPosition[2]);
 	shader.setImmediate("lightDirection", lightDirection[0], lightDirection[1], lightDirection[2]);
-	shader.setTexture("texture", 0, texture, true, true);
+	shader.setTexture("source", 0, texture, true, true);
 	setShader(shader);
 	{
 		gxBegin(GL_QUADS);
@@ -560,8 +564,8 @@ struct Camera
 
 	void tick(const float dt)
 	{
-		rotation[0] -= mouse.dy / 100.f;
-		rotation[1] -= mouse.dx / 100.f;
+		rotation[0] += mouse.dy / 100.f;
+		rotation[1] += mouse.dx / 100.f;
 
 		if (gamepad[0].isConnected)
 		{
@@ -655,8 +659,8 @@ struct Scene
 		}
 
 		mp = new MediaPlayer();
-		mp->openAsync("../colorpart/roar.mpg", false);
-		//mp->openAsync("../colorpart/haelos.mpg", false);
+		mp->openAsync("../colorpart/roar.mpg", MP::kOutputMode_RGBA);
+		//mp->openAsync("../colorpart/haelos.mpg", MP::kOutputMode_RGBA);
 		mp->presentTime = 0.0;
 	}
 
@@ -759,7 +763,7 @@ void Scene::tick(const float dt)
 
 	//
 
-	mp->tick(mp->context);
+	mp->tick(mp->context, true);
 
 	//mp->presentTime += framework.timeStep * .25f;
 	mp->presentTime += framework.timeStep;
@@ -803,9 +807,10 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 				{
 					gxPushMatrix();
 					{
-						setBlend(BLEND_OPAQUE);
+						pushBlend(BLEND_OPAQUE);
 						setColor(colorWhite);
 						model->draw();
+						popBlend();
 
 						clearShader();
 
@@ -815,18 +820,21 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 							model->calculateTransform(mat);
 							gxMultMatrixf(mat.m_v);
 
-							setBlend(BLEND_OPAQUE);
+							pushBlend(BLEND_OPAQUE);
 							setColor(colorWhite);
+							gxSetTexture(getTexture("tile2.jpg"));
 							gxBegin(GL_QUADS);
 							{
 								const float s = 70.f;
 
-								gxVertex3f(-s, 0.f, -s);
-								gxVertex3f(+s, 0.f, -s);
-								gxVertex3f(+s, 0.f, +s);
-								gxVertex3f(-s, 0.f, +s);
+								gxTexCoord2f(0.f, 0.f); gxVertex3f(-s, 0.f, -s);
+								gxTexCoord2f(1.f, 0.f); gxVertex3f(+s, 0.f, -s);
+								gxTexCoord2f(1.f, 1.f); gxVertex3f(+s, 0.f, +s);
+								gxTexCoord2f(0.f, 1.f); gxVertex3f(-s, 0.f, +s);
 							}
 							gxEnd();
+							gxSetTexture(0);
+							popBlend();
 						}
 					}
 					gxPopMatrix();
@@ -855,17 +863,18 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 							glPolygonMode(GL_FRONT_AND_BACK, wireMode ? GL_LINE : GL_FILL);
 							checkErrorGL();
 
-							setBlend(BLEND_OPAQUE);
+							pushBlend(BLEND_OPAQUE);
 							Shader shader("waves");
 							shader.setImmediate("time", framework.time);
 							shader.setImmediate("mode", wireMode ? 1 : 0);
-							shader.setTexture("texture", 0, getTexture("tile2.jpg"), true, true);
+							shader.setTexture("source", 0, getTexture("tile2.jpg"), true, true);
 							setShader(shader);
 							{
 								setColor(colorWhite);
 								drawGrid(40, 40);
 							}
 							clearShader();
+							popBlend();
 
 							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 							checkErrorGL();
@@ -893,7 +902,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 							const int numX = int(std::round(scaleX / 60.f));
 							const int numY = int(std::round(scaleY / 60.f));
 
-							setBlend(BLEND_OPAQUE);
+							pushBlend(BLEND_OPAQUE);
 
 							const GLuint texture = mp->getTexture();
 
@@ -902,6 +911,8 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 								//drawExtrusion(20, 20, getTexture("tile1.jpg"));
 								drawExtrusion(numX, numY, texture);
 							}
+							
+							popBlend();
 						}
 						gxPopMatrix();
 					}
@@ -911,15 +922,16 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 					{
 						glDepthMask(false);
 
-						setBlend(BLEND_ADD);
+						pushBlend(BLEND_ADD);
 						setColor(127, 127, 127);
 						Shader shader("particles");
-						shader.setTexture("texture", 0, getTexture("particle.jpg"), true, true);
+						shader.setTexture("source", 0, getTexture("particle.jpg"), true, true);
 						setShader(shader);
 						{
-							//ps.draw();
+							ps.draw();
 						}
 						clearShader();
+						popBlend();
 
 						glDepthMask(true);
 					}
@@ -929,9 +941,10 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 					{
 						glDepthMask(false);
 
-						setBlend(BLEND_ADD);
+						pushBlend(BLEND_ADD);
 						setColor(127, 127, 127);
 						vm.draw();
+						popBlend();
 
 						glDepthMask(true);
 					}
@@ -945,11 +958,14 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 
 		glDisable(GL_DEPTH_TEST);
 
-		setBlend(BLEND_ALPHA);
-		setColor(colorWhite);
+		pushBlend(BLEND_ALPHA);
+		{
+			setColor(colorWhite);
 
-		//setFont("calibri.ttf");
-		//drawText(50.f, 50.f, 48, +1.f, +1.f, "%s : %04.2fs", model->getAnimName(), model->animTime);
+			//setFont("calibri.ttf");
+			//drawText(50.f, 50.f, 48, +1.f, +1.f, "%s : %04.2fs", model->getAnimName(), model->animTime);
+		}
+		popBlend();
 	}
 	popSurface();
 
@@ -957,8 +973,9 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 	{
 		Shader shader("chromo.ps", "effect.vs", "chromo.ps");
 		shader.setTexture("colormap", 0, surface->getTexture(), true, true);
-		setBlend(BLEND_OPAQUE);
+		pushBlend(BLEND_OPAQUE);
 		surface->postprocess(shader);
+		popBlend();
 	}
 }
 
@@ -1803,8 +1820,9 @@ int main(int argc, char * argv[])
 							0);
 						setShader(shader);
 						{
-							setBlend(BLEND_OPAQUE);
+							pushBlend(BLEND_OPAQUE);
 							drawRect(0.f, 0.f, GFX_SX, GFX_SY);
+							popBlend();
 						}
 						clearShader();
 					}
@@ -1897,9 +1915,10 @@ int main(int argc, char * argv[])
 
 				gxSetTexture(surface->getTexture());
 				{
-					setBlend(BLEND_OPAQUE);
+					pushBlend(BLEND_OPAQUE);
 					setColor(colorWhite);
 					drawRect(0, 0, GFX_SX, GFX_SY);
+					popBlend();
 				}
 				gxSetTexture(0);
 			}

@@ -1,3 +1,5 @@
+#ifdef WIN32
+
 #pragma once
 
 //////////////////////////////////////////////////////////
@@ -282,4 +284,6 @@ private:
 	static void __cdecl basicThread(void * objPtr);
 
 	static char deviceNames[VI_MAX_CAMERAS][255];
-}; 
+};
+
+#endif

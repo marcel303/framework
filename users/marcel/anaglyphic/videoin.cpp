@@ -1,3 +1,5 @@
+#ifdef WIN32
+
 //////////////////////////////////////////////////////////
 //Written by Theodore Watson - theo.watson@gmail.com    //
 //Do whatever you want with this code but if you find   //
@@ -2600,3 +2602,5 @@ HRESULT videoInput::routeCrossbar(
 
 	return hr;
 }
+
+#endif
