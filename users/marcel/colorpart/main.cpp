@@ -64,7 +64,7 @@ struct Particle
 
 		if (ix >= 0 && ix < image->sx && iy >= 0 && iy < image->sy)
 		{
-			const ImageData::Pixel & pixel = image->getLine(image->sy - 1 - iy)[ix];
+			const ImageData::Pixel & pixel = image->getLine(iy)[ix];
 
 			const float amount1 = 1.f - amount;
 			const float amount2 =       amount * colormul;
@@ -832,7 +832,7 @@ int main(int argc, char * argv[])
 						setFont("BeautifulEveryTime.ttf");
 						setColor(colorWhite);
 
-						const SrtFrame * srtFrame = srt.findFrameByTime(mediaPlayer->presentTime);
+						const SrtFrame * srtFrame = srt.findFrameByTime(mediaPlayer->context->mpContext.GetAudioTime());
 
 						if (srtFrame != nullptr)
 						{
