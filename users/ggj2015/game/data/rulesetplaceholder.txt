@@ -1,0 +1,224 @@
+agenda
+	title Galactic Bully
+	description have run wild for far too long. If we let their transgressions pass the problem will only grow worse. A call to arms has gone out and all Great Races are called upon to show their support in this corrective action. 
+	requirement 50% of the votes
+	type:randomtarget percentage:50
+	options
+		wealth:-2
+		onresult:success target:randomrace food:-3 wealth:-2
+		Join corrective action
+		Target -3 Wealth -2 Food, that will teach them!
+
+		wealth:-2
+		onresult:failure wealth:4
+		Bet that the Bully wins
+		The Space Casino always does double or nothing!
+		
+agenda
+	title Local Agenda
+	description There are no current topics of high importance. Take this time to settle old disputes, pay debts or focus on economic growth. Keep in mind that going to war is a risky business, one should not undertake alone.
+	type:local
+	options
+		wealth:-3 food:-2 numtargets:1 bribe:war
+		onresult:success wealth:6 food:2 tech:2
+		War! Risk funds in return for big gains
+		Because we can and it's good for the economy
+
+		wealth:3
+		onresult:success
+		Print some money.
+		Result: +3 wealth, for free!
+
+		food:2
+		onresult:success
+		Stock some food.
+		Result: +2 food, it's like those farmers were hiding it
+
+		wealth:-3 numtargets:1
+		onresult:success target:targetonly wealth:3
+		Bribe someone
+		Select a race, gift them 3 wealth
+
+agenda
+	title Intergalactic highway	
+	description According to HippoCorp Enterprises, Earth’s orbit is responsible for interfering with the galactic highway. 5 bags of Catnip worth of wealth are lost in SpaceFuel every 10 years. Earth is nice and all, but HippoCorp is offering +1 wealth each turn to warm you up to their plan!
+	requirement 50% of the votes
+	type:majorityvote percentage:50
+	options
+		food:0
+		onresult:success target:race race:0 special:kill special2:incomemod specialw:1
+		Destroy Earth? Might as well..
+		Global warming kind of ruined it anyway
+
+		wealth:-2 bribe:transfer numtargets:1
+		target:targetonly wealth:2
+		Bribe someone
+		Gift one representative 2 wealth
+
+		wealth:-4 bribe:transfer numtargets:2
+		target:targetonly wealth:2
+		Bribe two
+		Gift two representative wealth
+
+		wealth:-6 bribe:transfer numtargets:3
+		target:targetonly wealth:2
+		Bribe three
+		Gift three representative wealth
+
+agenda
+	title Quantum Catnip Hyperdrives
+	description Catnip Inc. has announced a breakthrough in their Quark research. Funding the production of Quantam Catnip Quark Hyperdrives might have a significant payoff right now.
+	requirement 16 Tech total to fund research
+	type:stockpile tech:16
+	options
+		tech:-1
+		onresult:success tech:2
+		Small investment
+		-1 Tech +2 Tech on Success
+
+		tech:-2
+		onresult:success tech:4
+		Medium investment
+		-2 Tech +4 Tech on Success
+
+		tech:-4
+		onresult:success tech:8
+		Massive investment
+		-4 Tech +8 Tech on Success
+		
+		sabotage:1 wealth:-1
+		onresult:failure tech:2
+		Sabotage the project.
+		-1 wealth +2 Tech on Failure
+
+agenda
+	title Galactic Crisis
+	description A massive swarm of giant herbivore carrots is roaming the galaxy, eating planets wherever they go. Pledge funds to stop this Terran-made GMO menace from spreading. Failing to provide funding could be painful.
+	requirement 20 wealth is required to stop the carrots
+	type:stockpile wealth:20
+	options
+		wealth:-1 
+		onresult:failure food:-2
+		Commit 1 wealth to the cause
+		-2 food on failure
+
+		wealth:-2
+		onresult:failure food:-2
+		Commit 2 wealth to the cause
+		-2 food on failure
+
+		wealth:-3
+		onresult:failure food:-2
+		Commit 3 wealth to the cause
+		-2 food on failure
+		
+agenda
+	title High Risk Investment
+	description BunnyHop Interactive has an interesting research project but are looking for investors. The payoff could be big if the project is properly funded.
+	requirement Unclear
+	type:stockpile wealth:30
+	options
+		wealth:-2
+		onresult:success tech:3
+		A low risk investment		
+		This surely can't hurt
+
+		wealth:-3
+		onresult:success tech:5
+		Medium risks
+		Medium rewards, why not?
+
+		wealth:-6
+		onresult:success tech:9
+		What can possible go wrong?
+		.
+
+agenda
+	title Intergalactic Money Sharks
+	requirement Majority vote will be executed
+	type:majorityvote percentage:50
+	description Priorities change so why not use the Galaxy Bank to exchange your unused resources!
+	options
+		wealth:-5
+		onresult:success tech:5
+		Exchange Wealth for Tech
+		Investments will not be refunded
+
+		tech:-5
+		onresult:failure wealth:5
+		Exchange Tech for Wealth
+		Investments will not be refunded
+
+agenda
+	title Space Dust Cleanup
+	requirement Gather at least 10 wealth to vacuum space
+	type:stockpile wealth:10
+	description The Schizo Cats have been whining about the large clouds of Space Dust floating around in their little cartboard corner. Perhaps the humans can be persuaded to clean up their mess? Or will others volunteer funds for the cleanup?
+	options
+		wealth:-4
+		onresult:success wealth:6
+		Charity might improve our Race's reputation
+		Then again, who cares about rep when you could be blowing up planets
+
+		tech:-4
+		onresult:failure tech:6
+		Deathstar research
+		Who needs karma anyway?		
+
+agenda
+	title Space Aid
+	requirement Willingness to aid those in need
+	type:local
+	description Someone did not pay attention during Economy 101. Space Aid has been requested to prevent a Race's untimely demise. Who wishes to provide aid?
+	options
+		wealth:-1 food:-1 tech:-1 numtargets:1 bribe:transfer
+		onresult:success
+		A small aid package.
+		Perhaps there are more deserving recipients though?
+
+		wealth:-2 food:-2 tech:-2 numtargets:1 bribe:transfer
+		onresult:success
+		A decent aid package.
+		Giving is the greatest gift.
+
+		wealth:-3 food:-2 numtargets:1 bribe:war
+		onresult:success wealth:4 food:2 tech:2
+		Aid? War!
+		I mean seriously..
+
+agenda
+	title Tax Tariffs
+	description The state gives, the state takes. Better pay up, abstaining will only hurt more...
+	type:majorityvote percentage:100
+	options
+		wealth:-2
+		onresult:failure target:abstainees wealth:-1
+		Pay with wealth 
+		.
+
+		tech:-2
+		onresult:failure target:abstainees wealth:0
+		Pay with Tech
+		.
+
+		food:-2
+		onresult:failure target:abstainees wealth:0
+		Pay with Food
+		.
+		
+agenda
+	title Pan-Galactic focus shift
+	description Economic scientists have come up with a theory that focusing on production of a single resource is more efficient than producing everything at once. Enamored by this concept, the president has put forth a few possible policy changes.
+	requirement The majority vote wins
+	type:majorityvote percentage:50
+	options
+		food:0
+		onresult:success special:incomemod specialw:1 specialw:-1
+		Let us focus on our monetary gains
+		Our businesses are lucrative as it is, why change?
+
+		food:0
+		onresult:failure special:incomemod specialw:-1 specialw:1
+		Technology is the way forward!
+		Where would we be without hyperdrives? Now we need Quantum Nukes!
+		

@@ -1,12 +1,14 @@
+include engine/ShaderPS.txt
+
 uniform sampler2D lightmap;
 uniform sampler2D colormap;
 
-varying vec2 texcoord;
+shader_in vec2 texcoord;
 
 void main()
 {
-	vec4 light = texture2D(lightmap, texcoord);
-	vec4 color = texture2D(colormap, texcoord);
+	vec4 light = texture(lightmap, texcoord);
+	vec4 color = texture(colormap, texcoord);
 	
-	gl_FragColor = vec4((light * color).xyz, 1.0);
+	shader_fragColor = vec4((light * color).xyz, 1.0);
 }

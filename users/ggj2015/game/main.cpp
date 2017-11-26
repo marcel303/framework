@@ -119,7 +119,7 @@ static void drawCharIcon(int x, int y, int index, float scale, CharIcon icon)
 static void drawWinnerScreen()
 {
 	setColor(colorWhite);
-	Sprite("winner-back.png").draw();
+	Sprite("winner-back.jpg").draw();
 
 	for (size_t i = 0; i < g_gameState->m_winningPlayers.size(); ++i)
 	{
@@ -603,7 +603,7 @@ public:
 		else if (m_state == State_HelpScreen)
 		{
 			setColor(colorWhite);
-			Sprite("help-screen.png").draw();
+			Sprite("help-screen.jpg").draw();
 		}
 		else if (m_state == State_Discuss)
 		{
@@ -949,7 +949,7 @@ public:
 		else if (g_votingScreen->m_state == VotingScreen::State_HelpScreen)
 		{
 			setColor(colorWhite);
-			Sprite("help-screen.png").draw();
+			Sprite("help-screen.jpg").draw();
 		}
 		else if (g_votingScreen->m_state == VotingScreen::State_ShowWinner)
 		{
@@ -958,7 +958,7 @@ public:
 		else
 		{
 			setColor(colorWhite);
-			Sprite("overview-back.png").draw();
+			Sprite("overview-back.jpg").draw();
 		}
 
 		const int councilX[MAX_PLAYERS] =
