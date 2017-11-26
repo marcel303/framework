@@ -46,8 +46,8 @@ void StatTimerMenu::Draw(int x, int y, int sx, int sy)
 	int currentY = y;
 
 	setColor(127, 227, 255);
-	drawText(x + sx - 2 - captionSize, currentY, fontSize, -1.f, +1.f, "time");
-	drawText(x + sx - 2              , currentY, fontSize, -1.f, +1.f, "count");
+	drawText(x + sx - 2 - captionSize, currentY + lineSize * .5f, fontSize, -1.f, 0.f, "time");
+	drawText(x + sx - 2              , currentY + lineSize * .5f, fontSize, -1.f, 0.f, "count");
 
 	currentY += lineSize;
 
@@ -66,14 +66,14 @@ void StatTimerMenu::Draw(int x, int y, int sx, int sy)
 		{
 			setColor(127, 227, 255);
 		}
-		drawText(x + 2, currentY, fontSize, +1.f, +1.f, timer ? "%s" : "[ %s ]", node->m_name.c_str());
+		drawText(x + 2, currentY + lineSize * .5f, fontSize, +1.f, 0.f, timer ? "%s" : "[ %s ]", node->m_name.c_str());
 		if (timer)
 		{
 			const uint32_t time = timer->GetAverageTime();
 			const uint32_t count = timer->GetAverageCount();
 			if (time != 0)
-				drawText(x + sx - 2 - captionSize, currentY, fontSize, -1.f, +1.f, "%.2f ms", time / 1000.f);
-			drawText(x + sx - 1 - 2, currentY, fontSize, -1.f, +1.f, "%u", count);
+				drawText(x + sx - 2 - captionSize, currentY + lineSize * .5f, fontSize, -1.f, 0.f, "%.2f ms", time / 1000.f);
+			drawText(x + sx - 1 - 2, currentY + lineSize * .5f, fontSize, -1.f, 0.f, "%u", count);
 		}
 
 		currentY += lineSize;
