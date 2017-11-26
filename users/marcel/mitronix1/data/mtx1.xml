@@ -1,0 +1,55 @@
+<graph nextNodeId="76" nextLinkId="69" nextZKey="703">
+    <node id="63" typeName="voice" editorX="112" editorY="-16" folded="1">
+        <input socket="speaker" value="1"/>
+    </node>
+    <node id="64" typeName="audio.in" editorX="-150.0535888671875" editorY="-3"/>
+    <node id="65" typeName="binauralizer" editorX="-22" editorY="5">
+        <input socket="sampleSet" value="cipic.147"/>
+    </node>
+    <node id="66" typeName="voice" editorX="112" editorY="32" folded="1">
+        <input socket="speaker" value="2"/>
+    </node>
+    <node id="67" typeName="noise.1d" passthrough="1" editorX="-144" editorY="112" folded="1">
+        <input socket="max" value="100.000000"/>
+        <input socket="min" value="-100.000000"/>
+        <input socket="scale" value="0.300000"/>
+    </node>
+    <node id="68" typeName="time" editorX="-256" editorY="112" folded="1"/>
+    <node id="69" nodeType="1" typeName="" editorX="-335.57794189453125" editorY="-18.992095947265625">
+        <visualizer nodeId="64" dstSocketName="audio" sx="168.4754638671875" sy="105.00003051757812"/>
+    </node>
+    <node id="71" typeName="mitronix" editorX="-566.90875244140625" editorY="18"/>
+    <node id="72" typeName="map.range" editorX="-452.71469116210938" editorY="57.871551513671875" folded="1">
+        <input socket="outMax" value="-90.000000"/>
+        <input socket="outMin" value="90.000000"/>
+    </node>
+    <node id="73" nodeType="1" typeName="" editorX="-405.9945068359375" editorY="102.0072021484375">
+        <visualizer nodeId="72" dstSocketName="result" sx="119" sy="83"/>
+    </node>
+    <node id="74" typeName="map.range" editorX="-451.19009399414062" editorY="19.636383056640625" folded="1">
+        <input socket="outMax" value="150.000000"/>
+        <input socket="outMin" value="-150.000000"/>
+    </node>
+    <node id="75" nodeType="1" typeName="" editorX="-480.55874633789062" editorY="-75.76300048828125">
+        <visualizer nodeId="74" dstSocketName="result" sx="125.00009155273438" sy="84.00006103515625"/>
+    </node>
+    <link id="59" enabled="1" srcNodeId="65" srcNodeSocketName="audio" dstNodeId="64" dstNodeSocketName="audio"/>
+    <link id="60" enabled="1" srcNodeId="63" srcNodeSocketName="audio" dstNodeId="65" dstNodeSocketName="leftEar"/>
+    <link id="61" enabled="1" srcNodeId="66" srcNodeSocketName="audio" dstNodeId="65" dstNodeSocketName="rightEar"/>
+    <link id="62" enabled="1" srcNodeId="67" srcNodeSocketName="x" dstNodeId="68" dstNodeSocketName="time"/>
+    <link id="63" enabled="1" srcNodeId="65" srcNodeSocketName="azimuth" dstNodeId="67" dstNodeSocketName="result"/>
+    <link id="65" enabled="1" srcNodeId="72" srcNodeSocketName="value" dstNodeId="71" dstNodeSocketName="mouse.y"/>
+    <link id="66" enabled="1" srcNodeId="65" srcNodeSocketName="elevation" dstNodeId="72" dstNodeSocketName="result"/>
+    <link id="67" enabled="1" srcNodeId="74" srcNodeSocketName="value" dstNodeId="71" dstNodeSocketName="mouse.x"/>
+    <link id="68" enabled="1" srcNodeId="65" srcNodeSocketName="azimuth" dstNodeId="74" dstNodeSocketName="result"/>
+    <editor>
+        <dragAndZoom x="-174.09432983398438" y="49.825187683105469" zoom="1"/>
+        <editorOptions menuIsVisible="1" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="34ac176b" gridColor="ffffff26">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>
