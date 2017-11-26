@@ -39,7 +39,15 @@ file(GLOB_RECURSE source_delaunay "delaunay/*.*")
 
 file(GLOB source_tests "test*.*")
 
-file(GLOB_RECURSE source_ui "../libparticle/ui.cpp" "../libparticle/ui.h" "../libparticle/textfield.cpp" "../libparticle/textfield.h" "../libparticle/colorwheel.cpp" "../libparticle/colorwheel.h" "../libparticle/particle.cpp" "../libparticle/particle.h")
+file(GLOB_RECURSE source_ui
+	"../libparticle/ui.cpp"
+	"../libparticle/ui.h"
+	"../libparticle/textfield.cpp"
+	"../libparticle/textfield.h"
+	"../libparticle/colorwheel.cpp"
+	"../libparticle/colorwheel.h"
+	"../libparticle/particle.cpp"
+	"../libparticle/particle.h")
 
 list(APPEND source ${source_graph})
 list(APPEND source ${source_ui})
@@ -63,7 +71,7 @@ target_compile_definitions(4dworld PRIVATE NO_SDL_GLEXT ENABLE_KINECT1=0 ENABLE_
 if (WIN32)
 	target_compile_definitions(4dworld PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
 
-		# set the current working directory
+	# set the current working directory
 	
 	set_target_properties(4dworld PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
 	
@@ -86,73 +94,30 @@ endif (WIN32)
 
 target_include_directories(4dworld PRIVATE "${PROJECT_SOURCE_DIR}")
 target_include_directories(4dworld PRIVATE "objects")
+target_include_directories(4dworld PRIVATE "../vfxGraph")
 
 if (APPLE)
-	target_include_directories(4dworld PRIVATE "../vfxGraph")
 	target_include_directories(4dworld PRIVATE "../vfxGraph/macos/include")
-	target_include_directories(4dworld PRIVATE "../libvideo/macos/include")
-	target_include_directories(4dworld PRIVATE "../libvideo/")
-	target_include_directories(4dworld PRIVATE "../libfreenect2/macos/include")
 endif (APPLE)
 
 if (WIN32)
-	target_include_directories(4dworld PRIVATE "../avgraph")
-	target_include_directories(4dworld PRIVATE "../vfxpro/win32/include")
-	target_include_directories(4dworld PRIVATE "../vfxpro/")
-	target_include_directories(4dworld PRIVATE "../avpaint/win32/include")
+	target_include_directories(4dworld PRIVATE "../vfxGraph/win32/include")
 endif (WIN32)
 
 target_link_libraries(4dworld PRIVATE framework)
 target_link_libraries(4dworld PRIVATE libosc)
 target_link_libraries(4dworld PRIVATE libgg)
 
+target_link_libraries(4dworld PRIVATE ${FRAMEWORK_LIBRARIES})
+
 if (MSVC)
-	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/win32/lib/portaudio_x86.lib)
-	
-	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
-	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)
-	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib)
-	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/OpenAL32.lib)
-	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2.lib)
-	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2main.lib)
-	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/XInput9_1_0.lib)
-	target_link_libraries(4dworld PRIVATE Winmm.lib OpenGL32.lib WSock32.lib Ws2_32.lib)
+	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../vfxGraph/win32/lib/portaudio_x86.lib)
 endif (MSVC)
 
 if (APPLE)
 	target_compile_definitions(4dworld PUBLIC MACOS)
 
-	find_library(COCOA_LIBRARY Cocoa)
-	find_library(CARBON_LIBRARY Carbon)
-	find_library(COREAUDIO_LIBRARY CoreAudio)
-	find_library(COREVIDEO_LIBRARY CoreVideo)
-	find_library(IOKIT_LIBRARY IOKit)
-	find_library(AUDIOTOOLBOX_LIBRARY AudioToolbox)
-	find_library(AUDIOUNIT_LIBRARY AudioUnit)
-	find_library(OPENAL_LIBRARY OpenAL)
-	find_library(OPENGL_LIBRARY OpenGL)
-	find_library(FF_LIBRARY ForceFeedback)
-	find_library(ICONV_LIBRARY iconv)
-	find_library(BZ2_LIBRARY bz2)
-	
-	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/glew/lib/libGLEW.a)
-	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libfreeimage.a)
-	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libfreetype.a)
-	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libSDL2.a)
-	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libSDL2main.a)
 	target_link_libraries(4dworld PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../vfxGraph/macos/lib/libportaudio.a)
-	target_link_libraries(4dworld PRIVATE ${COCOA_LIBRARY})
-	target_link_libraries(4dworld PRIVATE ${CARBON_LIBRARY})
-	target_link_libraries(4dworld PRIVATE ${COREAUDIO_LIBRARY})
-	target_link_libraries(4dworld PRIVATE ${COREVIDEO_LIBRARY})
-	target_link_libraries(4dworld PRIVATE ${IOKIT_LIBRARY})
-	target_link_libraries(4dworld PRIVATE ${AUDIOTOOLBOX_LIBRARY})
-	target_link_libraries(4dworld PRIVATE ${AUDIOUNIT_LIBRARY})
-	target_link_libraries(4dworld PRIVATE ${OPENAL_LIBRARY})
-	target_link_libraries(4dworld PRIVATE ${OPENGL_LIBRARY})
-	target_link_libraries(4dworld PRIVATE ${FF_LIBRARY})
-	target_link_libraries(4dworld PRIVATE ${ICONV_LIBRARY})
-	target_link_libraries(4dworld PRIVATE ${BZ2_LIBRARY}) # FreeType
 endif (APPLE)
 
 if (MSVC)

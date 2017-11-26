@@ -44,7 +44,15 @@ file(GLOB_RECURSE source_oxfJpegGlitch "ofxJpegGlitch/*.*")
 
 file(GLOB source_tests "test*.*")
 
-file(GLOB_RECURSE source_ui "../libparticle/ui.cpp" "../libparticle/ui.h" "../libparticle/textfield.cpp" "../libparticle/textfield.h" "../libparticle/colorwheel.cpp" "../libparticle/colorwheel.h" "../libparticle/particle.cpp" "../libparticle/particle.h")
+file(GLOB_RECURSE source_ui
+	"../libparticle/ui.cpp"
+	"../libparticle/ui.h"
+	"../libparticle/textfield.cpp"
+	"../libparticle/textfield.h"
+	"../libparticle/colorwheel.cpp"
+	"../libparticle/colorwheel.h"
+	"../libparticle/particle.cpp"
+	"../libparticle/particle.h")
 
 list(APPEND source ${source_video})
 list(APPEND source ${source_mediaplayer})
