@@ -66,6 +66,44 @@ if (APPLE)
 	target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/macos/include/freetype")
 endif (APPLE)
 
+if (APPLE)
+	find_library(COCOA_LIBRARY Cocoa)
+	find_library(CARBON_LIBRARY Carbon)
+	find_library(COREAUDIO_LIBRARY CoreAudio)
+	find_library(COREVIDEO_LIBRARY CoreVideo)
+	find_library(IOKIT_LIBRARY IOKit)
+	find_library(AUDIOTOOLBOX_LIBRARY AudioToolbox)
+	find_library(AUDIOUNIT_LIBRARY AudioUnit)
+	find_library(OPENAL_LIBRARY OpenAL)
+	find_library(OPENGL_LIBRARY OpenGL)
+	find_library(FF_LIBRARY ForceFeedback)
+	find_library(ICONV_LIBRARY iconv)
+	find_library(FREETYPE_LIBRARY freetype2)
+	find_library(BZ2_LIBRARY bz2)
+
+	set(FRAMEWORK_LIBRARIES
+		framework
+		libgg
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/glew/lib/libGLEW.a
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libfreeimage.a
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libfreetype.a
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libSDL2.a
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libSDL2main.a
+		${COCOA_LIBRARY}
+		${CARBON_LIBRARY}
+		${COREAUDIO_LIBRARY}
+		${COREVIDEO_LIBRARY}
+		${IOKIT_LIBRARY}
+		${AUDIOTOOLBOX_LIBRARY}
+		${AUDIOUNIT_LIBRARY}
+		${OPENAL_LIBRARY}
+		${OPENGL_LIBRARY}
+		${FF_LIBRARY}
+		${ICONV_LIBRARY}
+		${BZ2_LIBRARY}
+		PARENT_SCOPE)
+endif (APPLE)
+
 add_dependencies(framework libgg)
 
 if (MSVC)
