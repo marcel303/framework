@@ -4,7 +4,7 @@
 
 #if ENABLE_VIDEO
 
-#include "mediaplayer_new/MPContext.h"
+#include "mediaplayer/MPContext.h"
 #include <stdint.h>
 
 struct MediaPlayer

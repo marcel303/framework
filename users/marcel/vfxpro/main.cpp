@@ -29,8 +29,8 @@
 #endif
 
 #if ENABLE_VIDEO
-	#include "mediaplayer_new/MPContext.h"
-	#include "mediaplayer_new/MPUtil.h"
+	#include "mediaplayer/MPContext.h"
+	#include "mediaplayer/MPUtil.h"
 #endif
 
 #ifdef MACOS
