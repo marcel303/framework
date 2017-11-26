@@ -30,55 +30,55 @@ struct Particle;
 class Transform;
 
 	// shape distance functions
-static float computeMinParticleDistance(const Coord & c, const Particle * particles, const int numParticles);
-static float computeCircleDistance(const Coord & c);
-static float computeSphereDistance(const Coord & c);
-static float computeCubeDistance(const Coord & c);
-static float computeToroidDistance(const Coord & c, const float thickness, const float outer);
-static float computeCircleHullDistance(const Coord & c);
-static float computePointDistance(const Coord & c);
-static float computeLineDistance(const Coord & c);
-static float computeLineSegmentDistance(const Coord & c, const float x1, const float x2, const float r);
-static float computePerlinNoise(const Coord & c, const float w);
-static float computeTorus82(const Coord & c, const float a, const float b);
-static float computeTorus88(const Coord & c, const float a, const float b);
+inline float computeMinParticleDistance(const Coord & c, const Particle * particles, const int numParticles);
+inline float computeCircleDistance(const Coord & c);
+inline float computeSphereDistance(const Coord & c);
+inline float computeCubeDistance(const Coord & c);
+inline float computeToroidDistance(const Coord & c, const float thickness, const float outer);
+inline float computeCircleHullDistance(const Coord & c);
+inline float computePointDistance(const Coord & c);
+inline float computeLineDistance(const Coord & c);
+inline float computeLineSegmentDistance(const Coord & c, const float x1, const float x2, const float r);
+inline float computePerlinNoise(const Coord & c, const float w);
+inline float computeTorus82(const Coord & c, const float a, const float b);
+inline float computeTorus88(const Coord & c, const float a, const float b);
 
 	// coordinate space deformation functions
-static Coord repeat(const Coord & coord, const float repeatX, const float repeatY, const float repeatZ);
-static Coord twistX(const Coord & c, const float scale);
-static Coord twistY(const Coord & c, const float scale);
-static Coord twistZ(const Coord & c, const float scale);
+inline Coord repeat(const Coord & coord, const float repeatX, const float repeatY, const float repeatZ);
+inline Coord twistX(const Coord & c, const float scale);
+inline Coord twistY(const Coord & c, const float scale);
+inline Coord twistZ(const Coord & c, const float scale);
 
 	// CSG operations
-static float csgUnion(const float d1, const float d2);
-static float csgSubtraction(const float d1, const float d2);
-static float csgIntersection(const float d1, const float d2);
-static float csgSoftUnion(const float a, const float b, const float k);
-static float csgSoftIntersection(const float a, const float b, const float k);
+inline float csgUnion(const float d1, const float d2);
+inline float csgSubtraction(const float d1, const float d2);
+inline float csgIntersection(const float d1, const float d2);
+inline float csgSoftUnion(const float a, const float b, const float k);
+inline float csgSoftIntersection(const float a, const float b, const float k);
 
 // math functions
 
-static float min(const int x, const int y) { return x < y ? x : y; }
-static float min(const float x) { return x; }
-static float min(const float x, const float y) { return x < y ? x : y; }
-static float min(const float x, const float y, const float z) { return min(x, min(y, z)); }
-static float min(const float x, const float y, const float z, const float w) { return min(x, min(y, min(z, w))); }
-static float min(const float x, const float y, const float z, const float w, const float s) { return min(x, min(y, min(z, min(w, s)))); }
+inline float min(const int x, const int y) { return x < y ? x : y; }
+inline float min(const float x) { return x; }
+inline float min(const float x, const float y) { return x < y ? x : y; }
+inline float min(const float x, const float y, const float z) { return min(x, min(y, z)); }
+inline float min(const float x, const float y, const float z, const float w) { return min(x, min(y, min(z, w))); }
+inline float min(const float x, const float y, const float z, const float w, const float s) { return min(x, min(y, min(z, min(w, s)))); }
 
-static float max(const int x, const int y) { return x > y ? x : y; }
-static float max(const float x, const float y) { return x > y ? x : y; }
-static float max(const float x, const float y, const float z) { return max(x, max(y, z)); }
+inline float max(const int x, const int y) { return x > y ? x : y; }
+inline float max(const float x, const float y) { return x > y ? x : y; }
+inline float max(const float x, const float y, const float z) { return max(x, max(y, z)); }
 
-static float clamp(const float x, const float min, const float max) { return x < min ? min : x > max ? max : x; }
-static float lerp(const float a, const float b, const float t) { return a * (1.f - t) + b * t; }
+inline float clamp(const float x, const float min, const float max) { return x < min ? min : x > max ? max : x; }
+inline float lerp(const float a, const float b, const float t) { return a * (1.f - t) + b * t; }
 
-static float rand(const float min, const float max) { return min + (max - min) * (rand() % 1024) / 1023.f; }
+inline float rand(const float min, const float max) { return min + (max - min) * (rand() % 1024) / 1023.f; }
 
-static float length1(const float x) { return std::sqrtf(x * x); }
-static float length2(const float x, const float y) { return std::sqrtf(x * x + y * y); }
-static float length3(const float x, const float y, const float z) { return std::sqrtf(x * x + y * y + z * z); }
+inline float length1(const float x) { return std::sqrtf(x * x); }
+inline float length2(const float x, const float y) { return std::sqrtf(x * x + y * y); }
+inline float length3(const float x, const float y, const float z) { return std::sqrtf(x * x + y * y + z * z); }
 
-static float dot3(
+inline float dot3(
 	const float x1, const float y1, const float z1,
 	const float x2, const float y2, const float z2)
 {
@@ -275,7 +275,7 @@ struct Particle
 
 // shape distance functions
 
-static float computeMinParticleDistance(const Coord & c, const Particle * particles, const int numParticles)
+inline float computeMinParticleDistance(const Coord & c, const Particle * particles, const int numParticles)
 {
 	float minDistance = std::numeric_limits<float>::max();
 
@@ -296,7 +296,7 @@ static float computeMinParticleDistance(const Coord & c, const Particle * partic
 	return minDistance;
 }
 
-static float computeCircleDistance(const Coord & c)
+inline float computeCircleDistance(const Coord & c)
 {
 	const float dx = c.x;
 	const float dy = c.y;
@@ -308,12 +308,12 @@ static float computeCircleDistance(const Coord & c)
 	return d;
 }
 
-static float computeSphereDistance(const Coord & c)
+inline float computeSphereDistance(const Coord & c)
 {
 	return length3(c.x, c.y, c.z) - 1.f;
 }
 
-static float computeCubeDistance(const Coord & c, const float sx, const float sy, const float sz)
+inline float computeCubeDistance(const Coord & c, const float sx, const float sy, const float sz)
 {
 	// actually a round box
 
@@ -323,7 +323,7 @@ static float computeCubeDistance(const Coord & c, const float sx, const float sy
 		max(0.f, abs(c.z) - sz));
 }
 
-static float computeToroidDistance(const Coord & c, const float thickness, const float outer)
+inline float computeToroidDistance(const Coord & c, const float thickness, const float outer)
 {
 	const float s = length2(c.x, c.z);
 	const float dx = s - outer;
@@ -332,7 +332,7 @@ static float computeToroidDistance(const Coord & c, const float thickness, const
 	return d - thickness;
 }
 
-static float computeCircleHullDistance(const Coord & c)
+inline float computeCircleHullDistance(const Coord & c)
 {
 	const float dx = c.x;
 	const float dy = c.y;
@@ -352,7 +352,7 @@ static float computeCircleHullDistance(const Coord & c)
 	}
 }
 
-static float computePointDistance(const Coord & c)
+inline float computePointDistance(const Coord & c)
 {
 	const float dx = c.x;
 	const float dy = c.y;
@@ -361,7 +361,7 @@ static float computePointDistance(const Coord & c)
 	return d;
 }
 
-static float computeLineDistance(const Coord & c)
+inline float computeLineDistance(const Coord & c)
 {
 	const float dx = 0.f;
 	const float dy = c.y;
@@ -370,12 +370,12 @@ static float computeLineDistance(const Coord & c)
 	return d;
 }
 
-static float computePlaneDistance(const Coord & c)
+inline float computePlaneDistance(const Coord & c)
 {
 	return std::abs(c.x);
 }
 
-static float computeLineSegmentDistance(const Coord & c, const float x1, const float x2, const float r)
+inline float computeLineSegmentDistance(const Coord & c, const float x1, const float x2, const float r)
 {
 	const float px = c.x - x1;
 	const float py = c.y - 0.f;
@@ -391,14 +391,14 @@ static float computeLineSegmentDistance(const Coord & c, const float x1, const f
 	return d - r;
 }
 
-static float computePerlinNoise(const Coord & c, const float w)
+inline float computePerlinNoise(const Coord & c, const float w)
 {
 	const float value = octave_noise_4d(4.f, .5f, .5f, c.x, c.y, c.z, w);
 
 	return value;
 }
 
-static float computeTorus82(const Coord & c, const float a, const float b)
+inline float computeTorus82(const Coord & c, const float a, const float b)
 {
 	const float dx = (c.x * c.x + c.z * c.z) - a;
 	const float dy = c.y;
@@ -406,7 +406,7 @@ static float computeTorus82(const Coord & c, const float a, const float b)
 	return d - b;
 }
 
-static float computeTorus88(const Coord & c, const float a, const float b)
+inline float computeTorus88(const Coord & c, const float a, const float b)
 {
 	const float dx = (c.x * c.x * c.x * c.x + c.z * c.z * c.z * c.z) - a;
 	const float dy = c.y;
@@ -416,7 +416,7 @@ static float computeTorus88(const Coord & c, const float a, const float b)
 
 // coordinate space deformation functions
 
-static Coord repeat(const Coord & coord, const float repeatX, const float repeatY, const float repeatZ)
+inline Coord repeat(const Coord & coord, const float repeatX, const float repeatY, const float repeatZ)
 {
 	return Coord(
 		repeatX == 0.f ? coord.x : fmodf(coord.x, repeatX),
@@ -424,7 +424,7 @@ static Coord repeat(const Coord & coord, const float repeatX, const float repeat
 		repeatZ == 0.f ? coord.z : fmodf(coord.z, repeatZ));
 }
 
-static Coord twistX(const Coord & c, const float scale)
+inline Coord twistX(const Coord & c, const float scale)
 {
 	Coord result;
 	Mat4x4 m;
@@ -436,7 +436,7 @@ static Coord twistX(const Coord & c, const float scale)
 	return result;
 }
 
-static Coord twistY(const Coord & c, const float scale)
+inline Coord twistY(const Coord & c, const float scale)
 {
 	Coord result;
 	Mat4x4 m;
@@ -448,7 +448,7 @@ static Coord twistY(const Coord & c, const float scale)
 	return result;
 }
 
-static Coord twistZ(const Coord & c, const float scale)
+inline Coord twistZ(const Coord & c, const float scale)
 {
 	Coord result;
 	Mat4x4 m;
@@ -462,28 +462,28 @@ static Coord twistZ(const Coord & c, const float scale)
 
 // CSG operations
 
-static float csgUnion(const float d1, const float d2)
+inline float csgUnion(const float d1, const float d2)
 {
 	return min(d1, d2);
 }
 
-static float csgSubtraction(const float d1, const float d2)
+inline float csgSubtraction(const float d1, const float d2)
 {
 	return max(-d1, d2);
 }
 
-static float csgIntersection(const float d1, const float d2)
+inline float csgIntersection(const float d1, const float d2)
 {
 	return max(d1, d2);
 }
 
-static float csgSoftUnion(const float a, const float b, const float k)
+inline float csgSoftUnion(const float a, const float b, const float k)
 {
 	const float h = clamp(.5f + .5f * (b - a) / k, 0.f, 1.f);
 	return lerp(b, a, h) - k * h * (1.f - h);
 }
 
-static float csgSoftIntersection(const float a, const float b, const float k)
+inline float csgSoftIntersection(const float a, const float b, const float k)
 {
 	const float h = clamp(.5f + .5f * (b - a) / k, 0.f, 1.f);
 	return lerp(a, b, h) + k * h * (1.f - h);
