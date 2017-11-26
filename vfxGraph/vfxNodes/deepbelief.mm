@@ -106,6 +106,9 @@ void Deepbelief::shut()
 
 void Deepbelief::process(const uint8_t * bytes, const int sx, const int sy, const int numChannels, const int pitch, const float certaintyTreshold)
 {
+	if (state == nullptr)
+		return;
+	
 	Work * oldWork = nullptr;
 	
 	Work * newWork = new Work();
@@ -140,6 +143,9 @@ void Deepbelief::process(const uint8_t * bytes, const int sx, const int sy, cons
 
 void Deepbelief::wait()
 {
+	if (state == nullptr)
+		return;
+	
 	SDL_LockMutex(state->mutex);
 	{
 		if (state->hasResult == false)
@@ -154,6 +160,9 @@ void Deepbelief::wait()
 
 bool Deepbelief::getResult(DeepbeliefResult & result)
 {
+	if (state == nullptr)
+		return false;
+	
 	bool hasResult = false;
 
 	SDL_LockMutex(state->mutex);
