@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
+set(CMAKE_CXX_STANDARD 11)
+
 set(HAS_LIBGG 0)
 set(HAS_LIBNET 0)
 set(HAS_FRAMEWORK 0)
@@ -16,7 +18,7 @@ if (NOT HAS_LIBNET)
 endif (NOT HAS_LIBNET)
 if (NOT HAS_FRAMEWORK)
 	message("including framework")
-	add_subdirectory(../framework framework)
+	add_subdirectory(../../../framework framework)
 endif (NOT HAS_FRAMEWORK)
 
 #
@@ -54,14 +56,7 @@ target_link_libraries(twinkle PRIVATE framework)
 target_link_libraries(twinkle PRIVATE libnet)
 target_link_libraries(twinkle PRIVATE libgg)
 
-target_link_libraries(twinkle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
-target_link_libraries(twinkle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)
-target_link_libraries(twinkle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib)
-target_link_libraries(twinkle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/OpenAL32.lib)
-target_link_libraries(twinkle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2.lib)
-target_link_libraries(twinkle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2main.lib)
-target_link_libraries(twinkle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/XInput9_1_0.lib)
-target_link_libraries(twinkle PRIVATE Winmm.lib OpenGL32.lib WSock32.lib)
+target_link_libraries(twinkle PRIVATE ${FRAMEWORK_LIBRARIES})
 
 if (MSVC)
 	set_property(TARGET twinkle APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)

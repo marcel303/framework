@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "OptionMenu.h"
 #include "Options.h"
+#include "StringEx.h"
 
 #if ENABLE_OPTIONS
 

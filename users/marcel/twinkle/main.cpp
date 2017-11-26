@@ -6,7 +6,9 @@
 #include "audio.h"
 #include "audiostream/AudioOutput.h"
 
-#include <Windows.h>
+#ifdef WIN32
+	#include <Windows.h>
+#endif
 
 #define GAME_IN_STRUCT 1
 
@@ -119,7 +121,7 @@ static void initSound()
 
 static void playSound(const char * name)
 {
-	log("playSound: %s", name);
+	logDebug("playSound: %s", name);
 
 	if (s_sounds.count(name) == 0)
 	{
@@ -138,10 +140,10 @@ struct AudioSet
 	float volume[12];
 } const audioSets[4] =
 {
-	{ 1, 0, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0 },
-	{ 1, 1, 0, 0,  1, 1, 0, 0,  0, 1, 0, 0 },
-	{ 1, 1, 1, 0,  1, 1, 1, 0,  0, 0, 1, 0 },
-	{ 0, 0, 1, 1,  1, 1, 1, 1,  0, 0, 0, 1 }
+	{ { 1, 0, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0 } },
+	{ { 1, 1, 0, 0,  1, 1, 0, 0,  0, 1, 0, 0 } },
+	{ { 1, 1, 1, 0,  1, 1, 1, 0,  0, 0, 1, 0 } },
+	{ { 0, 0, 1, 1,  1, 1, 1, 1,  0, 0, 0, 1 } }
 };
 
 int activeAudioSet = 0;
@@ -897,7 +899,7 @@ static Color getEarthColor(EarthState state)
 	}
 }
 
-void doTitleScreen()
+bool doTitleScreen()
 {
 #define CINE 1
 	Music music("Sound Assets/Music/Twinkle_Menu_Theme_Loop.ogg");
@@ -924,6 +926,7 @@ void doTitleScreen()
 	spriterState.scale = .5f;
 #endif
 	
+	bool quit = false;
 	bool stop = false;
 	float stopTime = 0.f;
 	bool wasInside = false;
@@ -931,6 +934,11 @@ void doTitleScreen()
 	while (!stop)
 	{
 		framework.process();
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+		{
+			quit = true;
+		}
 
 		const float dt = framework.timeStep;
 
@@ -993,6 +1001,8 @@ void doTitleScreen()
 
 	music.stop();
 	music.setVolume(100);
+	
+	return !quit;
 }
 
 Lemming * getRandomLemming()
@@ -1056,6 +1066,7 @@ bool doGame()
 	player2.angle = random(0.f, 1.f) * 2.f * M_PI;
 
 	bool stop = false;
+	bool quit = false;
 
 	int frameStart = 2;
 
@@ -1116,11 +1127,6 @@ bool doGame()
 		}
 
 		// input
-
-		//if (keyboard.wentDown(SDLK_ESCAPE))
-		//{
-		//	stop = true;
-		//}
 
 	#ifdef DEBUG
 		if (keyboard.wentDown(SDLK_q))
@@ -1244,6 +1250,8 @@ bool doGame()
 			fadeOut = true;
 			fadeOutTime = 1.f;
 			fadeOutTimeRcp = 1.f / 10.f;
+			
+			quit = true;
 		}
 
 		if (earth_dead)
@@ -1547,7 +1555,7 @@ bool doGame()
 		framework.endDraw();
 	}
 
-	return true;
+	return !quit;
 }
 
 #if GAME_IN_STRUCT
@@ -1569,7 +1577,9 @@ int main(int argc, char * argv[])
 		framework.useClosestDisplayMode = true;
 	}
 
+#ifdef WIN32
 	srand(GetTickCount());
+#endif
 
 	if (framework.init(0, 0, SX, SY))
 	{
@@ -1598,11 +1608,11 @@ int main(int argc, char * argv[])
 			Game game;
 
 		//#ifndef DEBUG
-			game.doTitleScreen();
+			if (!game.doTitleScreen())
+				break;
 		//#endif
 
-			if (!game.doGame())
-				break;
+			game.doGame();
 
 			while (!keyboard.isIdle())
 				framework.process();
