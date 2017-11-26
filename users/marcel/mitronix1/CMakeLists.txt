@@ -18,7 +18,7 @@ if (NOT HAS_LIBOSC)
 endif (NOT HAS_LIBOSC)
 if (NOT HAS_FRAMEWORK)
 	message("including framework")
-	add_subdirectory(../framework framework)
+	add_subdirectory(../../../framework framework)
 endif (NOT HAS_FRAMEWORK)
 
 #
@@ -28,14 +28,28 @@ project(mitronix)
 # --- mitronix ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
-file(GLOB source_graph "../avgraph/graph*")
+file(GLOB source_graph "../../../vfxGraph/graph*")
 
-file(GLOB source_audio "../4dworld/audio*.*" "../4dworld/soundmix*.*" "../4dworld/osc4d*.*")
-file(GLOB_RECURSE source_audioNodes "../4dworld/audioNodes/*.*")
-file(GLOB_RECURSE source_objects "../4dworld/objects/*.*")
-file(GLOB_RECURSE source_delaunay "../4dworld/delaunay/*.*")
+file(GLOB source_audio
+	"../../../audioGraph/audio*.*"
+	"../../../audioGraph/soundmix*.*"
+	"../../../audioGraph/osc4d*.*")
+file(GLOB_RECURSE source_audioNodes
+	"../../../audioGraph/audioNodes/*.*")
+file(GLOB_RECURSE source_objects
+	"../../../audioGraph/objects/*.*")
+file(GLOB_RECURSE source_delaunay
+	"../../../audioGraph/delaunay/*.*")
 
-file(GLOB_RECURSE source_ui "../libparticle/ui.cpp" "../libparticle/ui.h" "../libparticle/textfield.cpp" "../libparticle/textfield.h" "../libparticle/colorwheel.cpp" "../libparticle/colorwheel.h" "../libparticle/particle.cpp" "../libparticle/particle.h")
+file(GLOB_RECURSE source_ui
+	"../../../libparticle/ui.cpp"
+	"../../../libparticle/ui.h"
+	"../../../libparticle/textfield.cpp"
+	"../../../libparticle/textfield.h"
+	"../../../libparticle/colorwheel.cpp"
+	"../../../libparticle/colorwheel.h"
+	"../../../libparticle/particle.cpp"
+	"../../../libparticle/particle.h")
 
 list(APPEND source ${source_graph})
 list(APPEND source ${source_audio})
@@ -52,19 +66,18 @@ source_group("ui" FILES ${source_ui})
 source_group("3rdparty\\delaunay" FILES ${source_delaunay})
 
 file(GLOB resources_root
-	"/Users/thecat/Google Drive/Projects/mitronix1/*.jpg"
-	"/Users/thecat/Google Drive/Projects/mitronix1/*.ttf*"
-	"/Users/thecat/Google Drive/Projects/mitronix1/*.xml")
-file(GLOB resources_cipic147 "/Users/thecat/Google Drive/Projects/mitronix1/cipic.147/*.wav")
+	"${CMAKE_CURRENT_SOURCE_DIR}/data/*.jpg"
+	"${CMAKE_CURRENT_SOURCE_DIR}/data/*.ttf*"
+	"${CMAKE_CURRENT_SOURCE_DIR}/data/*.xml")
+file(GLOB resources_cipic147
+	"${CMAKE_CURRENT_SOURCE_DIR}/data/cipic.147/*.wav")
+
 set_source_files_properties(${resources_root} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 set_source_files_properties(${resources_cipic147} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/cipic.147")
-message(STATUS "resource: " ${resources_cipic147})
+message(STATUS "CIPIC resources: " ${resources_cipic147})
 source_group("resources" FILES ${resources_root} ${resources_cipic147})
 
-#set(MACOSX_BUNDLE_ICON_FILE ${CMAKE_CURRENT_SOURCE_DIR}/appicon.icns)
 add_executable(mitronix MACOSX_BUNDLE ${source} ${resources_root} ${resources_cipic147})
-
-#set_target_properties(mitronix PROPERTIES RESOURCE "${resources}")
 
 target_compile_definitions(mitronix PRIVATE NO_SDL_GLEXT AUDIO_UPDATE_SIZE=64)
 
@@ -98,22 +111,17 @@ target_include_directories(mitronix PRIVATE "${PROJECT_SOURCE_DIR}")
 target_include_directories(mitronix PRIVATE "objects")
 
 if (APPLE)
-	target_include_directories(mitronix PRIVATE "../4dworld")
-	target_include_directories(mitronix PRIVATE "../4dworld/objects")
-	target_include_directories(mitronix PRIVATE "../avgraph")
-	target_include_directories(mitronix PRIVATE "../avgraph/macos/include")
-	target_include_directories(mitronix PRIVATE "../vfxpro/macos/include")
-	target_include_directories(mitronix PRIVATE "../vfxpro/")
-	target_include_directories(mitronix PRIVATE "../../../libfreenect2/macos/include")
+	target_include_directories(mitronix PRIVATE "../../../audioGraph")
+	target_include_directories(mitronix PRIVATE "../../../audioGraph/objects")
+	target_include_directories(mitronix PRIVATE "../../../vfxGraph")
+	target_include_directories(mitronix PRIVATE "../../../vfxGraph/macos/include")
 endif (APPLE)
 
 if (WIN32)
-	target_include_directories(mitronix PRIVATE "../4dworld")
-	target_include_directories(mitronix PRIVATE "../4dworld/objects")
-	target_include_directories(mitronix PRIVATE "../avgraph")
-	target_include_directories(mitronix PRIVATE "../vfxpro/win32/include")
-	target_include_directories(mitronix PRIVATE "../vfxpro/")
-	target_include_directories(mitronix PRIVATE "../avpaint/win32/include")
+	target_include_directories(mitronix PRIVATE "../../../audioGraph")
+	target_include_directories(mitronix PRIVATE "../../../audioGraph/objects")
+	target_include_directories(mitronix PRIVATE "../../../vfxGraph")
+	target_include_directories(mitronix PRIVATE "../../../vfxGraph/win32/include")
 endif (WIN32)
 
 target_link_libraries(mitronix PRIVATE framework)
@@ -121,15 +129,15 @@ target_link_libraries(mitronix PRIVATE libosc)
 target_link_libraries(mitronix PRIVATE libgg)
 
 if (MSVC)
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/win32/lib/portaudio_x86.lib)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../vfxGraph/win32/lib/portaudio_x86.lib)
 	
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib)
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/OpenAL32.lib)
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2.lib)
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2main.lib)
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/XInput9_1_0.lib)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework/win32/lib/FreeImage.lib)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework/win32/lib/freetype252.lib)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework/win32/lib/glew32.lib)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework/win32/lib/OpenAL32.lib)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework/win32/lib/SDL2.lib)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework/win32/lib/SDL2main.lib)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework/win32/lib/XInput9_1_0.lib)
 	target_link_libraries(mitronix PRIVATE Winmm.lib OpenGL32.lib WSock32.lib Ws2_32.lib)
 endif (MSVC)
 
@@ -149,12 +157,12 @@ if (APPLE)
 	find_library(ICONV_LIBRARY iconv)
 	find_library(BZ2_LIBRARY bz2)
 	
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/glew/lib/libGLEW.a)
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libfreeimage.a)
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libfreetype.a)
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libSDL2.a)
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libSDL2main.a)
-	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/macos/lib/libportaudio.a)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework/macos/glew/lib/libGLEW.a)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework/macos/lib/libfreeimage.a)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework/macos/lib/libfreetype.a)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework/macos/lib/libSDL2.a)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework/macos/lib/libSDL2main.a)
+	target_link_libraries(mitronix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../vfxGraph/macos/lib/libportaudio.a)
 	target_link_libraries(mitronix PRIVATE ${COCOA_LIBRARY})
 	target_link_libraries(mitronix PRIVATE ${CARBON_LIBRARY})
 	target_link_libraries(mitronix PRIVATE ${COREAUDIO_LIBRARY})
