@@ -22,9 +22,14 @@ project(libvideo)
 
 # --- libvideo ---
 
-file(GLOB_RECURSE source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-	"${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+file(GLOB_RECURSE source_mediaplayer "mediaplayer/*.*")
+file(GLOB_RECURSE source_video "video.cpp" "video.h")
+
+list(APPEND source ${source_mediaplayer})
+list(APPEND source ${source_video})
+
+source_group("mediaplayer" FILES ${source_mediaplayer})
+source_group("video" FILES ${source_video})
 
 add_library(libvideo ${source})
 
