@@ -157,6 +157,9 @@ int main(int argc, char * argv[])
 			{
 				for (int z = Z1; z <= Z2; ++z)
 				{
+					if (stressTest == false && (x != 0 || y != 0 || z != 0))
+						continue;
+					
 					bool startRandomAnimForModel = startRandomAnim;
 					
 					Model * model = models[CoordKey(x, y, z)];
@@ -166,22 +169,10 @@ int main(int argc, char * argv[])
 					
 					if (startRandomAnimForModel)
 					{
-						for (int x = X1; x <= X2; ++x)
-						{
-							for (int y = Y1; y <= Y2; ++y)
-							{
-								for (int z = Z1; z <= Z2; ++z)
-								{
-									if (stressTest == false && (x != 0 || y != 0 || z != 0))
-										continue;
-									
-									const std::string & name = animList[rand() % animList.size()];
-									
-									model->startAnim(name.c_str(), loop ? -1 : 1);
-									model->animSpeed = animSpeed;
-								}
-							}
-						}
+						const std::string & name = animList[rand() % animList.size()];
+						
+						model->startAnim(name.c_str(), loop ? -1 : 1);
+						model->animSpeed = animSpeed;
 					}
 				}
 			}
