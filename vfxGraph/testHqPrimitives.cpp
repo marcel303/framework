@@ -39,6 +39,7 @@ void testHqPrimitives()
 	
 	bool doTransform = true;
 	bool fixedStrokeSize = false;
+	bool enableColorGradient = false;
 	bool enableTexturing = false;
 	
 	float txTime = 0.f;
@@ -54,6 +55,8 @@ void testHqPrimitives()
 			doTransform = !doTransform;
 		if (keyboard.wentDown(SDLK_s))
 			fixedStrokeSize = !fixedStrokeSize;
+		if (keyboard.wentDown(SDLK_g))
+			enableColorGradient = !enableColorGradient;
 		if (keyboard.wentDown(SDLK_t))
 			enableTexturing = !enableTexturing;
 		
@@ -72,8 +75,22 @@ void testHqPrimitives()
 			pushSurface(&surface);
 			surface.clear(5, 5, 5);
 			
+			pushColorMode(COLOR_ADD);
+			
+			if (enableColorGradient)
+			{
+				hqSetGradient(
+					GRADIENT_LINEAR,
+					Mat4x4(true).Scale(1.f/400.f, 0, 1).RotateZ(framework.time).Translate(-GFX_SX/2, -GFX_SY/2, 0),
+					colorRed,
+					colorGreen,
+					COLOR_ADD);
+			}
+			
 			if (enableTexturing)
-				gxSetTexture(getTexture("picture.jpg"));
+			{
+				hqSetTexture(Mat4x4(true).Scale(1.f/600.f, 1.f/600.f, 1), getTexture("picture.jpg"));
+			}
 			
 			// lines
 			
@@ -90,7 +107,7 @@ void testHqPrimitives()
 				static Ve ve[kMaxVe];
 				static bool veInit = true;
 
-				if (veInit || keyboard.isDown(SDLK_i))
+				if (veInit || keyboard.isDown(SDLK_r))
 				{
 					veInit = false;
 
@@ -291,47 +308,29 @@ void testHqPrimitives()
 			}
 			gxPopMatrix();
 			
-			gxPushMatrix();
-			{
-				setColor(127, 127, 127);
-				
-				gxTranslatef(GFX_SX - 10, GFX_SY - 100, 0);
-				
-				gxTranslatef(-60, 0, 0);
-				hqBegin(HQ_FILLED_ROUNDED_RECTS);
-				{
-					hqFillRoundedRect(0, 0, 50, 90, 10);
-				}
-				hqEnd();
-				
-				gxTranslatef(-60, 0, 0);
-				hqBegin(HQ_FILLED_RECTS);
-				{
-					hqFillRect(0, 0, 50, 90);
-				}
-				hqEnd();
-				
-				gxTranslatef(-60, 0, 0);
-				drawRect(0, 0, 50, 90);
-				hqEnd();
-			}
-			gxPopMatrix();
-			
-			gxSetTexture(0);
-			
 			//
 		
 			setFont("calibri.ttf");
 			//setFontMode(FONT_SDF);
 			
 			setColor(colorWhite);
+			int y = 10;
+			const int dy = 22;
+			const int fontSize = 16;
 			drawText(10.f, 10.f, 24, +1, +1, "move the mouse up and down to animate stroke sizes");
-			drawText(10.f, 40.f, 18, +1, +1, "press A to toggle wiggle animation");
-			drawText(10.f, 60.f, 18, +1, +1, "press S to toggle fixed size stroke width for lines");
-			drawText(10.f, 80.f, 18, +1, +1, "press T to toggle texturing");
-			drawText(10.f, 100.f, 18, +1, +1, "press SPACE to quit test");
+			y += 10;
+			y += dy; drawText(10.f, y, fontSize, +1, +1, "press A to toggle wiggle animation [%s]", doTransform ? "on" : "off");
+			y += dy; drawText(10.f, y, fontSize, +1, +1, "press S to toggle fixed size stroke width for lines [%s]", fixedStrokeSize ? "on" : "off");
+			y += dy; drawText(10.f, y, fontSize, +1, +1, "press R to randomize lines");
+			y += dy; drawText(10.f, y, fontSize, +1, +1, "press G to toggle color gradient [%s]", enableColorGradient ? "on" : "off");
+			y += dy; drawText(10.f, y, fontSize, +1, +1, "press T to toggle texturing [%s]", enableTexturing ? "on" : "off");
+			y += dy; drawText(10.f, y, fontSize, +1, +1, "press SPACE to quit test");
 			
 			//
+			
+			hqClearGradient();
+			hqClearTexture();
+			popColorMode();
 			
 			popSurface();
 			
