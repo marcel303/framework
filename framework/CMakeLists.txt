@@ -66,6 +66,22 @@ if (APPLE)
 	target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/macos/include/freetype")
 endif (APPLE)
 
+if (MSVC)
+	set(FRAMEWORK_LIBRARIES
+		framework
+		libgg
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/OpenAL32.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2main.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/XInput9_1_0.lib
+		Winmm.lib
+		OpenGL32.lib
+		WSock32.lib)
+endif (MSVC)
+
 if (APPLE)
 	find_library(COCOA_LIBRARY Cocoa)
 	find_library(CARBON_LIBRARY Carbon)
