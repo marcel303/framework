@@ -1782,12 +1782,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 //
 
 GraphEdit::EditorVisualizer::EditorVisualizer()
-	: nodeId(kGraphNodeIdInvalid)
-	, srcSocketName()
-	, srcSocketIndex(-1)
-	, dstSocketName()
-	, dstSocketIndex(-1)
-	, visualizer(nullptr)
+	: GraphEdit_Visualizer()
 	, id(kGraphNodeIdInvalid)
 	, x(0)
 	, y(0)
@@ -1797,57 +1792,9 @@ GraphEdit::EditorVisualizer::EditorVisualizer()
 {
 }
 
-GraphEdit::EditorVisualizer::EditorVisualizer(const EditorVisualizer & other)
-	: nodeId(kGraphNodeIdInvalid)
-	, srcSocketName()
-	, srcSocketIndex(-1)
-	, dstSocketName()
-	, dstSocketIndex(-1)
-	, visualizer(nullptr)
-	, sx(0)
-	, sy(0)
-{
-	*this = other;
-}
-
-GraphEdit::EditorVisualizer::~EditorVisualizer()
-{
-	delete visualizer;
-	visualizer = nullptr;
-}
-
-void GraphEdit::EditorVisualizer::allocVisualizer()
-{
-	delete visualizer;
-	visualizer = nullptr;
-	
-	if (nodeId != kGraphNodeIdInvalid)
-	{
-		visualizer = new GraphEdit_Visualizer();
-		
-		visualizer->init(
-			nodeId,
-			srcSocketName,
-			srcSocketIndex,
-			dstSocketName,
-			dstSocketIndex);
-	}
-}
-
-void GraphEdit::EditorVisualizer::init(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex)
-{
-	this->nodeId = nodeId;
-	this->srcSocketName = srcSocketName;
-	this->srcSocketIndex = srcSocketIndex;
-	this->dstSocketName = dstSocketName;
-	this->dstSocketIndex = dstSocketIndex;
-	
-	allocVisualizer();
-}
-
 void GraphEdit::EditorVisualizer::tick(const GraphEdit & graphEdit)
 {
-	visualizer->tick(graphEdit);
+	GraphEdit_Visualizer::tick(graphEdit);
 	
 	updateSize(graphEdit);
 }
@@ -1856,38 +1803,21 @@ void GraphEdit::EditorVisualizer::updateSize(const GraphEdit & graphEdit)
 {
 	if (sx == 0 || sy == 0)
 	{
-		if (visualizer->hasValue)
+		if (hasValue)
 		{
 			int sxi = 0;
 			int syi = 0;
 			
-			visualizer->measure(graphEdit, "measure",
-				GraphEdit_Visualizer::kDefaultGraphSx, GraphEdit_Visualizer::kDefaultGraphSy,
-				GraphEdit_Visualizer::kDefaultMaxTextureSx, GraphEdit_Visualizer::kDefaultMaxTextureSy,
-				GraphEdit_Visualizer::kDefaultChannelsSx, GraphEdit_Visualizer::kDefaultChannelsSy,
+			measure(graphEdit, "measure",
+				kDefaultGraphSx, kDefaultGraphSy,
+				kDefaultMaxTextureSx, kDefaultMaxTextureSy,
+				kDefaultChannelsSx, kDefaultChannelsSy,
 				sxi, syi);
 			
 			sx = sxi;
 			sy = syi;
 		}
 	}
-}
-
-void GraphEdit::EditorVisualizer::operator=(const EditorVisualizer & other)
-{
-	nodeId = other.nodeId;
-	srcSocketName = other.srcSocketName;
-	srcSocketIndex = other.srcSocketIndex;
-	dstSocketName = other.dstSocketName;
-	dstSocketIndex = other.dstSocketIndex;
-	id = other.id;
-	x = other.x;
-	y = other.y;
-	sx = other.sx;
-	sy = other.sy;
-	zKey = other.zKey;
-	
-	allocVisualizer();
 }
 
 void GraphEdit::NodeData::setIsFolded(const bool _isFolded)
@@ -5608,7 +5538,7 @@ void GraphEdit::drawVisualizer(const EditorVisualizer & visualizer) const
 	
 	const int visualizerSx = int(std::ceil(visualizer.sx));
 	const int visualizerSy = int(std::ceil(visualizer.sy));
-	visualizer.visualizer->draw(*this, nodeName, isSelected, &visualizerSx, &visualizerSy);
+	visualizer.draw(*this, nodeName, isSelected, &visualizerSx, &visualizerSy);
 	
 #if 0
 	setColor(255, 255, 255, 63); // fixme : remove this drawRect call! only here to test node resizing
@@ -5783,7 +5713,12 @@ bool GraphEdit::load(const char * filename)
 				}
 			}
 			
-			visualizer.allocVisualizer();
+			visualizer.init(
+				visualizer.nodeId,
+				visualizer.srcSocketName,
+				visualizer.srcSocketIndex,
+				visualizer.dstSocketName,
+				visualizer.dstSocketIndex);
 		}
 	}
 	

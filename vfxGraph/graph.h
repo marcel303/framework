@@ -980,16 +980,8 @@ struct GraphEdit : GraphEditConnection
 		void setVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 	};
 	
-	struct EditorVisualizer
+	struct EditorVisualizer : GraphEdit_Visualizer
 	{
-		GraphNodeId nodeId;
-		std::string srcSocketName;
-		int srcSocketIndex;
-		std::string dstSocketName;
-		int dstSocketIndex;
-		
-		GraphEdit_Visualizer * visualizer;
-		
 		GraphNodeId id;
 		
 		float x;
@@ -1001,20 +993,9 @@ struct GraphEdit : GraphEditConnection
 		int zKey;
 		
 		EditorVisualizer();
-		EditorVisualizer(const EditorVisualizer & other);
-		~EditorVisualizer();
-		
-		void allocVisualizer();
-		
-		void init(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 		
 		void tick(const GraphEdit & graphEdit);
 		void updateSize(const GraphEdit & graphEdit);
-		
-		// nodes (and thus also visualizers) get copied around. we want to copy parameters but not the
-		// dynamically allocated visualizer object. so we need a copy constructor/assignment operator
-		// to address this and copy the parameters manually and allocate a new visualizer object
-		void operator=(const EditorVisualizer & other);
 	};
 	
 	struct NodeHitTestResult
