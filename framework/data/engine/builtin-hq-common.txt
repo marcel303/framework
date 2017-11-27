@@ -1,5 +1,7 @@
 static const char * s_hqCommonPs = R"SHADER(
 
+include engine/ShaderUtil.txt
+
 #if _SHADER_DEBUGGING_
 	uniform float disableOptimizations;
 	uniform float disableAA;
@@ -174,6 +176,8 @@ vec4 hqColor(float v, vec4 color)
 	}
 
 	color.a *= v;
+
+	color = applyColorPost(color, params.z);
 
 	if (debugHq)
 	{
