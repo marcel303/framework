@@ -1022,15 +1022,25 @@ struct GraphEdit : GraphEditConnection
 		const GraphEdit_TypeDefinition::InputSocket * inputSocket;
 		const GraphEdit_TypeDefinition::OutputSocket * outputSocket;
 		bool background;
-		bool borderL;
-		bool borderR;
-		bool borderT;
-		bool borderB;
 		
 		NodeHitTestResult()
 			: inputSocket(nullptr)
 			, outputSocket(nullptr)
 			, background(false)
+		{
+		}
+	};
+	
+	struct VisualizerHitTestResult
+	{
+		bool background;
+		bool borderL;
+		bool borderR;
+		bool borderT;
+		bool borderB;
+		
+		VisualizerHitTestResult()
+			: background(false)
 			, borderL(false)
 			, borderR(false)
 			, borderT(false)
@@ -1054,7 +1064,7 @@ struct GraphEdit : GraphEditConnection
 		
 		bool hasVisualizer;
 		EditorVisualizer * visualizer;
-		NodeHitTestResult visualizerHitTestResult;
+		VisualizerHitTestResult visualizerHitTestResult;
 		
 		HitTestResult()
 			: hasNode(false)

@@ -2301,7 +2301,7 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				visualizer.x + visualizer.sx,
 				visualizer.y + visualizer.sy))
 			{
-				NodeHitTestResult hitTestResult;
+				VisualizerHitTestResult hitTestResult;
 				
 				const int borderSize = 6;
 				
