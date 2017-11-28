@@ -55,7 +55,7 @@ list(APPEND source ${source_ui})
 
 #list(REMOVE_ITEM source ${source_vfxnodes})
 
-source_group("Source Files" FILES ${source})
+source_group("vfxGraph" FILES ${source})
 source_group("vfxNodes" FILES ${source_vfxnodes})
 source_group("tests" FILES ${source_tests})
 source_group("ui" FILES ${source_ui})
@@ -76,20 +76,30 @@ target_link_libraries(vfxgraph libgg)
 target_link_libraries(vfxgraph libosc)
 target_link_libraries(vfxgraph libvideo)
 
-target_compile_definitions(vfxgraph PRIVATE NO_SDL_GLEXT)
+target_compile_definitions(vfxgraph PRIVATE
+	NO_SDL_GLEXT
+	ENABLE_KINECT1=0
+	ENABLE_KINECT2=1
+	ENABLE_TURBOJPEG=1
+	ENABLE_LEAPMOTION=1)
 
-target_compile_definitions(vfxgraph PRIVATE NO_SDL_GLEXT ENABLE_KINECT1=0 ENABLE_KINECT2=1 ENABLE_TURBOJPEG=1 ENABLE_LEAPMOTION=1)
+if (WIN32)
+	target_compile_definitions(vfxgraph PRIVATE ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
+endif (WIN32)
+
+if (APPLE)
+	target_compile_definitions(vfxgraph PRIVATE ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
+	
+	target_compile_definitions(vfxgraph PUBLIC MACOS)
+endif (APPLE)
 
 target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}")
-target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}/../tests")
+target_include_directories(vfxgraph PRIVATE "${PROJECT_SOURCE_DIR}/../tests")
 
 if (WIN32)
 	target_include_directories(vfxgraph PRIVATE "win32/include")
 	target_include_directories(vfxgraph PRIVATE "../libvideo/win32/include")
 	target_include_directories(vfxgraph PRIVATE "../libvideo/")
-	target_include_directories(vfxgraph PRIVATE "../avpaint/win32/include")
-
-	target_compile_definitions(vfxgraph PRIVATE ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
 endif (WIN32)
 
 if (APPLE)
@@ -97,8 +107,6 @@ if (APPLE)
 	target_include_directories(vfxgraph PRIVATE "../libvideo/macos/include")
 	target_include_directories(vfxgraph PRIVATE "../libvideo/")
 	target_include_directories(vfxgraph PRIVATE "../libfreenect2/macos/include")
-
-	target_compile_definitions(vfxgraph PRIVATE ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
 endif (APPLE)
 
 if (MSVC)
@@ -108,8 +116,6 @@ if (MSVC)
 endif (MSVC)
 
 if (APPLE)
-	target_compile_definitions(vfxgraph PUBLIC MACOS)
-
 	target_link_libraries(vfxgraph ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/DeepBelief.framework)
 
 	find_library(COREIMAGE_LIBRARY CoreImage)

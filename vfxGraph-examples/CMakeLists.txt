@@ -38,16 +38,19 @@ project(avgraph)
 # --- avgraph ---
 
 file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
-file(GLOB_RECURSE source_vfxnodes "../vfxGraph/vfxNodes/*.*")
-
-#list(APPEND source ${source_vfxnodes})
 
 source_group("Source Files" FILES ${source})
-source_group("vfxNodes" FILES ${source_vfxnodes})
 
 add_executable(avgraph ${source})
 
 set_target_properties(avgraph PROPERTIES LINK_FLAGS "-Wl,-all_load")
+
+target_compile_definitions(avgraph PRIVATE
+	NO_SDL_GLEXT
+	ENABLE_KINECT1=0
+	ENABLE_KINECT2=1
+	ENABLE_TURBOJPEG=1
+	ENABLE_LEAPMOTION=1)
 
 target_link_libraries(avgraph PRIVATE libgg)
 target_link_libraries(avgraph PRIVATE libosc)
@@ -59,9 +62,24 @@ target_link_libraries(avgraph PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(avgraph PRIVATE ${LIBVIDEO_LIBRARIES})
 target_link_libraries(avgraph PRIVATE ${VFXGRAPH_LIBRARIES})
 
-target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT)
+target_include_directories(avgraph PRIVATE "${PROJECT_SOURCE_DIR}")
 
-target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT ENABLE_KINECT1=0 ENABLE_KINECT2=1 ENABLE_TURBOJPEG=1 ENABLE_LEAPMOTION=1)
+if (WIN32)
+	target_include_directories(avgraph PRIVATE "../vfxGraph/win32/include")
+	target_include_directories(avgraph PRIVATE "../libvideo/win32/include")
+	target_include_directories(avgraph PRIVATE "../libvideo/")
+
+	target_compile_definitions(avgraph PRIVATE ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
+endif (WIN32)
+
+if (APPLE)
+	target_include_directories(avgraph PRIVATE "../vfxGraph/macos/include")
+	target_include_directories(avgraph PRIVATE "../libvideo/macos/include")
+	target_include_directories(avgraph PRIVATE "../libvideo/")
+	target_include_directories(avgraph PRIVATE "../libfreenect2/macos/include")
+
+	target_compile_definitions(avgraph PRIVATE ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
+endif (APPLE)
 
 if (WIN32)
 	target_compile_definitions(avgraph PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
@@ -115,26 +133,6 @@ if (APPLE)
 	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxGraph/macos/framework/Deepbelief.framework DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
 	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxGraph/macos/lib/libLeap.dylib DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
 	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxGraph/macos/lib/libturbojpeg.0.dylib DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-endif (APPLE)
-
-target_include_directories(avgraph PRIVATE "${PROJECT_SOURCE_DIR}")
-
-if (WIN32)
-	target_include_directories(avgraph PRIVATE "win32/include")
-	target_include_directories(avgraph PRIVATE "../libvideo/win32/include")
-	target_include_directories(avgraph PRIVATE "../libvideo/")
-	target_include_directories(avgraph PRIVATE "../avpaint/win32/include")
-
-	target_compile_definitions(avgraph PRIVATE ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
-endif (WIN32)
-
-if (APPLE)
-	target_include_directories(avgraph PRIVATE "../vfxGraph/macos/include")
-	target_include_directories(avgraph PRIVATE "../libvideo/macos/include")
-	target_include_directories(avgraph PRIVATE "../libvideo/")
-	target_include_directories(avgraph PRIVATE "../libfreenect2/macos/include")
-
-	target_compile_definitions(avgraph PRIVATE ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
 endif (APPLE)
 
 if (MSVC)
