@@ -87,11 +87,11 @@ target_include_directories(audioGraph PUBLIC "objects")
 target_include_directories(audioGraph PUBLIC "../vfxGraph")
 
 if (APPLE)
-	target_include_directories(audioGraph PRIVATE "../vfxGraph/macos/include")
+	target_include_directories(audioGraph PUBLIC "../vfxGraph/macos/include")
 endif (APPLE)
 
 if (WIN32)
-	target_include_directories(audioGraph PRIVATE "../vfxGraph/win32/include")
+	target_include_directories(audioGraph PUBLIC "../vfxGraph/win32/include")
 endif (WIN32)
 
 if (MSVC)
