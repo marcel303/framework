@@ -546,20 +546,20 @@ struct GraphEdit_Visualizer
 					max = value;
 			}
 			
-			if (historySize < kMaxHistory)
+			if (historySize < maxHistorySize)
 				historySize = historySize + 1;
 			
 			history[nextWriteIndex] = value;
 			
 			nextWriteIndex++;
 			
-			if (nextWriteIndex == kMaxHistory)
+			if (nextWriteIndex == maxHistorySize)
 				nextWriteIndex = 0;
 		}
 		
 		float getGraphValue(const int offset) const
 		{
-			const int index = (nextWriteIndex - historySize + offset + kMaxHistory) % kMaxHistory;
+			const int index = (nextWriteIndex - historySize + offset + maxHistorySize) % maxHistorySize;
 			
 			return history[index];
 		}
@@ -627,6 +627,7 @@ struct GraphEdit_Visualizer
 	static const int kDefaultChannelsSy = 100;
 	
 	void init(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
+	void init();
 	
 	void tick(const GraphEdit & graphEdit);
 	void measure(const GraphEdit & graphEdit, const std::string & nodeName,

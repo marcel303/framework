@@ -1041,6 +1041,18 @@ void GraphEdit_Visualizer::init(const GraphNodeId _nodeId, const std::string & _
 	history.resize(100);
 }
 
+void GraphEdit_Visualizer::init()
+{
+	Assert(nodeId != kGraphNodeIdInvalid);
+	Assert(!srcSocketName.empty() || !dstSocketName.empty());
+	Assert(srcSocketIndex != -1 || dstSocketIndex != -1);
+	Assert(value.empty());
+	Assert(hasValue == false);
+	Assert(texture == 0);
+	
+	history.resize(100);
+}
+
 void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 {
 	auto srcSocket = graphEdit.tryGetInputSocket(nodeId, srcSocketIndex);
@@ -1527,7 +1539,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		y += kElemPadding;
 		
 		const int graphX = (sx - graphSx) / 2;
-		const int xOffset = history.kMaxHistory - history.historySize;
+		const int xOffset = history.maxHistorySize - history.historySize;
 		
 		setColor(127, 127, 255);
 		gxBegin(GL_QUADS);
@@ -5713,12 +5725,7 @@ bool GraphEdit::load(const char * filename)
 				}
 			}
 			
-			visualizer.init(
-				visualizer.nodeId,
-				visualizer.srcSocketName,
-				visualizer.srcSocketIndex,
-				visualizer.dstSocketName,
-				visualizer.dstSocketIndex);
+			visualizer.init();
 		}
 	}
 	
