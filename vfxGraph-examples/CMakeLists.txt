@@ -40,12 +40,14 @@ project(avgraph)
 file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 file(GLOB_RECURSE source_vfxnodes "../vfxGraph/vfxNodes/*.*")
 
-list(APPEND source ${source_vfxnodes})
+#list(APPEND source ${source_vfxnodes})
 
 source_group("Source Files" FILES ${source})
 source_group("vfxNodes" FILES ${source_vfxnodes})
 
 add_executable(avgraph ${source})
+
+set_target_properties(avgraph PROPERTIES LINK_FLAGS "-Wl,-all_load")
 
 target_link_libraries(avgraph PRIVATE libgg)
 target_link_libraries(avgraph PRIVATE libosc)

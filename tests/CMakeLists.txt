@@ -41,8 +41,6 @@ file(GLOB_RECURSE source_vfxGraph
 	"../vfxGraph/*.h"
 	"../vfxGraph/*.hpp"
 	"../vfxGraph/*.mm")
-file(GLOB_RECURSE source_vfxGraphEx "../vfxGraph/main.cpp")
-list(REMOVE_ITEM source_vfxGraph ${source_vfxGraphEx})
 
 file(GLOB_RECURSE source_datgui "ofxDatGui/*.*")
 file(GLOB_RECURSE source_nanovg "nanovg/*.*")

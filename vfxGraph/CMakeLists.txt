@@ -53,7 +53,7 @@ file(GLOB_RECURSE source_ui
 
 list(APPEND source ${source_ui})
 
-list(REMOVE_ITEM source ${source_vfxnodes})
+#list(REMOVE_ITEM source ${source_vfxnodes})
 
 source_group("Source Files" FILES ${source})
 source_group("vfxNodes" FILES ${source_vfxnodes})
@@ -115,6 +115,7 @@ if (APPLE)
 
 	target_link_libraries(vfxgraph ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/DeepBelief.framework)
 
+	find_library(COREIMAGE_LIBRARY CoreImage)
 	find_library(COREMIDI_LIBRARY CoreMIDI)
 	find_library(AVFOUNDATION_LIBRARY AVFoundation)
 
@@ -124,6 +125,7 @@ if (APPLE)
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libportaudio.a
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libturbojpeg.0.dylib
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/DeepBelief.framework
+		${COREIMAGE_LIBRARY}
 		${COREMIDI_LIBRARY}
 		${AVFOUNDATION_LIBRARY}
 		PARENT_SCOPE)
