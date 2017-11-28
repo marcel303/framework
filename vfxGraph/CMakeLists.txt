@@ -2,10 +2,8 @@ cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_CXX_STANDARD 14)
 
-set(HAS_LIBGG 0)
-set(HAS_LIBOSC 0)
-set(HAS_FRAMEWORK 0)
-set(HAS_LIBVIDEO 0)
+set(HAS_VFXGRAPH 1 PARENT_SCOPE)
+message("setting HAS_VFXGRAPH")
 
 # --- dependencies ---
 
@@ -28,20 +26,14 @@ endif (NOT HAS_LIBVIDEO)
 
 #
 
-project(avgraph)
+project(vfxgraph)
 
-# --- avgraph ---
+# --- vfxgraph ---
 
-file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
-file(GLOB_RECURSE source_video "../libvideo/video.cpp" "../libvideo/video.h")
-file(GLOB_RECURSE source_mediaplayer "../libvideo/mediaplayer/*.*")
+file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm" "../tests/ofMain.cpp")
 
-file(GLOB_RECURSE source_datgui "ofxDatGui/*.*")
-file(GLOB_RECURSE source_msdfgen "msdfgen/*.*")
-file(GLOB_RECURSE source_nanovg "nanovg/*.*")
 file(GLOB_RECURSE source_vfxnodes "vfxNodes/*.*")
 file(GLOB_RECURSE source_macos "macos/*.*")
-file(GLOB_RECURSE source_leap "leap/*.*")
 file(GLOB_RECURSE source_xmm "xmm/*.*")
 file(GLOB_RECURSE source_rtmidi "RtMidi*.*")
 file(GLOB_RECURSE source_json "json.hpp")
@@ -59,22 +51,15 @@ file(GLOB_RECURSE source_ui
 	"../libparticle/particle.cpp"
 	"../libparticle/particle.h")
 
-list(APPEND source ${source_video})
-list(APPEND source ${source_mediaplayer})
 list(APPEND source ${source_ui})
-#list(REMOVE_ITEM source ${source_datgui})
+
+list(REMOVE_ITEM source ${source_vfxnodes})
 
 source_group("Source Files" FILES ${source})
 source_group("vfxNodes" FILES ${source_vfxnodes})
 source_group("tests" FILES ${source_tests})
 source_group("ui" FILES ${source_ui})
-source_group("video" FILES ${source_video})
-source_group("video\\mediaplayer" FILES ${source_mediaplayer})
-source_group("3rdparty\\ofxDatGui" FILES ${source_datgui})
-source_group("3rdparty\\msdfgen" FILES ${source_msdfgen})
-source_group("3rdparty\\nanovg" FILES ${source_nanovg})
 source_group("3rdparty\\macos" FILES ${source_macos})
-source_group("3rdparty\\leap" FILES ${source_leap})
 source_group("3rdparty\\xmm" FILES ${source_xmm})
 source_group("3rdparty\\rtmidi" FILES ${source_rtmidi})
 source_group("3rdparty\\json" FILES ${source_json})
@@ -84,114 +69,67 @@ if (WIN32)
 	list(REMOVE_ITEM source ${source_xmm})
 endif (WIN32)
 
-add_executable(avgraph ${source})
+add_library(vfxgraph ${source})
 
-target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT)
+target_link_libraries(vfxgraph libgg)
+target_link_libraries(vfxgraph libosc)
+target_link_libraries(vfxgraph framework)
+target_link_libraries(vfxgraph libvideo)
 
-target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT ENABLE_KINECT1=0 ENABLE_KINECT2=1 ENABLE_TURBOJPEG=1 ENABLE_LEAPMOTION=1)
+target_compile_definitions(vfxgraph PRIVATE NO_SDL_GLEXT)
+
+target_compile_definitions(vfxgraph PRIVATE NO_SDL_GLEXT ENABLE_KINECT1=0 ENABLE_KINECT2=1 ENABLE_TURBOJPEG=1 ENABLE_LEAPMOTION=1)
+
+target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}")
+target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}/../tests")
+
+target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}/../framework") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
+target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}/../framework/macos/include") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
 
 if (WIN32)
-	target_compile_definitions(avgraph PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
-	
-	# set the current working directory
-	
-	set_target_properties(avgraph PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
-	
-	# copy DLL files to the Debug and Release folders
-	
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/FreeImage.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/glew32.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/OpenAL32.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/SDL2.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/XInput9_1_0.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxGraph/win32/dll/portaudio_x86.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxGraph/win32/dll/turbojpeg.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/avcodec-57.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/avdevice-57.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/avfilter-6.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/avformat-57.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/avutil-55.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/postproc-54.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/swresample-2.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/swscale-4.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/FreeImage.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/glew32.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/OpenAL32.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/SDL2.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/dll/XInput9_1_0.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxGraph/win32/dll/portaudio_x86.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../vfxGraph/win32/dll/turbojpeg.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/avcodec-57.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/avdevice-57.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/avfilter-6.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/avformat-57.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/avutil-55.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/postproc-54.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/swresample-2.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../libvideo/win32/dll/swscale-4.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	target_include_directories(vfxgraph PRIVATE "win32/include")
+	target_include_directories(vfxgraph PRIVATE "../libvideo/win32/include")
+	target_include_directories(vfxgraph PRIVATE "../libvideo/")
+	target_include_directories(vfxgraph PRIVATE "../avpaint/win32/include")
+
+	target_compile_definitions(vfxgraph PRIVATE ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
 endif (WIN32)
 
 if (APPLE)
-	# copy dylib and framework files to the Debug and Release folders
+	target_include_directories(vfxgraph PRIVATE "macos/include")
+	target_include_directories(vfxgraph PRIVATE "../libvideo/macos/include")
+	target_include_directories(vfxgraph PRIVATE "../libvideo/")
+	target_include_directories(vfxgraph PRIVATE "../libfreenect2/macos/include")
 
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Deepbelief.framework DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libturbojpeg.0.dylib DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug/)
-
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Deepbelief.framework DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libturbojpeg.0.dylib DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release/)
+	target_compile_definitions(vfxgraph PRIVATE ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
 endif (APPLE)
-
-target_include_directories(avgraph PRIVATE "${PROJECT_SOURCE_DIR}")
-
-if (WIN32)
-	target_include_directories(avgraph PRIVATE "win32/include")
-	target_include_directories(avgraph PRIVATE "../libvideo/win32/include")
-	target_include_directories(avgraph PRIVATE "../libvideo/")
-	target_include_directories(avgraph PRIVATE "../avpaint/win32/include")
-
-	target_compile_definitions(avgraph PRIVATE ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
-endif (WIN32)
-
-if (APPLE)
-	target_include_directories(avgraph PRIVATE "macos/include")
-	target_include_directories(avgraph PRIVATE "../libvideo/macos/include")
-	target_include_directories(avgraph PRIVATE "../libvideo/")
-	target_include_directories(avgraph PRIVATE "../libfreenect2/macos/include")
-
-	target_compile_definitions(avgraph PRIVATE ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
-endif (APPLE)
-
-target_link_libraries(avgraph PRIVATE framework)
-target_link_libraries(avgraph PRIVATE libosc)
-target_link_libraries(avgraph PRIVATE libgg)
-
-target_link_libraries(avgraph PRIVATE ${FRAMEWORK_LIBRARIES})
-target_link_libraries(avgraph PRIVATE ${LIBVIDEO_LIBRARIES})
 
 if (MSVC)
-	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/Leap.lib)
-	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/portaudio_x86.lib)
-	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/turbojpeg.lib)
+	target_link_libraries(vfxgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/Leap.lib)
+	target_link_libraries(vfxgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/portaudio_x86.lib)
+	target_link_libraries(vfxgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/turbojpeg.lib)
 endif (MSVC)
 
 if (APPLE)
-	target_compile_definitions(avgraph PUBLIC MACOS)
+	target_compile_definitions(vfxgraph PUBLIC MACOS)
+
+	target_link_libraries(vfxgraph ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/DeepBelief.framework)
 
 	find_library(COREMIDI_LIBRARY CoreMIDI)
 	find_library(AVFOUNDATION_LIBRARY AVFoundation)
 
-	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../libfreenect2/macos/lib/libfreenect2.0.2.0.dylib)
-	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libLeap.dylib)
-	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libportaudio.a)
-	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libturbojpeg.0.dylib)
-	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/DeepBelief.framework)
-	
-	target_link_libraries(avgraph PRIVATE ${COREMIDI_LIBRARY})
-	target_link_libraries(avgraph PRIVATE ${AVFOUNDATION_LIBRARY})
+	set(VFXGRAPH_LIBRARIES
+		${CMAKE_CURRENT_SOURCE_DIR}/../libfreenect2/macos/lib/libfreenect2.0.2.0.dylib
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libLeap.dylib
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libportaudio.a
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libturbojpeg.0.dylib
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/DeepBelief.framework
+		${COREMIDI_LIBRARY}
+		${AVFOUNDATION_LIBRARY}
+		PARENT_SCOPE)
 endif (APPLE)
 
 if (MSVC)
-	set_property(TARGET avgraph APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
-	set_property(TARGET avgraph APPEND_STRING PROPERTY LINK_FLAGS /SAFESEH:NO)
+	set_property(TARGET vfxgraph APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
+	set_property(TARGET vfxgraph APPEND_STRING PROPERTY LINK_FLAGS /SAFESEH:NO)
 endif (MSVC)

@@ -71,16 +71,6 @@ extern const int GFX_SY;
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
 
-extern void testAudiochannels();
-extern void testCatmullRom();
-extern void testHrtf();
-extern void testMacWebcam();
-extern void testReactionDiffusion();
-
-extern void testMain();
-
-extern void codevember1();
-
 //
 
 struct VfxNodeResourceTest : VfxNodeBase
@@ -625,13 +615,11 @@ int main(int argc, char * argv[])
 		
 		//testCamera3d();
 		
-		//testMain();
-		
 		//testVfxNodeCreation();
 		
 		//testDynamicInputs();
 		
-		testOscilloscope();
+		//testOscilloscope();
 		
 		//codevember1();
 		
