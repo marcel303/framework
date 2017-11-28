@@ -33,9 +33,9 @@ endif (NOT HAS_VFXGRAPH)
 
 #
 
-project(avgraph)
+project(vfxGraph-examples)
 
-# --- avgraph ---
+# --- examples ---
 
 file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 
@@ -52,15 +52,17 @@ target_compile_definitions(avgraph PRIVATE
 	ENABLE_TURBOJPEG=1
 	ENABLE_LEAPMOTION=1)
 
-target_link_libraries(avgraph PRIVATE libgg)
-target_link_libraries(avgraph PRIVATE libosc)
-target_link_libraries(avgraph PRIVATE framework)
-target_link_libraries(avgraph PRIVATE libvideo)
-target_link_libraries(avgraph PRIVATE vfxgraph)
+set(LIBRARIES PRIVATE
+	libgg
+	libosc
+	framework
+	libvideo
+	vfxgraph
+	${FRAMEWORK_LIBRARIES}
+	${LIBVIDEO_LIBRARIES}
+	${VFXGRAPH_LIBRARIES})
 
-target_link_libraries(avgraph PRIVATE ${FRAMEWORK_LIBRARIES})
-target_link_libraries(avgraph PRIVATE ${LIBVIDEO_LIBRARIES})
-target_link_libraries(avgraph PRIVATE ${VFXGRAPH_LIBRARIES})
+target_link_libraries(avgraph PRIVATE ${LIBRARIES})
 
 target_include_directories(avgraph PRIVATE "${PROJECT_SOURCE_DIR}")
 

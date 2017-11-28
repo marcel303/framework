@@ -30,8 +30,13 @@
 #include "delaunay/vector2.h"
 #include "framework.h"
 
+#include "../../libparticle/ui.h"
+
 extern const int GFX_SX;
 extern const int GFX_SY;
+
+const int GFX_SX = 1300;
+const int GFX_SY = 760;
 
 static float dot(const Vec2 & V1, const Vec2 & V2)
 {
@@ -78,8 +83,26 @@ static bool baryPointInTriangle(
 	}
 }
 
-void testDelaunay()
+int main(int argc, char * argv[])
 {
+#if 0
+	char * basePath = SDL_GetBasePath();
+	changeDirectory(basePath);
+	changeDirectory("data");
+	SDL_free(basePath);
+#endif
+
+#if FULLSCREEN
+	framework.fullscreen = true;
+#endif
+
+	//framework.waitForEvents = true;
+	
+	if (!framework.init(0, 0, GFX_SX, GFX_SY))
+		return -1;
+
+	initUi();
+
 	const int numPoints = 20;
 	
 	typedef Vector2<float> Pointf;
@@ -239,5 +262,7 @@ void testDelaunay()
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
 	
-	//exit(0);
+	framework.shutdown();
+
+	return 0;
 }

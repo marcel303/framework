@@ -34,13 +34,20 @@
 #include "framework.h"
 #include "paobject.h"
 
+#include "../libparticle/ui.h"
+
 using namespace binaural;
+
+#define FULLSCREEN 0
 
 #define BLEND_PREVIOUS_HRTF 1
 static const int AUDIO_UPDATE_SIZE = AUDIO_BUFFER_SIZE/2;
 
 extern const int GFX_SX;
 extern const int GFX_SY;
+
+const int GFX_SX = 1300;
+const int GFX_SY = 760;
 
 static SDL_mutex * g_audioMutex = nullptr;
 
@@ -241,8 +248,26 @@ struct MyPortAudioHandler : PortAudioHandler
 
 using namespace BinauralTestTypes;
 
-void testBinaural()
+int main(int argc, char * argv[])
 {
+#if 0
+	char * basePath = SDL_GetBasePath();
+	changeDirectory(basePath);
+	changeDirectory("data");
+	SDL_free(basePath);
+#endif
+
+#if FULLSCREEN
+	framework.fullscreen = true;
+#endif
+
+	//framework.waitForEvents = true;
+	
+	if (!framework.init(0, 0, GFX_SX, GFX_SY))
+		return -1;
+	
+	initUi();
+	
 	fassert(g_audioMutex == nullptr);
 	g_audioMutex = SDL_CreateMutex();
 	
@@ -1017,6 +1042,10 @@ void testBinaural()
 	fassert(g_audioMutex != nullptr);
 	SDL_DestroyMutex(g_audioMutex);
 	g_audioMutex = nullptr;
+	
+	framework.shutdown();
+
+	return 0;
 }
 
 static void drawHrirSampleGrid(const HRIRSampleSet & sampleSet, const Vec2 & hoverLocation, const HRIRSampleGrid::Cell * hoverCell, const HRIRSampleGrid::Triangle * hoverTriangle)
