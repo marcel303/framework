@@ -77,7 +77,6 @@ struct Particle
 
 		if (fixedColor)
 		{
-			const float v = vx * vx + vy * vy;
 			const float r1 = r;
 			const float r2 = 1.f - r1;
 			cr = cr * r1 + 2.f * r2;
@@ -177,8 +176,6 @@ struct ParticleSystem
 
 	void draw() const
 	{
-		setBlend(BLEND_OPAQUE);
-
 		gxBegin(GL_LINES);
 		{
 			for (auto & p : particles)
@@ -289,7 +286,7 @@ public:
 
 static void blurSurface(Surface * src, Surface * dst, const float blurAmount)
 {
-	setBlend(BLEND_OPAQUE);
+	pushBlend(BLEND_OPAQUE);
 
 	for (int i = 0; i < 2; ++i)
 	{
@@ -314,6 +311,8 @@ static void blurSurface(Surface * src, Surface * dst, const float blurAmount)
 		}
 		popSurface();
 	}
+	
+	popBlend();
 }
 
 static void blurSurface(Surface * surface, const float blurAmount)
@@ -368,9 +367,7 @@ struct Grid
 		const float sx = GFX_SX / NUMTILES_X / 2.f;
 		const float sy = GFX_SY / NUMTILES_Y / 2.f;
 	#if 1
-		//const float scale = 1.2f;
 		const float h = std::hypotf(mouseX - px, mouseY - py);
-		const bool inside = h <= 40.f;
 		const float scale = 1.2f / (h / 400.f + 1.f);
 		//const float angle = Calc::DegToRad(std::sinf(framework.time) * 20.f);
 		const float angle = Calc::Lerp(0.f, Calc::DegToRad(std::sinf(framework.time) * 20.f), h / 400.f);
@@ -537,7 +534,6 @@ static void randomizeImage()
 {
 	const char * filenames[] =
 	{
-		//"andreea.png",
 		"2.jpg",
 		"3.jpg"
 	};
@@ -562,8 +558,7 @@ int main(int argc, char * argv[])
 	
 	loadSrt("roar.srt", srt);
 
-	//image = loadImage("2.jpg");
-	image = loadImage("andreea.png");
+	image = loadImage("2.jpg");
 	
 	if (image == nullptr)
 		return -1;
@@ -587,8 +582,6 @@ int main(int argc, char * argv[])
 		MediaPlayer::OpenParams params;
 		params.filename = "roar.mpg";
 		mediaPlayer->openAsync(params);
-		//mediaPlayer->openAsync("haelos.mpg", false);
-		//mediaPlayer->openAsync("whilrwind.mpg", false);
 
 		AudioOutput_OpenAL * audioOutput = nullptr;
 		AudioOutputThread * audioOutputThread = nullptr;
@@ -631,7 +624,6 @@ int main(int argc, char * argv[])
 
 			if (mediaPlayer->isActive(mediaPlayer->context))
 			{
-				//mediaPlayer->presentTime = time;
 				mediaPlayer->tick(mediaPlayer->context, true);
 
 			#if DO_VIDEO
@@ -697,33 +689,26 @@ int main(int argc, char * argv[])
 
 				pushSurface(finalSurface);
 				{
-					setBlend(BLEND_OPAQUE);
 					const float blurAmount = (std::sinf(framework.time / 2.f) + 1.f) / 2.f;
 					blurSurface(particleSurface, blurAmount);
 
 					pushSurface(particleSurface);
 					{
-						setBlend(BLEND_ALPHA);
 						const float falloffPerSecond = (std::sinf(framework.time / 4.f) + 1.f) / 2.f;
 						const float falloff = 1.f - std::powf(falloffPerSecond, dt);
 						setColorf(0.f, 0.f, 0.f, falloff);
 						drawRect(0, 0, particleSurface->getWidth(), particleSurface->getHeight());
 
+						pushBlend(BLEND_OPAQUE);
 						ps->draw();
-
-					#if 0
-						const GLuint texture = mediaPlayer->getTexture();
-						gxSetTexture(texture);
-						{
-							setBlend(BLEND_OPAQUE);
-							setColor(colorWhite);
-							drawRect(0, surface->getHeight(), surface->getWidth(), 0);
-						}
-						gxSetTexture(0);
-					#endif
-
-						//setColor(colorWhite);
-						//fillCircle(gravityX, gravityY, 5.f, 16);
+						popBlend();
+						
+						pushBlend(BLEND_ALPHA);
+						hqBegin(HQ_STROKED_CIRCLES);
+						setColor(colorWhite);
+						hqStrokeCircle(gravityX, gravityY, 5.f, 2.f);
+						hqEnd();
+						popBlend();
 					}
 					popSurface();
 
@@ -736,12 +721,12 @@ int main(int argc, char * argv[])
 						shader.setImmediate("param3", 0);
 						shader.setImmediate("param4", 0);
 						shader.setImmediate("time", time * 5.f);
-						shader.setImmediate("alpha", (std::sinf(framework.time * .5f) - 1.f) / 2.f);
-						//shader.setImmediate("alpha", (std::sinf(framework.time * .1f) + 1.f)/2.f/4.f);
+						shader.setImmediate("alpha", (std::sinf(framework.time * .1f) + 1.f)/2.f/4.f);
 						setShader(shader);
 						{
-							setBlend(BLEND_OPAQUE);
+							pushBlend(BLEND_OPAQUE);
 							drawRect(0, 0, finalSurface->getWidth(), finalSurface->getHeight());
+							popBlend();
 						}
 						clearShader();
 					}
@@ -749,9 +734,10 @@ int main(int argc, char * argv[])
 					{
 						gxSetTexture(particleSurface->getTexture());
 						{
-							setBlend(BLEND_OPAQUE);
+							pushBlend(BLEND_OPAQUE);
 							setColor(colorWhite);
 							drawRect(0, 0, finalSurface->getWidth(), finalSurface->getHeight());
+							popBlend();
 						}
 						gxSetTexture(0);
 					}
@@ -761,22 +747,20 @@ int main(int argc, char * argv[])
 
 					pushSurface(videoOverlay);
 					{
-					#if 0
-						videoOverlay->clear(0, 0, 0, 0);
-					#else
-						setBlend(BLEND_MUL);
+						pushBlend(BLEND_MUL);
 						setColorf(.99f, .98f, .97f, .95f);
 						drawRect(0, 0, textOverlay->getWidth(), textOverlay->getHeight());
-					#endif
-
+						popBlend();
+						
 						if (mediaPlayer->isActive(mediaPlayer->context))
 						{
 							const GLuint texture = mediaPlayer->getTexture();
+							
 							if (texture != 0)
 							{
 								gxSetTexture(texture);
 								{
-									setBlend(BLEND_ALPHA);
+									pushBlend(BLEND_ALPHA);
 									{
 										gxBegin(GL_QUADS);
 										{
@@ -784,11 +768,11 @@ int main(int argc, char * argv[])
 										}
 										gxEnd();
 									}
-									setBlend(BLEND_ALPHA);
+									popBlend();
 								}
 								gxSetTexture(0);
 
-								setBlend(BLEND_ALPHA);
+								pushBlend(BLEND_ALPHA);
 								{
 									setColor(255, 255, 255, 255, 63);
 									glEnable(GL_LINE_SMOOTH);
@@ -800,7 +784,7 @@ int main(int argc, char * argv[])
 									gxEnd();
 									glDisable(GL_LINE_SMOOTH);
 								}
-								setBlend(BLEND_ALPHA);
+								popBlend();
 							}
 						}
 					}
@@ -808,11 +792,10 @@ int main(int argc, char * argv[])
 
 					gxSetTexture(videoOverlay->getTexture());
 					{
-						setBlend(BLEND_ALPHA);
+						pushBlend(BLEND_ALPHA);
 						setColor(colorWhite);
-						//const float a = (-std::cosf(framework.time * .1f) + 1.f) / 2.f;
-						//setColorf(1.f, 1.f, 1.f, a);
 						drawRect(0, 0, finalSurface->getWidth(), finalSurface->getHeight());
+						popBlend();
 					}
 					gxSetTexture(0);
 				#endif
@@ -824,31 +807,35 @@ int main(int argc, char * argv[])
 
 					pushSurface(textOverlay);
 					{
-						setBlend(BLEND_MUL);
+						pushBlend(BLEND_MUL);
 						setColorf(.99f, .98f, .97f, .95f);
 						drawRect(0, 0, textOverlay->getWidth(), textOverlay->getHeight());
-
-						setBlend(BLEND_ALPHA);
-						setFont("BeautifulEveryTime.ttf");
-						setColor(colorWhite);
+						popBlend();
 
 						const SrtFrame * srtFrame = srt.findFrameByTime(mediaPlayer->context->mpContext.GetAudioTime());
 
 						if (srtFrame != nullptr)
 						{
+							pushBlend(BLEND_ALPHA);
+							setFont("BeautifulEveryTime.ttf");
+							setColor(colorWhite);
+							
 							for (size_t i = 0; i < srtFrame->lines.size(); ++i)
 							{
 								drawText(GFX_SX/2, GFX_SY*3/4 + i * 50, 48, 0.f, 0.f, "%s", srtFrame->lines[i].c_str());
 							}
+							
+							popBlend();
 						}
 					}
 					popSurface();
 
 					gxSetTexture(textOverlay->getTexture());
 					{
-						setBlend(BLEND_ALPHA);
+						pushBlend(BLEND_ALPHA);
 						setColor(colorWhite);
 						drawRect(0, 0, finalSurface->getWidth(), finalSurface->getHeight());
+						popBlend();
 					}
 					gxSetTexture(0);
 				#endif
