@@ -6,195 +6,14 @@
 
 #include <array>
 
-#define ENABLE_MEDIA_FOUNDATION 0
-#define ENABLE_VIDEO_FOR_WINDOWS 0
 #define ENABLE_VIDEOIN 0
-#define ENABLE_FACE_DETECTION 0
-#define ENABLE_MOTION_DETECTION 0
-#define ENABLE_VIOLA_JONES 0
 
 #define GFX_SX 1920
 #define GFX_SY 1080
 
-#if ENABLE_MEDIA_FOUNDATION
-	#include <Mfapi.h>
-	#include <MfIdl.h>
-	#include <MfReadwrite.h>
-	#pragma comment(lib, "Mfplat.lib")
-	#pragma comment(lib, "Mfuuid.lib")
-	#pragma comment(lib, "MfReadWrite.lib")
-	#pragma comment(lib, "Mf.lib")
-#endif
-
-#if ENABLE_VIDEO_FOR_WINDOWS
-	#include <Windows.h>
-	#include <Vfw.h>
-	#pragma comment(lib, "Vfw32.lib")
-#endif
-
 #if ENABLE_VIDEOIN
 	#include "videoin.h"
 #endif
-
-#if ENABLE_FACE_DETECTION
-	#include "image.h"
-#endif
-
-#if ENABLE_VIOLA_JONES
-	#include "image.h"
-
-	#include "viola-jones/src/Feature.h"
-	#include "viola-jones/src/WeakClassifier.h"
-	#include "viola-jones/src/StrongClassifier.h"
-	#include "viola-jones/src/CascadeClassifier.h"
-
-float * integral_image(float * grayImage, const int sx, const int sy)
-{
-	const int bufferSize = sx * sy;
-
-	float * __restrict ii = new float[bufferSize];
-	float * __restrict s = new float[bufferSize];
-
-	for (int y = 0; y < sy; ++y)
-	{
-		for (int x = 0; x < sx; ++x)
-		{
-			if (x == 0)
-				s[(y*sx)+x] = grayImage[(y*sx)+x];
-			else
-				s[(y*sx)+x] = s[(y*sx)+x-1] + grayImage[(y*sx)+x];
-
-			if (y == 0)
-				ii[(y*sx)+x] = s[(y*sx)+x];
-			else
-				ii[(y*sx)+x] = ii[((y-1)*sx)+x] + s[(y*sx)+x];
-		}
-	}
-
-	delete[] s;
-
-	return ii;
-}
-
-float * squared_integral_image(const float * __restrict grayImage, const int sx, const int sy)
-{
-	const int bufferSize = sx * sy;
-	float * __restrict ii = new float[bufferSize];
-	float * __restrict s = new float[bufferSize];
-
-	for (int y = 0; y < sy; ++y)
-	{
-		for (int x = 0; x < sx; ++x)
-		{
-			if (x == 0)
-				s[(y*sx)+x] = pow(grayImage[(y*sx)+x], 2);
-			else
-				s[(y*sx)+x] = s[(y*sx)+x-1] + pow(grayImage[(y*sx)+x], 2);
-
-			if (y == 0)
-				ii[(y*sx)+x] = s[(y*sx)+x];
-			else
-				ii[(y*sx)+x] = ii[((y-1)*sx)+x] + s[(y*sx)+x];
-		}
-	}
-
-	delete[] s;
-
-	return ii;
-}
-
-float evaluate_integral_rectangle(const float * __restrict ii, const int iiwidth, const int x, const int y, const int sx, const int sy)
-{
-	float value = ii[((y+sy-1)*iiwidth)+(x+sx-1)];
-
-	if (x > 0)
-		value -= ii[((y+sy-1)*iiwidth)+(x-1)];
-	if (y > 0)
-		value -= ii[(y-1)*iiwidth+(x+sx-1)];
-	if (x > 0 && y > 0)
-		value += ii[(y-1)*iiwidth+(x-1)];
-
-	return value;
-}
-
-#endif
-
-static float scrollX = 0.f;
-
-static float calculateHeight(const float t)
-{
-	const float baseY = GFX_SY/2.f;
-	
-	float a = 1.f;
-	float f = Calc::m2PI / 1000.f;
-	float at = 0.f;
-
-	float result = 0.f;
-
-	for (int i = 0; i < 5; ++i)
-	{
-		result += std::sinf(t * f) * a;
-
-		at += a;
-		a /= 1.210f;
-		f *= 1.321f;
-	}
-
-	result = baseY + result / at * 200.f;
-
-	return result;
-}
-
-struct Pisu
-{
-	Pisu()
-		: x(GFX_SX/2.f)
-		, y(0.f)
-		, vy(0.f)
-	{
-	}
-
-	void tick(const float dt)
-	{
-		const float h = calculateHeight(scrollX + x);
-
-		if (y > h)
-		{
-			const float dh = h - y;
-			const float vm = dh / dt;
-
-			y = h;
-
-			if (vy > 0.f)
-				vy *= -.5f;
-			
-			if (vy > vm)
-				vy = vm;
-		}
-
-		vy += 200.f * dt;
-		
-		y += vy * dt;
-	}
-
-	void draw() const
-	{
-		pushBlend(BLEND_ALPHA);
-		setColor(colorWhite);
-		//fillCircle(x, y, 20.f, 30);
-
-		Sprite pisu("pisu.png");
-		pisu.pivotX = pisu.getWidth()/2;
-		pisu.pivotY = pisu.getHeight();
-		pisu.drawEx(x, y, 0.f, .1f);
-		
-		popBlend();
-	}
-
-	float x;
-	float y;
-	float vy;
-};
 
 struct ParticleSystem
 {
@@ -299,26 +118,6 @@ struct ParticleSystem
 
 		glDisable(GL_PROGRAM_POINT_SIZE);
 		checkErrorGL();
-
-#if 0
-		gxBegin(GL_LINES);
-		{
-			for (int i = 0, n = 0; i < kMaxParticles; ++i)
-			{
-				if (lt[i] > 0.f)
-				{
-					if ((n % 10) == 0)
-					{
-						gxVertex3f(0.f, 0.f, 0.f);
-						gxVertex3f(x[i], y[i], z[i]);
-					}
-
-					n++;
-				}
-			}
-		}
-		gxEnd();
-#endif
 	}
 };
 
@@ -564,8 +363,8 @@ struct Camera
 
 	void tick(const float dt)
 	{
-		rotation[0] += mouse.dy / 100.f;
-		rotation[1] += mouse.dx / 100.f;
+		rotation[0] -= mouse.dy / 100.f;
+		rotation[1] -= mouse.dx / 100.f;
 
 		if (gamepad[0].isConnected)
 		{
@@ -615,7 +414,7 @@ struct Camera
 		// where L is the left eye, R is the right eye and O is where the head rotates around the axis
 		// in real life, the head and eyes rotate a little more complicated..
 
-		matrix = Mat4x4(true).Translate(position).Translate(eyeX, eyeY, 0.f).RotateY(rotation[1]).RotateX(rotation[0]).Translate(eyeOffset, 0.f, 0.f);
+		matrix = Mat4x4(true).Translate(position).Translate(eyeX, eyeY, 0.f).RotateY(rotation[1]).RotateX(rotation[0]).Translate(eyeOffset, 0.f, 0.f).Scale(1, -1, 1);
 	}
 };
 
@@ -660,7 +459,6 @@ struct Scene
 
 		mp = new MediaPlayer();
 		mp->openAsync("../colorpart/roar.mpg", MP::kOutputMode_RGBA);
-		//mp->openAsync("../colorpart/haelos.mpg", MP::kOutputMode_RGBA);
 		mp->presentTime = 0.0;
 	}
 
@@ -764,8 +562,7 @@ void Scene::tick(const float dt)
 	//
 
 	mp->tick(mp->context, true);
-
-	//mp->presentTime += framework.timeStep * .25f;
+	
 	mp->presentTime += framework.timeStep;
 }
 
@@ -887,32 +684,25 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 					{
 						gxPushMatrix();
 						{
-							//gxTranslatef(0.f, 600.f, 0.f);
-							gxTranslatef(0.f, 250.f, -400.f);
-							//gxRotatef(-90.f, -1.f, 0.f, 0.f);
-
-							gxRotatef(std::sinf(framework.time * .123f) * 30.f, 0.f, 1.f, 0.f);
-							//gxRotatef(std::sinf(framework.time * .245f) * 30.f, 1.f, 0.f, 0.f);
-
 							const float scaleX = 1600.f/2.f;
 							const float scaleY = 1000.f/2.f;
 							const float scaleZ = 50.f;
+							
+							gxTranslatef(0.f, 250.f, -400.f);
+							gxRotatef(std::sinf(framework.time * .123f) * 30.f, 0.f, 1.f, 0.f);
 							gxScalef(scaleX, scaleY, scaleZ);
-
-							const int numX = int(std::round(scaleX / 60.f));
-							const int numY = int(std::round(scaleY / 60.f));
-
-							pushBlend(BLEND_OPAQUE);
 
 							const GLuint texture = mp->getTexture();
 
 							if (texture != 0)
 							{
-								//drawExtrusion(20, 20, getTexture("tile1.jpg"));
+								const int numX = int(std::round(scaleX / 60.f));
+								const int numY = int(std::round(scaleY / 60.f));
+								
+								pushBlend(BLEND_OPAQUE);
 								drawExtrusion(numX, numY, texture);
+								popBlend();
 							}
-							
-							popBlend();
 						}
 						gxPopMatrix();
 					}
@@ -921,17 +711,17 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 
 					{
 						glDepthMask(false);
-
-						pushBlend(BLEND_ADD);
+						
 						setColor(127, 127, 127);
 						Shader shader("particles");
 						shader.setTexture("source", 0, getTexture("particle.jpg"), true, true);
 						setShader(shader);
 						{
+							pushBlend(BLEND_ADD);
 							ps.draw();
+							popBlend();
 						}
 						clearShader();
-						popBlend();
 
 						glDepthMask(true);
 					}
@@ -957,15 +747,6 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 		gxPopMatrix();
 
 		glDisable(GL_DEPTH_TEST);
-
-		pushBlend(BLEND_ALPHA);
-		{
-			setColor(colorWhite);
-
-			//setFont("calibri.ttf");
-			//drawText(50.f, 50.f, 48, +1.f, +1.f, "%s : %04.2fs", model->getAnimName(), model->animTime);
-		}
-		popBlend();
 	}
 	popSurface();
 
@@ -979,234 +760,8 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 	}
 }
 
-#if ENABLE_VIDEO_FOR_WINDOWS
-
-struct VideoCapture
-{
-	enum HicState
-	{
-		kHicState_Initial,
-		kHicState_Created,
-		kHicState_Ready,
-		kHicState_Failed
-	};
-
-	CAPSTATUS status;
-
-	int videoSx;
-	int videoSy;
-	DWORD videoFormat;
-
-	BITMAPINFOHEADER srcFormat;
-	BITMAPINFOHEADER dstFormat;
-
-	HIC hic;
-	HicState hicState;
-
-	uint8_t * decompressBuffer;
-	int decompressCount;
-
-	VideoCapture()
-	{
-		memset(this, 0, sizeof(*this));
-	}
-
-	~VideoCapture()
-	{
-		delete decompressBuffer;
-		decompressBuffer = nullptr;
-	}
-
-	static int calculateStride(const int sx, const int bitDepth)
-	{
-		return (((sx * bitDepth) + 31) & ~31) >> 3;
-	}
-
-	void allocateDecompressBuffer()
-	{
-		decompressBuffer = new uint8_t[dstFormat.biSizeImage];
-	}
-};
-
-static LRESULT PASCAL frameCallback(HWND window, VIDEOHDR * videoHeader)
-{
-	VideoCapture * self = (VideoCapture*)capGetUserData(window);
-
-	if (window == 0)
-		return FALSE;
-	else
-	{
-		if (self->hicState == VideoCapture::kHicState_Initial)
-		{
-			self->hic = ICOpen(MAKEFOURCC('V','I','D','C'), self->videoFormat, ICMODE_DECOMPRESS);
-
-			if (self->hic == 0)
-			{
-				self->hicState = VideoCapture::kHicState_Failed;
-			}
-			else
-			{
-				self->hicState = VideoCapture::kHicState_Created;
-			}
-		}
-
-		if (self->hicState == VideoCapture::kHicState_Created)
-		{
-			BITMAPINFO srcFormat;
-
-			memset(&srcFormat, 0, sizeof(srcFormat));
-			if (capGetVideoFormat(window, &srcFormat, sizeof(srcFormat)) == 0)
-			{
-				self->hicState = VideoCapture::kHicState_Failed;
-			}
-			else
-			{
-				BITMAPINFOHEADER dstFormat;
-				memset(&dstFormat, 0, sizeof(dstFormat));
-				dstFormat.biSize = sizeof(dstFormat);
-				dstFormat.biWidth = srcFormat.bmiHeader.biWidth;
-				dstFormat.biHeight = srcFormat.bmiHeader.biHeight;
-				dstFormat.biBitCount = 24;
-				dstFormat.biPlanes = 1;
-				dstFormat.biCompression = BI_RGB;
-
-				const DWORD dstStride = VideoCapture::calculateStride(dstFormat.biWidth, dstFormat.biBitCount);
-				dstFormat.biSizeImage = dstFormat.biHeight * dstStride;
-
-				self->srcFormat = srcFormat.bmiHeader;
-				self->dstFormat = dstFormat;
-
-				if (ICDecompressBegin(self->hic, &self->srcFormat, &self->dstFormat) != ICERR_OK)
-				{
-					self->hicState = VideoCapture::kHicState_Failed;
-				}
-				else
-				{
-					self->allocateDecompressBuffer();
-
-					self->hicState = VideoCapture::kHicState_Ready;
-				}
-			}
-		}
-
-		if (self->hicState == VideoCapture::kHicState_Ready)
-		{
-			const uint64_t time1 = g_TimerRT.TimeUS_get();
-
-			if (ICDecompress(self->hic, ICDECOMPRESS_HURRYUP, &self->srcFormat, videoHeader->lpData, &self->dstFormat, self->decompressBuffer) == ICERR_OK)
-			{
-				//logDebug("decompress success! %d", self->decompressCount++);
-			}
-
-			const uint64_t time2 = g_TimerRT.TimeUS_get();
-
-			logDebug("decompress took %fms", (time2 - time1) / 1000.f);
-
-			//ICClose(hic);
-		}
-
-		return TRUE;
-	}
-}
-
-#endif
-
-#if ENABLE_MOTION_DETECTION
-static bool detectFacePosition_MovementDelta(
-	const uint8_t * __restrict curPixels,
-	      uint8_t * __restrict oldPixels,
-	short * __restrict deltaPixels,
-	const int sx, const int sy,
-	double & faceX, double & faceY)
-{
-	// note : assumes gray scale input images
-
-	const int bufferSize = sx * sy;
-
-	// compute delta image
-
-	for (int i = 0; i < bufferSize; ++i)
-	{
-		deltaPixels[i] = curPixels[i] - oldPixels[i];
-
-		oldPixels[i] = curPixels[i];
-	}
-
-	// analyze delta image
-
-	double totalValue = 0.0;
-	double totalX = 0.0;
-	double totalY = 0.0;
-
-	const double normValue = 1.0 / 255.0;
-
-	for (int y = 0; y < sy; ++y)
-	{
-		const short * __restrict line = deltaPixels + (y * sx);
-
-		for (int x = 0; x < sx; ++x)
-		{
-			const double delta = std::pow(std::abs(line[x]) * normValue, 2.0);
-
-			totalValue += delta;
-			totalX += x * delta;
-			totalY += y * delta;
-		}
-	}
-
-	if (totalValue > 0.0)
-	{
-		const double maxDelta = sx * sy;
-
-		const double moveAmount = Calc::Min(1.0, totalValue / maxDelta * 100.0);
-		//const double moveAmount = 1.0;
-
-		faceX = Calc::Lerp(faceX, totalX / totalValue, moveAmount);
-		faceY = Calc::Lerp(faceY, totalY / totalValue, moveAmount);
-	}
-
-	return true;
-}
-#endif
-
-#if ENABLE_FACE_DETECTION
-static bool detectFacePosition(const uint8_t * pixels, const int sx, const int sy, const int pixelStride, int & faceX, int & faceY)
-{
-	int64_t totalValue = 0;
-	int64_t totalX = 0;
-	int64_t totalY = 0;
-
-	for (int y = 0; y < sy; ++y)
-	{
-		const uint8_t * __restrict line = pixels + (y * sx * pixelStride);
-
-		for (int x = 0; x < sx; ++x)
-		{
-			const int r = line[x * pixelStride + 0];
-			const int g = line[x * pixelStride + 1];
-			const int b = line[x * pixelStride + 2];
-
-			const int lumi = r * 2 + g - b / 2;
-
-			//const int64_t lumi = line[x * pixelStride + 0];// + line[x].g + line[x].b;
-
-			totalValue += lumi;
-			totalX += x * lumi;
-			totalY += y * lumi;
-		}
-	}
-
-	faceX = int(totalX / totalValue);
-	faceY = int(totalY / totalValue);
-
-	return true;
-}
-#endif
-
 int main(int argc, char * argv[])
 {
-	//changeDirectory("data");
-
 #if !defined(DEBUG) && 1
 	framework.fullscreen = true;
 	framework.exclusiveFullscreen = false;
@@ -1222,319 +777,7 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
-#if ENABLE_VIDEO_FOR_WINDOWS
-		VideoCapture videoCapture;
-
-		char szDeviceName[80];
-		char szDeviceVersion[80];
-
-		int deviceIndex = -1;
-
-		for (int i = 0; i < 10; ++i)
-		{
-			if (capGetDriverDescription(
-				i,
-				szDeviceName,
-				sizeof(szDeviceName),
-				szDeviceVersion,
-				sizeof(szDeviceVersion)) == TRUE)
-			{
-				logDebug("device: %d: %s", i, szDeviceName);
-
-				if (deviceIndex < 0)
-				{
-					deviceIndex = i;
-				}
-			}
-		}
-
-		if (deviceIndex >= 0)
-		{
-			//const HWND window = capCreateCaptureWindow("Capture Window", (WS_VISIBLE * 1) | WS_POPUP | WS_CHILD, 0, 0, 800, 600, 0, 0);
-			const HWND window = capCreateCaptureWindow("Capture Window", 0, 0, 0, 800, 600, 0, 0);
-
-			const BOOL result = capDriverConnect(window, deviceIndex);
-
-			if (result == TRUE)
-			{
-				CAPDRIVERCAPS caps;
-				memset(&caps, 0, sizeof(caps));
-				if (capDriverGetCaps(window, &caps, sizeof(caps)) == TRUE)
-				{
-					logDebug("got driver caps!");
-				}
-
-				CAPSTATUS status;
-				memset(&status, 0, sizeof(status));
-				if (capGetStatus(window, &status, sizeof(status)) == TRUE)
-				{
-					logDebug("got driver status!");
-				}
-
-				SetWindowPos(window, NULL, 0, 0,
-					status.uiImageWidth, 
-					status.uiImageHeight,
-					SWP_NOZORDER | SWP_NOMOVE); 
-
-				//
-
-				if (false)
-				{
-					if (caps.fHasDlgVideoSource)
-						capDlgVideoSource(window); 
-
-					if (caps.fHasDlgVideoFormat) 
-					{
-						capDlgVideoFormat(window); 
-						capGetStatus(window, &status, sizeof (CAPSTATUS));
-					} 
-
-					if (caps.fHasDlgVideoDisplay)
-						capDlgVideoDisplay(window);
-				}
-
-				//
-
-				// todo : set this pointer and check return value
-				capSetUserData(window, &videoCapture);
-
-				// todo : check return value
-				capSetCallbackOnFrame(window, frameCallback);
-				//capSetCallbackOnVideoStream(window, frameCallback);
-
-				CAPTUREPARMS params;
-				memset(&params, 0, sizeof(params));
-				if (capCaptureGetSetup(window, &params, sizeof(params)) == TRUE)
-				{
-					params.dwRequestMicroSecPerFrame = 1000000/30; // 60 fps
-					// todo : check return value;
-					capCaptureSetSetup(window, &params, sizeof(params));
-				}
-
-				// todo : check what these do
-				//capPreviewScale(window, FALSE);
-				//capPreviewRate(window, 0);
-				capPreview(window, FALSE);
-
-				//capCaptureSequenceNoFile(window);
-
-				const DWORD formatSize = capGetVideoFormatSize(window);
-
-				if (formatSize > 0)
-				{
-					uint8_t * formatBuffer = new uint8_t[formatSize];
-
-					if (capGetVideoFormat(window, formatBuffer, formatSize) == formatSize)
-					{
-						const BITMAPINFOHEADER & header = ((BITMAPINFO*)formatBuffer)->bmiHeader;
-
-						videoCapture.videoSx = header.biWidth;
-						videoCapture.videoSy = header.biHeight;
-						videoCapture.videoFormat = header.biCompression;
-					}
-
-					delete[] formatBuffer;
-					formatBuffer = nullptr;
-				}
-
-				while (!framework.quitRequested)
-				{
-					framework.process();
-
-					const uint64_t time1 = g_TimerRT.TimeUS_get();
-					//capGrabFrame(window);
-					capGrabFrameNoStop(window);
-					const uint64_t time2 = g_TimerRT.TimeUS_get();
-					logDebug("capGrabFrameNoStop took %fms", (time2 - time1) / 1000.f);
-
-					framework.beginDraw(0, 0, 0, 0);
-					{
-						const int x = rand() % GFX_SX;
-						const int y = rand() % GFX_SY;
-
-						fillCircle(x, y, 100, 100);
-					}
-					framework.endDraw();
-				}
-			}
-
-			capSetCallbackOnFrame(window, nullptr);
-			capDriverDisconnect(window);
-			DestroyWindow(window);
-		}
-#endif
-
-#if ENABLE_MEDIA_FOUNDATION
-		//CoInitializeEx(0, COINIT_MULTITHREADED);
-		//MFStartup(MF_VERSION);
-
-		IMFAttributes * mfAttributes = nullptr;
-
-		if (MFCreateAttributes(&mfAttributes, 0) == S_OK)
-		{
-			if (mfAttributes->SetGUID(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID) == S_OK)
-			{
-				IMFActivate ** deviceSources = nullptr;
-				UINT32 deviceSourceCount = 0;
-
-				if (MFEnumDeviceSources(mfAttributes, &deviceSources, &deviceSourceCount) == S_OK)
-				{
-					for (UINT32 i = 0; i < deviceSourceCount; ++i)
-					{
-						WCHAR * friendlyName = nullptr;
-						UINT32 friendlyNameSize = 0;
-
-						if (deviceSources[i]->GetAllocatedString(MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME, &friendlyName, &friendlyNameSize) == S_OK)
-						{
-							logDebug("capture device: %s", friendlyName);
-						}
-
-						/*
-						WCHAR * symbolicLink = nullptr;
-						UINT32 symbolicLinkSize = 0;
-
-						if (deviceSources[i]->GetAllocatedString(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK, &symbolicLink, &symbolicLinkSize) == S_OK)
-						{
-							logDebug("capture device symlink: %s", symbolicLink);
-						}
-						*/
-
-						IMFMediaSource * mediaSource = nullptr;
-
-						if (deviceSources[i]->ActivateObject(IID_PPV_ARGS(&mediaSource)) == S_OK)
-						{
-							IMFSourceReader * sourceReader = nullptr;
-
-							if (MFCreateSourceReaderFromMediaSource(mediaSource, mfAttributes, &sourceReader) == S_OK)
-							{
-								DWORD streamIndex = 0;
-
-								BOOL isStreamSelected = FALSE;
-								if (sourceReader->GetStreamSelection(streamIndex, &isStreamSelected) == S_OK)
-								{
-									logDebug("isStreamSelected: %d", int(isStreamSelected));
-								}
-
-								IMFMediaType * mediaType = nullptr;
-
-								for (int mediaTypeIndex = 0; true; ++mediaTypeIndex)
-								{
-									if (sourceReader->GetNativeMediaType(streamIndex, mediaTypeIndex, &mediaType) == S_OK)
-									{
-										break;
-
-										mediaType->Release();
-										mediaType = nullptr;
-									}
-									else
-									{
-										// todo : check if error or MF_E_NO_MORE_TYPES
-										break;
-									}
-								}
-
-								IMFMediaType * outputMediaType = nullptr;
-								if (MFCreateMediaType(&outputMediaType) == S_OK)
-								{
-									if (mediaType != nullptr)
-									{
-										mediaType->CopyAllItems(outputMediaType);
-										mediaType->Release();
-									}
-
-									outputMediaType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
-									//outputMediaType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB8);
-									//outputMediaType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB32);
-									//outputMediaType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB24);
-#if 0
-									//outputMediaType->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlaceMode);
-									MFSetAttributeSize(outputMediaType, MF_MT_FRAME_SIZE, 320, 240);
-									outputMediaType->SetUINT32(MF_MT_DEFAULT_STRIDE, 0);
-
-									UINT32 imageSize;
-									MFCalculateImageSize(MFVideoFormat_RGB8, 320, 240, &imageSize);
-
-									outputMediaType->SetUINT32(MF_MT_FIXED_SIZE_SAMPLES, true);
-									outputMediaType->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, true);
-									MFSetAttributeRatio(outputMediaType, MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
-#endif
-
-									//if (sourceReader->SetCurrentMediaType(streamIndex, nullptr, outputMediaType) == S_OK)
-									{
-										logDebug("success!");
-
-										for (;;)
-										{
-											DWORD actualStreamIndex = 0;
-											DWORD streamFlags = 0;
-											LONGLONG timeStamp = 0;
-
-											IMFSample * sample = nullptr;
-
-											if (sourceReader->ReadSample(streamIndex, 0, &actualStreamIndex, &streamFlags, &timeStamp, &sample) == S_OK)
-											{
-												if (streamFlags & MF_SOURCE_READERF_ERROR)
-												{
-													logDebug("msg: error");
-												}
-
-												if (streamFlags & MF_SOURCE_READERF_ENDOFSTREAM)
-												{
-													logDebug("msg: end of stream");
-												}
-
-												if (streamFlags & MF_SOURCE_READERF_NEWSTREAM)
-												{
-													logDebug("msg: new stream");
-												}
-
-												if (streamFlags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED)
-												{
-													logDebug("msg: current media type changed");
-												}
-
-												if (sample != nullptr)
-												{
-													logDebug("got sample!");
-
-													sample->Release();
-													sample = nullptr;
-												}
-											}
-										}
-									}
-								}
-
-								sourceReader->Release();
-								sourceReader = nullptr;
-							}
-
-							mediaSource->Release();
-							mediaSource = nullptr;
-						}
-					}
-
-					for (UINT32 i = 0; i < deviceSourceCount; ++i)
-					{
-						deviceSources[i]->Release();
-					}
-
-					if (deviceSources != nullptr)
-					{
-						CoTaskMemFree(deviceSources);
-						deviceSources = nullptr;
-					}
-
-					deviceSourceCount = 0;
-				}
-			}
-
-			mfAttributes->Release();
-			mfAttributes = nullptr;
-		}
-#endif
-
-#if ENABLE_VIDEOIN
+	#if ENABLE_VIDEOIN
 		videoInput * VI = new videoInput();
 
 		const int numDevices = VI->listDevices();	
@@ -1548,151 +791,6 @@ int main(int argc, char * argv[])
 		const int videoSy = VI->getHeight(deviceIndex);
 		const int videoBufferSize = VI->getSize(deviceIndex);
 		uint8_t * videoBuffer = new unsigned char[videoBufferSize];
-#endif
-
-	#if ENABLE_FACE_DETECTION
-		ImageData * face = loadImage("face.jpg");
-
-		while (!keyboard.isDown(SDLK_SPACE))
-		{
-			framework.process();
-
-			//
-
-			int faceX;
-			int faceY;
-
-			if (detectFacePosition((uint8_t*)face->getLine(0), face->sx, face->sy, 4, faceX, faceY))
-			{
-				logDebug("weighted pos: %d, %d", faceX, faceY);
-			}
-
-			//
-
-			framework.beginDraw(0, 0, 0, 0);
-			{
-				gxBegin(GL_POINTS);
-				{
-					for (int y = 0; y < face->sy; y += 5)
-					{
-						const ImageData::Pixel * __restrict line = face->getLine(y);
-
-						for (int x = 0; x < face->sx; x += 5)
-						{
-							gxColor3ub(line[x].r, line[x].g, line[x].b);
-							gxVertex2f(x, y);
-						}
-					}
-				}
-				gxEnd();
-
-				setColor(colorWhite);
-				fillCircle(faceX, faceY, 10.f, 20);
-			}
-			framework.endDraw();
-		}
-	#endif
-
-	#if ENABLE_VIOLA_JONES
-		// load image
-
-		ImageData * image = loadImage("face.jpg");
-
-		// face detection over image
-
-		struct Detection
-		{
-			int x;
-			int y;
-			int baseResolution;
-		};
-
-		std::vector<Detection> detections;
-
-		// load cascade classifier model
-		
-		const char * modelfile = "haar-face.txt";
-		const float strictness = 1.f;
-		const float fincrement = .1f;
-		const float fscale = 1.25f;
-
-		CascadeClassifier * classifier = new CascadeClassifier(modelfile);
-		classifier->strictness(strictness);
-
-		// convert RGB image to grayscale
-		float * __restrict grayImage = new float[image->sx * image->sy];
-		for (int y = 0; y < image->sy; ++y)
-		{
-			const ImageData::Pixel * __restrict srcLine = image->getLine(y);
-			float * __restrict dstLine = grayImage + y * image->sx;
-
-			for (int x = 0; x < image->sx; ++x)
-			{
-				*dstLine = 
-					.21f * srcLine->r +
-					.71f * srcLine->g +
-					.07f * srcLine->b;
-
-				srcLine++;
-				dstLine++;
-			}
-		}
-
-		// calculate integral image and squared integral image
-
-		const float * iimg = integral_image(grayImage, image->sx, image->sy);
-		const float * siimg = squared_integral_image(grayImage, image->sx, image->sy);
-
-		delete[] grayImage;
-		grayImage = nullptr;
-
-		// run face detection on multiple scales
-
-		int fnotfound = 0;
-
-		int base_resolution = classifier->getBaseResolution();
-
-		while (base_resolution <= image->sx && base_resolution <= image->sy)
-		{
-			const int increment = Calc::Max(1, int(base_resolution * fincrement));
-
-			// slide window over image
-
-			for (int i = 0; (i+base_resolution) <= image->sx; i += increment)
-			{
-				for (int j = 0; (j+base_resolution) <= image->sy; j += increment)
-				{
-					// calculate mean and std. deviation for current window
-
-					const float mean = evaluate_integral_rectangle(
-						iimg, image->sx, i, j, base_resolution, base_resolution) / pow(base_resolution, 2);
-
-					const float stdev = sqrt((evaluate_integral_rectangle(siimg, image->sx, i, j, base_resolution, base_resolution) / pow(base_resolution, 2)) - pow(mean, 2));
-
-					// classify window (post-normalization of feature values using mean and stdev)
-
-					if (classifier->classify(iimg, image->sx, i, j, mean, stdev) == true)
-					{
-						Detection detection;
-						detection.x = i;
-						detection.y = j;
-						detection.baseResolution = base_resolution;
-
-						detections.push_back(detection);
-					}
-					else
-					{
-						fnotfound++;
-					}
-				}
-			}
-
-			classifier->scale(fscale);
-			base_resolution = classifier->getBaseResolution();
-		}
-
-		// Merge overlapping detections
-		//merge_detections(detections);
 	#endif
 
 		mouse.showCursor(false);
@@ -1702,38 +800,20 @@ int main(int argc, char * argv[])
 		Surface * surfaceL = new Surface(GFX_SX, GFX_SY, false, true);
 		Surface * surfaceR = new Surface(GFX_SX, GFX_SY, false, true);
 
-		Pisu pisu;
-		
 		scene = new Scene();
 
 	#if ENABLE_VIDEOIN
 		GLuint videoTexture = 0;
 	#endif
 
-	#if ENABLE_MOTION_DETECTION
-		uint8_t * curPixels = new uint8_t[videoSx * videoSy];
-		uint8_t * oldPixels = new uint8_t[videoSx * videoSy];
-		short * deltaPixels = new short[videoSx * videoSy];
-	#endif
-
-	#if ENABLE_MOTION_DETECTION || ENABLE_FACE_DETECTION
-		double faceX = 0.0;
-		double faceY = 0.0;
-		bool hasFacePosition = false;
-	#endif
-
 		while (!framework.quitRequested)
 		{
 			framework.process();
-
+			
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 
 			const float dt = framework.timeStep;
-
-			scrollX += dt * 200.f;
-
-			pisu.tick(dt);
 
 			scene->tick(dt);
 
@@ -1741,65 +821,8 @@ int main(int argc, char * argv[])
 
 			framework.beginDraw(0, 0, 0, 0);
 			{
-			#if 0
-				pushSurface(surface);
-				{
-					surface->clear(0, 0, 0, 0);
-					const float m = .999f;
-					setBlend(BLEND_MUL);
-					setColorf(m, m, m, m);
-					//drawRect(0, 0, surface->getWidth(), surface->getHeight());
-
-					// draw path
-
-					setBlend(BLEND_ALPHA);
-					//setColor(colorWhite);
-					setColor(Color::fromHSL(int((framework.time * .1f) * 6.f) / 6.f, 1.f, .5f));
-
-				#if 1
-					gxBegin(GL_LINES);
-					{
-						for (int x = 0; x < GFX_SX; ++x)
-						{
-							const float h1 = calculateHeight(scrollX + x + 0.f);
-							const float h2 = calculateHeight(scrollX + x + 1.f);
-
-							gxVertex2f(x + 0, h1);
-							gxVertex2f(x + 1, h2);
-						}
-					}
-					gxEnd();
-				#else
-					gxBegin(GL_LINES);
-					{
-						const float step = .01f;
-
-						for (float t = 0.f; t < numNodes; t += step)
-						{
-							const Vec2F p1 = path.Interpolate(t + step * 0.f);
-							const Vec2F p2 = path.Interpolate(t + step * 1.f);
-
-							gxVertex2f(p1[0], p1[1]);
-							gxVertex2f(p2[0], p2[1]);
-						}
-					}
-					gxEnd();
-			#endif
-
-					pisu.draw();
-				}
-				popSurface();
-			#endif
-
-				const float faceMovementAmount = 50.f;
-
-			#if ENABLE_FACE_DETECTION
-				const float eyeX = - (faceX/videoSx - 0.5) * faceMovementAmount;
-				const float eyeY = + (faceY/videoSy - 0.5) * faceMovementAmount;
-			#else
 				const float eyeX = 0.f;
 				const float eyeY = 0.f;
-			#endif
 
 				scene->draw(surfaceL, -1.f, eyeX, eyeY);
 				scene->draw(surfaceR, +1.f, eyeX, eyeY);
@@ -1836,46 +859,6 @@ int main(int argc, char * argv[])
 					{
 						if (VI->getPixels(deviceIndex, videoBuffer, true, false))
 						{
-						#if ENABLE_MOTION_DETECTION
-							for (int y = 0; y < videoSy; ++y)
-							{
-								const uint8_t * __restrict srcLine = videoBuffer + (y * videoSx * 3);
-								uint8_t * __restrict curLine = curPixels + y * videoSx;
-
-								for (int x = 0; x < videoSx; ++x)
-								{
-									const int r = srcLine[0];
-									const int g = srcLine[1];
-									const int b = srcLine[2];
-
-									srcLine += 3;
-
-									const int lumi = (r + g * 2 + b) >> 2;
-
-									curLine[x] = lumi;
-								}
-							}
-
-							if (detectFacePosition_MovementDelta(
-								curPixels,
-								oldPixels,
-								deltaPixels,
-								videoSx,
-								videoSy,
-								faceX,
-								faceY))
-							{
-								hasFacePosition = true;
-							}
-						#elif ENABLE_FACE_DETECTION
-							if (detectFacePosition(videoBuffer, videoSx, videoSy, 3, faceX, faceY))
-							{
-								hasFacePosition = true;
-							}
-						#endif
-
-							//
-
 							if (videoTexture != 0)
 							{
 								glDeleteTextures(1, &videoTexture);
@@ -1902,12 +885,6 @@ int main(int argc, char * argv[])
 							}
 							gxSetTexture(0);
 						}
-
-						if (hasFacePosition)
-						{
-							setColor(colorWhite);
-							fillCircle(faceX, videoSy - faceY, 10 / scale, 100);
-						}
 					}
 					popSurface();
 				}
@@ -1924,17 +901,6 @@ int main(int argc, char * argv[])
 			}
 			framework.endDraw();
 		}
-
-	#if ENABLE_MOTION_DETECTION
-		delete[] curPixels;
-		curPixels = nullptr;
-
-		delete[] oldPixels;
-		oldPixels = nullptr;
-
-		delete[] deltaPixels;
-		deltaPixels = nullptr;
-	#endif
 
 	#if ENABLE_VIDEOIN
 		if (videoTexture != 0)
