@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Calc.h"
 #include "picedit.h"
 #include "Traveller.h"

@@ -16,7 +16,7 @@
 #define DO_LIGHT_PROPAGATION 0
 #define DO_FLOCKING 0
 #define DO_PATH 1
-#define DO_BUILTIN_SHADER  1
+#define DO_BUILTIN_SHADER 0
 
 /*
 
@@ -44,8 +44,8 @@ cocompose v2 todo:
 
 #if 1
 	#if defined(DEBUG)
-		#define GFX_SX 1500
-		#define GFX_SY 900
+		#define GFX_SX 1200
+		#define GFX_SY 600
 	#else
 		#define GFX_SX 1920
 		#define GFX_SY 1080
@@ -343,11 +343,11 @@ struct Background : Editable
 			shader.setImmediate("colormapSize", GFX_SX, GFX_SY);
 			shader.setImmediate("time", framework.time); // fixme
 
-			setBlend(BLEND_OPAQUE);
+			pushBlend(BLEND_OPAQUE);
 			{
 				drawRect(0, 0, GFX_SX, GFX_SY);
 			}
-			setBlend(BLEND_ALPHA);
+			popBlend();
 		}
 		clearShader();
 	}
@@ -384,7 +384,7 @@ struct Background : Editable
 
 	virtual bool insertBegin(const std::string & filename, const int x, const int y) override
 	{
-		if (String::StartsWith(filename, "background") && Path::GetExtension(filename) == "ps")
+		if (String::StartsWith(filename, "background") && Path::GetExtension(filename, true) == "ps")
 			return true;
 		else
 			return false;
@@ -697,20 +697,20 @@ struct AudioVoice : Editable
 	{
 	}
 
-	virtual bool insertBegin(const std::string & filename, const int x, const int y)
+	virtual bool insertBegin(const std::string & filename, const int x, const int y) override
 	{
 		return false;
 	}
 
-	virtual void insertEnd(const int x, const int y)
+	virtual void insertEnd(const int x, const int y) override
 	{
 	}
 
-	virtual void insertMove(const int x, const int y)
+	virtual void insertMove(const int x, const int y) override
 	{
 	}
 
-	virtual void insertCancel()
+	virtual void insertCancel() override
 	{
 	}
 };
@@ -964,9 +964,9 @@ struct AudioCreation : Editable, public AudioStreamEx
 		}
 	}
 
-	virtual bool insertBegin(const std::string & filename, const int x, const int y)
+	virtual bool insertBegin(const std::string & filename, const int x, const int y) override
 	{
-		const std::string extension = Path::GetExtension(filename);
+		const std::string extension = Path::GetExtension(filename, true);
 
 		if (extension != "ogg")
 		{
@@ -994,15 +994,15 @@ struct AudioCreation : Editable, public AudioStreamEx
 		}
 	}
 
-	virtual void insertEnd(const int x, const int y)
+	virtual void insertEnd(const int x, const int y) override
 	{
 	}
 
-	virtual void insertMove(const int x, const int y)
+	virtual void insertMove(const int x, const int y) override
 	{
 	}
 
-	virtual void insertCancel()
+	virtual void insertCancel() override
 	{
 	}
 
@@ -1046,7 +1046,7 @@ struct AudioCreation : Editable, public AudioStreamEx
 		return result;
 	}
 
-	virtual int GetSampleRate()
+	virtual int GetSampleRate() override
 	{
 		return 44100;
 	}
@@ -1123,7 +1123,7 @@ struct Picture : Editable
 
 	Mat4x4 getTransform() const
 	{
-		const std::string extension = Path::GetExtension(filename);
+		const std::string extension = Path::GetExtension(filename, true);
 
 		float scale;
 		float sx;
@@ -1172,7 +1172,7 @@ struct Picture : Editable
 		{
 			gxMultMatrixf(mat.m_v);
 
-			const std::string extension = Path::GetExtension(filename);
+			const std::string extension = Path::GetExtension(filename, true);
 
 			if (extension == "ps")
 			{
@@ -1192,9 +1192,9 @@ struct Picture : Editable
 				setColor(colorWhite);
 				gxSetTexture(image->getTexture());
 				{
-					setBlend(BLEND_PREMULTIPLIED_ALPHA);
+					pushBlend(BLEND_PREMULTIPLIED_ALPHA);
 					drawRect(-1.f, -1.f, +1.f, +1.f);
-					setBlend(BLEND_ALPHA);
+					popBlend();
 				}
 				gxSetTexture(0);
 			}
@@ -1270,7 +1270,7 @@ struct Picture : Editable
 
 		drawTransition.tick(dt);
 
-		const std::string extension = Path::GetExtension(filename);
+		const std::string extension = Path::GetExtension(filename, true);
 
 		if (extension != "ps")
 		{
@@ -1285,7 +1285,7 @@ struct Picture : Editable
 					sprite.draw();
 				}
 				popSurface();
-
+/*
 				ComputeShader cs("randomize.cs");
 				setShader(cs);
 				{
@@ -1294,6 +1294,7 @@ struct Picture : Editable
 					cs.dispatch(image->getWidth(), image->getHeight(), 1);
 				}
 				clearShader();
+*/
 			}
 		}
 
@@ -1513,20 +1514,20 @@ struct Picture : Editable
 		}
 	}
 
-	virtual bool insertBegin(const std::string & filename, const int x, const int y)
+	virtual bool insertBegin(const std::string & filename, const int x, const int y) override
 	{
 		return false;
 	}
 
-	virtual void insertEnd(const int x, const int y)
+	virtual void insertEnd(const int x, const int y) override
 	{
 	}
 
-	virtual void insertMove(const int x, const int y)
+	virtual void insertMove(const int x, const int y) override
 	{
 	}
 
-	virtual void insertCancel()
+	virtual void insertCancel() override
 	{
 	}
 };
@@ -1648,11 +1649,11 @@ struct PictureSet : Editable
 	{
 	}
 
-	virtual bool insertBegin(const std::string & filename, const int x, const int y)
+	virtual bool insertBegin(const std::string & filename, const int x, const int y) override
 	{
 		Assert(getEditingPicture() == nullptr);
 
-		const std::string extension = Path::GetExtension(filename);
+		const std::string extension = Path::GetExtension(filename, true);
 
 		if (extension != "png" && extension != "jpg" && extension != "jpeg" && extension != "ps")
 		{
@@ -1675,7 +1676,7 @@ struct PictureSet : Editable
 		}
 	}
 
-	virtual void insertEnd(const int x, const int y)
+	virtual void insertEnd(const int x, const int y) override
 	{
 		Picture * editingPicture = getEditingPicture();
 
@@ -1686,7 +1687,7 @@ struct PictureSet : Editable
 		}
 	}
 
-	virtual void insertMove(const int x, const int y)
+	virtual void insertMove(const int x, const int y) override
 	{
 		Picture * editingPicture = getEditingPicture();
 		
@@ -1698,7 +1699,7 @@ struct PictureSet : Editable
 		}
 	}
 
-	virtual void insertCancel()
+	virtual void insertCancel() override
 	{
 		Picture * editingPicture = getEditingPicture();
 
@@ -1778,11 +1779,11 @@ struct Creation : Editable
 		return true;
 	}
 
-	virtual void mouseMove(const int x, const int y)
+	virtual void mouseMove(const int x, const int y) override
 	{
 	}
 
-	virtual bool insertBegin(const std::string & filename, const int x, const int y)
+	virtual bool insertBegin(const std::string & filename, const int x, const int y) override
 	{
 		Assert(activeEditable == nullptr);
 
@@ -1807,7 +1808,7 @@ struct Creation : Editable
 		}
 	}
 
-	virtual void insertEnd(const int x, const int y)
+	virtual void insertEnd(const int x, const int y) override
 	{
 		Assert(activeEditable != nullptr);
 
@@ -1819,7 +1820,7 @@ struct Creation : Editable
 		}
 	}
 
-	virtual void insertMove(const int x, const int y)
+	virtual void insertMove(const int x, const int y) override
 	{
 		Assert(activeEditable != nullptr);
 
@@ -1829,7 +1830,7 @@ struct Creation : Editable
 		}
 	}
 
-	virtual void insertCancel()
+	virtual void insertCancel() override
 	{
 		Assert(activeEditable != nullptr);
 
@@ -1866,7 +1867,7 @@ static void createAudioCache()
 
 	for (auto file : files)
 	{
-		if (Path::GetExtension(file) == "ogg")
+		if (Path::GetExtension(file, true) == "ogg")
 		{
 			const std::string cacheFile = Path::StripExtension(file) + ".aud";
 
@@ -2554,6 +2555,8 @@ int main(int argc, char * argv[])
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				Surface * surface = downresSurfaces[0];
+				
+				surface->swapBuffers();
 
 #if DO_COCREATE
 				pushSurface(surface);
@@ -2584,9 +2587,9 @@ int main(int argc, char * argv[])
 							particle.setBufferRw("particleBuffer", particleBuffer);
 							particle.setImmediate("colorStrength", 8.f * mouse.y / float(GFX_SY));
 
-							setBlend(BLEND_ADD);
+							pushBlend(BLEND_ADD);
 							gxEmitVertices(GL_POINTS, particleCount);
-							setBlend(BLEND_ALPHA);
+							popBlend();
 						}
 						clearShader();
 					}
@@ -2634,7 +2637,7 @@ int main(int argc, char * argv[])
 #endif
 
 			#if DO_GAUSSIAN_BLUR
-				setBlend(BLEND_OPAQUE);
+				pushBlend(BLEND_OPAQUE);
 				{
 					// create downsample chain
 
@@ -2687,11 +2690,11 @@ int main(int argc, char * argv[])
 						gxSetTexture(0);
 					}
 				}
-				setBlend(BLEND_ALPHA);
+				popBlend();
 
-				//setBlend(BLEND_ADD);
-				setBlend(BLEND_OPAQUE);
-				//setBlend(BLEND_ALPHA);
+				//pushBlend(BLEND_ADD);
+				pushBlend(BLEND_OPAQUE);
+				//pushBlend(BLEND_ALPHA);
 				{
 					for (int i = 3; i < 4; ++i)
 					{
@@ -2709,7 +2712,7 @@ int main(int argc, char * argv[])
 						gxSetTexture(0);
 					}
 				}
-				setBlend(BLEND_ALPHA);
+				popBlend();
 			#else
 
 			#if DO_PATH
@@ -2747,12 +2750,16 @@ int main(int argc, char * argv[])
 							path.curve(-200.f, +100.f, -200.f, 0.f, 0.f, -100.f -200.f * std::cos(framework.time * 0.f));
 							path.curveTo(0.f, 0.f, 0.f, +100.f, 0.f, +100.f +500.f * std::cos(framework.time * .1f));
 
-							setBlend(BLEND_ALPHA);
-
-							if (keyboard.isDown(SDLK_h))
-								hqDrawPath(path);
-							else
-								drawPath(path);
+							pushBlend(BLEND_MAX);
+							{
+								pushColorPost(POST_PREMULTIPLY_RGB_WITH_ALPHA);
+								if (keyboard.isDown(SDLK_h))
+									hqDrawPath(path, sine(1.5f, 32.f, framework.time * 100.f));
+								else
+									drawPath(path);
+								popColorPost();
+							}
+							popBlend();
 						}
 						gxPopMatrix();
 					}
@@ -2777,13 +2784,14 @@ int main(int argc, char * argv[])
 				//setShader_Colorize(surface->getTexture(), framework.time * .1f);
 				//setShader_HueShift(surface->getTexture(), framework.time * .1f);
 				{
-					setBlend(BLEND_OPAQUE);
+					pushBlend(BLEND_OPAQUE);
 					surface->postprocess();
+					popBlend();
 				}
 				clearShader();
 			#endif
 
-				setBlend(BLEND_OPAQUE);
+				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(surface->getTexture());
 				{
 					setColor(colorWhite);
@@ -2800,7 +2808,7 @@ int main(int argc, char * argv[])
 					}
 				}
 				gxSetTexture(0);
-				setBlend(BLEND_ALPHA);
+				popBlend();
 			#endif
 			}
 			framework.endDraw();
