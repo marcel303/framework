@@ -36,6 +36,7 @@ file(GLOB_RECURSE source_all "*.cpp" "*.h")
 file(GLOB_RECURSE source_4dworld "4dworld.cpp")
 file(GLOB_RECURSE source_binauralizer "binauralizer.cpp")
 file(GLOB_RECURSE source_delaunay "delaunay.cpp")
+file(GLOB_RECURSE source_audioVoices "audioVoiceManager.cpp")
 file(GLOB_RECURSE source_tests "test*.*")
 
 source_group("sources" FILES ${source_all})
@@ -44,14 +45,17 @@ source_group("tests" FILES ${source_tests})
 add_executable(4dworld ${source_4dworld})
 add_executable(binauralizer ${source_binauralizer})
 add_executable(delaunay ${source_delaunay})
+add_executable(audioVoices ${source_audioVoices})
 
 set_target_properties(4dworld PROPERTIES LINK_FLAGS "-Wl,-all_load")
 set_target_properties(binauralizer PROPERTIES LINK_FLAGS "-Wl,-all_load")
 set_target_properties(delaunay PROPERTIES LINK_FLAGS "-Wl,-all_load")
+set_target_properties(audioVoices PROPERTIES LINK_FLAGS "-Wl,-all_load")
 
 target_compile_definitions(4dworld PRIVATE NO_SDL_GLEXT)
 target_compile_definitions(binauralizer PRIVATE NO_SDL_GLEXT)
 target_compile_definitions(delaunay PRIVATE NO_SDL_GLEXT)
+target_compile_definitions(audioVoices PRIVATE NO_SDL_GLEXT)
 
 set(LIBRARIES PRIVATE
 	libgg
@@ -64,6 +68,7 @@ set(LIBRARIES PRIVATE
 target_link_libraries(4dworld PRIVATE ${LIBRARIES})
 target_link_libraries(binauralizer PRIVATE ${LIBRARIES})
 target_link_libraries(delaunay PRIVATE ${LIBRARIES})
+target_link_libraries(audioVoices PRIVATE ${LIBRARIES})
 
 if (WIN32)
 	target_compile_definitions(4dworld PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)

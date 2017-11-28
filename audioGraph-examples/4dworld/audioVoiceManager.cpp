@@ -35,7 +35,10 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
-extern bool STEREO_OUTPUT;
+const int GFX_SX = 1300;
+const int GFX_SY = 760;
+
+static bool STEREO_OUTPUT = true;
 
 const static float kWorldSx = 10.f;
 const static float kWorldSy = 8.f;
@@ -419,8 +422,26 @@ static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, 
 
 //
 
-void testAudioVoiceManager()
+int main(int argc, char * argv[])
 {
+#if 0
+	char * basePath = SDL_GetBasePath();
+	changeDirectory(basePath);
+	changeDirectory("data");
+	SDL_free(basePath);
+#endif
+
+#if FULLSCREEN
+	framework.fullscreen = true;
+#endif
+
+	//framework.waitForEvents = true;
+	
+	if (!framework.init(0, 0, GFX_SX, GFX_SY))
+		return -1;
+
+	initUi();
+
 	const int kNumChannels = 16;
 	
 	//
@@ -661,12 +682,12 @@ void testAudioVoiceManager()
 	
 	//
 	
-	delete world;
-	world = nullptr;
+	pa.shut();
 	
 	//
 	
-	pa.shut();
+	delete world;
+	world = nullptr;
 	
 	//
 	
@@ -677,4 +698,10 @@ void testAudioVoiceManager()
 	
 	SDL_DestroyMutex(mutex);
 	mutex = nullptr;
+
+	//
+
+	framework.shutdown();
+
+	return 0;
 }
