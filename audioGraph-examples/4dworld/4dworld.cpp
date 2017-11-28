@@ -36,12 +36,9 @@
 #include "Vec3.h"
 #include "../libparticle/ui.h"
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
-extern bool STEREO_OUTPUT;
-
 //
+
+#define FULLSCREEN 0
 
 #define CHANNEL_COUNT 64
 #define DYNAMIC_CHANNEL_COUNT 16
@@ -55,6 +52,19 @@ extern bool STEREO_OUTPUT;
 #define BINAURAL_DEMO 0
 
 //
+
+extern const int GFX_SX;
+extern const int GFX_SY;
+
+#if FULLSCREEN
+	const int GFX_SX = 2560/2;
+	const int GFX_SY = 1600/2;
+#else
+	const int GFX_SX = 1300;
+	const int GFX_SY = 760;
+#endif
+
+static bool STEREO_OUTPUT = true;
 
 static bool inputIsCaptured = false;
 
@@ -1819,8 +1829,26 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 
 #include "Timer.h"
 
-void testAudioGraphManager()
+int main(int argc, char * argv[])
 {
+#if 0
+	char * basePath = SDL_GetBasePath();
+	changeDirectory(basePath);
+	changeDirectory("data");
+	SDL_free(basePath);
+#endif
+
+#if FULLSCREEN
+	framework.fullscreen = true;
+#endif
+
+	//framework.waitForEvents = true;
+	
+	if (!framework.init(0, 0, GFX_SX, GFX_SY))
+		return -1;
+
+	initUi();
+
 	const auto t1 = g_TimerRT.TimeUS_get();
 	
 	SDL_mutex * mutex = SDL_CreateMutex();
@@ -2411,6 +2439,8 @@ void testAudioGraphManager()
 	//
 	
 	Font("calibri.ttf").saveCache();
+
+	framework.shutdown();
 	
-	exit(0);
+	return 0;
 }

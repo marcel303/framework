@@ -32,29 +32,13 @@ project(4dworld)
 
 # --- 4dworld ---
 
-file(GLOB_RECURSE source "*.cpp" "*.h")
-file(GLOB source_graph "../vfxGraph/graph*")
+file(GLOB_RECURSE source_4dworld "4dworld.cpp")
+file(GLOB_RECURSE source_tests "test*.*")
 
-file(GLOB source_tests "test*.*")
-
-file(GLOB_RECURSE source_ui
-	"../libparticle/ui.cpp"
-	"../libparticle/ui.h"
-	"../libparticle/textfield.cpp"
-	"../libparticle/textfield.h"
-	"../libparticle/colorwheel.cpp"
-	"../libparticle/colorwheel.h"
-	"../libparticle/particle.cpp"
-	"../libparticle/particle.h")
-
-list(APPEND source ${source_graph})
-list(APPEND source ${source_ui})
-
-source_group("4DWorld" FILES ${source})
+source_group("sources" FILES ${source_4dworld})
 source_group("tests" FILES ${source_tests})
-source_group("ui" FILES ${source_ui})
 
-add_executable(4dworld ${source})
+add_executable(4dworld ${source_4dworld})
 
 set_target_properties(4dworld PROPERTIES LINK_FLAGS "-Wl,-all_load")
 
