@@ -25,23 +25,20 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "Calc.h"
 #include "framework.h"
 #include "graph.h"
-#include "Parse.h"
 #include "StringEx.h"
-#include "tinyxml2.h"
 
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
-#include "vfxTypes.h"
-
 #include "vfxNodes/oscEndpointMgr.h"
-#include "vfxNodes/vfxNodeBase.h"
+#include "vfxTypes.h"
 
 #include "mediaplayer/MPUtil.h"
 #include "../libparticle/ui.h"
 #include "Timer.h"
+#include "tinyxml2.h"
+#include "vfxNodes/vfxNodeBase.h"
 
 using namespace tinyxml2;
 
@@ -154,216 +151,6 @@ VFX_NODE_TYPE(VfxNodeResourceTest)
 	
 	in("randomize!", "trigger");
 	out("value", "float");
-}
-
-//
-
-#include "Noise.h"
-
-static void testGradientShader()
-{
-	const int kNumCircles = 32;
-	
-	Vec3 circles[kNumCircles];
-	
-	for (int i = 0; i < kNumCircles; ++i)
-	{
-		circles[i][0] = random(0, GFX_SX);
-		circles[i][1] = random(0, GFX_SY);
-		circles[i][2] = random(0.f, 5.f); // life
-	}
-	
-	do
-	{
-		framework.process();
-		
-		for (int i = 0; i < kNumCircles; ++i)
-		{
-			circles[i][2] -= framework.timeStep;
-			
-			if (circles[i][2] <= 0.f)
-			{
-				circles[i][0] = random(0, GFX_SX);
-				circles[i][1] = random(0, GFX_SY);
-				circles[i][2] = random(0.f, 5.f); // life
-			}
-			
-			circles[i][0] += scaled_octave_noise_3d(4, .5f, .01f, -500.f, +500.f, framework.time * 20.f + i, circles[i][0], circles[i][1]) * framework.timeStep;
-			circles[i][1] += scaled_octave_noise_3d(4, .5f, .01f, -500.f, +500.f, framework.time * 20.f - i, circles[i][0], circles[i][1]) * framework.timeStep;
-		}
-		
-		framework.beginDraw(0, 0, 0, 0);
-		{
-			const Mat4x4 cmat = Mat4x4(true)
-				.Scale(1.f / 100.f, 1.f / 100.f, 1.f)
-				.RotateZ(-framework.time)
-				.Translate(-GFX_SX/2, -GFX_SY/2, 0);
-			const Mat4x4 tmat = Mat4x4(true)
-				.Translate(.5f, .5f, 0.f)
-				.Scale(1.f / 400.f, 1.f / 400.f, 1.f)
-				.RotateZ(+framework.time)
-				.Translate(-GFX_SX/2, -GFX_SY/2, 0);
-			
-			const GRADIENT_TYPE gradientType = mouse.isDown(BUTTON_LEFT) ? GRADIENT_RADIAL : GRADIENT_LINEAR;
-			const float gradientBias = mouse.x / float(GFX_SX);
-			const float gradientScale = gradientBias == 1.f ? 0.f : 1.f / (1.f - gradientBias);
-			hqSetGradient(gradientType, cmat, colorWhite, colorBlack, COLOR_MUL, gradientBias, gradientScale);
-			hqSetTexture(tmat, getTexture("happysun.jpg"));
-			for (int i = 0; i < 360; i += 20)
-			{
-				gxPushMatrix();
-				gxRotatef(i + framework.time, 0, 0, 1);
-				hqBegin(HQ_LINES);
-				{
-					setColor(colorWhite);
-					hqLine(0, 0, 10, GFX_SX, GFX_SY, 50);
-				}
-				hqEnd();
-				gxPopMatrix();
-			}
-			hqBegin(HQ_FILLED_CIRCLES);
-			{
-				for (int i = 0; i < kNumCircles; ++i)
-				{
-					gxColor4f(1, 1, 1, Calc::Clamp(circles[i][2], 0.f, 1.f));
-					hqFillCircle(circles[i][0], circles[i][1], 20.f);
-				}
-			}
-			hqEnd();
-			hqClearGradient();
-			hqClearTexture();
-		}
-		framework.endDraw();
-		
-	}
-	while (!keyboard.wentDown(SDLK_SPACE));
-}
-
-//
-
-static void testCamera3d()
-{
-	Camera3d camera;
-	
-	camera.position[0] = 0;
-	camera.position[1] = +.3f;
-	camera.position[2] = -1.f;
-	camera.pitch = 10.f;
-	
-	float fov = 90.f;
-	float near = .01f;
-	float far = 100.f;
-	
-	enum State
-	{
-		kState_Play,
-		kState_Menu
-	};
-	
-	State state = kState_Play;
-	
-	UiState uiState;
-	uiState.sx = 260;
-	uiState.x = (GFX_SX - uiState.sx) / 2;
-	uiState.y = GFX_SY * 2 / 3;
-	
-	do
-	{
-		framework.process();
-		
-		const float dt = framework.timeStep;
-		
-		if (state == kState_Play)
-		{
-			if (keyboard.wentDown(SDLK_TAB))
-				state = kState_Menu;
-			else
-			{
-				camera.tick(dt, true);
-			}
-		}
-		else if (state == kState_Menu)
-		{
-			if (keyboard.wentDown(SDLK_TAB))
-				state = kState_Play;
-			else
-			{
-			 
-			}
-		}
-		
-		framework.beginDraw(0, 0, 0, 0);
-		{
-			setFont("calibri.ttf");
-			pushFontMode(FONT_SDF);
-			
-			projectPerspective3d(fov, near, far);
-			
-			camera.pushViewMatrix();
-			{
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
-				
-				gxPushMatrix();
-				{
-					Mat4x4 cameraMatrix = camera.getViewMatrix();
-					//Mat4x4 cameraMatrix = camera.getWorldMatrix();
-					cameraMatrix.SetTranslation(0, 0, 0);
-					gxMultMatrixf(cameraMatrix.m_v);
-					gxMultMatrixf(cameraMatrix.m_v);
-					gxMultMatrixf(cameraMatrix.m_v);
-					gxScalef(.3f, .3f, .3f);
-					
-					setColor(colorWhite);
-					gxSetTexture(getTexture("happysun.jpg"));
-					drawRect3d(0, 1);
-					drawRect3d(2, 0);
-					gxSetTexture(0);
-				}
-				gxPopMatrix();
-				
-				setColor(colorWhite);
-				gxSetTexture(getTexture("picture.jpg"));
-				if (mouse.isDown(BUTTON_LEFT))
-					drawGrid3dLine(100, 100, 0, 2);
-				else
-					drawGrid3d(10, 10, 0, 2);
-				gxSetTexture(0);
-				
-				glDisable(GL_DEPTH_TEST);
-			}
-			camera.popViewMatrix();
-			
-			//
-			
-			projectScreen2d();
-			
-			if (state == kState_Play)
-			{
-				drawText(30, 30, 24, +1, +1, "press TAB to open menu");
-			}
-			else if (state == kState_Menu)
-			{
-				setColor(31, 63, 127, 127);
-				drawRect(0, 0, GFX_SX, GFX_SY);
-				
-				makeActive(&uiState, true, true);
-				pushMenu("camera");
-				{
-					doLabel("camera", 0.f);
-					doTextBox(fov, "field of view", dt);
-					doTextBox(near, "near distance", dt);
-					doTextBox(far, "far distance", dt);
-				}
-				popMenu();
-			}
-			
-			popFontMode();
-		}
-		framework.endDraw();
-
-	}
-	while (!keyboard.wentDown(SDLK_SPACE));
 }
 
 //
@@ -488,67 +275,6 @@ static void testDynamicInputs()
 
 //
 
-static void testOscilloscope()
-{
-	do
-	{
-		framework.process();
-		
-		framework.beginDraw(0, 0, 0, 0);
-		{
-			// code : https://github.com/m1el/woscope
-			// demo : http://m1el.github.io/woscope/
-			
-			const int kNumPoints = 512;
-			float x[kNumPoints];
-			float y[kNumPoints];
-	
-			const float m1 = sinf(framework.time / 5.678f) / 10.f;
-			const float m2 = sinf(framework.time / 6.789f) / 10.f;
-	
-			for (int i = 0; i < kNumPoints; ++i)
-			{
-				x[i] = sinf(i * m1 + framework.time / 1.234f) * 100.f + GFX_SX/2.f;
-				y[i] = cosf(i * m2 + framework.time / 2.345f) * 100.f + GFX_SY/2.f;
-			}
-			
-			pushBlend(BLEND_ADD);
-			{
-				Shader shader("oscline");
-				setShader(shader);
-				shader.setImmediate("uInvert", 1.f);
-				shader.setImmediate("uSize", 4.f);
-				shader.setImmediate("uIntensity", .2f);
-				shader.setImmediate("uColor", 1.f, 1.f, 1.f, 1.f);
-				shader.setImmediate("uNumPoints", kNumPoints);
-				
-				gxBegin(GL_QUADS);
-				{
-					for (int i = 0; i < kNumPoints - 1; ++i)
-					{
-						float x1 = x[i + 0];
-						float y1 = y[i + 0];
-						float x2 = x[i + 1];
-						float y2 = y[i + 1];
-						
-						setColor(colorWhite);
-						for (int j = 0; j < 4; ++j)
-							gxVertex4f(x1, y1, x2, y2);
-					}
-				}
-				gxEnd();
-				
-				clearShader();
-			}
-			popBlend();
-		}
-		framework.endDraw();
-		
-	} while (!keyboard.wentDown(SDLK_SPACE));
-}
-
-//
-
 #include "Path.h"
 
 static std::string filedrop;
@@ -581,8 +307,6 @@ int main(int argc, char * argv[])
 {
 	framework.enableRealTimeEditing = true;
 	
-	//framework.minification = 2;
-	
 	framework.enableDepthBuffer = false;
 	framework.enableDrawTiming = false;
 	//framework.enableProfiling = true;
@@ -601,27 +325,9 @@ int main(int argc, char * argv[])
 		
 		vfxSetThreadName("Main Thread");
 		
-		//testAudiochannels();
-		
-		//testMacWebcam();
-		
-		//testHrtf();
-
-		//testCatmullRom();
-		
-		//testReactionDiffusion();
-		
-		//testGradientShader();
-		
-		//testCamera3d();
-		
 		//testVfxNodeCreation();
 		
 		//testDynamicInputs();
-		
-		//testOscilloscope();
-		
-		//codevember1();
 		
 		//
 		
