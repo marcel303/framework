@@ -71,9 +71,9 @@ endif (WIN32)
 
 add_library(vfxgraph ${source})
 
+target_link_libraries(vfxgraph framework)
 target_link_libraries(vfxgraph libgg)
 target_link_libraries(vfxgraph libosc)
-target_link_libraries(vfxgraph framework)
 target_link_libraries(vfxgraph libvideo)
 
 target_compile_definitions(vfxgraph PRIVATE NO_SDL_GLEXT)
@@ -82,9 +82,6 @@ target_compile_definitions(vfxgraph PRIVATE NO_SDL_GLEXT ENABLE_KINECT1=0 ENABLE
 
 target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}/../tests")
-
-target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}/../framework") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
-target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}/../framework/macos/include") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
 
 if (WIN32)
 	target_include_directories(vfxgraph PRIVATE "win32/include")

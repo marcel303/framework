@@ -44,6 +44,8 @@ add_library(framework ${source})
 target_compile_definitions(framework PRIVATE NO_SDL_GLEXT)
 target_compile_definitions(framework PUBLIC $<$<CONFIG:Debug>:DEBUG>)
 
+target_link_libraries(framework libgg)
+
 if (MSVC)
 	target_compile_definitions(framework PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
 endif (MSVC)
@@ -119,8 +121,6 @@ if (APPLE)
 		${BZ2_LIBRARY}
 		PARENT_SCOPE)
 endif (APPLE)
-
-add_dependencies(framework libgg)
 
 if (MSVC)
 	set_property(TARGET framework APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)

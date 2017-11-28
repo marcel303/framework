@@ -41,12 +41,10 @@ endif (MSVC)
 
 target_include_directories(libvideo PUBLIC "${PROJECT_SOURCE_DIR}")
 
-target_include_directories(libvideo PUBLIC "${PROJECT_SOURCE_DIR}/../libgg") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
-target_include_directories(libvideo PUBLIC "${PROJECT_SOURCE_DIR}/../framework") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
+target_link_libraries(libvideo libgg)
+target_link_libraries(libvideo framework)
 
 if (APPLE)
-	target_include_directories(libvideo PUBLIC "${PROJECT_SOURCE_DIR}/../framework/macos/include") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
-
 	target_include_directories(libvideo PRIVATE "${PROJECT_SOURCE_DIR}/macos/include")
 endif (APPLE)
 
@@ -70,6 +68,3 @@ if (APPLE)
 		${SECURITY_LIBRARY}
 		PARENT_SCOPE)
 endif (APPLE)
-
-add_dependencies(libvideo libgg)
-add_dependencies(libvideo framework)

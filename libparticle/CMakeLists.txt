@@ -36,14 +36,10 @@ add_library(libparticle ${source})
 target_compile_definitions(libparticle PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
 
 target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}")
-target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}/../framework") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
-target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}/../framework/win32/include") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
-target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}/../libgg") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
-target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}/../libnfd") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
 
-add_dependencies(libparticle framework)
-add_dependencies(libparticle libnfd)
-add_dependencies(libparticle libgg)
+target_link_libraries(libparticle framework)
+target_link_libraries(libparticle libnfd)
+target_link_libraries(libparticle libgg)
 
 if (MSVC)
 	set_property(TARGET libparticle APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
