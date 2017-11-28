@@ -1351,7 +1351,7 @@ void hqStrokeTriangle(float x1, float y1, float x2, float y2, float x3, float y3
 void hqStrokeCircle(float x, float y, float radius, float stroke);
 void hqStrokeRect(float x1, float y1, float x2, float y2, float stroke);
 
-void hqDrawPath(const Path2d & path);
+void hqDrawPath(const Path2d & path, float stroke);
 
 // math
 

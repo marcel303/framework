@@ -7511,7 +7511,7 @@ void hqStrokeRect(float x1, float y1, float x2, float y2, float stroke)
 		gxVertex4f(x1, y1, x2, y2);
 }
 
-void hqDrawPath(const Path2d & path)
+void hqDrawPath(const Path2d & path, float stroke)
 {
 	const int kMaxPoints = 16 * 1024;
 
@@ -7524,11 +7524,11 @@ void hqDrawPath(const Path2d & path)
 	int numPoints = 0;
 	path.generatePoints(pxy, hxy, kMaxPoints, 1.f, numPoints);
 
-	hqBegin(HQ_LINES);
+	hqBegin(HQ_LINES, true);
 	{
 		for (int i = 0; i < numPoints - 1; ++i)
 		{
-			hqLine(pxy[0], pxy[1], 1.f, pxy[2], pxy[3], 1.f);
+			hqLine(pxy[0], pxy[1], stroke, pxy[2], pxy[3], stroke);
 
 			pxy += 2;
 			hxy += 2;
