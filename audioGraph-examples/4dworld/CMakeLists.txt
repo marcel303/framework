@@ -69,9 +69,6 @@ target_link_libraries(4dworld PRIVATE audioGraph)
 target_link_libraries(4dworld PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(4dworld PRIVATE ${AUDIOGRAPH_LIBRARIES})
 
-target_include_directories(4dworld PRIVATE "${PROJECT_SOURCE_DIR}")
-target_include_directories(4dworld PRIVATE "${PROJECT_SOURCE_DIR}/../../vfxGraph")
-
 if (WIN32)
 	target_compile_definitions(4dworld PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
 
