@@ -30,6 +30,8 @@
 #include <map>
 #include <string>
 
+#define ENABLE_HUB 0
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 
@@ -493,6 +495,8 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	return result;
 }
 
+#if ENABLE_HUB
+
 struct MainButton
 {
 	std::string caption;
@@ -754,6 +758,8 @@ void testMain()
 	SDL_FreeCursor(handCursor);
 	handCursor = nullptr;
 }
+
+#endif
 
 void testMenu()
 {
