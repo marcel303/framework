@@ -175,6 +175,9 @@ struct VectorMemory
 
 	void draw() const
 	{
+		glEnable(GL_LINE_SMOOTH);
+		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+		
 		gxBegin(GL_LINES);
 		{
 			for (int i = 0; i < kMaxLines; ++i)
@@ -193,6 +196,8 @@ struct VectorMemory
 			}
 		}
 		gxEnd();
+		
+		glDisable(GL_LINE_SMOOTH);
 	}
 };
 
