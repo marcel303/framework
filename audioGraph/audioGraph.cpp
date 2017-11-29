@@ -348,7 +348,7 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 	
 	audioGraph->graph = const_cast<Graph*>(&graph);
 	
-	for (auto nodeItr : graph.nodes)
+	for (auto & nodeItr : graph.nodes)
 	{
 		auto & node = nodeItr.second;
 		
@@ -429,7 +429,7 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 		}
 	}
 	
-	for (auto nodeItr : graph.nodes)
+	for (auto & nodeItr : graph.nodes)
 	{
 		auto & node = nodeItr.second;
 		
@@ -447,7 +447,7 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 		
 		auto & audioNodeInputs = audioNode->inputs;
 		
-		for (auto inputValueItr : node.editorInputValues)
+		for (auto & inputValueItr : node.editorInputValues)
 		{
 			const std::string & inputName = inputValueItr.first;
 			const std::string & inputValue = inputValueItr.second;
@@ -468,7 +468,7 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 		}
 	}
 	
-	for (auto audioNodeItr : audioGraph->nodes)
+	for (auto & audioNodeItr : audioGraph->nodes)
 	{
 		auto nodeId = audioNodeItr.first;
 		auto nodeItr = graph.nodes.find(nodeId);

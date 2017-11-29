@@ -61,7 +61,7 @@ const int Wavefield1D::kMaxElems;
 
 Wavefield1D::Wavefield1D()
 {
-	init(128);
+	init(0);
 }
 
 void Wavefield1D::init(const int _numElems)
@@ -69,13 +69,13 @@ void Wavefield1D::init(const int _numElems)
 	numElems = (_numElems + 3) & (~3);
 	numElems = std::min(numElems, kMaxElems);
 	
-	memset(p, 0, sizeof(p));
-	memset(v, 0, sizeof(v));
+	memset(p, 0, numElems * sizeof(p[0]));
+	memset(v, 0, numElems * sizeof(v[0]));
 	
 	for (int i = 0; i < numElems; ++i)
 		f[i] = 1.0;
 	
-	memset(d, 0, sizeof(d));
+	memset(d, 0, numElems * sizeof(d[0]));
 }
 
 #if AUDIO_USE_SSE
