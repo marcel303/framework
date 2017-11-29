@@ -27,9 +27,6 @@ project(libparticle)
 # --- libparticle ---
 
 file(GLOB source "*.cpp" "*.h")
-file(GLOB source_example "example/*.*")
-
-list(REMOVE_ITEM source ${source_example})
 
 add_library(libparticle ${source})
 
