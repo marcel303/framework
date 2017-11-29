@@ -632,7 +632,7 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 				xmlGraph.CloseElement();
 			}
 			
-			for (auto input : node.editorInputValues)
+			for (auto & input : node.editorInputValues)
 			{
 				xmlGraph.OpenElement("input");
 				{
