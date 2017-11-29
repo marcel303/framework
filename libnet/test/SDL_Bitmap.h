@@ -1,13 +1,33 @@
 #pragma once
 
-#include <SDL/SDL.h>
+#include "../libgg/Image.h"
 #include <xmmintrin.h>
 
-class SDL_Bitmap
+struct ImageMem
 {
-public:
-	SDL_Bitmap(SDL_Surface * surface, int clipX, int clipY, int clipSx, int clipSy)
-		: m_surface(surface)
+	int sx;
+	int sy;
+	uint32_t * pixels;
+	
+	ImageMem(int _sx, int _sy)
+		: sx(_sx)
+		, sy(_sy)
+		, pixels(nullptr)
+	{
+		pixels = (uint32_t*)_mm_malloc(sx * sy * 4, 16);
+	}
+	
+	~ImageMem()
+	{
+		_mm_free(pixels);
+		pixels = nullptr;
+	}
+};
+
+struct ImageCtx
+{
+	ImageCtx(ImageMem & image, int clipX, int clipY, int clipSx, int clipSy)
+		: m_image(image)
 		, m_clipX1(clipX)
 		, m_clipY1(clipY)
 		, m_clipX2(clipX + clipSx - 1)
@@ -38,9 +58,9 @@ public:
 		int bi = _mm_cvtss_si32(bm);
 
 		return
-			(ri << m_surface->format->Rshift) |
-			(gi << m_surface->format->Gshift) |
-			(bi << m_surface->format->Bshift);
+			(ri <<  0) |
+			(gi <<  8) |
+			(bi << 16);
 	}
 
 	void Clear(uint32_t c)
@@ -60,23 +80,22 @@ public:
 	{
 		x += m_clipX1;
 		y += m_clipY1;
-		if (y < m_clipY1 || y > m_clipY2 || y < 0 || y > m_surface->h - 1)
+		if (y < m_clipY1 || y > m_clipY2 || y < 0 || y > m_image.sx - 1)
 			return;
 		int x1 = x;
 		int x2 = x + sx - 1;
 		x1 = x1 < m_clipX1 ? m_clipX1 : x1;
 		x2 = x2 > m_clipX2 ? m_clipX2 : x2;
 		x1 = x1 < 0 ? 0 : x1;
-		x2 = x2 > m_surface->w - 1 ? m_surface->w - 1 : x2;
-		uint32_t * line = static_cast<uint32_t *>(m_surface->pixels) + ((m_surface->pitch * y) >> 2);
+		x2 = x2 > m_image.sx - 1 ? m_image.sx - 1 : x2;
+		uint32_t * line = m_image.pixels + y * m_image.sx;
 		for (int x = x1; x <= x2; ++x)
 		{
 			line[x] = c;
 		}
 	}
-
-private:
-	SDL_Surface * m_surface;
+	
+	ImageMem & m_image;
 	int m_clipX1;
 	int m_clipY1;
 	int m_clipX2;

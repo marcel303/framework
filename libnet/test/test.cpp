@@ -1,6 +1,3 @@
-#include <exception>
-#include <map>
-#include <SDL/SDL.h>
 #include "BitStream.h"
 #include "BinaryDiff.h"
 #include "ChannelHandler.h"
@@ -17,12 +14,18 @@
 #include "RpcManager.h"
 #include "SDL_Bitmap.h"
 #include "Timer.h"
+#include <exception>
+#include <map>
+
+#include "framework.h"
 
 static void TestBitStream();
 static void TestRpc();
 static void TestSerializableObject();
-static void TestGameUpdate(SDL_Surface * surface);
+static void TestGameUpdate(ImageMem & image);
 static void TestNetArray();
+
+static void presentImage(ImageMem & image);
 
 enum TestProtocol
 {
@@ -153,10 +156,10 @@ public:
 			m_posY = kWorldSize - kSize;
 	}
 
-	void Draw(SDL_Surface * surface)
+	void Draw(ImageMem & image)
 	{
-		SDL_Bitmap bitmap(
-			surface,
+		ImageCtx bitmap(
+			image,
 			m_posX,
 			m_posY,
 			kSize,
@@ -236,10 +239,10 @@ public:
 		}
 	}
 
-	void Draw(SDL_Surface * surface)
+	void Draw(ImageMem & image)
 	{
-		SDL_Bitmap bitmap(
-			surface,
+		ImageCtx bitmap(
+			image,
 			m_posX,
 			m_posY,
 			kSize,
@@ -336,10 +339,10 @@ public:
 		}
 	}
 
-	void Draw(SDL_Surface * surface)
+	void Draw(ImageMem & image)
 	{
-		SDL_Bitmap bitmap(
-			surface,
+		ImageCtx bitmap(
+			image,
 			0,
 			0,
 			kWorldSize,
@@ -363,7 +366,7 @@ public:
 		{
 			Door * door = m_doors[i];
 
-			door->Draw(surface);
+			door->Draw(image);
 		}
 	}
 
@@ -481,15 +484,15 @@ public:
 	{
 	}
 
-	void Draw(SDL_Surface * surface)
+	void Draw(ImageMem & image)
 	{
 		uint32_t n = 16;
 		uint32_t x1 = m_clientIdx % n;
 		uint32_t y1 = m_clientIdx / n;
-		uint32_t s = surface->w / n;
+		uint32_t s = image.sx / n;
 
-		SDL_Bitmap bitmap(
-			surface,
+		ImageCtx bitmap(
+			image,
 			x1 * s,
 			y1 * s,
 			s,
@@ -825,7 +828,7 @@ public:
 	std::map<uint32_t, ClientState *> m_clientStates;
 };
 
-static void TestGameUpdate(SDL_Surface * surface)
+static void TestGameUpdate(ImageMem & image)
 {
 	printf("LEFT/RIGHT/UP/DOWN: move player\n");
 	printf("               ESC: end test\n");
@@ -857,6 +860,8 @@ static void TestGameUpdate(SDL_Surface * surface)
 	while (stop == false)
 	{
 		SDL_Delay(10);
+		
+		framework.process();
 
 		// apply incoming deltas from client (server should be in sync with the client, since we're running in lock-step)
 
@@ -868,26 +873,15 @@ static void TestGameUpdate(SDL_Surface * surface)
 
 		// update server
 
-		SDL_Event e;
-		while (SDL_PollEvent(&e))
-		{
-			if (SDL_EVENTMASK(e.type) & SDL_KEYEVENTMASK)
-			{
-				if (e.key.keysym.sym == SDLK_LEFT)
-					moveX1 = e.key.state ? -1 : 0;
-				if (e.key.keysym.sym == SDLK_RIGHT)
-					moveX2 = e.key.state ? +1 : 0;
-				if (e.key.keysym.sym == SDLK_UP)
-					moveY1 = e.key.state ? -1 : 0;
-				if (e.key.keysym.sym == SDLK_DOWN)
-					moveY2 = e.key.state ? +1 : 0;
-				if (e.key.keysym.sym == SDLK_SPACE)
-					interact = e.key.state ? true : false;
-				if (e.key.keysym.sym == SDLK_ESCAPE && e.key.state)
-					stop = true;
-			}
-		}
-
+		moveX1 = keyboard.isDown(SDLK_LEFT) ? -1 : 0;
+		moveX2 = keyboard.isDown(SDLK_RIGHT) ? +1 : 0;
+		moveY1 = keyboard.isDown(SDLK_UP) ? -1 : 0;
+		moveY2 = keyboard.isDown(SDLK_DOWN) ? +1 : 0;
+		interact = keyboard.isDown(SDLK_SPACE);
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			stop = true;
+		
 		const float dt = 1.f / 60.f;
 
 		{
@@ -1027,20 +1021,20 @@ static void TestGameUpdate(SDL_Surface * surface)
 		}
 	#endif
 
-		SDL_Bitmap bitmap(
-			surface,
+		ImageCtx bitmap(
+			image,
 			0,
 			0,
-			surface->w,
-			surface->h);
+			image.sx,
+			image.sy);
 
 		bitmap.Clear(0);
 
-		gameDataCL.m_gameState->m_map->Draw(surface);
+		gameDataCL.m_gameState->m_map->Draw(image);
 		for (int p = 0; p < GameState::kMaxPlayers; ++p)
-			gameDataCL.m_gameState->m_players[p]->Draw(surface);
-
-		SDL_Flip(surface);
+			gameDataCL.m_gameState->m_players[p]->Draw(image);
+		
+		presentImage(image);
 	}
 }
 
@@ -1162,30 +1156,29 @@ static void TestRpc()
 	while (stop == false)
 	{
 		SDL_Delay(100);
+		
+		framework.process();
 
-		SDL_Event e;
-		while (SDL_PollEvent(&e))
+		if (keyboard.wentDown(SDLK_c))
 		{
-			if (e.type == SDL_KEYDOWN)
-			{
-				if (e.key.keysym.sym == SDLK_c)
-				{
-					BitStream bs;
+			BitStream bs;
 
-					rpcMgr.Call(testRpcCall1, bs, ChannelPool_Client, nullptr, true, true);
-					rpcMgr.Call(testRpcCall2, bs, ChannelPool_Client, nullptr, true, true);
-				}
-				if (e.key.keysym.sym == SDLK_a)
-				{
-					Channel * channel = channelMgr.CreateChannel(ChannelPool_Client);
-					channel->Connect(loopback);
-				}
-				if (e.key.keysym.sym == SDLK_ESCAPE)
-				{
-					stop = true;
-				}
-			}
+			rpcMgr.Call(testRpcCall1, bs, ChannelPool_Client, nullptr, true, true);
+			rpcMgr.Call(testRpcCall2, bs, ChannelPool_Client, nullptr, true, true);
 		}
+		
+		if (keyboard.wentDown(SDLK_a))
+		{
+			Channel * channel = channelMgr.CreateChannel(ChannelPool_Client);
+			channel->Connect(loopback);
+		}
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+		{
+			stop = true;
+		}
+		
+		//
 
 		const uint32_t time = static_cast<uint32_t>(timer.TimeMS_get());
 
@@ -1434,6 +1427,27 @@ static void TestNetArray()
 	}
 }
 
+static void presentImage(ImageMem & image)
+{
+	framework.beginDraw(0, 0, 0, 0);
+	{
+		GLuint texture = createTextureFromRGBA8(image.pixels, image.sx, image.sy, false, true);
+		
+		if (texture != 0)
+		{
+			pushBlend(BLEND_OPAQUE);
+			gxSetTexture(texture);
+			drawRect(0, 0, image.sx, image.sy);
+			gxSetTexture(0);
+			popBlend();
+			
+			glDeleteTextures(1, &texture);
+			texture = 0;
+		}
+	}
+	framework.endDraw();
+}
+
 int main(int argc, char * argv[])
 {
 	try
@@ -1443,14 +1457,16 @@ int main(int argc, char * argv[])
 
 		if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 			throw std::exception();//"failed to initialize SDL");
-
-		SDL_Surface * surface = SDL_SetVideoMode(displaySx, displaySy, 32, 0);
+		
+		framework.init(0, 0, displaySx, displaySy);
+		
+		ImageMem image(displaySx, displaySy);
 
 		TestBitStream();
 		TestRpc();
 		TestSerializableObject();
 		TestNetArray();
-		TestGameUpdate(surface);
+		TestGameUpdate(image);
 		printf("skipping libnet test!\n");
 		//return -1;
 
@@ -1463,19 +1479,14 @@ int main(int argc, char * argv[])
 
 		while (mode == 'U')
 		{
-			SDL_Event e;
-			if (SDL_PollEvent(&e))
-			{
-				if (e.type == SDL_KEYDOWN)
-				{
-					if (e.key.keysym.sym == SDLK_s)
-						mode = 'S';
-					if (e.key.keysym.sym == SDLK_c)
-						mode = 'C';
-					if (e.key.keysym.sym == SDLK_b)
-						mode = 'B';
-				}
-			}
+			framework.process();
+			
+			if (keyboard.wentDown(SDLK_s))
+				mode = 'S';
+			if (keyboard.wentDown(SDLK_c))
+				mode = 'C';
+			if (keyboard.wentDown(SDLK_b))
+				mode = 'B';
 		}
 
 		printf("mode = %c\n", mode);
@@ -1523,77 +1534,74 @@ int main(int argc, char * argv[])
 			SDL_Delay(10);
 			//SDL_Delay(1);
 			//SDL_Delay(0);
+			
+			framework.process();
 
-			SDL_Event e;
-
-			while (SDL_PollEvent(&e))
+			if (keyboard.wentDown(SDLK_ESCAPE))
+				stop = true;
+			if (isClient && keyboard.wentDown(SDLK_a))
 			{
-				if (e.type == SDL_KEYDOWN)
+				uint32_t count = keyboard.isDown(SDLK_LSHIFT) ? 100 : 1;
+
+				for (uint32_t i = 0; i < count; ++i)
 				{
-					if (e.key.keysym.sym == SDLK_ESCAPE)
-						stop = true;
-					if (isClient && e.key.keysym.sym == SDLK_a)
-					{
-						uint32_t count = (e.key.keysym.mod & KMOD_SHIFT) ? 100 : 1;
+					Channel * clientChannel = channelMgr.CreateChannel(ChannelPool_Client);
+					NetAssert(clientChannel != 0);
+					LOG_INF("created client channel %09u", clientChannel->m_id);
+					
+					//NetAddress address(74, 125, 79, 104, 4850);
+					NetAddress address(127, 0, 0, 1, serverPort);
+					
+					clientChannel->Connect(address);
 
-						for (uint32_t i = 0; i < count; ++i)
-						{
-							Channel * clientChannel = channelMgr.CreateChannel(ChannelPool_Client);
-							NetAssert(clientChannel != 0);
-							LOG_INF("created client channel %09u", clientChannel->m_id);
-							
-							//NetAddress address(74, 125, 79, 104, 4850);
-							NetAddress address(127, 0, 0, 1, serverPort);
-							
-							clientChannel->Connect(address);
-
-							//channelHandler.CL_AddChannel(clientChannel);
-						}
-					}
-					if (e.key.keysym.sym == SDLK_d)
-					{
-						bool all = (e.key.keysym.mod & KMOD_SHIFT) != 0;
-
-						if (isClient)
-						{
-							if (all)
-								channelHandler.CL_DisconnectAll(&channelMgr);
-							else
-								channelHandler.CL_DisconnectRandom(&channelMgr);
-						}
-						else if (isServer)
-						{
-							if (all)
-								channelHandler.SV_DisconnectAll(&channelMgr);
-							else
-								channelHandler.SV_DisconnectRandom(&channelMgr);
-						}
-					}
-					if (e.key.keysym.sym == SDLK_l)
-					{
-						channelHandler.Show();
-					}
-					if (e.key.keysym.sym == SDLK_t)
-					{
-						randomize1 = true;
-					}
-					if (e.key.keysym.sym == SDLK_r)
-					{
-						randomize2 = true;
-					}
-				}
-				if (e.type == SDL_KEYUP)
-				{
-					if (e.key.keysym.sym == SDLK_t)
-					{
-						randomize1 = false;
-					}
-					if (e.key.keysym.sym == SDLK_r)
-					{
-						randomize2 = false;
-					}
+					//channelHandler.CL_AddChannel(clientChannel);
 				}
 			}
+			
+			if (keyboard.wentDown(SDLK_d))
+			{
+				bool all = keyboard.isDown(SDLK_LSHIFT);
+
+				if (isClient)
+				{
+					if (all)
+						channelHandler.CL_DisconnectAll(&channelMgr);
+					else
+						channelHandler.CL_DisconnectRandom(&channelMgr);
+				}
+				else if (isServer)
+				{
+					if (all)
+						channelHandler.SV_DisconnectAll(&channelMgr);
+					else
+						channelHandler.SV_DisconnectRandom(&channelMgr);
+				}
+			}
+			
+			if (keyboard.wentDown(SDLK_l))
+			{
+				channelHandler.Show();
+			}
+			
+			if (keyboard.wentDown(SDLK_t))
+			{
+				randomize1 = true;
+			}
+			if (keyboard.wentDown(SDLK_r))
+			{
+				randomize2 = true;
+			}
+			
+			if (keyboard.wentUp(SDLK_t))
+			{
+				randomize1 = false;
+			}
+			if (keyboard.wentUp(SDLK_r))
+			{
+				randomize2 = false;
+			}
+			
+			//
 
 			if (randomize1)
 			{
@@ -1615,10 +1623,7 @@ int main(int argc, char * argv[])
 			
 			channelMgr.Update(time);
 
-			if (SDL_LockSurface(surface) < 0)
-				throw std::exception();//"failed to lock surface");
-
-			SDL_Bitmap bitmap(surface, 0, 0, displaySx, displaySy);
+			ImageCtx bitmap(image, 0, 0, displaySx, displaySy);
 
 			uint32_t c = bitmap.Color(isClient ? 1.0f : 0.0f, isServer ? 1.0f : 0.0f, 0.0f);
 
@@ -1629,18 +1634,14 @@ int main(int argc, char * argv[])
 			{
 				ClientState * clientState = i->second;
 
-				clientState->Draw(surface);
+				clientState->Draw(image);
 			}
 #endif
 
-			SDL_UnlockSurface(surface);
-
-			SDL_Flip(surface);
+			presentImage(image);
 		}
 		
 		channelMgr.Shutdown(true);
-
-		SDL_FreeSurface(surface);
 		
 		return 0;
 	}
