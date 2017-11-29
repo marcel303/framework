@@ -28,7 +28,7 @@
 #pragma once
 
 #ifndef AUDIO_UPDATE_SIZE
-	#define AUDIO_UPDATE_SIZE 64
+	#define AUDIO_UPDATE_SIZE 256
 #endif
 
 #define SAMPLE_RATE 44100
