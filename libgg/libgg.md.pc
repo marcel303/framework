@@ -1,5 +1,0 @@
-Name: libgg
-Description: 
-Version: 0.1
-Libs: -L/home/marcel/Documenten/projects/libgg/bin/Debug -lgg
-Cflags: -I/home/marcel/Documenten/projects/libgg

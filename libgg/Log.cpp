@@ -1,6 +1,4 @@
-//#include <iostream>
 #include "Log.h"
-#include "LogUdp.h"
 
 #ifndef DEPLOYMENT
 
@@ -20,9 +18,6 @@ void LogMgr::_WriteLine(LogLevel level, const char* text, ...)
 #else
 	fprintf(stderr, "[%s] %s\n", LevelToString(level), temp);
 #endif
-
-	//LogUdp::Init();
-	//LogUdp::Send(temp);
 }
 
 void LogMgr::_WriteLineNA(LogLevel level, const char* name, const char* text)
@@ -32,14 +27,7 @@ void LogMgr::_WriteLineNA(LogLevel level, const char* name, const char* text)
 		return;
 #endif
 	
-#ifdef PSP
 	fprintf(stderr, "[%s] %s: %s\n", LevelToString(level), name, text);
-#else
-	fprintf(stderr, "[%s] %s: %s\n", LevelToString(level), name, text);
-#endif
-
-	//LogUdp::Init();
-	//LogUdp::Send(temp);
 }
 
 #endif
