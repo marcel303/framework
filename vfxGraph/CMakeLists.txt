@@ -89,7 +89,7 @@ endif (WIN32)
 
 if (APPLE)
 	target_compile_definitions(vfxgraph PRIVATE ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
-	
+
 	target_compile_definitions(vfxgraph PUBLIC MACOS)
 endif (APPLE)
 
@@ -113,6 +113,14 @@ if (MSVC)
 	target_link_libraries(vfxgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/Leap.lib)
 	target_link_libraries(vfxgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/portaudio_x86.lib)
 	target_link_libraries(vfxgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/turbojpeg.lib)
+
+	set(VFXGRAPH_LIBRARIES
+		PARENT_SCOPE)
+
+	set(VFXGRAPH_BINARIES
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/portaudio_x86.dll
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/turbojpeg.dll
+		PARENT_SCOPE)
 endif (MSVC)
 
 if (APPLE)
@@ -131,6 +139,12 @@ if (APPLE)
 		${COREIMAGE_LIBRARY}
 		${COREMIDI_LIBRARY}
 		${AVFOUNDATION_LIBRARY}
+		PARENT_SCOPE)
+
+	set(VFXGRAPH_BINARIES
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Deepbelief.framework
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libLeap.dylib
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libturbojpeg.0.dylib
 		PARENT_SCOPE)
 endif (APPLE)
 

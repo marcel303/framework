@@ -48,6 +48,30 @@ if (APPLE)
 	target_include_directories(libvideo PRIVATE "${PROJECT_SOURCE_DIR}/macos/include")
 endif (APPLE)
 
+if (MSVC)
+	target_link_libraries(libvideo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/avcodec.lib)
+	target_link_libraries(libvideo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/avdevice.lib)
+	target_link_libraries(libvideo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/avfilter.lib)
+	target_link_libraries(libvideo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/avformat.lib)
+	target_link_libraries(libvideo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/avutil.lib)
+	target_link_libraries(libvideo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/swresample.lib)
+	target_link_libraries(libvideo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/swscale.lib)
+
+	set(LIBVIDEO_LIBRARIES
+		PARENT_SCOPE)
+
+	set(LIBVIDEO_BINARIES
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/avcodec-57.dll
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/avdevice-57.dll
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/avfilter-6.dll
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/avformat-57.dll
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/avutil-55.dll
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/postproc-54.dll
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/swresample-2.dll
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/swscale-4.dll
+		PARENT_SCOPE)
+endif (MSVC)
+
 if (APPLE)
 	find_library(COREMEDIA_LIBRARY CoreMedia)
 	find_library(VDA_LIBRARY VideoDecodeAcceleration)

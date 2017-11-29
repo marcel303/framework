@@ -72,16 +72,25 @@ if (MSVC)
 	set(FRAMEWORK_LIBRARIES
 		framework
 		libgg
-		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib
-		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib
-		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib
-		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/OpenAL32.lib
-		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2.lib
-		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2main.lib
-		${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/XInput9_1_0.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/FreeImage.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/freetype252.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/glew32.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/OpenAL32.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2main.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/XInput9_1_0.lib
 		Winmm.lib
 		OpenGL32.lib
-		WSock32.lib)
+		WSock32.lib
+		PARENT_SCOPE)
+
+	set(FRAMEWORK_BINARIES
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/FreeImage.dll
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/glew32.dll
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/OpenAL32.dll
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/SDL2.dll
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/XInput9_1_0.dll
+		PARENT_SCOPE)
 endif (MSVC)
 
 if (APPLE)
@@ -119,6 +128,9 @@ if (APPLE)
 		${FF_LIBRARY}
 		${ICONV_LIBRARY}
 		${BZ2_LIBRARY}
+		PARENT_SCOPE)
+
+	set(FRAMEWORK_BINARIES
 		PARENT_SCOPE)
 endif (APPLE)
 
