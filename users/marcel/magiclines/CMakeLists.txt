@@ -13,28 +13,26 @@ if (NOT HAS_LIBGG)
 endif (NOT HAS_LIBGG)
 if (NOT HAS_FRAMEWORK)
 	message("including framework")
-	add_subdirectory(../framework framework)
+	add_subdirectory(../../../framework framework)
 endif (NOT HAS_FRAMEWORK)
 
 #
 
-project(anaglyphic)
+project(magiclines)
 
-# --- anaglyphic ---
+# --- magiclines ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
 
-add_executable(anaglyphic ${source})
+add_executable(magiclines ${source})
 
-target_compile_definitions(anaglyphic PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
+target_include_directories(magiclines PRIVATE "${PROJECT_SOURCE_DIR}")
 
-target_include_directories(anaglyphic PRIVATE "${PROJECT_SOURCE_DIR}")
+target_link_libraries(magiclines PRIVATE framework)
+target_link_libraries(magiclines PRIVATE libgg)
 
-target_link_libraries(anaglyphic PRIVATE framework)
-target_link_libraries(anaglyphic PRIVATE libgg)
-
-target_link_libraries(anaglyphic PRIVATE ${FRAMEWORK_LIBRARIES})
+target_link_libraries(magiclines PRIVATE ${FRAMEWORK_LIBRARIES})
 
 if (MSVC)
-	set_property(TARGET anaglyphic APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
+	set_property(TARGET magiclines APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
 endif (MSVC)

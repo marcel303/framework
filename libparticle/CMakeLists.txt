@@ -33,18 +33,8 @@ list(REMOVE_ITEM source ${source_example})
 
 add_library(libparticle ${source})
 
-target_compile_definitions(libparticle PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
-
 target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}")
 
 target_link_libraries(libparticle framework)
 target_link_libraries(libparticle libnfd)
 target_link_libraries(libparticle libgg)
-
-if (MSVC)
-	set_property(TARGET libparticle APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
-endif (MSVC)
-
-if (APPLE)
-	target_compile_definitions(libparticle PUBLIC MACOS)
-endif (APPLE)

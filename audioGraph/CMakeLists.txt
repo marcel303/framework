@@ -63,24 +63,7 @@ target_link_libraries(audioGraph PRIVATE libgg)
 
 target_link_libraries(audioGraph PRIVATE ${FRAMEWORK_LIBRARIES})
 
-target_compile_definitions(audioGraph PRIVATE NO_SDL_GLEXT)
-
-target_compile_definitions(audioGraph
-	PRIVATE NO_SDL_GLEXT
-	ENABLE_KINECT1=0
-	ENABLE_KINECT2=0
-	ENABLE_TURBOJPEG=0
-	ENABLE_DEEPBELIEF=0
-	ENABLE_AVCODEC=0
-	BINAURAL_USE_SSE=1)
-
-if (WIN32)
-	target_compile_definitions(audioGraph PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
-endif (WIN32)
-
-if (APPLE)
-	target_compile_definitions(audioGraph PUBLIC MACOS)
-endif (APPLE)
+target_compile_definitions(audioGraph PUBLIC BINAURAL_USE_SSE=1)
 
 target_include_directories(audioGraph PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(audioGraph PUBLIC "objects")

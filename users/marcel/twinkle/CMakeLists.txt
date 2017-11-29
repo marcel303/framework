@@ -48,8 +48,6 @@ source_group("Game Files" FILES ${GAME_FILES})
 
 add_executable(twinkle ${source})
 
-target_compile_definitions(twinkle PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
-
 target_include_directories(twinkle PRIVATE "${PROJECT_SOURCE_DIR}")
 
 target_link_libraries(twinkle PRIVATE framework)

@@ -19,6 +19,10 @@ if (NOT HAS_FRAMEWORK)
 	message("including framework")
 	add_subdirectory(../framework framework)
 endif (NOT HAS_FRAMEWORK)
+if (NOT HAS_FRAMEWORK_OFX)
+	message("including framework-ofx")
+	add_subdirectory(../framework-ofx framework-ofx)
+endif (NOT HAS_FRAMEWORK_OFX)
 if (NOT HAS_LIBVIDEO)
 	message("including libvideo")
 	add_subdirectory(../libvideo libvideo)
@@ -30,7 +34,7 @@ project(vfxgraph)
 
 # --- vfxgraph ---
 
-file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm" "../tests/ofMain.cpp")
+file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 
 file(GLOB_RECURSE source_vfxnodes "vfxNodes/*.*")
 file(GLOB_RECURSE source_macos "macos/*.*")
@@ -38,8 +42,6 @@ file(GLOB_RECURSE source_xmm "xmm/*.*")
 file(GLOB_RECURSE source_rtmidi "RtMidi*.*")
 file(GLOB_RECURSE source_json "json.hpp")
 file(GLOB_RECURSE source_oxfJpegGlitch "ofxJpegGlitch/*.*")
-
-file(GLOB source_tests "test*.*")
 
 file(GLOB_RECURSE source_ui
 	"../libparticle/ui.cpp"
@@ -53,11 +55,8 @@ file(GLOB_RECURSE source_ui
 
 list(APPEND source ${source_ui})
 
-#list(REMOVE_ITEM source ${source_vfxnodes})
-
 source_group("vfxGraph" FILES ${source})
 source_group("vfxNodes" FILES ${source_vfxnodes})
-source_group("tests" FILES ${source_tests})
 source_group("ui" FILES ${source_ui})
 source_group("3rdparty\\macos" FILES ${source_macos})
 source_group("3rdparty\\xmm" FILES ${source_xmm})
@@ -72,40 +71,33 @@ endif (WIN32)
 add_library(vfxgraph ${source})
 
 target_link_libraries(vfxgraph framework)
+target_link_libraries(vfxgraph framework-ofx)
 target_link_libraries(vfxgraph libgg)
 target_link_libraries(vfxgraph libosc)
 target_link_libraries(vfxgraph libvideo)
 
-target_compile_definitions(vfxgraph PRIVATE
-	NO_SDL_GLEXT
+target_compile_definitions(vfxgraph PUBLIC
 	ENABLE_KINECT1=0
 	ENABLE_KINECT2=1
 	ENABLE_TURBOJPEG=1
 	ENABLE_LEAPMOTION=1)
 
 if (WIN32)
-	target_compile_definitions(vfxgraph PRIVATE ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
+	target_compile_definitions(vfxgraph PUBLIC ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
 endif (WIN32)
 
 if (APPLE)
-	target_compile_definitions(vfxgraph PRIVATE ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
-
-	target_compile_definitions(vfxgraph PUBLIC MACOS)
+	target_compile_definitions(vfxgraph PUBLIC ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
 endif (APPLE)
 
 target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}")
-target_include_directories(vfxgraph PRIVATE "${PROJECT_SOURCE_DIR}/../tests")
 
 if (WIN32)
-	target_include_directories(vfxgraph PRIVATE "win32/include")
-	target_include_directories(vfxgraph PRIVATE "../libvideo/win32/include")
-	target_include_directories(vfxgraph PRIVATE "../libvideo/")
+	target_include_directories(vfxgraph PUBLIC "win32/include")
 endif (WIN32)
 
 if (APPLE)
-	target_include_directories(vfxgraph PRIVATE "macos/include")
-	target_include_directories(vfxgraph PRIVATE "../libvideo/macos/include")
-	target_include_directories(vfxgraph PRIVATE "../libvideo/")
+	target_include_directories(vfxgraph PUBLIC "macos/include")
 	target_include_directories(vfxgraph PRIVATE "../libfreenect2/macos/include")
 endif (APPLE)
 

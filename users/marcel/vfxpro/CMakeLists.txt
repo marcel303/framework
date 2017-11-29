@@ -45,15 +45,12 @@ source_group("include" FILES ${source_macos})
 
 add_executable(vfxpro ${source})
 
-target_compile_definitions(vfxpro PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
-
 target_include_directories(vfxpro PRIVATE "${PROJECT_SOURCE_DIR}")
 
 if (MSVC)
 	target_include_directories(vfxpro PRIVATE "${PROJECT_SOURCE_DIR}/win32/include")
 endif (MSVC)
 if (APPLE)
-	target_include_directories(vfxpro PRIVATE "../../../libvideo/macos/include")
 	target_include_directories(vfxpro PRIVATE "${PROJECT_SOURCE_DIR}/../../../vfxGraph/macos/include")
 endif (APPLE)
 
@@ -66,7 +63,7 @@ target_link_libraries(vfxpro PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(vfxpro PRIVATE ${LIBVIDEO_LIBRARIES})
 
 if (MSVC)
-	target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/lib/Leap.lib)
+	target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../vfxGraph/win32/lib/Leap.lib)
 endif (MSVC)
 
 if (APPLE)

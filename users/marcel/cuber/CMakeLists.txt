@@ -27,18 +27,12 @@ list(REMOVE_ITEM source script.cpp)
 
 add_executable(cuber ${source})
 
-target_compile_definitions(cuber PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
-
 target_include_directories(cuber PRIVATE "${PROJECT_SOURCE_DIR}")
 
 target_link_libraries(cuber PRIVATE framework)
 target_link_libraries(cuber PRIVATE libgg)
 
 target_link_libraries(cuber PRIVATE ${FRAMEWORK_LIBRARIES})
-
-if (APPLE)
-	target_compile_definitions(cuber PUBLIC MACOS)
-endif (APPLE)
 
 if (MSVC)
 	set_property(TARGET cuber APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
@@ -49,8 +43,6 @@ endif (MSVC)
 set(WINDOWS_EXPORT_ALL_SYMBOLS, 1)
 
 add_library(script SHARED OpenSimplexNoise.cpp OpenSimplexNoise.h script.cpp script.h simplexnoise.cpp simplexnoise.h)
-
-target_compile_definitions(script PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
 
 if (APPLE)
 	target_include_directories(script PRIVATE "${PROJECT_SOURCE_DIR}")

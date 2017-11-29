@@ -26,14 +26,12 @@ file(GLOB source "*.cpp" "*.h")
 
 add_executable(game ${source})
 
-target_compile_definitions(game PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
-
 target_include_directories(game PRIVATE "${PROJECT_SOURCE_DIR}")
 
 target_link_libraries(game PRIVATE framework)
 target_link_libraries(game PRIVATE libgg)
 
-target_link_libraries(colorpart PRIVATE ${FRAMEWORK_LIBRARIES})
+target_link_libraries(game PRIVATE ${FRAMEWORK_LIBRARIES})
 
 if (APPLE)
 	target_compile_definitions(game PUBLIC MACOS)

@@ -24,8 +24,6 @@ file(GLOB source "*.cpp" "*.h")
 
 add_executable(fourier ${source})
 
-target_compile_definitions(fourier PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
-
 target_include_directories(fourier PRIVATE "${PROJECT_SOURCE_DIR}")
 
 target_link_libraries(fourier PRIVATE framework)

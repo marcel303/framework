@@ -23,7 +23,7 @@
 
 #pragma once
 //#include "ofTrueTypeFont.h"
-#include "../../../ofMain.h"
+#include "ofMain.h"
 
 #undef log
 

@@ -36,8 +36,6 @@ file(GLOB_RECURSE source "*.cpp" "*.h")
 
 add_executable(avpaint ${source})
 
-target_compile_definitions(avpaint PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
-
 target_include_directories(avpaint PRIVATE "${PROJECT_SOURCE_DIR}")
 
 target_link_libraries(avpaint PRIVATE framework)
@@ -49,8 +47,8 @@ target_link_libraries(avpaint PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(avpaint PRIVATE ${LIBVIDEO_LIBRARIES})
 
 if (MSVC)
-	target_link_libraries(avpaint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/win32/lib/Leap.lib)
-	target_link_libraries(avpaint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/win32/lib/portaudio_x86.lib)
+	target_link_libraries(avpaint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../vfxGraph/win32/lib/Leap.lib)
+	target_link_libraries(avpaint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../vfxGraph/win32/lib/portaudio_x86.lib)
 endif (MSVC)
 
 if (APPLE)

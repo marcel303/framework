@@ -26,9 +26,8 @@ if (MSVC)
 endif (MSVC)
 
 target_include_directories(libnet PUBLIC "${PROJECT_SOURCE_DIR}")
-target_include_directories(libnet PUBLIC "${PROJECT_SOURCE_DIR}/../libgg") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
 
-add_dependencies(libnet libgg)
+target_link_libraries(libnet libgg)
 
 # --- test application ---
 

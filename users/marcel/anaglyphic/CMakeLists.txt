@@ -31,14 +31,7 @@ file(GLOB_RECURSE source "*.c" "*.cpp" "*.h")
 
 add_executable(anaglyphic ${source})
 
-target_compile_definitions(anaglyphic PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
-
 target_include_directories(anaglyphic PRIVATE "${PROJECT_SOURCE_DIR}")
-target_include_directories(anaglyphic PRIVATE "../../../libvideo/")
-
-if (APPLE)
-	target_include_directories(anaglyphic PRIVATE "../../../libvideo/macos/include")
-endif (APPLE)
 
 target_link_libraries(anaglyphic PRIVATE framework)
 target_link_libraries(anaglyphic PRIVATE libgg)

@@ -26,18 +26,12 @@ file(GLOB_RECURSE source "*.c" "*.cpp" "*.h")
 
 add_executable(planetvis2 ${source})
 
-target_compile_definitions(planetvis2 PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
-
 target_include_directories(planetvis2 PRIVATE "${PROJECT_SOURCE_DIR}")
 
 target_link_libraries(planetvis2 PRIVATE framework)
 target_link_libraries(planetvis2 PRIVATE libgg)
 
 target_link_libraries(planetvis2 PRIVATE ${FRAMEWORK_LIBRARIES})
-
-if (APPLE)
-	target_compile_definitions(planetvis2 PUBLIC MACOS)
-endif (APPLE)
 
 if (MSVC)
 	set_property(TARGET planetvis2 APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)

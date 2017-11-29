@@ -45,13 +45,6 @@ add_executable(avgraph ${source})
 
 set_target_properties(avgraph PROPERTIES LINK_FLAGS "-Wl,-all_load")
 
-target_compile_definitions(avgraph PRIVATE
-	NO_SDL_GLEXT
-	ENABLE_KINECT1=0
-	ENABLE_KINECT2=1
-	ENABLE_TURBOJPEG=1
-	ENABLE_LEAPMOTION=1)
-
 set(LIBRARIES PRIVATE
 	libgg
 	libosc
@@ -67,25 +60,6 @@ target_link_libraries(avgraph PRIVATE ${LIBRARIES})
 target_include_directories(avgraph PRIVATE "${PROJECT_SOURCE_DIR}")
 
 if (WIN32)
-	target_include_directories(avgraph PRIVATE "../vfxGraph/win32/include")
-	target_include_directories(avgraph PRIVATE "../libvideo/win32/include")
-	target_include_directories(avgraph PRIVATE "../libvideo/")
-
-	target_compile_definitions(avgraph PRIVATE ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
-endif (WIN32)
-
-if (APPLE)
-	target_include_directories(avgraph PRIVATE "../vfxGraph/macos/include")
-	target_include_directories(avgraph PRIVATE "../libvideo/macos/include")
-	target_include_directories(avgraph PRIVATE "../libvideo/")
-	target_include_directories(avgraph PRIVATE "../libfreenect2/macos/include")
-
-	target_compile_definitions(avgraph PRIVATE ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
-endif (APPLE)
-
-if (WIN32)
-	target_compile_definitions(avgraph PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
-	
 	# set the current working directory
 	
 	set_target_properties(avgraph PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")

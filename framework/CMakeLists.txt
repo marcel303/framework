@@ -41,22 +41,17 @@ source_group("3rdparty\\utf8rewind" FILES ${source_utf8rewind})
 
 add_library(framework ${source})
 
-target_compile_definitions(framework PRIVATE NO_SDL_GLEXT)
+target_compile_definitions(framework PUBLIC NO_SDL_GLEXT)
 target_compile_definitions(framework PUBLIC $<$<CONFIG:Debug>:DEBUG>)
 
 target_link_libraries(framework libgg)
 
 if (MSVC)
-	target_compile_definitions(framework PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
+	target_compile_definitions(framework PUBLIC HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
 endif (MSVC)
 
-if (APPLE)
-	target_compile_definitions(framework PUBLIC MACOS)
-endif (APPLE)
-
 target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}")
-target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/audiostream")
-target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/../libgg") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
+target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/audiostream") # for ogg and vorbis headers
 
 if (MSVC)
 	target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/win32/include")

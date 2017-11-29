@@ -10,7 +10,9 @@ file(GLOB_RECURSE source "*.cpp" "*.h")
 
 add_executable(fbxtest ${source})
 
-target_compile_definitions(fbxtest PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
+if (MSVC)
+	target_compile_definitions(fbxtest PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
+endif (MSVC)
 
 target_include_directories(fbxtest PRIVATE "${PROJECT_SOURCE_DIR}")
 

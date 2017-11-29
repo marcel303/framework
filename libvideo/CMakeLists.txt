@@ -33,19 +33,17 @@ source_group("video" FILES ${source_video})
 
 add_library(libvideo ${source})
 
-target_compile_definitions(libvideo PRIVATE NO_SDL_GLEXT)
-
-if (MSVC)
-	target_compile_definitions(libvideo PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
-endif (MSVC)
-
 target_include_directories(libvideo PUBLIC "${PROJECT_SOURCE_DIR}")
 
 target_link_libraries(libvideo libgg)
 target_link_libraries(libvideo framework)
 
+if (MSVC)
+	target_include_directories(libvideo PUBLIC "${PROJECT_SOURCE_DIR}/win32/include")
+endif (MSVC)
+
 if (APPLE)
-	target_include_directories(libvideo PRIVATE "${PROJECT_SOURCE_DIR}/macos/include")
+	target_include_directories(libvideo PUBLIC "${PROJECT_SOURCE_DIR}/macos/include")
 endif (APPLE)
 
 if (MSVC)

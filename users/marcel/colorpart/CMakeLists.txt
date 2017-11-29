@@ -31,8 +31,6 @@ file(GLOB_RECURSE source "*.cpp" "*.h")
 
 add_executable(colorpart ${source})
 
-target_compile_definitions(colorpart PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
-
 target_include_directories(colorpart PRIVATE "${PROJECT_SOURCE_DIR}")
 
 target_link_libraries(colorpart PRIVATE framework)
