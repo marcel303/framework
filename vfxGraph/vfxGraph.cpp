@@ -45,13 +45,14 @@ VfxGraph * g_currentVfxGraph = nullptr;
 
 Surface * g_currentVfxSurface = nullptr;
 
+static Surface * s_dummySurface = nullptr; // todo : add explicit vfx graph init and shutdown ?
+
 //
 
 VfxGraph::VfxGraph()
 	: nodes()
-	, displayNodeIds()
 	, dynamicData(nullptr)
-	, dummySurface(nullptr)
+	, displayNodeIds()
 	, nextTickTraversalId(0)
 	, nextDrawTraversalId(0)
 	, valuesToFree()
@@ -59,7 +60,10 @@ VfxGraph::VfxGraph()
 {
 	dynamicData = new VfxDynamicData();
 	
-	dummySurface = new Surface(1, 1, false);
+	if (s_dummySurface == nullptr)
+	{
+		s_dummySurface = new Surface(1, 1, false);
+	}
 }
 
 VfxGraph::~VfxGraph()
@@ -69,9 +73,6 @@ VfxGraph::~VfxGraph()
 
 void VfxGraph::destroy()
 {
-	delete dummySurface;
-	dummySurface = nullptr;
-	
 	displayNodeIds.clear();
 	
 	for (auto i : valuesToFree)
@@ -293,12 +294,12 @@ int VfxGraph::traverseDraw() const
 	
 #if 1 // todo : make this depend on whether the graph editor is visible or not ? or whether the node is referenced by the editor ?
 
-	pushSurface(dummySurface);
+	pushSurface(s_dummySurface);
 	{
 		// draw nodes that aren't connected to the display node
 		
 		Assert(g_currentVfxSurface == nullptr);
-		g_currentVfxSurface = dummySurface;
+		g_currentVfxSurface = s_dummySurface;
 		
 		for (auto i : nodes)
 		{
@@ -374,7 +375,7 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = vfxGraph;
 	
-	for (auto nodeItr : graph.nodes)
+	for (auto & nodeItr : graph.nodes)
 	{
 		auto & node = nodeItr.second;
 		
@@ -503,7 +504,7 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 		}
 	}
 	
-	for (auto nodeItr : graph.nodes)
+	for (auto & nodeItr : graph.nodes)
 	{
 		auto & node = nodeItr.second;
 		
@@ -521,7 +522,7 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 		
 		auto & vfxNodeInputs = vfxNode->inputs;
 		
-		for (auto inputValueItr : node.editorInputValues)
+		for (auto & inputValueItr : node.editorInputValues)
 		{
 			const std::string & inputName = inputValueItr.first;
 			const std::string & inputValue = inputValueItr.second;
@@ -560,7 +561,7 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 	
 	g_currentVfxGraph = vfxGraph;
 	
-	for (auto vfxNodeItr : vfxGraph->nodes)
+	for (auto & vfxNodeItr : vfxGraph->nodes)
 	{
 		auto nodeId = vfxNodeItr.first;
 		auto nodeItr = graph.nodes.find(nodeId);

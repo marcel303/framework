@@ -93,8 +93,6 @@ struct VfxGraph
 	std::set<GraphNodeId> displayNodeIds;
 	std::set<VfxNodeOutput*> outputNodes;
 	
-	mutable Surface * dummySurface;
-	
 	mutable int nextTickOrder;
 	mutable int nextTickTraversalId;
 	mutable int nextDrawTraversalId;
