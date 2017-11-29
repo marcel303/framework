@@ -700,6 +700,8 @@ int main(int argc, char * argv[])
 	mutex = nullptr;
 
 	//
+	
+	Font("calibri.ttf").saveCache();
 
 	framework.shutdown();
 

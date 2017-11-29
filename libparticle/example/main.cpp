@@ -354,6 +354,8 @@ int main(int argc, char * argv[])
 		
 		popFontMode();
 		shutUi();
+		
+		Font("calibri.ttf").saveCache();
 
 		framework.shutdown();
 	}
