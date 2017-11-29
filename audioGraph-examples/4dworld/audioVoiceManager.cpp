@@ -664,7 +664,7 @@ int main(int argc, char * argv[])
 			popFontMode();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE));
+	} while (!keyboard.wentDown(SDLK_ESCAPE));
 	
 	//
 	

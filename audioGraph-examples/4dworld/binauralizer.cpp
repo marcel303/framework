@@ -293,7 +293,7 @@ int main(int argc, char * argv[])
 		sampleSet.finalize();
 	}
 	
-	if (true)
+	if (false)
 	{
 		// try loading a CIPIC sample set
 		
@@ -396,7 +396,7 @@ int main(int argc, char * argv[])
 		}
 	}
 	
-	if (true)
+	if (false)
 	{
 		// try loading a sample set and performing lookups
 
@@ -468,7 +468,6 @@ int main(int argc, char * argv[])
 		//loadHRIRSampleSet_Ircam("binaural/IRC_1057", sampleSet);
 		
 		loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
-		//loadHRIRSampleSet_Cipic("binaural/CIPIC/subject12", sampleSet);
 		
 		sampleSet.finalize();
 		
@@ -496,7 +495,7 @@ int main(int argc, char * argv[])
 	#if ENABLE_DEBUGGING && 0
 		for (int i = 0; i < 1; ++i)
 	#else
-		for (int i = 0; i < 1; ++i)
+		for (int i = 0; i < 2; ++i)
 		//for (int i = 0; i < 100; ++i)
 		//for (int i = 0; i < 135; ++i)
 	#endif
@@ -741,34 +740,11 @@ int main(int argc, char * argv[])
 				pushSurface(&view3D);
 				{
 					view3D.clear(200, 200, 200);
-					
-					Mat4x4 matP;
-					Mat4x4 matC;
-					Mat4x4 matV;
-					Mat4x4 matO;
-					
-				#if 1
-					projectPerspective3d(M_PI/2.f, .001f, 10.f);
+				
+					projectPerspective3d(90.f, .001f, 10.f);
 					viewLookat3d(-2.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, -1.f, 0.f);
 					
-					matP.MakeIdentity();
-					matC.MakeIdentity();
-					matV.MakeIdentity();
-				#else
-					matP.MakePerspectiveLH(M_PI/2.f, 1.f, .001f, 10.f);
-					matC.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(1.f, 0.f, 0.f), Vec3(0.f, 1.f, 0.f));
-					matC = matC.Scale(1, -1, 1).Translate(0.f, 0.f, -2.f);
-					matV = matC.Invert();
-					
-					const Mat4x4 matPV = matP * matV;
-					gxLoadMatrixf(matPV.m_v);
-				#endif
-				
-					matO = Mat4x4(true).RotateY(framework.time * .1f);
-					
-					gxMatrixMode(GL_MODELVIEW);
-					gxPushMatrix();
-					gxLoadMatrixf(matO.m_v);
+					gxRotatef(framework.time * .1f, 0, 1, 0);
 					
 					glPointSize(2.f);
 					gxBegin(GL_POINTS);
@@ -795,9 +771,6 @@ int main(int argc, char * argv[])
 						gxColor4f(0, 0, 1, 1); gxVertex3f(0, 0, 0); gxVertex3f(0, 0, 1);
 					}
 					gxEnd();
-					
-					gxMatrixMode(GL_MODELVIEW);
-					gxPopMatrix();
 					
 					projectScreen2d();
 				}
@@ -1034,7 +1007,7 @@ int main(int argc, char * argv[])
 				popFontMode();
 			}
 			framework.endDraw();
-		} while (!keyboard.wentDown(SDLK_SPACE));
+		} while (!keyboard.wentDown(SDLK_ESCAPE));
 		
 		pa.shut();
 	}
