@@ -1471,6 +1471,7 @@ struct GraphEdit : GraphEditConnection
 	void selectNodeAll();
 	void selectLinkAll();
 	void selectLinkRoutePointAll();
+	void selectVisualizerAll();
 	void selectAll();
 	
 	void snapToGrid(float & x, float & y) const;

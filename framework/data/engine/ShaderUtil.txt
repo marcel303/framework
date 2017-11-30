@@ -73,7 +73,8 @@ vec4 applyColorPost(vec4 color, float post)
 	/*
 	POST_NONE,
 	POST_RGB_MIX_ALPHA_TO_ZERO,
-	POST_RGB_MIX_ALPHA_TO_ONE
+	POST_RGB_MIX_ALPHA_TO_ONE,
+	POST_SET_ALPHA_TO_ONE
 	*/
 
 	vec4 result = color;
@@ -87,6 +88,10 @@ vec4 applyColorPost(vec4 color, float post)
 		else if (post == 2)
 		{
 			result.rgb = mix(vec3(1.0), result.rgb, result.a);
+		}
+		else if (post == 3)
+		{
+			result.a = 1.0;
 		}
 	}
 

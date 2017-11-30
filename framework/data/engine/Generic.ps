@@ -10,6 +10,8 @@ shader_in vec3 v_normal;
 shader_in vec4 v_color;
 shader_in vec2 v_texcoord0;
 
+// todo : use ShaderUtil functions for applying color mode and color POST_NONE
+
 void main()
 {
 	vec4 result = v_color;
@@ -50,7 +52,8 @@ void main()
 	/*
 	POST_NONE,
 	POST_RGB_MIX_ALPHA_TO_ZERO,
-	POST_RGB_MIX_ALPHA_TO_ONE
+	POST_RGB_MIX_ALPHA_TO_ONE,
+	POST_SET_ALPHA_TO_ONE
 	*/
 
 	if (params.z != 0)
@@ -62,6 +65,10 @@ void main()
 		else if (params.z == 2)
 		{
 			result.rgb = mix(vec3(1.0), result.rgb, result.a);
+		}
+		else if (params.z == 3)
+		{
+			result.a = 1.0;
 		}
 	}
 	

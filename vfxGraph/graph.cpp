@@ -1543,14 +1543,14 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 			{
 				const float value = history.getGraphValue(i);
 				
-				const float plotX1 = graphX + (i + 0 + xOffset) * graphSx / history.maxHistorySize;
-				const float plotX2 = graphX + (i + 1 + xOffset) * graphSx / history.maxHistorySize;
+				const float plotX1 = graphX + (i + 0 + xOffset) * graphSx / float(history.maxHistorySize);
+				const float plotX2 = graphX + (i + 1 + xOffset) * graphSx / float(history.maxHistorySize);
 				const float plotY = (graphMin == graphMax) ? .5f : (value - graphMax) / (graphMin - graphMax);
 				
-				const int x1 = plotX1;
-				const int y1 = y + graphSy;
-				const int x2 = plotX2;
-				const int y2 = y + plotY * graphSy;
+				const float x1 = plotX1;
+				const float y1 = y + graphSy;
+				const float x2 = plotX2;
+				const float y2 = y + plotY * graphSy;
 				
 				gxVertex2f(x1, y1);
 				gxVertex2f(x2, y1);
@@ -1584,11 +1584,13 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 			// todo : force alpha to one ?
 			
 			setColor(colorWhite);
+			pushColorPost(POST_SET_ALPHA_TO_ONE);
 			gxSetTexture(texture);
 			{
 				drawRect(textureX, y + textureY, textureX + textureSx, y + textureY + textureSy);
 			}
 			gxSetTexture(0);
+			popColorPost();
 		}
 		
 		setColor(colorWhite);
@@ -4621,6 +4623,8 @@ void GraphEdit::selectLinkAll()
 
 void GraphEdit::selectLinkRoutePointAll()
 {
+	selectedLinkRoutePoints.clear();
+	
 	for (auto & linkItr : graph->links)
 	{
 		auto & link = linkItr.second;
@@ -4632,11 +4636,20 @@ void GraphEdit::selectLinkRoutePointAll()
 	}
 }
 
+void GraphEdit::selectVisualizerAll()
+{
+	selectedVisualizers.clear();
+	
+	for (auto & visualizerItr : visualizers)
+		selectedVisualizers.insert(&visualizerItr.second);
+}
+
 void GraphEdit::selectAll()
 {
 	selectNodeAll();
 	selectLinkAll();
 	selectLinkRoutePointAll();
+	selectVisualizerAll();
 }
 
 void GraphEdit::snapToGrid(float & x, float & y) const
