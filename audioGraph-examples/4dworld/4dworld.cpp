@@ -2276,6 +2276,16 @@ int main(int argc, char * argv[])
 		return uiState.activeElem != nullptr;
 	};
 	
+	if (false)
+	{
+		for (;;)
+		{
+			AudioGraphInstance * instance = audioGraphMgr.createInstance("machines1.xml");
+			
+			audioGraphMgr.free(instance);
+		}
+	}
+	
 	do
 	{
 		framework.process();

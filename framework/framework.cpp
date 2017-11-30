@@ -1444,7 +1444,9 @@ bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, 
 			checkErrorGL();
 		}
 		
+	#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
 		// check if all went well
+		// note : we only do this when debugging OpenGL, as this call can be rather expensive
 		
 		const int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 		
@@ -1454,6 +1456,7 @@ bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, 
 			
 			result = false;
 		}
+	#endif
 	}
 
 	if (result && doubleBuffered == false)

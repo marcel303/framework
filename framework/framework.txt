@@ -8,9 +8,12 @@ Features:
 - Keyboard & mouse.
 - Up to four Gamepads using XInput.
 - Sprite rendering with animation support.
-- Basic UI with images and buttons.
 - OpenGL render targets.
 - OpenGL vertex and pixel shaders.
+- Legacy OpenGL way of drawing primitives.
+- High-quality (AA) filling and stroking of primitives.
+- Basic support for FBX and Ogre models.
+- Spriter animation support.
 - Logging.
 - Resource caching and automatic reloading.
 
@@ -117,7 +120,6 @@ Drawing a red line of text:
 
 	If alignX is +1, the text starts at x. If alignX is -1, the text ends at x.
 
-
 ------------------------------
 Gamepads
 ------------------------------
@@ -139,31 +141,3 @@ Analog values can be retrieved using gamepad[x].getAnalog. The dead zone has alr
 		aimDirection.x = gamepad[i].getAnalog(1, ANALOG_X, 100.f * framework.timeStep);
 		aimDireciton.y = gamepad[i].getAnalog(1, ANALOG_Y, 100.f * framework.timeStep);
 	}
-
-------------------------------
-Adding UI
-------------------------------
-
-A global UI object exists. But UI objects may freely be added and used. UI objects must be manually processed and drawn.
-
-	Ui ui;
-	
-	ui.load("main_menu.txt");
-	
-	while (!keyboard.wentDown(SDLK_ESCAPE))
-	{
-		framework.process();
-		
-		ui.process();
-		
-		framework.beginDraw(0, 0, 0, 0);
-		{
-			... (draw something behind the UI) ...
-			
-			ui.draw();
-			
-			... (draw something in front of the UI, like a mouse cursor for instance) ...
-		}
-		framework.endDraw();
-	}
-

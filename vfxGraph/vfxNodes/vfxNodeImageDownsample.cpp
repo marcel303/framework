@@ -105,6 +105,8 @@ void VfxNodeImageDownsample::tick(const float dt)
 	const VfxImageBase * image = getInputImage(kInput_Image, nullptr);
 	const DownsampleSize downsampleSize = (DownsampleSize)getInputInt(kInput_Size, 0);
 	const DownsampleChannel channel = (DownsampleChannel)getInputInt(kInput_Channel, kDownsampleChannel_All);
+	
+	// todo : allocate output image with format based on channel
 
 	if (image == nullptr || image->getSx() == 0 || image->getSy() == 0)
 	{
