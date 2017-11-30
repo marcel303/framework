@@ -93,8 +93,6 @@ struct GraphNode
 	
 	GraphNode();
 	
-	void setIsPassthrough(const bool isPassthrough);
-	
 	void setResource(const char * type, const char * name, const char * data);
 	void clearResource(const char * type, const char * name);
 	const char * getResource(const char * type, const char * name, const char * defaultValue) const;
@@ -114,7 +112,7 @@ struct GraphLinkRoutePoint
 	}
 };
 
-struct GraphNodeSocketLink
+struct GraphLink
 {
 	GraphLinkId id;
 	bool isEnabled;
@@ -137,7 +135,7 @@ struct GraphNodeSocketLink
 	float editorIsActiveAnimTime; // real-time connection node activation animation
 	float editorIsActiveAnimTimeRcp;
 	
-	GraphNodeSocketLink();
+	GraphLink();
 	
 	void setIsEnabled(const bool isEnabled);
 };
@@ -168,7 +166,7 @@ struct GraphEditConnection
 struct Graph
 {
 	std::map<GraphNodeId, GraphNode> nodes;
-	std::map<GraphLinkId, GraphNodeSocketLink> links;
+	std::map<GraphLinkId, GraphLink> links;
 	
 	GraphNodeId nextNodeId;
 	GraphLinkId nextLinkId;
@@ -181,14 +179,14 @@ struct Graph
 	GraphNodeId allocNodeId();
 	GraphLinkId allocLinkId();
 	
-	void addNode(GraphNode & node);
+	void addNode(const GraphNode & node);
 	void removeNode(const GraphNodeId nodeId);
 	
-	void addLink(const GraphNodeSocketLink & link, const bool clearInputDuplicates);
+	void addLink(const GraphLink & link, const bool clearInputDuplicates);
 	void removeLink(const GraphLinkId linkId);
 	
 	GraphNode * tryGetNode(const GraphNodeId nodeId);
-	GraphNodeSocketLink * tryGetLink(const GraphLinkId linkId);
+	GraphLink * tryGetLink(const GraphLinkId linkId);
 	
 	bool loadXml(const tinyxml2::XMLElement * xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
 	bool saveXml(tinyxml2::XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary) const;
@@ -1039,7 +1037,7 @@ struct GraphEdit : GraphEditConnection
 		NodeHitTestResult nodeHitTestResult;
 		
 		bool hasLink;
-		GraphNodeSocketLink * link;
+		GraphLink * link;
 		int linkSegmentIndex;
 		
 		bool hasLinkRoutePoint;
@@ -1431,7 +1429,7 @@ struct GraphEdit : GraphEditConnection
 	
 	GraphNode * tryGetNode(const GraphNodeId id) const;
 	NodeData * tryGetNodeData(const GraphNodeId id) const;
-	GraphNodeSocketLink * tryGetLink(const GraphLinkId id) const;
+	GraphLink * tryGetLink(const GraphLinkId id) const;
 	const GraphEdit_TypeDefinition::InputSocket * tryGetInputSocket(const GraphNodeId nodeId, const int socketIndex) const;
 	const GraphEdit_TypeDefinition::OutputSocket * tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const;
 	bool getLinkPath(const GraphLinkId linkId, LinkPath & path) const;

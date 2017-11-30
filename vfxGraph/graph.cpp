@@ -224,11 +224,6 @@ GraphNode::GraphNode()
 {
 }
 
-void GraphNode::setIsPassthrough(const bool _isPassthrough)
-{
-	isPassthrough = _isPassthrough;
-}
-
 void GraphNode::setResource(const char * type, const char * name, const char * data)
 {
 	auto & resource = resources[name];
@@ -271,7 +266,7 @@ const char * GraphNode::getResource(const char * type, const char * name, const 
 
 //
 
-GraphNodeSocketLink::GraphNodeSocketLink()
+GraphLink::GraphLink()
 	: id(kGraphLinkIdInvalid)
 	, isEnabled(true)
 	, isDynamic(false)
@@ -288,7 +283,7 @@ GraphNodeSocketLink::GraphNodeSocketLink()
 {
 }
 
-void GraphNodeSocketLink::setIsEnabled(const bool _isEnabled)
+void GraphLink::setIsEnabled(const bool _isEnabled)
 {
 	isEnabled = _isEnabled;
 }
@@ -330,7 +325,7 @@ GraphNodeId Graph::allocLinkId()
 	return result;
 }
 
-void Graph::addNode(GraphNode & node)
+void Graph::addNode(const GraphNode & node)
 {
 	Assert(node.id != kGraphNodeIdInvalid);
 	Assert(nodes.find(node.id) == nodes.end());
@@ -382,7 +377,7 @@ void Graph::removeNode(const GraphNodeId nodeId)
 	nodes.erase(nodeId);
 }
 
-void Graph::addLink(const GraphNodeSocketLink & link, const bool clearInputDuplicates)
+void Graph::addLink(const GraphLink & link, const bool clearInputDuplicates)
 {
 	if (clearInputDuplicates)
 	{
@@ -439,7 +434,7 @@ GraphNode * Graph::tryGetNode(const GraphNodeId nodeId)
 		return &nodeItr->second;
 }
 
-GraphNodeSocketLink * Graph::tryGetLink(const GraphLinkId linkId)
+GraphLink * Graph::tryGetLink(const GraphLinkId linkId)
 {
 	auto linkItr = links.find(linkId);
 	
@@ -494,7 +489,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 	
 	for (const XMLElement * xmlLink = xmlGraph->FirstChildElement("link"); xmlLink != nullptr; xmlLink = xmlLink->NextSiblingElement("link"))
 	{
-		GraphNodeSocketLink link;
+		GraphLink link;
 		link.id = intAttrib(xmlLink, "id", link.id);
 		link.srcNodeId = intAttrib(xmlLink, "srcNodeId", link.srcNodeId);
 		link.srcNodeSocketName = stringAttrib(xmlLink, "srcNodeSocketName", link.srcNodeSocketName.c_str());
@@ -1950,7 +1945,7 @@ GraphEdit::NodeData * GraphEdit::tryGetNodeData(const GraphNodeId nodeId) const
 		return nullptr;
 }
 
-GraphNodeSocketLink * GraphEdit::tryGetLink(const GraphLinkId id) const
+GraphLink * GraphEdit::tryGetLink(const GraphLinkId id) const
 {
 	auto i = graph->links.find(id);
 	
@@ -3126,7 +3121,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					Assert(node);
 					if (node)
 					{
-						node->setIsPassthrough(allPassthrough ? false : true);
+						node->isPassthrough = allPassthrough ? false : true;
 						
 						if (realTimeConnection != nullptr)
 						{
@@ -4214,7 +4209,7 @@ void GraphEdit::socketConnectEnd()
 			clearInputDuplicates = false;
 		}
 		
-		GraphNodeSocketLink link;
+		GraphLink link;
 		link.id = graph->allocLinkId();
 		link.isDynamic = socketConnect.srcNodeSocket->isDynamic || socketConnect.dstNodeSocket->isDynamic;
 		link.srcNodeId = socketConnect.srcNodeId;
