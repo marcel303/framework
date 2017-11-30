@@ -176,7 +176,7 @@ static void testVfxNodeCreation()
 		
 		const int64_t t2 = g_TimerRT.TimeUS_get();
 		
-		logDebug("node create/destroy took %dus. nodeType=%s", t2 - t1, registration->typeName.c_str());
+		logDebug("node create/destroy took %dus. nodeType=%s", t2 - t1, registration->typeName.c_str()); (void)t1; (void)t2;
 	}
 }
 
@@ -343,6 +343,46 @@ int main(int argc, char * argv[])
 		
 		//
 		
+		if (false)
+		{
+			// stress test vfx graph creation and destruction. enable this code path when profiling only
+			
+			Graph graph;
+			
+			XMLDocument document;
+			
+			if (document.LoadFile(FILENAME) == XML_SUCCESS)
+			{
+				const XMLElement * xmlGraph = document.FirstChildElement("graph");
+				
+				if (xmlGraph != nullptr)
+				{
+					graph.loadXml(xmlGraph, typeDefinitionLibrary);
+					
+					int i = 0;
+					
+					for (;;)
+					{
+						auto t1 = g_TimerRT.TimeUS_get();
+						
+						auto vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
+						
+						vfxGraph->tick(0.f);
+						
+						delete vfxGraph;
+						vfxGraph = nullptr;
+						
+						auto t2 = g_TimerRT.TimeUS_get();
+						printf("construct %003d + tick took %dus\n", i, int(t2 - t1));
+						
+						++i;
+					}
+				}
+			}
+		}
+		
+		//
+		
 		RealTimeConnection * realTimeConnection = new RealTimeConnection();
 		
 		//
@@ -491,7 +531,7 @@ int main(int argc, char * argv[])
 							{
 								if (linkTypeDefinition->srcTypeName == "draw" && linkTypeDefinition->dstTypeName == "draw")
 								{
-									GraphNodeSocketLink link = *hitTestResult.link;
+									GraphLink link = *hitTestResult.link;
 									
 									GraphEdit::LinkPath linkPath;
 									
@@ -507,7 +547,7 @@ int main(int argc, char * argv[])
 										{
 											if (true)
 											{
-												GraphNodeSocketLink link1;
+												GraphLink link1;
 												link1.id = graphEdit->graph->allocLinkId();
 												link1.srcNodeId = link.srcNodeId;
 												link1.srcNodeSocketIndex = link.srcNodeSocketIndex;
@@ -520,7 +560,7 @@ int main(int argc, char * argv[])
 											
 											if (true)
 											{
-												GraphNodeSocketLink link2;
+												GraphLink link2;
 												link2.id = graphEdit->graph->allocLinkId();
 												link2.srcNodeId = nodeId;
 												link2.srcNodeSocketIndex = 0;
