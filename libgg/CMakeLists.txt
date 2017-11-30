@@ -14,6 +14,8 @@ project(libgg)
 file(GLOB_RECURSE source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.cpp" "*.h")
 list(REMOVE_ITEM source Directory.cpp ImageLoader_FreeImage.cpp test_tga.cpp)
 
+source_group("sources" FILES ${source})
+
 add_library(libgg ${source})
 
 target_compile_definitions(libgg PUBLIC $<$<CONFIG:Debug>:DEBUG>)

@@ -34,6 +34,8 @@ project(avpaint)
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
 
+source_group("sources" FILES ${source})
+
 add_executable(avpaint ${source})
 
 target_include_directories(avpaint PRIVATE "${PROJECT_SOURCE_DIR}")

@@ -37,10 +37,8 @@ file(GLOB_RECURSE source_4dworld "4dworld.cpp")
 file(GLOB_RECURSE source_binauralizer "binauralizer.cpp")
 file(GLOB_RECURSE source_delaunay "delaunay.cpp")
 file(GLOB_RECURSE source_audioVoices "audioVoiceManager.cpp")
-file(GLOB_RECURSE source_tests "test*.*")
 
 source_group("sources" FILES ${source_all})
-source_group("tests" FILES ${source_tests})
 
 add_executable(4dworld ${source_4dworld})
 add_executable(binauralizer ${source_binauralizer})

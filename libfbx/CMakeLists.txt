@@ -8,6 +8,8 @@ project(fbxtest)
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
 
+source_group("sources" FILES ${source})
+
 add_executable(fbxtest ${source})
 
 if (MSVC)

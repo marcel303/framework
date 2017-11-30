@@ -40,7 +40,7 @@ set(GAME_FILES
 	effect.cpp
 	scene.h
 	scene.cpp)
-source_group("Game Files" FILES ${GAME_FILES})
+source_group("sources" FILES ${GAME_FILES})
 source_group("include" FILES ${source_macos})
 
 add_executable(vfxpro ${source})

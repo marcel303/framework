@@ -24,6 +24,8 @@ project(magiclines)
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
 
+source_group("sources" FILES ${source})
+
 add_executable(magiclines ${source})
 
 target_include_directories(magiclines PRIVATE "${PROJECT_SOURCE_DIR}")

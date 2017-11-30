@@ -24,6 +24,8 @@ project(planetvis)
 
 file(GLOB_RECURSE source "*.c" "*.cpp" "*.h")
 
+source_group("sources" FILES ${source})
+
 add_executable(planetvis ${source})
 
 target_include_directories(planetvis PRIVATE "${PROJECT_SOURCE_DIR}")

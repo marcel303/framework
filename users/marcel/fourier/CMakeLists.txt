@@ -22,6 +22,8 @@ project(fourier)
 
 file(GLOB source "*.cpp" "*.h")
 
+source_group("sources" FILES ${source})
+
 add_executable(fourier ${source})
 
 target_include_directories(fourier PRIVATE "${PROJECT_SOURCE_DIR}")

@@ -27,6 +27,8 @@ project(libnet)
 
 file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.cpp" "*.h")
 
+source_group("sources" FILES ${source})
+
 add_library(libnet ${source})
 
 target_include_directories(libnet PUBLIC "${PROJECT_SOURCE_DIR}")

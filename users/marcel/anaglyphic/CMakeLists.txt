@@ -29,6 +29,8 @@ project(anaglyphic)
 
 file(GLOB_RECURSE source "*.c" "*.cpp" "*.h")
 
+source_group("sources" FILES ${source})
+
 add_executable(anaglyphic ${source})
 
 target_include_directories(anaglyphic PRIVATE "${PROJECT_SOURCE_DIR}")

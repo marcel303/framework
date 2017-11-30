@@ -44,7 +44,8 @@ set(GAME_FILES
 	main.cpp
 	player.cpp
 	player.h)
-source_group("Game Files" FILES ${GAME_FILES})
+
+source_group("sources" FILES ${GAME_FILES})
 
 add_executable(twinkle ${source})
 

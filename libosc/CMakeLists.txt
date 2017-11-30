@@ -21,6 +21,8 @@ else (MSVC)
 	list(REMOVE_ITEM source ${source_win32})
 endif (MSVC)
 
+source_group("sources" FILES ${source})
+
 add_library(libosc ${source})
 
 target_compile_definitions(libosc PRIVATE _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)

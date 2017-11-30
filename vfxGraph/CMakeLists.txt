@@ -30,7 +30,7 @@ endif (NOT HAS_LIBVIDEO)
 
 #
 
-project(vfxgraph)
+project(vfxGraph)
 
 # --- vfxgraph ---
 
@@ -38,6 +38,7 @@ file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 
 file(GLOB_RECURSE source_vfxnodes "vfxNodes/*.*")
 file(GLOB_RECURSE source_macos "macos/*.*")
+file(GLOB_RECURSE source_win32 "win32/*.*")
 file(GLOB_RECURSE source_xmm "xmm/*.*")
 file(GLOB_RECURSE source_rtmidi "RtMidi*.*")
 file(GLOB_RECURSE source_json "json.hpp")
@@ -59,6 +60,7 @@ source_group("vfxGraph" FILES ${source})
 source_group("vfxNodes" FILES ${source_vfxnodes})
 source_group("ui" FILES ${source_ui})
 source_group("3rdparty\\macos" FILES ${source_macos})
+source_group("3rdparty\\win32" FILES ${source_win32})
 source_group("3rdparty\\xmm" FILES ${source_xmm})
 source_group("3rdparty\\rtmidi" FILES ${source_rtmidi})
 source_group("3rdparty\\json" FILES ${source_json})

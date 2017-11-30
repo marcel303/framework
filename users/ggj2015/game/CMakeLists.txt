@@ -18,11 +18,13 @@ endif (NOT HAS_FRAMEWORK)
 
 #
 
-project(game)
+project(ggj2015)
 
 # --- game ---
 
 file(GLOB source "*.cpp" "*.h")
+
+source_group("sources" FILES ${source})
 
 add_executable(game ${source})
 

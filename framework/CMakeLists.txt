@@ -34,6 +34,8 @@ file(GLOB_RECURSE source_remotery "remotery*.*")
 file(GLOB_RECURSE source_tinyxml "tinyxml*.*")
 file(GLOB_RECURSE source_utf8rewind "utf8rewind*.*")
 
+source_group("sources" FILES ${source})
+
 source_group("3rdparty\\msdfgen" FILES ${source_msdfgen})
 source_group("3rdparty\\remotery" FILES ${source_remotery})
 source_group("3rdparty\\tinyxml" FILES ${source_tinyxml})

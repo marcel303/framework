@@ -39,11 +39,11 @@ project(vfxGraph-examples)
 
 file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 
-source_group("Source Files" FILES ${source})
+source_group("sources" FILES ${source})
 
-add_executable(avgraph ${source})
+add_executable(examples ${source})
 
-set_target_properties(avgraph PROPERTIES LINK_FLAGS "-Wl,-all_load")
+set_target_properties(examples PROPERTIES LINK_FLAGS "-Wl,-all_load")
 
 set(LIBRARIES PRIVATE
 	libgg
@@ -55,14 +55,14 @@ set(LIBRARIES PRIVATE
 	${LIBVIDEO_LIBRARIES}
 	${VFXGRAPH_LIBRARIES})
 
-target_link_libraries(avgraph PRIVATE ${LIBRARIES})
+target_link_libraries(examples PRIVATE ${LIBRARIES})
 
-target_include_directories(avgraph PRIVATE "${PROJECT_SOURCE_DIR}")
+target_include_directories(examples PRIVATE "${PROJECT_SOURCE_DIR}")
 
 if (WIN32)
 	# set the current working directory
 	
-	set_target_properties(avgraph PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
+	set_target_properties(examples PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
 	
 	# copy DLL files to the Debug and Release folders
 
@@ -86,6 +86,6 @@ if (APPLE)
 endif (APPLE)
 
 if (MSVC)
-	set_property(TARGET avgraph APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
-	set_property(TARGET avgraph APPEND_STRING PROPERTY LINK_FLAGS /SAFESEH:NO)
+	set_property(TARGET examples APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
+	set_property(TARGET examples APPEND_STRING PROPERTY LINK_FLAGS /SAFESEH:NO)
 endif (MSVC)

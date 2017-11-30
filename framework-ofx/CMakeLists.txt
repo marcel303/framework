@@ -24,6 +24,8 @@ project(framework-ofx)
 
 file(GLOB_RECURSE source "*.*")
 
+source_group("sources" FILES ${source})
+
 add_library(framework-ofx ${source})
 
 target_include_directories(framework-ofx PUBLIC "${PROJECT_SOURCE_DIR}")

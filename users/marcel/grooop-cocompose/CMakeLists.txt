@@ -24,6 +24,8 @@ project(grooop-cocompose)
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
 
+source_group("sources" FILES ${source})
+
 add_executable(grooop-cocompose ${source})
 
 target_include_directories(grooop-cocompose PRIVATE "${PROJECT_SOURCE_DIR}")

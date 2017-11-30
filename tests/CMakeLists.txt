@@ -38,7 +38,7 @@ endif (NOT HAS_VFXGRAPH)
 
 #
 
-project(tests)
+project(framework-tests)
 
 # --- tests ---
 
@@ -47,21 +47,9 @@ file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 file(GLOB_RECURSE source_datgui "ofxDatGui/*.*")
 file(GLOB_RECURSE source_nanovg "nanovg/*.*")
 
-file(GLOB source_tests "test*.*")
-
-#list(REMOVE_ITEM source ${source_datgui})
-
-source_group("Source Files" FILES ${source})
-source_group("tests" FILES ${source_tests})
+source_group("sources" FILES ${source})
 source_group("3rdparty\\ofxDatGui" FILES ${source_datgui})
-source_group("3rdparty\\msdfgen" FILES ${source_msdfgen})
 source_group("3rdparty\\nanovg" FILES ${source_nanovg})
-source_group("3rdparty\\macos" FILES ${source_macos})
-source_group("3rdparty\\leap" FILES ${source_leap})
-source_group("3rdparty\\xmm" FILES ${source_xmm})
-source_group("3rdparty\\rtmidi" FILES ${source_rtmidi})
-source_group("3rdparty\\json" FILES ${source_json})
-source_group("3rdparty\\ofxJpegGlitch" FILES ${source_oxfJpegGlitch})
 
 if (WIN32)
 	list(REMOVE_ITEM source ${source_xmm})

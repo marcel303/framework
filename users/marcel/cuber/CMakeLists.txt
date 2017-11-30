@@ -25,6 +25,8 @@ project(cuber)
 file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.cpp" "*.h")
 list(REMOVE_ITEM source script.cpp)
 
+source_group("sources" FILES ${source})
+
 add_executable(cuber ${source})
 
 target_include_directories(cuber PRIVATE "${PROJECT_SOURCE_DIR}")

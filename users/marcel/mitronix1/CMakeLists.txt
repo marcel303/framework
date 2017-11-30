@@ -34,7 +34,7 @@ project(mitronix)
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
 
-source_group("mitronix" FILES ${source})
+source_group("sources" FILES ${source})
 
 file(GLOB resources_root
 	"${CMAKE_CURRENT_SOURCE_DIR}/data/*.jpg"

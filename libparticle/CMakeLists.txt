@@ -28,6 +28,8 @@ project(libparticle)
 
 file(GLOB source "*.cpp" "*.h")
 
+source_group("sources" FILES ${source})
+
 add_library(libparticle ${source})
 
 target_include_directories(libparticle PUBLIC "${PROJECT_SOURCE_DIR}")

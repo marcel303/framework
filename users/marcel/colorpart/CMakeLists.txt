@@ -29,6 +29,8 @@ project(colorpart)
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
 
+source_group("sources" FILES ${source})
+
 add_executable(colorpart ${source})
 
 target_include_directories(colorpart PRIVATE "${PROJECT_SOURCE_DIR}")

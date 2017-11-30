@@ -19,6 +19,8 @@ if (APPLE)
 	list(REMOVE_ITEM source nfd_gtk.c nfd_win.cpp)
 endif (APPLE)
 
+source_group("sources" FILES ${source})
+
 add_library(libnfd ${source})
 
 target_include_directories(libnfd PUBLIC "${PROJECT_SOURCE_DIR}")

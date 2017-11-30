@@ -29,6 +29,8 @@ project(vfxedit)
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
 
+source_group("sources" FILES ${source})
+
 file(GLOB_RECURSE source_midifile "midifile/*.*")
 source_group("midifile" FILES ${source_midifile})
 

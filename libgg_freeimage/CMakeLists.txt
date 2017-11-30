@@ -13,6 +13,8 @@ project(libgg_freeimage)
 
 set(source ../libgg/ImageLoader_FreeImage.cpp)
 
+source_group("sources" FILES ${source})
+
 add_library(libgg_freeimage ${source})
 
 target_compile_definitions(libgg_freeimage PRIVATE _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
