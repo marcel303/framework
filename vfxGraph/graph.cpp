@@ -219,7 +219,7 @@ GraphNode::GraphNode()
 	, typeName()
 	, isPassthrough(false)
 	, resources()
-	, editorInputValues()
+	, inputValues()
 	, editorValue()
 {
 }
@@ -473,7 +473,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 			const std::string socket = stringAttrib(xmlInput, "socket", "");
 			const std::string value = stringAttrib(xmlInput, "value", "");
 			
-			node.editorInputValues[socket] = value;
+			node.inputValues[socket] = value;
 		}
 		
 		for (const XMLElement * xmlResource = xmlNode->FirstChildElement("resource"); xmlResource != nullptr; xmlResource = xmlResource->NextSiblingElement("resource"))
@@ -632,7 +632,7 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 				xmlGraph.CloseElement();
 			}
 			
-			for (auto & input : node.editorInputValues)
+			for (auto & input : node.inputValues)
 			{
 				xmlGraph.OpenElement("input");
 				{
@@ -3037,7 +3037,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						GraphNode newNode = *node;
 						newNode.id = graph->allocNodeId();
 						newNode.isPassthrough = false;
-						newNode.editorInputValues.clear();
+						newNode.inputValues.clear();
 						newNode.editorValue.clear();
 						
 						graph->addNode(newNode);
@@ -3066,12 +3066,12 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							Assert(typeDefinition != nullptr);
 							
 							// let real-time editing know the socket values have changed
-							for (auto & inputValueItr : node->editorInputValues)
+							for (auto & inputValueItr : node->inputValues)
 							{
 								auto & srcSocketName = inputValueItr.first;
 								auto & srcSocketValue = inputValueItr.second;
 								
-								newNodePtr->editorInputValues[srcSocketName] = srcSocketValue;
+								newNodePtr->inputValues[srcSocketName] = srcSocketValue;
 								
 								if (typeDefinition != nullptr)
 								{
@@ -4018,7 +4018,6 @@ void GraphEdit::tickNodeDatas(const float dt)
 	for (auto & nodeDataItr : nodeDatas)
 	{
 		auto nodeId = nodeDataItr.first;
-		auto & node = *tryGetNode(nodeId);
 		auto & nodeData = nodeDataItr.second;
 		
 		if (nodeData.isFolded && nodeData.isCloseToConnectionSite == false)
@@ -5501,7 +5500,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 				
 				hqFillCircle(x, y, radius);
 				
-				if (node.editorInputValues.count(inputSocket.name) != 0)
+				if (node.inputValues.count(inputSocket.name) != 0)
 				{
 					setColor(255, 255, 255);
 					hqFillCircle(x, y, radius / 3.f);
@@ -6044,8 +6043,7 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 
 void GraphEdit::nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
 {
-	auto node = tryGetNode(nodeId);
-	Assert(node != nullptr);
+	Assert(tryGetNode(nodeId) != nullptr);
 	
 	// allocate nodeData
 	nodeDatas[nodeId];
@@ -6058,11 +6056,8 @@ void GraphEdit::nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
 
 void GraphEdit::nodeRemove(const GraphNodeId nodeId)
 {
-	auto node = tryGetNode(nodeId);
-	Assert(node != nullptr);
-	
-	auto nodeData = tryGetNodeData(nodeId);
-	Assert(nodeData != nullptr);
+	Assert(tryGetNode(nodeId) != nullptr);
+	Assert(tryGetNodeData(nodeId) != nullptr);
 	
 	if (selectedNodes.count(nodeId) != 0)
 		selectedNodes.erase(nodeId);
@@ -6077,11 +6072,8 @@ void GraphEdit::nodeRemove(const GraphNodeId nodeId)
 
 void GraphEdit::linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 {
-	auto srcNode = tryGetNode(srcNodeId);
-	auto dstNode = tryGetNode(dstNodeId);
-	
-	Assert(srcNode != nullptr);
-	Assert(dstNode != nullptr);
+	Assert(tryGetNode(srcNodeId) != nullptr);
+	Assert(tryGetNode(dstNodeId) != nullptr);
 	
 	if (realTimeConnection != nullptr)
 	{
@@ -6091,11 +6083,8 @@ void GraphEdit::linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, c
 
 void GraphEdit::linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 {
-	auto srcNode = tryGetNode(srcNodeId);
-	auto dstNode = tryGetNode(dstNodeId);
-	
-	Assert(srcNode != nullptr);
-	Assert(dstNode != nullptr);
+	Assert(tryGetNode(srcNodeId) != nullptr);
+	Assert(tryGetNode(dstNodeId) != nullptr);
 	
 	if (selectedLinks.count(linkId) != 0)
 		selectedLinks.erase(linkId);
@@ -6116,13 +6105,16 @@ void GraphEdit::linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId
 		
 		//
 		
+		auto srcNode = tryGetNode(srcNodeId);
+		Assert(srcNode != nullptr);
+		
 		auto srcSocket = tryGetInputSocket(srcNodeId, srcSocketIndex);
 		Assert(srcSocket != nullptr);
 		
-		if (srcSocket != nullptr)
+		if (srcNode != nullptr && srcSocket != nullptr)
 		{
-			auto valueText = srcNode->editorInputValues.find(srcSocket->name);
-			if (valueText != srcNode->editorInputValues.end())
+			auto valueText = srcNode->inputValues.find(srcSocket->name);
+			if (valueText != srcNode->inputValues.end())
 				realTimeConnection->setSrcSocketValue(srcNodeId, srcSocket->index, srcSocket->name, valueText->second);
 		}
 	}
@@ -6339,9 +6331,9 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 			
 			for (auto & inputSocket : inputSockets)
 			{
-				auto valueTextItr = node->editorInputValues.find(inputSocket.name);
+				auto valueTextItr = node->inputValues.find(inputSocket.name);
 				
-				const bool isPreExisting = valueTextItr != node->editorInputValues.end();
+				const bool isPreExisting = valueTextItr != node->inputValues.end();
 				
 				std::string oldValueText;
 				
@@ -6372,7 +6364,7 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 				{
 					if (!hasValue)
 					{
-						node->editorInputValues.erase(inputSocket.name);
+						node->inputValues.erase(inputSocket.name);
 						
 						if (graphEdit->realTimeConnection)
 						{
@@ -6385,7 +6377,7 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 				else
 				{
 					if (hasValue)
-						node->editorInputValues[inputSocket.name] = newValueText;
+						node->inputValues[inputSocket.name] = newValueText;
 				}
 				
 				// todo : detect if text has changed. if so, notify graph edit of change and let it take care of callbacks and undo/redo

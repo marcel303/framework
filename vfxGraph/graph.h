@@ -85,9 +85,10 @@ struct GraphNode
 	
 	std::map<std::string, Resource> resources;
 	
+	std::map<std::string, std::string> inputValues;
+	
 	// editor
 	
-	std::map<std::string, std::string> editorInputValues;
 	std::string editorValue;
 	
 	GraphNode();

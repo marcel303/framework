@@ -447,7 +447,7 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 		
 		auto & audioNodeInputs = audioNode->inputs;
 		
-		for (auto & inputValueItr : node.editorInputValues)
+		for (auto & inputValueItr : node.inputValues)
 		{
 			const std::string & inputName = inputValueItr.first;
 			const std::string & inputValue = inputValueItr.second;
