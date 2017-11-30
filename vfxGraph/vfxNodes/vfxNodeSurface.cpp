@@ -103,7 +103,9 @@ void VfxNodeSurface::allocSurface(const SURFACE_FORMAT format, const bool withDe
 	
 	surface = new Surface(GFX_SX, GFX_SY, withDepthBuffer, true, format);
 	surface->clear();
-	surface->clearDepth(1.f);
+	
+	if (withDepthBuffer)
+		surface->clearDepth(1.f);
 }
 
 void VfxNodeSurface::freeSurface()
