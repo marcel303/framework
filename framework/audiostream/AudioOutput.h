@@ -64,7 +64,7 @@ public:
 	
 private:
 	const static int kBufferSize = 8192 * 2;
-	const static int kBufferCount = 3;
+	const static int kBufferCount = 2;
 	
 	void SetEmptyBufferData();
 	void CheckError();
