@@ -129,8 +129,6 @@ void VfxNodeSound::tick(const float dt)
 			
 			// update streaming
 			
-			const double t1 = audioOutput->PlaybackPosition_get();
-			
 			if (isPaused)
 			{
 				AudioStreamNULL nullStream;

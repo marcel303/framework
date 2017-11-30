@@ -96,7 +96,7 @@ void Deepbelief::shut()
 			state->stop = true;
 
 			int r = SDL_CondSignal(state->workEvent);
-			Assert(r == 0);
+			Assert(r == 0); (void)r;
 		}
 		SDL_UnlockMutex(state->mutex);
 	}
@@ -130,7 +130,7 @@ void Deepbelief::process(const uint8_t * bytes, const int sx, const int sy, cons
 		state->work = newWork;
 
 		int r = SDL_CondSignal(state->workEvent);
-		Assert(r == 0);
+		Assert(r == 0); (void)r;
 	}
 	SDL_UnlockMutex(state->mutex);
 
@@ -384,7 +384,7 @@ void Deepbelief::threadMain(State * state)
 		#endif
 			
 			int r = SDL_CondSignal(state->doneEvent);
-			Assert(r == 0);
+			Assert(r == 0); (void)r;
 		}
 		
 		if (state->stop == false && state->work == nullptr) // 'if no more work to be done and should go idle'

@@ -4012,7 +4012,6 @@ void GraphEdit::tickNodeDatas(const float dt)
 {
 	for (auto & nodeDataItr : nodeDatas)
 	{
-		auto nodeId = nodeDataItr.first;
 		auto & nodeData = nodeDataItr.second;
 		
 		if (nodeData.isFolded && nodeData.isCloseToConnectionSite == false)

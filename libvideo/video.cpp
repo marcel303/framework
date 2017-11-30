@@ -96,7 +96,7 @@ static int ExecMediaPlayerThread(void * param)
 
 		const int t2 = SDL_GetTicks();
 
-		logDebug("MP context end took %dms", t2 - t1);
+		logDebug("MP context end took %dms", t2 - t1); (void)t1; (void)t2;
 	}
 	
 	s_numVideoThreads--;
@@ -150,8 +150,8 @@ void MediaPlayer::openAsync(const OpenParams & openParams)
 
 	const int t3 = SDL_GetTicks();
 
-	logDebug("MP begin took %dms", t2 - t1);
-	logDebug("MP thread start took %dms", t3 - t2);
+	logDebug("MP begin took %dms", t2 - t1); (void)t1; (void)t2;
+	logDebug("MP thread start took %dms", t3 - t2); (void)t2; (void)t3;
 }
 
 void MediaPlayer::openAsync(const char * filename, const MP::OutputMode outputMode)
@@ -181,7 +181,7 @@ void MediaPlayer::close(const bool _freeTexture)
 
 		const int t2 = SDL_GetTicks();
 
-		logDebug("MP texture delete took %dms", t2 - t1);
+		logDebug("MP texture delete took %dms", t2 - t1); (void)t1; (void)t2;
 	}
 }
 
@@ -485,5 +485,5 @@ void MediaPlayer::stopMediaPlayerThread()
 
 	const int t2 = SDL_GetTicks();
 
-	logDebug("MP thread shutdown took %dms", t2 - t1);
+	logDebug("MP thread shutdown took %dms", t2 - t1); (void)t1; (void)t2;
 }
