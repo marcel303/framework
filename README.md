@@ -26,6 +26,8 @@ Also included is a project called '4D World'. 4D World is an application built u
 
 The graph editor included in AV Graph is intended as a general-purpose, re-usable editor for various types of backends. Right now there's a visuals synthesis backend included in AV Graph, and a sound synthesis backend in 4D World. But it's not restricted to visuals or sound synthesis. Possible new backends include animation blending, state machines and shader and material systems.
 
+![avGraph](/vfxGraph/docs/avGraph2.png)
+
 ### (Vfx Graph) How can I check it out? ###
 
 * The current build has been tested on MacOS using XCode and on Windows using Visual Studio 2013.
