@@ -48,10 +48,10 @@ target_link_libraries(avpaint PRIVATE libvideo)
 target_link_libraries(avpaint PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(avpaint PRIVATE ${LIBVIDEO_LIBRARIES})
 
-if (MSVC)
+if (WIN32)
 	target_link_libraries(avpaint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../vfxGraph/win32/lib/Leap.lib)
 	target_link_libraries(avpaint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../vfxGraph/win32/lib/portaudio_x86.lib)
-endif (MSVC)
+endif (WIN32)
 
 if (APPLE)
 	target_include_directories(avpaint PRIVATE "../../../vfxGraph/macos/include")

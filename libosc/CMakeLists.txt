@@ -13,13 +13,13 @@ project(libosc)
 
 file(GLOB_RECURSE source "*.c" "*.cpp" "*.h")
 
-if (MSVC)
+if (WIN32)
 	file(GLOB_RECURSE source_posix "ip/posix/*.*")
 	list(REMOVE_ITEM source ${source_posix})
-else (MSVC)
+else (WIN32)
 	file(GLOB_RECURSE source_win32 "ip/win32/*.*")
 	list(REMOVE_ITEM source ${source_win32})
-endif (MSVC)
+endif (WIN32)
 
 source_group("sources" FILES ${source})
 

@@ -12,9 +12,9 @@ project(libnfd)
 # --- libnfd ---
 
 file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.c" "*.cpp" "*.h" "*.m")
-if (MSVC)
+if (WIN32)
 	list(REMOVE_ITEM source nfd_cocoa.m nfd_gtk.c)
-endif (MSVC)
+endif (WIN32)
 if (APPLE)
 	list(REMOVE_ITEM source nfd_gtk.c nfd_win.cpp)
 endif (APPLE)

@@ -55,17 +55,17 @@ endif (MSVC)
 target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/audiostream") # for ogg and vorbis headers
 
-if (MSVC)
+if (WIN32)
 	target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/win32/include")
 	target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/win32/include/freetype")
-endif (MSVC)
+endif (WIN32)
 
 if (APPLE)
 	target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/macos/include")
 	target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/macos/include/freetype")
 endif (APPLE)
 
-if (MSVC)
+if (WIN32)
 	set(FRAMEWORK_LIBRARIES
 		framework
 		libgg
@@ -88,7 +88,7 @@ if (MSVC)
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/SDL2.dll
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/XInput9_1_0.dll
 		PARENT_SCOPE)
-endif (MSVC)
+endif (WIN32)
 
 if (APPLE)
 	find_library(COCOA_LIBRARY Cocoa)

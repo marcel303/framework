@@ -102,7 +102,7 @@ if (APPLE)
 	target_include_directories(vfxgraph PRIVATE "../libfreenect2/macos/include")
 endif (APPLE)
 
-if (MSVC)
+if (WIN32)
 	target_link_libraries(vfxgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/Leap.lib)
 	target_link_libraries(vfxgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/portaudio_x86.lib)
 	target_link_libraries(vfxgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/turbojpeg.lib)
@@ -115,7 +115,7 @@ if (MSVC)
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/portaudio_x86.dll
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/turbojpeg.dll
 		PARENT_SCOPE)
-endif (MSVC)
+endif (WIN32)
 
 if (APPLE)
 	target_link_libraries(vfxgraph ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/DeepBelief.framework)

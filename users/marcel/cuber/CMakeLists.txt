@@ -51,10 +51,10 @@ if (APPLE)
 	target_include_directories(script PRIVATE "${PROJECT_SOURCE_DIR}/../../../framework/macos/include")
 endif (APPLE)
 
-if (MSVC)
+if (WIN32)
 	target_include_directories(script PRIVATE "${PROJECT_SOURCE_DIR}")
 	target_include_directories(script PRIVATE "${PROJECT_SOURCE_DIR}/../../../framework/win32/include")
-endif (MSVC)
+endif (WIN32)
 
 target_link_libraries(script PRIVATE libgg)
 

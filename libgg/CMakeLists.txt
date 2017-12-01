@@ -21,8 +21,11 @@ add_library(libgg ${source})
 target_compile_definitions(libgg PUBLIC $<$<CONFIG:Debug>:DEBUG>)
 target_include_directories(libgg PUBLIC "${PROJECT_SOURCE_DIR}")
 
-if (MSVC)
+if (WIN32)
 	target_compile_definitions(libgg PUBLIC WINDOWS)
+endif (WIN32)
+
+if (MSVC)
 	target_compile_definitions(libgg PUBLIC _USE_MATH_DEFINES)
 	target_compile_definitions(libgg PRIVATE _CRT_SECURE_NO_WARNINGS)
 	set_property(TARGET libgg APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)

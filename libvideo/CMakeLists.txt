@@ -38,15 +38,15 @@ target_include_directories(libvideo PUBLIC "${PROJECT_SOURCE_DIR}")
 target_link_libraries(libvideo libgg)
 target_link_libraries(libvideo framework)
 
-if (MSVC)
+if (WIN32)
 	target_include_directories(libvideo PUBLIC "${PROJECT_SOURCE_DIR}/win32/include")
-endif (MSVC)
+endif (WIN32)
 
 if (APPLE)
 	target_include_directories(libvideo PUBLIC "${PROJECT_SOURCE_DIR}/macos/include")
 endif (APPLE)
 
-if (MSVC)
+if (WIN32)
 	target_link_libraries(libvideo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/avcodec.lib)
 	target_link_libraries(libvideo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/avdevice.lib)
 	target_link_libraries(libvideo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/avfilter.lib)
@@ -68,7 +68,7 @@ if (MSVC)
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/swresample-2.dll
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/swscale-4.dll
 		PARENT_SCOPE)
-endif (MSVC)
+endif (WIN32)
 
 if (APPLE)
 	find_library(COREMEDIA_LIBRARY CoreMedia)
