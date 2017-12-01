@@ -29,8 +29,12 @@
 #include "vfxGraph.h"
 #include "vfxNodeOutput.h"
 #include "vfxNodeVfxGraph.h"
+#include <algorithm>
 
 using namespace tinyxml2;
+
+extern int VFXGRAPH_SX;
+extern int VFXGRAPH_SY;
 
 VFX_NODE_TYPE(VfxNodeVfxGraph)
 {
@@ -173,7 +177,7 @@ void VfxNodeVfxGraph::tick(const float dt)
 		auto restore = g_currentVfxGraph;
 		g_currentVfxGraph = nullptr;
 		{
-			vfxGraph->tick(dt);
+			vfxGraph->tick(VFXGRAPH_SX, VFXGRAPH_SY, dt);
 		}
 		g_currentVfxGraph = restore;
 		
@@ -192,7 +196,7 @@ void VfxNodeVfxGraph::tick(const float dt)
 			outputs.push_back(output);
 		}
 		
-		std::sort(outputs.begin(), outputs.end(), [](auto & o1, auto & o2) { return o1.name < o2.name; });
+		std::sort(outputs.begin(), outputs.end(), [](DynamicOutput & o1, DynamicOutput & o2) { return o1.name < o2.name; });
 	
 		setDynamicOutputs(&outputs[0], outputs.size());
 	}
@@ -212,7 +216,7 @@ void VfxNodeVfxGraph::draw() const
 	g_currentVfxGraph = nullptr;
 	g_currentVfxSurface = nullptr;
 	{
-		imageOutput->texture = vfxGraph->traverseDraw();
+		imageOutput->texture = vfxGraph->traverseDraw(VFXGRAPH_SX, VFXGRAPH_SY);
 	}
 	g_currentVfxGraph = restoreGraph;
 	g_currentVfxSurface = restoreSurface;

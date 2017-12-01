@@ -28,8 +28,8 @@
 #include "framework.h"
 #include "vfxNodeTest.h"
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+extern int VFXGRAPH_SX;
+extern int VFXGRAPH_SY;
 
 VFX_NODE_TYPE(VfxNodeTest)
 {

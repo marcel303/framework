@@ -32,6 +32,8 @@
 #include <map>
 #include <list>
 
+#include <vector> // todo : remove once receivedValues is removed
+
 struct OscEndpointMgr : OscReceiveHandler
 {
 	struct Receiver

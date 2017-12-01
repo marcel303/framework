@@ -107,9 +107,9 @@ struct VfxGraph
 	void destroy();
 	void connectToInputLiteral(VfxPlug & input, const std::string & inputValue);
 	
-	void tick(const float dt);
-	void draw() const;
-	int traverseDraw() const;
+	void tick(const int sx, const int sy, const float dt);
+	void draw(const int sx, const int sy) const;
+	int traverseDraw(const int sx, const int sy) const;
 };
 
 //

@@ -80,16 +80,15 @@ target_link_libraries(vfxgraph libvideo)
 
 target_compile_definitions(vfxgraph PUBLIC
 	ENABLE_KINECT1=0
-	ENABLE_KINECT2=1
 	ENABLE_TURBOJPEG=1
 	ENABLE_LEAPMOTION=1)
 
 if (WIN32)
-	target_compile_definitions(vfxgraph PUBLIC ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
+	target_compile_definitions(vfxgraph PUBLIC ENABLE_KINECT2=0 ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
 endif (WIN32)
 
 if (APPLE)
-	target_compile_definitions(vfxgraph PUBLIC ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
+	target_compile_definitions(vfxgraph PUBLIC ENABLE_KINECT2=1 ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
 endif (APPLE)
 
 target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}")
@@ -112,6 +111,7 @@ if (MSVC)
 		PARENT_SCOPE)
 
 	set(VFXGRAPH_BINARIES
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/Leap.dll
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/portaudio_x86.dll
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/turbojpeg.dll
 		PARENT_SCOPE)

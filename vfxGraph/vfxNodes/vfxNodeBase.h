@@ -570,7 +570,7 @@ struct VfxNodeBase
 			return &outputs[index];
 	}
 	
-	int getInputBool(const int index, const bool defaultValue) const
+	bool getInputBool(const int index, const bool defaultValue) const
 	{
 		const VfxPlug * plug = tryGetInput(index);
 		

@@ -198,7 +198,11 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 				info.location = location;
 			}
 			
-			std::sort(uniformInfos.begin(), uniformInfos.end(), [](auto & u1, auto & u2) { return u1.name < u2.name; });
+			std::sort(uniformInfos.begin(), uniformInfos.end(),
+				[](Fsfx2_UniformInfo & u1, Fsfx2_UniformInfo & u2)
+				{
+					return u1.name < u2.name; 
+				});
 			
 			int socketIndex = VfxNodeBase::inputs.size();
 
@@ -311,7 +315,10 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 				}
 			}
 			
-			setDynamicInputs(&inputs[0], inputs.size());
+			if (inputs.empty())
+				setDynamicInputs(nullptr, 0);
+			else
+				setDynamicInputs(&inputs[0], inputs.size());
 		}
 	}
 }
@@ -518,7 +525,7 @@ void VfxNodeFsfxV2::getDescription(VfxNodeDescription & d)
 	d.add("shader constants:");
 	if (dynamicInputs.empty())
 		d.add("(none)");
-	for (int i = 0; i < dynamicInputs.size(); ++i)
+	for (size_t i = 0; i < dynamicInputs.size(); ++i)
 	{
 		auto & input = dynamicInputs[i];
 		

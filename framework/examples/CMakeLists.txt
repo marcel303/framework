@@ -41,4 +41,5 @@ target_link_libraries(sprites PRIVATE ${FRAMEWORK_LIBRARIES})
 
 if (MSVC)
 	set_property(TARGET libparticle_test APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
+	set_property(TARGET libparticle_test APPEND_STRING PROPERTY LINK_FLAGS /SAFESEH:NO)
 endif (MSVC)

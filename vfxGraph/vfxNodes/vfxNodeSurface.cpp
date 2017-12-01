@@ -28,8 +28,8 @@
 #include "framework.h"
 #include "vfxNodeSurface.h"
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+extern int VFXGRAPH_SX;
+extern int VFXGRAPH_SY;
 
 extern Surface * g_currentVfxSurface;
 
@@ -101,7 +101,7 @@ void VfxNodeSurface::allocSurface(const SURFACE_FORMAT format, const bool withDe
 	
 	//
 	
-	surface = new Surface(GFX_SX, GFX_SY, withDepthBuffer, true, format);
+	surface = new Surface(VFXGRAPH_SX, VFXGRAPH_SY, withDepthBuffer, true, format);
 	surface->clear();
 	
 	if (withDepthBuffer)

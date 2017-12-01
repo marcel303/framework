@@ -39,8 +39,8 @@ struct Fsfx1_UniformInfo
 
 // todo : use current surface size ?
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+extern int VFXGRAPH_SX;
+extern int VFXGRAPH_SY;
 
 VFX_NODE_TYPE(VfxNodeFsfx)
 {
@@ -166,7 +166,11 @@ void VfxNodeFsfx::loadShader(const char * filename)
 				info.location = location;
 			}
 			
-			std::sort(uniformInfos.begin(), uniformInfos.end(), [](auto & u1, auto & u2) { return u1.name < u2.name; });
+			std::sort(uniformInfos.begin(), uniformInfos.end(),
+				[](Fsfx1_UniformInfo & u1, Fsfx1_UniformInfo & u2)
+				{
+					return u1.name < u2.name; 
+				});
 			
 			int socketIndex = VfxNodeBase::inputs.size();
 
@@ -266,7 +270,10 @@ void VfxNodeFsfx::loadShader(const char * filename)
 				}
 			}
 			
-			setDynamicInputs(&inputs[0], inputs.size());
+			if (inputs.empty())
+				setDynamicInputs(nullptr, 0);
+			else
+				setDynamicInputs(&inputs[0], inputs.size());
 		}
 	}
 }
@@ -338,8 +345,8 @@ void VfxNodeFsfx::tick(const float dt)
 		return;
 	}
 	
-	const int sx = image ? image->getSx() : getInputInt(kInput_Width, GFX_SX);
-	const int sy = image ? image->getSy() : getInputInt(kInput_Height, GFX_SY);
+	const int sx = image ? image->getSx() : getInputInt(kInput_Width, VFXGRAPH_SX);
+	const int sy = image ? image->getSy() : getInputInt(kInput_Height, VFXGRAPH_SY);
 	
 	if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight())
 	{
@@ -514,7 +521,7 @@ void VfxNodeFsfx::getDescription(VfxNodeDescription & d)
 	d.add("shader constants:");
 	if (dynamicInputs.empty())
 		d.add("(none)");
-	for (int i = 0; i < dynamicInputs.size(); ++i)
+	for (size_t i = 0; i < dynamicInputs.size(); ++i)
 	{
 		auto & input = dynamicInputs[i];
 		

@@ -2414,10 +2414,12 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 	cpuTimingBlock(GraphEdit_Tick);
 	
 #if defined(DEBUG) // todo : remove
+#if !defined(WINDOWS) // fixme : compile error ?
 	for (auto & nodeItr : graph->nodes)
 		Assert(nodeDatas.count(nodeItr.first) != 0);
 	for (auto & nodeDataItr : nodeDatas)
 		Assert(graph->nodes.count(nodeDataItr.first) != 0);
+#endif
 #endif
 
 	if (_inputIsCaptured)

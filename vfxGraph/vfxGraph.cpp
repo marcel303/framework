@@ -36,8 +36,11 @@
 	#include "Timer.h"
 #endif
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+extern int VFXGRAPH_SX;
+extern int VFXGRAPH_SY;
+
+int VFXGRAPH_SX = 0;
+int VFXGRAPH_SY = 0;
 
 //
 
@@ -190,11 +193,17 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 	}
 }
 
-void VfxGraph::tick(const float dt)
+void VfxGraph::tick(const int sx, const int sy, const float dt)
 {
 	vfxCpuTimingBlock(VfxGraph_Tick);
 	vfxGpuTimingBlock(VfxGraph_Tick);
 	
+	int oldSx = VFXGRAPH_SX;
+	int oldSy = VFXGRAPH_SY;
+
+	VFXGRAPH_SX = sx;
+	VFXGRAPH_SY = sy;
+
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = this;
 	
@@ -237,30 +246,39 @@ void VfxGraph::tick(const float dt)
 	//
 	
 	g_currentVfxGraph = nullptr;
+
+	VFXGRAPH_SX = oldSx;
+	VFXGRAPH_SY = oldSy;
 }
 
-void VfxGraph::draw() const
+void VfxGraph::draw(const int sx, const int sy) const
 {
-	const GLuint texture = traverseDraw();
+	const GLuint texture = traverseDraw(sx, sy);
 	
 	if (texture != 0)
 	{
 		gxSetTexture(texture);
 		pushBlend(BLEND_OPAQUE);
 		setColor(colorWhite);
-		drawRect(0, 0, GFX_SX, GFX_SY);
+		drawRect(0, 0, sx, sy);
 		popBlend();
 		gxSetTexture(0);
 	}
 }
 
-int VfxGraph::traverseDraw() const
+int VfxGraph::traverseDraw(const int sx, const int sy) const
 {
 	vfxCpuTimingBlock(VfxGraph_Draw);
 	vfxGpuTimingBlock(VfxGraph_Draw);
 	
 	int result = 0;
 	
+	int oldSx = VFXGRAPH_SX;
+	int oldSy = VFXGRAPH_SY;
+
+	VFXGRAPH_SX = sx;
+	VFXGRAPH_SY = sy;
+
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = const_cast<VfxGraph*>(this);
 	
@@ -323,6 +341,9 @@ int VfxGraph::traverseDraw() const
 	//
 	
 	g_currentVfxGraph = nullptr;
+
+	VFXGRAPH_SX = oldSx;
+	VFXGRAPH_SY = oldSy;
 	
 	return result;
 }

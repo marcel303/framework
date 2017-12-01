@@ -43,7 +43,9 @@ source_group("sources" FILES ${source})
 
 add_executable(examples ${source})
 
-set_target_properties(examples PROPERTIES LINK_FLAGS "-Wl,-all_load")
+if (APPLE)
+	set_target_properties(examples PROPERTIES LINK_FLAGS "-Wl,-all_load")
+endif (APPLE)
 
 set(LIBRARIES PRIVATE
 	libgg
@@ -87,5 +89,5 @@ endif (APPLE)
 
 if (MSVC)
 	set_property(TARGET examples APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
-	set_property(TARGET examples APPEND_STRING PROPERTY LINK_FLAGS /SAFESEH:NO)
+	set_property(TARGET examples APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO /WHOLEARCHIVE")
 endif (MSVC)

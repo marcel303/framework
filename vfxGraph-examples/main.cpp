@@ -367,7 +367,7 @@ int main(int argc, char * argv[])
 						
 						auto vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
 						
-						vfxGraph->tick(0.f);
+						vfxGraph->tick(GFX_SX, GFX_SY, 0.f);
 						
 						delete vfxGraph;
 						vfxGraph = nullptr;
@@ -611,7 +611,7 @@ int main(int argc, char * argv[])
 			{
 				const double timeStep = dt * realtimePreviewAnim;
 				
-				vfxGraph->tick(timeStep);
+				vfxGraph->tick(GFX_SX, GFX_SY, timeStep);
 			}
 			
 			// update vflip effect
@@ -632,7 +632,7 @@ int main(int argc, char * argv[])
 						gxScalef(1.f, vflip, 1.f);
 						gxTranslatef(-GFX_SX/2, -GFX_SY/2, 0);
 						
-						vfxGraph->draw();
+						vfxGraph->draw(GFX_SX, GFX_SY);
 					}
 					gxPopMatrix();
 				}

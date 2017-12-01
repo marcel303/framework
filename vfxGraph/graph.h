@@ -903,12 +903,12 @@ struct GraphEdit : GraphEditConnection
 				inputSockets.resize(typeDefinition.inputSockets.size() + newInputs.size());
 				numStaticInputSockets = typeDefinition.inputSockets.size();
 				
-				for (int i = 0; i < typeDefinition.inputSockets.size(); ++i)
+				for (size_t i = 0; i < typeDefinition.inputSockets.size(); ++i)
 				{
 					inputSockets[i] = typeDefinition.inputSockets[i];
 				}
 				
-				for (int i = 0; i < newInputs.size(); ++i)
+				for (size_t i = 0; i < newInputs.size(); ++i)
 				{
 					auto & newInput = newInputs[i];
 					auto & input = inputSockets[numStaticInputSockets + i];
@@ -924,12 +924,12 @@ struct GraphEdit : GraphEditConnection
 				outputSockets.resize(typeDefinition.outputSockets.size() + newOutputs.size());
 				numStaticOutputSockets = typeDefinition.outputSockets.size();
 				
-				for (int i = 0; i < typeDefinition.outputSockets.size(); ++i)
+				for (size_t i = 0; i < typeDefinition.outputSockets.size(); ++i)
 				{
 					outputSockets[i] = typeDefinition.outputSockets[i];
 				}
 				
-				for (int i = 0; i < newOutputs.size(); ++i)
+				for (size_t i = 0; i < newOutputs.size(); ++i)
 				{
 					auto & newOutput = newOutputs[i];
 					auto & output = outputSockets[numStaticOutputSockets + i];

@@ -38,6 +38,11 @@ using namespace tinyxml2;
 
 //
 
+extern const int GFX_SX;
+extern const int GFX_SY;
+
+//
+
 static void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const char * name, const float dt);
 
 //
