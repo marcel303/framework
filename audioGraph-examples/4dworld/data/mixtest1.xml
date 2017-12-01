@@ -1,0 +1,36 @@
+<graph nextNodeId="6" nextLinkId="14" nextZKey="43">
+    <node id="1" typeName="voice.4d" editorX="796.99310302734375" editorY="-117.24333190917969">
+        <input socket="gain" value="0.500000"/>
+    </node>
+    <node id="2" typeName="mix" editorX="430.847900390625" editorY="-98.212905883789062">
+        <input socket="mode" value="1"/>
+    </node>
+    <node id="3" typeName="audio.sine" editorX="274.79849243164062" editorY="-104.30262756347656">
+        <input socket="frequency" value="250.000000"/>
+        <input socket="mode" value="0"/>
+    </node>
+    <node id="4" typeName="audio.sine" editorX="264.91714477539062" editorY="70.030410766601562">
+        <input socket="frequency" value="5.400000"/>
+        <input socket="mode" value="0"/>
+    </node>
+    <node id="5" typeName="filter.comb" editorX="602.8828125" editorY="-97.451675415039062">
+        <input socket="delay" value="3.210000"/>
+        <input socket="feedback" value="0.200000"/>
+        <input socket="feedforward" value="0.000000"/>
+        <input socket="maxDelay" value="4.000000"/>
+    </node>
+    <link id="1" enabled="1" srcNodeId="2" srcNodeSocketName="sourceA" dstNodeId="3" dstNodeSocketName="audio"/>
+    <link id="4" enabled="1" srcNodeId="5" srcNodeSocketName="value" dstNodeId="2" dstNodeSocketName="audio"/>
+    <link id="6" enabled="1" srcNodeId="1" srcNodeSocketName="audio" dstNodeId="5" dstNodeSocketName="value"/>
+    <link id="13" enabled="1" srcNodeId="2" srcNodeSocketName="sourceB" dstNodeId="4" dstNodeSocketName="audio"/>
+    <editor>
+        <dragAndZoom x="526.4969482421875" y="35.477432250976562" zoom="1.3136866092681885"/>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="1" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="b600ff96">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

@@ -1,0 +1,16 @@
+include engine/ShaderPS.txt
+
+shader_in vec2 texcoord;
+
+uniform sampler2D source;
+uniform sampler2D overlay1;
+uniform float opacity;
+
+void main()
+{	
+	vec4 color = texture(source, texcoord);
+	color = vec4(color.rgb, (1.0 - color.a) * opacity);
+	color.rgb += (texture(overlay1, texcoord).rgb - vec3(0.5)) * 2.0 * 0.15;
+
+    shader_fragColor = color;
+}

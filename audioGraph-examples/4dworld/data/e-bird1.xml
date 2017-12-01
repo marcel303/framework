@@ -1,0 +1,124 @@
+<graph nextNodeId="73" nextLinkId="92" nextZKey="677">
+    <node id="5" typeName="voice.4d" editorX="238" editorY="12.894485473632812">
+        <input socket="ddiff" value="1"/>
+        <input socket="gain" value="0.200000"/>
+        <input socket="rampTime" value="4.000000"/>
+    </node>
+    <node id="30" typeName="memf" editorName="pos" editorX="74.65814208984375" editorY="170.5152587890625" folded="1">
+        <input socket="name" value="pos"/>
+    </node>
+    <node id="31" typeName="flags" editorName="dead" editorX="381" editorY="23" folded="1">
+        <input socket="flag" value="dead"/>
+    </node>
+    <node id="44" typeName="flags" editorName="kill" editorX="96" editorY="768" folded="1">
+        <input socket="flag" value="kill"/>
+    </node>
+    <node id="49" typeName="audio.pcmSelect" editorName="edo" editorX="-224" editorY="0" folded="1">
+        <input socket="mode" value="2"/>
+        <input socket="path" value="birds/edo"/>
+    </node>
+    <node id="51" typeName="trigger.event" editorX="-384" editorY="-16" folded="1">
+        <input socket="name" value="sing-begin"/>
+    </node>
+    <node id="52" typeName="trigger.event" editorX="-384" editorY="16" folded="1">
+        <input socket="name" value="sing-end"/>
+    </node>
+    <node id="53" typeName="audio.pcmSelect" editorName="call sfx" editorX="-32" editorY="-160" folded="1">
+        <input socket="mode" value="2"/>
+        <input socket="path" value="birds/edo-call"/>
+    </node>
+    <node id="54" typeName="trigger.event" editorX="-160" editorY="-176" folded="1">
+        <input socket="name" value="call-begin"/>
+    </node>
+    <node id="55" typeName="trigger.event" editorX="-160" editorY="-144" folded="1">
+        <input socket="name" value="call-end"/>
+    </node>
+    <node id="56" typeName="audio.pcmSelect" editorName="fly sfx" editorX="-32" editorY="-241.62814331054688" folded="1">
+        <input socket="mode" value="2"/>
+        <input socket="path" value="birds/formarcel"/>
+    </node>
+    <node id="57" typeName="trigger.event" editorX="-159.99998474121094" editorY="-257.01724243164062" folded="1">
+        <input socket="name" value="fly-begin"/>
+    </node>
+    <node id="58" typeName="trigger.event" editorX="-160" editorY="-224.007568359375" folded="1">
+        <input socket="name" value="fly-end"/>
+    </node>
+    <node id="59" typeName="audio.pcmSelect" editorName="milton" editorX="-224" editorY="80" folded="1">
+        <input socket="mode" value="2"/>
+        <input socket="path" value="birds/milton"/>
+    </node>
+    <node id="60" typeName="trigger.event" editorX="-384" editorY="64" folded="1">
+        <input socket="name" value="sing-begin"/>
+    </node>
+    <node id="61" typeName="trigger.event" editorX="-384" editorY="96" folded="1">
+        <input socket="name" value="sing-end"/>
+    </node>
+    <node id="62" typeName="audio.pcmSelect" editorName="formarcel" editorX="-224" editorY="160" folded="1">
+        <input socket="gain" value="0.800000"/>
+        <input socket="mode" value="2"/>
+        <input socket="path" value="birds/formarcel"/>
+    </node>
+    <node id="63" typeName="trigger.event" editorX="-384" editorY="144" folded="1">
+        <input socket="name" value="sing-begin"/>
+    </node>
+    <node id="64" typeName="trigger.event" editorX="-384" editorY="176" folded="1">
+        <input socket="name" value="sing-end"/>
+    </node>
+    <node id="65" typeName="gate" editorX="-64" editorY="16" folded="1"/>
+    <node id="66" typeName="trigger.event" editorX="-64" editorY="-16" folded="1">
+        <input socket="name" value="bird1"/>
+    </node>
+    <node id="67" typeName="gate" editorX="-64" editorY="96" folded="1"/>
+    <node id="68" typeName="trigger.event" editorX="-64" editorY="64" folded="1">
+        <input socket="name" value="bird2"/>
+    </node>
+    <node id="69" typeName="gate" editorX="-64" editorY="176" folded="1"/>
+    <node id="70" typeName="trigger.event" editorX="-64" editorY="144" folded="1">
+        <input socket="name" value="bird3"/>
+    </node>
+    <node id="71" typeName="math" editorName="gain" editorX="-34" editorY="-86" folded="1">
+        <input socket="a" value="0.200000"/>
+        <input socket="type" value="3"/>
+    </node>
+    <node id="72" typeName="memf" editorName="vol" editorX="-162" editorY="-87" folded="1">
+        <input socket="name" value="vol"/>
+    </node>
+    <link id="33" enabled="1" srcNodeId="5" srcNodeSocketName="pos.y" dstNodeId="30" dstNodeSocketName="value2"/>
+    <link id="35" enabled="1" srcNodeId="5" srcNodeSocketName="pos.z" dstNodeId="30" dstNodeSocketName="value3"/>
+    <link id="56" enabled="1" srcNodeId="31" srcNodeSocketName="set!" dstNodeId="5" dstNodeSocketName="rampedDown!"/>
+    <link id="58" enabled="1" srcNodeId="5" srcNodeSocketName="rampDown!" dstNodeId="44" dstNodeSocketName="set!"/>
+    <link id="65" enabled="1" srcNodeId="49" srcNodeSocketName="play!" dstNodeId="51" dstNodeSocketName="trigger!"/>
+    <link id="67" enabled="1" srcNodeId="5" srcNodeSocketName="pos.x" dstNodeId="30" dstNodeSocketName="value1"/>
+    <link id="68" enabled="1" srcNodeId="49" srcNodeSocketName="stop!" dstNodeId="52" dstNodeSocketName="trigger!"/>
+    <link id="69" enabled="1" srcNodeId="53" srcNodeSocketName="play!" dstNodeId="54" dstNodeSocketName="trigger!"/>
+    <link id="70" enabled="1" srcNodeId="53" srcNodeSocketName="stop!" dstNodeId="55" dstNodeSocketName="trigger!"/>
+    <link id="71" enabled="1" srcNodeId="5" srcNodeSocketName="audio" dstNodeId="53" dstNodeSocketName="audio"/>
+    <link id="72" enabled="1" srcNodeId="56" srcNodeSocketName="stop!" dstNodeId="58" dstNodeSocketName="trigger!"/>
+    <link id="73" enabled="1" srcNodeId="56" srcNodeSocketName="play!" dstNodeId="57" dstNodeSocketName="trigger!"/>
+    <link id="74" enabled="1" srcNodeId="5" srcNodeSocketName="audio" dstNodeId="56" dstNodeSocketName="audio"/>
+    <link id="75" enabled="1" srcNodeId="59" srcNodeSocketName="play!" dstNodeId="60" dstNodeSocketName="trigger!"/>
+    <link id="76" enabled="1" srcNodeId="59" srcNodeSocketName="stop!" dstNodeId="61" dstNodeSocketName="trigger!"/>
+    <link id="77" enabled="1" srcNodeId="62" srcNodeSocketName="play!" dstNodeId="63" dstNodeSocketName="trigger!"/>
+    <link id="78" enabled="1" srcNodeId="62" srcNodeSocketName="stop!" dstNodeId="64" dstNodeSocketName="trigger!"/>
+    <link id="81" enabled="1" srcNodeId="65" srcNodeSocketName="open!" dstNodeId="66" dstNodeSocketName="trigger!"/>
+    <link id="82" enabled="1" srcNodeId="67" srcNodeSocketName="open!" dstNodeId="68" dstNodeSocketName="trigger!"/>
+    <link id="83" enabled="1" srcNodeId="69" srcNodeSocketName="open!" dstNodeId="70" dstNodeSocketName="trigger!"/>
+    <link id="84" enabled="1" srcNodeId="65" srcNodeSocketName="in" dstNodeId="49" dstNodeSocketName="audio"/>
+    <link id="85" enabled="1" srcNodeId="5" srcNodeSocketName="audio" dstNodeId="65" dstNodeSocketName="out"/>
+    <link id="86" enabled="1" srcNodeId="67" srcNodeSocketName="in" dstNodeId="59" dstNodeSocketName="audio"/>
+    <link id="87" enabled="1" srcNodeId="5" srcNodeSocketName="audio" dstNodeId="67" dstNodeSocketName="out"/>
+    <link id="88" enabled="1" srcNodeId="69" srcNodeSocketName="in" dstNodeId="62" dstNodeSocketName="audio"/>
+    <link id="89" enabled="1" srcNodeId="5" srcNodeSocketName="audio" dstNodeId="69" dstNodeSocketName="out"/>
+    <link id="90" enabled="1" srcNodeId="71" srcNodeSocketName="b" dstNodeId="72" dstNodeSocketName="value1"/>
+    <link id="91" enabled="1" srcNodeId="5" srcNodeSocketName="gain" dstNodeId="71" dstNodeSocketName="result"/>
+    <editor>
+        <dragAndZoom x="170.17318725585938" y="34.493587493896484" zoom="1"/>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="000000cc" gridColor="ffffff4c">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

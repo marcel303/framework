@@ -1,0 +1,73 @@
+include engine/ShaderPS.txt
+include engine/builtin-hq-common.txt
+
+shader_in vec2 v_p;
+shader_in vec3 v_edgePlane1;
+shader_in vec3 v_edgePlane2;
+shader_in vec3 v_edgePlane3;
+shader_in vec3 v_baryDistances;
+shader_in vec4 v_color;
+
+uniform vec4 color1;
+uniform vec4 color2;
+uniform vec4 color3;
+
+float computeDistance(vec2 p)
+{
+	float d1 = dot(v_edgePlane1, vec3(p, 1.0));
+	float d2 = dot(v_edgePlane2, vec3(p, 1.0));
+	float d3 = dot(v_edgePlane3, vec3(p, 1.0));
+	
+	float d = min(min(d1, d2), d3);
+	
+	return d;
+}
+
+float distanceFade(float distance)
+{
+	// todo : add 0.5 to distance so 'stroke' center is actually along edge?
+	//        required for adjacent triangles to touch..
+	
+	return clamp(distance + 0.5, 0.0, 1.0);
+}
+
+void main()
+{
+	float v = 0.0;
+	
+	float d = computeDistance(v_p);
+	
+	if (d > 0.5 && enableOptimizations)
+	{
+		v = 1.0;
+	}
+	else
+	{
+		v = sampleDistanceFunction(v_p);
+	}
+
+	float b3 = dot(v_edgePlane1, vec3(v_p, 1.0)) / v_baryDistances.x;
+	float b1 = dot(v_edgePlane2, vec3(v_p, 1.0)) / v_baryDistances.y;
+	float b2 = dot(v_edgePlane3, vec3(v_p, 1.0)) / v_baryDistances.z;
+
+	vec4 bColor = b1 * color1 + b2 * color2 + b3 * color3;
+
+#if 0
+	bColor.rgb = vec3(a3);
+#endif
+
+#if 0
+	if (b1 < 0.0 || b1 > 1.0)
+		bColor = vec4(1.0);
+	if (b2 < 0.0 || b2 > 1.0)
+		bColor = vec4(1.0);
+	if (b3 < 0.0 || b3 > 1.0)
+		bColor = vec4(1.0);
+
+	//bColor.rgb = vec3(b2);
+#endif
+
+	vec4 color = hqColor(v, v_color * bColor);
+	
+	shader_fragColor = color;
+}

@@ -1,0 +1,40 @@
+<graph nextNodeId="52" nextLinkId="66" nextZKey="465">
+    <node id="5" typeName="voice.4d" editorX="238" editorY="12.89654541015625">
+        <input socket="pos.x" value="-20.000000"/>
+    </node>
+    <node id="30" typeName="memf" editorName="ball pos" editorX="48" editorY="142.24807739257812">
+        <input socket="name" value="pos"/>
+    </node>
+    <node id="31" typeName="flags" editorName="dead" editorX="397" editorY="-9">
+        <input socket="flag" value="dead"/>
+    </node>
+    <node id="44" typeName="flags" editorName="kill" editorX="41.99993896484375" editorY="554.6778564453125">
+        <input socket="flag" value="kill"/>
+    </node>
+    <node id="49" typeName="audio.pcmSelect" editorX="50.71844482421875" editorY="23.439361572265625">
+        <input socket="mode" value="2"/>
+        <input socket="path" value="birds/edo"/>
+    </node>
+    <node id="50" nodeType="1" typeName="" editorX="-190.13638305664062" editorY="57.7978515625">
+        <visualizer nodeId="49" dstSocketName="audio" sx="216" sy="148"/>
+    </node>
+    <node id="51" typeName="trigger.event" editorX="-91.319580078125" editorY="-33.112930297851562">
+        <input socket="name" value="bounce"/>
+    </node>
+    <link id="33" enabled="1" srcNodeId="5" srcNodeSocketName="pos.y" dstNodeId="30" dstNodeSocketName="value2"/>
+    <link id="35" enabled="1" srcNodeId="5" srcNodeSocketName="pos.z" dstNodeId="30" dstNodeSocketName="value3"/>
+    <link id="56" enabled="1" srcNodeId="31" srcNodeSocketName="set!" dstNodeId="5" dstNodeSocketName="rampedDown!"/>
+    <link id="58" enabled="1" srcNodeId="5" srcNodeSocketName="rampDown!" dstNodeId="44" dstNodeSocketName="set!"/>
+    <link id="64" enabled="1" srcNodeId="5" srcNodeSocketName="audio" dstNodeId="49" dstNodeSocketName="audio"/>
+    <link id="65" enabled="1" srcNodeId="49" srcNodeSocketName="play!" dstNodeId="51" dstNodeSocketName="trigger!"/>
+    <editor>
+        <dragAndZoom x="224.8785400390625" y="56.701824188232422" zoom="1.2374682426452637"/>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="000000cc" gridColor="ffffff4c">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>
