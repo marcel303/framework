@@ -49,8 +49,6 @@
 
 #define MACHINE_V2 1
 
-#define BINAURAL_DEMO 0
-
 //
 
 extern const int GFX_SX;
@@ -1254,12 +1252,7 @@ struct World : WorldInterface
 	
 	void init()
 	{
-	#if BINAURAL_DEMO
-		globalsInstance = g_audioGraphMgr->createInstance("binaural1.xml");
-		g_audioGraphMgr->selectInstance(globalsInstance);
-	#else
 		globalsInstance = g_audioGraphMgr->createInstance("globals.xml");
-	#endif
 		
 		//
 		
@@ -1750,7 +1743,7 @@ static void doVoiceButton(const char * name, const char * file, const bool isLas
 			if (e->type != kEntity_Voice)
 				continue;
 			
-			const std::string filename = std::string("voice-fragments/") + file + ".wav";
+			const std::string filename = std::string("voice-fragments/") + file + ".ogg";
 			
 			e->graphInstance->audioGraph->setMems("voices.src", filename.c_str());
 			
@@ -1831,18 +1824,9 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 
 int main(int argc, char * argv[])
 {
-#if 0
-	char * basePath = SDL_GetBasePath();
-	changeDirectory(basePath);
-	changeDirectory("data");
-	SDL_free(basePath);
-#endif
-
 #if FULLSCREEN
 	framework.fullscreen = true;
 #endif
-
-	//framework.waitForEvents = true;
 	
 	if (!framework.init(0, 0, GFX_SX, GFX_SY))
 		return -1;
@@ -1867,19 +1851,7 @@ int main(int argc, char * argv[])
 	
 	fillPcmDataCache("birds", true, false);
 	fillPcmDataCache("testsounds", true, true);
-	//fillPcmDataCache("voices", true, false);
 	fillPcmDataCache("voice-fragments", false, false);
-	
-	//
-	
-	//fillHrirSampleSetCache("binaural/CIPIC/subject12", "cipic.12", kHRIRSampleSetType_Cipic);
-	
-#if BINAURAL_DEMO
-	//fillHrirSampleSetCache("binaural/CIPIC/subject10", "cipic.10", kHRIRSampleSetType_Cipic);
-	//fillHrirSampleSetCache("binaural/CIPIC/subject11", "cipic.11", kHRIRSampleSetType_Cipic);
-	fillHrirSampleSetCache("binaural/CIPIC/subject12", "cipic.12", kHRIRSampleSetType_Cipic);
-	//fillHrirSampleSetCache("binaural/CIPIC/subject147", "cipic.147", kHRIRSampleSetType_Cipic);
-#endif
 
 	//
 	
@@ -1943,15 +1915,16 @@ int main(int argc, char * argv[])
 	
 	World * world = nullptr;
 	
-#if BINAURAL_DEMO
+#if 1
 	world = new World();
 	world->init();
+	
+	g_world = world;
 #endif
 	
 	//
 	
-	std::string oscIpAddress = "192.168.1.10";
-	//std::string oscIpAddress = "127.0.0.1";
+	std::string oscIpAddress = "127.0.0.1";
 	int oscUdpPort = 2000;
 	
 	AudioUpdateHandler audioUpdateHandler;
@@ -1988,10 +1961,6 @@ int main(int argc, char * argv[])
 	bool graphList = true;
 	bool instanceList = false;
 	
-#if BINAURAL_DEMO
-	instanceList = true;
-#endif
-	
 	auto doMenus = [&](const bool doActions, const bool doDraw, const float dt) -> bool
 	{
 		uiState.sx = 200;
@@ -2000,7 +1969,6 @@ int main(int argc, char * argv[])
 		
 		makeActive(&uiState, doActions, doDraw);
 		
-	#if !BINAURAL_DEMO
 		pushMenu("control");
 		{
 			doDrawer(interact, "control");
@@ -2220,7 +2188,6 @@ int main(int argc, char * argv[])
 		popMenu();
 		
 		doBreak();
-	#endif
 		
 		pushMenu("graphList");
 		{
@@ -2240,7 +2207,6 @@ int main(int argc, char * argv[])
 		}
 		popMenu();
 		
-	#if 0 || BINAURAL_DEMO
 		doBreak();
 		
 		pushMenu("instanceList");
@@ -2271,7 +2237,6 @@ int main(int argc, char * argv[])
 			}
 		}
 		popMenu();
-	#endif
 		
 		return uiState.activeElem != nullptr;
 	};

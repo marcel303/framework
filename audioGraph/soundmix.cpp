@@ -433,7 +433,7 @@ bool PcmData::load(const char * filename, const int channel)
 			sound = nullptr;
 		}
 		
-		if (result == true && Path::GetExtension(filename, true) != "wav")
+		if (result == true && Path::GetExtension(filename, true) != "wav" && false)
 		{
 			try
 			{
