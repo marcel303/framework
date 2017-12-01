@@ -12,7 +12,7 @@ Path::Path(const std::string& path)
 
 void Path::Parse(const std::string& path)
 {
-	std::string temp = Sanitize(path);
+	std::string temp = Sanitize(NormalizeSlashes(path));
 
 	m_Nodes = String::Split(temp, '/');
 }

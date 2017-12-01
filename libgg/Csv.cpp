@@ -67,7 +67,7 @@ bool CsvDocument::load(const char * filename, const bool hasHeader, const char s
 {
 	try
 	{
-		FileStream stream(filename, (OpenMode)(OpenMode_Read | OpenMode_Text));
+		FileStream stream(filename, OpenMode_Read);
 		StreamReader reader(&stream, false);
 		auto lines = reader.ReadAllLines();
 		
