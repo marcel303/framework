@@ -119,6 +119,7 @@ endif (WIN32)
 
 if (APPLE)
 	target_link_libraries(vfxgraph ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/DeepBelief.framework)
+	target_link_libraries(vfxgraph ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Syphon.framework)
 
 	find_library(COREIMAGE_LIBRARY CoreImage)
 	find_library(COREMIDI_LIBRARY CoreMIDI)
@@ -130,6 +131,7 @@ if (APPLE)
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libportaudio.a
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libturbojpeg.0.dylib
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/DeepBelief.framework
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Syphon.framework
 		${COREIMAGE_LIBRARY}
 		${COREMIDI_LIBRARY}
 		${AVFOUNDATION_LIBRARY}
@@ -137,6 +139,7 @@ if (APPLE)
 
 	set(VFXGRAPH_BINARIES
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Deepbelief.framework
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Syphon.framework
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libLeap.dylib
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libturbojpeg.0.dylib
 		PARENT_SCOPE)
