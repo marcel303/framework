@@ -2169,8 +2169,10 @@ bool AudioApp::doMenus(const bool doActions, const bool doDraw, const float dt)
 	return uiState->activeElem != nullptr;
 }
 
-void AudioApp::tick(const float dt, bool & inputIsCaptured)
+void AudioApp::tick(const float dt, bool & _inputIsCaptured)
 {
+	inputIsCaptured = _inputIsCaptured;
+	
 	/*
 	bool graphEditHasInputCapture =
 		audioGraphMgr.selectedFile != nullptr &&
@@ -2197,6 +2199,8 @@ void AudioApp::tick(const float dt, bool & inputIsCaptured)
 	{
 		inputIsCaptured |= world->tick(dt);
 	}
+	
+	_inputIsCaptured = inputIsCaptured;
 }
 
 void AudioApp::draw()
