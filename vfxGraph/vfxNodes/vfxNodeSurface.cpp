@@ -51,6 +51,8 @@ VFX_NODE_TYPE(VfxNodeSurface)
 	
 	in("source", "draw", "", "draw");
 	inEnum("format", "surfaceFormat");
+	in("width", "int");
+	in("height", "int");
 	in("clear", "bool", "1");
 	in("clearColor", "color", "fff");
 	in("darken", "bool", "0");
@@ -73,6 +75,8 @@ VfxNodeSurface::VfxNodeSurface()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Before, kVfxPlugType_DontCare);
 	addInput(kInput_Format, kVfxPlugType_Int);
+	addInput(kInput_Width, kVfxPlugType_Int);
+	addInput(kInput_Height, kVfxPlugType_Int);
 	addInput(kInput_Clear, kVfxPlugType_Bool);
 	addInput(kInput_ClearColor, kVfxPlugType_Color);
 	addInput(kInput_Darken, kVfxPlugType_Bool);
@@ -95,13 +99,13 @@ VfxNodeSurface::~VfxNodeSurface()
 	freeSurface();
 }
 
-void VfxNodeSurface::allocSurface(const SURFACE_FORMAT format, const bool withDepthBuffer)
+void VfxNodeSurface::allocSurface(const int sx, const int sy, const SURFACE_FORMAT format, const bool withDepthBuffer)
 {
 	freeSurface();
 	
 	//
 	
-	surface = new Surface(VFXGRAPH_SX, VFXGRAPH_SY, withDepthBuffer, true, format);
+	surface = new Surface(sx, sy, withDepthBuffer, true, format);
 	surface->clear();
 	
 	if (withDepthBuffer)
@@ -125,17 +129,19 @@ void VfxNodeSurface::tick(const float dt)
 	}
 	
 	const Format format = (Format)getInputInt(kInput_Format, 0);
+	const int sx = getInputInt(kInput_Width, VFXGRAPH_SX);
+	const int sy = getInputInt(kInput_Height, VFXGRAPH_SY);
 	const ViewMode viewMode = (ViewMode)getInputInt(kInput_ViewMode, 0);
 	
 	const SURFACE_FORMAT surfaceFormat = (format == kFormat_RGBA8) ? SURFACE_RGBA8 :  SURFACE_RGBA16F;
 	
 	const bool withDepthBuffer = (viewMode == kViewMode_Perspective);
 	
-	if (surface == nullptr || withDepthBuffer != surface->hasDepthTexture() || surfaceFormat != surface->getFormat())
+	if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight() || withDepthBuffer != surface->hasDepthTexture() || surfaceFormat != surface->getFormat())
 	{
 		logDebug("allocating surface. withDepthBuffer=%d, format=%d", withDepthBuffer, surfaceFormat);
 		
-		allocSurface(surfaceFormat, withDepthBuffer);
+		allocSurface(sx, sy, surfaceFormat, withDepthBuffer);
 	}
 }
 
