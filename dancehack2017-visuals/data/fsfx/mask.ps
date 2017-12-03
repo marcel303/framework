@@ -1,0 +1,54 @@
+include fsfx/common.inc
+
+// todo : rewrite to use image inputs
+
+vec4 fsfx()
+{
+	vec2 colormapSize = textureSize(colormap, 0);
+	vec2 colormapSizeRcp = 1.f / colormapSize;
+	
+	vec2 sampleCoord = texcoord;
+	sampleCoord -= vec2(0.5);
+	sampleCoord *= colormapSize;
+	//sampleCoord += vec2(fsfxData.time * 30.0, fsfxData.time * 100.0);
+	
+#if 0
+	float p = texture(pcm, texcoord).x;
+	float h = abs(p) * colormapSize.y / 3.0;
+	float d = h - abs(sampleCoord.y);
+	float c = d >= 0.0 ? d / h * 2.0 : 1.0;
+#elif 0
+	float s = 100.0;
+	sampleCoord = mod(sampleCoord, s);
+	sampleCoord -= s / 2.0;
+	
+	float c = sin((sampleCoord.x + sampleCoord.y) * 0.1);
+#elif 1
+	float s = 100.0;
+	float r = s / 2.0;
+	sampleCoord = mod(sampleCoord, s);
+	sampleCoord -= r;
+	
+	float c = length(sampleCoord) / r;
+#else
+	float s = 100.0;
+	float r = s / 2.0;
+	sampleCoord = mod(sampleCoord, s);
+	sampleCoord -= r;
+	sampleCoord = abs(sampleCoord);
+	
+	float c = max(sampleCoord.x, sampleCoord.y) / r;
+#endif
+
+	//c *= 1.0;
+	//c += 0.05;
+	c = pow(c, param2);
+
+	c = clamp(c, 0.0, 1.0);
+	
+	float v = clamp(param1, 0.0, 1.0);
+
+	vec4 color = vec4(vec3(v), c);
+	
+	return color;
+}

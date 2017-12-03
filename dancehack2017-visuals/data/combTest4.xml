@@ -1,0 +1,122 @@
+<graph nextNodeId="94" nextLinkId="136" nextZKey="1147">
+    <node id="58" typeName="voice.4d" editorX="790.79852294921875" editorY="-194.77439880371094">
+        <input socket="ddiff" value="1"/>
+        <input socket="ddiff.curve" value="1.000000"/>
+        <input socket="dim.x" value="3.000000"/>
+        <input socket="dim.y" value="0.000000"/>
+        <input socket="dim.z" value="3.000000"/>
+        <input socket="gain" value="0.800000"/>
+        <input socket="pos.x" value="-4.000000"/>
+        <input socket="pos.y" value="-4.000000"/>
+        <input socket="sub.boost" value="2"/>
+    </node>
+    <node id="59" typeName="pcm.fromFile" editorX="-64" editorY="-320" folded="1">
+        <input socket="filename" value="birdTest.ogg"/>
+    </node>
+    <node id="60" typeName="audio.pcm" editorX="48.000656127929688" editorY="-320.09530639648438" folded="1">
+        <input socket="gain" value="10.000000"/>
+        <input socket="rangeBegin" value="0.840000"/>
+        <input socket="rangeLength" value="0.160000"/>
+    </node>
+    <node id="67" typeName="flags" editorX="788" editorY="-311.09005737304688">
+        <input socket="flag" value="loop"/>
+    </node>
+    <node id="68" typeName="math" editorX="369.999755859375" editorY="-147.00003051757812"/>
+    <node id="69" typeName="physical.spring" editorX="598.45751953125" editorY="-323.57470703125">
+        <input socket="dampen" value="0.009000"/>
+        <input socket="impulse" value="40.000000"/>
+        <input socket="strength" value="2000.000000"/>
+    </node>
+    <node id="70" nodeType="1" typeName="" editorX="596.010009765625" editorY="-506.10665893554688">
+        <visualizer nodeId="69" dstSocketName="value" sx="216" sy="148"/>
+    </node>
+    <node id="71" typeName="filter.comb" editorX="518.5557861328125" editorY="-169.22921752929688">
+        <input socket="feedback" value="0.800000"/>
+        <input socket="feedforward" value="0.000000"/>
+        <input socket="forward" value="0.800000"/>
+        <input socket="maxDelay" value="4.000000"/>
+    </node>
+    <node id="72" typeName="audio.sine" editorX="373.856689453125" editorY="-33.46990966796875">
+        <input socket="b" value="0.200000"/>
+        <input socket="frequency" value="0.900000"/>
+    </node>
+    <node id="73" typeName="smoothe" editorX="651.63714599609375" editorY="-180.8353271484375">
+        <input socket="smoothing" value="1"/>
+        <input socket="smoothness" value="0.200000"/>
+    </node>
+    <node id="74" typeName="trigger.denom" editorX="302.43533325195312" editorY="-238.89022827148438"/>
+    <node id="75" typeName="audio.sine" editorX="633.44598388671875" editorY="-50.96343994140625">
+        <input socket="a" value="-10.000000"/>
+        <input socket="b" value="10.000000"/>
+        <input socket="fine" value="0"/>
+        <input socket="frequency" value="0.050000"/>
+    </node>
+    <node id="76" typeName="wavefield.1d" editorX="93.227737426757812" editorY="-108.79974365234375">
+        <input socket="pos.dampen" value="0.200000"/>
+        <input socket="sample.pos" value="0.300000"/>
+        <input socket="size" value="32"/>
+        <input socket="tension" value="100.000000"/>
+        <input socket="trigger.amount" value="1.000000"/>
+        <input socket="trigger.pos" value="0.800000"/>
+        <input socket="vel.dampen" value="0.100000"/>
+    </node>
+    <node id="79" typeName="math" editorX="333.24978637695312" editorY="305.76785278320312">
+        <input socket="a" value="50.000000"/>
+        <input socket="b" value="0.001700"/>
+        <input socket="type" value="3"/>
+    </node>
+    <node id="81" typeName="audio.sine" editorX="489.0008544921875" editorY="220.56727600097656">
+        <input socket="a" value="-10.000000"/>
+        <input socket="b" value="10.000000"/>
+        <input socket="fine" value="0"/>
+    </node>
+    <node id="83" typeName="math" editorX="355.1116943359375" editorY="177.73255920410156">
+        <input socket="a" value="100.000000"/>
+        <input socket="b" value="0.001450"/>
+        <input socket="type" value="3"/>
+    </node>
+    <node id="90" typeName="trigger.denom" editorX="438.43539428710938" editorY="-320.89022827148438"/>
+    <node id="91" typeName="math" editorX="235.99984741210938" editorY="-126.00003051757812">
+        <input socket="b" value="4.000000"/>
+        <input socket="type" value="3"/>
+    </node>
+    <node id="92" typeName="in.value" editorName="comb4.gain" editorX="432" editorY="-400" folded="1">
+        <input socket="name" value="comb4.gain"/>
+        <input socket="smoothness" value="0.100000"/>
+    </node>
+    <node id="93" typeName="in.value" editorName="comb4.fade" editorX="320" editorY="-400" folded="1">
+        <input socket="max" value="0.200000"/>
+        <input socket="name" value="comb4.fade"/>
+        <input socket="smoothness" value="0.100000"/>
+    </node>
+    <link id="55" enabled="1" srcNodeId="60" srcNodeSocketName="pcm" dstNodeId="59" dstNodeSocketName="pcm"/>
+    <link id="62" enabled="1" srcNodeId="67" srcNodeSocketName="set!" dstNodeId="60" dstNodeSocketName="loop!"/>
+    <link id="79" enabled="1" srcNodeId="71" srcNodeSocketName="delay" dstNodeId="72" dstNodeSocketName="audio"/>
+    <link id="82" enabled="1" srcNodeId="73" srcNodeSocketName="value" dstNodeId="71" dstNodeSocketName="value"/>
+    <link id="87" enabled="1" srcNodeId="58" srcNodeSocketName="audio" dstNodeId="73" dstNodeSocketName="result"/>
+    <link id="91" enabled="1" srcNodeId="74" srcNodeSocketName="trigger!" dstNodeId="60" dstNodeSocketName="loop!"/>
+    <link id="96" enabled="1" srcNodeId="58" srcNodeSocketName="pos.x" dstNodeId="75" dstNodeSocketName="audio"/>
+    <link id="104" enabled="1" srcNodeId="58" srcNodeSocketName="pos.z" dstNodeId="81" dstNodeSocketName="audio"/>
+    <link id="105" enabled="1" srcNodeId="81" srcNodeSocketName="frequency" dstNodeId="79" dstNodeSocketName="result"/>
+    <link id="107" enabled="1" srcNodeId="75" srcNodeSocketName="frequency" dstNodeId="83" dstNodeSocketName="result"/>
+    <link id="124" enabled="1" srcNodeId="71" srcNodeSocketName="value" dstNodeId="68" dstNodeSocketName="result"/>
+    <link id="125" enabled="1" srcNodeId="68" srcNodeSocketName="a" dstNodeId="69" dstNodeSocketName="value"/>
+    <link id="126" enabled="1" srcNodeId="90" srcNodeSocketName="trigger!" dstNodeId="74" dstNodeSocketName="trigger!"/>
+    <link id="128" enabled="1" srcNodeId="69" srcNodeSocketName="impulse!" dstNodeId="90" dstNodeSocketName="trigger!"/>
+    <link id="129" enabled="1" srcNodeId="76" srcNodeSocketName="trigger!" dstNodeId="74" dstNodeSocketName="trigger!"/>
+    <link id="131" enabled="1" srcNodeId="91" srcNodeSocketName="a" dstNodeId="76" dstNodeSocketName="audio"/>
+    <link id="132" enabled="1" srcNodeId="68" srcNodeSocketName="b" dstNodeId="91" dstNodeSocketName="result"/>
+    <link id="133" enabled="1" srcNodeId="58" srcNodeSocketName="gain" dstNodeId="92" dstNodeSocketName="valueX"/>
+    <link id="134" enabled="1" srcNodeId="68" srcNodeSocketName="a" dstNodeId="60" dstNodeSocketName="audio"/>
+    <link id="135" enabled="1" srcNodeId="73" srcNodeSocketName="smoothness" dstNodeId="93" dstNodeSocketName="valueX"/>
+    <editor>
+        <dragAndZoom x="671.8848876953125" y="-168.66122436523438" zoom="1"/>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="6767677f" gridColor="b600ff96">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

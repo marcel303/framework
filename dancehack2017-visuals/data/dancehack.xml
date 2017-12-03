@@ -1,0 +1,76 @@
+<graph nextNodeId="21" nextLinkId="16">
+    <node id="1" typeName="kinect2"/>
+    <node id="4" typeName="image_cpu.downsample">
+        <input socket="channel" value="0"/>
+        <input socket="maxWidth" value="12"/>
+        <input socket="size" value="0"/>
+    </node>
+    <node id="5" typeName="image_cpu.toGpu">
+        <input socket="channel" value="0"/>
+    </node>
+    <node id="7" typeName="draw.fsfx-v2">
+        <input socket="param1" value="0.000300"/>
+        <input socket="param2" value="1.000000"/>
+        <input socket="shader" value="fsfx/multiply.ps"/>
+    </node>
+    <node id="9" typeName="draw.display"/>
+    <node id="10" typeName="draw.surface">
+        <input socket="format" value="1"/>
+        <input socket="viewMode" value="0"/>
+    </node>
+    <node id="11" typeName="draw.image">
+        <input socket="sizeMode" value="0"/>
+    </node>
+    <node id="12" typeName="draw.sequence"/>
+    <node id="13" typeName="image_cpu.downsample">
+        <input socket="channel" value="0"/>
+        <input socket="maxWidth" value="20"/>
+        <input socket="size" value="0"/>
+    </node>
+    <node id="14" typeName="image_cpu.toGpu">
+        <input socket="channel" value="0"/>
+    </node>
+    <node id="17" typeName="picture">
+        <input socket="source" value="patreon.jpg"/>
+    </node>
+    <node id="18" typeName="draw.syphon"/>
+    <node id="19" typeName="video">
+        <input socket="mode" value="0"/>
+        <input socket="source" value="mocapc.mp4"/>
+    </node>
+    <link id="1" srcNodeId="4" srcNodeSocketName="image" dstNodeId="1" dstNodeSocketName="mem_video"/>
+    <link id="2" srcNodeId="5" srcNodeSocketName="image" dstNodeId="4" dstNodeSocketName="image"/>
+    <link id="5" srcNodeId="9" srcNodeSocketName="image" dstNodeId="10" dstNodeSocketName="image"/>
+    <link id="7" srcNodeId="11" srcNodeSocketName="image" dstNodeId="1" dstNodeSocketName="depth"/>
+    <link id="9" srcNodeId="10" srcNodeSocketName="source" dstNodeId="12" dstNodeSocketName="any"/>
+    <link id="10" srcNodeId="12" srcNodeSocketName="01" dstNodeId="11" dstNodeSocketName="any"/>
+    <link id="11" srcNodeId="12" srcNodeSocketName="02" dstNodeId="7" dstNodeSocketName="any"/>
+    <link id="12" srcNodeId="13" srcNodeSocketName="image" dstNodeId="1" dstNodeSocketName="mem_depth"/>
+    <link id="13" srcNodeId="14" srcNodeSocketName="image" dstNodeId="13" dstNodeSocketName="image"/>
+    <link id="15" srcNodeId="18" srcNodeSocketName="image" dstNodeId="19" dstNodeSocketName="image"/>
+    <editor nextZKey="61">
+        <dragAndZoom x="90.449462890625" y="175.35531616210938" zoom="1"/>
+        <nodeDatas>
+            <nodeData nodeId="1" x="-256" y="-83" zKey="44"/>
+            <nodeData nodeId="4" x="61.970001220703125" y="-99.041999816894531" zKey="10"/>
+            <nodeData nodeId="5" x="222.97000122070312" y="-118.04199981689453" zKey="46"/>
+            <nodeData nodeId="7" x="104.88199615478516" y="193.9580078125" zKey="42"/>
+            <nodeData nodeId="9" x="566.8819580078125" y="102.9580078125" zKey="24"/>
+            <nodeData nodeId="10" x="424.88198852539062" y="113.95800018310547" zKey="40"/>
+            <nodeData nodeId="11" x="132.88198852539062" y="100.95800018310547" zKey="36"/>
+            <nodeData nodeId="12" x="264.74432373046875" y="121.11544799804688" zKey="41"/>
+            <nodeData nodeId="13" x="-82.597885131835938" y="12.251739501953125" zKey="49"/>
+            <nodeData nodeId="14" x="396.97000122070312" y="-129.0419921875" zKey="47"/>
+            <nodeData nodeId="17" x="-310.31298828125" y="333.65936279296875" zKey="57"/>
+            <nodeData nodeId="18" x="-141.36912536621094" y="325.0181884765625" zKey="59"/>
+            <nodeData nodeId="19" x="-317.38360595703125" y="400.36944580078125" zKey="58"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="2" x="-266" y="-283.25091552734375" zKey="2" nodeId="1" dstSocketName="video" sx="216" sy="160"/>
+            <visualizer id="3" x="-316" y="51.96112060546875" zKey="3" nodeId="1" dstSocketName="depth" sx="216" sy="213"/>
+            <visualizer id="6" x="102.88165283203125" y="-317.0419921875" zKey="7" nodeId="5" dstSocketName="image" sx="216" sy="162"/>
+            <visualizer id="15" x="376.08261108398438" y="-354.75692749023438" zKey="50" nodeId="14" dstSocketName="image" sx="216" sy="213"/>
+        </visualizers>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
+    </editor>
+</graph>

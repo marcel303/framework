@@ -1,0 +1,70 @@
+<graph nextNodeId="56" nextLinkId="72" nextZKey="514">
+    <node id="5" typeName="voice.4d" editorX="238" editorY="12.89654541015625">
+        <input socket="articulation" value="1.000000"/>
+        <input socket="dim.x" value="2.000000"/>
+        <input socket="dim.y" value="2.000000"/>
+        <input socket="dim.z" value="2.000000"/>
+        <input socket="sub.boost" value="2"/>
+    </node>
+    <node id="23" typeName="audio.pcm" editorX="-313.9774169921875" editorY="-70.717025756835938"/>
+    <node id="30" typeName="memf" editorX="48" editorY="142.24807739257812">
+        <input socket="name" value="pos"/>
+    </node>
+    <node id="39" typeName="normalize" passthrough="1" editorX="-16" editorY="-80">
+        <input socket="value" value="1.000000"/>
+    </node>
+    <node id="40" typeName="limiter" editorX="112" editorY="-81.422317504882812">
+        <input socket="decay" value="0.002000"/>
+        <input socket="max" value="0.800000"/>
+    </node>
+    <node id="42" typeName="filter.comb" editorX="-144" editorY="-80.07769775390625">
+        <input socket="delay" value="0.027000"/>
+        <input socket="feedback" value="0.800000"/>
+        <input socket="feedforward" value="0.000000"/>
+        <input socket="maxDelay" value="1.000000"/>
+    </node>
+    <node id="49" typeName="pcm.fromFile" editorX="-444.39407348632812" editorY="-71.255752563476562">
+        <input socket="filename" value="birds/formarcel/01.wav"/>
+    </node>
+    <node id="50" typeName="memf" editorX="-347.65725708007812" editorY="173.37033081054688">
+        <input socket="name" value="delay"/>
+    </node>
+    <node id="51" typeName="memf" editorX="38.54571533203125" editorY="279.37539672851562">
+        <input socket="name" value="dim"/>
+    </node>
+    <node id="53" typeName="audio.sine" editorX="-195.91860961914062" editorY="125.25746154785156">
+        <input socket="b" value="0.100000"/>
+        <input socket="frequency" value="40.000000"/>
+        <input socket="mode" value="0"/>
+        <input socket="skew" value="0.200000"/>
+        <input socket="type" value="2"/>
+    </node>
+    <node id="55" typeName="audio.pcmSelect" editorX="-455.53897094726562" editorY="7.5715179443359375">
+        <input socket="autoPlay" value="1"/>
+        <input socket="mode" value="2"/>
+        <input socket="path" value="birds/edo"/>
+    </node>
+    <link id="33" enabled="1" srcNodeId="5" srcNodeSocketName="pos.y" dstNodeId="30" dstNodeSocketName="value2"/>
+    <link id="34" enabled="1" srcNodeId="5" srcNodeSocketName="pos.x" dstNodeId="30" dstNodeSocketName="value1"/>
+    <link id="35" enabled="1" srcNodeId="5" srcNodeSocketName="pos.z" dstNodeId="30" dstNodeSocketName="value3"/>
+    <link id="43" enabled="1" srcNodeId="40" srcNodeSocketName="value" dstNodeId="39" dstNodeSocketName="result"/>
+    <link id="45" enabled="1" srcNodeId="5" srcNodeSocketName="audio" dstNodeId="40" dstNodeSocketName="result"/>
+    <link id="50" enabled="1" srcNodeId="39" srcNodeSocketName="value" dstNodeId="42" dstNodeSocketName="value"/>
+    <link id="63" enabled="1" srcNodeId="23" srcNodeSocketName="pcm" dstNodeId="49" dstNodeSocketName="pcm"/>
+    <link id="64" enabled="1" srcNodeId="42" srcNodeSocketName="delay" dstNodeId="50" dstNodeSocketName="value1"/>
+    <link id="65" enabled="1" srcNodeId="5" srcNodeSocketName="dim.x" dstNodeId="51" dstNodeSocketName="value1"/>
+    <link id="66" enabled="1" srcNodeId="5" srcNodeSocketName="dim.y" dstNodeId="51" dstNodeSocketName="value2"/>
+    <link id="67" enabled="1" srcNodeId="5" srcNodeSocketName="dim.z" dstNodeId="51" dstNodeSocketName="value3"/>
+    <link id="70" enabled="1" srcNodeId="39" srcNodeSocketName="value" dstNodeId="53" dstNodeSocketName="audio"/>
+    <link id="71" enabled="1" srcNodeId="42" srcNodeSocketName="value" dstNodeId="55" dstNodeSocketName="audio"/>
+    <editor>
+        <dragAndZoom x="37.535564422607422" y="109.29573822021484" zoom="1.1392972469329834"/>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

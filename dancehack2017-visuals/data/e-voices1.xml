@@ -1,0 +1,102 @@
+<graph nextNodeId="56" nextLinkId="71" nextZKey="618">
+    <node id="5" typeName="voice.4d" editorX="302" editorY="12.886932373046875">
+        <input socket="dim.x" value="8.000000"/>
+        <input socket="dim.y" value="2.000000"/>
+        <input socket="dim.z" value="8.000000"/>
+        <input socket="rampTime" value="10.000000"/>
+        <input socket="spatd.noise.depth" value="2.000000"/>
+        <input socket="spatd.scale" value="10.000000"/>
+        <input socket="sub.boost" value="1"/>
+    </node>
+    <node id="22" typeName="pcm.fromFile" editorName="voices" editorX="-366.53271484375" editorY="-87.195510864257812" folded="1">
+        <input socket="filename" value="voices/004-marcel-fixed.ogg"/>
+    </node>
+    <node id="23" typeName="audio.pcm" editorX="-233.97589111328125" editorY="-70.719955444335938" folded="1">
+        <input socket="gain" value="4.000000"/>
+        <input socket="loop" value="0"/>
+        <input socket="loopCount" value="-1"/>
+    </node>
+    <node id="31" typeName="flags" editorName="dead" editorX="448" editorY="16" folded="1">
+        <input socket="flag" value="dead"/>
+    </node>
+    <node id="39" typeName="normalize" passthrough="1" editorX="48" editorY="-32" folded="1">
+        <input socket="value" value="1.000000"/>
+    </node>
+    <node id="40" typeName="limiter" editorX="176" editorY="-32" folded="1">
+        <input socket="decay" value="0.002000"/>
+        <input socket="max" value="0.300000"/>
+    </node>
+    <node id="42" typeName="filter.comb" editorX="-80" editorY="-32" folded="1">
+        <input socket="feedback" value="0.550000"/>
+        <input socket="feedforward" value="0.000000"/>
+        <input socket="maxDelay" value="1.000000"/>
+    </node>
+    <node id="44" typeName="flags" editorName="kill" editorX="156.83956909179688" editorY="743.32843017578125" folded="1">
+        <input socket="flag" value="kill"/>
+    </node>
+    <node id="45" typeName="audio.drywet" editorX="3.639495849609375" editorY="91.450286865234375"/>
+    <node id="46" typeName="audio.sine" passthrough="1" editorX="-153.15043640136719" editorY="118.1812744140625" folded="1">
+        <input socket="b" value="0.100000"/>
+        <input socket="frequency" value="200.000000"/>
+        <input socket="mode" value="0"/>
+        <input socket="skew" value="0.400000"/>
+        <input socket="type" value="2"/>
+    </node>
+    <node id="47" typeName="audio.sine" passthrough="1" editorX="-153.15043640136719" editorY="166.1812744140625" folded="1">
+        <input socket="b" value="0.100000"/>
+        <input socket="frequency" value="300.000000"/>
+        <input socket="mode" value="0"/>
+        <input socket="skew" value="0.100000"/>
+        <input socket="type" value="2"/>
+    </node>
+    <node id="48" typeName="audio.sine" editorName="lfo" editorX="-153.15043640136719" editorY="214.36541748046875" folded="1">
+        <input socket="fine" value="0"/>
+        <input socket="frequency" value="0.300000"/>
+    </node>
+    <node id="51" typeName="audio.sine" editorX="-320" editorY="273.14279174804688" folded="1">
+        <input socket="fine" value="0"/>
+        <input socket="frequency" value="0.012300"/>
+    </node>
+    <node id="52" typeName="map.range" editorX="32" editorY="272" folded="1">
+        <input socket="outMax" value="6.000000"/>
+        <input socket="outMin" value="-6.000000"/>
+    </node>
+    <node id="53" typeName="map.range" editorX="-224" editorY="0" folded="1">
+        <input socket="outMax" value="0.050000"/>
+        <input socket="outMin" value="0.400000"/>
+    </node>
+    <node id="54" typeName="memf" editorName="vol" editorX="64" editorY="16" folded="1">
+        <input socket="name" value="vol"/>
+    </node>
+    <node id="55" typeName="math" editorName="gain" editorX="64" editorY="48" folded="1">
+        <input socket="a" value="0.500000"/>
+        <input socket="type" value="3"/>
+    </node>
+    <link id="22" enabled="1" srcNodeId="23" srcNodeSocketName="pcm" dstNodeId="22" dstNodeSocketName="pcm"/>
+    <link id="43" enabled="1" srcNodeId="40" srcNodeSocketName="value" dstNodeId="39" dstNodeSocketName="result"/>
+    <link id="45" enabled="1" srcNodeId="5" srcNodeSocketName="audio" dstNodeId="40" dstNodeSocketName="result"/>
+    <link id="48" enabled="1" srcNodeId="42" srcNodeSocketName="value" dstNodeId="23" dstNodeSocketName="audio"/>
+    <link id="50" enabled="1" srcNodeId="39" srcNodeSocketName="value" dstNodeId="42" dstNodeSocketName="value"/>
+    <link id="56" enabled="1" srcNodeId="31" srcNodeSocketName="set!" dstNodeId="5" dstNodeSocketName="rampedDown!"/>
+    <link id="58" enabled="1" srcNodeId="5" srcNodeSocketName="rampDown!" dstNodeId="44" dstNodeSocketName="set!"/>
+    <link id="59" enabled="1" srcNodeId="45" srcNodeSocketName="dry" dstNodeId="46" dstNodeSocketName="audio"/>
+    <link id="60" enabled="1" srcNodeId="45" srcNodeSocketName="wet" dstNodeId="47" dstNodeSocketName="audio"/>
+    <link id="61" enabled="1" srcNodeId="5" srcNodeSocketName="audio" dstNodeId="45" dstNodeSocketName="audio"/>
+    <link id="62" enabled="1" srcNodeId="45" srcNodeSocketName="wetness" dstNodeId="48" dstNodeSocketName="audio"/>
+    <link id="65" enabled="1" srcNodeId="52" srcNodeSocketName="value" dstNodeId="51" dstNodeSocketName="audio"/>
+    <link id="66" enabled="1" srcNodeId="5" srcNodeSocketName="pos.y" dstNodeId="52" dstNodeSocketName="result"/>
+    <link id="67" enabled="1" srcNodeId="53" srcNodeSocketName="value" dstNodeId="51" dstNodeSocketName="audio"/>
+    <link id="68" enabled="1" srcNodeId="42" srcNodeSocketName="delay" dstNodeId="53" dstNodeSocketName="result"/>
+    <link id="69" enabled="1" srcNodeId="55" srcNodeSocketName="b" dstNodeId="54" dstNodeSocketName="value1"/>
+    <link id="70" enabled="1" srcNodeId="5" srcNodeSocketName="gain" dstNodeId="55" dstNodeSocketName="result"/>
+    <editor>
+        <dragAndZoom x="342.45989990234375" y="122.48260498046875" zoom="1"/>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="3c01c24f" gridColor="ffffff4c">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

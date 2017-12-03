@@ -1,0 +1,7 @@
+<graph nextNodeId="2" nextLinkId="1" nextZKey="2">
+    <node id="1" typeName="wavefield.1d" editorX="-206" editorY="-114"/>
+    <editor>
+        <dragAndZoom x="0" y="0" zoom="1"/>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
+    </editor>
+</graph>
