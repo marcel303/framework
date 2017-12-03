@@ -41,6 +41,8 @@ struct VfxNodeKinect2 : VfxNodeBase
 	{
 		kInput_DeviceId,
 		kInput_Infrared,
+		kInput_DepthMin,
+		kInput_DepthMax,
 		kInput_COUNT
 	};
 	
@@ -49,6 +51,7 @@ struct VfxNodeKinect2 : VfxNodeBase
 		kOutput_VideoImage,
 		kOutput_DepthImage,
 		kOutput_VideoImageCpu,
+		kOutput_DepthImageCpu,
 		kOutput_DepthChannels,
 		kOutput_COUNT
 	};
@@ -57,6 +60,8 @@ struct VfxNodeKinect2 : VfxNodeBase
 	VfxImage_Texture depthImage;
 	
 	VfxImageCpu videoImageCpu;
+	VfxImageCpu depthImageCpu;
+	VfxImageCpuData depthImageCpuData;
 	VfxChannels depthChannels;
 
 	VfxNodeKinect2();

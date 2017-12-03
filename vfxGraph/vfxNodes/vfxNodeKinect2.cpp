@@ -62,9 +62,12 @@ VFX_NODE_TYPE(VfxNodeKinect2)
 	
 	in("deviceId", "int");
 	in("infrared", "bool");
+	in("min", "float");
+	in("max", "float");
 	out("video", "image");
 	out("depth", "image");
 	out("mem_video", "image_cpu");
+	out("mem_depth", "image_cpu");
 	out("ch_depth", "channels");
 }
 
@@ -77,9 +80,12 @@ VfxNodeKinect2::VfxNodeKinect2()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_DeviceId, kVfxPlugType_Int);
 	addInput(kInput_Infrared, kVfxPlugType_Bool);
+	addInput(kInput_DepthMin, kVfxPlugType_Float);
+	addInput(kInput_DepthMax, kVfxPlugType_Float);
 	addOutput(kOutput_VideoImage, kVfxPlugType_Image, &videoImage);
 	addOutput(kOutput_DepthImage, kVfxPlugType_Image, &depthImage);
 	addOutput(kOutput_VideoImageCpu, kVfxPlugType_ImageCpu, &videoImageCpu);
+	addOutput(kOutput_DepthImageCpu, kVfxPlugType_ImageCpu, &depthImageCpu);
 	addOutput(kOutput_DepthChannels, kVfxPlugType_Channels, &depthChannels);
 }
 
@@ -138,6 +144,7 @@ void VfxNodeKinect2::tick(const float dt)
 		depthImage.texture = 0;
 		
 		videoImageCpu.reset();
+		depthImageCpu.reset();
 		depthChannels.reset();
 		
 		return;
@@ -146,7 +153,7 @@ void VfxNodeKinect2::tick(const float dt)
 	const bool wantsVideoTexture = outputs[kOutput_VideoImage].isReferenced();
 	const bool wantsDepthTexture = outputs[kOutput_DepthImage].isReferenced();
 	const bool wantsVideoData = outputs[kOutput_VideoImageCpu].isReferenced();
-	const bool wantsDepthData = outputs[kOutput_DepthChannels].isReferenced();
+	const bool wantsDepthData = outputs[kOutput_DepthImageCpu].isReferenced() || outputs[kOutput_DepthChannels].isReferenced();
 	
 	tickId++;
 	
@@ -241,7 +248,34 @@ void VfxNodeKinect2::tick(const float dt)
 		videoImageCpu.reset();
 	
 	if (depthFrame != nullptr)
+	{
 		depthChannels.setData2DContiguous((float*)depthFrame->data, false, depthFrame->width, depthFrame->height, 1);
+		
+		if (outputs[kOutput_DepthImageCpu].isReferenced())
+		{
+			depthImageCpuData.allocOnSizeChange(depthFrame->width, depthFrame->height, 1, true);
+			
+			depthImageCpu.setDataR8(depthImageCpuData.data, depthFrame->width, depthFrame->height, 4, depthFrame->width);
+			
+			for (int y = 0; y < depthFrame->height; ++y)
+			{
+				uint8_t * __restrict dst = ((uint8_t*)depthImageCpuData.data) + y * depthFrame->width;
+				float * __restrict src = ((float*)depthFrame->data) + y * depthFrame->width;
+				
+				for (int x = 0; x < depthFrame->width; ++x)
+				{
+					int c = int(src[x]);
+					
+					if (c < 0)
+						c = 0;
+					else if (c > 255)
+						c = 255;
+					
+					dst[x] = c;
+				}
+			}
+		}
+	}
 	else
 		depthChannels.reset();
 }
