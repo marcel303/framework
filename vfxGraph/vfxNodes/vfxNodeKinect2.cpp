@@ -63,7 +63,7 @@ VFX_NODE_TYPE(VfxNodeKinect2)
 	in("deviceId", "int");
 	in("infrared", "bool");
 	in("min", "float");
-	in("max", "float");
+	in("max", "float", "2000");
 	out("video", "image");
 	out("depth", "image");
 	out("mem_video", "image_cpu");
@@ -257,6 +257,11 @@ void VfxNodeKinect2::tick(const float dt)
 			
 			depthImageCpu.setDataR8(depthImageCpuData.data, depthFrame->width, depthFrame->height, 4, depthFrame->width);
 			
+			const float depthMin = getInputFloat(kInput_DepthMin, 0.f);
+			const float depthMax = getInputFloat(kInput_DepthMax, 2000.f);
+			
+			const float depthScale = depthMax > depthMin ? 255.f / (depthMax - depthMin) : 0.f;
+			
 			for (int y = 0; y < depthFrame->height; ++y)
 			{
 				uint8_t * __restrict dst = ((uint8_t*)depthImageCpuData.data) + y * depthFrame->width;
@@ -264,7 +269,9 @@ void VfxNodeKinect2::tick(const float dt)
 				
 				for (int x = 0; x < depthFrame->width; ++x)
 				{
-					int c = int(src[x]);
+					float depth = src[x];
+					
+					int c = int((depth - depthMin) * depthScale);
 					
 					if (c < 0)
 						c = 0;
