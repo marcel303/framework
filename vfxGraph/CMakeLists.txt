@@ -145,6 +145,9 @@ if (APPLE)
 		PARENT_SCOPE)
 endif (APPLE)
 
+file(GLOB_RECURSE temp "vfxNodes/vfxNode*")
+set(VFXGRAPH_NODES ${temp} PARENT_SCOPE)
+
 if (MSVC)
 	set_property(TARGET vfxgraph APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
 	set_property(TARGET vfxgraph APPEND_STRING PROPERTY LINK_FLAGS /SAFESEH:NO)

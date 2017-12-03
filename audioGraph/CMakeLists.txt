@@ -96,6 +96,9 @@ if (APPLE)
 		PARENT_SCOPE)
 endif (APPLE)
 
+file(GLOB_RECURSE temp "audioNodes/audioNode*")
+set(AUDIOGRAPH_NODES ${temp} PARENT_SCOPE)
+
 if (MSVC)
 	set_property(TARGET audioGraph APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
 	set_property(TARGET audioGraph APPEND_STRING PROPERTY LINK_FLAGS /SAFESEH:NO)
