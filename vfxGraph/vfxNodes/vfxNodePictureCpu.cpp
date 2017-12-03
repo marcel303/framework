@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "image.h"
+#include "../../framework/image.h"
 #include "vfxNodePictureCpu.h"
 
 VFX_NODE_TYPE(VfxNodePictureCpu)
