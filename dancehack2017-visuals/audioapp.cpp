@@ -1507,25 +1507,6 @@ struct World : WorldInterface
 				}
 			}
 			hqEnd();
-			
-			beginTextBatch();
-			for (int ox = 0; ox < 2; ++ox)
-			{
-				for (int oy = 0; oy < 2; ++oy)
-				{
-					const Vec2 world = wavefieldToWorld.Mul4(Vec2(wavefield.numElems * ox, wavefield.numElems * oy));
-					
-					setColor(colorWhite);
-					drawText(
-						ox * wavefield.numElems,
-						oy * wavefield.numElems,
-						1.5f,
-						0, 0,
-						"(%.2f, %.2f)",
-						world[0], world[1]);
-				}
-			}
-			endTextBatch();
 		}
 		gxPopMatrix();
 		
@@ -1533,42 +1514,14 @@ struct World : WorldInterface
 		{
 			gxMultMatrixf(worldToScreen.m_v);
 			
-			const float rect[4][2] =
+			pushBlend(BLEND_ADD);
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
-				{ -6, -6 },
-				{ +6, -6 },
-				{ +6, +6 },
-				{ -6, +6 }
-			};
-			
-			hqBegin(HQ_LINES, true);
-			{
-				for (int i = 0; i < 4; ++i)
-				{
-					const auto v1 = rect[(i + 0) % 4];
-					const auto v2 = rect[(i + 1) % 4];
-					
-					setColor(255, 255, 255, 127);
-					hqLine(v1[0], v1[1], 1.f, v2[0], v2[1], 1.f);
-				}
+				setColor(15, 31, 63, 127);
+				hqFillRoundedRect(-6, -6, +6, +6, .5f);
 			}
 			hqEnd();
-			
-			beginTextBatch();
-			for (int i = 0; i < 4; ++i)
-			{
-				const auto v = rect[(i + 0) % 4];
-				
-				setColor(colorWhite);
-				drawText(
-					v[0],
-					v[1],
-					.8f,
-					0, 0,
-					"(%.2f, %.2f)",
-					v[0], v[1]);
-			}
-			endTextBatch();
+			popBlend();
 			
 			for (auto entity : entities)
 			{
@@ -2216,12 +2169,8 @@ bool AudioApp::doMenus(const bool doActions, const bool doDraw, const float dt)
 	return uiState->activeElem != nullptr;
 }
 
-void AudioApp::tick()
+void AudioApp::tick(const float dt, bool & inputIsCaptured)
 {
-	const float dt = std::min(1.f / 20.f, framework.timeStep);
-	
-	inputIsCaptured = false;
-	
 	/*
 	bool graphEditHasInputCapture =
 		audioGraphMgr.selectedFile != nullptr &&

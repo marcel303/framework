@@ -33,7 +33,7 @@ struct AudioApp
 
 	void init();
 	bool doMenus(const bool doActions, const bool doDraw, const float dt);
-	void tick();
+	void tick(const float dt, bool & inputIsCaptured);
 	void draw();
 	void shut();
 };

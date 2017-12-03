@@ -2,13 +2,18 @@ include engine/ShaderPS.txt
 
 shader_in vec2 texcoord;
 
-uniform sampler2D source;
+uniform sampler2D sourceWorld;
+uniform sampler2D sourceGraph;
 uniform float opacity;
 
 void main()
 {	
-	vec4 color = texture(source, texcoord);
-	color = vec4(color.rgb, (1.0 - color.a) * opacity);
+	vec4 colorWorld = texture(sourceWorld, texcoord);
+	
+	vec4 colorGraph = texture(sourceGraph, texcoord);
+	colorGraph = vec4(colorGraph.rgb, (1.0 - colorGraph.a) * opacity);
+
+	vec4 color = mix(colorWorld, colorGraph, colorGraph.a);
 
     shader_fragColor = color;
 }

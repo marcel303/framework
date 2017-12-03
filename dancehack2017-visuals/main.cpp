@@ -177,7 +177,8 @@ struct VideoApp
 	
 	VfxGraph * vfxGraph = nullptr;
 	
-	Surface * graphEditSurface = nullptr;
+	Surface * worldSurface = nullptr;
+	Surface * graphSurface = nullptr;
 	
 	float realtimePreviewAnim = 1.f;
 	
@@ -214,7 +215,8 @@ struct VideoApp
 		
 		//
 		
-		graphEditSurface = new Surface(GFX_SX, GFX_SY, false);
+		worldSurface = new Surface(GFX_SX, GFX_SY, false);
+		graphSurface = new Surface(GFX_SX, GFX_SY, false);
 	}
 	
 	void tick(const float dt, bool & inputIsCaptured)
@@ -328,29 +330,34 @@ struct VideoApp
 	
 	void draw(const float dt)
 	{
-		if (vfxGraph != nullptr)
+		pushSurface(worldSurface);
 		{
-			gxPushMatrix();
+			worldSurface->clear(0, 0, 0, 255);
+			if (vfxGraph != nullptr)
 			{
-				gxTranslatef(+GFX_SX/2, +GFX_SY/2, 0);
-				gxScalef(1.f, vflip, 1.f);
-				gxTranslatef(-GFX_SX/2, -GFX_SY/2, 0);
-				
-				vfxGraph->draw(GFX_SX, GFX_SY);
+				gxPushMatrix();
+				{
+					gxTranslatef(+GFX_SX/2, +GFX_SY/2, 0);
+					gxScalef(1.f, vflip, 1.f);
+					gxTranslatef(-GFX_SX/2, -GFX_SY/2, 0);
+					
+					vfxGraph->draw(GFX_SX, GFX_SY);
+				}
+				gxPopMatrix();
 			}
-			gxPopMatrix();
-		}
 
-		Assert(g_currentVfxGraph == nullptr);
-		g_currentVfxGraph = vfxGraph;
-		{
-			graphEdit->tickVisualizers(dt);
+			Assert(g_currentVfxGraph == nullptr);
+			g_currentVfxGraph = vfxGraph;
+			{
+				graphEdit->tickVisualizers(dt);
+			}
+			g_currentVfxGraph = nullptr;
 		}
-		g_currentVfxGraph = nullptr;
+		popSurface();
 
-		pushSurface(graphEditSurface);
+		pushSurface(graphSurface);
 		{
-			graphEditSurface->clear(0, 0, 0, 255);
+			graphSurface->clear(0, 0, 0, 255);
 			pushBlend(BLEND_ADD);
 			
 			glBlendEquation(GL_FUNC_ADD);
@@ -365,8 +372,11 @@ struct VideoApp
 	
 	void shut()
 	{
-		delete graphEditSurface;
-		graphEditSurface = nullptr;
+		delete worldSurface;
+		worldSurface = nullptr;
+		
+		delete graphSurface;
+		graphSurface = nullptr;
 	
 		delete graphEdit;
 		graphEdit = nullptr;
@@ -378,6 +388,51 @@ struct VideoApp
 		typeDefinitionLibrary = nullptr;
 	}
 };
+
+//
+
+AudioApp * g_audioApp = nullptr;
+
+struct VfxNodeAudioApp : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Image,
+		kOutput_COUNT
+	};
+	
+	VfxImage_Texture imageOutput;
+	
+	VfxNodeAudioApp()
+		: VfxNodeBase()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
+	}
+	
+	virtual void tick(const float dt)
+	{
+		if (isPassthrough || g_audioApp == nullptr)
+		{
+			imageOutput.texture = 0;
+			return;
+		}
+		
+		imageOutput.texture = g_audioApp->worldSurface->getTexture();
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeAudioApp)
+{
+	typeName = "audioApp";
+	
+	out("image", "image");
+}
 
 //
 
@@ -395,10 +450,6 @@ int main(int argc, char * argv[])
 	framework.actionHandler = handleAction;
 	framework.realTimeEditCallback = handleRealTimeEdit;
 	
-	AudioApp audioApp;
-	
-	VideoApp videoApp;
-	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
 		initUi();
@@ -415,9 +466,17 @@ int main(int argc, char * argv[])
 		
 		//
 		
+		AudioApp audioApp;
+		
+		VideoApp videoApp;
+		
 		audioApp.init();
 		
 		videoApp.init();
+		
+		g_audioApp = &audioApp;
+		
+		int selectedApp = 0;
 		
 		//
 		
@@ -435,6 +494,9 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
+			if (keyboard.wentDown(SDLK_LALT) && keyboard.isDown(SDLK_LGUI))
+				selectedApp = (selectedApp + 1) % 2;
+			
 			// avoid excessively large time steps by clamping it to 1/15th of a second, simulating a minimum of 15 fps
 			
 			framework.timeStep = std::min(framework.timeStep, 1.f / 15.f);
@@ -445,16 +507,28 @@ int main(int argc, char * argv[])
 			
 			bool inputIsCaptured = false;
 			
-			audioApp.tick();
+			if (selectedApp == 0)
+				audioApp.tick(dt, inputIsCaptured);
 			
-			videoApp.tick(dt, inputIsCaptured);
+			if (selectedApp == 1)
+				videoApp.tick(dt, inputIsCaptured);
+			
+			inputIsCaptured = true;
+			
+			if (selectedApp != 0)
+				audioApp.tick(dt, inputIsCaptured);
+			
+			if (selectedApp != 1)
+				videoApp.tick(dt, inputIsCaptured);
 			
 			//
 			
+			/*
 			if (videoApp.graphEdit->state == GraphEdit::kState_Hidden)
 				SDL_ShowCursor(0);
 			else
 				SDL_ShowCursor(1);
+			*/
 			
 			framework.beginDraw(0, 0, 0, 255);
 			{
@@ -468,28 +542,22 @@ int main(int argc, char * argv[])
 				
 				if (hideTime > 0.f)
 				{
-					if (hideTime < 1.f)
-					{
-						pushBlend(BLEND_OPAQUE);
-						{
-							const float radius = std::pow(1.f - hideTime, 2.f) * 200.f;
-							
-							setShader_GaussianBlurH(videoApp.graphEditSurface->getTexture(), 32, radius);
-							videoApp.graphEditSurface->postprocess();
-							clearShader();
-						}
-						popBlend();
-					}
-					
 					Shader composite("composite");
 					setShader(composite);
-					pushBlend(BLEND_ADD);
+					pushBlend(BLEND_OPAQUE);
 					{
-						glBlendEquation(GL_FUNC_ADD);
-						glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
+						const GLuint worldTexture =
+							selectedApp == 0
+							? audioApp.worldSurface->getTexture()
+							: videoApp.worldSurface->getTexture();
 						
-						composite.setTexture("source", 0, videoApp.graphEditSurface->getTexture(), false, true);
-						//composite.setTexture("source", 0, audioApp.worldSurface->getTexture(), false, true);
+						const GLuint graphTexture =
+							selectedApp == 0
+							? audioApp.graphSurface->getTexture()
+							: videoApp.graphSurface->getTexture();
+						
+						composite.setTexture("sourceWorld", 0, worldTexture, false, true);
+						composite.setTexture("sourceGraph", 1, graphTexture, false, true);
 						composite.setImmediate("opacity", hideTime);
 						
 						drawRect(0, 0, GFX_SX, GFX_SY);
