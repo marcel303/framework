@@ -1588,7 +1588,24 @@ void Surface::postprocess()
 
 	pushSurface(this);
 	{
+		GLint restoreDepthTest;
+		glGetIntegerv(GL_DEPTH_TEST, &restoreDepthTest);
+		checkErrorGL();
+		glDisable(GL_DEPTH_TEST);
+		checkErrorGL();
+		glDepthMask(GL_FALSE);
+		checkErrorGL();
+		
 		drawRect(0.f, 0.f, m_size[0], m_size[1]);
+		
+		glDepthMask(GL_TRUE);
+		checkErrorGL();
+		
+		if (restoreDepthTest)
+		{
+			glEnable(GL_DEPTH_TEST);
+			checkErrorGL();
+		}
 	}
 	popSurface();	
 }
