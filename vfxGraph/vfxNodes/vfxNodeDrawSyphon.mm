@@ -34,21 +34,19 @@ VFX_NODE_TYPE(VfxNodeDrawSyphon)
 	typeName = "draw.syphon";
 	
 	in("image", "image");
+	in("name", "string");
 	out("any", "draw", "draw");
 }
 
 VfxNodeDrawSyphon::VfxNodeDrawSyphon()
 	: VfxNodeBase()
 	, server(nullptr)
+	, currentName()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_Image);
+	addInput(kInput_Name, kVfxPlugType_String);
 	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
-	
-	auto context = CGLGetCurrentContext();
-	
-	server = [[SyphonServer alloc] initWithName:@"My Output" context:context options:nil];
-	checkErrorGL();
 }
 
 VfxNodeDrawSyphon::~VfxNodeDrawSyphon()
@@ -61,9 +59,39 @@ VfxNodeDrawSyphon::~VfxNodeDrawSyphon()
 	checkErrorGL();
 }
 
+void VfxNodeDrawSyphon::tick(const float dt)
+{
+	const char * name = getInputString(kInput_Name, "");
+	
+	if (name != currentName)
+	{
+		if (server != nil)
+		{
+			[server stop];
+			checkErrorGL();
+			
+			[server release];
+			server = nil;
+			checkErrorGL();
+		}
+		
+		currentName = name;
+		
+		if (!currentName.empty())
+		{
+			auto context = CGLGetCurrentContext();
+		
+			server = [[SyphonServer alloc] initWithName:[NSString stringWithCString:name encoding:NSASCIIStringEncoding] context:context options:nil];
+			checkErrorGL();
+		}
+	}
+}
+
 void VfxNodeDrawSyphon::draw() const
 {
 	if (isPassthrough)
+		return;
+	if (server == nil)
 		return;
 
 	vfxCpuTimingBlock(VfxNodeDrawSyphon);

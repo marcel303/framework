@@ -35,6 +35,7 @@ struct VfxNodeDrawSyphon : VfxNodeBase
 	enum Input
 	{
 		kInput_Image,
+		kInput_Name,
 		kInput_COUNT
 	};
 	
@@ -46,8 +47,11 @@ struct VfxNodeDrawSyphon : VfxNodeBase
 	
 	SyphonServer * server;
 	
+	std::string currentName;
+	
 	VfxNodeDrawSyphon();
 	virtual ~VfxNodeDrawSyphon() override;
 	
+	virtual void tick(const float dt) override;
 	virtual void draw() const override;
 };
