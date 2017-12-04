@@ -420,7 +420,6 @@ void VfxNodeFsfxV2::draw() const
 	{
 		vfxGpuTimingBlock(VfxNodeFsfxV2);
 		
-		pushBlend(BLEND_OPAQUE);
 		setShader(*shader);
 		{
 			int textureSlot = 0;
@@ -542,11 +541,17 @@ void VfxNodeFsfxV2::draw() const
 				shader->setBuffer("gaussianKernel", *gaussianKernel);
 				shader->setImmediate("gaussianKernelSize", 60.f);
 			}
-
-			g_currentVfxSurface->postprocess();
+			
+			pushBlend(BLEND_OPAQUE);
+			{
+				pushTransform();
+				setTransform(TRANSFORM_SCREEN);
+				g_currentVfxSurface->postprocess();
+				popTransform();
+			}
+			popBlend();
 		}
 		clearShader();
-		popBlend();
 	}
 	else
 	{

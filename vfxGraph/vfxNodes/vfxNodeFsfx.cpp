@@ -386,7 +386,6 @@ void VfxNodeFsfx::draw() const
 	{
 		vfxGpuTimingBlock(VfxNodeFsfx);
 		
-		pushBlend(BLEND_OPAQUE);
 		setShader(*shader);
 		{
 			int textureSlot = 0;
@@ -501,10 +500,17 @@ void VfxNodeFsfx::draw() const
 			shader->setImmediate("param2", param2);
 			shader->setImmediate("opacity", opacity);
 			shader->setImmediate("time", time);
-			surface->postprocess();
+			
+			pushBlend(BLEND_OPAQUE);
+			{
+				pushTransform();
+				setTransform(TRANSFORM_SCREEN);
+				surface->postprocess();
+				popTransform();
+			}
+			popBlend();
 		}
 		clearShader();
-		popBlend();
 	}
 	else
 	{
