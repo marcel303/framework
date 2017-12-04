@@ -54,7 +54,9 @@ VFX_NODE_TYPE(VfxNodeSurface)
 	in("width", "int");
 	in("height", "int");
 	in("clear", "bool", "1");
-	in("clearColor", "color", "fff");
+	in("clearColor", "color");
+	in("depthClear", "bool", "1");
+	in("depthValue", "float", "1");
 	in("darken", "bool", "0");
 	in("darkenColor", "color", "000");
 	in("multiply", "bool", "0");
@@ -79,6 +81,8 @@ VfxNodeSurface::VfxNodeSurface()
 	addInput(kInput_Height, kVfxPlugType_Int);
 	addInput(kInput_Clear, kVfxPlugType_Bool);
 	addInput(kInput_ClearColor, kVfxPlugType_Color);
+	addInput(kInput_DepthClear, kVfxPlugType_Bool);
+	addInput(kInput_DepthValue, kVfxPlugType_Float);
 	addInput(kInput_Darken, kVfxPlugType_Bool);
 	addInput(kInput_DarkenColor, kVfxPlugType_Color);
 	addInput(kInput_Multiply, kVfxPlugType_Bool);
@@ -164,6 +168,8 @@ void VfxNodeSurface::beforeDraw() const
 	
 	const bool clear = getInputBool(kInput_Clear, true);
 	const VfxColor * clearColor = getInputColor(kInput_ClearColor, nullptr);
+	const bool depthClear = getInputBool(kInput_DepthClear, true);
+	const float depthValue = getInputFloat(kInput_DepthValue, 1.f);
 	const bool darken = getInputBool(kInput_Darken, false);
 	const VfxColor * darkenColor = getInputColor(kInput_DarkenColor, nullptr);
 	const bool multiply = getInputBool(kInput_Multiply, false);
@@ -186,9 +192,12 @@ void VfxNodeSurface::beforeDraw() const
 			surface->clearf(clearColor->r, clearColor->g, clearColor->b, clearColor->a);
 		else
 			surface->clear();
-		
-		if (viewMode == kViewMode_Perspective)
-			surface->clearDepth(1.f);
+	}
+	
+	if (surface->getDepthTexture() != 0)
+	{
+		if (depthClear)
+			surface->clearDepth(depthValue);
 	}
 	
 	if (darken && darkenColor)

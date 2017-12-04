@@ -53,6 +53,8 @@ struct VfxNodeSurface : VfxNodeBase
 		kInput_Height,
 		kInput_Clear,
 		kInput_ClearColor,
+		kInput_DepthClear,
+		kInput_DepthValue,
 		kInput_Darken,
 		kInput_DarkenColor,
 		kInput_Multiply,
