@@ -1,4 +1,4 @@
-<graph nextNodeId="45" nextLinkId="38">
+<graph nextNodeId="52" nextLinkId="48">
     <node id="1" typeName="kinect2">
         <input socket="max" value="8000.000000"/>
         <input socket="min" value="200.000000"/>
@@ -14,11 +14,10 @@
     <node id="23" typeName="draw.surface">
         <input socket="clearColor" value="000000ff"/>
         <input socket="format" value="0"/>
-        <input socket="height" value="400"/>
+        <input socket="height" value="768"/>
         <input socket="viewMode" value="0"/>
-        <input socket="width" value="800"/>
+        <input socket="width" value="1024"/>
     </node>
-    <node id="24" typeName="draw.display"/>
     <node id="27" typeName="draw.transform2d">
         <input socket="scale" value="0.000000"/>
     </node>
@@ -26,7 +25,7 @@
         <input socket="frequency" value="0.020000"/>
     </node>
     <node id="29" typeName="draw.syphon">
-        <input socket="name" value="kinect"/>
+        <input socket="name" value="marcel"/>
     </node>
     <node id="30" typeName="draw.blend">
         <input socket="mode" value="0"/>
@@ -53,68 +52,78 @@
         <input socket="sendIpAddress" value="127.0.0.1"/>
         <input socket="sendPort" value="6448"/>
     </node>
-    <node id="38" typeName="channel.toGpu"/>
-    <node id="40" typeName="draw.syphon">
-        <input socket="name" value="weki"/>
-    </node>
     <node id="41" typeName="audioApp"/>
-    <node id="42" typeName="draw.syphon">
-        <input socket="name" value="ui"/>
+    <node id="45" typeName="draw.surface">
+        <input socket="format" value="0"/>
+        <input socket="height" value="768"/>
+        <input socket="viewMode" value="0"/>
+        <input socket="width" value="2048"/>
     </node>
-    <node id="43" typeName="video">
-        <input socket="mode" value="0"/>
-        <input socket="source" value="mocapc.mp4"/>
+    <node id="46" typeName="draw.sequence"/>
+    <node id="47" typeName="draw.image">
+        <input socket="sizeMode" value="2"/>
     </node>
-    <node id="44" typeName="draw.syphon">
-        <input socket="name" value="a"/>
+    <node id="48" typeName="draw.display"/>
+    <node id="49" typeName="draw.image">
+        <input socket="sizeMode" value="2"/>
+    </node>
+    <node id="50" typeName="draw.transform2d">
+        <input socket="x" value="512.000000"/>
+    </node>
+    <node id="51" typeName="draw.transform2d">
+        <input socket="x" value="-512.000000"/>
     </node>
     <link id="16" srcNodeId="21" srcNodeSocketName="depth" dstNodeId="1" dstNodeSocketName="ch_depth"/>
     <link id="17" srcNodeId="22" srcNodeSocketName="channels" dstNodeId="21" dstNodeSocketName="xyz"/>
-    <link id="19" srcNodeId="24" srcNodeSocketName="image" dstNodeId="23" dstNodeSocketName="image"/>
     <link id="25" srcNodeId="23" srcNodeSocketName="source" dstNodeId="27" dstNodeSocketName="transform"/>
     <link id="26" srcNodeId="27" srcNodeSocketName="scale" dstNodeId="28" dstNodeSocketName="value">
         <param name="out.max" value="0.400000"/>
         <param name="out.min" value="0.100000"/>
     </link>
-    <link id="27" srcNodeId="29" srcNodeSocketName="image" dstNodeId="23" dstNodeSocketName="image"/>
     <link id="28" srcNodeId="30" srcNodeSocketName="any" dstNodeId="22" dstNodeSocketName="any"/>
     <link id="29" srcNodeId="27" srcNodeSocketName="any" dstNodeId="30" dstNodeSocketName="any"/>
     <link id="30" srcNodeId="31" srcNodeSocketName="image" dstNodeId="1" dstNodeSocketName="mem_depth"/>
     <link id="31" srcNodeId="32" srcNodeSocketName="image" dstNodeId="31" dstNodeSocketName="image"/>
     <link id="32" srcNodeId="35" srcNodeSocketName="image" dstNodeId="31" dstNodeSocketName="image"/>
     <link id="33" srcNodeId="34" srcNodeSocketName="channels" dstNodeId="35" dstNodeSocketName="channels"/>
-    <link id="34" srcNodeId="38" srcNodeSocketName="channels" dstNodeId="34" dstNodeSocketName="channels"/>
-    <link id="35" srcNodeId="40" srcNodeSocketName="image" dstNodeId="38" dstNodeSocketName="image"/>
-    <link id="36" srcNodeId="42" srcNodeSocketName="image" dstNodeId="41" dstNodeSocketName="image"/>
-    <link id="37" srcNodeId="44" srcNodeSocketName="image" dstNodeId="43" dstNodeSocketName="image"/>
-    <editor nextZKey="190">
-        <dragAndZoom x="874.826416015625" y="-149.03327941894531" zoom="1.6934328079223633"/>
+    <link id="38" srcNodeId="45" srcNodeSocketName="source" dstNodeId="46" dstNodeSocketName="any"/>
+    <link id="40" srcNodeId="48" srcNodeSocketName="image" dstNodeId="45" dstNodeSocketName="image"/>
+    <link id="41" srcNodeId="47" srcNodeSocketName="image" dstNodeId="23" dstNodeSocketName="image"/>
+    <link id="42" srcNodeId="29" srcNodeSocketName="image" dstNodeId="45" dstNodeSocketName="image"/>
+    <link id="43" srcNodeId="49" srcNodeSocketName="image" dstNodeId="41" dstNodeSocketName="image"/>
+    <link id="44" srcNodeId="46" srcNodeSocketName="02" dstNodeId="50" dstNodeSocketName="transform"/>
+    <link id="45" srcNodeId="50" srcNodeSocketName="any" dstNodeId="49" dstNodeSocketName="any"/>
+    <link id="46" srcNodeId="51" srcNodeSocketName="any" dstNodeId="47" dstNodeSocketName="any"/>
+    <link id="47" srcNodeId="46" srcNodeSocketName="01" dstNodeId="51" dstNodeSocketName="transform"/>
+    <editor nextZKey="257">
+        <dragAndZoom x="884.0303955078125" y="-131.09701538085938" zoom="0.7669256329536438"/>
         <nodeDatas>
-            <nodeData nodeId="1" x="-256" y="-83" zKey="144"/>
-            <nodeData nodeId="21" x="-9.758331298828125" y="-39.191864013671875" zKey="68"/>
-            <nodeData nodeId="22" x="129.00520324707031" y="-237.71185302734375" zKey="179"/>
-            <nodeData nodeId="23" x="512.6741943359375" y="-287.007080078125" zKey="125"/>
-            <nodeData nodeId="24" x="665.2225341796875" y="-261.576416015625" zKey="73"/>
-            <nodeData nodeId="27" x="385.65219116210938" y="-255.45855712890625" zKey="124"/>
-            <nodeData nodeId="28" x="255.59716796875" y="-161.4576416015625" zKey="134"/>
-            <nodeData nodeId="29" x="664.55413818359375" y="-356.67578125" zKey="182"/>
-            <nodeData nodeId="30" x="259.91629028320312" y="-250.0552978515625" zKey="127"/>
-            <nodeData nodeId="31" x="-35.1143798828125" y="86.88165283203125" zKey="163"/>
-            <nodeData nodeId="32" x="137.94378662109375" y="111.39825439453125" zKey="146"/>
-            <nodeData nodeId="34" x="231.24380493164062" y="245.12074279785156" zKey="164"/>
-            <nodeData nodeId="35" x="96.039794921875" y="231.44844055175781" zKey="151"/>
-            <nodeData nodeId="36" x="99.07818603515625" y="330.19314575195312" zKey="174"/>
-            <nodeData nodeId="38" x="364.928955078125" y="222.33357238769531" zKey="167"/>
-            <nodeData nodeId="40" x="363.05242919921875" y="350.53656005859375" zKey="173"/>
-            <nodeData nodeId="41" x="651.337158203125" y="-62.0465087890625" zKey="181"/>
-            <nodeData nodeId="42" x="796.81793212890625" y="-56.46112060546875" zKey="186"/>
-            <nodeData nodeId="43" x="815.03729248046875" y="-248.86457824707031" zKey="189"/>
-            <nodeData nodeId="44" x="976.88580322265625" y="-260.73757934570312" zKey="188"/>
+            <nodeData nodeId="1" x="-256" y="-80" zKey="192"/>
+            <nodeData nodeId="21" x="-16" y="-32" zKey="68"/>
+            <nodeData nodeId="22" x="128" y="-240" zKey="190"/>
+            <nodeData nodeId="23" x="512" y="-288" zKey="218"/>
+            <nodeData nodeId="27" x="384" y="-256" zKey="124"/>
+            <nodeData nodeId="28" x="256" y="-160" zKey="134"/>
+            <nodeData nodeId="29" x="1280" y="-240" zKey="256"/>
+            <nodeData nodeId="30" x="256" y="-256" zKey="127"/>
+            <nodeData nodeId="31" x="-32" y="80" zKey="191"/>
+            <nodeData nodeId="32" x="144" y="112" zKey="146"/>
+            <nodeData nodeId="34" x="224" y="240" zKey="194"/>
+            <nodeData nodeId="35" x="96" y="224" zKey="151"/>
+            <nodeData nodeId="36" x="96" y="336" zKey="174"/>
+            <nodeData nodeId="41" x="640" y="-224" zKey="255"/>
+            <nodeData nodeId="45" x="1136" y="-288" zKey="236"/>
+            <nodeData nodeId="46" x="1008" y="-288" zKey="237"/>
+            <nodeData nodeId="47" x="768" y="-272" zKey="253" folded="1"/>
+            <nodeData nodeId="48" x="1296" y="-304" zKey="206"/>
+            <nodeData nodeId="49" x="768" y="-240" zKey="252" folded="1"/>
+            <nodeData nodeId="50" x="880" y="-240" zKey="254" folded="1"/>
+            <nodeData nodeId="51" x="880" y="-272" zKey="251" folded="1"/>
         </nodeDatas>
         <visualizers>
-            <visualizer id="33" x="493.09747314453125" y="77.690765380859375" zKey="178" nodeId="32" dstSocketName="image" sx="521.736083984375" sy="421.9962158203125"/>
-            <visualizer id="39" x="209.8778076171875" y="520.23480224609375" zKey="177" nodeId="38" dstSocketName="image" sx="216" sy="114"/>
+            <visualizer id="33" x="416" y="80" zKey="233" nodeId="32" dstSocketName="image" sx="521.736083984375" sy="421.9962158203125"/>
+            <visualizer id="39" x="208" y="528" zKey="177" nodeId="38" dstSocketName="image" sx="216" sy="114"/>
         </visualizers>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="484cab38" gridColor="ffffff4c"/>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="1" snapToGrid="1" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="484cab38" gridColor="ffffff4c"/>
     </editor>
 </graph>
