@@ -113,6 +113,7 @@ VFX_NODE_TYPE(VfxNodeFsfxV2)
 	in("time", "float");
 	in("opacity", "float", "1");
 	out("any", "draw", "draw");
+	out("image", "image");
 }
 
 VfxNodeFsfxV2::VfxNodeFsfxV2()
@@ -122,6 +123,8 @@ VfxNodeFsfxV2::VfxNodeFsfxV2()
 	, shader(nullptr)
 	, shaderInputs()
 	, gaussianKernel(nullptr)
+	, imageSurface(nullptr)
+	, imageOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Before, kVfxPlugType_DontCare);
@@ -134,6 +137,7 @@ VfxNodeFsfxV2::VfxNodeFsfxV2()
 	addInput(kInput_Time, kVfxPlugType_Float);
 	addInput(kInput_Opacity, kVfxPlugType_Float);
 	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
+	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
 	
 	if (initialized == false)
 	{
@@ -145,8 +149,10 @@ VfxNodeFsfxV2::VfxNodeFsfxV2()
 
 VfxNodeFsfxV2::~VfxNodeFsfxV2()
 {
-	delete shader;
-	shader = nullptr;
+	freeShader();
+	
+	delete imageSurface;
+	imageSurface = nullptr;
 }
 
 void VfxNodeFsfxV2::loadShader(const char * filename)
@@ -336,6 +342,34 @@ void VfxNodeFsfxV2::freeShader()
 	setDynamicInputs(nullptr, 0);
 }
 
+void VfxNodeFsfxV2::updateImageOutput(Surface * source) const
+{
+	if (outputs[kOutput_Image].isReferenced())
+	{
+		if (imageSurface == nullptr || imageSurface->getWidth() != source->getWidth() || imageSurface->getHeight() != source->getHeight())
+		{
+			delete imageSurface;
+			imageSurface = nullptr;
+			
+			imageSurface = new Surface(
+				source->getWidth(),
+				source->getHeight(),
+				source->getFormat() == SURFACE_RGBA16F, false, false);
+		}
+		
+		source->blitTo(imageSurface);
+		
+		imageOutput.texture = imageSurface->getTexture();
+	}
+	else
+	{
+		delete imageSurface;
+		imageSurface = nullptr;
+		
+		imageOutput.texture = 0;
+	}
+}
+
 void VfxNodeFsfxV2::tick(const float dt)
 {
 	if (isPassthrough)
@@ -377,6 +411,8 @@ void VfxNodeFsfxV2::draw() const
 	
 	if (isPassthrough || shader == nullptr || g_currentVfxSurface == nullptr)
 	{
+		updateImageOutput(g_currentVfxSurface);
+		
 		return;
 	}
 	
@@ -518,6 +554,8 @@ void VfxNodeFsfxV2::draw() const
 		
 		g_currentVfxSurface->clear(127, 0, 127, 255);
 	}
+	
+	updateImageOutput(g_currentVfxSurface);
 }
 
 void VfxNodeFsfxV2::getDescription(VfxNodeDescription & d)

@@ -58,6 +58,7 @@ struct VfxNodeFsfxV2 : VfxNodeBase
 	enum Output
 	{
 		kOutput_Any,
+		kOutput_Image,
 		kOutput_COUNT
 	};
 	
@@ -68,11 +69,16 @@ struct VfxNodeFsfxV2 : VfxNodeBase
 	
 	ShaderBuffer * gaussianKernel;
 	
+	mutable Surface * imageSurface;
+	mutable VfxImage_Texture imageOutput;
+	
 	VfxNodeFsfxV2();
 	virtual ~VfxNodeFsfxV2() override;
 	
 	void loadShader(const char * filename);
 	void freeShader();
+	
+	void updateImageOutput(Surface * source) const;
 	
 	virtual void tick(const float dt) override;
 	virtual void draw() const override;
