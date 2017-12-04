@@ -236,12 +236,16 @@ void VfxNodeSurface::beforeDraw() const
 		glDepthFunc(GL_LEQUAL);
 		checkErrorGL();
 	}
+	
+	pushBlend(BLEND_ALPHA);
 }
 
 void VfxNodeSurface::afterDraw() const
 {
 	if (isPassthrough)
 		return;
+	
+	popBlend();
 	
 	if (oldDepthTestEnabled)
 	{
