@@ -286,7 +286,7 @@ void VfxNodeChannelMerge::tick(const float dt)
 			
 			//
 			
-			channelsOutput.size = sx * sy * numChannels;
+			channelsOutput.size = sx * sy;
 			channelsOutput.numChannels = 0;
 			
 			channelsOutput.sx = sx;
