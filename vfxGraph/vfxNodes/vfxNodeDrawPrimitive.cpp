@@ -58,11 +58,11 @@ VFX_NODE_TYPE(VfxNodeDrawPrimitive)
 	in("channels", "channels");
 	in("size", "float", "1");
 	in("fill", "bool", "1");
-	in("color", "color");
+	in("color", "color", "fff");
 	in("image", "image");
 	in("stroke", "bool");
 	in("strokeSize", "float", "1.0");
-	in("strokeColor", "color");
+	in("strokeColor", "color", "fff");
 	out("any", "draw", "draw");
 }
 
