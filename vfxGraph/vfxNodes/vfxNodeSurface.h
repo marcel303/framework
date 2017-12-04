@@ -49,6 +49,8 @@ struct VfxNodeSurface : VfxNodeBase
 	{
 		kInput_Before,
 		kInput_Format,
+		kInput_Width,
+		kInput_Height,
 		kInput_Clear,
 		kInput_ClearColor,
 		kInput_Darken,
@@ -78,7 +80,7 @@ struct VfxNodeSurface : VfxNodeBase
 	VfxNodeSurface();
 	virtual ~VfxNodeSurface() override;
 	
-	void allocSurface(const SURFACE_FORMAT format, const bool withDepthBuffer);
+	void allocSurface(const int sx, const int sy, const SURFACE_FORMAT format, const bool withDepthBuffer);
 	void freeSurface();
 	
 	virtual void tick(const float dt) override;
