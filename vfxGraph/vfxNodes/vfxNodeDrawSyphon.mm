@@ -121,6 +121,7 @@ void VfxNodeDrawSyphon::draw() const
 				{
 					pushBlend(BLEND_OPAQUE);
 					{
+						setColor(colorWhite);
 						drawRect(-1, +1, +1, -1);
 					}
 					popBlend();
