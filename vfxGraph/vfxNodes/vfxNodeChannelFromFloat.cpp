@@ -55,8 +55,14 @@ struct VfxNodeChannelFromFloat : VfxNodeBase
 	virtual void tick(const float dt) override
 	{
 		const float value1 = getInputFloat(kInput_Value1, 0.f);
-		
-		if (true)
+
+		if (isPassthrough)
+		{
+			channelData.free();
+			
+			channelOutput.reset();
+		}
+		else
 		{
 			channelData.allocOnSizeChange(1);
 			

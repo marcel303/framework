@@ -59,7 +59,7 @@ struct VfxNodeChannelLiteral : VfxNodeBase
 	{
 		const char * text = getInputString(kInput_Text, nullptr);
 		
-		if (text == nullptr)
+		if (isPassthrough || text == nullptr)
 		{
 			channelData.free();
 			
