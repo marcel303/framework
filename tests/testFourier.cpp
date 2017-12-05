@@ -25,11 +25,11 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "fourier.h"
 #include "framework.h"
 #include "image.h"
 #include "testBase.h"
 #include "Timer.h"
-#include "vfxNodes/fourier.h"
 #include <math.h>
 
 extern const int GFX_SX;

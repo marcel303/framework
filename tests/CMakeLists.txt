@@ -7,7 +7,9 @@ set(HAS_LIBOSC 0)
 set(HAS_FRAMEWORK 0)
 set(HAS_FRAMEWORK_OFX 0)
 set(HAS_LIBVIDEO 0)
+set(HAS_AVGRAPH 0)
 set(HAS_VFXGRAPH 0)
+set(HAS_AUDIOGRAPH 0)
 
 # --- dependencies ---
 
@@ -31,10 +33,18 @@ if (NOT HAS_LIBVIDEO)
 	message("including libvideo")
 	add_subdirectory(../libvideo libvideo)
 endif (NOT HAS_LIBVIDEO)
+if (NOT HAS_AVGRAPH)
+	message("including avGraph")
+	add_subdirectory(../avGraph avGraph)
+endif (NOT HAS_AVGRAPH)
 if (NOT HAS_VFXGRAPH)
 	message("including vfxgraph")
 	add_subdirectory(../vfxGraph vfxgraph)
 endif (NOT HAS_VFXGRAPH)
+if (NOT HAS_AUDIOGRAPH)
+	message("including audioGraph")
+	add_subdirectory(../audioGraph audioGraph)
+endif (NOT HAS_AUDIOGRAPH)
 
 #
 
@@ -95,10 +105,12 @@ target_link_libraries(tests PRIVATE libosc)
 target_link_libraries(tests PRIVATE libgg)
 target_link_libraries(tests PRIVATE libvideo)
 target_link_libraries(tests PRIVATE vfxgraph)
+target_link_libraries(tests PRIVATE audioGraph)
 
 target_link_libraries(tests PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(tests PRIVATE ${LIBVIDEO_LIBRARIES})
 target_link_libraries(tests PRIVATE ${VFXGRAPH_LIBRARIES})
+#target_link_libraries(tests PRIVATE ${AUDIOGRAPH_LIBRARIES})
 
 if (MSVC)
 	set_property(TARGET tests APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
