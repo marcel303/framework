@@ -19,6 +19,10 @@ if (NOT HAS_FRAMEWORK)
 	message("including framework")
 	add_subdirectory(../framework framework)
 endif (NOT HAS_FRAMEWORK)
+if (NOT HAS_AVGRAPH)
+	message("including avGraph")
+	add_subdirectory(../avGraph avGraph)
+endif (NOT HAS_AVGRAPH)
 
 #
 
@@ -27,36 +31,21 @@ project(audioGraph)
 # --- audioGraph ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
-file(GLOB source_graph "../vfxGraph/graph*")
-
 file(GLOB_RECURSE source_audioNodes "audioNodes/*.*")
 file(GLOB_RECURSE source_objects "objects/*.*" ${source_graph})
 file(GLOB_RECURSE source_delaunay "delaunay/*.*")
 
 file(GLOB source_tests "test*.*")
 
-file(GLOB_RECURSE source_ui
-	"../libparticle/ui.cpp"
-	"../libparticle/ui.h"
-	"../libparticle/textfield.cpp"
-	"../libparticle/textfield.h"
-	"../libparticle/colorwheel.cpp"
-	"../libparticle/colorwheel.h"
-	"../libparticle/particle.cpp"
-	"../libparticle/particle.h")
-
-list(APPEND source ${source_graph})
-list(APPEND source ${source_ui})
-
 source_group("audioGraph" FILES ${source})
 source_group("audioNodes" FILES ${source_audioNodes})
 source_group("objects" FILES ${source_objects})
 source_group("tests" FILES ${source_tests})
-source_group("ui" FILES ${source_ui})
 source_group("3rdparty\\delaunay" FILES ${source_delaunay})
 
 add_library(audioGraph ${source})
 
+target_link_libraries(audioGraph PRIVATE avGraph)
 target_link_libraries(audioGraph PRIVATE framework)
 target_link_libraries(audioGraph PRIVATE libosc)
 target_link_libraries(audioGraph PRIVATE libgg)
