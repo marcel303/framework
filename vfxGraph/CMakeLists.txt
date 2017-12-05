@@ -23,6 +23,10 @@ if (NOT HAS_FRAMEWORK_OFX)
 	message("including framework-ofx")
 	add_subdirectory(../framework-ofx framework-ofx)
 endif (NOT HAS_FRAMEWORK_OFX)
+if (NOT HAS_AVGRAPH)
+	message("including avGraph")
+	add_subdirectory(../avGraph avGraph)
+endif (NOT HAS_AVGRAPH)
 if (NOT HAS_LIBVIDEO)
 	message("including libvideo")
 	add_subdirectory(../libvideo libvideo)
@@ -44,21 +48,8 @@ file(GLOB_RECURSE source_rtmidi "RtMidi*.*")
 file(GLOB_RECURSE source_json "json.hpp")
 file(GLOB_RECURSE source_oxfJpegGlitch "ofxJpegGlitch/*.*")
 
-file(GLOB_RECURSE source_ui
-	"../libparticle/ui.cpp"
-	"../libparticle/ui.h"
-	"../libparticle/textfield.cpp"
-	"../libparticle/textfield.h"
-	"../libparticle/colorwheel.cpp"
-	"../libparticle/colorwheel.h"
-	"../libparticle/particle.cpp"
-	"../libparticle/particle.h")
-
-list(APPEND source ${source_ui})
-
 source_group("vfxGraph" FILES ${source})
 source_group("vfxNodes" FILES ${source_vfxnodes})
-source_group("ui" FILES ${source_ui})
 source_group("3rdparty\\macos" FILES ${source_macos})
 source_group("3rdparty\\win32" FILES ${source_win32})
 source_group("3rdparty\\xmm" FILES ${source_xmm})
@@ -72,6 +63,7 @@ endif (WIN32)
 
 add_library(vfxgraph ${source})
 
+target_link_libraries(vfxgraph avGraph)
 target_link_libraries(vfxgraph framework)
 target_link_libraries(vfxgraph framework-ofx)
 target_link_libraries(vfxgraph libgg)

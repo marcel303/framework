@@ -140,7 +140,7 @@ todo : nodes :
 - add curl node
 - add text list node. next! prev! rand! custom editor for list of strings
 - add audioGraph node
-- create separate and vfxGraph project with CMake files
++ create separate avGraph and vfxGraph projects with CMake files
 - have the model node also expose channels ?
 
 
