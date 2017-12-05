@@ -765,6 +765,9 @@ void testMenu()
 {
 	beginTest(testMenu);
 	
+	Assert(handCursor == nullptr);
+	handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+	
 	Surface surface(GFX_SX, GFX_SY, true);
 	
 	bool stop = false;
@@ -808,4 +811,7 @@ void testMenu()
 	} while (stop == false);
 	
 	buttonStates.clear();
+	
+	SDL_FreeCursor(handCursor);
+	handCursor = nullptr;
 }
