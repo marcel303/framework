@@ -5414,16 +5414,20 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 		color = color.interp(Color(particleColor.rgba[0], particleColor.rgba[1], particleColor.rgba[2]), particleColor.rgba[3]);
 	}
 	
+	const float border = 3.f;
+	const float radius = 5.f;
+	
 	hqBegin(HQ_FILLED_ROUNDED_RECTS);
 	{
-		const float border = 3.f;
-		const float radius = 5.f;
-		
-		setColor(isSelected ? colorWhite : colorBlack);
-		hqFillRoundedRect(-border/2, -border/2, sx + border/2, sy + border/2, radius + border/2);
-		
 		setColor(color);
 		hqFillRoundedRect(0.f + border/2, 0.f + border/2, sx - border/2, sy - border/2, radius);
+	}
+	hqEnd();
+	
+	hqBegin(HQ_STROKED_ROUNDED_RECTS);
+	{
+		setColor(isSelected ? colorWhite : colorBlack);
+		hqStrokeRoundedRect(0.f + border/2, 0.f + border/2, sx - border/2, sy - border/2, radius, 3.f);
 	}
 	hqEnd();
 	
