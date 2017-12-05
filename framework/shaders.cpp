@@ -66,6 +66,8 @@
 #include "data/engine/builtin-hq-stroked-circle.vs"
 #include "data/engine/builtin-hq-stroked-rect.ps"
 #include "data/engine/builtin-hq-stroked-rect.vs"
+#include "data/engine/builtin-hq-stroked-rounded-rect.ps"
+#include "data/engine/builtin-hq-stroked-rounded-rect.vs"
 #include "data/engine/builtin-hq-stroked-triangle.ps"
 #include "data/engine/builtin-hq-stroked-triangle.vs"
 
@@ -137,6 +139,8 @@ void registerBuiltinShaders()
 	shaderSource("engine/builtin-hq-stroked-circle.vs", s_hqStrokedCircleVs);
 	shaderSource("engine/builtin-hq-stroked-rect.ps", s_hqStrokedRectPs);
 	shaderSource("engine/builtin-hq-stroked-rect.vs", s_hqStrokedRectVs);
+	shaderSource("engine/builtin-hq-stroked-rounded-rect.ps", s_hqStrokedRoundedRectPs);
+	shaderSource("engine/builtin-hq-stroked-rounded-rect.vs", s_hqStrokedRoundedRectVs);
 	shaderSource("engine/builtin-hq-stroked-triangle.ps", s_hqStrokedTrianglePs);
 	shaderSource("engine/builtin-hq-stroked-triangle.vs", s_hqStrokedTriangleVs);
 	

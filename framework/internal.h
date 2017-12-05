@@ -828,6 +828,7 @@ public:
 	BuiltinShader hqStrokeTriangle;
 	BuiltinShader hqStrokedCircle;
 	BuiltinShader hqStrokedRect;
+	BuiltinShader hqStrokedRoundedRect;
 	
 	BuiltinShader msdfText;
 };

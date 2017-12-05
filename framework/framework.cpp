@@ -7250,6 +7250,11 @@ static void setShader_HqStrokedRects()
 	setShader(globals.builtinShaders->hqStrokedRect.get());
 }
 
+static void setShader_HqStrokedRoundedRects()
+{
+	setShader(globals.builtinShaders->hqStrokedRoundedRect.get());
+}
+
 void hqBegin(HQ_TYPE type, bool useScreenSize)
 {
 	switch (type)
@@ -7292,6 +7297,11 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 	case HQ_STROKED_RECTS:
 		gxBegin(GL_QUADS);
 		setShader_HqStrokedRects();
+		break;
+	
+	case HQ_STROKED_ROUNDED_RECTS:
+		gxBegin(GL_QUADS);
+		setShader_HqStrokedRoundedRects();
 		break;
 
 	default:
@@ -7351,6 +7361,10 @@ void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 		break;
 
 	case HQ_STROKED_RECTS:
+		gxBegin(GL_QUADS);
+		break;
+		
+	case HQ_STROKED_ROUNDED_RECTS:
 		gxBegin(GL_QUADS);
 		break;
 
@@ -7527,6 +7541,13 @@ void hqStrokeCircle(float x, float y, float radius, float stroke)
 void hqStrokeRect(float x1, float y1, float x2, float y2, float stroke)
 {
 	gxNormal3f(stroke, 0.f, 0.f);
+	for (int i = 0; i < 4; ++i)
+		gxVertex4f(x1, y1, x2, y2);
+}
+
+void hqStrokeRoundedRect(float x1, float y1, float x2, float y2, float radius, float stroke)
+{
+	gxNormal3f(radius, stroke, 0.f);
 	for (int i = 0; i < 4; ++i)
 		gxVertex4f(x1, y1, x2, y2);
 }

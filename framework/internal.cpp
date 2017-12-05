@@ -2817,6 +2817,7 @@ BuiltinShaders::BuiltinShaders()
 	, hqStrokeTriangle("engine/builtin-hq-stroked-triangle")
 	, hqStrokedCircle("engine/builtin-hq-stroked-circle")
 	, hqStrokedRect("engine/builtin-hq-stroked-rect")
+	, hqStrokedRoundedRect("engine/builtin-hq-stroked-rounded-rect")
 	, msdfText("engine/builtin-msdf-text")
 {
 }

@@ -1,0 +1,77 @@
+static const char * s_hqStrokedRoundedRectPs = R"SHADER(
+
+include engine/ShaderPS.txt
+include engine/builtin-hq-common.txt
+
+shader_in vec3 v_edgePlane1;
+shader_in vec3 v_edgePlane2;
+shader_in vec3 v_edgePlane3;
+shader_in vec3 v_edgePlane4;
+shader_in float v_radius;
+shader_in float v_strokeSize;
+shader_in vec4 v_color;
+
+float computeDistance(vec2 p)
+{
+	float d1 = dot(v_edgePlane1, vec3(p, 1.0));
+	float d2 = dot(v_edgePlane2, vec3(p, 1.0));
+	float d3 = dot(v_edgePlane3, vec3(p, 1.0));
+	float d4 = dot(v_edgePlane4, vec3(p, 1.0));
+	
+	float da[4];
+	da[0] = d1;
+	da[1] = d2;
+	da[2] = d3;
+	da[3] = d4;
+
+	int i1 = 0;
+	int i2 = 0;
+	if (da[1] < da[i1]) i1 = 1;
+	if (da[2] < da[i1]) i1 = 2;
+	if (da[3] < da[i1]) i1 = 3;
+
+	i2 = (i1 + 1) % 4;
+	if (i1 != 0) if (da[0] < da[i2]) i2 = 0;
+	if (i1 != 1) if (da[1] < da[i2]) i2 = 1;
+	if (i1 != 2) if (da[2] < da[i2]) i2 = 2;
+	if (i1 != 3) if (da[3] < da[i2]) i2 = 3;
+
+	float da1 = da[i1];
+	float da2 = da[i2];
+
+	float d;
+
+	if (da1 < 0.0 && da2 < 0.0)
+		d = v_radius - sqrt(da1 * da1 + da2 * da2);
+	else
+		d = min(da1, da2) + v_radius;
+	
+	return d;
+}
+
+float distanceFade(float distance)
+{
+	return clamp(v_strokeSize - abs(distance), 0.0, 1.0);
+}
+
+void main()
+{
+	float v = 0.0;
+	
+	float d = computeDistance(v_p);
+	
+	if (abs(d) > v_strokeSize + 1.0 && enableOptimizations)
+	{
+		v = 0.0;
+	}
+	else
+	{
+		v = sampleDistanceFunction(v_p);
+	}
+
+	vec4 color = hqColor(v, v_color);
+	
+	shader_fragColor = color;
+}
+
+)SHADER";
