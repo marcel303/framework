@@ -36,6 +36,8 @@
 
 //
 
+#if FOURIER_USE_SSE
+
 struct float4impl
 {
 	__m128 value;
@@ -114,6 +116,8 @@ struct float4impl
 	}
 };
 
+#endif
+
 //
 
 static float sine(const float angle)
@@ -125,6 +129,8 @@ static double sine(const double angle)
 {
 	return std::sin(angle);
 }
+
+#if FOURIER_USE_SSE
 
 static float4impl sine(const float4impl & angle)
 {
@@ -140,6 +146,8 @@ static float4impl sine(const float4impl & angle)
 	
 	return result;
 }
+
+#endif
 
 //
 
@@ -293,6 +301,8 @@ void Fourier::fft1D_slow(
 	fft1D_slowImpl(dreal, dimag, size, transformSize, inverse, normalize);
 }
 
+#if FOURIER_USE_SSE
+
 void Fourier::fft1D(
 	float4 * __restrict dreal,
 	float4 * __restrict dimag,
@@ -317,6 +327,8 @@ void Fourier::fft1D_slow(
 	
 	fft1D_slowImpl(dreal_impl, dimag_impl, size, transformSize, inverse, normalize);
 }
+
+#endif
 
 template <typename real>
 static void fft2DImpl(
