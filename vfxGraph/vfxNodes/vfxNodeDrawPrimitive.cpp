@@ -348,7 +348,24 @@ void VfxNodeDrawPrimitive::draw() const
 			break;
 			
 		case kPrimitiveType_RoundedRect:
-			break;
+			{
+				hqBegin(HQ_STROKED_ROUNDED_RECTS);
+				{
+					const int num = channels->size;
+					
+					for (int i = 0; i < num; ++i)
+					{
+						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
+						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float s = channels->numChannels >= 4 ? channels->channels[3].data[i] : 0.f;
+						
+						hqStrokeRoundedRect(x - r * size, y - r * size, x + r * size, y + r * size, s * .5f, strokeSize);
+					}
+				}
+				hqEnd();
+				break;
+			}
 		}
 	}
 	
