@@ -32,17 +32,15 @@ void main()
 	
 	// unpack
 	
-	vec2 p11 = params1.xy;
-	vec2 p12 = params1.zw;
-	float radius = params2.x;
+	vec2 p11 = min(params1.xy, params1.zw);
+	vec2 p12 = max(params1.xy, params1.zw);
+	float radius = min(min(p12.x - p11.x, p12.y - p11.y)/2.01, params2.x);
 	float borderSize = 1.0;
 
-	float scale = length(ModelViewMatrix[0].xyz);
+	float scale = min(length(ModelViewMatrix[0].xyz), length(ModelViewMatrix[1].xyz));
 
 	if (useScreenSize == 1.0)
 	{
-		float scale = length(ModelViewMatrix[0].xyz);
-		
 		vec2 s = (p12 - p11) * 0.5;
 		vec2 m = (p11 + p12) * 0.5;
 		p11 = m - s / scale;
@@ -81,6 +79,16 @@ void main()
 	vec3 edgePlane3 = calculatePlane(corner3, corner4);
 	vec3 edgePlane4 = calculatePlane(corner4, corner1);
 	
+	vec2 mid = (corner1 + corner2 + corner3 + corner4) / 4.0;
+
+	if (dot(edgePlane1, vec3(mid, 1.0)) > 0.0 && false)
+	{
+		edgePlane1 = -edgePlane1;
+		edgePlane2 = -edgePlane2;
+		edgePlane3 = -edgePlane3;
+		edgePlane4 = -edgePlane4;
+	}
+
 	// determine vertex coord, stroke offset and stroke size based on vertex ID
 	
 	vec2 basePosition;
