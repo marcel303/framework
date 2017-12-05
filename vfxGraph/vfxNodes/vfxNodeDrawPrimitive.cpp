@@ -29,24 +29,26 @@
 #include "vfxNodeDrawPrimitive.h"
 #include "vfxTypes.h"
 
-enum PrimtiveType
+enum PrimitiveType
 {
-	kPrimtiveType_Cirle,
-	kPrimtiveType_Quad,
-	kPrimtiveType_TriangleUp,
-	kPrimtiveType_TriangleDown,
-	kPrimtiveType_HLine,
-	kPrimtiveType_VLine
+	kPrimitiveType_Cirle,
+	kPrimitiveType_Quad,
+	kPrimitiveType_TriangleUp,
+	kPrimitiveType_TriangleDown,
+	kPrimitiveType_HLine,
+	kPrimitiveType_VLine,
+	kPrimitiveType_RoundedRect
 };
 
 VFX_ENUM_TYPE(drawPrimitiveType)
 {
-	elem("circle", kPrimtiveType_Cirle);
-	elem("quad", kPrimtiveType_Quad);
-	elem("triangle_up", kPrimtiveType_TriangleUp);
-	elem("triangle_down", kPrimtiveType_TriangleDown);
-	elem("hline", kPrimtiveType_HLine);
-	elem("vline", kPrimtiveType_VLine);
+	elem("circle", kPrimitiveType_Cirle);
+	elem("quad", kPrimitiveType_Quad);
+	elem("triangle_up", kPrimitiveType_TriangleUp);
+	elem("triangle_down", kPrimitiveType_TriangleDown);
+	elem("hline", kPrimitiveType_HLine);
+	elem("vline", kPrimitiveType_VLine);
+	elem("quad_round", kPrimitiveType_RoundedRect);
 }
 
 VFX_NODE_TYPE(VfxNodeDrawPrimitive)
@@ -91,7 +93,7 @@ void VfxNodeDrawPrimitive::draw() const
 	vfxCpuTimingBlock(VfxNodeDrawPrimitive);
 	vfxGpuTimingBlock(VfxNodeDrawPrimitive);
 	
-	const PrimtiveType type = (PrimtiveType)getInputInt(kInput_Type, kPrimtiveType_Cirle);
+	const PrimitiveType type = (PrimitiveType)getInputInt(kInput_Type, kPrimitiveType_Cirle);
 	const VfxChannels * channels = getInputChannels(kInput_Channels, nullptr);
 	const float size = getInputFloat(kInput_Size, 1.f);
 	const bool fill = getInputBool(kInput_Fill, true);
@@ -116,7 +118,7 @@ void VfxNodeDrawPrimitive::draw() const
 	{
 		switch (type)
 		{
-		case kPrimtiveType_Cirle:
+		case kPrimitiveType_Cirle:
 			{
 				hqBegin(HQ_FILLED_CIRCLES);
 				{
@@ -135,7 +137,7 @@ void VfxNodeDrawPrimitive::draw() const
 				break;
 			}
 			
-		case kPrimtiveType_Quad:
+		case kPrimitiveType_Quad:
 			{
 				hqBegin(HQ_FILLED_RECTS);
 				{
@@ -155,7 +157,7 @@ void VfxNodeDrawPrimitive::draw() const
 				break;
 			}
 			
-		case kPrimtiveType_TriangleUp:
+		case kPrimitiveType_TriangleUp:
 			{
 				hqBegin(HQ_FILLED_TRIANGLES);
 				{
@@ -174,7 +176,7 @@ void VfxNodeDrawPrimitive::draw() const
 				break;
 			}
 			
-		case kPrimtiveType_TriangleDown:
+		case kPrimitiveType_TriangleDown:
 			{
 				hqBegin(HQ_FILLED_TRIANGLES);
 				{
@@ -193,7 +195,7 @@ void VfxNodeDrawPrimitive::draw() const
 				break;
 			}
 			
-		case kPrimtiveType_HLine:
+		case kPrimitiveType_HLine:
 			{
 				hqBegin(HQ_LINES);
 				{
@@ -203,17 +205,17 @@ void VfxNodeDrawPrimitive::draw() const
 					{
 						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
 						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float s1 = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
-						const float s2 = channels->numChannels >= 4 ? channels->channels[3].data[i] : s1;
+						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float s = channels->numChannels >= 4 ? channels->channels[3].data[i] : 1.f;
 						
-						hqLine(x - size, y, s1 * strokeSize, x + size, y, s2 * strokeSize);
+						hqLine(x - r * size, y, s * strokeSize, x + r * size, y, s * strokeSize);
 					}
 				}
 				hqEnd();
 				break;
 			}
 			
-		case kPrimtiveType_VLine:
+		case kPrimitiveType_VLine:
 			{
 				hqBegin(HQ_LINES);
 				{
@@ -223,10 +225,30 @@ void VfxNodeDrawPrimitive::draw() const
 					{
 						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
 						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float s1 = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
-						const float s2 = channels->numChannels >= 4 ? channels->channels[3].data[i] : s1;
+						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float s = channels->numChannels >= 4 ? channels->channels[3].data[i] : 1.f;
 						
-						hqLine(x, y - size, s1 * strokeSize, x, y + size, s2 * strokeSize);
+						hqLine(x, y - r * size, s * strokeSize, x, y + r * size, s * strokeSize);
+					}
+				}
+				hqEnd();
+				break;
+			}
+			
+		case kPrimitiveType_RoundedRect:
+			{
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				{
+					const int num = channels->size;
+					
+					for (int i = 0; i < num; ++i)
+					{
+						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
+						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float s = channels->numChannels >= 4 ? channels->channels[3].data[i] : 0.f;
+						
+						hqFillRoundedRect(x - r * size, y - r * size, x + r * size, y + r * size, s * .5f);
 					}
 				}
 				hqEnd();
@@ -244,7 +266,7 @@ void VfxNodeDrawPrimitive::draw() const
 		
 		switch (type)
 		{
-		case kPrimtiveType_Cirle:
+		case kPrimitiveType_Cirle:
 			{
 				hqBegin(HQ_STROKED_CIRCLES);
 				{
@@ -263,7 +285,7 @@ void VfxNodeDrawPrimitive::draw() const
 				break;
 			}
 			
-		case kPrimtiveType_Quad:
+		case kPrimitiveType_Quad:
 			{
 				hqBegin(HQ_STROKED_RECTS);
 				{
@@ -283,7 +305,7 @@ void VfxNodeDrawPrimitive::draw() const
 				break;
 			}
 			
-		case kPrimtiveType_TriangleUp:
+		case kPrimitiveType_TriangleUp:
 			{
 				hqBegin(HQ_STROKED_TRIANGLES);
 				{
@@ -302,7 +324,7 @@ void VfxNodeDrawPrimitive::draw() const
 				break;
 			}
 			
-		case kPrimtiveType_TriangleDown:
+		case kPrimitiveType_TriangleDown:
 			{
 				hqBegin(HQ_STROKED_TRIANGLES);
 				{
@@ -321,8 +343,11 @@ void VfxNodeDrawPrimitive::draw() const
 				break;
 			}
 			
-		case kPrimtiveType_HLine:
-		case kPrimtiveType_VLine:
+		case kPrimitiveType_HLine:
+		case kPrimitiveType_VLine:
+			break;
+			
+		case kPrimitiveType_RoundedRect:
 			break;
 		}
 	}
