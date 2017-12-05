@@ -165,8 +165,9 @@ void VfxNodeDrawPrimitive::draw() const
 					{
 						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
 						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
 						
-						hqFillTriangle(x, y - size, x - size, y + size, x + size, y + size);
+						hqFillTriangle(x, y - r * size, x - r * size, y + r * size, x + r * size, y + r * size);
 					}
 				}
 				hqEnd();
@@ -183,8 +184,9 @@ void VfxNodeDrawPrimitive::draw() const
 					{
 						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
 						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
 						
-						hqFillTriangle(x, y + size, x - size, y - size, x + size, y - size);
+						hqFillTriangle(x, y + r * size, x - r * size, y - r * size, x + r * size, y - r * size);
 					}
 				}
 				hqEnd();
@@ -291,8 +293,9 @@ void VfxNodeDrawPrimitive::draw() const
 					{
 						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
 						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
 						
-						hqStrokeTriangle(x, y - size, x - size, y + size, x + size, y + size, strokeSize);
+						hqStrokeTriangle(x, y - r * size, x - r * size, y + r * size, x + r * size, y + r * size, strokeSize);
 					}
 				}
 				hqEnd();
@@ -309,8 +312,9 @@ void VfxNodeDrawPrimitive::draw() const
 					{
 						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
 						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
+						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
 						
-						hqStrokeTriangle(x, y + size, x - size, y - size, x + size, y - size, strokeSize);
+						hqStrokeTriangle(x, y + r * size, x - r * size, y - r * size, x + r * size, y - r * size, strokeSize);
 					}
 				}
 				hqEnd();
