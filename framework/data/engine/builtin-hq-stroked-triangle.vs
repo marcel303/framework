@@ -42,6 +42,15 @@ void main()
 	vec3 edgePlane2 = calculatePlane(p2, p3);
 	vec3 edgePlane3 = calculatePlane(p3, p1);
 	
+	vec2 mid = (p1 + p2 + p3) / 3.0;
+
+	if (dot(edgePlane1, vec3(mid, 1.0)) < 0.0)
+	{
+		edgePlane1 = -edgePlane1;
+		edgePlane2 = -edgePlane2;
+		edgePlane3 = -edgePlane3;
+	}
+
 	// determine vertex coord, stroke offset and stroke size based on vertex ID
 	
 	float borderSize = strokeSize + 1.0;
