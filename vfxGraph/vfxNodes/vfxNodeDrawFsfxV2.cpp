@@ -89,10 +89,8 @@ static const char * s_fsfxCommonInc = R"SHADER(
 		
 		color = applyColorPost(color, params.z);
 		
-		color.a *= opacity;
-		
-		if (color.a != 1.0)
-			color = mix(baseColor, color, color.a);
+		if (opacity != 1.0)
+			color = mix(baseColor, color, opacity);
 		
 		shader_fragColor = color;
 	}
