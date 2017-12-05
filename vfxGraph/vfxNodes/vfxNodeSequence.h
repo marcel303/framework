@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "vfxNodes/vfxNodeBase.h"
+#include "vfxNodeBase.h"
 
 // would be nice to have a mask input which selects which sequence elements are active ..
 

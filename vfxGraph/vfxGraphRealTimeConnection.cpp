@@ -28,7 +28,7 @@
 #include "framework.h" // log
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
-#include "vfxNodes/vfxNodeBase.h"
+#include "vfxNodeBase.h"
 
 #include "Parse.h"
 #include "StringEx.h"

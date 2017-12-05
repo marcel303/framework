@@ -38,7 +38,7 @@
 #include "../libparticle/ui.h"
 #include "Timer.h"
 #include "tinyxml2.h"
-#include "vfxNodes/vfxNodeBase.h"
+#include "vfxNodeBase.h"
 
 using namespace tinyxml2;
 
@@ -60,7 +60,8 @@ using namespace tinyxml2;
 //#define FILENAME "fsfxv2Test.xml"
 //#define FILENAME "kinectTest2.xml"
 //#define FILENAME "testOscilloscope.xml"
-#define FILENAME "testVisualizers.xml"
+//#define FILENAME "testVisualizers.xml"
+#define FILENAME "testRibbon3.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;

@@ -27,9 +27,9 @@
 
 #include "framework.h"
 #include "testBase.h"
+#include "vfxNodeBase.h"
 #include "vfxNodes/imageCpuDelayLine.h"
 #include "vfxNodes/openglTexture.h"
-#include "vfxNodes/vfxNodeBase.h"
 
 #include "../libvideo/video.h"
 #include "mediaplayer/MPVideoBuffer.h"

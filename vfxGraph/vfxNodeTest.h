@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "vfxNodes/vfxNodeBase.h"
+#include "vfxNodeBase.h"
 
 struct VfxNodeTest : VfxNodeBase
 {

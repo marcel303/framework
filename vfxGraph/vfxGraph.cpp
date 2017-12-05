@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "Parse.h"
 #include "vfxGraph.h"
-#include "vfxNodes/vfxNodeBase.h"
+#include "vfxNodeBase.h"
 #include "vfxNodes/vfxNodeDisplay.h"
 #include "vfxTypes.h"
 
