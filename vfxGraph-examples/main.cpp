@@ -384,26 +384,15 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		RealTimeConnection * realTimeConnection = new RealTimeConnection();
-		
-		//
-		
-		GraphEdit * graphEdit = new GraphEdit(typeDefinitionLibrary);
-		
-		graphEdit->realTimeConnection = realTimeConnection;
-
 		VfxGraph * vfxGraph = new VfxGraph();
 		
-		realTimeConnection->vfxGraph = vfxGraph;
-		realTimeConnection->vfxGraphPtr = &vfxGraph;
+		RealTimeConnection * realTimeConnection = new RealTimeConnection(vfxGraph);
+		
+		GraphEdit * graphEdit = new GraphEdit(typeDefinitionLibrary, realTimeConnection);
 		
 		//
 		
-		g_currentVfxGraph = realTimeConnection->vfxGraph;
-		
 		graphEdit->load(FILENAME);
-		
-		g_currentVfxGraph = nullptr;
 		
 		//
 		
@@ -491,8 +480,6 @@ int main(int argc, char * argv[])
 			
 			//
 			
-			g_currentVfxGraph = realTimeConnection->vfxGraph;
-			
 			if (filedrop.empty() == false)
 			{
 				graphEdit->load(filedrop.c_str());
@@ -502,15 +489,9 @@ int main(int argc, char * argv[])
 				filedrop.clear();
 			}
 			
-			g_currentVfxGraph = nullptr;
-			
 			//
 			
-			g_currentVfxGraph = realTimeConnection->vfxGraph;
-			
 			inputIsCaptured |= graphEdit->tick(dt, inputIsCaptured);
-			
-			g_currentVfxGraph = nullptr;
 			
 			if (inputIsCaptured == false)
 			{
@@ -638,12 +619,7 @@ int main(int argc, char * argv[])
 					gxPopMatrix();
 				}
 				
-				Assert(g_currentVfxGraph == nullptr);
-				g_currentVfxGraph = vfxGraph;
-				{
-					graphEdit->tickVisualizers(dt);
-				}
-				g_currentVfxGraph = nullptr;
+				graphEdit->tickVisualizers(dt);
 				
 				pushSurface(graphEditSurface);
 				{

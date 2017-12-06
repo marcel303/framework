@@ -1658,14 +1658,11 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 			channelDataMax = max;
 		}
 		
-		const float strokeSize = 1.f * graphEdit.dragAndZoom.zoom;
+		const float strokeSize = 1.f * std::sqrt(std::abs(graphEdit.dragAndZoom.zoom));
 		
 		for (int c = 0; c < channelData.channels.size(); ++c)
 		{
 			auto & channel = channelData.channels[c];
-			
-			float lastX = 0.f;
-			float lastY = 0.f;
 			
 			if (channel.numValues == 0)
 				continue;
@@ -1699,6 +1696,9 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 						
 						int total = 0;
 						
+						float lastX = 0.f;
+						float lastY = 0.f;
+			
 						for (int i = 0; i < numValues; ++i)
 						{
 							const int s1 = (i + 0) * channel.numValues / numValues;
@@ -1729,6 +1729,9 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 						
 					#else
 						// connected lines between each sample
+						
+						float lastX = 0.f;
+						float lastY = 0.f;
 						
 						for (int i = 0; i < channel.numValues; ++i)
 						{
@@ -1839,7 +1842,7 @@ void GraphEdit::NodeData::setIsFolded(const bool _isFolded)
 
 //
 
-GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
+GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary, GraphEdit_RealTimeConnection * _realTimeConnection)
 	: graph(nullptr)
 	, nextZKey(1)
 	, nodeDatas()
@@ -1877,6 +1880,8 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	graph->graphEditConnection = this;
 	
 	typeDefinitionLibrary = _typeDefinitionLibrary;
+	
+	realTimeConnection = _realTimeConnection;
 	
 	propertyEditor = new GraphUi::PropEdit(_typeDefinitionLibrary, this);
 	

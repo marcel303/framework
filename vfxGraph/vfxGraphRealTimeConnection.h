@@ -38,12 +38,14 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	bool isLoading;
 	
-	RealTimeConnection()
+	RealTimeConnection(VfxGraph *& _vfxGraph)
 		: GraphEdit_RealTimeConnection()
 		, vfxGraph(nullptr)
 		, vfxGraphPtr(nullptr)
 		, isLoading(false)
 	{
+		vfxGraph = _vfxGraph;
+		vfxGraphPtr = &_vfxGraph;
 	}
 	
 	virtual void loadBegin() override;

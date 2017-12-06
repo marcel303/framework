@@ -1424,7 +1424,7 @@ struct GraphEdit : GraphEditConnection
 	float idleTime;
 	float hideTime;
 	
-	GraphEdit(GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
+	GraphEdit(GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, GraphEdit_RealTimeConnection * realTimeConnection = nullptr);
 	~GraphEdit();
 	
 	GraphNode * tryGetNode(const GraphNodeId id) const;
