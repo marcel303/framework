@@ -108,7 +108,7 @@ void VfxGraph::destroy()
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = this;
 	
-	for (auto i : nodes)
+	for (auto & i : nodes)
 	{
 		VfxNodeBase * node = i.second;
 		
@@ -227,7 +227,7 @@ void VfxGraph::tick(const int sx, const int sy, const float dt)
 	
 	// process nodes that aren't connected to the display node
 	
-	for (auto i : nodes)
+	for (auto & i : nodes)
 	{
 		VfxNodeBase * node = i.second;
 		
@@ -319,7 +319,7 @@ int VfxGraph::traverseDraw(const int sx, const int sy) const
 		Assert(g_currentVfxSurface == nullptr);
 		g_currentVfxSurface = s_dummySurface;
 		
-		for (auto i : nodes)
+		for (auto & i : nodes)
 		{
 			VfxNodeBase * node = i.second;
 			

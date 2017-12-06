@@ -94,7 +94,7 @@ void AudioGraph::destroy()
 	
 	valuesToFree.clear();
 	
-	for (auto i : nodes)
+	for (auto & i : nodes)
 	{
 		AudioNodeBase * node = i.second;
 		
@@ -185,7 +185,7 @@ void AudioGraph::tick(const float dt)
 	
 	// process nodes
 	
-	for (auto i : nodes)
+	for (auto & i : nodes)
 	{
 		AudioNodeBase * node = i.second;
 		
