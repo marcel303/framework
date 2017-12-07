@@ -27,12 +27,22 @@
 
 #include "audioGraph.h"
 #include "audioGraphManager.h"
+#include "soundmix.h"
 #include "vfxNodeAudioGraph.h"
 
 #include "framework.h"
-#include "soundmix.h"
 
-static SDL_mutex * s_audioMutex = nullptr;
+/*
+
+use audio graph as a channel generator
+
+audio graph instance : has its own voice manager ?
+
+capture channels from async process
+
+instantiate voice manager, port audio, etc ..
+
+*/
 
 VFX_NODE_TYPE(VfxNodeAudioGraph)
 {
@@ -49,16 +59,6 @@ VfxNodeAudioGraph::VfxNodeAudioGraph()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Filename, kVfxPlugType_String);
 	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelOutput);
-	
-	// todo : do this somewhere else !
-	
-	s_audioMutex = SDL_CreateMutex();
-	
-	g_voiceMgr = new AudioVoiceManager();
-	g_voiceMgr->init(16, 16);
-	
-	g_audioGraphMgr = new AudioGraphManager();
-	g_audioGraphMgr->init(s_audioMutex);
 }
 
 VfxNodeAudioGraph::~VfxNodeAudioGraph()
@@ -67,17 +67,6 @@ VfxNodeAudioGraph::~VfxNodeAudioGraph()
 	currentFilename.clear();
 	
 	setDynamicInputs(nullptr, 0);
-	
-	g_audioGraphMgr->shut();
-	delete g_audioGraphMgr;
-	g_audioGraphMgr = nullptr;
-	
-	g_voiceMgr->shut();
-	delete g_voiceMgr;
-	g_voiceMgr = nullptr;
-	
-	SDL_DestroyMutex(s_audioMutex);
-	s_audioMutex = nullptr;
 }
 
 void VfxNodeAudioGraph::updateDynamicInputs()
@@ -145,14 +134,6 @@ void VfxNodeAudioGraph::tick(const float dt)
 		return;
 	}
 	
-	// todo : do this somewhere else !
-	
-	const double audioDt = AUDIO_UPDATE_SIZE / double(SAMPLE_RATE);
-	
-	g_currentAudioTime += audioDt;
-	
-	g_audioGraphMgr->tick(audioDt);
-	
 	//
 	
 	const bool outputStereo = false;
@@ -161,7 +142,11 @@ void VfxNodeAudioGraph::tick(const float dt)
 	
 	channelData.allocOnSizeChange(numSamples * numChannels);
 	
-	g_voiceMgr->generateAudio(channelData.data, numSamples, true, outputStereo, false);
+	SDL_LockMutex(g_voiceMgr->mutex);
+	{
+		g_voiceMgr->generateAudio(channelData.data, numSamples, true, outputStereo, false);
+	}
+	SDL_UnlockMutex(g_voiceMgr->mutex);
 	
 	channelOutput.setDataContiguous(channelData.data, true, numSamples, numChannels);
 	

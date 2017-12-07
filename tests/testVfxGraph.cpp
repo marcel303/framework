@@ -32,6 +32,77 @@
 #include "vfxNodeBase.h"
 
 #include "audioGraph.h"
+#include "audioGraphManager.h"
+#include "audioUpdateHandler.h"
+#include "soundmix.h"
+
+static SDL_mutex * s_audioMutex = nullptr;
+
+static AudioUpdateHandler * s_audioUpdateHandler = nullptr;
+
+static PortAudioObject * s_paObject = nullptr;
+
+static void initAudioGraph()
+{
+	Assert(s_audioMutex == nullptr);
+	s_audioMutex = SDL_CreateMutex();
+	
+	Assert(g_voiceMgr == nullptr);
+	g_voiceMgr = new AudioVoiceManager();
+	g_voiceMgr->init(16, 16);
+	g_voiceMgr->outputStereo = true;
+	
+	Assert(g_audioGraphMgr == nullptr);
+	g_audioGraphMgr = new AudioGraphManager();
+	g_audioGraphMgr->init(s_audioMutex);
+	
+	Assert(s_audioUpdateHandler == nullptr);
+	s_audioUpdateHandler = new AudioUpdateHandler();
+	s_audioUpdateHandler->init(s_audioMutex, nullptr, 0);
+	s_audioUpdateHandler->audioGraphMgr = g_audioGraphMgr;
+	s_audioUpdateHandler->voiceMgr = g_voiceMgr;
+	
+	Assert(s_paObject == nullptr);
+	s_paObject = new PortAudioObject();
+	s_paObject->init(SAMPLE_RATE, 2, 2, AUDIO_UPDATE_SIZE, s_audioUpdateHandler);
+}
+
+static void shutAudioGraph()
+{
+	if (s_paObject != nullptr)
+	{
+		s_paObject->shut();
+		delete s_paObject;
+		s_paObject = nullptr;
+	}
+	
+	if (s_audioUpdateHandler != nullptr)
+	{
+		s_audioUpdateHandler->shut();
+		delete s_audioUpdateHandler;
+		s_audioUpdateHandler = nullptr;
+	}
+	
+	if (g_audioGraphMgr != nullptr)
+	{
+		g_audioGraphMgr->shut();
+		delete g_audioGraphMgr;
+		g_audioGraphMgr = nullptr;
+	}
+	
+	if (g_voiceMgr != nullptr)
+	{
+		g_voiceMgr->shut();
+		delete g_voiceMgr;
+		g_voiceMgr = nullptr;
+	}
+	
+	if (s_audioMutex != nullptr)
+	{
+		SDL_DestroyMutex(s_audioMutex);
+		s_audioMutex = nullptr;
+	}
+}
 
 void testVfxGraph()
 {
@@ -39,6 +110,8 @@ void testVfxGraph()
 	
 	// fixme !
 	fillPcmDataCache("../4dworld/testsounds", true, true);
+	
+	initAudioGraph();
 	
 	VfxGraph * vfxGraph = nullptr;
 	
@@ -78,4 +151,9 @@ void testVfxGraph()
 		}
 		framework.endDraw();
 	} while (tickTestUi());
+	
+	delete vfxGraph;
+	vfxGraph = nullptr;
+	
+	shutAudioGraph();
 }
