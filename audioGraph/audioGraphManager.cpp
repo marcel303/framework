@@ -272,6 +272,7 @@ void AudioGraphManager::init(SDL_mutex * mutex)
 
 void AudioGraphManager::shut()
 {
+	AudioGraphManager * oldAudioGraphMgr = g_audioGraphMgr;
 	g_audioGraphMgr = this;
 	{
 		for (auto & file : files)
@@ -280,7 +281,7 @@ void AudioGraphManager::shut()
 		
 		selectedFile = nullptr;
 	}
-	g_audioGraphMgr = nullptr;
+	g_audioGraphMgr = oldAudioGraphMgr;
 	
 	//
 	
