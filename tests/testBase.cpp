@@ -247,7 +247,7 @@ static bool doMenu(const bool tickMenu, const bool drawMenu)
 	s_testState.drawMenu = drawMenu;
 	
 	s_testState.drawX = 25;
-	if (doButton(s_testState.drawX, GFX_SY - 25, +1, -1, "Back (SPACE)") == kButtonPress)
+	if (doButton(s_testState.drawX, GFX_SY - 25, +1, -1, "Back (ESCAPE)") == kButtonPress)
 	{
 		result = false;
 		
@@ -359,7 +359,7 @@ bool tickTestUi()
 	
 	result &= doMenu(true, false);
 	
-	result &= keyboard.wentDown(SDLK_SPACE) == false;
+	result &= keyboard.wentDown(SDLK_ESCAPE) == false;
 	
 	if (s_testState.isHovering)
 		SDL_SetCursor(handCursor);
