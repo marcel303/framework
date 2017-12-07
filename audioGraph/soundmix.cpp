@@ -1021,6 +1021,11 @@ void AudioVoiceManager::portAudioCallback(
 	float * samples = (float*)outputBuffer;
 	const int numSamples = framesPerBuffer;
 	
+	generateAudio(samples, numSamples, true, outputStereo, true);
+}
+
+void AudioVoiceManager::generateAudio(float * __restrict samples, const int numSamples, const bool doLimiting, const bool outputStereo, const bool interleaved)
+{
 	if (outputStereo)
 	{
 		memset(samples, 0, numSamples * 2 * sizeof(float));
@@ -1058,13 +1063,16 @@ void AudioVoiceManager::portAudioCallback(
 				
 				// apply limiting
 				
-				if (outputStereo)
+				if (doLimiting)
 				{
-					voice.applyLimiter(voiceSamples, numSamples, .1f);
-				}
-				else
-				{
-					voice.applyLimiter(voiceSamples, numSamples, .4f);
+					if (outputStereo)
+					{
+						voice.applyLimiter(voiceSamples, numSamples, .1f);
+					}
+					else
+					{
+						voice.applyLimiter(voiceSamples, numSamples, .4f);
+					}
 				}
 				
 				// apply volume ramping
@@ -1077,50 +1085,100 @@ void AudioVoiceManager::portAudioCallback(
 					{
 						if (voice.speaker == AudioVoice::kSpeaker_Left)
 						{
-							// interleave voice samples into destination buffer
-							
-							float * __restrict dstPtr = samples;
-							
-							for (int i = 0; i < numSamples; ++i)
+							if (interleaved)
 							{
-								dstPtr[i * 2 + 0] += voiceSamples[i];
+								// interleave voice samples into destination buffer
+								
+								float * __restrict dstPtr = samples;
+								
+								for (int i = 0; i < numSamples; ++i)
+								{
+									dstPtr[i * 2 + 0] += voiceSamples[i];
+								}
+							}
+							else
+							{
+								float * __restrict dstPtr = samples + numSamples * 0;
+								
+								for (int i = 0; i < numSamples; ++i)
+								{
+									dstPtr[i] += voiceSamples[i];
+								}
 							}
 						}
 						else if (voice.speaker == AudioVoice::kSpeaker_Right)
 						{
-							// interleave voice samples into destination buffer
-							
-							float * __restrict dstPtr = samples;
-							
-							for (int i = 0; i < numSamples; ++i)
+							if (interleaved)
 							{
-								dstPtr[i * 2 + 1] += voiceSamples[i];
+								// interleave voice samples into destination buffer
+								
+								float * __restrict dstPtr = samples;
+								
+								for (int i = 0; i < numSamples; ++i)
+								{
+									dstPtr[i * 2 + 1] += voiceSamples[i];
+								}
+							}
+							else
+							{
+								float * __restrict dstPtr = samples + numSamples * 1;
+								
+								for (int i = 0; i < numSamples; ++i)
+								{
+									dstPtr[i] += voiceSamples[i];
+								}
 							}
 						}
 						else
 						{
-							// interleave voice samples into destination buffer
-							
-							float * __restrict dstPtr = samples;
-							
-							for (int i = 0; i < numSamples; ++i)
+							if (interleaved)
 							{
-								dstPtr[i * 2 + 0] += voiceSamples[i];
-								dstPtr[i * 2 + 1] += voiceSamples[i];
+								// interleave voice samples into destination buffer
+								
+								float * __restrict dstPtr = samples;
+								
+								for (int i = 0; i < numSamples; ++i)
+								{
+									dstPtr[i * 2 + 0] += voiceSamples[i];
+									dstPtr[i * 2 + 1] += voiceSamples[i];
+								}
+							}
+							else
+							{
+								float * __restrict dstPtr1 = samples + numSamples * 0;
+								float * __restrict dstPtr2 = samples + numSamples * 1;
+								
+								for (int i = 0; i < numSamples; ++i)
+								{
+									dstPtr1[i] += voiceSamples[i];
+									dstPtr2[i] += voiceSamples[i];
+								}
 							}
 						}
 					}
 					else
 					{
-						// interleave voice samples into destination buffer
-						
-						float * __restrict dstPtr = samples + voice.channelIndex;
-						
-						for (int i = 0; i < numSamples; ++i)
+						if (interleaved)
 						{
-							*dstPtr = voiceSamples[i];
+							// interleave voice samples into destination buffer
 							
-							dstPtr += numChannels;
+							float * __restrict dstPtr = samples + voice.channelIndex;
+							
+							for (int i = 0; i < numSamples; ++i)
+							{
+								*dstPtr = voiceSamples[i];
+								
+								dstPtr += numChannels;
+							}
+						}
+						else
+						{
+							float * __restrict dstPtr = samples + numSamples * voice.channelIndex;
+							
+							for (int i = 0; i < numSamples; ++i)
+							{
+								dstPtr[i] = voiceSamples[i];
+							}
 						}
 					}
 				}
