@@ -1021,17 +1021,31 @@ void AudioVoiceManager::portAudioCallback(
 	float * samples = (float*)outputBuffer;
 	const int numSamples = framesPerBuffer;
 	
-	generateAudio(samples, numSamples, true, outputStereo, true);
+	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
+	
+	generateAudio(samples, numSamples, true, outputMode, true);
 }
 
-void AudioVoiceManager::generateAudio(float * __restrict samples, const int numSamples, const bool doLimiting, const bool outputStereo, const bool interleaved)
+void AudioVoiceManager::generateAudio(
+	float * __restrict samples, const int numSamples,
+	const bool doLimiting,
+	const OutputMode outputMode,
+	const bool interleaved)
 {
-	if (outputStereo)
+	// initialize samples to zero before we start mixing
+	
+	if (outputMode == kOutputMode_Mono)
+	{
+		memset(samples, 0, numSamples * 1 * sizeof(float));
+	}
+	else if (outputMode == kOutputMode_Stereo)
 	{
 		memset(samples, 0, numSamples * 2 * sizeof(float));
 	}
 	else
 	{
+		Assert(outputMode == kOutputMode_MultiChannel);
+		
 		memset(samples, 0, numSamples * numChannels * sizeof(float));
 	}
 	
@@ -1065,7 +1079,9 @@ void AudioVoiceManager::generateAudio(float * __restrict samples, const int numS
 				
 				if (doLimiting)
 				{
-					if (outputStereo)
+					// todo : perform limiting before and/or after mixing ? make limits settable ?
+					
+					if (outputMode != kOutputMode_MultiChannel)
 					{
 						voice.applyLimiter(voiceSamples, numSamples, .1f);
 					}
@@ -1081,7 +1097,11 @@ void AudioVoiceManager::generateAudio(float * __restrict samples, const int numS
 				
 				if (voice.channelIndex != -1)
 				{
-					if (outputStereo)
+					if (outputMode == kOutputMode_Mono)
+					{
+						audioBufferAdd(samples, voiceSamples, numSamples);
+					}
+					else if (outputMode == kOutputMode_Stereo)
 					{
 						if (voice.speaker == AudioVoice::kSpeaker_Left)
 						{
@@ -1098,12 +1118,7 @@ void AudioVoiceManager::generateAudio(float * __restrict samples, const int numS
 							}
 							else
 							{
-								float * __restrict dstPtr = samples + numSamples * 0;
-								
-								for (int i = 0; i < numSamples; ++i)
-								{
-									dstPtr[i] += voiceSamples[i];
-								}
+								audioBufferAdd(&samples[numSamples * 0], voiceSamples, numSamples);
 							}
 						}
 						else if (voice.speaker == AudioVoice::kSpeaker_Right)
@@ -1121,12 +1136,7 @@ void AudioVoiceManager::generateAudio(float * __restrict samples, const int numS
 							}
 							else
 							{
-								float * __restrict dstPtr = samples + numSamples * 1;
-								
-								for (int i = 0; i < numSamples; ++i)
-								{
-									dstPtr[i] += voiceSamples[i];
-								}
+								audioBufferAdd(&samples[numSamples * 1], voiceSamples, numSamples);
 							}
 						}
 						else
@@ -1145,14 +1155,8 @@ void AudioVoiceManager::generateAudio(float * __restrict samples, const int numS
 							}
 							else
 							{
-								float * __restrict dstPtr1 = samples + numSamples * 0;
-								float * __restrict dstPtr2 = samples + numSamples * 1;
-								
-								for (int i = 0; i < numSamples; ++i)
-								{
-									dstPtr1[i] += voiceSamples[i];
-									dstPtr2[i] += voiceSamples[i];
-								}
+								audioBufferAdd(&samples[numSamples * 0], voiceSamples, numSamples);
+								audioBufferAdd(&samples[numSamples * 1], voiceSamples, numSamples);
 							}
 						}
 					}
@@ -1173,12 +1177,7 @@ void AudioVoiceManager::generateAudio(float * __restrict samples, const int numS
 						}
 						else
 						{
-							float * __restrict dstPtr = samples + numSamples * voice.channelIndex;
-							
-							for (int i = 0; i < numSamples; ++i)
-							{
-								dstPtr[i] = voiceSamples[i];
-							}
+							audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
 						}
 					}
 				}

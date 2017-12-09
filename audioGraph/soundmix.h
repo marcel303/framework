@@ -386,6 +386,13 @@ struct AudioVoiceManager : PortAudioHandler
 	bool outputStereo;
 	int colorIndex;
 	
+	enum OutputMode
+	{
+		kOutputMode_Mono,
+		kOutputMode_Stereo,
+		kOutputMode_MultiChannel
+	};
+	
 	struct Spatialisation
 	{
 		float globalGain;
@@ -426,7 +433,7 @@ struct AudioVoiceManager : PortAudioHandler
 		void * outputBuffer,
 		const int framesPerBuffer) override;
 	
-	void generateAudio(float * __restrict samples, const int numSamples, const bool doLimiting, const bool outputStereo, const bool interleaved);
+	void generateAudio(float * __restrict samples, const int numSamples, const bool doLimiting, const OutputMode outputMode, const bool interleaved);
 	void generateOsc(Osc4DStream & stream, const bool forceSync);
 };
 
