@@ -36,6 +36,9 @@ struct VfxNodeAudioGraph : VfxNodeBase
 	enum Input
 	{
 		kInput_Filename,
+		kInput_OutputMode,
+		kInput_Limit,
+		kInput_LimitPeak,
 		kInput_COUNT
 	};
 	
@@ -43,6 +46,13 @@ struct VfxNodeAudioGraph : VfxNodeBase
 	{
 		kOutput_Channels,
 		kOutput_COUNT
+	};
+	
+	enum OutputMode
+	{
+		kOutputMode_Mono,
+		kOutputMode_Stereo,
+		kOutputMode_MultiChannel
 	};
 	
 	AudioGraphInstance * audioGraphInstance;

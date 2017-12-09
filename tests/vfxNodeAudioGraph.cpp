@@ -44,11 +44,21 @@ instantiate voice manager, port audio, etc ..
 
 */
 
+VFX_ENUM_TYPE(audioGraphOutputMode)
+{
+	elem("mono");
+	elem("stereo");
+	elem("multiChannel");
+};
+
 VFX_NODE_TYPE(VfxNodeAudioGraph)
 {
 	typeName = "audioGraph";
 	
 	in("file", "string");
+	inEnum("mode", "audioGraphOutputMode");
+	in("limit", "bool");
+	in("limitPeak", "float", "1");
 	out("channels", "channels");
 }
 
@@ -62,6 +72,9 @@ VfxNodeAudioGraph::VfxNodeAudioGraph()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Filename, kVfxPlugType_String);
+	addInput(kInput_OutputMode, kVfxPlugType_Int);
+	addInput(kInput_Limit, kVfxPlugType_Bool);
+	addInput(kInput_LimitPeak, kVfxPlugType_Float);
 	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
 }
 
@@ -146,6 +159,9 @@ void VfxNodeAudioGraph::updateDynamicInputs()
 void VfxNodeAudioGraph::tick(const float dt)
 {
 	const char * filename = getInputString(kInput_Filename, nullptr);
+	const OutputMode _outputMode = (OutputMode)getInputInt(kInput_OutputMode, 0);
+	const bool limit = getInputBool(kInput_Limit, false);
+	const float limitPeak = getInputFloat(kInput_LimitPeak, 1.f);
 	
 	if (isPassthrough || filename == nullptr)
 	{
@@ -179,20 +195,28 @@ void VfxNodeAudioGraph::tick(const float dt)
 	
 	//
 	
-	const bool outputStereo = false;
+	const AudioVoiceManager::OutputMode outputMode =
+		_outputMode == kOutputMode_Mono ? AudioVoiceManager::kOutputMode_Mono :
+		_outputMode == kOutputMode_Stereo ? AudioVoiceManager::kOutputMode_Stereo :
+		_outputMode == kOutputMode_MultiChannel ? AudioVoiceManager::kOutputMode_MultiChannel :
+		AudioVoiceManager::kOutputMode_Mono;
+	
 	const int numSamples = AUDIO_UPDATE_SIZE;
-	const int numChannels = outputStereo ? 2 : g_voiceMgr->numChannels;
+	const int numChannels =
+		_outputMode == kOutputMode_Mono ? 1 :
+		_outputMode == kOutputMode_Stereo ? 2 :
+		_outputMode == kOutputMode_MultiChannel ? g_voiceMgr->numChannels :
+		1;
 	
 	channelData.allocOnSizeChange(numSamples * numChannels);
 	
 	SDL_LockMutex(g_voiceMgr->mutex);
 	{
-		g_voiceMgr->generateAudio(channelData.data, numSamples, true, outputStereo, false);
+		g_voiceMgr->generateAudio(channelData.data, numSamples, limit, outputMode, false);
 	}
 	SDL_UnlockMutex(g_voiceMgr->mutex);
 	
-	//channelOutput.setDataContiguous(channelData.data, true, numSamples, numChannels);
-	channelsOutput.setDataContiguous(channelData.data, true, numSamples, 1);
+	channelsOutput.setDataContiguous(channelData.data, true, numSamples, numChannels);
 	
 	int index = kInput_COUNT;
 	
