@@ -57,7 +57,7 @@ VFX_NODE_TYPE(VfxNodeAudioGraph)
 	
 	in("file", "string");
 	inEnum("mode", "audioGraphOutputMode");
-	in("limit", "bool");
+	in("limit", "bool", "1");
 	in("limitPeak", "float", "1");
 	out("channels", "channels");
 }
@@ -183,7 +183,11 @@ void VfxNodeAudioGraph::tick(const float dt)
 		currentFilename = filename;
 	}
 	
+	//
+	
 	updateDynamicInputs();
+	
+	//
 	
 	if (audioGraphInstance == nullptr)
 	{
@@ -212,7 +216,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 	
 	SDL_LockMutex(g_voiceMgr->mutex);
 	{
-		g_voiceMgr->generateAudio(channelData.data, numSamples, limit, outputMode, false);
+		g_voiceMgr->generateAudio(channelData.data, numSamples, limit, limitPeak, outputMode, false);
 	}
 	SDL_UnlockMutex(g_voiceMgr->mutex);
 	
