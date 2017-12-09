@@ -1022,13 +1022,15 @@ void AudioVoiceManager::portAudioCallback(
 	const int numSamples = framesPerBuffer;
 	
 	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
+	const float limiterPeak = outputMode == kOutputMode_MultiChannel ? .4f : .1f;
 	
-	generateAudio(samples, numSamples, true, outputMode, true);
+	generateAudio(samples, numSamples, true, limiterPeak, outputMode, true);
 }
 
 void AudioVoiceManager::generateAudio(
 	float * __restrict samples, const int numSamples,
 	const bool doLimiting,
+	const float limiterPeak,
 	const OutputMode outputMode,
 	const bool interleaved)
 {
@@ -1081,14 +1083,7 @@ void AudioVoiceManager::generateAudio(
 				{
 					// todo : perform limiting before and/or after mixing ? make limits settable ?
 					
-					if (outputMode != kOutputMode_MultiChannel)
-					{
-						voice.applyLimiter(voiceSamples, numSamples, .1f);
-					}
-					else
-					{
-						voice.applyLimiter(voiceSamples, numSamples, .4f);
-					}
+					voice.applyLimiter(voiceSamples, numSamples, limiterPeak);
 				}
 				
 				// apply volume ramping

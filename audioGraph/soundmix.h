@@ -433,7 +433,12 @@ struct AudioVoiceManager : PortAudioHandler
 		void * outputBuffer,
 		const int framesPerBuffer) override;
 	
-	void generateAudio(float * __restrict samples, const int numSamples, const bool doLimiting, const OutputMode outputMode, const bool interleaved);
+	void generateAudio(
+		float * __restrict samples, const int numSamples,
+		const bool doLimiting,
+		const float limiterPeak,
+		const OutputMode outputMode,
+		const bool interleaved);
 	void generateOsc(Osc4DStream & stream, const bool forceSync);
 };
 
