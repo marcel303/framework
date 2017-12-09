@@ -55,51 +55,91 @@ VFX_NODE_TYPE(VfxNodeAudioGraph)
 VfxNodeAudioGraph::VfxNodeAudioGraph()
 	: VfxNodeBase()
 	, audioGraphInstance(nullptr)
+	, currentFilename()
+	, currentControlValues()
+	, channelData()
+	, channelsOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Filename, kVfxPlugType_String);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelOutput);
+	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
 }
 
 VfxNodeAudioGraph::~VfxNodeAudioGraph()
 {
 	g_audioGraphMgr->free(audioGraphInstance);
-	currentFilename.clear();
-	
-	setDynamicInputs(nullptr, 0);
 }
 
 void VfxNodeAudioGraph::updateDynamicInputs()
 {
 	if (audioGraphInstance == nullptr)
 	{
-		setDynamicInputs(nullptr, 0);
+		if (!currentControlValues.empty())
+		{
+			logDebug("resetting dynamic inputs");
+			
+			setDynamicInputs(nullptr, 0);
+			
+			currentControlValues.clear();
+		}
 	}
 	else
 	{
 		SDL_LockMutex(g_audioGraphMgr->audioMutex);
 		auto controlValues = g_audioGraphMgr->controlValues;
 		SDL_UnlockMutex(g_audioGraphMgr->audioMutex);
-
-		std::vector<DynamicInput> dynamicInputs;
-		dynamicInputs.resize(controlValues.size());
-
-		int index = 0;
-
-		for (auto & controlValue : controlValues)
+		
+		bool equal = true;
+		
+		if (equal)
 		{
-			auto & dynamicInput = dynamicInputs[index];
-			
-			dynamicInput.name = controlValue.name;
-			dynamicInput.type = kVfxPlugType_Float;
-			
-			index++;
+			if (controlValues.size() != currentControlValues.size())
+			{
+				equal = false;
+			}
 		}
+		
+		if (equal)
+		{
+			int index = 0;
+			
+			for (auto & controlValue : controlValues)
+			{
+				if (controlValue.name != currentControlValues[index])
+					equal = false;
+				
+				index++;
+			}
+		}
+		
+		if (equal == false)
+		{
+			logDebug("control values changed. updating dynamic inputs");
+			
+			std::vector<DynamicInput> dynamicInputs;
+			dynamicInputs.resize(controlValues.size());
+			
+			currentControlValues.clear();
 
-		if (dynamicInputs.empty())
-			setDynamicInputs(nullptr, 0);
-		else
-			setDynamicInputs(&dynamicInputs[0], dynamicInputs.size());
+			int index = 0;
+
+			for (auto & controlValue : controlValues)
+			{
+				auto & dynamicInput = dynamicInputs[index];
+				
+				dynamicInput.name = controlValue.name;
+				dynamicInput.type = kVfxPlugType_Float;
+				
+				currentControlValues.push_back(controlValue.name);
+				
+				index++;
+			}
+
+			if (dynamicInputs.empty())
+				setDynamicInputs(nullptr, 0);
+			else
+				setDynamicInputs(&dynamicInputs[0], dynamicInputs.size());
+		}
 	}
 }
 
@@ -109,8 +149,11 @@ void VfxNodeAudioGraph::tick(const float dt)
 	
 	if (isPassthrough || filename == nullptr)
 	{
-		g_audioGraphMgr->free(audioGraphInstance);
-		currentFilename.clear();
+		if (audioGraphInstance != nullptr)
+		{
+			g_audioGraphMgr->free(audioGraphInstance);
+			currentFilename.clear();
+		}
 	}
 	else if (filename != currentFilename)
 	{
@@ -129,7 +172,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 	if (audioGraphInstance == nullptr)
 	{
 		channelData.free();
-		channelOutput.reset();
+		channelsOutput.reset();
 		
 		return;
 	}
@@ -148,7 +191,8 @@ void VfxNodeAudioGraph::tick(const float dt)
 	}
 	SDL_UnlockMutex(g_voiceMgr->mutex);
 	
-	channelOutput.setDataContiguous(channelData.data, true, numSamples, numChannels);
+	//channelOutput.setDataContiguous(channelData.data, true, numSamples, numChannels);
+	channelsOutput.setDataContiguous(channelData.data, true, numSamples, 1);
 	
 	int index = kInput_COUNT;
 	

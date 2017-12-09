@@ -45,18 +45,14 @@ struct VfxNodeAudioGraph : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	struct AudioInput
-	{
-		std::string name;
-		int socketIndex;
-	};
-	
 	AudioGraphInstance * audioGraphInstance;
 	
 	std::string currentFilename;
 	
+	std::vector<std::string> currentControlValues;
+	
 	VfxChannelData channelData;
-	VfxChannels channelOutput;
+	VfxChannels channelsOutput;
 	
 	VfxNodeAudioGraph();
 	
