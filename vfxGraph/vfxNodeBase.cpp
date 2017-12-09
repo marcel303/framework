@@ -578,7 +578,7 @@ void VfxPlug::connectTo(void * dstMem, const VfxPlugType dstType, const bool isI
 void VfxPlug::setMap(const void * dst, const float inMin, const float inMax, const float outMin, const float outMax)
 {
 #if EXTENDED_INPUTS
-	logDebug("map: %.2f, %.2f -> %.2f, %.2f", inMin, inMax, outMin, outMax);
+	logDebug("setMap: %.2f, %.2f -> %.2f, %.2f", inMin, inMax, outMin, outMax);
 	
 	for (auto & elem : floatArray.elems)
 	{
@@ -1030,6 +1030,31 @@ void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
 			}
 			
 			input->connectTo(*output);
+			
+			predeps.push_back(dstNode);
+			
+			// apply optional remapping parameters
+		
+			if (link.params.empty() == false &&
+				input->type == kVfxPlugType_Float &&
+				output->type == kVfxPlugType_Float)
+			{
+				auto inMin = link.floatParam("in.min", 0.f);
+				auto inMax = link.floatParam("in.max", 1.f);
+				auto outMin = link.floatParam("out.min", 0.f);
+				auto outMax = link.floatParam("out.max", 1.f);
+				
+				const bool hasRemap =
+					inMin != 0.f ||
+					inMax != 1.f ||
+					outMin != 0.f ||
+					outMax != 1.f;
+				
+				if (hasRemap)
+				{
+					input->setMap(output->mem, inMin, inMax, outMin, outMax);
+				}
+			}
 		}
 	}
 }
@@ -1037,6 +1062,31 @@ void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
 void VfxNodeBase::setDynamicInputs(const DynamicInput * newInputs, const int numInputs)
 {
 	const int numStaticInputs = inputs.size() - dynamicInputs.size();
+	
+	// remove socket connections
+	
+	for (auto & link : g_currentVfxGraph->dynamicData->links)
+	{
+		if (link.srcNodeId == id)
+		{
+			auto dstNodeItr = g_currentVfxGraph->nodes.find(link.dstNodeId);
+			
+			if (dstNodeItr == g_currentVfxGraph->nodes.end())
+			{
+				logError("failed to find output node. nodeId=%d", link.dstNodeId);
+				continue;
+			}
+			
+			auto dstNode = dstNodeItr->second;
+			
+			auto predepItr = std::find(predeps.begin(), predeps.end(), dstNode);
+			
+			if (predepItr != predeps.end())
+			{
+				predeps.erase(predepItr);
+			}
+		}
+	}
 	
 	// copy the list of dynamic inputs. we will need the definitions to reconnect inputs at a future time
 	

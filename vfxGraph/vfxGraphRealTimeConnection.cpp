@@ -33,6 +33,8 @@
 #include "Parse.h"
 #include "StringEx.h"
 
+#define VFXGRAPH_DEBUG_PREDEPS 0
+
 void RealTimeConnection::loadBegin()
 {
 	Assert(g_currentVfxGraph == nullptr);
@@ -427,6 +429,16 @@ void RealTimeConnection::setLinkParameter(const GraphLinkId linkId, const GraphN
 		}
 	}
 #endif
+
+	for (auto & link : vfxGraph->dynamicData->links)
+	{
+		if (link.linkId == linkId)
+		{
+			link.params[name] = value;
+			
+			logDebug("setLinkParameter: set dynamic link parameter. count=%d", link.params.size());
+		}
+	}
 }
 
 void RealTimeConnection::clearLinkParameter(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex, const std::string & name)
@@ -508,6 +520,16 @@ void RealTimeConnection::clearLinkParameter(const GraphLinkId linkId, const Grap
 		}
 	}
 #endif
+
+	for (auto & link : vfxGraph->dynamicData->links)
+	{
+		if (link.linkId == linkId)
+		{
+			link.params.erase(name);
+			
+			logDebug("clearLinkParameter: cleared dynamic link parameter. count=%d", link.params.size());
+		}
+	}
 }
 
 void RealTimeConnection::setNodeIsPassthrough(const GraphNodeId nodeId, const bool isPassthrough)
@@ -1031,6 +1053,13 @@ bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vecto
 	
 	d.add("tick: %.3fms", node->tickTimeAvg / 1000.0);
 	d.add("draw: %.3fms", node->drawTimeAvg / 1000.0);
+	
+#if VFXGRAPH_DEBUG_PREDEPS
+	d.add("predeps: %d", node->predeps.size());
+	for (auto & predep : node->predeps)
+		d.add("predep: %p", predep);
+	d.add("self: %p", this);
+#endif
 	
 	if (node->editorIssue.empty() == false)
 	{

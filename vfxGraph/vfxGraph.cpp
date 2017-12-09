@@ -350,6 +350,18 @@ int VfxGraph::traverseDraw(const int sx, const int sy) const
 
 //
 
+float VfxDynamicLink::floatParam(const char * name, const float defaultValue) const
+{
+	auto i = params.find(name);
+	
+	if (i == params.end())
+		return defaultValue;
+	else
+		return Parse::Float(i->second);
+}
+
+//
+
 VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName, VfxGraph * vfxGraph)
 {
 	VfxNodeBase * vfxNode = nullptr;
@@ -458,6 +470,7 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 				dlink.dstNodeId = link.dstNodeId;
 				dlink.dstSocketIndex = link.dstNodeSocketIndex;
 				dlink.dstSocketName = link.dstNodeSocketName;
+				dlink.params = link.params;
 				vfxGraph->dynamicData->links.push_back(dlink);
 				continue;
 			}

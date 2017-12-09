@@ -126,6 +126,8 @@ struct VfxDynamicLink
 	std::string dstSocketName;
 	int dstSocketIndex;
 	
+	std::map<std::string, std::string> params;
+	
 	VfxDynamicLink()
 		: linkId(-1)
 		, srcNodeId(-1)
@@ -134,8 +136,11 @@ struct VfxDynamicLink
 		, dstNodeId(-1)
 		, dstSocketName()
 		, dstSocketIndex(-1)
+		, params()
 	{
 	}
+	
+	float floatParam(const char * name, const float defaultValue) const;
 };
 
 struct VfxDynamicInputSocketValue
