@@ -138,6 +138,8 @@ struct GraphLink
 	GraphLink();
 	
 	void setIsEnabled(const bool isEnabled);
+	
+	float floatParam(const char * name, const float defaultValue) const;
 };
 
 struct GraphEditConnection

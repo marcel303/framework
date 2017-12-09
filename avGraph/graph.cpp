@@ -288,6 +288,16 @@ void GraphLink::setIsEnabled(const bool _isEnabled)
 	isEnabled = _isEnabled;
 }
 
+float GraphLink::floatParam(const char * name, const float defaultValue) const
+{
+	auto i = params.find(name);
+	
+	if (i == params.end())
+		return defaultValue;
+	else
+		return Parse::Float(i->second);
+}
+
 //
 
 Graph::Graph()
