@@ -4874,11 +4874,15 @@ void setColorf(float r, float g, float b, float a, float rgbMul)
 void setAlpha(int a)
 {
 	globals.color.a = scale255(a);
+	
+	gxColor4f(globals.color.r, globals.color.g, globals.color.b, globals.color.a);
 }
 
 void setAlphaf(float a)
 {
 	globals.color.a = a;
+	
+	gxColor4f(globals.color.r, globals.color.g, globals.color.b, globals.color.a);
 }
 
 static Stack<Color, 32> colorStack;
