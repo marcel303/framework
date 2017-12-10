@@ -150,8 +150,13 @@ void RealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	// todo : iterate all other nodes, to ensure there are no nodes with references back to this node?
 #endif
 	
-	delete node;
-	node = nullptr;
+	auto oldVfxGraph = g_currentVfxGraph;
+	g_currentVfxGraph = vfxGraph;
+	{
+		delete node;
+		node = nullptr;
+	}
+	g_currentVfxGraph = oldVfxGraph;
 	
 	vfxGraph->nodes.erase(nodeItr);
 	
