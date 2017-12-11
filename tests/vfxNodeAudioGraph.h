@@ -44,12 +44,12 @@ struct VfxNodeAudioGraph : VfxNodeBase
 	
 	enum Output
 	{
-		kOutput_Channels,
 		kOutput_COUNT
 	};
 	
 	enum OutputMode
 	{
+		kOutputMode_None = -1,
 		kOutputMode_Mono,
 		kOutputMode_Stereo,
 		kOutputMode_MultiChannel
@@ -61,14 +61,18 @@ struct VfxNodeAudioGraph : VfxNodeBase
 	
 	std::vector<std::string> currentControlValues;
 	
+	int currentNumSamples;
+	int currentNumChannels;
+	
 	VfxChannelData channelData;
-	VfxChannels channelsOutput;
+	VfxChannels * channelOutputs;
 	
 	VfxNodeAudioGraph();
 	
 	virtual ~VfxNodeAudioGraph() override;
 	
 	void updateDynamicInputs();
+	void updateDynamicOutputs(const int numSamples, const int numChannels);
 	
 	virtual void tick(const float dt) override;
 };

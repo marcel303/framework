@@ -28,6 +28,7 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "soundmix.h"
+#include "StringEx.h"
 #include "vfxNodeAudioGraph.h"
 
 #include "framework.h"
@@ -59,7 +60,6 @@ VFX_NODE_TYPE(VfxNodeAudioGraph)
 	inEnum("mode", "audioGraphOutputMode");
 	in("limit", "bool", "1");
 	in("limitPeak", "float", "1");
-	out("channels", "channels");
 }
 
 VfxNodeAudioGraph::VfxNodeAudioGraph()
@@ -67,20 +67,24 @@ VfxNodeAudioGraph::VfxNodeAudioGraph()
 	, audioGraphInstance(nullptr)
 	, currentFilename()
 	, currentControlValues()
+	, currentNumSamples(0)
+	, currentNumChannels(0)
 	, channelData()
-	, channelsOutput()
+	, channelOutputs(nullptr)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Filename, kVfxPlugType_String);
 	addInput(kInput_OutputMode, kVfxPlugType_Int);
 	addInput(kInput_Limit, kVfxPlugType_Bool);
 	addInput(kInput_LimitPeak, kVfxPlugType_Float);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
 }
 
 VfxNodeAudioGraph::~VfxNodeAudioGraph()
 {
 	g_audioGraphMgr->free(audioGraphInstance);
+	
+	delete [] channelOutputs;
+	channelOutputs = nullptr;
 }
 
 void VfxNodeAudioGraph::updateDynamicInputs()
@@ -156,6 +160,65 @@ void VfxNodeAudioGraph::updateDynamicInputs()
 	}
 }
 
+void VfxNodeAudioGraph::updateDynamicOutputs(const int numSamples, const int numChannels)
+{
+	if (audioGraphInstance == nullptr)
+	{
+		if (currentNumSamples != 0 || currentNumChannels != 0)
+		{
+			logDebug("resetting dynamic output channels");
+			
+			currentNumSamples = 0;
+			currentNumChannels = 0;
+		
+			setDynamicOutputs(nullptr, 0);
+			
+			channelData.free();
+			
+			delete [] channelOutputs;
+			channelOutputs = nullptr;
+		}
+	}
+	else
+	{
+		if (currentNumSamples != numSamples || currentNumChannels != numChannels)
+		{
+			logDebug("allocating dynamic output channels: %d x %d samples", numChannels, numSamples);
+			
+			currentNumSamples = numSamples;
+			currentNumChannels = numChannels;
+			
+			//
+			
+			channelData.free();
+			
+			delete [] channelOutputs;
+			channelOutputs = nullptr;
+			
+			//
+			
+			channelData.allocOnSizeChange(numSamples * numChannels);
+			
+			channelOutputs = new VfxChannels[numChannels];
+			
+			DynamicOutput outputs[numChannels];
+			
+			for (int i = 0; i < numChannels; ++i)
+			{
+				auto & o = outputs[i];
+				
+				o.type = kVfxPlugType_Channels;
+				o.name = String::FormatC("channel%d", i + 1);
+				o.mem = &channelOutputs[i];
+				
+				channelOutputs[i].setDataContiguous(channelData.data + numSamples * i, true, numSamples, 1);
+			}
+			
+			setDynamicOutputs(outputs, numChannels);
+		}
+	}
+}
+
 void VfxNodeAudioGraph::tick(const float dt)
 {
 	const char * filename = getInputString(kInput_Filename, nullptr);
@@ -185,15 +248,23 @@ void VfxNodeAudioGraph::tick(const float dt)
 	
 	//
 	
+	const int numSamples = AUDIO_UPDATE_SIZE;
+	const int numChannels =
+		_outputMode == kOutputMode_Mono ? 1 :
+		_outputMode == kOutputMode_Stereo ? 2 :
+		_outputMode == kOutputMode_MultiChannel ? g_voiceMgr->numChannels :
+		1;
+	
+	//
+	
 	updateDynamicInputs();
+	
+	updateDynamicOutputs(numSamples, numChannels);
 	
 	//
 	
 	if (audioGraphInstance == nullptr)
 	{
-		channelData.free();
-		channelsOutput.reset();
-		
 		return;
 	}
 	
@@ -205,22 +276,11 @@ void VfxNodeAudioGraph::tick(const float dt)
 		_outputMode == kOutputMode_MultiChannel ? AudioVoiceManager::kOutputMode_MultiChannel :
 		AudioVoiceManager::kOutputMode_Mono;
 	
-	const int numSamples = AUDIO_UPDATE_SIZE;
-	const int numChannels =
-		_outputMode == kOutputMode_Mono ? 1 :
-		_outputMode == kOutputMode_Stereo ? 2 :
-		_outputMode == kOutputMode_MultiChannel ? g_voiceMgr->numChannels :
-		1;
-	
-	channelData.allocOnSizeChange(numSamples * numChannels);
-	
 	SDL_LockMutex(g_voiceMgr->mutex);
 	{
 		g_voiceMgr->generateAudio(channelData.data, numSamples, limit, limitPeak, outputMode, false);
 	}
 	SDL_UnlockMutex(g_voiceMgr->mutex);
-	
-	channelsOutput.setDataContiguous(channelData.data, true, numSamples, numChannels);
 	
 	int index = kInput_COUNT;
 	
