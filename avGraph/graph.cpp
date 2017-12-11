@@ -2485,53 +2485,20 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		if (!link.isDynamic)
 			continue;
 		
-		auto srcNodeData = tryGetNodeData(link.srcNodeId);
+		resolveSocketIndices(
+			link.srcNodeId, link.srcNodeSocketName, link.srcNodeSocketIndex,
+			link.dstNodeId, link.dstNodeSocketName, link.dstNodeSocketIndex);
+	}
+	
+	// update dynamic visualizers
+	
+	for (auto & visualizerItr : visualizers)
+	{
+		auto & visualizer = visualizerItr.second;
 		
-		if (!srcNodeData->dynamicSockets.inputSockets.empty())
-		{
-			if (link.srcNodeSocketIndex < 0 || link.srcNodeSocketIndex >= srcNodeData->dynamicSockets.numStaticInputSockets)
-			{
-				link.srcNodeSocketIndex = -1;
-				
-				Assert(srcNodeData);
-				if (srcNodeData)
-				{
-					int index = 0;
-					
-					for (auto & inputSocket : srcNodeData->dynamicSockets.inputSockets)
-					{
-						if (link.srcNodeSocketName == inputSocket.name)
-							link.srcNodeSocketIndex = index;
-						index++;
-					}
-				}
-			}
-		}
-		
-		//
-		
-		auto dstNodeData = tryGetNodeData(link.dstNodeId);
-		
-		if (!dstNodeData->dynamicSockets.outputSockets.empty())
-		{
-			if (link.dstNodeSocketIndex < 0 || link.dstNodeSocketIndex >= dstNodeData->dynamicSockets.numStaticOutputSockets)
-			{
-				link.dstNodeSocketIndex = -1;
-				
-				Assert(dstNodeData);
-				if (dstNodeData)
-				{
-					int index = 0;
-					
-					for (auto & outputSocket : dstNodeData->dynamicSockets.outputSockets)
-					{
-						if (link.dstNodeSocketName == outputSocket.name)
-							link.dstNodeSocketIndex = index;
-						index++;
-					}
-				}
-			}
-		}
+		resolveSocketIndices(
+			visualizer.nodeId, visualizer.srcSocketName, visualizer.srcSocketIndex,
+			visualizer.nodeId, visualizer.dstSocketName, visualizer.dstSocketIndex);
 	}
 	
 	//
@@ -4558,6 +4525,59 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 		}
 		
 		return true;
+	}
+}
+
+void GraphEdit::resolveSocketIndices(
+	const GraphNodeId srcNodeId, const std::string & srcNodeSocketName, int & srcNodeSocketIndex,
+	const GraphNodeId dstNodeId, const std::string & dstNodeSocketName, int & dstNodeSocketIndex)
+{
+	auto srcNodeData = tryGetNodeData(srcNodeId);
+
+	if (!srcNodeData->dynamicSockets.inputSockets.empty())
+	{
+		if (srcNodeSocketIndex < 0 || srcNodeSocketIndex >= srcNodeData->dynamicSockets.numStaticInputSockets)
+		{
+			srcNodeSocketIndex = -1;
+			
+			Assert(srcNodeData);
+			if (srcNodeData)
+			{
+				int index = 0;
+				
+				for (auto & inputSocket : srcNodeData->dynamicSockets.inputSockets)
+				{
+					if (srcNodeSocketName == inputSocket.name)
+						srcNodeSocketIndex = index;
+					index++;
+				}
+			}
+		}
+	}
+
+	//
+
+	auto dstNodeData = tryGetNodeData(dstNodeId);
+
+	if (!dstNodeData->dynamicSockets.outputSockets.empty())
+	{
+		if (dstNodeSocketIndex < 0 || dstNodeSocketIndex >= dstNodeData->dynamicSockets.numStaticOutputSockets)
+		{
+			dstNodeSocketIndex = -1;
+			
+			Assert(dstNodeData);
+			if (dstNodeData)
+			{
+				int index = 0;
+				
+				for (auto & outputSocket : dstNodeData->dynamicSockets.outputSockets)
+				{
+					if (dstNodeSocketName == outputSocket.name)
+						dstNodeSocketIndex = index;
+					index++;
+				}
+			}
+		}
 	}
 }
 
