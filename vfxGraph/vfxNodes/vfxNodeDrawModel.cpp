@@ -28,6 +28,14 @@
 #include "framework.h"
 #include "vfxNodeDrawModel.h"
 
+template <typename T>
+static inline T pad(T value, int align)
+{
+	return (value + align - 1) & (~(align - 1));
+}
+
+#define ALIGNED_ALLOCA(size, align) reinterpret_cast<void*>(pad(reinterpret_cast<uintptr_t>(alloca(size + align - 1)), align))
+
 VFX_NODE_TYPE(VfxNodeDrawModel)
 {
 	typeName = "draw.model";
@@ -39,6 +47,12 @@ VFX_NODE_TYPE(VfxNodeDrawModel)
 	in("rootMotion", "bool");
 	in("scale", "float", "1");
 	out("any", "draw", "draw");
+	out("position.x", "channel");
+	out("position.y", "channel");
+	out("position.z", "channel");
+	out("normal.x", "channel");
+	out("normal.y", "channel");
+	out("normal.z", "channel");
 }
 
 VfxNodeDrawModel::VfxNodeDrawModel()
@@ -53,6 +67,12 @@ VfxNodeDrawModel::VfxNodeDrawModel()
 	addInput(kInput_AnimationRootMotionEnabled, kVfxPlugType_Bool);
 	addInput(kInput_Scale, kVfxPlugType_Float);
 	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
+	addOutput(kOutput_PositionX, kVfxPlugType_Channel, &positionX);
+	addOutput(kOutput_PositionY, kVfxPlugType_Channel, &positionY);
+	addOutput(kOutput_PositionZ, kVfxPlugType_Channel, &positionZ);
+	addOutput(kOutput_NormalX, kVfxPlugType_Channel, &normalX);
+	addOutput(kOutput_NormalY, kVfxPlugType_Channel, &normalY);
+	addOutput(kOutput_NormalZ, kVfxPlugType_Channel, &normalZ);
 }
 
 VfxNodeDrawModel::~VfxNodeDrawModel()
@@ -66,6 +86,22 @@ void VfxNodeDrawModel::tick(const float dt)
 	vfxCpuTimingBlock(VfxNodeDrawModel);
 	
 	const char * filename = getInputString(kInput_Filename, nullptr);
+	const float scale = getInputFloat(kInput_Scale, 1.f);
+	const bool wantsChannels =
+		outputs[kOutput_PositionX].isReferenced() ||
+		outputs[kOutput_PositionY].isReferenced() ||
+		outputs[kOutput_PositionZ].isReferenced() ||
+		outputs[kOutput_NormalX].isReferenced() ||
+		outputs[kOutput_NormalY].isReferenced() ||
+		outputs[kOutput_NormalZ].isReferenced();
+	
+	positionX.reset();
+	positionY.reset();
+	positionZ.reset();
+
+	normalX.reset();
+	normalY.reset();
+	normalZ.reset();
 
 	if (isPassthrough || filename == nullptr)
 	{
@@ -73,7 +109,9 @@ void VfxNodeDrawModel::tick(const float dt)
 		
 		delete model;
 		model = nullptr;
-
+		
+		channelData.free();
+		
 		return;
 	}
 
@@ -105,9 +143,54 @@ void VfxNodeDrawModel::tick(const float dt)
 	model->animLoop = int(std::round(animLoopCount));
 	model->animRootMotionEnabled = animRootMotionEnabled;
 	
-	// todo : tick model
+	model->tick(dt);
 	
-	// todo : remove model tick from framework
+	if (wantsChannels)
+	{
+		Mat4x4 matrix;
+		matrix.MakeScaling(scale, scale, scale);
+		
+		const int numMatrices = model->calculateBoneMatrices(matrix, nullptr, nullptr, nullptr, 0);
+		
+		Mat4x4 * localMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numMatrices, 16);
+		Mat4x4 * worldMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numMatrices, 16);
+		Mat4x4 * globalMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numMatrices, 16);
+		
+		model->calculateBoneMatrices(matrix, localMatrices, worldMatrices, globalMatrices, numMatrices);
+		
+		const int numVertices = model->softBlend(matrix, nullptr, nullptr,  nullptr, numMatrices, nullptr, nullptr, 0);
+		
+		Vec3 * positions = (Vec3*)ALIGNED_ALLOCA(sizeof(Vec3) * numVertices, 16);
+		Vec3 * normals = (Vec3*)ALIGNED_ALLOCA(sizeof(Vec3) * numVertices, 16);
+		
+		model->softBlend(matrix, localMatrices, worldMatrices, globalMatrices, numMatrices, positions, normals, numVertices);
+		
+		const int size = numVertices * 6;
+		
+		channelData.allocOnSizeChange(size);
+		
+		positionX.setData(channelData.data + 0 * numVertices, false, numVertices);
+		positionY.setData(channelData.data + 1 * numVertices, false, numVertices);
+		positionZ.setData(channelData.data + 2 * numVertices, false, numVertices);
+		normalX.setData(channelData.data + 3 * numVertices, false, numVertices);
+		normalY.setData(channelData.data + 4 * numVertices, false, numVertices);
+		normalZ.setData(channelData.data + 5 * numVertices, false, numVertices);
+		
+		for (int i = 0; i < numVertices; ++i)
+		{
+			positionX.dataRw()[i] = positions[i][0];
+			positionY.dataRw()[i] = positions[i][1];
+			positionZ.dataRw()[i] = positions[i][2];
+			
+			normalX.dataRw()[i] = normals[i][0];
+			normalY.dataRw()[i] = normals[i][1];
+			normalZ.dataRw()[i] = normals[i][2];
+		}
+	}
+	else
+	{
+		channelData.free();
+	}
 }
 
 void VfxNodeDrawModel::draw() const
@@ -124,7 +207,6 @@ void VfxNodeDrawModel::draw() const
 	{
 		gxScalef(scale, scale, scale);
 		
-		//const int drawFlags = DrawMesh | DrawBones | DrawNormals;
 		const int drawFlags = DrawMesh;
 		
 		setColor(colorWhite);

@@ -47,6 +47,12 @@ struct VfxNodeDrawModel : VfxNodeBase
 	enum Output
 	{
 		kOutput_Any,
+		kOutput_PositionX,
+		kOutput_PositionY,
+		kOutput_PositionZ,
+		kOutput_NormalX,
+		kOutput_NormalY,
+		kOutput_NormalZ,
 		kOutput_COUNT
 	};
 
@@ -54,6 +60,14 @@ struct VfxNodeDrawModel : VfxNodeBase
 
 	std::string currentFilename;
 	std::string currentAnim;
+	
+	VfxChannelData channelData;
+	VfxChannel positionX;
+	VfxChannel positionY;
+	VfxChannel positionZ;
+	VfxChannel normalX;
+	VfxChannel normalY;
+	VfxChannel normalZ;
 	
 	VfxNodeDrawModel();
 	virtual ~VfxNodeDrawModel() override;
