@@ -49,12 +49,15 @@ struct VfxNodeTransform2D : VfxNodeBase
 	enum Output
 	{
 		kOutput_Any,
+		kOutput_Matrix,
 		kOutput_COUNT
 	};
 	
 	VfxNodeTransform2D();
 	
 	Mat4x4 matrix;
+
+	VfxChannel matrixOutput;
 	
 	virtual void tick(const float dt) override;
 	

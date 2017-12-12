@@ -43,11 +43,13 @@ VFX_NODE_TYPE(VfxNodeTransform2D)
 	in("angle", "float");
 	in("angle_norm", "float");
 	out("transform", "draw", "draw");
+	out("matrix", "channel");
 }
 
 VfxNodeTransform2D::VfxNodeTransform2D()
 	: VfxNodeBase()
 	, matrix()
+	, matrixOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Any, kVfxPlugType_DontCare);
@@ -59,12 +61,20 @@ VfxNodeTransform2D::VfxNodeTransform2D()
 	addInput(kInput_Angle, kVfxPlugType_Float);
 	addInput(kInput_AngleNorm, kVfxPlugType_Float);
 	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
+	addOutput(kOutput_Matrix, kVfxPlugType_Channel, &matrixOutput);
 }
 
 void VfxNodeTransform2D::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeTransform2D);
 	
+	if (isPassthrough)
+	{
+		matrix.MakeIdentity();
+		matrixOutput.setData(matrix.m_v, false, 16);
+		return;
+	}
+
 	const float x = getInputFloat(kInput_X, 0.f);
 	const float y = getInputFloat(kInput_Y, 0.f);
 	const float scale = getInputFloat(kInput_Scale, 1.f);
@@ -84,6 +94,7 @@ void VfxNodeTransform2D::tick(const float dt)
 	r.MakeRotationZ(angle * M_PI / 180.f);
 	
 	matrix = t * r * s;
+	matrixOutput.setData(matrix.m_v, false, 16);
 }
 
 void VfxNodeTransform2D::beforeDraw() const
