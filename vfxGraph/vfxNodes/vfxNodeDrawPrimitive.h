@@ -35,6 +35,7 @@ struct VfxNodeDrawPrimitive : VfxNodeBase
 	{
 		kInput_Before,
 		kInput_Type,
+		kInput_UseScreenSize,
 		kInput_XChannel,
 		kInput_YChannel,
 		kInput_RChannel,

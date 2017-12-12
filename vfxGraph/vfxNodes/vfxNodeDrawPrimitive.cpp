@@ -57,6 +57,7 @@ VFX_NODE_TYPE(VfxNodeDrawPrimitive)
 	
 	in("before", "draw");
 	inEnum("type", "drawPrimitiveType");
+	in("screenSize", "bool");
 	in("x", "channel");
 	in("y", "channel");
 	in("r", "channel");
@@ -77,6 +78,7 @@ VfxNodeDrawPrimitive::VfxNodeDrawPrimitive()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Before, kVfxPlugType_DontCare);
 	addInput(kInput_Type, kVfxPlugType_Int);
+	addInput(kInput_UseScreenSize, kVfxPlugType_Bool);
 	addInput(kInput_XChannel, kVfxPlugType_Channel);
 	addInput(kInput_YChannel, kVfxPlugType_Channel);
 	addInput(kInput_RChannel, kVfxPlugType_Channel);
@@ -100,6 +102,7 @@ void VfxNodeDrawPrimitive::draw() const
 	vfxGpuTimingBlock(VfxNodeDrawPrimitive);
 	
 	const PrimitiveType type = (PrimitiveType)getInputInt(kInput_Type, kPrimitiveType_Cirle);
+	const bool useScreenSize = getInputBool(kInput_UseScreenSize, false);
 	const VfxChannel * xChannel = getInputChannel(kInput_XChannel, nullptr);
 	const VfxChannel * yChannel = getInputChannel(kInput_YChannel, nullptr);
 	const VfxChannel * rChannel = getInputChannel(kInput_RChannel, nullptr);
@@ -128,7 +131,7 @@ void VfxNodeDrawPrimitive::draw() const
 		{
 		case kPrimitiveType_Cirle:
 			{
-				hqBegin(HQ_FILLED_CIRCLES);
+				hqBegin(HQ_FILLED_CIRCLES, useScreenSize);
 				{
 					while (!zipper.done())
 					{
@@ -147,7 +150,7 @@ void VfxNodeDrawPrimitive::draw() const
 			
 		case kPrimitiveType_Quad:
 			{
-				hqBegin(HQ_FILLED_RECTS);
+				hqBegin(HQ_FILLED_RECTS, useScreenSize);
 				{
 					while (!zipper.done())
 					{
@@ -167,7 +170,7 @@ void VfxNodeDrawPrimitive::draw() const
 			
 		case kPrimitiveType_TriangleUp:
 			{
-				hqBegin(HQ_FILLED_TRIANGLES);
+				hqBegin(HQ_FILLED_TRIANGLES, useScreenSize);
 				{
 					while (!zipper.done())
 					{
@@ -186,7 +189,7 @@ void VfxNodeDrawPrimitive::draw() const
 			
 		case kPrimitiveType_TriangleDown:
 			{
-				hqBegin(HQ_FILLED_TRIANGLES);
+				hqBegin(HQ_FILLED_TRIANGLES, useScreenSize);
 				{
 					while (!zipper.done())
 					{
@@ -205,7 +208,7 @@ void VfxNodeDrawPrimitive::draw() const
 			
 		case kPrimitiveType_HLine:
 			{
-				hqBegin(HQ_LINES);
+				hqBegin(HQ_LINES, useScreenSize);
 				{
 					while (!zipper.done())
 					{
@@ -225,7 +228,7 @@ void VfxNodeDrawPrimitive::draw() const
 			
 		case kPrimitiveType_VLine:
 			{
-				hqBegin(HQ_LINES);
+				hqBegin(HQ_LINES, useScreenSize);
 				{
 					while (!zipper.done())
 					{
@@ -245,7 +248,7 @@ void VfxNodeDrawPrimitive::draw() const
 			
 		case kPrimitiveType_RoundedRect:
 			{
-				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS, useScreenSize);
 				{
 					while (!zipper.done())
 					{
@@ -278,7 +281,7 @@ void VfxNodeDrawPrimitive::draw() const
 		{
 		case kPrimitiveType_Cirle:
 			{
-				hqBegin(HQ_STROKED_CIRCLES);
+				hqBegin(HQ_STROKED_CIRCLES, useScreenSize);
 				{
 					while (!zipper.done())
 					{
@@ -297,7 +300,7 @@ void VfxNodeDrawPrimitive::draw() const
 			
 		case kPrimitiveType_Quad:
 			{
-				hqBegin(HQ_STROKED_RECTS);
+				hqBegin(HQ_STROKED_RECTS, useScreenSize);
 				{
 					while (!zipper.done())
 					{
@@ -317,7 +320,7 @@ void VfxNodeDrawPrimitive::draw() const
 			
 		case kPrimitiveType_TriangleUp:
 			{
-				hqBegin(HQ_STROKED_TRIANGLES);
+				hqBegin(HQ_STROKED_TRIANGLES, useScreenSize);
 				{
 					while (!zipper.done())
 					{
@@ -336,7 +339,7 @@ void VfxNodeDrawPrimitive::draw() const
 			
 		case kPrimitiveType_TriangleDown:
 			{
-				hqBegin(HQ_STROKED_TRIANGLES);
+				hqBegin(HQ_STROKED_TRIANGLES, useScreenSize);
 				{
 					while (!zipper.done())
 					{
@@ -359,7 +362,7 @@ void VfxNodeDrawPrimitive::draw() const
 			
 		case kPrimitiveType_RoundedRect:
 			{
-				hqBegin(HQ_STROKED_ROUNDED_RECTS);
+				hqBegin(HQ_STROKED_ROUNDED_RECTS, useScreenSize);
 				{
 					while (!zipper.done())
 					{
