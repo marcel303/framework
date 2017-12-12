@@ -168,88 +168,72 @@ VFX_NODE_TYPE(VfxNodeChannelMath)
 	typeName = "channel.math";
 	
 	inEnum("type", "mathType", "1");
-	in("a", "channels");
-	in("b", "channels");
-	out("result", "channels");
+	in("a", "channel");
+	in("b", "channel");
+	out("result", "channel");
 }
 
 VfxNodeChannelMath::VfxNodeChannelMath()
 	: VfxNodeBase()
 	, channelData()
-	, channelsOutput()
+	, channelOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Type, kVfxPlugType_Int);
-	addInput(kInput_A, kVfxPlugType_Channels);
-	addInput(kInput_B, kVfxPlugType_Channels);
-	addOutput(kOutput_R, kVfxPlugType_Channels, &channelsOutput);
-}
-
-static float safeRead(const VfxChannels * channels, const int channelIndex, const int x, const int y)
-{
-	if (channels->numChannels == 0)
-		return 0.f;
-	if (channels->sx == 0 || channels->sy == 0)
-		return 0.f;
-
-	const VfxChannel & channel = channels->channels[channelIndex % channels->numChannels];
-
-	const float result = channel.data[(y % channels->sy) * channels->sx + (x % channels->sx)];
-
-	return result;
+	addInput(kInput_A, kVfxPlugType_Channel);
+	addInput(kInput_B, kVfxPlugType_Channel);
+	addOutput(kOutput_R, kVfxPlugType_Channel, &channelOutput);
 }
 
 void VfxNodeChannelMath::tick(const float dt)
 {
-	VfxChannels zero;
-	float zeroValue = 0.f;
-	zero.setDataContiguous(&zeroValue, false, 1, 1);
-	
 	const Type type = (Type)getInputInt(kInput_Type, kType_Add);
-	const VfxChannels * a = getInputChannels(kInput_A, &zero);
-	const VfxChannels * b = getInputChannels(kInput_B, &zero);
+	const VfxChannel * a = getInputChannel(kInput_A, nullptr);
+	const VfxChannel * b = getInputChannel(kInput_B, nullptr);
 	
-	if (isPassthrough || a->numChannels == 0 || b->numChannels == 0)
+	VfxChannelZipper zipper({ a, b });
+	
+	if (isPassthrough || zipper.done())
 	{
 		channelData.free();
-		channelsOutput = *a;
+		channelOutput = *a;
+	}
+	else if (zipper.done())
+	{
+		channelData.free();
+		channelOutput.reset();
 	}
 	else
 	{
-		const int numChannels = std::max(a->numChannels, b->numChannels);
-		const int sx = std::max(a->sx, b->sx);
-		const int sy = std::max(a->sy, b->sy);
+		const int size = zipper.sx * zipper.sy;
 
-		channelData.allocOnSizeChange(numChannels * sx * sy);
+		channelData.allocOnSizeChange(size);
 		
-		channelsOutput.size = sx * sy;
-		channelsOutput.numChannels = numChannels;
+		channelOutput.size = size;
 		
-		channelsOutput.sx = sx;
-		channelsOutput.sy = sy;
+		channelOutput.sx = zipper.sx;
+		channelOutput.sy = zipper.sy;
 		
 		float * __restrict dst = channelData.data;
-
-		for (int i = 0; i < numChannels; ++i)
+		
+		channelOutput.data = dst;
+		channelOutput.continuous = (a && a->continuous) || (b && b->continuous);
+		
+		while (!zipper.doneY())
 		{
-			const VfxChannel & channelA = a->channels[i % a->numChannels];
-			const VfxChannel & channelB = b->channels[i % b->numChannels];
-			
-			channelsOutput.channels[i].data = dst;
-			channelsOutput.channels[i].continuous = channelA.continuous || channelB.continuous;
-			
-			for (int y = 0; y < sy; ++y)
+			while (!zipper.doneX())
 			{
-				for (int x = 0; x < sx; ++x)
-				{
-					const float valueA = safeRead(a, i, x, y);
-					const float valueB = safeRead(b, i, x, y);
+				const float valueA = zipper.read(0, 0.f);
+				const float valueB = zipper.read(0, 1.f);
 
-					const float result = evalMathOp(valueA, valueB, type);
+				const float result = evalMathOp(valueA, valueB, type);
 
-					*dst++ = result;
-				}
+				*dst++ = result;
+				
+				zipper.nextX();
 			}
+			
+			zipper.nextY();
 		}
 	}
 }

@@ -45,7 +45,9 @@ struct VfxNodeDotDetector : VfxNodeBase
 	{
 		kOutput_Lumi,
 		kOutput_Mask,
-		kOutput_XYRadius,
+		kOutput_X,
+		kOutput_Y,
+		kOutput_Radius,
 		kOutput_NumDots,
 		kOutput_COUNT
 	};
@@ -69,7 +71,9 @@ struct VfxNodeDotDetector : VfxNodeBase
 	
 	VfxImageCpu lumiOutput;
 	VfxImageCpu maskOutput;
-	VfxChannels xyrOutput;
+	VfxChannel xOutput;
+	VfxChannel yOutput;
+	VfxChannel rOutput;
 	
 	int numDotsOutput;
 

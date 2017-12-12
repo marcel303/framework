@@ -33,60 +33,49 @@ VFX_NODE_TYPE(VfxNodeChannelSlice)
 {
 	typeName = "channel.slice";
 	
-	in("channels", "channels");
-	in("channel", "int");
-	in("channel_norm", "float");
+	in("channel", "channel");
 	in("sliceBase", "int");
 	in("sliceBase_norm", "float");
 	in("sliceCount", "int", "1");
 	in("sliceCount_norm", "float");
-	out("channels", "channels");
+	out("channel", "channel");
 }
 
 VfxNodeChannelSlice::VfxNodeChannelSlice()
 	: VfxNodeBase()
-	, channelsOutput()
+	, channelOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Channels, kVfxPlugType_Channels);
-	addInput(kInput_ChannelIndex, kVfxPlugType_Int);
-	addInput(kInput_ChannelIndexNorm, kVfxPlugType_Float);
+	addInput(kInput_Channel, kVfxPlugType_Channel);
 	addInput(kInput_SliceIndex, kVfxPlugType_Int);
 	addInput(kInput_SliceIndexNorm, kVfxPlugType_Float);
 	addInput(kInput_SliceCount, kVfxPlugType_Int);
 	addInput(kInput_SliceCountNorm, kVfxPlugType_Float);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
+	addOutput(kOutput_Channel, kVfxPlugType_Channel, &channelOutput);
 }
 
 void VfxNodeChannelSlice::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeChannelSlice);
 	
-	const VfxChannels * channels = getInputChannels(kInput_Channels, nullptr);
-	int channelIndex =
-		tryGetInput(kInput_ChannelIndexNorm)->isConnected()
-		? int(std::round(getInputFloat(kInput_ChannelIndexNorm, 0.f) * (channels->numChannels - 1)))
-		: getInputInt(kInput_ChannelIndex, 0);
+	const VfxChannel * channel = getInputChannel(kInput_Channel, nullptr);
 	int sliceIndex =
 		tryGetInput(kInput_SliceIndexNorm)->isConnected()
-		? int(std::round(getInputFloat(kInput_SliceIndexNorm, 0.f) * (channels->sy - 1)))
+		? int(std::round(getInputFloat(kInput_SliceIndexNorm, 0.f) * (channel->sy - 1)))
 		: getInputInt(kInput_SliceIndex, 0);
 	int sliceCount =
 		tryGetInput(kInput_SliceCountNorm)->isConnected()
-		? int(std::round(getInputFloat(kInput_SliceCountNorm, 0.f) * channels->sy))
+		? int(std::round(getInputFloat(kInput_SliceCountNorm, 0.f) * channel->sy))
 		: getInputInt(kInput_SliceCount, 1);
 	
-	if (isPassthrough || channels == nullptr || channels->sx == 0 || channels->sy == 0 || channels->numChannels == 0)
+	if (isPassthrough || channel == nullptr || channel->sx == 0 || channel->sy == 0)
 	{
-		channelsOutput.reset();
+		channelOutput.reset();
 	}
 	else
 	{
-		channelIndex = std::max(0, std::min(channels->numChannels - 1, channelIndex));
-		sliceIndex = std::max(0, std::min(channels->sy - 1, sliceIndex));
-		sliceCount = std::max(0, std::min(channels->sy, sliceCount));
-		
-		const auto & channel = channels->channels[channelIndex];
+		sliceIndex = std::max(0, std::min(channel->sy - 1, sliceIndex));
+		sliceCount = std::max(0, std::min(channel->sy, sliceCount));
 		
 		int sliceIndex1 = sliceIndex;
 		int sliceIndex2 = sliceIndex + sliceCount;
@@ -96,17 +85,17 @@ void VfxNodeChannelSlice::tick(const float dt)
 		
 		if (sliceIndex1 < 0)
 			sliceIndex1 = 0;
-		if (sliceIndex2 > channels->sy)
-			sliceIndex2 = channels->sy;
+		if (sliceIndex2 > channel->sy)
+			sliceIndex2 = channel->sy;
 		
-		const float * base = channel.data + sliceIndex1 * channels->sx;
+		const float * base = channel->data + sliceIndex1 * channel->sx;
 		
-		channelsOutput.setData2DContiguous(base, channel.continuous, channels->sx, sliceIndex2 - sliceIndex1, 1);
+		channelOutput.setData2D(base, channel->continuous, channel->sx, sliceIndex2 - sliceIndex1);
 	}
 }
 
 void VfxNodeChannelSlice::getDescription(VfxNodeDescription & d)
 {
-	d.add("output channels:");
-	d.add(channelsOutput);
+	d.add("output channel:");
+	d.add(channelOutput);
 }

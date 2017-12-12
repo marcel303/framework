@@ -53,7 +53,7 @@ struct VfxNodeSampleImageCpu : VfxNodeBase
 	
 	float rgbaValueOutput[4];
 
-	VfxChannels rgbaChannelsOutput;
+	VfxChannel rgbaChannelOutput;
 	
 	VfxNodeSampleImageCpu();
 	

@@ -347,83 +347,34 @@ void VfxChannelData::free()
 
 //
 
-void VfxChannels::setData(const float * const * data, const bool * continuous, const int _size, const int _numChannels)
+void VfxChannel::setData(const float * _data, const bool _continuous, const int _size)
 {
-	Assert(_numChannels <= kMaxVfxChannels);
+	data = _data;
+	continuous = _continuous;
 	
 	size = _size;
-	numChannels = std::min(_numChannels, kMaxVfxChannels);
 	
 	sx = _size;
 	sy = 1;
-	
-	for (int i = 0; i < numChannels; ++i)
-	{
-		channels[i].data = data[i];
-		channels[i].continuous = continuous != nullptr ? continuous[i] : false;
-	}
 }
 
-void VfxChannels::setDataContiguous(const float * data, const bool continuous, const int _size, const int _numChannels)
+void VfxChannel::setData2D(const float * _data, const bool _continuous, const int _sx, const int _sy)
 {
-	Assert(_numChannels <= kMaxVfxChannels);
-	
-	size = _size;
-	numChannels = std::min(_numChannels, kMaxVfxChannels);
-	
-	sx = _size;
-	sy = 1;
-	
-	for (int i = 0; i < numChannels; ++i)
-	{
-		channels[i].data = data + i * size;
-		channels[i].continuous = continuous;
-	}
-}
-
-void VfxChannels::setData2D(const float * const * data, const bool * continuous, const int _sx, const int _sy, const int _numChannels)
-{
-	Assert(_numChannels <= kMaxVfxChannels);
+	data = _data;
+	continuous = _continuous;
 	
 	size = _sx * _sy;
-	numChannels = std::min(_numChannels, kMaxVfxChannels);
 	
 	sx = _sx;
 	sy = _sy;
-	
-	for (int i = 0; i < numChannels; ++i)
-	{
-		channels[i].data = data[i];
-		channels[i].continuous = continuous != nullptr ? continuous[i] : false;
-	}
 }
 
-void VfxChannels::setData2DContiguous(const float * data, const bool continuous, const int _sx, const int _sy, const int _numChannels)
+void VfxChannel::reset()
 {
-	Assert(_numChannels <= kMaxVfxChannels);
-	
-	size = _sx * _sy;
-	numChannels = std::min(_numChannels, kMaxVfxChannels);
-	
-	sx = _sx;
-	sy = _sy;
-	
-	for (int i = 0; i < numChannels; ++i)
-	{
-		channels[i].data = data + i * size;
-		channels[i].continuous = continuous;
-	}
-}
-
-void VfxChannels::reset()
-{
-	for (int i = 0; i < numChannels; ++i)
-	{
-		channels[i] = VfxChannel();
-	}
+	data = nullptr;
+	continuous = false;
 	
 	size = 0;
-	numChannels = 0;
 	
 	sx = 0;
 	sy = 0;
@@ -724,14 +675,13 @@ void VfxNodeDescription::add(const char * name, const VfxImageCpu & image)
 	add("MEMORY: %.2f Kb", numBytes / 1024.0);
 }
 
-void VfxNodeDescription::add(const VfxChannels & channels)
+void VfxNodeDescription::add(const VfxChannel & channel)
 {
-	add("numChannels: %d", channels.numChannels);
-	if (channels.sy > 1)
-		add("size: %d x %d", channels.sx, channels.sy);
+	if (channel.sy > 1)
+		add("size: %d x %d", channel.sx, channel.sy);
 	else
-		add("size: %d", channels.size);
-	add("MEMORY: %.2f Kb", channels.numChannels * channels.size * sizeof(float) / 1024.0);
+		add("size: %d", channel.size);
+	add("MEMORY: %.2f Kb", channel.size * sizeof(float) / 1024.0);
 }
 
 void VfxNodeDescription::addOpenglTexture(const char * name, const uint32_t id)

@@ -35,7 +35,10 @@ struct VfxNodeDrawPrimitive : VfxNodeBase
 	{
 		kInput_Before,
 		kInput_Type,
-		kInput_Channels,
+		kInput_XChannel,
+		kInput_YChannel,
+		kInput_RChannel,
+		kInput_SChannel,
 		kInput_Size,
 		kInput_Fill,
 		kInput_FillColor,

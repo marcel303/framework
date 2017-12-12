@@ -164,23 +164,6 @@ struct VfxImageCpuData
 
 //
 
-struct VfxChannel
-{
-	const float * data;
-	bool continuous; // hints whether data should be treated as individual samples, or continuous. it's similar to nearest vs linear texture sampling in OpenGL
-	
-	VfxChannel()
-		: data(nullptr)
-		, continuous(false)
-	{
-	}
-	
-	float * dataRw()
-	{
-		return (float*)data;
-	}
-};
-
 struct VfxChannelData
 {
 	float * data;
@@ -202,33 +185,141 @@ struct VfxChannelData
 	void free();
 };
 
-// fixme : for some reason this is not allowed to be a struct member in XCode. it starts to complain about an undefined reference to this constant. I have no idea why .. I do this all over the place and it should be allowed ?
-static const int kMaxVfxChannels = 16;
-
-struct VfxChannels
+struct VfxChannel
 {
-	VfxChannel channels[kMaxVfxChannels];
+	const float * data;
+	bool continuous; // hints whether data should be treated as individual samples, or continuous. it's similar to nearest vs linear texture sampling in OpenGL
 	
 	int size;
-	int numChannels;
 	
 	int sx;
 	int sy;
 	
-	VfxChannels()
-		: channels()
+	VfxChannel()
+		: data(nullptr)
+		, continuous(false)
 		, size(0)
-		, numChannels(0)
 		, sx(0)
 		, sy(0)
 	{
 	}
 	
-	void setData(const float * const * data, const bool * continuous, const int size, const int numChannels);
-	void setDataContiguous(const float * data, const bool continuous, const int size, const int numChannels);
-	void setData2D(const float * const * data, const bool * continuous, const int sx, const int sy, const int numChannels);
-	void setData2DContiguous(const float * data, const bool continuous, const int sx, const int sy, const int numChannels);
+	void setData(const float * data, const bool continuous, const int size);
+	void setData2D(const float * data, const bool continuous, const int sx, const int sy);
 	void reset();
+	
+	float * dataRw() const
+	{
+		return const_cast<float*>(data);
+	}
+};
+
+struct VfxChannelZipper
+{
+	const static int kMaxChannels = 16;
+	
+	VfxChannelZipper(std::initializer_list<const VfxChannel*> _channels)
+		: numChannels(0)
+		, sx(0)
+		, sy(0)
+		, x(0)
+		, y(0)
+	{
+		numChannels = 0;
+		
+		for (auto channel : _channels)
+		{
+			if (numChannels < kMaxChannels)
+			{
+				channels[numChannels] = channel;
+				
+				if (channel != nullptr)
+				{
+					sx = std::max(sx, channel->sx);
+					sy = std::max(sy, channel->sy);
+				}
+				
+				numChannels++;
+			}
+		}
+	}
+	
+	int size() const
+	{
+		return sx * sy;
+	}
+	
+	bool doneX() const
+	{
+		return x == sx;
+	}
+	
+	void nextX()
+	{
+		Assert(!doneX());
+		
+		x = x + 1;
+	}
+	
+	bool doneY() const
+	{
+		return y == sy;
+	}
+	
+	void nextY()
+	{
+		Assert(!doneY());
+		
+		y = y + 1;
+		
+		if (!doneY())
+		{
+			x = 0;
+		}
+	}
+	
+	bool done() const
+	{
+		return doneX() && doneY();
+	}
+	
+	void next()
+	{
+		nextX();
+		
+		if (doneX())
+		{
+			nextY();
+		}
+	}
+	
+	float read(const int channelIndex, const float defaultValue) const
+	{
+		auto channel = channels[channelIndex];
+		
+		if (channel == nullptr || channel->size == 0)
+		{
+			return defaultValue;
+		}
+		else
+		{
+			const int rx = x % channel->sx;
+			const int ry = y % channel->sy;
+			
+			const float result = channel->data[ry * channel->sx + rx];
+			
+			return result;
+		}
+	}
+	
+	const VfxChannel * channels[kMaxChannels];
+	int numChannels;
+	
+	int sx;
+	int sy;
+	
+	int x;
+	int y;
 };
 
 //
@@ -244,7 +335,7 @@ enum VfxPlugType
 	kVfxPlugType_Color,
 	kVfxPlugType_Image,
 	kVfxPlugType_ImageCpu,
-	kVfxPlugType_Channels,
+	kVfxPlugType_Channel,
 	kVfxPlugType_Trigger
 };
 
@@ -383,10 +474,10 @@ struct VfxPlug
 		return (VfxImageCpu*)mem;
 	}
 	
-	VfxChannels * getChannels() const
+	VfxChannel * getChannel() const
 	{
-		Assert(memType == kVfxPlugType_Channels);
-		return (VfxChannels*)mem;
+		Assert(memType == kVfxPlugType_Channel);
+		return (VfxChannel*)mem;
 	}
 	
 	//
@@ -433,7 +524,7 @@ struct VfxNodeDescription
 	void add(const char * format, ...);
 	void add(const char * name, const VfxImageBase & image);
 	void add(const char * name, const VfxImageCpu & image);
-	void add(const VfxChannels & channels);
+	void add(const VfxChannel & channel);
 	void addOpenglTexture(const char * name, const uint32_t id);
 	
 	void newline();
@@ -640,14 +731,14 @@ struct VfxNodeBase
 			return plug->getImageCpu();
 	}
 	
-	const VfxChannels * getInputChannels(const int index, const VfxChannels * defaultValue) const
+	const VfxChannel * getInputChannel(const int index, const VfxChannel * defaultValue) const
 	{
 		const VfxPlug * plug = tryGetInput(index);
 		
 		if (plug == nullptr || !plug->isConnected())
 			return defaultValue;
 		else
-			return plug->getChannels();
+			return plug->getChannel();
 	}
 	
 	void setOuputIsValid(const int index, const bool isValid)

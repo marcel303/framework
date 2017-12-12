@@ -40,19 +40,19 @@ struct VfxNodeChannelLiteral : VfxNodeBase
 	
 	enum Output
 	{
-		kOutput_Channels,
+		kOutput_Channel,
 		kOutput_COUNT
 	};
 	
 	VfxChannelData channelData;
 	
-	VfxChannels channelOutput;
+	VfxChannel channelOutput;
 	
 	VfxNodeChannelLiteral()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Text, kVfxPlugType_String);
-		addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelOutput);
+		addOutput(kOutput_Channel, kVfxPlugType_Channel, &channelOutput);
 	}
 	
 	virtual void tick(const float dt) override
@@ -79,7 +79,7 @@ struct VfxNodeChannelLiteral : VfxNodeBase
 				channelData.data[i] = value;
 			}
 			
-			channelOutput.setDataContiguous(channelData.data, false, channelData.size, 1);
+			channelOutput.setData(channelData.data, false, channelData.size);
 		}
 	}
 };
@@ -89,5 +89,5 @@ VFX_NODE_TYPE(VfxNodeChannelLiteral)
 	typeName = "channel.literal";
 	
 	in("text", "string");
-	out("channels", "channels");
+	out("channel", "channel");
 }

@@ -36,14 +36,17 @@ struct VfxNodeDotTracker : VfxNodeBase
 {
 	enum Input
 	{
-		kInput_XY,
+		kInput_X,
+		kInput_Y,
 		kInput_MaxDistance,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
-		kOutput_IDs,
+		kOutput_ID,
+		kOutput_SpeedX,
+		kOutput_SpeedY,
 		kOutput_COUNT
 	};
 
@@ -54,7 +57,9 @@ struct VfxNodeDotTracker : VfxNodeBase
 	VfxChannelData idData;
 	VfxChannelData speedXData;
 	VfxChannelData speedYData;
-	VfxChannels idOutput;
+	VfxChannel idOutput;
+	VfxChannel speedXOutput;
+	VfxChannel speedYOutput;
 
 	VfxNodeDotTracker();
 	virtual ~VfxNodeDotTracker() override;

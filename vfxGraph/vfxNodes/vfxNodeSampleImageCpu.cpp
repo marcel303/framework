@@ -43,7 +43,7 @@ VFX_NODE_TYPE(VfxNodeSampleImageCpu)
 	out("g", "float");
 	out("b", "float");
 	out("a", "float");
-	out("rgba", "channels");
+	out("rgba", "channel");
 }
 
 //
@@ -51,7 +51,7 @@ VFX_NODE_TYPE(VfxNodeSampleImageCpu)
 VfxNodeSampleImageCpu::VfxNodeSampleImageCpu()
 	: VfxNodeBase()
 	, rgbaValueOutput()
-	, rgbaChannelsOutput()
+	, rgbaChannelOutput()
 {
 	rgbaValueOutput[0] = 0.f;
 	rgbaValueOutput[1] = 0.f;
@@ -68,7 +68,7 @@ VfxNodeSampleImageCpu::VfxNodeSampleImageCpu()
 	addOutput(kOutput_G, kVfxPlugType_Float, &rgbaValueOutput[1]);
 	addOutput(kOutput_B, kVfxPlugType_Float, &rgbaValueOutput[2]);
 	addOutput(kOutput_A, kVfxPlugType_Float, &rgbaValueOutput[3]);
-	addOutput(kOutput_RGBA, kVfxPlugType_Channels, &rgbaChannelsOutput);
+	addOutput(kOutput_RGBA, kVfxPlugType_Channel, &rgbaChannelOutput);
 }
 
 void VfxNodeSampleImageCpu::tick(const float dt)
@@ -88,7 +88,7 @@ void VfxNodeSampleImageCpu::tick(const float dt)
 		rgbaValueOutput[2] = 0.f;
 		rgbaValueOutput[3] = 0.f;
 
-		rgbaChannelsOutput.reset();
+		rgbaChannelOutput.reset();
 
 		return;
 	}
@@ -268,5 +268,5 @@ void VfxNodeSampleImageCpu::tick(const float dt)
 		}
 	}
 	
-	rgbaChannelsOutput.setDataContiguous(rgbaValueOutput, true, 1, 4);
+	rgbaChannelOutput.setData(rgbaValueOutput, false, 4);
 }

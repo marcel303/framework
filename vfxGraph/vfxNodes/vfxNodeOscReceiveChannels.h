@@ -49,7 +49,7 @@ struct VfxNodeOscReceiveChannels : VfxNodeBase
 	
 	enum Output
 	{
-		kOutput_Channels,
+		kOutput_Channel,
 		kOutput_Receive,
 		kOutput_COUNT
 	};
@@ -58,7 +58,7 @@ struct VfxNodeOscReceiveChannels : VfxNodeBase
 
 	VfxChannelData channelData;
 
-	VfxChannels channelsOutput;
+	VfxChannel channelOutput;
 	
 	std::list<HistoryItem> history;
 	int numReceives;

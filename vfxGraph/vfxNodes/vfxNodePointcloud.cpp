@@ -37,19 +37,26 @@ VFX_NODE_TYPE(VfxNodePointcloud)
 {
 	typeName = "pointcloud";
 	
-	in("depth", "channels");
+	in("depth", "channel");
 	inEnum("mode", "pointcloudMode");
-	out("xyz", "channels");
+	out("x", "channel");
+	out("y", "channel");
+	out("z", "channel");
 }
 
 VfxNodePointcloud::VfxNodePointcloud()
 	: VfxNodeBase()
 	, xyzChannelData()
+	, xOutput()
+	, yOutput()
+	, zOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_DepthChannel, kVfxPlugType_Channels);
+	addInput(kInput_DepthChannel, kVfxPlugType_Channel);
 	addInput(kInput_Mode, kVfxPlugType_Int);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &xyzOutput);
+	addOutput(kOutput_X, kVfxPlugType_Channel, &xOutput);
+	addOutput(kOutput_Y, kVfxPlugType_Channel, &yOutput);
+	addOutput(kOutput_Z, kVfxPlugType_Channel, &zOutput);
 }
 
 namespace KinectV1
@@ -92,25 +99,31 @@ void VfxNodePointcloud::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodePointcloud);
 	
-	const VfxChannels * channels = getInputChannels(kInput_DepthChannel, nullptr);
+	const VfxChannel * channel = getInputChannel(kInput_DepthChannel, nullptr);
 	const Mode mode = (Mode)getInputInt(kInput_Mode, 0);
 	
-	if (channels == nullptr || channels->sx == 0 || channels->sy == 0 || channels->numChannels == 0)
+	if (channel == nullptr || channel->sx == 0 || channel->sy == 0)
 	{
 		xyzChannelData.free();
 		
-		xyzOutput.reset();
+		xOutput.reset();
+		yOutput.reset();
+		zOutput.reset();
 	}
 	else
 	{
-		xyzChannelData.alloc(channels->sx * channels->sy * 3);
+		xyzChannelData.alloc(channel->sx * channel->sy * 3);
 		
-		xyzOutput.setData2DContiguous(xyzChannelData.data, false, channels->sx, channels->sy, 3);
+		const int pitch = channel->sx * channel->sy;
 		
-		const auto & dChannel = channels->channels[0];
-		      auto & xChannel = xyzOutput.channels[0];
-		      auto & yChannel = xyzOutput.channels[1];
-		      auto & zChannel = xyzOutput.channels[2];
+		xOutput.setData2D(xyzChannelData.data + pitch * 0, false, channel->sx, channel->sy);
+		yOutput.setData2D(xyzChannelData.data + pitch * 1, false, channel->sx, channel->sy);
+		zOutput.setData2D(xyzChannelData.data + pitch * 2, false, channel->sx, channel->sy);
+		
+		auto & dChannel = *channel;
+		auto & xChannel = xOutput;
+		auto & yChannel = yOutput;
+		auto & zChannel = zOutput;
 		
 		const float * __restrict dItr = dChannel.data;
 		      float * __restrict xItr = xChannel.dataRw();
@@ -121,14 +134,14 @@ void VfxNodePointcloud::tick(const float dt)
 		
 		if (mode == kMode_Kinect1)
 		{
-			for (int y = 0; y < channels->sy; ++y)
-				for (int x = 0; x < channels->sx; ++x)
+			for (int y = 0; y < channel->sy; ++y)
+				for (int x = 0; x < channel->sx; ++x)
 					KinectV1::depthToCameraXYZ(x, y, *dItr++, *xItr++, *yItr++, *zItr++);
 		}
 		else
 		{
-			for (int y = 0; y < channels->sy; ++y)
-				for (int x = 0; x < channels->sx; ++x)
+			for (int y = 0; y < channel->sy; ++y)
+				for (int x = 0; x < channel->sx; ++x)
 					KinectV2::depthToCameraXYZ(x, y, *dItr++, *xItr++, *yItr++, *zItr++);
 		}
 	}
@@ -137,5 +150,7 @@ void VfxNodePointcloud::tick(const float dt)
 void VfxNodePointcloud::getDescription(VfxNodeDescription & d)
 {
 	d.add("output XYZ:");
-	d.add(xyzOutput);
+	d.add(xOutput);
+	d.add(yOutput);
+	d.add(zOutput);
 }

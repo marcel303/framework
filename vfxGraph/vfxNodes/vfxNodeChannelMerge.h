@@ -27,6 +27,11 @@
 
 #pragma once
 
+#if 0
+
+// todo : use dynamic outputs to accomodate swizzle size
+// todo : rename this into the swizzle node ?
+
 #include "vfxNodeBase.h"
 
 struct VfxNodeChannelMerge : VfxNodeBase
@@ -48,10 +53,10 @@ struct VfxNodeChannelMerge : VfxNodeBase
 	{
 		kInput_MergeMode,
 		kInput_WrapMode,
-		kInput_Channels1,
-		kInput_Channels2,
-		kInput_Channels3,
-		kInput_Channels4,
+		kInput_Channel1,
+		kInput_Channel2,
+		kInput_Channel3,
+		kInput_Channel4,
 		kInput_Swizzle,
 		kInput_COUNT
 	};
@@ -64,7 +69,7 @@ struct VfxNodeChannelMerge : VfxNodeBase
 	
 	VfxChannelData channelData;
 	
-	VfxChannels channelsOutput;
+	VfxChannel channelOutput;
 
 	VfxNodeChannelMerge();
 	
@@ -72,3 +77,5 @@ struct VfxNodeChannelMerge : VfxNodeBase
 	
 	virtual void getDescription(VfxNodeDescription & d) override;
 };
+
+#endif

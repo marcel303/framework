@@ -35,7 +35,9 @@ VFX_NODE_TYPE(VfxNodeTest)
 {
 	typeName = "test";
 	
-	in("xyz", "channels");
+	in("x", "channel");
+	in("y", "channel");
+	in("z", "channel");
 	in("scale", "float", "1");
 	out("any", "int");
 }
@@ -45,7 +47,9 @@ VfxNodeTest::VfxNodeTest()
 	, anyOutput(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Channels, kVfxPlugType_Channels);
+	addInput(kInput_XChannel, kVfxPlugType_Channel);
+	addInput(kInput_YChannel, kVfxPlugType_Channel);
+	addInput(kInput_ZChannel, kVfxPlugType_Channel);
 	addInput(kInput_Scale, kVfxPlugType_Float);
 	addOutput(kOutput_Any, kVfxPlugType_Int, &anyOutput);
 }
@@ -60,28 +64,29 @@ void VfxNodeTest::tick(const float dt)
 
 void VfxNodeTest::draw() const
 {
-	const VfxChannels * channels = getInputChannels(kInput_Channels, nullptr);
+	const VfxChannel * xChannel = getInputChannel(kInput_XChannel, nullptr);
+	const VfxChannel * yChannel = getInputChannel(kInput_YChannel, nullptr);
 	const float scale = getInputFloat(kInput_Scale, 1.f);
 	
-	if (channels && channels->numChannels >= 2)
+	VfxChannelZipper zipper({ xChannel, yChannel });
+	
+	if (!zipper.done())
 	{
-		auto & x = channels->channels[0];
-		auto & y = channels->channels[1];
-		//auto & z = channels->channels[2];
-		
 		gxPushMatrix();
 		{
 			gxScalef(scale, scale, scale);
 			
 			hqBegin(HQ_FILLED_CIRCLES, true);
 			{
-				for (int i = 0; i < channels->size; ++i)
+				while (!zipper.done())
 				{
 					setColor(colorWhite);
-					//hqFillCircle(x.data[i], y.data[i], 100);
-					hqFillCircle(x.data[i], y.data[i], 1);
+					//hqFillCircle(zipper.read(0, 0.f), zipper.read(1, 0.f), 100);
+					hqFillCircle(zipper.read(0, 0.f), zipper.read(1, 0.f), 1);
 					
 					//logDebug("x, y: %f, %f", x.data[i], y.data[i]);
+					
+					zipper.next();
 				}
 			}
 			hqEnd();

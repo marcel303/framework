@@ -201,7 +201,7 @@ VFX_NODE_TYPE(VfxNodeOscReceiveChannels)
 		return new ResourceEditor_OscPathList();
 	};
 	
-	out("channels", "channels");
+	out("channel", "channel");
 	out("receive!", "trigger");
 }
 
@@ -209,12 +209,12 @@ VfxNodeOscReceiveChannels::VfxNodeOscReceiveChannels()
 	: VfxNodeBase()
 	, oscPathList(nullptr)
 	, channelData()
-	, channelsOutput()
+	, channelOutput()
 	, history()
 	, numReceives(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
+	addOutput(kOutput_Channel, kVfxPlugType_Channel, &channelOutput);
 	addOutput(kOutput_Receive, kVfxPlugType_Trigger, nullptr);
 }
 
@@ -239,14 +239,16 @@ void VfxNodeOscReceiveChannels::tick(const float dt)
 
 	// todo : check if path list has changed. if it has, re-allocate and reset channels output
 	
-	if (oscPathList->elems.size() != channelsOutput.numChannels)
+	// todo : use dynamic outputs ?
+	
+	if (oscPathList->elems.size() != channelOutput.size)
 	{
 		channelData.alloc(oscPathList->elems.size());
 		
 		for (int i = 0; i < channelData.size; ++i)
 			channelData.data[i] = 0.f;
 		
-		channelsOutput.setDataContiguous(channelData.data, false, 1, oscPathList->elems.size());
+		channelOutput.setData(channelData.data, false, oscPathList->elems.size());
 	}
 	
 	int index = 0;

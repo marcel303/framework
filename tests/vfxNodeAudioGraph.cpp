@@ -199,7 +199,7 @@ void VfxNodeAudioGraph::updateDynamicOutputs(const int numSamples, const int num
 			
 			channelData.allocOnSizeChange(numSamples * numChannels);
 			
-			channelOutputs = new VfxChannels[numChannels];
+			channelOutputs = new VfxChannel[numChannels];
 			
 			DynamicOutput outputs[numChannels];
 			
@@ -207,11 +207,11 @@ void VfxNodeAudioGraph::updateDynamicOutputs(const int numSamples, const int num
 			{
 				auto & o = outputs[i];
 				
-				o.type = kVfxPlugType_Channels;
+				o.type = kVfxPlugType_Channel;
 				o.name = String::FormatC("channel%d", i + 1);
 				o.mem = &channelOutputs[i];
 				
-				channelOutputs[i].setDataContiguous(channelData.data + numSamples * i, true, numSamples, 1);
+				channelOutputs[i].setData(channelData.data + numSamples * i, true, numSamples);
 			}
 			
 			setDynamicOutputs(outputs, numChannels);

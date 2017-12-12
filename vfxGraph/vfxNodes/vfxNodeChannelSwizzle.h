@@ -33,20 +33,23 @@ struct VfxNodeChannelSwizzle : VfxNodeBase
 {
 	enum Input
 	{
-		kInput_Channels,
+		kInput_Channel1,
+		kInput_Channel2,
+		kInput_Channel3,
+		kInput_Channel4,
 		kInput_Swizzle,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
-		kOutput_Channels,
 		kOutput_COUNT
 	};
 
-	VfxChannels channelsOutput;
+	VfxChannel * channelOutputs;
 
 	VfxNodeChannelSwizzle();
+	virtual ~VfxNodeChannelSwizzle() override;
 	
 	virtual void tick(const float dt) override;
 };

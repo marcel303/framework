@@ -37,19 +37,19 @@ struct VfxNodeChannelFromFloat : VfxNodeBase
 	
 	enum Output
 	{
-		kOutput_Channels,
+		kOutput_Channel,
 		kOutput_COUNT
 	};
 	
 	VfxChannelData channelData;
 	
-	VfxChannels channelOutput;
+	VfxChannel channelOutput;
 	
 	VfxNodeChannelFromFloat()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Value1, kVfxPlugType_Float);
-		addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelOutput);
+		addOutput(kOutput_Channel, kVfxPlugType_Channel, &channelOutput);
 	}
 	
 	virtual void tick(const float dt) override
@@ -68,7 +68,7 @@ struct VfxNodeChannelFromFloat : VfxNodeBase
 			
 			channelData.data[0] = value1;
 			
-			channelOutput.setDataContiguous(channelData.data, false, channelData.size, 1);
+			channelOutput.setData(channelData.data, false, channelData.size);
 		}
 	}
 };
@@ -78,5 +78,5 @@ VFX_NODE_TYPE(VfxNodeChannelFromFloat)
 	typeName = "channel.fromFloat";
 	
 	in("value1", "float");
-	out("channels", "channels");
+	out("channel", "channel");
 }

@@ -63,7 +63,8 @@ struct VfxNodeSpectrum2D : VfxNodeBase
 	{
 		kOutput_Image1,
 		kOutput_Image2,
-		kOutput_Channels,
+		kOutput_RealChannel,
+		kOutput_ImagChannel,
 		kOutput_COUNT
 	};
 	
@@ -74,7 +75,8 @@ struct VfxNodeSpectrum2D : VfxNodeBase
 	
 	VfxImage_Texture image1Output;
 	VfxImage_Texture image2Output;
-	VfxChannels channelsOutput;
+	VfxChannel realChannelOutput;
+	VfxChannel imagChannelOutput;
 
 	VfxNodeSpectrum2D();
 	virtual ~VfxNodeSpectrum2D() override;

@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if 0
+
 #include "vfxNodeChannelSelect.h"
 #include <algorithm>
 #include <cmath>
@@ -33,10 +35,10 @@ VFX_NODE_TYPE(VfxNodeChannelSelect)
 {
 	typeName = "channel.select";
 	
-	in("channels", "channels");
+	in("channel", "channel");
 	in("channel", "int");
 	in("channel_norm", "float");
-	out("channels", "channels");
+	out("channel", "channel");
 }
 
 VfxNodeChannelSelect::VfxNodeChannelSelect()
@@ -44,10 +46,10 @@ VfxNodeChannelSelect::VfxNodeChannelSelect()
 	, channelsOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Channels, kVfxPlugType_Channels);
+	addInput(kInput_Channels, kVfxPlugType_Channel);
 	addInput(kInput_ChannelIndex, kVfxPlugType_Int);
 	addInput(kInput_ChannelIndexNorm, kVfxPlugType_Float);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
+	addOutput(kOutput_Channels, kVfxPlugType_Channel, &channelsOutput);
 }
 
 void VfxNodeChannelSelect::tick(const float dt)
@@ -79,3 +81,5 @@ void VfxNodeChannelSelect::getDescription(VfxNodeDescription & d)
 	d.add("output channels:");
 	d.add(channelsOutput);
 }
+
+#endif

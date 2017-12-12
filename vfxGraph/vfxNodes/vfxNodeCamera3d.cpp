@@ -41,7 +41,7 @@ VFX_NODE_TYPE(VfxNodeCamera3d)
 	in("pitch", "float");
 	in("roll", "float");
 	out("any", "draw", "draw");
-	out("mat.world", "channels");
+	out("matrix", "channel");
 }
 
 VfxNodeCamera3d::VfxNodeCamera3d()
@@ -60,7 +60,7 @@ VfxNodeCamera3d::VfxNodeCamera3d()
 	addInput(kInput_Pitch, kVfxPlugType_Float);
 	addInput(kInput_Roll, kVfxPlugType_Float);
 	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
-	addOutput(kOutput_WorldMatrix, kVfxPlugType_Channels, &cameraWorldMatrixOutput);
+	addOutput(kOutput_WorldMatrix, kVfxPlugType_Channel, &cameraWorldMatrixOutput);
 	
 	camera = new Camera3d();
 }
@@ -104,7 +104,7 @@ void VfxNodeCamera3d::tick(const float dt)
 	camera->tick(dt, interactive);
 	
 	cameraWorldMatrix = camera->getWorldMatrix();
-	cameraWorldMatrixOutput.setData2DContiguous(cameraWorldMatrix.m_v, false, 4, 4, 1);
+	cameraWorldMatrixOutput.setData2D(cameraWorldMatrix.m_v, false, 4, 4);
 }
 
 void VfxNodeCamera3d::beforeDraw() const

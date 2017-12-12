@@ -46,13 +46,17 @@ struct VfxNodePointcloud : VfxNodeBase
 
 	enum Output
 	{
-		kOutput_Channels,
+		kOutput_X,
+		kOutput_Y,
+		kOutput_Z,
 		kOutput_COUNT
 	};
 
 	VfxChannelData xyzChannelData;
 	
-	VfxChannels xyzOutput;
+	VfxChannel xOutput;
+	VfxChannel yOutput;
+	VfxChannel zOutput;
 
 	VfxNodePointcloud();
 	

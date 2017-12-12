@@ -57,7 +57,10 @@ VFX_NODE_TYPE(VfxNodeDrawPrimitive)
 	
 	in("before", "draw");
 	inEnum("type", "drawPrimitiveType");
-	in("channels", "channels");
+	in("x", "channel");
+	in("y", "channel");
+	in("r", "channel");
+	in("s", "channel");
 	in("size", "float", "1");
 	in("fill", "bool", "1");
 	in("color", "color", "fff");
@@ -74,7 +77,10 @@ VfxNodeDrawPrimitive::VfxNodeDrawPrimitive()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Before, kVfxPlugType_DontCare);
 	addInput(kInput_Type, kVfxPlugType_Int);
-	addInput(kInput_Channels, kVfxPlugType_Channels);
+	addInput(kInput_XChannel, kVfxPlugType_Channel);
+	addInput(kInput_YChannel, kVfxPlugType_Channel);
+	addInput(kInput_RChannel, kVfxPlugType_Channel);
+	addInput(kInput_SChannel, kVfxPlugType_Channel);
 	addInput(kInput_Size, kVfxPlugType_Float);
 	addInput(kInput_Fill, kVfxPlugType_Bool);
 	addInput(kInput_FillColor, kVfxPlugType_Color);
@@ -94,7 +100,10 @@ void VfxNodeDrawPrimitive::draw() const
 	vfxGpuTimingBlock(VfxNodeDrawPrimitive);
 	
 	const PrimitiveType type = (PrimitiveType)getInputInt(kInput_Type, kPrimitiveType_Cirle);
-	const VfxChannels * channels = getInputChannels(kInput_Channels, nullptr);
+	const VfxChannel * xChannel = getInputChannel(kInput_XChannel, nullptr);
+	const VfxChannel * yChannel = getInputChannel(kInput_YChannel, nullptr);
+	const VfxChannel * rChannel = getInputChannel(kInput_RChannel, nullptr);
+	const VfxChannel * sChannel = getInputChannel(kInput_SChannel, nullptr);
 	const float size = getInputFloat(kInput_Size, 1.f);
 	const bool fill = getInputBool(kInput_Fill, true);
 	const VfxColor * fillColor = getInputColor(kInput_FillColor, nullptr);
@@ -102,9 +111,6 @@ void VfxNodeDrawPrimitive::draw() const
 	const bool stroke = getInputBool(kInput_Stroke, false);
 	const float strokeSize = getInputFloat(kInput_StrokeSize, 1.f);
 	const VfxColor * strokeColor = getInputColor(kInput_StrokeColor, nullptr);
-	
-	if (channels == nullptr)
-		return;
 	
 	if (fillColor)
 		setColorf(fillColor->r, fillColor->g, fillColor->b, fillColor->a);
@@ -116,21 +122,23 @@ void VfxNodeDrawPrimitive::draw() const
 	
 	if (fill)
 	{
+		VfxChannelZipper zipper({ xChannel, yChannel, rChannel, sChannel });
+		
 		switch (type)
 		{
 		case kPrimitiveType_Cirle:
 			{
 				hqBegin(HQ_FILLED_CIRCLES);
 				{
-					const int num = channels->size;
-					
-					for (int i = 0; i < num; ++i)
+					while (!zipper.done())
 					{
-						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float x = zipper.read(0, 0.f);
+						const float y = zipper.read(1, 0.f);
+						const float r = zipper.read(2, 1.f);
 						
 						hqFillCircle(x, y, r * size);
+						
+						zipper.next();
 					}
 				}
 				hqEnd();
@@ -141,16 +149,16 @@ void VfxNodeDrawPrimitive::draw() const
 			{
 				hqBegin(HQ_FILLED_RECTS);
 				{
-					const int num = channels->size;
-					
-					for (int i = 0; i < num; ++i)
+					while (!zipper.done())
 					{
-						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float rx = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
-						const float ry = channels->numChannels >= 4 ? channels->channels[3].data[i] : rx;
+						const float x = zipper.read(0, 0.f);
+						const float y = zipper.read(1, 0.f);
+						const float rx = zipper.read(2, 1.f);
+						const float ry = zipper.read(3, rx);
 						
 						hqFillRect(x - rx * size, y - ry * size, x + rx * size, y + ry * size);
+						
+						zipper.next();
 					}
 				}
 				hqEnd();
@@ -161,15 +169,15 @@ void VfxNodeDrawPrimitive::draw() const
 			{
 				hqBegin(HQ_FILLED_TRIANGLES);
 				{
-					const int num = channels->size;
-					
-					for (int i = 0; i < num; ++i)
+					while (!zipper.done())
 					{
-						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float x = zipper.read(0, 0.f);
+						const float y = zipper.read(1, 0.f);
+						const float r = zipper.read(2, 1.f);
 						
 						hqFillTriangle(x, y - r * size, x - r * size, y + r * size, x + r * size, y + r * size);
+						
+						zipper.next();
 					}
 				}
 				hqEnd();
@@ -180,15 +188,15 @@ void VfxNodeDrawPrimitive::draw() const
 			{
 				hqBegin(HQ_FILLED_TRIANGLES);
 				{
-					const int num = channels->size;
-					
-					for (int i = 0; i < num; ++i)
+					while (!zipper.done())
 					{
-						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float x = zipper.read(0, 0.f);
+						const float y = zipper.read(1, 0.f);
+						const float r = zipper.read(2, 1.f);
 						
 						hqFillTriangle(x, y + r * size, x - r * size, y - r * size, x + r * size, y - r * size);
+						
+						zipper.next();
 					}
 				}
 				hqEnd();
@@ -199,16 +207,16 @@ void VfxNodeDrawPrimitive::draw() const
 			{
 				hqBegin(HQ_LINES);
 				{
-					const int num = channels->size;
-					
-					for (int i = 0; i < num; ++i)
+					while (!zipper.done())
 					{
-						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
-						const float s = channels->numChannels >= 4 ? channels->channels[3].data[i] : 1.f;
+						const float x = zipper.read(0, 0.f);
+						const float y = zipper.read(1, 0.f);
+						const float r = zipper.read(2, 1.f);
+						const float s = zipper.read(3, 1.f);
 						
 						hqLine(x - r * size, y, s * strokeSize, x + r * size, y, s * strokeSize);
+						
+						zipper.next();
 					}
 				}
 				hqEnd();
@@ -219,16 +227,16 @@ void VfxNodeDrawPrimitive::draw() const
 			{
 				hqBegin(HQ_LINES);
 				{
-					const int num = channels->size;
-					
-					for (int i = 0; i < num; ++i)
+					while (!zipper.done())
 					{
-						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
-						const float s = channels->numChannels >= 4 ? channels->channels[3].data[i] : 1.f;
+						const float x = zipper.read(0, 0.f);
+						const float y = zipper.read(1, 0.f);
+						const float r = zipper.read(2, 1.f);
+						const float s = zipper.read(3, 1.f);
 						
 						hqLine(x, y - r * size, s * strokeSize, x, y + r * size, s * strokeSize);
+						
+						zipper.next();
 					}
 				}
 				hqEnd();
@@ -239,16 +247,16 @@ void VfxNodeDrawPrimitive::draw() const
 			{
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
-					const int num = channels->size;
-					
-					for (int i = 0; i < num; ++i)
+					while (!zipper.done())
 					{
-						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
-						const float s = channels->numChannels >= 4 ? channels->channels[3].data[i] : 0.f;
+						const float x = zipper.read(0, 0.f);
+						const float y = zipper.read(1, 0.f);
+						const float r = zipper.read(2, 1.f);
+						const float s = zipper.read(3, 0.f);
 						
 						hqFillRoundedRect(x - r * size, y - r * size, x + r * size, y + r * size, s * .5f);
+						
+						zipper.next();
 					}
 				}
 				hqEnd();
@@ -259,6 +267,8 @@ void VfxNodeDrawPrimitive::draw() const
 	
 	if (stroke)
 	{
+		VfxChannelZipper zipper({ xChannel, yChannel, rChannel, sChannel });
+		
 		if (strokeColor)
 			setColorf(strokeColor->r, strokeColor->g, strokeColor->b, strokeColor->a);
 		else
@@ -270,15 +280,15 @@ void VfxNodeDrawPrimitive::draw() const
 			{
 				hqBegin(HQ_STROKED_CIRCLES);
 				{
-					const int num = channels->size;
-					
-					for (int i = 0; i < num; ++i)
+					while (!zipper.done())
 					{
-						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float x = zipper.read(0, 0.f);
+						const float y = zipper.read(1, 0.f);
+						const float r = zipper.read(2, 1.f);
 						
 						hqStrokeCircle(x, y, r * size, strokeSize);
+						
+						zipper.next();
 					}
 				}
 				hqEnd();
@@ -289,16 +299,16 @@ void VfxNodeDrawPrimitive::draw() const
 			{
 				hqBegin(HQ_STROKED_RECTS);
 				{
-					const int num = channels->size;
-					
-					for (int i = 0; i < num; ++i)
+					while (!zipper.done())
 					{
-						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float rx = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
-						const float ry = channels->numChannels >= 4 ? channels->channels[3].data[i] : rx;
+						const float x = zipper.read(0, 0.f);
+						const float y = zipper.read(1, 0.f);
+						const float rx = zipper.read(2, 1.f);
+						const float ry = zipper.read(3, rx);
 						
 						hqStrokeRect(x - rx * size, y - ry * size, x + rx * size, y + ry * size, strokeSize);
+						
+						zipper.next();
 					}
 				}
 				hqEnd();
@@ -309,15 +319,15 @@ void VfxNodeDrawPrimitive::draw() const
 			{
 				hqBegin(HQ_STROKED_TRIANGLES);
 				{
-					const int num = channels->size;
-					
-					for (int i = 0; i < num; ++i)
+					while (!zipper.done())
 					{
-						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float x = zipper.read(0, 0.f);
+						const float y = zipper.read(1, 0.f);
+						const float r = zipper.read(2, 1.f);
 						
 						hqStrokeTriangle(x, y - r * size, x - r * size, y + r * size, x + r * size, y + r * size, strokeSize);
+						
+						zipper.next();
 					}
 				}
 				hqEnd();
@@ -328,15 +338,15 @@ void VfxNodeDrawPrimitive::draw() const
 			{
 				hqBegin(HQ_STROKED_TRIANGLES);
 				{
-					const int num = channels->size;
-					
-					for (int i = 0; i < num; ++i)
+					while (!zipper.done())
 					{
-						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
+						const float x = zipper.read(0, 0.f);
+						const float y = zipper.read(1, 0.f);
+						const float r = zipper.read(2, 1.f);
 						
 						hqStrokeTriangle(x, y + r * size, x - r * size, y - r * size, x + r * size, y - r * size, strokeSize);
+						
+						zipper.next();
 					}
 				}
 				hqEnd();
@@ -351,16 +361,16 @@ void VfxNodeDrawPrimitive::draw() const
 			{
 				hqBegin(HQ_STROKED_ROUNDED_RECTS);
 				{
-					const int num = channels->size;
-					
-					for (int i = 0; i < num; ++i)
+					while (!zipper.done())
 					{
-						const float x = channels->numChannels >= 1 ? channels->channels[0].data[i] : 0.f;
-						const float y = channels->numChannels >= 2 ? channels->channels[1].data[i] : 0.f;
-						const float r = channels->numChannels >= 3 ? channels->channels[2].data[i] : 1.f;
-						const float s = channels->numChannels >= 4 ? channels->channels[3].data[i] : 0.f;
+						const float x = zipper.read(0, 0.f);
+						const float y = zipper.read(1, 0.f);
+						const float r = zipper.read(2, 1.f);
+						const float s = zipper.read(3, 0.f);
 						
 						hqStrokeRoundedRect(x - r * size, y - r * size, x + r * size, y + r * size, s * .5f, strokeSize);
+						
+						zipper.next();
 					}
 				}
 				hqEnd();

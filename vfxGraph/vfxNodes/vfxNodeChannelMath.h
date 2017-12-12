@@ -73,7 +73,7 @@ struct VfxNodeChannelMath : VfxNodeBase
 	};
 	
 	VfxChannelData channelData;
-	VfxChannels channelsOutput;
+	VfxChannel channelOutput;
 	
 	VfxNodeChannelMath();
 	

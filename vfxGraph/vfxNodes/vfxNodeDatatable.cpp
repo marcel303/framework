@@ -37,7 +37,7 @@ VFX_NODE_TYPE(VfxNodeDatatable)
 	in("filename", "string");
 	in("hasHeader", "bool");
 	in("transpose", "bool");
-	out("channels", "channels");
+	out("channel", "channel");
 }
 
 VfxNodeDatatable::VfxNodeDatatable()
@@ -45,13 +45,13 @@ VfxNodeDatatable::VfxNodeDatatable()
 	, filename()
 	, hasHeader(false)
 	, transpose(false)
-	, outputChannels()
+	, outputChannel()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Filename, kVfxPlugType_String);
 	addInput(kInput_HasHeader, kVfxPlugType_Bool);
 	addInput(kInput_Transpose, kVfxPlugType_Bool);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &outputChannels);
+	addOutput(kOutput_Channel, kVfxPlugType_Channel, &outputChannel);
 }
 
 void VfxNodeDatatable::tick(const float dt)
@@ -62,7 +62,7 @@ void VfxNodeDatatable::tick(const float dt)
 	{
 		filename.clear();
 		channelData.free();
-		outputChannels.reset();
+		outputChannel.reset();
 		return;
 	}
 	
@@ -81,7 +81,7 @@ void VfxNodeDatatable::tick(const float dt)
 		transpose = newTranspose;
 		
 		channelData.free();
-		outputChannels.reset();
+		outputChannel.reset();
 		
 		if (Path::GetExtension(filename, true) == "csv")
 		{
@@ -106,7 +106,9 @@ void VfxNodeDatatable::tick(const float dt)
 						}
 					}
 					
-					outputChannels.setDataContiguous(channelData.data, false, numColumns, numRows);
+					// todo : add option to output 1D data to dynamic outputs or 2D data
+					
+					outputChannel.setData2D(channelData.data, false, numColumns, numRows);
 				}
 				else
 				{
@@ -118,7 +120,7 @@ void VfxNodeDatatable::tick(const float dt)
 						}
 					}
 					
-					outputChannels.setDataContiguous(channelData.data, false, numRows, numColumns);
+					outputChannel.setData2D(channelData.data, false, numRows, numColumns);
 				}
 			}
 		}

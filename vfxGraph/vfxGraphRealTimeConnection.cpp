@@ -217,7 +217,7 @@ void RealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeId src
 		if (dstSocketIndex < numDstStaticInputs)
 			link.dstSocketIndex = dstSocketIndex;
 		else
-			link.dstSocketName = dstNode->dynamicInputs[dstSocketIndex - numDstStaticInputs].name;
+			link.dstSocketName = dstNode->dynamicOutputs[dstSocketIndex - numDstStaticInputs].name;
 		
 		vfxGraph->dynamicData->links.push_back(link);
 	}
@@ -592,7 +592,7 @@ bool RealTimeConnection::setPlugValue(VfxPlug * plug, const std::string & value)
 		return false;
 	case kVfxPlugType_ImageCpu:
 		return false;
-	case kVfxPlugType_Channels:
+	case kVfxPlugType_Channel:
 		return false;
 	case kVfxPlugType_Trigger:
 		return false;
@@ -652,14 +652,17 @@ bool RealTimeConnection::getPlugValue(VfxPlug * plug, std::string & value)
 				return true;
 			}
 		}
-	case kVfxPlugType_Channels:
+	case kVfxPlugType_Channel:
 		{
-			auto channels = plug->getChannels();
-			if (channels == nullptr)
+			auto channel = plug->getChannel();
+			if (channel == nullptr)
 				return false;
 			else
 			{
-				value = String::FormatC("[%d x %d]", channels->numChannels, channels->size);
+				if (channel->sy > 1)
+					value = String::FormatC("[%d x %d]", channel->sx, channel->sy);
+				else
+					value = String::FormatC("[%d]", channel->size);
 				return true;
 			}
 		}
@@ -924,12 +927,9 @@ bool RealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, const
 	
 	input->referencedByRealTimeConnectionTick = vfxGraph->nextTickTraversalId;
 	
-	auto inputChannels = input->getChannels();
+	auto inputChannel = input->getChannel();
 	
-	for (int i = 0; i < inputChannels->numChannels; ++i)
-	{
-		channels.addChannel(inputChannels->channels[i].data, inputChannels->sx * inputChannels->sy, inputChannels->channels[i].continuous);
-	}
+	channels.addChannel(inputChannel->data, inputChannel->sx * inputChannel->sy, inputChannel->continuous);
 	
 	return true;
 }
@@ -959,12 +959,9 @@ bool RealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, const
 
 	output->referencedByRealTimeConnectionTick = vfxGraph->nextTickTraversalId;
 	
-	auto outputChannels = output->getChannels();
+	auto outputChannel = output->getChannel();
 	
-	for (int i = 0; i < outputChannels->numChannels; ++i)
-	{
-		channels.addChannel(outputChannels->channels[i].data, outputChannels->sx * outputChannels->sy, outputChannels->channels[i].continuous);
-	}
+	channels.addChannel(outputChannel->data, outputChannel->sx * outputChannel->sy, outputChannel->continuous);
 	
 	return true;
 }
@@ -1170,8 +1167,8 @@ static std::string vfxPlugTypeToValueTypeName(const VfxPlugType plugType)
 			return "image";
 		case kVfxPlugType_ImageCpu:
 			return "image_cpu";
-		case kVfxPlugType_Channels:
-			return "channels";
+		case kVfxPlugType_Channel:
+			return "channel";
 		case kVfxPlugType_Trigger:
 			return "trigger";
 	}

@@ -65,7 +65,7 @@ VFX_NODE_TYPE(VfxNodeKinect2)
 	out("video", "image");
 	out("depth", "image");
 	out("mem_video", "image_cpu");
-	out("ch_depth", "channels");
+	out("ch_depth", "channel");
 }
 
 VfxNodeKinect2::VfxNodeKinect2()
@@ -73,6 +73,7 @@ VfxNodeKinect2::VfxNodeKinect2()
 	, videoImage()
 	, depthImage()
 	, videoImageCpu()
+	, depthChannel()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_DeviceId, kVfxPlugType_Int);
@@ -80,7 +81,7 @@ VfxNodeKinect2::VfxNodeKinect2()
 	addOutput(kOutput_VideoImage, kVfxPlugType_Image, &videoImage);
 	addOutput(kOutput_DepthImage, kVfxPlugType_Image, &depthImage);
 	addOutput(kOutput_VideoImageCpu, kVfxPlugType_ImageCpu, &videoImageCpu);
-	addOutput(kOutput_DepthChannels, kVfxPlugType_Channels, &depthChannels);
+	addOutput(kOutput_DepthChannel, kVfxPlugType_Channel, &depthChannel);
 }
 
 VfxNodeKinect2::~VfxNodeKinect2()
@@ -138,7 +139,7 @@ void VfxNodeKinect2::tick(const float dt)
 		depthImage.texture = 0;
 		
 		videoImageCpu.reset();
-		depthChannels.reset();
+		depthChannel.reset();
 		
 		return;
 	}
@@ -146,7 +147,7 @@ void VfxNodeKinect2::tick(const float dt)
 	const bool wantsVideoTexture = outputs[kOutput_VideoImage].isReferenced();
 	const bool wantsDepthTexture = outputs[kOutput_DepthImage].isReferenced();
 	const bool wantsVideoData = outputs[kOutput_VideoImageCpu].isReferenced();
-	const bool wantsDepthData = outputs[kOutput_DepthChannels].isReferenced();
+	const bool wantsDepthData = outputs[kOutput_DepthChannel].isReferenced();
 	
 	tickId++;
 	
@@ -241,9 +242,9 @@ void VfxNodeKinect2::tick(const float dt)
 		videoImageCpu.reset();
 	
 	if (depthFrame != nullptr)
-		depthChannels.setData2DContiguous((float*)depthFrame->data, false, depthFrame->width, depthFrame->height, 1);
+		depthChannel.setData2D((float*)depthFrame->data, false, depthFrame->width, depthFrame->height);
 	else
-		depthChannels.reset();
+		depthChannel.reset();
 }
 
 void VfxNodeKinect2::getDescription(VfxNodeDescription & d)
@@ -265,6 +266,8 @@ void VfxNodeKinect2::getDescription(VfxNodeDescription & d)
 	d.newline();
 	
 	d.add("video image", videoImageCpu);
+	
+	d.add("depth channel", depthChannel);
 }
 
 #endif

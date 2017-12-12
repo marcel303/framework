@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if 0
+
 #include "framework.h"
 #include "vfxNodeChannelMerge.h"
 #include "vfxTypes.h"
@@ -47,28 +49,28 @@ VFX_NODE_TYPE(VfxNodeChannelMerge)
 	typeName = "channel.merge";
 	inEnum("mergeMode", "channelMergeMergeMode");
 	inEnum("wrapMode", "channelMergeWrapMode");
-	in("channels1", "channels");
-	in("channels2", "channels");
-	in("channels3", "channels");
-	in("channels4", "channels");
+	in("channel1", "channel");
+	in("channel2", "channel");
+	in("channel3", "channel");
+	in("channel4", "channel");
 	in("swizzle", "string");
-	out("channels", "channels");
+	out("channel", "channel");
 }
 
 VfxNodeChannelMerge::VfxNodeChannelMerge()
 	: VfxNodeBase()
 	, channelData()
-	, channelsOutput()
+	, channelOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_MergeMode, kVfxPlugType_Int);
 	addInput(kInput_WrapMode, kVfxPlugType_Int);
-	addInput(kInput_Channels1, kVfxPlugType_Channels);
-	addInput(kInput_Channels2, kVfxPlugType_Channels);
-	addInput(kInput_Channels3, kVfxPlugType_Channels);
-	addInput(kInput_Channels4, kVfxPlugType_Channels);
+	addInput(kInput_Channel1, kVfxPlugType_Channel);
+	addInput(kInput_Channel2, kVfxPlugType_Channel);
+	addInput(kInput_Channel3, kVfxPlugType_Channel);
+	addInput(kInput_Channel4, kVfxPlugType_Channel);
 	addInput(kInput_Swizzle, kVfxPlugType_String);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
+	addOutput(kOutput_Channel, kVfxPlugType_Channel, &channelOutput);
 }
 
 void VfxNodeChannelMerge::tick(const float dt)
@@ -78,27 +80,27 @@ void VfxNodeChannelMerge::tick(const float dt)
 	if (isPassthrough)
 	{
 		channelData.free();
-		channelsOutput.reset();
+		channelOutput.reset();
 		return;
 	}
 	
 	const MergeMode mergeMode = (MergeMode)getInputInt(kInput_MergeMode, 0);
 	const WrapMode wrapMode = (WrapMode)getInputInt(kInput_WrapMode, 0);
-	const VfxChannels * channels1 = getInputChannels(kInput_Channels1, nullptr);
-	const VfxChannels * channels2 = getInputChannels(kInput_Channels2, nullptr);
-	const VfxChannels * channels3 = getInputChannels(kInput_Channels3, nullptr);
-	const VfxChannels * channels4 = getInputChannels(kInput_Channels4, nullptr);
+	const VfxChannel * channel1 = getInputChannel(kInput_Channel1, nullptr);
+	const VfxChannel * channel2 = getInputChannel(kInput_Channel2, nullptr);
+	const VfxChannel * channel3 = getInputChannel(kInput_Channel3, nullptr);
+	const VfxChannel * channel4 = getInputChannel(kInput_Channel4, nullptr);
 	const char * swizzleText = getInputString(kInput_Swizzle, nullptr);
 
-	const VfxChannels * channels[4] =
+	const VfxChannel * channels[4] =
 	{
-		channels1,
-		channels2,
-		channels3,
-		channels4
+		channel1,
+		channel2,
+		channel3,
+		channel4
 	};
 	
-	channelsOutput.reset();
+	channelOutput.reset();
 	
 	VfxSwizzle swizzle;
 	
@@ -112,15 +114,11 @@ void VfxNodeChannelMerge::tick(const float dt)
 		{
 			if (channels[i] != nullptr)
 			{
-				for (int c = 0; c < channels[i]->numChannels; ++c)
+				if (swizzle.numChannels < VfxSwizzle::kMaxChannels)
 				{
-					if (swizzle.numChannels < VfxSwizzle::kMaxChannels)
-					{
-						swizzle.channels[swizzle.numChannels].sourceIndex = i;
-						swizzle.channels[swizzle.numChannels].elemIndex = c;
-						
-						swizzle.numChannels++;
-					}
+					swizzle.channels[swizzle.numChannels].sourceIndex = i;
+					
+					swizzle.numChannels++;
 				}
 			}
 		}
@@ -134,7 +132,7 @@ void VfxNodeChannelMerge::tick(const float dt)
 	{
 		channelData.free();
 		
-		channelsOutput.reset();
+		channelOutput.reset();
 	}
 	else
 	{
@@ -424,3 +422,5 @@ void VfxNodeChannelMerge::getDescription(VfxNodeDescription & d)
 	d.add("memory usage: %d values", channelData.size);
 	d.add("output size: %dx%d x %d channels", channelsOutput.sx, channelsOutput.sy, channelsOutput.numChannels);
 }
+
+#endif

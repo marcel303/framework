@@ -60,7 +60,8 @@ VFX_NODE_TYPE(VfxNodeSpectrum1D)
 	in("scale", "float", "1.0");
 	out("image", "image");
 	out("image2", "image");
-	out("channels", "channels");
+	out("real", "channel");
+	out("imag", "channel");
 }
 
 VfxNodeSpectrum1D::VfxNodeSpectrum1D()
@@ -71,7 +72,8 @@ VfxNodeSpectrum1D::VfxNodeSpectrum1D()
 	, dimag(nullptr)
 	, image1Output()
 	, image2Output()
-	, channelsOutput()
+	, realChannelOutput()
+	, imagChannelOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
@@ -82,7 +84,8 @@ VfxNodeSpectrum1D::VfxNodeSpectrum1D()
 	addInput(kInput_Scale, kVfxPlugType_Float);
 	addOutput(kOutput_Image1, kVfxPlugType_Image, &image1Output);
 	addOutput(kOutput_Image2, kVfxPlugType_Image, &image2Output);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
+	addOutput(kOutput_RealChannel, kVfxPlugType_Channel, &realChannelOutput);
+	addOutput(kOutput_ImagChannel, kVfxPlugType_Channel, &imagChannelOutput);
 }
 
 VfxNodeSpectrum1D::~VfxNodeSpectrum1D()
@@ -140,8 +143,6 @@ void VfxNodeSpectrum1D::tick(const float dt)
 			float * __restrict rreal = dreal;
 			float * __restrict rimag = dimag;
 			
-			const bool continuous[] = { true, true };
-			
 			if (outputMode == kOutputMode_Channel1And2)
 			{
 				if (scale != 1.f)
@@ -153,9 +154,8 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					}
 				}
 				
-				float * channels[] = { rreal, rimag };
-				
-				channelsOutput.setData(channels, continuous, transformSx, 2);
+				realChannelOutput.setData(rreal, false, transformSx);
+				imagChannelOutput.setData(rimag, false, transformSx);
 			}
 			else if (outputMode == kOutputMode_Channel1)
 			{
@@ -164,7 +164,8 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					rreal[x] = rreal[x] * scale;
 				}
 				
-				channelsOutput.setDataContiguous(rreal, true, transformSx, 1);
+				realChannelOutput.setData(rreal, false, transformSx);
+				imagChannelOutput = realChannelOutput;
 			}
 			else if (outputMode == kOutputMode_Channel2)
 			{
@@ -173,7 +174,8 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					rreal[x] = rimag[x] * scale;
 				}
 				
-				channelsOutput.setDataContiguous(rreal, true, transformSx, 1);
+				realChannelOutput.setData(rreal, false, transformSx);
+				imagChannelOutput = realChannelOutput;
 			}
 			else if (outputMode == kOutputMode_Length)
 			{
@@ -186,7 +188,8 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					rreal[x] = s * scale;
 				}
 				
-				channelsOutput.setDataContiguous(rreal, true, transformSx, 1);
+				realChannelOutput.setData(rreal, false, transformSx);
+				imagChannelOutput = realChannelOutput;
 			}
 			else if (outputMode == kOutputMode_LengthSq)
 			{
@@ -199,7 +202,8 @@ void VfxNodeSpectrum1D::tick(const float dt)
 					rreal[x] = sSq * scale;
 				}
 				
-				channelsOutput.setDataContiguous(rreal, true, transformSx, 1);
+				realChannelOutput.setData(rreal, false, transformSx);
+				imagChannelOutput = realChannelOutput;
 			}
 		}
 		

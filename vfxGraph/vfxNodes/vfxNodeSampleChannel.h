@@ -33,7 +33,6 @@ struct VfxNodeSampleChannel : VfxNodeBase
 {
 	enum Input
 	{
-		kInput_Channels,
 		kInput_Channel,
 		kInput_X,
 		kInput_Y,
@@ -44,13 +43,13 @@ struct VfxNodeSampleChannel : VfxNodeBase
 	enum Output
 	{
 		kOutput_Value,
-		kOutput_Channels,
+		kOutput_Channel,
 		kOutput_COUNT
 	};
 	
 	float valueOutput;
 
-	VfxChannels channelsOutput;
+	VfxChannel channelOutput;
 	
 	VfxNodeSampleChannel();
 	

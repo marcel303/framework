@@ -34,9 +34,7 @@ VFX_NODE_TYPE(VfxNodeChannelToGpu)
 {
 	typeName = "channel.toGpu";
 	
-	in("channels", "channels");
-	in("channel", "int");
-	in("channel_norm", "float");
+	in("channel", "channel");
 	out("image", "image");
 }
 
@@ -46,9 +44,7 @@ VfxNodeChannelToGpu::VfxNodeChannelToGpu()
 	, imageOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Channels, kVfxPlugType_Channels);
-	addInput(kInput_ChannelIndex, kVfxPlugType_Int);
-	addInput(kInput_ChannelIndexNorm, kVfxPlugType_Float);
+	addInput(kInput_Channel, kVfxPlugType_Channel);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
 }
 
@@ -56,14 +52,9 @@ void VfxNodeChannelToGpu::tick(const float dt)
 {
 	vfxGpuTimingBlock(VfxNodeChannelToGpu);
 	
-	const VfxChannels * channels = getInputChannels(kInput_Channels, nullptr);
+	const VfxChannel * channel = getInputChannel(kInput_Channel, nullptr);
 	
-	int channelIndex =
-		tryGetInput(kInput_ChannelIndexNorm)->isConnected()
-		? int(std::round(getInputFloat(kInput_ChannelIndexNorm, 0.f) * channels->numChannels))
-		: getInputInt(kInput_ChannelIndex, 0);
-	
-	if (isPassthrough || channels == nullptr || channels->sx == 0 || channels->sy == 0 || channels->numChannels == 0)
+	if (isPassthrough || channel == nullptr || channel->sx == 0 || channel->sy == 0)
 	{
 		freeImage();
 	}
@@ -71,16 +62,12 @@ void VfxNodeChannelToGpu::tick(const float dt)
 	{
 		vfxGpuTimingBlock(VfxNodeChannelToGpu);
 		
-		channelIndex = std::max(0, std::min(channels->numChannels - 1, channelIndex));
-		
-		const auto & channel = channels->channels[channelIndex];
-		
-		if (texture.isChanged(channels->sx, channels->sy, GL_R32F) || texture.isSamplingChange(channel.continuous, true))
+		if (texture.isChanged(channel->sx, channel->sy, GL_R32F) || texture.isSamplingChange(channel->continuous, true))
 		{
-			allocateImage(channels->sx, channels->sy, channel.continuous);
+			allocateImage(channel->sx, channel->sy, channel->continuous);
 		}
 		
-		texture.upload(channel.data, 4, channels->sx, GL_RED, GL_FLOAT);
+		texture.upload(channel->data, 4, channel->sx, GL_RED, GL_FLOAT);
 	}
 }
 

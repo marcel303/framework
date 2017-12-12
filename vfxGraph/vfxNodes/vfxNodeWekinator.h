@@ -39,7 +39,7 @@ struct VfxNodeWekinator : VfxNodeBase, OscReceiveHandler
 		kInput_SendPath,
 		kInput_RecvEnabled,
 		kInput_RecvPath,
-		kInput_Channels,
+		kInput_Channel,
 		kInput_RecordBegin,
 		kInput_RecordEnd,
 		kInput_Train,
@@ -50,13 +50,13 @@ struct VfxNodeWekinator : VfxNodeBase, OscReceiveHandler
 	
 	enum Output
 	{
-		kOutput_Channels,
+		kOutput_Outputs,
 		kOutput_COUNT
 	};
 	
 	VfxChannelData channelData;
 	
-	VfxChannels channelsOutput;
+	VfxChannel outputsChannel;
 	
 	VfxNodeWekinator();
 	virtual ~VfxNodeWekinator() override;

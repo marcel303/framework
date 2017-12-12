@@ -181,51 +181,35 @@ void VfxTimeline::load(XMLElement * elem)
 //
 
 VfxSwizzle::VfxSwizzle()
-	: channels()
-	, numChannels(0)
+	: elems()
+	, numElems(0)
 {
 
 }
 
 void VfxSwizzle::reset()
 {
-	numChannels = 0;
+	numElems = 0;
 }
 
 bool VfxSwizzle::parse(const char * text)
 {
 	bool result = true;
 
-	std::vector<std::string> elems;
-	splitString(text, elems, ' ');
+	std::vector<std::string> elemTexts;
+	splitString(text, elemTexts, ' ');
 
-	if (elems.size() > kMaxChannels)
+	if (elemTexts.size() > kMaxElems)
 	{
 		result = false;
 	}
 	else
 	{
-		for (auto & elem : elems)
+		for (auto & elemText : elemTexts)
 		{
-			Channel & channel = channels[numChannels++];
+			Elem & elem = elems[numElems++];
 
-			const char * period = strchr(elem.c_str(), '.');
-
-			if (period == nullptr)
-			{
-				channel.sourceIndex = 0;
-				channel.elemIndex = Parse::Int32(elem.c_str());
-			}
-			else
-			{
-				// parse string before and after period
-				
-				const std::string source = elem.substr(0, period - elem.c_str());
-				channel.sourceIndex = Parse::Int32(source);
-				
-				const char * elem = period + 1;
-				channel.elemIndex = Parse::Int32(elem);
-			}
+			elem.channelIndex = Parse::Int32(elemText.c_str());
 		}
 	}
 

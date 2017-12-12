@@ -33,9 +33,7 @@ struct VfxNodeChannelSlice : VfxNodeBase
 {
 	enum Input
 	{
-		kInput_Channels,
-		kInput_ChannelIndex,
-		kInput_ChannelIndexNorm,
+		kInput_Channel,
 		kInput_SliceIndex,
 		kInput_SliceIndexNorm,
 		kInput_SliceCount,
@@ -45,11 +43,11 @@ struct VfxNodeChannelSlice : VfxNodeBase
 
 	enum Output
 	{
-		kOutput_Channels,
+		kOutput_Channel,
 		kOutput_COUNT
 	};
 
-	VfxChannels channelsOutput;
+	VfxChannel channelOutput;
 
 	VfxNodeChannelSlice();
 	

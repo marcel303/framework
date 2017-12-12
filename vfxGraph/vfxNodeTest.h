@@ -33,7 +33,9 @@ struct VfxNodeTest : VfxNodeBase
 {
 	enum Input
 	{
-		kInput_Channels,
+		kInput_XChannel,
+		kInput_YChannel,
+		kInput_ZChannel,
 		kInput_Scale,
 		kInput_COUNT
 	};

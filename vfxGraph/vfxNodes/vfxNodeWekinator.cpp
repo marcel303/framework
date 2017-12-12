@@ -41,18 +41,18 @@ VFX_NODE_TYPE(VfxNodeWekinator)
 	in("sendPath", "string", "/wek/inputs");
 	in("recv", "bool", "1");
 	in("recvPath", "string", "/wek/outputs");
-	in("channels", "channels");
+	in("inputs", "channel");
 	in("recordBegin", "trigger");
 	in("recordEnd", "trigger");
 	in("train", "trigger");
 	in("runBegin", "trigger");
 	in("runEnd", "trigger");
-	out("channels", "channels");
+	out("outputs", "channel");
 }
 
 VfxNodeWekinator::VfxNodeWekinator()
 	: VfxNodeBase()
-	, channelsOutput()
+	, outputsChannel()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_EndpointName, kVfxPlugType_String);
@@ -60,13 +60,13 @@ VfxNodeWekinator::VfxNodeWekinator()
 	addInput(kInput_SendPath, kVfxPlugType_String);
 	addInput(kInput_RecvEnabled, kVfxPlugType_Bool);
 	addInput(kInput_RecvPath, kVfxPlugType_String);
-	addInput(kInput_Channels, kVfxPlugType_Channels);
+	addInput(kInput_Channel, kVfxPlugType_Channel);
 	addInput(kInput_RecordBegin, kVfxPlugType_Trigger);
 	addInput(kInput_RecordEnd, kVfxPlugType_Trigger);
 	addInput(kInput_Train, kVfxPlugType_Trigger);
 	addInput(kInput_RunBegin, kVfxPlugType_Trigger);
 	addInput(kInput_RunEnd, kVfxPlugType_Trigger);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
+	addOutput(kOutput_Outputs, kVfxPlugType_Channel, &outputsChannel);
 }
 
 VfxNodeWekinator::~VfxNodeWekinator()
@@ -85,9 +85,9 @@ void VfxNodeWekinator::tick(const float dt)
 	const char * sendPath = getInputString(kInput_SendPath, "/wek/inputs");
 	const bool recvEnabled = getInputBool(kInput_RecvEnabled, true);
 	
-	const VfxChannels * inputChannels = getInputChannels(kInput_Channels, nullptr);
+	const VfxChannel * inputChannel = getInputChannel(kInput_Channel, nullptr);
 
-	if (sendEnabled && inputChannels != nullptr)
+	if (sendEnabled && inputChannel != nullptr)
 	{
 		OscSender * oscSender = g_oscEndpointMgr.findSender(endpointName);
 
@@ -103,16 +103,11 @@ void VfxNodeWekinator::tick(const float dt)
 					<< osc::BeginBundleImmediate
 					<< osc::BeginMessage(sendPath);
 				
-				if (inputChannels->numChannels >= 1)
+				for (int i = 0; i < inputChannel->size; ++i)
 				{
-					const VfxChannel & channel = inputChannels->channels[0];
+					const float value = inputChannel->data[i];
 					
-					for (int i = 0; i < inputChannels->size; ++i)
-					{
-						const float value = channel.data[i];
-						
-						p << value;
-					}
+					p << value;
 				}
 				
 				p
@@ -214,7 +209,7 @@ void VfxNodeWekinator::handleOscMessage(const osc::ReceivedMessage & m, const Ip
 				args >> channelData.data[i];
 			}
 			
-			channelsOutput.setDataContiguous(channelData.data, false, channelData.size, 1);
+			outputsChannel.setData(channelData.data, false, channelData.size);
 		}
 		catch (std::exception & e)
 		{

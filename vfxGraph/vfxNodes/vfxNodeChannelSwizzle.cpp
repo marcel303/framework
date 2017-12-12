@@ -26,68 +26,103 @@
 */
 
 #include "framework.h"
+#include "StringEx.h"
 #include "vfxNodeChannelSwizzle.h"
 #include "vfxTypes.h"
 
 VFX_NODE_TYPE(VfxNodeChannelSwizzle)
 {
 	typeName = "channel.swizzle";
-	in("channels", "channels");
+	in("channel1", "channel");
+	in("channel2", "channel");
+	in("channel3", "channel");
+	in("channel4", "channel");
 	in("swizzle", "string");
-	out("channels", "channels");
 }
 
 VfxNodeChannelSwizzle::VfxNodeChannelSwizzle()
 	: VfxNodeBase()
-	, channelsOutput()
+	, channelOutputs(nullptr)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Channels, kVfxPlugType_Channels);
+	addInput(kInput_Channel1, kVfxPlugType_Channel);
+	addInput(kInput_Channel2, kVfxPlugType_Channel);
+	addInput(kInput_Channel3, kVfxPlugType_Channel);
+	addInput(kInput_Channel4, kVfxPlugType_Channel);
 	addInput(kInput_Swizzle, kVfxPlugType_String);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
+}
+
+VfxNodeChannelSwizzle::~VfxNodeChannelSwizzle()
+{
+	delete [] channelOutputs;
+	channelOutputs = nullptr;
 }
 
 void VfxNodeChannelSwizzle::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeImageDownsample);
 	
-	const VfxChannels * channels = getInputChannels(kInput_Channels, nullptr);
+	const VfxChannel * channel1 = getInputChannel(kInput_Channel1, nullptr);
+	const VfxChannel * channel2 = getInputChannel(kInput_Channel2, nullptr);
+	const VfxChannel * channel3 = getInputChannel(kInput_Channel3, nullptr);
+	const VfxChannel * channel4 = getInputChannel(kInput_Channel4, nullptr);
 	const char * swizzleText = getInputString(kInput_Swizzle, nullptr);
-
-	channelsOutput.reset();
 	
-	if (isPassthrough == false && channels != nullptr && channels->numChannels > 0 && swizzleText != nullptr)
+	VfxSwizzle swizzle;
+	
+	if (isPassthrough || swizzleText == nullptr || swizzle.parse(swizzleText) == false)
 	{
-		VfxSwizzle swizzle;
-
-		if (swizzle.parse(swizzleText))
+		setDynamicOutputs(nullptr, 0);
+		
+		delete [] channelOutputs;
+		channelOutputs = nullptr;
+		
+		return;
+	}
+	
+	if (dynamicOutputs.size() != swizzle.numElems)
+	{
+		delete [] channelOutputs;
+		channelOutputs = nullptr;
+		
+		//
+		
+		channelOutputs = new VfxChannel[swizzle.numElems];
+		
+		DynamicOutput outputs[swizzle.numElems];
+		
+		for (int i = 0; i < swizzle.numElems; ++i)
 		{
-			channelsOutput.size = channels->size;
-			channelsOutput.sx = channels->sx;
-			channelsOutput.sy = channels->sy;
+			auto & o = outputs[i];
 			
-			bool isValid = true;
-			
-			// todo : try to compose a new channels object from the channels we got and the swizzle parameters
+			o.type = kVfxPlugType_Channel;
+			o.name = String::FormatC("%d", i + 1);
+			o.mem = &channelOutputs[i];
+		}
+		
+		setDynamicOutputs(outputs, swizzle.numElems);
+	}
 
-			for (int i = 0; i < swizzle.numChannels; ++i)
-			{
-				auto & c = swizzle.channels[i];
-				
-				if (c.sourceIndex == 0 && c.elemIndex >= 0 && c.elemIndex < channels->numChannels)
-				{
-					channelsOutput.channels[channelsOutput.numChannels++] = channels->channels[c.elemIndex];
-				}
-				else
-				{
-					isValid = false;
-				}
-			}
-			
-			if (isValid == false)
-			{
-				channelsOutput.reset();
-			}
+	const VfxChannel * inputs[] =
+	{
+		channel1,
+		channel2,
+		channel3,
+		channel4
+	};
+	
+	for (int i = 0; i < swizzle.numElems; ++i)
+	{
+		auto & elem = swizzle.elems[i];
+		auto & output = channelOutputs[i];
+		
+		if (elem.channelIndex >= 0 && elem.channelIndex < 4 && inputs[elem.channelIndex] != nullptr)
+		{
+			output = *inputs[elem.channelIndex];
+		}
+		else
+		{
+			output.reset();
 		}
 	}
 }

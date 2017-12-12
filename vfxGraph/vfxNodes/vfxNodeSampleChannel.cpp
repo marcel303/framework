@@ -34,13 +34,12 @@ VFX_NODE_TYPE(VfxNodeSampleChannel)
 {
 	typeName = "channel.sample";
 	
-	in("channels", "channels");
-	in("channel", "int");
+	in("channel", "channel");
 	in("x", "float", "0.5");
 	in("y", "float", "0.5");
 	in("filter", "bool", "1");
 	out("value", "float");
-	out("channels", "channels");
+	out("channel", "channel");
 }
 
 //
@@ -48,58 +47,52 @@ VFX_NODE_TYPE(VfxNodeSampleChannel)
 VfxNodeSampleChannel::VfxNodeSampleChannel()
 	: VfxNodeBase()
 	, valueOutput(0.f)
-	, channelsOutput()
+	, channelOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Channels, kVfxPlugType_Channels);
-	addInput(kInput_Channel, kVfxPlugType_Int);
+	addInput(kInput_Channel, kVfxPlugType_Channel);
 	addInput(kInput_X, kVfxPlugType_Float);
 	addInput(kInput_Y, kVfxPlugType_Float);
 	addInput(kInput_Filter, kVfxPlugType_Bool);
 	addOutput(kOutput_Value, kVfxPlugType_Float, &valueOutput);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
+	addOutput(kOutput_Channel, kVfxPlugType_Channel, &channelOutput);
 }
 
 void VfxNodeSampleChannel::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeSampleChannel);
 
-	const VfxChannels * channels = getInputChannels(kInput_Channels, nullptr);
-	const int channelIndex = getInputInt(kInput_Channel, 0);
+	const VfxChannel * channel = getInputChannel(kInput_Channel, nullptr);
 	const float xNorm = getInputFloat(kInput_X, .5f);
 	const float yNorm = getInputFloat(kInput_Y, .5f);
 	const bool filter = getInputBool(kInput_Filter, true);
 
 	if (isPassthrough ||
-		channels == nullptr ||
-		channels->sx < 1 ||
-		channels->sy < 1 ||
-		channelIndex < 0 ||
-		channelIndex >= channels->numChannels)
+		channel == nullptr ||
+		channel->sx < 1 ||
+		channel->sy < 1)
 	{
 		valueOutput = 0.f;
 
-		channelsOutput.reset();
+		channelOutput.reset();
 
 		return;
 	}
 	
-	auto & c = channels->channels[channelIndex];
-	
 	if (filter)
 	{
-		float xf = xNorm * (channels->sx - 1);
-		float yf = yNorm * (channels->sy - 1);
+		float xf = xNorm * (channel->sx - 1);
+		float yf = yNorm * (channel->sy - 1);
 	
 		if (xf < 0)
 			xf = 0;
-		else if (xf >= channels->sx)
-			xf = channels->sx - 1;
+		else if (xf >= channel->sx)
+			xf = channel->sx - 1;
 	
 		if (yf < 0)
 			yf = 0;
-		else if (yf >= channels->sy)
-			yf = channels->sy - 1;
+		else if (yf >= channel->sy)
+			yf = channel->sy - 1;
 	
 		const int x1 = int(xf);
 		const int y1 = int(yf);
@@ -107,15 +100,15 @@ void VfxNodeSampleChannel::tick(const float dt)
 		int x2 = x1 + 1;
 		int y2 = y1 + 1;
 	
-		if (x2 >= channels->sx)
+		if (x2 >= channel->sx)
 			x2--;
-		if (y2 >= channels->sy)
+		if (y2 >= channel->sy)
 			y2--;
 	
-		Assert(x1 >= 0 && x1 < channels->sx);
-		Assert(y1 >= 0 && y1 < channels->sy);
-		Assert(x2 >= 0 && x2 < channels->sx);
-		Assert(y2 >= 0 && y2 < channels->sy);
+		Assert(x1 >= 0 && x1 < channel->sx);
+		Assert(y1 >= 0 && y1 < channel->sy);
+		Assert(x2 >= 0 && x2 < channel->sx);
+		Assert(y2 >= 0 && y2 < channel->sy);
 	
 		Assert(x1 <= x2);
 		Assert(y1 <= y2);
@@ -130,10 +123,10 @@ void VfxNodeSampleChannel::tick(const float dt)
 		Assert(s2 >= 0.f && s2 <= 1.f);
 		Assert(t2 >= 0.f && t2 <= 1.f);
 	
-		const float v00 = c.data[y1 * channels->sx + x1];
-		const float v01 = c.data[y1 * channels->sx + x2];
-		const float v10 = c.data[y2 * channels->sx + x1];
-		const float v11 = c.data[y2 * channels->sx + x2];
+		const float v00 = channel->data[y1 * channel->sx + x1];
+		const float v01 = channel->data[y1 * channel->sx + x2];
+		const float v10 = channel->data[y2 * channel->sx + x1];
+		const float v11 = channel->data[y2 * channel->sx + x2];
 		
 		const float v0 = v00 * s1 + v01 * s2;
 		const float v1 = v10 * s1 + v11 * s2;
@@ -144,26 +137,26 @@ void VfxNodeSampleChannel::tick(const float dt)
 	}
 	else
 	{
-		int x = int(xNorm * channels->sx);
-		int y = int(yNorm * channels->sy);
+		int x = int(xNorm * channel->sx);
+		int y = int(yNorm * channel->sy);
 		
 		if (x < 0)
 			x = 0;
-		else if (x >= channels->sx)
-			x = channels->sx - 1;
+		else if (x >= channel->sx)
+			x = channel->sx - 1;
 		
 		if (y < 0)
 			y = 0;
-		else if (y >= channels->sy)
-			y = channels->sy - 1;
+		else if (y >= channel->sy)
+			y = channel->sy - 1;
 		
-		Assert(x >= 0 && x < channels->sx);
-		Assert(y >= 0 && y < channels->sy);
+		Assert(x >= 0 && x < channel->sx);
+		Assert(y >= 0 && y < channel->sy);
 		
-		const float v = c.data[y * channels->sx + x];
+		const float v = channel->data[y * channel->sx + x];
 		
 		valueOutput = v;
 	}
 	
-	channelsOutput.setDataContiguous(&valueOutput, true, 1, 1);
+	channelOutput.setData(&valueOutput, true, 1);
 }

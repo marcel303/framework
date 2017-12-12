@@ -27,6 +27,8 @@
 
 #pragma once
 
+#if 0
+
 #include "vfxNodeBase.h"
 
 struct VfxNodeChannelSelect : VfxNodeBase
@@ -41,7 +43,7 @@ struct VfxNodeChannelSelect : VfxNodeBase
 
 	enum Output
 	{
-		kOutput_Channels,
+		kOutput_Channel,
 		kOutput_COUNT
 	};
 
@@ -53,3 +55,5 @@ struct VfxNodeChannelSelect : VfxNodeBase
 	
 	virtual void getDescription(VfxNodeDescription & d) override;
 };
+
+#endif

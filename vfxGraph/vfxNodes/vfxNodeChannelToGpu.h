@@ -34,9 +34,7 @@ struct VfxNodeChannelToGpu : VfxNodeBase
 {
 	enum Input
 	{
-		kInput_Channels,
-		kInput_ChannelIndex,
-		kInput_ChannelIndexNorm,
+		kInput_Channel,
 		kInput_COUNT
 	};
 

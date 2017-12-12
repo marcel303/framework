@@ -29,6 +29,8 @@
 
 #include "vfxNodeBase.h"
 
+// todo : use dynamic outputs ?
+
 struct VfxNodeDatatable : VfxNodeBase
 {
 	enum Input
@@ -41,7 +43,7 @@ struct VfxNodeDatatable : VfxNodeBase
 	
 	enum Output
 	{
-		kOutput_Channels,
+		kOutput_Channel,
 		kOutput_COUNT
 	};
 	
@@ -51,7 +53,7 @@ struct VfxNodeDatatable : VfxNodeBase
 	
 	VfxChannelData channelData;
 	
-	VfxChannels outputChannels;
+	VfxChannel outputChannel;
 	
 	VfxNodeDatatable();
 	

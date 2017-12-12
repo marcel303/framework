@@ -57,7 +57,7 @@ struct VfxNodeCamera3d : VfxNodeBase
 	
 	Mat4x4 cameraWorldMatrix;
 	
-	VfxChannels cameraWorldMatrixOutput;
+	VfxChannel cameraWorldMatrixOutput;
 	
 	VfxNodeCamera3d();
 	virtual ~VfxNodeCamera3d() override;

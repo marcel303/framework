@@ -49,7 +49,8 @@ VFX_NODE_TYPE(VfxNodeSpectrum2D)
 	in("scale", "float", "1.0");
 	out("image", "image");
 	out("image2", "image");
-	out("channels", "channels");
+	out("real", "channel");
+	out("imag", "channel");
 }
 
 VfxNodeSpectrum2D::VfxNodeSpectrum2D()
@@ -60,7 +61,8 @@ VfxNodeSpectrum2D::VfxNodeSpectrum2D()
 	, dimag(nullptr)
 	, image1Output()
 	, image2Output()
-	, channelsOutput()
+	, realChannelOutput()
+	, imagChannelOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
@@ -70,7 +72,8 @@ VfxNodeSpectrum2D::VfxNodeSpectrum2D()
 	addInput(kInput_Scale, kVfxPlugType_Float);
 	addOutput(kOutput_Image1, kVfxPlugType_Image, &image1Output);
 	addOutput(kOutput_Image2, kVfxPlugType_Image, &image2Output);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
+	addOutput(kOutput_RealChannel, kVfxPlugType_Channel, &realChannelOutput);
+	addOutput(kOutput_ImagChannel, kVfxPlugType_Channel, &imagChannelOutput);
 }
 
 VfxNodeSpectrum2D::~VfxNodeSpectrum2D()
@@ -189,14 +192,13 @@ void VfxNodeSpectrum2D::tick(const float dt)
 		
 		if (outputMode == kOutputMode_Channel1And2)
 		{
-			const float * channels[] = { dreal, dimag };
-			const bool continuous[] = { true, true };
-			
-			channelsOutput.setData2D(channels, continuous, transformSx, transformSy, 2);
+			realChannelOutput.setData2D(dreal, false, transformSx, transformSy);
+			imagChannelOutput.setData2D(dimag, false, transformSx, transformSy);
 		}
 		else
 		{
-			channelsOutput.setData2DContiguous(dreal, true, transformSx, transformSy, 1);
+			realChannelOutput.setData2D(dreal, false, transformSx, transformSy);
+			imagChannelOutput.setData2D(dreal, false, transformSx, transformSy);
 		}
 	}
 }
@@ -204,7 +206,8 @@ void VfxNodeSpectrum2D::tick(const float dt)
 void VfxNodeSpectrum2D::getDescription(VfxNodeDescription & d)
 {
 	d.add("channels:");
-	d.add(channelsOutput);
+	d.add(realChannelOutput);
+	d.add(imagChannelOutput);
 }
 
 void VfxNodeSpectrum2D::allocateTextures(const int sx, const int sy)
@@ -238,5 +241,6 @@ void VfxNodeSpectrum2D::freeTextures()
 	image1Output.texture = 0;
 	image2Output.texture = 0;
 	
-	channelsOutput.reset();
+	realChannelOutput.reset();
+	imagChannelOutput.reset();
 }

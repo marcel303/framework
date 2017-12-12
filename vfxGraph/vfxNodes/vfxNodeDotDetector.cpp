@@ -57,7 +57,9 @@ VFX_NODE_TYPE(VfxNodeDotDetector)
 	in("maxRadius", "float", "10");
 	out("lumi", "image_cpu");
 	out("mask", "image_cpu");
-	out("channels", "channels");
+	out("x", "channel");
+	out("y", "channel");
+	out("r", "channel");
 	out("numDots", "int");
 }
 
@@ -72,7 +74,9 @@ VfxNodeDotDetector::VfxNodeDotDetector()
 	, dotRadius()
 	, lumiOutput()
 	, maskOutput()
-	, xyrOutput()
+	, xOutput()
+	, yOutput()
+	, rOutput()
 	, numDotsOutput(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -83,7 +87,9 @@ VfxNodeDotDetector::VfxNodeDotDetector()
 	addInput(kInput_MaxRadius, kVfxPlugType_Float);
 	addOutput(kOutput_Lumi, kVfxPlugType_ImageCpu, &lumiOutput);
 	addOutput(kOutput_Mask, kVfxPlugType_ImageCpu, &maskOutput);
-	addOutput(kOutput_XYRadius, kVfxPlugType_Channels, &xyrOutput);
+	addOutput(kOutput_X, kVfxPlugType_Channel, &xOutput);
+	addOutput(kOutput_Y, kVfxPlugType_Channel, &yOutput);
+	addOutput(kOutput_Radius, kVfxPlugType_Channel, &rOutput);
 	addOutput(kOutput_NumDots, kVfxPlugType_Int, &numDotsOutput);
 }
 
@@ -247,9 +253,9 @@ void VfxNodeDotDetector::tick(const float dt)
 			dotRadius.data[i] = s;
 		}
 		
-		const float * data[] = { dotX.data, dotY.data, dotRadius.data };
-		
-		xyrOutput.setData(data, nullptr, numIslands, 3);
+		xOutput.setData(dotX.data, nullptr, numIslands);
+		yOutput.setData(dotY.data, nullptr, numIslands);
+		rOutput.setData(dotRadius.data, nullptr, numIslands);
 		
 		//
 		
@@ -269,7 +275,9 @@ void VfxNodeDotDetector::getDescription(VfxNodeDescription & d)
 	d.newline();
 	
 	d.add("dot XY + radius channels:");
-	d.add(xyrOutput);
+	d.add(xOutput);
+	d.add(yOutput);
+	d.add(rOutput);
 }
 
 void VfxNodeDotDetector::allocateMask(const int sx, const int sy, const int maxIslands)
@@ -319,7 +327,9 @@ void VfxNodeDotDetector::freeChannels()
 	dotY.free();
 	dotRadius.free();
 	
-	xyrOutput.reset();
+	xOutput.reset();
+	yOutput.reset();
+	rOutput.reset();
 	
 	numDotsOutput = 0;
 }

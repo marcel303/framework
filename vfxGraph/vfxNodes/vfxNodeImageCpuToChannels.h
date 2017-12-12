@@ -41,7 +41,10 @@ struct VfxNodeImageCpuToChannels : VfxNodeBase
 	
 	enum Output
 	{
-		kOutput_Channels,
+		kOutput_RChannel,
+		kOutput_GChannel,
+		kOutput_BChannel,
+		kOutput_AChannel,
 		kOutput_COUNT
 	};
 
@@ -57,7 +60,10 @@ struct VfxNodeImageCpuToChannels : VfxNodeBase
 	
 	VfxChannelData channelData;
 
-	VfxChannels channelsOutput;
+	VfxChannel rChannelOutput;
+	VfxChannel gChannelOutput;
+	VfxChannel bChannelOutput;
+	VfxChannel aChannelOutput;
 
 	VfxNodeImageCpuToChannels();
 	virtual ~VfxNodeImageCpuToChannels() override;

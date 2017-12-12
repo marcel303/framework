@@ -45,18 +45,27 @@ VFX_NODE_TYPE(VfxNodeImageCpuToChannels)
 	
 	in("image", "image_cpu");
 	inEnum("channel", "imageCpuToChannelsChannel");
-	out("channels", "channels");
+	out("r", "channel");
+	out("g", "channel");
+	out("b", "channel");
+	out("a", "channel");
 }
 
 VfxNodeImageCpuToChannels::VfxNodeImageCpuToChannels()
 	: VfxNodeBase()
 	, channelData()
-	, channelsOutput()
+	, rChannelOutput()
+	, gChannelOutput()
+	, bChannelOutput()
+	, aChannelOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
 	addInput(kInput_Channel, kVfxPlugType_Int);
-	addOutput(kOutput_Channels, kVfxPlugType_Channels, &channelsOutput);
+	addOutput(kOutput_RChannel, kVfxPlugType_Channel, &rChannelOutput);
+	addOutput(kOutput_GChannel, kVfxPlugType_Channel, &gChannelOutput);
+	addOutput(kOutput_BChannel, kVfxPlugType_Channel, &bChannelOutput);
+	addOutput(kOutput_AChannel, kVfxPlugType_Channel, &aChannelOutput);
 }
 
 VfxNodeImageCpuToChannels::~VfxNodeImageCpuToChannels()
@@ -91,20 +100,30 @@ void VfxNodeImageCpuToChannels::tick(const float dt)
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const Channel channel = (Channel)getInputInt(kInput_Channel, 0);
 	
-	const bool wantsChannels = outputs[kOutput_Channels].isReferenced();
+	const bool wantsChannels =
+		outputs[kOutput_RChannel].isReferenced() ||
+		outputs[kOutput_GChannel].isReferenced() ||
+		outputs[kOutput_BChannel].isReferenced() ||
+		outputs[kOutput_AChannel].isReferenced();
 	
 	if (isPassthrough || image == nullptr || image->sx == 0 || image->sy == 0 || wantsChannels == false)
 	{
 		channelData.free();
 
-		channelsOutput.reset();
+		rChannelOutput.reset();
+		gChannelOutput.reset();
+		bChannelOutput.reset();
+		aChannelOutput.reset();
 		
 		return;
 	}
 	
 	//
 	
-	channelsOutput.reset();
+	rChannelOutput.reset();
+	gChannelOutput.reset();
+	bChannelOutput.reset();
+	aChannelOutput.reset();
 	
 	if (image->numChannels == 1)
 	{
@@ -112,7 +131,10 @@ void VfxNodeImageCpuToChannels::tick(const float dt)
 		
 		fillFloats(channelData.data, image, 0);
 		
-		channelsOutput.setData2DContiguous(channelData.data, true, image->sx, image->sy, 1);
+		rChannelOutput.setData2D(channelData.data, true, image->sx, image->sy);
+		gChannelOutput.setData2D(channelData.data, true, image->sx, image->sy);
+		bChannelOutput.setData2D(channelData.data, true, image->sx, image->sy);
+		aChannelOutput.setData2D(channelData.data, true, image->sx, image->sy);
 	}
 	else if (channel == kChannel_RGBA)
 	{
@@ -123,7 +145,11 @@ void VfxNodeImageCpuToChannels::tick(const float dt)
 			fillFloats(channelData.data + image->sx * image->sy * i, image, i);
 		}
 		
-		channelsOutput.setData2DContiguous(channelData.data, true, image->sx, image->sy, 4);
+		const int pitch = image->sx * image->sy;
+		
+		rChannelOutput.setData2D(channelData.data + pitch * 0, true, image->sx, image->sy);
+		gChannelOutput.setData2D(channelData.data + pitch * 1, true, image->sx, image->sy);
+		bChannelOutput.setData2D(channelData.data + pitch * 2, true, image->sx, image->sy);
 	}
 	else if (channel == kChannel_RGB)
 	{
@@ -134,7 +160,11 @@ void VfxNodeImageCpuToChannels::tick(const float dt)
 			fillFloats(channelData.data + image->sx * image->sy * i, image, i);
 		}
 		
-		channelsOutput.setData2DContiguous(channelData.data, true, image->sx, image->sy, 3);
+		const int pitch = image->sx * image->sy;
+		
+		rChannelOutput.setData2D(channelData.data + pitch * 0, true, image->sx, image->sy);
+		gChannelOutput.setData2D(channelData.data + pitch * 1, true, image->sx, image->sy);
+		bChannelOutput.setData2D(channelData.data + pitch * 2, true, image->sx, image->sy);
 	}
 	else if (channel == kChannel_R || channel == kChannel_G || channel == kChannel_B || channel == kChannel_A)
 	{
@@ -153,7 +183,10 @@ void VfxNodeImageCpuToChannels::tick(const float dt)
 		
 		fillFloats(channelData.data, image, channelIndex);
 		
-		channelsOutput.setData2DContiguous(channelData.data, true, image->sx, image->sy, 1);
+		rChannelOutput.setData2D(channelData.data, true, image->sx, image->sy);
+		gChannelOutput.setData2D(channelData.data, true, image->sx, image->sy);
+		bChannelOutput.setData2D(channelData.data, true, image->sx, image->sy);
+		aChannelOutput.setData2D(channelData.data, true, image->sx, image->sy);
 	}
 	else
 	{
@@ -163,5 +196,8 @@ void VfxNodeImageCpuToChannels::tick(const float dt)
 
 void VfxNodeImageCpuToChannels::getDescription(VfxNodeDescription & d)
 {
-	d.add(channelsOutput);
+	d.add(rChannelOutput);
+	d.add(gChannelOutput);
+	d.add(bChannelOutput);
+	d.add(aChannelOutput);
 }

@@ -71,16 +71,15 @@ struct VfxTimeline
 
 struct VfxSwizzle
 {
-	static const int kMaxChannels = 16;
+	static const int kMaxElems = 16;
 
-	struct Channel
+	struct Elem
 	{
-		int sourceIndex;
-		int elemIndex;
+		int channelIndex;
 	};
 
-	Channel channels[kMaxChannels];
-	int numChannels;
+	Elem elems[kMaxElems];
+	int numElems;
 
 	VfxSwizzle();
 

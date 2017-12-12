@@ -65,7 +65,7 @@ struct VfxNodeAudioGraph : VfxNodeBase
 	int currentNumChannels;
 	
 	VfxChannelData channelData;
-	VfxChannels * channelOutputs;
+	VfxChannel * channelOutputs;
 	
 	VfxNodeAudioGraph();
 	
