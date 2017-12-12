@@ -721,8 +721,8 @@ public:
 	Vec3 animRootMotion;
 	bool animRootMotionEnabled;
 	
-	Model(const char * filename);
-	Model(class ModelCacheElem & cacheElem);
+	Model(const char * filename, bool autoUpdate = false);
+	Model(class ModelCacheElem & cacheElem, bool autoUpdate);
 	~Model();
 	
 	void startAnim(const char * name, int loop = 1);
@@ -732,6 +732,8 @@ public:
 	std::vector<std::string> getAnimList() const;
 	const char * getAnimName() const;
 	
+	void tick(const float dt);
+	
 	void draw(const int drawFlags = DrawMesh) const;
 	void drawEx(Vec3Arg position, Vec3Arg axis, const float angle = 0.f, const float scale = 1.f, const int drawFlags = DrawMesh) const;
 	void drawEx(const Mat4x4 & matrix, const int drawFlags = DrawMesh) const;
@@ -739,9 +741,12 @@ public:
 	void calculateTransform(Mat4x4 & matrix) const;
 	static void calculateTransform(Vec3Arg position, Vec3Arg axis, const float angle, const float scale, Mat4x4 & matrix);
 	
+	int calculateBoneMatrices(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * worldMatrices, Mat4x4 * globalMatrices, const int numMatrices) const;
+	int softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * worldMatrices, Mat4x4 * globalMatrices, const int numMatrices, Vec3 * positions, Vec3 * normals, const int numVertices) const;
+	
 private:
 	void ctor();
-
+	
 	// drawing
 	class ModelCacheElem * m_model;
 	
@@ -750,6 +755,8 @@ private:
 	void * m_currentAnim;
 	void * m_animSegment;
 	bool m_isAnimStarted;
+	
+	bool m_autoUpdate;
 
 	void updateAnimationSegment();
 	void updateAnimation(float timeStep);

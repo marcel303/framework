@@ -688,14 +688,16 @@ namespace AnimModel
 
 using namespace AnimModel;
 
-Model::Model(const char * filename)
+Model::Model(const char * filename, const bool autoUpdate)
+	: m_autoUpdate(autoUpdate)
 {
 	ctor();
 	
 	m_model = &g_modelCache.findOrCreate(filename);
 }
 
-Model::Model(ModelCacheElem & cacheElem)
+Model::Model(ModelCacheElem & cacheElem, const bool autoUpdate)
+	: m_autoUpdate(autoUpdate)
 {
 	ctor();
 	
@@ -722,12 +724,14 @@ void Model::ctor()
 	animSpeed = 1.f;
 	animRootMotionEnabled = true;
 	
-	framework.registerModel(this);
+	if (m_autoUpdate)
+		framework.registerModel(this);
 }
 
 Model::~Model()
 {
-	framework.unregisterModel(this);
+	if (m_autoUpdate)
+		framework.unregisterModel(this);
 }
 
 void Model::startAnim(const char * name, int loop)
@@ -775,6 +779,11 @@ const char * Model::getAnimName() const
 	return m_animSegmentName.c_str();
 }
 
+void Model::tick(const float dt)
+{
+	updateAnimation(dt);
+}
+
 void Model::draw(const int drawFlags) const
 {
 	drawEx(Vec3(x, y, z), axis, angle, scale, drawFlags);
@@ -793,119 +802,11 @@ void Model::drawEx(Vec3Arg position, Vec3Arg axis, const float angle, const floa
 
 void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 {
-	// calculate transforms in local bone space
-	
-	BoneTransform * transforms = (BoneTransform*)ALIGNED_ALLOCA(sizeof(BoneTransform) * m_model->boneSet->m_numBones, 16);
-	
-	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
-	{
-		transforms[i] = m_model->boneSet->m_bones[i].transform;
-	}
-	
-	// apply animations
-	
-	// todo: move to updateAnimation
-	if (m_isAnimStarted && m_animSegment && !animIsPaused)
-	{
-		Anim * anim = reinterpret_cast<Anim*>(m_animSegment);
-		
-		const bool isDone = anim->evaluate(animTime, transforms);
-		
-		if (anim->m_rootMotion)
-		{
-			int boneIndex = m_model->boneSet->findBone(m_model->rootNode);
-			
-			if (boneIndex != -1)
-			{
-				transforms[boneIndex].translation = m_model->boneSet->m_bones[boneIndex].transform.translation;
-			}
-		}
-		
-		if (isDone)
-		{
-			if (animLoop > 0 || animLoop < 0)
-			{
-				animTime = 0.f;
-				animLoopCount++;
-				if (animLoop > 0)
-					animLoop--;
-			}
-			else
-			{
-				animIsActive = false;
-			}
-		}
-	}
-	
-	// convert translation / rotation pairs into matrices
-	
 	Mat4x4 * localMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * m_model->boneSet->m_numBones, 16);
-	
-	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
-	{
-		// todo: scale?
-		
-		const BoneTransform & transform = transforms[i];
-		
-		Mat4x4 & boneMatrix = localMatrices[i];
-		
-		transform.rotation.toMatrix3x3(boneMatrix);
-		
-		boneMatrix(0, 3) = 0.f;
-		boneMatrix(1, 3) = 0.f;
-		boneMatrix(2, 3) = 0.f;
-		
-		boneMatrix(3, 0) = transform.translation[0];
-		boneMatrix(3, 1) = transform.translation[1];
-		boneMatrix(3, 2) = transform.translation[2];
-		boneMatrix(3, 3) = 1.f;
-	}
-	
-	// calculate the bone hierarchy in world space
-	
 	Mat4x4 * worldMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * m_model->boneSet->m_numBones, 16);
-	
-	if (m_model->boneSet->m_bonesAreSorted)
-	{
-		for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
-		{
-			const int parent = m_model->boneSet->m_bones[i].parent;
-			
-			if (parent == -1)
-				worldMatrices[i] = matrix * m_model->meshToObject * localMatrices[i];
-			else
-				worldMatrices[i] = worldMatrices[parent] * localMatrices[i];
-		}
-	}
-	else
-	{
-		for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
-		{
-			int boneIndex = i;
-			
-			Mat4x4 finalMatrix = localMatrices[boneIndex];
-			
-			boneIndex = m_model->boneSet->m_bones[boneIndex].parent;
-			
-			while (boneIndex != -1)
-			{
-				finalMatrix = localMatrices[boneIndex] * finalMatrix;
-				
-				boneIndex = m_model->boneSet->m_bones[boneIndex].parent;
-			}
-			
-			worldMatrices[i] = matrix * m_model->meshToObject * finalMatrix;
-		}
-	}
-	
 	Mat4x4 * globalMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * m_model->boneSet->m_numBones, 16);
 	
-	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
-	{
-		const Mat4x4 & worldToBone = m_model->boneSet->m_bones[i].poseMatrix;
-		
-		globalMatrices[i] = worldMatrices[i] * worldToBone;
-	}
+	calculateBoneMatrices(matrix, localMatrices, worldMatrices, globalMatrices, m_model->boneSet->m_numBones);
 	
 	// draw
 	
@@ -1125,6 +1026,189 @@ void Model::calculateTransform(Vec3Arg position, Vec3Arg axis, const float angle
 			for (int j = 0; j < 3; ++j)
 				matrix(i, j) *= scale;
 	}
+}
+
+int Model::calculateBoneMatrices(
+	const Mat4x4 & matrix,
+	Mat4x4 * localMatrices,
+	Mat4x4 * worldMatrices,
+	Mat4x4 * globalMatrices,
+	const int numMatrices) const
+{
+	if (numMatrices == 0)
+	{
+		return m_model->boneSet->m_numBones;
+	}
+	
+	Assert(numMatrices == m_model->boneSet->m_numBones);
+	
+	// calculate transforms in local bone space
+	
+	BoneTransform * transforms = (BoneTransform*)ALIGNED_ALLOCA(sizeof(BoneTransform) * m_model->boneSet->m_numBones, 16);
+	
+	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
+	{
+		transforms[i] = m_model->boneSet->m_bones[i].transform;
+	}
+	
+	// apply animations
+	
+	// todo: move to updateAnimation
+	if (m_isAnimStarted && m_animSegment && !animIsPaused)
+	{
+		Anim * anim = reinterpret_cast<Anim*>(m_animSegment);
+		
+		const bool isDone = anim->evaluate(animTime, transforms);
+		
+		if (anim->m_rootMotion)
+		{
+			int boneIndex = m_model->boneSet->findBone(m_model->rootNode);
+			
+			if (boneIndex != -1)
+			{
+				transforms[boneIndex].translation = m_model->boneSet->m_bones[boneIndex].transform.translation;
+			}
+		}
+		
+		if (isDone)
+		{
+			if (animLoop > 0 || animLoop < 0)
+			{
+				animTime = 0.f;
+				animLoopCount++;
+				if (animLoop > 0)
+					animLoop--;
+			}
+			else
+			{
+				animIsActive = false;
+			}
+		}
+	}
+	
+	// convert translation / rotation pairs into matrices
+	
+	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
+	{
+		// todo: scale?
+		
+		const BoneTransform & transform = transforms[i];
+		
+		Mat4x4 & boneMatrix = localMatrices[i];
+		
+		transform.rotation.toMatrix3x3(boneMatrix);
+		
+		boneMatrix(0, 3) = 0.f;
+		boneMatrix(1, 3) = 0.f;
+		boneMatrix(2, 3) = 0.f;
+		
+		boneMatrix(3, 0) = transform.translation[0];
+		boneMatrix(3, 1) = transform.translation[1];
+		boneMatrix(3, 2) = transform.translation[2];
+		boneMatrix(3, 3) = 1.f;
+	}
+	
+	// calculate the bone hierarchy in world space
+	
+	if (m_model->boneSet->m_bonesAreSorted)
+	{
+		for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
+		{
+			const int parent = m_model->boneSet->m_bones[i].parent;
+			
+			if (parent == -1)
+				worldMatrices[i] = matrix * m_model->meshToObject * localMatrices[i];
+			else
+				worldMatrices[i] = worldMatrices[parent] * localMatrices[i];
+		}
+	}
+	else
+	{
+		for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
+		{
+			int boneIndex = i;
+			
+			Mat4x4 finalMatrix = localMatrices[boneIndex];
+			
+			boneIndex = m_model->boneSet->m_bones[boneIndex].parent;
+			
+			while (boneIndex != -1)
+			{
+				finalMatrix = localMatrices[boneIndex] * finalMatrix;
+				
+				boneIndex = m_model->boneSet->m_bones[boneIndex].parent;
+			}
+			
+			worldMatrices[i] = matrix * m_model->meshToObject * finalMatrix;
+		}
+	}
+	
+	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
+	{
+		const Mat4x4 & worldToBone = m_model->boneSet->m_bones[i].poseMatrix;
+		
+		globalMatrices[i] = worldMatrices[i] * worldToBone;
+	}
+	
+	return 0;
+}
+
+int Model::softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * worldMatrices, Mat4x4 * globalMatrices, const int numMatrices, Vec3 * positions, Vec3 * normals, const int numVertices) const
+{
+	Assert(numMatrices == m_model->boneSet->m_numBones);
+	
+	if (numVertices == 0)
+	{
+		int result = 0;
+		
+		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
+			result += m_model->meshSet->m_meshes[i]->m_numVertices;
+		
+		return result;
+	}
+	
+	calculateBoneMatrices(matrix, localMatrices, worldMatrices, globalMatrices, m_model->boneSet->m_numBones);
+	
+	// todo : write a fast SIMD version of this. write out streams of px, py, pz, nx, ny, nz
+	
+	const float boneWeightScale = 1.f / 255.f;
+	
+	for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
+	{
+		const Mesh * mesh = m_model->meshSet->m_meshes[i];
+		
+		for (int j = 0; j < mesh->m_numVertices; ++j)
+		{
+			const Vertex & vertex = mesh->m_vertices[j];
+			
+			// -- software vertex blend (soft skinned) --
+			
+			Vec3 p(0.f, 0.f, 0.f);
+			Vec3 n(0.f, 0.f, 0.f);
+			
+			for (int b = 0; b < 4; ++b)
+			{
+				if (vertex.boneWeights[b] == 0)
+					continue;
+				
+				const int boneIndex = vertex.boneIndices[b];
+				const float boneWeight = vertex.boneWeights[b] * boneWeightScale;
+				
+				const Mat4x4 & globalMatrix = globalMatrices[boneIndex];
+				
+				Vec3 vp(vertex.px, vertex.py, vertex.pz);
+				Vec3 vn(vertex.nx, vertex.ny, vertex.nz);
+				
+				p += globalMatrix.Mul4(vp) * boneWeight;
+				n += globalMatrix.Mul3(vn) * boneWeight;
+			}
+			
+			*positions++ = p;
+			*normals++ = n.CalcNormalized();
+		}
+	}
+	
+	return 0;
 }
 
 void Model::updateAnimationSegment()
