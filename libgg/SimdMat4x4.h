@@ -250,6 +250,23 @@ public:
 
 		return r;
 	}
+
+#undef m00
+#undef m10
+#undef m20
+#undef m30
+#undef m01
+#undef m11
+#undef m21
+#undef m31
+#undef m02
+#undef m12
+#undef m22
+#undef m32
+#undef m03
+#undef m13
+#undef m23
+#undef m33
 #endif
 
 	FORCEINLINE SimdVec Mul3x3(SimdVecArg vec) const
