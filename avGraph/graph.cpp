@@ -1049,7 +1049,6 @@ void GraphEdit_Visualizer::init()
 {
 	Assert(nodeId != kGraphNodeIdInvalid);
 	Assert(!srcSocketName.empty() || !dstSocketName.empty());
-	Assert(srcSocketIndex != -1 || dstSocketIndex != -1);
 	Assert(value.empty());
 	Assert(hasValue == false);
 	Assert(texture == 0);
@@ -2221,13 +2220,14 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 			auto & node = *sortedElems[i].node;
 			auto & nodeData = *sortedElems[i].nodeData;
 			
-			const auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+			auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 			
 			if (typeDefinition == nullptr)
 			{
-				// todo : complain ?
+				typeDefinition = &emptyTypeDefinition;
 			}
-			else
+			
+			if (typeDefinition != nullptr)
 			{
 				NodeHitTestResult hitTestResult;
 				
@@ -4533,8 +4533,9 @@ void GraphEdit::resolveSocketIndices(
 	const GraphNodeId dstNodeId, const std::string & dstNodeSocketName, int & dstNodeSocketIndex)
 {
 	auto srcNodeData = tryGetNodeData(srcNodeId);
-
-	if (!srcNodeData->dynamicSockets.inputSockets.empty())
+	Assert(srcNodeData != nullptr);
+	
+	if (srcNodeData != nullptr && !srcNodeData->dynamicSockets.inputSockets.empty())
 	{
 		if (srcNodeSocketIndex < 0 || srcNodeSocketIndex >= srcNodeData->dynamicSockets.numStaticInputSockets)
 		{
@@ -4558,8 +4559,9 @@ void GraphEdit::resolveSocketIndices(
 	//
 
 	auto dstNodeData = tryGetNodeData(dstNodeId);
+	Assert(dstNodeData != nullptr);
 
-	if (!dstNodeData->dynamicSockets.outputSockets.empty())
+	if (dstNodeData != nullptr && !dstNodeData->dynamicSockets.outputSockets.empty())
 	{
 		if (dstNodeSocketIndex < 0 || dstNodeSocketIndex >= dstNodeData->dynamicSockets.numStaticOutputSockets)
 		{
@@ -5033,14 +5035,13 @@ void GraphEdit::draw() const
 			
 			if (typeDefinition == nullptr)
 			{
-				// todo : draw error node ?
-				setColor(colorBlack);
-				drawRectLine(nodeData.x, nodeData.y, nodeData.x + 100, nodeData.y + 20);
-				setColor(colorRed);
-				drawRectLine(nodeData.x, nodeData.y, nodeData.x + 100, nodeData.y + 20);
-				setColor(colorWhite);
-				setFont("calibri.ttf");
-				drawText(nodeData.x + 100/2, nodeData.y + 20/2, 12, 0.f, 0.f, "%s", node.typeName.c_str());
+				gxPushMatrix();
+				{
+					gxTranslatef(nodeData.x, nodeData.y, 0.f);
+					
+					drawNode(node, nodeData, emptyTypeDefinition, node.typeName.c_str());
+				}
+				gxPopMatrix();
 			}
 			else
 			{
@@ -5048,7 +5049,14 @@ void GraphEdit::draw() const
 				{
 					gxTranslatef(nodeData.x, nodeData.y, 0.f);
 					
-					drawNode(node, nodeData, *typeDefinition);
+					const char * displayName =
+						!nodeData.displayName.empty()
+						? nodeData.displayName.c_str()
+						: typeDefinition->displayName.empty()
+							? typeDefinition->typeName.c_str()
+							: typeDefinition->displayName.c_str();
+					
+					drawNode(node, nodeData, *typeDefinition, displayName);
 				}
 				gxPopMatrix();
 			}
@@ -5369,7 +5377,7 @@ void GraphEdit::draw() const
 	popFontMode();
 }
 
-void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, const GraphEdit_TypeDefinition & definition) const
+void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, const GraphEdit_TypeDefinition & definition, const char * displayName) const
 {
 	cpuTimingBlock(drawNode);
 	
@@ -5404,6 +5412,8 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	
 	if (isSelected)
 		color = Color(63, 63, 127, 255);
+	else if (definition.typeName.empty()) // error node
+		color = Color(255, 31, 31, 255);
 	else
 		color = Color(63, 63, 63, 255);
 	
@@ -5476,12 +5486,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	
 	setFont("calibri.ttf");
 	setColor(255, 255, 255);
-	drawText(sx/2, 12, 14, 0.f, 0.f, "%s",
-		!nodeData.displayName.empty()
-		? nodeData.displayName.c_str()
-		: definition.displayName.empty()
-			? definition.typeName.c_str()
-			: definition.displayName.c_str());
+	drawText(sx/2, 12, 14, 0.f, 0.f, "%s", displayName);
 	
 	if (node.isPassthrough)
 	{

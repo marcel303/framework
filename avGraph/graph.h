@@ -1372,6 +1372,8 @@ struct GraphEdit : GraphEditConnection
 	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
 	
+	GraphEdit_TypeDefinition emptyTypeDefinition;
+	
 	GraphEdit_RealTimeConnection * realTimeConnection;
 	
 	std::set<GraphNodeId> selectedNodes;
@@ -1491,7 +1493,7 @@ struct GraphEdit : GraphEditConnection
 	void showNotification(const char * format, ...);
 	
 	void draw() const;
-	void drawNode(const GraphNode & node, const NodeData & nodeData, const GraphEdit_TypeDefinition & typeDefinition) const;
+	void drawNode(const GraphNode & node, const NodeData & nodeData, const GraphEdit_TypeDefinition & typeDefinition, const char * displayName) const;
 	void drawVisualizer(const EditorVisualizer & visualizer) const;
 	
 	bool load(const char * filename);
