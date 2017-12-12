@@ -81,16 +81,22 @@ static const char * s_fsfxCommonInc = R"SHADER(
 
 	vec4 fsfx();
 
+	float fsfxOpacity = 1.0;
+
 	void main()
 	{
-		vec4 baseColor = texture(colormap, texcoord);
-		
 		vec4 color = fsfx();
 		
 		color = applyColorPost(color, params.z);
 		
-		if (opacity != 1.0)
-			color = mix(baseColor, color, opacity);
+		fsfxOpacity *= opacity;
+		
+		if (fsfxOpacity != 1.0)
+		{
+			vec4 baseColor = texture(colormap, texcoord);
+			
+			color = mix(baseColor, color, fsfxOpacity);
+		}
 		
 		shader_fragColor = color;
 	}
