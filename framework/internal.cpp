@@ -1806,10 +1806,17 @@ void FontCacheElem::load(const char * filename)
 
 	free();
 	
+	//
+	
+	bool loaded = false;
+	
 #if USE_STBFONT
 	font = new StbFont();
 	
-	font->load(filename);
+	if (font->load(filename))
+	{
+		loaded = true;
+	}
 #else
 	if (FT_New_Face(globals.freeType, filename, 0, &face) != 0)
 	{
@@ -1822,14 +1829,19 @@ void FontCacheElem::load(const char * filename)
 
 		// fixme : this is a work around for FreeType returning monochrome data in FT_Load_Char, instead of the 8 bit gray scale data it should be returning, when it finds a stored glyph bitmap in the font itself. since we cannot directly upload bit packed font data to OpenGL, we 'force' FreeType to always render the outline version instead, by setting num_fixed_sizes to zero here
 		face->num_fixed_sizes = 0;
+		
+		loaded = true;
 	}
 #endif
 	
 #if USE_GLYPH_ATLAS
-	const GLint swizzleMask[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
-	
-	textureAtlas = new TextureAtlas();
-	textureAtlas->init(256, 16, GL_R8, false, false, swizzleMask);
+	if (loaded)
+	{
+		const GLint swizzleMask[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
+		
+		textureAtlas = new TextureAtlas();
+		textureAtlas->init(256, 16, GL_R8, false, false, swizzleMask);
+	}
 #endif
 }
 
