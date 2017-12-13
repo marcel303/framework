@@ -88,4 +88,7 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual int getNodeCpuHeatMax() const override;
 	virtual int getNodeCpuTimeUs(const GraphNodeId nodeId) const override;
+	
+	virtual int getNodeGpuHeatMax() const override;
+	virtual int getNodeGpuTimeUs(const GraphNodeId nodeId) const override;
 };

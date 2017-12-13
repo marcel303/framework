@@ -33,6 +33,9 @@
 #include <string>
 #include <vector>
 
+// todo : remove ?
+#include "vfxNodes/openglGpuTimer.h"
+
 #define EXTENDED_INPUTS 1
 
 struct GraphEdit_ResourceEditorBase;
@@ -336,7 +339,8 @@ enum VfxPlugType
 	kVfxPlugType_Image,
 	kVfxPlugType_ImageCpu,
 	kVfxPlugType_Channel,
-	kVfxPlugType_Trigger
+	kVfxPlugType_Trigger,
+	kVfxPlugType_Draw
 };
 
 #if EXTENDED_INPUTS
@@ -581,6 +585,9 @@ struct VfxNodeBase
 	
 	int tickTimeAvg;
 	int drawTimeAvg;
+	int gpuTimeAvg;
+	
+	OpenglGpuTimer gpuTimer; // todo : remove !
 	
 	VfxNodeBase();
 	

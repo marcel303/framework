@@ -596,6 +596,9 @@ bool RealTimeConnection::setPlugValue(VfxPlug * plug, const std::string & value)
 		return false;
 	case kVfxPlugType_Trigger:
 		return false;
+		
+	case kVfxPlugType_Draw:
+		return false;
 	}
 	
 	Assert(false); // all cases should be handled explicitly
@@ -667,6 +670,8 @@ bool RealTimeConnection::getPlugValue(VfxPlug * plug, std::string & value)
 			}
 		}
 	case kVfxPlugType_Trigger:
+		return false;
+	case kVfxPlugType_Draw:
 		return false;
 	}
 	
@@ -1055,6 +1060,7 @@ bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vecto
 	
 	d.add("tick: %.3fms", node->tickTimeAvg / 1000.0);
 	d.add("draw: %.3fms", node->drawTimeAvg / 1000.0);
+	d.add("gpu: %.3fms", node->gpuTimeAvg / 1000000.0);
 	
 #if VFXGRAPH_DEBUG_PREDEPS
 	d.add("predeps: %d", node->predeps.size());
@@ -1171,6 +1177,8 @@ static std::string vfxPlugTypeToValueTypeName(const VfxPlugType plugType)
 			return "channel";
 		case kVfxPlugType_Trigger:
 			return "trigger";
+		case kVfxPlugType_Draw:
+			return "draw";
 	}
 	
 	Assert(false);
@@ -1246,4 +1254,29 @@ int RealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const
 	auto node = nodeItr->second;
 	
 	return node->tickTimeAvg;
+}
+
+int RealTimeConnection::getNodeGpuHeatMax() const
+{
+	return 1000 * (1000 / 30);
+}
+
+int RealTimeConnection::getNodeGpuTimeUs(const GraphNodeId nodeId) const
+{
+	if (isLoading)
+		return false;
+	
+	Assert(vfxGraph != nullptr);
+	if (vfxGraph == nullptr)
+		return false;
+	
+	auto nodeItr = vfxGraph->nodes.find(nodeId);
+	
+	Assert(vfxGraph->nodesFailedToCreate.count(nodeId) != 0 || nodeItr != vfxGraph->nodes.end());
+	if (nodeItr == vfxGraph->nodes.end())
+		return false;
+	
+	auto node = nodeItr->second;
+	
+	return node->gpuTimeAvg;
 }

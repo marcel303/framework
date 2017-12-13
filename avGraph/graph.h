@@ -812,6 +812,16 @@ struct GraphEdit_RealTimeConnection
 	{
 		return 0;
 	}
+	
+	virtual int getNodeGpuHeatMax() const
+	{
+		return 1000;
+	}
+	
+	virtual int getNodeGpuTimeUs(const GraphNodeId nodeId) const
+	{
+		return 0;
+	}
 };
 
 //

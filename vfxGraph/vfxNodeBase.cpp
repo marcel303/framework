@@ -768,6 +768,7 @@ VfxNodeBase::VfxNodeBase()
 	, isPassthrough(false)
 	, tickTimeAvg(0)
 	, drawTimeAvg(0)
+	, gpuTimeAvg(0)
 {
 }
 
@@ -836,9 +837,13 @@ void VfxNodeBase::traverseDraw(const int traversalId)
 	
 	//
 	
+	gpuTimer.begin();
+	
 	t -= g_TimerRT.TimeUS_get();
 	
 	draw();
+	
+	gpuTimer.end();
 	
 	//
 	
@@ -849,6 +854,12 @@ void VfxNodeBase::traverseDraw(const int traversalId)
 	t += g_TimerRT.TimeUS_get();
 	
 	drawTimeAvg = (drawTimeAvg * 95 + t * 5) / 100;
+	
+	//
+	
+	gpuTimer.poll();
+	
+	gpuTimeAvg = (gpuTimeAvg * 95 + gpuTimer.elapsed * 5) / 100;
 }
 
 void VfxNodeBase::trigger(const int outputSocketIndex)
