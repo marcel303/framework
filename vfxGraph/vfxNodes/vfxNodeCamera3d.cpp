@@ -51,7 +51,7 @@ VfxNodeCamera3d::VfxNodeCamera3d()
 	, cameraWorldMatrixOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Any, kVfxPlugType_DontCare);
+	addInput(kInput_Draw, kVfxPlugType_Draw);
 	addInput(kInput_Interactive, kVfxPlugType_Bool);
 	addInput(kInput_X, kVfxPlugType_Float);
 	addInput(kInput_Y, kVfxPlugType_Float);
@@ -59,7 +59,7 @@ VfxNodeCamera3d::VfxNodeCamera3d()
 	addInput(kInput_Yaw, kVfxPlugType_Float);
 	addInput(kInput_Pitch, kVfxPlugType_Float);
 	addInput(kInput_Roll, kVfxPlugType_Float);
-	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
+	addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
 	addOutput(kOutput_WorldMatrix, kVfxPlugType_Channel, &cameraWorldMatrixOutput);
 	
 	camera = new Camera3d();

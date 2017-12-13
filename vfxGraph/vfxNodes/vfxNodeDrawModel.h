@@ -46,7 +46,7 @@ struct VfxNodeDrawModel : VfxNodeBase
 	
 	enum Output
 	{
-		kOutput_Any,
+		kOutput_Draw,
 		kOutput_PositionX,
 		kOutput_PositionY,
 		kOutput_PositionZ,

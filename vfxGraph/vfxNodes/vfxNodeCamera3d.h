@@ -35,7 +35,7 @@ struct VfxNodeCamera3d : VfxNodeBase
 {
 	enum Input
 	{
-		kInput_Any,
+		kInput_Draw,
 		kInput_Interactive,
 		kInput_X,
 		kInput_Y,
@@ -48,7 +48,7 @@ struct VfxNodeCamera3d : VfxNodeBase
 	
 	enum Output
 	{
-		kOutput_Any,
+		kOutput_Draw,
 		kOutput_WorldMatrix,
 		kOutput_COUNT
 	};

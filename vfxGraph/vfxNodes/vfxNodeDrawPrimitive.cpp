@@ -76,7 +76,7 @@ VfxNodeDrawPrimitive::VfxNodeDrawPrimitive()
 	: VfxNodeBase()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Before, kVfxPlugType_DontCare);
+	addInput(kInput_Draw, kVfxPlugType_Draw);
 	addInput(kInput_Type, kVfxPlugType_Int);
 	addInput(kInput_UseScreenSize, kVfxPlugType_Bool);
 	addInput(kInput_XChannel, kVfxPlugType_Channel);
@@ -90,7 +90,7 @@ VfxNodeDrawPrimitive::VfxNodeDrawPrimitive()
 	addInput(kInput_Stroke, kVfxPlugType_Bool);
 	addInput(kInput_StrokeSize, kVfxPlugType_Float);
 	addInput(kInput_StrokeColor, kVfxPlugType_Color);
-	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
+	addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
 }
 
 void VfxNodeDrawPrimitive::draw() const

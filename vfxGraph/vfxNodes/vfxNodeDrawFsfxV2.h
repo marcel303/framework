@@ -43,7 +43,7 @@ struct VfxNodeFsfxV2 : VfxNodeBase
 	
 	enum Input
 	{
-		kInput_Before,
+		kInput_Draw,
 		kInput_Shader,
 		kInput_Image1,
 		kInput_Image2,
@@ -57,7 +57,7 @@ struct VfxNodeFsfxV2 : VfxNodeBase
 	
 	enum Output
 	{
-		kOutput_Any,
+		kOutput_Draw,
 		kOutput_Image,
 		kOutput_COUNT
 	};

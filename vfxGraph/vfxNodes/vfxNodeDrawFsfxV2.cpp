@@ -131,7 +131,7 @@ VfxNodeFsfxV2::VfxNodeFsfxV2()
 	, imageOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Before, kVfxPlugType_DontCare);
+	addInput(kInput_Draw, kVfxPlugType_Draw);
 	addInput(kInput_Shader, kVfxPlugType_String);
 	addInput(kInput_Image1, kVfxPlugType_Image);
 	addInput(kInput_Image2, kVfxPlugType_Image);
@@ -140,7 +140,7 @@ VfxNodeFsfxV2::VfxNodeFsfxV2()
 	addInput(kInput_Param2, kVfxPlugType_Float);
 	addInput(kInput_Time, kVfxPlugType_Float);
 	addInput(kInput_Opacity, kVfxPlugType_Float);
-	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
+	addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
 	
 	if (initialized == false)

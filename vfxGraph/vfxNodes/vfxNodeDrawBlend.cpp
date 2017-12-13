@@ -51,9 +51,9 @@ VFX_NODE_TYPE(VfxNodeDrawBlend)
 VfxNodeDrawBlend::VfxNodeDrawBlend()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Any, kVfxPlugType_DontCare);
+	addInput(kInput_Draw, kVfxPlugType_Draw);
 	addInput(kInput_BlendMode, kVfxPlugType_Int);
-	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
+	addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
 }
 
 void VfxNodeDrawBlend::beforeDraw() const

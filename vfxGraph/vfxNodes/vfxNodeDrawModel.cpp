@@ -66,7 +66,7 @@ VfxNodeDrawModel::VfxNodeDrawModel()
 	addInput(kInput_AnimationLoopCount, kVfxPlugType_Float);
 	addInput(kInput_AnimationRootMotionEnabled, kVfxPlugType_Bool);
 	addInput(kInput_Scale, kVfxPlugType_Float);
-	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
+	addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
 	addOutput(kOutput_PositionX, kVfxPlugType_Channel, &positionX);
 	addOutput(kOutput_PositionY, kVfxPlugType_Channel, &positionY);
 	addOutput(kOutput_PositionZ, kVfxPlugType_Channel, &positionZ);

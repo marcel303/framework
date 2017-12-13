@@ -46,7 +46,7 @@ VfxNodeDrawSyphon::VfxNodeDrawSyphon()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_Image);
 	addInput(kInput_Name, kVfxPlugType_String);
-	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
+	addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
 }
 
 VfxNodeDrawSyphon::~VfxNodeDrawSyphon()

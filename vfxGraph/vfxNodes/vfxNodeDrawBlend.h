@@ -44,14 +44,14 @@ struct VfxNodeDrawBlend : VfxNodeBase
 
 	enum Input
 	{
-		kInput_Any,
+		kInput_Draw,
 		kInput_BlendMode,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
-		kOutput_Any,
+		kOutput_Draw,
 		kOutput_COUNT
 	};
 	

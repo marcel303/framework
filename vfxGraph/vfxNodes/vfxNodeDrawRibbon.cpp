@@ -49,14 +49,14 @@ VfxNodeDrawRibbon::VfxNodeDrawRibbon()
 	: VfxNodeBase()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Draw, kVfxPlugType_DontCare);
+	addInput(kInput_Draw, kVfxPlugType_Draw);
 	addInput(kInput_X1, kVfxPlugType_Float);
 	addInput(kInput_Y1, kVfxPlugType_Float);
 	addInput(kInput_Z1, kVfxPlugType_Float);
 	addInput(kInput_X2, kVfxPlugType_Float);
 	addInput(kInput_Y2, kVfxPlugType_Float);
 	addInput(kInput_Z2, kVfxPlugType_Float);
-	addOutput(kOutput_Draw, kVfxPlugType_DontCare, this);
+	addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
 }
 
 void VfxNodeDrawRibbon::tick(const float dt)

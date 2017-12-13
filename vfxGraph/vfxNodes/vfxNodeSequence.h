@@ -48,7 +48,7 @@ struct VfxNodeSequence : VfxNodeBase
 
 	enum Output
 	{
-		kOutput_Any,
+		kOutput_Draw,
 		kOutput_COUNT
 	};
 

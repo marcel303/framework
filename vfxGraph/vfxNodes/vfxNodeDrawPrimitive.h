@@ -33,7 +33,7 @@ struct VfxNodeDrawPrimitive : VfxNodeBase
 {
 	enum Input
 	{
-		kInput_Before,
+		kInput_Draw,
 		kInput_Type,
 		kInput_UseScreenSize,
 		kInput_XChannel,
@@ -52,7 +52,7 @@ struct VfxNodeDrawPrimitive : VfxNodeBase
 	
 	enum Output
 	{
-		kOutput_Any,
+		kOutput_Draw,
 		kOutput_COUNT
 	};
 	

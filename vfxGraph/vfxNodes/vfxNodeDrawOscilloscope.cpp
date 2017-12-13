@@ -71,7 +71,7 @@ VfxNodeDrawOscilloscope::VfxNodeDrawOscilloscope()
 	addInput(kInput_Intensity, kVfxPlugType_Float);
 	addInput(kInput_X, kVfxPlugType_Float);
 	addInput(kInput_Y, kVfxPlugType_Float);
-	addOutput(kOutput_Draw, kVfxPlugType_DontCare, this);
+	addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
 	
 	flags |= kFlag_CustomTraverseTick;
 }

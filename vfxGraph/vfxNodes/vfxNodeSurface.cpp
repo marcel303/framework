@@ -75,7 +75,7 @@ VfxNodeSurface::VfxNodeSurface()
 	, oldDepthTestEnabled(false)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Before, kVfxPlugType_DontCare);
+	addInput(kInput_Draw, kVfxPlugType_Draw);
 	addInput(kInput_Format, kVfxPlugType_Int);
 	addInput(kInput_Width, kVfxPlugType_Int);
 	addInput(kInput_Height, kVfxPlugType_Int);

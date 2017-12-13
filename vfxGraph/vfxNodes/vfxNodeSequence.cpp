@@ -47,15 +47,15 @@ VfxNodeSequence::VfxNodeSequence()
 	: VfxNodeBase()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_1, kVfxPlugType_DontCare);
-	addInput(kInput_2, kVfxPlugType_DontCare);
-	addInput(kInput_3, kVfxPlugType_DontCare);
-	addInput(kInput_4, kVfxPlugType_DontCare);
-	addInput(kInput_5, kVfxPlugType_DontCare);
-	addInput(kInput_6, kVfxPlugType_DontCare);
-	addInput(kInput_7, kVfxPlugType_DontCare);
-	addInput(kInput_8, kVfxPlugType_DontCare);
-	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
+	addInput(kInput_1, kVfxPlugType_Draw);
+	addInput(kInput_2, kVfxPlugType_Draw);
+	addInput(kInput_3, kVfxPlugType_Draw);
+	addInput(kInput_4, kVfxPlugType_Draw);
+	addInput(kInput_5, kVfxPlugType_Draw);
+	addInput(kInput_6, kVfxPlugType_Draw);
+	addInput(kInput_7, kVfxPlugType_Draw);
+	addInput(kInput_8, kVfxPlugType_Draw);
+	addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
 	
 	flags |= kFlag_CustomTraverseDraw;
 }

@@ -52,7 +52,7 @@ VfxNodeTransform2D::VfxNodeTransform2D()
 	, matrixOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Any, kVfxPlugType_DontCare);
+	addInput(kInput_Draw, kVfxPlugType_Draw);
 	addInput(kInput_X, kVfxPlugType_Float);
 	addInput(kInput_Y, kVfxPlugType_Float);
 	addInput(kInput_Scale, kVfxPlugType_Float);
@@ -60,7 +60,7 @@ VfxNodeTransform2D::VfxNodeTransform2D()
 	addInput(kInput_ScaleY, kVfxPlugType_Float);
 	addInput(kInput_Angle, kVfxPlugType_Float);
 	addInput(kInput_AngleNorm, kVfxPlugType_Float);
-	addOutput(kOutput_Any, kVfxPlugType_DontCare, this);
+	addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
 	addOutput(kOutput_Matrix, kVfxPlugType_Channel, &matrixOutput);
 }
 

@@ -35,7 +35,7 @@ struct VfxNodeTransform2D : VfxNodeBase
 {
 	enum Input
 	{
-		kInput_Any,
+		kInput_Draw,
 		kInput_X,
 		kInput_Y,
 		kInput_Scale,
@@ -48,7 +48,7 @@ struct VfxNodeTransform2D : VfxNodeBase
 	
 	enum Output
 	{
-		kOutput_Any,
+		kOutput_Draw,
 		kOutput_Matrix,
 		kOutput_COUNT
 	};
