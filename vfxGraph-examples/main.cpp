@@ -42,6 +42,7 @@
 
 using namespace tinyxml2;
 
+//#define FILENAME "graph.xml"
 //#define FILENAME "kinect.xml"
 //#define FILENAME "yuvtest.xml"
 //#define FILENAME "timeline.xml"
@@ -61,7 +62,8 @@ using namespace tinyxml2;
 //#define FILENAME "kinectTest2.xml"
 //#define FILENAME "testOscilloscope.xml"
 //#define FILENAME "testVisualizers.xml"
-#define FILENAME "testRibbon3.xml"
+//#define FILENAME "testRibbon3.xml"
+#define FILENAME "testPetals.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -304,6 +306,190 @@ static void handleRealTimeEdit(const std::string & filename)
 
 //
 
+#include "tinyxml2_helpers.h"
+
+static void checkVfxGraphIntegrity(const char * filename, const GraphEdit_TypeDefinitionLibrary & tdl)
+{
+	tinyxml2::XMLDocument d;
+	
+	if (d.LoadFile(filename) != XML_SUCCESS)
+	{
+		logError("%s: failed to load XML document", filename);
+	}
+	else
+	{
+		auto xmlGraph = d.FirstChildElement("graph");
+		
+		if (xmlGraph == nullptr)
+		{
+			logError("%s: failed to find graph element", filename);
+		}
+		else
+		{
+			std::map<GraphNodeId, std::string> nodes;
+			
+			for (auto xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
+			{
+				const GraphNodeId nodeId = intAttrib(xmlNode, "id", kGraphNodeIdInvalid);
+				const char * typeName = stringAttrib(xmlNode, "typeName", nullptr);
+				
+				if (nodeId == kGraphNodeIdInvalid)
+				{
+					logError("%s: found node without valid node id", filename);
+				}
+				else
+				{
+					auto i = nodes.find(nodeId);
+					
+					if (i != nodes.end())
+					{
+						logError("%s: found node with duplicate node id. nodeId=%d", filename, nodeId);
+					}
+					else
+					{
+						nodes.insert(std::make_pair(nodeId, typeName ? typeName : ""));
+					}
+				}
+				
+				if (typeName == nullptr)
+				{
+					logError("%s: found node without valid type name. nodeId=%d", filename, nodeId);
+				}
+				else
+				{
+					auto td = tdl.tryGetTypeDefinition(typeName);
+					
+					if (td == nullptr)
+					{
+						logError("%s: found node with type name that doesn't exist in type definition library. nodeId=%d, typeName=%s", filename, nodeId, typeName);
+					}
+				}
+			}
+			
+			//
+			
+			std::set<GraphLinkId> linkIds;
+			
+			for (auto xmlLink = xmlGraph->FirstChildElement("link"); xmlLink != nullptr; xmlLink = xmlLink->NextSiblingElement("link"))
+			{
+				const int linkId = intAttrib(xmlLink, "id", kGraphLinkIdInvalid);
+				const bool isDynamic = boolAttrib(xmlLink, "dynamic", false);
+				
+				if (linkId == kGraphLinkIdInvalid)
+				{
+					logError("%s: found link without valid link id", filename);
+				}
+				else
+				{
+					auto i = linkIds.find(linkId);
+					
+					if (i != linkIds.end())
+					{
+						logError("%s: found link with duplicate link id. linkId=%d", filename, linkId);
+					}
+					else
+					{
+						linkIds.insert(linkId);
+					}
+				}
+				
+				const int srcNodeId = intAttrib(xmlLink, "srcNodeId", kGraphNodeIdInvalid);
+				const char * srcNodeSocketName = stringAttrib(xmlLink, "srcNodeSocketName", nullptr);
+				const int dstNodeId = intAttrib(xmlLink, "dstNodeId", kGraphNodeIdInvalid);
+				const char * dstNodeSocketName = stringAttrib(xmlLink, "dstNodeSocketName", nullptr);
+				
+				if (srcNodeId == kGraphNodeIdInvalid)
+					logError("%s: found link with invalid src node id", filename);
+				if (srcNodeSocketName == nullptr)
+					logError("%s: found link with invalid src socket name", filename);
+				if (dstNodeId == kGraphNodeIdInvalid)
+					logError("%s: found link with invalid dst node id", filename);
+				if (dstNodeSocketName == nullptr)
+					logError("%s: found link with invalid dst socket name", filename);
+				
+				if (srcNodeId != kGraphNodeIdInvalid)
+				{
+					auto i = nodes.find(srcNodeId);
+					
+					if (i == nodes.end())
+						logError("%s: found link with non-existing src node. linkId=%d, srcNodeId=%d", filename, linkId, srcNodeId);
+					else
+					{
+						auto td = tdl.tryGetTypeDefinition(i->second);
+						
+						if (td != nullptr)
+						{
+							if (srcNodeSocketName != nullptr)
+							{
+								bool found = false;
+								
+								for (auto & input : td->inputSockets)
+									if (input.name == srcNodeSocketName)
+										found = true;
+								
+								if (found == false && isDynamic == false)
+								{
+									logError("%s: found link with non-existing src socket. linkId=%d, srcNodeId=%d, srcNodeSocketName=%s", filename, linkId, srcNodeId, srcNodeSocketName);
+								}
+							}
+						}
+					}
+				}
+				
+				if (dstNodeId != kGraphNodeIdInvalid)
+				{
+					auto i = nodes.find(dstNodeId);
+					
+					if (i == nodes.end())
+						logError("%s: found link with non-existing dst node. linkId=%d, dstNodeId=%d", filename, linkId, dstNodeId);
+					else
+					{
+						auto td = tdl.tryGetTypeDefinition(i->second);
+						
+						if (td != nullptr)
+						{
+							if (dstNodeSocketName != nullptr)
+							{
+								bool found = false;
+								
+								for (auto & output : td->outputSockets)
+									if (output.name == dstNodeSocketName)
+										found = true;
+								
+								if (found == false && isDynamic == false)
+								{
+									logError("%s: found link with non-existing dst socket. linkId=%d, dstNodeId=%d, dstNodeSocketName=%s", filename, linkId, dstNodeId, dstNodeSocketName);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+static void checkVfxGraphs(const GraphEdit_TypeDefinitionLibrary & tdl)
+{
+	std::vector<std::string> filenames = listFiles(".", true);
+	
+	for (auto & filename : filenames)
+	{
+		if (Path::GetExtension(filename, true) != "xml")
+			continue;
+		
+		if (filename == "ccl.xml" ||
+			filename == "combTest5.xml" ||
+			filename == "mlworkshopA.xml" ||
+			filename == "types.xml")
+			continue;
+		
+		checkVfxGraphIntegrity(filename.c_str(), tdl);
+	}
+}
+
+//
+
 int main(int argc, char * argv[])
 {
 	framework.enableRealTimeEditing = true;
@@ -341,6 +527,13 @@ int main(int argc, char * argv[])
 		GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
 		
 		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
+		
+		//
+		
+		if (true)
+		{
+			checkVfxGraphs(*typeDefinitionLibrary);
+		}
 		
 		//
 		
