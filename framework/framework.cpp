@@ -5538,18 +5538,26 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 	}
 	else if (globals.fontMode == FONT_SDF)
 	{
-		MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
-		
-		const MsdfGlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
-		
-		for (size_t i = 0; i < textLength; ++i)
+		if (globals.fontMSDF->m_glyphCache->m_isLoaded)
 		{
-			glyphs[i] = &glyphCache.findOrCreate(text[i]);
+			MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
+			
+			const MsdfGlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+			
+			for (size_t i = 0; i < textLength; ++i)
+			{
+				glyphs[i] = &glyphCache.findOrCreate(text[i]);
+			}
+			
+			float yTop;
+			
+			measureText_MSDF(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
 		}
-		
-		float yTop;
-		
-		measureText_MSDF(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
+		else
+		{
+			sx = 0.f;
+			sy = 0.f;
+		}
 	}
 }
 
@@ -5688,24 +5696,27 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 	}
 	else
 	{
-		MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
-		
-		const MsdfGlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
-		
-		for (size_t i = 0; i < textLength; ++i)
+		if (globals.fontMSDF->m_glyphCache->m_isLoaded)
 		{
-			glyphs[i] = &glyphCache.findOrCreate(text[i]);
-		}
-		
-		float sx, sy, yTop;
-		measureText_MSDF(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
-		
-		x += sx * (alignX - 1.f) / 2.f;
-		y += sy * (alignY - 1.f) / 2.f;
-		
-		y -= yTop;
+			MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
+			
+			const MsdfGlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+			
+			for (size_t i = 0; i < textLength; ++i)
+			{
+				glyphs[i] = &glyphCache.findOrCreate(text[i]);
+			}
+			
+			float sx, sy, yTop;
+			measureText_MSDF(glyphCache.m_font.fontInfo, size, text, glyphs, textLength, sx, sy, yTop);
+			
+			x += sx * (alignX - 1.f) / 2.f;
+			y += sy * (alignY - 1.f) / 2.f;
+			
+			y -= yTop;
 
-		drawText_MSDF(glyphCache, x, y, size, text, glyphs, textLength);
+			drawText_MSDF(glyphCache, x, y, size, text, glyphs, textLength);
+		}
 	}
 }
 
