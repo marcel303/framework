@@ -45,6 +45,8 @@ VFX_NODE_TYPE(VfxNodeDrawText)
 	
 	in("text", "string");
 	inEnum("sizeMode", "drawTextSizeMode");
+	in("fontFile", "string", "calibri.ttf");
+	in("fontSize", "float", "12");
 	in("align.x", "float");
 	in("align.y", "float");
 	in("angle", "float");
@@ -58,6 +60,8 @@ VfxNodeDrawText::VfxNodeDrawText()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Text, kVfxPlugType_String);
 	addInput(kInput_SizeMode, kVfxPlugType_Int);
+	addInput(kInput_FontFile, kVfxPlugType_String);
+	addInput(kInput_FontSize, kVfxPlugType_Float);
 	addInput(kInput_AlignX, kVfxPlugType_Float);
 	addInput(kInput_AlignY, kVfxPlugType_Float);
 	addInput(kInput_Angle, kVfxPlugType_Float);
@@ -74,10 +78,11 @@ void VfxNodeDrawText::draw() const
 	vfxCpuTimingBlock(VfxNodeDrawText);
 
 	const VfxColor defaultColor(1.f, 1.f, 1.f, 1.f);
-	const float fontSize = 12.f;
 
 	const char * text = getInputString(kInput_Text, nullptr);
 	const SizeMode sizeMode = (SizeMode)getInputInt(kInput_SizeMode, 0);
+	const char * fontFile = getInputString(kInput_FontFile, "calibri.ttf");
+	const float fontSize = getInputFloat(kInput_FontSize, 12.f);
 	const float alignX = getInputFloat(kInput_AlignX, 0.f);
 	const float alignY = getInputFloat(kInput_AlignY, 0.f);
 	const float angle = getInputFloat(kInput_Angle, 0.f);
@@ -88,7 +93,7 @@ void VfxNodeDrawText::draw() const
 	{
 		vfxGpuTimingBlock(VfxNodeDrawText);
 
-		setFont("calibri.ttf");
+		setFont(fontFile);
 		pushFontMode(FONT_SDF);
 
 		float scaleX = 1.f;

@@ -45,6 +45,8 @@ struct VfxNodeDrawText : VfxNodeBase
 	{
 		kInput_Text,
 		kInput_SizeMode,
+		kInput_FontFile,
+		kInput_FontSize,
 		kInput_AlignX,
 		kInput_AlignY,
 		kInput_Angle,
