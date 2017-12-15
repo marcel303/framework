@@ -195,7 +195,7 @@ void VfxNodeDrawModel::tick(const float dt)
 
 void VfxNodeDrawModel::draw() const
 {
-	if (isPassthrough || model == nullptr)
+	if (isPassthrough || model == nullptr || !tryGetOutput(kOutput_Draw)->isReferencedByLink)
 		return;
 	
 	vfxCpuTimingBlock(VfxNodeDrawModel);
