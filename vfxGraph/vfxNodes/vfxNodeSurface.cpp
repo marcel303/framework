@@ -262,6 +262,7 @@ void VfxNodeSurface::afterDraw() const
 	
 	popSurface();
 	
+	Assert(g_currentVfxSurface == surface);
 	g_currentVfxSurface = oldSurface;
 	oldSurface = nullptr;
 	
