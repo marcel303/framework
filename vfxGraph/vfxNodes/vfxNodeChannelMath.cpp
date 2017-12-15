@@ -224,7 +224,7 @@ void VfxNodeChannelMath::tick(const float dt)
 			while (!zipper.doneX())
 			{
 				const float valueA = zipper.read(0, 0.f);
-				const float valueB = zipper.read(0, 1.f);
+				const float valueB = zipper.read(1, 0.f);
 
 				const float result = evalMathOp(valueA, valueB, type);
 
