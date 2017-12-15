@@ -73,27 +73,10 @@ void VfxNodeSequence::customTraverseDraw(const int traversalId) const
 		
 		if (plug && plug->isConnected())
 		{
-			for (auto & predep : predeps)
-			{
-				bool isConnectedToPlug = false;
-				
-				for (auto & output : predep->outputs)
-				{
-					if (output.mem == plug->mem)
-					{
-						isConnectedToPlug = true;
-						break;
-					}
-				}
-				
-				if (isConnectedToPlug)
-				{
-					if (predep->lastDrawTraversalId != traversalId)
-						predep->traverseDraw(traversalId);
-					
-					break;
-				}
-			}
+			VfxNodeBase * vfxNode = reinterpret_cast<VfxNodeBase*>(plug->mem);
+			
+			if (vfxNode->lastDrawTraversalId != traversalId)
+				vfxNode->traverseDraw(traversalId);
 		}
 	}
 }
