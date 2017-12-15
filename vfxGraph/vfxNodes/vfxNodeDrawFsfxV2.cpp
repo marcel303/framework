@@ -348,7 +348,7 @@ void VfxNodeFsfxV2::freeShader()
 
 void VfxNodeFsfxV2::updateImageOutput(Surface * source) const
 {
-	if (outputs[kOutput_Image].isReferenced())
+	if (source != nullptr && outputs[kOutput_Image].isReferenced())
 	{
 		if (imageSurface == nullptr || imageSurface->getWidth() != source->getWidth() || imageSurface->getHeight() != source->getHeight())
 		{
