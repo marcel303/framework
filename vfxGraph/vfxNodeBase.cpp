@@ -828,6 +828,26 @@ void VfxNodeBase::traverseDraw(const int traversalId)
 	}
 	else
 	{
+		// first traverse the draw inputs
+		
+		for (auto & input : inputs)
+		{
+			if (input.type == kVfxPlugType_Draw && input.isConnected())
+			{
+				VfxNodeBase * vfxNode = reinterpret_cast<VfxNodeBase*>(input.mem);
+				
+				if (vfxNode->lastDrawTraversalId != traversalId)
+				{
+					vfxNode->traverseDraw(traversalId);
+				}
+			}
+		}
+		
+		// some nodes output an image during draw so we need to traverse the other nodes too
+		// but since we traverse each node only once we need to traverse the draw node first
+		// as drawing works as an 'immediate mode' operation, whereas all the other outputs
+		// after traversal will point to a cached value calculated during traversal
+		
 		for (auto predep : predeps)
 		{
 			if (predep->lastDrawTraversalId != traversalId)
@@ -837,13 +857,17 @@ void VfxNodeBase::traverseDraw(const int traversalId)
 	
 	//
 	
+#if ENABLE_VFXGRAPH_PROFILING
 	gpuTimer.begin();
+#endif
 	
 	t -= g_TimerRT.TimeUS_get();
 	
 	draw();
 	
+#if ENABLE_VFXGRAPH_PROFILING
 	gpuTimer.end();
+#endif
 	
 	//
 	
@@ -856,10 +880,12 @@ void VfxNodeBase::traverseDraw(const int traversalId)
 	drawTimeAvg = (drawTimeAvg * 95 + t * 5) / 100;
 	
 	//
-	
+
+#if ENABLE_VFXGRAPH_PROFILING
 	gpuTimer.poll();
 	
 	gpuTimeAvg = (gpuTimeAvg * 95 + gpuTimer.elapsed * 5) / 100;
+#endif
 }
 
 void VfxNodeBase::trigger(const int outputSocketIndex)

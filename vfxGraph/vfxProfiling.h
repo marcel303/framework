@@ -27,7 +27,9 @@
 
 #pragma once
 
-#if 0
+#define ENABLE_VFXGRAPH_PROFILING 0
+
+#if ENABLE_VFXGRAPH_PROFILING
 
 	#include "remotery.h"
 

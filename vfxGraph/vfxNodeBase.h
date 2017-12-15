@@ -33,8 +33,9 @@
 #include <string>
 #include <vector>
 
-// todo : remove ?
-#include "vfxNodes/openglGpuTimer.h"
+#if ENABLE_VFXGRAPH_PROFILING
+	#include "vfxNodes/openglGpuTimer.h"
+#endif
 
 #define EXTENDED_INPUTS 1
 
@@ -587,7 +588,9 @@ struct VfxNodeBase
 	int drawTimeAvg;
 	int gpuTimeAvg;
 	
+#if ENABLE_VFXGRAPH_PROFILING
 	OpenglGpuTimer gpuTimer; // todo : remove !
+#endif
 	
 	VfxNodeBase();
 	
