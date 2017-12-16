@@ -229,10 +229,25 @@ struct VfxChannelZipper
 		, x(0)
 		, y(0)
 	{
-		numChannels = 0;
-		
-		for (auto channel : _channels)
+		ctor(_channels.begin(), _channels.size());
+	}
+	
+	VfxChannelZipper(const VfxChannel * const * _channels, const int _numChannels)
+		: numChannels(0)
+		, sx(0)
+		, sy(0)
+		, x(0)
+		, y(0)
+	{
+		ctor(_channels, _numChannels);
+	}
+	
+	void ctor(const VfxChannel * const * _channels, const int _numChannels)
+	{
+		for (int i = 0; i < _numChannels; ++i)
 		{
+			const VfxChannel * channel = _channels[i];
+			
 			if (numChannels < kMaxChannels)
 			{
 				channels[numChannels] = channel;
@@ -295,6 +310,12 @@ struct VfxChannelZipper
 		{
 			nextY();
 		}
+	}
+	
+	void restart()
+	{
+		x = 0;
+		y = 0;
 	}
 	
 	float read(const int channelIndex, const float defaultValue) const
