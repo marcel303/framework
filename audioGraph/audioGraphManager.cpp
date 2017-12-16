@@ -629,6 +629,8 @@ void AudioGraphManager::tick(const float dt)
 {
 	SDL_LockMutex(audioMutex);
 	{
+		// update control values
+		
 		for (auto & controlValue : controlValues)
 		{
 			const float retain = std::powf(controlValue.smoothness, dt);

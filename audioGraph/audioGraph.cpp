@@ -28,6 +28,7 @@
 #include "audioGraph.h"
 #include "audioNodeBase.h"
 #include "framework.h"
+#include "Log.h"
 #include "Parse.h"
 
 #if AUDIO_GRAPH_ENABLE_TIMING
@@ -49,7 +50,10 @@ AudioGraph::AudioGraph()
 	, valuesToFree()
 	, time(0.0)
 	, activeFlags()
+	, memf()
+	, mems()
 	, events()
+	, controlValues()
 	, mutex(nullptr)
 {
 	mutex = SDL_CreateMutex();
@@ -94,6 +98,9 @@ void AudioGraph::destroy()
 	
 	valuesToFree.clear();
 	
+	auto oldAudioGraph = g_currentAudioGraph;
+	g_currentAudioGraph = this;
+	
 	for (auto & i : nodes)
 	{
 		AudioNodeBase * node = i.second;
@@ -114,6 +121,8 @@ void AudioGraph::destroy()
 	}
 	
 	nodes.clear();
+	
+	g_currentAudioGraph = oldAudioGraph;
 	
 	graph = nullptr;
 }
@@ -183,6 +192,18 @@ void AudioGraph::tick(const float dt)
 	Assert(g_currentAudioGraph == nullptr);
 	g_currentAudioGraph = this;
 	
+	// update control values
+	
+	for (auto & controlValue : controlValues)
+	{
+		const float retain = std::powf(controlValue.smoothness, dt);
+		
+		controlValue.currentX = controlValue.currentX * retain + controlValue.desiredX * (1.f - retain);
+		controlValue.currentY = controlValue.currentY * retain + controlValue.desiredY * (1.f - retain);
+	}
+
+	exportControlValues();
+	
 	// process nodes
 	
 	for (auto & i : nodes)
@@ -240,6 +261,117 @@ bool AudioGraph::isFLagSet(const char * name) const
 	SDL_UnlockMutex(mutex);
 	
 	return result;
+}
+
+void AudioGraph::registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY)
+{
+	SDL_LockMutex(mutex);
+	{
+		bool exists = false;
+		
+		for (auto & controlValue : controlValues)
+		{
+			if (controlValue.name == name)
+			{
+				controlValue.refCount++;
+				exists = true;
+				break;
+			}
+		}
+		
+		if (exists == false)
+		{
+			controlValues.resize(controlValues.size() + 1);
+			
+			auto & controlValue = controlValues.back();
+			
+			controlValue.type = type;
+			controlValue.name = name;
+			controlValue.refCount = 1;
+			controlValue.min = min;
+			controlValue.max = max;
+			controlValue.smoothness = smoothness;
+			controlValue.defaultX = defaultX;
+			controlValue.defaultY = defaultY;
+			controlValue.desiredX = defaultX;
+			controlValue.desiredY = defaultY;
+			controlValue.currentX = defaultX;
+			controlValue.currentY = defaultY;
+			
+			std::sort(controlValues.begin(), controlValues.end(), [](const AudioControlValue & a, const AudioControlValue & b) { return a.name < b.name; });
+		}
+	}
+	SDL_UnlockMutex(mutex);
+}
+
+void AudioGraph::unregisterControlValue(const char * name)
+{
+	SDL_LockMutex(mutex);
+	{
+		bool exists = false;
+		
+		for (auto controlValueItr = controlValues.begin(); controlValueItr != controlValues.end(); ++controlValueItr)
+		{
+			auto & controlValue = *controlValueItr;
+			
+			if (controlValue.name == name)
+			{
+				controlValue.refCount--;
+				
+				if (controlValue.refCount == 0)
+				{
+					//LOG_DBG("erasing control value %s", name);
+					
+					controlValues.erase(controlValueItr);
+				}
+				
+				exists = true;
+				break;
+			}
+		}
+		
+		Assert(exists);
+		if (exists == false)
+		{
+			LOG_WRN("failed to unregister control value %s", name);
+		}
+	}
+	SDL_UnlockMutex(mutex);
+}
+
+bool AudioGraph::findControlValue(const char * name, AudioControlValue & result) const
+{
+	bool found = false;
+	
+	SDL_LockMutex(mutex);
+	{
+		for (auto controlValueItr = controlValues.begin(); controlValueItr != controlValues.end(); ++controlValueItr)
+		{
+			auto & controlValue = *controlValueItr;
+			
+			if (controlValue.name == name)
+			{
+				result = controlValue;
+				found = true;
+				break;
+			}
+		}
+	}
+	SDL_UnlockMutex(mutex);
+	
+	return found;
+}
+
+void AudioGraph::exportControlValues()
+{
+	SDL_LockMutex(mutex);
+	{
+		for (auto & controlValue : controlValues)
+		{
+			setMemf(controlValue.name.c_str(), controlValue.currentX, controlValue.currentY);
+		}
+	}
+	SDL_UnlockMutex(mutex);
 }
 
 void AudioGraph::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)

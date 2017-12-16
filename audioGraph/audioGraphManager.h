@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "audioTypes.h"
 #include <list>
 #include <map>
 #include <string>
@@ -64,32 +65,6 @@ struct AudioGraphFile
 
 	AudioGraphFile();
 	~AudioGraphFile();
-};
-
-struct AudioControlValue
-{
-	enum Type
-	{
-		kType_Vector1d,
-		kType_Vector2d,
-		kType_Random1d,
-		kType_Random2d,
-	};
-	
-	Type type;
-	std::string name;
-	int refCount = 0;
-	
-	float min;
-	float max;
-	float smoothness;
-	float defaultX;
-	float defaultY;
-	
-	float desiredX;
-	float desiredY;
-	float currentX;
-	float currentY;
 };
 
 struct AudioGraphManager
