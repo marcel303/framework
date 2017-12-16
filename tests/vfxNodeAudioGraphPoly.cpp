@@ -27,6 +27,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioGraph.h"
 #include "audioGraphManager.h"
+#include "soundmix.h"
+#include "StringEx.h"
 #include "vfxNodeAudioGraphPoly.h"
 
 #include "framework.h"
@@ -36,16 +38,20 @@ VFX_NODE_TYPE(VfxNodeAudioGraphPoly)
 	typeName = "audioGraph.poly";
 	in("file", "string");
 	in("volume", "channel");
+	out("voices", "channel");
 }
 
 VfxNodeAudioGraphPoly::VfxNodeAudioGraphPoly()
 	: VfxNodeBase()
 	, instances()
 	, currentFilename()
+	, voicesData()
+	, voicesOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Filename, kVfxPlugType_String);
 	addInput(kInput_Volume, kVfxPlugType_Channel);
+	addOutput(kOutput_Voices, kVfxPlugType_Channel, &voicesOutput);
 	
 	memset(instances, 0, sizeof(instances));
 }
@@ -68,7 +74,10 @@ void VfxNodeAudioGraphPoly::updateDynamicInputs()
 	for (int i = 0; i < kMaxInstances; ++i)
 	{
 		if (instances[i] != nullptr)
+		{
 			audioGraphInstance = instances[i];
+			break;
+		}
 	}
 	
 	if (audioGraphInstance == nullptr)
@@ -96,6 +105,7 @@ void VfxNodeAudioGraphPoly::updateDynamicInputs()
 		{
 			if (controlValues.size() != currentControlValues.size())
 			{
+				logDebug("control values size changed. %d -> %d", currentControlValues.size(), controlValues.size());
 				equal = false;
 			}
 		}
@@ -107,7 +117,10 @@ void VfxNodeAudioGraphPoly::updateDynamicInputs()
 			for (auto & controlValue : controlValues)
 			{
 				if (controlValue.name != currentControlValues[index])
+				{
+					logDebug("control values name changed (%d)", index);
 					equal = false;
+				}
 				
 				index++;
 			}
@@ -269,6 +282,20 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			}
 			
 			index++;
+		}
+		
+		const int numVoices = g_voiceMgr->voices.size();
+		
+		voicesData.allocOnSizeChange(numVoices * AUDIO_UPDATE_SIZE);
+		voicesOutput.setData2D(voicesData.data, true, AUDIO_UPDATE_SIZE, numVoices);
+		
+		float * __restrict voiceData = voicesData.data;
+		
+		for (auto & voice : g_voiceMgr->voices)
+		{
+			voice.source->generate(voiceData, AUDIO_UPDATE_SIZE);
+			
+			voiceData += AUDIO_UPDATE_SIZE;
 		}
 	}
 	SDL_UnlockMutex(g_audioGraphMgr->audioMutex);

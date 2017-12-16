@@ -44,6 +44,7 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 	
 	enum Output
 	{
+		kOutput_Voices,
 		kOutput_COUNT
 	};
 	
@@ -52,6 +53,9 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 	std::string currentFilename;
 	
 	std::vector<std::string> currentControlValues;
+	
+	VfxChannelData voicesData;
+	VfxChannel voicesOutput;
 	
 	VfxNodeAudioGraphPoly();
 	virtual ~VfxNodeAudioGraphPoly() override;
