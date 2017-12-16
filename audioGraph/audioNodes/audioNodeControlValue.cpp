@@ -62,6 +62,13 @@ AUDIO_NODE_TYPE(controlValue, AudioNodeControlValue)
 AudioNodeControlValue::AudioNodeControlValue()
 	: AudioNodeBase()
 	, currentName()
+	, currentScope(kScope_None)
+	, currentType(kType_None)
+	, currentMin(0.f)
+	, currentMax(0.f)
+	, currentSmoothness(0.f)
+	, currentDefaultX(0.f)
+	, currentDefaultY(0.f)
 	, isRegistered(false)
 	, valueOutput()
 {
@@ -82,15 +89,27 @@ AudioNodeControlValue::~AudioNodeControlValue()
 {
 	if (isRegistered)
 	{
-		g_audioGraphMgr->unregisterControlValue(currentName.c_str());
-		isRegistered = false;
+		if (currentScope == kScope_Shared)
+		{
+			g_audioGraphMgr->unregisterControlValue(currentName.c_str());
+			isRegistered = false;
+		}
+		else if (currentScope == kScope_PerInstance)
+		{
+			g_currentAudioGraph->unregisterControlValue(currentName.c_str());
+			isRegistered = false;
+		}
+		else
+		{
+			Assert(false);
+		}
 	}
 }
 
 void AudioNodeControlValue::tick(const float dt)
 {
 	const char * name = getInputString(kInput_Name, "");
-	const Type _type = (Type)getInputInt(kInput_Type, 0);
+	const Type type = (Type)getInputInt(kInput_Type, 0);
 	const Scope scope = (Scope)getInputInt(kInput_Scope, 0);
 	const float min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero)->getMean();
 	const float max = getInputAudioFloat(kInput_Max, &AudioFloat::One)->getMean();
@@ -98,63 +117,98 @@ void AudioNodeControlValue::tick(const float dt)
 	const float defaultX = getInputAudioFloat(kInput_DefaultX, &AudioFloat::Zero)->getMean();
 	const float defaultY = getInputAudioFloat(kInput_DefaultY, &AudioFloat::Zero)->getMean();
 	
-	AudioControlValue::Type type =
-		_type == kType_Vector1D ? AudioControlValue::kType_Vector1d :
-		_type == kType_Vector2D ? AudioControlValue::kType_Vector2d :
-		_type == kType_Random1D ? AudioControlValue::kType_Random1d :
-		_type == kType_Random2D ? AudioControlValue::kType_Random2d :
-		AudioControlValue::kType_Vector1d;
-
-	if (scope == kScope_Shared)
+	bool changed = false;
+	
+	if (name != currentName ||
+		scope != currentScope ||
+		type != currentType ||
+		min != currentMin ||
+		max != currentMax ||
+		smoothness != currentSmoothness ||
+		defaultX != currentDefaultX ||
+		defaultY != currentDefaultY)
 	{
-		bool changed = false;
+		changed = true;
+	}
+	
+	if (changed)
+	{
+		// unregister
 		
-		if (name != currentName)
+		if (currentScope == kScope_None)
 		{
-			changed = true;
+			//
 		}
-		else
-		{
-			AudioControlValue controlValue;
-			
-			if (g_audioGraphMgr->findControlValue(name, controlValue) == false)
-			{
-				changed = true;
-			}
-			else
-			{
-				const float min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero)->getMean();
-				const float max = getInputAudioFloat(kInput_Max, &AudioFloat::One)->getMean();
-				const float smoothness = getInputAudioFloat(kInput_Smoothness, &AudioFloat::Zero)->getMean();
-				const float defaultX = getInputAudioFloat(kInput_DefaultX, &AudioFloat::Zero)->getMean();
-				const float defaultY = getInputAudioFloat(kInput_DefaultY, &AudioFloat::Zero)->getMean();
-				
-				if (type != controlValue.type ||
-					min != controlValue.min ||
-					max != controlValue.max ||
-					smoothness != controlValue.smoothness ||
-					defaultX != controlValue.defaultX ||
-					defaultY != controlValue.defaultY)
-				{
-					changed = true;
-				}
-			}
-		}
-		
-		if (changed)
+		else if (currentScope == kScope_Shared)
 		{
 			if (isRegistered)
 			{
 				g_audioGraphMgr->unregisterControlValue(currentName.c_str());
 				isRegistered = false;
 			}
-			
-			currentName = name;
-			
-			if (!currentName.empty())
+		}
+		else if (currentScope == kScope_PerInstance)
+		{
+			if (isRegistered)
 			{
-				g_audioGraphMgr->registerControlValue(type, currentName.c_str(), min, max, smoothness, defaultX, defaultY);
+				g_currentAudioGraph->unregisterControlValue(currentName.c_str());
+				isRegistered = false;
+			}
+		}
+		else
+		{
+			Assert(false);
+		}
+		
+		//
+		
+		currentName = name;
+		currentScope = scope;
+		currentType = type;
+		currentMin = min;
+		currentMax = max;
+		currentSmoothness = smoothness;
+		currentDefaultX = defaultX;
+		currentDefaultY = defaultY;
+		
+		AudioControlValue::Type _type =
+			type == kType_Vector1D ? AudioControlValue::kType_Vector1d :
+			type == kType_Vector2D ? AudioControlValue::kType_Vector2d :
+			type == kType_Random1D ? AudioControlValue::kType_Random1d :
+			type == kType_Random2D ? AudioControlValue::kType_Random2d :
+			AudioControlValue::kType_Vector1d;
+		
+		if (!currentName.empty())
+		{
+			if (scope == kScope_Shared)
+			{
+				g_audioGraphMgr->registerControlValue(
+					_type,
+					currentName.c_str(),
+					min,
+					max,
+					smoothness,
+					defaultX,
+					defaultY);
+				
 				isRegistered = true;
+			}
+			else if (scope == kScope_PerInstance)
+			{
+				g_currentAudioGraph->registerControlValue(
+					_type,
+					currentName.c_str(),
+					min,
+					max,
+					smoothness,
+					defaultX,
+					defaultY);
+				
+				isRegistered = true;
+			}
+			else
+			{
+				Assert(false);
 			}
 		}
 	}

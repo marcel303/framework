@@ -33,6 +33,7 @@ struct AudioNodeControlValue : AudioNodeBase
 {
 	enum Type
 	{
+		kType_None = -1,
 		kType_Vector1D,
 		kType_Vector2D,
 		kType_Random1D,
@@ -41,6 +42,7 @@ struct AudioNodeControlValue : AudioNodeBase
 
 	enum Scope
 	{
+		kScope_None = -1,
 		kScope_Shared,
 		kScope_PerInstance
 	};
@@ -66,6 +68,13 @@ struct AudioNodeControlValue : AudioNodeBase
 	};
 	
 	std::string currentName;
+	Scope currentScope;
+	Type currentType;
+	float currentMin;
+	float currentMax;
+	float currentSmoothness;
+	float currentDefaultX;
+	float currentDefaultY;
 	bool isRegistered;
 	
 	AudioFloat valueOutput[2];
