@@ -82,5 +82,8 @@ struct AudioNodeControlValue : AudioNodeBase
 	AudioNodeControlValue();
 	virtual ~AudioNodeControlValue() override;
 	
+	void updateControlValueRegistration();
+	
+	virtual void init(const GraphNode & node) override;
 	virtual void tick(const float dt) override;
 };

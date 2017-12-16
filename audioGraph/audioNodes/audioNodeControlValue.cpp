@@ -106,7 +106,7 @@ AudioNodeControlValue::~AudioNodeControlValue()
 	}
 }
 
-void AudioNodeControlValue::tick(const float dt)
+void AudioNodeControlValue::updateControlValueRegistration()
 {
 	const char * name = getInputString(kInput_Name, "");
 	const Type type = (Type)getInputInt(kInput_Type, 0);
@@ -242,4 +242,14 @@ void AudioNodeControlValue::tick(const float dt)
 			valueOutput[1].setScalar(0.f);
 		}
 	}
+}
+
+void AudioNodeControlValue::init(const GraphNode & node)
+{
+	updateControlValueRegistration();
+}
+
+void AudioNodeControlValue::tick(const float dt)
+{
+	updateControlValueRegistration();
 }
