@@ -37,7 +37,7 @@
 
 //
 
-AudioGraph * g_currentAudioGraph = nullptr;
+__thread AudioGraph * g_currentAudioGraph = nullptr;
 
 double g_currentAudioTime = 0.0;
 
@@ -98,7 +98,7 @@ void AudioGraph::destroy()
 	
 	valuesToFree.clear();
 	
-	auto oldAudioGraph = g_currentAudioGraph;
+	Assert(g_currentAudioGraph == nullptr);
 	g_currentAudioGraph = this;
 	
 	for (auto & i : nodes)
@@ -122,7 +122,8 @@ void AudioGraph::destroy()
 	
 	nodes.clear();
 	
-	g_currentAudioGraph = oldAudioGraph;
+	Assert(g_currentAudioGraph == this);
+	g_currentAudioGraph = nullptr;
 	
 	graph = nullptr;
 }
@@ -480,6 +481,9 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 	
 	audioGraph->graph = const_cast<Graph*>(&graph);
 	
+	Assert(g_currentAudioGraph == nullptr);
+	g_currentAudioGraph = audioGraph;
+	
 	for (auto & nodeItr : graph.nodes)
 	{
 		auto & node = nodeItr.second;
@@ -609,6 +613,9 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 		
 		audioNode->init(node);
 	}
+	
+	Assert(g_currentAudioGraph == audioGraph);
+	g_currentAudioGraph = nullptr;
 	
 	return audioGraph;
 }

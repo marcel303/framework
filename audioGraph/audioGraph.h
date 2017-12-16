@@ -48,7 +48,7 @@ struct AudioPlug;
 
 struct SDL_mutex;
 
-extern AudioGraph * g_currentAudioGraph;
+extern __thread AudioGraph * g_currentAudioGraph;
 
 extern double g_currentAudioTime;
 
