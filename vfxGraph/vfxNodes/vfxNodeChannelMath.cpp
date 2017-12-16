@@ -193,10 +193,14 @@ void VfxNodeChannelMath::tick(const float dt)
 	
 	VfxChannelZipper zipper({ a, b });
 	
-	if (isPassthrough || zipper.done())
+	if (isPassthrough)
 	{
 		channelData.free();
-		channelOutput = *a;
+		
+		if (a != nullptr)
+			channelOutput = *a;
+		else
+			channelOutput.reset();
 	}
 	else if (zipper.done())
 	{
