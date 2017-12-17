@@ -652,31 +652,6 @@ public:
 
 //
 
-class UiCacheElem
-{
-public:
-	typedef std::map<std::string, Dictionary> Map;
-	
-	Map map;
-	
-	void free();
-	void load(const char * filename);
-};
-
-class UiCache
-{
-public:
-	typedef std::map<std::string, UiCacheElem> Map;
-	
-	Map m_map;
-	
-	void clear();
-	void reload();
-	UiCacheElem & findOrCreate(const char * filename);
-};
-
-//
-
 template <typename Type, int kMaxStackSize>
 struct Stack
 {
@@ -846,4 +821,3 @@ extern SoundCache g_soundCache;
 extern FontCache g_fontCache;
 extern MsdfFontCache g_fontCacheMSDF;
 extern GlyphCache g_glyphCache;
-extern UiCache g_uiCache;

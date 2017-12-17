@@ -494,7 +494,6 @@ bool Framework::shutdown()
 	g_fontCache.clear();
 	g_fontCacheMSDF.clear();
 	g_glyphCache.clear();
-	g_uiCache.clear();
 	
 	// shut down FreeType
 	
@@ -899,7 +898,6 @@ void Framework::reloadCaches()
 	g_fontCache.reload();
 	g_fontCacheMSDF.reload();
 	g_glyphCache.clear();
-	g_uiCache.reload();
 	
 	globals.resourceVersion++;
 	
@@ -1045,13 +1043,6 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 		{
 			g_fontCache.findOrCreate(f);
 			g_fontCacheMSDF.findOrCreate(f);
-		}
-		else if (e == "txt")
-		{
-			FileReader r;
-			std::string line;
-			if (r.open(f, true) && r.read(line) && strstr(line.c_str(), "#ui"))
-				g_uiCache.findOrCreate(f);
 		}
 		else if (strstr(f, ".vs") == f + fl - 3 || strstr(f, ".ps") == f + fl - 3)
 		{

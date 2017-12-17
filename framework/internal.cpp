@@ -66,7 +66,6 @@ SoundCache g_soundCache;
 FontCache g_fontCache;
 MsdfFontCache g_fontCacheMSDF;
 GlyphCache g_glyphCache;
-UiCache g_uiCache;
 
 // -----
 
@@ -1890,7 +1889,8 @@ FontCacheElem & FontCache::findOrCreate(const char * name)
 void GlyphCache::clear()
 {
 #if USE_GLYPH_ATLAS
-	// todo : free texture atlas elements
+	// note : clearing the font cache will free the texture atlasses and the texture atlas elements with it
+	//        there's no need to free them manually here
 #else
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
@@ -2722,97 +2722,6 @@ MsdfFontCacheElem & MsdfFontCache::findOrCreate(const char * name)
 }
 
 #endif
-
-//
-
-void UiCacheElem::free()
-{
-	map.clear();
-}
-
-void UiCacheElem::load(const char * filename)
-{
-	ScopedLoadTimer loadTimer(filename);
-
-	free();
-	
-	FileReader r;
-	
-	if (!r.open(filename, true))
-	{
-		//logError("%s: failed to open file!", filename);
-	}
-	else
-	{
-		std::string line;
-		
-		int nameAlloc = 0;
-		
-		while (r.read(line))
-		{
-			if (line.size() == 0 || line[0] == '#')
-			{
-				// empty line or comment
-				continue;
-			}
-			
-			Dictionary d;
-			
-			if (!d.parse(line))
-			{
-				logError("%s: parse error: %s", filename, line.c_str());
-			}
-			else
-			{
-				std::string name = d.getString("name", "");
-				
-				if (name.empty())
-				{
-					char temp[32];
-					sprintf_s(temp, sizeof(temp), "noname_%d", nameAlloc++);
-					name = temp;
-				}
-				
-				map[name] = d;
-			}
-		}
-		
-		logInfo("loaded %s", filename);
-	}
-}
-
-void UiCache::clear()
-{
-	m_map.clear();
-}
-
-void UiCache::reload()
-{
-	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
-	{
-		i->second.load(i->first.c_str());
-	}
-}
-
-UiCacheElem & UiCache::findOrCreate(const char * filename)
-{
-	Map::iterator i = m_map.find(filename);
-	
-	if (i != m_map.end())
-	{
-		return i->second;
-	}
-	else
-	{
-		UiCacheElem elem;
-		
-		elem.load(filename);
-		
-		i = m_map.insert(Map::value_type(filename, elem)).first;
-		
-		return i->second;
-	}
-}
 
 //
 
