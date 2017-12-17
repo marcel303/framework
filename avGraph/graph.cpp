@@ -6120,6 +6120,18 @@ void GraphEdit::nodeRemove(const GraphNodeId nodeId)
 	{
 		realTimeConnection->nodeRemove(nodeId);
 	}
+	
+	// remove visualizers referenced by node
+	
+	for (auto i = visualizers.begin(); i != visualizers.end(); )
+	{
+		auto & visualizer = i->second;
+		
+		if (visualizer.nodeId == nodeId)
+			i = visualizers.erase(i);
+		else
+			++i;
+	}
 }
 
 void GraphEdit::linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
