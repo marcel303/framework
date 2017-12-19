@@ -22,7 +22,7 @@ private:
 	void addChar(const char c);
 	void removeChar();
 
-	static const int kMaxBufferSize = 256;
+	static const int kMaxBufferSize = 1024;
 
 	bool m_isActive;
 	bool m_canCancel;

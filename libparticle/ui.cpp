@@ -5,6 +5,8 @@
 #include "textfield.h"
 #include "ui.h"
 
+#define MAX_TEXTBOX_LENGTH 512
+
 struct UiElem;
 struct UiMenu;
 
@@ -679,9 +681,9 @@ static UiTextboxResult doTextBoxImpl(T & value, const char * name, const float x
 			textFieldIsInit = true;
 			
 			// fixme : it's not technically correct to open and close just to init. also, SDL text input ..
-			textField.open(32, false, false);
+			textField.open(MAX_TEXTBOX_LENGTH, false, false);
 
-			char temp[32];
+			char temp[MAX_TEXTBOX_LENGTH];
 			valueToString(value, temp, sizeof(temp));
 			textField.setText(temp);
 
@@ -698,9 +700,9 @@ static UiTextboxResult doTextBoxImpl(T & value, const char * name, const float x
 			}
 			else
 			{
-				textField.open(32, false, false);
+				textField.open(MAX_TEXTBOX_LENGTH, false, false);
 
-				char temp[32];
+				char temp[MAX_TEXTBOX_LENGTH];
 				valueToString(value, temp, sizeof(temp));
 				textField.setText(temp);
 				
