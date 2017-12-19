@@ -52,11 +52,16 @@ void AudioNodeVoice::AudioSourceVoiceNode::generate(ALIGN16 float * __restrict s
 	}
 	else
 	{
-		const AudioFloat * audio = voiceNode->getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
-		
-		audio->expand();
-		
-		memcpy(samples, audio->samples, numSamples * sizeof(float));
+		Assert(g_currentAudioGraph == nullptr);
+		g_currentAudioGraph = voiceNode->audioGraph;
+		{
+			const AudioFloat * audio = voiceNode->getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
+			
+			audio->expand();
+			
+			memcpy(samples, audio->samples, numSamples * sizeof(float));
+		}
+		g_currentAudioGraph = nullptr;
 	}
 }
 
@@ -66,6 +71,7 @@ AudioNodeVoice::AudioNodeVoice()
 	: AudioNodeBase()
 	, source()
 	, voice(nullptr)
+	, audioGraph(nullptr)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);
@@ -74,6 +80,11 @@ AudioNodeVoice::AudioNodeVoice()
 	//
 	
 	source.voiceNode = this;
+	
+	//
+	
+	Assert(g_currentAudioGraph != nullptr);
+	audioGraph = g_currentAudioGraph;
 }
 
 AudioNodeVoice::~AudioNodeVoice()

@@ -95,6 +95,8 @@ struct AudioNodeVoice4D : AudioNodeBase
 	AudioSourceVoiceNode source;
 	AudioVoice * voice;
 	
+	AudioGraph * audioGraph;
+	
 	AudioNodeVoice4D();
 	~AudioNodeVoice4D() override;
 	

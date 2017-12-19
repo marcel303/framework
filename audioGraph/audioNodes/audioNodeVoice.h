@@ -30,6 +30,8 @@
 #include "audioNodeBase.h"
 #include "soundmix.h" // AudioSource
 
+struct AudioGraph;
+
 struct AudioNodeVoice : AudioNodeBase
 {
 	enum Speaker
@@ -60,6 +62,8 @@ struct AudioNodeVoice : AudioNodeBase
 	
 	AudioSourceVoiceNode source;
 	AudioVoice * voice;
+	
+	AudioGraph * audioGraph;
 	
 	AudioNodeVoice();
 	virtual ~AudioNodeVoice() override;
