@@ -157,6 +157,28 @@ void VfxNodeAudioGraphPoly::updateDynamicInputs()
 	}
 }
 
+void VfxNodeAudioGraphPoly::listChannels(const VfxChannel ** channels, const VfxChannel * volume, int & numChannels, const int maxChannels)
+{
+	numChannels = 0;
+	
+	if (numChannels < maxChannels)
+		channels[numChannels++] = volume;
+	
+	for (int i = 0; i < dynamicInputs.size(); ++i)
+	{
+		auto input = tryGetInput(kInput_COUNT + i);
+		
+		Assert(input != nullptr);
+		if (input != nullptr && input->type == kVfxPlugType_Channel)
+		{
+			const VfxChannel * channel = input->isConnected() ? input->getChannel() : nullptr;
+			
+			if (numChannels < maxChannels)
+				channels[numChannels++] = channel;
+		}
+	}
+}
+
 void VfxNodeAudioGraphPoly::tick(const float dt)
 {
 	const char * filename = getInputString(kInput_Filename, nullptr);
@@ -171,6 +193,9 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			if (instances[i] != nullptr)
 				g_audioGraphMgr->free(instances[i]);
 		}
+		
+		voicesData.free();
+		voicesOutput.reset();
 		
 		return;
 	}
@@ -188,36 +213,16 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	
 	//
 	
-	updateDynamicInputs();
-	
-	//
-	
-	const VfxChannel * channels[128];
-	int numChannels = 0;
-	
-	channels[numChannels++] = volume;
-	
-	for (int i = 0; i < dynamicInputs.size(); ++i)
-	{
-		auto input = tryGetInput(kInput_COUNT + i);
-		
-		Assert(input != nullptr);
-		if (input != nullptr && input->type == kVfxPlugType_Channel)
-		{
-			const VfxChannel * channel = input->isConnected() ? input->getChannel() : nullptr;
-			
-			if (numChannels < 128)
-				channels[numChannels++] = channel;
-		}
-	}
-	
-	VfxChannelZipper zipper(channels, numChannels);
+	VfxChannelZipper volumeZipper({ volume });
 	
 	int index = 0;
 	
-	while (!zipper.done())
+	AudioGraphInstance * newInstances[kMaxInstances];
+	int numNewInstances = 0;
+	
+	while (!volumeZipper.done() && index < kMaxInstances)
 	{
-		const float volume = zipper.read(0, 0.f);
+		const float volume = volumeZipper.read(0, 1.f);
 		
 		if (volume == 0.f)
 		{
@@ -227,12 +232,19 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		else
 		{
 			if (instances[index] == nullptr)
+			{
 				instances[index] = g_audioGraphMgr->createInstance(filename);
+				
+				g_audioGraphMgr->selectInstance(instances[index]); // fixme
+				
+				newInstances[numNewInstances] = instances[index];
+				numNewInstances++;
+			}
 		}
 		
 		//
 		
-		zipper.next();
+		volumeZipper.next();
 		
 		index++;
 	}
@@ -247,12 +259,24 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	
 	//
 	
+	updateDynamicInputs();
+	
+	//
+	
+	const VfxChannel * channels[128];
+	int numChannels;
+	
+	listChannels(channels, volume, numChannels, 128);
+	
+	VfxChannelZipper zipper(channels, numChannels);
+	
 	index = 0;
 	
 	SDL_LockMutex(g_audioGraphMgr->audioMutex);
 	{
 		for (auto & dynamicInput : dynamicInputs)
 		{
+			volumeZipper.restart();
 			zipper.restart();
 			
 			auto input = tryGetInput(kInput_COUNT + index);
@@ -260,34 +284,53 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			Assert(input != nullptr);
 			if (input != nullptr && input->type == kVfxPlugType_Channel)
 			{
-				for (int i = 0; i < kMaxInstances; ++i)
+				int instanceIndex = 0;
+				
+				while (!volumeZipper.done())
 				{
-					if (instances[i] == nullptr)
-						continue;
+					const float volume = volumeZipper.read(0, 1.f);
 					
-					Assert(!zipper.done());
-					
-					auto audioGraph = instances[i]->audioGraph;
-					
-					for (auto & controlValue : audioGraph->controlValues)
+					if (volume == 0.f)
 					{
-						if (controlValue.name == dynamicInput.name)
+						Assert(instances[instanceIndex] == nullptr);
+					}
+					else if (instanceIndex < kMaxInstances)
+					{
+						Assert(instances[instanceIndex] != nullptr);
+					
+						auto audioGraph = instances[instanceIndex]->audioGraph;
+						
+						for (auto & controlValue : audioGraph->controlValues)
 						{
-							controlValue.desiredX = zipper.read(index + 1, controlValue.defaultX);
+							if (controlValue.name == dynamicInput.name)
+							{
+								controlValue.desiredX = zipper.read(index + 1, controlValue.defaultX);
+							}
 						}
 					}
 					
+					volumeZipper.next();
 					zipper.next();
+					
+					instanceIndex++;
 				}
 			}
 			
 			index++;
 		}
 		
+		for (int i = 0; i < numNewInstances; ++i)
+		{
+			newInstances[i]->audioGraph->triggerEvent("begin");
+		}
+		
 		const int numVoices = g_voiceMgr->voices.size();
 		
 		voicesData.allocOnSizeChange(numVoices * AUDIO_UPDATE_SIZE);
-		voicesOutput.setData2D(voicesData.data, true, AUDIO_UPDATE_SIZE, numVoices);
+		// todo : change this back into setData2D
+		//voicesOutput.setData2D(voicesData.data, true, AUDIO_UPDATE_SIZE, numVoices);
+		voicesOutput.setData(voicesData.data, true, AUDIO_UPDATE_SIZE * numVoices);
+		// todo : 'channel.merge' (transform) node which can make 2D into 1D and vice versa, concatenate channels, etc
 		
 		float * __restrict voiceData = voicesData.data;
 		

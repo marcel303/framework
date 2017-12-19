@@ -33,7 +33,7 @@ struct AudioGraphInstance;
 
 struct VfxNodeAudioGraphPoly : VfxNodeBase
 {
-	static const int kMaxInstances = 32;
+	static const int kMaxInstances = 128;
 	
 	enum Input
 	{
@@ -61,6 +61,7 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 	virtual ~VfxNodeAudioGraphPoly() override;
 	
 	void updateDynamicInputs();
+	void listChannels(const VfxChannel ** channels, const VfxChannel * volume, int & numChannels, const int maxChannels);
 	
 	virtual void tick(const float dt) override;
 	
