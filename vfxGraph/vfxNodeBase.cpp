@@ -1042,6 +1042,13 @@ void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
 					input->setMap(output->mem, inMin, inMax, outMin, outMax);
 				}
 			}
+			
+			// make sure the output is up to date, as it may have been skipped during traversal as it was possibly ot connected
+			
+			if (dstNode->lastTickTraversalId != g_currentVfxGraph->nextTickTraversalId)
+			{
+				dstNode->traverseTick(g_currentVfxGraph->nextTickTraversalId, 0.f);
+			}
 		}
 	}
 }
