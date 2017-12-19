@@ -247,6 +247,7 @@ AudioGraphManager::AudioGraphManager()
 	, files()
 	, selectedFile(nullptr)
 	, audioMutex(nullptr)
+	, audioValueHistorySet(nullptr)
 {
 }
 
@@ -268,6 +269,8 @@ void AudioGraphManager::init(SDL_mutex * mutex)
 	createAudioNodeTypeDefinitions(*typeDefinitionLibrary, g_audioNodeTypeRegistrationList);
 	
 	audioMutex = mutex;
+	
+	audioValueHistorySet = new AudioValueHistorySet();
 }
 
 void AudioGraphManager::shut()
@@ -284,6 +287,9 @@ void AudioGraphManager::shut()
 	g_audioGraphMgr = oldAudioGraphMgr;
 	
 	//
+	
+	delete audioValueHistorySet;
+	audioValueHistorySet = nullptr;
 	
 	audioMutex = nullptr;
 	
@@ -384,7 +390,7 @@ AudioGraphInstance * AudioGraphManager::createInstance(const char * filename)
 	//
 	
 	auto audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary);
-	auto realTimeConnection = new AudioRealTimeConnection();
+	auto realTimeConnection = new AudioRealTimeConnection(audioValueHistorySet);
 	
 	//
 	

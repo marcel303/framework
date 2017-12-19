@@ -45,7 +45,7 @@ struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
 	
 	AudioValueHistorySet * audioValueHistorySet;
 	
-	AudioRealTimeConnection();
+	AudioRealTimeConnection(AudioValueHistorySet * audioValueHistorySet);
 	virtual ~AudioRealTimeConnection() override;
 	
 	void updateAudioValues();
@@ -83,4 +83,58 @@ struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual int getNodeCpuHeatMax() const override;
 	virtual int getNodeCpuTimeUs(const GraphNodeId nodeId) const override;
+};
+
+//
+
+struct AudioFloat;
+
+struct AudioValueHistory
+{
+	static const int kHistorySize = 8;
+	static const int kNumSamples = AUDIO_UPDATE_SIZE * kHistorySize;
+	
+	uint64_t lastUpdateTime;
+	
+	float samples[kNumSamples];
+	
+	bool isValid;
+	
+	AudioValueHistory();
+	
+	void provide(const AudioFloat & value);
+	
+	bool isActive() const;
+	
+	AudioValueHistory(const AudioValueHistory & other) = delete;
+	AudioValueHistory & operator=(AudioValueHistory const & other) = delete;
+};
+
+struct AudioValueHistory_SocketRef
+{
+	GraphNodeId nodeId;
+	int srcSocketIndex;
+	int dstSocketIndex;
+	
+	AudioValueHistory_SocketRef()
+		: nodeId(kGraphNodeIdInvalid)
+		, srcSocketIndex(-1)
+		, dstSocketIndex(-1)
+	{
+	}
+	
+	bool operator<(const AudioValueHistory_SocketRef & other) const
+	{
+		if (nodeId != other.nodeId)
+			return nodeId < other.nodeId;
+		else if (srcSocketIndex != other.srcSocketIndex)
+			return srcSocketIndex < other.srcSocketIndex;
+		else
+			return dstSocketIndex < other.dstSocketIndex;
+	}
+};
+
+struct AudioValueHistorySet
+{
+	std::map<AudioValueHistory_SocketRef, AudioValueHistory> s_audioValues;
 };

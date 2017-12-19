@@ -36,6 +36,7 @@
 struct AudioGraph;
 struct AudioGraphFileRTC;
 struct AudioRealTimeConnection;
+struct AudioValueHistorySet;
 struct Graph;
 struct GraphEdit;
 struct GraphEdit_TypeDefinitionLibrary;
@@ -88,6 +89,8 @@ struct AudioGraphManager
 	std::map<std::string, Memf> memf;
 	
 	SDL_mutex * audioMutex;
+	
+	AudioValueHistorySet * audioValueHistorySet;
 	
 	AudioGraphManager();
 	~AudioGraphManager();

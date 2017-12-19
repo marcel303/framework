@@ -41,73 +41,30 @@
 #include "soundmix.h"
 #include "Timer.h"
 
-struct AudioValueHistory
+AudioValueHistory::AudioValueHistory()
+	: lastUpdateTime(0)
+	, isValid(false)
 {
-	static const int kHistorySize = 8;
-	static const int kNumSamples = AUDIO_UPDATE_SIZE * kHistorySize;
-	
-	GraphNodeId nodeId;
-	int srcSocketIndex;
-	int dstSocketIndex;
-	
-	uint64_t lastUpdateTime;
-	
-	float samples[kNumSamples];
-	
-	AudioValueHistory()
-		: nodeId(kGraphNodeIdInvalid)
-		, srcSocketIndex(-1)
-		, dstSocketIndex(-1)
-		, lastUpdateTime(0)
-		, samples()
-	{
-	}
-	
-	void provide(const AudioFloat & value)
-	{
-		value.expand();
-		
-		memmove(samples, samples + AUDIO_UPDATE_SIZE, (kNumSamples - AUDIO_UPDATE_SIZE) * sizeof(float));
-		
-		memcpy(samples + kNumSamples - AUDIO_UPDATE_SIZE, value.samples, AUDIO_UPDATE_SIZE * sizeof(float));
-	}
-	
-	bool isActive() const
-	{
-		const uint64_t time = g_TimerRT.TimeUS_get();
-		
-		return (time - lastUpdateTime) < 1000 * 1000;
-	}
-};
+	memset(samples, 0, sizeof(samples));
+}
 
-struct SocketRef
+void AudioValueHistory::provide(const AudioFloat & value)
 {
-	GraphNodeId nodeId;
-	int srcSocketIndex;
-	int dstSocketIndex;
+	value.expand();
 	
-	SocketRef()
-		: nodeId(kGraphNodeIdInvalid)
-		, srcSocketIndex(-1)
-		, dstSocketIndex(-1)
-	{
-	}
+	memmove(samples, samples + AUDIO_UPDATE_SIZE, (kNumSamples - AUDIO_UPDATE_SIZE) * sizeof(float));
 	
-	bool operator<(const SocketRef & other) const
-	{
-		if (nodeId != other.nodeId)
-			return nodeId < other.nodeId;
-		else if (srcSocketIndex != other.srcSocketIndex)
-			return srcSocketIndex < other.srcSocketIndex;
-		else
-			return dstSocketIndex < other.dstSocketIndex;
-	}
-};
+	memcpy(samples + kNumSamples - AUDIO_UPDATE_SIZE, value.samples, AUDIO_UPDATE_SIZE * sizeof(float));
+	
+	isValid = true;
+}
 
-struct AudioValueHistorySet
+bool AudioValueHistory::isActive() const
 {
-	std::map<SocketRef, AudioValueHistory> s_audioValues;
-};
+	const uint64_t time = g_TimerRT.TimeUS_get();
+	
+	return (time - lastUpdateTime) < 1000 * 1000;
+}
 
 //
 
@@ -121,19 +78,21 @@ struct AudioScope
 		: mutex(_mutex)
 	{
 		Assert(mutex != nullptr);
-		SDL_LockMutex(mutex);
+		const int result = SDL_LockMutex(mutex);
+		Assert(result == 0);
 	}
 	
 	~AudioScope()
 	{
 		Assert(mutex != nullptr);
-		SDL_UnlockMutex(mutex);
+		const int result = SDL_UnlockMutex(mutex);
+		Assert(result == 0);
 	}
 };
 
 //
 
-AudioRealTimeConnection::AudioRealTimeConnection()
+AudioRealTimeConnection::AudioRealTimeConnection(AudioValueHistorySet * _audioValueHistorySet)
 	: GraphEdit_RealTimeConnection()
 	, audioGraph(nullptr)
 	, audioGraphPtr(nullptr)
@@ -141,13 +100,11 @@ AudioRealTimeConnection::AudioRealTimeConnection()
 	, isLoading(false)
 	, audioValueHistorySet(nullptr)
 {
-	audioValueHistorySet = new AudioValueHistorySet();
+	audioValueHistorySet = _audioValueHistorySet;
 }
 
 AudioRealTimeConnection::~AudioRealTimeConnection()
 {
-	delete audioValueHistorySet;
-	audioValueHistorySet = nullptr;
 }
 
 void AudioRealTimeConnection::updateAudioValues()
@@ -157,6 +114,9 @@ void AudioRealTimeConnection::updateAudioValues()
 		return;
 
 	AUDIO_SCOPE;
+	
+	if (audioGraph->currentTickTraversalId < 0)
+		return;
 	
 	for (auto i = audioValueHistorySet->s_audioValues.begin(); i != audioValueHistorySet->s_audioValues.end(); )
 	{
@@ -179,6 +139,9 @@ void AudioRealTimeConnection::updateAudioValues()
 				
 				auto node = nodeItr->second;
 				
+				if (node->lastTickTraversalId == -1)
+					continue;
+				
 				auto input = node->tryGetInput(socketRef.srcSocketIndex);
 				
 				Assert(input != nullptr);
@@ -187,9 +150,14 @@ void AudioRealTimeConnection::updateAudioValues()
 				
 				if (input->isConnected() && input->type == kAudioPlugType_FloatVec)
 				{
-					const AudioFloat & value = input->getAudioFloat();
-					
-					audioValueHistory.provide(value);
+					Assert(g_currentAudioGraph == nullptr);
+					g_currentAudioGraph = audioGraph;
+					{
+						const AudioFloat & value = input->getAudioFloat();
+						
+						audioValueHistory.provide(value);
+					}
+					g_currentAudioGraph = nullptr;
 				}
 			}
 			else if (socketRef.dstSocketIndex != -1)
@@ -202,6 +170,9 @@ void AudioRealTimeConnection::updateAudioValues()
 				
 				auto node = nodeItr->second;
 				
+				if (node->lastTickTraversalId == -1)
+					continue;
+				
 				auto output = node->tryGetOutput(socketRef.dstSocketIndex);
 				
 				Assert(output != nullptr);
@@ -210,9 +181,14 @@ void AudioRealTimeConnection::updateAudioValues()
 				
 				if (output->isConnected() && output->type == kAudioPlugType_FloatVec)
 				{
-					const AudioFloat & value = output->getAudioFloat();
-					
-					audioValueHistory.provide(value);
+					Assert(g_currentAudioGraph == nullptr);
+					g_currentAudioGraph = audioGraph;
+					{
+						const AudioFloat & value = output->getAudioFloat();
+						
+						audioValueHistory.provide(value);
+					}
+					g_currentAudioGraph = nullptr;
 				}
 			}
 			
@@ -464,8 +440,6 @@ void AudioRealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNo
 	{
 		input->disconnect();
 	}
-	
-	// todo : we should reconnect with the node socket's editor value when set here
 	
 	{
 		// attempt to remove dst node from predeps
@@ -827,18 +801,18 @@ bool AudioRealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, 
 	{
 		AUDIO_SCOPE;
 		
-		SocketRef ref;
+		AudioValueHistory_SocketRef ref;
 		ref.nodeId = nodeId;
 		ref.srcSocketIndex = srcSocketIndex;
 		
 		auto & history = audioValueHistorySet->s_audioValues[ref];
+		
 		history.lastUpdateTime = g_TimerRT.TimeUS_get();
 		
-		channels.addChannel(history.samples, history.kNumSamples, true);
+		if (history.isValid)
+			channels.addChannel(history.samples, history.kNumSamples, true);
 		
-		// todo : let channel own data
-		
-		return true;
+		return history.isValid;
 	}
 	else
 	{
@@ -873,16 +847,15 @@ bool AudioRealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, 
 	{
 		AUDIO_SCOPE;
 		
-		SocketRef ref;
+		AudioValueHistory_SocketRef ref;
 		ref.nodeId = nodeId;
 		ref.dstSocketIndex = dstSocketIndex;
 		
 		auto & history = audioValueHistorySet->s_audioValues[ref];
 		history.lastUpdateTime = g_TimerRT.TimeUS_get();
 		
-		channels.addChannel(history.samples, history.kNumSamples, true);
-		
-		// todo : let channel own data
+		if (history.isValid)
+			channels.addChannel(history.samples, history.kNumSamples, true);
 		
 		return true;
 	}
@@ -980,7 +953,7 @@ int AudioRealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 	
 	int result = 0;
 	
-	if (node->lastTickTraversalId + 1 == audioGraph->nextTickTraversalId)
+	if (node->lastTickTraversalId == audioGraph->currentTickTraversalId)
 		result |= kActivity_Continuous;
 	
 	if (node->editorIsTriggered)
