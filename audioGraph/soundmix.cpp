@@ -218,6 +218,38 @@ void audioBufferAdd(
 	}
 }
 
+void audioBufferAdd(
+	      float * __restrict audioBufferDst,
+	const float * __restrict audioBufferSrc,
+	const int numSamples,
+	const float * __restrict scale)
+{
+	int begin = 0;
+	
+	// todo : verify this function works correctly
+	
+#if ENABLE_SSE
+	Assert((uintptr_t(audioBufferDst) & 15) == 0);
+	Assert((uintptr_t(audioBufferSrc) & 15) == 0);
+	Assert((uintptr_t(scale) & 15) == 0);
+	
+	      __m128 * __restrict audioBufferDst_4 = (__m128*)audioBufferDst;
+	const __m128 * __restrict audioBufferSrc_4 = (__m128*)audioBufferSrc;
+	const __m128 * __restrict scale_4 = (__m128*)scale;
+	const int numSamples4 = numSamples / 4;
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		audioBufferDst_4[i] = audioBufferDst_4[i] + audioBufferSrc_4[i] * scale_4[i];
+	}
+	
+	begin = numSamples4 * 4;
+#endif
+
+	for (int i = begin; i < AUDIO_UPDATE_SIZE; ++i)
+		audioBufferDst[i] = audioBufferDst[i] + audioBufferSrc[i] * scale[i];
+}
+
 void audioBufferDryWet(
 	float * dstBuffer,
 	const float * __restrict dryBuffer,
@@ -302,6 +334,46 @@ void audioBufferDryWet(
 			dryBuffer[i] * dryness +
 			wetBuffer[i] * wetness;
 	}
+}
+
+float audioBufferSum(
+	const float * __restrict audioBuffer,
+	const int numSamples)
+{
+	// todo : verify this function works correctly
+	
+	int begin = 0;
+	float sum = 0.f;
+	
+#if ENABLE_SSE
+	const __m128 * __restrict audioBuffer_4 = (__m128*)audioBuffer;
+	const int numSamples4 = numSamples / 4;
+	
+	__m128 sum4 = _mm_setzero_ps();
+
+	for (int i = 0; i < AUDIO_UPDATE_SIZE / 4; ++i)
+	{
+		sum4 += audioBuffer_4[i];
+	}
+	
+	__m128 x = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(0, 0, 0, 0));
+	__m128 y = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(1, 1, 1, 1));
+	__m128 z = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(2, 2, 2, 2));
+	__m128 w = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(3, 3, 3, 3));
+
+	__m128 sum1 = _mm_add_ps(_mm_add_ps(x, y), _mm_add_ps(z, w));
+
+	sum = _mm_cvtss_f32(sum1);
+	
+	begin = numSamples4 * 4;
+#endif
+
+	for (int i = begin; i < AUDIO_UPDATE_SIZE; ++i)
+	{
+		sum += audioBuffer[i];
+	}
+	
+	return sum;
 }
 
 //

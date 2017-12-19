@@ -470,6 +470,12 @@ extern void audioBufferAdd(
 	const float scale);
 
 extern void audioBufferAdd(
+	      float * __restrict audioBufferDst,
+	const float * __restrict audioBufferSrc,
+	const int numSamples,
+	const float * __restrict scale);
+
+extern void audioBufferAdd(
 	const float * __restrict audioBuffer1,
 	const float * __restrict audioBuffer2,
 	const int numSamples,
@@ -489,6 +495,10 @@ extern void audioBufferDryWet(
 	const float * __restrict wetBuffer,
 	const int numSamples,
 	const float wetness);
+
+extern float audioBufferSum(
+	const float * __restrict audioBuffer,
+	const int numSamples);
 
 //
 

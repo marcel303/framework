@@ -45,8 +45,10 @@ double g_currentAudioTime = 0.0;
 
 AudioGraph::AudioGraph()
 	: nodes()
-	, nextTickTraversalId(0)
+	, currentTickTraversalId(-1)
+#if AUDIO_GRAPH_ENABLE_TIMING
 	, graph(nullptr)
+#endif
 	, valuesToFree()
 	, time(0.0)
 	, activeFlags()
@@ -125,7 +127,9 @@ void AudioGraph::destroy()
 	Assert(g_currentAudioGraph == this);
 	g_currentAudioGraph = nullptr;
 	
+#if AUDIO_GRAPH_ENABLE_TIMING
 	graph = nullptr;
+#endif
 }
 
 void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & inputValue)
@@ -207,17 +211,17 @@ void AudioGraph::tick(const float dt)
 	
 	// process nodes
 	
+	++currentTickTraversalId;
+	
 	for (auto & i : nodes)
 	{
 		AudioNodeBase * node = i.second;
 		
-		if (node->lastTickTraversalId != nextTickTraversalId)
+		if (node->lastTickTraversalId != currentTickTraversalId)
 		{
-			node->traverseTick(nextTickTraversalId, dt);
+			node->traverseTick(currentTickTraversalId, dt);
 		}
 	}
-	
-	++nextTickTraversalId;
 	
 	//
 	
@@ -479,7 +483,9 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 {
 	AudioGraph * audioGraph = new AudioGraph();
 	
+#if AUDIO_GRAPH_ENABLE_TIMING
 	audioGraph->graph = const_cast<Graph*>(&graph);
+#endif
 	
 	Assert(g_currentAudioGraph == nullptr);
 	g_currentAudioGraph = audioGraph;

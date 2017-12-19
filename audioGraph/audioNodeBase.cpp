@@ -50,38 +50,11 @@ float AudioFloat::getMean() const
 		return getScalar();
 	else
 	{
-		// todo : add audioBuffer*** function to calculate the mean value of a buffer
+		const float sum = audioBufferSum(samples, AUDIO_UPDATE_SIZE);
 		
-	#if AUDIO_USE_SSE && 0
-		const __m128 * __restrict samples4 = (__m128*)samples;
+		const float mean = sum / AUDIO_UPDATE_SIZE;
 		
-		__m128 sum4 = _mm_setzero_ps();
-		
-		for (int i = 0; i < AUDIO_UPDATE_SIZE / 4; ++i)
-		{
-			sum4 += samples4[i];
-		}
-		
-		__m128 x = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(0, 0, 0, 0));
-		__m128 y = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(1, 1, 1, 1));
-		__m128 z = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(2, 2, 2, 2));
-		__m128 w = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(3, 3, 3, 3));
-		
-		__m128 sum1 = _mm_add_ps(_mm_add_ps(x, y), _mm_add_ps(z, w));
-		
-		const float sum = _mm_cvtss_f32(_mm_mul_ps(sum1, _mm_set1_ps(1.f / AUDIO_UPDATE_SIZE)));
-	#else
-		float sum = 0.f;
-		
-		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-		{
-			sum += samples[i];
-		}
-		
-		sum /= AUDIO_UPDATE_SIZE;
-	#endif
-		
-		return sum;
+		return mean;
 	}
 }
 
@@ -232,10 +205,7 @@ void AudioFloat::addMul(const AudioFloat & other, const AudioFloat & gain)
 		}
 		else
 		{
-			// todo : write SSE code path for this case
-			
-			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-				samples[i] += other.samples[i] * gain.samples[i];
+			audioBufferAdd(samples, other.samples, AUDIO_UPDATE_SIZE, gain.samples);
 		}
 	}
 }
@@ -429,12 +399,10 @@ AudioFloat * AudioFloatArray::get()
 {
 	// fixme : g_currentAudioGraph should always be valid here? right now we just validate without checking traversal id when g_currentAudioGraph is nullptr. potetially doing this work twice (or more). on the other hand, if get is called after the update, it may set the traversal id to that of the next frame, without working on the array that will be updated in the future. this would be even worse..
 	
-	if (g_currentAudioGraph == nullptr || lastUpdateTick != g_currentAudioGraph->nextTickTraversalId)
+	Assert(g_currentAudioGraph != nullptr);
+	if (lastUpdateTick != g_currentAudioGraph->currentTickTraversalId)
 	{
-		if (g_currentAudioGraph != nullptr)
-		{
-			lastUpdateTick = g_currentAudioGraph->nextTickTraversalId;
-		}
+		lastUpdateTick = g_currentAudioGraph->currentTickTraversalId;
 		
 		update();
 	}
@@ -537,7 +505,6 @@ AudioNodeBase::AudioNodeBase()
 	, predeps()
 	, triggerTargets()
 	, lastTickTraversalId(-1)
-	, lastDrawTraversalId(-1)
 	, editorIsTriggered(false)
 	, isPassthrough(false)
 	, isDeprecated(false)
@@ -779,7 +746,20 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 		GraphEdit_TypeDefinition typeDefinition;
 		
 		typeDefinition.typeName = registration->typeName;
-		typeDefinition.displayName = registration->displayName;
+		
+		if (registration->displayName.empty())
+		{
+			auto pos = registration->typeName.rfind('.');
+			
+			if (pos == std::string::npos)
+				typeDefinition.displayName = registration->typeName;
+			else
+				typeDefinition.displayName = registration->typeName.substr(pos + 1);
+		}
+		else
+		{
+			typeDefinition.displayName = registration->displayName;
+		}
 		
 		for (int i = 0; i < (int)registration->inputs.size(); ++i)
 		{

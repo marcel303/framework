@@ -316,7 +316,6 @@ struct AudioNodeBase
 	std::vector<TriggerTarget> triggerTargets;
 	
 	int lastTickTraversalId;
-	int lastDrawTraversalId;
 	bool editorIsTriggered; // only here for real-time connection with graph editor
 	
 	bool isPassthrough;
