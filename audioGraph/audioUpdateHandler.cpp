@@ -159,8 +159,6 @@ void AudioUpdateHandler::portAudioCallback(
 	if (audioGraphMgr != nullptr)
 	{
 		audioGraphMgr->tick(dt);
-		
-		audioGraphMgr->updateAudioValues();
 	}
 	
 	if (voiceMgr != nullptr)
@@ -173,6 +171,11 @@ void AudioUpdateHandler::portAudioCallback(
 		{
 			voiceMgr->generateOsc(*oscStream, forceSyncOsc);
 		}
+	}
+	
+	if (audioGraphMgr != nullptr)
+	{
+		audioGraphMgr->updateAudioValues();
 	}
 	
 	g_audioInputChannels = nullptr;
