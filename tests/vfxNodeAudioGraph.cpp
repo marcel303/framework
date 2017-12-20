@@ -276,11 +276,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 		_outputMode == kOutputMode_MultiChannel ? AudioVoiceManager::kOutputMode_MultiChannel :
 		AudioVoiceManager::kOutputMode_Mono;
 	
-	SDL_LockMutex(g_voiceMgr->mutex);
-	{
-		g_voiceMgr->generateAudio(channelData.data, numSamples, limit, limitPeak, outputMode, false);
-	}
-	SDL_UnlockMutex(g_voiceMgr->mutex);
+	g_voiceMgr->generateAudio(channelData.data, numSamples, limit, limitPeak, outputMode, false);
 	
 	int index = kInput_COUNT;
 	
