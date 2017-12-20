@@ -102,9 +102,9 @@ void VfxNodeAudioGraph::updateDynamicInputs()
 	}
 	else
 	{
-		SDL_LockMutex(g_audioGraphMgr->audioMutex);
-		auto controlValues = g_audioGraphMgr->controlValues;
-		SDL_UnlockMutex(g_audioGraphMgr->audioMutex);
+		SDL_LockMutex(g_audioGraphMgr->globals.audioMutex);
+		auto controlValues = g_audioGraphMgr->globals.controlValues;
+		SDL_UnlockMutex(g_audioGraphMgr->globals.audioMutex);
 		
 		bool equal = true;
 		
@@ -286,9 +286,9 @@ void VfxNodeAudioGraph::tick(const float dt)
 		
 		if (input != nullptr && input->type == kVfxPlugType_Float)
 		{
-			SDL_LockMutex(g_audioGraphMgr->audioMutex);
+			SDL_LockMutex(g_audioGraphMgr->globals.audioMutex);
 			{
-				for (auto & controlValue : g_audioGraphMgr->controlValues)
+				for (auto & controlValue : g_audioGraphMgr->globals.controlValues)
 				{
 					if (controlValue.name == dynamicInput.name)
 					{
@@ -299,7 +299,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 					}
 				}
 			}
-			SDL_UnlockMutex(g_audioGraphMgr->audioMutex);
+			SDL_UnlockMutex(g_audioGraphMgr->globals.audioMutex);
 		}
 		
 		index++;
