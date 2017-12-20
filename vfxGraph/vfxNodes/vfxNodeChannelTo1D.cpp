@@ -26,7 +26,7 @@
 */
 
 #include "framework.h"
-#include "vfxNodeChannelMerge.h"
+#include "vfxNodeChannelTo1D.h"
 #include "vfxTypes.h"
 
 VFX_NODE_TYPE(VfxNodeChannelTo1D)
