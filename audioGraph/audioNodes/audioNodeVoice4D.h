@@ -156,6 +156,8 @@ struct AudioNodeVoice4DReturn : AudioNodeBase
 
 	AudioSourceReturnNode source;
 	AudioVoice * voice;
+	
+	AudioGraph * audioGraph;
 
 	AudioFloat audioOutput;
 	

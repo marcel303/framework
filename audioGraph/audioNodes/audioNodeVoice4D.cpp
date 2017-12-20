@@ -390,11 +390,16 @@ void AudioNodeVoice4DReturn::AudioSourceReturnNode::generate(ALIGN16 float * __r
 	}
 	else
 	{
-		const AudioFloat * audio = returnNode->getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
-		
-		audio->expand();
-		
-		memcpy(samples, audio->samples, numSamples * sizeof(float));
+		Assert(g_currentAudioGraph == nullptr);
+		g_currentAudioGraph = returnNode->audioGraph;
+		{
+			const AudioFloat * audio = returnNode->getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
+			
+			audio->expand();
+			
+			memcpy(samples, audio->samples, numSamples * sizeof(float));
+		}
+		g_currentAudioGraph = nullptr;
 	}
 }
 
@@ -402,6 +407,7 @@ AudioNodeVoice4DReturn::AudioNodeVoice4DReturn()
 	: AudioNodeBase()
 	, source()
 	, voice(nullptr)
+	, audioGraph(nullptr)
 	, audioOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -433,6 +439,9 @@ AudioNodeVoice4DReturn::AudioNodeVoice4DReturn()
 	addInput(kInput_BackEnabled, kAudioPlugType_Bool);
 	addInput(kInput_BackDistance, kAudioPlugType_FloatVec);
 	addInput(kInput_BackScatter, kAudioPlugType_FloatVec);
+	
+	Assert(g_currentAudioGraph != nullptr);
+	audioGraph = g_currentAudioGraph;
 }
 
 AudioNodeVoice4DReturn::~AudioNodeVoice4DReturn()
