@@ -56,19 +56,14 @@ AudioGraph::AudioGraph()
 	, mems()
 	, events()
 	, controlValues()
-	, mutex(nullptr)
+	, mutex()
 {
-	mutex = SDL_CreateMutex();
-	Assert(mutex != nullptr);
+	mutex.init();
 }
 
 AudioGraph::~AudioGraph()
 {
 	destroy();
-	
-	Assert(mutex != nullptr);
-	SDL_DestroyMutex(mutex);
-	mutex = nullptr;
 }
 
 void AudioGraph::destroy()
@@ -130,6 +125,8 @@ void AudioGraph::destroy()
 #if AUDIO_GRAPH_ENABLE_TIMING
 	graph = nullptr;
 #endif
+
+	mutex.shut();
 }
 
 void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & inputValue)
@@ -236,41 +233,41 @@ void AudioGraph::tick(const float dt)
 
 void AudioGraph::setFlag(const char * name, const bool value)
 {
-	SDL_LockMutex(mutex);
+	mutex.lock();
 	{
 		if (value)
 			activeFlags.insert(name);
 		else
 			activeFlags.erase(name);
 	}
-	SDL_UnlockMutex(mutex);
+	mutex.unlock();
 }
 
 void AudioGraph::resetFlag(const char * name)
 {
-	SDL_LockMutex(mutex);
+	mutex.lock();
 	{
 		activeFlags.erase(name);
 	}
-	SDL_UnlockMutex(mutex);
+	mutex.unlock();
 }
 
 bool AudioGraph::isFLagSet(const char * name) const
 {
 	bool result = false;
 	
-	SDL_LockMutex(mutex);
+	mutex.lock();
 	{
 		result = activeFlags.count(name) != 0;
 	}
-	SDL_UnlockMutex(mutex);
+	mutex.unlock();
 	
 	return result;
 }
 
 void AudioGraph::registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY)
 {
-	SDL_LockMutex(mutex);
+	mutex.lock();
 	{
 		bool exists = false;
 		
@@ -306,12 +303,12 @@ void AudioGraph::registerControlValue(AudioControlValue::Type type, const char *
 			std::sort(controlValues.begin(), controlValues.end(), [](const AudioControlValue & a, const AudioControlValue & b) { return a.name < b.name; });
 		}
 	}
-	SDL_UnlockMutex(mutex);
+	mutex.unlock();
 }
 
 void AudioGraph::unregisterControlValue(const char * name)
 {
-	SDL_LockMutex(mutex);
+	mutex.lock();
 	{
 		bool exists = false;
 		
@@ -341,14 +338,14 @@ void AudioGraph::unregisterControlValue(const char * name)
 			LOG_WRN("failed to unregister control value %s", name);
 		}
 	}
-	SDL_UnlockMutex(mutex);
+	mutex.unlock();
 }
 
 bool AudioGraph::findControlValue(const char * name, AudioControlValue & result) const
 {
 	bool found = false;
 	
-	SDL_LockMutex(mutex);
+	mutex.lock();
 	{
 		for (auto controlValueItr = controlValues.begin(); controlValueItr != controlValues.end(); ++controlValueItr)
 		{
@@ -362,26 +359,26 @@ bool AudioGraph::findControlValue(const char * name, AudioControlValue & result)
 			}
 		}
 	}
-	SDL_UnlockMutex(mutex);
+	mutex.unlock();
 	
 	return found;
 }
 
 void AudioGraph::exportControlValues()
 {
-	SDL_LockMutex(mutex);
+	mutex.lock();
 	{
 		for (auto & controlValue : controlValues)
 		{
 			setMemf(controlValue.name.c_str(), controlValue.currentX, controlValue.currentY);
 		}
 	}
-	SDL_UnlockMutex(mutex);
+	mutex.unlock();
 }
 
 void AudioGraph::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
-	SDL_LockMutex(mutex);
+	mutex.lock();
 	{
 		auto & mem = memf[name];
 		
@@ -390,14 +387,14 @@ void AudioGraph::setMemf(const char * name, const float value1, const float valu
 		mem.value3 = value3;
 		mem.value4 = value4;
 	}
-	SDL_UnlockMutex(mutex);
+	mutex.unlock();
 }
 
 AudioGraph::Memf AudioGraph::getMemf(const char * name) const
 {
 	Memf result;
 	
-	SDL_LockMutex(mutex);
+	mutex.lock();
 	{
 		auto memItr = memf.find(name);
 		
@@ -406,27 +403,27 @@ AudioGraph::Memf AudioGraph::getMemf(const char * name) const
 			result = memItr->second;
 		}
 	}
-	SDL_UnlockMutex(mutex);
+	mutex.unlock();
 	
 	return result;
 }
 
 void AudioGraph::setMems(const char * name, const char * value)
 {
-	SDL_LockMutex(mutex);
+	mutex.lock();
 	{
 		auto & mem = mems[name];
 		
 		mem.value = value;
 	}
-	SDL_UnlockMutex(mutex);
+	mutex.unlock();
 }
 
 AudioGraph::Mems AudioGraph::getMems(const char * name) const
 {
 	Mems result;
 	
-	SDL_LockMutex(mutex);
+	mutex.lock();
 	{
 		auto memItr = mems.find(name);
 		
@@ -435,18 +432,18 @@ AudioGraph::Mems AudioGraph::getMems(const char * name) const
 			result = memItr->second;
 		}
 	}
-	SDL_UnlockMutex(mutex);
+	mutex.unlock();
 	
 	return result;
 }
 
 void AudioGraph::triggerEvent(const char * event)
 {
-	SDL_LockMutex(mutex);
+	mutex.lock();
 	{
 		events.push_back(event);
 	}
-	SDL_UnlockMutex(mutex);
+	mutex.unlock();
 }
 
 //

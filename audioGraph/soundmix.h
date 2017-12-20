@@ -137,8 +137,6 @@ struct AudioSourcePcm : AudioSource
 #include "paobject.h"
 #include "Vec3.h"
 
-struct SDL_mutex;
-
 struct AudioVoice
 {
 	enum Speaker
@@ -378,7 +376,7 @@ struct AudioVoice
 
 struct AudioVoiceManager : PortAudioHandler
 {
-	SDL_mutex * mutex;
+	AudioMutex mutex;
 	
 	int numChannels;
 	int numDynamicChannels;

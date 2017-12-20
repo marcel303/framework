@@ -100,9 +100,9 @@ void VfxNodeAudioGraphPoly::updateDynamicInputs()
 	{
 		auto audioGraph = audioGraphInstance->audioGraph;
 		
-		SDL_LockMutex(audioGraph->mutex);
+		audioGraph->mutex.lock();
 		auto controlValues = audioGraph->controlValues;
-		SDL_UnlockMutex(audioGraph->mutex);
+		audioGraph->mutex.unlock();
 		
 		bool equal = true;
 		

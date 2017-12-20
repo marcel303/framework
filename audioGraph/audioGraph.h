@@ -122,7 +122,7 @@ struct AudioGraph
 	
 	std::vector<AudioControlValue> controlValues;
 	
-	SDL_mutex * mutex;
+	AudioMutex mutex;
 	
 	AudioGraph();
 	~AudioGraph();
