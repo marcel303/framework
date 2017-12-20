@@ -2081,9 +2081,9 @@ int main(int argc, char * argv[])
 					doBreak();
 					
 					doLabel("shared memory", 0.f);
-					SDL_LockMutex(g_audioGraphMgr->audioMutex);
-					auto controlValues = g_audioGraphMgr->controlValues;
-					SDL_UnlockMutex(g_audioGraphMgr->audioMutex);
+					SDL_LockMutex(g_audioGraphMgr->globals.audioMutex);
+					auto controlValues = g_audioGraphMgr->globals.controlValues;
+					SDL_UnlockMutex(g_audioGraphMgr->globals.audioMutex);
 					int padIndex = 0;
 					for (int i = 0; i < controlValues.size(); ++i)
 					{
@@ -2113,10 +2113,10 @@ int main(int argc, char * argv[])
 								padIndex = 0;
 						}
 					}
-					SDL_LockMutex(g_audioGraphMgr->audioMutex);
+					SDL_LockMutex(g_audioGraphMgr->globals.audioMutex);
 					for (auto & srcControlValue : controlValues)
 					{
-						for (auto & dstControlValue : g_audioGraphMgr->controlValues)
+						for (auto & dstControlValue : g_audioGraphMgr->globals.controlValues)
 						{
 							if (srcControlValue.name == dstControlValue.name)
 							{
@@ -2126,7 +2126,7 @@ int main(int argc, char * argv[])
 							}
 						}
 					}
-					SDL_UnlockMutex(g_audioGraphMgr->audioMutex);
+					SDL_UnlockMutex(g_audioGraphMgr->globals.audioMutex);
 				}
 			}
 		}

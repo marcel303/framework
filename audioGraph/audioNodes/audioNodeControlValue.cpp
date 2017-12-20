@@ -91,7 +91,7 @@ AudioNodeControlValue::~AudioNodeControlValue()
 	{
 		if (currentScope == kScope_Shared)
 		{
-			g_audioGraphMgr->unregisterControlValue(currentName.c_str());
+			g_audioGraphMgr->globals.unregisterControlValue(currentName.c_str());
 			isRegistered = false;
 		}
 		else if (currentScope == kScope_PerInstance)
@@ -143,7 +143,7 @@ void AudioNodeControlValue::updateControlValueRegistration()
 		{
 			if (isRegistered)
 			{
-				g_audioGraphMgr->unregisterControlValue(currentName.c_str());
+				g_audioGraphMgr->globals.unregisterControlValue(currentName.c_str());
 				isRegistered = false;
 			}
 		}
@@ -182,7 +182,7 @@ void AudioNodeControlValue::updateControlValueRegistration()
 		{
 			if (scope == kScope_Shared)
 			{
-				g_audioGraphMgr->registerControlValue(
+				g_audioGraphMgr->globals.registerControlValue(
 					_type,
 					currentName.c_str(),
 					min,
@@ -222,7 +222,7 @@ void AudioNodeControlValue::updateControlValueRegistration()
 	{
 		if (scope == kScope_Shared)
 		{
-			AudioGraphManager::Memf memf = g_audioGraphMgr->getMemf(name);
+			AudioGraphGlobals::Memf memf = g_audioGraphMgr->globals.getMemf(name);
 
 			valueOutput[0].setScalar(memf.value1);
 			valueOutput[1].setScalar(memf.value2);
