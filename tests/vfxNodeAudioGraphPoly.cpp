@@ -33,6 +33,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "framework.h"
 
+#include "Timer.h"
+
 VFX_NODE_TYPE(VfxNodeAudioGraphPoly)
 {
 	typeName = "audioGraph.poly";
@@ -47,6 +49,9 @@ VfxNodeAudioGraphPoly::VfxNodeAudioGraphPoly()
 	, currentFilename()
 	, voicesData()
 	, voicesOutput()
+	, history()
+	, historyWritePos(0)
+	, historySize(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Filename, kVfxPlugType_String);
@@ -179,6 +184,16 @@ void VfxNodeAudioGraphPoly::listChannels(const VfxChannel ** channels, const Vfx
 	}
 }
 
+void VfxNodeAudioGraphPoly::addHistoryElem(const HistoryType type, const float value)
+{
+	history[historyWritePos].type = type;
+	history[historyWritePos].value = value;
+	
+	historyWritePos = (historyWritePos + 1) % kMaxHistory;
+	if (historySize < kMaxHistory)
+		historySize++;
+}
+
 void VfxNodeAudioGraphPoly::tick(const float dt)
 {
 	const char * filename = getInputString(kInput_Filename, nullptr);
@@ -227,13 +242,23 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		if (volume == 0.f)
 		{
 			if (instances[index] != nullptr)
+			{
+				auto t1 = g_TimerRT.TimeUS_get();
 				g_audioGraphMgr->free(instances[index]);
+				auto t2 = g_TimerRT.TimeUS_get();
+				
+				addHistoryElem(kHistoryType_InstanceFree, (t2 - t1) / 1000.0);
+			}
 		}
 		else
 		{
 			if (instances[index] == nullptr)
 			{
+				auto t1 = g_TimerRT.TimeUS_get();
 				instances[index] = g_audioGraphMgr->createInstance(filename);
+				auto t2 = g_TimerRT.TimeUS_get();
+				
+				addHistoryElem(kHistoryType_InstanceCreate, (t2 - t1) / 1000.0);
 				
 				g_audioGraphMgr->selectInstance(instances[index]); // fixme
 				
@@ -327,10 +352,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		const int numVoices = g_voiceMgr->voices.size();
 		
 		voicesData.allocOnSizeChange(numVoices * AUDIO_UPDATE_SIZE);
-		// todo : change this back into setData2D
-		//voicesOutput.setData2D(voicesData.data, true, AUDIO_UPDATE_SIZE, numVoices);
-		voicesOutput.setData(voicesData.data, true, AUDIO_UPDATE_SIZE * numVoices);
-		// todo : 'channel.merge' (transform) node which can make 2D into 1D and vice versa, concatenate channels, etc
+		voicesOutput.setData2D(voicesData.data, true, AUDIO_UPDATE_SIZE, numVoices);
 		
 		float * __restrict voiceData = voicesData.data;
 		
@@ -353,4 +375,25 @@ void VfxNodeAudioGraphPoly::getDescription(VfxNodeDescription & d)
 			numInstances++;
 	
 	d.add("instances: %d / %d (max)", numInstances, kMaxInstances);
+	d.newline();
+	
+	d.add("history:");
+	if (historySize == 0)
+		d.add("n/a");
+	else
+	{
+		int index = historySize < kMaxHistory ? 0 : historyWritePos;
+		
+		for (int i = 0; i < historySize; ++i)
+		{
+			auto & e = history[index];
+			
+			if (e.type == kHistoryType_InstanceCreate)
+				d.add("[create] time: %.2fms", e.value);
+			if (e.type == kHistoryType_InstanceFree)
+				d.add("[free] time: %.2fms", e.value);
+			
+			index = (index + 1) % kMaxHistory;
+		}
+	}
 }

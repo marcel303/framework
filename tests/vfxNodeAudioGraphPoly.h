@@ -33,7 +33,20 @@ struct AudioGraphInstance;
 
 struct VfxNodeAudioGraphPoly : VfxNodeBase
 {
+	enum HistoryType
+	{
+		kHistoryType_InstanceCreate,
+		kHistoryType_InstanceFree
+	};
+	
+	struct HistoryElem
+	{
+		HistoryType type;
+		float value;
+	};
+	
 	static const int kMaxInstances = 128;
+	static const int kMaxHistory = 16;
 	
 	enum Input
 	{
@@ -57,11 +70,16 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 	VfxChannelData voicesData;
 	VfxChannel voicesOutput;
 	
+	HistoryElem history[kMaxHistory];
+	int historyWritePos;
+	int historySize;
+	
 	VfxNodeAudioGraphPoly();
 	virtual ~VfxNodeAudioGraphPoly() override;
 	
 	void updateDynamicInputs();
 	void listChannels(const VfxChannel ** channels, const VfxChannel * volume, int & numChannels, const int maxChannels);
+	void addHistoryElem(const HistoryType type, const float value);
 	
 	virtual void tick(const float dt) override;
 	
