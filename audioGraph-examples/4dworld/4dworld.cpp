@@ -2354,13 +2354,7 @@ int main(int argc, char * argv[])
 				
 				if (audioGraphMgr.selectedFile && audioGraphMgr.selectedFile->activeInstance)
 				{
-					int64_t audioCpuTime = 0;
-					
-					SDL_LockMutex(audioUpdateHandler.mutex);
-					{
-						audioCpuTime = audioUpdateHandler.cpuTime;
-					}
-					SDL_UnlockMutex(audioUpdateHandler.mutex);
+					const int64_t audioCpuTime = audioUpdateHandler.cpuTime;
 					
 					setColor(colorGreen);
 					drawText(GFX_SX/2, 20, 20, 0, 0, "- 4DWORLD :: %s: %p :: %.2f%% -",

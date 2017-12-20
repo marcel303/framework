@@ -49,7 +49,7 @@ AudioUpdateHandler::AudioUpdateHandler()
 	, time(0.0)
 	, mutex(nullptr)
 	, cpuTime(0)
-	, nextCpuTimeUpdate()
+	, nextCpuTimeUpdate(0)
 {
 }
 
@@ -195,12 +195,8 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	if (currentTimeUs >= nextCpuTimeUpdate)
 	{
-		SDL_LockMutex(mutex);
-		{
-			cpuTime = cpuTimeTotal;
-			cpuTimeTotal = 0;
-		}
-		SDL_UnlockMutex(mutex);
+		cpuTime = cpuTimeTotal;
+		cpuTimeTotal = 0;
 		
 		nextCpuTimeUpdate = currentTimeUs + 1000000;
 	}

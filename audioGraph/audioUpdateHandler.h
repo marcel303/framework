@@ -30,6 +30,7 @@
 #include "commandQueue.h"
 #include "osc4d.h"
 #include "paobject.h"
+#include <atomic>
 #include <stdint.h>
 #include <vector>
 
@@ -90,7 +91,7 @@ struct AudioUpdateHandler : PortAudioHandler
 	
 	SDL_mutex * mutex;
 	
-	int64_t cpuTime;
+	std::atomic<int64_t> cpuTime;
 	int64_t cpuTimeTotal;
 	int64_t nextCpuTimeUpdate;
 	
