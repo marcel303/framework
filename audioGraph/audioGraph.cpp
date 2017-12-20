@@ -55,6 +55,7 @@ AudioGraph::AudioGraph()
 	, memf()
 	, mems()
 	, events()
+	, triggeredEvents()
 	, controlValues()
 	, mutex()
 {
@@ -194,18 +195,27 @@ void AudioGraph::tick(const float dt)
 	Assert(g_currentAudioGraph == nullptr);
 	g_currentAudioGraph = this;
 	
-	// update control values
-	
-	for (auto & controlValue : controlValues)
+	mutex.lock();
 	{
-		const float retain = std::powf(controlValue.smoothness, dt);
+		// update control values
 		
-		controlValue.currentX = controlValue.currentX * retain + controlValue.desiredX * (1.f - retain);
-		controlValue.currentY = controlValue.currentY * retain + controlValue.desiredY * (1.f - retain);
-	}
+		for (auto & controlValue : controlValues)
+		{
+			const float retain = std::powf(controlValue.smoothness, dt);
+			
+			controlValue.currentX = controlValue.currentX * retain + controlValue.desiredX * (1.f - retain);
+			controlValue.currentY = controlValue.currentY * retain + controlValue.desiredY * (1.f - retain);
+		}
 
-	exportControlValues();
-	
+		exportControlValues();
+		
+		// update the set of 'active' events. all newly triggered events are processed next tick
+		
+		std::swap(events, triggeredEvents);
+		triggeredEvents.clear();
+	}
+	mutex.unlock();
+		
 	// process nodes
 	
 	++currentTickTraversalId;
@@ -223,8 +233,6 @@ void AudioGraph::tick(const float dt)
 	//
 	
 	time += dt;
-	
-	events.clear();
 	
 	//
 	
@@ -441,7 +449,7 @@ void AudioGraph::triggerEvent(const char * event)
 {
 	mutex.lock();
 	{
-		events.push_back(event);
+		triggeredEvents.push_back(event);
 	}
 	mutex.unlock();
 }

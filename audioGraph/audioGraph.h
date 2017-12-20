@@ -118,6 +118,7 @@ struct AudioGraph
 	std::set<std::string> activeFlags;
 	std::map<std::string, Memf> memf;
 	std::map<std::string, Mems> mems;
+	std::vector<std::string> triggeredEvents;
 	std::vector<std::string> events;
 	
 	std::vector<AudioControlValue> controlValues;

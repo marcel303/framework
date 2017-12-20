@@ -647,6 +647,8 @@ void AudioGraphManager::tick(const float dt)
 		
 		exportControlValues();
 		
+		// tick graph instances
+		
 		for (auto & file : files)
 			for (auto & instance : file.second->instanceList)
 				instance.audioGraph->tick(dt);
