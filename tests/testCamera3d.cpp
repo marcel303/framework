@@ -1,14 +1,42 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #include "framework.h"
+#include "testBase.h"
 
 #include "../libparticle/ui.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
 
-// todo : add to tests menu
-
 void testCamera3d()
 {
+	setAbout("This test illustrates how to use the Camera3d object to fly through a 3D scene.");
+	
 	Camera3d camera;
 	
 	camera.position[0] = 0;
@@ -54,7 +82,6 @@ void testCamera3d()
 				state = kState_Play;
 			else
 			{
-			 
 			}
 		}
 		
@@ -110,6 +137,8 @@ void testCamera3d()
 			}
 			else if (state == kState_Menu)
 			{
+				drawText(30, 30, 24, +1, +1, "press TAB to close menu");
+				
 				setColor(31, 63, 127, 127);
 				drawRect(0, 0, GFX_SX, GFX_SY);
 				
@@ -125,9 +154,11 @@ void testCamera3d()
 			}
 			
 			popFontMode();
+			
+			drawTestUi();
 		}
 		framework.endDraw();
 
 	}
-	while (!keyboard.wentDown(SDLK_SPACE));
+	while (tickTestUi());
 }
