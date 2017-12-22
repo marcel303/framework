@@ -38,9 +38,6 @@
 
 #define ENABLE_FILE_FIXUPS 1 // todo : remove
 
-extern const int GFX_SX; // fixme : make property of graph editor
-extern const int GFX_SY;
-
 using namespace tinyxml2;
 
 //
@@ -706,11 +703,29 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 	return result;
 }
 
+bool Graph::load(const char * filename, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary)
+{
+	XMLDocument document;
+	
+	if (document.LoadFile(filename) != XML_SUCCESS)
+		return false;
+	
+	XMLElement * xmlGraph = document.FirstChildElement("graph");
+	
+	if (xmlGraph == nullptr)
+		return false;
+	
+	return loadXml(xmlGraph, typeDefinitionLibrary);
+}
+
 //
 
 #include "framework.h"
 #include "../libparticle/particle.h"
 #include "../libparticle/ui.h"
+
+int GRAPHEDIT_SX = 0;
+int GRAPHEDIT_SY = 0;
 
 static bool selectionMod()
 {
@@ -1589,8 +1604,6 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		
 		if (texture != 0)
 		{
-			// todo : force alpha to one ?
-			
 			setColor(colorWhite);
 			pushColorPost(POST_SET_ALPHA_TO_ONE);
 			gxSetTexture(texture);
@@ -1600,9 +1613,6 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 			gxSetTexture(0);
 			popColorPost();
 		}
-		
-		setColor(colorWhite);
-		//drawRectLine(textureX, y + textureY, textureX + textureSx, y + textureY + textureSy);
 		
 		y += textureAreaSy;
 	}
@@ -1634,6 +1644,11 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 			
 			min = channelDataMin;
 			max = channelDataMax;
+			
+			const float dt = 1.f / 60.f; // fixme
+			const float retain = std::powf(.7f, dt);
+			min *= retain;
+			max *= retain;
 		}
 		
 		for (auto & channel : channelData.channels)
@@ -1851,7 +1866,11 @@ void GraphEdit::NodeData::setIsFolded(const bool _isFolded)
 
 //
 
-GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary, GraphEdit_RealTimeConnection * _realTimeConnection)
+GraphEdit::GraphEdit(
+	const int _displaySx,
+	const int _displaySy,
+	GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary,
+	GraphEdit_RealTimeConnection * _realTimeConnection)
 	: graph(nullptr)
 	, nextZKey(1)
 	, nodeDatas()
@@ -1878,6 +1897,8 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary, G
 	, linkParamsEditorLinkId(kGraphLinkIdInvalid)
 	, nodeTypeNameSelect(nullptr)
 	, nodeResourceEditor()
+	, displaySx(0)
+	, displaySy(0)
 	, uiState(nullptr)
 	, cursorHand(nullptr)
 	, animationIsDone(true)
@@ -1897,8 +1918,11 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary, G
 	nodeTypeNameSelect = new GraphUi::NodeTypeNameSelect(this);
 	
 	nodeInsert.menu = new GraphEdit_NodeTypeSelect();
-	nodeInsert.menu->x = (GFX_SX - nodeInsert.menu->sx)/2;
-	nodeInsert.menu->y = (GFX_SY - nodeInsert.menu->sy)/2;
+	nodeInsert.menu->x = (_displaySx - nodeInsert.menu->sx)/2;
+	nodeInsert.menu->y = (_displaySy - nodeInsert.menu->sy)/2;
+	
+	displaySx = _displaySx;
+	displaySy = _displaySy;
 	
 	uiState = new UiState();
 	
@@ -2426,6 +2450,9 @@ bool GraphEdit::hitTestNode(const NodeData & nodeData, const GraphEdit_TypeDefin
 bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 {
 	cpuTimingBlock(GraphEdit_Tick);
+	
+	GRAPHEDIT_SX = displaySx;
+	GRAPHEDIT_SY = displaySy;
 	
 #if defined(DEBUG) // todo : remove
 #if !defined(WINDOWS) // fixme : compile error ?
@@ -4028,10 +4055,10 @@ void GraphEdit::tickMouseScroll(const float dt)
 		tX = mouse.x - kScrollBorder;
 	if (mouse.y < kScrollBorder)
 		tY = mouse.y - kScrollBorder;
-	if (mouse.x > GFX_SX - 1 - kScrollBorder)
-		tX = mouse.x - (GFX_SX - 1 - kScrollBorder);
-	if (mouse.y > GFX_SY - 1 - kScrollBorder)
-		tY = mouse.y - (GFX_SY - 1 - kScrollBorder);
+	if (mouse.x > GRAPHEDIT_SX - 1 - kScrollBorder)
+		tX = mouse.x - (GRAPHEDIT_SX - 1 - kScrollBorder);
+	if (mouse.y > GRAPHEDIT_SY - 1 - kScrollBorder)
+		tY = mouse.y - (GRAPHEDIT_SY - 1 - kScrollBorder);
 	
 	dragAndZoom.desiredFocusX += tX / float(kScrollBorder) * kScrollSpeed * dt;
 	dragAndZoom.desiredFocusY += tY / float(kScrollBorder) * kScrollSpeed * dt;
@@ -4819,6 +4846,9 @@ void GraphEdit::draw() const
 	if (state == kState_Hidden || (state == kState_HiddenIdle && hideTime == 0.f))
 		return;
 	
+	GRAPHEDIT_SX = displaySx;
+	GRAPHEDIT_SY = displaySy;
+	
 	gxPushMatrix();
 	gxMultMatrixf(dragAndZoom.transform.m_v);
 	gxTranslatef(.375f, .375f, 0.f); // avoid bad looking rectangles due to some diamond rule shenanigans in OpenGL by translating slightly
@@ -4829,7 +4859,7 @@ void GraphEdit::draw() const
 	
 	{
 		const Vec2 _p1 = dragAndZoom.invTransform * Vec2(0.f, 0.f);
-		const Vec2 _p2 = dragAndZoom.invTransform * Vec2(GFX_SX, GFX_SY);
+		const Vec2 _p2 = dragAndZoom.invTransform * Vec2(GRAPHEDIT_SX, GRAPHEDIT_SY);
 		
 		const Vec2 p1 = _p1.Min(_p2);
 		const Vec2 p2 = _p1.Max(_p2);
@@ -4851,7 +4881,7 @@ void GraphEdit::draw() const
 			const int cx2 = std::ceil(p2[0] / kGridSize);
 			const int cy2 = std::ceil(p2[1] / kGridSize);
 			
-			if ((cx2 - cx1) < GFX_SX / 2)
+			if ((cx2 - cx1) < GRAPHEDIT_SX / 2)
 			{
 				setColorf(
 					editorOptions.gridColor.rgba[0],
@@ -5245,7 +5275,7 @@ void GraphEdit::draw() const
 	if (state == kState_NodeResourceEdit)
 	{
 		setColor(0, 0, 0, 127);
-		drawRect(0, 0, GFX_SX, GFX_SY);
+		drawRect(0, 0, GRAPHEDIT_SX, GRAPHEDIT_SY);
 	}
 	
 	if (nodeResourceEditor.resourceEditor != nullptr)
@@ -5285,20 +5315,20 @@ void GraphEdit::draw() const
 		
 		y *= 50;
 		
-		gxTranslatef(0, GFX_SY - y, 0);
+		gxTranslatef(0, GRAPHEDIT_SY - y, 0);
 		
 		for (auto & n : notifications)
 		{
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
 				setColor(0, 0, 0, 191);
-				hqFillRoundedRect(GFX_SX/2 - kWidth, 0, GFX_SX/2 + kWidth, kHeight, 7.f);
+				hqFillRoundedRect(GRAPHEDIT_SX/2 - kWidth, 0, GRAPHEDIT_SX/2 + kWidth, kHeight, 7.f);
 			}
 			hqEnd();
 			
 			setColor(colorWhite);
 			setFont("calibri.ttf");
-			drawText(GFX_SX/2, kHeight/2, 18, 0.f, 0.f, "%s", n.text.c_str());
+			drawText(GRAPHEDIT_SX/2, kHeight/2, 18, 0.f, 0.f, "%s", n.text.c_str());
 			
 			gxTranslatef(0, -50, 0);
 		}
@@ -5442,7 +5472,7 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	{
 		const Color color1(255, 0, 0, 255);
 		const Color color2(127, 0, 0, 255);
-		Mat4x4 cmat = Mat4x4(true).Scale(1.f / GFX_SX, 1.f / GFX_SX, 1.f).RotateZ(45);
+		Mat4x4 cmat = Mat4x4(true).Scale(1.f / GRAPHEDIT_SX, 1.f / GRAPHEDIT_SX, 1.f).RotateZ(45);
 		
 		hqSetGradient(GRADIENT_LINEAR, cmat, color1, color2, COLOR_ADD);
 	}
@@ -5602,11 +5632,6 @@ void GraphEdit::drawVisualizer(const EditorVisualizer & visualizer) const
 	const int visualizerSx = int(std::ceil(visualizer.sx));
 	const int visualizerSy = int(std::ceil(visualizer.sy));
 	visualizer.draw(*this, nodeName, isSelected, &visualizerSx, &visualizerSy);
-	
-#if 0
-	setColor(255, 255, 255, 63); // fixme : remove this drawRect call! only here to test node resizing
-	drawRect(0, 0, visualizer.sx, visualizer.sy);
-#endif
 }
 
 bool GraphEdit::load(const char * filename)
@@ -6353,7 +6378,7 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 	
 	const int kPadding = 10;
 	
-	g_drawX = GFX_SX - uiState->sx - kPadding;
+	g_drawX = GRAPHEDIT_SX - uiState->sx - kPadding;
 	g_drawY = kPadding;
 	
 	uiState->textBoxTextOffset = 80;

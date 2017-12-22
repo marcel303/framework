@@ -35,8 +35,8 @@
 #include <string>
 #include <vector>
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+extern int GRAPHEDIT_SX;
+extern int GRAPHEDIT_SY;
 
 namespace tinyxml2
 {
@@ -192,6 +192,8 @@ struct Graph
 	
 	bool loadXml(const tinyxml2::XMLElement * xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
 	bool saveXml(tinyxml2::XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary) const;
+	
+	bool load(const char * filename, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
 };
 
 //
@@ -666,8 +668,8 @@ struct GraphEdit_ResourceEditorBase
 		
 		getSize(sx, sy);
 		
-		x = (GFX_SX - sx) / 2;
-		y = (GFX_SY - sy) / 2;
+		x = (GRAPHEDIT_SX - sx) / 2;
+		y = (GRAPHEDIT_SY - sy) / 2;
 	}
 };
 
@@ -1175,7 +1177,7 @@ struct GraphEdit : GraphEditConnection
 		
 		void updateTransform()
 		{
-			transform = Mat4x4(true).Translate(GFX_SX/2, GFX_SY/2, 0).Scale(zoom, zoom, 1.f).Translate(-focusX, -focusY, 0.f);
+			transform = Mat4x4(true).Translate(GRAPHEDIT_SX/2, GRAPHEDIT_SY/2, 0).Scale(zoom, zoom, 1.f).Translate(-focusX, -focusY, 0.f);
 			invTransform = transform.Invert();
 		}
 		
@@ -1429,6 +1431,9 @@ struct GraphEdit : GraphEditConnection
 	
 	std::list<Notification> notifications;
 	
+	int displaySx;
+	int displaySy;
+	
 	UiState * uiState;
 	
 	SDL_Cursor * cursorHand;
@@ -1438,7 +1443,11 @@ struct GraphEdit : GraphEditConnection
 	float idleTime;
 	float hideTime;
 	
-	GraphEdit(GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, GraphEdit_RealTimeConnection * realTimeConnection = nullptr);
+	GraphEdit(
+		const int _displaySx,
+		const int _displaySy,
+		GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary,
+		GraphEdit_RealTimeConnection * realTimeConnection = nullptr);
 	~GraphEdit();
 	
 	GraphNode * tryGetNode(const GraphNodeId id) const;
