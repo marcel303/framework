@@ -83,7 +83,10 @@ struct AudioGraphManager
 	
 	AudioGraphGlobals * globals;
 	
-	AudioGraphManager();
+	int displaySx;
+	int displaySy;
+	
+	AudioGraphManager(const int displaySx, const int displaySy);
 	~AudioGraphManager();
 	
 	// called from the app thread

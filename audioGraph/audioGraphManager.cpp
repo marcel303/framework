@@ -419,14 +419,18 @@ AudioGraphGlobals::Memf AudioGraphGlobals::getMemf(const char * name)
 
 //
 
-AudioGraphManager::AudioGraphManager()
+AudioGraphManager::AudioGraphManager(const int _displaySx, const int _displaySy)
 	: typeDefinitionLibrary(nullptr)
 	, files()
 	, selectedFile(nullptr)
 	, audioMutex(nullptr)
 	, audioValueHistorySet(nullptr)
 	, globals(nullptr)
+	, displaySx(0)
+	, displaySy(0)
 {
+	displaySx = _displaySx;
+	displaySy = _displaySy;
 }
 
 AudioGraphManager::~AudioGraphManager()
@@ -570,7 +574,7 @@ AudioGraphInstance * AudioGraphManager::createInstance(const char * filename)
 		file = new AudioGraphFile();
 		file->filename = filename;
 		
-		file->graphEdit = new GraphEdit(typeDefinitionLibrary);
+		file->graphEdit = new GraphEdit(displaySx, displaySy, typeDefinitionLibrary);
 		file->graphEdit->realTimeConnection = file->realTimeConnection;
 		
 		file->graphEdit->load(filename);

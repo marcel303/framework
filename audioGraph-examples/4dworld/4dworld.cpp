@@ -1905,7 +1905,7 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	AudioGraphManager audioGraphMgr;
+	AudioGraphManager audioGraphMgr(GFX_SX, GFX_SY);
 	audioGraphMgr.init(mutex);
 	
 	Assert(g_audioGraphMgr == nullptr);
