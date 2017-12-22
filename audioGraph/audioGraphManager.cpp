@@ -425,6 +425,7 @@ AudioGraphManager::AudioGraphManager()
 	, selectedFile(nullptr)
 	, audioMutex(nullptr)
 	, audioValueHistorySet(nullptr)
+	, globals(nullptr)
 {
 }
 
@@ -449,7 +450,8 @@ void AudioGraphManager::init(SDL_mutex * mutex)
 	
 	audioValueHistorySet = new AudioValueHistorySet();
 	
-	globals.init(mutex);
+	globals = new AudioGraphGlobals();
+	globals->init(mutex);
 }
 
 void AudioGraphManager::shut()
@@ -467,7 +469,13 @@ void AudioGraphManager::shut()
 	
 	//
 	
-	globals.shut();
+	if (globals != nullptr)
+	{
+		globals->shut();
+		
+		delete globals;
+		globals = nullptr;
+	}
 	
 	delete audioValueHistorySet;
 	audioValueHistorySet = nullptr;
@@ -570,8 +578,8 @@ AudioGraphInstance * AudioGraphManager::createInstance(const char * filename)
 	
 	//
 	
-	auto audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary);
-	auto realTimeConnection = new AudioRealTimeConnection(audioValueHistorySet);
+	auto audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary, globals);
+	auto realTimeConnection = new AudioRealTimeConnection(audioValueHistorySet, globals);
 	
 	//
 	
@@ -673,7 +681,7 @@ void AudioGraphManager::tick(const float dt)
 {
 	SDL_LockMutex(audioMutex);
 	{
-		globals.tick(dt);
+		globals->tick(dt);
 		
 		// tick graph instances
 		

@@ -35,6 +35,7 @@
 
 struct AudioGraph;
 struct AudioGraphFileRTC;
+struct AudioGraphGlobals;
 struct AudioRealTimeConnection;
 struct AudioValueHistorySet;
 struct Graph;
@@ -68,42 +69,6 @@ struct AudioGraphFile
 	~AudioGraphFile();
 };
 
-struct AudioGraphGlobals
-{
-	struct Memf
-	{
-		float value1 = 0.f;
-		float value2 = 0.f;
-		float value3 = 0.f;
-		float value4 = 0.f;
-	};
-	
-	std::vector<AudioControlValue> controlValues;
-	
-	std::map<std::string, Memf> memf;
-	
-	SDL_mutex * audioMutex;
-	
-	AudioGraphGlobals();
-	
-	// called from the app thread
-	void init(SDL_mutex * mutex);
-	void shut();
-	
-	// called from the audio thread
-	void tick(const float dt);
-	
-	// called from any thread
-	void registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY);
-	void unregisterControlValue(const char * name);
-	bool findControlValue(const char * name, AudioControlValue & result) const;
-	void exportControlValues();
-	
-	// called from any thread
-	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
-	Memf getMemf(const char * name);
-};
-
 struct AudioGraphManager
 {
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
@@ -116,7 +81,7 @@ struct AudioGraphManager
 	
 	AudioValueHistorySet * audioValueHistorySet;
 	
-	AudioGraphGlobals globals;
+	AudioGraphGlobals * globals;
 	
 	AudioGraphManager();
 	~AudioGraphManager();

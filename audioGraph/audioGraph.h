@@ -42,6 +42,7 @@
 
 struct AudioBuffer;
 struct AudioGraph;
+struct AudioGraphGlobals;
 struct AudioNodeBase;
 struct AudioOutputChannel;
 struct AudioPlug;
@@ -118,14 +119,16 @@ struct AudioGraph
 	std::set<std::string> activeFlags;
 	std::map<std::string, Memf> memf;
 	std::map<std::string, Mems> mems;
-	std::vector<std::string> triggeredEvents;
 	std::vector<std::string> events;
+	std::vector<std::string> triggeredEvents;
 	
 	std::vector<AudioControlValue> controlValues;
 	
+	AudioGraphGlobals * globals;
+	
 	AudioMutex mutex;
 	
-	AudioGraph();
+	AudioGraph(AudioGraphGlobals * globals);
 	~AudioGraph();
 	
 	void destroy();
@@ -156,9 +159,47 @@ struct AudioGraph
 
 //
 
+struct AudioGraphGlobals
+{
+	struct Memf
+	{
+		float value1 = 0.f;
+		float value2 = 0.f;
+		float value3 = 0.f;
+		float value4 = 0.f;
+	};
+	
+	std::vector<AudioControlValue> controlValues;
+	
+	std::map<std::string, Memf> memf;
+	
+	SDL_mutex * audioMutex;
+	
+	AudioGraphGlobals();
+	
+	// called from the app thread
+	void init(SDL_mutex * mutex);
+	void shut();
+	
+	// called from the audio thread
+	void tick(const float dt);
+	
+	// called from any thread
+	void registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY);
+	void unregisterControlValue(const char * name);
+	bool findControlValue(const char * name, AudioControlValue & result) const;
+	void exportControlValues();
+	
+	// called from any thread
+	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
+	Memf getMemf(const char * name);
+};
+
+//
+
 AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & typeName, AudioGraph * audioGraph);
 
-AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
+AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals);
 
 //
 

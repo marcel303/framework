@@ -43,7 +43,7 @@ double g_currentAudioTime = 0.0;
 
 //
 
-AudioGraph::AudioGraph()
+AudioGraph::AudioGraph(AudioGraphGlobals * _globals)
 	: nodes()
 	, currentTickTraversalId(-1)
 #if AUDIO_GRAPH_ENABLE_TIMING
@@ -57,9 +57,12 @@ AudioGraph::AudioGraph()
 	, events()
 	, triggeredEvents()
 	, controlValues()
+	, globals(nullptr)
 	, mutex()
 {
 	mutex.init();
+	
+	globals = _globals;
 }
 
 AudioGraph::~AudioGraph()
@@ -484,9 +487,9 @@ AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & ty
 
 //
 
-AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary)
+AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals)
 {
-	AudioGraph * audioGraph = new AudioGraph();
+	AudioGraph * audioGraph = new AudioGraph(globals);
 	
 #if AUDIO_GRAPH_ENABLE_TIMING
 	audioGraph->graph = const_cast<Graph*>(&graph);

@@ -30,6 +30,7 @@
 #include "graph.h"
 
 struct AudioGraph;
+struct AudioGraphGlobals;
 struct AudioValueHistorySet;
 
 struct SDL_mutex;
@@ -45,7 +46,9 @@ struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
 	
 	AudioValueHistorySet * audioValueHistorySet;
 	
-	AudioRealTimeConnection(AudioValueHistorySet * audioValueHistorySet);
+	AudioGraphGlobals * globals;
+	
+	AudioRealTimeConnection(AudioValueHistorySet * audioValueHistorySet, AudioGraphGlobals * globals);
 	virtual ~AudioRealTimeConnection() override;
 	
 	void updateAudioValues();
