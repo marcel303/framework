@@ -226,8 +226,6 @@ void audioBufferAdd(
 {
 	int begin = 0;
 	
-	// todo : verify this function works correctly
-	
 #if ENABLE_SSE
 	Assert((uintptr_t(audioBufferDst) & 15) == 0);
 	Assert((uintptr_t(audioBufferSrc) & 15) == 0);
@@ -246,7 +244,7 @@ void audioBufferAdd(
 	begin = numSamples4 * 4;
 #endif
 
-	for (int i = begin; i < AUDIO_UPDATE_SIZE; ++i)
+	for (int i = begin; i < numSamples; ++i)
 		audioBufferDst[i] = audioBufferDst[i] + audioBufferSrc[i] * scale[i];
 }
 
@@ -340,8 +338,6 @@ float audioBufferSum(
 	const float * __restrict audioBuffer,
 	const int numSamples)
 {
-	// todo : verify this function works correctly
-	
 	int begin = 0;
 	float sum = 0.f;
 	
@@ -351,7 +347,7 @@ float audioBufferSum(
 	
 	__m128 sum4 = _mm_setzero_ps();
 
-	for (int i = 0; i < AUDIO_UPDATE_SIZE / 4; ++i)
+	for (int i = 0; i < numSamples4; ++i)
 	{
 		sum4 += audioBuffer_4[i];
 	}
@@ -368,7 +364,7 @@ float audioBufferSum(
 	begin = numSamples4 * 4;
 #endif
 
-	for (int i = begin; i < AUDIO_UPDATE_SIZE; ++i)
+	for (int i = begin; i < numSamples; ++i)
 	{
 		sum += audioBuffer[i];
 	}
@@ -1028,8 +1024,6 @@ void AudioVoiceManager::freeVoice(AudioVoice *& voice)
 
 void AudioVoiceManager::updateChannelIndices()
 {
-	// todo : mute a voice for a while after allocating channel index ? to ensure there is no issue with OSC position vs audio signal
-	
 #ifdef WIN32
 	bool used[1024]; // fixme : use a general fix for variable sized arrays
 #else
