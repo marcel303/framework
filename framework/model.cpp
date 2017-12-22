@@ -554,16 +554,53 @@ namespace AnimModel
 			
 			if (numKeys)
 			{
-				const AnimKey * key = firstKey;
-				const AnimKey * lastKey = firstKey + numKeys - 1;
-				
-				while (key != lastKey && time >= key[1].time)
-				{
-					key++;
-				}
-				
 				if (i == boneIndex || boneIndex == -1)
 				{
+					const AnimKey * key = firstKey;
+					const AnimKey * lastKey = firstKey + numKeys - 1;
+					
+				#if 0
+					while (key != lastKey && time >= key[1].time)
+					{
+						key++;
+					}
+				#else
+					int startIndex = 0;
+					int count = numKeys;
+					
+					while (count >= 2)
+					{
+						const int step = count / 2;
+						const int midIndex = startIndex + step;
+						
+						const AnimKey * midKey = key + midIndex;
+						
+						if (time >= midKey->time)
+						{
+							startIndex += step;
+							
+							count -= step;
+						}
+						else
+						{
+							count = step;
+						}
+					}
+					
+					key = key + startIndex;
+				#endif
+					
+				#if 0
+					const AnimKey * testKey = firstKey;
+					
+					while (testKey != lastKey && time >= testKey[1].time)
+					{
+						testKey++;
+					}
+					
+					Assert(key == testKey);
+				#endif
+					
 					BoneTransform transform;
 					
 					if (key != lastKey && time >= key->time)
