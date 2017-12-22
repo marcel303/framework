@@ -164,6 +164,8 @@ int main(int argc, char * argv[])
 					
 					Model * model = models[CoordKey(x, y, z)];
 					
+					model->tick(framework.timeStep);
+					
 					if (autoPlay &&  !model->animIsActive)
 						startRandomAnimForModel = true;
 					
