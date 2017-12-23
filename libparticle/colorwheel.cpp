@@ -140,42 +140,18 @@ void ColorWheel::draw()
 	// lightness triangle
 
 	{
-	#if 0
-		gxBegin(GL_TRIANGLES);
-		{
-			float xy[6];
-			getTriangleCoords(xy);
-			
-			float r, g, b, a;
-			toColor(hue, 0.f, 0.f, r, g, b, a);
-			gxColor4f(r, g, b, 1.f);
-			gxVertex2f(xy[0], xy[1]);
-
-			gxColor4f(0.f, 0.f, 0.f, 1.f);
-			gxVertex2f(xy[2], xy[3]);
-
-			gxColor4f(1.f, 1.f, 1.f, 1.f);
-			gxVertex2f(xy[4], xy[5]);
-		}
-		gxEnd();
-	#endif
-	
-	#if 1
-		{
-			float xy[6];
-			getTriangleCoords(xy);
-			
-			float r, g, b, a;
-			toColor(hue, 0.f, 0.f, r, g, b, a);
-			
-			const Color c1(r, g, b, 1.f);
-			const Color c2(0.f, 0.f, 0.f, 1.f);
-			const Color c3(1.f, 1.f, 1.f, 1.f);
-			
-			setColor(colorWhite);
-			drawUiShadedTriangle(xy[0], xy[1], xy[2], xy[3], xy[4], xy[5], c1, c2, c3);
-		}
-	#endif
+		float xy[6];
+		getTriangleCoords(xy);
+		
+		float r, g, b, a;
+		toColor(hue, 0.f, 0.f, r, g, b, a);
+		
+		const Color c1(r, g, b, 1.f);
+		const Color c2(0.f, 0.f, 0.f, 1.f);
+		const Color c3(1.f, 1.f, 1.f, 1.f);
+		
+		setColor(colorWhite);
+		drawUiShadedTriangle(xy[0], xy[1], xy[2], xy[3], xy[4], xy[5], c1, c2, c3);
 	}
 
 	{

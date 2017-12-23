@@ -78,7 +78,7 @@ void checkErrorGL_internal(const char * function, int line)
 	{
 		logError("%s: %d: OpenGL error: %x", function, line, error);
 
-		#if 1
+		#if 1 // GLEW initialisation generates an error.. skip it here
 		static int skipCount = 1;
 		if (skipCount-- <= 0)
 			fassert(false);
@@ -408,19 +408,13 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 	}
 	else
 	{
-	#if 1
+	#if 1 // imageFixAlphaFilter for png and gif
 		if (String::EndsWith(filename, ".png") || String::EndsWith(filename, ".gif"))
 		{
 			ImageData * temp = imageFixAlphaFilter(imageData);
 			delete imageData;
 			imageData = temp;
 		}
-	#endif
-
-	#if 0
-		ImageData * temp = imagePremultiplyAlpha(imageData);
-		delete imageData;
-		imageData = temp;
 	#endif
 
 		if ((imageData->sx % gridSx) != 0 || (imageData->sy % gridSy) != 0)
@@ -577,48 +571,6 @@ static void getShaderInfoLog(GLuint shader, const char * source, std::vector<std
 	
 	delete [] log;
 	log = 0;
-	
-#if 0
-	bool newLine = true;
-	
-	std::string line;
-
-	for (int lineNumber = 1; *source; )
-	{
-		if (newLine)
-		{
-			line.append(String::FormatC("%04d: ", lineNumber));
-			newLine = false;
-		}
-
-		if (*source == '\n' || *source == '\r')
-		{
-			lines.push_back(line);
-			line.clear();
-			
-			newLine = true;
-			lineNumber++;
-		}
-		else
-		{
-			if (*source == '\t')
-			{
-				line.append("    ");
-			}
-			else
-			{
-				line.push_back(*source);
-			}
-		}
-
-		source++;
-	}
-	
-	if (!line.empty())
-	{
-		lines.push_back(line);
-	}
-#endif
 }
 
 static void showShaderInfoLog(GLuint shader, const char * source)

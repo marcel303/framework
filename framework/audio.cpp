@@ -259,7 +259,6 @@ SoundData * loadSound_WAV(const char * filename)
 
 SoundData * loadSound_OGG(const char * filename)
 {
-#if 1
 	static const int kMaxSamples = (1 << 14) * sizeof(short);
 	AudioSample samples[kMaxSamples];
 	
@@ -285,21 +284,6 @@ SoundData * loadSound_OGG(const char * filename)
 	const int numBytes = numSamples * sizeof(AudioSample);
 	void * bytes = new char[numBytes];
 	memcpy(bytes, &readBuffer[0], numBytes);
-#else
-	static const int kMaxSamples = 44100 * sizeof(short) * 2 * 120;
-	
-	AudioStream_Vorbis stream;
-	stream.Open(filename, false);
-	AudioSample * samples = new AudioSample[kMaxSamples];
-	const int numSamples = stream.Provide(kMaxSamples, samples);
-	const int numBytes = numSamples * sizeof(AudioSample);
-	const int sampleRate = stream.mSampleRate;
-	stream.Close();
-	
-	void * bytes = new char[numBytes];
-	memcpy(bytes, samples, numBytes);
-	delete [] samples;
-#endif
 	
 	SoundData * soundData = new SoundData;
 	soundData->channelSize = 2;
