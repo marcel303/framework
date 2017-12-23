@@ -206,13 +206,11 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 #endif
 #endif
 	
-#if 1
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 32);
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-#endif
 	
 	if (enableDepthBuffer)
 	{
@@ -3025,31 +3023,6 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 			const float rsx = float(m_texture->sx / m_anim->m_gridSize[0]);
 			const float rsy = float(m_texture->sy / m_anim->m_gridSize[1]);
 			
-		#if 0
-			const float verts[16] =
-			{
-				0.f, 0.f, 0.f, 1.f,
-				rsx, 0.f, 0.f, 1.f,
-				rsx, rsy, 0.f, 1.f,
-				0.f, rsy, 0.f, 1.f
-			};
-			
-			static const float texs[8] =
-			{
-				0.f, 1.f,
-				1.f, 1.f,
-				1.f, 0.f,
-				0.f, 0.f
-			};
-			
-			glEnableClientState(GL_VERTEX_ARRAY);
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-			glVertexPointer(4, GL_FLOAT, 0, verts);
-			glTexCoordPointer(2, GL_FLOAT, 0, texs);
-			glDrawArrays(GL_QUADS, 0, 4);
-			glDisableClientState(GL_VERTEX_ARRAY);
-			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		#else
 			gxBegin(GL_QUADS);
 			{
 				gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f, 0.f);
@@ -3058,7 +3031,6 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 				gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f, rsy);
 			}
 			gxEnd();
-		#endif
 
 			checkErrorGL();
 		}
@@ -3694,7 +3666,7 @@ void Path2d::PathElem::curveEval(float & x, float & y, const float t) const
 void Path2d::PathElem::curveSubdiv(const float t1, const float t2, float *& xy, float *& hxy, int & numPoints) const
 {
 	const float eps = .1f;
-	const float flatnessEps = .1f;
+	const float flatnessEps = .03f;
 
 	const float tm = (t1 + t2) * .5f;
 	
@@ -3708,13 +3680,13 @@ void Path2d::PathElem::curveSubdiv(const float t1, const float t2, float *& xy, 
 	curveEval(px1, py1, t1);
 	curveEval(px2, py2, tm);
 	curveEval(px3, py3, t2);
-
+	
 	const float dx = px3 - px1;
 	const float dy = py3 - py1;
 	const float ds = std::hypot(dx, dy);
-
+	
 	bool needsSubdiv = true;
-
+	
 	if (ds <= eps)
 		needsSubdiv = false;
 
@@ -3729,8 +3701,9 @@ void Path2d::PathElem::curveSubdiv(const float t1, const float t2, float *& xy, 
 
 		const float dd = d2 - d1;
 
-		if (std::abs(dd) <= flatnessEps)
-			needsSubdiv = false;
+		if (t1 != 0.f || t2 != 1.f)
+			if (std::abs(dd) <= flatnessEps)
+				needsSubdiv = false;
 	}
 
 	if (needsSubdiv)
