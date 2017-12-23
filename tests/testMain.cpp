@@ -58,6 +58,10 @@ extern void testXmm();
 #endif
 extern void testHqPrimitives();
 extern void testHrtf();
+extern void testGradientShader();
+extern void testVfxGraph();
+extern void testCamera3d();
+extern void testOscilloscope();
 
 extern void testMain();
 extern void testMenu();
@@ -478,6 +482,11 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	//doButton("TT", "STB TrueType", testStbTruetype);
 	//doButton("TAtl", "Texture Atlas", testTextureAtlas);
 	//doButton("Thr", "Threading", testThreading);
+	doButton("Grd", "HQ Gradient & Texture", testGradientShader);
+	doButton("Vfx", "Vfx Graph", testVfxGraph);
+	doButton("Cam", "3D Camera", testCamera3d);
+	doButton("Osc", "Oscilloscope", testOscilloscope);
+	//doButton("Aud", "Audio Graph", testAudioGraph);
 #ifndef WIN32
 	doButton("XMM", "XMM Gesture Follower", testXmm);
 #endif

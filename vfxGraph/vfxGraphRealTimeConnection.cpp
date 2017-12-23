@@ -1146,7 +1146,7 @@ int RealTimeConnection::linkIsActive(const GraphLinkId linkId, const GraphNodeId
 	
 	if (dstInput->editorIsTriggered)
 	{
-		// fixme : setting this to false here won't work correctly when there's multiply outgoing connections for this socket. we should report true for all of these connections. we should, instead, clear all of these flags prior to processing the VfxGraph
+		// fixme : setting this to false here won't work correctly when there's multiple outgoing connections for this socket. we should report true for all of these connections. we should, instead, clear all of these flags prior to processing the VfxGraph
 		
 		dstInput->editorIsTriggered = false;
 		

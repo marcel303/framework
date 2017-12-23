@@ -130,21 +130,7 @@ static bool initAudioOutput()
 	
 	logDebug("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
 	
-	PaDeviceIndex deviceIndex = Pa_GetDefaultOutputDevice();
-	
-#if 0
-	const int numDevices = Pa_GetDeviceCount();
-	
-	for (int i = 0; i < numDevices; ++i)
-	{
-		const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(i);
-		
-		log("device: %s, maxOutputChannels: %d", deviceInfo->name, deviceInfo->maxOutputChannels);
-		
-		if (deviceInfo->maxOutputChannels >= kNumChannels)
-			deviceIndex = i;
-	}
-#endif
+	const PaDeviceIndex deviceIndex = Pa_GetDefaultOutputDevice();
 
 	if (deviceIndex == paNoDevice)
 	{

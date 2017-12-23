@@ -35,8 +35,6 @@
 #include <GL/glew.h>
 #include <libfreenect2/libfreenect2.hpp>
 
-//#include <libfreenect2/frame_listener_impl.h> // fixme : remove
-
 // kinect device and video frames/textures. note that these are all shared between kinect2 nodes, as
 // it would be senseless for each node to compute these over and over again with the same data coming
 // from the kinect. share them globally so we only need to compute them once for each new frame

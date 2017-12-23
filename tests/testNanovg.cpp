@@ -291,13 +291,6 @@ void testNanovg()
 		{
 			nvgBeginFrame(vg, framework.windowSx, framework.windowSy, 1.f);
 			{
-			#if 0
-				nvgBeginPath(vg);
-				nvgRect(vg, 100,100, 120,30);
-				nvgFillColor(vg, nvgRGBA(255,192,0,255));
-				nvgFill(vg);
-			#endif
-				
 				nvgSave(vg);
 				{
 					nvgScale(vg, 3.f, 3.f);
@@ -305,7 +298,7 @@ void testNanovg()
 					nvgStrokeWidth(vg, 1.5f);
 					nvgStrokeColor(vg, nvgRGBf(1.f, 0.f, 0.f));
 					nvgBeginPath(vg);
-					nvgRoundedRect(vg, 10.f, 10.f, 200.f, 400.f, 20.f);
+					nvgRoundedRect(vg, 10.f, 10.f, 300.f, 220.f, 20.f);
 					nvgFill(vg);
 					nvgStroke(vg);
 				}

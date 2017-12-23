@@ -72,8 +72,6 @@ VfxNodeAudioGraphPoly::~VfxNodeAudioGraphPoly()
 
 void VfxNodeAudioGraphPoly::updateDynamicInputs()
 {
-	// fixme : dynamic inputs should depend on an instance to exist. create an 'offline' graph to determine inputs ?
-	
 	AudioGraphInstance * audioGraphInstance = nullptr;
 	
 	for (int i = 0; i < kMaxInstances; ++i)

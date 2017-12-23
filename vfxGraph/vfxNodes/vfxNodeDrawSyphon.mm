@@ -105,7 +105,7 @@ void VfxNodeDrawSyphon::draw() const
 		const int sx = image->getSx();
 		const int sy = image->getSy();
 		
-	#if 1
+	#if 1 // note : take the inefficient code path here as it's the only one which seems to work on OpenGL 4.1+
 		pushSurface(g_currentVfxSurface);
 		{
 			[server bindToDrawFrameOfSize:NSMakeSize(sx, sy)];

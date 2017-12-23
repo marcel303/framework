@@ -316,37 +316,7 @@ void drawTestUi()
 			drawRect(0, GFX_SY, GFX_SX, 0);
 		}
 		
-	#if 1
 		doMenu(false, true);
-	#else
-		const int alpha = offset * 255;
-		const float scale = offset;
-		const float cornerRadius = 10.f;
-		const float strokeSize = 2.f;
-		
-		const int sx = 160;
-		const int sy = 40;
-		
-		gxTranslatef(GFX_SX - sx/2 - 25, GFX_SY - sy/2 - 25, 0);
-		gxScalef(scale, scale, 1);
-		
-		hqBegin(HQ_FILLED_ROUNDED_RECTS);
-		{
-			setColor(0, 0, 100, alpha);
-			hqFillRoundedRect(-sx/2 - strokeSize, -sy/2 - strokeSize, +sx/2 + strokeSize, +sy/2 + strokeSize, cornerRadius + strokeSize);
-		}
-		hqEnd();
-		
-		hqBegin(HQ_FILLED_ROUNDED_RECTS);
-		{
-			setColor(255, 255, 255, alpha);
-			hqFillRoundedRect(-sx/2, -sy/2, +sx/2, +sy/2, cornerRadius);
-		}
-		hqEnd();
-		
-		setColor(0, 0, 100, alpha);
-		drawText(0, 0, 20, 0, 0, "Help");
-	#endif
 	}
 	gxPopMatrix();
 	
