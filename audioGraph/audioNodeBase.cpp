@@ -895,7 +895,26 @@ struct AudioNodeSourceMix : AudioNodeBase
 		
 		bool isFirst = true;
 		
-		float gainScale = 1.f;
+		for (int i = 0; i < numInputs; ++i)
+		{
+			auto & input = inputs[i];
+			
+			input.source->expand();
+			
+			if (isFirst)
+			{
+				isFirst = false;
+				
+				if (input.gain->isScalar && input.gain->getScalar() == 1.f)
+					audioOutput.set(*input.source);
+				else
+					audioOutput.setMul(*input.source, *input.gain);
+			}
+			else
+			{
+				audioOutput.addMul(*input.source, *input.gain);
+			}
+		}
 		
 		if (normalizeGain)
 		{
@@ -905,41 +924,16 @@ struct AudioNodeSourceMix : AudioNodeBase
 			{
 				// todo : do this on a per-sample basis !
 				
-				totalGain += input.gain->getScalar();
+				totalGain += input.gain->getMean();
 			}
 			
 			if (totalGain > 0.f)
 			{
+				float gainScale = 1.f;
+				
 				gainScale = 1.f / totalGain;
-			}
-		}
-		
-		for (int i = 0; i < numInputs; ++i)
-		{
-			auto & input = inputs[i];
-			
-			input.source->expand();
-			
-			// todo : do this on a per-sample basis !
-			
-			const float gain = input.gain->getScalar() * gainScale;
-			
-			if (isFirst)
-			{
-				isFirst = false;
 				
-				if (gain == 1.f)
-					audioOutput.set(*input.source);
-				else
-					audioOutput.setMul(*input.source, gain);
-			}
-			else
-			{
-				// todo : do this on a per-sample basis !
-				
-				const float gain = input.gain->getScalar() * gainScale;
-				
-				audioOutput.addMul(*input.source, gain);
+				audioOutput.mul(gainScale);
 			}
 		}
 	}
