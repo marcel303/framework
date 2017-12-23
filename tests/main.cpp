@@ -14,7 +14,7 @@ int main(int argc, char * argv[])
 {
 	framework.enableRealTimeEditing = true;
 	
-	framework.enableDepthBuffer = false;
+	framework.enableDepthBuffer = true;
 	framework.enableDrawTiming = false;
 	//framework.enableProfiling = true;
 	
