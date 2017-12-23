@@ -397,8 +397,6 @@ void AudioFloatArray::update()
 
 AudioFloat * AudioFloatArray::get()
 {
-	// fixme : g_currentAudioGraph should always be valid here? right now we just validate without checking traversal id when g_currentAudioGraph is nullptr. potetially doing this work twice (or more). on the other hand, if get is called after the update, it may set the traversal id to that of the next frame, without working on the array that will be updated in the future. this would be even worse..
-	
 	Assert(g_currentAudioGraph != nullptr);
 	if (lastUpdateTick != g_currentAudioGraph->currentTickTraversalId)
 	{

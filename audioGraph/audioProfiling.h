@@ -27,7 +27,7 @@
 
 #pragma once
 
-#if 0
+#if 0 // set to 1 to enable profiling
 
 	#include "remotery.h"
 

@@ -95,7 +95,7 @@ void AudioUpdateHandler::shut()
 
 void AudioUpdateHandler::setOscEndpoint(const char * ipAddress, const int udpPort)
 {
-	SDL_LockMutex(mutex);
+	SDL_LockMutex(mutex); // setOscEndpoint
 	{
 		oscStream->setEndpoint(ipAddress, udpPort);
 	}

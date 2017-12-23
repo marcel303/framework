@@ -1198,13 +1198,6 @@ namespace binaural
 					maxA = std::max(maxA, triangle.vertex[i].location.azimuth);
 				}
 				
-			#if 0
-				minE -= 1.f;
-				maxE += 1.f;
-				minA -= 1.f;
-				maxA += 1.f;
-			#endif
-				
 				const int cellX1 = int(std::floor(minE / 180.f * HRIRSampleGrid::kGridSx));
 				const int cellY1 = int(std::floor(minA / 360.f * HRIRSampleGrid::kGridSy));
 				

@@ -1645,6 +1645,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 			min = channelDataMin;
 			max = channelDataMax;
 			
+			// todo : move this update to tickVisualizers
 			const float dt = 1.f / 60.f; // fixme
 			const float retain = std::powf(.7f, dt);
 			min *= retain;
@@ -4962,7 +4963,6 @@ void GraphEdit::draw() const
 	hqEnd();
 	
 #if 0 // todo : remove. test bezier control points
-	gxBegin(GL_POINTS);
 	{
 		for (auto & linkItr : graph->links)
 		{
@@ -4977,22 +4977,25 @@ void GraphEdit::draw() const
 				float x1 = path.points[0].x;
 				float y1 = path.points[0].y;
 				
+				Path2d path2d;
+				
+				path2d.moveTo(x1, y1);
+				
 				for (int i = 1; i < path.points.size(); ++i)
 				{
 					const float x2 = path.points[i].x;
 					const float y2 = path.points[i].y;
 					
-					hqLine(
-						x1, y1, 2.f,
-						x2, y2, 2.f);
+					path2d.curveTo(x2, y2, -30.f, 0.f, +30.f, 0.f);
 					
 					x1 = x2;
 					y1 = y2;
 				}
+				
+				hqDrawPath(path2d, 4.f);
 			}
 		}
 	}
-	gxEnd();
 #endif
 	
 	hqBegin(HQ_FILLED_CIRCLES);
