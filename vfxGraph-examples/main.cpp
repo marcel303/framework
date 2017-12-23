@@ -581,7 +581,7 @@ int main(int argc, char * argv[])
 		
 		RealTimeConnection * realTimeConnection = new RealTimeConnection(vfxGraph);
 		
-		GraphEdit * graphEdit = new GraphEdit(typeDefinitionLibrary, realTimeConnection);
+		GraphEdit * graphEdit = new GraphEdit(GFX_SX, GFX_SY, typeDefinitionLibrary, realTimeConnection);
 		
 		//
 		
