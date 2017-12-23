@@ -64,8 +64,8 @@ struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual void setNodeIsPassthrough(const GraphNodeId nodeId, const bool isPassthrough) override;
 	
-	static bool setPlugValue(AudioPlug * plug, const std::string & value);
-	static bool getPlugValue(AudioPlug * plug, std::string & value);
+	static bool setPlugValue(AudioGraph * audioGraph, AudioPlug * plug, const std::string & value);
+	static bool getPlugValue(AudioGraph * audioGraph, AudioPlug * plug, std::string & value);
 
 	virtual void setSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, const std::string & value) override;
 	virtual bool getSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, std::string & value) override;

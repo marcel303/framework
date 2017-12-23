@@ -526,7 +526,7 @@ void AudioRealTimeConnection::setNodeIsPassthrough(const GraphNodeId nodeId, con
 	node->isPassthrough = isPassthrough;
 }
 
-bool AudioRealTimeConnection::setPlugValue(AudioPlug * plug, const std::string & value)
+bool AudioRealTimeConnection::setPlugValue(AudioGraph * audioGraph, AudioPlug * plug, const std::string & value)
 {
 	switch (plug->type)
 	{
@@ -553,8 +553,15 @@ bool AudioRealTimeConnection::setPlugValue(AudioPlug * plug, const std::string &
 		return false;
 		
 	case kAudioPlugType_FloatVec:
-		plug->getRwAudioFloat().setScalar(Parse::Float(value));
-		return true;
+		{
+			Assert(g_currentAudioGraph == nullptr);
+			g_currentAudioGraph = audioGraph;
+			{
+				plug->getRwAudioFloat().setScalar(Parse::Float(value));
+			}
+			g_currentAudioGraph = nullptr;
+			return true;
+		}
 
 	case kAudioPlugType_Trigger:
 		return false;
@@ -564,7 +571,7 @@ bool AudioRealTimeConnection::setPlugValue(AudioPlug * plug, const std::string &
 	return false;
 }
 
-bool AudioRealTimeConnection::getPlugValue(AudioPlug * plug, std::string & value)
+bool AudioRealTimeConnection::getPlugValue(AudioGraph * audioGraph, AudioPlug * plug, std::string & value)
 {
 	switch (plug->type)
 	{
@@ -586,7 +593,12 @@ bool AudioRealTimeConnection::getPlugValue(AudioPlug * plug, std::string & value
 	case kAudioPlugType_PcmData:
 		return false;
 	case kAudioPlugType_FloatVec:
-		value = String::FormatC("%f", plug->getAudioFloat().getScalar());
+		Assert(g_currentAudioGraph == nullptr);
+		g_currentAudioGraph = audioGraph;
+		{
+			value = String::FormatC("%f", plug->getAudioFloat().getScalar());
+		}
+		g_currentAudioGraph = nullptr;
 		return true;
 	case kAudioPlugType_Trigger:
 		return false;
@@ -625,7 +637,7 @@ void AudioRealTimeConnection::setSrcSocketValue(const GraphNodeId nodeId, const 
 	
 	if (input->isConnected())
 	{
-		setPlugValue(input, value);
+		setPlugValue(audioGraph, input, value);
 	}
 	else
 	{
@@ -661,7 +673,7 @@ bool AudioRealTimeConnection::getSrcSocketValue(const GraphNodeId nodeId, const 
 	
 	AUDIO_SCOPE;
 	
-	return getPlugValue(input, value);
+	return getPlugValue(audioGraph, input, value);
 }
 
 void AudioRealTimeConnection::setDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, const std::string & value)
@@ -691,7 +703,7 @@ void AudioRealTimeConnection::setDstSocketValue(const GraphNodeId nodeId, const 
 	
 	AUDIO_SCOPE;
 	
-	setPlugValue(output, value);
+	setPlugValue(audioGraph, output, value);
 }
 
 bool AudioRealTimeConnection::getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value)
@@ -719,7 +731,7 @@ bool AudioRealTimeConnection::getDstSocketValue(const GraphNodeId nodeId, const 
 	
 	AUDIO_SCOPE;
 	
-	return getPlugValue(output, value);
+	return getPlugValue(audioGraph, output, value);
 }
 
 void AudioRealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName)
