@@ -175,7 +175,7 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	if (audioGraphMgr != nullptr)
 	{
-		audioGraphMgr->updateAudioValues();
+		audioGraphMgr->tickVisualizers();
 	}
 	
 	g_audioInputChannels = nullptr;

@@ -1905,7 +1905,7 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	AudioGraphManager audioGraphMgr(GFX_SX, GFX_SY);
+	AudioGraphManager_RTE audioGraphMgr(GFX_SX, GFX_SY);
 	audioGraphMgr.init(mutex);
 	
 	Assert(g_audioGraphMgr == nullptr);
@@ -2009,9 +2009,9 @@ int main(int argc, char * argv[])
 						world->addMachine();
 					if (doButton("kill selected", 0.f, .5f, false))
 					{
-						if (g_audioGraphMgr->selectedFile && g_audioGraphMgr->selectedFile->activeInstance)
+						if (audioGraphMgr.selectedFile && audioGraphMgr.selectedFile->activeInstance)
 						{
-							auto graphInstance = g_audioGraphMgr->selectedFile->activeInstance;
+							auto graphInstance = audioGraphMgr.selectedFile->activeInstance;
 							
 							for (auto e : world->entities)
 							{
@@ -2025,9 +2025,9 @@ int main(int argc, char * argv[])
 					}
 					if (doButton("kill selected type", .5f, .5f, true))
 					{
-						if (g_audioGraphMgr->selectedFile && g_audioGraphMgr->selectedFile->activeInstance)
+						if (audioGraphMgr.selectedFile && audioGraphMgr.selectedFile->activeInstance)
 						{
-							auto graphInstance = g_audioGraphMgr->selectedFile->activeInstance;
+							auto graphInstance = audioGraphMgr.selectedFile->activeInstance;
 							
 							EntityType type = kEntity_Unknown;
 							
@@ -2081,9 +2081,9 @@ int main(int argc, char * argv[])
 					doBreak();
 					
 					doLabel("shared memory", 0.f);
-					SDL_LockMutex(g_audioGraphMgr->globals->audioMutex);
-					auto controlValues = g_audioGraphMgr->globals->controlValues;
-					SDL_UnlockMutex(g_audioGraphMgr->globals->audioMutex);
+					SDL_LockMutex(audioGraphMgr.globals->audioMutex);
+					auto controlValues = audioGraphMgr.globals->controlValues;
+					SDL_UnlockMutex(audioGraphMgr.globals->audioMutex);
 					int padIndex = 0;
 					for (int i = 0; i < controlValues.size(); ++i)
 					{
@@ -2113,10 +2113,10 @@ int main(int argc, char * argv[])
 								padIndex = 0;
 						}
 					}
-					SDL_LockMutex(g_audioGraphMgr->globals->audioMutex);
+					SDL_LockMutex(audioGraphMgr.globals->audioMutex);
 					for (auto & srcControlValue : controlValues)
 					{
-						for (auto & dstControlValue : g_audioGraphMgr->globals->controlValues)
+						for (auto & dstControlValue : audioGraphMgr.globals->controlValues)
 						{
 							if (srcControlValue.name == dstControlValue.name)
 							{
@@ -2126,7 +2126,7 @@ int main(int argc, char * argv[])
 							}
 						}
 					}
-					SDL_UnlockMutex(g_audioGraphMgr->globals->audioMutex);
+					SDL_UnlockMutex(audioGraphMgr.globals->audioMutex);
 				}
 			}
 		}
@@ -2178,7 +2178,7 @@ int main(int argc, char * argv[])
 						fullFilename = Path::ReplaceExtension(fullFilename, "xml");
 					TestInstance * instance = new TestInstance(fullFilename.c_str());
 					world->entities.push_back(instance);
-					g_audioGraphMgr->selectInstance(instance->graphInstance);
+					audioGraphMgr.selectInstance(instance->graphInstance);
 				}
 			}
 			

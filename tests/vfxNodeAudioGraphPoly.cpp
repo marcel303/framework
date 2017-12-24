@@ -258,7 +258,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 				
 				addHistoryElem(kHistoryType_InstanceCreate, (t2 - t1) / 1000.0);
 				
-				g_audioGraphMgr->selectInstance(instances[index]); // fixme
+				//g_audioGraphMgr->selectInstance(instances[index]); // fixme
 				
 				newInstances[numNewInstances] = instances[index];
 				numNewInstances++;
@@ -295,34 +295,35 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	
 	index = 0;
 	
-	SDL_LockMutex(g_audioGraphMgr->audioMutex);
+	for (auto & dynamicInput : dynamicInputs)
 	{
-		for (auto & dynamicInput : dynamicInputs)
+		volumeZipper.restart();
+		zipper.restart();
+		
+		auto input = tryGetInput(kInput_COUNT + index);
+		
+		Assert(input != nullptr);
+		if (input != nullptr && input->type == kVfxPlugType_Channel)
 		{
-			volumeZipper.restart();
-			zipper.restart();
+			int instanceIndex = 0;
 			
-			auto input = tryGetInput(kInput_COUNT + index);
-			
-			Assert(input != nullptr);
-			if (input != nullptr && input->type == kVfxPlugType_Channel)
+			while (!volumeZipper.done())
 			{
-				int instanceIndex = 0;
+				const float volume = volumeZipper.read(0, 1.f);
 				
-				while (!volumeZipper.done())
+				if (volume == 0.f)
 				{
-					const float volume = volumeZipper.read(0, 1.f);
+					Assert(instances[instanceIndex] == nullptr);
+				}
+				else if (instanceIndex < kMaxInstances)
+				{
+					Assert(instances[instanceIndex] != nullptr);
 					
-					if (volume == 0.f)
-					{
-						Assert(instances[instanceIndex] == nullptr);
-					}
-					else if (instanceIndex < kMaxInstances)
-					{
-						Assert(instances[instanceIndex] != nullptr);
+					auto audioGraph = instances[instanceIndex]->audioGraph;
 					
-						auto audioGraph = instances[instanceIndex]->audioGraph;
-						
+					// todo : remove the need for a mutex lock when updating control values. or at least limit its scope
+					audioGraph->mutex.lock();
+					{
 						for (auto & controlValue : audioGraph->controlValues)
 						{
 							if (controlValue.name == dynamicInput.name)
@@ -331,22 +332,26 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 							}
 						}
 					}
-					
-					volumeZipper.next();
-					zipper.next();
-					
-					instanceIndex++;
+					audioGraph->mutex.unlock();
 				}
+				
+				volumeZipper.next();
+				zipper.next();
+				
+				instanceIndex++;
 			}
-			
-			index++;
 		}
 		
-		for (int i = 0; i < numNewInstances; ++i)
-		{
-			newInstances[i]->audioGraph->triggerEvent("begin");
-		}
-		
+		index++;
+	}
+	
+	for (int i = 0; i < numNewInstances; ++i)
+	{
+		newInstances[i]->audioGraph->triggerEvent("begin");
+	}
+	
+	g_voiceMgr->mutex.lock();
+	{
 		const int numVoices = g_voiceMgr->voices.size();
 		
 		voicesData.allocOnSizeChange(numVoices * AUDIO_UPDATE_SIZE);
@@ -361,7 +366,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			voiceData += AUDIO_UPDATE_SIZE;
 		}
 	}
-	SDL_UnlockMutex(g_audioGraphMgr->audioMutex);
+	g_voiceMgr->mutex.unlock();
 }
 
 void VfxNodeAudioGraphPoly::getDescription(VfxNodeDescription & d)

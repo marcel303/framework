@@ -419,7 +419,7 @@ AudioGraphGlobals::Memf AudioGraphGlobals::getMemf(const char * name)
 
 //
 
-AudioGraphManager::AudioGraphManager(const int _displaySx, const int _displaySy)
+AudioGraphManager_RTE::AudioGraphManager_RTE(const int _displaySx, const int _displaySy)
 	: typeDefinitionLibrary(nullptr)
 	, files()
 	, selectedFile(nullptr)
@@ -433,12 +433,12 @@ AudioGraphManager::AudioGraphManager(const int _displaySx, const int _displaySy)
 	displaySy = _displaySy;
 }
 
-AudioGraphManager::~AudioGraphManager()
+AudioGraphManager_RTE::~AudioGraphManager_RTE()
 {
 	shut();
 }
 
-void AudioGraphManager::init(SDL_mutex * mutex)
+void AudioGraphManager_RTE::init(SDL_mutex * mutex)
 {
 	shut();
 	
@@ -458,7 +458,7 @@ void AudioGraphManager::init(SDL_mutex * mutex)
 	globals->init(mutex);
 }
 
-void AudioGraphManager::shut()
+void AudioGraphManager_RTE::shut()
 {
 	AudioGraphManager * oldAudioGraphMgr = g_audioGraphMgr;
 	g_audioGraphMgr = this;
@@ -490,7 +490,7 @@ void AudioGraphManager::shut()
 	typeDefinitionLibrary = nullptr;
 }
 
-void AudioGraphManager::selectFile(const char * filename)
+void AudioGraphManager_RTE::selectFile(const char * filename)
 {
 	SDL_LockMutex(audioMutex);
 	{
@@ -518,7 +518,7 @@ void AudioGraphManager::selectFile(const char * filename)
 	SDL_UnlockMutex(audioMutex);
 }
 
-void AudioGraphManager::selectInstance(const AudioGraphInstance * instance)
+void AudioGraphManager_RTE::selectInstance(const AudioGraphInstance * instance)
 {
 	SDL_LockMutex(audioMutex);
 	{
@@ -547,7 +547,7 @@ void AudioGraphManager::selectInstance(const AudioGraphInstance * instance)
 	SDL_UnlockMutex(audioMutex);
 }
 
-AudioGraphInstance * AudioGraphManager::createInstance(const char * filename)
+AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename)
 {
 	AudioGraphFile * file;
 	bool isNew;
@@ -616,7 +616,7 @@ AudioGraphInstance * AudioGraphManager::createInstance(const char * filename)
 	return instance;
 }
 
-void AudioGraphManager::free(AudioGraphInstance *& instance)
+void AudioGraphManager_RTE::free(AudioGraphInstance *& instance)
 {
 	if (instance == nullptr)
 	{
@@ -681,7 +681,7 @@ void AudioGraphManager::free(AudioGraphInstance *& instance)
 	SDL_UnlockMutex(audioMutex);
 }
 
-void AudioGraphManager::tick(const float dt)
+void AudioGraphManager_RTE::tick(const float dt)
 {
 	SDL_LockMutex(audioMutex);
 	{
@@ -696,7 +696,7 @@ void AudioGraphManager::tick(const float dt)
 	SDL_UnlockMutex(audioMutex);
 }
 
-void AudioGraphManager::updateAudioValues()
+void AudioGraphManager_RTE::tickVisualizers()
 {
 	SDL_LockMutex(audioMutex);
 	{
@@ -708,7 +708,7 @@ void AudioGraphManager::updateAudioValues()
 	SDL_UnlockMutex(audioMutex);
 }
 
-bool AudioGraphManager::tickEditor(const float dt, const bool isInputCaptured)
+bool AudioGraphManager_RTE::tickEditor(const float dt, const bool isInputCaptured)
 {
 	bool result = false;
 	
@@ -722,7 +722,7 @@ bool AudioGraphManager::tickEditor(const float dt, const bool isInputCaptured)
 	return result;
 }
 
-void AudioGraphManager::drawEditor()
+void AudioGraphManager_RTE::drawEditor()
 {
 	if (selectedFile != nullptr)
 	{

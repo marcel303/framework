@@ -71,6 +71,19 @@ struct AudioGraphFile
 
 struct AudioGraphManager
 {
+	virtual ~AudioGraphManager() { }
+	
+	// called from the app thread
+	virtual AudioGraphInstance * createInstance(const char * filename) = 0;
+	virtual void free(AudioGraphInstance *& instance) = 0;
+	
+	// called from the audio thread
+	virtual void tick(const float dt) = 0;
+	virtual void tickVisualizers() = 0;
+};
+
+struct AudioGraphManager_RTE : AudioGraphManager
+{
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
 	
 	std::map<std::string, AudioGraphFile*> files;
@@ -86,8 +99,8 @@ struct AudioGraphManager
 	int displaySx;
 	int displaySy;
 	
-	AudioGraphManager(const int displaySx, const int displaySy);
-	~AudioGraphManager();
+	AudioGraphManager_RTE(const int displaySx, const int displaySy);
+	virtual ~AudioGraphManager_RTE() override;
 	
 	// called from the app thread
 	void init(SDL_mutex * mutex);
@@ -98,12 +111,12 @@ struct AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
-	AudioGraphInstance * createInstance(const char * filename);
-	void free(AudioGraphInstance *& instance);
+	virtual AudioGraphInstance * createInstance(const char * filename) override;
+	virtual void free(AudioGraphInstance *& instance) override;
 	
 	// called from the audio thread
-	void tick(const float dt);
-	void updateAudioValues();
+	virtual void tick(const float dt) override;
+	virtual void tickVisualizers() override;
 	
 	// called from the app thread
 	bool tickEditor(const float dt, const bool isInputCaptured);
