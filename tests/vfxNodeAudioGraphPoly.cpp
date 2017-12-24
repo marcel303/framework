@@ -35,6 +35,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "Timer.h"
 
+extern AudioGraphManager * g_vfxAudioGraphMgr;
+
 VFX_NODE_TYPE(VfxNodeAudioGraphPoly)
 {
 	typeName = "audioGraph.poly";
@@ -66,7 +68,7 @@ VfxNodeAudioGraphPoly::~VfxNodeAudioGraphPoly()
 	for (int i = 0; i < kMaxInstances; ++i)
 	{
 		if (instances[i] != nullptr)
-			g_audioGraphMgr->free(instances[i]);
+			g_vfxAudioGraphMgr->free(instances[i]);
 	}
 }
 
@@ -204,7 +206,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		for (int i = 0; i < kMaxInstances; ++i)
 		{
 			if (instances[i] != nullptr)
-				g_audioGraphMgr->free(instances[i]);
+				g_vfxAudioGraphMgr->free(instances[i]);
 		}
 		
 		voicesData.free();
@@ -220,7 +222,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		for (int i = 0; i < kMaxInstances; ++i)
 		{
 			if (instances[i] != nullptr)
-				g_audioGraphMgr->free(instances[i]);
+				g_vfxAudioGraphMgr->free(instances[i]);
 		}
 	}
 	
@@ -242,7 +244,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			if (instances[index] != nullptr)
 			{
 				auto t1 = g_TimerRT.TimeUS_get();
-				g_audioGraphMgr->free(instances[index]);
+				g_vfxAudioGraphMgr->free(instances[index]);
 				auto t2 = g_TimerRT.TimeUS_get();
 				
 				addHistoryElem(kHistoryType_InstanceFree, (t2 - t1) / 1000.0);
@@ -253,12 +255,12 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			if (instances[index] == nullptr)
 			{
 				auto t1 = g_TimerRT.TimeUS_get();
-				instances[index] = g_audioGraphMgr->createInstance(filename);
+				instances[index] = g_vfxAudioGraphMgr->createInstance(filename);
 				auto t2 = g_TimerRT.TimeUS_get();
 				
 				addHistoryElem(kHistoryType_InstanceCreate, (t2 - t1) / 1000.0);
 				
-				//g_audioGraphMgr->selectInstance(instances[index]); // fixme
+				//g_vfxAudioGraphMgr->selectInstance(instances[index]); // fixme
 				
 				newInstances[numNewInstances] = instances[index];
 				numNewInstances++;
@@ -275,7 +277,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	while (index < kMaxInstances)
 	{
 		if (instances[index] != nullptr)
-			g_audioGraphMgr->free(instances[index]);
+			g_vfxAudioGraphMgr->free(instances[index]);
 		
 		index++;
 	}
@@ -350,7 +352,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		newInstances[i]->audioGraph->triggerEvent("begin");
 	}
 	
-	g_voiceMgr->mutex.lock();
+	g_voiceMgr->audioMutex.lock();
 	{
 		const int numVoices = g_voiceMgr->voices.size();
 		
@@ -366,7 +368,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			voiceData += AUDIO_UPDATE_SIZE;
 		}
 	}
-	g_voiceMgr->mutex.unlock();
+	g_voiceMgr->audioMutex.unlock();
 }
 
 void VfxNodeAudioGraphPoly::getDescription(VfxNodeDescription & d)

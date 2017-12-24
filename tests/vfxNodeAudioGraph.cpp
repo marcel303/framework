@@ -33,6 +33,8 @@
 
 #include "framework.h"
 
+AudioGraphManager * g_vfxAudioGraphMgr = nullptr;
+
 /*
 
 use audio graph as a channel generator
@@ -81,7 +83,7 @@ VfxNodeAudioGraph::VfxNodeAudioGraph()
 
 VfxNodeAudioGraph::~VfxNodeAudioGraph()
 {
-	g_audioGraphMgr->free(audioGraphInstance);
+	g_vfxAudioGraphMgr->free(audioGraphInstance);
 	
 	delete [] channelOutputs;
 	channelOutputs = nullptr;
@@ -102,9 +104,10 @@ void VfxNodeAudioGraph::updateDynamicInputs()
 	}
 	else
 	{
-		SDL_LockMutex(g_currentAudioGraph->globals->audioMutex);
-		auto controlValues = g_currentAudioGraph->globals->controlValues;
-		SDL_UnlockMutex(g_currentAudioGraph->globals->audioMutex);
+		auto audioGraph = audioGraphInstance->audioGraph;
+		SDL_LockMutex(audioGraph->globals->audioMutex);
+		auto controlValues = audioGraph->globals->controlValues;
+		SDL_UnlockMutex(audioGraph->globals->audioMutex);
 		
 		bool equal = true;
 		
@@ -230,18 +233,18 @@ void VfxNodeAudioGraph::tick(const float dt)
 	{
 		if (audioGraphInstance != nullptr)
 		{
-			g_audioGraphMgr->free(audioGraphInstance);
+			g_vfxAudioGraphMgr->free(audioGraphInstance);
 			currentFilename.clear();
 		}
 	}
 	else if (filename != currentFilename)
 	{
-		g_audioGraphMgr->free(audioGraphInstance);
+		g_vfxAudioGraphMgr->free(audioGraphInstance);
 		currentFilename.clear();
 		
 		//
 		
-		audioGraphInstance = g_audioGraphMgr->createInstance(filename);
+		audioGraphInstance = g_vfxAudioGraphMgr->createInstance(filename);
 		
 		currentFilename = filename;
 	}
@@ -286,9 +289,11 @@ void VfxNodeAudioGraph::tick(const float dt)
 		
 		if (input != nullptr && input->type == kVfxPlugType_Float)
 		{
-			SDL_LockMutex(g_currentAudioGraph->globals->audioMutex);
+			auto audioGraph = audioGraphInstance->audioGraph;
+			
+			SDL_LockMutex(audioGraph->globals->audioMutex);
 			{
-				for (auto & controlValue : g_currentAudioGraph->globals->controlValues)
+				for (auto & controlValue : audioGraph->globals->controlValues)
 				{
 					if (controlValue.name == dynamicInput.name)
 					{
@@ -299,7 +304,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 					}
 				}
 			}
-			SDL_UnlockMutex(g_currentAudioGraph->globals->audioMutex);
+			SDL_UnlockMutex(audioGraph->globals->audioMutex);
 		}
 		
 		index++;
