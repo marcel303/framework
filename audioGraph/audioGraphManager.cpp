@@ -419,8 +419,136 @@ AudioGraphGlobals::Memf AudioGraphGlobals::getMemf(const char * name)
 
 //
 
+AudioGraphManager_Basic::AudioGraphManager_Basic()
+	: AudioGraphManager()
+	, typeDefinitionLibrary(nullptr)
+	, audioMutex(nullptr)
+	, globals(nullptr)
+{
+}
+
+AudioGraphManager_Basic::~AudioGraphManager_Basic()
+{
+	shut();
+}
+
+void AudioGraphManager_Basic::init(SDL_mutex * mutex)
+{
+	shut();
+	
+	//
+	
+	typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+	
+	createAudioValueTypeDefinitions(*typeDefinitionLibrary);
+	createAudioEnumTypeDefinitions(*typeDefinitionLibrary, g_audioEnumTypeRegistrationList);
+	createAudioNodeTypeDefinitions(*typeDefinitionLibrary, g_audioNodeTypeRegistrationList);
+	
+	audioMutex = mutex;
+	
+	globals = new AudioGraphGlobals();
+	globals->init(mutex);
+}
+
+void AudioGraphManager_Basic::shut()
+{
+	auto oldAudioGraphMgr = g_audioGraphMgr;
+	g_audioGraphMgr = this;
+	{
+		while (!instances.empty())
+		{
+			AudioGraphInstance * instance = &instances.front();
+			
+			free(instance);
+		}
+	}
+	g_audioGraphMgr = oldAudioGraphMgr;
+	
+	//
+	
+	if (globals != nullptr)
+	{
+		globals->shut();
+		
+		delete globals;
+		globals = nullptr;
+	}
+	
+	audioMutex = nullptr;
+	
+	delete typeDefinitionLibrary;
+	typeDefinitionLibrary = nullptr;
+}
+
+AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filename)
+{
+	Graph graph;
+	
+	if (graph.load(filename, typeDefinitionLibrary))
+	{
+		auto audioGraph = constructAudioGraph(graph, typeDefinitionLibrary, globals);
+		
+		AudioGraphInstance * instance = nullptr;
+		
+		SDL_LockMutex(audioMutex);
+		{
+			instances.emplace_back();
+			instance = &instances.back();
+			instance->audioGraph = audioGraph;
+		}
+		SDL_UnlockMutex(audioMutex);
+		
+		return instance;
+	}
+	else
+	{
+		return nullptr;
+	}
+}
+
+void AudioGraphManager_Basic::free(AudioGraphInstance *& instance)
+{
+	if (instance == nullptr)
+	{
+		return;
+	}
+	
+	for (auto instanceItr = instances.begin(); instanceItr != instances.end(); ++instanceItr)
+	{
+		if (&(*instanceItr) == instance)
+		{
+			instances.erase(instanceItr);
+			instance = nullptr;
+			break;
+		}
+	}
+	
+	Assert(instance == nullptr); // found and freed?
+}
+
+void AudioGraphManager_Basic::tick(const float dt)
+{
+	SDL_LockMutex(audioMutex);
+	{
+		globals->tick(dt);
+		
+		// tick graph instances
+		
+		for (auto & instance : instances)
+			instance.audioGraph->tick(dt);
+	}
+	SDL_UnlockMutex(audioMutex);
+}
+
+void AudioGraphManager_Basic::tickVisualizers()
+{
+}
+
+//
+
 AudioGraphManager_RTE::AudioGraphManager_RTE(const int _displaySx, const int _displaySy)
-	: typeDefinitionLibrary(nullptr)
+	: AudioGraphManager()
+	, typeDefinitionLibrary(nullptr)
 	, files()
 	, selectedFile(nullptr)
 	, audioMutex(nullptr)
@@ -460,7 +588,7 @@ void AudioGraphManager_RTE::init(SDL_mutex * mutex)
 
 void AudioGraphManager_RTE::shut()
 {
-	AudioGraphManager * oldAudioGraphMgr = g_audioGraphMgr;
+	auto oldAudioGraphMgr = g_audioGraphMgr;
 	g_audioGraphMgr = this;
 	{
 		for (auto & file : files)

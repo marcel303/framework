@@ -82,6 +82,32 @@ struct AudioGraphManager
 	virtual void tickVisualizers() = 0;
 };
 
+struct AudioGraphManager_Basic : AudioGraphManager
+{
+	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
+	
+	std::list<AudioGraphInstance> instances;
+	
+	SDL_mutex * audioMutex;
+	
+	AudioGraphGlobals * globals;
+	
+	AudioGraphManager_Basic();
+	virtual ~AudioGraphManager_Basic() override;
+	
+	// called from the app thread
+	void init(SDL_mutex * mutex);
+	void shut();
+	
+	// called from the app thread
+	virtual AudioGraphInstance * createInstance(const char * filename) override;
+	virtual void free(AudioGraphInstance *& instance) override;
+	
+	// called from the audio thread
+	virtual void tick(const float dt) override;
+	virtual void tickVisualizers() override;
+};
+
 struct AudioGraphManager_RTE : AudioGraphManager
 {
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
