@@ -101,7 +101,7 @@ void RealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::string & t
 	
 	//
 	
-	VfxNodeBase * vfxNode = createVfxNode(nodeId, typeName, vfxGraph);
+	VfxNodeBase * vfxNode = createVfxNode(nodeId, typeName);
 	
 	if (vfxNode == nullptr)
 	{
@@ -110,15 +110,20 @@ void RealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::string & t
 		return;
 	}
 	
-	vfxNode->id = nodeId;
-	
-	vfxNode->initSelf(node);
-	
-	vfxGraph->nodes[node.id] = vfxNode;
-	
-	//
-	
-	vfxNode->init(node);
+	Assert(g_currentVfxGraph == nullptr);
+	g_currentVfxGraph = vfxGraph;
+	{
+		vfxNode->id = nodeId;
+		
+		vfxNode->initSelf(node);
+		
+		vfxGraph->nodes[node.id] = vfxNode;
+		
+		//
+		
+		vfxNode->init(node);
+	}
+	g_currentVfxGraph = nullptr;
 }
 
 void RealTimeConnection::nodeRemove(const GraphNodeId nodeId)

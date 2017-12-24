@@ -312,6 +312,8 @@ int VfxGraph::traverseDraw(const int sx, const int sy) const
 	
 #if 1 // todo : make this depend on whether the graph editor is visible or not ? or whether the node is referenced by the editor ?
 
+	// note : traversal for sub-graphs not connected to the display node should start at nodes without any connected outputs. otherwise we might start in the middle of a sub-graph, resulting in undefined behavior
+	
 	pushSurface(s_dummySurface);
 	{
 		// draw nodes that aren't connected to the display node
@@ -323,10 +325,17 @@ int VfxGraph::traverseDraw(const int sx, const int sy) const
 		{
 			VfxNodeBase * node = i.second;
 			
-			if (node->lastDrawTraversalId != nextDrawTraversalId)
+			if (node->lastDrawTraversalId == nextDrawTraversalId)
+				continue;
+			
+			bool isRootNode = true;
+			
+			for (auto & output : node->outputs)
+				if (output.isReferencedByLink)
+					isRootNode = false;
+			
+			if (isRootNode)
 			{
-				//if (any input or output referencedByRealTimeConnectionTick)
-				
 				node->traverseDraw(nextDrawTraversalId);
 			}
 		}
@@ -362,7 +371,7 @@ float VfxDynamicLink::floatParam(const char * name, const float defaultValue) co
 
 //
 
-VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName, VfxGraph * vfxGraph)
+VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName)
 {
 	VfxNodeBase * vfxNode = nullptr;
 	
@@ -385,17 +394,6 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 		}
 	}
 	
-	if (typeName == "draw.display")
-	{
-		Assert(vfxNode != nullptr);
-		if (vfxNode != nullptr)
-		{
-			// fixme : move display node id handling out of here. remove nodeId and vfxGraph passed in to this function
-			Assert(vfxGraph->displayNodeIds.count(nodeId) == 0);
-			vfxGraph->displayNodeIds.insert(nodeId);
-		}
-	}
-	
 	return vfxNode;
 }
 
@@ -412,7 +410,7 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 	{
 		auto & node = nodeItr.second;
 		
-		VfxNodeBase * vfxNode = createVfxNode(node.id, node.typeName, vfxGraph);
+		VfxNodeBase * vfxNode = createVfxNode(node.id, node.typeName);
 		
 		Assert(vfxNode != nullptr);
 		if (vfxNode == nullptr)

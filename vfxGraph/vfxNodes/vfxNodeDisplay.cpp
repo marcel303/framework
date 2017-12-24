@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "vfxGraph.h"
 #include "vfxNodeDisplay.h"
 
 VFX_NODE_TYPE(VfxNodeDisplay)
@@ -32,4 +33,10 @@ VFX_NODE_TYPE(VfxNodeDisplay)
 	typeName = "draw.display";
 	
 	in("image", "image");
+}
+
+void VfxNodeDisplay::init(const GraphNode & node)
+{
+	Assert(g_currentVfxGraph->displayNodeIds.count(node.id) == 0);
+	g_currentVfxGraph->displayNodeIds.insert(node.id);
 }

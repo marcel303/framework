@@ -48,4 +48,6 @@ struct VfxNodeDisplay : VfxNodeBase
 	{
 		return getInputImage(kInput_Image, nullptr);
 	}
+	
+	virtual void init(const GraphNode & node) override;
 };
