@@ -115,3 +115,90 @@ void OpenglGpuTimer::poll()
 		}
 	}
 }
+
+//
+
+const int OpenglGpuTimer2::kMaxHistory;
+
+OpenglGpuTimer2::OpenglGpuTimer2()
+	: nextQuery(0)
+	, nextRead(0)
+	, numBusy(0)
+	, elapsed(0)
+{
+	glGenQueries(kMaxHistory * 2, (GLuint*)queries);
+	checkErrorGL();
+}
+
+OpenglGpuTimer2::~OpenglGpuTimer2()
+{
+	glDeleteQueries(kMaxHistory * 2, (GLuint*)queries);
+	checkErrorGL();
+}
+
+void OpenglGpuTimer2::begin()
+{
+	while (numBusy == kMaxHistory)
+	{
+		logDebug("waiting for GPU result!");
+		
+		poll();
+	}
+	
+	glQueryCounter(queries[nextQuery][0], GL_TIMESTAMP);
+	checkErrorGL();
+}
+
+void OpenglGpuTimer2::end()
+{
+	glQueryCounter(queries[nextQuery][1], GL_TIMESTAMP);
+	checkErrorGL();
+	
+	numBusy++;
+	
+	if (nextQuery + 1 == kMaxHistory)
+		nextQuery = 0;
+	else
+		nextQuery = nextQuery + 1;
+}
+
+void OpenglGpuTimer2::poll()
+{
+	while (numBusy > 0)
+	{
+		GLuint query1 = queries[nextRead][0];
+		GLuint query2 = queries[nextRead][1];
+		
+		GLint done = 0;
+		
+		glGetQueryObjectiv(query2, GL_QUERY_RESULT_AVAILABLE, &done);
+		checkErrorGL();
+		
+		if (done)
+		{
+			GLuint64 t1 = 0;
+			GLuint64 t2 = 0;
+		
+			glGetQueryObjectui64v(query1, GL_QUERY_RESULT, &t1);
+			checkErrorGL();
+			glGetQueryObjectui64v(query2, GL_QUERY_RESULT, &t2);
+			checkErrorGL();
+			
+			elapsed = t2 - t1;
+		
+			//logDebug("vfxGraph draw GPU time: %.2f", elapsed / 1000000.0);
+			
+			if (nextRead + 1 == kMaxHistory)
+				nextRead = 0;
+			else
+				nextRead = nextRead + 1;
+			
+			numBusy--;
+		}
+		else
+		{
+			break;
+		}
+	}
+}
+

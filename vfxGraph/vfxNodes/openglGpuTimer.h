@@ -45,3 +45,23 @@ struct OpenglGpuTimer
 	void end();
 	void poll();
 };
+
+// implementation using GL_TIMESTAMP queries. allows for timing sub-trees. doesn't work on MacOS though ?
+struct OpenglGpuTimer2
+{
+	static const int kMaxHistory = 3;
+	
+	unsigned int queries[kMaxHistory][2];
+	
+	int nextQuery;
+	int nextRead;
+	int numBusy;
+	int elapsed;
+	
+	OpenglGpuTimer2();
+	~OpenglGpuTimer2();
+	
+	void begin();
+	void end();
+	void poll();
+};
