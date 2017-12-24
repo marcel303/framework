@@ -29,6 +29,11 @@
 #include "Debugging.h"
 #include <SDL2/SDL.h>
 
+AudioMutex_Shared::AudioMutex_Shared()
+	: mutex(nullptr)
+{
+}
+
 AudioMutex_Shared::AudioMutex_Shared(SDL_mutex * _mutex)
 	: mutex(_mutex)
 {

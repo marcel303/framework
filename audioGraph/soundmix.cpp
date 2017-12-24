@@ -891,7 +891,7 @@ void AudioVoice::applyLimiter(float * __restrict samples, const int numSamples, 
 AudioVoiceManager * g_voiceMgr = nullptr;
 
 AudioVoiceManager::AudioVoiceManager()
-	: mutex()
+	: audioMutex()
 	, numChannels(0)
 	, numDynamicChannels(0)
 	, voices()
@@ -902,7 +902,7 @@ AudioVoiceManager::AudioVoiceManager()
 {
 }
 	
-void AudioVoiceManager::init(const int _numChannels, const int _numDynamicChannels)
+void AudioVoiceManager::init(SDL_mutex * _audioMutex, const int _numChannels, const int _numDynamicChannels)
 {
 	Assert(voices.empty());
 	
@@ -912,14 +912,14 @@ void AudioVoiceManager::init(const int _numChannels, const int _numDynamicChanne
 	Assert(numDynamicChannels == 0);
 	numDynamicChannels = _numDynamicChannels;
 	
-	mutex.init();
+	audioMutex.mutex = _audioMutex;
 }
 
 void AudioVoiceManager::shut()
 {
 	Assert(voices.empty());
 	
-	mutex.shut();
+	audioMutex.mutex = nullptr;
 	
 	voices.clear();
 	
@@ -936,7 +936,7 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, co
 	if (channelIndex >= numChannels)
 		return false;
 
-	mutex.lock();
+	audioMutex.lock();
 	{
 		voices.push_back(AudioVoice());
 		voice = &voices.back();
@@ -979,7 +979,7 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, co
 			voice->isRamped = true;
 		}
 	}
-	mutex.unlock();
+	audioMutex.unlock();
 	
 	return true;
 }
@@ -988,7 +988,7 @@ void AudioVoiceManager::freeVoice(AudioVoice *& voice)
 {
 	Assert(voice != nullptr);
 	
-	mutex.lock();
+	audioMutex.lock();
 	{
 		if (voice->channelIndex != -1 && g_oscStream != nullptr)
 		{
@@ -1017,7 +1017,7 @@ void AudioVoiceManager::freeVoice(AudioVoice *& voice)
 			updateChannelIndices();
 		}
 	}
-	mutex.unlock();
+	audioMutex.unlock();
 	
 	voice = nullptr;
 }
@@ -1062,13 +1062,13 @@ int AudioVoiceManager::numDynamicChannelsUsed() const
 {
 	int result = 0;
 	
-	mutex.lock();
+	audioMutex.lock();
 	{
 		for (auto & voice : voices)
 			if (voice.channelIndex != -1 && voice.channelIndex < numDynamicChannels)
 				result++;
 	}
-	mutex.unlock();
+	audioMutex.unlock();
 	
 	return result;
 }
@@ -1112,7 +1112,7 @@ void AudioVoiceManager::generateAudio(
 		memset(samples, 0, numSamples * numChannels * sizeof(float));
 	}
 	
-	mutex.lock();
+	audioMutex.lock();
 	{
 		for (auto & voice : voices)
 		{
@@ -1240,7 +1240,7 @@ void AudioVoiceManager::generateAudio(
 			}
 		}
 	}
-	mutex.unlock();
+	audioMutex.unlock();
 }
 
 static void generateOscForVoice(AudioVoice & voice, Osc4DStream & stream, const bool forceSync)
@@ -1376,7 +1376,7 @@ static void generateOscForVoice(AudioVoice & voice, Osc4DStream & stream, const 
 
 void AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool _forceSync)
 {
-	mutex.lock();
+	audioMutex.lock();
 	{
 		try
 		{
@@ -1452,5 +1452,5 @@ void AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool _forceSync)
 			LOG_ERR("%s", e.what());
 		}
 	}
-	mutex.unlock();
+	audioMutex.unlock();
 }

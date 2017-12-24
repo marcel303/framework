@@ -376,7 +376,7 @@ struct AudioVoice
 
 struct AudioVoiceManager : PortAudioHandler
 {
-	AudioMutex mutex;
+	AudioMutex_Shared audioMutex;
 	
 	int numChannels;
 	int numDynamicChannels;
@@ -416,7 +416,7 @@ struct AudioVoiceManager : PortAudioHandler
 	
 	AudioVoiceManager();
 	
-	void init(const int numChannels, const int numDynamicChannels);
+	void init(SDL_mutex * audioMutex, const int numChannels, const int numDynamicChannels);
 	void shut();
 	
 	bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex);

@@ -66,6 +66,8 @@ static bool STEREO_OUTPUT = true;
 
 static bool inputIsCaptured = false;
 
+static AudioGraphManager * s_audioGraphMgr = nullptr;
+
 //
 
 static void doSlider(float & value, const char * name, const float smoothness, const float dt)
@@ -341,12 +343,12 @@ struct TestInstance : EntityBase
 	{
 		type = kEntity_TestInstance;
 		
-		graphInstance = g_audioGraphMgr->createInstance(filename);
+		graphInstance = s_audioGraphMgr->createInstance(filename);
 	}
 	
 	virtual ~TestInstance() override
 	{
-		g_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance);
 	}
 	
 	virtual void tick(const float dt) override
@@ -366,12 +368,12 @@ struct Ball : EntityBase
 	{
 		type = kEntity_Ball;
 		
-		graphInstance = g_audioGraphMgr->createInstance("ballTest.xml");
+		graphInstance = s_audioGraphMgr->createInstance("ballTest.xml");
 	}
 	
 	virtual ~Ball() override
 	{
-		g_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance);
 	}
 	
 	virtual void tick(const float dt) override
@@ -448,12 +450,12 @@ struct Oneshot : EntityBase
 		, timer(time)
 		, doRampDown(_doRampDown)
 	{
-		graphInstance = g_audioGraphMgr->createInstance(filename);
+		graphInstance = s_audioGraphMgr->createInstance(filename);
 	}
 	
 	virtual ~Oneshot() override
 	{
-		g_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance);
 	}
 	
 	virtual void tick(const float dt) override
@@ -553,7 +555,7 @@ struct Bird : EntityBase
 	{
 		type = kEntity_Bird;
 		
-		graphInstance = g_audioGraphMgr->createInstance("e-bird1.xml");
+		graphInstance = s_audioGraphMgr->createInstance("e-bird1.xml");
 		
 		const int birdType = rand() % 3;
 		if (birdType == 0)
@@ -566,7 +568,7 @@ struct Bird : EntityBase
 	
 	virtual ~Bird() override
 	{
-		g_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance);
 	}
 	
 	void beginSongTimer()
@@ -876,12 +878,12 @@ struct Voices : EntityBase
 	{
 		type = kEntity_Voice;
 		
-		graphInstance = g_audioGraphMgr->createInstance("e-voices2.xml");
+		graphInstance = s_audioGraphMgr->createInstance("e-voices2.xml");
 	}
 	
 	virtual ~Voices() override
 	{
-		g_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance);
 	}
 	
 	virtual void tick(const float dt) override
@@ -962,9 +964,9 @@ struct Machine : EntityBase
 		type = kEntity_Machine;
 		
 	#if MACHINE_V2
-		graphInstance = g_audioGraphMgr->createInstance("machines1.xml");
+		graphInstance = s_audioGraphMgr->createInstance("machines1.xml");
 	#else
-		graphInstance = g_audioGraphMgr->createInstance("e-machine1.xml");
+		graphInstance = s_audioGraphMgr->createInstance("e-machine1.xml");
 	#endif
 		
 		randomize();
@@ -972,7 +974,7 @@ struct Machine : EntityBase
 	
 	virtual ~Machine() override
 	{
-		g_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance);
 	}
 	
 	void randomize()
@@ -1150,12 +1152,12 @@ struct AlwaysThere : EntityBase
 	{
 		type = kEntity_AlwaysThere;
 		
-		graphInstance = g_audioGraphMgr->createInstance(filename);
+		graphInstance = s_audioGraphMgr->createInstance(filename);
 	}
 	
 	virtual ~AlwaysThere() override
 	{
-		g_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance);
 	}
 	
 	virtual void tick(const float dt) override
@@ -1252,7 +1254,7 @@ struct World : WorldInterface
 	
 	void init()
 	{
-		globalsInstance = g_audioGraphMgr->createInstance("globals.xml");
+		globalsInstance = s_audioGraphMgr->createInstance("globals.xml");
 		
 		//
 		
@@ -1285,7 +1287,7 @@ struct World : WorldInterface
 		
 		entities.clear();
 		
-		g_audioGraphMgr->free(globalsInstance);
+		s_audioGraphMgr->free(globalsInstance);
 	}
 	
 	void addBall()
@@ -1899,7 +1901,7 @@ int main(int argc, char * argv[])
 	const int kNumChannels = CHANNEL_COUNT;
 	
 	AudioVoiceManager voiceMgr;
-	voiceMgr.init(CHANNEL_COUNT, DYNAMIC_CHANNEL_COUNT);
+	voiceMgr.init(mutex, CHANNEL_COUNT, DYNAMIC_CHANNEL_COUNT);
 	voiceMgr.outputStereo = STEREO_OUTPUT;
 	g_voiceMgr = &voiceMgr;
 	
@@ -1908,8 +1910,8 @@ int main(int argc, char * argv[])
 	AudioGraphManager_RTE audioGraphMgr(GFX_SX, GFX_SY);
 	audioGraphMgr.init(mutex);
 	
-	Assert(g_audioGraphMgr == nullptr);
-	g_audioGraphMgr = &audioGraphMgr;
+	Assert(s_audioGraphMgr == nullptr);
+	s_audioGraphMgr = &audioGraphMgr;
 	
 	//
 	
@@ -2388,8 +2390,8 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	Assert(g_audioGraphMgr == &audioGraphMgr);
-	g_audioGraphMgr = nullptr;
+	Assert(s_audioGraphMgr == &audioGraphMgr);
+	s_audioGraphMgr = nullptr;
 	
 	audioGraphMgr.shut();
 	

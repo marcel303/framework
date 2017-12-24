@@ -86,18 +86,22 @@ struct AudioGraphManager_Basic : AudioGraphManager
 {
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
 	
+	std::map<std::string, Graph> graphCache;
+	bool cacheOnCreate;
+	
 	std::list<AudioGraphInstance> instances;
 	
-	SDL_mutex * audioMutex;
+	AudioMutex_Shared audioMutex;
 	
 	AudioGraphGlobals * globals;
 	
-	AudioGraphManager_Basic();
+	AudioGraphManager_Basic(const bool cacheOnCreate);
 	virtual ~AudioGraphManager_Basic() override;
 	
 	// called from the app thread
 	void init(SDL_mutex * mutex);
 	void shut();
+	void addGraphToCache(const char * filename);
 	
 	// called from the app thread
 	virtual AudioGraphInstance * createInstance(const char * filename) override;
@@ -148,5 +152,3 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	bool tickEditor(const float dt, const bool isInputCaptured);
 	void drawEditor();
 };
-
-extern AudioGraphManager * g_audioGraphMgr;

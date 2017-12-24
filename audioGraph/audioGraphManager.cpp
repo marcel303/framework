@@ -36,10 +36,6 @@
 
 //
 
-AudioGraphManager * g_audioGraphMgr = nullptr;
-
-//
-
 struct AudioGraphFileRTC : GraphEdit_RealTimeConnection
 {
 	AudioGraphFile * file;
@@ -246,16 +242,21 @@ AudioGraphGlobals::AudioGraphGlobals()
 	: controlValues()
 	, memf()
 	, audioMutex(nullptr)
+	, audioGraphMgr(nullptr)
 {
 }
 
-void AudioGraphGlobals::init(SDL_mutex * mutex)
+void AudioGraphGlobals::init(SDL_mutex * mutex, AudioGraphManager * _audioGraphMgr)
 {
 	audioMutex = mutex;
+	
+	audioGraphMgr = _audioGraphMgr;
 }
 
 void AudioGraphGlobals::shut()
 {
+	audioGraphMgr = nullptr;
+	
 	audioMutex = nullptr;
 }
 
@@ -419,12 +420,16 @@ AudioGraphGlobals::Memf AudioGraphGlobals::getMemf(const char * name)
 
 //
 
-AudioGraphManager_Basic::AudioGraphManager_Basic()
+AudioGraphManager_Basic::AudioGraphManager_Basic(bool _cacheOnCreate)
 	: AudioGraphManager()
 	, typeDefinitionLibrary(nullptr)
+	, graphCache()
+	, cacheOnCreate(false)
+	, instances()
 	, audioMutex(nullptr)
 	, globals(nullptr)
 {
+	cacheOnCreate = _cacheOnCreate;
 }
 
 AudioGraphManager_Basic::~AudioGraphManager_Basic()
@@ -444,25 +449,20 @@ void AudioGraphManager_Basic::init(SDL_mutex * mutex)
 	createAudioEnumTypeDefinitions(*typeDefinitionLibrary, g_audioEnumTypeRegistrationList);
 	createAudioNodeTypeDefinitions(*typeDefinitionLibrary, g_audioNodeTypeRegistrationList);
 	
-	audioMutex = mutex;
+	audioMutex.mutex = mutex;
 	
 	globals = new AudioGraphGlobals();
-	globals->init(mutex);
+	globals->init(mutex, this);
 }
 
 void AudioGraphManager_Basic::shut()
 {
-	auto oldAudioGraphMgr = g_audioGraphMgr;
-	g_audioGraphMgr = this;
+	while (!instances.empty())
 	{
-		while (!instances.empty())
-		{
-			AudioGraphInstance * instance = &instances.front();
-			
-			free(instance);
-		}
+		AudioGraphInstance * instance = &instances.front();
+		
+		free(instance);
 	}
-	g_audioGraphMgr = oldAudioGraphMgr;
 	
 	//
 	
@@ -474,29 +474,76 @@ void AudioGraphManager_Basic::shut()
 		globals = nullptr;
 	}
 	
-	audioMutex = nullptr;
+	audioMutex.mutex = nullptr;
 	
 	delete typeDefinitionLibrary;
 	typeDefinitionLibrary = nullptr;
 }
 
+void AudioGraphManager_Basic::addGraphToCache(const char * filename)
+{
+	auto i = graphCache.find(filename);
+	
+	if (i == graphCache.end())
+	{
+		auto g = graphCache.emplace(filename, Graph());
+		
+		auto & graph = g.first->second;
+		
+		// todo : check load result
+		
+		graph.load(filename, typeDefinitionLibrary);
+	}
+}
+
 AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filename)
 {
-	Graph graph;
+	AudioGraph * audioGraph = nullptr;
 	
-	if (graph.load(filename, typeDefinitionLibrary))
+	auto graphItr = graphCache.find(filename);
+	
+	if (graphItr != graphCache.end())
 	{
-		auto audioGraph = constructAudioGraph(graph, typeDefinitionLibrary, globals);
+		auto & graph = graphItr->second;
 		
+		audioGraph = constructAudioGraph(graph, typeDefinitionLibrary, globals);
+	}
+	else
+	{
+		if (cacheOnCreate)
+		{
+			auto g = graphCache.emplace(filename, Graph());
+			
+			auto & graph = g.first->second;
+			
+			// todo : check load result
+			
+			graph.load(filename, typeDefinitionLibrary);
+			
+			audioGraph = constructAudioGraph(graph, typeDefinitionLibrary, globals);
+		}
+		else
+		{
+			Graph graph;
+			
+			if (graph.load(filename, typeDefinitionLibrary))
+			{
+				audioGraph = constructAudioGraph(graph, typeDefinitionLibrary, globals);
+			}
+		}
+	}
+	
+	if (audioGraph != nullptr)
+	{
 		AudioGraphInstance * instance = nullptr;
 		
-		SDL_LockMutex(audioMutex);
+		audioMutex.lock();
 		{
 			instances.emplace_back();
 			instance = &instances.back();
 			instance->audioGraph = audioGraph;
 		}
-		SDL_UnlockMutex(audioMutex);
+		audioMutex.unlock();
 		
 		return instance;
 	}
@@ -515,10 +562,15 @@ void AudioGraphManager_Basic::free(AudioGraphInstance *& instance)
 	
 	for (auto instanceItr = instances.begin(); instanceItr != instances.end(); ++instanceItr)
 	{
+		// todo : remove lock around free. for now needed to avoid voices being referenced by voice manager during mixing while the graph is being destroyed. introduce a separate step to unregister voices ? perhaps add a voice list to each audio graph instance ?
 		if (&(*instanceItr) == instance)
 		{
+			audioMutex.lock();
 			instances.erase(instanceItr);
+			audioMutex.unlock();
+			
 			instance = nullptr;
+			
 			break;
 		}
 	}
@@ -528,7 +580,7 @@ void AudioGraphManager_Basic::free(AudioGraphInstance *& instance)
 
 void AudioGraphManager_Basic::tick(const float dt)
 {
-	SDL_LockMutex(audioMutex);
+	audioMutex.lock();
 	{
 		globals->tick(dt);
 		
@@ -537,7 +589,7 @@ void AudioGraphManager_Basic::tick(const float dt)
 		for (auto & instance : instances)
 			instance.audioGraph->tick(dt);
 	}
-	SDL_UnlockMutex(audioMutex);
+	audioMutex.unlock();
 }
 
 void AudioGraphManager_Basic::tickVisualizers()
@@ -583,21 +635,16 @@ void AudioGraphManager_RTE::init(SDL_mutex * mutex)
 	audioValueHistorySet = new AudioValueHistorySet();
 	
 	globals = new AudioGraphGlobals();
-	globals->init(mutex);
+	globals->init(mutex, this);
 }
 
 void AudioGraphManager_RTE::shut()
 {
-	auto oldAudioGraphMgr = g_audioGraphMgr;
-	g_audioGraphMgr = this;
-	{
-		for (auto & file : files)
-			delete file.second;
-		files.clear();
-		
-		selectedFile = nullptr;
-	}
-	g_audioGraphMgr = oldAudioGraphMgr;
+	for (auto & file : files)
+		delete file.second;
+	files.clear();
+	
+	selectedFile = nullptr;
 	
 	//
 	

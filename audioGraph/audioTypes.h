@@ -134,6 +134,7 @@ struct AudioMutex_Shared
 {
 	SDL_mutex * mutex;
 	
+	AudioMutex_Shared();
 	AudioMutex_Shared(SDL_mutex * mutex);
 	
 	void lock() const;
