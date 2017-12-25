@@ -45,7 +45,7 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 		float value;
 	};
 	
-	static const int kMaxInstances = 128;
+	static const int kMaxInstances = 256;
 	static const int kMaxHistory = 16;
 	
 	enum Input

@@ -212,6 +212,8 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		voicesData.free();
 		voicesOutput.reset();
 		
+		updateDynamicInputs();
+		
 		return;
 	}
 	
@@ -260,7 +262,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 				
 				addHistoryElem(kHistoryType_InstanceCreate, (t2 - t1) / 1000.0);
 				
-				//g_vfxAudioGraphMgr->selectInstance(instances[index]); // fixme
+				//static_cast<AudioGraphManager_RTE*>(g_vfxAudioGraphMgr)->selectInstance(instances[index]); // fixme
 				
 				newInstances[numNewInstances] = instances[index];
 				numNewInstances++;
@@ -295,21 +297,21 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	
 	VfxChannelZipper zipper(channels, numChannels);
 	
-	index = 0;
+	int inputIndex = 0;
 	
 	for (auto & dynamicInput : dynamicInputs)
 	{
 		volumeZipper.restart();
 		zipper.restart();
 		
-		auto input = tryGetInput(kInput_COUNT + index);
+		auto input = tryGetInput(kInput_COUNT + inputIndex);
 		
 		Assert(input != nullptr);
 		if (input != nullptr && input->type == kVfxPlugType_Channel)
 		{
 			int instanceIndex = 0;
 			
-			while (!volumeZipper.done())
+			while (!volumeZipper.done() && instanceIndex < kMaxInstances)
 			{
 				const float volume = volumeZipper.read(0, 1.f);
 				
@@ -330,7 +332,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 						{
 							if (controlValue.name == dynamicInput.name)
 							{
-								controlValue.desiredX = zipper.read(index + 1, controlValue.defaultX);
+								controlValue.desiredX = zipper.read(inputIndex + 1, controlValue.defaultX);
 							}
 						}
 					}
@@ -344,7 +346,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			}
 		}
 		
-		index++;
+		inputIndex++;
 	}
 	
 	for (int i = 0; i < numNewInstances; ++i)
