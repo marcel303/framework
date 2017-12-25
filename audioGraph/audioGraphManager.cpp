@@ -486,13 +486,11 @@ void AudioGraphManager_Basic::addGraphToCache(const char * filename)
 	
 	if (i == graphCache.end())
 	{
-		auto g = graphCache.emplace(filename, Graph());
+		auto e = graphCache.emplace(filename, GraphCacheElem());
 		
-		auto & graph = g.first->second;
+		auto & elem = e.first->second;
 		
-		// todo : check load result
-		
-		graph.load(filename, typeDefinitionLibrary);
+		elem.isValid = elem.graph.load(filename, typeDefinitionLibrary);
 	}
 }
 
@@ -504,23 +502,27 @@ AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filena
 	
 	if (graphItr != graphCache.end())
 	{
-		auto & graph = graphItr->second;
+		auto & elem = graphItr->second;
 		
-		audioGraph = constructAudioGraph(graph, typeDefinitionLibrary, globals);
+		if (elem.isValid)
+		{
+			audioGraph = constructAudioGraph(elem.graph, typeDefinitionLibrary, globals);
+		}
 	}
 	else
 	{
 		if (cacheOnCreate)
 		{
-			auto g = graphCache.emplace(filename, Graph());
+			auto e = graphCache.emplace(filename, GraphCacheElem());
 			
-			auto & graph = g.first->second;
+			auto & elem = e.first->second;
 			
-			// todo : check load result
+			elem.isValid = elem.graph.load(filename, typeDefinitionLibrary);
 			
-			graph.load(filename, typeDefinitionLibrary);
-			
-			audioGraph = constructAudioGraph(graph, typeDefinitionLibrary, globals);
+			if (elem.isValid)
+			{
+				audioGraph = constructAudioGraph(elem.graph, typeDefinitionLibrary, globals);
+			}
 		}
 		else
 		{

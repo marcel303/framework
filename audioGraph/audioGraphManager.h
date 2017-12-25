@@ -84,9 +84,15 @@ struct AudioGraphManager
 
 struct AudioGraphManager_Basic : AudioGraphManager
 {
+	struct GraphCacheElem
+	{
+		bool isValid;
+		Graph graph;
+	};
+	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
 	
-	std::map<std::string, Graph> graphCache;
+	std::map<std::string, GraphCacheElem> graphCache;
 	bool cacheOnCreate;
 	
 	std::list<AudioGraphInstance> instances;
