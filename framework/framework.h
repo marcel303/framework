@@ -1330,9 +1330,7 @@ enum HQ_TYPE
 	HQ_STROKED_TRIANGLES,
 	HQ_STROKED_CIRCLES,
 	HQ_STROKED_RECTS,
-	HQ_STROKED_ROUNDED_RECTS,
-
-	// todo : rounded rectangle, ellipse, curve (?), arc (?)
+	HQ_STROKED_ROUNDED_RECTS
 };
 
 enum GRADIENT_TYPE

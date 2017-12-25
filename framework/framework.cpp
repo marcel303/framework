@@ -2255,8 +2255,8 @@ void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 		return;
 	const GLuint index = glGetUniformBlockIndex(program, name);
 	checkErrorGL();
-
-	if (index == -1) // todo : index is -1 on failure to find it ?
+	
+	if (index == GL_INVALID_INDEX)
 		logWarning("unable to find block index for %s", name);
 	else
 		setBuffer(index, buffer);
@@ -2280,7 +2280,7 @@ void Shader::setBufferRw(const char * name, const ShaderBufferRw & buffer)
 	const GLuint index = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, name);
 	checkErrorGL();
 
-	if (index == -1) // todo : index is -1 on failure to find it ?
+	if (index == GL_INVALID_INDEX)
 		logWarning("unable to find block index for %s", name);
 	else
 		setBufferRw(index, buffer);
@@ -2515,7 +2515,7 @@ void ComputeShader::setBuffer(const char * name, const ShaderBuffer & buffer)
 	const GLuint index = glGetUniformBlockIndex(program, name);
 	checkErrorGL();
 
-	if (index == -1) // todo : index is -1 on failure to find it ?
+	if (index == GL_INVALID_INDEX)
 		logWarning("unable to find block index for %s", name);
 	else
 		setBuffer(index, buffer);
@@ -2539,7 +2539,7 @@ void ComputeShader::setBufferRw(const char * name, const ShaderBufferRw & buffer
 	const GLuint index = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, name);
 	checkErrorGL();
 
-	if (index == -1) // todo : index is -1 on failure to find it ?
+	if (index == GL_INVALID_INDEX)
 		logWarning("unable to find block index for %s", name);
 	else
 		setBufferRw(index, buffer);
@@ -7575,24 +7575,8 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 		fassert(false);
 		break;
 	}
-
-	if (globals.shader != nullptr && globals.shader->getType() == SHADER_VSPS)
-	{
-		Shader * shader = static_cast<Shader*>(globals.shader);
-
-		shader->setImmediate("useScreenSize", useScreenSize ? 1.f : 0.f);
-		
-		if (s_gxTextureEnabled)
-			shader->setTextureUnit("source", 0);
-		shader->setImmediate("sourceEnabled", s_gxTextureEnabled ? 1.f : 0.f);
-
-		//shader->setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
-		//shader->setImmediate("disableAA", cos(framework.time) < 0.f ? 0.f : 1.f);
-
-		shader->setImmediate("disableOptimizations", 0.f);
-		shader->setImmediate("disableAA", 0.f);
-		shader->setImmediate("_debugHq", 0.f);
-	}
+	
+	globals.hqUseScreenSize = useScreenSize;
 }
 
 void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
@@ -7641,22 +7625,8 @@ void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 	}
 	
 	setShader(shader);
-
-	if (globals.shader != nullptr && globals.shader->getType() == SHADER_VSPS)
-	{
-		Shader * shader = static_cast<Shader*>(globals.shader);
-		
-		// todo : optimize : cache immediate index and store all debug parameters in a single uniform
-		
-		shader->setImmediate("useScreenSize", useScreenSize ? 1.f : 0.f);
-
-		//shader->setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
-		//shader->setImmediate("disableAA", cos(framework.time) < 0.f ? 0.f : 1.f);
-
-		shader->setImmediate("disableOptimizations", 0.f);
-		shader->setImmediate("disableAA", 0.f);
-		shader->setImmediate("_debugHq", 0.f);
-	}
+	
+	globals.hqUseScreenSize = useScreenSize;
 }
 
 void hqEnd()
@@ -7670,7 +7640,11 @@ void hqEnd()
 		
 		if (shaderElem.params[ShaderCacheElem::kSp_ShadingParams].index != -1)
 		{
-			shader.setImmediate(shaderElem.params[ShaderCacheElem::kSp_ShadingParams].index, globals.hqGradientType, globals.hqTextureEnabled);
+			shader.setImmediate(
+				shaderElem.params[ShaderCacheElem::kSp_ShadingParams].index,
+				globals.hqGradientType,
+				globals.hqTextureEnabled,
+				globals.hqUseScreenSize);
 		}
 		
 		if (globals.hqGradientType != GRADIENT_NONE)
@@ -7719,6 +7693,16 @@ void hqEnd()
 			
 			shader.setTextureUnit("source", 0);
 		}
+		
+
+	#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+		//shader.setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
+		//shader.setImmediate("disableAA", cos(framework.time) < 0.f ? 0.f : 1.f);
+
+		shader.setImmediate("disableOptimizations", 0.f);
+		shader.setImmediate("disableAA", 0.f);
+		shader.setImmediate("_debugHq", 0.f);
+	#endif
 	}
 	
 	gxEnd();

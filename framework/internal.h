@@ -134,6 +134,7 @@ public:
 	float hqGradientScale;
 	bool hqTextureEnabled;
 	Mat4x4 hqTextureMatrix;
+	bool hqUseScreenSize;
 	FontCacheElem * font;
 	bool isInTextBatch;
 	MsdfFontCacheElem * fontMSDF;
