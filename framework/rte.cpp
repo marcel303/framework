@@ -317,9 +317,13 @@ void shutRealTimeEditing()
 
 void tickRealTimeEditing()
 {
-	// todo : add something similar to watch api on platforms other than win32 or osx
-	
 	static int x = 0;
+	
+	if (x == 0)
+	{
+		logWarning("using non-optimized code path for checking for file changes. this could be hefty and cause periodic stutters when there's lots of files!");
+	}
+	
 	x++;
 	
 	if ((x % 60) != 0)
