@@ -31,8 +31,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 // todo : interpret NOTE_OFF and NOTE_ON messages
 
-//static const uint8_t NOTE_OFF = 0x80;
-//static const uint8_t NOTE_ON = 0x90;
+static const uint8_t NOTE_OFF = 0x80;
+static const uint8_t NOTE_ON = 0x90;
 static const uint8_t CONTROLLER_CHANGE = 0xB0;
 
 VFX_NODE_TYPE(VfxNodeMidi)
@@ -43,6 +43,7 @@ VFX_NODE_TYPE(VfxNodeMidi)
 	out("key", "float");
 	out("value", "float");
 	out("trigger", "trigger");
+	out("values", "channel");
 }
 
 VfxNodeMidi::VfxNodeMidi()
@@ -51,12 +52,18 @@ VfxNodeMidi::VfxNodeMidi()
 	, midiIn(nullptr)
 	, keyOutput(0.f)
 	, valueOutput(0.f)
+	, valueData()
+	, valueChannel()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Port, kVfxPlugType_Int);
 	addOutput(kOutput_Key, kVfxPlugType_Float, &keyOutput);
 	addOutput(kOutput_Value, kVfxPlugType_Float, &valueOutput);
 	addOutput(kOutput_Trigger, kVfxPlugType_Trigger, nullptr);
+	addOutput(kOutput_ValueChannel, kVfxPlugType_Channel, &valueChannel);
+	
+	memset(valueData, 0, sizeof(valueData));
+	valueChannel.setData(valueData, false, 256);
 }
 
 VfxNodeMidi::~VfxNodeMidi()
@@ -70,6 +77,8 @@ void VfxNodeMidi::close()
 	{
 		delete midiIn;
 		midiIn = nullptr;
+		
+		memset(valueData, 0, sizeof(valueData));
 	}
 	catch (std::exception & e)
 	{
@@ -95,13 +104,13 @@ void VfxNodeMidi::tick(const float dt)
 		{
 			currentPort = port;
 			
-			midiIn = new RtMidiIn();
+			midiIn = new RtMidiIn(RtMidi::UNSPECIFIED, "Vfx Midi", 1024);
 			
 			for (int i = 0; i < midiIn->getPortCount(); ++i)
 			{
 				auto name = midiIn->getPortName();
 				
-				LOG_DBG("available MIDI port: %s", name.c_str());
+				LOG_DBG("available MIDI port: %d: %s", i, name.c_str());
 			}
 			
 			if (port >= midiIn->getPortCount())
@@ -110,7 +119,7 @@ void VfxNodeMidi::tick(const float dt)
 			}
 			else
 			{
-				midiIn->openPort(0);
+				midiIn->openPort(port);
 			}
 		}
 	}
@@ -158,6 +167,36 @@ void VfxNodeMidi::tick(const float dt)
 						
 						keyOutput = key;
 						valueOutput = value / 127.f;
+						
+						if (key >= 0 && key < 256)
+							valueData[key] = valueOutput;
+						
+						trigger(kOutput_Trigger);
+					}
+					else if (event == NOTE_ON)
+					{
+						const int key = message[1];
+						const int value = message[2];
+						
+						keyOutput = key;
+						valueOutput = value / 127.f;
+						
+						if (key >= 0 && key < 256)
+							valueData[key] = valueOutput;
+						
+						trigger(kOutput_Trigger);
+					}
+					else if (event == NOTE_OFF)
+					{
+						// todo : check note off
+						const int key = message[1];
+						const int value = message[2];
+						
+						keyOutput = key;
+						valueOutput = 0.f;
+						
+						if (key >= 0 && key < 256)
+							valueData[key] = valueOutput;
 						
 						trigger(kOutput_Trigger);
 					}

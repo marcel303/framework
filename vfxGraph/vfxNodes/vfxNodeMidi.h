@@ -44,6 +44,7 @@ struct VfxNodeMidi : VfxNodeBase
 		kOutput_Key,
 		kOutput_Value,
 		kOutput_Trigger,
+		kOutput_ValueChannel,
 		kOutput_COUNT
 	};
 	
@@ -53,6 +54,9 @@ struct VfxNodeMidi : VfxNodeBase
 	
 	float keyOutput;
 	float valueOutput;
+	
+	float valueData[256];
+	VfxChannel valueChannel;
 	
 	VfxNodeMidi();
 	virtual ~VfxNodeMidi() override;
