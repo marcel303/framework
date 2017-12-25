@@ -138,6 +138,8 @@ void VfxNodeXinput::getDescription(VfxNodeDescription & d)
 		
 		if (g.isConnected)
 		{
+			d.add("Name: %s", g.getName());
+			
 			d.add("L-Analog: %.2f, %.2f", g.getAnalog(0, ANALOG_X), g.getAnalog(0, ANALOG_Y));
 			d.add("R-Analog: %.2f, %.2f", g.getAnalog(1, ANALOG_X), g.getAnalog(1, ANALOG_Y));
 		}
