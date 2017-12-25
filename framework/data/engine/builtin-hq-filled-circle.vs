@@ -8,8 +8,6 @@ shader_out vec2 v_center;
 shader_out float v_radius;
 shader_out vec4 v_color;
 
-uniform float useScreenSize;
-
 void main()
 {
 	vec4 params = unpackNormal();

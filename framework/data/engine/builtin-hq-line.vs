@@ -11,8 +11,6 @@ shader_out vec3 v_edgePlane;
 shader_out vec3 v_perpPlane;
 shader_out vec4 v_color;
 
-uniform float useScreenSize;
-
 void main()
 {
 	vec4 params = unpackNormal();

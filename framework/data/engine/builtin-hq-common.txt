@@ -25,9 +25,10 @@ uniform mat4x4 gmat;
 // texture coordinate matrix
 uniform mat4x4 tmat;
 
-uniform vec2 shadingParams; // gradientType, textureEnabled
+uniform vec3 shadingParams; // gradientType, textureEnabled, useScreenSize
 float gradientType = shadingParams.x;
 float textureEnabled = shadingParams.y;
+float useScreenSize = shadingParams.z;
 
 // color gradient
 uniform mat4x4 gradientInfo;

@@ -10,8 +10,6 @@ shader_out vec3 v_edgePlane3;
 shader_out vec3 v_edgePlane4;
 shader_out vec4 v_color;
 
-uniform float useScreenSize;
-
 vec3 calculatePlane(vec2 p1, vec2 p2)
 {
 	vec2 pd = p2 - p1;

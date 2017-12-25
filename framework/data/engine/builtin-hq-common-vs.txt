@@ -2,4 +2,7 @@ static const char * s_hqCommonVs = R"SHADER(
 
 uniform sampler2D source;
 
+uniform vec3 shadingParams; // gradientType, textureEnabled, useScreenSize
+float useScreenSize = shadingParams.z;
+
 )SHADER";
