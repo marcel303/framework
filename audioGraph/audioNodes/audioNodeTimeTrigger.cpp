@@ -27,8 +27,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioNodeTimeTrigger.h"
 
-#include "framework.h" // todo : remove. here for random
-
 // todo : make it possible to have multiple delayed triggers pile up
 
 AUDIO_NODE_TYPE(trigger_time, AudioNodeTimeTrigger)
@@ -45,6 +43,7 @@ AUDIO_NODE_TYPE(trigger_time, AudioNodeTimeTrigger)
 AudioNodeTimeTrigger::AudioNodeTimeTrigger()
 	: AudioNodeBase()
 	, time(0.0)
+	, rng()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Automatic, kAudioPlugType_Bool);
@@ -76,7 +75,7 @@ void AudioNodeTimeTrigger::tick(const float dt)
 	
 	if (time == 0.0 && automatic == true)
 	{
-		time = random(minInterval, maxInterval);
+		time = rng.nextf(minInterval, maxInterval);
 	}
 }
 
@@ -88,6 +87,6 @@ void AudioNodeTimeTrigger::handleTrigger(const int inputSocketIndex)
 
 	if (automatic == false)
 	{
-		time = random(minInterval, maxInterval);
+		time = rng.nextf(minInterval, maxInterval);
 	}
 }

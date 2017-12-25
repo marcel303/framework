@@ -156,3 +156,10 @@ struct AudioMutex
 
 	void debugCheckIsLocked();
 };
+
+struct AudioRNG
+{
+	AudioRNG();
+	
+	float nextf(const float min, const float max);
+};

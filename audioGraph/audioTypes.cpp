@@ -95,3 +95,16 @@ void AudioMutex::unlock() const
 	const int result = SDL_UnlockMutex(mutex);
 	Assert(result == 0);
 }
+
+//
+
+AudioRNG::AudioRNG()
+{
+}
+
+float AudioRNG::nextf(const float min, const float max)
+{
+	const float t = (rand() % 1000) / 999.f;
+	
+	return min * t + max * (1.f - t);
+}

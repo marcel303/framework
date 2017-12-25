@@ -28,6 +28,7 @@
 #pragma once
 
 #include "audioNodeBase.h"
+#include "audioTypes.h"
 
 struct AudioNodeTimeTrigger : AudioNodeBase
 {
@@ -47,6 +48,8 @@ struct AudioNodeTimeTrigger : AudioNodeBase
 	};
 	
 	double time;
+	
+	AudioRNG rng;
 	
 	AudioNodeTimeTrigger();
 	
