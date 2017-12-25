@@ -34,6 +34,7 @@ VFX_NODE_TYPE(VfxNodeCamera3d)
 	
 	in("any", "draw", "", "draw");
 	in("control", "bool");
+	in("gamepad", "int");
 	in("x", "float");
 	in("y", "float");
 	in("z", "float");
@@ -53,6 +54,7 @@ VfxNodeCamera3d::VfxNodeCamera3d()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Draw, kVfxPlugType_Draw);
 	addInput(kInput_Interactive, kVfxPlugType_Bool);
+	addInput(kInput_Gamepad, kVfxPlugType_Int);
 	addInput(kInput_X, kVfxPlugType_Float);
 	addInput(kInput_Y, kVfxPlugType_Float);
 	addInput(kInput_Z, kVfxPlugType_Float);
@@ -83,6 +85,7 @@ void VfxNodeCamera3d::tick(const float dt)
 	}
 	
 	const bool interactive = getInputBool(kInput_Interactive, false);
+	const int gamepadIndex = getInputInt(kInput_Gamepad, 0);
 
 	const float x = getInputFloat(kInput_X, 0.f);
 	const float y = getInputFloat(kInput_Y, 0.f);
@@ -91,6 +94,8 @@ void VfxNodeCamera3d::tick(const float dt)
 	const float yaw = getInputFloat(kInput_Yaw, 0.f);
 	const float pitch = getInputFloat(kInput_Pitch, 0.f);
 
+	camera->gamepadIndex = gamepadIndex;
+	
 	if (interactive == false)
 	{
 		camera->position[0] = x;

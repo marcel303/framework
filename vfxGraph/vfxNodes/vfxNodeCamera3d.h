@@ -37,6 +37,7 @@ struct VfxNodeCamera3d : VfxNodeBase
 	{
 		kInput_Draw,
 		kInput_Interactive,
+		kInput_Gamepad,
 		kInput_X,
 		kInput_Y,
 		kInput_Z,
