@@ -44,6 +44,8 @@ void testCamera3d()
 	camera.position[2] = -1.f;
 	camera.pitch = 10.f;
 	
+	camera.gamepadIndex = 0;
+	
 	float fov = 90.f;
 	float near = .01f;
 	float far = 100.f;
