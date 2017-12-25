@@ -33,7 +33,19 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 static const uint8_t NOTE_OFF = 0x80;
 static const uint8_t NOTE_ON = 0x90;
-static const uint8_t CONTROLLER_CHANGE = 0xB0;
+static const uint8_t POLYPHONIC_KEY_PRESSURE = 0xa0;
+static const uint8_t CONTROLLER_CHANGE = 0xb0;
+static const uint8_t PITCH_BEND = 0xe0;
+
+/*
+
+todo : send reset all controllers message on connect and expose it in the node ?
+
+https://www.midi.org/specifications/item/table-1-summary-of-midi-message
+Reset All Controllers. When Reset All Controllers is received, all controller values are reset to their default values. (See specific Recommended Practices for defaults).
+
+*/
+
 
 VFX_NODE_TYPE(VfxNodeMidi)
 {
@@ -199,6 +211,14 @@ void VfxNodeMidi::tick(const float dt)
 							valueData[key] = valueOutput;
 						
 						trigger(kOutput_Trigger);
+					}
+					else if (event == PITCH_BEND)
+					{
+					
+					}
+					else
+					{
+						LOG_DBG("unknown MIDI event: %x", event);
 					}
 				}
 			}
