@@ -112,6 +112,23 @@ void AudioNodeWavefield2D::randomize()
 	}
 }
 
+void AudioNodeWavefield2D::init(const GraphNode & node)
+{
+	if (isPassthrough)
+	{
+		return;
+	}
+	
+	const int size = getInputInt(kInput_Size, 16);
+	
+	if (size != wavefield->numElems)
+	{
+		wavefield->init(size);
+		
+		randomize();
+	}
+}
+
 void AudioNodeWavefield2D::tick(const float _dt)
 {
 	audioCpuTimingBlock(AudioNodeWavefield2D);
