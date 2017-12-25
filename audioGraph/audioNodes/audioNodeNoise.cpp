@@ -27,8 +27,7 @@
 
 #include "audioNodeNoise.h"
 #include "Noise.h"
-
-#include "framework.h" // todo : remove. for random
+#include <cmath>
 
 AUDIO_ENUM_TYPE(noiseType)
 {
@@ -125,12 +124,14 @@ void AudioNodeNoise::drawWhite()
 	const AudioFloat * min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero);
 	const AudioFloat * max = getInputAudioFloat(kInput_Max, &AudioFloat::One);
 	
+	auto & rng = pinkNumber.rng;
+	
 	if (fine == false)
 	{
 		const float minValue = min->getMean();
 		const float maxValue = max->getMean();
 		
-		resultOutput.setScalar(random(minValue, maxValue));
+		resultOutput.setScalar(rng.nextf(minValue, maxValue));
 	}
 	else if (min->isScalar && max->isScalar)
 	{
@@ -141,7 +142,7 @@ void AudioNodeNoise::drawWhite()
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			resultOutput.samples[i] = random(minValue, maxValue);
+			resultOutput.samples[i] = rng.nextf(minValue, maxValue);
 		}
 	}
 	else
@@ -156,7 +157,7 @@ void AudioNodeNoise::drawWhite()
 			const float minValue = min->samples[i];
 			const float maxValue = max->samples[i];
 			
-			resultOutput.samples[i] = random(minValue, maxValue);
+			resultOutput.samples[i] = rng.nextf(minValue, maxValue);
 		}
 	}
 }
@@ -233,6 +234,8 @@ void AudioNodeNoise::drawBrown()
 	const double falloffPerSample = 0.98;
 	const double wanderPerSample = 0.1;
 	
+	auto & rng = pinkNumber.rng;
+	
 	if (fine == false)
 	{
 		const float minValue = min->getMean();
@@ -241,7 +244,7 @@ void AudioNodeNoise::drawBrown()
 		resultOutput.setScalar(((minValue + maxValue) + brownValue * (maxValue - minValue)) * .5f);
 		
 		brownValue *= falloffPerSample;
-		brownValue += random(-wanderPerSample, +wanderPerSample);
+		brownValue += rng.nextf(-wanderPerSample, +wanderPerSample);
 	}
 	else if (min->isScalar && max->isScalar)
 	{
@@ -255,7 +258,7 @@ void AudioNodeNoise::drawBrown()
 			resultOutput.samples[i] = ((minValue + maxValue) + brownValue * (maxValue - minValue)) * .5f;
 
 			brownValue *= falloffPerSample;
-			brownValue += random(-wanderPerSample, +wanderPerSample);
+			brownValue += rng.nextf(-wanderPerSample, +wanderPerSample);
 		}
 	}
 	else
@@ -273,7 +276,7 @@ void AudioNodeNoise::drawBrown()
 			resultOutput.samples[i] = ((minValue + maxValue) + brownValue * (maxValue - minValue)) * .5f;
 
 			brownValue *= falloffPerSample;
-			brownValue += random(-wanderPerSample, +wanderPerSample);
+			brownValue += rng.nextf(-wanderPerSample, +wanderPerSample);
 		}
 	}
 }

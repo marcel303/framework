@@ -28,7 +28,7 @@
 #pragma once
 
 #include "audioNodeBase.h"
-#include <stdlib.h> // todo : move to cpp, needed for rand()
+#include "Random.h"
 
 struct AudioNodeNoise : AudioNodeBase
 {
@@ -60,62 +60,9 @@ struct AudioNodeNoise : AudioNodeBase
 		kOutput_COUNT
 	};
 	
-	// Voss' pink number object to be used for pink noise generation
-	
-	struct PinkNumber
-	{
-		int maxKey;
-		int key; 
-		int whiteValues[5];
-		int range;
-		
-		PinkNumber(const int _range = 128)
-		{
-			maxKey = 0x1f; // five bits set
-			
-			range = _range;
-			key = 0;
-			
-			for (int i = 0; i < 5; ++i)
-			{
-				whiteValues[i] = rand() % (range/5);
-			}
-		}
-		
-		int next()
-		{ 
-			const int lastKey = key;
-
-			key++;
-			
-			if (key > maxKey)
-				key = 0;
-			
-			// exclusive-or previous value with current value. this gives a list of bits that have changed
-			
-			int diff = lastKey ^ key;
-			
-			int sum = 0;
-			
-			for (int i = 0; i < 5; ++i)
-			{ 
-				// if bit changed get new random number for corresponding whiteValue
-				
-				if (diff & (1 << i))
-				{
-					whiteValues[i] = rand() % (range/5);
-				}
-				
-				sum += whiteValues[i];
-			}
-			
-			return sum; 
-		}
-	};
-	
 	AudioFloat resultOutput;
 	
-	PinkNumber pinkNumber;
+	RNG::PinkNumber pinkNumber;
 	
 	double brownValue;
 	
