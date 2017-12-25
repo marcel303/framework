@@ -1043,6 +1043,7 @@ class Gamepad
 	float m_vibrationDuration;
 	float m_vibrationStrength;
 	float m_lastVibrationStrength;
+	char name[64];
 
 public:
 	Gamepad();
@@ -1054,6 +1055,8 @@ public:
 	float getAnalog(int stick, ANALOG analog, float scale = 1.f) const;
 
 	void vibrate(float duration, float strength);
+	
+	const char * getName() const;
 };
 
 class Midi

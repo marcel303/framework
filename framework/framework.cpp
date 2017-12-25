@@ -174,7 +174,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 	// initialize SDL
 	
-	const int initFlags = SDL_INIT_NOPARACHUTE | SDL_INIT_TIMER | SDL_INIT_VIDEO;
+	const int initFlags = SDL_INIT_NOPARACHUTE | SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK;
 	
 	if (SDL_Init(initFlags) < 0)
 	{
@@ -393,6 +393,17 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 #endif
 
 	gxInitialize();
+	
+#ifndef __WIN32__
+	// initialize SDL joysticks
+	
+	const int numJoysticks = SDL_NumJoysticks();
+	
+	for (int i = 0; i < numJoysticks && i < MAX_GAMEPAD; ++i)
+	{
+		globals.joystick[i] = SDL_JoystickOpen(i);
+	}
+#endif
 
 #if ENABLE_PROFILING
 	if (framework.enableProfiling)
@@ -585,6 +596,159 @@ bool Framework::shutdown()
 	initErrorHandler = 0;
 
 	return result;
+}
+
+struct XMap
+{
+	enum Source
+	{
+		kSource_None,
+		kSource_Axis,
+		kSource_Button,
+		kSource_Hat
+	};
+	
+	struct Elem
+	{
+		Source source;
+		int sourceId;
+		int sourceChildId;
+	};
+	
+	const char * deviceName;
+	
+	Elem buttons[GAMEPAD_MAX];
+	Elem axis[2][ANALOG_MAX];
+};
+
+/*
+	DPAD_LEFT,
+	DPAD_RIGHT,
+	DPAD_UP,
+	DPAD_DOWN,
+	GAMEPAD_A,
+	GAMEPAD_B,
+	GAMEPAD_X,
+	GAMEPAD_Y,
+	GAMEPAD_L1,
+	GAMEPAD_L2,
+	GAMEPAD_R1,
+	GAMEPAD_R2,
+	GAMEPAD_START,
+	GAMEPAD_BACK,
+*/
+
+static XMap zeemoteSteelseriesFree =
+{
+	"Zeemote: SteelSeries FREE",
+	{
+		{ XMap::kSource_Hat, 0, SDL_HAT_LEFT },
+		{ XMap::kSource_Hat, 0, SDL_HAT_RIGHT },
+		{ XMap::kSource_Hat, 0, SDL_HAT_UP },
+		{ XMap::kSource_Hat, 0, SDL_HAT_DOWN },
+		{ XMap::kSource_Button, 0 },
+		{ XMap::kSource_Button, 1 },
+		{ XMap::kSource_Button, 3 },
+		{ XMap::kSource_Button, 4 },
+		{ XMap::kSource_Button, 6 },
+		{ XMap::kSource_None },
+		{ XMap::kSource_Button, 7 },
+		{ XMap::kSource_None },
+		{ XMap::kSource_Button, 12 },
+		{ XMap::kSource_Button, 11 }
+	},
+	{
+		{
+			{ XMap::kSource_Axis, 0 },
+			{ XMap::kSource_Axis, 1 }
+		},
+		{
+			{ XMap::kSource_Axis, 2 },
+			{ XMap::kSource_Axis, 3 }
+		}
+	}
+};
+
+static XMap logitechDualAction =
+{
+	"Logitech Dual Action",
+	{
+		{ XMap::kSource_Hat, 0, SDL_HAT_LEFT },
+		{ XMap::kSource_Hat, 0, SDL_HAT_RIGHT },
+		{ XMap::kSource_Hat, 0, SDL_HAT_UP },
+		{ XMap::kSource_Hat, 0, SDL_HAT_DOWN },
+		{ XMap::kSource_Button, 1 },
+		{ XMap::kSource_Button, 2 },
+		{ XMap::kSource_Button, 0 },
+		{ XMap::kSource_Button, 3 },
+		{ XMap::kSource_Button, 4 },
+		{ XMap::kSource_Button, 6 },
+		{ XMap::kSource_Button, 5 },
+		{ XMap::kSource_Button, 7 },
+		{ XMap::kSource_Button, 8 },
+		{ XMap::kSource_Button, 9 }
+	},
+	{
+		{
+			{ XMap::kSource_Axis, 0 },
+			{ XMap::kSource_Axis, 1 }
+		},
+		{
+			{ XMap::kSource_Axis, 2 },
+			{ XMap::kSource_Axis, 3 }
+		}
+	}
+};
+
+static XMap ps3Controller =
+{
+	"PLAYSTATION(R)3 Controller",
+	{
+		{ XMap::kSource_Button, 7 }, // dpad lrud
+		{ XMap::kSource_Button, 5 },
+		{ XMap::kSource_Button, 4 },
+		{ XMap::kSource_Button, 6 },
+		{ XMap::kSource_Button, 14 }, // abxy
+		{ XMap::kSource_Button, 13 },
+		{ XMap::kSource_Button, 15 },
+		{ XMap::kSource_Button, 12 },
+		{ XMap::kSource_Button, 10 }, // l1/l2 r1/r2
+		{ XMap::kSource_Button, 8 },
+		{ XMap::kSource_Button, 11 },
+		{ XMap::kSource_Button, 9 },
+		{ XMap::kSource_Button, 0 }, // start, back
+		{ XMap::kSource_Button, 3 }
+	},
+	{
+		{
+			{ XMap::kSource_Axis, 0 },
+			{ XMap::kSource_Axis, 1 }
+		},
+		{
+			{ XMap::kSource_Axis, 2 },
+			{ XMap::kSource_Axis, 3 }
+		}
+	}
+};
+
+static const XMap * getXMap(const char * deviceName)
+{
+	const XMap * xmaps[3] =
+	{
+		&zeemoteSteelseriesFree,
+		&logitechDualAction,
+		&ps3Controller
+	};
+	
+	for (int i = 0; i < 3; ++i)
+	{
+		if (strcmp(xmaps[i]->deviceName, deviceName) == 0)
+		{
+			return xmaps[i];
+		}
+	}
+	
+	return nullptr;
 }
 
 void Framework::process()
@@ -817,6 +981,8 @@ void Framework::process()
 				v.wRightMotorSpeed = 65535 * gamepad[i].m_vibrationStrength;
 				XInputSetState(i, &v);
 			}
+			
+			sprintf_s(gamepad[i].name, "XInput", i + 1);
 		}
 		else
 		{
@@ -825,6 +991,122 @@ void Framework::process()
 	}
 
 	globals.xinputGamepadIdx++;
+#else
+	SDL_JoystickUpdate();
+	
+	for (int i = 0; i < MAX_GAMEPAD; ++i)
+	{
+		SDL_Joystick * joy = globals.joystick[i];
+		
+		gamepad[i].isConnected = joy != nullptr && SDL_JoystickGetAttached(joy);
+		
+		const XMap * xmap = nullptr;
+		
+		if (gamepad[i].isConnected)
+		{
+			const char * deviceName = SDL_JoystickNameForIndex(i);
+			
+			xmap = getXMap(deviceName);
+			
+		#if 0
+			const int numButtons = SDL_JoystickNumButtons(joy);
+			const int numHats = SDL_JoystickNumHats(joy);
+			const int numBalls = SDL_JoystickNumBalls(joy);
+			
+			for (int j = 0; j < numButtons; ++j)
+			{
+				auto value = SDL_JoystickGetButton(joy, j);
+				
+				if (value)
+					printf("joy button %d\n", j);
+			}
+			
+			for (int j = 0; j < numHats; ++j)
+			{
+				auto value = SDL_JoystickGetHat(joy, j);
+				
+				if (value)
+					printf("joy hat %d: %x\n", j, value);
+			}
+			
+			for (int j = 0; j < numBalls; ++j)
+			{
+				int dx;
+				int dy;
+				
+				if (SDL_JoystickGetBall(joy, j, &dx, &dy) == 0 && (dx || dy))
+				{
+					printf("joy ball %d: %d, %d\n", j, dx, dy);
+				}
+			}
+		#endif
+		}
+		
+		if (gamepad[i].isConnected && xmap != nullptr)
+		{
+			strcpy_s(gamepad[i].name, sizeof(gamepad[i].name), SDL_JoystickNameForIndex(i));
+			
+		#define APPLY_DEADZONE(v, t) (std::abs(v) <= t ? 0.f : clamp((std::abs(v) - t) * (v < 0.f ? -1.f : +1.f) / float(32767 - t), -1.f, +1.f))
+		#define DEADZONE 1024
+			
+			bool * isDown = gamepad[i].m_isDown;
+
+			bool wasDown[GAMEPAD_MAX];
+			memcpy(wasDown, isDown, sizeof(wasDown));
+			
+			const int numAxes = SDL_JoystickNumAxes(joy);
+			const int numButtons = SDL_JoystickNumButtons(joy);
+			const int numHats = SDL_JoystickNumHats(joy);
+			
+			for (int j = 0; j < GAMEPAD_MAX; ++j)
+			{
+				auto & b = xmap->buttons[j];
+				
+				if (b.source == XMap::kSource_Button)
+				{
+					if (b.sourceId < numButtons)
+						isDown[j] = SDL_JoystickGetButton(joy, b.sourceId) != 0;
+				}
+				else if (b.source == XMap::kSource_Hat)
+				{
+					if (b.sourceId < numHats)
+						isDown[j] = SDL_JoystickGetHat(joy, b.sourceId) & b.sourceChildId;
+				}
+			}
+			
+			for (int j = 0; j < 2; ++j)
+			{
+				for (int k = 0; k < ANALOG_MAX; ++k)
+				{
+					auto & a = xmap->axis[j][k];
+					
+					if (a.source == XMap::kSource_Axis)
+					{
+						if (a.sourceId < numAxes)
+							gamepad[i].m_analog[j][k] = APPLY_DEADZONE(SDL_JoystickGetAxis(joy, a.sourceId), DEADZONE);
+					}
+				}
+			}
+			
+			bool * wentDown = gamepad[i].m_wentDown;
+			bool * wentUp = gamepad[i].m_wentUp;
+
+			for (int j = 0; j < GAMEPAD_MAX; ++j)
+			{
+				if (!wasDown[j] && isDown[j])
+					wentDown[j] = true;
+				if (wasDown[j] && !isDown[j])
+					wentUp[j] = true;
+			}
+			
+		#undef DEADZONE
+		#undef APPLY_DEADZONE
+		}
+		else
+		{
+			memset(&gamepad[i], 0, sizeof(Gamepad));
+		}
+	}
 #endif
 
 	if (doReload)
@@ -4208,6 +4490,11 @@ void Gamepad::vibrate(float duration, float strength)
 	m_vibrationStrength = strength;
 }
 
+const char * Gamepad::getName() const
+{
+	return name;
+}
+
 // -----
 
 Midi::Midi()
@@ -4287,10 +4574,11 @@ void Camera3d::tick(float dt, bool enableInput)
 		
 		if (gamepadIndex >= 0 && gamepadIndex < MAX_GAMEPAD && gamepad[gamepadIndex].isConnected)
 		{
-			forwardSpeed += gamepad[gamepadIndex].getAnalog(0, ANALOG_Y);
+			strafeSpeed += gamepad[gamepadIndex].getAnalog(0, ANALOG_X);
+			forwardSpeed -= gamepad[gamepadIndex].getAnalog(0, ANALOG_Y);
 		
-			yaw += gamepad[gamepadIndex].getAnalog(1, ANALOG_Y);
-			pitch += gamepad[gamepadIndex].getAnalog(1, ANALOG_Y);
+			yaw -= gamepad[gamepadIndex].getAnalog(1, ANALOG_X);
+			pitch -= gamepad[gamepadIndex].getAnalog(1, ANALOG_Y);
 		}
 		
 		// mouse + mouse smoothing

@@ -155,6 +155,7 @@ public:
 	bool midiChange[MAX_MIDI_KEYS];
 	bool midiChangeAsync[MAX_MIDI_KEYS];
 	float midiValue[MAX_MIDI_KEYS];
+	SDL_Joystick * joystick[GAMEPAD_MAX];
 	ShaderBase * shader;
 	TRANSFORM transform;
 	Mat4x4 transformScreen;
