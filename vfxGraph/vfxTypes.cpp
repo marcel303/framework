@@ -241,7 +241,8 @@ void VfxOscPathList::save(tinyxml2::XMLPrinter * printer)
 	{
 		printer->OpenElement("elem");
 		{
-			printer->PushAttribute("path", elem.c_str());
+			printer->PushAttribute("path", elem.path.c_str());
+			printer->PushAttribute("name", elem.name.c_str());
 		}
 		printer->CloseElement();
 	}
@@ -253,8 +254,11 @@ void VfxOscPathList::load(tinyxml2::XMLElement * elem)
 	
 	for (auto xmlElem = elem->FirstChildElement("elem"); xmlElem != nullptr; xmlElem = xmlElem->NextSiblingElement("elem"))
 	{
-		const std::string path = stringAttrib(xmlElem, "path", "");
+		Elem elem;
 		
-		elems.push_back(path);
+		elem.path = stringAttrib(xmlElem, "path", "");
+		elem.name = stringAttrib(xmlElem, "name", "");
+		
+		elems.push_back(elem);
 	}
 }

@@ -29,12 +29,10 @@
 
 #include "oscReceiver.h"
 #include "oscSender.h"
-#include <map>
 #include <list>
+#include <string>
 
-#include <vector> // todo : remove once receivedValues is removed
-
-struct OscEndpointMgr : OscReceiveHandler
+struct OscEndpointMgr
 {
 	struct Receiver
 	{
@@ -67,10 +65,9 @@ struct OscEndpointMgr : OscReceiveHandler
 	};
 	
 	std::list<Receiver> receivers;
-	std::map<std::string, std::vector<float>> receivedValues;
-	int lastTraversalId;
-	
 	std::list<Sender> senders;
+	
+	int lastTraversalId;
 	
 	OscEndpointMgr();
 	
@@ -83,8 +80,6 @@ struct OscEndpointMgr : OscReceiveHandler
 	OscSender * findSender(const char * name);
 	
 	void tick();
-	
-	virtual void handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) override;
 };
 
 extern OscEndpointMgr g_oscEndpointMgr;

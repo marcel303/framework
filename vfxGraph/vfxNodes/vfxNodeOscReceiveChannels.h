@@ -27,12 +27,13 @@
 
 #pragma once
 
+#include "oscReceiver.h"
 #include "vfxNodeBase.h"
 #include <list>
 
 struct VfxOscPathList;
 
-struct VfxNodeOscReceiveChannels : VfxNodeBase
+struct VfxNodeOscReceiveChannels : VfxNodeBase, OscReceiveHandler
 {
 	const int kMaxHistory = 10;
 	
@@ -44,6 +45,7 @@ struct VfxNodeOscReceiveChannels : VfxNodeBase
 	
 	enum Input
 	{
+		kInput_EndpointName,
 		kInput_COUNT
 	};
 	
@@ -57,7 +59,6 @@ struct VfxNodeOscReceiveChannels : VfxNodeBase
 	VfxOscPathList * oscPathList;
 
 	VfxChannelData channelData;
-
 	VfxChannel channelOutput;
 	
 	std::list<HistoryItem> history;
@@ -71,4 +72,6 @@ struct VfxNodeOscReceiveChannels : VfxNodeBase
 	virtual void tick(const float dt) override;
 	
 	virtual void getDescription(VfxNodeDescription & d) override;
+	
+	virtual void handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) override;
 };

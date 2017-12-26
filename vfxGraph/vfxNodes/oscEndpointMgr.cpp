@@ -32,9 +32,8 @@
 OscEndpointMgr g_oscEndpointMgr;
 
 OscEndpointMgr::OscEndpointMgr()
-	: OscReceiveHandler()
-	, receivers()
-	, receivedValues()
+	: receivers()
+	, senders()
 	, lastTraversalId(-1)
 {
 }
@@ -184,45 +183,5 @@ void OscEndpointMgr::tick()
 	{
 		r.receiver.freeMessages();
 		r.receiver.recvMessages();
-	}
-	
-	//
-	
-	receivedValues.clear();
-	
-	for (auto & r : receivers)
-	{
-		r.receiver.pollMessages(this);
-	}
-}
-
-void OscEndpointMgr::handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint)
-{
-	try
-	{
-		const char * path = m.AddressPattern();
-		
-		auto & values = receivedValues[path];
-		
-		values.clear();
-		
-		int index = 0;
-		
-		for (auto i = m.ArgumentsBegin(); i != m.ArgumentsEnd(); ++i)
-		{
-			auto & a = *i;
-			
-			float value = a.IsFloat() ? a.AsFloat() : 0.f;
-			
-			values.push_back(value);
-			
-			index++;
-		}
-	}
-	catch (std::exception & e)
-	{
-		LOG_ERR("failed to handle OSC message: %s", e.what());
-		
-		return;
 	}
 }

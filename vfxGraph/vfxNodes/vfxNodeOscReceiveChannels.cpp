@@ -79,9 +79,14 @@ struct ResourceEditor_OscPathList : GraphEdit_ResourceEditorBase
 		
 		if (g_doActions && learningIndex != -1)
 		{
-			if (g_oscEndpointMgr.receivedValues.empty() == false)
+			OscFirstReceivedPathLearner firstReceivedPath;
+			
+			for (auto & receiver : g_oscEndpointMgr.receivers)
+				receiver.receiver.pollMessages(&firstReceivedPath);
+			
+			if (!firstReceivedPath.path.empty())
 			{
-				pathList->elems[learningIndex] = g_oscEndpointMgr.receivedValues.begin()->first;
+				pathList->elems[learningIndex].path = firstReceivedPath.path;
 				
 				learningIndex = -1;
 				
@@ -102,8 +107,6 @@ struct ResourceEditor_OscPathList : GraphEdit_ResourceEditorBase
 				
 				pushMenu(name);
 				{
-					auto & path(elem);
-					
 					if (doButton(index == learningIndex ? "cancel" : "learn", 0.f, .15f, false))
 					{
 						if (index == learningIndex)
@@ -115,7 +118,8 @@ struct ResourceEditor_OscPathList : GraphEdit_ResourceEditorBase
 					if (doButton("remove", 0.15f, .15f, false))
 						removeIndex = index;
 					
-					doTextBox(path, "path", .3f, .7f, true, dt);
+					doTextBox(elem.name, "name", .3f, .15f, false, dt);
+					doTextBox(elem.path, "path", .45f, .55f, true, dt);
 				}
 				popMenu();
 				
@@ -134,7 +138,7 @@ struct ResourceEditor_OscPathList : GraphEdit_ResourceEditorBase
 		
 		if (doButton("add"))
 		{
-			pathList->elems.push_back("");
+			pathList->elems.emplace_back();
 			
 			uiState->reset();
 		}
@@ -201,6 +205,7 @@ VFX_NODE_TYPE(VfxNodeOscReceiveChannels)
 		return new ResourceEditor_OscPathList();
 	};
 	
+	in("endpoint", "string");
 	out("channel", "channel");
 	out("receive!", "trigger");
 }
@@ -214,8 +219,9 @@ VfxNodeOscReceiveChannels::VfxNodeOscReceiveChannels()
 	, numReceives(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addOutput(kOutput_Channel, kVfxPlugType_Channel, &channelOutput);
+	addInput(kInput_EndpointName, kVfxPlugType_String);
 	addOutput(kOutput_Receive, kVfxPlugType_Trigger, nullptr);
+	addOutput(kOutput_Channel, kVfxPlugType_Channel, &channelOutput);
 }
 
 VfxNodeOscReceiveChannels::~VfxNodeOscReceiveChannels()
@@ -235,65 +241,48 @@ void VfxNodeOscReceiveChannels::tick(const float dt)
 	if (isPassthrough)
 		return;
 	
-	bool hasReceived = false;
-
-	// todo : check if path list has changed. if it has, re-allocate and reset channels output
+	const char * endpointName = getInputString(kInput_EndpointName, "");
 	
-	// todo : use dynamic outputs ?
+	// check if path list has changed. if it has, update dynamic outputs and channel output
 	
-	if (oscPathList->elems.size() != channelOutput.size)
+	if (oscPathList->elems.size() != dynamicOutputs.size())
 	{
-		channelData.alloc(oscPathList->elems.size());
-		
-		for (int i = 0; i < channelData.size; ++i)
-			channelData.data[i] = 0.f;
-		
-		channelOutput.setData(channelData.data, false, oscPathList->elems.size());
-	}
-	
-	int index = 0;
-	
-	for (auto & elem : oscPathList->elems)
-	{
-		const char * path = elem.c_str();
-		
-		auto i = g_oscEndpointMgr.receivedValues.find(path);
-		
-		if (i != g_oscEndpointMgr.receivedValues.end())
+		if (oscPathList->elems.empty())
 		{
-			auto & values = i->second;
+			channelData.free();
+			channelOutput.reset();
 			
-			for (auto value : values)
-			{
-				hasReceived = true;
-				
-				//
-				
-				if (index >= 0 && index < channelData.size)
-				{
-					channelData.data[index] = value;
-				}
-				
-				//
-
-				HistoryItem historyItem;
-				historyItem.path = path;
-				historyItem.value = value;
-				history.push_front(historyItem);
-				
-				while (history.size() > kMaxHistory)
-					history.pop_back();
-				
-				numReceives++;
-			}
+			setDynamicOutputs(nullptr, 0);
 		}
-		
-		index++;
+		else
+		{
+			const int numElems = oscPathList->elems.size();
+			
+			channelData.alloc(numElems);
+			channelOutput.setData(channelData.data, false, numElems);
+			
+			DynamicOutput outputs[numElems];
+			
+			for (int i = 0; i < numElems; ++i)
+			{
+				auto & elem = oscPathList->elems[i];
+				
+				channelData.data[i] = 0.f;
+				
+				outputs[i].name = elem.name.empty() ? String::FormatC("channel%d", i + 1) : elem.name;
+				outputs[i].type = kVfxPlugType_Float;
+				outputs[i].mem = &channelData.data[i];
+			}
+			
+			setDynamicOutputs(outputs, numElems);
+		}
 	}
-
-	if (hasReceived)
+	
+	auto receiver = g_oscEndpointMgr.findReceiver(endpointName);
+	
+	if (receiver != nullptr)
 	{
-		trigger(kOutput_Receive);
+		receiver->pollMessages(this);
 	}
 }
 
@@ -305,7 +294,7 @@ void VfxNodeOscReceiveChannels::getDescription(VfxNodeDescription & d)
 	else
 	{
 		for (auto & elem : oscPathList->elems)
-			d.add("%s", elem.c_str());
+			d.add("%s: %s", elem.name.c_str(), elem.path.c_str());
 	}
 	d.newline();
 	
@@ -316,3 +305,46 @@ void VfxNodeOscReceiveChannels::getDescription(VfxNodeDescription & d)
 		d.add("%s: %.6f", h.path.c_str(), h.value);
 }
 
+void VfxNodeOscReceiveChannels::handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint)
+{
+	bool hasReceived = false;
+	
+	int index = 0;
+	
+	for (auto & elem : oscPathList->elems)
+	{
+		if (elem.path == m.AddressPattern())
+		{
+			for (auto i = m.ArgumentsBegin(); i != m.ArgumentsEnd(); ++i)
+			{
+				auto & a = *i;
+				
+				if (a.IsFloat())
+				{
+					channelData.data[index] = a.AsFloat();
+					
+					hasReceived = true;
+					
+					//
+					
+					HistoryItem historyItem;
+					historyItem.path = elem.path;
+					historyItem.value = channelData.data[index];
+					history.push_front(historyItem);
+					
+					while (history.size() > kMaxHistory)
+						history.pop_back();
+					
+					numReceives++;
+				}
+			}
+		}
+		
+		index++;
+	}
+	
+	if (hasReceived)
+	{
+		trigger(kOutput_Receive);
+	}
+}

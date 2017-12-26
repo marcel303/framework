@@ -97,7 +97,13 @@ struct VfxOscPath
 
 struct VfxOscPathList
 {
-	std::vector<std::string> elems;
+	struct Elem
+	{
+		std::string path;
+		std::string name;
+	};
+	
+	std::vector<Elem> elems;
 	
 	void save(tinyxml2::XMLPrinter * printer);
 	void load(tinyxml2::XMLElement * elem);

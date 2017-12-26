@@ -77,9 +77,14 @@ struct ResourceEditor_OscPath : GraphEdit_ResourceEditorBase
 		
 		if (g_doActions && isLearning)
 		{
-			if (g_oscEndpointMgr.receivedValues.empty() == false)
+			OscFirstReceivedPathLearner firstReceivedPath;
+			
+			for (auto & receiver : g_oscEndpointMgr.receivers)
+				receiver.receiver.pollMessages(&firstReceivedPath);
+			
+			if (!firstReceivedPath.path.empty())
 			{
-				path->path = g_oscEndpointMgr.receivedValues.begin()->first;
+				path->path = firstReceivedPath.path;
 				
 				isLearning = false;
 				
@@ -167,6 +172,7 @@ VFX_NODE_TYPE(VfxNodeOscReceive)
 		return new ResourceEditor_OscPath();
 	};
 	
+	in("endpoint", "string");
 	in("path", "string");
 	out("value", "float");
 	out("receive!", "trigger");
@@ -180,6 +186,7 @@ VfxNodeOscReceive::VfxNodeOscReceive()
 	, numReceives(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	addInput(kInput_EndpointName, kVfxPlugType_String);
 	addInput(kInput_Path, kVfxPlugType_String);
 	addOutput(kOutput_Value, kVfxPlugType_Float, &valueOutput);
 	addOutput(kOutput_Receive, kVfxPlugType_Trigger, nullptr);
@@ -212,31 +219,13 @@ void VfxNodeOscReceive::tick(const float dt)
 	if (isPassthrough)
 		return;
 	
-	const char * path = getPath();
+	const char * endpointName = getInputString(kInput_EndpointName, "");
 	
-	auto i = g_oscEndpointMgr.receivedValues.find(path);
+	auto receiver = g_oscEndpointMgr.findReceiver(endpointName);
 	
-	if (i != g_oscEndpointMgr.receivedValues.end())
+	if (receiver != nullptr)
 	{
-		auto & values = i->second;
-		
-		for (auto value : values)
-		{
-			valueOutput = value;
-	
-			trigger(kOutput_Receive);
-			
-			//
-
-			HistoryItem historyItem;
-			historyItem.value = value;
-			history.push_front(historyItem);
-			
-			while (history.size() > kMaxHistory)
-				history.pop_back();
-			
-			numReceives++;
-		}
+		receiver->pollMessages(this);
 	}
 }
 
@@ -252,3 +241,33 @@ void VfxNodeOscReceive::getDescription(VfxNodeDescription & d)
 		d.add("%.6f", h.value);
 }
 
+void VfxNodeOscReceive::handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint)
+{
+	const char * path = getPath();
+	
+	if (strcmp(path, m.AddressPattern()) == 0)
+	{
+		for (auto i = m.ArgumentsBegin(); i != m.ArgumentsEnd(); ++i)
+		{
+			auto & a = *i;
+			
+			if (a.IsFloat())
+			{
+				valueOutput = a.AsFloat();
+				
+				trigger(kOutput_Receive);
+				
+				//
+
+				HistoryItem historyItem;
+				historyItem.value = valueOutput;
+				history.push_front(historyItem);
+				
+				while (history.size() > kMaxHistory)
+					history.pop_back();
+				
+				numReceives++;
+			}
+		}
+	}
+}

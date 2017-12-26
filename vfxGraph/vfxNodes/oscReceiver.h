@@ -68,3 +68,14 @@ struct OscReceiver
 
 	static int executeOscThread(void * data);
 };
+
+struct OscFirstReceivedPathLearner : OscReceiveHandler
+{
+	std::string path;
+	
+	virtual void handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) override
+	{
+		if (path.empty())
+			path = m.AddressPattern();
+	}
+};
