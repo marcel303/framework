@@ -279,7 +279,7 @@ void AudioNodeMathBase::tick(const float dt)
 	const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
 	const AudioFloat * b = getInputAudioFloat(kInput_B, &AudioFloat::Zero);
 	
-		if (a->isScalar && b->isScalar)
+	if (a->isScalar && b->isScalar)
 	{
 		result.setScalar(evalMathOp(a->getScalar(), b->getScalar(), type, isPassthrough));
 	}
