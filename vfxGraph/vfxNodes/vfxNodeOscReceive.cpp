@@ -217,7 +217,10 @@ void VfxNodeOscReceive::tick(const float dt)
 	vfxCpuTimingBlock(VfxNodeOscReceive);
 	
 	if (isPassthrough)
+	{
+		valueOutput = 0.f;
 		return;
+	}
 	
 	const char * endpointName = getInputString(kInput_EndpointName, "");
 	

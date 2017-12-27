@@ -239,42 +239,91 @@ void VfxNodeOscReceiveChannels::tick(const float dt)
 	vfxCpuTimingBlock(VfxNodeOscReceiveChannels);
 	
 	if (isPassthrough)
+	{
+		channelData.free();
+		channelOutput.reset();
+		setDynamicOutputs(nullptr, 0);
 		return;
+	}
 	
 	const char * endpointName = getInputString(kInput_EndpointName, "");
 	
 	// check if path list has changed. if it has, update dynamic outputs and channel output
 	
-	if (oscPathList->elems.size() != dynamicOutputs.size())
+	bool oscPathListHasChanged = false;
+	
+	int numNamedElems = 0;
+	
+	for (auto & elem : oscPathList->elems)
+		if (elem.name.empty() == false)
+			numNamedElems++;
+	
+	if (numNamedElems != dynamicOutputs.size())
+		oscPathListHasChanged = true;
+	else
 	{
-		if (oscPathList->elems.empty())
+		int elemIndex = 0;
+		
+		for (auto & elem : oscPathList->elems)
+		{
+			if (elem.name.empty())
+				continue;
+			
+			if (dynamicOutputs[elemIndex].name != elem.name)
+				oscPathListHasChanged = true;
+			
+			elemIndex++;
+		}
+	}
+	
+	const int numElems = oscPathList->elems.size();
+	
+	if (numElems != channelData.size)
+	{
+		if (numElems == 0)
 		{
 			channelData.free();
 			channelOutput.reset();
+		}
+		else
+		{
+			channelData.alloc(numElems);
+			channelOutput.setData(channelData.data, false, numElems);
 			
+			for (int i = 0; i < numElems; ++i)
+				channelData.data[i] = 0.f;
+		}
+	}
+	
+	if (oscPathListHasChanged)
+	{
+		if (numNamedElems == 0)
+		{
 			setDynamicOutputs(nullptr, 0);
 		}
 		else
 		{
-			const int numElems = oscPathList->elems.size();
+			DynamicOutput outputs[numNamedElems];
 			
-			channelData.alloc(numElems);
-			channelOutput.setData(channelData.data, false, numElems);
-			
-			DynamicOutput outputs[numElems];
+			int elemIndex = 0;
 			
 			for (int i = 0; i < numElems; ++i)
 			{
-				auto & elem = oscPathList->elems[i];
-				
 				channelData.data[i] = 0.f;
 				
-				outputs[i].name = elem.name.empty() ? String::FormatC("channel%d", i + 1) : elem.name;
-				outputs[i].type = kVfxPlugType_Float;
-				outputs[i].mem = &channelData.data[i];
+				auto & elem = oscPathList->elems[i];
+				
+				if (elem.name.empty())
+					continue;
+				
+				outputs[elemIndex].name = elem.name;
+				outputs[elemIndex].type = kVfxPlugType_Float;
+				outputs[elemIndex].mem = &channelData.data[i];
+				
+				elemIndex++;
 			}
 			
-			setDynamicOutputs(outputs, numElems);
+			setDynamicOutputs(outputs, numNamedElems);
 		}
 	}
 	
