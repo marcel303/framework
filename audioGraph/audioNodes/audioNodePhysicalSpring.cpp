@@ -101,6 +101,7 @@ void AudioNodePhysicalSpring::tick(const float _dt)
 		const double force = externalForce->samples[i] - strength->samples[i] * delta;
 
 		speed *= dampenThisTick;
+		value *= dampenThisTick;
 		
 		speed += force * dt;
 		value += speed * dt;
