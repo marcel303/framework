@@ -1,24 +1,49 @@
 /*
 
 top priority items:
-- add buttons to manually trigger nodes
-	- like the BANG node in max
-	- add ability to trigger any input/output trigger (?)
+# add buttons to manually trigger nodes
+	# like the BANG node in max
+	# add ability to trigger any input/output trigger (?)
+	# decided not to do this, as UI is better left uncoupled from graph processing (for now). perhaps a separate UI layer on top of vfx- and audio graph makes more sense
 - add GPU performance markers
+	+ add GPU timer object
+	+ add GPU time to vfx node base
+	- fix issue with recursive GPU timers
 - add text field to node type select
 - add a list of xml files to click on for more rapid testing
-- add automated error checking test for existing graph files ?
 - add a dedicated shader node. no pre-defined inputs at all. output an image
 - rename fsfx v1 to imfx ? redefine behavior to run shader over an image. expressly output as image
-- how to convert multiple channels to gpu image with channel(s).toGpu ?
+# how to convert multiple channels to gpu image with channel(s).toGpu ?
+	# removed support for multiple channels for one output socket. always using a single channel resolves this issue
 - add ability for nodes to report warnings and errors
-+ add gen.osc. lt user select shape. take inspiration from audio node version
 	# renamed to gen.primitive
 - add gen.random node with different modes. white, pink, brown
 - add gen.brownian
-+ oscilloscope node
-+ decouple visualizers from nodes. when hit testing, sort elems by z-key, add ptr to node or visualizer
++ remove visualizers for nodes which are removed?
++ add polyphonic audio graph node
++ add channel.curve node. give it a min, max, power factor and channel size params. perhaps even 2d
+- add multiple window support to framework. would help with managing lists of audio and vfx graphs. just open a window and show the lists over there
+- fix issue with immediate values not being restored properly for most types
++ make sure inputs are update to date (last tick ID) when resizing dynamic inputs ?
+- raise a menu when socket connect is released on a node itself. ask for which socket to connect to
+- make it possible to have voice nodes in audio graph which do not generate audible sound ?
+- add an option to audio graph and poly audio graph nodes to output audio or not
+- add options to poly and regular audio graph nodes to output mono, stereo, or multi-channel
+	- requires an extra mixing level ? perhaps add a voice manager interface. or store voices in audio graph ? let voice manager allocate channel indices, but do mixing itself differently ? or perhaps add voice groups or something ..
++ add channel.fft node
 
+
+melody = individual, harmony = community, rithm = time, tonal color = mood
+ingradients
+line input
+midi notes
+video feed
+visual circles.. animated grooop logo
+visual score
+ideom
+metronome.. dissolves into visuals leading
+videos
+- datum: 21 december. laken, beamer, verloopstukje
 
 todo :
 - add undo/redo support. just serialize/deserialize graph for every action?
@@ -52,7 +77,6 @@ todo :
 	- (temporarily) un-fold node when it is the only selected node. allows connecting sockets
 	- (temporarily) un-fold hovered over node when connecting sockets. currently based on distance, but should also include hit test
 	- move hovered over node in front of others?
-	- raise a menu when socket connect is released on a node itself. ask for which socket to connect to
 - NanoVG includes an interesting blurring algortihm used for blurring fonts. integrate ?
 - add ability to add node between nodes ?
 - add third 'node minification' option: show only active inputs and outputs
@@ -107,12 +131,6 @@ todo : nodes :
 	- fix issue with output time not reset on filename change or looping. remember start time? -> capture time on next provide
 - add note (like C1) to MIDI note
 - add adsr node
-- add draw primitive node
-	+ xyz channels input
-	- add size literal input (to be used when 3rd channel is missing
-	- screen size input (if true, scaling doesn't affect circle size)
-	- texture
-	- color. use white when missing
 - perhaps add string names to channels, for more convenient selection ? would reduce remixing capability I fear .. maybe let nodes which produce channels to document in their node description what those channels represent, semantically .. but not let the user use those semantics to select channels
 - add image to image_cpu node. default behaviour is to delay by a few frames
 - add integral image node. expose integral as 2d channels object
@@ -132,7 +150,7 @@ todo : nodes :
 	- remove items from channels where depth at index fails test
 		- allocate new channels object to store results
 	- add range min/max range + pass if inside or outside boolean
-- add memory node ? get/set named variables. how to ensure processing order ?
+- add memory node ? get/set named variables. how to ensure processing order ? or maybe for vfx <-> c++ communication only in which case order is guaranteed
 - add queue system for triggers ? ensure predeps have finished processing before handling triggers
 - add ability for nodes to trigger again (process a partial time slice ?). but this will re-introduce again the issue of execution order of triggers ..
 - add channels.toImage node ?
@@ -140,8 +158,6 @@ todo : nodes :
 - add curl node
 - add text list node. next! prev! rand! custom editor for list of strings
 - add audioGraph node
-+ create separate avGraph and vfxGraph projects with CMake files
-- have the model node also expose channels ?
 
 
 todo : UI
@@ -343,6 +359,9 @@ todo :
 + fix issue where freeing texture here can result in issues when drawing visualizer. tick of visualizer should always happen after cpuToGpu tick, but there's no link connecting visualizer to the node it references, so tick order is undefined .. ! -> maybe update visualizer in draw. or never capture references (to textures ID's or whatever) in visualizer. only let it copy values by value (as needed for graph) but capture everything else on draw
 	+ add a separate tickVisualizers(..) or similar ? it would run after evaluating the vfx graph, so get the latest values. conceptually, doing the regular tick before the vfx graph also makes sense, as it ensures vfx graph uses the latest version of the graph. so editor.tick, vfxGraph.tick/draw, editor.tickVisualizers. editor.draw, composite vfxGraph/editor
 + add copy and paste text support
++ create separate avGraph and vfxGraph projects with CMake files
++ decouple visualizers from nodes. when hit testing, sort elems by z-key, add ptr to node or visualizer
++ add automated error checking test for existing graph files ?
 
 
 todo : nodes :
@@ -435,6 +454,14 @@ todo : nodes :
 + show src socket value preview when hovering over a link
 + reduce hit size links
 + add FSFX node which lets one select a shader from a drop down list
++ add draw primitive node
+	+ xyz channels input
+	+ add size literal input (to be used when 3rd channel is missing
+	+ screen size input (if true, scaling doesn't affect circle size)
+	+ color. use white when missing
++ have the model node also expose channels ?
++ add gen.osc. lt user select shape. take inspiration from audio node version
++ oscilloscope node
 
 
 todo : fsfx :
