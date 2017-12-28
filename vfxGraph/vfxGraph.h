@@ -166,6 +166,8 @@ struct VfxDynamicData
 
 //
 
+void createVfxTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
+
 VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName);
 
 VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
