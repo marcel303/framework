@@ -74,16 +74,14 @@ struct Grid
 			"testOscilloscope3.xml"
 		};
 		
-		const int baseIndex = rand();
-		
 		for (int x = 0; x < GRID_SX; ++x)
 		{
 			for (int y = 0; y < GRID_SY; ++y)
 			{
-				const int index = baseIndex + x + y * GRID_SY;
 				const int numFilenames = sizeof(filenames) / sizeof(filenames[0]);
-
-				const char * filename = filenames[index % numFilenames];
+				const int index = rand() % numFilenames;
+				
+				const char * filename = filenames[index];
 
 				Graph graph;
 				graph.load(filename, &typeDefinitionLibrary);
