@@ -41,10 +41,14 @@ file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 
 source_group("sources" FILES ${source})
 
-add_executable(examples ${source})
+add_executable(000-minimal "000-minimal.cpp")
+add_executable(010-multiple-instances "010-multiple-instances.cpp")
+add_executable(900-devgrounds "900-devgrounds.cpp")
 
 if (APPLE)
-	set_target_properties(examples PROPERTIES LINK_FLAGS "-Wl,-all_load")
+	set_target_properties(000-minimal PROPERTIES LINK_FLAGS "-Wl,-all_load")
+	set_target_properties(010-multiple-instances PROPERTIES LINK_FLAGS "-Wl,-all_load")
+	set_target_properties(900-devgrounds PROPERTIES LINK_FLAGS "-Wl,-all_load")
 endif (APPLE)
 
 set(LIBRARIES PRIVATE
@@ -57,14 +61,15 @@ set(LIBRARIES PRIVATE
 	${LIBVIDEO_LIBRARIES}
 	${VFXGRAPH_LIBRARIES})
 
-target_link_libraries(examples PRIVATE ${LIBRARIES})
-
-target_include_directories(examples PRIVATE "${PROJECT_SOURCE_DIR}")
+target_link_libraries(000-minimal PRIVATE ${LIBRARIES})
+target_link_libraries(010-multiple-instances PRIVATE ${LIBRARIES})
+target_link_libraries(900-devgrounds PRIVATE ${LIBRARIES})
 
 if (WIN32)
 	# set the current working directory
 	
-	set_target_properties(examples PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
+	set_target_properties(000-minimal PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
+	set_target_properties(900-devgrounds PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
 	
 	# copy DLL files to the Debug and Release folders
 
