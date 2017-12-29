@@ -27,7 +27,6 @@
 
 #include "audioGraph.h"
 #include "audioNodeBase.h"
-#include "framework.h"
 #include "graph.h"
 #include "soundmix.h"
 #include "StringEx.h"
@@ -421,7 +420,7 @@ void AudioPlug::connectTo(AudioPlug & dst)
 {
 	if (dst.type != type)
 	{
-		logError("node connection failed. type mismatch");
+		LOG_ERR("node connection failed. type mismatch", 0);
 	}
 	else
 	{
@@ -444,7 +443,7 @@ void AudioPlug::connectTo(void * dstMem, const AudioPlugType dstType, const bool
 {
 	if (dstType != type)
 	{
-		logError("node connection failed. type mismatch");
+		LOG_ERR("node connection failed. type mismatch", 0);
 	}
 	else
 	{

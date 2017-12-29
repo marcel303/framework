@@ -26,7 +26,7 @@
 */
 
 #include "Calc.h"
-#include "framework.h"
+#include "framework.h" // keyboard, mouse
 #include "Noise.h"
 #include "soundmix_wavefield.h"
 

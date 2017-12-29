@@ -27,7 +27,7 @@
 
 #include "audioGraph.h"
 #include "audioNodeBase.h"
-#include "framework.h"
+#include "framework.h" // listFiles
 #include "Log.h"
 #include "Parse.h"
 
@@ -117,7 +117,7 @@ void AudioGraph::destroy()
 		const uint64_t t2 = g_TimerRT.TimeUS_get();
 		auto graphNode = graph->tryGetNode(i.first);
 		const std::string typeName = graphNode ? graphNode->typeName : "n/a";
-		logDebug("delete %s took %.2fms", typeName.c_str(), (t2 - t1) / 1000.0);
+		LOG_DBG("delete %s took %.2fms", typeName.c_str(), (t2 - t1) / 1000.0);
 	#endif
 	}
 	
@@ -187,7 +187,7 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 	}
 	else
 	{
-		logWarning("cannot instantiate literal for non-supported type %d, value=%s", input.type, inputValue.c_str());
+		LOG_WRN("cannot instantiate literal for non-supported type %d, value=%s", input.type, inputValue.c_str());
 	}
 }
 
@@ -475,7 +475,7 @@ AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & ty
 			
 		#if AUDIO_GRAPH_ENABLE_TIMING
 			const uint64_t t2 = g_TimerRT.TimeUS_get();
-			logDebug("create %s took %.2fms", typeName.c_str(), (t2 - t1) / 1000.0);
+			LOG_DBG("create %s took %.2fms", typeName.c_str(), (t2 - t1) / 1000.0);
 		#endif
 		
 			break;
@@ -507,7 +507,7 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 		Assert(audioNode != nullptr);
 		if (audioNode == nullptr)
 		{
-			logError("unable to create node");
+			LOG_ERR("unable to create node", 0);
 		}
 		else
 		{
@@ -535,9 +535,9 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 		if (srcNodeItr == audioGraph->nodes.end() || dstNodeItr == audioGraph->nodes.end())
 		{
 			if (srcNodeItr == audioGraph->nodes.end())
-				logError("source node doesn't exist");
+				LOG_ERR("source node doesn't exist", 0);
 			if (dstNodeItr == audioGraph->nodes.end())
-				logError("destination node doesn't exist");
+				LOG_ERR("destination node doesn't exist", 0);
 		}
 		else
 		{
@@ -551,9 +551,9 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 			if (input == nullptr || output == nullptr)
 			{
 				if (input == nullptr)
-					logError("input node socket doesn't exist. name=%s, index=%d", link.srcNodeSocketName.c_str(), link.srcNodeSocketIndex);
+					LOG_ERR("input node socket doesn't exist. name=%s, index=%d", link.srcNodeSocketName.c_str(), link.srcNodeSocketIndex);
 				if (output == nullptr)
-					logError("output node socket doesn't exist. name=%s, index=%d", link.dstNodeSocketName.c_str(), link.dstNodeSocketIndex);
+					LOG_ERR("output node socket doesn't exist. name=%s, index=%d", link.dstNodeSocketName.c_str(), link.dstNodeSocketIndex);
 			}
 			else
 			{
@@ -647,7 +647,7 @@ static std::map<std::string, PcmData*> s_pcmDataCache;
 
 void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths)
 {
-	logDebug("filling data cache with path: %s", path);
+	LOG_DBG("filling data cache with path: %s", path);
 	
 	const auto t1 = g_TimerRT.TimeUS_get();
 	

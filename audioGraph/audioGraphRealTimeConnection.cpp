@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "framework.h" // log
 #include "audioGraph.h"
 #include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
@@ -228,7 +227,7 @@ void AudioRealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::strin
 	if (isLoading)
 		return;
 	
-	//logDebug("nodeAdd");
+	//LOG_DBG("nodeAdd", 0);
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -269,7 +268,7 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	if (isLoading)
 		return;
 	
-	//logDebug("nodeRemove");
+	//LOG_DBG("nodeRemove", 0);
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -321,7 +320,7 @@ void AudioRealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeI
 	if (isLoading)
 		return;
 	
-	//logDebug("linkAdd");
+	//LOG_DBG("linkAdd", 0);
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -334,9 +333,9 @@ void AudioRealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeI
 	if (srcNodeItr == audioGraph->nodes.end() || dstNodeItr == audioGraph->nodes.end())
 	{
 		if (srcNodeItr == audioGraph->nodes.end())
-			logError("source node doesn't exist");
+			LOG_ERR("source node doesn't exist", 0);
 		if (dstNodeItr == audioGraph->nodes.end())
-			logError("destination node doesn't exist");
+			LOG_ERR("destination node doesn't exist", 0);
 		
 		return;
 	}
@@ -351,9 +350,9 @@ void AudioRealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeI
 	if (input == nullptr || output == nullptr)
 	{
 		if (input == nullptr)
-			logError("input node socket doesn't exist");
+			LOG_ERR("input node socket doesn't exist", 0);
 		if (output == nullptr)
-			logError("output node socket doesn't exist");
+			LOG_ERR("output node socket doesn't exist", 0);
 		
 		return;
 	}
@@ -385,7 +384,7 @@ void AudioRealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNo
 	if (isLoading)
 		return;
 	
-	//logDebug("linkRemove");
+	//LOG_DBG("linkRemove", 0);
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -507,7 +506,7 @@ void AudioRealTimeConnection::setNodeIsPassthrough(const GraphNodeId nodeId, con
 	if (isLoading)
 		return;
 	
-	//logDebug("setNodeIsPassthrough called for nodeId=%d, isPassthrough=%d", int(nodeId), int(isPassthrough));
+	//LOG_DBG("setNodeIsPassthrough called for nodeId=%d, isPassthrough=%d", int(nodeId), int(isPassthrough));
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -613,7 +612,7 @@ void AudioRealTimeConnection::setSrcSocketValue(const GraphNodeId nodeId, const 
 	if (isLoading)
 		return;
 	
-	//logDebug("setSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
+	//LOG_DBG("setSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -681,7 +680,7 @@ void AudioRealTimeConnection::setDstSocketValue(const GraphNodeId nodeId, const 
 	if (isLoading)
 		return;
 	
-	//logDebug("setDstSocketValue called for nodeId=%d, dstSocket=%s", int(nodeId), dstSocketName.c_str());
+	//LOG_DBG("setDstSocketValue called for nodeId=%d, dstSocket=%s", int(nodeId), dstSocketName.c_str());
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -739,7 +738,7 @@ void AudioRealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, cons
 	if (isLoading)
 		return;
 	
-	//logDebug("clearSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
+	//LOG_DBG("clearSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
