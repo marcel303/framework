@@ -478,9 +478,13 @@ static void checkVfxGraphs(const GraphEdit_TypeDefinitionLibrary & tdl)
 		if (Path::GetExtension(filename, true) != "xml")
 			continue;
 		
-		if (filename == "ccl.xml" ||
+		if (filename == "audioKey.xml" ||
+			filename == "audioKey2.xml" ||
+			filename == "ccl.xml" ||
 			filename == "combTest5.xml" ||
+			filename == "combTest5p.xml" ||
 			filename == "mlworkshopA.xml" ||
+			filename == "mlworkshopAp.xml" ||
 			filename == "types.xml")
 			continue;
 		
@@ -495,10 +499,8 @@ int main(int argc, char * argv[])
 	framework.enableRealTimeEditing = true;
 	
 	framework.enableDepthBuffer = false;
-	framework.enableDrawTiming = false;
+	//framework.enableDrawTiming = true;
 	//framework.enableProfiling = true;
-	
-	//framework.fullscreen = true;
 	
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
