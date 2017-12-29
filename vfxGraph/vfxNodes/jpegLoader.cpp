@@ -295,7 +295,7 @@ bool loadImage_turbojpeg(const char * filename, JpegLoadData & data, const bool 
 	return result;
 }
 
-static bool saveImage_turbojpegInternal(const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, const bool srcIsColor, const int dstQualityLevel, void *& dstBuffer, int & dstBufferSize, const bool allowAllocation)
+static bool saveImage_turbojpegInternal(const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, const bool srcIsColor, const int dstQualityLevel, void *& dstBuffer, int & dstBufferSize, const bool allowAllocation, const bool flipImage)
 {
 	bool result = true;
 	
@@ -312,7 +312,7 @@ static bool saveImage_turbojpegInternal(const void * srcBuffer, const int srcBuf
 		const TJPF pixelFormat = srcIsColor ? TJPF_RGBX : TJPF_GRAY;
 		const TJSAMP subsamp = srcIsColor ? TJSAMP_422 : TJSAMP_GRAY;
 		const int quality = dstQualityLevel;
-		const int flags = TJFLAG_NOREALLOC * (allowAllocation ? 0 : 1);
+		const int flags = (TJFLAG_NOREALLOC * (allowAllocation ? 0 : 1)) | (TJFLAG_BOTTOMUP * (flipImage ? 1 : 0));
 		
 		const int xPitch = srcSx * tjPixelSize[pixelFormat];
 		
@@ -338,7 +338,7 @@ static bool saveImage_turbojpegInternal(const void * srcBuffer, const int srcBuf
 
 bool saveImage_turbojpeg(const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, const bool srcIsColor, const int dstQualityLevel, void *& dstBuffer, int & dstBufferSize)
 {
-	return saveImage_turbojpegInternal(srcBuffer, srcBufferSize, srcSx, srcSy, srcIsColor, dstQualityLevel, dstBuffer, dstBufferSize, false);
+	return saveImage_turbojpegInternal(srcBuffer, srcBufferSize, srcSx, srcSy, srcIsColor, dstQualityLevel, dstBuffer, dstBufferSize, false, false);
 }
 
 bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, const bool srcIsColor, const int dstQualityLevel, void * _saveBuffer, int _saveBufferSize)
@@ -348,7 +348,7 @@ bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const in
 	void * saveBuffer = _saveBuffer;
 	int saveBufferSize = _saveBufferSize;
 	
-	if (saveImage_turbojpegInternal(srcBuffer, srcBufferSize, srcSx, srcSy, srcIsColor, dstQualityLevel, saveBuffer, saveBufferSize, false) == false)
+	if (saveImage_turbojpegInternal(srcBuffer, srcBufferSize, srcSx, srcSy, srcIsColor, dstQualityLevel, saveBuffer, saveBufferSize, false, false) == false)
 	{
 		result = false;
 	}
@@ -377,14 +377,14 @@ bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const in
 	return result;
 }
 
-bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, const bool srcIsColor, const int dstQualityLevel)
+bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, const bool srcIsColor, const int dstQualityLevel, const bool flipImage)
 {
 	bool result = true;
 	
 	void * saveBuffer = nullptr;
 	int saveBufferSize = 0;
 	
-	if (saveImage_turbojpegInternal(srcBuffer, srcBufferSize, srcSx, srcSy, srcIsColor, dstQualityLevel, saveBuffer, saveBufferSize, true) == false)
+	if (saveImage_turbojpegInternal(srcBuffer, srcBufferSize, srcSx, srcSy, srcIsColor, dstQualityLevel, saveBuffer, saveBufferSize, true, flipImage) == false)
 	{
 		result = false;
 	}
