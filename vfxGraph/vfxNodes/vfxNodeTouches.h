@@ -59,6 +59,7 @@ struct VfxNodeTouches : VfxNodeBase
 		kOutput_WentUpMask,
 		kOutput_MovedMask,
 		kOutput_NumTouches,
+		kOutput_Id,
 		kOutput_X,
 		kOutput_Y,
 		kOutput_COUNT
@@ -66,9 +67,10 @@ struct VfxNodeTouches : VfxNodeBase
 	
 	Touch touches[kMaxTouches];
 	int numTouches;
-
-	VfxChannelData xChannelData;
-	VfxChannelData yChannelData;
+	
+	float idChannelData[kMaxTouches];
+	float xChannelData[kMaxTouches];
+	float yChannelData[kMaxTouches];
 
 	//
 
@@ -78,6 +80,7 @@ struct VfxNodeTouches : VfxNodeBase
 	int wentUpOutput;
 	int movedOutput;
 	float numTouchesOutput;
+	VfxChannel idChannelOutput;
 	VfxChannel xChannelOutput;
 	VfxChannel yChannelOutput;
 

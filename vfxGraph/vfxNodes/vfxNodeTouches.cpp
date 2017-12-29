@@ -40,6 +40,7 @@ VFX_NODE_TYPE(VfxNodeTouches)
 	out("wentUp", "int");
 	out("moved", "int");
 	out("numTouches", "float");
+	out("id", "channel");
 	out("x", "channel");
 	out("y", "channel");
 }
@@ -56,6 +57,7 @@ VfxNodeTouches::VfxNodeTouches()
 	: VfxNodeBase()
 	, touches()
 	, numTouches(0)
+	, idChannelData()
 	, xChannelData()
 	, yChannelData()
 	, isDownOutput(0)
@@ -64,6 +66,7 @@ VfxNodeTouches::VfxNodeTouches()
 	, wentUpOutput(0)
 	, movedOutput(0)
 	, numTouchesOutput(0)
+	, idChannelOutput()
 	, xChannelOutput()
 	, yChannelOutput()
 {
@@ -74,13 +77,9 @@ VfxNodeTouches::VfxNodeTouches()
 	addOutput(kOutput_IsUpMask, kVfxPlugType_Int, &isUpOutput);
 	addOutput(kOutput_MovedMask, kVfxPlugType_Int, &movedOutput);
 	addOutput(kOutput_NumTouches, kVfxPlugType_Float, &numTouchesOutput);
+	addOutput(kOutput_Id, kVfxPlugType_Channel, &idChannelOutput);
 	addOutput(kOutput_X, kVfxPlugType_Channel, &xChannelOutput);
 	addOutput(kOutput_Y, kVfxPlugType_Channel, &yChannelOutput);
-
-	//
-
-	xChannelData.alloc(kMaxTouches);
-	yChannelData.alloc(kMaxTouches);
 }
 
 VfxNodeTouches::Touch * VfxNodeTouches::findTouch(const uint64_t id)
@@ -192,12 +191,15 @@ void VfxNodeTouches::tick(const float dt)
 
 	for (int i = 0; i < numTouches; ++i)
 	{
-		xChannelData.data[i] = touches[i].x;
-		yChannelData.data[i] = touches[i].y;
+		// todo : add a more persistent/consistent touch ID
+		idChannelData[i] = i;
+		xChannelData[i] = touches[i].x;
+		yChannelData[i] = touches[i].y;
 	}
 	
-	xChannelOutput.setData(xChannelData.data, false, numTouches);
-	yChannelOutput.setData(yChannelData.data, false, numTouches);
+	idChannelOutput.setData(idChannelData, false, numTouches);
+	xChannelOutput.setData(xChannelData, false, numTouches);
+	yChannelOutput.setData(yChannelData, false, numTouches);
 
 	// free dangling touches
 
