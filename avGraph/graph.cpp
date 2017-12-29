@@ -2900,7 +2900,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								hitTestResult.nodeHitTestResult.inputSocket->name,
 								hitTestResult.nodeHitTestResult.inputSocket->index,
 								String::Empty, -1,
-								mousePosition.x, mousePosition.y, true);
+								mousePosition.x, mousePosition.y, true, nullptr);
 						}
 						
 						if (enabled(kFlag_NodeAdd) && hitTestResult.nodeHitTestResult.outputSocket)
@@ -2910,7 +2910,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								String::Empty, -1,
 								hitTestResult.nodeHitTestResult.outputSocket->name,
 								hitTestResult.nodeHitTestResult.outputSocket->index,
-								mousePosition.x, mousePosition.y, true);
+								mousePosition.x, mousePosition.y, true, nullptr);
 						}
 					}
 					
@@ -3104,14 +3104,36 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					}
 				}
 				
-				// todo : copy selected visualizers ?
+				std::set<EditorVisualizer*> newSelectedVisualizers;
 				
-				if (!newSelectedNodes.empty())
+				for (auto visualizer : selectedVisualizers)
+				{
+					EditorVisualizer * newVisualizer = nullptr;
+					
+					if (tryAddVisualizer(
+						visualizer->nodeId,
+						visualizer->srcSocketName,
+						visualizer->srcSocketIndex,
+						visualizer->dstSocketName,
+						visualizer->dstSocketIndex,
+						visualizer->x + kGridSize,
+						visualizer->y + kGridSize,
+						false,
+						&newVisualizer))
+					{
+						newVisualizer->sx = visualizer->sx;
+						newVisualizer->sy = visualizer->sy;
+						
+						newSelectedVisualizers.insert(newVisualizer);
+					}
+				}
+				
+				if (!newSelectedNodes.empty() || !newSelectedVisualizers.empty())
 				{
 					selectedNodes = newSelectedNodes;
 					selectedLinks.clear();
 					selectedLinkRoutePoints.clear();
-					selectedVisualizers.clear();
+					selectedVisualizers = newSelectedVisualizers;
 				}
 			}
 			
@@ -4091,8 +4113,8 @@ void GraphEdit::nodeSelectEnd()
 	// fixme : apply append behavior
 	
 	selectedNodes = nodeSelect.nodeIds;
-	selectedLinks.clear(); // todo : also select links
-	selectedLinkRoutePoints.clear(); // todo : also select route points
+	selectedLinks.clear();
+	selectedLinkRoutePoints.clear();
 	selectedVisualizers = nodeSelect.visualizers;
 	
 	nodeSelect = NodeSelect();
@@ -4243,7 +4265,7 @@ void GraphEdit::socketConnectEnd()
 				socketConnect.srcNodeId,
 				socketConnect.srcNodeSocket->name, socketConnect.srcNodeSocket->index,
 				String::Empty, -1,
-				mousePosition.x, mousePosition.y, true);
+				mousePosition.x, mousePosition.y, true, nullptr);
 		}
 	}
 	else if (enabled(kFlag_NodeAdd) && socketConnect.dstNodeId != kGraphNodeIdInvalid)
@@ -4254,7 +4276,7 @@ void GraphEdit::socketConnectEnd()
 				socketConnect.dstNodeId,
 				String::Empty, -1,
 				socketConnect.dstNodeSocket->name, socketConnect.dstNodeSocket->index,
-				mousePosition.x, mousePosition.y, true);
+				mousePosition.x, mousePosition.y, true, nullptr);
 		}
 	}
 	
@@ -4434,8 +4456,6 @@ void GraphEdit::doLinkParams(const float dt)
 							link->params[param.name] = newValueText;
 					}
 					
-					// todo : detect if text has changed. if so, notify graph edit of change and let it take care of callbacks and undo/redo
-					
 					if (realTimeConnection)
 					{
 						if (newValueText != oldValueText && hasValue)
@@ -4528,10 +4548,13 @@ bool GraphEdit::tryAddNode(const std::string & typeName, const float x, const fl
 	}
 }
 
-bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex, const int x, const int y, const bool select)
+bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex, const float x, const float y, const bool select, EditorVisualizer ** out_visualizer)
 {
 	if (nodeId == kGraphNodeIdInvalid)
 	{
+		if (out_visualizer != nullptr)
+			*out_visualizer = nullptr;
+		
 		return false;
 	}
 	else
@@ -4540,8 +4563,8 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 		EditorVisualizer & visualizer = visualizers[visualizerId];
 		
 		visualizer.id = visualizerId;
-		visualizer.x = mousePosition.x;
-		visualizer.y = mousePosition.y;
+		visualizer.x = x;
+		visualizer.y = y;
 		visualizer.zKey = nextZKey++;
 		visualizer.init(nodeId, srcSocketName, srcSocketIndex, dstSocketName, dstSocketIndex);
 		visualizer.sx = 0;
@@ -4551,6 +4574,9 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 		{
 			selectVisualizer(&visualizer, true);
 		}
+		
+		if (out_visualizer != nullptr)
+			*out_visualizer = &visualizer;
 		
 		return true;
 	}
@@ -5146,11 +5172,7 @@ void GraphEdit::draw() const
 			auto nodeData = tryGetNodeData(socketConnect.srcNodeId);
 			
 			Assert(nodeData != nullptr);
-			if (nodeData == nullptr)
-			{
-				// todo : error
-			}
-			else
+			if (nodeData != nullptr)
 			{
 				hqBegin(HQ_LINES);
 				{
@@ -5173,11 +5195,7 @@ void GraphEdit::draw() const
 			auto nodeData = tryGetNodeData(socketConnect.dstNodeId);
 			
 			Assert(nodeData != nullptr);
-			if (nodeData == nullptr)
-			{
-				// todo : error
-			}
-			else
+			if (nodeData != nullptr)
 			{
 				hqBegin(HQ_LINES);
 				{
@@ -6408,10 +6426,6 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 	
 	if (node != nullptr && nodeData != nullptr)
 	{
-		// todo : would be nice to change node type on the fly
-		
-		//doTextBox(node->typeName, "node type", dt);
-		
 		const GraphEdit_TypeDefinition * typeDefinition = typeLibrary->tryGetTypeDefinition(node->typeName);
 		
 		if (typeDefinition != nullptr)
@@ -6479,8 +6493,6 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 					if (hasValue)
 						node->inputValues[inputSocket.name] = newValueText;
 				}
-				
-				// todo : detect if text has changed. if so, notify graph edit of change and let it take care of callbacks and undo/redo
 				
 				if (graphEdit->realTimeConnection)
 				{
