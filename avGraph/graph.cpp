@@ -4560,16 +4560,20 @@ void GraphEdit::resolveSocketIndices(
 	const GraphNodeId srcNodeId, const std::string & srcNodeSocketName, int & srcNodeSocketIndex,
 	const GraphNodeId dstNodeId, const std::string & dstNodeSocketName, int & dstNodeSocketIndex)
 {
-	auto srcNodeData = tryGetNodeData(srcNodeId);
-	Assert(srcNodeData != nullptr);
+	auto srcNode = tryGetNode(srcNodeId);
+	Assert(srcNode != nullptr);
 	
-	if (srcNodeData != nullptr && !srcNodeData->dynamicSockets.inputSockets.empty())
+	if (srcNode != nullptr)
 	{
-		if (srcNodeSocketIndex < 0 || srcNodeSocketIndex >= srcNodeData->dynamicSockets.numStaticInputSockets)
+		auto srcNodeTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
+		
+		if (srcNodeTypeDefinition != nullptr && (srcNodeSocketIndex < 0 || srcNodeSocketIndex >= srcNodeTypeDefinition->inputSockets.size()))
 		{
 			srcNodeSocketIndex = -1;
 			
+			auto srcNodeData = tryGetNodeData(srcNodeId);
 			Assert(srcNodeData);
+			
 			if (srcNodeData)
 			{
 				int index = 0;
@@ -4585,17 +4589,21 @@ void GraphEdit::resolveSocketIndices(
 	}
 
 	//
+	
+	auto dstNode = tryGetNode(dstNodeId);
+	Assert(dstNode != nullptr);
 
-	auto dstNodeData = tryGetNodeData(dstNodeId);
-	Assert(dstNodeData != nullptr);
-
-	if (dstNodeData != nullptr && !dstNodeData->dynamicSockets.outputSockets.empty())
+	if (dstNode != nullptr)
 	{
-		if (dstNodeSocketIndex < 0 || dstNodeSocketIndex >= dstNodeData->dynamicSockets.numStaticOutputSockets)
+		auto dstNodeTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
+		
+		if (dstNodeTypeDefinition != nullptr && (dstNodeSocketIndex < 0 || dstNodeSocketIndex >= dstNodeTypeDefinition->outputSockets.size()))
 		{
 			dstNodeSocketIndex = -1;
 			
+			auto dstNodeData = tryGetNodeData(dstNodeId);
 			Assert(dstNodeData);
+			
 			if (dstNodeData)
 			{
 				int index = 0;

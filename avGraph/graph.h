@@ -879,17 +879,12 @@ struct GraphEdit : GraphEditConnection
 			bool hasDynamicSockets;
 			
 			std::vector<GraphEdit_TypeDefinition::InputSocket> inputSockets;
-			int numStaticInputSockets;
-			
 			std::vector<GraphEdit_TypeDefinition::OutputSocket> outputSockets;
-			int numStaticOutputSockets;
 			
 			DynamicSockets()
 				: hasDynamicSockets(false)
 				, inputSockets()
-				, numStaticInputSockets(0)
 				, outputSockets()
-				, numStaticOutputSockets()
 			{
 			}
 			
@@ -900,10 +895,7 @@ struct GraphEdit : GraphEditConnection
 					hasDynamicSockets = false;
 					
 					inputSockets.clear();
-					numStaticInputSockets = 0;
-					
 					outputSockets.clear();
-					numStaticOutputSockets = 0;
 				}
 			}
 			
@@ -915,43 +907,51 @@ struct GraphEdit : GraphEditConnection
 				hasDynamicSockets = true;
 				
 				inputSockets.resize(typeDefinition.inputSockets.size() + newInputs.size());
-				numStaticInputSockets = typeDefinition.inputSockets.size();
 				
-				for (size_t i = 0; i < typeDefinition.inputSockets.size(); ++i)
+				int inputSocketIndex = 0;
+				
+				for (auto & inputSocket : typeDefinition.inputSockets)
 				{
-					inputSockets[i] = typeDefinition.inputSockets[i];
+					inputSockets[inputSocketIndex] = inputSocket;
+					
+					inputSocketIndex++;
 				}
 				
-				for (size_t i = 0; i < newInputs.size(); ++i)
+				for (auto & newInput : newInputs)
 				{
-					auto & newInput = newInputs[i];
-					auto & input = inputSockets[numStaticInputSockets + i];
+					auto & input = inputSockets[inputSocketIndex];
 					
 					input.name = newInput.name;
 					input.typeName = newInput.typeName;
 					input.isDynamic = true;
-					input.index = numStaticInputSockets + i;
+					input.index = inputSocketIndex;
+					
+					inputSocketIndex++;
 				}
 				
 				//
 				
 				outputSockets.resize(typeDefinition.outputSockets.size() + newOutputs.size());
-				numStaticOutputSockets = typeDefinition.outputSockets.size();
 				
-				for (size_t i = 0; i < typeDefinition.outputSockets.size(); ++i)
+				int outputSocketIndex = 0;
+				
+				for (auto & outputSocket : typeDefinition.outputSockets)
 				{
-					outputSockets[i] = typeDefinition.outputSockets[i];
+					outputSockets[outputSocketIndex] = outputSocket;
+					
+					outputSocketIndex++;
 				}
 				
-				for (size_t i = 0; i < newOutputs.size(); ++i)
+				for (auto & newOutput : newOutputs)
 				{
-					auto & newOutput = newOutputs[i];
-					auto & output = outputSockets[numStaticOutputSockets + i];
+					auto & output = outputSockets[outputSocketIndex];
 					
 					output.name = newOutput.name;
 					output.typeName = newOutput.typeName;
 					output.isDynamic = true;
-					output.index = numStaticOutputSockets + i;
+					output.index = outputSocketIndex;
+					
+					outputSocketIndex++;
 				}
 			}
 		};
