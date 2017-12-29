@@ -39,15 +39,21 @@ project(vfxGraph-examples)
 
 file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 
-source_group("sources" FILES ${source})
+source_group("" FILES ${source})
 
 add_executable(000-minimal "000-minimal.cpp")
 add_executable(010-multiple-instances "010-multiple-instances.cpp")
+add_executable(400-editor "400-editor.cpp")
+add_executable(410-readonly-editor "410-readonly-editor.cpp")
+add_executable(420-realtime-editing "420-realtime-editing.cpp")
 add_executable(900-devgrounds "900-devgrounds.cpp")
 
 if (APPLE)
 	set_target_properties(000-minimal PROPERTIES LINK_FLAGS "-Wl,-all_load")
 	set_target_properties(010-multiple-instances PROPERTIES LINK_FLAGS "-Wl,-all_load")
+	set_target_properties(400-editor PROPERTIES LINK_FLAGS "-Wl,-all_load")
+	set_target_properties(410-readonly-editor PROPERTIES LINK_FLAGS "-Wl,-all_load")
+	set_target_properties(420-realtime-editing PROPERTIES LINK_FLAGS "-Wl,-all_load")
 	set_target_properties(900-devgrounds PROPERTIES LINK_FLAGS "-Wl,-all_load")
 endif (APPLE)
 
@@ -63,6 +69,9 @@ set(LIBRARIES PRIVATE
 
 target_link_libraries(000-minimal PRIVATE ${LIBRARIES})
 target_link_libraries(010-multiple-instances PRIVATE ${LIBRARIES})
+target_link_libraries(400-editor PRIVATE ${LIBRARIES})
+target_link_libraries(410-readonly-editor PRIVATE ${LIBRARIES})
+target_link_libraries(420-realtime-editing PRIVATE ${LIBRARIES})
 target_link_libraries(900-devgrounds PRIVATE ${LIBRARIES})
 
 if (WIN32)
