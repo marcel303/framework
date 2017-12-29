@@ -194,7 +194,7 @@ int main(int argc, char * argv[])
 				}
 				popFontMode();
 				
-				imageCapture.recordFramebuffer(GFX_SX, GFX_SY);
+				//imageCapture.recordFramebuffer(GFX_SX, GFX_SY);
 			}
 			framework.endDraw();
 		}
