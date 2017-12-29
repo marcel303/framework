@@ -29,7 +29,7 @@
 #include "graph.h"
 #include "vfxGraph.h"
 
-#define FILENAME "testPetals.xml"
+#define FILENAME "drawTest.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -41,6 +41,8 @@ const int GFX_SY = 768;
 
 int main(int argc, char * argv[])
 {
+	framework.enableRealTimeEditing = true;
+	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
 		GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
