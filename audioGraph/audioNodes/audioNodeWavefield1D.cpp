@@ -28,8 +28,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioNodeWavefield1D.h"
 #include "Noise.h"
 #include "wavefield.h"
-
-#include "framework.h" // random. todo : remove
+#include <cmath>
 
 AUDIO_NODE_TYPE(wavefield_1d, AudioNodeWavefield1D)
 {
@@ -50,9 +49,22 @@ AUDIO_NODE_TYPE(wavefield_1d, AudioNodeWavefield1D)
 	out("audio", "audioValue");
 }
 
+template <typename T>
+inline T lerp(T a, T b, T t)
+{
+	return a * (1.0 - t) + b * t;
+}
+
+template <typename T>
+inline T clamp(T value, T min, T max)
+{
+	return value < min ? min : value > max ? max : value;
+}
+
 AudioNodeWavefield1D::AudioNodeWavefield1D()
 	: AudioNodeBase()
 	, wavefield(nullptr)
+	, rng()
 	, audioOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -81,11 +93,11 @@ AudioNodeWavefield1D::~AudioNodeWavefield1D()
 
 void AudioNodeWavefield1D::randomize()
 {
-	const double xRatio = random(0.0, 1.0 / 10.0);
-	const double randomFactor = random(0.0, 1.0);
-	//const double cosFactor = random(0.0, 1.0);
+	const double xRatio = rng.nextd(0.0, 1.0 / 10.0);
+	const double randomFactor = rng.nextd(0.0, 1.0);
+	//const double cosFactor = rng.nextd(0.0, 1.0);
 	const double cosFactor = 0.0;
-	const double perlinFactor = random(0.0, 1.0);
+	const double perlinFactor = rng.nextd(0.0, 1.0);
 	
 	for (int x = 0; x < wavefield->numElems; ++x)
 	{
@@ -94,11 +106,11 @@ void AudioNodeWavefield1D::randomize()
 		wavefield->d[x] = 0.0;
 		
 		wavefield->f[x] = 1.0;
-		wavefield->f[x] *= lerp<double>(1.0, random(0.0, 1.0), randomFactor);
+		wavefield->f[x] *= lerp<double>(1.0, rng.nextd(0.0, 1.0), randomFactor);
 		wavefield->f[x] *= lerp<double>(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
 		
 		//wavefield->f[x] = 1.0 - std::pow(m_wavefield.f[x], 2.0);
-		//wavefield->f[x] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
+		//wavefield->f[x] = 1.0 - std::pow(rng.nextd(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
 		
 		wavefield->f[x] *= lerp<double>(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
 	}

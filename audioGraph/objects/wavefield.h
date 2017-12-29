@@ -68,6 +68,8 @@ struct Wavefield2D
 	ALIGN32 double f[kMaxElems][kMaxElems];
 	ALIGN32 double d[kMaxElems][kMaxElems];
 	
+	AudioRNG rng;
+	
 	void init(const int numElems);
 	void shut();
 	

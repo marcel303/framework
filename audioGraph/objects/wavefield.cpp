@@ -25,13 +25,9 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "wavefield.h"
-#include <math.h>
-#include <SDL2/SDL.h>
-
-#include "Calc.h"
-#include "framework.h" // todo : remove
 #include "Noise.h"
+#include "wavefield.h"
+#include <cmath>
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -57,9 +53,18 @@ extern const int GFX_SY;
 
 //
 
+template <typename T>
+inline T lerp(T a, T b, T t)
+{
+	return a * (1.0 - t) + b * t;
+}
+
+//
+
 const int Wavefield1D::kMaxElems;
 
 Wavefield1D::Wavefield1D()
+	: numElems(0)
 {
 	init(0);
 }
@@ -306,6 +311,8 @@ void Wavefield1D::operator delete(void * mem)
 const int Wavefield2D::kMaxElems;
 
 Wavefield2D::Wavefield2D()
+	: numElems(0)
+	, rng()
 {
 	init(32);
 }
@@ -492,7 +499,7 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	{
 		for (int y = 0; y < numElems; ++y)
 		{
-			const double d_clamped = fmax(fmin(d[x][y], dMax), dMin);
+			const double d_clamped = std::max(fmin(d[x][y], dMax), dMin);
 			
 			p[x][y] = p[x][y] * pRetain + v[x][y] * dt * f[x][y] + d_clamped;
 			v[x][y] = v[x][y] * vRetain;
@@ -504,12 +511,12 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 
 void Wavefield2D::randomize()
 {
-	const double xRatio = random(0.0, 1.0 / 10.0);
-	const double yRatio = random(0.0, 1.0 / 10.0);
-	const double randomFactor = random(0.0, 1.0);
-	//const double cosFactor = random(0.0, 1.0);
+	const double xRatio = rng.nextd(0.0, 1.0 / 10.0);
+	const double yRatio = rng.nextd(0.0, 1.0 / 10.0);
+	const double randomFactor = rng.nextd(0.0, 1.0);
+	//const double cosFactor = rng.nextd(0.0, 1.0);
 	const double cosFactor = 0.0;
-	const double perlinFactor = random(0.0, 1.0);
+	const double perlinFactor = rng.nextd(0.0, 1.0);
 	
 	for (int x = 0; x < numElems; ++x)
 	{
@@ -517,12 +524,12 @@ void Wavefield2D::randomize()
 		{
 			f[x][y] = 1.0;
 			
-			f[x][y] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
-			f[x][y] *= Calc::Lerp(1.0, (std::cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
+			f[x][y] *= lerp<double>(1.0, rng.nextd(0.f, 1.f), randomFactor);
+			f[x][y] *= lerp<double>(1.0, (std::cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
 			//f[x][y] = 1.0 - std::pow(f[x][y], 2.0);
 			
 			//f[x][y] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
-			f[x][y] *= Calc::Lerp(1.0, scaled_octave_noise_2d(16, .4f, 1.f / 20.f, 0.f, 1.f, x, y), perlinFactor);
+			f[x][y] *= lerp<double>(1.0, scaled_octave_noise_2d(16, .4f, 1.f / 20.f, 0.f, 1.f, x, y), perlinFactor);
 		}
 	}
 }
@@ -550,8 +557,8 @@ void Wavefield2D::doGaussianImpact(const int _x, const int _y, const int _radius
 			const int y = spotY + j;
 			
 			double value = 1.0;
-			value *= (1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0;
-			value *= (1.0 + std::cos(j / double(r) * Calc::mPI)) / 2.0;
+			value *= (1.0 + std::cos(i / double(r) * M_PI)) / 2.0;
+			value *= (1.0 + std::cos(j / double(r) * M_PI)) / 2.0;
 			
 			//value = std::pow(value, 2.0);
 			

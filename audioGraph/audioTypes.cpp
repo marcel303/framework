@@ -104,7 +104,14 @@ AudioRNG::AudioRNG()
 
 float AudioRNG::nextf(const float min, const float max)
 {
-	const float t = (rand() % 1000) / 999.f;
+	const float t = rand() / float(RAND_MAX);
 	
 	return min * t + max * (1.f - t);
+}
+
+double AudioRNG::nextd(const double min, const double max)
+{
+	const double t = rand() / double(RAND_MAX);
+	
+	return min * t + max * (1.0 - t);
 }

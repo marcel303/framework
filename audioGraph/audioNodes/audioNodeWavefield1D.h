@@ -28,6 +28,7 @@
 #pragma once
 
 #include "audioNodeBase.h"
+#include "audioTypes.h"
 
 struct Wavefield1D;
 
@@ -57,7 +58,9 @@ struct AudioNodeWavefield1D : AudioNodeBase
 	};
 	
 	Wavefield1D * wavefield;
-
+	
+	AudioRNG rng;
+	
 	AudioFloat audioOutput;
 	
 	AudioNodeWavefield1D();

@@ -162,4 +162,5 @@ struct AudioRNG
 	AudioRNG();
 	
 	float nextf(const float min, const float max);
+	double nextd(const double min, const double max);
 };
