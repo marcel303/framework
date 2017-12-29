@@ -56,8 +56,7 @@ VfxNodeImageScale::~VfxNodeImageScale()
 {
 	freeImage();
 }
-
-void VfxNodeImageScale::tick(const float dt)
+void VfxNodeImageScale::draw() const
 {
 	vfxCpuTimingBlock(VfxNodeImageScale);
 	
@@ -120,7 +119,7 @@ void VfxNodeImageScale::tick(const float dt)
 	}
 }
 
-void VfxNodeImageScale::allocateImage(const int sx, const int sy)
+void VfxNodeImageScale::allocateImage(const int sx, const int sy) const
 {
 	freeImage();
 
@@ -131,7 +130,7 @@ void VfxNodeImageScale::allocateImage(const int sx, const int sy)
 	imageOutput.texture = surface->getTexture();
 }
 
-void VfxNodeImageScale::freeImage()
+void VfxNodeImageScale::freeImage() const
 {
 	delete surface;
 	surface = nullptr;

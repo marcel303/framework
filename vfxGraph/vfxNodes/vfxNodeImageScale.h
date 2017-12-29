@@ -48,15 +48,15 @@ struct VfxNodeImageScale : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	Surface * surface;
+	mutable Surface * surface;
 	
-	VfxImage_Texture imageOutput;
+	mutable VfxImage_Texture imageOutput;
 	
 	VfxNodeImageScale();
 	virtual ~VfxNodeImageScale() override;
 	
-	virtual void tick(const float dt) override;
+	virtual void draw() const override;
 
-	void allocateImage(const int sx, const int sy);
-	void freeImage();
+	void allocateImage(const int sx, const int sy) const;
+	void freeImage() const;
 };
