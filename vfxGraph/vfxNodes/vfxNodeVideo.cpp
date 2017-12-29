@@ -112,8 +112,6 @@ void VfxNodeVideo::tick(const float dt)
 		
 		if (paramsChanged)
 		{
-			// todo : media player should re-allocate texture when output mode has changed
-			
 			mediaPlayer->close(false);
 			
 			mediaPlayer->presentTime = 0.f;

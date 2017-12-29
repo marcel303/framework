@@ -28,8 +28,6 @@
 #include "framework.h"
 #include "vfxNodeTransform2D.h"
 
-// todo : rename transform output to any
-
 VFX_NODE_TYPE(VfxNodeTransform2D)
 {
 	typeName = "draw.transform2d";

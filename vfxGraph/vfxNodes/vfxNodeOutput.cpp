@@ -43,14 +43,14 @@ VfxNodeOutput::VfxNodeOutput()
 	addInput(kInput_Name, kVfxPlugType_String);
 	addInput(kInput_Value, kVfxPlugType_Float);
 
-	// todo : register as output node with vfx graph
+	// register as output node with vfx graph
 	
 	g_currentVfxGraph->outputNodes.insert(this);
 }
 
 VfxNodeOutput::~VfxNodeOutput()
 {
-	// todo : unregister as output node from vfx graph
+	// unregister as output node from vfx graph
 	
 	Assert(g_currentVfxGraph->outputNodes.count(this) != 0);
 	g_currentVfxGraph->outputNodes.erase(this);

@@ -29,8 +29,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "rtmidi/RtMidi.h"
 #include "vfxNodeMidi.h"
 
-// todo : interpret NOTE_OFF and NOTE_ON messages
-
 static const uint8_t NOTE_OFF = 0x80;
 static const uint8_t NOTE_ON = 0x90;
 static const uint8_t POLYPHONIC_KEY_PRESSURE = 0xa0;
@@ -200,9 +198,9 @@ void VfxNodeMidi::tick(const float dt)
 					}
 					else if (event == NOTE_OFF)
 					{
-						// todo : check note off
+						// todo : check if note off is implemented correctly. so far my MIDI devices don't seem to trigger OFF events
+						Assert(false);
 						const int key = message[1];
-						const int value = message[2];
 						
 						keyOutput = key;
 						valueOutput = 0.f;
