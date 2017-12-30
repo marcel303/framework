@@ -35,6 +35,9 @@
 #include "vfxGraph.h"
 #include "../libparticle/ui.h" // todo : remove
 
+extern int GRAPHEDIT_SX;
+extern int GRAPHEDIT_SY;
+
 struct ResourceEditor_OscPath : GraphEdit_ResourceEditorBase
 {
 	UiState * uiState;
@@ -47,7 +50,7 @@ struct ResourceEditor_OscPath : GraphEdit_ResourceEditorBase
 		, isLearning(false)
 	{
 		uiState = new UiState();
-		uiState->sx = 400; // todo : look at GFX_SX
+		uiState->sx = GRAPHEDIT_SX*2/3;
 	}
 	
 	~ResourceEditor_OscPath()

@@ -38,8 +38,8 @@ using namespace tinyxml2;
 
 //
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+extern int GRAPHEDIT_SX;
+extern int GRAPHEDIT_SY;
 
 //
 
@@ -54,7 +54,7 @@ ResourceEditor_VfxTimeline::ResourceEditor_VfxTimeline()
 	, selectedKeyIndex(-1)
 {
 	uiState = new UiState();
-	uiState->sx = GFX_SX - 100;
+	uiState->sx = GRAPHEDIT_SX - 100;
 }
 
 ResourceEditor_VfxTimeline::~ResourceEditor_VfxTimeline()
