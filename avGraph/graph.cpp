@@ -1071,7 +1071,7 @@ void GraphEdit_Visualizer::init()
 	history.resize(100);
 }
 
-void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
+void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit, const float dt)
 {
 	auto srcSocket = graphEdit.tryGetInputSocket(nodeId, srcSocketIndex);
 	auto dstSocket = graphEdit.tryGetOutputSocket(nodeId, dstSocketIndex);
@@ -1186,6 +1186,60 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 	{
 		//logDebug("reset realTimeSocketCapture");
 		//*this = GraphEdit_Visualizer();
+	}
+	
+	//
+	
+	const bool hasChannels = channelData.hasChannels();
+	
+	if (hasChannels)
+	{
+		float min = 0.f;
+		float max = 0.f;
+		
+		bool isFirst = true;
+		
+		if (hasChannelDataMinMax)
+		{
+			isFirst = false;
+			
+			const float retain = std::powf(.7f, dt);
+			
+			min = channelDataMin * retain;
+			max = channelDataMax * retain;
+		}
+		
+		for (auto & channel : channelData.channels)
+		{
+			if (channel.numValues > 0)
+			{
+				if (isFirst)
+				{
+					isFirst = false;
+					
+					min = channel.values[0];
+					max = channel.values[0];
+				}
+				
+				for (int i = 0; i < channel.numValues; ++i)
+				{
+					const float value = channel.values[i];
+					
+					if (value < min)
+						min = value;
+					else if (value > max)
+						max = value;
+				}
+			}
+		}
+		
+		if (min != max)
+		{
+			hasChannelDataMinMax = true;
+			
+			channelDataMin = min;
+			channelDataMax = max;
+		}
 	}
 }
 
@@ -1633,55 +1687,8 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		
 		const int dataY = y + kDataBorder;
 		
-		float min = 0.f;
-		float max = 0.f;
-		
-		bool isFirst = true;
-		
-		if (hasChannelDataMinMax)
-		{
-			isFirst = false;
-			
-			min = channelDataMin;
-			max = channelDataMax;
-			
-			// todo : move this update to tickVisualizers
-			const float dt = 1.f / 60.f; // fixme
-			const float retain = std::powf(.7f, dt);
-			min *= retain;
-			max *= retain;
-		}
-		
-		for (auto & channel : channelData.channels)
-		{
-			if (channel.numValues > 0)
-			{
-				if (isFirst)
-				{
-					isFirst = false;
-					
-					min = channel.values[0];
-					max = channel.values[0];
-				}
-				
-				for (int i = 0; i < channel.numValues; ++i)
-				{
-					const float value = channel.values[i];
-					
-					if (value < min)
-						min = value;
-					else if (value > max)
-						max = value;
-				}
-			}
-		}
-		
-		if (min != max)
-		{
-			hasChannelDataMinMax = true;
-			channelDataMin = min;
-			channelDataMax = max;
-		}
+		const float min = channelDataMin;
+		const float max = channelDataMax;
 		
 		const float strokeSize = 1.f * std::sqrt(std::abs(graphEdit.dragAndZoom.zoom));
 		
@@ -1713,7 +1720,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 					else
 					{
 					#if 1
-						// connected lines between each sample
+						// connected lines between each sample with a maximum of kMaxValues-1 line segments
 						
 						const int kMaxValues = 1024;
 						
@@ -1803,9 +1810,6 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		drawText(channelsDataX + channelsDataSx - 3, dataY + channelsDataSy - 3, 10, -1.f, -1.f, "%0.03f", min);
 		endTextBatch();
 		
-		setColor(colorWhite);
-		//drawRectLine(channelsEdgeX, y, channelsEdgeX + channelsSx, y + channelsSy);
-		
 		y += channelsSy;
 	}
 	
@@ -1828,9 +1832,9 @@ GraphEdit::EditorVisualizer::EditorVisualizer()
 {
 }
 
-void GraphEdit::EditorVisualizer::tick(const GraphEdit & graphEdit)
+void GraphEdit::EditorVisualizer::tick(const GraphEdit & graphEdit, const float dt)
 {
-	GraphEdit_Visualizer::tick(graphEdit);
+	GraphEdit_Visualizer::tick(graphEdit, dt);
 	
 	updateSize(graphEdit);
 }
@@ -4023,14 +4027,14 @@ void GraphEdit::tickVisualizers(const float dt)
 {
 	if (realTimeSocketCapture.visualizer.nodeId != kGraphNodeIdInvalid)
 	{
-		realTimeSocketCapture.visualizer.tick(*this);
+		realTimeSocketCapture.visualizer.tick(*this, dt);
 	}
 	
 	for (auto & visualizerItr : visualizers)
 	{
 		auto & visualizer = visualizerItr.second;
 		
-		visualizer.tick(*this);
+		visualizer.tick(*this, dt);
 	}
 }
 

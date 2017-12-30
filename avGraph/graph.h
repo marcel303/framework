@@ -601,9 +601,9 @@ struct GraphEdit_Visualizer
 	uint32_t texture;
 	
 	GraphEdit_ChannelData channelData;
-	mutable bool hasChannelDataMinMax;
-	mutable float channelDataMin;
-	mutable float channelDataMax;
+	bool hasChannelDataMinMax;
+	float channelDataMin;
+	float channelDataMax;
 	
 	GraphEdit_Visualizer()
 		: nodeId(kGraphNodeIdInvalid)
@@ -632,7 +632,7 @@ struct GraphEdit_Visualizer
 	void init(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 	void init();
 	
-	void tick(const GraphEdit & graphEdit);
+	void tick(const GraphEdit & graphEdit, const float dt);
 	void measure(const GraphEdit & graphEdit, const std::string & nodeName,
 		const int graphSx, const int graphSy,
 		const int maxTextureSx, const int maxTextureSy,
@@ -1008,7 +1008,7 @@ struct GraphEdit : GraphEditConnection
 		
 		EditorVisualizer();
 		
-		void tick(const GraphEdit & graphEdit);
+		void tick(const GraphEdit & graphEdit, const float dt);
 		void updateSize(const GraphEdit & graphEdit);
 	};
 	
