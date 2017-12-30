@@ -80,6 +80,8 @@
 
 #define MAX_TEXT_LENGTH 2048
 
+#define HIGHDPI_HACK 0 // todo : remove or make it into an init option (allowUpscaling or something) and make it nicer
+
 #if INDEX_TYPE == GL_UNSIGNED_INT
 typedef unsigned int glindex_t;
 #else
@@ -310,15 +312,22 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	if (!windowBorder)
 		flags |= SDL_WINDOW_BORDERLESS;
 	
+#if HIGHDPI_HACK
 	// todo : enable flag by default. make automatic DPI upscaling optional
-	//flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+	flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+#endif
 
 	globals.window = SDL_CreateWindow(
 		windowTitle.c_str(),
 		windowX == -1 ? SDL_WINDOWPOS_CENTERED : windowX,
 		windowY == -1 ? SDL_WINDOWPOS_CENTERED : windowY,
+	#if HIGHDPI_HACK
+		actualSx/2,
+		actualSy/2,
+	#else
 		actualSx,
 		actualSy,
+	#endif
 		flags);
 
 	if (!globals.window)
@@ -349,7 +358,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		glewExperimental = GL_TRUE; // force GLEW to resolve all supported extension methods
 	
 		const int glewStatus = glewInit();
-		glGetError(); // fixme : GLEW generates an error code and we're not interested in trapping it..
+		glGetError(); // note : GLEW generates an error code and we're not interested in trapping it..
 		checkErrorGL();
 
 		if (glewStatus != GLEW_OK)
@@ -766,6 +775,8 @@ void Framework::process()
 	memset(globals.mouseChange, 0, sizeof(globals.mouseChange));
 	
 	keyboard.events.clear();
+	
+	mouse.scrollY = 0;
 
 	lockMidi();
 	{
@@ -855,8 +866,20 @@ void Framework::process()
 		}
 		else if (e.type == SDL_MOUSEMOTION)
 		{
+		#if HIGHDPI_HACK
+			mouse.x = e.motion.x * 2 * minification * globals.displaySize[0] / globals.actualDisplaySize[0];
+			mouse.y = e.motion.y * 2 * minification * globals.displaySize[1] / globals.actualDisplaySize[1];
+		#else
 			mouse.x = e.motion.x * minification * globals.displaySize[0] / globals.actualDisplaySize[0];
 			mouse.y = e.motion.y * minification * globals.displaySize[1] / globals.actualDisplaySize[1];
+		#endif
+		}
+		else if (e.type == SDL_MOUSEWHEEL)
+		{
+			if (e.wheel.which != SDL_TOUCH_MOUSEID)
+			{
+				mouse.scrollY += e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
+			}
 		}
 		else if (e.type == SDL_WINDOWEVENT)
 		{

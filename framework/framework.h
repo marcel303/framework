@@ -1004,10 +1004,13 @@ public:
 	int x, y;
 	int dx, dy;
 	
+	int scrollY;
+	
 	Mouse()
 	{
 		x = y = 0;
 		dx = dy = 0;
+		scrollY = 0;
 	}
 	
 	bool isDown(BUTTON button) const;
