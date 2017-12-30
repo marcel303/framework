@@ -1139,6 +1139,19 @@ int RealTimeConnection::linkIsActive(const GraphLinkId linkId, const GraphNodeId
 	
 	auto dstNode = dstNodeItr->second;
 	
+#if defined(DEBUG)
+	if (dstSocketIndex == -1)
+	{
+		// the socket index may only be -1 if this is a dynamic link
+		bool isDynamic = false;
+		for (auto & dlink : vfxGraph->dynamicData->links)
+			if (dlink.linkId == linkId)
+				isDynamic = true;
+		Assert(isDynamic);
+		return false;
+	}
+#endif
+
 	auto dstInput = dstNode->tryGetOutput(dstSocketIndex);
 	
 	Assert(dstInput != nullptr);
