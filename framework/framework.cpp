@@ -7309,8 +7309,8 @@ void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const fl
 {
 	Shader & shader = globals.builtinShaders->gaussianBlurH.get();
 	setShader(shader);
-
-	static ShaderBuffer kernel;
+	
+	auto & kernel = globals.builtinShaders->gaussianKernelBuffer;
 	makeGaussianKernel(kernelSize, kernel);
 	
 	shader.setTexture("source", 0, source, true, true);
@@ -7324,7 +7324,7 @@ void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const fl
 	Shader & shader = globals.builtinShaders->gaussianBlurV.get();
 	setShader(shader);
 	
-	static ShaderBuffer kernel;
+	auto & kernel = globals.builtinShaders->gaussianKernelBuffer;
 	makeGaussianKernel(kernelSize, kernel);
 
 	shader.setTexture("source", 0, source, true, true);

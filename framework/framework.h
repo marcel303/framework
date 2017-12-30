@@ -1120,7 +1120,6 @@ void pushTransform();
 void popTransform();
 
 void projectScreen2d();
-void projectOrtho3d(); // todo
 void projectPerspective3d(const float fov, const float nearZ, const float farZ);
 void viewLookat3d(const float originX, const float originY, const float originZ, const float targetX, const float targetY, const float targetZ, const float upX, const float upY, const float upZ);
 Vec2 transformToScreen(const Vec3 & v);

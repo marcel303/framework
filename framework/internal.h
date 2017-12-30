@@ -794,6 +794,8 @@ public:
 	
 	BuiltinShader gaussianBlurH;
 	BuiltinShader gaussianBlurV;
+	ShaderBuffer gaussianKernelBuffer;
+	
 	BuiltinShader colorMultiply;
 	BuiltinShader colorTemperature;
 	
