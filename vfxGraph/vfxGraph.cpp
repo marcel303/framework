@@ -467,6 +467,8 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 			
 			if (link.isDynamic)
 			{
+				srcNode->predeps.push_back(dstNode);
+				
 				VfxDynamicLink dlink;
 				dlink.linkId = link.id;
 				dlink.srcNodeId = link.srcNodeId;
@@ -493,52 +495,7 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 			}
 			else
 			{
-				input->connectTo(*output);
-				
-				// apply optional remapping parameters
-				
-				if (link.params.empty() == false &&
-					input->type == kVfxPlugType_Float &&
-					output->type == kVfxPlugType_Float)
-				{
-					auto inMinItr = link.params.find("in.min");
-					auto inMaxItr = link.params.find("in.max");
-					auto outMinItr = link.params.find("out.min");
-					auto outMaxItr = link.params.find("out.max");
-					
-					const bool hasRemap =
-						inMinItr != link.params.end() ||
-						inMaxItr != link.params.end() ||
-						outMinItr != link.params.end() ||
-						outMaxItr != link.params.end();
-					
-					if (hasRemap)
-					{
-						const float inMin = inMinItr == link.params.end() ? 0.f : Parse::Float(inMinItr->second);
-						const float inMax = inMaxItr == link.params.end() ? 1.f : Parse::Float(inMaxItr->second);
-						const float outMin = outMinItr == link.params.end() ? 0.f : Parse::Float(outMinItr->second);
-						const float outMax = outMaxItr == link.params.end() ? 1.f : Parse::Float(outMaxItr->second);
-						
-						input->setMap(output->mem, inMin, inMax, outMin, outMax);
-					}
-				}
-				
-				// note : this may add the same node multiple times to the list of predeps. note that this
-				//        is ok as nodes will be traversed once through the travel id + it works nicely
-				//        with the live connection as we can just remove the predep and still have one or
-				//        references to the predep if the predep was referenced more than once
-				srcNode->predeps.push_back(dstNode);
-				
-				// if this is a trigger, add a trigger target to dstNode
-				if (output->type == kVfxPlugType_Trigger)
-				{
-					VfxNodeBase::TriggerTarget triggerTarget;
-					triggerTarget.srcNode = srcNode;
-					triggerTarget.srcSocketIndex = link.srcNodeSocketIndex;
-					triggerTarget.dstSocketIndex = link.dstNodeSocketIndex;
-					
-					dstNode->triggerTargets.push_back(triggerTarget);
-				}
+				connectVfxSockets(srcNode, link.srcNodeSocketIndex, input, dstNode, link.dstNodeSocketIndex, output, link.params, true);
 			}
 		}
 	}
@@ -613,6 +570,61 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 	g_currentVfxGraph = nullptr;
 	
 	return vfxGraph;
+}
+
+//
+
+void connectVfxSockets(VfxNodeBase * srcNode, const int srcNodeSocketIndex, VfxPlug * srcSocket, VfxNodeBase * dstNode, const int dstNodeSocketIndex, VfxPlug * dstSocket, const std::map<std::string, std::string> & linkParams, const bool addPredep)
+{
+	srcSocket->connectTo(*dstSocket);
+
+	// apply optional remapping parameters
+
+	if (linkParams.empty() == false &&
+		srcSocket->type == kVfxPlugType_Float &&
+		dstSocket->type == kVfxPlugType_Float)
+	{
+		auto inMinItr = linkParams.find("in.min");
+		auto inMaxItr = linkParams.find("in.max");
+		auto outMinItr = linkParams.find("out.min");
+		auto outMaxItr = linkParams.find("out.max");
+		
+		const bool hasRemap =
+			inMinItr != linkParams.end() ||
+			inMaxItr != linkParams.end() ||
+			outMinItr != linkParams.end() ||
+			outMaxItr != linkParams.end();
+		
+		if (hasRemap)
+		{
+			const float inMin = inMinItr == linkParams.end() ? 0.f : Parse::Float(inMinItr->second);
+			const float inMax = inMaxItr == linkParams.end() ? 1.f : Parse::Float(inMaxItr->second);
+			const float outMin = outMinItr == linkParams.end() ? 0.f : Parse::Float(outMinItr->second);
+			const float outMax = outMaxItr == linkParams.end() ? 1.f : Parse::Float(outMaxItr->second);
+			
+			srcSocket->setMap(dstSocket->mem, inMin, inMax, outMin, outMax);
+		}
+	}
+	
+	if (addPredep)
+	{
+		// note : this may add the same node multiple times to the list of predeps. note that this
+		//        is ok as nodes will be traversed once through the travel id + it works nicely
+		//        with the live connection as we can just remove the predep and still have one or
+		//        references to the predep if the predep was referenced more than once
+		srcNode->predeps.push_back(dstNode);
+	}
+
+	// if this is a trigger, add a trigger target to dstNode
+	if (dstSocket->type == kVfxPlugType_Trigger)
+	{
+		VfxNodeBase::TriggerTarget triggerTarget;
+		triggerTarget.srcNode = srcNode;
+		triggerTarget.srcSocketIndex = srcNodeSocketIndex;
+		triggerTarget.dstSocketIndex = dstNodeSocketIndex;
+		
+		dstNode->triggerTargets.push_back(triggerTarget);
+	}
 }
 
 //
