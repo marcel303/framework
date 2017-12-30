@@ -158,8 +158,41 @@ VFX_NODE_TYPE(VfxNodeResourceTest)
 
 //
 
+static VfxPlugType stringToVfxPlugType(const std::string & typeName)
+{
+	VfxPlugType type = kVfxPlugType_None;
+
+	if (typeName == "bool")
+		type = kVfxPlugType_Bool;
+	else if (typeName == "int")
+		type = kVfxPlugType_Int;
+	else if (typeName == "float")
+		type = kVfxPlugType_Float;
+	else if (typeName == "string")
+		type = kVfxPlugType_String;
+	else if (typeName == "channel")
+		type = kVfxPlugType_Channel;
+	else if (typeName == "color")
+		type = kVfxPlugType_Color;
+	else if (typeName == "image")
+		type = kVfxPlugType_Image;
+	else if (typeName == "image_cpu")
+		type = kVfxPlugType_ImageCpu;
+	else if (typeName == "draw")
+		type = kVfxPlugType_Draw;
+	else if (typeName == "trigger")
+		type = kVfxPlugType_Trigger;
+	
+	return type;
+}
+
 static void testVfxNodeCreation()
 {
+	VfxGraph vfxGraph;
+	
+	Assert(g_currentVfxGraph == nullptr);
+	g_currentVfxGraph = &vfxGraph;
+	
 	for (VfxNodeTypeRegistration * registration = g_vfxNodeTypeRegistrationList; registration != nullptr; registration = registration->next)
 	{
 		const int64_t t1 = g_TimerRT.TimeUS_get();
@@ -172,7 +205,57 @@ static void testVfxNodeCreation()
 		
 		vfxNode->init(node);
 		
-		// todo : check if vfx node is created properly
+		// check if vfx node is created properly
+		
+		Assert(vfxNode->inputs.size() == registration->inputs.size());
+		const int numInputs = std::max(vfxNode->inputs.size(), registration->inputs.size());
+		for (int i = 0; i < numInputs; ++i)
+		{
+			if (i >= vfxNode->inputs.size())
+			{
+				logError("input in registration doesn't exist in vfx node: index=%d, name=%s", i, registration->inputs[i].name.c_str());
+			}
+			else if (i >= registration->inputs.size())
+			{
+				logError("input in vfx node doesn't exist in registration: index=%d, type=%d", i, vfxNode->inputs[i].type);
+			}
+			else
+			{
+				auto & r = registration->inputs[i];
+				
+				const VfxPlugType type = stringToVfxPlugType(r.typeName);
+				
+				if (type == kVfxPlugType_None)
+					logError("unknown type name in registration: index=%d, typeName=%s", i, r.typeName.c_str());
+				else if (type != vfxNode->inputs[i].type)
+					logError("different types in registration vs vfx node. index=%d, typeName=%s", i, r.typeName.c_str());
+			}
+		}
+		
+		Assert(vfxNode->outputs.size() == registration->outputs.size());
+		const int numOutputs = std::max(vfxNode->outputs.size(), registration->outputs.size());
+		for (int i = 0; i < numOutputs; ++i)
+		{
+			if (i >= vfxNode->outputs.size())
+			{
+				logError("output in registration doesn't exist in vfx node: index=%d, name=%s", i, registration->outputs[i].name.c_str());
+			}
+			else if (i >= registration->outputs.size())
+			{
+				logError("output in vfx node doesn't exist in registration: index=%d, type=%d", i, vfxNode->outputs[i].type);
+			}
+			else
+			{
+				auto & r = registration->outputs[i];
+				
+				const VfxPlugType type = stringToVfxPlugType(r.typeName);
+				
+				if (type == kVfxPlugType_None)
+					logError("unknown type name in registration: index=%d, typeName=%s", i, r.typeName.c_str());
+				else if (type != vfxNode->outputs[i].type)
+					logError("different types in registration vs vfx node. index=%d, typeName=%s", i, r.typeName.c_str());
+			}
+		}
 		
 		delete vfxNode;
 		vfxNode = nullptr;
@@ -181,6 +264,8 @@ static void testVfxNodeCreation()
 		
 		logDebug("node create/destroy took %dus. nodeType=%s", t2 - t1, registration->typeName.c_str()); (void)t1; (void)t2;
 	}
+	
+	g_currentVfxGraph = nullptr;
 }
 
 //
@@ -514,7 +599,7 @@ int main(int argc, char * argv[])
 		
 		vfxSetThreadName("Main Thread");
 		
-		//testVfxNodeCreation();
+		testVfxNodeCreation();
 		
 		//testDynamicInputs();
 		
