@@ -3003,20 +3003,11 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				}
 			}
 			
-		#if !defined(MACOS)
-			for (auto & e : framework.events)
+		#if !defined(MACOS) // fixme : mouse wheel event seems to trigger when interacting with the touch pad on MacOS
 			{
-				// todo : add mouse wheel to framework mouse class
-				
-				if (enabled(kFlag_Zoom) && e.type == SDL_MOUSEWHEEL && e.wheel.which != SDL_TOUCH_MOUSEID)
-				{
-					// fixme : mouse wheel event seems to trigger when interacting with the touch pad on MacOS
-					const int amount = e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
-					
-					const float magnitude = std::powf(1.1f, amount);
-					
-					dragAndZoom.desiredZoom *= magnitude;
-				}
+				const float magnitude = std::powf(1.1f, mouse.scrollY);
+			
+				dragAndZoom.desiredZoom *= magnitude;
 			}
 		#endif
 			
@@ -4110,12 +4101,19 @@ void GraphEdit::tickKeyboardScroll()
 
 void GraphEdit::nodeSelectEnd()
 {
-	// fixme : apply append behavior
+	if (selectionMod())
+	{
+		selectedNodes.insert(nodeSelect.nodeIds.begin(), nodeSelect.nodeIds.end());
+		selectedVisualizers.insert(nodeSelect.visualizers.begin(), nodeSelect.visualizers.end());
+	}
+	else
+	{
+		selectedNodes = nodeSelect.nodeIds;
+		selectedVisualizers = nodeSelect.visualizers;
+	}
 	
-	selectedNodes = nodeSelect.nodeIds;
 	selectedLinks.clear();
 	selectedLinkRoutePoints.clear();
-	selectedVisualizers = nodeSelect.visualizers;
 	
 	nodeSelect = NodeSelect();
 }
