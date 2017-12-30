@@ -35,14 +35,42 @@ public:
 	void Append(int v)
 	{
 		char temp[32];
-#if defined(WIN32) && 0
-		_itoa(v, temp, 10);
-#else
-	// todo : make this faster
-		sprintf(temp, "%d", v);
-		//itoa(v, temp, 10);
-#endif
-		Append(temp);
+		
+		if (v == 0)
+		{
+			// a common case is zero
+			
+			Append('0');
+		}
+		else
+		{
+			const bool isNegative = v < 0;
+			
+			long long vll = isNegative ? -static_cast<long long>(v) : v;
+			
+			int length = 0;
+			
+			while (vll != 0)
+			{
+				temp[length++] = '0' + (vll % 10);
+				
+				vll /= 10;
+			}
+			
+			if (isNegative)
+				temp[length++] = '-';
+			
+			if (mLength + length >= SIZE)
+				return;
+			
+			while (length > 0)
+			{
+				--length;
+				
+				mBuffer[mLength] = temp[length];
+				mLength++;
+			}
+		}
 	}
 
 	void Append(float v)
