@@ -6346,14 +6346,6 @@ static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, con
 		
 		return valueText != defaultValue;
 	}
-	else if (editor == "slider")
-	{
-		// todo : add doSlider
-		
-		doTextBox(valueText, name.c_str(), dt);
-		
-		return valueText != defaultValue;
-	}
 	else if (editor == "colorpicker")
 	{
 		if (index < maxUiColors)
