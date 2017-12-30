@@ -766,9 +766,14 @@ VfxNodeBase::VfxNodeBase()
 	, editorIsTriggered(false)
 	, editorIssue()
 	, isPassthrough(false)
+#if ENABLE_VFXGRAPH_CPU_TIMING
 	, tickTimeAvg(0)
 	, drawTimeAvg(0)
+#endif
+#if ENABLE_VFXGRAPH_GPU_TIMING
 	, gpuTimeAvg(0)
+	, gpuTimer()
+#endif
 {
 }
 
@@ -794,15 +799,21 @@ void VfxNodeBase::traverseTick(const int traversalId, const float dt)
 	
 	//
 	
+#if ENABLE_VFXGRAPH_CPU_TIMING
 	const uint64_t t1 = g_TimerRT.TimeUS_get();
+#endif
 	
 	tick(dt);
 	
+#if ENABLE_VFXGRAPH_CPU_TIMING
 	const uint64_t t2 = g_TimerRT.TimeUS_get();
+#endif
 	
 	//
 	
+#if ENABLE_VFXGRAPH_CPU_TIMING
 	tickTimeAvg = (tickTimeAvg * 99 + (t2 - t1)) / 100;
+#endif
 }
 
 void VfxNodeBase::traverseDraw(const int traversalId)
@@ -812,13 +823,17 @@ void VfxNodeBase::traverseDraw(const int traversalId)
 	
 	//
 	
+#if ENABLE_VFXGRAPH_CPU_TIMING
 	uint64_t t = 0;
 	
 	t -= g_TimerRT.TimeUS_get();
+#endif
 	
 	beforeDraw();
 	
+#if ENABLE_VFXGRAPH_CPU_TIMING
 	t += g_TimerRT.TimeUS_get();
+#endif
 	
 	//
 	
@@ -857,15 +872,17 @@ void VfxNodeBase::traverseDraw(const int traversalId)
 	
 	//
 	
-#if ENABLE_VFXGRAPH_PROFILING
+#if ENABLE_VFXGRAPH_GPU_TIMING
 	gpuTimer.begin();
 #endif
 	
+#if ENABLE_VFXGRAPH_CPU_TIMING
 	t -= g_TimerRT.TimeUS_get();
+#endif
 	
 	draw();
 	
-#if ENABLE_VFXGRAPH_PROFILING
+#if ENABLE_VFXGRAPH_GPU_TIMING
 	gpuTimer.end();
 #endif
 	
@@ -875,13 +892,15 @@ void VfxNodeBase::traverseDraw(const int traversalId)
 	
 	//
 	
+#if ENABLE_VFXGRAPH_CPU_TIMING
 	t += g_TimerRT.TimeUS_get();
 	
 	drawTimeAvg = (drawTimeAvg * 95 + t * 5) / 100;
+#endif
 	
 	//
 
-#if ENABLE_VFXGRAPH_PROFILING
+#if ENABLE_VFXGRAPH_GPU_TIMING
 	gpuTimer.poll();
 	
 	gpuTimeAvg = (gpuTimeAvg * 95 + gpuTimer.elapsed * 5) / 100;

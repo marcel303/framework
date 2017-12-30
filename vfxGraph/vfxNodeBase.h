@@ -33,7 +33,7 @@
 #include <string>
 #include <vector>
 
-#if ENABLE_VFXGRAPH_PROFILING
+#if ENABLE_VFXGRAPH_GPU_TIMING
 	#include "vfxNodes/openglGpuTimer.h"
 #endif
 
@@ -605,12 +605,13 @@ struct VfxNodeBase
 	
 	bool isPassthrough;
 	
+#if ENABLE_VFXGRAPH_CPU_TIMING
 	int tickTimeAvg;
 	int drawTimeAvg;
+#endif
+#if ENABLE_VFXGRAPH_GPU_TIMING
 	int gpuTimeAvg;
-	
-#if ENABLE_VFXGRAPH_PROFILING
-	OpenglGpuTimer gpuTimer; // todo : remove !
+	OpenglGpuTimer gpuTimer;
 #endif
 	
 	VfxNodeBase();

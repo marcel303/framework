@@ -1069,9 +1069,13 @@ bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vecto
 	if (!d.lines.empty())
 		d.add("");
 	
+#if ENABLE_VFXGRAPH_CPU_TIMING
 	d.add("tick: %.3fms", node->tickTimeAvg / 1000.0);
 	d.add("draw: %.3fms", node->drawTimeAvg / 1000.0);
+#endif
+#if ENABLE_VFXGRAPH_GPU_TIMING
 	d.add("gpu: %.3fms", node->gpuTimeAvg / 1000000.0);
+#endif
 	
 #if VFXGRAPH_DEBUG_PREDEPS
 	d.add("predeps: %d", node->predeps.size());
@@ -1262,22 +1266,26 @@ int RealTimeConnection::getNodeCpuHeatMax() const
 
 int RealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const
 {
+#if ENABLE_VFXGRAPH_CPU_TIMING
 	if (isLoading)
-		return false;
+		return 0;
 	
 	Assert(vfxGraph != nullptr);
 	if (vfxGraph == nullptr)
-		return false;
+		return 0;
 	
 	auto nodeItr = vfxGraph->nodes.find(nodeId);
 	
 	Assert(vfxGraph->nodesFailedToCreate.count(nodeId) != 0 || nodeItr != vfxGraph->nodes.end());
 	if (nodeItr == vfxGraph->nodes.end())
-		return false;
+		return 0;
 	
 	auto node = nodeItr->second;
 	
 	return node->tickTimeAvg;
+#else
+	return 0;
+#endif
 }
 
 int RealTimeConnection::getNodeGpuHeatMax() const
@@ -1287,20 +1295,24 @@ int RealTimeConnection::getNodeGpuHeatMax() const
 
 int RealTimeConnection::getNodeGpuTimeUs(const GraphNodeId nodeId) const
 {
+#if ENABLE_VFXGRAPH_GPU_TIMING
 	if (isLoading)
-		return false;
+		return 0;
 	
 	Assert(vfxGraph != nullptr);
 	if (vfxGraph == nullptr)
-		return false;
+		return 0;
 	
 	auto nodeItr = vfxGraph->nodes.find(nodeId);
 	
 	Assert(vfxGraph->nodesFailedToCreate.count(nodeId) != 0 || nodeItr != vfxGraph->nodes.end());
 	if (nodeItr == vfxGraph->nodes.end())
-		return false;
+		return 0;
 	
 	auto node = nodeItr->second;
 	
 	return node->gpuTimeAvg;
+#else
+	return 0;
+#endif
 }
