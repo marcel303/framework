@@ -77,12 +77,7 @@ void checkErrorGL_internal(const char * function, int line)
 	if (error != GL_NO_ERROR)
 	{
 		logError("%s: %d: OpenGL error: %x", function, line, error);
-
-		#if 1 // GLEW initialisation generates an error.. skip it here
-		static int skipCount = 1;
-		if (skipCount-- <= 0)
-			fassert(false);
-		#endif
+		AssertMsg(error == GL_NO_ERROR, "%s: %d: OpenGL error: %x", function, line, error);
 	}
 #endif
 }
