@@ -34,8 +34,8 @@ VFX_NODE_TYPE(VfxNodeImageScale)
 	
 	in("image", "image");
 	in("scale", "float", "1");
-	in("maxWidth", "float" "-1");
-	in("maxHeight", "float" "-1");
+	in("maxWidth", "float", "-1");
+	in("maxHeight", "float", "-1");
 	out("image", "image");
 }
 
