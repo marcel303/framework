@@ -1,5 +1,5 @@
 #if OS != win
-	#include <CoreFoundation/CFByteOrder.h> // todo: use our own big/little/host endianness functions.
+	#include <CoreFoundation/CFByteOrder.h>
 #else
 	#define CFSwapInt32LittleToHost(x) (x)
 #endif
@@ -170,7 +170,6 @@ bool TexturePVR::Load(uint8_t* bytes)
 	int dataOffset = 0;
 	int dataLength = header.dataLength;
 	
-	// todo: use for loop, use numMipmaps from header.
 	while (dataOffset < dataLength)
 	{
 #if 0
@@ -208,8 +207,6 @@ bool TexturePVR::Load(uint8_t* bytes)
 			blockCountX = 2;
 		if (blockCountY < 2)
 			blockCountY = 2;
-		
-		// todo: Check if data is within memory bounds.
 		
 		int dataSize = blockCountX * blockCountY * ((blockSize  * bpp) / 8);
 		

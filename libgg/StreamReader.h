@@ -27,8 +27,6 @@ public:
 	float ReadFloat();
 	void ReadBytes(void* bytes, uint32_t byteCount);
 
-	// todo: endianness
-
 	std::string ReadText_Binary();
 	void ReadText_Binary(char* out_String, size_t maxLength);
 	std::string ReadLine();

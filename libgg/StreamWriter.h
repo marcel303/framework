@@ -19,8 +19,6 @@ public:
 	void WriteFloat(float v);
 	void WriteBytes(const void* bytes, uint32_t byteCount);
 
-	// todo: endianness
-
 	void WriteText(const char* str);
 	void WriteText(const std::string& str);
 	void WriteText_Binary(const char* str);

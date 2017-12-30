@@ -680,7 +680,7 @@ static UiTextboxResult doTextBoxImpl(T & value, const char * name, const float x
 		{
 			textFieldIsInit = true;
 			
-			// fixme : it's not technically correct to open and close just to init. also, SDL text input ..
+			// fixme : it's not technically correct to open and close just to init
 			textField.open(MAX_TEXTBOX_LENGTH, false, false);
 
 			char temp[MAX_TEXTBOX_LENGTH];
