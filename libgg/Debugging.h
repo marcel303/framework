@@ -3,7 +3,7 @@
 #ifdef DEBUG
 void HandleAssert(const char * func, int line, const char * expr, ...);
 #define Assert(x) do { if (!(x)) { HandleAssert(__FUNCTION__, __LINE__, #x); } } while (false)
-#define AssertMsg(x, msg, ...) do { if (!(x)) { HandleAssert(__FUNCTION__, __LINE__, #x, msg, __VA_ARGS__); } } while (false)
+#define AssertMsg(x, msg, ...) do { if (!(x)) { HandleAssert(__FUNCTION__, __LINE__, "%s: " msg, #x, __VA_ARGS__); } } while (false)
 #define Verify(x) Assert(x)
 #define VerifyMsg AssertMsg
 #else
