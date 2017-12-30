@@ -8,8 +8,6 @@
 
 namespace Col
 {
-	// todo: templated?
-
 #define HASBUCKET_USE_LIST 1
 #define HASHBUCKET_CAPACITY 4
 //#define HASHBUCKET_CAPACITY 8

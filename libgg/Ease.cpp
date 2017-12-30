@@ -94,8 +94,6 @@ float EvalEase(float t, EaseType type, float param1)
 		else
 			result = EvalEase(t * 2.f - 1.f, kEaseType_BounceOut, 0.f) * .5f + .5f;
 		break;
-
-		// todo : elastic in/out
 		
 	default:
 		Assert(false);

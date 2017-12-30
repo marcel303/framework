@@ -9,8 +9,8 @@
 
 namespace Calc
 {
-	RNG::Random g_RandomHQ;
-	RNG::Random g_RandomHS;
+	RNG::MersenneTwister g_RandomHQ;
+	RNG::XorShift g_RandomHS;
 	
 #if !CALC_HQ_SINCOS
 	static float g_SinCosTable[SINCOS_TABLE_SIZE * 2];
@@ -31,15 +31,12 @@ namespace Calc
 	
 	void Initialize()
 	{
-		g_RandomHQ = Rand_Create(RNG::RandomType_MT);
-		g_RandomHS = Rand_Create(RNG::RandomType_XORSHIFT);
-		
 		time_t t;
 		time(&t);
 		srand((unsigned int)t);
 		
-		g_RandomHQ.Initialize(rand());
-		g_RandomHS.Initialize(rand());
+		g_RandomHQ.init(rand());
+		g_RandomHS.init(rand());
 		
 #if !CALC_HQ_SINCOS
 		for (int i = 0; i < SINCOS_TABLE_SIZE; ++i)
@@ -66,8 +63,6 @@ namespace Calc
 		
 		return g_SinCosTable[index + 1];
 	}
-	
-	// todo: tell compiler there is no aliasing between out_Sin and out_Cos (?)
 	
 	void SinCos_Fast(float angle, float* out_Sin, float* out_Cos)
 	{

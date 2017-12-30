@@ -14,12 +14,10 @@
 #define USE_PSPVEC 0
 #endif
 
-// todo: fast angle 2 radians (?)
-
 namespace Calc
 {
-	extern RNG::Random g_RandomHQ; // High-quality random
-	extern RNG::Random g_RandomHS; // High-speed random
+	extern RNG::MersenneTwister g_RandomHQ; // High-quality random
+	extern RNG::XorShift g_RandomHS; // High-speed random
 	
 	const static float mPI = (float)M_PI;
 	const static float m2PI = (float)(M_PI * 2.0);
@@ -195,12 +193,12 @@ namespace Calc
 	
 	inline uint32_t Random()
 	{
-		return g_RandomHQ.Next();
+		return g_RandomHQ.next();
 	}
 	
 	inline uint32_t Random(int upperExclusive)
 	{
-		return g_RandomHQ.Next() % upperExclusive;
+		return g_RandomHQ.next() % upperExclusive;
 	}
 	
 	inline float RandomMin0Max1(uint32_t v)
