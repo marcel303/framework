@@ -86,11 +86,11 @@ ImageData * loadImage(const char * filename)
 		const int sy = FreeImage_GetHeight(bmp);
 
 		data = _mm_malloc(sx * sy * 4, 16);
-		char * dest = (char*)data;
+		char * __restrict dest = (char*)data;
 		
 		for (int y = 0; y < sy; ++y)
 		{
-			uint8_t * source = (uint8_t*)FreeImage_GetScanLine(bmp, sy - 1 - y);
+			const uint8_t * __restrict source = (uint8_t*)FreeImage_GetScanLine(bmp, sy - 1 - y);
 			
 			for (int x = 0; x < sx; ++x)
 			{
@@ -119,11 +119,11 @@ ImageData * loadImage(const char * filename)
 		}
 
 		data = _mm_malloc(sx * sy * 4, 16);
-		char * dest = (char*)data;
+		char * __restrict dest = (char*)data;
 		
 		for (int y = 0; y < sy; ++y)
 		{
-			uint32_t * source = (uint32_t*)FreeImage_GetScanLine(bmp32, sy - 1 - y);
+			const uint32_t * __restrict source = (uint32_t*)FreeImage_GetScanLine(bmp32, sy - 1 - y);
 			
 			for (int x = 0; x < sx; ++x)
 			{
