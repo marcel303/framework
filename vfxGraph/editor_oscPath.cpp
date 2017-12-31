@@ -1,0 +1,157 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+#include "Debugging.h"
+#include "editor_oscPath.h"
+#include "tinyxml2.h"
+#include "vfxGraph.h"
+#include "vfxNodes/oscEndpointMgr.h"
+#include "vfxNodes/oscReceiver.h"
+#include "vfxTypes.h"
+#include "../libparticle/ui.h" // todo : remove
+
+extern int GRAPHEDIT_SX;
+extern int GRAPHEDIT_SY;
+
+//
+
+ResourceEditor_OscPath::ResourceEditor_OscPath()
+	: uiState(nullptr)
+	, path(nullptr)
+	, isLearning(false)
+{
+	uiState = new UiState();
+	uiState->sx = GRAPHEDIT_SX*2/3;
+}
+
+ResourceEditor_OscPath::~ResourceEditor_OscPath()
+{
+	freeVfxNodeResource(path);
+	Assert(path == nullptr);
+	
+	delete uiState;
+	uiState = nullptr;
+}
+
+void ResourceEditor_OscPath::getSize(int & sx, int & sy) const
+{
+	sx = uiState->sx;
+	sy = 100;
+}
+
+void ResourceEditor_OscPath::setPosition(const int x, const int y)
+{
+	uiState->x = x;
+	uiState->y = y;
+}
+
+void ResourceEditor_OscPath::doMenu(const float dt)
+{
+	pushMenu("osc.path");
+	
+	if (g_doActions && isLearning)
+	{
+		OscFirstReceivedPathLearner firstReceivedPath;
+		
+		for (auto & receiver : g_oscEndpointMgr.receivers)
+			receiver.receiver.pollMessages(&firstReceivedPath);
+		
+		if (!firstReceivedPath.path.empty())
+		{
+			path->path = firstReceivedPath.path;
+			
+			isLearning = false;
+			
+			uiState->reset();
+		}
+	}
+	
+	if (path != nullptr)
+	{
+		doTextBox(path->path, "path", dt);
+	}
+	
+	if (isLearning)
+	{
+		doLabel("learning..", 0.f);
+		
+		if (doButton("cancel"))
+			isLearning = false;
+	}
+	else
+	{
+		if (doButton("learn"))
+			isLearning = true;
+	}
+	
+	popMenu();
+}
+
+bool ResourceEditor_OscPath::tick(const float dt, const bool inputIsCaptured)
+{
+	makeActive(uiState, true, false);
+	doMenu(dt);
+	
+	return uiState->activeElem != nullptr;
+}
+
+void ResourceEditor_OscPath::draw() const
+{
+	makeActive(uiState, false, true);
+	const_cast<ResourceEditor_OscPath*>(this)->doMenu(0.f);
+}
+
+void ResourceEditor_OscPath::setResource(const GraphNode & node, const char * type, const char * name)
+{
+	Assert(path == nullptr);
+	
+	if (createVfxNodeResource<VfxOscPath>(node, type, name, path))
+	{
+		//
+	}
+}
+
+bool ResourceEditor_OscPath::serializeResource(std::string & text) const
+{
+	if (path != nullptr)
+	{
+		tinyxml2::XMLPrinter p;
+		p.OpenElement("value");
+		{
+			path->save(&p);
+		}
+		p.CloseElement();
+		
+		text = p.CStr();
+		
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}

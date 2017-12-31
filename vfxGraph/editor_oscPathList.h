@@ -29,23 +29,26 @@
 
 #include "graph.h"
 
-struct VfxTimeline;
+struct UiState;
+struct VfxOscPathList;
 
-struct ResourceEditor_VfxTimeline : GraphEdit_ResourceEditorBase
+struct ResourceEditor_OscPathList : GraphEdit_ResourceEditorBase
 {
 	UiState * uiState;
-	mutable VfxTimeline * timeline;
-	mutable int selectedKeyIndex;
-
-	ResourceEditor_VfxTimeline();
-	virtual ~ResourceEditor_VfxTimeline() override;
-
-	virtual void getSize(int & sx, int & sy) const override;
-	virtual void setPosition(const int x, const int y) override;
+	VfxOscPathList * pathList;
+	int learningIndex;
 	
-	virtual bool tick(const float dt, const bool inputIsCaptured) override;
-	virtual void draw() const override;
+	ResourceEditor_OscPathList();
+	virtual ~ResourceEditor_OscPathList() override;
 	
-	virtual void setResource(const GraphNode & node, const char * type, const char * name) override;
-	virtual bool serializeResource(std::string & text) const override;
+	void getSize(int & sx, int & sy) const override;
+	void setPosition(const int x, const int y) override;
+	
+	void doMenu(const float dt);
+	
+	bool tick(const float dt, const bool inputIsCaptured) override;
+	void draw() const override;
+	
+	void setResource(const GraphNode & node, const char * type, const char * name) override;
+	bool serializeResource(std::string & text) const override;
 };
