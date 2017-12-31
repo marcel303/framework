@@ -80,6 +80,13 @@ void VfxNodePictureCpu::tick(const float dt)
 
 void VfxNodePictureCpu::setImage(const char * filename)
 {
+	delete imageData;
+	imageData = nullptr;
+	
+	image.reset();
+	
+	//
+	
 	if (filename != nullptr)
 	{
 		currentFilename = filename;
@@ -88,9 +95,7 @@ void VfxNodePictureCpu::setImage(const char * filename)
 
 		if (imageData != nullptr)
 		{
-			// todo : use 16 byte alignment. speedups in downsample node etc probably make conversion here a good trade-off
-			
-			image.setDataRGBA8((uint8_t*)imageData->getLine(0), imageData->sx, imageData->sy, 4, 0);
+			image.setDataRGBA8((uint8_t*)imageData->getLine(0), imageData->sx, imageData->sy, 16, 0);
 		}
 		else
 		{
@@ -100,11 +105,6 @@ void VfxNodePictureCpu::setImage(const char * filename)
 	else
 	{
 		currentFilename.clear();
-		
-		delete imageData;
-		imageData = nullptr;
-		
-		image.reset();
 	}
 }
 
