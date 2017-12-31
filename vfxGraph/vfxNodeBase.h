@@ -29,6 +29,7 @@
 
 #include "Debugging.h"
 #include "vfxProfiling.h"
+#include <initializer_list>
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -254,8 +255,8 @@ struct VfxChannelZipper
 				
 				if (channel != nullptr)
 				{
-					sx = std::max(sx, channel->sx);
-					sy = std::max(sy, channel->sy);
+					sx = channel->sx > sx ? channel->sx : sx;
+					sy = channel->sy > sy ? channel->sy : sy;
 				}
 				
 				numChannels++;
@@ -886,11 +887,6 @@ struct VfxNodeTypeRegistration
 	std::string displayName;
 	
 	std::string resourceTypeName;
-	
-	std::string author;
-	std::string copyright;
-	std::string description;
-	std::string helpText;
 	
 	std::vector<Input> inputs;
 	std::vector<Output> outputs;
