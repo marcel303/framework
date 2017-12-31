@@ -431,9 +431,9 @@ void VfxFloatArray::update()
 float * VfxFloatArray::get()
 {
 	Assert(g_currentVfxGraph != nullptr);
-	if (lastUpdateTick != g_currentVfxGraph->nextTickTraversalId)
+	if (lastUpdateTick != g_currentVfxGraph->currentTickTraversalId)
 	{
-		lastUpdateTick = g_currentVfxGraph->nextTickTraversalId;
+		lastUpdateTick = g_currentVfxGraph->currentTickTraversalId;
 		
 		update();
 	}
@@ -628,7 +628,7 @@ bool VfxPlug::isReferenced() const
 	
 	if (referencedByRealTimeConnectionTick != -1)
 	{
-		if (referencedByRealTimeConnectionTick >= g_currentVfxGraph->nextTickTraversalId - 60)
+		if (referencedByRealTimeConnectionTick >= g_currentVfxGraph->currentTickTraversalId - 60)
 			return true;
 	}
 	
@@ -1033,9 +1033,9 @@ void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
 			
 			// make sure the output is up to date, as it may have been skipped during traversal as it was possibly ot connected
 			
-			if (dstNode->lastTickTraversalId != g_currentVfxGraph->nextTickTraversalId)
+			if (dstNode->lastTickTraversalId != g_currentVfxGraph->currentTickTraversalId)
 			{
-				dstNode->traverseTick(g_currentVfxGraph->nextTickTraversalId, 0.f);
+				dstNode->traverseTick(g_currentVfxGraph->currentTickTraversalId, 0.f);
 			}
 		}
 	}

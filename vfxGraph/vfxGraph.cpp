@@ -56,7 +56,7 @@ VfxGraph::VfxGraph()
 	: nodes()
 	, dynamicData(nullptr)
 	, displayNodeIds()
-	, nextTickTraversalId(0)
+	, currentTickTraversalId(-1)
 	, nextDrawTraversalId(0)
 	, valuesToFree()
 	, time(0.0)
@@ -207,7 +207,9 @@ void VfxGraph::tick(const int sx, const int sy, const float dt)
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = this;
 	
-	// use traversalId, start update at display node
+	// process nodes. start update at display node
+	
+	++currentTickTraversalId;
 	
 	if (displayNodeIds.empty() == false)
 	{
@@ -221,7 +223,7 @@ void VfxGraph::tick(const int sx, const int sy, const float dt)
 			
 			VfxNodeDisplay * displayNode = static_cast<VfxNodeDisplay*>(node);
 			
-			displayNode->traverseTick(nextTickTraversalId, dt);
+			displayNode->traverseTick(currentTickTraversalId, dt);
 		}
 	}
 	
@@ -231,13 +233,11 @@ void VfxGraph::tick(const int sx, const int sy, const float dt)
 	{
 		VfxNodeBase * node = i.second;
 		
-		if (node->lastTickTraversalId != nextTickTraversalId)
+		if (node->lastTickTraversalId != currentTickTraversalId)
 		{
-			node->traverseTick(nextTickTraversalId, dt);
+			node->traverseTick(currentTickTraversalId, dt);
 		}
 	}
-	
-	++nextTickTraversalId;
 	
 	//
 	

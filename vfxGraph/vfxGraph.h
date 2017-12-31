@@ -93,8 +93,7 @@ struct VfxGraph
 	std::set<GraphNodeId> displayNodeIds;
 	std::set<VfxNodeOutput*> outputNodes;
 	
-	mutable int nextTickOrder;
-	mutable int nextTickTraversalId;
+	int currentTickTraversalId;
 	mutable int nextDrawTraversalId;
 	
 	std::vector<ValueToFree> valuesToFree;

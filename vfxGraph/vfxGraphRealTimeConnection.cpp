@@ -792,7 +792,7 @@ bool RealTimeConnection::getSrcSocketValue(const GraphNodeId nodeId, const int s
 	if (input->isConnected() == false)
 		return false;
 	
-	input->referencedByRealTimeConnectionTick = vfxGraph->nextTickTraversalId;
+	input->referencedByRealTimeConnectionTick = vfxGraph->currentTickTraversalId;
 	
 	return getPlugValue(vfxGraph, input, value);
 }
@@ -848,7 +848,7 @@ bool RealTimeConnection::getDstSocketValue(const GraphNodeId nodeId, const int d
 	if (output == nullptr)
 		return false;
 	
-	output->referencedByRealTimeConnectionTick = vfxGraph->nextTickTraversalId;
+	output->referencedByRealTimeConnectionTick = vfxGraph->currentTickTraversalId;
 	
 	return getPlugValue(vfxGraph, output, value);
 }
@@ -945,7 +945,7 @@ bool RealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, const
 	if (input->isConnected() == false)
 		return false;
 	
-	input->referencedByRealTimeConnectionTick = vfxGraph->nextTickTraversalId;
+	input->referencedByRealTimeConnectionTick = vfxGraph->currentTickTraversalId;
 	
 	auto inputChannel = input->getChannel();
 	
@@ -980,7 +980,7 @@ bool RealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, const
 	if (output == nullptr)
 		return false;
 
-	output->referencedByRealTimeConnectionTick = vfxGraph->nextTickTraversalId;
+	output->referencedByRealTimeConnectionTick = vfxGraph->currentTickTraversalId;
 	
 	auto outputChannel = output->getChannel();
 	
