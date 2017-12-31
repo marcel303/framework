@@ -212,10 +212,14 @@ void VfxNodeDrawOscilloscope::customTraverseTick(const int traversalId, const fl
 	
 	// todo : figure out a better way to implement timestep subdivisions
 	
+	auto oldraversalId = g_currentVfxGraph->currentTickTraversalId;
+	
 	int substepTraversalId = traversalId;
 	
 	for (int i = 0; i < numSubsteps; ++i)
 	{
+		g_currentVfxGraph->currentTickTraversalId = substepTraversalId;
+		
 		for (auto predep : predeps)
 		{
 			if (predep->lastTickTraversalId != substepTraversalId)
@@ -228,4 +232,6 @@ void VfxNodeDrawOscilloscope::customTraverseTick(const int traversalId, const fl
 		
 		substepTraversalId++;
 	}
+	
+	g_currentVfxGraph->currentTickTraversalId = oldraversalId;
 }
