@@ -430,16 +430,10 @@ void VfxFloatArray::update()
 
 float * VfxFloatArray::get()
 {
-	// fixme : g_currentVfxGraph should always be valid here? right now we just validate without checking traversal id when g_currentVfxGraph is nullptr. potetially doing this work twice (or more). on the other hand, if get is called after the update, it may set the traversal id to that of the next frame, without working on the array that will be updated in the future. this would be even worse..
-	
-	// todo : remove last update tick test ? it makes 'subsampling' impossible (or at least harder..). see oscillator node
-	
-	//if (g_currentVfxGraph == nullptr || lastUpdateTick != g_currentVfxGraph->nextTickTraversalId)
+	Assert(g_currentVfxGraph != nullptr);
+	if (lastUpdateTick != g_currentVfxGraph->nextTickTraversalId)
 	{
-		//if (g_currentVfxGraph != nullptr)
-		{
-			//lastUpdateTick = g_currentVfxGraph->nextTickTraversalId;
-		}
+		lastUpdateTick = g_currentVfxGraph->nextTickTraversalId;
 		
 		update();
 	}

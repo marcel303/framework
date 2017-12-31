@@ -564,7 +564,7 @@ void RealTimeConnection::setNodeIsPassthrough(const GraphNodeId nodeId, const bo
 	node->isPassthrough = isPassthrough;
 }
 
-bool RealTimeConnection::setPlugValue(VfxPlug * plug, const std::string & value)
+bool RealTimeConnection::setPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, const std::string & value)
 {
 	switch (plug->type)
 	{
@@ -580,7 +580,12 @@ bool RealTimeConnection::setPlugValue(VfxPlug * plug, const std::string & value)
 		plug->getRwInt() = Parse::Int32(value);
 		return true;
 	case kVfxPlugType_Float:
-		plug->getRwFloat() = Parse::Float(value);
+		Assert(g_currentVfxGraph == nullptr);
+		g_currentVfxGraph = vfxGraph;
+		{
+			plug->getRwFloat() = Parse::Float(value);
+		}
+		g_currentVfxGraph = nullptr;
 		return true;
 		
 	case kVfxPlugType_String:
@@ -610,7 +615,7 @@ bool RealTimeConnection::setPlugValue(VfxPlug * plug, const std::string & value)
 	return false;
 }
 
-bool RealTimeConnection::getPlugValue(VfxPlug * plug, std::string & value)
+bool RealTimeConnection::getPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, std::string & value)
 {
 	switch (plug->type)
 	{
@@ -626,7 +631,12 @@ bool RealTimeConnection::getPlugValue(VfxPlug * plug, std::string & value)
 		value = String::ToString(plug->getInt());
 		return true;
 	case kVfxPlugType_Float:
-		value = String::FormatC("%f", plug->getFloat());
+		Assert(g_currentVfxGraph == nullptr);
+		g_currentVfxGraph = vfxGraph;
+		{
+			value = String::FormatC("%f", plug->getFloat());
+		}
+		g_currentVfxGraph = nullptr;
 		return true;
 	case kVfxPlugType_String:
 		value = plug->getString();
@@ -747,7 +757,7 @@ void RealTimeConnection::setSrcSocketValue(const GraphNodeId nodeId, const int s
 	{
 		if (input->isConnected())
 		{
-			setPlugValue(input, value);
+			setPlugValue(vfxGraph, input, value);
 		}
 		else
 		{
@@ -784,7 +794,7 @@ bool RealTimeConnection::getSrcSocketValue(const GraphNodeId nodeId, const int s
 	
 	input->referencedByRealTimeConnectionTick = vfxGraph->nextTickTraversalId;
 	
-	return getPlugValue(input, value);
+	return getPlugValue(vfxGraph, input, value);
 }
 
 void RealTimeConnection::setDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, const std::string & value)
@@ -812,7 +822,7 @@ void RealTimeConnection::setDstSocketValue(const GraphNodeId nodeId, const int d
 	if (output == nullptr)
 		return;
 	
-	setPlugValue(output, value);
+	setPlugValue(vfxGraph, output, value);
 }
 
 bool RealTimeConnection::getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value)
@@ -840,7 +850,7 @@ bool RealTimeConnection::getDstSocketValue(const GraphNodeId nodeId, const int d
 	
 	output->referencedByRealTimeConnectionTick = vfxGraph->nextTickTraversalId;
 	
-	return getPlugValue(output, value);
+	return getPlugValue(vfxGraph, output, value);
 }
 
 void RealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName)

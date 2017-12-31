@@ -63,8 +63,8 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual void setNodeIsPassthrough(const GraphNodeId nodeId, const bool isPassthrough) override;
 	
-	static bool setPlugValue(VfxPlug * plug, const std::string & value);
-	static bool getPlugValue(VfxPlug * plug, std::string & value);
+	static bool setPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, const std::string & value);
+	static bool getPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, std::string & value);
 
 	virtual void setSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, const std::string & value) override;
 	virtual bool getSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, std::string & value) override;
