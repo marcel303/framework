@@ -27,6 +27,7 @@
 
 #include "fourier.h"
 #include "vfxNodeChannelFft.h"
+#include <algorithm>
 
 VFX_NODE_TYPE(VfxNodeChannelFft)
 {
