@@ -87,10 +87,11 @@ void VfxNodeDrawModel::tick(const float dt)
 	
 	const char * filename = getInputString(kInput_Filename, nullptr);
 	const float scale = getInputFloat(kInput_Scale, 1.f);
-	const bool wantsChannels =
+	const bool wantsPositionChannels =
 		outputs[kOutput_PositionX].isReferenced() ||
 		outputs[kOutput_PositionY].isReferenced() ||
-		outputs[kOutput_PositionZ].isReferenced() ||
+		outputs[kOutput_PositionZ].isReferenced();
+	const bool wantsNormalChannels =
 		outputs[kOutput_NormalX].isReferenced() ||
 		outputs[kOutput_NormalY].isReferenced() ||
 		outputs[kOutput_NormalZ].isReferenced();
@@ -145,7 +146,7 @@ void VfxNodeDrawModel::tick(const float dt)
 	
 	model->tick(dt);
 	
-	if (wantsChannels)
+	if (wantsPositionChannels || wantsNormalChannels)
 	{
 		Mat4x4 matrix;
 		matrix.MakeScaling(scale, scale, scale);
@@ -158,34 +159,38 @@ void VfxNodeDrawModel::tick(const float dt)
 		
 		model->calculateBoneMatrices(matrix, localMatrices, worldMatrices, globalMatrices, numMatrices);
 		
-		const int numVertices = model->softBlend(matrix, nullptr, nullptr,  nullptr, numMatrices, nullptr, nullptr, 0);
+		const int numVertices = model->softBlend(
+			matrix, nullptr, nullptr,  nullptr, numMatrices,
+			false, nullptr, nullptr, nullptr,
+			false, nullptr, nullptr, nullptr, 0);
 		
-		Vec3 * positions = (Vec3*)ALIGNED_ALLOCA(sizeof(Vec3) * numVertices, 16);
-		Vec3 * normals = (Vec3*)ALIGNED_ALLOCA(sizeof(Vec3) * numVertices, 16);
-		
-		model->softBlend(matrix, localMatrices, worldMatrices, globalMatrices, numMatrices, positions, normals, numVertices);
-		
-		const int size = numVertices * 6;
+		const int size =
+			(wantsPositionChannels * numVertices * 3) +
+			(wantsNormalChannels   * numVertices * 3);
 		
 		channelData.allocOnSizeChange(size);
 		
-		positionX.setData(channelData.data + 0 * numVertices, false, numVertices);
-		positionY.setData(channelData.data + 1 * numVertices, false, numVertices);
-		positionZ.setData(channelData.data + 2 * numVertices, false, numVertices);
-		normalX.setData(channelData.data + 3 * numVertices, false, numVertices);
-		normalY.setData(channelData.data + 4 * numVertices, false, numVertices);
-		normalZ.setData(channelData.data + 5 * numVertices, false, numVertices);
+		float * dataPtr = channelData.data;
 		
-		for (int i = 0; i < numVertices; ++i)
+		if (wantsPositionChannels)
 		{
-			positionX.dataRw()[i] = positions[i][0];
-			positionY.dataRw()[i] = positions[i][1];
-			positionZ.dataRw()[i] = positions[i][2];
-			
-			normalX.dataRw()[i] = normals[i][0];
-			normalY.dataRw()[i] = normals[i][1];
-			normalZ.dataRw()[i] = normals[i][2];
+			positionX.setData(dataPtr, false, numVertices); dataPtr += numVertices;
+			positionY.setData(dataPtr, false, numVertices); dataPtr += numVertices;
+			positionZ.setData(dataPtr, false, numVertices); dataPtr += numVertices;
 		}
+		
+		if (wantsNormalChannels)
+		{
+			normalX.setData(dataPtr, false, numVertices); dataPtr += numVertices;
+			normalY.setData(dataPtr, false, numVertices); dataPtr += numVertices;
+			normalZ.setData(dataPtr, false, numVertices); dataPtr += numVertices;
+		}
+		
+		model->softBlend(
+			matrix, localMatrices, worldMatrices, globalMatrices, numMatrices,
+			wantsPositionChannels, positionX.dataRw(), positionY.dataRw(), positionZ.dataRw(),
+			wantsNormalChannels, normalX.dataRw(), normalY.dataRw(), normalZ.dataRw(),
+			numVertices);
 	}
 	else
 	{

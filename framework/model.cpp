@@ -1190,7 +1190,16 @@ int Model::calculateBoneMatrices(
 	return 0;
 }
 
-int Model::softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * worldMatrices, Mat4x4 * globalMatrices, const int numMatrices, Vec3 * positions, Vec3 * normals, const int numVertices) const
+int Model::softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * worldMatrices, Mat4x4 * globalMatrices, const int numMatrices,
+	const bool wantsPosition,
+	float * __restrict positionX,
+	float * __restrict positionY,
+	float * __restrict positionZ,
+	const bool wantsNormal,
+	float * __restrict normalX,
+	float * __restrict normalY,
+	float * __restrict normalZ,
+	const int numVertices) const
 {
 	Assert(numMatrices == m_model->boneSet->m_numBones);
 	
@@ -1210,6 +1219,8 @@ int Model::softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * wor
 	
 	const float boneWeightScale = 1.f / 255.f;
 	
+	int outputIndex = 0;
+	
 	for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 	{
 		const Mesh * mesh = m_model->meshSet->m_meshes[i];
@@ -1217,6 +1228,9 @@ int Model::softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * wor
 		for (int j = 0; j < mesh->m_numVertices; ++j)
 		{
 			const Vertex & vertex = mesh->m_vertices[j];
+			
+			const Vec3 vp(vertex.px, vertex.py, vertex.pz);
+			const Vec3 vn(vertex.nx, vertex.ny, vertex.nz);
 			
 			// -- software vertex blend (soft skinned) --
 			
@@ -1229,19 +1243,38 @@ int Model::softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * wor
 					continue;
 				
 				const int boneIndex = vertex.boneIndices[b];
-				const float boneWeight = vertex.boneWeights[b] * boneWeightScale;
+				const float boneWeight = vertex.boneWeights[b];
 				
 				const Mat4x4 & globalMatrix = globalMatrices[boneIndex];
 				
-				Vec3 vp(vertex.px, vertex.py, vertex.pz);
-				Vec3 vn(vertex.nx, vertex.ny, vertex.nz);
+				if (wantsPosition)
+				{
+					p += globalMatrix.Mul4(vp) * boneWeight;
+				}
 				
-				p += globalMatrix.Mul4(vp) * boneWeight;
-				n += globalMatrix.Mul3(vn) * boneWeight;
+				if (wantsNormal)
+				{
+					n += globalMatrix.Mul3(vn) * boneWeight;
+				}
 			}
 			
-			*positions++ = p;
-			*normals++ = n.CalcNormalized();
+			if (wantsPosition)
+			{
+				positionX[outputIndex] = p[0] * boneWeightScale;
+				positionY[outputIndex] = p[1] * boneWeightScale;
+				positionZ[outputIndex] = p[2] * boneWeightScale;
+			}
+			
+			if (wantsNormal)
+			{
+				n.Normalize();
+				
+				normalX[outputIndex] = n[0];
+				normalY[outputIndex] = n[1];
+				normalZ[outputIndex] = n[2];
+			}
+			
+			outputIndex++;
 		}
 	}
 	

@@ -742,7 +742,17 @@ public:
 	static void calculateTransform(Vec3Arg position, Vec3Arg axis, const float angle, const float scale, Mat4x4 & matrix);
 	
 	int calculateBoneMatrices(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * worldMatrices, Mat4x4 * globalMatrices, const int numMatrices) const;
-	int softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * worldMatrices, Mat4x4 * globalMatrices, const int numMatrices, Vec3 * positions, Vec3 * normals, const int numVertices) const;
+	
+	int softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * worldMatrices, Mat4x4 * globalMatrices, const int numMatrices,
+		const bool wantsPosition,
+		float * __restrict positionX,
+		float * __restrict positionY,
+		float * __restrict positionZ,
+		const bool wantsNormal,
+		float * __restrict normalX,
+		float * __restrict normalY,
+		float * __restrict normalZ,
+		const int numVertices) const;
 	
 private:
 	void ctor();
