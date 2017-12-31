@@ -1514,7 +1514,7 @@ void doColorWheel(float & r, float & g, float & b, float & a, const char * name,
 				mouse.x - wheelX,
 				mouse.y - wheelY,
 				mouse.wentDown(BUTTON_LEFT),
-				mouse.isDown(BUTTON_LEFT), dt); // fixme : mouseDown and dt
+				mouse.isDown(BUTTON_LEFT), dt);
 		}
 		g_uiState->colorWheel->toColor(r, g, b, a);
 	}

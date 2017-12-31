@@ -477,10 +477,6 @@ void MediaPlayer::stopMediaPlayerThread()
 
 		context = nullptr;
 		mpThread = nullptr;
-
-		// fixme : since we don't wait for the close operation to complete, we may run into trouble opening the same movie again
-		//         if very little time passes between close and open. todo : ensure close has completed before allowing open operation
-		//         or : fix avcodec so it can share opened files
 	}
 
 	const int t2 = SDL_GetTicks();
