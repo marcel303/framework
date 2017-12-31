@@ -168,15 +168,6 @@ public:
 
 	inline SimdMat4x4 CalcTranspose() const
 	{
-#if 1
-		SimdMat4x4 r;
-		
-		for (int i = 0; i < 4; ++i)
-			for (int j = 0; j < 4; ++j)
-				r(i, j) = (*this)(j, i);
-		
-		return r;
-#else
 		SimdMat4x4 r = *this;
 
 		_MM_TRANSPOSE4_PS(
@@ -186,7 +177,6 @@ public:
 			r.m_rows[3].Vec128());
 
 		return r;
-#endif
 	}
 
 #if 1
