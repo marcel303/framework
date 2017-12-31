@@ -5608,7 +5608,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 
 // fixme : settle on one method
 static int sampleMethod = 3;
-static bool useSuperSampling = true;
+static bool useSuperSampling = false;
 
 static void measureText_MSDF(const stbtt_fontinfo & fontInfo, const float size, const GlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
 
