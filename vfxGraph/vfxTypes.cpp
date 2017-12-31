@@ -209,7 +209,7 @@ bool VfxSwizzle::parse(const char * text)
 		{
 			Elem & elem = elems[numElems++];
 
-			elem.channelIndex = Parse::Int32(elemText.c_str());
+			elem.channelIndex = Parse::Int32(elemText);
 		}
 	}
 
