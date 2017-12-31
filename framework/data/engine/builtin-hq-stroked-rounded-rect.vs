@@ -38,8 +38,6 @@ void main()
 
 	float scale = min(length(ModelViewMatrix[0].xyz), length(ModelViewMatrix[1].xyz));
 
-	float borderSize = strokeSize + 1.0;
-
 	if (useScreenSize == 1.0)
 	{
 		vec2 s = (p12 - p11) * 0.5;
@@ -47,9 +45,14 @@ void main()
 		p11 = m - s / scale;
 		p12 = m + s / scale;
 
-		borderSize /= scale;
 		radius /= scale;
 	}
+	else
+	{
+		strokeSize *= scale;
+	}
+
+	float borderSize = strokeSize + 1.0;
 	
 	vec2 p1 = vec2(p11.x, p11.y);
 	vec2 p2 = vec2(p12.x, p11.y);
