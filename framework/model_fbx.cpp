@@ -881,20 +881,13 @@ class HashMap
 		{
 		public:
 			Block * next;
-			Node * nodes;
+			Node nodes[PoolSize];
 			unsigned int numNodes;
 			
 			Block()
 			{
 				next = 0;
-				nodes = (Node*)malloc(sizeof(Node) * PoolSize);
 				numNodes = 0;
-			}
-			
-			~Block()
-			{
-				free(nodes);
-				nodes = 0;
 			}
 			
 			Node * alloc()
