@@ -107,7 +107,7 @@ struct AudioGraph
 	
 	std::map<GraphNodeId, AudioNodeBase*> nodes;
 	
-	mutable int currentTickTraversalId;
+	int currentTickTraversalId;
 	
 #if AUDIO_GRAPH_ENABLE_TIMING
 	Graph * graph;
