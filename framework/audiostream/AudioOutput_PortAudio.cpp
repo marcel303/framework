@@ -142,6 +142,8 @@ void AudioOutput_PortAudio::portAudioCallback(
 			
 			const int numSamplesRead = m_stream->Provide(numSamples, samples);
 			
+			memset(samples + numSamplesRead, 0, (numSamples - numSamplesRead) * sizeof(AudioSample));
+			
 			m_position += numSamplesRead;
 			m_isDone = numSamplesRead == 0;
 		}
