@@ -252,7 +252,7 @@ namespace binaural
 			
 			const int todo = std::min(left, AUDIO_BUFFER_SIZE - nextReadLocation);
 			
-		#if ENABLE_SSE
+		#if BINAURAL_USE_SSE
 			debugAssert((todo % 4) == 0);
 			
 			const float4 * __restrict audioBufferL4 = (float4*)audioBufferL.samples + nextReadLocation / 4;

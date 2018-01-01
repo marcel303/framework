@@ -26,6 +26,7 @@
 */
 
 #include "audio.h"
+#include "audioTypes.h"
 #include "binaural.h"
 #include "binaural_cipic.h"
 #include "binaural_ircam.h"
@@ -33,6 +34,9 @@
 #include "binauralizer.h"
 #include "framework.h"
 #include "paobject.h"
+#include "soundmix.h"
+#include "Timer.h"
+#include <atomic>
 
 #include "../libparticle/ui.h"
 
@@ -41,7 +45,7 @@ using namespace binaural;
 #define FULLSCREEN 0
 
 #define BLEND_PREVIOUS_HRTF 1
-static const int AUDIO_UPDATE_SIZE = AUDIO_BUFFER_SIZE/2;
+#define NUM_BINAURAL_SOUNDS 1
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -49,204 +53,193 @@ extern const int GFX_SY;
 const int GFX_SX = 1300;
 const int GFX_SY = 760;
 
-static SDL_mutex * g_audioMutex = nullptr;
-
 static void drawHrirSampleGrid(const HRIRSampleSet & dataSet, const Vec2 & hoverLocation, const HRIRSampleGrid::Cell * hoverCell, const HRIRSampleGrid::Triangle * hoverTriangle);
 
-namespace BinauralTestTypes
+namespace BinauralTestNamespace
 {
-
-struct AudioMutex : Mutex
-{
-	virtual void lock() override
-	{
-		SDL_LockMutex(g_audioMutex);
-	}
+	static SDL_mutex * s_audioMutexSDL = nullptr;
 	
-	virtual void unlock() override
+	struct AudioMutex : binaural::Mutex
 	{
-		SDL_UnlockMutex(g_audioMutex);
-	}
-};
-
-struct PcmData
-{
-	float * samples;
-	int numSamples;
-	
-	PcmData()
-		: samples(nullptr)
-		, numSamples(0)
-	{
-	}
-	
-	~PcmData()
-	{
-		delete samples;
-		samples = nullptr;
-	}
-	
-	void init(const char * filename)
-	{
-		::SoundData * sound = ::loadSound(filename);
+		virtual void lock() override
+		{
+			const int r = SDL_LockMutex(s_audioMutexSDL);
+			Assert(r == 0);
+		}
 		
-		if (sound->sampleCount > 0 && sound->channelSize == 2)
+		virtual void unlock() override
 		{
-			samples = new float[sound->sampleCount];
-			numSamples = sound->sampleCount;
-			
-			const short * __restrict sampleData = (short*)sound->sampleData;
-			const float scale = 1.f / (1 << 15);
-			
-			for (int i = 0; i < numSamples; ++i)
-				samples[i] = sampleData[i * sound->channelCount] * scale;
+			const int r = SDL_UnlockMutex(s_audioMutexSDL);
+			Assert(r == 0);
 		}
-	}
-};
+	};
+	
+	static AudioMutex s_audioMutex;
+	
+	//
 
-struct PcmObject
-{
-	const PcmData * pcmData;
-	int nextSampleIndex;
-	
-	PcmObject()
-		: pcmData(nullptr)
-		, nextSampleIndex(0)
+	struct PcmObject
 	{
-	}
-	
-	void init(const PcmData * _pcmData)
-	{
-		pcmData = _pcmData;
-	}
-	
-	void generate(float * __restrict samples, const int numSamples)
-	{
-		if (pcmData == nullptr || pcmData->numSamples == 0)
+		const PcmData * pcmData;
+		int nextSampleIndex;
+		
+		PcmObject()
+			: pcmData(nullptr)
+			, nextSampleIndex(0)
 		{
-			memset(samples, 0, numSamples * sizeof(float));
 		}
-		else
+		
+		void init(const PcmData * _pcmData)
 		{
-			int left = numSamples;
-			int done = 0;
-			
-			while (left != 0)
+			pcmData = _pcmData;
+		}
+		
+		void generate(float * __restrict samples, const int numSamples)
+		{
+			if (pcmData == nullptr || pcmData->numSamples == 0)
 			{
-				if (nextSampleIndex == pcmData->numSamples)
+				memset(samples, 0, numSamples * sizeof(float));
+			}
+			else
+			{
+				int left = numSamples;
+				int done = 0;
+				
+				while (left != 0)
 				{
-					nextSampleIndex = 0;
+					if (nextSampleIndex == pcmData->numSamples)
+					{
+						nextSampleIndex = 0;
+					}
+					
+					const int todo = std::min(left, pcmData->numSamples - nextSampleIndex);
+					
+					memcpy(samples + done, pcmData->samples + nextSampleIndex, todo * sizeof(float));
+					
+					nextSampleIndex += todo;
+					
+					left -= todo;
+					done += todo;
 				}
-				
-				const int todo = std::min(left, pcmData->numSamples - nextSampleIndex);
-				
-				memcpy(samples + done, pcmData->samples + nextSampleIndex, todo * sizeof(float));
-				
-				nextSampleIndex += todo;
-				
-				left -= todo;
-				done += todo;
 			}
+			
+			//samples[i] = random(-.1f, +.1f);
+		}
+	};
+
+	struct BinauralSound
+	{
+		Binauralizer binauralizer;
+		PcmObject pcmObject;
+		
+		BinauralSound()
+			: binauralizer()
+			, pcmObject()
+		{
 		}
 		
-		//samples[i] = random(-.1f, +.1f);
-	}
-};
-
-struct BinauralSound
-{
-	Binauralizer binauralizer;
-	PcmObject pcmObject;
-	AudioMutex mutex;
-	
-	BinauralSound()
-		: binauralizer()
-		, pcmObject()
-	{
-	}
-	
-	void init(HRIRSampleSet * sampleSet, PcmData * pcmData)
-	{
-		binauralizer.init(sampleSet, &mutex);
-		
-		pcmObject.init(pcmData);
-	}
-	
-	void generate(float * __restrict samples)
-	{
-		float pcmSamples[AUDIO_UPDATE_SIZE];
-		pcmObject.generate(pcmSamples, AUDIO_UPDATE_SIZE);
-		
-		binauralizer.provide(pcmSamples, AUDIO_UPDATE_SIZE);
-		
-		binauralizer.generateInterleaved(samples, AUDIO_UPDATE_SIZE);
-	}
-};
-
-struct MyPortAudioHandler : PortAudioHandler
-{
-	std::vector<BinauralSound*> sounds;
-	
-	float gain;
-	
-	MyPortAudioHandler()
-		: sounds()
-		, gain(1.f)
-	{
-	}
-	
-	~MyPortAudioHandler()
-	{
-		for (auto & sound : sounds)
+		void init(HRIRSampleSet * sampleSet, PcmData * pcmData)
 		{
-			delete sound;
-			sound = nullptr;
+			binauralizer.init(sampleSet, &s_audioMutex);
+			
+			pcmObject.init(pcmData);
 		}
 		
-		sounds.clear();
-	}
-	
-	void addBinauralSound(HRIRSampleSet * sampleSet, PcmData * pcmData)
-	{
-		BinauralSound * sound = new BinauralSound();
-		
-		sound->init(sampleSet, pcmData);
-		
-		sounds.push_back(sound);
-	}
-	
-	virtual void portAudioCallback(
-		const void * inputBuffer,
-		const int numInputChannels,
-		void * outputBuffer,
-		const int framesPerBuffer) override
-	{
-		float * __restrict samples = (float*)outputBuffer;
-		
-		memset(samples, 0, framesPerBuffer * 2 * sizeof(float));
-		
-		for (auto & sound : sounds)
+		void generate(float * __restrict samples)
 		{
-			float soundSamples[AUDIO_UPDATE_SIZE * 2];
+			float pcmSamples[AUDIO_UPDATE_SIZE];
+			pcmObject.generate(pcmSamples, AUDIO_UPDATE_SIZE);
 			
-			sound->generate(soundSamples);
+			binauralizer.provide(pcmSamples, AUDIO_UPDATE_SIZE);
 			
-			for (int i = 0; i < AUDIO_UPDATE_SIZE * 2; ++i)
+			binauralizer.generateInterleaved(samples, AUDIO_UPDATE_SIZE);
+		}
+	};
+
+	struct MyPortAudioHandler : PortAudioHandler
+	{
+		std::vector<BinauralSound*> sounds;
+		
+		float gain;
+		
+		std::atomic_uint64_t timeUsPerTick;
+		std::atomic_uint64_t timeUsPerSecondAccu;
+		std::atomic_uint64_t timeUsPerSecond;
+		int numTicks;
+		
+		MyPortAudioHandler()
+			: sounds()
+			, gain(1.f)
+			, timeUsPerTick(0)
+			, timeUsPerSecondAccu(0)
+			, timeUsPerSecond(0)
+			, numTicks(0)
+		{
+		}
+		
+		~MyPortAudioHandler()
+		{
+			for (auto & sound : sounds)
 			{
-				samples[i] += soundSamples[i];
+				delete sound;
+				sound = nullptr;
 			}
+			
+			sounds.clear();
 		}
 		
-		for (int i = 0; i < AUDIO_UPDATE_SIZE * 2; ++i)
+		void addBinauralSound(HRIRSampleSet * sampleSet, PcmData * pcmData)
 		{
-			samples[i] *= gain;
+			BinauralSound * sound = new BinauralSound();
+			
+			sound->init(sampleSet, pcmData);
+			
+			sounds.push_back(sound);
 		}
-	}
-};
-
+		
+		virtual void portAudioCallback(
+			const void * inputBuffer,
+			const int numInputChannels,
+			void * outputBuffer,
+			const int framesPerBuffer) override
+		{
+			Assert(framesPerBuffer == AUDIO_UPDATE_SIZE);
+			
+			const auto t1 = g_TimerRT.TimeUS_get();
+			
+			float * __restrict samples = (float*)outputBuffer;
+			
+			memset(samples, 0, framesPerBuffer * 2 * sizeof(float));
+			
+			for (auto & sound : sounds)
+			{
+				float soundSamples[AUDIO_UPDATE_SIZE * 2];
+				
+				sound->generate(soundSamples);
+				
+				audioBufferAdd(samples, soundSamples, AUDIO_UPDATE_SIZE * 2);
+			}
+			
+			audioBufferMul(samples, AUDIO_UPDATE_SIZE * 2, gain);
+			
+			const auto t2 = g_TimerRT.TimeUS_get();
+			
+			const auto t = t2 - t1;
+			timeUsPerTick = t;
+			timeUsPerSecondAccu += t;
+			
+			numTicks++;
+			
+			if ((numTicks % (SAMPLE_RATE / AUDIO_UPDATE_SIZE)) == 0)
+			{
+				timeUsPerSecond = timeUsPerSecondAccu.load();
+				timeUsPerSecondAccu = 0;
+			}
+		}
+	};
 }
 
-using namespace BinauralTestTypes;
+using namespace BinauralTestNamespace;
 
 int main(int argc, char * argv[])
 {
@@ -260,212 +253,21 @@ int main(int argc, char * argv[])
 #if FULLSCREEN
 	framework.fullscreen = true;
 #endif
-
-	//framework.waitForEvents = true;
 	
 	if (!framework.init(0, 0, GFX_SX, GFX_SY))
 		return -1;
 	
 	initUi();
 	
-	fassert(g_audioMutex == nullptr);
-	g_audioMutex = SDL_CreateMutex();
+	fassert(s_audioMutexSDL == nullptr);
+	s_audioMutexSDL = SDL_CreateMutex();
 	
 	enableDebugLog = true;
-	
-	if (false)
-	{
-		// try loading an IRCAM sample set
-
-		HRIRSampleSet sampleSet;
-
-		loadHRIRSampleSet_Ircam("binaural/IRC_1057", sampleSet);
-	}
-	
-	if (false)
-	{
-		// try loading an MIT sample set
-
-		HRIRSampleSet sampleSet;
-
-		loadHRIRSampleSet_Mit("binaural/MIT-HRTF-DIFFUSE", sampleSet);
-		
-		sampleSet.finalize();
-	}
-	
-	if (false)
-	{
-		// try loading a CIPIC sample set
-		
-		HRIRSampleSet sampleSet;
-		
-		loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
-		
-		sampleSet.finalize();
-		
-		if (true)
-		{
-			// save sample grid
-			
-			FILE * file = fopen("binaural/cipic_147.grid", "wb");
-			
-			if (file != nullptr)
-			{
-				debugTimerBegin("sampleGrid_save");
-				
-				if (sampleSet.sampleGrid.save(file) == false)
-				{
-					logError("failed to save sample grid");
-				}
-				
-				debugTimerEnd("sampleGrid_save");
-				
-				fclose(file);
-				file = nullptr;
-			}
-		}
-		
-		if (true)
-		{
-			// load sample grid
-			
-			HRIRSampleGrid sampleGrid;
-			
-			FILE * file = fopen("binaural/cipic_147.grid", "rb");
-			
-			if (file != nullptr)
-			{
-				debugTimerBegin("sampleGrid_load");
-				
-				if (sampleSet.sampleGrid.load(file) == false)
-				{
-					logError("failed to load sample grid");
-				}
-				
-				debugTimerEnd("sampleGrid_load");
-				
-				fclose(file);
-				file = nullptr;
-			}
-		}
-		
-		if (true)
-		{
-			// save sample set
-			
-			FILE * file = fopen("binaural/cipic_147", "wb");
-			
-			if (file != nullptr)
-			{
-				debugTimerBegin("sampleSet_save");
-				
-				if (sampleSet.save(file) == false)
-				{
-					logError("failed to save sample set");
-				}
-				
-				debugTimerEnd("sampleSet_save");
-				
-				fclose(file);
-				file = nullptr;
-			}
-		}
-		
-		if (true)
-		{
-			// load sample set
-			
-			HRIRSampleSet sampleSet;
-			
-			FILE * file = fopen("binaural/cipic_147", "rb");
-			
-			if (file != nullptr)
-			{
-				debugTimerBegin("sampleSet_load");
-				
-				if (sampleSet.load(file) == false)
-				{
-					logError("failed to load sample set");
-				}
-				
-				debugTimerEnd("sampleSet_load");
-				
-				fclose(file);
-				file = nullptr;
-			}
-		}
-	}
-	
-	if (false)
-	{
-		// try loading a sample set and performing lookups
-
-		HRIRSampleSet sampleSet;
-
-		loadHRIRSampleSet_Mit("binaural/MIT-HRTF-DIFFUSE", sampleSet);
-		
-		sampleSet.finalize();
-		
-		for (int elevation = 0; elevation <= 180; elevation += 10)
-		{
-			for (int azimuth = 0; azimuth <= 360; azimuth += 10)
-			{
-				HRIRSampleData const * samples[3];
-				float sampleWeights[3];
-				
-				if (sampleSet.lookup_3(elevation, azimuth, samples, sampleWeights) == false)
-				{
-					debugLog("sample set lookup failed! elevation=%d, azimuth=%d", elevation, azimuth);
-				}
-				else
-				{
-					debugTimerBegin("blend_hrir");
-					
-					HRIRSampleData weightedSample;
-					
-					blendHrirSamples_3(
-						*samples[0], sampleWeights[0],
-						*samples[1], sampleWeights[1],
-						*samples[2], sampleWeights[2],
-						weightedSample);
-					
-					debugTimerEnd("blend_hrir");
-				}
-			}
-		}
-	}
-	
-	{
-		for (int i = 0; i < 100; ++i)
-		{
-			float elevation = random(-90.f, +90.f);
-			float azimuth = random(-180.f, +180.f);
-			float x, y, z;
-			
-			elevationAndAzimuthToCartesian(elevation, azimuth, x, y, z);
-			debugLog("(%.2f, %.2f) -> (%.2f, %.2f, %.2f)", elevation, azimuth, x, y, z);
-			
-			cartesianToElevationAndAzimuth(x, y, z, elevation, azimuth);
-			debugLog("(%.2f, %.2f) -> (%.2f, %.2f, %.2f)", elevation, azimuth, x, y, z);
-			
-			elevationAndAzimuthToCartesian(elevation, azimuth, x, y, z);
-			debugLog("(%.2f, %.2f) -> (%.2f, %.2f, %.2f)", elevation, azimuth, x, y, z);
-			
-			cartesianToElevationAndAzimuth(x, y, z, elevation, azimuth);
-			debugLog("(%.2f, %.2f) -> (%.2f, %.2f, %.2f)", elevation, azimuth, x, y, z);
-			
-			debugLog("----");
-		}
-	}
 	
 	{
 		// try loading a sample set and displaying it
 
 		HRIRSampleSet sampleSet;
-
-		//loadHRIRSampleSet_Mit("binaural/MIT-HRTF-DIFFUSE", sampleSet);
-		
-		//loadHRIRSampleSet_Ircam("binaural/IRC_1057", sampleSet);
 		
 		loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
 		
@@ -487,31 +289,25 @@ int main(int argc, char * argv[])
 		Surface view3D(200, 200, false);
 		
 		PcmData pcmData;
-		pcmData.init("testsounds/music2.ogg");
-		//pcmData.init("testsounds/sound.ogg");
+		pcmData.load("testsounds/music2.ogg", 0);
 		
-		MyPortAudioHandler audio;
+		MyPortAudioHandler audioHandler;
 		int numSources = 0;
-	#if ENABLE_DEBUGGING && 0
-		for (int i = 0; i < 1; ++i)
-	#else
-		for (int i = 0; i < 2; ++i)
-		//for (int i = 0; i < 100; ++i)
-		//for (int i = 0; i < 135; ++i)
-	#endif
+		
+		for (int i = 0; i < NUM_BINAURAL_SOUNDS; ++i)
 		{
-			audio.addBinauralSound(&sampleSet, &pcmData);
+			audioHandler.addBinauralSound(&sampleSet, &pcmData);
 			
 			numSources++;
 		}
 		
 		if (numSources == 0)
-			audio.gain = 0.f;
+			audioHandler.gain = 0.f;
 		else
-			audio.gain = 1.f / numSources;
+			audioHandler.gain = 1.f / numSources;
 		
 		PortAudioObject pa;
-		pa.init(44100, 2, 0, AUDIO_UPDATE_SIZE, &audio);
+		pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioHandler);
 		
 		do
 		{
@@ -543,11 +339,11 @@ int main(int argc, char * argv[])
 			
 			const Vec2 hoverLocation = transform.Invert() * Vec2(mouse.x, mouse.y);
 			
-			SDL_LockMutex(g_audioMutex);
+			s_audioMutex.lock();
 			{
 				int index = 0;
 				
-				for (auto & sound : audio.sounds)
+				for (auto & sound : audioHandler.sounds)
 				{
 				#if 0
 					const float elevation = hoverLocation[1] + std::sin(framework.time * index / 98.f) * 60.f;
@@ -564,7 +360,7 @@ int main(int argc, char * argv[])
 					sound->binauralizer.setSampleLocation(elevation, azimuth);
 				}
 			}
-			SDL_UnlockMutex(g_audioMutex);
+			s_audioMutex.unlock();
 			
 			float baryU;
 			float baryV;
@@ -646,10 +442,7 @@ int main(int argc, char * argv[])
 			AudioBuffer_Real audioBufferL;
 			AudioBuffer_Real audioBufferR;
 			
-		#if 0
-			audioBufferL = audioBuffer;
-			audioBufferR = audioBuffer;
-		#elif BLEND_PREVIOUS_HRTF
+		#if BLEND_PREVIOUS_HRTF
 			// convolve audio in the frequency domain
 			
 			const HRTF & oldHrtf = previousHrtf;
@@ -712,18 +505,18 @@ int main(int argc, char * argv[])
 					drawHrirSampleGrid(sampleSet, hoverLocation, hoverCell, hoverTriangle);
 					
 					std::vector<Vec2> sampleLocations;
-					sampleLocations.resize(audio.sounds.size());
-					SDL_LockMutex(g_audioMutex);
+					sampleLocations.resize(audioHandler.sounds.size());
+					s_audioMutex.lock();
 					{
 						int index = 0;
-						for (auto & sound : audio.sounds)
+						for (auto & sound : audioHandler.sounds)
 						{
 							sampleLocations[index][0] = sound->binauralizer.sampleLocation.elevation;
 							sampleLocations[index][1] = sound->binauralizer.sampleLocation.azimuth;
 							index++;
 						}
 					}
-					SDL_UnlockMutex(g_audioMutex);
+					s_audioMutex.unlock();
 					
 					hqBegin(HQ_FILLED_CIRCLES);
 					{
@@ -938,7 +731,6 @@ int main(int argc, char * argv[])
 				}
 				gxPopMatrix();
 				
-				
 				gxPushMatrix();
 				{
 					gxTranslatef((GFX_SX - AUDIO_UPDATE_SIZE) / 2, GFX_SY - 50, 0);
@@ -1004,6 +796,15 @@ int main(int argc, char * argv[])
 					gxPopMatrix();
 				}
 				
+				gxPushMatrix();
+				{
+					gxTranslatef(10, 100, 0);
+					setColor(colorBlack);
+					drawText(0, 0, 16, +1, +1, "time per tick: %.2fms", audioHandler.timeUsPerTick / 1000.0);
+					drawText(0, 20, 16, +1, +1, "time per second: %.2fms", audioHandler.timeUsPerSecond / 1000.0);
+				}
+				gxPopMatrix();
+				
 				popFontMode();
 			}
 			framework.endDraw();
@@ -1012,9 +813,9 @@ int main(int argc, char * argv[])
 		pa.shut();
 	}
 	
-	fassert(g_audioMutex != nullptr);
-	SDL_DestroyMutex(g_audioMutex);
-	g_audioMutex = nullptr;
+	fassert(s_audioMutexSDL != nullptr);
+	SDL_DestroyMutex(s_audioMutexSDL);
+	s_audioMutexSDL = nullptr;
 	
 	framework.shutdown();
 

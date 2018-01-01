@@ -32,23 +32,19 @@ project(audioGraph-examples)
 
 # --- examples ---
 
-file(GLOB_RECURSE source_all "*.cpp" "*.h")
-file(GLOB_RECURSE source_4dworld "4dworld.cpp")
-file(GLOB_RECURSE source_binauralizer "binauralizer.cpp")
-file(GLOB_RECURSE source_delaunay "delaunay.cpp")
-file(GLOB_RECURSE source_audioVoices "audioVoiceManager.cpp")
+file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 
-source_group("sources" FILES ${source_all})
+source_group("" FILES ${source})
 
-add_executable(4dworld ${source_4dworld})
-add_executable(binauralizer ${source_binauralizer})
-add_executable(delaunay ${source_delaunay})
-add_executable(audioVoices ${source_audioVoices})
+add_executable(300-binauralizer 300-binauralizer.cpp)
+add_executable(310-delaunay 310-delaunay.cpp)
+add_executable(320-audioVoices 320-audioVoiceManager.cpp)
+add_executable(700-4dworld 700-4dworld.cpp)
 
-set_target_properties(4dworld PROPERTIES LINK_FLAGS "-Wl,-all_load")
-set_target_properties(binauralizer PROPERTIES LINK_FLAGS "-Wl,-all_load")
-set_target_properties(delaunay PROPERTIES LINK_FLAGS "-Wl,-all_load")
-set_target_properties(audioVoices PROPERTIES LINK_FLAGS "-Wl,-all_load")
+set_target_properties(300-binauralizer PROPERTIES LINK_FLAGS "-Wl,-all_load")
+set_target_properties(310-delaunay PROPERTIES LINK_FLAGS "-Wl,-all_load")
+set_target_properties(320-audioVoices PROPERTIES LINK_FLAGS "-Wl,-all_load")
+set_target_properties(700-4dworld PROPERTIES LINK_FLAGS "-Wl,-all_load")
 
 set(LIBRARIES PRIVATE
 	libgg
@@ -58,10 +54,10 @@ set(LIBRARIES PRIVATE
 	${FRAMEWORK_LIBRARIES}
 	${AUDIOGRAPH_LIBRARIES})
 
-target_link_libraries(4dworld PRIVATE ${LIBRARIES})
-target_link_libraries(binauralizer PRIVATE ${LIBRARIES})
-target_link_libraries(delaunay PRIVATE ${LIBRARIES})
-target_link_libraries(audioVoices PRIVATE ${LIBRARIES})
+target_link_libraries(300-binauralizer PRIVATE ${LIBRARIES})
+target_link_libraries(310-delaunay PRIVATE ${LIBRARIES})
+target_link_libraries(320-audioVoices PRIVATE ${LIBRARIES})
+target_link_libraries(700-4dworld PRIVATE ${LIBRARIES})
 
 if (WIN32)
 	# set the current working directory

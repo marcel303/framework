@@ -43,6 +43,8 @@
 #if BINAURAL_USE_SSE
 	#include <xmmintrin.h>
 	#include <immintrin.h>
+#else
+	#warning "BINAURAL_USE_SSE is set to 0. is this intended?"
 #endif
 
 /*
