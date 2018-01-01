@@ -65,7 +65,7 @@ struct PortAudioObject
 	bool findSupportedDevices(const int numInputChannels, const int numOutputChannels, int & inputDeviceIndex, int & outputDeviceIndex) const;
 	bool isSupported(const int numInputChannels, const int numOutputChannels) const;
 	
-	bool init(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * audioSource, const int inputDeviceIndex = -1, const int outputDeviceIndex = -1);
-	bool initImpl(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * audioSource, const int inputDeviceIndex, const int outputDeviceIndex);
+	bool init(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * audioSource, const int inputDeviceIndex = -1, const int outputDeviceIndex = -1, const bool useFloatFormat = true);
+	bool initImpl(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * audioSource, const int inputDeviceIndex, const int outputDeviceIndex, const bool useFloatFormat);
 	bool shut();
 };

@@ -176,9 +176,9 @@ bool PortAudioObject::isSupported(const int numInputChannels, const int numOutpu
 	return findSupportedDevices(numInputChannels, numOutputChannels, inputDeviceIndex, outputDeviceIndex) == true;
 }
 
-bool PortAudioObject::init(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * handler, const int inputDeviceIndex, const int outputDeviceIndex)
+bool PortAudioObject::init(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * handler, const int inputDeviceIndex, const int outputDeviceIndex, const bool useFloatFormat)
 {
-	if (initImpl(sampleRate, numOutputChannels, numInputChannels, bufferSize, handler, inputDeviceIndex, outputDeviceIndex) == false)
+	if (initImpl(sampleRate, numOutputChannels, numInputChannels, bufferSize, handler, inputDeviceIndex, outputDeviceIndex, useFloatFormat) == false)
 	{
 		shut();
 		
@@ -190,7 +190,7 @@ bool PortAudioObject::init(const int sampleRate, const int numOutputChannels, co
 	}
 }
 
-bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannels, const int _numInputChannels, const int bufferSize, PortAudioHandler * _handler, const int _inputDeviceIndex, const int _outputDeviceIndex)
+bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannels, const int _numInputChannels, const int bufferSize, PortAudioHandler * _handler, const int _inputDeviceIndex, const int _outputDeviceIndex, const bool useFloatFormat)
 {
 	handler = _handler;
 	numOutputChannels = _numOutputChannels;
@@ -231,7 +231,7 @@ bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannel
 	
 	outputParameters.device = outputDeviceIndex;
 	outputParameters.channelCount = numOutputChannels;
-	outputParameters.sampleFormat = paFloat32;
+	outputParameters.sampleFormat = useFloatFormat ? paFloat32 : paInt16;
 	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
 	outputParameters.hostApiSpecificStreamInfo = nullptr;
 	
@@ -242,7 +242,7 @@ bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannel
 	
 	inputParameters.device = inputDeviceIndex;
 	inputParameters.channelCount = numInputChannels;
-	inputParameters.sampleFormat = paFloat32;
+	inputParameters.sampleFormat = useFloatFormat ? paFloat32 : paInt16;
 	inputParameters.suggestedLatency = Pa_GetDeviceInfo(inputParameters.device)->defaultLowInputLatency;
 	inputParameters.hostApiSpecificStreamInfo = nullptr;
 	
