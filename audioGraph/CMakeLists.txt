@@ -68,17 +68,14 @@ endif (WIN32)
 
 if (WIN32)
 	set(AUDIOGRAPH_LIBRARIES
-		"${CMAKE_CURRENT_SOURCE_DIR}/../vfxGraph/win32/lib/portaudio_x86.lib"
 		PARENT_SCOPE)
 
 	set(AUDIOGRAPH_BINARIES
-		${CMAKE_CURRENT_SOURCE_DIR}/../vfxGraph/win32/dll/portaudio_x86.dll
 		PARENT_SCOPE)
 endif (WIN32)
 
 if (APPLE)
 	set(AUDIOGRAPH_LIBRARIES
-		${CMAKE_CURRENT_SOURCE_DIR}/../vfxGraph/macos/lib/libportaudio.a
 		PARENT_SCOPE)
 
 	set(AUDIOGRAPH_BINARIES

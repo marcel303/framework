@@ -76,6 +76,7 @@ if (WIN32)
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2.lib
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2main.lib
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/XInput9_1_0.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/portaudio_x86.lib
 		Winmm.lib
 		OpenGL32.lib
 		WSock32.lib
@@ -87,6 +88,7 @@ if (WIN32)
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/OpenAL32.dll
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/SDL2.dll
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/XInput9_1_0.dll
+		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/portaudio_x86.dll
 		PARENT_SCOPE)
 endif (WIN32)
 
@@ -113,6 +115,7 @@ if (APPLE)
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libfreetype.a
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libSDL2.a
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libSDL2main.a
+		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libportaudio.a
 		${COCOA_LIBRARY}
 		${CARBON_LIBRARY}
 		${COREAUDIO_LIBRARY}
