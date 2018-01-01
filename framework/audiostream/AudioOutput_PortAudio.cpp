@@ -129,24 +129,42 @@ void AudioOutput_PortAudio::portAudioCallback(
 	void * outputBuffer,
 	const int framesPerBuffer)
 {
+	AudioSample * __restrict samples = (AudioSample*)outputBuffer;
+	const int numSamples = framesPerBuffer;
+	
+	bool generateSilence = true;
+	
 	lock();
 	{
 		if (m_stream && m_isPlaying)
 		{
-			AudioSample * __restrict samples = (AudioSample*)outputBuffer;
-			const int numSamples = framesPerBuffer;
+			generateSilence = false;
 			
 			const int numSamplesRead = m_stream->Provide(numSamples, samples);
 			
 			m_position += numSamplesRead;
 			m_isDone = numSamplesRead == 0;
 		}
-		else
-		{
-			memset(outputBuffer, 0, framesPerBuffer * sizeof(AudioSample));
-		}
 	}
 	unlock();
+	
+	if (generateSilence)
+	{
+		memset(outputBuffer, 0, framesPerBuffer * sizeof(AudioSample));
+	}
+	else
+	{
+		const int volume = std::max(0, std::min(1024, m_volume.load()));
+	
+		if (volume != 1024)
+		{
+			short * __restrict values = (short*)samples;
+			const int numValues = numSamples * 2;
+			
+			for (int i = 0; i < numValues; ++i)
+				values[i] = (int(values[i]) * volume) >> 10;
+		}
+	}
 }
 
 AudioOutput_PortAudio::AudioOutput_PortAudio()
@@ -154,7 +172,7 @@ AudioOutput_PortAudio::AudioOutput_PortAudio()
 	, m_mutex(nullptr)
 	, m_stream(nullptr)
 	, m_isPlaying(false)
-	, m_volume(1000)
+	, m_volume(1024)
 	, m_position(0)
 	, m_isDone(false)
 {
@@ -220,7 +238,7 @@ void AudioOutput_PortAudio::Update()
 
 void AudioOutput_PortAudio::Volume_set(float volume)
 {
-	m_volume = int(std::roundf(volume * 1000.f));
+	m_volume = int(std::roundf(volume * 1024.f));
 }
 
 bool AudioOutput_PortAudio::IsPlaying_get()
