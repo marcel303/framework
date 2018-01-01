@@ -28,6 +28,7 @@
 #include "audio.h"
 #include "audiostream/AudioOutput.h"
 #include "audiostream/AudioOutput_OpenAL.h"
+#include "audiostream/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "framework.h"
 #include "internal.h"
@@ -551,9 +552,9 @@ bool SoundPlayer::init(int numSources)
 	// create music source
 	
 	m_musicStream = new AudioStream_Vorbis;
-	m_musicOutput = new AudioOutput_OpenAL;
+	m_musicOutput = new AudioOutput_PortAudio;
 	
-	if (!m_musicOutput->Initialize(2, 44100, 1 << 14))
+	if (!m_musicOutput->Initialize(2, 44100, 256))
 	{
 		logError("failed to initialize OpenAL audio output");
 		return false;
@@ -755,10 +756,10 @@ void SoundPlayer::playMusic(const char * filename, bool loop)
 	MutexScope scope(m_musicMutex);
 	if (m_musicStream && m_musicOutput)
 	{
-		Assert(m_musicStream->mSampleRate == 44100); // fixme : handle different sample rates?
-
 		m_musicStream->Open(filename, loop);
 		m_musicOutput->Play();
+		
+		Assert(m_musicStream->mSampleRate == 44100); // fixme : handle different sample rates?
 	}
 }
 

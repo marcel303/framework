@@ -81,7 +81,7 @@ class SoundPlayer
 	Source * m_sources;
 	
 	class AudioStream_Vorbis * m_musicStream;
-	class AudioOutput_OpenAL * m_musicOutput;
+	class AudioOutput_PortAudio * m_musicOutput;
 	
 	int m_playId;
 	
