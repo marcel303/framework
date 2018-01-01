@@ -452,7 +452,7 @@ int main(int argc, char * argv[])
 	
 	AudioVoiceManager voiceMgr;
 	
-	voiceMgr.init(kNumChannels, kNumChannels);
+	voiceMgr.init(mutex, kNumChannels, kNumChannels);
 	
 	voiceMgr.outputStereo = STEREO_OUTPUT;
 	
