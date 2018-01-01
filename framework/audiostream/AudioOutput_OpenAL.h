@@ -25,4 +25,47 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#pragma once
+
 #include "AudioOutput.h"
+#include <OpenAL/al.h>
+
+class AudioOutput_OpenAL : public AudioOutput
+{
+public:
+	AudioOutput_OpenAL();
+	virtual ~AudioOutput_OpenAL();
+
+	bool Initialize(int numChannels, int sampleRate, int bufferSize);
+	bool Shutdown();
+	
+	virtual void Open(AudioStream * stream) override;
+	virtual void Close() override;
+	virtual void Play() override;
+	virtual void Stop() override;
+	virtual void Update() override;
+	virtual void Volume_set(float volume) override;
+	virtual bool IsPlaying_get() override;
+	virtual bool HasFinished_get() override;
+	virtual double PlaybackPosition_get() override;
+	
+private:
+	const static int kBufferSize = 8192 * 2;
+	const static int kBufferCount = 2;
+	
+	void SetEmptyBufferData();
+	void CheckError();
+	
+	AudioStream * mAudioStream;
+	
+	ALuint mFormat;
+	ALuint mSampleRate;
+	int mBufferSize;
+	ALuint mBufferIds[kBufferCount];
+	ALuint mSourceId;
+	
+	bool mIsPlaying;
+	bool mHasFinished;
+	double mPlaybackPosition;
+	float mVolume;
+};

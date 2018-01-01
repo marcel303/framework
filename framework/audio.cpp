@@ -27,6 +27,7 @@
 
 #include "audio.h"
 #include "audiostream/AudioOutput.h"
+#include "audiostream/AudioOutput_OpenAL.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "framework.h"
 #include "internal.h"
@@ -400,7 +401,7 @@ void SoundPlayer::executeMusicThread()
 		SDL_Delay(1);
 		
 		MutexScope scope(m_musicMutex);
-		m_musicOutput->Update(m_musicStream);
+		m_musicOutput->Update();
 	}
 #endif
 }
@@ -558,6 +559,8 @@ bool SoundPlayer::init(int numSources)
 		return false;
 	}
 	
+	m_musicOutput->Open(m_musicStream);
+	
 	m_playId = 0;
 	
 	// create music thread
@@ -632,7 +635,7 @@ void SoundPlayer::process()
 {
 #if !THREADED_MUSIC_PLAYER
 	if (m_musicOutput)
-		m_musicOutput->Update(m_musicStream);
+		m_musicOutput->Update();
 #endif
 }
 
