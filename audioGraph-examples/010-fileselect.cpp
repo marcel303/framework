@@ -65,7 +65,10 @@ int main(int argc, char * argv[])
 		
 		// create an audio graph instance
 		
-		AudioGraphInstance * instance = audioGraphMgr.createInstance("sweetStuff6.xml");
+		AudioGraphInstance * instance = nullptr;
+		
+		std::string currentFilename;
+		int selectedIndex = 0;
 		
 		while (!framework.quitRequested)
 		{
@@ -80,12 +83,57 @@ int main(int argc, char * argv[])
 				pushFontMode(FONT_SDF);
 				{
 					// show CPU usage of the audio thread
-					
+
 					setColor(colorWhite);
 					drawText(10, 10, 16, +1, +1, "time per tick: %.2fms", audioUpdateHandler.msecsPerTick / 1000.0);
 					drawText(10, 30, 16, +1, +1, "time per second: %.2fms", audioUpdateHandler.msecsPerSecond / 1000.0);
 					drawText(10, 50, 16, +1, +1, "CPU usage audio thread: %d%%",
 						int(std::round(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100.0)));
+					
+					// process the file selection menu
+
+					const char * filenames[] =
+					{
+						"sweetStuff1.xml",
+						"sweetStuff2.xml",
+						"sweetStuff3.xml",
+						"sweetStuff4.xml",
+						"sweetStuff5.xml",
+						"sweetStuff6.xml"
+					};
+					const int numFilenames = sizeof(filenames) / sizeof(filenames[0]);
+					
+					if (keyboard.wentDown(SDLK_UP))
+						selectedIndex = selectedIndex == 0 ? numFilenames - 1 : selectedIndex - 1;
+					if (keyboard.wentDown(SDLK_DOWN))
+						selectedIndex = selectedIndex == numFilenames - 1 ? 0 : selectedIndex + 1;
+					
+					const char * filename = filenames[selectedIndex];
+					
+					if (filename != currentFilename)
+					{
+						currentFilename = filename;
+						
+						audioGraphMgr.free(instance);
+						instance = audioGraphMgr.createInstance(filename);
+					}
+
+					// draw the file selection menu
+					
+					gxPushMatrix();
+					{
+						gxTranslatef(GFX_SX/2, 100, 0);
+						setColor(200, 200, 200);
+						drawText(0, 0, 24, 0, 0, "Press UP and DOWN to select audio graph");
+						
+						gxTranslatef(0, 30, 0);
+						for (int i = 0; i < numFilenames; ++i)
+						{
+							setColor(i == selectedIndex ? colorYellow : colorRed);
+							drawText(0, i * 20, 16, 0, 0, "%s", filenames[i]);
+						}
+					}
+					gxPopMatrix();
 				}
 				popFontMode();
 			}
