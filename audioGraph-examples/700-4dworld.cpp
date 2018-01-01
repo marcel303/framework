@@ -66,6 +66,8 @@ static bool STEREO_OUTPUT = true;
 
 static bool inputIsCaptured = false;
 
+static AudioVoiceManager * s_voiceMgr = nullptr;
+
 static AudioGraphManager * s_audioGraphMgr = nullptr;
 
 //
@@ -1903,12 +1905,12 @@ int main(int argc, char * argv[])
 	AudioVoiceManager voiceMgr;
 	voiceMgr.init(mutex, CHANNEL_COUNT, DYNAMIC_CHANNEL_COUNT);
 	voiceMgr.outputStereo = STEREO_OUTPUT;
-	g_voiceMgr = &voiceMgr;
+	s_voiceMgr = &voiceMgr;
 	
 	//
 	
 	AudioGraphManager_RTE audioGraphMgr(GFX_SX, GFX_SY);
-	audioGraphMgr.init(mutex);
+	audioGraphMgr.init(mutex, &voiceMgr);
 	
 	Assert(s_audioGraphMgr == nullptr);
 	s_audioGraphMgr = &audioGraphMgr;
@@ -2141,8 +2143,6 @@ int main(int argc, char * argv[])
 			if (world != nullptr && doDrawer(developer, "developer"))
 			{
 				doCheckBox(world->showBirdDebugs, "show bird debugs", false);
-				if (doButton("force sync OSC"))
-					audioUpdateHandler.scheduleForceSyncOsc();
 				
 				doTextBox(world->desiredParams.wavefieldC, "wavefield.c", dt);
 				doTextBox(world->desiredParams.wavefieldD, "wavefield.d", dt);
@@ -2356,7 +2356,7 @@ int main(int argc, char * argv[])
 				
 				if (audioGraphMgr.selectedFile && audioGraphMgr.selectedFile->activeInstance)
 				{
-					const int64_t audioCpuTime = audioUpdateHandler.cpuTime;
+					const int64_t audioCpuTime = audioUpdateHandler.msecsPerSecond;
 					
 					setColor(colorGreen);
 					drawText(GFX_SX/2, 20, 20, 0, 0, "- 4DWORLD :: %s: %p :: %.2f%% -",
@@ -2399,8 +2399,8 @@ int main(int argc, char * argv[])
 	
 	voiceMgr.shut();
 	
-	Assert(g_voiceMgr == &voiceMgr);
-	g_voiceMgr = nullptr;
+	Assert(s_voiceMgr == &voiceMgr);
+	s_voiceMgr = nullptr;
 	
 	//
 	

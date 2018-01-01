@@ -162,17 +162,17 @@ namespace BinauralTestNamespace
 		
 		float gain;
 		
-		std::atomic_uint64_t timeUsPerTick;
-		std::atomic_uint64_t timeUsPerSecondAccu;
-		std::atomic_uint64_t timeUsPerSecond;
+		std::atomic_uint64_t msecsPerTick;
+		std::atomic_uint64_t msecsPerSecondAccu;
+		std::atomic_uint64_t msecsPerSecond;
 		int numTicks;
 		
 		MyPortAudioHandler()
 			: sounds()
 			, gain(1.f)
-			, timeUsPerTick(0)
-			, timeUsPerSecondAccu(0)
-			, timeUsPerSecond(0)
+			, msecsPerTick(0)
+			, msecsPerSecondAccu(0)
+			, msecsPerSecond(0)
 			, numTicks(0)
 		{
 		}

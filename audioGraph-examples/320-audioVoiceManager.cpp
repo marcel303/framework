@@ -44,6 +44,8 @@ const static float kWorldSx = 10.f;
 const static float kWorldSy = 8.f;
 const static float kWorldSz = 8.f;
 
+static AudioVoiceManager * s_voiceMgr = nullptr;
+
 #define OSC_TEST 1
 
 struct Creature
@@ -71,7 +73,7 @@ struct Creature
 	{
 		sine.init(0.f, random(100.f, 400.f));
 		
-		g_voiceMgr->allocVoice(voice, &sine, "creature", true, 0.f, 1.f, -1);
+		s_voiceMgr->allocVoice(voice, &sine, "creature", true, 0.f, 1.f, -1);
 		voice->isSpatial = true;
 		
 		pos[0] = random<float>(-kWorldSx, +kWorldSx);
@@ -90,7 +92,7 @@ struct Creature
 	{
 		if (voice != nullptr)
 		{
-			g_voiceMgr->freeVoice(voice);
+			s_voiceMgr->freeVoice(voice);
 		}
 	}
 	
@@ -130,13 +132,13 @@ struct RicePaddy
 	{
 		source.init(32);
 		
-		g_voiceMgr->allocVoice(voice, &source, "ricePaddy", true, 0.f, 1.f, -1);
+		s_voiceMgr->allocVoice(voice, &source, "ricePaddy", true, 0.f, 1.f, -1);
 		voice->isSpatial = true;
 	}
 	
 	~RicePaddy()
 	{
-		g_voiceMgr->freeVoice(voice);
+		s_voiceMgr->freeVoice(voice);
 	}
 };
 
@@ -156,7 +158,7 @@ struct TestObject
 	{
 		sine.init(0.f, sineFrequency);
 		
-		g_voiceMgr->allocVoice(voice, &sine, "testObject", true, 0.f, 1.f, -1);
+		s_voiceMgr->allocVoice(voice, &sine, "testObject", true, 0.f, 1.f, -1);
 		voice->isSpatial = true;
 		
 		uiState.sx = 300.f;
@@ -164,7 +166,7 @@ struct TestObject
 	
 	~TestObject()
 	{
-		g_voiceMgr->freeVoice(voice);
+		s_voiceMgr->freeVoice(voice);
 	}
 	
 	void tickAndDraw(const float dt)
@@ -456,7 +458,7 @@ int main(int argc, char * argv[])
 	
 	voiceMgr.outputStereo = STEREO_OUTPUT;
 	
-	g_voiceMgr = &voiceMgr;
+	s_voiceMgr = &voiceMgr;
 	
 	//
 	
@@ -628,18 +630,18 @@ int main(int argc, char * argv[])
 					audioUpdateHandler.commandQueue.push(command);
 				}
 				
-				doTextBox(g_voiceMgr->spat.globalPos[0], "pos.x", dt);
-				doTextBox(g_voiceMgr->spat.globalPos[1], "pos.y", dt);
-				doTextBox(g_voiceMgr->spat.globalPos[2], "pos.z", dt);
-				doTextBox(g_voiceMgr->spat.globalRot[0], "rot.x", dt);
-				doTextBox(g_voiceMgr->spat.globalRot[1], "rot.y", dt);
-				doTextBox(g_voiceMgr->spat.globalRot[2], "rot.z", dt);
-				doTextBox(g_voiceMgr->spat.globalPlode[0], "plode.x", dt);
-				doTextBox(g_voiceMgr->spat.globalPlode[1], "plode.y", dt);
-				doTextBox(g_voiceMgr->spat.globalPlode[2], "plode.z", dt);
-				doTextBox(g_voiceMgr->spat.globalOrigin[0], "origin.x", dt);
-				doTextBox(g_voiceMgr->spat.globalOrigin[1], "origin.y", dt);
-				doTextBox(g_voiceMgr->spat.globalOrigin[2], "origin.z", dt);
+				doTextBox(s_voiceMgr->spat.globalPos[0], "pos.x", dt);
+				doTextBox(s_voiceMgr->spat.globalPos[1], "pos.y", dt);
+				doTextBox(s_voiceMgr->spat.globalPos[2], "pos.z", dt);
+				doTextBox(s_voiceMgr->spat.globalRot[0], "rot.x", dt);
+				doTextBox(s_voiceMgr->spat.globalRot[1], "rot.y", dt);
+				doTextBox(s_voiceMgr->spat.globalRot[2], "rot.z", dt);
+				doTextBox(s_voiceMgr->spat.globalPlode[0], "plode.x", dt);
+				doTextBox(s_voiceMgr->spat.globalPlode[1], "plode.y", dt);
+				doTextBox(s_voiceMgr->spat.globalPlode[2], "plode.z", dt);
+				doTextBox(s_voiceMgr->spat.globalOrigin[0], "origin.x", dt);
+				doTextBox(s_voiceMgr->spat.globalOrigin[1], "origin.y", dt);
+				doTextBox(s_voiceMgr->spat.globalOrigin[2], "origin.z", dt);
 			}
 			popMenu();
 			
@@ -692,7 +694,9 @@ int main(int argc, char * argv[])
 	//
 	
 	voiceMgr.shut();
-	g_voiceMgr = nullptr;
+	
+	Assert(s_voiceMgr == &voiceMgr);
+	s_voiceMgr = nullptr;
 	
 	//
 	
