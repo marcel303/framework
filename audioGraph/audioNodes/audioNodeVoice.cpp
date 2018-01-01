@@ -28,6 +28,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioGraph.h"
 #include "audioNodeVoice.h"
 
+#define voiceMgr g_currentAudioGraph->globals->voiceMgr
+
 AUDIO_ENUM_TYPE(voiceSpeaker)
 {
 	elem("left+right");
@@ -92,7 +94,7 @@ AudioNodeVoice::~AudioNodeVoice()
 {
 	if (voice != nullptr)
 	{
-		g_voiceMgr->freeVoice(voice);
+		voiceMgr->freeVoice(voice);
 	}
 }
 
@@ -102,14 +104,14 @@ void AudioNodeVoice::tick(const float dt)
 	{
 		if (voice != nullptr)
 		{
-			g_voiceMgr->freeVoice(voice);
+			voiceMgr->freeVoice(voice);
 		}
 		
 		return;
 	}
 	else if (voice == nullptr)
 	{
-		g_voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, -1);
+		voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, -1);
 	}
 	
 	const Speaker speaker = (Speaker)getInputInt(kInput_Speaker, 0);

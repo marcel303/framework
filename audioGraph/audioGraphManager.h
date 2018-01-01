@@ -105,7 +105,7 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	virtual ~AudioGraphManager_Basic() override;
 	
 	// called from the app thread
-	void init(SDL_mutex * mutex);
+	void init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr);
 	void shut();
 	void addGraphToCache(const char * filename);
 	
@@ -139,7 +139,7 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	virtual ~AudioGraphManager_RTE() override;
 	
 	// called from the app thread
-	void init(SDL_mutex * mutex);
+	void init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr);
 	void shut();
 	
 	// called from the app thread

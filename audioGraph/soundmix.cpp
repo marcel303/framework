@@ -888,8 +888,6 @@ void AudioVoice::applyLimiter(float * __restrict samples, const int numSamples, 
 
 //
 
-AudioVoiceManager * g_voiceMgr = nullptr;
-
 AudioVoiceManager::AudioVoiceManager()
 	: audioMutex()
 	, numChannels(0)

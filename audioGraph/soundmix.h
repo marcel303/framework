@@ -497,7 +497,3 @@ extern void audioBufferDryWet(
 extern float audioBufferSum(
 	const float * __restrict audioBuffer,
 	const int numSamples);
-
-//
-
-extern AudioVoiceManager * g_voiceMgr;

@@ -47,6 +47,7 @@ struct AudioGraphGlobals;
 struct AudioNodeBase;
 struct AudioOutputChannel;
 struct AudioPlug;
+struct AudioVoiceManager;
 
 struct SDL_mutex;
 
@@ -176,12 +177,14 @@ struct AudioGraphGlobals
 	
 	SDL_mutex * audioMutex;
 	
+	AudioVoiceManager * voiceMgr;
+	
 	AudioGraphManager * audioGraphMgr;
 	
 	AudioGraphGlobals();
 	
 	// called from the app thread
-	void init(SDL_mutex * mutex, AudioGraphManager * audioGraphMgr);
+	void init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr, AudioGraphManager * audioGraphMgr);
 	void shut();
 	
 	// called from the audio thread

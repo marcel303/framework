@@ -246,9 +246,11 @@ AudioGraphGlobals::AudioGraphGlobals()
 {
 }
 
-void AudioGraphGlobals::init(SDL_mutex * mutex, AudioGraphManager * _audioGraphMgr)
+void AudioGraphGlobals::init(SDL_mutex * mutex, AudioVoiceManager * _voiceMgr, AudioGraphManager * _audioGraphMgr)
 {
 	audioMutex = mutex;
+	
+	voiceMgr = _voiceMgr;
 	
 	audioGraphMgr = _audioGraphMgr;
 }
@@ -437,7 +439,7 @@ AudioGraphManager_Basic::~AudioGraphManager_Basic()
 	shut();
 }
 
-void AudioGraphManager_Basic::init(SDL_mutex * mutex)
+void AudioGraphManager_Basic::init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr)
 {
 	shut();
 	
@@ -452,7 +454,7 @@ void AudioGraphManager_Basic::init(SDL_mutex * mutex)
 	audioMutex.mutex = mutex;
 	
 	globals = new AudioGraphGlobals();
-	globals->init(mutex, this);
+	globals->init(mutex, voiceMgr, this);
 }
 
 void AudioGraphManager_Basic::shut()
@@ -620,7 +622,7 @@ AudioGraphManager_RTE::~AudioGraphManager_RTE()
 	shut();
 }
 
-void AudioGraphManager_RTE::init(SDL_mutex * mutex)
+void AudioGraphManager_RTE::init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr)
 {
 	shut();
 	
@@ -637,7 +639,7 @@ void AudioGraphManager_RTE::init(SDL_mutex * mutex)
 	audioValueHistorySet = new AudioValueHistorySet();
 	
 	globals = new AudioGraphGlobals();
-	globals->init(mutex, this);
+	globals->init(mutex, voiceMgr, this);
 }
 
 void AudioGraphManager_RTE::shut()

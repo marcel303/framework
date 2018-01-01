@@ -33,7 +33,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "soundmix.h"
 #include "Timer.h"
 #include <SDL2/SDL.h>
-#include <vector>
 
 Osc4DStream * g_oscStream = nullptr;
 
@@ -44,11 +43,12 @@ AudioUpdateHandler::AudioUpdateHandler()
 	: updateTasks()
 	, voiceMgr(nullptr)
 	, audioGraphMgr(nullptr)
-	, commandQueue()
 	, oscStream(nullptr)
 	, time(0.0)
 	, mutex(nullptr)
-	, cpuTime(0)
+	, msecsPerTick(0)
+	, msecsPerSecond(0)
+	, msecsTotal(0)
 	, nextCpuTimeUpdate(0)
 {
 }
@@ -102,13 +102,6 @@ void AudioUpdateHandler::setOscEndpoint(const char * ipAddress, const int udpPor
 	SDL_UnlockMutex(mutex);
 }
 
-void AudioUpdateHandler::scheduleForceSyncOsc()
-{
-	Command command;
-	command.type = Command::kType_ForceOscSync;
-	commandQueue.push(command);
-}
-
 void AudioUpdateHandler::portAudioCallback(
 	const void * inputBuffer,
 	const int numInputChannels,
@@ -117,30 +110,7 @@ void AudioUpdateHandler::portAudioCallback(
 {
 	audioCpuTimingBlock(audioUpdateHandler);
 	
-	cpuTimeTotal -= g_TimerRT.TimeUS_get();
-	
-	//
-	
-	bool forceSyncOsc = false;
-	
-	//
-	
-	Command command;
-	
-	while (commandQueue.pop(command))
-	{
-		switch (command.type)
-		{
-		case Command::kType_None:
-			break;
-		case Command::kType_ForceOscSync:
-			LOG_WRN("force syncing OSC!", 0);
-			forceSyncOsc = true;
-			break;
-		}
-	}
-	
-	//forceSyncOsc = true;
+	msecsTotal -= g_TimerRT.TimeUS_get();
 	
 	//
 	
@@ -151,15 +121,21 @@ void AudioUpdateHandler::portAudioCallback(
 	g_audioInputChannels = (float*)inputBuffer;
 	g_numAudioInputChannels = numInputChannels;
 	
+	//
+	
 	for (auto updateTask : updateTasks)
 	{
-		updateTask->audioUpdate(dt);
+		updateTask->preAudioUpdate(dt);
 	}
+	
+	//
 	
 	if (audioGraphMgr != nullptr)
 	{
 		audioGraphMgr->tick(dt);
 	}
+	
+	//
 	
 	if (voiceMgr != nullptr)
 	{
@@ -169,14 +145,25 @@ void AudioUpdateHandler::portAudioCallback(
 		
 		if (oscStream->isReady())
 		{
-			voiceMgr->generateOsc(*oscStream, forceSyncOsc);
+			voiceMgr->generateOsc(*oscStream, false);
 		}
 	}
+	
+	//
+	
+	for (auto updateTask : updateTasks)
+	{
+		updateTask->postAudioUpdate(dt);
+	}
+	
+	//
 	
 	if (audioGraphMgr != nullptr)
 	{
 		audioGraphMgr->tickVisualizers();
 	}
+	
+	//
 	
 	g_audioInputChannels = nullptr;
 	g_numAudioInputChannels = 0;
@@ -191,12 +178,12 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	const int64_t currentTimeUs = g_TimerRT.TimeUS_get();
 	
-	cpuTimeTotal += currentTimeUs;
+	msecsTotal += currentTimeUs;
 	
 	if (currentTimeUs >= nextCpuTimeUpdate)
 	{
-		cpuTime = cpuTimeTotal;
-		cpuTimeTotal = 0;
+		msecsPerSecond = msecsTotal;
+		msecsTotal = 0;
 		
 		nextCpuTimeUpdate = currentTimeUs + 1000000;
 	}

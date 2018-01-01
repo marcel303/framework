@@ -27,7 +27,6 @@
 
 #pragma once
 
-#include "commandQueue.h"
 #include "osc4d.h"
 #include "paobject.h"
 #include <atomic>
@@ -54,7 +53,8 @@ struct AudioUpdateTask
 	{
 	}
 	
-	virtual void audioUpdate(const float dt) = 0;
+	virtual void preAudioUpdate(const float dt) = 0;
+	virtual void postAudioUpdate(const float dt) = 0;
 };
 
 //
@@ -83,16 +83,15 @@ struct AudioUpdateHandler : PortAudioHandler
 	
 	AudioGraphManager * audioGraphMgr;
 	
-	CommandQueue<Command> commandQueue;
-	
 	Osc4DStream * oscStream;
 	
 	double time;
 	
 	SDL_mutex * mutex;
 	
-	std::atomic<int64_t> cpuTime;
-	int64_t cpuTimeTotal;
+	std::atomic<int64_t> msecsPerTick;
+	std::atomic<int64_t> msecsPerSecond;
+	int64_t msecsTotal;
 	int64_t nextCpuTimeUpdate;
 	
 	AudioUpdateHandler();
@@ -102,7 +101,6 @@ struct AudioUpdateHandler : PortAudioHandler
 	void shut();
 	
 	void setOscEndpoint(const char * ipAddress, const int udpPort);
-	void scheduleForceSyncOsc();
 	
 	virtual void portAudioCallback(
 		const void * inputBuffer,
