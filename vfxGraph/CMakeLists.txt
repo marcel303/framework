@@ -96,7 +96,6 @@ endif (APPLE)
 
 if (WIN32)
 	target_link_libraries(vfxgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/Leap.lib)
-	target_link_libraries(vfxgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/portaudio_x86.lib)
 	target_link_libraries(vfxgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/turbojpeg.lib)
 
 	set(VFXGRAPH_LIBRARIES
@@ -104,7 +103,6 @@ if (WIN32)
 
 	set(VFXGRAPH_BINARIES
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/Leap.dll
-		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/portaudio_x86.dll
 		${CMAKE_CURRENT_SOURCE_DIR}/win32/dll/turbojpeg.dll
 		PARENT_SCOPE)
 endif (WIN32)
@@ -120,7 +118,6 @@ if (APPLE)
 	set(VFXGRAPH_LIBRARIES
 		${CMAKE_CURRENT_SOURCE_DIR}/../libfreenect2/macos/lib/libfreenect2.0.2.0.dylib
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libLeap.dylib
-		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libportaudio.a
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libturbojpeg.0.dylib
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/DeepBelief.framework
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Syphon.framework
