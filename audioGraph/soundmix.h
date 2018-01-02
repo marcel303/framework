@@ -178,8 +178,6 @@ struct AudioVoice
 	
 	Speaker speaker;
 	
-	bool initOsc;
-	
 	AudioSource * source;
 	
 	float gain;
@@ -192,7 +190,6 @@ struct AudioVoice
 		: channelIndex(-1)
 		, type(_type)
 		, speaker(kSpeaker_None)
-		, initOsc(true)
 		, source(nullptr)
 		, gain(1.f)
 		, rampInfo()

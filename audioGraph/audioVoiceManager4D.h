@@ -214,6 +214,8 @@ struct AudioVoice4D : AudioVoice
 	
 	ReturnInfo returnInfo;
 	
+	bool initOsc;
+	
 	AudioVoice4D()
 		: AudioVoice(kType_4DSOUND)
 		, isSpatial(false)
@@ -221,6 +223,7 @@ struct AudioVoice4D : AudioVoice
 		, spat()
 		, lastSentSpat()
 		, returnInfo()
+		, initOsc(true)
 	{
 		spat.sendIndex = 0;
 	}
