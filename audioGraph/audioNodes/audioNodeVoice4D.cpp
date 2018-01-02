@@ -209,7 +209,13 @@ void AudioNodeVoice4D::tick(const float dt)
 		const float rampTime = getInputAudioFloat(kInput_RampTime, &AudioFloat::One)->getMean();
 		
 		voiceMgr->allocVoice(voice, &source, "voice.4d", true, .3f, rampTime, -1);
-		voice->isSpatial = true;
+		
+		if (voice->type == AudioVoice::kType_4DSOUND)
+		{
+			AudioVoice4D * voice4D = static_cast<AudioVoice4D*>(voice);
+			
+			voice4D->isSpatial = true;
+		}
 	}
 	
 	// update spatialisation parameters (if this is a 4D voice node)
@@ -485,8 +491,14 @@ void AudioNodeVoice4DReturn::tick(const float dt)
 			source.returnNode = this;
 			if (voiceMgr->allocVoice(voice, &source, "return.4d", true, .2f, rampTime, absoluteIndex))
 			{
-				voice->isReturn = true;
 				voice->speaker = AudioVoice::kSpeaker_LeftAndRight;
+				
+				if (voice->type == AudioVoice::kType_4DSOUND)
+				{
+					AudioVoice4D * voice4D = static_cast<AudioVoice4D*>(voice);
+				
+					voice4D->isReturn = true;
+				}
 			}
 		}
 	}

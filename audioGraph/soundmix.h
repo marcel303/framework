@@ -173,9 +173,6 @@ struct AudioVoice
 	};
 	
 	int channelIndex;
-	
-	bool isSpatial;
-	bool isReturn;
 
 	Type type;
 	
@@ -193,8 +190,6 @@ struct AudioVoice
 	
 	AudioVoice(const Type _type = kType_Basic)
 		: channelIndex(-1)
-		, isSpatial(false)
-		, isReturn(false)
 		, type(_type)
 		, speaker(kSpeaker_None)
 		, initOsc(true)
@@ -385,13 +380,18 @@ struct AudioVoice4D : AudioVoice
 		}
 	};
 
+	bool isSpatial;
+	bool isReturn;
+	
 	Spatialisation spat;
 	Spatialisation lastSentSpat;
 	
 	ReturnInfo returnInfo;
-
+	
 	AudioVoice4D()
 		: AudioVoice(kType_4DSOUND)
+		, isSpatial(false)
+		, isReturn(false)
 		, spat()
 		, lastSentSpat()
 		, returnInfo()
