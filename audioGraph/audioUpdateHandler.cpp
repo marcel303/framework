@@ -34,6 +34,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "Timer.h"
 #include <SDL2/SDL.h>
 
+#include "audioVoiceManager4D.h"
+
 Osc4DStream * g_oscStream = nullptr;
 
 float * g_audioInputChannels = nullptr;

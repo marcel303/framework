@@ -32,8 +32,6 @@
 #include "audioTypes.h"
 #include "limiter.h"
 
-struct Osc4DStream;
-
 struct PcmData
 {
 	float * samples;
@@ -134,11 +132,16 @@ struct AudioSourcePcm : AudioSource
 //
 
 #include "osc4d.h"
-#include "paobject.h"
 #include "Vec3.h"
 
 struct AudioVoice
 {
+	enum Type
+	{
+		kType_Basic,
+		kType_4DSOUND
+	};
+
 	enum Speaker
 	{
 		kSpeaker_None,
@@ -169,6 +172,46 @@ struct AudioVoice
 		}
 	};
 	
+	int channelIndex;
+	
+	bool isSpatial;
+	bool isReturn;
+
+	Type type;
+	
+	Speaker speaker;
+	
+	bool initOsc;
+	
+	AudioSource * source;
+	
+	float gain;
+	
+	RampInfo rampInfo;
+	
+	Limiter limiter;
+	
+	AudioVoice(const Type _type = kType_Basic)
+		: channelIndex(-1)
+		, isSpatial(false)
+		, isReturn(false)
+		, type(_type)
+		, speaker(kSpeaker_None)
+		, initOsc(true)
+		, source(nullptr)
+		, gain(1.f)
+		, rampInfo()
+		, limiter()
+	{
+	}
+	
+	static void applyRamping(RampInfo & rampInfo, float * __restrict samples, const int numSamples, const int durationInSamples);
+	
+	void applyLimiter(float * __restrict samples, const int numSamples, const float maxGain);
+};
+
+struct AudioVoice4D : AudioVoice
+{
 	struct SpatialCompressor
 	{
 		bool enable = false;
@@ -281,7 +324,6 @@ struct AudioVoice
 	{
 		Vec3 color;
 		std::string name;
-		float gain;
 		int sendIndex;
 		
 		Vec3 pos;
@@ -304,7 +346,6 @@ struct AudioVoice
 		Spatialisation()
 			: color(1.f, 0.f, 0.f)
 			, name()
-			, gain(1.f)
 			, sendIndex(-1)
 			, pos()
 			, size(1.f, 1.f, 1.f)
@@ -343,46 +384,20 @@ struct AudioVoice
 		{
 		}
 	};
-	
-	int channelIndex;
-	
-	bool isSpatial;
-	bool isReturn;
-	
-	Speaker speaker;
-	
+
 	Spatialisation spat;
 	Spatialisation lastSentSpat;
 	
 	ReturnInfo returnInfo;
-	
-	bool initOsc;
-	
-	AudioSource * source;
-	
-	RampInfo rampInfo;
-	
-	Limiter limiter;
-	
-	AudioVoice()
-		: channelIndex(-1)
-		, isSpatial(false)
-		, isReturn(false)
-		, speaker(kSpeaker_None)
+
+	AudioVoice4D()
+		: AudioVoice(kType_4DSOUND)
 		, spat()
 		, lastSentSpat()
 		, returnInfo()
-		, initOsc(true)
-		, source(nullptr)
-		, rampInfo()
-		, limiter()
 	{
 		spat.sendIndex = 0;
 	}
-	
-	static void applyRamping(RampInfo & rampInfo, float * __restrict samples, const int numSamples, const int durationInSamples);
-	
-	void applyLimiter(float * __restrict samples, const int numSamples, const float maxGain);
 };
 
 struct AudioVoiceManager
@@ -442,61 +457,6 @@ struct AudioVoiceManagerBasic : AudioVoiceManager
 	int numDynamicChannelsUsed() const;
 	
 	virtual void generateAudio(float * __restrict samples, const int numSamples) override;
-};
-
-struct AudioVoiceManager4D : AudioVoiceManager
-{
-	AudioMutex_Shared audioMutex;
-	
-	int numChannels;
-	int numDynamicChannels;
-	std::list<AudioVoice> voices;
-	bool outputStereo;
-	int colorIndex;
-	
-	struct Spatialisation
-	{
-		float globalGain;
-		Vec3 globalPos;
-		Vec3 globalSize;
-		Vec3 globalRot;
-		Vec3 globalPlode;
-		Vec3 globalOrigin;
-		
-		Spatialisation()
-			: globalGain(1.f)
-			, globalPos()
-			, globalSize(1.f, 1.f, 1.f)
-			, globalRot()
-			, globalPlode(1.f, 1.f, 1.f)
-			, globalOrigin()
-		{
-		}
-	};
-	
-	Spatialisation spat;
-	Spatialisation lastSentSpat;
-	
-	AudioVoiceManager4D();
-	
-	void init(SDL_mutex * audioMutex, const int numChannels, const int numDynamicChannels);
-	void shut();
-	
-	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
-	virtual void freeVoice(AudioVoice *& voice) override;
-	
-	void updateChannelIndices();
-	int numDynamicChannelsUsed() const;
-	
-	virtual void generateAudio(float * __restrict samples, const int numSamples) override;
-	
-	void generateAudio(
-		float * __restrict samples, const int numSamples,
-		const bool doLimiting,
-		const float limiterPeak,
-		const OutputMode outputMode,
-		const bool interleaved);
-	void generateOsc(Osc4DStream & stream, const bool forceSync);
 };
 
 //

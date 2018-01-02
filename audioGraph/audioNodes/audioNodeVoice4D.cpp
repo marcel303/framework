@@ -27,6 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioGraph.h"
 #include "audioNodeVoice4D.h"
+#include "audioVoiceManager4D.h"
 #include "Calc.h"
 #include "Mat4x4.h"
 #include "StringBuilder.h"
@@ -211,103 +212,111 @@ void AudioNodeVoice4D::tick(const float dt)
 		voice->isSpatial = true;
 	}
 	
-	voice->spat.globalEnable = getInputBool(kInput_Global, true);
+	// update spatialisation parameters (if this is a 4D voice node)
 	
-	const float originRotY = getInputAudioFloat(kInput_OriginRotY, &AudioFloat::Zero)->getMean();
+	voice->gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
 	
-	Mat4x4 originMatrix;
-	originMatrix.MakeRotationY(Calc::DegToRad(originRotY));
-	
-	StringBuilder<64> name;
-	name.Append("channel(");
-	name.Append(voice->channelIndex + 1);
-	name.Append(")");
-	
-	//voice->spat.color = getInputString(kInput_Color, "ff0000");
-	if (voice->spat.name != name.ToString())
-		voice->spat.name = name.ToString();
-	voice->spat.gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
-	
-	// position
-	voice->spat.pos[0] = getInputAudioFloat(kInput_PosX, &AudioFloat::Zero)->getMean();
-	voice->spat.pos[1] = getInputAudioFloat(kInput_PosY, &AudioFloat::Zero)->getMean();
-	voice->spat.pos[2] = getInputAudioFloat(kInput_PosZ, &AudioFloat::Zero)->getMean();
-	voice->spat.pos = originMatrix.Mul4(voice->spat.pos);
-	
-	// rotation
-	voice->spat.rot[0] = getInputAudioFloat(kInput_RotX, &AudioFloat::Zero)->getMean();
-	voice->spat.rot[1] = getInputAudioFloat(kInput_RotY, &AudioFloat::Zero)->getMean();
-	voice->spat.rot[2] = getInputAudioFloat(kInput_RotZ, &AudioFloat::Zero)->getMean();
-	voice->spat.rot = originMatrix.Mul3(voice->spat.rot);
-	
-	// dimensions
-	//const float size = getInputAudioFloat(kInput_Dim, &AudioFloat::One)->getMean();
-	const float size = 1.f;
-	voice->spat.size[0] = size * getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();
-	voice->spat.size[1] = size * getInputAudioFloat(kInput_DimY, &AudioFloat::One)->getMean();
-	voice->spat.size[2] = size * getInputAudioFloat(kInput_DimZ, &AudioFloat::One)->getMean();
-	
-	voice->spat.articulation = getInputAudioFloat(kInput_Articulation, &AudioFloat::Zero)->getMean();
-	
-	// doppler
+	if (voice->type == AudioVoice::kType_4DSOUND)
 	{
-		const AudioFloat scale(1.f);
-		const AudioFloat smooth(.2f);
+		AudioVoice4D * voice4D = static_cast<AudioVoice4D*>(voice);
 		
-		voice->spat.doppler.enable = getInputBool(kInput_Doppler, true);
-		voice->spat.doppler.scale = getInputAudioFloat(kInput_DopplerScale, &scale)->getMean();
-		voice->spat.doppler.smooth = getInputAudioFloat(kInput_DopplerSmooth, &smooth)->getMean();
-	}
-	
-	// distance intensity
-	{
-		const AudioFloat treshold(100.f);
-		const AudioFloat curve(-.4f);
+		voice4D->spat.globalEnable = getInputBool(kInput_Global, true);
 		
-		voice->spat.distanceIntensity.enable = getInputBool(kInput_DistanceIntensity, true);
-		voice->spat.distanceIntensity.threshold = getInputAudioFloat(kInput_DistanceIntensityTreshold, &treshold)->getMean();
-		voice->spat.distanceIntensity.curve = getInputAudioFloat(kInput_DistanceIntensityCurve, &curve)->getMean();
-	}
-	
-	// distance dampening
-	{
-		const AudioFloat treshold(100.f);
-		const AudioFloat curve(-.4f);
+		const float originRotY = getInputAudioFloat(kInput_OriginRotY, &AudioFloat::Zero)->getMean();
 		
-		voice->spat.distanceDampening.enable = getInputBool(kInput_DistanceDampening, true);
-		voice->spat.distanceDampening.threshold = getInputAudioFloat(kInput_DistanceDampeningTreshold, &treshold)->getMean();
-		voice->spat.distanceDampening.curve = getInputAudioFloat(kInput_DistanceDampeningCurve, &curve)->getMean();
-	}
-	
-	// distance diffusion
-	{
-		const AudioFloat treshold(50.f);
-		const AudioFloat curve(.2f);
+		Mat4x4 originMatrix;
+		originMatrix.MakeRotationY(Calc::DegToRad(originRotY));
 		
-		voice->spat.distanceDiffusion.enable = getInputBool(kInput_DistanceDiffusion, false);
-		voice->spat.distanceDiffusion.threshold = getInputAudioFloat(kInput_DistanceDiffusionTreshold, &treshold)->getMean();
-		voice->spat.distanceDiffusion.curve = getInputAudioFloat(kInput_DistanceDiffusionCurve, &curve)->getMean();
+		StringBuilder<64> name;
+		name.Append("channel(");
+		name.Append(voice4D->channelIndex + 1);
+		name.Append(")");
+		
+		//voice4D->spat.color = getInputString(kInput_Color, "ff0000");
+		if (voice4D->spat.name != name.ToString())
+			voice4D->spat.name = name.ToString();
+		
+		// position
+		voice4D->spat.pos[0] = getInputAudioFloat(kInput_PosX, &AudioFloat::Zero)->getMean();
+		voice4D->spat.pos[1] = getInputAudioFloat(kInput_PosY, &AudioFloat::Zero)->getMean();
+		voice4D->spat.pos[2] = getInputAudioFloat(kInput_PosZ, &AudioFloat::Zero)->getMean();
+		voice4D->spat.pos = originMatrix.Mul4(voice4D->spat.pos);
+		
+		// rotation
+		voice4D->spat.rot[0] = getInputAudioFloat(kInput_RotX, &AudioFloat::Zero)->getMean();
+		voice4D->spat.rot[1] = getInputAudioFloat(kInput_RotY, &AudioFloat::Zero)->getMean();
+		voice4D->spat.rot[2] = getInputAudioFloat(kInput_RotZ, &AudioFloat::Zero)->getMean();
+		voice4D->spat.rot = originMatrix.Mul3(voice4D->spat.rot);
+		
+		// dimensions
+		//const float size = getInputAudioFloat(kInput_Dim, &AudioFloat::One)->getMean();
+		const float size = 1.f;
+		voice4D->spat.size[0] = size * getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();
+		voice4D->spat.size[1] = size * getInputAudioFloat(kInput_DimY, &AudioFloat::One)->getMean();
+		voice4D->spat.size[2] = size * getInputAudioFloat(kInput_DimZ, &AudioFloat::One)->getMean();
+		
+		voice4D->spat.articulation = getInputAudioFloat(kInput_Articulation, &AudioFloat::Zero)->getMean();
+		
+		// doppler
+		{
+			const AudioFloat scale(1.f);
+			const AudioFloat smooth(.2f);
+			
+			voice4D->spat.doppler.enable = getInputBool(kInput_Doppler, true);
+			voice4D->spat.doppler.scale = getInputAudioFloat(kInput_DopplerScale, &scale)->getMean();
+			voice4D->spat.doppler.smooth = getInputAudioFloat(kInput_DopplerSmooth, &smooth)->getMean();
+		}
+		
+		// distance intensity
+		{
+			const AudioFloat treshold(100.f);
+			const AudioFloat curve(-.4f);
+			
+			voice4D->spat.distanceIntensity.enable = getInputBool(kInput_DistanceIntensity, true);
+			voice4D->spat.distanceIntensity.threshold = getInputAudioFloat(kInput_DistanceIntensityTreshold, &treshold)->getMean();
+			voice4D->spat.distanceIntensity.curve = getInputAudioFloat(kInput_DistanceIntensityCurve, &curve)->getMean();
+		}
+		
+		// distance dampening
+		{
+			const AudioFloat treshold(100.f);
+			const AudioFloat curve(-.4f);
+			
+			voice4D->spat.distanceDampening.enable = getInputBool(kInput_DistanceDampening, true);
+			voice4D->spat.distanceDampening.threshold = getInputAudioFloat(kInput_DistanceDampeningTreshold, &treshold)->getMean();
+			voice4D->spat.distanceDampening.curve = getInputAudioFloat(kInput_DistanceDampeningCurve, &curve)->getMean();
+		}
+		
+		// distance diffusion
+		{
+			const AudioFloat treshold(50.f);
+			const AudioFloat curve(.2f);
+			
+			voice4D->spat.distanceDiffusion.enable = getInputBool(kInput_DistanceDiffusion, false);
+			voice4D->spat.distanceDiffusion.threshold = getInputAudioFloat(kInput_DistanceDiffusionTreshold, &treshold)->getMean();
+			voice4D->spat.distanceDiffusion.curve = getInputAudioFloat(kInput_DistanceDiffusionCurve, &curve)->getMean();
+		}
+		
+		// spatial delay
+		
+		{
+			voice4D->spat.spatialDelay.enable = getInputBool(kInput_SpatialDelay, false);
+			voice4D->spat.spatialDelay.mode = (Osc4D::SpatialDelayMode)getInputInt(kInput_SpatialDelayMode, Osc4D::kSpatialDelay_Grid);
+			voice4D->spat.spatialDelay.feedback = getInputAudioFloat(kInput_SpatialDelayFeedback, &AudioFloat::Half)->getMean();
+			voice4D->spat.spatialDelay.wetness = getInputAudioFloat(kInput_SpatialDelayWetness, &AudioFloat::Half)->getMean();
+			//voice4D->spat.spatialDelay.smooth = getInputAudioFloat(kInput_SpatialDelaySmooth, &AudioFloat::Zero)->getMean();
+			voice4D->spat.spatialDelay.smooth = 0.f;
+			voice4D->spat.spatialDelay.scale = getInputAudioFloat(kInput_SpatialDelayScale, &AudioFloat::One)->getMean();
+			voice4D->spat.spatialDelay.noiseDepth = getInputAudioFloat(kInput_SpatialDelayNoiseDepth, &AudioFloat::Zero)->getMean();
+			voice4D->spat.spatialDelay.noiseFrequency = getInputAudioFloat(kInput_SpatialDelayNoiseFreq, &AudioFloat::One)->getMean();
+		}
+		
+		// sub boost
+		
+		voice4D->spat.subBoost = (Osc4D::SubBoost)getInputInt(kInput_SubBoost, 0);
 	}
 	
-	// spatial delay
-	
-	{
-		voice->spat.spatialDelay.enable = getInputBool(kInput_SpatialDelay, false);
-		voice->spat.spatialDelay.mode = (Osc4D::SpatialDelayMode)getInputInt(kInput_SpatialDelayMode, Osc4D::kSpatialDelay_Grid);
-		voice->spat.spatialDelay.feedback = getInputAudioFloat(kInput_SpatialDelayFeedback, &AudioFloat::Half)->getMean();
-		voice->spat.spatialDelay.wetness = getInputAudioFloat(kInput_SpatialDelayWetness, &AudioFloat::Half)->getMean();
-		//voice->spat.spatialDelay.smooth = getInputAudioFloat(kInput_SpatialDelaySmooth, &AudioFloat::Zero)->getMean();
-		voice->spat.spatialDelay.smooth = 0.f;
-		voice->spat.spatialDelay.scale = getInputAudioFloat(kInput_SpatialDelayScale, &AudioFloat::One)->getMean();
-		voice->spat.spatialDelay.noiseDepth = getInputAudioFloat(kInput_SpatialDelayNoiseDepth, &AudioFloat::Zero)->getMean();
-		voice->spat.spatialDelay.noiseFrequency = getInputAudioFloat(kInput_SpatialDelayNoiseFreq, &AudioFloat::One)->getMean();
-	}
-	
-	// sub boost
-	
-	voice->spat.subBoost = (Osc4D::SubBoost)getInputInt(kInput_SubBoost, 0);
-	
-	//
+	// update ramping
 	
 	if (g_currentAudioGraph->isFLagSet("voice.4d.rampUp"))
 	{
@@ -484,9 +493,11 @@ void AudioNodeVoice4DReturn::tick(const float dt)
 	
 	//
 	
-	if (voice != nullptr)
+	if (voice != nullptr && voice->type == AudioVoice::kType_4DSOUND)
 	{
-		voice->returnInfo.returnIndex = getInputInt(kInput_Index, -1);
+		AudioVoice4D * voice4D = static_cast<AudioVoice4D*>(voice);
+		
+		voice4D->returnInfo.returnIndex = getInputInt(kInput_Index, -1);
 		
 		const int inputOffset[Osc4D::kReturnSide_COUNT] =
 		{
@@ -502,9 +513,9 @@ void AudioNodeVoice4DReturn::tick(const float dt)
 		
 		for (int i = 0; i < Osc4D::kReturnSide_COUNT; ++i)
 		{
-			voice->returnInfo.sides[i].enabled = getInputBool(inputOffset[i] + 0, false);
-			voice->returnInfo.sides[i].distance = getInputAudioFloat(inputOffset[i] + 1, &distanceDefault)->getMean();
-			voice->returnInfo.sides[i].scatter = getInputAudioFloat(inputOffset[i] + 2, &AudioFloat::Zero)->getMean();
+			voice4D->returnInfo.sides[i].enabled = getInputBool(inputOffset[i] + 0, false);
+			voice4D->returnInfo.sides[i].distance = getInputAudioFloat(inputOffset[i] + 1, &distanceDefault)->getMean();
+			voice4D->returnInfo.sides[i].scatter = getInputAudioFloat(inputOffset[i] + 2, &AudioFloat::Zero)->getMean();
 		}
 	}
 }
