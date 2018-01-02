@@ -1051,6 +1051,7 @@ bool SoundPlayer_PortAudio::init(int numSources)
 	// initialize threading
 	
 	m_mutex = SDL_CreateMutex();
+	fassert(m_mutex != nullptr);
 	
 	// create audio sources
 	
