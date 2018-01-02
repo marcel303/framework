@@ -27,7 +27,10 @@
 
 #pragma once
 
+#include "audioGraph.h"
+#include "soundmix.h"
 #include "vfxNodeBase.h"
+#include <set>
 
 struct AudioGraphInstance;
 
@@ -45,6 +48,27 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 		float value;
 	};
 	
+	struct VoiceMgr : AudioVoiceManager
+	{
+		std::set<AudioVoice*> voices;
+		
+		VoiceMgr()
+			: AudioVoiceManager(kType_Basic)
+		{
+		}
+		
+		virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
+		virtual void freeVoice(AudioVoice *& voice) override;
+		
+		virtual void portAudioCallback(
+			const void * inputBuffer,
+			const int numInputChannels,
+			void * outputBuffer,
+			const int framesPerBuffer) override
+		{
+		}
+	};
+	
 	static const int kMaxInstances = 256;
 	static const int kMaxHistory = 16;
 	
@@ -60,6 +84,10 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 		kOutput_Voices,
 		kOutput_COUNT
 	};
+	
+	VoiceMgr voiceMgr;
+	
+	AudioGraphGlobals globals;
 	
 	AudioGraphInstance * instances[kMaxInstances];
 	

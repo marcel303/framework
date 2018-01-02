@@ -27,12 +27,34 @@
 
 #pragma once
 
+#include "audioGraph.h"
 #include "vfxNodeBase.h"
 
 struct AudioGraphInstance;
 
 struct VfxNodeAudioGraph : VfxNodeBase
 {
+	struct VoiceMgr : AudioVoiceManager
+	{
+		std::set<AudioVoice*> voices;
+		
+		VoiceMgr()
+			: AudioVoiceManager(kType_Basic)
+		{
+		}
+		
+		virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
+		virtual void freeVoice(AudioVoice *& voice) override;
+		
+		virtual void portAudioCallback(
+			const void * inputBuffer,
+			const int numInputChannels,
+			void * outputBuffer,
+			const int framesPerBuffer) override
+		{
+		}
+	};
+	
 	enum Input
 	{
 		kInput_Filename,
@@ -51,9 +73,12 @@ struct VfxNodeAudioGraph : VfxNodeBase
 	{
 		kOutputMode_None = -1,
 		kOutputMode_Mono,
-		kOutputMode_Stereo,
-		kOutputMode_MultiChannel
+		kOutputMode_Stereo
 	};
+	
+	VoiceMgr voiceMgr;
+	
+	AudioGraphGlobals globals;
 	
 	AudioGraphInstance * audioGraphInstance;
 	

@@ -35,6 +35,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "Timer.h"
 
+extern SDL_mutex * g_vfxAudioMutex;
+extern AudioVoiceManager * g_vfxAudioVoiceMgr;
 extern AudioGraphManager * g_vfxAudioGraphMgr;
 
 VFX_NODE_TYPE(VfxNodeAudioGraphPoly)
@@ -45,8 +47,26 @@ VFX_NODE_TYPE(VfxNodeAudioGraphPoly)
 	out("voices", "channel");
 }
 
+bool VfxNodeAudioGraphPoly::VoiceMgr::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
+{
+	const bool result = g_vfxAudioVoiceMgr->allocVoice(voice, source, name, doRamping, rampDelay, rampTime, channelIndex);
+	
+	voices.insert(voice);
+	
+	return result;
+}
+
+void VfxNodeAudioGraphPoly::VoiceMgr::freeVoice(AudioVoice *& voice)
+{
+	voices.erase(voice);
+	
+	g_vfxAudioVoiceMgr->freeVoice(voice);
+}
+
 VfxNodeAudioGraphPoly::VfxNodeAudioGraphPoly()
 	: VfxNodeBase()
+	, voiceMgr()
+	, globals()
 	, instances()
 	, currentFilename()
 	, voicesData()
@@ -61,6 +81,8 @@ VfxNodeAudioGraphPoly::VfxNodeAudioGraphPoly()
 	addOutput(kOutput_Voices, kVfxPlugType_Channel, &voicesOutput);
 	
 	memset(instances, 0, sizeof(instances));
+	
+	globals.init(g_vfxAudioMutex, &voiceMgr, g_vfxAudioGraphMgr);
 }
 
 VfxNodeAudioGraphPoly::~VfxNodeAudioGraphPoly()
@@ -257,7 +279,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			if (instances[index] == nullptr)
 			{
 				auto t1 = g_TimerRT.TimeUS_get();
-				instances[index] = g_vfxAudioGraphMgr->createInstance(filename);
+				instances[index] = g_vfxAudioGraphMgr->createInstance(filename, &globals);
 				auto t2 = g_TimerRT.TimeUS_get();
 				
 				addHistoryElem(kHistoryType_InstanceCreate, (t2 - t1) / 1000.0);
@@ -354,23 +376,25 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		newInstances[i]->audioGraph->triggerEvent("begin");
 	}
 	
-	g_voiceMgr->audioMutex.lock();
+	AudioMutex_Shared mutex(g_vfxAudioMutex);
+	
+	mutex.lock();
 	{
-		const int numVoices = g_voiceMgr->voices.size();
+		const int numVoices = voiceMgr.voices.size();
 		
 		voicesData.allocOnSizeChange(numVoices * AUDIO_UPDATE_SIZE);
 		voicesOutput.setData2D(voicesData.data, true, AUDIO_UPDATE_SIZE, numVoices);
 		
 		float * __restrict voiceData = voicesData.data;
 		
-		for (auto & voice : g_voiceMgr->voices)
+		for (auto & voice : voiceMgr.voices)
 		{
-			voice.source->generate(voiceData, AUDIO_UPDATE_SIZE);
+			voice->source->generate(voiceData, AUDIO_UPDATE_SIZE);
 			
 			voiceData += AUDIO_UPDATE_SIZE;
 		}
 	}
-	g_voiceMgr->audioMutex.unlock();
+	mutex.unlock();
 }
 
 void VfxNodeAudioGraphPoly::getDescription(VfxNodeDescription & d)
