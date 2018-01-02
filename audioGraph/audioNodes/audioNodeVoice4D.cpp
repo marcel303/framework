@@ -311,16 +311,16 @@ void AudioNodeVoice4D::tick(const float dt)
 	
 	if (g_currentAudioGraph->isFLagSet("voice.4d.rampUp"))
 	{
-		voice->ramp = true;
+		voice->rampInfo.ramp = true;
 	}
 	else if (g_currentAudioGraph->isFLagSet("voice.4d.rampDown"))
 	{
-		voice->ramp = false;
+		voice->rampInfo.ramp = false;
 	}
 	
-	if (voice->hasRamped)
+	if (voice->rampInfo.hasRamped)
 	{
-		if (voice->ramp)
+		if (voice->rampInfo.ramp)
 		{
 			trigger(kOutput_RampedUp);
 			
@@ -339,11 +339,11 @@ void AudioNodeVoice4D::handleTrigger(const int inputSocketIndex)
 {
 	if (inputSocketIndex == kInput_RampUp)
 	{
-		voice->ramp = true;
+		voice->rampInfo.ramp = true;
 	}
 	else if (inputSocketIndex == kInput_RampDown)
 	{
-		voice->ramp = false;
+		voice->rampInfo.ramp = false;
 	}
 }
 
@@ -544,23 +544,30 @@ void AudioNodeVoice4DGlobals::tick(const float dt)
 		return;
 	}
 	
+	if (voiceMgr->type != AudioVoiceManager::kType_4DSOUND)
+	{
+		return;
+	}
+	
+	AudioVoiceManager4D * voiceMgr4D = static_cast<AudioVoiceManager4D*>(voiceMgr);
+	
 	const float size = getInputAudioFloat(kInput_Dim, &AudioFloat::One)->getMean();
 	const float plode = getInputAudioFloat(kInput_Plode, &AudioFloat::One)->getMean();
 	
-	voiceMgr->spat.globalGain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
-	voiceMgr->spat.globalPos[0] = getInputAudioFloat(kInput_PosX, &AudioFloat::Zero)->getMean();
-	voiceMgr->spat.globalPos[1] = getInputAudioFloat(kInput_PosY, &AudioFloat::Zero)->getMean();
-	voiceMgr->spat.globalPos[2] = getInputAudioFloat(kInput_PosZ, &AudioFloat::Zero)->getMean();
-	voiceMgr->spat.globalSize[0] = size * getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();
-	voiceMgr->spat.globalSize[1] = size * getInputAudioFloat(kInput_DimY, &AudioFloat::One)->getMean();
-	voiceMgr->spat.globalSize[2] = size * getInputAudioFloat(kInput_DimZ, &AudioFloat::One)->getMean();
-	voiceMgr->spat.globalRot[0] = getInputAudioFloat(kInput_RotX, &AudioFloat::Zero)->getMean();
-	voiceMgr->spat.globalRot[1] = getInputAudioFloat(kInput_RotY, &AudioFloat::Zero)->getMean();
-	voiceMgr->spat.globalRot[2] = getInputAudioFloat(kInput_RotZ, &AudioFloat::Zero)->getMean();
-	voiceMgr->spat.globalPlode[0] = plode * getInputAudioFloat(kInput_PlodeX, &AudioFloat::One)->getMean();
-	voiceMgr->spat.globalPlode[1] = plode * getInputAudioFloat(kInput_PlodeY, &AudioFloat::One)->getMean();
-	voiceMgr->spat.globalPlode[2] = plode * getInputAudioFloat(kInput_PlodeZ, &AudioFloat::One)->getMean();
-	voiceMgr->spat.globalOrigin[0] = getInputAudioFloat(kInput_OriginX, &AudioFloat::Zero)->getMean();
-	voiceMgr->spat.globalOrigin[1] = getInputAudioFloat(kInput_OriginY, &AudioFloat::Zero)->getMean();
-	voiceMgr->spat.globalOrigin[2] = getInputAudioFloat(kInput_OriginZ, &AudioFloat::Zero)->getMean();
+	voiceMgr4D->spat.globalGain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
+	voiceMgr4D->spat.globalPos[0] = getInputAudioFloat(kInput_PosX, &AudioFloat::Zero)->getMean();
+	voiceMgr4D->spat.globalPos[1] = getInputAudioFloat(kInput_PosY, &AudioFloat::Zero)->getMean();
+	voiceMgr4D->spat.globalPos[2] = getInputAudioFloat(kInput_PosZ, &AudioFloat::Zero)->getMean();
+	voiceMgr4D->spat.globalSize[0] = size * getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();
+	voiceMgr4D->spat.globalSize[1] = size * getInputAudioFloat(kInput_DimY, &AudioFloat::One)->getMean();
+	voiceMgr4D->spat.globalSize[2] = size * getInputAudioFloat(kInput_DimZ, &AudioFloat::One)->getMean();
+	voiceMgr4D->spat.globalRot[0] = getInputAudioFloat(kInput_RotX, &AudioFloat::Zero)->getMean();
+	voiceMgr4D->spat.globalRot[1] = getInputAudioFloat(kInput_RotY, &AudioFloat::Zero)->getMean();
+	voiceMgr4D->spat.globalRot[2] = getInputAudioFloat(kInput_RotZ, &AudioFloat::Zero)->getMean();
+	voiceMgr4D->spat.globalPlode[0] = plode * getInputAudioFloat(kInput_PlodeX, &AudioFloat::One)->getMean();
+	voiceMgr4D->spat.globalPlode[1] = plode * getInputAudioFloat(kInput_PlodeY, &AudioFloat::One)->getMean();
+	voiceMgr4D->spat.globalPlode[2] = plode * getInputAudioFloat(kInput_PlodeZ, &AudioFloat::One)->getMean();
+	voiceMgr4D->spat.globalOrigin[0] = getInputAudioFloat(kInput_OriginX, &AudioFloat::Zero)->getMean();
+	voiceMgr4D->spat.globalOrigin[1] = getInputAudioFloat(kInput_OriginY, &AudioFloat::Zero)->getMean();
+	voiceMgr4D->spat.globalOrigin[2] = getInputAudioFloat(kInput_OriginZ, &AudioFloat::Zero)->getMean();
 }
