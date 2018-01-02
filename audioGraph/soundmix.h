@@ -385,7 +385,7 @@ struct AudioVoice
 	void applyLimiter(float * __restrict samples, const int numSamples, const float maxGain);
 };
 
-struct AudioVoiceManager : PortAudioHandler
+struct AudioVoiceManager
 {
 	enum Type
 	{
@@ -417,6 +417,8 @@ struct AudioVoiceManager : PortAudioHandler
 	
 	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) = 0;
 	virtual void freeVoice(AudioVoice *& voice) = 0;
+	
+	virtual void generateAudio(float * __restrict samples, const int numSamples) = 0;
 };
 
 struct AudioVoiceManagerBasic : AudioVoiceManager
@@ -439,11 +441,7 @@ struct AudioVoiceManagerBasic : AudioVoiceManager
 	void updateChannelIndices();
 	int numDynamicChannelsUsed() const;
 	
-	virtual void portAudioCallback(
-		const void * inputBuffer,
-		const int numInputChannels,
-		void * outputBuffer,
-		const int framesPerBuffer) override;
+	virtual void generateAudio(float * __restrict samples, const int numSamples) override;
 };
 
 struct AudioVoiceManager4D : AudioVoiceManager
@@ -490,11 +488,7 @@ struct AudioVoiceManager4D : AudioVoiceManager
 	void updateChannelIndices();
 	int numDynamicChannelsUsed() const;
 	
-	virtual void portAudioCallback(
-		const void * inputBuffer,
-		const int numInputChannels,
-		void * outputBuffer,
-		const int framesPerBuffer) override;
+	virtual void generateAudio(float * __restrict samples, const int numSamples) override;
 	
 	void generateAudio(
 		float * __restrict samples, const int numSamples,

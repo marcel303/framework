@@ -46,13 +46,7 @@ struct VfxNodeAudioGraph : VfxNodeBase
 		virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
 		virtual void freeVoice(AudioVoice *& voice) override;
 		
-		virtual void portAudioCallback(
-			const void * inputBuffer,
-			const int numInputChannels,
-			void * outputBuffer,
-			const int framesPerBuffer) override
-		{
-		}
+		virtual void generateAudio(float * __restrict samples, const int numSamples) override { }
 	};
 	
 	enum Input

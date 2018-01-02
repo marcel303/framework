@@ -45,12 +45,15 @@ extern const int GFX_SY;
 static SDL_mutex * s_audioMutex = nullptr;
 static AudioUpdateHandler * s_audioUpdateHandler = nullptr;
 static PortAudioObject * s_paObject = nullptr;
+static AudioVoiceManagerBasic * s_voiceMgr = nullptr;
 #if ENABLE_AUDIO_RTE
 static AudioGraphManager_RTE * s_audioGraphMgr = nullptr;
 #else
 static AudioGraphManager_Basic * s_audioGraphMgr = nullptr;
 #endif
 
+extern SDL_mutex * g_vfxAudioMutex;
+extern AudioVoiceManager * g_vfxAudioVoiceMgr;
 extern AudioGraphManager * g_vfxAudioGraphMgr;
 
 static void initAudioGraph();
@@ -288,11 +291,13 @@ static void initAudioGraph()
 {
 	Assert(s_audioMutex == nullptr);
 	s_audioMutex = SDL_CreateMutex();
+	g_vfxAudioMutex = s_audioMutex;
 	
-	Assert(g_voiceMgr == nullptr);
-	g_voiceMgr = new AudioVoiceManager();
-	g_voiceMgr->init(s_audioMutex, 16, 16);
-	g_voiceMgr->outputStereo = true;
+	Assert(s_voiceMgr == nullptr);
+	s_voiceMgr = new AudioVoiceManagerBasic();
+	s_voiceMgr->init(s_audioMutex, 16, 16);
+	s_voiceMgr->outputStereo = true;
+	g_vfxAudioVoiceMgr = s_voiceMgr;
 	
 	Assert(s_audioGraphMgr == nullptr);
 #if ENABLE_AUDIO_RTE
@@ -300,14 +305,14 @@ static void initAudioGraph()
 #else
 	s_audioGraphMgr = new AudioGraphManager_Basic(true);
 #endif
-	s_audioGraphMgr->init(s_audioMutex);
+	s_audioGraphMgr->init(s_audioMutex, s_voiceMgr);
 	g_vfxAudioGraphMgr = s_audioGraphMgr;
 	
 	Assert(s_audioUpdateHandler == nullptr);
 	s_audioUpdateHandler = new AudioUpdateHandler();
 	s_audioUpdateHandler->init(s_audioMutex, nullptr, 0);
 	s_audioUpdateHandler->audioGraphMgr = s_audioGraphMgr;
-	s_audioUpdateHandler->voiceMgr = g_voiceMgr;
+	s_audioUpdateHandler->voiceMgr = s_voiceMgr;
 	
 	Assert(s_paObject == nullptr);
 	s_paObject = new PortAudioObject();
@@ -339,11 +344,11 @@ static void shutAudioGraph()
 		s_audioGraphMgr = nullptr;
 	}
 	
-	if (g_voiceMgr != nullptr)
+	if (s_voiceMgr != nullptr)
 	{
-		g_voiceMgr->shut();
-		delete g_voiceMgr;
-		g_voiceMgr = nullptr;
+		s_voiceMgr->shut();
+		delete s_voiceMgr;
+		s_voiceMgr = nullptr;
 	}
 	
 	if (s_audioMutex != nullptr)

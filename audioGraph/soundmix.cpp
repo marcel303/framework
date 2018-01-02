@@ -1213,15 +1213,8 @@ int AudioVoiceManagerBasic::numDynamicChannelsUsed() const
 	return result;
 }
 
-void AudioVoiceManagerBasic::portAudioCallback(
-	const void * inputBuffer,
-	const int numInputChannels,
-	void * outputBuffer,
-	const int framesPerBuffer)
+void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int numSamples)
 {
-	float * samples = (float*)outputBuffer;
-	const int numSamples = framesPerBuffer;
-	
 	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
 	const float limiterPeak = outputMode == kOutputMode_MultiChannel ? .4f : .1f;
 	
@@ -1233,7 +1226,7 @@ void AudioVoiceManagerBasic::portAudioCallback(
 		for (auto & voice : voices)
 			voiceArray[voiceIndex++] = &voice;
 		
-		generateAudio(
+		AudioVoiceManager::generateAudio(
 			voiceArray, numVoices,
 			samples, numSamples, numChannels,
 			true, limiterPeak,
@@ -1430,15 +1423,8 @@ int AudioVoiceManager4D::numDynamicChannelsUsed() const
 	return result;
 }
 
-void AudioVoiceManager4D::portAudioCallback(
-	const void * inputBuffer,
-	const int numInputChannels,
-	void * outputBuffer,
-	const int framesPerBuffer)
+void AudioVoiceManager4D::generateAudio(float * __restrict samples, const int numSamples)
 {
-	float * samples = (float*)outputBuffer;
-	const int numSamples = framesPerBuffer;
-	
 	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
 	const float limiterPeak = outputMode == kOutputMode_MultiChannel ? .4f : .1f;
 	

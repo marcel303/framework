@@ -139,7 +139,7 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	if (voiceMgr != nullptr)
 	{
-		voiceMgr->portAudioCallback(inputBuffer, numInputChannels, outputBuffer, framesPerBuffer);
+		voiceMgr->generateAudio((float*)outputBuffer, framesPerBuffer);
 		
 		//
 		
