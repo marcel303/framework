@@ -145,7 +145,12 @@ void AudioUpdateHandler::portAudioCallback(
 		
 		if (oscStream->isReady())
 		{
-			voiceMgr->generateOsc(*oscStream, false);
+			if (voiceMgr->type == AudioVoiceManager::kType_4DSOUND)
+			{
+				AudioVoiceManager4D * voiceMgr4D = static_cast<AudioVoiceManager4D*>(voiceMgr);
+				
+				voiceMgr4D->generateOsc(*oscStream, false);
+			}
 		}
 	}
 	

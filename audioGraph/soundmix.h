@@ -147,6 +147,28 @@ struct AudioVoice
 		kSpeaker_Right
 	};
 	
+	struct RampInfo
+	{
+		bool ramp;
+		float rampValue;
+		float rampDelay;
+		bool rampDelayIsZero;
+		float rampTime;
+		bool isRamped;
+		bool hasRamped;
+		
+		RampInfo()
+			: ramp(true)
+			, rampValue(1.f)
+			, rampDelay(0.f)
+			, rampDelayIsZero(false)
+			, rampTime(0.f)
+			, isRamped(true)
+			, hasRamped(false)
+		{
+		}
+	};
+	
 	struct SpatialCompressor
 	{
 		bool enable = false;
@@ -338,13 +360,7 @@ struct AudioVoice
 	
 	AudioSource * source;
 	
-	bool ramp;
-	float rampValue;
-	float rampDelay;
-	bool rampDelayIsZero;
-	float rampTime;
-	bool isRamped;
-	bool hasRamped;
+	RampInfo rampInfo;
 	
 	Limiter limiter;
 	
@@ -358,23 +374,79 @@ struct AudioVoice
 		, returnInfo()
 		, initOsc(true)
 		, source(nullptr)
-		, ramp(true)
-		, rampValue(1.f)
-		, rampDelay(0.f)
-		, rampDelayIsZero(false)
-		, rampTime(0.f)
-		, isRamped(true)
-		, hasRamped(false)
+		, rampInfo()
 		, limiter()
 	{
 		spat.sendIndex = 0;
 	}
 	
-	void applyRamping(float * __restrict samples, const int numSamples, const int durationInSamples);
+	static void applyRamping(RampInfo & rampInfo, float * __restrict samples, const int numSamples, const int durationInSamples);
+	
 	void applyLimiter(float * __restrict samples, const int numSamples, const float maxGain);
 };
 
 struct AudioVoiceManager : PortAudioHandler
+{
+	enum Type
+	{
+		kType_Basic,
+		kType_4DSOUND
+	};
+	
+	enum OutputMode
+	{
+		kOutputMode_Mono,
+		kOutputMode_Stereo,
+		kOutputMode_MultiChannel
+	};
+	
+	Type type;
+	
+	AudioVoiceManager(const Type _type);
+	
+	void generateAudio(
+		AudioVoice ** voices,
+		const int numVoices,
+		float * __restrict samples, const int numSamples, const int numChannels,
+		const bool doLimiting,
+		const float limiterPeak,
+		const bool updateRamping,
+		const float globalGain,
+		const OutputMode outputMode,
+		const bool interleaved);
+	
+	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) = 0;
+	virtual void freeVoice(AudioVoice *& voice) = 0;
+};
+
+struct AudioVoiceManagerBasic : AudioVoiceManager
+{
+	AudioMutex_Shared audioMutex;
+	
+	int numChannels;
+	int numDynamicChannels;
+	std::list<AudioVoice> voices;
+	bool outputStereo;
+	
+	AudioVoiceManagerBasic();
+	
+	void init(SDL_mutex * audioMutex, const int numChannels, const int numDynamicChannels);
+	void shut();
+	
+	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
+	virtual void freeVoice(AudioVoice *& voice) override;
+	
+	void updateChannelIndices();
+	int numDynamicChannelsUsed() const;
+	
+	virtual void portAudioCallback(
+		const void * inputBuffer,
+		const int numInputChannels,
+		void * outputBuffer,
+		const int framesPerBuffer) override;
+};
+
+struct AudioVoiceManager4D : AudioVoiceManager
 {
 	AudioMutex_Shared audioMutex;
 	
@@ -383,13 +455,6 @@ struct AudioVoiceManager : PortAudioHandler
 	std::list<AudioVoice> voices;
 	bool outputStereo;
 	int colorIndex;
-	
-	enum OutputMode
-	{
-		kOutputMode_Mono,
-		kOutputMode_Stereo,
-		kOutputMode_MultiChannel
-	};
 	
 	struct Spatialisation
 	{
@@ -414,13 +479,13 @@ struct AudioVoiceManager : PortAudioHandler
 	Spatialisation spat;
 	Spatialisation lastSentSpat;
 	
-	AudioVoiceManager();
+	AudioVoiceManager4D();
 	
 	void init(SDL_mutex * audioMutex, const int numChannels, const int numDynamicChannels);
 	void shut();
 	
-	bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex);
-	void freeVoice(AudioVoice *& voice);
+	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
+	virtual void freeVoice(AudioVoice *& voice) override;
 	
 	void updateChannelIndices();
 	int numDynamicChannelsUsed() const;

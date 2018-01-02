@@ -795,79 +795,75 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 
 //
 
-void AudioVoice::applyRamping(float * __restrict samples, const int numSamples, const int durationInSamples)
+void AudioVoice::applyRamping(RampInfo & rampInfo, float * __restrict samples, const int numSamples, const int durationInSamples)
 {
-	hasRamped = false;
-	
-	//
-	
-	if (ramp)
+	if (rampInfo.ramp)
 	{
-		if (rampValue < 1.f)
+		if (rampInfo.rampValue < 1.f)
 		{
 			const float gainStep = 1.f / durationInSamples;
 			
 			for (int i = 0; i < numSamples; ++i)
 			{
-				samples[i] *= rampValue;
+				samples[i] *= rampInfo.rampValue;
 				
-				if (rampDelayIsZero)
+				if (rampInfo.rampDelayIsZero)
 				{
-					rampValue = fminf(1.f, rampValue + gainStep);
+					rampInfo.rampValue = fminf(1.f, rampInfo.rampValue + gainStep);
 				}
 				else
 				{
-					rampDelay = rampDelay - 1.f / SAMPLE_RATE;
+					rampInfo.rampDelay = rampInfo.rampDelay - 1.f / SAMPLE_RATE;
 					
-					if (rampDelay <= 0.f)
+					if (rampInfo.rampDelay <= 0.f)
 					{
-						rampDelay = 0.f;
+						rampInfo.rampDelay = 0.f;
 						
-						rampDelayIsZero = true;
+						rampInfo.rampDelayIsZero = true;
 					}
 				}
 			}
 			
-			if (rampValue == 1.f)
+			if (rampInfo.rampValue == 1.f)
 			{
-				isRamped = true;
+				rampInfo.isRamped = true;
 				
-				hasRamped = true;
+				rampInfo.hasRamped = true;
 			}
 		}
 	}
 	else
 	{
-		if (rampValue > 0.f)
+		if (rampInfo.rampValue > 0.f)
 		{
 			const float gainStep = -1.f / durationInSamples;
 			
 			for (int i = 0; i < numSamples; ++i)
 			{
-				samples[i] *= rampValue;
+				samples[i] *= rampInfo.rampValue;
 				
-				if (rampDelayIsZero)
+				if (rampInfo.rampDelayIsZero)
 				{
-					rampValue = fmaxf(0.f, rampValue + gainStep);
+					rampInfo.rampValue = fmaxf(0.f, rampInfo.rampValue + gainStep);
 				}
 				else
 				{
-					rampDelay = rampDelay - 1.f / float(SAMPLE_RATE);
+					rampInfo.rampDelay = rampInfo.rampDelay - 1.f / float(SAMPLE_RATE);
 					
-					if (rampDelay <= 0.f)
+					if (rampInfo.rampDelay <= 0.f)
 					{
-						rampDelay = 0.f;
+						rampInfo.rampDelay = 0.f;
 						
-						rampDelayIsZero = true;
+						rampInfo.rampDelayIsZero = true;
 					}
 				}
 			}
 			
-			if (rampValue == 0.f)
+			if (rampInfo.rampValue == 0.f)
 			{
-				isRamped = false;
+				rampInfo.isRamped = false;
 				
-				hasRamped = true;
+				rampInfo.hasRamped = true;
 			}
 		}
 		else
@@ -888,19 +884,188 @@ void AudioVoice::applyLimiter(float * __restrict samples, const int numSamples, 
 
 //
 
-AudioVoiceManager::AudioVoiceManager()
-	: audioMutex()
+AudioVoiceManager::AudioVoiceManager(const Type _type)
+	: type(_type)
+{
+}
+
+void AudioVoiceManager::generateAudio(
+	AudioVoice ** voices,
+	const int numVoices,
+	float * __restrict samples, const int numSamples, const int numChannels,
+	const bool doLimiting,
+	const float limiterPeak,
+	const bool updateRamping,
+	const float globalGain,
+	const OutputMode outputMode,
+	const bool interleaved)
+{
+	// initialize samples to zero before we start mixing
+	
+	if (outputMode == kOutputMode_Mono)
+	{
+		memset(samples, 0, numSamples * 1 * sizeof(float));
+	}
+	else if (outputMode == kOutputMode_Stereo)
+	{
+		memset(samples, 0, numSamples * 2 * sizeof(float));
+	}
+	else
+	{
+		Assert(outputMode == kOutputMode_MultiChannel);
+		
+		memset(samples, 0, numSamples * numChannels * sizeof(float));
+	}
+	
+	for (int i = 0; i < numVoices; ++i)
+	{
+		auto & voice = *voices[i];
+		
+		// note : we need to call applyRamping or else ramping flags may not be updated appropriately
+		//        as an optimize we could skip some processing here, but for now it seems unnecessary
+		
+		if (voice.channelIndex != -1)
+		{
+			// generate samples
+			
+		#ifdef WIN32
+			// fixme : use a general fix for variable sized arrays
+			float * voiceSamples = (float*)alloca(numSamples * sizeof(float));
+		#else
+			ALIGN32 float voiceSamples[numSamples];
+		#endif
+			
+			voice.source->generate(voiceSamples, numSamples);
+			
+			// apply gain
+			
+			const float gain = voice.spat.gain * globalGain;
+			
+			audioBufferMul(voiceSamples, numSamples, gain);
+			
+			// apply limiting
+			
+			if (doLimiting)
+			{
+				// todo : perform limiting before and/or after mixing ? make limits settable ?
+				
+				voice.applyLimiter(voiceSamples, numSamples, limiterPeak);
+			}
+			
+			// apply volume ramping
+			
+			if (updateRamping)
+				voice.applyRamping(voice.rampInfo, voiceSamples, numSamples, SAMPLE_RATE * voice.rampInfo.rampTime);
+			else
+			{
+				AudioVoice::RampInfo rampInfo = voice.rampInfo;
+				
+				voice.applyRamping(rampInfo, voiceSamples, numSamples, SAMPLE_RATE * voice.rampInfo.rampTime);
+			}
+			
+			if (voice.channelIndex != -1)
+			{
+				if (outputMode == kOutputMode_Mono)
+				{
+					audioBufferAdd(samples, voiceSamples, numSamples);
+				}
+				else if (outputMode == kOutputMode_Stereo)
+				{
+					if (voice.speaker == AudioVoice::kSpeaker_Left)
+					{
+						if (interleaved)
+						{
+							// interleave voice samples into destination buffer
+							
+							float * __restrict dstPtr = samples;
+							
+							for (int i = 0; i < numSamples; ++i)
+							{
+								dstPtr[i * 2 + 0] += voiceSamples[i];
+							}
+						}
+						else
+						{
+							audioBufferAdd(&samples[numSamples * 0], voiceSamples, numSamples);
+						}
+					}
+					else if (voice.speaker == AudioVoice::kSpeaker_Right)
+					{
+						if (interleaved)
+						{
+							// interleave voice samples into destination buffer
+							
+							float * __restrict dstPtr = samples;
+							
+							for (int i = 0; i < numSamples; ++i)
+							{
+								dstPtr[i * 2 + 1] += voiceSamples[i];
+							}
+						}
+						else
+						{
+							audioBufferAdd(&samples[numSamples * 1], voiceSamples, numSamples);
+						}
+					}
+					else
+					{
+						if (interleaved)
+						{
+							// interleave voice samples into destination buffer
+							
+							float * __restrict dstPtr = samples;
+							
+							for (int i = 0; i < numSamples; ++i)
+							{
+								dstPtr[i * 2 + 0] += voiceSamples[i];
+								dstPtr[i * 2 + 1] += voiceSamples[i];
+							}
+						}
+						else
+						{
+							audioBufferAdd(&samples[numSamples * 0], voiceSamples, numSamples);
+							audioBufferAdd(&samples[numSamples * 1], voiceSamples, numSamples);
+						}
+					}
+				}
+				else
+				{
+					if (interleaved)
+					{
+						// interleave voice samples into destination buffer
+						
+						float * __restrict dstPtr = samples + voice.channelIndex;
+						
+						for (int i = 0; i < numSamples; ++i)
+						{
+							*dstPtr = voiceSamples[i];
+							
+							dstPtr += numChannels;
+						}
+					}
+					else
+					{
+						audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
+					}
+				}
+			}
+		}
+	}
+}
+
+//
+
+AudioVoiceManagerBasic::AudioVoiceManagerBasic()
+	: AudioVoiceManager(kType_Basic)
+	, audioMutex()
 	, numChannels(0)
 	, numDynamicChannels(0)
 	, voices()
 	, outputStereo(false)
-	, colorIndex(0)
-	, spat()
-	, lastSentSpat()
 {
 }
-	
-void AudioVoiceManager::init(SDL_mutex * _audioMutex, const int _numChannels, const int _numDynamicChannels)
+
+void AudioVoiceManagerBasic::init(SDL_mutex * _audioMutex, const int _numChannels, const int _numDynamicChannels)
 {
 	Assert(voices.empty());
 	
@@ -913,7 +1078,7 @@ void AudioVoiceManager::init(SDL_mutex * _audioMutex, const int _numChannels, co
 	audioMutex.mutex = _audioMutex;
 }
 
-void AudioVoiceManager::shut()
+void AudioVoiceManagerBasic::shut()
 {
 	Assert(voices.empty());
 	
@@ -925,7 +1090,201 @@ void AudioVoiceManager::shut()
 	numDynamicChannels = 0;
 }
 
-bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
+bool AudioVoiceManagerBasic::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
+{
+	Assert(voice == nullptr);
+	Assert(source != nullptr);
+	Assert(channelIndex < 0 || (channelIndex >= 0 && channelIndex < numChannels));
+
+	if (channelIndex >= numChannels)
+		return false;
+
+	audioMutex.lock();
+	{
+		voices.push_back(AudioVoice());
+		voice = &voices.back();
+		voice->source = source;
+		
+		if (channelIndex < 0)
+		{
+			updateChannelIndices();
+		}
+		else
+		{
+			voice->channelIndex = channelIndex;
+		}
+		
+		if (doRamping)
+		{
+			voice->rampInfo.ramp = true;
+			voice->rampInfo.rampValue = 0.f;
+			voice->rampInfo.rampDelay = rampDelay;
+			voice->rampInfo.rampDelayIsZero = rampDelay == 0.f;
+			voice->rampInfo.rampTime = rampTime;
+			voice->rampInfo.isRamped = false;
+		}
+		else
+		{
+			voice->rampInfo.ramp = true;
+			voice->rampInfo.rampValue = 1.f;
+			voice->rampInfo.rampDelay = 0.f;
+			voice->rampInfo.rampDelayIsZero = true;
+			voice->rampInfo.rampTime = 0.f;
+			voice->rampInfo.isRamped = true;
+		}
+	}
+	audioMutex.unlock();
+	
+	return true;
+}
+
+void AudioVoiceManagerBasic::freeVoice(AudioVoice *& voice)
+{
+	Assert(voice != nullptr);
+	
+	audioMutex.lock();
+	{
+		auto i = voices.end();
+		for (auto j = voices.begin(); j != voices.end(); ++j)
+			if (&(*j) == voice)
+				i = j;
+		
+		Assert(i != voices.end());
+		if (i != voices.end())
+		{
+			voices.erase(i);
+			
+			updateChannelIndices();
+		}
+	}
+	audioMutex.unlock();
+	
+	voice = nullptr;
+}
+
+void AudioVoiceManagerBasic::updateChannelIndices()
+{
+#ifdef WIN32
+	bool used[1024]; // fixme : use a general fix for variable sized arrays
+#else
+	bool used[numDynamicChannels];
+#endif
+	memset(used, 0, sizeof(used));
+	
+	for (auto & voice : voices)
+	{
+		if (voice.channelIndex != -1 && voice.channelIndex < numDynamicChannels)
+		{
+			used[voice.channelIndex] = true;
+		}
+	}
+	
+	for (auto & voice : voices)
+	{
+		if (voice.channelIndex == -1)
+		{
+			for (int i = 0; i < numDynamicChannels; ++i)
+			{
+				if (used[i] == false)
+				{
+					used[i] = true;
+					
+					voice.channelIndex = i;
+					
+					break;
+				}
+			}
+		}
+	}
+}
+
+int AudioVoiceManagerBasic::numDynamicChannelsUsed() const
+{
+	int result = 0;
+	
+	audioMutex.lock();
+	{
+		for (auto & voice : voices)
+			if (voice.channelIndex != -1 && voice.channelIndex < numDynamicChannels)
+				result++;
+	}
+	audioMutex.unlock();
+	
+	return result;
+}
+
+void AudioVoiceManagerBasic::portAudioCallback(
+	const void * inputBuffer,
+	const int numInputChannels,
+	void * outputBuffer,
+	const int framesPerBuffer)
+{
+	float * samples = (float*)outputBuffer;
+	const int numSamples = framesPerBuffer;
+	
+	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
+	const float limiterPeak = outputMode == kOutputMode_MultiChannel ? .4f : .1f;
+	
+	audioMutex.lock();
+	{
+		const int numVoices = voices.size();
+		AudioVoice * voiceArray[numVoices];
+		int voiceIndex = 0;
+		for (auto & voice : voices)
+			voiceArray[voiceIndex++] = &voice;
+		
+		generateAudio(
+			voiceArray, numVoices,
+			samples, numSamples, numChannels,
+			true, limiterPeak,
+			true,
+			1.f,
+			outputMode, true);
+	}
+	audioMutex.unlock();
+}
+
+//
+
+AudioVoiceManager4D::AudioVoiceManager4D()
+	: AudioVoiceManager(kType_4DSOUND)
+	, audioMutex()
+	, numChannels(0)
+	, numDynamicChannels(0)
+	, voices()
+	, outputStereo(false)
+	, colorIndex(0)
+	, spat()
+	, lastSentSpat()
+{
+}
+	
+void AudioVoiceManager4D::init(SDL_mutex * _audioMutex, const int _numChannels, const int _numDynamicChannels)
+{
+	Assert(voices.empty());
+	
+	Assert(numChannels == 0);
+	numChannels = _numChannels;
+	
+	Assert(numDynamicChannels == 0);
+	numDynamicChannels = _numDynamicChannels;
+	
+	audioMutex.mutex = _audioMutex;
+}
+
+void AudioVoiceManager4D::shut()
+{
+	Assert(voices.empty());
+	
+	audioMutex.mutex = nullptr;
+	
+	voices.clear();
+	
+	numChannels = 0;
+	numDynamicChannels = 0;
+}
+
+bool AudioVoiceManager4D::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
 {
 	Assert(voice == nullptr);
 	Assert(source != nullptr);
@@ -960,21 +1319,21 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, co
 		
 		if (doRamping)
 		{
-			voice->ramp = true;
-			voice->rampValue = 0.f;
-			voice->rampDelay = rampDelay;
-			voice->rampDelayIsZero = rampDelay == 0.f;
-			voice->rampTime = rampTime;
-			voice->isRamped = false;
+			voice->rampInfo.ramp = true;
+			voice->rampInfo.rampValue = 0.f;
+			voice->rampInfo.rampDelay = rampDelay;
+			voice->rampInfo.rampDelayIsZero = rampDelay == 0.f;
+			voice->rampInfo.rampTime = rampTime;
+			voice->rampInfo.isRamped = false;
 		}
 		else
 		{
-			voice->ramp = true;
-			voice->rampValue = 1.f;
-			voice->rampDelay = 0.f;
-			voice->rampDelayIsZero = true;
-			voice->rampTime = 0.f;
-			voice->isRamped = true;
+			voice->rampInfo.ramp = true;
+			voice->rampInfo.rampValue = 1.f;
+			voice->rampInfo.rampDelay = 0.f;
+			voice->rampInfo.rampDelayIsZero = true;
+			voice->rampInfo.rampTime = 0.f;
+			voice->rampInfo.isRamped = true;
 		}
 	}
 	audioMutex.unlock();
@@ -982,7 +1341,7 @@ bool AudioVoiceManager::allocVoice(AudioVoice *& voice, AudioSource * source, co
 	return true;
 }
 
-void AudioVoiceManager::freeVoice(AudioVoice *& voice)
+void AudioVoiceManager4D::freeVoice(AudioVoice *& voice)
 {
 	Assert(voice != nullptr);
 	
@@ -1020,7 +1379,7 @@ void AudioVoiceManager::freeVoice(AudioVoice *& voice)
 	voice = nullptr;
 }
 
-void AudioVoiceManager::updateChannelIndices()
+void AudioVoiceManager4D::updateChannelIndices()
 {
 #ifdef WIN32
 	bool used[1024]; // fixme : use a general fix for variable sized arrays
@@ -1056,7 +1415,7 @@ void AudioVoiceManager::updateChannelIndices()
 	}
 }
 
-int AudioVoiceManager::numDynamicChannelsUsed() const
+int AudioVoiceManager4D::numDynamicChannelsUsed() const
 {
 	int result = 0;
 	
@@ -1071,7 +1430,7 @@ int AudioVoiceManager::numDynamicChannelsUsed() const
 	return result;
 }
 
-void AudioVoiceManager::portAudioCallback(
+void AudioVoiceManager4D::portAudioCallback(
 	const void * inputBuffer,
 	const int numInputChannels,
 	void * outputBuffer,
@@ -1086,7 +1445,7 @@ void AudioVoiceManager::portAudioCallback(
 	generateAudio(samples, numSamples, true, limiterPeak, outputMode, true);
 }
 
-void AudioVoiceManager::generateAudio(
+void AudioVoiceManager4D::generateAudio(
 	float * __restrict samples, const int numSamples,
 	const bool doLimiting,
 	const float limiterPeak,
@@ -1147,7 +1506,7 @@ void AudioVoiceManager::generateAudio(
 				
 				// apply volume ramping
 				
-				voice.applyRamping(voiceSamples, numSamples, SAMPLE_RATE * voice.rampTime);
+				voice.applyRamping(voice.rampInfo, voiceSamples, numSamples, SAMPLE_RATE * voice.rampInfo.rampTime);
 				
 				if (voice.channelIndex != -1)
 				{
@@ -1372,7 +1731,7 @@ static void generateOscForVoice(AudioVoice & voice, Osc4DStream & stream, const 
 	}
 }
 
-void AudioVoiceManager::generateOsc(Osc4DStream & stream, const bool _forceSync)
+void AudioVoiceManager4D::generateOsc(Osc4DStream & stream, const bool _forceSync)
 {
 	audioMutex.lock();
 	{
