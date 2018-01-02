@@ -737,7 +737,7 @@ void SoundPlayer_OpenAL::setMusicVolume(float volume)
 
 void * SoundPlayer_PortAudio::createBuffer(const void * sampleData, const int sampleCount, const int channelSize, const int channelCount)
 {
-	if (channelSize == 2 && (channelCount == 1 || channelCount == 2))
+	if (sampleCount > 0 && channelSize == 2 && (channelCount == 1 || channelCount == 2))
 	{
 		Buffer * buffer = new Buffer();
 		
