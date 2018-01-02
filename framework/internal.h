@@ -30,11 +30,14 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include <map>
-#include <OpenAL/al.h>
 #include <SDL2/SDL.h>
 #include <string>
 #include "framework.h"
 #include "stb_truetype.h"
+
+#if FRAMEWORK_USE_OPENAL
+	#include <OpenAL/al.h>
+#endif
 
 #define MAX_MIDI_KEYS 256
 
@@ -457,7 +460,11 @@ public:
 class SoundCacheElem
 {
 public:
+#if FRAMEWORK_USE_OPENAL
 	ALuint buffer;
+#else
+	void * buffer;
+#endif
 	
 	SoundCacheElem();
 	void free();

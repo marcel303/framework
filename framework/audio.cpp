@@ -36,10 +36,6 @@
 
 //
 
-#define THREADED_MUSIC_PLAYER 0
-
-//
-
 SoundPlayer g_soundPlayer;
 
 //
@@ -311,7 +307,9 @@ SoundData * loadSound(const char * filename)
 
 //
 
-ALuint SoundPlayer::createSource()
+#if FRAMEWORK_USE_OPENAL
+
+ALuint SoundPlayer_OpenAL::createSource()
 {
 	ALuint source;
 	
@@ -331,7 +329,7 @@ ALuint SoundPlayer::createSource()
 	return source;
 }
 
-void SoundPlayer::destroySource(ALuint & source)
+void SoundPlayer_OpenAL::destroySource(ALuint & source)
 {
 	alDeleteSources(1, &source);
 	checkError();
@@ -339,7 +337,7 @@ void SoundPlayer::destroySource(ALuint & source)
 	source = 0;
 }
 
-SoundPlayer::Source * SoundPlayer::allocSource()
+SoundPlayer_OpenAL::Source * SoundPlayer_OpenAL::allocSource()
 {
 	// find a free source
 	
@@ -385,29 +383,7 @@ SoundPlayer::Source * SoundPlayer::allocSource()
 	return 0;
 }
 
-int SoundPlayer::executeMusicThreadProc(void * obj)
-{
-	SoundPlayer * self = (SoundPlayer*)obj;
-	
-	self->executeMusicThread();
-	
-	return 0;
-}
-
-void SoundPlayer::executeMusicThread()
-{
-#if THREADED_MUSIC_PLAYER
-	while (m_quitMusicThread == false)
-	{
-		SDL_Delay(1);
-		
-		MutexScope scope(m_musicMutex);
-		m_musicOutput->Update();
-	}
-#endif
-}
-
-void SoundPlayer::checkError()
+void SoundPlayer_OpenAL::checkError()
 {
 	ALenum error = alGetError();
 	
@@ -485,7 +461,7 @@ void SoundPlayer::checkError()
 	}
 }
 
-SoundPlayer::SoundPlayer()
+SoundPlayer_OpenAL::SoundPlayer_OpenAL()
 {
 	m_device = 0;
 	m_context = 0;
@@ -497,17 +473,13 @@ SoundPlayer::SoundPlayer()
 	m_musicOutput = 0;
 	
 	m_playId = 0;
-	
-	m_musicThread = 0;
-	m_musicMutex = 0;
-	m_quitMusicThread = false;
 }
 
-SoundPlayer::~SoundPlayer()
+SoundPlayer_OpenAL::~SoundPlayer_OpenAL()
 {
 }
 
-bool SoundPlayer::init(int numSources)
+bool SoundPlayer_OpenAL::init(int numSources)
 {
 	m_device = alcOpenDevice(0);
 	checkError();
@@ -552,9 +524,9 @@ bool SoundPlayer::init(int numSources)
 	// create music source
 	
 	m_musicStream = new AudioStream_Vorbis;
-	m_musicOutput = new AudioOutput_PortAudio;
+	m_musicOutput = new AudioOutput_OpenAL;
 	
-	if (!m_musicOutput->Initialize(2, 44100, 256))
+	if (!m_musicOutput->Initialize(2, 44100, 4096))
 	{
 		logError("failed to initialize OpenAL audio output");
 		return false;
@@ -564,27 +536,11 @@ bool SoundPlayer::init(int numSources)
 	
 	m_playId = 0;
 	
-	// create music thread
-	
-	m_musicMutex = SDL_CreateMutex();
-	m_musicThread = SDL_CreateThread(executeMusicThreadProc, "MusicThread", this);
-	m_quitMusicThread = false;
-	
 	return true;
 }
 
-bool SoundPlayer::shutdown()
+bool SoundPlayer_OpenAL::shutdown()
 {
-	// stop music thread
-	
-	m_quitMusicThread = true;
-	SDL_WaitThread(m_musicThread, 0);
-	SDL_DestroyMutex(m_musicMutex);
-	
-	m_musicThread = 0;
-	m_musicMutex = 0;
-	m_quitMusicThread = false;
-	
 	// destroy audio sources
 	
 	for (int i = 0; i < m_numSources; ++i)
@@ -632,15 +588,13 @@ bool SoundPlayer::shutdown()
 	return true;
 }
 
-void SoundPlayer::process()
+void SoundPlayer_OpenAL::process()
 {
-#if !THREADED_MUSIC_PLAYER
 	if (m_musicOutput)
 		m_musicOutput->Update();
-#endif
 }
 
-int SoundPlayer::playSound(ALuint buffer, float volume, bool loop)
+int SoundPlayer_OpenAL::playSound(ALuint buffer, float volume, bool loop)
 {
 	// allocate source
 	
@@ -676,7 +630,7 @@ int SoundPlayer::playSound(ALuint buffer, float volume, bool loop)
 	}
 }
 
-void SoundPlayer::stopSound(int playId)
+void SoundPlayer_OpenAL::stopSound(int playId)
 {
 	fassert(playId != -1);
 	if (playId == -1)
@@ -698,7 +652,7 @@ void SoundPlayer::stopSound(int playId)
 	}
 }
 
-void SoundPlayer::stopSoundsForBuffer(ALuint buffer)
+void SoundPlayer_OpenAL::stopSoundsForBuffer(ALuint buffer)
 {
 	fassert(buffer != 0);
 	if (buffer == 0)
@@ -720,7 +674,7 @@ void SoundPlayer::stopSoundsForBuffer(ALuint buffer)
 	}
 }
 
-void SoundPlayer::stopAllSounds()
+void SoundPlayer_OpenAL::stopAllSounds()
 {
 	for (int i = 0; i < m_numSources; ++i)
 	{
@@ -735,7 +689,7 @@ void SoundPlayer::stopAllSounds()
 	}
 }
 
-void SoundPlayer::setSoundVolume(int playId, float volume)
+void SoundPlayer_OpenAL::setSoundVolume(int playId, float volume)
 {
 	fassert(playId != -1);
 	if (playId == -1)
@@ -751,31 +705,521 @@ void SoundPlayer::setSoundVolume(int playId, float volume)
 	}
 }
 
-void SoundPlayer::playMusic(const char * filename, bool loop)
+void SoundPlayer_OpenAL::playMusic(const char * filename, bool loop)
 {
-	MutexScope scope(m_musicMutex);
 	if (m_musicStream && m_musicOutput)
 	{
 		m_musicStream->Open(filename, loop);
-		m_musicOutput->Play();
+		m_musicOutput->Play(m_musicStream);
 		
 		Assert(m_musicStream->mSampleRate == 44100); // fixme : handle different sample rates?
 	}
 }
 
-void SoundPlayer::stopMusic()
+void SoundPlayer_OpenAL::stopMusic()
 {
-	MutexScope scope(m_musicMutex);
 	if (m_musicStream && m_musicOutput)
 	{
-		m_musicStream->Close();
 		m_musicOutput->Stop();
+		m_musicStream->Close();
 	}
 }
 
-void SoundPlayer::setMusicVolume(float volume)
+void SoundPlayer_OpenAL::setMusicVolume(float volume)
 {
-	MutexScope scope(m_musicMutex);
 	if (m_musicOutput)
 		m_musicOutput->Volume_set(volume);
 }
+
+#endif
+
+#if FRAMEWORK_USE_PORTAUDIO
+
+void * SoundPlayer_PortAudio::createBuffer(const void * sampleData, const int sampleCount, const int channelSize, const int channelCount)
+{
+	if (channelSize == 2 && (channelCount == 1 || channelCount == 2))
+	{
+		Buffer * buffer = new Buffer();
+		
+		const int numValues = sampleCount * channelCount;
+		buffer->sampleData = new short[numValues];
+		memcpy(buffer->sampleData, sampleData, numValues * sizeof(short));
+		buffer->sampleCount = sampleCount;
+		buffer->channelCount = channelCount;
+		
+		return buffer;
+	}
+	else
+	{
+		return nullptr;
+	}
+}
+
+void SoundPlayer_PortAudio::destroyBuffer(void *& buffer)
+{
+	if (buffer == nullptr)
+		return;
+	
+	delete (Buffer*)buffer;
+	buffer = nullptr;
+}
+
+SoundPlayer_PortAudio::Source * SoundPlayer::allocSource()
+{
+	MutexScope scope(m_mutex);
+	
+	// find a free source
+	
+	for (int i = 0; i < m_numSources; ++i)
+	{
+		if (m_sources[i].playId == -1 || m_sources[i].buffer == nullptr)
+   		{
+			return &m_sources[i];
+   		}
+	}
+	
+	// terminate the oldest playing source
+	
+	int minPlayId = -1;
+	int index = -1;
+	
+	for (int i = 0; i < m_numSources; ++i)
+	{
+		if (m_sources[i].playId < minPlayId || index == -1)
+		{
+			// we mustn't terminate looping sounds
+			
+			if (!m_sources[i].loop)
+			{
+				minPlayId = m_sources[i].playId;
+				index = i;
+			}
+		}
+	}
+	
+	if (index != -1)
+	{
+		m_sources[index].playId = -1;
+		
+		return &m_sources[index];
+	}
+	
+	return nullptr;
+}
+
+int SoundPlayer_PortAudio::portaudioCallback(
+	const void * inputBuffer,
+	void * outputBuffer,
+	unsigned long framesPerBuffer,
+	const PaStreamCallbackTimeInfo * timeInfo,
+	PaStreamCallbackFlags statusFlags,
+	void * userData)
+{
+	SoundPlayer_PortAudio * soundPlayer = (SoundPlayer_PortAudio*)userData;
+	
+	soundPlayer->generateAudio((float*)outputBuffer, framesPerBuffer);
+
+	return paContinue;
+}
+
+void SoundPlayer_PortAudio::generateAudio(float * __restrict samples, const int numSamples)
+{
+	MutexScope scope(m_mutex);
+	
+	bool isActive = m_musicStream->IsOpen_get();
+	
+	if (isActive == false)
+	{
+		for (int i = 0; i < m_numSources; ++i)
+		{
+			if (m_sources[i].playId != -1)
+			{
+				isActive = true;
+				break;
+			}
+		}
+	}
+	
+	if (isActive)
+	{
+		// decode music stream first (if opened)
+		
+		if (m_musicStream->IsOpen_get())
+		{
+			AudioSample * __restrict voiceSamples = (AudioSample*)alloca(numSamples * sizeof(AudioSample));
+			
+			const int numSamplesRead = m_musicStream->Provide(numSamples, voiceSamples);
+			
+			memset(voiceSamples + numSamplesRead, 0, (numSamples - numSamplesRead) * sizeof(AudioSample));
+			
+			// convert to floating point
+			
+			const float scale = m_musicVolume / (1 << 15);
+			
+			for (int i = 0; i < numSamples; ++i)
+			{
+				samples[i * 2 + 0] = voiceSamples[i].channel[0] * scale;
+				samples[i * 2 + 1] = voiceSamples[i].channel[1] * scale;
+			}
+		}
+		else
+		{
+			memset(samples, 0, numSamples * sizeof(float) * 2);
+		}
+		
+		// add sounds
+		
+		for (int i = 0; i < m_numSources; ++i)
+		{
+			if (m_sources[i].playId != -1 && m_sources[i].buffer != nullptr)
+			{
+				fassert(m_sources[i].buffer != nullptr);
+				
+				// read samples from the buffer
+				
+				const Buffer * buffer = m_sources[i].buffer;
+				int bufferPosition = m_sources[i].bufferPosition;
+				
+				int sampleIndex = 0;
+				
+				const float scale = m_sources[i].volume / (1 << 15);
+				
+				if (buffer->channelCount == 1)
+				{
+					while (sampleIndex < numSamples)
+					{
+						if (bufferPosition == buffer->sampleCount)
+						{
+							if (m_sources[i].loop)
+							{
+								bufferPosition = 0;
+							}
+							else
+							{
+								m_sources[i].playId = -1;
+								m_sources[i].buffer = nullptr;
+								break;
+							}
+						}
+						
+						const float value = buffer->sampleData[bufferPosition] * scale;
+						
+						samples[sampleIndex * 2 + 0] += value;
+						samples[sampleIndex * 2 + 1] += value;
+						
+						bufferPosition++;
+						sampleIndex++;
+					}
+				}
+				else if (buffer->channelCount == 2)
+				{
+					while (sampleIndex < numSamples)
+					{
+						if (bufferPosition == buffer->sampleCount)
+						{
+							if (m_sources[i].loop)
+							{
+								bufferPosition = 0;
+							}
+							else
+							{
+								m_sources[i].playId = -1;
+								m_sources[i].buffer = nullptr;
+								break;
+							}
+						}
+						
+						const float value1 = buffer->sampleData[bufferPosition * 2 + 0] * scale;
+						const float value2 = buffer->sampleData[bufferPosition * 2 + 1] * scale;
+						
+						samples[sampleIndex * 2 + 0] += value1;
+						samples[sampleIndex * 2 + 1] += value2;
+						
+						bufferPosition++;
+						sampleIndex++;
+					}
+				}
+				
+				m_sources[i].bufferPosition = bufferPosition;
+			}
+		}
+	}
+	else
+	{
+		memset(samples, 0, numSamples * sizeof(float) * 2);
+	}
+}
+
+bool SoundPlayer_PortAudio::initPortAudio(const int numChannels, const int sampleRate, const int bufferSize)
+{
+	PaError err;
+
+	if ((err = Pa_Initialize()) != paNoError)
+	{
+		logError("portaudio: failed to initialize: %s", Pa_GetErrorText(err));
+		return false;
+	}
+
+	logDebug("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
+	
+	PaStreamParameters outputParameters;
+	memset(&outputParameters, 0, sizeof(outputParameters));
+
+	outputParameters.device = Pa_GetDefaultOutputDevice();
+	outputParameters.channelCount = numChannels;
+	outputParameters.sampleFormat = paFloat32;
+	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
+	outputParameters.hostApiSpecificStreamInfo = nullptr;
+
+	//
+	
+	if ((err = Pa_OpenStream(&m_paStream, nullptr, &outputParameters, sampleRate, bufferSize, paDitherOff, portaudioCallback, this)) != paNoError)
+	{
+		logError("portaudio: failed to open stream: %s", Pa_GetErrorText(err));
+		return false;
+	}
+
+	if ((err = Pa_StartStream(m_paStream)) != paNoError)
+	{
+		logError("portaudio: failed to start stream: %s", Pa_GetErrorText(err));
+		return false;
+	}
+
+	return true;
+}
+
+bool SoundPlayer_PortAudio::shutPortAudio()
+{
+	PaError err;
+	
+	if (m_paStream != nullptr)
+	{
+		if (Pa_IsStreamActive(m_paStream) != 0)
+		{
+			if ((err = Pa_StopStream(m_paStream)) != paNoError)
+			{
+				logError("portaudio: failed to stop stream: %s", Pa_GetErrorText(err));
+				return false;
+			}
+		}
+		
+		if ((err = Pa_CloseStream(m_paStream)) != paNoError)
+		{
+			logError("portaudio: failed to close stream: %s", Pa_GetErrorText(err));
+			return false;
+		}
+		
+		m_paStream = nullptr;
+	}
+	
+	if ((err = Pa_Terminate()) != paNoError)
+	{
+		logError("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
+		return false;
+	}
+	
+	return true;
+}
+
+SoundPlayer_PortAudio::SoundPlayer_PortAudio()
+{
+	m_mutex = nullptr;
+	
+	//
+	
+	m_numSources = 0;
+	m_sources = nullptr;
+	
+	m_playId = 0;
+	
+	//
+	
+	m_musicStream = nullptr;
+	m_musicVolume = 0.f;
+	
+	//
+	
+	m_paStream = nullptr;
+}
+
+SoundPlayer_PortAudio::~SoundPlayer_PortAudio()
+{
+}
+
+bool SoundPlayer_PortAudio::init(int numSources)
+{
+	// initialize threading
+	
+	m_mutex = SDL_CreateMutex();
+	
+	// create audio sources
+	
+	m_numSources = numSources;
+	m_sources = new Source[numSources];
+	memset(m_sources, 0, sizeof(Source) * numSources);
+	
+	m_playId = 0;
+	
+	// create music source
+	
+	m_musicStream = new AudioStream_Vorbis();
+	m_musicVolume = 1.f;
+	
+	// initialize portaudio
+	
+	if (!initPortAudio(2, 44100, 256))
+	{
+		logError("failed to initialize portaudio output");
+		return false;
+	}
+	
+	return true;
+}
+
+bool SoundPlayer_PortAudio::shutdown()
+{
+	// shut down portaudio
+	
+	shutPortAudio();
+	
+	// destroy music source
+	
+	delete m_musicStream;
+	m_musicStream = nullptr;
+	m_musicVolume = 0.f;
+	
+	// destroy audio sources
+	
+	m_numSources = 0;
+	delete [] m_sources;
+	m_sources = 0;
+	
+	m_playId = 0;
+	
+	// shut down threading
+	
+	fassert(m_mutex != nullptr);
+	SDL_DestroyMutex(m_mutex);
+	m_mutex = nullptr;
+	
+	return true;
+}
+
+void SoundPlayer_PortAudio::process()
+{
+}
+
+int SoundPlayer_PortAudio::playSound(const void * buffer, const float volume, const bool loop)
+{
+	if (buffer == nullptr)
+		return -1;
+	
+	MutexScope scope(m_mutex);
+	
+	// allocate source
+	
+	Source * source = allocSource();
+	
+	if (source == nullptr)
+	{
+		return -1;
+	}
+	else
+	{
+		source->playId = m_playId++;
+		source->buffer = (Buffer*)buffer;
+		source->bufferPosition = 0;
+		source->loop = loop;
+		source->volume = volume;
+		
+		return source->playId;
+	}
+}
+
+void SoundPlayer_PortAudio::stopSound(const int playId)
+{
+	fassert(playId != -1);
+	if (playId == -1)
+		return;
+	
+	for (int i = 0; i < m_numSources; ++i)
+	{
+		if (m_sources[i].playId == playId)
+		{
+			MutexScope scope(m_mutex);
+			m_sources[i].playId = -1;
+			m_sources[i].buffer = nullptr;
+			break;
+		}
+	}
+}
+
+void SoundPlayer_PortAudio::stopSoundsForBuffer(const void * _buffer)
+{
+	Buffer * buffer = (Buffer*)_buffer;
+	
+	fassert(buffer != nullptr);
+	if (buffer == nullptr)
+		return;
+	
+	for (int i = 0; i < m_numSources; ++i)
+	{
+		if (m_sources[i].buffer == buffer)
+		{
+			MutexScope scope(m_mutex);
+			m_sources[i].playId = -1;
+			m_sources[i].buffer = nullptr;
+		}
+	}
+}
+
+void SoundPlayer_PortAudio::stopAllSounds()
+{
+	MutexScope scope(m_mutex);
+	for (int i = 0; i < m_numSources; ++i)
+	{
+		m_sources[i].playId = -1;
+		m_sources[i].buffer = nullptr;
+	}
+}
+
+void SoundPlayer_PortAudio::setSoundVolume(const int playId, const float volume)
+{
+	fassert(playId != -1);
+	if (playId == -1)
+		return;
+	
+	for (int i = 0; i < m_numSources; ++i)
+	{
+		if (m_sources[i].playId == playId)
+		{
+			MutexScope scope(m_mutex);
+			m_sources[i].volume = volume;
+		}
+	}
+}
+
+void SoundPlayer_PortAudio::playMusic(const char * filename, const bool loop)
+{
+	MutexScope scope(m_mutex);
+	
+	m_musicStream->Open(filename, loop);
+	
+	Assert(m_musicStream->mSampleRate == 44100); // fixme : handle different sample rates?
+}
+
+void SoundPlayer_PortAudio::stopMusic()
+{
+	MutexScope scope(m_mutex);
+	
+	m_musicStream->Close();
+}
+
+void SoundPlayer_PortAudio::setMusicVolume(const float volume)
+{
+	MutexScope scope(m_mutex);
+	
+	m_musicVolume = volume;
+}
+
+#endif

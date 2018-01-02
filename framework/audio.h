@@ -27,8 +27,6 @@
 
 #pragma once
 
-#include <OpenAL/al.h>
-#include <OpenAL/alc.h>
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 #include <string.h>
@@ -60,7 +58,12 @@ public:
 
 SoundData * loadSound(const char * filename);
 
-class SoundPlayer
+#if FRAMEWORK_USE_OPENAL
+
+#include <OpenAL/al.h>
+#include <OpenAL/alc.h>
+
+class SoundPlayer_OpenAL
 {
 	friend class SoundCacheElem;
 	
@@ -71,42 +74,27 @@ class SoundPlayer
 	
 		int playId;
 		bool loop;
-		float finishTime;
 	};
 	
 	ALCdevice* m_device;
 	ALCcontext* m_context;
 	
 	int m_numSources;
-	Source * m_sources;
+	Source* m_sources;
 	
 	class AudioStream_Vorbis * m_musicStream;
-	class AudioOutput_PortAudio * m_musicOutput;
+	class AudioOutput_OpenAL * m_musicOutput;
 	
 	int m_playId;
-	
-	SDL_Thread * m_musicThread;
-	SDL_mutex * m_musicMutex;
-	bool m_quitMusicThread;
-	
-	class MutexScope
-	{
-		SDL_mutex * m_mutex;
-	public:
-		MutexScope(SDL_mutex * mutex) { m_mutex = mutex; SDL_LockMutex(m_mutex); }
-		~MutexScope() { SDL_UnlockMutex(m_mutex); }
-	};
 	
 	ALuint createSource();
 	void destroySource(ALuint & source);
 	Source * allocSource();
-	static int executeMusicThreadProc(void * obj);
-	void executeMusicThread();
 	void checkError();
 	
 public:
-	SoundPlayer();
-	~SoundPlayer();
+	SoundPlayer_OpenAL();
+	~SoundPlayer_OpenAL();
 	
 	bool init(int numSources);
 	bool shutdown();
@@ -121,5 +109,109 @@ public:
 	void stopMusic();
 	void setMusicVolume(float volume);
 };
+
+#endif
+
+//
+
+#if FRAMEWORK_USE_PORTAUDIO
+
+#include <portaudio/portaudio.h>
+
+class SoundPlayer_PortAudio
+{
+	friend class SoundCacheElem;
+	
+	struct Buffer
+	{
+		short * sampleData;
+		int sampleCount;
+		int channelCount;
+	};
+	
+	struct Source
+	{
+		Buffer * buffer;
+		int bufferPosition;
+		
+		int playId;
+		bool loop;
+		float volume;
+	};
+	
+	//
+	
+	SDL_mutex * m_mutex;
+	
+	//
+	
+	int m_numSources;
+	Source * m_sources;
+	
+	int m_playId;
+	
+	//
+	
+	class AudioStream_Vorbis * m_musicStream;
+	float m_musicVolume;
+	
+	//
+	
+	PaStream * m_paStream;
+	
+	//
+	
+	class MutexScope
+	{
+		SDL_mutex * m_mutex;
+	public:
+		MutexScope(SDL_mutex * mutex) { m_mutex = mutex; SDL_LockMutex(m_mutex); }
+		~MutexScope() { SDL_UnlockMutex(m_mutex); }
+	};
+	
+	void * createBuffer(const void * sampleData, const int sampleCount, const int channelSize, const int channelCount);
+	void destroyBuffer(void *& buffer);
+	Source * allocSource();
+	
+	static int portaudioCallback(
+		const void * inputBuffer,
+		void * outputBuffer,
+		unsigned long framesPerBuffer,
+		const PaStreamCallbackTimeInfo * timeInfo,
+		PaStreamCallbackFlags statusFlags,
+		void * userData);
+	
+	void generateAudio(float * __restrict samples, const int numSamples);
+	
+	bool initPortAudio(const int numChannels, const int sampleRate, const int bufferSize);
+	bool shutPortAudio();
+	
+public:
+	SoundPlayer_PortAudio();
+	~SoundPlayer_PortAudio();
+	
+	bool init(const int numSources);
+	bool shutdown();
+	void process();
+	
+	int playSound(const void * buffer, const float volume, const bool loop);
+	void stopSound(const int playId);
+	void stopSoundsForBuffer(const void * buffer);
+	void stopAllSounds();
+	void setSoundVolume(const int playId, const float volume);
+	void playMusic(const char * filename, const bool loop);
+	void stopMusic();
+	void setMusicVolume(const float volume);
+};
+
+#endif
+
+//
+
+#if FRAMEWORK_USE_PORTAUDIO
+	typedef SoundPlayer_PortAudio SoundPlayer;
+#elif FRAMEWORK_USE_OPENAL
+	typedef SoundPlayer_OpenAL SoundPlayer;
+#endif
 
 extern SoundPlayer g_soundPlayer;

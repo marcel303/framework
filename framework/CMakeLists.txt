@@ -44,6 +44,8 @@ source_group("3rdparty\\utf8rewind" FILES ${source_utf8rewind})
 add_library(framework ${source})
 
 target_compile_definitions(framework PUBLIC NO_SDL_GLEXT)
+target_compile_definitions(framework PUBLIC FRAMEWORK_USE_OPENAL=0)
+target_compile_definitions(framework PUBLIC FRAMEWORK_USE_PORTAUDIO=1)
 target_compile_definitions(framework PUBLIC $<$<CONFIG:Debug>:DEBUG>)
 
 target_link_libraries(framework libgg)

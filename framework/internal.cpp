@@ -1574,11 +1574,16 @@ SpriterCacheElem & SpriterCache::findOrCreate(const char * name)
 
 SoundCacheElem::SoundCacheElem()
 {
+#if FRAMEWORK_USE_OPENAL
 	buffer = 0;
+#else
+	buffer = nullptr;
+#endif
 }
 
 void SoundCacheElem::free()
 {
+#if FRAMEWORK_USE_OPENAL
 	if (buffer != 0)
 	{
 		g_soundPlayer.stopSoundsForBuffer(buffer);
@@ -1587,6 +1592,14 @@ void SoundCacheElem::free()
 		g_soundPlayer.checkError();
 		buffer = 0;
 	}
+#else
+	if (buffer != nullptr)
+	{
+		g_soundPlayer.stopSoundsForBuffer(buffer);
+		
+		g_soundPlayer.destroyBuffer(buffer);
+	}
+#endif
 }
 
 void SoundCacheElem::load(const char * filename)
@@ -1599,6 +1612,7 @@ void SoundCacheElem::load(const char * filename)
 	
 	if (soundData != 0)
 	{
+	#if FRAMEWORK_USE_OPENAL
 		ALenum bufferFormat = (ALenum)-1;
 		
 		if (soundData->channelCount == 1)
@@ -1651,6 +1665,18 @@ void SoundCacheElem::load(const char * filename)
 				soundData->channelCount,
 				soundData->channelSize);
 		}
+	#else
+		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->channelSize, soundData->channelCount);
+
+		if (buffer != nullptr)
+		{
+			logInfo("loaded %s", filename);
+		}
+		else
+		{
+			logError("%s: failed to create OpenAL buffer", filename);
+		}
+	#endif
 		
 		delete soundData;
 	}
