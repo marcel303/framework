@@ -81,6 +81,11 @@ int AudioStream_Vorbis::Provide(int numSamples, AudioSample* __restrict buffer)
 			1,
 			&bitstream);	
 		
+		if (currentBytesRead < 0)
+		{
+			currentBytesRead = 0;
+		}
+		
 		if (mNumChannels == 1)
 		{
 			DuplicateInPlace((short*)(bytes + bytesRead), currentBytesRead / sizeof(short));
