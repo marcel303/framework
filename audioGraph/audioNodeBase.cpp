@@ -28,6 +28,7 @@
 #include "audioGraph.h"
 #include "audioNodeBase.h"
 #include "graph.h"
+#include "Log.h"
 #include "soundmix.h"
 #include "StringEx.h"
 #include "Timer.h"

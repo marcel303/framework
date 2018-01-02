@@ -27,7 +27,9 @@
 
 #pragma once
 
+#include "osc4d.h"
 #include "soundmix.h"
+#include "Vec3.h"
 
 struct Osc4DStream;
 

@@ -29,6 +29,7 @@
 #include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
 
+#include "Log.h"
 #include "Parse.h"
 #include "StringEx.h"
 

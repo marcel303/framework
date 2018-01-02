@@ -131,9 +131,6 @@ struct AudioSourcePcm : AudioSource
 
 //
 
-#include "osc4d.h"
-#include "Vec3.h"
-
 struct AudioVoice
 {
 	enum Type
