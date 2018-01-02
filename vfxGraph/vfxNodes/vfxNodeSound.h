@@ -28,9 +28,28 @@
 #pragma once
 
 #include "vfxNodeBase.h"
+#include <atomic>
 
-class AudioOutput_OpenAL;
+class AudioOutput_PortAudio;
 class AudioStream_Vorbis;
+
+struct SDL_mutex;
+
+struct VfxNodeSound;
+
+struct VfxNodeSound_AudioStream : AudioStream
+{
+	VfxNodeSound * soundNode;
+	std::atomic_uint64_t timeInSamples;
+	
+	VfxNodeSound_AudioStream()
+		: soundNode(nullptr)
+		, timeInSamples(0)
+	{
+	}
+	
+	virtual int Provide(int numSamples, AudioSample * __restrict buffer) override;
+};
 
 struct VfxNodeSound : VfxNodeBase
 {
@@ -58,15 +77,19 @@ struct VfxNodeSound : VfxNodeBase
 		kOutput_BeatCount,
 		kOutput_COUNT
 	};
-
-	float timeOutput;
 	
-	AudioOutput_OpenAL * audioOutput;
+	SDL_mutex * mutex;
+	
+	AudioOutput_PortAudio * audioOutput;
 	AudioStream_Vorbis * audioStream;
 	
-	bool isPaused;
+	VfxNodeSound_AudioStream mixingAudioStream;
 	
-	int outputBeatCount;
+	std::atomic_bool isPaused;
+	
+	float timeOutput;
+	
+	int beatCountOutput;
 
 	VfxNodeSound();
 	virtual ~VfxNodeSound() override;
