@@ -27,6 +27,8 @@
 
 #pragma once
 
+#if FRAMEWORK_USE_PORTAUDIO
+
 #include "AudioOutput.h"
 #include <atomic>
 
@@ -61,9 +63,7 @@ public:
 	bool Initialize(const int numChannels, const int sampleRate, const int bufferSize);
 	bool Shutdown();
 	
-	virtual void Open(AudioStream * stream) override;
-	virtual void Close() override;
-	virtual void Play() override;
+	virtual void Play(AudioStream * stream) override;
 	virtual void Stop() override;
 	virtual void Update() override;
 	virtual void Volume_set(float volume) override;
@@ -71,3 +71,5 @@ public:
 	virtual bool HasFinished_get() override;
 	virtual double PlaybackPosition_get() override;
 };
+
+#endif

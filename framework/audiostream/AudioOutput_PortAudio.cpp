@@ -25,9 +25,11 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if FRAMEWORK_USE_PORTAUDIO
+
 #include "AudioOutput_PortAudio.h"
 #include "framework.h"
-#include "portaudio/portaudio.h"
+#include <portaudio/portaudio.h>
 
 void AudioOutput_PortAudio::lock()
 {
@@ -201,36 +203,29 @@ bool AudioOutput_PortAudio::Shutdown()
 	return shutPortAudio();
 }
 
-void AudioOutput_PortAudio::Open(AudioStream * stream)
+void AudioOutput_PortAudio::Play(AudioStream * stream)
 {
 	lock();
 	{
+		m_isPlaying = true;
+		m_isDone = false;
+		
 		m_stream = stream;
 	}
 	unlock();
 }
 
-void AudioOutput_PortAudio::Close()
+void AudioOutput_PortAudio::Stop()
 {
 	lock();
 	{
+		m_isPlaying = false;
+		
 		m_stream = nullptr;
 		
 		m_position = 0;
-		
-		m_isDone = false;
 	}
 	unlock();
-}
-
-void AudioOutput_PortAudio::Play()
-{
-	m_isPlaying = true;
-}
-
-void AudioOutput_PortAudio::Stop()
-{
-	m_isPlaying = false;
 }
 
 void AudioOutput_PortAudio::Update()
@@ -257,3 +252,5 @@ double AudioOutput_PortAudio::PlaybackPosition_get()
 {
 	return m_position / 44100.0;
 }
+
+#endif

@@ -34,9 +34,7 @@ class AudioOutput
 public:
 	virtual ~AudioOutput() { }
 	
-	virtual void Open(AudioStream * stream) = 0;
-	virtual void Close() = 0;
-	virtual void Play() = 0;
+	virtual void Play(AudioStream * stream) = 0;
 	virtual void Stop() = 0;
 	virtual void Update() = 0;
 	virtual void Volume_set(float volume) = 0;

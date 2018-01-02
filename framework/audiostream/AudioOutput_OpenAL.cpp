@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if FRAMEWORK_USE_OPENAL
+
 #include "AudioOutput_OpenAL.h"
 #include "framework.h"
 
@@ -133,23 +135,13 @@ bool AudioOutput_OpenAL::Shutdown()
 	return result;
 }
 
-void AudioOutput_OpenAL::Open(AudioStream * stream)
-{
-	mAudioStream = stream;
-}
-
-void AudioOutput_OpenAL::Close()
-{
-	Stop();
-	
-	mAudioStream = nullptr;
-}
-
-void AudioOutput_OpenAL::Play()
+void AudioOutput_OpenAL::Play(AudioStream * stream)
 {
 	if (mSourceId == 0)
 		return;
 
+	mAudioStream = stream;
+	
 	if (mIsPlaying == false)
 	{
 		SetEmptyBufferData();
@@ -177,6 +169,8 @@ void AudioOutput_OpenAL::Stop()
 	logDebug("OpenAL-Stream: stop", 0);
 
 	mIsPlaying = false;
+	
+	mAudioStream = nullptr;
 	
 	Update(); // todo : do we need this ?
 }
@@ -333,3 +327,5 @@ void AudioOutput_OpenAL::CheckError()
 		logError("OpenAL error: 0x%08x", error);
 	}
 }
+
+#endif
