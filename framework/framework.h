@@ -843,10 +843,9 @@ class Sound
 public:
 	Sound(const char * filename);
 	
-	void play(int volume = -1, int speed = -1);
+	void play(int volume = -1);
 	void stop();
 	void setVolume(int volume);
-	void setSpeed(int speed);
 	
 	static void stopAll();
 	

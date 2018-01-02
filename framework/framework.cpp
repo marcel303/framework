@@ -3821,18 +3821,14 @@ Sound::Sound(const char * filename)
 	m_sound = &g_soundCache.findOrCreate(filename);
 	m_playId = -1;
 	m_volume = 100;
-	m_speed = 100;
 }
 
-void Sound::play(int volume, int speed)
+void Sound::play(int volume)
 {
 	if (volume == -1)
 		volume = m_volume;
-	if (speed == -1)
-		speed = m_speed;
 	
 	volume = clamp(volume, 0, 100);
-	speed = std::max(0, speed);
 	
 	stop();
 	
@@ -3858,16 +3854,6 @@ void Sound::setVolume(int volume)
 	if (m_playId != -1)
 	{
 		g_soundPlayer.setSoundVolume(m_playId, volume / 100.f);
-	}
-}
-
-void Sound::setSpeed(int speed)
-{
-	m_speed = speed;
-	
-	if (m_playId != -1)
-	{
-		// todo
 	}
 }
 
