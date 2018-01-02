@@ -795,6 +795,8 @@ void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numS
 
 void AudioVoice::applyRamping(RampInfo & rampInfo, float * __restrict samples, const int numSamples, const int durationInSamples)
 {
+	rampInfo.hasRamped = false;
+	
 	if (rampInfo.ramp)
 	{
 		if (rampInfo.rampValue < 1.f)
