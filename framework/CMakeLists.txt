@@ -101,13 +101,15 @@ if (APPLE)
 	find_library(COREVIDEO_LIBRARY CoreVideo)
 	find_library(IOKIT_LIBRARY IOKit)
 	find_library(AUDIOTOOLBOX_LIBRARY AudioToolbox)
-	find_library(AUDIOUNIT_LIBRARY AudioUnit)
-	find_library(OPENAL_LIBRARY OpenAL)
 	find_library(OPENGL_LIBRARY OpenGL)
 	find_library(FF_LIBRARY ForceFeedback)
 	find_library(ICONV_LIBRARY iconv)
 	find_library(FREETYPE_LIBRARY freetype2)
 	find_library(BZ2_LIBRARY bz2)
+
+	# these libraries are only needed for OpenAL
+	#find_library(AUDIOUNIT_LIBRARY AudioUnit)
+	#find_library(OPENAL_LIBRARY OpenAL)
 
 	set(FRAMEWORK_LIBRARIES
 		framework
@@ -124,8 +126,6 @@ if (APPLE)
 		${COREVIDEO_LIBRARY}
 		${IOKIT_LIBRARY}
 		${AUDIOTOOLBOX_LIBRARY}
-		${AUDIOUNIT_LIBRARY}
-		${OPENAL_LIBRARY}
 		${OPENGL_LIBRARY}
 		${FF_LIBRARY}
 		${ICONV_LIBRARY}
