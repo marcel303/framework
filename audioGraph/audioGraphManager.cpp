@@ -496,8 +496,13 @@ void AudioGraphManager_Basic::addGraphToCache(const char * filename)
 	}
 }
 
-AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filename)
+AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filename, AudioGraphGlobals * globals)
 {
+	if (globals == nullptr)
+	{
+		globals = this->globals;
+	}
+	
 	AudioGraph * audioGraph = nullptr;
 	
 	auto graphItr = graphCache.find(filename);
@@ -726,8 +731,13 @@ void AudioGraphManager_RTE::selectInstance(const AudioGraphInstance * instance)
 	SDL_UnlockMutex(audioMutex);
 }
 
-AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename)
+AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename, AudioGraphGlobals * globals)
 {
+	if (globals == nullptr)
+	{
+		globals = this->globals;
+	}
+	
 	AudioGraphFile * file;
 	bool isNew;
 	

@@ -74,7 +74,7 @@ struct AudioGraphManager
 	virtual ~AudioGraphManager() { }
 	
 	// called from the app thread
-	virtual AudioGraphInstance * createInstance(const char * filename) = 0;
+	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr) = 0;
 	virtual void free(AudioGraphInstance *& instance) = 0;
 	
 	// called from the audio thread
@@ -110,7 +110,7 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	void addGraphToCache(const char * filename);
 	
 	// called from the app thread
-	virtual AudioGraphInstance * createInstance(const char * filename) override;
+	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals) override;
 	virtual void free(AudioGraphInstance *& instance) override;
 	
 	// called from the audio thread
@@ -147,7 +147,7 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
-	virtual AudioGraphInstance * createInstance(const char * filename) override;
+	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals) override;
 	virtual void free(AudioGraphInstance *& instance) override;
 	
 	// called from the audio thread
