@@ -225,15 +225,15 @@ namespace BinauralTestNamespace
 			const auto t2 = g_TimerRT.TimeUS_get();
 			
 			const auto t = t2 - t1;
-			timeUsPerTick = t;
-			timeUsPerSecondAccu += t;
+			msecsPerTick = t;
+			msecsPerSecondAccu += t;
 			
 			numTicks++;
 			
 			if ((numTicks % (SAMPLE_RATE / AUDIO_UPDATE_SIZE)) == 0)
 			{
-				timeUsPerSecond = timeUsPerSecondAccu.load();
-				timeUsPerSecondAccu = 0;
+				msecsPerSecond = msecsPerSecondAccu.load();
+				msecsPerSecondAccu = 0;
 			}
 		}
 	};
@@ -800,8 +800,8 @@ int main(int argc, char * argv[])
 				{
 					gxTranslatef(10, 100, 0);
 					setColor(colorBlack);
-					drawText(0, 0, 16, +1, +1, "time per tick: %.2fms", audioHandler.timeUsPerTick / 1000.0);
-					drawText(0, 20, 16, +1, +1, "time per second: %.2fms", audioHandler.timeUsPerSecond / 1000.0);
+					drawText(0, 0, 16, +1, +1, "time per tick: %.2fms", audioHandler.msecsPerTick / 1000.0);
+					drawText(0, 20, 16, +1, +1, "time per second: %.2fms", audioHandler.msecsPerSecond / 1000.0);
 				}
 				gxPopMatrix();
 				
