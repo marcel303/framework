@@ -28,6 +28,7 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager4D.h"
 #include "Calc.h"
 #include "framework.h"
 #include "Path.h"
@@ -1902,7 +1903,7 @@ int main(int argc, char * argv[])
 	
 	const int kNumChannels = CHANNEL_COUNT;
 	
-	AudioVoiceManager voiceMgr;
+	AudioVoiceManager4D voiceMgr;
 	voiceMgr.init(mutex, CHANNEL_COUNT, DYNAMIC_CHANNEL_COUNT);
 	voiceMgr.outputStereo = STEREO_OUTPUT;
 	s_voiceMgr = &voiceMgr;

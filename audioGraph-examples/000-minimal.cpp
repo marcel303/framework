@@ -48,7 +48,7 @@ int main(int argc, char * argv[])
 		SDL_mutex * mutex = SDL_CreateMutex();
 		Assert(mutex != nullptr);
 
-		AudioVoiceManager voiceMgr;
+		AudioVoiceManagerBasic voiceMgr;
 		voiceMgr.init(mutex, CHANNEL_COUNT, CHANNEL_COUNT);
 		voiceMgr.outputStereo = true;
 
