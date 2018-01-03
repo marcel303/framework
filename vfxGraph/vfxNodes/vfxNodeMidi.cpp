@@ -28,6 +28,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "Log.h"
 #include "rtmidi/RtMidi.h"
 #include "vfxNodeMidi.h"
+#include <math.h>
 
 static const uint8_t NOTE_OFF = 0x80;
 static const uint8_t NOTE_ON = 0x90;
@@ -44,6 +45,10 @@ Reset All Controllers. When Reset All Controllers is received, all controller va
 
 */
 
+static float midiNoteToFrequency(const int note)
+{
+	return powf(2.f, (note - 69) / 12.f) * 440.f;
+}
 
 VFX_NODE_TYPE(VfxNodeMidi)
 {
@@ -54,6 +59,7 @@ VFX_NODE_TYPE(VfxNodeMidi)
 	out("value", "float");
 	out("trigger", "trigger");
 	out("values", "channel");
+	out("frequency", "channel");
 }
 
 VfxNodeMidi::VfxNodeMidi()
@@ -71,9 +77,14 @@ VfxNodeMidi::VfxNodeMidi()
 	addOutput(kOutput_Value, kVfxPlugType_Float, &valueOutput);
 	addOutput(kOutput_Trigger, kVfxPlugType_Trigger, nullptr);
 	addOutput(kOutput_ValueChannel, kVfxPlugType_Channel, &valueChannel);
+	addOutput(kOutput_FrequencyChannel, kVfxPlugType_Channel, &frequencyChannel);
 	
 	memset(valueData, 0, sizeof(valueData));
-	valueChannel.setData(valueData, false, 256);
+	valueChannel.setData(valueData, false, kNumNotes);
+	
+	for (int i = 0; i < kNumNotes; ++i)
+		frequencyData[i] = midiNoteToFrequency(i);
+	frequencyChannel.setData(frequencyData, false, kNumNotes);
 }
 
 VfxNodeMidi::~VfxNodeMidi()
@@ -175,13 +186,15 @@ void VfxNodeMidi::tick(const float dt)
 						const int key = message[1];
 						const int value = message[2];
 						
-						keyOutput = key;
-						valueOutput = value / 127.f;
-						
-						if (key >= 0 && key < 256)
+						if (key >= 0 && key < kNumNotes)
+						{
+							keyOutput = key;
+							valueOutput = value / 127.f;
+							
 							valueData[key] = valueOutput;
-						
-						trigger(kOutput_Trigger);
+							
+							trigger(kOutput_Trigger);
+						}
 					}
 					else if (event == NOTE_ON)
 					{
@@ -191,10 +204,13 @@ void VfxNodeMidi::tick(const float dt)
 						keyOutput = key;
 						valueOutput = value / 127.f;
 						
-						if (key >= 0 && key < 256)
-							valueData[key] = valueOutput;
 						
-						trigger(kOutput_Trigger);
+						if (key >= 0 && key < kNumNotes)
+						{
+							valueData[key] = valueOutput;
+							
+							trigger(kOutput_Trigger);
+						}
 					}
 					else if (event == NOTE_OFF)
 					{
@@ -205,10 +221,13 @@ void VfxNodeMidi::tick(const float dt)
 						keyOutput = key;
 						valueOutput = 0.f;
 						
-						if (key >= 0 && key < 256)
+						
+						if (key >= 0 && key < kNumNotes)
+						{
 							valueData[key] = valueOutput;
 						
-						trigger(kOutput_Trigger);
+							trigger(kOutput_Trigger);
+						}
 					}
 					else if (event == PITCH_BEND)
 					{

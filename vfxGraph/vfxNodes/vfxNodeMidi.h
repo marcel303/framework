@@ -33,6 +33,8 @@ class RtMidiIn;
 
 struct VfxNodeMidi : VfxNodeBase
 {
+	static const int kNumNotes = 128;
+	
 	enum Input
 	{
 		kInput_Port,
@@ -45,6 +47,7 @@ struct VfxNodeMidi : VfxNodeBase
 		kOutput_Value,
 		kOutput_Trigger,
 		kOutput_ValueChannel,
+		kOutput_FrequencyChannel,
 		kOutput_COUNT
 	};
 	
@@ -55,8 +58,11 @@ struct VfxNodeMidi : VfxNodeBase
 	float keyOutput;
 	float valueOutput;
 	
-	float valueData[256];
+	float valueData[kNumNotes];
 	VfxChannel valueChannel;
+	
+	float frequencyData[kNumNotes];
+	VfxChannel frequencyChannel;
 	
 	VfxNodeMidi();
 	virtual ~VfxNodeMidi() override;
