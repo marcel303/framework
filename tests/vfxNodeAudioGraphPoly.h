@@ -36,6 +36,9 @@ struct AudioGraphInstance;
 
 struct VfxNodeAudioGraphPoly : VfxNodeBase
 {
+	static const int kMaxInstances = 128;
+	static const int kMaxHistory = 16;
+	
 	enum HistoryType
 	{
 		kHistoryType_InstanceCreate,
@@ -62,9 +65,6 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 		
 		virtual void generateAudio(float * __restrict samples, const int numSamples) override { }
 	};
-	
-	static const int kMaxInstances = 256;
-	static const int kMaxHistory = 16;
 	
 	enum Input
 	{
