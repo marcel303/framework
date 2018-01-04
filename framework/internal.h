@@ -113,11 +113,10 @@ public:
 		gxShaderIsDirty = true;
 	}
 	
-	SDL_Window * window;
+	SDL_Window * mainWindow;
+	SDL_Window * currentWindow;
 	SDL_GLContext glContext;
-	int displaySize[2];
-	int actualDisplaySize[2];
-	int drawableOffset[2];
+	int displaySize[2]; // size as passed to init
 #if ENABLE_PROFILING
 	Remotery * rmt;
 #endif

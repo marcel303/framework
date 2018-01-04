@@ -331,6 +331,33 @@ private:
 
 //
 
+class Window
+{
+public:
+	Window(const char * title, const int sx, const int sy, const bool resizable = false);
+	~Window();
+	
+	void setPosition(const int x, const int y);
+	void setPositionCentered();
+	void setSize(const int sx, const int sy);
+	
+	void show();
+	void hide();
+	
+	int getWidth() const;
+	int getHeight() const;
+	
+	SDL_Window * getWindow() const;
+	
+private:
+	struct SDL_Window * window;
+};
+
+void pushWindow(Window & window);
+void popWindow();
+
+//
+
 enum SURFACE_FORMAT
 {
 	SURFACE_RGBA8,

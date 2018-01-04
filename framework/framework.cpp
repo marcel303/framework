@@ -313,24 +313,21 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		flags |= SDL_WINDOW_BORDERLESS;
 	
 #if HIGHDPI_HACK
-	// todo : enable flag by default. make automatic DPI upscaling optional
 	flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+	
+	actualSx /= 2;
+	actualSy /= 2;
 #endif
 
-	globals.window = SDL_CreateWindow(
+	globals.mainWindow = SDL_CreateWindow(
 		windowTitle.c_str(),
 		windowX == -1 ? SDL_WINDOWPOS_CENTERED : windowX,
 		windowY == -1 ? SDL_WINDOWPOS_CENTERED : windowY,
-	#if HIGHDPI_HACK
-		actualSx/2,
-		actualSy/2,
-	#else
 		actualSx,
 		actualSy,
-	#endif
 		flags);
 
-	if (!globals.window)
+	if (!globals.mainWindow)
 	{
 		logError("failed to set video mode (%dx%d @ %dbpp): %s", sx / minification, sy / minification, 32, SDL_GetError());
 		if (initErrorHandler)
@@ -342,7 +339,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	windowSy = sy;
 	
 #if ENABLE_OPENGL
-	globals.glContext = SDL_GL_CreateContext(globals.window);
+	globals.glContext = SDL_GL_CreateContext(globals.mainWindow);
 	checkErrorGL();
 	
 	if (!globals.glContext)
@@ -392,9 +389,6 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	
 	globals.displaySize[0] = sx;
 	globals.displaySize[1] = sy;
-
-	globals.actualDisplaySize[0] = actualSx * minification;
-	globals.actualDisplaySize[1] = actualSy * minification;
 	
 #if 0 // invalid using non-legacy mode
 	glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);
@@ -467,18 +461,22 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 	settings.load("settings.txt");
 
-	// make sure we are focused
-
-	SDL_RaiseWindow(globals.window);
+	// set icon
 
 	if (!windowIcon.empty())
 	{
 		ImageData * iconData = loadImage(windowIcon.c_str());
 		SDL_Surface * surface = SDL_CreateRGBSurfaceFrom(iconData->imageData, iconData->sx, iconData->sy, 32, iconData->sx * sizeof(ImageData::Pixel), 0xff << 0, 0xff << 8, 0xff << 16, 0xff << 24);
-		SDL_SetWindowIcon(globals.window, surface);
+		SDL_SetWindowIcon(globals.mainWindow, surface);
 		SDL_FreeSurface(surface);
 		delete iconData;
 	}
+	
+	// make sure we are focused
+	
+	globals.currentWindow = globals.mainWindow;
+
+	SDL_RaiseWindow(globals.currentWindow);
 
 	SDL_DisableScreenSaver();
 
@@ -556,10 +554,10 @@ bool Framework::shutdown()
 	
 	// destroy SDL window
 	
-	if (globals.window)
+	if (globals.mainWindow)
 	{
-		SDL_DestroyWindow(globals.window);
-		globals.window = 0;
+		SDL_DestroyWindow(globals.mainWindow);
+		globals.mainWindow = 0;
 	}
 	
 	// shut down SDL
@@ -866,13 +864,20 @@ void Framework::process()
 		}
 		else if (e.type == SDL_MOUSEMOTION)
 		{
-		#if HIGHDPI_HACK
-			mouse.x = e.motion.x * 2 * minification * globals.displaySize[0] / globals.actualDisplaySize[0];
-			mouse.y = e.motion.y * 2 * minification * globals.displaySize[1] / globals.actualDisplaySize[1];
-		#else
-			mouse.x = e.motion.x * minification * globals.displaySize[0] / globals.actualDisplaySize[0];
-			mouse.y = e.motion.y * minification * globals.displaySize[1] / globals.actualDisplaySize[1];
-		#endif
+			SDL_Window * window = SDL_GetWindowFromID(e.motion.windowID);
+			
+			if (window == globals.mainWindow)
+			{
+				// todo : keep track of mouse and keyboard state on a per-window basis
+				
+				int windowSx;
+				int windowSy;
+				SDL_GetWindowSize(window, &windowSx, &windowSy);
+				
+				mouse.x = e.motion.x * minification * globals.displaySize[0] / windowSx;
+				mouse.y = e.motion.y * minification * globals.displaySize[1] / windowSy;
+				logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, mouse.x, mouse.y);
+			}
 		}
 		else if (e.type == SDL_MOUSEWHEEL)
 		{
@@ -1305,7 +1310,7 @@ void showErrorMessage(const char * caption, const char * format, ...)
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption, text, globals.window);
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption, text, globals.currentWindow);
 }
 
 void Framework::fillCachesWithPath(const char * path, bool recurse)
@@ -1383,9 +1388,33 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 void Framework::setFullscreen(bool fullscreen)
 {
 	if (fullscreen)
-		SDL_SetWindowFullscreen(globals.window, SDL_WINDOW_FULLSCREEN);
+		SDL_SetWindowFullscreen(globals.mainWindow, SDL_WINDOW_FULLSCREEN);
 	else
-		SDL_SetWindowFullscreen(globals.window, 0);
+		SDL_SetWindowFullscreen(globals.mainWindow, 0);
+}
+
+static void updateViewport(Surface * surface, SDL_Window * window)
+{
+	if (surface != nullptr)
+	{
+		glViewport(
+			0,
+			0,
+			surface->getWidth() / framework.minification,
+			surface->getHeight() / framework.minification);
+	}
+	else
+	{
+		int drawableSx;
+		int drawableSy;
+		SDL_GL_GetDrawableSize(globals.currentWindow, &drawableSx, &drawableSy);
+		
+		glViewport(
+			0,
+			0,
+			drawableSx,
+			drawableSy);
+	}
 }
 
 void Framework::beginDraw(int r, int g, int b, int a)
@@ -1401,17 +1430,7 @@ void Framework::beginDraw(int r, int g, int b, int a)
 	
 	// initialize viewport and OpenGL matrices
 	
-	int windowSx;
-	int windowSy;
-	SDL_GL_GetDrawableSize(globals.window, &windowSx, &windowSy);
-	globals.drawableOffset[0] = 0;
-	globals.drawableOffset[1] = windowSy - (globals.actualDisplaySize[1] / minification);
-	
-	glViewport(
-		globals.drawableOffset[0],
-		globals.drawableOffset[1],
-		globals.actualDisplaySize[0] / minification,
-		globals.actualDisplaySize[1] / minification);
+	updateViewport(nullptr, globals.currentWindow);
 	
 	applyTransform();
 	setBlend(BLEND_ALPHA);
@@ -1451,7 +1470,7 @@ void Framework::endDraw()
 	
 	// flip back buffers
 	
-	SDL_GL_SwapWindow(globals.window);
+	SDL_GL_SwapWindow(globals.currentWindow);
 #else
 	
 #endif
@@ -1493,7 +1512,7 @@ void Framework::blinkTaskbarIcon(int count)
 	memset(&info, 0, sizeof(info));
 	SDL_VERSION(&info.version);
 
-	if (SDL_GetWindowWMInfo(globals.window, &info))
+	if (SDL_GetWindowWMInfo(globals.currentWindow, &info))
 	{
 		FLASHWINFO flashInfo;
 		memset(&flashInfo, 0, sizeof(flashInfo));
@@ -1542,6 +1561,90 @@ void Framework::registerModel(Model * model)
 void Framework::unregisterModel(Model * model)
 {
 	m_models.erase(m_models.find(model));
+}
+
+// -----
+
+Window::Window(const char * title, const int sx, const int sy, const bool resizable)
+{
+	const int flags = SDL_WINDOW_OPENGL | (SDL_WINDOW_RESIZABLE * resizable);
+	
+	window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, sx, sy, flags);
+}
+
+Window::~Window()
+{
+	SDL_DestroyWindow(window);
+}
+
+void Window::setPosition(const int x, const int y)
+{
+	SDL_SetWindowPosition(window, x, y);
+}
+
+void Window::setPositionCentered()
+{
+	SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+}
+
+void Window::setSize(const int sx, const int sy)
+{
+	SDL_SetWindowSize(window, sx, sy);
+}
+
+void Window::show()
+{
+	SDL_ShowWindow(window);
+}
+
+void Window::hide()
+{
+	SDL_HideWindow(window);
+}
+
+int Window::getWidth() const
+{
+	int sx;
+	int sy;
+	
+	SDL_GetWindowSize(window, &sx, &sy);
+	
+	return sx;
+}
+
+int Window::getHeight() const
+{
+	int sx;
+	int sy;
+	
+	SDL_GetWindowSize(window, &sx, &sy);
+	
+	return sy;
+}
+
+SDL_Window * Window::getWindow() const
+{
+	return window;
+}
+
+static Stack<SDL_Window*, 32> s_windowStack(nullptr);
+
+void pushWindow(Window & window)
+{
+	s_windowStack.push(globals.currentWindow);
+	
+	globals.currentWindow = window.getWindow();
+	
+	SDL_GL_MakeCurrent(globals.currentWindow, globals.glContext);
+}
+
+void popWindow()
+{
+	SDL_Window * window = s_windowStack.popValue();
+	
+	globals.currentWindow = window;
+	
+	SDL_GL_MakeCurrent(globals.currentWindow, globals.glContext);
 }
 
 // -----
@@ -2013,6 +2116,10 @@ void Surface::blit(BLEND_MODE blendMode) const
 
 void blitBackBufferToSurface(Surface * surface)
 {
+	int drawableSx;
+	int drawableSy;
+	SDL_GL_GetDrawableSize(globals.currentWindow, &drawableSx, &drawableSy);
+	
 	int oldDrawBuffer = 0;
 
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldDrawBuffer);
@@ -2022,9 +2129,7 @@ void blitBackBufferToSurface(Surface * surface)
 	checkErrorGL();
 
 	glBlitFramebuffer(
-		// fixme
-		//0, 0, globals.actualDisplaySize[0] / framework.minification, globals.actualDisplaySize[1] / framework.minification,
-		0, 0, globals.actualDisplaySize[0], globals.actualDisplaySize[1],
+		0, 0, drawableSx, drawableSy,
 		0, 0, surface->getWidth(), surface->getHeight(),
 		GL_COLOR_BUFFER_BIT,
 		GL_NEAREST);
@@ -4699,9 +4804,30 @@ static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
 
 static void getViewportSize(float & sx, float & sy)
 {
-	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
-	sx = surface ? surface->getWidth() : globals.displaySize[0];
-	sy = surface ? surface->getHeight() : globals.displaySize[1];
+	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+	
+	if (surface != nullptr)
+	{
+		sx = surface->getWidth();
+		sy = surface->getHeight();
+	}
+	else
+	{
+		if (globals.currentWindow == globals.mainWindow)
+		{
+			sx = globals.displaySize[0];
+			sy = globals.displaySize[1];
+		}
+		else
+		{
+			int drawableSx;
+			int drawableSy;
+			SDL_GL_GetDrawableSize(globals.currentWindow, &drawableSx, &drawableSy);
+			
+			sx = drawableSx;
+			sy = drawableSy;
+		}
+	}
 }
 
 void setTransform(TRANSFORM transform)
@@ -4892,11 +5018,9 @@ Vec2 transformToScreen(const Vec3 & v)
 static void setSurface(Surface * surface)
 {
 	const GLuint framebuffer = surface ? surface->getFramebuffer() : 0;
-	const GLsizei sx = surface ? surface->getWidth() : globals.actualDisplaySize[0];
-	const GLsizei sy = surface ? surface->getHeight() : globals.actualDisplaySize[1];
-	
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-	glViewport(0, 0, sx / framework.minification, sy / framework.minification);
+	
+	updateViewport(surface, globals.currentWindow);
 	
 	applyTransform();
 }
@@ -4937,9 +5061,6 @@ void setDrawRect(int x, int y, int sx, int sy)
 	sx /= framework.minification;
 	sy /= framework.minification;
 	
-	x += globals.drawableOffset[0];
-	y += globals.drawableOffset[1];
-
 	glScissor(x, y, sx, sy);
 	glEnable(GL_SCISSOR_TEST);
 }
@@ -6441,12 +6562,12 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 
 	SDL_Window * getWindow()
 	{
-		return globals.window;
+		return globals.currentWindow;
 	}
 
 	SDL_Surface * getWindowSurface()
 	{
-		return SDL_GetWindowSurface(globals.window);
+		return SDL_GetWindowSurface(globals.currentWindow);
 	}
 
 #elif !USE_LEGACY_OPENGL
