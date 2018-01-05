@@ -51,6 +51,7 @@ struct AudioNodeVoice : AudioNodeBase
 	enum Input
 	{
 		kInput_Audio,
+		kInput_Gain,
 		kInput_Speaker,
 		kInput_COUNT
 	};

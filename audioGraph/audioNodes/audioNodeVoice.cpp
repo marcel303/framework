@@ -42,6 +42,7 @@ AUDIO_NODE_TYPE(voice, AudioNodeVoice)
 	typeName = "voice";
 	
 	in("audio", "audioValue");
+	in("gain", "audioValue", "1");
 	inEnum("speaker", "voiceSpeaker");
 }
 
@@ -78,6 +79,7 @@ AudioNodeVoice::AudioNodeVoice()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);
+	addInput(kInput_Gain, kAudioPlugType_FloatVec);
 	addInput(kInput_Speaker, kAudioPlugType_Int);
 	
 	//
@@ -113,6 +115,8 @@ void AudioNodeVoice::tick(const float dt)
 	{
 		voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, -1);
 	}
+	
+	voice->gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
 	
 	const Speaker speaker = (Speaker)getInputInt(kInput_Speaker, 0);
 	
