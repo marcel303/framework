@@ -1,0 +1,42 @@
+static const char * s_tresholdPs = R"SHADER(
+
+include engine/ShaderPS.txt
+
+shader_in vec2 texcoord;
+
+uniform sampler2D source;
+uniform vec4 settings;
+uniform vec4 weights;
+uniform vec4 failValue;
+uniform vec4 passValue;
+
+float treshold = settings.x;
+bool doFailReplacement = settings.y != 0.0;
+bool doPassReplacement = settings.z != 0.0;
+float opacity = settings.w;
+
+void main()
+{
+	vec4 sourceColor = texture(source, texcoord);
+
+	vec4 color = sourceColor;
+	
+	float value = dot(color, weights);
+	
+	if (value < treshold)
+	{
+		if (doFailReplacement)
+			color = failValue;
+	}
+	else
+	{
+		if (doPassReplacement)
+			color = passValue;
+	}
+
+	color = mix(sourceColor, color, opacity);
+	
+	shader_fragColor = color;
+}
+
+)SHADER";

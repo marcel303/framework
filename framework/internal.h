@@ -805,6 +805,9 @@ public:
 	BuiltinShader colorMultiply;
 	BuiltinShader colorTemperature;
 	
+	BuiltinShader treshold;
+	BuiltinShader tresholdValue;
+	
 	BuiltinShader hqLine;
 	BuiltinShader hqFilledTriangle;
 	BuiltinShader hqFilledCircle;

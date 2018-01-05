@@ -7449,14 +7449,14 @@ static void setShader_TresholdLumiEx(
 	bool doFailReplacement,
 	bool doPassReplacement,
 	const Color & failColor,
-	const Color & passColor)
+	const Color & passColor,
+	const float opacity)
 {
-	//Shader & shader = globals.builtinShaders->tresholdEx;
-	static Shader shader("builtin-treshold-ex", "builtin-effect.vs", "builtin-treshold-ex.ps");
+	Shader & shader = globals.builtinShaders->treshold.get();
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
-	shader.setImmediate("settings", treshold, doFailReplacement, doPassReplacement);
+	shader.setImmediate("settings", treshold, doFailReplacement, doPassReplacement, opacity);
 	shader.setImmediate("weights", weights[0], weights[1], weights[2], weights[3]);
 	shader.setImmediate("failValue", failColor.r, failColor.g, failColor.b, failColor.a);
 	shader.setImmediate("passValue", passColor.r, passColor.g, passColor.b, passColor.a);
@@ -7464,19 +7464,20 @@ static void setShader_TresholdLumiEx(
 
 static const Vec4 lumiVec(.30f, .59f, .11f, 0.f);
 
-void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor)
+void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity)
 {
-	//Shader & shader = globals.builtinShaders->tresholdLumi;
-	static Shader shader("builtin-treshold-lumi", "builtin-effect.vs", "builtin-treshold-lumi.ps");
-	setShader(shader);
-
-	shader.setTexture("source", 0, source, true, true);
-	shader.setImmediate("treshold", lumi);
-	shader.setImmediate("failColor", failColor.r, failColor.g, failColor.b);
-	shader.setImmediate("passColor", passColor.r, passColor.g, passColor.b);
+	setShader_TresholdLumiEx(
+		source,
+		lumi,
+		lumiVec,
+		true,
+		true,
+		failColor,
+		passColor,
+		opacity);
 }
 
-void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor)
+void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor, const float opacity)
 {
 	setShader_TresholdLumiEx(
 		source,
@@ -7485,10 +7486,11 @@ void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Col
 		true,
 		false,
 		failColor,
-		colorWhite);
+		colorWhite,
+		opacity);
 }
 
-void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor)
+void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor, const float opacity)
 {
 	setShader_TresholdLumiEx(
 		source,
@@ -7497,19 +7499,40 @@ void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Col
 		false,
 		true,
 		colorWhite,
-		passColor);
+		passColor,
+		opacity);
 }
 
-void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor)
+static void setShader_TresholdValueEx(
+	const GLuint source,
+	const Vec4 treshold,
+	bool doFailReplacement,
+	bool doPassReplacement,
+	const Color & failColor,
+	const Color & passColor,
+	const Vec4 opacity)
 {
-	//Shader & shader = globals.builtinShaders->tresholdValue;
-	static Shader shader("builtin-treshold-value", "builtin-effect.vs", "builtin-treshold-value.ps");
+	Shader & shader = globals.builtinShaders->tresholdValue.get();
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
-	shader.setImmediate("treshold", value.r, value.g, value.b, value.a);
+	shader.setImmediate("settings", 0.f, doFailReplacement, doPassReplacement, 0.f);
+	shader.setImmediate("tresholds", treshold[0], treshold[1], treshold[2], treshold[3]);
 	shader.setImmediate("failValue", failColor.r, failColor.g, failColor.b, failColor.a);
 	shader.setImmediate("passValue", passColor.r, passColor.g, passColor.b, passColor.a);
+	shader.setImmediate("opacities", opacity[0], opacity[1], opacity[2], opacity[3]);
+}
+
+void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor, const float opacity)
+{
+	setShader_TresholdValueEx(
+		source,
+		Vec4(value.r, value.g, value.b, value.a),
+		true,
+		true,
+		failColor,
+		passColor,
+		Vec4(opacity, opacity, opacity, 0.f));
 }
 
 void setShader_GrayscaleLumi(const GLuint source, const float opacity)
