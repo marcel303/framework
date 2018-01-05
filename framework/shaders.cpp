@@ -48,6 +48,11 @@
 #include "data/engine/builtin-guassian-h.vs"
 #include "data/engine/builtin-guassian-v.ps"
 #include "data/engine/builtin-guassian-v.vs"
+#include "data/engine/builtin-treshold.ps"
+#include "data/engine/builtin-treshold.vs"
+#include "data/engine/builtin-treshold-componentwise.ps"
+#include "data/engine/builtin-treshold-componentwise.vs"
+
 #include "data/engine/builtin-hq-common.txt"
 #include "data/engine/builtin-hq-common-vs.txt"
 #include "data/engine/builtin-hq-filled-circle.ps"
@@ -121,6 +126,11 @@ void registerBuiltinShaders()
 	shaderSource("engine/builtin-gaussian-h.vs", s_guassianHVs);
 	shaderSource("engine/builtin-gaussian-v.ps", s_guassianVPs);
 	shaderSource("engine/builtin-gaussian-v.vs", s_guassianVVs);
+	shaderSource("engine/builtin-treshold.ps", s_tresholdPs);
+	shaderSource("engine/builtin-treshold.vs", s_tresholdVs);
+	shaderSource("engine/builtin-treshold-componentwise.ps", s_tresholdComponentwisePs);
+	shaderSource("engine/builtin-treshold-componentwise.vs", s_tresholdComponentwiseVs);
+	
 	shaderSource("engine/builtin-hq-common.txt", s_hqCommonPs);
 	shaderSource("engine/builtin-hq-common-vs.txt", s_hqCommonVs);
 	shaderSource("engine/builtin-hq-filled-circle.ps", s_hqFilledCirclePs);
