@@ -297,3 +297,8 @@ bool PortAudioObject::shut()
 	
 	return true;
 }
+
+double PortAudioObject::getCpuUsage() const
+{
+	return Pa_GetStreamCpuLoad(stream);
+}
