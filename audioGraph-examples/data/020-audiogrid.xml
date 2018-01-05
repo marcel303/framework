@@ -1,0 +1,106 @@
+<graph nextNodeId="108" nextLinkId="153">
+    <node id="68" typeName="math"/>
+    <node id="69" typeName="physical.spring">
+        <input socket="dampen" value="0.009000"/>
+        <input socket="impulse" value="40.000000"/>
+    </node>
+    <node id="71" typeName="filter.comb">
+        <input socket="feedback" value="0.800000"/>
+        <input socket="feedforward" value="0.000000"/>
+        <input socket="forward" value="0.800000"/>
+        <input socket="maxDelay" value="4.000000"/>
+    </node>
+    <node id="72" typeName="audio.sine">
+        <input socket="a" value="0.080000"/>
+        <input socket="b" value="0.200000"/>
+        <input socket="frequency" value="0.900000"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="73" typeName="smoothe">
+        <input socket="smoothing" value="1"/>
+        <input socket="smoothness" value="0.200000"/>
+    </node>
+    <node id="76" typeName="wavefield.1d">
+        <input socket="gain" value="4.000000"/>
+        <input socket="pos.dampen" value="0.200000"/>
+        <input socket="sample.pos" value="0.300000"/>
+        <input socket="trigger.amount" value="1.000000"/>
+        <input socket="trigger.pos" value="0.800000"/>
+        <input socket="vel.dampen" value="0.100000"/>
+    </node>
+    <node id="94" typeName="trigger.event">
+        <input socket="name" value="begin"/>
+    </node>
+    <node id="95" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="96" typeName="trigger.time">
+        <input socket="auto" value="0"/>
+        <input socket="interval.max" value="0.000000"/>
+    </node>
+    <node id="99" typeName="ramp">
+        <input socket="rampTime" value="2.000000"/>
+    </node>
+    <node id="101" typeName="flags">
+        <input socket="flag" value="dead"/>
+    </node>
+    <node id="102" typeName="math.mul"/>
+    <node id="104" typeName="memf">
+        <input socket="name" value="freq"/>
+    </node>
+    <node id="105" typeName="math.mul">
+        <input socket="b" value="0.200000"/>
+    </node>
+    <node id="106" typeName="math.mul">
+        <input socket="b" value="1.000000"/>
+    </node>
+    <link id="79" srcNodeId="71" srcNodeSocketName="delay" dstNodeId="72" dstNodeSocketName="audio"/>
+    <link id="82" srcNodeId="73" srcNodeSocketName="value" dstNodeId="71" dstNodeSocketName="value"/>
+    <link id="124" srcNodeId="71" srcNodeSocketName="value" dstNodeId="68" dstNodeSocketName="result"/>
+    <link id="125" srcNodeId="68" srcNodeSocketName="a" dstNodeId="69" dstNodeSocketName="value"/>
+    <link id="138" srcNodeId="69" srcNodeSocketName="impulse!" dstNodeId="94" dstNodeSocketName="trigger!"/>
+    <link id="139" srcNodeId="76" srcNodeSocketName="trigger!" dstNodeId="94" dstNodeSocketName="trigger!"/>
+    <link id="140" srcNodeId="68" srcNodeSocketName="b" dstNodeId="76" dstNodeSocketName="audio"/>
+    <link id="142" srcNodeId="96" srcNodeSocketName="trigger!" dstNodeId="94" dstNodeSocketName="trigger!"/>
+    <link id="144" srcNodeId="99" srcNodeSocketName="rampDown!" dstNodeId="96" dstNodeSocketName="trigger!"/>
+    <link id="145" srcNodeId="101" srcNodeSocketName="set!" dstNodeId="99" dstNodeSocketName="rampedDown!"/>
+    <link id="146" srcNodeId="95" srcNodeSocketName="audio" dstNodeId="102" dstNodeSocketName="result"/>
+    <link id="147" srcNodeId="102" srcNodeSocketName="a" dstNodeId="99" dstNodeSocketName="value"/>
+    <link id="148" srcNodeId="102" srcNodeSocketName="b" dstNodeId="73" dstNodeSocketName="result"/>
+    <link id="149" srcNodeId="105" srcNodeSocketName="a" dstNodeId="104" dstNodeSocketName="value1"/>
+    <link id="150" srcNodeId="76" srcNodeSocketName="tension" dstNodeId="105" dstNodeSocketName="result"/>
+    <link id="151" srcNodeId="106" srcNodeSocketName="a" dstNodeId="104" dstNodeSocketName="value1"/>
+    <link id="152" srcNodeId="69" srcNodeSocketName="strength" dstNodeId="106" dstNodeSocketName="result"/>
+    <editor nextZKey="1273">
+        <dragAndZoom x="329.46170043945312" y="-156.84202575683594" zoom="0.73814678192138672"/>
+        <nodeDatas>
+            <nodeData nodeId="68" x="416" y="-176" zKey="1194"/>
+            <nodeData nodeId="69" x="256" y="-224" zKey="1265"/>
+            <nodeData nodeId="71" x="544" y="-176" zKey="1193"/>
+            <nodeData nodeId="72" x="416" y="-80" zKey="1195" folded="1"/>
+            <nodeData nodeId="73" x="672" y="-176" zKey="1192"/>
+            <nodeData nodeId="76" x="256.05746459960938" y="-96.00732421875" zKey="1264"/>
+            <nodeData nodeId="94" x="96" y="-160" zKey="1200"/>
+            <nodeData nodeId="95" x="944" y="-240" zKey="1231"/>
+            <nodeData nodeId="96" x="256" y="-336" zKey="1269"/>
+            <nodeData nodeId="99" x="496" y="-352" zKey="1270"/>
+            <nodeData nodeId="101" x="624" y="-352" zKey="1223"/>
+            <nodeData nodeId="102" x="800" y="-240" zKey="1232"/>
+            <nodeData nodeId="104" x="-80" y="-16" zKey="1267"/>
+            <nodeData nodeId="105" x="47.9522705078125" y="16" zKey="1272" folded="1"/>
+            <nodeData nodeId="106" x="48" y="-16" zKey="1271" folded="1"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="70" x="400" y="-16" zKey="1233" nodeId="69" dstSocketName="value" sx="216" sy="148"/>
+            <visualizer id="103" x="624" y="-16" zKey="1234" nodeId="76" dstSocketName="audio" sx="216" sy="148"/>
+            <visualizer id="107" x="-96" y="96" zKey="1268" nodeId="104" dstSocketName="value1" sx="216" sy="148"/>
+        </visualizers>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="6767677f" gridColor="b600ff96">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

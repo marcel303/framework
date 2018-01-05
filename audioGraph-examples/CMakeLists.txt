@@ -38,12 +38,14 @@ source_group("" FILES ${source})
 
 add_executable(000-minimal 000-minimal.cpp)
 add_executable(010-fileselect 010-fileselect.cpp)
+add_executable(020-audiogrid 020-audiogrid.cpp)
 add_executable(300-binauralizer 300-binauralizer.cpp)
 add_executable(310-delaunay 310-delaunay.cpp)
 add_executable(320-audioVoices 320-audioVoiceManager.cpp)
 add_executable(700-4dworld 700-4dworld.cpp)
 
 set_target_properties(000-minimal PROPERTIES LINK_FLAGS "-Wl,-all_load")
+set_target_properties(020-audiogrid PROPERTIES LINK_FLAGS "-Wl,-all_load")
 set_target_properties(010-fileselect PROPERTIES LINK_FLAGS "-Wl,-all_load")
 set_target_properties(300-binauralizer PROPERTIES LINK_FLAGS "-Wl,-all_load")
 set_target_properties(310-delaunay PROPERTIES LINK_FLAGS "-Wl,-all_load")
@@ -60,6 +62,7 @@ set(LIBRARIES PRIVATE
 
 target_link_libraries(000-minimal PRIVATE ${LIBRARIES})
 target_link_libraries(010-fileselect PRIVATE ${LIBRARIES})
+target_link_libraries(020-audiogrid PRIVATE ${LIBRARIES})
 target_link_libraries(300-binauralizer PRIVATE ${LIBRARIES})
 target_link_libraries(310-delaunay PRIVATE ${LIBRARIES})
 target_link_libraries(320-audioVoices PRIVATE ${LIBRARIES})
