@@ -479,8 +479,6 @@ struct AudioNodeBase
 
 //
 
-void createAudioValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
-
 struct AudioEnumTypeRegistration
 {
 	struct Elem
@@ -500,10 +498,6 @@ struct AudioEnumTypeRegistration
 	
 	void elem(const char * name, const int value = -1);
 };
-
-extern AudioEnumTypeRegistration * g_audioEnumTypeRegistrationList;
-
-void createAudioEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, AudioEnumTypeRegistration * registrationList);
 
 #define AUDIO_ENUM_TYPE(name) \
 	struct name ## __audio_registration : AudioEnumTypeRegistration \
@@ -571,8 +565,6 @@ struct AudioNodeTypeRegistration
 	void outEditable(const char * name);
 };
 
-extern AudioNodeTypeRegistration * g_audioNodeTypeRegistrationList;
-
 #define AUDIO_NODE_TYPE(name, type) \
 	struct name ## __audio_registration : AudioNodeTypeRegistration \
 	{ \
@@ -587,4 +579,11 @@ extern AudioNodeTypeRegistration * g_audioNodeTypeRegistrationList;
 	name ## __audio_registration name ## __audio_registrationInstance; \
 	void name ## __audio_registration :: init()
 
-void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, AudioNodeTypeRegistration * registrationList);
+extern AudioEnumTypeRegistration * g_audioEnumTypeRegistrationList;
+extern AudioNodeTypeRegistration * g_audioNodeTypeRegistrationList;
+
+void createAudioValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
+void createAudioEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * registrationList);
+void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioNodeTypeRegistration * registrationList);
+
+void createAudioTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * enumRegistrationList, const AudioNodeTypeRegistration * nodeRegistrationList);

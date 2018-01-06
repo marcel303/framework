@@ -459,6 +459,13 @@ void AudioGraph::triggerEvent(const char * event)
 
 //
 
+void createAudioTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
+{
+	createAudioTypeDefinitionLibrary(typeDefinitionLibrary, g_audioEnumTypeRegistrationList, g_audioNodeTypeRegistrationList);
+}
+
+//
+
 AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & typeName, AudioGraph * audioGraph)
 {
 	AudioNodeBase * audioNode = nullptr;

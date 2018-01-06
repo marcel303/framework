@@ -668,9 +668,9 @@ void createAudioValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefin
 	}
 }
 
-void createAudioEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, AudioEnumTypeRegistration * registrationList)
+void createAudioEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * registrationList)
 {
-	for (AudioEnumTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
+	for (const AudioEnumTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
 	{
 		auto & enumDefinition = typeDefinitionLibrary.enumDefinitions[registration->enumName];
 		
@@ -749,9 +749,9 @@ void AudioNodeTypeRegistration::outEditable(const char * name)
 
 #include "graph.h"
 
-void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, AudioNodeTypeRegistration * registrationList)
+void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioNodeTypeRegistration * registrationList)
 {
-	for (AudioNodeTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
+	for (const AudioNodeTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
 	{
 		GraphEdit_TypeDefinition typeDefinition;
 		
@@ -802,4 +802,13 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 		
 		typeDefinitionLibrary.typeDefinitions[typeDefinition.typeName] = typeDefinition;
 	}
+}
+
+//
+
+void createAudioTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * enumRegistrationList, const AudioNodeTypeRegistration * nodeRegistrationList)
+{
+	createAudioValueTypeDefinitions(typeDefinitionLibrary);
+	createAudioEnumTypeDefinitions(typeDefinitionLibrary, enumRegistrationList);
+	createAudioNodeTypeDefinitions(typeDefinitionLibrary, nodeRegistrationList);
 }
