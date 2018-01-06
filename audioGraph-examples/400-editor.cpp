@@ -31,9 +31,6 @@
 #include "framework.h"
 #include "soundmix.h"
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
 
@@ -49,8 +46,18 @@ int main(int argc, char * argv[])
 		
 		while (!framework.quitRequested)
 		{
+			// when we're just processing the editor it's fine to let process() wait for events and to pause the main
+			// thread as long as there's no events. this reduces CPU usage considerably, as we only tick and draw the
+			// editor when it needs to. however, sometimes the editor is in the middle of an animation and we need to
+			// process it continously. so check if animations are done here
+			framework.waitForEvents = graphEdit.animationIsDone;
+			
 			framework.process();
-
+			
+			// when we waited for an event the time step is possibly huge. set it to zero here to avoid jumpy animation
+			if (framework.waitForEvents)
+				framework.timeStep = 0.f;
+			
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
@@ -59,11 +66,8 @@ int main(int argc, char * argv[])
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				setFont("calibri.ttf");
-				pushFontMode(FONT_SDF);
-				{
-					graphEdit.draw();
-				}
-				popFontMode();
+				
+				graphEdit.draw();
 			}
 			framework.endDraw();
 		}
