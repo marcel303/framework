@@ -169,7 +169,8 @@ enum AudioPlugType
 
 struct AudioPlug
 {
-	AudioPlugType type;
+	AudioPlugType type : 8;
+	bool isTriggered;
 	void * mem;
 	
 #if MULTIPLE_AUDIO_INPUT
@@ -178,6 +179,7 @@ struct AudioPlug
 
 	AudioPlug()
 		: type(kAudioPlugType_None)
+		, isTriggered(false)
 		, mem(nullptr)
 	#if MULTIPLE_AUDIO_INPUT
 		, floatArray()
@@ -452,6 +454,14 @@ struct AudioNodeBase
 			return nullptr;
 		else
 			return &plug->getPcmData();
+	}
+	
+	void queueTrigger(const int index)
+	{
+		AudioPlug * plug = tryGetInput(index);
+		
+		if (plug != nullptr)
+			plug->isTriggered = true;
 	}
 	
 #if AUDIO_USE_SSE

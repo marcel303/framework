@@ -525,6 +525,18 @@ void AudioNodeBase::traverseTick(const int traversalId, const float dt)
 	
 	//
 	
+	for (int i = 0; i < inputs.size(); ++i)
+	{
+		if (inputs[i].isTriggered)
+		{
+			inputs[i].isTriggered = false;
+			
+			handleTrigger(i);
+		}
+	}
+	
+	//
+	
 	const uint64_t t1 = g_TimerRT.TimeUS_get();
 	
 	tick(dt);
@@ -555,7 +567,7 @@ void AudioNodeBase::trigger(const int outputSocketIndex)
 				{
 					triggerTarget.srcNode->editorIsTriggered = true;
 					
-					triggerTarget.srcNode->handleTrigger(triggerTarget.srcSocketIndex);
+					triggerTarget.srcNode->queueTrigger(triggerTarget.srcSocketIndex);
 				}
 			}
 		}

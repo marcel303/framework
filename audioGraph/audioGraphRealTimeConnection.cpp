@@ -914,7 +914,7 @@ void AudioRealTimeConnection::handleSrcSocketPressed(const GraphNodeId nodeId, c
 	
 	g_currentAudioGraph = audioGraph;
 	
-	node->handleTrigger(srcSocketIndex);
+	node->queueTrigger(srcSocketIndex);
 	
 	g_currentAudioGraph = nullptr;
 }
