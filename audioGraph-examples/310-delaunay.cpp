@@ -32,9 +32,6 @@
 
 #include "../../libparticle/ui.h"
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
 const int GFX_SX = 1300;
 const int GFX_SY = 760;
 

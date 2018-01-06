@@ -52,9 +52,6 @@
 
 //
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
 #if FULLSCREEN
 	const int GFX_SX = 2560/2;
 	const int GFX_SY = 1600/2;

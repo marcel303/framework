@@ -31,9 +31,6 @@
 #include "framework.h"
 #include "soundmix.h"
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
 const int GFX_SX = 512;
 const int GFX_SY = 512;
 
@@ -110,6 +107,8 @@ int main(int argc, char * argv[])
 					grid.elems[hoverX][hoverY].hoverAnim = 1.f;
 					
 					AudioGraphInstance *& instance = grid.elems[hoverX][hoverY].graphInstance;
+					
+					// todo : apply ramping before actually freeing voice
 					
 					audioGraphMgr.free(instance);
 					

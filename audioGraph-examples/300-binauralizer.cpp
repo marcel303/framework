@@ -47,9 +47,6 @@ using namespace binaural;
 #define BLEND_PREVIOUS_HRTF 1
 #define NUM_BINAURAL_SOUNDS 1
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
 const int GFX_SX = 1300;
 const int GFX_SY = 760;
 

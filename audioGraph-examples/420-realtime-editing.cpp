@@ -31,9 +31,6 @@
 #include "framework.h"
 #include "soundmix.h"
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
 
