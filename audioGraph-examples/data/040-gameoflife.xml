@@ -1,0 +1,58 @@
+<graph nextNodeId="108" nextLinkId="157">
+    <node id="69" typeName="physical.spring">
+        <input socket="dampen" value="0.009000"/>
+        <input socket="impulse" value="40.000000"/>
+        <input socket="strength" value="100.000000"/>
+    </node>
+    <node id="94" typeName="trigger.event">
+        <input socket="name" value="begin"/>
+    </node>
+    <node id="95" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="96" typeName="trigger.time">
+        <input socket="auto" value="0"/>
+        <input socket="interval.max" value="0.200000"/>
+        <input socket="interval.min" value="0.200000"/>
+    </node>
+    <node id="99" typeName="ramp"/>
+    <node id="101" typeName="flags">
+        <input socket="flag" value="dead"/>
+    </node>
+    <node id="102" typeName="math.mul"/>
+    <node id="104" typeName="memf">
+        <input socket="name" value="freq"/>
+    </node>
+    <link id="138" srcNodeId="69" srcNodeSocketName="impulse!" dstNodeId="94" dstNodeSocketName="trigger!"/>
+    <link id="142" srcNodeId="96" srcNodeSocketName="trigger!" dstNodeId="94" dstNodeSocketName="trigger!"/>
+    <link id="144" srcNodeId="99" srcNodeSocketName="rampDown!" dstNodeId="96" dstNodeSocketName="trigger!"/>
+    <link id="145" srcNodeId="101" srcNodeSocketName="set!" dstNodeId="99" dstNodeSocketName="rampedDown!"/>
+    <link id="146" srcNodeId="95" srcNodeSocketName="audio" dstNodeId="102" dstNodeSocketName="result"/>
+    <link id="147" srcNodeId="102" srcNodeSocketName="a" dstNodeId="99" dstNodeSocketName="value"/>
+    <link id="154" srcNodeId="102" srcNodeSocketName="b" dstNodeId="69" dstNodeSocketName="value"/>
+    <link id="156" srcNodeId="69" srcNodeSocketName="strength" dstNodeId="104" dstNodeSocketName="value1"/>
+    <editor nextZKey="1311">
+        <dragAndZoom x="832.9447021484375" y="-38.96832275390625" zoom="0.73814678192138672"/>
+        <nodeDatas>
+            <nodeData nodeId="69" x="656" y="-224" zKey="1310"/>
+            <nodeData nodeId="94" x="208" y="-144" zKey="1305"/>
+            <nodeData nodeId="95" x="944" y="-240" zKey="1231"/>
+            <nodeData nodeId="96" x="352.01153564453125" y="-272.00177001953125" zKey="1303"/>
+            <nodeData nodeId="99" x="496" y="-352" zKey="1304"/>
+            <nodeData nodeId="101" x="656" y="-352" zKey="1296"/>
+            <nodeData nodeId="102" x="800" y="-240" zKey="1232"/>
+            <nodeData nodeId="104" x="496" y="-208" zKey="1309" folded="1"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="70" x="660.11083984375" y="-76.9635009765625" zKey="1299" nodeId="69" dstSocketName="value" sx="216" sy="148"/>
+            <visualizer id="107" x="401.84515380859375" y="-93.150299072265625" zKey="1301" nodeId="104" dstSocketName="value1" sx="216" sy="148"/>
+        </visualizers>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="6767677f" gridColor="b600ff96">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

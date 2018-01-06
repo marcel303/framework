@@ -37,23 +37,106 @@ extern const int GFX_SY;
 const int GFX_SX = 512;
 const int GFX_SY = 512;
 
-#define GRID_SX 12
-#define GRID_SY 12
+#define GRID_SX 16
+#define GRID_SY 16
 
 #define ELEM_SX (GFX_SX/GRID_SX)
 #define ELEM_SY (GFX_SY/GRID_SY)
 
-#define CHANNEL_COUNT 64
+#define CHANNEL_COUNT 256
 
-struct GridElem
-{
-	AudioGraphInstance * graphInstance;
-	float hoverAnim;
-};
+//
 
-struct Grid
+template<int sx, int sy>
+struct GameOfLife
 {
-	GridElem elems[GRID_SX][GRID_SY];
+	struct Elem
+	{
+		int value;
+		float anim;
+		
+		AudioGraphInstance * graphInstance;
+	};
+
+	Elem elems[sx][sy];
+	
+	GameOfLife()
+	{
+		memset(elems, 0, sizeof(elems));
+	}
+
+	void randomize()
+	{
+		for (int y = 0; y < sy; ++y)
+			for (int x = 0; x < sx; ++x)
+				elems[x][y].value = rand() < RAND_MAX / 6 ? 1 : 0;
+	}
+
+	void evolve(AudioGraphManager & audioGraphMgr)
+	{
+		// evolve
+
+		int newValues[sx][sy];
+		
+		for (int x = 0; x < sx; ++x)
+		{
+			for (int y = 0; y < sy; ++y)
+			{
+				int n = 0;
+
+				for (int x1 = -1; x1 <= +1; ++x1)
+				{
+					for (int y1 = -1; y1 <= +1; ++y1)
+					{
+						if (x1 != 0 || y1 != 0)
+						{
+							const int px = (x + x1 + sx) % sx;
+							const int py = (y + y1 + sy) % sy;
+
+							if (elems[px][py].value != 0)
+							{
+								n++;
+							}
+						}
+					}
+				}
+
+				//
+
+				if (n == 2)
+					newValues[x][y] = elems[x][y].value;
+				else if (n == 3)
+					newValues[x][y] = 1;
+				else
+					newValues[x][y] = 0;
+			}
+		}
+
+		for (int x = 0; x < sx; ++x)
+		{
+			for (int y = 0; y < sy; ++y)
+			{
+				if (elems[x][y].value != newValues[x][y])
+				{
+					elems[x][y].value = newValues[x][y];
+					elems[x][y].anim = 1.f;
+					
+					AudioGraphInstance *& instance = elems[x][y].graphInstance;
+					
+					audioGraphMgr.free(instance);
+					
+					instance = audioGraphMgr.createInstance("040-gameoflife.xml");
+					
+					if (instance != nullptr)
+					{
+						const float freq = std::pow(2.f, 1.f + y + x / float(GRID_SX));
+						instance->audioGraph->setMemf("freq", freq);
+						instance->audioGraph->triggerEvent("begin");
+					}
+				}
+			}
+		}
+	}
 };
 
 int main(int argc, char * argv[])
@@ -82,8 +165,10 @@ int main(int argc, char * argv[])
 		
 		// set up the grid
 		
-		Grid grid;
-		memset(&grid, 0, sizeof(grid));
+		GameOfLife<GRID_SX, GRID_SY> gameOfLife;
+		gameOfLife.randomize();
+		
+		float evolveTimer = 0.f;
 		
 		int lastHoverX = -1;
 		int lastHoverY = -1;
@@ -97,6 +182,9 @@ int main(int argc, char * argv[])
 			
 			// handle input
 			
+			if (mouse.wentDown(BUTTON_LEFT))
+				gameOfLife.randomize();
+			
 			const int hoverX = mouse.x / ELEM_SX;
 			const int hoverY = mouse.y / ELEM_SY;
 			
@@ -107,32 +195,29 @@ int main(int argc, char * argv[])
 				
 				if (hoverX >= 0 && hoverX < GRID_SX && hoverY >= 0 && hoverY < GRID_SY)
 				{
-					grid.elems[hoverX][hoverY].hoverAnim = 1.f;
-					
-					AudioGraphInstance *& instance = grid.elems[hoverX][hoverY].graphInstance;
-					
-					audioGraphMgr.free(instance);
-					
-					instance = audioGraphMgr.createInstance("020-audiogrid.xml");
-					
-					if (instance != nullptr)
-					{
-						const float freq = std::pow(2.f, 5.f + hoverY + hoverX / float(GRID_SX));
-						instance->audioGraph->setMemf("freq", freq);
-						instance->audioGraph->triggerEvent("begin");
-					}
+					gameOfLife.elems[hoverX][hoverY].value = 1;
+					gameOfLife.elems[hoverX][hoverY].anim = 1.f;
 				}
 			}
 			
 			// process logic
 			
+			evolveTimer = std::max(0.f, evolveTimer - framework.timeStep);
+			
+			if (evolveTimer == 0.f)
+			{
+				evolveTimer = .7f;
+				
+				gameOfLife.evolve(audioGraphMgr);
+			}
+			
 			for (int x = 0; x < GRID_SX; ++x)
 			{
 				for (int y = 0; y < GRID_SY; ++y)
 				{
-					grid.elems[x][y].hoverAnim = std::max(0.f, grid.elems[x][y].hoverAnim - framework.timeStep / .8f);
+					gameOfLife.elems[x][y].anim = std::max(0.f, gameOfLife.elems[x][y].anim - framework.timeStep / .8f);
 					
-					AudioGraphInstance *& instance = grid.elems[x][y].graphInstance;
+					AudioGraphInstance *& instance = gameOfLife.elems[x][y].graphInstance;
 					
 					if (instance == nullptr)
 						continue;
@@ -164,7 +249,7 @@ int main(int argc, char * argv[])
 								const int y2 = (y + 1) * ELEM_SY - border;
 								
 								const bool hover = (x == hoverX && y == hoverY);
-								const int lightness = 30 + 100 * grid.elems[x][y].hoverAnim + 50 * hover;
+								const int lightness = 30 + 100 * gameOfLife.elems[x][y].anim + 50 * hover + 50 * gameOfLife.elems[x][y].value;
 								const float hue = y + x / float(GRID_SX);
 								const Color color = Color::fromHSL(hue / GRID_SY, .5f, lightness / 255.f);
 								
@@ -177,9 +262,13 @@ int main(int argc, char * argv[])
 					
 					// show CPU usage of the audio thread
 					
+					voiceMgr.audioMutex.lock();
+					const int numVoices = voiceMgr.voices.size();
+					voiceMgr.audioMutex.unlock();
+					
 					setColor(255, 255, 200);
-					drawText(10, 10, 16, +1, +1, "CPU usage audio thread: %d%%",
-						int(std::round(pa.getCpuUsage() * 100.0)));
+					drawText(10, 10, 16, +1, +1, "CPU usage audio thread: %d%%. numVoices=%d",
+						int(std::round(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100.0)), numVoices);
 				}
 				popFontMode();
 			}
@@ -190,7 +279,7 @@ int main(int argc, char * argv[])
 		
 		for (int x = 0; x < GRID_SX; ++x)
 			for (int y = 0; y < GRID_SY; ++y)
-				audioGraphMgr.free(grid.elems[x][y].graphInstance);
+				audioGraphMgr.free(gameOfLife.elems[x][y].graphInstance);
 		
 		// shut down audio related systems
 
