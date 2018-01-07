@@ -1,10 +1,18 @@
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
-#include <xmmintrin.h>
 #include "Debugging.h"
 #include "FastList.h"
 #include "MemOps.h"
+
+#if defined(MACOS) || defined(WINDOWS)
+	#include <xmmintrin.h>
+	#define HAS_MM_MALLOC 1
+#else
+	#include <stdlib.h>
+	#define HAS_MM_MALLOC 0
+#endif
 
 class IMemAllocator;
 class MemAllocatorGeneric;      // layers on top of standard library functions to provide 16 byte aligned allocations
@@ -20,6 +28,30 @@ class MemAllocInfo;
 class MemAllocInfoListIterator;
 
 typedef FastList<MemAllocInfo> MemAllocInfoList;
+
+inline void * MemAlloc(size_t size, size_t align)
+{
+#if HAS_MM_MALLOC
+	return _mm_malloc(size, align);
+#else
+	void * ptr;
+	
+	if (posix_memalign(&ptr, align, size) == 0)
+		return ptr;
+	else
+		return nullptr;
+	//return aligned_alloc(align, size);
+#endif
+}
+
+inline void MemFree(void * ptr)
+{
+#if HAS_MM_MALLOC
+	return _mm_free(ptr);
+#else
+	free(ptr);
+#endif
+}
 
 class IMemAllocator
 {
@@ -172,7 +204,7 @@ public:
 	virtual void * Alloc(size_t size, uint32_t tag = 0)
 	{
 #ifdef _DEBUG
-		void * p = _mm_malloc(size + sizeof(MemAllocInfo), m_alignment);
+		void * p = MemAlloc(size + sizeof(MemAllocInfo), m_alignment);
 
 		MemAllocInfo * pAllocInfo = reinterpret_cast<MemAllocInfo *>(p);
 		pAllocInfo->Init(size, tag, 0);
@@ -181,7 +213,7 @@ public:
 
 		return pAllocInfo + 1;
 #else
-		return _mm_malloc(size, m_alignment);
+		return MemAlloc(size, m_alignment);
 #endif
 	}
 
@@ -192,9 +224,9 @@ public:
 
 		m_allocList.erase(pAllocInfo);
 
-		_mm_free(pAllocInfo);
+		MemFree(pAllocInfo);
 #else
-		_mm_free(p);
+		MemFree(p);
 #endif
 	}
 
@@ -324,14 +356,14 @@ class MemAllocatorTransient : public MemAllocatorArray
 {
 public:
 	MemAllocatorTransient(size_t size)
-		: MemAllocatorArray(_mm_malloc(size, 16), size)
+		: MemAllocatorArray(MemAlloc(size, 16), size)
 	{
 	}
 
 	virtual ~MemAllocatorTransient()
 	{
 		void * pBytes = GetBytes();
-		_mm_free(pBytes);
+		MemFree(pBytes);
 		SetBytes(0, 0);
 	}
 };
@@ -340,7 +372,7 @@ class MemAllocatorStack : public MemAllocatorArray
 {
 public:
 	MemAllocatorStack(uint32_t size, uint32_t maxStackSize)
-		: MemAllocatorArray(_mm_malloc(size, 16), size)
+		: MemAllocatorArray(MemAlloc(size, 16), size)
 		, m_pStack(new void*[maxStackSize])
 		, m_stackSize(0)
 #ifdef DEBUG
@@ -354,7 +386,7 @@ public:
 		Assert(m_stackSize == 0);
 
 		void * pBytes = GetBytes();
-		_mm_free(pBytes);
+		MemFree(pBytes);
 		SetBytes(0, 0);
 
 		delete[] m_pStack;
@@ -393,7 +425,7 @@ class MemAllocatorManualStack : public MemAllocatorArray
 {
 public:
 	MemAllocatorManualStack(uint32_t size, uint32_t maxStackSize)
-		: MemAllocatorArray(_mm_malloc(size, 16), size)
+		: MemAllocatorArray(MemAlloc(size, 16), size)
 		, m_pStack(new void*[maxStackSize])
 		, m_stackSize(0)
 #ifdef DEBUG
@@ -407,7 +439,7 @@ public:
 		Assert(m_stackSize == 0);
 
 		void * pBytes = GetBytes();
-		_mm_free(pBytes);
+		MemFree(pBytes);
 		SetBytes(0, 0);
 
 		delete[] m_pStack;
@@ -458,7 +490,7 @@ class MemAllocatorFixed : public IMemAllocator, public IMemAllocationReporter
 public:
 	MemAllocatorFixed()
 	{
-		m_pBytes = reinterpret_cast<uint8_t *>(_mm_malloc(N * (1 << POW2), 16));
+		m_pBytes = reinterpret_cast<uint8_t *>(MemAlloc(N * (1 << POW2), 16));
 
 		m_pAllocInfos = new MemAllocInfo[N];
 
@@ -475,7 +507,7 @@ public:
 		delete[] m_pAllocInfos;
 		m_pAllocInfos = 0;
 
-		_mm_free(m_pBytes);
+		MemFree(m_pBytes);
 		m_pBytes = 0;
 	}
 
