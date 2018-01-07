@@ -514,7 +514,7 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 		Assert(audioNode != nullptr);
 		if (audioNode == nullptr)
 		{
-			LOG_ERR("unable to create node", 0);
+			LOG_ERR("unable to create node. id=%d, typeName=%s", node.id, node.typeName.c_str());
 		}
 		else
 		{
@@ -542,9 +542,9 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 		if (srcNodeItr == audioGraph->nodes.end() || dstNodeItr == audioGraph->nodes.end())
 		{
 			if (srcNodeItr == audioGraph->nodes.end())
-				LOG_ERR("source node doesn't exist", 0);
+				LOG_ERR("unable to setup link. source node doesn't exist", 0);
 			if (dstNodeItr == audioGraph->nodes.end())
-				LOG_ERR("destination node doesn't exist", 0);
+				LOG_ERR("unable to setup link. destination node doesn't exist", 0);
 		}
 		else
 		{
@@ -558,9 +558,9 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 			if (input == nullptr || output == nullptr)
 			{
 				if (input == nullptr)
-					LOG_ERR("input node socket doesn't exist. name=%s, index=%d", link.srcNodeSocketName.c_str(), link.srcNodeSocketIndex);
+					LOG_ERR("unable to setup link. input node socket doesn't exist. name=%s, index=%d", link.srcNodeSocketName.c_str(), link.srcNodeSocketIndex);
 				if (output == nullptr)
-					LOG_ERR("output node socket doesn't exist. name=%s, index=%d", link.dstNodeSocketName.c_str(), link.dstNodeSocketIndex);
+					LOG_ERR("unable to setup link. output node socket doesn't exist. name=%s, index=%d", link.dstNodeSocketName.c_str(), link.dstNodeSocketIndex);
 			}
 			else
 			{
