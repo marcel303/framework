@@ -35,6 +35,9 @@ file(GLOB_RECURSE source_audioNodes "audioNodes/*.*")
 file(GLOB_RECURSE source_objects "objects/*.*" ${source_graph})
 file(GLOB_RECURSE source_delaunay "delaunay/*.*")
 
+list(REMOVE_ITEM source ${source_audioNodes})
+set(AUDIOGRAPH_SOURCES ${source_audioNodes} PARENT_SCOPE)
+
 file(GLOB source_tests "test*.*")
 
 source_group("audioGraph" FILES ${source})
