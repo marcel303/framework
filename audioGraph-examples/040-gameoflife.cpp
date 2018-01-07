@@ -31,9 +31,6 @@
 #include "framework.h"
 #include "soundmix.h"
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
 const int GFX_SX = 512;
 const int GFX_SY = 512;
 
@@ -123,6 +120,8 @@ struct GameOfLife
 					
 					AudioGraphInstance *& instance = elems[x][y].graphInstance;
 					
+					// todo : apply ramping before actually freeing voice
+					
 					audioGraphMgr.free(instance);
 					
 					instance = audioGraphMgr.createInstance("040-gameoflife.xml");
@@ -161,7 +160,7 @@ int main(int argc, char * argv[])
 		audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
 
 		PortAudioObject pa;
-		pa.init(SAMPLE_RATE, 2, 2, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
+		pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 		
 		// set up the grid
 		
@@ -266,9 +265,17 @@ int main(int argc, char * argv[])
 					const int numVoices = voiceMgr.voices.size();
 					voiceMgr.audioMutex.unlock();
 					
-					setColor(255, 255, 200);
-					drawText(10, 10, 16, +1, +1, "CPU usage audio thread: %d%%. numVoices=%d",
-						int(std::round(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100.0)), numVoices);
+					// go a little bit overboard with the polish and show a nice background with rounded corners
+					// and an opacity fade that kicks in when the mouse cursor moves to the top of the window
+					const int a = 200 - std::max(0, mouse.y - 50) * 200 / 50;
+					setColor(31, 15, 7, a);
+					hqBegin(HQ_FILLED_ROUNDED_RECTS);
+					hqFillRoundedRect(GFX_SX/2-140, 5, GFX_SX/2+140, 50, 6);
+					hqEnd();
+					setColor(255, 255, 200, a);
+					drawText(GFX_SX/2, 10, 16, 0, +1, "CPU usage audio thread: %d%%",
+						int(std::round(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100.0)));
+					drawText(GFX_SX/2, 30, 16, 0, +1, "voices: %d/%d", numVoices, CHANNEL_COUNT);
 				}
 				popFontMode();
 			}
