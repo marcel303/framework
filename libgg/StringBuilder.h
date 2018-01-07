@@ -1,8 +1,7 @@
 #pragma once
 
 #include <stdlib.h>
-#include <string.h>
-#include "Log.h"
+#include "Log.h" // VA_SPRINTF
 
 template <int SIZE>
 class StringBuilder
