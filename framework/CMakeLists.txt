@@ -67,6 +67,10 @@ if (APPLE)
 	target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/macos/include/freetype")
 endif (APPLE)
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	target_include_directories(framework PRIVATE "/usr/include/freetype2")
+endif ()
+
 if (WIN32)
 	set(FRAMEWORK_LIBRARIES
 		framework

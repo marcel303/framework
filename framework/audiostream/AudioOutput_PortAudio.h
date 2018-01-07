@@ -43,7 +43,7 @@ class AudioOutput_PortAudio : AudioOutput
 	AudioStream * m_stream;
 	std::atomic_bool m_isPlaying;
 	std::atomic_int m_volume;
-	std::atomic_int64_t m_position;
+	std::atomic<int64_t> m_position;
 	std::atomic_bool m_isDone;
 	
 	void lock();

@@ -2,12 +2,13 @@
 
 #if GG_ENABLE_OPTIONS
 
-#include <stdio.h>
 #include "FileStream.h"
 #include "Log.h"
 #include "Parse.h"
 #include "StreamReader.h"
 #include "StringEx.h" // _s variants
+#include <stdio.h>
+#include <string.h>
 
 OptionManager g_optionManager;
 

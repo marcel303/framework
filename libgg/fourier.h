@@ -98,7 +98,11 @@ example usage:
 */
 
 #ifndef FOURIER_USE_SSE
-	#define FOURIER_USE_SSE 1
+	#if __SSE2__
+		#define FOURIER_USE_SSE 1
+	#else
+		#define FOURIER_USE_SSE 0
+	#endif
 #endif
 
 #if FOURIER_USE_SSE

@@ -876,7 +876,7 @@ void Framework::process()
 				
 				mouse.x = e.motion.x * minification * globals.displaySize[0] / windowSx;
 				mouse.y = e.motion.y * minification * globals.displaySize[1] / windowSy;
-				logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, mouse.x, mouse.y);
+				//logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, mouse.x, mouse.y);
 			}
 		}
 		else if (e.type == SDL_MOUSEWHEEL)
@@ -946,7 +946,7 @@ void Framework::process()
 
 			const XINPUT_GAMEPAD & g = state.Gamepad;
 			
-		#define APPLY_DEADZONE(v, t) (std::abs(v) <= t ? 0.f : clamp((std::abs(v) - t) * (v < 0.f ? -1.f : +1.f) / float(32767 - t), -1.f, +1.f))
+		#define APPLY_DEADZONE(v, t) (fabsf(v) <= t ? 0.f : clamp((fabsf(v) - t) * (v < 0.f ? -1.f : +1.f) / float(32767 - t), -1.f, +1.f))
 
 			gamepad[i].m_analog[0][ANALOG_X] = APPLY_DEADZONE(+g.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
 			gamepad[i].m_analog[0][ANALOG_Y] = APPLY_DEADZONE(-g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
@@ -1074,7 +1074,7 @@ void Framework::process()
 		{
 			strcpy_s(gamepad[i].name, sizeof(gamepad[i].name), SDL_JoystickNameForIndex(i));
 			
-		#define APPLY_DEADZONE(v, t) (std::abs(v) <= t ? 0.f : clamp((std::abs(v) - t) * (v < 0.f ? -1.f : +1.f) / float(32767 - t), -1.f, +1.f))
+		#define APPLY_DEADZONE(v, t) (fabsf(v) <= t ? 0.f : clamp((fabsf(v) - t) * (v < 0.f ? -1.f : +1.f) / float(32767 - t), -1.f, +1.f))
 		#define DEADZONE 1024
 			
 			bool * isDown = gamepad[i].m_isDown;
@@ -5393,8 +5393,8 @@ void drawCircle(float x, float y, float radius, int numSegments)
 			const float angle = i * (M_PI * 2.f / numSegments);
 
 			gxVertex2f(
-				x + std::cosf(angle) * radius,
-				y + std::sinf(angle) * radius);
+				x + cosf(angle) * radius,
+				y + sinf(angle) * radius);
 		}
 	}
 	gxEnd();
@@ -5414,11 +5414,11 @@ void fillCircle(float x, float y, float radius, int numSegments)
 				y);
 
 			gxVertex2f(
-				x + std::cosf(angle1) * radius,
-				y + std::sinf(angle1) * radius);
+				x + cosf(angle1) * radius,
+				y + sinf(angle1) * radius);
 			gxVertex2f(
-				x + std::cosf(angle2) * radius,
-				y + std::sinf(angle2) * radius);
+				x + cosf(angle2) * radius,
+				y + sinf(angle2) * radius);
 		}
 	}
 	gxEnd();
@@ -5467,10 +5467,10 @@ static void measureText_STBTT(const StbFont * font, int size, const GlyphCacheEl
 			}
 			else
 			{
-				x1 = std::min(x1, dx1);
-				y1 = std::min(y1, dy1);
-				x2 = std::max(x2, dx2);
-				y2 = std::max(y2, dy2);
+				x1 = fminf(x1, dx1);
+				y1 = fminf(y1, dy1);
+				x2 = fmaxf(x2, dx2);
+				y2 = fmaxf(y2, dy2);
 			}
 
 			const int advance = elem.advance + stbtt_GetCodepointKernAdvance(&font->fontInfo, codepoint, i + 1 < numGlyphs ? codepoints[i + 1] : 0);
@@ -5887,7 +5887,7 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 	if (globals.fontMode == FONT_BITMAP)
 	{
 	#if USE_STBFONT
-		const int sizei = int(std::ceilf(size));
+		const int sizei = int(ceilf(size));
 		
 		auto font = globals.font->font;
 		
@@ -5902,7 +5902,7 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 
 		measureText_STBTT(font, size, glyphs, text, textLength, sx, sy, yTop);
 	#else
-		const int sizei = int(std::ceilf(size));
+		const int sizei = int(ceilf(size));
 		
 		auto face = globals.font->face;
 		
@@ -6018,7 +6018,7 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 	
 	if (globals.fontMode == FONT_BITMAP)
 	{
-		const int sizei = int(std::ceilf(size));
+		const int sizei = int(ceilf(size));
 		
 	#if USE_STBFONT
 		auto & font = globals.font->font;
@@ -6255,7 +6255,7 @@ void drawPath(const Path2d & path)
 		{
 			const float tx = hxy[0];
 			const float ty = hxy[1];
-			const float ts = std::hypot(tx, ty);
+			const float ts = hypotf(tx, ty);
 
 			gxVertex2f(pxy[0],          pxy[1]         );
 			gxVertex2f(pxy[0] + hxy[0], pxy[1] + hxy[1]);
@@ -7991,7 +7991,7 @@ void hqDrawPath(const Path2d & path, float stroke)
 		{
 			const float tx = hxy[0];
 			const float ty = hxy[1];
-			//const float ts = std::hypot(tx, ty);
+			//const float ts = hypotf(tx, ty);
 
 			hqLine(
 				pxy[0],          pxy[1],          1.f,
@@ -8024,7 +8024,7 @@ void hqDrawPath(const Path2d & path, float stroke)
 	if (mode == 3)
 		hqBegin(HQ_STROKED_CIRCLES, useScreenSpace);
 	{
-		const float strokeSize = (std::sin(framework.time) + 1.f) / 2.f * 4.f;
+		const float strokeSize = (sinf(framework.time) + 1.f) / 2.f * 4.f;
 
 		for (int i = 0; i < numPoints; ++i)
 		{

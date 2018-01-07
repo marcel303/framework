@@ -116,7 +116,11 @@ public:
 
 #if FRAMEWORK_USE_PORTAUDIO
 
-#include <portaudio/portaudio.h>
+#if LINUX
+	#include <portaudio.h>
+#else
+	#include <portaudio/portaudio.h>
+#endif
 
 class SoundPlayer_PortAudio
 {

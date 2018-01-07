@@ -34,3 +34,7 @@ endif (MSVC)
 if (APPLE)
 	target_compile_definitions(libgg PUBLIC MACOS)
 endif (APPLE)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	target_compile_definitions(libgg PUBLIC LINUX)
+endif ()

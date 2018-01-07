@@ -1,5 +1,6 @@
-#include <algorithm>
 #include "MultiLevelMenu.h"
+#include <algorithm>
+#include <string.h>
 
 MultiLevelMenuBase::Node::Node()
 	: m_parent(0)

@@ -49,6 +49,10 @@
 	#define fassert(x) do { } while (false)
 #endif
 
+#if LINUX
+	typedef int SDLKey;
+#endif
+
 // configuration
 
 #if defined(DEBUG)
