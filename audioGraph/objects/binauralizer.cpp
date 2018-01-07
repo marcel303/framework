@@ -28,6 +28,7 @@
 #include "binaural.h"
 #include "binauralizer.h"
 #include <algorithm>
+#include <string.h>
 
 #undef AUDIO_UPDATE_SIZE
 

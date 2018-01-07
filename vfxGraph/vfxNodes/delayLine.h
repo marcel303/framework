@@ -28,7 +28,7 @@
 #pragma once
 
 #include "Debugging.h"
-#include <cmath>
+#include <math.h>
 #include <string.h>
 
 struct DelayLine
@@ -117,7 +117,7 @@ struct DelayLine
 	
 	float readInterp(const float offset) const
 	{
-		const float index = std::fmodf(numSamples + nextWriteIndex + offset, numSamples);
+		const float index = fmodf(numSamples + nextWriteIndex + offset, numSamples);
 		const int index1 = int(index);
 		const int index2 = (index1 + 1) % numSamples;
 		

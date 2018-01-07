@@ -45,7 +45,7 @@ struct AudioNodeVoice : AudioNodeBase
 	{
 		AudioNodeVoice * voiceNode;
 		
-		virtual void generate(ALIGN16 float * __restrict samples, const int numSamples);
+		virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples);
 	};
 
 	enum Input

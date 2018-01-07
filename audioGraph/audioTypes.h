@@ -35,9 +35,15 @@
 
 #define SAMPLE_RATE 44100
 
-#define AUDIO_USE_SSE 1
+#ifndef AUDIO_USE_SSE
+	#if __SSE2__
+		#define AUDIO_USE_SSE 1
+	#else
+		#define AUDIO_USE_SSE 0
+	#endif
+#endif
 
-#ifdef MACOS
+#if defined(MACOS) || defined(LINUX)
 	#define ALIGN16 __attribute__((aligned(16)))
 	#define ALIGN32 __attribute__((aligned(32)))
 #else

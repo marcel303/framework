@@ -36,7 +36,7 @@ struct AudioNodeVoice4D : AudioNodeBase
 	{
 		AudioNodeVoice4D * voiceNode;
 		
-		virtual void generate(ALIGN16 float * __restrict samples, const int numSamples);
+		virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples);
 	};
 
 	enum Input
@@ -113,7 +113,7 @@ struct AudioNodeVoice4DReturn : AudioNodeBase
 	{
 		AudioNodeVoice4DReturn * returnNode;
 		
-		virtual void generate(ALIGN16 float * __restrict samples, const int numSamples);
+		virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples);
 	};
 
 	enum Input

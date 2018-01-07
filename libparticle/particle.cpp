@@ -1306,8 +1306,8 @@ void getParticleSpawnLocation(const ParticleCallbacks & cbs, const ParticleInfo 
 			if (pi.emitFromShell)
 			{
 				const float a = cbs.randomFloat(cbs.userData, 0.f, float(2.f * M_PI));
-				x = std::cosf(a) * pi.circleRadius;
-				y = std::sinf(a) * pi.circleRadius;
+				x = cosf(a) * pi.circleRadius;
+				y = sinf(a) * pi.circleRadius;
 			}
 			else
 			{

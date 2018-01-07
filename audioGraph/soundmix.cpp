@@ -552,7 +552,7 @@ AudioSourceMix::Input * AudioSourceMix::add(AudioSource * source, const float ga
 	return &inputs.back();
 }
 
-void AudioSourceMix::generate(ALIGN16 float * __restrict samples, const int numSamples)
+void AudioSourceMix::generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples)
 {
 	if (inputs.empty())
 	{
@@ -623,7 +623,7 @@ void AudioSourceSine::init(const float _phase, const float _frequency)
 	phaseStep = _frequency / SAMPLE_RATE;
 }
 
-void AudioSourceSine::generate(ALIGN16 float * __restrict samples, const int numSamples)
+void AudioSourceSine::generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples)
 {
 	for (int i = 0; i < numSamples; ++i)
 	{
@@ -729,7 +729,7 @@ void AudioSourcePcm::resetLoopCount()
 	loopCount = 0;
 }
 
-void AudioSourcePcm::generate(ALIGN16 float * __restrict samples, const int numSamples)
+void AudioSourcePcm::generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples)
 {
 	hasLooped = false;
 	isDone = false;

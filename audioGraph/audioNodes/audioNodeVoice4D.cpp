@@ -103,7 +103,7 @@ AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
 	out("rampedDown!", "trigger");
 }
 
-void AudioNodeVoice4D::AudioSourceVoiceNode::generate(ALIGN16 float * __restrict samples, const int numSamples)
+void AudioNodeVoice4D::AudioSourceVoiceNode::generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples)
 {
 	Assert(numSamples == AUDIO_UPDATE_SIZE);
 	
@@ -397,7 +397,7 @@ AUDIO_NODE_TYPE(return_4d, AudioNodeVoice4DReturn)
 	in("back.scatter", "audioValue", "0");
 }
 
-void AudioNodeVoice4DReturn::AudioSourceReturnNode::generate(ALIGN16 float * __restrict samples, const int numSamples)
+void AudioNodeVoice4DReturn::AudioSourceReturnNode::generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples)
 {
 	Assert(numSamples == AUDIO_UPDATE_SIZE);
 	

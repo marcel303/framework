@@ -52,8 +52,6 @@ target_link_libraries(audioGraph PRIVATE libgg)
 
 target_link_libraries(audioGraph PRIVATE ${FRAMEWORK_LIBRARIES})
 
-target_compile_definitions(audioGraph PUBLIC BINAURAL_USE_SSE=1)
-
 target_include_directories(audioGraph PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(audioGraph PUBLIC "objects")
 target_include_directories(audioGraph PUBLIC "../vfxGraph")

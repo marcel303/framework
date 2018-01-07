@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include <cmath>
+#include <math.h>
 
 // weird idea: use a limited with N measurement points.. say 1024 .. and see how limiting each sample i % N limited separately affects the waveform
 
@@ -42,7 +42,7 @@ struct Limiter
 	
 	float next(const float value, const float retain, const float outputMax)
 	{
-		const float valueMag = std::fabsf(value);
+		const float valueMag = fabsf(value);
 		
 		if (valueMag > measuredMax)
 		{
@@ -72,7 +72,7 @@ struct Limiter
 		int i = 0;
 
 	#if 1
-		const float retain16 = std::powf(retain, 16);
+		const float retain16 = powf(retain, 16.f);
 
 		while (i * 16 < numSamples)
 		{
@@ -80,7 +80,7 @@ struct Limiter
 			{
 				const float value = samples[i * 16 + j];
 
-				const float valueMag = std::fabsf(value);
+				const float valueMag = fabsf(value);
 
 				if (valueMag > measuredMax)
 					measuredMax = valueMag;
@@ -121,7 +121,7 @@ struct Limiter
 		int i = 0;
 
 	#if 1
-		const float retain16 = std::powf(retain, 16);
+		const float retain16 = powf(retain, 16.f);
 
 		while (i * 16 < numSamples)
 		{
@@ -129,7 +129,7 @@ struct Limiter
 			{
 				const float value = samples[i * 16 + j];
 
-				const float valueMag = std::fabsf(value);
+				const float valueMag = fabsf(value);
 
 				if (valueMag > measuredMax)
 					measuredMax = valueMag;

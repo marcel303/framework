@@ -27,8 +27,13 @@
 
 #include "Log.h"
 #include "paobject.h"
-#include "portaudio/portaudio.h"
 #include <string.h>
+
+#if LINUX
+	#include <portaudio.h>
+#else
+	#include <portaudio/portaudio.h>
+#endif
 
 static int portaudioCallback(
 	const void * inputBuffer,

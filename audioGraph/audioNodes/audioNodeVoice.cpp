@@ -27,6 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioGraph.h"
 #include "audioNodeVoice.h"
+#include <string.h>
 
 #define voiceMgr g_currentAudioGraph->globals->voiceMgr
 
@@ -46,7 +47,7 @@ AUDIO_NODE_TYPE(voice, AudioNodeVoice)
 	inEnum("speaker", "voiceSpeaker");
 }
 
-void AudioNodeVoice::AudioSourceVoiceNode::generate(ALIGN16 float * __restrict samples, const int numSamples)
+void AudioNodeVoice::AudioSourceVoiceNode::generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples)
 {
 	Assert(numSamples == AUDIO_UPDATE_SIZE);
 	

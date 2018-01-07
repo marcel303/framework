@@ -32,6 +32,12 @@
 #include "audioTypes.h"
 #include "limiter.h"
 
+#if LINUX
+	#define SAMPLE_ALIGN16
+#else
+	#define SAMPLE_ALIGN16 ALIGN16
+#endif
+
 struct PcmData
 {
 	float * samples;
@@ -54,7 +60,7 @@ struct PcmData
 
 struct AudioSource
 {
-	virtual void generate(ALIGN16 float * __restrict samples, const int numSamples) = 0;
+	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) = 0;
 };
 
 struct AudioSourceMix : AudioSource
@@ -71,7 +77,7 @@ struct AudioSourceMix : AudioSource
 
 	AudioSourceMix();
 
-	virtual void generate(ALIGN16 float * __restrict samples, const int numSamples) override;
+	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override;
 
 	Input * add(AudioSource * source, const float gain);
 	void remove(Input * input);
@@ -88,7 +94,7 @@ struct AudioSourceSine : AudioSource
 	
 	void init(const float phase, const float frequency);
 	
-	virtual void generate(ALIGN16 float * __restrict samples, const int numSamples) override;
+	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override;
 };
 
 struct AudioSourcePcm : AudioSource
@@ -126,7 +132,7 @@ struct AudioSourcePcm : AudioSource
 	void setSamplePositionNorm(const float position);
 	void resetLoopCount();
 
-	virtual void generate(ALIGN16 float * __restrict samples, const int numSamples) override;
+	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override;
 };
 
 //
