@@ -58,17 +58,21 @@
 #if defined(DEBUG)
 	#define ENABLE_LOGGING_DBG 1
 	#define ENABLE_LOGGING 1
-	#define ENABLE_PROFILING 1
 
 	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 1
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 1
 #else
 	#define ENABLE_LOGGING_DBG 0 // do not alter
 	#define ENABLE_LOGGING 0 // do not alter
-	#define ENABLE_PROFILING 1 // do not alter
 
 	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 0 // do not alter
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0 // do not alter
+#endif
+
+#if defined(LINUX)
+	#define ENABLE_PROFILING 0
+#else
+	#define ENABLE_PROFILING 1
 #endif
 
 #define ENABLE_OPENGL 1

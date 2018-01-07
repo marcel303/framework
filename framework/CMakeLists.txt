@@ -34,6 +34,10 @@ file(GLOB_RECURSE source_remotery "remotery*.*")
 file(GLOB_RECURSE source_tinyxml "tinyxml*.*")
 file(GLOB_RECURSE source_utf8rewind "utf8rewind*.*")
 
+#if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	list(REMOVE_ITEM source remotery.cpp remotery.h)
+#endif ()
+
 source_group("sources" FILES ${source})
 
 source_group("3rdparty\\msdfgen" FILES ${source_msdfgen})
@@ -139,6 +143,33 @@ if (APPLE)
 	set(FRAMEWORK_BINARIES
 		PARENT_SCOPE)
 endif (APPLE)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux") 
+        include(FindPkgConfig) 
+ 
+        find_package(OpenGL REQUIRED) 
+        find_library(PTHREAD_LIBRARY pthread) 
+        find_package(GLEW REQUIRED) 
+        find_library(PORTAUDIO_LIBRARY portaudio) 
+        find_package(Freetype REQUIRED) 
+        find_library(FREEIMAGE_LIBRARY freeimage) 
+        find_package(SDL2 REQUIRED) 
+ 
+        set(FRAMEWORK_LIBRARIES 
+                framework 
+                libgg 
+                ${OPENGL_LIBRARIES} 
+                ${PTHREAD_LIBRARY} 
+                ${GLEW_LIBRARIES} 
+                ${PORTAUDIO_LIBRARY} 
+                ${FREETYPE_LIBRARIES} 
+                ${FREEIMAGE_LIBRARY} 
+                ${SDL2_LIBRARIES} 
+                PARENT_SCOPE) 
+
+        set(FRAMEWORK_BINARIES 
+                PARENT_SCOPE) 
+endif ()
 
 if (MSVC)
 	set_property(TARGET framework APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)

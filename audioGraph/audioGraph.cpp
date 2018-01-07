@@ -204,7 +204,7 @@ void AudioGraph::tick(const float dt)
 		
 		for (auto & controlValue : controlValues)
 		{
-			const float retain = std::powf(controlValue.smoothness, dt);
+			const float retain = powf(controlValue.smoothness, dt);
 			
 			controlValue.currentX = controlValue.currentX * retain + controlValue.desiredX * (1.f - retain);
 			controlValue.currentY = controlValue.currentY * retain + controlValue.desiredY * (1.f - retain);
