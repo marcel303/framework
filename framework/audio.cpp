@@ -712,7 +712,7 @@ void SoundPlayer_OpenAL::playMusic(const char * filename, bool loop)
 		m_musicStream->Open(filename, loop);
 		m_musicOutput->Play(m_musicStream);
 		
-		Assert(m_musicStream->mSampleRate == 44100); // fixme : handle different sample rates?
+		Assert(m_musicStream->mSampleRate == 44100); // todo : handle different sample rates?
 	}
 }
 
@@ -1206,7 +1206,7 @@ void SoundPlayer_PortAudio::playMusic(const char * filename, const bool loop)
 	
 	m_musicStream->Open(filename, loop);
 	
-	Assert(m_musicStream->mSampleRate == 44100); // fixme : handle different sample rates?
+	Assert(m_musicStream->mSampleRate == 44100); // todo : handle different sample rates?
 }
 
 void SoundPlayer_PortAudio::stopMusic()
