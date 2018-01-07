@@ -31,6 +31,7 @@
 #include "audioVoiceManager4D.h"
 #include "Calc.h"
 #include "framework.h"
+#include "MemAlloc.h"
 #include "Path.h"
 #include "soundmix.h" // AudioVoiceManager. todo : move to its own source file
 #include "StringEx.h"
@@ -113,7 +114,7 @@ static void doSlider(float & value, const char * name, const float smoothness, c
 		
 		//
 		
-		const float retain = std::powf(smoothness, dt);
+		const float retain = powf(smoothness, dt);
 		
 		value = lerp(desiredValue, value, retain);
 	}
@@ -461,8 +462,8 @@ struct Oneshot : EntityBase
 	virtual void tick(const float dt) override
 	{
 		pos += vel * dt;
-		vel *= std::powf(velGrow, dt);
-		dim *= std::powf(dimGrow, dt);
+		vel *= powf(velGrow, dt);
+		dim *= powf(dimGrow, dt);
 		
 		graphInstance->audioGraph->setMemf("pos", pos[0], pos[1], pos[2]);
 		graphInstance->audioGraph->setMemf("vel", vel[0], vel[1], vel[2]);
@@ -616,7 +617,7 @@ struct Bird : EntityBase
 	void beginFlying()
 	{
 		const float currentRadius = Vec2(currentPos[0], currentPos[1]).CalcSize();
-		const float currentAngle = std::atan2f(currentPos[2], currentPos[0]);
+		const float currentAngle = atan2f(currentPos[2], currentPos[0]);
 		
 		float desiredRadius;
 		float desiredAngle;
@@ -659,13 +660,13 @@ struct Bird : EntityBase
 	{
 		{
 			const float soundLevelAbs = std::abs(measuredSoundLevel);
-			const float soundLevelRetain = std::powf(.75f, dt);
+			const float soundLevelRetain = powf(.75f, dt);
 			soundLevelSlowChanging = lerp(soundLevelAbs, soundLevelSlowChanging, soundLevelRetain);
 		}
 		
 		{
 			const float soundLevelAbs = std::abs(measuredSoundLevel);
-			const float soundLevelRetain = std::powf(.5f, dt);
+			const float soundLevelRetain = powf(.5f, dt);
 			soundLevelFastChanging = lerp(soundLevelAbs, soundLevelFastChanging, soundLevelRetain);
 		}
 		
@@ -676,7 +677,7 @@ struct Bird : EntityBase
 	{
 		// update movement
 		
-		const float retain = std::powf(.3f, dt);
+		const float retain = powf(.3f, dt);
 		
 		const auto oldPos = currentPos;
 		
@@ -1008,7 +1009,7 @@ struct Machine : EntityBase
 	virtual void tick(const float dt) override
 	{
 		{
-			const float retain = std::powf(.2f, dt);
+			const float retain = powf(.2f, dt);
 			
 			auto oldPos = worldPos;
 			
@@ -1022,7 +1023,7 @@ struct Machine : EntityBase
 		}
 		
 		{
-			const float retain = std::powf(.85f, dt);
+			const float retain = powf(.85f, dt);
 			
 			currentTension = lerp(desiredTension, currentTension, retain);
 		}
@@ -1202,7 +1203,7 @@ struct World : WorldInterface
 		void lerpTo(const Parameters & other, const float dt)
 		{
 			{
-				const float retain = std::powf(.1f, dt);
+				const float retain = powf(.1f, dt);
 				
 				wavefieldC = lerp(other.wavefieldC, wavefieldC, retain);
 				wavefieldD = lerp(other.wavefieldD, wavefieldD, retain);
@@ -1632,7 +1633,7 @@ struct World : WorldInterface
 					{
 						hqBegin(HQ_STROKED_CIRCLES);
 						{
-							const float t = 1.f - std::fmodf(bird->songAnimTimer * bird->songAnimTimerRcp * 3.f, 1.f);
+							const float t = 1.f - fmodf(bird->songAnimTimer * bird->songAnimTimerRcp * 3.f, 1.f);
 							
 							setColorf(1.f, 1.f, 1.f, 1.f - t);
 							hqStrokeCircle(bird->currentPos[0], bird->currentPos[2], .5f + 5.f * t, 3.f);
@@ -1720,8 +1721,8 @@ struct World : WorldInterface
 		return wavefield.sample(samplePosition[0], samplePosition[1]);
 	}
 	
-	void * operator new(size_t size) { return _mm_malloc(size, 32); }
-	void operator delete(void * mem) { _mm_free(mem); }
+	void * operator new(size_t size) { return MemAlloc(size, 32); }
+	void operator delete(void * mem) { MemAlloc(mem); }
 };
 
 //
@@ -1761,7 +1762,11 @@ static void doVoiceButton(const char * name, const char * file, const bool isLas
 
 //
 
-#include "portaudio/portaudio.h"
+#if LINUX
+	#include <portaudio.h>
+#else
+	#include <portaudio/portaudio.h>
+#endif
 
 static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inputDeviceIndex, int & outputDeviceIndex)
 {
