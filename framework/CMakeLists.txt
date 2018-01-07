@@ -34,9 +34,9 @@ file(GLOB_RECURSE source_remotery "remotery*.*")
 file(GLOB_RECURSE source_tinyxml "tinyxml*.*")
 file(GLOB_RECURSE source_utf8rewind "utf8rewind*.*")
 
-#if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	list(REMOVE_ITEM source remotery.cpp remotery.h)
-#endif ()
+endif ()
 
 source_group("sources" FILES ${source})
 

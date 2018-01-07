@@ -946,7 +946,7 @@ void Framework::process()
 
 			const XINPUT_GAMEPAD & g = state.Gamepad;
 			
-		#define APPLY_DEADZONE(v, t) (fabsf(v) <= t ? 0.f : clamp((fabsf(v) - t) * (v < 0.f ? -1.f : +1.f) / float(32767 - t), -1.f, +1.f))
+		#define APPLY_DEADZONE(v, t) (std::abs(v) <= t ? 0.f : clamp((std::abs(v) - t) * (v < 0.f ? -1.f : +1.f) / float(32767 - t), -1.f, +1.f))
 
 			gamepad[i].m_analog[0][ANALOG_X] = APPLY_DEADZONE(+g.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
 			gamepad[i].m_analog[0][ANALOG_Y] = APPLY_DEADZONE(-g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
@@ -1074,7 +1074,7 @@ void Framework::process()
 		{
 			strcpy_s(gamepad[i].name, sizeof(gamepad[i].name), SDL_JoystickNameForIndex(i));
 			
-		#define APPLY_DEADZONE(v, t) (fabsf(v) <= t ? 0.f : clamp((fabsf(v) - t) * (v < 0.f ? -1.f : +1.f) / float(32767 - t), -1.f, +1.f))
+		#define APPLY_DEADZONE(v, t) (std::abs(v) <= t ? 0.f : clamp((fabsf(v) - t) * (v < 0.f ? -1.f : +1.f) / float(32767 - t), -1.f, +1.f))
 		#define DEADZONE 1024
 			
 			bool * isDown = gamepad[i].m_isDown;
