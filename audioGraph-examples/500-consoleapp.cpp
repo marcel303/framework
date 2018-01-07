@@ -63,6 +63,8 @@ int main(int argc, char * argv[])
 		
 		for (;;)
 		{
+			printf("CPU usage: %d%%\n", int(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100));
+			
 			SDL_Delay(1100);
 		}
 		
