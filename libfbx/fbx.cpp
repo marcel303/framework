@@ -1,5 +1,6 @@
-#include <assert.h>
 #include "fbx.h"
+#include <assert.h>
+#include <string.h>
 
 // --------------------------------------------------------------------------------
 // FbxRecord

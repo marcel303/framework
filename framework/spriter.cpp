@@ -449,7 +449,7 @@ namespace spriter
 			}
 			else if (loopType == kLoopType_Looping)
 			{
-				newTime = std::fmodf(newTime, length);
+				newTime = std::fmod<float>(newTime, length);
 			}
 			else
 			{

@@ -3297,7 +3297,7 @@ enum SampleType
 typedef struct Sample
 {
     // Inherit so that samples can be quickly allocated
-    ObjectLink ObjectLink;
+    ::ObjectLink ObjectLink;
 
     enum SampleType type;
 
@@ -4576,7 +4576,7 @@ RMT_API void _rmt_EndCPUSample(void)
 typedef struct CUDASample
 {
     // IS-A inheritance relationship
-    Sample Sample;
+    ::Sample Sample;
 
     // Pair of events that wrap the sample
     CUevent event_start;
@@ -4929,7 +4929,7 @@ static void D3D11_Destructor(D3D11* d3d11)
 typedef struct D3D11Timestamp
 {
     // Inherit so that timestamps can be quickly allocated
-    ObjectLink ObjectLink;
+    ::ObjectLink ObjectLink;
 
     // Pair of timestamp queries that wrap the sample
     ID3D11Query* query_start;
@@ -5066,7 +5066,7 @@ static HRESULT D3D11Timestamp_GetData(D3D11Timestamp* stamp, ID3D11DeviceContext
 typedef struct D3D11Sample
 {
     // IS-A inheritance relationship
-    Sample Sample;
+    ::Sample Sample;
 
     D3D11Timestamp* timestamp;
 
@@ -5493,7 +5493,7 @@ static void OpenGL_Destructor(OpenGL* opengl)
 typedef struct OpenGLTimestamp
 {
     // Inherit so that timestamps can be quickly allocated
-    ObjectLink ObjectLink;
+    ::ObjectLink ObjectLink;
 
     // Pair of timestamp queries that wrap the sample
     GLuint queries[2];
@@ -5612,7 +5612,7 @@ static rmtBool OpenGLTimestamp_GetData(OpenGLTimestamp* stamp, rmtU64* out_start
 typedef struct OpenGLSample
 {
     // IS-A inheritance relationship
-    Sample Sample;
+    ::Sample Sample;
 
     OpenGLTimestamp* timestamp;
 

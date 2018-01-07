@@ -1203,7 +1203,7 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit, const float dt)
 		{
 			isFirst = false;
 			
-			const float retain = std::powf(.7f, dt);
+			const float retain = std::pow<float>(.7f, dt);
 			
 			min = channelDataMin * retain;
 			max = channelDataMax * retain;
@@ -3009,7 +3009,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 		#if !defined(MACOS) // fixme : mouse wheel event seems to trigger when interacting with the touch pad on MacOS
 			{
-				const float magnitude = std::powf(1.1f, mouse.scrollY);
+				const float magnitude = std::pow<float>(1.1f, mouse.scrollY);
 			
 				dragAndZoom.desiredZoom *= magnitude;
 			}

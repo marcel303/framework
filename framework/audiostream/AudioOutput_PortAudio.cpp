@@ -29,7 +29,12 @@
 
 #include "AudioOutput_PortAudio.h"
 #include "framework.h"
-#include <portaudio/portaudio.h>
+
+#if LINUX
+	#include <portaudio.h>
+#else
+	#include <portaudio/portaudio.h>
+#endif
 
 void AudioOutput_PortAudio::lock()
 {
