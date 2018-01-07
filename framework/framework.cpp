@@ -2054,7 +2054,7 @@ void Surface::invertAlpha()
 
 void Surface::gaussianBlur(const float strengthH, const float strengthV, const int _kernelSize)
 {
-	const int kernelSize = _kernelSize < 0 ? int(std::ceilf(std::max(strengthH, strengthV))) : _kernelSize;
+	const int kernelSize = _kernelSize < 0 ? int(ceilf(std::max(strengthH, strengthV))) : _kernelSize;
 	
 	if (kernelSize == 0)
 		return;
@@ -5475,7 +5475,7 @@ static void measureText_STBTT(const StbFont * font, int size, const GlyphCacheEl
 
 			const int advance = elem.advance + stbtt_GetCodepointKernAdvance(&font->fontInfo, codepoint, i + 1 < numGlyphs ? codepoints[i + 1] : 0);
 		
-			const int advancePixels = std::max(1, int(std::ceilf(advance * scale)));
+			const int advancePixels = std::max(1, int(ceilf(advance * scale)));
 		
 			x += advancePixels;
 		}
@@ -5601,7 +5601,7 @@ static void drawText_STBTT(const StbFont * font, int size, const GlyphCacheElem 
 		
 		const int advance = elem.advance + stbtt_GetCodepointKernAdvance(&font->fontInfo, codepoint, i + 1 < numGlyphs ? codepoints[i + 1] : 0);
 		
-		const int advancePixels = std::max(1, int(std::ceilf(advance * scale)));
+		const int advancePixels = std::max(1, int(ceilf(advance * scale)));
 		
 		x += advancePixels;
 	}

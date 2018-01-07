@@ -27,11 +27,11 @@
 
 #include "framework.h"
 #include "image.h"
+#include "MemAlloc.h"
 #ifdef WIN32
 	#include <Windows.h>
 #endif
 #include <FreeImage.h>
-#include <xmmintrin.h>
 
 //
 
@@ -47,14 +47,14 @@ ImageData::ImageData(int sx, int sy)
 	this->sx = sx;
 	this->sy = sy;
 
-	imageData = (ImageData::Pixel*)_mm_malloc(sx * sy * 4, 16);
+	imageData = (ImageData::Pixel*)MemAlloc(sx * sy * 4, 16);
 }
 
 ImageData::~ImageData()
 {
 	if (imageData)
 	{
-		_mm_free(imageData);
+		MemFree(imageData);
 		imageData = 0;
 		
 		sx = sy = 0;
@@ -85,7 +85,7 @@ ImageData * loadImage(const char * filename)
 		const int sx = FreeImage_GetWidth(bmp);
 		const int sy = FreeImage_GetHeight(bmp);
 
-		data = _mm_malloc(sx * sy * 4, 16);
+		data = MemAlloc(sx * sy * 4, 16);
 		char * __restrict dest = (char*)data;
 		
 		for (int y = 0; y < sy; ++y)
@@ -118,7 +118,7 @@ ImageData * loadImage(const char * filename)
 			return 0;
 		}
 
-		data = _mm_malloc(sx * sy * 4, 16);
+		data = MemAlloc(sx * sy * 4, 16);
 		char * __restrict dest = (char*)data;
 		
 		for (int y = 0; y < sy; ++y)
@@ -161,7 +161,7 @@ ImageData *  imagePremultiplyAlpha(const ImageData * image)
 	ImageData * result = new ImageData();
 	result->sx = image->sx;
 	result->sy = image->sy;
-	result->imageData = (ImageData::Pixel*)_mm_malloc(numPixels * 4, 16);
+	result->imageData = (ImageData::Pixel*)MemAlloc(numPixels * 4, 16);
 
 	for (int i = 0; i < numPixels; ++i)
 	{
@@ -190,7 +190,7 @@ ImageData * imageFixAlphaFilter(const ImageData * image)
 	ImageData * result = new ImageData();
 	result->sx = image->sx;
 	result->sy = image->sy;
-	result->imageData = (ImageData::Pixel*)_mm_malloc(image->sx * image->sy * 4, 16);
+	result->imageData = (ImageData::Pixel*)MemAlloc(image->sx * image->sy * 4, 16);
 
 	for (int y = 0; y < image->sy; ++y)
 	{
