@@ -31,6 +31,8 @@
 
 struct VfxNodeBinaryOutput : VfxNodeBase
 {
+	static const int kChannelSize = 16;
+	
 	enum Input
 	{
 		kInput_Value,
@@ -46,10 +48,14 @@ struct VfxNodeBinaryOutput : VfxNodeBase
 		kOutput_Value4,
 		kOutput_Value5,
 		kOutput_Value6,
+		kOutput_ValueChannel,
 		kOutput_COUNT
 	};
 	
 	float outputValue[6];
+	
+	float channelData[kChannelSize];
+	VfxChannel channelOutput;
 	
 	VfxNodeBinaryOutput();
 	

@@ -40,6 +40,7 @@ VFX_NODE_TYPE(VfxNodeBinaryOutput)
 	out("bit4", "float");
 	out("bit5", "float");
 	out("bit6", "float");
+	out("channel", "channel");
 }
 
 VfxNodeBinaryOutput::VfxNodeBinaryOutput()
@@ -55,6 +56,10 @@ VfxNodeBinaryOutput::VfxNodeBinaryOutput()
 	addOutput(kOutput_Value4, kVfxPlugType_Float, &outputValue[3]);
 	addOutput(kOutput_Value5, kVfxPlugType_Float, &outputValue[4]);
 	addOutput(kOutput_Value6, kVfxPlugType_Float, &outputValue[5]);
+	addOutput(kOutput_ValueChannel, kVfxPlugType_Channel, &channelOutput);
+	
+	memset(channelData, 0, sizeof(channelData));
+	channelOutput.setData(channelData, false, kChannelSize);
 }
 
 void VfxNodeBinaryOutput::tick(const float dt)
@@ -78,4 +83,7 @@ void VfxNodeBinaryOutput::tick(const float dt)
 	outputValue[3] = (valueAsInt & (1 << 3)) >> 3;
 	outputValue[4] = (valueAsInt & (1 << 4)) >> 4;
 	outputValue[5] = (valueAsInt & (1 << 5)) >> 5;
+	
+	for (int i = 0, m = 1; i < kChannelSize; ++i, m <<= 1)
+		channelData[i] = (valueAsInt & m) ? 1.f : 0.f;
 }
