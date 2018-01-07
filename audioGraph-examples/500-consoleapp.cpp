@@ -55,7 +55,7 @@ int main(int argc, char * argv[])
 		audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
 
 		PortAudioObject pa;
-		pa.init(SAMPLE_RATE, 2, 2, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
+		pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 		
 		// create an audio graph instance
 		
