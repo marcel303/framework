@@ -5,6 +5,7 @@
 #include <cmath>
 #include <xmmintrin.h>
 
+#include "Log.h" // LOG_ functions
 #include "StringEx.h" // _s functions
 #include "ui.h" // srgb <-> linear
 
@@ -141,6 +142,17 @@ void ParticleColor::load(const XMLElement * elem)
 
 //
 
+ParticleCurve::Key::Key()
+	: t(0.f)
+	, value(0.f)
+{
+}
+
+bool ParticleCurve::Key::operator<(const Key & other) const
+{
+	return t < other.t;
+}
+
 ParticleCurve::ParticleCurve()
 {
 	setLinear(0.f, 1.f);
@@ -155,6 +167,66 @@ void ParticleCurve::setLinear(float v1, float v2)
 	keys[1].t = 1.f;
 	keys[1].value = v2;
 	numKeys = 2;
+}
+
+bool ParticleCurve::allocKey(Key *& key)
+{
+	if (numKeys == kMaxKeys)
+		return false;
+	else
+	{
+		key = &keys[numKeys++];
+		return true;
+	}
+}
+
+void ParticleCurve::freeKey(Key *& key)
+{
+	const int index = key - keys;
+	for (int i = index + 1; i < numKeys; ++i)
+		keys[i - 1] = keys[i];
+	numKeys--;
+}
+
+void ParticleCurve::clearKeys()
+{
+	for (int i = 0; i < numKeys; ++i)
+		keys[i] = Key();
+
+	numKeys = 0;
+}
+
+static bool compareKeysByTime(const ParticleCurve::Key * k1, const ParticleCurve::Key * k2)
+{
+    return k1->t < k2->t;
+}
+
+ParticleCurve::Key * ParticleCurve::sortKeys(Key * keyToReturn)
+{
+	Key * result = 0;
+
+	if (keyToReturn)
+	{
+		Key keyValues[kMaxKeys];
+		memcpy(keyValues, keys, sizeof(Key) * numKeys);
+		Key * keysForSorting[kMaxKeys];
+		for (int i = 0; i < numKeys; ++i)
+			keysForSorting[i] = &keys[i];
+        std::sort(keysForSorting, keysForSorting + numKeys, compareKeysByTime);
+		for (int i = 0; i < numKeys; ++i)
+		{
+			if (keysForSorting[i] == keyToReturn)
+				result = &keys[i];
+			const int index = keysForSorting[i] - keys;
+			keys[i] = keyValues[index];
+		}
+	}
+	else
+	{
+		std::sort(keys, keys + numKeys);
+	}
+
+	return result;
 }
 
 float ParticleCurve::sample(const float _t) const
@@ -201,7 +273,6 @@ void ParticleCurve::save(XMLPrinter * printer) const
 		{
 			printer->PushAttribute("t", keys[i].t);
 			printer->PushAttribute("value", keys[i].value);
-			printer->PushAttribute("curveValue", keys[i].curveValue);
 		}
 		printer->CloseElement();
 	}
@@ -219,7 +290,6 @@ void ParticleCurve::load(const XMLElement * elem)
 
 			key.t = floatAttrib(keyElem, "t", 0.f);
 			key.value = floatAttrib(keyElem, "value", 0.f);
-			key.curveValue = floatAttrib(keyElem, "curveValue", 0.f);
 		}
 	}
 
@@ -233,6 +303,7 @@ void ParticleCurve::load(const XMLElement * elem)
 
 ParticleColorCurve::Key::Key()
 	: t(0.f)
+	, color()
 {
 }
 
@@ -296,7 +367,7 @@ void ParticleColorCurve::clearKeys()
 	numKeys = 0;
 }
 
-static bool compareKeysByTime(const ParticleColorCurve::Key * k1, const ParticleColorCurve::Key * k2)
+static bool compareKeysByTime2(const ParticleColorCurve::Key * k1, const ParticleColorCurve::Key * k2)
 {
     return k1->t < k2->t;
 }
@@ -312,7 +383,7 @@ ParticleColorCurve::Key * ParticleColorCurve::sortKeys(Key * keyToReturn)
 		Key * keysForSorting[kMaxKeys];
 		for (int i = 0; i < numKeys; ++i)
 			keysForSorting[i] = &keys[i];
-        std::sort(keysForSorting, keysForSorting + numKeys, compareKeysByTime);
+        std::sort(keysForSorting, keysForSorting + numKeys, compareKeysByTime2);
 		for (int i = 0; i < numKeys; ++i)
 		{
 			if (keysForSorting[i] == keyToReturn)
@@ -441,7 +512,7 @@ void ParticleColorCurve::load(const XMLElement * elem)
 		}
 		else
 		{
-			// todo : emit warning?
+			LOG_WRN("color key allocation failed. too many keys. maxKeys=%d", kMaxKeys);
 		}
 	}
 

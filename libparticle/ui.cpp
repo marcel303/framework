@@ -18,7 +18,7 @@ static const int kTextBoxMousePixelsPerIncrement = 5;
 static const int kCheckBoxHeight = 20;
 static const int kEnumHeight = 20;
 static const int kEnumSelectOffset = 150;
-static const int kCurveHeight = 20;
+static const int kCurveHeight = 80;
 static const int kColorHeight = 20;
 static const int kColorCurveHeight = 20;
 #define kBackgroundFocusColor Color(0.f, 0.f, 1.f, g_uiState->opacity * .7f)
@@ -36,6 +36,12 @@ int g_drawY;
 UiState * g_uiState = nullptr;
 
 static GLuint checkersTexture = 0;
+
+//
+
+
+static float screenToCurve(const int x1, const int x2, const int x, const float offset);
+static float curveToScreen(int x1, int x2, float t);
 
 //
 
@@ -263,16 +269,16 @@ static const float kLinearToSrgb = 1.f / kSrgbToLinear;
 
 void srgbToLinear(float r, float g, float b, float & out_r, float & out_g, float & out_b)
 {
-	out_r = std::powf(r, kSrgbToLinear);
-	out_g = std::powf(g, kSrgbToLinear);
-	out_b = std::powf(b, kSrgbToLinear);
+	out_r = std::pow<float>(r, kSrgbToLinear);
+	out_g = std::pow<float>(g, kSrgbToLinear);
+	out_b = std::pow<float>(b, kSrgbToLinear);
 }
 
 void linearToSrgb(float r, float g, float b, float & out_r, float & out_g, float & out_b)
 {
-	out_r = std::powf(r, kLinearToSrgb);
-	out_g = std::powf(g, kLinearToSrgb);
-	out_b = std::powf(b, kLinearToSrgb);
+	out_r = std::pow<float>(r, kLinearToSrgb);
+	out_g = std::pow<float>(g, kLinearToSrgb);
+	out_b = std::pow<float>(b, kLinearToSrgb);
 }
 
 //
@@ -1196,9 +1202,44 @@ void doDropdownImpl(int & value, const char * name, const std::vector<EnumValue>
 	}
 }
 
+static ParticleCurve::Key * findNearestKey(ParticleCurve & curve, const float t, const float maxDeviation)
+{
+	ParticleCurve::Key * nearestKey = 0;
+	float nearestDistance = 0.f;
+
+	for (int i = 0; i < curve.numKeys; ++i)
+	{
+		const float dt = curve.keys[i].t - t;
+		const float distance = sqrtf(dt * dt);
+
+		if (distance < maxDeviation && (distance < nearestDistance || nearestKey == 0))
+		{
+			nearestKey = &curve.keys[i];
+			nearestDistance = distance;
+		}
+	}
+
+	return nearestKey;
+}
+
 void doParticleCurve(ParticleCurve & curve, const char * name)
 {
 	UiElem & elem = g_menu->getElem(name);
+	
+	enum Vars
+	{
+		kVar_SelectedKey,
+		kVar_IsDragging,
+		kVar_DragOffsetX,
+		kVar_DragOffsetY
+	};
+	
+	ParticleCurve::Key *& selectedKey = elem.getPointer<ParticleCurve::Key*>(kVar_SelectedKey, nullptr);
+	bool & isDragging = elem.getBool(kVar_IsDragging, false);
+	float & dragOffsetX = elem.getFloat(kVar_DragOffsetX, 0.f);
+	float & dragOffsetY = elem.getFloat(kVar_DragOffsetY, 0.f);
+	
+	const float kMaxSelectionDeviation = 5 / float(g_menu->sx);
 	
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
@@ -1209,14 +1250,95 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 	const int y2 = g_drawY + kCurveHeight;
 
 	g_drawY += kCurveHeight;
-    
+	
 	if (g_doActions)
 	{
 		elem.tick(x1, y1, x2, y2);
 
-		// todo : curve type selection
-	}
+		if (!elem.isActive)
+			selectedKey = nullptr;
+		else if (elem.hasFocus)
+		{
+			if (mouse.wentDown(BUTTON_LEFT))
+			{
+				// select or insert key
 
+				const float t = screenToCurve(x1, x2, mouse.x, 0.f);
+				const float value = clamp((mouse.y - y1) / float(y2 - y1), 0.f, 1.f);
+				
+				auto key = findNearestKey(curve, t, kMaxSelectionDeviation);
+				
+				if (key)
+				{
+					//
+				}
+				else
+				{
+					// insert a new key
+
+					//const float insertValue = curve.sample(t);
+					const float insertValue = value;
+
+					if (curve.allocKey(key))
+					{
+						key->t = t;
+						key->value = insertValue;
+
+						//key = curve.sortKeys(key);
+					}
+				}
+
+				selectedKey = key;
+
+				if (selectedKey != nullptr)
+				{
+					isDragging = true;
+					dragOffsetX = key->t - t;
+					dragOffsetY = key->value - value;
+				}
+			}
+			
+			if (!mouse.isDown(BUTTON_LEFT))
+			{
+				if (mouse.wentDown(BUTTON_RIGHT) || keyboard.wentDown(SDLK_DELETE) || keyboard.wentDown(SDLK_BACKSPACE))
+				{
+					selectedKey = nullptr;
+
+					// erase key
+
+					const float t = screenToCurve(x1, x2, mouse.x, 0.f);
+					auto * key = findNearestKey(curve, t, kMaxSelectionDeviation);
+
+					if (key)
+					{
+						curve.freeKey(key);
+					}
+				}
+			}
+		}
+
+		if (isDragging)
+		{
+			if (elem.isActive && selectedKey != nullptr && mouse.isDown(BUTTON_LEFT))
+			{
+				// move selected key around
+
+				const float t = screenToCurve(x1, x2, mouse.x, dragOffsetX);
+				const float value = screenToCurve(y1, y2, mouse.y, dragOffsetY);
+
+				selectedKey->t = t;
+				selectedKey->value = value;
+				selectedKey = curve.sortKeys(selectedKey);
+
+				fassert(selectedKey->t == t);
+			}
+			else
+			{
+				isDragging = false;
+			}
+		}
+	}
+	
 	if (g_doDraw)
 	{
 		if (elem.hasFocus)
@@ -1224,11 +1346,87 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 		else
 			setColor(kBackgroundColor);
 		drawRect(x1, y1, x2, y2);
+		
+		hqBegin(HQ_LINES);
+		{
+			setColor(127, 127, 255);
+			
+			float value1 = curve.sample(0.f);
+			float lx1 = x1;
+			float ly1 = lerp(y1, y2, value1);
+			
+			for (int i = 1; i <= 100; ++i)
+			{
+				const float t = i / 100.f;
+				
+				const float value2 = curve.sample(t);
+				const float lx2 = lerp(x1, x2, t);
+				const float ly2 = lerp(y1, y2, value2);
+				
+				hqLine(lx1, ly1, 1.f, lx2, ly2, 1.f);
+				
+				value1 = value2;
+				lx1 = lx2;
+				ly1 = ly2;
+			}
+		}
+		hqEnd();
+		
+		setDrawRect(x1, y1, x2-x1, y2-y1);
+		{
+			const float t = screenToCurve(x1, x2, mouse.x, 0.f);
+			auto highlightedKey = isDragging ? selectedKey : findNearestKey(curve, t, kMaxSelectionDeviation);
+			
+			hqBegin(HQ_LINES);
+			{
+				for (int i = 0; i < curve.numKeys; ++i)
+				{
+					const float c =
+						  !elem.hasFocus ? .5f
+						: (highlightedKey == &curve.keys[i]) ? 1.f
+						: (selectedKey == &curve.keys[i]) ? .8f
+						: .5f;
+					
+					auto & key = curve.keys[i];
+					
+					const float x = lerp(x1, x2, key.t);
+					
+					setColorf(c/2, c/2, c);
+					hqLine(x, y1, 2.f, x, y2, 2.f);
+				}
+			}
+			hqEnd();
+			
+			for (int i = 0; i < curve.numKeys; ++i)
+			{
+				const float c =
+					  !elem.hasFocus ? .5f
+					: (highlightedKey == &curve.keys[i]) ? 1.f
+					: (selectedKey == &curve.keys[i]) ? .8f
+					: .5f;
+				const float x = curveToScreen(x1, x2, curve.keys[i].t);
+				const float y = curveToScreen(y1, y2, curve.keys[i].value);// (y1 + y2) / 2.f;
+				drawUiCircle(x, y, 5.5f, c, c, c, 1.f);
+			}
+			
+			if (highlightedKey != nullptr)
+			{
+				const float t = highlightedKey->t;
+				const float value = highlightedKey->value;
+				const float x = curveToScreen(x1, x2, t);
+				const float y = curveToScreen(y1, y2, value);
+				
+				setColor(colorWhite);
+				drawText(x, y + 10, 12, 0.f, +1.f, "(%.2f, %.2f)", t, value);
+			}
+		}
+		clearDrawRect();
+		
+		setColor(colorWhite);
+		drawText(x1 + kPadding, y1 + kPadding, kFontSize, +1.f, +1.f, "%s", name);
+		
 		setColor(colorBlue);
 		drawRectLine(x1, y1, x2, y2);
-
-		setColor(colorWhite);
-		drawText(x1 + kPadding + kCheckButtonSize + kPadding, (y1+y2)/2, kFontSize, +1.f, 0.f, "%s", name);
 	}
 }
 
