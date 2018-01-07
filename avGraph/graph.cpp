@@ -1203,7 +1203,7 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit, const float dt)
 		{
 			isFirst = false;
 			
-			const float retain = std::pow<float>(.7f, dt);
+			const float retain = powf(.7f, dt);
 			
 			min = channelDataMin * retain;
 			max = channelDataMax * retain;

@@ -269,16 +269,16 @@ static const float kLinearToSrgb = 1.f / kSrgbToLinear;
 
 void srgbToLinear(float r, float g, float b, float & out_r, float & out_g, float & out_b)
 {
-	out_r = std::pow<float>(r, kSrgbToLinear);
-	out_g = std::pow<float>(g, kSrgbToLinear);
-	out_b = std::pow<float>(b, kSrgbToLinear);
+	out_r = powf(r, kSrgbToLinear);
+	out_g = powf(g, kSrgbToLinear);
+	out_b = powf(b, kSrgbToLinear);
 }
 
 void linearToSrgb(float r, float g, float b, float & out_r, float & out_g, float & out_b)
 {
-	out_r = std::pow<float>(r, kLinearToSrgb);
-	out_g = std::pow<float>(g, kLinearToSrgb);
-	out_b = std::pow<float>(b, kLinearToSrgb);
+	out_r = powf(r, kLinearToSrgb);
+	out_g = powf(g, kLinearToSrgb);
+	out_b = powf(b, kLinearToSrgb);
 }
 
 //
@@ -1509,7 +1509,7 @@ static ParticleColorCurve::Key * findNearestKey(ParticleColorCurve & curve, cons
 	for (int i = 0; i < curve.numKeys; ++i)
 	{
 		const float dt = curve.keys[i].t - t;
-		const float distance = std::sqrtf(dt * dt);
+		const float distance = sqrtf(dt * dt);
 
 		if (distance < maxDeviation && (distance < nearestDistance || nearestKey == 0))
 		{

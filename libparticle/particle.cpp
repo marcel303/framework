@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <assert.h>
 #include <cmath>
-#include <xmmintrin.h>
 
 #include "Log.h" // LOG_ functions
 #include "StringEx.h" // _s functions
@@ -15,10 +14,14 @@ using namespace tinyxml2;
 
 //
 
-#if defined(__GNUC__)
-    #define _MM_ACCESS(r, i) r[i]
-#else
-    #define _MM_ACCESS(r, i) r.m128_f32[i]
+#if __SSE2__
+	#include <xmmintrin.h>
+
+	#if defined(__GNUC__)
+		#define _MM_ACCESS(r, i) r[i]
+	#else
+		#define _MM_ACCESS(r, i) r.m128_f32[i]
+	#endif
 #endif
 
 //
@@ -1135,8 +1138,12 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 
 			p.speed[0] -= nx * d * (1.f + pi.bounciness);
 			p.speed[1] -= ny * d * (1.f + pi.bounciness);
-            
+			
+		#if __SSE2__
 			const float particleSpeed = _MM_ACCESS(_mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])), 0);
+		#else
+			const float particleSpeed = hypotf(p.speed[0], p.speed[1] * p.speed[1]);
+		#endif
 
 			if (particleSpeed < pi.minKillSpeed)
 				p.life = 0.f;
@@ -1159,8 +1166,12 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 	}
 
 	const float particleLife = 1.f - p.life;
-	//const float particleSpeed = sqrtf(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1]);
+#if __SSE2__
 	const float particleSpeed = _MM_ACCESS(_mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])), 0);
+#else
+	const float particleSpeed = hypotf(p.speed[0], p.speed[1]);
+#endif
+	
 	p.speedScalar = particleSpeed;
 
 	p.rotation = computeParticleRotation(pei, pi, timeStep, particleLife, particleSpeed, p.rotation);

@@ -788,7 +788,7 @@ static rmtError VirtualMirrorBuffer_Constructor(VirtualMirrorBuffer* buffer, rmt
 
 #endif
     // Map 2 contiguous pages
-    buffer->ptr = mmap(NULL, size * 2, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    buffer->ptr = (rmtU8*)mmap(NULL, size * 2, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (buffer->ptr == MAP_FAILED)
     {
         buffer->ptr = NULL;

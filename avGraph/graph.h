@@ -1165,7 +1165,7 @@ struct GraphEdit : GraphEditConnection
 		
 		void tick(const float dt)
 		{
-			const float falloff = std::pow<float>(.01f, dt);
+			const float falloff = powf(.01f, dt);
 			const float t1 = falloff;
 			const float t2 = 1.f - falloff;
 			zoom = zoom * t1 + desiredZoom * t2;

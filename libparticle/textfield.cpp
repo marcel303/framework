@@ -179,7 +179,7 @@ void EditorTextField::draw(const int ax, const int ay, const int asy, const int 
 		{
 			// draw caret
 
-			if (m_isActive && std::fmod<float>(m_caretTimer, .5f) < .25f)
+			if (m_isActive && fmodf(m_caretTimer, .5f) < .25f)
 			{
 				char textToCaretPosition[kMaxBufferSize + 1];
 				strcpy_s(textToCaretPosition, sizeof(textToCaretPosition), text);
