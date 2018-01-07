@@ -68,6 +68,43 @@
 	};
 
 	#define SCOPED_FLUSH_DENORMALS ScopedFlushDenormalsObject scopedFlushDenormals
+#elif defined(__arm__) || defined(__aarch64__)
+	struct ScopedFlushDenormalsObject
+	{
+		int oldValue;
+
+		ScopedFlushDenormalsObject()
+		{
+			int result;
+
+		#ifdef __aarch64__
+			asm volatile("mrs %[result], FPCR" : [result] "=r" (result));
+		#else
+			asm volatile("vmrs %[result], FPSCR" : [result] "=r" (result));
+		#endif
+
+			oldValue = result;
+
+			const int newValue = oldValue | (1 << 24);
+
+		#ifdef __aarch64__
+			asm volatile("msr FPCR, %[src]" : : [src] "r" (newValue));
+		#else
+			asm volatile("vmsr FPSCR, %[src]" : : [src] "r" (newValue));
+		#endif
+		}
+
+		~ScopedFlushDenormalsObject()
+		{
+		#ifdef __aarch64__
+			asm volatile("msr FPCR, %[src]" : : [src] "r" (oldValue));
+		#else
+			asm volatile("vmsr FPSCR, %[src]" : : [src] "r" (oldValue));
+		#endif
+		}
+	};
+
+	#define SCOPED_FLUSH_DENORMALS ScopedFlushDenormalsObject scopedFlushDenormals
 #else
 	#define SCOPED_FLUSH_DENORMALS do { } while (false)
 #endif
