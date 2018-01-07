@@ -29,6 +29,10 @@
 #include "Debugging.h"
 #include <SDL2/SDL.h>
 
+#if !AUDIO_USE_SSE
+	#warning "AUDIO_USE_SSE is set to 0. is this intended?"
+#endif
+
 AudioMutex_Shared::AudioMutex_Shared()
 	: mutex(nullptr)
 {

@@ -26,6 +26,7 @@
 */
 
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager4D.h"
 #include "framework.h"
 #include "soundmix.h"
 #include "soundmix_wavefield.h"
@@ -41,7 +42,7 @@ const static float kWorldSx = 10.f;
 const static float kWorldSy = 8.f;
 const static float kWorldSz = 8.f;
 
-static AudioVoiceManager * s_voiceMgr = nullptr;
+static AudioVoiceManager4D * s_voiceMgr = nullptr;
 
 #define OSC_TEST 1
 
@@ -96,7 +97,12 @@ struct Creature
 	{
 		pos += vel * dt;
 		
-		voice->spat.pos = pos;
+		if (voice->type == AudioVoice::kType_4DSOUND)
+		{
+			AudioVoice4D * voice4D = static_cast<AudioVoice4D*>(voice);
+			
+			voice4D->spat.pos = pos;
+		}
 	}
 	
 	void draw() const
@@ -178,81 +184,86 @@ struct TestObject
 			sine.init(0.f, sineFrequency);
 		}
 		
-		doTextBox(voice->spat.pos[0], "pos.x", dt);
-		doTextBox(voice->spat.pos[1], "pos.y", dt);
-		doTextBox(voice->spat.pos[2], "pos.z", dt);
-		
-		doTextBox(voice->spat.size[0], "dim.x", dt);
-		doTextBox(voice->spat.size[1], "dim.y", dt);
-		doTextBox(voice->spat.size[2], "dim.z", dt);
-		
-		doTextBox(voice->spat.rot[0], "rot.x", dt);
-		doTextBox(voice->spat.rot[1], "rot.y", dt);
-		doTextBox(voice->spat.rot[2], "rot.z", dt);
-		
-		std::vector<EnumValue> orientationModes;
-		orientationModes.push_back(EnumValue(Osc4D::kOrientation_Static, "static"));
-		orientationModes.push_back(EnumValue(Osc4D::kOrientation_Movement, "movement"));
-		orientationModes.push_back(EnumValue(Osc4D::kOrientation_Center, "center"));
-		doEnum(voice->spat.orientationMode, "orientation.mode", orientationModes);
-		doTextBox(voice->spat.orientationCenter[0], "orientation.center.x", dt);
-		doTextBox(voice->spat.orientationCenter[1], "orientation.center.y", dt);
-		doTextBox(voice->spat.orientationCenter[2], "orientation.center.z", dt);
-		
-		doCheckBox(voice->spat.globalEnable, "global.enable", false);
-		
-		if (doCheckBox(voice->spat.spatialCompressor.enable, "spatialCompressor", true))
+		if (voice->type == AudioVoice::kType_4DSOUND)
 		{
-			g_drawX += 20;
-			pushMenu("spatialCompressor");
-			doTextBox(voice->spat.spatialCompressor.attack, "attack", dt);
-			doTextBox(voice->spat.spatialCompressor.release, "release", dt);
-			doTextBox(voice->spat.spatialCompressor.minimum, "minimum", dt);
-			doTextBox(voice->spat.spatialCompressor.maximum, "maximum", dt);
-			doTextBox(voice->spat.spatialCompressor.curve, "curve", dt);
-			doCheckBox(voice->spat.spatialCompressor.invert, "invert", false);
-			popMenu();
-			g_drawX -= 20;
-		}
-		
-		if (doCheckBox(voice->spat.doppler.enable, "doppler", true))
-		{
-			g_drawX += 20;
-			pushMenu("doppler");
-			doTextBox(voice->spat.doppler.scale, "scale", dt);
-			doTextBox(voice->spat.doppler.smooth, "smooth", dt);
-			popMenu();
-			g_drawX -= 20;
-		}
-		
-		if (doCheckBox(voice->spat.distanceIntensity.enable, "distance.intensity", true))
-		{
-			g_drawX += 20;
-			pushMenu("distance.intensity");
-			doTextBox(voice->spat.distanceIntensity.threshold, "treshold", dt);
-			doTextBox(voice->spat.distanceIntensity.curve, "curve", dt);
-			popMenu();
-			g_drawX -= 20;
-		}
-		
-		if (doCheckBox(voice->spat.distanceDampening.enable, "distance.dampening", true))
-		{
-			g_drawX += 20;
-			pushMenu("distance.dampening");
-			doTextBox(voice->spat.distanceDampening.threshold, "treshold", dt);
-			doTextBox(voice->spat.distanceDampening.curve, "curve", dt);
-			popMenu();
-			g_drawX -= 20;
-		}
-		
-		if (doCheckBox(voice->spat.distanceDiffusion.enable, "distance.diffusion", true))
-		{
-			g_drawX += 20;
-			pushMenu("distance.diffusion");
-			doTextBox(voice->spat.distanceDiffusion.threshold, "treshold", dt);
-			doTextBox(voice->spat.distanceDiffusion.curve, "curve", dt);
-			popMenu();
-			g_drawX -= 20;
+			AudioVoice4D * voice4D = static_cast<AudioVoice4D*>(voice);
+			
+			doTextBox(voice4D->spat.pos[0], "pos.x", dt);
+			doTextBox(voice4D->spat.pos[1], "pos.y", dt);
+			doTextBox(voice4D->spat.pos[2], "pos.z", dt);
+			
+			doTextBox(voice4D->spat.size[0], "dim.x", dt);
+			doTextBox(voice4D->spat.size[1], "dim.y", dt);
+			doTextBox(voice4D->spat.size[2], "dim.z", dt);
+			
+			doTextBox(voice4D->spat.rot[0], "rot.x", dt);
+			doTextBox(voice4D->spat.rot[1], "rot.y", dt);
+			doTextBox(voice4D->spat.rot[2], "rot.z", dt);
+			
+			std::vector<EnumValue> orientationModes;
+			orientationModes.push_back(EnumValue(Osc4D::kOrientation_Static, "static"));
+			orientationModes.push_back(EnumValue(Osc4D::kOrientation_Movement, "movement"));
+			orientationModes.push_back(EnumValue(Osc4D::kOrientation_Center, "center"));
+			doEnum(voice4D->spat.orientationMode, "orientation.mode", orientationModes);
+			doTextBox(voice4D->spat.orientationCenter[0], "orientation.center.x", dt);
+			doTextBox(voice4D->spat.orientationCenter[1], "orientation.center.y", dt);
+			doTextBox(voice4D->spat.orientationCenter[2], "orientation.center.z", dt);
+			
+			doCheckBox(voice4D->spat.globalEnable, "global.enable", false);
+			
+			if (doCheckBox(voice4D->spat.spatialCompressor.enable, "spatialCompressor", true))
+			{
+				g_drawX += 20;
+				pushMenu("spatialCompressor");
+				doTextBox(voice4D->spat.spatialCompressor.attack, "attack", dt);
+				doTextBox(voice4D->spat.spatialCompressor.release, "release", dt);
+				doTextBox(voice4D->spat.spatialCompressor.minimum, "minimum", dt);
+				doTextBox(voice4D->spat.spatialCompressor.maximum, "maximum", dt);
+				doTextBox(voice4D->spat.spatialCompressor.curve, "curve", dt);
+				doCheckBox(voice4D->spat.spatialCompressor.invert, "invert", false);
+				popMenu();
+				g_drawX -= 20;
+			}
+			
+			if (doCheckBox(voice4D->spat.doppler.enable, "doppler", true))
+			{
+				g_drawX += 20;
+				pushMenu("doppler");
+				doTextBox(voice4D->spat.doppler.scale, "scale", dt);
+				doTextBox(voice4D->spat.doppler.smooth, "smooth", dt);
+				popMenu();
+				g_drawX -= 20;
+			}
+			
+			if (doCheckBox(voice4D->spat.distanceIntensity.enable, "distance.intensity", true))
+			{
+				g_drawX += 20;
+				pushMenu("distance.intensity");
+				doTextBox(voice4D->spat.distanceIntensity.threshold, "treshold", dt);
+				doTextBox(voice4D->spat.distanceIntensity.curve, "curve", dt);
+				popMenu();
+				g_drawX -= 20;
+			}
+			
+			if (doCheckBox(voice4D->spat.distanceDampening.enable, "distance.dampening", true))
+			{
+				g_drawX += 20;
+				pushMenu("distance.dampening");
+				doTextBox(voice4D->spat.distanceDampening.threshold, "treshold", dt);
+				doTextBox(voice4D->spat.distanceDampening.curve, "curve", dt);
+				popMenu();
+				g_drawX -= 20;
+			}
+			
+			if (doCheckBox(voice4D->spat.distanceDiffusion.enable, "distance.diffusion", true))
+			{
+				g_drawX += 20;
+				pushMenu("distance.diffusion");
+				doTextBox(voice4D->spat.distanceDiffusion.threshold, "treshold", dt);
+				doTextBox(voice4D->spat.distanceDiffusion.curve, "curve", dt);
+				popMenu();
+				g_drawX -= 20;
+			}
 		}
 		
 		popMenu();
@@ -321,7 +332,7 @@ struct VoiceWorld : AudioUpdateTask
 		}
 	}
 	
-	virtual void audioUpdate(const float dt) override
+	virtual void preAudioUpdate(const float dt) override
 	{
 		tick(dt);
 	}
@@ -446,7 +457,7 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	AudioVoiceManager voiceMgr;
+	AudioVoiceManager4D voiceMgr;
 	
 	voiceMgr.init(mutex, kNumChannels, kNumChannels);
 	
@@ -614,13 +625,6 @@ int main(int argc, char * argv[])
 			pushMenu("globals");
 			{
 				doLabel("globals", 0.f);
-				
-				if (doButton("force OSC sync"))
-				{
-					AudioUpdateHandler::Command command;
-					command.type = AudioUpdateHandler::Command::kType_ForceOscSync;
-					audioUpdateHandler.commandQueue.push(command);
-				}
 				
 				doTextBox(s_voiceMgr->spat.globalPos[0], "pos.x", dt);
 				doTextBox(s_voiceMgr->spat.globalPos[1], "pos.y", dt);

@@ -53,8 +53,13 @@ struct AudioUpdateTask
 	{
 	}
 	
-	virtual void preAudioUpdate(const float dt) = 0;
-	virtual void postAudioUpdate(const float dt) = 0;
+	virtual void preAudioUpdate(const float dt)
+	{
+	}
+	
+	virtual void postAudioUpdate(const float dt)
+	{
+	}
 };
 
 //

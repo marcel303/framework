@@ -63,7 +63,7 @@ int main(int argc, char * argv[])
 		
 		for (;;)
 		{
-			SDL_Delay(100);
+			SDL_Delay(1100);
 		}
 		
 		// free the audio graph instance

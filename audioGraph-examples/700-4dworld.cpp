@@ -1722,7 +1722,7 @@ struct World : WorldInterface
 	}
 	
 	void * operator new(size_t size) { return MemAlloc(size, 32); }
-	void operator delete(void * mem) { MemAlloc(mem); }
+	void operator delete(void * mem) { MemFree(mem); }
 };
 
 //
