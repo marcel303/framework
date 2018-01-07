@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cmath>
+#include <math.h>
 
 class Vec2
 {
@@ -33,7 +33,7 @@ public:
 			m_v[0] * m_v[0] +
 			m_v[1] * m_v[1];
 		
-		return std::sqrtf(sq);
+		return sqrtf(sq);
 	}
 
 	inline float CalcSizeSq() const

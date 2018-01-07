@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cmath>
 #include "Vec2.h"
 #include "Vec3.h"
+#include <math.h>
 
 class Vec4
 {
@@ -36,7 +36,7 @@ public:
 			m_v[2] * m_v[2] +
 			m_v[3] * m_v[3];
 		
-		return std::sqrtf(sq);
+		return sqrtf(sq);
 	}
 
 	inline float CalcSizeSq() const

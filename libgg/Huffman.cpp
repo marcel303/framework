@@ -1,6 +1,7 @@
-#include <algorithm>
 #include "Debugging.h"
 #include "Huffman.h"
+#include <algorithm>
+#include <string.h>
 
 struct FrequencyInfo
 {
