@@ -28,6 +28,7 @@
 #include "delayLine.h"
 #include "vfxNodeDelayLine.h"
 #include <algorithm>
+#include <cmath>
 
 VFX_NODE_TYPE(VfxNodeDelayLine)
 {

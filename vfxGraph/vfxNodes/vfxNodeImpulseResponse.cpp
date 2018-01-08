@@ -27,6 +27,7 @@
 
 #include "delayLine.h"
 #include "vfxNodeImpulseResponse.h"
+#include <cmath>
 
 VFX_NODE_TYPE(VfxNodeImpulseResponse)
 {
