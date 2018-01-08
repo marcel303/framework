@@ -2483,6 +2483,11 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 {
 	bool result = true;
 	
+	if (globals.fontMSDF->m_glyphCache->m_isLoaded == false)
+	{
+		return false;
+	}
+	
 	FILE * file = nullptr;
 	
 	if (result == true)
