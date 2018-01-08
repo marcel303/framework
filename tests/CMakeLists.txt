@@ -58,6 +58,7 @@ file(GLOB_RECURSE source_datgui "ofxDatGui/*.*")
 file(GLOB_RECURSE source_nanovg "nanovg/*.*")
 
 source_group("sources" FILES ${source})
+source_group("audioNodes" FILES ${AUDIOGRAPH_SOURCES})
 source_group("3rdparty\\ofxDatGui" FILES ${source_datgui})
 source_group("3rdparty\\nanovg" FILES ${source_nanovg})
 
@@ -65,7 +66,7 @@ if (WIN32)
 	list(REMOVE_ITEM source ${source_xmm})
 endif (WIN32)
 
-add_executable(tests ${source})
+add_executable(tests ${source} ${AUDIOGRAPH_SOURCES})
 
 set_target_properties(tests PROPERTIES LINK_FLAGS "-Wl,-all_load")
 
