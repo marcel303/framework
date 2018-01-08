@@ -74,7 +74,7 @@ void splitString(const std::string & str, std::vector<std::string> & result, cha
 #if defined(WIN32)
 	void __stdcall debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, GLvoid*);
 #else
-	void debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, GLvoid*);
+	void debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const GLvoid*);
 #endif
 #endif
 

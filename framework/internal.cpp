@@ -135,7 +135,7 @@ void debugOutputGL(
 	GLenum severity,
 	GLsizei length,
 	const GLchar * message,
-	GLvoid * userParam)
+	const GLvoid * userParam)
 {
 	if (severity != GL_DEBUG_SEVERITY_NOTIFICATION)
 	{
