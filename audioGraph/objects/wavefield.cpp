@@ -28,6 +28,7 @@
 #include "Noise.h"
 #include "wavefield.h"
 #include <cmath>
+#include <string.h>
 
 extern const int GFX_SX;
 extern const int GFX_SY;
