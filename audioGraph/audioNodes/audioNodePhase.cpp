@@ -69,16 +69,59 @@ void AudioNodePhase::tick(const float dt)
 		if (scalarInputs)
 		{
 			const float _frequency = frequency->getScalar();
-			const float _phaseOffset = phaseOffset->getScalar();
-			const float phaseStep = _frequency / SAMPLE_RATE;
+			const float _phaseOffset = fmodf(phaseOffset->getScalar(), 1.f);
+			
+			// todo : handle case where frequency < 0
+			
+		#if 0
+			const float phaseStep = fmodf(_frequency / SAMPLE_RATE, 1.f);
 			
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{
 				resultOutput.samples[i] = phase + _phaseOffset;
 				
 				phase += phaseStep;
-				phase = phase - floorf(phase);
+				
+				if (phase >= 1.f)
+					phase -= 1.f;
 			}
+		#else
+			const float phaseStep1 = fmodf(_frequency / SAMPLE_RATE * 1.f, 1.f);
+			const float phaseStep2 = fmodf(_frequency / SAMPLE_RATE * 2.f, 1.f);
+			const float phaseStep3 = fmodf(_frequency / SAMPLE_RATE * 3.f, 1.f);
+			const float phaseStep4 = fmodf(_frequency / SAMPLE_RATE * 4.f, 1.f);
+			
+			float _phase = phase + _phaseOffset;
+			
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; i += 4)
+			{
+				float value1 = _phase;
+				float value2 = _phase + phaseStep1;
+				float value3 = _phase + phaseStep2;
+				float value4 = _phase + phaseStep3;
+				
+				if (value2 >= 1.f) value2 -= 1.f;
+				if (value3 >= 1.f) value3 -= 1.f;
+				if (value4 >= 1.f) value4 -= 1.f;
+				
+				resultOutput.samples[i + 0] = value1;
+				resultOutput.samples[i + 1] = value2;
+				resultOutput.samples[i + 2] = value3;
+				resultOutput.samples[i + 3] = value4;
+				
+				_phase += phaseStep4;
+				
+				if (_phase >= 1.f)
+					_phase -= 1.f;
+			}
+			
+			_phase -= _phaseOffset;
+			
+			if (_phase < 0.f)
+				_phase += 1.f;
+			
+			phase = _phase;
+		#endif
 		}
 		else
 		{
