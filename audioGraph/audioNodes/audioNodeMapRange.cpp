@@ -90,13 +90,16 @@ void AudioNodeMapRange::tick(const float dt)
 		{
 			resultOutput.setVector();
 			
+			const float * __restrict valuePtr = value->samples;
+			      float * __restrict resultPtr = resultOutput.samples;
+			
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{
-				const float t2 = (value->samples[i] - _inMin) * scale;
+				const float t2 = (valuePtr[i] - _inMin) * scale;
 				const float t1 = 1.f - t2;
 				const float result = t1 * _outMin + t2 * _outMax;
 				
-				resultOutput.samples[i] = result;
+				resultPtr[i] = result;
 			}
 		}
 	}
