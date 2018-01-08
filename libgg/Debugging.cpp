@@ -35,7 +35,7 @@ void HandleAssert(const char * func, int line, const char * expr, ...)
 	char text[1024];
 	va_list args;
 	va_start(args, expr);
-#if defined(IPHONEOS) || defined(MACOS)
+#if defined(IPHONEOS) || defined(MACOS) || defined(LINUX)
     vsprintf(text, expr, args);
 #else
 	vsprintf_s(text, expr, args);
