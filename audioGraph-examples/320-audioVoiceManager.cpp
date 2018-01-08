@@ -80,9 +80,9 @@ struct Creature
 		const float angle = random<float>(0.f, M_PI * 2.f);
 		const float speed = 1.f;
 		
-		vel[0] = std::cosf(angle) * speed;
+		vel[0] = cosf(angle) * speed;
 		vel[1] = 0.f;
-		vel[2] = std::sinf(angle) * speed;
+		vel[2] = sinf(angle) * speed;
 	}
 	
 	void shut()
