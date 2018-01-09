@@ -30,7 +30,7 @@
 
 static const float twoPi = M_PI * 2.f;
 
-static float evalMathOp(const float a, const float b, const AudioNodeMath::Type type, const bool isPassthrough)
+static float evalMathOp(const float a, const float b, const AudioNodeMath::Type type)
 {
 	float r = 0.f;
 	
@@ -53,24 +53,15 @@ static float evalMathOp(const float a, const float b, const AudioNodeMath::Type 
 		break;
 		
 	case AudioNodeMath::kType_Sin:
-		if (isPassthrough)
-			r = a;
-		else
-			r = sinf(a * twoPi);
+		r = sinf(a * twoPi);
 		break;
 		
 	case AudioNodeMath::kType_Cos:
-		if (isPassthrough)
-			r = a;
-		else
-			r = cosf(a * twoPi);
+		r = cosf(a * twoPi);
 		break;
 		
 	case AudioNodeMath::kType_Abs:
-		if (isPassthrough)
-			r = a;
-		else
-			r = fabsf(a);
+		r = fabsf(a);
 		break;
 		
 	case AudioNodeMath::kType_Min:
@@ -82,82 +73,50 @@ static float evalMathOp(const float a, const float b, const AudioNodeMath::Type 
 		break;
 		
 	case AudioNodeMath::kType_Sat:
-		if (isPassthrough)
-			r = a;
-		else
-			r = fmaxf(0.f, fminf(1.f, a));
+		r = fmaxf(0.f, fminf(1.f, a));
 		break;
 		
 	case AudioNodeMath::kType_Neg:
-		if (isPassthrough)
-			r = a;
-		else
-			r = -a;
+		r = -a;
 		break;
 		
 	case AudioNodeMath::kType_Sqrt:
-		if (isPassthrough)
-			r = a;
-		else
-			r = sqrtf(a);
+		r = sqrtf(a);
 		break;
 		
 	case AudioNodeMath::kType_Pow:
-		if (isPassthrough)
-			r = a;
-		else
-			r = powf(a, b);
+		r = powf(a, b);
 		break;
 		
 	case AudioNodeMath::kType_Exp:
-		if (isPassthrough)
-			r = a;
-		else
-			r = expf(a);
+		r = expf(a);
 		break;
 		
 	case AudioNodeMath::kType_Mod:
-		if (isPassthrough)
-			r = a;
-		else
-			r = fmodf(a, b);
+		r = fmodf(a, b);
 		break;
 		
 	case AudioNodeMath::kType_Fract:
-		if (isPassthrough)
-			r = a;
-		else if (a >= 0.f)
+		if (a >= 0.f)
 			r = a - floorf(a);
 		else
 			r = a - ceilf(a);
 		break;
 		
 	case AudioNodeMath::kType_Floor:
-		if (isPassthrough)
-			r = a;
-		else
-			r = floorf(a);
+		r = floorf(a);
 		break;
 		
 	case AudioNodeMath::kType_Ceil:
-		if (isPassthrough)
-			r = a;
-		else
-			r = ceilf(a);
+		r = ceilf(a);
 		break;
 		
 	case AudioNodeMath::kType_Round:
-		if (isPassthrough)
-			r = a;
-		else
-			r = roundf(a);
+		r = roundf(a);
 		break;
 		
 	case AudioNodeMath::kType_Sign:
-		if (isPassthrough)
-			r = a;
-		else
-			r = a < 0.f ? -1.f : +1.f;
+		r = a < 0.f ? -1.f : +1.f;
 		break;
 		
 	case AudioNodeMath::kType_Hypot:
@@ -165,17 +124,11 @@ static float evalMathOp(const float a, const float b, const AudioNodeMath::Type 
 		break;
 	
 	case AudioNodeMath::kType_Pitch:
-		if (isPassthrough)
-			r = a;
-		else
-			r = a * powf(2.f, b);
+		r = a * powf(2.f, b);
 		break;
 		
 	case AudioNodeMath::kType_Semitone:
-		if (isPassthrough)
-			r = a;
-		else
-			r = a * powf(2.f, b / 12.f);
+		r = a * powf(2.f, b / 12.f);
 		break;
 	}
 	
@@ -243,7 +196,7 @@ void AudioNodeMath::tick(const float dt)
 	}
 	else if (a->isScalar && b->isScalar)
 	{
-		result.setScalar(evalMathOp(a->getScalar(), b->getScalar(), type, isPassthrough));
+		result.setScalar(evalMathOp(a->getScalar(), b->getScalar(), type));
 	}
 	else
 	{
@@ -254,7 +207,7 @@ void AudioNodeMath::tick(const float dt)
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			result.samples[i] = evalMathOp(a->samples[i], b->samples[i], type, isPassthrough);
+			result.samples[i] = evalMathOp(a->samples[i], b->samples[i], type);
 		}
 	}
 }
@@ -279,9 +232,13 @@ void AudioNodeMathBase::tick(const float dt)
 	const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
 	const AudioFloat * b = getInputAudioFloat(kInput_B, &AudioFloat::Zero);
 	
-	if (a->isScalar && b->isScalar)
+	if (isPassthrough)
 	{
-		result.setScalar(evalMathOp(a->getScalar(), b->getScalar(), type, isPassthrough));
+		result.set(*a);
+	}
+	else if (a->isScalar && b->isScalar)
+	{
+		result.setScalar(evalMathOp(a->getScalar(), b->getScalar(), type));
 	}
 	else
 	{
@@ -292,7 +249,7 @@ void AudioNodeMathBase::tick(const float dt)
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			result.samples[i] = evalMathOp(a->samples[i], b->samples[i], type, isPassthrough);
+			result.samples[i] = evalMathOp(a->samples[i], b->samples[i], type);
 		}
 	}
 }
@@ -315,27 +272,73 @@ AUDIO_NODE_TYPE(name, name) \
 	out("result", "audioValue"); \
 }
 
-DefineMathNode(AudioNodeMathAdd, kType_Add, "math.add");
-DefineMathNode(AudioNodeMathSub, kType_Sub, "math.sub");
-DefineMathNode(AudioNodeMathMul, kType_Mul, "math.mul");
-DefineMathNode(AudioNodeMathSin, kType_Sin, "math.sin");
-DefineMathNode(AudioNodeMathCos, kType_Cos, "math.cos");
-DefineMathNode(AudioNodeMathAbs, kType_Abs, "math.abs");
-DefineMathNode(AudioNodeMathMin, kType_Min, "math.min");
-DefineMathNode(AudioNodeMathMax, kType_Max, "math.max");
-DefineMathNode(AudioNodeMathSat, kType_Sat, "math.saturate");
-DefineMathNode(AudioNodeMathNeg, kType_Neg, "math.negate");
-DefineMathNode(AudioNodeMathSqrt, kType_Sqrt, "math.sqrt");
-DefineMathNode(AudioNodeMathPow, kType_Pow, "math.pow");
-DefineMathNode(AudioNodeMathExp, kType_Exp, "math.exp");
-DefineMathNode(AudioNodeMathMod, kType_Mod, "math.mod");
-DefineMathNode(AudioNodeMathFract, kType_Fract, "math.fract");
-DefineMathNode(AudioNodeMathFloor, kType_Floor, "math.floor");
-DefineMathNode(AudioNodeMathCeil, kType_Ceil, "math.ceil");
-DefineMathNode(AudioNodeMathRound, kType_Round, "math.round");
-DefineMathNode(AudioNodeMathSign, kType_Sign, "math.sign");
-DefineMathNode(AudioNodeMathHypot, kType_Hypot, "math.hypot");
-DefineMathNode(AudioNodeMathPitch, kType_Pitch, "math.pitch");
-DefineMathNode(AudioNodeMathSemitone, kType_Semitone, "math.semitone");
+#define DefineMathNode_V2(name, type, _typeName, eval) \
+struct name : AudioNodeMathBase \
+{ \
+	name() \
+		: AudioNodeMathBase(AudioNodeMath::type) \
+	{ \
+	} \
+	virtual void tick(const float dt) override \
+	{ \
+		const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero); \
+		const AudioFloat * b = getInputAudioFloat(kInput_B, &AudioFloat::Zero); \
+		if (isPassthrough) \
+		{ \
+			result.set(*a); \
+		} \
+		else if (a->isScalar && b->isScalar) \
+		{ \
+			result.setScalar(eval(a->getScalar(), b->getScalar())); \
+		} \
+		else \
+		{ \
+			a->expand(); \
+			b->expand(); \
+			result.setVector(); \
+			float * __restrict dst = result.samples; \
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i) \
+			{ \
+				dst[i] = eval(a->samples[i], b->samples[i]); \
+			} \
+		} \
+	} \
+}; \
+AUDIO_NODE_TYPE(name, name) \
+{ \
+	typeName = _typeName; \
+	in("a", "audioValue"); \
+	in("b", "audioValue"); \
+	out("result", "audioValue"); \
+}
+
+DefineMathNode_V2(AudioNodeMathAdd, kType_Add, "math.add", [](float a, float b) -> float { return a + b; });
+DefineMathNode_V2(AudioNodeMathSub, kType_Sub, "math.sub", [](float a, float b) -> float { return a - b; });
+DefineMathNode_V2(AudioNodeMathMul, kType_Mul, "math.mul", [](float a, float b) -> float { return a * b; });
+DefineMathNode_V2(AudioNodeMathSin, kType_Sin, "math.sin", [](float a, float b) -> float { return sinf(a); });
+DefineMathNode_V2(AudioNodeMathCos, kType_Cos, "math.cos", [](float a, float b) -> float { return cosf(a); });
+DefineMathNode_V2(AudioNodeMathAbs, kType_Abs, "math.abs", [](float a, float b) -> float { return fabsf(a); });
+DefineMathNode_V2(AudioNodeMathMin, kType_Min, "math.min", [](float a, float b) -> float { return fminf(a, b); });
+DefineMathNode_V2(AudioNodeMathMax, kType_Max, "math.max", [](float a, float b) -> float { return fmaxf(a, b); });
+DefineMathNode_V2(AudioNodeMathSat, kType_Sat, "math.saturate", [](float a, float b) -> float { return fmaxf(0.f, fminf(1.f, a)); });
+DefineMathNode_V2(AudioNodeMathNeg, kType_Neg, "math.negate", [](float a, float b) -> float { return -a; });
+DefineMathNode_V2(AudioNodeMathSqrt, kType_Sqrt, "math.sqrt", [](float a, float b) -> float { return sqrtf(a); });
+DefineMathNode_V2(AudioNodeMathPow, kType_Pow, "math.pow", [](float a, float b) -> float { return powf(a, b); });
+DefineMathNode_V2(AudioNodeMathExp, kType_Exp, "math.exp", [](float a, float b) -> float { return expf(a); });
+DefineMathNode_V2(AudioNodeMathMod, kType_Mod, "math.mod", [](float a, float b) -> float { return fmodf(a, b); });
+DefineMathNode_V2(AudioNodeMathFract, kType_Fract, "math.fract", [](float a, float b) -> float { \
+	if (a >= 0.f) \
+		return a - floorf(a); \
+	else \
+		return a - ceilf(a); \
+});
+DefineMathNode_V2(AudioNodeMathFloor, kType_Floor, "math.floor", [](float a, float b) -> float { return floorf(a); });
+DefineMathNode_V2(AudioNodeMathCeil, kType_Ceil, "math.ceil", [](float a, float b) -> float { return ceilf(a); });
+DefineMathNode_V2(AudioNodeMathRound, kType_Round, "math.round", [](float a, float b) -> float { return roundf(a); });
+DefineMathNode_V2(AudioNodeMathSign, kType_Sign, "math.sign", [](float a, float b) -> float { return a < 0.f ? -1.f : +1.f; });
+DefineMathNode_V2(AudioNodeMathHypot, kType_Hypot, "math.hypot", [](float a, float b) -> float { return hypotf(a,b); });
+DefineMathNode_V2(AudioNodeMathPitch, kType_Pitch, "math.pitch", [](float a, float b) -> float { return a * powf(2.f, b); });
+DefineMathNode_V2(AudioNodeMathSemitone, kType_Semitone, "math.semitone", [](float a, float b) -> float { return a * powf(2.f, b / 12.f); });
 
 #undef DefineMathNode
+#undef DefineMathNode_V2
