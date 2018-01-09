@@ -945,7 +945,9 @@ bool AudioRealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::
 	if (!d.lines.empty())
 		d.add("");
 	
+#if ENABLE_AUDIOGRAPH_CPU_TIMING
 	d.add("tick: %.3fms", node->tickTimeAvg / 1000.0);
+#endif
 	
 	std::swap(lines, d.lines);
 	
@@ -1001,6 +1003,7 @@ int AudioRealTimeConnection::getNodeCpuHeatMax() const
 
 int AudioRealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const
 {
+#if ENABLE_AUDIOGRAPH_CPU_TIMING
 	if (isLoading)
 		return false;
 	
@@ -1019,4 +1022,7 @@ int AudioRealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const
 	auto node = nodeItr->second;
 	
 	return node->tickTimeAvg;
+#else
+	return false;
+#endif
 }

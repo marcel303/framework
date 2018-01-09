@@ -323,7 +323,9 @@ struct AudioNodeBase
 	bool isPassthrough;
 	bool isDeprecated;
 	
+#if ENABLE_AUDIOGRAPH_CPU_TIMING
 	int tickTimeAvg;
+#endif
 	
 	AudioNodeBase();
 	

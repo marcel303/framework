@@ -506,7 +506,9 @@ AudioNodeBase::AudioNodeBase()
 	, editorIsTriggered(false)
 	, isPassthrough(false)
 	, isDeprecated(false)
+#if ENABLE_AUDIOGRAPH_CPU_TIMING
 	, tickTimeAvg(0)
+#endif
 {
 }
 
@@ -537,15 +539,21 @@ void AudioNodeBase::traverseTick(const int traversalId, const float dt)
 	
 	//
 	
+#if ENABLE_AUDIOGRAPH_CPU_TIMING
 	const uint64_t t1 = g_TimerRT.TimeUS_get();
-	
+#endif
+
 	tick(dt);
 	
+#if ENABLE_AUDIOGRAPH_CPU_TIMING
 	const uint64_t t2 = g_TimerRT.TimeUS_get();
+#endif
 	
 	//
 	
+#if ENABLE_AUDIOGRAPH_CPU_TIMING
 	tickTimeAvg = (tickTimeAvg * 99 + (t2 - t1) * 1 * (SAMPLE_RATE / AUDIO_UPDATE_SIZE)) / 100;
+#endif
 }
 
 void AudioNodeBase::trigger(const int outputSocketIndex)
