@@ -94,10 +94,7 @@ struct AudioNodeMathBase : AudioNodeBase
 		kOutput_COUNT
 	};
 	
-	AudioNodeMath::Type type;
 	AudioFloat result;
 	
-	AudioNodeMathBase(AudioNodeMath::Type type);
-	
-	virtual void tick(const float dt) override;
+	AudioNodeMathBase();
 };
