@@ -5,7 +5,9 @@
 #include "objects/paobject.h"
 #include "soundmix.h"
 
-#define MAX_BINAURALIZERS 10 // center + nearest + eight vertices
+#define MAX_VOLUMES 3
+#define MAX_BINAURALIZERS_PER_VOLUME 10 // center + nearest + eight vertices
+#define MAX_BINAURALIZERS_TOTAL (MAX_BINAURALIZERS_PER_VOLUME * MAX_VOLUMES)
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -66,24 +68,27 @@ struct MyMutex : binaural::Mutex
 	}
 };
 
-struct AudioSource_Binaural : AudioSource
+struct AudioSource_SoundVolume : AudioSource
 {
-	binaural::Binauralizer binauralizer[MAX_BINAURALIZERS];
-	float gain[MAX_BINAURALIZERS];
+	binaural::Binauralizer binauralizer[MAX_BINAURALIZERS_PER_VOLUME];
+	float gain[MAX_BINAURALIZERS_PER_VOLUME];
 	
 	AudioSource * source;
 	
 	ALIGN16 float samplesL[AUDIO_UPDATE_SIZE];
 	ALIGN16 float samplesR[AUDIO_UPDATE_SIZE];
 	
-	AudioSource_Binaural(const binaural::HRIRSampleSet * sampleSet, binaural::Mutex * mutex)
+	AudioSource_SoundVolume()
 		: binauralizer()
 		, source(nullptr)
 	{
-		for (int i = 0; i < MAX_BINAURALIZERS; ++i)
-			binauralizer[i].init(sampleSet, mutex);
-		
 		memset(gain, 0, sizeof(gain));
+	}
+	
+	void init(const binaural::HRIRSampleSet * sampleSet, binaural::Mutex * mutex)
+	{
+		for (int i = 0; i < MAX_BINAURALIZERS_PER_VOLUME; ++i)
+			binauralizer[i].init(sampleSet, mutex);
 	}
 	
 	virtual void generate(const int channelIndex, float * __restrict audioBuffer, const int numSamples) override
@@ -106,7 +111,7 @@ struct AudioSource_Binaural : AudioSource
 			
 			source->generate(0, sourceBuffer, numSamples);
 			
-			for (int i = 0; i < MAX_BINAURALIZERS; ++i)
+			for (int i = 0; i < MAX_BINAURALIZERS_PER_VOLUME; ++i)
 			{
 				binauralizer[i].provide(sourceBuffer, numSamples);
 				
@@ -133,11 +138,11 @@ struct AudioSource_Binaural : AudioSource
 		
 		if (channelIndex == 0)
 		{
-			memcpy(audioBuffer, samplesL, numSamples * sizeof(float));
+			audioBufferAdd(audioBuffer, samplesL, numSamples);
 		}
 		else
 		{
-			memcpy(audioBuffer, samplesR, numSamples * sizeof(float));
+			audioBufferAdd(audioBuffer, samplesR, numSamples);
 		}
 	}
 };
@@ -175,11 +180,11 @@ struct SoundVolume
 
 struct MyPortAudioHandler : PortAudioHandler
 {
-	AudioSource * audioSource;
+	AudioSource_SoundVolume audioSources[MAX_VOLUMES];
 	
-	MyPortAudioHandler(AudioSource * _audioSource)
+	MyPortAudioHandler()
 		: PortAudioHandler()
-		, audioSource(_audioSource)
+		, audioSources()
 	{
 	}
 	
@@ -192,8 +197,14 @@ struct MyPortAudioHandler : PortAudioHandler
 		ALIGN16 float channelL[AUDIO_UPDATE_SIZE];
 		ALIGN16 float channelR[AUDIO_UPDATE_SIZE];
 		
-		audioSource->generate(0, channelL, AUDIO_UPDATE_SIZE);
-		audioSource->generate(1, channelR, AUDIO_UPDATE_SIZE);
+		memset(channelL, 0, sizeof(channelL));
+		memset(channelR, 0, sizeof(channelR));
+		
+		for (int i = 0; i < MAX_VOLUMES; ++i)
+		{
+			audioSources[i].generate(0, channelL, AUDIO_UPDATE_SIZE);
+			audioSources[i].generate(1, channelR, AUDIO_UPDATE_SIZE);
+		}
 		
 		float * __restrict destinationBuffer = (float*)outputBuffer;
 		
@@ -281,8 +292,22 @@ void testSoundVolumes()
 	
 	SDL_mutex * audioMutex = SDL_CreateMutex();
 	
-	AudioSource_StreamOgg oggSource;
-	oggSource.load("wobbly.ogg");
+	const char * filenames[] =
+	{
+		"wobbly.ogg",
+		"hrtf/music.ogg",
+		"hrtf/music2.ogg"
+	};
+	const int numFilenames = sizeof(filenames) / sizeof(filenames[0]);
+	
+	AudioSource_StreamOgg oggSources[MAX_VOLUMES];
+	
+	for (int i = 0; i < MAX_VOLUMES; ++i)
+	{
+		const char * filename = filenames[i % numFilenames];
+		
+		oggSources[i].load(filename);
+	}
 	
 	MyMutex binauralMutex(audioMutex);
 	
@@ -290,21 +315,27 @@ void testSoundVolumes()
 	binaural::loadHRIRSampleSet_Cipic("hrtf/CIPIC/subject147", sampleSet);
 	sampleSet.finalize();
 	
-	AudioSource_Binaural binauralSource(&sampleSet, &binauralMutex);
-	binauralSource.source = &oggSource;
+	MyPortAudioHandler paHandler;
 	
-	MyPortAudioHandler paHandler(&binauralSource);
+	for (int i = 0; i < MAX_VOLUMES; ++i)
+	{
+		paHandler.audioSources[i].init(&sampleSet, &binauralMutex);
+		
+		paHandler.audioSources[i].source = &oggSources[i];
+	}
 	
 	PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &paHandler);
 	
-	SoundVolume soundVolume;
+	SoundVolume soundVolumes[MAX_VOLUMES];
 	
 	do
 	{
 		framework.process();
 
 		const float dt = framework.timeStep;
+		
+		// process input
 		
 		if (keyboard.wentDown(SDLK_a))
 			enableDistanceAttenuation = !enableDistanceAttenuation;
@@ -327,102 +358,121 @@ void testSoundVolumes()
 		if (keyboard.wentDown(SDLK_f))
 			flipUpDown = !flipUpDown;
 		
+		// update the camera
+		
 		camera.tick(dt, true);
 		
+		// update sound volume properties
+		
+		for (int i = 0; i < MAX_VOLUMES; ++i)
 		{
-			const float moveSpeed = 5.f;
-			const float x = std::sin(moveSpeed * framework.time / 11.234f);
-			const float y = std::sin(moveSpeed * framework.time / 13.456f);
-			const float z = std::sin(moveSpeed * framework.time / 15.678f);
+			auto & soundVolume = soundVolumes[i];
 			
-			const float scaleSpeed = 1.f;
+			const float moveSpeed = 5.f + i / 5.f;
+			const float moveAmount = 10.f / (i + 1);
+			const float x = std::sin(moveSpeed * framework.time / 11.234f) * moveAmount;
+			const float y = std::sin(moveSpeed * framework.time / 13.456f) * moveAmount;
+			const float z = std::sin(moveSpeed * framework.time / 15.678f) * moveAmount;
+			
+			const float scaleSpeed = 1.f + i / 5.f;
 			const float scaleX = lerp(.5f, 1.f, (std::cos(scaleSpeed * framework.time / 4.567f) + 1.f) / 2.f);
-			const float scaleY = scaleX * 4.f;
+			const float scaleY = scaleX * 1.5f;
 			const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * framework.time / 8.765f) + 1.f) / 2.f);
 			
-			const float rotateSpeed = 1.f;
+			const float rotateSpeed = 1.f + i / 5.f;
 			soundVolume.transform = Mat4x4(true).Translate(x, y, z).RotateX(rotateSpeed * framework.time / 3.456f).RotateY(rotateSpeed * framework.time / 4.567f).Scale(scaleX, scaleY, scaleZ);
 		}
 		
-		Vec3 samplePoints[MAX_BINAURALIZERS];
+		// gather HRTF sampling points
+		
+		Vec3 samplePoints[MAX_BINAURALIZERS_TOTAL];
+		Vec3 samplePointsView[MAX_BINAURALIZERS_TOTAL];
+		float samplePointsAmount[MAX_BINAURALIZERS_TOTAL];
 		int numSamplePoints = 0;
 		
-		Vec3 samplePointsView[MAX_BINAURALIZERS];
-		float samplePointsAmount[MAX_BINAURALIZERS];
-		
 		const Vec3 pCameraWorld = camera.getWorldMatrix().GetTranslation();
-		const Vec3 pSoundWorld = soundVolume.transform.Mul4(Vec3(0.f, 0.f, 0.f));
+		const Vec3 pSoundWorld = soundVolumes[0].transform.GetTranslation();
 		const Vec3 pSoundView = camera.getViewMatrix().Mul4(pSoundWorld);
 		
-		if (enableCenter)
+		for (int i = 0; i < MAX_VOLUMES; ++i)
 		{
-			samplePoints[numSamplePoints++] = pSoundWorld;
-		}
-		
-		const Vec3 nearestPointWorld = soundVolume.nearestPointWorld(pCameraWorld);
-		
-		if (enableNearest)
-		{
-			samplePoints[numSamplePoints++] = nearestPointWorld;
-		}
-		
-		if (enableVertices)
-		{
-			for (int i = 0; i < 8; ++i)
-			{
-				const Vec3 pWorld = soundVolume.projectToWorld(s_cubeVertices[i]);
-				
-				samplePoints[numSamplePoints++] = pWorld;
-			}
-		}
-		
-		binauralMutex.lock();
-		{
-			// activate the binauralizers for the generated sample points
+			auto & soundVolume = soundVolumes[i];
 			
-			for (int i = 0; i < numSamplePoints; ++i)
+			Vec3 svSamplePoints[MAX_BINAURALIZERS_PER_VOLUME];
+			int numSvSamplePoints = 0;
+			
+			if (enableCenter)
 			{
-				const Vec3 & pWorld = samplePoints[i];
-				const Vec3 pView = camera.getViewMatrix().Mul4(pWorld);
-				
-				const float distanceToHead = pView.CalcSize();
-				const float kDistanceToHeadTreshold = .1f; // 10cm. related to head size, but exact size is subjective
-				
-				const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadTreshold);
-				
-				samplePointsView[i] = pView;
-				samplePointsAmount[i] = fadeAmount;
-				
-				float elevation;
-				float azimuth;
-				binaural::cartesianToElevationAndAzimuth(pView[2], flipUpDown ? -pView[1] : +pView[1], pView[0], elevation, azimuth);
-				
-				// morph to an elevation and azimuth of (0, 0) as the sound gets closer to the center of the head
-				// perhaps we should add a dry-wet mix instead .. ?
-				elevation = lerp(0.f, elevation, fadeAmount);
-				azimuth = lerp(0.f, azimuth, fadeAmount);
-				
-				const float kMinDistanceToEar = .2f;
-				const float clampedDistanceToEar = std::max(kMinDistanceToEar, distanceToHead);
-				
-				//const float gain = enableDistanceAttenuation ? .1f / (clampedDistanceToEar * clampedDistanceToEar) : 1.f;
-				const float gain = enableDistanceAttenuation ? .5f / clampedDistanceToEar : 1.f;
-				
-				binauralSource.binauralizer[i].setSampleLocation(elevation, azimuth);
-				binauralSource.gain[i] = gain / numSamplePoints;
+				svSamplePoints[numSvSamplePoints++] = soundVolume.transform.GetTranslation();
 			}
 			
-			// reset and mute the unused binauralizers
-			
-			for (int i = numSamplePoints; i < MAX_BINAURALIZERS; ++i)
+			if (enableNearest)
 			{
-				binauralSource.binauralizer[i].setSampleLocation(0, 0);
-				binauralSource.gain[i] = 0.f;
+				const Vec3 nearestPointWorld = soundVolume.nearestPointWorld(pCameraWorld);
+				
+				svSamplePoints[numSvSamplePoints++] = nearestPointWorld;
 			}
+			
+			if (enableVertices)
+			{
+				for (int j = 0; j < 8; ++j)
+				{
+					const Vec3 pWorld = soundVolume.projectToWorld(s_cubeVertices[j]);
+					
+					svSamplePoints[numSvSamplePoints++] = pWorld;
+				}
+			}
+			
+			binauralMutex.lock();
+			{
+				// activate the binauralizers for the generated sample points
+				
+				for (int j = 0; j < numSvSamplePoints; ++j)
+				{
+					const Vec3 & pWorld = svSamplePoints[j];
+					const Vec3 pView = camera.getViewMatrix().Mul4(pWorld);
+					
+					const float distanceToHead = pView.CalcSize();
+					const float kDistanceToHeadTreshold = .1f; // 10cm. related to head size, but exact size is subjective
+					
+					const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadTreshold);
+					
+					float elevation;
+					float azimuth;
+					binaural::cartesianToElevationAndAzimuth(pView[2], flipUpDown ? -pView[1] : +pView[1], pView[0], elevation, azimuth);
+					
+					// morph to an elevation and azimuth of (0, 0) as the sound gets closer to the center of the head
+					// perhaps we should add a dry-wet mix instead .. ?
+					elevation = lerp(0.f, elevation, fadeAmount);
+					azimuth = lerp(0.f, azimuth, fadeAmount);
+					
+					const float kMinDistanceToEar = .2f;
+					const float clampedDistanceToEar = std::max(kMinDistanceToEar, distanceToHead);
+					
+					//const float gain = enableDistanceAttenuation ? .1f / (clampedDistanceToEar * clampedDistanceToEar) : 1.f;
+					const float gain = enableDistanceAttenuation ? .5f / clampedDistanceToEar : 1.f;
+					
+					paHandler.audioSources[i].binauralizer[j].setSampleLocation(elevation, azimuth);
+					paHandler.audioSources[i].gain[j] = gain / numSvSamplePoints;
+					
+					samplePoints[numSamplePoints] = pWorld;
+					samplePointsView[numSamplePoints] = pView;
+					samplePointsAmount[numSamplePoints] = fadeAmount;
+					numSamplePoints++;
+				}
+				
+				// reset and mute the unused binauralizers
+				
+				for (int j = numSvSamplePoints; j < MAX_BINAURALIZERS_PER_VOLUME; ++j)
+				{
+					paHandler.audioSources[i].binauralizer[j].setSampleLocation(0, 0);
+					paHandler.audioSources[i].gain[j] = 0.f;
+				}
+			}
+			binauralMutex.unlock();
 		}
-		binauralMutex.unlock();
 		
-		Assert(numSamplePoints <= MAX_BINAURALIZERS);
+		Assert(numSamplePoints <= MAX_BINAURALIZERS_TOTAL);
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -444,8 +494,11 @@ void testSoundVolumes()
 				}
 				gxPopMatrix();
 				
-				setColor(160, 160, 160);
-				drawSoundVolume(soundVolume);
+				for (int i = 0; i < MAX_VOLUMES; ++i)
+				{
+					setColor(160, 160, 160);
+					drawSoundVolume(soundVolumes[i]);
+				}
 				
 				for (int i = 0; i < numSamplePoints; ++i)
 				{
