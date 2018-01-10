@@ -76,23 +76,31 @@ struct Limiter
 
 		while (i * 16 < numSamples)
 		{
-			for (int j = 0; j < 16; ++j)
+			float * __restrict samplePtr = samples + i * 16;
+			
+			for (int j = 0; j < 4; ++j)
 			{
-				const float value = samples[i * 16 + j];
-
-				const float valueMag = fabsf(value);
-
-				if (valueMag > measuredMax)
-					measuredMax = valueMag;
+				const float value1 = fabsf(samplePtr[j * 4 + 0]);
+				const float value2 = fabsf(samplePtr[j * 4 + 1]);
+				const float value3 = fabsf(samplePtr[j * 4 + 2]);
+				const float value4 = fabsf(samplePtr[j * 4 + 3]);
+				
+				const float max1 = fmaxf(value1, value2);
+				const float max2 = fmaxf(value3, value4);
+				
+				measuredMax = fmaxf(measuredMax, fmaxf(max1, max2));
 			}
 
 			if (measuredMax > outputMax)
 			{
 				const float outputScale = outputMax / measuredMax;
 
-				for (int j = 0; j < 16; ++j)
+				for (int j = 0; j < 4; ++j)
 				{
-					samples[i * 16 + j] *= outputScale;
+					samplePtr[j * 4 + 0] *= outputScale;
+					samplePtr[j * 4 + 1] *= outputScale;
+					samplePtr[j * 4 + 2] *= outputScale;
+					samplePtr[j * 4 + 3] *= outputScale;
 				}
 
 				measuredMax *= retain16;
