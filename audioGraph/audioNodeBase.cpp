@@ -68,8 +68,16 @@ void AudioFloat::expand() const
 		{
 			self->isExpanded = true;
 			
+		#if AUDIO_USE_SSE
+			const __m128 scalar_4 = _mm_set1_ps(samples[0]);
+			__m128 * samples_4 = (__m128*)self->samples;
+			
+			for (int i = 0; i < AUDIO_UPDATE_SIZE / 4; ++i)
+				samples_4[i] = scalar_4;
+		#else
 			for (int i = 1; i < AUDIO_UPDATE_SIZE; ++i)
 				self->samples[i] = samples[0];
+		#endif
 		}
 	}
 	else
