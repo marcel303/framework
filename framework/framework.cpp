@@ -6379,6 +6379,7 @@ void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool
 				float p[3];
 				p[axis1] = x;
 				p[axis2] = -1.f;
+				p[axis3] = 0.f;
 				gxTexCoord2f(u, 0.f); gxVertex3fv(p);
 				
 				p[axis2] = +1.f;
