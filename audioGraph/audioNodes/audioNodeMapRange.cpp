@@ -90,6 +90,29 @@ void AudioNodeMapRange::tick(const float dt)
 		{
 			resultOutput.setVector();
 			
+		#ifdef __GNUC__
+			// todo : add a non-SSE implementation of SimdVec and rewrite
+			
+			typedef float v4sf __attribute__ ((vector_size(16)));
+			
+			const v4sf scale4 = { scale, scale, scale, scale };
+			const v4sf one4 = { 1.f, 1.f, 1.f, 1.f };
+			const v4sf inMin4 = { _inMin, _inMin, _inMin, _inMin };
+			const v4sf outMin4 = { _outMin, _outMin, _outMin, _outMin };
+			const v4sf outMax4 = { _outMax, _outMax, _outMax, _outMax };
+			
+			const v4sf * __restrict valuePtr = (v4sf*)value->samples;
+			      v4sf * __restrict resultPtr = (v4sf*)resultOutput.samples;
+			
+			for (int i = 0; i < AUDIO_UPDATE_SIZE/4; ++i)
+			{
+				const v4sf t2 = (valuePtr[i] - inMin4) * scale4;
+				const v4sf t1 = one4 - t2;
+				const v4sf result = t1 * outMin4 + t2 * outMax4;
+				
+				resultPtr[i] = result;
+			}
+		#else
 			const float * __restrict valuePtr = value->samples;
 			      float * __restrict resultPtr = resultOutput.samples;
 			
@@ -101,6 +124,7 @@ void AudioNodeMapRange::tick(const float dt)
 				
 				resultPtr[i] = result;
 			}
+		#endif
 		}
 	}
 	else
