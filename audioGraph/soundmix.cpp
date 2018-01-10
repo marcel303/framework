@@ -38,6 +38,26 @@
 
 #define ENABLE_SSE (AUDIO_USE_SSE && 1)
 
+#if defined(__arm__) || defined(__aarch64__)
+       #define HAS_NEON 1
+#else
+       #define HAS_NEON 0
+#endif
+
+#define ENABLE_NEON (HAS_NEON && 1)
+
+#ifdef __GNUC__
+	#define HAS_GCC_VECTOR 1
+#else
+	#define HAS_GCC_VECTOR 1
+#endif
+
+#define ENABLE_GCC_VECTOR (HAS_GCC_VECTOR && 1)
+
+#if ENABLE_GCC_VECTOR
+	typedef float vec4f __attribute__ ((vector_size(16)));
+#endif
+
 static void generateOscForVoice(AudioVoice & voice, Osc4DStream & stream, const bool forceSync);
 
 void audioBufferSetZero(
@@ -80,6 +100,19 @@ void audioBufferMul(
 	__m128 * __restrict audioBuffer4 = (__m128*)audioBuffer;
 	const int numSamples4 = numSamples / 4;
 	const __m128 scale4 = _mm_load1_ps(&scale);
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		audioBuffer4[i] = audioBuffer4[i] * scale4;
+	}
+	
+	begin = numSamples4 * 4;
+#elif ENABLE_GCC_VECTOR
+	Assert((uintptr_t(audioBuffer) & 15) == 0);
+	
+	vec4f * __restrict audioBuffer4 = (vec4f*)audioBuffer;
+	const int numSamples4 = numSamples / 4;
+	const vec4f scale4 = { scale, scale, scale, scale };
 	
 	for (int i = 0; i < numSamples4; ++i)
 	{
@@ -750,8 +783,7 @@ void AudioSourcePcm::generate(SAMPLE_ALIGN16 float * __restrict samples, const i
 	
 	if (generateSilence)
 	{
-		for (int i = 0; i < numSamples; ++i)
-			samples[i] = 0.f;
+		memset(samples, 0, numSamples * sizeof(float));
 		
 		if (loop == false)
 		{
