@@ -1242,7 +1242,6 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 	const float kMaxSelectionDeviation = 5 / float(g_menu->sx);
 	
 	const int kPadding = 5;
-	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
 
 	const int x1 = g_drawX;
 	const int x2 = g_drawX + g_menu->sx;

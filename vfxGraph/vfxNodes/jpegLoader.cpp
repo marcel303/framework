@@ -148,6 +148,7 @@ bool loadImage_turbojpeg(const void * buffer, const int bufferSize, const void *
 			const int requiredBufferSize = pitch * sy;
 			
 			Assert(requiredBufferSize <= dstBufferSize);
+			(void)requiredBufferSize;
 			
 			if (tjDecompress2(h, (unsigned char*)buffer, (unsigned long)bufferSize, (unsigned char*)dstBuffer, sx, pitch, sy, pixelFormat, flags) != 0)
 			{
