@@ -329,9 +329,20 @@ void testSoundVolumes()
 		
 		camera.tick(dt, true);
 		
-		const float scaleXY = lerp(.5f, 1.f, (std::cos(framework.time / 4.567f) + 1.f) / 2.f);
-		const float scaleZ = lerp(.05f, .5f, (std::cos(framework.time / 8.765f) + 1.f) / 2.f);
-		soundVolume.transform = Mat4x4(true).RotateX(framework.time / 3.456f).RotateY(framework.time / 4.567f).Scale(scaleXY, scaleXY, scaleZ);
+		{
+			const float moveSpeed = 5.f;
+			const float x = std::sin(moveSpeed * framework.time / 11.234f);
+			const float y = std::sin(moveSpeed * framework.time / 13.456f);
+			const float z = std::sin(moveSpeed * framework.time / 15.678f);
+			
+			const float scaleSpeed = 1.f;
+			const float scaleX = lerp(.5f, 1.f, (std::cos(scaleSpeed * framework.time / 4.567f) + 1.f) / 2.f);
+			const float scaleY = scaleX * 4.f;
+			const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * framework.time / 8.765f) + 1.f) / 2.f);
+			
+			const float rotateSpeed = 1.f;
+			soundVolume.transform = Mat4x4(true).Translate(x, y, z).RotateX(rotateSpeed * framework.time / 3.456f).RotateY(rotateSpeed * framework.time / 4.567f).Scale(scaleX, scaleY, scaleZ);
+		}
 		
 		Vec3 samplePoints[MAX_BINAURALIZERS];
 		int numSamplePoints = 0;
@@ -453,7 +464,8 @@ void testSoundVolumes()
 			for (int i = 0; i < numSamplePoints; ++i)
 			{
 				setColor(200, 200, 200);
-				drawText(10, 100 + i * 20, kFontSize, +1, +1, "sample pos: (%+.2f, %+.2f, %+.2f, world), (%+.2f, %+.2f, %+.2f, view), amount: %.2f",
+				drawText(10, 100 + i * 20, kFontSize, +1, +1,
+					"sample pos: (%+.2f, %+.2f, %+.2f, world), (%+.2f, %+.2f, %+.2f, view), amount: %.2f",
 					samplePoints[i][0], samplePoints[i][1], samplePoints[i][2],
 					samplePointsView[i][0], samplePointsView[i][1], samplePointsView[i][2],
 					samplePointsAmount[i]);
@@ -475,6 +487,5 @@ void testSoundVolumes()
 	pa.shut();
 	
 	SDL_DestroyMutex(audioMutex);
-	
-	exit(0);
+	audioMutex = nullptr;
 }
