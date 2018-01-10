@@ -80,6 +80,7 @@ struct AudioScope
 		Assert(mutex != nullptr);
 		const int result = SDL_LockMutex(mutex);
 		Assert(result == 0);
+		(void)result;
 	}
 	
 	~AudioScope()
@@ -87,6 +88,7 @@ struct AudioScope
 		Assert(mutex != nullptr);
 		const int result = SDL_UnlockMutex(mutex);
 		Assert(result == 0);
+		(void)result;
 	}
 };
 

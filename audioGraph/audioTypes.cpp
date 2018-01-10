@@ -48,6 +48,7 @@ void AudioMutex_Shared::lock() const
 	Assert(mutex != nullptr);
 	const int result = SDL_LockMutex(mutex);
 	Assert(result == 0);
+	(void)result;
 }
 
 void AudioMutex_Shared::unlock() const
@@ -55,6 +56,7 @@ void AudioMutex_Shared::unlock() const
 	Assert(mutex != nullptr);
 	const int result = SDL_UnlockMutex(mutex);
 	Assert(result == 0);
+	(void)result;
 }
 
 //

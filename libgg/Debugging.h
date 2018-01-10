@@ -9,8 +9,8 @@ void HandleAssert(const char * func, int line, const char * expr, ...);
 #else
 #define Assert(x) do { } while (false)
 #define AssertMsg(x, msg, ...) do { } while (false)
-#define Verify(x) do { x; } while (false)
-#define VerifyMsg(x, msg, ...) do { x; } while (false)
+#define Verify(x) do { const bool y = x; (void)y; } while (false)
+#define VerifyMsg(x, msg, ...) do { const bool y = x; (void)y; } while (false)
 #endif
 
 class AllocState
