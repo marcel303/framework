@@ -58,8 +58,6 @@
 	typedef float vec4f __attribute__ ((vector_size(16)));
 #endif
 
-static void generateOscForVoice(AudioVoice & voice, Osc4DStream & stream, const bool forceSync);
-
 void audioBufferSetZero(
 	float * __restrict audioBuffer,
 	const int numSamples)
@@ -111,15 +109,18 @@ void audioBufferMul(
 	Assert((uintptr_t(audioBuffer) & 15) == 0);
 	
 	vec4f * __restrict audioBuffer4 = (vec4f*)audioBuffer;
-	const int numSamples4 = numSamples / 4;
+	const int numSamples16 = numSamples / 16;
 	const vec4f scale4 = { scale, scale, scale, scale };
 	
-	for (int i = 0; i < numSamples4; ++i)
+	for (int i = 0; i < numSamples16; ++i)
 	{
-		audioBuffer4[i] = audioBuffer4[i] * scale4;
+		audioBuffer4[i * 4 + 0] = audioBuffer4[i * 4 + 0] * scale4;
+		audioBuffer4[i * 4 + 1] = audioBuffer4[i * 4 + 1] * scale4;
+		audioBuffer4[i * 4 + 2] = audioBuffer4[i * 4 + 2] * scale4;
+		audioBuffer4[i * 4 + 3] = audioBuffer4[i * 4 + 3] * scale4;
 	}
 	
-	begin = numSamples4 * 4;
+	begin = numSamples16 * 16;
 #endif
 
 	for (int i = begin; i < numSamples; ++i)
@@ -141,6 +142,19 @@ void audioBufferMul(
 	__m128 * __restrict audioBuffer4 = (__m128*)audioBuffer;
 	const int numSamples4 = numSamples / 4;
 	const __m128 * __restrict scale4 = (__m128*)scale;
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		audioBuffer4[i] = audioBuffer4[i] * scale4[i];
+	}
+	
+	begin = numSamples4 * 4;
+#elif ENABLE_GCC_VECTOR
+	Assert((uintptr_t(audioBuffer) & 15) == 0);
+	
+	vec4f * __restrict audioBuffer4 = (vec4f*)audioBuffer;
+	const int numSamples4 = numSamples / 4;
+	const vec4f * __restrict scale4 = (vec4f*)scale;
 	
 	for (int i = 0; i < numSamples4; ++i)
 	{
