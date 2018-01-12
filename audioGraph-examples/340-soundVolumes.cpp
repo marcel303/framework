@@ -1,4 +1,3 @@
-//#include "audiostream/AudioStreamVorbis.h"
 #include "framework.h"
 #include "objects/audioSourceVorbis.h"
 #include "objects/binauralizer.h"
@@ -6,7 +5,7 @@
 #include "objects/paobject.h"
 #include "soundmix.h"
 
-#define MAX_VOLUMES 2
+#define MAX_VOLUMES 12
 #define MAX_BINAURALIZERS_PER_VOLUME 10 // center + nearest + eight vertices
 #define MAX_BINAURALIZERS_TOTAL (MAX_BINAURALIZERS_PER_VOLUME * MAX_VOLUMES)
 
@@ -318,13 +317,21 @@ int main(int argc, char * argv[])
 	
 	SoundVolume soundVolumes[MAX_VOLUMES];
 	
+	float timeSeed = 1234.f;
+	
 	do
 	{
 		framework.process();
 
 		const float dt = framework.timeStep;
+		const float time = timeSeed + framework.time;
+		//const float time = timeSeed + mouse.x;
+		//const float time = timeSeed;
 		
 		// process input
+		
+		if (keyboard.wentDown(SDLK_t))
+			timeSeed = random(0.f, 1000.f);
 		
 		if (keyboard.wentDown(SDLK_a))
 			enableDistanceAttenuation = !enableDistanceAttenuation;
@@ -360,19 +367,19 @@ int main(int argc, char * argv[])
 		{
 			auto & soundVolume = soundVolumes[i];
 			
-			const float moveSpeed = 5.f + i / 5.f;
-			const float moveAmount = 4.f / (i + 1);
-			const float x = std::sin(moveSpeed * framework.time / 11.234f) * moveAmount;
-			const float y = std::sin(moveSpeed * framework.time / 13.456f) * moveAmount;
-			const float z = std::sin(moveSpeed * framework.time / 15.678f) * moveAmount;
+			const float moveSpeed = (1.f + i / float(MAX_VOLUMES)) * .2f;
+			const float moveAmount = 4.f / (i / float(MAX_VOLUMES) + 1);
+			const float x = std::sin(moveSpeed * time / 11.234f) * moveAmount;
+			const float y = std::sin(moveSpeed * time / 13.456f) * moveAmount;
+			const float z = std::sin(moveSpeed * time / 15.678f) * moveAmount;
 			
 			const float scaleSpeed = 1.f + i / 5.f;
-			const float scaleX = lerp(.5f, 1.f, (std::cos(scaleSpeed * framework.time / 4.567f) + 1.f) / 2.f);
+			const float scaleX = lerp(.5f, 1.f, (std::cos(scaleSpeed * time / 4.567f) + 1.f) / 2.f);
 			const float scaleY = scaleX * 1.5f;
-			const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * framework.time / 8.765f) + 1.f) / 2.f);
+			const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
 			
 			const float rotateSpeed = 1.f + i / 5.f;
-			soundVolume.transform = Mat4x4(true).Translate(x, y, z).RotateX(rotateSpeed * framework.time / 3.456f).RotateY(rotateSpeed * framework.time / 4.567f).Scale(scaleX, scaleY, scaleZ);
+			soundVolume.transform = Mat4x4(true).Translate(x, y, z).RotateX(rotateSpeed * time / 3.456f).RotateY(rotateSpeed * time / 4.567f).Scale(scaleX, scaleY, scaleZ);
 		}
 		
 		// gather HRTF sampling points
