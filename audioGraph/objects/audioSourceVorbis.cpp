@@ -25,30 +25,25 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <stdio.h>
 #include "audioSourceVorbis.h"
-#include "audiostream/oggvorbis.h"
 #include "Debugging.h"
 #include "Log.h"
+#include <stdio.h>
 
 AudioSourceVorbis::AudioSourceVorbis()
-	: file(nullptr)
-	, vorbisFile(nullptr)
+	: filename()
+	, file(nullptr)
+	, vorbisFile()
 	, sampleRate(0)
 	, numChannels(0)	
-	, position(0)
 	, loop(false)
 	, hasLooped(false)
 {
-	vorbisFile = new OggVorbis_File();
 }
 
 AudioSourceVorbis::~AudioSourceVorbis()
 {
 	close();
-	
-	delete vorbisFile;
-	vorbisFile = nullptr;
 }
 
 void AudioSourceVorbis::generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples)
@@ -72,7 +67,7 @@ void AudioSourceVorbis::generate(SAMPLE_ALIGN16 float * __restrict samples, cons
 		float ** channels;
 		
 		int numSamplesRead = (int)ov_read_float(
-			vorbisFile,
+			&vorbisFile,
 			&channels,
 			numSamplesRemaining,
 			&bitstream);	
@@ -82,18 +77,35 @@ void AudioSourceVorbis::generate(SAMPLE_ALIGN16 float * __restrict samples, cons
 			numSamplesRead = 0;
 		}
 		
-		//LOG_DBG("read %d samples", numSamplesRead);
-		
 		const int sampleOffset = numSamples - numSamplesRemaining;
+		
+		float * __restrict samplePtr = samples + sampleOffset;
 		
 		if (numChannels == 1)
 		{
-			memcpy(samples + sampleOffset, channels[0], numSamplesRead * sizeof(float));
+			memcpy(samplePtr, channels[0], numSamplesRead * sizeof(float));
 		}
 		else if (numChannels == 2)
 		{
-			memcpy(samples + sampleOffset, channels[0], numSamplesRead * sizeof(float));
-			// todo : add the second channel
+			const int numSamplesRead4 = numSamplesRead / 4;
+			
+			for (int i = 0; i < numSamplesRead4; ++i)
+			{
+				const float value1 = channels[0][i * 4 + 0] + channels[1][i * 4 + 0];
+				const float value2 = channels[0][i * 4 + 1] + channels[1][i * 4 + 1];
+				const float value3 = channels[0][i * 4 + 2] + channels[1][i * 4 + 2];
+				const float value4 = channels[0][i * 4 + 3] + channels[1][i * 4 + 3];
+				
+				samplePtr[i * 4 + 0] = value1;
+				samplePtr[i * 4 + 1] = value2;
+				samplePtr[i * 4 + 2] = value3;
+				samplePtr[i * 4 + 3] = value4;
+			}
+			
+			for (int i = numSamplesRead4 * 4; i < numSamplesRead; ++i)
+			{
+				samplePtr[i] = channels[0][i] + channels[1][i];
+			}
 		}
 		
 		if (numSamplesRead == 0)
@@ -106,7 +118,7 @@ void AudioSourceVorbis::generate(SAMPLE_ALIGN16 float * __restrict samples, cons
 				
 				close();
 				
-				//open(mFileName.c_str(), loop);
+				open(filename.c_str(), loop);
 				
 				hasLooped = true;
 			}
@@ -126,25 +138,26 @@ void AudioSourceVorbis::generate(SAMPLE_ALIGN16 float * __restrict samples, cons
 	}
 }
 
-void AudioSourceVorbis::open(const char * filename, bool _loop)
+void AudioSourceVorbis::open(const char * _filename, bool _loop)
 {
 	close();
-
+	
+	filename = _filename;
 	loop = _loop;
 
-	file = fopen(filename, "rb");
+	file = fopen(_filename, "rb");
 	
 	if (file == nullptr)
 	{
-		LOG_ERR("Vosbis Audio Stream: failed to open file (%s)", filename);
+		LOG_ERR("Vosbis Audio Stream: failed to open file (%s)", _filename);
 		Assert(file != 0);
 		close();
 		return;
 	}
 	
-	LOG_DBG("Vorbis Audio Stream: opened file: %s", filename);
+	LOG_DBG("Vorbis Audio Stream: opened file: %s", _filename);
 	
-	const int result = ov_open(file, vorbisFile, NULL, 0);
+	const int result = ov_open(file, &vorbisFile, NULL, 0);
 
 	if (result != 0)
 	{
@@ -155,7 +168,7 @@ void AudioSourceVorbis::open(const char * filename, bool _loop)
 	
 	LOG_DBG("Vorbis Audio Stream: created vorbis decoder", 0);
 	
-	vorbis_info * info = ov_info(vorbisFile, -1);
+	const vorbis_info * info = ov_info(&vorbisFile, -1);
 	
 	sampleRate = static_cast<int>(info->rate);
 	numChannels = info->channels;
@@ -174,13 +187,11 @@ void AudioSourceVorbis::close()
 {
 	if (file != nullptr)
 	{
-		ov_clear(vorbisFile);
+		ov_clear(&vorbisFile);
 		LOG_DBG("Vorbis Audio Stream: destroyed vorbis decoder", 0);
 		
 		fclose(file);
 		file = 0;
 		LOG_DBG("Vorbis Audio Stream: closed file", 0);
-		
-		position = 0;
 	}
 }

@@ -27,16 +27,18 @@
 
 #pragma once
 
+#include "audiostream/oggvorbis.h"
 #include "soundmix.h"
+#include <string>
 
 struct AudioSourceVorbis : AudioSource
 {
+	std::string filename;
 	FILE * file;
-	struct OggVorbis_File * vorbisFile;
-
+	OggVorbis_File vorbisFile;
+	
 	int sampleRate;
 	int numChannels;
-	int position;
 	bool loop;
 	bool hasLooped;
 
