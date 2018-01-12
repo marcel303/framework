@@ -59,7 +59,7 @@ if (MSVC)
 endif (MSVC)
 
 target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}")
-target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/audiostream") # for ogg and vorbis headers
+target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/audiostream/oggvorbis") # for ogg and vorbis headers
 
 if (WIN32)
 	target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/win32/include")
