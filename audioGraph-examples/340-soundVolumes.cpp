@@ -1,52 +1,17 @@
-#include "audiostream/AudioStreamVorbis.h"
+//#include "audiostream/AudioStreamVorbis.h"
 #include "framework.h"
+#include "objects/audioSourceVorbis.h"
 #include "objects/binauralizer.h"
 #include "objects/binaural_cipic.h"
 #include "objects/paobject.h"
 #include "soundmix.h"
 
-#define MAX_VOLUMES 3
+#define MAX_VOLUMES 2
 #define MAX_BINAURALIZERS_PER_VOLUME 10 // center + nearest + eight vertices
 #define MAX_BINAURALIZERS_TOTAL (MAX_BINAURALIZERS_PER_VOLUME * MAX_VOLUMES)
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
-namespace SoundVolumesTest
-{
-
-struct AudioSource
-{
-	virtual void generate(const int channelIndex, float * __restrict audioBuffer, const int numSamples) = 0;
-};
-
-struct AudioSource_StreamOgg : AudioSource
-{
-	AudioStream_Vorbis stream;
-	
-	AudioSource_StreamOgg()
-		: stream()
-	{
-	}
-	
-	void load(const char * filename)
-	{
-		stream.Open(filename, true);
-	}
-	
-	virtual void generate(const int channelIndex, float * __restrict audioBuffer, const int numSamples) override
-	{
-		AudioSample * samples = (AudioSample*)alloca(sizeof(AudioSample) * numSamples);
-		
-		const int numProvided = stream.Provide(numSamples, samples);
-		
-		for (int i = 0; i < numProvided; ++i)
-			audioBuffer[i] = (int(samples[i].channel[0]) + int(samples[i].channel[1])) / float(1 << 16);
-		
-		for (int i = numProvided; i < numSamples; ++i)
-			audioBuffer[i] = 0.f;
-	}
-};
+const int GFX_SX = 1024;
+const int GFX_SY = 768;
 
 struct MyMutex : binaural::Mutex
 {
@@ -68,7 +33,12 @@ struct MyMutex : binaural::Mutex
 	}
 };
 
-struct AudioSource_SoundVolume : AudioSource
+struct MultiChannelAudioSource
+{
+	virtual void generate(const int channelIndex, SAMPLE_ALIGN16 float * __restrict audioBuffer, const int numSamples) = 0;
+};
+
+struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 {
 	binaural::Binauralizer binauralizer[MAX_BINAURALIZERS_PER_VOLUME];
 	float gain[MAX_BINAURALIZERS_PER_VOLUME];
@@ -78,7 +48,7 @@ struct AudioSource_SoundVolume : AudioSource
 	ALIGN16 float samplesL[AUDIO_UPDATE_SIZE];
 	ALIGN16 float samplesR[AUDIO_UPDATE_SIZE];
 	
-	AudioSource_SoundVolume()
+	MultiChannelAudioSource_SoundVolume()
 		: binauralizer()
 		, source(nullptr)
 	{
@@ -91,7 +61,7 @@ struct AudioSource_SoundVolume : AudioSource
 			binauralizer[i].init(sampleSet, mutex);
 	}
 	
-	virtual void generate(const int channelIndex, float * __restrict audioBuffer, const int numSamples) override
+	virtual void generate(const int channelIndex, SAMPLE_ALIGN16 float * __restrict audioBuffer, const int numSamples) override
 	{
 		Assert(channelIndex < 2);
 		Assert(numSamples <= AUDIO_UPDATE_SIZE);
@@ -107,9 +77,10 @@ struct AudioSource_SoundVolume : AudioSource
 			memset(samplesL, 0, sizeof(samplesL));
 			memset(samplesR, 0, sizeof(samplesR));
 			
-			float sourceBuffer[numSamples];
+			ALIGN16 float sourceBuffer[AUDIO_UPDATE_SIZE];
+			memset(sourceBuffer, 0xff, sizeof(sourceBuffer));
 			
-			source->generate(0, sourceBuffer, numSamples);
+			source->generate(sourceBuffer, numSamples);
 			
 			for (int i = 0; i < MAX_BINAURALIZERS_PER_VOLUME; ++i)
 			{
@@ -180,7 +151,7 @@ struct SoundVolume
 
 struct MyPortAudioHandler : PortAudioHandler
 {
-	AudioSource_SoundVolume audioSources[MAX_VOLUMES];
+	MultiChannelAudioSource_SoundVolume audioSources[MAX_VOLUMES];
 	
 	MyPortAudioHandler()
 		: PortAudioHandler()
@@ -216,10 +187,6 @@ struct MyPortAudioHandler : PortAudioHandler
 	}
 };
 
-}
-
-using namespace SoundVolumesTest;
-
 static void drawSoundVolume(const SoundVolume & volume)
 {
 	gxPushMatrix();
@@ -232,6 +199,22 @@ static void drawSoundVolume(const SoundVolume & volume)
 		gxPushMatrix(); { gxTranslatef(0, +1, 0); drawGrid3dLine(10, 10, 2, 0); } gxPopMatrix();
 		gxPushMatrix(); { gxTranslatef(0, 0, -1); drawGrid3dLine(10, 10, 0, 1); } gxPopMatrix();
 		gxPushMatrix(); { gxTranslatef(0, 0, +1); drawGrid3dLine(10, 10, 0, 1); } gxPopMatrix();
+	}
+	gxPopMatrix();
+}
+
+static void drawSoundVolume_Translucent(const SoundVolume & volume)
+{
+	gxPushMatrix();
+	{
+		gxMultMatrixf(volume.transform.m_v);
+		
+		gxPushMatrix(); { gxTranslatef(-1, 0, 0); drawRect3d(1, 2); } gxPopMatrix();
+		gxPushMatrix(); { gxTranslatef(+1, 0, 0); drawRect3d(1, 2); } gxPopMatrix();
+		gxPushMatrix(); { gxTranslatef(0, -1, 0); drawRect3d(2, 0); } gxPopMatrix();
+		gxPushMatrix(); { gxTranslatef(0, +1, 0); drawRect3d(2, 0); } gxPopMatrix();
+		gxPushMatrix(); { gxTranslatef(0, 0, -1); drawRect3d(0, 1); } gxPopMatrix();
+		gxPushMatrix(); { gxTranslatef(0, 0, +1); drawRect3d(0, 1); } gxPopMatrix();
 	}
 	gxPopMatrix();
 }
@@ -267,9 +250,13 @@ static const Vec3 s_cubeVertices[8] =
 	Vec3(-1, +1, +1)
 };
 
-void testSoundVolumes()
+int main(int argc, char * argv[])
 {
+	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+		return -1;
+	
 	const int kFontSize = 16;
+	const int kFontSize2 = 10;
 	
 	bool enableDistanceAttenuation = true;
 	
@@ -278,6 +265,8 @@ void testSoundVolumes()
 	bool enableVertices = false;
 	
 	bool flipUpDown = false;
+	
+	bool showUi = true;
 	
 	Camera3d camera;
 	
@@ -295,18 +284,18 @@ void testSoundVolumes()
 	const char * filenames[] =
 	{
 		"wobbly.ogg",
-		"hrtf/music.ogg",
-		"hrtf/music2.ogg"
+		"hrtf/music2.ogg",
+		"hrtf/music.ogg"
 	};
 	const int numFilenames = sizeof(filenames) / sizeof(filenames[0]);
 	
-	AudioSource_StreamOgg oggSources[MAX_VOLUMES];
+	AudioSourceVorbis oggSources[MAX_VOLUMES];
 	
 	for (int i = 0; i < MAX_VOLUMES; ++i)
 	{
 		const char * filename = filenames[i % numFilenames];
 		
-		oggSources[i].load(filename);
+		oggSources[i].open(filename, true);
 	}
 	
 	MyMutex binauralMutex(audioMutex);
@@ -358,6 +347,9 @@ void testSoundVolumes()
 		if (keyboard.wentDown(SDLK_f))
 			flipUpDown = !flipUpDown;
 		
+		if (keyboard.wentDown(SDLK_TAB))
+			showUi = !showUi;
+		
 		// update the camera
 		
 		camera.tick(dt, true);
@@ -369,7 +361,7 @@ void testSoundVolumes()
 			auto & soundVolume = soundVolumes[i];
 			
 			const float moveSpeed = 5.f + i / 5.f;
-			const float moveAmount = 10.f / (i + 1);
+			const float moveAmount = 4.f / (i + 1);
 			const float x = std::sin(moveSpeed * framework.time / 11.234f) * moveAmount;
 			const float y = std::sin(moveSpeed * framework.time / 13.456f) * moveAmount;
 			const float z = std::sin(moveSpeed * framework.time / 15.678f) * moveAmount;
@@ -481,56 +473,94 @@ void testSoundVolumes()
 			
 			projectPerspective3d(fov, near, far);
 			
-			glEnable(GL_DEPTH_TEST);
-			glDepthFunc(GL_LESS);
-			
 			camera.pushViewMatrix();
 			{
-				gxPushMatrix();
+				glEnable(GL_DEPTH_TEST);
+				glDepthFunc(GL_LESS);
 				{
-					gxScalef(10, 10, 10);
-					setColor(50, 50, 50);
-					drawGrid3dLine(100, 100, 0, 2, true);
+					gxPushMatrix();
+					{
+						gxScalef(10, 10, 10);
+						setColor(50, 50, 50);
+						drawGrid3dLine(100, 100, 0, 2, true);
+					}
+					gxPopMatrix();
+					
+					for (int i = 0; i < MAX_VOLUMES; ++i)
+					{
+						setColor(160, 160, 160);
+						drawSoundVolume(soundVolumes[i]);
+					}
+					
+					for (int i = 0; i < numSamplePoints; ++i)
+					{
+						drawPoint(samplePoints[i], colorRed, colorGreen, colorBlue, .1f);
+					}
 				}
-				gxPopMatrix();
+				glDisable(GL_DEPTH_TEST);
 				
-				for (int i = 0; i < MAX_VOLUMES; ++i)
-				{
-					setColor(160, 160, 160);
-					drawSoundVolume(soundVolumes[i]);
-				}
+				//
 				
-				for (int i = 0; i < numSamplePoints; ++i)
+				glEnable(GL_DEPTH_TEST);
+				glDepthFunc(GL_LESS);
+				glDepthMask(GL_FALSE);
+				pushBlend(BLEND_ADD);
 				{
-					drawPoint(samplePoints[i], colorRed, colorGreen, colorBlue, .1f);
+					for (int i = 0; i < MAX_VOLUMES; ++i)
+					{
+						setColor(60, 100, 160, 63);
+						
+						drawSoundVolume_Translucent(soundVolumes[i]);
+					}
 				}
+				popBlend();
+				glDepthMask(GL_TRUE);
+				glDisable(GL_DEPTH_TEST);
 			}
 			camera.popViewMatrix();
 			
 			projectScreen2d();
 			
-			setColor(colorWhite);
-			drawText(10, 10, kFontSize, +1, +1, "sound world pos: %.2f, %.2f, %.2f", pSoundWorld[0], pSoundWorld[1], pSoundWorld[2]);
-			drawText(10, 30, kFontSize, +1, +1, "sound view pos: %.2f, %.2f, %.2f", pSoundView[0], pSoundView[1], pSoundView[2]);
-			drawText(10, 50, kFontSize, +1, +1, "camera world pos: %.2f, %.2f, %.2f", pCameraWorld[0], pCameraWorld[1], pCameraWorld[2]);
-			
-			for (int i = 0; i < numSamplePoints; ++i)
+			if (showUi)
 			{
-				setColor(200, 200, 200);
-				drawText(10, 100 + i * 20, kFontSize, +1, +1,
-					"sample pos: (%+.2f, %+.2f, %+.2f, world), (%+.2f, %+.2f, %+.2f, view), amount: %.2f",
-					samplePoints[i][0], samplePoints[i][1], samplePoints[i][2],
-					samplePointsView[i][0], samplePointsView[i][1], samplePointsView[i][2],
-					samplePointsAmount[i]);
+				setColor(colorWhite);
+				drawText(10, 10, kFontSize, +1, +1, "sound world pos: %.2f, %.2f, %.2f", pSoundWorld[0], pSoundWorld[1], pSoundWorld[2]);
+				drawText(10, 30, kFontSize, +1, +1, "sound view pos: %.2f, %.2f, %.2f", pSoundView[0], pSoundView[1], pSoundView[2]);
+				drawText(10, 50, kFontSize, +1, +1, "camera world pos: %.2f, %.2f, %.2f", pCameraWorld[0], pCameraWorld[1], pCameraWorld[2]);
+				
+				beginTextBatch();
+				{
+					int x = 10;
+					int y = 100;
+					
+					for (int i = 0; i < numSamplePoints; ++i)
+					{
+						setColor(200, 200, 200);
+						drawText(x, y, kFontSize2, +1, +1,
+							"sample pos: (%+.2f, %+.2f, %+.2f, world), (%+.2f, %+.2f, %+.2f, view), amount: %.2f",
+							samplePoints[i][0], samplePoints[i][1], samplePoints[i][2],
+							samplePointsView[i][0], samplePointsView[i][1], samplePointsView[i][2],
+							samplePointsAmount[i]);
+						
+						y += 12;
+						
+						if (((i + 1) % 46) == 0)
+						{
+							x += 400;
+							y = 100;
+						}
+					}
+				}
+				endTextBatch();
+				
+				gxTranslatef(0, GFX_SY - 100, 0);
+				setColor(colorWhite);
+				drawText(10, 0, kFontSize, +1, +1, "A: toggle distance attenuation (%s)", enableDistanceAttenuation ? "on" : "off");
+				drawText(10, 20, kFontSize, +1, +1, "C: toggle use center point (%s)", enableCenter ? "on" : "off");
+				drawText(10, 40, kFontSize, +1, +1, "N: toggle use nearest point (%s)", enableNearest ? "on" : "off");
+				drawText(10, 60, kFontSize, +1, +1, "V: toggle use vertices (%s)", enableVertices ? "on" : "off");
+				drawText(10, 80, kFontSize, +1, +1, "F: flip up-down axis for HRTF (%s)", flipUpDown ? "on" : "off");
 			}
-			
-			gxTranslatef(0, GFX_SY - 100, 0);
-			setColor(colorWhite);
-			drawText(10, 0, kFontSize, +1, +1, "A: toggle distance attenuation (%s)", enableDistanceAttenuation ? "on" : "off");
-			drawText(10, 20, kFontSize, +1, +1, "C: toggle use center point (%s)", enableCenter ? "on" : "off");
-			drawText(10, 40, kFontSize, +1, +1, "N: toggle use nearest point (%s)", enableNearest ? "on" : "off");
-			drawText(10, 60, kFontSize, +1, +1, "V: toggle use vertices (%s)", enableVertices ? "on" : "off");
-			drawText(10, 80, kFontSize, +1, +1, "F: flip up-down axis for HRTF (%s)", flipUpDown ? "on" : "off");
 			
 			popFontMode();
 		}
@@ -541,4 +571,8 @@ void testSoundVolumes()
 	
 	SDL_DestroyMutex(audioMutex);
 	audioMutex = nullptr;
+	
+	framework.shutdown();
+	
+	return 0;
 }
