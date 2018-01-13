@@ -37,22 +37,7 @@
 #endif
 
 #define ENABLE_SSE (AUDIO_USE_SSE && 1)
-
-#if defined(__arm__) || defined(__aarch64__)
-       #define HAS_NEON 1
-#else
-       #define HAS_NEON 0
-#endif
-
-#define ENABLE_NEON (HAS_NEON && 1)
-
-#ifdef __GNUC__
-	#define HAS_GCC_VECTOR 1
-#else
-	#define HAS_GCC_VECTOR 1
-#endif
-
-#define ENABLE_GCC_VECTOR (HAS_GCC_VECTOR && 1)
+#define ENABLE_GCC_VECTOR (AUDIO_USE_GCC_VECTOR && 1)
 
 #if ENABLE_GCC_VECTOR
 	typedef float vec4f __attribute__ ((vector_size(16)));
@@ -70,6 +55,19 @@ void audioBufferSetZero(
 	__m128 * __restrict audioBuffer4 = (__m128*)audioBuffer;
 	const int numSamples4 = numSamples / 4;
 	const __m128 zero4 = _mm_set1_ps(0.f);
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		audioBuffer4[i] = zero4;
+	}
+	
+	begin = numSamples4 * 4;
+#elif ENABLE_GCC_VECTOR
+	Assert((uintptr_t(audioBuffer) & 15) == 0);
+	
+	vec4f * __restrict audioBuffer4 = (vec4f*)audioBuffer;
+	const int numSamples4 = numSamples / 4;
+	const vec4f zero4 = { 0.f, 0.f, 0.f, 0.f };
 	
 	for (int i = 0; i < numSamples4; ++i)
 	{
@@ -191,6 +189,20 @@ void audioBufferAdd(
 	}
 	
 	begin = numSamples4 * 4;
+#elif ENABLE_GCC_VECTOR
+	Assert((uintptr_t(audioBufferDst) & 15) == 0);
+	Assert((uintptr_t(audioBufferSrc) & 15) == 0);
+	
+	vec4f * __restrict audioBufferDst4 = (vec4f*)audioBufferDst;
+	const vec4f * __restrict audioBufferSrc4 = (vec4f*)audioBufferSrc;
+	const int numSamples4 = numSamples / 4;
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		audioBufferDst4[i] = audioBufferDst4[i] + audioBufferSrc4[i];
+	}
+	
+	begin = numSamples4 * 4;
 #endif
 
 	for (int i = begin; i < numSamples; ++i)
@@ -215,6 +227,21 @@ void audioBufferAdd(
 	const __m128 * __restrict audioBufferSrc4 = (__m128*)audioBufferSrc;
 	const int numSamples4 = numSamples / 4;
 	const __m128 scale4 = _mm_load1_ps(&scale);
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		audioBufferDst4[i] = audioBufferDst4[i] + audioBufferSrc4[i] * scale4;
+	}
+	
+	begin = numSamples4 * 4;
+#elif ENABLE_GCC_VECTOR
+	Assert((uintptr_t(audioBufferDst) & 15) == 0);
+	Assert((uintptr_t(audioBufferSrc) & 15) == 0);
+	
+	vec4f * __restrict audioBufferDst4 = (vec4f*)audioBufferDst;
+	const vec4f * __restrict audioBufferSrc4 = (vec4f*)audioBufferSrc;
+	const int numSamples4 = numSamples / 4;
+	const vec4f scale4 = { scale, scale, scale, scale };
 	
 	for (int i = 0; i < numSamples4; ++i)
 	{
@@ -255,6 +282,22 @@ void audioBufferAdd(
 	}
 	
 	begin = numSamples4 * 4;
+#elif ENABLE_GCC_VECTOR
+	Assert((uintptr_t(audioBuffer1) & 15) == 0);
+	Assert((uintptr_t(audioBuffer2) & 15) == 0);
+	
+	const vec4f * __restrict audioBuffer1_4 = (vec4f*)audioBuffer1;
+	const vec4f * __restrict audioBuffer2_4 = (vec4f*)audioBuffer2;
+	const int numSamples4 = numSamples / 4;
+	const vec4f scale4 = { scale, scale, scale, scale };
+	vec4f * __restrict destinationBuffer4 = (vec4f*)destinationBuffer;
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		destinationBuffer4[i] = audioBuffer1_4[i] + audioBuffer2_4[i] * scale4;
+	}
+	
+	begin = numSamples4 * 4;
 #endif
 
 	for (int i = begin; i < numSamples; ++i)
@@ -279,6 +322,22 @@ void audioBufferAdd(
 	      __m128 * __restrict audioBufferDst_4 = (__m128*)audioBufferDst;
 	const __m128 * __restrict audioBufferSrc_4 = (__m128*)audioBufferSrc;
 	const __m128 * __restrict scale_4 = (__m128*)scale;
+	const int numSamples4 = numSamples / 4;
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		audioBufferDst_4[i] = audioBufferDst_4[i] + audioBufferSrc_4[i] * scale_4[i];
+	}
+	
+	begin = numSamples4 * 4;
+#elif ENABLE_GCC_VECTOR
+	Assert((uintptr_t(audioBufferDst) & 15) == 0);
+	Assert((uintptr_t(audioBufferSrc) & 15) == 0);
+	Assert((uintptr_t(scale) & 15) == 0);
+	
+	      vec4f * __restrict audioBufferDst_4 = (vec4f*)audioBufferDst;
+	const vec4f * __restrict audioBufferSrc_4 = (vec4f*)audioBufferSrc;
+	const vec4f * __restrict scale_4 = (vec4f*)scale;
 	const int numSamples4 = numSamples / 4;
 	
 	for (int i = 0; i < numSamples4; ++i)
@@ -327,6 +386,8 @@ void audioBufferDryWet(
 	}
 	
 	begin = numSamples4 * 4;
+#elif ENABLE_GCC_VECTOR && 0 // todo
+
 #endif
 
 	for (int i = begin; i < numSamples; ++i)
@@ -367,6 +428,8 @@ void audioBufferDryWet(
 	}
 	
 	begin = numSamples4 * 4;
+#elif ENABLE_GCC_VECTOR && 0 // todo
+
 #endif
 
 	const float dryness = (1.f - wetness);
@@ -407,6 +470,8 @@ float audioBufferSum(
 	sum = _mm_cvtss_f32(sum1);
 	
 	begin = numSamples4 * 4;
+#elif ENABLE_GCC_VECTOR && 0 // todo
+
 #endif
 
 	for (int i = begin; i < numSamples; ++i)

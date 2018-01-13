@@ -108,7 +108,7 @@ struct AudioFloat
 	void mulMul(const AudioFloat & other, const float gain);
 	void mulMul(const AudioFloat & other, const AudioFloat & gain);
 	
-#if AUDIO_USE_SSE
+#if AUDIO_USE_SSE || AUDIO_USE_GCC_VECTOR
 	void * operator new(size_t size);
 	void operator delete(void * mem);
 #endif
@@ -466,7 +466,7 @@ struct AudioNodeBase
 			plug->isTriggered = true;
 	}
 	
-#if AUDIO_USE_SSE
+#if AUDIO_USE_SSE || AUDIO_USE_GCC_VECTOR
 	void * operator new(size_t size);
 	void operator delete(void * mem);
 #endif

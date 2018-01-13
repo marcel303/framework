@@ -43,6 +43,14 @@
 	#endif
 #endif
 
+#ifndef AUDIO_USE_GCC_VECTOR
+	#if defined(__GNUC__)
+		#define AUDIO_USE_GCC_VECTOR 1
+	#else
+		#define AUDIO_USE_GCC_VECTOR 0
+	#endif
+#endif
+
 #if defined(MACOS) || defined(LINUX)
 	#define ALIGN16 __attribute__((aligned(16)))
 	#define ALIGN32 __attribute__((aligned(32)))

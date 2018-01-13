@@ -38,6 +38,10 @@
 	#include <xmmintrin.h>
 #endif
 
+#if AUDIO_USE_GCC_VECTOR
+	typedef float vec4f __attribute__ ((vector_size(16)));
+#endif
+
 //
 
 AudioFloat AudioFloat::Zero(0.0);
@@ -71,6 +75,12 @@ void AudioFloat::expand() const
 		#if AUDIO_USE_SSE
 			const __m128 scalar_4 = _mm_set1_ps(samples[0]);
 			__m128 * samples_4 = (__m128*)self->samples;
+			
+			for (int i = 0; i < AUDIO_UPDATE_SIZE / 4; ++i)
+				samples_4[i] = scalar_4;
+		#elif AUDIO_USE_GCC_VECTOR
+			const vec4f scalar_4 = { samples[0], samples[0], samples[0], samples[0] };
+			vec4f * samples_4 = (vec4f*)self->samples;
 			
 			for (int i = 0; i < AUDIO_UPDATE_SIZE / 4; ++i)
 				samples_4[i] = scalar_4;
@@ -343,6 +353,20 @@ void AudioFloat::operator delete(void * mem)
 	_mm_free(mem);
 }
 
+#elif AUDIO_USE_GCC_VECTOR
+
+void * AudioFloat::operator new(size_t size)
+{
+	void * result = nullptr;
+	posix_memalign(&result, 16, size);
+	return result;
+}
+
+void AudioFloat::operator delete(void * mem)
+{
+	free(mem);
+}
+
 #endif
 
 //
@@ -600,6 +624,20 @@ void * AudioNodeBase::operator new(size_t size)
 void AudioNodeBase::operator delete(void * mem)
 {
 	_mm_free(mem);
+}
+
+#elif AUDIO_USE_GCC_VECTOR
+
+void * AudioNodeBase::operator new(size_t size)
+{
+	void * result = nullptr;
+	posix_memalign(&result, 16, size);
+	return result;
+}
+
+void AudioNodeBase::operator delete(void * mem)
+{
+	free(mem);
 }
 
 #endif
