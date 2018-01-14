@@ -166,7 +166,7 @@ void AudioNodeWavefield2D::tick(const float _dt)
 	
 	//
 	
-	if (size != wavefield->numElems)
+	if (wavefield->roundNumElems(size) != wavefield->numElems)
 	{
 		wavefield->init(size);
 		

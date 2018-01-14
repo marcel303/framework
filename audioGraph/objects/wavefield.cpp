@@ -70,10 +70,14 @@ Wavefield1D::Wavefield1D()
 	init(0);
 }
 
+int Wavefield1D::roundNumElems(const int numElems)
+{
+	return std::min((numElems + 3) & (~3), kMaxElems);
+}
+
 void Wavefield1D::init(const int _numElems)
 {
-	numElems = (_numElems + 3) & (~3);
-	numElems = std::min(numElems, kMaxElems);
+	numElems = roundNumElems(_numElems);
 	
 	memset(p, 0, numElems * sizeof(p[0]));
 	memset(v, 0, numElems * sizeof(v[0]));
@@ -134,11 +138,11 @@ void tickForces(const double * __restrict p, const double c, double * __restrict
 	
 	const T _mm_cTimesDt = _mm_load<T>(c * dt);
 	
-	T * __restrict _mm_p1 = (T*)p1;
-	T * __restrict _mm_p2 = (T*)p2;
-	T * __restrict _mm_p3 = (T*)p3;
+	const T * __restrict _mm_p1 = (T*)p1;
+	const T * __restrict _mm_p2 = (T*)p2;
+	const T * __restrict _mm_p3 = (T*)p3;
 	T * __restrict _mm_v = (T*)v;
-	T * __restrict _mm_f = (T*)f;
+	const T * __restrict _mm_f = (T*)f;
 	
 	const int numElemsVec = numElems / vectorSize;
 	
@@ -162,7 +166,7 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	const double vRetain = std::pow(vRetainPerSecond, dt);
 	const double pRetain = std::pow(pRetainPerSecond, dt);
 	
-#if __AVX__
+#if AUDIO_USE_SSE && __AVX__
 	tickForces<__m256d>(p, c, v, f, dt, numElems, closedEnds);
 #elif AUDIO_USE_SSE
 	tickForces<__m128d>(p, c, v, f, dt, numElems, closedEnds);
@@ -318,10 +322,14 @@ Wavefield2D::Wavefield2D()
 	init(32);
 }
 
+int Wavefield2D::roundNumElems(const int numElems)
+{
+	return std::min((numElems + 3) & (~3), kMaxElems);
+}
+
 void Wavefield2D::init(const int _numElems)
 {
-	numElems = (_numElems + 3) & (~3);
-	numElems = std::min(numElems, kMaxElems);
+	numElems = roundNumElems(_numElems);
 	
 	memset(p, 0, sizeof(p));
 	memset(v, 0, sizeof(v));

@@ -43,6 +43,8 @@ struct Wavefield1D
 	
 	Wavefield1D();
 	
+	static int roundNumElems(const int numElems);
+	
 	void init(const int numElems);
 	
 	void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds);
@@ -74,6 +76,8 @@ struct Wavefield2D
 	void shut();
 	
 	Wavefield2D();
+	
+	static int roundNumElems(const int numElems);
 	
 	void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool _closedEnds);
 	void tickForces(const double dt, const double c, const bool _closedEnds);
