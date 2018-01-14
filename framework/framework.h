@@ -91,7 +91,7 @@
 #else
     #define OPENGL_VERSION 430
 #endif
-#define ENABLE_UTF8_SUPPORT 1 // todo : remove redundant conversions and make this enabled by default
+#define ENABLE_UTF8_SUPPORT 1
 
 static const int MAX_GAMEPAD = 4;
 
@@ -1347,13 +1347,13 @@ void showErrorMessage(const char * caption, const char * format, ...);
 
 void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma = 1.632f);
 
-// todo : implement these shaders .. ! and make source code shared/includable
 void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius);
 void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius);
 void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity);
 void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor, const float opacity);
 void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor, const float opacity);
 void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor, const float opacity);
+// todo : implement these shaders .. ! and make source code shared/includable
 void setShader_GrayscaleLumi(const GLuint source, const float opacity);
 void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const float opacity);
 void setShader_Colorize(const GLuint source, const float hue, const float opacity);

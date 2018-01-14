@@ -7441,8 +7441,6 @@ void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const fl
 	shader.setBuffer("kernel", kernel);
 }
 
-// todo : move these shaders to BuiltinShaders and supply shader source
-
 static void setShader_TresholdLumiEx(
 	const GLuint source,
 	const float treshold,
@@ -7535,6 +7533,8 @@ void setShader_TresholdValue(const GLuint source, const Color & value, const Col
 		passColor,
 		Vec4(opacity, opacity, opacity, 0.f));
 }
+
+// todo : move these shaders to BuiltinShaders and supply shader source
 
 void setShader_GrayscaleLumi(const GLuint source, const float opacity)
 {
