@@ -162,6 +162,7 @@ Framework::Framework()
 	timeStep = 1.f / 60.f;
 
 	m_sprites = 0;
+	m_windows = 0;
 }
 
 Framework::~Framework()
@@ -795,8 +796,6 @@ void Framework::process()
 	SDL_Event e;
 	
 	bool hasWaited = false;
-	
-	auto & windowData = globals.mainWindowData;
 
 	for (;;)
 	{
@@ -824,81 +823,117 @@ void Framework::process()
 		
 		if (e.type == SDL_KEYDOWN)
 		{
-			keyboard.events.push_back(e);
+			WindowData * windowData = findWindowDataById(e.key.windowID);
 			
-			bool isRepeat = false;
-			for (int i = 0; i < globals.mainWindowData.keyDownCount; ++i)
-				if (globals.mainWindowData.keyDown[i] == e.key.keysym.sym)
-					isRepeat = true;
-			if (isRepeat)
+			if (windowData != nullptr)
 			{
-				windowData.keyRepeat[windowData.keyRepeatCount++] = e.key.keysym.sym;
-			}
-			else
-			{
-				windowData.keyDown[windowData.keyDownCount++] = e.key.keysym.sym;
-				windowData.keyChange[windowData.keyChangeCount++] = e.key.keysym.sym;
+				keyboard.events.push_back(e);
+				
+				bool isRepeat = false;
+				for (int i = 0; i < windowData->keyDownCount; ++i)
+					if (windowData->keyDown[i] == e.key.keysym.sym)
+						isRepeat = true;
+				if (isRepeat)
+				{
+					windowData->keyRepeat[windowData->keyRepeatCount++] = e.key.keysym.sym;
+				}
+				else
+				{
+					windowData->keyDown[windowData->keyDownCount++] = e.key.keysym.sym;
+					windowData->keyChange[windowData->keyChangeCount++] = e.key.keysym.sym;
+				}
 			}
 		}
 		else if (e.type == SDL_KEYUP)
 		{
-			keyboard.events.push_back(e);
+			WindowData * windowData = findWindowDataById(e.key.windowID);
 			
-			for (int i = 0; i < windowData.keyDownCount; ++i)
+			if (windowData != nullptr)
 			{
-				if (windowData.keyDown[i] == e.key.keysym.sym)
+				keyboard.events.push_back(e);
+				
+				for (int i = 0; i < windowData->keyDownCount; ++i)
 				{
-					for (int j = i + 1; j < windowData.keyDownCount; ++j)
-						windowData.keyDown[j - 1] = windowData.keyDown[j];
-					windowData.keyDownCount--;
+					if (windowData->keyDown[i] == e.key.keysym.sym)
+					{
+						for (int j = i + 1; j < windowData->keyDownCount; ++j)
+							windowData->keyDown[j - 1] = windowData->keyDown[j];
+						windowData->keyDownCount--;
+					}
 				}
+				windowData->keyChange[windowData->keyChangeCount++] = e.key.keysym.sym;
 			}
-			windowData.keyChange[windowData.keyChangeCount++] = e.key.keysym.sym;
 		}
 		else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
 		{
-			//logDebug("mouse %d / %d", e.type, e.button.button);
-
-			const int index = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : -1;
-			if (index >= 0)
+			// todo : track mouse buttons per window
+			
+			WindowData * windowData = findWindowDataById(e.button.windowID);
+			
+			if (windowData != nullptr)
 			{
-				windowData.mouseDown[index] = e.button.state == SDL_PRESSED;
-				windowData.mouseChange[index] = true;
+				//logDebug("mouse %d / %d", e.type, e.button.button);
+
+				const int index = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : -1;
+				if (index >= 0)
+				{
+					windowData->mouseDown[index] = e.button.state == SDL_PRESSED;
+					windowData->mouseChange[index] = true;
+				}
 			}
 		}
 		else if (e.type == SDL_MOUSEMOTION)
 		{
-			SDL_Window * window = SDL_GetWindowFromID(e.motion.windowID);
+			// todo : track mouse motion per window
 			
-			if (window == globals.mainWindow)
+			WindowData * windowData = findWindowDataById(e.motion.windowID);
+			
+			if (windowData != nullptr)
 			{
-				// todo : keep track of mouse and keyboard state on a per-window basis
+				SDL_Window * window = SDL_GetWindowFromID(e.motion.windowID);
 				
-				int windowSx;
-				int windowSy;
-				SDL_GetWindowSize(window, &windowSx, &windowSy);
-				
-				mouse.x = e.motion.x * minification * globals.displaySize[0] / windowSx;
-				mouse.y = e.motion.y * minification * globals.displaySize[1] / windowSy;
-				//logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, mouse.x, mouse.y);
+				if (window == globals.mainWindow)
+				{
+					// todo : keep track of mouse and keyboard state on a per-window basis
+					
+					int windowSx;
+					int windowSy;
+					SDL_GetWindowSize(window, &windowSx, &windowSy);
+					
+					mouse.x = e.motion.x * minification * globals.displaySize[0] / windowSx;
+					mouse.y = e.motion.y * minification * globals.displaySize[1] / windowSy;
+					//logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, mouse.x, mouse.y);
+				}
 			}
 		}
 		else if (e.type == SDL_MOUSEWHEEL)
 		{
-			if (e.wheel.which != SDL_TOUCH_MOUSEID)
+			// todo : track mouse wheel per window
+			
+			WindowData * windowData = findWindowDataById(e.wheel.windowID);
+			
+			if (windowData != nullptr)
 			{
-				mouse.scrollY += e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
+				if (e.wheel.which != SDL_TOUCH_MOUSEID)
+				{
+					mouse.scrollY += e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
+				}
 			}
 		}
 		else if (e.type == SDL_WINDOWEVENT)
 		{
-			if (e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
-				windowIsActive = true;
-			else if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
-				windowIsActive = false;
+			WindowData * windowData = findWindowDataById(e.window.windowID);
+			
+			if (windowData != nullptr)
+			{
+				if (e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
+					windowIsActive = true;
+				else if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+					windowIsActive = false;
 
-			if (reloadCachesOnActivate && e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
-				doReload |= true;
+				if (reloadCachesOnActivate && e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
+					doReload |= true;
+			}
 		}
 		else if (e.type == SDL_DROPFILE)
 		{
@@ -912,14 +947,16 @@ void Framework::process()
 		}
 	}
 
-	if (windowData.hasOldMousePosition)
+	// todo : do mouse (dx,dy) per-window
+	
+	if (globals.mainWindowData.hasOldMousePosition)
 	{
 		mouse.dx = mouse.x - oldMouseX;
 		mouse.dy = mouse.y - oldMouseY;
 	}
 	else
 	{
-		windowData.hasOldMousePosition = true;
+		globals.mainWindowData.hasOldMousePosition = true;
 	}
 
 #ifdef __WIN32__
@@ -1567,52 +1604,98 @@ void Framework::unregisterModel(Model * model)
 	m_models.erase(m_models.find(model));
 }
 
+void Framework::registerWindow(Window * window)
+{
+	fassert(window->m_prev == 0);
+	fassert(window->m_next == 0);
+
+	if (m_windows)
+	{
+		m_windows->m_prev = window;
+		window->m_next = m_windows;
+	}
+
+	m_windows = window;
+}
+
+void Framework::unregisterWindow(Window * window)
+{
+	if (window == m_windows)
+		m_windows = window->m_next;
+
+	if (window->m_prev)
+		window->m_prev->m_next = window->m_next;
+	if (window->m_next)
+		window->m_next->m_prev = window->m_prev;
+
+	window->m_prev = 0;
+	window->m_next = 0;
+}
+
+WindowData * Framework::findWindowDataById(const int id)
+{
+	if (id == SDL_GetWindowID(globals.mainWindow))
+		return &globals.mainWindowData;
+	
+	for (Window * window = m_windows; window != nullptr; window = window->m_next)
+		if (SDL_GetWindowID(window->m_window) == id)
+			return window->m_windowData;
+	
+	return nullptr;
+}
+
 // -----
 
 Window::Window(const char * title, const int sx, const int sy, const bool resizable)
-	: window(nullptr)
-	, windowData(nullptr)
+	: m_prev(nullptr)
+	, m_next(nullptr)
+	, m_window(nullptr)
+	, m_windowData(nullptr)
 {
 	const int flags = SDL_WINDOW_OPENGL | (SDL_WINDOW_RESIZABLE * resizable);
 	
-	window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, sx, sy, flags);
+	m_window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, sx, sy, flags);
 	
-	windowData = new WindowData();
-	memset(windowData, 0, sizeof(WindowData));
+	m_windowData = new WindowData();
+	memset(m_windowData, 0, sizeof(WindowData));
+	
+	framework.registerWindow(this);
 }
 
 Window::~Window()
 {
-	delete windowData;
-	windowData = nullptr;
+	framework.unregisterWindow(this);
 	
-	SDL_DestroyWindow(window);
-	window = nullptr;
+	delete m_windowData;
+	m_windowData = nullptr;
+	
+	SDL_DestroyWindow(m_window);
+	m_window = nullptr;
 }
 
 void Window::setPosition(const int x, const int y)
 {
-	SDL_SetWindowPosition(window, x, y);
+	SDL_SetWindowPosition(m_window, x, y);
 }
 
 void Window::setPositionCentered()
 {
-	SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+	SDL_SetWindowPosition(m_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 }
 
 void Window::setSize(const int sx, const int sy)
 {
-	SDL_SetWindowSize(window, sx, sy);
+	SDL_SetWindowSize(m_window, sx, sy);
 }
 
 void Window::show()
 {
-	SDL_ShowWindow(window);
+	SDL_ShowWindow(m_window);
 }
 
 void Window::hide()
 {
-	SDL_HideWindow(window);
+	SDL_HideWindow(m_window);
 }
 
 int Window::getWidth() const
@@ -1620,7 +1703,7 @@ int Window::getWidth() const
 	int sx;
 	int sy;
 	
-	SDL_GetWindowSize(window, &sx, &sy);
+	SDL_GetWindowSize(m_window, &sx, &sy);
 	
 	return sx;
 }
@@ -1630,14 +1713,14 @@ int Window::getHeight() const
 	int sx;
 	int sy;
 	
-	SDL_GetWindowSize(window, &sx, &sy);
+	SDL_GetWindowSize(m_window, &sx, &sy);
 	
 	return sy;
 }
 
 SDL_Window * Window::getWindow() const
 {
-	return window;
+	return m_window;
 }
 
 static Stack<SDL_Window*, 32> s_windowStack(nullptr);

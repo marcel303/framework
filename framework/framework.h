@@ -232,6 +232,7 @@ class Sprite;
 class Spriter;
 struct SpriterState;
 class Surface;
+class Window;
 
 namespace spriter
 {
@@ -263,6 +264,7 @@ class Framework
 public:
 	friend class Sprite;
 	friend class Model;
+	friend class Window;
 	
 	Framework();
 	~Framework();
@@ -327,6 +329,7 @@ private:
 	
 	Sprite * m_sprites;
 	ModelSet m_models;
+	Window * m_windows;
 	
 	std::map<std::string, std::string> m_shaderSources;
 
@@ -335,6 +338,10 @@ private:
 	
 	void registerModel(Model * model);
 	void unregisterModel(Model * model);
+	
+	void registerWindow(Window * window);
+	void unregisterWindow(Window * window);
+	class WindowData * findWindowDataById(const int id);
 };
 
 //
@@ -342,6 +349,8 @@ private:
 class Window
 {
 public:
+	friend class Framework;
+	
 	Window(const char * title, const int sx, const int sy, const bool resizable = false);
 	~Window();
 	
@@ -358,9 +367,15 @@ public:
 	SDL_Window * getWindow() const;
 	
 private:
-	SDL_Window * window;
+	// book keeping
+	Window * m_prev;
+	Window * m_next;
 	
-	class WindowData * windowData;
+	// SDL window
+	SDL_Window * m_window;
+	
+	// keyboard and mouse data
+	class WindowData * m_windowData;
 };
 
 void pushWindow(Window & window);
