@@ -1800,7 +1800,7 @@ void FontCacheElem::load(const char * filename)
 		logInfo("loaded %s", filename);
 
 		// fixme : this is a work around for FreeType returning monochrome data in FT_Load_Char, instead of the 8 bit gray scale data it should be returning, when it finds a stored glyph bitmap in the font itself. since we cannot directly upload bit packed font data to OpenGL, we 'force' FreeType to always render the outline version instead, by setting num_fixed_sizes to zero here
-		face->num_fixed_sizes = 0;
+		//face->num_fixed_sizes = 0;
 		
 		loaded = true;
 	}
@@ -1987,7 +1987,10 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 		
 		FT_Set_Pixel_Sizes(face, 0, size);
 
-		if (FT_Load_Char(face, c, FT_LOAD_RENDER | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL) == 0)
+		// note : we use FT_LOAD_NO_BITMAP to avoid getting embedded glyph data. this embedded data uses 1 bpp monochrome pre-rendered versions of the glyphs. we currently do not support unpacking this data, although it may be beneficial (readability-wise) to do so
+		// note : we use FT_LOAD_FORCE_AUTOHINT to improve readability for some fonts at small sizes. perhaps this flag can be removed when FT_LOAD_NO_BITMAP is removed
+		
+		if (FT_Load_Char(face, c, FT_LOAD_RENDER | FT_LOAD_NO_BITMAP | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL) == 0)
 		{
 		#if USE_GLYPH_ATLAS
 			elem.g = *face->glyph;
