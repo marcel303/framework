@@ -1,49 +1,19 @@
 /*
 
 top priority items:
-# add buttons to manually trigger nodes
-	# like the BANG node in max
-	# add ability to trigger any input/output trigger (?)
-	# decided not to do this, as UI is better left uncoupled from graph processing (for now). perhaps a separate UI layer on top of vfx- and audio graph makes more sense
-- add GPU performance markers
-	+ add GPU timer object
-	+ add GPU time to vfx node base
-	- fix issue with recursive GPU timers
-- add text field to node type select
-- add a list of xml files to click on for more rapid testing
-- add a dedicated shader node. no pre-defined inputs at all. output an image
-- rename fsfx v1 to imfx ? redefine behavior to run shader over an image. expressly output as image
+- add multiple window support to framework. would help with managing lists of audio and vfx graphs. just open a window and show the lists over there
+- add node which generates a trigger signal once when a graph is created
+- add a list of xml files to click on to 900-devgrounds for more rapid testing
 # how to convert multiple channels to gpu image with channel(s).toGpu ?
 	# removed support for multiple channels for one output socket. always using a single channel resolves this issue
 - add ability for nodes to report warnings and errors
-	# renamed to gen.primitive
-- add gen.random node with different modes. white, pink, brown
-- add gen.brownian
-+ remove visualizers for nodes which are removed?
-+ add polyphonic audio graph node
-+ add channel.curve node. give it a min, max, power factor and channel size params. perhaps even 2d
-- add multiple window support to framework. would help with managing lists of audio and vfx graphs. just open a window and show the lists over there
 - fix issue with immediate values not being restored properly for most types
-+ make sure inputs are update to date (last tick ID) when resizing dynamic inputs ?
-- raise a menu when socket connect is released on a node itself. ask for which socket to connect to
 - make it possible to have voice nodes in audio graph which do not generate audible sound ?
 - add an option to audio graph and poly audio graph nodes to output audio or not
 - add options to poly and regular audio graph nodes to output mono, stereo, or multi-channel
 	- requires an extra mixing level ? perhaps add a voice manager interface. or store voices in audio graph ? let voice manager allocate channel indices, but do mixing itself differently ? or perhaps add voice groups or something ..
-+ add channel.fft node
+- fix issue with recursive GPU timers
 
-
-melody = individual, harmony = community, rithm = time, tonal color = mood
-ingradients
-line input
-midi notes
-video feed
-visual circles.. animated grooop logo
-visual score
-ideom
-metronome.. dissolves into visuals leading
-videos
-- datum: 21 december. laken, beamer, verloopstukje
 
 todo :
 - add undo/redo support. just serialize/deserialize graph for every action?
@@ -83,6 +53,8 @@ todo :
 	so we have three options then: show everything, show only active i/o and fully collapsed
 - add ability to reference nodes? makes graph organization more easy
 - drag link into empty space = open node type selection menu
+- add text field to node type select
+- raise a menu when socket connect is released on a node itself. ask for which socket to connect to
 
 
 todo : creativity investigation :
@@ -157,7 +129,10 @@ todo : nodes :
 - add play/stop/pause/resume triggers to video node
 - add curl node
 - add text list node. next! prev! rand! custom editor for list of strings
-- add audioGraph node
+- add gen.random node with different modes. white, pink, brown
+- add gen.brownian
+- add a dedicated shader node. no pre-defined inputs at all. output an image
+- rename fsfx v1 to imfx ? redefine behavior to run shader over an image. expressly output as image
 
 
 todo : UI
@@ -362,7 +337,12 @@ todo :
 + create separate avGraph and vfxGraph projects with CMake files
 + decouple visualizers from nodes. when hit testing, sort elems by z-key, add ptr to node or visualizer
 + add automated error checking test for existing graph files ?
-
++ remove visualizers for nodes which are removed?
++ make sure inputs are update to date (last tick ID) when resizing dynamic inputs ?
++ add GPU performance markers
+	+ add GPU timer object
+	+ add GPU time to vfx node base
+ 
 
 todo : nodes :
 + add ease node
@@ -462,7 +442,15 @@ todo : nodes :
 + have the model node also expose channels ?
 + add gen.osc. lt user select shape. take inspiration from audio node version
 + oscilloscope node
-
++ add polyphonic audio graph node
++ add channel.curve node. give it a min, max, power factor and channel size params. perhaps even 2d
++ add channel.fft node
+# add buttons to manually trigger nodes
+	# like the BANG node in max
+	# add ability to trigger any input/output trigger (?)
+	# decided not to do this, as UI is better left uncoupled from graph processing (for now). perhaps a separate UI layer on top of vfx- and audio graph makes more sense
+ + add audioGraph node
+ 
 
 todo : fsfx :
 + let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
