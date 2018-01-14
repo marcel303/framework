@@ -335,6 +335,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		return false;
 	}
 	
+	globals.currentWindowData = &globals.mainWindowData;
+	
 	windowSx = sx;
 	windowSy = sy;
 	
@@ -768,9 +770,9 @@ void Framework::process()
 	
 	// poll SDL event queue
 	
-	globals.keyChangeCount = 0;
-	globals.keyRepeatCount = 0;
-	memset(globals.mouseChange, 0, sizeof(globals.mouseChange));
+	globals.mainWindowData.keyChangeCount = 0;
+	globals.mainWindowData.keyRepeatCount = 0;
+	memset(globals.mainWindowData.mouseChange, 0, sizeof(globals.mainWindowData.mouseChange));
 	
 	keyboard.events.clear();
 	
@@ -793,6 +795,8 @@ void Framework::process()
 	SDL_Event e;
 	
 	bool hasWaited = false;
+	
+	auto & windowData = globals.mainWindowData;
 
 	for (;;)
 	{
@@ -823,33 +827,33 @@ void Framework::process()
 			keyboard.events.push_back(e);
 			
 			bool isRepeat = false;
-			for (int i = 0; i < globals.keyDownCount; ++i)
-				if (globals.keyDown[i] == e.key.keysym.sym)
+			for (int i = 0; i < globals.mainWindowData.keyDownCount; ++i)
+				if (globals.mainWindowData.keyDown[i] == e.key.keysym.sym)
 					isRepeat = true;
 			if (isRepeat)
 			{
-				globals.keyRepeat[globals.keyRepeatCount++] = e.key.keysym.sym;
+				windowData.keyRepeat[windowData.keyRepeatCount++] = e.key.keysym.sym;
 			}
 			else
 			{
-				globals.keyDown[globals.keyDownCount++] = e.key.keysym.sym;
-				globals.keyChange[globals.keyChangeCount++] = e.key.keysym.sym;
+				windowData.keyDown[windowData.keyDownCount++] = e.key.keysym.sym;
+				windowData.keyChange[windowData.keyChangeCount++] = e.key.keysym.sym;
 			}
 		}
 		else if (e.type == SDL_KEYUP)
 		{
 			keyboard.events.push_back(e);
 			
-			for (int i = 0; i < globals.keyDownCount; ++i)
+			for (int i = 0; i < windowData.keyDownCount; ++i)
 			{
-				if (globals.keyDown[i] == e.key.keysym.sym)
+				if (windowData.keyDown[i] == e.key.keysym.sym)
 				{
-					for (int j = i + 1; j < globals.keyDownCount; ++j)
-						globals.keyDown[j - 1] = globals.keyDown[j];
-					globals.keyDownCount--;
+					for (int j = i + 1; j < windowData.keyDownCount; ++j)
+						windowData.keyDown[j - 1] = windowData.keyDown[j];
+					windowData.keyDownCount--;
 				}
 			}
-			globals.keyChange[globals.keyChangeCount++] = e.key.keysym.sym;
+			windowData.keyChange[windowData.keyChangeCount++] = e.key.keysym.sym;
 		}
 		else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
 		{
@@ -858,8 +862,8 @@ void Framework::process()
 			const int index = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : -1;
 			if (index >= 0)
 			{
-				globals.mouseDown[index] = e.button.state == SDL_PRESSED;
-				globals.mouseChange[index] = true;
+				windowData.mouseDown[index] = e.button.state == SDL_PRESSED;
+				windowData.mouseChange[index] = true;
 			}
 		}
 		else if (e.type == SDL_MOUSEMOTION)
@@ -908,14 +912,14 @@ void Framework::process()
 		}
 	}
 
-	if (globals.hasOldMousePosition)
+	if (windowData.hasOldMousePosition)
 	{
 		mouse.dx = mouse.x - oldMouseX;
 		mouse.dy = mouse.y - oldMouseY;
 	}
 	else
 	{
-		globals.hasOldMousePosition = true;
+		windowData.hasOldMousePosition = true;
 	}
 
 #ifdef __WIN32__
@@ -1566,15 +1570,24 @@ void Framework::unregisterModel(Model * model)
 // -----
 
 Window::Window(const char * title, const int sx, const int sy, const bool resizable)
+	: window(nullptr)
+	, windowData(nullptr)
 {
 	const int flags = SDL_WINDOW_OPENGL | (SDL_WINDOW_RESIZABLE * resizable);
 	
 	window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, sx, sy, flags);
+	
+	windowData = new WindowData();
+	memset(windowData, 0, sizeof(WindowData));
 }
 
 Window::~Window()
 {
+	delete windowData;
+	windowData = nullptr;
+	
 	SDL_DestroyWindow(window);
+	window = nullptr;
 }
 
 void Window::setPosition(const int x, const int y)
@@ -4484,7 +4497,7 @@ bool Mouse::isDown(BUTTON button) const
 	const int index = getButtonIndex(button);
 	if (index < 0)
 		return false;
-	return globals.mouseDown[index];
+	return globals.currentWindowData->mouseDown[index];
 }
 
 bool Mouse::wentDown(BUTTON button) const
@@ -4492,7 +4505,7 @@ bool Mouse::wentDown(BUTTON button) const
 	const int index = getButtonIndex(button);
 	if (index < 0)
 		return false;
-	return isDown(button) && globals.mouseChange[index];
+	return isDown(button) && globals.currentWindowData->mouseChange[index];
 }
 
 bool Mouse::wentUp(BUTTON button) const
@@ -4500,7 +4513,7 @@ bool Mouse::wentUp(BUTTON button) const
 	const int index = getButtonIndex(button);
 	if (index < 0)
 		return false;
-	return !isDown(button) && globals.mouseChange[index];
+	return !isDown(button) && globals.currentWindowData->mouseChange[index];
 }
 
 void Mouse::showCursor(bool enabled)
@@ -4516,23 +4529,23 @@ void Mouse::setRelative(bool isRelative)
 
 bool Mouse::isIdle() const
 {
-	return dx == 0 && dy == 0 && !globals.mouseChange[0] && !globals.mouseChange[1];
+	return dx == 0 && dy == 0 && !globals.currentWindowData->mouseChange[0] && !globals.currentWindowData->mouseChange[1];
 }
 
 // -----
 
 bool Keyboard::isDown(SDLKey key) const
 {
-	for (int i = 0; i < globals.keyDownCount; ++i)
-		if (globals.keyDown[i] == key)
+	for (int i = 0; i < globals.currentWindowData->keyDownCount; ++i)
+		if (globals.currentWindowData->keyDown[i] == key)
 			return true;
 	return false;
 }
 
 static bool keyChange(SDLKey key)
 {
-	for (int i = 0; i < globals.keyChangeCount; ++i)
-		if (globals.keyChange[i] == key)
+	for (int i = 0; i < globals.currentWindowData->keyChangeCount; ++i)
+		if (globals.currentWindowData->keyChange[i] == key)
 			return true;
 	return false;
 }
@@ -4549,8 +4562,8 @@ bool Keyboard::wentUp(SDLKey key) const
 
 bool Keyboard::keyRepeat(SDLKey key) const
 {
-	for (int i = 0; i < globals.keyRepeatCount; ++i)
-		if (globals.keyRepeat[i] == key)
+	for (int i = 0; i < globals.currentWindowData->keyRepeatCount; ++i)
+		if (globals.currentWindowData->keyRepeat[i] == key)
 			return true;
 	return false;
 }
@@ -4558,8 +4571,8 @@ bool Keyboard::keyRepeat(SDLKey key) const
 bool Keyboard::isIdle() const
 {
 	return
-		globals.keyDownCount == 0 &&
-		globals.keyChangeCount == 0;
+		globals.currentWindowData->keyDownCount == 0 &&
+		globals.currentWindowData->keyChangeCount == 0;
 }
 
 // -----

@@ -358,7 +358,9 @@ public:
 	SDL_Window * getWindow() const;
 	
 private:
-	struct SDL_Window * window;
+	SDL_Window * window;
+	
+	class WindowData * windowData;
 };
 
 void pushWindow(Window & window);

@@ -96,6 +96,22 @@ struct TextureAtlas;
 
 //
 
+class WindowData
+{
+public:
+	bool mouseDown[BUTTON_MAX];
+	bool mouseChange[BUTTON_MAX];
+	bool hasOldMousePosition;
+	int keyDown[256];
+	int keyDownCount;
+	int keyChange[256];
+	int keyChangeCount;
+	int keyRepeat[256];
+	int keyRepeatCount;
+};
+
+//
+
 class Globals
 {
 public:
@@ -114,7 +130,9 @@ public:
 	}
 	
 	SDL_Window * mainWindow;
+	WindowData mainWindowData;
 	SDL_Window * currentWindow;
+	WindowData * currentWindowData;
 	SDL_GLContext glContext;
 	int displaySize[2]; // size as passed to init
 #if ENABLE_PROFILING
@@ -141,15 +159,6 @@ public:
 	bool isInTextBatch;
 	MsdfFontCacheElem * fontMSDF;
 	bool isInTextBatchMSDF;
-	bool mouseDown[BUTTON_MAX];
-	bool mouseChange[BUTTON_MAX];
-	bool hasOldMousePosition;
-	int keyDown[256];
-	int keyDownCount;
-	int keyChange[256];
-	int keyChangeCount;
-	int keyRepeat[256];
-	int keyRepeatCount;
 	int xinputGamepadIdx;
 	bool midiIsSet[MAX_MIDI_KEYS];
 	bool midiIsSetAsync[MAX_MIDI_KEYS];
