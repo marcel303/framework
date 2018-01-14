@@ -5,12 +5,14 @@
 #include "objects/paobject.h"
 #include "soundmix.h"
 
-#define MAX_VOLUMES 12
+#define MAX_VOLUMES 10
 #define MAX_BINAURALIZERS_PER_VOLUME 10 // center + nearest + eight vertices
 #define MAX_BINAURALIZERS_TOTAL (MAX_BINAURALIZERS_PER_VOLUME * MAX_VOLUMES)
 
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
+
+std::atomic_bool optimizedSampling(true);
 
 struct MyMutex : binaural::Mutex
 {
@@ -39,6 +41,8 @@ struct MultiChannelAudioSource
 
 struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 {
+	binaural::Mutex * mutex;
+	
 	binaural::Binauralizer binauralizer[MAX_BINAURALIZERS_PER_VOLUME];
 	float gain[MAX_BINAURALIZERS_PER_VOLUME];
 	
@@ -48,16 +52,116 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 	ALIGN16 float samplesR[AUDIO_UPDATE_SIZE];
 	
 	MultiChannelAudioSource_SoundVolume()
-		: binauralizer()
+		: mutex(nullptr)
+		, binauralizer()
 		, source(nullptr)
 	{
 		memset(gain, 0, sizeof(gain));
 	}
 	
-	void init(const binaural::HRIRSampleSet * sampleSet, binaural::Mutex * mutex)
+	void init(const binaural::HRIRSampleSet * sampleSet, binaural::Mutex * _mutex)
 	{
+		mutex = _mutex;
+		
 		for (int i = 0; i < MAX_BINAURALIZERS_PER_VOLUME; ++i)
-			binauralizer[i].init(sampleSet, mutex);
+			binauralizer[i].init(sampleSet, _mutex);
+	}
+	
+	void fillBuffers_naive(const int numSamples)
+	{
+		// generate source audio
+		
+		memset(samplesL, 0, sizeof(samplesL));
+		memset(samplesR, 0, sizeof(samplesR));
+	
+		ALIGN16 float sourceBuffer[AUDIO_UPDATE_SIZE];
+		source->generate(sourceBuffer, numSamples);
+		
+		// run binauralizers over the source audio
+		
+		for (int i = 0; i < MAX_BINAURALIZERS_PER_VOLUME; ++i)
+		{
+			binauralizer[i].provide(sourceBuffer, numSamples);
+			
+			ALIGN16 float tempL[AUDIO_UPDATE_SIZE];
+			ALIGN16 float tempR[AUDIO_UPDATE_SIZE];
+			
+			float gainCopy;
+			
+			binauralizer[i].mutex->lock();
+			{
+				binauralizer[i].generateLR(tempL, tempR, numSamples);
+				
+				gainCopy = gain[i];
+			}
+			binauralizer[i].mutex->unlock();
+			
+			if (gainCopy != 0.f)
+			{
+				audioBufferAdd(samplesL, tempL, numSamples, gainCopy);
+				audioBufferAdd(samplesR, tempR, numSamples, gainCopy);
+			}
+		}
+	}
+	
+	void fillBuffers_optimized(const int numSamples)
+	{
+		// generate source audio
+		
+		memset(samplesL, 0, sizeof(samplesL));
+		memset(samplesR, 0, sizeof(samplesR));
+	
+		ALIGN16 float sourceBuffer[AUDIO_UPDATE_SIZE];
+		source->generate(sourceBuffer, numSamples);
+		
+		// fetch all of the HRIR sample datas we need based on the current elevation and azimuth pairs
+		
+		const binaural::HRIRSampleData * samples[3 * MAX_BINAURALIZERS_PER_VOLUME];
+		float sampleWeights[3 * MAX_BINAURALIZERS_PER_VOLUME];
+		float gainCopy[MAX_BINAURALIZERS_PER_VOLUME];
+		
+		mutex->lock();
+		{
+			memcpy(gainCopy, gain, sizeof(gainCopy));
+			
+			for (int i = 0; i < MAX_BINAURALIZERS_PER_VOLUME; ++i)
+			{
+				binauralizer[i].sampleSet->lookup_3(
+					binauralizer[i].sampleLocation.elevation,
+					binauralizer[i].sampleLocation.azimuth,
+					samples + i * 3,
+					sampleWeights + i * 3);
+			}
+		}
+		mutex->unlock();
+		
+		// combine individual HRIRs into one combined HRIR
+		
+		binaural::HRIRSampleData combinedHrir;
+		memset(&combinedHrir, 0, sizeof(combinedHrir));
+		
+		const binaural::HRIRSampleData ** samplesPtr = samples;
+		float * sampleWeightsPtr = sampleWeights;
+		
+		for (int i = 0; i < MAX_BINAURALIZERS_PER_VOLUME; ++i)
+		{
+			const float gain = gainCopy[i];
+			
+			for (int j = 0; j < 3; ++j)
+			{
+				audioBufferAdd(combinedHrir.lSamples, samplesPtr[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
+				audioBufferAdd(combinedHrir.rSamples, samplesPtr[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
+			}
+			
+			samplesPtr += 3;
+			sampleWeightsPtr += 3;
+		}
+		
+		// run the binauralizer over the source audio
+		
+		binauralizer[0].provide(sourceBuffer, numSamples);
+		
+		binauralizer[0].generateLR(samplesL, samplesR, numSamples, &combinedHrir);
 	}
 	
 	virtual void generate(const int channelIndex, SAMPLE_ALIGN16 float * __restrict audioBuffer, const int numSamples) override
@@ -71,40 +175,21 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 			return;
 		}
 		
+		//
+		
 		if (channelIndex == 0)
 		{
-			memset(samplesL, 0, sizeof(samplesL));
-			memset(samplesR, 0, sizeof(samplesR));
-			
-			ALIGN16 float sourceBuffer[AUDIO_UPDATE_SIZE];
-			memset(sourceBuffer, 0xff, sizeof(sourceBuffer));
-			
-			source->generate(sourceBuffer, numSamples);
-			
-			for (int i = 0; i < MAX_BINAURALIZERS_PER_VOLUME; ++i)
+			if (optimizedSampling)
 			{
-				binauralizer[i].provide(sourceBuffer, numSamples);
-				
-				ALIGN16 float tempL[AUDIO_UPDATE_SIZE];
-				ALIGN16 float tempR[AUDIO_UPDATE_SIZE];
-				
-				float gainCopy;
-				
-				binauralizer[i].mutex->lock();
-				{
-					binauralizer[i].generateLR(tempL, tempR, numSamples);
-					
-					gainCopy = gain[i];
-				}
-				binauralizer[i].mutex->unlock();
-				
-				if (gainCopy != 0.f)
-				{
-					audioBufferAdd(samplesL, tempL, numSamples, gainCopy);
-					audioBufferAdd(samplesR, tempR, numSamples, gainCopy);
-				}
+				fillBuffers_optimized(numSamples);
+			}
+			else
+			{
+				fillBuffers_naive(numSamples);
 			}
 		}
+		
+		//
 		
 		if (channelIndex == 0)
 		{
@@ -268,6 +353,7 @@ int main(int argc, char * argv[])
 	bool showUi = true;
 	
 	Camera3d camera;
+	camera.gamepadIndex = 0;
 	
 	camera.position[0] = 0;
 	camera.position[1] = +.3f;
@@ -303,17 +389,17 @@ int main(int argc, char * argv[])
 	binaural::loadHRIRSampleSet_Cipic("hrtf/CIPIC/subject147", sampleSet);
 	sampleSet.finalize();
 	
-	MyPortAudioHandler paHandler;
+	MyPortAudioHandler * paHandler = new MyPortAudioHandler();
 	
 	for (int i = 0; i < MAX_VOLUMES; ++i)
 	{
-		paHandler.audioSources[i].init(&sampleSet, &binauralMutex);
+		paHandler->audioSources[i].init(&sampleSet, &binauralMutex);
 		
-		paHandler.audioSources[i].source = &oggSources[i];
+		paHandler->audioSources[i].source = &oggSources[i];
 	}
 	
 	PortAudioObject pa;
-	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &paHandler);
+	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, paHandler);
 	
 	SoundVolume soundVolumes[MAX_VOLUMES];
 	
@@ -329,6 +415,9 @@ int main(int argc, char * argv[])
 		//const float time = timeSeed;
 		
 		// process input
+		
+		if (keyboard.wentDown(SDLK_o))
+			optimizedSampling = !optimizedSampling;
 		
 		if (keyboard.wentDown(SDLK_t))
 			timeSeed = random(0.f, 1000.f);
@@ -451,8 +540,8 @@ int main(int argc, char * argv[])
 					//const float gain = enableDistanceAttenuation ? .1f / (clampedDistanceToEar * clampedDistanceToEar) : 1.f;
 					const float gain = enableDistanceAttenuation ? .5f / clampedDistanceToEar : 1.f;
 					
-					paHandler.audioSources[i].binauralizer[j].setSampleLocation(elevation, azimuth);
-					paHandler.audioSources[i].gain[j] = gain / numSvSamplePoints;
+					paHandler->audioSources[i].binauralizer[j].setSampleLocation(elevation, azimuth);
+					paHandler->audioSources[i].gain[j] = gain / numSvSamplePoints;
 					
 					samplePoints[numSamplePoints] = pWorld;
 					samplePointsView[numSamplePoints] = pView;
@@ -464,8 +553,8 @@ int main(int argc, char * argv[])
 				
 				for (int j = numSvSamplePoints; j < MAX_BINAURALIZERS_PER_VOLUME; ++j)
 				{
-					paHandler.audioSources[i].binauralizer[j].setSampleLocation(0, 0);
-					paHandler.audioSources[i].gain[j] = 0.f;
+					paHandler->audioSources[i].binauralizer[j].setSampleLocation(0, 0);
+					paHandler->audioSources[i].gain[j] = 0.f;
 				}
 			}
 			binauralMutex.unlock();
@@ -482,6 +571,9 @@ int main(int argc, char * argv[])
 			
 			camera.pushViewMatrix();
 			{
+				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+				glEnable(GL_LINE_SMOOTH);
+				
 				glEnable(GL_DEPTH_TEST);
 				glDepthFunc(GL_LESS);
 				{
@@ -575,6 +667,9 @@ int main(int argc, char * argv[])
 	} while (!keyboard.wentDown(SDLK_ESCAPE));
 	
 	pa.shut();
+	
+	delete paHandler;
+	paHandler = nullptr;
 	
 	SDL_DestroyMutex(audioMutex);
 	audioMutex = nullptr;
