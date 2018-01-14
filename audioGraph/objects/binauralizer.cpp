@@ -83,6 +83,51 @@ namespace binaural
 		mutex->unlock();
 	}
 	
+	void Binauralizer::calculateHrir(HRIRSampleData & hrir) const
+	{
+		// compute the HRIR, a blend between three sample points in a Delaunay triangulation of all sample points
+		
+		const HRIRSampleData * samples[3];
+		float sampleWeights[3];
+		
+		float elevation;
+		float azimuth;
+		
+		mutex->lock();
+		{
+			elevation = sampleLocation.elevation;
+			azimuth = sampleLocation.azimuth;
+		}
+		mutex->unlock();
+		
+		{
+			// clamp elevation and azimuth to ensure it maps within the elevation and azimut topology
+			
+			const float eps = .01f;
+			
+			const float elevationMin = -90.f + eps;
+			const float elevationMax = +90.f - eps;
+			
+			const float azimuthMin = -180.f + eps;
+			const float azimuthMax = +180.f - eps;
+			
+			elevation = std::max(elevation, elevationMin);
+			elevation = std::min(elevation, elevationMax);
+			
+			azimuth = std::max(azimuth, azimuthMin);
+			azimuth = std::min(azimuth, azimuthMax);
+		}
+		
+		if (sampleSet != nullptr && sampleSet->lookup_3(elevation, azimuth, samples, sampleWeights))
+		{
+			blendHrirSamples_3(samples, sampleWeights, hrir);
+		}
+		else
+		{
+			memset(&hrir, 0, sizeof(hrir));
+		}
+	}
+	
 	void Binauralizer::provide(const float * __restrict samples, const int numSamples)
 	{
 		int left = numSamples;
@@ -108,7 +153,7 @@ namespace binaural
 		sampleBuffer.totalWriteSize += numSamples;
 	}
 	
-	void Binauralizer::fillReadBuffer()
+	void Binauralizer::fillReadBuffer(const HRIRSampleData & hrir)
 	{
 		if (sampleBuffer.totalWriteSize < AUDIO_UPDATE_SIZE || sampleSet == nullptr)
 		{
@@ -144,52 +189,6 @@ namespace binaural
 			
 			left -= todo;
 			done += todo;
-		}
-		
-		// compute the HRIR, a blend between three sample points in a Delaunay triangulation of all sample points
-		
-		HRIRSampleData hrir;
-		
-		{
-			const HRIRSampleData * samples[3];
-			float sampleWeights[3];
-			
-			float elevation;
-			float azimuth;
-			
-			mutex->lock();
-			{
-				elevation = sampleLocation.elevation;
-				azimuth = sampleLocation.azimuth;
-			}
-			mutex->unlock();
-			
-			{
-				// clamp elevation and azimuth to ensure it maps within the elevation and azimut topology
-				
-				const float eps = .01f;
-				
-				const float elevationMin = -90.f + eps;
-				const float elevationMax = +90.f - eps;
-				
-				const float azimuthMin = -180.f + eps;
-				const float azimuthMax = +180.f - eps;
-				
-				elevation = std::max(elevation, elevationMin);
-				elevation = std::min(elevation, elevationMax);
-				
-				azimuth = std::max(azimuth, azimuthMin);
-				azimuth = std::min(azimuth, azimuthMax);
-			}
-			
-			if (sampleSet != nullptr && sampleSet->lookup_3(elevation, azimuth, samples, sampleWeights))
-			{
-				blendHrirSamples_3(samples, sampleWeights, hrir);
-			}
-			else
-			{
-				memset(&hrir, 0, sizeof(hrir));
-			}
 		}
 		
 		// compute the HRTF from the HRIR
@@ -239,7 +238,8 @@ namespace binaural
 	
 	void Binauralizer::generateInterleaved(
 		float * __restrict samples,
-		const int numSamples)
+		const int numSamples,
+		const HRIRSampleData * hrir)
 	{
 		int left = numSamples;
 		int done = 0;
@@ -248,7 +248,16 @@ namespace binaural
 		{
 			if (nextReadLocation == AUDIO_BUFFER_SIZE)
 			{
-				fillReadBuffer();
+				if (hrir == nullptr)
+				{
+					HRIRSampleData hrir;
+					calculateHrir(hrir);
+					fillReadBuffer(hrir);
+				}
+				else
+				{
+					fillReadBuffer(hrir);
+				}
 			}
 			
 			const int todo = std::min(left, AUDIO_BUFFER_SIZE - nextReadLocation);
@@ -291,7 +300,8 @@ namespace binaural
 	void Binauralizer::generateLR(
 		float * __restrict samplesL,
 		float * __restrict samplesR,
-		const int numSamples)
+		const int numSamples,
+		const HRIRSampleData * hrir)
 	{
 		int left = numSamples;
 		int done = 0;
@@ -300,7 +310,16 @@ namespace binaural
 		{
 			if (nextReadLocation == AUDIO_BUFFER_SIZE)
 			{
-				fillReadBuffer();
+				if (hrir == nullptr)
+				{
+					HRIRSampleData hrir;
+					calculateHrir(hrir);
+					fillReadBuffer(hrir);
+				}
+				else
+				{
+					fillReadBuffer(hrir);
+				}
 			}
 			
 			const int todo = std::min(left, AUDIO_BUFFER_SIZE - nextReadLocation);

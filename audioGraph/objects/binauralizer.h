@@ -88,16 +88,19 @@ namespace binaural
 		bool isInit() const;
 		
 		void setSampleLocation(const float elevation, const float azimuth);
+		void calculateHrir(HRIRSampleData & hrir) const;
 		void provide(const float * __restrict samples, const int numSamples);
-		void fillReadBuffer();
+		void fillReadBuffer(const HRIRSampleData & hrir);
 		
 		void generateInterleaved(
 			float * __restrict samples,
-			const int numSamples);
+			const int numSamples,
+			const HRIRSampleData * hrir = nullptr);
 		void generateLR(
 			float * __restrict samplesL,
 			float * __restrict samplesR,
-			const int numSamples);
+			const int numSamples,
+			const HRIRSampleData * hrir = nullptr);
 	};
 	
 	//
