@@ -90,7 +90,7 @@ void AudioNodeMapRange::tick(const float dt)
 		{
 			resultOutput.setVector();
 			
-		#ifdef __GNUC__
+		#if AUDIO_USE_GCC_VECTOR
 			// todo : add a non-SSE implementation of SimdVec and rewrite
 			
 			typedef float v4sf __attribute__ ((vector_size(16)));
