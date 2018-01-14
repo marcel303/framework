@@ -63,6 +63,8 @@ struct AudioGraphFile
 
 	AudioGraphFileRTC * realTimeConnection;
 	
+	AudioValueHistorySet * audioValueHistorySet;
+	
 	GraphEdit * graphEdit;
 
 	AudioGraphFile();
@@ -128,8 +130,6 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	
 	SDL_mutex * audioMutex;
 	
-	AudioValueHistorySet * audioValueHistorySet;
-	
 	AudioGraphGlobals * globals;
 	
 	int displaySx;
@@ -137,6 +137,47 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	
 	AudioGraphManager_RTE(const int displaySx, const int displaySy);
 	virtual ~AudioGraphManager_RTE() override;
+	
+	// called from the app thread
+	void init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr);
+	void shut();
+	
+	// called from the app thread
+	void selectFile(const char * filename);
+	void selectInstance(const AudioGraphInstance * instance);
+	
+	// called from the app thread
+	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr) override;
+	virtual void free(AudioGraphInstance *& instance) override;
+	
+	// called from the audio thread
+	virtual void tick(const float dt) override;
+	virtual void tickVisualizers() override;
+	
+	// called from the app thread
+	bool tickEditor(const float dt, const bool isInputCaptured);
+	void drawEditor();
+};
+
+//
+
+struct AudioGraphManager_MultiRTE : AudioGraphManager
+{
+	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
+	
+	std::map<std::string, AudioGraphFile*> files;
+	
+	AudioGraphFile * selectedFile;
+	
+	SDL_mutex * audioMutex;
+	
+	AudioGraphGlobals * globals;
+	
+	int displaySx;
+	int displaySy;
+	
+	AudioGraphManager_MultiRTE(const int displaySx, const int displaySy);
+	virtual ~AudioGraphManager_MultiRTE() override;
 	
 	// called from the app thread
 	void init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr);

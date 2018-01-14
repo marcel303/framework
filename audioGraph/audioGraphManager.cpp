@@ -215,10 +215,13 @@ AudioGraphFile::AudioGraphFile()
 	, instanceList()
 	, activeInstance(nullptr)
 	, realTimeConnection(nullptr)
+	, audioValueHistorySet(nullptr)
 	, graphEdit(nullptr)
 {
 	realTimeConnection = new AudioGraphFileRTC();
 	realTimeConnection->file = this;
+	
+	audioValueHistorySet = new AudioValueHistorySet();
 }
 
 AudioGraphFile::~AudioGraphFile()
@@ -237,6 +240,9 @@ AudioGraphFile::~AudioGraphFile()
 	
 	Assert(activeInstance == nullptr);
 	activeInstance = nullptr;
+	
+	delete audioValueHistorySet;
+	audioValueHistorySet = nullptr;
 	
 	delete realTimeConnection;
 	realTimeConnection = nullptr;
@@ -623,7 +629,6 @@ AudioGraphManager_RTE::AudioGraphManager_RTE(const int _displaySx, const int _di
 	, files()
 	, selectedFile(nullptr)
 	, audioMutex(nullptr)
-	, audioValueHistorySet(nullptr)
 	, globals(nullptr)
 	, displaySx(0)
 	, displaySy(0)
@@ -651,8 +656,6 @@ void AudioGraphManager_RTE::init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr
 	
 	audioMutex = mutex;
 	
-	audioValueHistorySet = new AudioValueHistorySet();
-	
 	globals = new AudioGraphGlobals();
 	globals->init(mutex, voiceMgr, this);
 }
@@ -679,9 +682,6 @@ void AudioGraphManager_RTE::shut()
 		globals = nullptr;
 	}
 	
-	delete audioValueHistorySet;
-	audioValueHistorySet = nullptr;
-	
 	audioMutex = nullptr;
 	
 	delete typeDefinitionLibrary;
@@ -692,14 +692,7 @@ void AudioGraphManager_RTE::selectFile(const char * filename)
 {
 	SDL_LockMutex(audioMutex);
 	{
-		if (selectedFile != nullptr)
-		{
-			selectedFile->graphEdit->cancelEditing();
-			
-			selectedFile = nullptr;
-		}
-		
-		//
+		AudioGraphFile * newSelectedFile = nullptr;
 		
 		if (filename != nullptr)
 		{
@@ -707,10 +700,24 @@ void AudioGraphManager_RTE::selectFile(const char * filename)
 			
 			if (fileItr != files.end())
 			{
-				selectedFile = fileItr->second;
-				
-				selectedFile->graphEdit->beginEditing();
+				newSelectedFile = fileItr->second;
 			}
+		}
+		
+		if (newSelectedFile != selectedFile)
+		{
+			if (selectedFile != nullptr)
+			{
+				selectedFile->graphEdit->cancelEditing();
+				
+				selectedFile = nullptr;
+			}
+			
+			//
+			
+			selectedFile = newSelectedFile;
+			
+			selectedFile->graphEdit->beginEditing();
 		}
 	}
 	SDL_UnlockMutex(audioMutex);
@@ -786,7 +793,7 @@ AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename
 	//
 	
 	auto audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary, globals);
-	auto realTimeConnection = new AudioRealTimeConnection(audioValueHistorySet, globals);
+	auto realTimeConnection = new AudioRealTimeConnection(file->audioValueHistorySet, globals);
 	
 	//
 	
@@ -822,8 +829,6 @@ void AudioGraphManager_RTE::free(AudioGraphInstance *& instance)
 	{
 		return;
 	}
-	
-	// todo : move audio graph free outside of mutex scope
 	
 	bool found = false;
 	
@@ -929,6 +934,315 @@ bool AudioGraphManager_RTE::tickEditor(const float dt, const bool isInputCapture
 }
 
 void AudioGraphManager_RTE::drawEditor()
+{
+	if (selectedFile != nullptr)
+	{
+		selectedFile->graphEdit->draw();
+	}
+}
+
+//
+
+AudioGraphManager_MultiRTE::AudioGraphManager_MultiRTE(const int _displaySx, const int _displaySy)
+	: AudioGraphManager()
+	, typeDefinitionLibrary(nullptr)
+	, files()
+	, selectedFile(nullptr)
+	, audioMutex(nullptr)
+	, globals(nullptr)
+	, displaySx(0)
+	, displaySy(0)
+{
+	displaySx = _displaySx;
+	displaySy = _displaySy;
+}
+
+AudioGraphManager_MultiRTE::~AudioGraphManager_MultiRTE()
+{
+	shut();
+}
+
+void AudioGraphManager_MultiRTE::init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr)
+{
+	shut();
+	
+	//
+	
+	typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+	
+	createAudioValueTypeDefinitions(*typeDefinitionLibrary);
+	createAudioEnumTypeDefinitions(*typeDefinitionLibrary, g_audioEnumTypeRegistrationList);
+	createAudioNodeTypeDefinitions(*typeDefinitionLibrary, g_audioNodeTypeRegistrationList);
+	
+	audioMutex = mutex;
+	
+	globals = new AudioGraphGlobals();
+	globals->init(mutex, voiceMgr, this);
+}
+
+void AudioGraphManager_MultiRTE::shut()
+{
+	for (auto & file : files)
+	{
+		delete file.second;
+		file.second = nullptr;
+	}
+	
+	files.clear();
+	
+	selectedFile = nullptr;
+	
+	//
+	
+	if (globals != nullptr)
+	{
+		globals->shut();
+		
+		delete globals;
+		globals = nullptr;
+	}
+	
+	audioMutex = nullptr;
+	
+	delete typeDefinitionLibrary;
+	typeDefinitionLibrary = nullptr;
+}
+
+void AudioGraphManager_MultiRTE::selectFile(const char * filename)
+{
+	SDL_LockMutex(audioMutex);
+	{
+		selectedFile = nullptr;
+		
+		if (filename != nullptr)
+		{
+			auto fileItr = files.find(filename);
+			
+			if (fileItr != files.end())
+			{
+				selectedFile = fileItr->second;
+			}
+		}
+	}
+	SDL_UnlockMutex(audioMutex);
+}
+
+void AudioGraphManager_MultiRTE::selectInstance(const AudioGraphInstance * instance)
+{
+	SDL_LockMutex(audioMutex);
+	{
+		if (instance == nullptr)
+		{
+			selectFile(nullptr);
+		}
+		else
+		{
+			for (auto & fileItr : files)
+			{
+				auto file = fileItr.second;
+				
+				for (auto & instanceInFile : file->instanceList)
+				{
+					if (instance == instanceInFile)
+					{
+						selectFile(fileItr.first.c_str());
+						
+						file->activeInstance = instance;
+					}
+				}
+			}
+		}
+	}
+	SDL_UnlockMutex(audioMutex);
+}
+
+AudioGraphInstance * AudioGraphManager_MultiRTE::createInstance(const char * filename, AudioGraphGlobals * globals)
+{
+	if (globals == nullptr)
+	{
+		globals = this->globals;
+	}
+	
+	AudioGraphFile * file;
+	bool isNew;
+	
+	SDL_LockMutex(audioMutex);
+	{
+		auto fileItr = files.find(filename);
+		
+		if (fileItr == files.end())
+		{
+			file = nullptr;
+			isNew = true;
+		}
+		else
+		{
+			file = fileItr->second;
+			isNew = false;
+		}
+	}
+	SDL_UnlockMutex(audioMutex);
+	
+	if (isNew)
+	{
+		file = new AudioGraphFile();
+		file->filename = filename;
+		
+		file->graphEdit = new GraphEdit(displaySx, displaySy, typeDefinitionLibrary);
+		file->graphEdit->realTimeConnection = file->realTimeConnection;
+		
+		file->graphEdit->load(filename);
+	}
+	
+	//
+	
+	auto audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary, globals);
+	auto realTimeConnection = new AudioRealTimeConnection(file->audioValueHistorySet, globals);
+	
+	//
+	
+	AudioGraphInstance * instance = new AudioGraphInstance();
+	instance->audioGraph = audioGraph;
+	instance->realTimeConnection = realTimeConnection;
+	instance->realTimeConnection->audioMutex = audioMutex;
+	instance->realTimeConnection->audioGraph = instance->audioGraph;
+	instance->realTimeConnection->audioGraphPtr = &instance->audioGraph;
+	
+	SDL_LockMutex(audioMutex);
+	{
+		if (isNew)
+		{
+			files[filename] = file;
+		}
+		
+		file->instanceList.push_back(instance);
+		
+		if (file->activeInstance == nullptr)
+		{
+			file->activeInstance = instance;
+		}
+	}
+	SDL_UnlockMutex(audioMutex);
+	
+	return instance;
+}
+
+void AudioGraphManager_MultiRTE::free(AudioGraphInstance *& instance)
+{
+	if (instance == nullptr)
+	{
+		return;
+	}
+	
+	bool found = false;
+	
+	SDL_LockMutex(audioMutex);
+	{
+		for (auto fileItr = files.begin(); fileItr != files.end(); )
+		{
+			auto & file = fileItr->second;
+			
+			for (auto instanceItr = file->instanceList.begin(); instanceItr != file->instanceList.end(); )
+			{
+				if (*instanceItr == instance)
+				{
+					found = true;
+					
+					instanceItr = file->instanceList.erase(instanceItr);
+					
+					if (instance == file->activeInstance)
+					{
+						if (file->instanceList.empty())
+						{
+							file->activeInstance = nullptr;
+						}
+						else
+						{
+							file->activeInstance = file->instanceList.front();
+						}
+					}
+				}
+				else
+				{
+					instanceItr++;
+				}
+			}
+			
+		#if 0
+			if (file->instanceList.empty())
+			{
+				if (file == selectedFile)
+				{
+					selectedFile = nullptr;
+				}
+				
+				delete file;
+				file = nullptr;
+				
+				fileItr = files.erase(fileItr);
+			}
+			else
+		#endif
+			{
+				fileItr++;
+			}
+		}
+	}
+	SDL_UnlockMutex(audioMutex);
+	
+	Assert(found);
+	
+	delete instance;
+	instance = nullptr;
+}
+
+void AudioGraphManager_MultiRTE::tick(const float dt)
+{
+	SDL_LockMutex(audioMutex);
+	{
+		globals->tick(dt);
+		
+		// tick graph instances
+		
+		for (auto & file : files)
+			for (auto & instance : file.second->instanceList)
+				instance->audioGraph->tick(dt);
+	}
+	SDL_UnlockMutex(audioMutex);
+}
+
+void AudioGraphManager_MultiRTE::tickVisualizers()
+{
+	SDL_LockMutex(audioMutex);
+	{
+		for (auto & fileItr : files)
+		{
+			AudioGraphFile * file = fileItr.second;
+			
+			if (file && file->activeInstance)
+			{
+				file->activeInstance->realTimeConnection->updateAudioValues();
+			}
+		}
+	}
+	SDL_UnlockMutex(audioMutex);
+}
+
+bool AudioGraphManager_MultiRTE::tickEditor(const float dt, const bool isInputCaptured)
+{
+	bool result = false;
+	
+	if (selectedFile != nullptr)
+	{
+		result |= selectedFile->graphEdit->tick(dt, isInputCaptured);
+		
+		selectedFile->graphEdit->tickVisualizers(dt);
+	}
+	
+	return result;
+}
+
+void AudioGraphManager_MultiRTE::drawEditor()
 {
 	if (selectedFile != nullptr)
 	{
