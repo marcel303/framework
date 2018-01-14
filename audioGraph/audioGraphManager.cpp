@@ -49,49 +49,49 @@ struct AudioGraphFileRTC : GraphEdit_RealTimeConnection
 	virtual void loadBegin() override
 	{
 		for (auto & instance : file->instanceList)
-			instance.realTimeConnection->loadBegin();
+			instance->realTimeConnection->loadBegin();
 	}
 
 	virtual void loadEnd(GraphEdit & graphEdit) override
 	{
 		for (auto & instance : file->instanceList)
-			instance.realTimeConnection->loadEnd(graphEdit);
+			instance->realTimeConnection->loadEnd(graphEdit);
 	}
 	
 	virtual void nodeAdd(const GraphNodeId nodeId, const std::string & typeName) override
 	{
 		for (auto & instance : file->instanceList)
-			instance.realTimeConnection->nodeAdd(nodeId, typeName);
+			instance->realTimeConnection->nodeAdd(nodeId, typeName);
 	}
 
 	virtual void nodeRemove(const GraphNodeId nodeId) override
 	{
 		for (auto & instance : file->instanceList)
-			instance.realTimeConnection->nodeRemove(nodeId);
+			instance->realTimeConnection->nodeRemove(nodeId);
 	}
 
 	virtual void linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
 	{
 		for (auto & instance : file->instanceList)
-			instance.realTimeConnection->linkAdd(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
+			instance->realTimeConnection->linkAdd(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
 	}
 
 	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
 	{
 		for (auto & instance : file->instanceList)
-			instance.realTimeConnection->linkRemove(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
+			instance->realTimeConnection->linkRemove(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
 	}
 	
 	virtual void setNodeIsPassthrough(const GraphNodeId nodeId, const bool isPassthrough) override
 	{
 		for (auto & instance : file->instanceList)
-			instance.realTimeConnection->setNodeIsPassthrough(nodeId, isPassthrough);
+			instance->realTimeConnection->setNodeIsPassthrough(nodeId, isPassthrough);
 	}
 	
 	virtual void setSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, const std::string & value) override
 	{
 		for (auto & instance : file->instanceList)
-			instance.realTimeConnection->setSrcSocketValue(nodeId, srcSocketIndex, srcSocketName, value);
+			instance->realTimeConnection->setSrcSocketValue(nodeId, srcSocketIndex, srcSocketName, value);
 	}
 
 	virtual bool getSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, std::string & value) override
@@ -105,7 +105,7 @@ struct AudioGraphFileRTC : GraphEdit_RealTimeConnection
 	virtual void setDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, const std::string & value) override
 	{
 		for (auto & instance : file->instanceList)
-			instance.realTimeConnection->setDstSocketValue(nodeId, dstSocketIndex, dstSocketName, value);
+			instance->realTimeConnection->setDstSocketValue(nodeId, dstSocketIndex, dstSocketName, value);
 	}
 
 	virtual bool getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value) override
@@ -119,7 +119,7 @@ struct AudioGraphFileRTC : GraphEdit_RealTimeConnection
 	virtual void clearSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName) override
 	{
 		for (auto & instance : file->instanceList)
-			instance.realTimeConnection->clearSrcSocketValue(nodeId, srcSocketIndex, srcSocketName);
+			instance->realTimeConnection->clearSrcSocketValue(nodeId, srcSocketIndex, srcSocketName);
 	}
 	
 	virtual bool getSrcSocketChannelData(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, GraphEdit_ChannelData & channels) override
@@ -224,7 +224,16 @@ AudioGraphFile::AudioGraphFile()
 AudioGraphFile::~AudioGraphFile()
 {
 	Assert(instanceList.empty());
+	
+	for (auto & instance : instanceList)
+	{
+		delete instance;
+		instance = nullptr;
+	}
+	
 	instanceList.clear();
+	
+	//
 	
 	Assert(activeInstance == nullptr);
 	activeInstance = nullptr;
@@ -461,7 +470,7 @@ void AudioGraphManager_Basic::shut()
 {
 	while (!instances.empty())
 	{
-		AudioGraphInstance * instance = &instances.front();
+		AudioGraphInstance *& instance = instances.front();
 		
 		free(instance);
 	}
@@ -544,13 +553,12 @@ AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filena
 	
 	if (audioGraph != nullptr)
 	{
-		AudioGraphInstance * instance = nullptr;
+		AudioGraphInstance * instance = new AudioGraphInstance();
+		instance->audioGraph = audioGraph;
 		
 		audioMutex.lock();
 		{
-			instances.emplace_back();
-			instance = &instances.back();
-			instance->audioGraph = audioGraph;
+			instances.push_back(instance);
 		}
 		audioMutex.unlock();
 		
@@ -571,13 +579,15 @@ void AudioGraphManager_Basic::free(AudioGraphInstance *& instance)
 	
 	for (auto instanceItr = instances.begin(); instanceItr != instances.end(); ++instanceItr)
 	{
-		// todo : remove lock around free. for now needed to avoid voices being referenced by voice manager during mixing while the graph is being destroyed. introduce a separate step to unregister voices ? perhaps add a voice list to each audio graph instance ?
-		if (&(*instanceItr) == instance)
+		if (*instanceItr == instance)
 		{
 			audioMutex.lock();
-			instances.erase(instanceItr);
+			{
+				instances.erase(instanceItr);
+			}
 			audioMutex.unlock();
 			
+			delete instance;
 			instance = nullptr;
 			
 			break;
@@ -596,7 +606,7 @@ void AudioGraphManager_Basic::tick(const float dt)
 		// tick graph instances
 		
 		for (auto & instance : instances)
-			instance.audioGraph->tick(dt);
+			instance->audioGraph->tick(dt);
 	}
 	audioMutex.unlock();
 }
@@ -650,7 +660,11 @@ void AudioGraphManager_RTE::init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr
 void AudioGraphManager_RTE::shut()
 {
 	for (auto & file : files)
+	{
 		delete file.second;
+		file.second = nullptr;
+	}
+	
 	files.clear();
 	
 	selectedFile = nullptr;
@@ -718,7 +732,7 @@ void AudioGraphManager_RTE::selectInstance(const AudioGraphInstance * instance)
 				
 				for (auto & instanceInFile : file->instanceList)
 				{
-					if (instance == &instanceInFile)
+					if (instance == instanceInFile)
 					{
 						selectFile(fileItr.first.c_str());
 						
@@ -776,7 +790,12 @@ AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename
 	
 	//
 	
-	AudioGraphInstance * instance;
+	AudioGraphInstance * instance = new AudioGraphInstance();
+	instance->audioGraph = audioGraph;
+	instance->realTimeConnection = realTimeConnection;
+	instance->realTimeConnection->audioMutex = audioMutex;
+	instance->realTimeConnection->audioGraph = instance->audioGraph;
+	instance->realTimeConnection->audioGraphPtr = &instance->audioGraph;
 	
 	SDL_LockMutex(audioMutex);
 	{
@@ -785,15 +804,7 @@ AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename
 			files[filename] = file;
 		}
 		
-		file->instanceList.push_back(AudioGraphInstance());
-		
-		instance = &file->instanceList.back();
-		
-		instance->audioGraph = audioGraph;
-		instance->realTimeConnection = realTimeConnection;
-		instance->realTimeConnection->audioMutex = audioMutex;
-		instance->realTimeConnection->audioGraph = instance->audioGraph;
-		instance->realTimeConnection->audioGraphPtr = &instance->audioGraph;
+		file->instanceList.push_back(instance);
 		
 		if (file->activeInstance == nullptr)
 		{
@@ -814,6 +825,8 @@ void AudioGraphManager_RTE::free(AudioGraphInstance *& instance)
 	
 	// todo : move audio graph free outside of mutex scope
 	
+	bool found = false;
+	
 	SDL_LockMutex(audioMutex);
 	{
 		for (auto fileItr = files.begin(); fileItr != files.end(); )
@@ -822,14 +835,13 @@ void AudioGraphManager_RTE::free(AudioGraphInstance *& instance)
 			
 			for (auto instanceItr = file->instanceList.begin(); instanceItr != file->instanceList.end(); )
 			{
-				if (&(*instanceItr) == instance)
+				if (*instanceItr == instance)
 				{
-					const bool isActiveInstance = instance == file->activeInstance;
+					found = true;
 					
 					instanceItr = file->instanceList.erase(instanceItr);
-					instance = nullptr;
 					
-					if (isActiveInstance)
+					if (instance == file->activeInstance)
 					{
 						if (file->instanceList.empty())
 						{
@@ -837,7 +849,7 @@ void AudioGraphManager_RTE::free(AudioGraphInstance *& instance)
 						}
 						else
 						{
-							file->activeInstance = &file->instanceList.front();
+							file->activeInstance = file->instanceList.front();
 						}
 					}
 				}
@@ -868,6 +880,11 @@ void AudioGraphManager_RTE::free(AudioGraphInstance *& instance)
 		}
 	}
 	SDL_UnlockMutex(audioMutex);
+	
+	Assert(found);
+	
+	delete instance;
+	instance = nullptr;
 }
 
 void AudioGraphManager_RTE::tick(const float dt)
@@ -880,7 +897,7 @@ void AudioGraphManager_RTE::tick(const float dt)
 		
 		for (auto & file : files)
 			for (auto & instance : file.second->instanceList)
-				instance.audioGraph->tick(dt);
+				instance->audioGraph->tick(dt);
 	}
 	SDL_UnlockMutex(audioMutex);
 }

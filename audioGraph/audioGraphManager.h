@@ -57,7 +57,7 @@ struct AudioGraphFile
 {
 	std::string filename;
 	
-	std::list<AudioGraphInstance> instanceList;
+	std::list<AudioGraphInstance*> instanceList;
 
 	const AudioGraphInstance * activeInstance;
 
@@ -95,7 +95,7 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	std::map<std::string, GraphCacheElem> graphCache;
 	bool cacheOnCreate;
 	
-	std::list<AudioGraphInstance> instances;
+	std::list<AudioGraphInstance*> instances;
 	
 	AudioMutex_Shared audioMutex;
 	
