@@ -33,11 +33,12 @@
 struct OpenglImageCapture
 {
 	std::vector<uint32_t> textures;
+	int saveIndex;
 	
 	OpenglImageCapture();
 	~OpenglImageCapture();
 	
 	void recordFramebuffer(const int sx, const int sy);
 	
-	void saveImageSequence(const char * filenameFormat);
+	void saveImageSequence(const char * filenameFormat, const bool flush);
 };

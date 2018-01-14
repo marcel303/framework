@@ -33,6 +33,7 @@
 
 OpenglImageCapture::OpenglImageCapture()
 	: textures()
+	, saveIndex(0)
 {
 }
 
@@ -64,10 +65,8 @@ void OpenglImageCapture::recordFramebuffer(const int sx, const int sy)
 	}
 }
 
-void OpenglImageCapture::saveImageSequence(const char * filenameFormat)
+void OpenglImageCapture::saveImageSequence(const char * filenameFormat, const bool flush)
 {
-	int index = 0;
-	
 	for (auto texture : textures)
 	{
 		GLint sx = 0;
@@ -88,11 +87,11 @@ void OpenglImageCapture::saveImageSequence(const char * filenameFormat)
 				checkErrorGL();
 				
 				char filename[PATH_MAX];
-				sprintf_s(filename, sizeof(filename), filenameFormat, index);
+				sprintf_s(filename, sizeof(filename), filenameFormat, saveIndex);
 				
 				if (saveImage_turbojpeg(filename, pixels, sx * sy * 4, sx, sy, true, 100, true))
 				{
-					index++;
+					saveIndex++;
 				}
 				
 				_mm_free(pixels);
@@ -100,5 +99,11 @@ void OpenglImageCapture::saveImageSequence(const char * filenameFormat)
 		}
 		glBindTexture(GL_TEXTURE_2D, 0);
 		checkErrorGL();
+	}
+	
+	if (flush && !textures.empty())
+	{
+		glDeleteTextures(textures.size(), &textures[0]);
+		textures.clear();
 	}
 }
