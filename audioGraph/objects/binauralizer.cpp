@@ -256,7 +256,7 @@ namespace binaural
 				}
 				else
 				{
-					fillReadBuffer(hrir);
+					fillReadBuffer(*hrir);
 				}
 			}
 			
@@ -318,7 +318,7 @@ namespace binaural
 				}
 				else
 				{
-					fillReadBuffer(hrir);
+					fillReadBuffer(*hrir);
 				}
 			}
 			
