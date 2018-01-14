@@ -365,6 +365,7 @@ public:
 	int getHeight() const;
 	
 	SDL_Window * getWindow() const;
+	class WindowData * getWindowData() const;
 	
 private:
 	// book keeping

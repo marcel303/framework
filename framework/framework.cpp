@@ -771,13 +771,11 @@ void Framework::process()
 	
 	// poll SDL event queue
 	
-	globals.mainWindowData.keyChangeCount = 0;
-	globals.mainWindowData.keyRepeatCount = 0;
-	memset(globals.mainWindowData.mouseChange, 0, sizeof(globals.mainWindowData.mouseChange));
-	
 	keyboard.events.clear();
 	
-	mouse.scrollY = 0;
+	globals.mainWindowData.beginProcess();
+	for (Window * window = m_windows; window != nullptr; window = window->m_next)
+		window->m_windowData->beginProcess();
 
 	lockMidi();
 	{
@@ -787,9 +785,6 @@ void Framework::process()
 		memset(globals.midiChangeAsync, 0, sizeof(globals.midiChangeAsync));
 	}
 	unlockMidi();
-	
-	const int oldMouseX = mouse.x;
-	const int oldMouseY = mouse.y;
 	
 	events.clear();
 
@@ -894,29 +889,30 @@ void Framework::process()
 				
 				if (window == globals.mainWindow)
 				{
-					// todo : keep track of mouse and keyboard state on a per-window basis
-					
 					int windowSx;
 					int windowSy;
 					SDL_GetWindowSize(window, &windowSx, &windowSy);
 					
-					mouse.x = e.motion.x * minification * globals.displaySize[0] / windowSx;
-					mouse.y = e.motion.y * minification * globals.displaySize[1] / windowSy;
+					windowData->mouseX = e.motion.x * minification * globals.displaySize[0] / windowSx;
+					windowData->mouseY = e.motion.y * minification * globals.displaySize[1] / windowSy;
 					//logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, mouse.x, mouse.y);
+				}
+				else
+				{
+					windowData->mouseX = e.motion.x;
+					windowData->mouseY = e.motion.y;
 				}
 			}
 		}
 		else if (e.type == SDL_MOUSEWHEEL)
 		{
-			// todo : track mouse wheel per window
-			
 			WindowData * windowData = findWindowDataById(e.wheel.windowID);
 			
 			if (windowData != nullptr)
 			{
 				if (e.wheel.which != SDL_TOUCH_MOUSEID)
 				{
-					mouse.scrollY += e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
+					windowData->mouseScrollY += e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
 				}
 			}
 		}
@@ -947,17 +943,11 @@ void Framework::process()
 		}
 	}
 
-	// todo : do mouse (dx,dy) per-window
+	globals.mainWindowData.endProcess();
+	for (Window * window = m_windows; window != nullptr; window = window->m_next)
+		window->m_windowData->endProcess();
 	
-	if (globals.mainWindowData.hasOldMousePosition)
-	{
-		mouse.dx = mouse.x - oldMouseX;
-		mouse.dy = mouse.y - oldMouseY;
-	}
-	else
-	{
-		globals.mainWindowData.hasOldMousePosition = true;
-	}
+	globals.currentWindowData->makeActive();
 
 #ifdef __WIN32__
 	// use XInput to poll gamepad state
@@ -1723,24 +1713,36 @@ SDL_Window * Window::getWindow() const
 	return m_window;
 }
 
+WindowData * Window::getWindowData() const
+{
+	return m_windowData;
+}
+
 static Stack<SDL_Window*, 32> s_windowStack(nullptr);
+static Stack<WindowData*, 32> s_windowDataStack(nullptr);
 
 void pushWindow(Window & window)
 {
 	s_windowStack.push(globals.currentWindow);
+	s_windowDataStack.push(globals.currentWindowData);
 	
 	globals.currentWindow = window.getWindow();
+	globals.currentWindowData = window.getWindowData();
 	
 	SDL_GL_MakeCurrent(globals.currentWindow, globals.glContext);
+	globals.currentWindowData->makeActive();
 }
 
 void popWindow()
 {
 	SDL_Window * window = s_windowStack.popValue();
+	WindowData * windowData = s_windowDataStack.popValue();
 	
 	globals.currentWindow = window;
+	globals.currentWindowData = windowData;
 	
 	SDL_GL_MakeCurrent(globals.currentWindow, globals.glContext);
+	globals.currentWindowData->makeActive();
 }
 
 // -----

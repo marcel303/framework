@@ -99,6 +99,45 @@ struct TextureAtlas;
 class WindowData
 {
 public:
+	void beginProcess()
+	{
+		keyChangeCount = 0;
+		keyRepeatCount = 0;
+		memset(mouseChange, 0, sizeof(mouseChange));
+		
+		mouseDx = 0;
+		mouseDy = 0;
+		mouseScrollY = 0;
+		
+		oldMouseX = mouseX;
+		oldMouseY = mouseY;
+	}
+	
+	void endProcess()
+	{
+		if (hasOldMousePosition)
+		{
+			mouseDx = mouseX - oldMouseX;
+			mouseDy = mouseY - oldMouseY;
+		}
+		else
+		{
+			hasOldMousePosition = true;
+			
+			mouse.dx = 0;
+			mouse.dy = 0;
+		}
+	}
+	
+	void makeActive() const
+	{
+		mouse.x = mouseX;
+		mouse.y = mouseY;
+		mouse.dx = mouseDx;
+		mouse.dy = mouseDy;
+		mouse.scrollY = mouseScrollY;
+	}
+	
 	bool mouseDown[BUTTON_MAX];
 	bool mouseChange[BUTTON_MAX];
 	bool hasOldMousePosition;
@@ -108,6 +147,13 @@ public:
 	int keyChangeCount;
 	int keyRepeat[256];
 	int keyRepeatCount;
+	int mouseX;
+	int mouseY;
+	int mouseDx;
+	int mouseDy;
+	int mouseScrollY;
+	int oldMouseX;
+	int oldMouseY;
 };
 
 //
