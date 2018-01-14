@@ -59,6 +59,35 @@ struct Wavefield1D
 
 //
 
+struct Wavefield1Df
+{
+	const static int kMaxElems = 2048;
+	
+	int numElems;
+	
+	ALIGN32 float p[kMaxElems];
+	ALIGN32 float v[kMaxElems];
+	ALIGN32 float f[kMaxElems];
+	ALIGN32 float d[kMaxElems];
+	
+	Wavefield1Df();
+	
+	static int roundNumElems(const int numElems);
+	
+	void init(const int numElems);
+	
+	void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds);
+	
+	float sample(const float x) const;
+	
+#if AUDIO_USE_SSE
+	void * operator new(size_t size);
+	void operator delete(void * mem);
+#endif
+};
+
+//
+
 struct Wavefield2D
 {
 	static const int kMaxElems = 64;
@@ -89,6 +118,45 @@ struct Wavefield2D
 	float sample(const float x, const float y) const;
 	
 	void copyFrom(const Wavefield2D & other, const bool copyP, const bool copyV, const bool copyF);
+	
+#if AUDIO_USE_SSE
+	void * operator new(size_t size);
+	void operator delete(void * mem);
+#endif
+};
+
+//
+
+struct Wavefield2Df
+{
+	static const int kMaxElems = 64;
+	
+	int numElems;
+	
+	ALIGN32 float p[kMaxElems][kMaxElems];
+	ALIGN32 float v[kMaxElems][kMaxElems];
+	ALIGN32 float f[kMaxElems][kMaxElems];
+	ALIGN32 float d[kMaxElems][kMaxElems];
+	
+	AudioRNG rng;
+	
+	void init(const int numElems);
+	void shut();
+	
+	Wavefield2Df();
+	
+	static int roundNumElems(const int numElems);
+	
+	void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool _closedEnds);
+	void tickForces(const float dt, const float c, const bool _closedEnds);
+	void tickVelocity(const float dt, const float vRetainPerSecond, const float pRetainPerSecond);
+	
+	void randomize();
+	
+	void doGaussianImpact(const int _x, const int _y, const int _radius, const float strength);
+	float sample(const float x, const float y) const;
+	
+	void copyFrom(const Wavefield2Df & other, const bool copyP, const bool copyV, const bool copyF);
 	
 #if AUDIO_USE_SSE
 	void * operator new(size_t size);

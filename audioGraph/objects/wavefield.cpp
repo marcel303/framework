@@ -72,7 +72,7 @@ Wavefield1D::Wavefield1D()
 
 int Wavefield1D::roundNumElems(const int numElems)
 {
-	return std::min((numElems + 3) & (~3), kMaxElems);
+	return std::min(numElems, kMaxElems);
 }
 
 void Wavefield1D::init(const int _numElems)
@@ -136,7 +136,8 @@ void tickForces(const double * __restrict p, const double c, double * __restrict
 	
 	//
 	
-	const T _mm_cTimesDt = _mm_load<T>(c * dt);
+	const float cTimesDt = c * dt;
+	const T _mm_cTimesDt = _mm_load<T>(cTimesDt);
 	
 	const T * __restrict _mm_p1 = (T*)p1;
 	const T * __restrict _mm_p2 = (T*)p2;
@@ -154,6 +155,16 @@ void tickForces(const double * __restrict p, const double c, double * __restrict
 		const T a = d1 + d2;
 		
 		_mm_v[i] = _mm_v[i] + a * _mm_cTimesDt * _mm_f[i];
+	}
+	
+	for (int i = numElemsVec * vectorSize; i < numElems; ++i)
+	{
+		const double d1 = p1[i] - p2[i];
+		const double d2 = p3[i] - p2[i];
+		
+		const double a = d1 + d2;
+		
+		v[i] = v[i] + a * cTimesDt * f[i];
 	}
 }
 
@@ -212,6 +223,8 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 		p[numElems - 1] = 0.f;
 	}
 	
+	int begin = 0;
+	
 #if AUDIO_USE_SSE && __AVX__
 	__m256d _mm_dt = _mm256_set1_pd(dt);
 	__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
@@ -225,6 +238,7 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	__m256d * __restrict _mm_d = (__m256d*)d;
 	
 	const int numElems4 = numElems / 4;
+	begin = numElems4 * 4;
 	
 	for (int i = 0; i < numElems4; ++i)
 	{
@@ -247,6 +261,7 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	__m128d * __restrict _mm_d = (__m128d*)d;
 	
 	const int numElems2 = numElems / 2;
+	begin = numElems2 * 2;
 	
 	for (int i = 0; i < numElems2; ++i)
 	{
@@ -256,11 +271,12 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 		_mm_v[i] = _mm_v[i] * _mm_vRetain;
 		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 	}
-#else
+#endif
+
 	const double dMin = -MAX_IMPULSE_PER_SECOND * dt;
 	const double dMax = +MAX_IMPULSE_PER_SECOND * dt;
 	
-	for (int i = 0; i < numElems; ++i)
+	for (int i = begin; i < numElems; ++i)
 	{
 		const double d_clamped = std::max(std::min(d[i], dMax), dMin);
 		
@@ -270,7 +286,6 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 		v[i] *= vRetain;
 		d[i] -= d_clamped;
 	}
-#endif
 }
 
 float Wavefield1D::sample(const float x) const
@@ -313,6 +328,272 @@ void Wavefield1D::operator delete(void * mem)
 
 //
 
+const int Wavefield1Df::kMaxElems;
+
+Wavefield1Df::Wavefield1Df()
+	: numElems(0)
+{
+	init(0);
+}
+
+int Wavefield1Df::roundNumElems(const int numElems)
+{
+	return std::min(numElems, kMaxElems);
+}
+
+void Wavefield1Df::init(const int _numElems)
+{
+	numElems = roundNumElems(_numElems);
+	
+	memset(p, 0, numElems * sizeof(p[0]));
+	memset(v, 0, numElems * sizeof(v[0]));
+	
+	for (int i = 0; i < numElems; ++i)
+		f[i] = 1.f;
+	
+	memset(d, 0, numElems * sizeof(d[0]));
+}
+
+#if AUDIO_USE_SSE
+
+template <typename T> inline T _mm_load(const float v);
+
+template <> inline __m128 _mm_load<__m128>(const float v)
+{
+	return _mm_set1_ps(v);
+}
+
+#if __AVX__
+template <> inline __m256 _mm_load<__m256>(const float v)
+{
+	return _mm256_set1_ps(v);
+}
+#endif
+
+template <typename T>
+void tickForces(const float * __restrict p, const float c, float * __restrict v, float * __restrict f, const float dt, const int numElems, const bool closedEnds)
+{
+	const int vectorSize = sizeof(T) / 4;
+	
+#ifdef WIN32
+	// fixme : use a general fix for variable sized arrays
+	ALIGN16 float p1[Wavefield1D::kMaxElems];
+	const float * __restrict p2 = p;
+	ALIGN16 float p3[Wavefield1D::kMaxElems];
+#else
+	ALIGN16 float p1[numElems];
+	const float * __restrict p2 = p;
+	ALIGN16 float p3[numElems];
+#endif
+	
+	memcpy(p1 + 1, p, (numElems - 1) * sizeof(float));
+	memcpy(p3, p + 1, (numElems - 1) * sizeof(float));
+	
+	if (closedEnds)
+	{
+		p1[0] = p1[1];
+		p3[numElems - 1] = p3[numElems - 2];
+	}
+	else
+	{
+		p1[0] = p1[numElems - 1];
+		p3[numElems - 1] = p3[0];
+	}
+	
+	//
+	
+	const float cTimesDt = c * dt;
+	const T _mm_cTimesDt = _mm_load<T>(cTimesDt);
+	
+	const T * __restrict _mm_p1 = (T*)p1;
+	const T * __restrict _mm_p2 = (T*)p2;
+	const T * __restrict _mm_p3 = (T*)p3;
+	T * __restrict _mm_v = (T*)v;
+	const T * __restrict _mm_f = (T*)f;
+	
+	const int numElemsVec = numElems / vectorSize;
+	
+	for (int i = 0; i < numElemsVec; ++i)
+	{
+		const T d1 = _mm_p1[i] - _mm_p2[i];
+		const T d2 = _mm_p3[i] - _mm_p2[i];
+		
+		const T a = d1 + d2;
+		
+		_mm_v[i] = _mm_v[i] + a * _mm_cTimesDt * _mm_f[i];
+	}
+	
+	for (int i = numElemsVec * vectorSize; i < numElems; ++i)
+	{
+		const float d1 = p1[i] - p2[i];
+		const float d2 = p3[i] - p2[i];
+		
+		const float a = d1 + d2;
+		
+		v[i] = v[i] + a * cTimesDt * f[i];
+	}
+}
+
+#endif
+
+void Wavefield1Df::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
+{
+	SCOPED_FLUSH_DENORMALS;
+	
+#if AUDIO_USE_SSE && __AVX__
+	tickForces<__m256>(p, c / 1000.0, v, f, dt * 1000.0, numElems, closedEnds);
+#elif AUDIO_USE_SSE
+	tickForces<__m128>(p, c / 1000.0, v, f, dt * 1000.0, numElems, closedEnds);
+#else
+	const float cTimesDt = c * dt;
+	
+	for (int i = 0; i < numElems; ++i)
+	{
+		int i1, i2, i3;
+		
+		if (closedEnds)
+		{
+			i1 = i - 1 >= 0            ? i - 1 : i;
+			i2 = i;
+			i3 = i + 1 <= numElems - 1 ? i + 1 : i;
+		}
+		else
+		{
+			i1 = i - 1 >= 0            ? i - 1 : numElems - 1;
+			i2 = i;
+			i3 = i + 1 <= numElems - 1 ? i + 1 : 0;
+		}
+		
+		const float p1 = p[i1];
+		const float p2 = p[i2];
+		const float p3 = p[i3];
+		
+		const float d1 = p1 - p2;
+		const float d2 = p3 - p2;
+		
+		const float a = d1 + d2;
+		
+		v[i] += a * cTimesDt * f[i];
+	}
+	
+	if (closedEnds)
+	{
+		v[0] = 0.f;
+		v[numElems - 1] = 0.f;
+		
+		p[0] = 0.f;
+		p[numElems - 1] = 0.f;
+	}
+#endif
+	
+	const float vRetain = std::pow(vRetainPerSecond, dt);
+	const float pRetain = std::pow(pRetainPerSecond, dt);
+	
+	int begin = 0;
+	
+#if AUDIO_USE_SSE && __AVX__
+	__m256 _mm_dt = _mm256_set1_ps(dt);
+	__m256 _mm_pRetain = _mm256_set1_ps(pRetain);
+	__m256 _mm_vRetain = _mm256_set1_ps(vRetain);
+	__m256 _mm_dMin = _mm256_set1_ps(-MAX_IMPULSE_PER_SECOND * dt);
+	__m256 _mm_dMax = _mm256_set1_ps(+MAX_IMPULSE_PER_SECOND * dt);
+	
+	__m256 * __restrict _mm_p = (__m256*)p;
+	__m256 * __restrict _mm_v = (__m256*)v;
+	__m256 * __restrict _mm_f = (__m256*)f;
+	__m256 * __restrict _mm_d = (__m256*)d;
+	
+	const int numElems8 = numElems / 8;
+	begin = numElems8 * 8;
+	
+	for (int i = 0; i < numElems8; ++i)
+	{
+		const __m256 _mm_d_clamped = _mm256_max_ps(_mm256_min_ps(_mm_d[i], _mm_dMax), _mm_dMin);
+		
+		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+		_mm_v[i] = _mm_v[i] * _mm_vRetain;
+		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
+	}
+#elif AUDIO_USE_SSE
+	__m128 _mm_dt = _mm_set1_ps(dt);
+	__m128 _mm_pRetain = _mm_set1_ps(pRetain);
+	__m128 _mm_vRetain = _mm_set1_ps(vRetain);
+	__m128 _mm_dMin = _mm_set1_ps(-MAX_IMPULSE_PER_SECOND * dt);
+	__m128 _mm_dMax = _mm_set1_ps(+MAX_IMPULSE_PER_SECOND * dt);
+	
+	__m128 * __restrict _mm_p = (__m128*)p;
+	__m128 * __restrict _mm_v = (__m128*)v;
+	__m128 * __restrict _mm_f = (__m128*)f;
+	__m128 * __restrict _mm_d = (__m128*)d;
+	
+	const int numElems4 = numElems / 4;
+	begin = numElems4 * 4;
+	
+	for (int i = 0; i < numElems4; ++i)
+	{
+		const __m128 _mm_d_clamped = _mm_max_ps(_mm_min_ps(_mm_d[i], _mm_dMax), _mm_dMin);
+		
+		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+		_mm_v[i] = _mm_v[i] * _mm_vRetain;
+		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
+	}
+#endif
+
+	const float dMin = -MAX_IMPULSE_PER_SECOND * dt;
+	const float dMax = +MAX_IMPULSE_PER_SECOND * dt;
+	
+	for (int i = begin; i < numElems; ++i)
+	{
+		const float d_clamped = std::max(std::min(d[i], dMax), dMin);
+		
+		p[i] += v[i] * dt * f[i] + d_clamped;
+		
+		p[i] *= pRetain;
+		v[i] *= vRetain;
+		d[i] -= d_clamped;
+	}
+}
+
+float Wavefield1Df::sample(const float x) const
+{
+	if (numElems == 0)
+	{
+		return 0.f;
+	}
+	else
+	{
+		const int x1 = int(x);
+		const int x2 = x1 + 1;
+		const float tx2 = x - x1;
+		const float tx1 = 1.f - tx2;
+		
+		const int x1Clamped = x1 >= numElems ? x1 - numElems : x1;
+		const int x2Clamped = x2 >= numElems ? x2 - numElems : x2;
+		
+		const float v0 = p[x1Clamped];
+		const float v1 = p[x2Clamped];
+		const float v = v0 * tx1 + v1 * tx2;
+		
+		return v;
+	}
+}
+
+#if AUDIO_USE_SSE
+
+void * Wavefield1Df::operator new(size_t size)
+{
+	return _mm_malloc(size, 32);
+}
+
+void Wavefield1Df::operator delete(void * mem)
+{
+	_mm_free(mem);
+}
+
+#endif
+
+//
+
 const int Wavefield2D::kMaxElems;
 
 Wavefield2D::Wavefield2D()
@@ -324,7 +605,7 @@ Wavefield2D::Wavefield2D()
 
 int Wavefield2D::roundNumElems(const int numElems)
 {
-	return std::min((numElems + 3) & (~3), kMaxElems);
+	return std::min(numElems, kMaxElems);
 }
 
 void Wavefield2D::init(const int _numElems)
@@ -454,12 +735,17 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	const double vRetain = std::pow(vRetainPerSecond, dt);
 	const double pRetain = std::pow(pRetainPerSecond, dt);
 	
+	int begin = 0;
+	
 #if AUDIO_USE_SSE && __AVX__
 	__m256d _mm_dt = _mm256_set1_pd(dt);
 	__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
 	__m256d _mm_vRetain = _mm256_set1_pd(vRetain);
 	__m256d _mm_dMin = _mm256_set1_pd(-MAX_IMPULSE_PER_SECOND * dt);
 	__m256d _mm_dMax = _mm256_set1_pd(+MAX_IMPULSE_PER_SECOND * dt);
+	
+	const int numElems4 = numElems / 4;
+	begin = numElems4 * 4;
 	
 	for (int x = 0; x < numElems; ++x)
 	{
@@ -468,7 +754,7 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 		__m256d * __restrict _mm_f = (__m256d*)f[x];
 		__m256d * __restrict _mm_d = (__m256d*)d[x];
 		
-		for (int i = 0; i < numElems/4; ++i)
+		for (int i = 0; i < numElems4; ++i)
 		{
 			const __m256d _mm_d_clamped = _mm256_max_pd(_mm256_min_pd(_mm_d[i], _mm_dMax), _mm_dMin);
 			
@@ -484,6 +770,9 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	__m128d _mm_dMin = _mm_set1_pd(-MAX_IMPULSE_PER_SECOND * dt);
 	__m128d _mm_dMax = _mm_set1_pd(+MAX_IMPULSE_PER_SECOND * dt);
 	
+	const int numElems2 = numElems / 2;
+	begin = numElems2 * 2;
+	
 	for (int x = 0; x < numElems; ++x)
 	{
 		__m128d * __restrict _mm_p = (__m128d*)p[x];
@@ -491,7 +780,7 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 		__m128d * __restrict _mm_f = (__m128d*)f[x];
 		__m128d * __restrict _mm_d = (__m128d*)d[x];
 		
-		for (int i = 0; i < numElems/2; ++i)
+		for (int i = 0; i < numElems2; ++i)
 		{
 			const __m128d _mm_d_clamped = _mm_max_pd(_mm_min_pd(_mm_d[i], _mm_dMax), _mm_dMin);
 			
@@ -500,13 +789,14 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 			_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 		}
 	}
-#else
+#endif
+
 	const double dMin = -MAX_IMPULSE_PER_SECOND * dt;
 	const double dMax = +MAX_IMPULSE_PER_SECOND * dt;
 	
 	for (int x = 0; x < numElems; ++x)
 	{
-		for (int y = 0; y < numElems; ++y)
+		for (int y = begin; y < numElems; ++y)
 		{
 			const double d_clamped = std::max(fmin(d[x][y], dMax), dMin);
 			
@@ -515,7 +805,6 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 			d[x][y] = d[x][y] - d_clamped;
 		}
 	}
-#endif
 }
 
 void Wavefield2D::randomize()
@@ -642,6 +931,356 @@ void * Wavefield2D::operator new(size_t size)
 }
 
 void Wavefield2D::operator delete(void * mem)
+{
+	_mm_free(mem);
+}
+
+#endif
+
+//
+
+const int Wavefield2Df::kMaxElems;
+
+Wavefield2Df::Wavefield2Df()
+	: numElems(0)
+	, rng()
+{
+	init(32);
+}
+
+int Wavefield2Df::roundNumElems(const int numElems)
+{
+	return std::min(numElems, kMaxElems);
+}
+
+void Wavefield2Df::init(const int _numElems)
+{
+	numElems = roundNumElems(_numElems);
+	
+	memset(p, 0, sizeof(p));
+	memset(v, 0, sizeof(v));
+	
+	for (int x = 0; x < numElems; ++x)
+		for (int y = 0; y < numElems; ++y)
+			f[x][y] = 1.f;
+	
+	memset(d, 0, sizeof(d));
+}
+
+void Wavefield2Df::shut()
+{
+}
+
+void Wavefield2Df::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
+{
+	SCOPED_FLUSH_DENORMALS;
+	
+	tickForces(dt * 1000.0, c / 1000.0, closedEnds);
+	
+	tickVelocity(dt, vRetainPerSecond, pRetainPerSecond);
+}
+
+void Wavefield2Df::tickForces(const float dt, const float c, const bool closedEnds)
+{
+	const float cTimesDt = c * dt;
+	
+	const int sx = numElems;
+	const int sy = numElems;
+	
+	for (int x = 0; x < sx; ++x)
+	{
+		int x0, x1, x2;
+		
+		if (closedEnds)
+		{
+			x0 = x > 0      ? x - 1 : 0;
+			x1 = x;
+			x2 = x < sx - 1 ? x + 1 : sx - 1;
+		}
+		else
+		{
+			x0 = x == 0 ? sx - 1 : x - 1;
+			x1 = x;
+			x2 = x == sx - 1 ? 0 : x + 1;
+		}
+		
+		for (int y = 0; y < sy; ++y)
+		{
+			const float pMid = p[x][y];
+			
+			int y0, y1, y2;
+			
+			if (closedEnds)
+			{
+				y0 = y > 0      ? y - 1 : 0;
+				y1 = y;
+				y2 = y < sy - 1 ? y + 1 : sy - 1;
+			}
+			else
+			{
+				y0 = y == 0 ? sy - 1 : y - 1;
+				y1 = y;
+				y2 = y == sy - 1 ? 0 : y + 1;
+			}
+			
+			float pt = 0.f;
+			
+		#if 0
+			pt += p[x0][y0];
+			pt += p[x1][y0];
+			pt += p[x2][y0];
+			pt += p[x0][y1];
+			pt += p[x2][y1];
+			pt += p[x0][y2];
+			pt += p[x1][y2];
+			pt += p[x2][y2];
+			
+			const float d = pt - pMid * 8.0;
+		#elif 0
+			pt += p[x0][y0];
+			pt += p[x2][y0];
+			pt += p[x0][y2];
+			pt += p[x2][y2];
+			
+			//const float d = pt - pMid * 4.f;
+			const float d = pt - pMid * 16.f;
+		#else
+			pt += p[x0][y1];
+			pt += p[x1][y0];
+			pt += p[x1][y2];
+			pt += p[x2][y1];
+			
+			const float d = pt - pMid * 4.f;
+		#endif
+			
+			const float a = d * cTimesDt;
+			
+			v[x][y] += a * f[x][y];
+		}
+	}
+	
+	if (closedEnds)
+	{
+		for (int x = 0; x < numElems; ++x)
+		{
+			v[x][0] = 0.f;
+			v[x][numElems - 1] = 0.f;
+		}
+		
+		for (int y = 0; y < numElems; ++y)
+		{
+			v[0][y] = 0.f;
+			v[numElems - 1][y] = 0.f;
+		}
+	}
+}
+
+void Wavefield2Df::tickVelocity(const float dt, const float vRetainPerSecond, const float pRetainPerSecond)
+{
+	const float vRetain = std::pow(vRetainPerSecond, dt);
+	const float pRetain = std::pow(pRetainPerSecond, dt);
+	
+	int begin = 0;
+	
+#if AUDIO_USE_SSE && __AVX__
+	__m256 _mm_dt = _mm256_set1_ps(dt);
+	__m256 _mm_pRetain = _mm256_set1_ps(pRetain);
+	__m256 _mm_vRetain = _mm256_set1_ps(vRetain);
+	__m256 _mm_dMin = _mm256_set1_ps(-MAX_IMPULSE_PER_SECOND * dt);
+	__m256 _mm_dMax = _mm256_set1_ps(+MAX_IMPULSE_PER_SECOND * dt);
+	
+	const int numElems8 = numElems / 8;
+	begin = numElems8 * 8;
+	
+	for (int x = 0; x < numElems; ++x)
+	{
+		__m256 * __restrict _mm_p = (__m256*)p[x];
+		__m256 * __restrict _mm_v = (__m256*)v[x];
+		__m256 * __restrict _mm_f = (__m256*)f[x];
+		__m256 * __restrict _mm_d = (__m256*)d[x];
+		
+		for (int i = 0; i < numElems8; ++i)
+		{
+			const __m256 _mm_d_clamped = _mm256_max_ps(_mm256_min_ps(_mm_d[i], _mm_dMax), _mm_dMin);
+			
+			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+			_mm_v[i] = _mm_v[i] * _mm_vRetain;
+			_mm_d[i] = _mm_d[i] - _mm_d_clamped;
+		}
+	}
+#elif AUDIO_USE_SSE
+	__m128d _mm_dt = _mm_set1_pd(dt);
+	__m128d _mm_pRetain = _mm_set1_pd(pRetain);
+	__m128d _mm_vRetain = _mm_set1_pd(vRetain);
+	__m128d _mm_dMin = _mm_set1_pd(-MAX_IMPULSE_PER_SECOND * dt);
+	__m128d _mm_dMax = _mm_set1_pd(+MAX_IMPULSE_PER_SECOND * dt);
+	
+	const int numElems4 = numElems / 4;
+	begin = numElems4 * 4;
+	
+	for (int x = 0; x < numElems; ++x)
+	{
+		__m128d * __restrict _mm_p = (__m128d*)p[x];
+		__m128d * __restrict _mm_v = (__m128d*)v[x];
+		__m128d * __restrict _mm_f = (__m128d*)f[x];
+		__m128d * __restrict _mm_d = (__m128d*)d[x];
+		
+		for (int i = 0; i < numElems4; ++i)
+		{
+			const __m128d _mm_d_clamped = _mm_max_pd(_mm_min_pd(_mm_d[i], _mm_dMax), _mm_dMin);
+			
+			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+			_mm_v[i] = _mm_v[i] * _mm_vRetain;
+			_mm_d[i] = _mm_d[i] - _mm_d_clamped;
+		}
+	}
+#endif
+
+	const float dMin = -MAX_IMPULSE_PER_SECOND * dt;
+	const float dMax = +MAX_IMPULSE_PER_SECOND * dt;
+	
+	for (int x = 0; x < numElems; ++x)
+	{
+		float * __restrict pPtr = p[x];
+		float * __restrict vPtr = v[x];
+		float * __restrict fPtr = f[x];
+		float * __restrict dPtr = d[x];
+		
+		for (int y = begin; y < numElems; ++y)
+		{
+			const float d_clamped = std::max(fmin(dPtr[y], dMax), dMin);
+			
+			pPtr[y] = pPtr[y] * pRetain + vPtr[y] * dt * fPtr[y] + d_clamped;
+			vPtr[y] = vPtr[y] * vRetain;
+			dPtr[y] = dPtr[y] - d_clamped;
+		}
+	}
+}
+
+void Wavefield2Df::randomize()
+{
+	const float xRatio = rng.nextd(0.f, 1.f / 10.f);
+	const float yRatio = rng.nextd(0.f, 1.f / 10.f);
+	const float randomFactor = rng.nextf(0.0, 1.f);
+	//const float cosFactor = rng.nextf(0.0, 1.f);
+	const float cosFactor = 0.f;
+	const float perlinFactor = rng.nextd(0.f, 1.f);
+	
+	for (int x = 0; x < numElems; ++x)
+	{
+		for (int y = 0; y < numElems; ++y)
+		{
+			f[x][y] = 1.f;
+			
+			f[x][y] *= lerp<float>(1.f, rng.nextd(0.f, 1.f), randomFactor);
+			f[x][y] *= lerp<float>(1.f, (std::cos(x * xRatio + y * yRatio) + 1.f) / 2.f, cosFactor);
+			//f[x][y] = 1.f - std::pow(f[x][y], 2.f);
+			
+			//f[x][y] = 1.f - std::pow(random(0.f, 1.f), 2.f) * (std::cos(x / 4.32) + 1.0)/2.f * (std::cos(y / 3.21f) + 1.f)/2.f;
+			f[x][y] *= lerp<float>(1.f, scaled_octave_noise_2d(16, .4f, 1.f / 20.f, 0.f, 1.f, x, y), perlinFactor);
+		}
+	}
+}
+
+void Wavefield2Df::doGaussianImpact(const int _x, const int _y, const int _radius, const float strength)
+{
+	if (_x - _radius < 0 ||
+		_y - _radius < 0 ||
+		_x + _radius >= numElems ||
+		_y + _radius >= numElems)
+	{
+		return;
+	}
+	
+	const int r = _radius;
+	const int spotX = _x;
+	const int spotY = _y;
+	const float s = strength;
+
+	for (int i = -r; i <= +r; ++i)
+	{
+		for (int j = -r; j <= +r; ++j)
+		{
+			const int x = spotX + i;
+			const int y = spotY + j;
+			
+			float value = 1.f;
+			value *= (1.f + std::cos(i / float(r) * M_PI)) / 2.f;
+			value *= (1.f + std::cos(j / float(r) * M_PI)) / 2.f;
+			
+			//value = std::pow(value, 2.0);
+			
+			if (x >= 0 && x < numElems)
+			{
+				if (y >= 0 && y < numElems)
+				{
+					d[x][y] += value * s;
+				}
+			}
+		}
+	}
+}
+
+float Wavefield2Df::sample(const float x, const float y) const
+{
+	if (numElems == 0)
+	{
+		return 0.f;
+	}
+	else
+	{
+		const int x1 = int(x);
+		const int y1 = int(y);
+		const int x2 = (x1 + 1) % numElems;
+		const int y2 = (y1 + 1) % numElems;
+		const float tx2 = x - x1;
+		const float ty2 = y - y1;
+		const float tx1 = 1.f - tx2;
+		const float ty1 = 1.f - ty2;
+		
+		const float v00 = p[x1][y1];
+		const float v10 = p[x2][y1];
+		const float v01 = p[x1][y2];
+		const float v11 = p[x2][y2];
+		const float v0 = v00 * tx1 + v10 * tx2;
+		const float v1 = v01 * tx1 + v11 * tx2;
+		const float v = v0 * ty1 + v1 * ty2;
+		
+		return v;
+	}
+}
+
+void Wavefield2Df::copyFrom(const Wavefield2Df & other, const bool copyP, const bool copyV, const bool copyF)
+{
+	numElems = other.numElems;
+	
+	if (copyP)
+	{
+		for (int x = 0; x < numElems; ++x)
+			memcpy(p[x], other.p[x], numElems * sizeof(float));
+	}
+	
+	if (copyV)
+	{
+		for (int x = 0; x < numElems; ++x)
+			memcpy(v[x], other.v[x], numElems * sizeof(float));
+	}
+	
+	if (copyF)
+	{
+		for (int x = 0; x < numElems; ++x)
+			memcpy(f[x], other.f[x], numElems * sizeof(float));
+	}
+}
+
+#if AUDIO_USE_SSE
+
+void * Wavefield2Df::operator new(size_t size)
+{
+	return _mm_malloc(size, 32);
+}
+
+void Wavefield2Df::operator delete(void * mem)
 {
 	_mm_free(mem);
 }
