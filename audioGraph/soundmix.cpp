@@ -1337,13 +1337,44 @@ void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int
 		for (auto & voice : voices)
 			voiceArray[voiceIndex++] = &voice;
 		
-		AudioVoiceManager::generateAudio(
-			voiceArray, numVoices,
-			samples, numSamples, numChannels,
-			true, limiterPeak,
-			true,
-			1.f,
-			outputMode, true);
+		const bool interleaveOptimize = (outputMode == kOutputMode_Stereo && numVoices >= 8);
+		
+		if (interleaveOptimize)
+		{
+			// generate channel data to planar arrays
+			
+			ALIGN16 float planarSamples[AUDIO_UPDATE_SIZE * 2];
+			
+			AudioVoiceManager::generateAudio(
+				voiceArray, numVoices,
+				planarSamples, numSamples, numChannels,
+				true, limiterPeak,
+				true,
+				1.f,
+				outputMode, false);
+			
+			// interleave channels
+			
+			const float * __restrict srcL = planarSamples;
+			const float * __restrict srcR = planarSamples + numSamples;
+			      float * __restrict dst = samples;
+			
+			for (int i = 0; i < numSamples; ++i)
+			{
+				dst[i * 2 + 0] = srcL[i];
+				dst[i * 2 + 1] = srcR[i];
+			}
+		}
+		else
+		{
+			AudioVoiceManager::generateAudio(
+				voiceArray, numVoices,
+				samples, numSamples, numChannels,
+				true, limiterPeak,
+				true,
+				1.f,
+				outputMode, true);
+		}
 	}
 	audioMutex.unlock();
 }
