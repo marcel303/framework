@@ -384,12 +384,12 @@ template <> inline float32x4_t _mm_load<float32x4_t>(const float v)
 
 inline float32x4_t _mm_min(float32x4_t a, float32x4_t b)
 {
-	return vminq_f32(a[i], b[i]);
+	return vminq_f32(a, b);
 }
 
 inline float32x4_t _mm_max(float32x4_t a, float32x4_t b)
 {
-	return vmaxq_f32(a[i], b[i]);
+	return vmaxq_f32(a, b);
 }
 #endif
 
@@ -1157,25 +1157,51 @@ void Wavefield2Df::tickVelocity(const float dt, const float vRetainPerSecond, co
 		}
 	}
 #elif AUDIO_USE_SSE
-	__m128d _mm_dt = _mm_set1_pd(dt);
-	__m128d _mm_pRetain = _mm_set1_pd(pRetain);
-	__m128d _mm_vRetain = _mm_set1_pd(vRetain);
-	__m128d _mm_dMin = _mm_set1_pd(-MAX_IMPULSE_PER_SECOND * dt);
-	__m128d _mm_dMax = _mm_set1_pd(+MAX_IMPULSE_PER_SECOND * dt);
+	__m128 _mm_dt = _mm_set1_ps(dt);
+	__m128 _mm_pRetain = _mm_set1_ps(pRetain);
+	__m128 _mm_vRetain = _mm_set1_ps(vRetain);
+	__m128 _mm_dMin = _mm_set1_ps(-MAX_IMPULSE_PER_SECOND * dt);
+	__m128 _mm_dMax = _mm_set1_ps(+MAX_IMPULSE_PER_SECOND * dt);
 	
 	const int numElems4 = numElems / 4;
 	begin = numElems4 * 4;
 	
 	for (int x = 0; x < numElems; ++x)
 	{
-		__m128d * __restrict _mm_p = (__m128d*)p[x];
-		__m128d * __restrict _mm_v = (__m128d*)v[x];
-		__m128d * __restrict _mm_f = (__m128d*)f[x];
-		__m128d * __restrict _mm_d = (__m128d*)d[x];
+		__m128 * __restrict _mm_p = (__m128*)p[x];
+		__m128 * __restrict _mm_v = (__m128*)v[x];
+		__m128 * __restrict _mm_f = (__m128*)f[x];
+		__m128 * __restrict _mm_d = (__m128*)d[x];
 		
 		for (int i = 0; i < numElems4; ++i)
 		{
-			const __m128d _mm_d_clamped = _mm_max_pd(_mm_min_pd(_mm_d[i], _mm_dMax), _mm_dMin);
+			const __m128 _mm_d_clamped = _mm_max_ps(_mm_min_ps(_mm_d[i], _mm_dMax), _mm_dMin);
+			
+			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+			_mm_v[i] = _mm_v[i] * _mm_vRetain;
+			_mm_d[i] = _mm_d[i] - _mm_d_clamped;
+		}
+	}
+#elif AUDIO_USE_NEON
+	float32x4_t _mm_dt = _mm_load<float32x4_t>(dt);
+	float32x4_t _mm_pRetain = _mm_load<float32x4_t>(pRetain);
+	float32x4_t _mm_vRetain = _mm_load<float32x4_t>(vRetain);
+	float32x4_t _mm_dMin = _mm_load<float32x4_t>(-MAX_IMPULSE_PER_SECOND * dt);
+	float32x4_t _mm_dMax = _mm_load<float32x4_t>(+MAX_IMPULSE_PER_SECOND * dt);
+	
+	const int numElems4 = numElems / 4;
+	begin = numElems4 * 4;
+	
+	for (int x = 0; x < numElems; ++x)
+	{
+		float32x4_t * __restrict _mm_p = (float32x4_t*)p[x];
+		float32x4_t * __restrict _mm_v = (float32x4_t*)v[x];
+		float32x4_t * __restrict _mm_f = (float32x4_t*)f[x];
+		float32x4_t * __restrict _mm_d = (float32x4_t*)d[x];
+		
+		for (int i = 0; i < numElems4; ++i)
+		{
+			const float32x4_t _mm_d_clamped = _mm_max(_mm_min(_mm_d[i], _mm_dMax), _mm_dMin);
 			
 			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
 			_mm_v[i] = _mm_v[i] * _mm_vRetain;
