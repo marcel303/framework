@@ -31,8 +31,8 @@
 #include "framework.h"
 #include "soundmix.h"
 
-const int GFX_SX = 1024;
-const int GFX_SY = 768;
+const int GFX_SX = 640;
+const int GFX_SY = 480;
 
 #define CHANNEL_COUNT 16
 
@@ -66,6 +66,7 @@ int main(int argc, char * argv[])
 		AudioGraphInstance * instance2 = audioGraphMgr.createInstance("sweetStuff9.xml");
 		
 		Window window("Window", 640, 480, true);
+		window.setPosition(10, 50);
 		
 		setFont("calibri.ttf");
 		pushFontMode(FONT_SDF);
