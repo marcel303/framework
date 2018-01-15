@@ -52,6 +52,10 @@ extern const int GFX_SY;
 	#include <xmmintrin.h>
 #endif
 
+#if AUDIO_USE_NEON
+	#include <arm_neon.h>
+#endif
+
 //
 
 template <typename T>
@@ -278,7 +282,7 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	
 	for (int i = begin; i < numElems; ++i)
 	{
-		const double d_clamped = std::max(std::min(d[i], dMax), dMin);
+		const double d_clamped = fmax(fmin(d[i], dMax), dMin);
 		
 		p[i] += v[i] * dt * f[i] + d_clamped;
 		
@@ -354,19 +358,38 @@ void Wavefield1Df::init(const int _numElems)
 	memset(d, 0, numElems * sizeof(d[0]));
 }
 
-#if AUDIO_USE_SSE
+#if AUDIO_USE_SSE || AUDIO_USE_NEON
 
 template <typename T> inline T _mm_load(const float v);
 
+#if AUDIO_USE_SSE
 template <> inline __m128 _mm_load<__m128>(const float v)
 {
 	return _mm_set1_ps(v);
 }
+#endif
 
-#if __AVX__
+#if AUDIO_USE_SSE && __AVX__
 template <> inline __m256 _mm_load<__m256>(const float v)
 {
 	return _mm256_set1_ps(v);
+}
+#endif
+
+#if AUDIO_USE_NEON
+template <> inline float32x4_t _mm_load<float32x4_t>(const float v)
+{
+	return float32x4_t { v, v, v, v };
+}
+
+inline float32x4_t _mm_min(float32x4_t a, float32x4_t b)
+{
+	return vminq_f32(a[i], b[i]);
+}
+
+inline float32x4_t _mm_max(float32x4_t a, float32x4_t b)
+{
+	return vmaxq_f32(a[i], b[i]);
 }
 #endif
 
@@ -444,6 +467,8 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 	tickForces<__m256>(p, c / 1000.0, v, f, dt * 1000.0, numElems, closedEnds);
 #elif AUDIO_USE_SSE
 	tickForces<__m128>(p, c / 1000.0, v, f, dt * 1000.0, numElems, closedEnds);
+#elif AUDIO_USE_NEON
+	tickForces<float32x4_t>(p, c / 1000.0, v, f, dt * 1000.0, numElems, closedEnds);
 #else
 	const float cTimesDt = c * dt;
 	
@@ -537,6 +562,29 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 		_mm_v[i] = _mm_v[i] * _mm_vRetain;
 		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 	}
+#elif AUDIO_USE_NEON
+	float32x4_t _mm_dt = _mm_load<float32x4_t>(dt);
+	float32x4_t _mm_pRetain = _mm_load<float32x4_t>(pRetain);
+	float32x4_t _mm_vRetain = _mm_load<float32x4_t>(vRetain);
+	float32x4_t _mm_dMin = _mm_load<float32x4_t>(-MAX_IMPULSE_PER_SECOND * dt);
+	float32x4_t _mm_dMax = _mm_load<float32x4_t>(+MAX_IMPULSE_PER_SECOND * dt);
+	
+	float32x4_t * __restrict _mm_p = (float32x4_t*)p;
+	float32x4_t * __restrict _mm_v = (float32x4_t*)v;
+	float32x4_t * __restrict _mm_f = (float32x4_t*)f;
+	float32x4_t * __restrict _mm_d = (float32x4_t*)d;
+	
+	const int numElems4 = numElems / 4;
+	begin = numElems4 * 4;
+	
+	for (int i = 0; i < numElems4; ++i)
+	{
+		const float32x4_t _mm_d_clamped = _mm_max(_mm_min(_mm_d[i], _mm_dMax), _mm_dMin);
+		
+		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+		_mm_v[i] = _mm_v[i] * _mm_vRetain;
+		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
+	}
 #endif
 
 	const float dMin = -MAX_IMPULSE_PER_SECOND * dt;
@@ -544,7 +592,7 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 	
 	for (int i = begin; i < numElems; ++i)
 	{
-		const float d_clamped = std::max(std::min(d[i], dMax), dMin);
+		const float d_clamped = fmaxf(fminf(d[i], dMax), dMin);
 		
 		p[i] += v[i] * dt * f[i] + d_clamped;
 		
@@ -798,7 +846,7 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	{
 		for (int y = begin; y < numElems; ++y)
 		{
-			const double d_clamped = std::max(fmin(d[x][y], dMax), dMin);
+			const double d_clamped = fmax(fmin(d[x][y], dMax), dMin);
 			
 			p[x][y] = p[x][y] * pRetain + v[x][y] * dt * f[x][y] + d_clamped;
 			v[x][y] = v[x][y] * vRetain;
@@ -1148,7 +1196,7 @@ void Wavefield2Df::tickVelocity(const float dt, const float vRetainPerSecond, co
 		
 		for (int y = begin; y < numElems; ++y)
 		{
-			const float d_clamped = std::max(fmin(dPtr[y], dMax), dMin);
+			const float d_clamped = fmaxf(fminf(dPtr[y], dMax), dMin);
 			
 			pPtr[y] = pPtr[y] * pRetain + vPtr[y] * dt * fPtr[y] + d_clamped;
 			vPtr[y] = vPtr[y] * vRetain;

@@ -51,6 +51,14 @@
 	#endif
 #endif
 
+#ifndef AUDIO_USE_NEON
+	#if defined(__arm__) || defined(__aarch64__)
+		#define AUDIO_USE_NEON 1
+	#else
+		#define AUDIO_USE_NEON 0
+	#endif
+#endif
+
 #if defined(MACOS) || defined(LINUX)
 	#define ALIGN16 __attribute__((aligned(16)))
 	#define ALIGN32 __attribute__((aligned(32)))
