@@ -29,6 +29,7 @@
 #include "Debugging.h"
 #include "Log.h"
 #include <stdio.h>
+#include <string.h>
 
 AudioSourceVorbis::AudioSourceVorbis()
 	: filename()
