@@ -64,6 +64,18 @@ inline T lerp(T a, T b, T t)
 	return a * (1.0 - t) + b * t;
 }
 
+inline void toSampleIndex(const float v, const int arraySize, int & s, float & fraction)
+{
+	const float vFloor = floorf(v);
+	fraction = v - vFloor;
+	
+	const int a = int(vFloor);
+	const int b = a < 0 ? a + arraySize : a;
+	const int c = b % arraySize;
+	
+	s = c;
+}
+
 //
 
 const int Wavefield1D::kMaxElems;
@@ -238,7 +250,6 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	
 	__m256d * __restrict _mm_p = (__m256d*)p;
 	__m256d * __restrict _mm_v = (__m256d*)v;
-	__m256d * __restrict _mm_f = (__m256d*)f;
 	__m256d * __restrict _mm_d = (__m256d*)d;
 	
 	const int numElems4 = numElems / 4;
@@ -248,7 +259,7 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	{
 		const __m256d _mm_d_clamped = _mm256_max_pd(_mm256_min_pd(_mm_d[i], _mm_dMax), _mm_dMin);
 		
-		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt + _mm_d_clamped;
 		_mm_v[i] = _mm_v[i] * _mm_vRetain;
 		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 	}
@@ -261,7 +272,6 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	
 	__m128d * __restrict _mm_p = (__m128d*)p;
 	__m128d * __restrict _mm_v = (__m128d*)v;
-	__m128d * __restrict _mm_f = (__m128d*)f;
 	__m128d * __restrict _mm_d = (__m128d*)d;
 	
 	const int numElems2 = numElems / 2;
@@ -271,7 +281,7 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	{
 		const __m128d _mm_d_clamped = _mm_max_pd(_mm_min_pd(_mm_d[i], _mm_dMax), _mm_dMin);
 		
-		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt + _mm_d_clamped;
 		_mm_v[i] = _mm_v[i] * _mm_vRetain;
 		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 	}
@@ -284,7 +294,7 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	{
 		const double d_clamped = fmax(fmin(d[i], dMax), dMin);
 		
-		p[i] += v[i] * dt * f[i] + d_clamped;
+		p[i] += v[i] * dt + d_clamped;
 		
 		p[i] *= pRetain;
 		v[i] *= vRetain;
@@ -300,13 +310,13 @@ float Wavefield1D::sample(const float x) const
 	}
 	else
 	{
-		const int x1 = int(x);
-		const int x2 = x1 + 1;
-		const float tx2 = x - x1;
-		const float tx1 = 1.f - tx2;
+		float tx2;
+		int x1Clamped;
 		
-		const int x1Clamped = x1 >= numElems ? x1 - numElems : x1;
-		const int x2Clamped = x2 >= numElems ? x2 - numElems : x2;
+		toSampleIndex(x, numElems, x1Clamped, tx2);
+		
+		const int x2Clamped = x1Clamped + 1 == numElems ? 0 : x1Clamped + 1;
+		const float tx1 = 1.f - tx2;
 		
 		const float v0 = p[x1Clamped];
 		const float v1 = p[x2Clamped];
@@ -333,7 +343,7 @@ void Wavefield1D::doGaussianImpact(const int _x, const int _radius, const double
 		const int x = spotX + i;
 		
 		float value = 1.f;
-		value *= (1.f + std::cos(i / float(r) * M_PI)) / 2.f;
+		value *= (1.f + std::cos(i / float(r + 1.f) * M_PI)) / 2.f;
 		
 		//value = std::pow(value, 2.0);
 		
@@ -553,7 +563,6 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 	
 	__m256 * __restrict _mm_p = (__m256*)p;
 	__m256 * __restrict _mm_v = (__m256*)v;
-	__m256 * __restrict _mm_f = (__m256*)f;
 	__m256 * __restrict _mm_d = (__m256*)d;
 	
 	const int numElems8 = numElems / 8;
@@ -563,7 +572,7 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 	{
 		const __m256 _mm_d_clamped = _mm256_max_ps(_mm256_min_ps(_mm_d[i], _mm_dMax), _mm_dMin);
 		
-		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt + _mm_d_clamped;
 		_mm_v[i] = _mm_v[i] * _mm_vRetain;
 		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 	}
@@ -576,7 +585,6 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 	
 	__m128 * __restrict _mm_p = (__m128*)p;
 	__m128 * __restrict _mm_v = (__m128*)v;
-	__m128 * __restrict _mm_f = (__m128*)f;
 	__m128 * __restrict _mm_d = (__m128*)d;
 	
 	const int numElems4 = numElems / 4;
@@ -586,7 +594,7 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 	{
 		const __m128 _mm_d_clamped = _mm_max_ps(_mm_min_ps(_mm_d[i], _mm_dMax), _mm_dMin);
 		
-		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt + _mm_d_clamped;
 		_mm_v[i] = _mm_v[i] * _mm_vRetain;
 		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 	}
@@ -599,7 +607,6 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 	
 	float32x4_t * __restrict _mm_p = (float32x4_t*)p;
 	float32x4_t * __restrict _mm_v = (float32x4_t*)v;
-	float32x4_t * __restrict _mm_f = (float32x4_t*)f;
 	float32x4_t * __restrict _mm_d = (float32x4_t*)d;
 	
 	const int numElems4 = numElems / 4;
@@ -609,7 +616,7 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 	{
 		const float32x4_t _mm_d_clamped = _mm_max(_mm_min(_mm_d[i], _mm_dMax), _mm_dMin);
 		
-		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+		_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt + _mm_d_clamped;
 		_mm_v[i] = _mm_v[i] * _mm_vRetain;
 		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 	}
@@ -622,7 +629,7 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 	{
 		const float d_clamped = fmaxf(fminf(d[i], dMax), dMin);
 		
-		p[i] += v[i] * dt * f[i] + d_clamped;
+		p[i] += v[i] * dt + d_clamped;
 		
 		p[i] *= pRetain;
 		v[i] *= vRetain;
@@ -638,9 +645,12 @@ float Wavefield1Df::sample(const float x) const
 	}
 	else
 	{
-		const int x1 = int(x);
+		const float xClamped_temp = fmodf(x, numElems);
+		const float xClamped = x < 0.f ? xClamped_temp + numElems : xClamped_temp;
+		
+		const int x1 = int(xClamped);
 		const int x2 = x1 + 1;
-		const float tx2 = x - x1;
+		const float tx2 = xClamped - x1;
 		const float tx1 = 1.f - tx2;
 		
 		const int x1Clamped = x1 >= numElems ? x1 - numElems : x1;
@@ -862,7 +872,7 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 		{
 			const __m256d _mm_d_clamped = _mm256_max_pd(_mm256_min_pd(_mm_d[i], _mm_dMax), _mm_dMin);
 			
-			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt + _mm_d_clamped;
 			_mm_v[i] = _mm_v[i] * _mm_vRetain;
 			_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 		}
@@ -888,7 +898,7 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 		{
 			const __m128d _mm_d_clamped = _mm_max_pd(_mm_min_pd(_mm_d[i], _mm_dMax), _mm_dMin);
 			
-			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt + _mm_d_clamped;
 			_mm_v[i] = _mm_v[i] * _mm_vRetain;
 			_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 		}
@@ -904,7 +914,7 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 		{
 			const double d_clamped = fmax(fmin(d[x][y], dMax), dMin);
 			
-			p[x][y] = p[x][y] * pRetain + v[x][y] * dt * f[x][y] + d_clamped;
+			p[x][y] = p[x][y] * pRetain + v[x][y] * dt + d_clamped;
 			v[x][y] = v[x][y] * vRetain;
 			d[x][y] = d[x][y] - d_clamped;
 		}
@@ -919,6 +929,8 @@ void Wavefield2D::randomize()
 	//const double cosFactor = rng.nextd(0.0, 1.0);
 	const double cosFactor = 0.0;
 	const double perlinFactor = rng.nextd(0.0, 1.0);
+	
+	init(numElems);
 	
 	for (int x = 0; x < numElems; ++x)
 	{
@@ -959,8 +971,8 @@ void Wavefield2D::doGaussianImpact(const int _x, const int _y, const int _radius
 			const int y = spotY + j;
 			
 			double value = 1.0;
-			value *= (1.0 + std::cos(i / double(r) * M_PI)) / 2.0;
-			value *= (1.0 + std::cos(j / double(r) * M_PI)) / 2.0;
+			value *= (1.0 + std::cos(i / double(r + 1) * M_PI)) / 2.0;
+			value *= (1.0 + std::cos(j / double(r + 1) * M_PI)) / 2.0;
 			
 			//value = std::pow(value, 2.0);
 			
@@ -983,12 +995,16 @@ float Wavefield2D::sample(const float x, const float y) const
 	}
 	else
 	{
-		const int x1 = int(x);
-		const int y1 = int(y);
-		const int x2 = (x1 + 1) % numElems;
-		const int y2 = (y1 + 1) % numElems;
-		const float tx2 = x - x1;
-		const float ty2 = y - y1;
+		float tx2;
+		float ty2;
+		int x1;
+		int y1;
+		
+		toSampleIndex(x, numElems, x1, tx2);
+		toSampleIndex(y, numElems, y1, ty2);
+		
+		const int x2 = x1 + 1 == numElems ? 0 : x1 + 1;
+		const int y2 = y1 + 1 == numElems ? 0 : y1 + 1;
 		const float tx1 = 1.f - tx2;
 		const float ty1 = 1.f - ty2;
 		
@@ -1207,7 +1223,7 @@ void Wavefield2Df::tickVelocity(const float dt, const float vRetainPerSecond, co
 		{
 			const __m256 _mm_d_clamped = _mm256_max_ps(_mm256_min_ps(_mm_d[i], _mm_dMax), _mm_dMin);
 			
-			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt + _mm_d_clamped;
 			_mm_v[i] = _mm_v[i] * _mm_vRetain;
 			_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 		}
@@ -1233,7 +1249,7 @@ void Wavefield2Df::tickVelocity(const float dt, const float vRetainPerSecond, co
 		{
 			const __m128 _mm_d_clamped = _mm_max_ps(_mm_min_ps(_mm_d[i], _mm_dMax), _mm_dMin);
 			
-			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt + _mm_d_clamped;
 			_mm_v[i] = _mm_v[i] * _mm_vRetain;
 			_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 		}
@@ -1252,14 +1268,13 @@ void Wavefield2Df::tickVelocity(const float dt, const float vRetainPerSecond, co
 	{
 		float32x4_t * __restrict _mm_p = (float32x4_t*)p[x];
 		float32x4_t * __restrict _mm_v = (float32x4_t*)v[x];
-		float32x4_t * __restrict _mm_f = (float32x4_t*)f[x];
 		float32x4_t * __restrict _mm_d = (float32x4_t*)d[x];
 		
 		for (int i = 0; i < numElems4; ++i)
 		{
 			const float32x4_t _mm_d_clamped = _mm_max(_mm_min(_mm_d[i], _mm_dMax), _mm_dMin);
 			
-			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i] + _mm_d_clamped;
+			_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt + _mm_d_clamped;
 			_mm_v[i] = _mm_v[i] * _mm_vRetain;
 			_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 		}
@@ -1273,14 +1288,13 @@ void Wavefield2Df::tickVelocity(const float dt, const float vRetainPerSecond, co
 	{
 		float * __restrict pPtr = p[x];
 		float * __restrict vPtr = v[x];
-		float * __restrict fPtr = f[x];
 		float * __restrict dPtr = d[x];
 		
 		for (int y = begin; y < numElems; ++y)
 		{
 			const float d_clamped = fmaxf(fminf(dPtr[y], dMax), dMin);
 			
-			pPtr[y] = pPtr[y] * pRetain + vPtr[y] * dt * fPtr[y] + d_clamped;
+			pPtr[y] = pPtr[y] * pRetain + vPtr[y] * dt + d_clamped;
 			vPtr[y] = vPtr[y] * vRetain;
 			dPtr[y] = dPtr[y] - d_clamped;
 		}
