@@ -316,6 +316,34 @@ float Wavefield1D::sample(const float x) const
 	}
 }
 
+void Wavefield1D::doGaussianImpact(const int _x, const int _radius, const double strength)
+{
+	if (_x - _radius < 0 ||
+		_x + _radius >= numElems)
+	{
+		return;
+	}
+	
+	const int r = _radius;
+	const int spotX = _x;
+	const double s = strength;
+
+	for (int i = -r; i <= +r; ++i)
+	{
+		const int x = spotX + i;
+		
+		float value = 1.f;
+		value *= (1.f + std::cos(i / float(r) * M_PI)) / 2.f;
+		
+		//value = std::pow(value, 2.0);
+		
+		if (x >= 0 && x < numElems)
+		{
+			d[x] += value * s;
+		}
+	}
+}
+
 #if AUDIO_USE_SSE
 
 void * Wavefield1D::operator new(size_t size)
@@ -623,6 +651,34 @@ float Wavefield1Df::sample(const float x) const
 		const float v = v0 * tx1 + v1 * tx2;
 		
 		return v;
+	}
+}
+
+void Wavefield1Df::doGaussianImpact(const int _x, const int _radius, const float strength)
+{
+	if (_x - _radius < 0 ||
+		_x + _radius >= numElems)
+	{
+		return;
+	}
+	
+	const int r = _radius;
+	const int spotX = _x;
+	const double s = strength;
+
+	for (int i = -r; i <= +r; ++i)
+	{
+		const int x = spotX + i;
+		
+		float value = 1.f;
+		value *= (1.f + std::cos(i / float(r) * M_PI)) / 2.f;
+		
+		//value = std::pow(value, 2.0);
+		
+		if (x >= 0 && x < numElems)
+		{
+			d[x] += value * s;
+		}
 	}
 }
 
