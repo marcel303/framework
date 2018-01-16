@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "jpegLoader.h"
+#include "MemAlloc.h"
 #include "openglImageCapture.h"
 #include "openglTexture.h"
 #include "StringEx.h"
@@ -81,7 +82,7 @@ void OpenglImageCapture::saveImageSequence(const char * filenameFormat, const bo
 			
 			if (sx > 0 && sy > 0)
 			{
-				void * pixels = _mm_malloc(sx * sy * 4, 256);
+				void * pixels = MemAlloc(sx * sy * 4, 256);
 				
 				glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 				checkErrorGL();
@@ -94,7 +95,7 @@ void OpenglImageCapture::saveImageSequence(const char * filenameFormat, const bo
 					saveIndex++;
 				}
 				
-				_mm_free(pixels);
+				MemFree(pixels);
 			}
 		}
 		glBindTexture(GL_TEXTURE_2D, 0);

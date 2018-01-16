@@ -26,10 +26,10 @@
 */
 
 #include "dotDetector.h"
+#include "MemAlloc.h"
 #include "vfxNodeDotDetector.h"
 #include <algorithm>
 #include <cmath>
-#include <xmmintrin.h>
 
 VFX_ENUM_TYPE(dotDetectorChannel)
 {
@@ -284,8 +284,8 @@ void VfxNodeDotDetector::allocateMask(const int sx, const int sy, const int maxI
 {
 	freeMask();
 	
-	lumi = (uint8_t*)_mm_malloc(sx * sy, 16);
-	mask = (uint8_t*)_mm_malloc(sx * sy, 16);
+	lumi = (uint8_t*)MemAlloc(sx * sy, 16);
+	mask = (uint8_t*)MemAlloc(sx * sy, 16);
 	
 	memset(lumi, 0, sx * sy);
 	memset(mask, 0, sx * sy);
@@ -299,10 +299,10 @@ void VfxNodeDotDetector::allocateMask(const int sx, const int sy, const int maxI
 
 void VfxNodeDotDetector::freeMask()
 {
-	_mm_free(lumi);
+	MemFree(lumi);
 	lumi = nullptr;
 	
-	_mm_free(mask);
+	MemFree(mask);
 	mask = nullptr;
 	
 	maskSx = 0;

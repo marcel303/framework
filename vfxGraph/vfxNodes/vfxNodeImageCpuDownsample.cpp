@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "MemAlloc.h"
 #include "vfxNodeImageCpuDownsample.h"
 #include <algorithm>
 #include <immintrin.h>
@@ -249,7 +250,7 @@ void VfxNodeImageCpuDownsample::allocateImage(const int sx, const int sy, const 
 			//        of connectivity with display node
 			
 			Assert(buffers.data1 == nullptr);
-			buffers.data1 = (uint8_t*)_mm_malloc(pad16(numChannels * sx) * sy , 16);
+			buffers.data1 = (uint8_t*)MemAlloc(pad16(numChannels * sx) * sy , 16);
 		}
 		else
 		{
@@ -262,7 +263,7 @@ void VfxNodeImageCpuDownsample::allocateImage(const int sx, const int sy, const 
 			downsampledSy = std::max(1, downsampledSy / pixelSize);
 			
 			Assert(buffers.data1 == nullptr);
-			buffers.data1 = (uint8_t*)_mm_malloc(pad16(numChannels * downsampledSx) * downsampledSy, 16);
+			buffers.data1 = (uint8_t*)MemAlloc(pad16(numChannels * downsampledSx) * downsampledSy, 16);
 			
 			//
 			
@@ -270,7 +271,7 @@ void VfxNodeImageCpuDownsample::allocateImage(const int sx, const int sy, const 
 			downsampledSy = std::max(1, downsampledSy / pixelSize);
 			
 			Assert(buffers.data2 == nullptr);
-			buffers.data2 = (uint8_t*)_mm_malloc(pad16(numChannels * downsampledSx) * downsampledSy, 16);
+			buffers.data2 = (uint8_t*)MemAlloc(pad16(numChannels * downsampledSx) * downsampledSy, 16);
 		}
 	}
 	else
@@ -279,16 +280,16 @@ void VfxNodeImageCpuDownsample::allocateImage(const int sx, const int sy, const 
 		const int downsampledSy = std::max(1, sy / pixelSize);
 		
 		Assert(buffers.data1 == nullptr);
-		buffers.data1 = (uint8_t*)_mm_malloc(pad16(numChannels * downsampledSx) * downsampledSy, 16);
+		buffers.data1 = (uint8_t*)MemAlloc(pad16(numChannels * downsampledSx) * downsampledSy, 16);
 	}
 }
 
 void VfxNodeImageCpuDownsample::freeImage()
 {
-	_mm_free(buffers.data1);
+	MemFree(buffers.data1);
 	buffers.data1 = nullptr;
 	
-	_mm_free(buffers.data2);
+	MemFree(buffers.data2);
 	buffers.data2 = nullptr;
 	
 	buffers = Buffers();

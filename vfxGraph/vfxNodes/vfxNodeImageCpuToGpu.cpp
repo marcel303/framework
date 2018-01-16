@@ -25,9 +25,9 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "MemAlloc.h"
 #include "vfxNodeImageCpuToGpu.h"
 #include <GL/glew.h>
-#include <xmmintrin.h>
 
 VFX_ENUM_TYPE(imageCpuToGpuChannel)
 {
@@ -130,7 +130,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		{
 			// todo : should we keep this temp buffer allocated ?
 			
-			uint8_t * temp = (uint8_t*)_mm_malloc(image->sx * image->sy * 4, 16);
+			uint8_t * temp = (uint8_t*)MemAlloc(image->sx * image->sy * 4, 16);
 			
 			if (image->numChannels == 3)
 			{
@@ -162,7 +162,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 			
 			texture.upload(temp, 16, image->sx, GL_RGBA, GL_UNSIGNED_BYTE);
 			
-			_mm_free(temp);
+			MemFree(temp);
 			temp = nullptr;
 		}
 	}
@@ -184,7 +184,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		{
 			// todo : RGB image upload is a slow path on my Intel Iris. convert to RGBA first ?
 			
-			uint8_t * temp = (uint8_t*)_mm_malloc(image->sx * image->sy * 3, 16);
+			uint8_t * temp = (uint8_t*)MemAlloc(image->sx * image->sy * 3, 16);
 			
 			VfxImageCpu::interleave3(
 				&image->channel[0],
@@ -194,7 +194,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 			
 			texture.upload(temp, 16, image->sx, GL_RGB, GL_UNSIGNED_BYTE);
 			
-			_mm_free(temp);
+			MemFree(temp);
 			temp = nullptr;
 		}
 	}
@@ -217,13 +217,13 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		else
 			source = &image->channel[3];
 		
-		uint8_t * temp = (uint8_t*)_mm_malloc(image->sx * image->sy * 1, 16);
+		uint8_t * temp = (uint8_t*)MemAlloc(image->sx * image->sy * 1, 16);
 		
 		VfxImageCpu::interleave1(source, temp, 0, image->sx, image->sy);
 		
 		texture.upload(temp, 16, image->sx, GL_RED, GL_UNSIGNED_BYTE);
 		
-		_mm_free(temp);
+		MemFree(temp);
 		temp = nullptr;
 	}
 	else

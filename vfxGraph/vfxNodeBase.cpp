@@ -26,12 +26,12 @@
 */
 
 #include "framework.h"
+#include "MemAlloc.h"
 #include "StringEx.h"
 #include "Timer.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
 #include <string.h>
-#include <xmmintrin.h>
 
 //
 
@@ -284,7 +284,7 @@ void VfxImageCpuData::alloc(const int sx, const int sy, const int numChannels, c
 
 	if (sx > 0 && sy > 0 && numChannels > 0)
 	{
-		data = (uint8_t*)_mm_malloc(sx * sy * numChannels, 16);
+		data = (uint8_t*)MemAlloc(sx * sy * numChannels, 16);
 		
 		// todo : non interleaved case ?
 		
@@ -310,7 +310,7 @@ void VfxImageCpuData::allocOnSizeChange(const VfxImageCpu & reference)
 
 void VfxImageCpuData::free()
 {
-	_mm_free(data);
+	MemFree(data);
 	data = nullptr;
 
 	image = VfxImageCpu();
