@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if ENABLE_SYPHON
+
 #import "framework.h"
 #import "vfxGraph.h"
 #import "vfxNodeDrawSyphon.h"
@@ -139,3 +141,5 @@ void VfxNodeDrawSyphon::draw() const
 	#endif
 	}
 }
+
+#endif

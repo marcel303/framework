@@ -126,11 +126,11 @@ static float evalMathOp(const float a, const float b, const VfxNodeMath::Type ty
 		break;
 	
 	case VfxNodeMath::kType_Pitch:
-		r = a * std::powf(2.f, b);
+		r = a * std::pow(2.f, b);
 		break;
 		
 	case VfxNodeMath::kType_Semitone:
-		r = a * std::powf(2.f, b / 12.f);
+		r = a * std::pow(2.f, b / 12.f);
 		break;
 	}
 	

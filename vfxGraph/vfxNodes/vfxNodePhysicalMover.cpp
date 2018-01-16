@@ -90,7 +90,7 @@ void VfxNodePhysicalMover::tick(const float dt)
 	outputSpeedX = speedX->isConnected() ? speedX->getRwFloat() : outputSpeedX + getInputFloat(kInput_AccelX, 0.f) * timeStep;
 	outputSpeedY = speedY->isConnected() ? speedY->getRwFloat() : outputSpeedY + getInputFloat(kInput_AccelY, 0.f) * timeStep;
 	outputSpeedZ = speedZ->isConnected() ? speedZ->getRwFloat() : outputSpeedZ + getInputFloat(kInput_AccelZ, 0.f) * timeStep;
-	outputSpeedLength = std::sqrtf(outputSpeedX * outputSpeedX + outputSpeedY * outputSpeedY + outputSpeedZ * outputSpeedZ);
+	outputSpeedLength = sqrtf(outputSpeedX * outputSpeedX + outputSpeedY * outputSpeedY + outputSpeedZ * outputSpeedZ);
 
 	outputPositionX += outputSpeedX * timeStep;
 	outputPositionY += outputSpeedY * timeStep;

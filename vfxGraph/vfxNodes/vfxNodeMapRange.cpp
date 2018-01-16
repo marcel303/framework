@@ -86,7 +86,7 @@ void VfxNodeMapRange::tick(const float dt)
 	if (clamp)
 		t = t < 0.f ? 0.f : t > 1.f ? 1.f : t;
 		
-	t = std::powf(t, outCurvePow);
+	t = std::pow(t, outCurvePow);
 	
 	const float t1 = t;
 	const float t2 = 1.f - t;

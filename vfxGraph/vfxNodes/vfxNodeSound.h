@@ -40,7 +40,7 @@ struct VfxNodeSound;
 struct VfxNodeSound_AudioStream : AudioStream
 {
 	VfxNodeSound * soundNode;
-	std::atomic_uint64_t timeInSamples;
+	std::atomic<uint64_t> timeInSamples;
 	
 	VfxNodeSound_AudioStream()
 		: soundNode(nullptr)
@@ -85,7 +85,7 @@ struct VfxNodeSound : VfxNodeBase
 	
 	VfxNodeSound_AudioStream mixingAudioStream;
 	
-	std::atomic_bool isPaused;
+	std::atomic<bool> isPaused;
 	
 	float timeOutput;
 	

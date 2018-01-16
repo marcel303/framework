@@ -64,7 +64,7 @@ void VfxNodePhysicalSpring::tick(const float dt)
 	const float dampen = getInputFloat(kInput_Dampen, .5f);
 	const float externalForce = getInputFloat(kInput_Force, 0.f);
 
-	const float dampenThisTick = std::powf(1.f - dampen, dt);
+	const float dampenThisTick = powf(1.f - dampen, dt);
 
 	const float delta = outputValue;
 	const float force = externalForce - strength * delta;

@@ -27,6 +27,8 @@
 
 #pragma once
 
+#if ENABLE_SYPHON
+
 #include "vfxNodeBase.h"
 #import <Syphon/Syphon.h>
 
@@ -55,3 +57,5 @@ struct VfxNodeDrawSyphon : VfxNodeBase
 	virtual void tick(const float dt) override;
 	virtual void draw() const override;
 };
+
+#endif

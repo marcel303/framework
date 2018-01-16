@@ -163,7 +163,7 @@ void VfxNodeSpectrum2D::tick(const float dt)
 				{
 					const float r = rreal[x];
 					const float i = rimag[x];
-					const float s = std::sqrtf(r * r + i * i);
+					const float s = std::sqrt(r * r + i * i);
 					
 					rreal[x] = s * scale;
 				}

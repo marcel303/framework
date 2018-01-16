@@ -330,7 +330,7 @@ void VfxNodeOscRandom::tick(const float dt)
 	{
 		next();
 		
-		phase = std::fmodf(phase, 1.f);
+		phase = std::fmod(phase, 1.f);
 	}
 }
 

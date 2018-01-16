@@ -29,6 +29,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "rtmidi/RtMidi.h"
 #include "vfxNodeMidi.h"
 #include <math.h>
+#include <string.h>
 
 static const uint8_t NOTE_OFF = 0x80;
 static const uint8_t NOTE_ON = 0x90;
