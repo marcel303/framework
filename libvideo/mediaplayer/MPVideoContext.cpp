@@ -26,6 +26,7 @@
 */
 
 #include "Debugging.h"
+#include "MemAlloc.h"
 #include "MPContext.h"
 #include "MPDebug.h"
 #include "MPPacketQueue.h"
@@ -36,7 +37,6 @@
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
-#include <xmmintrin.h>
 
 #define QUEUE_SIZE (4 * 10)
 //#define QUEUE_SIZE (4 * 30)
@@ -193,7 +193,7 @@ namespace MP
 							16);
 
 						Assert(m_tempFrameBuffer == nullptr);
-						m_tempFrameBuffer = (uint8_t*)_mm_malloc(frameBufferSize, 16);
+						m_tempFrameBuffer = (uint8_t*)MemAlloc(frameBufferSize, 16);
 
 						// Assign buffer to frame.
 						const int requiredFrameBufferSize = av_image_fill_arrays(
@@ -268,7 +268,7 @@ namespace MP
 
 		if (m_tempFrameBuffer != nullptr)
 		{
-			_mm_free(m_tempFrameBuffer);
+			MemFree(m_tempFrameBuffer);
 			m_tempFrameBuffer = nullptr;
 		}
 

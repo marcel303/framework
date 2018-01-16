@@ -26,11 +26,11 @@
 */
 
 #include "Debugging.h"
+#include "MemAlloc.h"
 #include "MPDebug.h"
 #include "MPVideoBuffer.h"
 #include <libavcodec/avcodec.h>
 #include <libavutil/imgutils.h>
-#include <xmmintrin.h>
 
 #if DEBUG_MEDIAPLAYER
 #include <atomic>
@@ -101,7 +101,7 @@ namespace MP
 			static_cast<int>(height),
 			16);
 		
-		m_frameBuffer = (uint8_t*)_mm_malloc(m_frameBufferSize, 16);
+		m_frameBuffer = (uint8_t*)MemAlloc(m_frameBufferSize, 16);
 		
 		if (!m_frameBuffer)
 		{
@@ -145,7 +145,7 @@ namespace MP
 
 		if (m_frameBuffer)
 		{
-			_mm_free(m_frameBuffer);
+			MemFree(m_frameBuffer);
 			m_frameBuffer = nullptr;
 			m_frameBufferSize = 0;
 			
