@@ -645,16 +645,13 @@ float Wavefield1Df::sample(const float x) const
 	}
 	else
 	{
-		const float xClamped_temp = fmodf(x, numElems);
-		const float xClamped = x < 0.f ? xClamped_temp + numElems : xClamped_temp;
+		float tx2;
+		int x1Clamped;
 		
-		const int x1 = int(xClamped);
-		const int x2 = x1 + 1;
-		const float tx2 = xClamped - x1;
+		toSampleIndex(x, numElems, x1Clamped, tx2);
+		
+		const int x2Clamped = x1Clamped + 1 == numElems ? 0 : x1Clamped + 1;
 		const float tx1 = 1.f - tx2;
-		
-		const int x1Clamped = x1 >= numElems ? x1 - numElems : x1;
-		const int x2Clamped = x2 >= numElems ? x2 - numElems : x2;
 		
 		const float v0 = p[x1Clamped];
 		const float v1 = p[x2Clamped];
@@ -1310,6 +1307,8 @@ void Wavefield2Df::randomize()
 	const float cosFactor = 0.f;
 	const float perlinFactor = rng.nextd(0.f, 1.f);
 	
+	init(numElems);
+	
 	for (int x = 0; x < numElems; ++x)
 	{
 		for (int y = 0; y < numElems; ++y)
@@ -1373,12 +1372,16 @@ float Wavefield2Df::sample(const float x, const float y) const
 	}
 	else
 	{
-		const int x1 = int(x);
-		const int y1 = int(y);
-		const int x2 = (x1 + 1) % numElems;
-		const int y2 = (y1 + 1) % numElems;
-		const float tx2 = x - x1;
-		const float ty2 = y - y1;
+		float tx2;
+		float ty2;
+		int x1;
+		int y1;
+		
+		toSampleIndex(x, numElems, x1, tx2);
+		toSampleIndex(y, numElems, y1, ty2);
+		
+		const int x2 = x1 + 1 == numElems ? 0 : x1 + 1;
+		const int y2 = y1 + 1 == numElems ? 0 : y1 + 1;
 		const float tx1 = 1.f - tx2;
 		const float ty1 = 1.f - ty2;
 		
