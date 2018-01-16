@@ -199,7 +199,7 @@ int main(int argc, char * argv[])
 			framework.endDraw();
 		}
 		
-		imageCapture.saveImageSequence("/Users/thecat/makevideo/images/%04d.jpg");
+		imageCapture.saveImageSequence("/Users/thecat/makevideo/images/%04d.jpg", true);
 
 		delete grid;
 		grid = nullptr;
