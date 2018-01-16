@@ -34,9 +34,13 @@
 #include "MPVideoBuffer.h"
 #include "MPVideoContext.h"
 #include <algorithm>
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
 #include <vector>
+
+extern "C"
+{
+	#include <libavcodec/avcodec.h>
+	#include <libavformat/avformat.h>
+}
 
 #define STREAM_NOT_FOUND 0xFFFF
 

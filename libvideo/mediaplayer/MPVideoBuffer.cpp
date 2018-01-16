@@ -29,8 +29,12 @@
 #include "MemAlloc.h"
 #include "MPDebug.h"
 #include "MPVideoBuffer.h"
-#include <libavcodec/avcodec.h>
-#include <libavutil/imgutils.h>
+
+extern "C"
+{
+	#include <libavcodec/avcodec.h>
+	#include <libavutil/imgutils.h>
+}
 
 #if DEBUG_MEDIAPLAYER
 #include <atomic>

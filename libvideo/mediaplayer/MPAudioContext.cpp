@@ -31,9 +31,13 @@
 #include "MPDebug.h"
 #include "MPPacketQueue.h"
 #include "MPUtil.h"
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libswresample/swresample.h>
+
+extern "C"
+{
+	#include <libavcodec/avcodec.h>
+	#include <libavformat/avformat.h>
+	#include <libswresample/swresample.h>
+}
 
 #define QUEUE_SIZE (4 * 3 * 10)
 

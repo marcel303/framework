@@ -33,10 +33,14 @@
 #include "MPUtil.h"
 #include "MPVideoBuffer.h"
 #include "MPVideoContext.h"
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavutil/imgutils.h>
-#include <libswscale/swscale.h>
+
+extern "C"
+{
+	#include <libavcodec/avcodec.h>
+	#include <libavformat/avformat.h>
+	#include <libavutil/imgutils.h>
+	#include <libswscale/swscale.h>
+}
 
 #define QUEUE_SIZE (4 * 10)
 //#define QUEUE_SIZE (4 * 30)
