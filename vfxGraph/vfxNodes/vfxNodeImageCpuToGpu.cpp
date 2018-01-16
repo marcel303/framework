@@ -27,7 +27,7 @@
 
 #include "MemAlloc.h"
 #include "vfxNodeImageCpuToGpu.h"
-#include <GL/glew.h>
+#include <GL/glew.h> // GL_RED
 
 VFX_ENUM_TYPE(imageCpuToGpuChannel)
 {

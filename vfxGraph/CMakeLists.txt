@@ -72,16 +72,19 @@ target_link_libraries(vfxgraph libvideo)
 
 target_compile_definitions(vfxgraph PUBLIC
 	ENABLE_KINECT1=0
-	ENABLE_TURBOJPEG=1
-	ENABLE_LEAPMOTION=1)
+	ENABLE_TURBOJPEG=1)
 
 if (WIN32)
-	target_compile_definitions(vfxgraph PUBLIC ENABLE_KINECT2=0 ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
+	target_compile_definitions(vfxgraph PUBLIC ENABLE_LEAPMOTION=1 ENABLE_KINECT2=0 ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
 endif (WIN32)
 
 if (APPLE)
-	target_compile_definitions(vfxgraph PUBLIC ENABLE_KINECT2=1 ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
+	target_compile_definitions(vfxgraph PUBLIC ENABLE_LEAPMOTION=1 ENABLE_KINECT2=1 ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
 endif (APPLE)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	target_compile_definitions(vfxgraph PUBLIC ENABLE_LEAPMOTION=0 ENABLE_KINECT2=0 ENABLE_DEEPBELIEF=0 __LINUX_ALSA__)
+endif ()
 
 target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}")
 

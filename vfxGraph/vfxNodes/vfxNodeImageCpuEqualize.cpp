@@ -27,13 +27,17 @@
 
 #include "vfxNodeImageCpuEqualize.h"
 #include <algorithm>
-#include <emmintrin.h>
-#include <immintrin.h>
+#include <string.h>
 
 // todo : use floyd steinberg error diffusion
 
 #define USE_AVX2 0
 #define USE_ERROR_DIFFUSION 0
+
+#if USE_AVX2
+	#include <emmintrin.h>
+	#include <immintrin.h>
+#endif
 
 #if USE_ERROR_DIFFUSION
 	typedef float LookupElem;

@@ -203,7 +203,7 @@ void VfxNodeDrawOscilloscope::customTraverseTick(const int traversalId, const fl
 	const float sampleRate = getInputFloat(kInput_SampleRate, 44100.f);
 	const float sampleDt = 1.f / sampleRate;
 	
-	const int numSubsteps = std::max(1, (int)std::ceilf(dt / sampleDt));
+	const int numSubsteps = std::max(1, (int)ceilf(dt / sampleDt));
 	
 	const float substepDt = dt / numSubsteps;
 	

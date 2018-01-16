@@ -28,7 +28,7 @@
 #include "vfxNodeChannelToGpu.h"
 #include <algorithm>
 #include <cmath>
-#include <GL/glew.h>
+#include <GL/glew.h> // GL_RED
 
 VFX_NODE_TYPE(VfxNodeChannelToGpu)
 {

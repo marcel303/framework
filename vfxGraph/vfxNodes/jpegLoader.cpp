@@ -32,7 +32,12 @@
 #include "Log.h"
 #include <stdint.h>
 #include <stdio.h>
-#include <turbojpeg/turbojpeg.h>
+
+#if defined(LINUX)
+	#include <turbojpeg.h>
+#else
+	#include <turbojpeg/turbojpeg.h>
+#endif
 
 JpegLoadData::JpegLoadData()
 	: flipY(false)

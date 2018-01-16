@@ -30,6 +30,7 @@
 #include "vfxNodeDotDetector.h"
 #include <algorithm>
 #include <cmath>
+#include <string.h>
 
 VFX_ENUM_TYPE(dotDetectorChannel)
 {
@@ -246,16 +247,16 @@ void VfxNodeDotDetector::tick(const float dt)
 			const int sx = islands[i].maxX - islands[i].minX;
 			const int sy = islands[i].maxY - islands[i].minY;
 			const int sSq = sx * sx + sy * sy;
-			const float s = std::sqrtf(sSq);
+			const float s = sqrtf(sSq);
 			
 			dotX.data[i] = islands[i].x;
 			dotY.data[i] = islands[i].y;
 			dotRadius.data[i] = s;
 		}
 		
-		xOutput.setData(dotX.data, nullptr, numIslands);
-		yOutput.setData(dotY.data, nullptr, numIslands);
-		rOutput.setData(dotRadius.data, nullptr, numIslands);
+		xOutput.setData(dotX.data, false, numIslands);
+		yOutput.setData(dotY.data, false, numIslands);
+		rOutput.setData(dotRadius.data, false, numIslands);
 		
 		//
 		

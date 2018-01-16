@@ -28,6 +28,7 @@
 #include "Debugging.h"
 #include "dotDetector.h"
 #include <algorithm>
+#include <string.h>
 
 #if USE_SSE2
 

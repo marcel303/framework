@@ -123,9 +123,9 @@ void VfxNodeDotTracker::tick(const float dt)
 			speedYData.data[i] = dots[i].speedY;
 		}
 		
-		idOutput.setData(idData.data, nullptr, numDots);
-		speedXOutput.setData(speedXData.data, nullptr, numDots);
-		speedYOutput.setData(speedYData.data, nullptr, numDots);
+		idOutput.setData(idData.data, false, numDots);
+		speedXOutput.setData(speedXData.data, false, numDots);
+		speedYOutput.setData(speedYData.data, false, numDots);
 	}
 }
 

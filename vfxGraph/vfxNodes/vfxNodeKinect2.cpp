@@ -32,7 +32,7 @@
 #include "kinect2FrameListener.h"
 #include "openglTexture.h"
 #include "vfxNodeKinect2.h"
-#include <GL/glew.h>
+#include <GL/glew.h> // GL_RED
 #include <libfreenect2/libfreenect2.hpp>
 
 // kinect device and video frames/textures. note that these are all shared between kinect2 nodes, as

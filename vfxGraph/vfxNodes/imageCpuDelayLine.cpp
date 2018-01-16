@@ -326,7 +326,7 @@ bool ImageCpuDelayLine::decode(const JpegData & jpegData, VfxImageCpuData & imag
 {
 	if (jpegData.bytes == nullptr)
 	{
-		return nullptr;
+		return false;
 	}
 	else
 	{

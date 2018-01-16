@@ -26,8 +26,6 @@
 */
 
 #include "vfxNodeImageCpuToChannels.h"
-#include <GL/glew.h>
-#include <xmmintrin.h>
 
 VFX_ENUM_TYPE(imageCpuToChannelsChannel)
 {

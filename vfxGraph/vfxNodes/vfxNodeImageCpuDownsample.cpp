@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if __SSE2__ // todo : add non-SSE code path
+
 #include "MemAlloc.h"
 #include "vfxNodeImageCpuDownsample.h"
 #include <algorithm>
@@ -648,3 +650,5 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 		Assert(false);
 	}
 }
+
+#endif

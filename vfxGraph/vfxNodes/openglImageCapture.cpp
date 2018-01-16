@@ -31,6 +31,7 @@
 #include "openglImageCapture.h"
 #include "openglTexture.h"
 #include "StringEx.h"
+#include <limits.h>
 
 OpenglImageCapture::OpenglImageCapture()
 	: textures()

@@ -155,7 +155,7 @@ static VfxTimeline::Key * findNearestKey(VfxTimeline & timeline, const int x1, c
 	{
 		const float dt = beatToScreen(x1, x2, timeline.keys[i].beat, timeline.bpm, timeline.length) - beatToScreen(x1, x2, beat, timeline.bpm, timeline.length);
 		
-		const float distance = std::sqrtf(dt * dt);
+		const float distance = sqrtf(dt * dt);
 
 		if (distance < maxDeviation && (distance < nearestDistance || nearestKey == 0))
 		{
