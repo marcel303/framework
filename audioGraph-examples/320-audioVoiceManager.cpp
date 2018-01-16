@@ -27,24 +27,287 @@
 
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager4D.h"
+#include "Calc.h" // todo : remove ?
 #include "framework.h"
+#include "Noise.h"
 #include "soundmix.h"
-#include "soundmix_wavefield.h"
 #include "wavefield.h"
 #include "../libparticle/ui.h"
 
-const int GFX_SX = 1300;
-const int GFX_SY = 760;
+/*
 
-static bool STEREO_OUTPUT = true;
+this example serves to illustrate how to generate audio using a voice manager and low-level audio sources
+
+an audio source could be a simple sine wave generator, something more complicated like PCM playback or a
+streaming OGG file. or it could be something completely different, like the wave field objects used here
+
+*/
+
+#define GFX_SX 1300
+#define GFX_SY 760
+
+static AudioMutex_Shared s_audioMutex;
+
+static AudioVoiceManagerBasic * s_voiceMgr = nullptr;
 
 const static float kWorldSx = 10.f;
 const static float kWorldSy = 8.f;
 const static float kWorldSz = 8.f;
 
-static AudioVoiceManager4D * s_voiceMgr = nullptr;
+// interactive 1D wavefield object
 
-#define OSC_TEST 1
+struct AudioSourceWavefield1D : AudioSource
+{
+	Wavefield1D m_wavefield;
+	double m_sampleLocation;
+	double m_sampleLocationSpeed;
+	bool m_closedEnds;
+	
+	AudioSourceWavefield1D();
+	
+	void init(const int numElems);
+	
+	// called from the main thread
+	void tick(const double dt);
+	
+	// called from the audio thread
+	virtual void generate(float * __restrict samples, const int numSamples) override;
+};
+
+AudioSourceWavefield1D::AudioSourceWavefield1D()
+	: m_wavefield()
+	, m_sampleLocation(0.0)
+	, m_closedEnds(true)
+{
+}
+
+void AudioSourceWavefield1D::init(const int numElems)
+{
+	m_wavefield.init(numElems);
+	
+	m_sampleLocation = 0.0;
+	m_sampleLocationSpeed = 0.0;
+}
+
+void AudioSourceWavefield1D::tick(const double dt)
+{
+	s_audioMutex.lock();
+	
+	if (mouse.isDown(BUTTON_LEFT))
+	{
+		//const int r = random(1, 5);
+		const int r = 1 + mouse.x * 30 / GFX_SX;
+		const int v = m_wavefield.numElems - r * 2;
+		
+		if (v > 0)
+		{
+			const int spot = r + (rand() % v);
+			
+			const double s = random(-1.f, +1.f) * .5f;
+			//const double s = 1.0;
+			
+			for (int i = -r; i <= +r; ++i)
+			{
+				const int x = spot + i;
+				const double value = std::pow((1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0, 2.0);
+				
+				if (x >= 0 && x < m_wavefield.numElems)
+					m_wavefield.p[x] += value * s;
+			}
+		}
+	}
+	
+	m_sampleLocationSpeed = 0.0;
+	
+	if (keyboard.isDown(SDLK_LEFT))
+		m_sampleLocationSpeed -= 10.0;
+	if (keyboard.isDown(SDLK_RIGHT))
+		m_sampleLocationSpeed += 10.0;
+	
+	const int editLocation = int(m_sampleLocation) % m_wavefield.numElems;
+	
+	if (keyboard.isDown(SDLK_a))
+		m_wavefield.f[editLocation] = 1.f;
+	if (keyboard.isDown(SDLK_z))
+		m_wavefield.f[editLocation] /= 1.01;
+	if (keyboard.isDown(SDLK_n))
+		m_wavefield.f[editLocation] *= random(.95f, 1.f);
+	
+	if (keyboard.wentDown(SDLK_r))
+		m_wavefield.p[rand() % m_wavefield.numElems] = random(-1.f, +1.f) * (keyboard.isDown(SDLK_LSHIFT) ? 40.f : 4.f);
+	
+	if (keyboard.wentDown(SDLK_c))
+		m_closedEnds = !m_closedEnds;
+	
+	if (keyboard.wentDown(SDLK_t))
+	{
+		const double xRatio = random(0.0, 1.0 / 10.0);
+		const double randomFactor = random(0.0, 1.0);
+		//const double cosFactor = random(0.0, 1.0);
+		const double cosFactor = 0.0;
+		const double perlinFactor = random(0.0, 1.0);
+		
+		for (int x = 0; x < m_wavefield.numElems; ++x)
+		{
+			m_wavefield.f[x] = 1.0;
+			
+			m_wavefield.f[x] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
+			m_wavefield.f[x] *= Calc::Lerp(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
+			//m_wavefield.f[x] = 1.0 - std::pow(m_wavefield.f[x], 2.0);
+			
+			//m_wavefield.f[x] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
+			m_wavefield.f[x] *= Calc::Lerp(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
+		}
+	}
+	
+	s_audioMutex.unlock();
+}
+
+void AudioSourceWavefield1D::generate(float * __restrict samples, const int numSamples)
+{
+	s_audioMutex.lock();
+	
+#if 0
+	const double dt = 1.0 / SAMPLE_RATE * Calc::Lerp(0.0, 1.0, mouse.y / double(GFX_SY - 1));
+	const double c = 1000000000.0;
+#else
+	const double dt = 1.0 / SAMPLE_RATE;
+	const double m2 = mouse.y / double(GFX_SY - 1);
+	const double m1 = 1.0 - m2;
+	const double c1 = 100000.0;
+	const double c2 = 1000000000.0;
+	const double c = c1 * m1 + c2 * m2;
+#endif
+
+	//const double vRetainPerSecond = 0.45;
+	const double vRetainPerSecond = 0.05;
+	const double pRetainPerSecond = 0.95;
+	
+	const bool closedEnds = m_closedEnds;
+	
+	for (int i = 0; i < numSamples; ++i)
+	{
+		m_sampleLocation += m_sampleLocationSpeed * dt;
+		
+		samples[i] = m_wavefield.sample(m_sampleLocation);
+		
+		m_wavefield.tick(dt, c, vRetainPerSecond, pRetainPerSecond, closedEnds);
+	}
+	
+	s_audioMutex.unlock();
+}
+
+// interactive 2D wavefield object
+
+struct AudioSourceWavefield2D : AudioSource
+{
+	Wavefield2D m_wavefield;
+	double m_sampleLocation[2];
+	double m_sampleLocationSpeed[2];
+	bool m_slowMotion;
+	
+	AudioSourceWavefield2D();
+	
+	void init(const int numElems);
+	
+	// called from the main thread
+	void tick(const double dt);
+	
+	// called from the audio thread
+	virtual void generate(float * __restrict samples, const int numSamples) override;
+};
+
+AudioSourceWavefield2D::AudioSourceWavefield2D()
+	: m_wavefield()
+	, m_sampleLocation()
+	, m_slowMotion(false)
+{
+	init(m_wavefield.kMaxElems);
+}
+
+void AudioSourceWavefield2D::init(const int numElems)
+{
+	m_wavefield.init(numElems);
+	
+	m_sampleLocation[0] = 0.0;
+	m_sampleLocation[1] = 0.0;
+	m_sampleLocationSpeed[0] = 0.0;
+	m_sampleLocationSpeed[1] = 0.0;
+}
+
+void AudioSourceWavefield2D::tick(const double dt)
+{
+	s_audioMutex.lock();
+	
+	m_sampleLocationSpeed[0] = 0.0;
+	m_sampleLocationSpeed[1] = 0.0;
+	
+	const float speed = 5.f;
+	
+	if (keyboard.isDown(SDLK_LEFT))
+		m_sampleLocationSpeed[0] -= speed;
+	if (keyboard.isDown(SDLK_RIGHT))
+		m_sampleLocationSpeed[0] += speed;
+	if (keyboard.isDown(SDLK_UP))
+		m_sampleLocationSpeed[1] -= speed;
+	if (keyboard.isDown(SDLK_DOWN))
+		m_sampleLocationSpeed[1] += speed;
+	
+	if (keyboard.isDown(SDLK_a))
+		//m_wavefield.f[m_sampleLocation[0]][m_sampleLocation[1]] *= 1.3;
+		m_wavefield.f[int(m_sampleLocation[0])][int(m_sampleLocation[1])] = 1.0;
+	if (keyboard.isDown(SDLK_z))
+		//m_wavefield.f[m_sampleLocation[0]][m_sampleLocation[1]] /= 1.3;
+		m_wavefield.f[int(m_sampleLocation[0])][int(m_sampleLocation[1])] = 0.0;
+	
+	if (keyboard.wentDown(SDLK_s))
+		m_slowMotion = !m_slowMotion;
+	
+	//if (keyboard.wentDown(SDLK_r))
+	if (keyboard.isDown(SDLK_r))
+		m_wavefield.p[rand() % m_wavefield.numElems][rand() % m_wavefield.numElems] = random(-1.f, +1.f) * 5.f;
+	
+	if (keyboard.wentDown(SDLK_t))
+	{
+		m_wavefield.randomize();
+	}
+	
+	s_audioMutex.unlock();
+}
+
+void AudioSourceWavefield2D::generate(float * __restrict samples, const int numSamples)
+{
+	s_audioMutex.lock();
+	
+#if 0
+	const double dt = 1.0 / SAMPLE_RATE * Calc::Lerp(0.0, 1.0, mouse.y / double(GFX_SY - 1));
+	const double c = 1000000000.0;
+#else
+	const double dt = 1.0 / SAMPLE_RATE * (m_slowMotion ? 0.001 : 1.0);
+	const double m1 = mouse.y / double(GFX_SY - 1);
+	//const double m1 = 0.75;
+	const double m2 = 1.0 - m1;
+	//const double c = 10000.0 * m2 + 1000000000.0 * m1;
+	const double c = 10000.0 * m2 + 1000000000.0 * m1;
+#endif
+
+	const double vRetainPerSecond = 0.05;
+	const double pRetainPerSecond = 0.05;
+	
+	for (int i = 0; i < numSamples; ++i)
+	{
+		m_sampleLocation[0] += m_sampleLocationSpeed[0] * dt;
+		m_sampleLocation[1] += m_sampleLocationSpeed[1] * dt;
+		
+		samples[i] = m_wavefield.sample(m_sampleLocation[0], m_sampleLocation[1]);
+		
+		m_wavefield.tick(dt, c, vRetainPerSecond, pRetainPerSecond, true);
+	}
+	
+	s_audioMutex.unlock();
+}
+
+// creatures and a voice world
 
 struct Creature
 {
@@ -96,13 +359,6 @@ struct Creature
 	void tick(const float dt)
 	{
 		pos += vel * dt;
-		
-		if (voice->type == AudioVoice::kType_4DSOUND)
-		{
-			AudioVoice4D * voice4D = static_cast<AudioVoice4D*>(voice);
-			
-			voice4D->spat.pos = pos;
-		}
 	}
 	
 	void draw() const
@@ -123,165 +379,12 @@ struct Creature
 	}
 };
 
-struct RicePaddy
-{
-	AudioSourceWavefield2D source;
-	AudioVoice * voice;
-	
-	RicePaddy()
-		: source()
-		, voice(nullptr)
-	{
-		source.init(32);
-		
-		s_voiceMgr->allocVoice(voice, &source, "ricePaddy", true, 0.f, 1.f, -1);
-	}
-	
-	~RicePaddy()
-	{
-		s_voiceMgr->freeVoice(voice);
-	}
-};
-
-struct TestObject
-{
-	AudioSourceSine sine;
-	float sineFrequency;
-	AudioVoice * voice;
-	
-	UiState uiState;
-	
-	TestObject()
-		: sine()
-		, sineFrequency(300.f)
-		, voice(nullptr)
-		, uiState()
-	{
-		sine.init(0.f, sineFrequency);
-		
-		s_voiceMgr->allocVoice(voice, &sine, "testObject", true, 0.f, 1.f, -1);
-		
-		uiState.sx = 300.f;
-	}
-	
-	~TestObject()
-	{
-		s_voiceMgr->freeVoice(voice);
-	}
-	
-	void tickAndDraw(const float dt)
-	{
-		makeActive(&uiState, true, true);
-		pushMenu("testObject");
-		
-		g_drawX += 40;
-		g_drawY += 40;
-		
-		doLabel("4D.source", 0.f);
-		
-		if (doTextBox(sineFrequency, "sine.frequency", dt) == kUiTextboxResult_EditingComplete)
-		{
-			sine.init(0.f, sineFrequency);
-		}
-		
-		if (voice->type == AudioVoice::kType_4DSOUND)
-		{
-			AudioVoice4D * voice4D = static_cast<AudioVoice4D*>(voice);
-			
-			doTextBox(voice4D->spat.pos[0], "pos.x", dt);
-			doTextBox(voice4D->spat.pos[1], "pos.y", dt);
-			doTextBox(voice4D->spat.pos[2], "pos.z", dt);
-			
-			doTextBox(voice4D->spat.size[0], "dim.x", dt);
-			doTextBox(voice4D->spat.size[1], "dim.y", dt);
-			doTextBox(voice4D->spat.size[2], "dim.z", dt);
-			
-			doTextBox(voice4D->spat.rot[0], "rot.x", dt);
-			doTextBox(voice4D->spat.rot[1], "rot.y", dt);
-			doTextBox(voice4D->spat.rot[2], "rot.z", dt);
-			
-			std::vector<EnumValue> orientationModes;
-			orientationModes.push_back(EnumValue(Osc4D::kOrientation_Static, "static"));
-			orientationModes.push_back(EnumValue(Osc4D::kOrientation_Movement, "movement"));
-			orientationModes.push_back(EnumValue(Osc4D::kOrientation_Center, "center"));
-			doEnum(voice4D->spat.orientationMode, "orientation.mode", orientationModes);
-			doTextBox(voice4D->spat.orientationCenter[0], "orientation.center.x", dt);
-			doTextBox(voice4D->spat.orientationCenter[1], "orientation.center.y", dt);
-			doTextBox(voice4D->spat.orientationCenter[2], "orientation.center.z", dt);
-			
-			doCheckBox(voice4D->spat.globalEnable, "global.enable", false);
-			
-			if (doCheckBox(voice4D->spat.spatialCompressor.enable, "spatialCompressor", true))
-			{
-				g_drawX += 20;
-				pushMenu("spatialCompressor");
-				doTextBox(voice4D->spat.spatialCompressor.attack, "attack", dt);
-				doTextBox(voice4D->spat.spatialCompressor.release, "release", dt);
-				doTextBox(voice4D->spat.spatialCompressor.minimum, "minimum", dt);
-				doTextBox(voice4D->spat.spatialCompressor.maximum, "maximum", dt);
-				doTextBox(voice4D->spat.spatialCompressor.curve, "curve", dt);
-				doCheckBox(voice4D->spat.spatialCompressor.invert, "invert", false);
-				popMenu();
-				g_drawX -= 20;
-			}
-			
-			if (doCheckBox(voice4D->spat.doppler.enable, "doppler", true))
-			{
-				g_drawX += 20;
-				pushMenu("doppler");
-				doTextBox(voice4D->spat.doppler.scale, "scale", dt);
-				doTextBox(voice4D->spat.doppler.smooth, "smooth", dt);
-				popMenu();
-				g_drawX -= 20;
-			}
-			
-			if (doCheckBox(voice4D->spat.distanceIntensity.enable, "distance.intensity", true))
-			{
-				g_drawX += 20;
-				pushMenu("distance.intensity");
-				doTextBox(voice4D->spat.distanceIntensity.threshold, "treshold", dt);
-				doTextBox(voice4D->spat.distanceIntensity.curve, "curve", dt);
-				popMenu();
-				g_drawX -= 20;
-			}
-			
-			if (doCheckBox(voice4D->spat.distanceDampening.enable, "distance.dampening", true))
-			{
-				g_drawX += 20;
-				pushMenu("distance.dampening");
-				doTextBox(voice4D->spat.distanceDampening.threshold, "treshold", dt);
-				doTextBox(voice4D->spat.distanceDampening.curve, "curve", dt);
-				popMenu();
-				g_drawX -= 20;
-			}
-			
-			if (doCheckBox(voice4D->spat.distanceDiffusion.enable, "distance.diffusion", true))
-			{
-				g_drawX += 20;
-				pushMenu("distance.diffusion");
-				doTextBox(voice4D->spat.distanceDiffusion.threshold, "treshold", dt);
-				doTextBox(voice4D->spat.distanceDiffusion.curve, "curve", dt);
-				popMenu();
-				g_drawX -= 20;
-			}
-		}
-		
-		popMenu();
-	}
-};
-
 struct VoiceWorld : AudioUpdateTask
 {
 	std::list<Creature> creatures;
 	
-	TestObject testObject;
-	
-	UiState uiState;
-	
 	VoiceWorld()
 		: creatures()
-		, testObject()
-		, uiState()
 	{
 	}
 	
@@ -311,8 +414,6 @@ struct VoiceWorld : AudioUpdateTask
 		{
 			creature.draw();
 		}
-		
-		const_cast<TestObject&>(testObject).tickAndDraw(framework.timeStep);
 	}
 	
 	void addCreature()
@@ -431,19 +532,6 @@ static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, 
 
 int main(int argc, char * argv[])
 {
-#if 0
-	char * basePath = SDL_GetBasePath();
-	changeDirectory(basePath);
-	changeDirectory("data");
-	SDL_free(basePath);
-#endif
-
-#if FULLSCREEN
-	framework.fullscreen = true;
-#endif
-
-	//framework.waitForEvents = true;
-	
 	if (!framework.init(0, 0, GFX_SX, GFX_SY))
 		return -1;
 
@@ -454,39 +542,31 @@ int main(int argc, char * argv[])
 	//
 	
 	SDL_mutex * mutex = SDL_CreateMutex();
+	s_audioMutex.mutex = mutex;
 	
 	//
 	
-	AudioVoiceManager4D voiceMgr;
-	
+	AudioVoiceManagerBasic voiceMgr;
 	voiceMgr.init(mutex, kNumChannels, kNumChannels);
-	
-	voiceMgr.outputStereo = STEREO_OUTPUT;
-	
+	voiceMgr.outputStereo = true;
 	s_voiceMgr = &voiceMgr;
 	
 	//
 	
 	VoiceWorld * world = new VoiceWorld();
-	
 	world->init(0);
 	
 	//
 	
-	std::string oscIpAddress = "192.168.1.10";
-	int oscUdpPort = 2000;
-	
 	AudioUpdateHandler audioUpdateHandler;
-	
-	audioUpdateHandler.init(mutex, oscIpAddress.c_str(), oscUdpPort);
+	audioUpdateHandler.init(mutex, nullptr, 0);
 	audioUpdateHandler.updateTasks.push_back(world);
 	audioUpdateHandler.voiceMgr = &voiceMgr;
 	
 	PortAudioObject pa;
+	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 	
-	pa.init(SAMPLE_RATE, STEREO_OUTPUT ? 2 : kNumChannels, STEREO_OUTPUT ? 2 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
-	
-	//
+	// add a 1D wavefield object
 	
 	AudioSourceWavefield1D wavefield1D;
 	wavefield1D.init(256);
@@ -495,13 +575,13 @@ int main(int argc, char * argv[])
 	voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D, "wavefield1D", true, 0.f, 1.f, -1);
 #endif
 
-	//
+	// add a 2D wavefield object
 	
 	AudioSourceWavefield2D wavefield2D;
 	wavefield2D.init(32);
 	AudioVoice * wavefield2DVoice = nullptr;
-#if 0
-	voiceMgr.allocVoice(wavefield2DVoice, &wavefield2D, true);
+#if 1
+	voiceMgr.allocVoice(wavefield2DVoice, &wavefield2D, "wavedield2D", true, 0.f, 1.f, -1);
 #endif
 	
 	//
@@ -518,7 +598,6 @@ int main(int argc, char * argv[])
 		
 		//
 		
-	#if OSC_TEST == 0
 		if (keyboard.wentDown(SDLK_a))
 		{
 			world->addCreature();
@@ -528,40 +607,16 @@ int main(int argc, char * argv[])
 		{
 			world->removeCreature();
 		}
-	#endif
-		
-		//
-		
-		static int frameIndex = 0;
-		frameIndex++;
-		//if (mouse.wentDown(BUTTON_LEFT))
-		if (mouse.isDown(BUTTON_LEFT) && (frameIndex % 10) == 0)
-		{
-			//const int r = 1 + mouse.x * 10 / GFX_SX;
-			//const int r = 6;
-			const double strength = random(0.f, +1.f) * 10.0;
-			
-			const int gfxSize = std::min(GFX_SX, GFX_SY);
-			
-			const int spotX = (mouse.x - GFX_SX/2.0) / gfxSize * (wavefield2D.m_wavefield.numElems - 1) + (wavefield2D.m_wavefield.numElems-1)/2.f;
-			const int spotY = (mouse.y - GFX_SY/2.0) / gfxSize * (wavefield2D.m_wavefield.numElems - 1) + (wavefield2D.m_wavefield.numElems-1)/2.f;
-			
-			const int r = spotX / float(wavefield2D.m_wavefield.numElems - 1.f) * 10 + 1;
-		
-			/*
-			// todo : restore. but do it from the audio thread
-			AudioSourceWavefield2D::Command command;
-			command.x = spotX;
-			command.y = spotY;
-			command.radius = r;
-			command.strength = strength;
-			wavefield2D.m_commandQueue.push(command);
-			*/
-		}
 		
 		//
 		
 		const float dt = std::min(1.f / 20.f, framework.timeStep);
+		
+		//
+		
+		wavefield1D.tick(dt);
+		
+		wavefield2D.tick(dt);
 		
 		//
 		
@@ -573,12 +628,12 @@ int main(int argc, char * argv[])
 				Wavefield1D w;
 				float sampleLocation;
 				
-				//SDL_LockMutex(voiceMgr.mutex);
+				s_audioMutex.lock();
 				{
 					w = wavefield1D.m_wavefield;
 					sampleLocation = wavefield1D.m_sampleLocation;
 				}
-				//SDL_UnlockMutex(voiceMgr.mutex);
+				s_audioMutex.unlock();
 				
 				drawWavefield1D(w, sampleLocation);
 			}
@@ -586,18 +641,17 @@ int main(int argc, char * argv[])
 			//
 			
 			{
-				const Wavefield2D & w = wavefield2D.m_wavefield;
-				//Wavefield2D w;
+				Wavefield2D w;
 				float sampleLocationX;
 				float sampleLocationY;
 				
-				//SDL_LockMutex(voiceMgr.mutex);
+				s_audioMutex.lock();
 				{
-					//w.copyFrom(wavefield2D.m_wavefield, true, false, true);
+					w.copyFrom(wavefield2D.m_wavefield, true, false, true);
 					sampleLocationX = wavefield2D.m_sampleLocation[0];
 					sampleLocationY = wavefield2D.m_sampleLocation[1];
 				}
-				//SDL_UnlockMutex(voiceMgr.mutex);
+				s_audioMutex.unlock();
 				
 				drawWavefield2D(w, sampleLocationX, sampleLocationY);
 			}
@@ -609,40 +663,6 @@ int main(int argc, char * argv[])
 			//
 			
 			makeActive(&uiState, true, true);
-			pushMenu("osc");
-			{
-				doLabel("OSC endpoint", 0.f);
-				if (doTextBox(oscIpAddress, "ip", dt) == kUiTextboxResult_EditingComplete ||
-					doTextBox(oscUdpPort, "port", dt) == kUiTextboxResult_EditingComplete)
-				{
-					audioUpdateHandler.setOscEndpoint(oscIpAddress.c_str(), oscUdpPort);
-				}
-			}
-			popMenu();
-			
-			doBreak();
-			
-			pushMenu("globals");
-			{
-				doLabel("globals", 0.f);
-				
-				doTextBox(s_voiceMgr->spat.globalPos[0], "pos.x", dt);
-				doTextBox(s_voiceMgr->spat.globalPos[1], "pos.y", dt);
-				doTextBox(s_voiceMgr->spat.globalPos[2], "pos.z", dt);
-				doTextBox(s_voiceMgr->spat.globalRot[0], "rot.x", dt);
-				doTextBox(s_voiceMgr->spat.globalRot[1], "rot.y", dt);
-				doTextBox(s_voiceMgr->spat.globalRot[2], "rot.z", dt);
-				doTextBox(s_voiceMgr->spat.globalPlode[0], "plode.x", dt);
-				doTextBox(s_voiceMgr->spat.globalPlode[1], "plode.y", dt);
-				doTextBox(s_voiceMgr->spat.globalPlode[2], "plode.z", dt);
-				doTextBox(s_voiceMgr->spat.globalOrigin[0], "origin.x", dt);
-				doTextBox(s_voiceMgr->spat.globalOrigin[1], "origin.y", dt);
-				doTextBox(s_voiceMgr->spat.globalOrigin[2], "origin.z", dt);
-			}
-			popMenu();
-			
-			doBreak();
-			
 			pushMenu("creatures");
 			{
 				if (doButton("add"))
