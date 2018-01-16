@@ -90,3 +90,21 @@ if (APPLE)
 		${SECURITY_LIBRARY}
 		PARENT_SCOPE)
 endif (APPLE)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	find_library(AVCODEC_LIBRARY avcodec)
+	find_library(AVDEVICE_LIBRARY avdevice)
+	find_library(AVFILTER_LIBRARY avfilter)
+	find_library(AVFORMAT_LIBRARY avformat)
+	find_library(AVUTIL_LIBRARY avutil)
+	find_library(SWSCALE_LIBRARY swscale)
+	
+	set(LIBVIDEO_LIBRARIES
+		${AVCODEC_LIBRARY}
+		${AVDEVICE_LIBRARY}
+		${AVFILTER_LIBRARY}
+		${AVFORMAT_LIBRARY}
+		${AVUTIL_LIBRARY}
+		${SWSCALE_LIBRARY}
+		PARENT_SCOPE)
+endif ()
