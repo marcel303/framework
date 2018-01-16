@@ -61,7 +61,10 @@ struct AudioSourceWavefield1D : AudioSource
 	Wavefield1D m_wavefield;
 	double m_sampleLocation;
 	double m_sampleLocationSpeed;
+	double m_tension;
 	bool m_closedEnds;
+	
+	float m_gain;
 	
 	AudioSourceWavefield1D();
 	
@@ -77,7 +80,9 @@ struct AudioSourceWavefield1D : AudioSource
 AudioSourceWavefield1D::AudioSourceWavefield1D()
 	: m_wavefield()
 	, m_sampleLocation(0.0)
+	, m_tension(1.0)
 	, m_closedEnds(true)
+	, m_gain(0.f)
 {
 }
 
@@ -85,7 +90,7 @@ void AudioSourceWavefield1D::init(const int numElems)
 {
 	m_wavefield.init(numElems);
 	
-	m_sampleLocation = 0.0;
+	m_sampleLocation = numElems / 2.0;
 	m_sampleLocationSpeed = 0.0;
 }
 
@@ -93,27 +98,17 @@ void AudioSourceWavefield1D::tick(const double dt)
 {
 	s_audioMutex.lock();
 	
-	if (mouse.isDown(BUTTON_LEFT))
+	if (mouse.wentDown(BUTTON_LEFT) || (gamepad[0].isConnected && gamepad[0].wentDown(GAMEPAD_A)))
 	{
-		//const int r = random(1, 5);
-		const int r = 1 + mouse.x * 30 / GFX_SX;
-		const int v = m_wavefield.numElems - r * 2;
+		const int radius = 1 + mouse.x * 30 / GFX_SX;
+		const int remainingSize = m_wavefield.numElems - radius * 2;
 		
-		if (v > 0)
+		if (remainingSize > 0)
 		{
-			const int spot = r + (rand() % v);
+			const int spot = radius + (rand() % remainingSize);
+			const double strength = random(-1.f, +1.f) * .5f;
 			
-			const double s = random(-1.f, +1.f) * .5f;
-			//const double s = 1.0;
-			
-			for (int i = -r; i <= +r; ++i)
-			{
-				const int x = spot + i;
-				const double value = std::pow((1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0, 2.0);
-				
-				if (x >= 0 && x < m_wavefield.numElems)
-					m_wavefield.p[x] += value * s;
-			}
+			m_wavefield.doGaussianImpact(spot, radius, strength);
 		}
 	}
 	
@@ -133,7 +128,7 @@ void AudioSourceWavefield1D::tick(const double dt)
 	if (keyboard.isDown(SDLK_n))
 		m_wavefield.f[editLocation] *= random(.95f, 1.f);
 	
-	if (keyboard.wentDown(SDLK_r))
+	if (keyboard.wentDown(SDLK_r) || (gamepad[0].isConnected && gamepad[0].isDown(GAMEPAD_B)))
 		m_wavefield.p[rand() % m_wavefield.numElems] = random(-1.f, +1.f) * (keyboard.isDown(SDLK_LSHIFT) ? 40.f : 4.f);
 	
 	if (keyboard.wentDown(SDLK_c))
@@ -160,6 +155,16 @@ void AudioSourceWavefield1D::tick(const double dt)
 		}
 	}
 	
+#if 0
+	m_tension = 1000000000.0;
+#else
+	const double m2 = mouse.y / double(GFX_SY - 1);
+	const double m1 = 1.0 - m2;
+	const double c1 = 100000.0;
+	const double c2 = 1000000000.0;
+	m_tension = c1 * m1 + c2 * m2;
+#endif
+	
 	s_audioMutex.unlock();
 }
 
@@ -167,18 +172,8 @@ void AudioSourceWavefield1D::generate(float * __restrict samples, const int numS
 {
 	s_audioMutex.lock();
 	
-#if 0
-	const double dt = 1.0 / SAMPLE_RATE * Calc::Lerp(0.0, 1.0, mouse.y / double(GFX_SY - 1));
-	const double c = 1000000000.0;
-#else
 	const double dt = 1.0 / SAMPLE_RATE;
-	const double m2 = mouse.y / double(GFX_SY - 1);
-	const double m1 = 1.0 - m2;
-	const double c1 = 100000.0;
-	const double c2 = 1000000000.0;
-	const double c = c1 * m1 + c2 * m2;
-#endif
-
+	
 	//const double vRetainPerSecond = 0.45;
 	const double vRetainPerSecond = 0.05;
 	const double pRetainPerSecond = 0.95;
@@ -191,10 +186,12 @@ void AudioSourceWavefield1D::generate(float * __restrict samples, const int numS
 		
 		samples[i] = m_wavefield.sample(m_sampleLocation);
 		
-		m_wavefield.tick(dt, c, vRetainPerSecond, pRetainPerSecond, closedEnds);
+		m_wavefield.tick(dt, m_tension, vRetainPerSecond, pRetainPerSecond, closedEnds);
 	}
 	
 	s_audioMutex.unlock();
+	
+	audioBufferMul(samples, numSamples, m_gain);
 }
 
 // interactive 2D wavefield object
@@ -204,7 +201,10 @@ struct AudioSourceWavefield2D : AudioSource
 	Wavefield2D m_wavefield;
 	double m_sampleLocation[2];
 	double m_sampleLocationSpeed[2];
+	double m_tension;
 	bool m_slowMotion;
+	
+	float m_gain;
 	
 	AudioSourceWavefield2D();
 	
@@ -220,17 +220,19 @@ struct AudioSourceWavefield2D : AudioSource
 AudioSourceWavefield2D::AudioSourceWavefield2D()
 	: m_wavefield()
 	, m_sampleLocation()
+	, m_tension(1.0)
 	, m_slowMotion(false)
+	, m_gain(1.f)
 {
-	init(m_wavefield.kMaxElems);
+	init(0);
 }
 
 void AudioSourceWavefield2D::init(const int numElems)
 {
 	m_wavefield.init(numElems);
 	
-	m_sampleLocation[0] = 0.0;
-	m_sampleLocation[1] = 0.0;
+	m_sampleLocation[0] = numElems / 2.0;
+	m_sampleLocation[1] = numElems / 2.0;
 	m_sampleLocationSpeed[0] = 0.0;
 	m_sampleLocationSpeed[1] = 0.0;
 }
@@ -260,16 +262,30 @@ void AudioSourceWavefield2D::tick(const double dt)
 		//m_wavefield.f[m_sampleLocation[0]][m_sampleLocation[1]] /= 1.3;
 		m_wavefield.f[int(m_sampleLocation[0])][int(m_sampleLocation[1])] = 0.0;
 	
-	if (keyboard.wentDown(SDLK_s))
+	if (keyboard.wentDown(SDLK_s) || (gamepad[0].isConnected && gamepad[0].isDown(GAMEPAD_Y)))
 		m_slowMotion = !m_slowMotion;
 	
-	//if (keyboard.wentDown(SDLK_r))
-	if (keyboard.isDown(SDLK_r))
+	if (keyboard.isDown(SDLK_r) || (gamepad[0].isConnected && gamepad[0].isDown(GAMEPAD_B)))
 		m_wavefield.p[rand() % m_wavefield.numElems][rand() % m_wavefield.numElems] = random(-1.f, +1.f) * 5.f;
 	
 	if (keyboard.wentDown(SDLK_t))
 	{
 		m_wavefield.randomize();
+	}
+	
+#if 0
+	m_tension  = 1000000000.0;
+#else
+	const double m1 = mouse.y / double(GFX_SY - 1);
+	//const double m1 = 0.75;
+	const double m2 = 1.0 - m1;
+	//const double c = 10000.0 * m2 + 1000000000.0 * m1;
+	m_tension = 10000.0 * m2 + 1000000000.0 * m1;
+#endif
+
+	if (gamepad[0].isConnected)
+	{
+		m_tension = lerp(10000000.0, 1000000000.0, (gamepad[0].getAnalog(0, ANALOG_X) + 1.f) / 2.f);
 	}
 	
 	s_audioMutex.unlock();
@@ -279,20 +295,10 @@ void AudioSourceWavefield2D::generate(float * __restrict samples, const int numS
 {
 	s_audioMutex.lock();
 	
-#if 0
-	const double dt = 1.0 / SAMPLE_RATE * Calc::Lerp(0.0, 1.0, mouse.y / double(GFX_SY - 1));
-	const double c = 1000000000.0;
-#else
 	const double dt = 1.0 / SAMPLE_RATE * (m_slowMotion ? 0.001 : 1.0);
-	const double m1 = mouse.y / double(GFX_SY - 1);
-	//const double m1 = 0.75;
-	const double m2 = 1.0 - m1;
-	//const double c = 10000.0 * m2 + 1000000000.0 * m1;
-	const double c = 10000.0 * m2 + 1000000000.0 * m1;
-#endif
-
-	const double vRetainPerSecond = 0.05;
-	const double pRetainPerSecond = 0.05;
+	
+	const double vRetainPerSecond = 0.0001;
+	const double pRetainPerSecond = 0.0001;
 	
 	for (int i = 0; i < numSamples; ++i)
 	{
@@ -301,10 +307,12 @@ void AudioSourceWavefield2D::generate(float * __restrict samples, const int numS
 		
 		samples[i] = m_wavefield.sample(m_sampleLocation[0], m_sampleLocation[1]);
 		
-		m_wavefield.tick(dt, c, vRetainPerSecond, pRetainPerSecond, true);
+		m_wavefield.tick(dt, m_tension, vRetainPerSecond, pRetainPerSecond, true);
 	}
 	
 	s_audioMutex.unlock();
+	
+	audioBufferMul(samples, numSamples, m_gain);
 }
 
 // creatures and a voice world
@@ -439,7 +447,7 @@ struct VoiceWorld : AudioUpdateTask
 	}
 };
 
-static void drawWavefield1D(const Wavefield1D & w, const float sampleLocation)
+static void drawWavefield1D(const Wavefield1D & w, const float sampleLocation, const bool enabled)
 {
 	gxPushMatrix();
 	gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
@@ -472,15 +480,18 @@ static void drawWavefield1D(const Wavefield1D & w, const float sampleLocation)
 	}
 	hqEnd();
 	
-	hqBegin(HQ_FILLED_CIRCLES);
+	if (enabled)
 	{
-		const float p = w.sample(sampleLocation);
-		const float a = 1.f;
-		
-		setColorf(1.f, 1.f, 0.f, a);
-		hqFillCircle(sampleLocation, p, 1.f);
+		hqBegin(HQ_FILLED_CIRCLES);
+		{
+			const float p = w.sample(sampleLocation);
+			const float a = 1.f;
+			
+			setColorf(1.f, 1.f, 0.f, a);
+			hqFillCircle(sampleLocation, p, 1.f);
+		}
+		hqEnd();
 	}
-	hqEnd();
 	
 	hqBegin(HQ_LINES);
 	{
@@ -493,7 +504,7 @@ static void drawWavefield1D(const Wavefield1D & w, const float sampleLocation)
 	gxPopMatrix();
 }
 
-static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, const float sampleLocationY)
+static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, const float sampleLocationY, const bool enabled)
 {
 	gxPushMatrix();
 	gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
@@ -514,7 +525,12 @@ static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, 
 				hqFillCircle(x, y, .2f + std::abs(p));
 			}
 		}
-		
+	}
+	hqEnd();
+	
+	if (enabled)
+	{
+		hqBegin(HQ_FILLED_CIRCLES);
 		{
 			const float p = w.sample(sampleLocationX, sampleLocationY);
 			const float a = 1.f;
@@ -522,8 +538,8 @@ static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, 
 			setColorf(1.f, 1.f, 0.f, a);
 			hqFillCircle(sampleLocationX, sampleLocationY, 1.f + std::abs(p));
 		}
+		hqEnd();
 	}
-	hqEnd();
 	
 	gxPopMatrix();
 }
@@ -568,21 +584,19 @@ int main(int argc, char * argv[])
 	
 	// add a 1D wavefield object
 	
+	bool wavefield1DEnabled = true;
 	AudioSourceWavefield1D wavefield1D;
 	wavefield1D.init(256);
 	AudioVoice * wavefield1DVoice = nullptr;
-#if 1
 	voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D, "wavefield1D", true, 0.f, 1.f, -1);
-#endif
 
 	// add a 2D wavefield object
 	
+	bool wavefield2DEnabled = false;
 	AudioSourceWavefield2D wavefield2D;
-	wavefield2D.init(32);
+	wavefield2D.init(48);
 	AudioVoice * wavefield2DVoice = nullptr;
-#if 1
 	voiceMgr.allocVoice(wavefield2DVoice, &wavefield2D, "wavedield2D", true, 0.f, 1.f, -1);
-#endif
 	
 	//
 	
@@ -591,6 +605,8 @@ int main(int argc, char * argv[])
 	uiState.textBoxTextOffset = 50;
 	uiState.x = GFX_SX - 150 - 40;
 	uiState.y = 40;
+	
+	int repeatIndex = 0;
 	
 	do
 	{
@@ -615,9 +631,38 @@ int main(int argc, char * argv[])
 		//
 		
 		wavefield1D.tick(dt);
+		wavefield1D.m_gain = wavefield1DEnabled ? 1.f : 0.f;
 		
 		wavefield2D.tick(dt);
+		wavefield2D.m_gain = wavefield2DEnabled ? 1.f : 0.f;
 		
+		const bool isDown = mouse.isDown(BUTTON_LEFT) || (gamepad[0].isConnected && gamepad[0].isDown(GAMEPAD_A));
+		
+		if (isDown)
+		{
+			if ((repeatIndex % 10) == 0)
+			{
+				const int gfxSize = std::min(GFX_SX, GFX_SY);
+				
+				const int spotX = (mouse.x - GFX_SX/2.0) / gfxSize * (wavefield2D.m_wavefield.numElems - 1) + (wavefield2D.m_wavefield.numElems-1)/2.f;
+				const int spotY = (mouse.y - GFX_SY/2.0) / gfxSize * (wavefield2D.m_wavefield.numElems - 1) + (wavefield2D.m_wavefield.numElems-1)/2.f;
+				const int r = spotX / float(wavefield2D.m_wavefield.numElems - 1.f) * 10 + 1;
+				const double strength = random(0.f, +1.f) * 4.0;
+				
+				s_audioMutex.lock();
+				{
+					wavefield2D.m_wavefield.doGaussianImpact(spotX, spotY, r, strength);
+				}
+				s_audioMutex.unlock();
+			}
+			
+			repeatIndex++;
+		}
+		else
+		{
+			repeatIndex = 0;
+		}
+
 		//
 		
 		framework.beginDraw(0, 0, 0, 0);
@@ -635,7 +680,7 @@ int main(int argc, char * argv[])
 				}
 				s_audioMutex.unlock();
 				
-				drawWavefield1D(w, sampleLocation);
+				drawWavefield1D(w, sampleLocation, wavefield1DEnabled);
 			}
 			
 			//
@@ -653,7 +698,7 @@ int main(int argc, char * argv[])
 				}
 				s_audioMutex.unlock();
 				
-				drawWavefield2D(w, sampleLocationX, sampleLocationY);
+				drawWavefield2D(w, sampleLocationX, sampleLocationY, wavefield2DEnabled);
 			}
 		
 			//
@@ -674,6 +719,15 @@ int main(int argc, char * argv[])
 				{
 					world->removeCreature();
 				}
+			}
+			popMenu();
+			
+			doBreak();
+			
+			pushMenu("wavefields");
+			{
+				doCheckBox(wavefield1DEnabled, "wavefield 1D", false);
+				doCheckBox(wavefield2DEnabled, "wavefield 2D", false);
 			}
 			popMenu();
 		
