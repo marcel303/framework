@@ -145,10 +145,12 @@ bool doButton(const char * name);
 
 UiTextboxResult doTextBox(int & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
 UiTextboxResult doTextBox(float & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
+UiTextboxResult doTextBox(double & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
 UiTextboxResult doTextBox(std::string & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
 
 UiTextboxResult doTextBox(int & value, const char * name, const float dt);
 UiTextboxResult doTextBox(float & value, const char * name, const float dt);
+UiTextboxResult doTextBox(double & value, const char * name, const float dt);
 UiTextboxResult doTextBox(std::string & value, const char * name, const float dt);
 
 bool doCheckBox(bool & value, const char * name, const bool isCollapsable);

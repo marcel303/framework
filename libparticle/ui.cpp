@@ -531,6 +531,12 @@ static bool valueToString(float src, char * dst, const int dstSize)
 	return true;
 }
 
+static bool valueToString(double src, char * dst, const int dstSize)
+{
+	sprintf_s(dst, dstSize, "%g", src);
+	return true;
+}
+
 static bool stringToValue(const char * src, std::string & dst)
 {
 	dst = src;
@@ -552,6 +558,15 @@ static bool stringToValue(const char * src, float & dst)
 		return false;
 	
 	dst = (float)atof(src);
+	return true;
+}
+
+static bool stringToValue(const char * src, double & dst)
+{
+	if (src[0] == 0)
+		return false;
+	
+	dst = atof(src);
 	return true;
 }
 
@@ -594,7 +609,7 @@ static bool stringToDouble(const char * s, double & d)
 	}
 }
 
-static void increment(char * dst, int dstSize, int direction, float & _value)
+static void increment(char * dst, int dstSize, int direction, double & _value)
 {
 	const int numDecimals = countDecimals(dst);
 	
@@ -647,6 +662,15 @@ static void increment(char * dst, int dstSize, int direction, float & _value)
 		
 		fassert(length >= 0 && length < dstSize);
 	}
+}
+
+static void increment(char * dst, int dstSize, int direction, float & _value)
+{
+	double value = _value;
+	
+	increment(dst, dstSize, direction, value);
+	
+	_value = value;
 }
 
 static void increment(char * dst, int dstSize, int direction, std::string & value)
@@ -818,6 +842,11 @@ UiTextboxResult doTextBox(float & value, const char * name, const float xOffset,
 	return doTextBoxImpl(value, name, xOffset, xScale, lineBreak, dt);
 }
 
+UiTextboxResult doTextBox(double & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
+{
+	return doTextBoxImpl(value, name, xOffset, xScale, lineBreak, dt);
+}
+
 UiTextboxResult doTextBox(std::string & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
 {
 	return doTextBoxImpl(value, name, xOffset, xScale, lineBreak, dt);
@@ -835,6 +864,11 @@ UiTextboxResult doTextBox(int & value, const char * name, const float dt)
 }
 
 UiTextboxResult doTextBox(float & value, const char * name, const float dt)
+{
+	return doTextBoxImpl(value, name, dt);
+}
+
+UiTextboxResult doTextBox(double & value, const char * name, const float dt)
 {
 	return doTextBoxImpl(value, name, dt);
 }
