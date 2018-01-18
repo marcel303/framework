@@ -41,7 +41,6 @@ struct TrackedDot
 	// stuff used internally by the dot tracker, or if you choose to use DGrid
 	TrackedDot * next;
 	int gridIndex;
-	bool identified;
 };
 
 struct DotTracker
