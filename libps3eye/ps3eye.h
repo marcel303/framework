@@ -18,10 +18,10 @@ struct libusb_device_handle;
 
 #include <stdint.h>
 
-#if defined(DEBUG)
-#define debug(...) fprintf(stdout, __VA_ARGS__)
+#if defined(DEBUG) && 0
+	#define debug(...) fprintf(stdout, __VA_ARGS__)
 #else
-#define debug(...) 
+	#define debug(...)
 #endif
 
 
