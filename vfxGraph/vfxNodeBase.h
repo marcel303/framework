@@ -140,6 +140,7 @@ struct VfxImageCpu
 	
 	void setDataInterleaved(const uint8_t * data, const int sx, const int sy, const int numChannels, const int alignment, const int pitch);
 	void setDataR8(const uint8_t * r, const int sx, const int sy, const int alignment, const int pitch);
+	void setDataRGB8(const uint8_t * rgba, const int sx, const int sy, const int alignment, const int pitch);
 	void setDataRGBA8(const uint8_t * rgba, const int sx, const int sy, const int alignment, const int pitch);
 	void reset();
 	
@@ -300,6 +301,9 @@ struct VfxChannelZipper
 	
 	bool done() const
 	{
+		if (size() == 0)
+			return true;
+		
 		return doneX() && doneY();
 	}
 	

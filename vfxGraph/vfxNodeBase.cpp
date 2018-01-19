@@ -150,6 +150,13 @@ void VfxImageCpu::setDataR8(const uint8_t * r, const int sx, const int sy, const
 	setDataInterleaved(r, sx, sy, 1, alignment, pitch);
 }
 
+void VfxImageCpu::setDataRGB8(const uint8_t * rgb, const int sx, const int sy, const int alignment, const int _pitch)
+{
+	const int pitch = _pitch == 0 ? sx * 3 : _pitch;
+	
+	setDataInterleaved(rgb, sx, sy, 3, alignment, pitch);
+}
+
 void VfxImageCpu::setDataRGBA8(const uint8_t * rgba, const int sx, const int sy, const int alignment, const int _pitch)
 {
 	const int pitch = _pitch == 0 ? sx * 4 : _pitch;
