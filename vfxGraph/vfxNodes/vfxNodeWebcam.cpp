@@ -67,6 +67,18 @@ void VfxNodeWebcam::tick(const float dt)
 {
 	if (isPassthrough)
 	{
+		if (webcam != nullptr)
+		{
+			webcam->shut();
+			
+			delete webcam;
+			webcam = nullptr;
+		}
+		
+		currentDeviceIndex = -1;
+		
+		lastImageIndex = -1;
+		
 		freeImage();
 		
 		return;
