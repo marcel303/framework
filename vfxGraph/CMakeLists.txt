@@ -31,6 +31,10 @@ if (NOT HAS_LIBVIDEO)
 	message("including libvideo")
 	add_subdirectory(../libvideo libvideo)
 endif (NOT HAS_LIBVIDEO)
+if (NOT HAS_LIBPS3EYE)
+	message("including libps3eye")
+	add_subdirectory(../libps3eye libps3eye)
+endif (NOT HAS_LIBPS3EYE)
 
 #
 
@@ -69,21 +73,22 @@ target_link_libraries(vfxgraph framework-ofx)
 target_link_libraries(vfxgraph libgg)
 target_link_libraries(vfxgraph libosc)
 target_link_libraries(vfxgraph libvideo)
+target_link_libraries(vfxgraph libps3eye)
 
 target_compile_definitions(vfxgraph PUBLIC
 	ENABLE_KINECT1=0
 	ENABLE_TURBOJPEG=1)
 
 if (WIN32)
-	target_compile_definitions(vfxgraph PUBLIC ENABLE_SYPHON=0 ENABLE_LEAPMOTION=1 ENABLE_KINECT2=0 ENABLE_DEEPBELIEF=0 __WINDOWS_MM__)
+	target_compile_definitions(vfxgraph PUBLIC ENABLE_SYPHON=0 ENABLE_LEAPMOTION=1 ENABLE_KINECT2=0 ENABLE_DEEPBELIEF=0 ENABLE_PS3EYE=0 __WINDOWS_MM__)
 endif (WIN32)
 
 if (APPLE)
-	target_compile_definitions(vfxgraph PUBLIC ENABLE_SYPHON=1 ENABLE_LEAPMOTION=1 ENABLE_KINECT2=1 ENABLE_DEEPBELIEF=1 __MACOSX_CORE__)
+	target_compile_definitions(vfxgraph PUBLIC ENABLE_SYPHON=1 ENABLE_LEAPMOTION=1 ENABLE_KINECT2=1 ENABLE_DEEPBELIEF=1 ENABLE_PS3EYE=1 __MACOSX_CORE__)
 endif (APPLE)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-	target_compile_definitions(vfxgraph PUBLIC ENABLE_SYPHON=0 ENABLE_LEAPMOTION=0 ENABLE_KINECT2=0 ENABLE_DEEPBELIEF=0 __LINUX_ALSA__)
+	target_compile_definitions(vfxgraph PUBLIC ENABLE_SYPHON=0 ENABLE_LEAPMOTION=0 ENABLE_KINECT2=0 ENABLE_DEEPBELIEF=0 ENABLE_PS3EYE=1 __LINUX_ALSA__)
 endif ()
 
 target_include_directories(vfxgraph PUBLIC "${PROJECT_SOURCE_DIR}")
