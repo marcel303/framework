@@ -38,9 +38,18 @@ struct SDL_Thread;
 
 struct VfxNodePs3eye : VfxNodeBase
 {
+	enum Resolution
+	{
+		kResolution_320x240,
+		kResolution_640x480
+	};
+	
 	enum Input
 	{
 		kInput_DeviceIndex,
+		kInput_Resolution,
+		kInput_Framerate,
+		kInput_ColorEnabled,
 		kInput_COUNT
 	};
 
@@ -52,6 +61,9 @@ struct VfxNodePs3eye : VfxNodeBase
 	};
 
 	int currentDeviceIndex;
+	int currentResolution;
+	int currentFramerate;
+	bool currentEnableColor;
 	
 	SDL_Thread * captureThread;
 	std::atomic<bool> stopCaptureThread;

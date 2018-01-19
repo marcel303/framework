@@ -36,11 +36,20 @@
 
 using namespace ps3eye;
 
+VFX_ENUM_TYPE(ps3eyeResolution)
+{
+	elem("320x240");
+	//elem("640x480");
+}
+
 VFX_NODE_TYPE(VfxNodePs3eye)
 {
 	typeName = "ps3eye";
 	
 	in("device", "int");
+	inEnum("resolution", "ps3eyeResolution");
+	in("fps", "int", "100");
+	in("color", "bool", "1");
 	out("image", "image");
 	out("image_mem", "image_cpu");
 }
@@ -48,6 +57,9 @@ VFX_NODE_TYPE(VfxNodePs3eye)
 VfxNodePs3eye::VfxNodePs3eye()
 	: VfxNodeBase()
 	, currentDeviceIndex(-1)
+	, currentResolution(0)
+	, currentFramerate(0)
+	, currentEnableColor(false)
 	, captureThread(nullptr)
 	, stopCaptureThread(false)
 	, ps3eye()
@@ -58,6 +70,9 @@ VfxNodePs3eye::VfxNodePs3eye()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_DeviceIndex, kVfxPlugType_Int);
+	addInput(kInput_Resolution, kVfxPlugType_Int);
+	addInput(kInput_Framerate, kVfxPlugType_Int);
+	addInput(kInput_ColorEnabled, kVfxPlugType_Bool);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
 	addOutput(kOutput_ImageCpu, kVfxPlugType_ImageCpu, &imageCpuOutput);
 }
@@ -77,26 +92,39 @@ void VfxNodePs3eye::tick(const float dt)
 	{
 		freeImage();
 		
+		stopCapture();
+		
+		currentDeviceIndex = -1;
+		currentResolution = 0;
+		currentFramerate = 0;
+		currentEnableColor = false;
+		
 		return;
 	}
 	
 	vfxCpuTimingBlock(VfxNodePs3eye);
 	vfxGpuTimingBlock(VfxNodePs3eye);
 	
-	const int desiredSx = 320;
-	const int desiredSy = 240;
-	const int desiredFps = 187;
-	const bool enableColor = true;
-
 	const int deviceIndex = getInputInt(kInput_DeviceIndex, 0);
+	const Resolution resolution = (Resolution)getInputInt(kInput_Resolution, 0);
+	const int desiredFramerate = getInputInt(kInput_Framerate, 100);
+	const bool enableColor = getInputBool(kInput_ColorEnabled, true);
 	
-	if (deviceIndex != currentDeviceIndex)
+	if (deviceIndex != currentDeviceIndex ||
+		currentResolution != resolution ||
+		desiredFramerate != currentFramerate ||
+		enableColor != currentEnableColor)
 	{
 		currentDeviceIndex = deviceIndex;
+		currentResolution = resolution;
+		currentFramerate = desiredFramerate;
+		currentEnableColor = enableColor;
+		
+		//
 		
 		stopCapture();
 
-    	// list the devices
+    	// select the device
 
     	auto devices = PS3EYECam::getDevices();
 		LOG_DBG("found %d PS3 eye cam devices", devices.size());
@@ -111,7 +139,13 @@ void VfxNodePs3eye::tick(const float dt)
 		
 		if (ps3eye != nullptr)
 		{
-			const bool result = ps3eye->init(desiredSx, desiredSy, desiredFps,
+			const int desiredSx = resolution == kResolution_320x240 ? 320 : 640;
+			const int desiredSy = resolution == kResolution_320x240 ? 240 : 480;
+	
+			const bool result = ps3eye->init(
+				desiredSx,
+				desiredSy,
+				desiredFramerate,
 				enableColor
 				? PS3EYECam::EOutputFormat::RGB
 				: PS3EYECam::EOutputFormat::Gray);
@@ -125,9 +159,10 @@ void VfxNodePs3eye::tick(const float dt)
 				const int sx = ps3eye->getWidth();
 				const int sy = ps3eye->getHeight();
 				
-				frameData = new uint8_t[sx * sy * (enableColor ? 3 : 1)];
+				const int numBytes = sx * sy * (enableColor ? 3 : 1);
 				
-				ps3eye->start();
+				frameData = new uint8_t[numBytes];
+				memset(frameData, 0, numBytes);
 				
 				captureThread = SDL_CreateThread(captureThreadProc, "PS3EYE Capture Thread", this);
 			}
@@ -199,27 +234,36 @@ int VfxNodePs3eye::captureThreadProc(void * obj)
 {
 	VfxNodePs3eye * self = (VfxNodePs3eye*)obj;
 	
+	self->ps3eye->start();
+	
 	while (self->stopCaptureThread == false)
 	{
 		self->ps3eye->getFrame(self->frameData);
 	}
+	
+	self->ps3eye->stop();
 	
 	return 0;
 }
 
 void VfxNodePs3eye::stopCapture()
 {
-	stopCaptureThread = true;
+	if (captureThread != nullptr)
+	{
+		stopCaptureThread = true;
+		
+		SDL_WaitThread(captureThread, nullptr);
+		captureThread = nullptr;
+		
+		stopCaptureThread = false;
+	}
 	
-	SDL_WaitThread(captureThread, nullptr);
-	captureThread = nullptr;
-	
-	stopCaptureThread = false;
-	
-	if (ps3eye != nullptr && ps3eye->isStreaming())
-		ps3eye->stop();
+	if (ps3eye != nullptr)
+	{
+		Assert(!ps3eye->isStreaming());
 
-	ps3eye = nullptr;
+		ps3eye = nullptr;
+	}
 
 	delete [] frameData;
 	frameData = nullptr;
