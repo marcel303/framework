@@ -22,9 +22,6 @@ using namespace ps3eye;
 
 void testPs3eye()
 {
-	SDL_mutex * mutex = SDL_CreateMutex();
-	Assert(mutex != nullptr);
-	
 	const bool enableColor = true;
 	
     PS3EYECam::PS3EYERef eye;
@@ -37,6 +34,15 @@ void testPs3eye()
 	}
 	logDebug("found %d devices", devices.size());
 	
+	if (devices.empty())
+	{
+		logError("no PS3 eye camera connected");
+		return;
+	}
+	
+	SDL_mutex * mutex = SDL_CreateMutex();
+	Assert(mutex != nullptr);
+	
 	uint8_t * frameData = nullptr;
 	uint8_t * lumiData = nullptr;
 	uint8_t * maskData = nullptr;
@@ -45,44 +51,38 @@ void testPs3eye()
 	OpenglTexture textureLumi;
 	OpenglTexture textureMask;
 	
-    if (!devices.empty())
-    {   
-        eye = devices.at(0);
+	eye = devices.at(0);
+	
+	const bool result = eye->init(320, 240, 187,
+		enableColor
+		? PS3EYECam::EOutputFormat::RGB
+		: PS3EYECam::EOutputFormat::Gray);
+	
+	logDebug("eye init result: %d", result);
+	
+	if (result)
+	{
+		eye->start();
 		
-        const bool result = eye->init(320, 240, 187, enableColor ? PS3EYECam::EOutputFormat::RGB : PS3EYECam::EOutputFormat::Gray);
+		const int sx = eye->getWidth();
+		const int sy = eye->getHeight();
 		
-        logDebug("eye init result: %d", result);
+		frameData = new uint8_t[sx * sy * (enableColor ? 3 : 1)];
 		
-		if (result)
-		{
-			{
-				Benchmark bm("eye start");
-				
-				eye->start();
-			}
-			
-			const int sx = eye->getWidth();
-			const int sy = eye->getHeight();
-			
-			frameData = new uint8_t[sx * sy * (enableColor ? 3 : 1)];
-			
-			lumiData = new uint8_t[sx * sy];
-			maskData = new uint8_t[sx * sy];
-			
-			{
-				Benchmark bm("texture create");
-				
-				texture.allocate(eye->getWidth(), eye->getHeight(), enableColor ? GL_RGB8 : GL_R8, true, true);
-				if (!enableColor)
-					texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
-				
-				textureLumi.allocate(sx, sy, GL_R8, true, true);
-				textureLumi.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
-				
-				textureMask.allocate(sx, sy, GL_R8, true, true);
-				textureMask.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
-			}
-		}
+		lumiData = new uint8_t[sx * sy];
+		maskData = new uint8_t[sx * sy];
+		
+		//
+		
+		texture.allocate(eye->getWidth(), eye->getHeight(), enableColor ? GL_RGB8 : GL_R8, true, true);
+		if (!enableColor)
+			texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+		
+		textureLumi.allocate(sx, sy, GL_R8, true, true);
+		textureLumi.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+		
+		textureMask.allocate(sx, sy, GL_R8, true, true);
+		textureMask.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 	}
 	
 	std::atomic_bool autoGain(eye->getAutogain());
@@ -104,6 +104,7 @@ void testPs3eye()
 	std::atomic_bool stop(false);
 	
 	int numDots_shared = 0;
+	DotIsland dots_shared[MAX_DOTS];
 	TrackedDot trackedDots_shared[MAX_DOTS];
 	
 	std::thread thread([&]()
@@ -192,6 +193,7 @@ void testPs3eye()
 					SDL_LockMutex(mutex);
 					{
 						numDots_shared = numDots;
+						memcpy(dots_shared, islands, sizeof(dots_shared));
 						memcpy(trackedDots_shared, trackedDots, sizeof(trackedDots_shared));
 					}
 					SDL_UnlockMutex(mutex);
@@ -205,11 +207,10 @@ void testPs3eye()
 	
 	do
 	{
-		//SDL_Delay(1000);
-		
 		framework.process();
 		
 		const int second = int(framework.time);
+		
 		if (second != lastSecond)
 		{
 			lastSecond = second;
@@ -217,134 +218,132 @@ void testPs3eye()
 			lastFrameIndex = frameIndex;
 		}
 		
-		if (eye)
+		texture.upload(frameData, 4, 0, enableColor ? GL_RGB : GL_RED, GL_UNSIGNED_BYTE);
+		
+		textureLumi.upload(lumiData, 1, 0, GL_RED, GL_UNSIGNED_BYTE);
+		textureMask.upload(maskData, 1, 0, GL_RED, GL_UNSIGNED_BYTE);
+		
+		int numDots;
+		DotIsland dots[MAX_DOTS];
+		TrackedDot trackedDots[MAX_DOTS];
+		
+		SDL_LockMutex(mutex);
 		{
-			texture.upload(frameData, 4, 0, enableColor ? GL_RGB : GL_RED, GL_UNSIGNED_BYTE);
-			
-			textureLumi.upload(lumiData, 1, 0, GL_RED, GL_UNSIGNED_BYTE);
-			textureMask.upload(maskData, 1, 0, GL_RED, GL_UNSIGNED_BYTE);
-			
-			int numDots;
-			TrackedDot trackedDots[MAX_DOTS];
-			
-			SDL_LockMutex(mutex);
-			{
-				numDots = numDots_shared;
-				memcpy(trackedDots, trackedDots_shared, sizeof(trackedDots));
-			}
-			SDL_UnlockMutex(mutex);
-			
-			framework.beginDraw(0, 0, 0, 0);
-			{
-				setFont("calibri.ttf");
-				pushFontMode(FONT_SDF);
-				
-				const GLuint textureId =
-					keyboard.isDown(SDLK_m) ? textureMask.id :
-					keyboard.isDown(SDLK_l) ? textureLumi.id :
-					texture.id;
-				
-				gxSetTexture(textureId);
-				{
-					drawRect(0, 0, GFX_SX, GFX_SY);
-				}
-				gxSetTexture(0);
-				
-				gxPushMatrix();
-				{
-					const float scaleX = GFX_SX / float(eye->getWidth());
-					const float scaleY = GFX_SY / float(eye->getHeight());
-					
-					gxScalef(scaleX, scaleY, 1.f);
-					
-					hqBegin(HQ_STROKED_CIRCLES);
-					{
-						setColor(colorGreen);
-						
-						for (int i = 0; i < numDots; ++i)
-						{
-							auto & d = trackedDots[i];
-							
-							hqStrokeCircle(d.x, d.y, MAX_DOT_RADIUS/2.f, 2.f);
-						}
-					}
-					hqEnd();
-					
-					beginTextBatch();
-					{
-						for (int i = 0; i < numDots; ++i)
-						{
-							auto & d = trackedDots[i];
-							
-							drawText(d.x, d.y, 12.f, 0.f, 0.f, "%d", d.id);
-						}
-					}
-					endTextBatch();
-				}
-				gxPopMatrix();
-				
-				makeActive(&uiState, true, true);
-				pushMenu("controls");
-				{
-					bool autoGainb = autoGain.load();
-					int gaini = gain;
-					
-					bool autoWhiteBalanceb = autoWhiteBalance.load();
-					int whiteBalancei = whiteBalance.load();
-					
-					int exposurei = exposure;
-					int sharpnessi = sharpness;
-					
-					int huei = hue;
-					
-					int brightnessi = brightness;
-					int contrasti = contrast;
-					
-					doCheckBox(autoGainb, "auto gain", false);
-					doTextBox(gaini, "gain", framework.timeStep);
-					doCheckBox(autoWhiteBalanceb, "auto white balance", false);
-					doTextBox(whiteBalancei, "white balance", framework.timeStep);
-					doTextBox(exposurei, "exposure", framework.timeStep);
-					doTextBox(sharpnessi, "sharpness", framework.timeStep);
-					doTextBox(huei, "hue", framework.timeStep);
-					doTextBox(brightnessi, "brightness", framework.timeStep);
-					doTextBox(contrasti, "contrast", framework.timeStep);
-					
-					autoGain = autoGainb;
-					gain = gaini;
-					autoWhiteBalance = autoWhiteBalanceb;
-					whiteBalance = whiteBalancei;
-					exposure = exposurei;
-					sharpness = sharpnessi;
-					hue = huei;
-					brightness = brightnessi;
-					contrast = contrasti;
-				}
-				popMenu();
-				
-				drawText(20, 400, 12, +1, +1, "frame: %d, fps: %d", frameIndex.load(), framesPerSecond);
-				
-				popFontMode();
-			}
-			framework.endDraw();
+			numDots = numDots_shared;
+			memcpy(dots, dots_shared, sizeof(dots));
+			memcpy(trackedDots, trackedDots_shared, sizeof(trackedDots));
 		}
+		SDL_UnlockMutex(mutex);
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			setFont("calibri.ttf");
+			pushFontMode(FONT_SDF);
+			
+			const GLuint textureId =
+				keyboard.isDown(SDLK_m) ? textureMask.id :
+				keyboard.isDown(SDLK_l) ? textureLumi.id :
+				texture.id;
+			
+			gxSetTexture(textureId);
+			{
+				drawRect(0, 0, GFX_SX, GFX_SY);
+			}
+			gxSetTexture(0);
+			
+			gxPushMatrix();
+			{
+				const float scaleX = GFX_SX / float(eye->getWidth());
+				const float scaleY = GFX_SY / float(eye->getHeight());
+				
+				gxScalef(scaleX, scaleY, 1.f);
+				
+				hqBegin(HQ_STROKED_CIRCLES);
+				{
+					setColor(colorGreen);
+					
+					for (int i = 0; i < numDots; ++i)
+					{
+						auto & o = dots[i];
+						auto & d = trackedDots[i];
+						
+						const float dx = o.maxX - o.minX;
+						const float dy = o.maxY - o.minY;
+						const float ds = std::hypot(dx, dy);
+						
+						hqStrokeCircle(d.x, d.y, ds/2.f, 2.f);
+					}
+				}
+				hqEnd();
+				
+				beginTextBatch();
+				{
+					for (int i = 0; i < numDots; ++i)
+					{
+						auto & d = trackedDots[i];
+						
+						drawText(d.x, d.y, 12.f, 0.f, 0.f, "%d", d.id);
+					}
+				}
+				endTextBatch();
+			}
+			gxPopMatrix();
+			
+			makeActive(&uiState, true, true);
+			pushMenu("controls");
+			{
+				bool autoGainb = autoGain.load();
+				int gaini = gain;
+				
+				bool autoWhiteBalanceb = autoWhiteBalance.load();
+				int whiteBalancei = whiteBalance.load();
+				
+				int exposurei = exposure;
+				int sharpnessi = sharpness;
+				
+				int huei = hue;
+				
+				int brightnessi = brightness;
+				int contrasti = contrast;
+				
+				doCheckBox(autoGainb, "auto gain", false);
+				doTextBox(gaini, "gain", framework.timeStep);
+				doCheckBox(autoWhiteBalanceb, "auto white balance", false);
+				doTextBox(whiteBalancei, "white balance", framework.timeStep);
+				doTextBox(exposurei, "exposure", framework.timeStep);
+				doTextBox(sharpnessi, "sharpness", framework.timeStep);
+				doTextBox(huei, "hue", framework.timeStep);
+				doTextBox(brightnessi, "brightness", framework.timeStep);
+				doTextBox(contrasti, "contrast", framework.timeStep);
+				
+				autoGain = autoGainb;
+				gain = gaini;
+				autoWhiteBalance = autoWhiteBalanceb;
+				whiteBalance = whiteBalancei;
+				exposure = exposurei;
+				sharpness = sharpnessi;
+				hue = huei;
+				brightness = brightnessi;
+				contrast = contrasti;
+			}
+			popMenu();
+			
+			drawText(20, 400, 12, +1, +1, "frame: %d, fps: %d", frameIndex.load(), framesPerSecond);
+			
+			popFontMode();
+		}
+		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_ESCAPE));
 	
 	stop = true;
-	
-	{
-		Benchmark bm("thread join");
-		thread.join();
-	}
+	thread.join();
+	stop = false;
 	
 	delete [] frameData;
 	frameData = nullptr;
 	
-	if (eye)
-	{
-		Benchmark bm("eye stop");
-		eye->stop();
-	}
+	eye->stop();
+	eye = nullptr;
 	
 	SDL_DestroyMutex(mutex);
 	mutex = nullptr;
