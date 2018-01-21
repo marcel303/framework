@@ -516,24 +516,7 @@ Wiimotes::Wiimotes()
 
 Wiimotes::~Wiimotes()
 {
-	if (discoveryObject != nullptr)
-	{
-		WiimoteDiscovery * discovery = (WiimoteDiscovery*)discoveryObject;
-		[discovery release];
-		
-		discoveryObject = nullptr;
-	}
-	
-	if (connectionObject != nullptr)
-	{
-		WiimoteConnection * connection = (WiimoteConnection*)connectionObject;
-		
-		[connection disconnectDevice];
-		
-		[connection release];
-		
-		connectionObject = nullptr;
-	}
+	shut();
 }
 
 void Wiimotes::findAndConnect()
@@ -555,6 +538,28 @@ void Wiimotes::findAndConnect()
 	}
 }
 
+void Wiimotes::shut()
+{
+	if (discoveryObject != nullptr)
+	{
+		WiimoteDiscovery * discovery = (WiimoteDiscovery*)discoveryObject;
+		[discovery release];
+		
+		discoveryObject = nullptr;
+	}
+	
+	if (connectionObject != nullptr)
+	{
+		WiimoteConnection * connection = (WiimoteConnection*)connectionObject;
+		
+		[connection disconnectDevice];
+		
+		[connection release];
+		
+		connectionObject = nullptr;
+	}
+}
+
 void Wiimotes::process()
 {
 	WiimoteConnection * connection = (WiimoteConnection*)connectionObject;
@@ -567,6 +572,11 @@ void Wiimotes::process()
 	{
 		memset(&wiimoteData, 0, sizeof(wiimoteData));
 	}
+}
+
+bool Wiimotes::getLedEnabled(const uint8_t index) const
+{
+	return (wiimoteData.ledValues & (1 << index)) != 0;
 }
 
 void Wiimotes::setLedValues(const uint8_t values)

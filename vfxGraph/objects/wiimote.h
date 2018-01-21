@@ -62,9 +62,11 @@ struct Wiimotes
 	~Wiimotes();
 	
 	void findAndConnect();
+	void shut();
 	
 	void process();
 	
+	bool getLedEnabled(const uint8_t index) const;
 	void setLedValues(const uint8_t values);
 	void setLedEnabled(const uint8_t index, const bool enabled);
 };
