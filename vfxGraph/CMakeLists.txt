@@ -122,6 +122,7 @@ if (APPLE)
 	find_library(COREIMAGE_LIBRARY CoreImage)
 	find_library(COREMIDI_LIBRARY CoreMIDI)
 	find_library(AVFOUNDATION_LIBRARY AVFoundation)
+	find_library(IOBLUETOOH_LIBRARY IOBluetooth) # Wiimote
 
 	set(VFXGRAPH_LIBRARIES
 		${CMAKE_CURRENT_SOURCE_DIR}/../libfreenect2/macos/lib/libfreenect2.0.2.0.dylib
@@ -132,6 +133,7 @@ if (APPLE)
 		${COREIMAGE_LIBRARY}
 		${COREMIDI_LIBRARY}
 		${AVFOUNDATION_LIBRARY}
+		${IOBLUETOOH_LIBRARY}
 		PARENT_SCOPE)
 
 	set(VFXGRAPH_BINARIES
