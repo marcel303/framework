@@ -1,3 +1,4 @@
+#import "Debugging.h"
 #import "Log.h"
 #import "wiimote.h"
 
@@ -31,6 +32,8 @@ Wiimotes
  
 */
 
+@class WiimoteDiscovery;
+
 enum WiimoteCommand
 {
 	kWiimoteCommand_SetLeds    = 0x11,
@@ -55,7 +58,7 @@ enum WiimoteAddress
 	kWiimoteAddress_PlusDisable = 0x04A400F0
 };
 
-@class WiimoteDiscovery;
+//
 
 @interface WiimoteChannelDelegate : NSObject <IOBluetoothL2CAPChannelDelegate>
 {
@@ -222,37 +225,48 @@ enum WiimoteAddress
 
 - (void)readDataWithAddress:(uint32_t)address dataSize:(uint16_t)dataSize
 {
-	uint8_t * packetData = (uint8_t*)alloca(6);
+	struct __attribute__ ((packed)) Packet
+	{
+		uint32_t address;
+		uint16_t size;
+	};
 	
-	uint32_t * addressPtr = (uint32_t*)(packetData + 0);
-	uint16_t * sizePtr = (uint16_t*)(packetData + 4);
+	Packet packet;
+	packet.address = htonl(address);
+	packet.size = htons(dataSize);
 	
-	*addressPtr = htonl(address);
-	*sizePtr = htons(dataSize);
-	
-	[self sendCommand:kWiimoteCommand_Read data:packetData dataSize:6];
+	Assert(sizeof(packet) == 6);
+	[self sendCommand:kWiimoteCommand_Read data:&packet dataSize:sizeof(packet)];
 }
 
 - (void)writeDataWithAddress:(uint32_t)address data:(const void*)data dataSize:(uint8_t)dataSize
 {
-	const int packetSize = 21;
-	uint8_t * packetData = (uint8_t*)alloca(packetSize);
-	memset(packetData, 0, packetSize);
+	struct __attribute__ ((packed)) Packet
+	{
+		uint32_t address;
+		uint8_t size;
+		uint8_t payload[16];
+	};
 	
-	uint32_t * addressPtr = (uint32_t*)(packetData + 0);
-	uint8_t * sizePtr = (uint8_t*)(packetData + 4);
+	Packet packet;
+	memset(&packet, 0, sizeof(packet));
 	
-	*addressPtr = htonl(address);
-	*sizePtr = dataSize;
+	packet.address = htonl(address);
+	packet.size = dataSize;
 	
-	memcpy(packetData + 5, data, dataSize);
+	Assert(dataSize <= 16);
+	memcpy(packet.payload, data, dataSize);
 	
-	[self sendCommand:kWiimoteCommand_Write data:packetData dataSize:packetSize];
+	Assert(sizeof(packet) == 21);
+	[self sendCommand:kWiimoteCommand_Write data:&packet dataSize:sizeof(packet)];
 }
 
 - (void)sendLedValues:(uint8_t)ledValues
 {
-	const uint8_t packetData[1] = { uint8_t(ledValues << 4) };
+	const uint8_t packetData[1] =
+	{
+		uint8_t(ledValues << 4)
+	};
 	
 	[self sendCommand:kWiimoteCommand_SetLeds data:packetData dataSize:1];
 }

@@ -4,19 +4,19 @@
 
 enum WiimoteButton
 {
-	kWiimoteButton_Two = 0x0001,
-	kWiimoteButton_One = 0x0002,
-	kWiimoteButton_B = 0x0004,
-	kWiimoteButton_A = 0x0008,
-	kWiimoteButton_Minus = 0x0010,
+	kWiimoteButton_Two         = 0x0001,
+	kWiimoteButton_One         = 0x0002,
+	kWiimoteButton_B           = 0x0004,
+	kWiimoteButton_A           = 0x0008,
+	kWiimoteButton_Minus       = 0x0010,
 	kWiimoteButton_ZACCEL_BIT6 = 0x0020,
 	kWiimoteButton_ZACCEL_BIT7 = 0x0040,
-	kWiimoteButton_Home = 0x0080,
-	kWiimoteButton_Left = 0x0100,
-	kWiimoteButton_Right = 0x0200,
-	kWiimoteButton_Down = 0x0400,
-	kWiimoteButton_Up = 0x0800,
-	kWiimoteButton_Plus = 0x1000,
+	kWiimoteButton_Home        = 0x0080,
+	kWiimoteButton_Left        = 0x0100,
+	kWiimoteButton_Right       = 0x0200,
+	kWiimoteButton_Down        = 0x0400,
+	kWiimoteButton_Up          = 0x0800,
+	kWiimoteButton_Plus        = 0x1000,
 	kWiimoteButton_ZACCEL_BIT4 = 0x2000,
 	kWiimoteButton_ZACCEL_BIT5 = 0x4000
 };
