@@ -132,17 +132,22 @@ bool BinaryDiffValidate(const void * bytes1, const void * bytes2, uint32_t byteC
 	return result;
 }
 
-void ApplyBinaryDiff(const void * sourceBytes, void * destBytes, uint32_t byteCount, const BinaryDiffEntry * entries)
+bool ApplyBinaryDiff(const void * sourceBytes, void * destBytes, uint32_t byteCount, const BinaryDiffEntry * entries)
 {
 	const uint8_t * src = reinterpret_cast<const uint8_t *>(sourceBytes);
 	      uint8_t * dst = reinterpret_cast<      uint8_t *>(destBytes);
 
 	for (const BinaryDiffEntry * entry = entries; entry; entry = entry->m_next)
 	{
-		// todo : ensure binary diff entries do not write outside of destBytes
+		// ensure binary diff entries do not write outside of destBytes
+		
+		if (entry->m_offset + entry->m_size > byteCount)
+			return false;
 
 		memcpy(dst + entry->m_offset, src + entry->m_offset, entry->m_size);
 	}
+	
+	return true;
 }
 
 BinaryDiffPackage MakeBinaryDiffPackage(const void * bytes, uint32_t byteCount, const BinaryDiffResult & diff)
@@ -178,7 +183,7 @@ BinaryDiffPackage MakeBinaryDiffPackage(const void * bytes, uint32_t byteCount, 
 	return result;
 }
 
-void ApplyBinaryDiffPackage(void * destBytes, uint32_t byteCount, const BinaryDiffPackage & package)
+bool ApplyBinaryDiffPackage(void * destBytes, uint32_t byteCount, const BinaryDiffPackage & package)
 {
 	if (!package.m_data.empty())
 	{
@@ -188,11 +193,17 @@ void ApplyBinaryDiffPackage(void * destBytes, uint32_t byteCount, const BinaryDi
 		for (const BinaryDiffEntry * entry = package.m_diff.m_diffs.get(); entry; entry = entry->m_next)
 		{
 			Assert(entry->m_offset + entry->m_size <= byteCount);
-
-			if (entry->m_offset + entry->m_size <= byteCount)
-				memcpy(dst + entry->m_offset, src, entry->m_size);
+			
+			// ensure binary diff entries do not write outside of destBytes
+			
+			if (entry->m_offset + entry->m_size > byteCount)
+				return false;
+			
+			memcpy(dst + entry->m_offset, src, entry->m_size);
 
 			src += entry->m_size;
 		}
 	}
+	
+	return true;
 }

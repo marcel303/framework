@@ -68,7 +68,7 @@ bool BinaryDiffValidate(const void * bytes1, const void * bytes2, uint32_t byteC
 /* Applies a binary diff.
  * Note that this method isn't very useful in practice. It assumes you can provide the source array as well as the output array.
  */
-void ApplyBinaryDiff(const void * sourceBytes, void * destBytes, uint32_t byteCount, const BinaryDiffEntry * entries);
+bool ApplyBinaryDiff(const void * sourceBytes, void * destBytes, uint32_t byteCount, const BinaryDiffEntry * entries);
 
 /* Generates a binary diff package, that contains both the binary diff result, and the data needed to apply the diff.
  */
@@ -76,4 +76,4 @@ BinaryDiffPackage MakeBinaryDiffPackage(const void * bytes, uint32_t byteCount, 
 
 /* Applies a binary diff package.
  */
-void ApplyBinaryDiffPackage(void * destBytes, uint32_t byteCount, const BinaryDiffPackage & package);
+bool ApplyBinaryDiffPackage(void * destBytes, uint32_t byteCount, const BinaryDiffPackage & package);
