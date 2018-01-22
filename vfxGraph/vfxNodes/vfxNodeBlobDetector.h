@@ -37,6 +37,7 @@ struct VfxNodeBlobDetector : VfxNodeBase
 		kInput_Channel,
 		kInput_TresholdTest,
 		kInput_TresholdValue,
+		kInput_MaxBlobs,
 		kInput_COUNT
 	};
 	

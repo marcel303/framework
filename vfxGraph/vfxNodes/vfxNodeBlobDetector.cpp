@@ -55,6 +55,7 @@ VFX_NODE_TYPE(VfxNodeBlobDetector)
 	inEnum("channel", "blobDetectorChannel");
 	inEnum("tresholdTest", "blobDetectorTresholdTest");
 	in("tresholdValue", "float", "0.5");
+	in("maxBlobs", "int", "256");
 	out("mask", "image_cpu");
 	out("x", "channel");
 	out("y", "channel");
@@ -80,6 +81,7 @@ VfxNodeBlobDetector::VfxNodeBlobDetector()
 	addInput(kInput_Channel, kVfxPlugType_Int);
 	addInput(kInput_TresholdTest, kVfxPlugType_Int);
 	addInput(kInput_TresholdValue, kVfxPlugType_Float);
+	addInput(kInput_MaxBlobs, kVfxPlugType_Int);
 	addOutput(kOutput_Mask, kVfxPlugType_ImageCpu, &maskOutput);
 	addOutput(kOutput_X, kVfxPlugType_Channel, &xOutput);
 	addOutput(kOutput_Y, kVfxPlugType_Channel, &yOutput);
@@ -103,7 +105,7 @@ void VfxNodeBlobDetector::tick(const float dt)
 	const Channel channel = (Channel)getInputInt(kInput_Channel, kChannel_RGB);
 	//const BlobDetector::TresholdTest test = getInputInt(kInput_TresholdTest, 0) == 0 ? BlobDetector::kTresholdTest_GreaterEqual : BlobDetector::kTresholdTest_LessEqual;
 	const int tresholdValue = getInputFloat(kInput_TresholdValue, .5f) * 255.f;
-	const int maxBlobs = std::min(kMaxBlobs, kMaxBlobs); // todo : add max blobs input
+	const int maxBlobs = std::max(0, std::min(kMaxBlobs, getInputInt(kInput_MaxBlobs, 256)));
 	
 	if (image == nullptr || isPassthrough)
 	{
