@@ -34,6 +34,7 @@
 #include "vfxNodeBase.h"
 #include <atomic>
 
+struct SDL_mutex;
 struct SDL_Thread;
 
 struct VfxNodePs3eye : VfxNodeBase
@@ -69,6 +70,7 @@ struct VfxNodePs3eye : VfxNodeBase
 	std::atomic<bool> stopCaptureThread;
 	ps3eye::PS3EYECam::PS3EYERef ps3eye;
 	uint8_t * frameData;
+	std::atomic<bool> hasFrameData;
 
 	OpenglTexture texture;
 

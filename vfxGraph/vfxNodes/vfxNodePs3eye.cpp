@@ -64,6 +64,7 @@ VfxNodePs3eye::VfxNodePs3eye()
 	, stopCaptureThread(false)
 	, ps3eye()
 	, frameData(nullptr)
+	, hasFrameData(false)
 	, texture()
 	, imageOutput()
 	, imageCpuOutput()
@@ -162,7 +163,7 @@ void VfxNodePs3eye::tick(const float dt)
 				const int numBytes = sx * sy * (enableColor ? 3 : 1);
 				
 				frameData = new uint8_t[numBytes];
-				memset(frameData, 0, numBytes);
+				Assert(hasFrameData == false);
 				
 				captureThread = SDL_CreateThread(captureThreadProc, "PS3EYE Capture Thread", this);
 			}
@@ -175,7 +176,7 @@ void VfxNodePs3eye::tick(const float dt)
 	}
 	else
 	{
-		if (true)
+		if (hasFrameData)
 		{
 			const bool wantsTexture = outputs[kOutput_Image].isReferenced();
 			
@@ -239,6 +240,8 @@ int VfxNodePs3eye::captureThreadProc(void * obj)
 	while (self->stopCaptureThread == false)
 	{
 		self->ps3eye->getFrame(self->frameData);
+		
+		self->hasFrameData = true;
 	}
 	
 	self->ps3eye->stop();
@@ -267,6 +270,8 @@ void VfxNodePs3eye::stopCapture()
 
 	delete [] frameData;
 	frameData = nullptr;
+	
+	hasFrameData = false;
 }
 
 #endif
