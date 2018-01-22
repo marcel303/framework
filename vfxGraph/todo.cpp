@@ -127,8 +127,9 @@ todo : nodes :
 - add ability for nodes to trigger again (process a partial time slice ?). but this will re-introduce again the issue of execution order of triggers ..
 - add channels.toImage node ?
 - add play/stop/pause/resume triggers to video node
-- add curl node
-- add text list node. next! prev! rand! custom editor for list of strings
+- add curl noise node
++ add text list node. next! prev! rand!
+- text array node : custom editor for list of strings
 - add gen.random node with different modes. white, pink, brown
 - add gen.brownian
 - add a dedicated shader node. no pre-defined inputs at all. output an image
