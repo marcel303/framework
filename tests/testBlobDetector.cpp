@@ -79,10 +79,9 @@ void testBlobDetection()
 	{
 		const int kMaxBlobs = 128;
 		
-		Blob blobs[kMaxBlobs];
-		memset(blobs, 0, sizeof(blobs));
-		
 		const uint16_t t1 = g_TimerRT.TimeUS_get();
+		
+		Blob blobs[kMaxBlobs];
 		
 		uint8_t values[SURFACE_SX * SURFACE_SY];
 		BlobDetector::computeValuesFromRGBA(rgba, SURFACE_SX, SURFACE_SY, 0, values);
@@ -138,12 +137,11 @@ void testBlobDetection()
 		popSurface();
 		
 		// detect blobs
-
-		const int kMaxBlobs = 128;
-		Blob blobs[kMaxBlobs];
-		memset(blobs, 0, sizeof(blobs));
 		
 		const int treshold = 255 * mouse.x / GFX_SX;
+		
+		const int kMaxBlobs = 128;
+		Blob blobs[kMaxBlobs];
 		
 		uint8_t values[SURFACE_SX * SURFACE_SY];
 		BlobDetector::computeValuesFromRGBA(rgba, SURFACE_SX, SURFACE_SY, treshold, values);

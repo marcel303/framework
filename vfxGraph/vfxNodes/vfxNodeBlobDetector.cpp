@@ -258,7 +258,6 @@ void VfxNodeBlobDetector::tick(const float dt)
 		memcpy(maskRw, mask, maskSx * maskSy);
 		
 		Blob blobs[kMaxBlobs];
-		memset(blobs, 0, sizeof(blobs));
 		
 		const int numBlobs = BlobDetector::detectBlobs(maskRw, maskSx, maskSy, blobs, maxBlobs);
 		

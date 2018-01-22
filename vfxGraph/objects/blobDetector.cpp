@@ -26,6 +26,7 @@
 */
 
 #include "blobDetector.h"
+#include <string.h>
 
 #if __SSE2__
 	#include <immintrin.h>
@@ -174,6 +175,7 @@ int BlobDetector::detectBlobs(
 		#endif
 		
 			Blob & blob = blobs[numBlobs];
+			memset(&blob, 0, sizeof(blob));
 			
 			const int index = x + y * sx;
 		
