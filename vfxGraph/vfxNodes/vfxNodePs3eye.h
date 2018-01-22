@@ -39,6 +39,20 @@ struct SDL_Thread;
 
 struct VfxNodePs3eye : VfxNodeBase
 {
+	struct EyeParams
+	{
+		bool isValid;
+		
+		bool autoGain;
+		int gain;
+		int exposure;
+		int balanceR;
+		int balanceG;
+		int balanceB;
+		
+		EyeParams();
+	};
+	
 	enum Resolution
 	{
 		kResolution_320x240,
@@ -51,6 +65,12 @@ struct VfxNodePs3eye : VfxNodeBase
 		kInput_Resolution,
 		kInput_Framerate,
 		kInput_ColorEnabled,
+		kInput_AutoGain,
+		kInput_Gain,
+		kInput_Exposure,
+		kInput_WhiteBalanceR,
+		kInput_WhiteBalanceG,
+		kInput_WhiteBalanceB,
 		kInput_COUNT
 	};
 
@@ -67,10 +87,14 @@ struct VfxNodePs3eye : VfxNodeBase
 	bool currentEnableColor;
 	
 	SDL_Thread * captureThread;
+	SDL_mutex * mutex;
 	std::atomic<bool> stopCaptureThread;
 	ps3eye::PS3EYECam::PS3EYERef ps3eye;
 	uint8_t * frameData;
 	std::atomic<bool> hasFrameData;
+	
+	EyeParams eyeParams;
+	EyeParams currentEyeParams;
 
 	OpenglTexture texture;
 

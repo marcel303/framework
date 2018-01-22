@@ -50,8 +50,19 @@ VFX_NODE_TYPE(VfxNodePs3eye)
 	inEnum("resolution", "ps3eyeResolution");
 	in("fps", "int", "100");
 	in("color", "bool", "1");
+	in("autoColors", "bool", "1");
+	in("gain", "float", "0.32");
+	in("exposure", "float", "0.47");
+	in("balanceR", "float", "0.5");
+	in("balanceG", "float", "0.5");
+	in("balanceB", "float", "0.5");
 	out("image", "image");
 	out("image_mem", "image_cpu");
+}
+
+VfxNodePs3eye::EyeParams::EyeParams()
+{
+	memset(this, 0, sizeof(*this));
 }
 
 VfxNodePs3eye::VfxNodePs3eye()
@@ -61,10 +72,13 @@ VfxNodePs3eye::VfxNodePs3eye()
 	, currentFramerate(0)
 	, currentEnableColor(false)
 	, captureThread(nullptr)
+	, mutex(nullptr)
 	, stopCaptureThread(false)
 	, ps3eye()
 	, frameData(nullptr)
 	, hasFrameData(false)
+	, eyeParams()
+	, currentEyeParams()
 	, texture()
 	, imageOutput()
 	, imageCpuOutput()
@@ -74,6 +88,12 @@ VfxNodePs3eye::VfxNodePs3eye()
 	addInput(kInput_Resolution, kVfxPlugType_Int);
 	addInput(kInput_Framerate, kVfxPlugType_Int);
 	addInput(kInput_ColorEnabled, kVfxPlugType_Bool);
+	addInput(kInput_AutoGain, kVfxPlugType_Bool);
+	addInput(kInput_Gain, kVfxPlugType_Float);
+	addInput(kInput_Exposure, kVfxPlugType_Float);
+	addInput(kInput_WhiteBalanceR, kVfxPlugType_Float);
+	addInput(kInput_WhiteBalanceG, kVfxPlugType_Float);
+	addInput(kInput_WhiteBalanceB, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
 	addOutput(kOutput_ImageCpu, kVfxPlugType_ImageCpu, &imageCpuOutput);
 }
@@ -110,6 +130,17 @@ void VfxNodePs3eye::tick(const float dt)
 	const Resolution resolution = (Resolution)getInputInt(kInput_Resolution, 0);
 	const int desiredFramerate = getInputInt(kInput_Framerate, 100);
 	const bool enableColor = getInputBool(kInput_ColorEnabled, true);
+	
+	SDL_LockMutex(mutex);
+	{
+		eyeParams.autoGain = getInputBool(kInput_AutoGain, true);
+		eyeParams.gain = std::max(0, std::min(255, (int)roundf(getInputFloat(kInput_Gain, .32f) * 63.f)));
+		eyeParams.exposure = std::max(0, std::min(255, (int)roundf(getInputFloat(kInput_Exposure, .47f) * 255.f)));
+		eyeParams.balanceR = std::max(0, std::min(255, (int)roundf(getInputFloat(kInput_WhiteBalanceR, .5f) * 255.f)));
+		eyeParams.balanceG = std::max(0, std::min(255, (int)roundf(getInputFloat(kInput_WhiteBalanceG, .5f) * 255.f)));
+		eyeParams.balanceB = std::max(0, std::min(255, (int)roundf(getInputFloat(kInput_WhiteBalanceB, .5f) * 255.f)));
+	}
+	SDL_UnlockMutex(mutex);
 	
 	if (deviceIndex != currentDeviceIndex ||
 		currentResolution != resolution ||
@@ -162,9 +193,15 @@ void VfxNodePs3eye::tick(const float dt)
 				
 				const int numBytes = sx * sy * (enableColor ? 3 : 1);
 				
+				Assert(frameData == nullptr);
 				frameData = new uint8_t[numBytes];
 				Assert(hasFrameData == false);
 				
+				Assert(mutex == nullptr);
+				mutex = SDL_CreateMutex();
+				Assert(mutex != nullptr);
+				
+				Assert(captureThread == nullptr);
 				captureThread = SDL_CreateThread(captureThreadProc, "PS3EYE Capture Thread", this);
 			}
 		}
@@ -235,16 +272,53 @@ int VfxNodePs3eye::captureThreadProc(void * obj)
 {
 	VfxNodePs3eye * self = (VfxNodePs3eye*)obj;
 	
-	self->ps3eye->start();
+	auto ps3eye = self->ps3eye.get();
+	
+	ps3eye->setAutoWhiteBalance(true);
+	
+	ps3eye->start();
+	
+	auto & currentEyeParams = self->currentEyeParams;
 	
 	while (self->stopCaptureThread == false)
 	{
-		self->ps3eye->getFrame(self->frameData);
+		EyeParams eyeParams;
+		
+		SDL_LockMutex(self->mutex);
+		{
+			eyeParams = self->eyeParams;
+		}
+		SDL_UnlockMutex(self->mutex);
+		
+		if (eyeParams.autoGain != currentEyeParams.autoGain || !currentEyeParams.isValid)
+			ps3eye->setAutogain(eyeParams.autoGain);
+		
+		if (eyeParams.gain != currentEyeParams.gain || !currentEyeParams.isValid)
+			ps3eye->setGain(eyeParams.gain);
+		
+		if (eyeParams.exposure != currentEyeParams.exposure || !currentEyeParams.isValid)
+			ps3eye->setExposure(eyeParams.exposure);
+		
+		if (eyeParams.balanceR != currentEyeParams.balanceR)
+			ps3eye->setRedBalance(eyeParams.balanceR);
+		if (eyeParams.balanceG != currentEyeParams.balanceG)
+			ps3eye->setGreenBalance(eyeParams.balanceG);
+		if (eyeParams.balanceB != currentEyeParams.balanceB)
+			ps3eye->setBlueBalance(eyeParams.balanceB);
+		
+		currentEyeParams = eyeParams;
+		currentEyeParams.isValid = true;
+		
+		//
+		
+		ps3eye->getFrame(self->frameData);
 		
 		self->hasFrameData = true;
 	}
 	
-	self->ps3eye->stop();
+	currentEyeParams = EyeParams();
+	
+	ps3eye->stop();
 	
 	return 0;
 }
@@ -259,6 +333,12 @@ void VfxNodePs3eye::stopCapture()
 		captureThread = nullptr;
 		
 		stopCaptureThread = false;
+	}
+	
+	if (mutex != nullptr)
+	{
+		SDL_DestroyMutex(mutex);
+		mutex = nullptr;
 	}
 	
 	if (ps3eye != nullptr)
