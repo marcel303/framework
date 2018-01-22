@@ -34,6 +34,8 @@
 
 #define RECURSION_OPTIMIZE 1
 
+#define RECUSRION_OPTIMIZE_NR2 1
+
 void BlobDetector::computeValuesFromRGBA(
 	const uint8_t * __restrict rgba_surface,
 	const int sx, const int sy,
@@ -76,28 +78,47 @@ struct RecurseInfo
 	int sy;
 };
 
+#if ENABLE_BLOBDETECTOR_STATS
 int recursionLevel = 0;
 int maxRecursionLevel = 0;
+#endif
 
 static void recurse(
 	RecurseInfo & info,
 	const int x,
 	const int y)
 {
+#if ENABLE_BLOBDETECTOR_STATS
 	recursionLevel++;
 	
 	if (recursionLevel > maxRecursionLevel)
 		maxRecursionLevel = recursionLevel;
-	
+#endif
+
+#if RECUSRION_OPTIMIZE_NR2
+	const int dy[3] = { 0, -1, +1 };
+#else
 	const int dx[4] = { -1, +1, 0, 0 };
 	const int dy[4] = { 0, 0, -1, +1 };
+#endif
 	
+#if RECUSRION_OPTIMIZE_NR2
+	for (int i = 0; i < 3; ++i)
+#else
 	for (int i = 0; i < 4; ++i)
+#endif
 	{
+	#if RECUSRION_OPTIMIZE_NR2
+		const int nx = x;
+		const int ny = y + dy[i];
+		
+		if (ny >= 0 && ny < info.sy)
+	#else
 		const int nx = x + dx[i];
 		const int ny = y + dy[i];
 		
 		if (nx >= 0 && nx < info.sx && ny >= 0 && ny < info.sy)
+	#endif
 		{
 			const int index = nx + ny * info.sx;
 			
@@ -138,7 +159,9 @@ static void recurse(
 		}
 	}
 	
+#if ENABLE_BLOBDETECTOR_STATS
 	recursionLevel--;
+#endif
 }
 
 int BlobDetector::detectBlobs(
@@ -206,8 +229,10 @@ int BlobDetector::detectBlobs(
 					recurse(info, xx, y);
 				}
 				
-				blob.x = blob.weightedX / float(blob.totalWeight);
-				blob.y = blob.weightedY / float(blob.totalWeight);
+				// note : we add (0.5, 0.5) to account for pixel centers
+				
+				blob.x = .5f + blob.weightedX / float(blob.totalWeight);
+				blob.y = .5f + blob.weightedY / float(blob.totalWeight);
 				
 				numBlobs++;
 				

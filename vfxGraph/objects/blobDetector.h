@@ -29,6 +29,8 @@
 
 #include <stdint.h>
 
+#define ENABLE_BLOBDETECTOR_STATS 0
+
 struct Blob
 {
 	uint64_t weightedX;
