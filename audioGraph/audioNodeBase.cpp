@@ -599,7 +599,7 @@ void AudioNodeBase::trigger(const int outputSocketIndex)
 		Assert(outputSocket.type == kAudioPlugType_Trigger);
 		if (outputSocket.type == kAudioPlugType_Trigger)
 		{
-			// iterate the list of outgoing connections, call handleTrigger on nodes with correct outputSocketIndex
+			// iterate the list of outgoing connections, call queueTrigger on nodes with correct outputSocketIndex
 			
 			for (auto & triggerTarget : triggerTargets)
 			{

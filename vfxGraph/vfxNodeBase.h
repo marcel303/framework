@@ -419,7 +419,7 @@ struct VfxFloatArray
 
 struct VfxPlug
 {
-	VfxPlugType type : 16;
+	VfxPlugType type : 8;
 	bool isTriggered : 1;
 	bool isReferencedByLink : 1;
 	int referencedByRealTimeConnectionTick;
