@@ -861,8 +861,6 @@ void Framework::process()
 		}
 		else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
 		{
-			// todo : track mouse buttons per window
-			
 			WindowData * windowData = findWindowDataById(e.button.windowID);
 			
 			if (windowData != nullptr)
@@ -870,6 +868,7 @@ void Framework::process()
 				//logDebug("mouse %d / %d", e.type, e.button.button);
 
 				const int index = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : -1;
+				
 				if (index >= 0)
 				{
 					windowData->mouseDown[index] = e.button.state == SDL_PRESSED;
@@ -879,8 +878,6 @@ void Framework::process()
 		}
 		else if (e.type == SDL_MOUSEMOTION)
 		{
-			// todo : track mouse motion per window
-			
 			WindowData * windowData = findWindowDataById(e.motion.windowID);
 			
 			if (windowData != nullptr)
@@ -895,7 +892,8 @@ void Framework::process()
 					
 					windowData->mouseX = e.motion.x * minification * globals.displaySize[0] / windowSx;
 					windowData->mouseY = e.motion.y * minification * globals.displaySize[1] / windowSy;
-					//logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, mouse.x, mouse.y);
+					
+					//logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, windowData->mouseX, windowData->mouseY);
 				}
 				else
 				{
