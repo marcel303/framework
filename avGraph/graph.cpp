@@ -1233,7 +1233,7 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit, const float dt)
 			}
 		}
 		
-		if (min != max)
+		if (isFirst == false)
 		{
 			hasChannelDataMinMax = true;
 			
