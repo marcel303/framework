@@ -290,22 +290,7 @@ public:
 	{
 		Assert(&rResult != this);
 		Assert(&rResult != &mat);
-
-	#if 0
-		for (int x = 0; x < 4; ++x)
-		{
-			for (int y = 0; y < 4; ++y)
-			{
-				float v = 0.0f;
-
-				for (int i = 0; i < 4; ++i)
-					v += (*this)(i, y) * mat(x, i);
-
-				rResult(x, y) = v;
-			}
-		}
-	#else
-		// todo : test
+		
 		const SimdVec row1 = mat.m_rows[0];
 		const SimdVec row2 = mat.m_rows[1];
 		const SimdVec row3 = mat.m_rows[2];
@@ -326,7 +311,6 @@ public:
 					brod3.Mul(row3).Add(brod4.Mul(row4))
 				);
 		}
-	#endif
 	}
 
 	inline SimdMat4x4 operator*(const SimdMat4x4 & mat) const
