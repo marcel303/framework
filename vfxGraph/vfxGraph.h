@@ -34,7 +34,7 @@
 #include <vector>
 
 #if defined(DEBUG)
-	#define VFX_GRAPH_ENABLE_TIMING 1
+	#define VFX_GRAPH_ENABLE_TIMING 1 // times node creation, destruction, node registration lookup
 #else
 	#define VFX_GRAPH_ENABLE_TIMING 0
 #endif

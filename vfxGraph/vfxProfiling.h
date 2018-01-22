@@ -27,9 +27,9 @@
 
 #pragma once
 
-#define ENABLE_VFXGRAPH_PROFILING 0
-#define ENABLE_VFXGRAPH_CPU_TIMING 0
-#define ENABLE_VFXGRAPH_GPU_TIMING 0
+#define ENABLE_VFXGRAPH_PROFILING 0 // enables Remotery hooks to time node draw/tick
+#define ENABLE_VFXGRAPH_CPU_TIMING 1 // captures CPU timing data for node draw/tick
+#define ENABLE_VFXGRAPH_GPU_TIMING 0 // captures GPU timing data for node draw
 
 #if ENABLE_VFXGRAPH_PROFILING
 
