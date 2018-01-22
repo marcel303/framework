@@ -55,6 +55,7 @@ VFX_NODE_TYPE(VfxNodeDotDetector)
 	inEnum("channel", "dotDetectorChannel");
 	inEnum("tresholdTest", "dotDetectorTresholdTest");
 	in("tresholdValue", "float", "0.5");
+	in("maxDots", "int", "256");
 	in("maxRadius", "float", "10");
 	out("lumi", "image_cpu");
 	out("mask", "image_cpu");
@@ -85,6 +86,7 @@ VfxNodeDotDetector::VfxNodeDotDetector()
 	addInput(kInput_Channel, kVfxPlugType_Int);
 	addInput(kInput_TresholdTest, kVfxPlugType_Int);
 	addInput(kInput_TresholdValue, kVfxPlugType_Float);
+	addInput(kInput_MaxDots, kVfxPlugType_Int);
 	addInput(kInput_MaxRadius, kVfxPlugType_Float);
 	addOutput(kOutput_Lumi, kVfxPlugType_ImageCpu, &lumiOutput);
 	addOutput(kOutput_Mask, kVfxPlugType_ImageCpu, &maskOutput);
@@ -112,7 +114,7 @@ void VfxNodeDotDetector::tick(const float dt)
 	const DotDetector::TresholdTest test = getInputInt(kInput_TresholdTest, 0) == 0 ? DotDetector::kTresholdTest_GreaterEqual : DotDetector::kTresholdTest_LessEqual;
 	const int tresholdValue = getInputFloat(kInput_TresholdValue, .5f) * 255.f;
 	const int maxRadius = std::max(1, int(std::round(getInputFloat(kInput_MaxRadius, 10.f))));
-	const int maxIslands = std::min(kMaxIslands, kMaxIslands); // todo : add max islands input
+	const int maxIslands = std::max(0, std::min(kMaxIslands, getInputInt(kInput_MaxDots, 256)));
 	
 	if (image == nullptr || isPassthrough)
 	{

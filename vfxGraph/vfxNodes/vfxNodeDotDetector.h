@@ -37,6 +37,7 @@ struct VfxNodeDotDetector : VfxNodeBase
 		kInput_Channel,
 		kInput_TresholdTest,
 		kInput_TresholdValue,
+		kInput_MaxDots,
 		kInput_MaxRadius,
 		kInput_COUNT
 	};
