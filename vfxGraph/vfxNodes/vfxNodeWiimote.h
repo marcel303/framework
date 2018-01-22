@@ -27,6 +27,8 @@
 
 #pragma once
 
+#if ENABLE_WIIMOTE
+
 #include "vfxNodeBase.h"
 
 struct Wiimotes;
@@ -85,3 +87,5 @@ struct VfxNodeWiimote : VfxNodeBase
 	
 	virtual void handleTrigger(const int index) override;
 };
+
+#endif

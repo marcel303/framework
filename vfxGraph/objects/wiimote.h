@@ -27,6 +27,8 @@
 
 #pragma once
 
+#if ENABLE_WIIMOTE
+
 #include <stdint.h>
 
 enum WiimoteButton
@@ -97,3 +99,5 @@ struct Wiimotes
 	void setLedValues(const uint8_t values);
 	void setLedEnabled(const uint8_t index, const bool enabled);
 };
+
+#endif

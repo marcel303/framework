@@ -25,8 +25,11 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if ENABLE_WIIMOTE
+
 #include "objects/wiimote.h"
 #include "vfxNodeWiimote.h"
+#include <string.h>
 
 VFX_NODE_TYPE(VfxNodeWiimote)
 {
@@ -123,3 +126,5 @@ void VfxNodeWiimote::handleTrigger(const int index)
 	wiimotes = new Wiimotes();
 	wiimotes->findAndConnect();
 }
+
+#endif

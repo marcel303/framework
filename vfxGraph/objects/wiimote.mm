@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if ENABLE_WIIMOTE
+
 #import "Debugging.h"
 #import "Log.h"
 #import "wiimote.h"
@@ -629,3 +631,5 @@ void Wiimotes::setLedEnabled(const uint8_t index, const bool enabled)
 	
 	setLedValues(wiimoteData.ledValues);
 }
+
+#endif
