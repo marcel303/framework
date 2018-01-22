@@ -307,8 +307,10 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 done:
 	for (int i = 0; i < numIslands; ++i)
 	{
-		islands[i].x = islands[i].totalX / float(islands[i].numPixels);
-		islands[i].y = islands[i].totalY / float(islands[i].numPixels);
+		// note : we add (0.5, 0.5) to account for pixel center
+		
+		islands[i].x = .5f + islands[i].totalX / float(islands[i].numPixels);
+		islands[i].y = .5f + islands[i].totalY / float(islands[i].numPixels);
 	}
 	
 	return numIslands;
