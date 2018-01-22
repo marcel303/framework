@@ -295,7 +295,7 @@ static void initAudioGraph()
 	
 	Assert(s_voiceMgr == nullptr);
 	s_voiceMgr = new AudioVoiceManagerBasic();
-	s_voiceMgr->init(s_audioMutex, 16, 16);
+	s_voiceMgr->init(s_audioMutex, 64, 64);
 	s_voiceMgr->outputStereo = true;
 	g_vfxAudioVoiceMgr = s_voiceMgr;
 	
