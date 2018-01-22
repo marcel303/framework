@@ -102,8 +102,8 @@ public:
 	uint8_t getExposure() const { return exposure; }
 	void setExposure(uint8_t val) {
 	    exposure = val;
-	    if (autogain)
-	    	return;
+	    //if (autogain) // setting exposure register seems to have no effect when automatic gain/exposure/white is enabled.. so why return here?
+	    //	return;
 	    sccb_reg_write(0x08, val>>7);
     	sccb_reg_write(0x10, val<<1);
 	}
@@ -131,16 +131,22 @@ public:
 	uint8_t getRedBalance() const { return redblc; }
 	void setRedBalance(uint8_t val) {
 		redblc = val;
+		//if (awb) // the r/g/b balances seem to operate independent of the auto white balance option. they seem to cooperate peacefully, so why the return here?
+		//	return;
 		sccb_reg_write(0x43, val);
 	}
 	uint8_t getBlueBalance() const { return blueblc; }
 	void setBlueBalance(uint8_t val) {
 		blueblc = val;
+		//if (awb) // the r/g/b balances seem to operate independent of the auto white balance option. they seem to cooperate peacefully, so why the return here?
+		//	return;
 		sccb_reg_write(0x42, val);
 	}
 	uint8_t getGreenBalance() const { return greenblc; }
 	void setGreenBalance(uint8_t val) {
 		greenblc = val;
+		//if (awb) // the r/g/b balances seem to operate independent of the auto white balance option. they seem to cooperate peacefully, so why the return here?
+		//	return;
 		sccb_reg_write(0x44, val);
 	}
     bool getFlipH() const { return flip_h; }
