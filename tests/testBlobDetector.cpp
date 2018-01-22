@@ -36,7 +36,9 @@ extern const int GFX_SY;
 #define SURFACE_SX 320
 #define SURFACE_SY 240
 
+#if ENABLE_BLOBDETECTOR_STATS
 extern int maxRecursionLevel;
+#endif
 
 void testBlobDetection()
 {
@@ -86,7 +88,12 @@ void testBlobDetection()
 		uint8_t values[SURFACE_SX * SURFACE_SY];
 		BlobDetector::computeValuesFromRGBA(rgba, SURFACE_SX, SURFACE_SY, 0, values);
 		
+	#if ENABLE_BLOBDETECTOR_STATS
 		maxRecursionLevel = 0;
+	#else
+		const int maxRecursionLevel = -1;
+	#endif
+	
 		const int numBlobs = BlobDetector::detectBlobs(values, SURFACE_SX, SURFACE_SY, blobs, kMaxBlobs);
 		
 		const uint16_t t2 = g_TimerRT.TimeUS_get();
@@ -108,9 +115,8 @@ void testBlobDetection()
 		
 		time += framework.timeStep * .4f; // tweaked it a little so it's easier to see how smooth (or not) the detected blob (x, y)'s are updated
 		
+	#if 1
 		// draw some circles in a surface and read back the pixel data into an array that we'll use for detecting blobs
-
-		uint8_t rgba[SURFACE_SX * SURFACE_SY * 4];
 	
 		pushSurface(&surface);
 		{
@@ -124,7 +130,7 @@ void testBlobDetection()
 					const float y = (std::sin(i + time / 3.45f * (i + 1) / 100.f) + 1.f) / 2.f * surface.getHeight();
 					
 					setColor(colorWhite);
-					hqFillCircle(x, y, 7.f);
+					hqFillCircle(x, y, 11.f);
 				}
 			}
 			hqEnd();
@@ -135,6 +141,7 @@ void testBlobDetection()
 			checkErrorGL();
 		}
 		popSurface();
+	#endif
 		
 		// detect blobs
 		
