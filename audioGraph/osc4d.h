@@ -31,6 +31,20 @@
 
 #include "Log.h" // todo : move to cpp
 
+/*
+
+note : the following OSC controls from the 4DSOUND OSC sheet were not implemented,
+
+sourceGesture###
+sourcePath###
+sourceModulation###
+sourceVantagePoint###
+sourceAngleFilter
+sourceElevationFilter
+subReduction###
+
+*/
+
 struct Osc4D
 {
 	enum OrientationMode
@@ -104,37 +118,25 @@ struct Osc4D
 	void sourceColor(const float r, const float g, const float b);
 	void sourceName(const char * name);
 	void sourcePosition(const float x, const float y, const float z);
+	
 	void sourceInvert(const bool x, const bool y, const bool z);
 	void sourceDimensions(const float x, const float y, const float z);
 	void sourceRotation(const float x, const float y, const float z);
+	
 	void sourceOrientationMode(const OrientationMode mode, const float centerX, const float centerY, const float centerZ);
-
-	// todo : sourceGesture###
-	// todo : sourcePath###
-	// todo : sourceModulation###
-
 	void sourceGlobalEnable(const bool enabled);
 	void sourceProjectionMode(const ProjectionMode mode);
 	void sourceArticulation(const float articulation);
-
-	// todo : sourceVantagePoint###
-
 	void sourceSpatialCompressor(const bool enable, const float attack, const float release, const float minimum, const float maximum, const float curve, const bool invert);
 	void sourceDoppler(const bool enable, const float scale, const float smooth);
-	
+
 	void sourceDistanceIntensity(const bool enable, const float treshold, const float curve);
 	void sourceDistanceDamping(const bool enable, const float treshold, const float curve);
 	void sourceDistanceDiffusion(const bool enable, const float treshold, const float curve);
 
-	// todo : sourceAngleFilter
-
-	// todo : sourceElevationFilter
-
 	void sourceSpatialDelay(const bool enable, const SpatialDelayMode mode, const int times, const float feedback, const float drywet, const float smooth, const float scale, const float noiseDepth, const float noiseFrequency);
 	
 	void sourceSend(const bool enabled);
-	
-	// todo : subReduction###
 	
 	void sourceSubBoost(const SubBoost boost);
 	

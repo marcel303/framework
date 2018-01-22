@@ -131,10 +131,6 @@ void Osc4D::sourceOrientationMode(const OrientationMode mode, const float center
 	end();
 }
 
-// todo : sourceGesture###
-// todo : sourcePath###
-// todo : sourceModulation###
-
 void Osc4D::sourceGlobalEnable(const bool enabled)
 {
 	beginSource("globalEnable");
@@ -155,8 +151,6 @@ void Osc4D::sourceArticulation(const float articulation)
 	f(articulation);
 	end();
 }
-
-// todo : sourceVantagePoint###
 
 void Osc4D::sourceSpatialCompressor(const bool enable, const float attack, const float release, const float minimum, const float maximum, const float curve, const bool invert)
 {
@@ -265,12 +259,6 @@ void Osc4D::sourceDistanceDiffusion(const bool enable, const float treshold, con
 	}
 }
 
-// todo : sourceAngleFilter
-
-// todo : sourceElevationFilter
-
-// todo : times is integer ?
-// todo : pattern ?
 void Osc4D::sourceSpatialDelay(const bool enable, const SpatialDelayMode mode, const int times, const float feedback, const float drywet, const float smooth, const float scale, const float noiseDepth, const float noiseFrequency)
 {
 	beginSource("spatialDelay/enable");
