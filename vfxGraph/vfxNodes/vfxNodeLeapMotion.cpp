@@ -186,13 +186,6 @@ void VfxNodeLeapMotion::tick(const float dt)
 		rightHandY = 0.f;
 		rightHandZ = 0.f;
 	}
-	
-	setOuputIsValid(kOutput_LeftHandX, isConnected);
-	setOuputIsValid(kOutput_LeftHandY, isConnected);
-	setOuputIsValid(kOutput_LeftHandZ, isConnected);
-	setOuputIsValid(kOutput_RightHandX, isConnected);
-	setOuputIsValid(kOutput_RightHandY, isConnected);
-	setOuputIsValid(kOutput_RightHandZ, isConnected);
 }
 
 void VfxNodeLeapMotion::getDescription(VfxNodeDescription & d)

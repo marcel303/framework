@@ -123,7 +123,7 @@ todo : nodes :
 		- allocate new channels object to store results
 	- add range min/max range + pass if inside or outside boolean
 - add memory node ? get/set named variables. how to ensure processing order ? or maybe for vfx <-> c++ communication only in which case order is guaranteed
-- add queue system for triggers ? ensure predeps have finished processing before handling triggers
++ add queue system for triggers ? ensure predeps have finished processing before handling triggers
 - add ability for nodes to trigger again (process a partial time slice ?). but this will re-introduce again the issue of execution order of triggers ..
 - add channels.toImage node ?
 - add play/stop/pause/resume triggers to video node

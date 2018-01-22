@@ -419,9 +419,9 @@ struct VfxFloatArray
 
 struct VfxPlug
 {
-	VfxPlugType type;
-	bool isValid;
-	bool isReferencedByLink;
+	VfxPlugType type : 16;
+	bool isTriggered : 1;
+	bool isReferencedByLink : 1;
 	int referencedByRealTimeConnectionTick;
 	void * mem;
 	VfxPlugType memType;
@@ -434,7 +434,7 @@ struct VfxPlug
 	
 	VfxPlug()
 		: type(kVfxPlugType_None)
-		, isValid(true)
+		, isTriggered(false)
 		, isReferencedByLink(false)
 		, referencedByRealTimeConnectionTick(-1)
 		, mem(nullptr)
@@ -778,17 +778,12 @@ struct VfxNodeBase
 			return plug->getChannel();
 	}
 	
-	void setOuputIsValid(const int index, const bool isValid)
+	void queueTrigger(const int index)
 	{
-		VfxPlug * plug = tryGetOutput(index);
+		VfxPlug * plug = tryGetInput(index);
 		
-		if (plug == nullptr)
-		{
-		}
-		else
-		{
-			plug->isValid = isValid;
-		}
+		if (plug != nullptr)
+			plug->isTriggered = true;
 	}
 	
 	void clearEditorIssue() const

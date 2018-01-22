@@ -800,6 +800,18 @@ void VfxNodeBase::traverseTick(const int traversalId, const float dt)
 	
 	//
 	
+	for (int i = 0; i < inputs.size(); ++i)
+	{
+		if (inputs[i].isTriggered)
+		{
+			inputs[i].isTriggered = false;
+			
+			handleTrigger(i);
+		}
+	}
+	
+	//
+	
 #if ENABLE_VFXGRAPH_CPU_TIMING
 	const uint64_t t1 = g_TimerRT.TimeUS_get();
 #endif
@@ -921,7 +933,7 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 		{
 			outputSocket.editorIsTriggered = true;
 			
-			// iterate the list of outgoing connections, call handleTrigger on nodes with correct outputSocketIndex
+			// iterate the list of outgoing connections, call queueTrigger on nodes with correct outputSocketIndex
 			
 			for (auto & triggerTarget : triggerTargets)
 			{
@@ -929,7 +941,7 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 				{
 					triggerTarget.srcNode->editorIsTriggered = true;
 					
-					triggerTarget.srcNode->handleTrigger(triggerTarget.srcSocketIndex);
+					triggerTarget.srcNode->queueTrigger(triggerTarget.srcSocketIndex);
 				}
 			}
 		}
