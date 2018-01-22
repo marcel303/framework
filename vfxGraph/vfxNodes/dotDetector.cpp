@@ -176,7 +176,7 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 		for (int x = 0; x < sx; )
 		{
 		#if USE_SSE2
-			// see if ant of the next 16 pixels passes the treshold test. if not, skip the next 16 pixels
+			// see if any of the next 16 pixels passes the treshold test. if not, skip the next 16 pixels
 			// we only do this test once every 16 pixels, to avoid redundant calculations
 			
 			if ((x & 15) == 0)

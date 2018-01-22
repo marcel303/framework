@@ -127,9 +127,9 @@ void VfxNodeDotDetector::tick(const float dt)
 			allocateMask(image->sx, image->sy, maxIslands);
 		}
 		
-		if (kMaxIslands != dotX.size)
+		if (maxIslands != dotX.size)
 		{
-			allocateChannels(kMaxIslands);
+			allocateChannels(maxIslands);
 		}
 		
 		const uint8_t * lumiPtr = nullptr;
