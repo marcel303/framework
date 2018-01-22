@@ -251,7 +251,7 @@ void VfxNodeDotDetector::tick(const float dt)
 			
 			dotX.data[i] = islands[i].x;
 			dotY.data[i] = islands[i].y;
-			dotRadius.data[i] = s;
+			dotRadius.data[i] = s / 2.f;
 		}
 		
 		xOutput.setData(dotX.data, false, numIslands);
