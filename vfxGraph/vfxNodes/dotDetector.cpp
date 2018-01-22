@@ -209,8 +209,8 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 								{
 									auto & island = islands[islandIndex];
 									
-									const int dx = x - island.x;
-									const int dy = y - island.y;
+									const int dx = x - island.xi;
+									const int dy = y - island.yi;
 									const int dsSq = dx * dx + dy * dy;
 									
 									if (dsSq < maxRadiusSq)
@@ -219,8 +219,8 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 										island.totalY += y;
 										island.numPixels++;
 										
-										island.x = island.totalX / island.numPixels;
-										island.y = island.totalY / island.numPixels;
+										island.xi = island.totalX / island.numPixels;
+										island.yi = island.totalY / island.numPixels;
 										
 										island.minX = std::min(island.minX, x);
 										island.minY = std::min(island.minY, y);
@@ -241,8 +241,8 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 					{
 						auto & island = islands[i];
 						
-						const int dx = x - island.x;
-						const int dy = y - island.y;
+						const int dx = x - island.xi;
+						const int dy = y - island.yi;
 						const int dsSq = dx * dx + dy * dy;
 						
 						if (dsSq < maxRadiusSq)
@@ -251,8 +251,8 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 							island.totalY += y;
 							island.numPixels++;
 							
-							island.x = island.totalX / island.numPixels;
-							island.y = island.totalY / island.numPixels;
+							island.xi = island.totalX / island.numPixels;
+							island.yi = island.totalY / island.numPixels;
 							
 							island.minX = std::min(island.minX, x);
 							island.minY = std::min(island.minY, y);
@@ -274,8 +274,8 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 					island.totalY = y;
 					island.numPixels = 1;
 					
-					island.x = x;
-					island.y = y;
+					island.xi = x;
+					island.yi = y;
 					
 					island.minX = x;
 					island.minY = y;
@@ -293,15 +293,22 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 					numIslands++;
 					
 					if (numIslands == maxIslands)
-						return numIslands;
+						goto done;
 				}
 				
 			foundIsland:
-				do { } while (false); // clang compiler errors if there is no expression of a label
+				do { } while (false); // clang compiler errors if there is no expression after a label
 			}
 			
 			++x;
 		}
+	}
+	
+done:
+	for (int i = 0; i < numIslands; ++i)
+	{
+		islands[i].x = islands[i].totalX / float(islands[i].numPixels);
+		islands[i].y = islands[i].totalY / float(islands[i].numPixels);
 	}
 	
 	return numIslands;

@@ -50,8 +50,11 @@ struct DotIsland
 	int totalY;
 	int numPixels;
 	
-	int x;
-	int y;
+	int xi;
+	int yi;
+	
+	float x;
+	float y;
 	
 	int minX;
 	int minY;
