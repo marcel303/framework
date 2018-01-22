@@ -171,8 +171,6 @@ void AudioOutput_OpenAL::Stop()
 	mIsPlaying = false;
 	
 	mAudioStream = nullptr;
-	
-	Update(); // todo : do we need this ?
 }
 
 void AudioOutput_OpenAL::Update()
