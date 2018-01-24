@@ -25,6 +25,7 @@ public:
 	static std::string ToUpper(const std::string& text);
 	static std::string ToLower(const std::string& text);
 	static std::string ToString(int value);
+	static std::string ToString(double value);
 	static std::string SubString(const std::string& text, size_t offset);
 	static std::string SubString(const std::string& text, size_t offset, size_t length);
 	static bool Equals(const char* text1, const char* text2);
