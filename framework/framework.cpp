@@ -384,7 +384,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	if (GLEW_ARB_debug_output)
 	{
 		logInfo("using OpenGL debug output");
-		glDebugMessageCallbackARB(debugOutputGL, stderr);
+		glDebugMessageCallbackARB((GLDEBUGPROCARB)debugOutputGL, stderr);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 	}
 #endif
