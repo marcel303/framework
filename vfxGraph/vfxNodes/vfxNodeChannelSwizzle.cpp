@@ -89,7 +89,7 @@ void VfxNodeChannelSwizzle::tick(const float dt)
 		
 		channelOutputs = new VfxChannel[swizzle.numElems];
 		
-		DynamicOutput outputs[swizzle.numElems];
+		DynamicOutput outputs[VfxSwizzle::kMaxElems];
 		
 		for (int i = 0; i < swizzle.numElems; ++i)
 		{

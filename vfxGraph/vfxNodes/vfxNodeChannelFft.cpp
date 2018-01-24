@@ -106,7 +106,7 @@ void VfxNodeChannelFft::tick(const float dt)
 			float * __restrict real = channelData.data + 0 * transformSize;
 			float * __restrict imag = channelData.data + 1 * transformSize;
 			
-			int xReversed[sx];
+			int * xReversed = (int*)alloca(sx * sizeof(int));
 			
 			for (int x = 0; x < sx; ++x)
 				xReversed[x] = Fourier::reverseBits(x, numBits);
