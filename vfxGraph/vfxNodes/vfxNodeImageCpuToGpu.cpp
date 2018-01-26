@@ -84,6 +84,8 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		texture.free();
 		
 		imageOutput.texture = 0;
+		
+		return;
 	}
 	
 	//
