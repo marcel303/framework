@@ -37,8 +37,6 @@
 #include "spriter.h"
 #include "tinyxml2_helpers.h"
 
-// todo : remove all of the dynamic memory allocations during draw
-
 #define FIXUP_BONE_REFS 0
 
 using namespace tinyxml2;
@@ -438,11 +436,9 @@ namespace spriter
 			, loopType(kLoopType_Looping)
 		{
 		}
-
-		void getAnimationDataAtTime(std::vector<TransformedObjectKey> & result, const Entity * entity, float newTime) const
+		
+		const MainlineKey & getAnimationDataAtTime_step1(float & newTime) const
 		{
-			resetAllocators();
-
 			if (loopType == kLoopType_NoLooping)
 			{
 				newTime = std::min<float>(newTime, length);
@@ -457,9 +453,16 @@ namespace spriter
 			}
 
 			const MainlineKey & mainKey = mainlineKeyFromTime(newTime);
+			
+			return mainKey;
+		}
 
-			std::vector<TransformedBoneKey> transformedBoneKeys;
-			transformedBoneKeys.resize(mainKey.boneRefs.size());
+		void getAnimationDataAtTime_step2(TransformedObjectKey * result, const size_t resultSize, const Entity * entity, const float newTime, const MainlineKey & mainKey) const
+		{
+			resetAllocators();
+
+			const int numBoneKeys = mainKey.boneRefs.size();
+			TransformedBoneKey * transformedBoneKeys = (TransformedBoneKey*)alloca(numBoneKeys * sizeof(TransformedBoneKey));
 
 			for (size_t b = 0; b < mainKey.boneRefs.size(); ++b)
 			{
@@ -471,12 +474,9 @@ namespace spriter
 				{
 					parentTransform = transformedBoneKeys[currentRef.parent].transform;
 				}
-				else
-				{
-					//parentTransform = Transform();
-				}
 
 				TransformedBoneKey & transformedKey = transformedBoneKeys[b];
+				
 				const Timeline * timeline;
 				transformedKey.key = dynamic_cast<const BoneTimelineKey*>(keyFromRef(currentRef, newTime, timeline));
 				Assert(transformedKey.key);
@@ -485,7 +485,7 @@ namespace spriter
 
 			//
 
-			result.resize(mainKey.objectRefs.size());
+			Assert(resultSize == mainKey.objectRefs.size());
 
 			for (size_t o = 0; o < mainKey.objectRefs.size(); ++o)
 			{
@@ -496,10 +496,6 @@ namespace spriter
 				if (currentRef.parent >= 0)
 				{
 					parentTransform = transformedBoneKeys[currentRef.parent].transform;
-				}
-				else
-				{
-					//parentTransform = Transform();
 				}
 
 				TransformedObjectKey & transformedKey = result[o];
@@ -514,9 +510,9 @@ namespace spriter
 				else
 					transformedKey.object = 0;
 			}
-
-			for (auto k : transformedBoneKeys)
-				k.key->Release();
+			
+			for (size_t k = 0; k < numBoneKeys; ++k)
+				transformedBoneKeys[k].key->Release();
 		}
 
 		const MainlineKey & mainlineKeyFromTime(int currentTime) const
@@ -758,13 +754,16 @@ namespace spriter
 		}
 
 		const Animation * animation = m_animations[animIndex];
-
-		std::vector<TransformedObjectKey> keys;
-		animation->getAnimationDataAtTime(keys, this, time);
+		
+		float newTime = time;
+		const MainlineKey & mainlineKey = animation->getAnimationDataAtTime_step1(newTime);
+		const size_t numKeys = mainlineKey.objectRefs.size();
+		TransformedObjectKey * keys = (TransformedObjectKey*)alloca(numKeys * sizeof(TransformedObjectKey));
+		animation->getAnimationDataAtTime_step2(keys, numKeys, this, newTime, mainlineKey);
 
 		int outNumDrawables = 0;
 
-		for (size_t k = 0; k < keys.size() && outNumDrawables < numDrawables; ++k)
+		for (size_t k = 0; k < numKeys && outNumDrawables < numDrawables; ++k)
 		{
 			const TransformedObjectKey & o = keys[k];
 
@@ -791,7 +790,7 @@ namespace spriter
 			drawable.a = tf.a;
 		}
 
-		for (size_t k = 0; k < keys.size(); ++k)
+		for (size_t k = 0; k < numKeys; ++k)
 		{
 			const TransformedObjectKey & o = keys[k];
 
@@ -810,12 +809,15 @@ namespace spriter
 
 		const Animation * animation = m_animations[animIndex];
 
-		std::vector<TransformedObjectKey> keys;
-		animation->getAnimationDataAtTime(keys, this, time);
+		float newTime = time;
+		const MainlineKey & mainlineKey = animation->getAnimationDataAtTime_step1(newTime);
+		const int numKeys = mainlineKey.objectRefs.size();
+		TransformedObjectKey * keys = (TransformedObjectKey*)alloca(numKeys * sizeof(TransformedObjectKey));
+		animation->getAnimationDataAtTime_step2(keys, numKeys, this, time, mainlineKey);
 
 		bool result = false;
 
-		for (size_t k = 0; k < keys.size(); ++k)
+		for (size_t k = 0; k < numKeys; ++k)
 		{
 			const TransformedObjectKey & o = keys[k];
 
