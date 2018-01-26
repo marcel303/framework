@@ -27,6 +27,7 @@
 
 #include "audioVoiceManager4D.h"
 #include "framework.h" // for color hsl
+#include "Log.h"
 
 AudioVoiceManager4D::AudioVoiceManager4D()
 	: AudioVoiceManager(kType_4DSOUND)

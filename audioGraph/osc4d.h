@@ -27,10 +27,6 @@
 
 #pragma once
 
-#define OSC_SEND_BUNDLES 1
-
-#include "Log.h" // todo : move to cpp
-
 /*
 
 note : the following OSC controls from the 4DSOUND OSC sheet were not implemented,
@@ -153,15 +149,15 @@ struct Osc4D
 	void globalMasterPhase(const float v);
 };
 
-#include "Debugging.h"
+//
+
 #include "ip/UdpSocket.h"
 #include "osc/OscOutboundPacketStream.h"
-#include <functional>
-
-#define OSC_BUFFER_SIZE (2*1024)
 
 struct Osc4DStream : Osc4D
 {
+	static const int OSC_BUFFER_SIZE = 2048;
+
 	char buffer[OSC_BUFFER_SIZE];
 	osc::OutboundPacketStream stream;
 	
@@ -170,150 +166,26 @@ struct Osc4DStream : Osc4D
 	bool hasMessage;
 	bool bundleIsInvalid;
 
-	Osc4DStream()
-		: stream(buffer, OSC_BUFFER_SIZE)
-		, transmitSocket(nullptr)
-		, hasMessage(false)
-		, bundleIsInvalid(false)
-	{
-	}
+	Osc4DStream();
+	virtual ~Osc4DStream() override;
 	
-	virtual ~Osc4DStream() override
-	{
-		shut();
-	}
-	
-	void init(const char * ipAddress, const int udpPort)
-	{
-		shut();
-		
-		//
-		
-		try
-		{
-			Assert(transmitSocket == nullptr);
-			transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPort));
-		}
-		catch (std::exception & e)
-		{
-			LOG_ERR("failed to create UDP transmit socket: %s", e.what());
-			Assert(transmitSocket == nullptr);
-		}
-	}
-	
-	void shut()
-	{
-		delete transmitSocket;
-		transmitSocket = nullptr;
-	}
-	
-	bool isReady() const
-	{
-		return transmitSocket != nullptr;
-	}
-	
-	void setEndpoint(const char * ipAddress, const int udpPort)
-	{
-		shut();
-		
-		init(ipAddress, udpPort);
-	}
-	
-	void beginBundle()
-	{
-	#if OSC_SEND_BUNDLES
-		try
-		{
-			bundleIsInvalid = false;
-			
-			stream << osc::BeginBundleImmediate;
-		}
-		catch (std::exception & e)
-		{
-			LOG_ERR("beginBundle failed: %s", e.what());
-			
-			bundleIsInvalid = true;
-		}
-	#endif
-	}
-	
-	void endBundle()
-	{
-	#if OSC_SEND_BUNDLES
-		try
-		{
-			stream << osc::EndBundle;
-		}
-		catch (std::exception & e)
-		{
-			LOG_ERR("endBundle failed: %s", e.what());
-			
-			bundleIsInvalid = true;
-		}
-		
-		flush();
-	#endif
-	}
-	
-	void flush()
-	{
-		if (hasMessage && stream.IsReady() && bundleIsInvalid == false)
-		{
-			try
-			{
-				transmitSocket->Send(stream.Data(), stream.Size());
-			}
-			catch (std::exception & e)
-			{
-				LOG_ERR("flush failed: %s", e.what());
-			}
-		}
-		
-		stream = osc::OutboundPacketStream(buffer, OSC_BUFFER_SIZE);
-		hasMessage = false;
-	}
+	void init(const char * ipAddress, const int udpPort);
+	void shut();
 
-	virtual void begin(const char * name) override
-	{
-	#if OSC_SEND_BUNDLES == 0
-		stream << osc::BeginBundleImmediate;
-	#endif
+	bool isReady() const;
+	void setEndpoint(const char * ipAddress, const int udpPort);
 	
-		stream << osc::BeginMessage(name);
-		
-		hasMessage = true;
-	}
-	
-	virtual void end() override
-	{
-		stream << osc::EndMessage;
-		
-	#if OSC_SEND_BUNDLES == 0
-		stream << osc::EndBundle;
-		
-		flush();
-	#endif
-	}
+	void beginBundle();
+	void endBundle();
+	void flush();
 
-	virtual void b(const bool v) override
-	{
-		stream << v;
-	}
+	virtual void begin(const char * name) override;
+	virtual void end() override;
 
-	virtual void i(const int v) override
-	{
-		stream << v;
-	}
-
-	virtual void f(const float v) override
-	{
-		stream << v;
-	}
-	
-	virtual void s(const char * v) override
-	{
-		stream << v;
-	}
+	virtual void b(const bool v) override;
+	virtual void i(const int v) override;
+	virtual void f(const float v) override;
+	virtual void s(const char * v) override;
 };
 
 extern Osc4DStream * g_oscStream;
