@@ -81,19 +81,9 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	
 	if (isPassthrough || image == nullptr || image->sx == 0 || image->sy == 0 || wantsTexture == false)
 	{
-		// todo : make it an option what to do when source image is empty. persist or free ?
+		texture.free();
 		
-		if (texture.isChanged(1, 1, GL_RGBA8))
-		{
-			texture.allocate(1, 1, GL_RGBA8, false, false);
-		}
-		
-		uint32_t black = 0;
-		texture.upload(&black, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE);
-		
-		imageOutput.texture = texture.id;
-		
-		return;
+		imageOutput.texture = 0;
 	}
 	
 	//
