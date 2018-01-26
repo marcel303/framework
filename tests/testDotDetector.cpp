@@ -147,6 +147,8 @@ void testDotDetector()
 	
 	TrackedDot trackedDots[kMaxIslands];
 	float lastFrameTime = framework.time;
+	int numAdded = 0;
+	int numRemoved = 0;
 
 	do
 	{
@@ -343,26 +345,23 @@ void testDotDetector()
 		
 		// track dots
 		
-		for (int i = 0; i < numIslands; ++i)
-		{
-			trackedDots[i].x = islands[i].x;
-			trackedDots[i].y = islands[i].y;
-		}
-		
-		// todo : should only do dot tracking when we know we got a new video frame, to ensure motion is stable
-		
-		int numAdded = 0;
-		int numRemoved = 0;
-		
-		if (useDotTracker)
-		{
-			const float dtFrame = framework.time - lastFrameTime;
-			
-			dotTracker.identify(trackedDots, numIslands, dtFrame, 50.f, gotNewFrame, nullptr, &numAdded, nullptr, &numRemoved);
-		}
-		
 		if (gotNewFrame)
 		{
+			// only do dot tracking when we know we got a new video frame, to ensure motion is stable
+			
+			for (int i = 0; i < numIslands; ++i)
+			{
+				trackedDots[i].x = islands[i].x;
+				trackedDots[i].y = islands[i].y;
+			}
+			
+			if (useDotTracker)
+			{
+				const float dtFrame = framework.time - lastFrameTime;
+				
+				dotTracker.identify(trackedDots, numIslands, dtFrame, 50.f, true, nullptr, &numAdded, nullptr, &numRemoved);
+			}
+		
 			lastFrameTime = framework.time;
 		}
 		
