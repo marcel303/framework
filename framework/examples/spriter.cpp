@@ -110,13 +110,13 @@ int main(int argc, char * argv[])
 			setColor(colorWhite);
 			spriter.draw(spriterState);
 			
-			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.0f, +.1f, 1.f).Translate(-VIEW_SX/2, -10, 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
+			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.1f, 1.f, 1.f).RotateZ(+M_PI_2).Translate(-VIEW_SX/2, -10, 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			hqFillRoundedRect(10, 10, VIEW_SX - 10, 100, 10.f);
 			hqEnd();
 			hqClearGradient();
 			
-			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.0f, -.1f, 1.f).Translate(-VIEW_SX/2, -(VIEW_SY-10), 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
+			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.1f, 1.f, 1.f).RotateZ(-M_PI_2).Translate(-VIEW_SX/2, -(VIEW_SY-10), 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			hqFillRoundedRect(10, VIEW_SY - 10, VIEW_SX - 10, VIEW_SY - 100, 10.f);
 			hqEnd();
