@@ -168,6 +168,7 @@ public:
 		colorMode = COLOR_MUL;
 		colorPost = POST_NONE;
 		fontMode = FONT_BITMAP;
+		colorClamp = true;
 		transform = TRANSFORM_SCREEN;
 		transformScreen.MakeIdentity();
 		transform2d.MakeIdentity();
@@ -191,6 +192,7 @@ public:
 	COLOR_POST colorPost;
 	FONT_MODE fontMode;
 	Color color;
+	bool colorClamp;
 	GRADIENT_TYPE hqGradientType;
 	Mat4x4 hqGradientMatrix;
 	Color hqGradientColor1;

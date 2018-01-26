@@ -834,8 +834,8 @@ struct SpriterState
 {
 	SpriterState();
 
-	int16_t x;
-	int16_t y;
+	float x;
+	float y;
 	float angle;
 	float scale;
 	float scaleX;
@@ -1206,6 +1206,7 @@ void popColorPost();
 void setColor(const Color & color);
 void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
 void setColorf(float r, float g, float b, float a = 1.f, float rgbMul = 1.f);
+void setColorClamp(bool clamp);
 void setAlpha(int a);
 void setAlphaf(float a);
 void pushColor();

@@ -5337,19 +5337,17 @@ void setColorf(float r, float g, float b, float a, float rgbMul)
 	g *= rgbMul;
 	b *= rgbMul;
 	
-#if 1
-	r = clamp(r, 0.f, 1.f);
-	g = clamp(g, 0.f, 1.f);
-	b = clamp(b, 0.f, 1.f);
-	a = clamp(a, 0.f, 1.f);
-#endif
-
 	globals.color.r = r;
 	globals.color.g = g;
 	globals.color.b = b;
 	globals.color.a = a;
 	
 	gxColor4f(r, g, b, a);
+}
+
+void setColorClamp(bool clamp)
+{
+	globals.colorClamp = clamp;
 }
 
 void setAlpha(int a)
@@ -7148,7 +7146,7 @@ static void gxFlush(bool endOfBatch)
 				s_gxTextureEnabled ? 1 : 0,
 				globals.colorMode,
 				globals.colorPost,
-				0);
+				globals.colorClamp);
 		}
 
 		if (globals.gxShaderIsDirty)

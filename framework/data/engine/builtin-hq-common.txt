@@ -100,13 +100,14 @@ vec4 hqGradientColor()
 
 	t = (t - gradientParams.y) * gradientParams.z;
 
-	vec4 color = mix(gradientColor1, gradientColor2, t);
+	// color clamp
 
-	//if (gradientParams.w == 1)
-	if (true)
+	if (params.w == 1)
 	{
-		color = clamp(color, vec4(0.0), vec4(1.0));
+		t = clamp(t, 0.0, 1.0);
 	}
+
+	vec4 color = mix(gradientColor1, gradientColor2, t);
 
 	return color;
 }

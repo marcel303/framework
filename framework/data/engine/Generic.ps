@@ -15,6 +15,15 @@ shader_in vec2 v_texcoord0;
 void main()
 {
 	vec4 result = v_color;
+
+	// color clamp
+
+	if (params.w != 0)
+	{
+		result = clamp(result, vec4(0.0), vec4(1.0));
+	}
+
+	// texture
 	
 	if (params.x != 0)
 	{
@@ -48,6 +57,8 @@ void main()
 			result.a   = texColor.a;
 		}
 	}
+
+	// color post
 
 	/*
 	POST_NONE,
