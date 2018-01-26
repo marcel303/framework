@@ -859,8 +859,6 @@ namespace binaural
 		float4 * __restrict outputReal,
 		float4 * __restrict outputImag) const
 	{
-		// todo : SSE optimize this code
-		
 		const float * __restrict sReal = real;
 		const float * __restrict sImag = imag;
 		
@@ -1126,8 +1124,6 @@ namespace binaural
 		for (auto & triangle : triangles)
 		{
 			// find matching HRIR samples
-			
-			// todo : use a faster lookup mechanism here
 			
 			const SampleLocation triangleLocations[3] =
 			{

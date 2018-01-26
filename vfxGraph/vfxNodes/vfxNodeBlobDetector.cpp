@@ -164,8 +164,6 @@ void VfxNodeBlobDetector::tick(const float dt)
 			}
 			else
 			{
-				// todo : if the data is planar it would be trivial to SSE-optimize this loop
-				
 				for (int y = 0; y < maskSy; ++y)
 				{
 					const uint8_t * __restrict srcR = image->channel[0].data + y * image->channel[0].pitch;
