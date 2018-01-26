@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <cmath>
+#include <algorithm>
 #include "framework.h"
 
 #define VIEW_SX (1920/2)
@@ -55,7 +55,7 @@ int main(int argc, char * argv[])
 	{
 		framework.process();
 		
-		if (isGrounded && (rand() % 100) == 0)
+		if (isGrounded && ((rand() % 100) == 0 || keyboard.wentDown(SDLK_SPACE)))
 		{
 			isGrounded = false;
 			speedY = -800.f;
@@ -80,18 +80,18 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		if (spriterState.x > VIEW_SX - 120 || direction == 0.f)
+		if (spriterState.x > VIEW_SX - 120 || keyboard.wentDown(SDLK_LEFT) || direction == 0.f)
 		{
-			spriterState.x = VIEW_SX - 120;
+			spriterState.x = std::min(VIEW_SX - 120.f, spriterState.x);
 			direction = -1.f;
 			spriterState.flipX = false;
 			if (isGrounded)
 				spriterState.startAnim(spriter, "Walk");
 		}
 		
-		if (spriterState.x < 120)
+		if (spriterState.x < 120 || keyboard.wentDown(SDLK_RIGHT))
 		{
-			spriterState.x = 120;
+			spriterState.x = std::max(120.f, spriterState.x);
 			direction = +1.f;
 			spriterState.flipX = true;
 			if (isGrounded)
@@ -104,11 +104,23 @@ int main(int argc, char * argv[])
 		{
 			hqBegin(HQ_LINES);
 			setColor(100, 100, 100);
-			hqLine(VIEW_SX/2-100, VIEW_SY*3/4 + 20, .3f, VIEW_SX/2+100, VIEW_SY*3/4 + 20, .9f);
+			hqLine(VIEW_SX/2-100, VIEW_SY*3/4 + 20, .3f, VIEW_SX/2+100, VIEW_SY*3/4 + 20, .5f);
 			hqEnd();
 			
 			setColor(colorWhite);
 			spriter.draw(spriterState);
+			
+			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.0f, +.1f, 1.f).Translate(-VIEW_SX/2, -10, 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			hqFillRoundedRect(10, 10, VIEW_SX - 10, 100, 10.f);
+			hqEnd();
+			hqClearGradient();
+			
+			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.0f, -.1f, 1.f).Translate(-VIEW_SX/2, -(VIEW_SY-10), 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			hqFillRoundedRect(10, VIEW_SY - 10, VIEW_SX - 10, VIEW_SY - 100, 10.f);
+			hqEnd();
+			hqClearGradient();
 		}
 		framework.endDraw();
 	}
