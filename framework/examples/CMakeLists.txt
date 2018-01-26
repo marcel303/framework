@@ -24,12 +24,14 @@ add_executable(example example.cpp)
 add_executable(model model.cpp)
 add_executable(sounds sounds.cpp)
 add_executable(sprites sprites.cpp)
+add_executable(spriter spriter.cpp)
 
 target_link_libraries(aniplay PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(example PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(model PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(sounds PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(sprites PRIVATE ${FRAMEWORK_LIBRARIES})
+target_link_libraries(spriter PRIVATE ${FRAMEWORK_LIBRARIES})
 
 if (WIN32)
 	# set the current working directory
