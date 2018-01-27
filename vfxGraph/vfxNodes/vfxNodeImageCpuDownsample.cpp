@@ -299,9 +299,14 @@ void VfxNodeImageCpuDownsample::freeImage()
 	imageOutput.reset();
 }
 
-static int downsampleLine2x2_SSE(const uint8_t * __restrict _srcLine1, const uint8_t * __restrict _srcLine2, const int numPixels, uint8_t * __restrict dstLine)
+static int downsampleLine2x2_1channel_SSE(
+	const uint8_t * __restrict _srcLine1,
+	const uint8_t * __restrict _srcLine2,
+	const int numPixels,
+	uint8_t * __restrict dstLine)
 {
-	const int numIterations = numPixels / 8;
+	const int numSrcBytes = numPixels * 2;
+	const int numIterations = numSrcBytes / 16;
 	
 	const __m128i * __restrict srcLine1 = (__m128i*)_srcLine1;
 	const __m128i * __restrict srcLine2 = (__m128i*)_srcLine2;
@@ -326,9 +331,16 @@ static int downsampleLine2x2_SSE(const uint8_t * __restrict _srcLine1, const uin
 	return numIterations * 8;
 }
 
-static int downsampleLine4x4_SSE(const uint8_t * __restrict _srcLine1, const uint8_t * __restrict _srcLine2, const uint8_t * __restrict _srcLine3, const uint8_t * __restrict _srcLine4, const int numPixels, uint8_t * __restrict dstLine)
+static int downsampleLine4x4_1channel_SSE(
+	const uint8_t * __restrict _srcLine1,
+	const uint8_t * __restrict _srcLine2,
+	const uint8_t * __restrict _srcLine3,
+	const uint8_t * __restrict _srcLine4,
+	const int numPixels,
+	uint8_t * __restrict dstLine)
 {
-	const int numIterations = numPixels / 4;
+	const int numSrcBytes = numPixels * 4;
+	const int numIterations = numSrcBytes / 16;
 	
 	const __m128i * __restrict srcLine1 = (__m128i*)_srcLine1;
 	const __m128i * __restrict srcLine2 = (__m128i*)_srcLine2;
@@ -365,9 +377,14 @@ static int downsampleLine4x4_SSE(const uint8_t * __restrict _srcLine1, const uin
 
 //
 
-static int downsampleLine2x2_4channel_SSE(const uint8_t * __restrict _srcLine1, const uint8_t * __restrict _srcLine2, const int numPixels, uint8_t * __restrict dstLine)
+static int downsampleLine2x2_4channel_SSE(
+	const uint8_t * __restrict _srcLine1,
+	const uint8_t * __restrict _srcLine2,
+	const int numPixels,
+	uint8_t * __restrict dstLine)
 {
-	const int numIterations = numPixels / 2;
+	const int numSrcBytes = numPixels * 2 * 4;
+	const int numIterations = numSrcBytes / 16;
 	
 	const __m128i * __restrict srcLine1 = (__m128i*)_srcLine1;
 	const __m128i * __restrict srcLine2 = (__m128i*)_srcLine2;
@@ -382,8 +399,16 @@ static int downsampleLine2x2_4channel_SSE(const uint8_t * __restrict _srcLine1, 
 		const __m128i srcValuesA = _mm_avg_epu8(srcValues1, srcValues2);
 		const __m128i srcValuesL = _mm_unpacklo_epi8(srcValuesA, zero);
 		const __m128i srcValuesR = _mm_unpackhi_epi8(srcValuesA, zero);
+		const __m128i srcValuesL1 = _mm_unpacklo_epi16(srcValuesL, zero);
+		const __m128i srcValuesL2 = _mm_unpackhi_epi16(srcValuesL, zero);
+		const __m128i srcValuesR1 = _mm_unpacklo_epi16(srcValuesR, zero);
+		const __m128i srcValuesR2 = _mm_unpackhi_epi16(srcValuesR, zero);
 		
-		const __m128i dstValues = _mm_avg_epu16(srcValuesL, srcValuesR);
+		const __m128i dstValuesL = _mm_srli_epi32(_mm_add_epi32(srcValuesL1, srcValuesL2), 1);
+		const __m128i dstValuesR = _mm_srli_epi32(_mm_add_epi32(srcValuesR1, srcValuesR2), 1);
+		
+		//const __m128i dstValues = _mm_avg_epu16(srcValuesL, srcValuesR);
+		const __m128i dstValues = _mm_packs_epi32(dstValuesL, dstValuesR);
 		const __m128i dstValuesPacked = _mm_packus_epi16(dstValues, zero);
 		
 		_mm_storel_epi64((__m128i*)(&dstLine[x * 8]), dstValuesPacked);
@@ -392,9 +417,16 @@ static int downsampleLine2x2_4channel_SSE(const uint8_t * __restrict _srcLine1, 
 	return numIterations * 2;
 }
 
-static int downsampleLine4x4_4channel_SSE(const uint8_t * __restrict _srcLine1, const uint8_t * __restrict _srcLine2, const uint8_t * __restrict _srcLine3, const uint8_t * __restrict _srcLine4, const int numPixels, uint8_t * __restrict dstLine)
+static int downsampleLine4x4_4channel_SSE(
+	const uint8_t * __restrict _srcLine1,
+	const uint8_t * __restrict _srcLine2,
+	const uint8_t * __restrict _srcLine3,
+	const uint8_t * __restrict _srcLine4,
+	const int numPixels,
+	uint8_t * __restrict dstLine)
 {
-	const int numIterations = numPixels / 1;
+	const int numSrcBytes = numPixels * 4 * 4;
+	const int numIterations = numSrcBytes / 16;
 	
 	const __m128i * __restrict srcLine1 = (__m128i*)_srcLine1;
 	const __m128i * __restrict srcLine2 = (__m128i*)_srcLine2;
@@ -437,9 +469,14 @@ static int downsampleLine4x4_4channel_SSE(const uint8_t * __restrict _srcLine1, 
 
 #if __AVX__
 
-static int downsampleLine2x2_AVX(const uint8_t * __restrict _srcLine1, const uint8_t * __restrict _srcLine2, const int numPixels, uint8_t * __restrict dstLine)
+static int downsampleLine2x2_1channel_AVX(
+	const uint8_t * __restrict _srcLine1,
+	const uint8_t * __restrict _srcLine2,
+	const int numPixels,
+	uint8_t * __restrict dstLine)
 {
-	const int numIterations = numPixels / 16;
+	const int numSrcBytes = numPixels * 2;
+	const int numIterations = numSrcBytes / 32;
 	
 	const __m256i * __restrict srcLine1 = (__m256i*)_srcLine1;
 	const __m256i * __restrict srcLine2 = (__m256i*)_srcLine2;
@@ -474,6 +511,9 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 		const int downsampledSx = std::max(1, src.sx / pixelSize);
 		const int downsampledSy = std::max(1, src.sy / pixelSize);
 		
+		const int yOffset1 = 0;
+		const int yOffset2 = src.sy >= 2 ? 1 : 0;
+		
 	#if 1
 		int interleavedNumPixelsProcessed = 0;
 		
@@ -481,8 +521,8 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 		{
 			for (int y = 0; y < downsampledSy; ++y)
 			{
-				const uint8_t * __restrict srcItr1 = src.channel[0].data + (y * 2 + 0) * src.channel[0].pitch;
-				const uint8_t * __restrict srcItr2 = src.channel[0].data + (y * 2 + 1) * src.channel[0].pitch;
+				const uint8_t * __restrict srcItr1 = src.channel[0].data + (y * 2 + yOffset1) * src.channel[0].pitch;
+				const uint8_t * __restrict srcItr2 = src.channel[0].data + (y * 2 + yOffset2) * src.channel[0].pitch;
 					  uint8_t * __restrict dstItr = (uint8_t*)dst.channel[0].data + y * dst.channel[0].pitch;
 				
 				interleavedNumPixelsProcessed = downsampleLine2x2_4channel_SSE(srcItr1, srcItr2, downsampledSx, dstItr);
@@ -497,8 +537,8 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 			
 			for (int y = 0; y < downsampledSy; ++y)
 			{
-				const uint8_t * __restrict srcItr1 = srcChannel.data + (y * 2 + 0) * srcChannel.pitch;
-				const uint8_t * __restrict srcItr2 = srcChannel.data + (y * 2 + 1) * srcChannel.pitch;
+				const uint8_t * __restrict srcItr1 = srcChannel.data + (y * 2 + yOffset1) * srcChannel.pitch;
+				const uint8_t * __restrict srcItr2 = srcChannel.data + (y * 2 + yOffset2) * srcChannel.pitch;
 					  uint8_t * __restrict dstItr = (uint8_t*)dstChannel.data + y * dstChannel.pitch;
 				
 				if (src.isPlanar)
@@ -514,9 +554,9 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 					if (srcChannel.stride == 1 && dstChannel.stride == 1 && ((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(dstItr)) & 0xf) == 0)
 					{
 					#if __AVX__
-						numPixelsProcessed = downsampleLine2x2_AVX(srcItr1, srcItr2, downsampledSx, dstItr);
+						numPixelsProcessed = downsampleLine2x2_1channel_AVX(srcItr1, srcItr2, downsampledSx, dstItr);
 					#else
-						numPixelsProcessed = downsampleLine2x2_SSE(srcItr1, srcItr2, downsampledSx, dstItr);
+						numPixelsProcessed = downsampleLine2x2_1channel_SSE(srcItr1, srcItr2, downsampledSx, dstItr);
 					#endif
 						
 						srcItr1 += numPixelsProcessed * 2;
@@ -529,9 +569,9 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 				{
 					numPixelsProcessed = interleavedNumPixelsProcessed;
 					
-					srcItr1 += numPixelsProcessed * 2;
-					srcItr2 += numPixelsProcessed * 2;
-					dstItr += numPixelsProcessed;
+					srcItr1 += numPixelsProcessed * 2 * srcChannel.stride;
+					srcItr2 += numPixelsProcessed * 2 * srcChannel.stride;
+					dstItr += numPixelsProcessed * dstChannel.stride;
 				}
 				
 				for (int x = numPixelsProcessed; x < downsampledSx; ++x)
@@ -601,7 +641,7 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 				#if 1
 					if (srcChannel.stride == 1 && dstChannel.stride == 1 && ((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(srcItr3) | uintptr_t(srcItr4) | uintptr_t(dstItr)) & 0xf) == 0)
 					{
-						numPixelsProcessed = downsampleLine4x4_SSE(srcItr1, srcItr2, srcItr3, srcItr4, downsampledSx, dstItr);
+						numPixelsProcessed = downsampleLine4x4_1channel_SSE(srcItr1, srcItr2, srcItr3, srcItr4, downsampledSx, dstItr);
 						
 						srcItr1 += numPixelsProcessed * 4;
 						srcItr2 += numPixelsProcessed * 4;
