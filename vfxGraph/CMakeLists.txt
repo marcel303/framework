@@ -44,7 +44,7 @@ project(vfxGraph)
 
 file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 
-file(GLOB_RECURSE source_vfxnodes "vfxNodes/*.*")
+file(GLOB_RECURSE source_vfxnodes "vfxNodes/*.cpp" "vfxNodes/*.h" "vfxNodes/*.mm")
 file(GLOB_RECURSE source_macos "macos/*.*")
 file(GLOB_RECURSE source_win32 "win32/*.*")
 file(GLOB_RECURSE source_xmm "xmm/*.*")
@@ -83,7 +83,7 @@ endforeach(s)
 file(APPEND ${headerfile} "void linkVfxNodes() { }\n")
 
 list(APPEND source ${headerfile})
-list(REMOVE_ITEM source ${source_vfxnodes})
+set_source_files_properties(${source_vfxnodes} PROPERTIES HEADER_FILE_ONLY 1)
 
 # ---- end of magic ----
 

@@ -31,7 +31,7 @@ project(audioGraph)
 # --- audioGraph ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
-file(GLOB_RECURSE source_audioNodes "audioNodes/*.*")
+file(GLOB_RECURSE source_audioNodes "audioNodes/*.cpp" "audioNodes/*.h")
 file(GLOB_RECURSE source_objects "objects/*.*" ${source_graph})
 file(GLOB_RECURSE source_delaunay "delaunay/*.*")
 
@@ -62,7 +62,7 @@ endforeach(s)
 file(APPEND ${headerfile} "void linkAudioNodes() { }\n")
 
 list(APPEND source ${headerfile})
-list(REMOVE_ITEM source ${source_audioNodes})
+set_source_files_properties(${source_audioNodes} PROPERTIES HEADER_FILE_ONLY 1)
 
 # ---- end of magic ----
 

@@ -48,7 +48,7 @@ add_executable(400-editor 400-editor.cpp)
 add_executable(420-realtime-editing 420-realtime-editing.cpp)
 add_executable(440-realtime-multiwindow 440-realtime-multiwindow.cpp)
 add_executable(500-consoleapp 500-consoleapp.cpp)
-add_executable(700-4dworld 700-4dworld.cpps)
+add_executable(700-4dworld 700-4dworld.cpp)
 
 set(LIBRARIES PRIVATE
 	libgg
