@@ -116,12 +116,10 @@ struct VfxImageCpu
 	struct Channel
 	{
 		const uint8_t * data;
-		int stride;
 		int pitch;
 		
 		Channel()
 			: data(nullptr)
-			, stride(0)
 			, pitch(0)
 		{
 		}
@@ -131,24 +129,34 @@ struct VfxImageCpu
 	int sy;
 	int numChannels;
 	int alignment;
-	bool isInterleaved;
-	bool isPlanar;
 	
 	Channel channel[4];
 	
 	VfxImageCpu();
 	
-	void setDataInterleaved(const uint8_t * data, const int sx, const int sy, const int numChannels, const int alignment, const int pitch);
+	void setDataContiguous(const uint8_t * data, const int sx, const int sy, const int numChannels, const int alignment, const int pitch);
+	void setData(const uint8_t ** datas, const int sx, const int sy, const int numChannels, const int alignment, const int * pitches);
+	
 	void setDataR8(const uint8_t * r, const int sx, const int sy, const int alignment, const int pitch);
-	void setDataRGB8(const uint8_t * rgba, const int sx, const int sy, const int alignment, const int pitch);
-	void setDataRGBA8(const uint8_t * rgba, const int sx, const int sy, const int alignment, const int pitch);
+	void setDataRGB8(const uint8_t * r, const uint8_t * g, const uint8_t * b, const int sx, const int sy, const int alignment, const int pitch);
+	void setDataRGBA8(const uint8_t * r, const uint8_t * g, const uint8_t * b, const uint8_t * a, const int sx, const int sy, const int alignment, const int pitch);
 	void reset();
 	
 	int getMemoryUsage() const;
 
-	static void interleave1(const Channel * channel1, uint8_t * _dst, const int dstPitch, const int sx, const int sy);
-	static void interleave3(const Channel * channel1, const Channel * channel2, const Channel * channel3, uint8_t * dst, const int dstPitch, const int sx, const int sy);
-	static void interleave4(const Channel * channel1, const Channel * channel2, const Channel * channel3, const Channel * channel4, uint8_t * dst, const int dstPitch, const int sx, const int sy);
+	static void interleave1(const Channel & channel1, uint8_t * _dst, const int dstPitch, const int sx, const int sy);
+	static void interleave3(const Channel & channel1, const Channel & channel2, const Channel & channel3, uint8_t * dst, const int dstPitch, const int sx, const int sy);
+	static void interleave4(const Channel & channel1, const Channel & channel2, const Channel & channel3, const Channel & channel4, uint8_t * dst, const int dstPitch, const int sx, const int sy);
+	
+	static void deinterleave1(
+		const uint8_t * src, const int sx, const int sy, const int alignment, const int pitch,
+		Channel & channel1);
+	static void deinterleave3(
+		const uint8_t * src, const int sx, const int sy, const int alignment, const int pitch,
+		Channel & channel1, Channel & channel2, Channel & channel3);
+	static void deinterleave4(
+		const uint8_t * src, const int sx, const int sy, const int alignment, const int pitch,
+		Channel & channel1, Channel & channel2, Channel & channel3, Channel & channel4);
 };
 
 //
@@ -162,8 +170,8 @@ struct VfxImageCpuData
 	VfxImageCpuData();
 	~VfxImageCpuData();
 
-	void alloc(const int sx, const int sy, const int numChannels, const bool interleaved);
-	void allocOnSizeChange(const int sx, const int sy, const int numChannels, const bool interleaved);
+	void alloc(const int sx, const int sy, const int numChannels);
+	void allocOnSizeChange(const int sx, const int sy, const int numChannels);
 	void allocOnSizeChange(const VfxImageCpu & reference);
 	void free();
 };

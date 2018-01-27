@@ -117,13 +117,11 @@ VfxImageCpu::VfxImageCpu()
 	, sy(0)
 	, numChannels(0)
 	, alignment(1)
-	, isInterleaved(false)
-	, isPlanar(false)
 	, channel()
 {
 }
 
-void VfxImageCpu::setDataInterleaved(const uint8_t * data, const int _sx, const int _sy, const int _numChannels, const int _alignment, const int pitch)
+void VfxImageCpu::setDataContiguous(const uint8_t * data, const int _sx, const int _sy, const int _numChannels, const int _alignment, const int pitch)
 {
 	Assert((uintptr_t(data) & (_alignment - 1)) == 0);
 
@@ -132,36 +130,65 @@ void VfxImageCpu::setDataInterleaved(const uint8_t * data, const int _sx, const 
 	
 	numChannels = _numChannels;
 	alignment = _alignment;
-	isInterleaved = true;
-	isPlanar = _numChannels == 1;
 	
-	for (int i = 0; i < 4; ++i)
+	for (int i = 0; i < numChannels; ++i)
 	{
-		channel[i].data = data + (i % numChannels);
-		channel[i].stride = numChannels;
+		channel[i].data = data + i * sy * pitch;
 		channel[i].pitch = pitch;
 	}
+	
+	for (int i = numChannels; i < 4; ++i)
+		channel[i] = channel[0];
+}
+
+void VfxImageCpu::setData(const uint8_t ** datas, const int _sx, const int _sy, const int _numChannels, const int _alignment, const int * pitches)
+{
+	sx = _sx;
+	sy = _sy;
+	
+	numChannels = _numChannels;
+	alignment = _alignment;
+	
+	for (int i = 0; i < numChannels; ++i)
+	{
+		const uint8_t * data = datas[i];
+		const int pitch = pitches[i];
+		
+		Assert((uintptr_t(data) & (_alignment - 1)) == 0);
+		
+		channel[i].data = data;
+		channel[i].pitch = pitch;
+	}
+	
+	for (int i = numChannels; i < 4; ++i)
+		channel[i] = channel[0];
 }
 
 void VfxImageCpu::setDataR8(const uint8_t * r, const int sx, const int sy, const int alignment, const int _pitch)
 {
 	const int pitch = _pitch == 0 ? sx * 1 : _pitch;
 	
-	setDataInterleaved(r, sx, sy, 1, alignment, pitch);
+	setData(&r, sx, sy, 1, alignment, &pitch);
 }
 
-void VfxImageCpu::setDataRGB8(const uint8_t * rgb, const int sx, const int sy, const int alignment, const int _pitch)
+void VfxImageCpu::setDataRGB8(const uint8_t * r, const uint8_t * g, const uint8_t * b, const int sx, const int sy, const int alignment, const int _pitch)
 {
 	const int pitch = _pitch == 0 ? sx * 3 : _pitch;
 	
-	setDataInterleaved(rgb, sx, sy, 3, alignment, pitch);
+	const uint8_t * datas[3] = { r, g, b };
+	const int pitches[3] = { pitch, pitch, pitch };
+	
+	setData(datas, sx, sy, 3, alignment, pitches);
 }
 
-void VfxImageCpu::setDataRGBA8(const uint8_t * rgba, const int sx, const int sy, const int alignment, const int _pitch)
+void VfxImageCpu::setDataRGBA8(const uint8_t * r, const uint8_t * g, const uint8_t * b, const uint8_t * a, const int sx, const int sy, const int alignment, const int _pitch)
 {
-	const int pitch = _pitch == 0 ? sx * 4 : _pitch;
+	const int pitch = _pitch == 0 ? sx * 3 : _pitch;
 	
-	setDataInterleaved(rgba, sx, sy, 4, alignment, pitch);
+	const uint8_t * datas[4] = { r, g, b, a };
+	const int pitches[4] = { pitch, pitch, pitch, pitch };
+	
+	setData(datas, sx, sy, 4, alignment, pitches);
 }
 
 void VfxImageCpu::reset()
@@ -176,8 +203,6 @@ void VfxImageCpu::reset()
 	
 	numChannels = 0;
 	alignment = 1;
-	isInterleaved = false;
-	isPlanar = false;
 }
 
 int VfxImageCpu::getMemoryUsage() const
@@ -186,84 +211,135 @@ int VfxImageCpu::getMemoryUsage() const
 	
 	for (int i = 0; i < numChannels; ++i)
 	{
-		result += sy * channel[i].pitch / channel[i].stride;
+		result += sy * channel[i].pitch;
 	}
 	
 	return result;
 }
 
-void VfxImageCpu::interleave1(const Channel * channel1, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
+void VfxImageCpu::interleave1(const Channel & channel1, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
 {
 	const int dstPitch = _dstPitch == 0 ? sx * 1 : _dstPitch;
 	
 	for (int y = 0; y < sy; ++y)
 	{
-		const uint8_t * __restrict src1 = channel1->data + y * channel1->pitch;
+		const uint8_t * __restrict src1 = channel1.data + y * channel1.pitch;
 			  uint8_t * __restrict dst  = _dst + y * dstPitch;
 		
-		if (channel1->stride == 1)
-		{
-			memcpy(dst, src1, sx);
-		}
-		else
-		{
-			for (int x = 0; x < sx; ++x)
-			{
-				*dst++ = *src1;
-				
-				src1 += channel1->stride;
-			}
-		}
+		memcpy(dst, src1, sx);
 	}
 }
 
-void VfxImageCpu::interleave3(const Channel * channel1, const Channel * channel2, const Channel * channel3, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
+void VfxImageCpu::interleave3(const Channel & channel1, const Channel & channel2, const Channel & channel3, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
 {
 	const int dstPitch = _dstPitch == 0 ? sx * 3 : _dstPitch;
 	
 	for (int y = 0; y < sy; ++y)
 	{
-		const uint8_t * __restrict src1 = channel1->data + y * channel1->pitch;
-		const uint8_t * __restrict src2 = channel2->data + y * channel2->pitch;
-		const uint8_t * __restrict src3 = channel3->data + y * channel3->pitch;
+		const uint8_t * __restrict src1 = channel1.data + y * channel1.pitch;
+		const uint8_t * __restrict src2 = channel2.data + y * channel2.pitch;
+		const uint8_t * __restrict src3 = channel3.data + y * channel3.pitch;
 			  uint8_t * __restrict dst  = _dst + y * dstPitch;
 		
 		for (int x = 0; x < sx; ++x)
 		{
-			*dst++ = *src1;
-			*dst++ = *src2;
-			*dst++ = *src3;
-			
-			src1 += channel1->stride;
-			src2 += channel2->stride;
-			src3 += channel3->stride;
+			*dst++ = *src1++;
+			*dst++ = *src2++;
+			*dst++ = *src3++;
 		}
 	}
 }
 
-void VfxImageCpu::interleave4(const Channel * channel1, const Channel * channel2, const Channel * channel3, const Channel * channel4, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
+void VfxImageCpu::interleave4(const Channel & channel1, const Channel & channel2, const Channel & channel3, const Channel & channel4, uint8_t * _dst, const int _dstPitch, const int sx, const int sy)
 {
 	const int dstPitch = _dstPitch == 0 ? sx * 4 : _dstPitch;
 	
 	for (int y = 0; y < sy; ++y)
 	{
-		const uint8_t * __restrict src1 = channel1->data + y * channel1->pitch;
-		const uint8_t * __restrict src2 = channel2->data + y * channel2->pitch;
-		const uint8_t * __restrict src3 = channel3->data + y * channel3->pitch;
-		const uint8_t * __restrict src4 = channel4->data + y * channel4->pitch;
+		const uint8_t * __restrict src1 = channel1.data + y * channel1.pitch;
+		const uint8_t * __restrict src2 = channel2.data + y * channel2.pitch;
+		const uint8_t * __restrict src3 = channel3.data + y * channel3.pitch;
+		const uint8_t * __restrict src4 = channel4.data + y * channel4.pitch;
 			  uint8_t * __restrict dst  = _dst + y * dstPitch;
 		
 		for (int x = 0; x < sx; ++x)
 		{
-			*dst++ = *src1;
-			*dst++ = *src2;
-			*dst++ = *src3;
-			*dst++ = *src4;
-			
-			src1 += channel1->stride;
-			src2 += channel2->stride;
-			src3 += channel3->stride;
-			src4 += channel4->stride;
+			*dst++ = *src1++;
+			*dst++ = *src2++;
+			*dst++ = *src3++;
+			*dst++ = *src4++;
+		}
+	}
+}
+
+void VfxImageCpu::deinterleave1(
+	const uint8_t * src, const int sx, const int sy, const int alignment, const int _pitch,
+	Channel & channel1)
+{
+	const int pitch = _pitch == 0 ? sx * 4 : _pitch;
+	
+	// todo : SSE optimize
+	
+	for (int y = 0; y < sy; ++y)
+	{
+		const uint8_t * __restrict srcPtr = src + y * pitch + 0;
+		
+		uint8_t * __restrict dst = (uint8_t*)channel1.data + y * channel1.pitch;
+		
+		memcpy(dst, srcPtr, sx);
+	}
+}
+
+void VfxImageCpu::deinterleave3(
+	const uint8_t * src, const int sx, const int sy, const int alignment, const int _pitch,
+	Channel & channel1, Channel & channel2, Channel & channel3)
+{
+	const int pitch = _pitch == 0 ? sx * 4 : _pitch;
+	
+	// todo : SSE optimize
+	
+	for (int y = 0; y < sy; ++y)
+	{
+		const uint8_t * __restrict srcPtr1 = src + y * pitch + 0;
+		const uint8_t * __restrict srcPtr2 = src + y * pitch + 1;
+		const uint8_t * __restrict srcPtr3 = src + y * pitch + 2;
+		
+		uint8_t * __restrict dst1 = (uint8_t*)channel1.data + y * channel1.pitch;
+		uint8_t * __restrict dst2 = (uint8_t*)channel2.data + y * channel2.pitch;
+		uint8_t * __restrict dst3 = (uint8_t*)channel3.data + y * channel3.pitch;
+		
+		for (int x = 0; x < sx; ++x)
+		{
+			dst1[x] = srcPtr1[x * 3];
+			dst2[x] = srcPtr2[x * 3];
+			dst3[x] = srcPtr3[x * 3];
+		}
+	}
+}
+
+void VfxImageCpu::deinterleave4(
+	const uint8_t * src, const int sx, const int sy, const int alignment, const int _pitch,
+	Channel & channel1, Channel & channel2, Channel & channel3, Channel & channel4)
+{
+	const int pitch = _pitch == 0 ? sx * 4 : _pitch;
+	
+	// todo : SSE optimize
+	
+	for (int y = 0; y < sy; ++y)
+	{
+		const uint8_t * __restrict srcPtr = src + y * pitch;
+		
+		uint8_t * __restrict dst1 = (uint8_t*)channel1.data + y * channel1.pitch;
+		uint8_t * __restrict dst2 = (uint8_t*)channel2.data + y * channel2.pitch;
+		uint8_t * __restrict dst3 = (uint8_t*)channel3.data + y * channel3.pitch;
+		uint8_t * __restrict dst4 = (uint8_t*)channel4.data + y * channel4.pitch;
+		
+		for (int x = 0; x < sx; ++x)
+		{
+			dst1[x] = srcPtr[x * 4 + 0];
+			dst2[x] = srcPtr[x * 4 + 1];
+			dst3[x] = srcPtr[x * 4 + 2];
+			dst4[x] = srcPtr[x * 4 + 3];
 		}
 	}
 }
@@ -281,29 +357,28 @@ VfxImageCpuData::~VfxImageCpuData()
 	free();	
 }
 
-void VfxImageCpuData::alloc(const int sx, const int sy, const int numChannels, const bool interleaved)
+void VfxImageCpuData::alloc(const int sx, const int sy, const int numChannels)
 {
 	free();
 	
 	//
-	
-	Assert(interleaved);
 
 	if (sx > 0 && sy > 0 && numChannels > 0)
 	{
-		data = (uint8_t*)MemAlloc(sx * sy * numChannels, 16);
+		const int paddedSx = (sx + 15) & (~15);
+		const int pitch = paddedSx;
 		
-		// todo : non interleaved case ?
+		data = (uint8_t*)MemAlloc(pitch * sy * numChannels, 16);
 		
-		image.setDataInterleaved(data, sx, sy, numChannels, 16, sx * numChannels);
+		image.setDataContiguous(data, sx, sy, numChannels, 16, pitch);
 	}
 }
 
-void VfxImageCpuData::allocOnSizeChange(const int sx, const int sy, const int numChannels, const bool interleaved)
+void VfxImageCpuData::allocOnSizeChange(const int sx, const int sy, const int numChannels)
 {
-	if (image.sx != sx || image.sy != sy || image.numChannels != numChannels || image.isInterleaved != interleaved)
+	if (image.sx != sx || image.sy != sy || image.numChannels != numChannels)
 	{
-		alloc(sx, sy, numChannels, interleaved);
+		alloc(sx, sy, numChannels);
 	}
 }
 
@@ -311,7 +386,7 @@ void VfxImageCpuData::allocOnSizeChange(const VfxImageCpu & reference)
 {
 	if (image.sx != reference.sx || image.sy != reference.sy || image.numChannels != reference.numChannels)
 	{
-		alloc(reference.sx, reference.sy, reference.numChannels, image.isInterleaved);
+		alloc(reference.sx, reference.sy, reference.numChannels);
 	}
 }
 
@@ -320,7 +395,7 @@ void VfxImageCpuData::free()
 	MemFree(data);
 	data = nullptr;
 
-	image = VfxImageCpu();
+	image.reset();
 }
 
 //
@@ -664,12 +739,11 @@ void VfxNodeDescription::add(const char * name, const VfxImageCpu & image)
 {
 	add("%s. size: %d x %d", name, image.sx, image.sy);
 	add("numChannels: %d, alignment: %d", image.numChannels, image.alignment);
-	add("isInterleaved: %d, isPlanar: %d", image.isInterleaved, image.isPlanar);
 	
 	for (int i = 0; i < image.numChannels; ++i)
 	{
 		const VfxImageCpu::Channel & c = image.channel[i];
-		add("[%d] stride: %d, pitch: %06d, data: %p", i, c.stride, c.pitch, c.data);
+		add("[%d] pitch: %06d, data: %p", i, c.pitch, c.data);
 	}
 	
 	const int numBytes = image.getMemoryUsage();
