@@ -52,7 +52,7 @@ VfxNodeWebcam::VfxNodeWebcam()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_DeviceIndex, kVfxPlugType_Int);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
-	addOutput(kOutput_ImageCpu, kVfxPlugType_ImageCpu, &imageCpuOutput);
+	addOutput(kOutput_ImageCpu, kVfxPlugType_ImageCpu, &imageCpuOutput.image);
 }
 
 VfxNodeWebcam::~VfxNodeWebcam()
@@ -136,7 +136,18 @@ void VfxNodeWebcam::tick(const float dt)
 				texture.upload(webcam->image->data, 16, webcam->image->pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
 			}
 			
-			imageCpuOutput.setDataRGBA8(webcam->image->data, webcam->image->sx, webcam->image->sy, 16, webcam->image->pitch);
+			imageCpuOutput.allocOnSizeChange(webcam->image->sx, webcam->image->sy, 4);
+			
+			VfxImageCpu::deinterleave4(
+				webcam->image->data,
+				webcam->image->sx,
+				webcam->image->sy,
+				16,
+				webcam->image->pitch,
+				imageCpuOutput.image.channel[0],
+				imageCpuOutput.image.channel[1],
+				imageCpuOutput.image.channel[2],
+				imageCpuOutput.image.channel[3]);
 			
 			lastImageIndex = webcam->image->index;
 		}
@@ -159,7 +170,7 @@ void VfxNodeWebcam::freeImage()
 	texture.free();
 
 	imageOutput.texture = 0;
-	imageCpuOutput.reset();
+	imageCpuOutput.free();
 }
 
 void VfxNodeWebcam::allocateImage(const int sx, const int sy)
