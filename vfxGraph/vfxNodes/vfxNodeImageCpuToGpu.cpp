@@ -94,8 +94,6 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	
 	if (image->numChannels == 1)
 	{
-		Assert(image->isPlanar);
-		
 		// always upload single channel data using the fast path
 		
 		if (texture.isChanged(image->sx, image->sy, GL_R8))
@@ -113,50 +111,43 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 			texture.allocate(image->sx, image->sy, GL_RGBA8, filter, clamp);
 			texture.setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA);
 		}
-	
-		if (image->numChannels == 4 && image->isInterleaved)
+		
+		// todo : should we keep this temp buffer allocated ?
+		
+		uint8_t * temp = (uint8_t*)MemAlloc(image->sx * image->sy * 4, 16);
+		
+		if (image->numChannels == 3)
 		{
-			texture.upload(image->channel[0].data, image->alignment, image->channel[0].pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
+			// special case for RGB input. set the alpha to one
+			
+			uint8_t * alphaData = (uint8_t*)alloca(image->sx);
+			memset(alphaData, 0xff, image->sx);
+			
+			VfxImageCpu::Channel alphaChannel;
+			alphaChannel.data = alphaData;
+			alphaChannel.pitch = 0;
+			
+			VfxImageCpu::interleave4(
+				image->channel[0],
+				image->channel[1],
+				image->channel[2],
+				alphaChannel,
+				temp, 0, image->sx, image->sy);
 		}
 		else
 		{
-			// todo : should we keep this temp buffer allocated ?
-			
-			uint8_t * temp = (uint8_t*)MemAlloc(image->sx * image->sy * 4, 16);
-			
-			if (image->numChannels == 3)
-			{
-				// special case for RGB input. set the alpha to one
-				
-				const uint32_t white = ~0;
-				
-				VfxImageCpu::Channel alphaChannel;
-				alphaChannel.data = (uint8_t*)&white;
-				alphaChannel.stride = 0;
-				alphaChannel.pitch = 0;
-				
-				VfxImageCpu::interleave4(
-					&image->channel[0],
-					&image->channel[1],
-					&image->channel[2],
-					&alphaChannel,
-					temp, 0, image->sx, image->sy);
-			}
-			else
-			{
-				VfxImageCpu::interleave4(
-					&image->channel[0],
-					&image->channel[1],
-					&image->channel[2],
-					&image->channel[3],
-					temp, 0, image->sx, image->sy);
-			}
-			
-			texture.upload(temp, 16, image->sx, GL_RGBA, GL_UNSIGNED_BYTE);
-			
-			MemFree(temp);
-			temp = nullptr;
+			VfxImageCpu::interleave4(
+				image->channel[0],
+				image->channel[1],
+				image->channel[2],
+				image->channel[3],
+				temp, 0, image->sx, image->sy);
 		}
+		
+		texture.upload(temp, 16, image->sx, GL_RGBA, GL_UNSIGNED_BYTE);
+		
+		MemFree(temp);
+		temp = nullptr;
 	}
 	else if (channel == kChannel_RGB)
 	{
@@ -166,29 +157,20 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 			texture.setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ONE);
 		}
 		
-		if (image->numChannels == 3 && image->isInterleaved)
-		{
-			// todo : RGB image upload is a slow path on my Intel Iris. convert to RGBA first ?
-			
-			texture.upload(image->channel[0].data, image->alignment, image->channel[0].pitch / 3, GL_RGB, GL_UNSIGNED_BYTE);
-		}
-		else
-		{
-			// todo : RGB image upload is a slow path on my Intel Iris. convert to RGBA first ?
-			
-			uint8_t * temp = (uint8_t*)MemAlloc(image->sx * image->sy * 3, 16);
-			
-			VfxImageCpu::interleave3(
-				&image->channel[0],
-				&image->channel[1],
-				&image->channel[2],
-				temp, 0, image->sx, image->sy);
-			
-			texture.upload(temp, 16, image->sx, GL_RGB, GL_UNSIGNED_BYTE);
-			
-			MemFree(temp);
-			temp = nullptr;
-		}
+		// todo : RGB image upload is a slow path on my Intel Iris. convert to RGBA first ?
+		
+		uint8_t * temp = (uint8_t*)MemAlloc(image->sx * image->sy * 3, 16);
+		
+		VfxImageCpu::interleave3(
+			image->channel[0],
+			image->channel[1],
+			image->channel[2],
+			temp, 0, image->sx, image->sy);
+		
+		texture.upload(temp, 16, image->sx, GL_RGB, GL_UNSIGNED_BYTE);
+		
+		MemFree(temp);
+		temp = nullptr;
 	}
 	else if (channel == kChannel_R || channel == kChannel_G || channel == kChannel_B || channel == kChannel_A)
 	{
@@ -209,14 +191,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		else
 			source = &image->channel[3];
 		
-		uint8_t * temp = (uint8_t*)MemAlloc(image->sx * image->sy * 1, 16);
-		
-		VfxImageCpu::interleave1(source, temp, 0, image->sx, image->sy);
-		
-		texture.upload(temp, 16, image->sx, GL_RED, GL_UNSIGNED_BYTE);
-		
-		MemFree(temp);
-		temp = nullptr;
+		texture.upload(source->data, image->alignment, source->pitch, GL_RED, GL_UNSIGNED_BYTE);
 	}
 	else
 	{

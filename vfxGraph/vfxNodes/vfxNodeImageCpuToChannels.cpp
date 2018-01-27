@@ -82,11 +82,11 @@ static void fillFloats(float * __restrict floatValues, const VfxImageCpu * image
 		const uint8_t * __restrict src = channel.data + channel.pitch * y;
 		      float   * __restrict dst = floatValues + image->sx * y;
 		
+		// todo : SSE optimize this code
+		
 		for (int x = 0; x < image->sx; ++x)
 		{
-			dst[x] = *src * scale;
-			
-			src += channel.stride;
+			dst[x] = src[x] * scale;
 		}
 	}
 }
