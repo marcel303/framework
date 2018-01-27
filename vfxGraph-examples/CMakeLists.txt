@@ -50,17 +50,6 @@ add_executable(420-realtime-editing "420-realtime-editing.cpp")
 add_executable(440-realtime-multiwindow "440-realtime-multiwindow.cpp")
 add_executable(900-devgrounds "900-devgrounds.cpp")
 
-if (APPLE)
-	set_target_properties(000-minimal PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(010-multiple-instances PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(012-happy-newyear PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(400-editor PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(410-readonly-editor PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(420-realtime-editing PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(440-realtime-multiwindow PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(900-devgrounds PROPERTIES LINK_FLAGS "-Wl,-all_load")
-endif (APPLE)
-
 set(LIBRARIES PRIVATE
 	libgg
 	libosc
