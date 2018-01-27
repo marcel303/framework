@@ -37,6 +37,7 @@
 #include "StringEx.h"
 #include "Vec3.h"
 #include "../libparticle/ui.h"
+#include <functional>
 
 //
 
