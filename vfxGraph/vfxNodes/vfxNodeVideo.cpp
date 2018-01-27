@@ -92,6 +92,8 @@ void VfxNodeVideo::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeVideo);
 	
+	// todo : improve passthrough handling
+	
 	const bool loop = getInputBool(kInput_Loop, true);
 	const float speed = getInputFloat(kInput_Speed, 1.f);
 	const MP::OutputMode outputMode = (MP::OutputMode)getInputInt(kInput_OutputMode, MP::kOutputMode_RGBA);
@@ -118,6 +120,8 @@ void VfxNodeVideo::tick(const float dt)
 			
 			mediaPlayer->openAsync(source, outputMode);
 		}
+		
+		Assert(mediaPlayer->context->openParams.outputMode == outputMode);
 		
 		const bool wantsTexture = outputs[kOutput_Image].isReferenced();
 		
@@ -161,12 +165,30 @@ void VfxNodeVideo::tick(const float dt)
 			}
 			else if (mediaPlayer->context->openParams.outputMode == MP::kOutputMode_RGBA)
 			{
-				int sx;
-				int sy;
-				int pitch;
-				const uint8_t * bytes = mediaPlayer->videoFrame->getRGBA(sx, sy, pitch);
+				// check if the output is connected. otherwise the conversion to planar can be avoided
 				
-				imageCpuOutputRGBA.setDataRGBA8(bytes, sx, sy, 16, pitch);
+				// todo : investigate adding a planar RGB output mode media player
+				
+				const VfxPlug * output = tryGetOutput(kOutput_ImageCpuRGBA);
+				
+				if (output->isReferenced())
+				{
+					int sx;
+					int sy;
+					int pitch;
+					const uint8_t * bytes = mediaPlayer->videoFrame->getRGBA(sx, sy, pitch);
+					
+					rgbaData.allocOnSizeChange(sx, sy, 4);
+					
+					VfxImageCpu::deinterleave4(
+						bytes, sx, sy, 16, pitch,
+						rgbaData.image.channel[0],
+						rgbaData.image.channel[1],
+						rgbaData.image.channel[2],
+						rgbaData.image.channel[3]);
+					
+					imageCpuOutputRGBA = rgbaData.image;
+				}
 			}
 		}
 	}
@@ -183,6 +205,11 @@ void VfxNodeVideo::tick(const float dt)
 	if (imageOutput.texture == 0 || isPassthrough)
 	{
 		imageOutput.texture = textureBlack;
+	}
+	
+	if (imageCpuOutputRGBA.numChannels == 0)
+	{
+		rgbaData.free();
 	}
 }
 
