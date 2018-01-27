@@ -51,7 +51,7 @@ struct AudioVoiceManager;
 
 struct SDL_mutex;
 
-extern __thread AudioGraph * g_currentAudioGraph;
+extern AUDIO_THREAD_LOCAL AudioGraph * g_currentAudioGraph;
 
 extern double g_currentAudioTime;
 

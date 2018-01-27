@@ -37,7 +37,7 @@
 
 //
 
-__thread AudioGraph * g_currentAudioGraph = nullptr;
+AUDIO_THREAD_LOCAL AudioGraph * g_currentAudioGraph = nullptr;
 
 double g_currentAudioTime = 0.0;
 
