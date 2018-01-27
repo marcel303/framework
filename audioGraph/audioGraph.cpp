@@ -494,8 +494,12 @@ AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & ty
 
 //
 
+extern void linkAudioNodes();
+
 AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals)
 {
+	linkAudioNodes();
+
 	AudioGraph * audioGraph = new AudioGraph(globals);
 	
 #if AUDIO_GRAPH_ENABLE_TIMING

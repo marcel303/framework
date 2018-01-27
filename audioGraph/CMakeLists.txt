@@ -35,9 +35,6 @@ file(GLOB_RECURSE source_audioNodes "audioNodes/*.*")
 file(GLOB_RECURSE source_objects "objects/*.*" ${source_graph})
 file(GLOB_RECURSE source_delaunay "delaunay/*.*")
 
-list(REMOVE_ITEM source ${source_audioNodes})
-set(AUDIOGRAPH_SOURCES ${source_audioNodes} PARENT_SCOPE)
-
 file(GLOB source_tests "test*.*")
 
 source_group("audioGraph" FILES ${source})
@@ -45,6 +42,29 @@ source_group("audioNodes" FILES ${source_audioNodes})
 source_group("objects" FILES ${source_objects})
 source_group("tests" FILES ${source_tests})
 source_group("3rdparty\\delaunay" FILES ${source_delaunay})
+
+# ---- time for some magic ----
+
+# we create a single source file which includes all of the source files in the audioNodes directory. this serves two purposes,
+# 1) it makes sure the constructors of the audio node registrations run. it uses a trick where at the end of the source file
+#    it includes a function, which gets called by createAudioGraph. this ensures that the source file and generated object
+#    are references eventually as the linker traverses references starting at the main(..) module. it's a long standing
+#    issue initializers are only invoked when objects are actually referenced. this ensure they do
+# 2) it speeds up library compilation speed, as all audio node sources are compiled at once, avoiding the overhead of
+#    compiling them separately
+
+set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.cpp)
+message(${headerfile})
+file(WRITE ${headerfile} "#pragma once\n\n")
+foreach(s ${source_audioNodes})
+	file(APPEND ${headerfile} "#include \"${s}\"\n")
+endforeach(s)
+file(APPEND ${headerfile} "void linkAudioNodes() { }\n")
+
+list(APPEND source ${headerfile})
+list(REMOVE_ITEM source ${source_audioNodes})
+
+# ---- end of magic ----
 
 add_library(audioGraph ${source})
 
