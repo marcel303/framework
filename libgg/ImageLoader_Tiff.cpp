@@ -2,7 +2,7 @@
 #include <string.h>
 #include "Exception.h"
 #include "FileStream.h"
-#include "Image.h"
+#include "ImageData.h"
 #include "ImageLoader_Tiff.h"
 #include "Log.h"
 #include "MemoryStream.h"

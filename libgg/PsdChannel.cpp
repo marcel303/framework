@@ -1,6 +1,6 @@
 #include <string.h>
 #include "Debugging.h"
-#include "Image.h"
+#include "ImageData.h"
 #include "PsdChannel.h"
 #include "PsdCompression.h"
 #include "PsdLog.h"

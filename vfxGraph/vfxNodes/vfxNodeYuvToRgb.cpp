@@ -48,7 +48,7 @@ VFX_NODE_TYPE(VfxNodeYuvToRgb)
 	out("image", "image");
 }
 
-static bool initialized = false;
+static bool s_yuvToRgb_initialized = false;
 
 static const char * s_yuvToRgbVs = R"SHADER(
 	include engine/ShaderVS.txt
@@ -163,8 +163,10 @@ VfxNodeYuvToRgb::VfxNodeYuvToRgb()
 	addInput(kInput_ColorSpace, kVfxPlugType_Int);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
 	
-	if (initialized == false)
+	if (s_yuvToRgb_initialized == false)
 	{
+		s_yuvToRgb_initialized = true;
+
 		shaderSource("yuvToRgb.vs", s_yuvToRgbVs);
 		
 		shaderSource("yuvToRgbNtsc.ps", s_yuvToRgbNtscPs);

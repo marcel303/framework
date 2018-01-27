@@ -1,5 +1,5 @@
 #include "IImageLoader.h"
-#include "Image.h"
+#include "ImageData.h"
 
 IImageLoader::~IImageLoader()
 {
