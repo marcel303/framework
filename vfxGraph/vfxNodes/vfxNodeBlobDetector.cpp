@@ -135,62 +135,57 @@ void VfxNodeBlobDetector::tick(const float dt)
 		const int max3 = (255 - tresholdValue) * 3;
 		const int mul3 = max3 ? (255 * 256 / max3) : 0;
 		
-		if (channel == kChannel_RGB)
+		// todo : this could be optimized a lot assuming data is planar
+		
+		if (image->numChannels == 1)
 		{
-			if (image->numChannels == 1 && image->isPlanar)
-			{
-				// note : single channel images. we just copy the data directly into the mask
-				
-				const VfxImageCpu::Channel * source = &image->channel[0];
+			// note : single channel images. we just copy the data directly into the mask
+			
+			const VfxImageCpu::Channel * source = &image->channel[0];
 
-				for (int y = 0; y < image->sy; ++y)
+			for (int y = 0; y < image->sy; ++y)
+			{
+				const uint8_t * __restrict src = source->data + y * source->pitch;
+					  uint8_t * __restrict dst  = mask + y * maskSx;
+				
+				for (int x = 0; x < image->sx; ++x)
 				{
-					const uint8_t * __restrict src = source->data + y * source->pitch;
-						  uint8_t * __restrict dst  = mask + y * maskSx;
+					int value = src[x];
 					
-					for (int x = 0; x < image->sx; ++x)
-					{
-						int value = src[x];
-						
-						value += add1;
-						if (value < 0)
-							value = 0;
-						value *= mul1;
-						value >>= 8;
-						
-						dst[x] = value;
-					}
+					value += add1;
+					if (value < 0)
+						value = 0;
+					value *= mul1;
+					value >>= 8;
+					
+					dst[x] = value;
 				}
 			}
-			else
+		}
+		else if (channel == kChannel_RGB)
+		{
+			for (int y = 0; y < maskSy; ++y)
 			{
-				for (int y = 0; y < maskSy; ++y)
+				const uint8_t * __restrict srcR = image->channel[0].data + y * image->channel[0].pitch;
+				const uint8_t * __restrict srcG = image->channel[1].data + y * image->channel[1].pitch;
+				const uint8_t * __restrict srcB = image->channel[2].data + y * image->channel[2].pitch;
+					  uint8_t * __restrict dst  = mask + y * maskSx;
+				
+				for (int x = 0; x < maskSx; ++x)
 				{
-					const uint8_t * __restrict srcR = image->channel[0].data + y * image->channel[0].pitch;
-					const uint8_t * __restrict srcG = image->channel[1].data + y * image->channel[1].pitch;
-					const uint8_t * __restrict srcB = image->channel[2].data + y * image->channel[2].pitch;
-						  uint8_t * __restrict dst  = mask + y * maskSx;
+					const int r = srcR[x];
+					const int g = srcG[x];
+					const int b = srcB[x];
 					
-					for (int x = 0; x < maskSx; ++x)
-					{
-						const int r = *srcR;
-						const int g = *srcG;
-						const int b = *srcB;
-						
-						int value = r + g + b;
-						
-						value += add3;
-						if (value < 0)
-							value = 0;
-						value *= mul3;
-						value >>= 8;
-						
-						dst[x] = value;
-						
-						srcR += image->channel[0].stride;
-						srcG += image->channel[1].stride;
-						srcB += image->channel[2].stride;
-					}
+					int value = r + g + b;
+					
+					value += add3;
+					if (value < 0)
+						value = 0;
+					value *= mul3;
+					value >>= 8;
+					
+					dst[x] = value;
 				}
 			}
 		}
@@ -207,48 +202,22 @@ void VfxNodeBlobDetector::tick(const float dt)
 			else
 				source = &image->channel[3];
 			
-			if (image->isPlanar)
+			for (int y = 0; y < image->sy; ++y)
 			{
-				for (int y = 0; y < image->sy; ++y)
+				const uint8_t * __restrict src = source->data + y * source->pitch;
+					  uint8_t * __restrict dst  = mask + y * maskSx;
+				
+				for (int x = 0; x < image->sx; ++x)
 				{
-					const uint8_t * __restrict src = source->data + y * source->pitch;
-						  uint8_t * __restrict dst  = mask + y * maskSx;
+					int value = src[x];
 					
-					for (int x = 0; x < image->sx; ++x)
-					{
-						int value = src[x];
-						
-						value += add1;
-						if (value < 0)
-							value = 0;
-						value *= mul1;
-						value >>= 8;
-						
-						dst[x] = value;
-					}
-				}
-			}
-			else
-			{
-				for (int y = 0; y < maskSy; ++y)
-				{
-					const uint8_t * __restrict src = source->data + y * source->pitch;
-					      uint8_t * __restrict dst = mask + y * maskSx;
+					value += add1;
+					if (value < 0)
+						value = 0;
+					value *= mul1;
+					value >>= 8;
 					
-					for (int x = 0; x < maskSx; ++x)
-					{
-						int value = *src;
-						
-						value += add1;
-						if (value < 0)
-							value = 0;
-						value *= mul1;
-						value >>= 8;
-						
-						dst[x] = value;
-						
-						src += source->stride;
-					}
+					dst[x] = value;
 				}
 			}
 		}
