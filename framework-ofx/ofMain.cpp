@@ -53,6 +53,11 @@ static int sStyleStackDepth = 0;
 
 //
 
+static int colorValueToInt(const float v)
+{
+	return int(v);
+}
+
 ofColor ofColor::white(255, 255, 255, 255);
 ofColor ofColor::black(0, 0, 0, 255);
 
@@ -60,7 +65,11 @@ ofColor ofColor::fromHex(const char * hex)
 {
 	const Color color = Color::fromHex(hex);
 	
-	return ofColor(color.r * 255.f, color.g * 255.f, color.b * 255.f, color.a * 255.f);
+	return ofColor(
+		colorValueToInt(color.r * 255.f),
+		colorValueToInt(color.g * 255.f),
+		colorValueToInt(color.b * 255.f),
+		colorValueToInt(color.a * 255.f));
 }
 
 ofColor ofColor::fromHex(uint32_t hex)
@@ -244,7 +253,7 @@ void ofSetColor(const ofColor & color, const float opacity)
 	sStyleStack[sStyleStackDepth].color = color;
 	sStyleStack[sStyleStackDepth].opacity = opacity;
 	
-	setColor(color.r, color.g, color.b, color.a * opacity);
+	setColor(color.r, color.g, color.b, colorValueToInt(color.a * opacity));
 }
 
 void ofSetLineWidth(const float width)

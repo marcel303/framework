@@ -41,10 +41,10 @@ class AudioOutput_PortAudio : AudioOutput
 	PaStream * m_paStream;
 	SDL_mutex * m_mutex;
 	AudioStream * m_stream;
-	std::atomic_bool m_isPlaying;
-	std::atomic_int m_volume;
+	std::atomic<bool> m_isPlaying;
+	std::atomic<int> m_volume;
 	std::atomic<int64_t> m_position;
-	std::atomic_bool m_isDone;
+	std::atomic<bool> m_isDone;
 	
 	void lock();
 	void unlock();

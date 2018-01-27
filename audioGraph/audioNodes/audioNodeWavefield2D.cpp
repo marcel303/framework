@@ -30,6 +30,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "wavefield.h"
 #include <cmath>
 
+#include "framework.h" // todo : remove
+
 AUDIO_NODE_TYPE(wavefield_2d, AudioNodeWavefield2D)
 {
 	typeName = "wavefield.2d";
@@ -51,6 +53,8 @@ AUDIO_NODE_TYPE(wavefield_2d, AudioNodeWavefield2D)
 	out("audio", "audioValue");
 }
 
+#if 0
+
 template <typename T>
 inline T lerp(T a, T b, T t)
 {
@@ -62,6 +66,8 @@ inline T clamp(T value, T min, T max)
 {
 	return value < min ? min : value > max ? max : value;
 }
+
+#endif
 
 AudioNodeWavefield2D::AudioNodeWavefield2D()
 	: AudioNodeBase()

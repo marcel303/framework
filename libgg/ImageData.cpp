@@ -1,5 +1,5 @@
 #include "Exception.h"
-#include "Image.h"
+#include "ImageData.h"
 
 Image::Image()
 {

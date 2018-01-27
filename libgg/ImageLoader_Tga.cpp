@@ -2,7 +2,7 @@
 #include "FileStream.h"
 #include "StreamReader.h"
 #include "StreamWriter.h"
-#include "Image.h"
+#include "ImageData.h"
 #include "ImageLoader_Tga.h"
 
 #define TGA_LOG(x, ...)

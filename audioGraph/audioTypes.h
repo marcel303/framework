@@ -62,9 +62,13 @@
 #if defined(MACOS) || defined(LINUX)
 	#define ALIGN16 __attribute__((aligned(16)))
 	#define ALIGN32 __attribute__((aligned(32)))
+
+	#define AUDIO_THREAD_LOCAL __thread
 #else
 	#define ALIGN16 __declspec(align(16))
 	#define ALIGN32 __declspec(align(32))
+
+	#define AUDIO_THREAD_LOCAL __declspec(thread)
 #endif
 
 #if AUDIO_USE_SSE

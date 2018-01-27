@@ -145,7 +145,8 @@ void VfxNodeOscReceiveChannels::tick(const float dt)
 		}
 		else
 		{
-			DynamicOutput outputs[numNamedElems];
+			std::vector<DynamicOutput> outputs;
+			outputs.resize(numNamedElems);
 			
 			int elemIndex = 0;
 			
@@ -165,7 +166,7 @@ void VfxNodeOscReceiveChannels::tick(const float dt)
 				elemIndex++;
 			}
 			
-			setDynamicOutputs(outputs, numNamedElems);
+			setDynamicOutputs(&outputs[0], numNamedElems);
 		}
 	}
 	

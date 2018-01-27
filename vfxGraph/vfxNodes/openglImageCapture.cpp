@@ -88,7 +88,11 @@ void OpenglImageCapture::saveImageSequence(const char * filenameFormat, const bo
 				glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 				checkErrorGL();
 				
+			#ifdef WIN32
+				char filename[_MAX_PATH];
+			#else
 				char filename[PATH_MAX];
+			#endif
 				sprintf_s(filename, sizeof(filename), filenameFormat, saveIndex);
 				
 				if (saveImage_turbojpeg(filename, pixels, sx * sy * 4, sx, sy, true, 100, true))

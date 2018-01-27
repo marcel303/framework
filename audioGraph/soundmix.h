@@ -32,7 +32,7 @@
 #include "audioTypes.h"
 #include "limiter.h"
 
-#if LINUX
+#if LINUX || WINDOWS
 	#define SAMPLE_ALIGN16
 #else
 	#define SAMPLE_ALIGN16 ALIGN16

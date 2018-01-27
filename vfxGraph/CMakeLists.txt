@@ -31,10 +31,10 @@ if (NOT HAS_LIBVIDEO)
 	message("including libvideo")
 	add_subdirectory(../libvideo libvideo)
 endif (NOT HAS_LIBVIDEO)
-if (NOT HAS_LIBPS3EYE)
+if (NOT WIN32 AND NOT HAS_LIBPS3EYE)
 	message("including libps3eye")
 	add_subdirectory(../libps3eye libps3eye)
-endif (NOT HAS_LIBPS3EYE)
+endif (NOT WIN32 AND NOT HAS_LIBPS3EYE)
 
 #
 
@@ -65,6 +65,28 @@ if (WIN32)
 	list(REMOVE_ITEM source ${source_xmm})
 endif (WIN32)
 
+# ---- time for some magic ----
+
+# we create a single source file which includes all of the source files in the vfxNodes directory. this serves two purposes,
+# 1) it makes sure the constructors of the vfx node registrations run. it uses a trick where at the end of the source file
+#    it includes a function, which gets called by createVfxGraph. this ensures that the source file and generated object
+#    are references eventually as the linker traverses references starting at the main(..) module. it's a long standing
+#    issue initializers are only invoked when objects are actually referenced. this ensure they do
+# 2) it speeds up library compilation speed, as all vfx node sources are compiled at once, avoiding the overhead of
+#    compiling them separately
+
+set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.mm)
+file(WRITE ${headerfile} "#pragma once\n\n")
+foreach(s ${source_vfxnodes})
+	file(APPEND ${headerfile} "#include \"${s}\"\n")
+endforeach(s)
+file(APPEND ${headerfile} "void linkVfxNodes() { }\n")
+
+list(APPEND source ${headerfile})
+list(REMOVE_ITEM source ${source_vfxnodes})
+
+# ---- end of magic ----
+
 add_library(vfxgraph ${source})
 
 target_link_libraries(vfxgraph avGraph)
@@ -73,7 +95,9 @@ target_link_libraries(vfxgraph framework-ofx)
 target_link_libraries(vfxgraph libgg)
 target_link_libraries(vfxgraph libosc)
 target_link_libraries(vfxgraph libvideo)
-target_link_libraries(vfxgraph libps3eye)
+if (NOT WIN32)
+	target_link_libraries(vfxgraph libps3eye)
+endif (NOT WIN32)
 
 target_compile_definitions(vfxgraph PUBLIC
 	ENABLE_KINECT1=0

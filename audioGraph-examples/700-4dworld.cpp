@@ -2224,9 +2224,9 @@ int main(int argc, char * argv[])
 					auto & filename = fileItr.first;
 					auto file = fileItr.second;
 					
-					for (auto & instance : file->instanceList)
+					for (auto instance : file->instanceList)
 					{
-						std::string name = String::FormatC("%s: %p", filename.c_str(), instance.audioGraph);
+						std::string name = String::FormatC("%s: %p", filename.c_str(), instance->audioGraph);
 						
 						if (doButton(name.c_str()))
 						{
@@ -2234,7 +2234,7 @@ int main(int argc, char * argv[])
 							{
 								activeInstanceName = name;
 								
-								audioGraphMgr.selectInstance(&instance);
+								audioGraphMgr.selectInstance(instance);
 							}
 						}
 					}

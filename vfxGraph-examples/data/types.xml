@@ -1,0 +1,35 @@
+<library>
+	<valueType typeName="bool" editor="checkbox" />
+	<valueType typeName="int" editor="textbox_int" visualizer="valueplotter" />
+	<valueType typeName="float" multipleInputs="1" editor="textbox_float" visualizer="valueplotter" />
+	<valueType typeName="string" editor="textbox" />
+	<valueType typeName="color" editor="colorpicker" />
+	<valueType typeName="trigger" multipleInputs="1" editor="button" />
+	<valueType typeName="image" editor="none" visualizer="opengl-texture" />
+	<valueType typeName="image_cpu" editor="none" />
+	<valueType typeName="channel" editor="none" visualizer="channels" />
+	<valueType typeName="draw" editor="none" />
+	<valueType typeName="any" typeValidation="0" editor="none" />
+
+	<linkType srcTypeName="float" dstTypeName="float">
+		<param typeName="float" name="in.min" default="0" />
+		<param typeName="float" name="in.max" default="1" />
+		<param typeName="float" name="out.min" default="0" />
+		<param typeName="float" name="out.max" default="1" />
+	</linkType>
+
+	<linkType srcTypeName="draw" dstTypeName="draw">
+	</linkType>
+
+	<enum name="downsampleSize">
+		<elem name="2x2" value="0" />
+		<elem name="4x4" value="1" />
+	</enum>
+	<enum name="downsampleChannel">
+		<elem name="all" value="0" />
+		<elem name="r" value="1" />
+		<elem name="g" value="2" />
+		<elem name="b" value="3" />
+		<elem name="a" value="4" />
+	</enum>
+</library>

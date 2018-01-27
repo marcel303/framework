@@ -50,17 +50,6 @@ add_executable(420-realtime-editing "420-realtime-editing.cpp")
 add_executable(440-realtime-multiwindow "440-realtime-multiwindow.cpp")
 add_executable(900-devgrounds "900-devgrounds.cpp")
 
-if (APPLE)
-	set_target_properties(000-minimal PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(010-multiple-instances PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(012-happy-newyear PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(400-editor PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(410-readonly-editor PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(420-realtime-editing PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(440-realtime-multiwindow PROPERTIES LINK_FLAGS "-Wl,-all_load")
-	set_target_properties(900-devgrounds PROPERTIES LINK_FLAGS "-Wl,-all_load")
-endif (APPLE)
-
 set(LIBRARIES PRIVATE
 	libgg
 	libosc
@@ -108,7 +97,12 @@ if (APPLE)
 endif (APPLE)
 
 if (MSVC)
-	set_property(TARGET examples APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
-	set_property(TARGET examples APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO /WHOLEARCHIVE")
-	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT examples)
+	set_property(TARGET 000-minimal APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
+	set_property(TARGET 010-multiple-instances APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
+	set_property(TARGET 012-happy-newyear APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
+	set_property(TARGET 400-editor APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
+	set_property(TARGET 410-readonly-editor APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
+	set_property(TARGET 420-realtime-editing APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
+	set_property(TARGET 440-realtime-multiwindow APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
+	set_property(TARGET 900-devgrounds APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
 endif (MSVC)

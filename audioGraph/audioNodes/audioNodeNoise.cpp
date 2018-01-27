@@ -27,6 +27,7 @@
 
 #include "audioNodeNoise.h"
 #include "Noise.h"
+#include <algorithm>
 #include <cmath>
 
 AUDIO_ENUM_TYPE(noiseType)

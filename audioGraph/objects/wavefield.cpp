@@ -27,6 +27,7 @@
 
 #include "Noise.h"
 #include "wavefield.h"
+#include <algorithm>
 #include <cmath>
 #include <string.h>
 
@@ -106,15 +107,15 @@ void Wavefield1D::init(const int _numElems)
 
 #if AUDIO_USE_SSE
 
-template <typename T> inline T _mm_load(const double v);
+template <typename T> inline T _mm_load_d(const double v);
 
-template <> inline __m128d _mm_load<__m128d>(const double v)
+template <> inline __m128d _mm_load_d<__m128d>(const double v)
 {
 	return _mm_set1_pd(v);
 }
 
 #if __AVX__
-template <> inline __m256d _mm_load<__m256d>(const double v)
+template <> inline __m256d _mm_load_d<__m256d>(const double v)
 {
 	return _mm256_set1_pd(v);
 }
@@ -152,8 +153,8 @@ void tickForces(const double * __restrict p, const double c, double * __restrict
 	
 	//
 	
-	const float cTimesDt = c * dt;
-	const T _mm_cTimesDt = _mm_load<T>(cTimesDt);
+	const double cTimesDt = c * dt;
+	const T _mm_cTimesDt = _mm_load_d<T>(cTimesDt);
 	
 	const T * __restrict _mm_p1 = (T*)p1;
 	const T * __restrict _mm_p2 = (T*)p2;
@@ -398,24 +399,24 @@ void Wavefield1Df::init(const int _numElems)
 
 #if AUDIO_USE_SSE || AUDIO_USE_NEON
 
-template <typename T> inline T _mm_load(const float v);
+template <typename T> inline T _mm_load_s(const float v);
 
 #if AUDIO_USE_SSE
-template <> inline __m128 _mm_load<__m128>(const float v)
+template <> inline __m128 _mm_load_s<__m128>(const float v)
 {
 	return _mm_set1_ps(v);
 }
 #endif
 
 #if AUDIO_USE_SSE && __AVX__
-template <> inline __m256 _mm_load<__m256>(const float v)
+template <> inline __m256 _mm_load_s<__m256>(const float v)
 {
 	return _mm256_set1_ps(v);
 }
 #endif
 
 #if AUDIO_USE_NEON
-template <> inline float32x4_t _mm_load<float32x4_t>(const float v)
+template <> inline float32x4_t _mm_load_s<float32x4_t>(const float v)
 {
 	return float32x4_t { v, v, v, v };
 }
@@ -464,7 +465,7 @@ void tickForces(const float * __restrict p, const float c, float * __restrict v,
 	//
 	
 	const float cTimesDt = c * dt;
-	const T _mm_cTimesDt = _mm_load<T>(cTimesDt);
+	const T _mm_cTimesDt = _mm_load_s<T>(cTimesDt);
 	
 	const T * __restrict _mm_p1 = (T*)p1;
 	const T * __restrict _mm_p2 = (T*)p2;
@@ -599,11 +600,11 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 		_mm_d[i] = _mm_d[i] - _mm_d_clamped;
 	}
 #elif AUDIO_USE_NEON
-	float32x4_t _mm_dt = _mm_load<float32x4_t>(dt);
-	float32x4_t _mm_pRetain = _mm_load<float32x4_t>(pRetain);
-	float32x4_t _mm_vRetain = _mm_load<float32x4_t>(vRetain);
-	float32x4_t _mm_dMin = _mm_load<float32x4_t>(-MAX_IMPULSE_PER_SECOND * dt);
-	float32x4_t _mm_dMax = _mm_load<float32x4_t>(+MAX_IMPULSE_PER_SECOND * dt);
+	float32x4_t _mm_dt = _mm_load_s<float32x4_t>(dt);
+	float32x4_t _mm_pRetain = _mm_load_s<float32x4_t>(pRetain);
+	float32x4_t _mm_vRetain = _mm_load_s<float32x4_t>(vRetain);
+	float32x4_t _mm_dMin = _mm_load_s<float32x4_t>(-MAX_IMPULSE_PER_SECOND * dt);
+	float32x4_t _mm_dMax = _mm_load_s<float32x4_t>(+MAX_IMPULSE_PER_SECOND * dt);
 	
 	float32x4_t * __restrict _mm_p = (float32x4_t*)p;
 	float32x4_t * __restrict _mm_v = (float32x4_t*)v;
@@ -1252,11 +1253,11 @@ void Wavefield2Df::tickVelocity(const float dt, const float vRetainPerSecond, co
 		}
 	}
 #elif AUDIO_USE_NEON
-	float32x4_t _mm_dt = _mm_load<float32x4_t>(dt);
-	float32x4_t _mm_pRetain = _mm_load<float32x4_t>(pRetain);
-	float32x4_t _mm_vRetain = _mm_load<float32x4_t>(vRetain);
-	float32x4_t _mm_dMin = _mm_load<float32x4_t>(-MAX_IMPULSE_PER_SECOND * dt);
-	float32x4_t _mm_dMax = _mm_load<float32x4_t>(+MAX_IMPULSE_PER_SECOND * dt);
+	float32x4_t _mm_dt = _mm_load_s<float32x4_t>(dt);
+	float32x4_t _mm_pRetain = _mm_load_s<float32x4_t>(pRetain);
+	float32x4_t _mm_vRetain = _mm_load_s<float32x4_t>(vRetain);
+	float32x4_t _mm_dMin = _mm_load_s<float32x4_t>(-MAX_IMPULSE_PER_SECOND * dt);
+	float32x4_t _mm_dMax = _mm_load_s<float32x4_t>(+MAX_IMPULSE_PER_SECOND * dt);
 	
 	const int numElems4 = numElems / 4;
 	begin = numElems4 * 4;

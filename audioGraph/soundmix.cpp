@@ -457,7 +457,7 @@ float audioBufferSum(
 
 	for (int i = 0; i < numSamples4; ++i)
 	{
-		sum4 += audioBuffer_4[i];
+		sum4 = _mm_add_ps(sum4, audioBuffer_4[i]);
 	}
 	
 	__m128 x = _mm_shuffle_ps(sum4, sum4, _MM_SHUFFLE(0, 0, 0, 0));
@@ -1332,7 +1332,11 @@ void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int
 	audioMutex.lock();
 	{
 		const int numVoices = voices.size();
+	#ifdef _MSC_VER
+		AudioVoice ** voiceArray = (AudioVoice**)alloca(numVoices * sizeof(AudioVoice*));
+	#else
 		AudioVoice * voiceArray[numVoices];
+	#endif
 		int voiceIndex = 0;
 		for (auto & voice : voices)
 			voiceArray[voiceIndex++] = &voice;

@@ -26,6 +26,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "audioNodeTimeTrigger.h"
+#include <algorithm>
 
 // todo : make it possible to have multiple delayed triggers pile up
 

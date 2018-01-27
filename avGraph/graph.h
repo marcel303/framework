@@ -792,11 +792,15 @@ struct GraphEdit_RealTimeConnection
 	
 	virtual int nodeIsActive(const GraphNodeId nodeId)
 	{
+		// todo : rename this method
+
 		return kActivity_Inactive;
 	}
 	
 	virtual int linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 	{
+		// todo : rename this method
+
 		return kActivity_Inactive;
 	}
 	

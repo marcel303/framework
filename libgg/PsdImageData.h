@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Image.h"
+#include "ImageData.h"
 #include "libgg_forward.h"
 #include "PsdForward.h"
 #include "PsdTypes.h"

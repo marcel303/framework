@@ -371,8 +371,12 @@ float VfxDynamicLink::floatParam(const char * name, const float defaultValue) co
 
 //
 
+extern void linkVfxNodes();
+
 void createVfxTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
 {
+	linkVfxNodes();
+
 	createVfxTypeDefinitionLibrary(typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
 }
 

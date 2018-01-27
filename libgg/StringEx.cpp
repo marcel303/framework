@@ -235,6 +235,11 @@ std::string String::ToString(int value)
 #endif
 }
 
+std::string String::ToString(double value)
+{
+	return String::Format("%f", value);
+}
+
 std::string String::SubString(const std::string& text, size_t offset)
 {
 	if (offset > text.length())
