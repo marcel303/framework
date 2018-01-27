@@ -38,13 +38,12 @@ VFX_NODE_TYPE(VfxNodePictureCpu)
 
 VfxNodePictureCpu::VfxNodePictureCpu()
 	: VfxNodeBase()
-	, image()
+	, imageData()
 	, currentFilename()
-	, imageData(nullptr)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Source, kVfxPlugType_String);
-	addOutput(kOutput_Image, kVfxPlugType_ImageCpu, &image);
+	addOutput(kOutput_Image, kVfxPlugType_ImageCpu, &imageData.image);
 }
 
 VfxNodePictureCpu::~VfxNodePictureCpu()
@@ -80,10 +79,7 @@ void VfxNodePictureCpu::tick(const float dt)
 
 void VfxNodePictureCpu::setImage(const char * filename)
 {
-	delete imageData;
-	imageData = nullptr;
-	
-	image.reset();
+	imageData.free();
 	
 	//
 	
@@ -91,15 +87,25 @@ void VfxNodePictureCpu::setImage(const char * filename)
 	{
 		currentFilename = filename;
 		
-		imageData = loadImage(filename);
+		ImageData * loadedImageData = loadImage(filename);
 
-		if (imageData != nullptr)
+		if (loadedImageData != nullptr)
 		{
-			image.setDataRGBA8((uint8_t*)imageData->getLine(0), imageData->sx, imageData->sy, 16, 0);
-		}
-		else
-		{
-			image.reset();
+			imageData.alloc(loadedImageData->sx, loadedImageData->sy, 4);
+			
+			VfxImageCpu::deinterleave4(
+				(uint8_t*)loadedImageData->imageData,
+				loadedImageData->sx,
+				loadedImageData->sy,
+				4,
+				0,
+				imageData.image.channel[0],
+				imageData.image.channel[1],
+				imageData.image.channel[2],
+				imageData.image.channel[3]);
+			
+			delete loadedImageData;
+			loadedImageData = nullptr;
 		}
 	}
 	else
@@ -110,5 +116,5 @@ void VfxNodePictureCpu::setImage(const char * filename)
 
 void VfxNodePictureCpu::getDescription(VfxNodeDescription & d)
 {
-	d.add("output image", image);
+	d.add("output image", imageData.image);
 }
