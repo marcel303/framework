@@ -130,10 +130,8 @@ void VfxNodeSpectrum1D::tick(const float dt)
 			
 			for (int x = 0; x < image->sx; ++x)
 			{
-				rreal[x] = *srcItr;
+				rreal[x] = srcItr[x];
 				rimag[x] = 0.f;
-				
-				srcItr += srcChannel.stride;
 			}
 		}
 		
