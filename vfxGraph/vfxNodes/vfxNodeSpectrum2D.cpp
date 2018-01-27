@@ -26,6 +26,7 @@
 */
 
 #include "fourier.h"
+#include "MemAlloc.h"
 #include "vfxNodeSpectrum2D.h"
 #include <cmath>
 #include <GL/glew.h> // GL_RED
@@ -119,8 +120,9 @@ void VfxNodeSpectrum2D::tick(const float dt)
 			for (int x = 0; x < image->sx; ++x)
 			{
 				rreal[x] = srcItr[x];
-				rimag[x] = 0.f;
 			}
+			
+			memset(rimag, 0, image->sx * sizeof(float));
 		}
 		
 		Fourier::fft2D_slow(dreal, dimag, image->sx, transformSx, image->sy, transformSy, false, normalize);
@@ -218,8 +220,8 @@ void VfxNodeSpectrum2D::allocateTextures(const int sx, const int sy)
 	texture1.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 	texture2.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 	
-	dreal = new float[sx * sy];
-	dimag = new float[sx * sy];
+	dreal = (float*)MemAlloc(sx * sy * sizeof(float), 16);
+	dimag = (float*)MemAlloc(sx * sy * sizeof(float), 16);
 	
 	image1Output.texture = texture1.id;
 	image2Output.texture = texture2.id;
@@ -230,10 +232,10 @@ void VfxNodeSpectrum2D::freeTextures()
 	texture1.free();
 	texture2.free();
 	
-	delete[] dreal;
+	MemFree(dreal);
 	dreal = nullptr;
 	
-	delete[] dimag;
+	MemFree(dimag);
 	dimag = nullptr;
 	
 	image1Output.texture = 0;

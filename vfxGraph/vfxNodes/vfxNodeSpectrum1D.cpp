@@ -26,6 +26,7 @@
 */
 
 #include "fourier.h"
+#include "MemAlloc.h"
 #include "vfxNodeSpectrum1D.h"
 #include <algorithm>
 #include <cmath>
@@ -131,8 +132,9 @@ void VfxNodeSpectrum1D::tick(const float dt)
 			for (int x = 0; x < image->sx; ++x)
 			{
 				rreal[x] = srcItr[x];
-				rimag[x] = 0.f;
 			}
+			
+			memset(rimag, 0, image->sx * sizeof(float));
 		}
 		
 		Fourier::fft1D_slow(dreal, dimag, image->sx, transformSx, false, normalize);
@@ -226,8 +228,8 @@ void VfxNodeSpectrum1D::allocateTextures(const int sx)
 	texture1.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 	texture2.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
 	
-	dreal = new float[sx];
-	dimag = new float[sx];
+	dreal = (float*)MemAlloc(sx * sizeof(float), 16);
+	dimag = (float*)MemAlloc(sx * sizeof(float), 16);
 	
 	image1Output.texture = texture1.id;
 	image2Output.texture = texture2.id;
@@ -238,10 +240,10 @@ void VfxNodeSpectrum1D::freeTextures()
 	texture1.free();
 	texture2.free();
 	
-	delete[] dreal;
+	MemFree(dreal);
 	dreal = nullptr;
 	
-	delete[] dimag;
+	MemFree(dimag);
 	dimag = nullptr;
 	
 	image1Output.texture = 0;
