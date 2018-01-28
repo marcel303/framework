@@ -339,13 +339,20 @@ void VfxImageCpu::deinterleave1(
 {
 	const int pitch = _pitch == 0 ? sx * 4 : _pitch;
 	
-	for (int y = 0; y < sy; ++y)
+	if (pitch == channel1.pitch)
 	{
-		const uint8_t * __restrict srcPtr = src + y * pitch + 0;
-		
-		uint8_t * __restrict dst = (uint8_t*)channel1.data + y * channel1.pitch;
-		
-		memcpy(dst, srcPtr, sx);
+		memcpy((uint8_t*)channel1.data, src, sy * pitch);;
+	}
+	else
+	{
+		for (int y = 0; y < sy; ++y)
+		{
+			const uint8_t * __restrict srcPtr = src + y * pitch + 0;
+			
+			uint8_t * __restrict dst = (uint8_t*)channel1.data + y * channel1.pitch;
+			
+			memcpy(dst, srcPtr, sx);
+		}
 	}
 }
 
@@ -357,9 +364,7 @@ void VfxImageCpu::deinterleave3(
 	
 	for (int y = 0; y < sy; ++y)
 	{
-		const uint8_t * __restrict srcPtr1 = src + y * pitch + 0;
-		const uint8_t * __restrict srcPtr2 = src + y * pitch + 1;
-		const uint8_t * __restrict srcPtr3 = src + y * pitch + 2;
+		const uint8_t * __restrict srcPtr = src + y * pitch;
 		
 		uint8_t * __restrict dst1 = (uint8_t*)channel1.data + y * channel1.pitch;
 		uint8_t * __restrict dst2 = (uint8_t*)channel2.data + y * channel2.pitch;
@@ -367,9 +372,11 @@ void VfxImageCpu::deinterleave3(
 		
 		for (int x = 0; x < sx; ++x)
 		{
-			dst1[x] = srcPtr1[x * 3];
-			dst2[x] = srcPtr2[x * 3];
-			dst3[x] = srcPtr3[x * 3];
+			dst1[x] = srcPtr[0];
+			dst2[x] = srcPtr[1];
+			dst3[x] = srcPtr[2];
+			
+			srcPtr += 3;
 		}
 	}
 }
