@@ -114,7 +114,8 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		
 		// todo : should we keep this temp buffer allocated ?
 		
-		uint8_t * temp = (uint8_t*)MemAlloc(image->sx * image->sy * 4, 16);
+		const int tempPitch = ((image->sx * 4) + 15) & (~15);
+		uint8_t * temp = (uint8_t*)MemAlloc(image->sy * tempPitch, 16);
 		
 		if (image->numChannels == 3)
 		{
@@ -132,7 +133,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 				image->channel[1],
 				image->channel[2],
 				alphaChannel,
-				temp, 0, image->sx, image->sy);
+				temp, tempPitch, image->sx, image->sy);
 		}
 		else
 		{
@@ -141,10 +142,10 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 				image->channel[1],
 				image->channel[2],
 				image->channel[3],
-				temp, 0, image->sx, image->sy);
+				temp, tempPitch, image->sx, image->sy);
 		}
 		
-		texture.upload(temp, 16, image->sx, GL_RGBA, GL_UNSIGNED_BYTE);
+		texture.upload(temp, 4, tempPitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
 		
 		MemFree(temp);
 		temp = nullptr;
@@ -167,7 +168,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 			image->channel[2],
 			temp, 0, image->sx, image->sy);
 		
-		texture.upload(temp, 16, image->sx, GL_RGB, GL_UNSIGNED_BYTE);
+		texture.upload(temp, 1, image->sx, GL_RGB, GL_UNSIGNED_BYTE);
 		
 		MemFree(temp);
 		temp = nullptr;
