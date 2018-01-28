@@ -173,6 +173,14 @@ struct AudioVoice
 			, hasRamped(false)
 		{
 		}
+		
+		void rampDown(const float delay, const float time)
+		{
+			ramp = false;
+			rampDelay = delay;
+			rampDelayIsZero = delay == 0.f;
+			rampTime = time;
+		}
 	};
 	
 	int channelIndex;

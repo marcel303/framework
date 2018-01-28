@@ -132,4 +132,9 @@ void AudioNodeVoice::tick(const float dt)
 		Assert(false);
 		voice->speaker = AudioVoice::kSpeaker_None;
 	}
+	
+	if (g_currentAudioGraph->rampDown)
+	{
+		voice->rampInfo.rampDown(0.f, AUDIO_UPDATE_SIZE / float(SAMPLE_RATE));
+	}
 }

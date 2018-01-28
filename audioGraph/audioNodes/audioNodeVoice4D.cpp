@@ -348,6 +348,11 @@ void AudioNodeVoice4D::tick(const float dt)
 			g_currentAudioGraph->setFlag("voice.4d.rampedDown");
 		}
 	}
+	
+	if (g_currentAudioGraph->rampDown)
+	{
+		voice->rampInfo.rampDown(0.f, AUDIO_UPDATE_SIZE / float(SAMPLE_RATE));
+	}
 }
 
 void AudioNodeVoice4D::handleTrigger(const int inputSocketIndex)

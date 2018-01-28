@@ -135,7 +135,7 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	if (audioGraphMgr != nullptr)
 	{
-		audioGraphMgr->tick(dt);
+		audioGraphMgr->tickAudio(dt);
 	}
 	
 	//

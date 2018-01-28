@@ -29,6 +29,7 @@
 
 #include "audioTypes.h"
 #include "graph.h"
+#include <atomic>
 #include <map>
 #include <set>
 #include <string>
@@ -106,6 +107,11 @@ struct AudioGraph
 		std::string value;
 	};
 	
+	std::atomic<bool> isPaused;
+	std::atomic<bool> rampDownRequested;
+	bool rampDown;
+	std::atomic<bool> rampedDown;
+	
 	std::map<GraphNodeId, AudioNodeBase*> nodes;
 	
 	int currentTickTraversalId;
@@ -130,7 +136,7 @@ struct AudioGraph
 	
 	AudioMutex mutex;
 	
-	AudioGraph(AudioGraphGlobals * globals);
+	AudioGraph(AudioGraphGlobals * globals, const bool isPaused);
 	~AudioGraph();
 	
 	void destroy();
@@ -207,7 +213,7 @@ void createAudioTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefi
 
 AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & typeName, AudioGraph * audioGraph);
 
-AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals);
+AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals, const bool createdPaused);
 
 //
 

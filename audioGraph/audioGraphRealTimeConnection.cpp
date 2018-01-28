@@ -216,7 +216,7 @@ void AudioRealTimeConnection::loadBegin()
 
 void AudioRealTimeConnection::loadEnd(GraphEdit & graphEdit)
 {
-	audioGraph = constructAudioGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary, globals);
+	audioGraph = constructAudioGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary, globals, false);
 	*audioGraphPtr = audioGraph;
 	
 	isLoading = false;

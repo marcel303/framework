@@ -43,8 +43,12 @@ double g_currentAudioTime = 0.0;
 
 //
 
-AudioGraph::AudioGraph(AudioGraphGlobals * _globals)
-	: nodes()
+AudioGraph::AudioGraph(AudioGraphGlobals * _globals, const bool _isPaused)
+	: isPaused(_isPaused)
+	, rampDownRequested(false)
+	, rampDown(false)
+	, rampedDown(false)
+	, nodes()
 	, currentTickTraversalId(-1)
 #if AUDIO_GRAPH_ENABLE_TIMING
 	, graph(nullptr)
@@ -195,8 +199,14 @@ void AudioGraph::tick(const float dt)
 {
 	audioCpuTimingBlock(AudioGraph_Tick);
 	
+	if (isPaused)
+		return;
+	
 	Assert(g_currentAudioGraph == nullptr);
 	g_currentAudioGraph = this;
+	
+	if (rampDownRequested)
+		rampDown = true;
 	
 	mutex.lock();
 	{
@@ -236,6 +246,11 @@ void AudioGraph::tick(const float dt)
 	//
 	
 	time += dt;
+	
+	//
+	
+	if (rampDown)
+		rampedDown = true;
 	
 	//
 	
@@ -496,11 +511,13 @@ AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & ty
 
 extern void linkAudioNodes();
 
-AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals)
+AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals, const bool createdPaused)
 {
 	linkAudioNodes();
-
-	AudioGraph * audioGraph = new AudioGraph(globals);
+	
+	//
+	
+	AudioGraph * audioGraph = new AudioGraph(globals, createdPaused);
 	
 #if AUDIO_GRAPH_ENABLE_TIMING
 	audioGraph->graph = const_cast<Graph*>(&graph);
