@@ -35,6 +35,17 @@
 
 //
 
+#if __SSE2__
+	// for interleave and deinterleave methods of VfxImageCpu
+	#include <xmmintrin.h>
+
+	// for _mm_shuffle_epi8 in deinterleave4
+	// todo : _mm_shuffle_epi8 requires SSSE3. check for it
+	#include <tmmintrin.h>
+#endif
+
+//
+
 VfxImage_Texture::VfxImage_Texture()
 	: VfxImageBase()
 	, texture(0)
@@ -262,12 +273,62 @@ void VfxImageCpu::interleave4(const Channel & channel1, const Channel & channel2
 		const uint8_t * __restrict src4 = channel4.data + y * channel4.pitch;
 			  uint8_t * __restrict dst  = _dst + y * dstPitch;
 		
-		for (int x = 0; x < sx; ++x)
+		int begin = 0;
+		
+	#if __SSE2__
+		/*
+		// without SSE
+			[II] Benchmark: interleave4: 0.000067 sec
+			[II] Benchmark: interleave4: 0.000069 sec
+			[II] Benchmark: interleave4: 0.000069 sec
+			[II] Benchmark: interleave4: 0.000069 sec
+
+		// with SSE
+			[II] Benchmark: interleave4: 0.000040 sec
+			[II] Benchmark: interleave4: 0.000044 sec
+			[II] Benchmark: interleave4: 0.000034 sec
+			[II] Benchmark: interleave4: 0.000034 sec
+		*/
+		const int sx_16 = sx / 16;
+		
+		const __m128i * __restrict src1_16 = (const __m128i*)src1;
+		const __m128i * __restrict src2_16 = (const __m128i*)src2;
+		const __m128i * __restrict src3_16 = (const __m128i*)src3;
+		const __m128i * __restrict src4_16 = (const __m128i*)src4;
+		__m128i * __restrict dst_4 = (__m128i*)dst;
+
+		for (int x = 0; x < sx_16; ++x)
 		{
-			*dst++ = *src1++;
-			*dst++ = *src2++;
-			*dst++ = *src3++;
-			*dst++ = *src4++;
+			const __m128i r_16 = _mm_loadu_si128(&src1_16[x]);
+			const __m128i g_16 = _mm_loadu_si128(&src2_16[x]);
+			const __m128i b_16 = _mm_loadu_si128(&src3_16[x]);
+			const __m128i a_16 = _mm_loadu_si128(&src4_16[x]);
+			
+			const __m128i rg1_8 = _mm_unpacklo_epi8(r_16, g_16);
+			const __m128i rg2_8 = _mm_unpackhi_epi8(r_16, g_16);
+			const __m128i ba1_8 = _mm_unpacklo_epi8(b_16, a_16);
+			const __m128i ba2_8 = _mm_unpackhi_epi8(b_16, a_16);
+			
+			const __m128i rgba1_16 = _mm_unpacklo_epi16(rg1_8, ba1_8);
+			const __m128i rgba2_16 = _mm_unpackhi_epi16(rg1_8, ba1_8);
+			const __m128i rgba3_16 = _mm_unpacklo_epi16(rg2_8, ba2_8);
+			const __m128i rgba4_16 = _mm_unpackhi_epi16(rg2_8, ba2_8);
+			
+			_mm_storeu_si128(&dst_4[x * 4 + 0], rgba1_16);
+			_mm_storeu_si128(&dst_4[x * 4 + 1], rgba2_16);
+			_mm_storeu_si128(&dst_4[x * 4 + 2], rgba3_16);
+			_mm_storeu_si128(&dst_4[x * 4 + 3], rgba4_16);
+		}
+		
+		begin = sx_16 * 16;
+	#endif
+	
+		for (int x = begin; x < sx; ++x)
+		{
+			dst[x * 4 + 0] = src1[x];
+			dst[x * 4 + 1] = src2[x];
+			dst[x * 4 + 2] = src3[x];
+			dst[x * 4 + 3] = src4[x];
 		}
 	}
 }
@@ -277,8 +338,6 @@ void VfxImageCpu::deinterleave1(
 	Channel & channel1)
 {
 	const int pitch = _pitch == 0 ? sx * 4 : _pitch;
-	
-	// todo : SSE optimize
 	
 	for (int y = 0; y < sy; ++y)
 	{
@@ -295,8 +354,6 @@ void VfxImageCpu::deinterleave3(
 	Channel & channel1, Channel & channel2, Channel & channel3)
 {
 	const int pitch = _pitch == 0 ? sx * 4 : _pitch;
-	
-	// todo : SSE optimize
 	
 	for (int y = 0; y < sy; ++y)
 	{
@@ -323,8 +380,6 @@ void VfxImageCpu::deinterleave4(
 {
 	const int pitch = _pitch == 0 ? sx * 4 : _pitch;
 	
-	// todo : SSE optimize
-	
 	for (int y = 0; y < sy; ++y)
 	{
 		const uint8_t * __restrict srcPtr = src + y * pitch;
@@ -334,7 +389,55 @@ void VfxImageCpu::deinterleave4(
 		uint8_t * __restrict dst3 = (uint8_t*)channel3.data + y * channel3.pitch;
 		uint8_t * __restrict dst4 = (uint8_t*)channel4.data + y * channel4.pitch;
 		
-		for (int x = 0; x < sx; ++x)
+		int begin = 0;
+		
+	#if __SSE2__
+		/*
+		without SSE:
+			[II] Benchmark: deinterleave4: 0.000278 sec
+			[II] Benchmark: deinterleave4: 0.000313 sec
+			[II] Benchmark: deinterleave4: 0.000359 sec
+		 
+		with SSE:
+			[II] Benchmark: deinterleave4: 0.000061 sec
+			[II] Benchmark: deinterleave4: 0.000069 sec
+			[II] Benchmark: deinterleave4: 0.000076 sec
+		*/
+		
+		const __m128i * __restrict src_4 = (__m128i*)srcPtr;
+		__m64 * __restrict dst1_8 = (__m64*)dst1;
+		__m64 * __restrict dst2_8 = (__m64*)dst2;
+		__m64 * __restrict dst3_8 = (__m64*)dst3;
+		__m64 * __restrict dst4_8 = (__m64*)dst4;
+		
+		const int sx_8 = sx / 8;
+		
+		for (int x = 0; x < sx_8; ++x)
+		{
+			__m128i rgba1 = _mm_loadu_si128(&src_4[x * 2 + 0]);
+			__m128i rgba2 = _mm_loadu_si128(&src_4[x * 2 + 1]);
+			__m128i shuffleIndices = _mm_set_epi8(
+				15, 11, 7, 3,
+				14, 10, 6, 2,
+				13, 9,  5, 1,
+				12, 8,  4, 0);
+			
+			rgba1 = _mm_shuffle_epi8(rgba1, shuffleIndices);
+			rgba2 = _mm_shuffle_epi8(rgba2, shuffleIndices);
+			
+			__m128i rg = _mm_unpacklo_epi32(rgba1, rgba2);
+			__m128i ba = _mm_unpackhi_epi32(rgba1, rgba2);
+			
+      		_mm_storel_pi(&dst1_8[x], _mm_castsi128_ps(rg));
+      		_mm_storeh_pi(&dst2_8[x], _mm_castsi128_ps(rg));
+      		_mm_storel_pi(&dst3_8[x], _mm_castsi128_ps(ba));
+      		_mm_storeh_pi(&dst4_8[x], _mm_castsi128_ps(ba));
+		}
+		
+		begin = sx_8 * 8;
+	#endif
+	
+		for (int x = begin; x < sx; ++x)
 		{
 			dst1[x] = srcPtr[x * 4 + 0];
 			dst2[x] = srcPtr[x * 4 + 1];
