@@ -133,7 +133,7 @@ void VfxNodeWebcam::tick(const float dt)
 					allocateImage(webcam->image->sx, webcam->image->sy);
 				}
 				
-				texture.upload(webcam->image->data, 16, webcam->image->pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
+				texture.upload(webcam->image->data, 4, webcam->image->pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
 			}
 			
 			imageCpuOutput.allocOnSizeChange(webcam->image->sx, webcam->image->sy, 4);
