@@ -364,7 +364,13 @@ bool ImageCpuDelayLine::decode(const JpegData & jpegData, VfxImageCpuData & imag
 			{
 				imageData.allocOnSizeChange(cachedLoadData->sx, cachedLoadData->sy, 1);
 				
-				imageData.image.setDataR8(cachedLoadData->buffer, cachedLoadData->sx, cachedLoadData->sy, 1, cachedLoadData->sx);
+				VfxImageCpu::deinterleave1(
+					cachedLoadData->buffer,
+					cachedLoadData->sx,
+					cachedLoadData->sy,
+					1,
+					cachedLoadData->sx * 1,
+					imageData.image.channel[0]);
 			}
 			else
 			{
@@ -541,6 +547,8 @@ ImageCpuDelayLine::JpegData * ImageCpuDelayLine::compress(const VfxImageCpu & im
 	
 	if (image.numChannels == 1)
 	{
+		// todo : remove temp alloc and copy if pitch allows it
+		
 		temp.resize(image.sx * image.sy * 1);
 		
 		// todo : specify pitch when calling saveImage_turbojpeg. turbojpeg supports it
