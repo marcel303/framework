@@ -251,6 +251,8 @@ void testVfxGraph()
 		// graph edit may change the graph, so we tick it first
 		graphEdit.tick(framework.timeStep, editor != 0);
 		
+		s_audioGraphMgr->tickMain();
+		
 	#if ENABLE_AUDIO_RTE
 		s_audioGraphMgr->tickEditor(framework.timeStep, editor != 1);
 	#endif

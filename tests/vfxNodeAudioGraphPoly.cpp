@@ -90,7 +90,7 @@ VfxNodeAudioGraphPoly::~VfxNodeAudioGraphPoly()
 	for (int i = 0; i < kMaxInstances; ++i)
 	{
 		if (instances[i] != nullptr)
-			g_vfxAudioGraphMgr->free(instances[i]);
+			g_vfxAudioGraphMgr->free(instances[i], false);
 	}
 }
 
@@ -228,7 +228,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		for (int i = 0; i < kMaxInstances; ++i)
 		{
 			if (instances[i] != nullptr)
-				g_vfxAudioGraphMgr->free(instances[i]);
+				g_vfxAudioGraphMgr->free(instances[i], true);
 		}
 		
 		voicesData.free();
@@ -246,7 +246,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		for (int i = 0; i < kMaxInstances; ++i)
 		{
 			if (instances[i] != nullptr)
-				g_vfxAudioGraphMgr->free(instances[i]);
+				g_vfxAudioGraphMgr->free(instances[i], true);
 		}
 	}
 	
@@ -268,7 +268,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			if (instances[index] != nullptr)
 			{
 				auto t1 = g_TimerRT.TimeUS_get();
-				g_vfxAudioGraphMgr->free(instances[index]);
+				g_vfxAudioGraphMgr->free(instances[index], true);
 				auto t2 = g_TimerRT.TimeUS_get();
 				
 				addHistoryElem(kHistoryType_InstanceFree, (t2 - t1) / 1000.0);
@@ -279,7 +279,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			if (instances[index] == nullptr)
 			{
 				auto t1 = g_TimerRT.TimeUS_get();
-				instances[index] = g_vfxAudioGraphMgr->createInstance(filename, &globals);
+				instances[index] = g_vfxAudioGraphMgr->createInstance(filename, &globals, true);
 				auto t2 = g_TimerRT.TimeUS_get();
 				
 				addHistoryElem(kHistoryType_InstanceCreate, (t2 - t1) / 1000.0);
@@ -301,7 +301,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	while (index < kMaxInstances)
 	{
 		if (instances[index] != nullptr)
-			g_vfxAudioGraphMgr->free(instances[index]);
+			g_vfxAudioGraphMgr->free(instances[index], true);
 		
 		index++;
 	}
@@ -373,6 +373,10 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	
 	for (int i = 0; i < numNewInstances; ++i)
 	{
+		Assert(newInstances[i]->audioGraph->isPaused);
+		newInstances[i]->audioGraph->isPaused = false;
+		
+		// todo : there should be an on-start type of trigger
 		newInstances[i]->audioGraph->triggerEvent("begin");
 	}
 	
