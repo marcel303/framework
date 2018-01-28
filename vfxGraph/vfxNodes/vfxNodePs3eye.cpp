@@ -81,6 +81,7 @@ VfxNodePs3eye::VfxNodePs3eye()
 	, currentEyeParams()
 	, texture()
 	, imageOutput()
+	, imageCpuData()
 	, imageCpuOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -239,9 +240,23 @@ void VfxNodePs3eye::tick(const float dt)
 			}
 			
 			if (enableColor)
-				imageCpuOutput.setDataRGB8(frameData, sx, sy, 1, sx * 3);
+			{
+				imageCpuData.allocOnSizeChange(sx, sy, 3);
+				imageCpuOutput = imageCpuData.image;
+				
+				VfxImageCpu::deinterleave3(
+					frameData,
+					sx, sy, 4, sx * 3,
+					imageCpuOutput.channel[0],
+					imageCpuOutput.channel[1],
+					imageCpuOutput.channel[2]);
+			}
 			else
-				imageCpuOutput.setDataR8(frameData, sx, sy, 1, sx * 1);
+			{
+				imageCpuData.free();
+				
+				imageCpuOutput.setDataR8(frameData, sx, sy, 1, sx);
+			}
 		}
 	}
 }
@@ -256,6 +271,7 @@ void VfxNodePs3eye::freeImage()
 	texture.free();
 
 	imageOutput.texture = 0;
+	imageCpuData.free();
 	imageCpuOutput.reset();
 }
 
