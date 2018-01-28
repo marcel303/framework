@@ -350,7 +350,7 @@ struct TestInstance : EntityBase
 	
 	virtual ~TestInstance() override
 	{
-		s_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance, false);
 	}
 	
 	virtual void tick(const float dt) override
@@ -375,7 +375,7 @@ struct Ball : EntityBase
 	
 	virtual ~Ball() override
 	{
-		s_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance, false);
 	}
 	
 	virtual void tick(const float dt) override
@@ -457,7 +457,7 @@ struct Oneshot : EntityBase
 	
 	virtual ~Oneshot() override
 	{
-		s_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance, false);
 	}
 	
 	virtual void tick(const float dt) override
@@ -570,7 +570,7 @@ struct Bird : EntityBase
 	
 	virtual ~Bird() override
 	{
-		s_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance, false);
 	}
 	
 	void beginSongTimer()
@@ -885,7 +885,7 @@ struct Voices : EntityBase
 	
 	virtual ~Voices() override
 	{
-		s_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance, false);
 	}
 	
 	virtual void tick(const float dt) override
@@ -976,7 +976,7 @@ struct Machine : EntityBase
 	
 	virtual ~Machine() override
 	{
-		s_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance, false);
 	}
 	
 	void randomize()
@@ -1159,7 +1159,7 @@ struct AlwaysThere : EntityBase
 	
 	virtual ~AlwaysThere() override
 	{
-		s_audioGraphMgr->free(graphInstance);
+		s_audioGraphMgr->free(graphInstance, false);
 	}
 	
 	virtual void tick(const float dt) override
@@ -1289,7 +1289,7 @@ struct World : WorldInterface
 		
 		entities.clear();
 		
-		s_audioGraphMgr->free(globalsInstance);
+		s_audioGraphMgr->free(globalsInstance, false);
 	}
 	
 	void addBall()
@@ -2253,7 +2253,7 @@ int main(int argc, char * argv[])
 		{
 			AudioGraphInstance * instance = audioGraphMgr.createInstance("machines1.xml");
 			
-			audioGraphMgr.free(instance);
+			audioGraphMgr.free(instance, false);
 		}
 	}
 	

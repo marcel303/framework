@@ -122,7 +122,7 @@ struct GameOfLife
 					
 					// todo : apply ramping before actually freeing voice
 					
-					audioGraphMgr.free(instance);
+					audioGraphMgr.free(instance, true);
 					
 					instance = audioGraphMgr.createInstance("040-gameoflife.xml");
 					
@@ -222,9 +222,12 @@ int main(int argc, char * argv[])
 						continue;
 					
 					if (instance->audioGraph->isFLagSet("dead"))
-						audioGraphMgr.free(instance);
+						audioGraphMgr.free(instance, false);
 				}
 			}
+			
+			// when using ramping when freeing instances, instances are actually still processed after being 'freed'. to ensure they're really freed once ramping is done, tickMain needs to be called regularly. we avoid freeing audio graphs on the audio thread, as the operation could be quite heavy and we don't want our audio to hitch
+			audioGraphMgr.tickMain();
 			
 			// draw
 			
@@ -286,7 +289,7 @@ int main(int argc, char * argv[])
 		
 		for (int x = 0; x < GRID_SX; ++x)
 			for (int y = 0; y < GRID_SY; ++y)
-				audioGraphMgr.free(gameOfLife.elems[x][y].graphInstance);
+				audioGraphMgr.free(gameOfLife.elems[x][y].graphInstance, false);
 		
 		// shut down audio related systems
 

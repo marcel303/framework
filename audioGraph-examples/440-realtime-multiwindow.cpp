@@ -107,8 +107,8 @@ int main(int argc, char * argv[])
 		
 		// free the audio graph instances
 		
-		audioGraphMgr.free(instance1);
-		audioGraphMgr.free(instance2);
+		audioGraphMgr.free(instance1, false);
+		audioGraphMgr.free(instance2, false);
 		
 		// shut down audio related systems
 

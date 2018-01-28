@@ -73,7 +73,9 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
-
+			
+			audioGraphMgr.tickMain();
+			
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				setFont("calibri.ttf");
@@ -111,7 +113,7 @@ int main(int argc, char * argv[])
 					{
 						currentFilename = filename;
 						
-						audioGraphMgr.free(instance);
+						audioGraphMgr.free(instance, true);
 						instance = audioGraphMgr.createInstance(filename);
 					}
 
@@ -139,7 +141,7 @@ int main(int argc, char * argv[])
 		
 		// free the audio graph instance
 		
-		audioGraphMgr.free(instance);
+		audioGraphMgr.free(instance, false);
 		
 		// shut down audio related systems
 
