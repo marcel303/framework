@@ -94,7 +94,7 @@ void VfxNodeImageCpuCrop::tick(const float dt)
 		
 		for (int i = 0; i < imageOutput.numChannels; ++i)
 		{
-			imageOutput.channel[i].data += imageOutput.channel[i].pitch * oy + ox * imageOutput.channel[i].stride;
+			imageOutput.channel[i].data += imageOutput.channel[i].pitch * oy + ox;
 		}
 	}
 }
