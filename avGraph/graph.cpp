@@ -3753,7 +3753,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 
 bool GraphEdit::tickTouches()
 {
-	if (state != kState_Idle && state != kState_TouchDrag && state != kState_TouchZoom || !framework.windowIsActive)
+	if ((state != kState_Idle && state != kState_TouchDrag && state != kState_TouchZoom) || !framework.windowIsActive)
 	{
 		touches = Touches();
 		
