@@ -4155,10 +4155,6 @@ bool GraphEdit::nodeResourceEditBegin(const GraphNodeId nodeId)
 	
 	//
 	
-	// todo : how to solve the issue of updating all graph instances with the newly edited data ?
-	//        perhaps add the notion of graph-local resources. it would be easiest to solve if each
-	//        graph instance just references the data instead of owning it
-	
 	auto node = tryGetNode(nodeId);
 	
 	Assert(node != nullptr);

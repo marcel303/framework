@@ -1,7 +1,7 @@
 /*
 
 top priority items:
-- add multiple window support to framework. would help with managing lists of audio and vfx graphs. just open a window and show the lists over there
++ add multiple window support to framework. would help with managing lists of audio and vfx graphs. just open a window and show the lists over there
 - add node which generates a trigger signal once when a graph is created
 - add a list of xml files to click on to 900-devgrounds for more rapid testing
 # how to convert multiple channels to gpu image with channel(s).toGpu ?
@@ -13,6 +13,8 @@ top priority items:
 - add options to poly and regular audio graph nodes to output mono, stereo, or multi-channel
 	- requires an extra mixing level ? perhaps add a voice manager interface. or store voices in audio graph ? let voice manager allocate channel indices, but do mixing itself differently ? or perhaps add voice groups or something ..
 - fix issue with recursive GPU timers
++ rewrite ImageCpu to only support planar R/G/B/A. simplifies many nodes. only toGpu gets more complicated, as OpenGL doesn't allow one to upload planar data afaik
++ add ramp down option when freeing audio graph instances
 
 
 todo :
@@ -134,7 +136,7 @@ todo : nodes :
 - add gen.brownian
 - add a dedicated shader node. no pre-defined inputs at all. output an image
 - rename fsfx v1 to imfx ? redefine behavior to run shader over an image. expressly output as image
-
+- the turbojpeg library has a custom callback function that can run over the DCT coefficients. investigate the crazy things that can be done with those! int (*customFilter)(short *coeffs, tjregion arrayRegion, ..)
 
 todo : UI
 - make nodes into lilly shapes ?

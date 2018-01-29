@@ -43,6 +43,8 @@ DSP filters tested here,
 
 - biquad filter. a highly versatile and therefore popular infinite impulse-response filter. quite fast to process and can be used to create low-pass, high-pass, shelf and notch filters
 
+- FIR filter. the finite impulse-response used here convolves an input signal with N coefficients. where convolve just means to pair-wise multiply sample N with coefficient N and sum the results. think of a dot product, but over possibly many more samples. and yes, a dot product is a convolution
+
 filters can be evaluate in various ways. the obvious way is to input 'time'-domain samples to the filter and use the output in further processing, like sending the values to a computer's speakers. another way to evaluate a filter is to run its coefficients through an evaluation function to see what its response is in the frequency domain. this is useful when drawing a graph to preview how a filter will affect an input signal
 
 */

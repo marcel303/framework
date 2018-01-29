@@ -7921,8 +7921,6 @@ void hqEnd()
 		
 		if (globals.hqGradientType != GRADIENT_NONE)
 		{
-			// todo : add option to disable gradient color clamp
-			
 			if (shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index != -1)
 			{
 				const Mat4x4 & cmat = globals.hqGradientMatrix;
