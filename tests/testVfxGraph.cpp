@@ -215,6 +215,148 @@ VFX_NODE_TYPE(VfxNodeCreature)
 	out("draw", "draw");
 }
 
+#include "Path.h"
+
+struct FileWindow
+{
+	const static int item_y1 = 10 + 20;
+	const static int item_x1 = 100;
+	const static int item_sy = 16;
+	const static int item_sx = 200;
+	
+	Window window;
+	std::vector<std::string> filenames;
+	
+	GraphEdit * graphEdit;
+	
+	int hoverIndex;
+	int pressIndex;
+	
+	FileWindow(GraphEdit * _graphEdit)
+		: window("Files", 200, 600, true)
+		, filenames()
+		, graphEdit(_graphEdit)
+		, hoverIndex(-1)
+		, pressIndex(-1)
+	{
+		std::vector<std::string> paths;
+		paths = listFiles(".", false);
+		
+		for (auto & path : paths)
+		{
+			if (Path::GetExtension(path, true) == "xml")
+				filenames.push_back(path);
+		}
+	}
+	
+	void windowToView(const float x, const float y, float & viewX, float & viewY) const
+	{
+		viewX = x;
+		viewY = y;
+	}
+	
+	void viewToItemIndex(const float x, const float y, int & itemIndex) const
+	{
+		itemIndex = (int)std::round((y - item_y1) / item_sy);
+	}
+	
+	void itemIndexToView(const int itemIndex, float & x, float & y) const
+	{
+		x = item_x1;
+		y = itemIndex * item_sy + item_y1;
+	}
+	
+	void tick()
+	{
+		pushWindow(window);
+		{
+			const float windowX = mouse.x;
+			const float windowY = mouse.y;
+			float viewX;
+			float viewY;
+			windowToView(windowX, windowY, viewX, viewY);
+			
+			int itemIndex;
+			viewToItemIndex(viewX, viewY, itemIndex);
+			
+			hoverIndex = itemIndex;
+			
+			if (mouse.wentDown(BUTTON_LEFT))
+				pressIndex = hoverIndex;
+			
+			if (mouse.wentUp(BUTTON_LEFT))
+			{
+				if (pressIndex == hoverIndex)
+				{
+					if (pressIndex >= 0 && pressIndex < filenames.size())
+					{
+						const std::string & filename = filenames[pressIndex];
+						
+						graphEdit->load(filename.c_str());
+					}
+				}
+				
+				pressIndex = -1;
+			}
+		}
+		popWindow();
+	}
+	
+	void draw()
+	{
+		pushWindow(window);
+		{
+			framework.beginDraw(100, 100, 100, 0);
+			{
+				setFont("calibri.ttf");
+				
+				if (hoverIndex != -1)
+				{
+					float hoverX;
+					float hoverY;
+					itemIndexToView(hoverIndex, hoverX, hoverY);
+					
+					hqBegin(HQ_FILLED_ROUNDED_RECTS);
+					{
+						hqFillRoundedRect(
+							hoverX - item_sx/2.f,
+							hoverY - item_sy/2.f,
+							hoverX + item_sx/2.f,
+							hoverY + item_sy/2.f, 4.f);
+					}
+					hqEnd();
+				}
+				
+				beginTextBatch();
+				{
+					int x = item_x1;
+					int y = item_y1;
+					
+					int itemIndex = 0;
+					
+					for (auto & filename : filenames)
+					{
+						if (itemIndex == pressIndex && pressIndex == hoverIndex)
+							setLumi(50);
+						else if (itemIndex == hoverIndex)
+							setLumi(255);
+						else
+							setLumi(200);
+						drawText(x, y, 14, 0, 0, "%s", filename.c_str());
+						
+						y += item_sy;
+						
+						itemIndex++;
+					}
+				}
+				endTextBatch();
+			}
+			framework.endDraw();
+		}
+		popWindow();
+	}
+};
+
 void testVfxGraph()
 {
 	setAbout("This example shows Vfx Graph in action!");
@@ -237,6 +379,8 @@ void testVfxGraph()
 	//graphEdit.load("mlworkshopVc.xml");
 	graphEdit.load("polyphonic.xml");
 	
+	FileWindow fileWindow(&graphEdit);
+	
 	int editor = 0;
 
 	do
@@ -245,6 +389,8 @@ void testVfxGraph()
 		
 		if (keyboard.isDown(SDLK_LGUI) && keyboard.wentDown(SDLK_e))
 			editor = 1 - editor;
+		
+		fileWindow.tick();
 		
 		g_oscEndpointMgr.tick();
 		
@@ -281,6 +427,8 @@ void testVfxGraph()
 			drawTestUi();
 		}
 		framework.endDraw();
+		
+		fileWindow.draw();
 	} while (tickTestUi());
 
 	delete vfxGraph;
