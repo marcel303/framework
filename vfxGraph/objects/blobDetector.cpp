@@ -169,6 +169,9 @@ int BlobDetector::detectBlobs(
 	const int sx, const int sy,
 	Blob * blobs, const int maxBlobs)
 {
+	if (maxBlobs <= 0)
+		return 0;
+	
 	int numBlobs = 0;
 	
 	RecurseInfo info;
