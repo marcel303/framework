@@ -221,8 +221,9 @@ struct FileWindow
 {
 	const static int item_y1 = 10 + 20;
 	const static int item_x1 = 100;
-	const static int item_sy = 16;
-	const static int item_sx = 200;
+	const static int item_sy = 20;
+	const static int item_sx = 180;
+	const static int item_spacing = 4;
 	
 	Window window;
 	std::vector<std::string> filenames;
@@ -231,6 +232,9 @@ struct FileWindow
 	
 	int hoverIndex;
 	int pressIndex;
+	
+	float scrollY;
+	float desiredScrollY;
 	
 	FileWindow(GraphEdit * _graphEdit)
 		: window("Files", 200, 600, true)
@@ -252,24 +256,61 @@ struct FileWindow
 	void windowToView(const float x, const float y, float & viewX, float & viewY) const
 	{
 		viewX = x;
-		viewY = y;
+		viewY = y - scrollY;
 	}
 	
 	void viewToItemIndex(const float x, const float y, int & itemIndex) const
 	{
-		itemIndex = (int)std::round((y - item_y1) / item_sy);
+		itemIndex = (int)std::round((y - item_y1) / (item_sy + item_spacing));
+		
+		float viewX;
+		float viewY;
+		itemIndexToView(itemIndex, viewX, viewY);
+		float dx = x - viewX;
+		float dy = y - viewY;
+		if (dx < -item_sx/2.f || dx > +item_sx/2.f ||
+			dy < -item_sy/2.f || dy > +item_sy/2.f)
+		{
+			itemIndex = -1;
+		}
+		
+		if (itemIndex < 0 || itemIndex >= filenames.size())
+			itemIndex = -1;
 	}
 	
 	void itemIndexToView(const int itemIndex, float & x, float & y) const
 	{
 		x = item_x1;
-		y = itemIndex * item_sy + item_y1;
+		y = itemIndex * (item_sy + item_spacing) + item_y1;
 	}
 	
-	void tick()
+	void tick(const float dt)
 	{
 		pushWindow(window);
 		{
+			if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+			{
+				desiredScrollY += mouse.dy;
+				scrollY += mouse.dy;
+			}
+			else
+			{
+				if (keyboard.wentDown(SDLK_UP))
+					desiredScrollY -= window.getHeight() * 2 / 3.f;
+				if (keyboard.wentDown(SDLK_DOWN))
+					desiredScrollY += window.getHeight() * 2 / 3.f;
+				
+				const float retain = std::pow(.01f, dt);
+				
+				const float minScrollY = - int(filenames.size()) * (item_sy + item_spacing) + window.getHeight() - item_y1;
+				if (desiredScrollY > 0.f)
+					desiredScrollY = lerp(0.f, desiredScrollY, retain);
+				if (desiredScrollY < 0.f && desiredScrollY < minScrollY)
+					desiredScrollY = lerp(minScrollY, desiredScrollY, retain);
+				
+				scrollY = lerp(desiredScrollY, scrollY, retain);
+			}
+			
 			const float windowX = mouse.x;
 			const float windowY = mouse.y;
 			float viewX;
@@ -310,6 +351,8 @@ struct FileWindow
 			{
 				setFont("calibri.ttf");
 				
+				gxTranslatef(0, scrollY, 0);
+				
 				if (hoverIndex != -1)
 				{
 					float hoverX;
@@ -344,7 +387,7 @@ struct FileWindow
 							setLumi(200);
 						drawText(x, y, 14, 0, 0, "%s", filename.c_str());
 						
-						y += item_sy;
+						y += item_sy + item_spacing;
 						
 						itemIndex++;
 					}
@@ -390,7 +433,7 @@ void testVfxGraph()
 		if (keyboard.isDown(SDLK_LGUI) && keyboard.wentDown(SDLK_e))
 			editor = 1 - editor;
 		
-		fileWindow.tick();
+		fileWindow.tick(framework.timeStep);
 		
 		g_oscEndpointMgr.tick();
 		
