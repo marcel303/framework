@@ -92,7 +92,22 @@ void VfxNodeVideo::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeVideo);
 	
-	// todo : improve passthrough handling
+	if (isPassthrough)
+	{
+		mediaPlayer->close(true);
+		mediaPlayer->presentTime = 0.f;
+		
+		imageOutput.texture = 0;
+		
+		rgbaData.free();
+		
+		imageCpuOutputRGBA.reset();
+		imageCpuOutputY.reset();
+		imageCpuOutputU.reset();
+		imageCpuOutputV.reset();
+		
+		return;
+	}
 	
 	const bool loop = getInputBool(kInput_Loop, true);
 	const float speed = getInputFloat(kInput_Speed, 1.f);
@@ -115,7 +130,6 @@ void VfxNodeVideo::tick(const float dt)
 		if (paramsChanged)
 		{
 			mediaPlayer->close(false);
-			
 			mediaPlayer->presentTime = 0.f;
 			
 			mediaPlayer->openAsync(source, outputMode);
@@ -202,7 +216,7 @@ void VfxNodeVideo::tick(const float dt)
 		}
 	}
 
-	if (imageOutput.texture == 0 || isPassthrough)
+	if (imageOutput.texture == 0)
 	{
 		imageOutput.texture = textureBlack;
 	}
