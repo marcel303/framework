@@ -225,6 +225,67 @@ struct FileWindow
 	const static int item_sx = 180;
 	const static int item_spacing = 4;
 	
+	struct Touches
+	{
+		int numTouches;
+		SDL_FingerID touchId[2];
+		float moveY;
+		
+		Touches()
+		{
+			memset(this, 0, sizeof(*this));
+		}
+		
+		void tick()
+		{
+			moveY = 0.f;
+			
+			if (!framework.windowIsActive)
+			{
+				reset();
+			}
+			else
+			{
+				for (auto & e : framework.events)
+				{
+					if (e.type == SDL_FINGERDOWN && numTouches < 2)
+					{
+						touchId[numTouches++] = e.tfinger.fingerId;
+					}
+					else if (e.type == SDL_FINGERUP)
+					{
+						for (int i = 0; i < numTouches; ++i)
+						{
+							if (touchId[i] == e.tfinger.fingerId)
+							{
+								for (int j = i + 1; j < numTouches; ++j)
+									touchId[j - 1] = touchId[j];
+								numTouches--;
+								break;
+							}
+						}
+					}
+					else if (e.type == SDL_FINGERMOTION)
+					{
+						for (int i = 0; i < numTouches; ++i)
+						{
+							if (touchId[i] == e.tfinger.fingerId)
+							{
+								moveY += e.tfinger.dy;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		void reset()
+		{
+			numTouches = 0;
+		}
+	};
+	
 	Window window;
 	std::vector<std::string> filenames;
 	
@@ -235,6 +296,8 @@ struct FileWindow
 	
 	float scrollY;
 	float desiredScrollY;
+	
+	Touches touches;
 	
 	FileWindow(GraphEdit * _graphEdit)
 		: window("Files", 200, 600, true)
@@ -288,7 +351,16 @@ struct FileWindow
 	{
 		pushWindow(window);
 		{
-			if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+			touches.tick();
+			
+			if (touches.numTouches == 2)
+			{
+				const float amount = touches.moveY * 400.f;
+				
+				desiredScrollY += amount;
+				scrollY += amount;
+			}
+			else if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
 			{
 				desiredScrollY += mouse.dy;
 				scrollY += mouse.dy;
@@ -347,13 +419,15 @@ struct FileWindow
 	{
 		pushWindow(window);
 		{
-			framework.beginDraw(100, 100, 100, 0);
+			const int c = framework.windowIsActive ? 50 : 20;
+			
+			framework.beginDraw(c, c, c, 0);
 			{
 				setFont("calibri.ttf");
 				
 				gxTranslatef(0, scrollY, 0);
 				
-				if (hoverIndex != -1)
+				if (touches.numTouches != 2 && hoverIndex != -1)
 				{
 					float hoverX;
 					float hoverY;
