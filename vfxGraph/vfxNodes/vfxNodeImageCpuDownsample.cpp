@@ -161,29 +161,9 @@ void VfxNodeImageCpuDownsample::tick(const float dt)
 			
 			if (downsampledSx <= buffers.maxSx && downsampledSy <= buffers.maxSy)
 			{
-				// criteria are already met; just copy the data
+				// criteria are already met; just reference the data
 				
-				// todo : why not just reference ?
-				
-				VfxImageCpu dstImage;
-				
-				dstImage.setDataContiguous(buffers.data1, downsampledSx, downsampledSy, numChannels, 16, pad16(downsampledSx));
-				
-				for (int i = 0; i < numChannels; ++i)
-				{
-					const VfxImageCpu::Channel & srcChannel = srcImage.channel[i];
-						  VfxImageCpu::Channel & dstChannel = dstImage.channel[i];
-					
-					for (int y = 0; y < image->sy; ++y)
-					{
-						const uint8_t * __restrict srcItr = srcChannel.data + y * srcChannel.pitch;
-						      uint8_t * __restrict dstItr = (uint8_t*)dstChannel.data + y * dstChannel.pitch;
-						
-						memcpy(dstItr, srcItr, image->sx);
-					}
-				}
-				
-				srcImage = dstImage;
+				srcImage = *image;
 			}
 			else
 			{
@@ -221,6 +201,11 @@ void VfxNodeImageCpuDownsample::tick(const float dt)
 
 void VfxNodeImageCpuDownsample::getDescription(VfxNodeDescription & d)
 {
+	const int numBytes = buffers.data1Size + buffers.data2Size;
+	
+	d.add("MEMORY USAGE: %.2fKb", numBytes / 1024.f);
+	d.newline();
+	
 	d.add("output image", imageOutput);
 }
 
@@ -239,16 +224,8 @@ void VfxNodeImageCpuDownsample::allocateImage(const int sx, const int sy, const 
 	{
 		if (sx <= maxSx && sy <= maxSy)
 		{
-			// note : if the downsample criteria are already met by the input image, we need a space to store the
-			//        entire image's contents. so our buffer needs to be full-size. ideally we could just reference
-			//        the original channel data in our own output image, but unfortunately tick order is not
-			//        guaranteed right now when nodes do not directly connect to the display node
-			
-			// todo : reference input image output data once typology is recursed in dependency order regardless
-			//        of connectivity with display node
-			
-			Assert(buffers.data1 == nullptr);
-			buffers.data1 = (uint8_t*)MemAlloc(pad16(sx) * sy * numChannels, 16);
+			// note : if the downsample criteria are already met by the input image, don't need any storage space
+			//        whatsoever, as we will just reference the input image
 		}
 		else
 		{
@@ -260,16 +237,20 @@ void VfxNodeImageCpuDownsample::allocateImage(const int sx, const int sy, const 
 			downsampledSx = std::max(1, downsampledSx / pixelSize);
 			downsampledSy = std::max(1, downsampledSy / pixelSize);
 			
+			Assert(buffers.data1Size == nullptr);
 			Assert(buffers.data1 == nullptr);
-			buffers.data1 = (uint8_t*)MemAlloc(pad16(downsampledSx) * downsampledSy * numChannels, 16);
+			buffers.data1Size = pad16(downsampledSx) * downsampledSy * numChannels;
+			buffers.data1 = (uint8_t*)MemAlloc(buffers.data1Size, 16);
 			
 			//
 			
 			downsampledSx = std::max(1, downsampledSx / pixelSize);
 			downsampledSy = std::max(1, downsampledSy / pixelSize);
 			
+			Assert(buffers.data2Size == nullptr);
 			Assert(buffers.data2 == nullptr);
-			buffers.data2 = (uint8_t*)MemAlloc(pad16(downsampledSx) * downsampledSy * numChannels, 16);
+			buffers.data2Size = pad16(downsampledSx) * downsampledSy * numChannels;
+			buffers.data2 = (uint8_t*)MemAlloc(buffers.data2Size, 16);
 		}
 	}
 	else
@@ -277,17 +258,21 @@ void VfxNodeImageCpuDownsample::allocateImage(const int sx, const int sy, const 
 		const int downsampledSx = std::max(1, sx / pixelSize);
 		const int downsampledSy = std::max(1, sy / pixelSize);
 		
+		Assert(buffers.data1Size == nullptr);
 		Assert(buffers.data1 == nullptr);
-		buffers.data1 = (uint8_t*)MemAlloc(pad16(downsampledSx) * downsampledSy * numChannels, 16);
+		buffers.data1Size = pad16(downsampledSx) * downsampledSy * numChannels;
+		buffers.data1 = (uint8_t*)MemAlloc(buffers.data1Size, 16);
 	}
 }
 
 void VfxNodeImageCpuDownsample::freeImage()
 {
 	MemFree(buffers.data1);
+	buffers.data1Size = 0;
 	buffers.data1 = nullptr;
 	
 	MemFree(buffers.data2);
+	buffers.data2Size = 0;
 	buffers.data2 = nullptr;
 	
 	buffers = Buffers();

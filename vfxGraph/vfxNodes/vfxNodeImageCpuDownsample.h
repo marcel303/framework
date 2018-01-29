@@ -64,6 +64,8 @@ struct VfxNodeImageCpuDownsample : VfxNodeBase
 	
 	struct Buffers
 	{
+		int data1Size;
+		int data2Size;
 		uint8_t * data1;
 		uint8_t * data2;
 		int sx;
