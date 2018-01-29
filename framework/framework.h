@@ -1209,6 +1209,8 @@ void setColorf(float r, float g, float b, float a = 1.f, float rgbMul = 1.f);
 void setColorClamp(bool clamp);
 void setAlpha(int a);
 void setAlphaf(float a);
+void setLumi(int l);
+void setLumif(float l);
 void pushColor();
 void popColor();
 

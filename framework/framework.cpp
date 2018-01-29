@@ -5364,6 +5364,22 @@ void setAlphaf(float a)
 	gxColor4f(globals.color.r, globals.color.g, globals.color.b, globals.color.a);
 }
 
+void setLumi(int l)
+{
+	const float lf = scale255(l);
+	
+	setLumif(lf);
+}
+
+void setLumif(float l)
+{
+	globals.color.r = l;
+	globals.color.g = l;
+	globals.color.b = l;
+	
+	gxColor4f(globals.color.r, globals.color.g, globals.color.b, globals.color.a);
+}
+
 static Stack<Color, 32> colorStack;
 
 void pushColor()
