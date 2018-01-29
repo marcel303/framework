@@ -54,8 +54,7 @@ source_group("3rdparty\\delaunay" FILES ${source_delaunay})
 #    compiling them separately
 
 set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.cpp)
-message(${headerfile})
-file(WRITE ${headerfile} "#pragma once\n\n")
+file(WRITE ${headerfile} "// auto-generated. do not hand-edit\n\n")
 foreach(s ${source_audioNodes})
 	file(APPEND ${headerfile} "#include \"${s}\"\n")
 endforeach(s)

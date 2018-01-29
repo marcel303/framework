@@ -76,7 +76,7 @@ endif (WIN32)
 #    compiling them separately
 
 set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.mm)
-file(WRITE ${headerfile} "#pragma once\n\n")
+file(WRITE ${headerfile} "// auto-generated. do not hand-edit\n\n")
 foreach(s ${source_vfxnodes})
 	file(APPEND ${headerfile} "#include \"${s}\"\n")
 endforeach(s)
