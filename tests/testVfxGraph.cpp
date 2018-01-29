@@ -305,6 +305,8 @@ struct FileWindow
 		, graphEdit(_graphEdit)
 		, hoverIndex(-1)
 		, pressIndex(-1)
+		, scrollY(0.f)
+		, desiredScrollY(0.f)
 	{
 		std::vector<std::string> paths;
 		paths = listFiles(".", false);
