@@ -97,12 +97,30 @@ void VfxNodeDeepbelief::tick(const float dt)
 	{
 		updateTimer = 0.f;
 		
-		if (image->isInterleaved)
+		if (image->numChannels == 1)
 		{
-			deepbelief.process(image->channel[0].data, image->sx, image->sy, image->numChannels, image->channel[0].pitch, treshold);
+			deepbelief.process(image->channel[0].data, image->sx, image->sy, 1, image->channel[0].pitch, treshold);
+		}
+		else
+		{
+			// interleave data
+			
+			uint8_t * bytes = new uint8_t[image->sx * image->sy * 3];
+			
+			VfxImageCpu::interleave3(
+				image->channel[0],
+				image->channel[1],
+				image->channel[2],
+				bytes, image->sx * 3,
+				image->sx, image->sy);
+			
+			deepbelief.process(bytes, image->sx, image->sy, 3, image->sx * 3, treshold);
+			
+			delete [] bytes;
+			bytes = nullptr;
 		}
 	}
-	
+
 	if (deepbelief.state && deepbelief.state->isInitialized)
 	{
 		if (deepbelief.getResult(result))
