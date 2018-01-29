@@ -921,12 +921,17 @@ void Framework::process()
 			if (windowData != nullptr)
 			{
 				if (e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
-					windowIsActive = true;
+					windowData->isActive = true;
 				else if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
-					windowIsActive = false;
-
-				if (reloadCachesOnActivate && e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
+					windowData->isActive = false;
+				
+				if (windowData == globals.currentWindowData)
+					windowIsActive = windowData->isActive;
+				
+				if (reloadCachesOnActivate && e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED && windowData == &globals.mainWindowData)
+				{
 					doReload |= true;
+				}
 			}
 		}
 		else if (e.type == SDL_DROPFILE)

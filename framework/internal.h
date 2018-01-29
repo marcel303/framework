@@ -131,6 +131,8 @@ public:
 	
 	void makeActive() const
 	{
+		framework.windowIsActive = isActive;
+		
 		mouse.x = mouseX;
 		mouse.y = mouseY;
 		mouse.dx = mouseDx;
@@ -138,6 +140,7 @@ public:
 		mouse.scrollY = mouseScrollY;
 	}
 	
+	bool isActive;
 	bool mouseDown[BUTTON_MAX];
 	bool mouseChange[BUTTON_MAX];
 	bool hasOldMousePosition;
