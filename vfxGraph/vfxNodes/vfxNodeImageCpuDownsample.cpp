@@ -49,6 +49,21 @@ static int pad16(const int v)
 	return (v + 15) & (~15);
 }
 
+VFX_ENUM_TYPE(downsampleSize)
+{
+	elem("2x2");
+	elem("4x4");
+}
+
+VFX_ENUM_TYPE(downsampleChannel)
+{
+	elem("all");
+	elem("r");
+	elem("g");
+	elem("b");
+	elem("a");
+}
+
 VFX_NODE_TYPE(VfxNodeImageCpuDownsample)
 {
 	typeName = "image_cpu.downsample";

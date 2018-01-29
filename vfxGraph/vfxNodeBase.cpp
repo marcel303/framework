@@ -1378,24 +1378,56 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 
 void createVfxValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
 {
-	// todo : create function to create value type definition and the entire type definition library
-	
-	// todo : remove file i/o and don't require types.xml
-	
-	tinyxml2::XMLDocument * document = new tinyxml2::XMLDocument();
-
-	if (document->LoadFile("types.xml") == tinyxml2::XML_SUCCESS)
+	auto addSimple = [&](const char * typeName, const char * editor, const char * visualizer = nullptr) -> GraphEdit_ValueTypeDefinition &
 	{
-		const tinyxml2::XMLElement * xmlLibrary = document->FirstChildElement("library");
+		auto & td = typeDefinitionLibrary.valueTypeDefinitions[typeName];
 		
-		if (xmlLibrary != nullptr)
-		{
-			typeDefinitionLibrary.loadXml(xmlLibrary);
-		}
-	}
+		td.typeName = typeName;
+		td.editor = editor;
+		if (visualizer)
+			td.visualizer = visualizer;
+		
+		return td;
+	};
 	
-	delete document;
-	document = nullptr;
+	addSimple("bool", "checkbox");
+	addSimple("int", "textbox_int", "valueplotter");
+	addSimple("float", "textbox_float", "valueplotter").multipleInputs = true;
+	addSimple("string", "textbox");
+	addSimple("color", "colorpicker");
+	addSimple("trigger", "button").multipleInputs = true;
+	addSimple("image", "none", "opengl-texture");
+	addSimple("image_cpu", "none");
+	addSimple("channel", "none", "channels");
+	addSimple("draw", "none");
+	addSimple("any", "none").typeValidation = false;
+	
+	{
+		std::pair<std::string, std::string> key("float", "float");
+		
+		GraphEdit_LinkTypeDefinition & floatLink = typeDefinitionLibrary.linkTypeDefinitions[key];
+		
+		floatLink.srcTypeName = "float";
+		floatLink.dstTypeName = "float";
+		
+		floatLink.params.resize(4);
+		
+		floatLink.params[0].typeName = "float";
+		floatLink.params[0].name = "in.min";
+		floatLink.params[0].defaultValue = "0";
+		
+		floatLink.params[1].typeName = "float";
+		floatLink.params[1].name = "in.max";
+		floatLink.params[1].defaultValue = "1";
+		
+		floatLink.params[2].typeName = "float";
+		floatLink.params[2].name = "out.min";
+		floatLink.params[2].defaultValue = "0";
+		
+		floatLink.params[3].typeName = "float";
+		floatLink.params[3].name = "out.max";
+		floatLink.params[3].defaultValue = "1";
+	}
 }
 
 //
