@@ -3665,7 +3665,10 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			//
 			
-			const int activity = realTimeConnection == nullptr ? 0 : realTimeConnection->nodeIsActive(node.id);
+			const int activity =
+				realTimeConnection == nullptr
+				? 0
+				: realTimeConnection->getNodeActivity(node.id);
 			
 			if (activity & GraphEdit_RealTimeConnection::kActivity_OneShot)
 			{
@@ -3704,7 +3707,10 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			if (link.isEnabled)
 			{
-				const bool isActive = realTimeConnection == nullptr ? false : realTimeConnection->linkIsActive(link.id, link.srcNodeId, link.srcNodeSocketIndex, link.dstNodeId, link.dstNodeSocketIndex);
+				const bool isActive =
+					realTimeConnection == nullptr
+					? false
+					: realTimeConnection->getLinkActivity(link.id, link.srcNodeId, link.srcNodeSocketIndex, link.dstNodeId, link.dstNodeSocketIndex) != 0;
 				
 				if (isActive)
 				{

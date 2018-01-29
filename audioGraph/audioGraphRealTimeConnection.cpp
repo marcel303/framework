@@ -956,7 +956,7 @@ bool AudioRealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::
 	return true;
 }
 
-int AudioRealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
+int AudioRealTimeConnection::getNodeActivity(const GraphNodeId nodeId)
 {
 	if (isLoading)
 		return false;
@@ -990,7 +990,7 @@ int AudioRealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 	return result;
 }
 
-int AudioRealTimeConnection::linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
+int AudioRealTimeConnection::getLinkActivity(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 {
 	if (isLoading)
 		return false;

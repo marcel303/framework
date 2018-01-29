@@ -1105,7 +1105,7 @@ bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vecto
 	return true;
 }
 
-int RealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
+int RealTimeConnection::getNodeActivity(const GraphNodeId nodeId)
 {
 	if (isLoading)
 		return false;
@@ -1140,7 +1140,7 @@ int RealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 	return result;
 }
 
-int RealTimeConnection::linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
+int RealTimeConnection::getLinkActivity(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 {
 	if (isLoading)
 		return false;

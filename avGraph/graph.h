@@ -790,17 +790,13 @@ struct GraphEdit_RealTimeConnection
 		return false;
 	}
 	
-	virtual int nodeIsActive(const GraphNodeId nodeId)
+	virtual int getNodeActivity(const GraphNodeId nodeId)
 	{
-		// todo : rename this method
-
 		return kActivity_Inactive;
 	}
 	
-	virtual int linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
+	virtual int getLinkActivity(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 	{
-		// todo : rename this method
-
 		return kActivity_Inactive;
 	}
 	
