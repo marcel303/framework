@@ -31,9 +31,9 @@
 
 VFX_ENUM_TYPE(imageCpuToGpuChannel)
 {
-	elem("rgba", 0);
-	elem("rgb");
-	elem("r");
+	elem("rgba");
+	//elem("rgb");
+	elem("r", 2);
 	elem("g");
 	elem("b");
 	elem("a");
@@ -104,7 +104,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		
 		texture.upload(image->channel[0].data, image->alignment, image->channel[0].pitch, GL_RED, GL_UNSIGNED_BYTE);
 	}
-	else if (channel == kChannel_RGBA)
+	else if (channel == kChannel_RGB || channel == kChannel_RGBA)
 	{
 		if (texture.isChanged(image->sx, image->sy, GL_RGBA8))
 		{
@@ -146,29 +146,6 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		}
 		
 		texture.upload(temp, 4, tempPitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
-		
-		MemFree(temp);
-		temp = nullptr;
-	}
-	else if (channel == kChannel_RGB)
-	{
-		if (texture.isChanged(image->sx, image->sy, GL_RGB8))
-		{
-			texture.allocate(image->sx, image->sy, GL_RGB8, filter, clamp);
-			texture.setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ONE);
-		}
-		
-		// todo : RGB image upload is a slow path on my Intel Iris. convert to RGBA first ?
-		
-		uint8_t * temp = (uint8_t*)MemAlloc(image->sx * image->sy * 3, 16);
-		
-		VfxImageCpu::interleave3(
-			image->channel[0],
-			image->channel[1],
-			image->channel[2],
-			temp, 0, image->sx, image->sy);
-		
-		texture.upload(temp, 1, image->sx, GL_RGB, GL_UNSIGNED_BYTE);
 		
 		MemFree(temp);
 		temp = nullptr;
