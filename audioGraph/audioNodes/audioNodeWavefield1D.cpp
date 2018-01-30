@@ -30,8 +30,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "wavefield.h"
 #include <cmath>
 
-#include "framework.h"
-
 AUDIO_NODE_TYPE(wavefield_1d, AudioNodeWavefield1D)
 {
 	typeName = "wavefield.1d";
@@ -50,22 +48,6 @@ AUDIO_NODE_TYPE(wavefield_1d, AudioNodeWavefield1D)
 	in("randomize!", "trigger");
 	out("audio", "audioValue");
 }
-
-/*
-
-template <typename T>
-inline T lerp(T a, T b, T t)
-{
-	return a * (1.0 - t) + b * t;
-}
-
-template <typename T>
-inline T clamp(T value, T min, T max)
-{
-	return value < min ? min : value > max ? max : value;
-}
-
-*/
 
 AudioNodeWavefield1D::AudioNodeWavefield1D()
 	: AudioNodeBase()
@@ -112,13 +94,13 @@ void AudioNodeWavefield1D::randomize()
 		wavefield->d[x] = 0.0;
 		
 		wavefield->f[x] = 1.0;
-		wavefield->f[x] *= lerp<double>(1.0, rng.nextd(0.0, 1.0), randomFactor);
-		wavefield->f[x] *= lerp<double>(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
+		wavefield->f[x] *= Wavefield::lerp<double>(1.0, rng.nextd(0.0, 1.0), randomFactor);
+		wavefield->f[x] *= Wavefield::lerp<double>(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
 		
 		//wavefield->f[x] = 1.0 - std::pow(m_wavefield.f[x], 2.0);
 		//wavefield->f[x] = 1.0 - std::pow(rng.nextd(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
 		
-		wavefield->f[x] *= lerp<double>(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
+		wavefield->f[x] *= Wavefield::lerp<double>(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
 	}
 }
 
@@ -187,7 +169,7 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	
 	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 	{
-		const double c = clamp<double>(tension->samples[i] * 1000000.0, -maxTension, +maxTension);
+		const double c = Wavefield::clamp<double>(tension->samples[i] * 1000000.0, -maxTension, +maxTension);
 		
 		wavefield->tick(dt, c, 1.0 - velocityDampening->samples[i], 1.0 - positionDampening->samples[i], wrap == false);
 		
