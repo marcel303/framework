@@ -237,7 +237,7 @@ void VfxNodeImageCpuDownsample::allocateImage(const int sx, const int sy, const 
 			downsampledSx = std::max(1, downsampledSx / pixelSize);
 			downsampledSy = std::max(1, downsampledSy / pixelSize);
 			
-			Assert(buffers.data1Size == nullptr);
+			Assert(buffers.data1Size == 0);
 			Assert(buffers.data1 == nullptr);
 			buffers.data1Size = pad16(downsampledSx) * downsampledSy * numChannels;
 			buffers.data1 = (uint8_t*)MemAlloc(buffers.data1Size, 16);
@@ -247,7 +247,7 @@ void VfxNodeImageCpuDownsample::allocateImage(const int sx, const int sy, const 
 			downsampledSx = std::max(1, downsampledSx / pixelSize);
 			downsampledSy = std::max(1, downsampledSy / pixelSize);
 			
-			Assert(buffers.data2Size == nullptr);
+			Assert(buffers.data2Size == 0);
 			Assert(buffers.data2 == nullptr);
 			buffers.data2Size = pad16(downsampledSx) * downsampledSy * numChannels;
 			buffers.data2 = (uint8_t*)MemAlloc(buffers.data2Size, 16);
@@ -258,7 +258,7 @@ void VfxNodeImageCpuDownsample::allocateImage(const int sx, const int sy, const 
 		const int downsampledSx = std::max(1, sx / pixelSize);
 		const int downsampledSy = std::max(1, sy / pixelSize);
 		
-		Assert(buffers.data1Size == nullptr);
+		Assert(buffers.data1Size == 0);
 		Assert(buffers.data1 == nullptr);
 		buffers.data1Size = pad16(downsampledSx) * downsampledSy * numChannels;
 		buffers.data1 = (uint8_t*)MemAlloc(buffers.data1Size, 16);
