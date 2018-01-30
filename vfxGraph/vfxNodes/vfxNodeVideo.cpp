@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "framework.h"
 #include "vfxNodeVideo.h"
 #include "../libvideo/video.h"
 #include "mediaplayer/MPVideoBuffer.h"
@@ -59,7 +58,6 @@ VfxNodeVideo::VfxNodeVideo()
 	, imageCpuOutputU()
 	, imageCpuOutputV()
 	, mediaPlayer(nullptr)
-	, textureBlack(0)
 {
 	mediaPlayer = new MediaPlayer();
 	
@@ -73,17 +71,10 @@ VfxNodeVideo::VfxNodeVideo()
 	addOutput(kOutput_ImageCpuY, kVfxPlugType_ImageCpu, &imageCpuOutputY);
 	addOutput(kOutput_ImageCpuU, kVfxPlugType_ImageCpu, &imageCpuOutputU);
 	addOutput(kOutput_ImageCpuV, kVfxPlugType_ImageCpu, &imageCpuOutputV);
-	
-	uint32_t pixels[4] = { 0, 0, 0, 0 };
-	textureBlack = createTextureFromRGBA8(pixels, 1, 1, false, true);
 }
 
 VfxNodeVideo::~VfxNodeVideo()
 {
-	glDeleteTextures(1, &textureBlack);
-	textureBlack = 0;
-	checkErrorGL();
-	
 	delete mediaPlayer;
 	mediaPlayer = nullptr;
 }
@@ -124,10 +115,18 @@ void VfxNodeVideo::tick(const float dt)
 		
 		const bool paramsChanged =
 			mediaPlayer->context->openParams.filename != source ||
-			(mediaPlayer->context->hasPresentedLastFrame && loop) ||
 			mediaPlayer->context->openParams.outputMode != outputMode;
 		
+		const bool hasLooped = mediaPlayer->context->hasPresentedLastFrame && loop;
+		
 		if (paramsChanged)
+		{
+			mediaPlayer->close(true);
+			mediaPlayer->presentTime = 0.f;
+			
+			mediaPlayer->openAsync(source, outputMode);
+		}
+		else if (hasLooped)
 		{
 			mediaPlayer->close(false);
 			mediaPlayer->presentTime = 0.f;
@@ -214,11 +213,6 @@ void VfxNodeVideo::tick(const float dt)
 		{
 			mediaPlayer->openAsync(source, MP::kOutputMode_RGBA);
 		}
-	}
-
-	if (imageOutput.texture == 0)
-	{
-		imageOutput.texture = textureBlack;
 	}
 	
 	if (imageCpuOutputRGBA.numChannels == 0)
