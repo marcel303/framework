@@ -258,6 +258,8 @@ int ImageCpuDelayLine::getLength() const
 
 void ImageCpuDelayLine::setLength(const int length)
 {
+	compressWait();
+	
 	SDL_LockMutex(mutex);
 	{
 		maxHistorySize = length;
