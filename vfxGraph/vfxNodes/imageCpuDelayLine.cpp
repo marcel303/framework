@@ -280,7 +280,10 @@ void ImageCpuDelayLine::add(const VfxImageCpu & image, const int jpegQualityLeve
 {
 	compressWait();
 	
-	if (useCompression)
+	// note : turbojpeg doesn't like it when we try to compress a 0x0 sized image. just use the non-compressed
+	//        code path to avoid issues
+	
+	if (useCompression && (image.sx > 0 && image.sy > 0))
 	{
 		compressWork(image, jpegQualityLevel, timestamp);
 	}
@@ -543,20 +546,34 @@ ImageCpuDelayLine::MemoryUsage ImageCpuDelayLine::getMemoryUsage() const
 
 ImageCpuDelayLine::JpegData * ImageCpuDelayLine::compress(const VfxImageCpu & image, const int jpegQualityLevel)
 {
+	const void * srcBuffer = nullptr;
+	int srcBufferSize = 0;
+	
 	std::vector<uint8_t> temp;
 	
 	if (image.numChannels == 1)
 	{
-		// todo : remove temp alloc and copy if pitch allows it
+		// note : avoid temp alloc and copy if pitch allows it
 		
-		temp.resize(image.sx * image.sy * 1);
-		
-		// todo : specify pitch when calling saveImage_turbojpeg. turbojpeg supports it
-		
-		VfxImageCpu::interleave1(
-			image.channel[0],
-			&temp[0], image.sx * 1,
-			image.sx, image.sy);
+		if (image.channel[0].pitch == image.sx)
+		{
+			srcBuffer = image.channel[0].data;
+			srcBufferSize = image.sx * image.sy * 1;
+		}
+		else
+		{
+			// todo : specify pitch when calling saveImage_turbojpeg. turbojpeg supports it. remove temp alloc
+			
+			temp.resize(image.sx * image.sy * 1);
+			
+			VfxImageCpu::interleave1(
+				image.channel[0],
+				&temp[0], image.sx * 1,
+				image.sx, image.sy);
+			
+			srcBuffer = (image.sx > 0 && image.sy > 0) ? &temp[0] : nullptr;
+			srcBufferSize = temp.size();
+		}
 	}
 	else
 	{
@@ -569,10 +586,11 @@ ImageCpuDelayLine::JpegData * ImageCpuDelayLine::compress(const VfxImageCpu & im
 			image.channel[3],
 			&temp[0], image.sx * 4,
 			image.sx, image.sy);
+		
+		srcBuffer = (image.sx > 0 && image.sy > 0) ? &temp[0] : nullptr;
+		srcBufferSize = temp.size();
 	}
 	
-	const void * srcBuffer = &temp[0];
-	const int srcBufferSize = temp.size();
 	const int srcSx = image.sx;
 	const int srcSy = image.sy;
 	const bool srcIsColor = image.numChannels >= 3;
