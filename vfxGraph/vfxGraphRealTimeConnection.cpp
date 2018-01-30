@@ -570,8 +570,6 @@ bool RealTimeConnection::setPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, const
 	{
 	case kVfxPlugType_None:
 		return false;
-	case kVfxPlugType_DontCare:
-		return false;
 		
 	case kVfxPlugType_Bool:
 		plug->getRwBool() = Parse::Bool(value);
@@ -620,8 +618,6 @@ bool RealTimeConnection::getPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, std::
 	switch (plug->type)
 	{
 	case kVfxPlugType_None:
-		return false;
-	case kVfxPlugType_DontCare:
 		return false;
 		
 	case kVfxPlugType_Bool:
@@ -1195,8 +1191,6 @@ static std::string vfxPlugTypeToValueTypeName(const VfxPlugType plugType)
 		case kVfxPlugType_None:
 			Assert(false);
 			return "";
-		case kVfxPlugType_DontCare:
-			return "any";
 		case kVfxPlugType_Bool:
 			return "bool";
 		case kVfxPlugType_Int:

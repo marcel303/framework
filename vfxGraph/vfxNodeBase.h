@@ -365,7 +365,6 @@ struct VfxChannelZipper
 enum VfxPlugType
 {
 	kVfxPlugType_None,
-	kVfxPlugType_DontCare,
 	kVfxPlugType_Bool,
 	kVfxPlugType_Int,
 	kVfxPlugType_Float,
@@ -432,7 +431,6 @@ struct VfxPlug
 	bool isReferencedByLink : 1;
 	int referencedByRealTimeConnectionTick;
 	void * mem;
-	VfxPlugType memType;
 	
 #if EXTENDED_INPUTS
 	mutable VfxFloatArray floatArray;
@@ -446,7 +444,6 @@ struct VfxPlug
 		, isReferencedByLink(false)
 		, referencedByRealTimeConnectionTick(-1)
 		, mem(nullptr)
-		, memType(kVfxPlugType_None)
 	#if EXTENDED_INPUTS
 		, floatArray()
 	#endif
@@ -469,19 +466,19 @@ struct VfxPlug
 	
 	bool getBool() const
 	{
-		Assert(memType == kVfxPlugType_Bool);
+		Assert(type == kVfxPlugType_Bool);
 		return *((bool*)mem);
 	}
 	
 	int getInt() const
 	{
-		Assert(memType == kVfxPlugType_Int);
+		Assert(type == kVfxPlugType_Int);
 		return *((int*)mem);
 	}
 	
 	float getFloat() const
 	{
-		Assert(memType == kVfxPlugType_Float);
+		Assert(type == kVfxPlugType_Float);
 	#if EXTENDED_INPUTS
 		if (mem == nullptr)
 			return *floatArray.get();
@@ -491,31 +488,31 @@ struct VfxPlug
 	
 	const std::string & getString() const
 	{
-		Assert(memType == kVfxPlugType_String);
+		Assert(type == kVfxPlugType_String);
 		return *((std::string*)mem);
 	}
 	
 	const VfxColor & getColor() const
 	{
-		Assert(memType == kVfxPlugType_Color);
+		Assert(type == kVfxPlugType_Color);
 		return *((VfxColor*)mem);
 	}
 	
 	VfxImageBase * getImage() const
 	{
-		Assert(memType == kVfxPlugType_Image);
+		Assert(type == kVfxPlugType_Image);
 		return (VfxImageBase*)mem;
 	}
 	
 	VfxImageCpu * getImageCpu() const
 	{
-		Assert(memType == kVfxPlugType_ImageCpu);
+		Assert(type == kVfxPlugType_ImageCpu);
 		return (VfxImageCpu*)mem;
 	}
 	
 	VfxChannel * getChannel() const
 	{
-		Assert(memType == kVfxPlugType_Channel);
+		Assert(type == kVfxPlugType_Channel);
 		return (VfxChannel*)mem;
 	}
 	
@@ -523,19 +520,19 @@ struct VfxPlug
 	
 	bool & getRwBool()
 	{
-		Assert(memType == kVfxPlugType_Bool);
+		Assert(type == kVfxPlugType_Bool);
 		return *((bool*)mem);
 	}
 	
 	int & getRwInt()
 	{
-		Assert(memType == kVfxPlugType_Int);
+		Assert(type == kVfxPlugType_Int);
 		return *((int*)mem);
 	}
 	
 	float & getRwFloat()
 	{
-		Assert(memType == kVfxPlugType_Float);
+		Assert(type == kVfxPlugType_Float);
 	#if EXTENDED_INPUTS
 		if (mem == nullptr)
 			return *floatArray.get();
@@ -545,13 +542,13 @@ struct VfxPlug
 	
 	std::string & getRwString()
 	{
-		Assert(memType == kVfxPlugType_String);
+		Assert(type == kVfxPlugType_String);
 		return *((std::string*)mem);
 	}
 	
 	VfxColor & getRwColor()
 	{
-		Assert(memType == kVfxPlugType_Color);
+		Assert(type == kVfxPlugType_Color);
 		return *((VfxColor*)mem);
 	}
 };
@@ -662,7 +659,6 @@ struct VfxNodeBase
 		{
 			outputs[index].type = type;
 			outputs[index].mem = mem;
-			outputs[index].memType = type;
 		}
 	}
 	

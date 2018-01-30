@@ -646,14 +646,7 @@ float * VfxFloatArray::get()
 
 void VfxPlug::connectTo(VfxPlug & dst)
 {
-	if (type == kVfxPlugType_DontCare)
-	{
-		mem = dst.mem;
-		memType = dst.type;
-		
-		dst.isReferencedByLink = true;
-	}
-	else if (dst.type != type)
+	if (dst.type != type)
 	{
 		logError("node connection failed. type mismatch");
 	}
@@ -663,7 +656,6 @@ void VfxPlug::connectTo(VfxPlug & dst)
 		VfxFloatArray::Elem elem;
 		elem.value = (float*)dst.mem;
 		floatArray.elems.push_back(elem);
-		memType = dst.type;
 		
 		dst.isReferencedByLink = true;
 	}
@@ -671,7 +663,6 @@ void VfxPlug::connectTo(VfxPlug & dst)
 	else
 	{
 		mem = dst.mem;
-		memType = dst.type;
 		
 		dst.isReferencedByLink = true;
 	}
@@ -679,12 +670,7 @@ void VfxPlug::connectTo(VfxPlug & dst)
 
 void VfxPlug::connectTo(void * dstMem, const VfxPlugType dstType, const bool isImmediate)
 {
-	if (type == kVfxPlugType_DontCare)
-	{
-		mem = dstMem;
-		memType = dstType;
-	}
-	else if (dstType != type)
+	if (dstType != type)
 	{
 		logError("node connection failed. type mismatch");
 	}
@@ -701,14 +687,11 @@ void VfxPlug::connectTo(void * dstMem, const VfxPlugType dstType, const bool isI
 			elem.value = (float*)dstMem;
 			floatArray.elems.push_back(elem);
 		}
-		
-		memType = dstType;
 	}
 #endif
 	else
 	{
 		mem = dstMem;
-		memType = dstType;
 	}
 }
 
@@ -753,7 +736,6 @@ void VfxPlug::clearMap(const void * dst)
 void VfxPlug::disconnect()
 {
 	mem = nullptr;
-	memType = kVfxPlugType_None;
 	
 #if EXTENDED_INPUTS
 	floatArray.immediateValue = nullptr;
@@ -781,7 +763,6 @@ void VfxPlug::disconnect(const void * dstMem)
 		if (removed && floatArray.elems.empty())
 		{
 			Assert(mem == nullptr);
-			memType = kVfxPlugType_None;
 		}
 		
 	#if EXTENDED_INPUTS
@@ -799,8 +780,6 @@ void VfxPlug::disconnect(const void * dstMem)
 bool VfxPlug::isConnected() const
 {
 	if (mem != nullptr)
-		return true;
-	if (memType != kVfxPlugType_None)
 		return true;
 	
 #if EXTENDED_INPUTS
@@ -1330,7 +1309,6 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 		outputs[numStaticOutputs + i] = VfxPlug();
 		outputs[numStaticOutputs + i].type = dynamicOutputs[i].type;
 		outputs[numStaticOutputs + i].mem = dynamicOutputs[i].mem;
-		outputs[numStaticOutputs + i].memType = dynamicOutputs[i].type;
 	}
 	
 	// reconnect inputs to our outputs
@@ -1400,7 +1378,6 @@ void createVfxValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinit
 	addSimple("image_cpu", "none");
 	addSimple("channel", "none", "channels");
 	addSimple("draw", "none");
-	addSimple("any", "none").typeValidation = false;
 	
 	{
 		std::pair<std::string, std::string> key("float", "float");

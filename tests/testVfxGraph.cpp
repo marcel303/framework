@@ -166,7 +166,7 @@ struct VfxNodeCreature : VfxNodeBase
 		addInput(kInput_MoveSpeed, kVfxPlugType_Float);
 		addInput(kInput_AngleSpeed, kVfxPlugType_Float);
 		addInput(kInput_StrokeSize, kVfxPlugType_Float);
-		addOutput(kOutput_Draw, kVfxPlugType_DontCare, this);
+		addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
 	}
 	
 	virtual void tick(const float dt) override
