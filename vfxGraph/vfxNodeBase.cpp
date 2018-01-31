@@ -630,11 +630,11 @@ float * VfxFloatArray::get()
 		update();
 	}
 	
+	Assert(!elems.empty());
+	
 	const int numElems = elems.size();
 	
-	if (numElems == 0)
-		return immediateValue;
-	else if (numElems == 1 && elems[0].hasRange == false)
+	if (numElems == 1 && elems[0].hasRange == false)
 		return elems[0].value;
 	else
 		return &sum;
@@ -668,30 +668,20 @@ void VfxPlug::connectTo(VfxPlug & dst)
 	}
 }
 
-void VfxPlug::connectTo(void * dstMem, const VfxPlugType dstType, const bool isImmediate)
+void VfxPlug::connectToImmediate(void * dstMem, const VfxPlugType dstType)
 {
 	if (dstType != type)
 	{
 		logError("node connection failed. type mismatch");
 	}
-#if EXTENDED_INPUTS
-	else if (dstType == kVfxPlugType_Float)
-	{
-		if (isImmediate)
-		{
-			floatArray.immediateValue = (float*)dstMem;
-		}
-		else
-		{
-			VfxFloatArray::Elem elem;
-			elem.value = (float*)dstMem;
-			floatArray.elems.push_back(elem);
-		}
-	}
-#endif
 	else
 	{
-		mem = dstMem;
+		immediateMem = dstMem;
+	
+		if (mem == nullptr)
+		{
+			mem = dstMem;
+		}
 	}
 }
 
@@ -735,18 +725,17 @@ void VfxPlug::clearMap(const void * dst)
 
 void VfxPlug::disconnect()
 {
-	mem = nullptr;
-	
-#if EXTENDED_INPUTS
-	floatArray.immediateValue = nullptr;
-#endif
+	mem = immediateMem;
 }
 
 void VfxPlug::disconnect(const void * dstMem)
 {
+	Assert(dstMem != nullptr && dstMem != immediateMem);
+	
 	if (type == kVfxPlugType_Float)
 	{
 		bool removed = false;
+		
 		for (auto elemItr = floatArray.elems.begin(); elemItr != floatArray.elems.end(); )
 		{
 			if (elemItr->value == dstMem)
@@ -758,16 +747,10 @@ void VfxPlug::disconnect(const void * dstMem)
 			
 			++elemItr;
 		}
+		
 		Assert(removed);
 		
-		if (removed && floatArray.elems.empty())
-		{
-			Assert(mem == nullptr);
-		}
-		
-	#if EXTENDED_INPUTS
-		floatArray.immediateValue = nullptr;
-	#endif
+		Assert(mem == immediateMem);
 	}
 	else
 	{
@@ -785,7 +768,12 @@ bool VfxPlug::isConnected() const
 #if EXTENDED_INPUTS
 	if (floatArray.elems.empty() == false)
 		return true;
-	if (floatArray.immediateValue != nullptr)
+#endif
+
+	Assert(immediateMem == nullptr); // mem should be equal to immediateMem when we get here
+
+#if 0
+	if (immediateMem != nullptr)
 		return true;
 #endif
 	

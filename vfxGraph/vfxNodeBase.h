@@ -405,14 +405,12 @@ struct VfxFloatArray
 	
 	float sum;
 	std::vector<Elem> elems;
-	float * immediateValue;
 	
 	int lastUpdateTick;
 	
 	VfxFloatArray()
 		: sum(0.f)
 		, elems()
-		, immediateValue(nullptr)
 		, lastUpdateTick(-1)
 	{
 	}
@@ -431,6 +429,7 @@ struct VfxPlug
 	bool isReferencedByLink : 1;
 	int referencedByRealTimeConnectionTick;
 	void * mem;
+	void * immediateMem;
 	
 #if EXTENDED_INPUTS
 	mutable VfxFloatArray floatArray;
@@ -444,6 +443,7 @@ struct VfxPlug
 		, isReferencedByLink(false)
 		, referencedByRealTimeConnectionTick(-1)
 		, mem(nullptr)
+		, immediateMem(nullptr)
 	#if EXTENDED_INPUTS
 		, floatArray()
 	#endif
@@ -452,7 +452,7 @@ struct VfxPlug
 	}
 	
 	void connectTo(VfxPlug & dst);
-	void connectTo(void * dstMem, const VfxPlugType dstType, const bool isImmediate);
+	void connectToImmediate(void * dstMem, const VfxPlugType dstType);
 	
 	void setMap(const void * dst, const float inMin, const float inMax, const float outMin, const float outMax);
 	void clearMap(const void * dst);
@@ -480,7 +480,7 @@ struct VfxPlug
 	{
 		Assert(type == kVfxPlugType_Float);
 	#if EXTENDED_INPUTS
-		if (mem == nullptr)
+		if (!floatArray.elems.empty())
 			return *floatArray.get();
 	#endif
 		return *((float*)mem);
@@ -533,10 +533,6 @@ struct VfxPlug
 	float & getRwFloat()
 	{
 		Assert(type == kVfxPlugType_Float);
-	#if EXTENDED_INPUTS
-		if (mem == nullptr)
-			return *floatArray.get();
-	#endif
 		return *((float*)mem);
 	}
 	

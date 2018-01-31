@@ -143,7 +143,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = Parse::Bool(inputValue);
 		
-		input.connectTo(value, kVfxPlugType_Bool, true);
+		input.connectToImmediate(value, kVfxPlugType_Bool);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Bool, value));
 	}
@@ -153,7 +153,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = Parse::Int32(inputValue);
 		
-		input.connectTo(value, kVfxPlugType_Int, true);
+		input.connectToImmediate(value, kVfxPlugType_Int);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Int, value));
 	}
@@ -163,7 +163,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = Parse::Float(inputValue);
 		
-		input.connectTo(value, kVfxPlugType_Float, true);
+		input.connectToImmediate(value, kVfxPlugType_Float);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Float, value));
 	}
@@ -173,7 +173,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = inputValue;
 		
-		input.connectTo(value, kVfxPlugType_String, true);
+		input.connectToImmediate(value, kVfxPlugType_String);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_String, value));
 	}
@@ -183,7 +183,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = Color::fromHex(inputValue.c_str());
 		
-		input.connectTo(value, kVfxPlugType_Color, true);
+		input.connectToImmediate(value, kVfxPlugType_Color);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Color, value));
 	}

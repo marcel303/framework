@@ -578,12 +578,7 @@ bool RealTimeConnection::setPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, const
 		plug->getRwInt() = Parse::Int32(value);
 		return true;
 	case kVfxPlugType_Float:
-		Assert(g_currentVfxGraph == nullptr);
-		g_currentVfxGraph = vfxGraph;
-		{
-			plug->getRwFloat() = Parse::Float(value);
-		}
-		g_currentVfxGraph = nullptr;
+		plug->getRwFloat() = Parse::Float(value);
 		return true;
 		
 	case kVfxPlugType_String:
@@ -751,7 +746,7 @@ void RealTimeConnection::setSrcSocketValue(const GraphNodeId nodeId, const int s
 	Assert(isDynamicInput || input != nullptr);
 	if (input != nullptr)
 	{
-		if (input->isConnected())
+		if (input->isConnected() && input->immediateMem != nullptr && input->immediateMem == input->mem)
 		{
 			setPlugValue(vfxGraph, input, value);
 		}
@@ -892,25 +887,15 @@ void RealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, const int
 	Assert(isDynamicInput || input != nullptr);
 	if (input != nullptr && input->isConnected())
 	{
-		// check if this link is connected to a literal value
-		
-		bool isImmediate = false;
-		
-		for (auto & i : vfxGraph->valuesToFree)
+		if (input->mem == input->immediateMem)
 		{
-			if (i.mem == input->mem)
-				isImmediate = true;
+			input->immediateMem = nullptr;
 			
-			for (auto & elem : input->floatArray.elems)
-				if (i.mem == elem.value)
-					isImmediate = true;
-			if (i.mem == input->floatArray.immediateValue)
-				isImmediate = true;
-		}
-		
-		if (isImmediate)
-		{
 			input->disconnect();
+		}
+		else
+		{
+			input->immediateMem = nullptr;
 		}
 	}
 }
