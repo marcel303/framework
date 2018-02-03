@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(HAS_LIBGG 0)
 set(HAS_LIBOSC 0)
 set(HAS_FRAMEWORK 0)
+set(HAS_LIBVIDEO 0)
 set(HAS_AUDIOGRAPH 0)
 
 # --- dependencies ---
@@ -21,6 +22,10 @@ if (NOT HAS_FRAMEWORK)
 	message("including framework")
 	add_subdirectory(../framework framework)
 endif (NOT HAS_FRAMEWORK)
+if (NOT HAS_LIBVIDEO)
+	message("including libvideo")
+	add_subdirectory(../libvideo libvideo)
+endif (NOT HAS_LIBVIDEO)
 if (NOT HAS_AUDIOGRAPH)
 	message("including audioGraph")
 	add_subdirectory(../audioGraph audioGraph)
@@ -50,6 +55,7 @@ add_executable(440-realtime-multiwindow 440-realtime-multiwindow.cpp)
 add_executable(500-consoleapp 500-consoleapp.cpp)
 add_executable(700-4dworld 700-4dworld.cpp)
 add_executable(710-go 710-go.cpp)
+add_executable(860-thetribe 860-thetribe.cpp)
 
 set(LIBRARIES PRIVATE
 	libgg
@@ -73,6 +79,7 @@ target_link_libraries(440-realtime-multiwindow PRIVATE ${LIBRARIES})
 target_link_libraries(500-consoleapp PRIVATE ${LIBRARIES})
 target_link_libraries(700-4dworld PRIVATE ${LIBRARIES})
 target_link_libraries(710-go PRIVATE ${LIBRARIES})
+target_link_libraries(860-thetribe PRIVATE ${LIBRARIES} libvideo ${LIBVIDEO_LIBRARIES})
 
 if (WIN32)
 	# set the current working directory
