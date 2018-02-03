@@ -49,6 +49,7 @@ add_executable(420-realtime-editing 420-realtime-editing.cpp)
 add_executable(440-realtime-multiwindow 440-realtime-multiwindow.cpp)
 add_executable(500-consoleapp 500-consoleapp.cpp)
 add_executable(700-4dworld 700-4dworld.cpp)
+add_executable(710-go 710-go.cpp)
 
 set(LIBRARIES PRIVATE
 	libgg
@@ -71,6 +72,7 @@ target_link_libraries(420-realtime-editing PRIVATE ${LIBRARIES})
 target_link_libraries(440-realtime-multiwindow PRIVATE ${LIBRARIES})
 target_link_libraries(500-consoleapp PRIVATE ${LIBRARIES})
 target_link_libraries(700-4dworld PRIVATE ${LIBRARIES})
+target_link_libraries(710-go PRIVATE ${LIBRARIES})
 
 if (WIN32)
 	# set the current working directory
@@ -79,6 +81,7 @@ if (WIN32)
 	set_target_properties(310-delaunay PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
 	set_target_properties(320-audioVoices PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
 	set_target_properties(700-4dworld PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
+	set_target_properties(710-go PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
 	
 	# copy DLL files to the Debug and Release folders
 	
