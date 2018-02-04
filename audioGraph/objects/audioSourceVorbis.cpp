@@ -39,6 +39,7 @@ AudioSourceVorbis::AudioSourceVorbis()
 	, numChannels(0)	
 	, loop(false)
 	, hasLooped(false)
+	, samplePosition(0)
 {
 }
 
@@ -109,6 +110,10 @@ void AudioSourceVorbis::generate(SAMPLE_ALIGN16 float * __restrict samples, cons
 			}
 		}
 		
+		samplePosition += numSamplesRead;
+		
+		//
+		
 		if (numSamplesRead == 0)
 		{
 			// reached EOF
@@ -122,6 +127,8 @@ void AudioSourceVorbis::generate(SAMPLE_ALIGN16 float * __restrict samples, cons
 				open(filename.c_str(), loop);
 				
 				hasLooped = true;
+				
+				samplePosition = 0;
 			}
 			else
 			{
