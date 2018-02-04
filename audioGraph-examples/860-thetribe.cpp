@@ -365,9 +365,34 @@ struct Videoclip
 	
 	void tick(const float dt)
 	{
+		const double newPresentTime = soundSource.samplePosition / float(soundSource.sampleRate);
+		
+		if (newPresentTime < mp.presentTime)
+		{
+			auto openParams = mp.context->openParams;
+			
+			mp.close(false);
+			
+			mp.openAsync(openParams);
+		}
+		
+		mp.presentTime = newPresentTime;
+		
+		mp.tick(mp.context, true);
+	#if 0
 		mp.presentTime += dt;
 		
 		mp.tick(mp.context, true);
+		
+		if (mp.presentedLastFrame(mp.context))
+		{
+			auto openParams = mp.context->openParams;
+			
+			mp.close(false);
+			
+			mp.openAsync(openParams);
+		}
+	#endif
 	}
 	
 	void drawSolid(const bool hover)
@@ -773,7 +798,8 @@ int main(int argc, char * argv[])
 			const float scaleSpeed = 1.f + i / 5.f;
 			const float scaleY = lerp(.5f, 1.f, (std::cos(scaleSpeed * time / 4.567f) + 1.f) / 2.f);
 			const float scaleX = scaleY * 4.f/3.f;
-			const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
+			//const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
+			const float scaleZ = lerp(.05f, .1f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
 			
 			const float rotateSpeed = 1.f + i / 5.f;
 			soundVolume.transform = Mat4x4(true).Translate(x, y, z).RotateX(rotateSpeed * time / 3.456f).RotateY(rotateSpeed * time / 4.567f).Scale(scaleX, scaleY, scaleZ);
