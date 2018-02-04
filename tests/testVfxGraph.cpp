@@ -308,6 +308,8 @@ struct FileWindow
 		, scrollY(0.f)
 		, desiredScrollY(0.f)
 	{
+		window.setPosition(5, 100);
+		
 		std::vector<std::string> paths;
 		paths = listFiles(".", false);
 		

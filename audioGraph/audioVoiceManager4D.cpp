@@ -26,7 +26,7 @@
 */
 
 #include "audioVoiceManager4D.h"
-#include "framework.h" // for color hsl
+#include "Debugging.h"
 #include "Log.h"
 
 AudioVoiceManager4D::AudioVoiceManager4D()
@@ -82,12 +82,16 @@ bool AudioVoiceManager4D::allocVoice(AudioVoice *& out_voice, AudioSource * sour
 		AudioVoice4D * voice = &voices.back();
 		voice->source = source;
 		
-		const Color color = Color::fromHSL(colorIndex / 16.f, 1.f, .5f);
+		const float hue = colorIndex / 16.f;
+		const float colorR = (cosf((hue + 0.0 / 3.0) * 2.0 * M_PI) + 1.0) / 2.0;
+		const float colorG = (cosf((hue + 1.0 / 3.0) * 2.0 * M_PI) + 1.0) / 2.0;
+		const float colorB = (cosf((hue + 2.0 / 3.0) * 2.0 * M_PI) + 1.0) / 2.0;
+		
 		colorIndex++;
 		
-		voice->spat.color[0] = color.r * 255.f;
-		voice->spat.color[1] = color.g * 255.f;
-		voice->spat.color[2] = color.b * 255.f;
+		voice->spat.color[0] = colorR * 255.f;
+		voice->spat.color[1] = colorG * 255.f;
+		voice->spat.color[2] = colorB * 255.f;
 		
 		voice->spat.name = name;
 		

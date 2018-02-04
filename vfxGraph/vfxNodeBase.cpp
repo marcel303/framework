@@ -771,11 +771,6 @@ bool VfxPlug::isConnected() const
 #endif
 
 	Assert(immediateMem == nullptr); // mem should be equal to immediateMem when we get here
-
-#if 0
-	if (immediateMem != nullptr)
-		return true;
-#endif
 	
 	return false;
 }

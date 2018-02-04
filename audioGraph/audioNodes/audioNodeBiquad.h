@@ -27,62 +27,45 @@
 
 #pragma once
 
-#include "vfxNodeBase.h"
+#include "audioNodeBase.h"
+#include "objects/basicDspFilters.h"
 
-struct VfxNodeBlobDetector : VfxNodeBase
+struct AudioNodeBiquad : AudioNodeBase
 {
+	enum Type
+	{
+		kType_Lowpass,
+		kType_Highpass,
+		kType_Bandpass,
+		kType_Notch,
+		kType_Peak,
+		kType_Lowshelf,
+		kType_Highshelf
+	};
+
 	enum Input
 	{
-		kInput_Image,
-		kInput_Channel,
-		kInput_Invert,
-		kInput_TresholdValue,
-		kInput_MaxBlobs,
+		kInput_Input,
+		kInput_Type,
+		kInput_Frequency,
+		kInput_Q,
+		kInput_PeakGain,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
-		kOutput_Mask,
-		kOutput_X,
-		kOutput_Y,
-		kOutput_NumBlobs,
+		kOutput_Output,
 		kOutput_COUNT
 	};
 	
-	enum Channel
-	{
-		kChannel_RGB,
-		kChannel_R,
-		kChannel_G,
-		kChannel_B,
-		kChannel_A
-	};
+	BiquadFilter biquad;
 	
-	uint8_t * mask;
-	uint8_t * maskRw;
-	int maskSx;
-	int maskSy;
-	VfxChannelData blobX;
-	VfxChannelData blobY;
-	
-	VfxImageCpu maskOutput;
-	VfxChannel xOutput;
-	VfxChannel yOutput;
-	VfxChannel rOutput;
-	
-	int numBlobsOutput;
+	AudioFloat resultOutput;
 
-	VfxNodeBlobDetector();
-	virtual ~VfxNodeBlobDetector() override;
+	AudioNodeBiquad();
 	
 	virtual void tick(const float dt) override;
 	
-	virtual void getDescription(VfxNodeDescription & d) override;
-	
-	void allocateMask(const int sx, const int sy);
-	void freeMask();
-	
-	void allocateChannels(const int size);
-	void freeChannels();
+	virtual bool getFilterResponse(float * magnitude, const int numSteps) const override;
 };

@@ -820,3 +820,36 @@ const binaural::HRIRSampleSet * getHrirSampleSet(const char * name)
 		return i->second;
 	}
 }
+
+//
+
+void drawFilterResponse(const AudioNodeBase * node, const float sx, const float sy)
+{
+	hqBegin(HQ_FILLED_ROUNDED_RECTS);
+	{
+		setColorf(0, 0, 0, .8f);
+		hqFillRoundedRect(0, 0, sx, sy, 4.f);
+	}
+	hqEnd();
+	
+	const int kNumSteps = 256;
+	float response[kNumSteps];
+	
+	if (node->getFilterResponse(response, kNumSteps))
+	{
+		setColor(colorWhite);
+		hqBegin(HQ_LINES);
+		{
+			for (int i = 0; i < kNumSteps - 1; ++i)
+			{
+				const float x1 = sx * (i + 0) / kNumSteps;
+				const float x2 = sx * (i + 1) / kNumSteps;
+				const float y1 = (1.f - response[i + 0]) * sy;
+				const float y2 = (1.f - response[i + 1]) * sy;
+				
+				hqLine(x1, y1, 3.f, x2, y2, 3.f);
+			}
+		}
+		hqEnd();
+	}
+}

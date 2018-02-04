@@ -217,6 +217,8 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 
 //
 
+// todo : replace this with a decent PCM data cache object and make it a global
+
 struct PcmData;
 
 void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths);
@@ -224,6 +226,8 @@ void clearPcmDataCache();
 const PcmData * getPcmData(const char * filename);
 
 //
+
+// todo : replace this with a decent sample set cache object and make it a global
 
 namespace binaural
 {
@@ -240,3 +244,7 @@ enum HRIRSampleSetType
 void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSampleSetType type);
 void clearHrirSampleSetCache();
 const binaural::HRIRSampleSet * getHrirSampleSet(const char * name);
+
+//
+
+void drawFilterResponse(const AudioNodeBase * node, const float sx, const float sy);

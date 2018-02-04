@@ -477,6 +477,7 @@ struct AudioNodeBase
 	virtual void handleTrigger(const int inputSocketIndex) { }
 	
 	virtual void getDescription(AudioNodeDescription & d) { }
+	virtual bool getFilterResponse(float * magnitude, const int numSteps) const { return false; }
 };
 
 //
