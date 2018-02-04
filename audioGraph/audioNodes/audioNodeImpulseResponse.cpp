@@ -62,6 +62,8 @@ void AudioNodeImpulseResponse::tick(const float _dt)
 	//
 	
 	{
+		// todo : decay rate should be an input
+		
 		const double dt = 1.0 / SAMPLE_RATE;
 		const double twoPi = 2.0 * M_PI;
 		const double retain = pow(0.5, dt * 1000.0);

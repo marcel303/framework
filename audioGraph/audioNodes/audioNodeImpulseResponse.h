@@ -44,9 +44,6 @@ struct AudioNodeImpulseResponse : AudioNodeBase
 		kOutput_COUNT
 	};
 	
-	// todo : should run a sine/cosine along the signal, accumulate impulse-response and decay each sample to go back to zero
-	// decay rate should be an input
-	
 	double measurementPhase;
 
 	double runningImpulseResponseX;

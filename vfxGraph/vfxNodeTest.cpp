@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+// todo : remove ?
+
 #include "framework.h"
 #include "vfxNodeTest.h"
 
