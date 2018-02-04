@@ -507,6 +507,96 @@ struct Vfxclip
 	}
 };
 
+#include "FileStream.h"
+#include "StreamReader.h"
+
+struct SpokenWord
+{
+	std::vector<std::string> lines;
+	
+	float scrollY;
+	
+	SpokenWord()
+		: lines()
+		, scrollY(0.f)
+	{
+		try
+		{
+			FileStream stream("wiekspreekt.txt", (OpenMode)(OpenMode_Read | OpenMode_Text));
+			StreamReader reader(&stream, false);
+			lines = reader.ReadAllLines();
+		}
+		catch (std::exception & e)
+		{
+			logError("failed to read text: %s", e.what());
+		}
+	}
+	
+	void tick(const float dt)
+	{
+		scrollY -= dt * 16.f;
+	}
+	
+	void draw()
+	{
+		const int fontSize = 18;
+		
+		float sx[1024];
+		float sy[1024];
+		
+		for (size_t i = 0; i < lines.size(); ++i)
+		{
+			auto & line = lines[i];
+			measureTextArea(fontSize, GFX_SX*2/3, sx[i], sy[i], "%s", line.c_str());
+		}
+		
+		gxPushMatrix();
+		{
+			gxTranslatef(0, scrollY, 0);
+			
+			const int x1 = 60;
+			const int y1 = 600;
+			
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			{
+				int x = 60;
+				int y = 600;
+				
+				for (size_t i = 0; i < lines.size(); ++i)
+				{
+					setColor(0, 0, 0, 100);
+					hqFillRoundedRect(x - 4, y - 4, x + sx[i] + 4, y + sy[i] + 4, 4.f);
+					
+					y += sy[i] + 5;
+				}
+			}
+			hqEnd();
+
+			setColor(colorWhite);
+			beginTextBatch();
+			{
+				int x = x1;
+				int y = y1;
+				
+				for (size_t i = 0; i < lines.size(); ++i)
+				{
+					auto & line = lines[i];
+					
+					const float d = fabsf(y + scrollY - 200.f);
+					const float l = powf(fmaxf(0.f, 1.f - d / 600.f), 1.4f);
+					
+					setLumif(l);
+					drawTextArea(x, y, GFX_SX*2/3, fontSize, "%s", line.c_str());
+					
+					y += sy[i] + 5;
+				}
+			}
+			endTextBatch();
+		}
+		gxPopMatrix();
+	}
+};
+
 struct World
 {
 	Videoclip videoclips[MAX_VOLUMES];
@@ -752,6 +842,8 @@ int main(int argc, char * argv[])
 	
 	ControlWindow controlWindow(world);
 	
+	SpokenWord spokenWord;
+	
 	do
 	{
 		framework.process();
@@ -894,6 +986,8 @@ int main(int argc, char * argv[])
 		
 		Assert(numSamplePoints <= MAX_BINAURALIZERS_TOTAL);
 		
+		spokenWord.tick(dt);
+		
 		controlWindow.tick();
 		
 		controlWindow.draw();
@@ -912,6 +1006,8 @@ int main(int argc, char * argv[])
 			camera.popViewMatrix();
 			
 			projectScreen2d();
+			
+			spokenWord.draw();
 			
 			if (showUi)
 			{
