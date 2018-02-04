@@ -14,6 +14,33 @@
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
 
+//
+
+#define NUM_VIDEOCLIPS 3
+
+static const char * audioFilenames[NUM_VIDEOCLIPS] =
+{
+	"0.1.ogg",
+	"1.1.ogg",
+	"2.1.ogg",
+};
+
+static const float audioGains[NUM_VIDEOCLIPS] =
+{
+	1.f,
+	.3f,
+	1.f
+};
+
+static const char * videoFilenames[NUM_VIDEOCLIPS] =
+{
+	"0.320px.mp4",
+	"1.320px.mp4",
+	"2.320px.mp4",
+};
+
+//
+
 struct MyMutex : binaural::Mutex
 {
 	SDL_mutex * mutex;
@@ -308,6 +335,31 @@ struct Videoclip
 		gain = _gain;
 	}
 	
+	float intersectRayWithPlane(Vec3Arg pos, Vec3Arg dir, Vec3 & p) const
+	{
+		auto & soundToWorld = soundVolume.transform;
+		const Mat4x4 worldToSound = soundToWorld.CalcInv();
+	
+		const Vec3 pos_sound = worldToSound.Mul4(pos);
+		const Vec3 dir_sound = worldToSound.Mul3(dir);
+	
+		const float d = pos_sound[2];
+		const float dd = dir_sound[2];
+	
+		const float t = - d / dd;
+		
+		p = pos_sound + dir_sound * t;
+		
+		return t;
+	}
+	
+	bool isInside(Vec3Arg pos_sound) const
+	{
+		return
+			pos_sound[0] >= -1.f && pos_sound[0] <= +1.f &&
+			pos_sound[1] >= -1.f && pos_sound[1] <= +1.f;
+	}
+	
 	void tick(const float dt)
 	{
 		mp.presentTime += dt;
@@ -315,7 +367,7 @@ struct Videoclip
 		mp.tick(mp.context, true);
 	}
 	
-	void drawSolid()
+	void drawSolid(const bool hover)
 	{
 		gxPushMatrix();
 		{
@@ -323,7 +375,7 @@ struct Videoclip
 			
 			gxSetTexture(mp.getTexture());
 			{
-				setColor(colorWhite);
+				setLumi(hover ? 255 : 100);
 				drawRect(-1, -1, +1, +1);
 			}
 			gxSetTexture(0);
@@ -340,8 +392,174 @@ struct Videoclip
 	}
 };
 
+struct World
+{
+	Videoclip videoclips[MAX_VOLUMES];
+	
+	void init()
+	{
+		for (int i = 0; i < MAX_VOLUMES; ++i)
+		{
+			const int index = i % NUM_VIDEOCLIPS;
+			
+			const char * audioFilename = audioFilenames[index];
+			const char * videoFilename = videoFilenames[index];
+			
+			videoclips[i].open(audioFilename, videoFilename, audioGains[index]);
+		}
+	}
+	
+	int hitTest(Vec3Arg pos, Vec3Arg dir) const
+	{
+		int result = -1;
+		float bestDistance = std::numeric_limits<float>::infinity();
+		
+		for (int i = 0; i < MAX_VOLUMES; ++i)
+		{
+			Vec3 p;
+			
+			const float t = videoclips[i].intersectRayWithPlane(pos, dir, p);
+			
+			if (t >= 0.f)
+			{
+				if (videoclips[i].isInside(p))
+				{
+					//const float distance = pos_sound.CalcSize();
+					const float distance = p.CalcSize(); // fixme : this is skewed by scale
+					
+					if (distance < bestDistance)
+					{
+						bestDistance = distance;
+						result = i;
+					}
+				}
+			}
+		}
+		
+		return result;
+	}
+	
+	void tick(const float dt)
+	{
+		for (int i = 0; i < MAX_VOLUMES; ++i)
+		{
+			videoclips[i].tick(dt);
+		}
+	}
+	
+	void draw(const Camera3d & camera)
+	{
+		const Vec3 origin = camera.getWorldMatrix().GetTranslation();
+		const Vec3 direction = camera.getWorldMatrix().GetAxis(2);
+		
+		const int hoverIndex = hitTest(origin, direction);
+		
+		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+		glEnable(GL_LINE_SMOOTH);
+
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LESS);
+		{
+			gxPushMatrix();
+			{
+				gxScalef(10, 10, 10);
+				setColor(50, 50, 50);
+				drawGrid3dLine(100, 100, 0, 2, true);
+			}
+			gxPopMatrix();
+			
+			for (int i = 0; i < MAX_VOLUMES; ++i)
+			{
+				const bool hover = (i == hoverIndex);
+				
+				videoclips[i].drawSolid(hover);
+			}
+			
+			gxBegin(GL_LINES);
+			{
+				setColor(colorWhite);
+				gxVertex3f(0.f, 0.f, 0.f);
+				gxVertex3f(direction[0], direction[1], direction[2]);
+			}
+			gxEnd();
+		}
+		glDisable(GL_DEPTH_TEST);
+	}
+};
+
+struct ControlWindow
+{
+	Window window;
+	
+	World & world;
+	
+	ControlWindow(World & _world)
+		: window("Control", 300, 300, false)
+		, world(_world)
+	{
+		window.setPosition(0, 200);
+	}
+	
+	void tick()
+	{
+		pushWindow(window);
+		{
+		}
+		popWindow();
+	}
+	
+	void draw()
+	{
+		pushWindow(window);
+		{
+			framework.beginDraw(255, 0, 0, 0);
+			{
+				gxPushMatrix();
+				{
+					gxTranslatef(window.getWidth()/2, window.getHeight()/2, 0);
+					gxScalef(10, 10, 10);
+					
+					hqBegin(HQ_FILLED_CIRCLES, true);
+					{
+						for (int i = 0; i < MAX_VOLUMES; ++i)
+						{
+							auto & videoclip = world.videoclips[i];
+							auto pos = videoclip.soundVolume.transform.GetTranslation();
+							
+							setColor(colorWhite);
+							hqFillCircle(pos[0], pos[2], 5.f);
+							//hqFillCircle(0.f, 0.f, 5.f);
+						}
+					}
+					hqEnd();
+				}
+				gxPopMatrix();
+			}
+			framework.endDraw();
+		}
+		popWindow();
+	}
+};
+
+static void handleAction(const std::string & action, const Dictionary & args)
+{
+	if (action == "filedrop")
+	{
+		const std::string filename = args.getString("file", "");
+		
+		const GLuint texture = getTexture(filename.c_str());
+		
+		if (texture != 0)
+		{
+		
+		}
+	}
+}
+
 int main(int argc, char * argv[])
 {
+	framework.actionHandler = handleAction;
+	
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
@@ -367,40 +585,9 @@ int main(int argc, char * argv[])
 	
 	SDL_mutex * audioMutex = SDL_CreateMutex();
 	
-	const int numFilenames = 3;
+	World world;
 	
-	const char * audioFilenames[numFilenames] =
-	{
-		"0.1.ogg",
-		"1.1.ogg",
-		"2.1.ogg",
-	};
-	
-	const char * videoFilenames[numFilenames] =
-	{
-		"0.320px.mp4",
-		"1.320px.mp4",
-		"2.320px.mp4",
-	};
-	
-	const float gains[numFilenames] =
-	{
-		1.f,
-		.3f,
-		1.f
-	};
-	
-	Videoclip videoclips[MAX_VOLUMES];
-	
-	for (int i = 0; i < MAX_VOLUMES; ++i)
-	{
-		const int index = i % numFilenames;
-		
-		const char * audioFilename = audioFilenames[index];
-		const char * videoFilename = videoFilenames[index];
-		
-		videoclips[i].open(audioFilename, videoFilename, gains[index]);
-	}
+	world.init();
 	
 	MyMutex binauralMutex(audioMutex);
 	
@@ -414,13 +601,15 @@ int main(int argc, char * argv[])
 	{
 		paHandler->audioSources[i].init(&sampleSet, &binauralMutex);
 		
-		paHandler->audioSources[i].source = &videoclips[i].soundSource;
+		paHandler->audioSources[i].source = &world.videoclips[i].soundSource;
 	}
 	
 	PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, paHandler);
 	
 	float timeSeed = 1234.f;
+	
+	ControlWindow controlWindow(world);
 	
 	do
 	{
@@ -451,16 +640,13 @@ int main(int argc, char * argv[])
 		
 		// update video clips
 		
-		for (int i = 0; i < MAX_VOLUMES; ++i)
-		{
-			videoclips[i].tick(dt);
-		}
+		world.tick(dt);
 		
 		// update sound volume properties
 		
 		for (int i = 0; i < MAX_VOLUMES; ++i)
 		{
-			auto & soundVolume = videoclips[i].soundVolume;
+			auto & soundVolume = world.videoclips[i].soundVolume;
 			
 			const float moveSpeed = (1.f + i / float(MAX_VOLUMES)) * .2f;
 			const float moveAmount = 4.f / (i / float(MAX_VOLUMES) + 1);
@@ -485,12 +671,12 @@ int main(int argc, char * argv[])
 		int numSamplePoints = 0;
 		
 		const Vec3 pCameraWorld = camera.getWorldMatrix().GetTranslation();
-		const Vec3 pSoundWorld = videoclips[0].soundVolume.transform.GetTranslation();
+		const Vec3 pSoundWorld = world.videoclips[0].soundVolume.transform.GetTranslation();
 		const Vec3 pSoundView = camera.getViewMatrix().Mul4(pSoundWorld);
 		
 		for (int i = 0; i < MAX_VOLUMES; ++i)
 		{
-			auto & videoclip = videoclips[i];
+			auto & videoclip = world.videoclips[i];
 			auto & soundVolume = videoclip.soundVolume;
 			
 			Vec3 svSamplePoints[MAX_BINAURALIZERS_PER_VOLUME];
@@ -566,6 +752,10 @@ int main(int argc, char * argv[])
 		
 		Assert(numSamplePoints <= MAX_BINAURALIZERS_TOTAL);
 		
+		controlWindow.tick();
+		
+		controlWindow.draw();
+		
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			setFont("calibri.ttf");
@@ -575,26 +765,7 @@ int main(int argc, char * argv[])
 			
 			camera.pushViewMatrix();
 			{
-				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-				glEnable(GL_LINE_SMOOTH);
-				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
-				{
-					gxPushMatrix();
-					{
-						gxScalef(10, 10, 10);
-						setColor(50, 50, 50);
-						drawGrid3dLine(100, 100, 0, 2, true);
-					}
-					gxPopMatrix();
-					
-					for (int i = 0; i < MAX_VOLUMES; ++i)
-					{
-						videoclips[i].drawSolid();
-					}
-				}
-				glDisable(GL_DEPTH_TEST);
+				world.draw(camera);
 			}
 			camera.popViewMatrix();
 			
