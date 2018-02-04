@@ -6,6 +6,8 @@ set(HAS_LIBGG 0)
 set(HAS_LIBOSC 0)
 set(HAS_FRAMEWORK 0)
 set(HAS_LIBVIDEO 0)
+set(HAS_AVGRAPH 0)
+set(HAS_VFXGRAPH 0)
 set(HAS_AUDIOGRAPH 0)
 
 # --- dependencies ---
@@ -26,6 +28,14 @@ if (NOT HAS_LIBVIDEO)
 	message("including libvideo")
 	add_subdirectory(../libvideo libvideo)
 endif (NOT HAS_LIBVIDEO)
+if (NOT HAS_AVGRAPH)
+	message("including avGraph")
+	add_subdirectory(../avGraph avGraph)
+endif (NOT HAS_AVGRAPH)
+if (NOT HAS_VFXGRAPH)
+	message("including vfxgraph")
+	add_subdirectory(../vfxGraph vfxgraph)
+endif (NOT HAS_VFXGRAPH)
 if (NOT HAS_AUDIOGRAPH)
 	message("including audioGraph")
 	add_subdirectory(../audioGraph audioGraph)
@@ -62,8 +72,10 @@ set(LIBRARIES PRIVATE
 	libosc
 	framework
 	audioGraph
+	vfxgraph
 	${FRAMEWORK_LIBRARIES}
-	${AUDIOGRAPH_LIBRARIES})
+	${AUDIOGRAPH_LIBRARIES}
+	${VFXGRAPH_LIBRARIES})
 
 target_link_libraries(000-minimal PRIVATE ${LIBRARIES})
 target_link_libraries(010-fileselect PRIVATE ${LIBRARIES})

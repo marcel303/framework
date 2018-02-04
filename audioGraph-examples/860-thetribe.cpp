@@ -4,6 +4,8 @@
 #include "objects/binaural_cipic.h"
 #include "objects/paobject.h"
 #include "soundmix.h"
+#include "vfxGraph.h"
+#include "vfxNodes/vfxNodeDisplay.h"
 #include "video.h"
 #include <atomic>
 
@@ -17,6 +19,7 @@ const int GFX_SY = 768;
 //
 
 #define NUM_VIDEOCLIPS 3
+#define NUM_VFXCLIPS 1
 
 static const char * audioFilenames[NUM_VIDEOCLIPS] =
 {
@@ -381,20 +384,109 @@ struct Videoclip
 			gxSetTexture(0);
 		}
 		gxPopMatrix();
-		
-		setColor(160, 160, 160);
-		drawSoundVolume(soundVolume);
 	}
 	
 	void drawTranslucent()
 	{
+		setColor(160, 160, 160);
+		drawSoundVolume(soundVolume);
+	}
+};
+
+struct Vfxclip
+{
+	SoundVolume soundVolume;
+	VfxGraph * vfxGraph;
 	
+	Vfxclip()
+		: soundVolume()
+		, vfxGraph(nullptr)
+	{
+	}
+	
+	~Vfxclip()
+	{
+		delete vfxGraph;
+		vfxGraph = nullptr;
+	}
+	
+	void open(const char * filename)
+	{
+		GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
+		createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
+		
+		Graph graph;
+		
+		if (graph.load(filename, &typeDefinitionLibrary))
+		{
+			vfxGraph = constructVfxGraph(graph, &typeDefinitionLibrary);
+		}
+	}
+	
+	float intersectRayWithPlane(Vec3Arg pos, Vec3Arg dir, Vec3 & p) const
+	{
+		auto & soundToWorld = soundVolume.transform;
+		const Mat4x4 worldToSound = soundToWorld.CalcInv();
+	
+		const Vec3 pos_sound = worldToSound.Mul4(pos);
+		const Vec3 dir_sound = worldToSound.Mul3(dir);
+	
+		const float d = pos_sound[2];
+		const float dd = dir_sound[2];
+	
+		const float t = - d / dd;
+		
+		p = pos_sound + dir_sound * t;
+		
+		return t;
+	}
+	
+	bool isInside(Vec3Arg pos_sound) const
+	{
+		return
+			pos_sound[0] >= -1.f && pos_sound[0] <= +1.f &&
+			pos_sound[1] >= -1.f && pos_sound[1] <= +1.f;
+	}
+	
+	void tick(const float dt)
+	{
+		vfxGraph->tick(1024, 1024, dt);
+		
+		vfxGraph->traverseDraw(1024, 1024);
+	}
+	
+	void drawSolid(const bool hover)
+	{
+		gxPushMatrix();
+		{
+			gxMultMatrixf(soundVolume.transform.m_v);
+			
+			const VfxNodeDisplay * displayNode = vfxGraph->getMainDisplayNode();
+			
+			const GLuint texture = displayNode ? displayNode->getImage()->getTexture() : 0;
+			
+			gxSetTexture(texture);
+			{
+				setLumi(255);
+				drawRect(-1, -1, +1, +1);
+			}
+			gxSetTexture(0);
+		}
+		gxPopMatrix();
+	}
+	
+	void drawTranslucent()
+	{
+		setColor(160, 160, 160);
+		drawSoundVolume(soundVolume);
 	}
 };
 
 struct World
 {
 	Videoclip videoclips[MAX_VOLUMES];
+	
+	Vfxclip vfxclips[NUM_VFXCLIPS];
 	
 	void init()
 	{
@@ -406,6 +498,11 @@ struct World
 			const char * videoFilename = videoFilenames[index];
 			
 			videoclips[i].open(audioFilename, videoFilename, audioGains[index]);
+		}
+		
+		for (int i = 0; i < NUM_VFXCLIPS; ++i)
+		{
+			vfxclips[i].open("groooplogo.xml");
 		}
 	}
 	
@@ -445,6 +542,11 @@ struct World
 		{
 			videoclips[i].tick(dt);
 		}
+		
+		for (int i = 0; i < NUM_VFXCLIPS; ++i)
+		{
+			vfxclips[i].tick(dt);
+		}
 	}
 	
 	void draw(const Camera3d & camera)
@@ -460,28 +562,43 @@ struct World
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LESS);
 		{
-			gxPushMatrix();
+			pushBlend(BLEND_OPAQUE);
 			{
-				gxScalef(10, 10, 10);
-				setColor(50, 50, 50);
-				drawGrid3dLine(100, 100, 0, 2, true);
+				gxPushMatrix();
+				{
+					gxScalef(10, 10, 10);
+					setColor(50, 50, 50);
+					drawGrid3dLine(100, 100, 0, 2, true);
+				}
+				gxPopMatrix();
+				
+				for (int i = 0; i < MAX_VOLUMES; ++i)
+				{
+					const bool hover = (i == hoverIndex);
+					
+					videoclips[i].drawSolid(hover);
+				}
+				
+				for (int i = 0; i < NUM_VFXCLIPS; ++i)
+				{
+					vfxclips[i].drawSolid(false);
+				}
 			}
-			gxPopMatrix();
-			
+			popBlend();
+		}
+		glDisable(GL_DEPTH_TEST);
+		
+		glEnable(GL_DEPTH_TEST);
+		{
 			for (int i = 0; i < MAX_VOLUMES; ++i)
 			{
-				const bool hover = (i == hoverIndex);
-				
-				videoclips[i].drawSolid(hover);
+				videoclips[i].drawTranslucent();
 			}
-			
-			gxBegin(GL_LINES);
+		
+			for (int i = 0; i < NUM_VFXCLIPS; ++i)
 			{
-				setColor(colorWhite);
-				gxVertex3f(0.f, 0.f, 0.f);
-				gxVertex3f(direction[0], direction[1], direction[2]);
+				vfxclips[i].drawTranslucent();
 			}
-			gxEnd();
 		}
 		glDisable(GL_DEPTH_TEST);
 	}
@@ -528,7 +645,6 @@ struct ControlWindow
 							
 							setColor(colorWhite);
 							hqFillCircle(pos[0], pos[2], 5.f);
-							//hqFillCircle(0.f, 0.f, 5.f);
 						}
 					}
 					hqEnd();
