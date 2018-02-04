@@ -30,6 +30,8 @@
 #include "soundmix.h"
 #include "testBase.h"
 
+#include "objects/basicDspFilters.h"
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 
@@ -230,234 +232,6 @@ struct OnePoleFilter
 	}
 };
 
-static const float kBiquadFlatQ = 1.f / sqrtf(2.f);
-
-enum BiquadType
-{
-    kBiquadLowpass,
-    kBiquadHighpass,
-    kBiquadBandpass,
-    kBiquadNotch,
-    kBiquadPeak,
-    kBiquadLowshelf,
-    kBiquadHighshelf
-};
-
-struct BiquadFilter
-{
-	float a0;
-	float a1;
-	float a2;
-	float b1;
-	float b2;
-	
-#if 1
-	float x1;
-	float x2;
-	float y1;
-	float y2;
-#endif
-
-#if 1
-	float h1;
-	float h2;
-#endif
-
-	BiquadFilter()
-	{
-		memset(this, 0, sizeof(*this));
-	}
-	
-	void make(const BiquadType type, const double Fc, const double Q, const double peakGainDB)
-	{
-		switch (type)
-		{
-		case kBiquadLowpass:
-			makeLowpass(Fc, Q, peakGainDB);
-			break;
-			
-		case kBiquadHighpass:
-			makeHighpass(Fc, Q, peakGainDB);
-			break;
-			
-		case kBiquadBandpass:
-			makeBandpass(Fc, Q, peakGainDB);
-			break;
-			
-		case kBiquadNotch:
-			makeNotch(Fc, Q, peakGainDB);
-			break;
-			
-		case kBiquadPeak:
-			makePeak(Fc, Q, peakGainDB);
-			break;
-			
-		case kBiquadLowshelf:
-			makeLowshelf(Fc, Q, peakGainDB);
-			break;
-			
-		case kBiquadHighshelf:
-			makeHighshelf(Fc, Q, peakGainDB);
-			break;
-		}
-	}
-	
-	void makeLowpass(const double Fc, const double Q, const double peakGainDB)
-	{
-		const double K = std::tan(M_PI * Fc);
-		
-		const double norm = 1 / (1 + K / Q + K * K);
-		
-		a0 = K * K * norm;
-		a1 = 2 * a0;
-		a2 = a0;
-		b1 = 2 * (K * K - 1) * norm;
-		b2 = (1 - K / Q + K * K) * norm;
-	}
-	
-	void makeHighpass(const double Fc, const double Q, const double peakGainDB)
-	{
-		const double K = std::tan(M_PI * Fc);
-		
-		const double norm = 1 / (1 + K / Q + K * K);
-		
-		a0 = 1 * norm;
-		a1 = -2 * a0;
-		a2 = a0;
-		b1 = 2 * (K * K - 1) * norm;
-		b2 = (1 - K / Q + K * K) * norm;
-	}
-	
-	void makeBandpass(const double Fc, const double Q, const double peakGainDB)
-	{
-		const double K = std::tan(M_PI * Fc);
-		
-		const double norm = 1 / (1 + K / Q + K * K);
-		
-		a0 = K / Q * norm;
-		a1 = 0;
-		a2 = -a0;
-		b1 = 2 * (K * K - 1) * norm;
-		b2 = (1 - K / Q + K * K) * norm;
-	}
-	
-	void makeNotch(const double Fc, const double Q, const double peakGainDB)
-	{
-		const double K = std::tan(M_PI * Fc);
-		
-		const double norm = 1 / (1 + K / Q + K * K);
-		
-		a0 = (1 + K * K) * norm;
-		a1 = 2 * (K * K - 1) * norm;
-		a2 = a0;
-		b1 = a1;
-		b2 = (1 - K / Q + K * K) * norm;
-	}
-	
-	void makePeak(const double Fc, const double Q, const double peakGainDB)
-	{
-		const double K = std::tan(M_PI * Fc);
-		const double V = std::pow(10.0, std::abs(peakGainDB) / 20.0);
-		
-		if (peakGainDB >= 0)
-		{
-			// boost
-			const double norm = 1 / (1 + 1/Q * K + K * K);
-			a0 = (1 + V/Q * K + K * K) * norm;
-			a1 = 2 * (K * K - 1) * norm;
-			a2 = (1 - V/Q * K + K * K) * norm;
-			b1 = a1;
-			b2 = (1 - 1/Q * K + K * K) * norm;
-		}
-		else
-		{
-			// cut
-			const double norm = 1 / (1 + V/Q * K + K * K);
-			a0 = (1 + 1/Q * K + K * K) * norm;
-			a1 = 2 * (K * K - 1) * norm;
-			a2 = (1 - 1/Q * K + K * K) * norm;
-			b1 = a1;
-			b2 = (1 - V/Q * K + K * K) * norm;
-		}
-	}
-	
-	void makeLowshelf(const double Fc, const double Q, const double peakGainDB)
-	{
-		const double K = std::tan(M_PI * Fc);
-		const double V = std::pow(10.0, std::abs(peakGainDB) / 20.0);
-		
-		if (peakGainDB >= 0)
-		{
-			// boost
-			const double norm = 1 / (1 + sqrt(2) * K + K * K);
-			a0 = (1 + sqrt(2*V) * K + V * K * K) * norm;
-			a1 = 2 * (V * K * K - 1) * norm;
-			a2 = (1 - sqrt(2*V) * K + V * K * K) * norm;
-			b1 = 2 * (K * K - 1) * norm;
-			b2 = (1 - sqrt(2) * K + K * K) * norm;
-		}
-		else
-		{
-			// cut
-			const double norm = 1 / (1 + sqrt(2*V) * K + V * K * K);
-			a0 = (1 + sqrt(2) * K + K * K) * norm;
-			a1 = 2 * (K * K - 1) * norm;
-			a2 = (1 - sqrt(2) * K + K * K) * norm;
-			b1 = 2 * (V * K * K - 1) * norm;
-			b2 = (1 - sqrt(2*V) * K + V * K * K) * norm;
-		}
-	}
-	
-	void makeHighshelf(const double Fc, const double Q, const double peakGainDB)
-	{
-		const double K = std::tan(M_PI * Fc);
-		const double V = std::pow(10.0, std::abs(peakGainDB) / 20.0);
-		
-		if (peakGainDB >= 0)
-		{
-			// boost
-			const double norm = 1 / (1 + sqrt(2) * K + K * K);
-			a0 = (V + sqrt(2*V) * K + K * K) * norm;
-			a1 = 2 * (K * K - V) * norm;
-			a2 = (V - sqrt(2*V) * K + K * K) * norm;
-			b1 = 2 * (K * K - 1) * norm;
-			b2 = (1 - sqrt(2) * K + K * K) * norm;
-		}
-		else
-		{
-			// cut
-			const double norm = 1 / (V + sqrt(2*V) * K + K * K);
-			a0 = (1 + sqrt(2) * K + K * K) * norm;
-			a1 = 2 * (K * K - 1) * norm;
-			a2 = (1 - sqrt(2) * K + K * K) * norm;
-			b1 = 2 * (K * K - V) * norm;
-			b2 = (V - sqrt(2*V) * K + K * K) * norm;
-		}
-	}
-	
-	float processSingle_v1(const float x0)
-	{
-		const float y0 = a0 * x0 + a1 * x1 + a2 * x2 - b1 * y1 - b2 * y2;
-
-		x2 = x1;
-		x1 = x0;
-		y2 = y1;
-		y1 = y0;
-
-		return y0;
-	}
-	
-	float processSingle_v2(const float value)
-	{
-		const float result = value * a0 + h1;
-		
-		h1 = value * a1 + h2 - b1 * result;
-		h2 = value * a2      - b2 * result;
-		
-		return result;
-	}
-};
-
 void testDspFilters()
 {
 	setAbout("This test uses various techniques from the field of digital signal processing (DSP), to evaluate and run filters across a signal.");
@@ -523,16 +297,12 @@ void testDspFilters()
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			srcSamples[i] = sinf(i / float(AUDIO_UPDATE_SIZE) * M_PI * 20);
 		
-		float dstSamples_v1[AUDIO_UPDATE_SIZE];
+		float dstSamples[AUDIO_UPDATE_SIZE];
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			dstSamples_v1[i] = biquadFilter.processSingle_v1(srcSamples[i]);
-		
-		float dstSamples_v2[AUDIO_UPDATE_SIZE];
-		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			dstSamples_v2[i] = biquadFilter.processSingle_v2(srcSamples[i]);
+			dstSamples[i] = biquadFilter.processSingle(srcSamples[i]);
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			printf("BiquadFilter: %.2f -> %.2f | %.2f\n", srcSamples[i], dstSamples_v1[i], dstSamples_v2[i]);
+			printf("BiquadFilter: %.2f -> %.2f\n", srcSamples[i], dstSamples[i]);
 	}
 #endif
 
