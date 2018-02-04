@@ -1,0 +1,105 @@
+<graph nextNodeId="60" nextLinkId="55">
+    <node id="5" typeName="voice.4d">
+        <input socket="dim.x" value="100.000000"/>
+        <input socket="dim.y" value="0.100000"/>
+        <input socket="dim.z" value="100.000000"/>
+        <input socket="pos.y" value="-8.000000"/>
+        <input socket="sub.boost" value="2"/>
+    </node>
+    <node id="30" typeName="wavefield.1d">
+        <input socket="pos.dampen" value="0.999900"/>
+        <input socket="sample.pos" value="0.510000"/>
+        <input socket="size" value="32"/>
+        <input socket="tension" value="1000.000000"/>
+        <input socket="trigger.amount" value="1.000000"/>
+        <input socket="vel.dampen" value="0.999900"/>
+    </node>
+    <node id="34" typeName="noise.1d">
+        <input socket="max" value="0.900000"/>
+        <input socket="min" value="0.100000"/>
+        <input socket="octaves" value="3"/>
+        <input socket="sample.rate" value="1"/>
+        <input socket="scale" value="0.100000"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="35" typeName="time"/>
+    <node id="36" typeName="smoothe">
+        <input socket="smoothing" value="1"/>
+        <input socket="smoothness" value="0.900000"/>
+    </node>
+    <node id="41" typeName="interp.scalar"/>
+    <node id="44" typeName="voice.4d">
+        <input socket="gain" value="8.000000"/>
+    </node>
+    <node id="45" typeName="wavefield.2d" passthrough="1">
+        <input socket="pos.dampen" value="0.900000"/>
+        <input socket="sample.pos.x" value="0.200000"/>
+        <input socket="sample.pos.y" value="0.400000"/>
+        <input socket="size" value="8"/>
+        <input socket="tension" value="400.000000"/>
+        <input socket="trigger.amount" value="1.000000"/>
+        <input socket="trigger.pos.x" value="0.700000"/>
+        <input socket="trigger.pos.y" value="0.700000"/>
+        <input socket="vel.dampen" value="0.200000"/>
+    </node>
+    <node id="46" typeName="audio.sine">
+        <input socket="frequency" value="0.050000"/>
+    </node>
+    <node id="47" typeName="trigger.time">
+        <input socket="interval.max" value="2.000000"/>
+        <input socket="interval.min" value="0.500000"/>
+    </node>
+    <node id="48" typeName="trigger.time">
+        <input socket="interval.max" value="0.000000"/>
+        <input socket="interval.min" value="0.150000"/>
+    </node>
+    <node id="49" typeName="flags">
+        <input socket="flag" value="test"/>
+    </node>
+    <node id="50" typeName="flags">
+        <input socket="flag" value="kill"/>
+    </node>
+    <node id="58" typeName="normalize"/>
+    <link id="31" srcNodeId="34" srcNodeSocketName="x" dstNodeId="35" dstNodeSocketName="time"/>
+    <link id="34" srcNodeId="36" srcNodeSocketName="value" dstNodeId="34" dstNodeSocketName="result"/>
+    <link id="38" srcNodeId="41" srcNodeSocketName="value" dstNodeId="34" dstNodeSocketName="result"/>
+    <link id="45" srcNodeId="45" srcNodeSocketName="sample.pos.x" dstNodeId="46" dstNodeSocketName="audio"/>
+    <link id="46" srcNodeId="45" srcNodeSocketName="trigger!" dstNodeId="47" dstNodeSocketName="trigger!"/>
+    <link id="47" srcNodeId="30" srcNodeSocketName="trigger!" dstNodeId="48" dstNodeSocketName="trigger!"/>
+    <link id="52" srcNodeId="5" srcNodeSocketName="audio" dstNodeId="58" dstNodeSocketName="result"/>
+    <link id="53" srcNodeId="58" srcNodeSocketName="value" dstNodeId="30" dstNodeSocketName="audio"/>
+    <link id="54" srcNodeId="44" srcNodeSocketName="audio" dstNodeId="45" dstNodeSocketName="audio"/>
+    <editor nextZKey="633">
+        <dragAndZoom x="-67.296211242675781" y="197.00567626953125" zoom="1.1510580778121948"/>
+        <nodeDatas>
+            <nodeData nodeId="5" x="180.99969482421875" y="103.99818420410156" zKey="0" folded="1"/>
+            <nodeData nodeId="30" x="-130.71675109863281" y="102.65159606933594" zKey="632"/>
+            <nodeData nodeId="34" x="-544.679931640625" y="410.4281005859375" zKey="623"/>
+            <nodeData nodeId="35" x="-682.74658203125" y="516.37921142578125" zKey="0"/>
+            <nodeData nodeId="36" x="-398.21697998046875" y="442.02047729492188" zKey="622"/>
+            <nodeData nodeId="41" x="-396.97100830078125" y="377.94403076171875" zKey="0"/>
+            <nodeData nodeId="44" x="180.99996948242188" y="-203.72421264648438" zKey="0" folded="1"/>
+            <nodeData nodeId="45" x="27.001861572265625" y="-204.22496032714844" zKey="625"/>
+            <nodeData nodeId="46" x="-144.93414306640625" y="-165.008056640625" zKey="0" folded="1"/>
+            <nodeData nodeId="47" x="-154.10101318359375" y="-103.16886901855469" zKey="0"/>
+            <nodeData nodeId="48" x="-343.18792724609375" y="280.99871826171875" zKey="631"/>
+            <nodeData nodeId="49" x="128" y="225" zKey="0"/>
+            <nodeData nodeId="50" x="130" y="325" zKey="0"/>
+            <nodeData nodeId="58" x="24.0001220703125" y="111.26991271972656" zKey="624" folded="1"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="32" x="-384.08218383789062" y="-8.2895126342773438" zKey="-1" nodeId="30" dstSocketName="audio" sx="216" sy="148"/>
+            <visualizer id="37" x="-448" y="672" zKey="-1" nodeId="36" dstSocketName="result" sx="216" sy="148"/>
+            <visualizer id="38" x="-672" y="672" zKey="-1" nodeId="34" dstSocketName="result" sx="216" sy="148"/>
+            <visualizer id="42" x="-224" y="672" zKey="-1" nodeId="41" dstSocketName="result" sx="216" sy="148"/>
+            <visualizer id="59" x="117.32461547851562" y="-389.70458984375" zKey="-1" nodeId="45" dstSocketName="audio" sx="216" sy="148"/>
+        </visualizers>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="1" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="000000cc" gridColor="b600ff96">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>
