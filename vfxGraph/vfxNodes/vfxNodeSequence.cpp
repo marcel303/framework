@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "framework.h"
 #include "vfxNodeSequence.h"
 
 VFX_NODE_TYPE(VfxNodeSequence)

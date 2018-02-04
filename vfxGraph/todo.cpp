@@ -7,7 +7,7 @@ top priority items:
 # how to convert multiple channels to gpu image with channel(s).toGpu ?
 	# removed support for multiple channels for one output socket. always using a single channel resolves this issue
 - add ability for nodes to report warnings and errors
-- fix issue with immediate values not being restored properly for most types
++ fix issue with immediate values not being restored properly for most types
 - make it possible to have voice nodes in audio graph which do not generate audible sound ?
 - add an option to audio graph and poly audio graph nodes to output audio or not
 - add options to poly and regular audio graph nodes to output mono, stereo, or multi-channel
@@ -15,6 +15,15 @@ top priority items:
 - fix issue with recursive GPU timers
 + rewrite ImageCpu to only support planar R/G/B/A. simplifies many nodes. only toGpu gets more complicated, as OpenGL doesn't allow one to upload planar data afaik
 + add ramp down option when freeing audio graph instances
+- add console based vfx graph app which lets one run a graph from the command line
+	- manually specify frame rate/time step
+	- listen to keyboard to quit
+	- fix issues with nodes that come up
+- add console based audio graph app which lets one run a graph from the command line
+	- list control values and allow user to edit them
+	- research how to make a (cross platform) console app ui
+- add ability for audio nodes to draw a filter response graph ?
+	- or add to audio graph manager : draw filter response and FFT of selected node/socket
 
 
 todo :
