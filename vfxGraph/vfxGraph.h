@@ -49,6 +49,7 @@ struct VfxGraph;
 struct VfxNodeBase;
 struct VfxPlug;
 
+struct VfxNodeDisplay;
 struct VfxNodeOutput;
 
 extern VfxGraph * g_currentVfxGraph;
@@ -109,6 +110,8 @@ struct VfxGraph
 	void tick(const int sx, const int sy, const float dt);
 	void draw(const int sx, const int sy) const;
 	int traverseDraw(const int sx, const int sy) const;
+	
+	VfxNodeDisplay * getMainDisplayNode() const;
 };
 
 //

@@ -644,6 +644,8 @@ void AudioRealTimeConnection::setSrcSocketValue(const GraphNodeId nodeId, const 
 	
 	if (input->isConnected())
 	{
+		// fixme
+		
 		setPlugValue(audioGraph, input, value);
 	}
 	else

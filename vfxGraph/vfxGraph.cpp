@@ -287,26 +287,17 @@ int VfxGraph::traverseDraw(const int sx, const int sy) const
 	
 	// start traversal at the display node and traverse to leafs following predeps and and back up the tree again to draw
 	
-	if (displayNodeIds.empty() == false)
+	VfxNodeDisplay * displayNode = getMainDisplayNode();
+	
+	if (displayNode != nullptr)
 	{
-		auto displayNodeId = *displayNodeIds.begin();
+		displayNode->traverseDraw(nextDrawTraversalId);
 		
-		auto nodeItr = nodes.find(displayNodeId);
-		Assert(nodeItr != nodes.end());
-		if (nodeItr != nodes.end())
+		const VfxImageBase * image = displayNode->getImage();
+		
+		if (image != nullptr)
 		{
-			auto node = nodeItr->second;
-			
-			VfxNodeDisplay * displayNode = static_cast<VfxNodeDisplay*>(node);
-			
-			displayNode->traverseDraw(nextDrawTraversalId);
-			
-			const VfxImageBase * image = displayNode->getImage();
-			
-			if (image != nullptr)
-			{
-				result = image->getTexture();
-			}
+			result = image->getTexture();
 		}
 	}
 	
@@ -355,6 +346,25 @@ int VfxGraph::traverseDraw(const int sx, const int sy) const
 	VFXGRAPH_SY = oldSy;
 	
 	return result;
+}
+
+VfxNodeDisplay * VfxGraph::getMainDisplayNode() const
+{
+	if (displayNodeIds.empty() == false)
+	{
+		auto displayNodeId = *displayNodeIds.begin();
+		
+		auto nodeItr = nodes.find(displayNodeId);
+		Assert(nodeItr != nodes.end());
+		if (nodeItr != nodes.end())
+		{
+			auto node = nodeItr->second;
+			
+			return static_cast<VfxNodeDisplay*>(node);
+		}
+	}
+	
+	return nullptr;
 }
 
 //
