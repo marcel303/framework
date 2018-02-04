@@ -21,6 +21,8 @@ const int GFX_SY = 768;
 #define NUM_VIDEOCLIPS 3
 #define NUM_VFXCLIPS 1
 
+#define DRAW_GRIDS 0
+
 static const char * audioFilenames[NUM_VIDEOCLIPS] =
 {
 	"0.1.ogg",
@@ -413,8 +415,10 @@ struct Videoclip
 	
 	void drawTranslucent()
 	{
+	#if DRAW_GRIDS
 		setColor(160, 160, 160);
 		drawSoundVolume(soundVolume);
+	#endif
 	}
 };
 
@@ -502,13 +506,16 @@ struct Vfxclip
 	
 	void drawTranslucent()
 	{
+	#if DRAW_GRIDS
 		setColor(160, 160, 160);
 		drawSoundVolume(soundVolume);
+	#endif
 	}
 };
 
 #include "FileStream.h"
 #include "StreamReader.h"
+#include "StringEx.h"
 
 struct SpokenWord
 {
@@ -525,6 +532,8 @@ struct SpokenWord
 			FileStream stream("wiekspreekt.txt", (OpenMode)(OpenMode_Read | OpenMode_Text));
 			StreamReader reader(&stream, false);
 			lines = reader.ReadAllLines();
+			for (auto & line : lines)
+				line = String::Trim(line);
 		}
 		catch (std::exception & e)
 		{
@@ -562,12 +571,15 @@ struct SpokenWord
 				int x = 60;
 				int y = 600;
 				
+				setColor(0, 0, 0, 100);
 				for (size_t i = 0; i < lines.size(); ++i)
 				{
-					setColor(0, 0, 0, 100);
-					hqFillRoundedRect(x - 4, y - 4, x + sx[i] + 4, y + sy[i] + 4, 4.f);
+					auto & line = lines[i];
 					
-					y += sy[i] + 5;
+					if (!line.empty())
+						hqFillRoundedRect(x - 7, y - 3, x + sx[i] + 7, y + sy[i] + 3, 4.f);
+					
+					y += sy[i] + 7;
 				}
 			}
 			hqEnd();
@@ -588,7 +600,7 @@ struct SpokenWord
 					setLumif(l);
 					drawTextArea(x, y, GFX_SX*2/3, fontSize, "%s", line.c_str());
 					
-					y += sy[i] + 5;
+					y += sy[i] + 7;
 				}
 			}
 			endTextBatch();
@@ -800,10 +812,13 @@ int main(int argc, char * argv[])
 	bool enableNearest = true;
 	bool enableVertices = true;
 	
-	bool showUi = true;
+	bool showUi = false;
 	
 	Camera3d camera;
 	camera.gamepadIndex = 0;
+	camera.maxForwardSpeed *= .1f;
+	camera.maxUpSpeed *= .1f;
+	camera.maxStrafeSpeed *= .1f;
 	
 	camera.position[0] = 0;
 	camera.position[1] = +.3f;
