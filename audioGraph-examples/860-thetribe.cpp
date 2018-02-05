@@ -22,6 +22,8 @@ const int GFX_SY = 768;
 #define NUM_VFXCLIPS 1
 
 #define DRAW_GRIDS 0
+#define DO_SPOKENWORD 0
+#define DO_CONTROLWINDOW 0
 
 static const char * audioFilenames[NUM_VIDEOCLIPS] =
 {
@@ -39,9 +41,9 @@ static const float audioGains[NUM_VIDEOCLIPS] =
 
 static const char * videoFilenames[NUM_VIDEOCLIPS] =
 {
-	"0.320px.mp4",
-	"1.320px.mp4",
-	"2.320px.mp4",
+	"0.1280px.mp4",
+	"1.1280px.mp4",
+	"2.1280px.mp4",
 };
 
 //
@@ -262,9 +264,12 @@ struct MyPortAudioHandler : PortAudioHandler
 {
 	MultiChannelAudioSource_SoundVolume audioSources[MAX_VOLUMES];
 	
+	AudioSource * audioSource_spokenWord;
+	
 	MyPortAudioHandler()
 		: PortAudioHandler()
 		, audioSources()
+		, audioSource_spokenWord(nullptr)
 	{
 	}
 	
@@ -286,12 +291,18 @@ struct MyPortAudioHandler : PortAudioHandler
 			audioSources[i].generate(1, channelR, AUDIO_UPDATE_SIZE);
 		}
 		
+		ALIGN16 float spokenWord[AUDIO_UPDATE_SIZE];
+		if (audioSource_spokenWord != nullptr)
+			audioSource_spokenWord->generate(spokenWord, AUDIO_UPDATE_SIZE);
+		else
+			memset(spokenWord, 0, sizeof(spokenWord));
+		
 		float * __restrict destinationBuffer = (float*)outputBuffer;
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			destinationBuffer[i * 2 + 0] = channelL[i];
-			destinationBuffer[i * 2 + 1] = channelR[i];
+			destinationBuffer[i * 2 + 0] = channelL[i] + spokenWord[i];
+			destinationBuffer[i * 2 + 1] = channelR[i] + spokenWord[i];
 		}
 	}
 };
@@ -405,7 +416,7 @@ struct Videoclip
 			
 			gxSetTexture(mp.getTexture());
 			{
-				setLumi(hover ? 255 : 100);
+				setLumi(hover ? 255 : 200);
 				drawRect(-1, -1, +1, +1);
 			}
 			gxSetTexture(0);
@@ -513,6 +524,8 @@ struct Vfxclip
 	}
 };
 
+#if DO_SPOKENWORD
+
 #include "FileStream.h"
 #include "StreamReader.h"
 #include "StringEx.h"
@@ -523,13 +536,20 @@ struct SpokenWord
 	
 	float scrollY;
 	
+	AudioSourceVorbis soundSource;
+	
 	SpokenWord()
 		: lines()
 		, scrollY(0.f)
+		, soundSource()
+	{
+	}
+	
+	void open(const char * text, const char * audio)
 	{
 		try
 		{
-			FileStream stream("wiekspreekt.txt", (OpenMode)(OpenMode_Read | OpenMode_Text));
+			FileStream stream(text, (OpenMode)(OpenMode_Read | OpenMode_Text));
 			StreamReader reader(&stream, false);
 			lines = reader.ReadAllLines();
 			for (auto & line : lines)
@@ -539,6 +559,8 @@ struct SpokenWord
 		{
 			logError("failed to read text: %s", e.what());
 		}
+		
+		soundSource.open(audio, false);
 	}
 	
 	void tick(const float dt)
@@ -608,6 +630,8 @@ struct SpokenWord
 		gxPopMatrix();
 	}
 };
+
+#endif
 
 struct World
 {
@@ -731,6 +755,8 @@ struct World
 	}
 };
 
+#if DO_CONTROLWINDOW
+
 struct ControlWindow
 {
 	Window window;
@@ -784,6 +810,8 @@ struct ControlWindow
 	}
 };
 
+#endif
+
 static void handleAction(const std::string & action, const Dictionary & args)
 {
 	if (action == "filedrop")
@@ -816,9 +844,11 @@ int main(int argc, char * argv[])
 	
 	Camera3d camera;
 	camera.gamepadIndex = 0;
-	camera.maxForwardSpeed *= .1f;
-	camera.maxUpSpeed *= .1f;
-	camera.maxStrafeSpeed *= .1f;
+	
+	const float kMoveSpeed = .2f;
+	camera.maxForwardSpeed *= kMoveSpeed;
+	camera.maxUpSpeed *= kMoveSpeed;
+	camera.maxStrafeSpeed *= kMoveSpeed;
 	
 	camera.position[0] = 0;
 	camera.position[1] = +.3f;
@@ -835,6 +865,12 @@ int main(int argc, char * argv[])
 	
 	world.init();
 	
+#if DO_SPOKENWORD
+	SpokenWord spokenWord;
+	
+	spokenWord.open("wiekspreekt.txt", "wiekspreekt.ogg");
+#endif
+
 	MyMutex binauralMutex(audioMutex);
 	
 	binaural::HRIRSampleSet sampleSet;
@@ -843,21 +879,29 @@ int main(int argc, char * argv[])
 	
 	MyPortAudioHandler * paHandler = new MyPortAudioHandler();
 	
+	int audioSourceIndex = 0;
+	
 	for (int i = 0; i < MAX_VOLUMES; ++i)
 	{
-		paHandler->audioSources[i].init(&sampleSet, &binauralMutex);
+		paHandler->audioSources[audioSourceIndex].init(&sampleSet, &binauralMutex);
 		
-		paHandler->audioSources[i].source = &world.videoclips[i].soundSource;
+		paHandler->audioSources[audioSourceIndex].source = &world.videoclips[i].soundSource;
+		
+		audioSourceIndex++;
 	}
 	
+#if DO_SPOKENWORD
+	paHandler->audioSource_spokenWord = &spokenWord.soundSource;
+#endif
+
 	PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, paHandler);
 	
 	float timeSeed = 1234.f;
 	
+#if DO_CONTROLWINDOW
 	ControlWindow controlWindow(world);
-	
-	SpokenWord spokenWord;
+#endif
 	
 	do
 	{
@@ -1001,12 +1045,16 @@ int main(int argc, char * argv[])
 		
 		Assert(numSamplePoints <= MAX_BINAURALIZERS_TOTAL);
 		
+	#if DO_SPOKENWORD
 		spokenWord.tick(dt);
+	#endif
 		
+	#if DO_CONTROLWINDOW
 		controlWindow.tick();
 		
 		controlWindow.draw();
-		
+	#endif
+	
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			setFont("calibri.ttf");
@@ -1022,7 +1070,9 @@ int main(int argc, char * argv[])
 			
 			projectScreen2d();
 			
+		#if DO_SPOKENWORD
 			spokenWord.draw();
+		#endif
 			
 			if (showUi)
 			{
