@@ -21,7 +21,7 @@ const int GFX_SY = 768;
 #define NUM_VIDEOCLIPS 3
 #define NUM_VFXCLIPS 1
 
-#define DRAW_GRIDS 0
+#define DRAW_GRIDS 1
 #define DO_SPOKENWORD 0
 #define DO_CONTROLWINDOW 0
 
@@ -427,7 +427,7 @@ struct Videoclip
 	void drawTranslucent()
 	{
 	#if DRAW_GRIDS
-		setColor(160, 160, 160);
+		setColor(200, 200, 200, 63);
 		drawSoundVolume(soundVolume);
 	#endif
 	}
@@ -518,7 +518,7 @@ struct Vfxclip
 	void drawTranslucent()
 	{
 	#if DRAW_GRIDS
-		setColor(160, 160, 160);
+		setColor(0, 0, 0, 100);
 		drawSoundVolume(soundVolume);
 	#endif
 	}
@@ -715,14 +715,6 @@ struct World
 		{
 			pushBlend(BLEND_OPAQUE);
 			{
-				gxPushMatrix();
-				{
-					gxScalef(10, 10, 10);
-					setColor(50, 50, 50);
-					drawGrid3dLine(100, 100, 0, 2, true);
-				}
-				gxPopMatrix();
-				
 				for (int i = 0; i < MAX_VOLUMES; ++i)
 				{
 					const bool hover = (i == hoverIndex);
@@ -741,6 +733,14 @@ struct World
 		
 		glEnable(GL_DEPTH_TEST);
 		{
+			gxPushMatrix();
+			{
+				gxScalef(10, 10, 10);
+				setColor(200, 200, 200, 60);
+				drawGrid3dLine(100, 100, 0, 2, true);
+			}
+			gxPopMatrix();
+			
 			for (int i = 0; i < MAX_VOLUMES; ++i)
 			{
 				videoclips[i].drawTranslucent();
