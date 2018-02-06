@@ -97,6 +97,14 @@ void VfxGraph::destroy()
 		case ValueToFree::kType_Color:
 			delete (Color*)i.mem;
 			break;
+		case ValueToFree::kType_Channel:
+			{
+				VfxChannel * channel = (VfxChannel*)i.mem;
+				if (channel)
+					delete channel->data;
+				delete channel;
+			}
+			break;
 		default:
 			Assert(false);
 			break;
@@ -186,6 +194,20 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		input.connectToImmediate(value, kVfxPlugType_Color);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Color, value));
+	}
+	else if (input.type == kVfxPlugType_Channel)
+	{
+		VfxChannel * value = new VfxChannel();
+		
+		float * data;
+		int dataSize;
+		VfxChannelData::parse(inputValue.c_str(), data, dataSize);
+		
+		value->setData(data, false, dataSize);
+		
+		input.connectToImmediate(value, kVfxPlugType_Channel);
+		
+		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Channel, value));
 	}
 	else
 	{

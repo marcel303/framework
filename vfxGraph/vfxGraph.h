@@ -67,7 +67,8 @@ struct VfxGraph
 			kType_Float,
 			kType_Transform,
 			kType_String,
-			kType_Color
+			kType_Color,
+			kType_Channel
 		};
 		
 		Type type;

@@ -595,8 +595,23 @@ bool RealTimeConnection::setPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, const
 		return false;
 	case kVfxPlugType_ImageCpu:
 		return false;
+		
 	case kVfxPlugType_Channel:
-		return false;
+		{
+			VfxChannel & channel = plug->getRwChannel();
+			
+			float * data;
+			int dataSize;
+			VfxChannelData::parse(value.c_str(), data, dataSize);
+			
+			delete channel.data;
+			channel.data = nullptr;
+			
+			channel.setData(data, false, dataSize);
+			
+			return true;
+		}
+		
 	case kVfxPlugType_Trigger:
 		return false;
 		
