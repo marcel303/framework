@@ -1316,15 +1316,15 @@ struct GraphEdit : GraphEditConnection
 	
 	struct NodeInsert
 	{
-		GraphEdit_NodeTypeSelect * menu;
-		
 		float x;
 		float y;
 		
+		GraphLinkId linkId;
+		
 		NodeInsert()
-			: menu(nullptr)
-			, x(0.f)
+			: x(0.f)
 			, y(0.f)
+			, linkId(kGraphLinkIdInvalid)
 		{
 		}
 	};
@@ -1426,6 +1426,8 @@ struct GraphEdit : GraphEditConnection
 	GraphNodeId linkParamsEditorLinkId;
 	
 	GraphUi::NodeTypeNameSelect * nodeTypeNameSelect;
+	
+	GraphEdit_NodeTypeSelect * nodeInsertMenu;
 	
 	NodeResourceEditor nodeResourceEditor;
 	

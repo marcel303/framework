@@ -1901,6 +1901,7 @@ GraphEdit::GraphEdit(
 	, propertyEditor(nullptr)
 	, linkParamsEditorLinkId(kGraphLinkIdInvalid)
 	, nodeTypeNameSelect(nullptr)
+	, nodeInsertMenu(nullptr)
 	, nodeResourceEditor()
 	, displaySx(0)
 	, displaySy(0)
@@ -1922,9 +1923,9 @@ GraphEdit::GraphEdit(
 	
 	nodeTypeNameSelect = new GraphUi::NodeTypeNameSelect(this);
 	
-	nodeInsert.menu = new GraphEdit_NodeTypeSelect();
-	nodeInsert.menu->x = (_displaySx - nodeInsert.menu->sx)/2;
-	nodeInsert.menu->y = (_displaySy - nodeInsert.menu->sy)/2;
+	nodeInsertMenu = new GraphEdit_NodeTypeSelect();
+	nodeInsertMenu->x = (_displaySx - nodeInsertMenu->sx)/2;
+	nodeInsertMenu->y = (_displaySy - nodeInsertMenu->sy)/2;
 	
 	displaySx = _displaySx;
 	displaySy = _displaySy;
@@ -1960,8 +1961,8 @@ GraphEdit::~GraphEdit()
 	delete propertyEditor;
 	propertyEditor = nullptr;
 	
-	delete nodeInsert.menu;
-	nodeInsert.menu = nullptr;
+	delete nodeInsertMenu;
+	nodeInsertMenu = nullptr;
 	
 	nodeDatas.clear();
 	
@@ -2800,6 +2801,16 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						}
 					}
 					
+					if (enabled(kFlag_NodeAdd) && hitTestResult.hasLink && commandMod())
+					{
+						nodeInsert.x = mousePosition.x;
+						nodeInsert.y = mousePosition.y;
+						nodeInsert.linkId = hitTestResult.link->id;
+					
+						state = kState_NodeInsert;
+						break;
+					}
+					
 					if (enabled(kFlag_Select) && hitTestResult.hasLink)
 					{
 						if (appendSelection == false)
@@ -3597,22 +3608,106 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		
 	case kState_NodeInsert:
 		{
-			std::string typeName;
-			
-			if (nodeInsert.menu->tick(*this, *typeDefinitionLibrary, dt, typeName))
+			if (nodeInsert.linkId != kGraphLinkIdInvalid)
 			{
-				nodeInsert.menu->cancel();
+				auto link = tryGetLink(nodeInsert.linkId);
 				
-				state = kState_Idle;
-				
-				if (typeName.empty() == false)
+				if (link != nullptr)
 				{
-					if (tryAddNode(typeName, nodeInsert.x, nodeInsert.y, true, nullptr))
+					auto srcNode = tryGetNode(link->srcNodeId);
+					auto dstNode = tryGetNode(link->dstNodeId);
+					
+					if (srcNode != nullptr && dstNode != nullptr)
 					{
-						nodeTypeNameSelect->addToHistory(typeName);
+						auto srcTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
+						auto dstTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
+						
+						if (srcTypeDefinition != nullptr && dstTypeDefinition != nullptr)
+						{
+							if (srcTypeDefinition->inputSockets.size() >= 1 &&
+								dstTypeDefinition->outputSockets.size() >= 1)
+							{
+								auto srcSocketTypeName = srcTypeDefinition->inputSockets[0].typeName;
+								auto dstSocketTypeName = dstTypeDefinition->outputSockets[0].typeName;
+								
+								nodeInsertMenu->filter.type = GraphEdit_NodeTypeSelect::kFilterType_PrimarySocketTypes;
+								nodeInsertMenu->filter.srcSocketTypeName = srcSocketTypeName;
+								nodeInsertMenu->filter.dstSocketTypeName = dstSocketTypeName;
+							}
+						}
 					}
 				}
 				
+			}
+			
+			std::string typeName;
+			
+			if (nodeInsertMenu->tick(*this, *typeDefinitionLibrary, dt, typeName))
+			{
+				nodeInsertMenu->cancel();
+				
+				const GraphLinkId linkId = nodeInsert.linkId;
+				const float x = nodeInsert.x;
+				const float y = nodeInsert.y;
+				
+				//
+				
+				nodeInsert = NodeInsert();
+				state = kState_Idle;
+				
+				//
+				
+				if (typeName.empty() == false)
+				{
+					GraphNodeId nodeId;
+					
+					if (tryAddNode(typeName, x, y, true, &nodeId))
+					{
+						// hook up the new node between the endpoints of the existing link
+						
+						if (linkId != kGraphLinkIdInvalid)
+						{
+							auto linkPtr = tryGetLink(linkId);
+							
+							if (linkPtr != nullptr)
+							{
+								// since the existing link may be removed due to adding new links,
+								// we need to make a copy of it here so we know the node ids and
+								// socket indices to connect with
+								
+								auto link = *linkPtr;
+								
+								if (true)
+								{
+									GraphLink link1;
+									link1.id = graph->allocLinkId();
+									link1.srcNodeId = link.srcNodeId;
+									link1.srcNodeSocketIndex = link.srcNodeSocketIndex;
+									link1.srcNodeSocketName = link.srcNodeSocketName;
+									link1.dstNodeId = nodeId;
+									link1.dstNodeSocketIndex = 0;
+									link1.dstNodeSocketName = "any";
+									graph->addLink(link1, true);
+								}
+								
+								if (true)
+								{
+									GraphLink link2;
+									link2.id = graph->allocLinkId();
+									link2.srcNodeId = nodeId;
+									link2.srcNodeSocketIndex = 0;
+									link2.srcNodeSocketName = "before";
+									link2.dstNodeId = link.dstNodeId;
+									link2.dstNodeSocketIndex = link.dstNodeSocketIndex;
+									link2.dstNodeSocketName = link.dstNodeSocketName;
+									graph->addLink(link2, true);
+								}
+							}
+						}
+						
+						nodeTypeNameSelect->addToHistory(typeName);
+					}
+				}
 				break;
 			}
 		}
@@ -4827,7 +4922,7 @@ void GraphEdit::cancelEditing()
 		
 	case kState_NodeInsert:
 		{
-			nodeInsert.menu->cancel();
+			nodeInsertMenu->cancel();
 			
 			state = kState_Idle;
 			break;
@@ -5321,7 +5416,7 @@ void GraphEdit::draw() const
 	
 	if (state == kState_NodeInsert)
 	{
-		nodeInsert.menu->draw(*this, *typeDefinitionLibrary);
+		nodeInsertMenu->draw(*this, *typeDefinitionLibrary);
 	}
 	
 	//
