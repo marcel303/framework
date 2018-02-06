@@ -48,6 +48,7 @@ struct VfxDynamicLink;
 struct VfxGraph;
 struct VfxNodeBase;
 struct VfxPlug;
+struct VfxResourceBase;
 
 struct VfxNodeDisplay;
 struct VfxNodeOutput;
@@ -177,14 +178,25 @@ VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinition
 
 void connectVfxSockets(VfxNodeBase * srcNode, const int srcNodeSocketIndex, VfxPlug * srcSocket, VfxNodeBase * dstNode, const int dstNodeSocketIndex, VfxPlug * dstSocket, const std::map<std::string, std::string> & linkParams, const bool addPredep);
 
-bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const char * name, void *& resource);
+VfxResourceBase * createVfxNodeResourceImpl(const GraphNode & node, const char * type, const char * name);
 
 template <typename T> bool createVfxNodeResource(const GraphNode & node, const char * type, const char * name, T *& resource)
 {
-	return createVfxNodeResourceImpl(node, type, name, (void*&)resource);
+	VfxResourceBase * resourceBase = createVfxNodeResourceImpl(node, type, name);
+	
+	if (resourceBase == nullptr)
+	{
+		return false;
+	}
+	else
+	{
+		resource = static_cast<T*>(resourceBase);
+		
+		return true;
+	}
 }
 
-bool freeVfxNodeResourceImpl(void * resource);
+bool freeVfxNodeResourceImpl(VfxResourceBase * resource);
 
 template <typename T> void freeVfxNodeResource(T *& resource)
 {

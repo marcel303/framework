@@ -704,7 +704,7 @@ struct VfxResourcePath
 
 struct VfxResourceElem
 {
-	void * resource;
+	VfxResourceBase * resource;
 	int refCount;
 	
 	VfxResourceElem()
@@ -715,10 +715,12 @@ struct VfxResourceElem
 };
 
 static std::map<VfxResourcePath, VfxResourceElem> resourcesByPath;
-static std::map<void*, VfxResourcePath> pathsByResource;
+static std::map<VfxResourceBase*, VfxResourcePath> pathsByResource;
 
-bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const char * name, void *& resource)
+VfxResourceBase * createVfxNodeResourceImpl(const GraphNode & node, const char * type, const char * name)
 {
+	VfxResourceBase * resource = nullptr;
+	
 	VfxResourcePath path;
 	path.nodeId = node.id;
 	path.type = type;
@@ -735,8 +737,6 @@ bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const 
 		e.refCount++;
 		
 		resource = e.resource;
-		
-		return true;
 	}
 	else
 	{
@@ -752,40 +752,17 @@ bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const 
 		
 		//
 		
-		resource = nullptr;
-		
 		if (strcmp(type, "timeline") == 0)
 		{
-			auto timeline = new VfxTimeline();
-			
-			if (hasXml)
-			{
-				timeline->load(d.RootElement());
-			}
-			
-			resource = timeline;
+			resource = new VfxTimeline();
 		}
 		else if (strcmp(type, "osc.path") == 0)
 		{
-			auto path = new VfxOscPath();
-			
-			if (hasXml)
-			{
-				path->load(d.RootElement());
-			}
-			
-			resource = path;
+			resource = new VfxOscPath();
 		}
 		else if (strcmp(type, "osc.pathList") == 0)
 		{
-			auto pathList = new VfxOscPathList();
-			
-			if (hasXml)
-			{
-				pathList->load(d.RootElement());
-			}
-			
-			resource = pathList;
+			resource = new VfxOscPathList();
 		}
 		
 		//
@@ -794,12 +771,15 @@ bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const 
 		if (resource == nullptr)
 		{
 			logError("failed to create resource %s", path.toString().c_str());
-			
-			return false;
 		}
 		else
 		{
 			logDebug("created resource %s", path.toString().c_str());
+			
+			if (hasXml)
+			{
+				resource->load(d.RootElement());
+			}
 			
 			VfxResourceElem e;
 			e.resource = resource;
@@ -807,13 +787,13 @@ bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const 
 			
 			resourcesByPath[path] = e;
 			pathsByResource[resource] = path;
-			
-			return true;
 		}
 	}
+	
+	return resource;
 }
 
-bool freeVfxNodeResourceImpl(void * resource)
+bool freeVfxNodeResourceImpl(VfxResourceBase * resource)
 {
 	bool result = false;
 	

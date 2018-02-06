@@ -36,7 +36,17 @@ namespace tinyxml2
 	class XMLPrinter;
 }
 
-struct VfxTimeline
+struct VfxResourceBase
+{
+	virtual ~VfxResourceBase()
+	{
+	}
+	
+	virtual void save(tinyxml2::XMLPrinter * printer) = 0;
+	virtual void load(tinyxml2::XMLElement * elem) = 0;
+};
+
+struct VfxTimeline : VfxResourceBase
 {
 	static const int kMaxKeys = 1024;
 
@@ -65,8 +75,8 @@ struct VfxTimeline
 	void clearKeys();
 	Key * sortKeys(Key * keyToReturn = 0);
 
-	void save(tinyxml2::XMLPrinter * printer);
-	void load(tinyxml2::XMLElement * elem);
+	virtual void save(tinyxml2::XMLPrinter * printer) override;
+	virtual void load(tinyxml2::XMLElement * elem) override;
 };
 
 struct VfxSwizzle
@@ -87,15 +97,15 @@ struct VfxSwizzle
 	bool parse(const char * text);
 };
 
-struct VfxOscPath
+struct VfxOscPath : VfxResourceBase
 {
 	std::string path;
 	
-	void save(tinyxml2::XMLPrinter * printer);
-	void load(tinyxml2::XMLElement * elem);
+	virtual void save(tinyxml2::XMLPrinter * printer) override;
+	virtual void load(tinyxml2::XMLElement * elem) override;
 };
 
-struct VfxOscPathList
+struct VfxOscPathList : VfxResourceBase
 {
 	struct Elem
 	{
@@ -105,6 +115,6 @@ struct VfxOscPathList
 	
 	std::vector<Elem> elems;
 	
-	void save(tinyxml2::XMLPrinter * printer);
-	void load(tinyxml2::XMLElement * elem);
+	virtual void save(tinyxml2::XMLPrinter * printer) override;
+	virtual void load(tinyxml2::XMLElement * elem) override;
 };
