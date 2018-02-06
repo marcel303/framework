@@ -188,7 +188,7 @@ struct AudioPlug
 	}
 	
 	void connectTo(AudioPlug & dst);
-	void connectTo(void * dstMem, const AudioPlugType dstType, const bool isImmediate);
+	void connectToImmediate(void * dstMem, const AudioPlugType dstType);
 	
 	void disconnect()
 	{

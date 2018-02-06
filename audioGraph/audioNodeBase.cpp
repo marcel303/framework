@@ -472,7 +472,7 @@ void AudioPlug::connectTo(AudioPlug & dst)
 	}
 }
 
-void AudioPlug::connectTo(void * dstMem, const AudioPlugType dstType, const bool isImmediate)
+void AudioPlug::connectToImmediate(void * dstMem, const AudioPlugType dstType)
 {
 	if (dstType != type)
 	{
@@ -483,16 +483,7 @@ void AudioPlug::connectTo(void * dstMem, const AudioPlugType dstType, const bool
 	#if MULTIPLE_AUDIO_INPUT
 		if (dstType == kAudioPlugType_FloatVec)
 		{
-			if (isImmediate)
-			{
-				floatArray.immediateValue = (AudioFloat*)dstMem;
-			}
-			else
-			{
-				AudioFloatArray::Elem elem;
-				elem.audioFloat = (AudioFloat*)dstMem;
-				floatArray.elems.push_back(elem);
-			}
+			floatArray.immediateValue = (AudioFloat*)dstMem;
 		}
 		else
 	#endif
