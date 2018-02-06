@@ -25,8 +25,9 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "framework.h" // log***
+#include "Debugging.h"
 #include "graph.h"
+#include "Log.h"
 #include "StringEx.h"
 #include "tinyxml2.h"
 #include "vfxResource.h"
@@ -95,7 +96,7 @@ VfxResourceBase * createVfxNodeResourceImpl(const GraphNode & node, const char *
 	
 	if (i != resourcesByPath.end())
 	{
-		logDebug("incremented refCount for resource %s", path.toString().c_str());
+		LOG_DBG("incremented refCount for resource %s", path.toString().c_str());
 		
 		auto & e = i->second;
 		
@@ -135,11 +136,11 @@ VfxResourceBase * createVfxNodeResourceImpl(const GraphNode & node, const char *
 		Assert(resource != nullptr);
 		if (resource == nullptr)
 		{
-			logError("failed to create resource %s", path.toString().c_str());
+			LOG_ERR("failed to create resource %s", path.toString().c_str());
 		}
 		else
 		{
-			logDebug("created resource %s", path.toString().c_str());
+			LOG_DBG("created resource %s", path.toString().c_str());
 			
 			if (hasXml)
 			{
@@ -167,7 +168,7 @@ bool freeVfxNodeResourceImpl(VfxResourceBase * resource)
 	Assert(i != pathsByResource.end());
 	if (i == pathsByResource.end())
 	{
-		logError("failed to find resource %p", resource);
+		LOG_ERR("failed to find resource %p", resource);
 	}
 	else
 	{
@@ -178,7 +179,7 @@ bool freeVfxNodeResourceImpl(VfxResourceBase * resource)
 		Assert(j != resourcesByPath.end());
 		if (j == resourcesByPath.end())
 		{
-			logError("failed to find resource elem for resource %s", path.toString().c_str());
+			LOG_ERR("failed to find resource elem for resource %s", path.toString().c_str());
 		}
 		else
 		{
@@ -188,7 +189,7 @@ bool freeVfxNodeResourceImpl(VfxResourceBase * resource)
 			
 			if (e.refCount == 0)
 			{
-				logDebug("refCount reached zero for resource %s. resource will be freed", path.toString().c_str());
+				LOG_DBG("refCount reached zero for resource %s. resource will be freed", path.toString().c_str());
 				
 				resourcesByPath.erase(j);
 				pathsByResource.erase(i);
@@ -197,7 +198,7 @@ bool freeVfxNodeResourceImpl(VfxResourceBase * resource)
 			}
 			else
 			{
-				logDebug("decremented refCount for resource %s", path.toString().c_str());
+				LOG_DBG("decremented refCount for resource %s", path.toString().c_str());
 			}
 		}
 	}

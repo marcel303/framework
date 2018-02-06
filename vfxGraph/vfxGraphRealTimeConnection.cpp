@@ -604,7 +604,7 @@ bool RealTimeConnection::setPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, const
 			int dataSize;
 			VfxChannelData::parse(value.c_str(), data, dataSize);
 			
-			delete channel.data;
+			delete [] channel.data;
 			channel.data = nullptr;
 			
 			channel.setData(data, false, dataSize);
