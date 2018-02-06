@@ -28,9 +28,9 @@
 #include "Debugging.h"
 #include "editor_oscPath.h"
 #include "tinyxml2.h"
-#include "vfxGraph.h"
 #include "vfxNodes/oscEndpointMgr.h"
 #include "vfxNodes/oscReceiver.h"
+#include "vfxResource.h"
 #include "vfxTypes.h"
 #include "../libparticle/ui.h" // todo : remove
 

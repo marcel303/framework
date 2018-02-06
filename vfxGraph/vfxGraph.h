@@ -177,36 +177,3 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
 
 void connectVfxSockets(VfxNodeBase * srcNode, const int srcNodeSocketIndex, VfxPlug * srcSocket, VfxNodeBase * dstNode, const int dstNodeSocketIndex, VfxPlug * dstSocket, const std::map<std::string, std::string> & linkParams, const bool addPredep);
-
-VfxResourceBase * createVfxNodeResourceImpl(const GraphNode & node, const char * type, const char * name);
-
-template <typename T> bool createVfxNodeResource(const GraphNode & node, const char * type, const char * name, T *& resource)
-{
-	VfxResourceBase * resourceBase = createVfxNodeResourceImpl(node, type, name);
-	
-	if (resourceBase == nullptr)
-	{
-		return false;
-	}
-	else
-	{
-		resource = static_cast<T*>(resourceBase);
-		
-		return true;
-	}
-}
-
-bool freeVfxNodeResourceImpl(VfxResourceBase * resource);
-
-template <typename T> void freeVfxNodeResource(T *& resource)
-{
-	if (resource != nullptr)
-	{
-		if (freeVfxNodeResourceImpl(resource))
-		{
-			delete resource;
-		}
-		
-		resource = nullptr;
-	}
-}
