@@ -89,7 +89,7 @@ Wavefield1D::Wavefield1D()
 
 int Wavefield1D::roundNumElems(const int numElems)
 {
-	return std::min(numElems, kMaxElems);
+	return std::max(0, std::min(numElems, kMaxElems));
 }
 
 void Wavefield1D::init(const int _numElems)
@@ -384,7 +384,7 @@ Wavefield1Df::Wavefield1Df()
 
 int Wavefield1Df::roundNumElems(const int numElems)
 {
-	return std::min(numElems, kMaxElems);
+	return std::max(0, std::min(numElems, kMaxElems));
 }
 
 void Wavefield1Df::init(const int _numElems)
@@ -720,7 +720,7 @@ Wavefield2D::Wavefield2D()
 
 int Wavefield2D::roundNumElems(const int numElems)
 {
-	return std::min(numElems, kMaxElems);
+	return std::max(0, std::min(numElems, kMaxElems));
 }
 
 void Wavefield2D::init(const int _numElems)
@@ -1071,7 +1071,7 @@ Wavefield2Df::Wavefield2Df()
 
 int Wavefield2Df::roundNumElems(const int numElems)
 {
-	return std::min(numElems, kMaxElems);
+	return std::max(0, std::min(numElems, kMaxElems));
 }
 
 void Wavefield2Df::init(const int _numElems)
