@@ -549,13 +549,12 @@ struct AudioNodeTypeRegistration
 	
 	AudioNodeBase* (*create)();
 	
+	GraphEdit_ResourceEditorBase * (*createResourceEditor)();
+	
 	std::string typeName;
 	std::string displayName;
 	
-	std::string author;
-	std::string copyright;
-	std::string description;
-	std::string helpText;
+	std::string resourceTypeName;
 	
 	std::vector<Input> inputs;
 	std::vector<Output> outputs;

@@ -816,6 +816,8 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 			typeDefinition.displayName = registration->displayName;
 		}
 		
+		typeDefinition.resourceTypeName = registration->resourceTypeName;
+		
 		for (int i = 0; i < (int)registration->inputs.size(); ++i)
 		{
 			auto & src = registration->inputs[i];
@@ -842,6 +844,8 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 			
 			typeDefinition.outputSockets.push_back(outputSocket);
 		}
+		
+		typeDefinition.resourceEditor.create = registration->createResourceEditor;
 		
 		typeDefinition.createUi();
 		
