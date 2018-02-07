@@ -189,6 +189,9 @@ void tickForces(const double * __restrict p, const double c, double * __restrict
 
 void Wavefield1D::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
 {
+	if (numElems == 0)
+		return;
+	
 	SCOPED_FLUSH_DENORMALS;
 	
 	const double vRetain = std::pow(vRetainPerSecond, dt);
