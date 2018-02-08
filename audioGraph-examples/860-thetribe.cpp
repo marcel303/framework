@@ -3,6 +3,7 @@
 #include "objects/binauralizer.h"
 #include "objects/binaural_cipic.h"
 #include "objects/paobject.h"
+#include "Quat.h"
 #include "soundmix.h"
 #include "vfxGraph.h"
 #include "vfxNodes/vfxNodeDisplay.h"
@@ -24,6 +25,8 @@ const int GFX_SY = 768;
 #define DRAW_GRIDS 1
 #define DO_SPOKENWORD 0
 #define DO_CONTROLWINDOW 0
+
+static const float timeSeed = 1234.f;
 
 static const char * audioFilenames[NUM_VIDEOCLIPS] =
 {
@@ -335,15 +338,42 @@ static const Vec3 s_cubeVertices[8] =
 	Vec3(-1, +1, +1)
 };
 
+float videoClipBlend[3] =
+{
+	1.f, 0.f, 1.f
+};
+
 struct Videoclip
 {
+	enum EvalMode
+	{
+		EvalMode_Floating,
+		EvalMode_Line,
+		EvalMode_Circle
+	};
+	
+	Mat4x4 transform;
 	AudioSourceVorbis soundSource;
 	SoundVolume soundVolume;
 	MediaPlayer mp;
 	float gain;
 	
-	void open(const char * audio, const char * video, const float _gain)
+	int index;
+	
+	Videoclip()
+		: transform()
+		, soundSource()
+		, soundVolume()
+		, mp()
+		, gain(0.f)
+		, index(-1)
 	{
+	}
+	
+	void init(const int _index, const char * audio, const char * video, const float _gain)
+	{
+		index = _index;
+		
 		soundSource.open(audio, true);
 		
 		mp.openAsync(video, MP::kOutputMode_RGBA);
@@ -376,8 +406,105 @@ struct Videoclip
 			pos_sound[1] >= -1.f && pos_sound[1] <= +1.f;
 	}
 	
+	void evalVideoClipParams(const EvalMode mode, Vec3 & scale, Quat & rotation, Vec3 & position, float & opacity) const
+	{
+		const float t = ((index + .5f) / float(MAX_VOLUMES) - .5f) * 2.f;
+		
+		switch (mode)
+		{
+		case EvalMode_Floating:
+			{
+				const float time = timeSeed + framework.time;
+		
+				const float moveSpeed = (1.f + index / float(NUM_VIDEOCLIPS)) * .2f;
+				const float moveAmount = 4.f / (index / float(NUM_VIDEOCLIPS) + 1);
+				const float x = std::sin(moveSpeed * time / 11.234f) * moveAmount;
+				const float y = std::sin(moveSpeed * time / 13.456f) * moveAmount;
+				const float z = std::sin(moveSpeed * time / 15.678f) * moveAmount;
+			
+				const float scaleSpeed = 1.f + index / 5.f;
+				const float scaleY = lerp(.5f, 1.f, (std::cos(scaleSpeed * time / 4.567f) + 1.f) / 2.f);
+				const float scaleX = scaleY * 4.f/3.f;
+				//const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
+				const float scaleZ = lerp(.05f, .1f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
+			
+				const float rotateSpeed = 1.f + index / 5.f;
+				
+				const Mat4x4 transform = Mat4x4(true).RotateX(rotateSpeed * time / 3.456f).RotateY(rotateSpeed * time / 4.567f);
+				
+				scale = Vec3(scaleX, scaleY, scaleZ);
+				rotation.fromMatrix(transform);
+				position = Vec3(x, y, z);
+				opacity = 1.f;
+			}
+			break;
+			
+		case EvalMode_Line:
+			{
+				scale = Vec3(1, 1, 1);
+				rotation.makeIdentity();
+				const float x = t * 4.f;
+				const float y = 0.f;
+				position = Vec3(x, y, 0);
+				opacity = 1.f;
+			}
+			break;
+			
+		case EvalMode_Circle:
+			{
+				scale = Vec3(1, 1, 1);
+				rotation.makeIdentity();
+				const float x = std::cos(t * M_PI * 2.f) * 4.f;
+				const float y = std::sin(t * M_PI * 2.f) * 4.f;
+				position = Vec3(x, y, 0);
+				opacity = 1.f;
+			}
+			break;
+		}
+	}
+	
 	void tick(const float dt)
 	{
+		Vec3 totalScale(0.f, 0.f, 0.f);
+		Quat totalRotation(0.f, 0.f, 0.f, 0.f);
+		Vec3 totalTranslation(0.f, 0.f, 0.f);
+		float totalOpacity = 0.f;
+		float totalBlend = 0.f;
+		
+		for (int i = 0; i < 3; ++i) // todo : count
+		{
+			const EvalMode evalMode = (EvalMode)i;
+			const float blend = videoClipBlend[i];
+			
+			Vec3 scale;
+			Quat rotation;
+			Vec3 position;
+			float opacity;
+			evalVideoClipParams(evalMode, scale, rotation, position, opacity);
+			
+			totalScale += scale * blend;
+			totalRotation += rotation * blend;
+			totalTranslation += position * blend;
+			totalOpacity += opacity * blend;
+			
+			totalBlend += blend;
+		}
+		
+		if (totalBlend != 0.f)
+		{
+			totalScale /= totalBlend;
+			totalRotation /= totalBlend;
+			totalTranslation /= totalBlend;
+			totalOpacity /= totalBlend;
+		}
+		
+		transform = Mat4x4(true).
+			Translate(totalTranslation).
+			Rotate(totalRotation).
+			Scale(totalScale);
+	
+		// update media player
+		
 		const double newPresentTime = soundSource.samplePosition / float(soundSource.sampleRate);
 		
 		if (newPresentTime < mp.presentTime)
@@ -534,13 +661,13 @@ struct SpokenWord
 {
 	std::vector<std::string> lines;
 	
-	float scrollY;
+	float scrollT;
 	
 	AudioSourceVorbis soundSource;
 	
 	SpokenWord()
 		: lines()
-		, scrollY(0.f)
+		, scrollT(0.f)
 		, soundSource()
 	{
 	}
@@ -565,11 +692,12 @@ struct SpokenWord
 	
 	void tick(const float dt)
 	{
-		scrollY -= dt * 16.f;
+		scrollT -= dt / 530.f;
 	}
 	
 	void draw()
 	{
+		const int kLineSpacing = 7;
 		const int fontSize = 18;
 		
 		float sx[1024];
@@ -581,17 +709,23 @@ struct SpokenWord
 			measureTextArea(fontSize, GFX_SX*2/3, sx[i], sy[i], "%s", line.c_str());
 		}
 		
+		int totalSy = 0;
+		for (size_t i = 0; i < lines.size(); ++i)
+			totalSy += sy[i] + kLineSpacing;
+		
+		const float scrollY = scrollT * totalSy;
+		
 		gxPushMatrix();
 		{
 			gxTranslatef(0, scrollY, 0);
 			
 			const int x1 = 60;
-			const int y1 = 600;
+			const int y1 = 200;
 			
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
 				int x = 60;
-				int y = 600;
+				int y = y1;
 				
 				setColor(0, 0, 0, 100);
 				for (size_t i = 0; i < lines.size(); ++i)
@@ -601,7 +735,7 @@ struct SpokenWord
 					if (!line.empty())
 						hqFillRoundedRect(x - 7, y - 3, x + sx[i] + 7, y + sy[i] + 3, 4.f);
 					
-					y += sy[i] + 7;
+					y += sy[i] + kLineSpacing;
 				}
 			}
 			hqEnd();
@@ -622,7 +756,7 @@ struct SpokenWord
 					setLumif(l);
 					drawTextArea(x, y, GFX_SX*2/3, fontSize, "%s", line.c_str());
 					
-					y += sy[i] + 7;
+					y += sy[i] + kLineSpacing;
 				}
 			}
 			endTextBatch();
@@ -648,7 +782,7 @@ struct World
 			const char * audioFilename = audioFilenames[index];
 			const char * videoFilename = videoFilenames[index];
 			
-			videoclips[i].open(audioFilename, videoFilename, audioGains[index]);
+			videoclips[i].init(i, audioFilename, videoFilename, audioGains[index]);
 		}
 		
 		for (int i = 0; i < NUM_VFXCLIPS; ++i)
@@ -868,6 +1002,7 @@ int main(int argc, char * argv[])
 #if DO_SPOKENWORD
 	SpokenWord spokenWord;
 	
+	// 8:49 ~= 530 seconds
 	spokenWord.open("wiekspreekt.txt", "wiekspreekt.ogg");
 #endif
 
@@ -897,8 +1032,6 @@ int main(int argc, char * argv[])
 	PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, paHandler);
 	
-	float timeSeed = 1234.f;
-	
 #if DO_CONTROLWINDOW
 	ControlWindow controlWindow(world);
 #endif
@@ -908,14 +1041,8 @@ int main(int argc, char * argv[])
 		framework.process();
 
 		const float dt = framework.timeStep;
-		const float time = timeSeed + framework.time;
-		//const float time = timeSeed + mouse.x;
-		//const float time = timeSeed;
 		
 		// process input
-		
-		if (keyboard.wentDown(SDLK_t))
-			timeSeed = random(0.f, 1000.f);
 		
 		if (keyboard.wentDown(SDLK_n))
 			enableNearest = !enableNearest;
@@ -930,6 +1057,12 @@ int main(int argc, char * argv[])
 		
 		camera.tick(dt, true);
 		
+	#if 0
+		videoClipBlend[0] = (1.f + std::cos(framework.time / 3.4f)) / 2.f;
+		videoClipBlend[1] = (1.f + std::cos(framework.time / 4.56f)) / 2.f;
+		videoClipBlend[2] = (1.f + std::cos(framework.time / 5.67f)) / 2.f;
+	#endif
+	
 		// update video clips
 		
 		world.tick(dt);
@@ -940,20 +1073,7 @@ int main(int argc, char * argv[])
 		{
 			auto & soundVolume = world.videoclips[i].soundVolume;
 			
-			const float moveSpeed = (1.f + i / float(MAX_VOLUMES)) * .2f;
-			const float moveAmount = 4.f / (i / float(MAX_VOLUMES) + 1);
-			const float x = std::sin(moveSpeed * time / 11.234f) * moveAmount;
-			const float y = std::sin(moveSpeed * time / 13.456f) * moveAmount;
-			const float z = std::sin(moveSpeed * time / 15.678f) * moveAmount;
-			
-			const float scaleSpeed = 1.f + i / 5.f;
-			const float scaleY = lerp(.5f, 1.f, (std::cos(scaleSpeed * time / 4.567f) + 1.f) / 2.f);
-			const float scaleX = scaleY * 4.f/3.f;
-			//const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
-			const float scaleZ = lerp(.05f, .1f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
-			
-			const float rotateSpeed = 1.f + i / 5.f;
-			soundVolume.transform = Mat4x4(true).Translate(x, y, z).RotateX(rotateSpeed * time / 3.456f).RotateY(rotateSpeed * time / 4.567f).Scale(scaleX, scaleY, scaleZ);
+			soundVolume.transform = world.videoclips[i].transform;
 		}
 		
 		// gather HRTF sampling points
