@@ -26,14 +26,13 @@
 */
 
 #include "imu9250.h"
-#include <cmath>
+#include "Log.h"
 #include <string.h>
 
 //
 
-#define LOG_DBG(...) do { printf(__VA_ARGS__); printf("\n"); } while (false)
-
 #define LOG_READ(...) do { } while (false)
+//#define LOG_READ(...) LOG_DBG(__VA_ARGS__)
 
 //
 
@@ -244,7 +243,7 @@ IMU9250::ReturnType IMU9250::ReturnMessageReader::decodeMessage()
 				(readBuffer[8] << 16) |
 				(readBuffer[7] << 8) |
 				readBuffer[6];
-			LOG_READ("pressure: %d (Pa), height: %d (cm)\n", pressure, height);
+			LOG_READ("pressure: %d (Pa), height: %d (cm)", pressure, height);
 			break;
 			
 		case kReturnType_LongitudeAndLatitude:

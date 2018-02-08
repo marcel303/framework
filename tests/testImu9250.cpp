@@ -65,6 +65,10 @@ struct MyIMU9250 : IMU9250
 	
 	IMU9250::ReturnMessageReader reader;
 	
+	short magnetMin[3] = { };
+	short magnetMax[3] = { };
+	bool hasMagnetMinMax = false;
+	
 	int receiveCount;
 	
 	MyIMU9250()
@@ -143,6 +147,28 @@ struct MyIMU9250 : IMU9250
 			{
 				receiveCount++;
 			}
+			
+			if (returnType == IMU9250::kReturnType_Magnet)
+			{
+				if (hasMagnetMinMax == false)
+				{
+					hasMagnetMinMax = true;
+					
+					for (int i = 0; i < 3; ++i)
+					{
+						magnetMin[i] = reader.magnet[i];
+						magnetMax[i] = reader.magnet[i];
+					}
+				}
+				else
+				{
+					for (int i = 0; i < 3; ++i)
+					{
+						magnetMin[i] = std::min(magnetMin[i], reader.magnet[i]);
+						magnetMax[i] = std::max(magnetMax[i], reader.magnet[i]);
+					}
+				}
+			}
 		}
 		SDL_UnlockMutex(mutex);
 	}
@@ -195,9 +221,9 @@ static void mtu9250_init(MyIMU9250 & imu)
 			imu.kReturnContent_Acceleration |
 			imu.kReturnContent_AngularVelocity |
 			imu.kReturnContent_Magnet |
-			imu.kReturnContent_Quaternion |
 			0);
 	
+	#if 1
 		// reset the calibration offsets
 	
 		for (int i = 0; i < 4; ++i)
@@ -206,6 +232,7 @@ static void mtu9250_init(MyIMU9250 & imu)
 			imu.setGyroOffsets(0, 0, 0);
 			imu.setMagnetOffsets(0, 0, 0);
 		}
+	#endif
 	}
 	SDL_UnlockMutex(imu.mutex);
 	
@@ -361,6 +388,11 @@ void testImu9250()
 			
 			SDL_LockMutex(imu.mutex);
 			{
+				if (keyboard.wentDown(SDLK_r))
+				{
+					imu.hasMagnetMinMax = false;
+				}
+				
 				for (int i = 0; i < 3; ++i)
 				{
 					gyro[i] = imu.reader.angularVelocityf[i] * M_PI / 180.f;
@@ -393,12 +425,12 @@ void testImu9250()
 		#else
 			SDL_LockMutex(imu.mutex);
 			{
-				const float magnetBias[3] = { -35.08f, -8.69f, -47.37f };
+				const float magnetBias[3] = { -38.f, -116.f, -238.f };
 				//const float magnetBias[3] = { };
 				
 				for (int i = 0; i < 3; ++i)
 				{
-					magnet[i] = imu.reader.magnetf[i] + magnetBias[i];
+					magnet[i] = imu.reader.magnet[i] + magnetBias[i];
 				}
 			}
 			SDL_UnlockMutex(imu.mutex);
@@ -536,11 +568,30 @@ void testImu9250()
 			setFont("calibri.ttf");
 			setColor(colorWhite);
 			drawText(5, 5, 12, +1, +1, "TTY port: %d", tty.port);
-			drawText(5, 20, 12, +1, +1, "magnet: %.2f, %.2f, %.2f", magnet[0], magnet[1], magnet[2]);
+			drawText(5, 20, 12, +1, +1, "magnet: (%d, %d, %d) -> (%.2f, %.2f, %.2f)",
+				imu.reader.magnet[0],
+				imu.reader.magnet[1],
+				imu.reader.magnet[2],
+				magnet[0], magnet[1], magnet[2]);
+			drawText(5, 35, 12, +1, +1, "magnet min/max: (%d, %d, %d) / (%d, %d, %d)",
+				imu.magnetMin[0],
+				imu.magnetMin[1],
+				imu.magnetMin[2],
+				imu.magnetMax[0],
+				imu.magnetMax[1],
+				imu.magnetMax[2]);
+			drawText(5, 50, 12, +1, +1, "magnet avg: (%d, %d, %d)",
+				(imu.magnetMin[0] + imu.magnetMax[0]) / 2,
+				(imu.magnetMin[1] + imu.magnetMax[1]) / 2,
+				(imu.magnetMin[2] + imu.magnetMax[2]) / 2);
 		}
 		framework.endDraw();
 	}
 	while (!keyboard.wentDown(SDLK_ESCAPE));
+	
+	imu.shut();
+	
+	tty.shut();
 	
 	//exit(0);
 }
@@ -1031,6 +1082,8 @@ void testImu9250_v1()
 			}
 		}
 	#endif
+	
+		imu.shut();
 		
 		close(port);
 	}
