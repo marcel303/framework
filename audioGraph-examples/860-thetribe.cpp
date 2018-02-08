@@ -408,7 +408,7 @@ struct Videoclip
 	
 	void evalVideoClipParams(const EvalMode mode, Vec3 & scale, Quat & rotation, Vec3 & position, float & opacity) const
 	{
-		const float t = ((index + .5f) / float(MAX_VOLUMES) - .5f) * 2.f;
+		const float t = (index + .5f) / float(MAX_VOLUMES) - .5f;
 		
 		switch (mode)
 		{
@@ -519,20 +519,6 @@ struct Videoclip
 		mp.presentTime = newPresentTime;
 		
 		mp.tick(mp.context, true);
-	#if 0
-		mp.presentTime += dt;
-		
-		mp.tick(mp.context, true);
-		
-		if (mp.presentedLastFrame(mp.context))
-		{
-			auto openParams = mp.context->openParams;
-			
-			mp.close(false);
-			
-			mp.openAsync(openParams);
-		}
-	#endif
 	}
 	
 	void drawSolid(const bool hover)
@@ -979,7 +965,8 @@ int main(int argc, char * argv[])
 	Camera3d camera;
 	camera.gamepadIndex = 0;
 	
-	const float kMoveSpeed = .2f;
+	//const float kMoveSpeed = .2f;
+	const float kMoveSpeed = 1.f;
 	camera.maxForwardSpeed *= kMoveSpeed;
 	camera.maxUpSpeed *= kMoveSpeed;
 	camera.maxStrafeSpeed *= kMoveSpeed;
@@ -1055,12 +1042,18 @@ int main(int argc, char * argv[])
 		
 		// update the camera
 		
-		camera.tick(dt, true);
+		const bool doCamera = !(keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT));
+		
+		camera.tick(dt, doCamera);
 		
 	#if 0
 		videoClipBlend[0] = (1.f + std::cos(framework.time / 3.4f)) / 2.f;
 		videoClipBlend[1] = (1.f + std::cos(framework.time / 4.56f)) / 2.f;
 		videoClipBlend[2] = (1.f + std::cos(framework.time / 5.67f)) / 2.f;
+	#elif 1
+		videoClipBlend[0] = mouse.x / float(GFX_SX);
+		videoClipBlend[1] = mouse.y / float(GFX_SY);
+		videoClipBlend[2] = 1.f - videoClipBlend[0] - videoClipBlend[1];
 	#endif
 	
 		// update video clips
