@@ -6253,7 +6253,7 @@ static void prepareTextArea(const float size, const char * text, const float max
 	while (textptr != textend && data.numLines < TextAreaData::kMaxLines)
 	{
 		const char * nextptr = eatWord(textptr);
-		while (*nextptr)
+		while (*nextptr && *nextptr != '\n')
 		{
 			const char * tempptr = eatWord(nextptr);
 			
