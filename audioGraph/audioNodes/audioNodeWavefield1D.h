@@ -59,6 +59,7 @@ struct AudioNodeWavefield1D : AudioNodeBase
 	};
 	
 	AudioResource_Wavefield1D * wavefieldData;
+	int currentDataVersion;
 	
 	Wavefield1D * wavefield;
 	

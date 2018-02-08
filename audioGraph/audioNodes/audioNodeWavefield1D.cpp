@@ -37,9 +37,11 @@ struct AudioResource_Wavefield1D : AudioResourceBase
 {
 	double f[Wavefield1D::kMaxElems];
 	int numElems;
+	int version;
 	
 	AudioResource_Wavefield1D()
 		: numElems(0)
+		, version(0)
 	{
 	}
 	
@@ -56,6 +58,8 @@ struct AudioResource_Wavefield1D : AudioResourceBase
 		
 		for (int i = 0; i < numElems; ++i)
 			f[i] = 1.f;
+		
+		version = 1;
 	}
 };
 
@@ -137,7 +141,8 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 		
 		if (g_doActions)
 		{
-			memcpy(wavefield.f, resource->f, sizeof(wavefield.f));
+			for (int i = 0; i < resource->numElems; ++i)
+				wavefield.f[i] = resource->f[i];
 			wavefield.numElems = resource->numElems;
 			
 			for (int i = 0; i < 100; ++i)
@@ -156,14 +161,17 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 			
 			hqBegin(HQ_FILLED_CIRCLES, true);
 			{
+				const double * p = wavefield.p;
+				const double * f = resource->f;
+				
 				for (int i = 0; i < resource->numElems; ++i)
 				{
-					const float p = wavefield.p[i];
-					//const float p = 0.f;
-					const float a = resource->f[i] / 2.f;
+					const float h = p[i];
+					//const float h = 0.f;
+					const float a = f[i] / 2.f;
 					
 					setLumif(a);
-					hqFillCircle(i, p, 1.f);
+					hqFillCircle(i, h, 1.f);
 				}
 			}
 			hqEnd();
@@ -171,13 +179,16 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 		#if 1
 			hqBegin(HQ_LINES, true);
 			{
+				const double * p = wavefield.p;
+				const double * f = resource->f;
+				
 				for (int i = 0; i < resource->numElems; ++i)
 				{
-					const float p = wavefield.p[i];
-					const float a = resource->f[i] / 2.f;
+					const float h = p[i];
+					const float a = f[i] / 2.f;
 					
 					setLumif(a);
-					hqLine(i, 0.f, 3.f, i, p, 1.f);
+					hqLine(i, 0.f, 3.f, i, h, 1.f);
 				}
 			}
 			hqEnd();
@@ -223,6 +234,8 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 			if (doButton("randomize", x, sx, false))
 			{
 				randomize();
+				
+				resource->version++;
 			}
 			x += sx;
 			
@@ -252,6 +265,10 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 						resource->f[i] = 1.f;
 					
 					resource->numElems = numElems;
+					
+					resource->version++;
+					
+					//
 					
 					wavefield.init(numElems);
 				}
@@ -350,6 +367,7 @@ AUDIO_NODE_TYPE(wavefield_1d, AudioNodeWavefield1D)
 AudioNodeWavefield1D::AudioNodeWavefield1D()
 	: AudioNodeBase()
 	, wavefieldData(nullptr)
+	, currentDataVersion(-1)
 	, wavefield(nullptr)
 	, rng()
 	, audioOutput()
@@ -408,20 +426,6 @@ void AudioNodeWavefield1D::randomize()
 void AudioNodeWavefield1D::init(const GraphNode & node)
 {
 	createAudioNodeResource(node, "wavefield.1d", "editorData", wavefieldData);
-
-	if (isPassthrough)
-	{
-		return;
-	}
-	
-	const int size = getInputInt(kInput_Size, 16);
-	
-	if (size != wavefield->numElems)
-	{
-		wavefield->init(size);
-		
-		randomize();
-	}
 }
 
 void AudioNodeWavefield1D::tick(const float _dt)
@@ -436,7 +440,7 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	const AudioFloat * tension = getInputAudioFloat(kInput_Tension, &defaultTension);
 	const bool wrap = getInputBool(kInput_Wrap, false);
 	const AudioFloat * sampleLocation = getInputAudioFloat(kInput_SampleLocation, &AudioFloat::Half);
-	const int size = getInputInt(kInput_Size, 16);
+	//const int size = getInputInt(kInput_Size, 16);
 	
 	//
 
@@ -448,11 +452,14 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	
 	//
 	
-	if (wavefield->roundNumElems(size) != wavefield->numElems)
+	if (wavefieldData->version != currentDataVersion)
 	{
-		wavefield->init(size);
+		wavefield->init(wavefieldData->numElems);
 		
-		randomize();
+		for (int i = 0; i < wavefield->numElems; ++i)
+			wavefield->f[i] = wavefieldData->f[i];
+		
+		currentDataVersion = wavefieldData->version;
 	}
 	
 	//
