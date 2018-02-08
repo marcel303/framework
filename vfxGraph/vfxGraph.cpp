@@ -97,6 +97,14 @@ void VfxGraph::destroy()
 		case ValueToFree::kType_Color:
 			delete (Color*)i.mem;
 			break;
+		case ValueToFree::kType_Channel:
+			{
+				VfxChannel * channel = (VfxChannel*)i.mem;
+				if (channel)
+					delete channel->data;
+				delete channel;
+			}
+			break;
 		default:
 			Assert(false);
 			break;
@@ -186,6 +194,20 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		input.connectToImmediate(value, kVfxPlugType_Color);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Color, value));
+	}
+	else if (input.type == kVfxPlugType_Channel)
+	{
+		VfxChannel * value = new VfxChannel();
+		
+		float * data;
+		int dataSize;
+		VfxChannelData::parse(inputValue.c_str(), data, dataSize);
+		
+		value->setData(data, false, dataSize);
+		
+		input.connectToImmediate(value, kVfxPlugType_Channel);
+		
+		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Channel, value));
 	}
 	else
 	{
@@ -639,201 +661,4 @@ void connectVfxSockets(VfxNodeBase * srcNode, const int srcNodeSocketIndex, VfxP
 		
 		dstNode->triggerTargets.push_back(triggerTarget);
 	}
-}
-
-//
-
-#include "StringEx.h"
-#include "tinyxml2.h"
-#include "vfxTypes.h"
-
-using namespace tinyxml2;
-
-struct VfxResourcePath
-{
-	GraphNodeId nodeId;
-	std::string type;
-	std::string name;
-	
-	VfxResourcePath()
-		: nodeId(kGraphNodeIdInvalid)
-		, type()
-		, name()
-	{
-	}
-	
-	bool operator<(const VfxResourcePath & other) const
-	{
-		if (nodeId != other.nodeId)
-			return nodeId < other.nodeId;
-		if (type != other.type)
-			return type < other.type;
-		if (name != other.name)
-			return name < other.name;
-		
-		return false;
-	}
-	
-	std::string toString() const
-	{
-		return String::FormatC("%s:%s/%d/%s", type.c_str(), "nodes", nodeId, name.c_str());
-	}
-};
-
-struct VfxResourceElem
-{
-	void * resource;
-	int refCount;
-	
-	VfxResourceElem()
-		: resource(nullptr)
-		, refCount(0)
-	{
-	}
-};
-
-static std::map<VfxResourcePath, VfxResourceElem> resourcesByPath;
-static std::map<void*, VfxResourcePath> pathsByResource;
-
-bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const char * name, void *& resource)
-{
-	VfxResourcePath path;
-	path.nodeId = node.id;
-	path.type = type;
-	path.name = name;
-	
-	auto i = resourcesByPath.find(path);
-	
-	if (i != resourcesByPath.end())
-	{
-		logDebug("incremented refCount for resource %s", path.toString().c_str());
-		
-		auto & e = i->second;
-		
-		e.refCount++;
-		
-		resource = e.resource;
-		
-		return true;
-	}
-	else
-	{
-		const char * resourceData = node.getResource(type, name, nullptr);
-		
-		XMLDocument d;
-		bool hasXml = false;
-		
-		if (resourceData != nullptr)
-		{
-			hasXml = d.Parse(resourceData) == XML_SUCCESS;
-		}
-		
-		//
-		
-		resource = nullptr;
-		
-		if (strcmp(type, "timeline") == 0)
-		{
-			auto timeline = new VfxTimeline();
-			
-			if (hasXml)
-			{
-				timeline->load(d.RootElement());
-			}
-			
-			resource = timeline;
-		}
-		else if (strcmp(type, "osc.path") == 0)
-		{
-			auto path = new VfxOscPath();
-			
-			if (hasXml)
-			{
-				path->load(d.RootElement());
-			}
-			
-			resource = path;
-		}
-		else if (strcmp(type, "osc.pathList") == 0)
-		{
-			auto pathList = new VfxOscPathList();
-			
-			if (hasXml)
-			{
-				pathList->load(d.RootElement());
-			}
-			
-			resource = pathList;
-		}
-		
-		//
-		
-		Assert(resource != nullptr);
-		if (resource == nullptr)
-		{
-			logError("failed to create resource %s", path.toString().c_str());
-			
-			return false;
-		}
-		else
-		{
-			logDebug("created resource %s", path.toString().c_str());
-			
-			VfxResourceElem e;
-			e.resource = resource;
-			e.refCount = 1;
-			
-			resourcesByPath[path] = e;
-			pathsByResource[resource] = path;
-			
-			return true;
-		}
-	}
-}
-
-bool freeVfxNodeResourceImpl(void * resource)
-{
-	bool result = false;
-	
-	auto i = pathsByResource.find(resource);
-	
-	Assert(i != pathsByResource.end());
-	if (i == pathsByResource.end())
-	{
-		logError("failed to find resource %p", resource);
-	}
-	else
-	{
-		auto & path = i->second;
-		
-		auto j = resourcesByPath.find(path);
-		
-		Assert(j != resourcesByPath.end());
-		if (j == resourcesByPath.end())
-		{
-			logError("failed to find resource elem for resource %s", path.toString().c_str());
-		}
-		else
-		{
-			auto & e = j->second;
-			
-			e.refCount--;
-			
-			if (e.refCount == 0)
-			{
-				logDebug("refCount reached zero for resource %s. resource will be freed", path.toString().c_str());
-				
-				resourcesByPath.erase(j);
-				pathsByResource.erase(i);
-				
-				result = true;
-			}
-			else
-			{
-				logDebug("decremented refCount for resource %s", path.toString().c_str());
-			}
-		}
-	}
-	
-	return result;
 }

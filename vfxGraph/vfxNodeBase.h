@@ -197,6 +197,8 @@ struct VfxChannelData
 	void alloc(const int size);
 	void allocOnSizeChange(const int size);
 	void free();
+	
+	static void parse(const char * text, float *& data, int & dataSize);
 };
 
 struct VfxChannel
@@ -546,6 +548,12 @@ struct VfxPlug
 	{
 		Assert(type == kVfxPlugType_Color);
 		return *((VfxColor*)mem);
+	}
+	
+	VfxChannel & getRwChannel()
+	{
+		Assert(type == kVfxPlugType_Channel);
+		return *((VfxChannel*)mem);
 	}
 };
 

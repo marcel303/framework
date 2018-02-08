@@ -95,18 +95,14 @@ void Quat::fromMatrix(const Mat4x4 & matrix)
 		int a1 = a0 == 2 ? 0 : a0 + 1;
 		int a2 = a1 == 2 ? 0 : a1 + 1;
 		
-		// have to reverse these -_-
-		
-		a0 = 2 - a0;
-		a1 = 2 - a1;
-		a2 = 2 - a2;
-		
 		const float s = sqrt(1.0f + matrix(a0, a0) - matrix(a1, a1) - matrix(a2, a2));
 		
+		const float sRcp = s != 0.f ? 1.f / s : 0.f;
+		
 		m_xyz[a0] = s / 2.f;		
-		m_xyz[a1] = (matrix(a1, a0) + matrix(a0, a1)) / s / 2.f;
-		m_xyz[a2] = (matrix(a2, a0) + matrix(a0, a2)) / s / 2.f;
-		m_w       = (matrix(a2, a1) - matrix(a1, a2)) / s / 2.f;
+		m_xyz[a1] = (matrix(a1, a0) + matrix(a0, a1)) * sRcp / 2.f;
+		m_xyz[a2] = (matrix(a2, a0) + matrix(a0, a2)) * sRcp / 2.f;
+		m_w       = (matrix(a2, a1) - matrix(a1, a2)) * sRcp / 2.f;
 	}
 	
 	normalize();

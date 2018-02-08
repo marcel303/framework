@@ -472,7 +472,7 @@ void AudioPlug::connectTo(AudioPlug & dst)
 	}
 }
 
-void AudioPlug::connectTo(void * dstMem, const AudioPlugType dstType, const bool isImmediate)
+void AudioPlug::connectToImmediate(void * dstMem, const AudioPlugType dstType)
 {
 	if (dstType != type)
 	{
@@ -483,16 +483,7 @@ void AudioPlug::connectTo(void * dstMem, const AudioPlugType dstType, const bool
 	#if MULTIPLE_AUDIO_INPUT
 		if (dstType == kAudioPlugType_FloatVec)
 		{
-			if (isImmediate)
-			{
-				floatArray.immediateValue = (AudioFloat*)dstMem;
-			}
-			else
-			{
-				AudioFloatArray::Elem elem;
-				elem.audioFloat = (AudioFloat*)dstMem;
-				floatArray.elems.push_back(elem);
-			}
+			floatArray.immediateValue = (AudioFloat*)dstMem;
 		}
 		else
 	#endif
@@ -825,6 +816,8 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 			typeDefinition.displayName = registration->displayName;
 		}
 		
+		typeDefinition.resourceTypeName = registration->resourceTypeName;
+		
 		for (int i = 0; i < (int)registration->inputs.size(); ++i)
 		{
 			auto & src = registration->inputs[i];
@@ -851,6 +844,8 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 			
 			typeDefinition.outputSockets.push_back(outputSocket);
 		}
+		
+		typeDefinition.resourceEditor.create = registration->createResourceEditor;
 		
 		typeDefinition.createUi();
 		

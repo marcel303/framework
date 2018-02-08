@@ -145,7 +145,7 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 		
 		*value = Parse::Bool(inputValue);
 		
-		input.connectTo(value, kAudioPlugType_Bool, true);
+		input.connectToImmediate(value, kAudioPlugType_Bool);
 		
 		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_Bool, value));
 	}
@@ -155,7 +155,7 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 		
 		*value = Parse::Int32(inputValue);
 		
-		input.connectTo(value, kAudioPlugType_Int, true);
+		input.connectToImmediate(value, kAudioPlugType_Int);
 		
 		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_Int, value));
 	}
@@ -165,7 +165,7 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 		
 		*value = Parse::Float(inputValue);
 		
-		input.connectTo(value, kAudioPlugType_Float, true);
+		input.connectToImmediate(value, kAudioPlugType_Float);
 		
 		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_Float, value));
 	}
@@ -175,7 +175,7 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 		
 		*value = inputValue;
 		
-		input.connectTo(value, kAudioPlugType_String, true);
+		input.connectToImmediate(value, kAudioPlugType_String);
 		
 		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_String, value));
 	}
@@ -185,7 +185,7 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 		
 		AudioFloat * value = new AudioFloat(scalarValue);
 		
-		input.connectTo(value, kAudioPlugType_FloatVec, true);
+		input.connectToImmediate(value, kAudioPlugType_FloatVec);
 		
 		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_AudioValue, value));
 	}

@@ -27,54 +27,38 @@
 
 #pragma once
 
-#include "audioNodeBase.h"
-#include "audioTypes.h"
+struct GraphNode;
+struct VfxResourceBase;
 
-struct AudioResource_Wavefield1D;
-struct Wavefield1D;
+VfxResourceBase * createVfxNodeResourceImpl(const GraphNode & node, const char * type, const char * name);
 
-struct AudioNodeWavefield1D : AudioNodeBase
+template <typename T> bool createVfxNodeResource(const GraphNode & node, const char * type, const char * name, T *& resource)
 {
-	enum Input
+	VfxResourceBase * resourceBase = createVfxNodeResourceImpl(node, type, name);
+	
+	if (resourceBase == nullptr)
 	{
-		kInput_Size,
-		kInput_Gain,
-		kInput_PositionDampening,
-		kInput_VelocityDampening,
-		kInput_Tension,
-		kInput_Wrap,
-		kInput_SampleLocation,
-		kInput_Trigger,
-		kInput_TriggerLocation,
-		kInput_TriggerAmount,
-		kInput_TriggerSize,
-		kInput_Randomize,
-		kInput_COUNT
-	};
-	
-	enum Output
+		return false;
+	}
+	else
 	{
-		kOutput_Audio,
-		kOutput_COUNT
-	};
-	
-	AudioResource_Wavefield1D * wavefieldData;
-	int currentDataVersion;
-	
-	Wavefield1D * wavefield;
-	
-	AudioRNG rng;
-	
-	AudioFloat audioOutput;
-	
-	AudioNodeWavefield1D();
-	virtual ~AudioNodeWavefield1D() override;
-	
-	void randomize();
-	
-	virtual void init(const GraphNode & node) override;
-	
-	virtual void tick(const float dt) override;
-	
-	virtual void handleTrigger(const int inputSocketIndex) override;
-};
+		resource = static_cast<T*>(resourceBase);
+		
+		return true;
+	}
+}
+
+bool freeVfxNodeResourceImpl(VfxResourceBase * resource);
+
+template <typename T> void freeVfxNodeResource(T *& resource)
+{
+	if (resource != nullptr)
+	{
+		if (freeVfxNodeResourceImpl(resource))
+		{
+			delete resource;
+		}
+		
+		resource = nullptr;
+	}
+}

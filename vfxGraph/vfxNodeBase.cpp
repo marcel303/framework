@@ -537,6 +537,36 @@ void VfxChannelData::free()
 	size = 0;
 }
 
+#include "Parse.h" // todo : move
+
+// todo : remove framework dependency
+
+extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
+
+void VfxChannelData::parse(const char * text, float *& data, int & dataSize)
+{
+	std::vector<std::string> parts;
+	splitString(text, parts, ' ');
+	
+	if (parts.empty())
+	{
+		data = nullptr;
+		dataSize = 0;
+	}
+	else
+	{
+		data = new float[parts.size()];
+		dataSize = parts.size();
+		
+		for (size_t i = 0; i < parts.size(); ++i)
+		{
+			const float value = Parse::Float(parts[i]);
+			
+			data[i] = value;
+		}
+	}
+}
+
 //
 
 void VfxChannel::setData(const float * _data, const bool _continuous, const int _size)
@@ -1359,7 +1389,7 @@ void createVfxValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinit
 	addSimple("trigger", "button").multipleInputs = true;
 	addSimple("image", "none", "opengl-texture");
 	addSimple("image_cpu", "none");
-	addSimple("channel", "none", "channels");
+	addSimple("channel", "textbox", "channels");
 	addSimple("draw", "none");
 	
 	{

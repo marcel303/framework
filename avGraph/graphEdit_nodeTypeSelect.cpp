@@ -32,13 +32,45 @@
 
 typedef std::map<std::string, std::vector<const GraphEdit_TypeDefinition*>> TypeDefinitionsByCategory;
 
-static void getTypeDefinitionsByCategory(const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, TypeDefinitionsByCategory & result)
+bool GraphEdit_NodeTypeSelect::Filter::isMatch(const GraphEdit_TypeDefinition & typeDefinition) const
+{
+	switch (type)
+	{
+	case kFilterType_None:
+		return true;
+	
+	case kFilterType_PrimarySocketTypes:
+		{
+			if (typeDefinition.inputSockets.size() < 1)
+				return false;
+			if (typeDefinition.outputSockets.size() < 1)
+				return false;
+			
+			auto & srcSocket = typeDefinition.inputSockets[0];
+			if (srcSocket.typeName != srcSocketTypeName)
+				return false;
+			
+			auto & dstSocket = typeDefinition.outputSockets[0];
+			if (dstSocket.typeName != dstSocketTypeName)
+				return false;
+				
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+static void getTypeDefinitionsByCategory(const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, TypeDefinitionsByCategory & result, GraphEdit_NodeTypeSelect::Filter & filter)
 {
 	for (auto & typeDefinitonItr : typeDefinitionLibrary.typeDefinitions)
 	{
-		auto typeDefinition = &typeDefinitonItr.second;
+		auto & typeDefinition = typeDefinitonItr.second;
 		
-		auto pos = typeDefinition->typeName.find('.');
+		if (!filter.isMatch(typeDefinition))
+			continue;
+		
+		auto pos = typeDefinition.typeName.find('.');
 		
 		std::string category;
 		
@@ -48,12 +80,12 @@ static void getTypeDefinitionsByCategory(const GraphEdit_TypeDefinitionLibrary &
 		}
 		else
 		{
-			category = typeDefinition->typeName.substr(0, pos);
+			category = typeDefinition.typeName.substr(0, pos);
 		}
 		
 		auto & list = result[category];
 		
-		list.push_back(typeDefinition);
+		list.push_back(&typeDefinition);
 	}
 }
 
@@ -152,6 +184,11 @@ static bool doCategories(GraphEdit & graphEdit, TypeDefinitionsByCategory & cate
 		g_drawX = x + 20;
 		g_drawY = y + 20;
 		
+		if (categories.size() == 1)
+		{
+			selectedCategoryName = categories.begin()->first;
+		}
+		
 		auto begin = categories.begin();
 		
 		while (begin != categories.end())
@@ -218,7 +255,7 @@ static bool doCategories(GraphEdit & graphEdit, TypeDefinitionsByCategory & cate
 			{
 				auto & categoryName = categoryItr->first;
 				
-				if (doCategoryButton(categoryName.c_str(), categoryName == selectedCategoryName))
+				if (doCategoryButton(categoryName.c_str(), categoryName == selectedCategoryName) || selectedCategoryName.empty())
 				{
 					selectedCategoryName = categoryName;
 				}
@@ -281,6 +318,7 @@ GraphEdit_NodeTypeSelect::GraphEdit_NodeTypeSelect()
 	, sy(360)
 	, uiState(nullptr)
 	, selectedCategoryName()
+	, filter()
 {
 	uiState = new UiState();
 }
@@ -312,6 +350,8 @@ void GraphEdit_NodeTypeSelect::draw(const GraphEdit & graphEdit, const GraphEdit
 void GraphEdit_NodeTypeSelect::cancel()
 {
 	uiState->reset();
+	
+	filter = Filter();
 }
 
 bool GraphEdit_NodeTypeSelect::doMenus(GraphEdit & graphEdit, const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, std::string & selectedNodeTypeName)
@@ -324,7 +364,7 @@ bool GraphEdit_NodeTypeSelect::doMenus(GraphEdit & graphEdit, const GraphEdit_Ty
 		uiState->sx = sx - 20;
 		
 		TypeDefinitionsByCategory typeDefinitionsByCategory;
-		getTypeDefinitionsByCategory(typeDefinitionLibrary, typeDefinitionsByCategory);
+		getTypeDefinitionsByCategory(typeDefinitionLibrary, typeDefinitionsByCategory, filter);
 		
 		doBackground(x, y, sx, sy);
 		
