@@ -24,7 +24,7 @@ const int GFX_SY = 768;
 #define NUM_VFXCLIPS 1
 
 #define DRAW_GRIDS 1
-#define DO_SPOKENWORD 0
+#define DO_SPOKENWORD 1
 #define DO_CONTROLWINDOW 0
 
 static bool enableNearest = true;
@@ -75,9 +75,41 @@ struct MyMutex : binaural::Mutex
 	}
 };
 
+enum VoiceGroup
+{
+	kVoiceGroup_Videoclips,
+	kVoiceGroup_SpokenWord
+};
+
+struct VoiceGroupData
+{
+	float currentGain;
+	float desiredGain;
+	float gainSpeed;
+	
+	VoiceGroupData()
+		: currentGain(1.f)
+		, desiredGain(1.f)
+		, gainSpeed(.5f)
+	{
+	}
+	
+	void tick(const float dt)
+	{
+		const float retain = std::pow(1.f - gainSpeed, dt);
+		const float falloff = 1.f - retain;
+		
+		currentGain = retain * currentGain + falloff * desiredGain;
+	}
+};
+
 struct MyPortAudioHandler : PortAudioHandler
 {
+	const static int kMaxVoiceGroups = 4;
+	
 	SDL_mutex * mutex;
+	
+	VoiceGroupData voiceGroups[kMaxVoiceGroups];
 	
 	std::vector<MultiChannelAudioSource_SoundVolume*> volumeSources;
 	std::vector<AudioSource*> pointSources;
@@ -135,24 +167,35 @@ struct MyPortAudioHandler : PortAudioHandler
 		memset(channelL, 0, sizeof(channelL));
 		memset(channelR, 0, sizeof(channelR));
 		
+		const float dt = AUDIO_UPDATE_SIZE / float(SAMPLE_RATE);
+		
 		SDL_LockMutex(mutex);
 		{
+			for (auto & voiceGroup : voiceGroups)
+			{
+				voiceGroup.tick(dt);
+			}
+			
 			for (auto volumeSource : volumeSources)
 			{
-				volumeSource->generate(0, channelL, AUDIO_UPDATE_SIZE);
-				volumeSource->generate(1, channelR, AUDIO_UPDATE_SIZE);
+				const float gain = voiceGroups[kVoiceGroup_Videoclips].currentGain;
+				
+				volumeSource->generate(0, channelL, AUDIO_UPDATE_SIZE, gain);
+				volumeSource->generate(1, channelR, AUDIO_UPDATE_SIZE, gain);
 			}
 			
 			for (auto & pointSource : pointSources)
 			{
+				const float gain = voiceGroups[kVoiceGroup_SpokenWord].currentGain;
+				
 				ALIGN16 float channel[AUDIO_UPDATE_SIZE];
 				
 				pointSource->generate(channel, AUDIO_UPDATE_SIZE);
 				
 				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 				{
-					channelL[i] += channel[i];
-					channelR[i] += channel[i];
+					channelL[i] += channel[i] * gain;
+					channelR[i] += channel[i] * gain;
 				}
 			}
 		}
@@ -527,7 +570,7 @@ struct SpokenWord
 		
 		soundSource.open(audio, false);
 		
-		s_paHandler->addPointSource(&spokenWord.soundSource);
+		s_paHandler->addPointSource(&soundSource);
 	}
 	
 	void tick(const float dt)
@@ -551,6 +594,20 @@ struct World
 	
 	Vfxclip vfxclips[NUM_VFXCLIPS];
 	
+#if DO_SPOKENWORD
+	SpokenWord spokenWord;
+#endif
+
+	World()
+		: camera()
+		, videoclips()
+		, vfxclips()
+	#if DO_SPOKENWORD
+		, spokenWord()
+	#endif
+	{
+	}
+
 	void init(binaural::HRIRSampleSet * sampleSet, binaural::Mutex * mutex)
 	{
 		camera.gamepadIndex = 0;
@@ -583,6 +640,12 @@ struct World
 		{
 			vfxclips[i].open("groooplogo.xml");
 		}
+		
+	#if DO_SPOKENWORD
+		// 8:49 ~= 530 seconds
+		//spokenWord.init("wiekspreekt.txt", "wiekspreekt.ogg");
+		spokenWord.init("albert-tekst1.txt", "albert-tekst1.ogg");
+	#endif
 	}
 	
 	int hitTest(Vec3Arg pos, Vec3Arg dir) const
@@ -641,9 +704,13 @@ struct World
 		{
 			vfxclips[i].tick(dt);
 		}
+		
+	#if DO_SPOKENWORD
+		spokenWord.tick(dt);
+	#endif
 	}
 	
-	void draw()
+	void draw3d()
 	{
 		const Vec3 origin = camera.getWorldMatrix().GetTranslation();
 		const Vec3 direction = camera.getWorldMatrix().GetAxis(2);
@@ -701,6 +768,13 @@ struct World
 		glDisable(GL_DEPTH_TEST);
 		
 		camera.popViewMatrix();
+	}
+	
+	void draw2d()
+	{
+	#if DO_SPOKENWORD
+		spokenWord.draw();
+	#endif
 	}
 };
 
@@ -809,13 +883,6 @@ int main(int argc, char * argv[])
 	
 	world.init(&sampleSet, &binauralMutex);
 	
-#if DO_SPOKENWORD
-	SpokenWord spokenWord;
-	
-	// 8:49 ~= 530 seconds
-	spokenWord.init("wiekspreekt.txt", "wiekspreekt.ogg");
-#endif
-
 	PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, paHandler);
 	
@@ -840,6 +907,13 @@ int main(int argc, char * argv[])
 		if (keyboard.wentDown(SDLK_TAB))
 			showUi = !showUi;
 		
+		SDL_LockMutex(audioMutex);
+		{
+			paHandler->voiceGroups[kVoiceGroup_Videoclips].desiredGain =
+				keyboard.isDown(SDLK_w) ? .1f : 1.f;
+		}
+		SDL_UnlockMutex(audioMutex);
+		
 	#if 0
 		videoClipBlend[0] = (1.f + std::cos(framework.time / 3.4f)) / 2.f;
 		videoClipBlend[1] = (1.f + std::cos(framework.time / 4.56f)) / 2.f;
@@ -854,10 +928,6 @@ int main(int argc, char * argv[])
 		
 		world.tick(dt);
 		
-	#if DO_SPOKENWORD
-		spokenWord.tick(dt);
-	#endif
-		
 	#if DO_CONTROLWINDOW
 		controlWindow.tick();
 		
@@ -871,13 +941,11 @@ int main(int argc, char * argv[])
 			
 			projectPerspective3d(fov, near, far);
 			{
-				world.draw();
+				world.draw3d();
 			}
 			projectScreen2d();
 			
-		#if DO_SPOKENWORD
-			spokenWord.draw();
-		#endif
+			world.draw2d();
 			
 			if (showUi)
 			{

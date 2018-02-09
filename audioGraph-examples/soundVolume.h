@@ -36,7 +36,7 @@
 
 struct MultiChannelAudioSource
 {
-	virtual void generate(const int channelIndex, SAMPLE_ALIGN16 float * __restrict audioBuffer, const int numSamples) = 0;
+	virtual void generate(const int channelIndex, SAMPLE_ALIGN16 float * __restrict audioBuffer, const int numSamples, const float gain) = 0;
 };
 
 struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
@@ -139,16 +139,13 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		binauralizer.generateLR(samplesL, samplesR, numSamples, &combinedHrir);
 	}
 	
-	virtual void generate(const int channelIndex, SAMPLE_ALIGN16 float * __restrict audioBuffer, const int numSamples) override
+	virtual void generate(const int channelIndex, SAMPLE_ALIGN16 float * __restrict audioBuffer, const int numSamples, const float gain) override
 	{
 		Assert(channelIndex < 2);
 		Assert(numSamples <= AUDIO_UPDATE_SIZE);
 		
 		if (source == nullptr)
-		{
-			memset(audioBuffer, 0, numSamples * sizeof(float));
 			return;
-		}
 		
 		//
 		
@@ -161,11 +158,11 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		
 		if (channelIndex == 0)
 		{
-			audioBufferAdd(audioBuffer, samplesL, numSamples);
+			audioBufferAdd(audioBuffer, samplesL, numSamples, gain);
 		}
 		else
 		{
-			audioBufferAdd(audioBuffer, samplesR, numSamples);
+			audioBufferAdd(audioBuffer, samplesR, numSamples, gain);
 		}
 	}
 };
