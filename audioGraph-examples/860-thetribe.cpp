@@ -21,7 +21,7 @@ const int GFX_SY = 768;
 #define NUM_VFXCLIPS 1
 
 #define NUM_SPOKENWORD_SOURCES 3
-#define NUM_SPOKENWORDS 3
+#define NUM_SPOKENWORDS 2
 
 #define DRAW_GRIDS 1
 #define DO_SPOKENWORD 1
@@ -55,16 +55,16 @@ static const char * videoFilenames[NUM_VIDEOCLIP_SOURCES] =
 
 static const char * spokenText[NUM_SPOKENWORD_SOURCES] =
 {
-	"wiekspreekt.txt",
 	"albert-tekst1.txt",
-	"albert-tekst2.txt"
+	"albert-tekst2.txt",
+	"wiekspreekt.txt"
 };
 
 static const char * spokenAudio[NUM_SPOKENWORD_SOURCES] =
 {
-	"wiekspreekt.ogg", // 8:49 ~= 530 seconds
 	"albert-tekst1.ogg",
-	"albert-tekst2.ogg"
+	"albert-tekst2.ogg",
+	"wiekspreekt.ogg" // 8:49 ~= 530 seconds
 };
 
 //
@@ -668,6 +668,13 @@ struct SpokenWord
 			
 			if (hover && mouse.wentDown(BUTTON_LEFT))
 			{
+				soundVolume.audioSource.mutex->lock();
+				{
+					const std::string filename = soundSource.filename;
+					soundSource.open(filename.c_str(), false);
+				}
+				soundVolume.audioSource.mutex->unlock();
+				
 				state = kState_Active;
 				break;
 			}
@@ -824,7 +831,7 @@ struct World
 			{
 				if (t < bestDistance)
 				{
-					bestDistance = distance;
+					bestDistance = t;
 					result = HitTestResult();
 					result.videoclip = &videoclip;
 				}
@@ -842,7 +849,7 @@ struct World
 			{
 				if (t < bestDistance)
 				{
-					bestDistance = distance;
+					bestDistance = t;
 					result = HitTestResult();
 					result.spokenWord = &spokenWord;
 				}
