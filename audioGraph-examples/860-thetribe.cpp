@@ -451,112 +451,35 @@ struct Vfxclip
 #include "FileStream.h"
 #include "StreamReader.h"
 #include "StringEx.h"
+#include "textScroller.h"
 
 struct SpokenWord
 {
-	std::vector<std::string> lines;
-	
-	float scrollT;
+	TextScroller textScroller;
 	
 	AudioSourceVorbis soundSource;
 	
 	SpokenWord()
-		: lines()
-		, scrollT(0.f)
+		: textScroller()
 		, soundSource()
 	{
 	}
 	
 	void open(const char * text, const char * audio)
 	{
-		try
-		{
-			FileStream stream(text, (OpenMode)(OpenMode_Read | OpenMode_Text));
-			StreamReader reader(&stream, false);
-			lines = reader.ReadAllLines();
-			for (auto & line : lines)
-				line = String::Trim(line);
-		}
-		catch (std::exception & e)
-		{
-			logError("failed to read text: %s", e.what());
-		}
+		textScroller.open(text);
 		
 		soundSource.open(audio, false);
 	}
 	
 	void tick(const float dt)
 	{
-		scrollT -= dt / 530.f;
+		textScroller.progress += dt / 530.f;
 	}
 	
 	void draw()
 	{
-		const int kLineSpacing = 7;
-		const int fontSize = 18;
-		
-		float sx[1024];
-		float sy[1024];
-		
-		for (size_t i = 0; i < lines.size(); ++i)
-		{
-			auto & line = lines[i];
-			measureTextArea(fontSize, GFX_SX*2/3, sx[i], sy[i], "%s", line.c_str());
-		}
-		
-		int totalSy = 0;
-		for (size_t i = 0; i < lines.size(); ++i)
-			totalSy += sy[i] + kLineSpacing;
-		
-		const float scrollY = scrollT * totalSy;
-		
-		gxPushMatrix();
-		{
-			gxTranslatef(0, scrollY, 0);
-			
-			const int x1 = 60;
-			const int y1 = 200;
-			
-			hqBegin(HQ_FILLED_ROUNDED_RECTS);
-			{
-				int x = 60;
-				int y = y1;
-				
-				setColor(0, 0, 0, 100);
-				for (size_t i = 0; i < lines.size(); ++i)
-				{
-					auto & line = lines[i];
-					
-					if (!line.empty())
-						hqFillRoundedRect(x - 7, y - 3, x + sx[i] + 7, y + sy[i] + 3, 4.f);
-					
-					y += sy[i] + kLineSpacing;
-				}
-			}
-			hqEnd();
-
-			setColor(colorWhite);
-			beginTextBatch();
-			{
-				int x = x1;
-				int y = y1;
-				
-				for (size_t i = 0; i < lines.size(); ++i)
-				{
-					auto & line = lines[i];
-					
-					const float d = fabsf(y + scrollY - 200.f);
-					const float l = powf(fmaxf(0.f, 1.f - d / 600.f), 1.4f);
-					
-					setLumif(l);
-					drawTextArea(x, y, GFX_SX*2/3, fontSize, "%s", line.c_str());
-					
-					y += sy[i] + kLineSpacing;
-				}
-			}
-			endTextBatch();
-		}
-		gxPopMatrix();
+		textScroller.draw();
 	}
 };
 
@@ -978,7 +901,7 @@ int main(int argc, char * argv[])
 			binauralMutex.unlock();
 		}
 		
-		Assert(numSamplePoints <= MAX_BINAURALIZERS_TOTAL);
+		Assert(numSamplePoints <= MAX_SAMPLELOCATIONS_TOTAL);
 		
 	#if DO_SPOKENWORD
 		spokenWord.tick(dt);
