@@ -11,16 +11,13 @@
 #include "video.h"
 #include <atomic>
 
-#define MAX_VOLUMES 6
-#define MAX_SAMPLELOCATIONS_TOTAL (MAX_SAMPLELOCATIONS_PER_VOLUME * MAX_VOLUMES)
-
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
 
 //
 
 #define NUM_VIDEOCLIP_SOURCES 3
-#define NUM_VIDEOCLIPS MAX_VOLUMES
+#define NUM_VIDEOCLIPS 6
 #define NUM_VFXCLIPS 1
 
 #define DRAW_GRIDS 1
@@ -557,28 +554,53 @@ struct SpokenWord
 	TextScroller textScroller;
 	
 	AudioSourceVorbis soundSource;
+	SoundVolume soundVolume;
 	
 	SpokenWord()
 		: textScroller()
 		, soundSource()
+		, soundVolume()
 	{
 	}
 	
-	void init(const char * text, const char * audio)
+	void init(
+		const binaural::HRIRSampleSet * sampleSet,
+		binaural::Mutex * mutex,
+		const char * text, const char * audio)
 	{
 		textScroller.open(text);
 		
 		soundSource.open(audio, false);
+		//s_paHandler->addPointSource(&soundSource);
 		
-		s_paHandler->addPointSource(&soundSource);
+		soundVolume.init(sampleSet, mutex, &soundSource);
+		s_paHandler->addVolumeSource(&soundVolume.audioSource);
 	}
 	
-	void tick(const float dt)
+	void tick(const Mat4x4 & worldToViewMatrix, Vec3Arg cameraPosition_world, const float dt)
 	{
+		soundVolume.transform = Mat4x4(true).Translate(0, 0, -2).Scale(1, 1, .1f);
+		soundVolume.generateSampleLocations(worldToViewMatrix, cameraPosition_world, true, true, 1.f);
+		
 		textScroller.progress += dt / 530.f;
 	}
 	
-	void draw()
+	void draw3d()
+	{
+		gxPushMatrix();
+		{
+			gxMultMatrixf(soundVolume.transform.m_v);
+			
+			setColor(colorWhite);
+			drawCircle(0, 0, 1, 40);
+		}
+		gxPopMatrix();
+		
+		setColor(200, 0, 0);
+		drawSoundVolume(soundVolume);
+	}
+	
+	void draw2d()
 	{
 		textScroller.draw();
 	}
@@ -644,7 +666,7 @@ struct World
 	#if DO_SPOKENWORD
 		// 8:49 ~= 530 seconds
 		//spokenWord.init("wiekspreekt.txt", "wiekspreekt.ogg");
-		spokenWord.init("albert-tekst1.txt", "albert-tekst1.ogg");
+		spokenWord.init(sampleSet, mutex, "albert-tekst1.txt", "albert-tekst1.ogg");
 	#endif
 	}
 	
@@ -706,7 +728,7 @@ struct World
 		}
 		
 	#if DO_SPOKENWORD
-		spokenWord.tick(dt);
+		spokenWord.tick(worldToViewMatrix, cameraPosition_world, dt);
 	#endif
 	}
 	
@@ -740,6 +762,10 @@ struct World
 				{
 					vfxclips[i].drawSolid(false);
 				}
+				
+			#if DO_SPOKENWORD
+				spokenWord.draw3d();
+			#endif
 			}
 			popBlend();
 		}
@@ -773,7 +799,7 @@ struct World
 	void draw2d()
 	{
 	#if DO_SPOKENWORD
-		spokenWord.draw();
+		spokenWord.draw2d();
 	#endif
 	}
 };

@@ -191,6 +191,11 @@ struct SoundVolume
 	{
 	}
 	
+	void init(const binaural::HRIRSampleSet * sampleSet, binaural::Mutex * mutex, AudioSource * source)
+	{
+		audioSource.init(sampleSet, mutex, source);
+	}
+	
 	Vec3 projectToSound(Vec3Arg v) const
 	{
 		return transform.CalcInv().Mul4(v);
