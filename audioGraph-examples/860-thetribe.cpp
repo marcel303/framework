@@ -168,6 +168,8 @@ struct MyPortAudioHandler : PortAudioHandler
 	}
 };
 
+static MyPortAudioHandler * s_paHandler = nullptr;
+
 static void drawSoundVolume(const SoundVolume & volume)
 {
 	gxPushMatrix();
@@ -232,6 +234,10 @@ struct Videoclip
 		mp.openAsync(video, MP::kOutputMode_RGBA);
 		
 		gain = _gain;
+		
+		//
+		
+		s_paHandler->addVolumeSource(&soundVolume.audioSource);
 	}
 	
 	float intersectRayWithPlane(Vec3Arg pos, Vec3Arg dir, Vec3 & p) const
@@ -515,11 +521,13 @@ struct SpokenWord
 	{
 	}
 	
-	void open(const char * text, const char * audio)
+	void init(const char * text, const char * audio)
 	{
 		textScroller.open(text);
 		
 		soundSource.open(audio, false);
+		
+		s_paHandler->addPointSource(&spokenWord.soundSource);
 	}
 	
 	void tick(const float dt)
@@ -776,7 +784,6 @@ int main(int argc, char * argv[])
 		return -1;
 	
 	const int kFontSize = 16;
-	const int kFontSize2 = 10;
 	
 	bool showUi = false;
 	
@@ -792,6 +799,10 @@ int main(int argc, char * argv[])
 	binaural::loadHRIRSampleSet_Cipic("subject147", sampleSet);
 	sampleSet.finalize();
 	
+	MyPortAudioHandler * paHandler = new MyPortAudioHandler();
+	paHandler->init(audioMutex);
+	s_paHandler = paHandler;
+	
 	//
 	
 	World world;
@@ -802,22 +813,7 @@ int main(int argc, char * argv[])
 	SpokenWord spokenWord;
 	
 	// 8:49 ~= 530 seconds
-	spokenWord.open("wiekspreekt.txt", "wiekspreekt.ogg");
-#endif
-	
-	MyPortAudioHandler * paHandler = new MyPortAudioHandler();
-	
-	paHandler->init(audioMutex);
-	
-	for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
-	{
-		auto & videoClip = world.videoclips[i];
-		
-		paHandler->addVolumeSource(&videoClip.soundVolume.audioSource);
-	}
-	
-#if DO_SPOKENWORD
-	paHandler->addPointSource(&spokenWord.soundSource);
+	spokenWord.init("wiekspreekt.txt", "wiekspreekt.ogg");
 #endif
 
 	PortAudioObject pa;
@@ -898,6 +894,7 @@ int main(int argc, char * argv[])
 	
 	pa.shut();
 	
+	s_paHandler = nullptr;
 	paHandler->shut();
 	delete paHandler;
 	paHandler = nullptr;
