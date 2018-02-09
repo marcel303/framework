@@ -19,7 +19,8 @@ const int GFX_SY = 768;
 
 //
 
-#define NUM_VIDEOCLIPS 3
+#define NUM_VIDEOCLIP_SOURCES 3
+#define NUM_VIDEOCLIPS MAX_VOLUMES
 #define NUM_VFXCLIPS 1
 
 #define DRAW_GRIDS 1
@@ -28,21 +29,21 @@ const int GFX_SY = 768;
 
 static const float timeSeed = 1234.f;
 
-static const char * audioFilenames[NUM_VIDEOCLIPS] =
+static const char * audioFilenames[NUM_VIDEOCLIP_SOURCES] =
 {
 	"0.1.ogg",
 	"1.1.ogg",
 	"2.1.ogg",
 };
 
-static const float audioGains[NUM_VIDEOCLIPS] =
+static const float audioGains[NUM_VIDEOCLIP_SOURCES] =
 {
 	1.f,
 	.3f,
 	1.f
 };
 
-static const char * videoFilenames[NUM_VIDEOCLIPS] =
+static const char * videoFilenames[NUM_VIDEOCLIP_SOURCES] =
 {
 	"0.1280px.mp4",
 	"1.1280px.mp4",
@@ -381,7 +382,7 @@ struct Videoclip
 	
 	void evalVideoClipParams(const EvalMode mode, Vec3 & scale, Quat & rotation, Vec3 & position, float & opacity) const
 	{
-		const float t = (index + .5f) / float(MAX_VOLUMES) - .5f;
+		const float t = (index + .5f) / float(NUM_VIDEOCLIPS) - .5f;
 		
 		switch (mode)
 		{
@@ -471,15 +472,10 @@ struct Videoclip
 			totalOpacity /= totalBlend;
 		}
 		
-	#if 0
 		transform = Mat4x4(true).
 			Translate(totalTranslation).
 			Rotate(totalRotation).
 			Scale(totalScale);
-	#else // fixme
-		transform = Mat4x4(true).
-			Translate(totalTranslation);
-	#endif
 	
 		// update media player
 		
@@ -733,20 +729,21 @@ struct SpokenWord
 
 struct World
 {
-	Videoclip videoclips[MAX_VOLUMES];
+	Videoclip videoclips[NUM_VIDEOCLIPS];
 	
 	Vfxclip vfxclips[NUM_VFXCLIPS];
 	
 	void init()
 	{
-		for (int i = 0; i < MAX_VOLUMES; ++i)
+		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
-			const int index = i % NUM_VIDEOCLIPS;
+			const int index = i % NUM_VIDEOCLIP_SOURCES;
 			
 			const char * audioFilename = audioFilenames[index];
 			const char * videoFilename = videoFilenames[index];
+			const float audioGain = audioGains[index];
 			
-			videoclips[i].init(i, audioFilename, videoFilename, audioGains[index]);
+			videoclips[i].init(i, audioFilename, videoFilename, audioGain);
 		}
 		
 		for (int i = 0; i < NUM_VFXCLIPS; ++i)
@@ -760,7 +757,7 @@ struct World
 		int result = -1;
 		float bestDistance = std::numeric_limits<float>::infinity();
 		
-		for (int i = 0; i < MAX_VOLUMES; ++i)
+		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
 			Vec3 p;
 			
@@ -787,7 +784,7 @@ struct World
 	
 	void tick(const float dt)
 	{
-		for (int i = 0; i < MAX_VOLUMES; ++i)
+		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
 			videoclips[i].tick(dt);
 		}
@@ -813,7 +810,7 @@ struct World
 		{
 			pushBlend(BLEND_OPAQUE);
 			{
-				for (int i = 0; i < MAX_VOLUMES; ++i)
+				for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 				{
 					const bool hover = (i == hoverIndex);
 					
@@ -839,7 +836,7 @@ struct World
 			}
 			gxPopMatrix();
 			
-			for (int i = 0; i < MAX_VOLUMES; ++i)
+			for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 			{
 				videoclips[i].drawTranslucent();
 			}
@@ -889,7 +886,7 @@ struct ControlWindow
 					
 					hqBegin(HQ_FILLED_CIRCLES, true);
 					{
-						for (int i = 0; i < MAX_VOLUMES; ++i)
+						for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 						{
 							auto & videoclip = world.videoclips[i];
 							auto pos = videoclip.soundVolume.transform.GetTranslation();
@@ -981,7 +978,7 @@ int main(int argc, char * argv[])
 	
 	int audioSourceIndex = 0;
 	
-	for (int i = 0; i < MAX_VOLUMES; ++i)
+	for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 	{
 		paHandler->audioSources[audioSourceIndex].init(&sampleSet, &binauralMutex);
 		
@@ -989,6 +986,8 @@ int main(int argc, char * argv[])
 		
 		audioSourceIndex++;
 	}
+	
+	Assert(audioSourceIndex <= MAX_VOLUMES);
 	
 #if DO_SPOKENWORD
 	paHandler->audioSource_spokenWord = &spokenWord.soundSource;
@@ -1040,7 +1039,7 @@ int main(int argc, char * argv[])
 		
 		// update sound volume properties
 		
-		for (int i = 0; i < MAX_VOLUMES; ++i)
+		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
 			auto & soundVolume = world.videoclips[i].soundVolume;
 			
@@ -1058,7 +1057,7 @@ int main(int argc, char * argv[])
 		const Vec3 pSoundWorld = world.videoclips[0].soundVolume.transform.GetTranslation();
 		const Vec3 pSoundView = camera.getViewMatrix().Mul4(pSoundWorld);
 		
-		for (int i = 0; i < MAX_VOLUMES; ++i)
+		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
 			auto & videoclip = world.videoclips[i];
 			auto & soundVolume = videoclip.soundVolume;
