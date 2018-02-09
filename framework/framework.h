@@ -1164,8 +1164,8 @@ public:
 	Mat4x4 getWorldMatrix() const;
 	Mat4x4 getViewMatrix() const;
 	
-	void pushViewMatrix();
-	void popViewMatrix();
+	void pushViewMatrix() const;
+	void popViewMatrix() const;
 };
 
 void clearCaches(int caches);
