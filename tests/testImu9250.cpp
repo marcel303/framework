@@ -186,23 +186,7 @@ struct MyIMU9250 : IMU9250
 	}
 };
 
-enum State
-{
-	kState_None,
-	kState_CalibrateGyroAndAccel,
-	kState_CalibrateMagnet,
-	kState_Reading
-};
-
-#if ENABLE_OSC
-static UdpTransmitSocket * transmitSockets[2] = { };
-static const int numTransmitSockets = sizeof(transmitSockets) / sizeof(transmitSockets[0]);
-#endif
-
 static MyIMU9250 imu;
-
-static State state = kState_None;
-static uint64_t stateTimer = 0;
 
 static void mtu9250_init(MyIMU9250 & imu)
 {
@@ -235,29 +219,6 @@ static void mtu9250_init(MyIMU9250 & imu)
 	#endif
 	}
 	SDL_UnlockMutex(imu.mutex);
-	
-	state = kState_Reading;
-}
-
-static double lerpAngles(const double a, const double b, const double t)
-{
-	Quat qA;
-	Quat qB;
-	
-	qA.fromAxisAngle(Vec3(1, 0, 0), a);
-	qB.fromAxisAngle(Vec3(1, 0, 0), b);
-
-	const Quat q = qB.slerp(qA, t);
-
-	Vec3 axis;
-	float angle;
-	
-	q.toAxisAngle(axis, angle);
-	
-	if (axis[0] < -.5f)
-		angle = - angle;
-	
-	return angle;
 }
 
 struct TTY
@@ -334,6 +295,46 @@ struct TTY
 	}
 };
 
+static void updateRotation(
+	const float * acceleration,
+	const float * gyro,
+	const float * magnet,
+	const double dt,
+	Quat & r)
+{
+	const float degToRad = M_PI / 180.f;
+	
+	// integrate gyro
+
+	Quat qX;
+	Quat qY;
+	Quat qZ;
+
+	qX.fromAxisAngle(Vec3(1,0,0), gyro[0] * degToRad * dt);
+	qY.fromAxisAngle(Vec3(0,1,0), gyro[1] * degToRad * dt);
+	qZ.fromAxisAngle(Vec3(0,0,1), gyro[2] * degToRad * dt);
+
+	r = r * qX;
+	r = r * qY;
+	r = r * qZ;
+
+	// smoothly interpolate to magnet
+
+	Mat4x4 mM;
+	mM.MakeLookat(
+		Vec3(0,0,0),
+		Vec3(acceleration[0], acceleration[1], acceleration[2]).CalcNormalized(),
+		Vec3(magnet[0], magnet[1], magnet[2]).CalcNormalized());
+	Quat qM;
+	qM.fromMatrix(mM);
+
+	const float s = std::pow(.1f, dt);
+	//const float s = 0.f;
+	//const float s = 1.f;
+
+	r = qM.slerp(r, s);
+}
+
 void testImu9250()
 {
 	TTY tty;
@@ -353,39 +354,70 @@ void testImu9250()
 	
 	mtu9250_init(imu);
 	
+#if ENABLE_OSC
+	UdpTransmitSocket * transmitSockets[2] = { };
+	const int numTransmitSockets = sizeof(transmitSockets) / sizeof(transmitSockets[0]);
+
+	//const char * ipAddress = "127.0.0.1";
+	//const int udpPort = 8000;
+	const char * ipAddress = "192.168.0.209";
+	const int udpPorts[2] = { 2002, 2018 };
+	
+	LOG_DBG("setting up UDP transmit sockets for OSC messaging", 0);
+
+	try
+	{
+		transmitSockets[0] = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPorts[0]));
+		transmitSockets[1] = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPorts[1]));
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("failed to create UDP transmit socket: %s", e.what());
+	}
+#endif
+
 	Camera3d camera;
 	camera.gamepadIndex = 0;
 	
 	Quat r;
 	r.makeIdentity();
-
+	
+	Quat c;
+	c.makeIdentity();
+	
 	do
 	{
 		framework.process();
 		
-		const float dt = framework.timeStep;
+		// input
 		
-		const int numSteps = 100;
-		
-		const float stepDt = dt / numSteps;
-		
-		float magnet[3];
-		float accel[3];
-		
-		for (int i = 0; i < numSteps; ++i)
+		if (keyboard.wentDown(SDLK_RETURN))
 		{
-			// update fake gyro/accel/magnet
-			
-		#if 0
-			float gyro[3] =
+			if (tty.port >= 0)
 			{
-				0.f,
-				0.f,
-				0.f
-			};
-		#else
-			float gyro[3];
-			
+				imu.shut();
+				
+				tty.shut();
+			}
+			else
+			{
+				tty.init();
+				
+				imu.init(tty.port);
+			}
+		}
+		
+		if (keyboard.wentDown(SDLK_c))
+		{
+			c = r;
+		}
+		
+		float acceleration[3] = { };
+		float gyro[3] = { };
+		float magnet[3] = { };
+		
+		if (imu.port >= 0)
+		{
 			SDL_LockMutex(imu.mutex);
 			{
 				if (keyboard.wentDown(SDLK_r))
@@ -393,99 +425,99 @@ void testImu9250()
 					imu.hasMagnetMinMax = false;
 				}
 				
-				for (int i = 0; i < 3; ++i)
-				{
-					gyro[i] = imu.reader.angularVelocityf[i] * M_PI / 180.f;
-				}
-			}
-			SDL_UnlockMutex(imu.mutex);
-		#endif
-			
-			if (keyboard.isDown(SDLK_r))
-				gyro[0] = -mouse.x / 100.f;
-			if (keyboard.isDown(SDLK_f))
-				gyro[0] = +mouse.x / 100.f;
-			if (keyboard.isDown(SDLK_t))
-				gyro[1] = -mouse.x / 100.f;
-			if (keyboard.isDown(SDLK_g))
-				gyro[1] = +mouse.x / 100.f;
-			if (keyboard.isDown(SDLK_y))
-				gyro[2] = -mouse.x / 100.f;
-			if (keyboard.isDown(SDLK_h))
-				gyro[2] = +mouse.x / 100.f;
-			
-		#if 0
-			magnet[0] = 1.f;
-			magnet[1] = 0.f;
-			magnet[2] = 0.f;
-		#elif 0
-			magnet[0] = std::cos(framework.time / 4.f);
-			magnet[1] = std::sin(framework.time / 4.f);
-			magnet[2] = 0.f;
-		#else
-			SDL_LockMutex(imu.mutex);
-			{
-				const float magnetBias[3] = { -38.f, -116.f, -238.f };
-				//const float magnetBias[3] = { };
+				const short magnetBias[3] = { -38, -116, -238 };
 				
 				for (int i = 0; i < 3; ++i)
 				{
+					acceleration[i] = imu.reader.accelerationf[i];
+					gyro[i] = imu.reader.angularVelocityf[i];
 					magnet[i] = imu.reader.magnet[i] + magnetBias[i];
 				}
 			}
 			SDL_UnlockMutex(imu.mutex);
-		#endif
-			
-		#if 0
-			accel[0] = 0.f;
-			accel[1] = 0.f;
-			accel[2] = 1.f;
-		#else
-			SDL_LockMutex(imu.mutex);
-			{
-				for (int i = 0; i < 3; ++i)
-				{
-					accel[i] = imu.reader.accelerationf[i];
-				}
-			}
-			SDL_UnlockMutex(imu.mutex);
-		#endif
-		
-			// integrate gyro
-		
-			Quat qX;
-			Quat qY;
-			Quat qZ;
-			
-			qX.fromAxisAngle(Vec3(1,0,0), gyro[0] * stepDt);
-			qY.fromAxisAngle(Vec3(0,1,0), gyro[1] * stepDt);
-			qZ.fromAxisAngle(Vec3(0,0,1), gyro[2] * stepDt);
-			
-			r = r * qX;
-			r = r * qY;
-			r = r * qZ;
-			
-			// smoothly interpolate to magnet
-			
-			Mat4x4 mM;
-			mM.MakeLookat(Vec3(0,0,0), Vec3(accel[0], accel[1], accel[2]).CalcNormalized(), Vec3(magnet[0], magnet[1], magnet[2]).CalcNormalized());
-			Quat qM;
-			qM.fromMatrix(mM);
-			
-			const float s = std::pow(.1f, stepDt);
-			//const float s = 0.f;
-			//const float s = 1.f;
-			
-			r = qM.slerp(r, s);
 		}
 		
+		if (keyboard.isDown(SDLK_r))
+			gyro[0] = -mouse.x / 10.f;
+		if (keyboard.isDown(SDLK_f))
+			gyro[0] = +mouse.x / 10.f;
+		if (keyboard.isDown(SDLK_t))
+			gyro[1] = -mouse.x / 10.f;
+		if (keyboard.isDown(SDLK_g))
+			gyro[1] = +mouse.x / 10.f;
+		if (keyboard.isDown(SDLK_y))
+			gyro[2] = -mouse.x / 10.f;
+		if (keyboard.isDown(SDLK_h))
+			gyro[2] = +mouse.x / 10.f;
+		
+		//
+		
+		const float dt = framework.timeStep;
+		
+		const int numSteps = 100;
+		const float stepDt = dt / numSteps;
+		
+		for (int i = 0; i < numSteps; ++i)
+		{
+			updateRotation(
+				acceleration,
+				gyro,
+				magnet,
+				stepDt,
+				r);
+		}
+		
+	#if ENABLE_OSC
+		// send the result over OSC
+		
+		for (int i = 0; i < numTransmitSockets; ++i)
+		{
+			auto transmitSocket = transmitSockets[i];
+			
+			if (transmitSocket != nullptr)
+			{
+				try
+				{
+					auto & reader = imu.reader;
+					
+					char buffer[OSC_BUFFER_SIZE];
+					
+					osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
+
+					p << osc::BeginMessage("/gyro");
+					
+					p << reader.anglef[0];
+					p << reader.anglef[1];
+					p << reader.anglef[2];
+					p << reader.accelerationf[0];
+					p << reader.accelerationf[1];
+					p << reader.accelerationf[2];
+					p << reader.angularVelocityf[0];
+					p << reader.angularVelocityf[1];
+					p << reader.angularVelocityf[2];
+					p << reader.temperature;
+					
+					p << osc::EndMessage;
+
+					transmitSocket->Send(p.Data(), p.Size());
+				}
+				catch (std::exception & e)
+				{
+					LOG_ERR("failed to send OSC message: %s", e.what());
+				}
+			}
+		}
+	#endif
+	
 		//
 		
 		camera.tick(dt, true);
 		
 		Mat4x4 transform;
 		
-		transform = r.toMatrix();
+		const Quat r2 = r * c.calcInverse();
+		
+		transform = r2.toMatrix();
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -547,7 +579,7 @@ void testImu9250()
 						gxVertex3f(magnet[0], magnet[1], magnet[2]);
 						
 						gxVertex3f(0, 0, 0);
-						gxVertex3f(accel[0], accel[1], accel[2]);
+						gxVertex3f(acceleration[0], acceleration[1], acceleration[2]);
 					}
 					gxEnd();
 					
@@ -592,501 +624,6 @@ void testImu9250()
 	imu.shut();
 	
 	tty.shut();
-	
-	//exit(0);
-}
-
-void testImu9250_v1()
-{
-	// stty -f /dev/tty.HC-06-DevB 115200
-	
-	const char * ttyPath = "/dev/tty.HC-06-DevB";
-	
-#if ENABLE_OSC
-	//const char * ipAddress = "127.0.0.1";
-	//const int udpPort = 8000;
-	const char * ipAddress = "192.168.0.209";
-	const int udpPorts[2] = { 2002, 2018 };
-	
-	LOG_DBG("setting up UDP transmit sockets for OSC messaging", 0);
-
-	try
-	{
-		transmitSockets[0] = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPorts[0]));
-		transmitSockets[1] = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPorts[1]));
-	}
-	catch (std::exception & e)
-	{
-		LOG_ERR("failed to create UDP transmit socket: %s", e.what());
-	}
-	
-#endif
-
-	LOG_DBG("opening tty port to connect to gyro sensor", 0);
-	
-	int port = open(ttyPath, O_RDWR);
-	
-	if (port < 0)
-	{
-		LOG_ERR("failed to open tty port. path=%s", ttyPath);
-	}
-	else
-	{
-		LOG_INF("opened tty port. path=%s", ttyPath);
-		
-	#if 0
-		termios settings;
-		
-		if (tcgetattr(port, &settings) != 0)
-		{
-			LOG_ERR("failed to get terminal io settings", 0);
-		}
-		else
-		{
-			const int rate = 115200;
-			
-			if (cfsetispeed(&settings, rate) != 0)
-				LOG_ERR("failed to set tty ispeed to %d", rate);
-			if (cfsetospeed(&settings, rate) != 0)
-				LOG_ERR("failed to set tty ospeed to %d", rate);
-			
-			//settings.c_cflag = (settings.c_cflag & (~CSIZE)) | CS8;
-			//CDTR_IFLOW; // enable
-			//CRTS_IFLOW; // disable
-			
-			if (tcsetattr(port, TCSANOW, &settings) != 0)
-				LOG_ERR("failed to apply terminal io settings", 0);
-			else
-				LOG_INF("succesfully applied terminal io settings", 0);
-			
-			tcflush(port, TCIOFLUSH);
-		}
-	#endif
-	
-		imu.init(port);
-		
-		mtu9250_init(imu);
-		
-		float magnetMin[3] = { };
-		float magnetMax[3] = { };
-		bool hasMagnetMinMax = false;
-		
-		Camera3d camera;
-		camera.gamepadIndex = 0;
-		
-		bool enableCameraInput = false;
-		
-		float summedAngles[3] = { };
-		
-		const int kMaxHistory = 10000;
-		float magnetHistory[3][kMaxHistory];
-		int magnetHistorySize = 0;
-		int nextMagnetHistoryIndex = 0;
-		
-		//float magnetBias[3] = { };
-		float magnetBias[3] = { -35.08f, -8.69f, -47.37f };
-		float gyroBias[3] = { };
-		
-		float eulerBias[3] = { };
-		
-		do
-		{
-			framework.process();
-			
-			const float dt = framework.timeStep;
-			
-			SDL_LockMutex(imu.mutex);
-			
-			const float biasedGyro[3] =
-			{
-				imu.reader.angularVelocityf[0] + gyroBias[0],
-				imu.reader.angularVelocityf[1] + gyroBias[1],
-				imu.reader.angularVelocityf[2] + gyroBias[2]
-			};
-			
-			const float biasedMagnet[3] =
-			{
-				imu.reader.magnetf[0] + magnetBias[0],
-				imu.reader.magnetf[1] + magnetBias[1],
-				imu.reader.magnetf[2] + magnetBias[2]
-			};
-			
-			switch (state)
-			{
-			case kState_None:
-				break;
-			case kState_CalibrateGyroAndAccel:
-				if (g_TimerRT.TimeUS_get() >= stateTimer + 7 * 1000000)
-				{
-					LOG_DBG("calibration done. entering reading mode", 0);
-					imu.setCalibrationMode(imu.kCalibrationMode_Off);
-					state = kState_Reading;
-					break;
-				}
-				break;
-				
-			case kState_CalibrateMagnet:
-				if (g_TimerRT.TimeUS_get() >= stateTimer + 7 * 1000000)
-				{
-					LOG_DBG("calibration done. entering reading mode", 0);
-					imu.setCalibrationMode(imu.kCalibrationMode_Off);
-					state = kState_Reading;
-					break;
-				}
-				break;
-				
-			case kState_Reading:
-				if (keyboard.wentDown(SDLK_f))
-					enableCameraInput = !enableCameraInput;
-				
-				if (keyboard.wentDown(SDLK_g))
-				{
-					// enter calibration mode
-					LOG_DBG("entering gyro calibration mode!", 0);
-					state = kState_CalibrateGyroAndAccel;
-					imu.setCalibrationMode(imu.kCalibrationMode_GyroAndAccel);
-					stateTimer = g_TimerRT.TimeUS_get();
-					break;
-				}
-				
-				if (keyboard.wentDown(SDLK_m))
-				{
-					// enter calibration mode
-					LOG_DBG("entering magnet calibration mode!", 0);
-					state = kState_CalibrateMagnet;
-					imu.setCalibrationMode(imu.kCalibrationMode_Magnet);
-					stateTimer = g_TimerRT.TimeUS_get();
-					break;
-				}
-				
-				if (keyboard.wentDown(SDLK_r))
-				{
-					hasMagnetMinMax = false;
-				}
-				
-				if (keyboard.wentDown(SDLK_t))
-				{
-				#if 0
-					// note : imu.setMagnetOffsets doesn't seem to work as expected
-					//imu.setMagnetOffsets(...)
-				#else
-					for (int i = 0; i < 3; ++i)
-					{
-						magnetBias[i] = - (magnetMin[i] + magnetMax[i]) / 2.f;
-					}
-				#endif
-				
-					magnetHistorySize = 0;
-					nextMagnetHistoryIndex = 0;
-				}
-				
-				if (keyboard.wentDown(SDLK_h))
-				{
-				#if 0
-					imu.setGyroOffsets(
-						imu.reader.angularVelocity[0],
-						imu.reader.angularVelocity[1],
-						imu.reader.angularVelocity[2]);
-				#else
-					gyroBias[0] = - imu.reader.angularVelocityf[0];
-					gyroBias[1] = - imu.reader.angularVelocityf[1];
-					gyroBias[2] = - imu.reader.angularVelocityf[2];
-				#endif
-				}
-				
-				if (hasMagnetMinMax == false)
-				{
-					hasMagnetMinMax = true;
-					
-					magnetMin[0] = imu.reader.magnetf[0];
-					magnetMin[1] = imu.reader.magnetf[1];
-					magnetMin[2] = imu.reader.magnetf[2];
-					
-					magnetMax[0] = imu.reader.magnetf[0];
-					magnetMax[1] = imu.reader.magnetf[1];
-					magnetMax[2] = imu.reader.magnetf[2];
-				}
-				else
-				{
-					magnetMin[0] = std::min(magnetMin[0], imu.reader.magnetf[0]);
-					magnetMin[1] = std::min(magnetMin[1], imu.reader.magnetf[1]);
-					magnetMin[2] = std::min(magnetMin[2], imu.reader.magnetf[2]);
-					
-					magnetMax[0] = std::max(magnetMax[0], imu.reader.magnetf[0]);
-					magnetMax[1] = std::max(magnetMax[1], imu.reader.magnetf[1]);
-					magnetMax[2] = std::max(magnetMax[2], imu.reader.magnetf[2]);
-				}
-				break;
-			}
-			
-		// ----
-		
-			// calculate the magnetic angle
-			const float magnetAngle = atan2f(-biasedMagnet[1], biasedMagnet[0]);
-			
-			// integrate gyro
-			summedAngles[2] += Calc::DegToRad(imu.reader.angularVelocityf[2] * dt);
-			
-			// smoothe to magnetic angle
-			const double retain = std::pow(0.05, double(dt));
-			summedAngles[2] = lerpAngles(summedAngles[2], magnetAngle, retain);
-			
-		// ----
-		
-			for (int i = 0; i < 3; ++i)
-				magnetHistory[i][nextMagnetHistoryIndex] = biasedMagnet[i];
-			magnetHistorySize = std::min(kMaxHistory, magnetHistorySize + 1);
-			nextMagnetHistoryIndex = (nextMagnetHistoryIndex + 1) % kMaxHistory;
-			
-			SDL_UnlockMutex(imu.mutex);
-			
-			camera.tick(dt, enableCameraInput);
-			
-			framework.beginDraw(0, 0, 0, 0);
-			{
-				setFont("calibri.ttf");
-				
-				IMU9250::ReturnMessageReader reader;
-				SDL_LockMutex(imu.mutex);
-				{
-					reader = imu.reader;
-				}
-				SDL_UnlockMutex(imu.mutex);
-				
-				projectPerspective3d(90.f, .01f, 100.f);
-				camera.pushViewMatrix();
-				{
-					gxTranslatef(0, 0, 2);
-					
-				#if 1
-					Mat4x4 mY;
-					
-					mY.MakeRotationY(summedAngles[2]);
-					
-					const Mat4x4 magnetMatrix = mY;
-				#elif 0
-					Mat4x4 mY;
-					Mat4x4 mP;
-					Mat4x4 mR;
-					
-					mY.MakeRotationY(Calc::DegToRad(reader.anglef[2]));
-					mP.MakeRotationX(-Calc::DegToRad(reader.anglef[1]));
-					mR.MakeRotationZ(Calc::DegToRad(reader.anglef[0]));
-					
-					const Mat4x4 magnetMatrix = mY * mP * mR;
-				#elif 1
-					Quat q(
-						reader.quaternionf[0],
-						reader.quaternionf[1],
-						reader.quaternionf[2],
-						reader.quaternionf[3]);
-					
-					const Mat4x4 magnetMatrix = q.toMatrix();
-					//magnetMatrix = magnetMatrix.CalcInv();
-				#elif 0
-					Mat4x4 magnetMatrix;
-					magnetMatrix.MakeLookat(
-						Vec3(0.f, 0.f, 0.f),
-						Vec3(reader.accelerationf[0], reader.accelerationf[2], reader.accelerationf[1]),
-						Vec3(0.f, 1.f, 0.f));
-					magnetMatrix = magnetMatrix.CalcInv();
-				#elif 1
-					Mat4x4 magnetMatrix;
-					magnetMatrix.MakeRotationY(Calc::DegToRad(reader.anglef[2]));
-				#elif 1
-					Mat4x4 magnetMatrix;
-					magnetMatrix.MakeRotationY(std::atan2(reader.magnetf[0], reader.magnetf[1]));
-				#else
-					Mat4x4 magnetMatrix;
-					magnetMatrix.MakeLookat(
-						Vec3(0.f, 0.f, 0.f),
-						Vec3(reader.magnetf[0], reader.magnetf[1], reader.magnetf[2]),
-						Vec3(0.f, 1.f, 0.f));
-				#endif
-					
-					gxPushMatrix();
-					gxScalef(.1f, .1f, .1f);
-					pushBlend(BLEND_ADD);
-					gxBegin(GL_LINES);
-					{
-						gxColor4f(1, 1, 1, .5f);
-						for (int i = 0; i < magnetHistorySize - 1; ++i)
-						{
-							gxVertex3f(magnetHistory[0][i + 0], magnetHistory[2][i + 0], -magnetHistory[1][i + 0]);
-							gxVertex3f(magnetHistory[0][i + 1], magnetHistory[2][i + 1], -magnetHistory[1][i + 1]);
-						}
-					}
-					gxEnd();
-					popBlend();
-					gxPopMatrix();
-				
-					glEnable(GL_DEPTH_TEST);
-					glDepthFunc(GL_LESS);
-					
-					gxPushMatrix();
-					{
-						gxMultMatrixf(magnetMatrix.m_v);
-						
-						setColor(colorGreen);
-						drawGrid3dLine(10, 10, 0, 1);
-					}
-					gxPopMatrix();
-					
-					glDisable(GL_DEPTH_TEST);
-				}
-				camera.popViewMatrix();
-				projectScreen2d();
-				
-				Color color;
-				const char * text = nullptr;
-				if (state == kState_Reading)
-				{
-					color = colorBlue;
-					text = "Reading";
-				}
-				else if (state == kState_CalibrateGyroAndAccel)
-				{
-					color = colorYellow;
-					text = "Calibrating gyro and accel";
-				}
-				else if (state == kState_CalibrateMagnet)
-				{
-					color = colorRed;
-					text = "Calibrating magnet";
-				}
-				
-				if (text != nullptr)
-				{
-					hqBegin(HQ_FILLED_ROUNDED_RECTS);
-					setColor(color);
-					hqFillRoundedRect(GFX_SX/2-200, 100, GFX_SX/2+200, 160, 6.f);
-					hqEnd();
-					
-					setColor(colorWhite);
-					drawText(GFX_SX/2, 130, 30, 0, 0, "%s", text);
-				}
-				
-				int x = GFX_SX/2;
-				int y = 40;
-				setLumi(255);
-				
-				drawText(x, y, 16, 0, 0, "State: %d. Receive count: %d", state, imu.receiveCount);
-				y += 20;
-				
-				x = 40;
-				y = GFX_SY * 1/3;
-				setLumi(127);
-				
-				drawText(x, y, 16, +1, 0, "Angle: %.2f, %.2f, %.2f",
-					reader.anglef[0],
-					reader.anglef[1],
-					reader.anglef[2]);
-				y += 20;
-				
-				drawText(x, y, 16, +1, 0, "Acceleration: %.2f, %.2f, %.2f",
-					reader.accelerationf[0],
-					reader.accelerationf[1],
-					reader.accelerationf[2]);
-				y += 20;
-				
-				drawText(x, y, 16, +1, 0, "Angular velocity: %.2f, %.2f, %.2f",
-					reader.angularVelocityf[0],
-					reader.angularVelocityf[1],
-					reader.angularVelocityf[2]);
-				y += 20;
-				drawText(x, y, 16, +1, 0, "Angular velocity + Bias: %.2f, %.2f, %.2f",
-					biasedGyro[0],
-					biasedGyro[1],
-					biasedGyro[2]);
-				y += 20;
-				
-				drawText(x, y, 16, +1, 0, "Magnet: %.2f, %.2f, %.2f",
-					reader.magnetf[0],
-					reader.magnetf[1],
-					reader.magnetf[2]);
-				y += 20;
-				drawText(x, y, 16, +1, 0, "Magnet (Biased): %.2f, %.2f, %.2f",
-					biasedMagnet[0],
-					biasedMagnet[1],
-					biasedMagnet[2]);
-				y += 20;
-				drawText(x, y, 16, +1, 0, "Magnet Bias: %.2f, %.2f, %.2f",
-					magnetBias[0],
-					magnetBias[1],
-					magnetBias[2]);
-				y += 20;
-				drawText(x, y, 16, +1, 0, "Magnet Min/Max: %d, %d, %d , %d, %d, %d",
-					magnetMin[0],
-					magnetMin[1],
-					magnetMin[2],
-					magnetMax[0],
-					magnetMax[1],
-					magnetMax[2]);
-				y += 20;
-				
-				// help text
-				
-				x = GFX_SX/2;
-				y = GFX_SY - 100;
-				setLumi(255);
-				
-				drawText(x, y, 16, 0, 0, "F = toggle camera");
-				y += 20;
-				drawText(x, y, 16, 0, 0, "R = reset magnet history, T = center magnet, H = center gyro");
-				y += 20;
-				drawText(x, y, 16, 0, 0, "G = GYRO CALIBRATION MODE, M = MAGNET CALIBRATION MODE");
-				y += 20;
-			}
-			framework.endDraw();
-		}
-		while (!keyboard.wentDown(SDLK_ESCAPE));
-		
-		imu.shut();
-		
-	#if ENABLE_OSC && 0
-		// send the result over OSC
-		
-		for (int i = 0; i < numTransmitSockets; ++i)
-		{
-			auto transmitSocket = transmitSockets[i];
-			
-			if (transmitSocket != nullptr)
-			{
-				try
-				{
-					char buffer[OSC_BUFFER_SIZE];
-					
-					osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
-
-					p << osc::BeginMessage("/gyro");
-					
-					p << reader.anglef[0];
-					p << reader.anglef[1];
-					p << reader.anglef[2];
-					p << reader.accelerationf[0];
-					p << reader.accelerationf[1];
-					p << reader.accelerationf[2];
-					p << reader.angularVelocityf[0];
-					p << reader.angularVelocityf[1];
-					p << reader.angularVelocityf[2];
-					p << reader.temperature;
-					
-					p << osc::EndMessage;
-
-					transmitSocket->Send(p.Data(), p.Size());
-				}
-				catch (std::exception & e)
-				{
-					LOG_ERR("failed to send OSC message: %s", e.what());
-				}
-			}
-		}
-	#endif
-	
-		imu.shut();
-		
-		close(port);
-	}
 	
 	//exit(0);
 }

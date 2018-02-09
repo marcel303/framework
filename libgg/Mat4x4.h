@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Quat.h"
 #include "Vec2.h"
 #include "Vec3.h"
 #include "Vec4.h"
@@ -487,6 +488,11 @@ public:
 		t.MakeScaling(x, y, z);
 		return (*this) * t;
 	}
+	
+	inline Mat4x4 Scale(Vec3Arg vec) const
+	{
+		return Scale(vec[0], vec[1], vec[2]);
+	}
 
 	inline Mat4x4 RotateX(const float angle, const bool left = true) const
 	{
@@ -506,6 +512,12 @@ public:
 	{
 		Mat4x4 t;
 		t.MakeRotationZ(angle, left);
+		return (*this) * t;
+	}
+	
+	inline Mat4x4 Rotate(const Quat & q) const
+	{
+		Mat4x4 t = q.toMatrix();
 		return (*this) * t;
 	}
 
