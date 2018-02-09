@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Mat4x4.h"
 #include "Vec3.h"
 #include "Vec4.h"
 
+class Mat4x4;
 class Quat;
 
 class Quat

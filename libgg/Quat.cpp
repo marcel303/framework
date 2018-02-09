@@ -1,5 +1,6 @@
 #include <cmath>
 #include "Debugging.h"
+#include "Mat4x4.h"
 #include "Quat.h"
 
 Quat::Quat()
