@@ -74,15 +74,50 @@ struct MyMutex : binaural::Mutex
 
 struct MyPortAudioHandler : PortAudioHandler
 {
-	MultiChannelAudioSource_SoundVolume audioSources[MAX_VOLUMES];
+	SDL_mutex * mutex;
 	
-	AudioSource * audioSource_spokenWord;
+	std::vector<MultiChannelAudioSource_SoundVolume*> volumeSources;
+	std::vector<AudioSource*> pointSources;
 	
 	MyPortAudioHandler()
 		: PortAudioHandler()
-		, audioSources()
-		, audioSource_spokenWord(nullptr)
+		, mutex(nullptr)
+		, volumeSources()
+		, pointSources()
 	{
+	}
+	
+	~MyPortAudioHandler()
+	{
+		Assert(mutex == nullptr);
+	}
+	
+	void init(SDL_mutex * _mutex)
+	{
+		mutex = _mutex;
+	}
+	
+	void shut()
+	{
+		mutex = nullptr;
+	}
+	
+	void addVolumeSource(MultiChannelAudioSource_SoundVolume * source)
+	{
+		SDL_LockMutex(mutex);
+		{
+			volumeSources.push_back(source);
+		}
+		SDL_UnlockMutex(mutex);
+	}
+	
+	void addPointSource(AudioSource * source)
+	{
+		SDL_LockMutex(mutex);
+		{
+			pointSources.push_back(source);
+		}
+		SDL_UnlockMutex(mutex);
 	}
 	
 	virtual void portAudioCallback(
@@ -97,24 +132,35 @@ struct MyPortAudioHandler : PortAudioHandler
 		memset(channelL, 0, sizeof(channelL));
 		memset(channelR, 0, sizeof(channelR));
 		
-		for (int i = 0; i < MAX_VOLUMES; ++i)
+		SDL_LockMutex(mutex);
 		{
-			audioSources[i].generate(0, channelL, AUDIO_UPDATE_SIZE);
-			audioSources[i].generate(1, channelR, AUDIO_UPDATE_SIZE);
+			for (auto volumeSource : volumeSources)
+			{
+				volumeSource->generate(0, channelL, AUDIO_UPDATE_SIZE);
+				volumeSource->generate(1, channelR, AUDIO_UPDATE_SIZE);
+			}
+			
+			for (auto & pointSource : pointSources)
+			{
+				ALIGN16 float channel[AUDIO_UPDATE_SIZE];
+				
+				pointSource->generate(channel, AUDIO_UPDATE_SIZE);
+				
+				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+				{
+					channelL[i] += channel[i];
+					channelR[i] += channel[i];
+				}
+			}
 		}
-		
-		ALIGN16 float spokenWord[AUDIO_UPDATE_SIZE];
-		if (audioSource_spokenWord != nullptr)
-			audioSource_spokenWord->generate(spokenWord, AUDIO_UPDATE_SIZE);
-		else
-			memset(spokenWord, 0, sizeof(spokenWord));
+		SDL_UnlockMutex(mutex);
 		
 		float * __restrict destinationBuffer = (float*)outputBuffer;
-		
+
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			destinationBuffer[i * 2 + 0] = channelL[i] + spokenWord[i];
-			destinationBuffer[i * 2 + 1] = channelR[i] + spokenWord[i];
+			destinationBuffer[i * 2 + 0] = channelL[i];
+			destinationBuffer[i * 2 + 1] = channelR[i];
 		}
 	}
 };
@@ -134,18 +180,6 @@ static void drawSoundVolume(const SoundVolume & volume)
 	}
 	gxPopMatrix();
 }
-
-static const Vec3 s_cubeVertices[8] =
-{
-	Vec3(-1, -1, -1),
-	Vec3(+1, -1, -1),
-	Vec3(+1, +1, -1),
-	Vec3(-1, +1, -1),
-	Vec3(-1, -1, +1),
-	Vec3(+1, -1, +1),
-	Vec3(+1, +1, +1),
-	Vec3(-1, +1, +1)
-};
 
 float videoClipBlend[3] =
 {
@@ -179,8 +213,15 @@ struct Videoclip
 	{
 	}
 	
-	void init(const int _index, const char * audio, const char * video, const float _gain)
+	void init(
+		const binaural::HRIRSampleSet * sampleSet,
+		binaural::Mutex * mutex,
+		const int _index, const char * audio, const char * video, const float _gain)
 	{
+		soundVolume.audioSource.init(sampleSet, mutex, &soundSource);
+		
+		//
+		
 		index = _index;
 		
 		soundSource.open(audio, true);
@@ -487,12 +528,29 @@ struct SpokenWord
 
 struct World
 {
+	Camera3d camera;
+	
 	Videoclip videoclips[NUM_VIDEOCLIPS];
 	
 	Vfxclip vfxclips[NUM_VFXCLIPS];
 	
-	void init()
+	void init(binaural::HRIRSampleSet * sampleSet, binaural::Mutex * mutex)
 	{
+		camera.gamepadIndex = 0;
+		
+		//const float kMoveSpeed = .2f;
+		const float kMoveSpeed = 1.f;
+		camera.maxForwardSpeed *= kMoveSpeed;
+		camera.maxUpSpeed *= kMoveSpeed;
+		camera.maxStrafeSpeed *= kMoveSpeed;
+		
+		camera.position[0] = 0;
+		camera.position[1] = +.3f;
+		camera.position[2] = -1.f;
+		camera.pitch = 10.f;
+		
+		//
+		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
 			const int index = i % NUM_VIDEOCLIP_SOURCES;
@@ -501,7 +559,7 @@ struct World
 			const char * videoFilename = videoFilenames[index];
 			const float audioGain = audioGains[index];
 			
-			videoclips[i].init(i, audioFilename, videoFilename, audioGain);
+			videoclips[i].init(sampleSet, mutex, i, audioFilename, videoFilename, audioGain);
 		}
 		
 		for (int i = 0; i < NUM_VFXCLIPS; ++i)
@@ -542,10 +600,20 @@ struct World
 	
 	void tick(const float dt)
 	{
+		// update the camera
+		
+		const bool doCamera = !(keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT));
+		
+		camera.tick(dt, doCamera);
+		
+		// update video clips
+		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
 			videoclips[i].tick(dt);
 		}
+		
+		// update vfx clips
 		
 		for (int i = 0; i < NUM_VFXCLIPS; ++i)
 		{
@@ -695,29 +763,23 @@ int main(int argc, char * argv[])
 	
 	bool showUi = false;
 	
-	Camera3d camera;
-	camera.gamepadIndex = 0;
-	
-	//const float kMoveSpeed = .2f;
-	const float kMoveSpeed = 1.f;
-	camera.maxForwardSpeed *= kMoveSpeed;
-	camera.maxUpSpeed *= kMoveSpeed;
-	camera.maxStrafeSpeed *= kMoveSpeed;
-	
-	camera.position[0] = 0;
-	camera.position[1] = +.3f;
-	camera.position[2] = -1.f;
-	camera.pitch = 10.f;
-	
 	float fov = 90.f;
 	float near = .01f;
 	float far = 100.f;
 	
 	SDL_mutex * audioMutex = SDL_CreateMutex();
 	
+	MyMutex binauralMutex(audioMutex);
+	
+	binaural::HRIRSampleSet sampleSet;
+	binaural::loadHRIRSampleSet_Cipic("subject147", sampleSet);
+	sampleSet.finalize();
+	
+	//
+	
 	World world;
 	
-	world.init();
+	world.init(&sampleSet, &binauralMutex);
 	
 #if DO_SPOKENWORD
 	SpokenWord spokenWord;
@@ -725,30 +787,20 @@ int main(int argc, char * argv[])
 	// 8:49 ~= 530 seconds
 	spokenWord.open("wiekspreekt.txt", "wiekspreekt.ogg");
 #endif
-
-	MyMutex binauralMutex(audioMutex);
-	
-	binaural::HRIRSampleSet sampleSet;
-	binaural::loadHRIRSampleSet_Cipic("subject147", sampleSet);
-	sampleSet.finalize();
 	
 	MyPortAudioHandler * paHandler = new MyPortAudioHandler();
 	
-	int audioSourceIndex = 0;
+	paHandler->init(audioMutex);
 	
 	for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 	{
-		paHandler->audioSources[audioSourceIndex].init(&sampleSet, &binauralMutex);
+		auto & videoClip = world.videoclips[i];
 		
-		paHandler->audioSources[audioSourceIndex].source = &world.videoclips[i].soundSource;
-		
-		audioSourceIndex++;
+		paHandler->addVolumeSource(&videoClip.soundVolume.audioSource);
 	}
 	
-	Assert(audioSourceIndex <= MAX_VOLUMES);
-	
 #if DO_SPOKENWORD
-	paHandler->audioSource_spokenWord = &spokenWord.soundSource;
+	paHandler->addPointSource(&spokenWord.soundSource);
 #endif
 
 	PortAudioObject pa;
@@ -775,12 +827,6 @@ int main(int argc, char * argv[])
 		if (keyboard.wentDown(SDLK_TAB))
 			showUi = !showUi;
 		
-		// update the camera
-		
-		const bool doCamera = !(keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT));
-		
-		camera.tick(dt, doCamera);
-		
 	#if 0
 		videoClipBlend[0] = (1.f + std::cos(framework.time / 3.4f)) / 2.f;
 		videoClipBlend[1] = (1.f + std::cos(framework.time / 4.56f)) / 2.f;
@@ -806,102 +852,17 @@ int main(int argc, char * argv[])
 		
 		// gather HRTF sampling points
 		
-		Vec3 samplePoints[MAX_SAMPLELOCATIONS_TOTAL];
-		Vec3 samplePointsView[MAX_SAMPLELOCATIONS_TOTAL];
-		float samplePointsAmount[MAX_SAMPLELOCATIONS_TOTAL];
-		int numSamplePoints = 0;
-		
-		const Vec3 pCameraWorld = camera.getWorldMatrix().GetTranslation();
-		const Vec3 pSoundWorld = world.videoclips[0].soundVolume.transform.GetTranslation();
-		const Vec3 pSoundView = camera.getViewMatrix().Mul4(pSoundWorld);
+		const Vec3 cameraPosition_world = world.camera.getWorldMatrix().GetTranslation();
+		//const Vec3 soundPosition_world = world.videoclips[0].soundVolume.transform.GetTranslation();
+		//const Vec3 soundPosition_view = camera.getViewMatrix().Mul4(pSoundWorld);
+		const Mat4x4 worldToViewMatrix = world.camera.getViewMatrix();
 		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
-			auto & videoclip = world.videoclips[i];
-			auto & soundVolume = videoclip.soundVolume;
+			auto & self = world.videoclips[i];
 			
-			Vec3 svSamplePoints[MAX_SAMPLELOCATIONS_PER_VOLUME];
-			int numSvSamplePoints = 0;
-			
-			if (enableNearest)
-			{
-				const Vec3 nearestPointWorld = soundVolume.nearestPointWorld(pCameraWorld);
-				
-				svSamplePoints[numSvSamplePoints++] = nearestPointWorld;
-			}
-			
-			if (enableVertices)
-			{
-				for (int j = 0; j < 8; ++j)
-				{
-					const Vec3 pWorld = soundVolume.projectToWorld(s_cubeVertices[j]);
-					
-					svSamplePoints[numSvSamplePoints++] = pWorld;
-				}
-			}
-			
-			binauralMutex.lock();
-			{
-				// activate the binauralizers for the generated sample points
-				
-				for (int j = 0; j < numSvSamplePoints; ++j)
-				{
-					const Vec3 & pWorld = svSamplePoints[j];
-					const Vec3 pView = camera.getViewMatrix().Mul4(pWorld);
-					
-					const float distanceToHead = pView.CalcSize();
-					const float kDistanceToHeadTreshold = .1f; // 10cm. related to head size, but exact size is subjective
-					
-					const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadTreshold);
-					
-					float elevation;
-					float azimuth;
-					binaural::cartesianToElevationAndAzimuth(pView[2], pView[1], pView[0], elevation, azimuth);
-					
-					// morph to an elevation and azimuth of (0, 0) as the sound gets closer to the center of the head
-					// perhaps we should add a dry-wet mix instead .. ?
-					elevation = lerp(0.f, elevation, fadeAmount);
-					azimuth = lerp(0.f, azimuth, fadeAmount);
-					
-					const float kMinDistanceToEar = .2f;
-					const float clampedDistanceToEar = std::max(kMinDistanceToEar, distanceToHead);
-					
-					//const float gain = videoclip.gain / clampedDistanceToEar;
-					const float gain = videoclip.gain / (clampedDistanceToEar * clampedDistanceToEar);
-					
-					paHandler->audioSources[i].mutex->lock();
-					{
-						paHandler->audioSources[i].sampleLocation[j].elevation = elevation;
-						paHandler->audioSources[i].sampleLocation[j].azimuth = azimuth;
-						paHandler->audioSources[i].sampleLocation[j].gain = gain / numSvSamplePoints;
-					}
-					paHandler->audioSources[i].mutex->unlock();
-					
-					//
-					
-					samplePoints[numSamplePoints] = pWorld;
-					samplePointsView[numSamplePoints] = pView;
-					samplePointsAmount[numSamplePoints] = fadeAmount;
-					numSamplePoints++;
-				}
-				
-				// reset and mute the unused binauralizers
-				
-				for (int j = numSvSamplePoints; j < MAX_SAMPLELOCATIONS_PER_VOLUME; ++j)
-				{
-					paHandler->audioSources[i].mutex->lock();
-					{
-						paHandler->audioSources[i].sampleLocation[j].elevation = 0.f;
-						paHandler->audioSources[i].sampleLocation[j].azimuth = 0.f;
-						paHandler->audioSources[i].sampleLocation[j].gain = 0.f;
-					}
-					paHandler->audioSources[i].mutex->unlock();
-				}
-			}
-			binauralMutex.unlock();
+			self.soundVolume.generateSampleLocations(worldToViewMatrix, cameraPosition_world, enableNearest, enableVertices, self.gain);
 		}
-		
-		Assert(numSamplePoints <= MAX_SAMPLELOCATIONS_TOTAL);
 		
 	#if DO_SPOKENWORD
 		spokenWord.tick(dt);
@@ -920,11 +881,11 @@ int main(int argc, char * argv[])
 			
 			projectPerspective3d(fov, near, far);
 			
-			camera.pushViewMatrix();
+			world.camera.pushViewMatrix();
 			{
-				world.draw(camera);
+				world.draw(world.camera);
 			}
-			camera.popViewMatrix();
+			world.camera.popViewMatrix();
 			
 			projectScreen2d();
 			
@@ -934,36 +895,6 @@ int main(int argc, char * argv[])
 			
 			if (showUi)
 			{
-				setColor(colorWhite);
-				drawText(10, 10, kFontSize, +1, +1, "sound world pos: %.2f, %.2f, %.2f", pSoundWorld[0], pSoundWorld[1], pSoundWorld[2]);
-				drawText(10, 30, kFontSize, +1, +1, "sound view pos: %.2f, %.2f, %.2f", pSoundView[0], pSoundView[1], pSoundView[2]);
-				drawText(10, 50, kFontSize, +1, +1, "camera world pos: %.2f, %.2f, %.2f", pCameraWorld[0], pCameraWorld[1], pCameraWorld[2]);
-				
-				beginTextBatch();
-				{
-					int x = 10;
-					int y = 100;
-					
-					for (int i = 0; i < numSamplePoints; ++i)
-					{
-						setColor(200, 200, 200);
-						drawText(x, y, kFontSize2, +1, +1,
-							"sample pos: (%+.2f, %+.2f, %+.2f, world), (%+.2f, %+.2f, %+.2f, view), amount: %.2f",
-							samplePoints[i][0], samplePoints[i][1], samplePoints[i][2],
-							samplePointsView[i][0], samplePointsView[i][1], samplePointsView[i][2],
-							samplePointsAmount[i]);
-						
-						y += 12;
-						
-						if (((i + 1) % 46) == 0)
-						{
-							x += 400;
-							y = 100;
-						}
-					}
-				}
-				endTextBatch();
-				
 				gxTranslatef(0, GFX_SY - 100, 0);
 				setColor(colorWhite);
 				drawText(10, 40, kFontSize, +1, +1, "N: toggle use nearest point (%s)", enableNearest ? "on" : "off");
@@ -977,6 +908,7 @@ int main(int argc, char * argv[])
 	
 	pa.shut();
 	
+	paHandler->shut();
 	delete paHandler;
 	paHandler = nullptr;
 	
