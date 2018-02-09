@@ -215,7 +215,11 @@ struct SoundVolume
 		return projectToWorld(Vec3(x, y, z));
 	}
 
-	void generateSampleLocations(const Mat4x4 & worldToViewMatrix, Vec3Arg cameraPosition_world, const bool enableNearest, const bool enableVertices, const float _gain)
+	void generateSampleLocations(
+		const Mat4x4 & worldToViewMatrix,
+		Vec3Arg cameraPosition_world,
+		const bool enableNearest, const bool enableVertices,
+		const float _gain)
 	{
 		Vec3 samplePoints[MAX_SAMPLELOCATIONS_PER_VOLUME];
 		int numSamplePoints = 0;
@@ -237,67 +241,54 @@ struct SoundVolume
 			}
 		}
 
-		// activate the binauralizers for the generated sample points
-		
-		for (int i = 0; i < numSamplePoints; ++i)
+		audioSource.mutex->lock();
 		{
-			const Vec3 & position_world = samplePoints[i];
-			const Vec3 position_view = worldToViewMatrix.Mul4(position_world);
+			// activate the binauralizers for the generated sample points
 			
-			const float distanceToHead = position_view.CalcSize();
-			const float kDistanceToHeadTreshold = .1f; // 10cm. related to head size, but exact size is subjective
-			
-			const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadTreshold);
-			
-			float elevation;
-			float azimuth;
-			binaural::cartesianToElevationAndAzimuth(
-				position_view[2],
-				position_view[1],
-				position_view[0],
-				elevation,
-				azimuth);
-			
-			// morph to an elevation and azimuth of (0, 0) as the sound gets closer to the center of the head
-			// perhaps we should add a dry-wet mix instead .. ?
-			elevation = lerp(0.f, elevation, fadeAmount);
-			azimuth = lerp(0.f, azimuth, fadeAmount);
-			
-			const float kMinDistanceToEar = .2f;
-			const float clampedDistanceToEar = std::max(kMinDistanceToEar, distanceToHead);
-			
-			//const float gain = videoclip.gain / clampedDistanceToEar;
-			const float gain = _gain / (clampedDistanceToEar * clampedDistanceToEar);
-			
-			audioSource.mutex->lock();
+			for (int i = 0; i < numSamplePoints; ++i)
 			{
+				const Vec3 & position_world = samplePoints[i];
+				const Vec3 position_view = worldToViewMatrix.Mul4(position_world);
+				
+				const float distanceToHead = position_view.CalcSize();
+				const float kDistanceToHeadTreshold = .1f; // 10cm. related to head size, but exact size is subjective
+				
+				const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadTreshold);
+				
+				float elevation;
+				float azimuth;
+				binaural::cartesianToElevationAndAzimuth(
+					position_view[2],
+					position_view[1],
+					position_view[0],
+					elevation,
+					azimuth);
+				
+				// morph to an elevation and azimuth of (0, 0) as the sound gets closer to the center of the head
+				// perhaps we should add a dry-wet mix instead .. ?
+				elevation = lerp(0.f, elevation, fadeAmount);
+				azimuth = lerp(0.f, azimuth, fadeAmount);
+				
+				const float kMinDistanceToEar = .2f;
+				const float clampedDistanceToEar = std::max(kMinDistanceToEar, distanceToHead);
+				
+				//const float gain = _gain / clampedDistanceToEar;
+				const float gain = _gain / (clampedDistanceToEar * clampedDistanceToEar);
+				
 				audioSource.sampleLocation[i].elevation = elevation;
 				audioSource.sampleLocation[i].azimuth = azimuth;
 				audioSource.sampleLocation[i].gain = gain / numSamplePoints;
 			}
-			audioSource.mutex->unlock();
-			
-			//
-			
-		#if 0
-			samplePoints[numSamplePoints] = pWorld;
-			samplePointsView[numSamplePoints] = pView;
-			samplePointsAmount[numSamplePoints] = fadeAmount;
-			numSamplePoints++;
-		#endif
-		}
 		
-		// reset and mute the unused binauralizers
-		
-		for (int i = numSamplePoints; i < MAX_SAMPLELOCATIONS_PER_VOLUME; ++i)
-		{
-			audioSource.mutex->lock();
+			// reset and mute the unused binauralizers
+			
+			for (int i = numSamplePoints; i < MAX_SAMPLELOCATIONS_PER_VOLUME; ++i)
 			{
 				audioSource.sampleLocation[i].elevation = 0.f;
 				audioSource.sampleLocation[i].azimuth = 0.f;
 				audioSource.sampleLocation[i].gain = 0.f;
 			}
-			audioSource.mutex->unlock();
 		}
+		audioSource.mutex->unlock();
 	}
 };

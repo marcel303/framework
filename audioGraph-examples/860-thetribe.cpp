@@ -27,6 +27,9 @@ const int GFX_SY = 768;
 #define DO_SPOKENWORD 0
 #define DO_CONTROLWINDOW 0
 
+static bool enableNearest = true;
+static bool enableVertices = true;
+
 static const float timeSeed = 1234.f;
 
 static const char * audioFilenames[NUM_VIDEOCLIP_SOURCES] =
@@ -313,7 +316,7 @@ struct Videoclip
 		}
 	}
 	
-	void tick(const float dt)
+	void tick(const Mat4x4 & worldToViewMatrix, const Vec3 & cameraPosition_world, const float dt)
 	{
 		Vec3 totalScale(0.f, 0.f, 0.f);
 		Quat totalRotation(0.f, 0.f, 0.f, 0.f);
@@ -352,7 +355,13 @@ struct Videoclip
 			Translate(totalTranslation).
 			Rotate(totalRotation).
 			Scale(totalScale);
-	
+		
+		// update sample locations for binauralization given the new transform
+		
+		soundVolume.transform = transform;
+		
+		soundVolume.generateSampleLocations(worldToViewMatrix, cameraPosition_world, enableNearest, enableVertices, gain);
+		
 		// update media player
 		
 		const double newPresentTime = soundSource.samplePosition / float(soundSource.sampleRate);
@@ -606,11 +615,16 @@ struct World
 		
 		camera.tick(dt, doCamera);
 		
+		//
+		
+		const Vec3 cameraPosition_world = camera.getWorldMatrix().GetTranslation();
+		const Mat4x4 worldToViewMatrix = camera.getViewMatrix();
+		
 		// update video clips
 		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
-			videoclips[i].tick(dt);
+			videoclips[i].tick(worldToViewMatrix, cameraPosition_world, dt);
 		}
 		
 		// update vfx clips
@@ -621,12 +635,16 @@ struct World
 		}
 	}
 	
-	void draw(const Camera3d & camera)
+	void draw()
 	{
 		const Vec3 origin = camera.getWorldMatrix().GetTranslation();
 		const Vec3 direction = camera.getWorldMatrix().GetAxis(2);
 		
 		const int hoverIndex = hitTest(origin, direction);
+		
+		//
+		
+		camera.pushViewMatrix();
 		
 		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 		glEnable(GL_LINE_SMOOTH);
@@ -673,6 +691,8 @@ struct World
 			}
 		}
 		glDisable(GL_DEPTH_TEST);
+		
+		camera.popViewMatrix();
 	}
 };
 
@@ -758,9 +778,6 @@ int main(int argc, char * argv[])
 	const int kFontSize = 16;
 	const int kFontSize2 = 10;
 	
-	bool enableNearest = true;
-	bool enableVertices = true;
-	
 	bool showUi = false;
 	
 	float fov = 90.f;
@@ -841,29 +858,6 @@ int main(int argc, char * argv[])
 		
 		world.tick(dt);
 		
-		// update sound volume properties
-		
-		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
-		{
-			auto & soundVolume = world.videoclips[i].soundVolume;
-			
-			soundVolume.transform = world.videoclips[i].transform;
-		}
-		
-		// gather HRTF sampling points
-		
-		const Vec3 cameraPosition_world = world.camera.getWorldMatrix().GetTranslation();
-		//const Vec3 soundPosition_world = world.videoclips[0].soundVolume.transform.GetTranslation();
-		//const Vec3 soundPosition_view = camera.getViewMatrix().Mul4(pSoundWorld);
-		const Mat4x4 worldToViewMatrix = world.camera.getViewMatrix();
-		
-		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
-		{
-			auto & self = world.videoclips[i];
-			
-			self.soundVolume.generateSampleLocations(worldToViewMatrix, cameraPosition_world, enableNearest, enableVertices, self.gain);
-		}
-		
 	#if DO_SPOKENWORD
 		spokenWord.tick(dt);
 	#endif
@@ -880,13 +874,9 @@ int main(int argc, char * argv[])
 			pushFontMode(FONT_SDF);
 			
 			projectPerspective3d(fov, near, far);
-			
-			world.camera.pushViewMatrix();
 			{
-				world.draw(world.camera);
+				world.draw();
 			}
-			world.camera.popViewMatrix();
-			
 			projectScreen2d();
 			
 		#if DO_SPOKENWORD
