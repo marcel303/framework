@@ -20,6 +20,9 @@ const int GFX_SY = 768;
 #define NUM_VIDEOCLIPS 0
 #define NUM_VFXCLIPS 1
 
+#define NUM_SPOKENWORD_SOURCES 3
+#define NUM_SPOKENWORDS 3
+
 #define DRAW_GRIDS 1
 #define DO_SPOKENWORD 1
 #define DO_CONTROLWINDOW 0
@@ -48,6 +51,20 @@ static const char * videoFilenames[NUM_VIDEOCLIP_SOURCES] =
 	"0.1280px.mp4",
 	"1.1280px.mp4",
 	"2.1280px.mp4",
+};
+
+static const char * spokenText[NUM_SPOKENWORD_SOURCES] =
+{
+	"wiekspreekt.txt",
+	"albert-tekst1.txt",
+	"albert-tekst2.txt"
+};
+
+static const char * spokenAudio[NUM_SPOKENWORD_SOURCES] =
+{
+	"wiekspreekt.ogg", // 8:49 ~= 530 seconds
+	"albert-tekst1.ogg",
+	"albert-tekst2.ogg"
 };
 
 //
@@ -565,6 +582,8 @@ struct SpokenWord
 	AudioSourceVorbis soundSource;
 	SoundVolume soundVolume;
 	
+	Vec3 pos;
+	
 	State state;
 	
 	bool hover;
@@ -601,7 +620,8 @@ struct SpokenWord
 	void init(
 		const binaural::HRIRSampleSet * sampleSet,
 		binaural::Mutex * mutex,
-		const char * text, const char * audio)
+		const char * text, const char * audio,
+		Vec3Arg _pos)
 	{
 		textScroller.open(text);
 		
@@ -610,6 +630,8 @@ struct SpokenWord
 		
 		soundVolume.init(sampleSet, mutex, &soundSource);
 		s_paHandler->addVolumeSource(&soundVolume.audioSource);
+		
+		pos = _pos;
 	}
 	
 	bool intersectRayWithPlane(Vec3Arg pos, Vec3Arg dir, Vec3 & p, float & t) const
@@ -625,7 +647,8 @@ struct SpokenWord
 		const float angleY = currentAngle * M_PI / 180.f;
 		
 		soundVolume.transform = Mat4x4(true)
-			.Translate(0.f, y, 1.f)
+			.Translate(pos)
+			.Translate(0.f, 0.f, y)
 			.RotateY(angleY)
 			.Scale(currentScale, currentScale, currentScale)
 			.Scale(1.f, 1.f, .1f);
@@ -723,7 +746,7 @@ struct World
 	
 	Vfxclip vfxclips[NUM_VFXCLIPS];
 	
-	SpokenWord spokenWord;
+	SpokenWord spokenWords[NUM_SPOKENWORDS];
 	
 	HitTestResult hitTestResult;
 	
@@ -731,7 +754,7 @@ struct World
 		: camera()
 		, videoclips()
 		, vfxclips()
-		, spokenWord()
+		, spokenWords()
 		, hitTestResult()
 	{
 	}
@@ -770,9 +793,17 @@ struct World
 		}
 		
 	#if DO_SPOKENWORD
-		// 8:49 ~= 530 seconds
-		//spokenWord.init("wiekspreekt.txt", "wiekspreekt.ogg");
-		spokenWord.init(sampleSet, mutex, "albert-tekst1.txt", "albert-tekst1.ogg");
+		for (int i = 0; i < NUM_SPOKENWORDS; ++i)
+		{
+			auto & spokenWord = spokenWords[i];
+			
+			const char * textFilename = spokenText[i];
+			const char * audioFilename = spokenAudio[i];
+			
+			const Vec3 p(0.f, 0.f, i + 1.f);
+			
+			spokenWord.init(sampleSet, mutex, textFilename, audioFilename, p);
+		}
 	#endif
 	}
 	
@@ -791,10 +822,7 @@ struct World
 			
 			if (videoclip.intersectRayWithPlane(pos, dir, p, t) && t >= 0.f)
 			{
-				//const float distance = pos_sound.CalcSize();
-				const float distance = p.CalcSize(); // fixme : this is skewed by scale
-				
-				if (distance < bestDistance)
+				if (t < bestDistance)
 				{
 					bestDistance = distance;
 					result = HitTestResult();
@@ -803,17 +831,16 @@ struct World
 			}
 		}
 		
-		for (int i = 0; i < 1; ++i)
+		for (int i = 0; i < NUM_SPOKENWORDS; ++i)
 		{
+			auto & spokenWord = spokenWords[i];
+			
 			Vec3 p;
 			float t;
 			
 			if (spokenWord.intersectRayWithPlane(pos, dir, p, t) && t >= 0.f)
 			{
-				//const float distance = pos_sound.CalcSize();
-				const float distance = p.CalcSize(); // fixme : this is skewed by scale
-				
-				if (distance < bestDistance)
+				if (t < bestDistance)
 				{
 					bestDistance = distance;
 					result = HitTestResult();
@@ -853,7 +880,12 @@ struct World
 		}
 		
 	#if DO_SPOKENWORD
-		spokenWord.tick(worldToViewMatrix, cameraPosition_world, dt);
+		for (int i = 0; i < NUM_SPOKENWORDS; ++i)
+		{
+			auto & spokenWord = spokenWords[i];
+			
+			spokenWord.tick(worldToViewMatrix, cameraPosition_world, dt);
+		}
 	#endif
 		
 		//
@@ -896,8 +928,10 @@ struct World
 				}
 				
 			#if DO_SPOKENWORD
-				for (int i = 0; i < 1; ++i)
+				for (int i = 0; i < NUM_SPOKENWORDS; ++i)
 				{
+					auto & spokenWord = spokenWords[i];
+					
 					spokenWord.draw3d();
 				}
 			#endif
@@ -934,7 +968,12 @@ struct World
 	void draw2d()
 	{
 	#if DO_SPOKENWORD
-		spokenWord.draw2d();
+		for (int i = 0; i < NUM_SPOKENWORDS; ++i)
+		{
+			auto & spokenWord = spokenWords[i];
+			
+			spokenWord.draw2d();
+		}
 	#endif
 	}
 };
