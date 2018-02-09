@@ -17,7 +17,7 @@ const int GFX_SY = 768;
 //
 
 #define NUM_VIDEOCLIP_SOURCES 3
-#define NUM_VIDEOCLIPS 6
+#define NUM_VIDEOCLIPS 0
 #define NUM_VFXCLIPS 1
 
 #define DRAW_GRIDS 1
@@ -226,6 +226,26 @@ static void drawSoundVolume(const SoundVolume & volume)
 	gxPopMatrix();
 }
 
+static bool intersectSoundVolume(const SoundVolume & soundVolume, Vec3Arg pos, Vec3Arg dir, Vec3 & p, float & t)
+{
+	auto & soundToWorld = soundVolume.transform;
+	const Mat4x4 worldToSound = soundToWorld.CalcInv();
+
+	const Vec3 pos_sound = worldToSound.Mul4(pos);
+	const Vec3 dir_sound = worldToSound.Mul3(dir);
+
+	const float d = pos_sound[2];
+	const float dd = dir_sound[2];
+
+	t = - d / dd;
+	
+	p = pos_sound + dir_sound * t;
+	
+	return
+		p[0] >= -1.f && p[0] <= +1.f &&
+		p[1] >= -1.f && p[1] <= +1.f;
+}
+
 float videoClipBlend[3] =
 {
 	1.f, 0.f, 1.f
@@ -248,6 +268,8 @@ struct Videoclip
 	
 	int index;
 	
+	bool hover;
+	
 	Videoclip()
 		: transform()
 		, soundSource()
@@ -255,6 +277,7 @@ struct Videoclip
 		, mp()
 		, gain(0.f)
 		, index(-1)
+		, hover(false)
 	{
 	}
 	
@@ -280,29 +303,9 @@ struct Videoclip
 		s_paHandler->addVolumeSource(&soundVolume.audioSource);
 	}
 	
-	float intersectRayWithPlane(Vec3Arg pos, Vec3Arg dir, Vec3 & p) const
+	bool intersectRayWithPlane(Vec3Arg pos, Vec3Arg dir, Vec3 & p, float & t) const
 	{
-		auto & soundToWorld = soundVolume.transform;
-		const Mat4x4 worldToSound = soundToWorld.CalcInv();
-	
-		const Vec3 pos_sound = worldToSound.Mul4(pos);
-		const Vec3 dir_sound = worldToSound.Mul3(dir);
-	
-		const float d = pos_sound[2];
-		const float dd = dir_sound[2];
-	
-		const float t = - d / dd;
-		
-		p = pos_sound + dir_sound * t;
-		
-		return t;
-	}
-	
-	bool isInside(Vec3Arg pos_sound) const
-	{
-		return
-			pos_sound[0] >= -1.f && pos_sound[0] <= +1.f &&
-			pos_sound[1] >= -1.f && pos_sound[1] <= +1.f;
+		return intersectSoundVolume(soundVolume, pos, dir, p, t);
 	}
 	
 	void evalVideoClipParams(const EvalMode mode, Vec3 & scale, Quat & rotation, Vec3 & position, float & opacity) const
@@ -426,7 +429,7 @@ struct Videoclip
 		mp.tick(mp.context, true);
 	}
 	
-	void drawSolid(const bool hover)
+	void drawSolid()
 	{
 		gxPushMatrix();
 		{
@@ -513,7 +516,7 @@ struct Vfxclip
 		vfxGraph->traverseDraw(1024, 1024);
 	}
 	
-	void drawSolid(const bool hover)
+	void drawSolid()
 	{
 		gxPushMatrix();
 		{
@@ -542,7 +545,7 @@ struct Vfxclip
 	}
 };
 
-#if DO_SPOKENWORD
+#if DO_SPOKENWORD || 1
 
 #include "FileStream.h"
 #include "StreamReader.h"
@@ -551,15 +554,47 @@ struct Vfxclip
 
 struct SpokenWord
 {
+	enum State
+	{
+		kState_Inactive,
+		kState_Active
+	};
+	
 	TextScroller textScroller;
 	
 	AudioSourceVorbis soundSource;
 	SoundVolume soundVolume;
 	
+	State state;
+	
+	bool hover;
+	
+	Color currentColor;
+	Color desiredColor;
+	
+	float currentGain;
+	float desiredGain;
+	
+	float currentScale;
+	float desiredScale;
+	
+	float currentAngle;
+	float desiredAngle;
+	
 	SpokenWord()
 		: textScroller()
 		, soundSource()
 		, soundVolume()
+		, state(kState_Inactive)
+		, hover(false)
+		, currentColor(50, 50, 50)
+		, desiredColor(50, 50, 50)
+		, currentGain(0.f)
+		, desiredGain(0.f)
+		, currentScale(0.f)
+		, desiredScale(.1f)
+		, currentAngle(0.f)
+		, desiredAngle(0.f)
 	{
 	}
 	
@@ -577,12 +612,67 @@ struct SpokenWord
 		s_paHandler->addVolumeSource(&soundVolume.audioSource);
 	}
 	
+	bool intersectRayWithPlane(Vec3Arg pos, Vec3Arg dir, Vec3 & p, float & t) const
+	{
+		return intersectSoundVolume(soundVolume, pos, dir, p, t);
+	}
+	
 	void tick(const Mat4x4 & worldToViewMatrix, Vec3Arg cameraPosition_world, const float dt)
 	{
-		soundVolume.transform = Mat4x4(true).Translate(0, 0, -2).Scale(1, 1, .1f);
-		soundVolume.generateSampleLocations(worldToViewMatrix, cameraPosition_world, true, true, 1.f);
+		//const float y = std::sin(framework.time / 3.45f) * 1.f;
+		const float y = 0.f;
+		//const float angleY = std::sin(framework.time / 4.56f) * 1.f;
+		const float angleY = currentAngle * M_PI / 180.f;
+		
+		soundVolume.transform = Mat4x4(true)
+			.Translate(0.f, y, 1.f)
+			.RotateY(angleY)
+			.Scale(currentScale, currentScale, currentScale)
+			.Scale(1.f, 1.f, .1f);
+		soundVolume.generateSampleLocations(worldToViewMatrix, cameraPosition_world, true, true, currentGain);
 		
 		textScroller.progress += dt / 530.f;
+		
+		//
+		
+		switch (state)
+		{
+		case kState_Inactive:
+			desiredColor = Color(50, 50, 50);
+			desiredGain = 0.f;
+			desiredScale = .4f;
+			desiredAngle = 0.f;
+			
+			if (hover && mouse.wentDown(BUTTON_LEFT))
+			{
+				state = kState_Active;
+				break;
+			}
+			break;
+		
+		case kState_Active:
+			desiredColor = Color(255, 0, 0);
+			desiredGain = 1.f;
+			desiredScale = 1.f;
+			desiredAngle = 180.f;
+			
+			if (hover && mouse.wentDown(BUTTON_LEFT))
+			{
+				state = kState_Inactive;
+				break;
+			}
+			break;
+		}
+		
+		//
+		
+		const float speed = .7f;
+		const float retain = std::pow(1.f - speed, dt);
+		
+		currentColor = desiredColor.interp(currentColor, retain);
+		currentGain = lerp(desiredGain, currentGain, retain);
+		currentScale = lerp(desiredScale, currentScale, retain);
+		currentAngle = lerp(desiredAngle, currentAngle, retain);
 	}
 	
 	void draw3d()
@@ -592,11 +682,15 @@ struct SpokenWord
 			gxMultMatrixf(soundVolume.transform.m_v);
 			
 			setColor(colorWhite);
-			drawCircle(0, 0, 1, 40);
+			drawCircle(0, 0, 1, 200);
 		}
 		gxPopMatrix();
 		
-		setColor(200, 0, 0);
+		Color color = currentColor;
+		if (hover)
+			color = color.interp(colorWhite, .5f);
+		
+		setColor(color);
 		drawSoundVolume(soundVolume);
 	}
 	
@@ -610,23 +704,35 @@ struct SpokenWord
 
 struct World
 {
+	struct HitTestResult
+	{
+		Videoclip * videoclip;
+		
+		SpokenWord * spokenWord;
+		
+		HitTestResult()
+			: videoclip(nullptr)
+			, spokenWord(nullptr)
+		{
+		}
+	};
+	
 	Camera3d camera;
 	
 	Videoclip videoclips[NUM_VIDEOCLIPS];
 	
 	Vfxclip vfxclips[NUM_VFXCLIPS];
 	
-#if DO_SPOKENWORD
 	SpokenWord spokenWord;
-#endif
-
+	
+	HitTestResult hitTestResult;
+	
 	World()
 		: camera()
 		, videoclips()
 		, vfxclips()
-	#if DO_SPOKENWORD
 		, spokenWord()
-	#endif
+		, hitTestResult()
 	{
 	}
 
@@ -670,29 +776,48 @@ struct World
 	#endif
 	}
 	
-	int hitTest(Vec3Arg pos, Vec3Arg dir) const
+	HitTestResult hitTest(Vec3Arg pos, Vec3Arg dir)
 	{
-		int result = -1;
+		HitTestResult result;
+		
 		float bestDistance = std::numeric_limits<float>::infinity();
 		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
+			auto & videoclip = videoclips[i];
+			
 			Vec3 p;
+			float t;
 			
-			const float t = videoclips[i].intersectRayWithPlane(pos, dir, p);
-			
-			if (t >= 0.f)
+			if (videoclip.intersectRayWithPlane(pos, dir, p, t) && t >= 0.f)
 			{
-				if (videoclips[i].isInside(p))
+				//const float distance = pos_sound.CalcSize();
+				const float distance = p.CalcSize(); // fixme : this is skewed by scale
+				
+				if (distance < bestDistance)
 				{
-					//const float distance = pos_sound.CalcSize();
-					const float distance = p.CalcSize(); // fixme : this is skewed by scale
-					
-					if (distance < bestDistance)
-					{
-						bestDistance = distance;
-						result = i;
-					}
+					bestDistance = distance;
+					result = HitTestResult();
+					result.videoclip = &videoclip;
+				}
+			}
+		}
+		
+		for (int i = 0; i < 1; ++i)
+		{
+			Vec3 p;
+			float t;
+			
+			if (spokenWord.intersectRayWithPlane(pos, dir, p, t) && t >= 0.f)
+			{
+				//const float distance = pos_sound.CalcSize();
+				const float distance = p.CalcSize(); // fixme : this is skewed by scale
+				
+				if (distance < bestDistance)
+				{
+					bestDistance = distance;
+					result = HitTestResult();
+					result.spokenWord = &spokenWord;
 				}
 			}
 		}
@@ -730,17 +855,26 @@ struct World
 	#if DO_SPOKENWORD
 		spokenWord.tick(worldToViewMatrix, cameraPosition_world, dt);
 	#endif
+		
+		//
+		
+		if (hitTestResult.videoclip)
+			hitTestResult.videoclip->hover = false;
+		if (hitTestResult.spokenWord)
+			hitTestResult.spokenWord->hover = false;
+		
+		const Vec3 origin = camera.getWorldMatrix().GetTranslation();
+		const Vec3 direction = camera.getWorldMatrix().GetAxis(2);
+		hitTestResult = hitTest(origin, direction);
+		
+		if (hitTestResult.videoclip)
+			hitTestResult.videoclip->hover = true;
+		if (hitTestResult.spokenWord)
+			hitTestResult.spokenWord->hover = true;
 	}
 	
 	void draw3d()
 	{
-		const Vec3 origin = camera.getWorldMatrix().GetTranslation();
-		const Vec3 direction = camera.getWorldMatrix().GetAxis(2);
-		
-		const int hoverIndex = hitTest(origin, direction);
-		
-		//
-		
 		camera.pushViewMatrix();
 		
 		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
@@ -753,18 +887,19 @@ struct World
 			{
 				for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 				{
-					const bool hover = (i == hoverIndex);
-					
-					videoclips[i].drawSolid(hover);
+					videoclips[i].drawSolid();
 				}
 				
 				for (int i = 0; i < NUM_VFXCLIPS; ++i)
 				{
-					vfxclips[i].drawSolid(false);
+					vfxclips[i].drawSolid();
 				}
 				
 			#if DO_SPOKENWORD
-				spokenWord.draw3d();
+				for (int i = 0; i < 1; ++i)
+				{
+					spokenWord.draw3d();
+				}
 			#endif
 			}
 			popBlend();
