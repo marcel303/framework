@@ -11,8 +11,13 @@
 #include "video.h"
 #include <atomic>
 
+#if 1
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
+#else
+const int GFX_SX = 640;
+const int GFX_SY = 480;
+#endif
 
 //
 
@@ -21,11 +26,11 @@ const int GFX_SY = 768;
 #define NUM_VFXCLIPS 1
 
 #define NUM_SPOKENWORD_SOURCES 3
-#define NUM_SPOKENWORDS 2
+#define NUM_SPOKENWORDS 3
 
 #define DRAW_GRIDS 1
-#define DO_SPOKENWORD 1
 #define DO_CONTROLWINDOW 0
+#define ENABLE_TRANSFORM_MIXING 0
 
 static bool enableNearest = true;
 static bool enableVertices = true;
@@ -265,7 +270,7 @@ static bool intersectSoundVolume(const SoundVolume & soundVolume, Vec3Arg pos, V
 
 float videoClipBlend[3] =
 {
-	1.f, 0.f, 1.f
+	1.f, 0.f, 0.f
 };
 
 struct Videoclip
@@ -476,9 +481,12 @@ struct Vfxclip
 	SoundVolume soundVolume;
 	VfxGraph * vfxGraph;
 	
+	bool hover;
+	
 	Vfxclip()
 		: soundVolume()
 		, vfxGraph(nullptr)
+		, hover(false)
 	{
 	}
 	
@@ -501,29 +509,9 @@ struct Vfxclip
 		}
 	}
 	
-	float intersectRayWithPlane(Vec3Arg pos, Vec3Arg dir, Vec3 & p) const
+	bool intersectRayWithPlane(Vec3Arg pos, Vec3Arg dir, Vec3 & p, float & t) const
 	{
-		auto & soundToWorld = soundVolume.transform;
-		const Mat4x4 worldToSound = soundToWorld.CalcInv();
-	
-		const Vec3 pos_sound = worldToSound.Mul4(pos);
-		const Vec3 dir_sound = worldToSound.Mul3(dir);
-	
-		const float d = pos_sound[2];
-		const float dd = dir_sound[2];
-	
-		const float t = - d / dd;
-		
-		p = pos_sound + dir_sound * t;
-		
-		return t;
-	}
-	
-	bool isInside(Vec3Arg pos_sound) const
-	{
-		return
-			pos_sound[0] >= -1.f && pos_sound[0] <= +1.f &&
-			pos_sound[1] >= -1.f && pos_sound[1] <= +1.f;
+		return intersectSoundVolume(soundVolume, pos, dir, p, t);
 	}
 	
 	void tick(const float dt)
@@ -549,6 +537,12 @@ struct Vfxclip
 				drawRect(-1, -1, +1, +1);
 			}
 			gxSetTexture(0);
+			
+			if (hover)
+			{
+				setLumi(255);
+				drawRectLine(-1, -1, +1, +1);
+			}
 		}
 		gxPopMatrix();
 	}
@@ -561,8 +555,6 @@ struct Vfxclip
 	#endif
 	}
 };
-
-#if DO_SPOKENWORD || 1
 
 #include "FileStream.h"
 #include "StreamReader.h"
@@ -666,7 +658,7 @@ struct SpokenWord
 			desiredScale = .4f;
 			desiredAngle = 0.f;
 			
-			if (hover && mouse.wentDown(BUTTON_LEFT))
+			if (hover && (mouse.wentDown(BUTTON_LEFT) || gamepad[0].wentDown(GAMEPAD_A)))
 			{
 				soundVolume.audioSource.mutex->lock();
 				{
@@ -686,7 +678,7 @@ struct SpokenWord
 			desiredScale = 1.f;
 			desiredAngle = 180.f;
 			
-			if (hover && mouse.wentDown(BUTTON_LEFT))
+			if (hover && (mouse.wentDown(BUTTON_LEFT) || gamepad[0].wentDown(GAMEPAD_A)))
 			{
 				state = kState_Inactive;
 				break;
@@ -705,7 +697,7 @@ struct SpokenWord
 		currentAngle = lerp(desiredAngle, currentAngle, retain);
 	}
 	
-	void draw3d()
+	void drawSolid()
 	{
 		gxPushMatrix();
 		{
@@ -715,7 +707,10 @@ struct SpokenWord
 			drawCircle(0, 0, 1, 200);
 		}
 		gxPopMatrix();
-		
+	}
+	
+	void drawTranslucent()
+	{
 		Color color = currentColor;
 		if (hover)
 			color = color.interp(colorWhite, .5f);
@@ -726,11 +721,11 @@ struct SpokenWord
 	
 	void draw2d()
 	{
+	#if 0
 		textScroller.draw();
+	#endif
 	}
 };
-
-#endif
 
 struct World
 {
@@ -738,10 +733,13 @@ struct World
 	{
 		Videoclip * videoclip;
 		
+		Vfxclip * vfxclip;
+		
 		SpokenWord * spokenWord;
 		
 		HitTestResult()
 			: videoclip(nullptr)
+			, vfxclip(nullptr)
 			, spokenWord(nullptr)
 		{
 		}
@@ -770,8 +768,8 @@ struct World
 	{
 		camera.gamepadIndex = 0;
 		
-		//const float kMoveSpeed = .2f;
-		const float kMoveSpeed = 1.f;
+		const float kMoveSpeed = .2f;
+		//const float kMoveSpeed = 1.f;
 		camera.maxForwardSpeed *= kMoveSpeed;
 		camera.maxUpSpeed *= kMoveSpeed;
 		camera.maxStrafeSpeed *= kMoveSpeed;
@@ -799,7 +797,6 @@ struct World
 			vfxclips[i].open("groooplogo.xml");
 		}
 		
-	#if DO_SPOKENWORD
 		for (int i = 0; i < NUM_SPOKENWORDS; ++i)
 		{
 			auto & spokenWord = spokenWords[i];
@@ -811,7 +808,6 @@ struct World
 			
 			spokenWord.init(sampleSet, mutex, textFilename, audioFilename, p);
 		}
-	#endif
 	}
 	
 	HitTestResult hitTest(Vec3Arg pos, Vec3Arg dir)
@@ -834,6 +830,24 @@ struct World
 					bestDistance = t;
 					result = HitTestResult();
 					result.videoclip = &videoclip;
+				}
+			}
+		}
+		
+		for (int i = 0; i < NUM_VFXCLIPS; ++i)
+		{
+			auto & vfxclip = vfxclips[i];
+			
+			Vec3 p;
+			float t;
+			
+			if (vfxclip.intersectRayWithPlane(pos, dir, p, t) && t >= 0.f)
+			{
+				if (t < bestDistance)
+				{
+					bestDistance = t;
+					result = HitTestResult();
+					result.vfxclip = &vfxclip;
 				}
 			}
 		}
@@ -886,19 +900,17 @@ struct World
 			vfxclips[i].tick(dt);
 		}
 		
-	#if DO_SPOKENWORD
 		for (int i = 0; i < NUM_SPOKENWORDS; ++i)
 		{
-			auto & spokenWord = spokenWords[i];
-			
-			spokenWord.tick(worldToViewMatrix, cameraPosition_world, dt);
+			spokenWords[i].tick(worldToViewMatrix, cameraPosition_world, dt);
 		}
-	#endif
 		
 		//
 		
 		if (hitTestResult.videoclip)
 			hitTestResult.videoclip->hover = false;
+		if (hitTestResult.vfxclip)
+			hitTestResult.vfxclip->hover = false;
 		if (hitTestResult.spokenWord)
 			hitTestResult.spokenWord->hover = false;
 		
@@ -908,6 +920,8 @@ struct World
 		
 		if (hitTestResult.videoclip)
 			hitTestResult.videoclip->hover = true;
+		if (hitTestResult.vfxclip)
+			hitTestResult.vfxclip->hover = true;
 		if (hitTestResult.spokenWord)
 			hitTestResult.spokenWord->hover = true;
 	}
@@ -934,20 +948,17 @@ struct World
 					vfxclips[i].drawSolid();
 				}
 				
-			#if DO_SPOKENWORD
 				for (int i = 0; i < NUM_SPOKENWORDS; ++i)
 				{
-					auto & spokenWord = spokenWords[i];
-					
-					spokenWord.draw3d();
+					spokenWords[i].drawSolid();
 				}
-			#endif
 			}
 			popBlend();
 		}
 		glDisable(GL_DEPTH_TEST);
 		
 		glEnable(GL_DEPTH_TEST);
+		glDepthMask(GL_FALSE);
 		{
 			gxPushMatrix();
 			{
@@ -966,7 +977,13 @@ struct World
 			{
 				vfxclips[i].drawTranslucent();
 			}
+			
+			for (int i = 0; i < NUM_SPOKENWORDS; ++i)
+			{
+				spokenWords[i].drawTranslucent();
+			}
 		}
+		glDepthMask(GL_TRUE);
 		glDisable(GL_DEPTH_TEST);
 		
 		camera.popViewMatrix();
@@ -974,14 +991,10 @@ struct World
 	
 	void draw2d()
 	{
-	#if DO_SPOKENWORD
 		for (int i = 0; i < NUM_SPOKENWORDS; ++i)
 		{
-			auto & spokenWord = spokenWords[i];
-			
-			spokenWord.draw2d();
+			spokenWords[i].draw2d();
 		}
-	#endif
 	}
 };
 
@@ -1061,6 +1074,8 @@ int main(int argc, char * argv[])
 {
 	framework.actionHandler = handleAction;
 	
+	//framework.minification = 2;
+	
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
@@ -1121,6 +1136,7 @@ int main(int argc, char * argv[])
 		}
 		SDL_UnlockMutex(audioMutex);
 		
+	#if ENABLE_TRANSFORM_MIXING
 	#if 0
 		videoClipBlend[0] = (1.f + std::cos(framework.time / 3.4f)) / 2.f;
 		videoClipBlend[1] = (1.f + std::cos(framework.time / 4.56f)) / 2.f;
@@ -1129,6 +1145,7 @@ int main(int argc, char * argv[])
 		videoClipBlend[0] = mouse.x / float(GFX_SX);
 		videoClipBlend[1] = mouse.y / float(GFX_SY);
 		videoClipBlend[2] = 1.f - videoClipBlend[0] - videoClipBlend[1];
+	#endif
 	#endif
 	
 		// update video clips
