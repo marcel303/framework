@@ -4844,7 +4844,7 @@ Mat4x4 Camera3d::getViewMatrix() const
 	return getWorldMatrix().CalcInv();
 }
 
-void Camera3d::pushViewMatrix()
+void Camera3d::pushViewMatrix() const
 {
 	const Mat4x4 matrix = getViewMatrix();
 	
@@ -4857,7 +4857,7 @@ void Camera3d::pushViewMatrix()
 	gxMatrixMode(restoreMatrixMode);
 }
 
-void Camera3d::popViewMatrix()
+void Camera3d::popViewMatrix() const
 {
 	const GLenum restoreMatrixMode = gxGetMatrixMode();
 	{
