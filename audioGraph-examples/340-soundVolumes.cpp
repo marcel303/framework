@@ -172,7 +172,6 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		
 		if (source == nullptr)
 		{
-			memset(audioBuffer, 0, numSamples * sizeof(float));
 			return;
 		}
 		
