@@ -31,6 +31,7 @@ const int GFX_SY = 480;
 #define DRAW_GRIDS 1
 #define DO_CONTROLWINDOW 0
 #define ENABLE_TRANSFORM_MIXING 0
+#define DO_CAGEDSOUNDS 0
 
 static bool enableNearest = true;
 static bool enableVertices = true;
@@ -351,13 +352,12 @@ struct Videoclip
 				const float scaleX = scaleY * 4.f/3.f;
 				//const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
 				const float scaleZ = lerp(.05f, .1f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
-			
 				const float rotateSpeed = 1.f + index / 5.f;
 				
-				const Mat4x4 transform = Mat4x4(true).RotateX(rotateSpeed * time / 3.456f).RotateY(rotateSpeed * time / 4.567f);
-				
 				scale = Vec3(scaleX, scaleY, scaleZ);
-				rotation.fromMatrix(transform);
+				rotation =
+					Quat(Vec3(1.f, 0.f, 0.f), rotateSpeed * time / 3.456f) *
+					Quat(Vec3(0.f, 1.f, 0.f), rotateSpeed * time / 4.567f);
 				position = Vec3(x, y, z);
 				opacity = 1.f;
 			}
@@ -390,7 +390,7 @@ struct Videoclip
 	void tick(const Mat4x4 & worldToViewMatrix, const Vec3 & cameraPosition_world, const float dt)
 	{
 		Vec3 totalScale(0.f, 0.f, 0.f);
-		Quat totalRotation(0.f, 0.f, 0.f, 0.f);
+		Quat totalRotation;
 		Vec3 totalTranslation(0.f, 0.f, 0.f);
 		float totalOpacity = 0.f;
 		float totalBlend = 0.f;
@@ -407,7 +407,9 @@ struct Videoclip
 			evalVideoClipParams(evalMode, scale, rotation, position, opacity);
 			
 			totalScale += scale * blend;
-			totalRotation += rotation * blend;
+			// todo : what's the best way to blend between rotations ?
+			//totalRotation = totalRotation.slerp(rotation, blend);
+			totalRotation = totalRotation * rotation;
 			totalTranslation += position * blend;
 			totalOpacity += opacity * blend;
 			
@@ -417,7 +419,6 @@ struct Videoclip
 		if (totalBlend != 0.f)
 		{
 			totalScale /= totalBlend;
-			totalRotation /= totalBlend;
 			totalTranslation /= totalBlend;
 			totalOpacity /= totalBlend;
 		}
@@ -1070,6 +1071,90 @@ static void handleAction(const std::string & action, const Dictionary & args)
 	}
 }
 
+#if DO_CAGEDSOUNDS
+
+struct Cage
+{
+	virtual float evaluate(const float x, const float y, const float z) const
+	{
+		//const float elevation = std::atan2(y, x);
+		//const float azimuth = std::atan2(x, z);
+		
+		const float zxHypot = std::hypot(z, x);
+		
+		const float azimuth = std::atan2(z, x);
+		
+		float elevation;
+		
+		if (zxHypot == 0.f)
+		{
+			if (y < 0.f)
+				elevation = -90.f;
+			else
+				elevation = +90.f;
+		}
+		else
+		{
+			elevation = std::atan(y / zxHypot);
+		}
+		
+		return evaluatePolar(elevation, azimuth);
+	}
+	
+	virtual float evaluatePolar(const float elevation, const float azimuth) const
+	{
+		return 0.f;
+	}
+};
+
+struct CagedSound
+{
+
+};
+
+static void drawCage2d(const Cage & cage)
+{
+	gxPushMatrix();
+	gxScalef(1.f / 360.f * GFX_SX, 1.f / 180.f * GFX_SY, 0);
+	gxTranslatef(180, 90, 0);
+	
+	setAlphaf(1.f);
+	hqBegin(HQ_FILLED_CIRCLES, true);
+	
+	for (float azimuth = -180.f; azimuth <= +180.f; azimuth += 4)
+	{
+		for (float elevation = -90.f; elevation <= +90.f; elevation += 4)
+		{
+			float x, y, z;
+			binaural::elevationAndAzimuthToCartesian(elevation, azimuth, x, y, z);
+			
+			const float value = cage.evaluate(x, y, z);
+			
+			setLumif(value);
+			hqFillCircle(azimuth, elevation, 3.f);
+		}
+	}
+	
+	hqEnd();
+	
+	gxPopMatrix();
+}
+
+struct Cage1 : Cage
+{
+	virtual float evaluatePolar(const float elevation, const float azimuth) const override
+	{
+		float v = 1.f;
+		
+		//v *= (1.f - std::cos(elevation * 2.f)) / 2.f;
+		v *= (std::cos(azimuth * 5.f) + 1.f) / 2.f;
+		
+		return v;
+	}
+};
+
+#endif
+
 int main(int argc, char * argv[])
 {
 	framework.actionHandler = handleAction;
@@ -1112,6 +1197,10 @@ int main(int argc, char * argv[])
 	ControlWindow controlWindow(world);
 #endif
 	
+#if DO_CAGEDSOUNDS
+	Cage1 cage;
+#endif
+	
 	do
 	{
 		framework.process();
@@ -1144,7 +1233,7 @@ int main(int argc, char * argv[])
 	#elif 1
 		videoClipBlend[0] = mouse.x / float(GFX_SX);
 		videoClipBlend[1] = mouse.y / float(GFX_SY);
-		videoClipBlend[2] = 1.f - videoClipBlend[0] - videoClipBlend[1];
+		videoClipBlend[2] = std::max(0.f, 1.f - videoClipBlend[0] - videoClipBlend[1]);
 	#endif
 	#endif
 	
@@ -1170,6 +1259,10 @@ int main(int argc, char * argv[])
 			projectScreen2d();
 			
 			world.draw2d();
+			
+		#if DO_CAGEDSOUNDS
+			drawCage2d(cage);
+		#endif
 			
 			if (showUi)
 			{
