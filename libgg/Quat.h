@@ -12,6 +12,7 @@ public:
 	Quat();
 	Quat(const Quat & quat);
 	Quat(float x, float y, float z, float w);
+	Quat(Vec3 axis, float angle);
 
 	float calcSize() const;
 	void normalize();
