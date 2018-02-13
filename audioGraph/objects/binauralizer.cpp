@@ -155,7 +155,7 @@ namespace binaural
 	
 	void Binauralizer::fillReadBuffer(const HRIRSampleData & hrir)
 	{
-		if (sampleBuffer.totalWriteSize < AUDIO_UPDATE_SIZE || sampleSet == nullptr)
+		if (sampleBuffer.totalWriteSize < AUDIO_UPDATE_SIZE)
 		{
 			memset(audioBufferL.samples, 0, sizeof(audioBufferL));
 			memset(audioBufferR.samples, 0, sizeof(audioBufferR));
