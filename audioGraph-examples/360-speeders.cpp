@@ -325,7 +325,7 @@ struct MyPortAudioHandler : PortAudioHandler
 		
 		monoSource.generate(s_monoData, AUDIO_UPDATE_SIZE);
 		
-	#if 0
+	#if 1
 		if (numInputChannels > 0)
 		{
 			const float * input = (float*)inputBuffer;
@@ -571,7 +571,6 @@ struct RecordedFragment : AudioSource
 		v[1] = 0.f;
 		v[2] = std::sin(angle2) * speed;
 		
-		//v[1] += 2.f;
 		v[1] += lerp(1.f, 10.f, std::pow(random(0.f, 1.f), 2.f));
 	}
 	
@@ -598,7 +597,7 @@ struct RecordedFragment : AudioSource
 		if (p[1] < 0.f)
 		{
 			rampUp = true;
-			rampUpVolume = std::abs(v[1] * 2.f);
+			rampUpVolume = std::abs(v[1] * .5f);
 			
 			p[1] = 0.f;
 			v[1] *= -.9f;
@@ -632,8 +631,8 @@ struct RecordedFragment : AudioSource
 				playbackPosition = 0;
 		}
 		
-	#if 0
-		const float desiredGain = rampUp ? rampUpVolume : 0.1f;
+	#if 1
+		const float desiredGain = rampUp ? rampUpVolume : 0.01f;
 		const float retain = std::pow(.1f, 1.f / AUDIO_UPDATE_SIZE);
 		const float falloff = 1.f - retain;
 		
