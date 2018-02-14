@@ -60,6 +60,10 @@ struct PcmData
 
 struct AudioSource
 {
+	virtual ~AudioSource()
+	{
+	}
+	
 	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) = 0;
 };
 
