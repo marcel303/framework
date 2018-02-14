@@ -6,10 +6,18 @@
 #include "soundmix.h"
 
 #define MAX_SOUNDVOLUMES 100
-#define NUM_SPEEDERS 20
+//#define NUM_SPEEDERS 16
+//#define NUM_SPEEDERS 90
+#define NUM_SPEEDERS 0
+
+#define DO_RECORDING 1
+//#define NUM_BUFFERS_PER_RECORDING (4 * 44100 / AUDIO_UPDATE_SIZE)
+#define NUM_BUFFERS_PER_RECORDING (2 * 44100 / AUDIO_UPDATE_SIZE)
 
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
+
+struct RecordedData;
 
 struct MyMutex : binaural::Mutex
 {
@@ -23,13 +31,13 @@ struct MyMutex : binaural::Mutex
 	virtual void lock() override
 	{
 		const int r = SDL_LockMutex(mutex);
-		Assert(r == 0);
+		Verify(r == 0);
 	}
 	
 	virtual void unlock() override
 	{
 		const int r = SDL_UnlockMutex(mutex);
-		Assert(r == 0);
+		Verify(r == 0);
 	}
 };
 
@@ -207,7 +215,7 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 			
 			const float attenuation = enableDistanceAttenuation ? .2f / (clampedDistanceToEar * clampedDistanceToEar) : 1.f;
 			//const float attenuation = enableDistanceAttenuation ? .5f / clampedDistanceToEar : 1.f;
-			const float gain = attenuation / numSamplePositions / NUM_SPEEDERS;
+			const float gain = attenuation / numSamplePositions / 40.f;
 
 			const binaural::HRIRSampleData * samples[3];
 			float sampleWeights[3];
@@ -270,6 +278,11 @@ struct AudioSourceMonoData : AudioSource
 	}
 };
 
+static float s_inputData[AUDIO_UPDATE_SIZE];
+
+static void tickAudio(const float dt);
+static void addRecordedFragment(RecordedData & recordedData);
+
 struct MyPortAudioHandler : PortAudioHandler
 {
 	Mat4x4 worldToViewTransform;
@@ -312,6 +325,24 @@ struct MyPortAudioHandler : PortAudioHandler
 		
 		monoSource.generate(s_monoData, AUDIO_UPDATE_SIZE);
 		
+	#if 0
+		if (numInputChannels > 0)
+		{
+			const float * input = (float*)inputBuffer;
+			
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+				s_inputData[i] = input[i * numInputChannels];
+		}
+		else
+		{
+			memset(s_inputData, 0, sizeof(s_inputData));
+		}
+	#else
+		memcpy(s_inputData, s_monoData, sizeof(s_inputData));
+	#endif
+		
+		tickAudio(AUDIO_UPDATE_SIZE / float(SAMPLE_RATE));
+		
 		s_binauralMutex->lock();
 		{
 			s_worldToViewTransform = worldToViewTransform;
@@ -341,18 +372,34 @@ const float kInitSpeederDistance1 = 8.f;
 const float kInitSpeederDistance2 = 10.f;
 const float kMaxSpeederDistance = 12.f;
 
-struct Speeder
+struct Speeder : AudioSource
 {
 	Vec3 p;
 	Vec3 v;
+	
+	float gain;
+	bool rampUp;
+	float rampUpVolume;
 	
 	AudioSourceMonoData monoData;
 	
 	MultiChannelAudioSource_SoundVolume audioSource;
 	
+	Speeder()
+		: p()
+		, v()
+		, gain(0.f)
+		, rampUp(false)
+		, rampUpVolume(0.f)
+		, monoData()
+		, audioSource()
+	{
+	
+	}
+	
 	void init()
 	{
-		audioSource.init(&monoData);
+		audioSource.init(this);
 		
 		randomizePosition();
 		updateTransform();
@@ -394,12 +441,17 @@ struct Speeder
 			.Scale(scale, scale, scale);
 	}
 	
-	void tick(const float dt)
+	void tickAudio(const float dt)
 	{
+		rampUp = false;
+		
 		p += v * dt;
 		
 		if (p[1] < 0.f)
 		{
+			rampUp = true;
+			rampUpVolume = std::abs(v[1] * 2.f);
+			
 			p[1] = 0.f;
 			v[1] *= -.9f;
 		}
@@ -415,11 +467,193 @@ struct Speeder
 		
 		updateTransform();
 	}
+	
+	void tick(const float dt)
+	{
+	}
+	
+	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override
+	{
+		monoData.generate(samples, numSamples);
+		
+		const float desiredGain = rampUp ? rampUpVolume : 0.1f;
+		const float retain = std::pow(.1f, 1.f / AUDIO_UPDATE_SIZE);
+		const float falloff = 1.f - retain;
+		
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		{
+			gain = gain * retain + desiredGain * falloff;
+			
+			samples[i] += random(-1.f, +1.f) * gain;
+		}
+	}
+};
+
+struct RecordedData
+{
+	float samples[NUM_BUFFERS_PER_RECORDING * AUDIO_UPDATE_SIZE];
+	int numSamples;
+};
+
+struct Recorder
+{
+	RecordedData recordedData;
+	
+	Recorder()
+		: recordedData()
+	{
+	}
+	
+	void tickAudio(const float dt)
+	{
+		memcpy(recordedData.samples + recordedData.numSamples, s_inputData, AUDIO_UPDATE_SIZE * sizeof(float));
+		recordedData.numSamples += AUDIO_UPDATE_SIZE;
+		
+		if (recordedData.numSamples == NUM_BUFFERS_PER_RECORDING * AUDIO_UPDATE_SIZE)
+		{
+			addRecordedFragment(recordedData);
+			
+			recordedData.numSamples = 0;
+		}
+	}
+};
+
+struct RecordedFragment : AudioSource
+{
+	Vec3 p;
+	Vec3 v;
+	
+	float gain;
+	bool rampUp;
+	float rampUpVolume;
+	
+	RecordedData recordedData;
+	
+	int playbackPosition;
+	
+	MultiChannelAudioSource_SoundVolume audioSource;
+	
+	RecordedFragment()
+		: p()
+		, v()
+		, gain(0.f)
+		, rampUp(false)
+		, rampUpVolume(0.f)
+		, recordedData()
+		, playbackPosition(0)
+		, audioSource()
+	{
+	}
+	
+	void init()
+	{
+		audioSource.init(this);
+		
+		randomizePosition();
+		updateTransform();
+		
+		s_paHandler->addAudioSource(&audioSource);
+	}
+	
+	void randomizePosition()
+	{
+		const float angle = random(0.f, float(M_PI) * 2.f);
+		const float distance = random(kInitSpeederDistance1, kInitSpeederDistance2);
+		
+		p[0] = std::cos(angle) * distance;
+		p[1] = 0.f;
+		p[2] = std::sin(angle) * distance;
+		
+		const float angle2 = angle + random(-.2f, +.2f) + M_PI;
+		const float speed = lerp(.2f, 2.f, std::pow(random(0.f, 1.f), 2.f));
+		
+		v[0] = std::cos(angle2) * speed;
+		v[1] = 0.f;
+		v[2] = std::sin(angle2) * speed;
+		
+		//v[1] += 2.f;
+		v[1] += lerp(1.f, 10.f, std::pow(random(0.f, 1.f), 2.f));
+	}
+	
+	void updateTransform()
+	{
+		const float rX = (p[0] + p[1]) * 4.f;
+		const float rY = (p[2] + p[1]) * 4.f;
+		const float scale = .1f;
+		
+		audioSource.soundVolume.transform =
+			Mat4x4(true)
+			.Translate(p)
+			.RotateY(rY)
+			.RotateX(rX)
+			.Scale(scale, scale, scale);
+	}
+	
+	void tickAudio(const float dt)
+	{
+		rampUp = false;
+		
+		p += v * dt;
+		
+		if (p[1] < 0.f)
+		{
+			rampUp = true;
+			rampUpVolume = std::abs(v[1] * 2.f);
+			
+			p[1] = 0.f;
+			v[1] *= -.9f;
+		}
+		
+		v[1] -= 8.f * dt;
+		
+		const float distance = p.CalcSize();
+		
+		if (distance > kMaxSpeederDistance)
+		{
+			randomizePosition();
+		}
+		
+		updateTransform();
+	}
+	
+	void tick(const float dt)
+	{
+	}
+	
+	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override
+	{
+		for (int i = 0; i < numSamples; ++i)
+		{
+			samples[i] = recordedData.samples[playbackPosition];
+			
+			playbackPosition++;
+			
+			if (playbackPosition == recordedData.numSamples)
+				playbackPosition = 0;
+		}
+		
+	#if 0
+		const float desiredGain = rampUp ? rampUpVolume : 0.1f;
+		const float retain = std::pow(.1f, 1.f / AUDIO_UPDATE_SIZE);
+		const float falloff = 1.f - retain;
+		
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		{
+			gain = gain * retain + desiredGain * falloff;
+			
+			samples[i] += random(-1.f, +1.f) * gain;
+		}
+	#endif
+	}
 };
 
 struct World
 {
 	Speeder speeders[NUM_SPEEDERS];
+	
+	std::vector<RecordedFragment*> recordedFragments;
+	
+	Recorder recorder;
 	
 	void init()
 	{
@@ -427,6 +661,31 @@ struct World
 		{
 			speeder.init();
 		}
+	}
+	
+	void shut()
+	{
+		for (auto & recordedFragment : recordedFragments)
+		{
+			delete recordedFragment;
+		}
+		
+		recordedFragments.clear();
+	}
+	
+	void tickAudio(const float dt)
+	{
+		for (auto & speeder : speeders)
+		{
+			speeder.tickAudio(dt);
+		}
+		
+		for (auto & recordedFragment : recordedFragments)
+		{
+			recordedFragment->tickAudio(dt);
+		}
+		
+		recorder.tickAudio(dt);
 	}
 	
 	void tick(const float dt)
@@ -438,13 +697,34 @@ struct World
 	}
 };
 
+static World * s_world = nullptr;
+
+static void tickAudio(const float dt)
+{
+	s_world->tickAudio(dt);
+}
+
+static void addRecordedFragment(RecordedData & recordedData)
+{
+	if (s_world->recordedFragments.size() < MAX_SOUNDVOLUMES * 2/3)
+	{
+		RecordedFragment * fragment = new RecordedFragment();
+		fragment->recordedData = recordedData;
+		fragment->init();
+		
+		s_world->recordedFragments.push_back(fragment);
+	}
+}
+
 static void drawSoundVolume(const SoundVolume & volume)
 {
 	gxPushMatrix();
 	{
 		gxMultMatrixf(volume.transform.m_v);
 		
-		const int res = 4;
+	#if 1
+		//const int res = 4;
+		const int res = 1;
 		
 		gxPushMatrix(); { gxTranslatef(-1, 0, 0); drawGrid3dLine(res, res, 1, 2); } gxPopMatrix();
 		gxPushMatrix(); { gxTranslatef(+1, 0, 0); drawGrid3dLine(res, res, 1, 2); } gxPopMatrix();
@@ -452,6 +732,13 @@ static void drawSoundVolume(const SoundVolume & volume)
 		gxPushMatrix(); { gxTranslatef(0, +1, 0); drawGrid3dLine(res, res, 2, 0); } gxPopMatrix();
 		gxPushMatrix(); { gxTranslatef(0, 0, -1); drawGrid3dLine(res, res, 0, 1); } gxPopMatrix();
 		gxPushMatrix(); { gxTranslatef(0, 0, +1); drawGrid3dLine(res, res, 0, 1); } gxPopMatrix();
+	#endif
+	
+		gxSetTexture(getTexture("thegrooop-white.png"));
+		{
+			drawRect(-1, -1, +1, +1);
+		}
+		gxSetTexture(0);
 	}
 	gxPopMatrix();
 }
@@ -477,10 +764,6 @@ int main(int argc, char * argv[])
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
-	const int kFontSize = 16;
-	
-	bool showUi = true;
-	
 	Camera3d camera;
 	camera.gamepadIndex = 0;
 	
@@ -489,7 +772,7 @@ int main(int argc, char * argv[])
 	camera.position[2] = -1.f;
 	camera.pitch = 10.f;
 	
-	float fov = 90.f;
+	float fov = 60.f;
 	float near = .01f;
 	float far = 100.f;
 	
@@ -506,24 +789,12 @@ int main(int argc, char * argv[])
 	MyPortAudioHandler * paHandler = new MyPortAudioHandler();
 	s_paHandler = paHandler;
 	
-	for (int i = 0; i < 0; ++i)
-	{
-		MultiChannelAudioSource_SoundVolume * audioSource = new MultiChannelAudioSource_SoundVolume();
-
-		AudioSourceVorbis * vorbis = new AudioSourceVorbis();
-		vorbis->open("wobbly.ogg", true);
-		
-		audioSource->init(vorbis);
-
-		paHandler->addAudioSource(audioSource);
-	}
-	
 	World world;
-	
 	world.init();
+	s_world = &world;
 	
 	PortAudioObject pa;
-	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, paHandler);
+	pa.init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, paHandler);
 	
 	do
 	{
@@ -531,16 +802,9 @@ int main(int argc, char * argv[])
 
 		const float dt = framework.timeStep;
 		
-		// process input
-		
-		if (keyboard.wentDown(SDLK_TAB))
-			showUi = !showUi;
-		
 		// update the camera
 		
 		camera.tick(dt, true);
-		
-		//camera.position[1] = .2f;
 		
 		// update the world
 		
@@ -564,9 +828,6 @@ int main(int argc, char * argv[])
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			setFont("calibri.ttf");
-			pushFontMode(FONT_SDF);
-			
 			projectPerspective3d(fov, near, far);
 			
 			camera.pushViewMatrix();
@@ -595,8 +856,11 @@ int main(int argc, char * argv[])
 					gxPushMatrix();
 					{
 						gxScalef(10, 10, 10);
-						setColor(50, 50, 50);
+						setColor(16, 20, 24);
 						drawGrid3dLine(100, 100, 0, 2, true);
+						
+						setColor(60, 100, 160, 127);
+						drawGrid3d(1, 1, 0, 2);
 					}
 					gxPopMatrix();
 					
@@ -611,26 +875,22 @@ int main(int argc, char * argv[])
 				glDisable(GL_DEPTH_TEST);
 			}
 			camera.popViewMatrix();
-			
-			projectScreen2d();
-			
-			if (showUi)
-			{
-				gxTranslatef(0, GFX_SY - 100, 0);
-				setColor(colorWhite);
-				drawText(10, 0, kFontSize, +1, +1, "Hey!");
-			}
-			
-			popFontMode();
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_ESCAPE));
 	
 	pa.shut();
 	
+	world.shut();
+	s_world = nullptr;
+	
 	s_paHandler = nullptr;
 	delete paHandler;
 	paHandler = nullptr;
+	
+	s_sampleSet = nullptr;
+	
+	s_binauralMutex = nullptr;
 	
 	SDL_DestroyMutex(audioMutex);
 	audioMutex = nullptr;
