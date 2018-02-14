@@ -20,6 +20,11 @@ Quat::Quat(float x, float y, float z, float w)
 {
 }
 
+Quat::Quat(Vec3 axis, float angle)
+{
+	fromAxisAngle(axis, angle);
+}
+
 float Quat::calcSize() const
 {
 	return std::sqrt(m_xyz * m_xyz + m_w * m_w);
@@ -68,7 +73,7 @@ void Quat::fromAxisAngle(Vec3 axis, float angle)
 
 void Quat::fromMatrix(const Mat4x4 & matrix)
 {
-	const float eps = 0.001f;
+	const float eps = 0.00001f;
 
 	// we need four cases, 1 special (and preferred) and 3 backups, to extract
 	// the axis angle pair. We need the backups in case the rotation is aligned
@@ -100,7 +105,7 @@ void Quat::fromMatrix(const Mat4x4 & matrix)
 		
 		const float sRcp = s != 0.f ? 1.f / s : 0.f;
 		
-		m_xyz[a0] = s / 2.f;		
+		m_xyz[a0] = s / 2.f;
 		m_xyz[a1] = (matrix(a1, a0) + matrix(a0, a1)) * sRcp / 2.f;
 		m_xyz[a2] = (matrix(a2, a0) + matrix(a0, a2)) * sRcp / 2.f;
 		m_w       = (matrix(a2, a1) - matrix(a1, a2)) * sRcp / 2.f;
