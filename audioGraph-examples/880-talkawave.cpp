@@ -6,7 +6,7 @@
 #include "soundmix.h"
 
 #define MAX_SOUNDVOLUMES 100
-#define NUM_SPEEDERS 16
+#define NUM_SPEEDERS 40
 
 #define DO_RECORDING 0
 #define NUM_BUFFERS_PER_RECORDING (2 * 44100 / AUDIO_UPDATE_SIZE)
@@ -429,7 +429,9 @@ struct Waves
 		
 		if (mouse.isDown(BUTTON_LEFT))
 		{
-			p[kSize/3][kSize/3] = -.2f;
+			p[kSize*1/3][kSize*1/3] = -.4f;
+			p[kSize*2/3][kSize*1/3] = -.2f;
+			p[kSize*2/3][kSize*2/3] = -.4f;
 		}
 		else
 		{
@@ -525,7 +527,7 @@ struct Speeder : AudioSource
 		p[2] = std::sin(angle) * distance;
 		
 		const float angle2 = angle + random(-.2f, +.2f) + M_PI;
-		const float speed = lerp(1.f, 8.f, std::pow(random(0.f, 1.f), 2.f));
+		const float speed = lerp(.2f, 1.f, std::pow(random(0.f, 1.f), 2.f));
 		
 		v[0] = std::cos(angle2) * speed;
 		v[1] = 0.f;
@@ -555,6 +557,7 @@ struct Speeder : AudioSource
 		
 		p += v * dt;
 		
+	#if 0
 		if (p[1] < 0.f)
 		{
 			rampUp = true;
@@ -563,13 +566,31 @@ struct Speeder : AudioSource
 			p[1] = 0.f;
 			v[1] *= -.9f;
 		}
+	#endif
 		
+	#if 1
+		const float height = sampleHeight(p);
+		
+		if (p[1] < height)
+		{
+			const float delta = p[1] - height;
+			
+			rampUp = true;
+			rampUpVolume = std::abs(delta * 1.f);
+			
+			v[1] -= delta * 200.f * dt;
+			
+			const float falloff = std::pow(.5f, dt);
+			v[1] *= falloff;
+		}
+	#else
 		const float height = sampleHeight(p);
 		
 		if (p[1] < height && v[1] < 0.f)
 		{
 			p[1] = height;
 		}
+	#endif
 		
 		v[1] -= 8.f * dt;
 		
@@ -599,7 +620,7 @@ struct Speeder : AudioSource
 		{
 			gain = gain * retain + desiredGain * falloff;
 			
-			samples[i] += random(-1.f, +1.f) * gain;
+			samples[i] += random(-1.f, +1.f) * gain * .5f;
 		}
 	}
 };
@@ -974,7 +995,9 @@ int main(int argc, char * argv[])
 		
 		// update the camera
 		
-		camera.tick(dt, true);
+		const bool doCameraInput = !(keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT));
+		
+		camera.tick(dt, doCameraInput);
 		
 		// update the world
 		
@@ -997,6 +1020,26 @@ int main(int argc, char * argv[])
 			}
 			
 			waves = world.waves;
+			
+		#if 1
+			for (int xo = -2; xo <= +2; ++xo)
+			{
+				 for (int yo = -2; yo <= +2; ++yo)
+				 {
+					const int x = xo + mouse.x * Waves::kSize / GFX_SX;
+					const int y = yo + mouse.y * Waves::kSize / GFX_SY;
+				
+					if (x >= 0 && x < Waves::kSize &&
+						y >= 0 && y < Waves::kSize)
+					{
+						const float value = (1.f - sqrt(xo * xo + yo * yo) / 3.f) * 4.f;
+						const float retain = std::pow(.2f, dt);
+						
+						world.waves.p[x][y] = lerp(value, world.waves.p[x][y], retain);
+					}
+				}
+			}
+		#endif
 		}
 		s_binauralMutex->unlock();
 		
