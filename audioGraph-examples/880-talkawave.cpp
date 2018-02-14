@@ -6,7 +6,7 @@
 #include "soundmix.h"
 
 #define MAX_SOUNDVOLUMES 100
-#define NUM_SPEEDERS 6
+#define NUM_SPEEDERS 16
 
 #define DO_RECORDING 0
 #define NUM_BUFFERS_PER_RECORDING (2 * 44100 / AUDIO_UPDATE_SIZE)
@@ -365,6 +365,96 @@ struct MyPortAudioHandler : PortAudioHandler
 
 static MyPortAudioHandler * s_paHandler = nullptr;
 
+struct Waves
+{
+	static const int kSize = 128;
+	
+	Mat4x4 transform;
+	
+	float p[kSize][kSize];
+	float v[kSize][kSize];
+	
+	Waves()
+	{
+		transform = Mat4x4(true)
+			.RotateX(M_PI/2.f)
+			.Scale(10, 10, 1)
+			.Translate(-.5f, -.5f, 0)
+			.Scale(1.f / kSize, 1.f / kSize, 1.f)
+			.Translate(.5f, .5f, 0);
+		
+		memset(p, 0, sizeof(p));
+		memset(v, 0, sizeof(v));
+		
+		//p[kSize/2][kSize/2] = 10.f;
+	}
+	
+	Vec3 projectToWaves(Vec3Arg p) const
+	{
+		return transform.CalcInv().Mul4(p);
+	}
+	
+	float sample(const float x, const float y)
+	{
+		int xi = int(round(x));
+		int yi = int(round(y));
+		
+		xi = clamp(xi, 0, kSize - 1);
+		yi = clamp(yi, 0, kSize - 1);
+		
+		return p[xi][yi];
+	}
+	
+	void tick(const float dt)
+	{
+		const float stiffness = 100.f;
+		const float falloff = std::pow(.6f, dt);
+		
+		if (!mouse.isDown(BUTTON_LEFT))
+		{
+			p[kSize/2][kSize/2] = 2.f;
+		}
+		
+		// integrate forces into velocity
+		
+		for (int x = 0; x < kSize; ++x)
+		{
+			for (int y = 0; y < kSize; ++y)
+			{
+				const int x0 = x > 0 ? x - 1 : 0;
+				const int y0 = y > 0 ? y - 1 : 0;
+				const int x1 = x;
+				const int y1 = y;
+				const int x2 = x < kSize - 1 ? x + 1 : kSize - 1;
+				const int y2 = y < kSize - 1 ? y + 1 : kSize - 1;
+				
+				float d = 0.f;
+				
+				d += p[x0][y1];
+				d += p[x2][y1];
+				d += p[x1][y0];
+				d += p[x1][y2];
+				
+				d -= p[x1][y1] * 4.f;
+				d /= 4.f;
+				
+				v[x1][y1] += d * stiffness * dt;
+				v[x1][y1] *= falloff;
+			}
+		}
+		
+		// integrate velocity into position
+		
+		for (int x = 0; x < kSize; ++x)
+		{
+			for (int y = 0; y < kSize; ++y)
+			{
+				p[x][y] += v[x][y] * dt;
+			}
+		}
+	}
+};
+
 const float kInitSpeederDistance1 = 8.f;
 const float kInitSpeederDistance2 = 10.f;
 const float kMaxSpeederDistance = 12.f;
@@ -447,7 +537,7 @@ struct Speeder : AudioSource
 		if (p[1] < 0.f)
 		{
 			rampUp = true;
-			rampUpVolume = std::abs(v[1] * 2.f);
+			rampUpVolume = std::abs(v[1] * .2f);
 			
 			p[1] = 0.f;
 			v[1] *= -.9f;
@@ -651,6 +741,8 @@ struct World
 	
 	Recorder recorder;
 	
+	Waves waves;
+	
 	void init()
 	{
 		for (auto & speeder : speeders)
@@ -682,6 +774,8 @@ struct World
 		}
 		
 		recorder.tickAudio(dt);
+		
+		waves.tick(dt);
 	}
 	
 	void tick(const float dt)
@@ -757,6 +851,45 @@ static void drawSoundVolume_Translucent(const SoundVolume & volume)
 	gxPopMatrix();
 }
 
+static void drawWaves_solid(const Waves & waves)
+{
+	gxPushMatrix();
+	{
+		gxMultMatrixf(waves.transform.m_v);
+		
+		setColor(100, 100, 100);
+		gxBegin(GL_TRIANGLES);
+		{
+			for (int x = 0; x < waves.kSize - 1; ++x)
+			{
+				for (int y = 0; y < waves.kSize - 1; ++y)
+				{
+					const int x0 = x + 0;
+					const int y0 = y + 0;
+					const int x1 = x + 1;
+					const int y1 = y + 1;
+					const float z00 = waves.p[x0][y0];
+					const float z10 = waves.p[x1][y0];
+					const float z01 = waves.p[x0][y1];
+					const float z11 = waves.p[x1][y1];
+					
+					gxColor4f(z00, z00, z00, 1.f);
+					
+					gxVertex3f(x0, y0, z00);
+					gxVertex3f(x1, y0, z10);
+					gxVertex3f(x1, y1, z11);
+					
+					gxVertex3f(x0, y0, z00);
+					gxVertex3f(x1, y1, z11);
+					gxVertex3f(x0, y1, z01);
+				}
+			}
+		}
+		gxEnd();
+	}
+	gxPopMatrix();
+}
+
 int main(int argc, char * argv[])
 {
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
@@ -813,6 +946,8 @@ int main(int argc, char * argv[])
 		SoundVolume soundVolumes[MAX_SOUNDVOLUMES];
 		int numSoundVolumes = 0;
 		
+		Waves waves;
+		
 		s_binauralMutex->lock();
 		{
 			paHandler->worldToViewTransform = camera.getViewMatrix();
@@ -821,11 +956,16 @@ int main(int argc, char * argv[])
 			{
 				soundVolumes[numSoundVolumes++] = audioSource->soundVolume;
 			}
+			
+			waves = world.waves;
 		}
 		s_binauralMutex->unlock();
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			pushFontMode(FONT_SDF);
+			setFont("calibri.ttf");
+			
 			projectPerspective3d(fov, near, far);
 			
 			camera.pushViewMatrix();
@@ -836,6 +976,8 @@ int main(int argc, char * argv[])
 				glEnable(GL_DEPTH_TEST);
 				glDepthFunc(GL_LESS);
 				{
+					drawWaves_solid(waves);
+					
 					for (int i = 0; i < numSoundVolumes; ++i)
 					{
 						setColor(160, 160, 160);
@@ -873,6 +1015,15 @@ int main(int argc, char * argv[])
 				glDisable(GL_DEPTH_TEST);
 			}
 			camera.popViewMatrix();
+			
+			projectScreen2d();
+			
+			Vec3 coord = waves.projectToWaves(camera.position);
+			const float value = waves.sample(coord[0], coord[1]);
+			setColor(colorWhite);
+			drawText(10, 10, 16, +1, +1, "wave value: %.2f", value);
+			
+			popFontMode();
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_ESCAPE));
