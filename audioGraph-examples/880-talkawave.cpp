@@ -279,6 +279,7 @@ static float s_inputData[AUDIO_UPDATE_SIZE];
 
 static void tickAudio(const float dt);
 static void addRecordedFragment(RecordedData & recordedData);
+static float sampleHeight(Vec3Arg p);
 
 struct MyPortAudioHandler : PortAudioHandler
 {
@@ -377,6 +378,7 @@ struct Waves
 	Waves()
 	{
 		transform = Mat4x4(true)
+			.Translate(0, -.05f, 0)
 			.RotateX(M_PI/2.f)
 			.Scale(10, 10, 1)
 			.Translate(-.5f, -.5f, 0)
@@ -385,8 +387,6 @@ struct Waves
 		
 		memset(p, 0, sizeof(p));
 		memset(v, 0, sizeof(v));
-		
-		//p[kSize/2][kSize/2] = 10.f;
 	}
 	
 	Vec3 projectToWaves(Vec3Arg p) const
@@ -394,15 +394,32 @@ struct Waves
 		return transform.CalcInv().Mul4(p);
 	}
 	
-	float sample(const float x, const float y)
+	float sample(const float x, const float y) const
 	{
-		int xi = int(round(x));
-		int yi = int(round(y));
+		int x0 = int(floor(x));
+		int y0 = int(floor(y));
+		int x1 = int(ceil(x));
+		int y1 = int(ceil(y));
 		
-		xi = clamp(xi, 0, kSize - 1);
-		yi = clamp(yi, 0, kSize - 1);
+		x0 = clamp(x0, 0, kSize - 1);
+		y0 = clamp(y0, 0, kSize - 1);
+		x1 = clamp(x1, 0, kSize - 1);
+		y1 = clamp(y1, 0, kSize - 1);
 		
-		return p[xi][yi];
+		const float tx = x - x0;
+		const float ty = y - y0;
+		
+		const float v00 = p[x0][y0];
+		const float v10 = p[x1][y0];
+		const float v01 = p[x0][y1];
+		const float v11 = p[x1][y1];
+		
+		const float v0 = lerp(v00, v10, tx);
+		const float v1 = lerp(v01, v11, tx);
+		
+		const float v = lerp(v0, v1, ty);
+		
+		return v;
 	}
 	
 	void tick(const float dt)
@@ -410,7 +427,11 @@ struct Waves
 		const float stiffness = 100.f;
 		const float falloff = std::pow(.6f, dt);
 		
-		if (!mouse.isDown(BUTTON_LEFT))
+		if (mouse.isDown(BUTTON_LEFT))
+		{
+			p[kSize/3][kSize/3] = -.2f;
+		}
+		else
 		{
 			p[kSize/2][kSize/2] = 2.f;
 		}
@@ -541,6 +562,13 @@ struct Speeder : AudioSource
 			
 			p[1] = 0.f;
 			v[1] *= -.9f;
+		}
+		
+		const float height = sampleHeight(p);
+		
+		if (p[1] < height && v[1] < 0.f)
+		{
+			p[1] = height;
 		}
 		
 		v[1] -= 8.f * dt;
@@ -808,6 +836,17 @@ static void addRecordedFragment(RecordedData & recordedData)
 #endif
 }
 
+static float sampleHeight(Vec3Arg p)
+{
+	const Vec3 p_waves = s_world->waves.projectToWaves(p);
+	
+	const float height = s_world->waves.sample(p_waves[0], p_waves[1]);
+	
+	const Vec3 p_world = s_world->waves.transform * Vec3(p_waves[0], p_waves[1], height);
+	
+	return p_world[1];
+}
+
 static void drawSoundVolume(const SoundVolume & volume)
 {
 	gxPushMatrix();
@@ -904,8 +943,8 @@ int main(int argc, char * argv[])
 	camera.pitch = 10.f;
 	
 	float fov = 70.f;
-	float near = .01f;
-	float far = 100.f;
+	float near = .05f;
+	float far = 20.f;
 	
 	SDL_mutex * audioMutex = SDL_CreateMutex();
 	
@@ -1018,7 +1057,7 @@ int main(int argc, char * argv[])
 			
 			projectScreen2d();
 			
-			Vec3 coord = waves.projectToWaves(camera.position);
+			const Vec3 coord = waves.projectToWaves(camera.position);
 			const float value = waves.sample(coord[0], coord[1]);
 			setColor(colorWhite);
 			drawText(10, 10, 16, +1, +1, "wave value: %.2f", value);
