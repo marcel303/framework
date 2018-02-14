@@ -6,12 +6,9 @@
 #include "soundmix.h"
 
 #define MAX_SOUNDVOLUMES 100
-//#define NUM_SPEEDERS 16
-//#define NUM_SPEEDERS 90
-#define NUM_SPEEDERS 0
+#define NUM_SPEEDERS 6
 
-#define DO_RECORDING 1
-//#define NUM_BUFFERS_PER_RECORDING (4 * 44100 / AUDIO_UPDATE_SIZE)
+#define DO_RECORDING 0
 #define NUM_BUFFERS_PER_RECORDING (2 * 44100 / AUDIO_UPDATE_SIZE)
 
 const int GFX_SX = 1200;
@@ -215,7 +212,7 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 			
 			const float attenuation = enableDistanceAttenuation ? .2f / (clampedDistanceToEar * clampedDistanceToEar) : 1.f;
 			//const float attenuation = enableDistanceAttenuation ? .5f / clampedDistanceToEar : 1.f;
-			const float gain = attenuation / numSamplePositions / 40.f;
+			const float gain = attenuation / numSamplePositions / 10.f;
 
 			const binaural::HRIRSampleData * samples[3];
 			float sampleWeights[3];
@@ -297,7 +294,7 @@ struct MyPortAudioHandler : PortAudioHandler
 		, audioSources()
 		, monoSource()
 	{
-		monoSource.open("wobbly.ogg", true);
+		monoSource.open("talkative.ogg", true);
 	}
 
 	void addAudioSource(MultiChannelAudioSource_SoundVolume * audioSource)
@@ -705,6 +702,7 @@ static void tickAudio(const float dt)
 
 static void addRecordedFragment(RecordedData & recordedData)
 {
+#if DO_RECORDING
 	if (s_world->recordedFragments.size() < MAX_SOUNDVOLUMES)
 	{
 		RecordedFragment * fragment = new RecordedFragment();
@@ -713,6 +711,7 @@ static void addRecordedFragment(RecordedData & recordedData)
 		
 		s_world->recordedFragments.push_back(fragment);
 	}
+#endif
 }
 
 static void drawSoundVolume(const SoundVolume & volume)

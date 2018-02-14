@@ -66,6 +66,7 @@ add_executable(500-consoleapp 500-consoleapp.cpp)
 add_executable(700-4dworld 700-4dworld.cpp)
 add_executable(710-go 710-go.cpp)
 add_executable(860-thetribe 860-thetribe.cpp)
+add_executable(880-talkawave 880-talkawave.cpp)
 
 set(LIBRARIES PRIVATE
 	libgg
@@ -92,6 +93,7 @@ target_link_libraries(500-consoleapp PRIVATE ${LIBRARIES})
 target_link_libraries(700-4dworld PRIVATE ${LIBRARIES})
 target_link_libraries(710-go PRIVATE ${LIBRARIES})
 target_link_libraries(860-thetribe PRIVATE ${LIBRARIES} libvideo ${LIBVIDEO_LIBRARIES})
+target_link_libraries(880-talkawave PRIVATE ${LIBRARIES} libvideo ${LIBVIDEO_LIBRARIES})
 
 if (WIN32)
 	# set the current working directory
