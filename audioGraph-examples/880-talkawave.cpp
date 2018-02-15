@@ -11,8 +11,8 @@
 #define DO_RECORDING 0
 #define NUM_BUFFERS_PER_RECORDING (2 * 44100 / AUDIO_UPDATE_SIZE)
 
-const int GFX_SX = 1200;
-const int GFX_SY = 600;
+const int GFX_SX = 1280;
+const int GFX_SY = 720;
 
 struct RecordedData;
 
@@ -339,12 +339,12 @@ struct MyPortAudioHandler : PortAudioHandler
 		memcpy(s_inputData, s_monoData, sizeof(s_inputData));
 	#endif
 		
-		tickAudio(AUDIO_UPDATE_SIZE / float(SAMPLE_RATE));
-		
 		s_binauralMutex->lock();
 		{
 			s_worldToViewTransform = worldToViewTransform;
 			s_viewToWorldTransform = worldToViewTransform.CalcInv();
+			
+			tickAudio(AUDIO_UPDATE_SIZE / float(SAMPLE_RATE));
 		
 			for (auto & audioSource : audioSources)
 			{
@@ -468,10 +468,14 @@ struct Waves
 		
 		// integrate velocity into position
 		
+		const float pFalloff = std::pow(.9f, dt);
+		
 		for (int x = 0; x < kSize; ++x)
 		{
 			for (int y = 0; y < kSize; ++y)
 			{
+				p[x][y] *= pFalloff;
+				
 				p[x][y] += v[x][y] * dt;
 			}
 		}
@@ -952,6 +956,9 @@ static void drawWaves_solid(const Waves & waves)
 
 int main(int argc, char * argv[])
 {
+	framework.enableDepthBuffer = true;
+	//framework.fullscreen = true;
+	
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
@@ -1100,11 +1107,13 @@ int main(int argc, char * argv[])
 			
 			projectScreen2d();
 			
+		#if 0
 			const Vec3 coord = waves.projectToWaves(camera.position);
 			const float value = waves.sample(coord[0], coord[1]);
 			setColor(colorWhite);
 			drawText(10, 10, 16, +1, +1, "wave value: %.2f", value);
-			
+		#endif
+		
 			popFontMode();
 		}
 		framework.endDraw();
