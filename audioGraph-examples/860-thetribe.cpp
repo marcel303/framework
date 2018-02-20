@@ -21,8 +21,10 @@ const int GFX_SY = 480;
 
 //
 
+#define TEST_WELCOME 1
+
 #define NUM_VIDEOCLIP_SOURCES 3
-#define NUM_VIDEOCLIPS 0
+#define NUM_VIDEOCLIPS 3
 #define NUM_VFXCLIPS 1
 
 #define NUM_SPOKENWORD_SOURCES 3
@@ -30,7 +32,7 @@ const int GFX_SY = 480;
 
 #define DRAW_GRIDS 1
 #define DO_CONTROLWINDOW 0
-#define ENABLE_TRANSFORM_MIXING 0
+#define ENABLE_TRANSFORM_MIXING 1
 #define DO_CAGEDSOUNDS 0
 
 static bool enableNearest = true;
@@ -38,12 +40,25 @@ static bool enableVertices = true;
 
 static const float timeSeed = 1234.f;
 
+#if TEST_WELCOME
+
+static const char * audioFilenames[NUM_VIDEOCLIP_SOURCES] =
+{
+    "welcome/01 Welcome Intro alleeeen zang loop.ogg",
+    "welcome/04 Welcome couplet 1 zonder zang loop.ogg",
+    "welcome/08 Welcome refrein 1 zonder zang loop.ogg",
+};
+
+#else
+
 static const char * audioFilenames[NUM_VIDEOCLIP_SOURCES] =
 {
 	"0.1.ogg",
 	"1.1.ogg",
 	"2.1.ogg",
 };
+
+#endif
 
 static const float audioGains[NUM_VIDEOCLIP_SOURCES] =
 {
@@ -999,6 +1014,9 @@ struct World
 	}
 };
 
+static World * s_world = nullptr;
+
+
 #if DO_CONTROLWINDOW
 
 struct ControlWindow
@@ -1155,12 +1173,149 @@ struct Cage1 : Cage
 
 #endif
 
+static void drawCubeFace(Vec3Arg side, Vec3Arg up)
+{
+    Mat4x4 cameraMatrix;
+    cameraMatrix.MakeLookat(Vec3(0,0,0), side, up);
+    
+    float fov = 90.f;
+    float near = .01f;
+    float far = 100.f;
+    
+    projectPerspective3d(fov, near, far);
+    gxPushMatrix();
+    {
+        Mat4x4 worldToView = cameraMatrix.CalcInv();
+        gxMultMatrixf(worldToView.m_v);
+        
+        s_world->draw3d();
+    }
+    gxPopMatrix();
+    projectScreen2d();
+}
+
+static const int kCubeSx = 512;
+static const int kCubeSy = 512;
+
+static void initCube(GLuint & cubemap)
+{
+    glGenTextures(1, &cubemap);
+    checkErrorGL();
+    
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+    checkErrorGL();
+    {
+        glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        checkErrorGL();
+        
+        glTexStorage2D(GL_TEXTURE_CUBE_MAP, 1, GL_RGBA8, kCubeSx, kCubeSy);
+        checkErrorGL();
+    }
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    checkErrorGL();
+}
+
+static void shutCube(GLuint & cubemap)
+{
+    glDeleteTextures(1, &cubemap);
+    checkErrorGL();
+    cubemap = 0;
+}
+
+static void drawCube()
+{
+    GLuint cubemap = 0;
+    initCube(cubemap);
+    
+    struct FaceInfo
+    {
+        GLint id;
+        Vec3 side;
+        Vec3 up;
+    };
+    
+    FaceInfo faceInfos[6] =
+    {
+        { GL_TEXTURE_CUBE_MAP_POSITIVE_X, Vec3(-1,0,0), Vec3(0,+1,0) },
+        { GL_TEXTURE_CUBE_MAP_NEGATIVE_X, Vec3(+1,0,0), Vec3(0,+1,0) },
+        { GL_TEXTURE_CUBE_MAP_POSITIVE_Y, Vec3(0,+1,0), Vec3(0,0,-1) },
+        { GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, Vec3(0,-1,0), Vec3(0,0,+1) },
+        { GL_TEXTURE_CUBE_MAP_POSITIVE_Z, Vec3(0,0,+1), Vec3(0,+1,0) },
+        { GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, Vec3(0,0,-1), Vec3(0,+1,0) }
+    };
+    
+    //glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+    
+    Surface surface(kCubeSx, kCubeSy, true, false, SURFACE_RGBA8);
+    pushSurface(&surface);
+    
+    for (int i = 0; i < 6; ++i)
+    {
+        auto & faceInfo = faceInfos[i];
+        
+        surface.clear();
+        surface.clearDepth(1.f);
+        
+        drawCubeFace(faceInfo.side, faceInfo.up);
+        
+        //glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+        checkErrorGL();
+        glCopyTexSubImage2D(faceInfo.id, 0, 0, 0, 0, 0, kCubeSx, kCubeSy);
+        checkErrorGL();
+        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+        checkErrorGL();
+    }
+    
+    popSurface();
+    
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+    {
+        setColor(colorWhite);
+        Shader shader("cubeproj");
+        setShader(shader);
+        
+        //shader.setTexture("source", 0, cubemap);
+        const GLint index = glGetUniformLocation(shader.getProgram(), "source");
+        checkErrorGL();
+        
+        if (index != -1)
+        {
+            const int unit = 0;
+            
+            glUniform1i(index, unit);
+            glActiveTexture(GL_TEXTURE0 + unit);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+            glActiveTexture(GL_TEXTURE0);
+            checkErrorGL();
+        }
+        
+        gxBegin(GL_QUADS);
+        {
+            drawRect(0, 0, GFX_SX, GFX_SY);
+        }
+        gxEnd();
+        clearShader();
+    }
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    
+    shutCube(cubemap);
+}
+
 int main(int argc, char * argv[])
 {
 	framework.actionHandler = handleAction;
 	
 	//framework.minification = 2;
 	
+    framework.enableDepthBuffer = true;
+    framework.enableRealTimeEditing = true;
+    
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
@@ -1189,6 +1344,7 @@ int main(int argc, char * argv[])
 	World world;
 	
 	world.init(&sampleSet, &binauralMutex);
+    s_world = &world;
 	
 	PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, paHandler);
@@ -1252,12 +1408,16 @@ int main(int argc, char * argv[])
 			setFont("calibri.ttf");
 			pushFontMode(FONT_SDF);
 			
+        #if TEST_WELCOME
+            drawCube();
+        #else
 			projectPerspective3d(fov, near, far);
 			{
 				world.draw3d();
 			}
 			projectScreen2d();
-			
+        #endif
+            
 			world.draw2d();
 			
 		#if DO_CAGEDSOUNDS
