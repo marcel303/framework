@@ -5,14 +5,13 @@
 
 namespace Videotube
 {
-#define TEST_WELCOME 1
-
+#define NUM_AUDIOCLIP_SOURCES 16
 #define NUM_VIDEOCLIP_SOURCES 3
-#define NUM_VIDEOCLIPS 3
-#define NUM_VFXCLIPS 1
+#define NUM_VIDEOCLIPS 16
+#define NUM_VFXCLIPS 0
 
 #define NUM_SPOKENWORD_SOURCES 3
-#define NUM_SPOKENWORDS 3
+#define NUM_SPOKENWORDS 0
 
 #define DRAW_GRIDS 1
 #define DO_CONTROLWINDOW 0
@@ -22,38 +21,31 @@ static bool enableVertices = true;
 
 static const float timeSeed = 1234.f;
 
-#if TEST_WELCOME
-
-static const char * audioFilenames[NUM_VIDEOCLIP_SOURCES] =
+static const char * audioFilenames[NUM_AUDIOCLIP_SOURCES] =
 {
     "welcome/01 Welcome Intro alleeeen zang loop.ogg",
+    "welcome/02 Welcome Intro zonder zang loop.ogg",
+    "welcome/03 Welcome couplet 1 alleeen zang loop.ogg",
     "welcome/04 Welcome couplet 1 zonder zang loop.ogg",
+    "welcome/05 Welcome couplet 2 alleen zang loop.ogg",
+    "welcome/06 Welcome couplet 2 zonder zang loop.ogg",
+    "welcome/07 Welcome refrein 1 alleen zang loop.ogg",
     "welcome/08 Welcome refrein 1 zonder zang loop.ogg",
-};
-
-#else
-
-static const char * audioFilenames[NUM_VIDEOCLIP_SOURCES] =
-{
-	"0.1.ogg",
-	"1.1.ogg",
-	"2.1.ogg",
-};
-
-#endif
-
-static const float audioGains[NUM_VIDEOCLIP_SOURCES] =
-{
-	1.f,
-	.3f,
-	1.f
+    "welcome/09 Welcome brug alleeeen zang loop.ogg",
+    "welcome/10 Welcome brug zonder zang loop.ogg",
+    "welcome/11 Welcome 2e refrein alleeeen zang loop.ogg",
+    "welcome/12 Welcome 2e refrein zonder zang loop.ogg",
+    "welcome/13 Welcome Rap Gitaar lick loop.ogg",
+    "welcome/14 Welcome Rap Alles loop.ogg",
+    "welcome/15 Welcome Refrein 3 alleeen zang loop.ogg",
+    "welcome/16 Welcome Refrein 3 zonder zang loop.ogg"
 };
 
 static const char * videoFilenames[NUM_VIDEOCLIP_SOURCES] =
 {
-	"0.1280px.mp4",
-	"1.1280px.mp4",
-	"2.1280px.mp4",
+	"0.320px.mp4",
+	"1.320px.mp4",
+	"2.320px.mp4",
 };
 
 static const char * spokenText[NUM_SPOKENWORD_SOURCES] =
@@ -273,13 +265,6 @@ float videoClipBlend[3] =
 
 struct Videoclip
 {
-	enum EvalMode
-	{
-		EvalMode_Floating,
-		EvalMode_Line,
-		EvalMode_Circle
-	};
-	
 	Mat4x4 transform;
 	AudioSourceVorbis soundSource;
 	SoundVolume soundVolume;
@@ -328,102 +313,44 @@ struct Videoclip
 		return intersectSoundVolume(soundVolume, pos, dir, p, t);
 	}
 	
-	void evalVideoClipParams(const EvalMode mode, Vec3 & scale, Quat & rotation, Vec3 & position, float & opacity) const
+	void evalVideoClipParams(Vec3 & scale, Quat & rotation, Vec3 & position, float & opacity) const
 	{
-		const float t = (index + .5f) / float(NUM_VIDEOCLIPS) - .5f;
-		
-		switch (mode)
-		{
-		case EvalMode_Floating:
-			{
-				const float time = timeSeed + framework.time;
-		
-				const float moveSpeed = (1.f + index / float(NUM_VIDEOCLIPS)) * .2f;
-				const float moveAmount = 4.f / (index / float(NUM_VIDEOCLIPS) + 1);
-				const float x = std::sin(moveSpeed * time / 11.234f) * moveAmount;
-				const float y = std::sin(moveSpeed * time / 13.456f) * moveAmount;
-				const float z = std::sin(moveSpeed * time / 15.678f) * moveAmount;
-			
-				const float scaleSpeed = 1.f + index / 5.f;
-				const float scaleY = lerp(.5f, 1.f, (std::cos(scaleSpeed * time / 4.567f) + 1.f) / 2.f);
-				const float scaleX = scaleY * 4.f/3.f;
-				//const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
-				const float scaleZ = lerp(.05f, .1f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
-				const float rotateSpeed = 1.f + index / 5.f;
-				
-				scale = Vec3(scaleX, scaleY, scaleZ);
-				rotation =
-					Quat(Vec3(1.f, 0.f, 0.f), rotateSpeed * time / 3.456f) *
-					Quat(Vec3(0.f, 1.f, 0.f), rotateSpeed * time / 4.567f);
-				position = Vec3(x, y, z);
-				opacity = 1.f;
-			}
-			break;
-			
-		case EvalMode_Line:
-			{
-				scale = Vec3(1, 1, 1);
-				rotation.makeIdentity();
-				const float x = t * 4.f;
-				const float y = 0.f;
-				position = Vec3(x, y, 0);
-				opacity = 1.f;
-			}
-			break;
-			
-		case EvalMode_Circle:
-			{
-				scale = Vec3(1, 1, 1);
-				rotation.makeIdentity();
-				const float x = std::cos(t * M_PI * 2.f) * 4.f;
-				const float y = std::sin(t * M_PI * 2.f) * 4.f;
-				position = Vec3(x, y, 0);
-				opacity = 1.f;
-			}
-			break;
-		}
+        const float time = timeSeed + framework.time;
+
+        const float moveSpeed = (1.f + index / float(NUM_VIDEOCLIPS)) * .2f;
+        //const float moveAmount = 4.f / (index / float(NUM_VIDEOCLIPS) + 1);
+        const float moveAmount = 2.f;
+        const float x = std::sin(moveSpeed * time / 11.234f) * moveAmount;
+        const float y = std::sin(moveSpeed * time / 13.456f) * moveAmount;
+        const float z = std::sin(moveSpeed * time / 15.678f) * moveAmount * .2f + index * 1.7f + 8.f;
+    
+        const float scaleSpeed = 1.f + index / 5.f;
+        const float scaleY = lerp(.5f, 1.f, (std::cos(scaleSpeed * time / 4.567f) + 1.f) / 2.f);
+        const float scaleX = scaleY * 4.f/3.f;
+        //const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
+        const float scaleZ = lerp(.05f, .1f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
+        const float rotateSpeed = 1.f + index / 10.f;
+        
+        scale = Vec3(scaleX, scaleY, scaleZ);
+        rotation =
+            Quat(Vec3(1.f, 0.f, 0.f), rotateSpeed * time / 3.456f) *
+            Quat(Vec3(0.f, 1.f, 0.f), rotateSpeed * time / 4.567f);
+        position = Vec3(x, y, z);
+        opacity = 1.f;
 	}
 	
 	void tick(const Mat4x4 & worldToViewMatrix, const Vec3 & cameraPosition_world, const float dt)
 	{
-		Vec3 totalScale(0.f, 0.f, 0.f);
-		Quat totalRotation;
-		Vec3 totalTranslation(0.f, 0.f, 0.f);
-		float totalOpacity = 0.f;
-		float totalBlend = 0.f;
-		
-		for (int i = 0; i < 3; ++i) // todo : count
-		{
-			const EvalMode evalMode = (EvalMode)i;
-			const float blend = videoClipBlend[i];
-			
-			Vec3 scale;
-			Quat rotation;
-			Vec3 position;
-			float opacity;
-			evalVideoClipParams(evalMode, scale, rotation, position, opacity);
-			
-			totalScale += scale * blend;
-			// todo : what's the best way to blend between rotations ?
-			//totalRotation = totalRotation.slerp(rotation, blend);
-			totalRotation = totalRotation * rotation;
-			totalTranslation += position * blend;
-			totalOpacity += opacity * blend;
-			
-			totalBlend += blend;
-		}
-		
-		if (totalBlend != 0.f)
-		{
-			totalScale /= totalBlend;
-			totalTranslation /= totalBlend;
-			totalOpacity /= totalBlend;
-		}
-		
-		transform = Mat4x4(true).
-			Translate(totalTranslation).
-			Rotate(totalRotation).
-			Scale(totalScale);
+        Vec3 scale;
+        Quat rotation;
+        Vec3 position;
+        float opacity;
+        evalVideoClipParams(scale, rotation, position, opacity);
+
+        transform = Mat4x4(true).
+			Translate(position).
+			Rotate(rotation).
+			Scale(scale);
 		
 		// update sample locations for binauralization given the new transform
 		
@@ -769,18 +696,18 @@ struct World
 		
 		camera.position[0] = 0;
 		camera.position[1] = +.3f;
-		camera.position[2] = -1.f;
-		camera.pitch = 10.f;
+		camera.position[2] = 0;
 		
 		//
 		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
-			const int index = i % NUM_VIDEOCLIP_SOURCES;
+            const int audioIndex = i % NUM_AUDIOCLIP_SOURCES;
+            const int videoIndex = i % NUM_VIDEOCLIP_SOURCES;
 			
-			const char * audioFilename = audioFilenames[index];
-			const char * videoFilename = videoFilenames[index];
-			const float audioGain = audioGains[index];
+			const char * audioFilename = audioFilenames[audioIndex];
+			const char * videoFilename = videoFilenames[videoIndex];
+            const float audioGain = 1.f;
 			
 			videoclips[i].init(sampleSet, mutex, i, audioFilename, videoFilename, audioGain);
 		}
@@ -955,9 +882,9 @@ struct World
 		{
 			gxPushMatrix();
 			{
-				gxScalef(10, 10, 10);
+				gxScalef(40, 40, 40);
 				setColor(200, 200, 200, 60);
-				drawGrid3dLine(100, 100, 0, 2, true);
+				drawGrid3dLine(400, 400, 0, 2, true);
 			}
 			gxPopMatrix();
 			
