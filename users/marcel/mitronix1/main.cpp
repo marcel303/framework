@@ -34,6 +34,8 @@ static View view = kView_MainButtons;
 static bool buttonPressed = false;
 static bool hasMouseHover = false;
 
+static AudioGraphManager * s_audioGraphMgr = nullptr;
+
 static void playMenuSound();
 
 struct MainButton
@@ -841,12 +843,12 @@ struct Instrument
 	Instrument(const char * filename)
 		: audioGraphInstance(nullptr)
 	{
-		audioGraphInstance = g_audioGraphMgr->createInstance(filename);
+		audioGraphInstance = s_audioGraphMgr->createInstance(filename);
 	}
 	
 	~Instrument()
 	{
-		g_audioGraphMgr->free(audioGraphInstance);
+		s_audioGraphMgr->free(audioGraphInstance, false);
 	}
 };
 
@@ -885,14 +887,13 @@ int main(int argc, char * argv[])
 		
 		SDL_mutex * audioMutex = SDL_CreateMutex();
 		
-		AudioVoiceManager * audioVoiceMgr = new AudioVoiceManager();
-		audioVoiceMgr->init(16, 16);
+		AudioVoiceManagerBasic * audioVoiceMgr = new AudioVoiceManagerBasic();
+		audioVoiceMgr->init(audioMutex, 16, 16);
 		audioVoiceMgr->outputStereo = true;
-		g_voiceMgr = audioVoiceMgr;
 		
-		AudioGraphManager * audioGraphMgr = new AudioGraphManager();
-		audioGraphMgr->init(audioMutex);
-		g_audioGraphMgr = audioGraphMgr;
+		AudioGraphManager_RTE * audioGraphMgr = new AudioGraphManager_RTE(GFX_SX, GFX_SY);
+		audioGraphMgr->init(audioMutex, audioVoiceMgr);
+		s_audioGraphMgr = audioGraphMgr;
 		
 		AudioUpdateHandler * audioUpdateHandler = new AudioUpdateHandler();
 		audioUpdateHandler->init(audioMutex, nullptr, 0);
@@ -1150,12 +1151,11 @@ int main(int argc, char * argv[])
 		delete audioUpdateHandler;
 		audioUpdateHandler = nullptr;
 		
-		g_audioGraphMgr = nullptr;
+		s_audioGraphMgr = nullptr;
 		audioGraphMgr->shut();
 		delete audioGraphMgr;
 		audioGraphMgr = nullptr;
 		
-		g_voiceMgr = nullptr;
 		audioVoiceMgr->shut();
 		delete audioVoiceMgr;
 		audioVoiceMgr = nullptr;

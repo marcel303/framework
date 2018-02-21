@@ -50,10 +50,6 @@ source_group("resources" FILES ${resources_root} ${resources_cipic147})
 
 add_executable(mitronix MACOSX_BUNDLE ${source} ${resources_root} ${resources_cipic147})
 
-set_target_properties(mitronix PROPERTIES LINK_FLAGS "-Wl,-all_load")
-
-target_compile_definitions(mitronix PUBLIC AUDIO_UPDATE_SIZE=64)
-
 if (WIN32)
 	# set the current working directory
 	
