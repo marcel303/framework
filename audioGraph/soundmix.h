@@ -235,6 +235,7 @@ struct AudioVoiceManager
 	Type type;
 	
 	AudioVoiceManager(const Type _type);
+    virtual ~AudioVoiceManager() { }
 	
 	void generateAudio(
 		AudioVoice ** voices,
