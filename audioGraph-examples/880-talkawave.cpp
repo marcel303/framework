@@ -4,12 +4,17 @@
 #include "objects/binaural_cipic.h"
 #include "objects/paobject.h"
 #include "soundmix.h"
+#include <deque>
 
-#define MAX_SOUNDVOLUMES 100
-#define NUM_SPEEDERS 40
+//#define MAX_SOUNDVOLUMES 100
+#define MAX_SOUNDVOLUMES 40
+#define NUM_SPEEDERS 0
 
-#define DO_RECORDING 0
+#define DO_RECORDING 1
 #define NUM_BUFFERS_PER_RECORDING (2 * 44100 / AUDIO_UPDATE_SIZE)
+
+#define DO_WATER 1
+#define WATER_HEIGHT .1f
 
 const int GFX_SX = 1280;
 const int GFX_SY = 720;
@@ -307,6 +312,18 @@ struct MyPortAudioHandler : PortAudioHandler
 		s_binauralMutex->unlock();
 	}
 	
+	void removeAudioSource(MultiChannelAudioSource_SoundVolume * audioSource)
+	{
+		s_binauralMutex->lock();
+		{
+			auto i = std::find(audioSources.begin(), audioSources.end(), audioSource);
+			
+			if (i != audioSources.end())
+				audioSources.erase(i);
+		}
+		s_binauralMutex->unlock();
+	}
+	
 	virtual void portAudioCallback(
 		const void * inputBuffer,
 		const int numInputChannels,
@@ -366,6 +383,8 @@ struct MyPortAudioHandler : PortAudioHandler
 
 static MyPortAudioHandler * s_paHandler = nullptr;
 
+#if DO_WATER
+
 struct Waves
 {
 	static const int kSize = 128;
@@ -380,9 +399,9 @@ struct Waves
 		transform = Mat4x4(true)
 			.Translate(0, -.05f, 0)
 			.RotateX(M_PI/2.f)
-			.Scale(10, 10, 1)
+			.Scale(10, 10, WATER_HEIGHT)
 			.Translate(-.5f, -.5f, 0)
-			.Scale(1.f / kSize, 1.f / kSize, 1.f)
+			.Scale(1.f / kSize, 1.f / kSize, 1)
 			.Translate(.5f, .5f, 0);
 		
 		memset(p, 0, sizeof(p));
@@ -481,6 +500,8 @@ struct Waves
 		}
 	}
 };
+
+#endif
 
 const float kInitSpeederDistance1 = 8.f;
 const float kInitSpeederDistance2 = 10.f;
@@ -695,6 +716,11 @@ struct RecordedFragment : AudioSource
 		s_paHandler->addAudioSource(&audioSource);
 	}
 	
+	void shut()
+	{
+		s_paHandler->removeAudioSource(&audioSource);
+	}
+	
 	void randomizePosition()
 	{
 		const float angle = random(0.f, float(M_PI) * 2.f);
@@ -790,11 +816,13 @@ struct World
 {
 	Speeder speeders[NUM_SPEEDERS];
 	
-	std::vector<RecordedFragment*> recordedFragments;
+	std::deque<RecordedFragment*> recordedFragments;
 	
 	Recorder recorder;
 	
+#if DO_WATER
 	Waves waves;
+#endif
 	
 	void init()
 	{
@@ -828,7 +856,9 @@ struct World
 		
 		recorder.tickAudio(dt);
 		
+	#if DO_WATER
 		waves.tick(dt);
+	#endif
 	}
 	
 	void tick(const float dt)
@@ -850,6 +880,17 @@ static void tickAudio(const float dt)
 static void addRecordedFragment(RecordedData & recordedData)
 {
 #if DO_RECORDING
+	if (s_world->recordedFragments.size() == MAX_SOUNDVOLUMES)
+	{
+		RecordedFragment * fragment = s_world->recordedFragments.front();
+		
+		fragment->shut();
+		delete fragment;
+		fragment = nullptr;
+		
+		s_world->recordedFragments.pop_front();
+	}
+	
 	if (s_world->recordedFragments.size() < MAX_SOUNDVOLUMES)
 	{
 		RecordedFragment * fragment = new RecordedFragment();
@@ -863,6 +904,7 @@ static void addRecordedFragment(RecordedData & recordedData)
 
 static float sampleHeight(Vec3Arg p)
 {
+#if DO_WATER
 	const Vec3 p_waves = s_world->waves.projectToWaves(p);
 	
 	const float height = s_world->waves.sample(p_waves[0], p_waves[1]);
@@ -870,6 +912,9 @@ static float sampleHeight(Vec3Arg p)
 	const Vec3 p_world = s_world->waves.transform * Vec3(p_waves[0], p_waves[1], height);
 	
 	return p_world[1];
+#else
+	return 0.f;
+#endif
 }
 
 static void drawSoundVolume(const SoundVolume & volume)
@@ -915,6 +960,8 @@ static void drawSoundVolume_Translucent(const SoundVolume & volume)
 	gxPopMatrix();
 }
 
+#if DO_WATER
+
 static void drawWaves_solid(const Waves & waves)
 {
 	gxPushMatrix();
@@ -953,6 +1000,8 @@ static void drawWaves_solid(const Waves & waves)
 	}
 	gxPopMatrix();
 }
+
+#endif
 
 int main(int argc, char * argv[])
 {
@@ -1015,7 +1064,9 @@ int main(int argc, char * argv[])
 		SoundVolume soundVolumes[MAX_SOUNDVOLUMES];
 		int numSoundVolumes = 0;
 		
+	#if DO_WATER
 		Waves waves;
+	#endif
 		
 		s_binauralMutex->lock();
 		{
@@ -1026,9 +1077,9 @@ int main(int argc, char * argv[])
 				soundVolumes[numSoundVolumes++] = audioSource->soundVolume;
 			}
 			
+		#if DO_WATER
 			waves = world.waves;
 			
-		#if 1
 			for (int xo = -2; xo <= +2; ++xo)
 			{
 				 for (int yo = -2; yo <= +2; ++yo)
@@ -1065,7 +1116,9 @@ int main(int argc, char * argv[])
 				glEnable(GL_DEPTH_TEST);
 				glDepthFunc(GL_LESS);
 				{
+				#if DO_WATER
 					drawWaves_solid(waves);
+				#endif
 					
 					for (int i = 0; i < numSoundVolumes; ++i)
 					{
@@ -1107,7 +1160,7 @@ int main(int argc, char * argv[])
 			
 			projectScreen2d();
 			
-		#if 0
+		#if DO_WATER && 0
 			const Vec3 coord = waves.projectToWaves(camera.position);
 			const float value = waves.sample(coord[0], coord[1]);
 			setColor(colorWhite);
