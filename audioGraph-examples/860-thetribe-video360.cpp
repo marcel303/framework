@@ -1008,14 +1008,19 @@ static void drawCubeFace(Vec3Arg side, Vec3Arg up)
         Mat4x4 worldToView = cameraMatrix.CalcInv();
         gxMultMatrixf(worldToView.m_v);
         
-        s_world->draw3d();
+        const auto oldPitch = s_world->camera.pitch;
+        s_world->camera.pitch = 0.f;
+        {
+            s_world->draw3d();
+        }
+        s_world->camera.pitch = oldPitch;
     }
     gxPopMatrix();
     projectScreen2d();
 }
 
-static const int kCubeSx = 512;
-static const int kCubeSy = 512;
+static const int kCubeSx = 512*2;
+static const int kCubeSy = 512*2;
 
 static void initCube(GLuint & cubemap)
 {
@@ -1159,6 +1164,8 @@ void main()
 	PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, paHandler);
 	
+    Surface preview(GFX_SX/4, GFX_SY/4, true, false, SURFACE_RGBA8);
+    
 	do
 	{
 		framework.process();
@@ -1203,8 +1210,52 @@ void main()
 		{
 			setFont("calibri.ttf");
 			pushFontMode(FONT_SDF);
-			
+            
+			// draw cube map
+            
             drawCube();
+            
+            // draw small preview which is non-cubemapped
+            
+			pushSurface(&preview);
+            {
+                preview.clear(255, 255, 255, 0);
+                preview.clearDepth(1.f);
+                
+                float fov = 60.f;
+                float near = .01f;
+                float far = 100.f;
+                
+                projectPerspective3d(fov, near, far);
+                {
+                    world.draw3d();
+                }
+                projectScreen2d();
+            }
+            popSurface();
+            
+            pushBlend(BLEND_OPAQUE);
+            gxSetTexture(preview.getTexture());
+            {
+                setColor(colorWhite);
+                //drawRect(10, 10, 10 + preview.getWidth(), 10 + preview.getHeight());
+				
+				const float x1 = 10;
+				const float y1 = 10;
+				const float x2 = 10 + preview.getWidth();
+				const float y2 = 10 + preview.getHeight();
+				
+				gxBegin(GL_QUADS);
+				{
+					gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y1);
+					gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y1);
+					gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y2);
+					gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y2);
+				}
+				gxEnd();
+            }
+            gxSetTexture(0);
+            popBlend();
             
 			world.draw2d();
 			
