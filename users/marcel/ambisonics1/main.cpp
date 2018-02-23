@@ -24,10 +24,208 @@ const int GFX_SY = 768;
 
 static float samples[NUM_CHANNELS][BUFFER_SIZE * NUM_BUFFERS];
 
+/*
+
+PcmAudioCapture
+---------------
+
+a simple helper object to capture multi-channel audio and save it to a raw PCM file
+
+it first needs to be initialized with the number of channels one wishes to capture
+
+it then needs to be fed sample data. before feeding it data, beginSegment must be called with the number of samples
+that will be added. next, the data itself should be submitted. the data can be presented as planar data for a single
+channel, in which case it needs to be fed data for each channel individually, or as interleaved data for all channels
+at once
+
+planar data example:
+	PcmAudioCapture audioCapture;
+	audioCapture.init(2);
+ 
+	for (int i = 0; i < 10; ++i)
+	{
+		// generate some audio
+		float leftSamples[256];
+		float rightSamples[256];
+		generateNoise_Planar(leftSamples);
+		generateNoise_Planar(rightSamples);
+ 
+		// and capture it
+		audioCapture.beginSegment(256);
+		audioCapture.addSamples_Planar(0, leftSamples);
+		audioCapture.addSamples_Planar(1, rightSamples);
+	}
+ 
+	audioCapture.savePcmData("raw.pcm");
+	audioCapture.shut();
+
+interleaved data example:
+	PcmAudioCapture audioCapture;
+	audioCapture.init(2);
+ 
+	for (int i = 0; i < 10; ++i)
+	{
+		// generate some audio
+		float samples[256 * 2];
+		generateNoise_Interleaved(samples);
+ 
+		// and capture it
+		audioCapture.beginSegment(256);
+		audioCapture.addSamples_Interleaved(samples);
+	}
+ 
+	audioCapture.savePcmData("raw.pcm");
+	audioCapture.shut();
+ 
+*/
+
+struct PcmAudioCapture
+{
+	struct Segment
+	{
+		Segment * next;
+		
+		float * samples;
+		int numSamples;
+		
+		Segment()
+		{
+			memset(this, 0, sizeof(*this));
+		}
+	};
+	
+	Segment * firstSegment;
+	Segment * currentSegment;
+	
+	int numChannels;
+	
+	PcmAudioCapture();
+	~PcmAudioCapture();
+	
+	void init(const int numChannels);
+	void shut();
+	
+	void beginSegment(const int numSamples);
+	void addSamples_Planar(const int channel, const float * samples);
+	void addSamples_Interleaved(const float * samples);
+	
+	bool savePcmData(const char * filename) const;
+};
+
+PcmAudioCapture::PcmAudioCapture()
+{
+	memset(this, 0, sizeof(*this));
+}
+
+PcmAudioCapture::~PcmAudioCapture()
+{
+	shut();
+}
+
+void PcmAudioCapture::init(const int _numChannels)
+{
+	shut();
+	
+	//
+	
+	numChannels = _numChannels;
+}
+
+void PcmAudioCapture::shut()
+{
+	Segment * segment = firstSegment;
+	
+	while (segment != nullptr)
+	{
+		Segment * next = segment->next;
+		
+		//
+		
+		delete [] segment->samples;
+		segment->samples = nullptr;
+		
+		delete segment;
+		segment = nullptr;
+		
+		//
+		
+		segment = next;
+	}
+	
+	firstSegment = nullptr;
+	currentSegment = nullptr;
+	
+	numChannels = 0;
+}
+
+void PcmAudioCapture::beginSegment(const int numSamples)
+{
+	Segment * segment = new Segment();
+	segment->samples = new float[numChannels * numSamples];
+	segment->numSamples = numSamples;
+	
+	if (currentSegment)
+	{
+		currentSegment->next = segment;
+		currentSegment = segment;
+	}
+	else
+	{
+		firstSegment = segment;
+		currentSegment = segment;
+	}
+}
+
+void PcmAudioCapture::addSamples_Planar(const int channel, const float * samples)
+{
+	for (int i = 0; i < currentSegment->numSamples; ++i)
+	{
+		currentSegment->samples[i * numChannels + channel] = samples[i];
+	}
+}
+
+void PcmAudioCapture::addSamples_Interleaved(const float * samples)
+{
+	memcpy(currentSegment->samples, samples, numChannels * currentSegment->numSamples);
+}
+
+bool PcmAudioCapture::savePcmData(const char * filename) const
+{
+	bool result = true;
+	
+	FILE * file = fopen(filename, "wb");
+	
+	if (file == nullptr)
+	{
+		result = false;
+	}
+	else
+	{
+		for (Segment * segment = firstSegment; segment != nullptr; segment = segment->next)
+		{
+			const int numValues = numChannels * segment->numSamples;
+			
+			if (fwrite(segment->samples, sizeof(float), numValues, file) != numValues)
+			{
+				result = false;
+				break;
+			}
+		}
+		
+		fclose(file);
+		file = nullptr;
+	}
+	
+	return result;
+}
+
 int main(int argc, char * argv[])
 {
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
+	
+	PcmAudioCapture audioCapture;
+	audioCapture.init(NUM_CHANNELS);
 	
 	const double dt = 1.0 / SAMPLE_RATE;
 	
@@ -112,6 +310,19 @@ int main(int argc, char * argv[])
 			myBFormat.ExtractStream(samples[i] + b * BUFFER_SIZE, i, BUFFER_SIZE);
 		}
 		
+		// extract the b-format data and capture it
+		
+		audioCapture.beginSegment(BUFFER_SIZE);
+		
+		for (int i = 0; i < NUM_CHANNELS; ++i)
+		{
+			float samples[BUFFER_SIZE];
+			
+			myBFormat.ExtractStream(samples, i, BUFFER_SIZE);
+			
+			audioCapture.addSamples_Planar(i, samples);
+		}
+		
 		//
 		
 	#if DO_PREVIEW
@@ -192,7 +403,7 @@ int main(int argc, char * argv[])
 	
 	printf("writing B-format. numChannels=%d, numSamples=%d\n", myBFormat.GetChannelCount(), myBFormat.GetSampleCount());
 	
-	FILE * file = fopen("raw.pcm", "wb");
+	FILE * file = fopen("raw1.pcm", "wb");
 	
 	if (file != nullptr)
 	{
@@ -207,6 +418,9 @@ int main(int argc, char * argv[])
 		fclose(file);
 		file = nullptr;
 	}
+	
+	audioCapture.savePcmData("raw2.pcm");
+	audioCapture.shut();
 	
 	framework.shutdown();
 	
