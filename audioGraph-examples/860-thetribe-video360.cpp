@@ -1138,10 +1138,6 @@ void main()
 	
 	bool showUi = true;
 	
-	float fov = 90.f;
-	float near = .01f;
-	float far = 100.f;
-	
 	SDL_mutex * audioMutex = SDL_CreateMutex();
 	
 	MyMutex binauralMutex(audioMutex);

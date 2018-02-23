@@ -11,9 +11,12 @@
 #include "video.h"
 #include <atomic>
 
-#if 1
+#if 0
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
+#elif 1
+const int GFX_SX = 2400;
+const int GFX_SY = 1200;
 #else
 const int GFX_SX = 640;
 const int GFX_SY = 480;
@@ -35,7 +38,7 @@ int main(int argc, char * argv[])
     
     //Cagedsounds::main();
     //Spokenword::main();
-    //Video360::main();
+    Video360::main();
     //Videomixer::main();
     Videotube::main();
 	
