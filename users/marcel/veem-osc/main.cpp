@@ -12,8 +12,8 @@
 
 #define OSC_BUFFER_SIZE 2048
 
-const int GFX_SX = 800;
-const int GFX_SY = 600;
+const int GFX_SX = 500;
+const int GFX_SY = 700;
 
 std::atomic<bool> s_quitRequested(false);
 
@@ -401,7 +401,7 @@ static SDL_Thread * s_updateSlowThread = nullptr;
 
 #include "Noise.h"
 
-static void sendFakeCamera(OscSender & sender)
+static void sendFakeCamera(OscSender & sender, const float rateOfChange, const char * address)
 {
 	const int sx = 16;
 	const int sy = 12;
@@ -412,7 +412,7 @@ static void sendFakeCamera(OscSender & sender)
 	{
 		for (int x = 0; x < sx; ++x)
 		{
-			const float value = scaled_octave_noise_3d(8, .6f, .1f, 0.f, 1.f, x, y, framework.time * .1f);
+			const float value = scaled_octave_noise_3d(8, .6f, .1f, 0.f, 1.f, x, y, framework.time * rateOfChange);
 			
 			values[y][x] = value;
 		}
@@ -422,7 +422,7 @@ static void sendFakeCamera(OscSender & sender)
 	osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
 	p << osc::BeginBundleImmediate;
 	{
-		p << osc::BeginMessage("/env/light/raw");
+		p << osc::BeginMessage(address);
 		for (int y = 0; y < sy; ++y)
 			for (int x = 0; x < sx; ++x)
 				p << values[y][x];
@@ -455,7 +455,9 @@ static int sendFakeSensorDataThreadProc(void * obj)
 			
 			//
 			
-			sendFakeCamera(*sender);
+			sendFakeCamera(*sender, .1f, "/env/light/raw");
+			
+			sendFakeCamera(*sender, 1.f, "/room/light/raw");
 		}
 		SDL_UnlockMutex(s_mutex);
 		
@@ -473,7 +475,7 @@ static int drawValueGrid(const std::vector<float> & values, const int gridSx, co
 {
 	Assert(gridSx * gridSy == values.size());
 	
-	const int kScale = 8;
+	const int kScale = 6;
 	
 	gxPushMatrix();
 	gxScalef(kScale, kScale, 0);
