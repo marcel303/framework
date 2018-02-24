@@ -20,7 +20,8 @@ std::atomic<bool> s_quitRequested(false);
 static SDL_mutex * s_mutex = nullptr;
 
 #define UPDATE_SLOW_INTERVAL 10
-#define REPAINT_INTERVAL 1000
+#define REPAINT_INTERVAL 400
+#define SEND_FAKE_SENSOR_DATA_INTERVAL 1000
 
 // OSC message history
 
@@ -384,6 +385,39 @@ static SDL_Thread * s_updateSlowThread = nullptr;
 
 //
 
+static int sendFakeSensorDataThreadProc(void * obj)
+{
+	OscSender * sender = (OscSender*)obj;
+	
+	while (!s_quitRequested)
+	{
+		SDL_LockMutex(s_mutex);
+		{
+			char buffer[OSC_BUFFER_SIZE];
+			osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
+			p << osc::BeginBundleImmediate;
+			{
+				p << osc::BeginMessage("/humidity");
+				p << float(std::sin(framework.time * 2.0 * M_PI / 60.0) + 1.f) / 2.f;
+				p << float(std::cos(framework.time * 2.0 * M_PI / 60.0) + 1.f) / 2.f;
+				p << osc::EndMessage;
+			}
+			p << osc::EndBundle;
+			
+			sender->send(p.Data(), p.Size());
+		}
+		SDL_UnlockMutex(s_mutex);
+		
+		SDL_Delay(SEND_FAKE_SENSOR_DATA_INTERVAL);
+	}
+	
+	return 0;
+}
+
+static SDL_Thread * s_sendFakeSensorDataThread = nullptr;
+
+//
+
 int main(int argc, char * argv[])
 {
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
@@ -403,6 +437,8 @@ int main(int argc, char * argv[])
 	repaintTimer->init(repaintEvent, REPAINT_INTERVAL);
 	
 	s_updateSlowThread = SDL_CreateThread(updateSlowThreadProc, "Update Slow", sender);
+	
+	s_sendFakeSensorDataThread = SDL_CreateThread(sendFakeSensorDataThreadProc, "Send Fake Sensor Data", sender);
 	
 	framework.waitForEvents = true;
 	
@@ -424,22 +460,6 @@ int main(int argc, char * argv[])
 			{
 				repaint = true;
 			}
-		}
-		
-		if (true)
-		{
-		#if 1
-			// todo : remove. fake some OSC sends
-			
-			char buffer[OSC_BUFFER_SIZE];
-			osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
-			p << osc::BeginMessage("/humidity");
-				p << float(std::sin(framework.time * 2.0 * M_PI / 60.0) + 1.f) / 2.f;
-				p << float(std::cos(framework.time * 2.0 * M_PI / 60.0) + 1.f) / 2.f;
-				p << osc::EndMessage;
-			
-			sender->send(p.Data(), p.Size());
-		#endif
 		}
 		
 		if (repaint)
@@ -509,6 +529,8 @@ int main(int argc, char * argv[])
 	}
 	
 	s_quitRequested = true;
+	
+	SDL_WaitThread(s_sendFakeSensorDataThread, nullptr);
 	
 	SDL_WaitThread(s_updateSlowThread, nullptr);
 	
