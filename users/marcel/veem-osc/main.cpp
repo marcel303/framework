@@ -16,6 +16,55 @@ std::atomic<bool> s_quitRequested(false);
 
 static SDL_mutex * s_mutex = nullptr;
 
+// OSC message history
+
+struct OscMessageHistory
+{
+	struct Elem
+	{
+		std::string address;
+		std::vector<float> values;
+		std::vector<float> values_slow;
+		uint64_t lastReceiveTime;
+		
+		void record(const std::vector<float> & _values)
+		{
+			values = _values;
+		}
+		
+		void updateSlow(const float dt)
+		{
+			// make sure the arrays have the correct size
+			
+			while (values_slow.size() < values.size())
+				values_slow.push_back(0.f);
+			while (values_slow.size() > values.size())
+				values_slow.pop_back();
+			
+			// update
+			
+			const float retain = std::pow(.1f, dt);
+			
+			for (size_t i = 0; i < values.size(); ++i)
+			{
+				const float oldValue = values_slow[i];
+				const float newValue = values[i];
+				
+				values_slow[i] = oldValue * retain + newValue * (1.f - retain);
+			}
+		}
+	};
+	
+	std::map<std::string, Elem> elems;
+	
+	Elem & getElem(const char * address)
+	{
+		return elems[address];
+	}
+};
+
+static OscMessageHistory s_oscMessageHistory;
+
 // OSC receiver
 
 struct OscPacketListener : osc::OscPacketListener
@@ -26,15 +75,27 @@ struct OscPacketListener : osc::OscPacketListener
 		{
 			// todo : check address
 			
-			// todo : record value
+			const char * address = m.AddressPattern();
 			
-			// todo : update slow-changing version
-			
-			// todo : send slow-changing version
-			
-			// todo : update gradient version
-			
-			// todo : send gradient version
+			if (address != nullptr)
+			{
+				// todo : record value
+				
+				OscMessageHistory::Elem & elem = s_oscMessageHistory.getElem(address);
+				
+				std::vector<float> values;
+				
+				for (auto aItr = m.ArgumentsBegin(); aItr != m.ArgumentsEnd(); ++aItr)
+				{
+					auto & a = *aItr;
+					
+					const float value = a.IsFloat() ? a.AsFloat() : 0.f;
+					
+					values.push_back(value);
+				}
+				
+				elem.record(values);
+			}
 		}
 		SDL_UnlockMutex(s_mutex);
 	}
@@ -101,6 +162,35 @@ struct OscReceiver
 	}
 };
 
+//
+
+struct OscSender
+{
+	UdpTransmitSocket * transmitSocket;
+	
+	void init(const char * ipAddress, const int udpPort)
+	{
+		transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPort));
+	}
+	
+	void shut()
+	{
+		if (transmitSocket != nullptr)
+		{
+			delete transmitSocket;
+			transmitSocket = nullptr;
+		}
+	}
+	
+	void send(const void * data, const int dataSize)
+	{
+		if (transmitSocket != nullptr)
+		{
+			transmitSocket->Send((char*)data, dataSize);
+		}
+	}
+};
+
 // timer event
 
 static int s_timerEvent = -1;
@@ -133,6 +223,9 @@ int main(int argc, char * argv[])
 	OscReceiver * receiver = new OscReceiver();
 	receiver->init("127.0.0.1", 8000);
 	
+	OscSender * sender = new OscSender();
+	sender->init("127.0.0.1", 9000);
+	
 	s_timerEvent = SDL_RegisterEvents(1);
 	
 	s_timerThread = SDL_CreateThread(timerThreadProc, "Timer", nullptr);
@@ -150,16 +243,59 @@ int main(int argc, char * argv[])
 			break;
 		
 		bool repaint = false;
+		bool updateOsc = false;
 		
 		for (auto & event : framework.events)
+		{
 			if (event.type == s_timerEvent)
+			{
 				repaint = true;
+				
+				updateOsc = true;
+			}
+		}
+		
+		if (updateOsc)
+		{
+			SDL_LockMutex(s_mutex);
+			{
+				for (auto & elemItr : s_oscMessageHistory.elems)
+				{
+					auto & elem = elemItr.second;
+					
+					// todo : update slow-changing version
+					
+					elem.updateSlow(1.f);
+					
+					// todo : send slow-changing version
+					
+					// todo : update gradient version
+				
+					// todo : send gradient version
+				}
+			}
+			SDL_UnlockMutex(s_mutex);
+		}
 		
 		if (repaint)
 		{
+			OscMessageHistory history;
+			
+			SDL_LockMutex(s_mutex);
+			{
+				history = s_oscMessageHistory;
+			}
+			SDL_UnlockMutex(s_mutex);
+			
 			framework.beginDraw(rand() % 255, 0, 0, 0);
 			{
-			
+				setFont("calibri.ttf");
+				pushFontMode(FONT_SDF);
+				
+				setColor(colorWhite);
+				drawText(5, 5, 12, +1, +1, "OSC history:");
+				
+				popFontMode();
 			}
 			framework.endDraw();
 		}
