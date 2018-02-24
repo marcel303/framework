@@ -217,8 +217,13 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	
 	if (enableDepthBuffer)
 	{
-		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
 		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+	}
+	else
+	{
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
+		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
 	}
 	
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
