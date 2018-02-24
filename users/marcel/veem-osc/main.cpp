@@ -19,8 +19,8 @@ std::atomic<bool> s_quitRequested(false);
 
 static SDL_mutex * s_mutex = nullptr;
 
-#define UPDATE_SLOW_INTERVAL 200
-#define REPAINT_INTERVAL 100
+#define UPDATE_SLOW_INTERVAL 10
+#define REPAINT_INTERVAL 1000
 
 // OSC message history
 
@@ -236,25 +236,57 @@ struct OscSender
 	}
 };
 
-// repaint event
+// event timer
 
-static int s_repaintEvent = -1;
-
-static SDL_Thread * s_repaintThread = nullptr;
-
-static int repaintThreadProc(void * obj)
+struct EventTimer
 {
-	while (!s_quitRequested)
+	int event = -1;
+	int interval = 0;
+	SDL_Thread * thread = nullptr;
+	std::atomic<bool> stop;
+	
+	EventTimer()
+		: stop(false)
 	{
-		SDL_Event e;
-		e.type = s_repaintEvent;
-		SDL_PushEvent(&e);
-		
-		SDL_Delay(REPAINT_INTERVAL);
 	}
 	
-	return 0;
-}
+	~EventTimer()
+	{
+		shut();
+	}
+	
+	void init(const int _event, const int _interval)
+	{
+		event = _event;
+		interval = _interval;
+		
+		thread = SDL_CreateThread(timerThreadProc, "Event Timer", this);
+	}
+	
+	void shut()
+	{
+		stop = true;
+		
+		SDL_WaitThread(thread, nullptr);
+		thread = nullptr;
+	}
+	
+	static int timerThreadProc(void * obj)
+	{
+		EventTimer * self = (EventTimer*)obj;
+		
+		while (self->stop == false)
+		{
+			SDL_Delay(self->interval);
+			
+			SDL_Event e;
+			e.type = self->event;
+			SDL_PushEvent(&e);
+		}
+		
+		return 0;
+	}
+};
 
 // slow-changing value update thread
 
@@ -365,9 +397,10 @@ int main(int argc, char * argv[])
 	OscSender * sender = new OscSender();
 	sender->init("255.255.255.255", 8000);
 	
-	s_repaintEvent = SDL_RegisterEvents(1);
+	const int repaintEvent = SDL_RegisterEvents(1);
 	
-	s_repaintThread = SDL_CreateThread(repaintThreadProc, "Repaint", nullptr);
+	EventTimer * repaintTimer = new EventTimer();
+	repaintTimer->init(repaintEvent, REPAINT_INTERVAL);
 	
 	s_updateSlowThread = SDL_CreateThread(updateSlowThreadProc, "Update Slow", sender);
 	
@@ -387,7 +420,7 @@ int main(int argc, char * argv[])
 		
 		for (auto & event : framework.events)
 		{
-			if (event.type == s_repaintEvent)
+			if (event.type == repaintEvent)
 			{
 				repaint = true;
 			}
@@ -479,7 +512,8 @@ int main(int argc, char * argv[])
 	
 	SDL_WaitThread(s_updateSlowThread, nullptr);
 	
-	SDL_WaitThread(s_repaintThread, nullptr);
+	delete repaintTimer;
+	repaintTimer = nullptr;
 	
 	delete receiver;
 	receiver = nullptr;
