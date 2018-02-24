@@ -403,12 +403,14 @@ static SDL_Thread * s_updateSlowThread = nullptr;
 
 static bool s_sendFakeDataEnabled = false;
 
-static void sendFakeCamera(OscSender & sender, const float rateOfChange, const char * address)
+static void sendFakeCamera(OscSender & sender, const float rateOfChange, const char * addressPrefix)
 {
 	const int sx = 16;
 	const int sy = 12;
 	
 	float values[sy][sx];
+	
+	float total = 0.f;
 	
 	for (int y = 0; y < sy; ++y)
 	{
@@ -417,17 +419,29 @@ static void sendFakeCamera(OscSender & sender, const float rateOfChange, const c
 			const float value = scaled_octave_noise_3d(8, .6f, .1f, 0.f, 1.f, x, y, framework.time * rateOfChange);
 			
 			values[y][x] = value;
+			
+			total += value;
 		}
 	}
+	
+	const float average = total / (sx * sy);
 	
 	char buffer[OSC_BUFFER_SIZE];
 	osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
 	p << osc::BeginBundleImmediate;
 	{
-		p << osc::BeginMessage(address);
+		char rawAddress[256];
+		sprintf_s(rawAddress, sizeof(rawAddress), "%s/raw", addressPrefix);
+		p << osc::BeginMessage(rawAddress);
 		for (int y = 0; y < sy; ++y)
 			for (int x = 0; x < sx; ++x)
 				p << values[y][x];
+		p << osc::EndMessage;
+		
+		char averageAddress[256];
+		sprintf_s(averageAddress, sizeof(averageAddress), "%s/average", addressPrefix);
+		p << osc::BeginMessage(averageAddress);
+		p << average;
 		p << osc::EndMessage;
 	}
 	p << osc::EndBundle;
@@ -459,9 +473,9 @@ static int sendFakeSensorDataThreadProc(void * obj)
 				
 				//
 				
-				sendFakeCamera(*sender, .1f, "/env/light/raw");
+				sendFakeCamera(*sender, .1f, "/env/light");
 				
-				sendFakeCamera(*sender, 1.f, "/room/light/raw");
+				sendFakeCamera(*sender, 1.f, "/room/light");
 			}
 			SDL_UnlockMutex(s_mutex);
 		}
@@ -623,14 +637,14 @@ int main(int argc, char * argv[])
 								drawText(0, 0, kFontSize, +1, +1, "Sent");
 								gxTranslatef(60, 0, 0);
 								drawText(0, 0, kFontSize, +1, +1, "x %d", elem.recordCount);
-								gxTranslatef(64, 0, 0);
+								gxTranslatef(80, 0, 0);
 							}
 							else
 							{
 								drawText(0, 0, kFontSize, +1, +1, "Received");
 								gxTranslatef(60, 0, 0);
 								drawText(0, 0, kFontSize, +1, +1, "x %d", elem.recordCount);
-								gxTranslatef(64, 0, 0);
+								gxTranslatef(80, 0, 0);
 							}
 							
 							if (elem.values.size() > 1)
