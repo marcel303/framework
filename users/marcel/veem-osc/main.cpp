@@ -401,6 +401,8 @@ static SDL_Thread * s_updateSlowThread = nullptr;
 
 #include "Noise.h"
 
+static bool s_sendFakeDataEnabled = false;
+
 static void sendFakeCamera(OscSender & sender, const float rateOfChange, const char * address)
 {
 	const int sx = 16;
@@ -439,27 +441,30 @@ static int sendFakeSensorDataThreadProc(void * obj)
 	
 	while (!s_quitRequested)
 	{
-		SDL_LockMutex(s_mutex);
+		if (s_sendFakeDataEnabled)
 		{
-			char buffer[OSC_BUFFER_SIZE];
-			osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
-			p << osc::BeginBundleImmediate;
+			SDL_LockMutex(s_mutex);
 			{
-				p << osc::BeginMessage("/humidity");
-				p << float(std::sin(framework.time * 2.0 * M_PI / 60.0) + 1.f) / 2.f;
-				p << osc::EndMessage;
+				char buffer[OSC_BUFFER_SIZE];
+				osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
+				p << osc::BeginBundleImmediate;
+				{
+					p << osc::BeginMessage("/humidity");
+					p << float(std::sin(framework.time * 2.0 * M_PI / 60.0) + 1.f) / 2.f;
+					p << osc::EndMessage;
+				}
+				p << osc::EndBundle;
+				
+				sender->send(p.Data(), p.Size());
+				
+				//
+				
+				sendFakeCamera(*sender, .1f, "/env/light/raw");
+				
+				sendFakeCamera(*sender, 1.f, "/room/light/raw");
 			}
-			p << osc::EndBundle;
-			
-			sender->send(p.Data(), p.Size());
-			
-			//
-			
-			sendFakeCamera(*sender, .1f, "/env/light/raw");
-			
-			sendFakeCamera(*sender, 1.f, "/room/light/raw");
+			SDL_UnlockMutex(s_mutex);
 		}
-		SDL_UnlockMutex(s_mutex);
 		
 		SDL_Delay(SEND_FAKE_SENSOR_DATA_INTERVAL);
 	}
@@ -553,7 +558,7 @@ int main(int argc, char * argv[])
 		
 		bool repaint = false;
 		
-		if (continousRepaint)
+		//if (continousRepaint)
 			repaint = true;
 		
 		for (auto & event : framework.events)
@@ -564,8 +569,15 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		if (keyboard.wentDown(SDLK_SPACE))
+		if (keyboard.wentDown(SDLK_f))
+		{
+			s_sendFakeDataEnabled = !s_sendFakeDataEnabled;
+		}
+		
+		if (keyboard.wentDown(SDLK_p))
+		{
 			continousRepaint = !continousRepaint;
+		}
 		
 		if (repaint)
 		{
@@ -586,10 +598,12 @@ int main(int argc, char * argv[])
 				{
 					gxTranslatef(5, 5, 0);
 					setColor(colorWhite);
-					
 					setLumi(40);
-					drawText(0, 0, kFontSize, +1, +1, "OSC history:");
-					gxTranslatef(0, 16, 0);
+					
+					drawText(0, 0, kFontSize, +1, +1, "F = change send fake sensor data (%s), P = change power-save (%s)",
+						s_sendFakeDataEnabled ? "enable" : "disabled",
+						continousRepaint ? "disabled" : "enabled");
+					gxTranslatef(0, 24, 0);
 					
 					for (auto & elemItr : history.elems)
 					{
