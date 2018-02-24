@@ -12,7 +12,7 @@
 
 #define OSC_BUFFER_SIZE 2048
 
-const int GFX_SX = 500;
+const int GFX_SX = 1000;
 const int GFX_SY = 700;
 
 std::atomic<bool> s_quitRequested(false);
@@ -457,6 +457,12 @@ static int sendFakeSensorDataThreadProc(void * obj)
 	{
 		if (s_sendFakeDataEnabled)
 		{
+			const float magnetX = scaled_octave_noise_1d(4, .6f, .1f, +.6f, +1.f, framework.time / 1.23f);
+			const float magnetY = scaled_octave_noise_1d(4, .6f, .1f, -.4f, +.3f, framework.time / 1.45f);
+			const float magnetZ = scaled_octave_noise_1d(4, .6f, .1f, -.2f, +.1f, framework.time / 1.67f);
+			
+			const float magnetStrength = std::min(1.f, std::sqrt(magnetX * magnetX + magnetY * magnetY + magnetZ * magnetZ));
+			
 			SDL_LockMutex(s_mutex);
 			{
 				char buffer[OSC_BUFFER_SIZE];
@@ -465,6 +471,24 @@ static int sendFakeSensorDataThreadProc(void * obj)
 				{
 					p << osc::BeginMessage("/humidity");
 					p << float(std::sin(framework.time * 2.0 * M_PI / 60.0) + 1.f) / 2.f;
+					p << osc::EndMessage;
+					
+					p << osc::BeginMessage("/magnet/raw");
+					p << magnetX;
+					p << magnetY;
+					p << magnetZ;
+					p << osc::EndMessage;
+					
+					p << osc::BeginMessage("/magnet/strength");
+					p << magnetStrength;
+					p << osc::EndMessage;
+					
+					p << osc::BeginMessage("/bluetooth/count");
+					p << int(framework.time / 20.f) % 6;
+					p << osc::EndMessage;
+					
+					p << osc::BeginMessage("/sound/intensity");
+					p << (std::sin(framework.time / 10.f) + 1.f) / 2.f;
 					p << osc::EndMessage;
 				}
 				p << osc::EndBundle;
@@ -619,6 +643,9 @@ int main(int argc, char * argv[])
 						continousRepaint ? "disabled" : "enabled");
 					gxTranslatef(0, 24, 0);
 					
+					int x = 0;
+					int y = 0;
+					
 					for (auto & elemItr : history.elems)
 					{
 						auto & elem = elemItr.second;
@@ -627,6 +654,16 @@ int main(int argc, char * argv[])
 						
 						gxPushMatrix();
 						{
+							gxTranslatef(x, y, 0);
+							
+							if (y == 0)
+							{
+								setLumi(180);
+								drawLine(0, 0, 0, (GFX_SY - 100)*2/3);
+							}
+							
+							gxTranslatef(5, 0, 0);
+							
 							setLumi(40);
 							
 							drawText(0, 0, kFontSize, +1, +1, "%s", elem.address.c_str());
@@ -675,7 +712,13 @@ int main(int argc, char * argv[])
 						}
 						gxPopMatrix();
 						
-						gxTranslatef(0, sy, 0);
+						y += sy;
+						
+						if (y >= GFX_SY - 100)
+						{
+							x += 480;
+							y = 0;
+						}
 					}
 				}
 				gxPopMatrix();
