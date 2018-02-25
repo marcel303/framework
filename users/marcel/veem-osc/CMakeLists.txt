@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.6)
 set(CMAKE_CXX_STANDARD 11)
 
 set(HAS_LIBGG 0)
+set(HAS_LIBOSC 0)
 set(HAS_FRAMEWORK 0)
 
 # --- dependencies ---
