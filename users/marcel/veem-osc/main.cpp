@@ -635,10 +635,33 @@ static int drawValueGrid(const std::vector<float> & values, const int gridSx, co
 
 int main(int argc, char * argv[])
 {
+	const char * basePath = SDL_GetBasePath();
+	changeDirectory(basePath);
+	
 	const int kFontSize = 14;
 	
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
+	
+	// load OSC settings
+	
+	{
+		tinyxml2::XMLDocument d;
+		if (d.LoadFile("veem-osc.xml") == tinyxml2::XML_SUCCESS)
+		{
+			tinyxml2::XMLElement * settingsXml = d.FirstChildElement("settings");
+			
+			if (settingsXml != nullptr)
+			{
+				tinyxml2::XMLElement * addressSettingsXml = settingsXml->FirstChildElement("addressSettings");
+				
+				if (addressSettingsXml != nullptr)
+				{
+					s_oscAddressSettings.loadXml(addressSettingsXml);
+				}
+			}
+		}
+	}
 	
 	s_mutex = SDL_CreateMutex();
 	
@@ -758,17 +781,16 @@ int main(int argc, char * argv[])
 									mouse.x >= smoothX1 && mouse.x <= smoothX2 &&
 									mouse.y >= smoothY1 && mouse.y <= smoothY2;
 								
-								setColor(255, 255, 255, 127);
-								drawRect(smoothX1 - x, smoothY1 - y, smoothX2 - x, smoothY2 - y);
-								
-								setColor(colorWhite);
+								setLumi(255);
 								drawRect(smoothX1 - x, smoothY1 - y, smoothX1 - x + smoothSx * settingsElem.smoothness, smoothY2 - y);
+								setLumi(160);
+								drawRectLine(smoothX1 - x, smoothY1 - y, smoothX2 - x, smoothY2 - y);
 								
 								setLumi(40);
 								drawText(
 									(smoothX1 + smoothX2) / 2.f - x,
 									(smoothY1 + smoothY2) / 2.f - y,
-									8, 0, 0, "%d%%", int(std::round(settingsElem.smoothness * 100.f)));
+									10, 0, 0, "%d", int(std::round(settingsElem.smoothness * 100.f)));
 								
 								if (hoverSmooth)
 								{
