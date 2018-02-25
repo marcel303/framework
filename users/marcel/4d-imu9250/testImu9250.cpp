@@ -746,8 +746,8 @@ void testImu9250()
                 drawText(5, GFX_SY - 100, 12, +1, +1, "PRESS [C] when done calibrating magnet");
             else if (tty.port >= 0)
                 drawText(5, GFX_SY - 100, 12, +1, +1, "PRESS [C] to calibrate the magnet");
-            else if (tty.port >= 0)
-                drawText(5, GFX_SY - 80, 12, +1, +1, "PRESS [V] to enable 3D preview");
+			
+			drawText(5, GFX_SY - 20, 12, +1, +1, "PRESS [V] to toggle 3D preview (%s)", draw3d ? "enabled" : "disabled");
 		}
 		framework.endDraw();
 	}
