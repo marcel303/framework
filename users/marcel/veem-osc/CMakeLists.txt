@@ -27,10 +27,13 @@ project(veem-osc)
 # --- veem-osc ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
+file(GLOB resources "${CMAKE_CURRENT_SOURCE_DIR}/calibri.ttf")
 
 source_group("sources" FILES ${source})
 
-add_executable(veem-osc MACOSX_BUNDLE ${source})
+set_source_files_properties(${resources} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+
+add_executable(veem-osc MACOSX_BUNDLE ${source} ${resources})
 
 target_include_directories(veem-osc PRIVATE "${PROJECT_SOURCE_DIR}")
 
