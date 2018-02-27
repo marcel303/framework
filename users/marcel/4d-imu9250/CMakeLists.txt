@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11")
 
 set(HAS_LIBGG 0)
 set(HAS_LIBOSC 0)
@@ -33,10 +34,13 @@ project(imu9250)
 # --- imu9250 ---
 
 file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
+file(GLOB resources "data/*.ttf" "data/*.jpg")
 
 source_group("sources" FILES ${source})
 
-add_executable(imu9250 MACOSX_BUNDLE ${source})
+set_source_files_properties(${resources} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+
+add_executable(imu9250 MACOSX_BUNDLE ${source} ${resources})
 
 if (APPLE)
 	# copy dylib and framework files to the Debug and Release folders
