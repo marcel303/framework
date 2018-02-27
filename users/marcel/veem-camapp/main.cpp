@@ -1,5 +1,7 @@
 #include "Log.h"
 #include "ps3eye.h"
+#include "tinyxml2.h"
+#include "tinyxml2_helpers.h"
 
 // for outbound OSC messages
 #include "ip/UdpSocket.h"
@@ -202,7 +204,7 @@ struct Recorder
 		eye = devices[deviceIndex];
 		devices.clear();
 		
-		const bool result = eye->init(320, 240, 60, PS3EYECam::EOutputFormat::Gray);
+		const bool result = eye->init(320, 240, 30, PS3EYECam::EOutputFormat::Gray);
 
 		if (!result)
 		{
@@ -295,25 +297,7 @@ struct Controller
 		framework.shutdown();
 	}
 	
-	bool tick()
-	{
-		framework.process();
-		
-		if (keyboard.wentDown(SDLK_ESCAPE))
-			framework.quitRequested = true;
-			
-		if (mouse.isDown(BUTTON_LEFT))
-		{
-			if (mouse.y < 120)
-				recorder1->exposure = mouse.x / 320.f;
-			else
-				recorder1->gain = mouse.x / 320.f;
-		}
-		
-		return !framework.quitRequested;
-	}
-	
-	void drawCamera(const int index)
+	Recorder * getRecorder(const int index)
 	{
 		Recorder * recorder = nullptr;
 		
@@ -322,24 +306,81 @@ struct Controller
 		if (index == 1)
 			recorder = recorder2;
 		
+		return recorder;
+	}
+	
+	void tickCameraUi(const int index)
+	{
+		Recorder * recorder = getRecorder(index);
+		
+		const int x1 = (index + 0) * 320;
+		const int y1 = 0;
+		const int x2 = (index + 1) * 320;
+		const int y2 = 240;
+		
+		const bool isInside =
+			mouse.x >= x1 &&
+			mouse.y >= y1 &&
+			mouse.x < x2 &&
+			mouse.y < y2;
+		
+		if (isInside && mouse.isDown(BUTTON_LEFT))
+		{
+			if (mouse.y < 120)
+				recorder->exposure = (mouse.x - x1) / 320.f;
+			else
+				recorder->gain = (mouse.x - x1) / 320.f;
+		}
+	}
+	
+	bool tick()
+	{
+		framework.process();
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
+			
+		tickCameraUi(0);
+		tickCameraUi(1);
+		
+		return !framework.quitRequested;
+	}
+	
+	void drawCameraUi(const int index)
+	{
+		Recorder * recorder = getRecorder(index);
+		
 		if (recorder != nullptr && recorder->frameData != nullptr)
 		{
 			GLuint texture = createTextureFromR8(recorder->frameData, 320, 240, false, true);
 			
-			glBindTexture(GL_TEXTURE_2D, texture);
-			GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-			checkErrorGL();
-			glBindTexture(GL_TEXTURE_2D, 0);
-			checkErrorGL();
+			if (texture != 0)
+			{
+				glBindTexture(GL_TEXTURE_2D, texture);
+				GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
+				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+				checkErrorGL();
+				glBindTexture(GL_TEXTURE_2D, 0);
+				checkErrorGL();
 
-			gxSetTexture(texture);
-			setColor(colorWhite);
-			drawRect(0, 0, 320, 240);
-			gxSetTexture(0);
-			
-			glDeleteTextures(1, &texture);
-			texture = 0;
+				gxSetTexture(texture);
+				setColor(colorWhite);
+				drawRect(0, 0, 320, 240);
+				gxSetTexture(0);
+				
+				glDeleteTextures(1, &texture);
+				texture = 0;
+				checkErrorGL();
+			}
+		}
+		
+		if (recorder != nullptr)
+		{
+			setColor(0, 0, 255, 63);
+			drawRect(0, 0, 320 * recorder->exposure, 120);
+		
+			setColor(255, 0, 0, 63);
+			drawRect(0, 120, 320 * recorder->gain, 240);
 		}
 	}
 	
@@ -352,19 +393,13 @@ struct Controller
 			{
 				gxPushMatrix();
 				{
-					drawCamera(0);
+					drawCameraUi(0);
 					gxTranslatef(320, 0, 0);
 					
-					drawCamera(1);
+					drawCameraUi(1);
 					gxTranslatef(320, 0, 0);
 				}
 				gxPopMatrix();
-
-				setColor(0, 0, 255, 63);
-				drawRect(0, 0, 320 * recorder1->exposure, 120);
-				
-				setColor(255, 0, 0, 63);
-				drawRect(0, 120, 320 * recorder1->gain, 240);
 			}
 			popFontMode();
 		}
@@ -406,12 +441,41 @@ int main(int argc, char * argv[])
 	s_oscSender = &sender;
 	
 	Recorder recorder1;
-	if (!recorder1.init(0, "/env/light"))
+	if (!recorder1.init(0, "/env/light") && false)
 		return -1;
 	
 	Recorder recorder2;
 	if (!recorder2.init(1, "/room/light") && false)
 		return -1;
+	
+	// load settings
+	
+	{
+		tinyxml2::XMLDocument d;
+		if (d.LoadFile("settings.xml") == tinyxml2::XML_SUCCESS)
+		{
+			auto settingsXml = d.FirstChildElement("settings");
+			
+			if (settingsXml)
+			{
+				auto recorder1Xml = settingsXml->FirstChildElement("recorder1");
+				
+				if (recorder1Xml)
+				{
+					recorder1.exposure = floatAttrib(recorder1Xml, "exposure", recorder1.exposure);
+					recorder1.gain = floatAttrib(recorder1Xml, "gain", recorder1.gain);
+				}
+				
+				auto recorder2Xml = settingsXml->FirstChildElement("recorder2");
+				
+				if (recorder2Xml)
+				{
+					recorder2.exposure = floatAttrib(recorder2Xml, "exposure", recorder2.exposure);
+					recorder2.gain = floatAttrib(recorder2Xml, "gain", recorder2.gain);
+				}
+			}
+		}
+	}
 	
 	Controller controller;
 	controller.init(&recorder1, &recorder2);
@@ -423,6 +487,35 @@ int main(int argc, char * argv[])
 		
 		controller.draw();
 	}
+	
+	// save settings
+	
+	{
+		tinyxml2::XMLPrinter p;
+		p.OpenElement("settings");
+		{
+			p.OpenElement("recorder1");
+			{
+				p.PushAttribute("exposure", recorder1.exposure);
+				p.PushAttribute("gain", recorder1.gain);
+			}
+			p.CloseElement();
+			
+			p.OpenElement("recorder2");
+			{
+				p.PushAttribute("exposure", recorder2.exposure);
+				p.PushAttribute("gain", recorder2.gain);
+			}
+			p.CloseElement();
+		}
+		p.CloseElement();
+		
+		tinyxml2::XMLDocument d;
+		d.Parse(p.CStr());
+		d.SaveFile("settings.xml");
+	}
+	
+	controller.shut();
 	
 	recorder1.shut();
 	recorder2.shut();
