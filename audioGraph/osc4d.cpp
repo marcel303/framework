@@ -213,7 +213,7 @@ void Osc4D::sourceDistanceIntensity(const bool enable, const float treshold, con
 
 	if (enable)
 	{
-		beginSource("distanceIntensity/treshold");
+		beginSource("distanceIntensity/threshold");
 		f(treshold);
 		end();
 
@@ -231,7 +231,7 @@ void Osc4D::sourceDistanceDamping(const bool enable, const float treshold, const
 
 	if (enable)
 	{
-		beginSource("distanceDamping/treshold");
+		beginSource("distanceDamping/threshold");
 		f(treshold);
 		end();
 
@@ -249,7 +249,7 @@ void Osc4D::sourceDistanceDiffusion(const bool enable, const float treshold, con
 
 	if (enable)
 	{
-		beginSource("distanceDiffusion/treshold");
+		beginSource("distanceDiffusion/threshold");
 		f(treshold);
 		end();
 
