@@ -518,6 +518,11 @@ void testImu9250()
 			framework.timeStep = 0.f;
 		}
 		
+		if (framework.windowIsActive == false)
+		{
+			SDL_Delay(1000/10);
+		}
+		
 		// input
 		
 		if (keyboard.wentDown(SDLK_RETURN))
