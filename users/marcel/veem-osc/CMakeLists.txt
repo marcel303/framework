@@ -27,7 +27,7 @@ project(veem-osc)
 
 # --- veem-osc ---
 
-file(GLOB_RECURSE source "*.cpp" "*.h")
+file(GLOB source "*.cpp" "*.h")
 file(GLOB resources "${CMAKE_CURRENT_SOURCE_DIR}/calibri.ttf")
 
 source_group("sources" FILES ${source})
