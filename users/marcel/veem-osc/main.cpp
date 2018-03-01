@@ -260,7 +260,7 @@ struct OscReceiver
 		shut();
 	}
 	
-	void init(const char * ipAddress, const int udpPort)
+	void init(const uint32_t ipAddress, const int udpPort)
 	{
 		packetListener = new OscPacketListener();
 	
@@ -676,7 +676,7 @@ int main(int argc, char * argv[])
 	s_mutex = SDL_CreateMutex();
 	
 	OscReceiver * receiver = new OscReceiver();
-	receiver->init("127.0.0.1", 8000);
+	receiver->init(IpEndpointName::ANY_ADDRESS, 8000);
 	
 	OscSender * sender = new OscSender();
 	sender->init("255.255.255.255", 8000);
