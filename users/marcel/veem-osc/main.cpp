@@ -311,11 +311,16 @@ struct OscReceiver
 
 struct OscSender
 {
-	UdpTransmitSocket * transmitSocket;
+	UdpSocket * transmitSocket;
+	IpEndpointName remoteEndpoint;
 	
 	void init(const char * ipAddress, const int udpPort)
 	{
-		transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPort));
+		transmitSocket = new UdpSocket();
+		transmitSocket->SetEnableBroadcast(true);
+		transmitSocket->Bind(IpEndpointName(IpEndpointName::ANY_ADDRESS, IpEndpointName::ANY_PORT));
+		
+		remoteEndpoint = IpEndpointName(ipAddress, udpPort);
 	}
 	
 	void shut()
@@ -331,7 +336,7 @@ struct OscSender
 	{
 		if (transmitSocket != nullptr)
 		{
-			transmitSocket->Send((char*)data, dataSize);
+			transmitSocket->SendTo(remoteEndpoint, (char*)data, dataSize);
 		}
 	}
 };
