@@ -7,12 +7,20 @@
 #include "ip/UdpSocket.h"
 #include "osc/OscOutboundPacketStream.h"
 
-#define GFX_SX 640
-#define GFX_SY 240
+#define GFX_SX (640*2)
+#define GFX_SY (240*2)
+#define CAMVIEW_SX (GFX_SX/2)
+#define CAMVIEW_SY (GFX_SY)
 
 #define OSC_BUFFER_SIZE 2048
 
-#define DO_CONTROLLER 1
+#define FPS 2
+
+#if defined(LINUX)
+	#define DO_CONTROLLER 0
+#else
+	#define DO_CONTROLLER 1
+#endif
 
 #if DO_CONTROLLER
 	#include "framework.h"
@@ -204,7 +212,7 @@ struct Recorder
 		eye = devices[deviceIndex];
 		devices.clear();
 		
-		const bool result = eye->init(320, 240, 30, PS3EYECam::EOutputFormat::Gray);
+		const bool result = eye->init(320, 240, FPS, PS3EYECam::EOutputFormat::Gray);
 
 		if (!result)
 		{
@@ -313,10 +321,10 @@ struct Controller
 	{
 		Recorder * recorder = getRecorder(index);
 		
-		const int x1 = (index + 0) * 320;
+		const int x1 = (index + 0) * CAMVIEW_SX;
 		const int y1 = 0;
-		const int x2 = (index + 1) * 320;
-		const int y2 = 240;
+		const int x2 = (index + 1) * CAMVIEW_SX;
+		const int y2 = CAMVIEW_SY;
 		
 		const bool isInside =
 			mouse.x >= x1 &&
@@ -326,10 +334,10 @@ struct Controller
 		
 		if (isInside && mouse.isDown(BUTTON_LEFT))
 		{
-			if (mouse.y < 120)
-				recorder->exposure = (mouse.x - x1) / 320.f;
+			if (mouse.y < CAMVIEW_SY/2)
+				recorder->exposure = (mouse.x - x1) / float(CAMVIEW_SX);
 			else
-				recorder->gain = (mouse.x - x1) / 320.f;
+				recorder->gain = (mouse.x - x1) / float(CAMVIEW_SX);
 		}
 	}
 	
@@ -365,7 +373,7 @@ struct Controller
 
 				gxSetTexture(texture);
 				setColor(colorWhite);
-				drawRect(0, 0, 320, 240);
+				drawRect(0, 0, CAMVIEW_SX, CAMVIEW_SY);
 				gxSetTexture(0);
 				
 				glDeleteTextures(1, &texture);
@@ -377,10 +385,10 @@ struct Controller
 		if (recorder != nullptr)
 		{
 			setColor(0, 0, 255, 63);
-			drawRect(0, 0, 320 * recorder->exposure, 120);
+			drawRect(0, 0, CAMVIEW_SX * recorder->exposure, CAMVIEW_SY/2);
 		
 			setColor(255, 0, 0, 63);
-			drawRect(0, 120, 320 * recorder->gain, 240);
+			drawRect(0, CAMVIEW_SY/2, CAMVIEW_SX * recorder->gain, CAMVIEW_SY);
 		}
 	}
 	
@@ -394,10 +402,10 @@ struct Controller
 				gxPushMatrix();
 				{
 					drawCameraUi(0);
-					gxTranslatef(320, 0, 0);
+					gxTranslatef(CAMVIEW_SX, 0, 0);
 					
 					drawCameraUi(1);
-					gxTranslatef(320, 0, 0);
+					gxTranslatef(CAMVIEW_SX, 0, 0);
 				}
 				gxPopMatrix();
 			}
