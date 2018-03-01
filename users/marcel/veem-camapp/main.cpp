@@ -37,13 +37,18 @@ using namespace ps3eye;
 
 struct OscSender
 {
-	UdpTransmitSocket * transmitSocket;
+	UdpSocket * transmitSocket;
+	IpEndpointName remoteEndpoint;
 	
 	bool init(const char * ipAddress, const int udpPort)
 	{
 		try
 		{
-			transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPort));
+			transmitSocket = new UdpSocket();
+			transmitSocket->SetEnableBroadcast(true);
+			transmitSocket->Bind(IpEndpointName(IpEndpointName::ANY_ADDRESS, IpEndpointName::ANY_PORT));
+			
+			remoteEndpoint = IpEndpointName(ipAddress, udpPort);
 			
 			return true;
 		}
@@ -76,7 +81,7 @@ struct OscSender
 		{
 			try
 			{
-				transmitSocket->Send((char*)data, dataSize);
+				transmitSocket->SendTo(remoteEndpoint, (char*)data, dataSize);
 			}
 			catch (std::exception & e)
 			{
