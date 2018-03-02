@@ -1,9 +1,17 @@
 #include "audioGraph.h"
+#include "audioGraphManager.h"
+#include "audioUpdateHandler.h"
+#include "audioVoiceManager4D.h"
 #include "framework.h"
 #include "Noise.h"
+#include "objects/paobject.h"
 
-const int GFX_SX = 800;
-const int GFX_SY = 600;
+const int GFX_SX = 1100;
+const int GFX_SY = 740;
+
+static SDL_mutex * s_audioMutex = nullptr;
+static AudioVoiceManager * s_voiceMgr = nullptr;
+static AudioGraphManager * s_audioGraphMgr = nullptr;
 
 static void drawThickCircle(const float radius1, const float radius2, const int numSegments)
 {
@@ -249,6 +257,52 @@ struct Mechanism
 	}
 };
 
+struct Thermalizer
+{
+	const static int kSize = 64;
+	
+	float heat[kSize];
+	
+	Thermalizer()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+	
+	void tick(const float dt)
+	{
+		for (int i = 0; i < kSize; ++i)
+		{
+			const float noiseX = i;
+			const float noiseY = framework.time * .1f;
+			
+			const float noise = scaled_octave_noise_2d(8, .5f, 1.f, 0.f, 1.f, noiseX, noiseY);
+			
+			heat[i] = noise;
+		}
+	}
+	
+	void draw2d() const
+	{
+		gxPushMatrix();
+		{
+			//gxScalef(.5f, .5f, 1);
+			gxScalef(8, 8, 1);
+			gxTranslatef(-kSize/2, 0, 0);
+			
+			hqBegin(HQ_FILLED_CIRCLES);
+			{
+				for (int i = 0; i < kSize; ++i)
+				{
+					setLumif(std::abs(heat[i]));
+					hqFillCircle(i, 0, .5f);
+				}
+			}
+			hqEnd();
+		}
+		gxPopMatrix();
+	}
+};
+
 int main(int argc, char * argv[])
 {
 	framework.enableDepthBuffer = true;
@@ -256,11 +310,40 @@ int main(int argc, char * argv[])
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
+	SDL_mutex * audioMutex = SDL_CreateMutex();
+	s_audioMutex = audioMutex;
+	
+	AudioVoiceManager4D voiceMgr;
+	voiceMgr.init(audioMutex, 16, 16);
+	voiceMgr.outputStereo = true;
+	s_voiceMgr = &voiceMgr;
+	
+	AudioGraphManager_RTE audioGraphMgr(GFX_SX, GFX_SY);
+	audioGraphMgr.init(audioMutex, &voiceMgr);
+	s_audioGraphMgr = &audioGraphMgr;
+	
+	AudioUpdateHandler audioUpdateHandler;
+	audioUpdateHandler.init(audioMutex, nullptr, 0);
+	audioUpdateHandler.voiceMgr = &voiceMgr;
+	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
+	
+	PortAudioObject paObject;
+	paObject.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
+	
 	Mechanism mechanism;
+	
+	Thermalizer thermalizer;
 	
 	Camera3d camera;
 	camera.gamepadIndex = 0;
 	camera.position[2] = -2.f;
+	
+	bool drawMechanism = true;
+	bool drawThermalizer = true;
+	bool showEditor = true;
+	
+	AudioGraphInstance * instance = audioGraphMgr.createInstance("sound3.xml");
+	audioGraphMgr.selectInstance(instance);
 	
 	for (;;)
 	{
@@ -280,10 +363,36 @@ int main(int argc, char * argv[])
 		
 		mechanism.tick(dt * 10.f);
 		
-		camera.tick(dt, true);
+		thermalizer.tick(dt);
 		
-		framework.beginDraw(0, 0, 0, 0);
+		bool inputIsCaptured = false;
+		
+		inputIsCaptured |= audioGraphMgr.tickEditor(dt, inputIsCaptured);
+		
+		if (audioGraphMgr.selectedFile != nullptr)
 		{
+			if (audioGraphMgr.selectedFile->graphEdit->state != GraphEdit::kState_Hidden)
+				inputIsCaptured |= true;
+		}
+		
+		camera.tick(dt, !inputIsCaptured);
+		
+		if (inputIsCaptured == false)
+		{
+			if (keyboard.wentDown(SDLK_m))
+				drawMechanism = !drawMechanism;
+			
+			if (keyboard.wentDown(SDLK_t))
+				drawThermalizer = !drawThermalizer;
+		}
+		
+		audioGraphMgr.tickMain();
+		
+		framework.beginDraw(40, 40, 40, 0);
+		{
+			pushFontMode(FONT_SDF);
+			setFont("calibri.ttf");
+			
 			const float fov = 100.f;
 			const float near = .01f;
 			const float far = 10.f;
@@ -295,41 +404,44 @@ int main(int argc, char * argv[])
 				glEnable(GL_DEPTH_TEST);
 				glDepthFunc(GL_LESS);
 				{
-					setColor(colorWhite);
-					mechanism.draw_solid();
-					
-					for (int ring = 0; ring <= 3; ++ring)
+					if (drawMechanism)
 					{
-						for (int i = 0; i < 10; ++i)
+						setColor(colorWhite);
+						mechanism.draw_solid();
+						
+						for (int ring = 0; ring <= 3; ++ring)
 						{
-							gxPushMatrix();
+							for (int i = 0; i < 10; ++i)
 							{
-								const float angle = framework.time / (i / 10.f + 2.f);
-								
-							#if 1
-								Mat4x4 matrix;
-								float radius;
-								
-								mechanism.evaluateMatrix(ring, matrix, radius);
-								
-								gxMultMatrixf(matrix.m_v);
-								gxScalef(radius, radius, radius);
-								gxRotatef(angle / M_PI * 180.f, 0, 0, 1);
-								gxTranslatef(1.f, 0.f, 0.f);
-								gxRotatef(90, 1, 0, 0);
-							#else
-								const Vec3 p = mechanism.evaluatePoint(ring, angle);
-								gxTranslatef(p[0], p[1], p[2]);
-							#endif
-								
-								setColor(colorGreen);
-								const float s1 = .05f;
-								const float s2 = .06f;
-								//drawRect(-s, -s, +s, +s);
-								//drawThickCircle(s1, s2, 100);
-								drawTubeCircle(s1, .01f, 100, 10);
+								gxPushMatrix();
+								{
+									const float angle = framework.time / (i / 10.f + 2.f);
+									
+								#if 1
+									Mat4x4 matrix;
+									float radius;
+									
+									mechanism.evaluateMatrix(ring, matrix, radius);
+									
+									gxMultMatrixf(matrix.m_v);
+									gxScalef(radius, radius, radius);
+									gxRotatef(angle / M_PI * 180.f, 0, 0, 1);
+									gxTranslatef(1.f, 0.f, 0.f);
+									gxRotatef(90, 1, 0, 0);
+								#else
+									const Vec3 p = mechanism.evaluatePoint(ring, angle);
+									gxTranslatef(p[0], p[1], p[2]);
+								#endif
+									
+									setColor(colorGreen);
+									const float s1 = .05f;
+									const float s2 = .06f;
+									//drawRect(-s, -s, +s, +s);
+									//drawThickCircle(s1, s2, 100);
+									drawTubeCircle(s1, .01f, 100, 10);
+								}
+								gxPopMatrix();
 							}
-							gxPopMatrix();
 						}
 					}
 				}
@@ -338,9 +450,46 @@ int main(int argc, char * argv[])
 			camera.popViewMatrix();
 			
 			projectScreen2d();
+			
+			if (drawThermalizer)
+			{
+				gxPushMatrix();
+				{
+					gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
+					
+					setColor(colorWhite);
+					thermalizer.draw2d();
+				}
+				gxPopMatrix();
+			}
+			
+			if (showEditor)
+			{
+				audioGraphMgr.drawEditor();
+			}
+			
+			popFontMode();
 		}
 		framework.endDraw();
 	}
+	
+	audioGraphMgr.free(instance, false);
+	
+	paObject.shut();
+	
+	audioUpdateHandler.shut();
+	
+	audioGraphMgr.shut();
+	s_audioGraphMgr = nullptr;
+	
+	voiceMgr.shut();
+	s_voiceMgr = nullptr;
+	
+	SDL_DestroyMutex(audioMutex);
+	audioMutex = nullptr;
+	s_audioMutex = nullptr;
+	
+	Font("calibri.ttf").saveCache();
 	
 	framework.shutdown();
 	
