@@ -35,6 +35,10 @@ using namespace ps3eye;
 
 //
 
+static SDL_mutex * s_controllerMutex = nullptr;
+
+//
+
 struct OscSender
 {
 	UdpSocket * transmitSocket;
@@ -283,7 +287,15 @@ struct Recorder
 			
 			// todo : make thread safe
 			
-			sendCameraData(self->frameData, *s_oscSender, self->oscAddressPrefix.c_str());
+			std::string oscAddressPrefix;
+			
+			SDL_LockMutex(s_controllerMutex);
+			{
+				oscAddressPrefix = self->oscAddressPrefix;
+			}
+			SDL_UnlockMutex(s_controllerMutex);
+			
+			sendCameraData(self->frameData, *s_oscSender, oscAddressPrefix.c_str());
 		}
 		
 		return 0;
@@ -303,10 +315,15 @@ struct Controller
 		
 		recorder1 = _recorder1;
 		recorder2 = _recorder2;
+		
+		s_controllerMutex = SDL_CreateMutex();
 	}
 	
 	void shut()
 	{
+		SDL_DestroyMutex(s_controllerMutex);
+		s_controllerMutex = nullptr;
+		
 		framework.shutdown();
 	}
 	
@@ -424,18 +441,47 @@ struct Controller
 
 struct Controller
 {
+	Recorder * recorder1 = nullptr;
+	Recorder * recorder2 = nullptr;
+	
 	void init(Recorder * _recorder1, Recorder * _recorder2)
 	{
 		SDL_Init(0);
+		
+		s_controllerMutex = SDL_CreateMutex();
+		
+		recorder1 = _recorder1;
+		recorder2 = _recorder2;
+		
+		printf("press 'q' to quit\n");
+		printf("press 's' to swap cameras\n");
 	}
 	
 	void shut()
 	{
+		SDL_DestroyMutex(s_controllerMutex);
+		s_controllerMutex = nullptr;
+		
 		SDL_Quit();
 	}
 	
 	bool tick()
 	{
+		const int c = getc(stdin);
+		
+		if (c == 's')
+		{
+			SDL_LockMutex(s_controllerMutex);
+			{
+				std::swap(recorder1->oscAddressPrefix, recorder2->oscAddressPrefix);
+			}
+			SDL_UnlockMutex(s_controllerMutex);
+		}
+		else if (c == 'q')
+		{
+			return false;
+		}
+		
 		return true;
 	}
 	
@@ -448,6 +494,20 @@ struct Controller
 
 int main(int argc, char * argv[])
 {
+	// show connected devices
+	
+	{
+		auto devices = PS3EYECam::getDevices();
+		
+		for (auto & device : devices)
+		{
+			char identifier[1024];
+			device->getUSBPortPath(identifier, sizeof(identifier));
+			
+			printf("found connected PS3 camera. identifier: %s", identifier);
+		}
+	}
+	
 	OscSender sender;
 	if (!sender.init("255.255.255.255", 8000))
 		return -1;
