@@ -463,6 +463,7 @@ void AudioPlug::connectTo(AudioPlug & dst)
 			AudioFloatArray::Elem elem;
 			elem.audioFloat = (AudioFloat*)dst.mem;
 			floatArray.elems.push_back(elem);
+			floatArray.lastUpdateTick = -1;
 		}
 		else
 	#endif
