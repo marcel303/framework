@@ -222,9 +222,8 @@ int AudioVoiceManager4D::numDynamicChannelsUsed() const
 void AudioVoiceManager4D::generateAudio(float * __restrict samples, const int numSamples)
 {
 	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
-	const float limiterPeak = outputMode == kOutputMode_MultiChannel ? .4f : .1f;
 	
-	generateAudio(samples, numSamples, true, limiterPeak, outputMode, true);
+	generateAudio(samples, numSamples, true, 1.f, outputMode, true);
 }
 
 void AudioVoiceManager4D::generateAudio(
