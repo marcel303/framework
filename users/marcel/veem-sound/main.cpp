@@ -12,7 +12,7 @@ const int GFX_SY = 740;
 
 static SDL_mutex * s_audioMutex = nullptr;
 static AudioVoiceManager * s_voiceMgr = nullptr;
-static AudioGraphManager * s_audioGraphMgr = nullptr;
+static AudioGraphManager_RTE * s_audioGraphMgr = nullptr;
 
 static void drawThickCircle(const float radius1, const float radius2, const int numSegments)
 {
@@ -272,6 +272,7 @@ struct AudioNodeMechanism : AudioNodeBase
 	{
 		kInput_Ring,
 		kInput_Speed,
+		kInput_Scale,
 		kInput_Angle,
 		kInput_COUNT
 	};
@@ -300,6 +301,7 @@ struct AudioNodeMechanism : AudioNodeBase
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Ring, kAudioPlugType_Int);
 		addInput(kInput_Speed, kAudioPlugType_FloatVec);
+		addInput(kInput_Scale, kAudioPlugType_FloatVec);
 		addInput(kInput_Angle, kAudioPlugType_FloatVec);
 		addOutput(kOutput_X, kAudioPlugType_FloatVec, &xOutput);
 		addOutput(kOutput_Y, kAudioPlugType_FloatVec, &yOutput);
@@ -312,8 +314,10 @@ struct AudioNodeMechanism : AudioNodeBase
 	{
 		const int ring = getInputInt(kInput_Ring, 0);
 		const AudioFloat * speed = getInputAudioFloat(kInput_Speed, &AudioFloat::One);
+		const AudioFloat * scale = getInputAudioFloat(kInput_Scale, &AudioFloat::One);
 		const AudioFloat * angle = getInputAudioFloat(kInput_Angle, &AudioFloat::Zero);
 		
+		scale->expand();
 		angle->expand();
 		
 		xOutput.setVector();
@@ -324,7 +328,7 @@ struct AudioNodeMechanism : AudioNodeBase
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			const Vec3 p = mechanism.evaluatePoint(ring, angle->samples[i]);
+			const Vec3 p = mechanism.evaluatePoint(ring, angle->samples[i]) * scale->samples[i];
 			
 			xOutput.samples[i] = p[0];
 			yOutput.samples[i] = p[1];
@@ -346,7 +350,8 @@ AUDIO_NODE_TYPE(mechanism, AudioNodeMechanism)
 	typeName = "mechanism";
 	
 	in("ring", "int");
-	in("speed", "audioValue");
+	in("speed", "audioValue", "1");
+	in("scale", "audioValue", "1");
 	in("angle", "audioValue");
 	out("x", "audioValue");
 	out("y", "audioValue");
@@ -399,12 +404,84 @@ struct Thermalizer
 	}
 };
 
+struct ControlWindow
+{
+	const int kItemSize = 24;
+	
+	Window window;
+	
+	std::vector<std::string> files;
+	
+	ControlWindow()
+		: window("audio graphs", 140, 300)
+	{
+		window.setPosition(10, 100);
+	}
+	
+	const int getHoverIndex()
+	{
+		return mouse.y / kItemSize;
+	}
+	
+	void tick()
+	{
+		files.clear();
+		
+		SDL_LockMutex(s_audioMutex);
+		{
+			for (auto & file : s_audioGraphMgr->files)
+			{
+				files.push_back(file.first);
+			}
+		}
+		SDL_UnlockMutex(s_audioMutex);
+		
+		const int hoverIndex = getHoverIndex();
+		
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			if (hoverIndex >= 0 && hoverIndex < files.size())
+			{
+				s_audioGraphMgr->selectFile(files[hoverIndex].c_str());
+			}
+		}
+	}
+	
+	void draw()
+	{
+		framework.beginDraw(200, 200, 200, 0);
+		{
+			setFont("calibri.ttf");
+			
+			const int hoverIndex = getHoverIndex();
+			
+			int index = 0;
+			
+			for (auto & file : files)
+			{
+				setColor(index == hoverIndex ? colorBlue : colorBlack);
+				
+				drawTextArea(0, index * kItemSize, window.getWidth(), kItemSize, 16, 0.f, 0.f, "%s", file.c_str());
+				
+				++index;
+			}
+		}
+		framework.endDraw();
+	}
+};
+
 int main(int argc, char * argv[])
 {
 	framework.enableDepthBuffer = true;
 	
+	framework.windowX = 10 + 140 + 10;
+	
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
+	
+	fillPcmDataCache("ogg-lp7000", false, false);
+	
+	ControlWindow controlWindow;
 	
 	SDL_mutex * audioMutex = SDL_CreateMutex();
 	s_audioMutex = audioMutex;
@@ -419,7 +496,7 @@ int main(int argc, char * argv[])
 	s_audioGraphMgr = &audioGraphMgr;
 	
 	AudioUpdateHandler audioUpdateHandler;
-	audioUpdateHandler.init(audioMutex, nullptr, 0);
+	audioUpdateHandler.init(audioMutex, "127.0.0.1", 2000);
 	audioUpdateHandler.voiceMgr = &voiceMgr;
 	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
 	
@@ -439,8 +516,19 @@ int main(int argc, char * argv[])
 	bool drawThermalizer = true;
 	bool showEditor = true;
 	
-	AudioGraphInstance * instance = audioGraphMgr.createInstance("sound3.xml");
-	audioGraphMgr.selectInstance(instance);
+	std::vector<AudioGraphInstance*> instances;
+	
+	//AudioGraphInstance * instance = audioGraphMgr.createInstance("sound3.xml");
+	//audioGraphMgr.selectInstance(instance);
+	
+	//instances.push_back(audioGraphMgr.createInstance("sound3.xml"));
+	instances.push_back(audioGraphMgr.createInstance("base1.xml"));
+	instances.push_back(audioGraphMgr.createInstance("env1.xml"));
+	
+	if (instances.size() > 0)
+	{
+		audioGraphMgr.selectInstance(instances[0]);
+	}
 	
 	for (;;)
 	{
@@ -466,11 +554,16 @@ int main(int argc, char * argv[])
 		
 		inputIsCaptured |= audioGraphMgr.tickEditor(dt, inputIsCaptured);
 		
+		bool isEditing = false;
+		
 		if (audioGraphMgr.selectedFile != nullptr)
 		{
 			if (audioGraphMgr.selectedFile->graphEdit->state != GraphEdit::kState_Hidden)
-				inputIsCaptured |= true;
+				isEditing = true;
 		}
+		
+		if (isEditing)
+			inputIsCaptured |= true;
 		
 		camera.tick(dt, !inputIsCaptured);
 		
@@ -485,6 +578,11 @@ int main(int argc, char * argv[])
 		
 		audioGraphMgr.tickMain();
 		
+		if (!isEditing || !framework.windowIsActive)
+		{
+			SDL_Delay(100);
+		}
+			
 		framework.beginDraw(40, 40, 40, 0);
 		{
 			pushFontMode(FONT_SDF);
@@ -568,9 +666,21 @@ int main(int argc, char * argv[])
 			popFontMode();
 		}
 		framework.endDraw();
+		
+		pushWindow(controlWindow.window);
+		{
+			controlWindow.tick();
+			
+			controlWindow.draw();
+		}
+		popWindow();
 	}
 	
-	audioGraphMgr.free(instance, false);
+	for (auto & instance : instances)
+		audioGraphMgr.free(instance, false);
+	instances.clear();
+	
+	//audioGraphMgr.free(instance, false);
 	
 	paObject.shut();
 	
