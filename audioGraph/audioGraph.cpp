@@ -825,18 +825,18 @@ const binaural::HRIRSampleSet * getHrirSampleSet(const char * name)
 
 void drawFilterResponse(const AudioNodeBase * node, const float sx, const float sy)
 {
-	hqBegin(HQ_FILLED_ROUNDED_RECTS);
-	{
-		setColorf(0, 0, 0, .8f);
-		hqFillRoundedRect(0, 0, sx, sy, 4.f);
-	}
-	hqEnd();
-	
 	const int kNumSteps = 256;
 	float response[kNumSteps];
 	
 	if (node->getFilterResponse(response, kNumSteps))
 	{
+		hqBegin(HQ_FILLED_ROUNDED_RECTS);
+		{
+			setColorf(0, 0, 0, .8f);
+			hqFillRoundedRect(0, 0, sx, sy, 4.f);
+		}
+		hqEnd();
+		
 		setColor(colorWhite);
 		hqBegin(HQ_LINES);
 		{

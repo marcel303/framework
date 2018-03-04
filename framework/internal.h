@@ -124,8 +124,8 @@ public:
 		{
 			hasOldMousePosition = true;
 			
-			mouse.dx = 0;
-			mouse.dy = 0;
+			mouseDx = 0;
+			mouseDy = 0;
 		}
 	}
 	

@@ -44,8 +44,6 @@
 
 #define ENABLE_OSC 1
 
-#define ENABLE_MANUAL_CALIBRATION 0
-
 #if ENABLE_OSC
 	#include "ip/UdpSocket.h"
 	#include "osc/OscOutboundPacketStream.h"
@@ -346,11 +344,143 @@ static void updateRotation(
 	Quat qM;
 	qM.fromMatrix(mM);
 
-	const float s = std::pow(.1f, dt);
+	const float s = (float)std::pow(0.1, dt);
 	//const float s = 0.f;
 	//const float s = 1.f;
 
 	r = qM.slerp(r, s);
+}
+
+static Quat r;
+
+//static short magnetBias[3] = { -38, -116, -238 };
+static short magnetBias[3] = { -96, -161, -355 };
+
+static std::atomic<bool> quitRequested(false);
+
+static int updateThreadProc(void * obj)
+{
+	MyIMU9250 & imu = *(MyIMU9250*)obj;
+	
+#if ENABLE_OSC
+	UdpTransmitSocket * transmitSockets[1] = { };
+	const int numTransmitSockets = sizeof(transmitSockets) / sizeof(transmitSockets[0]);
+
+	const char * ipAddress = "127.0.0.1";
+	//const int udpPort = 2000;
+	//const char * ipAddress = "192.168.0.209";
+	//const int udpPorts[2] = { 2002, 2018 };
+	const int udpPorts[2] = { 2000, 2018 };
+	
+	LOG_DBG("setting up UDP transmit sockets for OSC messaging", 0);
+
+	try
+	{
+		if (numTransmitSockets >= 1)
+			transmitSockets[0] = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPorts[0]));
+		if (numTransmitSockets >= 2)
+			transmitSockets[1] = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPorts[1]));
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("failed to create UDP transmit socket: %s", e.what());
+	}
+#endif
+
+	uint64_t lastTime = g_TimerRT.TimeUS_get();
+
+	while (quitRequested == false)
+	{
+		SDL_Delay(5);
+		
+		const uint64_t currentTime = g_TimerRT.TimeUS_get();
+		const double dt = (currentTime - lastTime) / 1000000.0;
+		lastTime = currentTime;
+		
+		//
+		
+		float acceleration[3] = { };
+		float gyro[3] = { };
+		float magnet[3] = { };
+		
+		if (imu.port >= 0)
+		{
+			SDL_LockMutex(imu.mutex);
+			{
+				for (int i = 0; i < 3; ++i)
+				{
+					acceleration[i] = imu.reader.accelerationf[i];
+					gyro[i] = imu.reader.angularVelocityf[i];
+					magnet[i] = imu.reader.magnet[i] + magnetBias[i];
+				}
+			}
+			SDL_UnlockMutex(imu.mutex);
+		}
+		else
+		{
+			acceleration[2] = 1.f;
+			magnet[1] = 1.f;
+		}
+		
+	#if 1
+		const int numSteps = 100;
+		const float stepDt = dt / numSteps;
+		
+		for (int i = 0; i < numSteps; ++i)
+		{
+			updateRotation(
+				acceleration,
+				gyro,
+				magnet,
+				stepDt,
+				r);
+		}
+	#endif
+	
+	#if ENABLE_OSC
+		// send the result over OSC
+		
+		for (int i = 0; i < numTransmitSockets; ++i)
+		{
+			auto transmitSocket = transmitSockets[i];
+			
+			if (transmitSocket != nullptr)
+			{
+				try
+				{
+					char buffer[OSC_BUFFER_SIZE];
+					osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
+
+					Vec3 axis;
+					float angle;
+					r.toAxisAngle(axis, angle);
+					
+					Vec3 axis2;
+					axis2[0] = axis[1];
+					axis2[1] = axis[2];
+					axis2[2] = axis[0];
+					
+					p << osc::BeginMessage("/listener1/angleAxis");
+					
+					p << float(angle * 180.f / M_PI);
+					p << axis2[0];
+					p << axis2[1];
+					p << axis2[2];
+					
+					p << osc::EndMessage;
+
+					transmitSocket->Send(p.Data(), p.Size());
+				}
+				catch (std::exception & e)
+				{
+					LOG_ERR("failed to send OSC message: %s", e.what());
+				}
+			}
+		}
+	#endif
+	}
+
+	return 0;
 }
 
 void testImu9250()
@@ -365,54 +495,34 @@ void testImu9250()
         
         mtu9250_init(imu);
     }
-	
-#if ENABLE_OSC
-	UdpTransmitSocket * transmitSockets[2] = { };
-	const int numTransmitSockets = sizeof(transmitSockets) / sizeof(transmitSockets[0]);
-
-	const char * ipAddress = "127.0.0.1";
-	//const int udpPort = 2000;
-	//const char * ipAddress = "192.168.0.209";
-	//const int udpPorts[2] = { 2002, 2018 };
-	const int udpPorts[2] = { 2000, 2018 };
-	
-	LOG_DBG("setting up UDP transmit sockets for OSC messaging", 0);
-
-	try
-	{
-		transmitSockets[0] = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPorts[0]));
-		transmitSockets[1] = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPorts[1]));
-	}
-	catch (std::exception & e)
-	{
-		LOG_ERR("failed to create UDP transmit socket: %s", e.what());
-	}
-#endif
 
 	Camera3d camera;
 	camera.gamepadIndex = 0;
 	
-	Quat r;
 	r.makeIdentity();
 	
-    bool waitForEvents = false;
-    
-    //short magnetBias[3] = { -38, -116, -238 };
-    short magnetBias[3] = { -96, -161, -355 };
+	SDL_Thread * updateThread = SDL_CreateThread(updateThreadProc, "Update Rotation", &imu);
     
     bool isCalibrating = false;
+	
+    bool draw3d = false;
     
 	do
 	{
-        //framework.waitForEvents = waitForEvents;
+        framework.waitForEvents = !draw3d;
         
 		framework.process();
 		
-        if (waitForEvents)
+        if (framework.waitForEvents)
         {
-            //framework.timeStep = 0.f;
-        }
-        
+			framework.timeStep = 0.f;
+		}
+		
+		if (framework.windowIsActive == false)
+		{
+			SDL_Delay(1000/10);
+		}
+		
 		// input
 		
 		if (keyboard.wentDown(SDLK_RETURN))
@@ -436,13 +546,6 @@ void testImu9250()
 			}
 		}
 		
-    #if ENABLE_MANUAL_CALIBRATION
-        if (keyboard.wentDown(SDLK_w))
-        {
-            waitForEvents = !waitForEvents;
-        }
-    #endif
-        
         if (isCalibrating)
         {
             if (tty.port < 0)
@@ -477,169 +580,18 @@ void testImu9250()
             }
         }
 		
-		float acceleration[3] = { };
-		float gyro[3] = { };
-		float magnet[3] = { };
-		
-		if (imu.port >= 0)
-		{
-			SDL_LockMutex(imu.mutex);
-			{
-				if (keyboard.wentDown(SDLK_r))
-				{
-					imu.hasMagnetMinMax = false;
-				}
-				
-				for (int i = 0; i < 3; ++i)
-				{
-					acceleration[i] = imu.reader.accelerationf[i];
-					gyro[i] = imu.reader.angularVelocityf[i];
-					magnet[i] = imu.reader.magnet[i] + magnetBias[i];
-				}
-			}
-			SDL_UnlockMutex(imu.mutex);
-		}
-		else
-		{
-			acceleration[2] = 1.f;
-			magnet[1] = 1.f;
+        if (keyboard.wentDown(SDLK_v))
+        {
+        	draw3d = !draw3d;
 		}
 		
-    #if ENABLE_MANUAL_CALIBRATION
-		if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
-		{
-			if (keyboard.wentDown(SDLK_r))
-				c = c * Quat(Vec3(1,0,0), -M_PI/2.f);
-			if (keyboard.wentDown(SDLK_f))
-				c = c * Quat(Vec3(1,0,0), +M_PI/2.f);
-			if (keyboard.wentDown(SDLK_t))
-				c = c * Quat(Vec3(0,1,0), -M_PI/2.f);
-			if (keyboard.wentDown(SDLK_g))
-				c = c * Quat(Vec3(0,1,0), +M_PI/2.f);
-			if (keyboard.wentDown(SDLK_y))
-				c = c * Quat(Vec3(0,0,1), -M_PI/2.f);
-			if (keyboard.wentDown(SDLK_h))
-				c = c * Quat(Vec3(0,0,1), +M_PI/2.f);
-		}
-		else
-		{
-			if (keyboard.isDown(SDLK_r))
-				gyro[0] = -mouse.x / 10.f;
-			if (keyboard.isDown(SDLK_f))
-				gyro[0] = +mouse.x / 10.f;
-			if (keyboard.isDown(SDLK_t))
-				gyro[1] = -mouse.x / 10.f;
-			if (keyboard.isDown(SDLK_g))
-				gyro[1] = +mouse.x / 10.f;
-			if (keyboard.isDown(SDLK_y))
-				gyro[2] = -mouse.x / 10.f;
-			if (keyboard.isDown(SDLK_h))
-				gyro[2] = +mouse.x / 10.f;
-		}
-    #endif
-        
 		//
 		
 		const float dt = framework.timeStep;
-		
-	#if 1
-		const int numSteps = 100;
-		const float stepDt = dt / numSteps;
-		
-		for (int i = 0; i < numSteps; ++i)
-		{
-			updateRotation(
-				acceleration,
-				gyro,
-				magnet,
-				stepDt,
-				r);
-		}
-	#endif
-		
-	#if ENABLE_OSC
-		// send the result over OSC
-		
-		for (int i = 0; i < numTransmitSockets; ++i)
-		{
-			auto transmitSocket = transmitSockets[i];
-			
-			if (transmitSocket != nullptr)
-			{
-				try
-				{
-					{
-						auto & reader = imu.reader;
-						
-						char buffer[OSC_BUFFER_SIZE];
-						
-						osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
-
-						p << osc::BeginMessage("/gyro");
-						
-						p << reader.anglef[0];
-						p << reader.anglef[1];
-						p << reader.anglef[2];
-						p << reader.accelerationf[0];
-						p << reader.accelerationf[1];
-						p << reader.accelerationf[2];
-						p << reader.angularVelocityf[0];
-						p << reader.angularVelocityf[1];
-						p << reader.angularVelocityf[2];
-						p << reader.temperature;
-						
-						p << osc::EndMessage;
-
-						transmitSocket->Send(p.Data(), p.Size());
-					}
-					
-					{
-						char buffer[OSC_BUFFER_SIZE];
-						
-						osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
-
-						Vec3 axis;
-						float angle;
-						r.toAxisAngle(axis, angle);
-						
-						Vec3 axis2;
-						axis2[0] = axis[1];
-						axis2[1] = axis[2];
-						axis2[2] = axis[0];
-						
-						p << osc::BeginMessage("/listener1/angleAxis");
-						
-						p << float(angle * 180.f / M_PI);
-						p << axis2[0];
-						p << axis2[1];
-						p << axis2[2];
-						
-						p << osc::EndMessage;
-
-						transmitSocket->Send(p.Data(), p.Size());
-					}
-				}
-				catch (std::exception & e)
-				{
-					LOG_ERR("failed to send OSC message: %s", e.what());
-				}
-			}
-		}
-	#endif
 	
 		//
 		
-        if (waitForEvents)
-        {
-            SDL_Delay(1);
-            continue;
-        }
-        
-    #if ENABLE_MANUAL_CALIBRATION
-        const bool enableCameraInput = true;
-    #else
-        const bool enableCameraInput = false;
-    #endif
+        const bool enableCameraInput = draw3d;
         
 		camera.tick(dt, enableCameraInput);
 		
@@ -649,84 +601,90 @@ void testImu9250()
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			projectPerspective3d(90.f, .01f, 100.f);
-			
-			camera.pushViewMatrix();
+			if (draw3d)
 			{
-				gxTranslatef(0, 0, 2);
-				//gxRotatef(+90, 0, 0, 1);
+				projectPerspective3d(90.f, .01f, 100.f);
 				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
-		
-				gxPushMatrix();
+				camera.pushViewMatrix();
 				{
-					gxMultMatrixf(transform.m_v);
+					gxTranslatef(0, 0, 2);
+					//gxRotatef(+90, 0, 0, 1);
 					
-					setColor(colorRed);
-					drawGrid3dLine(6, 6, 0, 1);
-					
-					setColor(colorWhite);
-					
-					gxPushMatrix();
-					gxTranslatef(0, 0, -.1f);
-					gxSetTexture(getTexture("imu9250-front.jpg"));
-					gxBegin(GL_QUADS);
-					{
-						gxTexCoord2f(0.f, 0.f); gxVertex2f(-1, -1);
-						gxTexCoord2f(1.f, 0.f); gxVertex2f(-1, +1);
-						gxTexCoord2f(1.f, 1.f); gxVertex2f(+1, +1);
-						gxTexCoord2f(0.f, 1.f); gxVertex2f(+1, -1);
-					}
-					gxEnd();
-					gxSetTexture(0);
-					gxPopMatrix();
-					
-					gxPushMatrix();
-					gxTranslatef(0, 0, +.1f);
-					gxSetTexture(getTexture("imu9250-back.jpg"));
-					gxBegin(GL_QUADS);
-					{
-						gxTexCoord2f(0.f, 0.f); gxVertex2f(-1, +1);
-						gxTexCoord2f(1.f, 0.f); gxVertex2f(-1, -1);
-						gxTexCoord2f(1.f, 1.f); gxVertex2f(+1, -1);
-						gxTexCoord2f(0.f, 1.f); gxVertex2f(+1, +1);
-					}
-					gxEnd();
-					gxSetTexture(0);
-					gxPopMatrix();
-				}
-				gxPopMatrix();
-				
-				gxPushMatrix();
-				{
-					gxScalef(4, 4, 4);
-					gxBegin(GL_LINES);
-					{
-						setColor(colorWhite);
-						gxVertex3f(0, 0, 0);
-						gxVertex3f(magnet[0], magnet[1], magnet[2]);
-						
-						setColor(colorYellow);
-						gxVertex3f(0, 0, 0);
-						gxVertex3f(acceleration[0], acceleration[1], acceleration[2]);
-					}
-					gxEnd();
-					
-					setColor(colorRed);
-					drawLine3d(0);
-					setColor(colorGreen);
-					drawLine3d(1);
-					setColor(colorBlue);
-					drawLine3d(2);
-				}
-				gxPopMatrix();
-				
-				glDisable(GL_DEPTH_TEST);
-			}
-			camera.popViewMatrix();
+					glEnable(GL_DEPTH_TEST);
+					glDepthFunc(GL_LESS);
 			
-			projectScreen2d();
+					gxPushMatrix();
+					{
+						gxMultMatrixf(transform.m_v);
+						
+						setColor(colorRed);
+						drawGrid3dLine(6, 6, 0, 1);
+						
+						setColor(colorWhite);
+						
+						gxPushMatrix();
+						gxTranslatef(0, 0, -.1f);
+						gxSetTexture(getTexture("imu9250-front.jpg"));
+						gxBegin(GL_QUADS);
+						{
+							gxTexCoord2f(0.f, 0.f); gxVertex2f(-1, -1);
+							gxTexCoord2f(1.f, 0.f); gxVertex2f(-1, +1);
+							gxTexCoord2f(1.f, 1.f); gxVertex2f(+1, +1);
+							gxTexCoord2f(0.f, 1.f); gxVertex2f(+1, -1);
+						}
+						gxEnd();
+						gxSetTexture(0);
+						gxPopMatrix();
+						
+						gxPushMatrix();
+						gxTranslatef(0, 0, +.1f);
+						gxSetTexture(getTexture("imu9250-back.jpg"));
+						gxBegin(GL_QUADS);
+						{
+							gxTexCoord2f(0.f, 0.f); gxVertex2f(-1, +1);
+							gxTexCoord2f(1.f, 0.f); gxVertex2f(-1, -1);
+							gxTexCoord2f(1.f, 1.f); gxVertex2f(+1, -1);
+							gxTexCoord2f(0.f, 1.f); gxVertex2f(+1, +1);
+						}
+						gxEnd();
+						gxSetTexture(0);
+						gxPopMatrix();
+					}
+					gxPopMatrix();
+					
+					gxPushMatrix();
+					{
+						gxScalef(4, 4, 4);
+						
+					#if 0
+						gxBegin(GL_LINES);
+						{
+							setColor(colorWhite);
+							gxVertex3f(0, 0, 0);
+							gxVertex3f(magnet[0], magnet[1], magnet[2]);
+							
+							setColor(colorYellow);
+							gxVertex3f(0, 0, 0);
+							gxVertex3f(acceleration[0], acceleration[1], acceleration[2]);
+						}
+						gxEnd();
+					#endif
+						
+						setColor(colorRed);
+						drawLine3d(0);
+						setColor(colorGreen);
+						drawLine3d(1);
+						setColor(colorBlue);
+						drawLine3d(2);
+					}
+					gxPopMatrix();
+					
+					glDisable(GL_DEPTH_TEST);
+				}
+				camera.popViewMatrix();
+				
+				projectScreen2d();
+			}
 			
             setFont("calibri.ttf");
             
@@ -761,13 +719,22 @@ void testImu9250()
             hqEnd();
             setColor(captionTextColor);
             drawText(GFX_SX/2, 5 + 15, 16, 0, 0, "%s", captionText.c_str());
-            
+			
+            const int biasedMagnet[3] =
+            {
+				imu.reader.magnet[0] + magnetBias[0],
+				imu.reader.magnet[1] + magnetBias[1],
+				imu.reader.magnet[2] + magnetBias[2]
+			};
+			
             setColor(colorWhite);
 			drawText(5, 38, 12, +1, +1, "magnet: (%d, %d, %d) -> (%.2f, %.2f, %.2f)",
 				imu.reader.magnet[0],
 				imu.reader.magnet[1],
 				imu.reader.magnet[2],
-				magnet[0], magnet[1], magnet[2]);
+				biasedMagnet[0],
+				biasedMagnet[1],
+				biasedMagnet[2]);
 			drawText(5, 53, 12, +1, +1, "magnet min/max: (%d, %d, %d) - (%d, %d, %d)",
 				imu.magnetMin[0],
 				imu.magnetMin[1],
@@ -784,14 +751,19 @@ void testImu9250()
                 drawText(5, GFX_SY - 100, 12, +1, +1, "PRESS [C] when done calibrating magnet");
             else if (tty.port >= 0)
                 drawText(5, GFX_SY - 100, 12, +1, +1, "PRESS [C] to calibrate the magnet");
+			
+			drawText(5, GFX_SY - 20, 12, +1, +1, "PRESS [V] to toggle 3D preview (%s)", draw3d ? "enabled" : "disabled");
 		}
 		framework.endDraw();
 	}
 	while (!keyboard.wentDown(SDLK_ESCAPE) && !framework.quitRequested);
 	
+	quitRequested = true;
+	
+	SDL_WaitThread(updateThread, nullptr);
+	updateThread = nullptr;
+	
 	imu.shut();
 	
 	tty.shut();
-	
-	exit(0);
 }
