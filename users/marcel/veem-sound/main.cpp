@@ -7,6 +7,8 @@
 #include "Noise.h"
 #include "objects/paobject.h"
 
+#define ENABLE_AUDIO 0
+
 const int GFX_SX = 1100;
 const int GFX_SY = 740;
 
@@ -312,6 +314,14 @@ struct AudioNodeMechanism : AudioNodeBase
 	
 	virtual void tick(const float dt)
 	{
+		if (isPassthrough)
+		{
+			xOutput.setScalar(0.f);
+			yOutput.setScalar(0.f);
+			zOutput.setScalar(0.f);
+			return;
+		}
+		
 		const int ring = getInputInt(kInput_Ring, 0);
 		const AudioFloat * speed = getInputAudioFloat(kInput_Speed, &AudioFloat::One);
 		const AudioFloat * scale = getInputAudioFloat(kInput_Scale, &AudioFloat::One);
@@ -358,27 +368,152 @@ AUDIO_NODE_TYPE(mechanism, AudioNodeMechanism)
 	out("z", "audioValue");
 }
 
+const double kCelcius = 273.0;
+
 struct Thermalizer
 {
-	const static int kSize = 64;
+	Mat4x4 thermalToView;
 	
-	float heat[kSize];
+	const static int kSize = 256;
+	
+	double heat[kSize];
+	
+	double heatVis[kSize];
 	
 	Thermalizer()
 	{
-		memset(this, 0, sizeof(*this));
+		thermalToView = Mat4x4(true)
+			.Translate(GFX_SX/2, GFX_SY/2, 0)
+			.Scale(3, 6, 1)
+			.Translate(0, -kCelcius, 0)
+			.Translate(-kSize/2, 0, 0);
+		
+		for (int i = 0; i < kSize; ++i)
+			heat[i] = kCelcius + 12.0;
+		
+		memset(heatVis, 0, sizeof(heatVis));
+	}
+	
+	void applyHeat(const int position, const double _heat, const double dt)
+	{
+		const double kRetainPerSecond = 0.7;
+		
+		const double retain = std::pow(kRetainPerSecond, dt);
+		
+		heat[position] = heat[position] * retain + _heat * (1.0 - retain);
+	}
+	
+	double sampleHeat(const int index) const
+	{
+		if (index < 0)
+			return heat[0];
+		else if (index > kSize - 1)
+			return heat[kSize -1];
+		else
+			return heat[index];
+	}
+	
+	void diffuseHeat(const double dt)
+	{
+		double oldHeat[kSize];
+		memcpy(oldHeat, heat, sizeof(oldHeat));
+		
+		const double kRetainPerMS = 0.8;
+		
+		const double retain = std::pow(kRetainPerMS, dt * 1000.0);
+		const double spread = (1.0 - retain) * 0.5;
+		
+		for (int i = 0; i < kSize; ++i)
+		{
+			const double value = spread * oldHeat[i];
+			
+			if (i > 0)
+			{
+				heat[i - 1] += value;
+				heat[i] -= value;
+			}
+			
+			if (i < kSize - 1)
+			{
+				heat[i + 1] += value;
+				heat[i] -= value;
+			}
+		}
+	}
+	
+	void applyHeatAtViewPos(const float x, const float y, const float dt)
+	{
+		const Mat4x4 viewToThermal = thermalToView.CalcInv();
+		const Vec2 p = viewToThermal.Mul4(Vec2(x, y));
+
+		const int i = int(std::round(p[0]));
+		
+		if (i >= 0 && i <= kSize - 1)
+		{
+			const float noiseX = i;
+			const float noiseY = framework.time * 1.f;
+			
+			const float noise = scaled_octave_noise_2d(8, .5f, 1.f, 0.f, kCelcius + 12.0, noiseX, noiseY);
+			
+			applyHeat(i, noise, dt);
+		}
 	}
 	
 	void tick(const float dt)
 	{
+		double oldHeat[kSize];
+		memcpy(oldHeat, heat, sizeof(oldHeat));
+		
+		const bool doApplyHeat = mouse.isDown(BUTTON_LEFT);
+		
+		// apply heat
+		
+		if (doApplyHeat)
+		{
+			applyHeatAtViewPos(mouse.x, mouse.y, dt);
+			
+			for (int i = 0; i < 2; ++i)
+			{
+				const float noiseX = i;
+				const float noiseY = framework.time * .2f;
+				
+				const float noise = scaled_octave_noise_2d(8, .5f, 1.f, kCelcius + 12.0, kCelcius + 72.0, noiseX, noiseY);
+				
+				applyHeat(i, noise, dt);
+			}
+			
+			for (int i = kSize - 2; i < kSize; ++i)
+			{
+				const float noiseX = i;
+				const float noiseY = framework.time * .3f;
+				
+				const float noise = scaled_octave_noise_2d(8, .5f, 1.f, kCelcius + 12.0, kCelcius + 72.0, noiseX, noiseY);
+				
+				applyHeat(i, noise, dt);
+			}
+		}
+		
+		// diffuse
+		
+	#if 0
+		diffuseHeat(dt);
+	#else
+		for (int i = 0; i < 10; ++i)
+			diffuseHeat(dt / 10.0);
+	#endif
+	
 		for (int i = 0; i < kSize; ++i)
 		{
-			const float noiseX = i;
-			const float noiseY = framework.time * .1f;
+			heatVis[i] *= 0.9;
 			
-			const float noise = scaled_octave_noise_2d(8, .5f, 1.f, 0.f, 1.f, noiseX, noiseY);
+			const double heatOld = oldHeat[i];
+			const double heatNew = heat[i];
 			
-			heat[i] = noise;
+			const int shift1 = int(std::floor(heatOld / 1.0));
+			const int shift2 = int(std::floor(heatNew / 1.0));
+			
+			if (shift1 != shift2)
+				heatVis[i] = 1.0;
 		}
 	}
 	
@@ -386,19 +521,32 @@ struct Thermalizer
 	{
 		gxPushMatrix();
 		{
-			//gxScalef(.5f, .5f, 1);
-			gxScalef(8, 8, 1);
-			gxTranslatef(-kSize/2, 0, 0);
+			gxMultMatrixf(thermalToView.m_v);
 			
-			hqBegin(HQ_FILLED_CIRCLES);
+			const float spacing = .03f;
+			
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
 				for (int i = 0; i < kSize; ++i)
 				{
 					setLumif(std::abs(heat[i]));
-					hqFillCircle(i, 0, .5f);
+					hqFillRoundedRect(i + spacing, kCelcius, i + 1 - spacing * 2, heat[i], .25f);
 				}
 			}
 			hqEnd();
+			
+			setColor(255, 127, 63);
+			pushBlend(BLEND_ALPHA);
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			{
+				for (int i = 0; i < kSize; ++i)
+				{
+					setAlphaf(heatVis[i]);
+					hqFillRoundedRect(i + spacing, kCelcius, i + 1 - spacing * 2, heat[i], .25f);
+				}
+			}
+			hqEnd();
+			popBlend();
 		}
 		gxPopMatrix();
 	}
@@ -470,6 +618,73 @@ struct ControlWindow
 	}
 };
 
+//
+
+#include "../libparticle/ui.h"
+
+#if LINUX
+	#include <portaudio.h>
+#else
+	#include <portaudio/portaudio.h>
+#endif
+
+static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inputDeviceIndex, int & outputDeviceIndex)
+{
+	bool result = false;
+	
+	pushMenu("pa");
+	{
+		const int numDevices = Pa_GetDeviceCount();
+		
+		std::vector<EnumValue> inputDevices;
+		std::vector<EnumValue> outputDevices;
+		
+		for (int i = 0; i < numDevices; ++i)
+		{
+			const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(i);
+			
+			if (deviceInfo->maxInputChannels > 0)
+			{
+				EnumValue e;
+				e.name = deviceInfo->name;
+				e.value = i;
+				
+				inputDevices.push_back(e);
+			}
+			
+			if (deviceInfo->maxOutputChannels > 0)
+			{
+				EnumValue e;
+				e.name = deviceInfo->name;
+				e.value = i;
+				
+				outputDevices.push_back(e);
+			}
+		}
+		
+		if (tick)
+		{
+			if (inputDeviceIndex == paNoDevice && inputDevices.empty() == false)
+				inputDeviceIndex = inputDevices.front().value;
+			if (outputDeviceIndex == paNoDevice && outputDevices.empty() == false)
+				outputDeviceIndex = outputDevices.front().value;
+		}
+		
+		doDropdown(inputDeviceIndex, "Input", inputDevices);
+		doDropdown(outputDeviceIndex, "Output", outputDevices);
+		
+		doBreak();
+		
+		if (doButton("OK"))
+		{
+			result = true;
+		}
+	}
+	popMenu();
+	
+	return result;
+}
+
 int main(int argc, char * argv[])
 {
 	framework.enableDepthBuffer = true;
@@ -479,16 +694,81 @@ int main(int argc, char * argv[])
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
+#if ENABLE_AUDIO
+	fillPcmDataCache("humans", false, false);
+	fillPcmDataCache("outside", false, false);
+	fillPcmDataCache("ticks", false, false);
+	fillPcmDataCache("voices", false, false);
+	fillPcmDataCache("water", false, false);
+	
 	fillPcmDataCache("ogg-lp7000", false, false);
+#endif
+
+#if ENABLE_AUDIO
+	int inputDeviceIndex = paNoDevice;
+	int outputDeviceIndex = paNoDevice;
 	
+	bool outputStereo = true;
+	
+	if (Pa_Initialize() == paNoError)
+	{
+		UiState uiState;
+		uiState.sx = 400;
+		uiState.x = (GFX_SX - uiState.sx) / 2;
+		uiState.y = (GFX_SY - 200) / 2;
+		
+		for (;;)
+		{
+			framework.process();
+			
+			if (keyboard.wentDown(SDLK_ESCAPE))
+			{
+				inputDeviceIndex = paNoDevice;
+				outputDeviceIndex = paNoDevice;
+				break;
+			}
+			
+			makeActive(&uiState, true, false);
+			if (doPaMenu(true, false, framework.timeStep, inputDeviceIndex, outputDeviceIndex))
+			{
+				break;
+			}
+			
+			framework.beginDraw(200, 200, 200, 255);
+			{
+				makeActive(&uiState, false, true);
+				doPaMenu(false, true, framework.timeStep, inputDeviceIndex, outputDeviceIndex);
+			}
+			framework.endDraw();
+		}
+		
+		if (outputDeviceIndex != paNoDevice)
+		{
+			const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(outputDeviceIndex);
+			
+			if (deviceInfo != nullptr && deviceInfo->maxOutputChannels >= 16)
+				outputStereo = false;
+		}
+		
+		Pa_Terminate();
+	}
+	
+	if (outputDeviceIndex == paNoDevice)
+	{
+		framework.shutdown();
+		return 0;
+	}
+#endif
+
+#if ENABLE_AUDIO
 	ControlWindow controlWindow;
-	
+
 	SDL_mutex * audioMutex = SDL_CreateMutex();
 	s_audioMutex = audioMutex;
 	
 	AudioVoiceManager4D voiceMgr;
 	voiceMgr.init(audioMutex, 16, 16);
-	voiceMgr.outputStereo = true;
+	voiceMgr.outputStereo = outputStereo;
 	s_voiceMgr = &voiceMgr;
 	
 	AudioGraphManager_RTE audioGraphMgr(GFX_SX, GFX_SY);
@@ -501,8 +781,9 @@ int main(int argc, char * argv[])
 	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
 	
 	PortAudioObject paObject;
-	paObject.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
-	
+	paObject.init(SAMPLE_RATE, outputStereo ? 2 : 16, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);
+#endif
+
 	Mechanism mechanism;
 	s_mechanism = &mechanism;
 	
@@ -518,6 +799,7 @@ int main(int argc, char * argv[])
 	
 	std::vector<AudioGraphInstance*> instances;
 	
+#if ENABLE_AUDIO
 	//AudioGraphInstance * instance = audioGraphMgr.createInstance("sound3.xml");
 	//audioGraphMgr.selectInstance(instance);
 	
@@ -529,6 +811,7 @@ int main(int argc, char * argv[])
 	{
 		audioGraphMgr.selectInstance(instances[0]);
 	}
+#endif
 	
 	for (;;)
 	{
@@ -552,6 +835,7 @@ int main(int argc, char * argv[])
 		
 		bool inputIsCaptured = false;
 		
+	#if ENABLE_AUDIO
 		inputIsCaptured |= audioGraphMgr.tickEditor(dt, inputIsCaptured);
 		
 		bool isEditing = false;
@@ -564,8 +848,9 @@ int main(int argc, char * argv[])
 		
 		if (isEditing)
 			inputIsCaptured |= true;
-		
-		camera.tick(dt, !inputIsCaptured);
+	#endif
+	
+		camera.tick(dt, !inputIsCaptured && !keyboard.isDown(SDLK_RSHIFT));
 		
 		if (inputIsCaptured == false)
 		{
@@ -576,12 +861,14 @@ int main(int argc, char * argv[])
 				drawThermalizer = !drawThermalizer;
 		}
 		
+	#if ENABLE_AUDIO
 		audioGraphMgr.tickMain();
 		
 		if (!isEditing || !framework.windowIsActive)
 		{
 			SDL_Delay(100);
 		}
+	#endif
 			
 		framework.beginDraw(40, 40, 40, 0);
 		{
@@ -648,25 +935,37 @@ int main(int argc, char * argv[])
 			
 			if (drawThermalizer)
 			{
-				gxPushMatrix();
-				{
-					gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
-					
-					setColor(colorWhite);
-					thermalizer.draw2d();
-				}
-				gxPopMatrix();
+				setColor(colorWhite);
+				thermalizer.draw2d();
 			}
 			
+		#if ENABLE_AUDIO
 			if (showEditor)
 			{
 				audioGraphMgr.drawEditor();
 			}
+		#endif
+		
+		#if 1
+			const float radius = mouse.isDown(BUTTON_LEFT) ? 12.f : 16.f;
+			SDL_ShowCursor(SDL_FALSE);
+			hqBegin(HQ_FILLED_CIRCLES);
+			setColor(200, 220, 240);
+			hqFillCircle(mouse.x + .2f, mouse.y + .2f, radius);
+			setColor(colorWhite);
+			hqFillCircle(mouse.x, mouse.y, radius - 1.f);
+			hqEnd();
+		#endif
+		
+			setColor(200, 200, 200);
+			drawText(GFX_SX - 70, GFX_SY - 130, 17, -1, -1, "made using framework & audioGraph");
+			drawText(GFX_SX - 70, GFX_SY - 110, 17, -1, -1, "http://centuryofthecat.nl");
 			
 			popFontMode();
 		}
 		framework.endDraw();
 		
+	#if ENABLE_AUDIO
 		pushWindow(controlWindow.window);
 		{
 			controlWindow.tick();
@@ -674,8 +973,10 @@ int main(int argc, char * argv[])
 			controlWindow.draw();
 		}
 		popWindow();
+	#endif
 	}
 	
+#if ENABLE_AUDIO
 	for (auto & instance : instances)
 		audioGraphMgr.free(instance, false);
 	instances.clear();
@@ -695,6 +996,7 @@ int main(int argc, char * argv[])
 	SDL_DestroyMutex(audioMutex);
 	audioMutex = nullptr;
 	s_audioMutex = nullptr;
+#endif
 	
 	Font("calibri.ttf").saveCache();
 	
