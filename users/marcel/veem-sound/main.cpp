@@ -6,6 +6,9 @@
 #include "framework.h"
 #include "Noise.h"
 #include "objects/paobject.h"
+#include "vfxGraph.h"
+#include "vfxGraphRealTimeConnection.h"
+#include "vfxNodeBase.h"
 
 #define ENABLE_AUDIO 0
 
@@ -383,7 +386,6 @@ struct Thermalizer
 	Thermalizer()
 	{
 		thermalToView = Mat4x4(true)
-			.Translate(GFX_SX/2, GFX_SY/2, 0)
 			.Scale(3, 6, 1)
 			.Translate(0, -kCelcius, 0)
 			.Translate(-kSize/2, 0, 0);
@@ -618,6 +620,47 @@ struct ControlWindow
 	}
 };
 
+struct VfxNodeThermalizer : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Draw,
+		kOutput_COUNT
+	};
+	
+	Thermalizer thermalizer;
+	
+	VfxNodeThermalizer()
+		: VfxNodeBase()
+		, thermalizer()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		thermalizer.tick(dt);
+	}
+	
+	virtual void draw() const override
+	{
+		setColor(colorWhite);
+		thermalizer.draw2d();
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeThermalizer)
+{
+	typeName = "thermalizer";
+	out("draw", "draw");
+}
+
 //
 
 #include "../libparticle/ui.h"
@@ -783,7 +826,15 @@ int main(int argc, char * argv[])
 	PortAudioObject paObject;
 	paObject.init(SAMPLE_RATE, outputStereo ? 2 : 16, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);
 #endif
-
+	
+	VfxGraph * vfxGraph = new VfxGraph();
+	RealTimeConnection realTimeConnection(vfxGraph);
+	
+	GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
+	createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
+	GraphEdit graphEdit(GFX_SX, GFX_SY, &typeDefinitionLibrary, &realTimeConnection);
+	graphEdit.load("control.xml");
+	
 	Mechanism mechanism;
 	s_mechanism = &mechanism;
 	
@@ -833,6 +884,8 @@ int main(int argc, char * argv[])
 		
 		thermalizer.tick(dt);
 		
+		vfxGraph->tick(GFX_SX, GFX_SY, dt);
+		
 		bool inputIsCaptured = false;
 		
 	#if ENABLE_AUDIO
@@ -849,6 +902,8 @@ int main(int argc, char * argv[])
 		if (isEditing)
 			inputIsCaptured |= true;
 	#endif
+	
+		inputIsCaptured |= graphEdit.tick(dt, inputIsCaptured);
 	
 		camera.tick(dt, !inputIsCaptured && !keyboard.isDown(SDLK_RSHIFT));
 		
@@ -935,9 +990,17 @@ int main(int argc, char * argv[])
 			
 			if (drawThermalizer)
 			{
-				setColor(colorWhite);
-				thermalizer.draw2d();
+				gxPushMatrix();
+				{
+					gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
+					
+					setColor(colorWhite);
+					thermalizer.draw2d();
+				}
+				gxPopMatrix();
 			}
+			
+			vfxGraph->draw(GFX_SX, GFX_SY);
 			
 		#if ENABLE_AUDIO
 			if (showEditor)
@@ -946,13 +1009,15 @@ int main(int argc, char * argv[])
 			}
 		#endif
 		
+			graphEdit.draw();
+		
 		#if 1
 			const float radius = mouse.isDown(BUTTON_LEFT) ? 12.f : 16.f;
 			SDL_ShowCursor(SDL_FALSE);
 			hqBegin(HQ_FILLED_CIRCLES);
-			setColor(200, 220, 240);
+			setColor(200, 220, 240, graphEdit.mousePosition.hover ? 127 : 255);
 			hqFillCircle(mouse.x + .2f, mouse.y + .2f, radius);
-			setColor(colorWhite);
+			setColor(255, 255, 255, graphEdit.mousePosition.hover ? 127 : 255);
 			hqFillCircle(mouse.x, mouse.y, radius - 1.f);
 			hqEnd();
 		#endif
