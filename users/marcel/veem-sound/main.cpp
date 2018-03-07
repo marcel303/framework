@@ -9,6 +9,7 @@
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 #include "vfxNodeBase.h"
+#include "vfxNodes/oscEndpointMgr.h"
 
 #define ENABLE_AUDIO 0
 
@@ -884,8 +885,6 @@ int main(int argc, char * argv[])
 		
 		thermalizer.tick(dt);
 		
-		vfxGraph->tick(GFX_SX, GFX_SY, dt);
-		
 		bool inputIsCaptured = false;
 		
 	#if ENABLE_AUDIO
@@ -915,6 +914,10 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_t))
 				drawThermalizer = !drawThermalizer;
 		}
+		
+		g_oscEndpointMgr.tick();
+		
+		vfxGraph->tick(GFX_SX, GFX_SY, dt);
 		
 	#if ENABLE_AUDIO
 		audioGraphMgr.tickMain();
