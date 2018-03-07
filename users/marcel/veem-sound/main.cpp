@@ -752,12 +752,12 @@ int main(int argc, char * argv[])
 	fillPcmDataCache("ogg-lp7000", false, false);
 #endif
 
-#if ENABLE_AUDIO
 	int inputDeviceIndex = paNoDevice;
 	int outputDeviceIndex = paNoDevice;
 	
 	bool outputStereo = true;
 	
+#if ENABLE_AUDIO
 	if (Pa_Initialize() == paNoError)
 	{
 		UiState uiState;
@@ -924,6 +924,8 @@ int main(int argc, char * argv[])
 		g_oscEndpointMgr.tick();
 		
 		vfxGraph->tick(GFX_SX, GFX_SY, dt);
+		
+		graphEdit.tickVisualizers(dt);
 		
 	#if ENABLE_AUDIO
 		audioGraphMgr.tickMain();
