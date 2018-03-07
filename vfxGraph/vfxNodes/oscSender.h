@@ -29,14 +29,14 @@
 
 #include <string>
 
-class UdpTransmitSocket;
+class UdpSocket;
 
 struct OscSender
 {
 	std::string ipAddress;
 	int udpPort;
 	
-	UdpTransmitSocket * transmitSocket;
+	UdpSocket * transmitSocket;
 	
 	OscSender();
 	
