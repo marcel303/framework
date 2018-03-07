@@ -20,6 +20,10 @@ static SDL_mutex * s_audioMutex = nullptr;
 static AudioVoiceManager * s_voiceMgr = nullptr;
 static AudioGraphManager_RTE * s_audioGraphMgr = nullptr;
 
+extern SDL_mutex * g_vfxAudioMutex;
+extern AudioVoiceManager * g_vfxAudioVoiceMgr;
+extern AudioGraphManager * g_vfxAudioGraphMgr;
+
 static void drawThickCircle(const float radius1, const float radius2, const int numSegments)
 {
 	const float angleStep = 2.f * M_PI / numSegments;
@@ -804,7 +808,6 @@ int main(int argc, char * argv[])
 	}
 #endif
 
-#if ENABLE_AUDIO
 	ControlWindow controlWindow;
 
 	SDL_mutex * audioMutex = SDL_CreateMutex();
@@ -826,7 +829,10 @@ int main(int argc, char * argv[])
 	
 	PortAudioObject paObject;
 	paObject.init(SAMPLE_RATE, outputStereo ? 2 : 16, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);
-#endif
+
+	g_vfxAudioMutex = audioMutex;
+	g_vfxAudioVoiceMgr = &voiceMgr;
+	g_vfxAudioGraphMgr = &audioGraphMgr;
 	
 	VfxGraph * vfxGraph = new VfxGraph();
 	RealTimeConnection realTimeConnection(vfxGraph);
@@ -1044,7 +1050,6 @@ int main(int argc, char * argv[])
 	#endif
 	}
 	
-#if ENABLE_AUDIO
 	for (auto & instance : instances)
 		audioGraphMgr.free(instance, false);
 	instances.clear();
@@ -1064,7 +1069,6 @@ int main(int argc, char * argv[])
 	SDL_DestroyMutex(audioMutex);
 	audioMutex = nullptr;
 	s_audioMutex = nullptr;
-#endif
 	
 	Font("calibri.ttf").saveCache();
 	
