@@ -385,8 +385,7 @@ struct Thermalizer
 	const static int kSize = 256;
 	
 	double heat[kSize];
-	
-	double heatVis[kSize];
+	double bang[kSize];
 	
 	Thermalizer()
 	{
@@ -398,7 +397,7 @@ struct Thermalizer
 		for (int i = 0; i < kSize; ++i)
 			heat[i] = kCelcius + 12.0;
 		
-		memset(heatVis, 0, sizeof(heatVis));
+		memset(bang, 0, sizeof(bang));
 	}
 	
 	void applyHeat(const int position, const double _heat, const double dt)
@@ -509,9 +508,12 @@ struct Thermalizer
 			diffuseHeat(dt / 10.0);
 	#endif
 	
+		const double decayPerSecond = 0.02;
+		const double decay = std::pow(decayPerSecond, dt);
+	
 		for (int i = 0; i < kSize; ++i)
 		{
-			heatVis[i] *= 0.9;
+			bang[i] *= decay;
 			
 			const double heatOld = oldHeat[i];
 			const double heatNew = heat[i];
@@ -520,7 +522,7 @@ struct Thermalizer
 			const int shift2 = int(std::floor(heatNew / 1.0));
 			
 			if (shift1 != shift2)
-				heatVis[i] = 1.0;
+				bang[i] = 1.0;
 		}
 	}
 	
@@ -548,7 +550,7 @@ struct Thermalizer
 			{
 				for (int i = 0; i < kSize; ++i)
 				{
-					setAlphaf(heatVis[i]);
+					setAlphaf(bang[i]);
 					hqFillRoundedRect(i + spacing, kCelcius, i + 1 - spacing * 2, heat[i], .25f);
 				}
 			}
