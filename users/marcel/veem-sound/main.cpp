@@ -382,22 +382,53 @@ struct Thermalizer
 {
 	Mat4x4 thermalToView;
 	
-	const static int kSize = 256;
+	int size = 0;
 	
-	double heat[kSize];
-	double bang[kSize];
+	double * heat = nullptr;
+	double * bang = nullptr;
 	
 	Thermalizer()
+		: thermalToView(true)
 	{
+	}
+	
+	~Thermalizer()
+	{
+		shut();
+	}
+	
+	void init(const int _size)
+	{
+		shut();
+		
+		//
+		
+		size = _size;
+		
 		thermalToView = Mat4x4(true)
 			.Scale(3, 6, 1)
 			.Translate(0, -kCelcius, 0)
-			.Translate(-kSize/2, 0, 0);
+			.Translate(-size/2.f, 0, 0);
 		
-		for (int i = 0; i < kSize; ++i)
+		heat = new double[size];
+		bang = new double[size];
+		
+		for (int i = 0; i < size; ++i)
+		{
 			heat[i] = kCelcius + 12.0;
+			bang[i] = 0.0;
+		}
+	}
+	
+	void shut()
+	{
+		delete [] heat;
+		heat = nullptr;
 		
-		memset(bang, 0, sizeof(bang));
+		delete [] bang;
+		bang = nullptr;
+		
+		size = 0;
 	}
 	
 	void applyHeat(const int position, const double _heat, const double dt)
@@ -413,23 +444,23 @@ struct Thermalizer
 	{
 		if (index < 0)
 			return heat[0];
-		else if (index > kSize - 1)
-			return heat[kSize -1];
+		else if (index > size - 1)
+			return heat[size -1];
 		else
 			return heat[index];
 	}
 	
 	void diffuseHeat(const double dt)
 	{
-		double oldHeat[kSize];
-		memcpy(oldHeat, heat, sizeof(oldHeat));
+		double * oldHeat = (double*)alloca(size * sizeof(double));
+		memcpy(oldHeat, heat, size * sizeof(double));
 		
 		const double kRetainPerMS = 0.8;
 		
 		const double retain = std::pow(kRetainPerMS, dt * 1000.0);
 		const double spread = (1.0 - retain) * 0.5;
 		
-		for (int i = 0; i < kSize; ++i)
+		for (int i = 0; i < size; ++i)
 		{
 			const double value = spread * oldHeat[i];
 			
@@ -439,7 +470,7 @@ struct Thermalizer
 				heat[i] -= value;
 			}
 			
-			if (i < kSize - 1)
+			if (i < size - 1)
 			{
 				heat[i + 1] += value;
 				heat[i] -= value;
@@ -454,7 +485,7 @@ struct Thermalizer
 
 		const int i = int(std::round(p[0]));
 		
-		if (i >= 0 && i <= kSize - 1)
+		if (i >= 0 && i <= size - 1)
 		{
 			const float noiseX = i;
 			const float noiseY = framework.time * 1.f;
@@ -467,8 +498,8 @@ struct Thermalizer
 	
 	void tick(const float dt)
 	{
-		double oldHeat[kSize];
-		memcpy(oldHeat, heat, sizeof(oldHeat));
+		double * oldHeat = (double*)alloca(size * sizeof(double));
+		memcpy(oldHeat, heat, size * sizeof(double));
 		
 		const bool doApplyHeat = mouse.isDown(BUTTON_LEFT);
 		
@@ -488,7 +519,7 @@ struct Thermalizer
 				applyHeat(i, noise, dt);
 			}
 			
-			for (int i = kSize - 2; i < kSize; ++i)
+			for (int i = size - 2; i < size; ++i)
 			{
 				const float noiseX = i;
 				const float noiseY = framework.time * .3f;
@@ -511,7 +542,7 @@ struct Thermalizer
 		const double decayPerSecond = 0.02;
 		const double decay = std::pow(decayPerSecond, dt);
 	
-		for (int i = 0; i < kSize; ++i)
+		for (int i = 0; i < size; ++i)
 		{
 			bang[i] *= decay;
 			
@@ -536,7 +567,7 @@ struct Thermalizer
 			
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
-				for (int i = 0; i < kSize; ++i)
+				for (int i = 0; i < size; ++i)
 				{
 					setLumif(std::abs(heat[i]));
 					hqFillRoundedRect(i + spacing, kCelcius, i + 1 - spacing * 2, heat[i], .25f);
@@ -548,7 +579,7 @@ struct Thermalizer
 			pushBlend(BLEND_ALPHA);
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
-				for (int i = 0; i < kSize; ++i)
+				for (int i = 0; i < size; ++i)
 				{
 					setAlphaf(bang[i]);
 					hqFillRoundedRect(i + spacing, kCelcius, i + 1 - spacing * 2, heat[i], .25f);
@@ -648,6 +679,8 @@ struct VfxNodeThermalizer : VfxNodeBase
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
+		
+		thermalizer.init(64);
 	}
 	
 	virtual void tick(const float dt) override
@@ -848,6 +881,7 @@ int main(int argc, char * argv[])
 	s_mechanism = &mechanism;
 	
 	Thermalizer thermalizer;
+	thermalizer.init(256);
 	
 	Camera3d camera;
 	camera.gamepadIndex = 0;
