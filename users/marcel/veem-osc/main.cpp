@@ -318,6 +318,7 @@ struct OscSender
 	{
 		transmitSocket = new UdpSocket();
 		transmitSocket->SetEnableBroadcast(true);
+		transmitSocket->SetAllowReuse(true);
 		transmitSocket->Bind(IpEndpointName(IpEndpointName::ANY_ADDRESS, IpEndpointName::ANY_PORT));
 		
 		remoteEndpoint = IpEndpointName(ipAddress, udpPort);
