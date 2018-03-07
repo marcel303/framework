@@ -73,7 +73,10 @@ bool OscSender::init(const char * _ipAddress, const int _udpPort)
 		}
 		else
 		{
-			transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress.c_str(), udpPort));
+			transmitSocket = new UdpSocket();
+			transmitSocket->SetEnableBroadcast(true);
+			transmitSocket->SetAllowReuse(true);
+			transmitSocket->Bind(IpEndpointName(ipAddress.c_str(), udpPort));
 			
 			return true;
 		}
