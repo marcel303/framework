@@ -403,20 +403,23 @@ struct Thermalizer
 		
 		//
 		
-		size = _size;
-		
-		thermalToView = Mat4x4(true)
-			.Scale(3, 6, 1)
-			.Translate(0, -kCelcius, 0)
-			.Translate(-size/2.f, 0, 0);
-		
-		heat = new double[size];
-		bang = new double[size];
-		
-		for (int i = 0; i < size; ++i)
+		if (_size > 0)
 		{
-			heat[i] = kCelcius + 12.0;
-			bang[i] = 0.0;
+			size = _size;
+			
+			thermalToView = Mat4x4(true)
+				.Scale(3, 6, 1)
+				.Translate(0, -kCelcius, 0)
+				.Translate(-size/2.f, 0, 0);
+			
+			heat = new double[size];
+			bang = new double[size];
+			
+			for (int i = 0; i < size; ++i)
+			{
+				heat[i] = kCelcius + 12.0;
+				bang[i] = 0.0;
+			}
 		}
 	}
 	
@@ -662,34 +665,91 @@ struct VfxNodeThermalizer : VfxNodeBase
 {
 	enum Input
 	{
+		kInput_Size,
+		kInput_Heat,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
 		kOutput_Draw,
+		kOutput_Heat,
+		kOutput_Bang,
 		kOutput_COUNT
 	};
 	
 	Thermalizer thermalizer;
 	
+	VfxChannelData heatData;
+	VfxChannel heatOutput;
+	
+	VfxChannelData bangData;
+	VfxChannel bangOutput;
+	
 	VfxNodeThermalizer()
 		: VfxNodeBase()
 		, thermalizer()
+		, heatData()
+		, heatOutput()
+		, bangData()
+		, bangOutput()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Size, kVfxPlugType_Int);
+		addInput(kInput_Heat, kVfxPlugType_Channel);
 		addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
-		
-		thermalizer.init(64);
+		addOutput(kOutput_Heat, kVfxPlugType_Channel, &heatOutput);
+		addOutput(kOutput_Bang, kVfxPlugType_Channel, &bangOutput);
 	}
 	
 	virtual void tick(const float dt) override
 	{
+		if (isPassthrough)
+		{
+			thermalizer.shut();
+			heatData.free();
+			heatOutput.reset();
+			bangData.free();
+			bangOutput.reset();
+			return;
+		}
+		
+		const int size = getInputInt(kInput_Size, 32);
+		const VfxChannel * heat = getInputChannel(kInput_Heat, nullptr);
+		
+		if (size != thermalizer.size)
+		{
+			thermalizer.init(size);
+		}
+		
+		if (heat != nullptr)
+		{
+			for (int i = 0; i < heat->sx; ++i)
+			{
+				thermalizer.applyHeat(i, heat->data[i], dt);
+			}
+		}
+		
 		thermalizer.tick(dt);
+		
+		heatData.allocOnSizeChange(thermalizer.size);
+		bangData.allocOnSizeChange(thermalizer.size);
+		
+		for (int i = 0; i < thermalizer.size; ++i)
+		{
+			heatData.data[i] = float(thermalizer.heat[i]);
+			bangData.data[i] = float(thermalizer.bang[i]);
+		}
+		
+		heatOutput.setData(heatData.data, true, heatData.size);
+		bangOutput.setData(bangData.data, true, bangData.size);
 	}
 	
 	virtual void draw() const override
 	{
+		if (isPassthrough)
+			return;
+		
 		setColor(colorWhite);
 		thermalizer.draw2d();
 	}
@@ -698,7 +758,11 @@ struct VfxNodeThermalizer : VfxNodeBase
 VFX_NODE_TYPE(VfxNodeThermalizer)
 {
 	typeName = "thermalizer";
+	in("size", "int", "32");
+	in("heat", "channel");
 	out("draw", "draw");
+	out("heat", "channel");
+	out("bang", "channel");
 }
 
 //
