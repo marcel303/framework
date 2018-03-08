@@ -11,7 +11,7 @@
 #include "vfxNodeBase.h"
 #include "vfxNodes/oscEndpointMgr.h"
 
-#define ENABLE_AUDIO 0
+#define ENABLE_AUDIO 1
 
 const int GFX_SX = 1100;
 const int GFX_SY = 740;
@@ -434,13 +434,16 @@ struct Thermalizer
 		size = 0;
 	}
 	
-	void applyHeat(const int position, const double _heat, const double dt)
+	void applyHeat(const int index, const double _heat, const double dt)
 	{
+		if (index < 0 || index >= size)
+			return;
+		
 		const double kRetainPerSecond = 0.7;
 		
 		const double retain = std::pow(kRetainPerSecond, dt);
 		
-		heat[position] = heat[position] * retain + _heat * (1.0 - retain);
+		heat[index] = heat[index] * retain + _heat * (1.0 - retain);
 	}
 	
 	double sampleHeat(const int index) const
