@@ -7,27 +7,8 @@
 extern "C"
 {
 
-BITMAP * screen = nullptr;
-
-FONT * font = nullptr;
-
 static int SoundThreadProc(void * obj);
 static SDL_Thread * soundThread = nullptr;
-
-int allegro_init()
-{
-	return 0;
-}
-
-int install_timer()
-{
-	return 0;
-}
-
-int install_keyboard()
-{
-	return 0;
-}
 
 int install_sound(int digi, int midi, const char * cfg_path)
 {
@@ -157,21 +138,6 @@ void remove_int(void (*proc)())
 			r = &t->next;
 		}
 	}
-}
-
-#define MAX_TEXT_LENGTH 4096
-
-#include "StringEx.h"
-
-void textprintf(BITMAP * bmp, FONT * font, int x, int y, int color, const char * format, ...)
-{
-	char _text[MAX_TEXT_LENGTH];
-	va_list args;
-	va_start(args, format);
-	vsprintf_s(_text, sizeof(_text), format, args);
-	va_end(args);
-	
-	drawText(x, y, 12, +1, +1, "%s", _text);
 }
 
 void set_volume(int, int)

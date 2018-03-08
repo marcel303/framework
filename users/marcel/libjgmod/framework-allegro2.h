@@ -7,16 +7,6 @@
 extern "C" {
 #endif
 
-typedef struct BITMAP
-{
-	int x;
-} BITMAP;
-
-typedef struct FONT
-{
-	int x;
-} FONT;
-
 typedef struct SAMPLE
 {
 	int freq;
@@ -34,13 +24,6 @@ typedef struct PACKFILE
 	int x;
 } PACKFILE;
 
-extern BITMAP * screen;
-
-extern FONT * font;
-
-int allegro_init();
-int install_timer();
-int install_keyboard();
 int install_sound(int digi, int midi, const char * cfg_path);
 
 void allegro_message(const char * format, ...);
@@ -51,8 +34,6 @@ char * get_extension(const char * filename);
 
 void install_int_ex(void (*proc)(), int speed);
 void remove_int(void (*proc)());
-
-void textprintf(BITMAP * bmp, FONT * font, int x, int y, int color, const char * format, ...);
 
 void set_volume(int, int);
 
