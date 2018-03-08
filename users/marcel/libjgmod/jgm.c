@@ -13,7 +13,9 @@
 #define USE_CONSOLE
 
 #include <stdio.h>
-#include "allegro.h"
+#include <string.h>
+#include "framework-allegro2.h"
+//#include "allegro.h"
 #include "jgmod.h"
 #include "file_io.h"
 
@@ -105,4 +107,3 @@ int main (int argc, char **argv)
     return 0;
 }
 END_OF_MAIN();
-
