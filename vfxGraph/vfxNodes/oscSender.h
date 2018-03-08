@@ -29,6 +29,7 @@
 
 #include <string>
 
+class IpEndpointName;
 class UdpSocket;
 
 struct OscSender
@@ -37,6 +38,7 @@ struct OscSender
 	int udpPort;
 	
 	UdpSocket * transmitSocket;
+	IpEndpointName * endpointName;
 	
 	OscSender();
 	
