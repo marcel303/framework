@@ -27,7 +27,6 @@
 //
 
 static void drawCircle(int chn);
-static void drawHeader();
 
 //
 
@@ -223,13 +222,20 @@ int main(int argc, char **argv)
 		
         framework.beginDraw(0, 0, 0, 0);
         {
-			drawHeader();
+        	// draw header
 			
-			textprintf (screen, font, 0,36, font_color, "Tempo : %3d  Bpm : %3d  Speed : %3d%%  Pitch : %3d%% ", mi.tempo, mi.bpm, mi.speed_ratio, mi.pitch_ratio);
-			textprintf (screen, font, 0,48, font_color, "Global volume : %2d  User volume : %2d ", mi.global_volume, get_mod_volume());
-			textprintf (screen, font, 0,70, font_color, "%03d-%02d-%02d    ", mi.trk, mi.pos, mi.tick < 0 ? 0 : mi.tick);
+			drawText(0,  0, 12, +1, +1, "Song name   : %s", the_mod->name);
+			drawText(0, 12, 12, +1, +1, "No Channels : %2d  Period Type : %s  No Inst : %2d ",
+				the_mod->no_chn, (the_mod->flag & LINEAR_MODE) ? "Linear" : "Amiga", the_mod->no_instrument);
+			drawText(0, 24, 12, +1, +1, "No Tracks   : %2d  No Patterns : %2d  No Sample : %2d ", the_mod->no_trk, the_mod->no_pat, the_mod->no_sample);
+			
+			// draw playback info
+			
+			drawText(0, 36, 12, +1, +1, "Tempo : %3d  Bpm : %3d  Speed : %3d%%  Pitch : %3d%% ", mi.tempo, mi.bpm, mi.speed_ratio, mi.pitch_ratio);
+			drawText(0, 48, 12, +1, +1, "Global volume : %2d  User volume : %2d ", mi.global_volume, get_mod_volume());
+			drawText(0, 70, 12, +1, +1, "%03d-%02d-%02d    ", mi.trk, mi.pos, mi.tick < 0 ? 0 : mi.tick);
 
-			for (int index = 0; index < chn_reserved; index++)
+			for (int index = 0; index < chn_reserved; ++index)
 			{
 				if (old_chn_info[index].old_sample != ci[index].sample)
 					old_chn_info[index].color = Color::fromHSL((rand() % 68 + 32) / 100.f, .5f, .5f);
@@ -237,19 +243,27 @@ int main(int argc, char **argv)
 				old_chn_info[index].old_sample = ci[index].sample;
 			}
 
-			for (int index = start_chn; index < end_chn; index++)
+			for (int index = start_chn; index < end_chn; ++index)
 			{
 				if (cp_circle)
 				{
 					drawCircle(index);
 				}
 
-				if ( (voice_get_position(voice_table[index]) >= 0) && (ci[index].volume >= 1) && (ci[index].volenv.v >= 1) && (voice_get_frequency(voice_table[index]) > 0) && (mi.global_volume > 0) )
-					textprintf (screen, font, 0,82+(index-start_chn)*bitmap_height, font_color, "%2d: %3d %2d %6dHz %3d ", index+1, ci[index].sample+1, ci[index].volume,  voice_get_frequency(voice_table[index]), ci[index].pan);
+				if (voice_get_position(voice_table[index]) >= 0 &&
+					ci[index].volume >= 1 &&
+					ci[index].volenv.v >= 1 &&
+					voice_get_frequency(voice_table[index]) > 0 &&
+					mi.global_volume > 0)
+				{
+					drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3d %2d %6dHz %3d ", index+1, ci[index].sample+1, ci[index].volume,  voice_get_frequency(voice_table[index]), ci[index].pan);
 					//textprintf (screen, font, 0,82+(index-start_chn)*bitmap_height, font_color, "%2d: %3d %2d %6dHz %3d %d %d", index+1, ci[index].sample+1, ci[index].volume,  voice_get_frequency(voice_table[index]), ci[index].pan, ci[index].volenv.v, ci[index].volenv.p);
+				}
 				else
-					textprintf (screen, font, 0,82+(index-start_chn)*bitmap_height, font_color, "%2d: %3s %2s %6sHz %3s  ", index+1, " --", "--",  " -----", "---");
+				{
+					drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3s %2s %6sHz %3s  ", index+1, " --", "--",  " -----", "---");
 					//textprintf (screen, font, 0,82+(index-start_chn)*bitmap_height, font_color, "%2d: %3d %2s %6sHz %3s ", index+1, ci[index].sample+1, "--",  " -----", "---");
+				}
 			}
 		}
 		framework.endDraw();
@@ -267,43 +281,36 @@ static void drawCircle(int chn)
     	(mi.global_volume > 0))
 	{
 		gxPushMatrix();
-		const int dx = 200;
-		const int dy = 79+(chn-start_chn)*bitmap_height;
-		gxTranslatef(dx, dy, 0);
-		
-        const float radius = (ci[chn].volume / 13.f) + 2.f;
-		
-		float xpos;
-		
-        if (mi.flag & XM_MODE)
-            xpos = voice_get_frequency(voice_table[chn]);
-        else
-            xpos = voice_get_frequency(voice_table[chn]) * 8363.f / ci[chn].c2spd;
-
-        xpos /= note_length;
-        xpos += note_relative_pos;
-
-        if (xpos > 439)
-            xpos = 439;
-        else if (xpos < 0)
-            xpos = 0;
-		
-		hqBegin(HQ_FILLED_CIRCLES);
 		{
-			setColor(old_chn_info[chn].color);
-			hqFillCircle(xpos, 5, radius);
+			const int dx = 200;
+			const int dy = 79+(chn-start_chn)*bitmap_height;
+			gxTranslatef(dx, dy, 0);
+			
+			const float radius = (ci[chn].volume / 13.f) + 2.f;
+			
+			float xpos;
+			
+			if (mi.flag & XM_MODE)
+				xpos = voice_get_frequency(voice_table[chn]);
+			else
+				xpos = voice_get_frequency(voice_table[chn]) * 8363.f / ci[chn].c2spd;
+
+			xpos /= note_length;
+			xpos += note_relative_pos;
+
+			if (xpos > 439)
+				xpos = 439;
+			else if (xpos < 0)
+				xpos = 0;
+			
+			hqBegin(HQ_FILLED_CIRCLES);
+			{
+				setColor(old_chn_info[chn].color);
+				hqFillCircle(xpos, 5, radius);
+				setColor(colorWhite);
+			}
+			hqEnd();
 		}
-		hqEnd();
-		
 		gxPopMatrix();
 	}
-	
-	setColor(colorWhite);
-}
-
-static void drawHeader()
-{
-    textprintf (screen, font, 0,0, font_color,  "Song name   : %s", the_mod->name);
-    textprintf (screen, font, 0,12, font_color, "No Channels : %2d  Period Type : %s  No Inst : %2d ", the_mod->no_chn, (the_mod->flag & LINEAR_MODE) ? "Linear" : "Amiga", the_mod->no_instrument);
-    textprintf (screen, font, 0,24, font_color, "No Tracks   : %2d  No Patterns : %2d  No Sample : %2d ", the_mod->no_trk, the_mod->no_pat, the_mod->no_sample);
 }
