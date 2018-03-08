@@ -46,7 +46,8 @@ struct VfxNodeTriggerTimer : VfxNodeBase
 	
 	float timer;
 	
-	int triggerCountOutput;
+	int triggerCount;
+	float triggerCountOutput;
 	
 	VfxNodeTriggerTimer();
 	

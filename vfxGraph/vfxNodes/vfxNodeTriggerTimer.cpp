@@ -33,18 +33,19 @@ VFX_NODE_TYPE(VfxNodeTriggerTimer)
 	
 	in("interval", "float");
 	out("trigger!", "trigger");
-	out("triggerCount", "int");
+	out("triggerCount", "float");
 }
 
 VfxNodeTriggerTimer::VfxNodeTriggerTimer()
 	: VfxNodeBase()
 	, timer(0.f)
-	, triggerCountOutput(0)
+	, triggerCount(0)
+	, triggerCountOutput(0.f)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Interval, kVfxPlugType_Float);
 	addOutput(kOutput_Trigger, kVfxPlugType_Trigger, nullptr);
-	addOutput(kOutput_TriggerCount, kVfxPlugType_Int, &triggerCountOutput);
+	addOutput(kOutput_TriggerCount, kVfxPlugType_Float, &triggerCountOutput);
 }
 
 void VfxNodeTriggerTimer::tick(const float dt)
@@ -63,7 +64,8 @@ void VfxNodeTriggerTimer::tick(const float dt)
 		{
 			timer = 0.f;
 			
-			triggerCountOutput++;
+			triggerCount++;
+			triggerCountOutput = triggerCount;
 			
 			trigger(kOutput_Trigger);
 		}
