@@ -12,7 +12,7 @@
  *  The core of MOD player. */
 
 #include <stdio.h>
-#include <allegro.h>
+#include "framework-allegro2.h"
 #include "jgmod.h"
 #include "jshare.h"
 

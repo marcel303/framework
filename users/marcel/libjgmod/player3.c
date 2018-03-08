@@ -10,7 +10,7 @@
  *
  *  New effects for s3m are located here. */
 
-#include <allegro.h>
+#include "framework-allegro2.h"
 #include "jgmod.h"
 #include "jshare.h"
 

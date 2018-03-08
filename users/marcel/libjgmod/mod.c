@@ -12,7 +12,7 @@
  *  Most of the user functions are located here. */
 
 #include <stdio.h>
-#include <allegro.h>
+#include "framework-allegro2.h"
 #include "jgmod.h"
 #include "file_io.h"
 

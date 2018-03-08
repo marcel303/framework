@@ -13,7 +13,7 @@
 
 
 #include <stdio.h>
-#include <allegro.h>
+#include "framework-allegro2.h"
 #include "file_io.h"
 #include "jgmod.h"
 

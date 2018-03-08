@@ -11,8 +11,8 @@
  *  JGM loader. */
 
 #include <stdio.h>
-#include <allegro.h>
 #include <string.h>
+#include "framework-allegro2.h"
 #include "jgmod.h"
 #include "file_io.h"
 

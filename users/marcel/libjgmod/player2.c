@@ -12,7 +12,7 @@
  *  Protracker effects and misc stuff are located here */
 
 #include <math.h>
-#include <allegro.h>
+#include "framework-allegro2.h"
 #include "jgmod.h"
 #include "jshare.h"
 

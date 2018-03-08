@@ -7,8 +7,8 @@
 // #define JGMOD_STDFILE" line
 
 
-#define JGMOD_PACKFILE    /* dont try to load datafile with this disabled */
-//#define JGMOD_STDFILE
+//#define JGMOD_PACKFILE    /* dont try to load datafile with this disabled */
+#define JGMOD_STDFILE
 
 
 #ifdef JGMOD_PACKFILE

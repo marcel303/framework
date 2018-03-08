@@ -14,7 +14,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <allegro.h>
+#include "framework-allegro2.h"
 #include "jgmod.h"
 #include "file_io.h"
 
