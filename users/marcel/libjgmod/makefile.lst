@@ -1,0 +1,27 @@
+OBJ_LIST = \
+$(OBJ_DIR)/file_io.o \
+$(OBJ_DIR)/load_mod.o \
+$(OBJ_DIR)/load_s3m.o \
+$(OBJ_DIR)/load_xm.o \
+$(OBJ_DIR)/load_it.o \
+$(OBJ_DIR)/load_jgm.o \
+$(OBJ_DIR)/save_jgm.o \
+$(OBJ_DIR)/mod.o \
+$(OBJ_DIR)/player.o \
+$(OBJ_DIR)/player2.o \
+$(OBJ_DIR)/player3.o \
+$(OBJ_DIR)/player4.o \
+
+OBJ_MSVC_LIST = \
+$(OBJ_DIR)/file_io.obj \
+$(OBJ_DIR)/load_mod.obj \
+$(OBJ_DIR)/load_s3m.obj \
+$(OBJ_DIR)/load_xm.obj \
+$(OBJ_DIR)/load_it.obj \
+$(OBJ_DIR)/load_jgm.obj \
+$(OBJ_DIR)/save_jgm.obj \
+$(OBJ_DIR)/mod.obj \
+$(OBJ_DIR)/player.obj \
+$(OBJ_DIR)/player2.obj \
+$(OBJ_DIR)/player3.obj \
+$(OBJ_DIR)/player4.obj

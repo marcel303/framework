@@ -1,0 +1,84 @@
+####################################################
+#                                                  #
+#     JGMOD makefile by Guan Foo Wah               #
+#                                                  #
+#    modified version for Linux, by George Foot    #
+#    and Henrik Stokseth                           #
+#                                                  #
+####################################################
+
+CPLIBDEST = /usr/local/lib
+CPINCDEST = /usr/local/include
+
+OBJ_DIR = ../obj/unix
+
+LIB_DIR = ../lib/unix
+STATIC_LIB = $(LIB_DIR)/libjgmod.a
+SHARED_LIB = $(LIB_DIR)/libjgmod.so
+
+
+include makefile.lst
+
+CFLAGS = -O3 -W -Wno-unused -Wall -mcpu=pentium -ffast-math -fomit-frame-pointer -funroll-loops -fPIC
+
+
+
+all : $(OBJ_LIST) $(SHARED_LIB) jgmod jgm
+	@echo Done. 
+	@echo To compress the executables, type \`make compress\' now
+	@echo To install the executables, type \`make install\' as root
+	@echo Please read readme.txt
+
+install:
+	cp $(SHARED_LIB) $(CPLIBDEST)
+	cp jgmod.h $(CPINCDEST)
+	ldconfig $(CPLIBDEST)
+	@echo Please read readme.txt
+
+include ../obj/unix/makefile.dep
+
+
+$(OBJ_DIR)/%.o: %.c
+	gcc $(CFLAGS) -o $@ -c $<
+
+
+$(STATIC_LIB) : $(OBJ_LIST)
+	ar rs $(STATIC_LIB) $(OBJ_LIST)
+
+$(SHARED_LIB) : $(OBJ_LIST)
+	gcc -shared -o $(SHARED_LIB) $(OBJ_LIST)
+
+jgmod : jgmod.c $(SHARED_LIB)
+	gcc jgmod.c -o jgmod -s -L../lib/unix -ljgmod `allegro-config --libs`
+
+jgm : jgm.c $(SHARED_NAME)
+	gcc jgm.c -o jgm -s -L../lib/unix -ljgmod `allegro-config --libs`
+
+
+clean :
+	rm $(OBJ_DIR)/*.o 
+	rm $(SHARED_LIB)
+	rm jgmod
+	rm jgm
+
+
+veryclean :
+	rm $(OBJ_DIR)/*.o 
+	rm $(SHARED_LIB)
+	rm jgmod
+	rm jgm
+	rm $(CPLIBDEST)/libjgmod.so
+	rm $(CPINCDEST)/jgmod.h
+
+
+compress: jgmod jgm
+    ifneq ($(DJP),)
+	@$(DJP) jgmod jgm
+	@echo Done. 
+    else
+	@echo No executable compressor found! This target requires either the
+	@echo DJP or UPX utilities to be installed.
+    endif
+	@echo To install the executables, type \`make install\' as root
+	@echo Please read readme.txt
+

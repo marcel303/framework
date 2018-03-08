@@ -1,0 +1,90 @@
+####################################################
+#                                                  #
+#     JGMOD makefile by Guan Foo Wah               #
+#                                                  #
+####################################################
+
+CPLIBDEST = $(subst /,\,$(DJDIR)/lib)
+CPINCDEST = $(subst /,\,$(DJDIR)/include)
+
+OBJ_DIR = ../obj/msvc
+
+LIB_DIR = ../lib/msvc
+LIB_FILE = libjgmod.lib
+LIB_NAME = $(LIB_DIR)/$(LIB_FILE)
+RUNNER = ../misc/runner.exe
+
+#check if VC enviroment string is set
+ifdef MSVCDIR
+MSVCDIR_U = $(subst \,/,$(MSVCDIR))
+MSVCDIR_D = $(subst /,\,$(MSVCDIR))
+else
+ifdef MSDEVDIR
+MSVCDIR_U = $(subst \,/,$(MSDEVDIR))
+MSVCDIR_D = $(subst /,\,$(MSDEVDIR))
+else
+badmsvc:
+	@echo Your MSVCDIR or MSDEVDIR environment variable is not set!
+endif
+endif
+
+NULLSTRING :=
+SPACE := $(NULLSTRING) # special magic to get an isolated space character
+
+ifneq ($(findstring $(SPACE),$(MSVCDIR)$(MSDEVDIR)),)
+badspaces:
+	@echo There are spaces in your MSVCDIR or MSDEVDIR environment
+	@echo variables: please change these to the 8.3 short filename
+	@echo version, or move your compiler to a different directory.
+endif
+
+
+include makefile.lst
+
+CFLAGS = /nologo /GB /Ox /MT  /W3 /Gd 
+#LFLAGS = 
+
+
+all : $(RUNNER) $(OBJ_MSVC_LIST) $(LIB_NAME) winjgmod.exe winjgm.exe
+	copy $(subst /,\,$(LIB_NAME)) $(MSVCDIR_D)\lib
+	copy jgmod.h $(MSVCDIR_D)\include
+	@echo Done. 
+	@echo Please read readme.txt
+
+
+include ..\obj\msvc\makefile.dep
+
+$(RUNNER): ..\misc\runner.c
+	gcc  -o $(RUNNER) ../misc/runner.c -O -Wall -Werror -s
+
+$(OBJ_DIR)/%.obj: %.c
+	$(RUNNER) cl @ $(CFLAGS) /Fo$@ /c $<
+
+$(LIB_NAME) : $(OBJ_MSVC_LIST)
+	$(RUNNER) lib @ /out:$(LIB_NAME) $(OBJ_MSVC_LIST) /nologo
+
+winjgmod.exe: jgmod.c jgmod.h $(LIB_NAME)
+	$(RUNNER) cl @ $(CFLAGS) /Fo$(OBJ_DIR)/jgmod.obj /c jgmod.c
+	$(RUNNER) link @ /nologo /release /subsystem:windows /out:winjgmod.exe $(OBJ_DIR)/jgmod.obj $(LIB_NAME) alleg.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib ole32.lib dinput.lib ddraw.lib dxguid.lib winmm.lib dsound.lib
+
+winjgm.exe: jgm.c jgmod.h $(LIB_NAME)
+	$(RUNNER) cl @ $(CFLAGS) /Fo$(OBJ_DIR)/jgm.obj /c jgm.c
+	$(RUNNER) link @ /nologo /release /subsystem:console /out:winjgm.exe $(OBJ_DIR)/jgm.obj $(LIB_NAME) alleg.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib ole32.lib dinput.lib ddraw.lib dxguid.lib winmm.lib dsound.lib
+
+
+clean :
+	del $(subst /,\,$(OBJ_DIR)/*.obj)
+	del $(subst /,\,$(LIB_NAME))
+	del ..\misc\runner.exe
+	del winjgmod.exe 
+	del winjgm.exe
+
+
+veryclean :
+	del $(subst /,\,$(OBJ_DIR)/*.obj)
+	del $(subst /,\,$(LIB_NAME))
+	del ..\misc\runner.exe
+	del winjgmod.exe 
+	del winjgm.exe
+	del $(MSVCDIR_D)\lib\$(LIB_FILE)
+	del $(MSVCDIR_D)\include\jgmod.h
