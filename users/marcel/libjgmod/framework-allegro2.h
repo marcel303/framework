@@ -64,7 +64,7 @@ static inline int ABS(int x) { return x < 0 ? -x : +x; }
 
 #define BPM_TO_TIMER(x) (1000000 * 60 / (x))
 
-void text_mode(int mode);
+//
 
 #define END_OF_FUNCTION(x)
 #define LOCK_FUNCTION(x)

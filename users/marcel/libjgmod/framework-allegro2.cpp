@@ -189,7 +189,14 @@ struct VoiceInfo
 	int frequency = 0;
 	int pan = 127;
 	int volume = 255;
+	int playmode = 0;
 	SAMPLE * sample = nullptr;
+	int sampleIncrement = 0;
+	
+	void updateIncrement(const int direction)
+	{
+		sampleIncrement = (int64_t(frequency) << 16) / 44100;
+	}
 };
 
 static VoiceInfo voices[MAX_VOICES];
@@ -259,6 +266,8 @@ void voice_start(int voice)
 	audioStream->lock();
 	{
 		voices[voice].started = 1;
+		
+		voices[voice].updateIncrement(+1);
 	}
 	audioStream->unlock();
 }
@@ -308,7 +317,11 @@ void voice_set_playmode(int voice, int mode)
 	if (voice == -1)
 		return;
 	
-	// todo
+	audioStream->lock();
+	{
+		voices[voice].playmode = mode;
+	}
+	audioStream->unlock();
 }
 
 void voice_set_position(int voice, int position)
@@ -333,6 +346,8 @@ void voice_set_frequency(int voice, int freq)
 	audioStream->lock();
 	{
 		voices[voice].frequency = freq;
+		
+		voices[voice].updateIncrement(+1);
 	}
 	audioStream->unlock();
 }
@@ -353,10 +368,6 @@ void lock_sample(SAMPLE * sample)
 {
 }
 
-void text_mode(int mode)
-{
-}
-
 }
 
 int AudioStream_VoiceMixer::Provide(int numSamples, AudioSample* __restrict buffer)
@@ -372,21 +383,25 @@ int AudioStream_VoiceMixer::Provide(int numSamples, AudioSample* __restrict buff
 				const int pan1 = 0xff - voice.pan;
 				const int pan2 =        voice.pan;
 				
+				int sampleIndex = voice.position >> 16;
+				
 				for (int i = 0; i < numSamples; ++i)
 				{
-					const int sampleIndex_x = voice.position >> 16;
-					const int sampleIndex = sampleIndex_x > voice.sample->len - 1 ? voice.sample->len - 1 : sampleIndex_x;
-					
-					//Assert(sampleIndex_x >= 0);
-					
 					if (sampleIndex >= 0 && sampleIndex < voice.sample->len)
 					{
 						if (voice.sample->bits == 8)
 						{
 							const unsigned char * values = (unsigned char*)voice.sample->data;
 							
-							buffer[i].channel[0] += ((values[sampleIndex] - int64_t(1 << 7)) * 32 * voice.volume * pan1) >> 16;
-							buffer[i].channel[1] += ((values[sampleIndex] - int64_t(1 << 7)) * 32 * voice.volume * pan2) >> 16;
+						#if 1
+							const int value = int8_t(values[sampleIndex] ^ 0x80) * 64 * voice.volume;
+							
+							buffer[i].channel[0] += (value * pan1) >> 16;
+							buffer[i].channel[1] += (value * pan2) >> 16;
+						#else
+							buffer[i].channel[0] += ((values[sampleIndex] - int64_t(1 << 7)) * 64 * voice.volume * pan1) >> 16;
+							buffer[i].channel[1] += ((values[sampleIndex] - int64_t(1 << 7)) * 64 * voice.volume * pan2) >> 16;
+						#endif
 						}
 						else if (voice.sample->bits == 16)
 						{
@@ -397,10 +412,71 @@ int AudioStream_VoiceMixer::Provide(int numSamples, AudioSample* __restrict buff
 						}
 					}
 					
-					if (voice.sample->loop_end > 0 && sampleIndex >= voice.sample->loop_end)
-						voice.position = voice.sample->loop_start << 16;
-					else
-						voice.position += int64_t(voice.frequency << 16) / 44100;
+					// increment sample playback position
+					
+					voice.position += voice.sampleIncrement;
+					
+					sampleIndex = voice.position >> 16;
+					
+					// handle looping and ping-pong
+					
+					if (voice.playmode & PLAYMODE_LOOP)
+					{
+						if (voice.playmode & PLAYMODE_BIDIR)
+						{
+							if (voice.sampleIncrement > 0)
+							{
+								if (sampleIndex >= voice.sample->loop_end)
+								{
+								#if 1
+									const int64_t delta = voice.position - (int64_t(voice.sample->loop_end) << 16);
+									
+									voice.position -= delta * 2;
+									
+									sampleIndex = voice.position >> 16;
+								#else
+									sampleIndex = voice.sample->loop_end - 1;
+								#endif
+								
+									voice.sampleIncrement = -voice.sampleIncrement;
+								}
+							}
+							else
+							{
+								if (sampleIndex < voice.sample->loop_start)
+								{
+								#if 1
+									const int64_t delta = voice.position - (int64_t(voice.sample->loop_start) << 16);
+									
+									voice.position -= delta * 2;
+									
+									sampleIndex = voice.position >> 16;
+								#else
+									sampleIndex = voice.sample->loop_start;
+								#endif
+								
+									voice.sampleIncrement = -voice.sampleIncrement;
+								}
+							}
+						}
+						else
+						{
+							if (sampleIndex >= voice.sample->loop_end)
+							{
+							#if 1
+								const int64_t delta = voice.position - (int64_t(voice.sample->loop_end) << 16);
+								
+								voice.position = (voice.sample->loop_start << 16) + delta;
+								
+								sampleIndex = voice.position >> 16;
+							#else
+								sampleIndex = voice.sample->loop_start;
+								
+								voice.position = voice.sample->loop_start << 16;
+							#endif
+							}
+						}
+					}
 				}
 			}
 		}
