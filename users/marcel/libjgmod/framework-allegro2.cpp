@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
+//#define DIGI_SAMPLERATE 44100
+#define DIGI_SAMPLERATE 192000
+
 struct AudioStream_VoiceMixer : AudioStream
 {
 	SDL_mutex * mutex;
@@ -44,7 +47,7 @@ static AudioStream_VoiceMixer * audioStream = nullptr;
 int install_sound(int digi, int midi, const char * cfg_path)
 {
 	audioOutput = new AudioOutput_PortAudio();
-	audioOutput->Initialize(2, 44100, 64);
+	audioOutput->Initialize(2, DIGI_SAMPLERATE, 64);
 	
 	audioStream = new AudioStream_VoiceMixer();
 	audioOutput->Play(audioStream);
@@ -118,15 +121,42 @@ struct TimerReg
 
 static TimerReg * s_timerRegs = nullptr;
 
+#include <unistd.h>
+
 static int TimerThreadProc(void * obj)
 {
 	TimerReg * r = (TimerReg*)obj;
 	
+	struct timespec start, end;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+	
 	while (r->stop == false)
 	{
-		r->proc();
+		audioStream->lock();
+		{
+			r->proc();
+		}
+		audioStream->unlock();
 		
-		SDL_Delay(r->delay);
+		clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+		
+		const int64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
+		
+		clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+		
+		if (delta_us < r->delay * 2)
+		{
+			int64_t todo_us = r->delay * 2 - delta_us;
+			
+			if (todo_us > r->delay*3/2)
+				todo_us = r->delay;
+	
+			usleep(todo_us);
+		}
+		else
+		{
+			printf("no wait..\n");
+		}
 	}
 	
 	return 0;
@@ -134,7 +164,14 @@ static int TimerThreadProc(void * obj)
 
 void install_int_ex(void (*proc)(), int speed)
 {
-	remove_int(proc);
+	for (auto r = s_timerRegs; r != nullptr; r = s_timerRegs->next)
+	{
+		if (r->proc == proc)
+		{
+			r->delay = speed;
+			return;
+		}
+	}
 	
 	TimerReg * r = new TimerReg;
 	
@@ -143,7 +180,7 @@ void install_int_ex(void (*proc)(), int speed)
 	
 	r->proc = proc;
 	r->stop = false;
-	r->delay = std::max(1, speed / 1000);
+	r->delay = speed;
 	r->thread = SDL_CreateThread(TimerThreadProc, "Allegro timer", r);
 }
 
@@ -195,7 +232,7 @@ struct VoiceInfo
 	
 	void updateIncrement(const int direction)
 	{
-		sampleIncrement = (int64_t(frequency) << 16) / 44100;
+		sampleIncrement = ((int64_t(frequency) << 16) / DIGI_SAMPLERATE) * direction;
 	}
 };
 
@@ -266,8 +303,6 @@ void voice_start(int voice)
 	audioStream->lock();
 	{
 		voices[voice].started = 1;
-		
-		voices[voice].updateIncrement(+1);
 	}
 	audioStream->unlock();
 }
@@ -347,7 +382,7 @@ void voice_set_frequency(int voice, int freq)
 	{
 		voices[voice].frequency = freq;
 		
-		voices[voice].updateIncrement(+1);
+		voices[voice].updateIncrement(voices[voice].sampleIncrement < 0 ? -1 : +1);
 	}
 	audioStream->unlock();
 }
@@ -426,7 +461,7 @@ int AudioStream_VoiceMixer::Provide(int numSamples, AudioSample* __restrict buff
 						{
 							if (voice.sampleIncrement > 0)
 							{
-								if (sampleIndex >= voice.sample->loop_end)
+								if (sampleIndex > voice.sample->loop_end)
 								{
 								#if 1
 									const int64_t delta = voice.position - (int64_t(voice.sample->loop_end) << 16);
@@ -435,7 +470,7 @@ int AudioStream_VoiceMixer::Provide(int numSamples, AudioSample* __restrict buff
 									
 									sampleIndex = voice.position >> 16;
 								#else
-									sampleIndex = voice.sample->loop_end - 1;
+									sampleIndex = voice.sample->loop_end;
 								#endif
 								
 									voice.sampleIncrement = -voice.sampleIncrement;

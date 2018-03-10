@@ -62,7 +62,7 @@ static inline int ABS(int x) { return x < 0 ? -x : +x; }
 #define PLAYMODE_LOOP 0x1
 #define PLAYMODE_BIDIR 0x2
 
-#define BPM_TO_TIMER(x) (1000000 * 60 / (x))
+#define BPM_TO_TIMER(x) ((1000000 * 60) / (x))
 
 //
 
