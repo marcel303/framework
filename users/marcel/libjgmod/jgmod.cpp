@@ -168,52 +168,52 @@ int main(int argc, char **argv)
 	{
         framework.process();
 		
-		if (keyboard.wentDown(SDLK_LEFT))
+		if (keyboard.wentDown(SDLK_LEFT, true))
 			prev_mod_track();
-		if (keyboard.wentDown(SDLK_RIGHT))
+		if (keyboard.wentDown(SDLK_RIGHT, true))
 			next_mod_track();
 		
-		if (keyboard.wentDown(SDLK_PLUS))
+		if (keyboard.wentDown(SDLK_PLUS, true))
 			set_mod_volume(get_mod_volume() + 5);
-		if (keyboard.wentDown(SDLK_MINUS))
+		if (keyboard.wentDown(SDLK_MINUS, true))
 			set_mod_volume(get_mod_volume() - 5);
 		
-		if (keyboard.wentDown(SDLK_F1))
+		if (keyboard.wentDown(SDLK_F1, true))
 			set_mod_speed (mi.speed_ratio - 5);
-		if (keyboard.wentDown(SDLK_F2))
+		if (keyboard.wentDown(SDLK_F2, true))
 			set_mod_speed (mi.speed_ratio + 5);
-		if (keyboard.wentDown(SDLK_F3))
+		if (keyboard.wentDown(SDLK_F3, true))
 			set_mod_pitch (mi.pitch_ratio - 5);
-		if (keyboard.wentDown(SDLK_F4))
+		if (keyboard.wentDown(SDLK_F4, true))
 			set_mod_pitch (mi.pitch_ratio + 5);
-		if (keyboard.wentDown(SDLK_F5))
+		if (keyboard.wentDown(SDLK_F5, true))
 			note_length++;
 		
-		if (keyboard.wentDown(SDLK_F6))
+		if (keyboard.wentDown(SDLK_F6, true))
 		{
 			note_length--;
 			if (note_length <= 0)
 				note_length = 1;
 		}
-		if (keyboard.wentDown(SDLK_F7))
+		if (keyboard.wentDown(SDLK_F7, true))
 		{
 			note_relative_pos -= 2;
 			if (note_relative_pos < -300)
 				note_relative_pos = -300;
 		}
-		if (keyboard.wentDown(SDLK_F8))
+		if (keyboard.wentDown(SDLK_F8, true))
 		{
 			note_relative_pos += 2;
 			if (note_relative_pos > 300)
 				note_relative_pos = 300;
 		}
 		
-		if (keyboard.wentDown(SDLK_r))
+		if (keyboard.wentDown(SDLK_r, true))
 			play_mod (the_mod, TRUE);
-		if (keyboard.wentDown(SDLK_p))
+		if (keyboard.wentDown(SDLK_p, true))
 			toggle_pause_mode ();
 		
-		if (keyboard.wentDown(SDLK_DOWN))
+		if (keyboard.wentDown(SDLK_DOWN, true))
 		{
 			if (the_mod->no_chn > 33)
 			{
@@ -224,7 +224,7 @@ int main(int argc, char **argv)
 				start_chn = end_chn - 33;
 			}
 		}
-		if (keyboard.wentDown(SDLK_UP))
+		if (keyboard.wentDown(SDLK_UP, true))
 		{
 			if (the_mod->no_chn > 33)
 			{
