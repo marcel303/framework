@@ -238,10 +238,6 @@ struct VoiceInfo
 
 static VoiceInfo voices[MAX_VOICES];
 
-void reserve_voices(int digi_voices, int midi_voices)
-{
-}
-
 int allocate_voice(SAMPLE * sample)
 {
 	int result = -1;
@@ -256,6 +252,9 @@ int allocate_voice(SAMPLE * sample)
 				
 				voices[i].used = 1;
 				voices[i].sample = sample;
+				voices[i].frequency = sample->freq;
+				
+				voices[i].updateIncrement(+1);
 				
 				result = i;
 				
@@ -279,6 +278,9 @@ void reallocate_voice(int voice, SAMPLE * sample)
 		
 		voices[voice].used = 1;
 		voices[voice].sample = sample;
+		voices[voice].frequency = sample->freq;
+		
+		voices[voice].updateIncrement(+1);
 	}
 	audioStream->unlock();
 }
@@ -337,6 +339,8 @@ int voice_get_frequency(int voice)
 
 void voice_set_volume(int voice, int volume)
 {
+	Assert(volume >= 0 && volume <= 255);
+	
 	if (voice == -1)
 		return;
 	
@@ -389,6 +393,8 @@ void voice_set_frequency(int voice, int freq)
 
 void voice_set_pan(int voice, int pan)
 {
+	Assert(pan >= 0 && pan <= 255);
+	
 	if (voice == -1)
 		return;
 	

@@ -37,7 +37,6 @@ void remove_int(void (*proc)());
 
 void set_volume(int, int);
 
-void reserve_voices(int digi_voices, int midi_voices);
 int allocate_voice(SAMPLE * sample);
 void reallocate_voice(int voice, SAMPLE * sample);
 void deallocate_voice(int voice);
