@@ -44,10 +44,61 @@ static OLD_CHN_INFO old_chn_info[MAX_ALLEG_VOICE];
 
 static int start_chn;
 static int end_chn;
-static int chn_reserved;
 static bool cp_circle = true;
 static int note_length = 130;
 static int note_relative_pos = 0;
+
+//
+
+static int do_load(const char * filename)
+{
+	if (the_mod)
+	{
+		stop_mod();
+		destroy_mod(the_mod);
+	}
+	
+	//
+	
+    the_mod = load_mod((char*)filename);
+	
+    if (the_mod == nullptr)
+	{
+        logError("%s", jgmod_error);
+        return 1;
+	}
+
+    start_chn = 0;
+    end_chn = the_mod->no_chn;
+	
+    if (end_chn > 33)
+        end_chn = 33;
+	
+    if (mi.flag & XM_MODE)
+        note_length = 180;
+    else
+        note_length = 140;
+	
+	set_mod_speed(starting_speed);
+    set_mod_pitch(starting_pitch);
+	
+	return TRUE;
+}
+
+static void handleAction(const std::string & action, const Dictionary & d)
+{
+	if (action == "filedrop")
+	{
+		auto file = d.getString("file", "");
+		
+		if (!file.empty())
+		{
+			do_load(file.c_str());
+			
+			play_mod(the_mod, TRUE);
+		}
+	}
+}
 
 //
 
@@ -79,25 +130,11 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-    the_mod = load_mod(argv[1]);
+	if (do_load(argv[1]) == FALSE)
+		return 1;
 	
-    if (the_mod == nullptr)
-	{
-        logError("%s", jgmod_error);
-        return 1;
-	}
-
-    if (the_mod->no_chn > MAX_ALLEG_VOICE)
-        chn_reserved = MAX_ALLEG_VOICE;
-    else
-        chn_reserved = the_mod->no_chn;
-
-    start_chn = 0;
-    end_chn = chn_reserved;
+	framework.actionHandler = handleAction;
 	
-    if (end_chn > 33)
-        end_chn = 33;
-
 	if (framework.init(0, nullptr, 640, 480) == false)
 	{
 		logError("failed to initialize framework");
@@ -106,8 +143,6 @@ int main(int argc, char **argv)
 	
 	setFont("unispace.ttf");
 	pushFontMode(FONT_SDF);
-	
-    reserve_voices(chn_reserved, -1);
 	
     if (install_sound(DIGI_AUTODETECT, MIDI_NONE, null) < 0)
 	{
@@ -121,20 +156,13 @@ int main(int argc, char **argv)
         old_chn_info[index].color = colorBlack;
 	}
 
-    if (install_mod(chn_reserved) < 0)
+    if (install_mod(MAX_ALLEG_VOICE) < 0)
 	{
-        logError("unable to allocate %d voices", chn_reserved);
+        logError("unable to allocate %d voices", MAX_ALLEG_VOICE);
         return 1;
 	}
-
-    set_mod_speed(starting_speed);
-    set_mod_pitch(starting_pitch);
-    play_mod(the_mod, TRUE);
 	
-    if (mi.flag & XM_MODE)
-        note_length = 180;
-    else
-        note_length = 140;
+    play_mod(the_mod, TRUE);
 
     while (is_mod_playing())
 	{
@@ -187,18 +215,18 @@ int main(int argc, char **argv)
 		
 		if (keyboard.wentDown(SDLK_DOWN))
 		{
-			if (chn_reserved > 33)
+			if (the_mod->no_chn > 33)
 			{
 				end_chn = start_chn + 33 + 1;
-				if (end_chn > chn_reserved)
-					end_chn = chn_reserved;
+				if (end_chn > the_mod->no_chn)
+					end_chn = the_mod->no_chn;
 
 				start_chn = end_chn - 33;
 			}
 		}
 		if (keyboard.wentDown(SDLK_UP))
 		{
-			if (chn_reserved > 33)
+			if (the_mod->no_chn > 33)
 			{
 				start_chn--;
 				if (start_chn < 0)
@@ -235,7 +263,7 @@ int main(int argc, char **argv)
 			drawText(0, 48, 12, +1, +1, "Global volume : %2d  User volume : %2d ", mi.global_volume, get_mod_volume());
 			drawText(0, 70, 12, +1, +1, "%03d-%02d-%02d    ", mi.trk, mi.pos, mi.tick < 0 ? 0 : mi.tick);
 
-			for (int index = 0; index < chn_reserved; ++index)
+			for (int index = 0; index < the_mod->no_chn; ++index)
 			{
 				if (old_chn_info[index].old_sample != ci[index].sample)
 					old_chn_info[index].color = Color::fromHSL((rand() % 68 + 32) / 100.f, .5f, .5f);
