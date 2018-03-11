@@ -366,6 +366,11 @@ void parse_note_command (int chn, int note)
         if ( (ci[chn].volenv.flg & ENV_ON) == 0)
             ci[chn].volume = 0;            
         }
+	
+    if (note == -3)
+        {
+        ci[chn].keyon = FALSE;
+        }
 
 }END_OF_FUNCTION (parse_note_command)
 

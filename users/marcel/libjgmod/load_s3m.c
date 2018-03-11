@@ -222,7 +222,7 @@ void convert_s3m_pitch (int *pitch)
 
     if (*pitch == 254)  // note cut
         {
-        *pitch = -1;
+        *pitch = -3; // note : check if this behavior is correct !
         return;
         }
 
