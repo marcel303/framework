@@ -1,0 +1,48 @@
+UNREAL
+------
+Unreal uses S3M and IT. JGMOD will only be able to load Unreal's S3M since
+JGMOD supports S3M but not IT.
+
+To search for Unreal music files, go to /music directory in Unreal cd-rom.
+That directory is full of files with UMX extension. There should be 32 UMX
+files. Below is a list of S3M files which JGMOD supports while the unlisted
+UMX files are IT files.
+
+
+Filename      Music name                       Channles used   Type
+------------  ------------------------------   -------------   -----
+CHIZRA1 .UMX  Chizra                            16              S3M
+CRATER  .UMX  Hub 7                             16              S3M
+DIGSH   .UMX  Shared Dig                        16              S3M
+DUSK    .UMX  Dusk Horizon                      16              S3M
+EVERSMOK.UMX  Bluff Eversmoking                 16              S3M
+FIFTH   .UMX  Hub 5                             16              S3M
+FOURTH  .UMX  hub 4                             16              S3M
+GUARDIAN.UMX  Guardian                          10              S3M
+ISOTOXIN.UMX  isotoxin - necros / fm            15              S3M
+K_VISION.UMX  Nightvision - Sandman/KFM         16              S3M
+NEWMCA13.UMX  Unreal #13 (By Michiel)           16              S3M
+NEWMCA16.UMX  Unreal #16 (By Michiel)           16              S3M
+NEWMCA7 .UMX  Unreal #7 (By Michiel)            16              S3M
+NEWMCA9 .UMX  Unreal #9 (By Michiel)            16              S3M
+SETI    .UMX  SETI                              15              S3M
+SKYTWN  .UMX  All Hallows Sunset                16              S3M
+SPIRE   .UMX  Hub 3                             16              S3M
+SURFACE .UMX  Surfacing                         16              S3M
+UNREAL4 .UMX  Erosion                           16              S3M
+UTEMPLE .UMX  Unreal Crypt                      16              S3M
+VORTEX  .UMX  Vortex Rikers                     16              S3M
+WARGATE .UMX  Wargate                           16              S3M
+WARLORD .UMX  Warlord Theme                     16              S3M
+
+
+
+UNREAL TOURNAMENT
+-----------------
+Of all the 30 musics found in UT, only 2 are non-IT type and of course, the
+rest are IT. How dissapointing. Only these 2 files are supported by JGMOD.
+
+Filename      Music name                       Channles used   Type
+------------  ------------------------------   -------------   -----
+MECH8   .UMX  mechanism eight - necros/         16              S3M
+FIREBR  .UMX                                    18              XM

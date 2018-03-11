@@ -1,0 +1,91 @@
+JGM format version 1 description by Guan Foo Wah in November 1998.
+Words, Dwords... are stored in Intel Format.
+sbyte = signed byte
+ 
+----------------------------------------------------------------
+
+**********************************
+* Here is the file format of JGM *
+**********************************
+
+Offset   Lenght     Type    Description 
+------   ------     ----    -----------
+0        18         (byte)  "JGMOD 01 module : "
+18       29         (byte)  Song name, padded with zeros
+47       1          (byte)  Ascii char 0x1A
+48       2          (word)  No Tracks
+50       2          (word)  No Patterns
+52       2          (word)  No Channels
+54       2          (word)  No Instruments
+56       2          (word)  No Samples
+58       2          (word)  Default Tempo
+60       2          (word)  Default BPM
+62       2          (word)  Global Volume
+64       2          (word)  Restart Position
+66       2          (word)  Flag
+68       no chn     (byte)  Panning positions
+??       no pat     (byte)  Pattern Table
+
+Total = 
+
+
+Instruments header (exists only if No Instruments > 0)
+------------------------------------------------------
+
+0        96         (byte)  Sample number for all notes
+96       48         (word)  Points for volume envelope
+144      1          (byte)  No points for volume envelope
+145      1          (byte)  Volume envelope type,  bit 0: On; 1: Sustain; 2: Loop
+146      1          (byte)  Volume sustain point
+147      1          (byte)  Volume loop start
+148      1          (byte)  Volume loop end
+
+149      48         (word)  Points for panning envelope
+197      1          (byte)  No points for panning envelope
+198      1          (byte)  Panning envelope type, bit 0: On; 1: Sustain; 2: Loop
+199      1          (byte)  Panning sustain point
+200      1          (byte)  Panning loop start
+201      1          (byte)  Panning loop end
+
+202      2          (word)  Volume fadeout
+
+Total = 204 bytes
+
+
+
+Sample header (exists only if No Samples > 0)
+---------------------------------------------
+
+0   4               (dword) Sample length (in samples)
+
+if (sample lenght > 0)
+4       4           (dword) Sample loop start (in samples)
+8       4           (dword) Sample loop end (in samples)
+12      1           (byte)  Vibrato Type
+13      1           (byte)  Vibrato Speed
+14      1           (byte)  Vibrato Depth
+15      1           (byte)  Vibrato Rate
+16      1           (byte)  Volume
+17      1           (byte)  Panning
+18      1           (sbyte) Transpose
+19      2           (word)  Finetune / C2spd
+21      1           (byte)  Sample bit (8 or 16)
+22      1           (byte)  Sample loop type (0 = off, 1 = loop, 2 = Bidi)
+23      ?           ??      Unsigned raw sample data
+
+Total = 23 + Sample Lenght
+
+
+Pattern header (exists only if No Patterns > 0)
+-----------------------------------------------
+0       2           (word)  No rows
+
+2       ??          (byte   Note info
+                    /word )
+??      ??          (byte)  Instrument info
+??      ??          (byte)  Volume info
+??      ??          (byte)  Command info
+??      ??          (byte)  Extcommand info
+
+I am kinda lazy to write the rest. You can check save_jgm.c to see how
+I save the patterns. :-)

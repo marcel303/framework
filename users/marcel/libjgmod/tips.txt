@@ -1,0 +1,90 @@
+--------------
+Tips and Hints
+--------------
+
+1. set_volume
+   ----------
+   Since it uses Allegro Digital Routines, whenever set_volume() is called,
+   the volume of the mod music also will be affected. You can simulate a
+   software volume mixing easily. Just don't use set_volume. This is
+   demonstrated in ex3.c.
+
+   If your mods use a lot of channel (say 16), it will get too loud and might
+   bury your sfx. To make your sfx more audible, reduce the mod volume or
+   amplify the WAV using some WAV editor.
+
+2. reserve_voices ()
+   -----------------
+   install_sound (DIGI_NONE, dont'care) is used on a computer with no sound
+   card, it will return 0 which means Allegro has initialize your nosound
+   card (and driver) sucessfully.
+
+   But if it is used with reserve_voices() on the same machine,
+   install_sound() might fail depending on the values pass into
+   reserve_voices(). For example
+
+        reserve_voices (8, -1);
+        install_sound (DIGI_NONE, don't care); // this will definetely fail!!
+
+    You might have been wondering by now why care for DIGI_NONE when most
+    of the computers have sound cards. Well, almost all computers while some
+    sound cards doesn't work with allegro (non SB compatible). Most of you
+    guys use DIGI_AUTODETECT which means Allegro will detect what kind of
+    sound card you have and choose an appropriate driver to use. Since
+    Allegro could not use or find the sound card on that computer, DIGI_NONE
+    driver is the best solution. So to counter this problem, set
+    reserve_voices (-1, -1) and reinitialize the driver after install_sound()
+    fails. Here is an example :-
+
+      reserve_voices (8, -1);
+      temp = install_sound (DIGI_AUTODETECT, dont care); // will fail if
+                                                         // DIGI_NONE is used
+      if (temp != 0)    // failed
+        {        
+        reserve_voices (-1, -1); // default voices
+        temp = install_sound (DIGI_AUTODETECT, dont care);
+        if (temp != 0)
+            {
+            // failing again is very unlikely. But test it to be save.
+            // exit the program or do whatever you want.
+            }
+        }
+
+ 3. Datafile support
+   ----------------
+   There are two methods of loading MODs from datafile. 
+
+        Method 1
+        --------
+        This method can load anykind of MODs supported by JGMOD but can
+        be very slow especially on S3M and XM. Just grab any MOD supported
+        by JGMOD in to datafile as a binary file or data and name it
+        whatever you like (lets assume it is called NAME). Save your datafile
+        to whatever name you like (assume mod.dat). To load the mod from
+        the datafile, just use the codes below. (See ex4.c)
+
+
+            the_mod = load_mod (mod.dat#NAME);
+
+        But bewere... If your datafile is globally compressed, loading a S3M
+        or XM could really slow down to a craw especially on XM.
+
+        Method 2
+        --------
+        This method is fast even on a globally compressed datfile. However
+        this method can only load JGM, a kind of MOD format. Use JGM.EXE
+        to convert any supported MOD format to JGM format.
+
+        Then grab the JGM to an Allegro datafile as Other (of type "JGM").
+        In the source code, you should load the datafile after calling
+        install_mod (). (see ex5.c)
+
+        However, if you want to load the datafile before
+        calling the install_mod for whatever reasons, include the code below
+        before you load the datafile. (see ex6.c)
+
+            register_datafile_jgmod();
+        
+        The reason you don't need to register_datafile_object if you load
+        a datafile after install_mod() is because install_mod() will
+        automatically do this for you.
