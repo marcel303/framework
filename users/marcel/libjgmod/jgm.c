@@ -10,12 +10,8 @@
  *
  *  For converting MODs to JGM  */
 
-#define USE_CONSOLE
-
 #include <stdio.h>
 #include <string.h>
-#include "framework-allegro2.h"
-//#include "allegro.h"
 #include "jgmod.h"
 #include "file_io.h"
 
@@ -32,7 +28,6 @@ int main (int argc, char **argv)
     fast_loading = FALSE;
     enable_m15 = TRUE;
 
-    allegro_init();
     setvbuf(stdout, null, _IONBF, 0);
 
     if (argc != 2)
