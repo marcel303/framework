@@ -192,7 +192,7 @@ Vec3 Mechanism::evaluatePoint(const int ringIndex, const float angle) const
 	return matrix * (p * radius);
 }
 
-void Mechanism::drawGizmo(const float radius, const float thickness)
+void Mechanism::drawGizmo(const float radius, const float thickness) const
 {
 	drawCircle(0, 0, radius, 100);
 	//drawThickCircle(radius - thickness, radius + thickness, 100);
@@ -201,7 +201,7 @@ void Mechanism::drawGizmo(const float radius, const float thickness)
 	drawTubeCircle(radius, thickness, 100, 10);
 }
 
-void Mechanism::draw_solid()
+void Mechanism::draw_solid() const
 {
 	gxPushMatrix();
 	{

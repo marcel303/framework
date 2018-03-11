@@ -32,7 +32,7 @@ struct Mechanism
 	void evaluateMatrix(const int ringIndex, Mat4x4 & matrix, float & radius) const;
 	Vec3 evaluatePoint(const int ringIndex, const float angle) const;
 	
-	void drawGizmo(const float radius, const float thickness);
+	void drawGizmo(const float radius, const float thickness) const;
 
-	void draw_solid();
+	void draw_solid() const;
 };

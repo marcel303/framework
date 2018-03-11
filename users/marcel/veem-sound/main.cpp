@@ -15,6 +15,7 @@
 #include "thermalizer.h"
 
 #define ENABLE_AUDIO 1
+#define DO_AUDIODEVICE_SELECT (ENABLE_AUDIO && 0)
 
 const int GFX_SX = 1100;
 const int GFX_SY = 740;
@@ -218,7 +219,40 @@ struct VfxNodeMechanism : VfxNodeBase
 	
 	virtual void draw() const override
 	{
-	
+		setColor(colorWhite);
+		mechanism.draw_solid();
+
+		for (int ring = 0; ring <= 3; ++ring)
+		{
+			for (int i = 0; i < 10; ++i)
+			{
+				gxPushMatrix();
+				{
+					const float angle = framework.time / (i / 10.f + 2.f);
+					
+				#if 1
+					Mat4x4 matrix;
+					float radius;
+					
+					mechanism.evaluateMatrix(ring, matrix, radius);
+					
+					gxMultMatrixf(matrix.m_v);
+					gxScalef(radius, radius, radius);
+					gxRotatef(angle / M_PI * 180.f, 0, 0, 1);
+					gxTranslatef(1.f, 0.f, 0.f);
+					gxRotatef(90, 1, 0, 0);
+				#else
+					const Vec3 p = mechanism.evaluatePoint(ring, angle);
+					gxTranslatef(p[0], p[1], p[2]);
+				#endif
+					
+					setColor(colorGreen);
+					const float s = .05f;
+					drawTubeCircle(s, .01f, 100, 10);
+				}
+				gxPopMatrix();
+			}
+		}
 	}
 };
 
@@ -432,6 +466,8 @@ VFX_NODE_TYPE(VfxNodeThermalizer)
 
 //
 
+#if DO_AUDIODEVICE_SELECT
+
 #include "../libparticle/ui.h"
 
 #if LINUX
@@ -497,6 +533,8 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 	return result;
 }
 
+#endif
+
 int main(int argc, char * argv[])
 {
 	framework.enableDepthBuffer = true;
@@ -516,12 +554,12 @@ int main(int argc, char * argv[])
 	fillPcmDataCache("ogg-lp7000", false, false);
 #endif
 
-	int inputDeviceIndex = paNoDevice;
-	int outputDeviceIndex = paNoDevice;
+	int inputDeviceIndex = -1;
+	int outputDeviceIndex = -1;
 	
 	bool outputStereo = true;
 	
-#if ENABLE_AUDIO
+#if DO_AUDIODEVICE_SELECT
 	if (Pa_Initialize() == paNoError)
 	{
 		UiState uiState;
@@ -606,19 +644,18 @@ int main(int argc, char * argv[])
 	GraphEdit graphEdit(GFX_SX, GFX_SY, &typeDefinitionLibrary, &realTimeConnection);
 	graphEdit.load("control.xml");
 	
-	Mechanism mechanism;
-	s_mechanism = &mechanism;
+	//Mechanism mechanism;
+	//s_mechanism = &mechanism;
 	
-	Thermalizer thermalizer;
-	thermalizer.init(256);
+	//Thermalizer thermalizer;
+	//thermalizer.init(256);
 	
 	Camera3d camera;
 	camera.gamepadIndex = 0;
 	camera.position[2] = -2.f;
 	
-	bool drawMechanism = true;
-	bool drawThermalizer = true;
-	bool showEditor = true;
+	//bool drawMechanism = true;
+	//bool drawThermalizer = true;
 	
 	std::vector<AudioGraphInstance*> instances;
 	
@@ -648,6 +685,7 @@ int main(int argc, char * argv[])
 		
 		const float dt = framework.timeStep;
 		
+	#if 0
 		mechanism.xAngleSpeed = scaled_octave_noise_2d(8, .5f, .01f, -90.f, +90.f, 0.f, framework.time);
 		mechanism.yAngleSpeed = scaled_octave_noise_2d(8, .5f, .01f, -90.f, +90.f, 1.f, framework.time);
 		mechanism.zAngleSpeed = scaled_octave_noise_2d(8, .5f, .01f, -90.f, +90.f, 2.f, framework.time);
@@ -655,7 +693,8 @@ int main(int argc, char * argv[])
 		mechanism.tick(dt * 10.f);
 		
 		thermalizer.tick(dt);
-		
+	#endif
+	
 		bool inputIsCaptured = false;
 		
 	#if ENABLE_AUDIO
@@ -692,6 +731,7 @@ int main(int argc, char * argv[])
 	
 		camera.tick(dt, !inputIsCaptured && !keyboard.isDown(SDLK_RSHIFT));
 		
+	#if 0
 		if (inputIsCaptured == false)
 		{
 			if (keyboard.wentDown(SDLK_m))
@@ -700,6 +740,7 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_t))
 				drawThermalizer = !drawThermalizer;
 		}
+	#endif
 		
 		g_oscEndpointMgr.tick();
 		
@@ -732,6 +773,7 @@ int main(int argc, char * argv[])
 				glEnable(GL_DEPTH_TEST);
 				glDepthFunc(GL_LESS);
 				{
+				#if 0
 					if (drawMechanism)
 					{
 						setColor(colorWhite);
@@ -762,16 +804,14 @@ int main(int argc, char * argv[])
 								#endif
 									
 									setColor(colorGreen);
-									const float s1 = .05f;
-									const float s2 = .06f;
-									//drawRect(-s, -s, +s, +s);
-									//drawThickCircle(s1, s2, 100);
-									drawTubeCircle(s1, .01f, 100, 10);
+									const float s = .05f;
+									drawTubeCircle(s, .01f, 100, 10);
 								}
 								gxPopMatrix();
 							}
 						}
 					}
+				#endif
 				}
 				glDisable(GL_DEPTH_TEST);
 			}
@@ -779,6 +819,7 @@ int main(int argc, char * argv[])
 			
 			projectScreen2d();
 			
+		#if 0
 			if (drawThermalizer)
 			{
 				gxPushMatrix();
@@ -790,6 +831,7 @@ int main(int argc, char * argv[])
 				}
 				gxPopMatrix();
 			}
+		#endif
 			
 			vfxGraph->draw(GFX_SX, GFX_SY);
 			
