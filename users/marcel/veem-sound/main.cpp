@@ -827,8 +827,8 @@ int main(int argc, char * argv[])
 		#endif
 		
 			setColor(200, 200, 200);
-			drawText(GFX_SX - 70, GFX_SY - 130, 17, -1, -1, "made using framework & audioGraph");
-			drawText(GFX_SX - 70, GFX_SY - 110, 17, -1, -1, "http://centuryofthecat.nl");
+			drawText(GFX_SX - 70, GFX_SY - 150, 17, -1, -1, "made using framework & audioGraph");
+			drawText(GFX_SX - 70, GFX_SY - 130, 17, -1, -1, "http://centuryofthecat.nl");
 			
 			popFontMode();
 		}
