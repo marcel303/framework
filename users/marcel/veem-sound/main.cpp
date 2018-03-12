@@ -14,6 +14,8 @@
 #include "mechanism.h"
 #include "thermalizer.h"
 
+#include "../libparticle/ui.h"
+
 #define ENABLE_AUDIO 1
 #define DO_AUDIODEVICE_SELECT (ENABLE_AUDIO && 0)
 
@@ -300,7 +302,14 @@ struct ControlWindow
 		{
 			for (auto & file : s_audioGraphMgr->files)
 			{
-				files.push_back(file.first);
+				bool isActive = false;
+				
+				for (auto & instance : file.second->instanceList)
+					if (instance->audioGraph != nullptr)
+						isActive = true;
+				
+				if (isActive)
+					files.push_back(file.first);
 			}
 		}
 		SDL_UnlockMutex(s_audioMutex);
@@ -440,6 +449,9 @@ struct VfxNodeThermalizer : VfxNodeBase
 		{
 			heatData.data[i] = float(thermalizer.heat[i]);
 			bangData.data[i] = float(thermalizer.bang[i]);
+			
+			if (bangData.data[i] < 1.f / 10000.f)
+				bangData.data[i] = 0.f;
 		}
 		
 		heatOutput.setData(heatData.data, true, heatData.size);
@@ -464,6 +476,66 @@ VFX_NODE_TYPE(VfxNodeThermalizer)
 	out("draw", "draw");
 	out("heat", "channel");
 	out("bang", "channel");
+}
+
+//
+
+struct AudioNodeRandom : AudioNodeBase
+{
+	enum Input
+	{
+		kInput_Min,
+		kInput_Max,
+		kInput_NumSteps,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	AudioFloat valueOutput;
+	
+	AudioNodeRandom()
+		: AudioNodeBase()
+		, valueOutput(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Min, kAudioPlugType_Float);
+		addInput(kInput_Max, kAudioPlugType_Float);
+		addInput(kInput_NumSteps, kAudioPlugType_Int);
+		addOutput(kOutput_Value, kAudioPlugType_FloatVec, &valueOutput);
+	}
+	
+	virtual void init(const GraphNode & node) override
+	{
+		const float min = getInputFloat(kInput_Min, 0.f);
+		const float max = getInputFloat(kInput_Max, 1.f);
+		const int numSteps = getInputInt(kInput_NumSteps, 0);
+		
+		if (numSteps <= 0)
+		{
+			valueOutput.setScalar(random(min, max));
+		}
+		else
+		{
+			const int t = rand() % numSteps;
+			
+			valueOutput.setScalar(min + (max - min) * (t + .5f) / numSteps);
+		}
+	}
+};
+
+AUDIO_NODE_TYPE(random, AudioNodeRandom)
+{
+	typeName = "random";
+	
+	in("min", "float");
+	in("max", "float", "1");
+	in("numSteps", "int");
+	out("value", "audioValue");
 }
 
 //
@@ -544,6 +616,8 @@ int main(int argc, char * argv[])
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
+	initUi();
+	
 #if ENABLE_AUDIO
 	fillPcmDataCache("humans", false, false);
 	fillPcmDataCache("outside", false, false);
@@ -616,7 +690,8 @@ int main(int argc, char * argv[])
 	s_audioMutex = audioMutex;
 	
 	AudioVoiceManager4D voiceMgr;
-	voiceMgr.init(audioMutex, 16, 16);
+	//voiceMgr.init(audioMutex, 16, 16);
+	voiceMgr.init(audioMutex, 128, 128); // fixme
 	voiceMgr.outputStereo = outputStereo;
 	s_voiceMgr = &voiceMgr;
 	
