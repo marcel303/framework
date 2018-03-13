@@ -14,6 +14,9 @@
 
 #define RAMP_DURATION_IN_SAMPLES 10000
 
+#define PLAYER_WAIT_MIN .5f
+#define PLAYER_WAIT_MAX 1.f
+
 const int GFX_SX = 640;
 const int GFX_SY = 480;
 
@@ -45,7 +48,15 @@ static bool s_record = false;
 
 struct Player
 {
-	bool active = false;
+	enum State
+	{
+		kState_Idle,
+		kState_Wait,
+		kState_Play
+	};
+	
+	State state = kState_Idle;
+	float stateTime = 0.f;
 	
 	int channel = 0;
 	int recording = 0;
@@ -74,20 +85,31 @@ struct MyPortAudioHandler : PortAudioHandler
 			{
 				auto & player = s_players[p];
 				
-				if (player.active == false)
+				if (player.state == Player::kState_Idle)
 				{
 					if (!s_recordings.empty())
 					{
-						player.active = true;
-						
+						player.state = Player::kState_Wait;
+						player.stateTime = random(PLAYER_WAIT_MIN, PLAYER_WAIT_MAX);
+						break;
+					}
+				}
+				else if (player.state == Player::kState_Wait)
+				{
+					player.stateTime = std::max(0.f, player.stateTime - AUDIO_UPDATE_SIZE / float(SAMPLE_RATE));
+					
+					if (player.stateTime == 0.f)
+					{
 						player.channel = p;
 						player.recording = rand() % s_recordings.size();
 						player.position = 0;
 						player.ramp = 0.f;
+						
+						player.state = Player::kState_Play;
+						break;
 					}
 				}
-				
-				if (player.active)
+				else if (player.state == Player::kState_Play)
 				{
 					auto & recording = s_recordings[player.recording];
 					
@@ -95,8 +117,7 @@ struct MyPortAudioHandler : PortAudioHandler
 					{
 						if (player.position == recording.samples.size())
 						{
-							player.active = false;
-							
+							player.state = Player::kState_Idle;
 							break;
 						}
 						
@@ -106,7 +127,7 @@ struct MyPortAudioHandler : PortAudioHandler
 						}
 						else
 						{
-							player.ramp = std::max(0.f, player.ramp + 1.f / RAMP_DURATION_IN_SAMPLES);
+							player.ramp = std::max(0.f, player.ramp - 1.f / RAMP_DURATION_IN_SAMPLES);
 						}
 						
 						const float value = recording.samples[player.position] * player.ramp;
@@ -131,9 +152,11 @@ struct MyPortAudioHandler : PortAudioHandler
 					
 					const short * src = (short*)example.soundData->sampleData;
 					
-					const float value = src[s_examplePosition];
+					const float value = src[s_examplePosition * 2] / float(1 << 15);
 					
-					dst[s_examplePosition * CHANNEL_COUNT + INSTRUCTION_CHANNEL] += value;
+					dst[i * CHANNEL_COUNT + INSTRUCTION_CHANNEL] += value;
+					
+					s_examplePosition++;
 				}
 			}
 			
@@ -366,7 +389,7 @@ int main(int argc, char * argv[])
 			continue;
 		}
 		
-		if (e.soundData->channelSize != 16 || e.soundData->channelCount != 1)
+		if (e.soundData->channelSize != 2 || e.soundData->channelCount != 2)
 		{
 			handleError("Failed to load instructional audio file (%s). Audio must be encoded as 16-bit, mono", filename.c_str());
 			continue;
