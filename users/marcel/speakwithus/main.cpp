@@ -6,8 +6,10 @@
 
 #include <ctime>
 
-#define CHANNEL_COUNT 2
+#define MAX_CHANNEL_COUNT 10
+#define MAX_PLAYER_COUNT MAX_CHANNEL_COUNT
 
+static int CHANNEL_COUNT = 0;
 #define PLAYER_COUNT CHANNEL_COUNT
 
 #define INSTRUCTION_CHANNEL 0
@@ -40,6 +42,8 @@ struct Recording
 
 static AudioMutex s_mutex;
 
+static int kRepaintEvent = -1;
+
 static Recording s_recording;
 
 static std::vector<Recording> s_recordings;
@@ -65,7 +69,7 @@ struct Player
 	float ramp = 0.f;
 };
 
-static Player s_players[PLAYER_COUNT];
+static Player s_players[MAX_PLAYER_COUNT];
 
 struct MyPortAudioHandler : PortAudioHandler
 {
@@ -246,6 +250,32 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 		doDropdown(outputDeviceIndex, "Output", outputDevices);
 		
 		doBreak();
+	}
+	popMenu();
+	
+	return result;
+}
+
+static bool doConfigMenu(const bool tick, const bool draw, const float dt, int & numChannels)
+{
+	bool result = false;
+	
+	pushMenu("config");
+	{
+		std::vector<EnumValue> numChannelsEnum;
+		numChannelsEnum.push_back(EnumValue(2, "Two"));
+		numChannelsEnum.push_back(EnumValue(3, "Three"));
+		numChannelsEnum.push_back(EnumValue(4, "Four"));
+		numChannelsEnum.push_back(EnumValue(5, "Five"));
+		numChannelsEnum.push_back(EnumValue(6, "Six"));
+		numChannelsEnum.push_back(EnumValue(7, "Sevent"));
+		numChannelsEnum.push_back(EnumValue(8, "Eight"));
+		numChannelsEnum.push_back(EnumValue(9, "Nine"));
+		numChannelsEnum.push_back(EnumValue(10, "Ten"));
+		
+		doDropdown(numChannels, "Output channels", numChannelsEnum);
+		
+		doBreak();
 		
 		if (doButton("OK"))
 		{
@@ -318,6 +348,57 @@ static void endRecording()
 	}
 }
 
+static void loadRecordings()
+{
+	auto filenames = listFiles(".", false);
+	
+	for (auto & filename : filenames)
+	{
+		if (Path::GetExtension(filename, true) == "pcm")
+		{
+			framework.process();
+			
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				setFont("calibri.ttf");
+				drawText(GFX_SX/2, GFX_SY/2, 16, 0, 0, "Loading %s", filename.c_str());
+			}
+			framework.endDraw();
+			
+			//
+			
+			FILE * file = fopen(filename.c_str(), "rb");
+			
+			if (file != nullptr)
+			{
+				// load source from file
+
+				fseek(file, 0, SEEK_END);
+				const size_t size = ftell(file);
+				fseek(file, 0, SEEK_SET);
+				
+				if (size != 0 && (size % 4) == 0)
+				{
+					const size_t numSamples = size / 4;
+					
+					Recording r;
+					r.samples.resize(numSamples);
+					
+					float * samples = &r.samples[0];
+
+					if (fread(samples, 4, numSamples, file) == numSamples)
+					{
+						s_recordings.push_back(r);
+					}
+				}
+				
+				fclose(file);
+				file = nullptr;
+			}
+		}
+	}
+}
+
 int main(int argc, char * argv[])
 {
 	changeDirectory(SDL_GetBasePath());
@@ -332,8 +413,11 @@ int main(int argc, char * argv[])
 	
 	s_mutex.init();
 	
+	kRepaintEvent = SDL_RegisterEvents(1);
+	
 	int inputDeviceIndex = paNoDevice;
 	int outputDeviceIndex = paNoDevice;
+	int numChannels = 2;
 	
 	UiState uiState;
 	uiState.sx = 400;
@@ -346,15 +430,22 @@ int main(int argc, char * argv[])
 		
 		framework.process();
 		
+		framework.waitForEvents = false;
+		
 		framework.beginDraw(100, 100, 100, 0);
 		{
 			makeActive(&uiState, true, true);
 			
 			if (doPaMenu(true, true, framework.timeStep, inputDeviceIndex, outputDeviceIndex))
 				break;
+			
+			if (doConfigMenu(true, true, framework.timeStep, numChannels))
+				break;
 		}
 		framework.endDraw();
 	}
+	
+	CHANNEL_COUNT = numChannels;
 	
 	if (inputDeviceIndex == paNoDevice || outputDeviceIndex == paNoDevice)
 	{
@@ -362,15 +453,7 @@ int main(int argc, char * argv[])
 		return -1;
 	}
 	
-	MyPortAudioHandler paHandler;
-	
-	PortAudioObject pa;
-	
-	if (!pa.init(SAMPLE_RATE, CHANNEL_COUNT, 1, AUDIO_UPDATE_SIZE, &paHandler, inputDeviceIndex, outputDeviceIndex))
-	{
-		handleError("Failed to initialize audio input and/or output device");
-		return -1;
-	}
+	loadRecordings();
 	
 	auto exampleFilenames = listFiles(".", false);
 	
@@ -378,6 +461,17 @@ int main(int argc, char * argv[])
 	{
 		if (Path::GetExtension(filename, true) != "ogg")
 			continue;
+		
+		framework.process();
+	
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			setFont("calibri.ttf");
+			drawText(GFX_SX/2, GFX_SY/2, 16, 0, 0, "Loading %s", filename.c_str());
+		}
+		framework.endDraw();
+		
+		//
 		
 		Example e;
 		e.filename = filename;
@@ -407,6 +501,20 @@ int main(int argc, char * argv[])
 		handleError("Failed to find any example/instructional audio files");
 		return -1;
 	}
+	
+	MyPortAudioHandler paHandler;
+	
+	PortAudioObject pa;
+	
+	if (!pa.init(SAMPLE_RATE, CHANNEL_COUNT, 1, AUDIO_UPDATE_SIZE, &paHandler, inputDeviceIndex, outputDeviceIndex))
+	{
+		handleError("Failed to initialize audio input and/or output device");
+		return -1;
+	}
+	
+	SDL_Event e;
+	e.type = kRepaintEvent;
+	SDL_PushEvent(&e);
 	
 	for (;;)
 	{
@@ -517,20 +625,38 @@ int main(int argc, char * argv[])
 			
 			if (s_record)
 			{
-				drawText(GFX_SX/2, GFX_SY/2 + 40, 16, 0, 0, "recording in progress..");
+				drawText(GFX_SX/2, GFX_SY/2 + 40, 16, 0, 0, "Recording in progress..");
 			}
 			
+		#if 0
 			int index = 0;
 			
 			for (auto & r : s_recordings)
 			{
-				drawText(GFX_SX/2, GFX_SY/2 + 60 + index * 20, 16, 0, 0, "recording. length = %d", r.samples.size());
+				drawText(GFX_SX/2, GFX_SY/2 + 60 + index * 20, 16, 0, 0, "Recording %d. Length = %d", index + 1, r.samples.size());
 				
 				index++;
 			}
+		#endif
 		}
 		framework.endDraw();
 	}
+	
+	pa.shut();
+	
+	s_mutex.lock();
+	{
+		s_recordings.clear();
+	}
+	s_mutex.unlock();
+	
+	s_mutex.shut();
+	
+	shutUi();
+	
+	Font("calibri.ttf").saveCache();
+	
+	framework.shutdown();
 	
 	return 0;
 }
