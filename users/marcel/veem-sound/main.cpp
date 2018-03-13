@@ -17,7 +17,9 @@
 #include "../libparticle/ui.h"
 
 #define ENABLE_AUDIO 1
-#define DO_AUDIODEVICE_SELECT (ENABLE_AUDIO && 0)
+#define DO_AUDIODEVICE_SELECT (ENABLE_AUDIO && 1)
+
+#define CHANNEL_COUNT 4
 
 const int GFX_SX = 1100;
 const int GFX_SY = 740;
@@ -690,8 +692,7 @@ int main(int argc, char * argv[])
 	s_audioMutex = audioMutex;
 	
 	AudioVoiceManager4D voiceMgr;
-	//voiceMgr.init(audioMutex, 16, 16);
-	voiceMgr.init(audioMutex, 128, 128); // fixme
+	voiceMgr.init(audioMutex, CHANNEL_COUNT, CHANNEL_COUNT);
 	voiceMgr.outputStereo = outputStereo;
 	s_voiceMgr = &voiceMgr;
 	
@@ -705,7 +706,7 @@ int main(int argc, char * argv[])
 	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
 	
 	PortAudioObject paObject;
-	paObject.init(SAMPLE_RATE, outputStereo ? 2 : 16, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);
+	paObject.init(SAMPLE_RATE, outputStereo ? 2 : CHANNEL_COUNT, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);
 
 	g_vfxAudioMutex = audioMutex;
 	g_vfxAudioVoiceMgr = &voiceMgr;
