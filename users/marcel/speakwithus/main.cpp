@@ -6,7 +6,7 @@
 
 #include <ctime>
 
-#define MAX_CHANNEL_COUNT 10
+#define MAX_CHANNEL_COUNT 64
 #define MAX_PLAYER_COUNT MAX_CHANNEL_COUNT
 
 static int CHANNEL_COUNT = 0;
@@ -208,7 +208,7 @@ static void handleError(const char * format, ...)
 
 #include "../../../libparticle/ui.h"
 
-static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inputDeviceIndex, int & outputDeviceIndex)
+static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inputDeviceIndex, int & outputDeviceIndex, int & numOutputChannels)
 {
 	bool result = false;
 	
@@ -253,26 +253,22 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 		doDropdown(inputDeviceIndex, "Input", inputDevices);
 		doDropdown(outputDeviceIndex, "Output", outputDevices);
 		
-		doBreak();
-	}
-	popMenu();
-	
-	return result;
-}
-
-static bool doConfigMenu(const bool tick, const bool draw, const float dt, int & numChannels)
-{
-	bool result = false;
-	
-	pushMenu("config");
-	{
-		doTextBox(numChannels, "Output channels", dt);
-		doBreak();
-		
-		if (doButton("OK"))
+		if (tick)
 		{
-			result = true;
+			if (outputDeviceIndex == paNoDevice)
+				numOutputChannels = 0;
+			else
+			{
+				const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(outputDeviceIndex);
+				
+				if (deviceInfo == nullptr)
+					numOutputChannels = 0;
+				else
+					numOutputChannels = deviceInfo->maxOutputChannels;
+			}
 		}
+		
+		doBreak();
 	}
 	popMenu();
 	
@@ -433,11 +429,13 @@ int main(int argc, char * argv[])
 		{
 			makeActive(&uiState, true, true);
 			
-			if (doPaMenu(true, true, framework.timeStep, inputDeviceIndex, outputDeviceIndex))
+			if (doPaMenu(true, true, framework.timeStep, inputDeviceIndex, outputDeviceIndex, numChannels))
 				break;
 			
-			if (doConfigMenu(true, true, framework.timeStep, numChannels))
+			pushMenu("buttons");
+			if (doButton("OK"))
 				break;
+			popMenu();
 		}
 		framework.endDraw();
 	}
