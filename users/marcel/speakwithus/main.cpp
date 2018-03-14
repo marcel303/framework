@@ -37,7 +37,11 @@ static int s_examplePosition = 0;
 
 struct Recording
 {
+	std::string filename;
+	
 	std::vector<float> samples;
+	
+	bool removed = false;
 };
 
 static AudioMutex s_mutex;
@@ -262,19 +266,7 @@ static bool doConfigMenu(const bool tick, const bool draw, const float dt, int &
 	
 	pushMenu("config");
 	{
-		std::vector<EnumValue> numChannelsEnum;
-		numChannelsEnum.push_back(EnumValue(2, "Two"));
-		numChannelsEnum.push_back(EnumValue(3, "Three"));
-		numChannelsEnum.push_back(EnumValue(4, "Four"));
-		numChannelsEnum.push_back(EnumValue(5, "Five"));
-		numChannelsEnum.push_back(EnumValue(6, "Six"));
-		numChannelsEnum.push_back(EnumValue(7, "Sevent"));
-		numChannelsEnum.push_back(EnumValue(8, "Eight"));
-		numChannelsEnum.push_back(EnumValue(9, "Nine"));
-		numChannelsEnum.push_back(EnumValue(10, "Ten"));
-		
-		doDropdown(numChannels, "Output channels", numChannelsEnum);
-		
+		doTextBox(numChannels, "Output channels", dt);
 		doBreak();
 		
 		if (doButton("OK"))
@@ -311,24 +303,18 @@ static void beginRecording()
 static void endRecording()
 {
 	Recording r;
-
+	
 	s_mutex.lock();
 	{
 		s_record = false;
 		
 		s_recording.samples.swap(r.samples);
-	}
-	s_mutex.unlock();
-
-	s_recordings.push_back(r);
-
-	if (r.samples.size() > 0)
-	{
-		char filename[128];
 		
+		char filename[128];
+	
 		time_t t = time(0);
 		struct tm * now = localtime(&t);
-		
+	
 		sprintf(filename, "recording %04d-%02d-%02d %02d-%02d-%02d.pcm",
 			1900 + now->tm_year,
 			1 + now->tm_mon,
@@ -337,7 +323,15 @@ static void endRecording()
 			now->tm_min,
 			now->tm_sec);
 		
-		FILE * file = fopen(filename, "wb");
+		r.filename = filename;
+		
+		s_recordings.push_back(r);
+	}
+	s_mutex.unlock();
+
+	if (r.samples.size() > 0)
+	{
+		FILE * file = fopen(r.filename.c_str(), "wb");
 		
 		if (file != nullptr)
 		{
@@ -351,6 +345,8 @@ static void endRecording()
 static void loadRecordings()
 {
 	auto filenames = listFiles(".", false);
+	
+	std::sort(filenames.begin(), filenames.end());
 	
 	for (auto & filename : filenames)
 	{
@@ -382,6 +378,7 @@ static void loadRecordings()
 					const size_t numSamples = size / 4;
 					
 					Recording r;
+					r.filename = filename;
 					r.samples.resize(numSamples);
 					
 					float * samples = &r.samples[0];
@@ -589,7 +586,8 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		if (mouse.wentDown(BUTTON_LEFT))
+	#if 1
+		if (keyboard.wentDown(SDLK_r))
 		{
 			if (s_record == false)
 			{
@@ -600,8 +598,9 @@ int main(int argc, char * argv[])
 				endRecording();
 			}
 		}
+	#endif
 		
-		framework.beginDraw(0, 0, 0, 0);
+		framework.beginDraw(200, 200, 200, 0);
 		{
 			setFont("calibri.ttf");
 			setColor(colorWhite);
@@ -628,14 +627,109 @@ int main(int argc, char * argv[])
 				drawText(GFX_SX/2, GFX_SY/2 + 40, 16, 0, 0, "Recording in progress..");
 			}
 			
-		#if 0
-			int index = 0;
-			
-			for (auto & r : s_recordings)
+		#if 1
 			{
-				drawText(GFX_SX/2, GFX_SY/2 + 60 + index * 20, 16, 0, 0, "Recording %d. Length = %d", index + 1, r.samples.size());
+				const int s = 32;
+				const int n = 20;
 				
-				index++;
+				int index = 0;
+				
+				int hoverIndex = -1;
+				
+				for (auto & r : s_recordings)
+				{
+					const int cx = index % n;
+					const int cy = index / n;
+					
+					const int x1 = (cx + 0) * s;
+					const int y1 = (cy + 0) * s;
+					const int x2 = (cx + 1) * s;
+					const int y2 = (cy + 1) * s;
+					
+					setColor(Color::fromHSL((cx + cy) / 13.f, r.removed ? .1f : .5f, .5f));
+					hqBegin(HQ_FILLED_ROUNDED_RECTS);
+					hqFillRoundedRect(x1, y1, x2, y2, 4);
+					hqEnd();
+					//drawRect(x1, y1, x2, y2);
+					
+					const bool isInside =
+						mouse.x >= x1 &&
+						mouse.y >= y1 &&
+						mouse.x < x2 &&
+						mouse.y < y2;
+					
+					if (isInside)
+						hoverIndex = index;
+					
+					if (isInside && mouse.wentDown(BUTTON_LEFT))
+					{
+						s_mutex.lock();
+						{
+							for (int i = 0; i < PLAYER_COUNT; ++i)
+							{
+								auto & p = s_players[i];
+								
+								p = Player();
+								p.channel = i % CHANNEL_COUNT;
+								p.recording = index;
+								p.state = Player::kState_Play;
+							}
+						}
+						s_mutex.unlock();
+					}
+					
+					if (isInside && mouse.wentDown(BUTTON_RIGHT))
+					{
+						remove(r.filename.c_str());
+						
+						r.removed = true;
+					}
+					
+					index++;
+				}
+				
+				if (hoverIndex >= 0)
+				{
+					auto & r = s_recordings[hoverIndex];
+					
+					if (!r.removed)
+					{
+						const int cx = hoverIndex % n;
+						const int cy = hoverIndex / n;
+						
+						const int x = std::round((cx + .5f) * s);
+						const int y = std::round((cy + .5f) * s);
+						
+						const int x1 = (cx + 0) * s;
+						const int y1 = (cy + 0) * s;
+						const int x2 = (cx + 1) * s;
+						const int y2 = (cy + 1) * s;
+						
+						setColor(255, 255, 255, 200);
+						hqBegin(HQ_STROKED_ROUNDED_RECTS);
+						hqStrokeRoundedRect(x1, y1, x2, y2, 4, 3.f);
+						hqEnd();
+						
+						setColor(colorBlack);
+						drawText(x + 1, y + 1, 14, 0, +1, "%s", r.filename.c_str());
+						
+						setColor(colorWhite);
+						drawText(x , y, 14, 0, +1, "%s", r.filename.c_str());
+					}
+				}
+			}
+		#endif
+		
+		#if 0
+			{
+				int index = 0;
+				
+				for (auto & r : s_recordings)
+				{
+					drawText(GFX_SX/2, GFX_SY/2 + 60 + index * 20, 16, 0, 0, "Recording %d. Length = %d", index + 1, r.samples.size());
+					
+					index++;
+				}
 			}
 		#endif
 		}
