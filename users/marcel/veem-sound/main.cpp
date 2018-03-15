@@ -452,8 +452,9 @@ struct VfxNodeThermalizer : VfxNodeBase
 			heatData.data[i] = float(thermalizer.heat[i]);
 			bangData.data[i] = float(thermalizer.bang[i]);
 			
-			if (bangData.data[i] < 1.f / 1000.f)
-				bangData.data[i] = 0.f;
+			bangData.data[i] = std::max(0.f, (bangData.data[i] - .3f) / .7f);
+			//if (bangData.data[i] < 1.f / 100.f)
+			//	bangData.data[i] = 0.f;
 		}
 		
 		heatOutput.setData(heatData.data, true, heatData.size);
@@ -723,11 +724,6 @@ int main(int argc, char * argv[])
 	std::vector<AudioGraphInstance*> instances;
 	
 #if ENABLE_AUDIO
-	//AudioGraphInstance * instance = audioGraphMgr.createInstance("sound3.xml");
-	//audioGraphMgr.selectInstance(instance);
-	
-	//instances.push_back(audioGraphMgr.createInstance("sound3.xml"));
-	instances.push_back(audioGraphMgr.createInstance("base1.xml"));
 	instances.push_back(audioGraphMgr.createInstance("env1.xml"));
 	
 	if (instances.size() > 0)
