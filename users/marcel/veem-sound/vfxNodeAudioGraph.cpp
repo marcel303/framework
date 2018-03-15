@@ -265,7 +265,8 @@ void VfxNodeAudioGraph::tick(const float dt)
 		
 		//
 		
-		audioGraphInstance = g_vfxAudioGraphMgr->createInstance(filename, &globals);
+		//audioGraphInstance = g_vfxAudioGraphMgr->createInstance(filename, &globals);
+		audioGraphInstance = g_vfxAudioGraphMgr->createInstance(filename); // fixme : custom globals does not get updated, so control values do not animate to the desired values ..
 		
 		currentFilename = filename;
 	}
