@@ -118,7 +118,7 @@ static void measureCategoryButton(const char * name, int & sx, int & sy)
 	float textSy;
 	measureText(kCategoryFontSize, textSx, textSy, name);
 	
-	sx = int(std::ceil(textSx)) + kCategoryPadding * 2;
+	sx = int(ceilf(textSx)) + kCategoryPadding * 2;
 	sy = kCategoryHeight;
 }
 
