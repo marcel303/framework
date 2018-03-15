@@ -19,7 +19,7 @@
 #define ENABLE_AUDIO 1
 #define DO_AUDIODEVICE_SELECT (ENABLE_AUDIO && 1)
 
-#define CHANNEL_COUNT 4
+#define CHANNEL_COUNT 16
 
 const int GFX_SX = 1100;
 const int GFX_SY = 740;
@@ -452,7 +452,7 @@ struct VfxNodeThermalizer : VfxNodeBase
 			heatData.data[i] = float(thermalizer.heat[i]);
 			bangData.data[i] = float(thermalizer.bang[i]);
 			
-			if (bangData.data[i] < 1.f / 10000.f)
+			if (bangData.data[i] < 1.f / 1000.f)
 				bangData.data[i] = 0.f;
 		}
 		

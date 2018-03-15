@@ -162,7 +162,7 @@ void Thermalizer::tick(const float dt)
 		diffuseHeat(dt / 10.0);
 #endif
 
-	const double decayPerSecond = 0.02;
+	const double decayPerSecond = 0.5;
 	const double decay = std::pow(decayPerSecond, dt);
 
 	for (int i = 0; i < size; ++i)
