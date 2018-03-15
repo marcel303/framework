@@ -27,15 +27,14 @@
 
 #pragma once
 
+// todo : remove SDL2 header file include ? add a new include for including low-level framework functions
+//        which should hopefully rarely be needed
+// for now we seem to depend mostly on: SDL_event, SDL_mutex, SDL_thread and SDL_timer
+
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
-
-#include <algorithm>
-#include <assert.h>
-#include <cmath>
 #include <float.h>
 #include <map>
-#include <set>
 #include <string>
 #include <vector>
 #include "Debugging.h"
@@ -325,10 +324,8 @@ public:
 	std::vector<SDL_Event> events;
 	
 private:
-	typedef std::set<Model*> ModelSet;
-	
 	Sprite * m_sprites;
-	ModelSet m_models;
+	Model * m_models;
 	Window * m_windows;
 	
 	std::map<std::string, std::string> m_shaderSources;
@@ -810,6 +807,10 @@ public:
 private:
 	void ctor();
 	
+	// book keeping
+	Model * m_prev;
+	Model * m_next;
+	
 	// drawing
 	class ModelCacheElem * m_model;
 	
@@ -972,7 +973,7 @@ class Path2d
 
 		float len() const
 		{
-			return std::sqrt(x * x + y * y);
+			return sqrtf(x * x + y * y);
 		}
 
 		Vertex operator-(const Vertex & v) const
@@ -1436,7 +1437,7 @@ void hqDrawPath(const Path2d & path, float stroke);
 template <typename T>
 static T clamp(T v, T vmin, T vmax)
 {
-	return std::min(std::max(v, vmin), vmax);
+	return v < vmin ? vmin : v > vmax ? vmax : v;
 }
 
 template <typename T>
@@ -1461,14 +1462,14 @@ template <typename T>
 static T sine(T min, T max, float t)
 {
 	t = t * float(M_PI) / 180.f;
-	return static_cast<T>(min + (max - min) * (std::sin(t) + 1.f) / 2.f);
+	return static_cast<T>(min + (max - min) * (sinf(t) + 1.f) / 2.f);
 }
 
 template <typename T>
 static T cosine(T min, T max, float t)
 {
 	t = t * float(M_PI) / 180.f;
-	return static_cast<T>(min + (max - min) * (std::cos(t) + 1.f) / 2.f);
+	return static_cast<T>(min + (max - min) * (cosf(t) + 1.f) / 2.f);
 }
 
 template <typename T>
