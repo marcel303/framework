@@ -342,6 +342,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		return false;
 	}
 	
+	SDL_RaiseWindow(globals.mainWindow);
+	
 	globals.currentWindowData = &globals.mainWindowData;
 	
 	windowSx = sx;
