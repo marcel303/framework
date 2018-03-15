@@ -367,6 +367,17 @@ void AudioNodeVoice4D::handleTrigger(const int inputSocketIndex)
 	}
 }
 
+void AudioNodeVoice4D::getDescription(AudioNodeDescription & d)
+{
+	if (voice != nullptr)
+	{
+		d.add("ramp: %d. delay=%.2f, value=%.2f",
+			voice->rampInfo.ramp,
+			voice->rampInfo.rampDelay,
+			voice->rampInfo.rampValue);
+	}
+}
+
 //
 
 AUDIO_NODE_TYPE(return_4d, AudioNodeVoice4DReturn)

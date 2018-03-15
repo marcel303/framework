@@ -103,6 +103,8 @@ struct AudioNodeVoice4D : AudioNodeBase
 	virtual void tick(const float dt) override;
 	
 	virtual void handleTrigger(const int inputSocketIndex) override;
+	
+	virtual void getDescription(AudioNodeDescription & d) override;
 };
 
 //
