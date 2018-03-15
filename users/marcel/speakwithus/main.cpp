@@ -627,8 +627,11 @@ int main(int argc, char * argv[])
 			
 		#if 1
 			{
+				const int ox = 140;
+				const int oy = 140;
+				
 				const int s = 32;
-				const int n = 20;
+				const int n = 7;
 				
 				int index = 0;
 				
@@ -639,10 +642,10 @@ int main(int argc, char * argv[])
 					const int cx = index % n;
 					const int cy = index / n;
 					
-					const int x1 = (cx + 0) * s;
-					const int y1 = (cy + 0) * s;
-					const int x2 = (cx + 1) * s;
-					const int y2 = (cy + 1) * s;
+					const int x1 = ox + (cx + 0) * s;
+					const int y1 = oy + (cy + 0) * s;
+					const int x2 = ox + (cx + 1) * s;
+					const int y2 = oy + (cy + 1) * s;
 					
 					setColor(Color::fromHSL((cx + cy) / 13.f, r.removed ? .1f : .5f, .5f));
 					hqBegin(HQ_FILLED_ROUNDED_RECTS);
@@ -695,15 +698,15 @@ int main(int argc, char * argv[])
 						const int cx = hoverIndex % n;
 						const int cy = hoverIndex / n;
 						
-						const int x = std::round((cx + .5f) * s);
-						const int y = std::round((cy + .5f) * s);
+						const int x = std::round(ox + (cx + .5f) * s);
+						const int y = std::round(oy + (cy + .5f) * s);
 						
-						const int x1 = (cx + 0) * s;
-						const int y1 = (cy + 0) * s;
-						const int x2 = (cx + 1) * s;
-						const int y2 = (cy + 1) * s;
+						const int x1 = ox + (cx + 0) * s;
+						const int y1 = oy + (cy + 0) * s;
+						const int x2 = ox + (cx + 1) * s;
+						const int y2 = oy + (cy + 1) * s;
 						
-						setColor(255, 255, 255, 200);
+						setColor(colorWhite);
 						hqBegin(HQ_STROKED_ROUNDED_RECTS);
 						hqStrokeRoundedRect(x1, y1, x2, y2, 4, 3.f);
 						hqEnd();
