@@ -698,8 +698,8 @@ int main(int argc, char * argv[])
 						const int cx = hoverIndex % n;
 						const int cy = hoverIndex / n;
 						
-						const int x = std::round(ox + (cx + .5f) * s);
-						const int y = std::round(oy + (cy + .5f) * s);
+						const int x = roundf(ox + (cx + .5f) * s);
+						const int y = roundf(oy + (cy + .5f) * s);
 						
 						const int x1 = ox + (cx + 0) * s;
 						const int y1 = oy + (cy + 0) * s;
