@@ -36,6 +36,7 @@
 #include "audioUpdateHandler.h"
 #include "vfxNodes/oscEndpointMgr.h"
 #include "soundmix.h"
+#include <cmath>
 
 #define ENABLE_AUDIO_RTE 1
 

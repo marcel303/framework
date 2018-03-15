@@ -32,6 +32,7 @@
 #include "vfxNodes/dotDetector.h"
 #include "vfxNodes/dotTracker.h"
 #include "../libvideo/video.h"
+#include <cmath>
 
 #define USE_READPIXELS_OPTIMIZE 0
 #define USE_READPIXELS_FENCES 0

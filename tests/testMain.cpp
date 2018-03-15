@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "testBase.h"
+#include <cmath>
 #include <map>
 #include <string>
 
