@@ -313,6 +313,7 @@ struct FileWindow
 		
 		std::vector<std::string> paths;
 		paths = listFiles(".", false);
+		std::sort(paths.begin(), paths.end());
 		
 		for (auto & path : paths)
 		{
