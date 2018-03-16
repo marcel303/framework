@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "Log.h"
 #include "StringEx.h"
+#include "Timer.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
 #include <atomic>
@@ -546,6 +547,10 @@ static int sendFakeSensorDataThreadProc(void * obj)
 {
 	OscSender * sender = (OscSender*)obj;
 	
+	uint64_t dropletTimer1 = 0;
+	uint64_t dropletTimer2 = 0;
+	int dropletCount = 0;
+	
 	while (!s_quitRequested)
 	{
 		if (s_sendFakeDataEnabled)
@@ -555,6 +560,24 @@ static int sendFakeSensorDataThreadProc(void * obj)
 			const float magnetZ = scaled_octave_noise_1d(4, .6f, .1f, -.2f, +.1f, framework.time / 1.67f);
 			
 			const float magnetStrength = std::min(1.f, std::sqrt(magnetX * magnetX + magnetY * magnetY + magnetZ * magnetZ));
+			
+			auto timeMS = g_TimerRT.TimeMS_get();
+			
+			if (timeMS >= dropletTimer1)
+			{
+				dropletTimer1 = timeMS + 20 * 1000;
+				dropletTimer2 = 0;
+				dropletCount = 3;
+			}
+			
+			const bool doDroplet = dropletCount > 0 && timeMS >= dropletTimer2;
+			
+			if (doDroplet)
+			{
+				dropletTimer2 = timeMS + 3 * 1000;
+				dropletCount--;
+				
+			}
 			
 			SDL_LockMutex(s_mutex);
 			{
@@ -583,6 +606,14 @@ static int sendFakeSensorDataThreadProc(void * obj)
 					p << osc::BeginMessage("/sound/intensity");
 					p << (std::sin(framework.time / 10.f) + 1.f) / 2.f;
 					p << osc::EndMessage;
+					
+					if (doDroplet)
+					{
+						p << osc::BeginMessage("/sound/droplet");
+						p << random(-8.f, +8.f);
+						p << random(-8.f, +8.f);
+						p << osc::EndMessage;
+					}
 				}
 				p << osc::EndBundle;
 				
@@ -595,6 +626,12 @@ static int sendFakeSensorDataThreadProc(void * obj)
 				sendFakeCamera(*sender, 1.f, "/room/light");
 			}
 			SDL_UnlockMutex(s_mutex);
+		}
+		else
+		{
+			dropletTimer1 = 0;
+			dropletTimer2 = 0;
+			dropletCount = 0;
 		}
 		
 		SDL_Delay(SEND_FAKE_SENSOR_DATA_INTERVAL);
