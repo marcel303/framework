@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "Noise.h"
 #include "thermalizer.h"
+#include <cmath>
 
 const double kCelcius = 273.0;
 

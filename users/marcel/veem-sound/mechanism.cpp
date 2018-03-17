@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "mechanism.h"
+#include <cmath>
 
 void drawThickCircle(const float radius1, const float radius2, const int numSegments)
 {
