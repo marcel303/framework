@@ -614,6 +614,9 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 
 int main(int argc, char * argv[])
 {
+	const char * basePath = SDL_GetBasePath();
+	changeDirectory(basePath);
+	
 	framework.windowX = 10 + 140 + 10;
 	
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
