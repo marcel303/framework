@@ -461,6 +461,9 @@ struct Controller
 		
 		printf("press 'y' and 'u' to change exposure of 2nd camera\n");
 		printf("press 'h' and 'j' to change gain of 2nd camera\n");
+		
+		printf("\nexposure: %.2f, gain: %.2f", (float)recorder1->exposure, (float)recorder1->gain);
+		printf("\nexposure: %.2f, gain: %.2f", (float)recorder2->exposure, (float)recorder2->gain);
 	}
 	
 	void shut()
