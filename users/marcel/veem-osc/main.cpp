@@ -23,7 +23,7 @@ std::atomic<bool> s_quitRequested(false);
 
 static SDL_mutex * s_mutex = nullptr;
 
-#define UPDATE_SLOW_INTERVAL 20
+#define UPDATE_SLOW_INTERVAL 1000
 #define REPAINT_INTERVAL 500
 #define SEND_FAKE_SENSOR_DATA_INTERVAL 1000
 
