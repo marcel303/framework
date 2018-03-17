@@ -19,7 +19,7 @@
 #if defined(LINUX)
 	#define DO_CONTROLLER 0
 #else
-	#define DO_CONTROLLER 1
+	#define DO_CONTROLLER 0
 #endif
 
 #if DO_CONTROLLER
@@ -157,7 +157,7 @@ void sendCameraData(const uint8_t * frameData, OscSender & sender, const char * 
 	
 	for (int y = 0; y < sy; ++y)
 		for (int x = 0; x < sx; ++x)
-			average += values[x][y];
+			average += values[y][x];
 	
 	average /= (16 * 12);
 	
@@ -174,7 +174,7 @@ void sendCameraData(const uint8_t * frameData, OscSender & sender, const char * 
 		p << average;
 		p << osc::EndMessage;
 		
-		//sender.send(p.Data(), p.Size());
+		sender.send(p.Data(), p.Size());
 	}
 }
 
@@ -455,6 +455,14 @@ struct Controller
 		
 		printf("press 'q' to quit\n");
 		printf("press 's' to swap cameras\n");
+		
+		printf("press 'i' and 'o' to change exposure of 1st camera\n");
+		printf("press 'k' and 'l' to change gain of 1st camera\n");
+		
+		printf("press 'y' and 'u' to change exposure of 2nd camera\n");
+		printf("press 'h' and 'j' to change gain of 2nd camera\n");
+		
+		system("/bin/stty raw");
 	}
 	
 	void shut()
@@ -467,7 +475,7 @@ struct Controller
 	
 	bool tick()
 	{
-		const int c = getc(stdin);
+		const int c = getchar();
 		
 		if (c == 's')
 		{
@@ -482,6 +490,48 @@ struct Controller
 			return false;
 		}
 		
+		if (c == 'i')
+		{
+			recorder1->exposure = std::max(0.f, recorder1->exposure - .01f);
+			printf("\nexposure: %.2f, gain: %.2f", (float)recorder1->exposure, (float)recorder1->gain);
+		}
+		else if (c == 'o')
+		{
+			recorder1->exposure = std::min(1.f, recorder1->exposure + .01f);
+			printf("\nexposure: %.2f, gain: %.2f", (float)recorder1->exposure, (float)recorder1->gain);
+		}
+		else if (c == 'k')
+		{
+			recorder1->gain = std::max(0.f, recorder1->gain - .01f);
+			printf("\nexposure: %.2f, gain: %.2f", (float)recorder1->exposure, (float)recorder1->gain);
+		}
+		else if (c == 'l')
+		{
+			recorder1->gain = std::min(1.f, recorder1->gain + .01f);
+			printf("\nexposure: %.2f, gain: %.2f", (float)recorder1->exposure, (float)recorder1->gain);
+		}
+		
+		if (c == 'y')
+		{
+			recorder2->exposure = std::max(0.f, recorder2->exposure - .01f);
+			printf("\nexposure: %.2f, gain: %.2f", (float)recorder2->exposure, (float)recorder2->gain);
+		}
+		else if (c == 'u')
+		{
+			recorder2->exposure = std::min(1.f, recorder2->exposure + .01f);
+			printf("\nexposure: %.2f, gain: %.2f", (float)recorder2->exposure, (float)recorder2->gain);
+		}
+		else if (c == 'h')
+		{
+			recorder2->gain = std::max(0.f, recorder2->gain - .01f);
+			printf("\nexposure: %.2f, gain: %.2f", (float)recorder2->exposure, (float)recorder2->gain);
+		}
+		else if (c == 'j')
+		{
+			recorder2->gain = std::min(1.f, recorder2->gain + .01f);
+			printf("\nexposure: %.2f, gain: %.2f", (float)recorder2->exposure, (float)recorder2->gain);
+		}
+		
 		return true;
 	}
 	
@@ -494,6 +544,7 @@ struct Controller
 
 int main(int argc, char * argv[])
 {
+#if 1
 	// show connected devices
 	
 	{
@@ -507,6 +558,12 @@ int main(int argc, char * argv[])
 			printf("found connected PS3 camera. identifier: %s", identifier);
 		}
 	}
+#endif
+
+	printf("veem-camapp. this app will output:\n");
+	printf("OSC message /env/light for camera at index #0\n");
+	printf("OSC message /room/light for camera at index #1\n");
+	printf("see the veem OSC sheet for details\n");
 	
 	OscSender sender;
 	if (!sender.init("255.255.255.255", 8000))
