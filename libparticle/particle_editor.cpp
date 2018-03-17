@@ -5,6 +5,7 @@
 #include "particle_framework.h"
 #include "tinyxml2.h"
 #include "ui.h"
+#include <cmath>
 
 #include "StringEx.h" // _s functions
 

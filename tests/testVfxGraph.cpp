@@ -36,6 +36,7 @@
 #include "audioUpdateHandler.h"
 #include "vfxNodes/oscEndpointMgr.h"
 #include "soundmix.h"
+#include <cmath>
 
 #define ENABLE_AUDIO_RTE 1
 
@@ -312,6 +313,7 @@ struct FileWindow
 		
 		std::vector<std::string> paths;
 		paths = listFiles(".", false);
+		std::sort(paths.begin(), paths.end());
 		
 		for (auto & path : paths)
 		{

@@ -618,7 +618,7 @@ static void increment(char * dst, int dstSize, int direction, double & _value)
 	if (stringToDouble(dst, value) == false)
 		return;
 	
-	value += direction / double(std::pow(10, numDecimals));
+	value += direction / double(pow(10.0, numDecimals));
 	
 	const std::string s = std::to_string(value);
 	

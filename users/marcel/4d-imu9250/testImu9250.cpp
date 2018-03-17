@@ -37,6 +37,7 @@
 #include "imu9250.h"
 
 #include <atomic>
+#include <cmath>
 
 #include <fcntl.h>
 #include <termios.h>

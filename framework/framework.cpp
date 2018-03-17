@@ -162,6 +162,7 @@ Framework::Framework()
 	timeStep = 1.f / 60.f;
 
 	m_sprites = 0;
+	m_models = 0;
 	m_windows = 0;
 }
 
@@ -340,6 +341,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 			initErrorHandler(INIT_ERROR_WINDOW);
 		return false;
 	}
+	
+	SDL_RaiseWindow(globals.mainWindow);
 	
 	globals.currentWindowData = &globals.mainWindowData;
 	
@@ -1208,9 +1211,9 @@ void Framework::process()
 		sprite->updateAnimation(timeStep);
 	}
 	
-	for (ModelSet::iterator i = m_models.begin(); i != m_models.end(); ++i)
+	for (Model * model = m_models; model; model = model->m_next)
 	{
-		(*i)->updateAnimation(timeStep);
+		model->updateAnimation(timeStep);
 	}
 }
 
@@ -1256,9 +1259,9 @@ void Framework::reloadCaches()
 		sprite->updateAnimationSegment();
 	}
 	
-	for (ModelSet::iterator i = m_models.begin(); i != m_models.end(); ++i)
+	for (Model * model = m_models; model; model = model->m_next)
 	{
-		(*i)->updateAnimationSegment();
+		model->updateAnimationSegment();
 	}
 }
 
@@ -1464,7 +1467,7 @@ void Framework::beginDraw(int r, int g, int b, int a)
 #if ENABLE_OPENGL
 	if (enableDrawTiming)
 		gpuTimingBegin(frameworkDraw);
-
+	
 	// clear back buffer
 	
 	glClearColor(scale255(r), scale255(g), scale255(b), scale255(a));
@@ -1475,6 +1478,7 @@ void Framework::beginDraw(int r, int g, int b, int a)
 	updateViewport(nullptr, globals.currentWindow);
 	
 	applyTransform();
+	
 	setBlend(BLEND_ALPHA);
 #endif
 }
@@ -1597,12 +1601,30 @@ void Framework::unregisterSprite(Sprite * sprite)
 
 void Framework::registerModel(Model * model)
 {
-	m_models.insert(model);
+	fassert(model->m_prev == 0);
+	fassert(model->m_next == 0);
+
+	if (m_models)
+	{
+		m_models->m_prev = model;
+		model->m_next = m_models;
+	}
+
+	m_models = model;
 }
 
 void Framework::unregisterModel(Model * model)
 {
-	m_models.erase(m_models.find(model));
+	if (model == m_models)
+		m_models = model->m_next;
+
+	if (model->m_prev)
+		model->m_prev->m_next = model->m_next;
+	if (model->m_next)
+		model->m_next->m_prev = model->m_prev;
+
+	model->m_prev = 0;
+	model->m_next = 0;
 }
 
 void Framework::registerWindow(Window * window)

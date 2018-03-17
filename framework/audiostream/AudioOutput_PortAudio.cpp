@@ -240,7 +240,7 @@ void AudioOutput_PortAudio::Update()
 
 void AudioOutput_PortAudio::Volume_set(float volume)
 {
-	m_volume = int(std::roundf(volume * 1024.f));
+	m_volume = int(roundf(volume * 1024.f));
 }
 
 bool AudioOutput_PortAudio::IsPlaying_get()

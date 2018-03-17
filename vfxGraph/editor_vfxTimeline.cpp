@@ -31,6 +31,7 @@
 #include "vfxResource.h"
 #include "vfxTypes.h"
 #include "../libparticle/ui.h" // todo : remove
+#include <cmath>
 
 //
 
