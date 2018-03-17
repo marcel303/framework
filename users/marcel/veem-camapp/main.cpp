@@ -545,8 +545,13 @@ struct Controller
 
 #endif
 
+void changeDirectory(const char * path);
+
 int main(int argc, char * argv[])
 {
+	const char * basePath = SDL_GetBasePath();
+	changeDirectory(basePath);
+	
 #if 1
 	// show connected devices
 	
