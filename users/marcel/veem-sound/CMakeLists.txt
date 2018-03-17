@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_CXX_STANDARD 11)
 
+set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR})
+
 set(HAS_LIBGG 0)
 set(HAS_LIBOSC 0)
 set(HAS_FRAMEWORK 0)
@@ -47,13 +49,10 @@ project(veem-sound)
 # --- veem-sound ---
 
 file(GLOB source "*.cpp" "*.h")
-file(GLOB resources "${CMAKE_CURRENT_SOURCE_DIR}/calibri.ttf")
 
 source_group("sources" FILES ${source})
 
-set_source_files_properties(${resources} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-
-add_executable(veem-sound ${source} ${resources})
+add_executable(veem-sound MACOSX_BUNDLE ${source})
 
 target_include_directories(veem-sound PRIVATE "${PROJECT_SOURCE_DIR}")
 
@@ -68,3 +67,5 @@ target_link_libraries(veem-sound PRIVATE libosc)
 target_link_libraries(veem-sound PRIVATE libgg)
 
 target_link_libraries(veem-sound PRIVATE ${FRAMEWORK_LIBRARIES})
+
+install(SCRIPT bundle.cmake)
