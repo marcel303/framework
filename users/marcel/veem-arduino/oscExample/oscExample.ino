@@ -2,8 +2,8 @@
 #include <WiFiUdp.h>
 #include <OSCMessage.h>
 
-char ssid[] = "youarenotalone";
-char pass[] = "hitorijanai";
+char ssid[] = "PlaatsvoorDans";
+char pass[] = "E3C9A1FB63";
 
 WiFiUDP Udp;
 const IPAddress outIp(255, 255, 255, 255);
