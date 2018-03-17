@@ -207,6 +207,8 @@ struct Recorder
 	
 	bool init(const int deviceIndex, const char * _oscAddressPrefix)
 	{
+		oscAddressPrefix = _oscAddressPrefix;
+		
 		auto devices = PS3EYECam::getDevices();
 		
 		LOG_INF("found %d devices", devices.size());
@@ -236,8 +238,6 @@ struct Recorder
 		const int sy = eye->getHeight();
 		
 		frameData = new uint8_t[sx * sy];
-		
-		oscAddressPrefix = _oscAddressPrefix;
 		
 		receiveThread = SDL_CreateThread(receiveThreadProc, "PS3 Eye Camera", this);
 		
@@ -461,8 +461,6 @@ struct Controller
 		
 		printf("press 'y' and 'u' to change exposure of 2nd camera\n");
 		printf("press 'h' and 'j' to change gain of 2nd camera\n");
-		
-		system("/bin/stty raw");
 	}
 	
 	void shut()
@@ -475,7 +473,9 @@ struct Controller
 	
 	bool tick()
 	{
+		system("/bin/stty raw");
 		const int c = getchar();
+		system("/bin/stty cooked");
 		
 		if (c == 's')
 		{
