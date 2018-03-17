@@ -5,6 +5,7 @@
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
 #include <atomic>
+#include <cmath>
 
 // for inbound OSC messages
 #include "osc/OscPacketListener.h"
