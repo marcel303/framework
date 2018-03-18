@@ -14,7 +14,7 @@
 
 #define OSC_BUFFER_SIZE 2048
 
-#define FPS 2
+#define FPS 5
 
 #if defined(LINUX)
 	#define DO_CONTROLLER 0
@@ -273,6 +273,8 @@ struct Recorder
 	{
 		auto self = (Recorder*)obj;
 		
+		int n = 0;
+		
 		while (self->quitRequested == false)
 		{
 			self->eye->setAutogain(false);
@@ -295,7 +297,12 @@ struct Recorder
 			}
 			SDL_UnlockMutex(s_controllerMutex);
 			
-			sendCameraData(self->frameData, *s_oscSender, oscAddressPrefix.c_str());
+			if ((n % 5) == 0)
+			{
+				sendCameraData(self->frameData, *s_oscSender, oscAddressPrefix.c_str());
+			}
+
+			n++;
 		}
 		
 		return 0;
