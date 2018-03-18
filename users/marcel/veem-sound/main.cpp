@@ -9,6 +9,7 @@
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 #include "vfxNodeBase.h"
+#include "vfxNodes/vfxNodeDisplay.h"
 #include "vfxNodes/oscEndpointMgr.h"
 
 #include "mechanism.h"
@@ -285,6 +286,8 @@ struct ControlWindow
 	
 	std::vector<std::string> files;
 	
+	bool saveCpu = false;
+	
 	ControlWindow()
 		: window("audio graphs", 140, 300)
 	{
@@ -334,6 +337,10 @@ struct ControlWindow
 				{
 					s_editor = kEditor_VfxGraph;
 				}
+				else if (hoverIndex == 1)
+				{
+					saveCpu = !saveCpu;
+				}
 				else
 				{
 					s_editor = kEditor_None;
@@ -365,6 +372,14 @@ struct ControlWindow
 				setColor(index == hoverIndex ? colorBlue : colorBlack);
 				
 				drawTextArea(0, index * kItemSize, window.getWidth(), kItemSize, 16, 0.f, 0.f, "vfx graph");
+				
+				++index;
+			}
+			
+			{
+				setColor(index == hoverIndex ? colorBlue : colorBlack);
+				
+				drawTextArea(0, index * kItemSize, window.getWidth(), kItemSize, 16, 0.f, 0.f, "save CPU");
 				
 				++index;
 			}
@@ -630,8 +645,7 @@ int main(int argc, char * argv[])
 	fillPcmDataCache("bang", false, false);
 	fillPcmDataCache("droplets", false, false);
 	fillPcmDataCache("env", false, false);
-	
-	//fillPcmDataCache("ogg-lp7000", false, false);
+	fillPcmDataCache("sats", false, false);
 #endif
 
 	int inputDeviceIndex = -1;
@@ -727,7 +741,7 @@ int main(int argc, char * argv[])
 	std::vector<AudioGraphInstance*> instances;
 	
 #if ENABLE_AUDIO
-	instances.push_back(audioGraphMgr.createInstance("env1.xml"));
+	//instances.push_back(audioGraphMgr.createInstance("env1.xml"));
 	
 	if (instances.size() > 0)
 	{
@@ -795,13 +809,31 @@ int main(int argc, char * argv[])
 		{
 			SDL_Delay(10);
 		}
-			
+		
 		framework.beginDraw(40, 40, 40, 0);
 		{
 			pushFontMode(FONT_SDF);
 			setFont("calibri.ttf");
 			
-			vfxGraph->draw(GFX_SX, GFX_SY);
+			static int frameIndex = 0;
+			frameIndex++;
+			if (controlWindow.saveCpu == false || (frameIndex % 10) == 0)
+			{
+				vfxGraph->draw(GFX_SX, GFX_SY);
+			}
+			else
+			{
+				auto displayNode = vfxGraph->getMainDisplayNode();
+				
+				auto texture = displayNode ? displayNode->getImage()->getTexture() : 0;
+				
+				gxSetTexture(texture);
+				pushBlend(BLEND_OPAQUE);
+				setColor(colorWhite);
+				drawRect(0, 0, GFX_SX, GFX_SY);
+				popBlend();
+				gxSetTexture(0);
+			}
 			
 		#if ENABLE_AUDIO
 			if (s_editor == kEditor_AudioGraph)
