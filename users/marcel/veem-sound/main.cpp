@@ -50,6 +50,7 @@ struct AudioNodeMechanism : AudioNodeBase
 	
 	enum Input
 	{
+		kInput_Fine,
 		kInput_Ring,
 		kInput_Speed,
 		kInput_Scale,
@@ -79,6 +80,7 @@ struct AudioNodeMechanism : AudioNodeBase
 		, time(0.f)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Fine, kAudioPlugType_Bool);
 		addInput(kInput_Ring, kAudioPlugType_Int);
 		addInput(kInput_Speed, kAudioPlugType_FloatVec);
 		addInput(kInput_Scale, kAudioPlugType_FloatVec);
@@ -100,29 +102,46 @@ struct AudioNodeMechanism : AudioNodeBase
 			return;
 		}
 		
+		const bool fine = getInputBool(kInput_Fine, true);
 		const int ring = getInputInt(kInput_Ring, 0);
 		const AudioFloat * speed = getInputAudioFloat(kInput_Speed, &AudioFloat::One);
 		const AudioFloat * scale = getInputAudioFloat(kInput_Scale, &AudioFloat::One);
 		const AudioFloat * angle = getInputAudioFloat(kInput_Angle, &AudioFloat::Zero);
 		
-		scale->expand();
-		angle->expand();
-		
-		xOutput.setVector();
-		yOutput.setVector();
-		zOutput.setVector();
-		
-		const double dtSample = double(dt) * speed->getMean() / AUDIO_UPDATE_SIZE;
-		
-		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		if (fine)
 		{
-			const Vec3 p = mechanism.evaluatePoint(ring, angle->samples[i]) * scale->samples[i];
+			scale->expand();
+			angle->expand();
 			
-			xOutput.samples[i] = p[0];
-			yOutput.samples[i] = p[1];
-			zOutput.samples[i] = p[2];
+			xOutput.setVector();
+			yOutput.setVector();
+			zOutput.setVector();
 			
-			mechanism.tick(dtSample);
+			const double dtSample = double(dt) * speed->getMean() / AUDIO_UPDATE_SIZE;
+			
+			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			{
+				const Vec3 p = mechanism.evaluatePoint(ring, angle->samples[i]) * scale->samples[i];
+				
+				xOutput.samples[i] = p[0];
+				yOutput.samples[i] = p[1];
+				zOutput.samples[i] = p[2];
+				
+				mechanism.tick(dtSample);
+			}
+		}
+		else
+		{
+			const float scaleAvg = scale->getMean();
+			const float angleAvg = angle->getMean();
+			
+			const Vec3 p = mechanism.evaluatePoint(ring, angleAvg) * scaleAvg;
+				
+			xOutput.setScalar(p[0]);
+			yOutput.setScalar(p[1]);
+			zOutput.setScalar(p[2]);
+				
+			mechanism.tick(dt);
 		}
 		
 		time += dt;
@@ -137,6 +156,7 @@ AUDIO_NODE_TYPE(mechanism, AudioNodeMechanism)
 {
 	typeName = "mechanism";
 	
+	in("fine", "bool", "1");
 	in("ring", "int");
 	in("speed", "audioValue", "1");
 	in("scale", "audioValue", "1");
