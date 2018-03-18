@@ -27,6 +27,7 @@
 
 #define NOMINMAX
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <map>

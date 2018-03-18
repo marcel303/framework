@@ -154,7 +154,8 @@ struct AudioVoice
 		kSpeaker_None,
 		kSpeaker_LeftAndRight,
 		kSpeaker_Left,
-		kSpeaker_Right
+		kSpeaker_Right,
+		kSpeaker_Channel
 	};
 	
 	struct RampInfo
