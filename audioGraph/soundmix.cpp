@@ -1118,6 +1118,27 @@ void AudioVoiceManager::generateAudio(
 							audioBufferAdd(&samples[numSamples * 1], voiceSamples, numSamples);
 						}
 					}
+					else if (voice.speaker == AudioVoice::kSpeaker_Channel)
+					{
+						if (voice.channelIndex >= 0 && voice.channelIndex < 2)
+						{
+							if (interleaved)
+							{
+								// interleave voice samples into destination buffer
+								
+								float * __restrict dstPtr = samples;
+								
+								for (int i = 0; i < numSamples; ++i)
+								{
+									dstPtr[i * 2 + voice.channelIndex] += voiceSamples[i];
+								}
+							}
+							else
+							{
+								audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
+							}
+						}
+					}
 					else
 					{
 						if (interleaved)
@@ -1141,22 +1162,25 @@ void AudioVoiceManager::generateAudio(
 				}
 				else
 				{
-					if (interleaved)
+					if (voice.channelIndex >= 0 && voice.channelIndex < numChannels)
 					{
-						// interleave voice samples into destination buffer
-						
-						float * __restrict dstPtr = samples + voice.channelIndex;
-						
-						for (int i = 0; i < numSamples; ++i)
+						if (interleaved)
 						{
-							*dstPtr = voiceSamples[i];
+							// interleave voice samples into destination buffer
 							
-							dstPtr += numChannels;
+							float * __restrict dstPtr = samples + voice.channelIndex;
+							
+							for (int i = 0; i < numSamples; ++i)
+							{
+								*dstPtr = voiceSamples[i];
+								
+								dstPtr += numChannels;
+							}
 						}
-					}
-					else
-					{
-						audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
+						else
+						{
+							audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
+						}
 					}
 				}
 			}
