@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <algorithm>
 #include <list>
 #include <time.h>
 #include "framework.h"
