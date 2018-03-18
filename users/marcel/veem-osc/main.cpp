@@ -146,7 +146,7 @@ struct OscMessageHistory
 			
 			// update
 			
-			const float retain = std::pow(smoothness, dt);
+			const float retain = std::pow(smoothness, dt / 60.f);
 			
 			for (size_t i = 0; i < values.size(); ++i)
 			{
