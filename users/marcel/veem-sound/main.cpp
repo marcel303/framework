@@ -614,9 +614,11 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 
 int main(int argc, char * argv[])
 {
+#if 0
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
-	
+#endif
+
 	framework.windowX = 10 + 140 + 10;
 	
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
@@ -625,13 +627,11 @@ int main(int argc, char * argv[])
 	initUi();
 	
 #if ENABLE_AUDIO
-	fillPcmDataCache("humans", false, false);
-	fillPcmDataCache("outside", false, false);
-	fillPcmDataCache("ticks", false, false);
-	fillPcmDataCache("voices", false, false);
-	fillPcmDataCache("water", false, false);
+	fillPcmDataCache("bang", false, false);
+	fillPcmDataCache("droplets", false, false);
+	fillPcmDataCache("env", false, false);
 	
-	fillPcmDataCache("ogg-lp7000", false, false);
+	//fillPcmDataCache("ogg-lp7000", false, false);
 #endif
 
 	int inputDeviceIndex = -1;
