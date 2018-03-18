@@ -125,7 +125,7 @@ void Thermalizer::tick(const float dt)
 	double * oldHeat = (double*)alloca(size * sizeof(double));
 	memcpy(oldHeat, heat, size * sizeof(double));
 	
-	const bool doApplyHeat = mouse.isDown(BUTTON_LEFT);
+	const bool doApplyHeat = mouse.isDown(BUTTON_LEFT) && false;
 	
 	// apply heat
 	
