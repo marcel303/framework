@@ -357,10 +357,6 @@ struct ControlWindow
 				{
 					s_editor = kEditor_VfxGraph;
 				}
-				else if (hoverIndex == 1)
-				{
-					saveCpu = !saveCpu;
-				}
 				else
 				{
 					s_editor = kEditor_None;
@@ -392,14 +388,6 @@ struct ControlWindow
 				setColor(index == hoverIndex ? colorBlue : colorBlack);
 				
 				drawTextArea(0, index * kItemSize, window.getWidth(), kItemSize, 16, 0.f, 0.f, "vfx graph");
-				
-				++index;
-			}
-			
-			{
-				setColor(index == hoverIndex ? colorBlue : colorBlack);
-				
-				drawTextArea(0, index * kItemSize, window.getWidth(), kItemSize, 16, 0.f, 0.f, "save CPU");
 				
 				++index;
 			}
@@ -770,16 +758,10 @@ int main(int argc, char * argv[])
 	GraphEdit graphEdit(GFX_SX, GFX_SY, &typeDefinitionLibrary, &realTimeConnection);
 	graphEdit.load("control.xml");
 	
-	std::vector<AudioGraphInstance*> instances;
-	
-#if ENABLE_AUDIO
-	//instances.push_back(audioGraphMgr.createInstance("env1.xml"));
-	
-	if (instances.size() > 0)
-	{
-		audioGraphMgr.selectInstance(instances[0]);
-	}
-#endif
+	UiState uiState;
+	uiState.sx = 300;
+	uiState.x = 40;
+	uiState.y = GFX_SY - 100;
 	
 	for (;;)
 	{
@@ -890,30 +872,32 @@ int main(int argc, char * argv[])
 			hqEnd();
 		#endif
 		
-			setColor(200, 200, 200);
-			drawText(GFX_SX - 70, GFX_SY - 150, 17, -1, -1, "made using framework & audioGraph");
-			drawText(GFX_SX - 70, GFX_SY - 130, 17, -1, -1, "http://centuryofthecat.nl");
+			makeActive(&uiState, true, true);
+			pushMenu("options");
+			doCheckBox(controlWindow.saveCpu, "CPU usage reduction", false);
+			popMenu();
+		
+			setColor(255, 255, 200, 100);
+			drawText(GFX_SX - 70, GFX_SY - 100, 17, -1, +1, "made using framework & audioGraph");
+			drawText(GFX_SX - 70, GFX_SY - 80, 17, -1, +1, "http://centuryofthecat.nl");
 			
 			popFontMode();
 		}
 		framework.endDraw();
 		
 	#if ENABLE_AUDIO
-		pushWindow(controlWindow.window);
+		if (framework.events.empty() == false)
 		{
-			controlWindow.tick();
-			
-			controlWindow.draw();
+			pushWindow(controlWindow.window);
+			{
+				controlWindow.tick();
+				
+				controlWindow.draw();
+			}
+			popWindow();
 		}
-		popWindow();
 	#endif
 	}
-	
-	for (auto & instance : instances)
-		audioGraphMgr.free(instance, false);
-	instances.clear();
-	
-	//audioGraphMgr.free(instance, false);
 	
 	paObject.shut();
 	
