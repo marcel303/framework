@@ -19,12 +19,8 @@
 
 #define CHANNEL_COUNT 16
 
-const int GFX_SX = 1024;
-const int GFX_SY = 768;
-
-static SDL_mutex * s_audioMutex = nullptr;
-static AudioVoiceManager * s_voiceMgr = nullptr;
-static AudioGraphManager_RTE * s_audioGraphMgr = nullptr;
+const int GFX_SX = 480;
+const int GFX_SY = 320;
 
 extern SDL_mutex * g_vfxAudioMutex;
 extern AudioVoiceManager * g_vfxAudioVoiceMgr;
@@ -37,7 +33,7 @@ enum Editor
 	kEditor_AudioGraph
 };
 
-static Editor s_editor = kEditor_VfxGraph;
+static Editor s_editor = kEditor_None;
 
 //
 
@@ -170,6 +166,144 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 
 #endif
 
+struct SatellitesApp
+{
+	bool outputStereo = true;
+	
+	int inputDeviceIndex = -1;
+	int outputDeviceIndex = -1;
+	
+	SDL_mutex * audioMutex = nullptr;
+	AudioVoiceManagerBasic * voiceMgr = nullptr;
+	AudioGraphManager_RTE * audioGraphMgr = nullptr;
+	AudioUpdateHandler * audioUpdateHandler = nullptr;
+	PortAudioObject * paObject = nullptr;
+	
+	VfxGraph * vfxGraph = nullptr;
+	RealTimeConnection * realTimeConnection = nullptr;
+	
+	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
+	GraphEdit * graphEdit = nullptr;
+	
+	bool doSetupScreen()
+	{
+	#if DO_AUDIODEVICE_SELECT
+		if (Pa_Initialize() == paNoError)
+		{
+			UiState uiState;
+			uiState.sx = 400;
+			uiState.x = (GFX_SX - uiState.sx) / 2;
+			uiState.y = (GFX_SY - 200) / 2;
+			
+			for (;;)
+			{
+				framework.process();
+				
+				if (keyboard.wentDown(SDLK_ESCAPE))
+				{
+					inputDeviceIndex = paNoDevice;
+					outputDeviceIndex = paNoDevice;
+					break;
+				}
+				
+				makeActive(&uiState, true, false);
+				if (doPaMenu(true, false, framework.timeStep, inputDeviceIndex, outputDeviceIndex))
+				{
+					break;
+				}
+				
+				framework.beginDraw(200, 200, 200, 255);
+				{
+					makeActive(&uiState, false, true);
+					doPaMenu(false, true, framework.timeStep, inputDeviceIndex, outputDeviceIndex);
+				}
+				framework.endDraw();
+			}
+			
+			if (outputDeviceIndex != paNoDevice)
+			{
+				const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(outputDeviceIndex);
+				
+				if (deviceInfo != nullptr && deviceInfo->maxOutputChannels >= 16)
+					outputStereo = false;
+			}
+			
+			Pa_Terminate();
+		}
+		
+		return outputDeviceIndex != paNoDevice;
+	#else
+		return true;
+	#endif
+	}
+	
+	bool init()
+	{
+		audioMutex = SDL_CreateMutex();
+		
+		voiceMgr = new AudioVoiceManagerBasic();
+		voiceMgr->init(audioMutex, CHANNEL_COUNT, CHANNEL_COUNT);
+		voiceMgr->outputStereo = outputStereo;
+		
+		audioGraphMgr = new AudioGraphManager_RTE(GFX_SX, GFX_SY);
+		audioGraphMgr->init(audioMutex, voiceMgr);
+		
+		audioUpdateHandler = new AudioUpdateHandler();
+		audioUpdateHandler->init(audioMutex, "127.0.0.1", 2000);
+		audioUpdateHandler->voiceMgr = voiceMgr;
+		audioUpdateHandler->audioGraphMgr = audioGraphMgr;
+		
+		paObject = new PortAudioObject();
+		paObject->init(SAMPLE_RATE, outputStereo ? 2 : CHANNEL_COUNT, 0, AUDIO_UPDATE_SIZE, audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);
+		
+		vfxGraph = new VfxGraph();
+		realTimeConnection = new RealTimeConnection((vfxGraph));
+		
+		typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary);
+		graphEdit = new GraphEdit(GFX_SX, GFX_SY, typeDefinitionLibrary, realTimeConnection);
+		graphEdit->load("satellites.xml");
+		
+		return true;
+	}
+	
+	void shut()
+	{
+		delete graphEdit;
+		graphEdit = nullptr;
+		
+		delete typeDefinitionLibrary;
+		typeDefinitionLibrary = nullptr;
+		
+		delete realTimeConnection;
+		realTimeConnection = nullptr;
+		
+		paObject->shut();
+		delete paObject;
+		paObject = nullptr;
+		
+		audioUpdateHandler->shut();
+		delete audioUpdateHandler;
+		audioUpdateHandler = nullptr;
+		
+		audioGraphMgr->shut();
+		delete audioGraphMgr;
+		audioGraphMgr = nullptr;
+		
+		voiceMgr->shut();
+		delete voiceMgr;
+		voiceMgr = nullptr;
+		
+		SDL_DestroyMutex(audioMutex);
+		audioMutex = nullptr;
+	}
+	
+	void tick()
+	{
+	
+	}
+};
+
 int main(int argc, char * argv[])
 {
 #if 0
@@ -188,104 +322,23 @@ int main(int argc, char * argv[])
 	fillPcmDataCache("sats", false, false);
 #endif
 
-	int inputDeviceIndex = -1;
-	int outputDeviceIndex = -1;
+	SatellitesApp app;
 	
-	bool outputStereo = true;
-	
-#if DO_AUDIODEVICE_SELECT
-	if (Pa_Initialize() == paNoError)
-	{
-		UiState uiState;
-		uiState.sx = 400;
-		uiState.x = (GFX_SX - uiState.sx) / 2;
-		uiState.y = (GFX_SY - 200) / 2;
-		
-		for (;;)
-		{
-			framework.process();
-			
-			if (keyboard.wentDown(SDLK_ESCAPE))
-			{
-				inputDeviceIndex = paNoDevice;
-				outputDeviceIndex = paNoDevice;
-				break;
-			}
-			
-			makeActive(&uiState, true, false);
-			if (doPaMenu(true, false, framework.timeStep, inputDeviceIndex, outputDeviceIndex))
-			{
-				break;
-			}
-			
-			framework.beginDraw(200, 200, 200, 255);
-			{
-				makeActive(&uiState, false, true);
-				doPaMenu(false, true, framework.timeStep, inputDeviceIndex, outputDeviceIndex);
-			}
-			framework.endDraw();
-		}
-		
-		if (outputDeviceIndex != paNoDevice)
-		{
-			const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(outputDeviceIndex);
-			
-			if (deviceInfo != nullptr && deviceInfo->maxOutputChannels >= 16)
-				outputStereo = false;
-		}
-		
-		Pa_Terminate();
-	}
-	
-	if (outputDeviceIndex == paNoDevice)
+	if (app.doSetupScreen() == false)
 	{
 		framework.shutdown();
 		return 0;
 	}
-#endif
-
-	SDL_mutex * audioMutex = SDL_CreateMutex();
-	s_audioMutex = audioMutex;
 	
-	AudioVoiceManagerBasic voiceMgr;
-	voiceMgr.init(audioMutex, CHANNEL_COUNT, CHANNEL_COUNT);
-	voiceMgr.outputStereo = outputStereo;
-	s_voiceMgr = &voiceMgr;
-	
-	AudioGraphManager_RTE audioGraphMgr(GFX_SX, GFX_SY);
-	audioGraphMgr.init(audioMutex, &voiceMgr);
-	s_audioGraphMgr = &audioGraphMgr;
-	
-	AudioUpdateHandler audioUpdateHandler;
-	audioUpdateHandler.init(audioMutex, "127.0.0.1", 2000);
-	audioUpdateHandler.voiceMgr = &voiceMgr;
-	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
-	
-	PortAudioObject paObject;
-	paObject.init(SAMPLE_RATE, outputStereo ? 2 : CHANNEL_COUNT, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);
-
-	g_vfxAudioMutex = audioMutex;
-	g_vfxAudioVoiceMgr = &voiceMgr;
-	g_vfxAudioGraphMgr = &audioGraphMgr;
-	
-	VfxGraph * vfxGraph = new VfxGraph();
-	RealTimeConnection realTimeConnection(vfxGraph);
-	
-	GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
-	createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
-	GraphEdit graphEdit(GFX_SX, GFX_SY, &typeDefinitionLibrary, &realTimeConnection);
-	graphEdit.load("satellites.xml");
-	
-	std::vector<AudioGraphInstance*> instances;
-	
-#if ENABLE_AUDIO
-	//instances.push_back(audioGraphMgr.createInstance("env1.xml"));
-	
-	if (instances.size() > 0)
+	if (app.init() == false)
 	{
-		audioGraphMgr.selectInstance(instances[0]);
+		framework.shutdown();
+		return -1;
 	}
-#endif
+	
+	g_vfxAudioMutex = app.audioMutex;
+	g_vfxAudioVoiceMgr = app.voiceMgr;
+	g_vfxAudioGraphMgr = app.audioGraphMgr;
 	
 	for (;;)
 	{
@@ -299,21 +352,21 @@ int main(int argc, char * argv[])
 		
 		if (s_editor == kEditor_None)
 		{
-			if (keyboard.wentDown(SDLK_TAB))
+			if (keyboard.isDown(SDLK_LGUI) && keyboard.wentDown(SDLK_v))
 			{
 				s_editor = kEditor_AudioGraph;
 			}
 		}
 		else if (s_editor == kEditor_AudioGraph)
 		{
-			if (keyboard.wentDown(SDLK_TAB))
+			if (keyboard.isDown(SDLK_LGUI) && keyboard.wentDown(SDLK_v))
 			{
 				s_editor = kEditor_VfxGraph;
 			}
 		}
 		else if (s_editor == kEditor_VfxGraph)
 		{
-			if (keyboard.wentDown(SDLK_TAB))
+			if (keyboard.isDown(SDLK_LGUI) && keyboard.wentDown(SDLK_v))
 			{
 				s_editor = kEditor_None;
 			}
@@ -326,18 +379,18 @@ int main(int argc, char * argv[])
 	#if ENABLE_AUDIO
 		if (s_editor != kEditor_AudioGraph)
 		{
-			if (audioGraphMgr.selectedFile)
-				audioGraphMgr.selectedFile->graphEdit->cancelEditing();
+			if (app.audioGraphMgr->selectedFile)
+				app.audioGraphMgr->selectedFile->graphEdit->cancelEditing();
 		}
 		else
 		{
-			inputIsCaptured |= audioGraphMgr.tickEditor(dt, inputIsCaptured);
+			inputIsCaptured |= app.audioGraphMgr->tickEditor(dt, inputIsCaptured);
 			
 			bool isEditing = false;
 			
-			if (audioGraphMgr.selectedFile != nullptr)
+			if (app.audioGraphMgr->selectedFile != nullptr)
 			{
-				if (audioGraphMgr.selectedFile->graphEdit->state != GraphEdit::kState_Hidden)
+				if (app.audioGraphMgr->selectedFile->graphEdit->state != GraphEdit::kState_Hidden)
 					isEditing = true;
 			}
 			
@@ -348,27 +401,24 @@ int main(int argc, char * argv[])
 	
 		if (s_editor != kEditor_VfxGraph)
 		{
-			graphEdit.cancelEditing();
+			app.graphEdit->cancelEditing();
 		}
 		else
 		{
-			inputIsCaptured |= graphEdit.tick(dt, inputIsCaptured);
+			inputIsCaptured |= app.graphEdit->tick(dt, inputIsCaptured);
 		}
 		
 		g_oscEndpointMgr.tick();
 		
-		vfxGraph->tick(GFX_SX, GFX_SY, dt);
+		app.vfxGraph->tick(GFX_SX, GFX_SY, dt);
 		
-		graphEdit.tickVisualizers(dt);
+		app.graphEdit->tickVisualizers(dt);
 		
 	#if ENABLE_AUDIO
-		audioGraphMgr.tickMain();
+		app.audioGraphMgr->tickMain();
 	#endif
-	
-		if (!framework.windowIsActive)
-		{
-			SDL_Delay(10);
-		}
+		
+		SDL_Delay(20);
 		
 		framework.beginDraw(40, 40, 40, 0);
 		{
@@ -378,45 +428,23 @@ int main(int argc, char * argv[])
 		#if ENABLE_AUDIO
 			if (s_editor == kEditor_AudioGraph)
 			{
-				if (!audioGraphMgr.files.empty() && audioGraphMgr.selectedFile == nullptr)
-					audioGraphMgr.selectFile(audioGraphMgr.files.begin()->first.c_str());
-				audioGraphMgr.drawEditor();
+				if (!app.audioGraphMgr->files.empty() && app.audioGraphMgr->selectedFile == nullptr)
+					app.audioGraphMgr->selectFile(app.audioGraphMgr->files.begin()->first.c_str());
+				app.audioGraphMgr->drawEditor();
 			}
 		#endif
 			
 			if (s_editor == kEditor_VfxGraph)
 			{
-				graphEdit.draw();
+				app.graphEdit->draw();
 			}
-		
-			setColor(200, 200, 200);
-			drawText(GFX_SX - 70, GFX_SY - 150, 17, -1, -1, "made using framework & audioGraph");
-			drawText(GFX_SX - 70, GFX_SY - 130, 17, -1, -1, "http://centuryofthecat.nl");
 			
+			setColor(colorGreen);
+			drawText(10, 10, 16, +1, +1, "CPU usage: %.2f%%", app.audioUpdateHandler->msecsPerSecond / 10000.f);
 			popFontMode();
 		}
 		framework.endDraw();
 	}
-	
-	for (auto & instance : instances)
-		audioGraphMgr.free(instance, false);
-	instances.clear();
-	
-	//audioGraphMgr.free(instance, false);
-	
-	paObject.shut();
-	
-	audioUpdateHandler.shut();
-	
-	audioGraphMgr.shut();
-	s_audioGraphMgr = nullptr;
-	
-	voiceMgr.shut();
-	s_voiceMgr = nullptr;
-	
-	SDL_DestroyMutex(audioMutex);
-	audioMutex = nullptr;
-	s_audioMutex = nullptr;
 	
 	Font("calibri.ttf").saveCache();
 	
