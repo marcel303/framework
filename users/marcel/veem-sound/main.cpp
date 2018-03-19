@@ -625,9 +625,21 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 		if (tick)
 		{
 			if (inputDeviceIndex == paNoDevice && inputDevices.empty() == false)
-				inputDeviceIndex = inputDevices.front().value;
+			{
+				for (auto & device : inputDevices)
+					if (Pa_GetDeviceInfo(device.value)->maxInputChannels >= 64)
+						inputDeviceIndex = device.value;
+				if (inputDeviceIndex == paNoDevice)
+					inputDeviceIndex = inputDevices.front().value;
+			}
 			if (outputDeviceIndex == paNoDevice && outputDevices.empty() == false)
-				outputDeviceIndex = outputDevices.front().value;
+			{
+				for (auto & device : outputDevices)
+					if (Pa_GetDeviceInfo(device.value)->maxOutputChannels >= 64)
+						outputDeviceIndex = device.value;
+				if (outputDeviceIndex == paNoDevice)
+					outputDeviceIndex = outputDevices.front().value;
+			}
 		}
 		
 		doDropdown(inputDeviceIndex, "Input", inputDevices);
