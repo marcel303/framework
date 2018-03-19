@@ -986,7 +986,7 @@ void AudioVoice::applyRamping(RampInfo & rampInfo, float * __restrict samples, c
 
 void AudioVoice::applyLimiter(float * __restrict samples, const int numSamples, const float maxGain)
 {
-	const float decayPerMs = .001f;
+	const float decayPerMs = .01f;
 	const float dtMs = 1000.f / SAMPLE_RATE;
 	const float retainPerSample = powf(1.f - decayPerMs, dtMs);
 	
@@ -1351,7 +1351,7 @@ int AudioVoiceManagerBasic::numDynamicChannelsUsed() const
 void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int numSamples)
 {
 	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
-	const float limiterPeak = outputMode == kOutputMode_MultiChannel ? .4f : .1f;
+	const float limiterPeak = 1.f;
 	
 	audioMutex.lock();
 	{
