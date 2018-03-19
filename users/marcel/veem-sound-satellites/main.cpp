@@ -451,8 +451,12 @@ int main(int argc, char * argv[])
 				app.graphEdit->draw();
 			}
 			
+			setColor(colorWhite);
+			drawText(GFX_SX/2, GFX_SY/2, 16, 0, 0, "Satellite speakers audio app");
+			
 			setColor(colorGreen);
-			drawText(10, 10, 16, +1, +1, "CPU usage: %.2f%%", app.audioUpdateHandler->msecsPerSecond / 10000.f);
+			drawText(10, GFX_SY - 10, 16, +1, -1, "CPU usage: %.2f%%", app.audioUpdateHandler->msecsPerSecond / 10000.f);
+			
 			popFontMode();
 		}
 		framework.endDraw();
