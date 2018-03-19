@@ -146,7 +146,7 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 			if (inputDeviceIndex == paNoDevice && inputDevices.empty() == false)
 			{
 				for (auto & device : inputDevices)
-					if (Pa_GetDeviceInfo(device.value)->maxInputChannels >= 64)
+					if (Pa_GetDeviceInfo(device.value)->maxInputChannels > 2 && Pa_GetDeviceInfo(device.value)->maxInputChannels < 64)
 						inputDeviceIndex = device.value;
 				if (inputDeviceIndex == paNoDevice)
 					inputDeviceIndex = inputDevices.front().value;
@@ -154,7 +154,7 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 			if (outputDeviceIndex == paNoDevice && outputDevices.empty() == false)
 			{
 				for (auto & device : outputDevices)
-					if (Pa_GetDeviceInfo(device.value)->maxOutputChannels >= 64)
+					if (Pa_GetDeviceInfo(device.value)->maxOutputChannels > 2 && Pa_GetDeviceInfo(device.value)->maxOutputChannels < 64)
 						outputDeviceIndex = device.value;
 				if (outputDeviceIndex == paNoDevice)
 					outputDeviceIndex = outputDevices.front().value;
@@ -318,7 +318,7 @@ struct SatellitesApp
 
 int main(int argc, char * argv[])
 {
-#if 0
+#if 1
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
 #endif
