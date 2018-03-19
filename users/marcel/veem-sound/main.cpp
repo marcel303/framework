@@ -306,7 +306,7 @@ struct ControlWindow
 	
 	std::vector<std::string> files;
 	
-	bool saveCpu = false;
+	bool saveCpu = true;
 	
 	ControlWindow()
 		: window("audio graphs", 140, 300)
