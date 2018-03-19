@@ -199,7 +199,7 @@ void Mechanism::drawGizmo(const float radius, const float thickness) const
 	//drawThickCircle(radius - thickness, radius + thickness, 100);
 	//drawTubeCircle_failed1(radius - thickness, radius + thickness, 100, 10);
 	//drawTubeCircle_failed1(radius, thickness, 10, 4);
-	drawTubeCircle(radius, thickness, 100, 10);
+	drawTubeCircle(radius, thickness, 100, 5);
 }
 
 void Mechanism::draw_solid() const
