@@ -17,6 +17,12 @@
 
 #include "../libparticle/ui.h"
 
+//
+
+#define DEPLOYMENT_BUILD 1
+
+//
+
 #define ENABLE_AUDIO 1
 #define DO_AUDIODEVICE_SELECT (ENABLE_AUDIO && 1)
 
@@ -245,6 +251,9 @@ struct VfxNodeMechanism : VfxNodeBase
 	
 	virtual void draw() const override
 	{
+		if (isPassthrough)
+			return;
+		
 		setColor(colorWhite);
 		mechanism.draw_solid();
 
@@ -649,7 +658,7 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 
 int main(int argc, char * argv[])
 {
-#if 0
+#if DEPLOYMENT_BUILD
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
 #endif
@@ -664,6 +673,7 @@ int main(int argc, char * argv[])
 #if ENABLE_AUDIO
 	fillPcmDataCache("bang", false, false);
 	fillPcmDataCache("droplets", false, false);
+	fillPcmDataCache("droplets2", false, false);
 	fillPcmDataCache("env", false, false);
 	fillPcmDataCache("sats", false, false);
 #endif
@@ -756,6 +766,12 @@ int main(int argc, char * argv[])
 	GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
 	createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
 	GraphEdit graphEdit(GFX_SX, GFX_SY, &typeDefinitionLibrary, &realTimeConnection);
+#if DEPLOYMENT_BUILD
+	graphEdit.flags =
+		GraphEdit::kFlag_Drag |
+		GraphEdit::kFlag_Zoom |
+		GraphEdit::kFlag_Select;
+#endif
 	graphEdit.load("control.xml");
 	
 	UiState uiState;
@@ -791,6 +807,13 @@ int main(int argc, char * argv[])
 			
 			if (audioGraphMgr.selectedFile != nullptr)
 			{
+			#if DEPLOYMENT_BUILD
+				audioGraphMgr.selectedFile->graphEdit->flags =
+					GraphEdit::kFlag_Drag |
+					GraphEdit::kFlag_Zoom |
+					GraphEdit::kFlag_Select;
+			#endif
+
 				if (audioGraphMgr.selectedFile->graphEdit->state != GraphEdit::kState_Hidden)
 					isEditing = true;
 			}
