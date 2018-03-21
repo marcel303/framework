@@ -259,7 +259,10 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	AudioGraphInstance * newInstances[kMaxInstances];
 	int numNewInstances = 0;
 	
-	while (!volumeZipper.done() && index < kMaxInstances)
+	const int maxVoices = 6;
+	int numVoices = 0;
+	
+	while (!volumeZipper.done() && index < kMaxInstances && numVoices < maxVoices)
 	{
 		const float volume = volumeZipper.read(0, 1.f);
 		
@@ -289,6 +292,8 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 				newInstances[numNewInstances] = instances[index];
 				numNewInstances++;
 			}
+			
+			numVoices++;
 		}
 		
 		//
@@ -319,6 +324,8 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	
 	VfxChannelZipper zipper(channels, numChannels);
 	
+	numVoices = 0;
+	
 	int inputIndex = 0;
 	
 	for (auto & dynamicInput : dynamicInputs)
@@ -341,7 +348,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 				{
 					Assert(instances[instanceIndex] == nullptr);
 				}
-				else if (instanceIndex < kMaxInstances)
+				else if (instanceIndex < kMaxInstances && numVoices < maxVoices)
 				{
 					Assert(instances[instanceIndex] != nullptr);
 					
@@ -359,6 +366,8 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 						}
 					}
 					audioGraph->mutex.unlock();
+					
+					numVoices++;
 				}
 				
 				volumeZipper.next();
