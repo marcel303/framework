@@ -766,7 +766,7 @@ int main(int argc, char * argv[])
 	GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
 	createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
 	GraphEdit graphEdit(GFX_SX, GFX_SY, &typeDefinitionLibrary, &realTimeConnection);
-#if DEPLOYMENT_BUILD
+#if DEPLOYMENT_BUILD && 0
 	graphEdit.flags =
 		GraphEdit::kFlag_Drag |
 		GraphEdit::kFlag_Zoom |
@@ -807,7 +807,7 @@ int main(int argc, char * argv[])
 			
 			if (audioGraphMgr.selectedFile != nullptr)
 			{
-			#if DEPLOYMENT_BUILD
+			#if DEPLOYMENT_BUILD && 0
 				audioGraphMgr.selectedFile->graphEdit->flags =
 					GraphEdit::kFlag_Drag |
 					GraphEdit::kFlag_Zoom |
