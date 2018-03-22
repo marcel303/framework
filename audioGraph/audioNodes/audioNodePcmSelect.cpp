@@ -133,6 +133,8 @@ void AudioNodeSourcePcmSelect::tick(const float dt)
 			if (pcmData != nullptr && pcmData->numSamples > 0)
 			{
 				files.push_back(pcmData);
+				
+				this->filenames.push_back(filename);
 			}
 		}
 		
@@ -214,4 +216,12 @@ void AudioNodeSourcePcmSelect::handleTrigger(const int inputSocketIndex)
 		
 		trigger(kOutput_Done);
 	}
+}
+
+void AudioNodeSourcePcmSelect::getDescription(AudioNodeDescription & d)
+{
+	if (fileIndex < 0)
+		d.add("not playing");
+	else
+		d.add("file: %s", filenames[fileIndex].c_str());
 }

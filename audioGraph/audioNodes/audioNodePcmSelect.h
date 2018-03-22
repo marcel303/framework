@@ -60,6 +60,7 @@ struct AudioNodeSourcePcmSelect : AudioNodeBase
 	
 	std::string currentPath;
 	std::vector<const PcmData*> files;
+	std::vector<std::string> filenames;
 	int fileIndex;
 	int samplePosition;
 	
@@ -76,4 +77,6 @@ struct AudioNodeSourcePcmSelect : AudioNodeBase
 	virtual void tick(const float dt) override;
 	
 	virtual void handleTrigger(const int inputSocketIndex) override;
+	
+	virtual void getDescription(AudioNodeDescription & d) override;
 };
