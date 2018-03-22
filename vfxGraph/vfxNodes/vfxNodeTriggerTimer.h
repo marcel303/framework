@@ -36,6 +36,7 @@ struct VfxNodeTriggerTimer : VfxNodeBase
 		kInput_Auto,
 		kInput_Interval,
 		kInput_Start,
+		kInput_Trigger,
 		kInput_COUNT
 	};
 	
@@ -57,4 +58,6 @@ struct VfxNodeTriggerTimer : VfxNodeBase
 	virtual void tick(const float dt) override;
 	
 	virtual void handleTrigger(const int socketIndex) override;
+	
+	virtual void getDescription(VfxNodeDescription & d) override;
 };

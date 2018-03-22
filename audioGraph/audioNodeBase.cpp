@@ -829,6 +829,7 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 			inputSocket.index = i;
 			inputSocket.enumName = src.enumName;
 			inputSocket.defaultValue = src.defaultValue;
+			inputSocket.displayName = src.displayName;
 			
 			typeDefinition.inputSockets.push_back(inputSocket);
 		}
@@ -842,6 +843,7 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 			outputSocket.name = src.name;
 			outputSocket.isEditable = src.isEditable;
 			outputSocket.index = i;
+			outputSocket.displayName = src.displayName;
 			
 			typeDefinition.outputSockets.push_back(outputSocket);
 		}
