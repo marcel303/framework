@@ -566,7 +566,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		
 		if (link.srcNodeSocketIndex == -1 && !link.isDynamic)
 		{
-			printf("failed to find srcSocketIndex. srcNodeId=%d, srcSocketName=%s\n", link.srcNodeId, link.srcNodeSocketName.c_str());
+			printf("failed to find srcSocketIndex. linkId=%d, srcNodeId=%d, srcSocketName=%s\n", link.id, link.srcNodeId, link.srcNodeSocketName.c_str());
 		}
 		
 		auto dstNode = tryGetNode(link.dstNodeId);
@@ -591,7 +591,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		
 		if (link.dstNodeSocketIndex == -1 && !link.isDynamic)
 		{
-			printf("failed to find dstSocketIndex. dstNodeId=%d, dstSocketName=%s\n", link.dstNodeId, link.dstNodeSocketName.c_str());
+			printf("failed to find dstSocketIndex. linkId=%d, dstNodeId=%d, dstSocketName=%s\n", link.id, link.dstNodeId, link.dstNodeSocketName.c_str());
 		}
 	}
 
@@ -3668,6 +3668,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						if (linkId != kGraphLinkIdInvalid)
 						{
 							auto linkPtr = tryGetLink(linkId);
+							Assert(linkPtr != nullptr);
 							
 							if (linkPtr != nullptr)
 							{
@@ -3686,7 +3687,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 									link1.srcNodeSocketName = link.srcNodeSocketName;
 									link1.dstNodeId = nodeId;
 									link1.dstNodeSocketIndex = 0;
-									link1.dstNodeSocketName = "any";
+									link1.dstNodeSocketName = "any"; // fixme
 									graph->addLink(link1, true);
 								}
 								
@@ -3696,7 +3697,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 									link2.id = graph->allocLinkId();
 									link2.srcNodeId = nodeId;
 									link2.srcNodeSocketIndex = 0;
-									link2.srcNodeSocketName = "before";
+									link2.srcNodeSocketName = "before"; // fixme
 									link2.dstNodeId = link.dstNodeId;
 									link2.dstNodeSocketIndex = link.dstNodeSocketIndex;
 									link2.dstNodeSocketName = link.dstNodeSocketName;
