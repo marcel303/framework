@@ -60,6 +60,7 @@ VFX_NODE_TYPE(VfxNodeAudioGraphPoly)
 	typeName = "audioGraph.poly";
 	in("file", "string");
 	in("volume", "channel");
+	in("polyphony", "int", "-1");
 	out("voices", "channel");
 }
 
@@ -78,6 +79,7 @@ VfxNodeAudioGraphPoly::VfxNodeAudioGraphPoly()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Filename, kVfxPlugType_String);
 	addInput(kInput_Volume, kVfxPlugType_Channel);
+	addInput(kInput_MaxInstances, kVfxPlugType_Int);
 	addOutput(kOutput_Voices, kVfxPlugType_Channel, &voicesOutput);
 	
 	memset(instances, 0, sizeof(instances));
@@ -220,6 +222,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 {
 	const char * filename = getInputString(kInput_Filename, nullptr);
 	const VfxChannel * volume = getInputChannel(kInput_Volume, nullptr);
+	const int maxInstances = getInputInt(kInput_MaxInstances, kMaxInstances);
 	
 	if (isPassthrough || filename == nullptr || volume == nullptr)
 	{
@@ -255,14 +258,12 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	VfxChannelZipper volumeZipper({ volume });
 	
 	int index = 0;
+	int numInstances = 0;
 	
 	AudioGraphInstance * newInstances[kMaxInstances];
 	int numNewInstances = 0;
 	
-	const int maxVoices = 6;
-	int numVoices = 0;
-	
-	while (!volumeZipper.done() && index < kMaxInstances && numVoices < maxVoices)
+	while (!volumeZipper.done() && index < kMaxInstances && numInstances < maxInstances)
 	{
 		const float volume = volumeZipper.read(0, 1.f);
 		
@@ -293,7 +294,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 				numNewInstances++;
 			}
 			
-			numVoices++;
+			numInstances++;
 		}
 		
 		//
@@ -324,7 +325,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	
 	VfxChannelZipper zipper(channels, numChannels);
 	
-	numVoices = 0;
+	numInstances = 0;
 	
 	int inputIndex = 0;
 	
@@ -348,7 +349,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 				{
 					Assert(instances[instanceIndex] == nullptr);
 				}
-				else if (instanceIndex < kMaxInstances && numVoices < maxVoices)
+				else if (instanceIndex < kMaxInstances && numInstances < maxInstances)
 				{
 					Assert(instances[instanceIndex] != nullptr);
 					
@@ -367,7 +368,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 					}
 					audioGraph->mutex.unlock();
 					
-					numVoices++;
+					numInstances++;
 				}
 				
 				volumeZipper.next();

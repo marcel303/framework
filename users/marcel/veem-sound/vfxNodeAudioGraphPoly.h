@@ -91,7 +91,7 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 	{
 		kInput_Filename,
 		kInput_Volume,
-		kInput_MaxVoices,
+		kInput_MaxInstances,
 		kInput_COUNT
 	};
 	
