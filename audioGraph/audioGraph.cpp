@@ -30,6 +30,7 @@
 #include "framework.h" // listFiles
 #include "Log.h"
 #include "Parse.h"
+#include <algorithm>
 
 #if AUDIO_GRAPH_ENABLE_TIMING
 	#include "Timer.h"
