@@ -177,6 +177,11 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	SetProcessDPIAware();
 #endif
 
+#ifdef LINUX
+	// fixme : this hack is necessary for now to get the Raspberry Pi up and running but should be removed asap
+	minification *= 2;
+#endif
+
 	// initialize SDL
 	
 	const int initFlags = SDL_INIT_NOPARACHUTE | SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK;
@@ -197,19 +202,26 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	int flags = 0;
 
 #if ENABLE_OPENGL
-#if USE_LEGACY_OPENGL
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-#else
-#if OPENGL_VERSION == 430
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-#endif
-#if OPENGL_VERSION == 410
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-#endif
-#endif
+	#if USE_LEGACY_OPENGL
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	#elif FRAMEWORK_USE_OPENGL_ES
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	#else
+		#if OPENGL_VERSION == 430
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+		#endif
+		#if OPENGL_VERSION == 410
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+		#endif
+	#endif
 	
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 32);
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
@@ -219,8 +231,13 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	
 	if (enableDepthBuffer)
 	{
+	#if FRAMEWORK_USE_OPENGL_ES
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+	#else
 		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
 		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+	#endif
 	}
 	else
 	{
@@ -229,8 +246,6 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	}
 	
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
