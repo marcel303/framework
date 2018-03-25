@@ -8,6 +8,7 @@
 #include "slideshow.h"
 #include "soundmix.h"
 #include "wavefield.h"
+#include <cmath>
 
 #define DEVMODE 0
 
