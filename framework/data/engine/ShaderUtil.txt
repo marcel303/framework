@@ -44,22 +44,22 @@ vec4 applyColorMode(vec4 color1, vec4 color2, float mode)
 	vec4 result = color1;
 	vec4 texColor = color2;
 
-	if (mode == 0)
+	if (mode == 0.0)
 	{
 		result.rgb = result.rgb * texColor.rgb;
 		result.a   = result.a   * texColor.a;
 	}
-	else if (mode == 1)
+	else if (mode == 1.0)
 	{
 		result.rgb = result.rgb + texColor.rgb;
 		result.a   = result.a   * texColor.a;
 	}
-	else if (mode == 2)
+	else if (mode == 2.0)
 	{
 		result.rgb = result.rgb - texColor.rgb;
 		result.a   = result.a   * texColor.a;
 	}
-	else if (mode == 3)
+	else if (mode == 3.0)
 	{
 		result.rgb = texColor.rgb;
 		result.a   = texColor.a;
@@ -79,17 +79,17 @@ vec4 applyColorPost(vec4 color, float post)
 
 	vec4 result = color;
 
-	if (post != 0)
+	if (post != 0.0)
 	{
-		if (post == 1)
+		if (post == 1.0)
 		{
 			result.rgb = mix(vec3(0.0), result.rgb, result.a);
 		}
-		else if (post == 2)
+		else if (post == 2.0)
 		{
 			result.rgb = mix(vec3(1.0), result.rgb, result.a);
 		}
-		else if (post == 3)
+		else if (post == 3.0)
 		{
 			result.a = 1.0;
 		}
