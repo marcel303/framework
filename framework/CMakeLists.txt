@@ -145,6 +145,8 @@ if (APPLE)
 endif (APPLE)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux") 
+		target_compile_definitions(framework PUBLIC FRAMEWORK_USE_OPENGL_ES=1)
+
         include(FindPkgConfig) 
  
         find_package(OpenGL REQUIRED) 
