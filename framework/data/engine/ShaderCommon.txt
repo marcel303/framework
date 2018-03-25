@@ -12,6 +12,8 @@
 
 #define tex2D texture
 
+precision highp float;
+
 #else
 
 class vec2

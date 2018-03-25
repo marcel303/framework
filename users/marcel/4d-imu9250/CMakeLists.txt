@@ -33,7 +33,7 @@ project(imu9250)
 
 # --- imu9250 ---
 
-file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
+file(GLOB source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 file(GLOB resources "data/*.ttf" "data/*.jpg")
 
 source_group("sources" FILES ${source})
