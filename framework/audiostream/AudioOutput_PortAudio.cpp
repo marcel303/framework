@@ -79,8 +79,11 @@ bool AudioOutput_PortAudio::initPortAudio(const int numChannels, const int sampl
 	outputParameters.device = Pa_GetDefaultOutputDevice();
 	outputParameters.channelCount = numChannels;
 	outputParameters.sampleFormat = paInt16;
-	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
 	outputParameters.hostApiSpecificStreamInfo = nullptr;
+	
+	auto deviceInfo = Pa_GetDeviceInfo(outputParameters.device);
+	if (deviceInfo != nullptr)
+		outputParameters.suggestedLatency = deviceInfo->defaultLowOutputLatency;
 
 	//
 	
