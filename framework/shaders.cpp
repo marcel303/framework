@@ -94,6 +94,8 @@ void registerBuiltinShaders()
 		#endif
 		
 		#define tex2D texture
+
+		precision highp float;
 		
 		#define VS_USE_LEGACY_MATRICES 0
 		
