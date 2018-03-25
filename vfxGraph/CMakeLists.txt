@@ -170,9 +170,11 @@ endif (APPLE)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	find_library(TURBOJPEG_LIBRARY turbojpeg)
+	find_library(ASOUND_LIBRARY asound) # ALSA sound dependency RtMidi
 
 	set(VFXGRAPH_LIBRARIES
 		${TURBOJPEG_LIBRARY}
+		${ASOUND_LIBRARY}
 		PARENT_SCOPE)
 
 	set(VFXGRAPH_BINARIES
