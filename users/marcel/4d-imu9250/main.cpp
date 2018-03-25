@@ -10,9 +10,13 @@ extern void testImu9250();
 
 int main(int argc, char * argv[])
 {
+#if MACOS
     const char * basePath = SDL_GetBasePath();
     changeDirectory(basePath);
-    
+#else
+	changeDirectory("data");
+#endif
+
 	framework.enableDepthBuffer = true;
 	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
