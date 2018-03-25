@@ -3,7 +3,7 @@
 #include "framework.h"
 #include "objects/paobject.h"
 #include "Path.h"
-
+#include <algorithm>
 #include <ctime>
 
 #define MAX_CHANNEL_COUNT 64
