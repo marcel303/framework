@@ -280,8 +280,13 @@ SoundData * loadSound_OGG(const char * filename)
 	
 	const int numSamples = readBuffer.size();
 	const int numBytes = numSamples * sizeof(AudioSample);
-	void * bytes = new char[numBytes];
-	memcpy(bytes, &readBuffer[0], numBytes);
+	void * bytes = nullptr;
+	
+	if (numBytes > 0)
+	{
+		bytes = new char[numBytes];
+		memcpy(bytes, &readBuffer[0], numBytes);
+	}
 	
 	SoundData * soundData = new SoundData;
 	soundData->channelSize = 2;
