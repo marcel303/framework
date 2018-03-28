@@ -30,6 +30,7 @@
 #include "audioUpdateHandler.h"
 #include "framework.h"
 #include "soundmix.h"
+#include "vfxNodes/delayLine.h"
 #include <cmath>
 #include <map>
 
@@ -45,8 +46,6 @@ const int GFX_SY = 400;
 	#define NUM_PARTICLES 1
 	#define MAX_SPACE_POINTS 200
 #endif
-
-#include "vfxNodes/delayLine.h"
 
 static int s_tickCount = 0;
 
@@ -79,7 +78,6 @@ struct Source
 	
 	Vec3 monoPosition;
 	
-	//int s = 0;
 	double phase1 = 0.0;
 	double phase2 = 0.0;
 	double phaseStep1 = random(3.0, 50.0) / SAMPLE_RATE * M_PI * 2.0;
@@ -278,7 +276,6 @@ struct SpacePoint
 			output.samples[i] += sample * gain;
 		}
 		
-		//previousDistance = distance;
 		previousReadOffset = readOffset2;
 		previousGain = gain2;
 	}
@@ -333,24 +330,6 @@ struct Space
 	std::map<LinkId, LinkData*> links;
 	
 	double t = 0.0;
-	
-	Space()
-	{
-		int index = 0;
-		
-		for (auto & p : points)
-		{
-			const float t = index / float(MAX_SPACE_POINTS);
-			
-			//p.position[0] = random(-24.f, +24.f);
-			//p.position[1] = random(-3.f, +3.f);
-			
-			p.position[0] = cosf(t * 2.0 * M_PI) * 10.f;
-			p.position[1] = sinf(t * 2.0 * M_PI) * 10.f;
-			
-			index++;
-		}
-	}
 	
 	static Vec3 evalCircle(const float t, const float radius)
 	{
@@ -407,7 +386,7 @@ struct Space
 	static Vec3 evalParticlePosition(const float i, const float t)
 	{
 		static double v1 = 0.0;
-		static double v2 = 0.0;
+		static double v2 = 1.0;
 		
 		if (keyboard.isDown(SDLK_a))
 			v1 = clamp(v1 + mouse.dy / 100000.0, 0.0, 1.0);
@@ -427,8 +406,6 @@ struct Space
 		p = lerp(p, p2, v1);
 		p = lerp(p, p3, v2);
 		
-		//p = evalSnake(pt);
-		
 		return p;
 	}
 	
@@ -441,9 +418,6 @@ struct Space
 		for (int i = 0; i < MAX_SPACE_POINTS; ++i)
 		{
 			auto & p = points[i];
-			
-			//points[i].position[0] = std::cos(t / 2.345f * (i + .5f)) * 16.f;
-			//points[i].position[1] = std::sin(t / 1.234f * (i + .5f)) * 6.f;
 			
 			p.position = evalParticlePosition(i, t);
 			
@@ -465,11 +439,6 @@ struct Space
 		
 		for (int i = 0; i < MAX_SPACE_POINTS; ++i)
 		{
-			//Vec3 target = Vec3(i * 4 + mouse.x - GFX_SX/2, i * 5 + mouse.y - GFX_SY/2, 0) / 10.f;
-			
-			//points[i].position = lerp(points[i].position, target, .001f);
-			//points[i].position[0] += mouse.dx / 40.f;
-			
 			points[i].beginMixing();
 		}
 		
@@ -530,44 +499,44 @@ struct Space
 	}
 };
 
+struct MyAudioSource : AudioSource
+{
+	AudioSourcePcm pcm;
+	
+	Source * source = nullptr;
+
+	Space * space = nullptr;
+
+	MyAudioSource()
+	{
+		fillPcmDataCache("testsounds", true, true);
+		pcm.init(getPcmData("music2.ogg"), 0);
+		pcm.play();
+		
+		source = new Source();
+		source->source = &pcm;
+
+		space = new Space();
+
+		space->source = source;
+	}
+	
+	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override
+	{
+		s_tickCount++;
+		
+		space->tick();
+		
+		audioBufferSetZero(samples, numSamples);
+		
+		for (int i = 0; i < MAX_SPACE_POINTS; ++i)
+			audioBufferAdd(samples, space->points[i].output.samples, numSamples);
+	}
+};
+
 int main(int argc, char * argv[])
 {
-	struct MyAudioSource : AudioSource
-	{
-		AudioSourcePcm pcm;
-		
-		Source * source = nullptr;
-	
-		Space * space = nullptr;
-	
-		MyAudioSource()
-		{
-			fillPcmDataCache("testsounds", true, true);
-			pcm.init(getPcmData("music2.ogg"), 0);
-			pcm.play();
-			
-			source = new Source();
-			source->source = &pcm;
-	
-			space = new Space();
-	
-			space->source = source;
-		}
-		
-		virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override
-		{
-			s_tickCount++;
-			
-			space->tick();
-			
-			audioBufferSetZero(samples, numSamples);
-			
-			for (int i = 0; i < MAX_SPACE_POINTS; ++i)
-				audioBufferAdd(samples, space->points[i].output.samples, numSamples);
-		}
-	};
-	
-	//
+	// todo : let source audio come from audio graph instances
 	
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
@@ -596,12 +565,12 @@ int main(int argc, char * argv[])
 		PortAudioObject pa;
 		pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 		
-		for (;;)
+		while (!framework.quitRequested)
 		{
 			framework.process();
 			
 			if (keyboard.wentDown(SDLK_ESCAPE))
-				exit(0);
+				framework.quitRequested = true;
 			
 			audioGraphMgr.tickMain();
 			
@@ -635,92 +604,7 @@ int main(int argc, char * argv[])
 				gxPopMatrix();
 			}
 			framework.endDraw();
-			
-			//SDL_Delay(100);
 		}
-		
-		// create an audio graph instance
-		
-		AudioGraphInstance * instance = nullptr;
-		
-		std::string currentFilename;
-		int selectedIndex = 0;
-		
-		while (!framework.quitRequested)
-		{
-			framework.process();
-
-			if (keyboard.wentDown(SDLK_ESCAPE))
-				framework.quitRequested = true;
-			
-			audioGraphMgr.tickMain();
-			
-			framework.beginDraw(0, 0, 0, 0);
-			{
-				setFont("calibri.ttf");
-				pushFontMode(FONT_SDF);
-				{
-					// show CPU usage of the audio thread
-
-					setColor(colorWhite);
-					drawText(10, 10, 16, +1, +1, "time per tick: %.2fms", audioUpdateHandler.msecsPerTick / 1000.0);
-					drawText(10, 30, 16, +1, +1, "time per second: %.2fms", audioUpdateHandler.msecsPerSecond / 1000.0);
-					drawText(10, 50, 16, +1, +1, "CPU usage audio thread: %d%%",
-						int(std::round(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100.0)));
-					
-					// process the file selection menu
-
-					const char * filenames[] =
-					{
-						"sweetStuff1.xml",
-						"sweetStuff2.xml",
-						"sweetStuff3.xml",
-						"sweetStuff4.xml",
-						"sweetStuff5.xml",
-						"sweetStuff6.xml"
-					};
-					const int numFilenames = sizeof(filenames) / sizeof(filenames[0]);
-					
-					if (keyboard.wentDown(SDLK_UP))
-						selectedIndex = selectedIndex == 0 ? numFilenames - 1 : selectedIndex - 1;
-					if (keyboard.wentDown(SDLK_DOWN))
-						selectedIndex = selectedIndex == numFilenames - 1 ? 0 : selectedIndex + 1;
-					
-					const char * filename = filenames[selectedIndex];
-					
-					if (filename != currentFilename)
-					{
-						currentFilename = filename;
-						
-						audioGraphMgr.free(instance, true);
-						instance = audioGraphMgr.createInstance(filename);
-					}
-
-					// draw the file selection menu
-					
-					gxPushMatrix();
-					{
-						gxTranslatef(GFX_SX/2, 100, 0);
-						setColor(200, 200, 200);
-						drawText(0, 0, 24, 0, 0, "Press UP and DOWN to select audio graph");
-						
-						gxTranslatef(0, 30, 0);
-						for (int i = 0; i < numFilenames; ++i)
-						{
-							setColor(i == selectedIndex ? colorYellow : colorRed);
-							drawText(0, i * 20, 16, 0, 0, "%s", filenames[i]);
-						}
-					}
-					gxPopMatrix();
-				}
-				popFontMode();
-			}
-			framework.endDraw();
-		}
-		
-		// free the audio graph instance
-		
-		audioGraphMgr.free(instance, false);
 		
 		// shut down audio related systems
 
