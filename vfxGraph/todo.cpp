@@ -23,7 +23,16 @@ top priority items:
 	- add 1D wavefield resource
 	- add 2D wavefield resource
 - audio graph: fix issue with immediate values not being restored properly for most types
- 
+- add shared control value inputs to poly audio graph node
+	- make sure both the poly and the regular audio graph nodes have both type of inputs
+- add headless vfx graph app
+	- make graph a command line option
+	- make tick frequency a command line option
+- add headless audio graph app
+	- make graph a command line option
+- add DC blocker node
+- port Veem changes where desired to master branch
+
 
 todo :
 - add undo/redo support. just serialize/deserialize graph for every action?
