@@ -236,7 +236,7 @@ struct SpacePoint
 			const float t2 = readOffset_interpAmount;
 			
 			sample = sample1 * t1 + sample2 * t2;
-		#elif 1
+		#else
 			const float readOffset = (readOffset2 * i + readOffset1 * (AUDIO_UPDATE_SIZE - i - 1)) * invAudioUpdateSize;
 			const int readOffseti = int(readOffset);
 			
@@ -265,10 +265,6 @@ struct SpacePoint
 			
 			sample = sample1 * t1 + sample2 * t2;
 		#endif
-		#else
-			const float readOffset = (readOffset2 * i + readOffset1 * (AUDIO_UPDATE_SIZE - i - 1)) / (AUDIO_UPDATE_SIZE - 1);
-			
-			sample = delayLine.readWithDelay(readOffset);
 		#endif
 			
 			const float gain = (gain2 * i + gain1 * (AUDIO_UPDATE_SIZE - i - 1)) * invAudioUpdateSize;
