@@ -613,7 +613,7 @@ bool PcmData::load(const char * filename, const int channel)
 		
 		// note : writing .cache files is disabled here. remove '&& false' to enable
 		
-		if (result == true && Path::GetExtension(filename, true) != "wav" && false)
+		if (result == true && Path::GetExtension(filename, true) != "wav" && true)
 		{
 			try
 			{
