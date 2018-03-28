@@ -34,6 +34,42 @@
 
 struct AudioGraphInstance;
 
+struct VoiceMgr_VoiceGroup : AudioVoiceManager
+{
+	enum Mode
+	{
+		kMode_Passthrough,
+		kMode_DownmixMono,
+		kMode_Disabled
+	};
+	
+	std::set<AudioVoice*> voices;
+	
+	Mode currentMode;
+	
+	VoiceMgr_VoiceGroup()
+		: AudioVoiceManager(kType_Basic)
+		, voices()
+		, currentMode(kMode_Passthrough)
+	{
+	}
+	
+	void setMode(const Mode mode)
+	{
+		if (mode != currentMode)
+		{
+			// todo : remove all voices
+			
+			// todo : add all voices
+		}
+	}
+	
+	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
+	virtual void freeVoice(AudioVoice *& voice) override;
+	
+	virtual void generateAudio(float * __restrict samples, const int numSamples) override { }
+};
+
 struct VfxNodeAudioGraphPoly : VfxNodeBase
 {
 	static const int kMaxInstances = 128;
@@ -51,21 +87,6 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 		float value;
 	};
 	
-	struct VoiceMgr : AudioVoiceManager
-	{
-		std::set<AudioVoice*> voices;
-		
-		VoiceMgr()
-			: AudioVoiceManager(kType_Basic)
-		{
-		}
-		
-		virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
-		virtual void freeVoice(AudioVoice *& voice) override;
-		
-		virtual void generateAudio(float * __restrict samples, const int numSamples) override { }
-	};
-	
 	enum Input
 	{
 		kInput_Filename,
@@ -79,7 +100,7 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	VoiceMgr voiceMgr;
+	VoiceMgr_VoiceGroup voiceMgr;
 	
 	AudioGraphGlobals globals;
 	

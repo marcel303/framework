@@ -39,15 +39,7 @@ extern SDL_mutex * g_vfxAudioMutex;
 extern AudioVoiceManager * g_vfxAudioVoiceMgr;
 extern AudioGraphManager * g_vfxAudioGraphMgr;
 
-VFX_NODE_TYPE(VfxNodeAudioGraphPoly)
-{
-	typeName = "audioGraph.poly";
-	in("file", "string");
-	in("volume", "channel");
-	out("voices", "channel");
-}
-
-bool VfxNodeAudioGraphPoly::VoiceMgr::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
+bool VoiceMgr_VoiceGroup::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
 {
 	const bool result = g_vfxAudioVoiceMgr->allocVoice(voice, source, name, doRamping, rampDelay, rampTime, channelIndex);
 	
@@ -56,11 +48,19 @@ bool VfxNodeAudioGraphPoly::VoiceMgr::allocVoice(AudioVoice *& voice, AudioSourc
 	return result;
 }
 
-void VfxNodeAudioGraphPoly::VoiceMgr::freeVoice(AudioVoice *& voice)
+void VoiceMgr_VoiceGroup::freeVoice(AudioVoice *& voice)
 {
 	voices.erase(voice);
 	
 	g_vfxAudioVoiceMgr->freeVoice(voice);
+}
+
+VFX_NODE_TYPE(VfxNodeAudioGraphPoly)
+{
+	typeName = "audioGraph.poly";
+	in("file", "string");
+	in("volume", "channel");
+	out("voices", "channel");
 }
 
 VfxNodeAudioGraphPoly::VfxNodeAudioGraphPoly()
