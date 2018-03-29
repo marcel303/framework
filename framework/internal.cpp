@@ -1678,7 +1678,7 @@ void SoundCacheElem::load(const char * filename)
 		}
 		else
 		{
-			logError("%s: failed to create OpenAL buffer", filename);
+			logError("%s: failed to create sound buffer", filename);
 		}
 	#endif
 		
