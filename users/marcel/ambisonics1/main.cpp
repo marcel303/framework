@@ -544,7 +544,7 @@ int main(int argc, char * argv[])
 		//
 		
 	#if DO_PREVIEW
-		if ((b % 4) == 0)
+		if ((b % 4) == 0 && !keyboard.isDown(SDLK_ESCAPE))
 		{
 			framework.process();
 			

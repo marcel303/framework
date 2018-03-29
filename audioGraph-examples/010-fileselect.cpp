@@ -155,6 +155,8 @@ int main(int argc, char * argv[])
 
 		SDL_DestroyMutex(mutex);
 		mutex = nullptr;
+
+		Font("calibri.ttf").saveCache();
 	}
 	framework.shutdown();
 

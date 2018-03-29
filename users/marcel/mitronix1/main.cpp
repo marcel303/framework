@@ -906,7 +906,7 @@ int main(int argc, char * argv[])
 		audioUpdateHandler->audioGraphMgr = audioGraphMgr;
 		
 		PortAudioObject * paObject = new PortAudioObject();
-		if (paObject->init(SAMPLE_RATE, 2, 2, AUDIO_UPDATE_SIZE, audioUpdateHandler) == false)
+		if (paObject->init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, audioUpdateHandler) == false)
 			logError("failed to initialize port audio object");
 		
 		Slideshow slideshow;
