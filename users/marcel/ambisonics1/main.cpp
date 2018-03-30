@@ -616,7 +616,7 @@ int main(int argc, char * argv[])
 							//mag = sqrtf(mag);
 							mag /= BUFFER_SIZE;
 							
-							fillCircle(x, y, mag * 40.f, 100);
+							fillCircle(x, y, mag * 40.f, 10);
 						}
 					}
 				#else
