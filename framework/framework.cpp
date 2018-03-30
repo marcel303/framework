@@ -177,11 +177,6 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	SetProcessDPIAware();
 #endif
 
-#ifdef LINUX
-	// fixme : this hack is necessary for now to get the Raspberry Pi up and running but should be removed asap
-	minification *= 2;
-#endif
-
 	// initialize SDL
 	
 	const int initFlags = SDL_INIT_NOPARACHUTE | SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK;
