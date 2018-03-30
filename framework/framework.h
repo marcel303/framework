@@ -85,11 +85,13 @@
 */
 
 #define USE_LEGACY_OPENGL 0
+
 #if defined(MACOS)
     #define OPENGL_VERSION 410
 #else
     #define OPENGL_VERSION 430
 #endif
+
 #define ENABLE_UTF8_SUPPORT 1
 
 static const int MAX_GAMEPAD = 4;
@@ -1322,6 +1324,7 @@ void gxSetTexture(GLuint texture);
 #else
 
 #define gxMatrixMode glMatrixMode
+GLenum gxGetMatrixMode();
 #define gxPopMatrix glPopMatrix
 #define gxPushMatrix glPushMatrix
 #define gxLoadIdentity glLoadIdentity
@@ -1333,10 +1336,10 @@ void gxGetMatrixf(GLenum mode, float * m);
 #define gxScalef glScalef
 static inline void gxValidateMatrices() { }
 
-static inline void gxInitialize() { }
+void gxInitialize();
 static inline void gxShutdown() { }
-void gxBegin(int primitiveType);
-#define gxEnd glEnd
+#define gxBegin glBegin
+void gxEnd();
 #define gxColor4f glColor4f
 #define gxColor4fv glColor4fv
 #define gxColor3ub glColor3ub
@@ -1347,7 +1350,10 @@ void gxBegin(int primitiveType);
 #define gxVertex2fv glVertex2fv
 #define gxVertex3f glVertex3f
 #define gxVertex3fv glVertex3fv
+#define gxVertex4f glVertex4f
+#define gxVertex4fv glVertex4fv
 void gxSetTexture(GLuint texture);
+
 
 #endif
 
