@@ -74,7 +74,9 @@
 	#define ENABLE_PROFILING 1
 #endif
 
-#define ENABLE_OPENGL 1
+#if !defined(ENABLE_OPENGL)
+	#define ENABLE_OPENGL 1
+#endif
 
 /*
 #ifdef DEBUG
@@ -84,7 +86,9 @@
 #endif
 */
 
-#define USE_LEGACY_OPENGL 0
+#if !defined(USE_LEGACY_OPENGL)
+	#define USE_LEGACY_OPENGL 0
+#endif
 
 #if defined(MACOS)
     #define OPENGL_VERSION 410
@@ -92,7 +96,9 @@
     #define OPENGL_VERSION 430
 #endif
 
-#define ENABLE_UTF8_SUPPORT 1
+#if !defined(ENABLE_UTF8_SUPPORT)
+	#define ENABLE_UTF8_SUPPORT 1
+#endif
 
 static const int MAX_GAMEPAD = 4;
 
