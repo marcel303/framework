@@ -145,7 +145,7 @@ if (APPLE)
 endif (APPLE)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux") 
-	target_compile_definitions(framework PUBLIC USE_LEGACY_OPENGL=1 ENABLE_MSDF_FONTS=0)
+	target_compile_definitions(framework PUBLIC USE_LEGACY_OPENGL=1 ENABLE_HQ_PRIMITIVES=0 ENABLE_MSDF_FONTS=0)
 
 	include(FindPkgConfig) 
 

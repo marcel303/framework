@@ -96,6 +96,10 @@
     #define OPENGL_VERSION 430
 #endif
 
+#if !defined(ENABLE_HQ_PRIMITIVES)
+	#define ENABLE_HQ_PRIMITIVES 1
+#endif
+
 #if !defined(ENABLE_UTF8_SUPPORT)
 	#define ENABLE_UTF8_SUPPORT 1
 #endif

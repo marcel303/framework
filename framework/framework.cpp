@@ -7877,6 +7877,10 @@ static void setShader_HqStrokedRoundedRects()
 
 void hqBegin(HQ_TYPE type, bool useScreenSize)
 {
+#if !ENABLE_HQ_PRIMITIVES
+	return;
+#endif
+
 	switch (type)
 	{
 	case HQ_LINES:
@@ -7984,6 +7988,10 @@ void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 
 void hqEnd()
 {
+#if !ENABLE_HQ_PRIMITIVES
+	return;
+#endif
+
 	{
 		Shader & shader = *static_cast<Shader*>(globals.shader);
 		
@@ -8092,6 +8100,8 @@ void hqClearTexture()
 	gxSetTexture(0);
 }
 
+#if ENABLE_HQ_PRIMITIVES
+
 void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2)
 {
 	gxNormal3f(strokeSize1, strokeSize2, 0.f);
@@ -8153,6 +8163,65 @@ void hqStrokeRoundedRect(float x1, float y1, float x2, float y2, float radius, f
 	for (int i = 0; i < 4; ++i)
 		gxVertex4f(x1, y1, x2, y2);
 }
+
+#else
+
+// these are really shitty regular OpenGL approximations to the HQ primitives. don't expect much when using them!
+
+void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2)
+{
+	drawLine(x1, y1, x2, y2);
+}
+
+void hqFillTriangle(float x1, float y1, float x2, float y2, float x3, float y3)
+{
+	gxBegin(GL_TRIANGLES);
+	{
+		gxVertex2f(x1, y1);
+		gxVertex2f(x2, y2);
+		gxVertex2f(x3, y3);
+	}
+	gxEnd();
+}
+
+void hqFillCircle(float x, float y, float radius)
+{
+	fillCircle(x, y, radius, radius / 4.f + 4.f);
+}
+
+void hqFillRect(float x1, float y1, float x2, float y2)
+{
+	drawRect(x1, y1, x2, y2);
+}
+
+void hqFillRoundedRect(float x1, float y1, float x2, float y2, float radius)
+{
+	drawRect(x1, y1, x2, y2);
+}
+
+void hqStrokeTriangle(float x1, float y1, float x2, float y2, float x3, float y3, float stroke)
+{
+	drawLine(x1, y1, x2, y2);
+	drawLine(x2, y2, x3, y3);
+	drawLine(x3, y3, x1, y1);
+}
+
+void hqStrokeCircle(float x, float y, float radius, float stroke)
+{
+	drawCircle(x, y, radius, radius / 4.f + 4.f);
+}
+
+void hqStrokeRect(float x1, float y1, float x2, float y2, float stroke)
+{
+	drawRectLine(x1, y1, x2, y2);
+}
+
+void hqStrokeRoundedRect(float x1, float y1, float x2, float y2, float radius, float stroke)
+{
+	drawRectLine(x1, y1, x2, y2);
+}
+
+#endif
 
 void hqDrawPath(const Path2d & path, float stroke)
 {
