@@ -797,7 +797,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 			shader = glCreateShader(type);
 
 		#if USE_LEGACY_OPENGL
-			const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120";
+			const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
 		#elif FRAMEWORK_USE_OPENGL_ES
 			const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
 		#else

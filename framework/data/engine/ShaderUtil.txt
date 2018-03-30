@@ -1,7 +1,7 @@
 static const char * s_shaderUtil = R"SHADER(
 
-const float kSrgbToLinear = 2.2f;
-const float kLinearToSrgb = 1.f / kSrgbToLinear;
+const float kSrgbToLinear = 2.0;
+const float kLinearToSrgb = 1.0 / kSrgbToLinear;
 
 // -- exposed functions --
 
