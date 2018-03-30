@@ -38,10 +38,10 @@
 #endif
 
 #if ENABLE_MSDF_FONTS
-	#define STB_TRUETYPE_IMPLEMENTATION
-	#include "stb_truetype.h"
 	#include "msdfgen/msdfgen.h"
 #endif
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
 
 #if defined(WIN32)
 	#include <Windows.h>
@@ -64,7 +64,9 @@ AnimCache g_animCache;
 SpriterCache g_spriterCache;
 SoundCache g_soundCache;
 FontCache g_fontCache;
+#if ENABLE_MSDF_FONTS
 MsdfFontCache g_fontCacheMSDF;
+#endif
 GlyphCache g_glyphCache;
 
 // -----

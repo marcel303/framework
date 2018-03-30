@@ -530,7 +530,9 @@ bool Framework::shutdown()
 	g_modelCache.clear();
 	g_soundCache.clear();
 	g_fontCache.clear();
+#if ENABLE_MSDF_FONTS
 	g_fontCacheMSDF.clear();
+#endif
 	g_glyphCache.clear();
 	
 	// shut down FreeType
@@ -1260,7 +1262,9 @@ void Framework::reloadCaches()
 	g_modelCache.reload();
 	g_soundCache.reload();
 	g_fontCache.reload();
+#if ENABLE_MSDF_FONTS
 	g_fontCacheMSDF.reload();
+#endif
 	g_glyphCache.clear();
 	
 	globals.resourceVersion++;
@@ -1406,7 +1410,9 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 		else if (e == "ttf")
 		{
 			g_fontCache.findOrCreate(f);
+		#if ENABLE_MSDF_FONTS
 			g_fontCacheMSDF.findOrCreate(f);
+		#endif
 		}
 		else if (strstr(f, ".vs") == f + fl - 3 || strstr(f, ".ps") == f + fl - 3)
 		{
@@ -4137,21 +4143,27 @@ Font::Font(const char * filename)
 {
 	m_font = &g_fontCache.findOrCreate(filename);
 	
+#if ENABLE_MSDF_FONTS
 	m_fontMSDF = &g_fontCacheMSDF.findOrCreate(filename);
+#endif
 }
 
 bool Font::saveCache(const char * _filename) const
 {
+#if ENABLE_MSDF_FONTS
 	const std::string filename = _filename ? _filename : (m_fontMSDF->m_filename + ".cache");
 	
 	return m_fontMSDF->m_glyphCache->saveCache(filename.c_str());
+#endif
 }
 
 bool Font::loadCache(const char * _filename)
 {
+#if ENABLE_MSDF_FONTS
 	const std::string filename = _filename ? _filename : (m_fontMSDF->m_filename + ".cache");
 	
 	return m_fontMSDF->m_glyphCache->loadCache(filename.c_str());
+#endif
 }
 
 // -----
@@ -4915,8 +4927,10 @@ void clearCaches(int caches)
 		g_glyphCache.clear();
 	}
 	
+#if ENABLE_MSDF_FONTS
 	if (caches & CACHE_FONT_MSDF)
 		g_fontCacheMSDF.clear();
+#endif
 
 	if (caches & CACHE_SHADER)
 		g_shaderCache.clear();
@@ -5462,6 +5476,11 @@ static Stack<FONT_MODE, 32> fontModeStack(FONT_BITMAP);
 
 void pushFontMode(FONT_MODE fontMode)
 {
+#if !ENABLE_MSDF_FONTS
+	if (fontMode == FONT_SDF)
+		fontMode = FONT_BITMAP;
+#endif
+
 	fontModeStack.push(globals.fontMode);
 	
 	setFontMode(fontMode);
@@ -6078,6 +6097,7 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 		measureText_FreeType(face, size, glyphs, textLength, sx, sy, yTop);
 	#endif
 	}
+#if ENABLE_MSDF_FONTS
 	else if (globals.fontMode == FONT_SDF)
 	{
 		if (globals.fontMSDF->m_glyphCache->m_isLoaded)
@@ -6101,6 +6121,7 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 			sy = 0.f;
 		}
 	}
+#endif
 }
 
 void beginTextBatch()
@@ -6115,6 +6136,7 @@ void beginTextBatch()
 		gxBegin(GL_QUADS);
 	#endif
 	}
+#if ENABLE_MSDF_FONTS
 	else if (globals.fontMode == FONT_SDF)
 	{
 		fassert(globals.isInTextBatchMSDF == false);
@@ -6132,6 +6154,7 @@ void beginTextBatch()
 		
 		gxBegin(GL_QUADS);
 	}
+#endif
 }
 
 void endTextBatch()
@@ -6236,7 +6259,8 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 	#endif
 	#endif
 	}
-	else
+#if ENABLE_MSDF_FONTS
+	else if (globals.fontMode == FONT_SDF)
 	{
 		if (globals.fontMSDF->m_glyphCache->m_isLoaded)
 		{
@@ -6260,6 +6284,7 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 			drawText_MSDF(glyphCache, x, y, size, text, glyphs, textLength);
 		}
 	}
+#endif
 }
 
 struct TextAreaData
