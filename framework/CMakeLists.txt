@@ -147,6 +147,8 @@ endif (APPLE)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux") 
 	target_compile_definitions(framework PUBLIC USE_LEGACY_OPENGL=1 ENABLE_HQ_PRIMITIVES=0 ENABLE_MSDF_FONTS=0)
 
+	set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -funsafe-math-optimizations")
+
 	include(FindPkgConfig) 
 
 	find_package(OpenGL REQUIRED) 
