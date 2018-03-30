@@ -145,32 +145,32 @@ if (APPLE)
 endif (APPLE)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux") 
-		target_compile_definitions(framework PUBLIC FRAMEWORK_USE_OPENGL_ES=1)
+	target_compile_definitions(framework PUBLIC USE_LEGACY_OPENGL=1 ENABLE_HQ_PRIMITIVES=0 ENABLE_MSDF_FONTS=0)
 
-        include(FindPkgConfig) 
- 
-        find_package(OpenGL REQUIRED) 
-        find_library(PTHREAD_LIBRARY pthread) 
-        find_package(GLEW REQUIRED) 
-        find_library(PORTAUDIO_LIBRARY portaudio) 
-        find_package(Freetype REQUIRED) 
-        find_library(FREEIMAGE_LIBRARY freeimage) 
-        find_package(SDL2 REQUIRED) 
- 
-        set(FRAMEWORK_LIBRARIES 
-                framework 
-                libgg 
-                ${OPENGL_LIBRARIES} 
-                ${PTHREAD_LIBRARY} 
-                ${GLEW_LIBRARIES} 
-                ${PORTAUDIO_LIBRARY} 
-                ${FREETYPE_LIBRARIES} 
-                ${FREEIMAGE_LIBRARY} 
-                ${SDL2_LIBRARIES} 
-                PARENT_SCOPE) 
+	include(FindPkgConfig) 
 
-        set(FRAMEWORK_BINARIES 
-                PARENT_SCOPE) 
+	find_package(OpenGL REQUIRED) 
+	find_library(PTHREAD_LIBRARY pthread) 
+	find_package(GLEW REQUIRED) 
+	find_library(PORTAUDIO_LIBRARY portaudio) 
+	find_package(Freetype REQUIRED) 
+	find_library(FREEIMAGE_LIBRARY freeimage) 
+	find_package(SDL2 REQUIRED) 
+
+	set(FRAMEWORK_LIBRARIES
+		framework
+		libgg
+		${OPENGL_LIBRARIES}
+		${PTHREAD_LIBRARY}
+		${GLEW_LIBRARIES}
+		${PORTAUDIO_LIBRARY}
+		${FREETYPE_LIBRARIES}
+		${FREEIMAGE_LIBRARY}
+		${SDL2_LIBRARIES}
+		PARENT_SCOPE)
+
+	set(FRAMEWORK_BINARIES
+		PARENT_SCOPE)
 endif ()
 
 if (MSVC)

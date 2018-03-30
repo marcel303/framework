@@ -87,6 +87,8 @@ void registerBuiltinShaders()
 			#define shader_attrib attribute
 			#define shader_in varying
 			#define shader_out varying
+			
+			#define texture texture2D
 		#else
 			#define shader_attrib in
 			#define shader_in in
