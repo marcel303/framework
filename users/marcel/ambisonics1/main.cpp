@@ -561,6 +561,18 @@ int main(int argc, char * argv[])
 						gxTranslatef(0.f, -1.f + 2.f / NUM_CHANNELS * (c + .5f), 0.f);
 						gxScalef(1.f, 1.f / NUM_CHANNELS, 0.f);
 						
+					#if USE_LEGACY_OPENGL
+						setColor(colorWhite);
+						for (int i = 0; i < BUFFER_SIZE - 1; ++i)
+						{
+							const float x1 = i + 0;
+							const float x2 = i + 1;
+							const float y1 = samples[c][b * BUFFER_SIZE + i + 0];
+							const float y2 = samples[c][b * BUFFER_SIZE + i + 1];
+							
+							drawLine(x1, y1, x2, y2);
+						}
+					#else
 						setColor(colorWhite);
 						hqBegin(HQ_LINES, true);
 						{
@@ -577,6 +589,7 @@ int main(int argc, char * argv[])
 							}
 						}
 						hqEnd();
+					#endif
 						
 						gxPopMatrix();
 					}
@@ -587,6 +600,26 @@ int main(int argc, char * argv[])
 				{
 					gxScalef(GFX_SX / float(MICGRID_SX), GFX_SY / float(MICGRID_SY), 1.f);
 					
+				#if USE_LEGACY_OPENGL
+					for (int x = 0; x < MICGRID_SX; ++x)
+					{
+						for (int y = 0; y < MICGRID_SY; ++y)
+						{
+							float values[BUFFER_SIZE];
+							
+							mics[x][y].Process(&myBFormat, BUFFER_SIZE, values);
+							
+							float mag = 0.f;
+							
+							for (int i = 0; i < BUFFER_SIZE; ++i)
+								mag += values[i] * values[i];
+							//mag = sqrtf(mag);
+							mag /= BUFFER_SIZE;
+							
+							fillCircle(x, y, mag * 40.f, 100);
+						}
+					}
+				#else
 					hqBegin(HQ_FILLED_CIRCLES);
 					
 					for (int x = 0; x < MICGRID_SX; ++x)
@@ -609,6 +642,7 @@ int main(int argc, char * argv[])
 					}
 					
 					hqEnd();
+				#endif
 				}
 				gxPopMatrix();
 			}
