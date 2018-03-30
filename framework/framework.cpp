@@ -226,6 +226,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	
 	if (enableDepthBuffer)
 	{
+	#if USE_LEGACY_OPENGL
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	#if FRAMEWORK_USE_OPENGL_ES
 		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
