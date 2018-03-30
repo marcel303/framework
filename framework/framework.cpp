@@ -416,11 +416,6 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	
 	globals.displaySize[0] = sx;
 	globals.displaySize[1] = sy;
-	
-#if 0 // invalid using non-legacy mode
-	glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);
-	checkErrorGL();
-#endif
 
 	gxInitialize();
 	
@@ -5022,7 +5017,6 @@ void applyTransformWithViewportSize(const float sx, const float sy)
 			
 			// capture transform
 			gxGetMatrixf(GL_PROJECTION, globals.transformScreen.m_v);
-			checkErrorGL();
 		}
 		gxPopMatrix();
 	}
@@ -5396,6 +5390,11 @@ void setColorf(float r, float g, float b, float a, float rgbMul)
 void setColorClamp(bool clamp)
 {
 	globals.colorClamp = clamp;
+	
+#if USE_LEGACY_OPENGL
+	glClampColor(GL_CLAMP_VERTEX_COLOR, clamp ? GL_TRUE : GL_FALSE);
+	checkErrorGL();
+#endif
 }
 
 void setAlpha(int a)
@@ -7486,11 +7485,9 @@ void gxSetTexture(GLuint texture)
 
 #else
 
-void gxBegin(int primitiveType)
+void gxInitialize()
 {
-	//clearShader();
-
-	glBegin(primitiveType);
+	registerBuiltinShaders();
 }
 
 void gxGetMatrixf(GLenum mode, float * m)
@@ -7511,6 +7508,22 @@ void gxGetMatrixf(GLenum mode, float * m)
 		fassert(false);
 		break;
 	}
+}
+
+GLenum gxGetMatrixMode()
+{
+	GLint mode = 0;
+	
+	glGetIntegerv(GL_MATRIX_MODE, &mode);
+	checkErrorGL();
+	
+	return (GLenum)mode;
+}
+
+void gxEnd()
+{
+	glEnd();
+	checkErrorGL();
 }
 
 void gxSetTexture(GLuint texture)
@@ -7842,48 +7855,48 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 	switch (type)
 	{
 	case HQ_LINES:
-		gxBegin(GL_QUADS);
 		setShader_HqLines();
+		gxBegin(GL_QUADS);
 		break;
 
 	case HQ_FILLED_TRIANGLES:
-		gxBegin(GL_TRIANGLES);
 		setShader_HqFilledTriangles();
+		gxBegin(GL_TRIANGLES);
 		break;
 
 	case HQ_FILLED_CIRCLES:
-		gxBegin(GL_QUADS);
 		setShader_HqFilledCircles();
+		gxBegin(GL_QUADS);
 		break;
 
 	case HQ_FILLED_RECTS:
-		gxBegin(GL_QUADS);
 		setShader_HqFilledRects();
+		gxBegin(GL_QUADS);
 		break;
 	
 	case HQ_FILLED_ROUNDED_RECTS:
-		gxBegin(GL_QUADS);
 		setShader_HqFilledRoundedRects();
+		gxBegin(GL_QUADS);
 		break;
 
 	case HQ_STROKED_TRIANGLES:
-		gxBegin(GL_TRIANGLES);
 		setShader_HqStrokedTriangles();
+		gxBegin(GL_TRIANGLES);
 		break;
 
 	case HQ_STROKED_CIRCLES:
-		gxBegin(GL_QUADS);
 		setShader_HqStrokedCircles();
+		gxBegin(GL_QUADS);
 		break;
 
 	case HQ_STROKED_RECTS:
-		gxBegin(GL_QUADS);
 		setShader_HqStrokedRects();
+		gxBegin(GL_QUADS);
 		break;
 	
 	case HQ_STROKED_ROUNDED_RECTS:
-		gxBegin(GL_QUADS);
 		setShader_HqStrokedRoundedRects();
+		gxBegin(GL_QUADS);
 		break;
 
 	default:
@@ -7896,6 +7909,8 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 
 void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 {
+	setShader(shader);
+	
 	switch (type)
 	{
 	case HQ_LINES:
@@ -7938,8 +7953,6 @@ void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 		fassert(false);
 		break;
 	}
-	
-	setShader(shader);
 	
 	globals.hqUseScreenSize = useScreenSize;
 }

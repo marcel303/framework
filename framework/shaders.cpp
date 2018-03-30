@@ -91,11 +91,11 @@ void registerBuiltinShaders()
 			#define shader_attrib in
 			#define shader_in in
 			#define shader_out out
+			
+			precision highp float;
 		#endif
 		
 		#define tex2D texture
-
-		precision highp float;
 		
 		#define VS_USE_LEGACY_MATRICES 0
 		
