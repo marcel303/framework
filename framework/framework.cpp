@@ -1958,9 +1958,43 @@ bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, 
 			glFormat = GL_R16F;
 		if (format == SURFACE_R32F)
 			glFormat = GL_R32F;
-
+		
+	#if USE_LEGACY_OPENGL
+		GLenum uploadFormat = GL_INVALID_ENUM;
+		GLenum uploadType = GL_INVALID_ENUM;
+		
+		if (format == SURFACE_RGBA8)
+		{
+			uploadFormat = GL_RGBA;
+			uploadType = GL_UNSIGNED_BYTE;
+		}
+		if (format == SURFACE_RGBA16F)
+		{
+			uploadFormat = GL_RGBA;
+			uploadType = GL_FLOAT;
+		}
+		if (format == SURFACE_R8)
+		{
+			uploadFormat = GL_RED;
+			uploadType = GL_UNSIGNED_BYTE;
+		}
+		if (format == SURFACE_R16F)
+		{
+			uploadFormat = GL_RED;
+			uploadType = GL_FLOAT;
+		}
+		if (format == SURFACE_R32F)
+		{
+			uploadFormat = GL_RED;
+			uploadType = GL_FLOAT;
+		}
+		
+		glTexImage2D(GL_TEXTURE_2D, 0, glFormat, sx, sy, 0, uploadFormat, uploadType, nullptr);
+		checkErrorGL();
+	#else
 		glTexStorage2D(GL_TEXTURE_2D, 1, glFormat, sx, sy);
 		checkErrorGL();
+	#endif
 
 		// set filtering
 		
