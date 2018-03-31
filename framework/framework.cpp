@@ -228,7 +228,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	{
 	#if USE_LEGACY_OPENGL
 		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-	#if FRAMEWORK_USE_OPENGL_ES
+	#elif FRAMEWORK_USE_OPENGL_ES
 		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 	#else
@@ -7872,12 +7872,10 @@ static void setShader_HqStrokedRoundedRects()
 	setShader(globals.builtinShaders->hqStrokedRoundedRect.get());
 }
 
+#if ENABLE_HQ_PRIMITIVES
+
 void hqBegin(HQ_TYPE type, bool useScreenSize)
 {
-#if !ENABLE_HQ_PRIMITIVES
-	return;
-#endif
-
 	switch (type)
 	{
 	case HQ_LINES:
@@ -7985,10 +7983,6 @@ void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 
 void hqEnd()
 {
-#if !ENABLE_HQ_PRIMITIVES
-	return;
-#endif
-
 	{
 		Shader & shader = *static_cast<Shader*>(globals.shader);
 		
@@ -8065,6 +8059,68 @@ void hqEnd()
 
 	clearShader();
 }
+
+#else
+
+void hqBegin(HQ_TYPE type, bool useScreenSize)
+{
+	switch (type)
+	{
+	case HQ_LINES:
+		gxBegin(GL_LINES);
+		break;
+
+	case HQ_FILLED_TRIANGLES:
+		gxBegin(GL_TRIANGLES);
+		break;
+
+	case HQ_FILLED_CIRCLES:
+		break;
+
+	case HQ_FILLED_RECTS:
+		gxBegin(GL_QUADS);
+		break;
+	
+	case HQ_FILLED_ROUNDED_RECTS:
+		gxBegin(GL_QUADS);
+		break;
+
+	case HQ_STROKED_TRIANGLES:
+		gxBegin(GL_LINES);
+		break;
+
+	case HQ_STROKED_CIRCLES:
+		break;
+
+	case HQ_STROKED_RECTS:
+		gxBegin(GL_LINES);
+		break;
+	
+	case HQ_STROKED_ROUNDED_RECTS:
+		gxBegin(GL_LINES);
+		break;
+
+	default:
+		fassert(false);
+		break;
+	}
+	
+	globals.hqUseScreenSize = useScreenSize;
+}
+
+void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
+{
+	setShader(shader);
+	
+	hqBegin(type, useScreenSize);
+}
+
+void hqEnd()
+{
+	gxEnd();
+}
+
+#endif
 
 void hqSetGradient(GRADIENT_TYPE gradientType, const Mat4x4 & matrix, const Color & color1, const Color & color2, const COLOR_MODE colorMode, const float bias, const float scale)
 {
@@ -8167,18 +8223,15 @@ void hqStrokeRoundedRect(float x1, float y1, float x2, float y2, float radius, f
 
 void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2)
 {
-	drawLine(x1, y1, x2, y2);
+	gxVertex2f(x1, y1);
+	gxVertex2f(x2, y2);
 }
 
 void hqFillTriangle(float x1, float y1, float x2, float y2, float x3, float y3)
 {
-	gxBegin(GL_TRIANGLES);
-	{
-		gxVertex2f(x1, y1);
-		gxVertex2f(x2, y2);
-		gxVertex2f(x3, y3);
-	}
-	gxEnd();
+	gxVertex2f(x1, y1);
+	gxVertex2f(x2, y2);
+	gxVertex2f(x3, y3);
 }
 
 void hqFillCircle(float x, float y, float radius)
@@ -8188,19 +8241,30 @@ void hqFillCircle(float x, float y, float radius)
 
 void hqFillRect(float x1, float y1, float x2, float y2)
 {
-	drawRect(x1, y1, x2, y2);
+	gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
+	gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+	gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+	gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
 }
 
 void hqFillRoundedRect(float x1, float y1, float x2, float y2, float radius)
 {
-	drawRect(x1, y1, x2, y2);
+	gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
+	gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+	gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+	gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
 }
 
 void hqStrokeTriangle(float x1, float y1, float x2, float y2, float x3, float y3, float stroke)
 {
-	drawLine(x1, y1, x2, y2);
-	drawLine(x2, y2, x3, y3);
-	drawLine(x3, y3, x1, y1);
+	gxVertex2f(x1, y1);
+	gxVertex2f(x2, y2);
+	
+	gxVertex2f(x2, y2);
+	gxVertex2f(x3, y3);
+	
+	gxVertex2f(x3, y3);
+	gxVertex2f(x1, y1);
 }
 
 void hqStrokeCircle(float x, float y, float radius, float stroke)
@@ -8210,12 +8274,32 @@ void hqStrokeCircle(float x, float y, float radius, float stroke)
 
 void hqStrokeRect(float x1, float y1, float x2, float y2, float stroke)
 {
-	drawRectLine(x1, y1, x2, y2);
+	gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
+	gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+	
+	gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+	gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+	
+	gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+	gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
+	
+	gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
+	gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 }
 
 void hqStrokeRoundedRect(float x1, float y1, float x2, float y2, float radius, float stroke)
 {
-	drawRectLine(x1, y1, x2, y2);
+	gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
+	gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+	
+	gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+	gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+	
+	gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+	gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
+	
+	gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
+	gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 }
 
 #endif
