@@ -7827,6 +7827,8 @@ void setShader_ColorTemperature(const GLuint source, const float temperature, co
 
 //
 
+#if ENABLE_HQ_PRIMITIVES
+
 static void setShader_HqLines()
 {
 	setShader(globals.builtinShaders->hqLine.get());
@@ -7871,8 +7873,6 @@ static void setShader_HqStrokedRoundedRects()
 {
 	setShader(globals.builtinShaders->hqStrokedRoundedRect.get());
 }
-
-#if ENABLE_HQ_PRIMITIVES
 
 void hqBegin(HQ_TYPE type, bool useScreenSize)
 {
@@ -8062,6 +8062,8 @@ void hqEnd()
 
 #else
 
+static HQ_TYPE s_hqType;
+
 void hqBegin(HQ_TYPE type, bool useScreenSize)
 {
 	switch (type)
@@ -8105,6 +8107,8 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 		break;
 	}
 	
+	s_hqType = type;
+	
 	globals.hqUseScreenSize = useScreenSize;
 }
 
@@ -8117,7 +8121,46 @@ void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 
 void hqEnd()
 {
-	gxEnd();
+	switch (s_hqType)
+	{
+	case HQ_LINES:
+		gxEnd();
+		break;
+
+	case HQ_FILLED_TRIANGLES:
+		gxEnd();
+		break;
+
+	case HQ_FILLED_CIRCLES:
+		break;
+
+	case HQ_FILLED_RECTS:
+		gxEnd();
+		break;
+	
+	case HQ_FILLED_ROUNDED_RECTS:
+		gxEnd();
+		break;
+
+	case HQ_STROKED_TRIANGLES:
+		gxEnd();
+		break;
+
+	case HQ_STROKED_CIRCLES:
+		break;
+
+	case HQ_STROKED_RECTS:
+		gxEnd();
+		break;
+	
+	case HQ_STROKED_ROUNDED_RECTS:
+		gxEnd();
+		break;
+
+	default:
+		fassert(false);
+		break;
+	}
 }
 
 #endif
