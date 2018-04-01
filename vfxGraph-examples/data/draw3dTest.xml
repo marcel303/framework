@@ -1,0 +1,72 @@
+<graph nextNodeId="176" nextLinkId="110">
+    <node id="163" typeName="draw.display"/>
+    <node id="164" typeName="draw.surface">
+        <input socket="clearColor" value="b9cceaff"/>
+        <input socket="viewMode" value="1"/>
+    </node>
+    <node id="165" typeName="draw.camera3d">
+        <input socket="z" value="-0.200000"/>
+    </node>
+    <node id="166" typeName="draw.image">
+        <input socket="sizeMode" value="1"/>
+    </node>
+    <node id="167" typeName="picture">
+        <input socket="source" value="picture.jpg"/>
+    </node>
+    <node id="168" typeName="draw.model">
+        <input socket="anim" value="anim02"/>
+        <input socket="animSpeed" value="0.200000"/>
+        <input socket="file" value="model.txt"/>
+        <input socket="scale" value="0.003000"/>
+    </node>
+    <node id="169" typeName="draw.sequence"/>
+    <node id="170" typeName="time">
+        <input socket="scale" value="7.000000"/>
+    </node>
+    <node id="171" typeName="draw.transform2d"/>
+    <node id="172" typeName="gen.sine">
+        <input socket="frequency" value="0.100000"/>
+    </node>
+    <node id="173" typeName="gen.sine">
+        <input socket="frequency" value="0.030000"/>
+    </node>
+    <link id="96" srcNodeId="163" srcNodeSocketName="image" dstNodeId="164" dstNodeSocketName="image"/>
+    <link id="97" srcNodeId="164" srcNodeSocketName="source" dstNodeId="165" dstNodeSocketName="any"/>
+    <link id="98" srcNodeId="166" srcNodeSocketName="image" dstNodeId="167" dstNodeSocketName="image"/>
+    <link id="101" srcNodeId="165" srcNodeSocketName="any" dstNodeId="169" dstNodeSocketName="any"/>
+    <link id="102" srcNodeId="169" srcNodeSocketName="01" dstNodeId="166" dstNodeSocketName="any"/>
+    <link id="105" srcNodeId="169" srcNodeSocketName="02" dstNodeId="171" dstNodeSocketName="transform"/>
+    <link id="106" srcNodeId="171" srcNodeSocketName="any" dstNodeId="168" dstNodeSocketName="any"/>
+    <link id="107" srcNodeId="171" srcNodeSocketName="angle" dstNodeId="170" dstNodeSocketName="time"/>
+    <link id="108" srcNodeId="165" srcNodeSocketName="z" dstNodeId="172" dstNodeSocketName="value">
+        <param name="out.max" value="-1.500000"/>
+        <param name="out.min" value="-1.000000"/>
+    </link>
+    <link id="109" srcNodeId="165" srcNodeSocketName="yaw" dstNodeId="173" dstNodeSocketName="value">
+        <param name="out.max" value="20.000000"/>
+        <param name="out.min" value="-20.000000"/>
+    </link>
+    <editor nextZKey="840">
+        <dragAndZoom x="12.668239593505859" y="6.217939636794581e-40" zoom="1.1840634346008301"/>
+        <nodeDatas>
+            <nodeData nodeId="163" x="320" y="-144" zKey="0"/>
+            <nodeData nodeId="164" x="176" y="-144" zKey="0"/>
+            <nodeData nodeId="165" x="32" y="-144" zKey="0"/>
+            <nodeData nodeId="166" x="-256" y="-144" zKey="0"/>
+            <nodeData nodeId="167" x="-400" y="-144" zKey="0"/>
+            <nodeData nodeId="168" x="-368" y="0" zKey="0"/>
+            <nodeData nodeId="169" x="-112" y="-144" zKey="0"/>
+            <nodeData nodeId="170" x="-368" y="160" zKey="0"/>
+            <nodeData nodeId="171" x="-240" y="0" zKey="0"/>
+            <nodeData nodeId="172" x="-112" y="64" zKey="0"/>
+            <nodeData nodeId="173" x="-112" y="160" zKey="0"/>
+        </nodeDatas>
+        <visualizers/>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="d6bf5bff" gridColor="ffffff5f">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0" g="0" b="0" a="0"/>
+                <key t="1" r="1" g="1" b="1" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

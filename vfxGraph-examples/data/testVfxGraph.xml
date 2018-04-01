@@ -1,0 +1,45 @@
+<graph nextNodeId="79" nextLinkId="102">
+    <node id="50" typeName="draw.display"/>
+    <node id="57" typeName="draw.surface"/>
+    <node id="58" typeName="video">
+        <input socket="source" value="mocap6.mp4"/>
+    </node>
+    <node id="59" typeName="draw.image">
+        <input socket="sizeMode" value="0"/>
+    </node>
+    <node id="60" typeName="draw.sequence"/>
+    <node id="64" typeName="vfxGraph">
+        <input socket="file" value="testVfxGraph-subGraph.xml"/>
+    </node>
+    <node id="65" typeName="draw.image"/>
+    <node id="66" typeName="draw.blend">
+        <input socket="mode" value="2"/>
+    </node>
+    <link id="60" srcNodeId="50" srcNodeSocketName="image" dstNodeId="57" dstNodeSocketName="image"/>
+    <link id="62" srcNodeId="59" srcNodeSocketName="image" dstNodeId="58" dstNodeSocketName="image"/>
+    <link id="75" srcNodeId="65" srcNodeSocketName="image" dstNodeId="64" dstNodeSocketName="image"/>
+    <link id="89" srcNodeId="60" srcNodeSocketName="01" dstNodeId="59" dstNodeSocketName="any"/>
+    <link id="92" srcNodeId="60" srcNodeSocketName="02" dstNodeId="66" dstNodeSocketName="any"/>
+    <link id="95" srcNodeId="57" srcNodeSocketName="source" dstNodeId="60" dstNodeSocketName="any"/>
+    <link id="98" srcNodeId="66" srcNodeSocketName="any" dstNodeId="65" dstNodeSocketName="any"/>
+    <editor nextZKey="610">
+        <dragAndZoom x="88.5074462890625" y="36.410140991210938" zoom="1"/>
+        <nodeDatas>
+            <nodeData nodeId="50" x="448" y="80" zKey="0"/>
+            <nodeData nodeId="57" x="320" y="80" zKey="0"/>
+            <nodeData nodeId="58" x="-256" y="80" zKey="0"/>
+            <nodeData nodeId="59" x="-128" y="80" zKey="581"/>
+            <nodeData nodeId="60" x="192" y="80" zKey="0"/>
+            <nodeData nodeId="64" x="-384" y="240" zKey="0"/>
+            <nodeData nodeId="65" x="-256" y="240" zKey="0"/>
+            <nodeData nodeId="66" x="-128" y="240" zKey="0"/>
+        </nodeDatas>
+        <visualizers/>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="002d9e90" gridColor="2b2b2b21">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0" g="0" b="0" a="0"/>
+                <key t="1" r="1" g="1" b="1" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

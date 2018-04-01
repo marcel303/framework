@@ -1,0 +1,11 @@
+include fsfx/common.inc
+
+vec4 fsfx()
+{
+	vec4 color = texture(colormap, texcoord);
+	
+	color.rgb = pow(color.rgb, vec3(param1)) * param2;
+	
+	color = clamp(color, vec4(0.0), vec4(1.0));
+	return color;
+}
