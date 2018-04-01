@@ -8098,8 +8098,28 @@ void hqEnd()
 
 static HQ_TYPE s_hqType;
 
+static float s_hqScale;
+
 void hqBegin(HQ_TYPE type, bool useScreenSize)
 {
+	if (useScreenSize)
+	{
+		Mat4x4 matM;
+		
+		gxGetMatrixf(GL_MODELVIEW, matM.m_v);
+		checkErrorGL();
+		
+		const float scale = matM.GetAxis(0).CalcSize();
+		
+		s_hqScale = 1.f / scale;
+	}
+	else
+	{
+		s_hqScale = 1.f;
+	}
+	
+	//
+	
 	switch (type)
 	{
 	case HQ_LINES:
@@ -8313,7 +8333,11 @@ void hqFillTriangle(float x1, float y1, float x2, float y2, float x3, float y3)
 
 void hqFillCircle(float x, float y, float radius)
 {
-	fillCircle(x, y, radius, radius / 4.f + 4.f);
+	radius *= s_hqScale;
+	
+	const int numSegments = radius * 6.f + 4.f;
+	
+	fillCircle(x, y, radius, numSegments);
 }
 
 void hqFillRect(float x1, float y1, float x2, float y2)
@@ -8346,7 +8370,11 @@ void hqStrokeTriangle(float x1, float y1, float x2, float y2, float x3, float y3
 
 void hqStrokeCircle(float x, float y, float radius, float stroke)
 {
-	drawCircle(x, y, radius, radius / 4.f + 4.f);
+	radius *= s_hqScale;
+	
+	const int numSegments = radius * 6.f + 4.f;
+	
+	drawCircle(x, y, radius, numSegments);
 }
 
 void hqStrokeRect(float x1, float y1, float x2, float y2, float stroke)
