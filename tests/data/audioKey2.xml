@@ -1,0 +1,79 @@
+<graph nextNodeId="18" nextLinkId="23">
+    <node id="1" typeName="physical.spring">
+        <input socket="dampen" value="0.005000"/>
+        <input socket="impulse" value="8.000000"/>
+        <input socket="strength" value="800.000000"/>
+    </node>
+    <node id="4" typeName="trigger.event">
+        <input socket="name" value="begin"/>
+    </node>
+    <node id="6" typeName="in.value">
+        <input socket="name" value="frequency"/>
+        <input socket="scope" value="1"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="7" typeName="filter.comb">
+        <input socket="delay" value="0.012300"/>
+        <input socket="feedback" value="0.700000"/>
+        <input socket="maxDelay" value="2.000000"/>
+    </node>
+    <node id="9" typeName="audio.sine">
+        <input socket="a" value="0.400000"/>
+        <input socket="b" value="0.600000"/>
+        <input socket="frequency" value="2000.000000"/>
+        <input socket="mode" value="0"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="10" typeName="math">
+        <input socket="type" value="3"/>
+    </node>
+    <node id="12" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="14" typeName="in.value">
+        <input socket="name" value="gain"/>
+        <input socket="scope" value="1"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="16" typeName="math.mul"/>
+    <node id="17" typeName="wavefield.1d">
+        <input socket="gain" value="4.000000"/>
+        <input socket="pos.dampen" value="0.200000"/>
+        <input socket="sample.pos" value="0.200000"/>
+        <input socket="size" value="32"/>
+        <input socket="tension" value="80.000000"/>
+        <input socket="trigger.amount" value="1.000000"/>
+        <input socket="vel.dampen" value="0.200000"/>
+    </node>
+    <link id="2" srcNodeId="1" srcNodeSocketName="impulse!" dstNodeId="4" dstNodeSocketName="trigger!"/>
+    <link id="4" srcNodeId="1" srcNodeSocketName="strength" dstNodeId="6" dstNodeSocketName="valueX"/>
+    <link id="8" srcNodeId="10" srcNodeSocketName="a" dstNodeId="1" dstNodeSocketName="value"/>
+    <link id="9" srcNodeId="7" srcNodeSocketName="value" dstNodeId="10" dstNodeSocketName="result"/>
+    <link id="10" srcNodeId="10" srcNodeSocketName="b" dstNodeId="9" dstNodeSocketName="audio"/>
+    <link id="11" srcNodeId="9" srcNodeSocketName="frequency" dstNodeId="6" dstNodeSocketName="valueX"/>
+    <link id="16" srcNodeId="16" srcNodeSocketName="b" dstNodeId="14" dstNodeSocketName="valueX"/>
+    <link id="17" srcNodeId="12" srcNodeSocketName="audio" dstNodeId="16" dstNodeSocketName="result"/>
+    <link id="18" srcNodeId="16" srcNodeSocketName="a" dstNodeId="7" dstNodeSocketName="value"/>
+    <link id="19" srcNodeId="17" srcNodeSocketName="trigger!" dstNodeId="4" dstNodeSocketName="trigger!"/>
+    <link id="21" srcNodeId="7" srcNodeSocketName="value" dstNodeId="17" dstNodeSocketName="audio"/>
+    <link id="22" srcNodeId="17" srcNodeSocketName="tension" dstNodeId="6" dstNodeSocketName="valueX"/>
+    <editor nextZKey="155">
+        <dragAndZoom x="209.42971801757812" y="159.05453491210938" zoom="0.72097641229629517"/>
+        <nodeDatas>
+            <nodeData nodeId="1" x="-160" y="-16" zKey="149"/>
+            <nodeData nodeId="4" x="-288" y="80" zKey="20"/>
+            <nodeData nodeId="6" x="-400" y="-16" zKey="139"/>
+            <nodeData nodeId="7" x="96" y="0" zKey="151"/>
+            <nodeData nodeId="9" x="-167.74111938476562" y="133.10685729980469" zKey="128"/>
+            <nodeData nodeId="10" x="-31.9998779296875" y="0" zKey="152"/>
+            <nodeData nodeId="12" x="353.3365478515625" y="0" zKey="141"/>
+            <nodeData nodeId="14" x="92.170608520507812" y="140.97088623046875" zKey="140"/>
+            <nodeData nodeId="16" x="224" y="0" zKey="112"/>
+            <nodeData nodeId="17" x="-32" y="112" zKey="154"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="8" x="-352" y="-176" zKey="42" nodeId="1" dstSocketName="value" sx="216" sy="148"/>
+        </visualizers>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
+    </editor>
+</graph>
