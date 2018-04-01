@@ -36,6 +36,7 @@
 #include "audioUpdateHandler.h"
 #include "vfxNodes/oscEndpointMgr.h"
 #include "soundmix.h"
+#include <algorithm>
 #include <cmath>
 
 #define ENABLE_AUDIO_RTE 1
@@ -121,8 +122,8 @@ struct Creature
 	
 	void tick(const float channelValue, const float moveSpeed, const float angleSpeed, const float dt)
 	{
-		x = lerp(0.f, x, std::powf(.8f, dt));
-		y = lerp(0.f, y, std::powf(.8f, dt));
+		x = lerp(0.f, x, powf(.8f, dt));
+		y = lerp(0.f, y, powf(.8f, dt));
 		
 		angle += channelValue * angleSpeed * dt;
 		

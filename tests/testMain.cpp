@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "testBase.h"
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <string>
@@ -364,7 +365,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 				
 				const float dx = o.x - b.x;
 				const float dy = o.y - b.y;
-				const float ds = std::sqrtf(dx * dx + dy * dy);
+				const float ds = sqrtf(dx * dx + dy * dy);
 				
 				ButtonLink bl;
 				bl.b = &o;
@@ -412,7 +413,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 			b.ay = ay;
 		}
 		
-		const float falloff = std::powf(.2f, dt);
+		const float falloff = powf(.2f, dt);
 		
 		for (auto & bi : buttonStates)
 		{
@@ -547,7 +548,7 @@ struct MainButton
 		if (tick)
 		{
 			const float retainPerSecond = .2f;
-			const float retainThisFrame = std::powf(retainPerSecond, dt);
+			const float retainThisFrame = powf(retainPerSecond, dt);
 			
 			currentX = lerp(desiredX, currentX, retainThisFrame);
 			currentY = lerp(desiredY, currentY, retainThisFrame);

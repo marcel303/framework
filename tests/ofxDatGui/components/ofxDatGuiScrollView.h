@@ -22,6 +22,7 @@
 
 #pragma once
 #include "../core/ofxDatGuiComponent.h"
+#include <algorithm>
 
 class ofxDatGuiScrollView : public ofxDatGuiComponent {
 

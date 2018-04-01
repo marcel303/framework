@@ -29,7 +29,12 @@
 #include "framework.h"
 #include "testBase.h"
 #include <cmath>
-#include <portaudio/portaudio.h>
+
+#if LINUX
+	#include <portaudio.h>
+#else
+	#include <portaudio/portaudio.h>
+#endif
 
 #define SAMPLERATE (44100.0)
 
