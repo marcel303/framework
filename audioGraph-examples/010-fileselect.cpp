@@ -30,6 +30,7 @@
 #include "audioUpdateHandler.h"
 #include "framework.h"
 #include "soundmix.h"
+#include <cmath>
 
 const int GFX_SX = 800;
 const int GFX_SY = 400;
