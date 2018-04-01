@@ -4185,6 +4185,8 @@ bool Font::saveCache(const char * _filename) const
 	const std::string filename = _filename ? _filename : (m_fontMSDF->m_filename + ".cache");
 	
 	return m_fontMSDF->m_glyphCache->saveCache(filename.c_str());
+#else
+	return true;
 #endif
 }
 
@@ -4194,6 +4196,8 @@ bool Font::loadCache(const char * _filename)
 	const std::string filename = _filename ? _filename : (m_fontMSDF->m_filename + ".cache");
 	
 	return m_fontMSDF->m_glyphCache->loadCache(filename.c_str());
+#else
+	return true;
 #endif
 }
 
