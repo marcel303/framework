@@ -109,6 +109,13 @@ namespace binaural
 	{
 		return float4 { x, x, x, x };
 	}
+
+	inline float4 _mm_load1_ps(const float * _x)
+	{
+		const float x = *_x;
+
+		return float4 { x, x, x, x };
+	}
 #endif
 
 	//
