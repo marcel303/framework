@@ -34,6 +34,12 @@
 
 #define ENABLE_HUB 0
 
+#if USE_LEGACY_OPENGL
+	#define DO_BLUR 0
+#else
+	#define DO_BLUR 1
+#endif
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 
@@ -720,7 +726,9 @@ void testMain()
 	
 	handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 	
+#if DO_BLUR
 	Surface surface(GFX_SX, GFX_SY, true);
+#endif
 	
 	bool stop = false;
 	
@@ -746,9 +754,10 @@ void testMain()
 		blurStrength *= std::pow(.01, double(dt * 4.0));
 		
 		//
-
-		framework.beginDraw(0, 0, 0, 0);
+		
+		framework.beginDraw(230, 230, 230, 0);
 		{
+		#if DO_BLUR
 			pushSurface(&surface);
 			{
 				surface.clear(230, 230, 230, 0);
@@ -758,12 +767,13 @@ void testMain()
 			popSurface();
 			
 			//surface.invert();
-		#if !USE_LEGACY_OPENGL
 			surface.gaussianBlur(blurStrength * 100.f, blurStrength * 100.f, std::ceilf(blurStrength * 100.f));
-		#endif
 			
 			setColor(colorWhite);
 			surface.blit(BLEND_OPAQUE);
+		#else
+			doMainButtons(false, true, dt);
+		#endif
 		}
 		framework.endDraw();
 	} while (stop == false);
