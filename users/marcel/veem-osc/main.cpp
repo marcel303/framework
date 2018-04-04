@@ -604,6 +604,10 @@ static int sendFakeSensorDataThreadProc(void * obj)
 					p << float(int(framework.time / 6.f) % 6);
 					p << osc::EndMessage;
 					
+					p << osc::BeginMessage("/veem/wind");
+					p << lerp(2.f, 20.f, float(1.f - (std::cos(framework.time / 100.f) + 1.f) / 2.f));
+					p << osc::EndMessage;
+					
 					p << osc::BeginMessage("/sound/intensity");
 					p << (std::sin(framework.time / 10.f) + 1.f) / 2.f;
 					p << osc::EndMessage;
