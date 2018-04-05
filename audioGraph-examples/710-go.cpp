@@ -50,9 +50,9 @@ static void doControlValue(AudioControlValue & controlValue, const int index, co
 		const float range = controlValue.max - controlValue.min;
 		const float step = range / 20.f;
 		
-		if (c == 'q')
+		if (c == '1')
 			controlValue.desiredX = fmaxf(controlValue.desiredX - step, controlValue.min);
-		if (c == 'w')
+		if (c == '2')
 			controlValue.desiredX = fminf(controlValue.desiredX + step, controlValue.max);
 	}
 	
@@ -101,81 +101,90 @@ int main(int argc, char * argv[])
 		audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
 
 		PortAudioObject pa;
-		pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 		
-		// create an audio graph instance
-		
-		AudioGraphInstance * instance = audioGraphMgr.createInstance(filename);
-		
-		if (instance == nullptr)
+		if (!pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler))
 		{
-			printf("failed to open %s\n", filename);
+			printf("failed to initialize audio output\n");
 		}
 		else
 		{
-			// todo : keyboard/console based ui to 
-			// - change control values
-			// - trigger events
-			// - quit the app
+			// create an audio graph instance
 			
-			int selectedIndex = 0;
+			AudioGraphInstance * instance = audioGraphMgr.createInstance(filename);
 			
-			int c = 0;
-			
-			for (;;)
+			if (instance == nullptr)
 			{
-				SDL_LockMutex(mutex);
-				{
-					const int count =
-						audioGraphMgr.globals->controlValues.size() +
-						instance->audioGraph->controlValues.size();
-					
-					if (count == 0)
-						selectedIndex = 0;
-					else
-					{
-						if (selectedIndex < 0)
-							selectedIndex = count - 1;
-						else if (selectedIndex >= count)
-							selectedIndex = 0;
-					}
-					
-					int index = 0;
-					
-					for (auto & controlValue : audioGraphMgr.globals->controlValues)
-					{
-						doControlValue(controlValue, index, selectedIndex, 'G', c);
-						
-						index++;
-					}
-					
-					for (auto & controlValue : instance->audioGraph->controlValues)
-					{
-						doControlValue(controlValue, index, selectedIndex, 'L', c);
-						
-						index++;
-					}
-				}
-				SDL_UnlockMutex(mutex);
-				
-				printf("CPU usage: %d%%\n", int(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100));
-				
-				system("/bin/stty raw");
-				c = getchar();
-				system("/bin/stty cooked");
-				
-				printf("\n");
-				
-				if (c == 'a')
-					selectedIndex--;
-				if (c == 'z')
-					selectedIndex++;
+				printf("failed to open %s\n", filename);
 			}
+			else
+			{
+				// todo : keyboard/console based ui to
+				// - trigger events
+				
+				int selectedIndex = 0;
+				
+				int c = 0;
+				
+				bool stop = false;
+				
+				do
+				{
+					SDL_LockMutex(mutex);
+					{
+						const int count =
+							audioGraphMgr.globals->controlValues.size() +
+							instance->audioGraph->controlValues.size();
+						
+						if (count == 0)
+							selectedIndex = 0;
+						else
+						{
+							if (selectedIndex < 0)
+								selectedIndex = count - 1;
+							else if (selectedIndex >= count)
+								selectedIndex = 0;
+						}
+						
+						int index = 0;
+						
+						for (auto & controlValue : audioGraphMgr.globals->controlValues)
+						{
+							doControlValue(controlValue, index, selectedIndex, 'G', c);
+							
+							index++;
+						}
+						
+						for (auto & controlValue : instance->audioGraph->controlValues)
+						{
+							doControlValue(controlValue, index, selectedIndex, 'L', c);
+							
+							index++;
+						}
+					}
+					SDL_UnlockMutex(mutex);
+					
+					printf("CPU usage: %d%%\n", int(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100));
+					
+					system("/bin/stty raw");
+					c = getchar();
+					system("/bin/stty cooked");
+					
+					printf("\n");
+					
+					if (c == 'q')
+						stop = true;
+					if (c == 'a')
+						selectedIndex--;
+					if (c == 'z')
+						selectedIndex++;
+				}
+				while (stop == false);
+			}
+			
+			// free the audio graph instance
+			
+			audioGraphMgr.free(instance, false);
 		}
-		
-		// free the audio graph instance
-		
-		audioGraphMgr.free(instance, false);
 		
 		// shut down audio related systems
 
