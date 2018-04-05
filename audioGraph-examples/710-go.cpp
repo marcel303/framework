@@ -77,6 +77,12 @@ int main(int argc, char * argv[])
 
 	if (SDL_Init(0) >= 0)
 	{
+		// load resources
+		
+		fillPcmDataCache("birds", true, false);
+		fillPcmDataCache("testsounds", true, true);
+		fillPcmDataCache("voice-fragments", false, false);
+		
 		// initialize audio related systems
 		
 		SDL_mutex * mutex = SDL_CreateMutex();
