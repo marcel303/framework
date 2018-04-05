@@ -15,9 +15,9 @@ endif (NOT HAS_FRAMEWORK)
 
 #
 
-project(framework-tests)
+project(framework-examples)
 
-# --- tests ---
+# --- examples ---
 
 add_executable(aniplay aniplay.cpp)
 add_executable(example example.cpp)
