@@ -41,6 +41,28 @@ static void showHelp()
 	printf("instantiates the audio graph given by <filename> and sends the synthesized sound to the default audio output interface.\n");
 }
 
+static void doControlValue(AudioControlValue & controlValue, const int index, const int selectedIndex, const char type, const char c)
+{
+	const bool isSelected = (index == selectedIndex);
+	
+	if (isSelected)
+	{
+		const float range = controlValue.max - controlValue.min;
+		const float step = range / 20.f;
+		
+		if (c == 'q')
+			controlValue.desiredX = fmaxf(controlValue.desiredX - step, controlValue.min);
+		if (c == 'w')
+			controlValue.desiredX = fminf(controlValue.desiredX + step, controlValue.max);
+	}
+	
+	printf("%s[%c] %20s: %.2f\n",
+		isSelected ? "==> " : "    ",
+		type,
+		controlValue.name.c_str(),
+		controlValue.desiredX);
+}
+
 int main(int argc, char * argv[])
 {
 	const char * filename = nullptr;
@@ -90,11 +112,58 @@ int main(int argc, char * argv[])
 			// - trigger events
 			// - quit the app
 			
+			int selectedIndex = 0;
+			
+			int c = 0;
+			
 			for (;;)
 			{
+				SDL_LockMutex(mutex);
+				{
+					const int count =
+						audioGraphMgr.globals->controlValues.size() +
+						instance->audioGraph->controlValues.size();
+					
+					if (count == 0)
+						selectedIndex = 0;
+					else
+					{
+						if (selectedIndex < 0)
+							selectedIndex = count - 1;
+						else if (selectedIndex >= count)
+							selectedIndex = 0;
+					}
+					
+					int index = 0;
+					
+					for (auto & controlValue : audioGraphMgr.globals->controlValues)
+					{
+						doControlValue(controlValue, index, selectedIndex, 'G', c);
+						
+						index++;
+					}
+					
+					for (auto & controlValue : instance->audioGraph->controlValues)
+					{
+						doControlValue(controlValue, index, selectedIndex, 'L', c);
+						
+						index++;
+					}
+				}
+				SDL_UnlockMutex(mutex);
+				
 				printf("CPU usage: %d%%\n", int(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100));
 				
-				SDL_Delay(1100);
+				system("/bin/stty raw");
+				c = getchar();
+				system("/bin/stty cooked");
+				
+				printf("\n");
+				
+				if (c == 'a')
+					selectedIndex--;
+				if (c == 'z')
+					selectedIndex++;
 			}
 		}
 		
