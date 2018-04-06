@@ -59,9 +59,10 @@ AudioGraph::AudioGraph(AudioGraphGlobals * _globals, const bool _isPaused)
 	, activeFlags()
 	, memf()
 	, mems()
-	, events()
+	, activeEvents()
 	, triggeredEvents()
 	, controlValues()
+	, events()
 	, globals(nullptr)
 	, mutex()
 {
@@ -225,7 +226,7 @@ void AudioGraph::tick(const float dt)
 		
 		// update the set of 'active' events. all newly triggered events are processed next tick
 		
-		std::swap(events, triggeredEvents);
+		std::swap(activeEvents, triggeredEvents);
 		triggeredEvents.clear();
 	}
 	mutex.unlock();
@@ -398,6 +399,72 @@ void AudioGraph::exportControlValues()
 		for (auto & controlValue : controlValues)
 		{
 			setMemf(controlValue.name.c_str(), controlValue.currentX, controlValue.currentY);
+		}
+	}
+	mutex.unlock();
+}
+
+void AudioGraph::registerEvent(const char * name)
+{
+	mutex.lock();
+	{
+		bool exists = false;
+		
+		for (auto & event : events)
+		{
+			if (event.name == name)
+			{
+				event.refCount++;
+				exists = true;
+				break;
+			}
+		}
+		
+		if (exists == false)
+		{
+			events.resize(events.size() + 1);
+			
+			auto & event = events.back();
+			
+			event.name = name;
+			event.refCount = 1;
+			
+			std::sort(events.begin(), events.end(), [](const AudioEvent & a, const AudioEvent & b) { return a.name < b.name; });
+		}
+	}
+	mutex.unlock();
+}
+
+void AudioGraph::unregisterEvent(const char * name)
+{
+	mutex.lock();
+	{
+		bool exists = false;
+		
+		for (auto eventItr = events.begin(); eventItr != events.end(); ++eventItr)
+		{
+			auto & event = *eventItr;
+			
+			if (event.name == name)
+			{
+				event.refCount--;
+				
+				if (event.refCount == 0)
+				{
+					//LOG_DBG("erasing event %s", name);
+					
+					events.erase(eventItr);
+				}
+				
+				exists = true;
+				break;
+			}
+		}
+		
+		Assert(exists);
+		if (exists == false)
+		{
+			LOG_WRN("failed to unregister event %s", name);
 		}
 	}
 	mutex.unlock();
