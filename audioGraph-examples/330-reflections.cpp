@@ -47,7 +47,7 @@ const int GFX_SY = 400;
 	#define MAX_SPACE_POINTS 200
 #endif
 
-#define ENABLE_MIDI 1
+#define ENABLE_MIDI 0
 
 #if ENABLE_MIDI
 	#include "objects/mididecoder.h"
@@ -422,7 +422,7 @@ struct Space
 	void tickParticles()
 	{
 	#if !ENABLE_MIDI
-		s_speed s = lerp(-1.f / 500.f, 1.f / 500.f, mouse.x / float(GFX_SX));
+		s_speed = lerp(-1.f / 500.f, 1.f / 500.f, mouse.x / float(GFX_SX));
 	#endif
 	
 		t += s_speed;
@@ -458,11 +458,9 @@ struct Space
 		{
 			source->tick();
 			
-			// todo : there should be a delay line between each space point and source point
-			
 			if (inputType == kInputType_Mono)
 			{
-				// todo : process audio for mono output
+				// process audio for mono down mix of all of the particle outputs
 				
 				source->downMix();
 				
@@ -473,7 +471,7 @@ struct Space
 			}
 			else if (inputType == kInputType_Particles)
 			{
-				// todo : process audio for each particle
+				// process audio for each particle
 				
 				for (int i = 0; i < NUM_PARTICLES; ++i)
 				{
@@ -487,6 +485,8 @@ struct Space
 	
 	void processReflection(const AudioBuffer & sourceBuffer, Vec3Arg sourcePosition, const int particleIndex)
 	{
+		// note : there is a modulating delay line between each space point and source point. this is what creates the 'noise effect' when points are moving quickly and the phasing when the space is configured in particular ways
+		
 		for (int i = 0; i < MAX_SPACE_POINTS; ++i)
 		{
 			auto & point = points[i];
