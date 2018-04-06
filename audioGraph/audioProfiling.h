@@ -34,13 +34,11 @@
 	#include "remotery.h"
 
 	#define audioCpuTimingBlock(name) rmt_ScopedCPUSample(name)
-	#define audioGpuTimingBlock(name) rmt_ScopedOpenGLSample(name)
 	#define audioSetThreadName(name) rmt_SetCurrentThreadName(name)
 
 #else
 
 	#define audioCpuTimingBlock(name) do { } while (false)
-	#define audioGpuTimingBlock(name) do { } while (false)
 	#define audioSetThreadName(name) do { } while (false)
 
 #endif
