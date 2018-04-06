@@ -133,9 +133,6 @@ int main(int argc, char * argv[])
 			}
 			else
 			{
-				// todo : keyboard/console based ui to
-				// - trigger events
-				
 				int selectedIndex = 0;
 				
 				int c = 0;

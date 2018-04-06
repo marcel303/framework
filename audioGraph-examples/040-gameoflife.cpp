@@ -121,7 +121,7 @@ struct GameOfLife
 					
 					AudioGraphInstance *& instance = elems[x][y].graphInstance;
 					
-					// todo : apply ramping before actually freeing voice
+					// note : we apply ramping before actually freeing voice so it sounds nicer. at the expensive of some extra processing ~
 					
 					audioGraphMgr.free(instance, true);
 					
