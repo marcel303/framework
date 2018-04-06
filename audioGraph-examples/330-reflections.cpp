@@ -47,6 +47,21 @@ const int GFX_SY = 400;
 	#define MAX_SPACE_POINTS 200
 #endif
 
+#define ENABLE_MIDI 1
+
+#if ENABLE_MIDI
+	#include "objects/mididecoder.h"
+	#include "rtmidi/RtMidi.h"
+#endif
+
+//
+
+static double s_morph1 = 0.0;
+static double s_morph2 = 1.0;
+static double s_speed = 0.0;
+
+//
+
 static int s_tickCount = 0;
 
 struct ALIGN32 AudioBuffer
@@ -339,7 +354,7 @@ struct Space
 	
 	static Vec3 evalQuad(const float t, const float radius)
 	{
-		const float u = fmodf(t, 1.f) * 4.f;
+		const float u = fmodf(fabsf(t), 1.f) * 4.f;
 		const int s = int(u);
 		const float f = u - s;
 		
@@ -381,14 +396,13 @@ struct Space
 	
 	static Vec3 evalParticlePosition(const float i, const float t)
 	{
-		static double v1 = 0.0;
-		static double v2 = 1.0;
-		
+	#if !ENABLE_MIDI
 		if (keyboard.isDown(SDLK_a))
-			v1 = clamp(v1 + mouse.dy / 100000.0, 0.0, 1.0);
+			s_morph1 = clamp(s_morph1 + mouse.dy / 100000.0, 0.0, 1.0);
 		if (keyboard.isDown(SDLK_s))
-			v2 = clamp(v2 + mouse.dy / 100000.0, 0.0, 1.0);
-		
+			s_morph2 = clamp(s_morph2 + mouse.dy / 100000.0, 0.0, 1.0);
+	#endif
+	
 		//
 		
 		const float pt = t * (i + .5f) / 6.f;
@@ -399,17 +413,19 @@ struct Space
 		
 		Vec3 p = p1;
 		
-		p = lerp(p, p2, v1);
-		p = lerp(p, p3, v2);
+		p = lerp(p, p2, s_morph1);
+		p = lerp(p, p3, s_morph2);
 		
 		return p;
 	}
 	
 	void tickParticles()
 	{
-		const double s = lerp(-1.f / 500.f, 1.f / 500.f, mouse.x / float(GFX_SX));
-		
-		t += s;
+	#if !ENABLE_MIDI
+		s_speed s = lerp(-1.f / 500.f, 1.f / 500.f, mouse.x / float(GFX_SX));
+	#endif
+	
+		t += s_speed;
 		
 		for (int i = 0; i < MAX_SPACE_POINTS; ++i)
 		{
@@ -495,6 +511,94 @@ struct Space
 	}
 };
 
+#if ENABLE_MIDI
+
+struct MidiController
+{
+	static const int kNumControlValues = 3;
+	
+	RtMidiIn * midiIn = nullptr;
+	
+	float controlValues[kNumControlValues];
+	
+	MidiController()
+	{
+		memset(controlValues, 0, sizeof(controlValues));
+	}
+	
+	~MidiController()
+	{
+		Assert(midiIn == nullptr);
+		shut();
+	}
+	
+	void init(const int port)
+	{
+		midiIn = new RtMidiIn(RtMidi::UNSPECIFIED, "Midi Controller", 1024);
+		
+		for (int i = 0; i < midiIn->getPortCount(); ++i)
+		{
+			auto name = midiIn->getPortName();
+			
+			logDebug("available MIDI port: %d: %s", i, name.c_str());
+		}
+		
+		if (port < midiIn->getPortCount())
+		{
+			midiIn->openPort(port);
+		}
+	}
+	
+	void shut()
+	{
+		delete midiIn;
+		midiIn = nullptr;
+	}
+	
+	void tick()
+	{
+		// poll MIDI messages
+		
+		std::vector<uint8_t> messageBytes;
+		
+		for (;;)
+		{
+			midiIn->getMessage(&messageBytes);
+			
+			MidiDecoder::Message message;
+			
+			if (messageBytes.empty())
+				break;
+			
+			if (message.decode(&messageBytes[0], messageBytes.size()))
+			{
+				if (message.type == MidiDecoder::kMessageType_ControllerChange)
+				{
+					logDebug("controller change. channel=%d, value=%d", message.controllerChange.note, message.controllerChange.value);
+					
+					// map the KORG nanoKONTROL2 midi controller's buttons and sliders
+					
+					int index = -1;
+					
+					if (message.controllerChange.note == 0) // 1st slider
+						index = 0;
+					if (message.controllerChange.note == 1) // 2nd slider
+						index = 1;
+					if (message.controllerChange.note == 16) // 1st knob
+						index = 2;
+					
+					if (index >= 0 && index < kNumControlValues)
+					{
+						controlValues[index] = message.controllerChange.value / 127.f;
+					}
+				}
+			}
+		}
+	}
+};
+
+#endif
+
 struct MyAudioSource : AudioSource
 {
 	AudioSourcePcm pcm;
@@ -502,6 +606,10 @@ struct MyAudioSource : AudioSource
 	Source * source = nullptr;
 
 	Space * space = nullptr;
+
+#if ENABLE_MIDI
+	MidiController midiController;
+#endif
 
 	MyAudioSource()
 	{
@@ -515,10 +623,29 @@ struct MyAudioSource : AudioSource
 		space = new Space();
 
 		space->source = source;
+		
+	#if ENABLE_MIDI
+		midiController.init(0);
+	#endif
 	}
 	
 	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override
 	{
+	#if ENABLE_MIDI
+		midiController.tick();
+		
+		// update control values
+		
+		s_morph1 = midiController.controlValues[0];
+		s_morph2 = midiController.controlValues[1];
+		
+		const float speed = (midiController.controlValues[2] - .5f) * 2.f;
+		const float speedSign = speed < 0.f ? -1.f : +1.f;
+		const float speedMag = fabs(speed);
+		const float speedMagCurve = powf(speedMag, 3.f);
+		s_speed = speedMagCurve * speedSign / 100.f;
+	#endif
+	
 		s_tickCount++;
 		
 		space->tick();
@@ -536,6 +663,10 @@ int main(int argc, char * argv[])
 	
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
+	#if ENABLE_MIDI
+		mouse.showCursor(false);
+	#endif
+	
 		// initialize audio related systems
 		
 		SDL_mutex * mutex = SDL_CreateMutex();
