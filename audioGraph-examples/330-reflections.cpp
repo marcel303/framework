@@ -214,7 +214,7 @@ struct SpacePoint
 		//printf("%d (%d) -> %d (%d)\n", readOffset1, readOffset2, readOffset1 - AUDIO_UPDATE_SIZE, readOffset1 - readOffset2);
 		
 		const float gain1 = previousGain;
-		const float gain2 = 4.f / (MAX_SPACE_POINTS * NUM_PARTICLES) * reflectionGain;
+		const float gain2 = 10.f / (MAX_SPACE_POINTS * NUM_PARTICLES) * reflectionGain;
 		//const float gain2 = 10.f / ((distance) + .1f) / MAX_SPACE_POINTS;
 		
 		const int gain1i = gain1 * (1 << kNumBits);
