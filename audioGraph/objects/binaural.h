@@ -75,6 +75,14 @@ within the triangle.
 	#endif
 #endif
 
+#if !defined(BINAURAL_USE_NEON)
+	#if defined(__arm__) || defined(__aarch64__)
+		#define BINAURAL_USE_NEON 1
+	#else
+		#define BINAURAL_USE_NEON 0 // do not alter
+	#endif
+#endif
+
 #if !defined(BINAURAL_USE_GCC_VECTOR)
 	#if defined(__GNUC__)
 		#define BINAURAL_USE_GCC_VECTOR 1
@@ -83,7 +91,7 @@ within the triangle.
 	#endif
 #endif
 
-#if BINAURAL_USE_SSE || BINAURAL_USE_GCC_VECTOR
+#if BINAURAL_USE_SSE || BINAURAL_USE_NEON || BINAURAL_USE_GCC_VECTOR
 	#define BINAURAL_USE_SIMD 1
 #else
 	#define BINAURAL_USE_SIMD 0 // do not alter

@@ -30,6 +30,10 @@
 #include <algorithm>
 #include <string.h>
 
+#if BINAURAL_USE_NEON
+	#include "sse2neon/SSE2NEON.h"
+#endif
+
 #undef AUDIO_UPDATE_SIZE
 
 namespace binaural
@@ -264,7 +268,7 @@ namespace binaural
 			
 			// todo : add BINAURAL_USE_SIMD check
 			
-		#if BINAURAL_USE_SSE
+		#if BINAURAL_USE_SSE || BINAURAL_USE_NEON
 			debugAssert((todo % 4) == 0);
 			
 			const float4 * __restrict audioBufferL4 = (float4*)audioBufferL.samples + nextReadLocation / 4;
