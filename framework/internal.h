@@ -134,7 +134,10 @@ public:
 		}
 		else
 		{
-			hasOldMousePosition = true;
+			if (mouseX != oldMouseX || mouseY != oldMouseY)
+			{
+				hasOldMousePosition = true;
+			}
 			
 			mouseDx = 0;
 			mouseDy = 0;
