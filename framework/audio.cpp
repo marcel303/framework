@@ -52,7 +52,7 @@ enum Chunk
 static bool checkId(const char * id, const char * match)
 {
 	for (int i = 0; i < 4; ++i)
-		if (id[i] != match[i])
+		if (tolower(id[i]) != tolower(match[i]))
 			return false;
 	
 	return true;
