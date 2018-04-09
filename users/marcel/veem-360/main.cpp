@@ -5,8 +5,6 @@
 
 #include "AmbisonicDecoder.h"
 
-#include <atomic>
-
 const int GFX_SX = 512 * 3/2;
 const int GFX_SY = 512;
 
@@ -148,8 +146,8 @@ int main(int argc, char * argv[])
 
 	//
 	
-	mouse.showCursor(false);
-	mouse.setRelative(true);
+	//mouse.showCursor(false);
+	//mouse.setRelative(true);
 	
 	// initialize audio system
 	
@@ -158,6 +156,12 @@ int main(int argc, char * argv[])
 	
 	PortAudioObject paObject;
 	paObject.init(44100, 2, 0, AUDIO_BUFFER_SIZE, &audioHandler);
+	
+	Camera3d cam;
+	cam.mouseRotationSpeed = 1.f;
+	cam.maxForwardSpeed = 1.f;
+	cam.maxUpSpeed = 1.f;
+	cam.maxStrafeSpeed = 1.f;
 	
 	for (;;)
 	{
@@ -200,9 +204,11 @@ int main(int argc, char * argv[])
 		
 		mp->tick(mp->context, true);
 
+		cam.tick(dt, true);
+		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-		#if 1
+		#if 0
 			Shader shader("360video");
 			setShader(shader);
 			shader.setTexture("source", 0, mp->getTexture());
@@ -222,7 +228,7 @@ int main(int argc, char * argv[])
 				popBlend();
 			}
 			clearShader();
-		#else
+		#elif 0
 			gxSetTexture(mp->getTexture());
 			{
 				setColor(colorWhite);
@@ -231,6 +237,47 @@ int main(int argc, char * argv[])
 				popBlend();
 			}
 			gxSetTexture(0);
+		#else
+			projectPerspective3d(45.f, .001f, 10.f);
+			cam.pushViewMatrix();
+			
+			setColor(colorWhite);
+			pushBlend(BLEND_OPAQUE);
+			
+			//gxPushMatrix();
+			//gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
+			//gxScalef(200, 200, 200);
+			
+			gxSetTexture(mp->getTexture());
+			//hqBegin(HQ_FILLED_CIRCLES);
+			glPointSize(10.f);
+			gxBegin(GL_POINTS);
+			for (float u = -1.f; u <= +1.f; u += 1.f / 200.f)
+			{
+				for (float v = -1.f; v <= +1.f; v += 1.f / 200.f)
+				{
+					const float s = u * u + v * v;
+					
+					if (s <= 1.f)
+					{
+						const float h = sqrtf(1.f - s);
+						
+						gxTexCoord2f((u + 1.f) / 2.f, (v + 1.f) / 2.f);
+						gxVertex3f(-u, -h, v);
+						//hqFillCircle(u, v, .01f);
+					}
+				}
+			}
+			//hqEnd();
+			gxEnd();
+			gxSetTexture(0);
+		
+			//gxPopMatrix();
+		
+			popBlend();
+		
+			cam.popViewMatrix();
+			projectScreen2d();
 		#endif
 		}
 		framework.endDraw();
