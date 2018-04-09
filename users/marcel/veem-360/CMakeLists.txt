@@ -51,6 +51,8 @@ file(GLOB resources
 	"${CMAKE_CURRENT_SOURCE_DIR}/calibri.ttf"
 	"${CMAKE_CURRENT_SOURCE_DIR}/01.mp4"
 	"${CMAKE_CURRENT_SOURCE_DIR}/sound.wav"
+	"${CMAKE_CURRENT_SOURCE_DIR}/360-points.vs"
+	"${CMAKE_CURRENT_SOURCE_DIR}/360-points.ps"
 	"${CMAKE_CURRENT_SOURCE_DIR}/360video.vs"
 	"${CMAKE_CURRENT_SOURCE_DIR}/360video.ps")
 

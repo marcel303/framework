@@ -146,8 +146,8 @@ int main(int argc, char * argv[])
 
 	//
 	
-	//mouse.showCursor(false);
-	//mouse.setRelative(true);
+	mouse.showCursor(false);
+	mouse.setRelative(true);
 	
 	// initialize audio system
 	
@@ -157,11 +157,12 @@ int main(int argc, char * argv[])
 	PortAudioObject paObject;
 	paObject.init(44100, 2, 0, AUDIO_BUFFER_SIZE, &audioHandler);
 	
+	const float moveSpeed = .2f;
 	Camera3d cam;
-	cam.mouseRotationSpeed = 1.f;
-	cam.maxForwardSpeed = 1.f;
-	cam.maxUpSpeed = 1.f;
-	cam.maxStrafeSpeed = 1.f;
+	cam.mouseRotationSpeed = .4f;
+	cam.maxForwardSpeed = moveSpeed;
+	cam.maxUpSpeed = moveSpeed;
+	cam.maxStrafeSpeed = moveSpeed;
 	
 	for (;;)
 	{
@@ -179,7 +180,7 @@ int main(int argc, char * argv[])
 		
 		SDL_LockMutex(s_mutex);
 		{
-			audioHandler.azimuthSpeed += mouse.dx / 10.0;
+			audioHandler.azimuthSpeed -= mouse.dx / 10.0;
 			
 			azimuth = audioHandler.azimuth;
 		}
@@ -205,6 +206,23 @@ int main(int argc, char * argv[])
 		mp->tick(mp->context, true);
 
 		cam.tick(dt, true);
+		
+		cam.yaw = azimuth * 180.f / M_PI;
+		
+		if (cam.position[1] > -.2f)
+			cam.position[1] = -.2f;
+		
+		const float retainPerSecond = .9f;
+		const float retain = powf(retainPerSecond, dt);
+		Vec3 origin = Vec3(0.f, -.5f, 0.f);
+		cam.position = lerp(origin, cam.position, retain);
+		
+		if (cam.position.CalcSize() > .8f)
+		{
+			cam.position = cam.position.CalcNormalized() * .8f;
+		}
+		
+		cam.pitch = clamp(cam.pitch, -80.f, -10.f);
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -237,19 +255,13 @@ int main(int argc, char * argv[])
 				popBlend();
 			}
 			gxSetTexture(0);
-		#else
-			projectPerspective3d(45.f, .001f, 10.f);
+		#elif 0
+			pushBlend(BLEND_OPAQUE);
+			projectPerspective3d(60.f, .001f, 10.f);
 			cam.pushViewMatrix();
 			
 			setColor(colorWhite);
-			pushBlend(BLEND_OPAQUE);
-			
-			//gxPushMatrix();
-			//gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
-			//gxScalef(200, 200, 200);
-			
 			gxSetTexture(mp->getTexture());
-			//hqBegin(HQ_FILLED_CIRCLES);
 			glPointSize(10.f);
 			gxBegin(GL_POINTS);
 			for (float u = -1.f; u <= +1.f; u += 1.f / 200.f)
@@ -264,21 +276,34 @@ int main(int argc, char * argv[])
 						
 						gxTexCoord2f((u + 1.f) / 2.f, (v + 1.f) / 2.f);
 						gxVertex3f(-u, -h, v);
-						//hqFillCircle(u, v, .01f);
 					}
 				}
 			}
-			//hqEnd();
 			gxEnd();
 			gxSetTexture(0);
 		
-			//gxPopMatrix();
-		
-			popBlend();
-		
 			cam.popViewMatrix();
 			projectScreen2d();
+			popBlend();
+		#else
+			pushBlend(BLEND_OPAQUE);
+			projectPerspective3d(50.f, .001f, 10.f);
+			cam.pushViewMatrix();
+			
+			Shader shader("360-points");
+			setShader(shader);
+			shader.setTexture("source", 0, mp->getTexture());
+			drawGrid3d(100, 100);
+			clearShader();
+			
+			cam.popViewMatrix();
+			projectScreen2d();
+			popBlend();
 		#endif
+		
+			setColor(200, 200, 200);
+			setFont("calibri.ttf");
+			drawText(10, 10, 14, +1, +1, "pitch: %.2f", cam.pitch);
 		}
 		framework.endDraw();
 	}
