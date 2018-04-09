@@ -318,9 +318,9 @@ int main(int argc, char * argv[])
 				drawRect(0, 0, GFX_SX, GFX_SY);
 				setColorf(.8f, .8f, .8f, opacity);
 				setFont("calibri.ttf");
-				drawText(GFX_SX/2, GFX_SY/2, 32, 0, 0, "Veem 360 App");
-				setColorf(.8f, .8f, .8f, opacity * .5f);
-				drawTextArea(GFX_SX/6, GFX_SY*5/6, GFX_SX*4/6, GFX_SY*1/6, 16, 0, 0, "Made using Framework, a C++ creative coding library\nhttps://http://centuryofthecat.nl/");
+				drawText(GFX_SX/2, GFX_SY/2, 32, 0, 0, "Veem 360");
+				setColorf(.8f, .8f, .8f, opacity * .7f);
+				drawTextArea(GFX_SX/6, GFX_SY*5/6, GFX_SX*4/6, GFX_SY*1/6, 16, 0, 0, "Code & design © 2018 Marcel Smit\nhttps://http://centuryofthecat.nl/");
 				popBlend();
 			}
 		
