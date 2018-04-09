@@ -6337,7 +6337,7 @@ struct TextAreaData
 
 static const char * eatWord(const char * str)
 {
-	while (*str && *str != ' ')
+	while (*str && *str != ' ' && *str != '\n')
 		str++;
 	while (*str && *str == ' ')
 		str++;
@@ -6380,6 +6380,9 @@ static void prepareTextArea(const float size, const char * text, const float max
 		*(char*)nextptr = 0;
 		strcpy_s(data.lines[data.numLines++], sizeof(data.lines[0]), textptr);
 		*(char*)nextptr = temp;
+
+		if (*nextptr == '\n')
+			nextptr++;
 
 		textptr = nextptr;
 	}
