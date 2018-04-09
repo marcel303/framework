@@ -8,7 +8,7 @@
 const int GFX_SX = 512 * 3/2;
 const int GFX_SY = 512;
 
-#define AUDIO_BUFFER_SIZE 32
+#define AUDIO_BUFFER_SIZE 64
 
 static SDL_mutex * s_mutex = nullptr;
 
@@ -48,9 +48,9 @@ struct MyAudioHandler : PortAudioHandler
 		SDL_LockMutex(s_mutex);
 		{
 			if (keyboard.isDown(SDLK_LEFT))
-				azimuthSpeed = -.7f;
-			if (keyboard.isDown(SDLK_RIGHT))
 				azimuthSpeed = +.7f;
+			if (keyboard.isDown(SDLK_RIGHT))
+				azimuthSpeed = -.7f;
 			
 			azimuth += azimuthSpeed * dt;
 			
@@ -138,7 +138,8 @@ int main(int argc, char * argv[])
 	
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
-
+	pushFontMode(FONT_SDF);
+	
 	// create media player
 	
 	MediaPlayer * mp = new MediaPlayer();
@@ -163,6 +164,9 @@ int main(int argc, char * argv[])
 	cam.maxForwardSpeed = moveSpeed;
 	cam.maxUpSpeed = moveSpeed;
 	cam.maxStrafeSpeed = moveSpeed;
+	
+	float fadeTimer = 7.f;
+	//float fadeTimer = 1.f;
 	
 	for (;;)
 	{
@@ -214,15 +218,19 @@ int main(int argc, char * argv[])
 		
 		const float retainPerSecond = .9f;
 		const float retain = powf(retainPerSecond, dt);
-		Vec3 origin = Vec3(0.f, -.5f, 0.f);
+		Vec3 origin = Vec3(0.f, -.7f, 0.f);
+		float originalPitch = -10.f;
 		cam.position = lerp(origin, cam.position, retain);
+		cam.pitch = lerp(originalPitch, cam.pitch, retain);
 		
 		if (cam.position.CalcSize() > .8f)
 		{
 			cam.position = cam.position.CalcNormalized() * .8f;
 		}
 		
-		cam.pitch = clamp(cam.pitch, -80.f, -10.f);
+		cam.pitch = clamp(cam.pitch, -80.f, -3.f);
+		
+		fadeTimer  = fmaxf(0.f, fadeTimer - dt);
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -287,7 +295,7 @@ int main(int argc, char * argv[])
 			popBlend();
 		#else
 			pushBlend(BLEND_OPAQUE);
-			projectPerspective3d(50.f, .001f, 10.f);
+			projectPerspective3d(46.f, .001f, 10.f);
 			cam.pushViewMatrix();
 			
 			Shader shader("360-points");
@@ -301,9 +309,26 @@ int main(int argc, char * argv[])
 			popBlend();
 		#endif
 		
+			const float opacity = fminf(1.f, fadeTimer / 3.f);
+			
+			if (opacity > 0.f)
+			{
+				pushBlend(BLEND_ALPHA);
+				setColorf(0.f, 0.f, 0.f, opacity);
+				drawRect(0, 0, GFX_SX, GFX_SY);
+				setColorf(.8f, .8f, .8f, opacity);
+				setFont("calibri.ttf");
+				drawText(GFX_SX/2, GFX_SY/2, 32, 0, 0, "Veem 360 App");
+				setColorf(.8f, .8f, .8f, opacity * .5f);
+				drawTextArea(GFX_SX/6, GFX_SY*5/6, GFX_SX*4/6, GFX_SY*1/6, 16, 0, 0, "Made using Framework, a C++ creative coding library\nhttps://http://centuryofthecat.nl/");
+				popBlend();
+			}
+		
+		#ifdef DEBUG
 			setColor(200, 200, 200);
 			setFont("calibri.ttf");
 			drawText(10, 10, 14, +1, +1, "pitch: %.2f", cam.pitch);
+		#endif
 		}
 		framework.endDraw();
 	}
@@ -315,6 +340,9 @@ int main(int argc, char * argv[])
 	delete mp;
 	mp = nullptr;
 	
+	Font("calibri.ttf").saveCache();
+	
+	popFontMode();
 	framework.shutdown();
 	
 	return 0;
