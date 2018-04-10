@@ -27,11 +27,18 @@
 
 #include "framework.h"
 #include "testBase.h"
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <string>
 
 #define ENABLE_HUB 0
+
+#if USE_LEGACY_OPENGL
+	#define DO_BLUR 0
+#else
+	#define DO_BLUR 1
+#endif
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -364,7 +371,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 				
 				const float dx = o.x - b.x;
 				const float dy = o.y - b.y;
-				const float ds = std::sqrtf(dx * dx + dy * dy);
+				const float ds = sqrtf(dx * dx + dy * dy);
 				
 				ButtonLink bl;
 				bl.b = &o;
@@ -412,7 +419,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 			b.ay = ay;
 		}
 		
-		const float falloff = std::powf(.2f, dt);
+		const float falloff = powf(.2f, dt);
 		
 		for (auto & bi : buttonStates)
 		{
@@ -547,7 +554,7 @@ struct MainButton
 		if (tick)
 		{
 			const float retainPerSecond = .2f;
-			const float retainThisFrame = std::powf(retainPerSecond, dt);
+			const float retainThisFrame = powf(retainPerSecond, dt);
 			
 			currentX = lerp(desiredX, currentX, retainThisFrame);
 			currentY = lerp(desiredY, currentY, retainThisFrame);
@@ -719,7 +726,9 @@ void testMain()
 	
 	handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 	
+#if DO_BLUR
 	Surface surface(GFX_SX, GFX_SY, true);
+#endif
 	
 	bool stop = false;
 	
@@ -745,9 +754,10 @@ void testMain()
 		blurStrength *= std::pow(.01, double(dt * 4.0));
 		
 		//
-
-		framework.beginDraw(0, 0, 0, 0);
+		
+		framework.beginDraw(230, 230, 230, 0);
 		{
+		#if DO_BLUR
 			pushSurface(&surface);
 			{
 				surface.clear(230, 230, 230, 0);
@@ -761,6 +771,9 @@ void testMain()
 			
 			setColor(colorWhite);
 			surface.blit(BLEND_OPAQUE);
+		#else
+			doMainButtons(false, true, dt);
+		#endif
 		}
 		framework.endDraw();
 	} while (stop == false);
@@ -812,7 +825,9 @@ void testMenu()
 			popSurface();
 			
 			//surface.invert();
+		#if !USE_LEGACY_OPENGL
 			surface.gaussianBlur(blurStrength * 100.f, blurStrength * 100.f, std::ceilf(blurStrength * 100.f));
+		#endif
 			
 			setColor(colorWhite);
 			surface.blit(BLEND_OPAQUE);

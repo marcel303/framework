@@ -116,6 +116,94 @@ struct float4impl
 	}
 };
 
+#elif FOURIER_USE_GCC_VECTOR
+
+struct float4impl
+{
+	Fourier::float4 value;
+	
+	float4impl()
+	{
+	}
+	
+	float4impl(const float _value)
+	{
+		value = Fourier::float4 { _value, _value, _value, _value };
+	}
+	
+	float4impl(const double __value)
+	{
+		const float _value = float(__value);
+		
+		value = Fourier::float4 { _value, _value, _value, _value };
+	}
+	
+	explicit float4impl(const Fourier::float4 _value)
+	{
+		value = _value;
+	}
+	
+	float4impl & operator=(const float _value)
+	{
+		value = Fourier::float4 { _value, _value, _value, _value };
+		
+		return *this;
+	}
+	
+	float4impl & operator=(const double __value)
+	{
+		const float _value = float(__value);
+		
+		value = Fourier::float4 { _value, _value, _value, _value };
+		
+		return *this;
+	}
+	
+	float4impl operator-() const
+	{
+		return float4impl(-value);
+	}
+	
+	float4impl operator+(const float4impl & other) const
+	{
+		return float4impl(value + other.value);
+	}
+	
+	float4impl operator-(const float4impl & other) const
+	{
+		return float4impl(value - other.value);
+	}
+	
+	void operator+=(const float4impl & other)
+	{
+		value = value + other.value;
+	}
+	
+	float4impl operator*(const float4impl & other) const
+	{
+		return float4impl(value * other.value);
+	}
+	
+	void operator*=(const float4impl & other)
+	{
+		value = value * other.value;
+	}
+	
+	float4impl operator*(const double _other) const
+	{
+		const float4impl other(_other);
+		
+		return float4impl(value * other.value);
+	}
+	
+	float4impl operator/(const int _other) const
+	{
+		const float4impl other((float)_other);
+		
+		return float4impl(value / other.value);
+	}
+};
+
 #endif
 
 //
@@ -130,7 +218,7 @@ static double sine(const double angle)
 	return std::sin(angle);
 }
 
-#if FOURIER_USE_SSE
+#if FOURIER_USE_SIMD
 
 static float4impl sine(const float4impl & angle)
 {
@@ -301,7 +389,7 @@ void Fourier::fft1D_slow(
 	fft1D_slowImpl(dreal, dimag, size, transformSize, inverse, normalize);
 }
 
-#if FOURIER_USE_SSE
+#if FOURIER_USE_SIMD
 
 void Fourier::fft1D(
 	float4 * __restrict dreal,

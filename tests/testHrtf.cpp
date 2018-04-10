@@ -33,12 +33,10 @@
 #include "paobject.h"
 #include "Parse.h"
 #include "Path.h"
-//#include "portaudio/portaudio.h"
 #include "StringEx.h"
 #include "testBase.h"
 #include "Timer.h"
 #include <complex>
-#include <xmmintrin.h>
 
 #define HRTF_BUFFER_SIZE 512
 #define AUDIO_BUFFER_SIZE 512
@@ -216,7 +214,7 @@ int HRIRSet::findNearestSampleLocations(const float x, const float y, const floa
 		const float dx = s.x - x;
 		const float dy = s.y - y;
 		const float dz = s.z - z;
-		const float ds = std::sqrtf(dx * dx + dy * dy + dz * dz);
+		const float ds = sqrtf(dx * dx + dy * dy + dz * dz);
 		
 		HRIRSampleLocationAndDistance & sd = set[index++];
 		
@@ -891,7 +889,7 @@ static void azimuthElevationToXYZ(const float azimuth, const float elevation, fl
 {
 	z = std::sin(Calc::DegToRad(elevation));
 	
-	const float radius = std::sqrtf(1.f - z * z);
+	const float radius = sqrtf(1.f - z * z);
 	
 	x = std::cos(Calc::DegToRad(azimuth)) * radius;
 	y = std::sin(Calc::DegToRad(azimuth)) * radius;

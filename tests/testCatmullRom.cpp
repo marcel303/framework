@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "testBase.h"
 #include <iostream>
-#include <cmath>
+#include <limits>
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -99,9 +99,9 @@ float VecDistSquared(const Vec2D& p, const Vec2D& q)
 void InitCentripetalCR(const Vec2D& p0, const Vec2D& p1, const Vec2D& p2, const Vec2D& p3,
 	CubicPoly &px, CubicPoly &py)
 {
-    float dt0 = std::powf(VecDistSquared(p0, p1), 0.25f);
-    float dt1 = std::powf(VecDistSquared(p1, p2), 0.25f);
-    float dt2 = std::powf(VecDistSquared(p2, p3), 0.25f);
+    float dt0 = powf(VecDistSquared(p0, p1), 0.25f);
+    float dt1 = powf(VecDistSquared(p1, p2), 0.25f);
+    float dt2 = powf(VecDistSquared(p2, p3), 0.25f);
 
 	// safety check for repeated points
     if (dt1 < 1e-4f)    dt1 = 1.0f;

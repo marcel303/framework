@@ -79,8 +79,8 @@ void testDotDetector()
 		
 		void tick(const float dt)
 		{
-			const float dx = std::cosf(angle);
-			const float dy = std::sinf(angle);
+			const float dx = cosf(angle);
+			const float dy = sinf(angle);
 			
 			x += dx * speed * dt;
 			y += dy * speed * dt;
@@ -389,7 +389,7 @@ void testDotDetector()
 					
 					const int dx = island.maxX - island.minX;
 					const int dy = island.maxY - island.minY;
-					const float ds = std::sqrtf(dx * dx + dy * dy) / 2.f + 1.f;
+					const float ds = sqrtf(dx * dx + dy * dy) / 2.f + 1.f;
 					
 					setColor(colorRed);
 					hqStrokeCircle(island.x, island.y, radius, 2.f);

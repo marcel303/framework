@@ -75,7 +75,11 @@ endif (WIN32)
 # 2) it speeds up library compilation speed, as all vfx node sources are compiled at once, avoiding the overhead of
 #    compiling them separately
 
-set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.mm)
+if (APPLE)
+	set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.mm)
+else (APPLE)
+	set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.cpp)
+endif (APPLE)
 file(WRITE ${headerfile} "// auto-generated. do not hand-edit\n\n")
 foreach(s ${source_vfxnodes})
 	file(APPEND ${headerfile} "#include \"${s}\"\n")
@@ -170,9 +174,11 @@ endif (APPLE)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	find_library(TURBOJPEG_LIBRARY turbojpeg)
+	find_library(ASOUND_LIBRARY asound) # ALSA sound dependency RtMidi
 
 	set(VFXGRAPH_LIBRARIES
 		${TURBOJPEG_LIBRARY}
+		${ASOUND_LIBRARY}
 		PARENT_SCOPE)
 
 	set(VFXGRAPH_BINARIES

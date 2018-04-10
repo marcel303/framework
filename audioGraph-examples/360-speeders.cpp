@@ -4,6 +4,7 @@
 #include "objects/binaural_cipic.h"
 #include "objects/paobject.h"
 #include "soundmix.h"
+#include <cmath>
 
 #define MAX_SOUNDVOLUMES 100
 //#define NUM_SPEEDERS 16

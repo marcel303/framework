@@ -38,10 +38,10 @@
 #endif
 
 #if ENABLE_MSDF_FONTS
-	#define STB_TRUETYPE_IMPLEMENTATION
-	#include "stb_truetype.h"
 	#include "msdfgen/msdfgen.h"
 #endif
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
 
 #if defined(WIN32)
 	#include <Windows.h>
@@ -64,7 +64,9 @@ AnimCache g_animCache;
 SpriterCache g_spriterCache;
 SoundCache g_soundCache;
 FontCache g_fontCache;
+#if ENABLE_MSDF_FONTS
 MsdfFontCache g_fontCacheMSDF;
+#endif
 GlyphCache g_glyphCache;
 
 // -----
@@ -797,13 +799,17 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 			shader = glCreateShader(type);
 
 		#if USE_LEGACY_OPENGL
-			const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120";
-        #elif OPENGL_VERSION == 410
-            const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
-		#elif OPENGL_VERSION == 430
-			const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+			const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
+		#elif FRAMEWORK_USE_OPENGL_ES
+			const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
 		#else
-			const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
+			#if OPENGL_VERSION == 410
+				const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+			#elif OPENGL_VERSION == 430
+				const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+			#else
+				const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
+			#endif
 		#endif
 
 		#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
@@ -1674,7 +1680,7 @@ void SoundCacheElem::load(const char * filename)
 		}
 		else
 		{
-			logError("%s: failed to create OpenAL buffer", filename);
+			logError("%s: failed to create sound buffer", filename);
 		}
 	#endif
 		

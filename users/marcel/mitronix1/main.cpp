@@ -8,6 +8,7 @@
 #include "slideshow.h"
 #include "soundmix.h"
 #include "wavefield.h"
+#include <cmath>
 
 #define DEVMODE 0
 
@@ -78,7 +79,7 @@ struct MainButton
 		if (tick)
 		{
 			const float retainPerSecond = .2f;
-			const float retainThisFrame = std::powf(retainPerSecond, dt);
+			const float retainThisFrame = powf(retainPerSecond, dt);
 			
 			currentX = lerp(desiredX, currentX, retainThisFrame);
 			currentY = lerp(desiredY, currentY, retainThisFrame);
@@ -862,8 +863,12 @@ static void playMenuSound()
 int main(int argc, char * argv[])
 {
 #if DEVMODE == 0
+#if MACOS
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
+#else
+	changeDirectory("data");
+#endif
 #endif
 	
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
@@ -901,7 +906,7 @@ int main(int argc, char * argv[])
 		audioUpdateHandler->audioGraphMgr = audioGraphMgr;
 		
 		PortAudioObject * paObject = new PortAudioObject();
-		if (paObject->init(SAMPLE_RATE, 2, 2, AUDIO_UPDATE_SIZE, audioUpdateHandler) == false)
+		if (paObject->init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, audioUpdateHandler) == false)
 			logError("failed to initialize port audio object");
 		
 		Slideshow slideshow;
@@ -1129,7 +1134,7 @@ int main(int argc, char * argv[])
 				surface->gaussianBlur(
 					blurStrength * 100.f,
 					blurStrength * 100.f,
-					std::ceilf(blurStrength * 100.f));
+					ceilf(blurStrength * 100.f));
 				
 				setColor(colorWhite);
 				surface->blit(BLEND_OPAQUE);

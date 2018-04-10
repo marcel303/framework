@@ -1,0 +1,77 @@
+<graph nextNodeId="183" nextLinkId="122">
+    <node id="163" typeName="draw.display"/>
+    <node id="164" typeName="draw.surface">
+        <input socket="clearColor" value="220007ff"/>
+        <input socket="format" value="0"/>
+        <input socket="multiplyColor" value="eaeaeaff"/>
+        <input socket="viewMode" value="0"/>
+    </node>
+    <node id="168" typeName="draw.model">
+        <input socket="anim" value="anim02"/>
+        <input socket="animSpeed" value="0.400000"/>
+        <input socket="file" value="model.txt"/>
+        <input socket="scale" value="0.003000"/>
+    </node>
+    <node id="176" typeName="draw.primitive">
+        <input socket="color" value="142e4f06"/>
+        <input socket="fill" value="0"/>
+        <input socket="size" value="0.030000"/>
+        <input socket="stroke" value="1"/>
+        <input socket="strokeColor" value="e6e99d41"/>
+        <input socket="strokeSize" value="1.100000"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="177" typeName="draw.transform2d">
+        <input socket="scale" value="2000.000000"/>
+        <input socket="scaleY" value="-1.000000"/>
+    </node>
+    <node id="178" typeName="gen.sine">
+        <input socket="frequency" value="0.020000"/>
+    </node>
+    <node id="179" typeName="gen.sine">
+        <input socket="frequency" value="0.030000"/>
+    </node>
+    <node id="180" typeName="draw.fsfx-v2" passthrough="1">
+        <input socket="opacity" value="0.700000"/>
+        <input socket="param1" value="100.000000"/>
+        <input socket="shader" value="fsfx/gaussian-h.ps"/>
+    </node>
+    <link id="96" srcNodeId="163" srcNodeSocketName="image" dstNodeId="164" dstNodeSocketName="image"/>
+    <link id="111" srcNodeId="176" srcNodeSocketName="x" dstNodeId="168" dstNodeSocketName="position.x"/>
+    <link id="112" srcNodeId="176" srcNodeSocketName="y" dstNodeId="168" dstNodeSocketName="position.y"/>
+    <link id="113" srcNodeId="177" srcNodeSocketName="any" dstNodeId="176" dstNodeSocketName="any"/>
+    <link id="115" srcNodeId="177" srcNodeSocketName="y" dstNodeId="178" dstNodeSocketName="value">
+        <param name="out.max" value="1000.000000"/>
+        <param name="out.min" value="900.000000"/>
+    </link>
+    <link id="116" srcNodeId="176" srcNodeSocketName="strokeSize" dstNodeId="179" dstNodeSocketName="value">
+        <param name="out.max" value="1.700000"/>
+        <param name="out.min" value="0.300000"/>
+    </link>
+    <link id="117" srcNodeId="176" srcNodeSocketName="size" dstNodeId="179" dstNodeSocketName="value">
+        <param name="out.max" value="0.020000"/>
+        <param name="out.min" value="0.040000"/>
+    </link>
+    <link id="118" srcNodeId="164" srcNodeSocketName="source" dstNodeId="180" dstNodeSocketName="any"/>
+    <link id="119" srcNodeId="180" srcNodeSocketName="before" dstNodeId="177" dstNodeSocketName="transform"/>
+    <editor nextZKey="924">
+        <dragAndZoom x="120.26533508300781" y="140.4593505859375" zoom="1"/>
+        <nodeDatas>
+            <nodeData nodeId="163" x="512" y="-144" zKey="0"/>
+            <nodeData nodeId="164" x="384" y="-144" zKey="918"/>
+            <nodeData nodeId="168" x="-208" y="-48" zKey="923"/>
+            <nodeData nodeId="176" x="-48" y="-96" zKey="922"/>
+            <nodeData nodeId="177" x="96" y="-144" zKey="894"/>
+            <nodeData nodeId="178" x="-48" y="-192" zKey="921"/>
+            <nodeData nodeId="179" x="-192" y="160" zKey="906"/>
+            <nodeData nodeId="180" x="240" y="-144" zKey="917"/>
+        </nodeDatas>
+        <visualizers/>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="d6bf5bff" gridColor="ffffff5f">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0" g="0" b="0" a="0"/>
+                <key t="1" r="1" g="1" b="1" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

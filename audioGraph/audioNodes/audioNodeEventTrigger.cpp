@@ -38,14 +38,73 @@ AUDIO_NODE_TYPE(trigger_event, AudioNodeEventTrigger)
 
 AudioNodeEventTrigger::AudioNodeEventTrigger()
 	: AudioNodeBase()
+	, currentName()
+	, isRegistered(false)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Name, kAudioPlugType_String);
 	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, nullptr);
 }
 
+AudioNodeEventTrigger::~AudioNodeEventTrigger()
+{
+	if (isRegistered)
+	{
+		g_currentAudioGraph->unregisterEvent(currentName.c_str());
+	}
+}
+
+void AudioNodeEventTrigger::updateEventRegistration()
+{
+	if (isPassthrough)
+	{
+		if (isRegistered)
+		{
+			g_currentAudioGraph->unregisterControlValue(currentName.c_str());
+			isRegistered = false;
+		}
+		
+		currentName.clear();
+		
+		return;
+	}
+	
+	const char * name = getInputString(kInput_Name, "");
+	
+	bool changed = false;
+	
+	if (name != currentName)
+	{
+		changed = true;
+	}
+	
+	if (changed)
+	{
+		// unregister
+		
+		if (isRegistered)
+		{
+			g_currentAudioGraph->unregisterControlValue(currentName.c_str());
+			isRegistered = false;
+		}
+		
+		//
+		
+		currentName = name;
+		
+		if (!currentName.empty())
+		{
+			g_currentAudioGraph->registerEvent(currentName.c_str());
+			
+			isRegistered = true;
+		}
+	}
+}
+
 void AudioNodeEventTrigger::tick(const float dt)
 {
+	updateEventRegistration();
+	
 	if (isPassthrough)
 		return;
 	
@@ -53,7 +112,7 @@ void AudioNodeEventTrigger::tick(const float dt)
 
 	if (name != nullptr)
 	{
-		for (auto & event : g_currentAudioGraph->events)
+		for (auto & event : g_currentAudioGraph->activeEvents)
 		{
 			if (event == name)
 			{
@@ -61,4 +120,9 @@ void AudioNodeEventTrigger::tick(const float dt)
 			}
 		}
 	}
+}
+
+void AudioNodeEventTrigger::init(const GraphNode & node)
+{
+	updateEventRegistration();
 }

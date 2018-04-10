@@ -6,7 +6,6 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11")
 set(HAS_LIBGG 0)
 set(HAS_LIBOSC 0)
 set(HAS_FRAMEWORK 0)
-set(HAS_LIBPARTICLE 0)
 
 # --- dependencies ---
 
@@ -22,10 +21,6 @@ if (NOT HAS_FRAMEWORK)
 	message("including framework")
 	add_subdirectory(../../../framework framework)
 endif (NOT HAS_FRAMEWORK)
-if (NOT HAS_LIBPARTICLE)
-	message("including libparticle")
-	add_subdirectory(../../../libparticle libparticle)
-endif (NOT HAS_LIBPARTICLE)
 
 #
 
@@ -33,7 +28,7 @@ project(imu9250)
 
 # --- imu9250 ---
 
-file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
+file(GLOB source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 file(GLOB resources "data/*.ttf" "data/*.jpg")
 
 source_group("sources" FILES ${source})
@@ -52,7 +47,6 @@ endif (APPLE)
 
 target_include_directories(imu9250 PRIVATE "${PROJECT_SOURCE_DIR}")
 
-target_link_libraries(imu9250 PRIVATE libparticle)
 target_link_libraries(imu9250 PRIVATE framework)
 target_link_libraries(imu9250 PRIVATE libosc)
 target_link_libraries(imu9250 PRIVATE libgg)

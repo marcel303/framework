@@ -32,6 +32,7 @@
 #include "soundmix.h"
 #include "wavefield.h"
 #include "../libparticle/ui.h"
+#include <cmath>
 
 /*
 

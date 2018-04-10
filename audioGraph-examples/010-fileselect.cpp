@@ -30,6 +30,7 @@
 #include "audioUpdateHandler.h"
 #include "framework.h"
 #include "soundmix.h"
+#include <cmath>
 
 const int GFX_SX = 800;
 const int GFX_SY = 400;
@@ -155,6 +156,8 @@ int main(int argc, char * argv[])
 
 		SDL_DestroyMutex(mutex);
 		mutex = nullptr;
+
+		Font("calibri.ttf").saveCache();
 	}
 	framework.shutdown();
 

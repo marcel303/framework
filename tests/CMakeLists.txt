@@ -72,8 +72,6 @@ endif (WIN32)
 
 add_executable(tests ${source})
 
-set_target_properties(tests PROPERTIES LINK_FLAGS "-Wl,-all_load")
-
 if (WIN32)
 	# set the current working directory
 	

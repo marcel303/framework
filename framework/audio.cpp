@@ -52,7 +52,7 @@ enum Chunk
 static bool checkId(const char * id, const char * match)
 {
 	for (int i = 0; i < 4; ++i)
-		if (id[i] != match[i])
+		if (tolower(id[i]) != tolower(match[i]))
 			return false;
 	
 	return true;
@@ -280,8 +280,13 @@ SoundData * loadSound_OGG(const char * filename)
 	
 	const int numSamples = readBuffer.size();
 	const int numBytes = numSamples * sizeof(AudioSample);
-	void * bytes = new char[numBytes];
-	memcpy(bytes, &readBuffer[0], numBytes);
+	void * bytes = nullptr;
+	
+	if (numBytes > 0)
+	{
+		bytes = new char[numBytes];
+		memcpy(bytes, &readBuffer[0], numBytes);
+	}
 	
 	SoundData * soundData = new SoundData;
 	soundData->channelSize = 2;
@@ -968,8 +973,11 @@ bool SoundPlayer_PortAudio::initPortAudio(const int numChannels, const int sampl
 	outputParameters.device = Pa_GetDefaultOutputDevice();
 	outputParameters.channelCount = numChannels;
 	outputParameters.sampleFormat = paFloat32;
-	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
 	outputParameters.hostApiSpecificStreamInfo = nullptr;
+	
+	auto deviceInfo = Pa_GetDeviceInfo(outputParameters.device);
+	if (deviceInfo != nullptr)
+		outputParameters.suggestedLatency = deviceInfo->defaultLowOutputLatency;
 
 	//
 	

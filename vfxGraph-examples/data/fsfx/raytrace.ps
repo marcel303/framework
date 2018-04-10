@@ -1,0 +1,65 @@
+include fsfx/common.inc
+
+float sDistanceSphere(vec3 p, vec3 sPos, float sRadius)
+{
+	vec3 d = p - sPos;
+	return length(d) - sRadius;
+}
+
+float sDistance(vec3 p)
+{
+	float d = 1000000.0;
+	
+	d = min(d, sDistanceSphere(p, vec3(0.0, 0.0, 3.0), 0.5));
+	d = min(d, sDistanceSphere(p, vec3(-1.0, 0.0, 3.0), 0.3));
+	d = min(d, sDistanceSphere(p, vec3(+1.0, 0.0, 3.0), 0.3));
+	
+	return d;
+}
+
+vec3 trace(vec3 cOrigin, vec3 cDirection)
+{
+	vec3 p = cOrigin;
+	
+	for (int i = 0; i < 100; ++i)
+	{
+		float d = sDistance(p);
+		
+		p = p + cDirection * d;
+	}
+	
+	float eps = 0.001;
+	float eps2rcp = 1.0 / (2.0 * eps);
+	float nx = (sDistance(p + vec3(eps, 0.0, 0.0)) - sDistance(p - vec3(eps, 0.0, 0.0))) * eps2rcp;
+	float ny = (sDistance(p + vec3(0.0, eps, 0.0)) - sDistance(p - vec3(0.0, eps, 0.0))) * eps2rcp;
+	float nz = (sDistance(p + vec3(0.0, 0.0, eps)) - sDistance(p - vec3(0.0, 0.0, eps))) * eps2rcp;
+	vec3 n = vec3(nx, ny, nz);
+	float nLength = length(n);
+	n = n / (nLength + 0.0001);
+
+	return n;
+}
+
+vec4 fsfx()
+{
+	vec2 colormapSize = textureSize(colormap, 0);
+	
+	vec2 sampleCoord = texcoord;
+	sampleCoord -= vec2(0.5);
+	sampleCoord.y *= colormapSize.y / colormapSize.x;
+
+	vec3 dir = vec3(sampleCoord, 1.0);
+	dir = normalize(dir);
+	
+	vec3 cOrigin = vec3(0.0, 0.0, param1);
+	vec3 cDirection = dir;
+	
+	vec3 c = trace(cOrigin, cDirection);
+	c = (c + vec3(1.0)) / 2.0;
+	
+	c = abs(c);
+
+	vec4 color = vec4(c, 1.0);
+	
+	return color;
+}

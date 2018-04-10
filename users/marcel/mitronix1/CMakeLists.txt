@@ -32,7 +32,7 @@ project(mitronix)
 
 # --- mitronix ---
 
-file(GLOB_RECURSE source "*.cpp" "*.h")
+file(GLOB source "*.cpp" "*.h")
 
 source_group("sources" FILES ${source})
 
