@@ -19,7 +19,7 @@ struct MyAudioHandler : PortAudioHandler
 	
 	SoundData * monoData = nullptr;
 	int monoPosition = 0;
-	float monoGain = .4f;
+	float monoGain = .5f;
 	double monoTime;
 	
 	CAmbisonicDecoder decoder;
@@ -69,7 +69,8 @@ struct MyAudioHandler : PortAudioHandler
 			
 			azimuthSpeed = azimuthSpeed * pow(0.97, dt * 1000.0);
 			
-			monoTime = monoPosition / 44100.0;
+			if (!keyboard.isDown(SDLK_p))
+				monoTime = monoPosition / 44100.0;
 		}
 		SDL_UnlockMutex(s_mutex);
 		
@@ -263,7 +264,7 @@ int main(int argc, char * argv[])
 			
 			azimuth = audioHandler.azimuth;
 			
-			audioTime = audioHandler.monoTime;
+			audioTime = audioHandler.monoTime + 2.0 / 60.0;
 		}
 		SDL_UnlockMutex(s_mutex);
 
@@ -395,7 +396,7 @@ int main(int argc, char * argv[])
 				setFont("calibri.ttf");
 				drawText(GFX_SX/2, GFX_SY/2, 32, 0, 0, "Veem 360");
 				setColorf(.8f, .8f, .8f, opacity * .7f);
-				drawTextArea(GFX_SX/6, GFX_SY*5/6, GFX_SX*4/6, GFX_SY*1/6, 16, 0, 0, "Code & design © 2018 Marcel Smit\nhttps://http://centuryofthecat.nl/");
+				drawTextArea(GFX_SX/6, GFX_SY*5/6, GFX_SX*4/6, GFX_SY*1/6, 16, 0, 0, "Code & design © 2018 Marcel Smit\nhttps://centuryofthecat.nl");
 				popBlend();
 			}
 		
