@@ -15,8 +15,12 @@ static SDL_mutex * s_mutex = nullptr;
 struct MyAudioHandler : PortAudioHandler
 {
 	SoundData * soundData = nullptr;
-	
 	int samplePosition = 0;
+	
+	SoundData * monoData = nullptr;
+	int monoPosition = 0;
+	float monoGain = .4f;
+	double monoTime;
 	
 	CAmbisonicDecoder decoder;
 	CBFormat bformat;
@@ -25,9 +29,13 @@ struct MyAudioHandler : PortAudioHandler
 	
 	double azimuthSpeed = 0.0;
 	
+	bool attractMode = false;
+	
 	void init(const char * filename)
 	{
 		soundData = loadSound("sound.wav");
+		
+		monoData = loadSound("01.wav");
 		
 		decoder.Configure(1, true, kAmblib_CustomSpeakerSetUp, 2);
 		
@@ -54,11 +62,18 @@ struct MyAudioHandler : PortAudioHandler
 			
 			azimuth += azimuthSpeed * dt;
 			
-			azimuth -= dt * .03;
+			if (attractMode)
+			{
+				azimuth -= dt * .03;
+			}
 			
 			azimuthSpeed = azimuthSpeed * pow(0.97, dt * 1000.0);
+			
+			monoTime = monoPosition / 44100.0;
 		}
 		SDL_UnlockMutex(s_mutex);
+		
+		const float shortToFloat = 1.f / (1 << 15);
 		
 		if (soundData != nullptr &&
 			soundData->sampleCount > 0 &&
@@ -68,7 +83,6 @@ struct MyAudioHandler : PortAudioHandler
 			float samples[4][AUDIO_BUFFER_SIZE];
 			
 			const short * sampleData = (short*)soundData->sampleData;
-			const float shortToFloat = 1.f / (1 << 15);
 			
 			for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
 			{
@@ -122,6 +136,29 @@ struct MyAudioHandler : PortAudioHandler
 		{
 			memset(outputBuffer, 0, framesPerBuffer * sizeof(float) * 2);
 		}
+		
+		if (monoData != nullptr &&
+			monoData->sampleCount > 0 &&
+			monoData->channelSize == 2 &&
+			monoData->channelCount == 1)
+		{
+			const short * mono = (short*)monoData->sampleData;
+			
+			Assert(framesPerBuffer == AUDIO_BUFFER_SIZE);
+			float * dst = (float*)outputBuffer;
+			for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+			{
+				const float value = mono[monoPosition] * shortToFloat;
+				
+				dst[i * 2 + 0] += value * monoGain;
+				dst[i * 2 + 1] += value * monoGain;
+				
+				monoPosition++;
+				
+				if (monoPosition == monoData->sampleCount)
+					monoPosition = 0;
+			}
+		}
 	}
 };
 
@@ -165,12 +202,31 @@ int main(int argc, char * argv[])
 	cam.maxUpSpeed = moveSpeed;
 	cam.maxStrafeSpeed = moveSpeed;
 	
+#ifdef DEBUG
+	float fadeTimer = 3.f;
+#else
 	float fadeTimer = 7.f;
-	//float fadeTimer = 1.f;
+#endif
+	
+	float attractTimer = 0.f;
 	
 	for (;;)
 	{
 		framework.process();
+		
+		for (auto & e : framework.events)
+		{
+			if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
+			{
+				mouse.showCursor(false);
+				mouse.setRelative(true);
+			}
+			else if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+			{
+				mouse.showCursor(true);
+				mouse.setRelative(false);
+			}
+		}
 		
 		if (keyboard.wentDown(SDLK_ESCAPE))
 			framework.quitRequested = true;
@@ -178,34 +234,53 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 		
-		const float dt = std::min(1.f / 15.f, framework.timeStep);
+		const float dt = fminf(1.f / 15.f, framework.timeStep);
+		
+		if (keyboard.isIdle() && mouse.isIdle())
+		{
+			attractTimer = fmaxf(0.f, attractTimer - dt);
+		}
+		else
+		{
+		#ifdef DEBUG
+			attractTimer = 4.f;
+		#else
+			attractTimer = 20.f;
+		#endif
+		}
+		
+		const bool attractMode = (attractTimer == 0.f);
 		
 		double azimuth = 0.0;
+		
+		double audioTime = 0.0;
 		
 		SDL_LockMutex(s_mutex);
 		{
 			audioHandler.azimuthSpeed -= mouse.dx / 10.0;
 			
+			audioHandler.attractMode = attractMode;
+			
 			azimuth = audioHandler.azimuth;
+			
+			audioTime = audioHandler.monoTime;
 		}
 		SDL_UnlockMutex(s_mutex);
 
 		// update video player
 		
-		if (mp->presentedLastFrame(mp->context))
+		if (audioTime < mp->presentTime)
 		{
+			// audio has looped! re-open the video
+			
 			auto openParams = mp->context->openParams;
 			
 			mp->close(false);
 			
-			mp->presentTime = 0.0;
-			
 			mp->openAsync(openParams);
 		}
-		else
-		{
-			mp->presentTime += dt;
-		}
+		
+		mp->presentTime = audioTime;
 		
 		mp->tick(mp->context, true);
 
