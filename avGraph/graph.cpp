@@ -3697,6 +3697,9 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								
 								auto link = *linkPtr;
 								
+								auto dstSocket = tryGetOutputSocket(nodeId, 0);
+								auto srcSocket = tryGetInputSocket(nodeId, 0);
+								
 								if (true)
 								{
 									GraphLink link1;
@@ -3705,8 +3708,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 									link1.srcNodeSocketIndex = link.srcNodeSocketIndex;
 									link1.srcNodeSocketName = link.srcNodeSocketName;
 									link1.dstNodeId = nodeId;
-									link1.dstNodeSocketIndex = 0;
-									link1.dstNodeSocketName = "any"; // fixme
+									link1.dstNodeSocketIndex = dstSocket->index;
+									link1.dstNodeSocketName = dstSocket->name;
 									graph->addLink(link1, true);
 								}
 								
@@ -3715,8 +3718,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 									GraphLink link2;
 									link2.id = graph->allocLinkId();
 									link2.srcNodeId = nodeId;
-									link2.srcNodeSocketIndex = 0;
-									link2.srcNodeSocketName = "before"; // fixme
+									link2.srcNodeSocketIndex = srcSocket->index;
+									link2.srcNodeSocketName = srcSocket->name;
 									link2.dstNodeId = link.dstNodeId;
 									link2.dstNodeSocketIndex = link.dstNodeSocketIndex;
 									link2.dstNodeSocketName = link.dstNodeSocketName;
