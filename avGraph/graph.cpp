@@ -3104,8 +3104,23 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								}
 							}
 							
-							// fixme : copy editor value too and let real-time connection know its value is changed
-							//newNode.editorValue = node->editorValue;
+							if (!node->editorValue.empty())
+							{
+								newNodePtr->editorValue = node->editorValue;
+								
+								if (realTimeConnection != nullptr)
+								{
+									auto & outputSockets = getOutputSockets(*typeDefinition, *nodeData);
+									
+									for (auto & outputSocket : outputSockets)
+									{
+										if (!outputSocket.isEditable)
+											continue;
+										
+										realTimeConnection->setDstSocketValue(newNodePtr->id, outputSocket.index, outputSocket.name, newNodePtr->editorValue);
+									}
+								}
+							}
 						}
 					}
 				}
