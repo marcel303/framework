@@ -39,6 +39,7 @@
 #include "Timer.h"
 #include "tinyxml2.h"
 #include "vfxNodeBase.h"
+#include <cmath>
 
 using namespace tinyxml2;
 
@@ -381,14 +382,6 @@ static void handleAction(const std::string & action, const Dictionary & args)
 	}
 }
 
-static void handleRealTimeEdit(const std::string & filename)
-{
-	if (String::StartsWith(filename, "fsfx/"))
-	{
-		// todo : reload shader
-	}
-}
-
 //
 
 #include "tinyxml2_helpers.h"
@@ -589,7 +582,6 @@ int main(int argc, char * argv[])
 	
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
-	framework.realTimeEditCallback = handleRealTimeEdit;
 	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
@@ -599,7 +591,7 @@ int main(int argc, char * argv[])
 		
 		vfxSetThreadName("Main Thread");
 		
-		testVfxNodeCreation();
+		//testVfxNodeCreation();
 		
 		//testDynamicInputs();
 		
