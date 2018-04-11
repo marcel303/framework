@@ -36,7 +36,7 @@
 #include <algorithm>
 #include <cmath>
 
-#define ENABLE_FILE_FIXUPS 1 // todo : remove
+#define ENABLE_FILE_FIXUPS 0 // todo : remove
 
 using namespace tinyxml2;
 
@@ -3121,6 +3121,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 									}
 								}
 							}
+							
+							// todo : copy links between selected nodes
 						}
 					}
 				}

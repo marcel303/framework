@@ -1,6 +1,7 @@
 /*
 
 top priority items:
+- copy links too between selected nodes when copying nodes
 - add node which generates a trigger signal once when a graph is created
 - add ability for nodes to report warnings and errors
 - make it possible to have voice nodes in audio graph which do not generate audible sound ?
