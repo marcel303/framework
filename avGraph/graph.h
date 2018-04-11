@@ -1211,6 +1211,7 @@ struct GraphEdit : GraphEditConnection
 	
 	struct EditorOptions
 	{
+		std::string comment;
 		bool menuIsVisible;
 		bool realTimePreview;
 		bool autoHideUi;
@@ -1225,7 +1226,8 @@ struct GraphEdit : GraphEditConnection
 		ParticleColorCurve cpuHeatColors;
 		
 		EditorOptions()
-			: menuIsVisible(false)
+			: comment()
+			, menuIsVisible(false)
 			, realTimePreview(true)
 			, autoHideUi(false)
 			, showBackground(true)

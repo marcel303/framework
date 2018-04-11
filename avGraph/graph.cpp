@@ -1938,7 +1938,7 @@ GraphEdit::GraphEdit(
 	uiState->sx = 200;
 	uiState->x = kPadding;
 	uiState->y = kPadding;
-	uiState->textBoxTextOffset = 50;
+	uiState->textBoxTextOffset = 64;
 	
 	cursorHand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 	
@@ -4490,6 +4490,7 @@ void GraphEdit::doEditorOptions(const float dt)
 	{
 		if (doDrawer(editorOptions.menuIsVisible, "editor options"))
 		{
+			doTextBox(editorOptions.comment, "comment", dt);
 			doCheckBox(editorOptions.realTimePreview, "real-time preview", false);
 			doCheckBox(editorOptions.autoHideUi, "auto-hide UI", false);
 			doCheckBox(editorOptions.showBackground, "show background", false);
@@ -6177,6 +6178,7 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 	{
 		EditorOptions defaultOptions;
 		
+		editorOptions.comment = stringAttrib(editorOptionsElem, "comment", editorOptions.comment.c_str());
 		editorOptions.menuIsVisible = boolAttrib(editorOptionsElem, "menuIsVisible", defaultOptions.menuIsVisible);
 		editorOptions.realTimePreview = boolAttrib(editorOptionsElem, "realTimePreview", defaultOptions.realTimePreview);
 		editorOptions.autoHideUi = boolAttrib(editorOptionsElem, "autoHideUi", defaultOptions.autoHideUi);
@@ -6272,6 +6274,7 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 	
 	editorElem.OpenElement("editorOptions");
 	{
+		editorElem.PushAttribute("comment", editorOptions.comment.c_str());
 		editorElem.PushAttribute("menuIsVisible", editorOptions.menuIsVisible);
 		editorElem.PushAttribute("realTimePreview", editorOptions.realTimePreview);
 		editorElem.PushAttribute("autoHideUi", editorOptions.autoHideUi);
