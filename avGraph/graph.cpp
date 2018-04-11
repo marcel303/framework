@@ -3040,7 +3040,11 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			if (enabled(kFlag_NodeAdd) && keyboard.wentDown(SDLK_d))
 			{
+				// copy nodes
+				
 				std::set<GraphNodeId> newSelectedNodes;
+				
+				std::map<GraphNodeId, GraphNodeId> oldToNewNodeIds;
 				
 				for (auto nodeId : selectedNodes)
 				{
@@ -3070,6 +3074,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						}
 						
 						newSelectedNodes.insert(newNode.id);
+						
+						oldToNewNodeIds.insert({ node->id, newNode.id});
 						
 						if (commandMod())
 						{
@@ -3123,11 +3129,36 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 									}
 								}
 							}
-							
-							// todo : copy links between selected nodes
 						}
 					}
 				}
+				
+				// copy links between copied nodes
+				
+				for (auto & linkItr : graph->links)
+				{
+					auto & link = linkItr.second;
+					
+					auto newSrcNodeIdItr = oldToNewNodeIds.find(link.srcNodeId);
+					auto newDstNodeIdItr = oldToNewNodeIds.find(link.dstNodeId);
+					
+					if (newSrcNodeIdItr != oldToNewNodeIds.end() &&
+						newDstNodeIdItr != oldToNewNodeIds.end())
+					{
+						auto newSrcNodeId = newSrcNodeIdItr->second;
+						auto newDstNodeId = newDstNodeIdItr->second;
+						
+						auto newLink = link;
+						newLink.id = graph->allocLinkId();
+						
+						newLink.srcNodeId = newSrcNodeId;
+						newLink.dstNodeId = newDstNodeId;
+						
+						graph->addLink(newLink, false);
+					}
+				}
+				
+				// copy visualizers
 				
 				std::set<EditorVisualizer*> newSelectedVisualizers;
 				
