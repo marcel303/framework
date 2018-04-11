@@ -38,6 +38,8 @@
 
 #define ENABLE_FILE_FIXUPS 0 // todo : remove
 
+#define ENABLE_VISUALIZERS_IN_NODE_DATAS 0 // todo : remove support for this
+
 using namespace tinyxml2;
 
 //
@@ -6082,6 +6084,7 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 			
 			nextZKey = std::max(nextZKey, nodeData.zKey + 1);
 			
+		#if ENABLE_VISUALIZERS_IN_NODE_DATAS
 			//
 			
 			// todo : remove support for visualizers stored in node datas
@@ -6104,6 +6107,7 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 				visualizer.sx = floatAttrib(xmlVisualizer, "sx", visualizer.sx);
 				visualizer.sy = floatAttrib(xmlVisualizer, "sy", visualizer.sy);
 			}
+		#endif
 		}
 	}
 	
