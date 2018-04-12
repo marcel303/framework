@@ -127,6 +127,10 @@ static int TimerThreadProc(void * obj)
 {
 	TimerReg * r = (TimerReg*)obj;
 	
+	// todo : use POSIX timer API ?
+	
+	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+	
 	struct timespec start, end;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 	
@@ -142,21 +146,18 @@ static int TimerThreadProc(void * obj)
 		
 		const int64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
 		
-		clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-		
-		if (delta_us < r->delay * 2)
+		if (delta_us < r->delay)
 		{
-			int64_t todo_us = r->delay * 2 - delta_us;
+			const int64_t todo_us = r->delay - delta_us;
 			
-			if (todo_us > r->delay*3/2)
-				todo_us = r->delay;
-	
 			usleep(todo_us);
 		}
 		else
 		{
 			printf("no wait..\n");
 		}
+		
+		clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 	}
 	
 	return 0;
