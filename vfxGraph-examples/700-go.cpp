@@ -26,9 +26,11 @@
 */
 
 #include "framework.h"
+#include "Parse.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
-#include "Debugging.h"
+#include <signal.h>
+#include <unistd.h>
 
 int GFX_SX = 640;
 int GFX_SY = 480;
@@ -45,8 +47,21 @@ static void showHelp()
 	printf("instantiates the vfx graph given by <filename> and runs it in either windowed or headless mode\n");
 }
 
+static void handleSignal(int sig)
+{
+	if (sig == SIGINT)
+	{
+		SDL_Event e;
+		e.type = SDL_QUIT;
+		e.quit.timestamp = SDL_GetTicks();
+		SDL_PushEvent(&e);
+	}
+}
+
 int main(int argc, char * argv[])
 {
+	signal(SIGINT, handleSignal);
+	
 	const char * filename = nullptr;
 
 	if (argc < 2)
@@ -55,16 +70,73 @@ int main(int argc, char * argv[])
 		return 0;
 	}
 	
-	// todo : parse command line arguments
-	
 	filename = argv[1];
-
+	
+	// set default options
+	
 	bool controlMode = false;
 	
-	int frequency = 100;
+	float controlRate = 100;
 	
 	GFX_SX = 640;
 	GFX_SY = 480;
+	
+	// parse command line arguments
+	
+	for (int i = 2; i < argc;)
+	{
+		if (!strcmp(argv[i], "-c"))
+		{
+			if (i + 1 < argc)
+			{
+				controlMode = true;
+				
+				controlRate = Parse::Float(argv[i + 1]);
+				
+				i += 2;
+			}
+			else
+			{
+				logError("missing argument");
+				return -1;
+			}
+		}
+		else if (!strcmp(argv[i], "-s"))
+		{
+			if (i + 2 < argc)
+			{
+				GFX_SX = Parse::Int32(argv[i + 1]);
+				GFX_SY = Parse::Int32(argv[i + 2]);
+				
+				i += 3;
+			}
+			else
+			{
+				logError("missing argument");
+				return -1;
+			}
+		}
+		else
+		{
+			logError("invalid argument: %s", argv[i]);
+			return -1;
+		}
+	}
+	
+	//
+	
+	if (controlRate <= 0.f)
+	{
+		logError("control rate must be > 0");
+		return -1;
+	}
+	
+	//
+	
+	if (framework.init(0, nullptr, GFX_SX, GFX_SY) == false)
+	{
+		return -1;
+	}
 	
 	//
 	
@@ -80,57 +152,77 @@ int main(int argc, char * argv[])
 		return -1;
 	}
 	
-	// fixme : make it possible to construct a vfx graph in headless mode. right now it crashes when it tries to create the dummy surface
-	
-	//VfxGraph * vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
-	
 	if (controlMode)
 	{
-		bool stop = false;
-
-		do
+		VfxGraph * vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
+		
+		struct timespec start, end;
+		
+		clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+		
+		// todo : create a truely headless mode
+		
+		for (;;)
 		{
+			/*
 			system("/bin/stty raw");
 			const int c = getchar();
 			system("/bin/stty cooked");
+			*/
 			
-			printf("\n");
+			framework.process();
+
+			if (keyboard.wentDown(SDLK_ESCAPE))
+				framework.quitRequested = true;
+
+			if (framework.quitRequested)
+				break;
 			
-			if (c == 'q')
-				stop = true;
+			clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+			
+			const int64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
+			
+			const int64_t todo_us = (1000000 - delta_us) / controlRate;
+			
+			if (todo_us > 0)
+			{
+				usleep(todo_us);
+			}
+			
+			clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+			
+			const float dt = 1.f / controlRate;
+			
+			vfxGraph->tick(GFX_SX, GFX_SY, dt);
 		}
-		while (stop == false);
 	}
 	else
 	{
-		if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+		VfxGraph * vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
+
+		for (;;)
 		{
-			VfxGraph * vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
+			framework.process();
 
-			for (;;)
+			if (keyboard.wentDown(SDLK_ESCAPE))
+				framework.quitRequested = true;
+
+			if (framework.quitRequested)
+				break;
+			
+			const float dt = fminf(1.f / 15.f, framework.timeStep);
+			
+			vfxGraph->tick(GFX_SX, GFX_SY, dt);
+			
+			framework.beginDraw(0, 0, 0, 0);
 			{
-				framework.process();
-
-				if (keyboard.wentDown(SDLK_ESCAPE))
-					framework.quitRequested = true;
-
-				if (framework.quitRequested)
-					break;
-				
-				const float dt = fminf(1.f / 15.f, framework.timeStep);
-				
-				vfxGraph->tick(GFX_SX, GFX_SY, dt);
-				
-				framework.beginDraw(0, 0, 0, 0);
-				{
-					vfxGraph->draw(GFX_SX, GFX_SY);
-				}
-				framework.endDraw();
+				vfxGraph->draw(GFX_SX, GFX_SY);
 			}
-
-			framework.shutdown();
+			framework.endDraw();
 		}
 	}
+
+	framework.shutdown();
 
 	return 0;
 }
