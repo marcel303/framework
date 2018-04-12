@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "Parse.h"
+#include "Path.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
 #include <signal.h>
@@ -55,6 +56,22 @@ static void handleSignal(int sig)
 		e.type = SDL_QUIT;
 		e.quit.timestamp = SDL_GetTicks();
 		SDL_PushEvent(&e);
+	}
+}
+
+static std::string filedrop;
+
+static void handleAction(const std::string & action, const Dictionary & args)
+{
+	if (action == "filedrop")
+	{
+		const Path basepath(getDirectory());
+		const Path filepath(args.getString("file", ""));
+		
+		Path relativePath;
+		relativePath.MakeRelative(basepath, filepath);
+		
+		filedrop = relativePath.ToString();
 	}
 }
 
@@ -133,6 +150,9 @@ int main(int argc, char * argv[])
 	
 	//
 	
+	framework.filedrop = true;
+	framework.actionHandler = handleAction;
+	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY) == false)
 	{
 		return -1;
@@ -209,6 +229,24 @@ int main(int argc, char * argv[])
 
 			if (framework.quitRequested)
 				break;
+			
+			if (filedrop.empty() == false)
+			{
+				graph = Graph();
+				
+				delete vfxGraph;
+				vfxGraph = nullptr;
+				
+				//
+				
+				graph.load(filedrop.c_str(), typeDefinitionLibrary);
+				
+				vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
+				
+				//
+				
+				filedrop.clear();
+			}
 			
 			const float dt = fminf(1.f / 15.f, framework.timeStep);
 			
