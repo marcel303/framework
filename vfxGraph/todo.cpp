@@ -1,21 +1,23 @@
 /*
 
 top priority items:
-- copy links too between selected nodes when copying nodes
+
 - add node which generates a trigger signal once when a graph is created
+
 - add ability for nodes to report warnings and errors
+
 - make it possible to have voice nodes in audio graph which do not generate audible sound ?
 - add an option to audio graph and poly audio graph nodes to output audio or not
 - add options to poly and regular audio graph nodes to output mono, stereo, or multi-channel
 	- requires an extra mixing level ? perhaps add a voice manager interface. or store voices in audio graph ? let voice manager allocate channel indices, but do mixing itself differently ? or perhaps add voice groups or something ..
+
 - fix issue with recursive GPU timers
+
 - add console based vfx graph app which lets one run a graph from the command line
-	- manually specify frame rate/time step
+	- manually specify tick rate/time step
 	- listen to keyboard to quit
 	- fix issues with nodes that come up
-- add console based audio graph app which lets one run a graph from the command line
-	- list control values and allow user to edit them
-	- research how to make a (cross platform) console app ui
+
 - add ability for audio nodes to draw a filter response graph ?
 	- or add to audio graph manager : draw filter response and FFT of selected node/socket
 - save wavefield data when saving. should be faster to restore than randomizing values. and also allows for finding nice sounds and saving them
@@ -23,16 +25,10 @@ top priority items:
 	- port resource implementation vfx graph to audio graph
 	- add 1D wavefield resource
 	- add 2D wavefield resource
-- audio graph: fix issue with immediate values not being restored properly for most types
 - add shared control value inputs to poly audio graph node
 	- make sure both the poly and the regular audio graph nodes have both type of inputs
-- add headless vfx graph app
-	- make graph a command line option
-	- make tick frequency a command line option
-- add headless audio graph app
-	- make graph a command line option
+
 - add DC blocker node
-- port Veem changes where desired to master branch
 
 
 todo :
@@ -75,6 +71,9 @@ todo :
 - drag link into empty space = open node type selection menu
 - add text field to node type select
 - raise a menu when socket connect is released on a node itself. ask for which socket to connect to
+- OSC endpoint: resend count? or just OSC send node?
+- add interval (once every N seconds) mode to OSC send mode
+- add a note field in editor options -> for versioning
 
 
 todo : creativity investigation :
@@ -370,6 +369,13 @@ todo :
 	+ auto detect compatible socket types. find match based on first/primary input/output to see if it's valid to insert
 	+ show filtered node type selection menu
 	+ add filter type of node type selection menu. types (for now): kFilter_None, kFilter_PrimarySocketTypes
++ copy links too between selected nodes when copying nodes
++ add console based audio graph app which lets one run a graph from the command line
+	+ list control values and allow user to edit them
+	+ research how to make a (cross platform) console app ui
+	+ make graph a command line option
++ audio graph: fix issue with immediate values not being restored properly for most types
++ port Veem changes where desired to master branch
 
 
 todo : nodes :
@@ -482,6 +488,7 @@ todo : nodes :
 + add MIDI node
 + add queue system for triggers ? ensure predeps have finished processing before handling triggers
 + add text list node. next! prev! rand!
++ add max number of voices for poly audio graph node
 
 
 todo : fsfx :
