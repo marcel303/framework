@@ -30,6 +30,9 @@
 #include "vfxGraph.h"
 #include "vfxNodeFsfx.h"
 
+extern int VFXGRAPH_SX;
+extern int VFXGRAPH_SY;
+
 struct Fsfx1_UniformInfo
 {
 	GLenum type;
@@ -340,8 +343,8 @@ void VfxNodeFsfx::tick(const float dt)
 		return;
 	}
 	
-	const int sx = image ? image->getSx() : getInputInt(kInput_Width, g_currentVfxSurface->getWidth());
-	const int sy = image ? image->getSy() : getInputInt(kInput_Height, g_currentVfxSurface->getHeight());
+	const int sx = image ? image->getSx() : getInputInt(kInput_Width, g_currentVfxSurface ? g_currentVfxSurface->getWidth() : VFXGRAPH_SX);
+	const int sy = image ? image->getSy() : getInputInt(kInput_Height, g_currentVfxSurface ? g_currentVfxSurface->getHeight() : VFXGRAPH_SY);
 	
 	if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight())
 	{
