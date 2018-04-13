@@ -425,7 +425,7 @@ void doMenu_Pi(const float dt)
 				"onDeath"
 			};
 			
-			for (int i = 0; i < ParticleInfo::kSubEmitterEvent_COUNT; ++i) // fixme : cannot use loops
+			for (int i = 0; i < ParticleInfo::kSubEmitterEvent_COUNT; ++i)
 			{
 				if (doCheckBox(g_pi().subEmitters[i].enabled, eventNames[i], true))
 				{
