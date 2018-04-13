@@ -328,7 +328,7 @@ static void updateRotation(
 	Quat qM;
 	qM.fromMatrix(mM);
 
-	const float s = std::pow(.1f, dt);
+	const float s = powf(.1f, dt);
 	//const float s = 0.f;
 	//const float s = 1.f;
 
