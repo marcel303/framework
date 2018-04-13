@@ -487,7 +487,7 @@ void doMenu_Pei(const float dt)
 	doTextBox(g_pei().startSpeed, "Start Speed", dt);
 	doTextBox(g_pei().startSpeedAngle, "Start Direction", dt);
 	doTextBox(g_pei().startSize, "Start Size", dt);
-	doTextBox(g_pei().startRotation, "Start Rotation", dt); // todo : min and max values for random start rotation?
+	doTextBox(g_pei().startRotation, "Start Rotation", dt);
 	doParticleColor(g_pei().startColor, "Start Color");
 	doTextBox(g_pei().gravityMultiplier, "Gravity Multiplier", dt);
 	doCheckBox(g_pei().inheritVelocity, "Inherit Velocity", false);
