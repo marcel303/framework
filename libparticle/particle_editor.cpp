@@ -485,6 +485,7 @@ void doMenu_Pei(const float dt)
 	doTextBox(g_pei().startDelay, "Start Delay", dt);
 	doTextBox(g_pei().startLifetime, "Start Lifetime", dt);
 	doTextBox(g_pei().startSpeed, "Start Speed", dt);
+	doTextBox(g_pei().startSpeedAngle, "Start Direction", dt);
 	doTextBox(g_pei().startSize, "Start Size", dt);
 	doTextBox(g_pei().startRotation, "Start Rotation", dt); // todo : min and max values for random start rotation?
 	doParticleColor(g_pei().startColor, "Start Color");
