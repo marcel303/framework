@@ -7816,7 +7816,7 @@ void setShader_HueShift(const GLuint source, const float hue, const float opacit
 	shader.setImmediate("opacity", opacity);
 }
 
-void setShader_Compositie(const GLuint source1, const GLuint source2)
+void setShader_Composite(const GLuint source1, const GLuint source2)
 {
 	//Shader & shader = globals.builtinShaders->compositeAlpha;
 	Shader shader("builtin-composite-alpha");
@@ -7826,7 +7826,7 @@ void setShader_Compositie(const GLuint source1, const GLuint source2)
 	shader.setTexture("source2", 1, source2, true, true);
 }
 
-void setShader_CompositiePremultiplied(const GLuint source1, const GLuint source2)
+void setShader_CompositePremultiplied(const GLuint source1, const GLuint source2)
 {
 	//Shader & shader = globals.builtinShaders->compositeAlphaPremultiplied;
 	Shader shader("builtin-composite-alpha-premultiplied");
