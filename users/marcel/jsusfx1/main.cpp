@@ -18,6 +18,17 @@ GFX status:
 
 */
 
+/*
+
+import filename -- REAPER v4.25+
+
+You can specify a filename to import (this filename will be searched within the JS effect directory). Importing files via this directive will have any functions defined in their @init sections available to the local effect. Additionally, if the imported file implements other sections (such as @sample, etc), and the importing file does not implement those sections, the imported version of those sections will be used.
+
+Note that files that are designed for import only (such as function libraries) should ideally be named xyz.jsfx-inc, as these will be ignored in the user FX list in REAPER.
+
+*/
+
+
 const int GFX_SX = 640;
 const int GFX_SY = 800;
 
@@ -85,16 +96,101 @@ static JsusFxTest * s_fx = nullptr;
 
 #define STUB printf("function %s not implemented\n", __FUNCTION__)
 
+struct JsusFx_Image
+{
+	Surface * surface = nullptr;
+	
+	~JsusFx_Image()
+	{
+		delete surface;
+		surface = nullptr;
+	}
+	
+	void resize(int sx, int sy)
+	{
+		if (surface == nullptr || surface->getWidth() != sx || surface->getHeight() != sy)
+		{
+			delete surface;
+			surface = nullptr;
+			
+			surface = new Surface(sx, sy, false);
+		}
+		
+		surface->clear();
+	}
+};
+
+struct JsusFx_ImageCache
+{
+	static const int kMaxImages = 1024;
+	
+	JsusFx_Image images[kMaxImages];
+	
+	JsusFx_Image dummyImage;
+	
+	JsusFx_ImageCache()
+	{
+		dummyImage.resize(1, 1);
+	}
+	
+	int alloc(int sx, int sy)
+	{
+		for (int i = 0; i < kMaxImages; ++i)
+		{
+			if (images[i].surface == nullptr)
+			{
+				images[i].resize(sx, sy);
+				return i;
+			}
+		}
+		
+		return -2;
+	}
+	
+	JsusFx_Image & get(int index)
+	{
+		if (index < 0 || index >= kMaxImages || images[index].surface == nullptr)
+			return dummyImage;
+		else
+			return images[index];
+	}
+};
+
+struct JsusFx_ImageScope
+{
+	JsusFx_Image * image = nullptr;
+	
+	JsusFx_ImageScope(JsusFx_ImageCache & cache, int index)
+	{
+		if (index != -1)
+		{
+			image = &cache.get(index);
+			pushSurface(image->surface);
+		}
+	}
+	
+	~JsusFx_ImageScope()
+	{
+		if (image != nullptr)
+			popSurface();
+	}
+};
+
+#define IMAGE_SCOPE JsusFx_ImageScope imageScope(imageCache, *m_gfx_dest)
+//#define IMAGE_SCOPE do { } while (false)
+
 struct JsusFxGfx_Framework : JsusFxGfx
 {
 	float m_fontSize = 12.f;
+	
+	JsusFx_ImageCache imageCache;
 	
 	virtual void setup(const int w, const int h) override
 	{
 		// update gfx state
 		
-		*m_gfx_w = w;
-		*m_gfx_h = h;
+		*m_gfx_w = w ? w : GFX_SX;
+		*m_gfx_h = h ? h : GFX_SY;
 		
 		if (*m_gfx_clear > -1.0)
 		{
@@ -108,7 +204,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			glClear(GL_COLOR_BUFFER_BIT);
 		}
 		
-		//*m_gfx_dest = -1.0;
+		*m_gfx_dest = -1.0;
 		*m_gfx_a = 1.0;
 		
 		// update mouse state
@@ -133,6 +229,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_line(int np, EEL_F ** params) override
 	{
+		IMAGE_SCOPE;
+		
 		const int x1 = (int)floor(params[0][0]);
 		const int y1 = (int)floor(params[1][0]);
 		const int x2 = (int)floor(params[2][0]);
@@ -143,6 +241,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_rect(int np, EEL_F ** params) override
 	{
+		IMAGE_SCOPE;
+		
 		const int x1 = (int)floor(params[0][0]);
 		const int y1 = (int)floor(params[1][0]);
 		const int w = (int)floor(params[2][0]);
@@ -166,6 +266,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_circle(EEL_F x, EEL_F y, EEL_F radius, bool fill, bool aa) override
 	{
+		IMAGE_SCOPE;
+		
 		if (fill)
 		{
 			updateColor();
@@ -182,8 +284,10 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		}
 	}
 	
-	virtual void gfx_triangle(EEL_F ** parms, int np)
+	virtual void gfx_triangle(EEL_F ** parms, int np) override
 	{
+		IMAGE_SCOPE;
+		
 		if (np >= 6)
 		{
 			np &= ~1;
@@ -231,6 +335,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_lineto(EEL_F xpos, EEL_F ypos, EEL_F useaa) override
 	{
+		IMAGE_SCOPE;
+		
 		updateColor();
 		//drawLine(*m_gfx_x, *m_gfx_y, xpos, ypos);
 		hqBegin(HQ_LINES);
@@ -243,6 +349,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_rectto(EEL_F xpos, EEL_F ypos) override
 	{
+		IMAGE_SCOPE;
+		
 		updateColor();
 		drawRect(*m_gfx_x, *m_gfx_y, xpos, ypos);
 		
@@ -263,8 +371,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		if (m_gfx_g) *m_gfx_g = np > 1 ? params[1][0] : params[0][0];
 		if (m_gfx_b) *m_gfx_b = np > 2 ? params[2][0] : params[0][0];
 		if (m_gfx_a) *m_gfx_a = np > 3 ? params[3][0] : 1.0;
-		//if (m_gfx_mode) *m_gfx_mode = np > 4 ? params[4][0] : 0; // todo
-		//if (np > 5 && m_gfx_dest) *m_gfx_dest = params[5][0]; // todo
+		if (m_gfx_mode) *m_gfx_mode = np > 4 ? params[4][0] : 0; // todo
+		if (np > 5 && m_gfx_dest) *m_gfx_dest = params[5][0];
 	}
 	
 	virtual void gfx_roundrect(int np, EEL_F ** params)
@@ -279,6 +387,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_drawnumber(EEL_F n, int nd) override
 	{
+		IMAGE_SCOPE;
+		
 		char formatString[32];
 		sprintf_s(formatString, sizeof(formatString), "%%.%df", nd);
 		
@@ -294,6 +404,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_drawchar(EEL_F n) override
 	{
+		IMAGE_SCOPE;
+		
 		const char c = (char)n;
 		
 		if (c == ' ')
@@ -312,20 +424,22 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		*m_gfx_x += sx;
 	}
 	
-	virtual void gfx_drawstr(void * opaque, EEL_F ** parms, int nparms, int formatmode) // mode=1 for format, 2 for purely measure no format, 3 for measure char
+	virtual void gfx_drawstr(void * opaque, EEL_F ** parms, int nparms, int formatmode) override // mode=1 for format, 2 for purely measure no format, 3 for measure char
 	{
+		IMAGE_SCOPE;
+		
 		int nfmtparms = nparms - 1;
 		
 		EEL_F ** fmtparms = parms + 1;
 		
+	#ifdef EEL_STRING_DEBUGOUT
 		const char * funcname =
 			  formatmode == 1 ? "gfx_printf"
 			: formatmode == 2 ? "gfx_measurestr"
 			: formatmode == 3 ? "gfx_measurechar"
 			: "gfx_drawstr";
-
-		WDL_FastString * fs = nullptr;
-		
+	#endif
+	
 		char buf[4096];
 
 		const char * s = nullptr;
@@ -341,9 +455,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		}
 		else
 		{
-			// todo : handle string lookups by index
-			//s = s_fx->m_string_context->GetStringForIndex(parms[0][0], &fs);
-			s = nullptr;
+			const WDL_FastString *fs = s_fx->getString(parms[0][0]);
+			s = fs ? fs->Get() : nullptr;
 			
 		#ifdef EEL_STRING_DEBUGOUT
 			if (!s)
@@ -395,6 +508,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_setpixel(EEL_F r, EEL_F g, EEL_F b) override
 	{
+		IMAGE_SCOPE;
+		
 		setColorf(r, g, b, *m_gfx_a);
 		drawPoint(*m_gfx_x, *m_gfx_y);
 	}
@@ -404,12 +519,74 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		STUB;
 	}
 
-	virtual EEL_F gfx_loadimg(void * opaque, int img, EEL_F loadFrom) { return 0.f; }
-	virtual void gfx_getimgdim(EEL_F img, EEL_F * w, EEL_F * h) { }
-	virtual EEL_F gfx_setimgdim(int img, EEL_F * w, EEL_F * h) { return 0.f; }
+	virtual EEL_F gfx_loadimg(void * opaque, int img, EEL_F loadFrom)
+	{
+		STUB;
+		
+		return 0.f;
+	}
 	
-	virtual EEL_F gfx_setfont(void * opaque, int np, EEL_F ** parms) { return 0.f; }
-	virtual EEL_F gfx_getfont(void * opaque, int np, EEL_F ** parms) { return 0.f; }
+	virtual void gfx_getimgdim(EEL_F _img, EEL_F * w, EEL_F * h) override
+	{
+		int img = (int)_img;
+		
+		if (img >= 0 && img < imageCache.kMaxImages)
+		{
+			auto & image = imageCache.images[img];
+			
+			if (image.surface == nullptr)
+			{
+				*w = 0;
+				*h = 0;
+			}
+			else
+			{
+				*w = image.surface->getWidth();
+				*h = image.surface->getHeight();
+			}
+		}
+		else
+		{
+			*w = 0;
+			*h = 0;
+		}
+	}
+	
+	virtual EEL_F gfx_setimgdim(int img, EEL_F * w, EEL_F * h) override
+	{
+		if (img >= 0 && img < imageCache.kMaxImages)
+		{
+			auto & image = imageCache.images[img];
+			
+			int use_w = (int)*w;
+			int use_h = (int)*h;
+			if (use_w < 1 || use_h < 1)
+				use_w = use_h = 1;
+			
+			if (use_w > 2048)
+				use_w = 2048;
+			if (use_h > 2048)
+				use_h = 2048;
+			
+			image.resize(use_w, use_h);
+		}
+		
+	 	return 1.f;
+	}
+	
+	virtual EEL_F gfx_setfont(void * opaque, int np, EEL_F ** parms)
+	{
+		STUB;
+		
+		return 0.f;
+	}
+	
+	virtual EEL_F gfx_getfont(void * opaque, int np, EEL_F ** parms)
+	{
+		STUB;
+		
+		return 0.f;
+	}
 	
 	virtual EEL_F gfx_showmenu(void * opaque, EEL_F ** parms, int nparms)
 	{
@@ -430,9 +607,42 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		STUB;
 	}
 
-	virtual void gfx_blit(EEL_F img, EEL_F scale, EEL_F rotate)
+	virtual void gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate) override
 	{
-		STUB;
+		int img = (int)_img;
+		
+		if (img >= 0 && img < imageCache.kMaxImages)
+		{
+			auto & image = imageCache.images[img];
+			
+			if (image.surface != nullptr)
+			{
+				const int mode = *m_gfx_mode;
+				
+				pushBlend(BLEND_PREMULTIPLIED_ALPHA);
+				gxSetTexture(image.surface->getTexture());
+				{
+					const int sx = image.surface->getWidth();
+					const int sy = image.surface->getHeight();
+					
+					if (scale != 1.f || rotate != 0.f)
+					{
+						gxPushMatrix();
+						gxTranslatef(+sx/2.f, +sy/2.f, 0);
+						gxScalef(scale, scale, 1.f);
+						gxRotatef(rotate, 0, 0, 1);
+						drawRect(-sx/2.f, -sy/2.f, +sx/2.f, +sy/2.f);
+						gxPopMatrix();
+					}
+					else
+					{
+						drawRect(*m_gfx_x, *m_gfx_y, *m_gfx_x + sx, *m_gfx_y + sy);
+					}
+				}
+				gxSetTexture(0);
+				popBlend();
+			}
+		}
 	}
 	
 	virtual void gfx_blitext(EEL_F img, EEL_F * coords, EEL_F angle)
@@ -509,7 +719,8 @@ int main(int argc, char * argv[])
 	//const char * filename = "3bandpeakfilter";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/FocusPressPushZoom";
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/vumetergfx";
-	const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
+	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
+	const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
 	
 	JsusFxPathLibraryTest pathLibrary;
 	if (!fx.compile(pathLibrary, filename))
@@ -571,7 +782,7 @@ int main(int argc, char * argv[])
 			
 			for (int i = 0; i < 64; ++i)
 			{
-				if (fx.sliders[i].exists)
+				if (fx.sliders[i].exists && fx.sliders[i].desc[0] != '-')
 				{
 					gxPushMatrix();
 					gxTranslatef(x, y, 0);
