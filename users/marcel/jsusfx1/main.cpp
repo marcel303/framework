@@ -455,7 +455,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		}
 		else
 		{
-			const WDL_FastString *fs = s_fx->getString(parms[0][0]);
+			const WDL_FastString *fs = s_fx->getString(parms[0][0] + .5f);
 			s = fs ? fs->Get() : nullptr;
 			
 		#ifdef EEL_STRING_DEBUGOUT
