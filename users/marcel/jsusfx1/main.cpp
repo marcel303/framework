@@ -26,6 +26,23 @@ You can specify a filename to import (this filename will be searched within the 
 
 Note that files that are designed for import only (such as function libraries) should ideally be named xyz.jsfx-inc, as these will be ignored in the user FX list in REAPER.
 
+---
+
+mouse_cap
+
+mouse_cap is a bitfield of mouse and keyboard modifier state.
+1: left mouse button
+2: right mouse button
+4: Control key (Windows), Command key (OSX)
+8: Shift key
+16: Alt key (Windows), Option key (OSX)
+32: Windows key (Windows), Control key (OSX) -- REAPER 4.60+
+64: middle mouse button -- REAPER 4.60+
+
+mouse_wheel
+
+gfx_texth
+
 */
 
 
@@ -98,25 +115,54 @@ static JsusFxTest * s_fx = nullptr;
 
 struct JsusFx_Image
 {
+	bool isValid = false;
+	
 	Surface * surface = nullptr;
 	
 	~JsusFx_Image()
 	{
-		delete surface;
-		surface = nullptr;
+		free();
 	}
 	
-	void resize(int sx, int sy)
+	void free()
 	{
-		if (surface == nullptr || surface->getWidth() != sx || surface->getHeight() != sy)
+		if (surface != nullptr)
 		{
 			delete surface;
 			surface = nullptr;
-			
-			surface = new Surface(sx, sy, false);
 		}
 		
-		surface->clear();
+		isValid = false;
+	}
+	
+	void resize(const int sx, const int sy)
+	{
+		if (sx <= 0 || sy <= 0)
+		{
+			isValid = false;
+		}
+		else
+		{
+			if (surface == nullptr || surface->getWidth() != sx || surface->getHeight() != sy)
+			{
+				if (surface != nullptr)
+				{
+					logDebug("image resize: (%d, %d) -> (%d, %d)", surface->getWidth(), surface->getHeight(), sx, sy);
+					
+					delete surface;
+					surface = nullptr;
+				}
+				
+				surface = new Surface(sx, sy, false);
+			}
+			
+			if (isValid == false)
+			{
+				surface->clear();
+				
+				isValid = true;
+			}
+		}
 	}
 };
 
@@ -133,8 +179,18 @@ struct JsusFx_ImageCache
 		dummyImage.resize(1, 1);
 	}
 	
-	int alloc(int sx, int sy)
+	void clear()
 	{
+		for (int i = 0; i < kMaxImages; ++i)
+		{
+			images[i].free();
+		}
+	}
+	
+	int alloc(const int sx, const int sy)
+	{
+		Assert(sx > 0 && sy > 0);
+		
 		for (int i = 0; i < kMaxImages; ++i)
 		{
 			if (images[i].surface == nullptr)
@@ -147,8 +203,10 @@ struct JsusFx_ImageCache
 		return -2;
 	}
 	
-	JsusFx_Image & get(int index)
+	JsusFx_Image & get(const int index)
 	{
+		Assert(index != -1);
+		
 		if (index < 0 || index >= kMaxImages || images[index].surface == nullptr)
 			return dummyImage;
 		else
@@ -156,13 +214,21 @@ struct JsusFx_ImageCache
 	}
 };
 
+#define PUSH_FRAMEBUFFER 1
+
 struct JsusFx_ImageScope
 {
 	JsusFx_Image * image = nullptr;
 	
 	JsusFx_ImageScope(JsusFx_ImageCache & cache, int index)
 	{
+	#if PUSH_FRAMEBUFFER
+		if (index == -1)
+			pushSurface(nullptr);
+		else
+	#else
 		if (index != -1)
+	#endif
 		{
 			image = &cache.get(index);
 			pushSurface(image->surface);
@@ -171,8 +237,12 @@ struct JsusFx_ImageScope
 	
 	~JsusFx_ImageScope()
 	{
+	#if PUSH_FRAMEBUFFER
+		popSurface();
+	#else
 		if (image != nullptr)
 			popSurface();
+	#endif
 	}
 };
 
@@ -184,6 +254,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	float m_fontSize = 12.f;
 	
 	JsusFx_ImageCache imageCache;
+	
+	int mouseFlags = 0;
 	
 	virtual void setup(const int w, const int h) override
 	{
@@ -212,14 +284,59 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		*m_mouse_x = mouse.x;
 		*m_mouse_y = mouse.y;
 		
+		const bool isInside =
+			mouse.x >= 0 && mouse.x < *m_gfx_w &&
+			mouse.y >= 0 && mouse.y < *m_gfx_h;
+		
+		if (isInside)
+		{
+			if (mouse.wentDown(BUTTON_LEFT))
+				mouseFlags |= 0x1;
+			if (mouse.wentDown(BUTTON_RIGHT))
+				mouseFlags |= 0x2;
+		}
+		
+		if (mouse.wentUp(BUTTON_LEFT))
+			mouseFlags &= ~0x1;
+		if (mouse.wentUp(BUTTON_RIGHT))
+			mouseFlags &= ~0x2;
+		
 		int vflags = 0;
 
-		if (mouse.isDown(BUTTON_LEFT))
+		if (mouseFlags & 0x1)
 			vflags |= 0x1;
-		if (mouse.isDown(BUTTON_RIGHT))
+		if (mouseFlags & 0x2)
 			vflags |= 0x2;
+		
+	#if defined(MACOS)
+		if (keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI))
+			vflags |= 0x4;
+	#else
+		if (keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL))
+			vflags |= 0x4;
+	#endif
+	
+		if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+			vflags |= 0x8;
+		if (keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT))
+			vflags |= 0x10;
+		
+	#if defined(MACOS)
+		if (keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL))
+			vflags |= 0x20;
+	#else
+		if (keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI))
+			vflags |= 0x20;
+	#endif
 
 		*m_mouse_cap = vflags;
+	}
+	
+	virtual void handleReset()
+	{
+		m_fontSize = 12.f;
+		
+		imageCache.clear();
 	}
 	
 	void updateColor()
@@ -338,7 +455,6 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		IMAGE_SCOPE;
 		
 		updateColor();
-		//drawLine(*m_gfx_x, *m_gfx_y, xpos, ypos);
 		hqBegin(HQ_LINES);
 		hqLine(*m_gfx_x, *m_gfx_y, 1.f, xpos, ypos, 1.f);
 		hqEnd();
@@ -530,19 +646,24 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	{
 		int img = (int)_img;
 		
-		if (img >= 0 && img < imageCache.kMaxImages)
+		if (img == -1)
+		{
+			*w = *m_gfx_w;
+			*h = *m_gfx_h;
+		}
+		else if (img >= 0 && img < imageCache.kMaxImages)
 		{
 			auto & image = imageCache.images[img];
 			
-			if (image.surface == nullptr)
-			{
-				*w = 0;
-				*h = 0;
-			}
-			else
+			if (image.isValid)
 			{
 				*w = image.surface->getWidth();
 				*h = image.surface->getHeight();
+			}
+			else
+			{
+				*w = 0;
+				*h = 0;
 			}
 		}
 		else
@@ -561,12 +682,14 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			int use_w = (int)*w;
 			int use_h = (int)*h;
 			if (use_w < 1 || use_h < 1)
-				use_w = use_h = 1;
+				use_w = use_h = 0;
 			
 			if (use_w > 2048)
 				use_w = 2048;
 			if (use_h > 2048)
 				use_h = 2048;
+			
+			logDebug("resizing image %d to (%d, %d)", img, use_w, use_h);
 			
 			image.resize(use_w, use_h);
 		}
@@ -615,11 +738,22 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		{
 			auto & image = imageCache.images[img];
 			
-			if (image.surface != nullptr)
+			Assert(image.isValid);
+			
+			if (image.isValid)
 			{
+				IMAGE_SCOPE;
+				
 				const int mode = *m_gfx_mode;
 				
-				pushBlend(BLEND_PREMULTIPLIED_ALPHA);
+				//updateColor();
+				setColor(colorWhite); // pretty sure this is correct
+				
+				// I think blend should be ALPHA or ADD depending on gfx_mode
+				//pushBlend(BLEND_PREMULTIPLIED_ALPHA);
+				pushBlend(BLEND_ALPHA);
+				//pushBlend(BLEND_ADD);
+				
 				gxSetTexture(image.surface->getTexture());
 				{
 					const int sx = image.surface->getWidth();
@@ -681,7 +815,7 @@ static void doSlider(JsusFx & fx, Slider & slider, int x, int y)
 	setColor(colorWhite);
 	drawText(sx/2.f, sy/2.f, 10.f, 0.f, 0.f, "%s", slider.desc);
 	
-	setColor(colorWhite);
+	setColor(63, 31, 255, 127);
 	drawRectLine(0, 0, sx, sy);
 }
 
@@ -718,9 +852,11 @@ int main(int argc, char * argv[])
 	
 	//const char * filename = "3bandpeakfilter";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/FocusPressPushZoom";
+	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/Direct";
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/vumetergfx";
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
-	const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
+	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
+	const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
 	
 	JsusFxPathLibraryTest pathLibrary;
 	if (!fx.compile(pathLibrary, filename))
@@ -728,6 +864,9 @@ int main(int argc, char * argv[])
 		logError("failed to load file: %s", filename);
 		return -1;
 	}
+	
+	//fx.gfx_w = std::max(fx.gfx_w, GFX_SX);
+	//fx.gfx_h = std::max(fx.gfx_h, GFX_SY/2);
 	
 	fx.prepare(44100, 64);
 	
@@ -740,6 +879,17 @@ int main(int argc, char * argv[])
 		
 		if (keyboard.wentDown(SDLK_ESCAPE))
 			framework.quitRequested = true;
+		
+		if (keyboard.wentDown(SDLK_SPACE))
+		{
+			if (!fx.compile(pathLibrary, filename))
+			{
+				logError("failed to load file: %s", filename);
+				return -1;
+			}
+			
+			fx.prepare(44100, 64);
+		}
 		
 		if (framework.quitRequested)
 			break;
@@ -771,7 +921,9 @@ int main(int argc, char * argv[])
 			gfx.setup(fx.gfx_w, fx.gfx_h);
 			
 			pushFontMode(FONT_SDF);
+			setColorClamp(true);
 			fx.draw();
+			setColorClamp(false);
 			popFontMode();
 			
 			const int sx = *gfx.m_gfx_w;
