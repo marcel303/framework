@@ -5051,7 +5051,7 @@ void applyTransformWithViewportSize(const float sx, const float sy)
 		{
 			gxLoadIdentity();
 			
-			if (surfaceStackSize == 0)
+			if (surfaceStackSize == 0 || surfaceStack[surfaceStackSize - 1] == nullptr)
 			{
 				// flip Y axis so the vertical axis runs top to bottom
 				gxScalef(1.f, -1.f, 1.f);
