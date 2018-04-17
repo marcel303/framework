@@ -112,7 +112,7 @@ public:
 
 static JsusFxTest * s_fx = nullptr;
 
-#define STUB printf("function %s not implemented\n", __FUNCTION__)
+#define STUB logDebug("function %s not implemented", __FUNCTION__)
 //#define STUB do { } while (false)
 
 struct JsusFx_Image
@@ -414,7 +414,11 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		const int x2 = (int)floor(params[2][0]);
 		const int y2 = (int)floor(params[3][0]);
 		
-		drawLine(x1, y1, x2, y2);
+		updateColor();
+		hqBegin(HQ_LINES);
+		hqLine(x1, y1, 1.f, x2, y2, 1.f);
+		hqEnd();
+		//drawLine(x1, y1, x2, y2);
 	}
 	
 	virtual void gfx_rect(int np, EEL_F ** params) override
@@ -535,9 +539,20 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		*m_gfx_y = ypos;
 	}
 	
-	virtual void gfx_arc(int np, EEL_F ** params)
+	virtual void gfx_arc(int np, EEL_F ** parms)
 	{
 		STUB;
+		
+		updateColor();
+	#if 1
+		hqBegin(HQ_STROKED_CIRCLES);
+		hqStrokeCircle(*parms[0], *parms[1], *parms[2], 1.f);
+		hqEnd();
+	#else
+		hqBegin(HQ_FILLED_CIRCLES);
+		hqFillCircle(*parms[0], *parms[1], *parms[2]);
+		hqEnd();
+	#endif
 	}
 	
 	virtual void gfx_set(int np, EEL_F ** params) override
@@ -552,14 +567,73 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		if (np > 5 && m_gfx_dest) *m_gfx_dest = params[5][0];
 	}
 	
-	virtual void gfx_roundrect(int np, EEL_F ** params)
+	virtual void gfx_roundrect(int np, EEL_F ** parms) override
 	{
-		STUB;
+		IMAGE_SCOPE;
+
+		const bool aa = np <= 5 || parms[5][0] > .5f;
+
+		const float sx = parms[2][0];
+		const float sy = parms[3][0];
+
+		if (sx > 0 && sy > 0)
+		{
+			const float x = parms[0][0];
+			const float y = parms[1][0];
+
+			const float radius = parms[4][0];
+
+			updateColor();
+
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			hqFillRoundedRect(x, y, x + sx, y + sy, radius);
+			hqEnd();
+		}
 	}
 	
-	virtual void gfx_grad_or_muladd_rect(int mod, int np, EEL_F ** params)
+	virtual void gfx_grad_or_muladd_rect(int mode, int np, EEL_F ** parms)
 	{
 		STUB;
+		
+		return;
+		
+		const int x1 = (int)floor(parms[0][0]);
+		const int y1 = (int)floor(parms[1][0]);
+		const int w = (int)floor(parms[2][0]);
+		const int h = (int)floor(parms[3][0]);
+		
+		if (w <= 0 || h <= 0)
+			return;
+		
+		IMAGE_SCOPE;
+		
+		if (mode == 0)
+		{
+			const float r = (float)parms[4][0];
+			const float g = (float)parms[5][0];
+			const float b = (float)parms[6][0];
+			const float a = (float)parms[7][0];
+			
+			setColorf(r, g, b, a);
+			drawRect(x1, y1, x1 + w, y1 + h);
+			
+			/*
+      LICE_GradRect(dest,x1,y1,w,h,(float)parms[4][0],(float)parms[5][0],(float)parms[6][0],(float)parms[7][0],
+                                   np > 8 ? (float)parms[8][0]:0.0f, np > 9 ? (float)parms[9][0]:0.0f,  np > 10 ? (float)parms[10][0]:0.0f, np > 11 ? (float)parms[11][0]:0.0f,
+                                   np > 12 ? (float)parms[12][0]:0.0f, np > 13 ? (float)parms[13][0]:0.0f,  np > 14 ? (float)parms[14][0]:0.0f, np > 15 ? (float)parms[15][0]:0.0f,
+                                   getCurMode());
+			
+			EEL_LICE_FUNCDEF void (*__LICE_GradRect)(LICE_IBitmap *dest, int dstx, int dsty, int dstw, int dsth,
+                      float ir, float ig, float ib, float ia,
+                      float drdx, float dgdx, float dbdx, float dadx,
+                      float drdy, float dgdy, float dbdy, float dady,
+                      int mode);
+			*/
+		}
+		else
+		{
+			logDebug("multiply-add rect!");
+		}
 	}
 	
 	virtual void gfx_drawnumber(EEL_F n, int nd) override
@@ -1067,8 +1141,8 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/vumetergfx";
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
-	const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
+	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
+	const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	
@@ -1144,6 +1218,7 @@ int main(int argc, char * argv[])
 			popFontMode();
 			//clearDrawRect();
 			
+		#if 0
 			{
 				int x = 0;
 				int index = 0;
@@ -1168,6 +1243,7 @@ int main(int argc, char * argv[])
 					index++;
 				}
 			}
+		#endif
 			
 			const int sx = *gfx.m_gfx_w;
 			const int sy = *gfx.m_gfx_h;
