@@ -3,6 +3,7 @@
 #include "jsusfx.h"
 #include "jsusfx_gfx.h"
 
+#include "Path.h"
 #include "StringEx.h"
 
 #include <fstream>
@@ -257,6 +258,56 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	int mouseFlags = 0;
 	
+	virtual bool handleFile(int index, const char *filename) override
+	{
+		if (Path::GetExtension(filename, true) == "png")
+		{
+			if (index >= 0 && index < imageCache.kMaxImages)
+			{
+				JsusFx_Image & image = imageCache.images[index];
+				
+				const GLuint texture = getTexture(filename);
+				
+				if (texture != 0)
+				{
+					GLuint restoreTexture;
+					glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+					checkErrorGL();
+				
+					GLint sx;
+					GLint sy;
+					
+					glBindTexture(GL_TEXTURE_2D, texture);
+					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sx);
+					checkErrorGL();
+					
+					glBindTexture(GL_TEXTURE_2D, texture);
+					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
+					checkErrorGL();
+				
+					glBindTexture(GL_TEXTURE_2D, restoreTexture);
+					
+					image.resize(sx, sy);
+					
+					pushSurface(image.surface);
+					{
+						gxSetTexture(texture);
+						setColor(colorWhite);
+						pushBlend(BLEND_OPAQUE);
+						drawRect(0, 0, sx, sy);
+						popBlend();
+						gxSetTexture(0);
+					}
+					popSurface();
+					
+					return true;
+				}
+			}
+		}
+		
+		return false;
+	}
+		
 	virtual void setup(const int w, const int h) override
 	{
 		// update gfx state
@@ -275,6 +326,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			glClearColor(r / 255.f, g / 255.f, b / 255.f, 0.f);
 			glClear(GL_COLOR_BUFFER_BIT);
 		}
+		
+		*m_gfx_texth = m_fontSize;
 		
 		*m_gfx_dest = -1.0;
 		*m_gfx_a = 1.0;
@@ -571,8 +624,10 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		}
 		else
 		{
-			const WDL_FastString *fs = s_fx->getString(parms[0][0] + .5f);
-			s = fs ? fs->Get() : nullptr;
+			const int index = parms[0][0] + .5f;
+			
+			WDL_FastString *fs = nullptr;
+			s = s_fx->getString(index, &fs);
 			
 		#ifdef EEL_STRING_DEBUGOUT
 			if (!s)
@@ -639,7 +694,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	{
 		STUB;
 		
-		return 0.f;
+		return -1.0;
 	}
 	
 	virtual void gfx_getimgdim(EEL_F _img, EEL_F * w, EEL_F * h) override
@@ -728,6 +783,9 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_blurto(EEL_F x, EEL_F y)
 	{
 		STUB;
+		
+		*m_gfx_x = x;
+		*m_gfx_y = y;
 	}
 
 	virtual void gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate) override
@@ -784,9 +842,195 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		STUB;
 	}
 	
-	virtual void gfx_blitext2(int mp, EEL_F ** params, int mode) // 0=blit, 1=deltablit
+	virtual void gfx_blitext2(int np, EEL_F ** parms, int blitmode) override
 	{
-		STUB;
+		// blitmode: 0=blit, 1=deltablit
+		
+		//STUB;
+		
+	#if 1
+		const int bmIndex = *parms[0];
+		
+		if (bmIndex < 0 || bmIndex >= imageCache.kMaxImages)
+			return;
+		
+		JsusFx_Image & image = imageCache.get(bmIndex);
+		
+		if (!image.isValid)
+			return;
+		
+		IMAGE_SCOPE;
+		
+		const int destIndex = *m_gfx_dest;
+		
+		const int bmw = image.surface->getWidth();
+		const int bmh = image.surface->getHeight();
+
+		// 0=img, 1=scale, 2=rotate
+		
+		double coords[8];
+		
+		const double sc = blitmode==0 ? parms[1][0] : 1.0;
+		const double angle = blitmode==0 ? parms[2][0] : 0.0;
+		
+		if (blitmode == 0)
+		{
+			parms += 2;
+			np -= 2;
+		}
+
+		coords[0] = np > 1 ? parms[1][0] : 0.f;
+		coords[1] = np > 2 ? parms[2][0] : 0.f;
+		coords[2] = np > 3 ? parms[3][0] : bmw;
+		coords[3] = np > 4 ? parms[4][0] : bmh;
+		coords[4] = np > 5 ? parms[5][0] : *m_gfx_x;
+		coords[5] = np > 6 ? parms[6][0] : *m_gfx_y;
+		coords[6] = np > 7 ? parms[7][0] : coords[2] * sc;
+		coords[7] = np > 8 ? parms[8][0] : coords[3] * sc;
+
+		const bool isFromFB = bmIndex == -1; // todo : allow blit from image index -1 ?
+
+	#if 0
+		// todo : alloc overlap
+		if (bmIndex == destIndex && CoordsSrcDestOverlap(coords))
+		{
+			if (!m_framebuffer_extra && LICE_FUNCTION_VALID(__LICE_CreateBitmap))
+				m_framebuffer_extra = __LICE_CreateBitmap(0, bmw, bmh);
+			
+			if (m_framebuffer_extra)
+			{
+				LICE__resize(bm = m_framebuffer_extra, bmw, bmh);
+				LICE_ScaledBlit(
+					bm, dest, // copy the source portion
+					(int)coords[0],
+					(int)coords[1],
+					(int)coords[2],
+					(int)coords[3],
+					(float)coords[0],
+					(float)coords[1],
+					(float)coords[2],
+					(float)coords[3],
+					1.0f,
+					LICE_BLIT_MODE_COPY);
+			}
+		}
+	#endif
+
+		if (blitmode==1)
+		{
+		#if 0
+			// todo : delta blit
+			if (LICE_FUNCTION_VALID(LICE_DeltaBlit))
+			{
+				LICE_DeltaBlit(
+					dest,bm,
+					(int)coords[4],
+					(int)coords[5],
+					(int)coords[6],
+					(int)coords[7],
+					(float)coords[0],
+					(float)coords[1],
+					(float)coords[2],
+					(float)coords[3],
+					np > 9 ? (float)parms[9][0]:1.0f, // dsdx
+					np > 10 ? (float)parms[10][0]:0.0f, // dtdx
+					np > 11 ? (float)parms[11][0]:0.0f, // dsdy
+					np > 12 ? (float)parms[12][0]:1.0f, // dtdy
+					np > 13 ? (float)parms[13][0]:0.0f, // dsdxdy
+					np > 14 ? (float)parms[14][0]:0.0f, // dtdxdy
+					true,
+					(float)*m_gfx_a,
+					getCurModeForBlit(isFromFB));
+			}
+		#endif
+		}
+		else if (fabs(angle) > 0.000000001 && false)
+		{
+		#if 0
+			// todo : rotation
+			
+			EEL_LICE_FUNCDEF void (*__LICE_RotatedBlit)(LICE_IBitmap *dest, LICE_IBitmap *src,
+                      int dstx, int dsty, int dstw, int dsth,
+                      float srcx, float srcy, float srcw, float srch,
+                      float angle,
+                      bool cliptosourcerect, float alpha, int mode,
+                      float rotxcent, float rotycent); // these coordinates are offset from the center of the image, in source pixel coordinates
+			
+			LICE_RotatedBlit(
+				dest,bm,
+				(int)coords[4],
+				(int)coords[5],
+				(int)coords[6],
+				(int)coords[7],
+				(float)coords[0],
+				(float)coords[1],
+				(float)coords[2],
+				(float)coords[3],
+				(float)angle,
+				true,
+				(float)*m_gfx_a,
+				getCurModeForBlit(isFromFB),
+				np > 9 ? (float)parms[9][0] : 0.0f,
+				np > 10 ? (float)parms[10][0] : 0.0f);
+		#endif
+		}
+		else
+		{
+			//EEL_LICE_FUNCDEF void (*__LICE_ScaledBlit)(LICE_IBitmap *dest, LICE_IBitmap *src, int dstx, int dsty, int dstw, int dsth, float srcx, float srcy, float srcw, float srch, float alpha, int mode);
+			
+			//logDebug("scaled blit!");
+			
+			const int dx = (int)coords[4];
+			const int dy = (int)coords[5];
+			const int dsx = (int)coords[6];
+			const int dsy = (int)coords[7];
+			
+			gxPushMatrix();
+			gxTranslatef(dx, dy, 0);
+			gxTranslatef(+dsx/2.f, +dsy/2.f, 0.f);
+			gxRotatef(angle * 180.f / M_PI, 0, 0, 1);
+			gxTranslatef(-dsx/2.f, -dsy/2.f, 0.f);
+			
+			setColorf(1.f, 1.f, 1.f, *m_gfx_a);
+			gxSetTexture(image.surface->getTexture());
+			{
+				const float eps = 1.f / std::max(bmw, bmh) / 1.f;
+				const float x1 = 0;
+				const float y1 = 0;
+				const float x2 = dsx;
+				const float y2 = dsy;
+				const float u1 = (float)coords[0] / bmw + eps;
+				const float v1 = (float)coords[1] / bmh + eps;
+				const float u2 = u1 + ((float)coords[2] - 1) / bmw - eps;
+				const float v2 = v1 + ((float)coords[3] - 1) / bmh - eps;
+				gxBegin(GL_QUADS);
+				{
+					gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
+					gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);
+					gxTexCoord2f(u2, v2); gxVertex2f(x2, y2);
+					gxTexCoord2f(u1, v2); gxVertex2f(x1, y2);
+				}
+				gxEnd();
+			}
+			gxSetTexture(0);
+			
+			gxPopMatrix();
+		#if 0
+			LICE_ScaledBlit(
+				dest,bm,
+				(int)coords[4],
+				(int)coords[5],
+				(int)coords[6],
+				(int)coords[7],
+				(float)coords[0],
+				(float)coords[1],
+				(float)coords[2],
+				(float)coords[3],
+				(float)*m_gfx_a,
+				getCurModeForBlit(isFromFB));
+		#endif
+		}
+	#endif
 	}
 };
 
@@ -856,7 +1100,9 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/vumetergfx";
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
-	const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
+	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
+	const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	
 	JsusFxPathLibraryTest pathLibrary;
 	if (!fx.compile(pathLibrary, filename))
@@ -920,11 +1166,13 @@ int main(int argc, char * argv[])
 			
 			gfx.setup(fx.gfx_w, fx.gfx_h);
 			
+			setDrawRect(0, 0, fx.gfx_w, fx.gfx_h);
 			pushFontMode(FONT_SDF);
 			setColorClamp(true);
 			fx.draw();
 			setColorClamp(false);
 			popFontMode();
+			clearDrawRect();
 			
 			const int sx = *gfx.m_gfx_w;
 			const int sy = *gfx.m_gfx_h;
