@@ -48,7 +48,7 @@ gfx_texth
 
 
 const int GFX_SX = 640;
-const int GFX_SY = 800;
+const int GFX_SY = 720;
 
 struct JsusFxPathLibraryTest : JsusFxPathLibrary {
 	static bool fileExists(const std::string &filename) {
@@ -113,6 +113,7 @@ public:
 static JsusFxTest * s_fx = nullptr;
 
 #define STUB printf("function %s not implemented\n", __FUNCTION__)
+//#define STUB do { } while (false)
 
 struct JsusFx_Image
 {
@@ -671,7 +672,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			else
 			{
 				updateColor();
-				drawText(*m_gfx_x, *m_gfx_y + m_fontSize, m_fontSize, +1, -1, "%s", s);
+				drawText(*m_gfx_x, *m_gfx_y + m_fontSize - 2, m_fontSize, +1, -1, "%s", s);
 				*m_gfx_x += sx;
 			}
 		}
@@ -1102,7 +1103,8 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
-	const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
+	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	
 	JsusFxPathLibraryTest pathLibrary;
 	if (!fx.compile(pathLibrary, filename))
@@ -1144,6 +1146,7 @@ int main(int argc, char * argv[])
 		{
 			setFont("calibri.ttf");
 			
+		#if 1
 			for (int a = 0; a < 10; ++a)
 			{
 				float ind[2][64];
@@ -1163,6 +1166,7 @@ int main(int argc, char * argv[])
 				
 				fx.process(in, out, 64);
 			}
+		#endif
 			
 			gfx.setup(fx.gfx_w, fx.gfx_h);
 			
@@ -1179,6 +1183,9 @@ int main(int argc, char * argv[])
 			
 			int x = 10;
 			int y = sy + 100;
+			
+			setColor(160, 160, 160);
+			drawText(x + 240, y, 18, +1, +1, "%s.jsfx", Path::GetBaseName(filename).c_str());
 			
 			for (int i = 0; i < 64; ++i)
 			{
