@@ -32,17 +32,23 @@ Note that files that are designed for import only (such as function libraries) s
 mouse_cap
 
 mouse_cap is a bitfield of mouse and keyboard modifier state.
-1: left mouse button
-2: right mouse button
-4: Control key (Windows), Command key (OSX)
-8: Shift key
-16: Alt key (Windows), Option key (OSX)
-32: Windows key (Windows), Control key (OSX) -- REAPER 4.60+
-64: middle mouse button -- REAPER 4.60+
+	1: left mouse button
+	2: right mouse button
+	4: Control key (Windows), Command key (OSX)
+	8: Shift key
+	16: Alt key (Windows), Option key (OSX)
+	32: Windows key (Windows), Control key (OSX) -- REAPER 4.60+
+	64: middle mouse button -- REAPER 4.60+
 
 mouse_wheel
 
 gfx_texth
+	avergage height of a text line
+
+gfx_mode
+	0x1 = additive
+	0x2 = disable source alpha for gfx_blit (make it opaque)
+	0x4 = disable filtering for gfx_blit (point sampling)
 
 */
 
@@ -571,7 +577,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	{
 		IMAGE_SCOPE;
 
-		const bool aa = np <= 5 || parms[5][0] > .5f;
+		//const bool aa = np <= 5 || parms[5][0] > .5f;
 
 		const float sx = parms[2][0];
 		const float sy = parms[3][0];
@@ -1145,9 +1151,9 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/vumetergfx";
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
-	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
+	const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
-	const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	
 	JsusFxPathLibraryTest pathLibrary;
