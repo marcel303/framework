@@ -591,12 +591,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		}
 	}
 	
-	virtual void gfx_grad_or_muladd_rect(int mode, int np, EEL_F ** parms)
+	virtual void gfx_grad_or_muladd_rect(int mode, int np, EEL_F ** parms) override
 	{
-		STUB;
-		
-		return;
-		
 		const int x1 = (int)floor(parms[0][0]);
 		const int y1 = (int)floor(parms[1][0]);
 		const int w = (int)floor(parms[2][0]);
@@ -614,25 +610,33 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			const float b = (float)parms[6][0];
 			const float a = (float)parms[7][0];
 			
-			setColorf(r, g, b, a);
-			drawRect(x1, y1, x1 + w, y1 + h);
+			const float xr = np >  8 ? (float)parms[ 8][0] : 0.0f;
+			const float xg = np >  9 ? (float)parms[ 9][0] : 0.0f;
+			const float xb = np > 10 ? (float)parms[10][0] : 0.0f;
+			const float xa = np > 11 ? (float)parms[11][0] : 0.0f;
 			
-			/*
-      LICE_GradRect(dest,x1,y1,w,h,(float)parms[4][0],(float)parms[5][0],(float)parms[6][0],(float)parms[7][0],
-                                   np > 8 ? (float)parms[8][0]:0.0f, np > 9 ? (float)parms[9][0]:0.0f,  np > 10 ? (float)parms[10][0]:0.0f, np > 11 ? (float)parms[11][0]:0.0f,
-                                   np > 12 ? (float)parms[12][0]:0.0f, np > 13 ? (float)parms[13][0]:0.0f,  np > 14 ? (float)parms[14][0]:0.0f, np > 15 ? (float)parms[15][0]:0.0f,
-                                   getCurMode());
+			const float yr = np > 12 ? (float)parms[12][0] : 0.0f;
+			const float yg = np > 13 ? (float)parms[13][0] : 0.0f;
+			const float yb = np > 14 ? (float)parms[14][0] : 0.0f;
+			const float ya = np > 15 ? (float)parms[15][0] : 0.0f;
 			
-			EEL_LICE_FUNCDEF void (*__LICE_GradRect)(LICE_IBitmap *dest, int dstx, int dsty, int dstw, int dsth,
-                      float ir, float ig, float ib, float ia,
-                      float drdx, float dgdx, float dbdx, float dadx,
-                      float drdy, float dgdy, float dbdy, float dady,
-                      int mode);
-			*/
+			Shader shader("lice-gradient");
+			setShader(shader);
+			{
+				shader.setImmediate("startPosition", x1, y1);
+				shader.setImmediate("startColor", r, g, b, a);
+				shader.setImmediate("gradientX", xr, xg, xb, xa);
+				shader.setImmediate("gradientY", yr, yg, yb, ya);
+				
+				drawRect(x1, y1, x1 + w, y1 + h);
+			}
+			clearShader();
 		}
 		else
 		{
 			logDebug("multiply-add rect!");
+			
+			STUB;
 		}
 	}
 	
@@ -1142,8 +1146,8 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
-	const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
+	const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	
 	JsusFxPathLibraryTest pathLibrary;
