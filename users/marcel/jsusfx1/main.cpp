@@ -53,7 +53,7 @@ gfx_mode
 */
 
 
-const int GFX_SX = 640;
+const int GFX_SX = 1000;
 const int GFX_SY = 720;
 
 struct JsusFxPathLibraryTest : JsusFxPathLibrary {
@@ -162,18 +162,11 @@ struct JsusFx_Image
 				}
 				
 				surface = new Surface(sx, sy, false, false, false);
-				
-				surface->clear();
-				
-				isValid = true;
 			}
 			
-			if (isValid == false)
-			{
-				surface->clear();
+			surface->clear();
 				
-				isValid = true;
-			}
+			isValid = true;
 		}
 	}
 };
@@ -261,6 +254,26 @@ struct JsusFx_ImageScope
 
 #define IMAGE_SCOPE JsusFx_ImageScope imageScope(imageCache, *m_gfx_dest)
 //#define IMAGE_SCOPE do { } while (false)
+
+struct JsusFx_BlendScope
+{
+	JsusFx_BlendScope(const int mode)
+	{
+		if (mode & 0x1)
+			pushBlend(BLEND_ADD);
+		else
+			pushBlend(BLEND_ALPHA);
+	}
+	
+	~JsusFx_BlendScope()
+	{
+		popBlend();
+	}
+};
+
+#define BLEND_SCOPE JsusFx_BlendScope blendScope(*m_gfx_mode)
+
+#define LINE_STROKE 1.6f
 
 struct JsusFxGfx_Framework : JsusFxGfx
 {
@@ -414,6 +427,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_line(int np, EEL_F ** params) override
 	{
 		IMAGE_SCOPE;
+		BLEND_SCOPE;
 		
 		const int x1 = (int)floor(params[0][0]);
 		const int y1 = (int)floor(params[1][0]);
@@ -422,14 +436,14 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		
 		updateColor();
 		hqBegin(HQ_LINES);
-		hqLine(x1, y1, 1.f, x2, y2, 1.f);
+		hqLine(x1, y1, LINE_STROKE, x2, y2, LINE_STROKE);
 		hqEnd();
-		//drawLine(x1, y1, x2, y2);
 	}
 	
 	virtual void gfx_rect(int np, EEL_F ** params) override
 	{
 		IMAGE_SCOPE;
+		BLEND_SCOPE;
 		
 		const int x1 = (int)floor(params[0][0]);
 		const int y1 = (int)floor(params[1][0]);
@@ -455,6 +469,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_circle(EEL_F x, EEL_F y, EEL_F radius, bool fill, bool aa) override
 	{
 		IMAGE_SCOPE;
+		BLEND_SCOPE;
 		
 		if (fill)
 		{
@@ -475,6 +490,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_triangle(EEL_F ** parms, int np) override
 	{
 		IMAGE_SCOPE;
+		BLEND_SCOPE;
 		
 		if (np >= 6)
 		{
@@ -524,10 +540,11 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_lineto(EEL_F xpos, EEL_F ypos, EEL_F useaa) override
 	{
 		IMAGE_SCOPE;
+		BLEND_SCOPE;
 		
 		updateColor();
 		hqBegin(HQ_LINES);
-		hqLine(*m_gfx_x, *m_gfx_y, 1.f, xpos, ypos, 1.f);
+		hqLine(*m_gfx_x, *m_gfx_y, LINE_STROKE, xpos, ypos, LINE_STROKE);
 		hqEnd();
 		
 		*m_gfx_x = xpos;
@@ -537,6 +554,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_rectto(EEL_F xpos, EEL_F ypos) override
 	{
 		IMAGE_SCOPE;
+		BLEND_SCOPE;
 		
 		updateColor();
 		drawRect(*m_gfx_x, *m_gfx_y, xpos, ypos);
@@ -576,6 +594,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_roundrect(int np, EEL_F ** parms) override
 	{
 		IMAGE_SCOPE;
+		BLEND_SCOPE;
 
 		//const bool aa = np <= 5 || parms[5][0] > .5f;
 
@@ -608,6 +627,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			return;
 		
 		IMAGE_SCOPE;
+		BLEND_SCOPE;
 		
 		if (mode == 0)
 		{
@@ -649,6 +669,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_drawnumber(EEL_F n, int nd) override
 	{
 		IMAGE_SCOPE;
+		BLEND_SCOPE;
 		
 		char formatString[32];
 		sprintf_s(formatString, sizeof(formatString), "%%.%df", nd);
@@ -666,6 +687,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_drawchar(EEL_F n) override
 	{
 		IMAGE_SCOPE;
+		BLEND_SCOPE;
 		
 		const char c = (char)n;
 		
@@ -688,6 +710,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_drawstr(void * opaque, EEL_F ** parms, int nparms, int formatmode) override // mode=1 for format, 2 for purely measure no format, 3 for measure char
 	{
 		IMAGE_SCOPE;
+		BLEND_SCOPE;
 		
 		int nfmtparms = nparms - 1;
 		
@@ -772,6 +795,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_setpixel(EEL_F r, EEL_F g, EEL_F b) override
 	{
 		IMAGE_SCOPE;
+		BLEND_SCOPE;
 		
 		setColorf(r, g, b, *m_gfx_a);
 		drawPoint(*m_gfx_x, *m_gfx_y);
@@ -1155,6 +1179,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
 	
 	JsusFxPathLibraryTest pathLibrary;
 	if (!fx.compile(pathLibrary, filename))
@@ -1162,9 +1187,6 @@ int main(int argc, char * argv[])
 		logError("failed to load file: %s", filename);
 		return -1;
 	}
-	
-	//fx.gfx_w = std::max(fx.gfx_w, GFX_SX);
-	//fx.gfx_h = std::max(fx.gfx_h, GFX_SY/2);
 	
 	fx.prepare(44100, 64);
 	
@@ -1262,7 +1284,7 @@ int main(int argc, char * argv[])
 			int y = sy + 100;
 			
 			setColor(160, 160, 160);
-			drawText(x + 240, y, 18, +1, +1, "%s.jsfx", Path::GetBaseName(filename).c_str());
+			drawText(x + 240, y, 18, +1, +1, "JSFX file: %s", Path::GetFileName(filename).c_str());
 			
 			for (int i = 0; i < 64; ++i)
 			{
