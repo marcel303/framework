@@ -567,6 +567,9 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	{
 		STUB;
 		
+		IMAGE_SCOPE;
+		BLEND_SCOPE;
+		
 		updateColor();
 	#if 1
 		hqBegin(HQ_STROKED_CIRCLES);
@@ -938,9 +941,18 @@ struct JsusFxGfx_Framework : JsusFxGfx
 					
 					logDebug("blit %d (%dx%d) -> %d. scale=%.2f, angle=%.2f", img, sx, sy, int(*m_gfx_dest), scale, rotate);
 					
+					const int dstX = (int)*m_gfx_x;
+					const int dstY = (int)*m_gfx_y;
+					
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				
 					if (scale != 1.f || rotate != 0.f)
 					{
 						gxPushMatrix();
+						gxTranslatef(dstX, dstY, 0);
 						gxTranslatef(+sx/2.f, +sy/2.f, 0);
 						gxScalef(scale, scale, 1.f);
 						gxRotatef(rotate * 180.f / M_PI, 0, 0, 1);
@@ -949,7 +961,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 					}
 					else
 					{
-						drawRect(*m_gfx_x, *m_gfx_y, *m_gfx_x + sx, *m_gfx_y + sy);
+						drawRect(dstX, dstY, dstX + sx, dstY + sy);
 					}
 				}
 				gxSetTexture(0);
@@ -1077,17 +1089,21 @@ struct JsusFxGfx_Framework : JsusFxGfx
 				setColorf(1.f, 1.f, 1.f, *m_gfx_a);
 				gxSetTexture(image.surface->getTexture());
 				{
-					const float eps = 1.f / std::max(bmw, bmh) / 1.f;
+					// todo : apply the correct filtering mode
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 					
 					const float x1 = 0;
 					const float y1 = 0;
 					const float x2 = dsx;
 					const float y2 = dsy;
 					
-					const float u1 = (float)coords[0] / bmw + eps;
-					const float v1 = (float)coords[1] / bmh + eps;
-					const float u2 = u1 + ((float)coords[2] - 1.f) / bmw - eps;
-					const float v2 = v1 + ((float)coords[3] - 1.f) / bmh - eps;
+					const float u1 = coords[0] / bmw;
+					const float v1 = coords[1] / bmh;
+					const float u2 = (coords[0] + coords[2]) / bmw;
+					const float v2 = (coords[1] + coords[3]) / bmh;
 					
 					logDebug("blit2 %d (%d,%d %dx%d) -> %d (%d,%d %dx%d)",
 						bmIndex, (int)coords[0], (int)coords[1], (int)coords[2], (int)coords[3],
@@ -1176,9 +1192,9 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
-	const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
+	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
+	const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
 	
