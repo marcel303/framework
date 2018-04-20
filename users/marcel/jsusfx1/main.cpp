@@ -275,6 +275,141 @@ struct JsusFx_BlendScope
 
 #define LINE_STROKE 1.6f
 
+#include "audio.h"
+
+struct JsusFx_File
+{
+	enum Mode
+	{
+		kMode_None,
+		kMode_Text,
+		kMode_Sound
+	};
+	
+	std::string filename;
+	Mode mode = kMode_None;
+	
+	SoundData * soundData = nullptr;
+	
+	int readPosition = 0;
+	
+	~JsusFx_File()
+	{
+		close();
+	}
+	
+	bool open(const char * _filename)
+	{
+		// reset
+		
+		filename.clear();
+		
+		// check if file exists
+		
+		FILE * file = fopen(_filename, "rb");
+		
+		if (file == nullptr)
+			return false;
+		else
+		{
+			filename = _filename;
+			fclose(file);
+			return true;
+		}
+	}
+	
+	void close()
+	{
+		delete soundData;
+		soundData = nullptr;
+	}
+	
+	bool riff(int & numChannels, int & sampleRate)
+	{
+		Assert(mode == kMode_None);
+		
+		// reset read state
+		
+		mode = kMode_None;
+		readPosition = 0;
+		
+		// load RIFF file
+		
+		soundData = loadSound(filename.c_str());
+		
+		if (soundData == nullptr || (soundData->channelSize != 2 && soundData->channelSize != 4))
+		{
+			numChannels = 0;
+			sampleRate = 0;
+			return false;
+		}
+		else
+		{
+			mode = kMode_Sound;
+			numChannels = soundData->channelCount;
+			sampleRate = soundData->sampleRate;
+			return true;
+		}
+	}
+	
+	void text()
+	{
+		// todo : add support for text mode
+	}
+	
+	int avail() const
+	{
+		if (mode == kMode_None)
+			return 0;
+		else if (mode == kMode_Text)
+			return 0;
+		else if (mode == kMode_Sound)
+			return soundData->sampleCount * soundData->channelCount - readPosition;
+		else
+			return 0;
+	}
+	
+	bool mem(const int numValues, EEL_F * dest)
+	{
+		if (mode == kMode_None)
+			return false;
+		else if (mode == kMode_Text)
+			return false;
+		else if (mode == kMode_Sound)
+		{
+			if (numValues > avail())
+				return false;
+			for (int i = 0; i < numValues; ++i)
+			{
+				const int channelIndex = readPosition / soundData->sampleCount;
+				const int sampleIndex = readPosition % soundData->sampleCount;
+				
+				if (soundData->channelSize == 2)
+				{
+					const short * values = (short*)soundData->sampleData;
+					
+					dest[i] = values[sampleIndex * soundData->channelCount + channelIndex] / float(1 << 15);
+				}
+				else if (soundData->channelSize == 4)
+				{
+					const float * values = (float*)soundData->sampleData;
+					
+					dest[i] = values[sampleIndex * soundData->channelCount + channelIndex];
+				}
+				
+				readPosition++;
+			}
+			
+			return true;
+		}
+		else
+			return false;
+	}
+};
+
+static const int kMaxFiles = 128;
+static JsusFx_File * s_files[kMaxFiles] = { };
+
 struct JsusFxGfx_Framework : JsusFxGfx
 {
 	float m_fontSize = 12.f;
@@ -285,7 +420,10 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual bool handleFile(int index, const char *filename) override
 	{
-		if (Path::GetExtension(filename, true) == "png")
+		if (index < 0 || index >= kMaxFiles)
+			return false;
+		
+		if (Path::GetExtension(filename, true) == "png" || Path::GetExtension(filename, true) == "jpg")
 		{
 			if (index >= 0 && index < imageCache.kMaxImages)
 			{
@@ -329,6 +467,26 @@ struct JsusFxGfx_Framework : JsusFxGfx
 					
 					return true;
 				}
+			}
+		}
+		else
+		{
+			delete s_files[index];
+			
+			//
+			
+			s_files[index] = new JsusFx_File();
+			
+			if (s_files[index]->open(filename))
+			{
+				return true;
+			}
+			else
+			{
+				delete s_files[index];
+				s_files[index] = nullptr;
+				
+				return false;
 			}
 		}
 		
@@ -807,6 +965,10 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_getpixel(EEL_F * r, EEL_F * g, EEL_F * b)
 	{
 		STUB;
+		
+		*r = 1.0;
+		*g = 0.0;
+		*b = 1.0;
 	}
 
 	virtual EEL_F gfx_loadimg(void * opaque, int img, EEL_F loadFrom)
@@ -1076,8 +1238,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			
 			// todo : not sure how to interpret rotation offset. it's not documented
 			
-			const float rotOffsetX = np > 9 ? (float)parms[9][0] : 0.0f;
-			const float rotOffsetY = np > 10 ? (float)parms[10][0] : 0.0f;
+			//const float rotOffsetX = np > 9 ? (float)parms[9][0] : 0.0f;
+			//const float rotOffsetY = np > 10 ? (float)parms[10][0] : 0.0f;
 			
 			gxPushMatrix();
 			{
@@ -1156,6 +1318,139 @@ static void doSlider(JsusFx & fx, Slider & slider, int x, int y)
 
 //
 
+static EEL_F NSEEL_CGEN_CALL _file_open(void *opaque, EEL_F *handle)
+{
+	const int index = *handle;
+	
+	if (index < 0 || index >= kMaxFiles)
+		return -1;
+	
+	WDL_FastString * fs = nullptr;
+	const char * filename = s_fx->getString(index, &fs);
+	
+	if (filename == nullptr)
+		return -1;
+	
+	// todo : add settable search path and search locally first
+	const std::string resolvedFilename = std::string("/Users/thecat/Library/Application Support/REAPER/Data/") + filename;
+	
+	for (int i = 1; i < kMaxFiles; ++i)
+	{
+		if (s_files[i] == nullptr)
+		{
+			s_files[i] = new JsusFx_File();
+			
+			if (s_files[i]->open(resolvedFilename.c_str()) == false)
+			{
+				delete s_files[i];
+				s_files[i] = nullptr;
+				
+				return -1;
+			}
+			else
+			{
+				return i;
+			}
+		}
+	}
+	
+	return -1;
+}
+
+static EEL_F NSEEL_CGEN_CALL _file_close(void *opaque, EEL_F *handle)
+{
+	const int index = *handle;
+	
+	if (index < 0 || index >= kMaxFiles)
+		return -1;
+	
+	if (s_files[index] == nullptr)
+		return -1;
+	
+	s_files[index]->close();
+	
+	delete s_files[index];
+	s_files[index] = nullptr;
+	
+	return 0;
+}
+
+static EEL_F NSEEL_CGEN_CALL _file_avail(void *opaque, EEL_F *handle)
+{
+  	const int index = *handle;
+	
+	if (index < 0 || index >= kMaxFiles)
+		return 0;
+	
+	if (s_files[index] == nullptr)
+		return 0;
+	
+	return s_files[index]->avail();
+}
+
+static EEL_F * NSEEL_CGEN_CALL _file_riff(void *opaque, EEL_F *handle, EEL_F *_numChannels, EEL_F *_sampleRate)
+{
+	*_numChannels = 0;
+	*_sampleRate = 0;
+	
+	const int index = *handle;
+	
+	if (index < 0 || index >= kMaxFiles)
+		return handle;
+	
+	if (s_files[index] == nullptr)
+		return handle;
+	
+	int numChannels;
+	int sampleRate;
+	if (s_files[index]->riff(numChannels, sampleRate) == false)
+		return handle;
+	
+	*_numChannels = numChannels;
+	*_sampleRate = sampleRate;
+	
+	return handle;
+}
+
+static EEL_F NSEEL_CGEN_CALL _file_mem(void *opaque, EEL_F *handle, EEL_F *_dest, EEL_F *_numValues)
+{
+	const int index = *handle;
+	
+	if (index < 0 || index >= kMaxFiles)
+		return 0;
+	
+	if (s_files[index] == nullptr)
+		return 0;
+	
+	const int destOffs = (int)(*_dest + 0.001);
+	
+	EEL_F * dest = NSEEL_VM_getramptr(s_fx->m_vm, destOffs, nullptr);
+	
+	if (dest == nullptr)
+		return 0;
+	
+	const int numValues = (int)*_numValues;
+	
+	if (s_files[index]->mem(numValues, dest) == false)
+		return 0;
+	else
+		return numValues;
+}
+
+struct JsusFx_FileAPI
+{
+	void init(NSEEL_VMCTX vm)
+	{
+		NSEEL_addfunc_retval("file_open",1,NSEEL_PProc_THIS,&_file_open);
+		NSEEL_addfunc_retval("file_close",1,NSEEL_PProc_THIS,&_file_close);
+		NSEEL_addfunc_retval("file_avail",1,NSEEL_PProc_THIS,&_file_avail);
+		NSEEL_addfunc_retptr("file_riff",3,NSEEL_PProc_THIS,&_file_riff);
+		NSEEL_addfunc_retval("file_mem",3,NSEEL_PProc_THIS,&_file_mem);
+	}
+};
+
+//
+
 static void handleAction(const std::string & action, const Dictionary & d)
 {
 	if (action == "filedrop")
@@ -1185,6 +1480,29 @@ int main(int argc, char * argv[])
 	fx.gfx = &gfx;
 	gfx.init(fx.m_vm);
 	
+	JsusFx_FileAPI fileApi;
+	fileApi.init(fx.m_vm);
+	
+#if 0
+	JsusFx_File f;
+	if (f.open("testsound.wav"))
+	{
+		int nc;
+		int sr;
+		if (f.riff(nc, sr))
+		{
+			const int a = f.avail();
+			const int ns = a / nc;
+			EEL_F s[ns];
+			if (f.mem(ns, s))
+			{
+				for (int i = 0; i < ns; ++i)
+					printf("s[%06d] = %.4f\n", i, s[i]);
+			}
+		}
+	}
+#endif
+
 	//const char * filename = "3bandpeakfilter";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/FocusPressPushZoom";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/Direct";
@@ -1194,9 +1512,10 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
-	const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
+	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
 	
 	JsusFxPathLibraryTest pathLibrary;
 	if (!fx.compile(pathLibrary, filename))
