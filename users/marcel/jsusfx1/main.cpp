@@ -1388,7 +1388,7 @@ static EEL_F NSEEL_CGEN_CALL _file_avail(void *opaque, EEL_F *handle)
 	return s_files[index]->avail();
 }
 
-static EEL_F * NSEEL_CGEN_CALL _file_riff(void *opaque, EEL_F *handle, EEL_F *_numChannels, EEL_F *_sampleRate)
+static EEL_F NSEEL_CGEN_CALL _file_riff(void *opaque, EEL_F *handle, EEL_F *_numChannels, EEL_F *_sampleRate)
 {
 	*_numChannels = 0;
 	*_sampleRate = 0;
@@ -1396,20 +1396,20 @@ static EEL_F * NSEEL_CGEN_CALL _file_riff(void *opaque, EEL_F *handle, EEL_F *_n
 	const int index = *handle;
 	
 	if (index < 0 || index >= kMaxFiles)
-		return handle;
+		return -1;
 	
 	if (s_files[index] == nullptr)
-		return handle;
+		return -1;
 	
 	int numChannels;
 	int sampleRate;
 	if (s_files[index]->riff(numChannels, sampleRate) == false)
-		return handle;
+		return -1;
 	
 	*_numChannels = numChannels;
 	*_sampleRate = sampleRate;
 	
-	return handle;
+	return 0;
 }
 
 static EEL_F NSEEL_CGEN_CALL _file_mem(void *opaque, EEL_F *handle, EEL_F *_dest, EEL_F *_numValues)
@@ -1444,7 +1444,7 @@ struct JsusFx_FileAPI
 		NSEEL_addfunc_retval("file_open",1,NSEEL_PProc_THIS,&_file_open);
 		NSEEL_addfunc_retval("file_close",1,NSEEL_PProc_THIS,&_file_close);
 		NSEEL_addfunc_retval("file_avail",1,NSEEL_PProc_THIS,&_file_avail);
-		NSEEL_addfunc_retptr("file_riff",3,NSEEL_PProc_THIS,&_file_riff);
+		NSEEL_addfunc_retval("file_riff",3,NSEEL_PProc_THIS,&_file_riff);
 		NSEEL_addfunc_retval("file_mem",3,NSEEL_PProc_THIS,&_file_mem);
 	}
 };
