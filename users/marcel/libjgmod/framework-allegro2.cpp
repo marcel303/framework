@@ -208,7 +208,7 @@ static thread_local AllegroVoiceAPI * voiceAPI = nullptr;
 extern "C"
 {
 static AudioOutput_PortAudio * audioOutput = nullptr;
-static AudioStream_VoiceMixer * audioStream = nullptr;
+static AudioStream_AllegroVoiceMixer * audioStream = nullptr;
 
 int install_sound(int digi, int midi, const char * cfg_path)
 {
@@ -217,7 +217,7 @@ int install_sound(int digi, int midi, const char * cfg_path)
 	audioOutput = new AudioOutput_PortAudio();
 	audioOutput->Initialize(2, DIGI_SAMPLERATE, 64);
 	
-	audioStream = new AudioStream_VoiceMixer(voiceAPI);
+	audioStream = new AudioStream_AllegroVoiceMixer(voiceAPI);
 	audioOutput->Play(audioStream);
 	
 	return 0;
@@ -503,7 +503,7 @@ void lock_sample(SAMPLE * sample)
 
 }
 
-AudioStream_VoiceMixer::AudioStream_VoiceMixer(AllegroVoiceAPI * _voiceAPI)
+AudioStream_AllegroVoiceMixer::AudioStream_AllegroVoiceMixer(AllegroVoiceAPI * _voiceAPI)
 	: AudioStream()
 	, mutex(nullptr)
 	, voiceAPI(_voiceAPI)
@@ -511,23 +511,23 @@ AudioStream_VoiceMixer::AudioStream_VoiceMixer(AllegroVoiceAPI * _voiceAPI)
 	mutex = SDL_CreateMutex();
 }
 
-AudioStream_VoiceMixer::~AudioStream_VoiceMixer()
+AudioStream_AllegroVoiceMixer::~AudioStream_AllegroVoiceMixer()
 {
 	SDL_DestroyMutex(mutex);
 	mutex = nullptr;
 }
 
-void AudioStream_VoiceMixer::lock()
+void AudioStream_AllegroVoiceMixer::lock()
 {
 	SDL_LockMutex(mutex);
 }
 
-void AudioStream_VoiceMixer::unlock()
+void AudioStream_AllegroVoiceMixer::unlock()
 {
 	SDL_UnlockMutex(mutex);
 }
 
-int AudioStream_VoiceMixer::Provide(int numSamples, AudioSample* __restrict buffer)
+int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restrict buffer)
 {
 #if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
 	::voiceAPI = this->voiceAPI;

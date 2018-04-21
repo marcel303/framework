@@ -126,14 +126,14 @@ struct AllegroVoiceAPI
 
 #include "audiostream/AudioStream.h"
 
-struct AudioStream_VoiceMixer : AudioStream
+struct AudioStream_AllegroVoiceMixer : AudioStream
 {
 	SDL_mutex * mutex;
 	
 	AllegroVoiceAPI * voiceAPI;
 	
-	AudioStream_VoiceMixer(AllegroVoiceAPI * voiceAPI);
-	virtual ~AudioStream_VoiceMixer() override;
+	AudioStream_AllegroVoiceMixer(AllegroVoiceAPI * voiceAPI);
+	virtual ~AudioStream_AllegroVoiceMixer() override;
 	
 	void lock();
 	void unlock();
