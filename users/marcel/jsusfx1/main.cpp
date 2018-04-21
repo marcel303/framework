@@ -276,6 +276,9 @@ struct JsusFx_BlendScope
 #define LINE_STROKE 1.6f
 
 #include "audio.h"
+#include "FileStream.h"
+#include "StreamReader.h"
+#include "StringEx.h"
 
 struct JsusFx_File
 {
@@ -292,6 +295,8 @@ struct JsusFx_File
 	SoundData * soundData = nullptr;
 	
 	int readPosition = 0;
+	
+	std::vector<EEL_F> vars;
 	
 	~JsusFx_File()
 	{
@@ -320,6 +325,8 @@ struct JsusFx_File
 	
 	void close()
 	{
+		vars.clear();
+		
 		delete soundData;
 		soundData = nullptr;
 	}
@@ -352,9 +359,51 @@ struct JsusFx_File
 		}
 	}
 	
-	void text()
+	bool text()
 	{
-		// todo : add support for text mode
+		Assert(mode == kMode_None);
+		
+		// reset read state
+		
+		mode = kMode_None;
+		readPosition = 0;
+		
+		// load text file
+		
+		try
+		{
+			FileStream stream(filename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
+			StreamReader reader(&stream, false);
+			
+			auto lines = reader.ReadAllLines();
+			
+			for (auto & line : lines)
+			{
+				// a poor way of skipping comments. assume / is the start of // and strip anything that come after it
+				const int pos = String::Find(line, '/');
+				if (pos >= 0)
+					line = line.substr(0, pos);
+				
+				auto parts = String::Split(line, ' ');
+				
+				for (auto & part : parts)
+				{
+					double var;
+					
+					if (sscanf(part.c_str(), "%lf", &var) == 1)
+						vars.push_back(var);
+				}
+			}
+			
+			mode = kMode_Text;
+			
+			return true;
+		}
+		catch (std::exception & e)
+		{
+			logError("failed to read text file contents: %s", e.what());
+			return false;
+		}
 	}
 	
 	int avail() const
@@ -362,7 +411,7 @@ struct JsusFx_File
 		if (mode == kMode_None)
 			return 0;
 		else if (mode == kMode_Text)
-			return 0;
+			return vars.size() - readPosition;
 		else if (mode == kMode_Sound)
 			return soundData->sampleCount * soundData->channelCount - readPosition;
 		else
@@ -402,6 +451,24 @@ struct JsusFx_File
 			
 			return true;
 		}
+		else
+			return false;
+	}
+	
+	bool var(EEL_F & value)
+	{
+		if (mode == kMode_None)
+			return false;
+		else if (mode == kMode_Text)
+		{
+			if (avail() < 1)
+				return false;
+			value = vars[readPosition];
+			readPosition++;
+			return true;
+		}
+		else if (mode == kMode_Sound)
+			return false;
 		else
 			return false;
 	}
@@ -1448,6 +1515,22 @@ static EEL_F NSEEL_CGEN_CALL _file_riff(void *opaque, EEL_F *handle, EEL_F *_num
 	return 0;
 }
 
+static EEL_F NSEEL_CGEN_CALL _file_text(void *opaque, EEL_F *handle)
+{
+	const int index = *handle;
+	
+	if (index < 0 || index >= kMaxFiles)
+		return -1;
+	
+	if (s_files[index] == nullptr)
+		return -1;
+	
+	if (s_files[index]->text() == false)
+		return -1;
+	
+	return 1;
+}
+
 static EEL_F NSEEL_CGEN_CALL _file_mem(void *opaque, EEL_F *handle, EEL_F *_dest, EEL_F *_numValues)
 {
 	const int index = *handle;
@@ -1473,6 +1556,22 @@ static EEL_F NSEEL_CGEN_CALL _file_mem(void *opaque, EEL_F *handle, EEL_F *_dest
 		return numValues;
 }
 
+static EEL_F NSEEL_CGEN_CALL _file_var(void *opaque, EEL_F *handle, EEL_F *dest)
+{
+	const int index = *handle;
+	
+	if (index < 0 || index >= kMaxFiles)
+		return 0;
+	
+	if (s_files[index] == nullptr)
+		return 0;
+	
+	if (s_files[index]->var(*dest) == false)
+		return 0;
+	else
+		return 1;
+}
+
 struct JsusFx_FileAPI
 {
 	void init(NSEEL_VMCTX vm)
@@ -1481,7 +1580,9 @@ struct JsusFx_FileAPI
 		NSEEL_addfunc_retval("file_close",1,NSEEL_PProc_THIS,&_file_close);
 		NSEEL_addfunc_retval("file_avail",1,NSEEL_PProc_THIS,&_file_avail);
 		NSEEL_addfunc_retval("file_riff",3,NSEEL_PProc_THIS,&_file_riff);
+		NSEEL_addfunc_retval("file_text",1,NSEEL_PProc_THIS,&_file_text);
 		NSEEL_addfunc_retval("file_mem",3,NSEEL_PProc_THIS,&_file_mem);
+		NSEEL_addfunc_retval("file_var",2,NSEEL_PProc_THIS,&_file_var);
 	}
 };
 
@@ -1552,7 +1653,8 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Quad";
-	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
+	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/AmbiXToB";
+	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
 	
 	JsusFxPathLibraryTest pathLibrary;
 	if (!fx.compile(pathLibrary, filename))
