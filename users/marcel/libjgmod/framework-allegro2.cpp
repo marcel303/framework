@@ -8,6 +8,8 @@
 //#define DIGI_SAMPLERATE 44100
 #define DIGI_SAMPLERATE 192000
 
+#define PROCESS_INTERRUPTS_ON_AUDIO_THREAD 1
+
 struct AudioStream_VoiceMixer : AudioStream
 {
 	SDL_mutex * mutex;
@@ -115,11 +117,18 @@ struct TimerReg
 	void (*proc)();
 	std::atomic<bool> stop;
 	int delay;
+	int delayInSamples;
 	
+#if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
+	int sampleTime;
+#else
 	SDL_Thread * thread;
+#endif
 };
 
 static TimerReg * s_timerRegs = nullptr;
+
+#if !PROCESS_INTERRUPTS_ON_AUDIO_THREAD
 
 #include <unistd.h>
 
@@ -163,6 +172,8 @@ static int TimerThreadProc(void * obj)
 	return 0;
 }
 
+#endif
+
 void install_int_ex(void (*proc)(), int speed)
 {
 	for (auto r = s_timerRegs; r != nullptr; r = s_timerRegs->next)
@@ -170,19 +181,33 @@ void install_int_ex(void (*proc)(), int speed)
 		if (r->proc == proc)
 		{
 			r->delay = speed;
+			r->delayInSamples = (int64_t(speed) * DIGI_SAMPLERATE) / 1000000;
 			return;
 		}
 	}
 	
 	TimerReg * r = new TimerReg;
 	
-	r->next = s_timerRegs;
-	s_timerRegs = r;
-	
 	r->proc = proc;
 	r->stop = false;
 	r->delay = speed;
+	r->delayInSamples = (int64_t(speed) * DIGI_SAMPLERATE) / 1000000;
+	
+#if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
+	r->sampleTime = 0;
+	
+	audioStream->lock();
+	{
+		r->next = s_timerRegs;
+		s_timerRegs = r;
+	}
+	audioStream->unlock();
+#else
+	r->next = s_timerRegs;
+	s_timerRegs = r;
+	
 	r->thread = SDL_CreateThread(TimerThreadProc, "Allegro timer", r);
+#endif
 }
 
 void remove_int(void (*proc)())
@@ -195,13 +220,23 @@ void remove_int(void (*proc)())
 		
 		if ((*r)->proc == proc)
 		{
+		#if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
+			audioStream->lock();
+		#endif
+		
 			*r = t->next;
 			
+		#if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
+			audioStream->unlock();
+		#endif
+		
 			//
 			
+		#if !PROCESS_INTERRUPTS_ON_AUDIO_THREAD
 			t->stop = true;
 			
 			SDL_WaitThread(t->thread, nullptr);
+		#endif
 			
 			delete t;
 			t = nullptr;
@@ -212,6 +247,25 @@ void remove_int(void (*proc)())
 		}
 	}
 }
+
+#if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
+
+static void processInterrupts(const int numSamples)
+{
+	for (TimerReg * r = s_timerRegs; r != nullptr; r = r->next)
+	{
+		r->sampleTime += numSamples;
+		
+		if (r->sampleTime >= r->delayInSamples)
+		{
+			r->sampleTime -= r->delayInSamples;
+			
+			r->proc();
+		}
+	}
+}
+
+#endif
 
 void set_volume(int, int)
 {
@@ -275,6 +329,8 @@ void reallocate_voice(int voice, SAMPLE * sample)
 	
 	audioStream->lock();
 	{
+		Assert(voices[voice].used);
+		
 		voices[voice] = VoiceInfo();
 		
 		voices[voice].used = 1;
@@ -293,6 +349,8 @@ void deallocate_voice(int voice)
 	
 	audioStream->lock();
 	{
+		Assert(voices[voice].used);
+		
 		voices[voice].used = 0;
 	}
 	audioStream->unlock();
@@ -305,6 +363,8 @@ void voice_start(int voice)
 	
 	audioStream->lock();
 	{
+		Assert(voices[voice].used);
+		
 		voices[voice].started = 1;
 	}
 	audioStream->unlock();
@@ -317,6 +377,8 @@ void voice_stop(int voice)
 	
 	audioStream->lock();
 	{
+		Assert(voices[voice].used);
+		
 		voices[voice].started = 0;
 	}
 	audioStream->unlock();
@@ -327,6 +389,8 @@ int voice_get_position(int voice)
 	if (voice == -1)
 		return 0;
 	
+	Assert(voices[voice].used);
+	
 	return voices[voice].position;
 }
 
@@ -334,6 +398,8 @@ int voice_get_frequency(int voice)
 {
 	if (voice == -1)
 		return 0;
+	
+	Assert(voices[voice].used);
 	
 	return voices[voice].frequency;
 }
@@ -347,6 +413,8 @@ void voice_set_volume(int voice, int volume)
 	
 	audioStream->lock();
 	{
+		Assert(voices[voice].used);
+		
 		voices[voice].volume = volume;
 	}
 	audioStream->unlock();
@@ -359,6 +427,8 @@ void voice_set_playmode(int voice, int mode)
 	
 	audioStream->lock();
 	{
+		Assert(voices[voice].used);
+		
 		voices[voice].playmode = mode;
 	}
 	audioStream->unlock();
@@ -366,12 +436,14 @@ void voice_set_playmode(int voice, int mode)
 
 void voice_set_position(int voice, int position)
 {
+	Assert(position >= 0);
+	
 	if (voice == -1)
 		return;
 	
 	audioStream->lock();
 	{
-		Assert(position >= 0);
+		Assert(voices[voice].used);
 		
 		voices[voice].position = int64_t(position) << 16;
 	}
@@ -380,11 +452,15 @@ void voice_set_position(int voice, int position)
 
 void voice_set_frequency(int voice, int freq)
 {
+	Assert(freq >= 0);
+	
 	if (voice == -1)
 		return;
 	
 	audioStream->lock();
 	{
+		Assert(voices[voice].used);
+		
 		voices[voice].frequency = freq;
 		
 		voices[voice].updateIncrement(voices[voice].sampleIncrement < 0 ? -1 : +1);
@@ -401,6 +477,8 @@ void voice_set_pan(int voice, int pan)
 	
 	audioStream->lock();
 	{
+		Assert(voices[voice].used);
+		
 		voices[voice].pan = pan;
 	}
 	audioStream->unlock();
@@ -414,6 +492,10 @@ void lock_sample(SAMPLE * sample)
 
 int AudioStream_VoiceMixer::Provide(int numSamples, AudioSample* __restrict buffer)
 {
+#if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
+	processInterrupts(numSamples);
+#endif
+	
 	memset(buffer, 0, numSamples * sizeof(AudioSample));
 	
 	lock();
@@ -468,15 +550,21 @@ int AudioStream_VoiceMixer::Provide(int numSamples, AudioSample* __restrict buff
 						{
 							if (voice.sampleIncrement > 0)
 							{
-								if (sampleIndex > voice.sample->loop_end)
+								if (sampleIndex >= voice.sample->loop_end)
 								{
 								#if 1
+									voice.position = (int64_t(voice.sample->loop_end - 1) << 16 << 1) - voice.position;
+									
+									sampleIndex = voice.position >> 16;
+								#elif 1
 									const int64_t delta = voice.position - (int64_t(voice.sample->loop_end) << 16);
 									
 									voice.position -= delta * 2;
 									
 									sampleIndex = voice.position >> 16;
 								#else
+									voice.position = int64_t(voice.sample->loop_end) << 16;
+									
 									sampleIndex = voice.sample->loop_end;
 								#endif
 								
@@ -488,12 +576,18 @@ int AudioStream_VoiceMixer::Provide(int numSamples, AudioSample* __restrict buff
 								if (sampleIndex < voice.sample->loop_start)
 								{
 								#if 1
+									voice.position = (int64_t(voice.sample->loop_start) << 16 << 1) - voice.position;
+									
+									sampleIndex = voice.position >> 16;
+								#elif 1
 									const int64_t delta = voice.position - (int64_t(voice.sample->loop_start) << 16);
 									
 									voice.position -= delta * 2;
 									
 									sampleIndex = voice.position >> 16;
 								#else
+									voice.position = int64_t(voice.sample->loop_start) << 16;
+									
 									sampleIndex = voice.sample->loop_start;
 								#endif
 								
@@ -506,6 +600,10 @@ int AudioStream_VoiceMixer::Provide(int numSamples, AudioSample* __restrict buff
 							if (sampleIndex >= voice.sample->loop_end)
 							{
 							#if 1
+								voice.position -= int64_t(voice.sample->loop_end - voice.sample->loop_start) << 16;
+								
+								sampleIndex = voice.position >> 16;
+							#elif 1
 								const int64_t delta = voice.position - (int64_t(voice.sample->loop_end) << 16);
 								
 								voice.position = (voice.sample->loop_start << 16) + delta;
@@ -514,7 +612,7 @@ int AudioStream_VoiceMixer::Provide(int numSamples, AudioSample* __restrict buff
 							#else
 								sampleIndex = voice.sample->loop_start;
 								
-								voice.position = voice.sample->loop_start << 16;
+								voice.position = int64_t(voice.sample->loop_start) << 16;
 							#endif
 							}
 						}
