@@ -421,7 +421,10 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual bool handleFile(int index, const char *filename) override
 	{
 		if (index < 0 || index >= kMaxFiles)
+		{
+			logError("file index out of bounds %d:%s", index, filename);
 			return false;
+		}
 		
 		if (Path::GetExtension(filename, true) == "png" || Path::GetExtension(filename, true) == "jpg")
 		{
@@ -431,7 +434,13 @@ struct JsusFxGfx_Framework : JsusFxGfx
 				
 				const GLuint texture = getTexture(filename);
 				
-				if (texture != 0)
+				if (texture == 0)
+				{
+					logError("failed to load image %d:%s", index, filename);
+					
+					return false;
+				}
+				else
 				{
 					GLuint restoreTexture;
 					glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
@@ -468,10 +477,22 @@ struct JsusFxGfx_Framework : JsusFxGfx
 					return true;
 				}
 			}
+			else
+			{
+				logDebug("image index out of bounds: %d:%s", index, filename);
+				
+				return false;
+			}
 		}
 		else
 		{
-			delete s_files[index];
+			if (s_files[index] != nullptr)
+			{
+				logWarning("file already exists %d:%s", index, filename);
+				
+				delete s_files[index];
+				s_files[index] = nullptr;
+			}
 			
 			//
 			
@@ -483,6 +504,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			}
 			else
 			{
+				logError("failed to open file %d:%s", index, filename);
+				
 				delete s_files[index];
 				s_files[index] = nullptr;
 				
@@ -1309,8 +1332,21 @@ static void doSlider(JsusFx & fx, Slider & slider, int x, int y)
 	const float t = (slider.getValue() - slider.min) / (slider.max - slider.min);
 	drawRect(0, 0, sx * t, sy);
 	
-	setColor(colorWhite);
-	drawText(sx/2.f, sy/2.f, 10.f, 0.f, 0.f, "%s", slider.desc);
+	if (slider.isEnum)
+	{
+		const int enumIndex = (int)slider.getValue();
+		
+		if (enumIndex >= 0 && enumIndex < slider.enumNames.size())
+		{
+			setColor(colorWhite);
+			drawText(sx/2.f, sy/2.f, 10.f, 0.f, 0.f, "%s", slider.enumNames[enumIndex].c_str());
+		}
+	}
+	else
+	{
+		setColor(colorWhite);
+		drawText(sx/2.f, sy/2.f, 10.f, 0.f, 0.f, "%s", slider.desc);
+	}
 	
 	setColor(63, 31, 255, 127);
 	drawRectLine(0, 0, sx, sy);
@@ -1515,6 +1551,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
+	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Quad";
 	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
 	
 	JsusFxPathLibraryTest pathLibrary;
