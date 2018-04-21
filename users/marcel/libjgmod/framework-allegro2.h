@@ -122,6 +122,8 @@ struct AllegroVoiceAPI
 	
 	virtual void lock() { }
 	virtual void unlock() { }
+	
+	void generateSamplesForVoice(const int voiceIndex, float * __restrict samples, const int numSamples, float & stereoPanning);
 };
 
 #include "audiostream/AudioStream.h"

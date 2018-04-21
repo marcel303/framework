@@ -203,6 +203,91 @@ void AllegroVoiceAPI::voice_set_pan(int voice, int pan)
 	unlock();
 }
 
+void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __restrict samples, const int numSamples, float & stereoPanning)
+{
+	auto & voice = voices[voiceIndex];
+	
+	if (voiceIndex < 0 || voiceIndex >= MAX_VOICES || !(voice.used && voice.started && voice.sample->len != 0))
+	{
+		memset(samples, 0, numSamples * sizeof(float));
+		
+		stereoPanning = .5f;
+	}
+	
+	stereoPanning = voice.pan / 255.f;
+	
+	int sampleIndex = voice.position >> 16;
+	
+	for (int i = 0; i < numSamples; ++i)
+	{
+		if (sampleIndex >= 0 && sampleIndex < voice.sample->len)
+		{
+			if (voice.sample->bits == 8)
+			{
+				const unsigned char * values = (unsigned char*)voice.sample->data;
+				
+				const int value = int8_t(values[sampleIndex] ^ 0x80) * voice.volume;
+				
+				samples[i] = value / float(1 << 15);
+			}
+			else if (voice.sample->bits == 16)
+			{
+				const short * values = (short*)voice.sample->data;
+				
+				const int value = values[sampleIndex] * voice.volume;
+				
+				samples[i] = value / float(1 << 23);
+			}
+		}
+		
+		// increment sample playback position
+		
+		voice.position += voice.sampleIncrement;
+		
+		sampleIndex = voice.position >> 16;
+		
+		// handle looping and ping-pong
+		
+		if (voice.playmode & PLAYMODE_LOOP)
+		{
+			if (voice.playmode & PLAYMODE_BIDIR)
+			{
+				if (voice.sampleIncrement > 0)
+				{
+					if (sampleIndex >= voice.sample->loop_end)
+					{
+						voice.position = (int64_t(voice.sample->loop_end - 1) << 16 << 1) - voice.position;
+						
+						sampleIndex = voice.position >> 16;
+						
+						voice.sampleIncrement = -voice.sampleIncrement;
+					}
+				}
+				else
+				{
+					if (sampleIndex < voice.sample->loop_start)
+					{
+						voice.position = (int64_t(voice.sample->loop_start) << 16 << 1) - voice.position;
+						
+						sampleIndex = voice.position >> 16;
+						
+						voice.sampleIncrement = -voice.sampleIncrement;
+					}
+				}
+			}
+			else
+			{
+				if (sampleIndex >= voice.sample->loop_end)
+				{
+					voice.position -= int64_t(voice.sample->loop_end - voice.sample->loop_start) << 16;
+					
+					sampleIndex = voice.position >> 16;
+				}
+			}
+		}
+	}
+}
+
 static thread_local AllegroVoiceAPI * voiceAPI = nullptr;
 
 extern "C"
