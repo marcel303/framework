@@ -73,3 +73,72 @@ static inline int ABS(int x) { return x < 0 ? -x : +x; }
 #ifdef __cplusplus
 }
 #endif
+
+#ifdef __cplusplus
+
+struct AllegroVoiceAPI
+{
+	static const int MAX_VOICES = 128;
+
+	struct VoiceInfo
+	{
+		int used = 0;
+		int started = 0;
+		int64_t position = 0;
+		int frequency = 0;
+		int pan = 127;
+		int volume = 255;
+		int playmode = 0;
+		SAMPLE * sample = nullptr;
+		int sampleIncrement = 0;
+		
+		void updateIncrement(const int direction, const int sampleRate)
+		{
+			sampleIncrement = ((int64_t(frequency) << 16) / sampleRate) * direction;
+		}
+	};
+
+	VoiceInfo voices[MAX_VOICES];
+	
+	int sampleRate;
+	
+	AllegroVoiceAPI(const int _sampleRate)
+		: sampleRate(_sampleRate)
+	{
+	}
+	
+	int allocate_voice(SAMPLE * sample);
+	void reallocate_voice(int voice, SAMPLE * sample);
+	void deallocate_voice(int voice);
+	void voice_start(int voice);
+	void voice_stop(int voice);
+	int voice_get_position(int voice);
+	int voice_get_frequency(int voice);
+	void voice_set_volume(int voice, int volume);
+	void voice_set_playmode(int voice, int mode);
+	void voice_set_position(int voice, int position);
+	void voice_set_frequency(int voice, int freq);
+	void voice_set_pan(int voice, int pan);
+	
+	virtual void lock() { }
+	virtual void unlock() { }
+};
+
+#include "audiostream/AudioStream.h"
+
+struct AudioStream_VoiceMixer : AudioStream
+{
+	SDL_mutex * mutex;
+	
+	AllegroVoiceAPI * voiceAPI;
+	
+	AudioStream_VoiceMixer(AllegroVoiceAPI * voiceAPI);
+	virtual ~AudioStream_VoiceMixer() override;
+	
+	void lock();
+	void unlock();
+	
+	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override;
+};
+
+#endif

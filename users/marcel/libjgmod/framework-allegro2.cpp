@@ -10,48 +10,214 @@
 
 #define PROCESS_INTERRUPTS_ON_AUDIO_THREAD 1
 
-struct AudioStream_VoiceMixer : AudioStream
+//
+
+int AllegroVoiceAPI::allocate_voice(SAMPLE * sample)
 {
-	SDL_mutex * mutex;
+	int result = -1;
 	
-	AudioStream_VoiceMixer()
-		: AudioStream()
-		, mutex(nullptr)
+	lock();
 	{
-		mutex = SDL_CreateMutex();
+		for (int i = 0; i < MAX_VOICES; ++i)
+		{
+			if (voices[i].used == 0)
+			{
+				voices[i] = VoiceInfo();
+				
+				voices[i].used = 1;
+				voices[i].sample = sample;
+				voices[i].frequency = sample->freq;
+				
+				voices[i].updateIncrement(+1, sampleRate);
+				
+				result = i;
+				
+				break;
+			}
+		}
 	}
+	unlock();
 	
-	~AudioStream_VoiceMixer()
+	return result;
+}
+
+void AllegroVoiceAPI::reallocate_voice(int voice, SAMPLE * sample)
+{
+	if (voice == -1)
+		return;
+	
+	lock();
 	{
-		SDL_DestroyMutex(mutex);
-		mutex = nullptr;
+		Assert(voices[voice].used);
+		
+		voices[voice] = VoiceInfo();
+		
+		voices[voice].used = 1;
+		voices[voice].sample = sample;
+		voices[voice].frequency = sample->freq;
+		
+		voices[voice].updateIncrement(+1, sampleRate);
 	}
+	unlock();
+}
+
+void AllegroVoiceAPI::deallocate_voice(int voice)
+{
+	if (voice == -1)
+		return;
 	
-	void lock()
+	lock();
 	{
-		SDL_LockMutex(mutex);
+		Assert(voices[voice].used);
+		
+		voices[voice].used = 0;
 	}
+	unlock();
+}
+
+void AllegroVoiceAPI::voice_start(int voice)
+{
+	if (voice == -1)
+		return;
 	
-	void unlock()
+	lock();
 	{
-		SDL_UnlockMutex(mutex);
+		Assert(voices[voice].used);
+		
+		voices[voice].started = 1;
 	}
+	unlock();
+}
+
+void AllegroVoiceAPI::voice_stop(int voice)
+{
+	if (voice == -1)
+		return;
 	
-	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override;
-};
+	lock();
+	{
+		Assert(voices[voice].used);
+		
+		voices[voice].started = 0;
+	}
+	unlock();
+}
+
+int AllegroVoiceAPI::voice_get_position(int voice)
+{
+	if (voice == -1)
+		return 0;
+	
+	Assert(voices[voice].used);
+	
+	return voices[voice].position;
+}
+
+int AllegroVoiceAPI::voice_get_frequency(int voice)
+{
+	if (voice == -1)
+		return 0;
+	
+	Assert(voices[voice].used);
+	
+	return voices[voice].frequency;
+}
+
+void AllegroVoiceAPI::voice_set_volume(int voice, int volume)
+{
+	Assert(volume >= 0 && volume <= 255);
+	
+	if (voice == -1)
+		return;
+	
+	lock();
+	{
+		Assert(voices[voice].used);
+		
+		voices[voice].volume = volume;
+	}
+	unlock();
+}
+
+void AllegroVoiceAPI::voice_set_playmode(int voice, int mode)
+{
+	if (voice == -1)
+		return;
+	
+	lock();
+	{
+		Assert(voices[voice].used);
+		
+		voices[voice].playmode = mode;
+	}
+	unlock();
+}
+
+void AllegroVoiceAPI::voice_set_position(int voice, int position)
+{
+	Assert(position >= 0);
+	
+	if (voice == -1)
+		return;
+	
+	lock();
+	{
+		Assert(voices[voice].used);
+		
+		voices[voice].position = int64_t(position) << 16;
+	}
+	unlock();
+}
+
+void AllegroVoiceAPI::voice_set_frequency(int voice, int freq)
+{
+	Assert(freq >= 0);
+	
+	if (voice == -1)
+		return;
+	
+	lock();
+	{
+		Assert(voices[voice].used);
+		
+		voices[voice].frequency = freq;
+		
+		voices[voice].updateIncrement(voices[voice].sampleIncrement < 0 ? -1 : +1, sampleRate);
+	}
+	unlock();
+}
+
+void AllegroVoiceAPI::voice_set_pan(int voice, int pan)
+{
+	Assert(pan >= 0 && pan <= 255);
+	
+	if (voice == -1)
+		return;
+	
+	lock();
+	{
+		Assert(voices[voice].used);
+		
+		voices[voice].pan = pan;
+	}
+	unlock();
+}
+
+static thread_local AllegroVoiceAPI * voiceAPI = nullptr;
 
 extern "C"
 {
-
 static AudioOutput_PortAudio * audioOutput = nullptr;
 static AudioStream_VoiceMixer * audioStream = nullptr;
 
 int install_sound(int digi, int midi, const char * cfg_path)
 {
+	voiceAPI = new AllegroVoiceAPI(DIGI_SAMPLERATE);
+	
 	audioOutput = new AudioOutput_PortAudio();
 	audioOutput->Initialize(2, DIGI_SAMPLERATE, 64);
 	
-	audioStream = new AudioStream_VoiceMixer();
+	audioStream = new AudioStream_VoiceMixer(voiceAPI);
 	audioOutput->Play(audioStream);
 	
 	return 0;
@@ -271,217 +437,64 @@ void set_volume(int, int)
 {
 }
 
-#define MAX_VOICES 128
-
-struct VoiceInfo
-{
-	int used = 0;
-	int started = 0;
-	int64_t position = 0;
-	int frequency = 0;
-	int pan = 127;
-	int volume = 255;
-	int playmode = 0;
-	SAMPLE * sample = nullptr;
-	int sampleIncrement = 0;
-	
-	void updateIncrement(const int direction)
-	{
-		sampleIncrement = ((int64_t(frequency) << 16) / DIGI_SAMPLERATE) * direction;
-	}
-};
-
-static VoiceInfo voices[MAX_VOICES];
-
 int allocate_voice(SAMPLE * sample)
 {
-	int result = -1;
-	
-	audioStream->lock();
-	{
-		for (int i = 0; i < MAX_VOICES; ++i)
-		{
-			if (voices[i].used == 0)
-			{
-				voices[i] = VoiceInfo();
-				
-				voices[i].used = 1;
-				voices[i].sample = sample;
-				voices[i].frequency = sample->freq;
-				
-				voices[i].updateIncrement(+1);
-				
-				result = i;
-				
-				break;
-			}
-		}
-	}
-	audioStream->unlock();
-	
-	return result;
+	return voiceAPI->allocate_voice(sample);
 }
 
 void reallocate_voice(int voice, SAMPLE * sample)
 {
-	if (voice == -1)
-		return;
-	
-	audioStream->lock();
-	{
-		Assert(voices[voice].used);
-		
-		voices[voice] = VoiceInfo();
-		
-		voices[voice].used = 1;
-		voices[voice].sample = sample;
-		voices[voice].frequency = sample->freq;
-		
-		voices[voice].updateIncrement(+1);
-	}
-	audioStream->unlock();
+	voiceAPI->reallocate_voice(voice, sample);
 }
 
 void deallocate_voice(int voice)
 {
-	if (voice == -1)
-		return;
-	
-	audioStream->lock();
-	{
-		Assert(voices[voice].used);
-		
-		voices[voice].used = 0;
-	}
-	audioStream->unlock();
+	voiceAPI->deallocate_voice(voice);
 }
 
 void voice_start(int voice)
 {
-	if (voice == -1)
-		return;
-	
-	audioStream->lock();
-	{
-		Assert(voices[voice].used);
-		
-		voices[voice].started = 1;
-	}
-	audioStream->unlock();
+	voiceAPI->voice_start(voice);
 }
 
 void voice_stop(int voice)
 {
-	if (voice == -1)
-		return;
-	
-	audioStream->lock();
-	{
-		Assert(voices[voice].used);
-		
-		voices[voice].started = 0;
-	}
-	audioStream->unlock();
+	voiceAPI->voice_stop(voice);
 }
 
 int voice_get_position(int voice)
 {
-	if (voice == -1)
-		return 0;
-	
-	Assert(voices[voice].used);
-	
-	return voices[voice].position;
+	return voiceAPI->voice_get_position(voice);
 }
 
 int voice_get_frequency(int voice)
 {
-	if (voice == -1)
-		return 0;
-	
-	Assert(voices[voice].used);
-	
-	return voices[voice].frequency;
+	return voiceAPI->voice_get_frequency(voice);
 }
 
 void voice_set_volume(int voice, int volume)
 {
-	Assert(volume >= 0 && volume <= 255);
-	
-	if (voice == -1)
-		return;
-	
-	audioStream->lock();
-	{
-		Assert(voices[voice].used);
-		
-		voices[voice].volume = volume;
-	}
-	audioStream->unlock();
+	voiceAPI->voice_set_volume(voice, volume);
 }
 
 void voice_set_playmode(int voice, int mode)
 {
-	if (voice == -1)
-		return;
-	
-	audioStream->lock();
-	{
-		Assert(voices[voice].used);
-		
-		voices[voice].playmode = mode;
-	}
-	audioStream->unlock();
+	voiceAPI->voice_set_playmode(voice, mode);
 }
 
 void voice_set_position(int voice, int position)
 {
-	Assert(position >= 0);
-	
-	if (voice == -1)
-		return;
-	
-	audioStream->lock();
-	{
-		Assert(voices[voice].used);
-		
-		voices[voice].position = int64_t(position) << 16;
-	}
-	audioStream->unlock();
+	voiceAPI->voice_set_position(voice, position);
 }
 
 void voice_set_frequency(int voice, int freq)
 {
-	Assert(freq >= 0);
-	
-	if (voice == -1)
-		return;
-	
-	audioStream->lock();
-	{
-		Assert(voices[voice].used);
-		
-		voices[voice].frequency = freq;
-		
-		voices[voice].updateIncrement(voices[voice].sampleIncrement < 0 ? -1 : +1);
-	}
-	audioStream->unlock();
+	voiceAPI->voice_set_frequency(voice, freq);
 }
 
 void voice_set_pan(int voice, int pan)
 {
-	Assert(pan >= 0 && pan <= 255);
-	
-	if (voice == -1)
-		return;
-	
-	audioStream->lock();
-	{
-		Assert(voices[voice].used);
-		
-		voices[voice].pan = pan;
-	}
-	audioStream->unlock();
+	voiceAPI->voice_set_pan(voice, pan);
 }
 
 void lock_sample(SAMPLE * sample)
@@ -490,17 +503,43 @@ void lock_sample(SAMPLE * sample)
 
 }
 
+AudioStream_VoiceMixer::AudioStream_VoiceMixer(AllegroVoiceAPI * _voiceAPI)
+	: AudioStream()
+	, mutex(nullptr)
+	, voiceAPI(_voiceAPI)
+{
+	mutex = SDL_CreateMutex();
+}
+
+AudioStream_VoiceMixer::~AudioStream_VoiceMixer()
+{
+	SDL_DestroyMutex(mutex);
+	mutex = nullptr;
+}
+
+void AudioStream_VoiceMixer::lock()
+{
+	SDL_LockMutex(mutex);
+}
+
+void AudioStream_VoiceMixer::unlock()
+{
+	SDL_UnlockMutex(mutex);
+}
+
 int AudioStream_VoiceMixer::Provide(int numSamples, AudioSample* __restrict buffer)
 {
 #if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
+	::voiceAPI = this->voiceAPI;
 	processInterrupts(numSamples);
+	::voiceAPI = nullptr;
 #endif
 	
 	memset(buffer, 0, numSamples * sizeof(AudioSample));
 	
 	lock();
 	{
-		for (auto & voice : voices)
+		for (auto & voice : voiceAPI->voices)
 		{
 			if (voice.used && voice.started && voice.sample->len != 0)
 			{
