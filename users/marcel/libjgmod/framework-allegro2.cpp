@@ -624,7 +624,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 	
 	lock();
 	{
-		for (auto & voice : voiceAPI->voices)
+		for (auto & __restrict voice : voiceAPI->voices)
 		{
 			if (voice.used && voice.started && voice.sample->len != 0)
 			{
@@ -635,20 +635,22 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 				
 				for (int i = 0; i < numSamples; ++i)
 				{
+					Assert(sampleIndex >= 0 && sampleIndex < voice.sample->len);
+					
 					if (sampleIndex >= 0 && sampleIndex < voice.sample->len)
 					{
 						if (voice.sample->bits == 8)
 						{
-							const unsigned char * values = (unsigned char*)voice.sample->data;
+							const unsigned char * __restrict values = (unsigned char*)voice.sample->data;
 							
-							const int value = int8_t(values[sampleIndex] ^ 0x80) * 64 * voice.volume;
+							const int value = int8_t(values[sampleIndex] ^ 0x80) * voice.volume;
 							
-							buffer[i].channel[0] += (value * pan1) >> 16;
-							buffer[i].channel[1] += (value * pan2) >> 16;
+							buffer[i].channel[0] += (value * pan1) >> 8 >> 2;
+							buffer[i].channel[1] += (value * pan2) >> 8 >> 2;
 						}
 						else if (voice.sample->bits == 16)
 						{
-							const unsigned short * values = (unsigned short*)voice.sample->data;
+							const unsigned short * __restrict values = (unsigned short*)voice.sample->data;
 							
 							const int value = int16_t(values[sampleIndex] ^ 0x8000);
 							
@@ -736,6 +738,15 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 								voice.position = int64_t(voice.sample->loop_start) << 16;
 							#endif
 							}
+						}
+					}
+					else
+					{
+						if (sampleIndex >= voice.sample->len)
+						{
+							voice.started = false;
+							
+							break;
 						}
 					}
 				}
