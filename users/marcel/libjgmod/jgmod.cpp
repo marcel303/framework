@@ -26,6 +26,10 @@
 
 //
 
+#define DO_DRAWTEST 1
+
+//
+
 static void drawCircle(int chn);
 
 //
@@ -102,6 +106,102 @@ static void handleAction(const std::string & action, const Dictionary & d)
 
 //
 
+#if DO_DRAWTEST
+
+static Camera3d s_camera;
+
+static void drawTest()
+{
+	const float speed = .3f;
+	s_camera.mouseRotationSpeed = 1.f;
+	s_camera.maxForwardSpeed = speed;
+	s_camera.maxUpSpeed = speed;
+	s_camera.maxStrafeSpeed = speed;
+	
+	s_camera.tick(1.f / 60.f, true);
+	
+	projectPerspective3d(60.f, .01f, 100.f);
+	s_camera.pushViewMatrix();
+	
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	
+	gxPushMatrix();
+	gxScalef(1.f / 400.f, 1.f / 400.f, 1.f / 400.f);
+	
+	gxPushMatrix();
+	gxScalef(400, 400, 400);
+	gxTranslatef(-.5f, 0, -.5f);
+	setColor(100, 100, 100);
+	drawGrid3dLine(100, 100, 0, 2);
+	gxPopMatrix();
+	
+	const int numChannels = end_chn - start_chn + 1;
+	
+	const int maxSx = 500;
+	
+	for (int chn = start_chn; chn < end_chn; ++chn)
+	{
+		if (voice_get_position(voice_table[chn]) < 0 ||
+			ci[chn].volume < 1 ||
+			ci[chn].volenv.v < 1 ||
+			voice_get_frequency(voice_table[chn]) <= 0 ||
+			(mi.global_volume <= 0))
+		{
+			continue;
+		}
+	
+		gxPushMatrix();
+		{
+			const int index = chn - start_chn;
+			
+			const int dx = -maxSx/2;
+			const int dy = (numChannels/2.f - index) * bitmap_height;
+			
+			gxTranslatef(dx, dy, 0);
+			
+			const float radius = (ci[chn].volume / 13.f) + 2.f;
+			
+			float xpos;
+			
+			if (mi.flag & XM_MODE)
+				xpos = voice_get_frequency(voice_table[chn]);
+			else
+				xpos = voice_get_frequency(voice_table[chn]) * 8363.f / ci[chn].c2spd;
+
+			xpos /= note_length;
+			xpos += note_relative_pos;
+
+			//if (xpos > maxSx)
+			//	xpos = maxSx;
+			//else if (xpos < 0)
+			//	xpos = 0;
+			
+			setColor(old_chn_info[chn].color);
+		#if 1
+			for (int i = 0; i < 20; ++i)
+			{
+				fillCircle(xpos, 5, radius, 20);
+				gxTranslatef(0, 0, 10);
+			}
+		#else
+			fillCircle(xpos, 5, radius, 20);
+		#endif
+			setColor(colorWhite);
+		}
+		gxPopMatrix();
+	}
+	
+	gxPopMatrix();
+	
+	glDisable(GL_DEPTH_TEST);
+	
+	s_camera.popViewMatrix();
+	projectScreen2d();
+}
+
+#endif
+
 int main(int argc, char **argv)
 {
     fast_loading = FALSE;
@@ -134,6 +234,7 @@ int main(int argc, char **argv)
 		return 1;
 	
 	framework.actionHandler = handleAction;
+	framework.enableDepthBuffer = true;
 	
 	if (framework.init(0, nullptr, 640, 480) == false)
 	{
@@ -250,6 +351,12 @@ int main(int argc, char **argv)
 		
         framework.beginDraw(0, 0, 0, 0);
         {
+        #if DO_DRAWTEST
+        	drawTest();
+		#endif
+			
+			setColor(colorWhite);
+			
         	// draw header
 			
 			drawText(0,  0, 12, +1, +1, "Song name   : %s", the_mod->name);
