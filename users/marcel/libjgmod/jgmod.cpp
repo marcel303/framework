@@ -138,8 +138,6 @@ static void drawTest()
 	
 	const int numChannels = end_chn - start_chn + 1;
 	
-	const int maxSx = 500;
-	
 	for (int chn = start_chn; chn < end_chn; ++chn)
 	{
 		if (voice_get_position(voice_table[chn]) < 0 ||
@@ -155,7 +153,7 @@ static void drawTest()
 		{
 			const int index = chn - start_chn;
 			
-			const int dx = -maxSx/2;
+			const int dx = -300;
 			const int dy = (numChannels/2.f - index) * bitmap_height;
 			
 			gxTranslatef(dx, dy, 0);
@@ -171,11 +169,6 @@ static void drawTest()
 
 			xpos /= note_length;
 			xpos += note_relative_pos;
-
-			//if (xpos > maxSx)
-			//	xpos = maxSx;
-			//else if (xpos < 0)
-			//	xpos = 0;
 			
 			setColor(old_chn_info[chn].color);
 		#if 1
