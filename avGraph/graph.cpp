@@ -5671,13 +5671,6 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	}
 	hqEnd();
 	
-	hqBegin(HQ_STROKED_ROUNDED_RECTS);
-	{
-		setColor(isSelected ? colorWhite : colorBlack);
-		hqStrokeRoundedRect(0.f + border/2, 0.f + border/2, sx - border/2, sy - border/2, radius, 3.f);
-	}
-	hqEnd();
-	
 	if (hasIssues)
 		hqClearGradient();
 	
