@@ -232,7 +232,7 @@ void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 			}
 			else if (voice.sample->bits == 16)
 			{
-				const short * values = (short*)voice.sample->data;
+				const unsigned short * values = (unsigned short*)voice.sample->data;
 				
 				const int value = int16_t(values[sampleIndex] ^ 0x8000) * voice.volume;
 				
@@ -648,12 +648,12 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 						}
 						else if (voice.sample->bits == 16)
 						{
-							const short * values = (short*)voice.sample->data;
+							const unsigned short * values = (unsigned short*)voice.sample->data;
 							
-							const int value = int16_t(values[sampleIndex] ^ 0x8000) * voice.volume;
+							const int value = int16_t(values[sampleIndex] ^ 0x8000);
 							
-							buffer[i].channel[0] += (value * voice.volume * pan1) >> 16 >> 2;
-							buffer[i].channel[1] += (value * voice.volume * pan2) >> 16 >> 2;
+							buffer[i].channel[0] += (((value * voice.volume) >> 1) * pan1) >> 15 >> 2;
+							buffer[i].channel[1] += (((value * voice.volume) >> 1) * pan2) >> 15 >> 2;
 						}
 					}
 					
