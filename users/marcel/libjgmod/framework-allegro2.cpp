@@ -234,7 +234,7 @@ void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 			{
 				const short * values = (short*)voice.sample->data;
 				
-				const int value = values[sampleIndex] * voice.volume;
+				const int value = int16_t(values[sampleIndex] ^ 0x8000) * voice.volume;
 				
 				samples[i] = value / float(1 << 23);
 			}
@@ -641,22 +641,19 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 						{
 							const unsigned char * values = (unsigned char*)voice.sample->data;
 							
-						#if 1
 							const int value = int8_t(values[sampleIndex] ^ 0x80) * 64 * voice.volume;
 							
 							buffer[i].channel[0] += (value * pan1) >> 16;
 							buffer[i].channel[1] += (value * pan2) >> 16;
-						#else
-							buffer[i].channel[0] += ((values[sampleIndex] - int64_t(1 << 7)) * 64 * voice.volume * pan1) >> 16;
-							buffer[i].channel[1] += ((values[sampleIndex] - int64_t(1 << 7)) * 64 * voice.volume * pan2) >> 16;
-						#endif
 						}
 						else if (voice.sample->bits == 16)
 						{
 							const short * values = (short*)voice.sample->data;
 							
-							buffer[i].channel[0] += ((values[sampleIndex] - (1 << 15)) * voice.volume * pan1) >> 16;
-							buffer[i].channel[1] += ((values[sampleIndex] - (1 << 15)) * voice.volume * pan2) >> 16;
+							const int value = int16_t(values[sampleIndex] ^ 0x8000) * voice.volume;
+							
+							buffer[i].channel[0] += (value * voice.volume * pan1) >> 16 >> 2;
+							buffer[i].channel[1] += (value * voice.volume * pan2) >> 16 >> 2;
 						}
 					}
 					
