@@ -275,7 +275,7 @@ struct JsusFx_BlendScope
 
 #define BLEND_SCOPE JsusFx_BlendScope blendScope(*m_gfx_mode)
 
-#define LINE_STROKE 1.6f
+#define LINE_STROKE 1.f
 
 #include "audio.h"
 #include "FileStream.h"
@@ -804,9 +804,9 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			const float radius = parms[4][0];
 
 			updateColor();
-
-			hqBegin(HQ_FILLED_ROUNDED_RECTS);
-			hqFillRoundedRect(x, y, x + sx, y + sy, radius);
+			
+			hqBegin(HQ_STROKED_ROUNDED_RECTS);
+			hqStrokeRoundedRect(x, y, x + sx, y + sy, radius, LINE_STROKE * 2.f);
 			hqEnd();
 		}
 	}
@@ -1721,9 +1721,9 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Level Meter.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Learning Sampler.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Humonica.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And String.jsfx";
+	const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And String.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And Chord.jsfx";
-	const char * filename = "/Users/thecat/geraintluff -jsfx/Echo-Cycles.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Echo-Cycles.jsfx";
 	
 	JsusFxPathLibraryTest pathLibrary;
 	if (!fx.compile(pathLibrary, filename))
