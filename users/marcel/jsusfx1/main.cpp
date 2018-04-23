@@ -481,7 +481,7 @@ static JsusFx_File * s_files[kMaxFiles] = { };
 
 struct JsusFxGfx_Framework : JsusFxGfx
 {
-	float m_fontSize = 12.f;
+	float m_fontSize = 10.f;
 	
 	JsusFx_ImageCache imageCache;
 	
@@ -1137,9 +1137,13 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	 	return 1.f;
 	}
 	
-	virtual EEL_F gfx_setfont(void * opaque, int np, EEL_F ** parms)
+	virtual EEL_F gfx_setfont(void * opaque, int np, EEL_F ** parms) override
 	{
-		STUB;
+		const int size = np > 2 ? (int)parms[2][0] : 10;
+		
+		// note : this implementation is very basic and doesn't support selecting a different font face
+		
+		m_fontSize = size;
 		
 		return 0.f;
 	}
@@ -1371,10 +1375,12 @@ struct JsusFxGfx_Framework : JsusFxGfx
 					const float u2 = (coords[0] + coords[2]) / bmw;
 					const float v2 = (coords[1] + coords[3]) / bmh;
 					
+				#if 0
 					logDebug("blit2 %d (%d,%d %dx%d) -> %d (%d,%d %dx%d)",
 						bmIndex, (int)coords[0], (int)coords[1], (int)coords[2], (int)coords[3],
 						int(*m_gfx_dest), dx, dy, dsx, dsy);
-					
+				#endif
+				
 					gxBegin(GL_QUADS);
 					{
 						gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
@@ -1612,11 +1618,34 @@ struct AudioStream_JsusFx : AudioStream
 	
 	JsusFx * fx = nullptr;
 	
+	SDL_mutex * mutex = nullptr;
+	
+	virtual ~AudioStream_JsusFx() override
+	{
+		if (mutex != nullptr)
+		{
+			SDL_DestroyMutex(mutex);
+			mutex = nullptr;
+		}
+	}
+	
 	void init(AudioStream * _source, JsusFx * _fx)
 	{
 		source = _source;
 		
 		fx = _fx;
+		
+		mutex = SDL_CreateMutex();
+	}
+	
+	void lock()
+	{
+		SDL_LockMutex(mutex);
+	}
+	
+	void unlock()
+	{
+		SDL_UnlockMutex(mutex);
 	}
 	
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
@@ -1648,7 +1677,11 @@ struct AudioStream_JsusFx : AudioStream
 			outputR
 		};
 		
-		fx->process(input, output, numSamples, 2, 2);
+		lock();
+		{
+			fx->process(input, output, numSamples, 2, 2);
+		}
+		unlock();
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
@@ -1662,16 +1695,22 @@ struct AudioStream_JsusFx : AudioStream
 
 //
 
+static AudioStream_JsusFx * s_audioStream = nullptr;
+
 static void handleAction(const std::string & action, const Dictionary & d)
 {
 	if (action == "filedrop")
 	{
-		auto filename = d.getString("file", "");
-		
-		JsusFxPathLibraryTest pathLibrary;
-		s_fx->compile(pathLibrary, filename);
-		
-		s_fx->prepare(SAMPLE_RATE, BUFFER_SIZE);
+		s_audioStream->lock();
+		{
+			auto filename = d.getString("file", "");
+			
+			JsusFxPathLibraryTest pathLibrary;
+			s_fx->compile(pathLibrary, filename);
+			
+			s_fx->prepare(SAMPLE_RATE, BUFFER_SIZE);
+		}
+		s_audioStream->unlock();
 	}
 }
 
@@ -1712,7 +1751,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Periphonic3D";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Warble.jsfx"; // fixme
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spectrum Matcher.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Smooth Limiter.jsfx";
+	const char * filename = "/Users/thecat/geraintluff -jsfx/Smooth Limiter.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Sandwich Amp.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Pulsar.jsfx"; // todo
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Panalysis.jsfx";
@@ -1721,7 +1760,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Level Meter.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Learning Sampler.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Humonica.jsfx";
-	const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And String.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And String.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And Chord.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Echo-Cycles.jsfx";
 	
@@ -1739,6 +1778,7 @@ int main(int argc, char * argv[])
 	
 	AudioStream_JsusFx audioStream;
 	audioStream.init(&vorbis, &fx);
+	s_audioStream = &audioStream;
 	
 	AudioOutput_PortAudio audioOutput;
 	audioOutput.Initialize(2, SAMPLE_RATE, BUFFER_SIZE);
