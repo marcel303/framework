@@ -588,7 +588,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		// update gfx state
 		
 		*m_gfx_w = w ? w : GFX_SX;
-		*m_gfx_h = h ? h : GFX_SY;
+		*m_gfx_h = h ? h : GFX_SY/4;
 		
 		if (*m_gfx_clear > -1.0)
 		{
@@ -1052,13 +1052,25 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		drawPoint(*m_gfx_x, *m_gfx_y);
 	}
 	
-	virtual void gfx_getpixel(EEL_F * r, EEL_F * g, EEL_F * b)
+	virtual void gfx_getpixel(EEL_F * r, EEL_F * g, EEL_F * b) override
 	{
-		STUB;
+		IMAGE_SCOPE;
 		
-		*r = 1.0;
-		*g = 0.0;
-		*b = 1.0;
+		const int x = *m_gfx_x;
+		const int y = *m_gfx_y;
+		
+		uint8_t rgba[4];
+		
+		glReadPixels(
+			x, y,
+			1, 1,
+			GL_RGBA, GL_UNSIGNED_BYTE,
+			rgba);
+		checkErrorGL();
+		
+		*r = rgba[0] / 255.f;
+		*g = rgba[1] / 255.f;
+		*b = rgba[2] / 255.f;
 	}
 
 	virtual EEL_F gfx_loadimg(void * opaque, int img, EEL_F loadFrom)
@@ -1648,13 +1660,14 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
+	const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Quad";
-	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/AmbiXToB";
+	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/AmbiXToB";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
+	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Periphonic3D";
 	
 	JsusFxPathLibraryTest pathLibrary;
 	if (!fx.compile(pathLibrary, filename))
