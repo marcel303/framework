@@ -1648,7 +1648,7 @@ struct AudioStream_JsusFx : AudioStream
 			outputR
 		};
 		
-		fx->process(input, output, numSamples);
+		fx->process(input, output, numSamples, 2, 2);
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
@@ -1694,7 +1694,7 @@ int main(int argc, char * argv[])
 	JsusFx_FileAPI fileApi;
 	fileApi.init(fx.m_vm);
 	
-	const char * filename = "3bandpeakfilter";
+	//const char * filename = "3bandpeakfilter";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/FocusPressPushZoom";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/Direct";
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/vumetergfx";
@@ -1702,7 +1702,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
+	const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
@@ -1825,6 +1825,7 @@ int main(int argc, char * argv[])
 			
 			setColor(160, 160, 160);
 			drawText(x + 240, y, 18, +1, +1, "JSFX file: %s", Path::GetFileName(filename).c_str());
+			drawText(x + 240 + 3, y + 21, 12, +1, +1, "%d ins, %d outs", fx.numInputs, fx.numOutputs);
 			
 			for (int i = 0; i < 64; ++i)
 			{
