@@ -5,10 +5,12 @@
 #include <stdio.h>
 #include <string.h>
 
-//#define DIGI_SAMPLERATE 44100
-#define DIGI_SAMPLERATE 192000
+#define DIGI_SAMPLERATE 44100
+//#define DIGI_SAMPLERATE 192000
 
 #define PROCESS_INTERRUPTS_ON_AUDIO_THREAD 1
+
+#define INTERP_LINEAR 0
 
 //
 
@@ -628,8 +630,8 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 		{
 			if (voice.used && voice.started && voice.sample->len != 0)
 			{
-				const int pan1 = 0xff - voice.pan;
-				const int pan2 =        voice.pan;
+				const int pan1 = (0xff - voice.pan) * voice.volume;
+				const int pan2 = (       voice.pan) * voice.volume;
 				
 				int sampleIndex = voice.position >> 16;
 				
@@ -639,11 +641,24 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 					
 					if (sampleIndex >= 0 && sampleIndex < voice.sample->len)
 					{
+					#if INTERP_LINEAR
+						const int sampleIndex2 = sampleIndex + 1 < voice.sample->len ? sampleIndex + 1 : sampleIndex;
+						
+						const int t = voice.position & 0xffff;
+					#endif
+					
 						if (voice.sample->bits == 8)
 						{
 							const unsigned char * __restrict values = (unsigned char*)voice.sample->data;
 							
-							const int value = int8_t(values[sampleIndex] ^ 0x80) * voice.volume;
+						#if INTERP_LINEAR
+							const int value1 = int8_t(values[sampleIndex ] ^ 0x80);
+							const int value2 = int8_t(values[sampleIndex2] ^ 0x80);
+							
+							const int value = (value1 * (0xffff - t) + value2 * t) >> 16;
+						#else
+							const int value = int8_t(values[sampleIndex] ^ 0x80);
+						#endif
 							
 							buffer[i].channel[0] += (value * pan1) >> 8 >> 2;
 							buffer[i].channel[1] += (value * pan2) >> 8 >> 2;
@@ -652,10 +667,17 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 						{
 							const unsigned short * __restrict values = (unsigned short*)voice.sample->data;
 							
-							const int value = int16_t(values[sampleIndex] ^ 0x8000);
+						#if INTERP_LINEAR
+							const int value1 = int16_t(values[sampleIndex ] ^ 0x8000);
+							const int value2 = int16_t(values[sampleIndex2] ^ 0x8000);
 							
-							buffer[i].channel[0] += (((value * voice.volume) >> 1) * pan1) >> 15 >> 2;
-							buffer[i].channel[1] += (((value * voice.volume) >> 1) * pan2) >> 15 >> 2;
+							const int value = (value1 * (0xffff - t) + value2 * t) >> 16;
+						#else
+							const int value = int16_t(values[sampleIndex] ^ 0x8000);
+						#endif
+							
+							buffer[i].channel[0] += (value * pan1) >> 16 >> 2;
+							buffer[i].channel[1] += (value * pan2) >> 16 >> 2;
 						}
 					}
 					
