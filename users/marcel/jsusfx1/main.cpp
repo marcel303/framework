@@ -495,94 +495,36 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			return false;
 		}
 		
-		if (Path::GetExtension(filename, true) == "png" || Path::GetExtension(filename, true) == "jpg")
+		if (s_files[index] != nullptr)
 		{
-			if (index >= 0 && index < imageCache.kMaxImages)
+			logWarning("file already exists %d:%s", index, filename);
+			
+			delete s_files[index];
+			s_files[index] = nullptr;
+		}
+		
+		//
+		
+		s_files[index] = new JsusFx_File();
+		
+		if (s_files[index]->open(filename))
+		{
+			if (Path::GetExtension(filename, true) == "png" || Path::GetExtension(filename, true) == "jpg")
 			{
-				JsusFx_Image & image = imageCache.images[index];
-				
-				const GLuint texture = getTexture(filename);
-				
-				if (texture == 0)
-				{
-					logError("failed to load image %d:%s", index, filename);
-					
-					return false;
-				}
-				else
-				{
-					GLuint restoreTexture;
-					glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-					checkErrorGL();
-				
-					GLint sx;
-					GLint sy;
-					
-					glBindTexture(GL_TEXTURE_2D, texture);
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sx);
-					checkErrorGL();
-					
-					glBindTexture(GL_TEXTURE_2D, texture);
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
-					checkErrorGL();
-				
-					glBindTexture(GL_TEXTURE_2D, restoreTexture);
-					
-					//
-					
-					image.resize(sx, sy);
-					
-					pushSurface(image.surface);
-					{
-						gxSetTexture(texture);
-						setColor(colorWhite);
-						pushBlend(BLEND_OPAQUE);
-						drawRect(0, 0, sx, sy);
-						popBlend();
-						gxSetTexture(0);
-					}
-					popSurface();
-					
-					return true;
-				}
+				gfx_loadimg(nullptr, index, index);
 			}
-			else
-			{
-				logDebug("image index out of bounds: %d:%s", index, filename);
-				
-				return false;
-			}
+			
+			return true;
 		}
 		else
 		{
-			if (s_files[index] != nullptr)
-			{
-				logWarning("file already exists %d:%s", index, filename);
-				
-				delete s_files[index];
-				s_files[index] = nullptr;
-			}
+			logError("failed to open file %d:%s", index, filename);
 			
-			//
+			delete s_files[index];
+			s_files[index] = nullptr;
 			
-			s_files[index] = new JsusFx_File();
-			
-			if (s_files[index]->open(filename))
-			{
-				return true;
-			}
-			else
-			{
-				logError("failed to open file %d:%s", index, filename);
-				
-				delete s_files[index];
-				s_files[index] = nullptr;
-				
-				return false;
-			}
+			return false;
 		}
-		
-		return false;
 	}
 		
 	virtual void setup(const int w, const int h) override
@@ -1075,11 +1017,69 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		*b = rgba[2] / 255.f;
 	}
 
-	virtual EEL_F gfx_loadimg(void * opaque, int img, EEL_F loadFrom)
+	virtual EEL_F gfx_loadimg(void * opaque, int index, EEL_F loadFrom) override
 	{
-		STUB;
+		const int fileIndex = (int)loadFrom;
 		
-		return -1.0;
+		if (fileIndex < 0 || fileIndex >= kMaxFiles)
+			return -1;
+	
+		if (s_files[fileIndex] == nullptr)
+			return -1;
+		
+		if (index >= 0 && index < imageCache.kMaxImages)
+		{
+			JsusFx_Image & image = imageCache.images[index];
+			
+			const char * filename = s_files[fileIndex]->filename.c_str();
+			
+			const GLuint texture = getTexture(filename);
+			
+			if (texture == 0)
+			{
+				logError("failed to load image %d:%s", index, filename);
+				
+				return -1;
+			}
+			else
+			{
+				GLuint restoreTexture;
+				glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+				checkErrorGL();
+			
+				GLint sx;
+				GLint sy;
+				
+				glBindTexture(GL_TEXTURE_2D, texture);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sx);
+				checkErrorGL();
+				
+				glBindTexture(GL_TEXTURE_2D, texture);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
+				checkErrorGL();
+			
+				glBindTexture(GL_TEXTURE_2D, restoreTexture);
+				
+				//
+				
+				image.resize(sx, sy);
+				
+				pushSurface(image.surface);
+				{
+					gxSetTexture(texture);
+					setColor(colorWhite);
+					pushBlend(BLEND_OPAQUE);
+					drawRect(0, 0, sx, sy);
+					popBlend();
+					gxSetTexture(0);
+				}
+				popSurface();
+				
+				return index;
+			}
+		}
+
+		return -1;
 	}
 	
 	virtual void gfx_getimgdim(EEL_F _img, EEL_F * w, EEL_F * h) override
@@ -1393,7 +1393,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 
 #undef STUB
 
-static void doSlider(JsusFx & fx, Slider & slider, int x, int y)
+static void doSlider(JsusFx & fx, JsusFx_Slider & slider, int x, int y)
 {
 	const int sx = 200;
 	const int sy = 12;
@@ -1710,6 +1710,11 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/AmbiXToB";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Periphonic3D";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Warble.jsfx"; // fixme
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spectrum Matcher.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Smooth Limiter.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Sandwich Amp.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Pulsar.jsfx";
 	
 	JsusFxPathLibraryTest pathLibrary;
 	if (!fx.compile(pathLibrary, filename))
