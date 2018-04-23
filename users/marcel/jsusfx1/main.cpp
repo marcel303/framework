@@ -52,6 +52,8 @@ gfx_mode
 
 */
 
+#define SAMPLE_RATE 44100
+#define BUFFER_SIZE 64
 
 const int GFX_SX = 1000;
 const int GFX_SY = 720;
@@ -1600,6 +1602,66 @@ struct JsusFx_FileAPI
 
 //
 
+#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiostream/AudioStream.h"
+#include "audiostream/AudioStreamVorbis.h"
+
+struct AudioStream_JsusFx : AudioStream
+{
+	AudioStream * source = nullptr;
+	
+	JsusFx * fx = nullptr;
+	
+	void init(AudioStream * _source, JsusFx * _fx)
+	{
+		source = _source;
+		
+		fx = _fx;
+	}
+	
+	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
+	{
+		Assert(numSamples == BUFFER_SIZE);
+		
+		source->Provide(numSamples, buffer);
+		
+		float inputL[BUFFER_SIZE];
+		float inputR[BUFFER_SIZE];
+		float outputL[BUFFER_SIZE];
+		float outputR[BUFFER_SIZE];
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			inputL[i] = buffer[i].channel[0] / float(1 << 15);
+			inputR[i] = buffer[i].channel[1] / float(1 << 15);
+		}
+		
+		float * input[2] =
+		{
+			inputL,
+			inputR
+		};
+		
+		float * output[2] =
+		{
+			outputL,
+			outputR
+		};
+		
+		fx->process(input, output, numSamples);
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			buffer[i].channel[0] = outputL[i] * float(1 << 15);
+			buffer[i].channel[1] = outputR[i] * float(1 << 15);
+		}
+		
+		return numSamples;
+	}
+};
+
+//
+
 static void handleAction(const std::string & action, const Dictionary & d)
 {
 	if (action == "filedrop")
@@ -1609,7 +1671,7 @@ static void handleAction(const std::string & action, const Dictionary & d)
 		JsusFxPathLibraryTest pathLibrary;
 		s_fx->compile(pathLibrary, filename);
 		
-		s_fx->prepare(44100, 64);
+		s_fx->prepare(SAMPLE_RATE, BUFFER_SIZE);
 	}
 }
 
@@ -1632,7 +1694,7 @@ int main(int argc, char * argv[])
 	JsusFx_FileAPI fileApi;
 	fileApi.init(fx.m_vm);
 	
-	//const char * filename = "3bandpeakfilter";
+	const char * filename = "3bandpeakfilter";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/FocusPressPushZoom";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/Direct";
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/vumetergfx";
@@ -1640,7 +1702,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
-	const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
@@ -1656,7 +1718,17 @@ int main(int argc, char * argv[])
 		return -1;
 	}
 	
-	fx.prepare(44100, 64);
+	fx.prepare(SAMPLE_RATE, BUFFER_SIZE);
+	
+	AudioStream_Vorbis vorbis;
+	vorbis.Open("movers.ogg", true);
+	
+	AudioStream_JsusFx audioStream;
+	audioStream.init(&vorbis, &fx);
+	
+	AudioOutput_PortAudio audioOutput;
+	audioOutput.Initialize(2, SAMPLE_RATE, BUFFER_SIZE);
+	audioOutput.Play(&audioStream);
 	
 	double t = 0.0;
 	double ts = 0.0;
@@ -1676,7 +1748,7 @@ int main(int argc, char * argv[])
 				return -1;
 			}
 			
-			fx.prepare(44100, 64);
+			fx.prepare(SAMPLE_RATE, BUFFER_SIZE);
 		}
 		
 		if (framework.quitRequested)
@@ -1686,22 +1758,22 @@ int main(int argc, char * argv[])
 		{
 			setFont("calibri.ttf");
 			
-		#if 1
+		#if 0
 			for (int a = 0; a < 10; ++a)
 			{
-				float ind[2][64];
+				float ind[2][BUFFER_SIZE];
 				float * in[2] = { ind[0], ind[1] };
-				float outd[2][64];
+				float outd[2][BUFFER_SIZE];
 				float * out[2] = { outd[0], outd[1] };
 				
-				for (int i = 0; i < 64; ++i)
+				for (int i = 0; i < BUFFER_SIZE; ++i)
 				{
 					in[0][i] = cos(t) * 0.2;
 					in[1][i] = sin(t) * 0.3 + random(-0.1, +0.1);
 					
 					double freq = lerp<double>(100.0, 1000.0, (sin(ts) + 1.0) / 2.0);
-					t += 2.0 * M_PI * freq / 44100.0;
-					ts += 2.0 * M_PI * 0.2 / 44100.0;
+					t += 2.0 * M_PI * freq / double(SAMPLE_RATE);
+					ts += 2.0 * M_PI * 0.2 / double(SAMPLE_RATE);
 				}
 				
 				fx.process(in, out, 64);
