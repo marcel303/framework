@@ -1702,7 +1702,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
-	const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
@@ -1714,7 +1714,16 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spectrum Matcher.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Smooth Limiter.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Sandwich Amp.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Pulsar.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Pulsar.jsfx"; // todo
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Panalysis.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/pad-synth.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/MIDI Harmony.jsfx"; // todo
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Level Meter.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Learning Sampler.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Humonica.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And String.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And Chord.jsfx";
+	const char * filename = "/Users/thecat/geraintluff -jsfx/Echo-Cycles.jsfx";
 	
 	JsusFxPathLibraryTest pathLibrary;
 	if (!fx.compile(pathLibrary, filename))
