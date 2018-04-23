@@ -1632,26 +1632,6 @@ int main(int argc, char * argv[])
 	JsusFx_FileAPI fileApi;
 	fileApi.init(fx.m_vm);
 	
-#if 0
-	JsusFx_File f;
-	if (f.open("testsound.wav"))
-	{
-		int nc;
-		int sr;
-		if (f.riff(nc, sr))
-		{
-			const int a = f.avail();
-			const int ns = a / nc;
-			EEL_F s[ns];
-			if (f.mem(ns, s))
-			{
-				for (int i = 0; i < ns; ++i)
-					printf("s[%06d] = %.4f\n", i, s[i]);
-			}
-		}
-	}
-#endif
-
 	//const char * filename = "3bandpeakfilter";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/FocusPressPushZoom";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/Direct";
