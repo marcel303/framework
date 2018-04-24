@@ -292,10 +292,7 @@ struct JsusFx_BlendScope
 
 #define LINE_STROKE 1.f
 
-#include "audio.h"
-#include "FileStream.h"
-#include "StreamReader.h"
-#include "StringEx.h"
+#include "riff.h"
 
 struct JsusFx_FileInfo
 {
@@ -330,7 +327,7 @@ struct JsusFx_File
 	std::string filename;
 	Mode mode = kMode_None;
 	
-	SoundData * soundData = nullptr;
+	RIFFSoundData * soundData = nullptr;
 	
 	int readPosition = 0;
 	
@@ -373,6 +370,9 @@ struct JsusFx_File
 	{
 		Assert(mode == kMode_None);
 		
+		numChannels = 0;
+		sampleRate = 0;
+		
 		// reset read state
 		
 		mode = kMode_None;
@@ -380,12 +380,55 @@ struct JsusFx_File
 		
 		// load RIFF file
 		
-		soundData = loadSound(filename.c_str());
+		bool success = true;
+		
+		FILE * file = fopen(filename.c_str(), "rb");
+		
+		success &= file != nullptr;
+		
+		int size = 0;
+		
+		if (success)
+		{
+			success &= fseek(file, 0, SEEK_END) == 0;
+			size = ftell(file);
+			success &= fseek(file, 0, SEEK_SET) == 0;
+		}
+		
+		uint8_t * bytes = nullptr;
+		
+		if (success)
+		{
+			bytes = new uint8_t[size];
+		
+			success &= fread(bytes, size, 1, file) == 1;
+		}
+		
+		if (file != nullptr)
+		{
+			fclose(file);
+			file = nullptr;
+		}
+		
+		if (success)
+		{
+			soundData = loadRIFF(bytes, size);
+		}
+		
+		if (bytes != nullptr)
+		{
+			delete [] bytes;
+			bytes = nullptr;
+		}
 		
 		if (soundData == nullptr || (soundData->channelSize != 2 && soundData->channelSize != 4))
 		{
-			numChannels = 0;
-			sampleRate = 0;
+			if (soundData != nullptr)
+			{
+				delete soundData;
+				soundData = nullptr;
+			}
+			
 			return false;
 		}
 		else
@@ -1851,8 +1894,8 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Quad";
-	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/AmbiXToB";
-	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
+	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/AmbiXToB";
+	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Periphonic3D";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/UHJ";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Warble.jsfx"; // fixme
