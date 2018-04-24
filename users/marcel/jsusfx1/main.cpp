@@ -1,6 +1,7 @@
 #include "framework.h"
 
 #include "jsusfx.h"
+#include "jsusfx_file.h"
 #include "jsusfx_gfx.h"
 
 #include "Path.h"
@@ -1526,6 +1527,124 @@ static void doSlider(JsusFx & fx, JsusFx_Slider & slider, int x, int y)
 
 //
 
+struct MyFileAPI : JsusFxFileAPI
+{
+	virtual int file_open(const char * filename) override
+	{
+		std::string resolvedPath;
+		
+		if (s_pathLibrary->resolveDataPath(filename, resolvedPath) == false)
+			return -1;
+		
+		for (int i = 1; i < kMaxFileHandles; ++i)
+		{
+			if (s_fileHandles[i] == nullptr)
+			{
+				s_fileHandles[i] = new JsusFx_File();
+				
+				if (s_fileHandles[i]->open(resolvedPath.c_str()) == false)
+				{
+					delete s_fileHandles[i];
+					s_fileHandles[i] = nullptr;
+					
+					return -1;
+				}
+				else
+				{
+					return i;
+				}
+			}
+		}
+		
+		return -1;
+	}
+
+	virtual bool file_close(const int index) override
+	{
+		if (index < 0 || index >= kMaxFileHandles)
+			return -1;
+		
+		if (s_fileHandles[index] == nullptr)
+			return -1;
+		
+		s_fileHandles[index]->close();
+		
+		delete s_fileHandles[index];
+		s_fileHandles[index] = nullptr;
+		
+		return 0;
+	}
+
+	virtual int file_avail(const int index) override
+	{
+		if (index < 0 || index >= kMaxFileHandles)
+			return 0;
+		
+		if (s_fileHandles[index] == nullptr)
+			return 0;
+		
+		return s_fileHandles[index]->avail();
+	}
+
+	virtual bool file_riff(const int index, int & numChannels, int & sampleRate) override
+	{
+		if (index < 0 || index >= kMaxFileHandles)
+			return false;
+		
+		if (s_fileHandles[index] == nullptr)
+			return false;
+		
+		if (s_fileHandles[index]->riff(numChannels, sampleRate) == false)
+			return false;
+		
+		return true;
+	}
+
+	virtual bool file_text(const int index) override
+	{
+		if (index < 0 || index >= kMaxFileHandles)
+			return false;
+		
+		if (s_fileHandles[index] == nullptr)
+			return false;
+		
+		if (s_fileHandles[index]->text() == false)
+			return false;
+		
+		return true;
+	}
+
+	virtual int file_mem(const int index, EEL_F * dest, const int numValues) override
+	{
+		if (index < 0 || index >= kMaxFileHandles)
+			return 0;
+		
+		if (s_fileHandles[index] == nullptr)
+			return 0;
+		
+		if (s_fileHandles[index]->mem(numValues, dest) == false)
+			return 0;
+		else
+			return numValues;
+	}
+
+	virtual bool file_var(const int index, EEL_F & dest) override
+	{
+		if (index < 0 || index >= kMaxFileHandles)
+			return 0;
+		
+		if (s_fileHandles[index] == nullptr)
+			return 0;
+		
+		if (s_fileHandles[index]->var(dest) == false)
+			return 0;
+		else
+			return 1;
+	}
+};
+
+#if 0
+
 static EEL_F NSEEL_CGEN_CALL _file_open(void *opaque, EEL_F *handle)
 {
 	const int index = *handle;
@@ -1689,6 +1808,7 @@ static void registerReaperFileAPI(NSEEL_VMCTX vm)
 	NSEEL_addfunc_retval("file_mem",3,NSEEL_PProc_THIS,&_file_mem);
 	NSEEL_addfunc_retval("file_var",2,NSEEL_PProc_THIS,&_file_var);
 }
+#endif
 
 //
 
@@ -1813,7 +1933,11 @@ int main(int argc, char * argv[])
 	//JsusFxGfx_Log gfx;
 	fx.gfx = &gfx;
 	gfx.init(fx.m_vm);
-	registerReaperFileAPI(fx.m_vm);
+	
+	MyFileAPI fileAPI;
+	fx.fileAPI = &fileAPI;
+	fileAPI.init(fx.m_vm);
+	//registerReaperFileAPI(fx.m_vm);
 	
 	JsusFxPathLibraryTest pathLibrary(DATA_ROOT);
 	s_pathLibrary = &pathLibrary;
