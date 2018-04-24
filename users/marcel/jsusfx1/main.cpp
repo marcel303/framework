@@ -1310,7 +1310,7 @@ struct MyFileAPI : JsusFxFileAPI
 		
 		if (jsusFx.pathLibrary.resolveDataPath(filename, resolvedPath) == false)
 		{
-			logError("failed to resolve data path");
+			jsusFx.displayError("failed to resolve data path");
 			return -1;
 		}
 		
@@ -1322,7 +1322,7 @@ struct MyFileAPI : JsusFxFileAPI
 				
 				if (files[i]->open(jsusFx, resolvedPath.c_str()) == false)
 				{
-					logError("failed to open file: %s", resolvedPath.c_str());
+					jsusFx.displayError("failed to open file: %s", resolvedPath.c_str());
 					
 					delete files[i];
 					files[i] = nullptr;
@@ -1336,7 +1336,7 @@ struct MyFileAPI : JsusFxFileAPI
 			}
 		}
 		
-		logError("failed to find a free file handle");
+		jsusFx.displayError("failed to find a free file handle");
 		return -1;
 	}
 
@@ -1344,13 +1344,13 @@ struct MyFileAPI : JsusFxFileAPI
 	{
 		if (index < 0 || index >= kMaxFileHandles)
 		{
-			logError("invalid file handle");
+			jsusFx.displayError("invalid file handle");
 			return -1;
 		}
 		
 		if (files[index] == nullptr)
 		{
-			logError("file not opened");
+			jsusFx.displayError("file not opened");
 			return -1;
 		}
 		
@@ -1366,13 +1366,13 @@ struct MyFileAPI : JsusFxFileAPI
 	{
 		if (index < 0 || index >= kMaxFileHandles)
 		{
-			logError("invalid file handle");
+			jsusFx.displayError("invalid file handle");
 			return 0;
 		}
 		
 		if (files[index] == nullptr)
 		{
-			logError("file not opened");
+			jsusFx.displayError("file not opened");
 			return 0;
 		}
 		
@@ -1383,19 +1383,19 @@ struct MyFileAPI : JsusFxFileAPI
 	{
 		if (index < 0 || index >= kMaxFileHandles)
 		{
-			logError("invalid file handle");
+			jsusFx.displayError("invalid file handle");
 			return false;
 		}
 		
 		if (files[index] == nullptr)
 		{
-			logError("file not opened");
+			jsusFx.displayError("file not opened");
 			return false;
 		}
 		
 		if (files[index]->riff(numChannels, sampleRate) == false)
 		{
-			logError("failed to parse RIFF");
+			jsusFx.displayError("failed to parse RIFF");
 			return false;
 		}
 		
@@ -1406,19 +1406,19 @@ struct MyFileAPI : JsusFxFileAPI
 	{
 		if (index < 0 || index >= kMaxFileHandles)
 		{
-			logError("invalid file handle");
+			jsusFx.displayError("invalid file handle");
 			return false;
 		}
 		
 		if (files[index] == nullptr)
 		{
-			logError("file not opened");
+			jsusFx.displayError("file not opened");
 			return false;
 		}
 		
 		if (files[index]->text() == false)
 		{
-			logError("failed to parse text");
+			jsusFx.displayError("failed to parse text");
 			return false;
 		}
 		
@@ -1429,19 +1429,19 @@ struct MyFileAPI : JsusFxFileAPI
 	{
 		if (index < 0 || index >= kMaxFileHandles)
 		{
-			logError("invalid file handle");
+			jsusFx.displayError("invalid file handle");
 			return 0;
 		}
 		
 		if (files[index] == nullptr)
 		{
-			logError("file not opened");
+			jsusFx.displayError("file not opened");
 			return 0;
 		}
 		
 		if (files[index]->mem(numValues, dest) == false)
 		{
-			logError("failed to read data");
+			jsusFx.displayError("failed to read data");
 			return 0;
 		}
 		else
@@ -1452,19 +1452,19 @@ struct MyFileAPI : JsusFxFileAPI
 	{
 		if (index < 0 || index >= kMaxFileHandles)
 		{
-			logError("invalid file handle");
+			jsusFx.displayError("invalid file handle");
 			return 0;
 		}
 		
 		if (files[index] == nullptr)
 		{
-			logError("file not opened");
+			jsusFx.displayError("file not opened");
 			return 0;
 		}
 		
 		if (files[index]->var(dest) == false)
 		{
-			logError("failed to read value");
+			jsusFx.displayError("failed to read value");
 			return 0;
 		}
 		else
