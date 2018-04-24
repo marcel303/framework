@@ -403,9 +403,11 @@ struct JsusFx_File
 		
 		// load text file
 		
+		std::istream * stream = nullptr;
+		
 		try
 		{
-			std::istream * stream = s_pathLibrary->open(filename);
+			stream = s_pathLibrary->open(filename);
 			
 			if (stream == nullptr)
 			{
@@ -417,12 +419,10 @@ struct JsusFx_File
 			{
 				char line[2048];
 				
-			// todo : check return value ?
 				stream->getline(line, sizeof(line), '\n');
 				
 				// a poor way of skipping comments. assume / is the start of // and strip anything that come after it
 				char * pos = strchr(line, '/');
-				
 				if (pos != nullptr)
 					*pos = 0;
 				
@@ -430,16 +430,24 @@ struct JsusFx_File
 				
 				for (;;)
 				{
+					// skip trailing white space
+					
 					while (*p && isspace(*p))
 						p++;
 					
+					// reached end of the line ?
+					
 					if (*p == 0)
 						break;
+					
+					// parse the value
 					
 					double var;
 					
 					if (sscanf(p, "%lf", &var) == 1)
 						vars.push_back(var);
+					
+					// skip the value
 					
 					while (*p && !isspace(*p))
 						p++;
@@ -454,6 +462,12 @@ struct JsusFx_File
 		}
 		catch (std::exception & e)
 		{
+			if (stream != nullptr)
+			{
+				delete stream;
+				stream = nullptr;
+			}
+			
 			logError("failed to read text file contents: %s", e.what());
 			return false;
 		}
