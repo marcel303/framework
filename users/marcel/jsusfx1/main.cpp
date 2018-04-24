@@ -1529,12 +1529,22 @@ static void doSlider(JsusFx & fx, JsusFx_Slider & slider, int x, int y)
 
 struct MyFileAPI : JsusFxFileAPI
 {
+	JsusFxPathLibrary & pathLibrary;
+	
+	MyFileAPI(JsusFxPathLibrary & _pathLibrary)
+		: pathLibrary(_pathLibrary)
+	{
+	}
+	
 	virtual int file_open(const char * filename) override
 	{
 		std::string resolvedPath;
 		
-		if (s_pathLibrary->resolveDataPath(filename, resolvedPath) == false)
+		if (pathLibrary.resolveDataPath(filename, resolvedPath) == false)
+		{
+			logError("failed to resolve data path");
 			return -1;
+		}
 		
 		for (int i = 1; i < kMaxFileHandles; ++i)
 		{
@@ -1544,6 +1554,8 @@ struct MyFileAPI : JsusFxFileAPI
 				
 				if (s_fileHandles[i]->open(resolvedPath.c_str()) == false)
 				{
+					logError("failed to open file: %s", resolvedPath.c_str());
+					
 					delete s_fileHandles[i];
 					s_fileHandles[i] = nullptr;
 					
@@ -1556,16 +1568,23 @@ struct MyFileAPI : JsusFxFileAPI
 			}
 		}
 		
+		logError("failed to find a free file handle");
 		return -1;
 	}
 
 	virtual bool file_close(const int index) override
 	{
 		if (index < 0 || index >= kMaxFileHandles)
+		{
+			logError("invalid file handle");
 			return -1;
+		}
 		
 		if (s_fileHandles[index] == nullptr)
+		{
+			logError("file not opened");
 			return -1;
+		}
 		
 		s_fileHandles[index]->close();
 		
@@ -1578,10 +1597,16 @@ struct MyFileAPI : JsusFxFileAPI
 	virtual int file_avail(const int index) override
 	{
 		if (index < 0 || index >= kMaxFileHandles)
+		{
+			logError("invalid file handle");
 			return 0;
+		}
 		
 		if (s_fileHandles[index] == nullptr)
+		{
+			logError("file not opened");
 			return 0;
+		}
 		
 		return s_fileHandles[index]->avail();
 	}
@@ -1589,13 +1614,22 @@ struct MyFileAPI : JsusFxFileAPI
 	virtual bool file_riff(const int index, int & numChannels, int & sampleRate) override
 	{
 		if (index < 0 || index >= kMaxFileHandles)
+		{
+			logError("invalid file handle");
 			return false;
+		}
 		
 		if (s_fileHandles[index] == nullptr)
+		{
+			logError("file not opened");
 			return false;
+		}
 		
 		if (s_fileHandles[index]->riff(numChannels, sampleRate) == false)
+		{
+			logError("failed to parse RIFF");
 			return false;
+		}
 		
 		return true;
 	}
@@ -1603,13 +1637,22 @@ struct MyFileAPI : JsusFxFileAPI
 	virtual bool file_text(const int index) override
 	{
 		if (index < 0 || index >= kMaxFileHandles)
+		{
+			logError("invalid file handle");
 			return false;
+		}
 		
 		if (s_fileHandles[index] == nullptr)
+		{
+			logError("file not opened");
 			return false;
+		}
 		
 		if (s_fileHandles[index]->text() == false)
+		{
+			logError("failed to parse text");
 			return false;
+		}
 		
 		return true;
 	}
@@ -1617,13 +1660,22 @@ struct MyFileAPI : JsusFxFileAPI
 	virtual int file_mem(const int index, EEL_F * dest, const int numValues) override
 	{
 		if (index < 0 || index >= kMaxFileHandles)
+		{
+			logError("invalid file handle");
 			return 0;
+		}
 		
 		if (s_fileHandles[index] == nullptr)
+		{
+			logError("file not opened");
 			return 0;
+		}
 		
 		if (s_fileHandles[index]->mem(numValues, dest) == false)
+		{
+			logError("failed to read data");
 			return 0;
+		}
 		else
 			return numValues;
 	}
@@ -1631,13 +1683,22 @@ struct MyFileAPI : JsusFxFileAPI
 	virtual bool file_var(const int index, EEL_F & dest) override
 	{
 		if (index < 0 || index >= kMaxFileHandles)
+		{
+			logError("invalid file handle");
 			return 0;
+		}
 		
 		if (s_fileHandles[index] == nullptr)
+		{
+			logError("file not opened");
 			return 0;
+		}
 		
 		if (s_fileHandles[index]->var(dest) == false)
+		{
+			logError("failed to read value");
 			return 0;
+		}
 		else
 			return 1;
 	}
@@ -1927,6 +1988,10 @@ int main(int argc, char * argv[])
 		return -1;
 	
 	JsusFx::init();
+	
+	JsusFxPathLibraryTest pathLibrary(DATA_ROOT);
+	s_pathLibrary = &pathLibrary;
+	
 	JsusFxTest fx;
 	s_fx = &fx;
 	JsusFxGfx_Framework gfx;
@@ -1934,13 +1999,10 @@ int main(int argc, char * argv[])
 	fx.gfx = &gfx;
 	gfx.init(fx.m_vm);
 	
-	MyFileAPI fileAPI;
+	MyFileAPI fileAPI(pathLibrary);
 	fx.fileAPI = &fileAPI;
 	fileAPI.init(fx.m_vm);
 	//registerReaperFileAPI(fx.m_vm);
-	
-	JsusFxPathLibraryTest pathLibrary(DATA_ROOT);
-	s_pathLibrary = &pathLibrary;
 	
 	//const char * filename = "3bandpeakfilter";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/FocusPressPushZoom";
