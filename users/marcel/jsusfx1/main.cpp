@@ -582,7 +582,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		{
 			if (Path::GetExtension(filename, true) == "png" || Path::GetExtension(filename, true) == "jpg")
 			{
-				gfx_loadimg(nullptr, index, index);
+				gfx_loadimg(index, index);
 			}
 			
 			return true;
@@ -1085,7 +1085,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		*b = rgba[2] / 255.f;
 	}
 
-	virtual EEL_F gfx_loadimg(void * opaque, int index, EEL_F loadFrom) override
+	virtual EEL_F gfx_loadimg(int index, EEL_F loadFrom) override
 	{
 		const int fileIndex = (int)loadFrom;
 		
@@ -1205,7 +1205,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	 	return 1.f;
 	}
 	
-	virtual EEL_F gfx_setfont(void * opaque, int np, EEL_F ** parms) override
+	virtual EEL_F gfx_setfont(int np, EEL_F ** parms) override
 	{
 		const int size = np > 2 ? (int)parms[2][0] : 10;
 		
@@ -1216,21 +1216,21 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		return 0.f;
 	}
 	
-	virtual EEL_F gfx_getfont(void * opaque, int np, EEL_F ** parms)
+	virtual EEL_F gfx_getfont(int np, EEL_F ** parms)
 	{
 		STUB;
 		
 		return 0.f;
 	}
 	
-	virtual EEL_F gfx_showmenu(void * opaque, EEL_F ** parms, int nparms)
+	virtual EEL_F gfx_showmenu(EEL_F ** parms, int nparms)
 	{
 		STUB;
 		
 		return 0.f;
 	}
 	
-	virtual EEL_F gfx_setcursor(void * opaque, EEL_F ** parms, int nparms) override
+	virtual EEL_F gfx_setcursor(EEL_F ** parms, int nparms) override
 	{
 	#if 1
 		const int cursorResId = (int)parms[0][0];
