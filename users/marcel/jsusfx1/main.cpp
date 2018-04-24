@@ -111,6 +111,10 @@ struct JsusFxPathLibraryTest : JsusFxPathLibrary {
 
 class JsusFxTest : public JsusFx {
 public:
+	JsusFxTest(JsusFxPathLibrary &pathLibrary)
+		: JsusFx(pathLibrary) {
+	}
+	
     void displayMsg(const char *fmt, ...) {
         char output[4096];
         va_list argptr;
@@ -314,284 +318,6 @@ struct JsusFx_FileInfo
 static const int kMaxFileInfos = 128;
 
 JsusFx_FileInfo s_fileInfos[kMaxFileInfos];
-
-struct JsusFx_File
-{
-	enum Mode
-	{
-		kMode_None,
-		kMode_Text,
-		kMode_Sound
-	};
-	
-	std::string filename;
-	Mode mode = kMode_None;
-	
-	RIFFSoundData * soundData = nullptr;
-	
-	int readPosition = 0;
-	
-	std::vector<EEL_F> vars;
-	
-	~JsusFx_File()
-	{
-		close();
-	}
-	
-	bool open(const char * _filename)
-	{
-		// reset
-		
-		filename.clear();
-		
-		// check if file exists
-		
-		FILE * file = fopen(_filename, "rb");
-		
-		if (file == nullptr)
-			return false;
-		else
-		{
-			filename = _filename;
-			fclose(file);
-			return true;
-		}
-	}
-	
-	void close()
-	{
-		vars.clear();
-		
-		delete soundData;
-		soundData = nullptr;
-	}
-	
-	bool riff(int & numChannels, int & sampleRate)
-	{
-		Assert(mode == kMode_None);
-		
-		numChannels = 0;
-		sampleRate = 0;
-		
-		// reset read state
-		
-		mode = kMode_None;
-		readPosition = 0;
-		
-		// load RIFF file
-		
-		bool success = true;
-		
-		FILE * file = fopen(filename.c_str(), "rb");
-		
-		success &= file != nullptr;
-		
-		int size = 0;
-		
-		if (success)
-		{
-			success &= fseek(file, 0, SEEK_END) == 0;
-			size = ftell(file);
-			success &= fseek(file, 0, SEEK_SET) == 0;
-		}
-		
-		uint8_t * bytes = nullptr;
-		
-		if (success)
-		{
-			bytes = new uint8_t[size];
-		
-			success &= fread(bytes, size, 1, file) == 1;
-		}
-		
-		if (file != nullptr)
-		{
-			fclose(file);
-			file = nullptr;
-		}
-		
-		if (success)
-		{
-			soundData = loadRIFF(bytes, size);
-		}
-		
-		if (bytes != nullptr)
-		{
-			delete [] bytes;
-			bytes = nullptr;
-		}
-		
-		if (soundData == nullptr || (soundData->channelSize != 2 && soundData->channelSize != 4))
-		{
-			if (soundData != nullptr)
-			{
-				delete soundData;
-				soundData = nullptr;
-			}
-			
-			return false;
-		}
-		else
-		{
-			mode = kMode_Sound;
-			numChannels = soundData->channelCount;
-			sampleRate = soundData->sampleRate;
-			return true;
-		}
-	}
-	
-	bool text()
-	{
-		Assert(mode == kMode_None);
-		
-		// reset read state
-		
-		mode = kMode_None;
-		readPosition = 0;
-		
-		// load text file
-		
-		std::istream * stream = nullptr;
-		
-		try
-		{
-			stream = s_pathLibrary->open(filename);
-			
-			if (stream == nullptr)
-			{
-				logError("failed to open text file");
-				return false;
-			}
-			
-			while (!stream->eof())
-			{
-				char line[2048];
-				
-				stream->getline(line, sizeof(line), '\n');
-				
-				// a poor way of skipping comments. assume / is the start of // and strip anything that come after it
-				char * pos = strchr(line, '/');
-				if (pos != nullptr)
-					*pos = 0;
-				
-				const char * p = line;
-				
-				for (;;)
-				{
-					// skip trailing white space
-					
-					while (*p && isspace(*p))
-						p++;
-					
-					// reached end of the line ?
-					
-					if (*p == 0)
-						break;
-					
-					// parse the value
-					
-					double var;
-					
-					if (sscanf(p, "%lf", &var) == 1)
-						vars.push_back(var);
-					
-					// skip the value
-					
-					while (*p && !isspace(*p))
-						p++;
-				}
-			}
-			
-			s_pathLibrary->close(stream);
-			
-			mode = kMode_Text;
-			
-			return true;
-		}
-		catch (std::exception & e)
-		{
-			if (stream != nullptr)
-			{
-				delete stream;
-				stream = nullptr;
-			}
-			
-			logError("failed to read text file contents: %s", e.what());
-			return false;
-		}
-	}
-	
-	int avail() const
-	{
-		if (mode == kMode_None)
-			return 0;
-		else if (mode == kMode_Text)
-			return readPosition == vars.size() ? 0 : 1;
-		else if (mode == kMode_Sound)
-			return soundData->sampleCount * soundData->channelCount - readPosition;
-		else
-			return 0;
-	}
-	
-	bool mem(const int numValues, EEL_F * dest)
-	{
-		if (mode == kMode_None)
-			return false;
-		else if (mode == kMode_Text)
-			return false;
-		else if (mode == kMode_Sound)
-		{
-			if (numValues > avail())
-				return false;
-			for (int i = 0; i < numValues; ++i)
-			{
-				const int channelIndex = readPosition / soundData->sampleCount;
-				const int sampleIndex = readPosition % soundData->sampleCount;
-				
-				if (soundData->channelSize == 2)
-				{
-					const short * values = (short*)soundData->sampleData;
-					
-					dest[i] = values[sampleIndex * soundData->channelCount + channelIndex] / float(1 << 15);
-				}
-				else if (soundData->channelSize == 4)
-				{
-					const float * values = (float*)soundData->sampleData;
-					
-					dest[i] = values[sampleIndex * soundData->channelCount + channelIndex];
-				}
-				else
-				{
-					Assert(false);
-				}
-				
-				readPosition++;
-			}
-			
-			return true;
-		}
-		else
-			return false;
-	}
-	
-	bool var(EEL_F & value)
-	{
-		if (mode == kMode_None)
-			return false;
-		else if (mode == kMode_Text)
-		{
-			if (avail() < 1)
-				return false;
-			value = vars[readPosition];
-			readPosition++;
-			return true;
-		}
-		else if (mode == kMode_Sound)
-			return false;
-		else
-			return false;
-	}
-};
 
 struct JsusFxGfx_Framework : JsusFxGfx
 {
@@ -1573,19 +1299,16 @@ struct MyFileAPI : JsusFxFileAPI
 
 	JsusFx_File * files[kMaxFileHandles];
 	
-	JsusFxPathLibrary & pathLibrary;
-	
-	MyFileAPI(JsusFxPathLibrary & _pathLibrary)
-		: pathLibrary(_pathLibrary)
+	MyFileAPI()
 	{
 		memset(files, 0, sizeof(files));
 	}
 	
-	virtual int file_open(const char * filename) override
+	virtual int file_open(JsusFx & jsusFx, const char * filename) override
 	{
 		std::string resolvedPath;
 		
-		if (pathLibrary.resolveDataPath(filename, resolvedPath) == false)
+		if (jsusFx.pathLibrary.resolveDataPath(filename, resolvedPath) == false)
 		{
 			logError("failed to resolve data path");
 			return -1;
@@ -1597,7 +1320,7 @@ struct MyFileAPI : JsusFxFileAPI
 			{
 				files[i] = new JsusFx_File();
 				
-				if (files[i]->open(resolvedPath.c_str()) == false)
+				if (files[i]->open(jsusFx, resolvedPath.c_str()) == false)
 				{
 					logError("failed to open file: %s", resolvedPath.c_str());
 					
@@ -1617,7 +1340,7 @@ struct MyFileAPI : JsusFxFileAPI
 		return -1;
 	}
 
-	virtual bool file_close(const int index) override
+	virtual bool file_close(JsusFx & jsusFx, const int index) override
 	{
 		if (index < 0 || index >= kMaxFileHandles)
 		{
@@ -1631,7 +1354,7 @@ struct MyFileAPI : JsusFxFileAPI
 			return -1;
 		}
 		
-		files[index]->close();
+		files[index]->close(jsusFx);
 		
 		delete files[index];
 		files[index] = nullptr;
@@ -1639,7 +1362,7 @@ struct MyFileAPI : JsusFxFileAPI
 		return 0;
 	}
 
-	virtual int file_avail(const int index) override
+	virtual int file_avail(JsusFx & jsusFx, const int index) override
 	{
 		if (index < 0 || index >= kMaxFileHandles)
 		{
@@ -1656,7 +1379,7 @@ struct MyFileAPI : JsusFxFileAPI
 		return files[index]->avail();
 	}
 
-	virtual bool file_riff(const int index, int & numChannels, int & sampleRate) override
+	virtual bool file_riff(JsusFx & jsusFx, const int index, int & numChannels, int & sampleRate) override
 	{
 		if (index < 0 || index >= kMaxFileHandles)
 		{
@@ -1679,7 +1402,7 @@ struct MyFileAPI : JsusFxFileAPI
 		return true;
 	}
 
-	virtual bool file_text(const int index) override
+	virtual bool file_text(JsusFx & jsusFx, const int index) override
 	{
 		if (index < 0 || index >= kMaxFileHandles)
 		{
@@ -1702,7 +1425,7 @@ struct MyFileAPI : JsusFxFileAPI
 		return true;
 	}
 
-	virtual int file_mem(const int index, EEL_F * dest, const int numValues) override
+	virtual int file_mem(JsusFx & jsusFx, const int index, EEL_F * dest, const int numValues) override
 	{
 		if (index < 0 || index >= kMaxFileHandles)
 		{
@@ -1725,7 +1448,7 @@ struct MyFileAPI : JsusFxFileAPI
 			return numValues;
 	}
 
-	virtual bool file_var(const int index, EEL_F & dest) override
+	virtual bool file_var(JsusFx & jsusFx, const int index, EEL_F & dest) override
 	{
 		if (index < 0 || index >= kMaxFileHandles)
 		{
@@ -1870,14 +1593,14 @@ int main(int argc, char * argv[])
 	JsusFxPathLibraryTest pathLibrary(DATA_ROOT);
 	s_pathLibrary = &pathLibrary;
 	
-	JsusFxTest fx;
+	JsusFxTest fx(pathLibrary);
 	s_fx = &fx;
 	JsusFxGfx_Framework gfx;
 	//JsusFxGfx_Log gfx;
 	fx.gfx = &gfx;
 	gfx.init(fx.m_vm);
 	
-	MyFileAPI fileAPI(pathLibrary);
+	MyFileAPI fileAPI;
 	fx.fileAPI = &fileAPI;
 	fileAPI.init(fx.m_vm);
 	
