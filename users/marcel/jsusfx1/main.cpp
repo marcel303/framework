@@ -137,7 +137,6 @@ public:
 };
 
 static JsusFxTest * s_fx = nullptr;
-static JsusFxPathLibrary * s_pathLibrary = nullptr;
 
 #define STUB logDebug("function %s not implemented", __FUNCTION__)
 //#define STUB do { } while (false)
@@ -1591,7 +1590,6 @@ int main(int argc, char * argv[])
 	JsusFx::init();
 	
 	JsusFxPathLibraryTest pathLibrary(DATA_ROOT);
-	s_pathLibrary = &pathLibrary;
 	
 	JsusFxTest fx(pathLibrary);
 	s_fx = &fx;
@@ -1618,7 +1616,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Quad";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/AmbiXToB";
-	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
+	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Periphonic3D";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/UHJ";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Warble.jsfx"; // fixme
@@ -1634,7 +1632,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Humonica.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And String.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And Chord.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Echo-Cycles.jsfx";
+	const char * filename = "/Users/thecat/geraintluff -jsfx/Echo-Cycles.jsfx";
 	
 	if (!fx.compile(pathLibrary, filename))
 	{
