@@ -1162,14 +1162,34 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		return 0.f;
 	}
 	
-	virtual EEL_F gfx_setcursor(void * opaque, EEL_F ** parms, int nparms)
+	virtual EEL_F gfx_setcursor(void * opaque, EEL_F ** parms, int nparms) override
 	{
-		STUB;
+	#if 1
+		const int cursorResId = (int)parms[0][0];
 		
-		return 0.f;
+		char cursorName[64];
+		cursorName[0]= 0;
+		
+		if (nparms > 1)
+		{
+			WDL_FastString * fs = nullptr;
+			const char * p = s_fx->getString(parms[1][0], &fs);
+			
+			if (p && p[0])
+			{
+				strcpy_s(cursorName, sizeof(cursorName), p);
+				
+				// todo : do something with this cursor ?
+			}
+		}
+		
+		return 1;
+	#else
+		return 0;
+	#endif
 	}
 	
-	virtual void gfx_blurto(EEL_F x, EEL_F y)
+	virtual void gfx_blurto(EEL_F x, EEL_F y) override
 	{
 		STUB;
 		
@@ -1250,8 +1270,6 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		// blitmode:
 		//     0 = blit
 		//     1 = deltablit
-		
-		//STUB;
 		
 		const int bmIndex = *parms[0];
 		
