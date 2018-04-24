@@ -109,13 +109,71 @@ struct JsusFxPathLibraryTest : JsusFxPathLibrary {
 	}
 };
 
+struct JsusFx_FileInfo
+{
+	std::string filename;
+	
+	bool isValid() const
+	{
+		return !filename.empty();
+	}
+	
+	bool init(const char * _filename)
+	{
+		filename = _filename;
+		
+		return isValid();
+	}
+};
+
+static const int kMaxFileInfos = 128;
+
+JsusFx_FileInfo s_fileInfos[kMaxFileInfos];
+
 class JsusFxTest : public JsusFx {
 public:
 	JsusFxTest(JsusFxPathLibrary &pathLibrary)
 		: JsusFx(pathLibrary) {
 	}
 	
-    void displayMsg(const char *fmt, ...) {
+	virtual bool handleFile(int index, const char *filename) override
+	{
+		if (index < 0 || index >= kMaxFileInfos)
+		{
+			logError("file index out of bounds %d:%s", index, filename);
+			return false;
+		}
+		
+		if (s_fileInfos[index].isValid())
+		{
+			logWarning("file already exists %d:%s", index, filename);
+			
+			s_fileInfos[index] = JsusFx_FileInfo();
+		}
+		
+		//
+		
+		if (s_fileInfos[index].init(filename))
+		{
+			if (Path::GetExtension(filename, true) == "png" || Path::GetExtension(filename, true) == "jpg")
+			{
+				if (gfx != nullptr)
+				{
+					gfx->gfx_loadimg(index, index);
+				}
+			}
+			
+			return true;
+		}
+		else
+		{
+			logError("failed to find file %d:%s", index, filename);
+			
+			return false;
+		}
+	}
+	
+    virtual void displayMsg(const char *fmt, ...) override {
         char output[4096];
         va_list argptr;
         va_start(argptr, fmt);
@@ -125,7 +183,7 @@ public:
         logDebug(output);
     }
 
-    void displayError(const char *fmt, ...) {
+    virtual void displayError(const char *fmt, ...) override {
         char output[4096];
         va_list argptr;
         va_start(argptr, fmt);
@@ -295,29 +353,6 @@ struct JsusFx_BlendScope
 
 #define LINE_STROKE 1.f
 
-#include "riff.h"
-
-struct JsusFx_FileInfo
-{
-	std::string filename;
-	
-	bool isValid() const
-	{
-		return !filename.empty();
-	}
-	
-	bool init(const char * _filename)
-	{
-		filename = _filename;
-		
-		return isValid();
-	}
-};
-
-static const int kMaxFileInfos = 128;
-
-JsusFx_FileInfo s_fileInfos[kMaxFileInfos];
-
 struct JsusFxGfx_Framework : JsusFxGfx
 {
 	float m_fontSize = 10.f;
@@ -326,40 +361,6 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	int mouseFlags = 0;
 	
-	virtual bool handleFile(int index, const char *filename) override
-	{
-		if (index < 0 || index >= kMaxFileInfos)
-		{
-			logError("file index out of bounds %d:%s", index, filename);
-			return false;
-		}
-		
-		if (s_fileInfos[index].isValid())
-		{
-			logWarning("file already exists %d:%s", index, filename);
-			
-			s_fileInfos[index] = JsusFx_FileInfo();
-		}
-		
-		//
-		
-		if (s_fileInfos[index].init(filename))
-		{
-			if (Path::GetExtension(filename, true) == "png" || Path::GetExtension(filename, true) == "jpg")
-			{
-				gfx_loadimg(index, index);
-			}
-			
-			return true;
-		}
-		else
-		{
-			logError("failed to find file %d:%s", index, filename);
-			
-			return false;
-		}
-	}
-		
 	virtual void setup(const int w, const int h) override
 	{
 		// update gfx state
