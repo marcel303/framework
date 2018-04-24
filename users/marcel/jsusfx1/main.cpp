@@ -405,28 +405,48 @@ struct JsusFx_File
 		
 		try
 		{
-			FileStream stream(filename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
-			StreamReader reader(&stream, false);
+			std::istream * stream = s_pathLibrary->open(filename);
 			
-			auto lines = reader.ReadAllLines();
-			
-			for (auto & line : lines)
+			if (stream == nullptr)
 			{
+				logError("failed to open text file");
+				return false;
+			}
+			
+			while (!stream->eof())
+			{
+				char line[2048];
+				
+			// todo : check return value ?
+				stream->getline(line, sizeof(line), '\n');
+				
 				// a poor way of skipping comments. assume / is the start of // and strip anything that come after it
-				const int pos = String::Find(line, '/');
-				if (pos >= 0)
-					line = line.substr(0, pos);
+				char * pos = strchr(line, '/');
 				
-				auto parts = String::Split(line, ' ');
+				if (pos != nullptr)
+					*pos = 0;
 				
-				for (auto & part : parts)
+				const char * p = line;
+				
+				for (;;)
 				{
+					while (*p && isspace(*p))
+						p++;
+					
+					if (*p == 0)
+						break;
+					
 					double var;
 					
-					if (sscanf(part.c_str(), "%lf", &var) == 1)
+					if (sscanf(p, "%lf", &var) == 1)
 						vars.push_back(var);
+					
+					while (*p && !isspace(*p))
+						p++;
 				}
 			}
+			
+			s_pathLibrary->close(stream);
 			
 			mode = kMode_Text;
 			
@@ -444,7 +464,7 @@ struct JsusFx_File
 		if (mode == kMode_None)
 			return 0;
 		else if (mode == kMode_Text)
-			return vars.size() - readPosition;
+			return readPosition == vars.size() ? 0 : 1;
 		else if (mode == kMode_Sound)
 			return soundData->sampleCount * soundData->channelCount - readPosition;
 		else
@@ -477,6 +497,10 @@ struct JsusFx_File
 					const float * values = (float*)soundData->sampleData;
 					
 					dest[i] = values[sampleIndex * soundData->channelCount + channelIndex];
+				}
+				else
+				{
+					Assert(false);
 				}
 				
 				readPosition++;
@@ -1793,9 +1817,10 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Quad";
-	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/AmbiXToB";
-	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
+	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/AmbiXToB";
+	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Periphonic3D";
+	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/UHJ";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Warble.jsfx"; // fixme
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spectrum Matcher.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Smooth Limiter.jsfx";
