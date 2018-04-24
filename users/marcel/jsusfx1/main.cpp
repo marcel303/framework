@@ -55,10 +55,18 @@ gfx_mode
 #define SAMPLE_RATE 44100
 #define BUFFER_SIZE 64
 
+#define DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/"
+
 const int GFX_SX = 1000;
 const int GFX_SY = 720;
 
 struct JsusFxPathLibraryTest : JsusFxPathLibrary {
+	std::string dataRoot;
+	
+	JsusFxPathLibraryTest(const char * _dataRoot) {
+		dataRoot = _dataRoot;
+	}
+	
 	static bool fileExists(const std::string &filename) {
 		std::ifstream is(filename);
 		return is.is_open();
@@ -77,6 +85,11 @@ struct JsusFxPathLibraryTest : JsusFxPathLibrary {
 		if (fileExists(resolvedPath))
 			return true;
 		return false;
+	}
+	
+	virtual bool resolveDataPath(const std::string &importPath, std::string &resolvedPath) override {
+		resolvedPath = dataRoot + "/" + importPath;
+		return fileExists(resolvedPath);
 	}
 	
 	virtual std::istream* open(const std::string &path) override {
@@ -119,6 +132,7 @@ public:
 };
 
 static JsusFxTest * s_fx = nullptr;
+static JsusFxPathLibrary * s_pathLibrary = nullptr;
 
 #define STUB logDebug("function %s not implemented", __FUNCTION__)
 //#define STUB do { } while (false)
@@ -281,6 +295,23 @@ struct JsusFx_BlendScope
 #include "FileStream.h"
 #include "StreamReader.h"
 #include "StringEx.h"
+
+struct JsusFx_FileInfo
+{
+	std::string filename;
+	
+	bool isValid() const
+	{
+		return !filename.empty();
+	}
+	
+	bool init(const char * _filename)
+	{
+		filename = _filename;
+		
+		return isValid();
+	}
+};
 
 struct JsusFx_File
 {
@@ -476,8 +507,12 @@ struct JsusFx_File
 	}
 };
 
-static const int kMaxFiles = 128;
-static JsusFx_File * s_files[kMaxFiles] = { };
+static const int kMaxFileInfos = 128;
+static const int kMaxFileHandles = 16;
+
+static JsusFx_FileInfo s_fileInfos[kMaxFileInfos];
+
+static JsusFx_File * s_fileHandles[kMaxFileHandles] = { };
 
 struct JsusFxGfx_Framework : JsusFxGfx
 {
@@ -489,25 +524,22 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual bool handleFile(int index, const char *filename) override
 	{
-		if (index < 0 || index >= kMaxFiles)
+		if (index < 0 || index >= kMaxFileInfos)
 		{
 			logError("file index out of bounds %d:%s", index, filename);
 			return false;
 		}
 		
-		if (s_files[index] != nullptr)
+		if (s_fileInfos[index].isValid())
 		{
 			logWarning("file already exists %d:%s", index, filename);
 			
-			delete s_files[index];
-			s_files[index] = nullptr;
+			s_fileInfos[index] = JsusFx_FileInfo();
 		}
 		
 		//
 		
-		s_files[index] = new JsusFx_File();
-		
-		if (s_files[index]->open(filename))
+		if (s_fileInfos[index].init(filename))
 		{
 			if (Path::GetExtension(filename, true) == "png" || Path::GetExtension(filename, true) == "jpg")
 			{
@@ -518,10 +550,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		}
 		else
 		{
-			logError("failed to open file %d:%s", index, filename);
-			
-			delete s_files[index];
-			s_files[index] = nullptr;
+			logError("failed to find file %d:%s", index, filename);
 			
 			return false;
 		}
@@ -1021,17 +1050,17 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	{
 		const int fileIndex = (int)loadFrom;
 		
-		if (fileIndex < 0 || fileIndex >= kMaxFiles)
+		if (fileIndex < 0 || fileIndex >= kMaxFileInfos)
 			return -1;
 	
-		if (s_files[fileIndex] == nullptr)
+		if (s_fileInfos[fileIndex].isValid() == false)
 			return -1;
 		
 		if (index >= 0 && index < imageCache.kMaxImages)
 		{
 			JsusFx_Image & image = imageCache.images[index];
 			
-			const char * filename = s_files[fileIndex]->filename.c_str();
+			const char * filename = s_fileInfos[fileIndex].filename.c_str();
 			
 			const GLuint texture = getTexture(filename);
 			
@@ -1463,7 +1492,7 @@ static EEL_F NSEEL_CGEN_CALL _file_open(void *opaque, EEL_F *handle)
 {
 	const int index = *handle;
 	
-	if (index < 0 || index >= kMaxFiles)
+	if (index < 0 || index >= kMaxFileInfos)
 		return -1;
 	
 	WDL_FastString * fs = nullptr;
@@ -1472,19 +1501,21 @@ static EEL_F NSEEL_CGEN_CALL _file_open(void *opaque, EEL_F *handle)
 	if (filename == nullptr)
 		return -1;
 	
-	// todo : add settable search path and search locally first
-	const std::string resolvedFilename = std::string("/Users/thecat/Library/Application Support/REAPER/Data/") + filename;
+	std::string resolvedPath;
 	
-	for (int i = 1; i < kMaxFiles; ++i)
+	if (s_pathLibrary->resolveDataPath(filename, resolvedPath) == false)
+		return -1;
+	
+	for (int i = 1; i < kMaxFileHandles; ++i)
 	{
-		if (s_files[i] == nullptr)
+		if (s_fileHandles[i] == nullptr)
 		{
-			s_files[i] = new JsusFx_File();
+			s_fileHandles[i] = new JsusFx_File();
 			
-			if (s_files[i]->open(resolvedFilename.c_str()) == false)
+			if (s_fileHandles[i]->open(resolvedPath.c_str()) == false)
 			{
-				delete s_files[i];
-				s_files[i] = nullptr;
+				delete s_fileHandles[i];
+				s_fileHandles[i] = nullptr;
 				
 				return -1;
 			}
@@ -1502,16 +1533,16 @@ static EEL_F NSEEL_CGEN_CALL _file_close(void *opaque, EEL_F *handle)
 {
 	const int index = *handle;
 	
-	if (index < 0 || index >= kMaxFiles)
+	if (index < 0 || index >= kMaxFileHandles)
 		return -1;
 	
-	if (s_files[index] == nullptr)
+	if (s_fileHandles[index] == nullptr)
 		return -1;
 	
-	s_files[index]->close();
+	s_fileHandles[index]->close();
 	
-	delete s_files[index];
-	s_files[index] = nullptr;
+	delete s_fileHandles[index];
+	s_fileHandles[index] = nullptr;
 	
 	return 0;
 }
@@ -1520,13 +1551,13 @@ static EEL_F NSEEL_CGEN_CALL _file_avail(void *opaque, EEL_F *handle)
 {
   	const int index = *handle;
 	
-	if (index < 0 || index >= kMaxFiles)
+	if (index < 0 || index >= kMaxFileHandles)
 		return 0;
 	
-	if (s_files[index] == nullptr)
+	if (s_fileHandles[index] == nullptr)
 		return 0;
 	
-	return s_files[index]->avail();
+	return s_fileHandles[index]->avail();
 }
 
 static EEL_F NSEEL_CGEN_CALL _file_riff(void *opaque, EEL_F *handle, EEL_F *_numChannels, EEL_F *_sampleRate)
@@ -1536,15 +1567,15 @@ static EEL_F NSEEL_CGEN_CALL _file_riff(void *opaque, EEL_F *handle, EEL_F *_num
 	
 	const int index = *handle;
 	
-	if (index < 0 || index >= kMaxFiles)
+	if (index < 0 || index >= kMaxFileHandles)
 		return -1;
 	
-	if (s_files[index] == nullptr)
+	if (s_fileHandles[index] == nullptr)
 		return -1;
 	
 	int numChannels;
 	int sampleRate;
-	if (s_files[index]->riff(numChannels, sampleRate) == false)
+	if (s_fileHandles[index]->riff(numChannels, sampleRate) == false)
 		return -1;
 	
 	*_numChannels = numChannels;
@@ -1557,13 +1588,13 @@ static EEL_F NSEEL_CGEN_CALL _file_text(void *opaque, EEL_F *handle)
 {
 	const int index = *handle;
 	
-	if (index < 0 || index >= kMaxFiles)
+	if (index < 0 || index >= kMaxFileHandles)
 		return -1;
 	
-	if (s_files[index] == nullptr)
+	if (s_fileHandles[index] == nullptr)
 		return -1;
 	
-	if (s_files[index]->text() == false)
+	if (s_fileHandles[index]->text() == false)
 		return -1;
 	
 	return 1;
@@ -1573,10 +1604,10 @@ static EEL_F NSEEL_CGEN_CALL _file_mem(void *opaque, EEL_F *handle, EEL_F *_dest
 {
 	const int index = *handle;
 	
-	if (index < 0 || index >= kMaxFiles)
+	if (index < 0 || index >= kMaxFileHandles)
 		return 0;
 	
-	if (s_files[index] == nullptr)
+	if (s_fileHandles[index] == nullptr)
 		return 0;
 	
 	const int destOffs = (int)(*_dest + 0.001);
@@ -1588,7 +1619,7 @@ static EEL_F NSEEL_CGEN_CALL _file_mem(void *opaque, EEL_F *handle, EEL_F *_dest
 	
 	const int numValues = (int)*_numValues;
 	
-	if (s_files[index]->mem(numValues, dest) == false)
+	if (s_fileHandles[index]->mem(numValues, dest) == false)
 		return 0;
 	else
 		return numValues;
@@ -1598,31 +1629,28 @@ static EEL_F NSEEL_CGEN_CALL _file_var(void *opaque, EEL_F *handle, EEL_F *dest)
 {
 	const int index = *handle;
 	
-	if (index < 0 || index >= kMaxFiles)
+	if (index < 0 || index >= kMaxFileHandles)
 		return 0;
 	
-	if (s_files[index] == nullptr)
+	if (s_fileHandles[index] == nullptr)
 		return 0;
 	
-	if (s_files[index]->var(*dest) == false)
+	if (s_fileHandles[index]->var(*dest) == false)
 		return 0;
 	else
 		return 1;
 }
 
-struct JsusFx_FileAPI
+static void registerReaperFileAPI(NSEEL_VMCTX vm)
 {
-	void init(NSEEL_VMCTX vm)
-	{
-		NSEEL_addfunc_retval("file_open",1,NSEEL_PProc_THIS,&_file_open);
-		NSEEL_addfunc_retval("file_close",1,NSEEL_PProc_THIS,&_file_close);
-		NSEEL_addfunc_retval("file_avail",1,NSEEL_PProc_THIS,&_file_avail);
-		NSEEL_addfunc_retval("file_riff",3,NSEEL_PProc_THIS,&_file_riff);
-		NSEEL_addfunc_retval("file_text",1,NSEEL_PProc_THIS,&_file_text);
-		NSEEL_addfunc_retval("file_mem",3,NSEEL_PProc_THIS,&_file_mem);
-		NSEEL_addfunc_retval("file_var",2,NSEEL_PProc_THIS,&_file_var);
-	}
-};
+	NSEEL_addfunc_retval("file_open",1,NSEEL_PProc_THIS,&_file_open);
+	NSEEL_addfunc_retval("file_close",1,NSEEL_PProc_THIS,&_file_close);
+	NSEEL_addfunc_retval("file_avail",1,NSEEL_PProc_THIS,&_file_avail);
+	NSEEL_addfunc_retval("file_riff",3,NSEEL_PProc_THIS,&_file_riff);
+	NSEEL_addfunc_retval("file_text",1,NSEEL_PProc_THIS,&_file_text);
+	NSEEL_addfunc_retval("file_mem",3,NSEEL_PProc_THIS,&_file_mem);
+	NSEEL_addfunc_retval("file_var",2,NSEEL_PProc_THIS,&_file_var);
+}
 
 //
 
@@ -1723,7 +1751,7 @@ static void handleAction(const std::string & action, const Dictionary & d)
 		{
 			auto filename = d.getString("file", "");
 			
-			JsusFxPathLibraryTest pathLibrary;
+			JsusFxPathLibraryTest pathLibrary(DATA_ROOT);
 			s_fx->compile(pathLibrary, filename);
 			
 			s_fx->prepare(SAMPLE_RATE, BUFFER_SIZE);
@@ -1747,9 +1775,10 @@ int main(int argc, char * argv[])
 	//JsusFxGfx_Log gfx;
 	fx.gfx = &gfx;
 	gfx.init(fx.m_vm);
+	registerReaperFileAPI(fx.m_vm);
 	
-	JsusFx_FileAPI fileApi;
-	fileApi.init(fx.m_vm);
+	JsusFxPathLibraryTest pathLibrary(DATA_ROOT);
+	s_pathLibrary = &pathLibrary;
 	
 	//const char * filename = "3bandpeakfilter";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/FocusPressPushZoom";
@@ -1765,11 +1794,11 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Quad";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/AmbiXToB";
-	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
+	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Periphonic3D";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Warble.jsfx"; // fixme
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spectrum Matcher.jsfx";
-	const char * filename = "/Users/thecat/geraintluff -jsfx/Smooth Limiter.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Smooth Limiter.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Sandwich Amp.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Pulsar.jsfx"; // todo
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Panalysis.jsfx";
@@ -1782,7 +1811,6 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And Chord.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Echo-Cycles.jsfx";
 	
-	JsusFxPathLibraryTest pathLibrary;
 	if (!fx.compile(pathLibrary, filename))
 	{
 		logError("failed to load file: %s", filename);
