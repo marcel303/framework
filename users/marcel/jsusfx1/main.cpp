@@ -314,6 +314,10 @@ struct JsusFx_FileInfo
 	}
 };
 
+static const int kMaxFileInfos = 128;
+
+JsusFx_FileInfo s_fileInfos[kMaxFileInfos];
+
 struct JsusFx_File
 {
 	enum Mode
@@ -545,13 +549,6 @@ struct JsusFx_File
 			return false;
 	}
 };
-
-static const int kMaxFileInfos = 128;
-static const int kMaxFileHandles = 16;
-
-static JsusFx_FileInfo s_fileInfos[kMaxFileInfos];
-
-static JsusFx_File * s_fileHandles[kMaxFileHandles] = { };
 
 struct JsusFxGfx_Framework : JsusFxGfx
 {
@@ -1529,11 +1526,16 @@ static void doSlider(JsusFx & fx, JsusFx_Slider & slider, int x, int y)
 
 struct MyFileAPI : JsusFxFileAPI
 {
+	static const int kMaxFileHandles = 16;
+
+	JsusFx_File * files[kMaxFileHandles];
+	
 	JsusFxPathLibrary & pathLibrary;
 	
 	MyFileAPI(JsusFxPathLibrary & _pathLibrary)
 		: pathLibrary(_pathLibrary)
 	{
+		memset(files, 0, sizeof(files));
 	}
 	
 	virtual int file_open(const char * filename) override
@@ -1548,16 +1550,16 @@ struct MyFileAPI : JsusFxFileAPI
 		
 		for (int i = 1; i < kMaxFileHandles; ++i)
 		{
-			if (s_fileHandles[i] == nullptr)
+			if (files[i] == nullptr)
 			{
-				s_fileHandles[i] = new JsusFx_File();
+				files[i] = new JsusFx_File();
 				
-				if (s_fileHandles[i]->open(resolvedPath.c_str()) == false)
+				if (files[i]->open(resolvedPath.c_str()) == false)
 				{
 					logError("failed to open file: %s", resolvedPath.c_str());
 					
-					delete s_fileHandles[i];
-					s_fileHandles[i] = nullptr;
+					delete files[i];
+					files[i] = nullptr;
 					
 					return -1;
 				}
@@ -1580,16 +1582,16 @@ struct MyFileAPI : JsusFxFileAPI
 			return -1;
 		}
 		
-		if (s_fileHandles[index] == nullptr)
+		if (files[index] == nullptr)
 		{
 			logError("file not opened");
 			return -1;
 		}
 		
-		s_fileHandles[index]->close();
+		files[index]->close();
 		
-		delete s_fileHandles[index];
-		s_fileHandles[index] = nullptr;
+		delete files[index];
+		files[index] = nullptr;
 		
 		return 0;
 	}
@@ -1602,13 +1604,13 @@ struct MyFileAPI : JsusFxFileAPI
 			return 0;
 		}
 		
-		if (s_fileHandles[index] == nullptr)
+		if (files[index] == nullptr)
 		{
 			logError("file not opened");
 			return 0;
 		}
 		
-		return s_fileHandles[index]->avail();
+		return files[index]->avail();
 	}
 
 	virtual bool file_riff(const int index, int & numChannels, int & sampleRate) override
@@ -1619,13 +1621,13 @@ struct MyFileAPI : JsusFxFileAPI
 			return false;
 		}
 		
-		if (s_fileHandles[index] == nullptr)
+		if (files[index] == nullptr)
 		{
 			logError("file not opened");
 			return false;
 		}
 		
-		if (s_fileHandles[index]->riff(numChannels, sampleRate) == false)
+		if (files[index]->riff(numChannels, sampleRate) == false)
 		{
 			logError("failed to parse RIFF");
 			return false;
@@ -1642,13 +1644,13 @@ struct MyFileAPI : JsusFxFileAPI
 			return false;
 		}
 		
-		if (s_fileHandles[index] == nullptr)
+		if (files[index] == nullptr)
 		{
 			logError("file not opened");
 			return false;
 		}
 		
-		if (s_fileHandles[index]->text() == false)
+		if (files[index]->text() == false)
 		{
 			logError("failed to parse text");
 			return false;
@@ -1665,13 +1667,13 @@ struct MyFileAPI : JsusFxFileAPI
 			return 0;
 		}
 		
-		if (s_fileHandles[index] == nullptr)
+		if (files[index] == nullptr)
 		{
 			logError("file not opened");
 			return 0;
 		}
 		
-		if (s_fileHandles[index]->mem(numValues, dest) == false)
+		if (files[index]->mem(numValues, dest) == false)
 		{
 			logError("failed to read data");
 			return 0;
@@ -1688,13 +1690,13 @@ struct MyFileAPI : JsusFxFileAPI
 			return 0;
 		}
 		
-		if (s_fileHandles[index] == nullptr)
+		if (files[index] == nullptr)
 		{
 			logError("file not opened");
 			return 0;
 		}
 		
-		if (s_fileHandles[index]->var(dest) == false)
+		if (files[index]->var(dest) == false)
 		{
 			logError("failed to read value");
 			return 0;
