@@ -1445,17 +1445,6 @@ int main(int argc, char * argv[])
 		if (keyboard.wentDown(SDLK_ESCAPE))
 			framework.quitRequested = true;
 		
-		if (keyboard.wentDown(SDLK_SPACE))
-		{
-			if (!fx.compile(pathLibrary, filename))
-			{
-				logError("failed to load file: %s", filename);
-				return -1;
-			}
-			
-			fx.prepare(SAMPLE_RATE, BUFFER_SIZE);
-		}
-		
 		if (framework.quitRequested)
 			break;
 
