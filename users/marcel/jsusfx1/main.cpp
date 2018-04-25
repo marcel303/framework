@@ -109,68 +109,10 @@ struct JsusFxPathLibraryTest : JsusFxPathLibrary {
 	}
 };
 
-struct JsusFx_FileInfo
-{
-	std::string filename;
-	
-	bool isValid() const
-	{
-		return !filename.empty();
-	}
-	
-	bool init(const char * _filename)
-	{
-		filename = _filename;
-		
-		return isValid();
-	}
-};
-
-static const int kMaxFileInfos = 128;
-
-JsusFx_FileInfo s_fileInfos[kMaxFileInfos];
-
 class JsusFxTest : public JsusFx {
 public:
 	JsusFxTest(JsusFxPathLibrary &pathLibrary)
 		: JsusFx(pathLibrary) {
-	}
-	
-	virtual bool handleFile(int index, const char *filename) override
-	{
-		if (index < 0 || index >= kMaxFileInfos)
-		{
-			logError("file index out of bounds %d:%s", index, filename);
-			return false;
-		}
-		
-		if (s_fileInfos[index].isValid())
-		{
-			logWarning("file already exists %d:%s", index, filename);
-			
-			s_fileInfos[index] = JsusFx_FileInfo();
-		}
-		
-		//
-		
-		if (s_fileInfos[index].init(filename))
-		{
-			if (Path::GetExtension(filename, true) == "png" || Path::GetExtension(filename, true) == "jpg")
-			{
-				if (gfx != nullptr)
-				{
-					gfx->gfx_loadimg(index, index);
-				}
-			}
-			
-			return true;
-		}
-		else
-		{
-			logError("failed to find file %d:%s", index, filename);
-			
-			return false;
-		}
 	}
 	
     virtual void displayMsg(const char *fmt, ...) override {
@@ -851,21 +793,21 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		*b = rgba[2] / 255.f;
 	}
 
-	virtual EEL_F gfx_loadimg(int index, EEL_F loadFrom) override
+	virtual EEL_F gfx_loadimg(JsusFx & jsusFx, int index, EEL_F loadFrom) override
 	{
 		const int fileIndex = (int)loadFrom;
 		
-		if (fileIndex < 0 || fileIndex >= kMaxFileInfos)
+		if (fileIndex < 0 || fileIndex >= JsusFx::kMaxFileInfos)
 			return -1;
 	
-		if (s_fileInfos[fileIndex].isValid() == false)
+		if (jsusFx.fileInfos[fileIndex].isValid() == false)
 			return -1;
 		
 		if (index >= 0 && index < imageCache.kMaxImages)
 		{
 			JsusFx_Image & image = imageCache.images[index];
 			
-			const char * filename = s_fileInfos[fileIndex].filename.c_str();
+			const char * filename = jsusFx.fileInfos[fileIndex].filename.c_str();
 			
 			const GLuint texture = getTexture(filename);
 			
@@ -1617,7 +1559,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Quad";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/AmbiXToB";
-	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
+	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Periphonic3D";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/UHJ";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Warble.jsfx"; // fixme
@@ -1633,7 +1575,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Humonica.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And String.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And Chord.jsfx";
-	const char * filename = "/Users/thecat/geraintluff -jsfx/Echo-Cycles.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Echo-Cycles.jsfx";
 	
 	if (!fx.compile(pathLibrary, filename))
 	{
