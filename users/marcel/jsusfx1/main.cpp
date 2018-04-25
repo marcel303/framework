@@ -239,41 +239,7 @@ struct JsusFx_ImageCache
 	}
 };
 
-#define PUSH_FRAMEBUFFER 1
-
-struct JsusFx_ImageScope
-{
-	JsusFx_Image * image = nullptr;
-	
-	JsusFx_ImageScope(JsusFx_ImageCache & cache, int index)
-	{
-	#if PUSH_FRAMEBUFFER
-		if (index == -1)
-			pushSurface(nullptr);
-		else
-	#else
-		if (index != -1)
-	#endif
-		{
-			image = &cache.get(index);
-			Assert(image->isValid);
-			pushSurface(image->surface);
-		}
-	}
-	
-	~JsusFx_ImageScope()
-	{
-	#if PUSH_FRAMEBUFFER
-		popSurface();
-	#else
-		if (image != nullptr)
-			popSurface();
-	#endif
-	}
-};
-
-#define IMAGE_SCOPE JsusFx_ImageScope imageScope(imageCache, *m_gfx_dest)
-//#define IMAGE_SCOPE do { } while (false)
+#define IMAGE_SCOPE updateSurface()
 
 struct JsusFx_BlendScope
 {
@@ -302,6 +268,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	JsusFx_ImageCache imageCache;
 	
 	int mouseFlags = 0;
+	
+	int currentImageIndex = -1;
 	
 	virtual void setup(const int w, const int h) override
 	{
@@ -380,6 +348,24 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		*m_mouse_cap = vflags;
 	}
 	
+	virtual void beginDraw() override
+	{
+		logDebug("beginDraw");
+		
+		pushSurface(nullptr);
+		
+		currentImageIndex = -1;
+	}
+	
+	virtual void endDraw() override
+	{
+		logDebug("endDraw");
+		
+		popSurface();
+		
+		currentImageIndex = -2;
+	}
+	
 	virtual void handleReset()
 	{
 		m_fontSize = 12.f;
@@ -390,6 +376,28 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	void updateColor()
 	{
 		setColorf(*m_gfx_r, *m_gfx_g, *m_gfx_b, *m_gfx_a);
+	}
+	
+	void updateSurface()
+	{
+		const int index = *m_gfx_dest;
+		
+		if (index != currentImageIndex)
+		{
+			popSurface();
+			
+			if (index == -1)
+				pushSurface(nullptr);
+			else
+			{
+				auto image = &imageCache.get(index);
+				
+				Assert(image->isValid);
+				pushSurface(image->surface);
+				
+				currentImageIndex = index;
+			}
+		}
 	}
 	
 	virtual void gfx_line(int np, EEL_F ** params) override
@@ -1005,7 +1013,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 					const int sx = image.surface->getWidth();
 					const int sy = image.surface->getHeight();
 					
-					logDebug("blit %d (%dx%d) -> %d. scale=%.2f, angle=%.2f", img, sx, sy, int(*m_gfx_dest), scale, rotate);
+					//logDebug("blit %d (%dx%d) -> %d. scale=%.2f, angle=%.2f", img, sx, sy, int(*m_gfx_dest), scale, rotate);
 					
 					const int dstX = (int)*m_gfx_x;
 					const int dstY = (int)*m_gfx_y;
@@ -1355,8 +1363,8 @@ int main(int argc, char * argv[])
 	
 	JsusFxTest fx(pathLibrary);
 	s_fx = &fx;
+	
 	JsusFxGfx_Framework gfx;
-	//JsusFxGfx_Log gfx;
 	fx.gfx = &gfx;
 	gfx.init(fx.m_vm);
 	
@@ -1371,14 +1379,14 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
-	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
+	const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Quad";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/AmbiXToB";
-	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
+	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Periphonic3D";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/UHJ";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Warble.jsfx"; // fixme
