@@ -1275,7 +1275,7 @@ struct MidiKeyboard
 		{
 			auto & key = keys[i];
 			
-			key.note = 16 + i;
+			key.note = 32 + i;
 			key.isDown = false;
 		}
 	}
@@ -1615,7 +1615,7 @@ int main(int argc, char * argv[])
 
 		audioStream.lock();
 		{
-			doMidiKeyboard(midiKeyboard, mouse.x - 10, mouse.y - 10, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false);
+			doMidiKeyboard(midiKeyboard, mouse.x - 10 - fx.gfx_w, mouse.y - 10, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false);
 		}
 		audioStream.unlock();
 		
@@ -1707,9 +1707,9 @@ int main(int argc, char * argv[])
 			
 			gxPushMatrix();
 			{
-				gxTranslatef(10, 10, 0);
+				gxTranslatef(10 + fx.gfx_w, 10, 0);
 				
-				doMidiKeyboard(midiKeyboard, mouse.x - 10, mouse.y - 10, nullptr, nullptr, false, true);
+				doMidiKeyboard(midiKeyboard, mouse.x - 10 - fx.gfx_w, mouse.y - 10, nullptr, nullptr, false, true);
 			}
 			gxPopMatrix();
 		}
