@@ -257,7 +257,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	JsusFx & jsusFx;
 	
 	JsusFxGfx_Framework(JsusFx & _jsusFx)
-		: jsusFx(_jsusFx)
+		: JsusFxGfx()
+		, jsusFx(_jsusFx)
 	{
 	}
 	
@@ -731,7 +732,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			const int index = parms[0][0] + .5f;
 			
 			WDL_FastString *fs = nullptr;
-			jsusFx.getString(index, &fs);
+			s = jsusFx.getString(index, &fs);
 			
 		#ifdef EEL_STRING_DEBUGOUT
 			if (!s)
@@ -1253,9 +1254,162 @@ static void doSlider(JsusFx & fx, JsusFx_Slider & slider, int x, int y)
 
 //
 
+#define MIDI_OFF 0x80
+#define MIDI_ON 0x90
+
+struct MidiKeyboard
+{
+	static const int kNumKeys = 16;
+	
+	struct Key
+	{
+		int note;
+		bool isDown;
+	};
+	
+	Key keys[kNumKeys];
+	
+	MidiKeyboard()
+	{
+		for (int i = 0; i < kNumKeys; ++i)
+		{
+			auto & key = keys[i];
+			
+			key.note = 16 + i;
+			key.isDown = false;
+		}
+	}
+};
+
+static void writeMidi(uint8_t *& midi, int & midiSize, const int channel, const int message, const int param1, const int param2)
+{
+	*midi++ = channel;
+	*midi++ = message;
+	*midi++ = param1;
+	*midi++ = param2;
+	
+	midiSize += 4;
+}
+
+void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8_t * midi, int * midiSize, const bool doTick, const bool doDraw)
+{
+	const int keySx = 16;
+	const int keySy = 64;
+
+	const int sx = keySx * MidiKeyboard::kNumKeys;
+	const int sy = keySy;
+
+	const int hoverIndex = mouseY >= 0 && mouseY <= keySy ? mouseX / keySx : -1;
+	const float velocity = clamp(mouseY / float(keySy), 0.f, 1.f);
+	
+	if (doTick)
+	{
+		bool isDown[MidiKeyboard::kNumKeys];
+		memset(isDown, 0, sizeof(isDown));
+		
+		if (mouse.isDown(BUTTON_LEFT) && hoverIndex >= 0 && hoverIndex < MidiKeyboard::kNumKeys)
+			isDown[hoverIndex] = true;
+		
+		for (int i = 0; i < MidiKeyboard::kNumKeys; ++i)
+		{
+			auto & key = kb.keys[i];
+			
+			if (key.isDown != isDown[i])
+			{
+				if (isDown[i])
+				{
+					key.isDown = true;
+					
+					writeMidi(midi, *midiSize, 0, MIDI_ON, key.note, velocity * 127);
+				}
+				else
+				{
+					writeMidi(midi, *midiSize, 0, MIDI_OFF, key.note, velocity * 127);
+					
+					key.isDown = false;
+				}
+			}
+		}
+	}
+	
+	if (doDraw)
+	{
+		setColor(colorBlack);
+		drawRect(0, 0, sx, sy);
+		
+		for (int i = 0; i < MidiKeyboard::kNumKeys; ++i)
+		{
+			auto & key = kb.keys[i];
+			
+			gxPushMatrix();
+			{
+				gxTranslatef(keySx * i, 0, 0);
+				
+				setColor(key.isDown ? colorWhite : i == hoverIndex ? colorGreen : colorBlue);
+				drawRect(0, 0, keySx, keySy);
+			}
+			gxPopMatrix();
+		}
+	}
+}
+
+//
+
 #include "audiostream/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStream.h"
 #include "audiostream/AudioStreamVorbis.h"
+
+struct MidiBuffer
+{
+	static const int kMaxBytes = 2048;
+	
+	uint8_t bytes[kMaxBytes];
+	int numBytes = 0;
+};
+
+static MidiBuffer s_midiBuffer;
+
+static bool generateMidiEvent(uint8_t * midi)
+{
+	static int lastNote = -1;
+	static int todo = 0;
+
+	//const bool trigger = (rand() % 1000) == 0;
+	const bool trigger = (lastNote == -1) ? (todo-- == 0) : ((rand() % 200) == 0);
+
+	if (trigger) {
+		if (lastNote != -1) {
+			const uint8_t msg = 0x80;
+			const uint8_t note = lastNote;
+			const uint8_t value = rand() % 128;
+			
+			midi[0] = 0;
+			midi[1] = msg;
+			midi[2] = note;
+			midi[3] = value;
+			
+			lastNote = -1;
+			
+			return true;
+		} else {
+			const uint8_t msg = 0x90;
+			const uint8_t note = 32 + (rand() % 32);
+			const uint8_t value = rand() % 128;
+			
+			midi[0] = 0;
+			midi[1] = msg;
+			midi[2] = note;
+			midi[3] = value;
+			
+			lastNote = note;
+			todo = 100 + (rand() % 400);
+			
+			return true;
+		}
+	} else {
+		return false;
+	}
+}
 
 struct AudioStream_JsusFx : AudioStream
 {
@@ -1285,12 +1439,14 @@ struct AudioStream_JsusFx : AudioStream
 	
 	void lock()
 	{
-		SDL_LockMutex(mutex);
+		const int r = SDL_LockMutex(mutex);
+		Assert(r == 0);
 	}
 	
 	void unlock()
 	{
-		SDL_UnlockMutex(mutex);
+		const int r = SDL_UnlockMutex(mutex);
+		Assert(r == 0);
 	}
 	
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
@@ -1324,7 +1480,14 @@ struct AudioStream_JsusFx : AudioStream
 		
 		lock();
 		{
+			//if (generateMidiEvent(s_midiBuffer.bytes))
+			//	s_midiBuffer.numBytes += 4;
+			
+			fx->setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
+			
 			fx->process(input, output, numSamples, 2, 2);
+			
+			s_midiBuffer.numBytes = 0;
 		}
 		unlock();
 		
@@ -1386,7 +1549,7 @@ int main(int argc, char * argv[])
 	
 	//const char * filename = "3bandpeakfilter";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/FocusPressPushZoom";
-	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/Direct";
+	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/Direct";
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/vumetergfx";
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
@@ -1412,7 +1575,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Level Meter.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Learning Sampler.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Humonica.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And String.jsfx";
+	const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And String.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And Chord.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Echo-Cycles.jsfx";
 	
@@ -1438,6 +1601,8 @@ int main(int argc, char * argv[])
 	double t = 0.0;
 	double ts = 0.0;
 	
+	MidiKeyboard midiKeyboard;
+	
 	for (;;)
 	{
 		framework.process();
@@ -1448,6 +1613,12 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 
+		audioStream.lock();
+		{
+			doMidiKeyboard(midiKeyboard, mouse.x - 10, mouse.y - 10, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false);
+		}
+		audioStream.unlock();
+		
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			setFont("calibri.ttf");
@@ -1533,6 +1704,14 @@ int main(int argc, char * argv[])
 					y += 16;
 				}
 			}
+			
+			gxPushMatrix();
+			{
+				gxTranslatef(10, 10, 0);
+				
+				doMidiKeyboard(midiKeyboard, mouse.x - 10, mouse.y - 10, nullptr, nullptr, false, true);
+			}
+			gxPopMatrix();
 		}
 		framework.endDraw();
 	}
