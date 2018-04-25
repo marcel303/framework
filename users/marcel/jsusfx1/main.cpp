@@ -241,23 +241,7 @@ struct JsusFx_ImageCache
 
 #define IMAGE_SCOPE updateSurface()
 
-struct JsusFx_BlendScope
-{
-	JsusFx_BlendScope(const int mode)
-	{
-		if (mode & 0x1)
-			pushBlend(BLEND_ADD);
-		else
-			pushBlend(BLEND_ALPHA);
-	}
-	
-	~JsusFx_BlendScope()
-	{
-		popBlend();
-	}
-};
-
-#define BLEND_SCOPE JsusFx_BlendScope blendScope(*m_gfx_mode)
+#define BLEND_SCOPE updateBlendMode()
 
 #define LINE_STROKE 1.f
 
@@ -270,6 +254,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	int mouseFlags = 0;
 	
 	int currentImageIndex = -1;
+	int currentBlendMode = -1;
 	
 	virtual void setup(const int w, const int h) override
 	{
@@ -353,16 +338,21 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		logDebug("beginDraw");
 		
 		pushSurface(nullptr);
-		
 		currentImageIndex = -1;
+		
+		pushBlend(BLEND_OPAQUE);
+		currentBlendMode = -1;
+		updateBlendMode();
 	}
 	
 	virtual void endDraw() override
 	{
 		logDebug("endDraw");
 		
-		popSurface();
+		popBlend();
+		currentBlendMode = -1;
 		
+		popSurface();
 		currentImageIndex = -2;
 	}
 	
@@ -371,6 +361,21 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		m_fontSize = 12.f;
 		
 		imageCache.free();
+	}
+	
+	void updateBlendMode()
+	{
+		const int mode = *m_gfx_mode;
+		
+		if (mode != currentBlendMode)
+		{
+			currentBlendMode = mode;
+			
+			if (mode & 0x1)
+				setBlend(BLEND_ADD);
+			else
+				setBlend(BLEND_ALPHA);
+		}
 	}
 	
 	void updateColor()
