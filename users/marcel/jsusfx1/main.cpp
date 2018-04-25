@@ -136,8 +136,6 @@ public:
     }
 };
 
-static JsusFxTest * s_fx = nullptr;
-
 #define STUB logDebug("function %s not implemented", __FUNCTION__)
 //#define STUB do { } while (false)
 
@@ -255,6 +253,13 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	int currentImageIndex = -1;
 	int currentBlendMode = -1;
+	
+	JsusFx & jsusFx;
+	
+	JsusFxGfx_Framework(JsusFx & _jsusFx)
+		: jsusFx(_jsusFx)
+	{
+	}
 	
 	virtual void setup(const int w, const int h) override
 	{
@@ -726,7 +731,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			const int index = parms[0][0] + .5f;
 			
 			WDL_FastString *fs = nullptr;
-			s = s_fx->getString(index, &fs);
+			jsusFx.getString(index, &fs);
 			
 		#ifdef EEL_STRING_DEBUGOUT
 			if (!s)
@@ -962,7 +967,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		if (nparms > 1)
 		{
 			WDL_FastString * fs = nullptr;
-			const char * p = s_fx->getString(parms[1][0], &fs);
+			const char * p = jsusFx.getString(parms[1][0], &fs);
 			
 			if (p && p[0])
 			{
@@ -1335,6 +1340,8 @@ struct AudioStream_JsusFx : AudioStream
 
 //
 
+static JsusFxTest * s_fx = nullptr;
+
 static AudioStream_JsusFx * s_audioStream = nullptr;
 
 static void handleAction(const std::string & action, const Dictionary & d)
@@ -1369,7 +1376,7 @@ int main(int argc, char * argv[])
 	JsusFxTest fx(pathLibrary);
 	s_fx = &fx;
 	
-	JsusFxGfx_Framework gfx;
+	JsusFxGfx_Framework gfx(fx);
 	fx.gfx = &gfx;
 	gfx.init(fx.m_vm);
 	
@@ -1379,12 +1386,12 @@ int main(int argc, char * argv[])
 	
 	//const char * filename = "3bandpeakfilter";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/FocusPressPushZoom";
-	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/Direct";
+	const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/Direct";
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/vumetergfx";
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
-	const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
+	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
