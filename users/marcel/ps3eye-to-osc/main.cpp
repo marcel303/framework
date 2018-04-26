@@ -20,7 +20,7 @@
 #define OSC_IMAGE_SX 8
 #define OSC_IMAGE_SY 6
 
-#define FPS 5
+#define FPS 187
 
 #include "framework.h"
 #include "../../../libparticle/ui.h" // todo : rename
@@ -107,20 +107,56 @@ static OscSender * s_oscSender = nullptr;
 
 //
 
+static void applyTreshold(
+	const uint8_t * __restrict color_surface,
+	const int sx, const int sy,
+	const int threshold,
+	uint8_t * __restrict value_surface)
+{
+	const int add1 = - threshold;
+	const int max1 = (255 - threshold);
+	const int mul1 = 255 * 256 / max1;
+	
+	for (int y = 0; y < sy; ++y)
+	{
+		const uint8_t * __restrict color_line = color_surface + y * sx;
+		      uint8_t * __restrict value_line = value_surface + y * sx;
+		
+		for (int x = 0; x < sx; ++x)
+		{
+			int value = color_line[x];
+			
+			value += add1;
+			if (value < 0)
+				value = 0;
+			
+			value *= mul1;
+			value >>= 8;
+			
+			value_line[x] = value;
+		}
+	}
+}
+
 struct DownsampledImage
 {
 	static const int sx = OSC_IMAGE_SX;
 	static const int sy = OSC_IMAGE_SY;
 	
+	uint8_t tresholdedValues[CAM_SX * CAM_SY];
+	
 	float values[sy][sx];
 	
 	float weightedX;
 	float weightedY;
+	bool hasWeightedXY;
 	
 	float average;
 	
-	void downsample(const uint8_t * __restrict frameData)
+	void downsample(const uint8_t * __restrict frameData, const int threshold, const float minWeight)
 	{
+		applyTreshold(frameData, CAM_SX, CAM_SY, threshold, tresholdedValues);
+		
 		int64_t totalX = 0;
 		int64_t totalY = 0;
 		int64_t totalValue = 0;
@@ -142,7 +178,7 @@ struct DownsampledImage
 						const int xi = x * REGION_SX + rx;
 						
 						const int index = yi * CAM_SX + xi;
-						const int value = frameData[index];
+						const int value = tresholdedValues[index];
 						
 						sum += value;
 						
@@ -159,8 +195,17 @@ struct DownsampledImage
 		
 		// calculate weighted X and Y
 		
-		weightedX = float(totalX / double(totalValue));
-		weightedY = float(totalY / double(totalValue));
+		if (totalValue >= minWeight * 255.f)
+		{
+			hasWeightedXY = true;
+			
+			weightedX = float(totalX / double(totalValue));
+			weightedY = float(totalY / double(totalValue));
+		}
+		else
+		{
+			hasWeightedXY = false;
+		}
 		
 		// calculate average brightness
 		
@@ -174,13 +219,9 @@ struct DownsampledImage
 	}
 };
 
-void sendCameraData(const uint8_t * frameData, OscSender & sender, const char * addressPrefix)
+void sendCameraData(const uint8_t * frameData, const DownsampledImage & downsampledImage, OscSender & sender, const char * addressPrefix)
 {
 	// output : OSC_IMAGE_SX x OSC_IMAGE_SY values (float)
-	
-	DownsampledImage downsampledImage;
-	
-	downsampledImage.downsample(frameData);
 	
 	// send raw brightness data
 	
@@ -210,21 +251,24 @@ void sendCameraData(const uint8_t * frameData, OscSender & sender, const char * 
 		
 		char address[64];
 		
-		// send weighted X
-		
-		sprintf(address, "%s/weightedX", addressPrefix);
-		
-		p << osc::BeginMessage(address);
-		p << downsampledImage.weightedX;
-		p << osc::EndMessage;
-		
-		// send weighted Y
-		
-		sprintf(address, "%s/weightedY", addressPrefix);
-		
-		p << osc::BeginMessage(address);
-		p << downsampledImage.weightedX;
-		p << osc::EndMessage;
+		if (downsampledImage.hasWeightedXY)
+		{
+			// send weighted X
+			
+			sprintf(address, "%s/weightedX", addressPrefix);
+			
+			p << osc::BeginMessage(address);
+			p << downsampledImage.weightedX;
+			p << osc::EndMessage;
+			
+			// send weighted Y
+			
+			sprintf(address, "%s/weightedY", addressPrefix);
+			
+			p << osc::BeginMessage(address);
+			p << downsampledImage.weightedY;
+			p << osc::EndMessage;
+		}
 		
 		// send average brightness
 		
@@ -246,21 +290,23 @@ struct Recorder
 	
 	uint8_t * frameData = nullptr;
 	
+	DownsampledImage downsampledImage;
+	
 	std::string oscAddressPrefix;
 	
 	SDL_Thread * receiveThread = nullptr;
 	
 	std::atomic<bool> quitRequested;
 	
-	int desiredFps;
-	int currentFps;
+	int desiredFps = 0;
+	int currentFps = 0;
+	int threshold = 0;
+	
 	std::atomic<float> exposure;
 	std::atomic<float> gain;
 	
 	Recorder()
 		: quitRequested(false)
-		, desiredFps(0)
-		, currentFps(0)
 		, exposure(1.f)
 		, gain(0.f)
 	{
@@ -386,7 +432,9 @@ struct Recorder
 			
 			//LOG_DBG("got frame data!", 0);
 			
-			sendCameraData(self->frameData, *s_oscSender, oscAddressPrefix.c_str());
+			self->downsampledImage.downsample(self->frameData, self->threshold, 4.f);
+			
+			sendCameraData(self->frameData, self->downsampledImage, *s_oscSender, oscAddressPrefix.c_str());
 		}
 		
 		return 0;
@@ -416,6 +464,8 @@ struct Controller
 		
 		recorder1 = _recorder1;
 		recorder2 = _recorder2;
+		
+		fps = recorder1->desiredFps;
 		
 		s_controllerMutex = SDL_CreateMutex();
 	}
@@ -487,7 +537,7 @@ struct Controller
 		sprintf_s(menuName, sizeof(menuName), "cam%d", index);
 		
 		g_drawX = 10 + index * CAMVIEW_SX;
-		g_drawY = GFX_SY - 10 - 30;
+		g_drawY = GFX_SY - 10 - 60;
 		
 		pushMenu(menuName);
 		{
@@ -496,6 +546,7 @@ struct Controller
 			if (doTick) SDL_LockMutex(s_controllerMutex);
 			{
 				doTextBox(recorder->oscAddressPrefix, "OSC prefix", dt);
+				doTextBox(recorder->threshold, "threshold", dt);
 			}
 			if (doTick) SDL_UnlockMutex(s_controllerMutex);
 		}
@@ -546,7 +597,8 @@ struct Controller
 		
 		if (recorder != nullptr && recorder->frameData != nullptr)
 		{
-			GLuint texture = createTextureFromR8(recorder->frameData, CAM_SX, CAM_SY, false, true);
+			//GLuint texture = createTextureFromR8(recorder->frameData, CAM_SX, CAM_SY, false, true);
+			GLuint texture = createTextureFromR8(recorder->downsampledImage.tresholdedValues, CAM_SX, CAM_SY, false, true);
 			
 			if (texture != 0)
 			{
