@@ -5,12 +5,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#define DIGI_SAMPLERATE 44100
-//#define DIGI_SAMPLERATE 192000
+//#define DIGI_SAMPLERATE 44100
+#define DIGI_SAMPLERATE 192000
 
 #define PROCESS_INTERRUPTS_ON_AUDIO_THREAD 1
 
 #define INTERP_LINEAR 0
+
+#define FIXBITS 32
 
 //
 
@@ -112,7 +114,7 @@ int AllegroVoiceAPI::voice_get_position(int voice)
 	
 	Assert(voices[voice].used);
 	
-	return voices[voice].position;
+	return voices[voice].position >> FIXBITS;
 }
 
 int AllegroVoiceAPI::voice_get_frequency(int voice)
@@ -166,7 +168,7 @@ void AllegroVoiceAPI::voice_set_position(int voice, int position)
 	{
 		Assert(voices[voice].used);
 		
-		voices[voice].position = int64_t(position) << 16;
+		voices[voice].position = int64_t(position) << FIXBITS;
 	}
 	unlock();
 }
@@ -218,7 +220,7 @@ void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 	
 	stereoPanning = voice.pan / 255.f;
 	
-	int sampleIndex = voice.position >> 16;
+	int sampleIndex = voice.position >> FIXBITS;
 	
 	for (int i = 0; i < numSamples; ++i)
 	{
@@ -246,7 +248,7 @@ void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 		
 		voice.position += voice.sampleIncrement;
 		
-		sampleIndex = voice.position >> 16;
+		sampleIndex = voice.position >> FIXBITS;
 		
 		// handle looping and ping-pong
 		
@@ -258,9 +260,9 @@ void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 				{
 					if (sampleIndex >= voice.sample->loop_end)
 					{
-						voice.position = (int64_t(voice.sample->loop_end - 1) << 16 << 1) - voice.position;
+						voice.position = (int64_t(voice.sample->loop_end - 1) << FIXBITS << 1) - voice.position;
 						
-						sampleIndex = voice.position >> 16;
+						sampleIndex = voice.position >> FIXBITS;
 						
 						voice.sampleIncrement = -voice.sampleIncrement;
 					}
@@ -269,9 +271,9 @@ void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 				{
 					if (sampleIndex < voice.sample->loop_start)
 					{
-						voice.position = (int64_t(voice.sample->loop_start) << 16 << 1) - voice.position;
+						voice.position = (int64_t(voice.sample->loop_start) << FIXBITS << 1) - voice.position;
 						
-						sampleIndex = voice.position >> 16;
+						sampleIndex = voice.position >> FIXBITS;
 						
 						voice.sampleIncrement = -voice.sampleIncrement;
 					}
@@ -281,9 +283,9 @@ void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 			{
 				if (sampleIndex >= voice.sample->loop_end)
 				{
-					voice.position -= int64_t(voice.sample->loop_end - voice.sample->loop_start) << 16;
+					voice.position -= int64_t(voice.sample->loop_end - voice.sample->loop_start) << FIXBITS;
 					
-					sampleIndex = voice.position >> 16;
+					sampleIndex = voice.position >> FIXBITS;
 				}
 			}
 		}
@@ -633,7 +635,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 				const int pan1 = (0xff - voice.pan) * voice.volume;
 				const int pan2 = (       voice.pan) * voice.volume;
 				
-				int sampleIndex = voice.position >> 16;
+				int sampleIndex = voice.position >> FIXBITS;
 				
 				for (int i = 0; i < numSamples; ++i)
 				{
@@ -644,7 +646,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 					#if INTERP_LINEAR
 						const int sampleIndex2 = sampleIndex + 1 < voice.sample->len ? sampleIndex + 1 : sampleIndex;
 						
-						const int t = voice.position & 0xffff;
+						const int t = (voice.position >> (FIXBITS - 16)) & 0xffff;
 					#endif
 					
 						if (voice.sample->bits == 8)
@@ -685,7 +687,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 					
 					voice.position += voice.sampleIncrement;
 					
-					sampleIndex = voice.position >> 16;
+					sampleIndex = voice.position >> FIXBITS;
 					
 					// handle looping and ping-pong
 					
@@ -698,17 +700,17 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 								if (sampleIndex >= voice.sample->loop_end)
 								{
 								#if 1
-									voice.position = (int64_t(voice.sample->loop_end - 1) << 16 << 1) - voice.position;
+									voice.position = (int64_t(voice.sample->loop_end - 1) << FIXBITS << 1) - voice.position;
 									
-									sampleIndex = voice.position >> 16;
+									sampleIndex = voice.position >> FIXBITS;
 								#elif 1
-									const int64_t delta = voice.position - (int64_t(voice.sample->loop_end) << 16);
+									const int64_t delta = voice.position - (int64_t(voice.sample->loop_end) << FIXBITS);
 									
 									voice.position -= delta * 2;
 									
-									sampleIndex = voice.position >> 16;
+									sampleIndex = voice.position >> FIXBITS;
 								#else
-									voice.position = int64_t(voice.sample->loop_end) << 16;
+									voice.position = int64_t(voice.sample->loop_end) << FIXBITS;
 									
 									sampleIndex = voice.sample->loop_end;
 								#endif
@@ -721,17 +723,17 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 								if (sampleIndex < voice.sample->loop_start)
 								{
 								#if 1
-									voice.position = (int64_t(voice.sample->loop_start) << 16 << 1) - voice.position;
+									voice.position = (int64_t(voice.sample->loop_start) << FIXBITS << 1) - voice.position;
 									
-									sampleIndex = voice.position >> 16;
+									sampleIndex = voice.position >> FIXBITS;
 								#elif 1
-									const int64_t delta = voice.position - (int64_t(voice.sample->loop_start) << 16);
+									const int64_t delta = voice.position - (int64_t(voice.sample->loop_start) << FIXBITS);
 									
 									voice.position -= delta * 2;
 									
-									sampleIndex = voice.position >> 16;
+									sampleIndex = voice.position >> FIXBITS;
 								#else
-									voice.position = int64_t(voice.sample->loop_start) << 16;
+									voice.position = int64_t(voice.sample->loop_start) << FIXBITS;
 									
 									sampleIndex = voice.sample->loop_start;
 								#endif
@@ -745,19 +747,19 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 							if (sampleIndex >= voice.sample->loop_end)
 							{
 							#if 1
-								voice.position -= int64_t(voice.sample->loop_end - voice.sample->loop_start) << 16;
+								voice.position -= int64_t(voice.sample->loop_end - voice.sample->loop_start) << FIXBITS;
 								
-								sampleIndex = voice.position >> 16;
+								sampleIndex = voice.position >> FIXBITS;
 							#elif 1
-								const int64_t delta = voice.position - (int64_t(voice.sample->loop_end) << 16);
+								const int64_t delta = voice.position - (int64_t(voice.sample->loop_end) << FIXBITS);
 								
-								voice.position = (voice.sample->loop_start << 16) + delta;
+								voice.position = (int64_t(voice.sample->loop_start) << FIXBITS) + delta;
 								
-								sampleIndex = voice.position >> 16;
+								sampleIndex = voice.position >> FIXBITS;
 							#else
 								sampleIndex = voice.sample->loop_start;
 								
-								voice.position = int64_t(voice.sample->loop_start) << 16;
+								voice.position = int64_t(voice.sample->loop_start) << FIXBITS;
 							#endif
 							}
 						}

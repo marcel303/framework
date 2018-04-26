@@ -90,11 +90,11 @@ struct AllegroVoiceAPI
 		int volume = 255;
 		int playmode = 0;
 		SAMPLE * sample = nullptr;
-		int sampleIncrement = 0;
+		int64_t sampleIncrement = 0;
 		
 		void updateIncrement(const int direction, const int sampleRate)
 		{
-			sampleIncrement = ((int64_t(frequency) << 16) / sampleRate) * direction;
+			sampleIncrement = ((int64_t(frequency) << 32) / sampleRate) * direction;
 		}
 	};
 
