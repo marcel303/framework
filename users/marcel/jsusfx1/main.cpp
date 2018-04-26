@@ -1281,14 +1281,13 @@ struct MidiKeyboard
 	}
 };
 
-static void writeMidi(uint8_t *& midi, int & midiSize, const int channel, const int message, const int param1, const int param2)
+static void writeMidi(uint8_t *& midi, int & midiSize, const int message, const int param1, const int param2)
 {
-	*midi++ = channel;
 	*midi++ = message;
 	*midi++ = param1;
 	*midi++ = param2;
 	
-	midiSize += 4;
+	midiSize += 3;
 }
 
 void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8_t * midi, int * midiSize, const bool doTick, const bool doDraw)
@@ -1320,11 +1319,11 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 				{
 					key.isDown = true;
 					
-					writeMidi(midi, *midiSize, 0, MIDI_ON, key.note, velocity * 127);
+					writeMidi(midi, *midiSize, MIDI_ON, key.note, velocity * 127);
 				}
 				else
 				{
-					writeMidi(midi, *midiSize, 0, MIDI_OFF, key.note, velocity * 127);
+					writeMidi(midi, *midiSize, MIDI_OFF, key.note, velocity * 127);
 					
 					key.isDown = false;
 				}
@@ -1337,6 +1336,12 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 		setColor(colorBlack);
 		drawRect(0, 0, sx, sy);
 		
+		const Color colorKey(200, 200, 200);
+		const Color colorkeyHover(255, 255, 255);
+		const Color colorKeyDown(100, 100, 100);
+		
+		hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / keySy, 1.f), Color(140, 180, 220), colorWhite, COLOR_MUL);
+		
 		for (int i = 0; i < MidiKeyboard::kNumKeys; ++i)
 		{
 			auto & key = kb.keys[i];
@@ -1345,11 +1350,16 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 			{
 				gxTranslatef(keySx * i, 0, 0);
 				
-				setColor(key.isDown ? colorWhite : i == hoverIndex ? colorGreen : colorBlue);
-				drawRect(0, 0, keySx, keySy);
+				setColor(key.isDown ? colorKeyDown : i == hoverIndex ? colorkeyHover : colorKey);
+				
+				hqBegin(HQ_FILLED_RECTS);
+				hqFillRect(0, 0, keySx, keySy);
+				hqEnd();
 			}
 			gxPopMatrix();
 		}
+		
+		hqClearGradient();
 	}
 }
 
@@ -1361,7 +1371,7 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 
 struct MidiBuffer
 {
-	static const int kMaxBytes = 2048;
+	static const int kMaxBytes = 1000 * 3;
 	
 	uint8_t bytes[kMaxBytes];
 	int numBytes = 0;
@@ -1383,10 +1393,9 @@ static bool generateMidiEvent(uint8_t * midi)
 			const uint8_t note = lastNote;
 			const uint8_t value = rand() % 128;
 			
-			midi[0] = 0;
-			midi[1] = msg;
-			midi[2] = note;
-			midi[3] = value;
+			midi[0] = msg;
+			midi[1] = note;
+			midi[2] = value;
 			
 			lastNote = -1;
 			
@@ -1396,10 +1405,9 @@ static bool generateMidiEvent(uint8_t * midi)
 			const uint8_t note = 32 + (rand() % 32);
 			const uint8_t value = rand() % 128;
 			
-			midi[0] = 0;
-			midi[1] = msg;
-			midi[2] = note;
-			midi[3] = value;
+			midi[0] = msg;
+			midi[1] = note;
+			midi[2] = value;
 			
 			lastNote = note;
 			todo = 100 + (rand() % 400);
@@ -1480,9 +1488,6 @@ struct AudioStream_JsusFx : AudioStream
 		
 		lock();
 		{
-			//if (generateMidiEvent(s_midiBuffer.bytes))
-			//	s_midiBuffer.numBytes += 4;
-			
 			fx->setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
 			
 			fx->process(input, output, numSamples, 2, 2);
