@@ -15,6 +15,11 @@
 
 #define OSC_BUFFER_SIZE 2048
 
+#define CAM_SX 320
+#define CAM_SY 240
+#define OSC_IMAGE_SX 8
+#define OSC_IMAGE_SY 6
+
 #define FPS 5
 
 #include "framework.h"
@@ -22,6 +27,17 @@
 
 #include <atomic>
 #include <string>
+
+/*
+
+todo :
+
+- apply weighting/masking post process
+- show masked/post processed image
+- send weighed average pixel X/Y and average value over OSC
+- run dot detector over image
+
+*/
 
 using namespace ps3eye;
 
@@ -91,37 +107,59 @@ static OscSender * s_oscSender = nullptr;
 
 //
 
-void sendCameraData(const uint8_t * frameData, OscSender & sender, const char * addressPrefix)
+struct DownsampledImage
 {
-	// output : 16 x 12 values (float)
-	
-	const int sx = 16;
-	const int sy = 12;
+	static const int sx = OSC_IMAGE_SX;
+	static const int sy = OSC_IMAGE_SY;
 	
 	float values[sy][sx];
 	
-	for (int y = 0; y < sy; ++y)
+	float average;
+	
+	void downsample(const uint8_t * frameData)
 	{
-		for (int x = 0; x < sx; ++x)
+		for (int y = 0; y < sy; ++y)
 		{
-			int sum = 0;
-			
-			for (int ry = 0; ry < 20; ++ry)
+			for (int x = 0; x < sx; ++x)
 			{
-				for (int rx = 0; rx < 20; ++rx)
+				int sum = 0;
+				
+				for (int ry = 0; ry < 20; ++ry)
 				{
-					const int yi = y * 20 + ry;
-					const int xi = x * 20 + rx;
-					
-					const int index = yi * 320 + xi;
-					
-					sum += frameData[index];
+					for (int rx = 0; rx < 20; ++rx)
+					{
+						const int yi = y * 20 + ry;
+						const int xi = x * 20 + rx;
+						
+						const int index = yi * CAM_SX + xi;
+						
+						sum += frameData[index];
+					}
 				}
+				
+				values[y][x] = sum / (20 * 20 * 255.f);
 			}
-			
-			values[y][x] = sum / (20 * 20 * 255.f);
 		}
+		
+		// calculate average brightness
+		
+		average = 0.f;
+		
+		for (int y = 0; y < sy; ++y)
+			for (int x = 0; x < sx; ++x)
+				average += values[y][x];
+		
+		average /= (OSC_IMAGE_SX * OSC_IMAGE_SY);
 	}
+};
+
+void sendCameraData(const uint8_t * frameData, OscSender & sender, const char * addressPrefix)
+{
+	// output : OSC_IMAGE_SX x OSC_IMAGE_SY values (float)
+	
+	DownsampledImage downsampledImage;
+	
+	downsampledImage.downsample(frameData);
 	
 	// send raw brightness data
 	
@@ -134,24 +172,14 @@ void sendCameraData(const uint8_t * frameData, OscSender & sender, const char * 
 		
 		p << osc::BeginMessage(address);
 		{
-			for (int y = 0; y < sy; ++y)
-				for (int x = 0; x < sx; ++x)
-					p << values[y][x];
+			for (int y = 0; y < downsampledImage.sy; ++y)
+				for (int x = 0; x < downsampledImage.sx; ++x)
+					p << downsampledImage.values[y][x];
 		}
 		p << osc::EndMessage;
 		
 		sender.send(p.Data(), p.Size());
 	}
-	
-	// calculate average brightness
-	
-	float average = 0.f;
-	
-	for (int y = 0; y < sy; ++y)
-		for (int x = 0; x < sx; ++x)
-			average += values[y][x];
-	
-	average /= (16 * 12);
 	
 	// send average brightness
 	
@@ -163,7 +191,7 @@ void sendCameraData(const uint8_t * frameData, OscSender & sender, const char * 
 		sprintf(address, "%s/average", addressPrefix);
 		
 		p << osc::BeginMessage(address);
-		p << average;
+		p << downsampledImage.average;
 		p << osc::EndMessage;
 		
 		sender.send(p.Data(), p.Size());
@@ -182,11 +210,15 @@ struct Recorder
 	
 	std::atomic<bool> quitRequested;
 	
+	int desiredFps;
+	int currentFps;
 	std::atomic<float> exposure;
 	std::atomic<float> gain;
 	
 	Recorder()
 		: quitRequested(false)
+		, desiredFps(0)
+		, currentFps(0)
 		, exposure(1.f)
 		, gain(0.f)
 	{
@@ -197,9 +229,11 @@ struct Recorder
 		shut();
 	}
 	
-	bool init(const int deviceIndex, const char * _oscAddressPrefix)
+	bool init(const int deviceIndex, const char * _oscAddressPrefix, const int fps)
 	{
 		oscAddressPrefix = _oscAddressPrefix;
+		desiredFps = fps;
+		currentFps = fps;
 		
 		auto devices = PS3EYECam::getDevices();
 		
@@ -215,7 +249,7 @@ struct Recorder
 		eye = devices[deviceIndex];
 		devices.clear();
 		
-		const bool result = eye->init(320, 240, FPS, PS3EYECam::EOutputFormat::Gray);
+		const bool result = eye->init(CAM_SX, CAM_SY, fps, PS3EYECam::EOutputFormat::Gray);
 
 		if (!result)
 		{
@@ -269,6 +303,29 @@ struct Recorder
 		
 		while (self->quitRequested == false)
 		{
+			std::string oscAddressPrefix;
+			
+			SDL_LockMutex(s_controllerMutex);
+			{
+				oscAddressPrefix = self->oscAddressPrefix;
+				
+				if (self->desiredFps != self->currentFps)
+				{
+					self->currentFps = self->desiredFps;
+					
+					//
+					
+					logDebug("restarting camera stream");
+					
+					self->eye->stop();
+					
+					self->eye->setFrameRate(self->desiredFps);
+					
+					self->eye->start();
+				}
+			}
+			SDL_UnlockMutex(s_controllerMutex);
+			
 			self->eye->setAutogain(false);
 			self->eye->setAutoWhiteBalance(false);
 			self->eye->setExposure(self->exposure * 255.f);
@@ -278,16 +335,6 @@ struct Recorder
 			self->eye->getFrame(self->frameData);
 			
 			//LOG_DBG("got frame data!", 0);
-			
-			// todo : make thread safe
-			
-			std::string oscAddressPrefix;
-			
-			SDL_LockMutex(s_controllerMutex);
-			{
-				oscAddressPrefix = self->oscAddressPrefix;
-			}
-			SDL_UnlockMutex(s_controllerMutex);
 			
 			if ((n % 5) == 0)
 			{
@@ -309,8 +356,11 @@ struct Controller
 	Recorder * recorder2 = nullptr;
 	
 	int fps = 0;
-	std::string oscEndpointIpAddress;
-	int oscEndpointUdpPort = 0;
+	std::string oscEndpointIpAddress = "255.255.255.255";
+	int oscEndpointUdpPort = 8000;
+	
+	std::string currentOscEndpointIpAddress;
+	int currentOscEndpointUdpPort = 0;
 	
 	void init(Recorder * _recorder1, Recorder * _recorder2)
 	{
@@ -345,13 +395,16 @@ struct Controller
 		return recorder;
 	}
 	
-	void tickMenu(const int index, const bool doTick, const bool doDraw, const float dt)
+	void updateSettings(const int index, const int fps)
 	{
-		char menuName[32];
-		sprintf_s(menuName, sizeof(menuName), "cam%d", index);
+		Recorder * recorder = getRecorder(index);
 		
-		makeActive(&uiState, doTick, doDraw);
-		pushMenu(menuName);
+		recorder->desiredFps = fps;
+	}
+	
+	void tickSharedMenu(const bool doTick, const bool doDraw, const float dt)
+	{
+		pushMenu("shared");
 		{
 			doTextBox(fps, "fps", dt);
 			
@@ -360,10 +413,46 @@ struct Controller
 			
 			if (doTick)
 			{
-				// todo : check if FPS changed
+				updateSettings(0, fps);
+				updateSettings(1, fps);
 				
 				// todo : check if OSC endpoint changed
+				
+				if (oscEndpointIpAddress != currentOscEndpointIpAddress || oscEndpointUdpPort != currentOscEndpointUdpPort)
+				{
+					currentOscEndpointIpAddress = oscEndpointIpAddress;
+					currentOscEndpointUdpPort = oscEndpointUdpPort;
+					
+					//
+					
+					logDebug("reinitializing OSC sender");
+					
+					s_oscSender->shut();
+					
+					s_oscSender->init(oscEndpointIpAddress.c_str(), oscEndpointUdpPort);
+				}
 			}
+		}
+		popMenu();
+	}
+	
+	void tickRecorderMenu(const int index, const bool doTick, const bool doDraw, const float dt)
+	{
+		char menuName[32];
+		sprintf_s(menuName, sizeof(menuName), "cam%d", index);
+		
+		g_drawX = 10 + index * CAMVIEW_SX;
+		g_drawY = GFX_SY - 10 - 30;
+		
+		pushMenu(menuName);
+		{
+			Recorder * recorder = getRecorder(index);
+			
+			if (doTick) SDL_LockMutex(s_controllerMutex);
+			{
+				doTextBox(recorder->oscAddressPrefix, "OSC prefix", dt);
+			}
+			if (doTick) SDL_UnlockMutex(s_controllerMutex);
 		}
 		popMenu();
 	}
@@ -394,7 +483,10 @@ struct Controller
 	
 	void tick(const float dt)
 	{
-		tickMenu(0, true, false, dt);
+		makeActive(&uiState, true, false);
+		tickSharedMenu(true, false, dt);
+		tickRecorderMenu(0, true, false, dt);
+		tickRecorderMenu(1, true, false, dt);
 		
 		if (uiState.activeElem == nullptr)
 		{
@@ -409,7 +501,7 @@ struct Controller
 		
 		if (recorder != nullptr && recorder->frameData != nullptr)
 		{
-			GLuint texture = createTextureFromR8(recorder->frameData, 320, 240, false, true);
+			GLuint texture = createTextureFromR8(recorder->frameData, CAM_SX, CAM_SY, false, true);
 			
 			if (texture != 0)
 			{
@@ -453,7 +545,10 @@ struct Controller
 		}
 		gxPopMatrix();
 	
-		tickMenu(0, false, true, 0.f);
+		makeActive(&uiState, false, true);
+		tickSharedMenu(false, true, 0.f);
+		tickRecorderMenu(0, false, true, 0.f);
+		tickRecorderMenu(1, false, true, 0.f);
 	}
 };
 
@@ -483,17 +578,12 @@ int main(int argc, char * argv[])
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
-	OscSender sender;
-	if (!sender.init("255.255.255.255", 8000))
-		return -1;
-	s_oscSender = &sender;
-	
 	Recorder recorder1;
-	if (!recorder1.init(0, "/env/light") && false)
+	if (!recorder1.init(0, "/env/light", FPS) && false)
 		return -1;
 	
 	Recorder recorder2;
-	if (!recorder2.init(1, "/room/light") && false)
+	if (!recorder2.init(1, "/room/light", FPS) && false)
 		return -1;
 	
 	// load settings
@@ -527,6 +617,9 @@ int main(int argc, char * argv[])
 	
 	Controller controller;
 	controller.init(&recorder1, &recorder2);
+	
+	OscSender sender;
+	s_oscSender = &sender;
 	
 	for (;;)
 	{
