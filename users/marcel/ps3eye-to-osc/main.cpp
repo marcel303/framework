@@ -114,32 +114,53 @@ struct DownsampledImage
 	
 	float values[sy][sx];
 	
+	float weightedX;
+	float weightedY;
+	
 	float average;
 	
-	void downsample(const uint8_t * frameData)
+	void downsample(const uint8_t * __restrict frameData)
 	{
+		int64_t totalX = 0;
+		int64_t totalY = 0;
+		int64_t totalValue = 0;
+		
+		const int REGION_SX = CAM_SX / OSC_IMAGE_SX;
+		const int REGION_SY = CAM_SY / OSC_IMAGE_SY;
+		
 		for (int y = 0; y < sy; ++y)
 		{
 			for (int x = 0; x < sx; ++x)
 			{
 				int sum = 0;
 				
-				for (int ry = 0; ry < 20; ++ry)
+				for (int ry = 0; ry < REGION_SY; ++ry)
 				{
-					for (int rx = 0; rx < 20; ++rx)
+					for (int rx = 0; rx < REGION_SX; ++rx)
 					{
-						const int yi = y * 20 + ry;
-						const int xi = x * 20 + rx;
+						const int yi = y * REGION_SY + ry;
+						const int xi = x * REGION_SX + rx;
 						
 						const int index = yi * CAM_SX + xi;
+						const int value = frameData[index];
 						
-						sum += frameData[index];
+						sum += value;
+						
+						totalX += value * xi;
+						totalY += value * yi;
 					}
 				}
 				
-				values[y][x] = sum / (20 * 20 * 255.f);
+				values[y][x] = sum / (REGION_SX * REGION_SY * 255.f);
+				
+				totalValue += sum;
 			}
 		}
+		
+		// calculate weighted X and Y
+		
+		weightedX = float(totalX / double(totalValue));
+		weightedY = float(totalY / double(totalValue));
 		
 		// calculate average brightness
 		
@@ -181,18 +202,39 @@ void sendCameraData(const uint8_t * frameData, OscSender & sender, const char * 
 		sender.send(p.Data(), p.Size());
 	}
 	
-	// send average brightness
-	
 	{
 		char buffer[OSC_BUFFER_SIZE];
 		osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
 		
+		p << osc::BeginBundle();
+		
 		char address[64];
+		
+		// send weighted X
+		
+		sprintf(address, "%s/weightedX", addressPrefix);
+		
+		p << osc::BeginMessage(address);
+		p << downsampledImage.weightedX;
+		p << osc::EndMessage;
+		
+		// send weighted Y
+		
+		sprintf(address, "%s/weightedY", addressPrefix);
+		
+		p << osc::BeginMessage(address);
+		p << downsampledImage.weightedX;
+		p << osc::EndMessage;
+		
+		// send average brightness
+		
 		sprintf(address, "%s/average", addressPrefix);
 		
 		p << osc::BeginMessage(address);
 		p << downsampledImage.average;
 		p << osc::EndMessage;
+		
+		p << osc::EndBundle;
 		
 		sender.send(p.Data(), p.Size());
 	}
@@ -326,22 +368,25 @@ struct Recorder
 			}
 			SDL_UnlockMutex(s_controllerMutex);
 			
-			self->eye->setAutogain(false);
-			self->eye->setAutoWhiteBalance(false);
-			self->eye->setExposure(self->exposure * 255.f);
-			self->eye->setGain(self->gain * 63.f);
-			//self->eye->setAutogain(true);
+			if (self->eye->getAutogain())
+				self->eye->setAutogain(false);
+			
+			if (self->eye->getAutoWhiteBalance())
+				self->eye->setAutoWhiteBalance(false);
+			
+			const int exposurei = self->exposure * 255.f;
+			if (self->eye->getExposure() != exposurei)
+				self->eye->setExposure(exposurei);
+			
+			const int gaini = self->gain * 63.f;
+			if (self->eye->getGain() != gaini)
+				self->eye->setGain(gaini);
 			
 			self->eye->getFrame(self->frameData);
 			
 			//LOG_DBG("got frame data!", 0);
 			
-			if ((n % 5) == 0)
-			{
-				sendCameraData(self->frameData, *s_oscSender, oscAddressPrefix.c_str());
-			}
-
-			n++;
+			sendCameraData(self->frameData, *s_oscSender, oscAddressPrefix.c_str());
 		}
 		
 		return 0;
