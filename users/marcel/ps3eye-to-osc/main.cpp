@@ -110,11 +110,13 @@ static OscSender * s_oscSender = nullptr;
 static void applyTreshold(
 	const uint8_t * __restrict color_surface,
 	const int sx, const int sy,
-	const int threshold,
+	const int _threshold,
 	uint8_t * __restrict value_surface)
 {
+	const int threshold = clamp(_threshold, 0, 255);
+	
 	const int add1 = - threshold;
-	const int max1 = (255 - threshold);
+	const int max1 = (256 - threshold);
 	const int mul1 = 255 * 256 / max1;
 	
 	for (int y = 0; y < sy; ++y)
@@ -387,8 +389,6 @@ struct Recorder
 	{
 		auto self = (Recorder*)obj;
 		
-		int n = 0;
-		
 		while (self->quitRequested == false)
 		{
 			std::string oscAddressPrefix;
@@ -448,7 +448,6 @@ struct Controller
 	Recorder * recorder1 = nullptr;
 	Recorder * recorder2 = nullptr;
 	
-	int fps = 0;
 	std::string oscEndpointIpAddress = "255.255.255.255";
 	int oscEndpointUdpPort = 8000;
 	
@@ -464,8 +463,6 @@ struct Controller
 		
 		recorder1 = _recorder1;
 		recorder2 = _recorder2;
-		
-		fps = recorder1->desiredFps;
 		
 		s_controllerMutex = SDL_CreateMutex();
 	}
@@ -490,28 +487,16 @@ struct Controller
 		return recorder;
 	}
 	
-	void updateSettings(const int index, const int fps)
-	{
-		Recorder * recorder = getRecorder(index);
-		
-		recorder->desiredFps = fps;
-	}
-	
 	void tickSharedMenu(const bool doTick, const bool doDraw, const float dt)
 	{
 		pushMenu("shared");
 		{
-			doTextBox(fps, "fps", dt);
-			
 			doTextBox(oscEndpointIpAddress, "OSC address", dt);
 			doTextBox(oscEndpointUdpPort, "OSC port", dt);
 			
 			if (doTick)
 			{
-				updateSettings(0, fps);
-				updateSettings(1, fps);
-				
-				// todo : check if OSC endpoint changed
+				// check if OSC endpoint changed
 				
 				if (oscEndpointIpAddress != currentOscEndpointIpAddress || oscEndpointUdpPort != currentOscEndpointUdpPort)
 				{
@@ -546,6 +531,7 @@ struct Controller
 			if (doTick) SDL_LockMutex(s_controllerMutex);
 			{
 				doTextBox(recorder->oscAddressPrefix, "OSC prefix", dt);
+				doTextBox(recorder->desiredFps, "fps", dt);
 				doTextBox(recorder->threshold, "threshold", dt);
 			}
 			if (doTick) SDL_UnlockMutex(s_controllerMutex);
