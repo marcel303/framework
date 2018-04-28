@@ -250,6 +250,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	enum PrimType
 	{
 		kPrimType_Other,
+		kPrimType_Rect,
+		kPrimType_RectLine,
 		kPrimType_HqLine,
 		kPrimType_HqFillCircle,
 		kPrimType_HqStrokeCircle
@@ -387,7 +389,11 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	{
 		if (_primType != primType)
 		{
-			if (primType == kPrimType_HqLine)
+			if (primType == kPrimType_Rect)
+				gxEnd();
+			else if (primType == kPrimType_RectLine)
+				gxEnd();
+			else if (primType == kPrimType_HqLine)
 				hqEnd();
 			else if (primType == kPrimType_HqFillCircle)
 				hqEnd();
@@ -396,7 +402,11 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			
 			primType = _primType;
 			
-			if (primType == kPrimType_HqLine)
+			if (primType == kPrimType_Rect)
+				gxBegin(GL_QUADS);
+			else if (primType == kPrimType_RectLine)
+				gxBegin(GL_LINES);
+			else if (primType == kPrimType_HqLine)
 				hqBegin(HQ_LINES);
 			else if (primType == kPrimType_HqFillCircle)
 				hqBegin(HQ_FILLED_CIRCLES);
@@ -465,11 +475,6 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_rect(int np, EEL_F ** params) override
 	{
-		PRIM_SCOPE(kPrimType_Other);
-		
-		IMAGE_SCOPE;
-		BLEND_SCOPE;
-		
 		const int x1 = (int)floor(params[0][0]);
 		const int y1 = (int)floor(params[1][0]);
 		const int w = (int)floor(params[2][0]);
@@ -479,15 +484,37 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		
   		const bool filled = (np < 5 || params[4][0] > 0.5);
 		
+		PRIM_SCOPE(filled ? kPrimType_Rect : kPrimType_RectLine);
+		
+		IMAGE_SCOPE;
+		BLEND_SCOPE;
+		
+		static int n = 0;
+		
   		if (filled)
   		{
   			updateColor();
-			drawRect(x1, y1, x2, y2);
+			
+			gxVertex2f(x1, y1);
+			gxVertex2f(x2, y1);
+			gxVertex2f(x2, y2);
+			gxVertex2f(x1, y2);
 		}
 		else
 		{
 			updateColor();
-			drawRectLine(x1, y1, x2, y2);
+			
+			gxVertex2f(x1, y1);
+			gxVertex2f(x2, y1);
+			
+			gxVertex2f(x2, y1);
+			gxVertex2f(x2, y2);
+			
+			gxVertex2f(x2, y2);
+			gxVertex2f(x1, y2);
+			
+			gxVertex2f(x1, y2);
+			gxVertex2f(x1, y1);
 		}
 	}
 	
