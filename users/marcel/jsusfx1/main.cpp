@@ -243,8 +243,18 @@ struct JsusFx_ImageCache
 
 #define LINE_STROKE 1.f
 
+#define PRIM_SCOPE(type) updatePrimType(type)
+
 struct JsusFxGfx_Framework : JsusFxGfx
 {
+	enum PrimType
+	{
+		kPrimType_Other,
+		kPrimType_HqLine,
+		kPrimType_HqFillCircle,
+		kPrimType_HqStrokeCircle
+	};
+	
 	float m_fontSize = 10.f;
 	
 	JsusFx_ImageCache imageCache;
@@ -255,6 +265,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	int currentBlendMode = -1;
 	
 	JsusFx & jsusFx;
+	
+	PrimType primType = kPrimType_Other;
 	
 	JsusFxGfx_Framework(JsusFx & _jsusFx)
 		: JsusFxGfx()
@@ -355,6 +367,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	{
 		logDebug("endDraw");
 		
+		PRIM_SCOPE(kPrimType_Other);
+		
 		popBlend();
 		currentBlendMode = -1;
 		
@@ -367,6 +381,28 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		m_fontSize = 12.f;
 		
 		imageCache.free();
+	}
+	
+	void updatePrimType(PrimType _primType)
+	{
+		if (_primType != primType)
+		{
+			if (primType == kPrimType_HqLine)
+				hqEnd();
+			else if (primType == kPrimType_HqFillCircle)
+				hqEnd();
+			else if (primType == kPrimType_HqStrokeCircle)
+				hqEnd();
+			
+			primType = _primType;
+			
+			if (primType == kPrimType_HqLine)
+				hqBegin(HQ_LINES);
+			else if (primType == kPrimType_HqFillCircle)
+				hqBegin(HQ_FILLED_CIRCLES);
+			else if (primType == kPrimType_HqStrokeCircle)
+				hqBegin(HQ_STROKED_CIRCLES);
+		}
 	}
 	
 	void updateBlendMode()
@@ -413,6 +449,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_line(int np, EEL_F ** params) override
 	{
+		PRIM_SCOPE(kPrimType_HqLine);
+		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
 		
@@ -422,13 +460,13 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		const int y2 = (int)floor(params[3][0]);
 		
 		updateColor();
-		hqBegin(HQ_LINES);
 		hqLine(x1, y1, LINE_STROKE, x2, y2, LINE_STROKE);
-		hqEnd();
 	}
 	
 	virtual void gfx_rect(int np, EEL_F ** params) override
 	{
+		PRIM_SCOPE(kPrimType_Other);
+		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
 		
@@ -455,27 +493,27 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_circle(EEL_F x, EEL_F y, EEL_F radius, bool fill, bool aa) override
 	{
+		PRIM_SCOPE(fill ? kPrimType_HqFillCircle : kPrimType_HqStrokeCircle);
+		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
 		
 		if (fill)
 		{
 			updateColor();
-			hqBegin(HQ_FILLED_CIRCLES);
 			hqFillCircle(x, y, radius);
-			hqEnd();
 		}
 		else
 		{
 			updateColor();
-			hqBegin(HQ_STROKED_CIRCLES);
 			hqStrokeCircle(x, y, radius, 1.f);
-			hqEnd();
 		}
 	}
 	
 	virtual void gfx_triangle(EEL_F ** parms, int np) override
 	{
+		PRIM_SCOPE(kPrimType_Other);
+		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
 		
@@ -526,13 +564,13 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_lineto(EEL_F xpos, EEL_F ypos, EEL_F useaa) override
 	{
+		PRIM_SCOPE(kPrimType_HqLine);
+		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
 		
 		updateColor();
-		hqBegin(HQ_LINES);
 		hqLine(*m_gfx_x, *m_gfx_y, LINE_STROKE, xpos, ypos, LINE_STROKE);
-		hqEnd();
 		
 		*m_gfx_x = xpos;
 		*m_gfx_y = ypos;
@@ -540,6 +578,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_rectto(EEL_F xpos, EEL_F ypos) override
 	{
+		PRIM_SCOPE(kPrimType_Other);
+		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
 		
@@ -553,6 +593,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_arc(int np, EEL_F ** parms)
 	{
 		STUB;
+		
+		PRIM_SCOPE(kPrimType_Other);
 		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
@@ -583,6 +625,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_roundrect(int np, EEL_F ** parms) override
 	{
+		PRIM_SCOPE(kPrimType_Other);
+		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
 
@@ -615,6 +659,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		
 		if (w <= 0 || h <= 0)
 			return;
+		
+		PRIM_SCOPE(kPrimType_Other);
 		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
@@ -658,6 +704,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_drawnumber(EEL_F n, int nd) override
 	{
+		PRIM_SCOPE(kPrimType_Other);
+		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
 		
@@ -676,6 +724,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_drawchar(EEL_F n) override
 	{
+		PRIM_SCOPE(kPrimType_Other);
+		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
 		
@@ -699,6 +749,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_drawstr(void * opaque, EEL_F ** parms, int nparms, int formatmode) override // mode=1 for format, 2 for purely measure no format, 3 for measure char
 	{
+		PRIM_SCOPE(kPrimType_Other);
+		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
 		
@@ -784,6 +836,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_setpixel(EEL_F r, EEL_F g, EEL_F b) override
 	{
+		PRIM_SCOPE(kPrimType_Other);
+		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
 		
@@ -793,6 +847,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	virtual void gfx_getpixel(EEL_F * r, EEL_F * g, EEL_F * b) override
 	{
+		PRIM_SCOPE(kPrimType_Other);
+		
 		IMAGE_SCOPE;
 		
 		const int x = *m_gfx_x;
@@ -814,6 +870,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 
 	virtual EEL_F gfx_loadimg(JsusFx & jsusFx, int index, EEL_F loadFrom) override
 	{
+		PRIM_SCOPE(kPrimType_Other);
+		
 		const int fileIndex = (int)loadFrom;
 		
 		if (fileIndex < 0 || fileIndex >= JsusFx::kMaxFileInfos)
@@ -1006,6 +1064,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 			
 			if (image.isValid)
 			{
+				PRIM_SCOPE(kPrimType_Other);
+				
 				IMAGE_SCOPE;
 				
 				const int mode = *m_gfx_mode;
@@ -1075,6 +1135,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		
 		if (!image.isValid)
 			return;
+		
+		PRIM_SCOPE(kPrimType_Other);
 		
 		IMAGE_SCOPE;
 		
@@ -1559,7 +1621,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
-	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
+	const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
@@ -1580,7 +1642,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Level Meter.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Learning Sampler.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Humonica.jsfx";
-	const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And String.jsfx";
+	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And String.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And Chord.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Echo-Cycles.jsfx";
 	
