@@ -25,6 +25,13 @@
 #include "framework.h"
 #include "../../../libparticle/ui.h" // todo : rename
 
+#include "../../../vfxGraph/objects/blobDetector.h"
+#include "../../../vfxGraph/objects/blobDetector.cpp"
+#include "../../../vfxGraph/vfxNodes/dotDetector.h"
+#include "../../../vfxGraph/vfxNodes/dotDetector.cpp"
+
+#include "Benchmark.h"
+
 #include <atomic>
 #include <string>
 
@@ -140,12 +147,49 @@ static void applyTreshold(
 	}
 }
 
+struct FrameData
+{
+	static const int kMaxIslands = 8;
+	static const int kMaxBlobs = 8;
+	
+	uint8_t cameraImage[CAM_SX * CAM_SY];
+	
+	uint8_t tresholdedValues[CAM_SX * CAM_SY];
+	
+	uint8_t mask[CAM_SX * CAM_SY];
+	
+	DotIsland islands[kMaxIslands];
+	int numIslands = 0;
+	
+	Blob blobs[kMaxBlobs];
+	int numBlobs = 0;
+	
+	void doDotDetection()
+	{
+		DotDetector::treshold(tresholdedValues, CAM_SX, mask, CAM_SX, CAM_SX, CAM_SY, DotDetector::kTresholdTest_GreaterEqual, 127);
+		
+		numIslands = DotDetector::detectDots(mask, CAM_SX, CAM_SY, 20.f, islands, kMaxIslands, true);
+		
+		logDebug("num islands: %d", numIslands);
+	}
+	
+	void doBlobDetection()
+	{
+		Benchmark bm("blobDetection");
+		
+		uint8_t values[CAM_SX * CAM_SY];
+		memcpy(values, tresholdedValues, sizeof(values));
+		
+		numBlobs = BlobDetector::detectBlobs(values, CAM_SX, CAM_SY, blobs, kMaxBlobs);
+		
+		logDebug("num blobs: %d", numBlobs);
+	}
+};
+
 struct DownsampledImage
 {
 	static const int sx = OSC_IMAGE_SX;
 	static const int sy = OSC_IMAGE_SY;
-	
-	uint8_t tresholdedValues[CAM_SX * CAM_SY];
 	
 	float values[sy][sx];
 	
@@ -155,10 +199,8 @@ struct DownsampledImage
 	
 	float average;
 	
-	void downsample(const uint8_t * __restrict frameData, const int threshold, const float minWeight)
+	void downsample(const uint8_t * __restrict imageData, const float minWeight)
 	{
-		applyTreshold(frameData, CAM_SX, CAM_SY, threshold, tresholdedValues);
-		
 		int64_t totalX = 0;
 		int64_t totalY = 0;
 		int64_t totalValue = 0;
@@ -180,7 +222,7 @@ struct DownsampledImage
 						const int xi = x * REGION_SX + rx;
 						
 						const int index = yi * CAM_SX + xi;
-						const int value = tresholdedValues[index];
+						const int value = imageData[index];
 						
 						sum += value;
 						
@@ -290,7 +332,8 @@ struct Recorder
 {
 	PS3EYECam::PS3EYERef eye;
 	
-	uint8_t * frameData = nullptr;
+	FrameData frameData;
+	//uint8_t * frameData = nullptr;
 	
 	DownsampledImage downsampledImage;
 	
@@ -350,11 +393,6 @@ struct Recorder
 
 		eye->start();
 		
-		const int sx = eye->getWidth();
-		const int sy = eye->getHeight();
-		
-		frameData = new uint8_t[sx * sy];
-		
 		receiveThread = SDL_CreateThread(receiveThreadProc, "PS3 Eye Camera", this);
 		
 		return true;
@@ -370,12 +408,6 @@ struct Recorder
 			receiveThread = nullptr;
 			
 			quitRequested = false;
-		}
-		
-		if (frameData != nullptr)
-		{
-			delete [] frameData;
-			frameData = nullptr;
 		}
 		
 		if (eye != nullptr)
@@ -428,13 +460,19 @@ struct Recorder
 			if (self->eye->getGain() != gaini)
 				self->eye->setGain(gaini);
 			
-			self->eye->getFrame(self->frameData);
+			self->eye->getFrame(self->frameData.cameraImage);
 			
 			//LOG_DBG("got frame data!", 0);
 			
-			self->downsampledImage.downsample(self->frameData, self->threshold, 4.f);
+			applyTreshold(self->frameData.cameraImage, CAM_SX, CAM_SY, self->threshold, self->frameData.tresholdedValues);
 			
-			sendCameraData(self->frameData, self->downsampledImage, *s_oscSender, oscAddressPrefix.c_str());
+			self->downsampledImage.downsample(self->frameData.tresholdedValues, 4.f);
+			
+			self->frameData.doDotDetection();
+			
+			self->frameData.doBlobDetection();
+			
+			sendCameraData(self->frameData.cameraImage, self->downsampledImage, *s_oscSender, oscAddressPrefix.c_str());
 		}
 		
 		return 0;
@@ -581,10 +619,10 @@ struct Controller
 	{
 		Recorder * recorder = getRecorder(index);
 		
-		if (recorder != nullptr && recorder->frameData != nullptr)
+		if (recorder != nullptr && recorder->frameData.cameraImage != nullptr)
 		{
 			//GLuint texture = createTextureFromR8(recorder->frameData, CAM_SX, CAM_SY, false, true);
-			GLuint texture = createTextureFromR8(recorder->downsampledImage.tresholdedValues, CAM_SX, CAM_SY, false, true);
+			GLuint texture = createTextureFromR8(recorder->frameData.tresholdedValues, CAM_SX, CAM_SY, false, true);
 			
 			if (texture != 0)
 			{
@@ -683,6 +721,7 @@ int main(int argc, char * argv[])
 				
 				if (recorder1Xml)
 				{
+					recorder1.desiredFps = floatAttrib(recorder1Xml, "fps", recorder1.desiredFps);
 					recorder1.exposure = floatAttrib(recorder1Xml, "exposure", recorder1.exposure);
 					recorder1.gain = floatAttrib(recorder1Xml, "gain", recorder1.gain);
 				}
@@ -691,6 +730,7 @@ int main(int argc, char * argv[])
 				
 				if (recorder2Xml)
 				{
+					recorder2.desiredFps = floatAttrib(recorder2Xml, "fps", recorder2.desiredFps);
 					recorder2.exposure = floatAttrib(recorder2Xml, "exposure", recorder2.exposure);
 					recorder2.gain = floatAttrib(recorder2Xml, "gain", recorder2.gain);
 				}
@@ -738,6 +778,7 @@ int main(int argc, char * argv[])
 		{
 			p.OpenElement("recorder1");
 			{
+				p.PushAttribute("fps", recorder1.desiredFps);
 				p.PushAttribute("exposure", recorder1.exposure);
 				p.PushAttribute("gain", recorder1.gain);
 			}
@@ -745,6 +786,7 @@ int main(int argc, char * argv[])
 			
 			p.OpenElement("recorder2");
 			{
+				p.PushAttribute("fps", recorder2.desiredFps);
 				p.PushAttribute("exposure", recorder2.exposure);
 				p.PushAttribute("gain", recorder2.gain);
 			}
