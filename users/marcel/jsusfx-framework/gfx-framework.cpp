@@ -27,6 +27,10 @@
 
 #include "framework.h"
 #include "gfx-framework.h"
+#include "jsusfx.h"
+#include "StringEx.h"
+
+#include "WDL/wdlstring.h"
 
 #define STUB logDebug("function %s not implemented", __FUNCTION__)
 //#define STUB do { } while (false)

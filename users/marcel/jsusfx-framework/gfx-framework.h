@@ -31,6 +31,7 @@
 
 class Surface;
 
+class JsusFx;
 struct JsusFx_Image;
 struct JsusFx_ImageCache;
 struct JsusFxGfx_Framework; // implements JsusFxGfx
@@ -111,7 +112,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_triangle(EEL_F ** parms, int np) override;
 	virtual void gfx_lineto(EEL_F xpos, EEL_F ypos, EEL_F useaa) override;
 	virtual void gfx_rectto(EEL_F xpos, EEL_F ypos) override;
-	virtual void gfx_arc(int np, EEL_F ** parms);
+	virtual void gfx_arc(int np, EEL_F ** parms) override;
 	virtual void gfx_set(int np, EEL_F ** params) override;
 	virtual void gfx_roundrect(int np, EEL_F ** parms) override;
 	virtual void gfx_grad_or_muladd_rect(int mode, int np, EEL_F ** parms) override;
