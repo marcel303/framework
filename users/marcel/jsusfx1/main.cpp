@@ -4,32 +4,18 @@
 #include "jsusfx_file.h"
 #include "jsusfx_gfx.h"
 
+#include "gfx-framework.h"
+
 #include "Path.h"
-#include "StringEx.h"
 
-#include <fstream>
-
-#include "WDL/wdlstring.h"
-
-#include "../jsusfx-framework/gfx-framework.cpp"
 /*
 
 GFX status:
-- Most of Liteon scripts appear to work.
-- JSFX-Kawa (https://github.com/kawaCat/JSFX-kawa) mostly works. Some text and blitting not working yet.
-- ATK for Reaper loads ok, but doesn't output anything to the screen at all.
+- All Liteon scripts appear to work.
+- JSFX-Kawa (https://github.com/kawaCat/JSFX-kawa) works.
+- ATK for Reaper works.
 
-*/
-
-/*
-
-import filename -- REAPER v4.25+
-
-You can specify a filename to import (this filename will be searched within the JS effect directory). Importing files via this directive will have any functions defined in their @init sections available to the local effect. Additionally, if the imported file implements other sections (such as @sample, etc), and the importing file does not implement those sections, the imported version of those sections will be used.
-
-Note that files that are designed for import only (such as function libraries) should ideally be named xyz.jsfx-inc, as these will be ignored in the user FX list in REAPER.
-
----
+todo :
 
 mouse_cap
 
@@ -43,9 +29,6 @@ mouse_cap is a bitfield of mouse and keyboard modifier state.
 	64: middle mouse button -- REAPER 4.60+
 
 mouse_wheel
-
-gfx_texth
-	avergage height of a text line
 
 gfx_mode
 	0x1 = additive
