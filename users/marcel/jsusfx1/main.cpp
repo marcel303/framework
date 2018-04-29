@@ -64,8 +64,23 @@ const int GFX_SY = 720;
 struct JsusFxPathLibraryTest : JsusFxPathLibrary {
 	std::string dataRoot;
 	
+	std::vector<std::string> searchPaths;
+	
 	JsusFxPathLibraryTest(const char * _dataRoot) {
 		dataRoot = _dataRoot;
+	}
+	
+	void addSearchPath(const std::string & path)
+	{
+		if (path.empty())
+			return;
+		
+		// make sure it ends with '/' or '\\'
+		
+		if (path.back() == '/' || path.back() == '\\')
+			searchPaths.push_back(path);
+		else
+			searchPaths.push_back(path + "/");
 	}
 	
 	static bool fileExists(const std::string &filename) {
@@ -82,9 +97,14 @@ struct JsusFxPathLibraryTest : JsusFxPathLibrary {
 			resolvedPath = resolvedPath + importPath;
 			return true;
 		}
-		resolvedPath = resolvedPath + "lib/" + importPath; // fixme : this is a hack to make JSFX-Kawa work, without having to deal with search paths more generally
-		if (fileExists(resolvedPath))
-			return true;
+		for (std::string & searchPath : searchPaths)
+		{
+			if (fileExists(resolvedPath + searchPath + importPath))
+			{
+				resolvedPath = resolvedPath + searchPath + importPath;
+				return true;
+			}
+		}
 		return false;
 	}
 	
@@ -488,8 +508,6 @@ struct JsusFxGfx_Framework : JsusFxGfx
 		
 		IMAGE_SCOPE;
 		BLEND_SCOPE;
-		
-		static int n = 0;
 		
   		if (filled)
   		{
@@ -1629,6 +1647,7 @@ int main(int argc, char * argv[])
 	JsusFx::init();
 	
 	JsusFxPathLibraryTest pathLibrary(DATA_ROOT);
+	pathLibrary.addSearchPath("lib");
 	
 	JsusFxTest fx(pathLibrary);
 	s_fx = &fx;
