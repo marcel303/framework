@@ -22,7 +22,8 @@ project(jsusfx-framework)
 # -- framework + JSUSFX library --
 
 set(sources
-	gfx-framework.cpp)
+	gfx-framework.cpp
+	jsusfx-framework.cpp)
 
 file(GLOB_RECURSE headers *.h)
 
