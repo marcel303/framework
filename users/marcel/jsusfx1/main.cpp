@@ -61,74 +61,6 @@ gfx_mode
 const int GFX_SX = 1000;
 const int GFX_SY = 720;
 
-struct JsusFxPathLibraryTest : JsusFxPathLibrary {
-	std::string dataRoot;
-	
-	std::vector<std::string> searchPaths;
-	
-	JsusFxPathLibraryTest(const char * _dataRoot) {
-		dataRoot = _dataRoot;
-	}
-	
-	void addSearchPath(const std::string & path)
-	{
-		if (path.empty())
-			return;
-		
-		// make sure it ends with '/' or '\\'
-		
-		if (path.back() == '/' || path.back() == '\\')
-			searchPaths.push_back(path);
-		else
-			searchPaths.push_back(path + "/");
-	}
-	
-	static bool fileExists(const std::string &filename) {
-		std::ifstream is(filename);
-		return is.is_open();
-	}
-
-	virtual bool resolveImportPath(const std::string &importPath, const std::string &parentPath, std::string &resolvedPath) override {
-		const size_t pos = parentPath.rfind('/', '\\');
-		if (pos != std::string::npos)
-			resolvedPath = parentPath.substr(0, pos + 1);
-		if (fileExists(resolvedPath + importPath))
-		{
-			resolvedPath = resolvedPath + importPath;
-			return true;
-		}
-		for (std::string & searchPath : searchPaths)
-		{
-			if (fileExists(resolvedPath + searchPath + importPath))
-			{
-				resolvedPath = resolvedPath + searchPath + importPath;
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	virtual bool resolveDataPath(const std::string &importPath, std::string &resolvedPath) override {
-		resolvedPath = dataRoot + "/" + importPath;
-		return fileExists(resolvedPath);
-	}
-	
-	virtual std::istream* open(const std::string &path) override {
-		std::ifstream *stream = new std::ifstream(path);
-		if ( stream->is_open() == false ) {
-			delete stream;
-			stream = nullptr;
-		}
-		
-		return stream;
-	}
-	
-	virtual void close(std::istream *&stream) override {
-		delete stream;
-		stream = nullptr;
-	}
-};
-
 class JsusFxTest : public JsusFx {
 public:
 	JsusFxTest(JsusFxPathLibrary &pathLibrary)
@@ -1627,7 +1559,7 @@ static void handleAction(const std::string & action, const Dictionary & d)
 		{
 			auto filename = d.getString("file", "");
 			
-			JsusFxPathLibraryTest pathLibrary(DATA_ROOT);
+			JsusFxPathLibrary_Basic pathLibrary(DATA_ROOT);
 			s_fx->compile(pathLibrary, filename);
 			
 			s_fx->prepare(SAMPLE_RATE, BUFFER_SIZE);
@@ -1646,7 +1578,7 @@ int main(int argc, char * argv[])
 	
 	JsusFx::init();
 	
-	JsusFxPathLibraryTest pathLibrary(DATA_ROOT);
+	JsusFxPathLibrary_Basic pathLibrary(DATA_ROOT);
 	pathLibrary.addSearchPath("lib");
 	
 	JsusFxTest fx(pathLibrary);
