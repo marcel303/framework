@@ -16,22 +16,22 @@ if (NOT HAS_FRAMEWORK)
 	add_subdirectory(../../../framework framework)
 endif (NOT HAS_FRAMEWORK)
 
-add_subdirectory(../../../../jsusfx jsusfx)
+add_subdirectory(../jsusfx-framework jsusfx-framework)
 
 #
 
-project(jsfx-framework)
+project(jsfx-framework-test)
 
-# --- jsusfx-framework ---
+# --- jsusfx-framework-test ---
 
 file(GLOB source "*.cpp" "*.h")
 
 source_group("sources" FILES ${source})
 
-add_executable(jsusfx-framework ${source})
+add_executable(jsusfx-framework-test ${source})
 
-target_link_libraries(jsusfx-framework PRIVATE jsusfx)
-target_link_libraries(jsusfx-framework PRIVATE framework)
-target_link_libraries(jsusfx-framework PRIVATE libgg)
+target_link_libraries(jsusfx-framework-test PRIVATE jsusfx-framework)
+target_link_libraries(jsusfx-framework-test PRIVATE framework)
+target_link_libraries(jsusfx-framework-test PRIVATE libgg)
 
-target_link_libraries(jsusfx-framework PRIVATE ${FRAMEWORK_LIBRARIES})
+target_link_libraries(jsusfx-framework-test PRIVATE ${FRAMEWORK_LIBRARIES})
