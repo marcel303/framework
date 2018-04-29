@@ -5,6 +5,7 @@
 #include "jsusfx_gfx.h"
 
 #include "gfx-framework.h"
+#include "jsusfx-framework.h"
 
 #include "Path.h"
 
@@ -44,33 +45,6 @@ gfx_mode
 
 const int GFX_SX = 1000;
 const int GFX_SY = 720;
-
-class JsusFxTest : public JsusFx {
-public:
-	JsusFxTest(JsusFxPathLibrary &pathLibrary)
-		: JsusFx(pathLibrary) {
-	}
-	
-    virtual void displayMsg(const char *fmt, ...) override {
-        char output[4096];
-        va_list argptr;
-        va_start(argptr, fmt);
-        vsnprintf(output, 4095, fmt, argptr);
-        va_end(argptr);
-
-        logDebug(output);
-    }
-
-    virtual void displayError(const char *fmt, ...) override {
-        char output[4096];
-        va_list argptr;
-        va_start(argptr, fmt);
-        vsnprintf(output, 4095, fmt, argptr);
-        va_end(argptr);
-
-        logError(output);
-    }
-};
 
 static void doSlider(JsusFx & fx, JsusFx_Slider & slider, int x, int y)
 {
@@ -368,7 +342,7 @@ struct AudioStream_JsusFx : AudioStream
 
 //
 
-static JsusFxTest * s_fx = nullptr;
+static JsusFx * s_fx = nullptr;
 
 static AudioStream_JsusFx * s_audioStream = nullptr;
 
@@ -402,7 +376,7 @@ int main(int argc, char * argv[])
 	JsusFxPathLibrary_Basic pathLibrary(DATA_ROOT);
 	pathLibrary.addSearchPath("lib");
 	
-	JsusFxTest fx(pathLibrary);
+	JsusFx_Framework fx(pathLibrary);
 	s_fx = &fx;
 	
 	JsusFxGfx_Framework gfx(fx);
