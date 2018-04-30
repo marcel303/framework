@@ -134,7 +134,15 @@ JsusFx_Image & JsusFx_ImageCache::get(const int index)
 JsusFxGfx_Framework::JsusFxGfx_Framework(JsusFx & _jsusFx)
 	: JsusFxGfx()
 	, jsusFx(_jsusFx)
+	, surface(nullptr)
 {
+}
+
+void JsusFxGfx_Framework::setup(Surface * _surface, const int w, const int h)
+{
+	surface = _surface;
+	
+	setup(w, h);
 }
 
 void JsusFxGfx_Framework::setup(const int w, const int h)
@@ -156,8 +164,16 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 		const int g = (a >>  8) & 0xff;
 		const int b = (a >> 16) & 0xff;
 		
-		glClearColor(r / 255.f, g / 255.f, b / 255.f, 0.f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		if (surface != nullptr)
+		{
+			surface->clear(r, g, b, 0);
+		}
+		else
+		{
+			glClearColor(r / 255.f, g / 255.f, b / 255.f, 0.f);
+			glClear(GL_COLOR_BUFFER_BIT);
+			checkErrorGL();
+		}
 	}
 	
 	*m_gfx_texth = m_fontSize;
@@ -222,7 +238,7 @@ void JsusFxGfx_Framework::beginDraw()
 {
 	logDebug("beginDraw");
 	
-	pushSurface(nullptr);
+	pushSurface(surface);
 	currentImageIndex = -1;
 	
 	pushBlend(BLEND_OPAQUE);
@@ -241,6 +257,8 @@ void JsusFxGfx_Framework::endDraw()
 	
 	popSurface();
 	currentImageIndex = -2;
+	
+	surface = nullptr;
 }
 
 void JsusFxGfx_Framework::handleReset()
@@ -309,7 +327,7 @@ void JsusFxGfx_Framework::updateSurface()
 		popSurface();
 		
 		if (index == -1)
-			pushSurface(nullptr);
+			pushSurface(surface);
 		else
 		{
 			auto image = &imageCache.get(index);
@@ -354,9 +372,9 @@ void JsusFxGfx_Framework::gfx_rect(int np, EEL_F ** params)
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
 	
-		if (filled)
-		{
-			updateColor();
+	if (filled)
+	{
+		updateColor();
 		
 		gxVertex2f(x1, y1);
 		gxVertex2f(x2, y1);
@@ -804,6 +822,7 @@ EEL_F JsusFxGfx_Framework::gfx_loadimg(JsusFx & jsusFx, int index, EEL_F loadFro
 			checkErrorGL();
 		
 			glBindTexture(GL_TEXTURE_2D, restoreTexture);
+			checkErrorGL();
 			
 			//
 			
@@ -985,7 +1004,8 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			
+				checkErrorGL();
+				
 				if (scale != 1.f || rotate != 0.f)
 				{
 					gxPushMatrix();
@@ -1131,6 +1151,7 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				checkErrorGL();
 				
 				const float x1 = 0;
 				const float y1 = 0;

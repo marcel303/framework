@@ -92,7 +92,11 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	
 	PrimType primType = kPrimType_Other;
 	
+	Surface * surface = nullptr;
+	
 	JsusFxGfx_Framework(JsusFx & _jsusFx);
+	
+	void setup(Surface * surface, const int w, const int h);
 	
 	virtual void setup(const int w, const int h) override;
 	
