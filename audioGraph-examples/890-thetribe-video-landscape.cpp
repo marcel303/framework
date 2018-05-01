@@ -417,6 +417,23 @@ struct SpokenWord
 		return intersectSoundVolume(soundVolume, pos, dir, p, t);
 	}
 	
+	void toActive()
+	{
+		soundVolume.audioSource.mutex->lock();
+		{
+			const std::string filename = soundSource.filename;
+			soundSource.open(filename.c_str(), false);
+		}
+		soundVolume.audioSource.mutex->unlock();
+
+		state = kState_Active;
+	}
+	
+	void toInactive()
+	{
+		state = kState_Inactive;
+	}
+	
 	void tick(const Mat4x4 & worldToViewMatrix, Vec3Arg cameraPosition_world, const float dt)
 	{
 		//const float y = std::sin(framework.time / 3.45f) * 1.f;
@@ -447,14 +464,7 @@ struct SpokenWord
 		#if ENABLE_INTERACTIVITY
 			if (hover && (mouse.wentDown(BUTTON_LEFT) || gamepad[0].wentDown(GAMEPAD_A)))
 			{
-				soundVolume.audioSource.mutex->lock();
-				{
-					const std::string filename = soundSource.filename;
-					soundSource.open(filename.c_str(), false);
-				}
-				soundVolume.audioSource.mutex->unlock();
-				
-				state = kState_Active;
+				toActive();
 				break;
 			}
 		#endif
@@ -466,10 +476,16 @@ struct SpokenWord
 			desiredScale = 1.f;
 			desiredAngle = 180.f;
 			
+			if (soundSource.hasEnded)
+			{
+				toInactive();
+				break;
+			}
+			
 		#if ENABLE_INTERACTIVITY
 			if (hover && (mouse.wentDown(BUTTON_LEFT) || gamepad[0].wentDown(GAMEPAD_A)))
 			{
-				state = kState_Inactive;
+				toInactive();
 				break;
 			}
 		#endif
@@ -622,7 +638,7 @@ struct VfxNodeSpokenWord : VfxNodeBase
 			return;
 		if (spokenWord == nullptr)
 			return;
-			
+		
 		spokenWord->drawSolid();
 		
 		spokenWord->drawTranslucent();
@@ -1196,7 +1212,9 @@ struct VfxNodeWorld : VfxNodeBase
 	{
 		if (index == kInput_SpokenWordBegin)
 		{
-			// todo
+			// todo : fix index. maybe add a node which adds/registers a spoken word to the world and manages only that instance ?
+			
+			s_world->spokenWords[0].toActive();
 			
 			logDebug("spoken word!");
 		}
