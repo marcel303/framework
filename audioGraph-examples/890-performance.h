@@ -11,6 +11,11 @@ extern AudioMixer * g_audioMixer;
 
 struct World;
 
+struct GraphEdit;
+struct GraphEdit_RealTimeConnection;
+struct GraphEdit_TypeDefinitionLibrary;
+struct VfxGraph;
+
 struct VideoLandscape
 {
 	const int kFontSize = 16;
@@ -31,3 +36,32 @@ struct VideoLandscape
 	void tick(const float dt);
 	void draw();
 };
+
+struct VfxGraphInstance
+{
+	VfxGraph * vfxGraph = nullptr;
+	
+	GraphEdit * graphEdit = nullptr;
+	
+	GraphEdit_RealTimeConnection * realTimeConnection = nullptr;
+	
+	~VfxGraphInstance();
+};
+
+struct VfxGraphMgr
+{
+	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
+	
+	std::vector<VfxGraphInstance*> instances;
+	
+	VfxGraphInstance * activeInstance;
+	
+	VfxGraphMgr();
+	~VfxGraphMgr();
+	
+	VfxGraphInstance * createInstance(const char * filename);
+	
+	void freeInstance(VfxGraphInstance *& instance);
+};
+
+extern VfxGraphMgr * g_vfxGraphMgr;

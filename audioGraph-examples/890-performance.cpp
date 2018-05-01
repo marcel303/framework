@@ -1,17 +1,10 @@
 #include "890-performance.h"
 #include "framework.h"
-#include "objects/audioSourceVorbis.h"
+#include "graph.h"
 #include "objects/binauralizer.h"
 #include "objects/binaural_cipic.h"
-#include "objects/paobject.h"
-#include "Quat.h"
-#include "soundmix.h"
-#include "soundVolume.h"
-#include "StringEx.h"
 #include "vfxGraph.h"
-#include "vfxNodes/vfxNodeDisplay.h"
-#include "video.h"
-#include <atomic>
+#include "vfxGraphRealTimeConnection.h"
 
 #if 1
 const int GFX_SX = 1024;
@@ -34,6 +27,8 @@ binaural::Mutex * g_binauralMutex = nullptr;
 binaural::HRIRSampleSet * g_sampleSet = nullptr;
 AudioMixer * g_audioMixer = nullptr;
 
+VfxGraphMgr * g_vfxGraphMgr = nullptr;
+
 struct MyMutex : binaural::Mutex
 {
 	SDL_mutex * mutex;
@@ -55,6 +50,71 @@ struct MyMutex : binaural::Mutex
 		Assert(r == 0);
 	}
 };
+
+//
+
+VfxGraphInstance::~VfxGraphInstance()
+{
+	delete graphEdit;
+	graphEdit = nullptr;
+	
+	delete realTimeConnection;
+	realTimeConnection = nullptr;
+	
+	delete vfxGraph;
+	vfxGraph = nullptr;
+}
+
+//
+
+VfxGraphMgr::VfxGraphMgr()
+	: typeDefinitionLibrary(nullptr)
+	, instances()
+	, activeInstance(nullptr)
+{
+	typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+	
+	createVfxTypeDefinitionLibrary(*typeDefinitionLibrary);
+}
+
+VfxGraphMgr::~VfxGraphMgr()
+{
+	Assert(instances.empty());
+	Assert(activeInstance == nullptr);
+	
+	delete typeDefinitionLibrary;
+	typeDefinitionLibrary = nullptr;
+}
+
+VfxGraphInstance * VfxGraphMgr::createInstance(const char * filename)
+{
+	VfxGraphInstance * instance = new VfxGraphInstance();
+	
+	instance->realTimeConnection = new RealTimeConnection(instance->vfxGraph);
+	
+	instance->graphEdit = new GraphEdit(GFX_SX, GFX_SY, typeDefinitionLibrary, instance->realTimeConnection);
+	
+	instance->graphEdit->load(filename);
+	
+	instances.push_back(instance);
+	
+	return instance;
+}
+
+void VfxGraphMgr::freeInstance(VfxGraphInstance *& instance)
+{
+	if (instance == activeInstance)
+		activeInstance = nullptr;
+	
+	auto i = std::find(instances.begin(), instances.end(), instance);
+	Assert(i != instances.end());
+	instances.erase(i);
+	
+	delete instance;
+	instance = nullptr;
+}
+
+//
 
 int main(int argc, char * argv[])
 {
@@ -82,6 +142,11 @@ int main(int argc, char * argv[])
     PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, audioMixer);
 	
+	VfxGraphMgr * vfxGraphMgr = new VfxGraphMgr();
+	g_vfxGraphMgr = vfxGraphMgr;
+	
+	VfxGraphInstance * vfxInstance = vfxGraphMgr->createInstance("v001.xml");
+	
 	VideoLandscape * landscape = new VideoLandscape();
 	landscape->init();
 	
@@ -89,7 +154,23 @@ int main(int argc, char * argv[])
 	{
 		framework.process();
 
+		for (int i = 0; i < 9; ++i)
+		{
+			if (keyboard.wentDown((SDLKey)(SDLK_1 + i)))
+			{
+				if (i < vfxGraphMgr->instances.size())
+				{
+					vfxGraphMgr->activeInstance = vfxGraphMgr->instances[i];
+				}
+			}
+		}
+		
 		const float dt = framework.timeStep;
+		
+		if (vfxGraphMgr->activeInstance != nullptr)
+		{
+			vfxGraphMgr->activeInstance->graphEdit->tick(dt, false);
+		}
 		
 		landscape->tick(dt);
 		
@@ -100,6 +181,11 @@ int main(int argc, char * argv[])
 			
 			landscape->draw();
 			
+			if (vfxGraphMgr->activeInstance != nullptr)
+			{
+				vfxGraphMgr->activeInstance->graphEdit->draw();
+			}
+			
 			popFontMode();
 		}
 		framework.endDraw();
@@ -109,6 +195,12 @@ int main(int argc, char * argv[])
 	
     delete landscape;
     landscape = nullptr;
+	
+	vfxGraphMgr->freeInstance(vfxInstance);
+	
+	delete vfxGraphMgr;
+	vfxGraphMgr = nullptr;
+	g_vfxGraphMgr = nullptr;
 	
 	pa.shut();
 	
