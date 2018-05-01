@@ -18,6 +18,8 @@
 
 #define DRAW_GRIDS 1
 
+#define ENABLE_INTERACTIVITY 0
+
 static bool enableNearest = true;
 static bool enableVertices = true;
 
@@ -442,6 +444,7 @@ struct SpokenWord
 			desiredScale = .4f;
 			desiredAngle = 0.f;
 			
+		#if ENABLE_INTERACTIVITY
 			if (hover && (mouse.wentDown(BUTTON_LEFT) || gamepad[0].wentDown(GAMEPAD_A)))
 			{
 				soundVolume.audioSource.mutex->lock();
@@ -454,6 +457,7 @@ struct SpokenWord
 				state = kState_Active;
 				break;
 			}
+		#endif
 			break;
 		
 		case kState_Active:
@@ -462,11 +466,13 @@ struct SpokenWord
 			desiredScale = 1.f;
 			desiredAngle = 180.f;
 			
+		#if ENABLE_INTERACTIVITY
 			if (hover && (mouse.wentDown(BUTTON_LEFT) || gamepad[0].wentDown(GAMEPAD_A)))
 			{
 				state = kState_Inactive;
 				break;
 			}
+		#endif
 			break;
 		}
 		
@@ -505,9 +511,7 @@ struct SpokenWord
 	
 	void draw2d()
 	{
-	#if 1
 		textScroller.draw();
-	#endif
 	}
 };
 
@@ -519,6 +523,9 @@ struct VfxNodeSpokenWord : VfxNodeBase
 		kInput_Text,
 		kInput_Sound,
 		kInput_Time,
+		kInput_X,
+		kInput_Y,
+		kInput_Z,
 		kInput_Appear,
 		kInput_COUNT
 	};
@@ -548,6 +555,136 @@ struct VfxNodeSpokenWord : VfxNodeBase
 		addInput(kInput_Text, kVfxPlugType_String);
 		addInput(kInput_Sound, kVfxPlugType_String);
 		addInput(kInput_Time, kVfxPlugType_Float);
+		addInput(kInput_X, kVfxPlugType_Float);
+		addInput(kInput_Y, kVfxPlugType_Float);
+		addInput(kInput_Z, kVfxPlugType_Float);
+		addInput(kInput_Appear, kVfxPlugType_Trigger);
+		addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		if (isPassthrough)
+		{
+			delete spokenWord;
+			spokenWord = nullptr;
+			
+			currentText.clear();
+			currentSoundFilename.clear();
+			currentTime = 0.f;
+			
+			return;
+		}
+		
+		const char * text = getInputString(kInput_Text, "");
+		const char * soundFilename = getInputString(kInput_Sound, "");
+		const float time = getInputFloat(kInput_Time, 0.f);
+		const float x = getInputFloat(kInput_X, 0.f);
+		const float y = getInputFloat(kInput_Y, 0.f);
+		const float z = getInputFloat(kInput_Z, 0.f);
+		
+		if (spokenWord == nullptr || text != currentText || soundFilename != currentSoundFilename || time != currentTime)
+		{
+			currentText = text;
+			currentSoundFilename = soundFilename;
+			currentTime = time;
+			
+			delete spokenWord;
+			spokenWord = new SpokenWord();
+			
+			spokenWord->init(g_sampleSet, g_binauralMutex, text, nullptr, soundFilename, Vec3(0.f, 0.f, 0.f));
+		}
+		
+		Mat4x4 worldToViewMatrix;
+		gxGetMatrixf(GL_MODELVIEW, worldToViewMatrix.m_v);
+		
+		const Vec3 cameraPosition_world = -worldToViewMatrix.GetTranslation();
+		
+		spokenWord->pos = Vec3(x, y, z);
+		
+		spokenWord->tick(worldToViewMatrix, cameraPosition_world, dt);
+	}
+	
+	virtual void handleTrigger(const int index) override
+	{
+		if (isPassthrough)
+			return;
+		
+		if (index == kInput_Appear)
+		{
+			// todo : make spoken word appear
+		}
+	}
+	
+	virtual void draw() const override
+	{
+		if (isPassthrough)
+			return;
+		if (spokenWord == nullptr)
+			return;
+			
+		spokenWord->drawSolid();
+		
+		spokenWord->drawTranslucent();
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeSpokenWord)
+{
+	typeName = "spokenWord";
+	
+	in("draw", "draw");
+	in("text", "string");
+	in("sound", "string");
+	in("time", "float");
+	in("x", "float");
+	in("y", "float");
+	in("z", "float");
+	in("appear!", "trigger");
+	out("draw", "draw");
+}
+
+struct VfxNodeSpokenWord2d : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Draw,
+		kInput_Text,
+		kInput_Sound,
+		kInput_Time,
+		kInput_X,
+		kInput_Y,
+		kInput_Appear,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Draw,
+		kOutput_COUNT
+	};
+	
+	SpokenWord * spokenWord;
+	
+	std::string currentText;
+	std::string currentSoundFilename;
+	float currentTime;
+	
+	VfxNodeSpokenWord2d()
+		: VfxNodeBase()
+		, spokenWord(nullptr)
+		, currentText()
+		, currentSoundFilename()
+		, currentTime(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		
+		addInput(kInput_Draw, kVfxPlugType_Draw);
+		addInput(kInput_Text, kVfxPlugType_String);
+		addInput(kInput_Sound, kVfxPlugType_String);
+		addInput(kInput_Time, kVfxPlugType_Float);
+		addInput(kInput_X, kVfxPlugType_Float);
+		addInput(kInput_Y, kVfxPlugType_Float);
 		addInput(kInput_Appear, kVfxPlugType_Trigger);
 		addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
 	}
@@ -608,19 +745,115 @@ struct VfxNodeSpokenWord : VfxNodeBase
 		if (spokenWord == nullptr)
 			return;
 		
-		spokenWord->draw2d();
+		const float x = getInputFloat(kInput_X, 0.f);
+		const float y = getInputFloat(kInput_Y, 0.f);
+		
+		gxPushMatrix();
+		{
+			gxTranslatef(x, y, 0.f);
+			spokenWord->draw2d();
+		}
+		gxPopMatrix();
 	}
 };
 
-VFX_NODE_TYPE(VfxNodeSpokenWord)
+VFX_NODE_TYPE(VfxNodeSpokenWord2d)
 {
-	typeName = "spokenWord";
+	typeName = "spokenWord.2d";
 	
 	in("draw", "draw");
 	in("text", "string");
 	in("sound", "string");
 	in("time", "float");
+	in("x", "float");
+	in("y", "float");
 	in("appear!", "trigger");
+	out("draw", "draw");
+}
+
+struct VfxNodeDrawGrid : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Draw,
+		kInput_Scale1,
+		kInput_Scale2,
+		kInput_NumSegments1,
+		kInput_NumSegments2,
+		kInput_Axis1,
+		kInput_Axis2,
+		kInput_Color,
+		kInput_Optimized,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Draw,
+		kOutput_COUNT
+	};
+	
+	VfxNodeDrawGrid()
+		: VfxNodeBase()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		
+		addInput(kInput_Draw, kVfxPlugType_Draw);
+		addInput(kInput_Scale1, kVfxPlugType_Float);
+		addInput(kInput_Scale2, kVfxPlugType_Float);
+		addInput(kInput_NumSegments1, kVfxPlugType_Float);
+		addInput(kInput_NumSegments2, kVfxPlugType_Float);
+		addInput(kInput_Axis1, kVfxPlugType_Int);
+		addInput(kInput_Axis2, kVfxPlugType_Int);
+		addInput(kInput_Color, kVfxPlugType_Color);
+		addInput(kInput_Optimized, kVfxPlugType_Bool);
+		addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
+	}
+	
+	virtual void draw() const override
+	{
+		const VfxColor defaultColor(1.f, 1.f, 1.f, 1.f);
+		
+		const float scale1 = getInputFloat(kInput_Scale1, 1.f);
+		const float scale2 = getInputFloat(kInput_Scale1, 1.f);
+		const int numSegments1 = getInputFloat(kInput_NumSegments1, 10);
+		const int numSegments2 = getInputFloat(kInput_NumSegments2, 10);
+		const int axis1 = clamp(getInputInt(kInput_Axis1, 0), 0, 2);
+		const int axis2 = clamp(getInputInt(kInput_Axis2, 2), 0, 2);
+		const VfxColor * color = getInputColor(kInput_Color, &defaultColor);
+		const bool optimized = getInputBool(kInput_Optimized, true);
+		
+		// scale = 40 x 40, segs = 400 x 400
+		// axis = 0, 2
+		// optimized = true
+		
+		float scale[3] = { 1.f, 1.f, 1.f };
+		scale[axis1] = scale1;
+		scale[axis2] = scale2;
+		
+		gxPushMatrix();
+		{
+			gxScalef(scale[0], scale[1], scale[2]);
+			setColorf(color->r, color->g, color->b, color->a);
+			drawGrid3dLine(numSegments1, numSegments2, axis1, axis2, optimized);
+		}
+		gxPopMatrix();
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeDrawGrid)
+{
+	typeName = "draw.grid";
+	
+	in("draw", "draw");
+	in("scale1", "float", "1");
+	in("scale2", "float", "1");
+	in("numSegs1", "float", "10");
+	in("numSegs2", "float", "10");
+	in("axis1", "int", "0");
+	in("axis2", "int", "2");
+	in("color", "color", "ffffffff");
+	in("optimized", "bool", "1");
 	out("draw", "draw");
 }
 
@@ -787,7 +1020,11 @@ struct World
 	{
 		// update the camera
 		
+	#if ENABLE_INTERACTIVITY
 		const bool doCamera = !(keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT));
+	#else
+		const bool doCamera = false;
+	#endif
 		
 		camera.tick(dt, doCamera);
 		
@@ -916,6 +1153,67 @@ struct World
 
 static World * s_world = nullptr;
 
+struct VfxNodeWorld : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_CameraX,
+		kInput_CameraY,
+		kInput_CameraZ,
+		kInput_CameraYaw,
+		kInput_SpokenWordBegin,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_COUNT
+	};
+	
+	VfxNodeWorld()
+		: VfxNodeBase()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		
+		addInput(kInput_CameraX, kVfxPlugType_Float);
+		addInput(kInput_CameraY, kVfxPlugType_Float);
+		addInput(kInput_CameraZ, kVfxPlugType_Float);
+		addInput(kInput_CameraYaw, kVfxPlugType_Float);
+		addInput(kInput_SpokenWordBegin, kVfxPlugType_Trigger);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		s_world->camera.position = Vec3(
+			getInputFloat(kInput_CameraX, 0.f),
+			getInputFloat(kInput_CameraY, 0.f),
+			getInputFloat(kInput_CameraZ, 0.f));
+		
+		s_world->camera.yaw = getInputFloat(kInput_CameraYaw, 0.f);
+	}
+	
+	virtual void handleTrigger(const int index) override
+	{
+		if (index == kInput_SpokenWordBegin)
+		{
+			// todo
+			
+			logDebug("spoken word!");
+		}
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeWorld)
+{
+	typeName = "world";
+	
+	in("camera.x", "float");
+	in("camera.y", "float");
+	in("camera.z", "float");
+	in("camera.yaw", "float");
+	in("word.begin!", "trigger");
+}
+
 void VideoLandscape::init()
 {
 	world = new World();
@@ -933,6 +1231,7 @@ void VideoLandscape::shut()
 
 void VideoLandscape::tick(const float dt)
 {
+#if ENABLE_INTERACTIVITY
 	// process input
 	
 	if (keyboard.wentDown(SDLK_n))
@@ -943,7 +1242,8 @@ void VideoLandscape::tick(const float dt)
 	
 	if (keyboard.wentDown(SDLK_TAB))
 		showUi = !showUi;
-	
+#endif
+
 	SDL_LockMutex(g_audioMutex);
 	{
 		g_audioMixer->voiceGroups[kVoiceGroup_Videoclips].desiredGain =
