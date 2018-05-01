@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include "Debugging.h"
+#include "framework.h"
 #include "Mat4x4.h"
 #include "objects/binauralizer.h"
 #include "soundmix.h"

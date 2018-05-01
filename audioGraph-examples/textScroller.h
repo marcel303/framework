@@ -31,6 +31,9 @@
 #include <string>
 #include <vector>
 
+extern const int GFX_SX;
+extern const int GFX_SY;
+
 struct TextScroller
 {
 	std::vector<std::string> lines;
