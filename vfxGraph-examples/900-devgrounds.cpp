@@ -39,6 +39,7 @@
 #include "Timer.h"
 #include "tinyxml2.h"
 #include "vfxNodeBase.h"
+#include <cmath>
 
 using namespace tinyxml2;
 
@@ -381,202 +382,6 @@ static void handleAction(const std::string & action, const Dictionary & args)
 	}
 }
 
-static void handleRealTimeEdit(const std::string & filename)
-{
-	if (String::StartsWith(filename, "fsfx/"))
-	{
-		// todo : reload shader
-	}
-}
-
-//
-
-#include "tinyxml2_helpers.h"
-
-static void checkVfxGraphIntegrity(const char * filename, const GraphEdit_TypeDefinitionLibrary & tdl)
-{
-	tinyxml2::XMLDocument d;
-	
-	if (d.LoadFile(filename) != XML_SUCCESS)
-	{
-		logError("%s: failed to load XML document", filename);
-	}
-	else
-	{
-		auto xmlGraph = d.FirstChildElement("graph");
-		
-		if (xmlGraph == nullptr)
-		{
-			logError("%s: failed to find graph element", filename);
-		}
-		else
-		{
-			std::map<GraphNodeId, std::string> nodes;
-			
-			for (auto xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
-			{
-				const GraphNodeId nodeId = intAttrib(xmlNode, "id", kGraphNodeIdInvalid);
-				const char * typeName = stringAttrib(xmlNode, "typeName", nullptr);
-				
-				if (nodeId == kGraphNodeIdInvalid)
-				{
-					logError("%s: found node without valid node id", filename);
-				}
-				else
-				{
-					auto i = nodes.find(nodeId);
-					
-					if (i != nodes.end())
-					{
-						logError("%s: found node with duplicate node id. nodeId=%d", filename, nodeId);
-					}
-					else
-					{
-						nodes.insert(std::make_pair(nodeId, typeName ? typeName : ""));
-					}
-				}
-				
-				if (typeName == nullptr)
-				{
-					logError("%s: found node without valid type name. nodeId=%d", filename, nodeId);
-				}
-				else
-				{
-					auto td = tdl.tryGetTypeDefinition(typeName);
-					
-					if (td == nullptr)
-					{
-						logError("%s: found node with type name that doesn't exist in type definition library. nodeId=%d, typeName=%s", filename, nodeId, typeName);
-					}
-				}
-			}
-			
-			//
-			
-			std::set<GraphLinkId> linkIds;
-			
-			for (auto xmlLink = xmlGraph->FirstChildElement("link"); xmlLink != nullptr; xmlLink = xmlLink->NextSiblingElement("link"))
-			{
-				const int linkId = intAttrib(xmlLink, "id", kGraphLinkIdInvalid);
-				const bool isDynamic = boolAttrib(xmlLink, "dynamic", false);
-				
-				if (linkId == kGraphLinkIdInvalid)
-				{
-					logError("%s: found link without valid link id", filename);
-				}
-				else
-				{
-					auto i = linkIds.find(linkId);
-					
-					if (i != linkIds.end())
-					{
-						logError("%s: found link with duplicate link id. linkId=%d", filename, linkId);
-					}
-					else
-					{
-						linkIds.insert(linkId);
-					}
-				}
-				
-				const int srcNodeId = intAttrib(xmlLink, "srcNodeId", kGraphNodeIdInvalid);
-				const char * srcNodeSocketName = stringAttrib(xmlLink, "srcNodeSocketName", nullptr);
-				const int dstNodeId = intAttrib(xmlLink, "dstNodeId", kGraphNodeIdInvalid);
-				const char * dstNodeSocketName = stringAttrib(xmlLink, "dstNodeSocketName", nullptr);
-				
-				if (srcNodeId == kGraphNodeIdInvalid)
-					logError("%s: found link with invalid src node id", filename);
-				if (srcNodeSocketName == nullptr)
-					logError("%s: found link with invalid src socket name", filename);
-				if (dstNodeId == kGraphNodeIdInvalid)
-					logError("%s: found link with invalid dst node id", filename);
-				if (dstNodeSocketName == nullptr)
-					logError("%s: found link with invalid dst socket name", filename);
-				
-				if (srcNodeId != kGraphNodeIdInvalid)
-				{
-					auto i = nodes.find(srcNodeId);
-					
-					if (i == nodes.end())
-						logError("%s: found link with non-existing src node. linkId=%d, srcNodeId=%d", filename, linkId, srcNodeId);
-					else
-					{
-						auto td = tdl.tryGetTypeDefinition(i->second);
-						
-						if (td != nullptr)
-						{
-							if (srcNodeSocketName != nullptr)
-							{
-								bool found = false;
-								
-								for (auto & input : td->inputSockets)
-									if (input.name == srcNodeSocketName)
-										found = true;
-								
-								if (found == false && isDynamic == false)
-								{
-									logError("%s: found link with non-existing src socket. linkId=%d, srcNodeId=%d, srcNodeSocketName=%s", filename, linkId, srcNodeId, srcNodeSocketName);
-								}
-							}
-						}
-					}
-				}
-				
-				if (dstNodeId != kGraphNodeIdInvalid)
-				{
-					auto i = nodes.find(dstNodeId);
-					
-					if (i == nodes.end())
-						logError("%s: found link with non-existing dst node. linkId=%d, dstNodeId=%d", filename, linkId, dstNodeId);
-					else
-					{
-						auto td = tdl.tryGetTypeDefinition(i->second);
-						
-						if (td != nullptr)
-						{
-							if (dstNodeSocketName != nullptr)
-							{
-								bool found = false;
-								
-								for (auto & output : td->outputSockets)
-									if (output.name == dstNodeSocketName)
-										found = true;
-								
-								if (found == false && isDynamic == false)
-								{
-									logError("%s: found link with non-existing dst socket. linkId=%d, dstNodeId=%d, dstNodeSocketName=%s", filename, linkId, dstNodeId, dstNodeSocketName);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
-static void checkVfxGraphs(const GraphEdit_TypeDefinitionLibrary & tdl)
-{
-	std::vector<std::string> filenames = listFiles(".", true);
-	
-	for (auto & filename : filenames)
-	{
-		if (Path::GetExtension(filename, true) != "xml")
-			continue;
-		
-		if (filename == "audioKey.xml" ||
-			filename == "audioKey2.xml" ||
-			filename == "ccl.xml" ||
-			filename == "combTest5.xml" ||
-			filename == "combTest5p.xml" ||
-			filename == "mlworkshopA.xml" ||
-			filename == "mlworkshopAp.xml" ||
-			filename == "types.xml")
-			continue;
-		
-		checkVfxGraphIntegrity(filename.c_str(), tdl);
-	}
-}
-
 //
 
 int main(int argc, char * argv[])
@@ -589,7 +394,6 @@ int main(int argc, char * argv[])
 	
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
-	framework.realTimeEditCallback = handleRealTimeEdit;
 	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
@@ -599,7 +403,7 @@ int main(int argc, char * argv[])
 		
 		vfxSetThreadName("Main Thread");
 		
-		testVfxNodeCreation();
+		//testVfxNodeCreation();
 		
 		//testDynamicInputs();
 		
@@ -614,13 +418,6 @@ int main(int argc, char * argv[])
 		GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
 		
 		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
-		
-		//
-		
-		if (true)
-		{
-			checkVfxGraphs(*typeDefinitionLibrary);
-		}
 		
 		//
 		
@@ -772,76 +569,6 @@ int main(int argc, char * argv[])
 			//
 			
 			inputIsCaptured |= graphEdit->tick(dt, inputIsCaptured);
-			
-			if (inputIsCaptured == false)
-			{
-				// todo : move this to graph edit ?
-				// todo : dynamically get src/dst socket indices from type definition
-				// todo : pop up a node type select dialog ?
-				
-				if (mouse.wentDown(BUTTON_LEFT) && keyboard.isDown(SDLK_RSHIFT))
-				{
-					GraphEdit::HitTestResult hitTestResult;
-					
-					if (graphEdit->hitTest(graphEdit->mousePosition.x, graphEdit->mousePosition.y, hitTestResult))
-					{
-						if (hitTestResult.hasLink)
-						{
-							auto linkTypeDefinition = graphEdit->tryGetLinkTypeDefinition(hitTestResult.link->id);
-							
-							if (linkTypeDefinition != nullptr)
-							{
-								if (linkTypeDefinition->srcTypeName == "draw" && linkTypeDefinition->dstTypeName == "draw")
-								{
-									GraphLink link = *hitTestResult.link;
-									
-									GraphEdit::LinkPath linkPath;
-									
-									if (graphEdit->getLinkPath(link.id, linkPath))
-									{
-										GraphNodeId nodeId;
-										
-										if (graphEdit->tryAddNode(
-											"draw.fsfx-v2",
-											graphEdit->mousePosition.x,
-											graphEdit->mousePosition.y,
-											true, &nodeId))
-										{
-											if (true)
-											{
-												GraphLink link1;
-												link1.id = graphEdit->graph->allocLinkId();
-												link1.srcNodeId = link.srcNodeId;
-												link1.srcNodeSocketIndex = link.srcNodeSocketIndex;
-												link1.srcNodeSocketName = link.srcNodeSocketName;
-												link1.dstNodeId = nodeId;
-												link1.dstNodeSocketIndex = 0;
-												link1.dstNodeSocketName = "any";
-												graphEdit->graph->addLink(link1, true);
-											}
-											
-											if (true)
-											{
-												GraphLink link2;
-												link2.id = graphEdit->graph->allocLinkId();
-												link2.srcNodeId = nodeId;
-												link2.srcNodeSocketIndex = 0;
-												link2.srcNodeSocketName = "before";
-												link2.dstNodeId = link.dstNodeId;
-												link2.dstNodeSocketIndex = link.dstNodeSocketIndex;
-												link2.dstNodeSocketName = link.dstNodeSocketName;
-												graphEdit->graph->addLink(link2, true);
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-					
-					inputIsCaptured = true;
-				}
-			}
 			
 			if (inputIsCaptured == false)
 			{

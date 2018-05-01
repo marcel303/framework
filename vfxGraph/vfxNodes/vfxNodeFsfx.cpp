@@ -30,17 +30,15 @@
 #include "vfxGraph.h"
 #include "vfxNodeFsfx.h"
 
+extern int VFXGRAPH_SX;
+extern int VFXGRAPH_SY;
+
 struct Fsfx1_UniformInfo
 {
 	GLenum type;
 	std::string name;
 	GLint location;
 };
-
-// todo : use current surface size ?
-
-extern int VFXGRAPH_SX;
-extern int VFXGRAPH_SY;
 
 VFX_NODE_TYPE(VfxNodeFsfx)
 {
@@ -345,8 +343,8 @@ void VfxNodeFsfx::tick(const float dt)
 		return;
 	}
 	
-	const int sx = image ? image->getSx() : getInputInt(kInput_Width, VFXGRAPH_SX);
-	const int sy = image ? image->getSy() : getInputInt(kInput_Height, VFXGRAPH_SY);
+	const int sx = image ? image->getSx() : getInputInt(kInput_Width, g_currentVfxSurface ? g_currentVfxSurface->getWidth() : VFXGRAPH_SX);
+	const int sy = image ? image->getSy() : getInputInt(kInput_Height, g_currentVfxSurface ? g_currentVfxSurface->getHeight() : VFXGRAPH_SY);
 	
 	if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight())
 	{

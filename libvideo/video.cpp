@@ -299,6 +299,13 @@ void MediaPlayer::updateTexture()
 			
 			glGenTextures(1, &texture);
 			glBindTexture(GL_TEXTURE_2D, texture);
+		#if USE_LEGACY_OPENGL
+			const GLenum glFormat = internalFormat == GL_R8 ? GL_LUMINANCE8 : GL_RGBA8;
+			const GLenum uploadFormat = internalFormat == GL_R8 ? GL_RED : GL_RGBA;
+			const GLenum uploadType = GL_UNSIGNED_BYTE;
+			glTexImage2D(GL_TEXTURE_2D, 0, glFormat, sx, sy, 0, uploadFormat, uploadType, nullptr);
+			checkErrorGL();
+		#else
 			glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, sx, sy);
 			checkErrorGL();
 			
@@ -308,6 +315,7 @@ void MediaPlayer::updateTexture()
 				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 				checkErrorGL();
 			}
+		#endif
 			
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);

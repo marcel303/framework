@@ -1,0 +1,55 @@
+<graph nextNodeId="13" nextLinkId="16">
+    <node id="1" typeName="physical.spring">
+        <input socket="dampen" value="0.022000"/>
+        <input socket="impulse" value="8.000000"/>
+        <input socket="strength" value="800.000000"/>
+    </node>
+    <node id="4" typeName="trigger.event">
+        <input socket="name" value="begin"/>
+    </node>
+    <node id="6" typeName="in.value">
+        <input socket="name" value="frequency"/>
+        <input socket="scope" value="1"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="7" typeName="filter.comb">
+        <input socket="delay" value="0.321000"/>
+        <input socket="feedback" value="0.700000"/>
+        <input socket="feedforward" value="0.000000"/>
+        <input socket="maxDelay" value="2.000000"/>
+    </node>
+    <node id="9" typeName="audio.sine">
+        <input socket="frequency" value="2000.000000"/>
+        <input socket="mode" value="0"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="10" typeName="math">
+        <input socket="type" value="3"/>
+    </node>
+    <node id="12" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <link id="2" srcNodeId="1" srcNodeSocketName="impulse!" dstNodeId="4" dstNodeSocketName="trigger!"/>
+    <link id="4" srcNodeId="1" srcNodeSocketName="strength" dstNodeId="6" dstNodeSocketName="valueX"/>
+    <link id="8" srcNodeId="10" srcNodeSocketName="a" dstNodeId="1" dstNodeSocketName="value"/>
+    <link id="9" srcNodeId="7" srcNodeSocketName="value" dstNodeId="10" dstNodeSocketName="result"/>
+    <link id="10" srcNodeId="10" srcNodeSocketName="b" dstNodeId="9" dstNodeSocketName="audio"/>
+    <link id="11" srcNodeId="9" srcNodeSocketName="frequency" dstNodeId="6" dstNodeSocketName="valueX"/>
+    <link id="15" srcNodeId="12" srcNodeSocketName="audio" dstNodeId="7" dstNodeSocketName="value"/>
+    <editor nextZKey="87">
+        <dragAndZoom x="162.33003234863281" y="7.7413334846496582" zoom="1.1999057531356812"/>
+        <nodeDatas>
+            <nodeData nodeId="1" x="-160" y="-16" zKey="60"/>
+            <nodeData nodeId="4" x="-288" y="80" zKey="20"/>
+            <nodeData nodeId="6" x="-400" y="-16" zKey="29"/>
+            <nodeData nodeId="7" x="96" y="0" zKey="86"/>
+            <nodeData nodeId="9" x="-167.74111938476562" y="133.10685729980469" zKey="59"/>
+            <nodeData nodeId="10" x="-32" y="-0" zKey="83"/>
+            <nodeData nodeId="12" x="224" y="0" zKey="85"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="8" x="-352" y="-176" zKey="42" nodeId="1" dstSocketName="value" sx="216" sy="148"/>
+        </visualizers>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
+    </editor>
+</graph>

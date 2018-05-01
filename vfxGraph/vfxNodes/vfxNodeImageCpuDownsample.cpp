@@ -28,12 +28,15 @@
 #include "MemAlloc.h"
 #include "vfxNodeImageCpuDownsample.h"
 #include <algorithm>
-#include <immintrin.h>
-#include <xmmintrin.h>
 
-#if !__AVX__
-	#ifndef WIN32
-		#warning AVX support disabled. wave field methods will use slower SSE code paths
+#if __SSE2__
+	#include <immintrin.h>
+	#include <xmmintrin.h>
+
+	#if !__AVX__
+		#ifndef WIN32
+			#warning AVX support disabled. wave field methods will use slower SSE code paths
+		#endif
 	#endif
 #endif
 

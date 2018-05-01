@@ -102,6 +102,10 @@ if (APPLE)
 		PARENT_SCOPE)
 endif (APPLE)
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux") 
+	set(CMAKE_CXX_FLAGS "-mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -funsafe-math-optimizations")
+endif ()
+
 if (MSVC)
 	set_property(TARGET audioGraph APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
 	set_property(TARGET audioGraph APPEND_STRING PROPERTY LINK_FLAGS /SAFESEH:NO)

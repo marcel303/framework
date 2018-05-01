@@ -214,7 +214,14 @@ bool OscReceiver::doInit(const char * _ipAddress, const int _udpPort)
 			
 			// IpEndpointName::ANY_ADDRESS
 			
-			receiveSocket = new UdpListeningReceiveSocket(IpEndpointName(ipAddress.c_str(), udpPort), packetListener);
+			IpEndpointName endpointName;
+			
+			if (ipAddress.empty())
+				endpointName = IpEndpointName(IpEndpointName::ANY_ADDRESS, udpPort);
+			else
+				endpointName = IpEndpointName(ipAddress.c_str(), udpPort);
+			
+			receiveSocket = new UdpListeningReceiveSocket(endpointName, packetListener);
 			
 			LOG_DBG("creating OSC receive thread", 0);
 		
@@ -263,10 +270,19 @@ bool OscReceiver::shut()
 
 bool OscReceiver::isAddressValid(const char * ipAddress, const int udpPort) const
 {
-	if (ipAddress == nullptr || ipAddress[0] == 0)
+	if (ipAddress == nullptr)
 		return false;
 	if (udpPort == 0)
 		return false;
+	if (ipAddress[0] != 0)
+	{
+		int numDots = 0;
+		for (int i = 0; ipAddress[i] != 0; ++i)
+			if (ipAddress[i] == '.')
+				numDots++;
+		if (numDots < 3)
+			return false;
+	}
 	
 	return true;
 }

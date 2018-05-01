@@ -41,6 +41,43 @@ static void showHelp()
 	printf("instantiates the audio graph given by <filename> and sends the synthesized sound to the default audio output interface.\n");
 }
 
+static void doControlValue(AudioControlValue & controlValue, const int index, const int selectedIndex, const char type, const int c)
+{
+	const bool isSelected = (index == selectedIndex);
+	
+	if (isSelected)
+	{
+		const float range = controlValue.max - controlValue.min;
+		const float step = range / 20.f;
+		
+		if (c == '1')
+			controlValue.desiredX = fmaxf(controlValue.desiredX - step, controlValue.min);
+		if (c == '2')
+			controlValue.desiredX = fminf(controlValue.desiredX + step, controlValue.max);
+	}
+	
+	printf("%s[%c] %20s: %.2f\n",
+		isSelected ? "==> " : "    ",
+		type,
+		controlValue.name.c_str(),
+		controlValue.desiredX);
+}
+
+static void doEvent(AudioGraph * audioGraph, const std::string & event, const int index, const int selectedIndex, const int c)
+{
+	const bool isSelected = (index == selectedIndex);
+	
+	if (isSelected)
+	{
+		if (c == ' ')
+			audioGraph->triggerEvent(event.c_str());
+	}
+	
+	printf("%sEVENT %18s\n",
+		isSelected ? "==> " : "    ",
+		event.c_str());
+}
+
 int main(int argc, char * argv[])
 {
 	const char * filename = nullptr;
@@ -55,6 +92,12 @@ int main(int argc, char * argv[])
 
 	if (SDL_Init(0) >= 0)
 	{
+		// load resources
+		
+		fillPcmDataCache("birds", true, false);
+		fillPcmDataCache("testsounds", true, true);
+		fillPcmDataCache("voice-fragments", false, false);
+		
 		// initialize audio related systems
 		
 		SDL_mutex * mutex = SDL_CreateMutex();
@@ -73,34 +116,96 @@ int main(int argc, char * argv[])
 		audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
 
 		PortAudioObject pa;
-		pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
 		
-		// create an audio graph instance
-		
-		AudioGraphInstance * instance = audioGraphMgr.createInstance(filename);
-		
-		if (instance == nullptr)
+		if (!pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler))
 		{
-			printf("failed to open %s\n", filename);
+			printf("failed to initialize audio output\n");
 		}
 		else
 		{
-			// todo : keyboard/console based ui to 
-			// - change control values
-			// - trigger events
-			// - quit the app
+			// create an audio graph instance
 			
-			for (;;)
+			AudioGraphInstance * instance = audioGraphMgr.createInstance(filename);
+			
+			if (instance == nullptr)
 			{
-				printf("CPU usage: %d%%\n", int(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100));
-				
-				SDL_Delay(1100);
+				printf("failed to open %s\n", filename);
 			}
+			else
+			{
+				int selectedIndex = 0;
+				
+				int c = 0;
+				
+				bool stop = false;
+				
+				do
+				{
+					SDL_LockMutex(mutex);
+					{
+						const int count =
+							audioGraphMgr.globals->controlValues.size() +
+							instance->audioGraph->controlValues.size() +
+							instance->audioGraph->events.size();
+						
+						if (count == 0)
+							selectedIndex = 0;
+						else
+						{
+							if (selectedIndex < 0)
+								selectedIndex = count - 1;
+							else if (selectedIndex >= count)
+								selectedIndex = 0;
+						}
+						
+						int index = 0;
+						
+						for (auto & controlValue : audioGraphMgr.globals->controlValues)
+						{
+							doControlValue(controlValue, index, selectedIndex, 'G', c);
+							
+							index++;
+						}
+						
+						for (auto & controlValue : instance->audioGraph->controlValues)
+						{
+							doControlValue(controlValue, index, selectedIndex, 'L', c);
+							
+							index++;
+						}
+						
+						for (auto & event : instance->audioGraph->events)
+						{
+							doEvent(instance->audioGraph, event.name, index, selectedIndex, c);
+							
+							index++;
+						}
+					}
+					SDL_UnlockMutex(mutex);
+					
+					printf("up/down = a/z, increment/decrement = 1/2, trigger event = SPACE, quit = q\n");
+					printf("CPU usage: %d%%\n", int(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100));
+					
+					system("/bin/stty raw");
+					c = getchar();
+					system("/bin/stty cooked");
+					
+					printf("\n");
+					
+					if (c == 'q')
+						stop = true;
+					if (c == 'a')
+						selectedIndex--;
+					if (c == 'z')
+						selectedIndex++;
+				}
+				while (stop == false);
+			}
+			
+			// free the audio graph instance
+			
+			audioGraphMgr.free(instance, false);
 		}
-		
-		// free the audio graph instance
-		
-		audioGraphMgr.free(instance, false);
 		
 		// shut down audio related systems
 

@@ -38,7 +38,8 @@ struct AudioNodeVoice : AudioNodeBase
 	{
 		kSpeaker_LeftAndRight,
 		kSpeaker_Left,
-		kSpeaker_Right
+		kSpeaker_Right,
+		kSpeaker_Channel
 	};
 	
 	struct AudioSourceVoiceNode : AudioSource
@@ -53,6 +54,7 @@ struct AudioNodeVoice : AudioNodeBase
 		kInput_Audio,
 		kInput_Gain,
 		kInput_Speaker,
+		kInput_ChannelIndex,
 		kInput_COUNT
 	};
 	

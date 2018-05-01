@@ -51,6 +51,9 @@ if (NOT HAS_AUDIOGRAPH)
 	add_subdirectory(../audioGraph audioGraph)
 endif (NOT HAS_AUDIOGRAPH)
 
+#todo : remove ugly sub-framework folder dependency jsusfx library
+add_subdirectory(../users/marcel/jsusfx-framework jsusfx-framework)
+
 #
 
 project(framework-tests)
@@ -71,8 +74,6 @@ if (WIN32)
 endif (WIN32)
 
 add_executable(tests ${source})
-
-set_target_properties(tests PROPERTIES LINK_FLAGS "-Wl,-all_load")
 
 if (WIN32)
 	# set the current working directory
@@ -112,6 +113,7 @@ target_link_libraries(tests PRIVATE libvideo)
 target_link_libraries(tests PRIVATE vfxgraph)
 target_link_libraries(tests PRIVATE audioGraph)
 target_link_libraries(tests PRIVATE libps3eye)
+target_link_libraries(tests PRIVATE jsusfx-framework)
 
 target_link_libraries(tests PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(tests PRIVATE ${LIBVIDEO_LIBRARIES})

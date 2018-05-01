@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if ENABLE_WIIMOTE
+
 #include "framework.h"
 #include "objects/wiimote.h"
 
@@ -133,3 +135,5 @@ void testWiimotes()
 	
 	exit(0);
 }
+
+#endif

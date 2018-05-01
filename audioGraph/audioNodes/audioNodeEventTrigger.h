@@ -43,7 +43,16 @@ struct AudioNodeEventTrigger : AudioNodeBase
 		kOutput_COUNT
 	};
 	
+	std::string currentName;
+	
+	bool isRegistered;
+	
 	AudioNodeEventTrigger();
+	~AudioNodeEventTrigger();
+	
+	void updateEventRegistration();
 	
 	virtual void tick(const float dt) override;
+	
+	virtual void init(const GraphNode & node) override;
 };

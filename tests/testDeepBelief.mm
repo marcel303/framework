@@ -34,6 +34,7 @@
 #include "vfxNodes/deepbelief.h"
 #include "../libvideo/video.h"
 #include "mediaplayer/MPVideoBuffer.h"
+#include <cmath>
 
 extern const int GFX_SX;
 extern const int GFX_SY;

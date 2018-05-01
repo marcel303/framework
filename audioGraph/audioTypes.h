@@ -39,7 +39,7 @@
 	#if __SSE2__
 		#define AUDIO_USE_SSE 1
 	#else
-		#define AUDIO_USE_SSE 0
+		#define AUDIO_USE_SSE 0 // do not alter
 	#endif
 #endif
 
@@ -47,7 +47,7 @@
 	#if defined(__GNUC__)
 		#define AUDIO_USE_GCC_VECTOR 1
 	#else
-		#define AUDIO_USE_GCC_VECTOR 0
+		#define AUDIO_USE_GCC_VECTOR 0 // do not alter
 	#endif
 #endif
 
@@ -55,8 +55,14 @@
 	#if defined(__arm__) || defined(__aarch64__)
 		#define AUDIO_USE_NEON 1
 	#else
-		#define AUDIO_USE_NEON 0
+		#define AUDIO_USE_NEON 0 // do not alter
 	#endif
+#endif
+
+#if AUDIO_USE_SSE || AUDIO_USE_GCC_VECTOR || AUDIO_USE_NEON
+	#define AUDIO_USE_SIMD 1
+#else
+	#define AUDIO_USE_SIMD 0 // do not alter
 #endif
 
 #if defined(MACOS) || defined(LINUX)
@@ -189,6 +195,12 @@ struct AudioControlValue
 	float desiredY;
 	float currentX;
 	float currentY;
+};
+
+struct AudioEvent
+{
+	std::string name;
+	int refCount = 0;
 };
 
 struct SDL_mutex;

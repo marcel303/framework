@@ -34,15 +34,25 @@ OscSender::OscSender()
 	: ipAddress()
 	, udpPort(0)
 	, transmitSocket(nullptr)
+	, endpointName(nullptr)
 {
 }
 
 bool OscSender::isAddressValid(const char * ipAddress, const int udpPort) const
 {
-	if (ipAddress == nullptr || ipAddress[0] == 0)
+	if (ipAddress == nullptr)
 		return false;
 	if (udpPort == 0)
 		return false;
+	if (ipAddress[0] != 0)
+	{
+		int numDots = 0;
+		for (int i = 0; ipAddress[i] != 0; ++i)
+			if (ipAddress[i] == '.')
+				numDots++;
+		if (numDots < 3)
+			return false;
+	}
 	
 	return true;
 }
@@ -73,7 +83,15 @@ bool OscSender::init(const char * _ipAddress, const int _udpPort)
 		}
 		else
 		{
-			transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress.c_str(), udpPort));
+			if (ipAddress.empty())
+				endpointName = new IpEndpointName(IpEndpointName::ANY_ADDRESS, udpPort);
+			else
+				endpointName = new IpEndpointName(ipAddress.c_str(), udpPort);
+			
+			transmitSocket = new UdpSocket();
+			transmitSocket->SetEnableBroadcast(true);
+			transmitSocket->SetAllowReuse(true);
+			transmitSocket->Bind(IpEndpointName(IpEndpointName::ANY_ADDRESS, IpEndpointName::ANY_PORT));
 			
 			return true;
 		}
@@ -98,6 +116,12 @@ bool OscSender::shut()
 			transmitSocket = nullptr;
 		}
 		
+		if (endpointName != nullptr)
+		{
+			delete endpointName;
+			endpointName = nullptr;
+		}
+		
 		return true;
 	}
 	catch (std::exception & e)
@@ -110,8 +134,8 @@ bool OscSender::shut()
 
 void OscSender::send(const void * data, const int dataSize)
 {
-	if (transmitSocket != nullptr)
+	if (transmitSocket != nullptr && transmitSocket->IsBound())
 	{
-		transmitSocket->Send((char*)data, dataSize);
+		transmitSocket->SendTo(*endpointName, (char*)data, dataSize);
 	}
 }

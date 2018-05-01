@@ -1,0 +1,10 @@
+include fsfx/common.inc
+
+vec4 fsfx()
+{
+	vec4 color = texture(colormap, texcoord);
+
+	color.rgb = hueShift(color.rgb, param1);
+
+	return color;
+}

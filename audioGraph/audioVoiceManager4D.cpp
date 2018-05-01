@@ -222,9 +222,8 @@ int AudioVoiceManager4D::numDynamicChannelsUsed() const
 void AudioVoiceManager4D::generateAudio(float * __restrict samples, const int numSamples)
 {
 	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
-	const float limiterPeak = outputMode == kOutputMode_MultiChannel ? .4f : .1f;
 	
-	generateAudio(samples, numSamples, true, limiterPeak, outputMode, true);
+	generateAudio(samples, numSamples, true, 1.f, outputMode, true);
 }
 
 void AudioVoiceManager4D::generateAudio(
@@ -334,6 +333,27 @@ void AudioVoiceManager4D::generateAudio(
 								audioBufferAdd(&samples[numSamples * 1], voiceSamples, numSamples);
 							}
 						}
+						else if (voice.speaker == AudioVoice::kSpeaker_Channel)
+						{
+							if (voice.channelIndex >= 0 && voice.channelIndex < 2)
+							{
+								if (interleaved)
+								{
+									// interleave voice samples into destination buffer
+									
+									float * __restrict dstPtr = samples;
+									
+									for (int i = 0; i < numSamples; ++i)
+									{
+										dstPtr[i * 2 + voice.channelIndex] += voiceSamples[i];
+									}
+								}
+								else
+								{
+									audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
+								}
+							}
+						}
 						else
 						{
 							if (interleaved)
@@ -357,22 +377,25 @@ void AudioVoiceManager4D::generateAudio(
 					}
 					else
 					{
-						if (interleaved)
+						if (voice.channelIndex >= 0 && voice.channelIndex < numChannels)
 						{
-							// interleave voice samples into destination buffer
-							
-							float * __restrict dstPtr = samples + voice.channelIndex;
-							
-							for (int i = 0; i < numSamples; ++i)
+							if (interleaved)
 							{
-								*dstPtr = voiceSamples[i];
+								// interleave voice samples into destination buffer
 								
-								dstPtr += numChannels;
+								float * __restrict dstPtr = samples + voice.channelIndex;
+								
+								for (int i = 0; i < numSamples; ++i)
+								{
+									*dstPtr = voiceSamples[i];
+									
+									dstPtr += numChannels;
+								}
 							}
-						}
-						else
-						{
-							audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
+							else
+							{
+								audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
+							}
 						}
 					}
 				}

@@ -686,6 +686,7 @@ void VfxPlug::connectTo(VfxPlug & dst)
 		VfxFloatArray::Elem elem;
 		elem.value = (float*)dst.mem;
 		floatArray.elems.push_back(elem);
+		floatArray.lastUpdateTick = -1;
 		
 		dst.isReferencedByLink = true;
 	}

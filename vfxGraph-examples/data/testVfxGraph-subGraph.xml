@@ -1,0 +1,134 @@
+<graph nextNodeId="75" nextLinkId="81">
+    <node id="27" typeName="osc.endpoint">
+        <input socket="ipAddress" value="127.0.0.1"/>
+        <input socket="port" value="2000"/>
+        <input socket="recvIpAddress" value="127.0.0.1"/>
+        <input socket="recvPort" value="2000"/>
+        <input socket="sendIpAddress" value="127.0.0.1"/>
+        <input socket="sendPort" value="2000"/>
+    </node>
+    <node id="33" typeName="osc.send">
+        <input socket="path" value="/a"/>
+    </node>
+    <node id="39" typeName="osc.receiveChannels">
+        <resource type="osc.pathList" name="editorData"><![CDATA[<value>
+    <elem path="/a"/>
+    <elem path="/b"/>
+    <elem path="/c"/>
+    <elem path="/d"/>
+    <elem path="/a"/>
+    <elem path="/b"/>
+    <elem path="/b"/>
+    <elem path="/d"/>
+    <elem path="/d"/>
+</value>
+]]></resource>
+    </node>
+    <node id="41" typeName="osc.send">
+        <input socket="path" value="/b"/>
+    </node>
+    <node id="42" typeName="osc.send">
+        <input socket="path" value="/c"/>
+    </node>
+    <node id="43" typeName="osc.send">
+        <input socket="path" value="/d"/>
+    </node>
+    <node id="44" typeName="gen.sine"/>
+    <node id="45" typeName="gen.sine">
+        <input socket="frequency" value="1.123000"/>
+    </node>
+    <node id="46" typeName="gen.sine">
+        <input socket="frequency" value="1.234000"/>
+    </node>
+    <node id="47" typeName="gen.sine">
+        <input socket="frequency" value="1.345000"/>
+    </node>
+    <node id="50" typeName="draw.display"/>
+    <node id="51" typeName="channel.swizzle">
+        <input socket="swizzle" value="0 1 2 3"/>
+    </node>
+    <node id="53" typeName="channel.swizzle">
+        <input socket="swizzle" value="0 1 2 3"/>
+    </node>
+    <node id="54" typeName="channel.toGpu"/>
+    <node id="55" typeName="channel.fromFile">
+        <input socket="filename" value="datatable.csv"/>
+    </node>
+    <node id="56" typeName="draw.image">
+        <input socket="opacity" value="0.500000"/>
+        <input socket="sizeMode" value="1"/>
+    </node>
+    <node id="57" typeName="draw.surface"/>
+    <node id="60" typeName="draw.sequence"/>
+    <node id="64" typeName="output">
+        <input socket="name" value="output3"/>
+    </node>
+    <node id="66" typeName="gen.sine"/>
+    <node id="67" typeName="gen.sine">
+        <input socket="frequency" value="2.000000"/>
+    </node>
+    <node id="68" typeName="gen.sine">
+        <input socket="frequency" value="4.000000"/>
+    </node>
+    <node id="70" typeName="output">
+        <input socket="name" value="output2"/>
+    </node>
+    <node id="71" typeName="output">
+        <input socket="name" value="output1"/>
+    </node>
+    <link id="43" srcNodeId="33" srcNodeSocketName="value" dstNodeId="44" dstNodeSocketName="value"/>
+    <link id="44" srcNodeId="41" srcNodeSocketName="value" dstNodeId="45" dstNodeSocketName="value"/>
+    <link id="45" srcNodeId="42" srcNodeSocketName="value" dstNodeId="46" dstNodeSocketName="value"/>
+    <link id="46" srcNodeId="43" srcNodeSocketName="value" dstNodeId="47" dstNodeSocketName="value"/>
+    <link id="49" srcNodeId="51" srcNodeSocketName="channel1" dstNodeId="39" dstNodeSocketName="channel"/>
+    <link id="53" srcNodeId="53" srcNodeSocketName="channel1" dstNodeId="39" dstNodeSocketName="channel"/>
+    <link id="55" srcNodeId="51" srcNodeSocketName="channel2" dstNodeId="53" dstNodeSocketName="1" dynamic="1"/>
+    <link id="56" srcNodeId="54" srcNodeSocketName="channel" dstNodeId="51" dstNodeSocketName="1" dynamic="1"/>
+    <link id="58" srcNodeId="51" srcNodeSocketName="channel3" dstNodeId="55" dstNodeSocketName="channel"/>
+    <link id="59" srcNodeId="56" srcNodeSocketName="image" dstNodeId="54" dstNodeSocketName="image"/>
+    <link id="60" srcNodeId="50" srcNodeSocketName="image" dstNodeId="57" dstNodeSocketName="image"/>
+    <link id="64" srcNodeId="57" srcNodeSocketName="source" dstNodeId="60" dstNodeSocketName="any"/>
+    <link id="75" srcNodeId="60" srcNodeSocketName="01" dstNodeId="56" dstNodeSocketName="any"/>
+    <link id="76" srcNodeId="64" srcNodeSocketName="value" dstNodeId="66" dstNodeSocketName="value"/>
+    <link id="77" srcNodeId="70" srcNodeSocketName="value" dstNodeId="67" dstNodeSocketName="value"/>
+    <link id="80" srcNodeId="71" srcNodeSocketName="value" dstNodeId="68" dstNodeSocketName="value"/>
+    <editor nextZKey="618">
+        <dragAndZoom x="177.7388916015625" y="-72.842025756835938" zoom="1"/>
+        <nodeDatas>
+            <nodeData nodeId="27" x="-320" y="-192" zKey="0"/>
+            <nodeData nodeId="33" x="-48" y="-192" zKey="0" folded="1"/>
+            <nodeData nodeId="39" x="-320" y="-16" zKey="0"/>
+            <nodeData nodeId="41" x="-48" y="-160" zKey="0" folded="1"/>
+            <nodeData nodeId="42" x="-48" y="-128" zKey="0" folded="1"/>
+            <nodeData nodeId="43" x="-48" y="-96" zKey="0" folded="1"/>
+            <nodeData nodeId="44" x="-208" y="-192" zKey="577" folded="1"/>
+            <nodeData nodeId="45" x="-208" y="-160" zKey="583" folded="1"/>
+            <nodeData nodeId="46" x="-208" y="-128" zKey="0" folded="1"/>
+            <nodeData nodeId="47" x="-208" y="-96" zKey="0" folded="1"/>
+            <nodeData nodeId="50" x="576" y="-64" zKey="0"/>
+            <nodeData nodeId="51" x="-48" y="-16" zKey="616"/>
+            <nodeData nodeId="53" x="-176" y="-16" zKey="617"/>
+            <nodeData nodeId="54" x="320" y="0" zKey="0" folded="1"/>
+            <nodeData nodeId="55" x="-320" y="96" zKey="0"/>
+            <nodeData nodeId="56" x="320" y="32" zKey="0" folded="1"/>
+            <nodeData nodeId="57" x="448" y="-64" zKey="0"/>
+            <nodeData nodeId="60" x="320" y="64" zKey="0" folded="1"/>
+            <nodeData nodeId="64" x="272" y="-192" zKey="611" folded="1"/>
+            <nodeData nodeId="66" x="112" y="-192" zKey="608" folded="1"/>
+            <nodeData nodeId="67" x="112" y="-160" zKey="609" folded="1"/>
+            <nodeData nodeId="68" x="112" y="-128" zKey="610" folded="1"/>
+            <nodeData nodeId="70" x="272" y="-160" zKey="612" folded="1"/>
+            <nodeData nodeId="71" x="272" y="-128" zKey="613" folded="1"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="73" x="80" y="32" zKey="0" nodeId="51" dstSocketName="1" sx="216" sy="148"/>
+            <visualizer id="74" x="208" y="-96" zKey="0" nodeId="56" srcSocketName="image" sx="216" sy="88"/>
+        </visualizers>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="002d9e90" gridColor="2b2b2b21">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0" g="0" b="0" a="0"/>
+                <key t="1" r="1" g="1" b="1" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

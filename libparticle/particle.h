@@ -118,6 +118,7 @@ struct ParticleEmitterInfo
 	float startDelay; // Delay in seconds before the system starts emitting once enabled.
 	float startLifetime; // The initial lifetime for particles.
 	float startSpeed; // The initial speed of each particle in the appropriate direction.
+	float startSpeedAngle; // The initial movement direction of each particle, unless random start direction is enabled.
 	float startSize; // The initial size of each particle.
 	float startRotation; // The initial rotation angle of each particle.
 	ParticleColor startColor; // The initial color of each particle.
@@ -235,6 +236,7 @@ struct ParticleInfo
 
 	bool collision;
 	// todo : add plane collision support?
+	// todo : add collision scene editor
 	float bounciness;
 	float lifetimeLoss; // The fraction of a particle’s total lifetime that it loses if it collides.
 	float minKillSpeed; // Particles travelling below this speed after a collision will be removed from the system.

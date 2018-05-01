@@ -29,6 +29,7 @@
 #include "graph.h"
 #include "vfxGraph.h"
 #include "vfxNodes/openglImageCapture.h"
+#include <cmath>
 
 extern const int GFX_SX;
 extern const int GFX_SY;

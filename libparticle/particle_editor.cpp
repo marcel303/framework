@@ -5,6 +5,7 @@
 #include "particle_framework.h"
 #include "tinyxml2.h"
 #include "ui.h"
+#include <cmath>
 
 #include "StringEx.h" // _s functions
 
@@ -424,7 +425,7 @@ void doMenu_Pi(const float dt)
 				"onDeath"
 			};
 			
-			for (int i = 0; i < ParticleInfo::kSubEmitterEvent_COUNT; ++i) // fixme : cannot use loops
+			for (int i = 0; i < ParticleInfo::kSubEmitterEvent_COUNT; ++i)
 			{
 				if (doCheckBox(g_pi().subEmitters[i].enabled, eventNames[i], true))
 				{
@@ -484,8 +485,9 @@ void doMenu_Pei(const float dt)
 	doTextBox(g_pei().startDelay, "Start Delay", dt);
 	doTextBox(g_pei().startLifetime, "Start Lifetime", dt);
 	doTextBox(g_pei().startSpeed, "Start Speed", dt);
+	doTextBox(g_pei().startSpeedAngle, "Start Direction", dt);
 	doTextBox(g_pei().startSize, "Start Size", dt);
-	doTextBox(g_pei().startRotation, "Start Rotation", dt); // todo : min and max values for random start rotation?
+	doTextBox(g_pei().startRotation, "Start Rotation", dt);
 	doParticleColor(g_pei().startColor, "Start Color");
 	doTextBox(g_pei().gravityMultiplier, "Gravity Multiplier", dt);
 	doCheckBox(g_pei().inheritVelocity, "Inherit Velocity", false);

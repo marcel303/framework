@@ -4,6 +4,7 @@
 #include "Quat.h"
 
 Quat::Quat()
+	: m_xyz()
 {
 	m_w = 1.f;
 }
@@ -20,7 +21,7 @@ Quat::Quat(float x, float y, float z, float w)
 {
 }
 
-Quat::Quat(Vec3 axis, float angle)
+Quat::Quat(const Vec3 & axis, float angle)
 {
 	fromAxisAngle(axis, angle);
 }
@@ -54,9 +55,9 @@ Quat Quat::calcConjugate() const
 	return result;
 }
 
-void Quat::fromAxisAngle(Vec3 axis, float angle)
+void Quat::fromAxisAngle(const Vec3 & _axis, float angle)
 {
-	axis.Normalize();
+	const Vec3 axis = _axis.CalcNormalized();
 	
 	// setup 'axis'
 

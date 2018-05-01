@@ -154,7 +154,8 @@ struct AudioVoice
 		kSpeaker_None,
 		kSpeaker_LeftAndRight,
 		kSpeaker_Left,
-		kSpeaker_Right
+		kSpeaker_Right,
+		kSpeaker_Channel
 	};
 	
 	struct RampInfo
@@ -235,6 +236,7 @@ struct AudioVoiceManager
 	Type type;
 	
 	AudioVoiceManager(const Type _type);
+    virtual ~AudioVoiceManager() { }
 	
 	void generateAudio(
 		AudioVoice ** voices,

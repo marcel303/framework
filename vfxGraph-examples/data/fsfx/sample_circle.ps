@@ -1,0 +1,45 @@
+include fsfx/common.inc
+
+vec4 fsfx()
+{
+	vec2 colormapSize = textureSize(colormap, 0);
+	vec2 colormapSizeRcp = 1.f / colormapSize;
+	
+	vec2 sampleCoord = texcoord;
+		
+	#if 1
+	vec2 coord = texcoord * colormapSize;
+	vec2 mid = colormapSize * 0.5;
+	vec2 delta = coord - mid;
+	float distance = length(delta);
+	
+	float distanceTreshold = param2;
+	if (distanceTreshold <= 0.0)
+		distanceTreshold = param1;
+	
+	if (distance >= distanceTreshold)
+	{
+		float targetDistance = max(0.0, param1);
+		
+		vec2 pos = mid + normalize(delta) * targetDistance;
+		
+		sampleCoord = pos * colormapSizeRcp;
+	}
+	#else
+	vec2 coord = (texcoord - vec2(0.5)) * colormapSize;
+	vec2 mid = colormapSize * 0.5;
+	vec2 delta = coord - mid;
+	float distance = length(coord);
+	
+	if (distance > param1)
+	{
+		vec2 pos = mid + normalize(delta) * distance;
+		
+		sampleCoord = pos * colormapSizeRcp;
+	}
+	#endif
+	
+	vec4 color = texture(colormap, sampleCoord);
+	
+	return color;
+}

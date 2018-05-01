@@ -1,0 +1,665 @@
+Well. Here is the progress of JGMOD library.
+
+
+December 1997
+-------------
+24  Got 2 MOD documentation from oulu. Neither give a very good description
+    about the MOD format but with both combined, just enough.
+
+25  Merry Christmas !! Decided to make a mod library and I called it JGMOD.
+    You might be wondering what JG means. My actual name is Guan Foo Wah.
+    Guan is my surname and people call me Jeffery, or Jeff. So JG stands for
+    Jeffery Guan. I could call it GFWMOD but it really sounds terrible to me.
+
+    Started making the library. The birth of this library !!! Able to load
+    some of the MOD 31 instruments header (song name and all the 31
+    instruments info). 
+
+26  Revamped in the loading header function. It was untidy. Now it uses
+    Allegro's pack_stuff routines. Able to load the MOD pattern for 4 channels
+    mod.
+
+27  Finally figured out how to load X channel mod. It is really easy. Some
+    other damm documentation confuses me with it.  Able to load all the 31
+    instruments sample. Having trouble to play those sample using Allegro's
+    play_sample() function. Sounds too terrible.
+
+28  Tried minus 127 with all of those 31 instruments samples and hell it
+    works !! play_sample() have no problem playing those samples now. That
+    was a lucky try. Made an interrupt to play those mod files assuming the
+    music is at tempo 6 and bmp 125. Since it uses play_sample(), a new
+    sample played will not cancel any sample on the same channel. Echos and
+    feedback will be heard. Yuck !
+
+29  Started making this history to whovever is interested.
+    Now it uses Allegro's lower level digital sample routines. No more
+    feedback and echos. YEAAA... Plays samples in loop mode if required.
+
+30  Now plays the sample at the correct volume. Pattern Break command (13)
+    is now supported. Able to play music at different tempo and bmp(15).
+
+31  Supports Fine Volume Slide Up and Fine Volume Slide Down (14-10
+    and 14-11).
+
+
+January 1998
+------------
+3   Supports set sample offset(9).
+
+5   Fixed Fine Volume Slide Up and Fine Volume Slide down bug
+
+7   Changed the way to handle bpm by changing the interrupt rate
+    when needed.
+
+8   Fixed a pattern break bug. Supports MOD 15 instruments now. 
+
+9   Volume slide (10) supported
+
+10  Read the S3M format. Could not understand much. Change to NTSC clock rate
+    cause S3M c2spd is in that rate. Implemented the finetune effect (14-5).
+
+11  Implemented the period slide up (pormento up, 1) and slide
+    down(promento down, 2) effect. Slide to note(3) is also supported but
+    buggy.
+
+12  Fixed slide to note bug, but a bug still exists.
+
+26  Fixed another slide to note bug. I think it is free of bug now. Did a
+    makefile for this library.
+
+28  Supports Retrigger Sample (14-9) and Cut Sample (14-12).
+
+29  Delay Sample (14-13) and Pormento to note+volume slide suported (5).
+    Vibrato+volume slide is also supported but without the vibrato.
+    Make prev_pattern() and next_pattern() to skip pattern.
+
+30  Now the song can play in a loop mode. Fixed a bug in the skip pattern
+    functions.  
+
+
+Febuary 1998
+------------
+13  Opps. Haven't update this library for a long time. Did stop_mod function
+    to stop the music. Updated the mod loader to support up to 32 channels
+    but not player.
+
+14  Did a loader for XM partially.
+
+16  The player now supports up to 32 channels and the number of channels
+    reserved for mod can be specified instead of the default 24 channels.
+
+19  Changed how the mod interrupt works. Global commands will not be skiped
+    if the no of channels reserved for the player is less than no of
+    channels used by the song. Did a readme.txt. I am going to upload this to
+    my web page tomorrow.
+
+20  Library uploaded. 
+
+23  Did the vibrato effect (4). Yea... !!!!
+
+24  Added some preprocessor commands to jgmod.h. Did a cpp program to test
+    with this library. It compiled fine. No errors at all. But when I ran the
+    program, there is no sound at all. I have no clue at all why this
+    is happening. I don't know much about cpp.
+
+25  Did set pan effect (8) and 16 pos panning effect (14-8). This is a
+    non-standard protracker effect. So, could not test my codes. Not sure if
+    it really works. Also, did is_mod_playing() function to test the mod
+    is playing anything.
+
+27  Did pause_mod(), resume_mod() and is_mod_paused() function. Thought
+    I found a bug in mod_interrupt() function in player.c. The player exits
+    with SIGSEGV when a music playing in unloop mode ends without windows
+    running. It has no problem when windows is running. After 2 hours of
+    wondering, found the ass code. Jgmod.c is the problem. Jgmod.c is
+    accessing 'of' pointer even it is pointing to NULL. Fixed the problem. If
+    you are reading this, my advice. If you are messing with pointers, don't
+    test your program under windows. It will usually appear to be NORMAL.
+    Shitty win95.
+
+
+March 98
+--------
+1   Change next_pattern() and prev_pattern() to next_mod_track() and
+    prev_mod_track() respectively. Fixed a bug in is_mod_playing() and
+    resume_mod(). Added goto_mod_track() and finished destroy_mod().
+    Change readme.txt and my jgmod homepage contents.
+
+2   Library uploaded. Fixed a pattern break bug. I was not reading the
+    documentation properly. Corrected the set pan effect.
+
+3   Redo the s3m loader because I forgot most of the s3m loader codes I did
+    2 months ago. 
+
+4   Continue the s3m loader. Able to load 8 bit and 16 bit samples. Only
+    tested with 8bit unsigned samples. Fixed a sample offset bug. Tested the
+    library with cpp program again. This time it works. This is puzzling.
+
+5   Fixed the 16bit samples loader. Instrument lenght given in S3M is in
+    samples. I thought it is in bytes. Change the way notes are stored.
+    Previously notes are stored in a single huge array. Now, store notes
+    in arrays according to their pattern. I change it because it would be
+    easier this way when dealing with XM.
+
+6   Continue the s3m loader. Able to detect the no of channels accurately
+    but slow.
+
+9   Busying downloading gcc280, gpp280 and lgp280. Fixed some compile
+    problems with gcc280.
+
+10  Added restart position support (only in loop mode). Did a faster channels
+    detection for s3m but less accurate. One of partitions compressed with
+    drivespace 3 in my hard disk had gone bad. Fixed the problem with
+    Scandisk. I store most of my mod musics in that partition. I had
+    100-110Mb of mod. After fixing, I have 13Mb left !!!! Now I have very
+    less mod for testing. I have do redownload those musics again. *sigh*
+    Never ever use drivespace even if you are short of space. 
+    
+11  Added the option to disable or enable protracker with 15 instruments.   
+    Continue the s3m loader. Able to set panning.
+
+13  Just got myself a modem. Busying downloading some of the musics which
+    lost earlier. 
+
+15  Able to load all of the S3M patterns. Just need to convert it to a common
+    format (format used by protracker).
+
+16  Converted the S3M frequency to hertz. Now JGMOD can play S3M
+    basically. Yahoo !!! S3M command A (set tempo), B (pattern jump),
+    and C (pattern break) supported.
+
+17  S3M volume channel done. Command O (set sample offset), T (set bpm).
+    Command D (volume slide) partially supported.
+    
+18  Continue coding command D. Fixed a restart position bug. S8 (set 16
+    position panning) command supported.
+
+19  SD (delay sample), X (set pan), G (slide to note), note off supported.
+    Finished coding the command D.
+
+20  S2 (finetune), SC (cut sample) supported. Delay sample had been wrongly
+    converted. Fixed. Library uploaded.
+
+21  Fixed a problem with s3m fine volume slide up. V (global volume)
+    supported.
+
+    Found the cause of the problem when playing the last track of 'Existing
+    by Rick Rippon'. The header reported that there are total of 41 patterns
+    but actually 42 patterns. Stupid S3M. Fixed. 
+
+    Now this is the stupidest mistake I ever had. I left some of the SAMPLE
+    structure pointing to a null sample data in the s3m loader. When Allegro
+    plays this sample with volume greater than 0, it will exit will SIGSEV
+    error. This cause Catch that goblin!" to exit with SIGSEV error at track
+    18-03 (or pattern 14). This song requested to play instrument 17 which is
+    empty. It took me to 4 hours just to find this bug. 
+    
+22  Added set_mod_volume() and get_mod_volume(). Pattern delay(14-14)
+    supported. Command E(portamento down) and F(portamento up) implemented
+    except the extra fine slide part. I don't know how. My sliding is
+    somewhat different from what I heard from other players. Don't know
+    why. Library uploaded.
+
+26  Downloaded wip (25 March). A stereo variable is added to the sample
+    structure which causes only MOD to play incorrectly. Fixed.
+
+29  Lock the appropriate function and variables and JGMOD structure. Fixed a
+    bug in destroy_mod. Calling play_mod after calling destroy_mod will not
+    play the song correctly.
+
+30  Implemented extra fine slide for E(portamento down) and F(portamento up).
+
+31  Improved the vibrato effect and command H(vibrato) is supported. 
+    Fixed finetune for s3m. SA (stereo control) and Set Vibrato
+    waveform (mod and s3m) supported.
+
+
+April 98
+--------
+1   XM and IT supported !!!!                                                        You have been fooled... haha.
+
+3   Pattern loop is now supported for MOD and S3M. 
+
+4   Command I(Tremor), K(vibrato+volume slide) and L(porta to note+volume
+    slide) are now supported. Now I found why my pitch sliding is different
+    from other players. When converting herz to period, I should have take
+    c2spd into account but I didn't. Fixed by changing quite a number of
+    lines except set finetune. I will do it another day because it is
+    3.50AM now. I hope no new bug occured from this modification.
+
+5   Finished finetune. Implemented command U (fine vibrato).
+    Library uploaded
+
+6   Did codes for cubic player note dots like for JGMOD.EXE.
+
+9   Some minor changes to player.c and Arpeggio supported (for MOD and S3M).
+
+10  Fixed a bug in portamento to note.
+
+11  Player.c which is 32kb takes a long time to compile (about 8 sec). So I
+    started splitting player.c to two files. Player.c and player2.c. 
+
+15  Changed the priority of all insturments sample from a default of 255 to
+    192 because of the Allegro wip April 12 version. Added JGMOD_DATE just
+    like allegro. Done get_jgmod_sample() to get mod instruments. Done
+    ex1.c, ex2.c and ex3.c, which is examples on how to program with JGMOD.
+
+17  Fixed a bug in s3m loader. Now it can handle buggy note values.
+    Implemented s3m apreggio (command J).
+
+21  Tremolo and set tremolo waveform supported for MOD and S3M.
+
+22  Restarted the XM loader. Now able to load all the patterns but I still
+    haven't convert it into something JGMOD understand.
+
+25  Added remove_mod() function.
+
+26  Added the ability to speed up or slow down the music by using
+    set_mod_speed(). toggle_pause_mode() done.
+
+28  Library uploaded
+
+30  XM header might report the wrong number of patterns. Now my XM loader
+    can deal with this problem.
+
+
+MAY 1998
+--------
+1   Continue the XM loader. Able to load instrument header
+
+2   Continue the XM loader. Able to detect number of samples, load
+    all the sample headers and load all the delta samples (8bit and 16bit).
+
+3   Now, my library can play XM basically. There is still a lot to do before
+    it sounds acceptable. Implemented command B(position jump),
+    D(pattern break), 9(sample offset), EE(pattern delay), F(set tempo/BPM),
+    C (set volume), G(set global volume), E6(loop pattern), E9(retrig note),
+    ED(note delay), EC(note cut)    .
+
+4   XM might request to play nonexistant instrument or sample which will
+    cause a SIGSEV error. I also converted the sample number for notes in
+    all instruments wrongly. This causes JGMOD to play incorrect sample.
+    All fixed.
+
+5   Fine volume slide down and up supported. Plays incorrect sample again.
+    Fixed.
+
+6   Fixed some bugs in the loader. Now it can load "Dreams 2" without
+    SIGSEV error but the loader still could not load it correctly.
+
+7   Command 8(Set Pan), 7(tremolo), E7(set tremolo waveform),
+    1(pitch slide up), 2(pitch slide down) supported. 3(Slide to note)
+    is also done but somewhat different from what I heard from Cubic player.
+
+23  Fixed portamento to note bug for XM. Command 5(slide to note + volume
+    slide) and 6 (vibrato + volume slide) done.
+
+24  Command 4 (vibrato), E4(vibrato waveform), E1(fine porta up),
+    E2 (fine porta down), H(global volume slide) implemented.
+    
+    Found out that I did not implement E1(fine porta up) and E2(fine porta
+    down) for MOD. How the hell did I miss those ? Anyway, both has been
+    implemented.
+
+26  Changed all malloc() calls in loaders to calloc().
+
+28  Implemented command K(key off) and note off as volume ramp for 200
+    milisec temporary. This make more music sound much better.
+
+39  Set vibrato speed and do vibrato for volume column done.
+
+30  Player.c reaches 32Kb again while player2.c is at 19Kb. Transfered some
+    codes to player2.c. Did panning slide left and right for volume column.
+
+31  Implemented command P(panning slide)
+
+
+JUNE 1998
+---------
+4   get_jgmod_sample_no() returns some invalid sample number which caused
+    jgmod to access invalid memory. The funniest thing is that sometimes
+    JGMOD does not exit immediately with SIGSEV when accesing the invalid
+    memory. This causes note2hz() calculate frequency with wrong value of
+    sample transpose and then exit with Floating Point Exception. I hope this
+    will fix all SIGSEV problems I face some of the time with XM.
+    
+5   I have decided to redo some of the codes for the mod interrupt. Whatever
+    changes to the volume, etc... are updated immediately. Now I wish to
+    do whatever changes only at the end of the interrupt. This will make
+    me easier for me to code and maintain.
+
+6   Got the player to play basically. I am going to concentrate on MOD
+    commands first. S3M and XM will be later.
+
+    Command 1, 2, 4, 6, 10, 11, 12, 13, 15, E1, E2, E6, E10, E11, E14 done.
+
+7   Fixed a bug with extended commands which are global commands. Command
+    E4, E5, E7, E8, E9, ED, 0, 3, 5, 7, 8, 9 done. Phew ! All MOD effects are
+    done. Now I will concentrate on S3M.
+    
+    S3M command A, B, C, D, E, F, G, H, I, J, K, L, O, R, T, U done.
+
+8   Fixed a bug in MOD arpeggio and slide to note. Continue doing those
+    S3M effects. Done all except Multi Retrig.
+
+9   Done Multi Retrig for S3M. Now, JGMOD supports all standard S3M effects.
+    I will concentrate on XM. Supports XM basically. XM effect
+    3-6, 8, A-D, EA, EB, F, G done.
+
+10  Fixed a bug with porta to note and sample offset. On June 4, I fixed a
+    bug which may cause SIGSEV or Floating exception. I missed a section of
+    code which could also returns an invalid sample number. Fixed.
+
+13  Implemented more effects. All volume commands are done.
+
+14  Implemented command X1 (extra fine porta up), X2 (extra fine porta down),
+    R (Multi retrig note) and T (tremor). All XM commands are supported now
+    except K (Key off) and L (set envelope position).
+
+    set_mod_speed() no longer increse the pitch but only the speed.
+    Done set_mod_pitch() to increase the pitch
+
+    Uploaded JGMOD to my homepage.
+
+17  XM official document stated that envelops are 48 bytes long when actually
+    it is 24 words long. This leads me to think there are 24 envelope
+    positions when there are actually 12 positions only. Changed.
+
+28  Found out that XM (amiga frequency) cannot play instruments with negative
+    finetune in B note (any octave) properly. This is because that finetune
+    is not converted properly when loading XM which I think it causes JGMOD
+    to access illegal memory.
+
+    There is another illegal memory access in parse_new_note(). Both fixed
+
+
+JULY 1998
+---------
+7   Added some codes to simulate key off (or note off)
+
+11  Added some codes for initializing envelopes. Converting XM linear period
+    to frequency no longer uses pow() and no longer cause some programs which
+    uses FPU to crash with floating point exception (I think).
+
+15  More initializing envelopes today. Normal and sustain volume envelope
+    supported but there is a bug in sustain volume envelope.
+
+16  Fixed the yesterday sustain volume bug and done loop volume envelope.
+    Key off is properly supported (I think)
+
+22  Improve the documentation just like what Linus Frost suggested. I hope
+    the improvement is good enough. Library Uploaded
+
+26  Converted all 16bit samples in XM to 8bit samples upon loading. This is
+    to fix those a SIGSEV error that I encountered a long time ago. This
+    conversion has no effect on the sound output quality at all since allegro
+    will automatically convert 16bit to 8bit samples before mixing.
+
+27  Added the option to force to 8bit samples in XM modules by using define
+    in load_xm.c.
+
+31  Fix XM portamento to note + volume slide bug. 
+    JGMOD will restart the song if prev_mod_track() or goto_mod_track() to
+    track 0.
+
+
+AUGUST 1998
+-----------
+6   Fixed a bug that exits in volume envelope when sustain point is at tick 0
+
+7   Panning Envelope supported. JGMOD has problem playing envelope with only
+    one point specified. Instruments that should play volume envelope but
+    no point specified in the envelope should not be played at all. Fixed
+
+    Began coding on the conversion utility, JGM. Able to save JGM basic
+    JGM header
+
+8   Begain coding on the JGM loader. Able to load basic JGM header. Also the
+    conversion utility able to save instrument header.
+
+9   Able to load instrument header.
+
+10  Able to save and load sample header.
+
+11  Some adjustment to the sample header.
+
+17  Playing an instrument that doesn't use volume envelope, with key off
+    (or note off) specified is equilavent to note cut. Fixed.
+
+20  Fixed 2 bugs in portamento to note. Library uploaded.
+
+
+September 1998
+--------------
+9   Fixed a bug in the XM loader.
+
+16  Correct the tempo effect. A tempo 0 command will be ignored.
+
+30  XM arpeggio and XM set envelope position supported. The S3M loader will
+    automatically convert all 16bit samples to 8bit samples to avoid SIGSEV
+    error when playing the S3M as well.
+
+
+October 1998
+------------
+3   I found out that Unreal uses S3M and IT some time ago, thanks to
+    www.gamasutra.com. I bought the game today and found out it is really
+    true except that the file has an extra header for Unreal in the beginning
+    (about 145 bytes) of the file and with an extension of umx.
+
+    Detecting the umx file is very simple but finding the size of the of
+    the unreal header file is not very direct since the size of the header
+    varies for all umx. There are 2 variables in the file which are very
+    close to the size of the file but it doesn't give me any clue of
+    detecting the size of the header. I found out a way of detecting the size
+    of the header and thus able to find the first byte of the S3M header. Now
+    loading the S3M from UMX is not a problem for JGMOD.
+
+    Library uploaded
+
+9   Corrected some errors in unreal.txt about the channels used for some
+    musics.
+
+29  JGMOD are able to handle musics more than 32 channels. Also loading XM
+    and MOD more than 32 channels have no problem with JGMOD.
+    JGMOD.EXE can scroll up or down if more than 33 channels are used, that
+    is if the screen is not big enough to display all those 33 channels.
+
+30  The s3m loader are able to load s3m up to 32 channels. Previously, only
+    up to 16 channels.
+
+
+November 1998
+-------------
+6   Instrument without note specified should be ignored.
+
+7   Decided how the patterns should be saved. Coded the JGM converter and
+    loader. Fix a lot of bug in the converted. HEck... Converter is harder
+    to code than the loader. Fixed quite a lot of bugs in the converter.
+    Keep me busy for about 4 hours debugging it. I think it is stable now.
+    
+    Now JGMOD can load JGM can Allegro datafile. Library Uploaded
+
+8   Fix another bug in JGM. Now it can store patterns greater than 255 rows.
+    Library uploaded again.
+
+    Found another bug... damn... JGM has trouble storing extended command
+    some extended command. Fixed. Shouldn't have upload it so fast.
+
+27  Ported my library to Winallegro using VC5. WinJGMOD is here !!!
+
+28  More testing for WinJGMOD. Winallegro can't play volume correctly. BAD.
+    JGMOD uploaded.
+
+
+December 1998
+-------------
+10  Started doing Allegro grabber plugins. Able to grab MODs.
+
+11  Added function register_datafile_jgm() to load jgm.
+
+14  Finished doing Allegro grabber plugins.
+
+22  When instrument/sample and a portamento to note is specified, the volume
+    should be initialize to the default volume specified within the
+    instrument/sample.
+
+    Added a function in JGMOD.EXE to redraw the screen by pressing the
+    tilde key. This is only important if the screen is messed up when
+    switching to windows and back to dos.
+
+23  Fix a bug on yesterday's bug fix which only happens on XM. Added
+    compress option thru makefile.
+
+    Library uploaded.
+
+29  Didn't close a file correctly in the detect_jgm() function. Fixed.
+
+
+January 1999
+------------
+24  Upgraded to DJGPP 2.02. JGMOD have trouble opening certain MOD files.
+    Don't really know why.
+
+26. Found a bug in the jgmod_fseek() function. Now, JGMOD should not have
+    troubles opening the MOD files. The grabber plugin and my Jtris game now
+    works fine. Phew.
+
+    Library uploaded.
+
+31  Started doing my own file routines, for portability reasons.
+
+
+February 1999
+-------------
+24  Added a variable, enable_lasttrk_loop to ignore the position jump in the
+    last track of a song to avoid infinity loop.
+
+
+April 1999
+----------
+20  Gosh. Haven't been updating JGMOD for a long long time. Seems like an eon.
+    Been spending too much time playing games. Just finished the jgmod_error.
+    Problems encountered by JGMOD will be reported in jgmod_error.
+
+22  Read a little of IT file format doc. Finished the detection for IT and
+    started doing the IT loader.
+
+24  Decided that the JGMOD examples should be part of JGMOD distribution.
+    Library uploaded.
+
+
+May 1999
+--------
+13  Added keys to reduce and increase range of notes displayed 
+    (using F5 & F6), and to change the relative positions of the notes
+    (using F7 & F8) in JGMOD.EXE.
+
+16  Added get_mod_info() to get some information about MODs. Added EX7
+    to examples to show how to use get_mod_info().
+
+
+June 1999
+---------
+6   Fixed a pattern break and position jump bug. I noticed this bug about a
+    year ago and refused to fix it because it could cause infinity loop. The
+    pattern break bug will be handled correctly if the mod song is in loop
+    mode. Otherwise, it will not. JGMOD could play backward.s3m properly now.
+
+    I tought I found out that JGMOD plays instruments at tick 1. Should be at
+    tick 0. Actually, JGMOD plays instruments at tick 0. Then, immediatelly,
+    the tick is increased by one. This made it looks JGMOD plays instruments
+    at tick 1. It really fooled me for a while, after not touching my core
+    JGMOD codes for such a long time. JGMOD codes looks quite alien to me
+    now. Changed the logic of the core. Increase, then play.
+
+    set_mod_pitch() no longer allow 0 pitch 
+
+21  Fixed the arpeggio bug, I think.
+    Library Uploaded.
+
+
+November 1999
+-------------
+26  Bought Unreal Tournament(UT). What an exciting game.
+
+29  Just received a JGMOD version of Linux from George Foot. Hm.. Maybe I
+    will call it LnxJGMOD? or LinuxJGMOD? Duh.. I have no idea.
+
+    The detection for S3M in Unreal has been changed to detect S3M more
+    reliably than before. JGMOD is now able to detect and load UT's S3M and
+    XM (both in UMX). Also added codes to detect Unreal and UT Impulse
+    Tracker(IT) files. JGMOD should not have any problems at all when
+    detecting any UMX modules.
+
+
+January 2000
+------------
+5   Changed the directory structure. Library and object files are no longer
+    kept in the same directory but in it's own directory just like Allegro.
+
+6   Finished porting to Linux generally.
+
+7.  Forgotten to close some files in get_mod_info(). Fixed.
+    get_mod_info() now able to detect and get information about Unreal
+    Tournament XM and IT files.
+
+    JGMOD plugin now supports Unreal and Unreal Tournament UMX (S3M and XM)
+    files. More information is displayed about MOD in the plugin. 
+    
+9   Wrote plugins.lnx on now to install the plugins. The previous
+    plugins.txt has been renamed to plugins.dj
+
+    Library uploaded.
+
+10  Re-porting JGMOD to MSVC. Got the jgmod.exe and jgm.exe compiled. jgm.exe
+    crashes when converting MOD to JGM.
+
+11  Bought and installed Linux Mandrake 6.1. Excellent KDE desktop.
+    Continue porting JGMOD to MSVC. Found JGMOD have linking problems under
+    Linux with Allegro 3.9.30. Fixed.
+
+12  Finished porting to MSVC. All of the files compiled successfully with
+    Allegro 3.9.30. Like the previous version of WinJGMOD, JGMOD still cannot
+    play MODs correctly and sometimes, it quits playing MOD. There is
+    something wrong with the timer and allegro doesn't support bidirectional
+    and looping samples. 
+
+13  Fixed some linking problem again under Linux.
+
+16  Library Uploaded.
+
+17  Fixed some problem with the timer halting in MSVC. Linux shared file
+    library is supported.
+    Library Uploaded.
+
+
+September 2000
+--------------
+11  Having trouble running DJGPP utilities on Windows ME. DJGPP have trouble
+    renaming files. ARgh.... Have to install Win95B on a seperate partition,
+    with the help of BootMagic. HD space is very very limited now. ARGhh...
+
+    Tested Henrik Stokseth MingW32 patch for JGMOD. Thanks man. Everything
+    works fine.
+
+12  Tested Robin Burrows wdsound.c which improves Win32 mixing routine for
+    JGMOD on Mingw32. MSVC can't compile the wdsound.c. This is exiciting.
+    All the Mod musics sound correctly on DirectX platform. YEAH.
+
+    Library Uploaded.
+
+
+April 2001
+----------
+18  Applied the diff file by Angelo Mottola to support BEOS 5.
+
+    Library Uploaded.
+
+October 2002
+------------
+8   Allegro WIP 4.12's save_sample is having problem with JGMOD's save_sample
+    Renamed JGMOD's save_sample to save_jgsample to avoid function name
+    conflict.
+
+15  Library Uploaded.

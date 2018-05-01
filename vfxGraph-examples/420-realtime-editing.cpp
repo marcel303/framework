@@ -64,16 +64,28 @@ int main(int argc, char * argv[])
 
 		while (!framework.quitRequested)
 		{
+			framework.waitForEvents =
+				graphEdit.editorOptions.realTimePreview == false &&
+				graphEdit.animationIsDone;
+			
 			framework.process();
 
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
-			const float timeStep = std::min(framework.timeStep, 1.f / 15.f);
+			const float timeStep =
+				framework.waitForEvents
+				? 0.f
+				: std::min(framework.timeStep, 1.f / 15.f);
 
 			graphEdit.tick(timeStep, false);
 			
-			vfxGraph->tick(GFX_SX, GFX_SY, timeStep);
+			const float vfxTimeStep =
+				graphEdit.editorOptions.realTimePreview
+				? timeStep
+				: 0.f;
+			
+			vfxGraph->tick(GFX_SX, GFX_SY, vfxTimeStep);
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{

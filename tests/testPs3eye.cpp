@@ -7,6 +7,8 @@
 #include "vfxNodes/dotDetector.h"
 #include "vfxNodes/dotTracker.h"
 
+#include <atomic>
+#include <cmath>
 #include <thread>
 
 #define PS3_MAX_SX 640

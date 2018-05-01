@@ -36,6 +36,7 @@ AUDIO_ENUM_TYPE(voiceSpeaker)
 	elem("left+right");
 	elem("left");
 	elem("right");
+	elem("channel");
 }
 
 AUDIO_NODE_TYPE(voice, AudioNodeVoice)
@@ -45,6 +46,7 @@ AUDIO_NODE_TYPE(voice, AudioNodeVoice)
 	in("audio", "audioValue");
 	in("gain", "audioValue", "1");
 	inEnum("speaker", "voiceSpeaker");
+	in("channel", "int");
 }
 
 void AudioNodeVoice::AudioSourceVoiceNode::generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples)
@@ -82,6 +84,7 @@ AudioNodeVoice::AudioNodeVoice()
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);
 	addInput(kInput_Gain, kAudioPlugType_FloatVec);
 	addInput(kInput_Speaker, kAudioPlugType_Int);
+	addInput(kInput_ChannelIndex, kAudioPlugType_Int);
 	
 	//
 	
@@ -103,6 +106,9 @@ AudioNodeVoice::~AudioNodeVoice()
 
 void AudioNodeVoice::tick(const float dt)
 {
+	const Speaker speaker = (Speaker)getInputInt(kInput_Speaker, 0);
+	const int channelIndex = getInputInt(kInput_ChannelIndex, 0);
+	
 	if (isPassthrough)
 	{
 		if (voice != nullptr)
@@ -112,14 +118,20 @@ void AudioNodeVoice::tick(const float dt)
 		
 		return;
 	}
-	else if (voice == nullptr)
+	else if (voice == nullptr || (speaker == kSpeaker_Channel && voice->channelIndex != channelIndex))
 	{
-		voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, -1);
+		const int voiceChannelIndex =
+			speaker == kSpeaker_Channel
+			? channelIndex
+			: -1;
+		
+		if (voice)
+			voiceMgr->freeVoice(voice);
+		
+		voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, voiceChannelIndex);
 	}
 	
 	voice->gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
-	
-	const Speaker speaker = (Speaker)getInputInt(kInput_Speaker, 0);
 	
 	if (speaker == kSpeaker_LeftAndRight)
 		voice->speaker = AudioVoice::kSpeaker_LeftAndRight;
@@ -127,6 +139,8 @@ void AudioNodeVoice::tick(const float dt)
 		voice->speaker = AudioVoice::kSpeaker_Left;
 	else if (speaker == kSpeaker_Right)
 		voice->speaker = AudioVoice::kSpeaker_Right;
+	else if (speaker == kSpeaker_Channel)
+		voice->speaker = AudioVoice::kSpeaker_Channel;
 	else
 	{
 		Assert(false);

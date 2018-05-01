@@ -41,11 +41,23 @@
 
 #define MAX_MIDI_KEYS 256
 
-#define USE_GLYPH_ATLAS 1
+#if !defined(USE_GLYPH_ATLAS)
+	#if !USE_LEGACY_OPENGL
+		#define USE_GLYPH_ATLAS 1
+	#else
+		#define USE_GLYPH_ATLAS 0 // cannot use glyph cache, as it uses R8 texture storage
+	#endif
+#endif
 
 #define USE_STBFONT 0
 
-#define ENABLE_MSDF_FONTS 1
+#if !defined(ENABLE_MSDF_FONTS)
+	#if !USE_LEGACY_OPENGL
+		#define ENABLE_MSDF_FONTS 1
+	#else
+		#define ENABLE_MSDF_FONTS 0 // cannot use MSDF fonts as the shader is too complex for the legacy OpenGL mode
+	#endif
+#endif
 
 #if USE_GLYPH_ATLAS
 	#define GLYPH_ATLAS_BORDER 1
@@ -122,10 +134,13 @@ public:
 		}
 		else
 		{
-			hasOldMousePosition = true;
+			if (mouseX != oldMouseX || mouseY != oldMouseY)
+			{
+				hasOldMousePosition = true;
+			}
 			
-			mouse.dx = 0;
-			mouse.dy = 0;
+			mouseDx = 0;
+			mouseDy = 0;
 		}
 	}
 	
@@ -877,6 +892,8 @@ public:
 	BuiltinShader hqStrokedCircle;
 	BuiltinShader hqStrokedRect;
 	BuiltinShader hqStrokedRoundedRect;
+	
+	BuiltinShader hqShadedTriangle;
 	
 	BuiltinShader msdfText;
 };
