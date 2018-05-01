@@ -138,9 +138,18 @@ JsusFxGfx_Framework::JsusFxGfx_Framework(JsusFx & _jsusFx)
 {
 }
 
-void JsusFxGfx_Framework::setup(Surface * _surface, const int w, const int h)
+void JsusFxGfx_Framework::setup(
+	Surface * _surface,
+	const int w,
+	const int h,
+	const int _mouseX,
+	const int _mouseY,
+	const bool _inputEnabled)
 {
 	surface = _surface;
+	mouseX = _mouseX;
+	mouseY = _mouseY;
+	inputEnabled = _inputEnabled;
 	
 	setup(w, h);
 }
@@ -183,54 +192,57 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 	
 	// update mouse state
 	
-	*m_mouse_x = mouse.x;
-	*m_mouse_y = mouse.y;
-	
-	const bool isInside =
-		mouse.x >= 0 && mouse.x < *m_gfx_w &&
-		mouse.y >= 0 && mouse.y < *m_gfx_h;
-	
-	if (isInside)
-	{
-		if (mouse.wentDown(BUTTON_LEFT))
-			mouseFlags |= 0x1;
-		if (mouse.wentDown(BUTTON_RIGHT))
-			mouseFlags |= 0x2;
-	}
-	
-	if (mouse.wentUp(BUTTON_LEFT))
-		mouseFlags &= ~0x1;
-	if (mouse.wentUp(BUTTON_RIGHT))
-		mouseFlags &= ~0x2;
+	*m_mouse_x = mouseX;
+	*m_mouse_y = mouseY;
 	
 	int vflags = 0;
-
-	if (mouseFlags & 0x1)
-		vflags |= 0x1;
-	if (mouseFlags & 0x2)
-		vflags |= 0x2;
 	
-#if defined(MACOS)
-	if (keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI))
-		vflags |= 0x4;
-#else
-	if (keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL))
-		vflags |= 0x4;
-#endif
+	if (inputEnabled)
+	{
+		const bool isInside =
+			mouseX >= 0 && mouseX < *m_gfx_w &&
+			mouseY >= 0 && mouseY < *m_gfx_h;
+		
+		if (isInside)
+		{
+			if (mouse.wentDown(BUTTON_LEFT))
+				mouseFlags |= 0x1;
+			if (mouse.wentDown(BUTTON_RIGHT))
+				mouseFlags |= 0x2;
+		}
+		
+		if (mouse.wentUp(BUTTON_LEFT))
+			mouseFlags &= ~0x1;
+		if (mouse.wentUp(BUTTON_RIGHT))
+			mouseFlags &= ~0x2;
 
-	if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
-		vflags |= 0x8;
-	if (keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT))
-		vflags |= 0x10;
+		if (mouseFlags & 0x1)
+			vflags |= 0x1;
+		if (mouseFlags & 0x2)
+			vflags |= 0x2;
+		
+	#if defined(MACOS)
+		if (keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI))
+			vflags |= 0x4;
+	#else
+		if (keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL))
+			vflags |= 0x4;
+	#endif
+
+		if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+			vflags |= 0x8;
+		if (keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT))
+			vflags |= 0x10;
+		
+	#if defined(MACOS)
+		if (keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL))
+			vflags |= 0x20;
+	#else
+		if (keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI))
+			vflags |= 0x20;
+	#endif
+	}
 	
-#if defined(MACOS)
-	if (keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL))
-		vflags |= 0x20;
-#else
-	if (keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI))
-		vflags |= 0x20;
-#endif
-
 	*m_mouse_cap = vflags;
 }
 
@@ -258,7 +270,8 @@ void JsusFxGfx_Framework::endDraw()
 	popSurface();
 	currentImageIndex = -2;
 	
-	surface = nullptr;
+// todo : reset surface or not ?
+	//surface = nullptr;
 }
 
 void JsusFxGfx_Framework::handleReset()

@@ -93,10 +93,13 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	PrimType primType = kPrimType_Other;
 	
 	Surface * surface = nullptr;
+	int mouseX = 0;
+	int mouseY = 0;
+	bool inputEnabled = true;
 	
 	JsusFxGfx_Framework(JsusFx & _jsusFx);
 	
-	void setup(Surface * surface, const int w, const int h);
+	void setup(Surface * surface, const int w, const int h, const int mouseX, const int mouseY, const bool inputEnabled);
 	
 	virtual void setup(const int w, const int h) override;
 	
