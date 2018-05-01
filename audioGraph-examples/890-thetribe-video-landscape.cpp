@@ -103,11 +103,6 @@ static bool intersectSoundVolume(const SoundVolume & soundVolume, Vec3Arg pos, V
 		p[1] >= -1.f && p[1] <= +1.f;
 }
 
-static float videoClipBlend[3] =
-{
-	1.f, 0.f, 0.f
-};
-
 struct Videoclip
 {
 	Mat4x4 transform;
@@ -1085,14 +1080,7 @@ struct VfxNodeSpokenWord : VfxNodeBase
 			spokenWord->init(g_sampleSet, g_binauralMutex, text, nullptr, soundFilename, Vec3(0.f, 0.f, 0.f));
 		}
 		
-		Mat4x4 worldToViewMatrix;
-		gxGetMatrixf(GL_MODELVIEW, worldToViewMatrix.m_v);
-		
-		const Vec3 cameraPosition_world = -worldToViewMatrix.GetTranslation();
-		
 		spokenWord->pos = Vec3(x, y, z);
-		
-		spokenWord->tick(worldToViewMatrix, cameraPosition_world, dt);
 	}
 	
 	virtual void handleTrigger(const int index) override

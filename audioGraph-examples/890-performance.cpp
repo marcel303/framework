@@ -169,6 +169,7 @@ int main(int argc, char * argv[])
 	landscape->init();
 	
 	VfxGraphInstance * vfxInstance = vfxGraphMgr->createInstance("v001.xml");
+	vfxGraphMgr->activeInstance = vfxInstance;
 	
 	do
 	{
