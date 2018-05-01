@@ -2,6 +2,8 @@
 
 top priority items:
 
+- fix threshold typo (treshold) throughout the entire code base
+
 - add node which generates a trigger signal once when a graph is created
 
 - add ability for nodes to report warnings and errors
@@ -72,8 +74,8 @@ todo :
 - add text field to node type select
 - raise a menu when socket connect is released on a node itself. ask for which socket to connect to
 - OSC endpoint: resend count? or just OSC send node?
-- add interval (once every N seconds) mode to OSC send mode
-- add a note field in editor options -> for versioning
++ add interval (once every N seconds) mode to OSC send mode
++ add a note field in editor options -> for versioning
 
 
 todo : creativity investigation :
