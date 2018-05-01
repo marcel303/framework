@@ -236,6 +236,7 @@ struct ParticleInfo
 
 	bool collision;
 	// todo : add plane collision support?
+	// todo : add collision scene editor
 	float bounciness;
 	float lifetimeLoss; // The fraction of a particle’s total lifetime that it loses if it collides.
 	float minKillSpeed; // Particles travelling below this speed after a collision will be removed from the system.
