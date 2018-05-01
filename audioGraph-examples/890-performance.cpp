@@ -165,10 +165,10 @@ int main(int argc, char * argv[])
 	VfxGraphMgr * vfxGraphMgr = new VfxGraphMgr();
 	g_vfxGraphMgr = vfxGraphMgr;
 	
-	VfxGraphInstance * vfxInstance = vfxGraphMgr->createInstance("v001.xml");
-	
 	VideoLandscape * landscape = new VideoLandscape();
 	landscape->init();
+	
+	VfxGraphInstance * vfxInstance = vfxGraphMgr->createInstance("v001.xml");
 	
 	do
 	{
@@ -215,12 +215,12 @@ int main(int argc, char * argv[])
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_ESCAPE));
 	
+	vfxGraphMgr->freeInstance(vfxInstance);
+	
 	landscape->shut();
 	
     delete landscape;
     landscape = nullptr;
-	
-	vfxGraphMgr->freeInstance(vfxInstance);
 	
 	delete vfxGraphMgr;
 	vfxGraphMgr = nullptr;

@@ -14,7 +14,6 @@
 #define NUM_VFXCLIPS 0
 
 #define NUM_SPOKENWORD_SOURCES 3
-#define NUM_SPOKENWORDS 1
 
 #define DRAW_GRIDS 1
 
@@ -897,7 +896,7 @@ struct World
 	
 	Vfxclip vfxclips[NUM_VFXCLIPS];
 	
-	SpokenWord spokenWords[NUM_SPOKENWORDS];
+	std::vector<SpokenWord*> spokenWords;
 	
 	HitTestResult hitTestResult;
 	
@@ -942,31 +941,29 @@ struct World
 		{
 			vfxclips[i].open("groooplogo.xml");
 		}
-		
-		for (int i = 0; i < NUM_SPOKENWORDS; ++i)
-		{
-			auto & spokenWord = spokenWords[i];
-			
-			const char * textFilename = spokenText[i];
-			const char * audioFilename = spokenAudio[i];
-			
-			const Vec3 p(0.f, 0.f, i + 1.f);
-			
-			spokenWord.init(sampleSet, mutex, nullptr, textFilename, audioFilename, p);
-		}
 	}
 	
 	void shut()
 	{
+		Assert(spokenWords.empty());
+		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
 			videoclips[i].shut();
 		}
+	}
+	
+	void addSpokenWord(SpokenWord * spokenWord)
+	{
+		spokenWords.push_back(spokenWord);
+	}
+	
+	void removeSpokenWord(SpokenWord * spokenWord)
+	{
+		auto i = std::find(spokenWords.begin(), spokenWords.end(), spokenWord);
+		Assert(i != spokenWords.end());
 		
-		for (int i = 0; i < NUM_SPOKENWORDS; ++i)
-		{
-			spokenWords[i].shut();
-		}
+		spokenWords.erase(i);
 	}
 	
 	HitTestResult hitTest(Vec3Arg pos, Vec3Arg dir)
@@ -1011,20 +1008,18 @@ struct World
 			}
 		}
 		
-		for (int i = 0; i < NUM_SPOKENWORDS; ++i)
+		for (auto spokenWord : spokenWords)
 		{
-			auto & spokenWord = spokenWords[i];
-			
 			Vec3 p;
 			float t;
 			
-			if (spokenWord.intersectRayWithPlane(pos, dir, p, t) && t >= 0.f)
+			if (spokenWord->intersectRayWithPlane(pos, dir, p, t) && t >= 0.f)
 			{
 				if (t < bestDistance)
 				{
 					bestDistance = t;
 					result = HitTestResult();
-					result.spokenWord = &spokenWord;
+					result.spokenWord = spokenWord;
 				}
 			}
 		}
@@ -1067,9 +1062,9 @@ struct World
 			vfxclips[i].tick(dt);
 		}
 		
-		for (int i = 0; i < NUM_SPOKENWORDS; ++i)
+		for (auto spokenWord : spokenWords)
 		{
-			spokenWords[i].tick(worldToViewMatrix, cameraPosition_world, dt);
+			spokenWord->tick(worldToViewMatrix, cameraPosition_world, dt);
 		}
 		
 		//
@@ -1117,9 +1112,9 @@ struct World
 					vfxclips[i].drawSolid();
 				}
 				
-				for (int i = 0; i < NUM_SPOKENWORDS; ++i)
+				for (auto spokenWord : spokenWords)
 				{
-					spokenWords[i].drawSolid();
+					spokenWord->drawSolid();
 				}
 			}
 			popBlend();
@@ -1147,9 +1142,9 @@ struct World
 				vfxclips[i].drawTranslucent();
 			}
 			
-			for (int i = 0; i < NUM_SPOKENWORDS; ++i)
+			for (auto spokenWord : spokenWords)
 			{
-				spokenWords[i].drawTranslucent();
+				spokenWord->drawTranslucent();
 			}
 		}
 		glDepthMask(GL_TRUE);
@@ -1160,9 +1155,9 @@ struct World
 	
 	void draw2d()
 	{
-		for (int i = 0; i < NUM_SPOKENWORDS; ++i)
+		for (auto spokenWord : spokenWords)
 		{
-			spokenWords[i].draw2d();
+			spokenWord->draw2d();
 		}
 	}
 };
@@ -1186,6 +1181,8 @@ struct VfxNodeWorld : VfxNodeBase
 		kOutput_COUNT
 	};
 	
+	SpokenWord spokenWord;
+	
 	VfxNodeWorld()
 		: VfxNodeBase()
 	{
@@ -1196,6 +1193,24 @@ struct VfxNodeWorld : VfxNodeBase
 		addInput(kInput_CameraZ, kVfxPlugType_Float);
 		addInput(kInput_CameraYaw, kVfxPlugType_Float);
 		addInput(kInput_SpokenWordBegin, kVfxPlugType_Trigger);
+		
+		const int i = 0;
+		
+		const char * textFilename = spokenText[i];
+		const char * audioFilename = spokenAudio[i];
+	
+		const Vec3 p(0.f, 0.f, i + 1.f);
+	
+		spokenWord.init(g_sampleSet, g_binauralMutex, nullptr, textFilename, audioFilename, p);
+		
+		s_world->addSpokenWord(&spokenWord);
+	}
+	
+	virtual ~VfxNodeWorld() override
+	{
+		spokenWord.shut();
+		
+		s_world->removeSpokenWord(&spokenWord);
 	}
 	
 	virtual void tick(const float dt) override
@@ -1212,11 +1227,7 @@ struct VfxNodeWorld : VfxNodeBase
 	{
 		if (index == kInput_SpokenWordBegin)
 		{
-			// todo : fix index. maybe add a node which adds/registers a spoken word to the world and manages only that instance ?
-			
-			s_world->spokenWords[0].toActive();
-			
-			logDebug("spoken word!");
+			spokenWord.toActive();
 		}
 	}
 };
