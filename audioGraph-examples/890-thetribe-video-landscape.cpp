@@ -65,6 +65,10 @@ static const char * spokenAudio[NUM_SPOKENWORD_SOURCES] =
 
 //
 
+static MediaPlayer mediaPlayers[NUM_VIDEOCLIP_SOURCES];
+
+//
+
 static void drawSoundVolume(const SoundVolume & volume)
 {
 	gxPushMatrix();
@@ -111,12 +115,15 @@ struct Videoclip
 	Mat4x4 transform;
 	AudioSourceVorbis soundSource;
 	SoundVolume soundVolume;
-	MediaPlayer mp;
 	float gain;
 	
 	int index;
 	
 	bool hover;
+	
+	bool isPaused;
+	
+	bool isPlaying;
 	
 	double time;
 	
@@ -124,10 +131,11 @@ struct Videoclip
 		: transform()
 		, soundSource()
 		, soundVolume()
-		, mp()
 		, gain(0.f)
 		, index(-1)
 		, hover(false)
+		, isPaused(true)
+		, isPlaying(false)
 		, time(timeSeed)
 	{
 	}
@@ -145,20 +153,16 @@ struct Videoclip
 		
 		soundSource.open(audio, true);
 		
-		mp.openAsync(video, MP::kOutputMode_RGBA);
-		
 		gain = _gain;
-		
-		//
-		
-		g_audioMixer->addVolumeSource(&soundVolume.audioSource);
 	}
 	
 	void shut()
 	{
-		mp.close(true);
-		
-		g_audioMixer->removeVolumeSource(&soundVolume.audioSource);
+		if (isPlaying)
+		{
+			g_audioMixer->removeVolumeSource(&soundVolume.audioSource);
+			isPlaying = false;
+		}
 	}
 	
 	bool intersectRayWithPlane(Vec3Arg pos, Vec3Arg dir, Vec3 & p, float & t) const
@@ -191,6 +195,23 @@ struct Videoclip
 	
 	void tick(const Mat4x4 & worldToViewMatrix, const Vec3 & cameraPosition_world, const float dt)
 	{
+		if (isPaused)
+		{
+			if (isPlaying)
+			{
+				g_audioMixer->removeVolumeSource(&soundVolume.audioSource);
+				isPlaying = false;
+			}
+		}
+		else
+		{
+			if (!isPlaying)
+			{
+				g_audioMixer->addVolumeSource(&soundVolume.audioSource);
+				isPlaying = true;
+			}
+		}
+		
 		time += dt * s_videoClipSpeedMultiplier;
 		
         Vec3 scale;
@@ -209,23 +230,6 @@ struct Videoclip
 		soundVolume.transform = transform;
 		
 		soundVolume.generateSampleLocations(worldToViewMatrix, cameraPosition_world, enableNearest, enableVertices, gain);
-		
-		// update media player
-		
-		const double newPresentTime = soundSource.samplePosition / float(soundSource.sampleRate);
-		
-		if (newPresentTime < mp.presentTime)
-		{
-			auto openParams = mp.context->openParams;
-			
-			mp.close(false);
-			
-			mp.openAsync(openParams);
-		}
-		
-		mp.presentTime = newPresentTime;
-		
-		mp.tick(mp.context, true);
 	}
 	
 	void drawSolid()
@@ -234,7 +238,7 @@ struct Videoclip
 		{
 			gxMultMatrixf(soundVolume.transform.m_v);
 			
-			gxSetTexture(mp.getTexture());
+			gxSetTexture(mediaPlayers[index % NUM_VIDEOCLIP_SOURCES].getTexture());
 			{
 				setLumi(hover ? 255 : 200);
 				drawRect(-1, -1, +1, +1);
@@ -584,10 +588,6 @@ struct VfxNodeDrawGrid : VfxNodeBase
 		const VfxColor * color = getInputColor(kInput_Color, &defaultColor);
 		const bool optimized = getInputBool(kInput_Optimized, true);
 		
-		// scale = 40 x 40, segs = 400 x 400
-		// axis = 0, 2
-		// optimized = true
-		
 		float scale[3] = { 1.f, 1.f, 1.f };
 		scale[axis1] = scale1;
 		scale[axis2] = scale2;
@@ -618,6 +618,70 @@ VFX_NODE_TYPE(VfxNodeDrawGrid)
 	out("draw", "draw");
 }
 
+struct FaceTile
+{
+	MediaPlayer mp;
+	
+	void init(const char * filename)
+	{
+		mp.openAsync(filename, MP::kOutputMode_RGBA);
+	}
+	
+	void shut()
+	{
+		mp.close(true);
+	}
+	
+	void tick(const float dt)
+	{
+		if (mp.presentedLastFrame(mp.context))
+		{
+			auto openParams = mp.context->openParams;
+			
+			mp.close(false);
+			
+			mp.openAsync(openParams);
+		}
+	}
+};
+
+struct Faces
+{
+	std::vector<FaceTile*> tiles;
+	
+	void init()
+	{
+		// todo : create tiles
+	}
+	
+	void shut()
+	{
+		for (auto & tile : tiles)
+		{
+			tile->shut();
+			
+			delete tile;
+			tile = nullptr;
+		}
+		
+		tiles.clear();
+	}
+	
+	void tick(const float dt)
+	{
+		// todo : update tile mode
+		
+		// todo : update tile locations
+		
+		// todo : update tile selection
+	}
+	
+	void draw2d()
+	{
+	
+	}
+};
+
 struct World
 {
 	struct HitTestResult
@@ -644,6 +708,8 @@ struct World
 	
 	std::vector<SpokenWord*> spokenWords;
 	
+	Faces faces;
+	
 	HitTestResult hitTestResult;
 	
 	World()
@@ -651,12 +717,20 @@ struct World
 		, videoclips()
 		, vfxclips()
 		, spokenWords()
+		, faces()
 		, hitTestResult()
 	{
 	}
 
 	void init(binaural::HRIRSampleSet * sampleSet, binaural::Mutex * mutex)
 	{
+		for (int i = 0; i < NUM_VIDEOCLIP_SOURCES; ++i)
+		{
+			const char * videoFilename = videoFilenames[i];
+			
+			mediaPlayers[i].openAsync(videoFilename, MP::kOutputMode_RGBA);
+		}
+		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
             const int audioIndex = i % NUM_AUDIOCLIP_SOURCES;
@@ -682,6 +756,27 @@ struct World
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
 			videoclips[i].shut();
+		}
+		
+		for (int i = 0; i < NUM_VIDEOCLIP_SOURCES; ++i)
+		{
+			mediaPlayers[i].close(true);
+		}
+	}
+	
+	void beginVideoClips()
+	{
+		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
+		{
+			videoclips[i].isPaused = false;
+		}
+	}
+	
+	void pauseVideoClips()
+	{
+		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
+		{
+			videoclips[i].isPaused = true;
 		}
 	}
 	
@@ -793,6 +888,24 @@ struct World
 		gxGetMatrixf(GL_MODELVIEW, worldToViewMatrix.m_v);
 		
 		const Vec3 cameraPosition_world = worldToViewMatrix.CalcInv().GetTranslation();
+		
+		// update media players
+		
+		for (int i = 0; i < NUM_VIDEOCLIP_SOURCES; ++i)
+		{
+			mediaPlayers[i].presentTime += dt;
+			
+			mediaPlayers[i].tick(mediaPlayers[i].context, true);
+			
+			if (mediaPlayers[i].presentedLastFrame(mediaPlayers[i].context))
+			{
+				auto openParams = mediaPlayers[i].context->openParams;
+				
+				mediaPlayers[i].close(false);
+				
+				mediaPlayers[i].openAsync(openParams);
+			}
+		}
 		
 		// update video clips
 		
@@ -926,6 +1039,8 @@ struct VfxNodeWorld : VfxNodeBase
 		kInput_VideoClipGridColor,
 		kInput_VideoClipGridColor2,
 		kInput_SpokenWordBegin,
+		kInput_VideoBegin,
+		kInput_VideoEnd,
 		kInput_COUNT
 	};
 	
@@ -951,6 +1066,8 @@ struct VfxNodeWorld : VfxNodeBase
 		addInput(kInput_VideoClipDrawGrid, kVfxPlugType_Bool);
 		addInput(kInput_VideoClipGridColor, kVfxPlugType_Color);
 		addInput(kInput_VideoClipGridColor2, kVfxPlugType_Color);
+		addInput(kInput_VideoBegin, kVfxPlugType_Trigger);
+		addInput(kInput_VideoEnd, kVfxPlugType_Trigger);
 		addInput(kInput_SpokenWordBegin, kVfxPlugType_Trigger);
 		
 		const int i = 0;
@@ -1004,6 +1121,14 @@ struct VfxNodeWorld : VfxNodeBase
 		{
 			spokenWord->toActive();
 		}
+		else if (index == kInput_VideoBegin)
+		{
+			s_world->beginVideoClips();
+		}
+		else if (index == kInput_VideoEnd)
+		{
+			s_world->pauseVideoClips();
+		}
 	}
 };
 
@@ -1021,6 +1146,8 @@ VFX_NODE_TYPE(VfxNodeWorld)
 	in("gridcolor", "color", "ffffffff");
 	in("gridcolor2", "color", "ffffffff");
 	in("word.begin!", "trigger");
+	in("video.begin!", "trigger");
+	in("video.end!", "trigger");
 }
 
 //
