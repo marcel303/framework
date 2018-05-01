@@ -13,9 +13,6 @@
 #include "video.h"
 #include <atomic>
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
 #if 1
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
@@ -85,7 +82,33 @@ int main(int argc, char * argv[])
     PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, audioMixer);
 	
-    Videotube::main();
+	VideoLandscape * landscape = new VideoLandscape();
+	landscape->init();
+	
+	do
+	{
+		framework.process();
+
+		const float dt = framework.timeStep;
+		
+		landscape->tick(dt);
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			setFont("calibri.ttf");
+			pushFontMode(FONT_SDF);
+			
+			landscape->draw();
+			
+			popFontMode();
+		}
+		framework.endDraw();
+	} while (!keyboard.wentDown(SDLK_ESCAPE));
+	
+	landscape->shut();
+	
+    delete landscape;
+    landscape = nullptr;
 	
 	pa.shut();
 	

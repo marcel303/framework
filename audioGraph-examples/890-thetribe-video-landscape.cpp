@@ -11,18 +11,6 @@
 #include "video.h"
 #include <cmath>
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
-extern void addAudioSource(MultiChannelAudioSource * audioSource);
-
-extern SDL_mutex * g_audioMutex;
-
-extern binaural::Mutex * g_binauralMutex;
-extern binaural::HRIRSampleSet * g_sampleSet;
-
-namespace Videotube
-{
 #define NUM_AUDIOCLIP_SOURCES 16
 #define NUM_VIDEOCLIP_SOURCES 3
 #define NUM_VIDEOCLIPS 16
@@ -117,7 +105,7 @@ static bool intersectSoundVolume(const SoundVolume & soundVolume, Vec3Arg pos, V
 		p[1] >= -1.f && p[1] <= +1.f;
 }
 
-float videoClipBlend[3] =
+static float videoClipBlend[3] =
 {
 	1.f, 0.f, 0.f
 };
@@ -804,85 +792,64 @@ struct World
 
 static World * s_world = nullptr;
 
-void init()
+void VideoLandscape::init()
 {
-
+	world = new World();
+	world->init(g_sampleSet, g_binauralMutex);
+    s_world = world;
 }
 
-void main()
+void VideoLandscape::shut()
 {
-	const int kFontSize = 16;
+	world->shut();
 	
-	bool showUi = true;
+	delete world;
+	world = nullptr;
+}
+
+void VideoLandscape::tick(const float dt)
+{
+	// process input
 	
-	float fov = 90.f;
-	float near = .01f;
-	float far = 100.f;
+	if (keyboard.wentDown(SDLK_n))
+		enableNearest = !enableNearest;
 	
-	//
+	if (keyboard.wentDown(SDLK_v))
+		enableVertices = !enableVertices;
 	
-	World world;
-	world.init(g_sampleSet, g_binauralMutex);
-    s_world = &world;
+	if (keyboard.wentDown(SDLK_TAB))
+		showUi = !showUi;
 	
-	do
+	SDL_LockMutex(g_audioMutex);
 	{
-		framework.process();
-
-		const float dt = framework.timeStep;
-		
-		// process input
-		
-		if (keyboard.wentDown(SDLK_n))
-			enableNearest = !enableNearest;
-		
-		if (keyboard.wentDown(SDLK_v))
-			enableVertices = !enableVertices;
-		
-		if (keyboard.wentDown(SDLK_TAB))
-			showUi = !showUi;
-		
-		SDL_LockMutex(g_audioMutex);
-		{
-			g_audioMixer->voiceGroups[kVoiceGroup_Videoclips].desiredGain =
-				keyboard.isDown(SDLK_w) ? .1f : 1.f;
-		}
-		SDL_UnlockMutex(g_audioMutex);
-		
-		// update video clips
-		
-		world.tick(dt);
-		
-		framework.beginDraw(0, 0, 0, 0);
-		{
-			setFont("calibri.ttf");
-			pushFontMode(FONT_SDF);
-			
-			projectPerspective3d(fov, near, far);
-			{
-				world.draw3d();
-			}
-			projectScreen2d();
-            
-			world.draw2d();
-			
-			if (showUi)
-			{
-				setColor(255, 255, 255, 127);
-				drawText(GFX_SX - 10, 40, 32, -1, +1, "VIDEO CLIP TUBE");
-
-				gxTranslatef(0, GFX_SY - 100, 0);
-				setColor(colorWhite);
-				drawText(10, 40, kFontSize, +1, +1, "N: toggle use nearest point (%s)", enableNearest ? "on" : "off");
-				drawText(10, 60, kFontSize, +1, +1, "V: toggle use vertices (%s)", enableVertices ? "on" : "off");
-			}
-			
-			popFontMode();
-		}
-		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_ESCAPE));
+		g_audioMixer->voiceGroups[kVoiceGroup_Videoclips].desiredGain =
+			keyboard.isDown(SDLK_w) ? .1f : 1.f;
+	}
+	SDL_UnlockMutex(g_audioMutex);
 	
-	world.shut();
+	// update video clips
+	
+	world->tick(dt);
 }
 
+void VideoLandscape::draw()
+{
+	projectPerspective3d(fov, near, far);
+	{
+		world->draw3d();
+	}
+	projectScreen2d();
+
+	world->draw2d();
+
+	if (showUi)
+	{
+		setColor(255, 255, 255, 127);
+		drawText(GFX_SX - 10, 40, 32, -1, +1, "VIDEO CLIP TUBE");
+
+		gxTranslatef(0, GFX_SY - 100, 0);
+		setColor(colorWhite);
+		drawText(10, 40, kFontSize, +1, +1, "N: toggle use nearest point (%s)", enableNearest ? "on" : "off");
+		drawText(10, 60, kFontSize, +1, +1, "V: toggle use vertices (%s)", enableVertices ? "on" : "off");
+	}
 }
