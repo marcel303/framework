@@ -530,262 +530,6 @@ struct SpokenWord
 	}
 };
 
-struct VfxNodeSpokenWord : VfxNodeBase
-{
-	enum Input
-	{
-		kInput_Draw,
-		kInput_Text,
-		kInput_Sound,
-		kInput_Time,
-		kInput_X,
-		kInput_Y,
-		kInput_Z,
-		kInput_Appear,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Draw,
-		kOutput_COUNT
-	};
-	
-	SpokenWord * spokenWord;
-	
-	std::string currentText;
-	std::string currentSoundFilename;
-	float currentTime;
-	
-	VfxNodeSpokenWord()
-		: VfxNodeBase()
-		, spokenWord(nullptr)
-		, currentText()
-		, currentSoundFilename()
-		, currentTime(0.f)
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		
-		addInput(kInput_Draw, kVfxPlugType_Draw);
-		addInput(kInput_Text, kVfxPlugType_String);
-		addInput(kInput_Sound, kVfxPlugType_String);
-		addInput(kInput_Time, kVfxPlugType_Float);
-		addInput(kInput_X, kVfxPlugType_Float);
-		addInput(kInput_Y, kVfxPlugType_Float);
-		addInput(kInput_Z, kVfxPlugType_Float);
-		addInput(kInput_Appear, kVfxPlugType_Trigger);
-		addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
-	}
-	
-	virtual void tick(const float dt) override
-	{
-		if (isPassthrough)
-		{
-			delete spokenWord;
-			spokenWord = nullptr;
-			
-			currentText.clear();
-			currentSoundFilename.clear();
-			currentTime = 0.f;
-			
-			return;
-		}
-		
-		const char * text = getInputString(kInput_Text, "");
-		const char * soundFilename = getInputString(kInput_Sound, "");
-		const float time = getInputFloat(kInput_Time, 0.f);
-		const float x = getInputFloat(kInput_X, 0.f);
-		const float y = getInputFloat(kInput_Y, 0.f);
-		const float z = getInputFloat(kInput_Z, 0.f);
-		
-		if (spokenWord == nullptr || text != currentText || soundFilename != currentSoundFilename || time != currentTime)
-		{
-			currentText = text;
-			currentSoundFilename = soundFilename;
-			currentTime = time;
-			
-			delete spokenWord;
-			spokenWord = new SpokenWord();
-			
-			spokenWord->init(g_sampleSet, g_binauralMutex, text, nullptr, soundFilename, Vec3(0.f, 0.f, 0.f));
-		}
-		
-		Mat4x4 worldToViewMatrix;
-		gxGetMatrixf(GL_MODELVIEW, worldToViewMatrix.m_v);
-		
-		const Vec3 cameraPosition_world = -worldToViewMatrix.GetTranslation();
-		
-		spokenWord->pos = Vec3(x, y, z);
-		
-		spokenWord->tick(worldToViewMatrix, cameraPosition_world, dt);
-	}
-	
-	virtual void handleTrigger(const int index) override
-	{
-		if (isPassthrough)
-			return;
-		
-		if (index == kInput_Appear)
-		{
-			// todo : make spoken word appear
-		}
-	}
-	
-	virtual void draw() const override
-	{
-		if (isPassthrough)
-			return;
-		if (spokenWord == nullptr)
-			return;
-		
-		spokenWord->drawSolid();
-		
-		spokenWord->drawTranslucent();
-	}
-};
-
-VFX_NODE_TYPE(VfxNodeSpokenWord)
-{
-	typeName = "spokenWord";
-	
-	in("draw", "draw");
-	in("text", "string");
-	in("sound", "string");
-	in("time", "float");
-	in("x", "float");
-	in("y", "float");
-	in("z", "float");
-	in("appear!", "trigger");
-	out("draw", "draw");
-}
-
-struct VfxNodeSpokenWord2d : VfxNodeBase
-{
-	enum Input
-	{
-		kInput_Draw,
-		kInput_Text,
-		kInput_Sound,
-		kInput_Time,
-		kInput_X,
-		kInput_Y,
-		kInput_Appear,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Draw,
-		kOutput_COUNT
-	};
-	
-	SpokenWord * spokenWord;
-	
-	std::string currentText;
-	std::string currentSoundFilename;
-	float currentTime;
-	
-	VfxNodeSpokenWord2d()
-		: VfxNodeBase()
-		, spokenWord(nullptr)
-		, currentText()
-		, currentSoundFilename()
-		, currentTime(0.f)
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		
-		addInput(kInput_Draw, kVfxPlugType_Draw);
-		addInput(kInput_Text, kVfxPlugType_String);
-		addInput(kInput_Sound, kVfxPlugType_String);
-		addInput(kInput_Time, kVfxPlugType_Float);
-		addInput(kInput_X, kVfxPlugType_Float);
-		addInput(kInput_Y, kVfxPlugType_Float);
-		addInput(kInput_Appear, kVfxPlugType_Trigger);
-		addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
-	}
-	
-	virtual void tick(const float dt) override
-	{
-		if (isPassthrough)
-		{
-			delete spokenWord;
-			spokenWord = nullptr;
-			
-			currentText.clear();
-			currentSoundFilename.clear();
-			currentTime = 0.f;
-			
-			return;
-		}
-		
-		const char * text = getInputString(kInput_Text, "");
-		const char * soundFilename = getInputString(kInput_Sound, "");
-		const float time = getInputFloat(kInput_Time, 0.f);
-		
-		if (spokenWord == nullptr || text != currentText || soundFilename != currentSoundFilename || time != currentTime)
-		{
-			currentText = text;
-			currentSoundFilename = soundFilename;
-			currentTime = time;
-			
-			delete spokenWord;
-			spokenWord = new SpokenWord();
-			
-			spokenWord->init(g_sampleSet, g_binauralMutex, text, nullptr, soundFilename, Vec3(0.f, 0.f, 0.f));
-		}
-		
-		Mat4x4 worldToViewMatrix;
-		gxGetMatrixf(GL_MODELVIEW, worldToViewMatrix.m_v);
-		
-		const Vec3 cameraPosition_world = -worldToViewMatrix.GetTranslation();
-		
-		spokenWord->tick(worldToViewMatrix, cameraPosition_world, dt);
-	}
-	
-	virtual void handleTrigger(const int index) override
-	{
-		if (isPassthrough)
-			return;
-		
-		if (index == kInput_Appear)
-		{
-			// todo : make spoken word appear
-		}
-	}
-	
-	virtual void draw() const override
-	{
-		if (isPassthrough)
-			return;
-		if (spokenWord == nullptr)
-			return;
-		
-		const float x = getInputFloat(kInput_X, 0.f);
-		const float y = getInputFloat(kInput_Y, 0.f);
-		
-		gxPushMatrix();
-		{
-			gxTranslatef(x, y, 0.f);
-			spokenWord->draw2d();
-		}
-		gxPopMatrix();
-	}
-};
-
-VFX_NODE_TYPE(VfxNodeSpokenWord2d)
-{
-	typeName = "spokenWord.2d";
-	
-	in("draw", "draw");
-	in("text", "string");
-	in("sound", "string");
-	in("time", "float");
-	in("x", "float");
-	in("y", "float");
-	in("appear!", "trigger");
-	out("draw", "draw");
-}
-
 struct VfxNodeDrawGrid : VfxNodeBase
 {
 	enum Input
@@ -953,17 +697,31 @@ struct World
 		}
 	}
 	
-	void addSpokenWord(SpokenWord * spokenWord)
+	SpokenWord * createSpokenWord()
 	{
+		SpokenWord * spokenWord = new SpokenWord();
+		
 		spokenWords.push_back(spokenWord);
+		
+		return spokenWord;
 	}
 	
-	void removeSpokenWord(SpokenWord * spokenWord)
+	void freeSpokenWord(SpokenWord *& spokenWord)
 	{
+		if (spokenWord == nullptr)
+			return;
+		
 		auto i = std::find(spokenWords.begin(), spokenWords.end(), spokenWord);
 		Assert(i != spokenWords.end());
 		
 		spokenWords.erase(i);
+		
+		//
+		
+		spokenWord->shut();
+		
+		delete spokenWord;
+		spokenWord = nullptr;
 	}
 	
 	HitTestResult hitTest(Vec3Arg pos, Vec3Arg dir)
@@ -1181,10 +939,11 @@ struct VfxNodeWorld : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	SpokenWord spokenWord;
+	SpokenWord * spokenWord;
 	
 	VfxNodeWorld()
 		: VfxNodeBase()
+		, spokenWord(nullptr)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		
@@ -1200,17 +959,15 @@ struct VfxNodeWorld : VfxNodeBase
 		const char * audioFilename = spokenAudio[i];
 	
 		const Vec3 p(0.f, 0.f, i + 1.f);
-	
-		spokenWord.init(g_sampleSet, g_binauralMutex, nullptr, textFilename, audioFilename, p);
 		
-		s_world->addSpokenWord(&spokenWord);
+		spokenWord = s_world->createSpokenWord();
+		
+		spokenWord->init(g_sampleSet, g_binauralMutex, nullptr, textFilename, audioFilename, p);
 	}
 	
 	virtual ~VfxNodeWorld() override
 	{
-		spokenWord.shut();
-		
-		s_world->removeSpokenWord(&spokenWord);
+		s_world->freeSpokenWord(spokenWord);
 	}
 	
 	virtual void tick(const float dt) override
@@ -1227,7 +984,7 @@ struct VfxNodeWorld : VfxNodeBase
 	{
 		if (index == kInput_SpokenWordBegin)
 		{
-			spokenWord.toActive();
+			spokenWord->toActive();
 		}
 	}
 };
@@ -1242,6 +999,145 @@ VFX_NODE_TYPE(VfxNodeWorld)
 	in("camera.yaw", "float");
 	in("word.begin!", "trigger");
 }
+
+//
+
+struct VfxNodeSpokenWord : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Text,
+		kInput_Sound,
+		kInput_Time,
+		kInput_X,
+		kInput_Y,
+		kInput_Z,
+		kInput_Begin,
+		kInput_End,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_COUNT
+	};
+	
+	SpokenWord * spokenWord;
+	
+	std::string currentText;
+	std::string currentSoundFilename;
+	float currentTime;
+	
+	VfxNodeSpokenWord()
+		: VfxNodeBase()
+		, spokenWord(nullptr)
+		, currentText()
+		, currentSoundFilename()
+		, currentTime(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		
+		addInput(kInput_Text, kVfxPlugType_String);
+		addInput(kInput_Sound, kVfxPlugType_String);
+		addInput(kInput_Time, kVfxPlugType_Float);
+		addInput(kInput_X, kVfxPlugType_Float);
+		addInput(kInput_Y, kVfxPlugType_Float);
+		addInput(kInput_Z, kVfxPlugType_Float);
+		addInput(kInput_Begin, kVfxPlugType_Trigger);
+		addInput(kInput_End, kVfxPlugType_Trigger);
+	}
+	
+	virtual ~VfxNodeSpokenWord() override
+	{
+		s_world->freeSpokenWord(spokenWord);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		if (isPassthrough)
+		{
+			s_world->freeSpokenWord(spokenWord);
+			
+			currentText.clear();
+			currentSoundFilename.clear();
+			currentTime = 0.f;
+			
+			return;
+		}
+		
+		const char * text = getInputString(kInput_Text, "");
+		const char * soundFilename = getInputString(kInput_Sound, "");
+		const float time = getInputFloat(kInput_Time, 0.f);
+		const float x = getInputFloat(kInput_X, 0.f);
+		const float y = getInputFloat(kInput_Y, 0.f);
+		const float z = getInputFloat(kInput_Z, 0.f);
+		
+		if (spokenWord == nullptr || text != currentText || soundFilename != currentSoundFilename || time != currentTime)
+		{
+			currentText = text;
+			currentSoundFilename = soundFilename;
+			currentTime = time;
+			
+			s_world->freeSpokenWord(spokenWord);
+			
+			spokenWord = s_world->createSpokenWord();
+			
+			spokenWord->init(g_sampleSet, g_binauralMutex, text, nullptr, soundFilename, Vec3(0.f, 0.f, 0.f));
+		}
+		
+		Mat4x4 worldToViewMatrix;
+		gxGetMatrixf(GL_MODELVIEW, worldToViewMatrix.m_v);
+		
+		const Vec3 cameraPosition_world = -worldToViewMatrix.GetTranslation();
+		
+		spokenWord->pos = Vec3(x, y, z);
+		
+		spokenWord->tick(worldToViewMatrix, cameraPosition_world, dt);
+	}
+	
+	virtual void handleTrigger(const int index) override
+	{
+		if (isPassthrough)
+			return;
+		
+		if (index == kInput_Begin)
+		{
+			spokenWord->toActive();
+		}
+		else if (index == kInput_End)
+		{
+			spokenWord->toInactive();
+		}
+	}
+	
+	virtual void draw() const override
+	{
+		if (isPassthrough)
+			return;
+		if (spokenWord == nullptr)
+			return;
+		
+		spokenWord->drawSolid();
+		
+		spokenWord->drawTranslucent();
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeSpokenWord)
+{
+	typeName = "spokenWord";
+	
+	in("text", "string");
+	in("sound", "string");
+	in("time", "float");
+	in("x", "float");
+	in("y", "float");
+	in("z", "float");
+	in("begin!", "trigger");
+	in("end!", "trigger");
+}
+
+//
 
 void VideoLandscape::init()
 {
