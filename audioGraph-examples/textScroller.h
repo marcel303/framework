@@ -42,7 +42,8 @@ struct TextScroller
 	
 	TextScroller();
 	
-	void open(const char * filename);
+	void initFromText(const char * text);
+	void initFromFile(const char * filename);
 	
 	void draw();
 };

@@ -36,7 +36,14 @@ TextScroller::TextScroller()
 {
 }
 
-void TextScroller::open(const char * filename)
+void TextScroller::initFromText(const char * text)
+{
+	lines = String::Split(text, '\n');
+	for (auto & line : lines)
+		line = String::Trim(line);
+}
+
+void TextScroller::initFromFile(const char * filename)
 {
 	try
 	{
