@@ -114,6 +114,26 @@ void VfxGraphMgr::freeInstance(VfxGraphInstance *& instance)
 	instance = nullptr;
 }
 
+void VfxGraphMgr::tick(const float dt)
+{
+	for (auto & instanceItr : instances)
+	{
+		VfxGraphInstance * instance = instanceItr;
+		
+		instance->vfxGraph->tick(GFX_SX, GFX_SY, dt);
+	}
+}
+
+void VfxGraphMgr::draw()
+{
+	for (auto & instanceItr : instances)
+	{
+		VfxGraphInstance * instance = instanceItr;
+		
+		instance->vfxGraph->draw(GFX_SX, GFX_SY);
+	}
+}
+
 //
 
 int main(int argc, char * argv[])
@@ -172,12 +192,16 @@ int main(int argc, char * argv[])
 			vfxGraphMgr->activeInstance->graphEdit->tick(dt, false);
 		}
 		
+		vfxGraphMgr->tick(dt);
+		
 		landscape->tick(dt);
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			setFont("calibri.ttf");
 			pushFontMode(FONT_SDF);
+			
+			vfxGraphMgr->draw();
 			
 			landscape->draw();
 			

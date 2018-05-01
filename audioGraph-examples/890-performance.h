@@ -62,6 +62,9 @@ struct VfxGraphMgr
 	VfxGraphInstance * createInstance(const char * filename);
 	
 	void freeInstance(VfxGraphInstance *& instance);
+	
+	void tick(const float dt);
+	void draw();
 };
 
 extern VfxGraphMgr * g_vfxGraphMgr;
