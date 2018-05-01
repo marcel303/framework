@@ -5084,6 +5084,93 @@ void GraphEdit::draw() const
 		}
 	}
 
+#if 1 // todo : remove. test bezier control points, drawing only circles
+	{
+		for (auto & linkItr : graph->links)
+		{
+			auto linkId = linkItr.first;
+			
+			LinkPath path;
+			
+			if (getLinkPath(linkId, path))
+			{
+				setColor(colorWhite);
+				
+				float x1 = path.points[0].x;
+				float y1 = path.points[0].y;
+				
+				Path2d path2d;
+				
+				path2d.moveTo(x1, y1);
+				
+				for (int i = 1; i < path.points.size(); ++i)
+				{
+					const float x2 = path.points[i].x;
+					const float y2 = path.points[i].y;
+					
+					path2d.curveTo(x2, y2, -30.f, 0.f, +30.f, 0.f);
+					
+					x1 = x2;
+					y1 = y2;
+				}
+				
+				const int kMaxPoints = 64;
+
+				float pxyStorage[kMaxPoints * 2];
+				float hxyStorage[kMaxPoints * 2];
+
+				float * pxy = pxyStorage;
+				float * hxy = hxyStorage;
+
+				int numPoints = 0;
+				path2d.generatePoints(pxy, hxy, kMaxPoints, 1.f, numPoints);
+				
+				hqBegin(HQ_FILLED_CIRCLES, true);
+				{
+					for (int i = 0; i < numPoints; ++i)
+					{
+						hqFillCircle(pxy[i * 2 + 0], pxy[i * 2 + 1], 3.f);
+					}
+				}
+				hqEnd();
+			}
+		}
+	}
+#elif 0 // todo : remove. test bezier control points
+	{
+		for (auto & linkItr : graph->links)
+		{
+			auto linkId = linkItr.first;
+			
+			LinkPath path;
+			
+			if (getLinkPath(linkId, path))
+			{
+				setColor(colorWhite);
+				
+				float x1 = path.points[0].x;
+				float y1 = path.points[0].y;
+				
+				Path2d path2d;
+				
+				path2d.moveTo(x1, y1);
+				
+				for (int i = 1; i < path.points.size(); ++i)
+				{
+					const float x2 = path.points[i].x;
+					const float y2 = path.points[i].y;
+					
+					path2d.curveTo(x2, y2, -30.f, 0.f, +30.f, 0.f);
+					
+					x1 = x2;
+					y1 = y2;
+				}
+				
+				hqDrawPath(path2d, 4.f);
+			}
+		}
+	}
+#else
 	// traverse and draw links
 	
 	hqBegin(HQ_LINES);
@@ -5139,43 +5226,8 @@ void GraphEdit::draw() const
 		}
 	}
 	hqEnd();
-	
-#if 0 // todo : remove. test bezier control points
-	{
-		for (auto & linkItr : graph->links)
-		{
-			auto linkId = linkItr.first;
-			
-			LinkPath path;
-			
-			if (getLinkPath(linkId, path))
-			{
-				setColor(colorWhite);
-				
-				float x1 = path.points[0].x;
-				float y1 = path.points[0].y;
-				
-				Path2d path2d;
-				
-				path2d.moveTo(x1, y1);
-				
-				for (int i = 1; i < path.points.size(); ++i)
-				{
-					const float x2 = path.points[i].x;
-					const float y2 = path.points[i].y;
-					
-					path2d.curveTo(x2, y2, -30.f, 0.f, +30.f, 0.f);
-					
-					x1 = x2;
-					y1 = y2;
-				}
-				
-				hqDrawPath(path2d, 4.f);
-			}
-		}
-	}
 #endif
-	
+
 	hqBegin(HQ_FILLED_CIRCLES);
 	{
 		for (auto & linkItr : graph->links)
