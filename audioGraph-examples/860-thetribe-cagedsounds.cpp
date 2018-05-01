@@ -1,3 +1,5 @@
+#include <cmath>
+
 namespace Cagedsounds
 {
 struct MyMutex : binaural::Mutex
