@@ -485,7 +485,7 @@ int main(int argc, char * argv[])
 			}
 		#endif
 			
-			gfx.setup(fx.gfx_w, fx.gfx_h);
+			gfx.setup(nullptr, fx.gfx_w, fx.gfx_h, mouse.x, mouse.y, true);
 			
 			//setDrawRect(0, 0, fx.gfx_w, fx.gfx_h);
 			pushFontMode(FONT_SDF);
