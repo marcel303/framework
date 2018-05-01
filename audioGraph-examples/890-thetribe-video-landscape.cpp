@@ -3,6 +3,7 @@
 #include "soundVolume.h"
 #include "textScroller.h"
 #include "vfxGraph.h"
+#include "vfxNodeBase.h"
 #include "vfxNodes/vfxNodeDisplay.h"
 #include "video.h"
 #include <cmath>
@@ -13,7 +14,7 @@
 #define NUM_VFXCLIPS 0
 
 #define NUM_SPOKENWORD_SOURCES 3
-#define NUM_SPOKENWORDS 0
+#define NUM_SPOKENWORDS 1
 
 #define DRAW_GRIDS 1
 
@@ -382,14 +383,22 @@ struct SpokenWord
 	void init(
 		const binaural::HRIRSampleSet * sampleSet,
 		binaural::Mutex * mutex,
-		const char * text, const char * audio,
+		const char * text,
+		const char * textFile, const char * audioFile,
 		Vec3Arg _pos)
 	{
-		textScroller.open(text);
+		if (text != nullptr)
+			textScroller.initFromText(text);
+		else
+			textScroller.initFromFile(textFile);
 		
-		soundSource.open(audio, false);
+		if (audioFile != nullptr)
+		{
+			soundSource.open(audioFile, false);
+		}
+		
 		//g_audioMixer->addPointSource(&soundSource);
-		
+	
 		soundVolume.init(sampleSet, mutex, &soundSource);
 		g_audioMixer->addVolumeSource(&soundVolume.audioSource);
 		
@@ -472,7 +481,7 @@ struct SpokenWord
 		currentAngle = lerp(desiredAngle, currentAngle, retain);
 	}
 	
-	void drawSolid()
+	void drawSolid() const
 	{
 		gxPushMatrix();
 		{
@@ -484,7 +493,7 @@ struct SpokenWord
 		gxPopMatrix();
 	}
 	
-	void drawTranslucent()
+	void drawTranslucent() const
 	{
 		Color color = currentColor;
 		if (hover)
@@ -496,11 +505,124 @@ struct SpokenWord
 	
 	void draw2d()
 	{
-	#if 0
+	#if 1
 		textScroller.draw();
 	#endif
 	}
 };
+
+struct VfxNodeSpokenWord : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Draw,
+		kInput_Text,
+		kInput_Sound,
+		kInput_Time,
+		kInput_Appear,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Draw,
+		kOutput_COUNT
+	};
+	
+	SpokenWord * spokenWord;
+	
+	std::string currentText;
+	std::string currentSoundFilename;
+	float currentTime;
+	
+	VfxNodeSpokenWord()
+		: VfxNodeBase()
+		, spokenWord(nullptr)
+		, currentText()
+		, currentSoundFilename()
+		, currentTime(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		
+		addInput(kInput_Draw, kVfxPlugType_Draw);
+		addInput(kInput_Text, kVfxPlugType_String);
+		addInput(kInput_Sound, kVfxPlugType_String);
+		addInput(kInput_Time, kVfxPlugType_Float);
+		addInput(kInput_Appear, kVfxPlugType_Trigger);
+		addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		if (isPassthrough)
+		{
+			delete spokenWord;
+			spokenWord = nullptr;
+			
+			currentText.clear();
+			currentSoundFilename.clear();
+			currentTime = 0.f;
+			
+			return;
+		}
+		
+		const char * text = getInputString(kInput_Text, "");
+		const char * soundFilename = getInputString(kInput_Sound, "");
+		const float time = getInputFloat(kInput_Time, 0.f);
+		
+		if (spokenWord == nullptr || text != currentText || soundFilename != currentSoundFilename || time != currentTime)
+		{
+			currentText = text;
+			currentSoundFilename = soundFilename;
+			currentTime = time;
+			
+			delete spokenWord;
+			spokenWord = new SpokenWord();
+			
+			spokenWord->init(g_sampleSet, g_binauralMutex, text, nullptr, soundFilename, Vec3(0.f, 0.f, 0.f));
+		}
+		
+		Mat4x4 worldToViewMatrix;
+		gxGetMatrixf(GL_MODELVIEW, worldToViewMatrix.m_v);
+		
+		const Vec3 cameraPosition_world = -worldToViewMatrix.GetTranslation();
+		
+		spokenWord->tick(worldToViewMatrix, cameraPosition_world, dt);
+	}
+	
+	virtual void handleTrigger(const int index) override
+	{
+		if (isPassthrough)
+			return;
+		
+		if (index == kInput_Appear)
+		{
+			// todo : make spoken word appear
+		}
+	}
+	
+	virtual void draw() const override
+	{
+		if (isPassthrough)
+			return;
+		if (spokenWord == nullptr)
+			return;
+		
+		spokenWord->draw2d();
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeSpokenWord)
+{
+	typeName = "spokenWord";
+	
+	in("draw", "draw");
+	in("text", "string");
+	in("sound", "string");
+	in("time", "float");
+	in("appear!", "trigger");
+	out("draw", "draw");
+}
 
 struct World
 {
@@ -581,7 +703,7 @@ struct World
 			
 			const Vec3 p(0.f, 0.f, i + 1.f);
 			
-			spokenWord.init(sampleSet, mutex, textFilename, audioFilename, p);
+			spokenWord.init(sampleSet, mutex, nullptr, textFilename, audioFilename, p);
 		}
 	}
 	
@@ -671,8 +793,12 @@ struct World
 		
 		//
 		
-		const Vec3 cameraPosition_world = camera.getWorldMatrix().GetTranslation();
-		const Mat4x4 worldToViewMatrix = camera.getViewMatrix();
+		camera.pushViewMatrix();
+		
+		Mat4x4 worldToViewMatrix;
+		gxGetMatrixf(GL_MODELVIEW, worldToViewMatrix.m_v);
+		
+		const Vec3 cameraPosition_world = worldToViewMatrix.CalcInv().GetTranslation();
 		
 		// update video clips
 		
@@ -712,6 +838,8 @@ struct World
 			hitTestResult.vfxclip->hover = true;
 		if (hitTestResult.spokenWord)
 			hitTestResult.spokenWord->hover = true;
+		
+		camera.popViewMatrix();
 	}
 	
 	void draw3d()
@@ -840,6 +968,8 @@ void VideoLandscape::draw()
 
 	if (showUi)
 	{
+		gxPushMatrix();
+		
 		setColor(255, 255, 255, 127);
 		drawText(GFX_SX - 10, 40, 32, -1, +1, "VIDEO CLIP TUBE");
 
@@ -847,5 +977,7 @@ void VideoLandscape::draw()
 		setColor(colorWhite);
 		drawText(10, 40, kFontSize, +1, +1, "N: toggle use nearest point (%s)", enableNearest ? "on" : "off");
 		drawText(10, 60, kFontSize, +1, +1, "V: toggle use vertices (%s)", enableVertices ? "on" : "off");
+		
+		gxPopMatrix();
 	}
 }
