@@ -631,3 +631,111 @@ static void shutAudioGraph()
 		s_audioMutex = nullptr;
 	}
 }
+
+//
+
+// todo : create a separate JsusFx test
+
+#include "audioNodeBase.h"
+
+static AudioNodeBase * tryGetSelectedAudioNode(AudioGraphManager_RTE * audioGraphMgr)
+{
+	if (audioGraphMgr->selectedFile == nullptr)
+		return nullptr;
+	if (audioGraphMgr->selectedFile->activeInstance == nullptr)
+		return nullptr;
+	
+	GraphEdit * graphEdit = audioGraphMgr->selectedFile->graphEdit;
+	
+	if (graphEdit->selectedNodes.size() != 1)
+		return nullptr;
+	
+	const AudioGraphInstance * activeInstance = audioGraphMgr->selectedFile->activeInstance;
+	
+	const GraphNodeId nodeId = *graphEdit->selectedNodes.begin();
+	
+	auto audioNodeItr = activeInstance->audioGraph->nodes.find(nodeId);
+	
+	if (audioNodeItr == activeInstance->audioGraph->nodes.end())
+		return nullptr;
+	
+	AudioNodeBase * audioNode = audioNodeItr->second;
+	
+	return audioNode;
+}
+
+void testVfxGraph_JsusFx()
+{
+	setAbout("This example shows Vfx Graph in action!");
+
+	fillPcmDataCache("../4dworld/testsounds", true, true);
+	
+	initAudioGraph();
+	
+	AudioGraphInstance * instance = s_audioGraphMgr->createInstance("ag-test.xml");
+	s_audioGraphMgr->selectInstance(instance);
+	
+	do
+	{
+		framework.process();
+		
+		const float dt = framework.timeStep;
+		
+		AudioNodeBase * selectedAudioNode = tryGetSelectedAudioNode(s_audioGraphMgr);
+		
+		bool inputIsCaptured = false;
+		
+		int sx;
+		int sy;
+		
+		bool drawEditor = false;
+		
+		if (selectedAudioNode != nullptr)
+		{
+			g_currentAudioGraph = s_audioGraphMgr->selectedFile->activeInstance->audioGraph;
+			{
+				drawEditor = selectedAudioNode->tickEditor(0, 0, sx, sy, inputIsCaptured) && (sx > 0 && sy > 0);
+			}
+			g_currentAudioGraph = nullptr;
+		}
+		
+		inputIsCaptured |= s_audioGraphMgr->tickEditor(dt, inputIsCaptured);
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			s_audioGraphMgr->drawEditor();
+			
+			if (drawEditor)
+			{
+				Surface surface(sx, sy, false);
+				
+				pushSurface(&surface);
+				{
+					surface.clear();
+					
+					g_currentAudioGraph = s_audioGraphMgr->selectedFile->activeInstance->audioGraph;
+					{
+						selectedAudioNode->drawEditor(&surface, 0, 0, sx, sy);
+					}
+					g_currentAudioGraph = nullptr;
+				}
+				popSurface();
+				
+				pushBlend(BLEND_OPAQUE);
+				pushColorMode(COLOR_IGNORE);
+				gxSetTexture(surface.getTexture());
+				drawRect(0, 0, sx, sy);
+				gxSetTexture(0);
+				popColorMode();
+				popBlend();
+			}
+			
+			drawTestUi();
+		}
+		framework.endDraw();
+	} while (!keyboard.wentDown(SDLK_ESCAPE));
+	
+	s_audioGraphMgr->free(instance, false);
+	
+	shutAudioGraph();
+}
