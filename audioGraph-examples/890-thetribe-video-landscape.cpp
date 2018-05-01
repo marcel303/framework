@@ -10,12 +10,10 @@
 
 #define NUM_AUDIOCLIP_SOURCES 16
 #define NUM_VIDEOCLIP_SOURCES 3
-#define NUM_VIDEOCLIPS 16
+#define NUM_VIDEOCLIPS 32
 #define NUM_VFXCLIPS 0
 
 #define NUM_SPOKENWORD_SOURCES 3
-
-#define DRAW_GRIDS 1
 
 #define ENABLE_INTERACTIVITY 0
 
@@ -103,6 +101,11 @@ static bool intersectSoundVolume(const SoundVolume & soundVolume, Vec3Arg pos, V
 		p[1] >= -1.f && p[1] <= +1.f;
 }
 
+static double s_videoClipSpeedMultiplier = 1.0;
+static bool s_videoClipDrawGrid = true;
+static Color s_videoClipGridColor(1.f, 1.f, 1.f, 1.f);
+static Color s_videoClipGridColor2(1.f, 1.f, 1.f, 1.f);
+
 struct Videoclip
 {
 	Mat4x4 transform;
@@ -115,6 +118,8 @@ struct Videoclip
 	
 	bool hover;
 	
+	double time;
+	
 	Videoclip()
 		: transform()
 		, soundSource()
@@ -123,6 +128,7 @@ struct Videoclip
 		, gain(0.f)
 		, index(-1)
 		, hover(false)
+		, time(timeSeed)
 	{
 	}
 	
@@ -162,14 +168,11 @@ struct Videoclip
 	
 	void evalVideoClipParams(Vec3 & scale, Quat & rotation, Vec3 & position, float & opacity) const
 	{
-        const float time = timeSeed + framework.time;
-
-        const float moveSpeed = (1.f + index / float(NUM_VIDEOCLIPS)) * .2f;
-        //const float moveAmount = 4.f / (index / float(NUM_VIDEOCLIPS) + 1);
-        const float moveAmount = 2.f;
-        const float x = std::sin(moveSpeed * time / 11.234f) * moveAmount;
+        const float moveSpeed = (1.f + index / float(NUM_VIDEOCLIPS)) * .1f;
+        const float moveAmount = 1.f;
+        const float x = std::sin(moveSpeed * time / 15.678f) * moveAmount * .2f - index * 2.7f - 8.f;
         const float y = std::sin(moveSpeed * time / 13.456f) * moveAmount;
-        const float z = std::sin(moveSpeed * time / 15.678f) * moveAmount * .2f + index * 1.7f + 8.f;
+        const float z = std::sin(moveSpeed * time / 11.234f) * moveAmount;
     
         const float scaleSpeed = 1.f + index / 5.f;
         const float scaleY = lerp(.5f, 1.f, (std::cos(scaleSpeed * time / 4.567f) + 1.f) / 2.f);
@@ -177,10 +180,10 @@ struct Videoclip
         //const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
         const float scaleZ = lerp(.05f, .1f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
         const float rotateSpeed = 1.f + index / 10.f;
-        
+		
         scale = Vec3(scaleX, scaleY, scaleZ);
         rotation =
-            Quat(Vec3(1.f, 0.f, 0.f), rotateSpeed * time / 3.456f) *
+            Quat(Vec3(0.f, 0.f, 1.f), rotateSpeed * time / 3.456f) *
             Quat(Vec3(0.f, 1.f, 0.f), rotateSpeed * time / 4.567f);
         position = Vec3(x, y, z);
         opacity = 1.f;
@@ -188,6 +191,8 @@ struct Videoclip
 	
 	void tick(const Mat4x4 & worldToViewMatrix, const Vec3 & cameraPosition_world, const float dt)
 	{
+		time += dt * s_videoClipSpeedMultiplier;
+		
         Vec3 scale;
         Quat rotation;
         Vec3 position;
@@ -241,10 +246,11 @@ struct Videoclip
 	
 	void drawTranslucent()
 	{
-	#if DRAW_GRIDS
-		setColor(200, 200, 200, 63);
-		drawSoundVolume(soundVolume);
-	#endif
+		if (s_videoClipDrawGrid)
+		{
+			setColor(s_videoClipGridColor2);
+			drawSoundVolume(soundVolume);
+		}
 	}
 };
 
@@ -321,10 +327,11 @@ struct Vfxclip
 	
 	void drawTranslucent()
 	{
-	#if DRAW_GRIDS
-		setColor(0, 0, 0, 100);
-		drawSoundVolume(soundVolume);
-	#endif
+		if (s_videoClipDrawGrid)
+		{
+			setColor(s_videoClipGridColor2);
+			drawSoundVolume(soundVolume);
+		}
 	}
 };
 
@@ -650,20 +657,6 @@ struct World
 
 	void init(binaural::HRIRSampleSet * sampleSet, binaural::Mutex * mutex)
 	{
-		camera.gamepadIndex = 0;
-		
-		const float kMoveSpeed = .2f;
-		//const float kMoveSpeed = 1.f;
-		camera.maxForwardSpeed *= kMoveSpeed;
-		camera.maxUpSpeed *= kMoveSpeed;
-		camera.maxStrafeSpeed *= kMoveSpeed;
-		
-		camera.position[0] = 0;
-		camera.position[1] = +.3f;
-		camera.position[2] = 0;
-		
-		//
-		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
             const int audioIndex = i % NUM_AUDIOCLIP_SOURCES;
@@ -879,8 +872,10 @@ struct World
 		{
 			gxPushMatrix();
 			{
+				//gxTranslatef(camera.position[0], 0.f, camera.position[2]);
+				
 				gxScalef(40, 40, 40);
-				setColor(200, 200, 200, 60);
+				setColor(s_videoClipGridColor);
 				drawGrid3dLine(400, 400, 0, 2, true);
 			}
 			gxPopMatrix();
@@ -925,6 +920,11 @@ struct VfxNodeWorld : VfxNodeBase
 		kInput_CameraY,
 		kInput_CameraZ,
 		kInput_CameraYaw,
+		kInput_CameraRoll,
+		kInput_VideoClipTimeMultiplier,
+		kInput_VideoClipDrawGrid,
+		kInput_VideoClipGridColor,
+		kInput_VideoClipGridColor2,
 		kInput_SpokenWordBegin,
 		kInput_COUNT
 	};
@@ -946,6 +946,11 @@ struct VfxNodeWorld : VfxNodeBase
 		addInput(kInput_CameraY, kVfxPlugType_Float);
 		addInput(kInput_CameraZ, kVfxPlugType_Float);
 		addInput(kInput_CameraYaw, kVfxPlugType_Float);
+		addInput(kInput_CameraRoll, kVfxPlugType_Float);
+		addInput(kInput_VideoClipTimeMultiplier, kVfxPlugType_Float);
+		addInput(kInput_VideoClipDrawGrid, kVfxPlugType_Bool);
+		addInput(kInput_VideoClipGridColor, kVfxPlugType_Color);
+		addInput(kInput_VideoClipGridColor2, kVfxPlugType_Color);
 		addInput(kInput_SpokenWordBegin, kVfxPlugType_Trigger);
 		
 		const int i = 0;
@@ -973,6 +978,24 @@ struct VfxNodeWorld : VfxNodeBase
 			getInputFloat(kInput_CameraZ, 0.f));
 		
 		s_world->camera.yaw = getInputFloat(kInput_CameraYaw, 0.f);
+		s_world->camera.roll = getInputFloat(kInput_CameraRoll, 0.f);
+		
+		s_videoClipSpeedMultiplier = getInputFloat(kInput_VideoClipTimeMultiplier, 1.f);
+		s_videoClipDrawGrid = getInputBool(kInput_VideoClipDrawGrid, true);
+		
+		VfxColor defaultColor(1.f, 1.f, 1.f, 1.f);
+		
+		const VfxColor * gridColor = getInputColor(kInput_VideoClipGridColor, &defaultColor);
+		s_videoClipGridColor.r = gridColor->r;
+		s_videoClipGridColor.g = gridColor->g;
+		s_videoClipGridColor.b = gridColor->b;
+		s_videoClipGridColor.a = gridColor->a;
+		
+		const VfxColor * gridColor2 = getInputColor(kInput_VideoClipGridColor2, &defaultColor);
+		s_videoClipGridColor2.r = gridColor2->r;
+		s_videoClipGridColor2.g = gridColor2->g;
+		s_videoClipGridColor2.b = gridColor2->b;
+		s_videoClipGridColor2.a = gridColor2->a;
 	}
 	
 	virtual void handleTrigger(const int index) override
@@ -992,6 +1015,11 @@ VFX_NODE_TYPE(VfxNodeWorld)
 	in("camera.y", "float");
 	in("camera.z", "float");
 	in("camera.yaw", "float");
+	in("camera.roll", "float");
+	in("video.tmult", "float", "1");
+	in("video.dgrid", "bool", "1");
+	in("gridcolor", "color", "ffffffff");
+	in("gridcolor2", "color", "ffffffff");
 	in("word.begin!", "trigger");
 }
 
@@ -1184,13 +1212,15 @@ void VideoLandscape::draw()
 		gxPushMatrix();
 		
 		setColor(255, 255, 255, 127);
-		drawText(GFX_SX - 10, 40, 32, -1, +1, "VIDEO CLIP TUBE");
+		drawText(GFX_SX - 16, 24, 32, -1, +1, "GROOOP PERFORMANCE APP");
 
+	#if 0
 		gxTranslatef(0, GFX_SY - 100, 0);
 		setColor(colorWhite);
 		drawText(10, 40, kFontSize, +1, +1, "N: toggle use nearest point (%s)", enableNearest ? "on" : "off");
 		drawText(10, 60, kFontSize, +1, +1, "V: toggle use vertices (%s)", enableVertices ? "on" : "off");
-		
+	#endif
+	
 		gxPopMatrix();
 	}
 }
