@@ -1,4 +1,5 @@
 #include "890-performance.h"
+#include "audioGraph.h"
 #include "objects/audioSourceVorbis.h"
 #include "soundVolume.h"
 #include "textScroller.h"
@@ -130,7 +131,11 @@ static float s_particlesCoronaOpacity = 0.f;
 struct Videoclip
 {
 	Mat4x4 transform;
+#if USE_STREAMING
 	AudioSourceVorbis soundSource;
+#else
+	AudioSourcePcm soundSource;
+#endif
 	SoundVolume soundVolume;
 	float gain;
 	
@@ -168,7 +173,15 @@ struct Videoclip
 		
 		index = _index;
 		
+	#if USE_STREAMING
 		soundSource.open(audio, true);
+	#else
+		const PcmData * pcmData = getPcmData(audio);
+		
+		soundSource.init(pcmData, 0);
+		soundSource.play();
+		soundSource.loop = true;
+	#endif
 		
 		gain = _gain;
 	}
@@ -780,6 +793,8 @@ struct Faces
 	
 	double time = 0.0;
 	
+	float focus = 0.f;
+	
 	Surface * mask = nullptr;
 	
 	void init()
@@ -842,8 +857,6 @@ struct Faces
 		
 		if (focusIndex >= 0)
 		{
-			compositionMode = kCompositionMode_Grid;
-			
 			tiles[focusIndex]->endFocus();
 			
 			focusIndex = -1;
@@ -857,6 +870,15 @@ struct Faces
 			
 			compositionMode = kCompositionMode_Focus;
 		}
+		else
+		{
+			compositionMode = kCompositionMode_Grid;
+		}
+	}
+	
+	void endFocus()
+	{
+		beginFocus(-1);
 	}
 	
 	static void calcGridProperties(const int index, FaceTile & tile)
@@ -899,6 +921,8 @@ struct Faces
 		
 		// update tile composition and properties
 		
+		float desiredFocus = 0.f;
+		
 		if (compositionMode == kCompositionMode_Grid)
 		{
 			int index = 0;
@@ -912,6 +936,8 @@ struct Faces
 		}
 		else if (compositionMode == kCompositionMode_Focus)
 		{
+			desiredFocus = 1.f;
+			
 			int index = 0;
 			
 			for (auto tile : tiles)
@@ -932,6 +958,11 @@ struct Faces
 		{
 			Assert(false);
 		}
+		
+		const double retainPerSecond = s_videoRetain;
+		const double retain = pow(retainPerSecond, dt);
+		
+		focus = lerp(desiredFocus, focus, retain);
 		
 		// update tiles
 		
@@ -969,8 +1000,9 @@ struct Faces
 			setShader(tileShader);
 			tileShader.setTexture("image", 0, texture);
 			tileShader.setTexture("mask", 1, mask->getTexture());
-			tileShader.setImmediate("opacity", opacity);
 			tileShader.setImmediate("range", s_videoNearDistance, s_videoDistance);
+			tileShader.setImmediate("focus", focus);
+			tileShader.setImmediate("opacity", opacity);
 			
 			gxPushMatrix();
 			{
@@ -1546,7 +1578,10 @@ struct VfxNodeWorld : VfxNodeBase
 		{
 			const int focusIndex = getInputFloat(kInput_VideoFocusIndex, 0.f);
 			
-			s_world->faces.beginFocus(focusIndex);
+			if (focusIndex == s_world->faces.focusIndex)
+				s_world->faces.endFocus();
+			else
+				s_world->faces.beginFocus(focusIndex);
 		}
 	}
 };

@@ -1,6 +1,8 @@
 #include "audioMixer.h"
 #include "objects/binauralizer.h"
 
+#define USE_STREAMING 1
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 

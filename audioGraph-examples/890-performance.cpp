@@ -1,4 +1,5 @@
 #include "890-performance.h"
+#include "audioGraph.h"
 #include "framework.h"
 #include "graph.h"
 #include "objects/binauralizer.h"
@@ -167,7 +168,7 @@ struct VfxNodeTriggerFilter : VfxNodeBase
 		addInput(kInput_FilterValue, kVfxPlugType_Float);
 		addInput(kInput_Trigger, kVfxPlugType_Trigger);
 		addInput(kInput_OutputValue, kVfxPlugType_Float);
-		addOutput(kOutput_Trigger, kVfxPlugType_Trigger, this);
+		addOutput(kOutput_Trigger, kVfxPlugType_Trigger, nullptr);
 		addOutput(kOutput_Value, kVfxPlugType_Float, &valueOutput);
 	}
 	
@@ -207,6 +208,10 @@ int main(int argc, char * argv[])
     
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
+	
+#if !USE_STREAMING
+	fillPcmDataCache(".", true, false);
+#endif
 	
 	SDL_mutex * audioMutex = SDL_CreateMutex();
 	g_audioMutex = audioMutex;

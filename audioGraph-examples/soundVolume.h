@@ -85,6 +85,27 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 	
 	void fillBuffers(const int numSamples)
 	{
+	#if defined(DEBUG)
+		{
+			ALIGN16 float sourceBuffer[AUDIO_UPDATE_SIZE];
+			source->generate(sourceBuffer, numSamples);
+			
+			float gain = 0.f;
+			
+			for (int i = 0; i < MAX_SAMPLELOCATIONS_PER_VOLUME; ++i)
+			{
+				gain += sampleLocation[i].gain;
+			}
+			
+			audioBufferMul(sourceBuffer, numSamples, gain);
+			
+			memcpy(samplesL, sourceBuffer, numSamples * sizeof(float));
+			memcpy(samplesR, sourceBuffer, numSamples * sizeof(float));
+			
+			return;
+		}
+	#endif
+	
 		// generate source audio
 		
 		memset(samplesL, 0, sizeof(samplesL));
