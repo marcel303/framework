@@ -208,6 +208,8 @@ int main(int argc, char * argv[])
 			
 			if (vfxGraphMgr->activeInstance != nullptr)
 			{
+				vfxGraphMgr->activeInstance->graphEdit->tickVisualizers(dt);
+				
 				vfxGraphMgr->activeInstance->graphEdit->draw();
 			}
 			

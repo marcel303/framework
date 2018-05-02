@@ -109,6 +109,16 @@ static double s_videoClipSpeedMultiplier = 1.0;
 static bool s_videoClipDrawGrid = true;
 static Color s_videoClipGridColor(1.f, 1.f, 1.f, 1.f);
 static Color s_videoClipGridColor2(1.f, 1.f, 1.f, 1.f);
+static float s_videoAspect = 1.f;
+static float s_videoScale = 1.f;
+static float s_videoSpacing = 200.f;
+static float s_videoDistance = 400.f;
+static float s_videoNearDistance = 200.f;
+static float s_videoAngleWobbleX = 0.f;
+static float s_videoAngleWobbleY = 0.f;
+static float s_wobbleSpeedX = 1.f;
+static float s_wobbleSpeedY = 1.f;
+static float s_videoRetain = 0.f;
 
 struct Videoclip
 {
@@ -620,11 +630,38 @@ VFX_NODE_TYPE(VfxNodeDrawGrid)
 
 struct FaceTile
 {
+	Vec3 currentPos;
+	Vec3 desiredPos;
+	
+	Vec3 finalPos;
+	
+	float wobbleSpeed;
+	float wobbleMag;
+	
+	float wobbleX;
+	float wobbleY;
+	
+	float angleX;
+	float angleY;
+	
+	float aspectRatio;
+	
+	double time = 0.0;
+	
 	MediaPlayer mp;
 	
 	void init(const char * filename)
 	{
 		mp.openAsync(filename, MP::kOutputMode_RGBA);
+		
+		wobbleSpeed = 1.f;
+		//wobbleMag = 50.f;
+		wobbleMag = 0.f;
+		
+		aspectRatio = 1.f;
+		
+		wobbleX = random(0.f, 1000.f);
+		wobbleY = random(0.f, 1000.f);
 	}
 	
 	void shut()
@@ -634,11 +671,39 @@ struct FaceTile
 	
 	void tick(const float dt)
 	{
-		if (mp.presentedLastFrame(mp.context))
+		time += dt;
+		
+		const double retainPerSecond = s_videoRetain;
+		const double retain = pow(retainPerSecond, dt);
+		
+		currentPos = lerp(desiredPos, currentPos, retain);
+		
+		wobbleX += wobbleSpeed * s_wobbleSpeedX * dt;
+		wobbleY += wobbleSpeed * s_wobbleSpeedY * dt;
+		
+		const Vec3 wobblePos(
+			sinf(wobbleX) * wobbleMag,
+			sinf(wobbleY) * wobbleMag,
+			0.f);
+		
+		angleX = sin(time) * s_videoAngleWobbleX;
+		angleY = sin(time) * s_videoAngleWobbleY;
+		
+		finalPos = currentPos + wobblePos;
+		
+		aspectRatio = s_videoAspect;
+		
+		mp.presentTime += dt;
+		
+		mp.tick(mp.context, true);
+		
+		if (mp.isActive(mp.context) && mp.presentedLastFrame(mp.context))
 		{
 			auto openParams = mp.context->openParams;
 			
 			mp.close(false);
+			
+			mp.presentTime = 0.0;
 			
 			mp.openAsync(openParams);
 		}
@@ -647,11 +712,42 @@ struct FaceTile
 
 struct Faces
 {
+	static const int kGridSx = 5;
+	static const int kGridSy = 3;
+	
+	enum CompositionMode
+	{
+		kCompositionMode_Free,
+		kCompositionMode_Grid,
+		kCompositionMode_Weave,
+		kCompositionMode_Focus,
+		kCompositionMode_COUNT
+	};
+	
 	std::vector<FaceTile*> tiles;
+	
+	CompositionMode compositionMode = kCompositionMode_Focus;
+	
+	int focusIndex = 0;
+	
+	double time = 0.0;
 	
 	void init()
 	{
-		// todo : create tiles
+		// create tiles
+		
+		const int numTiles = kGridSx * kGridSy;
+		
+		for (int i = 0; i < numTiles; ++i)
+		{
+			FaceTile * tile = new FaceTile();
+			
+			tile->init(videoFilenames[rand() % NUM_VIDEOCLIP_SOURCES]);
+			
+			tile->wobbleSpeed = random(.5f, 1.f);
+			
+			tiles.push_back(tile);
+		}
 	}
 	
 	void shut()
@@ -667,18 +763,162 @@ struct Faces
 		tiles.clear();
 	}
 	
+	static void calcGridProperties(const int index, Vec3 & pos)
+	{
+		const int tileX = index % kGridSx;
+		const int tileY = index / kGridSx;
+
+		const float spacing = s_videoSpacing;
+
+		const float x = lerp(-1.f, +1.f, (tileX + .5f) / float(kGridSx)) * kGridSx * spacing;
+		const float y = lerp(-1.f, +1.f, (tileY + .5f) / float(kGridSy)) * kGridSy * spacing * s_videoAspect;
+
+		pos = Vec3(x, y, s_videoDistance);
+	}
+	
+	static void calcFocusProperties(const int index, Vec3 & pos)
+	{
+		pos = Vec3(0, 0, s_videoNearDistance);
+	}
+	
 	void tick(const float dt)
 	{
+		time += dt;
+		
 		// todo : update tile mode
+		
+		if ((rand() % 200) == 0)
+		{
+			//compositionMode = (CompositionMode)(rand() % kCompositionMode_COUNT);
+		}
+		
+		if ((rand() % 200) == 0)
+		{
+			focusIndex = rand() % (kGridSx * kGridSy);
+		}
 		
 		// todo : update tile locations
 		
+		if (compositionMode == kCompositionMode_Free)
+		{
+		
+		}
+		else if (compositionMode == kCompositionMode_Grid)
+		{
+			int index = 0;
+			
+			for (auto tile : tiles)
+			{
+				calcGridProperties(index, tile->desiredPos);
+				
+				index++;
+			}
+		}
+		else if (compositionMode == kCompositionMode_Weave)
+		{
+		
+		}
+		else if (compositionMode == kCompositionMode_Focus)
+		{
+			int index = 0;
+			
+			for (auto tile : tiles)
+			{
+				if (index == focusIndex)
+				{
+					calcFocusProperties(index, tile->desiredPos);
+				}
+				else
+				{
+					calcGridProperties(index, tile->desiredPos);
+				}
+				
+				index++;
+			}
+		}
+		else
+		{
+			Assert(false);
+		}
+		
 		// todo : update tile selection
+		
+		// update tiles
+		
+		for (auto tile : tiles)
+		{
+			tile->tick(dt);
+		}
 	}
 	
 	void draw2d()
 	{
-	
+		Surface mask(512, 512, false);
+		pushSurface(&mask);
+		mask.clear();
+		setColor(colorWhite);
+		pushBlend(BLEND_OPAQUE);
+		hqBegin(HQ_FILLED_ROUNDED_RECTS);
+		hqFillRoundedRect(0, 0, mask.getWidth(), mask.getHeight(), 20);
+		hqEnd();
+		popBlend();
+		popSurface();
+		
+		projectPerspective3d(90.f, 1.f, 1000.f);
+		gxPushMatrix();
+		//gxTranslatef(0, 0, 400);
+		
+		auto sortedTiles = tiles;
+		
+		std::sort(sortedTiles.begin(), sortedTiles.end(), [](FaceTile * t1, FaceTile * t2) { return t1->currentPos[2] > t2->currentPos[2]; });
+		
+		for (auto tile : sortedTiles)
+		{
+			auto texture = tile->mp.getTexture();
+			
+			if (texture == 0)
+				continue;
+			
+			int sx;
+			int sy;
+			double duration;
+			
+			if (!tile->mp.getVideoProperties(sx, sy, duration))
+				continue;
+			
+			Shader tileShader("face-tile");
+			setShader(tileShader);
+			tileShader.setTexture("image", 0, texture);
+			tileShader.setTexture("mask", 1, mask.getTexture());
+			tileShader.setImmediate("opacity", 1.f);
+			tileShader.setImmediate("range", s_videoNearDistance, s_videoDistance);
+			
+			gxPushMatrix();
+			{
+				const float rsy = GFX_SY * s_videoScale;
+				const float rsx = rsy * tile->aspectRatio;
+				
+				gxTranslatef(
+					tile->currentPos[0],
+					tile->currentPos[1],
+					tile->currentPos[2]);
+				
+				gxRotatef(90, 0, 0, 1); // fixme ! just to make it appear in portrait mode!
+				gxScalef(rsx/2.f, rsy/2.f, 1.f);
+				
+				gxRotatef(tile->angleX, 1, 0, 0);
+				gxRotatef(tile->angleY, 0, 1, 0);
+				
+				setColor(colorWhite);
+				drawRect(-1, -1, +1, +1);
+			}
+			gxPopMatrix();
+			
+			clearShader();
+		}
+		
+		gxPopMatrix();
+		projectScreen2d();
 	}
 };
 
@@ -747,11 +987,15 @@ struct World
 		{
 			vfxclips[i].open("groooplogo.xml");
 		}
+		
+		faces.init();
 	}
 	
 	void shut()
 	{
 		Assert(spokenWords.empty());
+		
+		faces.shut();
 		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
@@ -903,6 +1147,8 @@ struct World
 				
 				mediaPlayers[i].close(false);
 				
+				mediaPlayers[i].presentTime = 0.0;
+				
 				mediaPlayers[i].openAsync(openParams);
 			}
 		}
@@ -921,10 +1167,16 @@ struct World
 			vfxclips[i].tick(dt);
 		}
 		
+		// update spoken words
+		
 		for (auto spokenWord : spokenWords)
 		{
 			spokenWord->tick(worldToViewMatrix, cameraPosition_world, dt);
 		}
+		
+		// update faces
+		
+		faces.tick(dt);
 		
 		//
 		
@@ -1016,6 +1268,8 @@ struct World
 	
 	void draw2d()
 	{
+		faces.draw2d();
+		
 		for (auto spokenWord : spokenWords)
 		{
 			spokenWord->draw2d();
@@ -1041,6 +1295,16 @@ struct VfxNodeWorld : VfxNodeBase
 		kInput_SpokenWordBegin,
 		kInput_VideoBegin,
 		kInput_VideoEnd,
+		kInput_VideoAspect,
+		kInput_VideoScale,
+		kInput_VideoSpacing,
+		kInput_VideoDistance,
+		kInput_VideoNearDistance,
+		kInput_VideoAngleWobbleX,
+		kInput_VideoAngleWobbleY,
+		kInput_VideoWobbleX,
+		kInput_VideoWobbleY,
+		kInput_VideoRetain,
 		kInput_COUNT
 	};
 	
@@ -1049,11 +1313,8 @@ struct VfxNodeWorld : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	SpokenWord * spokenWord;
-	
 	VfxNodeWorld()
 		: VfxNodeBase()
-		, spokenWord(nullptr)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		
@@ -1066,25 +1327,23 @@ struct VfxNodeWorld : VfxNodeBase
 		addInput(kInput_VideoClipDrawGrid, kVfxPlugType_Bool);
 		addInput(kInput_VideoClipGridColor, kVfxPlugType_Color);
 		addInput(kInput_VideoClipGridColor2, kVfxPlugType_Color);
+		addInput(kInput_SpokenWordBegin, kVfxPlugType_Trigger);
 		addInput(kInput_VideoBegin, kVfxPlugType_Trigger);
 		addInput(kInput_VideoEnd, kVfxPlugType_Trigger);
-		addInput(kInput_SpokenWordBegin, kVfxPlugType_Trigger);
-		
-		const int i = 0;
-		
-		const char * textFilename = spokenText[i];
-		const char * audioFilename = spokenAudio[i];
-	
-		const Vec3 p(0.f, 0.f, i + 1.f);
-		
-		spokenWord = s_world->createSpokenWord();
-		
-		spokenWord->init(g_sampleSet, g_binauralMutex, nullptr, textFilename, audioFilename, p);
+		addInput(kInput_VideoAspect, kVfxPlugType_Float);
+		addInput(kInput_VideoScale, kVfxPlugType_Float);
+		addInput(kInput_VideoSpacing, kVfxPlugType_Float);
+		addInput(kInput_VideoDistance, kVfxPlugType_Float);
+		addInput(kInput_VideoNearDistance, kVfxPlugType_Float);
+		addInput(kInput_VideoAngleWobbleX, kVfxPlugType_Float);
+		addInput(kInput_VideoAngleWobbleY, kVfxPlugType_Float);
+		addInput(kInput_VideoWobbleX, kVfxPlugType_Float);
+		addInput(kInput_VideoWobbleY, kVfxPlugType_Float);
+		addInput(kInput_VideoRetain, kVfxPlugType_Float);
 	}
 	
 	virtual ~VfxNodeWorld() override
 	{
-		s_world->freeSpokenWord(spokenWord);
 	}
 	
 	virtual void tick(const float dt) override
@@ -1113,15 +1372,24 @@ struct VfxNodeWorld : VfxNodeBase
 		s_videoClipGridColor2.g = gridColor2->g;
 		s_videoClipGridColor2.b = gridColor2->b;
 		s_videoClipGridColor2.a = gridColor2->a;
+		
+		s_videoAspect = getInputFloat(kInput_VideoAspect, 1.f);
+		s_videoScale = getInputFloat(kInput_VideoScale, .2f);
+		s_videoSpacing = getInputFloat(kInput_VideoSpacing, 200.f);
+		s_videoDistance = getInputFloat(kInput_VideoDistance, 400.f);
+		s_videoNearDistance = getInputFloat(kInput_VideoNearDistance, 200.f);
+		s_videoAngleWobbleX = getInputFloat(kInput_VideoAngleWobbleX, 0.f);
+		s_videoAngleWobbleY = getInputFloat(kInput_VideoAngleWobbleY, 0.f);
+		
+		s_wobbleSpeedX = getInputFloat(kInput_VideoWobbleX, 1.f);
+		s_wobbleSpeedY = getInputFloat(kInput_VideoWobbleY, 1.f);
+		
+		s_videoRetain = getInputFloat(kInput_VideoRetain, 0.f);
 	}
 	
 	virtual void handleTrigger(const int index) override
 	{
-		if (index == kInput_SpokenWordBegin)
-		{
-			spokenWord->toActive();
-		}
-		else if (index == kInput_VideoBegin)
+		if (index == kInput_VideoBegin)
 		{
 			s_world->beginVideoClips();
 		}
@@ -1148,6 +1416,16 @@ VFX_NODE_TYPE(VfxNodeWorld)
 	in("word.begin!", "trigger");
 	in("video.begin!", "trigger");
 	in("video.end!", "trigger");
+	in("video.aspect!", "float", "1");
+	in("video.scale", "float", "0.2");
+	in("video.spacing", "float", "200");
+	in("video.fdist", "float", "400");
+	in("video.ndist", "float", "200");
+	in("video.awob.x", "float");
+	in("video.awob.y", "float");
+	in("wobble.x", "float", "1");
+	in("wobble.y", "float", "1");
+	in("video.retain", "float");
 }
 
 //
