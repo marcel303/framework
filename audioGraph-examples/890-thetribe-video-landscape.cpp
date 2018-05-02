@@ -652,6 +652,8 @@ struct FaceTile
 	
 	MediaPlayer mp;
 	
+	AudioSourceVorbis audioSource;
+	
 	void init(const char * filename)
 	{
 		mp.openAsync(filename, MP::kOutputMode_RGBA);
@@ -669,6 +671,28 @@ struct FaceTile
 	void shut()
 	{
 		mp.close(true);
+	}
+	
+	void beginFocus()
+	{
+		auto openParams = mp.context->openParams;
+		
+		mp.close(false);
+	
+		mp.presentTime = 0.0;
+	
+		mp.openAsync(openParams);
+		
+		audioSource.open(spokenAudio[0], false);
+		
+		g_audioMixer->addPointSource(&audioSource);
+	}
+	
+	void endFocus()
+	{
+		g_audioMixer->removePointSource(&audioSource);
+		
+		audioSource.close();
 	}
 	
 	void tick(const float dt)
@@ -695,19 +719,34 @@ struct FaceTile
 		
 		aspectRatio = s_videoAspect;
 		
-		mp.presentTime += dt;
-		
-		mp.tick(mp.context, true);
-		
-		if (mp.isActive(mp.context) && mp.presentedLastFrame(mp.context))
+		if (audioSource.isOpen())
 		{
-			auto openParams = mp.context->openParams;
+			// advance video in sync with audio
 			
-			mp.close(false);
+			mp.presentTime = audioSource.samplePosition / double(audioSource.sampleRate);
 			
-			mp.presentTime = 0.0;
+			mp.tick(mp.context, true);
+		}
+		else
+		{
+			// advance video
 			
-			mp.openAsync(openParams);
+			mp.presentTime += dt;
+			
+			mp.tick(mp.context, true);
+			
+			// loop when finished
+			
+			if (mp.isActive(mp.context) && mp.presentedLastFrame(mp.context))
+			{
+				auto openParams = mp.context->openParams;
+				
+				mp.close(false);
+				
+				mp.presentTime = 0.0;
+				
+				mp.openAsync(openParams);
+			}
 		}
 	}
 };
@@ -730,7 +769,7 @@ struct Faces
 	
 	CompositionMode compositionMode = kCompositionMode_Focus;
 	
-	int focusIndex = 0;
+	int focusIndex = -1;
 	
 	double time = 0.0;
 	
@@ -825,7 +864,14 @@ struct Faces
 		
 		if ((rand() % 200) == 0)
 		{
+			if (focusIndex >= 0)
+			{
+				tiles[focusIndex]->endFocus();
+			}
+			
 			focusIndex = rand() % (kGridSx * kGridSy);
+			
+			tiles[focusIndex]->beginFocus();
 		}
 		
 		// todo : update tile locations
