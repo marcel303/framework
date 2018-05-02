@@ -758,9 +758,7 @@ struct Faces
 	
 	enum CompositionMode
 	{
-		kCompositionMode_Free,
 		kCompositionMode_Grid,
-		kCompositionMode_Weave,
 		kCompositionMode_Focus,
 		kCompositionMode_COUNT
 	};
@@ -826,6 +824,32 @@ struct Faces
 		mask = nullptr;
 	}
 	
+	void beginFocus(const int index)
+	{
+		if (index == focusIndex)
+		{
+			return;
+		}
+		
+		if (focusIndex >= 0)
+		{
+			compositionMode = kCompositionMode_Grid;
+			
+			tiles[focusIndex]->endFocus();
+			
+			focusIndex = -1;
+		}
+		
+		if (index >= 0 && index < tiles.size())
+		{
+			focusIndex = index;
+		
+			tiles[focusIndex]->beginFocus();
+			
+			compositionMode = kCompositionMode_Focus;
+		}
+	}
+	
 	static void calcGridProperties(const int index, FaceTile & tile)
 	{
 		const int tileX = index % kGridSx;
@@ -855,32 +879,18 @@ struct Faces
 	{
 		time += dt;
 		
-		// todo : update tile mode
-		
-		if ((rand() % 200) == 0)
+	#if 0
+		if ((rand() % 1000) == 0)
 		{
-			//compositionMode = (CompositionMode)(rand() % kCompositionMode_COUNT);
-		}
-		
-		if ((rand() % 200) == 0)
-		{
-			if (focusIndex >= 0)
-			{
-				tiles[focusIndex]->endFocus();
-			}
+			const int index = rand() % (kGridSx * kGridSy);
 			
-			focusIndex = rand() % (kGridSx * kGridSy);
-			
-			tiles[focusIndex]->beginFocus();
+			beginFocus(index);
 		}
+	#endif
 		
-		// todo : update tile locations
+		// update tile composition and properties
 		
-		if (compositionMode == kCompositionMode_Free)
-		{
-		
-		}
-		else if (compositionMode == kCompositionMode_Grid)
+		if (compositionMode == kCompositionMode_Grid)
 		{
 			int index = 0;
 			
@@ -890,10 +900,6 @@ struct Faces
 				
 				index++;
 			}
-		}
-		else if (compositionMode == kCompositionMode_Weave)
-		{
-		
 		}
 		else if (compositionMode == kCompositionMode_Focus)
 		{
@@ -918,8 +924,6 @@ struct Faces
 			Assert(false);
 		}
 		
-		// todo : update tile selection
-		
 		// update tiles
 		
 		for (auto tile : tiles)
@@ -932,6 +936,7 @@ struct Faces
 	{
 		projectPerspective3d(90.f, 1.f, 1000.f);
 		gxPushMatrix();
+		gxScalef(1, -1, 1);
 		
 		auto sortedTiles = tiles;
 		
@@ -1357,7 +1362,6 @@ struct VfxNodeWorld : VfxNodeBase
 		kInput_VideoClipDrawGrid,
 		kInput_VideoClipGridColor,
 		kInput_VideoClipGridColor2,
-		kInput_SpokenWordBegin,
 		kInput_VideoBegin,
 		kInput_VideoEnd,
 		kInput_VideoAspect,
@@ -1370,6 +1374,8 @@ struct VfxNodeWorld : VfxNodeBase
 		kInput_VideoWobbleX,
 		kInput_VideoWobbleY,
 		kInput_VideoRetain,
+		kInput_VideoFocus,
+		kInput_VideoFocusIndex,
 		kInput_COUNT
 	};
 	
@@ -1392,7 +1398,6 @@ struct VfxNodeWorld : VfxNodeBase
 		addInput(kInput_VideoClipDrawGrid, kVfxPlugType_Bool);
 		addInput(kInput_VideoClipGridColor, kVfxPlugType_Color);
 		addInput(kInput_VideoClipGridColor2, kVfxPlugType_Color);
-		addInput(kInput_SpokenWordBegin, kVfxPlugType_Trigger);
 		addInput(kInput_VideoBegin, kVfxPlugType_Trigger);
 		addInput(kInput_VideoEnd, kVfxPlugType_Trigger);
 		addInput(kInput_VideoAspect, kVfxPlugType_Float);
@@ -1405,6 +1410,8 @@ struct VfxNodeWorld : VfxNodeBase
 		addInput(kInput_VideoWobbleX, kVfxPlugType_Float);
 		addInput(kInput_VideoWobbleY, kVfxPlugType_Float);
 		addInput(kInput_VideoRetain, kVfxPlugType_Float);
+		addInput(kInput_VideoFocus, kVfxPlugType_Trigger);
+		addInput(kInput_VideoFocusIndex, kVfxPlugType_Float);
 	}
 	
 	virtual ~VfxNodeWorld() override
@@ -1462,6 +1469,12 @@ struct VfxNodeWorld : VfxNodeBase
 		{
 			s_world->pauseVideoClips();
 		}
+		else if (index == kInput_VideoFocus)
+		{
+			const int focusIndex = getInputFloat(kInput_VideoFocusIndex, 0.f);
+			
+			s_world->faces.beginFocus(focusIndex);
+		}
 	}
 };
 
@@ -1478,10 +1491,9 @@ VFX_NODE_TYPE(VfxNodeWorld)
 	in("video.dgrid", "bool", "1");
 	in("gridcolor", "color", "ffffffff");
 	in("gridcolor2", "color", "ffffffff");
-	in("word.begin!", "trigger");
 	in("video.begin!", "trigger");
 	in("video.end!", "trigger");
-	in("video.aspect!", "float", "1");
+	in("video.aspect", "float", "1");
 	in("video.scale", "float", "0.2");
 	in("video.spacing", "float", "200");
 	in("video.fdist", "float", "400");
@@ -1491,6 +1503,8 @@ VFX_NODE_TYPE(VfxNodeWorld)
 	in("wobble.x", "float", "1");
 	in("wobble.y", "float", "1");
 	in("video.retain", "float");
+	in("video.focus", "trigger");
+	in("video.findex", "float");
 }
 
 //

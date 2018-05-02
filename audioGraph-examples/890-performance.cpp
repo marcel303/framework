@@ -136,6 +136,70 @@ void VfxGraphMgr::draw()
 
 //
 
+#include "vfxNodeBase.h"
+
+struct VfxNodeTriggerFilter : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Value,
+		kInput_FilterValue,
+		kInput_OutputValue,
+		kInput_Trigger,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Trigger,
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	float valueOutput;
+	
+	VfxNodeTriggerFilter()
+		: VfxNodeBase()
+		, valueOutput(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Value, kVfxPlugType_Float);
+		addInput(kInput_FilterValue, kVfxPlugType_Float);
+		addInput(kInput_Trigger, kVfxPlugType_Trigger);
+		addInput(kInput_OutputValue, kVfxPlugType_Float);
+		addOutput(kOutput_Trigger, kVfxPlugType_Trigger, this);
+		addOutput(kOutput_Value, kVfxPlugType_Float, &valueOutput);
+	}
+	
+	virtual void handleTrigger(const int index)
+	{
+		const float value = getInputFloat(kInput_Value, 0.f);
+		const float filterValue = getInputFloat(kInput_FilterValue, 0.f);
+		const float outputValue = getInputFloat(kInput_OutputValue, 0.f);
+		
+		if (value == filterValue)
+		{
+			valueOutput = outputValue;
+			
+			trigger(kOutput_Trigger);
+		}
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeTriggerFilter)
+{
+	typeName = "trigger.filter";
+	
+	in("value", "float");
+	in("filterValue", "float");
+	in("outputValue", "float");
+	in("trigger!", "trigger");
+	out("trigger!", "trigger");
+	out("value", "float");
+}
+
+//
+
 int main(int argc, char * argv[])
 {
     framework.enableDepthBuffer = true;
@@ -170,6 +234,7 @@ int main(int argc, char * argv[])
 	
 	VfxGraphInstance * vfxInstance = vfxGraphMgr->createInstance("v001.xml");
 	vfxGraphMgr->activeInstance = vfxInstance;
+	vfxGraphMgr->activeInstance->graphEdit->state = GraphEdit::kState_Hidden;
 	
 	do
 	{
@@ -208,6 +273,10 @@ int main(int argc, char * argv[])
 			
 			if (vfxGraphMgr->activeInstance != nullptr)
 			{
+				const bool isVisible = vfxGraphMgr->activeInstance->graphEdit->state != GraphEdit::kState_Hidden;
+				
+				mouse.showCursor(isVisible);
+				
 				vfxGraphMgr->activeInstance->graphEdit->tickVisualizers(dt);
 				
 				vfxGraphMgr->activeInstance->graphEdit->draw();
