@@ -641,8 +641,10 @@ struct FaceTile
 	float wobbleX;
 	float wobbleY;
 	
-	float angleX;
-	float angleY;
+	float currentAngleX = 0.f;
+	float currentAngleY = 0.f;
+	float desiredAngleX = 0.f;
+	float desiredAngleY = 0.f;
 	
 	float aspectRatio;
 	
@@ -686,8 +688,8 @@ struct FaceTile
 			sinf(wobbleY) * wobbleMag,
 			0.f);
 		
-		angleX = sin(time) * s_videoAngleWobbleX;
-		angleY = sin(time) * s_videoAngleWobbleY;
+		currentAngleX = lerp(desiredAngleX, currentAngleX, retain);
+		currentAngleY = lerp(desiredAngleY, currentAngleY, retain);
 		
 		finalPos = currentPos + wobblePos;
 		
@@ -785,7 +787,7 @@ struct Faces
 		mask = nullptr;
 	}
 	
-	static void calcGridProperties(const int index, Vec3 & pos)
+	static void calcGridProperties(const int index, FaceTile & tile)
 	{
 		const int tileX = index % kGridSx;
 		const int tileY = index / kGridSx;
@@ -795,12 +797,19 @@ struct Faces
 		const float x = lerp(-1.f, +1.f, (tileX + .5f) / float(kGridSx)) * kGridSx * spacing;
 		const float y = lerp(-1.f, +1.f, (tileY + .5f) / float(kGridSy)) * kGridSy * spacing * s_videoAspect;
 
-		pos = Vec3(x, y, s_videoDistance);
+		tile.desiredPos = Vec3(x, y, s_videoDistance);
+		tile.desiredAngleX = 0.f;
+		tile.desiredAngleY = 0.f;
+		
+		tile.desiredAngleX += sin(tile.time + index) * s_videoAngleWobbleX;
+		tile.desiredAngleY += sin(tile.time + index) * s_videoAngleWobbleY;
 	}
 	
-	static void calcFocusProperties(const int index, Vec3 & pos)
+	static void calcFocusProperties(const int index, FaceTile & tile)
 	{
-		pos = Vec3(0, 0, s_videoNearDistance);
+		tile.desiredPos = Vec3(0, 0, s_videoNearDistance);
+		tile.desiredAngleX = 180.f;
+		tile.desiredAngleY = 0.f;
 	}
 	
 	void tick(const float dt)
@@ -831,7 +840,7 @@ struct Faces
 			
 			for (auto tile : tiles)
 			{
-				calcGridProperties(index, tile->desiredPos);
+				calcGridProperties(index, *tile);
 				
 				index++;
 			}
@@ -848,11 +857,11 @@ struct Faces
 			{
 				if (index == focusIndex)
 				{
-					calcFocusProperties(index, tile->desiredPos);
+					calcFocusProperties(index, *tile);
 				}
 				else
 				{
-					calcGridProperties(index, tile->desiredPos);
+					calcGridProperties(index, *tile);
 				}
 				
 				index++;
@@ -916,8 +925,8 @@ struct Faces
 				gxRotatef(90, 0, 0, 1); // fixme ! just to make it appear in portrait mode!
 				gxScalef(rsx/2.f, rsy/2.f, 1.f);
 				
-				gxRotatef(tile->angleX, 1, 0, 0);
-				gxRotatef(tile->angleY, 0, 1, 0);
+				gxRotatef(tile->currentAngleX, 1, 0, 0);
+				gxRotatef(tile->currentAngleY, 0, 1, 0);
 				
 				setColor(colorWhite);
 				drawRect(-1, -1, +1, +1);
