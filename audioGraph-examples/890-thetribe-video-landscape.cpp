@@ -732,8 +732,27 @@ struct Faces
 	
 	double time = 0.0;
 	
+	Surface * mask = nullptr;
+	
 	void init()
 	{
+		// create mask texture
+		
+		mask = new Surface(512, 512, false, false, SURFACE_RGBA8);
+		
+		pushSurface(mask);
+		{
+			mask->clear();
+			
+			setColor(colorWhite);
+			pushBlend(BLEND_OPAQUE);
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			hqFillRoundedRect(0, 0, mask->getWidth(), mask->getHeight(), 20);
+			hqEnd();
+			popBlend();
+		}
+		popSurface();
+		
 		// create tiles
 		
 		const int numTiles = kGridSx * kGridSy;
@@ -761,6 +780,9 @@ struct Faces
 		}
 		
 		tiles.clear();
+		
+		delete mask;
+		mask = nullptr;
 	}
 	
 	static void calcGridProperties(const int index, Vec3 & pos)
@@ -853,20 +875,8 @@ struct Faces
 	
 	void draw2d()
 	{
-		Surface mask(512, 512, false);
-		pushSurface(&mask);
-		mask.clear();
-		setColor(colorWhite);
-		pushBlend(BLEND_OPAQUE);
-		hqBegin(HQ_FILLED_ROUNDED_RECTS);
-		hqFillRoundedRect(0, 0, mask.getWidth(), mask.getHeight(), 20);
-		hqEnd();
-		popBlend();
-		popSurface();
-		
 		projectPerspective3d(90.f, 1.f, 1000.f);
 		gxPushMatrix();
-		//gxTranslatef(0, 0, 400);
 		
 		auto sortedTiles = tiles;
 		
@@ -889,7 +899,7 @@ struct Faces
 			Shader tileShader("face-tile");
 			setShader(tileShader);
 			tileShader.setTexture("image", 0, texture);
-			tileShader.setTexture("mask", 1, mask.getTexture());
+			tileShader.setTexture("mask", 1, mask->getTexture());
 			tileShader.setImmediate("opacity", 1.f);
 			tileShader.setImmediate("range", s_videoNearDistance, s_videoDistance);
 			
