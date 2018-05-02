@@ -2,6 +2,7 @@
 #include "objects/audioSourceVorbis.h"
 #include "soundVolume.h"
 #include "textScroller.h"
+#include "vectorLines.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
 #include "vfxNodes/vfxNodeDisplay.h"
@@ -67,6 +68,10 @@ static const char * spokenAudio[NUM_SPOKENWORD_SOURCES] =
 
 static MediaPlayer mediaPlayers[NUM_VIDEOCLIP_SOURCES];
 
+static VectorMemory vectorMemory;
+
+static VectorParticleSystem vectorParticleSystem;
+
 //
 
 static void drawSoundVolume(const SoundVolume & volume)
@@ -119,6 +124,8 @@ static float s_videoAngleWobbleY = 0.f;
 static float s_wobbleSpeedX = 1.f;
 static float s_wobbleSpeedY = 1.f;
 static float s_videoRetain = 0.f;
+static float s_particlesLineOpacity = 0.f;
+static float s_particlesCoronaOpacity = 0.f;
 
 struct Videoclip
 {
@@ -1203,7 +1210,7 @@ struct World
 		
 		const float opacity = clamp(videoclipsOpacity, 0.f, 1.f);
 		
-		if (opacity == 0.f)
+		if (opacity <= 1.f / 100.f)
 			pauseVideoClips();
 		else
 			beginVideoClips();
@@ -1261,6 +1268,28 @@ struct World
 		// update faces
 		
 		faces.tick(dt);
+		
+		// updated vector lines
+		
+		auto previousState = vectorParticleSystem;
+		
+		vectorParticleSystem.tick(dt);
+		
+		for (int i = (vectorParticleSystem.spawnIndex + 1) % VectorParticleSystem::kMaxParticles; i != previousState.spawnIndex; i = (i + 1) % VectorParticleSystem::kMaxParticles)
+		{
+			if (previousState.lt[i] <= 0.f || vectorParticleSystem.lt[i] <= 0.f)
+				continue;
+			
+			vectorMemory.addLine(
+				previousState.x[i],
+				previousState.y[i],
+				previousState.z[i],
+				vectorParticleSystem.x[i],
+				vectorParticleSystem.y[i],
+				vectorParticleSystem.z[i], 4.f);
+		}
+		
+		vectorMemory.tick(dt);
 		
 		//
 		
@@ -1343,6 +1372,22 @@ struct World
 			{
 				spokenWord->drawTranslucent();
 			}
+			
+			pushBlend(BLEND_ALPHA);
+			{
+				vectorMemory.draw(s_particlesLineOpacity);
+			}
+			popBlend();
+			
+			pushBlend(BLEND_ADD);
+			{
+				setColorf(1.f, 1.f, 1.f, s_particlesCoronaOpacity);
+				Shader shader("particles");
+				shader.setTexture("source", 0, getTexture("particle.jpg"), true, true);
+				vectorParticleSystem.draw();
+				clearShader();
+			}
+			popBlend();
 		}
 		glDepthMask(GL_TRUE);
 		glDisable(GL_DEPTH_TEST);
@@ -1392,6 +1437,8 @@ struct VfxNodeWorld : VfxNodeBase
 		kInput_VideoRetain,
 		kInput_VideoFocus,
 		kInput_VideoFocusIndex,
+		kInput_ParticleLineOpacity,
+		kInput_ParticleCoronaOpacity,
 		kInput_COUNT
 	};
 	
@@ -1430,6 +1477,8 @@ struct VfxNodeWorld : VfxNodeBase
 		addInput(kInput_VideoRetain, kVfxPlugType_Float);
 		addInput(kInput_VideoFocus, kVfxPlugType_Trigger);
 		addInput(kInput_VideoFocusIndex, kVfxPlugType_Float);
+		addInput(kInput_ParticleLineOpacity, kVfxPlugType_Float);
+		addInput(kInput_ParticleCoronaOpacity, kVfxPlugType_Float);
 	}
 	
 	virtual ~VfxNodeWorld() override
@@ -1478,6 +1527,9 @@ struct VfxNodeWorld : VfxNodeBase
 		s_wobbleSpeedY = getInputFloat(kInput_VideoWobbleY, 1.f);
 		
 		s_videoRetain = getInputFloat(kInput_VideoRetain, 0.f);
+		
+		s_particlesLineOpacity = getInputFloat(kInput_ParticleLineOpacity, 0.f);
+		s_particlesCoronaOpacity = getInputFloat(kInput_ParticleCoronaOpacity, 0.f);
 	}
 	
 	virtual void handleTrigger(const int index) override
@@ -1528,6 +1580,8 @@ VFX_NODE_TYPE(VfxNodeWorld)
 	in("video.retain", "float");
 	in("video.focus", "trigger");
 	in("video.findex", "float");
+	in("p.opacity", "float", "p.line");
+	in("p.corona.opacity", "float", "p.corona");
 }
 
 //
