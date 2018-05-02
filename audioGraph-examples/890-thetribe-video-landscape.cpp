@@ -767,6 +767,8 @@ struct Faces
 	
 	CompositionMode compositionMode = kCompositionMode_Focus;
 	
+	float opacity = 0.f;
+	
 	int focusIndex = -1;
 	
 	double time = 0.0;
@@ -960,7 +962,7 @@ struct Faces
 			setShader(tileShader);
 			tileShader.setTexture("image", 0, texture);
 			tileShader.setTexture("mask", 1, mask->getTexture());
-			tileShader.setImmediate("opacity", 1.f);
+			tileShader.setImmediate("opacity", opacity);
 			tileShader.setImmediate("range", s_videoNearDistance, s_videoDistance);
 			
 			gxPushMatrix();
@@ -1014,6 +1016,8 @@ struct World
 	
 	Videoclip videoclips[NUM_VIDEOCLIPS];
 	
+	float videoclipsOpacity;
+	
 	Vfxclip vfxclips[NUM_VFXCLIPS];
 	
 	std::vector<SpokenWord*> spokenWords;
@@ -1025,6 +1029,7 @@ struct World
 	World()
 		: camera()
 		, videoclips()
+		, videoclipsOpacity(0.f)
 		, vfxclips()
 		, spokenWords()
 		, faces()
@@ -1194,6 +1199,15 @@ struct World
 		
 		camera.tick(dt, doCamera);
 		
+		// pause/resume video clips
+		
+		const float opacity = clamp(videoclipsOpacity, 0.f, 1.f);
+		
+		if (opacity == 0.f)
+			pauseVideoClips();
+		else
+			beginVideoClips();
+		
 		//
 		
 		camera.pushViewMatrix();
@@ -1358,6 +1372,8 @@ struct VfxNodeWorld : VfxNodeBase
 		kInput_CameraZ,
 		kInput_CameraYaw,
 		kInput_CameraRoll,
+		kInput_WorldOpacity,
+		kInput_FacesOpacity,
 		kInput_VideoClipTimeMultiplier,
 		kInput_VideoClipDrawGrid,
 		kInput_VideoClipGridColor,
@@ -1394,6 +1410,8 @@ struct VfxNodeWorld : VfxNodeBase
 		addInput(kInput_CameraZ, kVfxPlugType_Float);
 		addInput(kInput_CameraYaw, kVfxPlugType_Float);
 		addInput(kInput_CameraRoll, kVfxPlugType_Float);
+		addInput(kInput_WorldOpacity, kVfxPlugType_Float);
+		addInput(kInput_FacesOpacity, kVfxPlugType_Float);
 		addInput(kInput_VideoClipTimeMultiplier, kVfxPlugType_Float);
 		addInput(kInput_VideoClipDrawGrid, kVfxPlugType_Bool);
 		addInput(kInput_VideoClipGridColor, kVfxPlugType_Color);
@@ -1427,6 +1445,9 @@ struct VfxNodeWorld : VfxNodeBase
 		
 		s_world->camera.yaw = getInputFloat(kInput_CameraYaw, 0.f);
 		s_world->camera.roll = getInputFloat(kInput_CameraRoll, 0.f);
+		
+		s_world->videoclipsOpacity = getInputFloat(kInput_WorldOpacity, 0.f);
+		s_world->faces.opacity = getInputFloat(kInput_FacesOpacity, 0.f);
 		
 		s_videoClipSpeedMultiplier = getInputFloat(kInput_VideoClipTimeMultiplier, 1.f);
 		s_videoClipDrawGrid = getInputBool(kInput_VideoClipDrawGrid, true);
@@ -1487,6 +1508,8 @@ VFX_NODE_TYPE(VfxNodeWorld)
 	in("camera.z", "float");
 	in("camera.yaw", "float");
 	in("camera.roll", "float");
+	in("world.a", "float");
+	in("faces.a", "float");
 	in("video.tmult", "float", "1");
 	in("video.dgrid", "bool", "1");
 	in("gridcolor", "color", "ffffffff");
@@ -1639,6 +1662,93 @@ VFX_NODE_TYPE(VfxNodeSpokenWord)
 
 //
 
+#include "vfxNodeBase.h"
+
+struct VfxNodeScalarSmoothe : VfxNodeBase
+{
+	enum SmoothingUnit
+	{
+		kSmoothingUnit_PerSecond,
+		kSmoothingUnit_PerMillisecond
+	};
+	
+	enum Input
+	{
+		kInput_Value,
+		kInput_SmoothingUnit,
+		kInput_Smoothness,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Result,
+		kOutput_COUNT
+	};
+	
+	float resultOutput;
+	
+	double currentValue;
+	
+	VfxNodeScalarSmoothe()
+		: VfxNodeBase()
+		, resultOutput()
+		, currentValue(0.0)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Value, kVfxPlugType_Float);
+		addInput(kInput_SmoothingUnit, kVfxPlugType_Int);
+		addInput(kInput_Smoothness, kVfxPlugType_Float);
+		addOutput(kOutput_Result, kVfxPlugType_Float, &resultOutput);
+	}
+	
+	virtual void tick(const float dt) override;
+};
+
+VFX_ENUM_TYPE(smoothing_mode)
+{
+	elem("perSecond");
+	elem("perMillisecond");
+}
+
+VFX_NODE_TYPE(VfxNodeScalarSmoothe)
+{
+	typeName = "scalar.smoothe";
+	
+	in("value", "float");
+	inEnum("smoothing", "smoothing_mode");
+	in("smoothness", "float", "0.5");
+	out("result", "float");
+}
+
+void VfxNodeScalarSmoothe::tick(const float _dt)
+{
+	vfxCpuTimingBlock(VfxNodeScalarSmoothe);
+	
+	const float value = getInputFloat(kInput_Value, 0.f);
+	const SmoothingUnit smoothingUnit = (SmoothingUnit)getInputInt(kInput_SmoothingUnit, 0);
+	const float retain = getInputFloat(kInput_Smoothness, .5f);
+	
+	const double dt = (smoothingUnit == kSmoothingUnit_PerSecond) ? _dt : _dt * 1000.0;
+	
+	if (isPassthrough)
+	{
+		resultOutput = value;
+	}
+	else
+	{
+		const double retainPerSecond = fminf(1.f, fmaxf(0.f, retain));
+		const double retainPerSample = pow(retainPerSecond, dt);
+		const double followPerSample = 1.0 - retainPerSample;
+		
+		resultOutput = currentValue;
+		
+		currentValue = currentValue * retainPerSample + value * followPerSample;
+	}
+}
+
+//
+
 void VideoLandscape::init()
 {
 	world = new World();
@@ -1689,14 +1799,21 @@ void VideoLandscape::draw()
 	}
 	projectScreen2d();
 
+	const float opacity = clamp(world->videoclipsOpacity, 0.f, 1.f);
+
+	setColorf(0.f, 0.f, 0.f, 1.f - opacity);
+	drawRect(0, 0, GFX_SX, GFX_SY);
+	
 	world->draw2d();
 
 	if (showUi)
 	{
 		gxPushMatrix();
 		
+	#if 0
 		setColor(255, 255, 255, 127);
 		drawText(GFX_SX - 16, 24, 32, -1, +1, "GROOOP PERFORMANCE APP");
+	#endif
 
 	#if 0
 		gxTranslatef(0, GFX_SY - 100, 0);
