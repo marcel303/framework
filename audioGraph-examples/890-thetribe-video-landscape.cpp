@@ -1092,9 +1092,8 @@ struct World
 			
 			const char * audioFilename = audioFilenames[audioIndex];
 			const char * videoFilename = videoFilenames[videoIndex];
-            const float audioGain = 1.f;
 			
-			videoclips[i].init(sampleSet, mutex, i, audioFilename, videoFilename, audioGain);
+			videoclips[i].init(sampleSet, mutex, i, audioFilename, videoFilename, videoclipsOpacity);
 		}
 		
 		for (int i = 0; i < NUM_VFXCLIPS; ++i)
@@ -1280,6 +1279,8 @@ struct World
 		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
+			videoclips[i].gain = videoclipsOpacity;
+			
 			videoclips[i].tick(worldToViewMatrix, cameraPosition_world, dt);
 		}
 		
