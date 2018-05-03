@@ -1383,6 +1383,7 @@ struct World
 			gxPushMatrix();
 			{
 				//gxTranslatef(camera.position[0], 0.f, camera.position[2]);
+				gxTranslatef(-45.f, 0, 0);
 				
 				gxScalef(40, 40, 40);
 				setColor(s_videoClipGridColor);
