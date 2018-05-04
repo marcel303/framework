@@ -1,5 +1,6 @@
 #include "890-performance.h"
 #include "audioGraph.h"
+#include "Noise.h"
 #include "objects/audioSourceVorbis.h"
 #include "soundVolume.h"
 #include "textScroller.h"
@@ -122,6 +123,9 @@ static float s_videoDistance = 400.f;
 static float s_videoNearDistance = 200.f;
 static float s_videoAngleWobbleX = 0.f;
 static float s_videoAngleWobbleY = 0.f;
+static float s_videoSaturation = 1.f;
+static float s_videoPerlinScale = 1.f;
+static float s_videoPerlinThreshold = 0.f;
 static float s_wobbleSpeedX = 1.f;
 static float s_wobbleSpeedY = 1.f;
 static float s_videoRetain = 0.f;
@@ -131,10 +135,14 @@ static float s_particlesCoronaOpacity = 0.f;
 struct Videoclip
 {
 	Mat4x4 transform;
+#if ENABLE_WELCOME
 #if USE_STREAMING
 	AudioSourceVorbis soundSource;
 #else
 	AudioSourcePcm soundSource;
+#endif
+#else
+	AudioSourceMix soundSource;
 #endif
 	SoundVolume soundVolume;
 	float gain;
@@ -172,7 +180,8 @@ struct Videoclip
 		//
 		
 		index = _index;
-		
+	
+	#if ENABLE_WELCOME
 	#if USE_STREAMING
 		soundSource.open(audio, true);
 	#else
@@ -181,6 +190,7 @@ struct Videoclip
 		soundSource.init(pcmData, 0);
 		soundSource.play();
 		soundSource.loop = true;
+	#endif
 	#endif
 		
 		gain = _gain;
@@ -268,12 +278,22 @@ struct Videoclip
 		{
 			gxMultMatrixf(soundVolume.transform.m_v);
 			
-			gxSetTexture(mediaPlayers[index % NUM_VIDEOCLIP_SOURCES].getTexture());
+			const GLuint texture = mediaPlayers[index % NUM_VIDEOCLIP_SOURCES].getTexture();
+			const float perlin1 = scaled_octave_noise_1d(8, .5f, s_videoPerlinScale, 0.f, 1.f, index);
+			const float perlin2 = s_videoPerlinThreshold;
+			
+			Shader shader("videoclip");
+			setShader(shader);
+			shader.setTexture("image", 0, texture);
+			shader.setImmediate("saturation", s_videoSaturation);
+			shader.setImmediate("perlin", perlin1, perlin2);
+			gxSetTexture(texture);
 			{
 				setLumi(hover ? 255 : 200);
 				drawRect(-1, -1, +1, +1);
 			}
 			gxSetTexture(0);
+			clearShader();
 		}
 		gxPopMatrix();
 	}
@@ -801,7 +821,7 @@ struct Faces
 	{
 		// create mask texture
 		
-		mask = new Surface(512, 512, false, false, SURFACE_RGBA8);
+		mask = new Surface(400, 500, false, false, SURFACE_R8);
 		
 		pushSurface(mask);
 		{
@@ -809,9 +829,11 @@ struct Faces
 			
 			setColor(colorWhite);
 			pushBlend(BLEND_OPAQUE);
+			pushColorPost(POST_PREMULTIPLY_RGB_WITH_ALPHA);
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
-			hqFillRoundedRect(0, 0, mask->getWidth(), mask->getHeight(), 20);
+			hqFillRoundedRect(0, 0, mask->getWidth(), mask->getHeight(), 24);
 			hqEnd();
+			popColorPost();
 			popBlend();
 		}
 		popSurface();
@@ -902,8 +924,8 @@ struct Faces
 	static void calcFocusProperties(const int index, FaceTile & tile)
 	{
 		tile.desiredPos = Vec3(0, 0, s_videoNearDistance);
-		tile.desiredAngleX = 180.f;
-		tile.desiredAngleY = 0.f;
+		tile.desiredAngleX = 0.f;
+		tile.desiredAngleY = 180.f;
 	}
 	
 	void tick(const float dt)
@@ -996,6 +1018,11 @@ struct Faces
 			if (!tile->mp.getVideoProperties(sx, sy, duration))
 				continue;
 			
+		#if 1
+			// fixme
+			std::swap(sx, sy);
+		#endif
+		
 			Shader tileShader("face-tile");
 			setShader(tileShader);
 			tileShader.setTexture("image", 0, texture);
@@ -1007,14 +1034,13 @@ struct Faces
 			gxPushMatrix();
 			{
 				const float rsy = GFX_SY * s_videoScale;
-				const float rsx = rsy * tile->aspectRatio;
+				const float rsx = rsy / tile->aspectRatio;
 				
 				gxTranslatef(
 					tile->currentPos[0],
 					tile->currentPos[1],
 					tile->currentPos[2]);
 				
-				gxRotatef(90, 0, 0, 1); // fixme ! just to make it appear in portrait mode!
 				gxScalef(rsx/2.f, rsy/2.f, 1.f);
 				
 				gxRotatef(tile->currentAngleX, 1, 0, 0);
@@ -1074,6 +1100,26 @@ struct World
 		, faces()
 		, hitTestResult()
 	{
+		vectorParticleSystem.spawn = [](VectorParticleSystem & ps, const float life)
+		{
+			const int spawnIndex = ps.nextSpawnIndex();
+			
+			const float x1 = -100.f;
+			const float y1 = -1.f;
+			const float z1 = -1.f;
+			const float x2 = +0.f;
+			const float y2 = +1.f;
+			const float z2 = +1.f;
+
+			ps.lt[spawnIndex] = life;
+			ps.lr[spawnIndex] = 1.f / life;
+			ps.x[spawnIndex] = random(x1, x2);
+			ps.y[spawnIndex] = random(y1, y2);
+			ps.z[spawnIndex] = random(z1, z2);
+			ps.vx[spawnIndex] = random(-1.f, +1.f);
+			ps.vy[spawnIndex] = random(-1.f, +2.f);
+			ps.vz[spawnIndex] = random(-1.f, +1.f);
+		};
 	}
 
 	void init(binaural::HRIRSampleSet * sampleSet, binaural::Mutex * mutex)
@@ -1306,7 +1352,7 @@ struct World
 		
 		auto previousState = vectorParticleSystem;
 		
-		vectorParticleSystem.tick(dt);
+		vectorParticleSystem.tick(-.5f, dt);
 		
 		for (int i = (vectorParticleSystem.spawnIndex + 1) % VectorParticleSystem::kMaxParticles; i != previousState.spawnIndex; i = (i + 1) % VectorParticleSystem::kMaxParticles)
 		{
@@ -1469,6 +1515,9 @@ struct VfxNodeWorld : VfxNodeBase
 		kInput_VideoWobbleX,
 		kInput_VideoWobbleY,
 		kInput_VideoRetain,
+		kInput_VideoSaturation,
+		kInput_VideoNoisePerlinScale,
+		kInput_VideoNoisePerlinThreshold,
 		kInput_VideoFocus,
 		kInput_VideoFocusIndex,
 		kInput_ParticleLineOpacity,
@@ -1509,6 +1558,9 @@ struct VfxNodeWorld : VfxNodeBase
 		addInput(kInput_VideoWobbleX, kVfxPlugType_Float);
 		addInput(kInput_VideoWobbleY, kVfxPlugType_Float);
 		addInput(kInput_VideoRetain, kVfxPlugType_Float);
+		addInput(kInput_VideoSaturation, kVfxPlugType_Float);
+		addInput(kInput_VideoNoisePerlinScale, kVfxPlugType_Float);
+		addInput(kInput_VideoNoisePerlinThreshold, kVfxPlugType_Float);
 		addInput(kInput_VideoFocus, kVfxPlugType_Trigger);
 		addInput(kInput_VideoFocusIndex, kVfxPlugType_Float);
 		addInput(kInput_ParticleLineOpacity, kVfxPlugType_Float);
@@ -1559,6 +1611,10 @@ struct VfxNodeWorld : VfxNodeBase
 		
 		s_wobbleSpeedX = getInputFloat(kInput_VideoWobbleX, 1.f);
 		s_wobbleSpeedY = getInputFloat(kInput_VideoWobbleY, 1.f);
+		
+		s_videoSaturation = getInputFloat(kInput_VideoSaturation, 1.f);
+		s_videoPerlinScale = getInputFloat(kInput_VideoNoisePerlinScale, 1.f);
+		s_videoPerlinThreshold = getInputFloat(kInput_VideoNoisePerlinThreshold, 0.f);
 		
 		s_videoRetain = getInputFloat(kInput_VideoRetain, 0.f);
 		
@@ -1615,6 +1671,9 @@ VFX_NODE_TYPE(VfxNodeWorld)
 	in("wobble.x", "float", "1");
 	in("wobble.y", "float", "1");
 	in("video.retain", "float");
+	in("video.sat", "float", "1");
+	in("video.p.scale", "float", "1");
+	in("video.p.thres", "float");
 	in("video.focus", "trigger");
 	in("video.findex", "float");
 	in("p.opacity", "float", "p.line");
@@ -1753,6 +1812,140 @@ VFX_NODE_TYPE(VfxNodeSpokenWord)
 
 //
 
+struct Starfield
+{
+	VectorParticleSystem ps;
+	
+	VectorMemory vm;
+	
+	float starOpacity = 1.f;
+	float lineOpacity = 1.f;
+	float speedMultiplier = 1.f;
+	
+	void init()
+	{
+		ps.spawn = [&](VectorParticleSystem & ps, const float life)
+		{
+			const int spawnIndex = ps.nextSpawnIndex();
+			
+			const float x1 = -1.f;
+			const float y1 = -1.f;
+			const float z1 = +10.f;
+			const float x2 = +1.f;
+			const float y2 = +1.f;
+			const float z2 = +10.f;
+			
+			const float speedMultiplier = .2f;
+			
+			ps.lt[spawnIndex] = life;
+			ps.lr[spawnIndex] = 1.f / life;
+			ps.x[spawnIndex] = random(x1, x2);
+			ps.y[spawnIndex] = random(y1, y2);
+			ps.z[spawnIndex] = random(z1, z2);
+			ps.vx[spawnIndex] = speedMultiplier * random(-1.f, +1.f);
+			ps.vy[spawnIndex] = speedMultiplier * random(-1.f, +1.f);
+			ps.vz[spawnIndex] = speedMultiplier * random(-10.f, -10.f);
+		};
+	}
+	
+	void shut()
+	{
+	}
+	
+	void tick(const float dt)
+	{
+		auto previousState = ps;
+		
+		ps.tick(0.f, dt * speedMultiplier);
+		
+		for (int i = (ps.spawnIndex + 1) % VectorParticleSystem::kMaxParticles; i != previousState.spawnIndex; i = (i + 1) % VectorParticleSystem::kMaxParticles)
+		{
+			if (previousState.lt[i] <= 0.f || ps.lt[i] <= 0.f)
+				continue;
+			
+			vm.addLine(
+				previousState.x[i],
+				previousState.y[i],
+				previousState.z[i],
+				ps.x[i],
+				ps.y[i],
+				ps.z[i], 2.3f);
+		}
+		
+		vm.tick(dt);
+	}
+	
+	void draw3d()
+	{
+		draw3dTranslucent();
+	}
+	
+	void draw3dTranslucent()
+	{
+		pushBlend(BLEND_ALPHA);
+		{
+			vm.draw(lineOpacity);
+		}
+		popBlend();
+		
+		pushBlend(BLEND_ADD);
+		{
+			setColorf(1.f, 1.f, 1.f, starOpacity);
+			Shader shader("particles");
+			shader.setTexture("source", 0, getTexture("particle.jpg"), true, true);
+			{
+				ps.draw();
+			}
+			clearShader();
+		}
+		popBlend();
+	}
+};
+
+static Starfield * s_starfield = nullptr;
+
+struct VfxNodeStarfield : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_StarOpacity,
+		kInput_LineOpacity,
+		kInput_Speed,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_COUNT
+	};
+	
+	VfxNodeStarfield()
+		: VfxNodeBase()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_StarOpacity, kVfxPlugType_Float);
+		addInput(kInput_LineOpacity, kVfxPlugType_Float);
+		addInput(kInput_Speed, kVfxPlugType_Float);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		s_starfield->starOpacity = getInputFloat(kInput_StarOpacity, 1.f);
+		s_starfield->lineOpacity = getInputFloat(kInput_LineOpacity, 1.f);
+		s_starfield->speedMultiplier = getInputFloat(kInput_Speed, 1.f);
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeStarfield)
+{
+	typeName = "starfield";
+	in("star.opacity", "float", "1");
+	in("line.opacity", "float", "1");
+	in("speed", "float", "1");
+}
+
+//
+
 #include "vfxNodeBase.h"
 
 struct VfxNodeScalarSmoothe : VfxNodeBase
@@ -1766,6 +1959,7 @@ struct VfxNodeScalarSmoothe : VfxNodeBase
 	enum Input
 	{
 		kInput_Value,
+		kInput_InitialValue,
 		kInput_SmoothingUnit,
 		kInput_Smoothness,
 		kInput_COUNT
@@ -1788,9 +1982,15 @@ struct VfxNodeScalarSmoothe : VfxNodeBase
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Value, kVfxPlugType_Float);
+		addInput(kInput_InitialValue, kVfxPlugType_Float);
 		addInput(kInput_SmoothingUnit, kVfxPlugType_Int);
 		addInput(kInput_Smoothness, kVfxPlugType_Float);
 		addOutput(kOutput_Result, kVfxPlugType_Float, &resultOutput);
+	}
+	
+	virtual void init(const GraphNode & node) override
+	{
+		currentValue = getInputFloat(kInput_InitialValue, 0.f);
 	}
 	
 	virtual void tick(const float dt) override;
@@ -1807,6 +2007,7 @@ VFX_NODE_TYPE(VfxNodeScalarSmoothe)
 	typeName = "scalar.smoothe";
 	
 	in("value", "float");
+	in("value.init", "float");
 	inEnum("smoothing", "smoothing_mode");
 	in("smoothness", "float", "0.5");
 	out("result", "float");
@@ -1845,14 +2046,23 @@ void VideoLandscape::init()
 	world = new World();
 	world->init(g_sampleSet, g_binauralMutex);
     s_world = world;
+	
+    starfield = new Starfield();
+    starfield->init();
+    s_starfield = starfield;
 }
 
 void VideoLandscape::shut()
 {
-	world->shut();
+	starfield->shut();
+	delete starfield;
+	starfield = nullptr;
+	s_starfield = nullptr;
 	
+	world->shut();
 	delete world;
 	world = nullptr;
+	s_world = nullptr;
 }
 
 void VideoLandscape::tick(const float dt)
@@ -1880,6 +2090,10 @@ void VideoLandscape::tick(const float dt)
 	// update video clips
 	
 	world->tick(dt);
+	
+	// update starfield
+	
+	starfield->tick(dt);
 }
 
 void VideoLandscape::draw()
@@ -1896,6 +2110,12 @@ void VideoLandscape::draw()
 	drawRect(0, 0, GFX_SX, GFX_SY);
 	
 	world->draw2d();
+	
+	projectPerspective3d(fov, near, far);
+	{
+		starfield->draw3d();
+	}
+	projectScreen2d();
 
 	if (showUi)
 	{

@@ -260,7 +260,9 @@ int main(int argc, char * argv[])
 		
 		if (vfxGraphMgr->activeInstance != nullptr)
 		{
+			g_currentVfxGraph = vfxGraphMgr->activeInstance->vfxGraph;
 			vfxGraphMgr->activeInstance->graphEdit->tick(dt, false);
+			g_currentVfxGraph = nullptr;
 		}
 		
 		vfxGraphMgr->tick(dt);

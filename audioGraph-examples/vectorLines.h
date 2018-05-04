@@ -3,6 +3,7 @@
 #include "Calc.h"
 #include "framework.h"
 #include <cmath>
+#include <functional>
 
 struct VectorParticleSystem
 {
@@ -20,34 +21,24 @@ struct VectorParticleSystem
 	double spawnTimer;
 	double spawnInterval;
 	int spawnIndex;
-
+	
+	std::function<void (VectorParticleSystem & ps, const float life)> spawn;
+	
 	VectorParticleSystem()
 	{
 		memset(this, 0, sizeof(*this));
 	}
-
-	void spawn(const float life)
+	
+	int nextSpawnIndex()
 	{
-		const float x1 = -100.f;
-		const float y1 = -1.f;
-		const float z1 = -1.f;
-		const float x2 = +0.f;
-		const float y2 = +1.f;
-		const float z2 = +1.f;
-
-		lt[spawnIndex] = life;
-		lr[spawnIndex] = 1.f / life;
-		x[spawnIndex] = random(x1, x2);
-		y[spawnIndex] = random(y1, y2);
-		z[spawnIndex] = random(z1, z2);
-		vx[spawnIndex] = random(-1.f, +1.f);
-		vy[spawnIndex] = random(-1.f, +2.f);
-		vz[spawnIndex] = random(-1.f, +1.f);
-
+		const int result = spawnIndex;
+		
 		spawnIndex = (spawnIndex + 1) % kMaxParticles;
+		
+		return result;
 	}
 
-	void tick(const float dt)
+	void tick(const float gravity, const float dt)
 	{
 		spawnInterval = 2.0 / 60.0;
 
@@ -61,7 +52,7 @@ struct VectorParticleSystem
 
 				const double life = kMaxParticles * spawnInterval;
 
-				spawn(life);
+				spawn(*this, life);
 			}
 		}
 		else
@@ -76,8 +67,8 @@ struct VectorParticleSystem
 			x[i] += vx[i] * dt;
 			y[i] += vy[i] * dt;
 			z[i] += vz[i] * dt;
-
-			vy[i] += -.5f * dt;
+			
+			vy[i] += gravity * dt;
 		}
 	}
 
