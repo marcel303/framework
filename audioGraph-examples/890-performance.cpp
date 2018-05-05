@@ -7,7 +7,14 @@
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 
-#if 1
+#if !defined(DEBUG)
+	#define FINMODE 1
+#endif
+
+#if FINMODE
+const int GFX_SX = 1920;
+const int GFX_SY = 1080;
+#elif 1
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
 #elif 1
@@ -205,11 +212,15 @@ int main(int argc, char * argv[])
 {
     framework.enableDepthBuffer = true;
     framework.enableRealTimeEditing = true;
-    
+	
+#if FINMODE
+	framework.fullscreen = true;
+#endif
+
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
-#if !USE_STREAMING
+#if ENABLE_WELCOME && !USE_STREAMING
 	fillPcmDataCache(".", true, false);
 #endif
 	
