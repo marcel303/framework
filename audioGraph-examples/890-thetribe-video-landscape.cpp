@@ -20,6 +20,8 @@
 
 #define ENABLE_INTERACTIVITY 0
 
+#define PARTICLE_SCALE (GFX_SX / 1024.f)
+
 static bool enableNearest = true;
 static bool enableVertices = true;
 
@@ -1464,6 +1466,7 @@ struct World
 				setColorf(1.f, 1.f, 1.f, s_particlesCoronaOpacity);
 				Shader shader("particles");
 				shader.setTexture("source", 0, getTexture("particle.jpg"), true, true);
+				shader.setImmediate("pointScale", PARTICLE_SCALE);
 				vectorParticleSystem.draw();
 				clearShader();
 			}
@@ -1893,6 +1896,7 @@ struct Starfield
 			setColorf(1.f, 1.f, 1.f, starOpacity);
 			Shader shader("particles");
 			shader.setTexture("source", 0, getTexture("particle.jpg"), true, true);
+			shader.setImmediate("pointScale", PARTICLE_SCALE);
 			{
 				ps.draw();
 			}
