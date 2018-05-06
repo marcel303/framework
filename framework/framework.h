@@ -1161,6 +1161,7 @@ public:
 	
 	float yaw;
 	float pitch;
+	float roll;
 	
 	double mouseSmooth;
 	float mouseRotationSpeed;

@@ -37,6 +37,7 @@ VFX_NODE_TYPE(VfxNodeSampleChannel)
 	in("channel", "channel");
 	in("x", "float", "0.5");
 	in("y", "float", "0.5");
+	in("normalized", "bool", "1");
 	in("filter", "bool", "1");
 	out("value", "float");
 	out("channel", "channel");
@@ -53,6 +54,7 @@ VfxNodeSampleChannel::VfxNodeSampleChannel()
 	addInput(kInput_Channel, kVfxPlugType_Channel);
 	addInput(kInput_X, kVfxPlugType_Float);
 	addInput(kInput_Y, kVfxPlugType_Float);
+	addInput(kInput_Normalized, kVfxPlugType_Bool);
 	addInput(kInput_Filter, kVfxPlugType_Bool);
 	addOutput(kOutput_Value, kVfxPlugType_Float, &valueOutput);
 	addOutput(kOutput_Channel, kVfxPlugType_Channel, &channelOutput);
@@ -65,6 +67,7 @@ void VfxNodeSampleChannel::tick(const float dt)
 	const VfxChannel * channel = getInputChannel(kInput_Channel, nullptr);
 	const float xNorm = getInputFloat(kInput_X, .5f);
 	const float yNorm = getInputFloat(kInput_Y, .5f);
+	const bool normalized = getInputBool(kInput_Normalized, true);
 	const bool filter = getInputBool(kInput_Filter, true);
 
 	if (isPassthrough ||
@@ -81,8 +84,8 @@ void VfxNodeSampleChannel::tick(const float dt)
 	
 	if (filter)
 	{
-		float xf = xNorm * (channel->sx - 1);
-		float yf = yNorm * (channel->sy - 1);
+		float xf = normalized ? (xNorm * (channel->sx - 1)) : xNorm;
+		float yf = normalized ? (yNorm * (channel->sy - 1)) : yNorm;
 	
 		if (xf < 0)
 			xf = 0;
@@ -137,8 +140,8 @@ void VfxNodeSampleChannel::tick(const float dt)
 	}
 	else
 	{
-		int x = int(xNorm * channel->sx);
-		int y = int(yNorm * channel->sy);
+		int x = int(normalized ? (xNorm * channel->sx) : xNorm);
+		int y = int(normalized ? (yNorm * channel->sy) : yNorm);
 		
 		if (x < 0)
 			x = 0;
