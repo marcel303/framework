@@ -4845,6 +4845,7 @@ Camera3d::Camera3d()
 	, position(0.f, 0.f, 0.f)
 	, yaw(0.f)
 	, pitch(0.f)
+	, roll(0.f)
 	, mouseSmooth(0.75)
 	, mouseRotationSpeed(1.f)
 	, maxForwardSpeed(1.f)
@@ -4921,7 +4922,7 @@ void Camera3d::tick(float dt, bool enableInput)
 
 Mat4x4 Camera3d::getWorldMatrix() const
 {
-	return Mat4x4(true).Translate(position).RotateY(yaw / 180.f * M_PI).RotateX(pitch / 180.f * M_PI);
+	return Mat4x4(true).Translate(position).RotateZ(roll / 180.f * M_PI).RotateY(yaw / 180.f * M_PI).RotateX(pitch / 180.f * M_PI);
 }
 
 Mat4x4 Camera3d::getViewMatrix() const
