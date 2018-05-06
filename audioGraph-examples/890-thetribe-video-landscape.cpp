@@ -22,9 +22,6 @@
 
 #define PARTICLE_SCALE (GFX_SX / 1024.f)
 
-static bool enableNearest = true;
-static bool enableVertices = true;
-
 static const float timeSeed = 1234.f;
 
 static const char * audioFilenames[NUM_AUDIOCLIP_SOURCES] =
@@ -271,6 +268,8 @@ struct Videoclip
 		
 		soundVolume.transform = transform;
 		
+		const bool enableNearest = true;
+		const bool enableVertices = true;
 		soundVolume.generateSampleLocations(worldToViewMatrix, cameraPosition_world, enableNearest, enableVertices, gain);
 	}
 	
@@ -2071,19 +2070,6 @@ void VideoLandscape::shut()
 
 void VideoLandscape::tick(const float dt)
 {
-#if ENABLE_INTERACTIVITY
-	// process input
-	
-	if (keyboard.wentDown(SDLK_n))
-		enableNearest = !enableNearest;
-	
-	if (keyboard.wentDown(SDLK_v))
-		enableVertices = !enableVertices;
-	
-	if (keyboard.wentDown(SDLK_TAB))
-		showUi = !showUi;
-#endif
-
 	SDL_LockMutex(g_audioMutex);
 	{
 		g_audioMixer->voiceGroups[kVoiceGroup_Videoclips].desiredGain =
@@ -2120,23 +2106,4 @@ void VideoLandscape::draw()
 		starfield->draw3d();
 	}
 	projectScreen2d();
-
-	if (showUi)
-	{
-		gxPushMatrix();
-		
-	#if 0
-		setColor(255, 255, 255, 127);
-		drawText(GFX_SX - 16, 24, 32, -1, +1, "GROOOP PERFORMANCE APP");
-	#endif
-
-	#if 0
-		gxTranslatef(0, GFX_SY - 100, 0);
-		setColor(colorWhite);
-		drawText(10, 40, kFontSize, +1, +1, "N: toggle use nearest point (%s)", enableNearest ? "on" : "off");
-		drawText(10, 60, kFontSize, +1, +1, "V: toggle use vertices (%s)", enableVertices ? "on" : "off");
-	#endif
-	
-		gxPopMatrix();
-	}
 }

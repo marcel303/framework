@@ -25,11 +25,6 @@ const int GFX_SX = 640;
 const int GFX_SY = 480;
 #endif
 
-namespace Videotube
-{
-	void main();
-}
-
 SDL_mutex * g_audioMutex = nullptr;
 binaural::Mutex * g_binauralMutex = nullptr;
 binaural::HRIRSampleSet * g_sampleSet = nullptr;
