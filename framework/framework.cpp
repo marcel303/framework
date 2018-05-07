@@ -759,16 +759,48 @@ static XMap ps3Controller =
 	}
 };
 
+static XMap logitechAttack3Controller =
+{
+	"Logitech Attack 3",
+	{
+		{ XMap::kSource_Button, 3 }, // dpad lrud
+		{ XMap::kSource_Button, 4 },
+		{ XMap::kSource_Button, 2 },
+		{ XMap::kSource_Button, 1 },
+		{ XMap::kSource_Button, 0 }, // abxy
+		{ XMap::kSource_None },
+		{ XMap::kSource_None },
+		{ XMap::kSource_None },
+		{ XMap::kSource_Button, 5 }, // l1/l2 r1/r2
+		{ XMap::kSource_Button, 6 },
+		{ XMap::kSource_Button, 10 },
+		{ XMap::kSource_Button, 9 },
+		{ XMap::kSource_Button, 7 }, // start, back
+		{ XMap::kSource_Button, 8 }
+	},
+	{
+		{
+			{ XMap::kSource_Axis, 0 },
+			{ XMap::kSource_Axis, 1 }
+		},
+		{
+			{ XMap::kSource_None },
+			{ XMap::kSource_None }
+		}
+	}
+};
+
 static const XMap * getXMap(const char * deviceName)
 {
-	const XMap * xmaps[3] =
+	const XMap * xmaps[4] =
 	{
 		&zeemoteSteelseriesFree,
 		&logitechDualAction,
-		&ps3Controller
+		&ps3Controller,
+		&logitechAttack3Controller
 	};
 	
-	for (int i = 0; i < 3; ++i)
+	for (int i = 0; i < 4; ++i)
 	{
 		if (strcmp(xmaps[i]->deviceName, deviceName) == 0)
 		{
