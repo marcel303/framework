@@ -28,6 +28,7 @@
 #include "framework.h"
 #include "graph.h"
 #include "vfxGraph.h"
+#include <algorithm>
 
 extern const int GFX_SX;
 extern const int GFX_SY;
