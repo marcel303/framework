@@ -140,48 +140,67 @@ void VfxNodeDotDetector::tick(const float dt)
 		
 		// create luminance map
 		
-		if (channel == kChannel_RGB)
+		if (image->numChannels == 1)
 		{
-			if (image->numChannels == 1 && image->isPlanar)
+			// note : single channel images. we just pass the data directly into the dot detection algortihm
+			
+			const VfxImageCpu::Channel * source = &image->channel[0];
+			
+			lumiPtr = source->data;
+			lumiAlignment = image->alignment;
+			lumiPitch = source->pitch;
+		}
+		else if (channel == kChannel_RGB)
+		{
+			lumiPtr = lumi;
+			lumiAlignment = 16;
+			lumiPitch = maskSx;
+			
+			for (int y = 0; y < maskSy; ++y)
 			{
-				// note : single channel images. we just pass the data directly into the dot detection algortihm
+				const uint8_t * __restrict srcR = image->channel[0].data + y * image->channel[0].pitch;
+				const uint8_t * __restrict srcG = image->channel[1].data + y * image->channel[1].pitch;
+				const uint8_t * __restrict srcB = image->channel[2].data + y * image->channel[2].pitch;
+					  uint8_t * __restrict dst  = lumi + y * maskSx;
 				
-				const VfxImageCpu::Channel * source = &image->channel[0];
+				int begin = 0;
 				
-				lumiPtr = source->data;
-				lumiAlignment = image->alignment;
-				lumiPitch = source->pitch;
-			}
-			else
-			{
-				lumiPtr = lumi;
-				lumiAlignment = 16;
-				lumiPitch = maskSx;
-				
-				// todo : if the data is planar it would be trivial to SSE-optimize this loop
-				
-				for (int y = 0; y < maskSy; ++y)
+			#if __SSE2__
+				if (image->alignment >= 16)
 				{
-					const uint8_t * __restrict srcR = image->channel[0].data + y * image->channel[0].pitch;
-					const uint8_t * __restrict srcG = image->channel[1].data + y * image->channel[1].pitch;
-					const uint8_t * __restrict srcB = image->channel[2].data + y * image->channel[2].pitch;
-						  uint8_t * __restrict dst  = lumi + y * maskSx;
+					const int sx_16 = image->sx / 16;
 					
-					for (int x = 0; x < maskSx; ++x)
+					const __m128i * __restrict srcR_16 = (const __m128i*)srcR;
+					const __m128i * __restrict srcG_16 = (const __m128i*)srcG;
+					const __m128i * __restrict srcB_16 = (const __m128i*)srcB;
+						  __m128i * __restrict dst_16  = (__m128i*)dst;
+					
+					for (int x = 0; x < sx_16; ++x)
 					{
-						const int r = *srcR;
-						const int g = *srcG;
-						const int b = *srcB;
+						const __m128i r = srcR_16[x];
+						const __m128i g = srcG_16[x];
+						const __m128i b = srcB_16[x];
 						
-						const int l = (r + g * 2 + b) >> 2;
+						__m128i l = _mm_avg_epu8(r, b);
 						
-						*dst = l;
+						l = _mm_avg_epu8(l, g);
 						
-						srcR += image->channel[0].stride;
-						srcG += image->channel[1].stride;
-						srcB += image->channel[2].stride;
-						dst  += 1;
+						dst_16[x] = l;
 					}
+					
+					begin = sx_16 * 16;
+				}
+			#endif
+			
+				for (int x = begin; x < maskSx; ++x)
+				{
+					const int r = srcR[x];
+					const int g = srcG[x];
+					const int b = srcB[x];
+					
+					const int l = (r + g * 2 + b) >> 2;
+					
+					dst[x] = l;
 				}
 			}
 		}
@@ -198,32 +217,9 @@ void VfxNodeDotDetector::tick(const float dt)
 			else
 				source = &image->channel[3];
 			
-			if (image->isPlanar)
-			{
-				lumiPtr = source->data;
-				lumiAlignment = image->alignment;
-				lumiPitch = source->pitch;
-			}
-			else
-			{
-				lumiPtr = lumi;
-				lumiAlignment = 16;
-				lumiPitch = maskSx;
-				
-				for (int y = 0; y < maskSy; ++y)
-				{
-					const uint8_t * __restrict src = source->data + y * source->pitch;
-					      uint8_t * __restrict dst = lumi + y * maskSx;
-					
-					for (int x = 0; x < maskSx; ++x)
-					{
-						*dst = *src;
-						
-						src += source->stride;
-						dst += 1;
-					}
-				}
-			}
+			lumiPtr = source->data;
+			lumiAlignment = image->alignment;
+			lumiPitch = source->pitch;
 		}
 		
 		// update lumi output

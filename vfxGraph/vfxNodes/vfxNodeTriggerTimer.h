@@ -33,7 +33,10 @@ struct VfxNodeTriggerTimer : VfxNodeBase
 {
 	enum Input
 	{
+		kInput_Auto,
 		kInput_Interval,
+		kInput_Start,
+		kInput_Trigger,
 		kInput_COUNT
 	};
 	
@@ -44,11 +47,17 @@ struct VfxNodeTriggerTimer : VfxNodeBase
 		kOutput_COUNT
 	};
 	
+	bool isStarted;
 	float timer;
 	
-	int triggerCountOutput;
+	int triggerCount;
+	float triggerCountOutput;
 	
 	VfxNodeTriggerTimer();
 	
 	virtual void tick(const float dt) override;
+	
+	virtual void handleTrigger(const int socketIndex) override;
+	
+	virtual void getDescription(VfxNodeDescription & d) override;
 };

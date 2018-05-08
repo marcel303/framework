@@ -216,7 +216,7 @@ void AudioRealTimeConnection::loadBegin()
 
 void AudioRealTimeConnection::loadEnd(GraphEdit & graphEdit)
 {
-	audioGraph = constructAudioGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary, globals);
+	audioGraph = constructAudioGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary, globals, false);
 	*audioGraphPtr = audioGraph;
 	
 	isLoading = false;
@@ -644,6 +644,8 @@ void AudioRealTimeConnection::setSrcSocketValue(const GraphNodeId nodeId, const 
 	
 	if (input->isConnected())
 	{
+		// fixme
+		
 		setPlugValue(audioGraph, input, value);
 	}
 	else
@@ -956,7 +958,7 @@ bool AudioRealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::
 	return true;
 }
 
-int AudioRealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
+int AudioRealTimeConnection::getNodeActivity(const GraphNodeId nodeId)
 {
 	if (isLoading)
 		return false;
@@ -990,7 +992,7 @@ int AudioRealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 	return result;
 }
 
-int AudioRealTimeConnection::linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
+int AudioRealTimeConnection::getLinkActivity(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 {
 	if (isLoading)
 		return false;

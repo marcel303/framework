@@ -30,6 +30,7 @@
 #include "audioUpdateHandler.h"
 #include "framework.h"
 #include "soundmix.h"
+#include <cmath>
 
 const int GFX_SX = 800;
 const int GFX_SY = 400;
@@ -73,7 +74,9 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
-
+			
+			audioGraphMgr.tickMain();
+			
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				setFont("calibri.ttf");
@@ -111,7 +114,7 @@ int main(int argc, char * argv[])
 					{
 						currentFilename = filename;
 						
-						audioGraphMgr.free(instance);
+						audioGraphMgr.free(instance, true);
 						instance = audioGraphMgr.createInstance(filename);
 					}
 
@@ -139,7 +142,7 @@ int main(int argc, char * argv[])
 		
 		// free the audio graph instance
 		
-		audioGraphMgr.free(instance);
+		audioGraphMgr.free(instance, false);
 		
 		// shut down audio related systems
 
@@ -153,6 +156,8 @@ int main(int argc, char * argv[])
 
 		SDL_DestroyMutex(mutex);
 		mutex = nullptr;
+
+		Font("calibri.ttf").saveCache();
 	}
 	framework.shutdown();
 

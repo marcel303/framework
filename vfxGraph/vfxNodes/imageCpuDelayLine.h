@@ -105,7 +105,6 @@ struct ImageCpuDelayLine
 	SDL_Thread * thread;
 	
 	JpegLoadData * cachedLoadData;
-	VfxImageCpu * cachedImage;
 
 	ImageCpuDelayLine();
 	~ImageCpuDelayLine();

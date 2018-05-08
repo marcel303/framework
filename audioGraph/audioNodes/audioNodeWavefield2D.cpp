@@ -30,8 +30,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "wavefield.h"
 #include <cmath>
 
-#include "framework.h" // todo : remove
-
 AUDIO_NODE_TYPE(wavefield_2d, AudioNodeWavefield2D)
 {
 	typeName = "wavefield.2d";
@@ -52,22 +50,6 @@ AUDIO_NODE_TYPE(wavefield_2d, AudioNodeWavefield2D)
 	in("randomize!", "trigger");
 	out("audio", "audioValue");
 }
-
-#if 0
-
-template <typename T>
-inline T lerp(T a, T b, T t)
-{
-	return a * (1.0 - t) + b * t;
-}
-
-template <typename T>
-inline T clamp(T value, T min, T max)
-{
-	return value < min ? min : value > max ? max : value;
-}
-
-#endif
 
 AudioNodeWavefield2D::AudioNodeWavefield2D()
 	: AudioNodeBase()
@@ -120,12 +102,12 @@ void AudioNodeWavefield2D::randomize()
 			
 			wavefield->f[x][y] = 1.0;
 			
-			wavefield->f[x][y] *= lerp<double>(1.0, rng.nextd(0.f, 1.f), randomFactor);
-			wavefield->f[x][y] *= lerp<double>(1.0, (std::cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
+			wavefield->f[x][y] *= Wavefield::lerp<double>(1.0, rng.nextd(0.f, 1.f), randomFactor);
+			wavefield->f[x][y] *= Wavefield::lerp<double>(1.0, (std::cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
 			//wavefield->f[x][y] = 1.0 - std::pow(wavefield->f[x][y], 2.0);
 			
 			//wavefield->f[x][y] = 1.0 - std::pow(rng.nextd(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
-			wavefield->f[x][y] *= lerp<double>(1.0, scaled_octave_noise_2d(16, .4f, 1.f / 20.f, 0.f, 1.f, x, y), perlinFactor);
+			wavefield->f[x][y] *= Wavefield::lerp<double>(1.0, scaled_octave_noise_2d(16, .4f, 1.f / 20.f, 0.f, 1.f, x, y), perlinFactor);
 		}
 	}
 }
@@ -197,7 +179,7 @@ void AudioNodeWavefield2D::tick(const float _dt)
 	
 	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 	{
-		const double c = clamp<double>(tension->samples[i] * 1000000.0, -maxTension, +maxTension);
+		const double c = Wavefield::clamp<double>(tension->samples[i] * 1000000.0, -maxTension, +maxTension);
 		
 		wavefield->tick(dt, c, 1.0 - velocityDampening->samples[i], 1.0 - positionDampening->samples[i], wrap == false);
 		

@@ -30,6 +30,7 @@
 #include "audioUpdateHandler.h"
 #include "framework.h"
 #include "soundmix.h"
+#include <cmath>
 
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
@@ -58,7 +59,14 @@ int main(int argc, char * argv[])
 		audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
 
 		PortAudioObject pa;
-		pa.init(SAMPLE_RATE, 2, 2, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
+		if (!pa.init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, &audioUpdateHandler))
+		{
+			if (!pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler))
+			{
+				logError("failed to initialize audio output. goodbye~ !");
+				return -1;
+			}
+		}
 		
 		// create an audio graph instance
 		
@@ -94,7 +102,7 @@ int main(int argc, char * argv[])
 		
 		// free the audio graph instance
 		
-		audioGraphMgr.free(instance);
+		audioGraphMgr.free(instance, false);
 		
 		// shut down audio related systems
 

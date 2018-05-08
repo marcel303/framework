@@ -30,6 +30,7 @@
 #include "framework.h" // listFiles
 #include "Log.h"
 #include "Parse.h"
+#include <algorithm>
 
 #if AUDIO_GRAPH_ENABLE_TIMING
 	#include "Timer.h"
@@ -43,8 +44,12 @@ double g_currentAudioTime = 0.0;
 
 //
 
-AudioGraph::AudioGraph(AudioGraphGlobals * _globals)
-	: nodes()
+AudioGraph::AudioGraph(AudioGraphGlobals * _globals, const bool _isPaused)
+	: isPaused(_isPaused)
+	, rampDownRequested(false)
+	, rampDown(false)
+	, rampedDown(false)
+	, nodes()
 	, currentTickTraversalId(-1)
 #if AUDIO_GRAPH_ENABLE_TIMING
 	, graph(nullptr)
@@ -54,9 +59,10 @@ AudioGraph::AudioGraph(AudioGraphGlobals * _globals)
 	, activeFlags()
 	, memf()
 	, mems()
-	, events()
+	, activeEvents()
 	, triggeredEvents()
 	, controlValues()
+	, events()
 	, globals(nullptr)
 	, mutex()
 {
@@ -141,7 +147,7 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 		
 		*value = Parse::Bool(inputValue);
 		
-		input.connectTo(value, kAudioPlugType_Bool, true);
+		input.connectToImmediate(value, kAudioPlugType_Bool);
 		
 		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_Bool, value));
 	}
@@ -151,7 +157,7 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 		
 		*value = Parse::Int32(inputValue);
 		
-		input.connectTo(value, kAudioPlugType_Int, true);
+		input.connectToImmediate(value, kAudioPlugType_Int);
 		
 		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_Int, value));
 	}
@@ -161,7 +167,7 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 		
 		*value = Parse::Float(inputValue);
 		
-		input.connectTo(value, kAudioPlugType_Float, true);
+		input.connectToImmediate(value, kAudioPlugType_Float);
 		
 		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_Float, value));
 	}
@@ -171,7 +177,7 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 		
 		*value = inputValue;
 		
-		input.connectTo(value, kAudioPlugType_String, true);
+		input.connectToImmediate(value, kAudioPlugType_String);
 		
 		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_String, value));
 	}
@@ -181,7 +187,7 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 		
 		AudioFloat * value = new AudioFloat(scalarValue);
 		
-		input.connectTo(value, kAudioPlugType_FloatVec, true);
+		input.connectToImmediate(value, kAudioPlugType_FloatVec);
 		
 		valuesToFree.push_back(AudioGraph::ValueToFree(AudioGraph::ValueToFree::kType_AudioValue, value));
 	}
@@ -195,8 +201,14 @@ void AudioGraph::tick(const float dt)
 {
 	audioCpuTimingBlock(AudioGraph_Tick);
 	
+	if (isPaused)
+		return;
+	
 	Assert(g_currentAudioGraph == nullptr);
 	g_currentAudioGraph = this;
+	
+	if (rampDownRequested)
+		rampDown = true;
 	
 	mutex.lock();
 	{
@@ -214,7 +226,7 @@ void AudioGraph::tick(const float dt)
 		
 		// update the set of 'active' events. all newly triggered events are processed next tick
 		
-		std::swap(events, triggeredEvents);
+		std::swap(activeEvents, triggeredEvents);
 		triggeredEvents.clear();
 	}
 	mutex.unlock();
@@ -236,6 +248,11 @@ void AudioGraph::tick(const float dt)
 	//
 	
 	time += dt;
+	
+	//
+	
+	if (rampDown)
+		rampedDown = true;
 	
 	//
 	
@@ -387,6 +404,72 @@ void AudioGraph::exportControlValues()
 	mutex.unlock();
 }
 
+void AudioGraph::registerEvent(const char * name)
+{
+	mutex.lock();
+	{
+		bool exists = false;
+		
+		for (auto & event : events)
+		{
+			if (event.name == name)
+			{
+				event.refCount++;
+				exists = true;
+				break;
+			}
+		}
+		
+		if (exists == false)
+		{
+			events.resize(events.size() + 1);
+			
+			auto & event = events.back();
+			
+			event.name = name;
+			event.refCount = 1;
+			
+			std::sort(events.begin(), events.end(), [](const AudioEvent & a, const AudioEvent & b) { return a.name < b.name; });
+		}
+	}
+	mutex.unlock();
+}
+
+void AudioGraph::unregisterEvent(const char * name)
+{
+	mutex.lock();
+	{
+		bool exists = false;
+		
+		for (auto eventItr = events.begin(); eventItr != events.end(); ++eventItr)
+		{
+			auto & event = *eventItr;
+			
+			if (event.name == name)
+			{
+				event.refCount--;
+				
+				if (event.refCount == 0)
+				{
+					//LOG_DBG("erasing event %s", name);
+					
+					events.erase(eventItr);
+				}
+				
+				exists = true;
+				break;
+			}
+		}
+		
+		Assert(exists);
+		if (exists == false)
+		{
+			LOG_WRN("failed to unregister event %s", name);
+		}
+	}
+	mutex.unlock();
+}
+
 void AudioGraph::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
 	mutex.lock();
@@ -496,11 +579,13 @@ AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & ty
 
 extern void linkAudioNodes();
 
-AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals)
+AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals, const bool createdPaused)
 {
 	linkAudioNodes();
-
-	AudioGraph * audioGraph = new AudioGraph(globals);
+	
+	//
+	
+	AudioGraph * audioGraph = new AudioGraph(globals, createdPaused);
 	
 #if AUDIO_GRAPH_ENABLE_TIMING
 	audioGraph->graph = const_cast<Graph*>(&graph);
@@ -650,15 +735,14 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 #include "Path.h"
 #include "soundmix.h"
 #include "StringEx.h"
+#include "Timer.h"
 #include <map>
-
-#include "Timer.h" // todo : add routines for capturing and logging timing data
 
 static std::map<std::string, PcmData*> s_pcmDataCache;
 
 void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths)
 {
-	LOG_DBG("filling data cache with path: %s", path);
+	LOG_DBG("filling PCM data cache with path: %s", path);
 	
 	const auto t1 = g_TimerRT.TimeUS_get();
 	
@@ -698,7 +782,7 @@ void fillPcmDataCache(const char * path, const bool recurse, const bool stripPat
 	
 	const auto t2 = g_TimerRT.TimeUS_get();
 	
-	printf("load PCM from %s took %.2fms\n", path, (t2 - t1) / 1000.0);
+	printf("loading PCM data from %s took %.2fms\n", path, (t2 - t1) / 1000.0);
 }
 
 void clearPcmDataCache()
@@ -801,5 +885,38 @@ const binaural::HRIRSampleSet * getHrirSampleSet(const char * name)
 	else
 	{
 		return i->second;
+	}
+}
+
+//
+
+void drawFilterResponse(const AudioNodeBase * node, const float sx, const float sy)
+{
+	const int kNumSteps = 256;
+	float response[kNumSteps];
+	
+	if (node->getFilterResponse(response, kNumSteps))
+	{
+		hqBegin(HQ_FILLED_ROUNDED_RECTS);
+		{
+			setColorf(0, 0, 0, .8f);
+			hqFillRoundedRect(0, 0, sx, sy, 4.f);
+		}
+		hqEnd();
+		
+		setColor(colorWhite);
+		hqBegin(HQ_LINES);
+		{
+			for (int i = 0; i < kNumSteps - 1; ++i)
+			{
+				const float x1 = sx * (i + 0) / kNumSteps;
+				const float x2 = sx * (i + 1) / kNumSteps;
+				const float y1 = (1.f - response[i + 0]) * sy;
+				const float y2 = (1.f - response[i + 1]) * sy;
+				
+				hqLine(x1, y1, 3.f, x2, y2, 3.f);
+			}
+		}
+		hqEnd();
 	}
 }

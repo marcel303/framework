@@ -246,8 +246,6 @@ struct ImageDelayLine
 	}
 };
 
-// todo : add filter and clamp options
-
 VfxNodeImageDelayLine::VfxNodeImageDelayLine()
 	: VfxNodeBase()
 	, outputImage()

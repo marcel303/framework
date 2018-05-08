@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "framework.h"
 #include "vfxNodeVideo.h"
 #include "../libvideo/video.h"
 #include "mediaplayer/MPVideoBuffer.h"
@@ -59,7 +58,6 @@ VfxNodeVideo::VfxNodeVideo()
 	, imageCpuOutputU()
 	, imageCpuOutputV()
 	, mediaPlayer(nullptr)
-	, textureBlack(0)
 {
 	mediaPlayer = new MediaPlayer();
 	
@@ -73,17 +71,10 @@ VfxNodeVideo::VfxNodeVideo()
 	addOutput(kOutput_ImageCpuY, kVfxPlugType_ImageCpu, &imageCpuOutputY);
 	addOutput(kOutput_ImageCpuU, kVfxPlugType_ImageCpu, &imageCpuOutputU);
 	addOutput(kOutput_ImageCpuV, kVfxPlugType_ImageCpu, &imageCpuOutputV);
-	
-	uint32_t pixels[4] = { 0, 0, 0, 0 };
-	textureBlack = createTextureFromRGBA8(pixels, 1, 1, false, true);
 }
 
 VfxNodeVideo::~VfxNodeVideo()
 {
-	glDeleteTextures(1, &textureBlack);
-	textureBlack = 0;
-	checkErrorGL();
-	
 	delete mediaPlayer;
 	mediaPlayer = nullptr;
 }
@@ -91,6 +82,23 @@ VfxNodeVideo::~VfxNodeVideo()
 void VfxNodeVideo::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeVideo);
+	
+	if (isPassthrough)
+	{
+		mediaPlayer->close(true);
+		mediaPlayer->presentTime = 0.f;
+		
+		imageOutput.texture = 0;
+		
+		rgbaData.free();
+		
+		imageCpuOutputRGBA.reset();
+		imageCpuOutputY.reset();
+		imageCpuOutputU.reset();
+		imageCpuOutputV.reset();
+		
+		return;
+	}
 	
 	const bool loop = getInputBool(kInput_Loop, true);
 	const float speed = getInputFloat(kInput_Speed, 1.f);
@@ -107,17 +115,26 @@ void VfxNodeVideo::tick(const float dt)
 		
 		const bool paramsChanged =
 			mediaPlayer->context->openParams.filename != source ||
-			(mediaPlayer->context->hasPresentedLastFrame && loop) ||
 			mediaPlayer->context->openParams.outputMode != outputMode;
+		
+		const bool hasLooped = mediaPlayer->context->hasPresentedLastFrame && loop;
 		
 		if (paramsChanged)
 		{
-			mediaPlayer->close(false);
-			
+			mediaPlayer->close(true);
 			mediaPlayer->presentTime = 0.f;
 			
 			mediaPlayer->openAsync(source, outputMode);
 		}
+		else if (hasLooped)
+		{
+			mediaPlayer->close(false);
+			mediaPlayer->presentTime = 0.f;
+			
+			mediaPlayer->openAsync(source, outputMode);
+		}
+		
+		Assert(mediaPlayer->context->openParams.outputMode == outputMode);
 		
 		const bool wantsTexture = outputs[kOutput_Image].isReferenced();
 		
@@ -161,12 +178,30 @@ void VfxNodeVideo::tick(const float dt)
 			}
 			else if (mediaPlayer->context->openParams.outputMode == MP::kOutputMode_RGBA)
 			{
-				int sx;
-				int sy;
-				int pitch;
-				const uint8_t * bytes = mediaPlayer->videoFrame->getRGBA(sx, sy, pitch);
+				// check if the output is connected. otherwise the conversion to planar can be avoided
 				
-				imageCpuOutputRGBA.setDataRGBA8(bytes, sx, sy, 16, pitch);
+				// todo : investigate adding a planar RGB output mode media player
+				
+				const VfxPlug * output = tryGetOutput(kOutput_ImageCpuRGBA);
+				
+				if (output->isReferenced())
+				{
+					int sx;
+					int sy;
+					int pitch;
+					const uint8_t * bytes = mediaPlayer->videoFrame->getRGBA(sx, sy, pitch);
+					
+					rgbaData.allocOnSizeChange(sx, sy, 4);
+					
+					VfxImageCpu::deinterleave4(
+						bytes, sx, sy, 16, pitch,
+						rgbaData.image.channel[0],
+						rgbaData.image.channel[1],
+						rgbaData.image.channel[2],
+						rgbaData.image.channel[3]);
+					
+					imageCpuOutputRGBA = rgbaData.image;
+				}
 			}
 		}
 	}
@@ -179,10 +214,10 @@ void VfxNodeVideo::tick(const float dt)
 			mediaPlayer->openAsync(source, MP::kOutputMode_RGBA);
 		}
 	}
-
-	if (imageOutput.texture == 0 || isPassthrough)
+	
+	if (imageCpuOutputRGBA.numChannels == 0)
 	{
-		imageOutput.texture = textureBlack;
+		rgbaData.free();
 	}
 }
 

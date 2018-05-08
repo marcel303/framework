@@ -29,8 +29,6 @@
 
 #include "vfxNodeBase.h"
 
-class ImageData;
-
 struct VfxNodePictureCpu : VfxNodeBase
 {
 	enum Input
@@ -45,10 +43,9 @@ struct VfxNodePictureCpu : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	VfxImageCpu image;
+	VfxImageCpuData imageData;
 	
 	std::string currentFilename;
-	ImageData * imageData;
 	
 	VfxNodePictureCpu();
 	

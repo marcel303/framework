@@ -27,6 +27,8 @@
 
 #pragma once
 
+// todo : remove ?
+
 #include "vfxNodeBase.h"
 
 struct VfxNodeTest : VfxNodeBase

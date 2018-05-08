@@ -213,7 +213,7 @@ void Osc4D::sourceDistanceIntensity(const bool enable, const float treshold, con
 
 	if (enable)
 	{
-		beginSource("distanceIntensity/treshold");
+		beginSource("distanceIntensity/threshold");
 		f(treshold);
 		end();
 
@@ -231,7 +231,7 @@ void Osc4D::sourceDistanceDamping(const bool enable, const float treshold, const
 
 	if (enable)
 	{
-		beginSource("distanceDamping/treshold");
+		beginSource("distanceDamping/threshold");
 		f(treshold);
 		end();
 
@@ -249,7 +249,7 @@ void Osc4D::sourceDistanceDiffusion(const bool enable, const float treshold, con
 
 	if (enable)
 	{
-		beginSource("distanceDiffusion/treshold");
+		beginSource("distanceDiffusion/threshold");
 		f(treshold);
 		end();
 
@@ -444,3 +444,158 @@ void Osc4D::globalMasterPhase(const float v)
 	f(v);
 	end();
 }
+
+//
+
+#include "Debugging.h"
+#include "Log.h"
+
+//#include <functional>
+
+#define OSC_SEND_BUNDLES 1
+
+Osc4DStream::Osc4DStream()
+	: stream(buffer, OSC_BUFFER_SIZE)
+	, transmitSocket(nullptr)
+	, hasMessage(false)
+	, bundleIsInvalid(false)
+{
+}
+
+Osc4DStream::~Osc4DStream()
+{
+	shut();
+}
+
+void Osc4DStream::init(const char * ipAddress, const int udpPort)
+{
+	shut();
+	
+	//
+	
+	try
+	{
+		Assert(transmitSocket == nullptr);
+		transmitSocket = new UdpTransmitSocket(IpEndpointName(ipAddress, udpPort));
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("failed to create UDP transmit socket: %s", e.what());
+		Assert(transmitSocket == nullptr);
+	}
+}
+
+void Osc4DStream::shut()
+{
+	delete transmitSocket;
+	transmitSocket = nullptr;
+}
+
+bool Osc4DStream::isReady() const
+{
+	return transmitSocket != nullptr;
+}
+
+void Osc4DStream::setEndpoint(const char * ipAddress, const int udpPort)
+{
+	shut();
+	
+	init(ipAddress, udpPort);
+}
+
+void Osc4DStream::beginBundle()
+{
+#if OSC_SEND_BUNDLES
+	try
+	{
+		bundleIsInvalid = false;
+		
+		stream << osc::BeginBundleImmediate;
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("beginBundle failed: %s", e.what());
+		
+		bundleIsInvalid = true;
+	}
+#endif
+}
+
+void Osc4DStream::endBundle()
+{
+#if OSC_SEND_BUNDLES
+	try
+	{
+		stream << osc::EndBundle;
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("endBundle failed: %s", e.what());
+		
+		bundleIsInvalid = true;
+	}
+	
+	flush();
+#endif
+}
+
+void Osc4DStream::flush()
+{
+	if (hasMessage && stream.IsReady() && bundleIsInvalid == false)
+	{
+		try
+		{
+			transmitSocket->Send(stream.Data(), stream.Size());
+		}
+		catch (std::exception & e)
+		{
+			LOG_ERR("flush failed: %s", e.what());
+		}
+	}
+	
+	stream = osc::OutboundPacketStream(buffer, OSC_BUFFER_SIZE);
+	hasMessage = false;
+}
+
+void Osc4DStream::begin(const char * name)
+{
+#if OSC_SEND_BUNDLES == 0
+	stream << osc::BeginBundleImmediate;
+#endif
+
+	stream << osc::BeginMessage(name);
+	
+	hasMessage = true;
+}
+
+void Osc4DStream::end()
+{
+	stream << osc::EndMessage;
+	
+#if OSC_SEND_BUNDLES == 0
+	stream << osc::EndBundle;
+	
+	flush();
+#endif
+}
+
+void Osc4DStream::b(const bool v)
+{
+	stream << v;
+}
+
+void Osc4DStream::i(const int v)
+{
+	stream << v;
+}
+
+void Osc4DStream::f(const float v)
+{
+	stream << v;
+}
+
+void Osc4DStream::s(const char * v)
+{
+	stream << v;
+}
+

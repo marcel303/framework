@@ -138,6 +138,8 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 {
 	if (_maxRadius <= 0.f)
 		return 0;
+	if (maxIslands <= 0)
+		return 0;
 	
 	int numIslands = 0;
 	

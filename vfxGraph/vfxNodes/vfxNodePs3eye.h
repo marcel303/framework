@@ -97,8 +97,9 @@ struct VfxNodePs3eye : VfxNodeBase
 	EyeParams currentEyeParams;
 
 	OpenglTexture texture;
-
 	VfxImage_Texture imageOutput;
+	
+	VfxImageCpuData imageCpuData;
 	VfxImageCpu imageCpuOutput;
 
 	VfxNodePs3eye();

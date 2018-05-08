@@ -1,0 +1,23 @@
+include engine/ShaderPS.txt
+
+shader_in vec2 position;
+
+uniform vec2 startPosition;
+uniform vec4 startColor;
+uniform vec4 gradientX;
+uniform vec4 gradientY;
+
+void main()
+{
+	float deltaX = position.x - startPosition.x;
+	float deltaY = position.y - startPosition.y;
+
+	vec4 color =
+		startColor
+		+ gradientX * deltaX
+		+ gradientY * deltaY;
+
+	color = clamp(color, vec4(0.0), vec4(1.0));
+
+    shader_fragColor = color;
+}

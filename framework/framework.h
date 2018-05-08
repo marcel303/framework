@@ -27,15 +27,14 @@
 
 #pragma once
 
+// todo : remove SDL2 header file include ? add a new include for including low-level framework functions
+//        which should hopefully rarely be needed
+// for now we seem to depend mostly on: SDL_event, SDL_mutex, SDL_thread and SDL_timer
+
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
-
-#include <algorithm>
-#include <assert.h>
-#include <cmath>
 #include <float.h>
 #include <map>
-#include <set>
 #include <string>
 #include <vector>
 #include "Debugging.h"
@@ -75,7 +74,9 @@
 	#define ENABLE_PROFILING 1
 #endif
 
-#define ENABLE_OPENGL 1
+#if !defined(ENABLE_OPENGL)
+	#define ENABLE_OPENGL 1
+#endif
 
 /*
 #ifdef DEBUG
@@ -85,13 +86,23 @@
 #endif
 */
 
-#define USE_LEGACY_OPENGL 0
+#if !defined(USE_LEGACY_OPENGL)
+	#define USE_LEGACY_OPENGL 0
+#endif
+
 #if defined(MACOS)
     #define OPENGL_VERSION 410
 #else
     #define OPENGL_VERSION 430
 #endif
-#define ENABLE_UTF8_SUPPORT 1
+
+#if !defined(ENABLE_HQ_PRIMITIVES)
+	#define ENABLE_HQ_PRIMITIVES 1
+#endif
+
+#if !defined(ENABLE_UTF8_SUPPORT)
+	#define ENABLE_UTF8_SUPPORT 1
+#endif
 
 static const int MAX_GAMEPAD = 4;
 
@@ -325,10 +336,8 @@ public:
 	std::vector<SDL_Event> events;
 	
 private:
-	typedef std::set<Model*> ModelSet;
-	
 	Sprite * m_sprites;
-	ModelSet m_models;
+	Model * m_models;
 	Window * m_windows;
 	
 	std::map<std::string, std::string> m_shaderSources;
@@ -810,6 +819,10 @@ public:
 private:
 	void ctor();
 	
+	// book keeping
+	Model * m_prev;
+	Model * m_next;
+	
 	// drawing
 	class ModelCacheElem * m_model;
 	
@@ -834,8 +847,8 @@ struct SpriterState
 {
 	SpriterState();
 
-	int16_t x;
-	int16_t y;
+	float x;
+	float y;
 	float angle;
 	float scale;
 	float scaleX;
@@ -972,7 +985,7 @@ class Path2d
 
 		float len() const
 		{
-			return std::sqrt(x * x + y * y);
+			return sqrtf(x * x + y * y);
 		}
 
 		Vertex operator-(const Vertex & v) const
@@ -1148,6 +1161,7 @@ public:
 	
 	float yaw;
 	float pitch;
+	float roll;
 	
 	double mouseSmooth;
 	float mouseRotationSpeed;
@@ -1164,8 +1178,8 @@ public:
 	Mat4x4 getWorldMatrix() const;
 	Mat4x4 getViewMatrix() const;
 	
-	void pushViewMatrix();
-	void popViewMatrix();
+	void pushViewMatrix() const;
+	void popViewMatrix() const;
 };
 
 void clearCaches(int caches);
@@ -1206,8 +1220,11 @@ void popColorPost();
 void setColor(const Color & color);
 void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
 void setColorf(float r, float g, float b, float a = 1.f, float rgbMul = 1.f);
+void setColorClamp(bool clamp);
 void setAlpha(int a);
 void setAlphaf(float a);
+void setLumi(int l);
+void setLumif(float l);
 void pushColor();
 void popColor();
 
@@ -1318,6 +1335,7 @@ void gxSetTexture(GLuint texture);
 #else
 
 #define gxMatrixMode glMatrixMode
+GLenum gxGetMatrixMode();
 #define gxPopMatrix glPopMatrix
 #define gxPushMatrix glPushMatrix
 #define gxLoadIdentity glLoadIdentity
@@ -1329,10 +1347,10 @@ void gxGetMatrixf(GLenum mode, float * m);
 #define gxScalef glScalef
 static inline void gxValidateMatrices() { }
 
-static inline void gxInitialize() { }
+void gxInitialize();
 static inline void gxShutdown() { }
-void gxBegin(int primitiveType);
-#define gxEnd glEnd
+#define gxBegin glBegin
+void gxEnd();
 #define gxColor4f glColor4f
 #define gxColor4fv glColor4fv
 #define gxColor3ub glColor3ub
@@ -1343,7 +1361,10 @@ void gxBegin(int primitiveType);
 #define gxVertex2fv glVertex2fv
 #define gxVertex3f glVertex3f
 #define gxVertex3fv glVertex3fv
+#define gxVertex4f glVertex4f
+#define gxVertex4fv glVertex4fv
 void gxSetTexture(GLuint texture);
+
 
 #endif
 
@@ -1376,8 +1397,8 @@ void setShader_GrayscaleLumi(const GLuint source, const float opacity);
 void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const float opacity);
 void setShader_Colorize(const GLuint source, const float hue, const float opacity);
 void setShader_HueShift(const GLuint source, const float hue, const float opacity);
-void setShader_Compositie(const GLuint source1, const GLuint source2);
-void setShader_CompositiePremultiplied(const GLuint source1, const GLuint source2);
+void setShader_Composite(const GLuint source1, const GLuint source2);
+void setShader_CompositePremultiplied(const GLuint source1, const GLuint source2);
 void setShader_Premultiply(const GLuint source);
 void setShader_ColorMultiply(const GLuint source, const Color & color, const float opacity);
 void setShader_ColorTemperature(const GLuint source, const float temperature, const float opacity);
@@ -1433,7 +1454,7 @@ void hqDrawPath(const Path2d & path, float stroke);
 template <typename T>
 static T clamp(T v, T vmin, T vmax)
 {
-	return std::min(std::max(v, vmin), vmax);
+	return v < vmin ? vmin : v > vmax ? vmax : v;
 }
 
 template <typename T>
@@ -1458,14 +1479,14 @@ template <typename T>
 static T sine(T min, T max, float t)
 {
 	t = t * float(M_PI) / 180.f;
-	return static_cast<T>(min + (max - min) * (std::sin(t) + 1.f) / 2.f);
+	return static_cast<T>(min + (max - min) * (sinf(t) + 1.f) / 2.f);
 }
 
 template <typename T>
 static T cosine(T min, T max, float t)
 {
 	t = t * float(M_PI) / 180.f;
-	return static_cast<T>(min + (max - min) * (std::cos(t) + 1.f) / 2.f);
+	return static_cast<T>(min + (max - min) * (cosf(t) + 1.f) / 2.f);
 }
 
 template <typename T>

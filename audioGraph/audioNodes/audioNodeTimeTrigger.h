@@ -37,6 +37,7 @@ struct AudioNodeTimeTrigger : AudioNodeBase
 		kInput_Automatic,
 		kInput_IntervalMin,
 		kInput_IntervalMax,
+		kInput_Start,
 		kInput_Trigger,
 		kInput_COUNT
 	};
@@ -56,4 +57,6 @@ struct AudioNodeTimeTrigger : AudioNodeBase
 	virtual void tick(const float dt) override;
 
 	virtual void handleTrigger(const int inputSocketIndex) override;
+	
+	virtual void getDescription(AudioNodeDescription & d) override;
 };

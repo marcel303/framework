@@ -27,6 +27,10 @@
 
 #include "vfxNodeImageCpuToChannels.h"
 
+#if __SSE2__
+	#include <immintrin.h>
+#endif
+
 VFX_ENUM_TYPE(imageCpuToChannelsChannel)
 {
 	elem("rgba", 0);
@@ -71,6 +75,48 @@ VfxNodeImageCpuToChannels::~VfxNodeImageCpuToChannels()
 	channelData.free();
 }
 
+#if __SSE2__
+
+static int fillFloats_SSE(const uint8_t * __restrict src, const int sx, float * __restrict dst)
+{
+	const float scale = 1.f / 255.f;
+	
+	const __m128 scale_4 = _mm_set1_ps(scale);
+	
+	const __m128i * __restrict src_16 = (__m128i*)src;
+	__m128 * __restrict dst_4 = (__m128*)dst;
+	
+	const int sx_16 = sx / 16;
+	
+	for (int x = 0; x < sx_16; ++x)
+	{
+		const __m128i values = _mm_loadu_si128(&src_16[x]);
+		const __m128i zero = _mm_setzero_si128();
+		
+		const __m128i valuesL = _mm_unpacklo_epi8(values, zero);
+		const __m128i valuesR = _mm_unpackhi_epi8(values, zero);
+		
+		const __m128i values1 = _mm_unpacklo_epi16(valuesL, zero);
+		const __m128i values2 = _mm_unpackhi_epi16(valuesR, zero);
+		const __m128i values3 = _mm_unpacklo_epi16(valuesL, zero);
+		const __m128i values4 = _mm_unpackhi_epi16(valuesR, zero);
+		
+		const __m128 floats1 = _mm_mul_ps(_mm_cvtepi32_ps(values1), scale_4);
+		const __m128 floats2 = _mm_mul_ps(_mm_cvtepi32_ps(values2), scale_4);
+		const __m128 floats3 = _mm_mul_ps(_mm_cvtepi32_ps(values3), scale_4);
+		const __m128 floats4 = _mm_mul_ps(_mm_cvtepi32_ps(values4), scale_4);
+		
+		_mm_storeu_ps((float*)&dst_4[x * 4 + 0], floats1);
+		_mm_storeu_ps((float*)&dst_4[x * 4 + 1], floats2);
+		_mm_storeu_ps((float*)&dst_4[x * 4 + 2], floats3);
+		_mm_storeu_ps((float*)&dst_4[x * 4 + 3], floats4);
+	}
+	
+	return sx_16 * 16;
+}
+
+#endif
+
 static void fillFloats(float * __restrict floatValues, const VfxImageCpu * image, const int channelIndex)
 {
 	auto & channel = image->channel[channelIndex];
@@ -82,11 +128,17 @@ static void fillFloats(float * __restrict floatValues, const VfxImageCpu * image
 		const uint8_t * __restrict src = channel.data + channel.pitch * y;
 		      float   * __restrict dst = floatValues + image->sx * y;
 		
-		for (int x = 0; x < image->sx; ++x)
+		int begin = 0;
+		
+	#if __SSE2__
+		// 1.25ms no SSE -> 1.25ms with SSE. exactly the same! must be memory bandwidth bound..
+		// let's hope faster memory is on the way, so my time spending on this won't be in vain! ;-)
+		begin = fillFloats_SSE(src, image->sx, dst);
+	#endif
+		
+		for (int x = begin; x < image->sx; ++x)
 		{
-			dst[x] = *src * scale;
-			
-			src += channel.stride;
+			dst[x] = src[x] * scale;
 		}
 	}
 }

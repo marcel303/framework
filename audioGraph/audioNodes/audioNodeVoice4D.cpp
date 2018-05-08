@@ -348,6 +348,11 @@ void AudioNodeVoice4D::tick(const float dt)
 			g_currentAudioGraph->setFlag("voice.4d.rampedDown");
 		}
 	}
+	
+	if (g_currentAudioGraph->rampDown)
+	{
+		voice->rampInfo.rampDown(0.f, AUDIO_UPDATE_SIZE / float(SAMPLE_RATE));
+	}
 }
 
 void AudioNodeVoice4D::handleTrigger(const int inputSocketIndex)
@@ -359,6 +364,17 @@ void AudioNodeVoice4D::handleTrigger(const int inputSocketIndex)
 	else if (inputSocketIndex == kInput_RampDown)
 	{
 		voice->rampInfo.ramp = false;
+	}
+}
+
+void AudioNodeVoice4D::getDescription(AudioNodeDescription & d)
+{
+	if (voice != nullptr)
+	{
+		d.add("ramp: %d. delay=%.2f, value=%.2f",
+			voice->rampInfo.ramp,
+			voice->rampInfo.rampDelay,
+			voice->rampInfo.rampValue);
 	}
 }
 

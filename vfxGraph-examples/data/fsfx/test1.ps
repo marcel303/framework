@@ -1,0 +1,19 @@
+include fsfx/common.inc
+
+uniform float colorR;
+uniform float colorG;
+uniform vec3 rgb;
+uniform vec4 colorSub;
+
+vec4 fsfx()
+{
+	vec4 color = texture(colormap, texcoord);
+
+	color.r += colorR;
+	color.g += colorG;
+	color.rgb += rgb;
+	color.rgb -= color1.rgb * color1.a;
+	color.rgb -= colorSub.rgb * colorSub.a;
+	
+	return color;
+}

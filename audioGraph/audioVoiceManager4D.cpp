@@ -26,7 +26,8 @@
 */
 
 #include "audioVoiceManager4D.h"
-#include "framework.h" // for color hsl
+#include "Debugging.h"
+#include "Log.h"
 
 AudioVoiceManager4D::AudioVoiceManager4D()
 	: AudioVoiceManager(kType_4DSOUND)
@@ -81,12 +82,16 @@ bool AudioVoiceManager4D::allocVoice(AudioVoice *& out_voice, AudioSource * sour
 		AudioVoice4D * voice = &voices.back();
 		voice->source = source;
 		
-		const Color color = Color::fromHSL(colorIndex / 16.f, 1.f, .5f);
+		const float hue = colorIndex / 16.f;
+		const float colorR = (cosf((hue + 0.0 / 3.0) * 2.0 * M_PI) + 1.0) / 2.0;
+		const float colorG = (cosf((hue + 1.0 / 3.0) * 2.0 * M_PI) + 1.0) / 2.0;
+		const float colorB = (cosf((hue + 2.0 / 3.0) * 2.0 * M_PI) + 1.0) / 2.0;
+		
 		colorIndex++;
 		
-		voice->spat.color[0] = color.r * 255.f;
-		voice->spat.color[1] = color.g * 255.f;
-		voice->spat.color[2] = color.b * 255.f;
+		voice->spat.color[0] = colorR * 255.f;
+		voice->spat.color[1] = colorG * 255.f;
+		voice->spat.color[2] = colorB * 255.f;
 		
 		voice->spat.name = name;
 		
@@ -217,9 +222,8 @@ int AudioVoiceManager4D::numDynamicChannelsUsed() const
 void AudioVoiceManager4D::generateAudio(float * __restrict samples, const int numSamples)
 {
 	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
-	const float limiterPeak = outputMode == kOutputMode_MultiChannel ? .4f : .1f;
 	
-	generateAudio(samples, numSamples, true, limiterPeak, outputMode, true);
+	generateAudio(samples, numSamples, true, 1.f, outputMode, true);
 }
 
 void AudioVoiceManager4D::generateAudio(
@@ -329,6 +333,27 @@ void AudioVoiceManager4D::generateAudio(
 								audioBufferAdd(&samples[numSamples * 1], voiceSamples, numSamples);
 							}
 						}
+						else if (voice.speaker == AudioVoice::kSpeaker_Channel)
+						{
+							if (voice.channelIndex >= 0 && voice.channelIndex < 2)
+							{
+								if (interleaved)
+								{
+									// interleave voice samples into destination buffer
+									
+									float * __restrict dstPtr = samples;
+									
+									for (int i = 0; i < numSamples; ++i)
+									{
+										dstPtr[i * 2 + voice.channelIndex] += voiceSamples[i];
+									}
+								}
+								else
+								{
+									audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
+								}
+							}
+						}
 						else
 						{
 							if (interleaved)
@@ -352,22 +377,25 @@ void AudioVoiceManager4D::generateAudio(
 					}
 					else
 					{
-						if (interleaved)
+						if (voice.channelIndex >= 0 && voice.channelIndex < numChannels)
 						{
-							// interleave voice samples into destination buffer
-							
-							float * __restrict dstPtr = samples + voice.channelIndex;
-							
-							for (int i = 0; i < numSamples; ++i)
+							if (interleaved)
 							{
-								*dstPtr = voiceSamples[i];
+								// interleave voice samples into destination buffer
 								
-								dstPtr += numChannels;
+								float * __restrict dstPtr = samples + voice.channelIndex;
+								
+								for (int i = 0; i < numSamples; ++i)
+								{
+									*dstPtr = voiceSamples[i];
+									
+									dstPtr += numChannels;
+								}
 							}
-						}
-						else
-						{
-							audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
+							else
+							{
+								audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
+							}
 						}
 					}
 				}

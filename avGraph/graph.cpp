@@ -36,8 +36,6 @@
 #include <algorithm>
 #include <cmath>
 
-#define ENABLE_FILE_FIXUPS 1 // todo : remove
-
 using namespace tinyxml2;
 
 //
@@ -458,12 +456,6 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 	
 	for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
 	{
-	#if ENABLE_FILE_FIXUPS
-		const int nodeType = intAttrib(xmlNode, "nodeType", 0);
-		if (nodeType != 0)
-			continue;
-	#endif
-		
 		GraphNode node;
 		node.id = intAttrib(xmlNode, "id", node.id);
 		node.typeName = stringAttrib(xmlNode, "typeName", node.typeName.c_str());
@@ -566,7 +558,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		
 		if (link.srcNodeSocketIndex == -1 && !link.isDynamic)
 		{
-			printf("failed to find srcSocketIndex. srcNodeId=%d, srcSocketName=%s\n", link.srcNodeId, link.srcNodeSocketName.c_str());
+			printf("failed to find srcSocketIndex. linkId=%d, srcNodeId=%d, srcSocketName=%s\n", link.id, link.srcNodeId, link.srcNodeSocketName.c_str());
 		}
 		
 		auto dstNode = tryGetNode(link.dstNodeId);
@@ -591,7 +583,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		
 		if (link.dstNodeSocketIndex == -1 && !link.isDynamic)
 		{
-			printf("failed to find dstSocketIndex. dstNodeId=%d, dstSocketName=%s\n", link.dstNodeId, link.dstNodeSocketName.c_str());
+			printf("failed to find dstSocketIndex. linkId=%d, dstNodeId=%d, dstSocketName=%s\n", link.id, link.dstNodeId, link.dstNodeSocketName.c_str());
 		}
 	}
 
@@ -1901,6 +1893,7 @@ GraphEdit::GraphEdit(
 	, propertyEditor(nullptr)
 	, linkParamsEditorLinkId(kGraphLinkIdInvalid)
 	, nodeTypeNameSelect(nullptr)
+	, nodeInsertMenu(nullptr)
 	, nodeResourceEditor()
 	, displaySx(0)
 	, displaySy(0)
@@ -1922,9 +1915,9 @@ GraphEdit::GraphEdit(
 	
 	nodeTypeNameSelect = new GraphUi::NodeTypeNameSelect(this);
 	
-	nodeInsert.menu = new GraphEdit_NodeTypeSelect();
-	nodeInsert.menu->x = (_displaySx - nodeInsert.menu->sx)/2;
-	nodeInsert.menu->y = (_displaySy - nodeInsert.menu->sy)/2;
+	nodeInsertMenu = new GraphEdit_NodeTypeSelect();
+	nodeInsertMenu->x = (_displaySx - nodeInsertMenu->sx)/2;
+	nodeInsertMenu->y = (_displaySy - nodeInsertMenu->sy)/2;
 	
 	displaySx = _displaySx;
 	displaySy = _displaySy;
@@ -1935,7 +1928,7 @@ GraphEdit::GraphEdit(
 	uiState->sx = 200;
 	uiState->x = kPadding;
 	uiState->y = kPadding;
-	uiState->textBoxTextOffset = 50;
+	uiState->textBoxTextOffset = 64;
 	
 	cursorHand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 	
@@ -1960,8 +1953,8 @@ GraphEdit::~GraphEdit()
 	delete propertyEditor;
 	propertyEditor = nullptr;
 	
-	delete nodeInsert.menu;
-	nodeInsert.menu = nullptr;
+	delete nodeInsertMenu;
+	nodeInsertMenu = nullptr;
 	
 	nodeDatas.clear();
 	
@@ -2800,6 +2793,16 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						}
 					}
 					
+					if (enabled(kFlag_NodeAdd) && hitTestResult.hasLink && commandMod())
+					{
+						nodeInsert.x = mousePosition.x;
+						nodeInsert.y = mousePosition.y;
+						nodeInsert.linkId = hitTestResult.link->id;
+					
+						state = kState_NodeInsert;
+						break;
+					}
+					
 					if (enabled(kFlag_Select) && hitTestResult.hasLink)
 					{
 						if (appendSelection == false)
@@ -3027,7 +3030,11 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			if (enabled(kFlag_NodeAdd) && keyboard.wentDown(SDLK_d))
 			{
+				// copy nodes
+				
 				std::set<GraphNodeId> newSelectedNodes;
+				
+				std::map<GraphNodeId, GraphNodeId> oldToNewNodeIds;
 				
 				for (auto nodeId : selectedNodes)
 				{
@@ -3057,6 +3064,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						}
 						
 						newSelectedNodes.insert(newNode.id);
+						
+						oldToNewNodeIds.insert({ node->id, newNode.id});
 						
 						if (commandMod())
 						{
@@ -3093,11 +3102,53 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								}
 							}
 							
-							// fixme : copy editor value too and let real-time connection know its value is changed
-							//newNode.editorValue = node->editorValue;
+							if (!node->editorValue.empty())
+							{
+								newNodePtr->editorValue = node->editorValue;
+								
+								if (realTimeConnection != nullptr)
+								{
+									auto & outputSockets = getOutputSockets(*typeDefinition, *nodeData);
+									
+									for (auto & outputSocket : outputSockets)
+									{
+										if (!outputSocket.isEditable)
+											continue;
+										
+										realTimeConnection->setDstSocketValue(newNodePtr->id, outputSocket.index, outputSocket.name, newNodePtr->editorValue);
+									}
+								}
+							}
 						}
 					}
 				}
+				
+				// copy links between copied nodes
+				
+				for (auto & linkItr : graph->links)
+				{
+					auto & link = linkItr.second;
+					
+					auto newSrcNodeIdItr = oldToNewNodeIds.find(link.srcNodeId);
+					auto newDstNodeIdItr = oldToNewNodeIds.find(link.dstNodeId);
+					
+					if (newSrcNodeIdItr != oldToNewNodeIds.end() &&
+						newDstNodeIdItr != oldToNewNodeIds.end())
+					{
+						auto newSrcNodeId = newSrcNodeIdItr->second;
+						auto newDstNodeId = newDstNodeIdItr->second;
+						
+						auto newLink = link;
+						newLink.id = graph->allocLinkId();
+						
+						newLink.srcNodeId = newSrcNodeId;
+						newLink.dstNodeId = newDstNodeId;
+						
+						graph->addLink(newLink, false);
+					}
+				}
+				
+				// copy visualizers
 				
 				std::set<EditorVisualizer*> newSelectedVisualizers;
 				
@@ -3597,22 +3648,110 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		
 	case kState_NodeInsert:
 		{
-			std::string typeName;
-			
-			if (nodeInsert.menu->tick(*this, *typeDefinitionLibrary, dt, typeName))
+			if (nodeInsert.linkId != kGraphLinkIdInvalid)
 			{
-				nodeInsert.menu->cancel();
+				auto link = tryGetLink(nodeInsert.linkId);
 				
-				state = kState_Idle;
-				
-				if (typeName.empty() == false)
+				if (link != nullptr)
 				{
-					if (tryAddNode(typeName, nodeInsert.x, nodeInsert.y, true, nullptr))
+					auto srcNode = tryGetNode(link->srcNodeId);
+					auto dstNode = tryGetNode(link->dstNodeId);
+					
+					if (srcNode != nullptr && dstNode != nullptr)
 					{
-						nodeTypeNameSelect->addToHistory(typeName);
+						auto srcTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
+						auto dstTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
+						
+						if (srcTypeDefinition != nullptr && dstTypeDefinition != nullptr)
+						{
+							if (srcTypeDefinition->inputSockets.size() >= 1 &&
+								dstTypeDefinition->outputSockets.size() >= 1)
+							{
+								auto srcSocketTypeName = srcTypeDefinition->inputSockets[0].typeName;
+								auto dstSocketTypeName = dstTypeDefinition->outputSockets[0].typeName;
+								
+								nodeInsertMenu->filter.type = GraphEdit_NodeTypeSelect::kFilterType_PrimarySocketTypes;
+								nodeInsertMenu->filter.srcSocketTypeName = srcSocketTypeName;
+								nodeInsertMenu->filter.dstSocketTypeName = dstSocketTypeName;
+							}
+						}
 					}
 				}
 				
+			}
+			
+			std::string typeName;
+			
+			if (nodeInsertMenu->tick(*this, *typeDefinitionLibrary, dt, typeName))
+			{
+				nodeInsertMenu->cancel();
+				
+				const GraphLinkId linkId = nodeInsert.linkId;
+				const float x = nodeInsert.x;
+				const float y = nodeInsert.y;
+				
+				//
+				
+				nodeInsert = NodeInsert();
+				state = kState_Idle;
+				
+				//
+				
+				if (typeName.empty() == false)
+				{
+					GraphNodeId nodeId;
+					
+					if (tryAddNode(typeName, x, y, true, &nodeId))
+					{
+						// hook up the new node between the endpoints of the existing link
+						
+						if (linkId != kGraphLinkIdInvalid)
+						{
+							auto linkPtr = tryGetLink(linkId);
+							Assert(linkPtr != nullptr);
+							
+							if (linkPtr != nullptr)
+							{
+								// since the existing link may be removed due to adding new links,
+								// we need to make a copy of it here so we know the node ids and
+								// socket indices to connect with
+								
+								auto link = *linkPtr;
+								
+								auto dstSocket = tryGetOutputSocket(nodeId, 0);
+								auto srcSocket = tryGetInputSocket(nodeId, 0);
+								
+								if (true)
+								{
+									GraphLink link1;
+									link1.id = graph->allocLinkId();
+									link1.srcNodeId = link.srcNodeId;
+									link1.srcNodeSocketIndex = link.srcNodeSocketIndex;
+									link1.srcNodeSocketName = link.srcNodeSocketName;
+									link1.dstNodeId = nodeId;
+									link1.dstNodeSocketIndex = dstSocket->index;
+									link1.dstNodeSocketName = dstSocket->name;
+									graph->addLink(link1, true);
+								}
+								
+								if (true)
+								{
+									GraphLink link2;
+									link2.id = graph->allocLinkId();
+									link2.srcNodeId = nodeId;
+									link2.srcNodeSocketIndex = srcSocket->index;
+									link2.srcNodeSocketName = srcSocket->name;
+									link2.dstNodeId = link.dstNodeId;
+									link2.dstNodeSocketIndex = link.dstNodeSocketIndex;
+									link2.dstNodeSocketName = link.dstNodeSocketName;
+									graph->addLink(link2, true);
+								}
+							}
+						}
+						
+						nodeTypeNameSelect->addToHistory(typeName);
+					}
+				}
 				break;
 			}
 		}
@@ -3665,7 +3804,10 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			//
 			
-			const int activity = realTimeConnection == nullptr ? 0 : realTimeConnection->nodeIsActive(node.id);
+			const int activity =
+				realTimeConnection == nullptr
+				? 0
+				: realTimeConnection->getNodeActivity(node.id);
 			
 			if (activity & GraphEdit_RealTimeConnection::kActivity_OneShot)
 			{
@@ -3704,7 +3846,10 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			if (link.isEnabled)
 			{
-				const bool isActive = realTimeConnection == nullptr ? false : realTimeConnection->linkIsActive(link.id, link.srcNodeId, link.srcNodeSocketIndex, link.dstNodeId, link.dstNodeSocketIndex);
+				const bool isActive =
+					realTimeConnection == nullptr
+					? false
+					: realTimeConnection->getLinkActivity(link.id, link.srcNodeId, link.srcNodeSocketIndex, link.dstNodeId, link.dstNodeSocketIndex) != 0;
 				
 				if (isActive)
 				{
@@ -3753,7 +3898,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 
 bool GraphEdit::tickTouches()
 {
-	if (state != kState_Idle && state != kState_TouchDrag && state != kState_TouchZoom)
+	if ((state != kState_Idle && state != kState_TouchDrag && state != kState_TouchZoom) || !framework.windowIsActive)
 	{
 		touches = Touches();
 		
@@ -4155,10 +4300,6 @@ bool GraphEdit::nodeResourceEditBegin(const GraphNodeId nodeId)
 	
 	//
 	
-	// todo : how to solve the issue of updating all graph instances with the newly edited data ?
-	//        perhaps add the notion of graph-local resources. it would be easiest to solve if each
-	//        graph instance just references the data instead of owning it
-	
 	auto node = tryGetNode(nodeId);
 	
 	Assert(node != nullptr);
@@ -4339,6 +4480,7 @@ void GraphEdit::doEditorOptions(const float dt)
 	{
 		if (doDrawer(editorOptions.menuIsVisible, "editor options"))
 		{
+			doTextBox(editorOptions.comment, "comment", dt);
 			doCheckBox(editorOptions.realTimePreview, "real-time preview", false);
 			doCheckBox(editorOptions.autoHideUi, "auto-hide UI", false);
 			doCheckBox(editorOptions.showBackground, "show background", false);
@@ -4825,7 +4967,7 @@ void GraphEdit::cancelEditing()
 		
 	case kState_NodeInsert:
 		{
-			nodeInsert.menu->cancel();
+			nodeInsertMenu->cancel();
 			
 			state = kState_Idle;
 			break;
@@ -4942,6 +5084,93 @@ void GraphEdit::draw() const
 		}
 	}
 
+#if 1 // todo : remove. test bezier control points, drawing only circles
+	{
+		for (auto & linkItr : graph->links)
+		{
+			auto linkId = linkItr.first;
+			
+			LinkPath path;
+			
+			if (getLinkPath(linkId, path))
+			{
+				setColor(colorWhite);
+				
+				float x1 = path.points[0].x;
+				float y1 = path.points[0].y;
+				
+				Path2d path2d;
+				
+				path2d.moveTo(x1, y1);
+				
+				for (int i = 1; i < path.points.size(); ++i)
+				{
+					const float x2 = path.points[i].x;
+					const float y2 = path.points[i].y;
+					
+					path2d.curveTo(x2, y2, -30.f, 0.f, +30.f, 0.f);
+					
+					x1 = x2;
+					y1 = y2;
+				}
+				
+				const int kMaxPoints = 64;
+
+				float pxyStorage[kMaxPoints * 2];
+				float hxyStorage[kMaxPoints * 2];
+
+				float * pxy = pxyStorage;
+				float * hxy = hxyStorage;
+
+				int numPoints = 0;
+				path2d.generatePoints(pxy, hxy, kMaxPoints, 1.f, numPoints);
+				
+				hqBegin(HQ_FILLED_CIRCLES, true);
+				{
+					for (int i = 0; i < numPoints; ++i)
+					{
+						hqFillCircle(pxy[i * 2 + 0], pxy[i * 2 + 1], 3.f);
+					}
+				}
+				hqEnd();
+			}
+		}
+	}
+#elif 0 // todo : remove. test bezier control points
+	{
+		for (auto & linkItr : graph->links)
+		{
+			auto linkId = linkItr.first;
+			
+			LinkPath path;
+			
+			if (getLinkPath(linkId, path))
+			{
+				setColor(colorWhite);
+				
+				float x1 = path.points[0].x;
+				float y1 = path.points[0].y;
+				
+				Path2d path2d;
+				
+				path2d.moveTo(x1, y1);
+				
+				for (int i = 1; i < path.points.size(); ++i)
+				{
+					const float x2 = path.points[i].x;
+					const float y2 = path.points[i].y;
+					
+					path2d.curveTo(x2, y2, -30.f, 0.f, +30.f, 0.f);
+					
+					x1 = x2;
+					y1 = y2;
+				}
+				
+				hqDrawPath(path2d, 4.f);
+			}
+		}
+	}
+#else
 	// traverse and draw links
 	
 	hqBegin(HQ_LINES);
@@ -4997,43 +5226,8 @@ void GraphEdit::draw() const
 		}
 	}
 	hqEnd();
-	
-#if 0 // todo : remove. test bezier control points
-	{
-		for (auto & linkItr : graph->links)
-		{
-			auto linkId = linkItr.first;
-			
-			LinkPath path;
-			
-			if (getLinkPath(linkId, path))
-			{
-				setColor(colorWhite);
-				
-				float x1 = path.points[0].x;
-				float y1 = path.points[0].y;
-				
-				Path2d path2d;
-				
-				path2d.moveTo(x1, y1);
-				
-				for (int i = 1; i < path.points.size(); ++i)
-				{
-					const float x2 = path.points[i].x;
-					const float y2 = path.points[i].y;
-					
-					path2d.curveTo(x2, y2, -30.f, 0.f, +30.f, 0.f);
-					
-					x1 = x2;
-					y1 = y2;
-				}
-				
-				hqDrawPath(path2d, 4.f);
-			}
-		}
-	}
 #endif
-	
+
 	hqBegin(HQ_FILLED_CIRCLES);
 	{
 		for (auto & linkItr : graph->links)
@@ -5319,7 +5513,7 @@ void GraphEdit::draw() const
 	
 	if (state == kState_NodeInsert)
 	{
-		nodeInsert.menu->draw(*this, *typeDefinitionLibrary);
+		nodeInsertMenu->draw(*this, *typeDefinitionLibrary);
 	}
 	
 	//
@@ -5529,13 +5723,6 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	}
 	hqEnd();
 	
-	hqBegin(HQ_STROKED_ROUNDED_RECTS);
-	{
-		setColor(isSelected ? colorWhite : colorBlack);
-		hqStrokeRoundedRect(0.f + border/2, 0.f + border/2, sx - border/2, sy - border/2, radius, 3.f);
-	}
-	hqEnd();
-	
 	if (hasIssues)
 		hqClearGradient();
 	
@@ -5708,73 +5895,6 @@ bool GraphEdit::load(const char * filename)
 		if (xmlGraph != nullptr)
 		{
 			result &= graph->loadXml(xmlGraph, typeDefinitionLibrary);
-			
-		#if ENABLE_FILE_FIXUPS
-			// fixup zkey allocation
-			
-			nextZKey = intAttrib(xmlGraph, "nextZKey", nextZKey);
-			
-			// fixup node datas. todo : remove these fixups
-			
-			for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
-			{
-				const int nodeType = intAttrib(xmlNode, "nodeType", 0);
-				if (nodeType != 0)
-					continue;
-				
-				const GraphNodeId nodeId = intAttrib(xmlNode, "id", kGraphNodeIdInvalid);
-				if (nodeId == kGraphNodeIdInvalid)
-					continue;
-				
-				auto nodeDataPtr = tryGetNodeData(nodeId);
-				Assert(nodeDataPtr != nullptr);
-				if (nodeDataPtr == nullptr)
-					continue;
-				
-				auto & nodeData = *nodeDataPtr;
-				
-				nodeData.x = floatAttrib(xmlNode, "editorX", nodeData.x);
-				nodeData.y = floatAttrib(xmlNode, "editorY", nodeData.y);
-				nodeData.zKey = intAttrib(xmlNode, "zKey", nodeData.zKey);
-				nodeData.isFolded = boolAttrib(xmlNode, "folded", nodeData.isFolded);
-				nodeData.foldAnimProgress = nodeData.isFolded ? 0.f : 1.f;
-				
-				nodeData.displayName = stringAttrib(xmlNode, "editorName", nodeData.displayName.c_str());
-			}
-			
-			// fixup visualizers
-			for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
-			{
-				const int nodeType = intAttrib(xmlNode, "nodeType", 0);
-				if (nodeType != 1)
-					continue;
-				
-				auto visualizerId = intAttrib(xmlNode, "id", kGraphNodeIdInvalid);
-				Assert(visualizerId != kGraphNodeIdInvalid);
-				if (visualizerId == kGraphNodeIdInvalid)
-					continue;
-				
-				const XMLElement * xmlVisualizer = xmlNode->FirstChildElement("visualizer");
-				Assert(xmlVisualizer != nullptr);
-				if (xmlVisualizer == nullptr)
-					continue;
-				
-				EditorVisualizer & visualizer = visualizers[visualizerId];
-				
-				visualizer.id = visualizerId;
-				visualizer.x = floatAttrib(xmlNode, "editorX", visualizer.x);
-				visualizer.y = floatAttrib(xmlNode, "editorY", visualizer.y);
-				visualizer.zKey = intAttrib(xmlNode, "zKey", visualizer.zKey);
-				
-				visualizer.nodeId = visualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", visualizer.nodeId);
-				visualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", visualizer.srcSocketName.c_str());
-				visualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", visualizer.dstSocketName.c_str());
-				visualizer.sx = floatAttrib(xmlVisualizer, "sx", visualizer.sx);
-				visualizer.sy = floatAttrib(xmlVisualizer, "sy", visualizer.sy);
-			}
-		#endif
-			
-			//
 			
 			const XMLElement * xmlEditor = xmlGraph->FirstChildElement("editor");
 			if (xmlEditor != nullptr)
@@ -5966,29 +6086,6 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 			nodeData.displayName = stringAttrib(nodeDataElem, "displayName", nodeData.displayName.c_str());
 			
 			nextZKey = std::max(nextZKey, nodeData.zKey + 1);
-			
-			//
-			
-			// todo : remove support for visualizers stored in node datas
-			
-			const XMLElement * xmlVisualizer = nodeDataElem->FirstChildElement("visualizer");
-			
-			if (xmlVisualizer != nullptr)
-			{
-				auto visualizerId = graph->allocNodeId();
-				auto & visualizer = visualizers[visualizerId];
-				
-				visualizer.id = visualizerId;
-				visualizer.x = nodeData.x;
-				visualizer.y = nodeData.y;
-				visualizer.zKey = nodeData.zKey;
-				
-				visualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", visualizer.nodeId);
-				visualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", visualizer.srcSocketName.c_str());
-				visualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", visualizer.dstSocketName.c_str());
-				visualizer.sx = floatAttrib(xmlVisualizer, "sx", visualizer.sx);
-				visualizer.sy = floatAttrib(xmlVisualizer, "sy", visualizer.sy);
-			}
 		}
 	}
 	
@@ -6024,6 +6121,7 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 	{
 		EditorOptions defaultOptions;
 		
+		editorOptions.comment = stringAttrib(editorOptionsElem, "comment", editorOptions.comment.c_str());
 		editorOptions.menuIsVisible = boolAttrib(editorOptionsElem, "menuIsVisible", defaultOptions.menuIsVisible);
 		editorOptions.realTimePreview = boolAttrib(editorOptionsElem, "realTimePreview", defaultOptions.realTimePreview);
 		editorOptions.autoHideUi = boolAttrib(editorOptionsElem, "autoHideUi", defaultOptions.autoHideUi);
@@ -6119,6 +6217,7 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 	
 	editorElem.OpenElement("editorOptions");
 	{
+		editorElem.PushAttribute("comment", editorOptions.comment.c_str());
 		editorElem.PushAttribute("menuIsVisible", editorOptions.menuIsVisible);
 		editorElem.PushAttribute("realTimePreview", editorOptions.realTimePreview);
 		editorElem.PushAttribute("autoHideUi", editorOptions.autoHideUi);

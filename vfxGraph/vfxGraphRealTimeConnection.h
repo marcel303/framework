@@ -81,8 +81,8 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	virtual bool getNodeIssues(const GraphNodeId nodeId, std::vector<std::string> & issues) override;
 	virtual bool getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines) override;
 	
-	virtual int nodeIsActive(const GraphNodeId nodeId) override;
-	virtual int linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override;
+	virtual int getNodeActivity(const GraphNodeId nodeId) override;
+	virtual int getLinkActivity(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override;
 	
 	virtual bool getNodeDynamicSockets(const GraphNodeId nodeId, std::vector<DynamicInput> & inputs, std::vector<DynamicOutput> & outputs) const override;
 	

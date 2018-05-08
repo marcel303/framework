@@ -62,11 +62,6 @@ VfxGraph::VfxGraph()
 	, time(0.0)
 {
 	dynamicData = new VfxDynamicData();
-	
-	if (s_dummySurface == nullptr)
-	{
-		s_dummySurface = new Surface(1, 1, false);
-	}
 }
 
 VfxGraph::~VfxGraph()
@@ -96,6 +91,14 @@ void VfxGraph::destroy()
 			break;
 		case ValueToFree::kType_Color:
 			delete (Color*)i.mem;
+			break;
+		case ValueToFree::kType_Channel:
+			{
+				VfxChannel * channel = (VfxChannel*)i.mem;
+				if (channel)
+					delete channel->data;
+				delete channel;
+			}
 			break;
 		default:
 			Assert(false);
@@ -143,7 +146,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = Parse::Bool(inputValue);
 		
-		input.connectTo(value, kVfxPlugType_Bool, true);
+		input.connectToImmediate(value, kVfxPlugType_Bool);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Bool, value));
 	}
@@ -153,7 +156,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = Parse::Int32(inputValue);
 		
-		input.connectTo(value, kVfxPlugType_Int, true);
+		input.connectToImmediate(value, kVfxPlugType_Int);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Int, value));
 	}
@@ -163,7 +166,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = Parse::Float(inputValue);
 		
-		input.connectTo(value, kVfxPlugType_Float, true);
+		input.connectToImmediate(value, kVfxPlugType_Float);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Float, value));
 	}
@@ -173,7 +176,7 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = inputValue;
 		
-		input.connectTo(value, kVfxPlugType_String, true);
+		input.connectToImmediate(value, kVfxPlugType_String);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_String, value));
 	}
@@ -183,9 +186,23 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 		
 		*value = Color::fromHex(inputValue.c_str());
 		
-		input.connectTo(value, kVfxPlugType_Color, true);
+		input.connectToImmediate(value, kVfxPlugType_Color);
 		
 		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Color, value));
+	}
+	else if (input.type == kVfxPlugType_Channel)
+	{
+		VfxChannel * value = new VfxChannel();
+		
+		float * data;
+		int dataSize;
+		VfxChannelData::parse(inputValue.c_str(), data, dataSize);
+		
+		value->setData(data, false, dataSize);
+		
+		input.connectToImmediate(value, kVfxPlugType_Channel);
+		
+		valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Channel, value));
 	}
 	else
 	{
@@ -287,32 +304,29 @@ int VfxGraph::traverseDraw(const int sx, const int sy) const
 	
 	// start traversal at the display node and traverse to leafs following predeps and and back up the tree again to draw
 	
-	if (displayNodeIds.empty() == false)
+	VfxNodeDisplay * displayNode = getMainDisplayNode();
+	
+	if (displayNode != nullptr)
 	{
-		auto displayNodeId = *displayNodeIds.begin();
+		displayNode->traverseDraw(nextDrawTraversalId);
 		
-		auto nodeItr = nodes.find(displayNodeId);
-		Assert(nodeItr != nodes.end());
-		if (nodeItr != nodes.end())
+		const VfxImageBase * image = displayNode->getImage();
+		
+		if (image != nullptr)
 		{
-			auto node = nodeItr->second;
-			
-			VfxNodeDisplay * displayNode = static_cast<VfxNodeDisplay*>(node);
-			
-			displayNode->traverseDraw(nextDrawTraversalId);
-			
-			const VfxImageBase * image = displayNode->getImage();
-			
-			if (image != nullptr)
-			{
-				result = image->getTexture();
-			}
+			result = image->getTexture();
 		}
 	}
 	
 #if 1 // todo : make this depend on whether the graph editor is visible or not ? or whether the node is referenced by the editor ?
 
 	// note : traversal for sub-graphs not connected to the display node should start at nodes without any connected outputs. otherwise we might start in the middle of a sub-graph, resulting in undefined behavior
+	
+// todo : create dummy surface explicitly during init ?
+	if (s_dummySurface == nullptr)
+	{
+		s_dummySurface = new Surface(1, 1, false);
+	}
 	
 	pushSurface(s_dummySurface);
 	{
@@ -355,6 +369,25 @@ int VfxGraph::traverseDraw(const int sx, const int sy) const
 	VFXGRAPH_SY = oldSy;
 	
 	return result;
+}
+
+VfxNodeDisplay * VfxGraph::getMainDisplayNode() const
+{
+	if (displayNodeIds.empty() == false)
+	{
+		auto displayNodeId = *displayNodeIds.begin();
+		
+		auto nodeItr = nodes.find(displayNodeId);
+		Assert(nodeItr != nodes.end());
+		if (nodeItr != nodes.end())
+		{
+			auto node = nodeItr->second;
+			
+			return static_cast<VfxNodeDisplay*>(node);
+		}
+	}
+	
+	return nullptr;
 }
 
 //
@@ -629,201 +662,4 @@ void connectVfxSockets(VfxNodeBase * srcNode, const int srcNodeSocketIndex, VfxP
 		
 		dstNode->triggerTargets.push_back(triggerTarget);
 	}
-}
-
-//
-
-#include "StringEx.h"
-#include "tinyxml2.h"
-#include "vfxTypes.h"
-
-using namespace tinyxml2;
-
-struct VfxResourcePath
-{
-	GraphNodeId nodeId;
-	std::string type;
-	std::string name;
-	
-	VfxResourcePath()
-		: nodeId(kGraphNodeIdInvalid)
-		, type()
-		, name()
-	{
-	}
-	
-	bool operator<(const VfxResourcePath & other) const
-	{
-		if (nodeId != other.nodeId)
-			return nodeId < other.nodeId;
-		if (type != other.type)
-			return type < other.type;
-		if (name != other.name)
-			return name < other.name;
-		
-		return false;
-	}
-	
-	std::string toString() const
-	{
-		return String::FormatC("%s:%s/%d/%s", type.c_str(), "nodes", nodeId, name.c_str());
-	}
-};
-
-struct VfxResourceElem
-{
-	void * resource;
-	int refCount;
-	
-	VfxResourceElem()
-		: resource(nullptr)
-		, refCount(0)
-	{
-	}
-};
-
-static std::map<VfxResourcePath, VfxResourceElem> resourcesByPath;
-static std::map<void*, VfxResourcePath> pathsByResource;
-
-bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const char * name, void *& resource)
-{
-	VfxResourcePath path;
-	path.nodeId = node.id;
-	path.type = type;
-	path.name = name;
-	
-	auto i = resourcesByPath.find(path);
-	
-	if (i != resourcesByPath.end())
-	{
-		logDebug("incremented refCount for resource %s", path.toString().c_str());
-		
-		auto & e = i->second;
-		
-		e.refCount++;
-		
-		resource = e.resource;
-		
-		return true;
-	}
-	else
-	{
-		const char * resourceData = node.getResource(type, name, nullptr);
-		
-		XMLDocument d;
-		bool hasXml = false;
-		
-		if (resourceData != nullptr)
-		{
-			hasXml = d.Parse(resourceData) == XML_SUCCESS;
-		}
-		
-		//
-		
-		resource = nullptr;
-		
-		if (strcmp(type, "timeline") == 0)
-		{
-			auto timeline = new VfxTimeline();
-			
-			if (hasXml)
-			{
-				timeline->load(d.RootElement());
-			}
-			
-			resource = timeline;
-		}
-		else if (strcmp(type, "osc.path") == 0)
-		{
-			auto path = new VfxOscPath();
-			
-			if (hasXml)
-			{
-				path->load(d.RootElement());
-			}
-			
-			resource = path;
-		}
-		else if (strcmp(type, "osc.pathList") == 0)
-		{
-			auto pathList = new VfxOscPathList();
-			
-			if (hasXml)
-			{
-				pathList->load(d.RootElement());
-			}
-			
-			resource = pathList;
-		}
-		
-		//
-		
-		Assert(resource != nullptr);
-		if (resource == nullptr)
-		{
-			logError("failed to create resource %s", path.toString().c_str());
-			
-			return false;
-		}
-		else
-		{
-			logDebug("created resource %s", path.toString().c_str());
-			
-			VfxResourceElem e;
-			e.resource = resource;
-			e.refCount = 1;
-			
-			resourcesByPath[path] = e;
-			pathsByResource[resource] = path;
-			
-			return true;
-		}
-	}
-}
-
-bool freeVfxNodeResourceImpl(void * resource)
-{
-	bool result = false;
-	
-	auto i = pathsByResource.find(resource);
-	
-	Assert(i != pathsByResource.end());
-	if (i == pathsByResource.end())
-	{
-		logError("failed to find resource %p", resource);
-	}
-	else
-	{
-		auto & path = i->second;
-		
-		auto j = resourcesByPath.find(path);
-		
-		Assert(j != resourcesByPath.end());
-		if (j == resourcesByPath.end())
-		{
-			logError("failed to find resource elem for resource %s", path.toString().c_str());
-		}
-		else
-		{
-			auto & e = j->second;
-			
-			e.refCount--;
-			
-			if (e.refCount == 0)
-			{
-				logDebug("refCount reached zero for resource %s. resource will be freed", path.toString().c_str());
-				
-				resourcesByPath.erase(j);
-				pathsByResource.erase(i);
-				
-				result = true;
-			}
-			else
-			{
-				logDebug("decremented refCount for resource %s", path.toString().c_str());
-			}
-		}
-	}
-	
-	return result;
 }

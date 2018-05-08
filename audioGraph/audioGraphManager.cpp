@@ -152,20 +152,20 @@ struct AudioGraphFileRTC : GraphEdit_RealTimeConnection
 			return file->activeInstance->realTimeConnection->getNodeDescription(nodeId, lines);
 	}
 	
-	virtual int nodeIsActive(const GraphNodeId nodeId) override
+	virtual int getNodeActivity(const GraphNodeId nodeId) override
 	{
 		if (file->activeInstance == nullptr)
 			return false;
 		else
-			return file->activeInstance->realTimeConnection->nodeIsActive(nodeId);
+			return file->activeInstance->realTimeConnection->getNodeActivity(nodeId);
 	}
 
-	virtual int linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
+	virtual int getLinkActivity(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
 	{
 		if (file->activeInstance == nullptr)
 			return false;
 		else
-			return file->activeInstance->realTimeConnection->linkIsActive(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
+			return file->activeInstance->realTimeConnection->getLinkActivity(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
 	}
 
 	virtual int getNodeCpuHeatMax() const override
@@ -478,7 +478,7 @@ void AudioGraphManager_Basic::shut()
 	{
 		AudioGraphInstance *& instance = instances.front();
 		
-		free(instance);
+		free(instance, false);
 	}
 	
 	//
@@ -511,7 +511,7 @@ void AudioGraphManager_Basic::addGraphToCache(const char * filename)
 	}
 }
 
-AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filename, AudioGraphGlobals * globals)
+AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filename, AudioGraphGlobals * globals, const bool createdPaused)
 {
 	if (globals == nullptr)
 	{
@@ -528,7 +528,7 @@ AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filena
 		
 		if (elem.isValid)
 		{
-			audioGraph = constructAudioGraph(elem.graph, typeDefinitionLibrary, globals);
+			audioGraph = constructAudioGraph(elem.graph, typeDefinitionLibrary, globals, createdPaused);
 		}
 	}
 	else
@@ -543,7 +543,7 @@ AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filena
 			
 			if (elem.isValid)
 			{
-				audioGraph = constructAudioGraph(elem.graph, typeDefinitionLibrary, globals);
+				audioGraph = constructAudioGraph(elem.graph, typeDefinitionLibrary, globals, createdPaused);
 			}
 		}
 		else
@@ -552,7 +552,7 @@ AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filena
 			
 			if (graph.load(filename, typeDefinitionLibrary))
 			{
-				audioGraph = constructAudioGraph(graph, typeDefinitionLibrary, globals);
+				audioGraph = constructAudioGraph(graph, typeDefinitionLibrary, globals, createdPaused);
 			}
 		}
 	}
@@ -576,10 +576,19 @@ AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filena
 	}
 }
 
-void AudioGraphManager_Basic::free(AudioGraphInstance *& instance)
+void AudioGraphManager_Basic::free(AudioGraphInstance *& instance, const bool doRampDown)
 {
 	if (instance == nullptr)
 	{
+		return;
+	}
+	
+	if (doRampDown)
+	{
+		instance->audioGraph->rampDownRequested = true;
+		
+		instance = nullptr;
+		
 		return;
 	}
 	
@@ -603,7 +612,25 @@ void AudioGraphManager_Basic::free(AudioGraphInstance *& instance)
 	Assert(instance == nullptr); // found and freed?
 }
 
-void AudioGraphManager_Basic::tick(const float dt)
+void AudioGraphManager_Basic::tickMain()
+{
+	std::vector<AudioGraphInstance*> instancesToRemove;
+
+	for (auto & instance : instances)
+	{
+		if (instance->audioGraph->rampedDown)
+		{
+			instancesToRemove.push_back(instance);
+		}
+	}
+	
+	for (auto & instanceToRemove : instancesToRemove)
+	{
+		free(instanceToRemove, false);
+	}
+}
+
+void AudioGraphManager_Basic::tickAudio(const float dt)
 {
 	audioMutex.lock();
 	{
@@ -752,7 +779,7 @@ void AudioGraphManager_RTE::selectInstance(const AudioGraphInstance * instance)
 	SDL_UnlockMutex(audioMutex);
 }
 
-AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename, AudioGraphGlobals * globals)
+AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename, AudioGraphGlobals * globals, const bool createdPaused)
 {
 	if (globals == nullptr)
 	{
@@ -792,7 +819,7 @@ AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename
 	
 	//
 	
-	auto audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary, globals);
+	auto audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary, globals, createdPaused);
 	auto realTimeConnection = new AudioRealTimeConnection(file->audioValueHistorySet, globals);
 	
 	//
@@ -823,10 +850,19 @@ AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename
 	return instance;
 }
 
-void AudioGraphManager_RTE::free(AudioGraphInstance *& instance)
+void AudioGraphManager_RTE::free(AudioGraphInstance *& instance, const bool doRampDown)
 {
 	if (instance == nullptr)
 	{
+		return;
+	}
+	
+	if (doRampDown)
+	{
+		instance->audioGraph->rampDownRequested = true;
+		
+		instance = nullptr;
+		
 		return;
 	}
 	
@@ -892,7 +928,28 @@ void AudioGraphManager_RTE::free(AudioGraphInstance *& instance)
 	instance = nullptr;
 }
 
-void AudioGraphManager_RTE::tick(const float dt)
+void AudioGraphManager_RTE::tickMain()
+{
+	std::vector<AudioGraphInstance*> instancesToRemove;
+
+	for (auto & file : files)
+	{
+		for (auto & instance : file.second->instanceList)
+		{
+			if (instance->audioGraph->rampedDown)
+			{
+				instancesToRemove.push_back(instance);
+			}
+		}
+	}
+	
+	for (auto & instanceToRemove : instancesToRemove)
+	{
+		free(instanceToRemove, false);
+	}
+}
+
+void AudioGraphManager_RTE::tickAudio(const float dt)
 {
 	SDL_LockMutex(audioMutex);
 	{
@@ -1056,7 +1113,7 @@ void AudioGraphManager_MultiRTE::selectInstance(const AudioGraphInstance * insta
 	SDL_UnlockMutex(audioMutex);
 }
 
-AudioGraphInstance * AudioGraphManager_MultiRTE::createInstance(const char * filename, AudioGraphGlobals * globals)
+AudioGraphInstance * AudioGraphManager_MultiRTE::createInstance(const char * filename, AudioGraphGlobals * globals, const bool createdPaused)
 {
 	if (globals == nullptr)
 	{
@@ -1096,7 +1153,7 @@ AudioGraphInstance * AudioGraphManager_MultiRTE::createInstance(const char * fil
 	
 	//
 	
-	auto audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary, globals);
+	auto audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary, globals, createdPaused);
 	auto realTimeConnection = new AudioRealTimeConnection(file->audioValueHistorySet, globals);
 	
 	//
@@ -1127,10 +1184,19 @@ AudioGraphInstance * AudioGraphManager_MultiRTE::createInstance(const char * fil
 	return instance;
 }
 
-void AudioGraphManager_MultiRTE::free(AudioGraphInstance *& instance)
+void AudioGraphManager_MultiRTE::free(AudioGraphInstance *& instance, const bool doRampDown)
 {
 	if (instance == nullptr)
 	{
+		return;
+	}
+	
+	if (doRampDown)
+	{
+		instance->audioGraph->rampDownRequested = true;
+		
+		instance = nullptr;
+		
 		return;
 	}
 	
@@ -1196,7 +1262,28 @@ void AudioGraphManager_MultiRTE::free(AudioGraphInstance *& instance)
 	instance = nullptr;
 }
 
-void AudioGraphManager_MultiRTE::tick(const float dt)
+void AudioGraphManager_MultiRTE::tickMain()
+{
+	std::vector<AudioGraphInstance*> instancesToRemove;
+
+	for (auto & file : files)
+	{
+		for (auto & instance : file.second->instanceList)
+		{
+			if (instance->audioGraph->rampedDown)
+			{
+				instancesToRemove.push_back(instance);
+			}
+		}
+	}
+	
+	for (auto & instanceToRemove : instancesToRemove)
+	{
+		free(instanceToRemove, false);
+	}
+}
+
+void AudioGraphManager_MultiRTE::tickAudio(const float dt)
 {
 	SDL_LockMutex(audioMutex);
 	{

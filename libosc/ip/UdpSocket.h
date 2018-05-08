@@ -158,6 +158,7 @@ public:
 	UdpListeningReceiveSocket( const IpEndpointName& localEndpoint, PacketListener *listener )
         : listener_( listener )
     {
+    	SetAllowReuse(true);
         Bind( localEndpoint );
         mux_.AttachSocketListener( this, listener_ );
     }

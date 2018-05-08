@@ -30,6 +30,10 @@
 #include <algorithm>
 #include <string.h>
 
+#if BINAURAL_USE_NEON
+	#include "sse2neon/SSE2NEON.h"
+#endif
+
 #undef AUDIO_UPDATE_SIZE
 
 namespace binaural
@@ -155,7 +159,7 @@ namespace binaural
 	
 	void Binauralizer::fillReadBuffer(const HRIRSampleData & hrir)
 	{
-		if (sampleBuffer.totalWriteSize < AUDIO_UPDATE_SIZE || sampleSet == nullptr)
+		if (sampleBuffer.totalWriteSize < AUDIO_UPDATE_SIZE)
 		{
 			memset(audioBufferL.samples, 0, sizeof(audioBufferL));
 			memset(audioBufferR.samples, 0, sizeof(audioBufferR));
@@ -262,7 +266,9 @@ namespace binaural
 			
 			const int todo = std::min(left, AUDIO_BUFFER_SIZE - nextReadLocation);
 			
-		#if BINAURAL_USE_SSE
+			// todo : add BINAURAL_USE_SIMD check
+			
+		#if BINAURAL_USE_SSE || BINAURAL_USE_NEON
 			debugAssert((todo % 4) == 0);
 			
 			const float4 * __restrict audioBufferL4 = (float4*)audioBufferL.samples + nextReadLocation / 4;

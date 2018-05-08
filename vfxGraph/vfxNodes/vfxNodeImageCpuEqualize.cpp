@@ -68,34 +68,15 @@ static void computeHistogram(const VfxImageCpu::Channel * __restrict channel, co
 {
 	memset(histogram, 0, sizeof(int) * 256);
 	
-	if (channel->stride == 1)
+	for (int y = 0; y < sy; ++y)
 	{
-		for (int y = 0; y < sy; ++y)
+		const uint8_t * __restrict srcPtr = channel->data + y * channel->pitch;
+		
+		for (int x = 0; x < sx; ++x)
 		{
-			const uint8_t * __restrict srcPtr = channel->data + y * channel->pitch;
+			const int value = srcPtr[x];
 			
-			for (int x = 0; x < sx; ++x)
-			{
-				const int value = srcPtr[x];
-				
-				histogram[value]++;
-			}
-		}
-	}
-	else
-	{
-		for (int y = 0; y < sy; ++y)
-		{
-			const uint8_t * __restrict srcPtr = channel->data + y * channel->pitch;
-
-			for (int x = 0; x < sx; ++x)
-			{
-				const int value = *srcPtr;
-
-				histogram[value]++;
-				
-				srcPtr += channel->stride;
-			}
+			histogram[value]++;
 		}
 	}
 }
@@ -123,12 +104,11 @@ static void equalizeHistogram(const int * __restrict srcHistogram, const int num
 VfxNodeImageCpuEqualize::VfxNodeImageCpuEqualize()
 	: VfxNodeBase()
 	, imageData()
-	, imageOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
 	addInput(kInput_Channel, kVfxPlugType_Int);
-	addOutput(kOutput_Image, kVfxPlugType_ImageCpu, &imageOutput);
+	addOutput(kOutput_Image, kVfxPlugType_ImageCpu, &imageData.image);
 }
 
 void VfxNodeImageCpuEqualize::tick(const float dt)
@@ -141,14 +121,10 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 	if (image == nullptr || image->sx == 0 || image->sy == 0 || image->numChannels == 0)
 	{
 		imageData.free();
-		
-		imageOutput.reset();
 	}
 	else if (isPassthrough)
 	{
 		imageData.free();
-		
-		imageOutput = *image;
 	}
 	else
 	{
@@ -157,9 +133,7 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 			channel == kChannel_RGBA ? 4 :
 			channel == kChannel_RGB ? 3 : 1);
 		
-		imageData.allocOnSizeChange(image->sx, image->sy, numChannels, true);
-		
-		imageOutput = imageData.image;
+		imageData.allocOnSizeChange(image->sx, image->sy, numChannels);
 
 		for (int i = 0; i < numChannels; ++i)
 		{
@@ -167,6 +141,7 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 			
 			const VfxImageCpu::Channel * __restrict srcChannel = nullptr;
 			
+			// todo : if the source only has one channel there's no point of doing equalization x4
 			if (channel == kChannel_R)
 				srcChannel = &image->channel[0];
 			else if (channel == kChannel_G)
@@ -205,7 +180,6 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 				float error = 0.f;
 			#endif
 			
-				if (numChannels == 1 && image->numChannels == 1)
 				{
 				#if USE_AVX2 && USE_ERROR_DIFFUSION == 0
 					// optimized version using AVX scattered reads from remap table
@@ -268,30 +242,6 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 					#endif
 						
 						dstPtr[x] = dstValue;
-					}
-				}
-				else
-				{
-					const int srcStride = srcChannel->stride;
-					const int dstStride = dstChannel->stride;
-					
-					for (int x = 0; x < image->sx; ++x)
-					{
-					#if USE_ERROR_DIFFUSION
-						const int srcValue = *srcPtr;
-						const float dstValuef = remap[srcValue];
-						const int dstValue = std::max(0, std::min(255, int(std::round(dstValuef + error))));
-						
-						error = dstValuef - dstValue;
-					#else
-						const int srcValue = *srcPtr;
-						const int dstValue = remap[srcValue];
-					#endif
-						
-						*dstPtr = dstValue;
-						
-						srcPtr += srcStride;
-						dstPtr += dstStride;
 					}
 				}
 			}

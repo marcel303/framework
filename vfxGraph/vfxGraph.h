@@ -48,7 +48,9 @@ struct VfxDynamicLink;
 struct VfxGraph;
 struct VfxNodeBase;
 struct VfxPlug;
+struct VfxResourceBase;
 
+struct VfxNodeDisplay;
 struct VfxNodeOutput;
 
 extern VfxGraph * g_currentVfxGraph;
@@ -66,7 +68,8 @@ struct VfxGraph
 			kType_Float,
 			kType_Transform,
 			kType_String,
-			kType_Color
+			kType_Color,
+			kType_Channel
 		};
 		
 		Type type;
@@ -109,6 +112,8 @@ struct VfxGraph
 	void tick(const int sx, const int sy, const float dt);
 	void draw(const int sx, const int sy) const;
 	int traverseDraw(const int sx, const int sy) const;
+	
+	VfxNodeDisplay * getMainDisplayNode() const;
 };
 
 //
@@ -172,25 +177,3 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
 
 void connectVfxSockets(VfxNodeBase * srcNode, const int srcNodeSocketIndex, VfxPlug * srcSocket, VfxNodeBase * dstNode, const int dstNodeSocketIndex, VfxPlug * dstSocket, const std::map<std::string, std::string> & linkParams, const bool addPredep);
-
-bool createVfxNodeResourceImpl(const GraphNode & node, const char * type, const char * name, void *& resource);
-
-template <typename T> bool createVfxNodeResource(const GraphNode & node, const char * type, const char * name, T *& resource)
-{
-	return createVfxNodeResourceImpl(node, type, name, (void*&)resource);
-}
-
-bool freeVfxNodeResourceImpl(void * resource);
-
-template <typename T> void freeVfxNodeResource(T *& resource)
-{
-	if (resource != nullptr)
-	{
-		if (freeVfxNodeResourceImpl(resource))
-		{
-			delete resource;
-		}
-		
-		resource = nullptr;
-	}
-}

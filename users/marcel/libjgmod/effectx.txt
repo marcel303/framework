@@ -1,0 +1,97 @@
+MOD, S3M, XM, and IT uses different numbers to represent different commands.
+JGMOD convert these different commands in to protracker like commands.
+Command 0-15 are protracker effects. Others are S3M and XM extended commands.
+
+Below are the list of JGMOD commands supported. As more it is supported
+by JGMOD, I will update the list. This is good for my own reference and
+maybe to you too.
+
+Command
+-------
+-2      Note Off (XM)
+-1      Note Cut (S3M)
+ 0      Arpeggio. (MOD, XM)
+ 1      Pitch slide up. (MOD)
+ 2      Pitch slide down. (MOD)
+ 3      Slide to note. (MOD, S3M, XM)
+ 4      Vibrato. (MOD, S3M)
+ 5      Slide to note + Volume slide. (MOD)
+ 6      Vibrato + volume slide. (MOD)
+ 7      Tremolo. (MOD, XM)
+ 8      Set panning.  (MOD, XM)
+ 9      Set sample offset. (MOD, S3M, XM)
+10      Volume slide. (MOD)
+11      Position Jump. (MOD, S3M, XM)
+12      Set Volume. (MOD, XM)
+13      Pattern Break. (MOD, S3M, XM)
+14      Extended command. See below
+15      Set tempo and bpm. (MOD, XM)
+
+// new set of effects for S3M.
+16      Set tempo. (S3M)
+17      Volume slide. (S3M)
+18      Porta Down. (S3M)
+19      Porta Up. (S3M)
+20      Tremor. (S3M)
+21      S3M Arpeggio. (S3M)
+22      Vibrato + Volume Slide. (S3M)
+23      Portemento to note + volume slide. (S3M)
+24      Multi Retrig. (S3M)
+25      S3M tremolo. (S3M)
+26      Set bpm. (S3M)
+27      Fine vibrato. (S3M)
+28      Set Global volume. (S3M, XM)
+29      Set Panning. (S3M)
+
+// new set of effects for XM
+30      Pitch slide up (XM).
+31      Pitch slide down (XM).
+32      XM Slide to note + Volume slide. (XM)
+33      XM Vibrato + Volume slide (XM)
+34      XM Volume slide (XM).
+35      Global Volume Slide(XM)
+36      Key off(XM)
+37      Set envelop position(XM)
+38      Panning Slide(XM)
+39      Extra fine slide up/down (XM)
+
+
+Extended command
+----------------
+1       Fine pitch slide up. (MOD)
+2       Fine pitch slide down. (MOD)
+3       Set glissando. Not supported.
+4       Set vibrato waveform. (MOD, S3M)
+5       Set finetune. Not supported.
+6       Loop pattern. (MOD, S3M, XM)
+7       Set tremolo waveform. (MOD, S3M, XM)
+8       Set 16 positon panning. (MOD, S3M)
+9       Retrigger sample. (MOD, XM)
+10      Fine volume slide up. (MOD)
+11      Fine volume slide down. (MOD)
+12      Cut sample. (MOD, S3M, XM)
+13      Delay Sample. (MOD, S3M, XM)
+14      Delay pattern. (MOD, S3M, XM)
+
+// new extended effects for S3M and XM
+16      Stereo Control (S3M)
+17      Fine porta up (XM)
+18      Fine porta down (XM)
+19      Fine volume slide up (XM)
+20      Fine volume slide down (XM)
+
+
+Volume Colum Effects
+--------------------
+0x10 to 0x50    Set volume
+0x60 to 0x6F    Volume Slide Down
+0x70 to 0x7F    Volume Slide Up
+0x80 to 0x8F    Fine volume slide down
+0x90 to 0x9F    Fine volume slide up
+0xA0 to 0xAF    Set vibrato Speed
+0xB0 to 0xBF    Vibrato
+0xC0 to 0xCF    Set Panning
+0xD0 to 0xDF    Panning slide left
+0xE0 to 0xEF    Panning slide right
+0xF0 to 0xFF    Tone porta
+

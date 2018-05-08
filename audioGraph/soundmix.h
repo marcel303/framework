@@ -60,6 +60,10 @@ struct PcmData
 
 struct AudioSource
 {
+	virtual ~AudioSource()
+	{
+	}
+	
 	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) = 0;
 };
 
@@ -150,7 +154,8 @@ struct AudioVoice
 		kSpeaker_None,
 		kSpeaker_LeftAndRight,
 		kSpeaker_Left,
-		kSpeaker_Right
+		kSpeaker_Right,
+		kSpeaker_Channel
 	};
 	
 	struct RampInfo
@@ -172,6 +177,14 @@ struct AudioVoice
 			, isRamped(true)
 			, hasRamped(false)
 		{
+		}
+		
+		void rampDown(const float delay, const float time)
+		{
+			ramp = false;
+			rampDelay = delay;
+			rampDelayIsZero = delay == 0.f;
+			rampTime = time;
 		}
 	};
 	
@@ -223,6 +236,7 @@ struct AudioVoiceManager
 	Type type;
 	
 	AudioVoiceManager(const Type _type);
+    virtual ~AudioVoiceManager() { }
 	
 	void generateAudio(
 		AudioVoice ** voices,

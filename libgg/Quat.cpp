@@ -1,8 +1,10 @@
 #include <cmath>
 #include "Debugging.h"
+#include "Mat4x4.h"
 #include "Quat.h"
 
 Quat::Quat()
+	: m_xyz()
 {
 	m_w = 1.f;
 }
@@ -17,6 +19,11 @@ Quat::Quat(float x, float y, float z, float w)
 	: m_xyz(x, y, z)
 	, m_w(w)
 {
+}
+
+Quat::Quat(const Vec3 & axis, float angle)
+{
+	fromAxisAngle(axis, angle);
 }
 
 float Quat::calcSize() const
@@ -48,9 +55,9 @@ Quat Quat::calcConjugate() const
 	return result;
 }
 
-void Quat::fromAxisAngle(Vec3 axis, float angle)
+void Quat::fromAxisAngle(const Vec3 & _axis, float angle)
 {
-	axis.Normalize();
+	const Vec3 axis = _axis.CalcNormalized();
 	
 	// setup 'axis'
 
@@ -67,7 +74,7 @@ void Quat::fromAxisAngle(Vec3 axis, float angle)
 
 void Quat::fromMatrix(const Mat4x4 & matrix)
 {
-	const float eps = 0.001f;
+	const float eps = 0.00001f;
 
 	// we need four cases, 1 special (and preferred) and 3 backups, to extract
 	// the axis angle pair. We need the backups in case the rotation is aligned
@@ -95,18 +102,14 @@ void Quat::fromMatrix(const Mat4x4 & matrix)
 		int a1 = a0 == 2 ? 0 : a0 + 1;
 		int a2 = a1 == 2 ? 0 : a1 + 1;
 		
-		// have to reverse these -_-
-		
-		a0 = 2 - a0;
-		a1 = 2 - a1;
-		a2 = 2 - a2;
-		
 		const float s = sqrt(1.0f + matrix(a0, a0) - matrix(a1, a1) - matrix(a2, a2));
 		
-		m_xyz[a0] = s / 2.f;		
-		m_xyz[a1] = (matrix(a1, a0) + matrix(a0, a1)) / s / 2.f;
-		m_xyz[a2] = (matrix(a2, a0) + matrix(a0, a2)) / s / 2.f;
-		m_w       = (matrix(a2, a1) - matrix(a1, a2)) / s / 2.f;
+		const float sRcp = s != 0.f ? 1.f / s : 0.f;
+		
+		m_xyz[a0] = s / 2.f;
+		m_xyz[a1] = (matrix(a1, a0) + matrix(a0, a1)) * sRcp / 2.f;
+		m_xyz[a2] = (matrix(a2, a0) + matrix(a0, a2)) * sRcp / 2.f;
+		m_w       = (matrix(a2, a1) - matrix(a1, a2)) * sRcp / 2.f;
 	}
 	
 	normalize();

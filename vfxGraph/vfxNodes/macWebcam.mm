@@ -99,6 +99,7 @@
 	
 	// get the default capture device
 	// todo : select the correct capture device
+	// todo : add capture device session discovery stuff. how to communicate this data to the webcam node and how to save the name inside the graph ? maybe should give the user the option to enter the name, and let the webcam node show the available device names in the node description ? or add a resource + resource editor
 	
 	device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
 	

@@ -56,7 +56,7 @@ struct VfxNodeWebcam : VfxNodeBase
 	OpenglTexture texture;
 
 	VfxImage_Texture imageOutput;
-	VfxImageCpu imageCpuOutput;
+	VfxImageCpuData imageCpuOutput;
 
 	VfxNodeWebcam();
 	~VfxNodeWebcam();

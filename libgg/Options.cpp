@@ -24,7 +24,8 @@ void OptionManager::Register(OptionBase * option)
 
 void OptionManager::AddCommandOption(const char * path, OptionCommandHandlerWithParam handler, void * param)
 {
-	// fixme : currently leaks
+	// note : currently leaks. but we don't care, and to be honest I would rather avoid the time spent freeing
+	//        these at exit than managing memory entirely correct here
 
 	new OptionCommandWithParam(path, handler, param);
 }

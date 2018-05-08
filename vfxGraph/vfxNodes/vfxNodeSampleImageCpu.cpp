@@ -143,10 +143,10 @@ void VfxNodeSampleImageCpu::tick(const float dt)
 			{
 				auto & c = image->channel[i];
 				
-				const int v00 = c.data[y1 * c.pitch + x1 * c.stride];
-				const int v01 = c.data[y1 * c.pitch + x2 * c.stride];
-				const int v10 = c.data[y2 * c.pitch + x1 * c.stride];
-				const int v11 = c.data[y2 * c.pitch + x2 * c.stride];
+				const int v00 = c.data[y1 * c.pitch + x1];
+				const int v01 = c.data[y1 * c.pitch + x2];
+				const int v10 = c.data[y2 * c.pitch + x1];
+				const int v11 = c.data[y2 * c.pitch + x2];
 				
 				const float v0 = v00 * s1 + v01 * s2;
 				const float v1 = v10 * s1 + v11 * s2;
@@ -198,10 +198,10 @@ void VfxNodeSampleImageCpu::tick(const float dt)
 			{
 				auto & c = image->channel[i];
 				
-				const int v00 = c.data[y1 * c.pitch + x1 * c.stride];
-				const int v01 = c.data[y1 * c.pitch + x2 * c.stride];
-				const int v10 = c.data[y2 * c.pitch + x1 * c.stride];
-				const int v11 = c.data[y2 * c.pitch + x2 * c.stride];
+				const int v00 = c.data[y1 * c.pitch + x1];
+				const int v01 = c.data[y1 * c.pitch + x2];
+				const int v10 = c.data[y2 * c.pitch + x1];
+				const int v11 = c.data[y2 * c.pitch + x2];
 				
 				const float v0 = v00 * s1 + v01 * s2;
 				const float v1 = v10 * s1 + v11 * s2;
@@ -236,7 +236,7 @@ void VfxNodeSampleImageCpu::tick(const float dt)
 			{
 				auto & c = image->channel[i];
 				
-				rgbaValueOutput[i] = c.data[y * c.pitch + x * c.stride] / 255.f;
+				rgbaValueOutput[i] = c.data[y * c.pitch + x] / 255.f;
 			}
 		}
 		else
@@ -263,7 +263,7 @@ void VfxNodeSampleImageCpu::tick(const float dt)
 			{
 				auto & c = image->channel[i];
 				
-				rgbaValueOutput[i] = c.data[y * c.pitch + x * c.stride] / 255.f;
+				rgbaValueOutput[i] = c.data[y * c.pitch + x] / 255.f;
 			}
 		}
 	}

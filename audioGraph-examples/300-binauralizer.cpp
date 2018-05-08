@@ -37,6 +37,7 @@
 #include "soundmix.h"
 #include "Timer.h"
 #include <atomic>
+#include <cmath>
 
 #include "../libparticle/ui.h"
 
@@ -46,6 +47,8 @@ using namespace binaural;
 
 #define BLEND_PREVIOUS_HRTF 1
 #define NUM_BINAURAL_SOUNDS 1
+
+#define DO_VIEW3D 1
 
 const int GFX_SX = 1300;
 const int GFX_SY = 760;
@@ -283,10 +286,12 @@ int main(int argc, char * argv[])
 		
 		float oscillatorPhase = 0.f;
 		
+	#if DO_VIEW3D
 		Surface view3D(200, 200, false);
+	#endif
 		
 		PcmData pcmData;
-		pcmData.load("testsounds/music2.ogg", 0);
+		pcmData.load("testsounds/birdTest.ogg", 0);
 		
 		MyPortAudioHandler audioHandler;
 		int numSources = 0;
@@ -527,6 +532,7 @@ int main(int argc, char * argv[])
 				}
 				gxPopMatrix();
 				
+			#if DO_VIEW3D
 				pushSurface(&view3D);
 				{
 					view3D.clear(200, 200, 200);
@@ -579,7 +585,8 @@ int main(int argc, char * argv[])
 					gxSetTexture(0);
 				}
 				gxPopMatrix();
-				
+			#endif
+			
 				//
 				
 				gxPushMatrix();

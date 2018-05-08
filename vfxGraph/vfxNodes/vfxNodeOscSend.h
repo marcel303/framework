@@ -47,6 +47,7 @@ struct VfxNodeOscSend : VfxNodeBase
 	enum SendMode
 	{
 		kSend_OnTick,
+		kSend_OnInterval,
 		kSend_OnChange,
 		kSend_OnEvent
 	};
@@ -56,6 +57,7 @@ struct VfxNodeOscSend : VfxNodeBase
 		kInput_EndpointName,
 		kInput_SendMode,
 		kInput_Path,
+		kInput_Interval,
 		kInput_Value,
 		kInput_Trigger,
 		kInput_COUNT
@@ -68,6 +70,8 @@ struct VfxNodeOscSend : VfxNodeBase
 	
 	bool hasLastSentValue;
 	float lastSentValue;
+	
+	float timer;
 	
 	std::list<HistoryItem> history;
 	int numSends;

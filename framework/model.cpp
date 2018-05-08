@@ -743,6 +743,10 @@ Model::Model(ModelCacheElem & cacheElem, const bool autoUpdate)
 
 void Model::ctor()
 {
+	// book keeping
+	m_prev = 0;
+	m_next = 0;
+	
 	// drawing
 	x = y = z = 0.f;
 	axis = Vec3(1.f, 0.f, 0.f);

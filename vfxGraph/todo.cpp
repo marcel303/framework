@@ -1,18 +1,36 @@
 /*
 
 top priority items:
-- add multiple window support to framework. would help with managing lists of audio and vfx graphs. just open a window and show the lists over there
+
+- fix threshold typo (treshold) throughout the entire code base
+
 - add node which generates a trigger signal once when a graph is created
-- add a list of xml files to click on to 900-devgrounds for more rapid testing
-# how to convert multiple channels to gpu image with channel(s).toGpu ?
-	# removed support for multiple channels for one output socket. always using a single channel resolves this issue
+
 - add ability for nodes to report warnings and errors
-- fix issue with immediate values not being restored properly for most types
+
 - make it possible to have voice nodes in audio graph which do not generate audible sound ?
 - add an option to audio graph and poly audio graph nodes to output audio or not
 - add options to poly and regular audio graph nodes to output mono, stereo, or multi-channel
 	- requires an extra mixing level ? perhaps add a voice manager interface. or store voices in audio graph ? let voice manager allocate channel indices, but do mixing itself differently ? or perhaps add voice groups or something ..
+
 - fix issue with recursive GPU timers
+
+- add console based vfx graph app which lets one run a graph from the command line
+	- manually specify tick rate/time step
+	- listen to keyboard to quit
+	- fix issues with nodes that come up
+
+- add ability for audio nodes to draw a filter response graph ?
+	- or add to audio graph manager : draw filter response and FFT of selected node/socket
+- save wavefield data when saving. should be faster to restore than randomizing values. and also allows for finding nice sounds and saving them
+	- review resource implementation vfx graph
+	- port resource implementation vfx graph to audio graph
+	- add 1D wavefield resource
+	- add 2D wavefield resource
+- add shared control value inputs to poly audio graph node
+	- make sure both the poly and the regular audio graph nodes have both type of inputs
+
+- add DC blocker node
 
 
 todo :
@@ -35,7 +53,8 @@ todo :
 	# add real-time editing callback for double click event
 		+ add an editor callback to the node type definition instead. the graph editor should be fully functional without real-time editing interface and an implementation running in the backgroup, meaning resource editing should work regardless of real-time interface
 	- open text editor for ps/vs when double clicking fsfx node
-	- open sub graph for container nodes
+	- open sub graph for container nodes. in a new window ?
+	- open visual editor for wavefield nodes
 - add sub-graph container node. to help organize complex graphs
 	- open container when double clicking container node
 	- determine how to save nodes hierarchically contained
@@ -48,13 +67,15 @@ todo :
 	- (temporarily) un-fold hovered over node when connecting sockets. currently based on distance, but should also include hit test
 	- move hovered over node in front of others?
 - NanoVG includes an interesting blurring algortihm used for blurring fonts. integrate ?
-- add ability to add node between nodes ?
 - add third 'node minification' option: show only active inputs and outputs
 	so we have three options then: show everything, show only active i/o and fully collapsed
 - add ability to reference nodes? makes graph organization more easy
 - drag link into empty space = open node type selection menu
 - add text field to node type select
 - raise a menu when socket connect is released on a node itself. ask for which socket to connect to
+- OSC endpoint: resend count? or just OSC send node?
++ add interval (once every N seconds) mode to OSC send mode
++ add a note field in editor options -> for versioning
 
 
 todo : creativity investigation :
@@ -85,7 +106,6 @@ todo : nodes :
 	- add (re)start input trigger
 	+ can be very very useful to trigger effects
 	- add time! input trigger. performs seek operation
-+ add MIDI node
 - add pitch control to oscillators ?
 - add pulse size to square oscillator
 - add audio playback node
@@ -123,17 +143,16 @@ todo : nodes :
 		- allocate new channels object to store results
 	- add range min/max range + pass if inside or outside boolean
 - add memory node ? get/set named variables. how to ensure processing order ? or maybe for vfx <-> c++ communication only in which case order is guaranteed
-+ add queue system for triggers ? ensure predeps have finished processing before handling triggers
 - add ability for nodes to trigger again (process a partial time slice ?). but this will re-introduce again the issue of execution order of triggers ..
 - add channels.toImage node ?
 - add play/stop/pause/resume triggers to video node
 - add curl noise node
-+ add text list node. next! prev! rand!
 - text array node : custom editor for list of strings
 - add gen.random node with different modes. white, pink, brown
 - add gen.brownian
 - add a dedicated shader node. no pre-defined inputs at all. output an image
 - rename fsfx v1 to imfx ? redefine behavior to run shader over an image. expressly output as image
+- the turbojpeg library has a custom callback function that can run over the DCT coefficients. investigate the crazy things that can be done with those! int (*customFilter)(short *coeffs, tjregion arrayRegion, ..)
 
 
 todo : UI
@@ -343,7 +362,23 @@ todo :
 + add GPU performance markers
 	+ add GPU timer object
 	+ add GPU time to vfx node base
- 
+ + add a list of xml files to click on to 900-devgrounds for more rapid testing
+# how to convert multiple channels to gpu image with channel(s).toGpu ?
+	# removed support for multiple channels for one output socket. always using a single channel resolves this issue
++ fix issue with immediate values not being restored properly for most types
++ add immediate value support channel data
++ add ability to add node between nodes
+	+ auto detect compatible socket types. find match based on first/primary input/output to see if it's valid to insert
+	+ show filtered node type selection menu
+	+ add filter type of node type selection menu. types (for now): kFilter_None, kFilter_PrimarySocketTypes
++ copy links too between selected nodes when copying nodes
++ add console based audio graph app which lets one run a graph from the command line
+	+ list control values and allow user to edit them
+	+ research how to make a (cross platform) console app ui
+	+ make graph a command line option
++ audio graph: fix issue with immediate values not being restored properly for most types
++ port Veem changes where desired to master branch
+
 
 todo : nodes :
 + add ease node
@@ -451,7 +486,12 @@ todo : nodes :
 	# add ability to trigger any input/output trigger (?)
 	# decided not to do this, as UI is better left uncoupled from graph processing (for now). perhaps a separate UI layer on top of vfx- and audio graph makes more sense
  + add audioGraph node
- 
++ rewrite ImageCpu to only support planar R/G/B/A. simplifies many nodes. only toGpu gets more complicated, as OpenGL doesn't allow one to upload planar data afaik
++ add MIDI node
++ add queue system for triggers ? ensure predeps have finished processing before handling triggers
++ add text list node. next! prev! rand!
++ add max number of voices for poly audio graph node
+
 
 todo : fsfx :
 + let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -475,6 +515,7 @@ todo : framework :
 + add a simple camera class. pushMatrix, popMatrix
 + add a generic way to shade and texture hq primitives. perhaps use texture and shading matrices ?
 + remove stage and UI classes
++ add multiple window support to framework. would help with managing lists of audio and vfx graphs. just open a window and show the lists over there
 
 todo : media player
 + for image analysis we often only need luminance. make it an option to output YUV Y-channel only?
@@ -496,5 +537,10 @@ todo : UI
 + add load/save notifications to UI., maybe a UI message that briefly appears on the bottom. white text on dark background ?
 + touch zoom on moving fingers treshold distance apart. also, try to convert normalized touch coords into inches or cms
 + fix issue with shift + <char> not resulting in desired character in text fields
+
+
+todo : audio graph
++ add ramp down option when freeing audio graph instances
+
 
 */

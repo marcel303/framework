@@ -41,6 +41,8 @@ struct AudioSourceVorbis : AudioSource
 	int numChannels;
 	bool loop;
 	bool hasLooped;
+	bool hasEnded;
+	int samplePosition;
 
 	AudioSourceVorbis();
 	virtual ~AudioSourceVorbis();
@@ -49,4 +51,6 @@ struct AudioSourceVorbis : AudioSource
 	
 	void open(const char * filename, const bool loop);
 	void close();
+	
+	bool isOpen() const;
 };

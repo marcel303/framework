@@ -30,6 +30,21 @@
 #include "audioTypes.h"
 #include <stddef.h>
 
+namespace Wavefield
+{
+	template <typename T>
+	inline T lerp(T a, T b, T t)
+	{
+		return a * (1.0 - t) + b * t;
+	}
+
+	template <typename T>
+	inline T clamp(T value, T min, T max)
+	{
+		return value < min ? min : value > max ? max : value;
+	}
+}
+
 struct Wavefield1D
 {
 	const static int kMaxElems = 2048;

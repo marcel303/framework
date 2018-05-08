@@ -30,11 +30,35 @@
 #include <string>
 
 struct GraphEdit;
+struct GraphEdit_TypeDefinition;
 struct GraphEdit_TypeDefinitionLibrary;
 struct UiState;
 
 struct GraphEdit_NodeTypeSelect
 {
+	enum FilterType
+	{
+		kFilterType_None,
+		kFilterType_PrimarySocketTypes
+	};
+	
+	struct Filter
+	{
+		FilterType type;
+		
+		std::string srcSocketTypeName;
+		std::string dstSocketTypeName;
+		
+		Filter()
+			: type(kFilterType_None)
+			, srcSocketTypeName()
+			, dstSocketTypeName()
+		{
+		}
+		
+		bool isMatch(const GraphEdit_TypeDefinition & typeDefinition) const;
+	};
+	
 	int x;
 	int y;
 	int sx;
@@ -43,6 +67,8 @@ struct GraphEdit_NodeTypeSelect
 	UiState * uiState;
 
 	std::string selectedCategoryName;
+	
+	Filter filter;
 
 	GraphEdit_NodeTypeSelect();
 	~GraphEdit_NodeTypeSelect();

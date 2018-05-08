@@ -97,12 +97,26 @@ example usage:
 
 */
 
-#ifndef FOURIER_USE_SSE
+#if !defined(FOURIER_USE_SSE)
 	#if __SSE2__
 		#define FOURIER_USE_SSE 1
 	#else
-		#define FOURIER_USE_SSE 0
+		#define FOURIER_USE_SSE 0 // do not alter
 	#endif
+#endif
+
+#if !defined(FOURIER_USE_GCC_VECTOR)
+	#if defined(__GNUC__)
+		#define FOURIER_USE_GCC_VECTOR 1
+	#else
+		#define FOURIER_USE_GCC_VECTOR 0 // do not alter
+	#endif
+#endif
+
+#if FOURIER_USE_SSE || FOURIER_USE_GCC_VECTOR
+	#define FOURIER_USE_SIMD 1
+#else
+	#define FOURIER_USE_SIMD 0 // do not alter
 #endif
 
 #if FOURIER_USE_SSE
@@ -113,6 +127,8 @@ struct Fourier
 {
 #if FOURIER_USE_SSE
 	typedef __m128 float4;
+#elif FOURIER_USE_GCC_VECTOR
+	typedef float float4 __attribute__ ((vector_size(16)));
 #endif
 
 	static void fft1D(
@@ -139,7 +155,7 @@ struct Fourier
 		const int size, const int transformSize,
 		const bool inverse, const bool normalize);
 	
-#if FOURIER_USE_SSE
+#if FOURIER_USE_SIMD
 	static void fft1D(
 		float4 * __restrict dreal,
 		float4 * __restrict dimag,

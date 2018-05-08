@@ -27,12 +27,12 @@
 
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager4D.h"
-#include "Calc.h" // todo : remove ?
 #include "framework.h"
 #include "Noise.h"
 #include "soundmix.h"
 #include "wavefield.h"
 #include "../libparticle/ui.h"
+#include <cmath>
 
 /*
 
@@ -82,7 +82,7 @@ AudioSourceWavefield1D::AudioSourceWavefield1D()
 	, m_sampleLocation(0.0)
 	, m_tension(1.0)
 	, m_closedEnds(true)
-	, m_gain(0.f)
+	, m_gain(1.f)
 {
 }
 
@@ -146,12 +146,12 @@ void AudioSourceWavefield1D::tick(const double dt)
 		{
 			m_wavefield.f[x] = 1.0;
 			
-			m_wavefield.f[x] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
-			m_wavefield.f[x] *= Calc::Lerp(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
+			m_wavefield.f[x] *= lerp(1.0, random(0.0, 1.0), randomFactor);
+			m_wavefield.f[x] *= lerp(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
 			//m_wavefield.f[x] = 1.0 - std::pow(m_wavefield.f[x], 2.0);
 			
 			//m_wavefield.f[x] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
-			m_wavefield.f[x] *= Calc::Lerp(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
+			m_wavefield.f[x] *= lerp(1.0, (double)scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
 		}
 	}
 	
@@ -202,6 +202,7 @@ struct AudioSourceWavefield2D : AudioSource
 	double m_sampleLocation[2];
 	double m_sampleLocationSpeed[2];
 	double m_tension;
+	double m_retain;
 	bool m_slowMotion;
 	
 	float m_gain;
@@ -221,6 +222,7 @@ AudioSourceWavefield2D::AudioSourceWavefield2D()
 	: m_wavefield()
 	, m_sampleLocation()
 	, m_tension(1.0)
+	, m_retain(0.0001)
 	, m_slowMotion(false)
 	, m_gain(1.f)
 {
@@ -262,8 +264,8 @@ void AudioSourceWavefield2D::tick(const double dt)
 		//m_wavefield.f[m_sampleLocation[0]][m_sampleLocation[1]] /= 1.3;
 		m_wavefield.f[int(m_sampleLocation[0])][int(m_sampleLocation[1])] = 0.0;
 	
-	if (keyboard.wentDown(SDLK_s) || (gamepad[0].isConnected && gamepad[0].isDown(GAMEPAD_Y)))
-		m_slowMotion = !m_slowMotion;
+	if (keyboard.wentDown(SDLK_s) || (gamepad[0].isConnected && gamepad[0].wentDown(GAMEPAD_Y)))
+ 		m_slowMotion = !m_slowMotion;
 	
 	if (keyboard.isDown(SDLK_r) || (gamepad[0].isConnected && gamepad[0].isDown(GAMEPAD_B)))
 		m_wavefield.p[rand() % m_wavefield.numElems][rand() % m_wavefield.numElems] = random(-1.f, +1.f) * 5.f;
@@ -297,8 +299,8 @@ void AudioSourceWavefield2D::generate(float * __restrict samples, const int numS
 	
 	const double dt = 1.0 / SAMPLE_RATE * (m_slowMotion ? 0.001 : 1.0);
 	
-	const double vRetainPerSecond = 0.0001;
-	const double pRetainPerSecond = 0.0001;
+	const double vRetainPerSecond = m_retain;
+	const double pRetainPerSecond = m_retain;
 	
 	for (int i = 0; i < numSamples; ++i)
 	{
@@ -588,7 +590,6 @@ int main(int argc, char * argv[])
 	AudioSourceWavefield1D wavefield1D;
 	wavefield1D.init(256);
 	AudioVoice * wavefield1DVoice = nullptr;
-	voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D, "wavefield1D", true, 0.f, 1.f, -1);
 
 	// add a 2D wavefield object
 	
@@ -596,7 +597,7 @@ int main(int argc, char * argv[])
 	AudioSourceWavefield2D wavefield2D;
 	wavefield2D.init(48);
 	AudioVoice * wavefield2DVoice = nullptr;
-	voiceMgr.allocVoice(wavefield2DVoice, &wavefield2D, "wavedield2D", true, 0.f, 1.f, -1);
+
 	
 	//
 	
@@ -630,11 +631,33 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		wavefield1D.tick(dt);
-		wavefield1D.m_gain = wavefield1DEnabled ? 1.f : 0.f;
+		if (wavefield1DEnabled)
+		{
+			wavefield1D.tick(dt);
+			
+			if (wavefield1DVoice == nullptr)
+				voiceMgr.allocVoice(wavefield1DVoice, &wavefield1D, "wavefield1D", true, 0.f, 1.f, -1);
+		}
+		else if (wavefield1DVoice != nullptr)
+		{
+			voiceMgr.freeVoice(wavefield1DVoice);
+		}
 		
-		wavefield2D.tick(dt);
-		wavefield2D.m_gain = wavefield2DEnabled ? 1.f : 0.f;
+		//
+		
+		if (wavefield2DEnabled)
+		{
+			wavefield2D.tick(dt);
+			
+			if (wavefield2DVoice == nullptr)
+				voiceMgr.allocVoice(wavefield2DVoice, &wavefield2D, "wavefield2D", true, 0.f, 1.f, -1);
+		}
+		else if (wavefield2DVoice != nullptr)
+		{
+			voiceMgr.freeVoice(wavefield2DVoice);
+		}
+		
+		//
 		
 		const bool isDown = mouse.isDown(BUTTON_LEFT) || (gamepad[0].isConnected && gamepad[0].isDown(GAMEPAD_A));
 		
@@ -724,10 +747,20 @@ int main(int argc, char * argv[])
 			
 			doBreak();
 			
-			pushMenu("wavefields");
+			pushMenu("1D wavefield");
 			{
-				doCheckBox(wavefield1DEnabled, "wavefield 1D", false);
-				doCheckBox(wavefield2DEnabled, "wavefield 2D", false);
+				doLabel("1D wavefield", 0);
+				doCheckBox(wavefield1DEnabled, "enabled", false);
+			}
+			popMenu();
+			
+			doBreak();
+			
+			pushMenu("2D wavefield");
+			{
+				doLabel("2D wavefield", 0);
+				doCheckBox(wavefield2DEnabled, "enabled", false);
+				doTextBox(wavefield2D.m_retain, "retain", dt);
 			}
 			popMenu();
 		

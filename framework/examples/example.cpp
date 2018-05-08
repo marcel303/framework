@@ -138,7 +138,7 @@ int main(int argc, char * argv[])
 			}
 			else
 			{
-				Sound("test.wav").play(50, 200);
+				Sound("test.wav").play(50);
 			}
 		}
 		

@@ -89,7 +89,7 @@ Wavefield1D::Wavefield1D()
 
 int Wavefield1D::roundNumElems(const int numElems)
 {
-	return std::min(numElems, kMaxElems);
+	return std::max(0, std::min(numElems, kMaxElems));
 }
 
 void Wavefield1D::init(const int _numElems)
@@ -189,6 +189,9 @@ void tickForces(const double * __restrict p, const double c, double * __restrict
 
 void Wavefield1D::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
 {
+	if (numElems == 0)
+		return;
+	
 	SCOPED_FLUSH_DENORMALS;
 	
 	const double vRetain = std::pow(vRetainPerSecond, dt);
@@ -381,7 +384,7 @@ Wavefield1Df::Wavefield1Df()
 
 int Wavefield1Df::roundNumElems(const int numElems)
 {
-	return std::min(numElems, kMaxElems);
+	return std::max(0, std::min(numElems, kMaxElems));
 }
 
 void Wavefield1Df::init(const int _numElems)
@@ -717,7 +720,7 @@ Wavefield2D::Wavefield2D()
 
 int Wavefield2D::roundNumElems(const int numElems)
 {
-	return std::min(numElems, kMaxElems);
+	return std::max(0, std::min(numElems, kMaxElems));
 }
 
 void Wavefield2D::init(const int _numElems)
@@ -1068,7 +1071,7 @@ Wavefield2Df::Wavefield2Df()
 
 int Wavefield2Df::roundNumElems(const int numElems)
 {
-	return std::min(numElems, kMaxElems);
+	return std::max(0, std::min(numElems, kMaxElems));
 }
 
 void Wavefield2Df::init(const int _numElems)

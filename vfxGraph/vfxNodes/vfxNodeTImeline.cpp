@@ -26,8 +26,9 @@
 */
 
 #include "editor_vfxTimeline.h"
-#include "vfxGraph.h"
 #include "vfxNodeTimeline.h"
+#include "vfxResource.h"
+#include "vfxTypes.h"
 
 VFX_NODE_TYPE(VfxNodeTimeline)
 {

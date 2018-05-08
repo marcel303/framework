@@ -790,17 +790,13 @@ struct GraphEdit_RealTimeConnection
 		return false;
 	}
 	
-	virtual int nodeIsActive(const GraphNodeId nodeId)
+	virtual int getNodeActivity(const GraphNodeId nodeId)
 	{
-		// todo : rename this method
-
 		return kActivity_Inactive;
 	}
 	
-	virtual int linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
+	virtual int getLinkActivity(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 	{
-		// todo : rename this method
-
 		return kActivity_Inactive;
 	}
 	
@@ -1215,6 +1211,7 @@ struct GraphEdit : GraphEditConnection
 	
 	struct EditorOptions
 	{
+		std::string comment;
 		bool menuIsVisible;
 		bool realTimePreview;
 		bool autoHideUi;
@@ -1229,7 +1226,8 @@ struct GraphEdit : GraphEditConnection
 		ParticleColorCurve cpuHeatColors;
 		
 		EditorOptions()
-			: menuIsVisible(false)
+			: comment()
+			, menuIsVisible(false)
 			, realTimePreview(true)
 			, autoHideUi(false)
 			, showBackground(true)
@@ -1320,15 +1318,15 @@ struct GraphEdit : GraphEditConnection
 	
 	struct NodeInsert
 	{
-		GraphEdit_NodeTypeSelect * menu;
-		
 		float x;
 		float y;
 		
+		GraphLinkId linkId;
+		
 		NodeInsert()
-			: menu(nullptr)
-			, x(0.f)
+			: x(0.f)
 			, y(0.f)
+			, linkId(kGraphLinkIdInvalid)
 		{
 		}
 	};
@@ -1430,6 +1428,8 @@ struct GraphEdit : GraphEditConnection
 	GraphNodeId linkParamsEditorLinkId;
 	
 	GraphUi::NodeTypeNameSelect * nodeTypeNameSelect;
+	
+	GraphEdit_NodeTypeSelect * nodeInsertMenu;
 	
 	NodeResourceEditor nodeResourceEditor;
 	

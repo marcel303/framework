@@ -5,6 +5,7 @@
 #include "objects/paobject.h"
 #include "soundmix.h"
 #include <atomic>
+#include <cmath>
 
 #define MAX_VOLUMES 10
 #define MAX_BINAURALIZERS_PER_VOLUME 10 // center + nearest + eight vertices
@@ -172,7 +173,6 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		
 		if (source == nullptr)
 		{
-			memset(audioBuffer, 0, numSamples * sizeof(float));
 			return;
 		}
 		

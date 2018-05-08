@@ -31,7 +31,7 @@ project(audioGraph)
 # --- audioGraph ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
-file(GLOB_RECURSE source_audioNodes "audioNodes/*.*")
+file(GLOB_RECURSE source_audioNodes "audioNodes/*.cpp" "audioNodes/*.h")
 file(GLOB_RECURSE source_objects "objects/*.*" ${source_graph})
 file(GLOB_RECURSE source_delaunay "delaunay/*.*")
 
@@ -54,15 +54,14 @@ source_group("3rdparty\\delaunay" FILES ${source_delaunay})
 #    compiling them separately
 
 set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.cpp)
-message(${headerfile})
-file(WRITE ${headerfile} "#pragma once\n\n")
+file(WRITE ${headerfile} "// auto-generated. do not hand-edit\n\n")
 foreach(s ${source_audioNodes})
 	file(APPEND ${headerfile} "#include \"${s}\"\n")
 endforeach(s)
 file(APPEND ${headerfile} "void linkAudioNodes() { }\n")
 
 list(APPEND source ${headerfile})
-list(REMOVE_ITEM source ${source_audioNodes})
+set_source_files_properties(${source_audioNodes} PROPERTIES HEADER_FILE_ONLY 1)
 
 # ---- end of magic ----
 
@@ -102,6 +101,10 @@ if (APPLE)
 	set(AUDIOGRAPH_BINARIES
 		PARENT_SCOPE)
 endif (APPLE)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux") 
+	set(CMAKE_CXX_FLAGS "-mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -funsafe-math-optimizations")
+endif ()
 
 if (MSVC)
 	set_property(TARGET audioGraph APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)

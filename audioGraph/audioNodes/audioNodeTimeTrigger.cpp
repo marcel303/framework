@@ -37,7 +37,8 @@ AUDIO_NODE_TYPE(trigger_time, AudioNodeTimeTrigger)
 	in("auto", "bool", "1");
 	in("interval.min", "audioValue", "1");
 	in("interval.max", "audioValue", "1");
-	in("trigger!", "trigger");
+	in("trigger!", "trigger", "", "start!");
+	in("triggerNow!", "trigger", "", "trigger!");
 	out("trigger!", "trigger");
 }
 
@@ -50,7 +51,7 @@ AudioNodeTimeTrigger::AudioNodeTimeTrigger()
 	addInput(kInput_Automatic, kAudioPlugType_Bool);
 	addInput(kInput_IntervalMin, kAudioPlugType_FloatVec);
 	addInput(kInput_IntervalMax, kAudioPlugType_FloatVec);
-	addInput(kInput_Trigger, kAudioPlugType_Trigger);
+	addInput(kInput_Start, kAudioPlugType_Trigger);
 	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, nullptr);
 }
 
@@ -85,9 +86,35 @@ void AudioNodeTimeTrigger::handleTrigger(const int inputSocketIndex)
 	const bool automatic = getInputBool(kInput_Automatic, true);
 	const float minInterval = getInputAudioFloat(kInput_IntervalMin, &AudioFloat::One)->getMean();
 	const float maxInterval = getInputAudioFloat(kInput_IntervalMax, &AudioFloat::One)->getMean();
-
-	if (automatic == false)
+	
+	if (inputSocketIndex == kInput_Start)
 	{
-		time = rng.nextf(minInterval, maxInterval);
+		if (automatic == false)
+		{
+			time = rng.nextf(minInterval, maxInterval);
+		}
+	}
+	else if (inputSocketIndex == kInput_Trigger)
+	{
+		time = 0.0;
+		
+		trigger(kOutput_Trigger);
+		
+		if (time == 0.0 && automatic == true)
+		{
+			time = rng.nextf(minInterval, maxInterval);
+		}
+	}
+}
+
+void AudioNodeTimeTrigger::getDescription(AudioNodeDescription & d)
+{
+	if (time > 0.0)
+	{
+		d.add("time remaining: %.2fs", time);
+	}
+	else
+	{
+		d.add("not started");
 	}
 }

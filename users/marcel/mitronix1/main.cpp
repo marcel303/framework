@@ -8,6 +8,7 @@
 #include "slideshow.h"
 #include "soundmix.h"
 #include "wavefield.h"
+#include <cmath>
 
 #define DEVMODE 0
 
@@ -33,6 +34,8 @@ static View view = kView_MainButtons;
 
 static bool buttonPressed = false;
 static bool hasMouseHover = false;
+
+static AudioGraphManager * s_audioGraphMgr = nullptr;
 
 static void playMenuSound();
 
@@ -76,7 +79,7 @@ struct MainButton
 		if (tick)
 		{
 			const float retainPerSecond = .2f;
-			const float retainThisFrame = std::powf(retainPerSecond, dt);
+			const float retainThisFrame = powf(retainPerSecond, dt);
 			
 			currentX = lerp(desiredX, currentX, retainThisFrame);
 			currentY = lerp(desiredY, currentY, retainThisFrame);
@@ -841,12 +844,12 @@ struct Instrument
 	Instrument(const char * filename)
 		: audioGraphInstance(nullptr)
 	{
-		audioGraphInstance = g_audioGraphMgr->createInstance(filename);
+		audioGraphInstance = s_audioGraphMgr->createInstance(filename);
 	}
 	
 	~Instrument()
 	{
-		g_audioGraphMgr->free(audioGraphInstance);
+		s_audioGraphMgr->free(audioGraphInstance, false);
 	}
 };
 
@@ -860,8 +863,12 @@ static void playMenuSound()
 int main(int argc, char * argv[])
 {
 #if DEVMODE == 0
+#if MACOS
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
+#else
+	changeDirectory("data");
+#endif
 #endif
 	
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
@@ -885,14 +892,13 @@ int main(int argc, char * argv[])
 		
 		SDL_mutex * audioMutex = SDL_CreateMutex();
 		
-		AudioVoiceManager * audioVoiceMgr = new AudioVoiceManager();
-		audioVoiceMgr->init(16, 16);
+		AudioVoiceManagerBasic * audioVoiceMgr = new AudioVoiceManagerBasic();
+		audioVoiceMgr->init(audioMutex, 16, 16);
 		audioVoiceMgr->outputStereo = true;
-		g_voiceMgr = audioVoiceMgr;
 		
-		AudioGraphManager * audioGraphMgr = new AudioGraphManager();
-		audioGraphMgr->init(audioMutex);
-		g_audioGraphMgr = audioGraphMgr;
+		AudioGraphManager_RTE * audioGraphMgr = new AudioGraphManager_RTE(GFX_SX, GFX_SY);
+		audioGraphMgr->init(audioMutex, audioVoiceMgr);
+		s_audioGraphMgr = audioGraphMgr;
 		
 		AudioUpdateHandler * audioUpdateHandler = new AudioUpdateHandler();
 		audioUpdateHandler->init(audioMutex, nullptr, 0);
@@ -900,7 +906,7 @@ int main(int argc, char * argv[])
 		audioUpdateHandler->audioGraphMgr = audioGraphMgr;
 		
 		PortAudioObject * paObject = new PortAudioObject();
-		if (paObject->init(SAMPLE_RATE, 2, 2, AUDIO_UPDATE_SIZE, audioUpdateHandler) == false)
+		if (paObject->init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, audioUpdateHandler) == false)
 			logError("failed to initialize port audio object");
 		
 		Slideshow slideshow;
@@ -1128,7 +1134,7 @@ int main(int argc, char * argv[])
 				surface->gaussianBlur(
 					blurStrength * 100.f,
 					blurStrength * 100.f,
-					std::ceilf(blurStrength * 100.f));
+					ceilf(blurStrength * 100.f));
 				
 				setColor(colorWhite);
 				surface->blit(BLEND_OPAQUE);
@@ -1150,12 +1156,11 @@ int main(int argc, char * argv[])
 		delete audioUpdateHandler;
 		audioUpdateHandler = nullptr;
 		
-		g_audioGraphMgr = nullptr;
+		s_audioGraphMgr = nullptr;
 		audioGraphMgr->shut();
 		delete audioGraphMgr;
 		audioGraphMgr = nullptr;
 		
-		g_voiceMgr = nullptr;
 		audioVoiceMgr->shut();
 		delete audioVoiceMgr;
 		audioVoiceMgr = nullptr;

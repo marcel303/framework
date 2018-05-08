@@ -41,19 +41,13 @@ VFX_ENUM_TYPE(blobDetectorChannel)
 	elem("a");
 }
 
-VFX_ENUM_TYPE(blobDetectorTresholdTest)
-{
-	elem("greaterEqual");
-	elem("lessEqual");
-}
-
 VFX_NODE_TYPE(VfxNodeBlobDetector)
 {
 	typeName = "image_cpu.blobs";
 	
 	in("image", "image_cpu");
 	inEnum("channel", "blobDetectorChannel");
-	inEnum("tresholdTest", "blobDetectorTresholdTest");
+	in("invert", "bool");
 	in("tresholdValue", "float", "0.5");
 	in("maxBlobs", "int", "256");
 	out("mask", "image_cpu");
@@ -79,7 +73,7 @@ VfxNodeBlobDetector::VfxNodeBlobDetector()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
 	addInput(kInput_Channel, kVfxPlugType_Int);
-	addInput(kInput_TresholdTest, kVfxPlugType_Int);
+	addInput(kInput_Invert, kVfxPlugType_Bool);
 	addInput(kInput_TresholdValue, kVfxPlugType_Float);
 	addInput(kInput_MaxBlobs, kVfxPlugType_Int);
 	addOutput(kOutput_Mask, kVfxPlugType_ImageCpu, &maskOutput);
@@ -95,6 +89,117 @@ VfxNodeBlobDetector::~VfxNodeBlobDetector()
 	freeChannels();
 }
 
+#if __SSE2__
+
+static int processLine_SSE2_1channel(
+	const uint8_t * __restrict src,
+	const int srcSize,
+	const int tresholdValue,
+	const bool invert,
+	uint8_t * __restrict dst)
+{
+	const __m128i * src_16 = (const __m128i*)src;
+	__m128i * dst_16 = (__m128i*)dst;
+	
+	const int srcSize_16 = srcSize / 16;
+	
+	const int sub = tresholdValue;
+	const int max = (255 - tresholdValue) * 1;
+	const int mul = max ? (255 * 256 / max) : 0;
+	
+	const __m128i sub_8 = _mm_set1_epi16(sub);
+	const __m128i mul_8 = _mm_set1_epi16(mul);
+	
+	for (int x = 0; x < srcSize_16; ++x)
+	{
+		__m128i value = src_16[x];
+		
+		if (invert)
+		{
+			value = _mm_subs_epu8(_mm_set1_epi8(255), value);
+		}
+		
+		__m128i valueL = _mm_unpacklo_epi8(value, _mm_setzero_si128());
+		__m128i valueR = _mm_unpackhi_epi8(value, _mm_setzero_si128());
+		
+		valueL = _mm_subs_epu16(valueL, sub_8);
+		valueR = _mm_subs_epu16(valueR, sub_8);
+		
+		valueL = _mm_mullo_epi16(valueL, mul_8);
+		valueR = _mm_mullo_epi16(valueR, mul_8);
+		
+		valueL = _mm_srli_epi16(valueL, 8);
+		valueR = _mm_srli_epi16(valueR, 8);
+		
+		dst_16[x] = _mm_packus_epi16(valueL, valueR);
+	}
+	
+	return srcSize_16 * 16;
+}
+
+static int processLine_SSE2_3channel(
+	const uint8_t * __restrict src1,
+	const uint8_t * __restrict src2,
+	const uint8_t * __restrict src3,
+	const int srcSize,
+	const int tresholdValue,
+	const bool invert,
+	uint8_t * __restrict dst)
+{
+	const __m128i * src1_16 = (const __m128i*)src1;
+	const __m128i * src2_16 = (const __m128i*)src2;
+	const __m128i * src3_16 = (const __m128i*)src3;
+	__m128i * dst_16 = (__m128i*)dst;
+	
+	const int srcSize_16 = srcSize / 16;
+	
+	const int sub = tresholdValue * 3;
+	const int max = (255 - tresholdValue) * 3;
+	const int mul = max ? (255 * 256 / max) : 0;
+	
+	const __m128i sub_8 = _mm_set1_epi16(sub);
+	const __m128i mul_8 = _mm_set1_epi16(mul);
+	
+	for (int x = 0; x < srcSize_16; ++x)
+	{
+		__m128i value1 = src1_16[x];
+		__m128i value2 = src2_16[x];
+		__m128i value3 = src3_16[x];
+		
+		if (invert)
+		{
+			value1 = _mm_subs_epu8(_mm_set1_epi8(255), value1);
+			value2 = _mm_subs_epu8(_mm_set1_epi8(255), value2);
+			value3 = _mm_subs_epu8(_mm_set1_epi8(255), value3);
+		}
+		
+		__m128i value1L = _mm_unpacklo_epi8(value1, _mm_setzero_si128());
+		__m128i value1R = _mm_unpackhi_epi8(value1, _mm_setzero_si128());
+		__m128i value2L = _mm_unpacklo_epi8(value2, _mm_setzero_si128());
+		__m128i value2R = _mm_unpackhi_epi8(value2, _mm_setzero_si128());
+		__m128i value3L = _mm_unpacklo_epi8(value3, _mm_setzero_si128());
+		__m128i value3R = _mm_unpackhi_epi8(value3, _mm_setzero_si128());
+		
+		__m128i valueL = _mm_add_epi16(value1L, _mm_add_epi16(value2L, value3L));
+		__m128i valueR = _mm_add_epi16(value1R, _mm_add_epi16(value2R, value3R));
+		
+		valueL = _mm_subs_epu16(valueL, sub_8);
+		valueR = _mm_subs_epu16(valueR, sub_8);
+		
+		valueL = _mm_mullo_epi16(valueL, mul_8);
+		valueR = _mm_mullo_epi16(valueR, mul_8);
+		
+		valueL = _mm_srli_epi16(valueL, 8);
+		valueR = _mm_srli_epi16(valueR, 8);
+		
+		dst_16[x] = _mm_packus_epi16(valueL, valueR);
+	}
+	
+	return srcSize_16 * 16;
+}
+
+#endif
+
 void VfxNodeBlobDetector::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeBlobDetector);
@@ -103,7 +208,7 @@ void VfxNodeBlobDetector::tick(const float dt)
 	
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const Channel channel = (Channel)getInputInt(kInput_Channel, kChannel_RGB);
-	//const BlobDetector::TresholdTest test = getInputInt(kInput_TresholdTest, 0) == 0 ? BlobDetector::kTresholdTest_GreaterEqual : BlobDetector::kTresholdTest_LessEqual;
+	const bool invert = getInputBool(kInput_Invert, false);
 	const int tresholdValue = getInputFloat(kInput_TresholdValue, .5f) * 255.f;
 	const int maxBlobs = std::max(0, std::min(kMaxBlobs, getInputInt(kInput_MaxBlobs, 256)));
 	
@@ -135,64 +240,74 @@ void VfxNodeBlobDetector::tick(const float dt)
 		const int max3 = (255 - tresholdValue) * 3;
 		const int mul3 = max3 ? (255 * 256 / max3) : 0;
 		
-		if (channel == kChannel_RGB)
+		if (image->numChannels == 1)
 		{
-			if (image->numChannels == 1 && image->isPlanar)
-			{
-				// note : single channel images. we just copy the data directly into the mask
-				
-				const VfxImageCpu::Channel * source = &image->channel[0];
+			// note : single channel images. we just copy the data directly into the mask
+			
+			const VfxImageCpu::Channel * source = &image->channel[0];
 
-				for (int y = 0; y < image->sy; ++y)
+			for (int y = 0; y < maskSy; ++y)
+			{
+				const uint8_t * __restrict src = source->data + y * source->pitch;
+					  uint8_t * __restrict dst  = mask + y * maskSx;
+				
+				int begin = 0;
+				
+			#if __SSE2__
+				begin = processLine_SSE2_1channel(src, maskSx, tresholdValue, invert, dst);
+			#endif
+			
+				for (int x = begin; x < maskSx; ++x)
 				{
-					const uint8_t * __restrict src = source->data + y * source->pitch;
-						  uint8_t * __restrict dst  = mask + y * maskSx;
+					int value = src[x];
 					
-					for (int x = 0; x < image->sx; ++x)
-					{
-						int value = src[x];
-						
-						value += add1;
-						if (value < 0)
-							value = 0;
-						value *= mul1;
-						value >>= 8;
-						
-						dst[x] = value;
-					}
+					if (invert)
+						value = 255 - value;
+					
+					value += add1;
+					if (value < 0)
+						value = 0;
+					value *= mul1;
+					value >>= 8;
+					
+					dst[x] = value;
 				}
 			}
-			else
+		}
+		else if (channel == kChannel_RGB)
+		{
+			for (int y = 0; y < maskSy; ++y)
 			{
-				// todo : if the data is planar it would be trivial to SSE-optimize this loop
+				const uint8_t * __restrict srcR = image->channel[0].data + y * image->channel[0].pitch;
+				const uint8_t * __restrict srcG = image->channel[1].data + y * image->channel[1].pitch;
+				const uint8_t * __restrict srcB = image->channel[2].data + y * image->channel[2].pitch;
+					  uint8_t * __restrict dst  = mask + y * maskSx;
 				
-				for (int y = 0; y < maskSy; ++y)
+				int begin = 0;
+				
+			#if __SSE2__
+				// without SSE: 1200-1400us -> 290-300us with SSE
+				begin = processLine_SSE2_3channel(srcR, srcG, srcB, image->sx, tresholdValue, invert, dst);
+			#endif
+			
+				for (int x = begin; x < maskSx; ++x)
 				{
-					const uint8_t * __restrict srcR = image->channel[0].data + y * image->channel[0].pitch;
-					const uint8_t * __restrict srcG = image->channel[1].data + y * image->channel[1].pitch;
-					const uint8_t * __restrict srcB = image->channel[2].data + y * image->channel[2].pitch;
-						  uint8_t * __restrict dst  = mask + y * maskSx;
+					const int r = srcR[x];
+					const int g = srcG[x];
+					const int b = srcB[x];
 					
-					for (int x = 0; x < maskSx; ++x)
-					{
-						const int r = *srcR;
-						const int g = *srcG;
-						const int b = *srcB;
-						
-						int value = r + g + b;
-						
-						value += add3;
-						if (value < 0)
-							value = 0;
-						value *= mul3;
-						value >>= 8;
-						
-						dst[x] = value;
-						
-						srcR += image->channel[0].stride;
-						srcG += image->channel[1].stride;
-						srcB += image->channel[2].stride;
-					}
+					int value = r + g + b;
+					
+					if (invert)
+						value = 255 * 3 - value;
+					
+					value += add3;
+					if (value < 0)
+						value = 0;
+					value *= mul3;
+					value >>= 8;
+					
+					dst[x] = value;
 				}
 			}
 		}
@@ -209,48 +324,31 @@ void VfxNodeBlobDetector::tick(const float dt)
 			else
 				source = &image->channel[3];
 			
-			if (image->isPlanar)
+			for (int y = 0; y < image->sy; ++y)
 			{
-				for (int y = 0; y < image->sy; ++y)
+				const uint8_t * __restrict src = source->data + y * source->pitch;
+					  uint8_t * __restrict dst  = mask + y * maskSx;
+				
+				int begin = 0;
+				
+			#if __SSE2__
+				begin = processLine_SSE2_1channel(src, image->sx, tresholdValue, invert, dst);
+			#endif
+			
+				for (int x = begin; x < image->sx; ++x)
 				{
-					const uint8_t * __restrict src = source->data + y * source->pitch;
-						  uint8_t * __restrict dst  = mask + y * maskSx;
+					int value = src[x];
 					
-					for (int x = 0; x < image->sx; ++x)
-					{
-						int value = src[x];
+					if (invert)
+						value = 255 - value;
 						
-						value += add1;
-						if (value < 0)
-							value = 0;
-						value *= mul1;
-						value >>= 8;
-						
-						dst[x] = value;
-					}
-				}
-			}
-			else
-			{
-				for (int y = 0; y < maskSy; ++y)
-				{
-					const uint8_t * __restrict src = source->data + y * source->pitch;
-					      uint8_t * __restrict dst = mask + y * maskSx;
+					value += add1;
+					if (value < 0)
+						value = 0;
+					value *= mul1;
+					value >>= 8;
 					
-					for (int x = 0; x < maskSx; ++x)
-					{
-						int value = *src;
-						
-						value += add1;
-						if (value < 0)
-							value = 0;
-						value *= mul1;
-						value >>= 8;
-						
-						dst[x] = value;
-						
-						src += source->stride;
-					}
+					dst[x] = value;
 				}
 			}
 		}

@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#pragma once
+
 #if ENABLE_KINECT2
 
 #include <libfreenect2/frame_listener_impl.h> // FrameListener

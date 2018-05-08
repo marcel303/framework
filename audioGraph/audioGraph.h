@@ -29,6 +29,7 @@
 
 #include "audioTypes.h"
 #include "graph.h"
+#include <atomic>
 #include <map>
 #include <set>
 #include <string>
@@ -106,6 +107,11 @@ struct AudioGraph
 		std::string value;
 	};
 	
+	std::atomic<bool> isPaused;
+	std::atomic<bool> rampDownRequested;
+	bool rampDown;
+	std::atomic<bool> rampedDown;
+	
 	std::map<GraphNodeId, AudioNodeBase*> nodes;
 	
 	int currentTickTraversalId;
@@ -121,16 +127,18 @@ struct AudioGraph
 	std::set<std::string> activeFlags;
 	std::map<std::string, Memf> memf;
 	std::map<std::string, Mems> mems;
-	std::vector<std::string> events;
+	std::vector<std::string> activeEvents;
 	std::vector<std::string> triggeredEvents;
 	
 	std::vector<AudioControlValue> controlValues;
+	
+	std::vector<AudioEvent> events;
 	
 	AudioGraphGlobals * globals;
 	
 	AudioMutex mutex;
 	
-	AudioGraph(AudioGraphGlobals * globals);
+	AudioGraph(AudioGraphGlobals * globals, const bool isPaused);
 	~AudioGraph();
 	
 	void destroy();
@@ -148,6 +156,10 @@ struct AudioGraph
 	void unregisterControlValue(const char * name);
 	bool findControlValue(const char * name, AudioControlValue & result) const;
 	void exportControlValues();
+	
+	// called from any thread
+	void registerEvent(const char * name);
+	void unregisterEvent(const char * name);
 	
 	// called from any thread
 	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
@@ -207,9 +219,11 @@ void createAudioTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefi
 
 AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & typeName, AudioGraph * audioGraph);
 
-AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals);
+AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals, const bool createdPaused);
 
 //
+
+// todo : replace this with a decent PCM data cache object and make it a global
 
 struct PcmData;
 
@@ -218,6 +232,8 @@ void clearPcmDataCache();
 const PcmData * getPcmData(const char * filename);
 
 //
+
+// todo : replace this with a decent sample set cache object and make it a global
 
 namespace binaural
 {
@@ -234,3 +250,7 @@ enum HRIRSampleSetType
 void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSampleSetType type);
 void clearHrirSampleSetCache();
 const binaural::HRIRSampleSet * getHrirSampleSet(const char * name);
+
+//
+
+void drawFilterResponse(const AudioNodeBase * node, const float sx, const float sy);

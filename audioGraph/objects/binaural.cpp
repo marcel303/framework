@@ -43,8 +43,12 @@
 #if BINAURAL_USE_SSE
 	#include <xmmintrin.h>
 	#include <immintrin.h>
-#else
-	#warning "BINAURAL_USE_SSE is set to 0. is this intended?"
+#endif
+
+#if BINAURAL_USE_SIMD == 0
+	#if __SSE2__
+		#warning "BINAURAL_USE_SSE is set to 0. is this intended?"
+	#endif
 #endif
 
 /*
@@ -90,6 +94,31 @@ namespace binaural
 		return _mm_mul_ps(a, b);
 	}
 
+#endif
+
+#if BINAURAL_USE_SSE
+	// for SSE we do not need to define any compatibility functions
+#elif BINAURAL_USE_NEON
+	// use an external dependency to translate SSE intrinsics to NEON intrinsics
+	#include "sse2neon/SSE2NEON.h"
+#elif BINAURAL_USE_GCC_VECTOR
+	// translate SSE intrinsics into GCC vector code
+	inline float4 _mm_set_ps(const float z, const float y, const float x, const float w)
+	{
+		return float4 { z, y, x, w };
+	}
+	
+	inline float4 _mm_set1_ps(const float x)
+	{
+		return float4 { x, x, x, x };
+	}
+
+	inline float4 _mm_load1_ps(const float * _x)
+	{
+		const float x = *_x;
+
+		return float4 { x, x, x, x };
+	}
 #endif
 
 	//
@@ -200,7 +229,7 @@ namespace binaural
 	{
 		debugTimerBegin("blendHrirSamples_3");
 		
-	#if BINAURAL_USE_SSE
+	#if BINAURAL_USE_SIMD
 		const float4 * __restrict a_lSamples = (float4*)a.lSamples;
 		const float4 * __restrict b_lSamples = (float4*)b.lSamples;
 		const float4 * __restrict c_lSamples = (float4*)c.lSamples;
@@ -401,7 +430,7 @@ namespace binaural
 	{
 		debugAssert((numSamples % 4) == 0);
 		
-	#if BINAURAL_USE_SSE
+	#if BINAURAL_USE_SIMD
 		const float tStepScalar = 1.f / numSamples;
 		const float4 tStep = _mm_set1_ps(8.f / numSamples);
 		float4 t1 = _mm_set_ps(tStepScalar * 3.f, tStepScalar * 2.f, tStepScalar * 1.f, tStepScalar * 0.f);
@@ -453,6 +482,7 @@ namespace binaural
 		const float * __restrict array4,
 		float4 * __restrict result)
 	{
+	 	// todo : include neon; requires transpose function
 	#if BINAURAL_USE_SSE
 		const float4 * __restrict array1_4 = (float4*)array1;
 		const float4 * __restrict array2_4 = (float4*)array2;
@@ -471,8 +501,12 @@ namespace binaural
 			float4 value3b = array3_4[i * 2 + 1];
 			float4 value4b = array4_4[i * 2 + 1];
 			
+		#if BINAURAL_USE_SSE
 			_MM_TRANSPOSE4_PS(value1a, value2a, value3a, value4a);
 			_MM_TRANSPOSE4_PS(value1b, value2b, value3b, value4b);
+		#else
+			#error
+		#endif
 			
 			result[i * 8 + 0] = value1a;
 			result[i * 8 + 1] = value2a;
@@ -509,6 +543,7 @@ namespace binaural
 		const float * __restrict array4,
 		float4 * __restrict result)
 	{
+		// todo : include neon; requires transpose function
 	#if BINAURAL_USE_SSE
 		const float4 * __restrict array1_4 = (float4*)array1;
 		const float4 * __restrict array2_4 = (float4*)array2;
@@ -522,7 +557,11 @@ namespace binaural
 			float4 value3 = array3_4[i];
 			float4 value4 = array4_4[i];
 			
+		#if BINAURAL_USE_SSE
 			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
+		#else
+			#error
+		#endif
 			
 			const int index1 = fftIndices.indices[i * 4 + 0];
 			const int index2 = fftIndices.indices[i * 4 + 1];
@@ -561,6 +600,7 @@ namespace binaural
 		float * __restrict array3,
 		float * __restrict array4)
 	{
+		// todo : include neon; requires transpose function
 	#if BINAURAL_USE_SSE
 		float4 * __restrict array1_4 = (float4*)array1;
 		float4 * __restrict array2_4 = (float4*)array2;
@@ -574,7 +614,11 @@ namespace binaural
 			float4 value3 = interleaved[i * 4 + 2];
 			float4 value4 = interleaved[i * 4 + 3];
 			
+		#if BINAURAL_USE_SSE
 			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
+		#else
+			#error
+		#endif
 			
 			array1_4[i] = value1;
 			array2_4[i] = value2;
@@ -599,6 +643,7 @@ namespace binaural
 		float * __restrict array1,
 		float * __restrict array2)
 	{
+	 	// todo : include neon; requires transpose function
 	#if BINAURAL_USE_SSE
 		float4 * __restrict array1_4 = (float4*)array1;
 		float4 * __restrict array2_4 = (float4*)array2;
@@ -615,8 +660,12 @@ namespace binaural
 			float4 value3b = interleaved[i * 8 + 6];
 			float4 value4b = interleaved[i * 8 + 7];
 			
+		#if BINAURAL_USE_SSE
 			_MM_TRANSPOSE4_PS(value1a, value2a, value3a, value4a);
 			_MM_TRANSPOSE4_PS(value1b, value2b, value3b, value4b);
+		#else
+			#error
+		#endif
 			
 			array1_4[i * 2 + 0] = value1a;
 			array2_4[i * 2 + 0] = value2a;
@@ -859,8 +908,6 @@ namespace binaural
 		float4 * __restrict outputReal,
 		float4 * __restrict outputImag) const
 	{
-		// todo : SSE optimize this code
-		
 		const float * __restrict sReal = real;
 		const float * __restrict sImag = imag;
 		
@@ -1126,8 +1173,6 @@ namespace binaural
 		for (auto & triangle : triangles)
 		{
 			// find matching HRIR samples
-			
-			// todo : use a faster lookup mechanism here
 			
 			const SampleLocation triangleLocations[3] =
 			{

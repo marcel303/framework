@@ -30,11 +30,324 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "wavefield.h"
 #include <cmath>
 
-#include "framework.h"
+#include "audioResource.h"
+#include "tinyxml2.h"
+
+struct AudioResource_Wavefield1D : AudioResourceBase
+{
+	double f[Wavefield1D::kMaxElems];
+	int numElems;
+	int version;
+	
+	AudioResource_Wavefield1D()
+		: numElems(0)
+		, version(0)
+	{
+	}
+	
+	virtual void save(tinyxml2::XMLPrinter * printer) override
+	{
+		// todo
+	}
+	
+	virtual void load(tinyxml2::XMLElement * elem) override
+	{
+		// todo
+		
+		numElems = 64;
+		
+		for (int i = 0; i < numElems; ++i)
+			f[i] = 1.f;
+		
+		version = 1;
+	}
+};
+
+#include "graph.h"
+#include "Noise.h"
+#include "../libparticle/ui.h"
+
+struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
+{
+	AudioResource_Wavefield1D * resource;
+	
+	UiState uiState;
+	int sx;
+	int sy;
+	int x;
+	int y;
+	
+	Wavefield1D wavefield;
+	
+	ResourceEditor_Wavefield1D()
+		: resource(nullptr)
+		, uiState()
+		, sx(700)
+		, sy(256)
+		, x(0)
+		, y(0)
+		, wavefield()
+	{
+		uiState.sx = sx;
+		uiState.textBoxTextOffset = 40;
+	}
+	
+	virtual ~ResourceEditor_Wavefield1D() override
+	{
+		freeAudioNodeResource(resource);
+		Assert(resource == nullptr);
+	}
+	
+	virtual void getSize(int & _sx, int & _sy) const override
+	{
+		_sx = sx;
+		_sy = sy;
+	}
+	
+	virtual void setPosition(const int _x, const int _y) override
+	{
+		x = _x;
+		y = _y;
+		
+		uiState.x = x;
+		uiState.y = y;
+	}
+	
+	void randomize()
+	{
+		const double xRatio = random(0.0, 1.0 / 10.0);
+		const double randomFactor = random(0.0, 1.0);
+		//const double cosFactor = random(0.0, 1.0);
+		const double cosFactor = 0.0;
+		const double perlinFactor = random(0.0, 1.0);
+		
+		for (int x = 0; x < resource->numElems; ++x)
+		{
+			resource->f[x] = 1.0;
+			
+			resource->f[x] *= lerp(1.0, random(0.0, 1.0), randomFactor);
+			resource->f[x] *= lerp(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
+			//resource->f[x] = 1.0 - std::pow(m_wavefield.f[x], 2.0);
+			
+			//resource->f[x] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
+			resource->f[x] *= lerp(1.0, (double)scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
+		}
+	}
+	
+	void doWavefield(const float dt)
+	{
+		if (resource == nullptr)
+			return;
+		
+		if (g_doActions)
+		{
+			for (int i = 0; i < resource->numElems; ++i)
+				wavefield.f[i] = resource->f[i];
+			wavefield.numElems = resource->numElems;
+			
+			for (int i = 0; i < 100; ++i)
+				wavefield.tick(dt / 100.0, 100000.0, 0.8, 0.8, true);
+		}
+		
+		if (g_doDraw)
+		{
+			gxPushMatrix();
+			gxTranslatef(x, y, 0);
+			gxTranslatef(sx/2, sy/2, 0);
+			gxScalef(sx / float(resource->numElems), sy/2, 1.f);
+			gxTranslatef(-(resource->numElems)/2.f, 0.f, 0.f);
+			
+			setColor(colorWhite);
+			
+			hqBegin(HQ_FILLED_CIRCLES, true);
+			{
+				const double * p = wavefield.p;
+				const double * f = resource->f;
+				
+				for (int i = 0; i < resource->numElems; ++i)
+				{
+					const float h = p[i];
+					//const float h = 0.f;
+					const float a = f[i] / 2.f;
+					
+					setLumif(a);
+					hqFillCircle(i, h, 1.f);
+				}
+			}
+			hqEnd();
+			
+		#if 1
+			hqBegin(HQ_LINES, true);
+			{
+				const double * p = wavefield.p;
+				const double * f = resource->f;
+				
+				for (int i = 0; i < resource->numElems; ++i)
+				{
+					const float h = p[i];
+					const float a = f[i] / 2.f;
+					
+					setLumif(a);
+					hqLine(i, 0.f, 3.f, i, h, 1.f);
+				}
+			}
+			hqEnd();
+		#endif
+
+		#if 0
+			if (enabled)
+			{
+				hqBegin(HQ_FILLED_CIRCLES);
+				{
+					const float p = wavefield.sample(sampleLocation);
+					const float a = 1.f;
+					
+					setColorf(1.f, 1.f, 0.f, a);
+					hqFillCircle(sampleLocation, p, 1.f);
+				}
+				hqEnd();
+			}
+		#endif
+			
+			hqBegin(HQ_LINES, true);
+			{
+				setColor(colorGreen);
+				hqLine(0.f, -1.f, 1.f, resource->numElems, -1.f, 1.f);
+				hqLine(0.f, +1.f, 1.f, resource->numElems, +1.f, 1.f);
+			}
+			hqEnd();
+			
+			gxPopMatrix();
+		}
+	}
+	
+	void doMenus(const bool doAction, const bool doDraw, const float dt)
+	{
+		makeActive(&uiState, doAction, doDraw);
+		pushMenu("buttons");
+		{
+			doWavefield(dt);
+			
+			float x = 0.f;
+			float sx = 1.f / 6;
+			
+			if (doButton("randomize", x, sx, false))
+			{
+				randomize();
+				
+				resource->version++;
+			}
+			x += sx;
+			
+			if (doButton("play", x, sx, false))
+			{
+				if (wavefield.numElems > 0)
+				{
+					const int x = rand() % wavefield.numElems;
+					
+					wavefield.doGaussianImpact(x, 1, 1.f);
+				}
+			}
+			x += sx;
+			
+			if (resource != nullptr)
+			{
+				int numElems = resource->numElems;
+				
+				doTextBox(numElems, "size", x, sx, false, dt);
+				x += sx;
+				
+				numElems = std::max(0, std::min(Wavefield1D::kMaxElems, numElems));
+				
+				if (numElems != resource->numElems)
+				{
+					for (int i = resource->numElems; i < numElems; ++i)
+						resource->f[i] = 1.f;
+					
+					resource->numElems = numElems;
+					
+					resource->version++;
+					
+					//
+					
+					wavefield.init(numElems);
+				}
+			}
+			
+			doBreak();
+		}
+		popMenu();
+	}
+	
+	virtual bool tick(const float dt, const bool inputIsCaptured) override
+	{
+		doMenus(true, false, dt);
+		
+		return uiState.activeElem != nullptr;
+	}
+	
+	virtual void draw() const override
+	{
+		gxPushMatrix();
+		{
+			gxTranslatef(x, y, 0);
+			
+			setColor(colorBlack);
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			{
+				hqFillRoundedRect(0, 0, sx, sy, 12.f);
+			}
+			hqEnd();
+		}
+		gxPopMatrix();
+		
+		const_cast<ResourceEditor_Wavefield1D*>(this)->doMenus(false, true, 0.f);
+	}
+	
+	virtual void setResource(const GraphNode & node, const char * type, const char * name) override
+	{
+		Assert(resource == nullptr);
+		
+		if (createAudioNodeResource(node, type, name, resource))
+		{
+			wavefield.init(resource->numElems);
+		}
+	}
+	
+	virtual bool serializeResource(std::string & text) const override
+	{
+		if (resource != nullptr)
+		{
+			tinyxml2::XMLPrinter p;
+			p.OpenElement("value");
+			{
+				resource->save(&p);
+			}
+			p.CloseElement();
+			
+			text = p.CStr();
+			
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+};
+
+AUDIO_RESOURCE_TYPE(AudioResource_Wavefield1D, "wavefield.1d");
 
 AUDIO_NODE_TYPE(wavefield_1d, AudioNodeWavefield1D)
 {
 	typeName = "wavefield.1d";
+	
+	resourceTypeName = "wavefield.1d";
+	
+	createResourceEditor = []() -> GraphEdit_ResourceEditorBase*
+	{
+		return new ResourceEditor_Wavefield1D();
+	};
 	
 	in("size", "int", "16");
 	in("gain", "audioValue", "1");
@@ -51,24 +364,10 @@ AUDIO_NODE_TYPE(wavefield_1d, AudioNodeWavefield1D)
 	out("audio", "audioValue");
 }
 
-/*
-
-template <typename T>
-inline T lerp(T a, T b, T t)
-{
-	return a * (1.0 - t) + b * t;
-}
-
-template <typename T>
-inline T clamp(T value, T min, T max)
-{
-	return value < min ? min : value > max ? max : value;
-}
-
-*/
-
 AudioNodeWavefield1D::AudioNodeWavefield1D()
 	: AudioNodeBase()
+	, wavefieldData(nullptr)
+	, currentDataVersion(-1)
 	, wavefield(nullptr)
 	, rng()
 	, audioOutput()
@@ -95,6 +394,8 @@ AudioNodeWavefield1D::~AudioNodeWavefield1D()
 {
 	delete wavefield;
 	wavefield = nullptr;
+	
+	freeAudioNodeResource(wavefieldData);
 }
 
 void AudioNodeWavefield1D::randomize()
@@ -112,31 +413,19 @@ void AudioNodeWavefield1D::randomize()
 		wavefield->d[x] = 0.0;
 		
 		wavefield->f[x] = 1.0;
-		wavefield->f[x] *= lerp<double>(1.0, rng.nextd(0.0, 1.0), randomFactor);
-		wavefield->f[x] *= lerp<double>(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
+		wavefield->f[x] *= Wavefield::lerp<double>(1.0, rng.nextd(0.0, 1.0), randomFactor);
+		wavefield->f[x] *= Wavefield::lerp<double>(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
 		
 		//wavefield->f[x] = 1.0 - std::pow(m_wavefield.f[x], 2.0);
 		//wavefield->f[x] = 1.0 - std::pow(rng.nextd(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
 		
-		wavefield->f[x] *= lerp<double>(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
+		wavefield->f[x] *= Wavefield::lerp<double>(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
 	}
 }
 
 void AudioNodeWavefield1D::init(const GraphNode & node)
 {
-	if (isPassthrough)
-	{
-		return;
-	}
-	
-	const int size = getInputInt(kInput_Size, 16);
-	
-	if (size != wavefield->numElems)
-	{
-		wavefield->init(size);
-		
-		randomize();
-	}
+	createAudioNodeResource(node, "wavefield.1d", "editorData", wavefieldData);
 }
 
 void AudioNodeWavefield1D::tick(const float _dt)
@@ -151,7 +440,7 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	const AudioFloat * tension = getInputAudioFloat(kInput_Tension, &defaultTension);
 	const bool wrap = getInputBool(kInput_Wrap, false);
 	const AudioFloat * sampleLocation = getInputAudioFloat(kInput_SampleLocation, &AudioFloat::Half);
-	const int size = getInputInt(kInput_Size, 16);
+	//const int size = getInputInt(kInput_Size, 16);
 	
 	//
 
@@ -163,11 +452,14 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	
 	//
 	
-	if (wavefield->roundNumElems(size) != wavefield->numElems)
+	if (wavefieldData->version != currentDataVersion)
 	{
-		wavefield->init(size);
+		wavefield->init(wavefieldData->numElems);
 		
-		randomize();
+		for (int i = 0; i < wavefield->numElems; ++i)
+			wavefield->f[i] = wavefieldData->f[i];
+		
+		currentDataVersion = wavefieldData->version;
 	}
 	
 	//
@@ -187,7 +479,7 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	
 	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 	{
-		const double c = clamp<double>(tension->samples[i] * 1000000.0, -maxTension, +maxTension);
+		const double c = Wavefield::clamp<double>(tension->samples[i] * 1000000.0, -maxTension, +maxTension);
 		
 		wavefield->tick(dt, c, 1.0 - velocityDampening->samples[i], 1.0 - positionDampening->samples[i], wrap == false);
 		

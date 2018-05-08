@@ -32,6 +32,7 @@
 #include "vfxNodes/dotDetector.h"
 #include "vfxNodes/dotTracker.h"
 #include "../libvideo/video.h"
+#include <cmath>
 
 #define USE_READPIXELS_OPTIMIZE 0
 #define USE_READPIXELS_FENCES 0
@@ -78,8 +79,8 @@ void testDotDetector()
 		
 		void tick(const float dt)
 		{
-			const float dx = std::cosf(angle);
-			const float dy = std::sinf(angle);
+			const float dx = cosf(angle);
+			const float dy = sinf(angle);
 			
 			x += dx * speed * dt;
 			y += dy * speed * dt;
@@ -147,6 +148,8 @@ void testDotDetector()
 	
 	TrackedDot trackedDots[kMaxIslands];
 	float lastFrameTime = framework.time;
+	int numAdded = 0;
+	int numRemoved = 0;
 
 	do
 	{
@@ -343,26 +346,23 @@ void testDotDetector()
 		
 		// track dots
 		
-		for (int i = 0; i < numIslands; ++i)
-		{
-			trackedDots[i].x = islands[i].x;
-			trackedDots[i].y = islands[i].y;
-		}
-		
-		// todo : should only do dot tracking when we know we got a new video frame, to ensure motion is stable
-		
-		int numAdded = 0;
-		int numRemoved = 0;
-		
-		if (useDotTracker)
-		{
-			const float dtFrame = framework.time - lastFrameTime;
-			
-			dotTracker.identify(trackedDots, numIslands, dtFrame, 50.f, gotNewFrame, nullptr, &numAdded, nullptr, &numRemoved);
-		}
-		
 		if (gotNewFrame)
 		{
+			// only do dot tracking when we know we got a new video frame, to ensure motion is stable
+			
+			for (int i = 0; i < numIslands; ++i)
+			{
+				trackedDots[i].x = islands[i].x;
+				trackedDots[i].y = islands[i].y;
+			}
+			
+			if (useDotTracker)
+			{
+				const float dtFrame = framework.time - lastFrameTime;
+				
+				dotTracker.identify(trackedDots, numIslands, dtFrame, 50.f, true, nullptr, &numAdded, nullptr, &numRemoved);
+			}
+		
 			lastFrameTime = framework.time;
 		}
 		
@@ -389,7 +389,7 @@ void testDotDetector()
 					
 					const int dx = island.maxX - island.minX;
 					const int dy = island.maxY - island.minY;
-					const float ds = std::sqrtf(dx * dx + dy * dy) / 2.f + 1.f;
+					const float ds = sqrtf(dx * dx + dy * dy) / 2.f + 1.f;
 					
 					setColor(colorRed);
 					hqStrokeCircle(island.x, island.y, radius, 2.f);

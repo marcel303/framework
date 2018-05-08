@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "framework.h"
 #include "vfxGraph.h"
 #include "vfxNodeTime.h"
 

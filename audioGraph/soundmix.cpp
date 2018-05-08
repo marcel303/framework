@@ -613,7 +613,7 @@ bool PcmData::load(const char * filename, const int channel)
 		
 		// note : writing .cache files is disabled here. remove '&& false' to enable
 		
-		if (result == true && Path::GetExtension(filename, true) != "wav" && false)
+		if (result == true && Path::GetExtension(filename, true) != "wav" && true)
 		{
 			try
 			{
@@ -986,7 +986,7 @@ void AudioVoice::applyRamping(RampInfo & rampInfo, float * __restrict samples, c
 
 void AudioVoice::applyLimiter(float * __restrict samples, const int numSamples, const float maxGain)
 {
-	const float decayPerMs = .001f;
+	const float decayPerMs = .01f;
 	const float dtMs = 1000.f / SAMPLE_RATE;
 	const float retainPerSample = powf(1.f - decayPerMs, dtMs);
 	
@@ -1118,6 +1118,27 @@ void AudioVoiceManager::generateAudio(
 							audioBufferAdd(&samples[numSamples * 1], voiceSamples, numSamples);
 						}
 					}
+					else if (voice.speaker == AudioVoice::kSpeaker_Channel)
+					{
+						if (voice.channelIndex >= 0 && voice.channelIndex < 2)
+						{
+							if (interleaved)
+							{
+								// interleave voice samples into destination buffer
+								
+								float * __restrict dstPtr = samples;
+								
+								for (int i = 0; i < numSamples; ++i)
+								{
+									dstPtr[i * 2 + voice.channelIndex] += voiceSamples[i];
+								}
+							}
+							else
+							{
+								audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
+							}
+						}
+					}
 					else
 					{
 						if (interleaved)
@@ -1141,22 +1162,25 @@ void AudioVoiceManager::generateAudio(
 				}
 				else
 				{
-					if (interleaved)
+					if (voice.channelIndex >= 0 && voice.channelIndex < numChannels)
 					{
-						// interleave voice samples into destination buffer
-						
-						float * __restrict dstPtr = samples + voice.channelIndex;
-						
-						for (int i = 0; i < numSamples; ++i)
+						if (interleaved)
 						{
-							*dstPtr = voiceSamples[i];
+							// interleave voice samples into destination buffer
 							
-							dstPtr += numChannels;
+							float * __restrict dstPtr = samples + voice.channelIndex;
+							
+							for (int i = 0; i < numSamples; ++i)
+							{
+								*dstPtr = voiceSamples[i];
+								
+								dstPtr += numChannels;
+							}
 						}
-					}
-					else
-					{
-						audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
+						else
+						{
+							audioBufferAdd(&samples[numSamples * voice.channelIndex], voiceSamples, numSamples);
+						}
 					}
 				}
 			}
@@ -1327,7 +1351,7 @@ int AudioVoiceManagerBasic::numDynamicChannelsUsed() const
 void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int numSamples)
 {
 	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
-	const float limiterPeak = outputMode == kOutputMode_MultiChannel ? .4f : .1f;
+	const float limiterPeak = 1.f;
 	
 	audioMutex.lock();
 	{

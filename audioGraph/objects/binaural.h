@@ -60,10 +60,10 @@ within the triangle.
 #include <vector>
 
 #ifndef ALIGN16
-	#ifdef MACOS
+	#if defined(MACOS) || defined(LINUX)
 		#define ALIGN16 __attribute__((aligned(16)))
 	#else
-		#define ALIGN16
+		#define ALIGN16 __declspec(align(16))
 	#endif
 #endif
 
@@ -71,12 +71,34 @@ within the triangle.
 	#if __SSE2__
 		#define BINAURAL_USE_SSE 1
 	#else
-		#define BINAURAL_USE_SSE 0
+		#define BINAURAL_USE_SSE 0 // do not alter
 	#endif
 #endif
 
+#if !defined(BINAURAL_USE_NEON)
+	#if defined(__arm__) || defined(__aarch64__)
+		#define BINAURAL_USE_NEON 1
+	#else
+		#define BINAURAL_USE_NEON 0 // do not alter
+	#endif
+#endif
+
+#if !defined(BINAURAL_USE_GCC_VECTOR)
+	#if defined(__GNUC__)
+		#define BINAURAL_USE_GCC_VECTOR 1
+	#else
+		#define BINAURAL_USE_GCC_VECTOR 0 // do not alter
+	#endif
+#endif
+
+#if BINAURAL_USE_SSE || BINAURAL_USE_NEON || BINAURAL_USE_GCC_VECTOR
+	#define BINAURAL_USE_SIMD 1
+#else
+	#define BINAURAL_USE_SIMD 0 // do not alter
+#endif
+
 #define ENABLE_DEBUGGING 0
-#define ENABLE_FOURIER4 (BINAURAL_USE_SSE && 1)
+#define ENABLE_FOURIER4 (BINAURAL_USE_SIMD && 1)
 
 #if BINAURAL_USE_SSE
 	#include <xmmintrin.h>
@@ -109,6 +131,8 @@ namespace binaural
 	
 #if BINAURAL_USE_SSE
 	typedef __m128 float4;
+#elif BINAURAL_USE_GCC_VECTOR
+	typedef float float4 __attribute__ ((vector_size(16)));
 #endif
 	
 	// structures

@@ -3,7 +3,7 @@
 #include "textfield.h"
 
 #define CARET_PADDING_X 0
-#define CARET_PADDING_Y 5 // todo : look these up
+#define CARET_PADDING_Y 5
 #define CARET_SX 2
 
 EditorTextField::EditorTextField()

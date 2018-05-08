@@ -59,8 +59,7 @@ struct VfxNodeVideo : VfxNodeBase
 	VfxImageCpu imageCpuOutputV;
 	
 	MediaPlayer * mediaPlayer;
-	
-	GLuint textureBlack;
+	VfxImageCpuData rgbaData;
 	
 	VfxNodeVideo();
 	virtual ~VfxNodeVideo() override;

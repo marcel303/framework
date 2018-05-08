@@ -1,0 +1,185 @@
+----------------------
+U S I N G    J G M O D
+----------------------
+
+int fast_loading = FALSE;
+    This variable affects only S3M loader. If FALSE, the S3M loader will use
+    a method to detect the no of channels used by the music accurately but
+    SLOW. If TRUE, the channels detection is less accurate but MUCH FASTER.
+    Speed difference between these two settings depending on the speed of
+    computer, cache memory and windows. Try these two settings and decide
+    yourself which is better (default = FALSE). 
+
+
+int enable_m15 = FALSE;
+    When load_mod is called, it will detect the correct type of mod
+    (eg. MOD, S3M, XM) and will call the appropriate loader. 15 instruments
+    protracker uses a different detection method than 31 instruments
+    protracker. Sometimes, the 15 instruments detector might detect wrongly.
+    By default, it has the value of FALSE which means the detector is
+    disabled. If load_mod() encountered a 15 instruments protracker, it will
+    not load it. To enable, set this variable to TRUE.
+
+
+int enable_lasttrk_loop = TRUE;
+    Some of the MODs contain the position jump command to which jump to
+    previous track at the last track of the mod. This causes the song to
+    loop infinitively. Set this variable to FALSE to ignore the position
+    jump command at the last track.
+
+
+void reserve_voices(int digi_voices, int midi_voices);
+    This is an Allegro function to specify the number of voices that are to
+    be used by the digital sound and MIDI drivers. This library uses the
+    digital sound driver. So sending wantever values for the MIDI
+    will not intefere with JGMOD library. By default, Allegro will allocate
+    8 voices for digital sound which means that it can play 8 digitized sounds
+    simultaneously. If you need more or less, use this function instead.
+
+    Each mod uses a number of voices. If it uses 18 channels, than you should
+    reserve 32 voices, which is the maximum possible of voices for Allegro.
+    The remaining 14 voices (32-18=14) can be used for sound effects.
+
+    Note : you could only allocate power of two (eg, 1,2,4,8,16,32 or 64)
+           voices. If it isn't power of two, allegro will round it to the
+           next nearest higher power of two. 
+
+
+int install_mod (int no_voices)
+    Call this to allocate no of channels (or voices) for the MOD. Returns
+    a positive number if sucessful or negative if unsucessful. Do not try
+    do allocate more than you reserve. Remember to install_timer() or there
+    will be no output to the speaker and call install_mod() AFTER
+    install_sound().
+
+    JGMOD will only uses the channels allocated using install_mod(). If the
+    channels allocated is not enough for the mod, then JGMOD will only play
+    the first few channels allocated. The rest will be ignored. 
+
+    reserve_voices (32, -1);
+    install_mod (16);
+    // play a mod which uses 24 channels here;
+
+    The first 16 channels for the mod will be played. While the remaining
+    8 (24-16=8) channels will be ignored.
+
+    Also, if you a load datafile which contains JGM after calling this
+    function, you don't need to register_datafile_jgmod() as install_mod()
+    will do that for you.
+
+
+void register_datafile_jgmod (void)
+    This function is used or register jgm type so that allegro knows how
+    to load it. install_mod() will automatically do this for you. But if
+    you want to load a jgm in datafile before calling install_mod(), call
+    this function before loading the datafile.
+
+void remove_mod (void)
+    Uninstall mod. You usually don't need to call this manually. This will
+    be called automatically upon exiting your program by using atexit().
+
+
+JGMOD *load_mod (uchar *filename)
+    This function will detect the type of MOD and will call the appropriate
+    function to load it. Able to load only supported mod types.
+
+
+void play_mod (JGMOD *j, int loop)
+    Play the mod j. Pass FALSE if you don't want to loop the music. TRUE
+    to loop the music.
+
+
+void stop_mod (void)
+    Stop the mod from playing.
+
+
+void next_mod_track (void)
+    Jump to the next pattern. If no next pattern, then the music will end.
+
+
+void prev_mod_track (void)
+    Jump to the previous pattern. If no previous pattern, then restart
+    the current pattern.
+
+
+void goto_mod_track (int new_track)
+    To jump directly to a specified track. If the track doesn't exists, then
+    the music will end immediately.
+
+
+void pause_mod (void)
+    Pause the currently playing mod.
+
+
+void resume_mod (void)
+    Resume a paused mod.    
+
+
+void toggle_pause_mode (void)
+    Resume a paused mod or pause a playing mod.
+
+
+int is_mod_playing (void)
+    Use this function to check if any mod is currently playing. Returns
+    TRUE if a mod is playing. Else, returns FALSE
+
+
+int is_mod_paused (void)
+    Check for any currently playing mod is paused. If paused, returns TRUE.
+    If not pause, returns FALSE. If not playing any music, returns FALSE. 
+
+
+void destroy_mod (JGMOD *j)
+    Frees a JGMOD structure and then set it to NULL.
+
+
+void set_mod_volume (int volume)
+    Set the mod volume. Range of 0-255. Doesn't work very well below
+    30 (roughly).
+
+
+int get_mod_volume (void)
+    Returns the mod volume.
+
+
+int get_jgmod_sample (JGMOD *j, int sample_no)
+    Returns a SAMPLE pointer to a sample for a particular mod. Will return
+    NULL if the requested sample number does not exists.
+
+
+void set_mod_speed (int speed)
+    Set speed of the mod playback in percentage. Range from 1-400 percent.
+
+
+void set_mod_pitch (int pitch)
+    Set the relative pitch of mod playback in percentage. Range from 1-400
+    percent.
+
+
+int get_mod_info (char *filename, JGMOD_INFO *ji)
+    Pass a JGMOD_INFO structure, with the filename, and get_mod_info()
+    will fill the JGMOD_INFO structure with information about a specific
+    MOD (eg song name, mod type). See ex7.c
+
+    At the moment, JGMOD_INFO contains only 3 members. Perhaps more will be
+    added later. 
+
+    typedef struct JGMOD_INFO
+    {
+        int type;
+        char type_name[20];
+        char name[29];
+    }JGMOD_INFO;
+
+    The type member contains the type MOD. Here is a #defines of all the
+    currently possible value.
+
+    #define MOD15_TYPE          1
+    #define MOD31_TYPE          2
+    #define S3M_TYPE            3
+    #define XM_TYPE             4
+    #define IT_TYPE             5
+    #define JGM_TYPE            6
+    #define UNREAL_S3M_TYPE     7
+    #define UNREAL_XM_TYPE      8
+    #define UNREAL_IT_TYPE      9

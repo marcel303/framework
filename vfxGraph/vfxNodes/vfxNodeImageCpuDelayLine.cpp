@@ -86,6 +86,21 @@ void VfxNodeImageCpuDelayLine::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeImageCpuDelayLine);
 	
+	if (isPassthrough)
+	{
+		delayLine->shut();
+		
+		for (int i = 0; i < 4; ++i)
+			imageData[i].free();
+		
+		return;
+	}
+	
+	if (delayLine->saveBuffer == nullptr)
+	{
+		delayLine->init(0, 1024 * 512);
+	}
+	
 	const int maxDelay = 1 + std::max(0, (int)std::ceil(getInputFloat(kInput_MaxDelay, 0.f)));
 	const bool compressionEnabled = getInputBool(kInput_CompressionEnabled, false);
 	const int jpegQualityLevel = std::max(0, std::min(100, (int)std::round(getInputFloat(kInput_JpegQualityLevel, .85f) * 100.f)));
@@ -113,6 +128,15 @@ void VfxNodeImageCpuDelayLine::tick(const float dt)
 		if (image != nullptr)
 		{
 			delayLine->add(*image, jpegQualityLevel, 0.0, compressionEnabled);
+		}
+		else
+		{
+			// add a (0, 0) sized image to ensure the delay line keeps processing and updating its
+			// history. otherwise, the delay line would seem to 'pause', which it never should do
+			
+			const VfxImageCpu emptyImage;
+			
+			delayLine->add(emptyImage, jpegQualityLevel, 0.0, compressionEnabled);
 		}
 		
 		const int offset[4] =
@@ -151,7 +175,14 @@ void VfxNodeImageCpuDelayLine::getDescription(VfxNodeDescription & d)
 {
 	ImageCpuDelayLine::MemoryUsage memoryUsage = delayLine->getMemoryUsage();
 	
-	d.add("memory usage. total: %.2fMb, history:%.2fMb (%d/%d)", memoryUsage.numBytes/(1024.0*1024.0), memoryUsage.numHistoryBytes/(1024.0*1024.0), memoryUsage.historySize, delayLine->maxHistorySize);
+	for (int i = 0; i < 4; ++i)
+		memoryUsage.numBytes += imageData[i].image.getMemoryUsage();
+	
+	d.add("memory usage. total: %.2fMb, history:%.2fMb (%d/%d)",
+		memoryUsage.numBytes/(1024.0*1024.0),
+		memoryUsage.numHistoryBytes/(1024.0*1024.0),
+		memoryUsage.historySize,
+		delayLine->maxHistorySize);
 	d.newline();
 	
 	for (int i = 0; i < 4; ++i)

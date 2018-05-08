@@ -570,8 +570,6 @@ bool RealTimeConnection::setPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, const
 	{
 	case kVfxPlugType_None:
 		return false;
-	case kVfxPlugType_DontCare:
-		return false;
 		
 	case kVfxPlugType_Bool:
 		plug->getRwBool() = Parse::Bool(value);
@@ -580,12 +578,7 @@ bool RealTimeConnection::setPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, const
 		plug->getRwInt() = Parse::Int32(value);
 		return true;
 	case kVfxPlugType_Float:
-		Assert(g_currentVfxGraph == nullptr);
-		g_currentVfxGraph = vfxGraph;
-		{
-			plug->getRwFloat() = Parse::Float(value);
-		}
-		g_currentVfxGraph = nullptr;
+		plug->getRwFloat() = Parse::Float(value);
 		return true;
 		
 	case kVfxPlugType_String:
@@ -602,8 +595,23 @@ bool RealTimeConnection::setPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, const
 		return false;
 	case kVfxPlugType_ImageCpu:
 		return false;
+		
 	case kVfxPlugType_Channel:
-		return false;
+		{
+			VfxChannel & channel = plug->getRwChannel();
+			
+			float * data;
+			int dataSize;
+			VfxChannelData::parse(value.c_str(), data, dataSize);
+			
+			delete [] channel.data;
+			channel.data = nullptr;
+			
+			channel.setData(data, false, dataSize);
+			
+			return true;
+		}
+		
 	case kVfxPlugType_Trigger:
 		return false;
 		
@@ -620,8 +628,6 @@ bool RealTimeConnection::getPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, std::
 	switch (plug->type)
 	{
 	case kVfxPlugType_None:
-		return false;
-	case kVfxPlugType_DontCare:
 		return false;
 		
 	case kVfxPlugType_Bool:
@@ -755,7 +761,7 @@ void RealTimeConnection::setSrcSocketValue(const GraphNodeId nodeId, const int s
 	Assert(isDynamicInput || input != nullptr);
 	if (input != nullptr)
 	{
-		if (input->isConnected())
+		if (input->isConnected() && input->immediateMem != nullptr && input->immediateMem == input->mem)
 		{
 			setPlugValue(vfxGraph, input, value);
 		}
@@ -896,25 +902,15 @@ void RealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, const int
 	Assert(isDynamicInput || input != nullptr);
 	if (input != nullptr && input->isConnected())
 	{
-		// check if this link is connected to a literal value
-		
-		bool isImmediate = false;
-		
-		for (auto & i : vfxGraph->valuesToFree)
+		if (input->mem == input->immediateMem)
 		{
-			if (i.mem == input->mem)
-				isImmediate = true;
+			input->immediateMem = nullptr;
 			
-			for (auto & elem : input->floatArray.elems)
-				if (i.mem == elem.value)
-					isImmediate = true;
-			if (i.mem == input->floatArray.immediateValue)
-				isImmediate = true;
-		}
-		
-		if (isImmediate)
-		{
 			input->disconnect();
+		}
+		else
+		{
+			input->immediateMem = nullptr;
 		}
 	}
 }
@@ -1105,7 +1101,7 @@ bool RealTimeConnection::getNodeDescription(const GraphNodeId nodeId, std::vecto
 	return true;
 }
 
-int RealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
+int RealTimeConnection::getNodeActivity(const GraphNodeId nodeId)
 {
 	if (isLoading)
 		return false;
@@ -1140,7 +1136,7 @@ int RealTimeConnection::nodeIsActive(const GraphNodeId nodeId)
 	return result;
 }
 
-int RealTimeConnection::linkIsActive(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
+int RealTimeConnection::getLinkActivity(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 {
 	if (isLoading)
 		return false;
@@ -1195,8 +1191,6 @@ static std::string vfxPlugTypeToValueTypeName(const VfxPlugType plugType)
 		case kVfxPlugType_None:
 			Assert(false);
 			return "";
-		case kVfxPlugType_DontCare:
-			return "any";
 		case kVfxPlugType_Bool:
 			return "bool";
 		case kVfxPlugType_Int:

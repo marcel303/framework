@@ -463,6 +463,7 @@ void AudioPlug::connectTo(AudioPlug & dst)
 			AudioFloatArray::Elem elem;
 			elem.audioFloat = (AudioFloat*)dst.mem;
 			floatArray.elems.push_back(elem);
+			floatArray.lastUpdateTick = -1;
 		}
 		else
 	#endif
@@ -472,7 +473,7 @@ void AudioPlug::connectTo(AudioPlug & dst)
 	}
 }
 
-void AudioPlug::connectTo(void * dstMem, const AudioPlugType dstType, const bool isImmediate)
+void AudioPlug::connectToImmediate(void * dstMem, const AudioPlugType dstType)
 {
 	if (dstType != type)
 	{
@@ -483,16 +484,7 @@ void AudioPlug::connectTo(void * dstMem, const AudioPlugType dstType, const bool
 	#if MULTIPLE_AUDIO_INPUT
 		if (dstType == kAudioPlugType_FloatVec)
 		{
-			if (isImmediate)
-			{
-				floatArray.immediateValue = (AudioFloat*)dstMem;
-			}
-			else
-			{
-				AudioFloatArray::Elem elem;
-				elem.audioFloat = (AudioFloat*)dstMem;
-				floatArray.elems.push_back(elem);
-			}
+			floatArray.immediateValue = (AudioFloat*)dstMem;
 		}
 		else
 	#endif
@@ -825,6 +817,8 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 			typeDefinition.displayName = registration->displayName;
 		}
 		
+		typeDefinition.resourceTypeName = registration->resourceTypeName;
+		
 		for (int i = 0; i < (int)registration->inputs.size(); ++i)
 		{
 			auto & src = registration->inputs[i];
@@ -835,6 +829,7 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 			inputSocket.index = i;
 			inputSocket.enumName = src.enumName;
 			inputSocket.defaultValue = src.defaultValue;
+			inputSocket.displayName = src.displayName;
 			
 			typeDefinition.inputSockets.push_back(inputSocket);
 		}
@@ -848,9 +843,12 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 			outputSocket.name = src.name;
 			outputSocket.isEditable = src.isEditable;
 			outputSocket.index = i;
+			outputSocket.displayName = src.displayName;
 			
 			typeDefinition.outputSockets.push_back(outputSocket);
 		}
+		
+		typeDefinition.resourceEditor.create = registration->createResourceEditor;
 		
 		typeDefinition.createUi();
 		

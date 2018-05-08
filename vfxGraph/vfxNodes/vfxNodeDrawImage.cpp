@@ -69,7 +69,7 @@ void VfxNodeDrawImage::draw() const
 	const SizeMode sizeMode = (SizeMode)getInputInt(kInput_SizeMode, 0);
 	const float opacity = getInputFloat(kInput_Opacity, 1.f);
 	
-	if (image != nullptr)
+	if (image != nullptr && image->getTexture() != 0 && image->getSx() > 0 && image->getSy() > 0)
 	{
 		vfxGpuTimingBlock(VfxNodeDrawImage);
 		

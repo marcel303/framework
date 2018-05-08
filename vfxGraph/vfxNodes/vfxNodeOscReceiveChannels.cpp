@@ -26,8 +26,8 @@
 */
 
 #include "oscEndpointMgr.h"
-#include "vfxGraph.h"
 #include "vfxNodeOscReceiveChannels.h"
+#include "vfxResource.h"
 #include "vfxTypes.h"
 
 //

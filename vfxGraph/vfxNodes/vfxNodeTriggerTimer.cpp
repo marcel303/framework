@@ -31,41 +31,101 @@ VFX_NODE_TYPE(VfxNodeTriggerTimer)
 {
 	typeName = "trigger.timer";
 	
+	in("auto", "bool", "1");
 	in("interval", "float");
+	in("start!", "trigger");
+	in("trigger!", "trigger");
 	out("trigger!", "trigger");
-	out("triggerCount", "int");
+	out("triggerCount", "float");
 }
 
 VfxNodeTriggerTimer::VfxNodeTriggerTimer()
 	: VfxNodeBase()
+	, isStarted(false)
 	, timer(0.f)
-	, triggerCountOutput(0)
+	, triggerCount(0)
+	, triggerCountOutput(0.f)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	addInput(kInput_Auto, kVfxPlugType_Bool);
 	addInput(kInput_Interval, kVfxPlugType_Float);
+	addInput(kInput_Start, kVfxPlugType_Trigger);
+	addInput(kInput_Trigger, kVfxPlugType_Trigger);
 	addOutput(kOutput_Trigger, kVfxPlugType_Trigger, nullptr);
-	addOutput(kOutput_TriggerCount, kVfxPlugType_Int, &triggerCountOutput);
+	addOutput(kOutput_TriggerCount, kVfxPlugType_Float, &triggerCountOutput);
 }
 
 void VfxNodeTriggerTimer::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeTriggerTimer);
 	
+	const bool startAuto = getInputBool(kInput_Auto, true);
 	const float interval = getInputFloat(kInput_Interval, 0.f);
 	
-	if (interval == 0.f)
+	if (isStarted == false && startAuto)
+	{
+		isStarted = true;
 		timer = 0.f;
-	else
+	}
+	
+	if (isPassthrough || interval == 0.f || isStarted == false)
+	{
+		timer = 0.f;
+	}
+	else if (timer < interval)
 	{
 		timer += dt;
 		
 		if (timer >= interval)
 		{
-			timer = 0.f;
-			
-			triggerCountOutput++;
+			triggerCount++;
+			triggerCountOutput = triggerCount;
 			
 			trigger(kOutput_Trigger);
+			
+			if (startAuto)
+				timer = 0.f;
+			else
+				isStarted = false;
 		}
+	}
+}
+
+void VfxNodeTriggerTimer::handleTrigger(const int socketIndex)
+{
+	if (socketIndex == kInput_Start)
+	{
+		isStarted = true;
+		timer = 0.f;
+	}
+	else if (socketIndex == kInput_Trigger)
+	{
+		const bool startAuto = getInputBool(kInput_Auto, true);
+		
+		triggerCount++;
+		triggerCountOutput = triggerCount;
+	
+		trigger(kOutput_Trigger);
+		
+		if (startAuto)
+			timer = 0.f;
+		else
+			isStarted = false;
+	}
+}
+
+void VfxNodeTriggerTimer::getDescription(VfxNodeDescription & d)
+{
+	if (isStarted)
+	{
+		const float interval = getInputFloat(kInput_Interval, 0.f);
+		
+		const float remaining = std::max(0.f, interval - timer);
+		
+		d.add("time remaining: %.2fs", remaining);
+	}
+	else
+	{
+		d.add("not started");
 	}
 }

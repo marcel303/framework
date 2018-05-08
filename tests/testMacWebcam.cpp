@@ -3,6 +3,7 @@
 #include "framework.h"
 #include "vfxNodes/macWebcam.h"
 #include "vfxNodes/openglTexture.h"
+#include <cmath>
 
 extern const int GFX_SX;
 extern const int GFX_SY;

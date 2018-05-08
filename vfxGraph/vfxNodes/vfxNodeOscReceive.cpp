@@ -26,8 +26,8 @@
 */
 
 #include "oscEndpointMgr.h"
-#include "vfxGraph.h"
 #include "vfxNodeOscReceive.h"
+#include "vfxResource.h"
 #include "vfxTypes.h"
 
 //
@@ -123,7 +123,9 @@ void VfxNodeOscReceive::handleOscMessage(const osc::ReceivedMessage & m, const I
 {
 	const char * path = getPath();
 	
-	if (strcmp(path, m.AddressPattern()) == 0)
+	const char * receivedPath = m.AddressPattern();
+	
+	if (strcmp(path, receivedPath) == 0)
 	{
 		for (auto i = m.ArgumentsBegin(); i != m.ArgumentsEnd(); ++i)
 		{

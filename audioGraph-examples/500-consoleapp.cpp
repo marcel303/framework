@@ -28,10 +28,11 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "Debugging.h"
 #include "soundmix.h"
 #include <SDL2/SDL.h>
 
-#define CHANNEL_COUNT 16
+#define CHANNEL_COUNT 64
 
 int main(int argc, char * argv[])
 {
@@ -70,7 +71,7 @@ int main(int argc, char * argv[])
 		
 		// free the audio graph instance
 		
-		audioGraphMgr.free(instance);
+		audioGraphMgr.free(instance, false);
 		
 		// shut down audio related systems
 

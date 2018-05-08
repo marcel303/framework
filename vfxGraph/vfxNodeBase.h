@@ -116,12 +116,10 @@ struct VfxImageCpu
 	struct Channel
 	{
 		const uint8_t * data;
-		int stride;
 		int pitch;
 		
 		Channel()
 			: data(nullptr)
-			, stride(0)
 			, pitch(0)
 		{
 		}
@@ -131,24 +129,34 @@ struct VfxImageCpu
 	int sy;
 	int numChannels;
 	int alignment;
-	bool isInterleaved;
-	bool isPlanar;
 	
 	Channel channel[4];
 	
 	VfxImageCpu();
 	
-	void setDataInterleaved(const uint8_t * data, const int sx, const int sy, const int numChannels, const int alignment, const int pitch);
+	void setDataContiguous(const uint8_t * data, const int sx, const int sy, const int numChannels, const int alignment, const int pitch);
+	void setData(const uint8_t ** datas, const int sx, const int sy, const int numChannels, const int alignment, const int * pitches);
+	
 	void setDataR8(const uint8_t * r, const int sx, const int sy, const int alignment, const int pitch);
-	void setDataRGB8(const uint8_t * rgba, const int sx, const int sy, const int alignment, const int pitch);
-	void setDataRGBA8(const uint8_t * rgba, const int sx, const int sy, const int alignment, const int pitch);
+	void setDataRGB8(const uint8_t * r, const uint8_t * g, const uint8_t * b, const int sx, const int sy, const int alignment, const int pitch);
+	void setDataRGBA8(const uint8_t * r, const uint8_t * g, const uint8_t * b, const uint8_t * a, const int sx, const int sy, const int alignment, const int pitch);
 	void reset();
 	
 	int getMemoryUsage() const;
 
-	static void interleave1(const Channel * channel1, uint8_t * _dst, const int dstPitch, const int sx, const int sy);
-	static void interleave3(const Channel * channel1, const Channel * channel2, const Channel * channel3, uint8_t * dst, const int dstPitch, const int sx, const int sy);
-	static void interleave4(const Channel * channel1, const Channel * channel2, const Channel * channel3, const Channel * channel4, uint8_t * dst, const int dstPitch, const int sx, const int sy);
+	static void interleave1(const Channel & channel1, uint8_t * _dst, const int dstPitch, const int sx, const int sy);
+	static void interleave3(const Channel & channel1, const Channel & channel2, const Channel & channel3, uint8_t * dst, const int dstPitch, const int sx, const int sy);
+	static void interleave4(const Channel & channel1, const Channel & channel2, const Channel & channel3, const Channel & channel4, uint8_t * dst, const int dstPitch, const int sx, const int sy);
+	
+	static void deinterleave1(
+		const uint8_t * src, const int sx, const int sy, const int alignment, const int pitch,
+		Channel & channel1);
+	static void deinterleave3(
+		const uint8_t * src, const int sx, const int sy, const int alignment, const int pitch,
+		Channel & channel1, Channel & channel2, Channel & channel3);
+	static void deinterleave4(
+		const uint8_t * src, const int sx, const int sy, const int alignment, const int pitch,
+		Channel & channel1, Channel & channel2, Channel & channel3, Channel & channel4);
 };
 
 //
@@ -162,8 +170,8 @@ struct VfxImageCpuData
 	VfxImageCpuData();
 	~VfxImageCpuData();
 
-	void alloc(const int sx, const int sy, const int numChannels, const bool interleaved);
-	void allocOnSizeChange(const int sx, const int sy, const int numChannels, const bool interleaved);
+	void alloc(const int sx, const int sy, const int numChannels);
+	void allocOnSizeChange(const int sx, const int sy, const int numChannels);
 	void allocOnSizeChange(const VfxImageCpu & reference);
 	void free();
 };
@@ -189,6 +197,8 @@ struct VfxChannelData
 	void alloc(const int size);
 	void allocOnSizeChange(const int size);
 	void free();
+	
+	static void parse(const char * text, float *& data, int & dataSize);
 };
 
 struct VfxChannel
@@ -357,7 +367,6 @@ struct VfxChannelZipper
 enum VfxPlugType
 {
 	kVfxPlugType_None,
-	kVfxPlugType_DontCare,
 	kVfxPlugType_Bool,
 	kVfxPlugType_Int,
 	kVfxPlugType_Float,
@@ -398,14 +407,12 @@ struct VfxFloatArray
 	
 	float sum;
 	std::vector<Elem> elems;
-	float * immediateValue;
 	
 	int lastUpdateTick;
 	
 	VfxFloatArray()
 		: sum(0.f)
 		, elems()
-		, immediateValue(nullptr)
 		, lastUpdateTick(-1)
 	{
 	}
@@ -424,7 +431,7 @@ struct VfxPlug
 	bool isReferencedByLink : 1;
 	int referencedByRealTimeConnectionTick;
 	void * mem;
-	VfxPlugType memType;
+	void * immediateMem;
 	
 #if EXTENDED_INPUTS
 	mutable VfxFloatArray floatArray;
@@ -438,7 +445,7 @@ struct VfxPlug
 		, isReferencedByLink(false)
 		, referencedByRealTimeConnectionTick(-1)
 		, mem(nullptr)
-		, memType(kVfxPlugType_None)
+		, immediateMem(nullptr)
 	#if EXTENDED_INPUTS
 		, floatArray()
 	#endif
@@ -447,7 +454,7 @@ struct VfxPlug
 	}
 	
 	void connectTo(VfxPlug & dst);
-	void connectTo(void * dstMem, const VfxPlugType dstType, const bool isImmediate);
+	void connectToImmediate(void * dstMem, const VfxPlugType dstType);
 	
 	void setMap(const void * dst, const float inMin, const float inMax, const float outMin, const float outMax);
 	void clearMap(const void * dst);
@@ -461,21 +468,21 @@ struct VfxPlug
 	
 	bool getBool() const
 	{
-		Assert(memType == kVfxPlugType_Bool);
+		Assert(type == kVfxPlugType_Bool);
 		return *((bool*)mem);
 	}
 	
 	int getInt() const
 	{
-		Assert(memType == kVfxPlugType_Int);
+		Assert(type == kVfxPlugType_Int);
 		return *((int*)mem);
 	}
 	
 	float getFloat() const
 	{
-		Assert(memType == kVfxPlugType_Float);
+		Assert(type == kVfxPlugType_Float);
 	#if EXTENDED_INPUTS
-		if (mem == nullptr)
+		if (!floatArray.elems.empty())
 			return *floatArray.get();
 	#endif
 		return *((float*)mem);
@@ -483,31 +490,31 @@ struct VfxPlug
 	
 	const std::string & getString() const
 	{
-		Assert(memType == kVfxPlugType_String);
+		Assert(type == kVfxPlugType_String);
 		return *((std::string*)mem);
 	}
 	
 	const VfxColor & getColor() const
 	{
-		Assert(memType == kVfxPlugType_Color);
+		Assert(type == kVfxPlugType_Color);
 		return *((VfxColor*)mem);
 	}
 	
 	VfxImageBase * getImage() const
 	{
-		Assert(memType == kVfxPlugType_Image);
+		Assert(type == kVfxPlugType_Image);
 		return (VfxImageBase*)mem;
 	}
 	
 	VfxImageCpu * getImageCpu() const
 	{
-		Assert(memType == kVfxPlugType_ImageCpu);
+		Assert(type == kVfxPlugType_ImageCpu);
 		return (VfxImageCpu*)mem;
 	}
 	
 	VfxChannel * getChannel() const
 	{
-		Assert(memType == kVfxPlugType_Channel);
+		Assert(type == kVfxPlugType_Channel);
 		return (VfxChannel*)mem;
 	}
 	
@@ -515,36 +522,38 @@ struct VfxPlug
 	
 	bool & getRwBool()
 	{
-		Assert(memType == kVfxPlugType_Bool);
+		Assert(type == kVfxPlugType_Bool);
 		return *((bool*)mem);
 	}
 	
 	int & getRwInt()
 	{
-		Assert(memType == kVfxPlugType_Int);
+		Assert(type == kVfxPlugType_Int);
 		return *((int*)mem);
 	}
 	
 	float & getRwFloat()
 	{
-		Assert(memType == kVfxPlugType_Float);
-	#if EXTENDED_INPUTS
-		if (mem == nullptr)
-			return *floatArray.get();
-	#endif
+		Assert(type == kVfxPlugType_Float);
 		return *((float*)mem);
 	}
 	
 	std::string & getRwString()
 	{
-		Assert(memType == kVfxPlugType_String);
+		Assert(type == kVfxPlugType_String);
 		return *((std::string*)mem);
 	}
 	
 	VfxColor & getRwColor()
 	{
-		Assert(memType == kVfxPlugType_Color);
+		Assert(type == kVfxPlugType_Color);
 		return *((VfxColor*)mem);
+	}
+	
+	VfxChannel & getRwChannel()
+	{
+		Assert(type == kVfxPlugType_Channel);
+		return *((VfxChannel*)mem);
 	}
 };
 
@@ -654,7 +663,6 @@ struct VfxNodeBase
 		{
 			outputs[index].type = type;
 			outputs[index].mem = mem;
-			outputs[index].memType = type;
 		}
 	}
 	

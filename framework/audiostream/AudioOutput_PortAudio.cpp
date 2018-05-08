@@ -79,8 +79,11 @@ bool AudioOutput_PortAudio::initPortAudio(const int numChannels, const int sampl
 	outputParameters.device = Pa_GetDefaultOutputDevice();
 	outputParameters.channelCount = numChannels;
 	outputParameters.sampleFormat = paInt16;
-	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
 	outputParameters.hostApiSpecificStreamInfo = nullptr;
+	
+	auto deviceInfo = Pa_GetDeviceInfo(outputParameters.device);
+	if (deviceInfo != nullptr)
+		outputParameters.suggestedLatency = deviceInfo->defaultLowOutputLatency;
 
 	//
 	
@@ -240,7 +243,7 @@ void AudioOutput_PortAudio::Update()
 
 void AudioOutput_PortAudio::Volume_set(float volume)
 {
-	m_volume = int(std::roundf(volume * 1024.f));
+	m_volume = int(roundf(volume * 1024.f));
 }
 
 bool AudioOutput_PortAudio::IsPlaying_get()

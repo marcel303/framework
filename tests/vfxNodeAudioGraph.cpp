@@ -104,7 +104,7 @@ VfxNodeAudioGraph::VfxNodeAudioGraph()
 
 VfxNodeAudioGraph::~VfxNodeAudioGraph()
 {
-	g_vfxAudioGraphMgr->free(audioGraphInstance);
+	g_vfxAudioGraphMgr->free(audioGraphInstance, false);
 	
 	delete [] channelOutputs;
 	channelOutputs = nullptr;
@@ -254,13 +254,13 @@ void VfxNodeAudioGraph::tick(const float dt)
 	{
 		if (audioGraphInstance != nullptr)
 		{
-			g_vfxAudioGraphMgr->free(audioGraphInstance);
+			g_vfxAudioGraphMgr->free(audioGraphInstance, true);
 			currentFilename.clear();
 		}
 	}
 	else if (filename != currentFilename)
 	{
-		g_vfxAudioGraphMgr->free(audioGraphInstance);
+		g_vfxAudioGraphMgr->free(audioGraphInstance, true);
 		currentFilename.clear();
 		
 		//

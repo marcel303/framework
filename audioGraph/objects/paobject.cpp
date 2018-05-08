@@ -60,6 +60,19 @@ bool PortAudioObject::findSupportedDevices(const int numInputChannels, const int
 		return false;
 	}
 	
+#if defined(LINUX)
+	const int numDevices = Pa_GetDeviceCount();
+
+	for (int deviceIndex = 0; deviceIndex < numDevices; ++deviceIndex)
+	{
+		const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(deviceIndex);
+		
+		LOG_INF("output device. index=%d, name=%s, numInputChannels=%d, numOutputChannels=%d", deviceIndex, deviceInfo->name, deviceInfo->maxInputChannels, deviceInfo->maxOutputChannels);
+	}
+	
+	LOG_INF("default output device=%d. looking for %d input and %d output channels", Pa_GetDefaultOutputDevice(), numInputChannels, numOutputChannels);
+#endif
+
 	//
 	
 	inputDeviceIndex = paNoDevice;
@@ -169,6 +182,8 @@ bool PortAudioObject::findSupportedDevices(const int numInputChannels, const int
 			}
 		}
 	}
+	
+	LOG_INF("found device %d for output and %d for input", outputDeviceIndex, inputDeviceIndex);
 	
 	return inputDeviceIndex != paNoDevice && outputDeviceIndex != paNoDevice;
 }

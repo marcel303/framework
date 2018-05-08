@@ -15,8 +15,17 @@ shader_in vec2 v_texcoord0;
 void main()
 {
 	vec4 result = v_color;
+
+	// color clamp
+
+	if (params.w != 0.0)
+	{
+		result = clamp(result, vec4(0.0), vec4(1.0));
+	}
+
+	// texture
 	
-	if (params.x != 0)
+	if (params.x != 0.0)
 	{
 		vec4 texColor = texture(source, v_texcoord0);
 		
@@ -27,27 +36,29 @@ void main()
 		COLOR_IGNORE
 		*/
 		
-		if (params.y == 0)
+		if (params.y == 0.0)
 		{
 			result.rgb = result.rgb * texColor.rgb;
 			result.a   = result.a   * texColor.a;
 		}
-		else if (params.y == 1)
+		else if (params.y == 1.0)
 		{
 			result.rgb = result.rgb + texColor.rgb;
 			result.a   = result.a   * texColor.a;
 		}
-		else if (params.y == 2)
+		else if (params.y == 2.0)
 		{
 			result.rgb = result.rgb - texColor.rgb;
 			result.a   = result.a   * texColor.a;
 		}
-		else if (params.y == 3)
+		else if (params.y == 3.0)
 		{
 			result.rgb = texColor.rgb;
 			result.a   = texColor.a;
 		}
 	}
+
+	// color post
 
 	/*
 	POST_NONE,
@@ -56,17 +67,17 @@ void main()
 	POST_SET_ALPHA_TO_ONE
 	*/
 
-	if (params.z != 0)
+	if (params.z != 0.0)
 	{
-		if (params.z == 1)
+		if (params.z == 1.0)
 		{
 			result.rgb = mix(vec3(0.0), result.rgb, result.a);
 		}
-		else if (params.z == 2)
+		else if (params.z == 2.0)
 		{
 			result.rgb = mix(vec3(1.0), result.rgb, result.a);
 		}
-		else if (params.z == 3)
+		else if (params.z == 3.0)
 		{
 			result.a = 1.0;
 		}

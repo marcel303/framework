@@ -29,6 +29,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioGraphManager.h"
 #include "audioProfiling.h"
 #include "audioUpdateHandler.h"
+#include "Debugging.h"
 #include "osc4d.h"
 #include "soundmix.h"
 #include "Timer.h"
@@ -134,7 +135,7 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	if (audioGraphMgr != nullptr)
 	{
-		audioGraphMgr->tick(dt);
+		audioGraphMgr->tickAudio(dt);
 	}
 	
 	//

@@ -52,7 +52,7 @@ enum Chunk
 static bool checkId(const char * id, const char * match)
 {
 	for (int i = 0; i < 4; ++i)
-		if (id[i] != match[i])
+		if (tolower(id[i]) != tolower(match[i]))
 			return false;
 	
 	return true;
@@ -173,7 +173,7 @@ SoundData * loadSound_WAV(const char * filename)
 				logError("invalid channel count: %d", fmtChannelCount);
 				ok = false;
 			}
-			if (fmtBitDepth != 8 && fmtBitDepth != 16 && fmtBitDepth != 24)
+			if (fmtBitDepth != 8 && fmtBitDepth != 16 && fmtBitDepth != 24 && fmtBitDepth != 32)
 			{
 				logError("bit depth not supported: %d", fmtBitDepth);
 				ok = false;
@@ -280,8 +280,13 @@ SoundData * loadSound_OGG(const char * filename)
 	
 	const int numSamples = readBuffer.size();
 	const int numBytes = numSamples * sizeof(AudioSample);
-	void * bytes = new char[numBytes];
-	memcpy(bytes, &readBuffer[0], numBytes);
+	void * bytes = nullptr;
+	
+	if (numBytes > 0)
+	{
+		bytes = new char[numBytes];
+		memcpy(bytes, &readBuffer[0], numBytes);
+	}
 	
 	SoundData * soundData = new SoundData;
 	soundData->channelSize = 2;
@@ -532,7 +537,7 @@ bool SoundPlayer_OpenAL::init(int numSources)
 		return false;
 	}
 	
-	m_musicOutput->Open(m_musicStream);
+	m_musicOutput->Play(m_musicStream);
 	
 	m_playId = 0;
 	
@@ -968,8 +973,11 @@ bool SoundPlayer_PortAudio::initPortAudio(const int numChannels, const int sampl
 	outputParameters.device = Pa_GetDefaultOutputDevice();
 	outputParameters.channelCount = numChannels;
 	outputParameters.sampleFormat = paFloat32;
-	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
 	outputParameters.hostApiSpecificStreamInfo = nullptr;
+	
+	auto deviceInfo = Pa_GetDeviceInfo(outputParameters.device);
+	if (deviceInfo != nullptr)
+		outputParameters.suggestedLatency = deviceInfo->defaultLowOutputLatency;
 
 	//
 	
@@ -1058,6 +1066,8 @@ bool SoundPlayer_PortAudio::init(int numSources)
 	m_numSources = numSources;
 	m_sources = new Source[numSources];
 	memset(m_sources, 0, sizeof(Source) * numSources);
+	for (int i = 0; i < numSources; ++i)
+		m_sources[i].playId = -1;
 	
 	m_playId = 0;
 	

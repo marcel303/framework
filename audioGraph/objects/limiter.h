@@ -73,7 +73,9 @@ struct Limiter
 
 	#if 1
 		const float retain16 = powf(retain, 16.f);
-
+		
+		// todo : SSE optimize limiter code
+		
 		while (i * 16 < numSamples)
 		{
 			float * __restrict samplePtr = samples + i * 16;

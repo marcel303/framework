@@ -35,17 +35,20 @@
 
 static void copyImage(const VfxImageCpu & image, VfxImageCpuData & imageData)
 {
-	imageData.allocOnSizeChange(image.sx, image.sy, image.numChannels, true);
+	imageData.allocOnSizeChange(image.sx, image.sy, image.numChannels);
 	
-	const VfxImageCpu::Channel & srcChannel = image.channel[0];
-	VfxImageCpu::Channel & dstChannel = imageData.image.channel[0];
-	
-	for (int y = 0; y < image.sy; ++y)
+	for (int i = 0; i < image.numChannels; ++i)
 	{
-		const uint8_t * __restrict srcBytes = srcChannel.data + y * srcChannel.pitch;
-		uint8_t * __restrict dstBytes = (uint8_t*)dstChannel.data + y * dstChannel.pitch;
+		const VfxImageCpu::Channel & srcChannel = image.channel[i];
+		VfxImageCpu::Channel & dstChannel = imageData.image.channel[i];
 		
-		memcpy(dstBytes, srcBytes, image.sx * image.numChannels);
+		for (int y = 0; y < image.sy; ++y)
+		{
+			const uint8_t * __restrict srcBytes = srcChannel.data + y * srcChannel.pitch;
+			uint8_t * __restrict dstBytes = (uint8_t*)dstChannel.data + y * dstChannel.pitch;
+			
+			memcpy(dstBytes, srcBytes, image.sx);
+		}
 	}
 }
 
@@ -127,7 +130,6 @@ ImageCpuDelayLine::ImageCpuDelayLine()
 	, mutex(nullptr)
 	, thread(nullptr)
 	, cachedLoadData(nullptr)
-	, cachedImage(nullptr)
 {
 }
 
@@ -176,9 +178,6 @@ void ImageCpuDelayLine::init(const int _maxHistorySize, const int _saveBufferSiz
 	
 	Assert(cachedLoadData == nullptr);
 	cachedLoadData = new JpegLoadData();
-	
-	Assert(cachedImage == nullptr);
-	cachedImage = new VfxImageCpu();
 }
 
 void ImageCpuDelayLine::shut()
@@ -190,9 +189,6 @@ void ImageCpuDelayLine::shut()
 	
 	delete cachedLoadData;
 	cachedLoadData = nullptr;
-	
-	delete cachedImage;
-	cachedImage = nullptr;
 	
 	if (thread != nullptr)
 	{
@@ -262,6 +258,8 @@ int ImageCpuDelayLine::getLength() const
 
 void ImageCpuDelayLine::setLength(const int length)
 {
+	compressWait();
+	
 	SDL_LockMutex(mutex);
 	{
 		maxHistorySize = length;
@@ -284,7 +282,10 @@ void ImageCpuDelayLine::add(const VfxImageCpu & image, const int jpegQualityLeve
 {
 	compressWait();
 	
-	if (useCompression)
+	// note : turbojpeg doesn't like it when we try to compress a 0x0 sized image. just use the non-compressed
+	//        code path to avoid issues
+	
+	if (useCompression && (image.sx > 0 && image.sy > 0))
 	{
 		compressWork(image, jpegQualityLevel, timestamp);
 	}
@@ -345,6 +346,7 @@ bool ImageCpuDelayLine::decode(const JpegData & jpegData, VfxImageCpuData & imag
 			glitch.glitch();
 		}
 		
+	#if 0
 		imageData.allocOnSizeChange(jpegData.sx, jpegData.sy, jpegData.numChannels, true);
 		const int numImageDataBytes = imageData.image.sy * imageData.image.channel[0].pitch;
 		
@@ -355,19 +357,47 @@ bool ImageCpuDelayLine::decode(const JpegData & jpegData, VfxImageCpuData & imag
 		else
 		{
 			return true;
-			/*
-			if (jpegData.isSingleChannel)
+		}
+	#else
+		if (loadImage_turbojpeg(jpegData.bytes, jpegData.numBytes, *cachedLoadData, jpegData.numChannels == 1) == false)
+		{
+			return false;
+		}
+		else
+		{
+			if (jpegData.numChannels == 1)
 			{
-				cachedImage->setDataR8(cachedLoadData->buffer, cachedLoadData->sx, cachedLoadData->sy, 1, cachedLoadData->sx);
+				imageData.allocOnSizeChange(cachedLoadData->sx, cachedLoadData->sy, 1);
+				
+				VfxImageCpu::deinterleave1(
+					cachedLoadData->buffer,
+					cachedLoadData->sx,
+					cachedLoadData->sy,
+					1,
+					cachedLoadData->sx * 1,
+					imageData.image.channel[0]);
 			}
 			else
 			{
-				cachedImage->setDataRGBA8(cachedLoadData->buffer, cachedLoadData->sx, cachedLoadData->sy, 4, cachedLoadData->sx * 4);
+				// deinterleave data
+				
+				imageData.allocOnSizeChange(cachedLoadData->sx, cachedLoadData->sy, 4);
+				
+				VfxImageCpu::deinterleave4(
+					cachedLoadData->buffer,
+					cachedLoadData->sx,
+					cachedLoadData->sy,
+					1,
+					cachedLoadData->sx * 4,
+					imageData.image.channel[0],
+					imageData.image.channel[1],
+					imageData.image.channel[2],
+					imageData.image.channel[3]);
 			}
 			
-			return cachedImage;
-			*/
+			return true;
 		}
+	#endif
 	}
 }
 
@@ -518,11 +548,54 @@ ImageCpuDelayLine::MemoryUsage ImageCpuDelayLine::getMemoryUsage() const
 
 ImageCpuDelayLine::JpegData * ImageCpuDelayLine::compress(const VfxImageCpu & image, const int jpegQualityLevel)
 {
-	const void * srcBuffer = image.channel[0].data;
-	const int srcBufferSize = image.sx * image.sy * image.numChannels;
+	const void * srcBuffer = nullptr;
+	int srcBufferSize = 0;
+	
+	std::vector<uint8_t> temp;
+	
+	if (image.numChannels == 1)
+	{
+		// note : avoid temp alloc and copy if pitch allows it
+		
+		if (image.channel[0].pitch == image.sx)
+		{
+			srcBuffer = image.channel[0].data;
+			srcBufferSize = image.sx * image.sy * 1;
+		}
+		else
+		{
+			// todo : specify pitch when calling saveImage_turbojpeg. turbojpeg supports it. remove temp alloc
+			
+			temp.resize(image.sx * image.sy * 1);
+			
+			VfxImageCpu::interleave1(
+				image.channel[0],
+				&temp[0], image.sx * 1,
+				image.sx, image.sy);
+			
+			srcBuffer = (image.sx > 0 && image.sy > 0) ? &temp[0] : nullptr;
+			srcBufferSize = temp.size();
+		}
+	}
+	else
+	{
+		temp.resize(image.sx * image.sy * 4);
+		
+		VfxImageCpu::interleave4(
+			image.channel[0],
+			image.channel[1],
+			image.channel[2],
+			image.channel[3],
+			&temp[0], image.sx * 4,
+			image.sx, image.sy);
+		
+		srcBuffer = (image.sx > 0 && image.sy > 0) ? &temp[0] : nullptr;
+		srcBufferSize = temp.size();
+	}
+	
 	const int srcSx = image.sx;
 	const int srcSy = image.sy;
-	const bool srcIsColor = image.numChannels == 4;
+	const bool srcIsColor = image.numChannels >= 3;
 	
 	void * dstBuffer = saveBuffer;
 	int dstBufferSize = saveBufferSize;
@@ -615,9 +688,6 @@ void ImageCpuDelayLine::threadMain()
 
 void ImageCpuDelayLine::compressWork(const VfxImageCpu & image, const int jpegQualityLevel, const double timestamp)
 {
-	if (image.isInterleaved == false)
-		return;
-	
 	// make a copy of the image
 	
 	VfxImageCpuData * imageData = new VfxImageCpuData();

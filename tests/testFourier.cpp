@@ -30,7 +30,7 @@
 #include "image.h"
 #include "testBase.h"
 #include "Timer.h"
-#include <math.h>
+#include <cmath>
 
 extern const int GFX_SX;
 extern const int GFX_SY;

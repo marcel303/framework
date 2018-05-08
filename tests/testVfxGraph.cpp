@@ -36,6 +36,8 @@
 #include "audioUpdateHandler.h"
 #include "vfxNodes/oscEndpointMgr.h"
 #include "soundmix.h"
+#include <algorithm>
+#include <cmath>
 
 #define ENABLE_AUDIO_RTE 1
 
@@ -120,8 +122,8 @@ struct Creature
 	
 	void tick(const float channelValue, const float moveSpeed, const float angleSpeed, const float dt)
 	{
-		x = lerp(0.f, x, std::powf(.8f, dt));
-		y = lerp(0.f, y, std::powf(.8f, dt));
+		x = lerp(0.f, x, powf(.8f, dt));
+		y = lerp(0.f, y, powf(.8f, dt));
 		
 		angle += channelValue * angleSpeed * dt;
 		
@@ -166,7 +168,7 @@ struct VfxNodeCreature : VfxNodeBase
 		addInput(kInput_MoveSpeed, kVfxPlugType_Float);
 		addInput(kInput_AngleSpeed, kVfxPlugType_Float);
 		addInput(kInput_StrokeSize, kVfxPlugType_Float);
-		addOutput(kOutput_Draw, kVfxPlugType_DontCare, this);
+		addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
 	}
 	
 	virtual void tick(const float dt) override
@@ -215,6 +217,270 @@ VFX_NODE_TYPE(VfxNodeCreature)
 	out("draw", "draw");
 }
 
+#include "Path.h"
+
+struct FileWindow
+{
+	const static int item_y1 = 10 + 20;
+	const static int item_x1 = 100;
+	const static int item_sy = 20;
+	const static int item_sx = 180;
+	const static int item_spacing = 4;
+	
+	struct Touches
+	{
+		int numTouches;
+		SDL_FingerID touchId[2];
+		float moveY;
+		
+		Touches()
+		{
+			memset(this, 0, sizeof(*this));
+		}
+		
+		void tick()
+		{
+			moveY = 0.f;
+			
+			if (!framework.windowIsActive)
+			{
+				reset();
+			}
+			else
+			{
+				for (auto & e : framework.events)
+				{
+					if (e.type == SDL_FINGERDOWN && numTouches < 2)
+					{
+						touchId[numTouches++] = e.tfinger.fingerId;
+					}
+					else if (e.type == SDL_FINGERUP)
+					{
+						for (int i = 0; i < numTouches; ++i)
+						{
+							if (touchId[i] == e.tfinger.fingerId)
+							{
+								for (int j = i + 1; j < numTouches; ++j)
+									touchId[j - 1] = touchId[j];
+								numTouches--;
+								break;
+							}
+						}
+					}
+					else if (e.type == SDL_FINGERMOTION)
+					{
+						for (int i = 0; i < numTouches; ++i)
+						{
+							if (touchId[i] == e.tfinger.fingerId)
+							{
+								moveY += e.tfinger.dy;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		void reset()
+		{
+			numTouches = 0;
+		}
+	};
+	
+	Window window;
+	std::vector<std::string> filenames;
+	
+	GraphEdit * graphEdit;
+	
+	int hoverIndex;
+	int pressIndex;
+	
+	float scrollY;
+	float desiredScrollY;
+	
+	Touches touches;
+	
+	FileWindow(GraphEdit * _graphEdit)
+		: window("Files", 200, 600, true)
+		, filenames()
+		, graphEdit(_graphEdit)
+		, hoverIndex(-1)
+		, pressIndex(-1)
+		, scrollY(0.f)
+		, desiredScrollY(0.f)
+	{
+		window.setPosition(5, 100);
+		
+		std::vector<std::string> paths;
+		paths = listFiles(".", false);
+		std::sort(paths.begin(), paths.end());
+		
+		for (auto & path : paths)
+		{
+			if (Path::GetExtension(path, true) == "xml")
+				filenames.push_back(path);
+		}
+	}
+	
+	void windowToView(const float x, const float y, float & viewX, float & viewY) const
+	{
+		viewX = x;
+		viewY = y - scrollY;
+	}
+	
+	void viewToItemIndex(const float x, const float y, int & itemIndex) const
+	{
+		itemIndex = (int)std::round((y - item_y1) / (item_sy + item_spacing));
+		
+		float viewX;
+		float viewY;
+		itemIndexToView(itemIndex, viewX, viewY);
+		float dx = x - viewX;
+		float dy = y - viewY;
+		if (dx < -item_sx/2.f || dx > +item_sx/2.f ||
+			dy < -item_sy/2.f || dy > +item_sy/2.f)
+		{
+			itemIndex = -1;
+		}
+		
+		if (itemIndex < 0 || itemIndex >= filenames.size())
+			itemIndex = -1;
+	}
+	
+	void itemIndexToView(const int itemIndex, float & x, float & y) const
+	{
+		x = item_x1;
+		y = itemIndex * (item_sy + item_spacing) + item_y1;
+	}
+	
+	void tick(const float dt)
+	{
+		pushWindow(window);
+		{
+			touches.tick();
+			
+			if (touches.numTouches == 2)
+			{
+				const float amount = touches.moveY * 400.f;
+				
+				desiredScrollY += amount;
+				scrollY += amount;
+			}
+			else if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+			{
+				desiredScrollY += mouse.dy;
+				scrollY += mouse.dy;
+			}
+			else
+			{
+				if (keyboard.wentDown(SDLK_UP))
+					desiredScrollY -= window.getHeight() * 2 / 3.f;
+				if (keyboard.wentDown(SDLK_DOWN))
+					desiredScrollY += window.getHeight() * 2 / 3.f;
+				
+				const float retain = std::pow(.01f, dt);
+				
+				const float minScrollY = - int(filenames.size()) * (item_sy + item_spacing) + window.getHeight() - item_y1;
+				if (desiredScrollY > 0.f)
+					desiredScrollY = lerp(0.f, desiredScrollY, retain);
+				if (desiredScrollY < 0.f && desiredScrollY < minScrollY)
+					desiredScrollY = lerp(minScrollY, desiredScrollY, retain);
+				
+				scrollY = lerp(desiredScrollY, scrollY, retain);
+			}
+			
+			const float windowX = mouse.x;
+			const float windowY = mouse.y;
+			float viewX;
+			float viewY;
+			windowToView(windowX, windowY, viewX, viewY);
+			
+			int itemIndex;
+			viewToItemIndex(viewX, viewY, itemIndex);
+			
+			hoverIndex = itemIndex;
+			
+			if (mouse.wentDown(BUTTON_LEFT))
+				pressIndex = hoverIndex;
+			
+			if (mouse.wentUp(BUTTON_LEFT))
+			{
+				if (pressIndex == hoverIndex)
+				{
+					if (pressIndex >= 0 && pressIndex < filenames.size())
+					{
+						const std::string & filename = filenames[pressIndex];
+						
+						graphEdit->load(filename.c_str());
+					}
+				}
+				
+				pressIndex = -1;
+			}
+		}
+		popWindow();
+	}
+	
+	void draw()
+	{
+		pushWindow(window);
+		{
+			const int c = framework.windowIsActive ? 50 : 20;
+			
+			framework.beginDraw(c, c, c, 0);
+			{
+				setFont("calibri.ttf");
+				
+				gxTranslatef(0, scrollY, 0);
+				
+				if (touches.numTouches != 2 && hoverIndex != -1)
+				{
+					float hoverX;
+					float hoverY;
+					itemIndexToView(hoverIndex, hoverX, hoverY);
+					
+					hqBegin(HQ_FILLED_ROUNDED_RECTS);
+					{
+						hqFillRoundedRect(
+							hoverX - item_sx/2.f,
+							hoverY - item_sy/2.f,
+							hoverX + item_sx/2.f,
+							hoverY + item_sy/2.f, 4.f);
+					}
+					hqEnd();
+				}
+				
+				beginTextBatch();
+				{
+					int x = item_x1;
+					int y = item_y1;
+					
+					int itemIndex = 0;
+					
+					for (auto & filename : filenames)
+					{
+						if (itemIndex == pressIndex && pressIndex == hoverIndex)
+							setLumi(50);
+						else if (itemIndex == hoverIndex)
+							setLumi(255);
+						else
+							setLumi(200);
+						drawText(x, y, 14, 0, 0, "%s", filename.c_str());
+						
+						y += item_sy + item_spacing;
+						
+						itemIndex++;
+					}
+				}
+				endTextBatch();
+			}
+			framework.endDraw();
+		}
+		popWindow();
+	}
+};
+
 void testVfxGraph()
 {
 	setAbout("This example shows Vfx Graph in action!");
@@ -237,6 +503,8 @@ void testVfxGraph()
 	//graphEdit.load("mlworkshopVc.xml");
 	graphEdit.load("polyphonic.xml");
 	
+	FileWindow fileWindow(&graphEdit);
+	
 	int editor = 0;
 
 	do
@@ -246,10 +514,14 @@ void testVfxGraph()
 		if (keyboard.isDown(SDLK_LGUI) && keyboard.wentDown(SDLK_e))
 			editor = 1 - editor;
 		
+		fileWindow.tick(framework.timeStep);
+		
 		g_oscEndpointMgr.tick();
 		
 		// graph edit may change the graph, so we tick it first
 		graphEdit.tick(framework.timeStep, editor != 0);
+		
+		s_audioGraphMgr->tickMain();
 		
 	#if ENABLE_AUDIO_RTE
 		s_audioGraphMgr->tickEditor(framework.timeStep, editor != 1);
@@ -279,6 +551,8 @@ void testVfxGraph()
 			drawTestUi();
 		}
 		framework.endDraw();
+		
+		fileWindow.draw();
 	} while (tickTestUi());
 
 	delete vfxGraph;
@@ -356,4 +630,112 @@ static void shutAudioGraph()
 		SDL_DestroyMutex(s_audioMutex);
 		s_audioMutex = nullptr;
 	}
+}
+
+//
+
+// todo : create a separate JsusFx test
+
+#include "audioNodeBase.h"
+
+static AudioNodeBase * tryGetSelectedAudioNode(AudioGraphManager_RTE * audioGraphMgr)
+{
+	if (audioGraphMgr->selectedFile == nullptr)
+		return nullptr;
+	if (audioGraphMgr->selectedFile->activeInstance == nullptr)
+		return nullptr;
+	
+	GraphEdit * graphEdit = audioGraphMgr->selectedFile->graphEdit;
+	
+	if (graphEdit->selectedNodes.size() != 1)
+		return nullptr;
+	
+	const AudioGraphInstance * activeInstance = audioGraphMgr->selectedFile->activeInstance;
+	
+	const GraphNodeId nodeId = *graphEdit->selectedNodes.begin();
+	
+	auto audioNodeItr = activeInstance->audioGraph->nodes.find(nodeId);
+	
+	if (audioNodeItr == activeInstance->audioGraph->nodes.end())
+		return nullptr;
+	
+	AudioNodeBase * audioNode = audioNodeItr->second;
+	
+	return audioNode;
+}
+
+void testVfxGraph_JsusFx()
+{
+	setAbout("This example shows Vfx Graph in action!");
+
+	fillPcmDataCache("../4dworld/testsounds", true, true);
+	
+	initAudioGraph();
+	
+	AudioGraphInstance * instance = s_audioGraphMgr->createInstance("ag-test.xml");
+	s_audioGraphMgr->selectInstance(instance);
+	
+	do
+	{
+		framework.process();
+		
+		const float dt = framework.timeStep;
+		
+		AudioNodeBase * selectedAudioNode = tryGetSelectedAudioNode(s_audioGraphMgr);
+		
+		bool inputIsCaptured = false;
+		
+		int sx;
+		int sy;
+		
+		bool drawEditor = false;
+		
+		if (selectedAudioNode != nullptr)
+		{
+			g_currentAudioGraph = s_audioGraphMgr->selectedFile->activeInstance->audioGraph;
+			{
+				drawEditor = selectedAudioNode->tickEditor(0, 0, sx, sy, inputIsCaptured) && (sx > 0 && sy > 0);
+			}
+			g_currentAudioGraph = nullptr;
+		}
+		
+		inputIsCaptured |= s_audioGraphMgr->tickEditor(dt, inputIsCaptured);
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			s_audioGraphMgr->drawEditor();
+			
+			if (drawEditor)
+			{
+				Surface surface(sx, sy, false);
+				
+				pushSurface(&surface);
+				{
+					surface.clear();
+					
+					g_currentAudioGraph = s_audioGraphMgr->selectedFile->activeInstance->audioGraph;
+					{
+						selectedAudioNode->drawEditor(&surface, 0, 0, sx, sy);
+					}
+					g_currentAudioGraph = nullptr;
+				}
+				popSurface();
+				
+				pushBlend(BLEND_OPAQUE);
+				pushColorMode(COLOR_IGNORE);
+				gxSetTexture(surface.getTexture());
+				drawRect(0, 0, sx, sy);
+				gxSetTexture(0);
+				popColorMode();
+				popBlend();
+			}
+			
+			drawTestUi();
+		}
+		framework.endDraw();
+	} while (!keyboard.wentDown(SDLK_ESCAPE));
+	
+	s_audioGraphMgr->free(instance, false);
+	
+	shutAudioGraph();
 }

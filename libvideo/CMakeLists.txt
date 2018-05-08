@@ -97,6 +97,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	find_library(AVFILTER_LIBRARY avfilter)
 	find_library(AVFORMAT_LIBRARY avformat)
 	find_library(AVUTIL_LIBRARY avutil)
+	find_library(SWRESAMPLE_LIBRARY swresample)
 	find_library(SWSCALE_LIBRARY swscale)
 	
 	set(LIBVIDEO_LIBRARIES
@@ -105,6 +106,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 		${AVFILTER_LIBRARY}
 		${AVFORMAT_LIBRARY}
 		${AVUTIL_LIBRARY}
+		${SWRESAMPLE_LIBRARY}
 		${SWSCALE_LIBRARY}
 		PARENT_SCOPE)
 endif ()

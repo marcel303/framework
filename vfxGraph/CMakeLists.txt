@@ -44,7 +44,7 @@ project(vfxGraph)
 
 file(GLOB_RECURSE source "*.c" "*.cpp" "*.h" "*.hpp" "*.mm")
 
-file(GLOB_RECURSE source_vfxnodes "vfxNodes/*.*")
+file(GLOB_RECURSE source_vfxnodes "vfxNodes/*.cpp" "vfxNodes/*.h" "vfxNodes/*.mm")
 file(GLOB_RECURSE source_macos "macos/*.*")
 file(GLOB_RECURSE source_win32 "win32/*.*")
 file(GLOB_RECURSE source_xmm "xmm/*.*")
@@ -75,15 +75,19 @@ endif (WIN32)
 # 2) it speeds up library compilation speed, as all vfx node sources are compiled at once, avoiding the overhead of
 #    compiling them separately
 
-set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.mm)
-file(WRITE ${headerfile} "#pragma once\n\n")
+if (APPLE)
+	set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.mm)
+else (APPLE)
+	set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.cpp)
+endif (APPLE)
+file(WRITE ${headerfile} "// auto-generated. do not hand-edit\n\n")
 foreach(s ${source_vfxnodes})
 	file(APPEND ${headerfile} "#include \"${s}\"\n")
 endforeach(s)
 file(APPEND ${headerfile} "void linkVfxNodes() { }\n")
 
 list(APPEND source ${headerfile})
-list(REMOVE_ITEM source ${source_vfxnodes})
+set_source_files_properties(${source_vfxnodes} PROPERTIES HEADER_FILE_ONLY 1)
 
 # ---- end of magic ----
 
@@ -170,9 +174,11 @@ endif (APPLE)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	find_library(TURBOJPEG_LIBRARY turbojpeg)
+	find_library(ASOUND_LIBRARY asound) # ALSA sound dependency RtMidi
 
 	set(VFXGRAPH_LIBRARIES
 		${TURBOJPEG_LIBRARY}
+		${ASOUND_LIBRARY}
 		PARENT_SCOPE)
 
 	set(VFXGRAPH_BINARIES

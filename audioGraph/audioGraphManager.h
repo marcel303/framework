@@ -76,11 +76,12 @@ struct AudioGraphManager
 	virtual ~AudioGraphManager() { }
 	
 	// called from the app thread
-	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr) = 0;
-	virtual void free(AudioGraphInstance *& instance) = 0;
+	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr, const bool createdPaused = false) = 0;
+	virtual void free(AudioGraphInstance *& instance, const bool doRampDown) = 0;
+	virtual void tickMain() = 0;
 	
 	// called from the audio thread
-	virtual void tick(const float dt) = 0;
+	virtual void tickAudio(const float dt) = 0;
 	virtual void tickVisualizers() = 0;
 };
 
@@ -112,11 +113,12 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	void addGraphToCache(const char * filename);
 	
 	// called from the app thread
-	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr) override;
-	virtual void free(AudioGraphInstance *& instance) override;
+	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr, const bool createdPaused = false) override;
+	virtual void free(AudioGraphInstance *& instance, const bool doRampDown) override;
+	virtual void tickMain() override;
 	
 	// called from the audio thread
-	virtual void tick(const float dt) override;
+	virtual void tickAudio(const float dt) override;
 	virtual void tickVisualizers() override;
 };
 
@@ -147,11 +149,12 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
-	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr) override;
-	virtual void free(AudioGraphInstance *& instance) override;
+	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr, const bool createdPaused = false) override;
+	virtual void free(AudioGraphInstance *& instance, const bool doRampDown) override;
+	virtual void tickMain() override;
 	
 	// called from the audio thread
-	virtual void tick(const float dt) override;
+	virtual void tickAudio(const float dt) override;
 	virtual void tickVisualizers() override;
 	
 	// called from the app thread
@@ -188,11 +191,12 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
-	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr) override;
-	virtual void free(AudioGraphInstance *& instance) override;
+	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr, const bool createdPaused = false) override;
+	virtual void free(AudioGraphInstance *& instance, const bool doRampDown) override;
+	virtual void tickMain() override;
 	
 	// called from the audio thread
-	virtual void tick(const float dt) override;
+	virtual void tickAudio(const float dt) override;
 	virtual void tickVisualizers() override;
 	
 	// called from the app thread
