@@ -1043,7 +1043,7 @@ struct Faces
 			
 			gxPushMatrix();
 			{
-				const float rsy = GFX_SY * s_videoScale;
+				const float rsy = 768 * s_videoScale;
 				const float rsx = rsy / tile->aspectRatio;
 				
 				gxTranslatef(
