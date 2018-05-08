@@ -31,6 +31,7 @@
 #include "framework.h"
 #include "soundmix.h"
 #include "vfxNodes/delayLine.h"
+#include <algorithm>
 #include <cmath>
 #include <map>
 
