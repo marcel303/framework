@@ -2,6 +2,7 @@
 #include "audioGraph.h"
 #include "Noise.h"
 #include "objects/audioSourceVorbis.h"
+#include "Path.h"
 #include "soundVolume.h"
 #include "textScroller.h"
 #include "vectorLines.h"
@@ -680,6 +681,16 @@ VFX_NODE_TYPE(VfxNodeDrawGrid)
 	out("draw", "draw");
 }
 
+//
+
+const char * getRandomFaceTileFilename()
+{
+	const char * filename = interviewFilenames[rand() % NUM_INTERVIEW_SOURCES];
+	//const char * filename = videoFilenames[rand() % NUM_VIDEOCLIP_SOURCES];
+	
+	return filename;
+}
+
 struct FaceTile
 {
 	Vec3 currentPos;
@@ -706,9 +717,13 @@ struct FaceTile
 	
 	AudioSourceVorbis audioSource;
 	
-	void init(const char * filename)
+	std::string audioFilename;
+	
+	void init(const char * videoFilename, const char * _audioFilename)
 	{
-		mp.openAsync(filename, MP::kOutputMode_RGBA);
+		mp.openAsync(videoFilename, MP::kOutputMode_RGBA);
+		
+		audioFilename = _audioFilename;
 		
 		wobbleSpeed = 1.f;
 		//wobbleMag = 50.f;
@@ -735,7 +750,7 @@ struct FaceTile
 	
 		mp.openAsync(openParams);
 		
-		audioSource.open(spokenAudio[0], false);
+		audioSource.open(audioFilename.c_str(), false);
 		
 		g_audioMixer->addPointSource(&audioSource);
 	}
@@ -858,10 +873,10 @@ struct Faces
 		{
 			FaceTile * tile = new FaceTile();
 			
-			const char * filename = interviewFilenames[rand() % NUM_INTERVIEW_SOURCES];
-			//const char * filename = videoFilenames[rand() % NUM_VIDEOCLIP_SOURCES];
+			const char * videoFilename = getRandomFaceTileFilename();
+			const std::string audioFilename = Path::ReplaceExtension(videoFilename, "ogg");
 			
-			tile->init(filename);
+			tile->init(videoFilename, audioFilename.c_str());
 			
 			tile->wobbleSpeed = random(.5f, 1.f);
 			
@@ -955,6 +970,18 @@ struct Faces
 			beginFocus(index);
 		}
 	#endif
+		
+		// check if focus tile has ended audio playback
+		
+		if (focusIndex >= 0)
+		{
+			FaceTile * tile = tiles[focusIndex];
+			
+			if (!tile->audioSource.isOpen() || tile->audioSource.hasEnded)
+			{
+				endFocus();
+			}
+		}
 		
 		// update tile composition and properties
 		
@@ -1647,10 +1674,13 @@ struct VfxNodeWorld : VfxNodeBase
 		{
 			const int focusIndex = getInputFloat(kInput_VideoFocusIndex, 0.f);
 			
-			if (focusIndex == s_world->faces.focusIndex)
-				s_world->faces.endFocus();
-			else
-				s_world->faces.beginFocus(focusIndex);
+			if (focusIndex >= 0 && focusIndex < s_world->faces.tiles.size())
+			{
+				if (focusIndex == s_world->faces.focusIndex)
+					s_world->faces.endFocus();
+				else
+					s_world->faces.beginFocus(focusIndex);
+			}
 		}
 	}
 };
