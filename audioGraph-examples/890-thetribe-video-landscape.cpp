@@ -15,6 +15,7 @@
 #define NUM_VIDEOCLIP_SOURCES 3
 #define NUM_VIDEOCLIPS 32
 #define NUM_VFXCLIPS 0
+#define NUM_INTERVIEW_SOURCES 6
 
 #define NUM_SPOKENWORD_SOURCES 3
 
@@ -46,9 +47,9 @@ static const char * audioFilenames[NUM_AUDIOCLIP_SOURCES] =
 
 static const char * videoFilenames[NUM_VIDEOCLIP_SOURCES] =
 {
-	"0.320px.mp4",
-	"1.320px.mp4",
-	"2.320px.mp4",
+	"0.640px.mp4",
+	"1.640px.mp4",
+	"2.640px.mp4",
 };
 
 static const char * spokenText[NUM_SPOKENWORD_SOURCES] =
@@ -63,6 +64,16 @@ static const char * spokenAudio[NUM_SPOKENWORD_SOURCES] =
 	"albert-tekst1.ogg",
 	"albert-tekst2.ogg",
 	"wiekspreekt.ogg" // 8:49 ~= 530 seconds
+};
+
+static const char * interviewFilenames[NUM_INTERVIEW_SOURCES] =
+{
+	"interviews/Daan-small.mp4",
+	"interviews/Jasmin-small.mp4",
+	"interviews/Jur-small.mp4",
+	"interviews/Lisa-small.mp4",
+	"interviews/Roos-small.mp4",
+	"interviews/Wiek-small.mp4"
 };
 
 //
@@ -847,7 +858,10 @@ struct Faces
 		{
 			FaceTile * tile = new FaceTile();
 			
-			tile->init(videoFilenames[rand() % NUM_VIDEOCLIP_SOURCES]);
+			const char * filename = interviewFilenames[rand() % NUM_INTERVIEW_SOURCES];
+			//const char * filename = videoFilenames[rand() % NUM_VIDEOCLIP_SOURCES];
+			
+			tile->init(filename);
 			
 			tile->wobbleSpeed = random(.5f, 1.f);
 			
@@ -1018,11 +1032,6 @@ struct Faces
 			
 			if (!tile->mp.getVideoProperties(sx, sy, duration))
 				continue;
-			
-		#if 1
-			// fixme
-			std::swap(sx, sy);
-		#endif
 		
 			Shader tileShader("face-tile");
 			setShader(tileShader);

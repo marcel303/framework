@@ -216,7 +216,7 @@ int main(int argc, char * argv[])
 		return -1;
 	
 #if ENABLE_WELCOME && !USE_STREAMING
-	fillPcmDataCache(".", true, false);
+	fillPcmDataCache(".", true, false, false);
 #endif
 	
 	SDL_mutex * audioMutex = SDL_CreateMutex();
