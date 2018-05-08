@@ -31,9 +31,6 @@
         <input socket="impulse" value="20.000000"/>
         <input socket="strength" value="1000.000000"/>
     </node>
-    <node id="70" nodeType="1" typeName="" editorX="336.00997924804688" editorY="-400.10665893554688">
-        <visualizer nodeId="69" dstSocketName="value" sx="216" sy="148"/>
-    </node>
     <node id="71" typeName="filter.comb" editorX="518.5557861328125" editorY="-169.22921752929688">
         <input socket="feedback" value="0.400000"/>
         <input socket="feedforward" value="0.000000"/>
@@ -99,14 +96,8 @@
     <node id="88" typeName="trigger.event" editorX="-86.86029052734375" editorY="-227.39175415039062">
         <input socket="name" value="type2"/>
     </node>
-    <node id="90" nodeType="1" typeName="" editorX="84.687652587890625" editorY="-543.5357666015625">
-        <visualizer nodeId="84" dstSocketName="audio" sx="216" sy="148"/>
-    </node>
     <node id="91" typeName="impulse.response" editorX="443" editorY="-554">
         <input socket="frequency" value="3000.000000"/>
-    </node>
-    <node id="92" nodeType="1" typeName="" editorX="569.3077392578125" editorY="-612.611083984375">
-        <visualizer nodeId="91" dstSocketName="response" sx="216" sy="148"/>
     </node>
     <node id="93" typeName="trigger.treshold" editorX="822" editorY="-539">
         <input socket="treshold" value="3.000000"/>
@@ -114,12 +105,6 @@
     <node id="94" typeName="sum" editorX="668" editorY="-735"/>
     <node id="95" typeName="impulse.response" editorX="445" editorY="-634">
         <input socket="frequency" value="300.000000"/>
-    </node>
-    <node id="96" nodeType="1" typeName="" editorX="791.723388671875" editorY="-788.6275634765625">
-        <visualizer nodeId="94" dstSocketName="sum" sx="216" sy="148"/>
-    </node>
-    <node id="97" nodeType="1" typeName="" editorX="337.723388671875" editorY="-814.220947265625">
-        <visualizer nodeId="95" dstSocketName="response" sx="216" sy="148"/>
     </node>
     <link id="55" enabled="1" srcNodeId="60" srcNodeSocketName="pcm" dstNodeId="59" dstNodeSocketName="pcm"/>
     <link id="62" enabled="1" srcNodeId="67" srcNodeSocketName="set!" dstNodeId="60" dstNodeSocketName="loop"/>

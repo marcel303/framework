@@ -35,9 +35,6 @@
     <node id="81" typeName="ramp" editorX="0" editorY="-880">
         <input socket="rampTime" value="4.000000"/>
     </node>
-    <node id="82" nodeType="1" typeName="" editorX="160" editorY="-960">
-        <visualizer nodeId="81" dstSocketName="value" sx="216" sy="148"/>
-    </node>
     <node id="84" typeName="trigger.time" editorX="-288" editorY="-960">
         <input socket="auto" value="0"/>
         <input socket="interval.max" value="0.010000"/>

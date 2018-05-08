@@ -52,9 +52,6 @@
     <node id="57" typeName="trigger.event" editorX="-368" editorY="-16" folded="1">
         <input socket="name" value="voices.play"/>
     </node>
-    <node id="58" nodeType="1" typeName="" editorX="-241.31341552734375" editorY="-103.13201904296875">
-        <visualizer nodeId="56" dstSocketName="value" sx="163" sy="44"/>
-    </node>
     <node id="59" typeName="audio.drywet" editorX="48" editorY="-48" folded="1"/>
     <node id="61" typeName="in.value" editorName="voice.echo" editorX="-80" editorY="32" folded="1">
         <input socket="defaultX" value="1.000000"/>
