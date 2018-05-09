@@ -67,9 +67,6 @@
         <input socket="rampTime" value="4.000000"/>
         <input socket="value" value="4.000000"/>
     </node>
-    <node id="82" nodeType="1" typeName="" editorX="179.7181396484375" editorY="-815.43365478515625">
-        <visualizer nodeId="81" dstSocketName="value" sx="216" sy="148"/>
-    </node>
     <node id="84" typeName="trigger.time" editorX="-366.01434326171875" editorY="-995.3406982421875">
         <input socket="auto" value="0"/>
         <input socket="interval.max" value="0.010000"/>

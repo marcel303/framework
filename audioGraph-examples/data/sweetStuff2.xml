@@ -33,12 +33,6 @@
         <input socket="filename" value="music2.ogg"/>
     </node>
     <node id="23" typeName="audio.pcm" editorX="-379.697509765625" editorY="-7.916015625"/>
-    <node id="24" nodeType="1" typeName="" editorX="-999.6505126953125" editorY="-177.22142028808594">
-        <visualizer nodeId="16" dstSocketName="phase" sx="399" sy="285"/>
-    </node>
-    <node id="25" nodeType="1" typeName="" editorX="-197.3677978515625" editorY="-168.53770446777344">
-        <visualizer nodeId="12" dstSocketName="result" sx="341" sy="230"/>
-    </node>
     <node id="26" typeName="audio.sine" editorX="-320.00003051757812" editorY="439.86917114257812" folded="1">
         <input socket="frequency" value="0.500000"/>
         <input socket="mode" value="0"/>

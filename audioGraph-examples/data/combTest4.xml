@@ -27,9 +27,6 @@
         <input socket="impulse" value="40.000000"/>
         <input socket="strength" value="2000.000000"/>
     </node>
-    <node id="70" nodeType="1" typeName="" editorX="596.010009765625" editorY="-506.10665893554688">
-        <visualizer nodeId="69" dstSocketName="value" sx="216" sy="148"/>
-    </node>
     <node id="71" typeName="filter.comb" editorX="518.5557861328125" editorY="-169.22921752929688">
         <input socket="feedback" value="0.800000"/>
         <input socket="feedforward" value="0.000000"/>

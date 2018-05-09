@@ -4,6 +4,7 @@
 #include "objects/binaural_cipic.h"
 #include "objects/paobject.h"
 #include "soundmix.h"
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 

@@ -550,7 +550,7 @@ void PcmData::reset()
 	numSamples = 0;
 }
 
-bool PcmData::load(const char * filename, const int channel)
+bool PcmData::load(const char * filename, const int channel, const bool createCache)
 {
 	bool result = true;
 	
@@ -613,7 +613,7 @@ bool PcmData::load(const char * filename, const int channel)
 		
 		// note : writing .cache files is disabled here. remove '&& false' to enable
 		
-		if (result == true && Path::GetExtension(filename, true) != "wav" && true)
+		if (result == true && Path::GetExtension(filename, true) != "wav" && createCache)
 		{
 			try
 			{

@@ -6,12 +6,6 @@
         <input socket="maxDelay" value="10.000000"/>
     </node>
     <node id="88" typeName="voice" passthrough="1" editorX="592" editorY="112"/>
-    <node id="89" nodeType="1" typeName="" editorX="575.8006591796875" editorY="345.7093505859375">
-        <visualizer nodeId="87" dstSocketName="value" sx="176" sy="143"/>
-    </node>
-    <node id="90" nodeType="1" typeName="" editorX="575.8907470703125" editorY="189.31831359863281">
-        <visualizer nodeId="86" dstSocketName="audio" sx="175" sy="147"/>
-    </node>
     <node id="91" typeName="return.4d" editorX="464" editorY="272">
         <input socket="back" value="1"/>
         <input socket="back.distance" value="50.000000"/>
@@ -35,9 +29,6 @@
     </node>
     <node id="92" typeName="audio.in" editorX="31.912109375" editorY="256" folded="1">
         <input socket="channel" value="58"/>
-    </node>
-    <node id="94" nodeType="1" typeName="" editorX="-13.070571899414062" editorY="679.225830078125">
-        <visualizer nodeId="92" dstSocketName="audio" sx="216" sy="148"/>
     </node>
     <node id="96" typeName="audio.sine" editorX="192" editorY="496" folded="1">
         <input socket="a" value="6.000000"/>

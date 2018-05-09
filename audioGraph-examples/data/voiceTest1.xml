@@ -25,9 +25,6 @@
         <input socket="outMax" value="20.000000"/>
         <input socket="outMin" value="-20.000000"/>
     </node>
-    <node id="30" nodeType="1" typeName="" editorX="-269.08013916015625" editorY="-183.33979797363281">
-        <visualizer nodeId="23" dstSocketName="audio" sx="386" sy="235"/>
-    </node>
     <link id="5" enabled="1" srcNodeId="9" srcNodeSocketName="a" dstNodeId="8" dstNodeSocketName="audio"/>
     <link id="6" enabled="1" srcNodeId="5" srcNodeSocketName="pos.x" dstNodeId="9" dstNodeSocketName="result"/>
     <link id="26" enabled="1" srcNodeId="29" srcNodeSocketName="value" dstNodeId="26" dstNodeSocketName="audio"/>

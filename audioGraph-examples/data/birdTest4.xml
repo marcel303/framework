@@ -15,9 +15,6 @@
         <input socket="mode" value="2"/>
         <input socket="path" value="birds/edo"/>
     </node>
-    <node id="50" nodeType="1" typeName="" editorX="-190.13638305664062" editorY="57.7978515625">
-        <visualizer nodeId="49" dstSocketName="audio" sx="216" sy="148"/>
-    </node>
     <node id="51" typeName="trigger.event" editorX="-91.319580078125" editorY="-33.112930297851562">
         <input socket="name" value="bounce"/>
     </node>

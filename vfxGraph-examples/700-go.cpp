@@ -25,13 +25,18 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if defined(MACOS) || defined(LINUX)
+
+// todo : make this code cross platform!
+
 #include "framework.h"
 #include "Parse.h"
 #include "Path.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
-#include <signal.h>
+
 #include <unistd.h>
+#include <signal.h>
 
 int GFX_SX = 640;
 int GFX_SY = 480;
@@ -264,3 +269,16 @@ int main(int argc, char * argv[])
 
 	return 0;
 }
+
+#else
+
+#include <stdio.h>
+
+int main(int argc, char * argv[])
+{
+	printf("Windows not supported (yet)!\n");
+
+	return -1;
+}
+
+#endif

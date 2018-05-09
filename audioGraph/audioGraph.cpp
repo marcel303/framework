@@ -740,7 +740,7 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 
 static std::map<std::string, PcmData*> s_pcmDataCache;
 
-void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths)
+void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths, const bool createCaches)
 {
 	LOG_DBG("filling PCM data cache with path: %s", path);
 	
@@ -762,7 +762,7 @@ void fillPcmDataCache(const char * path, const bool recurse, const bool stripPat
 		
 		PcmData * pcmData = new PcmData();
 		
-		if (pcmData->load(filenameLower.c_str(), 0) == false)
+		if (pcmData->load(filenameLower.c_str(), 0, createCaches) == false)
 		{
 			delete pcmData;
 			pcmData = nullptr;

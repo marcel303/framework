@@ -1,0 +1,192 @@
+<graph nextNodeId="68" nextLinkId="105">
+    <node id="1" typeName="draw.display"/>
+    <node id="24" typeName="draw.surface">
+        <input socket="clear" value="0"/>
+        <input socket="clearColor" value="010101ed"/>
+        <input socket="darken" value="1"/>
+        <input socket="darkenColor" value="0e1d1f30"/>
+        <input socket="format" value="1"/>
+        <input socket="viewMode" value="0"/>
+    </node>
+    <node id="36" typeName="channel.literal">
+        <input socket="text" value="-1 2  1.1 -0.3 0.4"/>
+    </node>
+    <node id="37" typeName="channel.swizzle">
+        <input socket="swizzle" value="0 1 2 3"/>
+    </node>
+    <node id="38" typeName="draw.primitive">
+        <input socket="color" value="e4a1a111"/>
+        <input socket="fill" value="0"/>
+        <input socket="stroke" value="1"/>
+        <input socket="strokeColor" value="fb0069d1"/>
+        <input socket="type" value="6"/>
+    </node>
+    <node id="40" typeName="draw.transform2d">
+        <input socket="scale" value="100.000000"/>
+        <input socket="scaleY" value="1.630000"/>
+    </node>
+    <node id="42" typeName="channel.fromFloat">
+        <input socket="value1" value="0.200000"/>
+    </node>
+    <node id="43" typeName="gen.sine">
+        <input socket="frequency" value="0.200000"/>
+    </node>
+    <node id="44" typeName="gen.sine">
+        <input socket="frequency" value="0.400000"/>
+    </node>
+    <node id="46" typeName="draw.sequence"/>
+    <node id="47" typeName="gen.sine">
+        <input socket="frequency" value="0.100000"/>
+    </node>
+    <node id="48" typeName="color">
+        <input socket="Y" value="0.200000"/>
+        <input socket="Z" value="0.100000"/>
+        <input socket="mode" value="0"/>
+    </node>
+    <node id="49" typeName="time">
+        <input socket="scale" value="0.300000"/>
+    </node>
+    <node id="50" typeName="draw.surface">
+        <input socket="format" value="0"/>
+        <input socket="viewMode" value="0"/>
+    </node>
+    <node id="51" typeName="draw.image">
+        <input socket="sizeMode" value="0"/>
+    </node>
+    <node id="52" typeName="draw.blend">
+        <input socket="mode" value="1"/>
+    </node>
+    <node id="53" typeName="draw.fsfx-v2" passthrough="1">
+        <input socket="opacity" value="0.950000"/>
+        <input socket="param1" value="200.000000"/>
+        <input socket="shader" value="fsfx/invert.ps"/>
+    </node>
+    <node id="54" typeName="draw.fsfx-v2">
+        <input socket="opacity" value="0.300000"/>
+        <input socket="param1" value="200.000000"/>
+        <input socket="shader" value="fsfx/sample_circle.ps"/>
+    </node>
+    <node id="55" typeName="gen.sine">
+        <input socket="frequency" value="0.010000"/>
+    </node>
+    <node id="56" typeName="gen.sine">
+        <input socket="frequency" value="0.020000"/>
+    </node>
+    <node id="57" typeName="channel.fromFile">
+        <input socket="filename" value="ribbonpoints.csv"/>
+        <input socket="transpose" value="1"/>
+    </node>
+    <node id="58" typeName="gen.sine">
+        <input socket="frequency" value="4.000000"/>
+    </node>
+    <node id="59" typeName="gen.sine">
+        <input socket="frequency" value="0.012300"/>
+    </node>
+    <node id="60" typeName="channel.fromFloat">
+        <input socket="value1" value="0.400000"/>
+    </node>
+    <node id="61" typeName="draw.fsfx-v2">
+        <input socket="opacity" value="0.100000"/>
+        <input socket="param1" value="100.000000"/>
+        <input socket="shader" value="fsfx/circles.ps"/>
+    </node>
+    <node id="62" typeName="draw.sequence"/>
+    <node id="63" typeName="draw.text">
+        <input socket="color" value="7aade4bc"/>
+        <input socket="sizeMode" value="0"/>
+        <input socket="text" value="framework"/>
+    </node>
+    <node id="64" typeName="draw.transform2d">
+        <input socket="scale" value="0.300000"/>
+        <input socket="y" value="220.000000"/>
+    </node>
+    <node id="66" typeName="audioGraph">
+        <input socket="comb4.gain" value="1.000000"/>
+        <input socket="comb5.fade" value="0.010000"/>
+        <input socket="comb5.gain" value="1.000000"/>
+        <input socket="file" value="../4dworld/sweetStuff6.xml"/>
+    </node>
+    <link id="61" srcNodeId="37" srcNodeSocketName="channel2" dstNodeId="36" dstNodeSocketName="channel"/>
+    <link id="67" srcNodeId="37" srcNodeSocketName="channel3" dstNodeId="42" dstNodeSocketName="channel"/>
+    <link id="68" srcNodeId="42" srcNodeSocketName="value1" dstNodeId="43" dstNodeSocketName="value">
+        <param name="out.max" value="0.500000"/>
+        <param name="out.min" value="0.100000"/>
+    </link>
+    <link id="69" srcNodeId="38" srcNodeSocketName="strokeSize" dstNodeId="44" dstNodeSocketName="value">
+        <param name="out.max" value="60.000000"/>
+        <param name="out.min" value="1.000000"/>
+    </link>
+    <link id="70" srcNodeId="40" srcNodeSocketName="any" dstNodeId="46" dstNodeSocketName="any"/>
+    <link id="71" srcNodeId="46" srcNodeSocketName="01" dstNodeId="38" dstNodeSocketName="any"/>
+    <link id="74" srcNodeId="24" srcNodeSocketName="multiplyColor" dstNodeId="48" dstNodeSocketName="color"/>
+    <link id="75" srcNodeId="48" srcNodeSocketName="X" dstNodeId="49" dstNodeSocketName="time"/>
+    <link id="76" srcNodeId="1" srcNodeSocketName="image" dstNodeId="50" dstNodeSocketName="image"/>
+    <link id="77" srcNodeId="51" srcNodeSocketName="image" dstNodeId="24" dstNodeSocketName="image"/>
+    <link id="79" srcNodeId="52" srcNodeSocketName="any" dstNodeId="51" dstNodeSocketName="any"/>
+    <link id="81" srcNodeId="50" srcNodeSocketName="source" dstNodeId="53" dstNodeSocketName="any"/>
+    <link id="83" srcNodeId="53" srcNodeSocketName="before" dstNodeId="54" dstNodeSocketName="any"/>
+    <link id="85" srcNodeId="40" srcNodeSocketName="angle_norm" dstNodeId="55" dstNodeSocketName="value"/>
+    <link id="86" srcNodeId="48" srcNodeSocketName="Y" dstNodeId="56" dstNodeSocketName="value">
+        <param name="out.max" value="0.900000"/>
+        <param name="out.min" value="0.500000"/>
+    </link>
+    <link id="89" srcNodeId="40" srcNodeSocketName="angle_norm" dstNodeId="58" dstNodeSocketName="value">
+        <param name="out.max" value="0.002000"/>
+        <param name="out.min" value="-0.002000"/>
+    </link>
+    <link id="90" srcNodeId="58" srcNodeSocketName="frequency" dstNodeId="59" dstNodeSocketName="value">
+        <param name="out.max" value="0.500000"/>
+    </link>
+    <link id="91" srcNodeId="37" srcNodeSocketName="channel4" dstNodeId="60" dstNodeSocketName="channel"/>
+    <link id="92" srcNodeId="38" srcNodeSocketName="strokeColor" dstNodeId="48" dstNodeSocketName="color"/>
+    <link id="93" srcNodeId="24" srcNodeSocketName="source" dstNodeId="61" dstNodeSocketName="any"/>
+    <link id="94" srcNodeId="61" srcNodeSocketName="before" dstNodeId="40" dstNodeSocketName="transform"/>
+    <link id="95" srcNodeId="37" srcNodeSocketName="channel1" dstNodeId="57" dstNodeSocketName="channel"/>
+    <link id="96" srcNodeId="54" srcNodeSocketName="before" dstNodeId="62" dstNodeSocketName="any"/>
+    <link id="97" srcNodeId="62" srcNodeSocketName="01" dstNodeId="52" dstNodeSocketName="any"/>
+    <link id="99" srcNodeId="62" srcNodeSocketName="03" dstNodeId="64" dstNodeSocketName="transform"/>
+    <link id="100" srcNodeId="64" srcNodeSocketName="any" dstNodeId="63" dstNodeSocketName="any"/>
+    <link id="101" srcNodeId="38" srcNodeSocketName="x" dstNodeId="37" dstNodeSocketName="1" dynamic="1"/>
+    <link id="102" srcNodeId="38" srcNodeSocketName="y" dstNodeId="37" dstNodeSocketName="2" dynamic="1"/>
+    <link id="103" srcNodeId="38" srcNodeSocketName="r" dstNodeId="37" dstNodeSocketName="3" dynamic="1"/>
+    <link id="104" srcNodeId="38" srcNodeSocketName="s" dstNodeId="37" dstNodeSocketName="4" dynamic="1"/>
+    <editor nextZKey="489">
+        <dragAndZoom x="479.448486328125" y="171.92572021484375" zoom="1.4438000917434692"/>
+        <nodeDatas>
+            <nodeData nodeId="1" x="1456" y="0" zKey="337"/>
+            <nodeData nodeId="24" x="528" y="0" zKey="488"/>
+            <nodeData nodeId="36" x="-256" y="48" zKey="453"/>
+            <nodeData nodeId="37" x="-128" y="0" zKey="476"/>
+            <nodeData nodeId="38" x="16" y="0" zKey="436"/>
+            <nodeData nodeId="40" x="288" y="0" zKey="484"/>
+            <nodeData nodeId="42" x="-256" y="96" zKey="454"/>
+            <nodeData nodeId="43" x="-384" y="96" zKey="297"/>
+            <nodeData nodeId="44" x="-128" y="192" zKey="442"/>
+            <nodeData nodeId="46" x="160" y="0" zKey="427"/>
+            <nodeData nodeId="47" x="-128" y="-128" zKey="368"/>
+            <nodeData nodeId="48" x="288" y="240" zKey="445"/>
+            <nodeData nodeId="49" x="160" y="256" zKey="444"/>
+            <nodeData nodeId="50" x="1328" y="0" zKey="354"/>
+            <nodeData nodeId="51" x="656" y="0" zKey="346"/>
+            <nodeData nodeId="52" x="784" y="0" zKey="353"/>
+            <nodeData nodeId="53" x="1200" y="0" zKey="448"/>
+            <nodeData nodeId="54" x="1072" y="0" zKey="449"/>
+            <nodeData nodeId="55" x="160" y="192" zKey="441" folded="1"/>
+            <nodeData nodeId="56" x="160" y="336" zKey="370"/>
+            <nodeData nodeId="57" x="-256" y="-48" zKey="457"/>
+            <nodeData nodeId="58" x="160" y="224" zKey="421" folded="1"/>
+            <nodeData nodeId="59" x="48" y="240" zKey="392" folded="1"/>
+            <nodeData nodeId="60" x="-256" y="160" zKey="433"/>
+            <nodeData nodeId="61" x="416" y="0" zKey="487"/>
+            <nodeData nodeId="62" x="944" y="-0" zKey="459"/>
+            <nodeData nodeId="63" x="656" y="128" zKey="467"/>
+            <nodeData nodeId="64" x="784" y="128" zKey="466"/>
+            <nodeData nodeId="66" x="-128" y="304" zKey="475"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="65" x="-368" y="208" zKey="468" nodeId="37" dstSocketName="1" sx="216" sy="148"/>
+            <visualizer id="67" x="-16" y="304" zKey="473" nodeId="66" dstSocketName="channel" sx="144.66046142578125" sy="103.67251586914062"/>
+        </visualizers>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
+    </editor>
+</graph>

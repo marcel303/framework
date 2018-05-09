@@ -1,6 +1,7 @@
 #include "colorwheel.h"
 #include "framework.h"
 #include "ui.h"
+#include <algorithm>
 
 void ColorWheel::getTriangleAngles(float a[3])
 {

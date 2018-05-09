@@ -366,8 +366,9 @@ int main(int argc, char * argv[])
 
 		SDL_DestroyMutex(mutex);
 		mutex = nullptr;
+
+		framework.shutdown();
 	}
-	framework.shutdown();
 
 	return 0;
 }

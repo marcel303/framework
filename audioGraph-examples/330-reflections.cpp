@@ -31,6 +31,7 @@
 #include "framework.h"
 #include "soundmix.h"
 #include "vfxNodes/delayLine.h"
+#include <algorithm>
 #include <cmath>
 #include <map>
 
@@ -41,8 +42,8 @@
 #endif
 
 #if FULLSCREEN
-	const int GFX_SX = 1024;
-	const int GFX_SY = 768;
+	const int GFX_SX = 800;
+	const int GFX_SY = 600;
 #else
 	const int GFX_SX = 1400;
 	const int GFX_SY = 400;
@@ -374,7 +375,7 @@ struct Space
 	
 	double t = 0.0;
 	
-	static Vec3 evalCircle(const float t, const float radius)
+	static Vec3 evalCircle(const double t, const float radius)
 	{
 		Vec3 p;
 		
@@ -384,11 +385,11 @@ struct Space
 		return p * radius;
 	}
 	
-	static Vec3 evalQuad(const float t, const float radius)
+	static Vec3 evalQuad(const double t, const float radius)
 	{
-		const float u = fmodf(fabsf(t), 1.f) * 4.f;
+		const double u = fmod(fabs(t), 1.0) * 4.0;
 		const int s = int(u);
-		const float f = u - s;
+		const double f = u - s;
 		
 		Vec3 p;
 		
@@ -416,7 +417,7 @@ struct Space
 		return p * radius;
 	}
 	
-	static Vec3 evalSnake(const float t)
+	static Vec3 evalSnake(const double t)
 	{
 		Vec3 p;
 		
@@ -426,7 +427,7 @@ struct Space
 		return p;
 	}
 	
-	static Vec3 evalParticlePosition(const float i, const float t)
+	static Vec3 evalParticlePosition(const float i, const double t)
 	{
 	#if !ENABLE_MIDI
 		if (keyboard.isDown(SDLK_a))
@@ -437,7 +438,7 @@ struct Space
 	
 		//
 		
-		const float pt = t * (i + .5f) / 6.f;
+		const double pt = t * (i + .5f) / 6.f;
 		
 		auto p1 = evalQuad(pt / 1.123, 12.f);
 		auto p2 = evalCircle(pt, 12.f);
@@ -541,6 +542,18 @@ struct Space
 			point.processReflection(sourceBuffer, sourcePosition, delayLine, link->previousReadOffset, link->previousGain);
 		}
 	}
+
+#if AUDIO_USE_SSE
+	void * operator new(size_t size)
+	{
+		return _mm_malloc(size, 32);
+	}
+
+	void operator delete(void * mem)
+	{
+		_mm_free(mem);
+	}
+#endif
 };
 
 #if ENABLE_MIDI || ENABLE_GAMEPAD
@@ -648,11 +661,11 @@ struct GamepadController : Controller
 	
 	void tick()
 	{
-		controlValues[2] = (gamepad[0].getAnalog(0, ANALOG_X) + 1.f) / 2.f;
+		controlValues[2] = (gamepad[0].getAnalog(0, ANALOG_X) / 2.f + 1.f) / 2.f;
 		
-		const float alpha = (clamp(gamepad[0].getAnalog(0, ANALOG_Y) * 1.5f, -1.f, +1.f) + 1.f) / 2.f;
+		const float alpha = (clamp(gamepad[0].getAnalog(0, ANALOG_Y) * 1.5f, -1.f, +1.f) + 1.f) / 2.f;// * (.5f / .6f);
 		
-		const bool isDown = gamepad[0].isDown(GAMEPAD_START);
+		const bool isDown = gamepad[0].isDown(GAMEPAD_A);
 		
 		if (isDown && !wasDown)
 			desiredMorph = (desiredMorph + 1) % 3;
@@ -661,13 +674,16 @@ struct GamepadController : Controller
 		
 		const float desiredMorphValues[2] =
 		{
-			desiredMorph == 1 ? .6f + alpha : 0.f,
-			desiredMorph == 2 ? .6f + alpha : 0.f
+			desiredMorph == 1 ? .7f + alpha / .5f * .3f : desiredMorph == 0 ? (alpha - .5f) * .6f : 0.f,
+			desiredMorph == 2 ? .7f + alpha / .5f * .3f : desiredMorph == 0 ? (alpha - .5f) * .0f : 0.f
 		};
+		
+		const float retain = gamepad[0].isDown(DPAD_DOWN) ? .998f : .99f;
+		const float decay = 1.f - retain;
 		
 		for (int i = 0; i < 2; ++i)
 		{
-			controlValues[i] = controlValues[i] * 0.99f + desiredMorphValues[i] * .01f;
+			controlValues[i] = controlValues[i] * retain + desiredMorphValues[i] * decay;
 		}
 	}
 };
@@ -692,7 +708,7 @@ struct MyAudioSource : AudioSource
 
 	MyAudioSource()
 	{
-		fillPcmDataCache("testsounds", true, true);
+		fillPcmDataCache("testsounds", true, true, true);
 		pcm.init(getPcmData("music2.ogg"), 0);
 		pcm.play();
 		
@@ -710,8 +726,10 @@ struct MyAudioSource : AudioSource
 	
 	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override
 	{
+	#if ENABLE_MIDI || ENABLE_GAMEPAD
 		Controller controller;
-		
+	#endif
+
 	#if ENABLE_MIDI
 		midiController.tick();
 		
@@ -842,6 +860,9 @@ int main(int argc, char * argv[])
 
 		audioGraphMgr.shut();
 		
+		voiceMgr.freeVoice(voice);
+		Assert(voice == nullptr);
+
 		voiceMgr.shut();
 
 		SDL_DestroyMutex(mutex);
