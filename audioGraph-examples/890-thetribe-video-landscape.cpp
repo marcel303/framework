@@ -832,7 +832,7 @@ struct Faces
 	
 	std::vector<FaceTile*> tiles;
 	
-	CompositionMode compositionMode = kCompositionMode_Focus;
+	CompositionMode compositionMode = kCompositionMode_Grid;
 	
 	float opacity = 0.f;
 	
@@ -1053,13 +1053,6 @@ struct Faces
 			if (texture == 0)
 				continue;
 			
-			int sx;
-			int sy;
-			double duration;
-			
-			if (!tile->mp.getVideoProperties(sx, sy, duration))
-				continue;
-		
 			Shader tileShader("face-tile");
 			setShader(tileShader);
 			tileShader.setTexture("image", 0, texture);
