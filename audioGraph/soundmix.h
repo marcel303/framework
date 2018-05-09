@@ -53,7 +53,7 @@ struct PcmData
 	void set(float * samples, const int numSamples);
 	void reset();
 
-	bool load(const char * filename, const int channel);
+	bool load(const char * filename, const int channel, const bool createCache);
 };
 
 //
