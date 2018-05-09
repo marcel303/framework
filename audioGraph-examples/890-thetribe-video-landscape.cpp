@@ -16,7 +16,7 @@
 #define NUM_VIDEOCLIP_SOURCES 3
 #define NUM_VIDEOCLIPS 32
 #define NUM_VFXCLIPS 0
-#define NUM_INTERVIEW_SOURCES 6
+#define NUM_INTERVIEW_SOURCES 7
 
 #define NUM_SPOKENWORD_SOURCES 3
 
@@ -69,6 +69,7 @@ static const char * spokenAudio[NUM_SPOKENWORD_SOURCES] =
 
 static const char * interviewFilenames[NUM_INTERVIEW_SOURCES] =
 {
+	"interviews/Albert-small.mp4",
 	"interviews/Daan-small.mp4",
 	"interviews/Jasmin-small.mp4",
 	"interviews/Jur-small.mp4",
@@ -142,6 +143,8 @@ static float s_wobbleSpeedY = 1.f;
 static float s_videoRetain = 0.f;
 static float s_particlesLineOpacity = 0.f;
 static float s_particlesCoronaOpacity = 0.f;
+
+static Surface * s_videoMask = nullptr;
 
 struct Videoclip
 {
@@ -298,6 +301,7 @@ struct Videoclip
 			Shader shader("videoclip");
 			setShader(shader);
 			shader.setTexture("image", 0, texture);
+			shader.setTexture("mask", 1, s_videoMask->getTexture());
 			shader.setImmediate("saturation", s_videoSaturation);
 			shader.setImmediate("perlin", perlin1, perlin2);
 			gxSetTexture(texture);
@@ -2078,6 +2082,25 @@ void VfxNodeScalarSmoothe::tick(const float _dt)
 
 void VideoLandscape::init()
 {
+	// create mask texture
+	
+	s_videoMask = new Surface(640, 360, false, false, SURFACE_R8);
+
+	pushSurface(s_videoMask);
+	{
+		s_videoMask->clear();
+		
+		setColor(colorWhite);
+		pushBlend(BLEND_OPAQUE);
+		pushColorPost(POST_PREMULTIPLY_RGB_WITH_ALPHA);
+		hqBegin(HQ_FILLED_ROUNDED_RECTS);
+		hqFillRoundedRect(0, 0, s_videoMask->getWidth(), s_videoMask->getHeight(), 64);
+		hqEnd();
+		popColorPost();
+		popBlend();
+	}
+	popSurface();
+	
 	world = new World();
 	world->init(g_sampleSet, g_binauralMutex);
     s_world = world;
