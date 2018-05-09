@@ -227,7 +227,7 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 
 struct PcmData;
 
-void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths);
+void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths, const bool createCaches);
 void clearPcmDataCache();
 const PcmData * getPcmData(const char * filename);
 
