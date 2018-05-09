@@ -8,15 +8,15 @@
 #include "vfxGraphRealTimeConnection.h"
 
 #if !defined(DEBUG)
-	#define FINMODE 1
+	#define FINMODE 0
 #endif
 
 #if FINMODE
 const int GFX_SX = 1920;
 const int GFX_SY = 1080;
 #elif 1
-const int GFX_SX = 1024;
-const int GFX_SY = 768;
+const int GFX_SX = 1920/2;
+const int GFX_SY = 1080/2;
 #elif 1
 const int GFX_SX = 2400;
 const int GFX_SY = 1200;
@@ -205,6 +205,8 @@ VFX_NODE_TYPE(VfxNodeTriggerFilter)
 
 int main(int argc, char * argv[])
 {
+	srand(time(nullptr));
+	
     framework.enableDepthBuffer = true;
     framework.enableRealTimeEditing = true;
 	
