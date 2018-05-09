@@ -1858,9 +1858,9 @@ int main(int argc, char * argv[])
 		framework.endDraw();
 	}
 	
-	fillPcmDataCache("birds", true, false);
-	fillPcmDataCache("testsounds", true, true);
-	fillPcmDataCache("voice-fragments", false, false);
+	fillPcmDataCache("birds", true, false, true);
+	fillPcmDataCache("testsounds", true, true, true);
+	fillPcmDataCache("voice-fragments", false, false, true);
 
 	//
 	
