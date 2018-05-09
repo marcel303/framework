@@ -31,6 +31,7 @@
 #include "framework.h"
 #include "soundmix.h"
 #include "vfxNodes/delayLine.h"
+#include <algorithm>
 #include <cmath>
 #include <map>
 
@@ -541,6 +542,18 @@ struct Space
 			point.processReflection(sourceBuffer, sourcePosition, delayLine, link->previousReadOffset, link->previousGain);
 		}
 	}
+
+#if AUDIO_USE_SSE
+	void * operator new(size_t size)
+	{
+		return _mm_malloc(size, 32);
+	}
+
+	void operator delete(void * mem)
+	{
+		_mm_free(mem);
+	}
+#endif
 };
 
 #if ENABLE_MIDI || ENABLE_GAMEPAD
@@ -713,8 +726,10 @@ struct MyAudioSource : AudioSource
 	
 	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override
 	{
+	#if ENABLE_MIDI || ENABLE_GAMEPAD
 		Controller controller;
-		
+	#endif
+
 	#if ENABLE_MIDI
 		midiController.tick();
 		
@@ -845,6 +860,9 @@ int main(int argc, char * argv[])
 
 		audioGraphMgr.shut();
 		
+		voiceMgr.freeVoice(voice);
+		Assert(voice == nullptr);
+
 		voiceMgr.shut();
 
 		SDL_DestroyMutex(mutex);

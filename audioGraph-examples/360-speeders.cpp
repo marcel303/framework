@@ -4,6 +4,7 @@
 #include "objects/binaural_cipic.h"
 #include "objects/paobject.h"
 #include "soundmix.h"
+#include <algorithm>
 #include <cmath>
 
 #define MAX_SOUNDVOLUMES 100
@@ -649,7 +650,12 @@ struct RecordedFragment : AudioSource
 
 struct World
 {
+#ifdef WIN32
+	// fixme : work around for "struct 'World' has an illegal zero-sized array" error when compiling with MSVC
+	Speeder speeders[NUM_SPEEDERS + 1];
+#else
 	Speeder speeders[NUM_SPEEDERS];
+#endif
 	
 	std::vector<RecordedFragment*> recordedFragments;
 	

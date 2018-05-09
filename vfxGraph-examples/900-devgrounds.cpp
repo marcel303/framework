@@ -39,6 +39,7 @@
 #include "Timer.h"
 #include "tinyxml2.h"
 #include "vfxNodeBase.h"
+#include <algorithm>
 #include <cmath>
 
 using namespace tinyxml2;

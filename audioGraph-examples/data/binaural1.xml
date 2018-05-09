@@ -24,12 +24,6 @@
     <node id="68" typeName="audio.pcm" editorName="pcm" editorX="-144" editorY="32" folded="1">
         <input socket="filename" value="music2.ogg"/>
     </node>
-    <node id="69" nodeType="1" typeName="" editorX="240.43939208984375" editorY="215.07719421386719">
-        <visualizer nodeId="65" dstSocketName="audio" sx="216" sy="148"/>
-    </node>
-    <node id="70" nodeType="1" typeName="" editorX="8.814544677734375" editorY="214.30250549316406">
-        <visualizer nodeId="66" dstSocketName="audio" sx="216" sy="148"/>
-    </node>
     <link id="62" enabled="1" srcNodeId="63" srcNodeSocketName="audio" dstNodeId="61" dstNodeSocketName="leftEar"/>
     <link id="64" enabled="1" srcNodeId="64" srcNodeSocketName="audio" dstNodeId="61" dstNodeSocketName="rightEar"/>
     <link id="65" enabled="1" srcNodeId="61" srcNodeSocketName="azimuth" dstNodeId="65" dstNodeSocketName="audio"/>

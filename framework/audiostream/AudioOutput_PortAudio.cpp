@@ -29,6 +29,7 @@
 
 #include "AudioOutput_PortAudio.h"
 #include "framework.h"
+#include <algorithm>
 
 #if LINUX
 	#include <portaudio.h>

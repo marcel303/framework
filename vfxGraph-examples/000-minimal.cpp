@@ -28,6 +28,7 @@
 #include "framework.h"
 #include "graph.h"
 #include "vfxGraph.h"
+#include <algorithm>
 
 #define FILENAME "drawTest.xml"
 

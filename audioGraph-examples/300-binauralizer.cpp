@@ -36,6 +36,7 @@
 #include "paobject.h"
 #include "soundmix.h"
 #include "Timer.h"
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 

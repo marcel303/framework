@@ -20,9 +20,6 @@
         <input socket="b" value="15.000000"/>
         <input socket="frequency" value="0.100000"/>
     </node>
-    <node id="32" nodeType="1" typeName="" editorX="-384.08218383789062" editorY="-8.2895126342773438">
-        <visualizer nodeId="30" dstSocketName="audio" sx="216" sy="148"/>
-    </node>
     <node id="34" typeName="noise.1d" editorX="-544.679931640625" editorY="410.4281005859375">
         <input socket="max" value="0.900000"/>
         <input socket="min" value="0.100000"/>
@@ -35,12 +32,6 @@
         <input socket="smoothing" value="1"/>
         <input socket="smoothness" value="0.900000"/>
     </node>
-    <node id="37" nodeType="1" typeName="" editorX="-448" editorY="672">
-        <visualizer nodeId="36" dstSocketName="result" sx="216" sy="148"/>
-    </node>
-    <node id="38" nodeType="1" typeName="" editorX="-672" editorY="672">
-        <visualizer nodeId="34" dstSocketName="result" sx="216" sy="148"/>
-    </node>
     <node id="39" typeName="audio.sine" editorX="-733.293701171875" editorY="174.46299743652344">
         <input socket="frequency" value="30.000000"/>
         <input socket="mode" value="0"/>
@@ -50,9 +41,6 @@
         <input socket="max" value="0.100000"/>
     </node>
     <node id="41" typeName="interp.scalar" editorX="-396.97100830078125" editorY="377.94403076171875"/>
-    <node id="42" nodeType="1" typeName="" editorX="-224" editorY="672">
-        <visualizer nodeId="41" dstSocketName="result" sx="216" sy="148"/>
-    </node>
     <node id="43" typeName="audio.sine" editorX="-289.93414306640625" editorY="235.51119995117188" folded="1">
         <input socket="a" value="0.100000"/>
         <input socket="b" value="0.900000"/>
@@ -105,9 +93,6 @@
         <input socket="a" value="-10.000000"/>
         <input socket="b" value="10.000000"/>
         <input socket="frequency" value="0.123000"/>
-    </node>
-    <node id="57" nodeType="1" typeName="" editorX="117.81747436523438" editorY="-387.95150756835938">
-        <visualizer nodeId="45" dstSocketName="audio" sx="216" sy="148"/>
     </node>
     <node id="58" typeName="time" editorX="-160" editorY="-299.159912109375">
         <input socket="scale" value="5.000000"/>

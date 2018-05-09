@@ -16,18 +16,6 @@
     <node id="28" typeName="phase" editorX="-386.0006103515625" editorY="183">
         <input socket="frequency" value="20.000000"/>
     </node>
-    <node id="29" nodeType="1" typeName="" editorX="32" editorY="224.00079345703125">
-        <visualizer nodeId="25" dstSocketName="value1" sx="136" sy="98"/>
-    </node>
-    <node id="30" nodeType="1" typeName="" editorX="32" editorY="336.00079345703125">
-        <visualizer nodeId="25" dstSocketName="value2" sx="136" sy="98"/>
-    </node>
-    <node id="31" nodeType="1" typeName="" editorX="32" editorY="448.00079345703125">
-        <visualizer nodeId="25" dstSocketName="value3" sx="136" sy="98"/>
-    </node>
-    <node id="32" nodeType="1" typeName="" editorX="32" editorY="560.00079345703125">
-        <visualizer nodeId="25" dstSocketName="value4" sx="136" sy="98"/>
-    </node>
     <node id="35" typeName="audio.sine" editorX="-382" editorY="295">
         <input socket="frequency" value="1.000000"/>
         <input socket="mode" value="1"/>
@@ -57,12 +45,6 @@
     <node id="42" typeName="math" editorX="-240" editorY="528">
         <input socket="b" value="0.500000"/>
         <input socket="type" value="7"/>
-    </node>
-    <node id="44" nodeType="1" typeName="" editorX="442.70425415039062" editorY="64.93109130859375">
-        <visualizer nodeId="26" dstSocketName="audio" sx="150" sy="134"/>
-    </node>
-    <node id="46" nodeType="1" typeName="" editorX="-504.95401000976562" editorY="411.26657104492188">
-        <visualizer nodeId="35" dstSocketName="audio" sx="216" sy="148"/>
     </node>
     <node id="47" typeName="envelope" editorX="181.5576171875" editorY="103.61360168457031">
         <input socket="attack" value="0.400000"/>
