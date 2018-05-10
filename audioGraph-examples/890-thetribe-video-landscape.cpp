@@ -1112,13 +1112,19 @@ struct NewBeat
 	float scale = 1.f;
 	float opacity = 1.f;
 	
+	MediaPlayer mp;
+	
+	std::string videoFilename;
+	
 	void init(const char * path)
 	{
 		auto files = listFiles(path, false);
 		
 		for (auto & file : files)
 		{
-			if (Path::GetExtension(file, true) == "png")
+			auto ext = Path::GetExtension(file, true);
+			
+			if (ext == "png")
 			{
 				GLuint texture = getTexture(file.c_str());
 				
@@ -1126,6 +1132,10 @@ struct NewBeat
 				{
 					textures.push_back(texture);
 				}
+			}
+			else if (ext == "mp4")
+			{
+				videoFilename = file;
 			}
 		}
 	}
@@ -1137,6 +1147,17 @@ struct NewBeat
 	
 	void tick(const float dt)
 	{
+		if (opacity == 0.f)
+		{
+			if (isActive)
+				end();
+		}
+		else
+		{
+			if (!isActive)
+				begin();
+		}
+		
 		if (isActive)
 		{
 			timer = fmaxf(0.f, timer - dt);
@@ -1144,6 +1165,26 @@ struct NewBeat
 			if (timer == 0.f)
 			{
 				next();
+			}
+			
+			if (mp.isActive(mp.context))
+			{
+				mp.presentTime += dt;
+				
+				mp.tick(mp.context, true);
+			}
+			else
+			{
+				mp.presentTime = 0.0;
+				
+				mp.openAsync(videoFilename.c_str(), MP::kOutputMode_RGBA);
+			}
+		}
+		else
+		{
+			if (mp.isActive(mp.context))
+			{
+				mp.close(true);
 			}
 		}
 	}
@@ -1171,9 +1212,15 @@ struct NewBeat
 	
 	void draw()
 	{
+	#if 0
 		if (isActive && activeTexture >= 0 && activeTexture < textures.size() && opacity > 0.f)
 		{
 			const GLuint texture = textures[activeTexture];
+	#else
+		if (isActive && mp.getTexture() != 0)
+		{
+			const GLuint texture = mp.getTexture();
+	#endif
 			
 			int sx;
 			int sy;
@@ -1185,6 +1232,9 @@ struct NewBeat
 				checkErrorGL();
 			}
 			gxSetTexture(0);
+			
+			sx *= PARTICLE_SCALE;
+			sy *= PARTICLE_SCALE;
 			
 			gxPushMatrix();
 			{
@@ -1289,6 +1339,7 @@ struct VfxNodeNewBeat : VfxNodeBase
 	
 	virtual void handleTrigger(const int index) override
 	{
+	/*
 		if (index == kInput_Begin)
 		{
 			newBeat.begin();
@@ -1297,6 +1348,7 @@ struct VfxNodeNewBeat : VfxNodeBase
 		{
 			newBeat.end();
 		}
+	*/
 	}
 	
 	NewBeat newBeat;
