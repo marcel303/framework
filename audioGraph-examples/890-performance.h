@@ -1,3 +1,5 @@
+#pragma once
+
 #include "audioMixer.h"
 #include "objects/binauralizer.h"
 
@@ -24,8 +26,6 @@ struct VfxGraph;
 struct VideoLandscape
 {
 	const int kFontSize = 16;
-	
-	bool showUi = true;
 	
 	float fov = 90.f;
 	float near = .01f;

@@ -145,6 +145,7 @@ static float s_particlesLineOpacity = 0.f;
 static float s_particlesCoronaOpacity = 0.f;
 
 static Surface * s_videoMask = nullptr;
+static Surface * s_circleMask = nullptr;
 
 struct Videoclip
 {
@@ -1093,6 +1094,224 @@ struct Faces
 	}
 };
 
+//
+
+struct NewBeat
+{
+	std::vector<GLuint> textures;
+	
+	bool isActive = false;
+	int activeTexture = -1;
+	
+	float timer = 0.f;
+	
+	float scale = 1.f;
+	float opacity = 1.f;
+	
+	void init(const char * path)
+	{
+		auto files = listFiles(path, false);
+		
+		for (auto & file : files)
+		{
+			if (Path::GetExtension(file, true) == "png")
+			{
+				GLuint texture = getTexture(file.c_str());
+				
+				if (texture != 0)
+				{
+					textures.push_back(texture);
+				}
+			}
+		}
+	}
+	
+	void shut()
+	{
+		textures.clear();
+	}
+	
+	void tick(const float dt)
+	{
+		if (isActive)
+		{
+			timer = fmaxf(0.f, timer - dt);
+			
+			if (timer == 0.f)
+			{
+				next();
+			}
+		}
+	}
+	
+	void next()
+	{
+		timer = 4.f;
+		
+		if (textures.empty())
+		{
+			activeTexture = -1;
+		}
+		else
+		{
+			if (activeTexture == -1)
+			{
+				activeTexture = rand() % textures.size();
+			}
+			else
+			{
+				activeTexture = (activeTexture + 1) % textures.size();
+			}
+		}
+	}
+	
+	void draw()
+	{
+		if (isActive && activeTexture >= 0 && activeTexture < textures.size() && opacity > 0.f)
+		{
+			const GLuint texture = textures[activeTexture];
+			
+			int sx;
+			int sy;
+			
+			gxSetTexture(texture);
+			{
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sx);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
+				checkErrorGL();
+			}
+			gxSetTexture(0);
+			
+			gxPushMatrix();
+			{
+				gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
+				gxScalef(sx/2.f, sy/2.f, 1);
+				gxScalef(scale, scale, 1.f);
+				
+				gxSetTexture(texture);
+				setColorf(1.f, 1.f, 1.f, opacity);
+				pushBlend(BLEND_ALPHA);
+				{
+					drawRect(-1, -1, +1, +1);
+				}
+				popBlend();
+				gxSetTexture(0);
+			}
+			gxPopMatrix();
+		}
+	}
+	
+	void begin(const float bpm)
+	{
+		end();
+		
+		//
+		
+		isActive = true;
+		
+		timer = 0.f;
+	}
+	
+	void end()
+	{
+		isActive = false;
+		
+		activeTexture = -1;
+	}
+};
+
+static NewBeat * s_newBeat = nullptr;
+
+struct VfxNodeNewBeat : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Path,
+		kInput_Bpm,
+		kInput_Scale,
+		kInput_Opacity,
+		kInput_Begin,
+		kInput_End,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_COUNT
+	};
+	
+	std::string currentPath;
+	
+	VfxNodeNewBeat()
+		: VfxNodeBase()
+		, newBeat()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Path, kVfxPlugType_String);
+		addInput(kInput_Bpm, kVfxPlugType_Float);
+		addInput(kInput_Scale, kVfxPlugType_Float);
+		addInput(kInput_Opacity, kVfxPlugType_Float);
+		addInput(kInput_Begin, kVfxPlugType_Trigger);
+		addInput(kInput_End, kVfxPlugType_Trigger);
+		
+		if (s_newBeat == nullptr)
+			s_newBeat = &newBeat;
+	}
+	
+	virtual ~VfxNodeNewBeat() override
+	{
+		if (s_newBeat == &newBeat)
+			s_newBeat = nullptr;
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const char * path = getInputString(kInput_Path, "");
+		
+		if (path != currentPath)
+		{
+			currentPath = path;
+			
+			newBeat.shut();
+			newBeat.init(path);
+		}
+		
+		newBeat.scale = getInputFloat(kInput_Scale, 1.f);
+		newBeat.opacity = getInputFloat(kInput_Opacity, 1.f);
+		
+		newBeat.tick(dt);
+	}
+	
+	virtual void handleTrigger(const int index) override
+	{
+		if (index == kInput_Begin)
+		{
+			const float bpm = getInputFloat(kInput_Bpm, 1.f);
+			
+			newBeat.begin(bpm);
+		}
+		else if (index == kInput_End)
+		{
+			newBeat.end();
+		}
+	}
+	
+	NewBeat newBeat;
+};
+
+VFX_NODE_TYPE(VfxNodeNewBeat)
+{
+	typeName = "newbeat";
+	in("path", "string");
+	in("bpm", "float", "1");
+	in("scale", "float", "1");
+	in("opacity", "float", "1");
+	in("begin!", "trigger");
+	in("end!", "trigger");
+}
+
+//
+
 struct World
 {
 	struct HitTestResult
@@ -1510,10 +1729,8 @@ struct World
 		camera.popViewMatrix();
 	}
 	
-	void draw2d()
+	void drawSpokeWords()
 	{
-		faces.draw2d();
-		
 		for (auto spokenWord : spokenWords)
 		{
 			spokenWord->draw2d();
@@ -2082,7 +2299,7 @@ void VfxNodeScalarSmoothe::tick(const float _dt)
 
 void VideoLandscape::init()
 {
-	// create mask texture
+	// create mask texture for videos
 	
 	s_videoMask = new Surface(640, 360, false, false, SURFACE_R8);
 
@@ -2098,6 +2315,24 @@ void VideoLandscape::init()
 		hqEnd();
 		popColorPost();
 		popBlend();
+	}
+	popSurface();
+	
+	// create mask texture for the entire projection
+	
+	s_circleMask = new Surface(GFX_SX, GFX_SY, false, false, SURFACE_R8);
+
+	pushSurface(s_circleMask);
+	{
+		s_circleMask->clear();
+		
+		Shader shader("circleMask");
+		setShader(shader);
+		shader.setImmediate("size", GFX_SX, GFX_SY);
+		pushBlend(BLEND_OPAQUE);
+		drawRect(0, 0, GFX_SX, GFX_SY);
+		popBlend();
+		clearShader();
 	}
 	popSurface();
 	
@@ -2154,11 +2389,34 @@ void VideoLandscape::draw()
 	setColorf(0.f, 0.f, 0.f, 1.f - opacity);
 	drawRect(0, 0, GFX_SX, GFX_SY);
 	
-	world->draw2d();
+	//world->drawSpokeWords();
 	
 	projectPerspective3d(fov, near, far);
 	{
 		starfield->draw3d();
 	}
 	projectScreen2d();
+	
+	// draw circular mask
+	
+	pushBlend(BLEND_MUL);
+	setColor(colorWhite);
+	gxSetTexture(s_circleMask->getTexture());
+	GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
+	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+	checkErrorGL();
+	drawRect(0, 0, GFX_SX, GFX_SY);
+	gxSetTexture(0);
+	popBlend();
+	
+	//
+	
+	world->faces.draw2d();
+	
+	//
+	
+	if (s_newBeat != nullptr)
+	{
+		s_newBeat->draw();
+	}
 }
