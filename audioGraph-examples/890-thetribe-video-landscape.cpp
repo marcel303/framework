@@ -1105,6 +1105,7 @@ struct NewBeat
 	
 	float timer = 0.f;
 	
+	float interval = 1.f;
 	float scale = 1.f;
 	float opacity = 1.f;
 	
@@ -1146,7 +1147,7 @@ struct NewBeat
 	
 	void next()
 	{
-		timer = 4.f;
+		timer = interval;
 		
 		if (textures.empty())
 		{
@@ -1201,7 +1202,7 @@ struct NewBeat
 		}
 	}
 	
-	void begin(const float bpm)
+	void begin()
 	{
 		end();
 		
@@ -1227,7 +1228,7 @@ struct VfxNodeNewBeat : VfxNodeBase
 	enum Input
 	{
 		kInput_Path,
-		kInput_Bpm,
+		kInput_Interval,
 		kInput_Scale,
 		kInput_Opacity,
 		kInput_Begin,
@@ -1248,7 +1249,7 @@ struct VfxNodeNewBeat : VfxNodeBase
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Path, kVfxPlugType_String);
-		addInput(kInput_Bpm, kVfxPlugType_Float);
+		addInput(kInput_Interval, kVfxPlugType_Float);
 		addInput(kInput_Scale, kVfxPlugType_Float);
 		addInput(kInput_Opacity, kVfxPlugType_Float);
 		addInput(kInput_Begin, kVfxPlugType_Trigger);
@@ -1276,6 +1277,7 @@ struct VfxNodeNewBeat : VfxNodeBase
 			newBeat.init(path);
 		}
 		
+		newBeat.interval = getInputFloat(kInput_Interval, 1.f);
 		newBeat.scale = getInputFloat(kInput_Scale, 1.f);
 		newBeat.opacity = getInputFloat(kInput_Opacity, 1.f);
 		
@@ -1286,9 +1288,7 @@ struct VfxNodeNewBeat : VfxNodeBase
 	{
 		if (index == kInput_Begin)
 		{
-			const float bpm = getInputFloat(kInput_Bpm, 1.f);
-			
-			newBeat.begin(bpm);
+			newBeat.begin();
 		}
 		else if (index == kInput_End)
 		{
@@ -1303,7 +1303,7 @@ VFX_NODE_TYPE(VfxNodeNewBeat)
 {
 	typeName = "newbeat";
 	in("path", "string");
-	in("bpm", "float", "1");
+	in("interval", "float", "1");
 	in("scale", "float", "1");
 	in("opacity", "float", "1");
 	in("begin!", "trigger");
