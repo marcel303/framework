@@ -125,6 +125,7 @@ static bool intersectSoundVolume(const SoundVolume & soundVolume, Vec3Arg pos, V
 }
 
 static double s_videoClipSpeedMultiplier = 1.0;
+static float s_videoClipScale = 1.f;
 static bool s_videoClipDrawGrid = true;
 static Color s_videoClipGridColor(1.f, 1.f, 1.f, 1.f);
 static Color s_videoClipGridColor2(1.f, 1.f, 1.f, 1.f);
@@ -274,6 +275,8 @@ struct Videoclip
         Vec3 position;
         float opacity;
         evalVideoClipParams(scale, rotation, position, opacity);
+		
+        scale *= s_videoClipScale;
 
         transform = Mat4x4(true).
 			Translate(position).
@@ -1646,6 +1649,26 @@ struct World
 		camera.popViewMatrix();
 	}
 	
+	void drawHorizon()
+	{
+		pushBlend(BLEND_OPAQUE);
+		
+		const float roll = camera.roll * M_PI / 180.f;
+		
+		const Vec2 xAxis = Vec2(std::cosf(-roll), std::sinf(-roll));
+		const Vec2 yAxis = Vec2(std::cosf(-roll - M_PI / 2.f), std::sinf(-roll - M_PI / 2.f));
+		
+		Shader shader("horizon");
+		setShader(shader);
+		shader.setImmediate("size", GFX_SX, GFX_SY);
+		shader.setImmediate("xAxis", xAxis[0], xAxis[1]);
+		shader.setImmediate("yAxis", yAxis[0], yAxis[1]);
+		drawRect(0, 0, GFX_SX, GFX_SY);
+		clearShader();
+		
+		popBlend();
+	}
+	
 	void draw3d()
 	{
 		camera.pushViewMatrix();
@@ -1680,6 +1703,7 @@ struct World
 		glEnable(GL_DEPTH_TEST);
 		glDepthMask(GL_FALSE);
 		{
+		#if 0
 			gxPushMatrix();
 			{
 				//gxTranslatef(camera.position[0], 0.f, camera.position[2]);
@@ -1690,6 +1714,7 @@ struct World
 				drawGrid3dLine(400, 400, 0, 2, true);
 			}
 			gxPopMatrix();
+		#endif
 			
 			for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 			{
@@ -1752,6 +1777,7 @@ struct VfxNodeWorld : VfxNodeBase
 		kInput_WorldOpacity,
 		kInput_FacesOpacity,
 		kInput_VideoClipTimeMultiplier,
+		kInput_VideoCLipScale,
 		kInput_VideoClipDrawGrid,
 		kInput_VideoClipGridColor,
 		kInput_VideoClipGridColor2,
@@ -1795,6 +1821,7 @@ struct VfxNodeWorld : VfxNodeBase
 		addInput(kInput_WorldOpacity, kVfxPlugType_Float);
 		addInput(kInput_FacesOpacity, kVfxPlugType_Float);
 		addInput(kInput_VideoClipTimeMultiplier, kVfxPlugType_Float);
+		addInput(kInput_VideoCLipScale, kVfxPlugType_Float);
 		addInput(kInput_VideoClipDrawGrid, kVfxPlugType_Bool);
 		addInput(kInput_VideoClipGridColor, kVfxPlugType_Color);
 		addInput(kInput_VideoClipGridColor2, kVfxPlugType_Color);
@@ -1837,6 +1864,7 @@ struct VfxNodeWorld : VfxNodeBase
 		s_world->faces.opacity = getInputFloat(kInput_FacesOpacity, 0.f);
 		
 		s_videoClipSpeedMultiplier = getInputFloat(kInput_VideoClipTimeMultiplier, 1.f);
+		s_videoClipScale = getInputFloat(kInput_VideoCLipScale, 1.f);
 		s_videoClipDrawGrid = getInputBool(kInput_VideoClipDrawGrid, true);
 		
 		VfxColor defaultColor(1.f, 1.f, 1.f, 1.f);
@@ -1911,6 +1939,7 @@ VFX_NODE_TYPE(VfxNodeWorld)
 	in("world.a", "float");
 	in("faces.a", "float");
 	in("video.tmult", "float", "1");
+	in("video.cscale", "float", "1");
 	in("video.dgrid", "bool", "1");
 	in("gridcolor", "color", "ffffffff");
 	in("gridcolor2", "color", "ffffffff");
@@ -2378,6 +2407,8 @@ void VideoLandscape::tick(const float dt)
 
 void VideoLandscape::draw()
 {
+	world->drawHorizon();
+	
 	projectPerspective3d(fov, near, far);
 	{
 		world->draw3d();
@@ -2389,7 +2420,7 @@ void VideoLandscape::draw()
 	setColorf(0.f, 0.f, 0.f, 1.f - opacity);
 	drawRect(0, 0, GFX_SX, GFX_SY);
 	
-	//world->drawSpokeWords();
+	world->drawSpokeWords();
 	
 	projectPerspective3d(fov, near, far);
 	{
