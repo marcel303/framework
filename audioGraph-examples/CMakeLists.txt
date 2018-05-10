@@ -76,6 +76,7 @@ add_executable(710-go 710-go.cpp)
 add_executable(860-thetribe 860-thetribe.cpp)
 add_executable(880-talkawave 880-talkawave.cpp)
 add_executable(890-performance 890-performance.cpp 890-performance.h 890-thetribe-video-landscape.cpp audioMixer.cpp audioMixer.h textScroller.cpp textScroller.h)
+add_executable(892-landart 892-landart.cpp 892-landart.h)
 
 set(LIBRARIES PRIVATE
 	libgg
@@ -107,6 +108,7 @@ target_link_libraries(710-go PRIVATE ${LIBRARIES})
 target_link_libraries(860-thetribe PRIVATE ${LIBRARIES} libvideo ${LIBVIDEO_LIBRARIES})
 target_link_libraries(880-talkawave PRIVATE ${LIBRARIES} libvideo ${LIBVIDEO_LIBRARIES})
 target_link_libraries(890-performance PRIVATE ${LIBRARIES} libvideo ${LIBVIDEO_LIBRARIES})
+target_link_libraries(892-landart PRIVATE ${LIBRARIES} libvideo ${LIBVIDEO_LIBRARIES})
 
 if (WIN32)
 	# set the current working directory
