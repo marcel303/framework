@@ -169,10 +169,11 @@ VFX_NODE_TYPE(VfxNodeTriggerFilter)
 
 #include "video.h"
 
-#define NUM_VIDEOS 2
+#define NUM_VIDEOS 3
 
 static const char * videoFilenames[NUM_VIDEOS] =
 {
+	"landschappen/hewhohasto.mp4",
 	"landschappen/landschapbomentest.mp4",
 	"landschappen/landschapwoestijntest.mp4",
 };
