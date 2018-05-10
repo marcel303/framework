@@ -970,15 +970,6 @@ struct Faces
 	{
 		time += dt;
 		
-	#if 0
-		if ((rand() % 1000) == 0)
-		{
-			const int index = rand() % (kGridSx * kGridSy);
-			
-			beginFocus(index);
-		}
-	#endif
-		
 		// check if focus tile has ended audio playback
 		
 		if (focusIndex >= 0)
@@ -1339,7 +1330,7 @@ struct VfxNodeNewBeat : VfxNodeBase
 	
 	virtual void handleTrigger(const int index) override
 	{
-	/*
+	#if 0 // todo : remove
 		if (index == kInput_Begin)
 		{
 			newBeat.begin();
@@ -1348,7 +1339,7 @@ struct VfxNodeNewBeat : VfxNodeBase
 		{
 			newBeat.end();
 		}
-	*/
+	#endif
 	}
 	
 	NewBeat newBeat;
@@ -1755,19 +1746,6 @@ struct World
 		glEnable(GL_DEPTH_TEST);
 		glDepthMask(GL_FALSE);
 		{
-		#if 0
-			gxPushMatrix();
-			{
-				//gxTranslatef(camera.position[0], 0.f, camera.position[2]);
-				gxTranslatef(-45.f, 0, 0);
-				
-				gxScalef(40, 40, 40);
-				setColor(s_videoClipGridColor);
-				drawGrid3dLine(400, 400, 0, 2, true);
-			}
-			gxPopMatrix();
-		#endif
-			
 			for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 			{
 				videoclips[i].drawTranslucent();
