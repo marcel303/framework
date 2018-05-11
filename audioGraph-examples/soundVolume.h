@@ -298,7 +298,8 @@ struct SoundVolume
 				const float clampedDistanceToEar = std::max(kMinDistanceToEar, distanceToHead);
 				
 				//const float gain = _gain / clampedDistanceToEar;
-				const float gain = _gain / (clampedDistanceToEar * clampedDistanceToEar);
+				//const float gain = _gain / (clampedDistanceToEar * clampedDistanceToEar);
+				const float gain = std::min(1.f, _gain / (clampedDistanceToEar * clampedDistanceToEar));
 				
 				audioSource.sampleLocation[i].elevation = elevation;
 				audioSource.sampleLocation[i].azimuth = azimuth;

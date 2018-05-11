@@ -3,9 +3,9 @@
 #include "audioMixer.h"
 #include "objects/binauralizer.h"
 
-#define USE_STREAMING 1
+#define USE_STREAMING 0
 
-#define ENABLE_WELCOME 0
+#define ENABLE_WELCOME 1
 
 extern const int GFX_SX;
 extern const int GFX_SY;

@@ -126,6 +126,7 @@ static bool intersectSoundVolume(const SoundVolume & soundVolume, Vec3Arg pos, V
 
 static double s_videoClipSpeedMultiplier = 1.0;
 static float s_videoClipScale = 1.f;
+static float s_videoClipVolume = 0.f;
 static bool s_videoClipDrawGrid = true;
 static Color s_videoClipGridColor(1.f, 1.f, 1.f, 1.f);
 static Color s_videoClipGridColor2(1.f, 1.f, 1.f, 1.f);
@@ -1624,7 +1625,7 @@ struct World
 		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
-			videoclips[i].gain = videoclipsOpacity;
+			videoclips[i].gain = videoclipsOpacity * s_videoClipVolume * 4.f;
 			
 			videoclips[i].tick(worldToViewMatrix, cameraPosition_world, dt);
 		}
@@ -1807,7 +1808,8 @@ struct VfxNodeWorld : VfxNodeBase
 		kInput_WorldOpacity,
 		kInput_FacesOpacity,
 		kInput_VideoClipTimeMultiplier,
-		kInput_VideoCLipScale,
+		kInput_VideoClipScale,
+		kInput_VideoClipVolume,
 		kInput_VideoClipDrawGrid,
 		kInput_VideoClipGridColor,
 		kInput_VideoClipGridColor2,
@@ -1851,7 +1853,8 @@ struct VfxNodeWorld : VfxNodeBase
 		addInput(kInput_WorldOpacity, kVfxPlugType_Float);
 		addInput(kInput_FacesOpacity, kVfxPlugType_Float);
 		addInput(kInput_VideoClipTimeMultiplier, kVfxPlugType_Float);
-		addInput(kInput_VideoCLipScale, kVfxPlugType_Float);
+		addInput(kInput_VideoClipScale, kVfxPlugType_Float);
+		addInput(kInput_VideoClipVolume, kVfxPlugType_Float);
 		addInput(kInput_VideoClipDrawGrid, kVfxPlugType_Bool);
 		addInput(kInput_VideoClipGridColor, kVfxPlugType_Color);
 		addInput(kInput_VideoClipGridColor2, kVfxPlugType_Color);
@@ -1894,7 +1897,8 @@ struct VfxNodeWorld : VfxNodeBase
 		s_world->faces.opacity = getInputFloat(kInput_FacesOpacity, 0.f);
 		
 		s_videoClipSpeedMultiplier = getInputFloat(kInput_VideoClipTimeMultiplier, 1.f);
-		s_videoClipScale = getInputFloat(kInput_VideoCLipScale, 1.f);
+		s_videoClipScale = getInputFloat(kInput_VideoClipScale, 1.f);
+		s_videoClipVolume = getInputFloat(kInput_VideoClipVolume, 0.f);
 		s_videoClipDrawGrid = getInputBool(kInput_VideoClipDrawGrid, true);
 		
 		VfxColor defaultColor(1.f, 1.f, 1.f, 1.f);
@@ -1970,6 +1974,7 @@ VFX_NODE_TYPE(VfxNodeWorld)
 	in("faces.a", "float");
 	in("video.tmult", "float", "1");
 	in("video.cscale", "float", "1");
+	in("video.cvol", "float", "0");
 	in("video.dgrid", "bool", "1");
 	in("gridcolor", "color", "ffffffff");
 	in("gridcolor2", "color", "ffffffff");
