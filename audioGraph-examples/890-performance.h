@@ -5,7 +5,7 @@
 
 #define USE_STREAMING 0
 
-#define ENABLE_WELCOME 1
+#define ENABLE_WELCOME 0
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -16,6 +16,7 @@ extern binaural::HRIRSampleSet * g_sampleSet;
 extern AudioMixer * g_audioMixer;
 
 struct Starfield;
+struct SpacePoints;
 struct World;
 
 struct GraphEdit;
@@ -31,9 +32,11 @@ struct VideoLandscape
 	float near = .01f;
 	float far = 100.f;
 	
-	World * world;
+	World * world = nullptr;
 	
-	Starfield * starfield;
+	Starfield * starfield = nullptr;
+	
+	SpacePoints * spacePoints = nullptr;
 	
 	//
 	

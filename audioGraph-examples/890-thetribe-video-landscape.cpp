@@ -2266,6 +2266,247 @@ VFX_NODE_TYPE(VfxNodeStarfield)
 
 //
 
+#define MAX_SPACE_POINTS 200
+
+struct GamepadController
+{
+	float controlValues[3] = { };
+	
+	int desiredMorph = 0;
+	
+	bool wasDown = false;
+	
+	void tick()
+	{
+		controlValues[2] = (gamepad[0].getAnalog(0, ANALOG_X) / 2.f + 1.f) / 2.f;
+		
+		const float alpha = (clamp(gamepad[0].getAnalog(0, ANALOG_Y) * 1.5f, -1.f, +1.f) + 1.f) / 2.f;// * (.5f / .6f);
+		
+		const bool isDown = gamepad[0].isDown(GAMEPAD_A);
+		
+		if (isDown && !wasDown)
+			desiredMorph = (desiredMorph + 1) % 3;
+		
+		wasDown = isDown;
+		
+		const float desiredMorphValues[2] =
+		{
+			desiredMorph == 1 ? .7f + alpha / .5f * .6f : desiredMorph == 0 ? (alpha - .5f) * .6f : 0.f,
+			desiredMorph == 2 ? .7f + alpha / .5f * .6f : desiredMorph == 0 ? (alpha - .5f) * .0f : 0.f
+		};
+		
+		const float retain = gamepad[0].isDown(DPAD_DOWN) ? .998f : .99f;
+		const float decay = 1.f - retain;
+		
+		for (int i = 0; i < 2; ++i)
+		{
+			controlValues[i] = controlValues[i] * retain + desiredMorphValues[i] * decay;
+		}
+	}
+};
+
+struct SpacePoint
+{
+	Vec3 position;
+	Vec3 direction;
+};
+
+static double s_morph1 = 0.0;
+static double s_morph2 = 1.0;
+static double s_speed = 0.0;
+
+struct SpacePoints
+{
+	GamepadController controller;
+	
+	SpacePoint points[MAX_SPACE_POINTS];
+	
+	double t = 0.0;
+	
+	float currentOpacity = 0.f;
+	float desiredOpacity = 1.f;
+	
+	static Vec3 evalCircle(const double t, const float radius)
+	{
+		Vec3 p;
+		
+		p[0] = std::cos(t * 2.0 * M_PI);
+		p[1] = std::sin(t * 2.0 * M_PI);
+		
+		return p * radius;
+	}
+	
+	static Vec3 evalQuad(const double t, const float radius)
+	{
+		const double u = fmod(fabs(t), 1.0) * 4.0;
+		const int s = int(u);
+		const double f = u - s;
+		
+		Vec3 p;
+		
+		if (s == 0)
+		{
+			p[0] = -1.f + f * 2.f;
+			p[1] = -1.f;
+		}
+		else if (s == 1)
+		{
+			p[0] = +1.f;
+			p[1] = -1.f + f * 2.f;
+		}
+		else if (s == 2)
+		{
+			p[0] = +1.f - f * 2.f;
+			p[1] = +1.f;
+		}
+		else if (s == 3)
+		{
+			p[0] = -1.f;
+			p[1] = +1.f - f * 2.f;
+		}
+		
+		return p * radius;
+	}
+	
+	static Vec3 evalSnake(const double t)
+	{
+		Vec3 p;
+		
+		p[0] = std::cos(t * 2.0 * M_PI / 2.345) * 16.f;
+		p[1] = std::sin(t * 2.0 * M_PI / 1.234) * 6.f;
+		
+		return p;
+	}
+	
+	static Vec3 evalParticlePosition(const float i, const double t)
+	{
+		const double pt = t * (i + .5f) / 6.f;
+		
+		auto p1 = evalQuad(pt / 1.123, 12.f);
+		auto p2 = evalCircle(pt, 12.f);
+		auto p3 = evalSnake(pt / 1.234);
+		
+		Vec3 p = p1;
+		
+		p = lerp(p, p2, s_morph1);
+		p = lerp(p, p3, s_morph2);
+		
+		return p;
+	}
+	
+	void tickParticles(const float dt)
+	{
+		t += s_speed * dt;
+		
+		if (gamepad[0].isDown(GAMEPAD_R2))
+			t *= std::pow(0.1, dt);
+		
+		for (int i = 0; i < MAX_SPACE_POINTS; ++i)
+		{
+			auto & p = points[i];
+			
+			p.position = evalParticlePosition(i, t);
+			
+			Vec3 d = evalParticlePosition(i + .01f, t) - evalParticlePosition(i - .01f, t);
+			p.direction[0] = -d[1];
+			p.direction[1] = +d[0];
+			p.direction.Normalize();
+		}
+	}
+	
+	void tick(const float dt)
+	{
+		currentOpacity = lerp(desiredOpacity, currentOpacity, powf(.2f, dt));
+		
+		// update control values
+		
+		controller.tick();
+		
+		s_morph1 = controller.controlValues[0];
+		s_morph2 = controller.controlValues[1];
+		
+		const float speed = (controller.controlValues[2] - .5f) * 2.f;
+		const float speedSign = speed < 0.f ? -1.f : +1.f;
+		const float speedMag = fabs(speed);
+		const float speedMagCurve = powf(speedMag, 3.f);
+		s_speed = speedMagCurve * speedSign / 100.f;
+		s_speed *= 80.f;
+		
+		// update particles
+		
+		tickParticles(dt);
+	}
+	
+	void draw()
+	{
+		gxPushMatrix();
+		gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
+		gxScalef(14, 14, 1);
+		gxScalef(PARTICLE_SCALE, PARTICLE_SCALE, 1.f);
+
+		hqBegin(HQ_LINES, true);
+		{
+			setColor(255, 255, 255, currentOpacity * 160);
+			const float s = 1.4f;
+			for (auto & p : points)
+				hqLine(
+					p.position[0],
+					p.position[1],
+					3.f * PARTICLE_SCALE,
+					p.position[0] + p.direction[0] * s,
+					p.position[1] + p.direction[1] * s,
+					.7f * PARTICLE_SCALE);
+		}
+		hqEnd();
+
+		hqBegin(HQ_STROKED_CIRCLES, true);
+		{
+			setColor(0, 255, 0, currentOpacity * 255.f);
+			for (auto & p : points)
+				hqStrokeCircle(p.position[0], p.position[1], 7.f * PARTICLE_SCALE, 1.2f * PARTICLE_SCALE);
+		}
+		hqEnd();
+
+		gxPopMatrix();
+	}
+};
+
+static SpacePoints * s_spacePoints = nullptr;
+
+struct VfxNodeSpacePoints : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Opacity,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_COUNT
+	};
+	
+	VfxNodeSpacePoints()
+		: VfxNodeBase()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Opacity, kVfxPlugType_Float);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		s_spacePoints->desiredOpacity = getInputFloat(kInput_Opacity, 0.f);
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeSpacePoints)
+{
+	typeName = "spacepoints";
+	in("opacity", "float");
+}
+
+//
+
 #include "vfxNodeBase.h"
 
 struct VfxNodeScalarSmoothe : VfxNodeBase
@@ -2400,6 +2641,8 @@ void VideoLandscape::init()
 	}
 	popSurface();
 	
+	//
+	
 	world = new World();
 	world->init(g_sampleSet, g_binauralMutex);
     s_world = world;
@@ -2407,10 +2650,17 @@ void VideoLandscape::init()
     starfield = new Starfield();
     starfield->init();
     s_starfield = starfield;
+	
+    spacePoints = new SpacePoints();
+    s_spacePoints = spacePoints;
 }
 
 void VideoLandscape::shut()
 {
+	delete spacePoints;
+	spacePoints = nullptr;
+	s_spacePoints = nullptr;
+	
 	starfield->shut();
 	delete starfield;
 	starfield = nullptr;
@@ -2438,6 +2688,10 @@ void VideoLandscape::tick(const float dt)
 	// update starfield
 	
 	starfield->tick(dt);
+	
+	// update space points
+	
+	spacePoints->tick(dt);
 }
 
 void VideoLandscape::draw()
@@ -2485,4 +2739,8 @@ void VideoLandscape::draw()
 	{
 		s_newBeat->draw();
 	}
+	
+	//
+	
+	spacePoints->draw();
 }
