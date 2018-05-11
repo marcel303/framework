@@ -174,8 +174,8 @@ VFX_NODE_TYPE(VfxNodeTriggerFilter)
 static const char * videoFilenames[NUM_VIDEOS] =
 {
 	"landschappen/hewhohasto.mp4",
-	"landschappen/landschapbomentest.mp4",
-	"landschappen/landschapwoestijntest.mp4",
+	"landschappen/hewhohasto2.mp4",
+	"landschappen/hewhohasto3.mp4",
 };
 
 MediaPlayer mediaPlayers[NUM_VIDEOS][2];
@@ -281,6 +281,13 @@ struct VfxNodeLandscape : VfxNodeBase
 			s_landscape->end();
 		}
 
+		if (keyboard.wentDown(SDLK_1))
+			s_landscape->activeVideo = 0;
+		else if (keyboard.wentDown(SDLK_2))
+			s_landscape->activeVideo = 1;
+		else if (keyboard.wentDown(SDLK_3))
+			s_landscape->activeVideo = 2;
+			
 		s_landscape->scrollSpeed = getInputFloat(kInput_ScrollSpeed, 1.f);
 		
 		imageOutput.texture = s_landscape->getVideoTexture();
@@ -291,7 +298,10 @@ struct VfxNodeLandscape : VfxNodeBase
 	
 	virtual void handleTrigger(const int index) override
 	{
-		s_landscape->activeVideo = (s_landscape->activeVideo + 1) % NUM_VIDEOS;
+		if (index == kInput_NextVideo)
+		{
+			//s_landscape->activeVideo = (s_landscape->activeVideo + 1) % NUM_VIDEOS;
+		}
 	}
 };
 

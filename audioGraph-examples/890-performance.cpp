@@ -8,7 +8,7 @@
 #include "vfxGraphRealTimeConnection.h"
 
 #if !defined(DEBUG)
-	#define FINMODE 0
+	#define FINMODE 1
 #endif
 
 #if FINMODE

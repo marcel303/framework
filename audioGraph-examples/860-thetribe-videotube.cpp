@@ -535,7 +535,7 @@ struct SpokenWord
 		const char * text, const char * audio,
 		Vec3Arg _pos)
 	{
-		textScroller.open(text);
+		textScroller.initFromFile(text);
 		
 		soundSource.open(audio, false);
 		//s_paHandler->addPointSource(&soundSource);
