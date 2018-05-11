@@ -25,6 +25,8 @@ struct VideoLandscape
 	
 	void init();
 	void shut();
+
+	void end();
 	
 	void tick(const float dt);
 	

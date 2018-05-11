@@ -4,7 +4,7 @@
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 
-#if !defined(DEBUG)
+#if !defined(DEBUG) || 1
 	#define FINMODE 1
 #endif
 
@@ -192,6 +192,11 @@ void VideoLandscape::shut()
 {
 }
 
+void VideoLandscape::end()
+{
+	activeVideo = -1;
+}
+
 void VideoLandscape::tick(const float dt)
 {
 	for (int i = 0; i < NUM_VIDEOS; ++i)
@@ -222,9 +227,16 @@ void VideoLandscape::tick(const float dt)
 
 uint32_t VideoLandscape::getVideoTexture() const
 {
-	auto & mp = mediaPlayers[activeVideo][activeMediaPlayer[activeVideo]];
+	if (activeVideo >= 0 && activeVideo < NUM_VIDEOS)
+	{
+		auto & mp = mediaPlayers[activeVideo][activeMediaPlayer[activeVideo]];
 	
-	return mp.getTexture();
+		return mp.getTexture();
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 //
@@ -246,21 +258,35 @@ struct VfxNodeLandscape : VfxNodeBase
 	
 	VfxImage_Texture imageOutput;
 	
+	Surface * blackSurface;
+
 	VfxNodeLandscape()
 		: VfxNodeBase()
 		, imageOutput()
+		, blackSurface(nullptr)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_ScrollSpeed, kVfxPlugType_Float);
 		addInput(kInput_NextVideo, kVfxPlugType_Trigger);
 		addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
+
+		blackSurface = new Surface(2, 2, false, false, false);
+		blackSurface->clear();
 	}
 	
 	virtual void tick(const float dt) override
 	{
+		if (keyboard.wentDown(SDLK_SPACE))
+		{
+			s_landscape->end();
+		}
+
 		s_landscape->scrollSpeed = getInputFloat(kInput_ScrollSpeed, 1.f);
 		
 		imageOutput.texture = s_landscape->getVideoTexture();
+
+		if (imageOutput.texture == 0)
+			imageOutput.texture = blackSurface->getTexture();
 	}
 	
 	virtual void handleTrigger(const int index) override
@@ -281,8 +307,6 @@ VFX_NODE_TYPE(VfxNodeLandscape)
 
 int main(int argc, char * argv[])
 {
-	srand(time(nullptr));
-	
     framework.enableDepthBuffer = false;
 	framework.enableRealTimeEditing = true;
 	
