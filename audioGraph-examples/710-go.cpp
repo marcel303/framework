@@ -96,7 +96,7 @@ int main(int argc, char * argv[])
 		
 		fillPcmDataCache("birds", true, false, true);
 		fillPcmDataCache("testsounds", true, true, true);
-		fillPcmDataCache("voice-fragments", false, false, true;
+		fillPcmDataCache("voice-fragments", false, false, true);
 		
 		// initialize audio related systems
 		

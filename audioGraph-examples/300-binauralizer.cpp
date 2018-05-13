@@ -292,7 +292,7 @@ int main(int argc, char * argv[])
 	#endif
 		
 		PcmData pcmData;
-		pcmData.load("testsounds/birdTest.ogg", 0);
+		pcmData.load("testsounds/birdTest.ogg", 0, false);
 		
 		MyPortAudioHandler audioHandler;
 		int numSources = 0;
