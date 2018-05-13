@@ -692,14 +692,6 @@ VFX_NODE_TYPE(VfxNodeDrawGrid)
 
 //
 
-const char * getRandomFaceTileFilename()
-{
-	const char * filename = interviewFilenames[rand() % NUM_INTERVIEW_SOURCES];
-	//const char * filename = videoFilenames[rand() % NUM_VIDEOCLIP_SOURCES];
-	
-	return filename;
-}
-
 struct FaceTile
 {
 	Vec3 currentPos;
@@ -878,11 +870,27 @@ struct Faces
 		
 		const int numTiles = kGridSx * kGridSy;
 		
+		std::vector<int> indices;
+		
+		for (int i = 0; i < numTiles; ++i)
+			indices.push_back(i % NUM_INTERVIEW_SOURCES);
+		
+		std::random_shuffle(indices.begin(), indices.end());
+		
+		// make sure tile #3 is Lisa
+		const int kLisa = 4;
+		
+		for (int i = 0; i < numTiles; ++i)
+			if (indices[i] == kLisa)
+				std::swap(indices[i], indices[2]);
+		
 		for (int i = 0; i < numTiles; ++i)
 		{
 			FaceTile * tile = new FaceTile();
 			
-			const char * videoFilename = getRandomFaceTileFilename();
+			const int index = indices[i];
+			
+			const char * videoFilename = interviewFilenames[index];
 			const std::string audioFilename = Path::ReplaceExtension(videoFilename, "ogg");
 			
 			tile->init(videoFilename, audioFilename.c_str());
@@ -975,6 +983,9 @@ struct Faces
 		
 		if (focusIndex >= 0)
 		{
+			if (keyboard.wentDown(SDLK_SPACE))
+				focusIndex = (focusIndex + 1) % (kGridSx * kGridSy);
+			
 			FaceTile * tile = tiles[focusIndex];
 			
 			if (!tile->audioSource.isOpen() || tile->audioSource.hasEnded)
@@ -2314,6 +2325,7 @@ struct SpacePoint
 static double s_morph1 = 0.0;
 static double s_morph2 = 1.0;
 static double s_speed = 0.0;
+static bool s_slowMode = false;
 
 struct SpacePoints
 {
@@ -2396,7 +2408,13 @@ struct SpacePoints
 	
 	void tickParticles(const float dt)
 	{
-		t += s_speed * dt;
+		if (keyboard.wentDown(SDLK_s))
+			s_slowMode = !s_slowMode;
+		
+		if (s_slowMode)
+			t += s_speed * dt * .25f;
+		else
+			t += s_speed * dt;
 		
 		if (gamepad[0].isDown(GAMEPAD_R2))
 			t *= std::pow(0.1, dt);
