@@ -131,6 +131,11 @@ void AudioNodeVoice::tick(const float dt)
 		voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, voiceChannelIndex);
 	}
 	
+	if (voice == nullptr)
+	{
+		return;
+	}
+	
 	voice->gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
 	
 	if (speaker == kSpeaker_LeftAndRight)
