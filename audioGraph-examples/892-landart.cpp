@@ -287,7 +287,10 @@ struct VfxNodeLandscape : VfxNodeBase
 			s_landscape->activeVideo = 1;
 		else if (keyboard.wentDown(SDLK_3))
 			s_landscape->activeVideo = 2;
-			
+		
+		if (gamepad[0].wentDown(GAMEPAD_A))
+			s_landscape->activeVideo = (s_landscape->activeVideo + 1) % NUM_VIDEOS;
+
 		s_landscape->scrollSpeed = getInputFloat(kInput_ScrollSpeed, 1.f);
 		
 		imageOutput.texture = s_landscape->getVideoTexture();
