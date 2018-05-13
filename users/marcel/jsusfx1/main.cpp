@@ -253,6 +253,32 @@ static bool generateMidiEvent(uint8_t * midi)
 	}
 }
 
+//
+
+struct Limiter
+{
+	double measuredMax = 0.0;
+	
+	float next(const float value)
+	{
+		const double mag = fabs(value);
+		
+		if (mag > measuredMax)
+			measuredMax = mag;
+		
+		if (measuredMax < 1.0)
+			return value;
+		else
+		{
+			const float result = value / measuredMax;
+			
+			measuredMax *= 0.999;
+			
+			return result;
+		}
+	}
+};
+
 struct AudioStream_JsusFx : AudioStream
 {
 	AudioStream * source = nullptr;
@@ -260,6 +286,8 @@ struct AudioStream_JsusFx : AudioStream
 	JsusFx * fx = nullptr;
 	
 	SDL_mutex * mutex = nullptr;
+	
+	Limiter limiter;
 	
 	virtual ~AudioStream_JsusFx() override
 	{
@@ -332,8 +360,11 @@ struct AudioStream_JsusFx : AudioStream
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
-			buffer[i].channel[0] = outputL[i] * float(1 << 15);
-			buffer[i].channel[1] = outputR[i] * float(1 << 15);
+			const float valueL = limiter.next(outputL[i]);
+			const float valueR = limiter.next(outputR[i]);
+			
+			buffer[i].channel[0] = valueL * float((1 << 15) - 2);
+			buffer[i].channel[1] = valueR * float((1 << 15) - 2);
 		}
 		
 		return numSamples;
@@ -394,7 +425,7 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
 	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
-	const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
+	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
 	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
@@ -418,6 +449,9 @@ int main(int argc, char * argv[])
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And String.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And Chord.jsfx";
 	//const char * filename = "/Users/thecat/geraintluff -jsfx/Echo-Cycles.jsfx";
+	//const char * filename = "/Users/thecat/Downloads/Transpire/Transpire";
+	const char * filename = "/Users/thecat/Downloads/Surround_Pan_2-JSFX/Surround Pan 2/Surround Pan 2";
+	//const char * filename = "/Users/thecat/Downloads/QuadraCom-JSFX/QuadraCom/QuadraCom";
 	
 	if (!fx.compile(pathLibrary, filename))
 	{
