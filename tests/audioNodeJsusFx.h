@@ -41,6 +41,8 @@ struct AudioNodeJsusFx : AudioNodeBase
 		kInput_Filename,
 		kInput_Input1,
 		kInput_Input2,
+		kInput_Input3,
+		kInput_Input4,
 		kInput_Slider1,
 		kInput_Slider2,
 		kInput_Slider3,
@@ -52,11 +54,15 @@ struct AudioNodeJsusFx : AudioNodeBase
 	{
 		kOutput_Audio1,
 		kOutput_Audio2,
+		kOutput_Audio3,
+		kOutput_Audio4,
 		kOutput_COUNT
 	};
 	
 	AudioFloat audioOutput1;
 	AudioFloat audioOutput2;
+	AudioFloat audioOutput3;
+	AudioFloat audioOutput4;
 	
 	JsusFxPathLibrary_Basic * pathLibrary;
 	JsusFx * jsusFx;
@@ -77,6 +83,9 @@ struct AudioNodeJsusFx : AudioNodeBase
 	
 	void clearOutputs();
 	bool isSliderConnected(const int index) const;
+	void updateImmediateValues();
+	
+	virtual void init(const GraphNode & node) override;
 	
 	virtual void tick(const float dt) override;
 	

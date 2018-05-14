@@ -41,7 +41,23 @@
 
 #define DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/" // fixme : remove hard coded Reaper data path
 
+//
+
 extern SDL_mutex * g_vfxAudioMutex; // fixme : remove this dependency
+
+static void lock()
+{
+	const int r = SDL_LockMutex(g_vfxAudioMutex); // fixme : mutex lock around draw code is a horrible idea!
+	Assert(r == 0);
+}
+
+static void unlock()
+{
+	const int r = SDL_UnlockMutex(g_vfxAudioMutex); // fixme : mutex lock around draw code is a horrible idea!
+	Assert(r == 0);
+}
+
+//
 
 AUDIO_NODE_TYPE(jsusfx, AudioNodeJsusFx)
 {
@@ -50,18 +66,24 @@ AUDIO_NODE_TYPE(jsusfx, AudioNodeJsusFx)
 	in("file", "string");
 	in("input1", "audioValue");
 	in("input2", "audioValue");
+	in("input3", "audioValue");
+	in("input4", "audioValue");
 	in("slider1", "audioValue");
 	in("slider2", "audioValue");
 	in("slider3", "audioValue");
 	in("slider4", "audioValue");
 	out("audio1", "audioValue");
 	out("audio2", "audioValue");
+	out("audio3", "audioValue");
+	out("audio4", "audioValue");
 }
 
 AudioNodeJsusFx::AudioNodeJsusFx()
 	: AudioNodeBase()
 	, audioOutput1()
 	, audioOutput2()
+	, audioOutput3()
+	, audioOutput4()
 	, pathLibrary(nullptr)
 	, jsusFx(nullptr)
 	, jsusFxIsValid(false)
@@ -74,12 +96,16 @@ AudioNodeJsusFx::AudioNodeJsusFx()
 	addInput(kInput_Filename, kAudioPlugType_String);
 	addInput(kInput_Input1, kAudioPlugType_FloatVec);
 	addInput(kInput_Input2, kAudioPlugType_FloatVec);
+	addInput(kInput_Input3, kAudioPlugType_FloatVec);
+	addInput(kInput_Input4, kAudioPlugType_FloatVec);
 	addInput(kInput_Slider1, kAudioPlugType_FloatVec);
 	addInput(kInput_Slider2, kAudioPlugType_FloatVec);
 	addInput(kInput_Slider3, kAudioPlugType_FloatVec);
 	addInput(kInput_Slider4, kAudioPlugType_FloatVec);
 	addOutput(kOutput_Audio1, kAudioPlugType_FloatVec, &audioOutput1);
 	addOutput(kOutput_Audio2, kAudioPlugType_FloatVec, &audioOutput2);
+	addOutput(kOutput_Audio3, kAudioPlugType_FloatVec, &audioOutput3);
+	addOutput(kOutput_Audio4, kAudioPlugType_FloatVec, &audioOutput4);
 	
 	static bool isInitialized = false;
 	
@@ -158,6 +184,52 @@ bool AudioNodeJsusFx::isSliderConnected(const int index) const
 		return true;
 }
 
+void AudioNodeJsusFx::updateImmediateValues()
+{
+	// update sliders with input values. only literals are processed here. the rule
+	// is connected input sockets are left untouched and are updated by the audio graph,
+	// and literals are edited/updated through the graph editor when changing literals or
+	// through this node editor by the @gfx section
+
+	for (int i = 0; i < 4; ++i)
+	{
+		if (isSliderConnected(i))
+			continue;
+		
+		auto & slider = jsusFx->sliders[i + 1];
+		
+		if (!slider.exists)
+			continue;
+		
+		AudioPlug * input = tryGetInput(kInput_Slider1 + i);
+		
+		if (input->floatArray.immediateValue == nullptr)
+		{
+			g_currentAudioGraph->connectToInputLiteral(*input, "");
+		}
+		
+		jsusFx->moveSlider(i + 1, input->getAudioFloat().getMean());
+	}
+}
+
+void AudioNodeJsusFx::init(const GraphNode & node)
+{
+	const char * filename = getInputString(kInput_Filename, nullptr);
+	
+	if (isPassthrough || filename == nullptr)
+		return;
+	
+	// reload script if filename changed
+
+	if (filename != currentFilename)
+	{
+		currentFilename = filename;
+		load(filename);
+	}
+	
+	updateImmediateValues();
+}
+
 void AudioNodeJsusFx::tick(const float dt)
 {
 	// todo : passthrough support
@@ -165,10 +237,12 @@ void AudioNodeJsusFx::tick(const float dt)
 	const char * filename = getInputString(kInput_Filename, nullptr);
 	const AudioFloat * input1 = getInputAudioFloat(kInput_Input1, &AudioFloat::Zero);
 	const AudioFloat * input2 = getInputAudioFloat(kInput_Input2, &AudioFloat::Zero);
+	const AudioFloat * input3 = getInputAudioFloat(kInput_Input2, &AudioFloat::Zero);
+	const AudioFloat * input4 = getInputAudioFloat(kInput_Input2, &AudioFloat::Zero);
 
 	if (isPassthrough || filename == nullptr)
 	{
-		currentFilename.clear();
+		//currentFilename.clear();
 		clearOutputs();
 		return;
 	}
@@ -189,9 +263,13 @@ void AudioNodeJsusFx::tick(const float dt)
 	{
 		input1->expand();
 		input2->expand();
+		input3->expand();
+		input4->expand();
 		
 		audioOutput1.setVector();
 		audioOutput2.setVector();
+		audioOutput3.setVector();
+		audioOutput4.setVector();
 		
 		// update slider values
 		
@@ -214,22 +292,28 @@ void AudioNodeJsusFx::tick(const float dt)
 		
 		// execute script
 		
-		const float * input[2] =
+		const float * input[4] =
 		{
 			input1->samples,
-			input2->samples
+			input2->samples,
+			input3->samples,
+			input4->samples
 		};
 		
-		float * output[2] =
+		float * output[4] =
 		{
 			audioOutput1.samples,
-			audioOutput2.samples
+			audioOutput2.samples,
+			audioOutput3.samples,
+			audioOutput4.samples
 		};
 		
-		if (!jsusFx->process(input, output, AUDIO_UPDATE_SIZE, 2, 2))
+		if (!jsusFx->process(input, output, AUDIO_UPDATE_SIZE, 4, 4))
 		{
 			audioOutput1.setZero();
 			audioOutput2.setZero();
+			audioOutput3.setZero();
+			audioOutput4.setZero();
 		}
 	}
 }
@@ -273,61 +357,40 @@ bool AudioNodeJsusFx::tickEditor(const int x, const int y, int & sx, int & sy, b
 
 void AudioNodeJsusFx::drawEditor(Surface * surface, const int x, const int y, const int sx, const int sy)
 {
-	int r = SDL_LockMutex(g_vfxAudioMutex); // fixme : mutex lock around draw code is a horrible idea!
-	Assert(r == 0);
-	
 #if 1
-	// update sliders with input values. only literals are processed here. the rule
-	// is connected input sockets are left untouched and are updated by the audio graph,
-	// and literals are edited/updated through the graph editor when changing literals or
-	// through this node editor by the @gfx section
-
-	for (int i = 0; i < 4; ++i)
+	lock();
 	{
-		if (isSliderConnected(i))
-			continue;
-		
-		auto & slider = jsusFx->sliders[i + 1];
-		
-		if (!slider.exists)
-			continue;
-		
-		AudioPlug * input = tryGetInput(kInput_Slider1 + i);
-		
-		if (input->floatArray.immediateValue == nullptr)
-			g_currentAudioGraph->connectToInputLiteral(*input, "");
-		
-		jsusFx->moveSlider(i + 1, input->getAudioFloat().getMean());
+		updateImmediateValues();
 	}
+	unlock();
 #endif
 
 	jsusFx_gfx->setup(surface, sx, sy, mouse.x - x, mouse.y - y, true);
 	
 	jsusFx->draw();
 	
-#if 1
-	// update input values with slider values
-	
-	for (int i = 0; i < 4; ++i)
+	lock();
 	{
-		if (isSliderConnected(i))
-			continue;
+		// update input values with slider values
 		
-		auto & slider = jsusFx->sliders[i + 1];
-		
-		if (!slider.exists)
-			continue;
-		
-		AudioPlug * input = tryGetInput(kInput_Slider1 + i);
-		
-		Assert(input->floatArray.immediateValue != nullptr);
-		
-		const float value = slider.getValue();
-		
-		input->floatArray.immediateValue->setScalar(value);
+		for (int i = 0; i < 4; ++i)
+		{
+			if (isSliderConnected(i))
+				continue;
+			
+			auto & slider = jsusFx->sliders[i + 1];
+			
+			if (!slider.exists)
+				continue;
+			
+			AudioPlug * input = tryGetInput(kInput_Slider1 + i);
+			
+			Assert(input->floatArray.immediateValue != nullptr);
+			
+			const float value = slider.getValue();
+			
+			input->floatArray.immediateValue->setScalar(value);
+		}
 	}
-#endif
-
-	r = SDL_UnlockMutex(g_vfxAudioMutex); // fixme : mutex lock around draw code is a horrible idea!
-	Assert(r == 0);
+	unlock();
 }
