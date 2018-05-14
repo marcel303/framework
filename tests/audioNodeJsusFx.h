@@ -76,6 +76,7 @@ struct AudioNodeJsusFx : AudioNodeBase
 	void free();
 	
 	void clearOutputs();
+	bool isSliderConnected(const int index) const;
 	
 	virtual void tick(const float dt) override;
 	

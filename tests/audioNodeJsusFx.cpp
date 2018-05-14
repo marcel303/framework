@@ -37,9 +37,11 @@
 #include "gfx-framework.h"
 #include "jsusfx-framework.h"
 
-#define SEARCH_PATH "/Users/thecat/atk-reaper/plugins/"
+#define SEARCH_PATH "/Users/thecat/atk-reaper/plugins/" // fixme : remove hard coded ATK scripts path
 
-#define DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/"
+#define DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/" // fixme : remove hard coded Reaper data path
+
+extern SDL_mutex * g_vfxAudioMutex; // fixme : remove this dependency
 
 AUDIO_NODE_TYPE(jsusfx, AudioNodeJsusFx)
 {
@@ -143,6 +145,19 @@ void AudioNodeJsusFx::clearOutputs()
 	audioOutput2.setZero();
 }
 
+bool AudioNodeJsusFx::isSliderConnected(const int index) const
+{
+	if (index < 0 || index >= 4)
+		return false;
+	
+	const AudioPlug * input = tryGetInput(kInput_Slider1 + index);
+	
+	if (input->floatArray.elems.empty())
+		return false;
+	else
+		return true;
+}
+
 void AudioNodeJsusFx::tick(const float dt)
 {
 	// todo : passthrough support
@@ -150,10 +165,6 @@ void AudioNodeJsusFx::tick(const float dt)
 	const char * filename = getInputString(kInput_Filename, nullptr);
 	const AudioFloat * input1 = getInputAudioFloat(kInput_Input1, &AudioFloat::Zero);
 	const AudioFloat * input2 = getInputAudioFloat(kInput_Input2, &AudioFloat::Zero);
-	const float slider1 = getInputAudioFloat(kInput_Slider1, &AudioFloat::Zero)->getMean();
-	const float slider2 = getInputAudioFloat(kInput_Slider2, &AudioFloat::Zero)->getMean();
-	const float slider3 = getInputAudioFloat(kInput_Slider3, &AudioFloat::Zero)->getMean();
-	const float slider4 = getInputAudioFloat(kInput_Slider4, &AudioFloat::Zero)->getMean();
 
 	if (isPassthrough || filename == nullptr)
 	{
@@ -184,17 +195,21 @@ void AudioNodeJsusFx::tick(const float dt)
 		
 		// update slider values
 		
-		const float sliderValues[4] =
-		{
-			slider1,
-			slider2,
-			slider3,
-			slider4
-		};
+	// fixme : automated slider changes should directly set the slider values
+	//         moveSlider / @slider should not be invoked. only when the user
+	//         changes the slider through the Reaper slider UI
+	// at least, this is what the Reaper documentation and forum posts are telling me..
+	// but does this make sense? it wouldn't work with the ATK code I've seen for instance..
+	// how does Reaper handle automation events?
 		
 		for (int i = 0; i < 4; ++i)
 		{
-			jsusFx->moveSlider(i + 1, sliderValues[i]);
+			if (!isSliderConnected(i))
+				continue;
+			
+			const float value = getInputAudioFloat(kInput_Slider1 + i, &AudioFloat::Zero)->getMean();
+			
+			jsusFx->moveSlider(i + 1, value);
 		}
 		
 		// execute script
@@ -258,29 +273,61 @@ bool AudioNodeJsusFx::tickEditor(const int x, const int y, int & sx, int & sy, b
 
 void AudioNodeJsusFx::drawEditor(Surface * surface, const int x, const int y, const int sx, const int sy)
 {
+	int r = SDL_LockMutex(g_vfxAudioMutex); // fixme : mutex lock around draw code is a horrible idea!
+	Assert(r == 0);
+	
+#if 1
+	// update sliders with input values. only literals are processed here. the rule
+	// is connected input sockets are left untouched and are updated by the audio graph,
+	// and literals are edited/updated through the graph editor when changing literals or
+	// through this node editor by the @gfx section
+
+	for (int i = 0; i < 4; ++i)
+	{
+		if (isSliderConnected(i))
+			continue;
+		
+		auto & slider = jsusFx->sliders[i + 1];
+		
+		if (!slider.exists)
+			continue;
+		
+		AudioPlug * input = tryGetInput(kInput_Slider1 + i);
+		
+		if (input->floatArray.immediateValue == nullptr)
+			g_currentAudioGraph->connectToInputLiteral(*input, "");
+		
+		jsusFx->moveSlider(i + 1, input->getAudioFloat().getMean());
+	}
+#endif
+
 	jsusFx_gfx->setup(surface, sx, sy, mouse.x - x, mouse.y - y, true);
 	
 	jsusFx->draw();
 	
-	// update input values
-
-	for (int i = 1; i < JsusFx::kMaxSliders; ++i)
+#if 1
+	// update input values with slider values
+	
+	for (int i = 0; i < 4; ++i)
 	{
-		auto & slider = jsusFx->sliders[i];
+		if (isSliderConnected(i))
+			continue;
 		
-		if (slider.exists)
-		{
-			const int inputIndex = i - 1;
-			
-			if (inputIndex >= 0 && inputIndex < 4)
-			{
-				AudioPlug * input = tryGetInput(kInput_Slider1 + inputIndex);
-				
-				if (input->floatArray.immediateValue == nullptr)
-					g_currentAudioGraph->connectToInputLiteral(*input, "");
-				
-				input->floatArray.immediateValue->setScalar(slider.getValue());
-			}
-		}
+		auto & slider = jsusFx->sliders[i + 1];
+		
+		if (!slider.exists)
+			continue;
+		
+		AudioPlug * input = tryGetInput(kInput_Slider1 + i);
+		
+		Assert(input->floatArray.immediateValue != nullptr);
+		
+		const float value = slider.getValue();
+		
+		input->floatArray.immediateValue->setScalar(value);
 	}
+#endif
+
+	r = SDL_UnlockMutex(g_vfxAudioMutex); // fixme : mutex lock around draw code is a horrible idea!
+	Assert(r == 0);
 }
