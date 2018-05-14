@@ -32,6 +32,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioResource.h"
 #include "tinyxml2.h"
+#include "tinyxml2_helpers.h"
 
 struct AudioResource_Wavefield1D : AudioResourceBase
 {
@@ -47,19 +48,19 @@ struct AudioResource_Wavefield1D : AudioResourceBase
 	
 	virtual void save(tinyxml2::XMLPrinter * printer) override
 	{
-		// todo
+		printer->PushAttribute("numElems", numElems);
+		
+		pushAttrib_array(printer, "f", f, sizeof(f[0]), numElems);
 	}
 	
 	virtual void load(tinyxml2::XMLElement * elem) override
 	{
-		// todo
+		numElems = intAttrib(elem, "numElems", 0);
+		numElems = clamp(numElems, 0, Wavefield1D::kMaxElems);
 		
-		numElems = 64;
+		arrayAttrib(elem, "f", f, sizeof(f[0]), numElems);
 		
-		for (int i = 0; i < numElems; ++i)
-			f[i] = 1.f;
-		
-		version = 1;
+		version++;
 	}
 };
 
@@ -72,20 +73,13 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 	AudioResource_Wavefield1D * resource;
 	
 	UiState uiState;
-	int sx;
-	int sy;
-	int x;
-	int y;
 	
 	Wavefield1D wavefield;
 	
 	ResourceEditor_Wavefield1D()
-		: resource(nullptr)
+		: GraphEdit_ResourceEditorBase(700, 256)
+		, resource(nullptr)
 		, uiState()
-		, sx(700)
-		, sy(256)
-		, x(0)
-		, y(0)
 		, wavefield()
 	{
 		uiState.sx = sx;
@@ -98,19 +92,15 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 		Assert(resource == nullptr);
 	}
 	
-	virtual void getSize(int & _sx, int & _sy) const override
+	virtual void afterPositionChanged() override
 	{
-		_sx = sx;
-		_sy = sy;
-	}
-	
-	virtual void setPosition(const int _x, const int _y) override
-	{
-		x = _x;
-		y = _y;
-		
 		uiState.x = x;
 		uiState.y = y;
+	}
+	
+	virtual void afterSizeChanged() override
+	{
+		uiState.sx = sx;
 	}
 	
 	void randomize()

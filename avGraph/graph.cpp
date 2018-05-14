@@ -4326,11 +4326,13 @@ bool GraphEdit::nodeResourceEditBegin(const GraphNodeId nodeId)
 					
 					// calculate the position based on size and move the editor over there
 					
-					int x;
-					int y;
-					nodeResourceEditor.resourceEditor->getPositionForViewCenter(x, y);
+					const int sx = nodeResourceEditor.resourceEditor->initSx;
+					const int sy = nodeResourceEditor.resourceEditor->initSy;
 					
-					nodeResourceEditor.resourceEditor->setPosition(x, y);
+					const int x = (GRAPHEDIT_SX - sx) / 2;
+					const int y = (GRAPHEDIT_SY - sy) / 2;
+					
+					nodeResourceEditor.resourceEditor->init(x, y, sx, sy);
 				}
 			}
 		}
@@ -5114,7 +5116,7 @@ void GraphEdit::draw() const
 					y1 = y2;
 				}
 				
-				const int kMaxPoints = 64;
+				const int kMaxPoints = 100;
 
 				float pxyStorage[kMaxPoints * 2];
 				float hxyStorage[kMaxPoints * 2];
@@ -5125,11 +5127,11 @@ void GraphEdit::draw() const
 				int numPoints = 0;
 				path2d.generatePoints(pxy, hxy, kMaxPoints, 1.f, numPoints);
 				
-				hqBegin(HQ_FILLED_CIRCLES, true);
+				hqBegin(HQ_FILLED_CIRCLES);
 				{
 					for (int i = 0; i < numPoints; ++i)
 					{
-						hqFillCircle(pxy[i * 2 + 0], pxy[i * 2 + 1], 3.f);
+						hqFillCircle(pxy[i * 2 + 0], pxy[i * 2 + 1], 1.f);
 					}
 				}
 				hqEnd();
