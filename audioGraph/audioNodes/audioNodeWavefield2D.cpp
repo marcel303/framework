@@ -97,7 +97,7 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 	AudioRNG rng;
 	
 	ResourceEditor_Wavefield2D()
-		: GraphEdit_ResourceEditorBase(700, 700)
+		: GraphEdit_ResourceEditorBase(400, 400)
 		, resource(nullptr)
 		, uiState()
 		, wavefield()
@@ -164,7 +164,7 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 			
 			wavefield.numElems = resource->numElems;
 			
-			for (int i = 0; i < 100; ++i)
+			for (int i = 0; i < 10; ++i)
 				wavefield.tick(dt / 100.0, 100000.0, 0.8, 0.8, true);
 		}
 		
@@ -186,7 +186,7 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 						const float a = saturate(wavefield.f[x][y]);
 						
 						setColorf(1.f, 1.f, 1.f, a);
-						hqFillCircle(x, y, .2f + std::abs(p));
+						hqFillCircle(x, y, .4f + std::abs(p) * 3.f);
 					}
 				}
 			}
