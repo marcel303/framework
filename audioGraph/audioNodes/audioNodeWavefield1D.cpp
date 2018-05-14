@@ -139,8 +139,8 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 				wavefield.f[i] = resource->f[i];
 			wavefield.numElems = resource->numElems;
 			
-			for (int i = 0; i < 100; ++i)
-				wavefield.tick(dt / 100.0, 100000.0, 0.8, 0.8, true);
+			for (int i = 0; i < 10; ++i)
+				wavefield.tick(dt / 10.0, 10000.0, 0.8, 0.8, true);
 		}
 		
 		if (g_doDraw)
@@ -152,6 +152,8 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 			gxTranslatef(-(resource->numElems - 1.f)/2.f, 0.f, 0.f);
 			
 			setColor(colorWhite);
+			
+			const float r = clamp(sx / float(resource->numElems + 1.f) / 2.f, 1.f, 6.f);
 			
 			hqBegin(HQ_FILLED_CIRCLES, true);
 			{
@@ -165,7 +167,7 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 					const float a = f[i] / 2.f;
 					
 					setLumif(a);
-					hqFillCircle(i, h, 1.f);
+					hqFillCircle(i, h, r);
 				}
 			}
 			hqEnd();
@@ -182,7 +184,7 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 					const float a = f[i] / 2.f;
 					
 					setLumif(a);
-					hqLine(i, 0.f, 3.f, i, h, 1.f);
+					hqLine(i, 0.f, r, i, h, r);
 				}
 			}
 			hqEnd();
