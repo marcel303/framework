@@ -64,6 +64,10 @@ struct AudioResource_Wavefield1D : AudioResourceBase
 	}
 };
 
+AUDIO_RESOURCE_TYPE(AudioResource_Wavefield1D, "wavefield.1d");
+
+//
+
 #include "graph.h"
 #include "Noise.h"
 #include "../libparticle/ui.h"
@@ -145,7 +149,7 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 			gxTranslatef(x, y, 0);
 			gxTranslatef(sx/2, sy/2, 0);
 			gxScalef(sx / float(resource->numElems), sy/2, 1.f);
-			gxTranslatef(-(resource->numElems)/2.f, 0.f, 0.f);
+			gxTranslatef(-(resource->numElems - 1.f)/2.f, 0.f, 0.f);
 			
 			setColor(colorWhite);
 			
@@ -202,8 +206,8 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 			hqBegin(HQ_LINES, true);
 			{
 				setColor(colorGreen);
-				hqLine(0.f, -1.f, 1.f, resource->numElems, -1.f, 1.f);
-				hqLine(0.f, +1.f, 1.f, resource->numElems, +1.f, 1.f);
+				hqLine(- .5f, -1.f, 1.f, resource->numElems- .5f, -1.f, 1.f);
+				hqLine(- .5f, +1.f, 1.f, resource->numElems- .5f, +1.f, 1.f);
 			}
 			hqEnd();
 			
@@ -247,7 +251,7 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 				doTextBox(numElems, "size", x, sx, false, dt);
 				x += sx;
 				
-				numElems = std::max(0, std::min(Wavefield1D::kMaxElems, numElems));
+				numElems = Wavefield1D::roundNumElems(numElems);
 				
 				if (numElems != resource->numElems)
 				{
@@ -326,7 +330,7 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 	}
 };
 
-AUDIO_RESOURCE_TYPE(AudioResource_Wavefield1D, "wavefield.1d");
+//
 
 AUDIO_NODE_TYPE(wavefield_1d, AudioNodeWavefield1D)
 {
