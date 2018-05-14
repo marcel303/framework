@@ -40,8 +40,8 @@ struct ResourceEditor_VfxTimeline : GraphEdit_ResourceEditorBase
 	ResourceEditor_VfxTimeline();
 	virtual ~ResourceEditor_VfxTimeline() override;
 
-	virtual void getSize(int & sx, int & sy) const override;
-	virtual void setPosition(const int x, const int y) override;
+	virtual void afterSizeChanged() override;
+	virtual void afterPositionChanged() override;
 	
 	virtual bool tick(const float dt, const bool inputIsCaptured) override;
 	virtual void draw() const override;

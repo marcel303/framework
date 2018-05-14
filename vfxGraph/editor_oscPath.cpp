@@ -40,12 +40,12 @@ extern int GRAPHEDIT_SY;
 //
 
 ResourceEditor_OscPath::ResourceEditor_OscPath()
-	: uiState(nullptr)
+	: GraphEdit_ResourceEditorBase(GRAPHEDIT_SX*2/3, 100)
+	, uiState(nullptr)
 	, path(nullptr)
 	, isLearning(false)
 {
 	uiState = new UiState();
-	uiState->sx = GRAPHEDIT_SX*2/3;
 }
 
 ResourceEditor_OscPath::~ResourceEditor_OscPath()
@@ -57,13 +57,12 @@ ResourceEditor_OscPath::~ResourceEditor_OscPath()
 	uiState = nullptr;
 }
 
-void ResourceEditor_OscPath::getSize(int & sx, int & sy) const
+void ResourceEditor_OscPath::afterSizeChanged()
 {
-	sx = uiState->sx;
-	sy = 100;
+	uiState->sx = sx;
 }
 
-void ResourceEditor_OscPath::setPosition(const int x, const int y)
+void ResourceEditor_OscPath::afterPositionChanged()
 {
 	uiState->x = x;
 	uiState->y = y;
