@@ -237,8 +237,8 @@ void AudioNodeJsusFx::tick(const float dt)
 	const char * filename = getInputString(kInput_Filename, nullptr);
 	const AudioFloat * input1 = getInputAudioFloat(kInput_Input1, &AudioFloat::Zero);
 	const AudioFloat * input2 = getInputAudioFloat(kInput_Input2, &AudioFloat::Zero);
-	const AudioFloat * input3 = getInputAudioFloat(kInput_Input2, &AudioFloat::Zero);
-	const AudioFloat * input4 = getInputAudioFloat(kInput_Input2, &AudioFloat::Zero);
+	const AudioFloat * input3 = getInputAudioFloat(kInput_Input3, &AudioFloat::Zero);
+	const AudioFloat * input4 = getInputAudioFloat(kInput_Input4, &AudioFloat::Zero);
 
 	if (isPassthrough || filename == nullptr)
 	{
