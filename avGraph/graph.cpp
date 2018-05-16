@@ -6559,7 +6559,9 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 				
 				bool pressed = false;
 				
-				const bool hasValue = doMenuItem(*graphEdit, newValueText, inputSocket.name, inputSocket.defaultValue,
+				const bool hasValue = doMenuItem(*graphEdit, newValueText,
+					inputSocket.displayName.empty() ? inputSocket.name : inputSocket.displayName,
+					inputSocket.defaultValue,
 					enumDefinition != nullptr
 					? "enum"
 					: valueTypeDefinition != nullptr
@@ -6618,7 +6620,9 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 				
 				bool pressed = false;
 				
-				const bool hasValue = doMenuItem(*graphEdit, newValueText, outputSocket.name, "",
+				const bool hasValue = doMenuItem(*graphEdit, newValueText,
+					outputSocket.displayName.empty() ? outputSocket.name : outputSocket.displayName,
+					"",
 					valueTypeDefinition != nullptr
 					? valueTypeDefinition->editor
 					: "textbox",
