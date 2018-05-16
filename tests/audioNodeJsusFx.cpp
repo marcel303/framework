@@ -162,6 +162,13 @@ static AudioNodeBase * createJsusFxNode(const AudioNodeTypeRegistration_JsusFx *
 	fx->numSliderInputs = r->sliderInputs.size();
 	fx->numAudioOutputs = r->numOutputs;
 	
+	// set default slider values
+	
+	for (auto & sliderInput : r->sliderInputs)
+	{
+		fx->defaultSliderValues.push_back(sliderInput.defaultValue);
+	}
+	
 	// add input sockets
 	
 	{
@@ -266,6 +273,7 @@ AudioNodeJsusFx::AudioNodeJsusFx(const bool _preInitialized)
 	, numAudioInputs(0)
 	, numSliderInputs(0)
 	, numAudioOutputs(0)
+	, defaultSliderValues()
 	, audioOutputs()
 	, pathLibrary(nullptr)
 	, jsusFx(nullptr)
@@ -282,6 +290,8 @@ AudioNodeJsusFx::AudioNodeJsusFx(const bool _preInitialized)
 		numAudioInputs = 4;
 		numSliderInputs = 4;
 		numAudioOutputs = 4;
+		
+		defaultSliderValues = { 0.f, 0.f, 0.f, 0.f };
 		
 		audioOutputs.resize(4);
 		
@@ -391,7 +401,10 @@ void AudioNodeJsusFx::updateImmediateValues()
 		
 		if (input->floatArray.immediateValue == nullptr)
 		{
-			g_currentAudioGraph->connectToInputLiteral(*input, "");
+			char defaultString[64];
+			sprintf_s(defaultString, sizeof(defaultString), "%g", defaultSliderValues[i]);
+			
+			g_currentAudioGraph->connectToInputLiteral(*input, defaultString);
 		}
 		
 		jsusFx->moveSlider(i + 1, input->getAudioFloat().getMean());
@@ -471,7 +484,10 @@ void AudioNodeJsusFx::tick(const float dt)
 			if (!isSliderConnected(i))
 				continue;
 			
-			const float value = getInputAudioFloat(SLIDER_INDEX(i), &AudioFloat::Zero)->getMean();
+			AudioFloat defaultValue;
+			defaultValue.setScalar(defaultSliderValues[i]);
+			
+			const float value = getInputAudioFloat(SLIDER_INDEX(i), &defaultValue)->getMean();
 			
 			jsusFx->moveSlider(i + 1, value);
 		}

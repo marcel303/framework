@@ -65,6 +65,8 @@ struct AudioNodeJsusFx : AudioNodeBase
 	int numSliderInputs;
 	int numAudioOutputs;
 	
+	std::vector<float> defaultSliderValues;
+	
 	std::vector<AudioFloat> audioOutputs;
 	
 	JsusFxPathLibrary_Basic * pathLibrary;
