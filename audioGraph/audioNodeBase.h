@@ -554,7 +554,8 @@ struct AudioNodeTypeRegistration
 	
 	AudioNodeTypeRegistration * next;
 	
-	AudioNodeBase* (*create)();
+	AudioNodeBase* (*create)(void * data);
+	void * createData;
 	
 	GraphEdit_ResourceEditorBase * (*createResourceEditor)();
 	
@@ -579,7 +580,7 @@ struct AudioNodeTypeRegistration
 	{ \
 		name ## __audio_registration() \
 		{ \
-			create = []() -> AudioNodeBase* { return new type(); }; \
+			create = [](void * data) -> AudioNodeBase* { return new type(); }; \
 			init(); \
 		} \
 		void init(); \

@@ -741,6 +741,7 @@ AudioNodeTypeRegistration * g_audioNodeTypeRegistrationList = nullptr;
 AudioNodeTypeRegistration::AudioNodeTypeRegistration()
 	: next(nullptr)
 	, create(nullptr)
+	, createData(nullptr)
 	, typeName()
 	, inputs()
 	, outputs()
