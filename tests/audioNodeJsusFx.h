@@ -59,10 +59,13 @@ struct AudioNodeJsusFx : AudioNodeBase
 		kOutput_COUNT
 	};
 	
-	AudioFloat audioOutput1;
-	AudioFloat audioOutput2;
-	AudioFloat audioOutput3;
-	AudioFloat audioOutput4;
+	bool preInitialized;
+	
+	int numAudioInputs;
+	int numSliderInputs;
+	int numAudioOutputs;
+	
+	std::vector<AudioFloat> audioOutputs;
 	
 	JsusFxPathLibrary_Basic * pathLibrary;
 	JsusFx * jsusFx;
@@ -75,7 +78,7 @@ struct AudioNodeJsusFx : AudioNodeBase
 	
 	bool hasFocus;
 	
-	AudioNodeJsusFx();
+	AudioNodeJsusFx(const bool preInitialized = false);
 	~AudioNodeJsusFx();
 	
 	void load(const char * filename);
