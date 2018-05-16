@@ -42,6 +42,8 @@
 #define DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/" // fixme : remove hard coded Reaper data path
 
 #define DYN_OFFSET 1 // todo : remove
+#define SLIDER_INDEX(i) (DYN_OFFSET + (i))
+#define AUDIOINPUT_INDEX(i) (DYN_OFFSET + numSliderInputs + (i))
 
 //
 
@@ -87,17 +89,6 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 		
 		in("filename", "string");
 		
-		// add audio inputs
-		
-		for (int i = 0; i < jsusFx.numInputs; ++i)
-		{
-			const std::string name = String::FormatC("in%d", i + 1);
-			
-			in(name.c_str(), "audioValue");
-		}
-		
-		numInputs = jsusFx.numInputs;
-		
 		// add slider inputs
 		
 		for (int i = 0; i < jsusFx.kMaxSliders; ++i)
@@ -137,6 +128,17 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 			sliderInputs.push_back(sliderInput);
 		}
 		
+		// add audio inputs
+		
+		for (int i = 0; i < jsusFx.numInputs; ++i)
+		{
+			const std::string name = String::FormatC("in%d", i + 1);
+			
+			in(name.c_str(), "audioValue");
+		}
+		
+		numInputs = jsusFx.numInputs;
+		
 		// add audio outputs
 		
 		for (int i = 0; i < jsusFx.numOutputs; ++i)
@@ -167,10 +169,10 @@ static AudioNodeBase * createJsusFxNode(const AudioNodeTypeRegistration_JsusFx *
 		
 		fx->addInput(inputIndex++, kAudioPlugType_String); // filename. todo : remove
 		
-		for (int i = 0; i < r->numInputs; ++i)
+		for (int i = 0; i < r->sliderInputs.size(); ++i)
 			fx->addInput(inputIndex++, kAudioPlugType_FloatVec);
 		
-		for (int i = 0; i < r->sliderInputs.size(); ++i)
+		for (int i = 0; i < r->numInputs; ++i)
 			fx->addInput(inputIndex++, kAudioPlugType_FloatVec);
 	}
 	
@@ -244,14 +246,14 @@ AUDIO_NODE_TYPE(jsusfx, AudioNodeJsusFx)
 	typeName = "jsusfx";
 	
 	in("file", "string");
-	in("input1", "audioValue");
-	in("input2", "audioValue");
-	in("input3", "audioValue");
-	in("input4", "audioValue");
 	in("slider1", "audioValue");
 	in("slider2", "audioValue");
 	in("slider3", "audioValue");
 	in("slider4", "audioValue");
+	in("input1", "audioValue");
+	in("input2", "audioValue");
+	in("input3", "audioValue");
+	in("input4", "audioValue");
 	out("audio1", "audioValue");
 	out("audio2", "audioValue");
 	out("audio3", "audioValue");
@@ -285,14 +287,14 @@ AudioNodeJsusFx::AudioNodeJsusFx(const bool _preInitialized)
 		
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Filename, kAudioPlugType_String);
-		addInput(kInput_Input1, kAudioPlugType_FloatVec);
-		addInput(kInput_Input2, kAudioPlugType_FloatVec);
-		addInput(kInput_Input3, kAudioPlugType_FloatVec);
-		addInput(kInput_Input4, kAudioPlugType_FloatVec);
 		addInput(kInput_Slider1, kAudioPlugType_FloatVec);
 		addInput(kInput_Slider2, kAudioPlugType_FloatVec);
 		addInput(kInput_Slider3, kAudioPlugType_FloatVec);
 		addInput(kInput_Slider4, kAudioPlugType_FloatVec);
+		addInput(kInput_Input1, kAudioPlugType_FloatVec);
+		addInput(kInput_Input2, kAudioPlugType_FloatVec);
+		addInput(kInput_Input3, kAudioPlugType_FloatVec);
+		addInput(kInput_Input4, kAudioPlugType_FloatVec);
 		addOutput(kOutput_Audio1, kAudioPlugType_FloatVec, &audioOutputs[0]);
 		addOutput(kOutput_Audio2, kAudioPlugType_FloatVec, &audioOutputs[1]);
 		addOutput(kOutput_Audio3, kAudioPlugType_FloatVec, &audioOutputs[2]);
@@ -360,7 +362,7 @@ bool AudioNodeJsusFx::isSliderConnected(const int index) const
 	if (index < 0 || index >= numSliderInputs)
 		return false;
 	
-	const AudioPlug * input = tryGetInput(DYN_OFFSET + numAudioInputs + index);
+	const AudioPlug * input = tryGetInput(SLIDER_INDEX(index));
 	
 	if (input->floatArray.elems.empty())
 		return false;
@@ -385,7 +387,7 @@ void AudioNodeJsusFx::updateImmediateValues()
 		if (!slider.exists)
 			continue;
 		
-		AudioPlug * input = tryGetInput(DYN_OFFSET + numAudioInputs + i);
+		AudioPlug * input = tryGetInput(SLIDER_INDEX(i));
 		
 		if (input->floatArray.immediateValue == nullptr)
 		{
@@ -469,7 +471,7 @@ void AudioNodeJsusFx::tick(const float dt)
 			if (!isSliderConnected(i))
 				continue;
 			
-			const float value = getInputAudioFloat(DYN_OFFSET + numAudioInputs + i, &AudioFloat::Zero)->getMean();
+			const float value = getInputAudioFloat(SLIDER_INDEX(i), &AudioFloat::Zero)->getMean();
 			
 			jsusFx->moveSlider(i + 1, value);
 		}
@@ -480,7 +482,7 @@ void AudioNodeJsusFx::tick(const float dt)
 		
 		for (int i = 0; i < numAudioInputs; ++i)
 		{
-			const AudioFloat * audioInput = getInputAudioFloat(DYN_OFFSET + i, &AudioFloat::Zero);
+			const AudioFloat * audioInput = getInputAudioFloat(AUDIOINPUT_INDEX(i), &AudioFloat::Zero);
 			
 			input[i] = audioInput->samples;
 		}
@@ -566,7 +568,7 @@ void AudioNodeJsusFx::drawEditor(Surface * surface, const int x, const int y, co
 			if (!slider.exists)
 				continue;
 			
-			AudioPlug * input = tryGetInput(DYN_OFFSET + numAudioInputs + i);
+			AudioPlug * input = tryGetInput(SLIDER_INDEX(i));
 			
 			Assert(input->floatArray.immediateValue != nullptr);
 			

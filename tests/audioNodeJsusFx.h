@@ -39,14 +39,14 @@ struct AudioNodeJsusFx : AudioNodeBase
 	enum Input
 	{
 		kInput_Filename,
-		kInput_Input1,
-		kInput_Input2,
-		kInput_Input3,
-		kInput_Input4,
 		kInput_Slider1,
 		kInput_Slider2,
 		kInput_Slider3,
 		kInput_Slider4,
+		kInput_Input1,
+		kInput_Input2,
+		kInput_Input3,
+		kInput_Input4,
 		kInput_COUNT
 	};
 	
