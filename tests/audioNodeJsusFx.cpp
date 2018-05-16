@@ -69,7 +69,7 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 	struct SliderInput
 	{
 		std::string name;
-		float defaultValue;
+		float defaultValue; // todo : honour default value when fetching slider values
 	};
 	
 	std::string filename;
@@ -87,6 +87,8 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 		
 		in("filename", "string");
 		
+		// add audio inputs
+		
 		for (int i = 0; i < jsusFx.numInputs; ++i)
 		{
 			const std::string name = String::FormatC("in%d", i + 1);
@@ -95,6 +97,8 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 		}
 		
 		numInputs = jsusFx.numInputs;
+		
+		// add slider inputs
 		
 		for (int i = 0; i < jsusFx.kMaxSliders; ++i)
 		{
@@ -107,17 +111,33 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 			sliderInput.name = slider.name;
 			sliderInput.defaultValue = slider.def;
 			
-			if (slider.isEnum && false)
+			char defaultString[64];
+			sprintf_s(defaultString, sizeof(defaultString), "%g", slider.def);
+			
+			if (slider.isEnum)
 			{
-				// todo : add enums
+				// add enumeration type registration with a name unique to this node type ..
+				
+				const std::string enumName = String::FormatC("%s_%s", typeName.c_str(), slider.name);
+				
+				AudioEnumTypeRegistration * e = new AudioEnumTypeRegistration();
+				e->enumName = enumName;
+				for (int i = 0; i < slider.enumNames.size(); ++i)
+					e->elem(slider.enumNames[i].c_str());
+				
+				// .. and add the enum input itself
+				
+				inEnum(sliderInput.name.c_str(), enumName.c_str(), defaultString, slider.desc);
 			}
 			else
 			{
-				in(sliderInput.name.c_str(), "audioValue");
+				in(sliderInput.name.c_str(), "audioValue", defaultString, slider.desc);
 			}
 			
 			sliderInputs.push_back(sliderInput);
 		}
+		
+		// add audio outputs
 		
 		for (int i = 0; i < jsusFx.numOutputs; ++i)
 		{
@@ -134,11 +154,11 @@ static AudioNodeBase * createJsusFxNode(const AudioNodeTypeRegistration_JsusFx *
 {
 	AudioNodeJsusFx * fx = new AudioNodeJsusFx(true);
 	
+	fx->resizeSockets(1 + r->numInputs + r->sliderInputs.size(), r->numOutputs);
+	
 	fx->numAudioInputs = r->numInputs;
 	fx->numSliderInputs = r->sliderInputs.size();
 	fx->numAudioOutputs = r->numOutputs;
-	
-	fx->resizeSockets(1 + r->numInputs + r->sliderInputs.size(), r->numOutputs);
 	
 	// add input sockets
 	
