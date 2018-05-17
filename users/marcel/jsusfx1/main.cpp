@@ -44,7 +44,8 @@ gfx_mode
 #define DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/"
 
 //#define SEARCH_PATH "/Users/thecat/atk-reaper/plugins/"
-#define SEARCH_PATH "/Users/thecat/geraintluff -jsfx/"
+//#define SEARCH_PATH "/Users/thecat/geraintluff -jsfx/"
+#define SEARCH_PATH "/Users/thecat/atk-reaper/plugins/"
 
 const int GFX_SX = 1000;
 const int GFX_SY = 720;
@@ -397,6 +398,126 @@ static void handleAction(const std::string & action, const Dictionary & d)
 	}
 }
 
+//
+
+struct AudioStream_JsusFxChain : AudioStream
+{
+	AudioStream * source = nullptr;
+	
+	std::vector<JsusFx*> effects;
+	
+	SDL_mutex * mutex = nullptr;
+	
+	Limiter limiter;
+	
+	virtual ~AudioStream_JsusFxChain() override
+	{
+		if (mutex != nullptr)
+		{
+			SDL_DestroyMutex(mutex);
+			mutex = nullptr;
+		}
+	}
+	
+	void init(AudioStream * _source)
+	{
+		source = _source;
+		
+		mutex = SDL_CreateMutex();
+	}
+	
+	void lock()
+	{
+		const int r = SDL_LockMutex(mutex);
+		Assert(r == 0);
+	}
+	
+	void unlock()
+	{
+		const int r = SDL_UnlockMutex(mutex);
+		Assert(r == 0);
+	}
+	
+	void add(JsusFx * jsusFx)
+	{
+		lock();
+		{
+			effects.push_back(jsusFx);
+		}
+		unlock();
+	}
+	
+	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
+	{
+		Assert(numSamples == BUFFER_SIZE);
+		
+		source->Provide(numSamples, buffer);
+		
+		float inputL[BUFFER_SIZE];
+		float inputR[BUFFER_SIZE];
+		float outputL[BUFFER_SIZE];
+		float outputR[BUFFER_SIZE];
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			inputL[i] = buffer[i].channel[0] / float(1 << 15);
+			inputR[i] = buffer[i].channel[1] / float(1 << 15);
+		}
+		
+		memset(outputL, 0, sizeof(outputL));
+		memset(outputR, 0, sizeof(outputR));
+		
+		float * input[2] =
+		{
+			inputL,
+			inputR
+		};
+		
+		float * output[2] =
+		{
+			outputL,
+			outputR
+		};
+		
+		lock();
+		{
+			for (auto & jsusFx : effects)
+			{
+				jsusFx->setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
+				
+				const float * inputTemp[2] =
+				{
+					input[0],
+					input[1]
+				};
+				
+				if (jsusFx->process(inputTemp, output, numSamples, 2, 2))
+				{
+					std::swap(input[0], output[0]);
+					std::swap(input[1], output[1]);
+				}
+			}
+			
+			s_midiBuffer.numBytes = 0;
+		}
+		unlock();
+		
+		std::swap(input[0], output[0]);
+		std::swap(input[1], output[1]);
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			const float valueL = limiter.next(outputL[i]);
+			const float valueR = limiter.next(outputR[i]);
+			
+			buffer[i].channel[0] = valueL * float((1 << 15) - 2);
+			buffer[i].channel[1] = valueR * float((1 << 15) - 2);
+		}
+		
+		return numSamples;
+	}
+};
+
 struct JsusFxWindow
 {
 	Window * window;
@@ -446,8 +567,6 @@ struct JsusFxWindow
 	{
 		if (!isValid)
 			return;
-		
-		jsusFx.process(nullptr, nullptr, BUFFER_SIZE, 0, 0);
 		
 		if (window->getQuitRequested())
 		{
@@ -553,9 +672,27 @@ std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool r
 
 static void testJsusFxList()
 {
-	auto filenames = scanJsusFxScripts(SEARCH_PATH, false);
+	if (!framework.init(0, nullptr, 420, 640))
+		return;
+	
+	JsusFx::init();
+	
+	//auto filenames = scanJsusFxScripts(SEARCH_PATH, false);
+	auto filenames = scanJsusFxScripts(SEARCH_PATH, true);
 	
 	std::vector<JsusFxWindow*> windows;
+	
+	AudioStream_Vorbis vorbis;
+	vorbis.Open("movers.ogg", true);
+	
+	AudioStream_JsusFxChain audioStream;
+	audioStream.init(&vorbis);
+	
+	AudioOutput_PortAudio audioOutput;
+	audioOutput.Initialize(2, SAMPLE_RATE, BUFFER_SIZE);
+	audioOutput.Play(&audioStream);
+	
+	MidiKeyboard midiKeyboard;
 	
 	for (;;)
 	{
@@ -598,6 +735,20 @@ static void testJsusFxList()
 			x += 10;
 			y += 10;
 			
+			gxPushMatrix();
+			{
+				audioStream.lock();
+				{
+					doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y - y, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false);
+				}
+				audioStream.unlock();
+				
+				doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y, nullptr, nullptr, false, true);
+			}
+			gxPopMatrix();
+			
+			y += 70;
+			
 			for (auto & filename : filenames)
 			{
 				setColor(colorWhite);
@@ -607,6 +758,11 @@ static void testJsusFxList()
 				if (isInside && mouse.wentDown(BUTTON_LEFT))
 				{
 					JsusFxWindow * window = new JsusFxWindow(filename.c_str());
+					
+					if (window->isValid)
+					{
+						audioStream.add(&window->jsusFx);
+					}
 					
 					windows.push_back(window);
 				}
@@ -624,10 +780,21 @@ static void testJsusFxList()
 		for (auto & window : windows)
 			window->draw();
 	}
+	
+	audioOutput.Stop();
+	
+	// todo : free effects, windows etc
+	
+	framework.shutdown();
 }
 
 int main(int argc, char * argv[])
 {
+#if 1
+	testJsusFxList();
+	exit(0);
+#endif
+	
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
 	
@@ -635,11 +802,6 @@ int main(int argc, char * argv[])
 		return -1;
 	
 	JsusFx::init();
-	
-#if 1
-	testJsusFxList();
-	exit(0);
-#endif
 	
 	JsusFxPathLibrary_Basic pathLibrary(DATA_ROOT);
 	pathLibrary.addSearchPath("lib");
