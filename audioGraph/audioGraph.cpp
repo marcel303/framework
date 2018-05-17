@@ -561,7 +561,7 @@ AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & ty
 			const uint64_t t1 = g_TimerRT.TimeUS_get();
 		#endif
 		
-			audioNode = r->create();
+			audioNode = r->create(r->createData);
 			
 		#if AUDIO_GRAPH_ENABLE_TIMING
 			const uint64_t t2 = g_TimerRT.TimeUS_get();
