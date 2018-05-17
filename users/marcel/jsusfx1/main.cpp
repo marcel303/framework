@@ -43,6 +43,9 @@ gfx_mode
 
 #define DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/"
 
+//#define SEARCH_PATH "/Users/thecat/atk-reaper/plugins/"
+#define SEARCH_PATH "/Users/thecat/geraintluff -jsfx/"
+
 const int GFX_SX = 1000;
 const int GFX_SY = 720;
 
@@ -394,6 +397,235 @@ static void handleAction(const std::string & action, const Dictionary & d)
 	}
 }
 
+struct JsusFxWindow
+{
+	Window * window;
+	
+	JsusFxPathLibrary_Basic pathLibrary;
+	
+	JsusFx_Framework jsusFx;
+	JsusFxFileAPI_Basic fileAPI;
+	JsusFxGfx_Framework gfxAPI;
+	
+	std::string filename;
+	
+	bool isValid;
+	
+	JsusFxWindow(const char * _filename)
+		: window(nullptr)
+		, pathLibrary(DATA_ROOT)
+		, jsusFx(pathLibrary)
+		, fileAPI()
+		, gfxAPI(jsusFx)
+		, filename(_filename)
+		, isValid(false)
+	{
+		fileAPI.init(jsusFx.m_vm);
+		jsusFx.fileAPI = &fileAPI;
+		
+		gfxAPI.init(jsusFx.m_vm);
+		jsusFx.gfx = &gfxAPI;
+		
+		if (jsusFx.compile(pathLibrary, filename))
+		{
+			jsusFx.prepare(SAMPLE_RATE, BUFFER_SIZE);
+			
+			window = new Window(filename.c_str(), jsusFx.gfx_w, jsusFx.gfx_h, true);
+			
+			isValid = true;
+		}
+	}
+	
+	~JsusFxWindow()
+	{
+		delete window;
+		window = nullptr;
+	}
+	
+	void tick(const float dt)
+	{
+		if (!isValid)
+			return;
+		
+		jsusFx.process(nullptr, nullptr, BUFFER_SIZE, 0, 0);
+		
+		if (window->getQuitRequested())
+		{
+			delete window;
+			window = nullptr;
+			
+			isValid = false;
+		}
+	}
+	
+	void draw()
+	{
+		if (!isValid)
+			return;
+		
+		pushWindow(*window);
+		{
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				gfxAPI.setup(nullptr, window->getWidth(), window->getHeight(), mouse.x, mouse.y, true);
+				
+				pushFontMode(FONT_SDF);
+				setColorClamp(true);
+				{
+					jsusFx.draw();
+				}
+				setColorClamp(false);
+				popFontMode();
+				
+				int x = 10;
+				int y = 10;
+				
+				setColor(160, 160, 160);
+				drawText(x, y, 18, +1, +1, "JSFX file: %s", Path::GetFileName(filename).c_str());
+				y += 20;
+				
+				setColor(160, 160, 160);
+				drawText(x + 3, y + 21, 12, +1, +1, "%d ins, %d outs", jsusFx.numInputs, jsusFx.numOutputs);
+				y += 14;
+				
+				for (auto & slider : jsusFx.sliders)
+				{
+					if (slider.exists && slider.desc[0] != '-')
+					{
+						gxPushMatrix();
+						gxTranslatef(x, y, 0);
+						doSlider(jsusFx, slider, mouse.x - x, mouse.y - y);
+						gxPopMatrix();
+						
+						y += 16;
+					}
+				}
+				
+				x += 300;
+				
+				if (x > window->getWidth() || y > window->getHeight())
+				{
+					window->setSize(x, y);
+				}
+			}
+			framework.endDraw();
+		}
+		popWindow();
+	}
+};
+
+std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool recurse)
+{
+	std::vector<std::string> result;
+	
+	auto filenames = listFiles(searchPath, recurse);
+	
+	JsusFxPathLibrary_Basic pathLibrary(DATA_ROOT);
+	JsusFxFileAPI_Basic fileAPI;
+	JsusFxGfx gfxAPI;
+	
+	for (auto & filename : filenames)
+	{
+		auto extension = Path::GetExtension(filename, true);
+		
+		if (extension != "" && extension != "jsfx")
+			continue;
+		
+		JsusFx_Framework jsusFx(pathLibrary);
+		
+		fileAPI.init(jsusFx.m_vm);
+		jsusFx.fileAPI = &fileAPI;
+		
+		gfxAPI.init(jsusFx.m_vm);
+		jsusFx.gfx = &gfxAPI;
+		
+		if (!jsusFx.compile(pathLibrary, filename))
+			continue;
+		
+		if (jsusFx.desc[0] == 0)
+			continue;
+		
+		result.push_back(filename);
+	}
+	
+	return result;
+}
+
+static void testJsusFxList()
+{
+	auto filenames = scanJsusFxScripts(SEARCH_PATH, false);
+	
+	std::vector<JsusFxWindow*> windows;
+	
+	for (;;)
+	{
+		framework.process();
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
+		
+		if (framework.quitRequested)
+			break;
+		
+		const float dt = framework.timeStep;
+		
+		for (auto windowItr = windows.begin(); windowItr != windows.end(); )
+		{
+			auto & window = *windowItr;
+			
+			window->tick(dt);
+			
+			if (window->isValid == false)
+			{
+				delete window;
+				window = nullptr;
+				
+				windowItr = windows.erase(windowItr);
+			}
+			else
+			{
+				windowItr++;
+			}
+		}
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			setFont("calibri.ttf");
+			
+			int x = 0;
+			int y = 0;
+			
+			x += 10;
+			y += 10;
+			
+			for (auto & filename : filenames)
+			{
+				setColor(colorWhite);
+				
+				const bool isInside = mouse.x >= x && mouse.y >= y && mouse.x < x + 400 && mouse.y < y + 14;
+				
+				if (isInside && mouse.wentDown(BUTTON_LEFT))
+				{
+					JsusFxWindow * window = new JsusFxWindow(filename.c_str());
+					
+					windows.push_back(window);
+				}
+				
+				setLumi(isInside ? 200 : 100);
+				drawRect(x, y, x + 400, y + 14);
+				setLumi(isInside ? 100 : 200);
+				drawText(x + 2, y + 14/2, 10, +1, 0, "%s", filename.c_str());
+				
+				y += 16;
+			}
+		}
+		framework.endDraw();
+		
+		for (auto & window : windows)
+			window->draw();
+	}
+}
+
 int main(int argc, char * argv[])
 {
 	framework.filedrop = true;
@@ -403,6 +635,11 @@ int main(int argc, char * argv[])
 		return -1;
 	
 	JsusFx::init();
+	
+#if 1
+	testJsusFxList();
+	exit(0);
+#endif
 	
 	JsusFxPathLibrary_Basic pathLibrary(DATA_ROOT);
 	pathLibrary.addSearchPath("lib");
