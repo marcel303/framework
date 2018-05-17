@@ -453,31 +453,17 @@ struct AudioStream_JsusFxChain : AudioStream
 		
 		source->Provide(numSamples, buffer);
 		
-		float inputL[BUFFER_SIZE];
-		float inputR[BUFFER_SIZE];
-		float outputL[BUFFER_SIZE];
-		float outputR[BUFFER_SIZE];
+		const int kNumBuffers = 4;
+		float bufferData[2][kNumBuffers][BUFFER_SIZE];
+		memset(bufferData, 0, sizeof(bufferData));
+		
+		int inputIndex = 0;
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
-			inputL[i] = buffer[i].channel[0] / float(1 << 15);
-			inputR[i] = buffer[i].channel[1] / float(1 << 15);
+			bufferData[inputIndex][0][i] = buffer[i].channel[0] / float(1 << 15);
+			bufferData[inputIndex][1][i] = buffer[i].channel[1] / float(1 << 15);
 		}
-		
-		memset(outputL, 0, sizeof(outputL));
-		memset(outputR, 0, sizeof(outputR));
-		
-		float * input[2] =
-		{
-			inputL,
-			inputR
-		};
-		
-		float * output[2] =
-		{
-			outputL,
-			outputR
-		};
 		
 		lock();
 		{
@@ -485,16 +471,18 @@ struct AudioStream_JsusFxChain : AudioStream
 			{
 				jsusFx->setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
 				
-				const float * inputTemp[2] =
-				{
-					input[0],
-					input[1]
-				};
+				const float * input[kNumBuffers];
+				float * output[kNumBuffers];
 				
-				if (jsusFx->process(inputTemp, output, numSamples, 2, 2))
+				for (int i = 0; i < kNumBuffers; ++i)
 				{
-					std::swap(input[0], output[0]);
-					std::swap(input[1], output[1]);
+					input[i] = bufferData[inputIndex][i];
+					output[i] = bufferData[1 - inputIndex][i];
+				}
+				
+				if (jsusFx->process(input, output, numSamples, kNumBuffers, kNumBuffers))
+				{
+					inputIndex = 1 - inputIndex;
 				}
 			}
 			
@@ -502,13 +490,12 @@ struct AudioStream_JsusFxChain : AudioStream
 		}
 		unlock();
 		
-		std::swap(input[0], output[0]);
-		std::swap(input[1], output[1]);
+		inputIndex = 1 - inputIndex;
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
-			const float valueL = limiter.next(outputL[i]);
-			const float valueR = limiter.next(outputR[i]);
+			const float valueL = limiter.next(bufferData[1 - inputIndex][0][i]);
+			const float valueR = limiter.next(bufferData[1 - inputIndex][1][i]);
 			
 			buffer[i].channel[0] = valueL * float((1 << 15) - 2);
 			buffer[i].channel[1] = valueR * float((1 << 15) - 2);
