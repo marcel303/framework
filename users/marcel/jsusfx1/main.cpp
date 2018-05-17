@@ -9,6 +9,9 @@
 
 #include "Path.h"
 
+#include <map>
+#include <vector>
+
 /*
 
 GFX status:
@@ -43,9 +46,9 @@ gfx_mode
 
 #define DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/"
 
-//#define SEARCH_PATH "/Users/thecat/atk-reaper/plugins/"
-//#define SEARCH_PATH "/Users/thecat/geraintluff -jsfx/"
-#define SEARCH_PATH "/Users/thecat/atk-reaper/plugins/"
+#define SEARCH_PATH_reaper "/Users/thecat/atk-reaper/plugins/"
+#define SEARCH_PATH_geraintluff "/Users/thecat/geraintluff -jsfx/"
+#define SEARCH_PATH_ATK "/Users/thecat/atk-reaper/plugins/"
 
 const int GFX_SX = 1000;
 const int GFX_SY = 720;
@@ -659,13 +662,18 @@ std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool r
 
 static void testJsusFxList()
 {
-	if (!framework.init(0, nullptr, 420, 640))
+	if (!framework.init(0, nullptr, 420, 720))
 		return;
 	
 	JsusFx::init();
 	
-	//auto filenames = scanJsusFxScripts(SEARCH_PATH, false);
-	auto filenames = scanJsusFxScripts(SEARCH_PATH, true);
+	std::map<std::string, std::vector<std::string>> filenamesByLocation;
+	
+	filenamesByLocation["Reaper"] = scanJsusFxScripts(SEARCH_PATH_reaper, true);
+	filenamesByLocation["ATK"] = scanJsusFxScripts(SEARCH_PATH_ATK, true);
+	filenamesByLocation["GeraintLuff"] = scanJsusFxScripts(SEARCH_PATH_geraintluff, false);
+	
+	std::string activeLocation = "Reaper";
 	
 	std::vector<JsusFxWindow*> windows;
 	
@@ -735,6 +743,38 @@ static void testJsusFxList()
 			gxPopMatrix();
 			
 			y += 70;
+			
+			int locationX = 0;
+			
+			for (auto & locationItr : filenamesByLocation)
+			{
+				const std::string & location = locationItr.first;
+				
+				const int x1 = x + locationX;
+				const int y1 = y;
+				const int x2 = x1 + 80;
+				const int y2 = y1 + 20;
+				
+				const bool isInside = mouse.x >= x1 && mouse.y >= y1 && mouse.x < x2 && mouse.y < y2;
+				
+				if (isInside && mouse.wentDown(BUTTON_LEFT))
+				{
+					activeLocation = location;
+				}
+				
+				setColor(colorWhite);
+				
+				setLumi(isInside ? 200 : 100);
+				drawRect(x1, y1, x2, y2);
+				setLumi(isInside ? 100 : 200);
+				drawText((x1 + x2)/2, (y1 + y2)/2, 16, 0, 0, "%s", location.c_str());
+				
+				locationX += 90;
+			}
+			
+			y += 24;
+			
+			auto & filenames = filenamesByLocation[activeLocation];
 			
 			for (auto & filename : filenames)
 			{
