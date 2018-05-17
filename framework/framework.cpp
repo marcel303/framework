@@ -942,6 +942,8 @@ void Framework::process()
 					windowData->isActive = true;
 				else if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
 					windowData->isActive = false;
+				else if (e.window.event == SDL_WINDOWEVENT_CLOSE)
+					windowData->quitRequested = true;
 				
 				if (windowData == globals.currentWindowData)
 					windowIsActive = windowData->isActive;
@@ -1753,6 +1755,11 @@ int Window::getHeight() const
 	SDL_GetWindowSize(m_window, &sx, &sy);
 	
 	return sy;
+}
+
+bool Window::getQuitRequested() const
+{
+	return m_windowData->quitRequested;
 }
 
 SDL_Window * Window::getWindow() const

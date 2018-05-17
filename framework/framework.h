@@ -373,6 +373,8 @@ public:
 	int getWidth() const;
 	int getHeight() const;
 	
+	bool getQuitRequested() const;
+	
 	SDL_Window * getWindow() const;
 	class WindowData * getWindowData() const;
 	
