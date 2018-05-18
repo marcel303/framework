@@ -49,6 +49,7 @@ gfx_mode
 #define SEARCH_PATH_reaper "/Users/thecat/atk-reaper/plugins/"
 #define SEARCH_PATH_geraintluff "/Users/thecat/geraintluff -jsfx/"
 #define SEARCH_PATH_ATK "/Users/thecat/atk-reaper/plugins/"
+#define SEARCH_PATH_kawa "/Users/thecat/Downloads/JSFX-kawa-master/"
 
 const int GFX_SX = 1000;
 const int GFX_SY = 720;
@@ -450,6 +451,19 @@ struct AudioStream_JsusFxChain : AudioStream
 		unlock();
 	}
 	
+	void remove(JsusFx * jsusFx)
+	{
+		lock();
+		{
+			auto i = std::find(effects.begin(), effects.end(), jsusFx);
+			
+			Assert(i != effects.end());
+			if (i != effects.end())
+				effects.erase(i);
+		}
+		unlock();
+	}
+	
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
 	{
 		Assert(numSamples == BUFFER_SIZE);
@@ -537,6 +551,8 @@ struct JsusFxWindow
 		gfxAPI.init(jsusFx.m_vm);
 		jsusFx.gfx = &gfxAPI;
 		
+		pathLibrary.addSearchPath("lib");
+		
 		if (jsusFx.compile(pathLibrary, filename))
 		{
 			jsusFx.prepare(SAMPLE_RATE, BUFFER_SIZE);
@@ -612,9 +628,12 @@ struct JsusFxWindow
 				
 				x += 300;
 				
-				if (x > window->getWidth() || y > window->getHeight())
+				const int sx = std::max(x, window->getWidth());
+				const int sy = std::max(y, window->getHeight());
+				
+				if (sx > window->getWidth() || sy > window->getHeight())
 				{
-					window->setSize(x, y);
+					window->setSize(sx, sy);
 				}
 			}
 			framework.endDraw();
@@ -632,6 +651,8 @@ std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool r
 	JsusFxPathLibrary_Basic pathLibrary(DATA_ROOT);
 	JsusFxFileAPI_Basic fileAPI;
 	JsusFxGfx gfxAPI;
+	
+	pathLibrary.addSearchPath("lib");
 	
 	for (auto & filename : filenames)
 	{
@@ -657,6 +678,8 @@ std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool r
 		result.push_back(filename);
 	}
 	
+	std::sort(result.begin(), result.end());
+	
 	return result;
 }
 
@@ -672,6 +695,7 @@ static void testJsusFxList()
 	filenamesByLocation["Reaper"] = scanJsusFxScripts(SEARCH_PATH_reaper, true);
 	filenamesByLocation["ATK"] = scanJsusFxScripts(SEARCH_PATH_ATK, true);
 	filenamesByLocation["GeraintLuff"] = scanJsusFxScripts(SEARCH_PATH_geraintluff, false);
+	filenamesByLocation["Kawa"] = scanJsusFxScripts(SEARCH_PATH_kawa, true);
 	
 	std::string activeLocation = "Reaper";
 	
@@ -709,6 +733,8 @@ static void testJsusFxList()
 			
 			if (window->isValid == false)
 			{
+				audioStream.remove(&window->jsusFx);
+				
 				delete window;
 				window = nullptr;
 				
