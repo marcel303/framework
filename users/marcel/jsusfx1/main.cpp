@@ -412,9 +412,15 @@ static void handleAction(const std::string & action, const Dictionary & d)
 
 struct AudioStream_JsusFxChain : AudioStream
 {
+	struct EffectElem
+	{
+		bool isPassthrough = false;
+		JsusFx * jsusFx = nullptr;
+	};
+	
 	AudioStream * source = nullptr;
 	
-	std::vector<JsusFx*> effects;
+	std::vector<EffectElem> effects;
 	
 	SDL_mutex * mutex = nullptr;
 	
@@ -452,7 +458,10 @@ struct AudioStream_JsusFxChain : AudioStream
 	{
 		lock();
 		{
-			effects.push_back(jsusFx);
+			EffectElem elem;
+			elem.jsusFx = jsusFx;
+			
+			effects.push_back(elem);
 		}
 		unlock();
 	}
@@ -461,7 +470,7 @@ struct AudioStream_JsusFxChain : AudioStream
 	{
 		lock();
 		{
-			auto i = std::find(effects.begin(), effects.end(), jsusFx);
+			auto i = std::find_if(effects.begin(), effects.end(), [=](const EffectElem & e) -> bool { return e.jsusFx == jsusFx; });
 			
 			Assert(i != effects.end());
 			if (i != effects.end())
@@ -490,8 +499,13 @@ struct AudioStream_JsusFxChain : AudioStream
 		
 		lock();
 		{
-			for (auto & jsusFx : effects)
+			for (auto & effect : effects)
 			{
+				if (effect.isPassthrough)
+					continue;
+				
+				auto & jsusFx = effect.jsusFx;
+				
 				jsusFx->setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
 				
 				const float * input[kNumBuffers];
@@ -655,6 +669,109 @@ struct JsusFxWindow
 	}
 };
 
+struct JsusFxChainWindow
+{
+	Window window;
+	
+	AudioStream_JsusFxChain & effectChain;
+	
+	int selectedEffectIndex;
+	
+	JsusFxChainWindow(AudioStream_JsusFxChain & _effectChain)
+		: window("Effect Chain", 300, 300, true)
+		, effectChain(_effectChain)
+		, selectedEffectIndex(0)
+	{
+	}
+	
+	void tick(const float dt)
+	{
+		pushWindow(window);
+		{
+			framework.beginDraw(50, 50, 50, 0);
+			{
+				setFont("calibri.ttf");
+				setColor(colorWhite);
+				
+				int x = 10;
+				int y = 10;
+				
+				int effectIndex = 0;
+				
+				for (auto & effect : effectChain.effects)
+				{
+					{
+						const int x1 = x;
+						const int y1 = y;
+						const int x2 = x + 16;
+						const int y2 = y + 16;
+						
+						const bool isInside =
+							mouse.x >= x1 &&
+							mouse.y >= y1 &&
+							mouse.x <= x2 &&
+							mouse.y <= y2;
+						
+						if (isInside && mouse.wentDown(BUTTON_LEFT))
+							effect.isPassthrough = !effect.isPassthrough;
+						
+						setLumi(effect.isPassthrough ? 0 : 200);
+						drawRect(x1, y1, x2, y2);
+						setLumi(100);
+						drawRectLine(x1, y1, x2, y2);
+					}
+					
+					{
+						const int x1 = x + 20;
+						const int y1 = y;
+						const int x2 = window.getWidth();
+						const int y2 = y + 16;
+						
+						const bool isInside =
+							mouse.x >= x1 &&
+							mouse.y >= y1 &&
+							mouse.x <= x2 &&
+							mouse.y <= y2;
+						
+						if (isInside && mouse.wentDown(BUTTON_LEFT))
+							selectedEffectIndex = effectIndex;
+						
+						if (effectIndex == selectedEffectIndex)
+						{
+							setLumi(0);
+							drawRect(x1, y1, x2, y2);
+						}
+						
+						setLumi(200);
+						drawText(x1, (y1 + y2)/2, 14, +1, 0, "%s", effect.jsusFx->desc);
+						y += 20;
+					}
+					
+					effectIndex++;
+				}
+				
+				effectChain.lock();
+				{
+					if (keyboard.wentDown(SDLK_UP) && selectedEffectIndex - 1 >= 0)
+					{
+						std::swap(effectChain.effects[selectedEffectIndex], effectChain.effects[selectedEffectIndex - 1]);
+						selectedEffectIndex--;
+					}
+					
+					if (keyboard.wentDown(SDLK_DOWN) && selectedEffectIndex + 1 < effectChain.effects.size())
+					{
+						std::swap(effectChain.effects[selectedEffectIndex], effectChain.effects[selectedEffectIndex + 1]);
+						selectedEffectIndex++;
+					}
+				}
+				effectChain.unlock();
+			}
+			framework.endDraw();
+		}
+		popWindow();
+	}
+};
+
 std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool recurse)
 {
 	std::vector<std::string> result;
@@ -710,7 +827,7 @@ static void testJsusFxList()
 	filenamesByLocation["GeraintLuff"] = scanJsusFxScripts(SEARCH_PATH_geraintluff, false);
 	filenamesByLocation["Kawa"] = scanJsusFxScripts(SEARCH_PATH_kawa, true);
 	
-	std::string activeLocation = "Reaper";
+	std::string activeLocation = "GeraintLuff";
 	
 	std::vector<JsusFxWindow*> windows;
 	
@@ -725,6 +842,8 @@ static void testJsusFxList()
 	audioOutput.Play(&audioStream);
 	
 	MidiKeyboard midiKeyboard;
+	
+	JsusFxChainWindow effectChainWindow(audioStream);
 	
 	for (;;)
 	{
@@ -758,6 +877,8 @@ static void testJsusFxList()
 				windowItr++;
 			}
 		}
+		
+		effectChainWindow.tick(dt);
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
