@@ -892,6 +892,8 @@ static void testJsusFxList()
 			
 			gxPushMatrix();
 			{
+				gxTranslatef(x, y, 0);
+				
 				audioStream.lock();
 				{
 					doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y - y, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false);
@@ -902,7 +904,7 @@ static void testJsusFxList()
 			}
 			gxPopMatrix();
 			
-			y += 70;
+			y += 74;
 			
 			int locationX = 0;
 			
