@@ -54,16 +54,22 @@ gfx_mode
 const int GFX_SX = 1000;
 const int GFX_SY = 720;
 
-static void doSlider(JsusFx & fx, JsusFx_Slider & slider, int x, int y)
+static void doSlider(JsusFx & fx, JsusFx_Slider & slider, int x, int y, bool & isActive)
 {
 	const int sx = 200;
 	const int sy = 12;
 	
 	const bool isInside =
-		//x >= 0 && x <= sx; // &&
+		x >= 0 && x <= sx &&
 		y >= 0 && y <= sy;
 	
-	if (isInside && mouse.isDown(BUTTON_LEFT))
+	if (isInside && mouse.wentDown(BUTTON_LEFT))
+		isActive = true;
+	
+	if (mouse.wentUp(BUTTON_LEFT))
+		isActive = false;
+	
+	if (isActive)
 	{
 		const float t = x / float(sx);
 		const float v = slider.min + (slider.max - slider.min) * t;
@@ -535,6 +541,7 @@ struct JsusFxWindow
 	std::string filename;
 	
 	bool isValid;
+	bool sliderIsActive[JsusFx::kMaxSliders];
 	
 	JsusFxWindow(const char * _filename)
 		: window(nullptr)
@@ -545,6 +552,8 @@ struct JsusFxWindow
 		, filename(_filename)
 		, isValid(false)
 	{
+		memset(sliderIsActive, 0, sizeof(sliderIsActive));
+		
 		fileAPI.init(jsusFx.m_vm);
 		jsusFx.fileAPI = &fileAPI;
 		
@@ -613,17 +622,21 @@ struct JsusFxWindow
 				drawText(x + 3, y + 21, 12, +1, +1, "%d ins, %d outs", jsusFx.numInputs, jsusFx.numOutputs);
 				y += 14;
 				
+				int sliderIndex = 0;
+				
 				for (auto & slider : jsusFx.sliders)
 				{
 					if (slider.exists && slider.desc[0] != '-')
 					{
 						gxPushMatrix();
 						gxTranslatef(x, y, 0);
-						doSlider(jsusFx, slider, mouse.x - x, mouse.y - y);
+						doSlider(jsusFx, slider, mouse.x - x, mouse.y - y, sliderIsActive[sliderIndex]);
 						gxPopMatrix();
 						
 						y += 16;
 					}
+					
+					sliderIndex++;
 				}
 				
 				x += 300;
@@ -929,6 +942,8 @@ int main(int argc, char * argv[])
 	
 	MidiKeyboard midiKeyboard;
 	
+	bool sliderIsActive[JsusFx::kMaxSliders] = { };
+	
 	for (;;)
 	{
 		framework.process();
@@ -948,28 +963,6 @@ int main(int argc, char * argv[])
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			setFont("calibri.ttf");
-			
-		#if 0
-			for (int a = 0; a < 10; ++a)
-			{
-				float ind[2][BUFFER_SIZE];
-				float * in[2] = { ind[0], ind[1] };
-				float outd[2][BUFFER_SIZE];
-				float * out[2] = { outd[0], outd[1] };
-				
-				for (int i = 0; i < BUFFER_SIZE; ++i)
-				{
-					in[0][i] = cos(t) * 0.2;
-					in[1][i] = sin(t) * 0.3 + random(-0.1, +0.1);
-					
-					double freq = lerp<double>(100.0, 1000.0, (sin(ts) + 1.0) / 2.0);
-					t += 2.0 * M_PI * freq / double(SAMPLE_RATE);
-					ts += 2.0 * M_PI * 0.2 / double(SAMPLE_RATE);
-				}
-				
-				fx.process(in, out, 64);
-			}
-		#endif
 			
 			gfx.setup(nullptr, fx.gfx_w, fx.gfx_h, mouse.x, mouse.y, true);
 			
@@ -1018,13 +1011,13 @@ int main(int argc, char * argv[])
 			drawText(x + 240, y, 18, +1, +1, "JSFX file: %s", Path::GetFileName(filename).c_str());
 			drawText(x + 240 + 3, y + 21, 12, +1, +1, "%d ins, %d outs", fx.numInputs, fx.numOutputs);
 			
-			for (int i = 0; i < 64; ++i)
+			for (int i = 0; i < JsusFx::kMaxSliders; ++i)
 			{
 				if (fx.sliders[i].exists && fx.sliders[i].desc[0] != '-')
 				{
 					gxPushMatrix();
 					gxTranslatef(x, y, 0);
-					doSlider(fx, fx.sliders[i], mouse.x - x, mouse.y - y);
+					doSlider(fx, fx.sliders[i], mouse.x - x, mouse.y - y, sliderIsActive[i]);
 					gxPopMatrix();
 					
 					y += 16;
