@@ -248,7 +248,7 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 
 void JsusFxGfx_Framework::beginDraw()
 {
-	logDebug("beginDraw");
+	Assert(primType == kPrimType_Other);
 	
 	pushSurface(surface);
 	currentImageIndex = -1;
@@ -260,8 +260,6 @@ void JsusFxGfx_Framework::beginDraw()
 
 void JsusFxGfx_Framework::endDraw()
 {
-	logDebug("endDraw");
-	
 	PRIM_SCOPE(kPrimType_Other);
 	
 	popBlend();
@@ -317,6 +315,8 @@ void JsusFxGfx_Framework::updateBlendMode()
 	
 	if (mode != currentBlendMode)
 	{
+		PRIM_SCOPE(kPrimType_Other);
+		
 		currentBlendMode = mode;
 		
 		if (mode & 0x1)
@@ -334,9 +334,12 @@ void JsusFxGfx_Framework::updateColor()
 void JsusFxGfx_Framework::updateSurface()
 {
 	const int index = *m_gfx_dest;
+	Assert(index >= -1);
 	
 	if (index != currentImageIndex)
 	{
+		PRIM_SCOPE(kPrimType_Other);
+		
 		popSurface();
 		
 		if (index == -1)
@@ -347,18 +350,18 @@ void JsusFxGfx_Framework::updateSurface()
 			
 			Assert(image->isValid);
 			pushSurface(image->surface);
-			
-			currentImageIndex = index;
 		}
+		
+		currentImageIndex = index;
 	}
 }
 
 void JsusFxGfx_Framework::gfx_line(int np, EEL_F ** params)
 {
-	PRIM_SCOPE(kPrimType_HqLine);
-	
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
+	
+	PRIM_SCOPE(kPrimType_HqLine);
 	
 	const int x1 = (int)floor(params[0][0]);
 	const int y1 = (int)floor(params[1][0]);
@@ -378,12 +381,12 @@ void JsusFxGfx_Framework::gfx_rect(int np, EEL_F ** params)
 	const int x2 = x1 + w;
 	const int y2 = y1 + h;
 	
-		const bool filled = (np < 5 || params[4][0] > 0.5);
-	
-	PRIM_SCOPE(filled ? kPrimType_Rect : kPrimType_RectLine);
+	const bool filled = (np < 5 || params[4][0] > 0.5);
 	
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
+	
+	PRIM_SCOPE(filled ? kPrimType_Rect : kPrimType_RectLine);
 	
 	if (filled)
 	{
@@ -414,10 +417,10 @@ void JsusFxGfx_Framework::gfx_rect(int np, EEL_F ** params)
 
 void JsusFxGfx_Framework::gfx_circle(EEL_F x, EEL_F y, EEL_F radius, bool fill, bool aa)
 {
-	PRIM_SCOPE(fill ? kPrimType_HqFillCircle : kPrimType_HqStrokeCircle);
-	
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
+	
+	PRIM_SCOPE(fill ? kPrimType_HqFillCircle : kPrimType_HqStrokeCircle);
 	
 	if (fill)
 	{
@@ -433,10 +436,10 @@ void JsusFxGfx_Framework::gfx_circle(EEL_F x, EEL_F y, EEL_F radius, bool fill, 
 
 void JsusFxGfx_Framework::gfx_triangle(EEL_F ** parms, int np)
 {
-	PRIM_SCOPE(kPrimType_Other);
-	
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
+	
+	PRIM_SCOPE(kPrimType_Other);
 	
 	if (np >= 6)
 	{
@@ -485,10 +488,10 @@ void JsusFxGfx_Framework::gfx_triangle(EEL_F ** parms, int np)
 
 void JsusFxGfx_Framework::gfx_lineto(EEL_F xpos, EEL_F ypos, EEL_F useaa)
 {
-	PRIM_SCOPE(kPrimType_HqLine);
-	
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
+	
+	PRIM_SCOPE(kPrimType_HqLine);
 	
 	updateColor();
 	hqLine(*m_gfx_x, *m_gfx_y, LINE_STROKE, xpos, ypos, LINE_STROKE);
@@ -499,10 +502,10 @@ void JsusFxGfx_Framework::gfx_lineto(EEL_F xpos, EEL_F ypos, EEL_F useaa)
 
 void JsusFxGfx_Framework::gfx_rectto(EEL_F xpos, EEL_F ypos)
 {
-	PRIM_SCOPE(kPrimType_Other);
-	
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
+	
+	PRIM_SCOPE(kPrimType_Other);
 	
 	updateColor();
 	drawRect(*m_gfx_x, *m_gfx_y, xpos, ypos);
@@ -515,10 +518,10 @@ void JsusFxGfx_Framework::gfx_arc(int np, EEL_F ** parms)
 {
 	STUB;
 	
-	PRIM_SCOPE(kPrimType_Other);
-	
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
+	
+	PRIM_SCOPE(kPrimType_Other);
 	
 	updateColor();
 #if 1
@@ -546,10 +549,10 @@ void JsusFxGfx_Framework::gfx_set(int np, EEL_F ** params)
 
 void JsusFxGfx_Framework::gfx_roundrect(int np, EEL_F ** parms)
 {
-	PRIM_SCOPE(kPrimType_Other);
-	
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
+	
+	PRIM_SCOPE(kPrimType_Other);
 
 	//const bool aa = np <= 5 || parms[5][0] > .5f;
 
@@ -581,10 +584,10 @@ void JsusFxGfx_Framework::gfx_grad_or_muladd_rect(int mode, int np, EEL_F ** par
 	if (w <= 0 || h <= 0)
 		return;
 	
-	PRIM_SCOPE(kPrimType_Other);
-	
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
+	
+	PRIM_SCOPE(kPrimType_Other);
 	
 	if (mode == 0)
 	{
@@ -625,10 +628,10 @@ void JsusFxGfx_Framework::gfx_grad_or_muladd_rect(int mode, int np, EEL_F ** par
 
 void JsusFxGfx_Framework::gfx_drawnumber(EEL_F n, int nd)
 {
-	PRIM_SCOPE(kPrimType_Other);
-	
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
+	
+	PRIM_SCOPE(kPrimType_Other);
 	
 	char formatString[32];
 	sprintf_s(formatString, sizeof(formatString), "%%.%df", nd);
@@ -645,10 +648,10 @@ void JsusFxGfx_Framework::gfx_drawnumber(EEL_F n, int nd)
 
 void JsusFxGfx_Framework::gfx_drawchar(EEL_F n)
 {
-	PRIM_SCOPE(kPrimType_Other);
-	
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
+	
+	PRIM_SCOPE(kPrimType_Other);
 	
 	const char c = (char)n;
 	
@@ -672,10 +675,10 @@ void JsusFxGfx_Framework::gfx_drawstr(void * opaque, EEL_F ** parms, int nparms,
 {
 	// mode=1 for format, 2 for purely measure no format, 3 for measure char
 
-	PRIM_SCOPE(kPrimType_Other);
-	
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
+	
+	PRIM_SCOPE(kPrimType_Other);
 	
 	int nfmtparms = nparms - 1;
 	
@@ -759,10 +762,10 @@ void JsusFxGfx_Framework::gfx_drawstr(void * opaque, EEL_F ** parms, int nparms,
 
 void JsusFxGfx_Framework::gfx_setpixel(EEL_F r, EEL_F g, EEL_F b)
 {
-	PRIM_SCOPE(kPrimType_Other);
-	
 	IMAGE_SCOPE;
 	BLEND_SCOPE;
+	
+	PRIM_SCOPE(kPrimType_Other);
 	
 	setColorf(r, g, b, *m_gfx_a);
 	drawPoint(*m_gfx_x, *m_gfx_y);
@@ -770,25 +773,32 @@ void JsusFxGfx_Framework::gfx_setpixel(EEL_F r, EEL_F g, EEL_F b)
 
 void JsusFxGfx_Framework::gfx_getpixel(EEL_F * r, EEL_F * g, EEL_F * b)
 {
-	PRIM_SCOPE(kPrimType_Other);
-	
 	IMAGE_SCOPE;
 	
 	const int x = *m_gfx_x;
 	const int y = *m_gfx_y;
 	
-	uint8_t rgba[4];
+	float rgba[4] = { };
+	
+	GLint restorePackAlignment;
+	glGetIntegerv(GL_PACK_ALIGNMENT, &restorePackAlignment);
+	checkErrorGL();
+	glPixelStorei(GL_PACK_ALIGNMENT, 4);
+	checkErrorGL();
 	
 	glReadPixels(
 		x, y,
 		1, 1,
-		GL_RGBA, GL_UNSIGNED_BYTE,
+		GL_RGBA, GL_FLOAT,
 		rgba);
 	checkErrorGL();
 	
-	*r = rgba[0] / 255.f;
-	*g = rgba[1] / 255.f;
-	*b = rgba[2] / 255.f;
+	glPixelStorei(GL_PACK_ALIGNMENT, restorePackAlignment);
+	checkErrorGL();
+	
+	*r = rgba[0];
+	*g = rgba[1];
+	*b = rgba[2];
 }
 
 EEL_F JsusFxGfx_Framework::gfx_loadimg(JsusFx & jsusFx, int index, EEL_F loadFrom)
@@ -988,9 +998,9 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 		
 		if (image.isValid)
 		{
-			PRIM_SCOPE(kPrimType_Other);
-			
 			IMAGE_SCOPE;
+			
+			PRIM_SCOPE(kPrimType_Other);
 			
 			const int mode = *m_gfx_mode;
 			
@@ -1061,9 +1071,9 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 	if (!image.isValid)
 		return;
 	
-	PRIM_SCOPE(kPrimType_Other);
-	
 	IMAGE_SCOPE;
+	
+	PRIM_SCOPE(kPrimType_Other);
 	
 	const int destIndex = *m_gfx_dest;
 	
