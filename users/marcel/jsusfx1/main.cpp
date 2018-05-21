@@ -8,6 +8,7 @@
 #include "jsusfx-framework.h"
 
 #include "Path.h"
+#include "StringEx.h"
 
 #include <map>
 #include <vector>
@@ -580,7 +581,9 @@ struct JsusFxWindow
 		{
 			jsusFx.prepare(SAMPLE_RATE, BUFFER_SIZE);
 			
-			window = new Window(filename.c_str(), jsusFx.gfx_w, jsusFx.gfx_h, true);
+			const std::string caption = String::FormatC("%s (%d ins, %d outs)", Path::GetFileName(filename).c_str(), jsusFx.numInputs, jsusFx.numOutputs);
+			
+			window = new Window(caption.c_str(), jsusFx.gfx_w, jsusFx.gfx_h, true);
 			
 			isValid = true;
 		}
@@ -627,14 +630,6 @@ struct JsusFxWindow
 				
 				int x = 10;
 				int y = 10;
-				
-				setColor(160, 160, 160);
-				drawText(x, y, 18, +1, +1, "JSFX file: %s", Path::GetFileName(filename).c_str());
-				y += 20;
-				
-				setColor(160, 160, 160);
-				drawText(x + 3, y + 21, 12, +1, +1, "%d ins, %d outs", jsusFx.numInputs, jsusFx.numOutputs);
-				y += 14;
 				
 				int sliderIndex = 0;
 				
