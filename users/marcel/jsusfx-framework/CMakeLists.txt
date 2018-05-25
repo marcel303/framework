@@ -13,7 +13,7 @@ if (NOT HAS_FRAMEWORK)
 	add_subdirectory(../../../framework framework)
 endif (NOT HAS_FRAMEWORK)
 
-add_subdirectory(../../../../jsusfx jsusfx)
+add_subdirectory(../../../libjsusfx/src jsusfx)
 
 #
 
