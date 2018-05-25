@@ -953,6 +953,7 @@ EEL_F JsusFxGfx_Framework::gfx_setcursor(EEL_F ** parms, int nparms)
 {
 #if 1
 	const int cursorResId = (int)parms[0][0];
+	(void)cursorResId;
 	
 	char cursorName[64];
 	cursorName[0]= 0;
@@ -1002,16 +1003,27 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 			
 			PRIM_SCOPE(kPrimType_Other);
 			
+			// mode & 0x1 = additive
+			// mode & 0x2 = disable source alpha
+			// mode & 0x4 = disable filtering
+			
 			const int mode = *m_gfx_mode;
 			
 			Assert(img != (int)*m_gfx_dest);
 			
 			setColorf(1.f, 1.f, 1.f, *m_gfx_a); // pretty sure this is correct
 			
-			// I think blend should be ALPHA or ADD depending on gfx_mode
-			//pushBlend(BLEND_PREMULTIPLIED_ALPHA);
-			pushBlend(BLEND_ALPHA);
-			//pushBlend(BLEND_ADD);
+			if (mode & 0x1)
+				pushBlend(BLEND_ADD);
+			else
+				pushBlend(BLEND_ALPHA);
+			
+			if (mode & 0x2)
+				pushColorPost(POST_SET_ALPHA_TO_ONE);
+			else
+				pushColorPost(POST_NONE);
+			
+			const bool filter = (mode & 0x4) == 0;
 			
 			gxSetTexture(image.surface->getTexture());
 			{
@@ -1023,8 +1035,8 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 				const int dstX = (int)*m_gfx_x;
 				const int dstY = (int)*m_gfx_y;
 				
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 				checkErrorGL();
@@ -1045,6 +1057,7 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 				}
 			}
 			gxSetTexture(0);
+			popColorPost();
 			popBlend();
 		}
 	}
@@ -1147,7 +1160,23 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 	}
 	else
 	{
-		// todo : apply blend mode (gfx_mode)
+		const int mode = *m_gfx_mode;
+	
+		setColorf(1.f, 1.f, 1.f, *m_gfx_a); // pretty sure this is correct
+	
+		if (mode & 0x1)
+			pushBlend(BLEND_ADD);
+		else
+			pushBlend(BLEND_ALPHA);
+	
+		if (mode & 0x2)
+			pushColorPost(POST_SET_ALPHA_TO_ONE);
+		else
+			pushColorPost(POST_NONE);
+	
+	// todo : apply the correct filtering mode. currently there's an issue where LICE filtering and OpenGL filtering differ, causing artefacts around knobs for instance when they're being rotated. I suspect LICE clamps the sample position to the source rect
+		//const bool filter = (mode & 0x4) == 0;
+		const bool filter = false;
 		
 		const int dx = (int)coords[4];
 		const int dy = (int)coords[5];
@@ -1166,12 +1195,10 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 			gxRotatef(angle * 180.f / M_PI, 0, 0, 1);
 			gxTranslatef(-dsx/2.f, -dsy/2.f, 0.f);
 			
-			setColorf(1.f, 1.f, 1.f, *m_gfx_a);
 			gxSetTexture(image.surface->getTexture());
 			{
-				// todo : apply the correct filtering mode
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 				checkErrorGL();
@@ -1204,6 +1231,9 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 			gxSetTexture(0);
 		}
 		gxPopMatrix();
+		
+		popColorPost();
+		popBlend();
 	}
 }
 
