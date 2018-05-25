@@ -228,46 +228,6 @@ struct MidiBuffer
 
 static MidiBuffer s_midiBuffer;
 
-static bool generateMidiEvent(uint8_t * midi)
-{
-	static int lastNote = -1;
-	static int todo = 0;
-
-	//const bool trigger = (rand() % 1000) == 0;
-	const bool trigger = (lastNote == -1) ? (todo-- == 0) : ((rand() % 200) == 0);
-
-	if (trigger) {
-		if (lastNote != -1) {
-			const uint8_t msg = 0x80;
-			const uint8_t note = lastNote;
-			const uint8_t value = rand() % 128;
-			
-			midi[0] = msg;
-			midi[1] = note;
-			midi[2] = value;
-			
-			lastNote = -1;
-			
-			return true;
-		} else {
-			const uint8_t msg = 0x90;
-			const uint8_t note = 32 + (rand() % 32);
-			const uint8_t value = rand() % 128;
-			
-			midi[0] = msg;
-			midi[1] = note;
-			midi[2] = value;
-			
-			lastNote = note;
-			todo = 100 + (rand() % 400);
-			
-			return true;
-		}
-	} else {
-		return false;
-	}
-}
-
 //
 
 struct Limiter
@@ -326,12 +286,14 @@ struct AudioStream_JsusFx : AudioStream
 	{
 		const int r = SDL_LockMutex(mutex);
 		Assert(r == 0);
+		(void)r;
 	}
 	
 	void unlock()
 	{
 		const int r = SDL_UnlockMutex(mutex);
 		Assert(r == 0);
+		(void)r;
 	}
 	
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
@@ -447,12 +409,14 @@ struct AudioStream_JsusFxChain : AudioStream
 	{
 		const int r = SDL_LockMutex(mutex);
 		Assert(r == 0);
+		(void)r;
 	}
 	
 	void unlock()
 	{
 		const int r = SDL_UnlockMutex(mutex);
 		Assert(r == 0);
+		(void)r;
 	}
 	
 	void add(JsusFx * jsusFx)
@@ -1055,9 +1019,6 @@ int main(int argc, char * argv[])
 	audioOutput.Initialize(2, SAMPLE_RATE, BUFFER_SIZE);
 	audioOutput.Play(&audioStream);
 	
-	double t = 0.0;
-	double ts = 0.0;
-	
 	MidiKeyboard midiKeyboard;
 	
 	bool sliderIsActive[JsusFx::kMaxSliders] = { };
@@ -1094,6 +1055,8 @@ int main(int argc, char * argv[])
 			
 		#if 0
 			{
+				// draw the list of used images on screen
+				
 				int x = 0;
 				int index = 0;
 				
@@ -1119,7 +1082,6 @@ int main(int argc, char * argv[])
 			}
 		#endif
 			
-			const int sx = *gfx.m_gfx_w;
 			const int sy = *gfx.m_gfx_h;
 			
 			int x = 10;
