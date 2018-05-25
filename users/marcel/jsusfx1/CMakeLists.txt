@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(HAS_LIBGG 0)
 set(HAS_FRAMEWORK 0)
+set(HAS_JSUSFX_FRAMEWORK 0)
 
 # --- dependencies ---
 
@@ -15,8 +16,10 @@ if (NOT HAS_FRAMEWORK)
 	message("including framework")
 	add_subdirectory(../../../framework framework)
 endif (NOT HAS_FRAMEWORK)
-
-add_subdirectory(../jsusfx-framework jsusfx-framework)
+if (NOT HAS_JSUSFX_FRAMEWORK)
+	message("including jsusfx-framework")
+	add_subdirectory(../../../libjsusfx-framework jsusfx-framework)
+endif (NOT HAS_JSUSFX_FRAMEWORK)
 
 #
 
