@@ -1122,7 +1122,9 @@ class Gamepad
 	float m_analog[2][ANALOG_MAX];
 	float m_vibrationDuration;
 	float m_vibrationStrength;
+#ifdef __WIN32__
 	float m_lastVibrationStrength;
+#endif
 	char name[64];
 
 public:
