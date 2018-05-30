@@ -31,11 +31,23 @@
 #include "framework.h"
 #include "soundmix.h"
 #include "vfxNodes/delayLine.h"
+#include <algorithm>
 #include <cmath>
 #include <map>
 
-const int GFX_SX = 1400;
-const int GFX_SY = 400;
+#if !defined(DEBUG)
+	#define FULLSCREEN 1
+#else
+	#define FULLSCREEN 0 // do not alter
+#endif
+
+#if FULLSCREEN
+	const int GFX_SX = 800;
+	const int GFX_SY = 600;
+#else
+	const int GFX_SX = 1400;
+	const int GFX_SY = 400;
+#endif
 
 #define CHANNEL_COUNT 16
 
@@ -46,6 +58,23 @@ const int GFX_SY = 400;
 	#define NUM_PARTICLES 1
 	#define MAX_SPACE_POINTS 200
 #endif
+
+#define ENABLE_MIDI 0
+
+#define ENABLE_GAMEPAD 1
+
+#if ENABLE_MIDI
+	#include "objects/mididecoder.h"
+	#include "rtmidi/RtMidi.h"
+#endif
+
+//
+
+static double s_morph1 = 0.0;
+static double s_morph2 = 1.0;
+static double s_speed = 0.0;
+
+//
 
 static int s_tickCount = 0;
 
@@ -166,6 +195,9 @@ struct Source
 	}
 };
 
+#define USE_FIXEDPOINT_SAMPLING 0
+#define DO_INTERPOLATION 1
+
 struct SpacePoint
 {
 	Vec3 position;
@@ -190,34 +222,36 @@ struct SpacePoint
 		const float readOffset1 = previousReadOffset + AUDIO_UPDATE_SIZE;
 		const float readOffset2 = distance         / 340.f * SAMPLE_RATE;
 		
+		//printf("%d (%d) -> %d (%d)\n", readOffset1, readOffset2, readOffset1 - AUDIO_UPDATE_SIZE, readOffset1 - readOffset2);
+		
+		const float gain1 = previousGain;
+		const float gain2 = 10.f / (MAX_SPACE_POINTS * NUM_PARTICLES) * reflectionGain;
+		//const float gain2 = 10.f / ((distance) + .1f) / MAX_SPACE_POINTS;
+		
+		const float invAudioUpdateSize = 1.f / (AUDIO_UPDATE_SIZE - 1);
+		
+	#if USE_FIXEDPOINT_SAMPLING
 		const int kNumBits = 10;
 		const int kAudioBits = 8;
+		
+		const float toInterp = 1.f / (1 << kNumBits);
 		
 		const int64_t readOffset1i = readOffset1 * int64_t(1 << kNumBits);
 		const int64_t readOffset2i = readOffset2 * int64_t(1 << kNumBits);
 		
-		//printf("%d (%d) -> %d (%d)\n", readOffset1, readOffset2, readOffset1 - AUDIO_UPDATE_SIZE, readOffset1 - readOffset2);
-		
-		const float gain1 = previousGain;
-		const float gain2 = 4.f / (MAX_SPACE_POINTS * NUM_PARTICLES) * reflectionGain;
-		//const float gain2 = 10.f / ((distance) + .1f) / MAX_SPACE_POINTS;
-		
-		const int gain1i = gain1 * (1 << kNumBits);
-		const int gain2i = gain2 * (1 << kNumBits);
-		
-		const float toInterp = 1.f / (1 << kNumBits);
-		const float invAudioUpdateSize = 1.f / (AUDIO_UPDATE_SIZE - 1);
-		
+		int64_t readOffseti = readOffset1i * (AUDIO_UPDATE_SIZE - 1);
+		int64_t readOffsetInci = readOffset2i - readOffset1i;
+	#endif
+	
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
 			float sample;
 			
-		#if 0
-			const int readOffset_fine = ((readOffset2i * i + readOffset1i * (AUDIO_UPDATE_SIZE - i - 1))) >> kAudioBits;
+		#if USE_FIXEDPOINT_SAMPLING
+			const int readOffset_fine = readOffseti >> kAudioBits;
 			const int readOffset = readOffset_fine >> kNumBits;
 			
-			const float readOffset_interpAmount = (readOffset_fine - (readOffset << kNumBits)) * toInterp;
-			
+		#if DO_INTERPOLATION
 			int index1 = delayLine.nextWriteIndex - 1 - readOffset;
 			int index2 = index1 - 1;
 			
@@ -229,6 +263,8 @@ struct SpacePoint
 					index1 += delayLine.numSamples;
 			}
 			
+			const float readOffset_interpAmount = (readOffset_fine - (readOffset << kNumBits)) * toInterp;
+			
 			const float sample1 = delayLine.samples[index1];
 			const float sample2 = delayLine.samples[index2];
 			
@@ -236,6 +272,18 @@ struct SpacePoint
 			const float t2 = readOffset_interpAmount;
 			
 			sample = sample1 * t1 + sample2 * t2;
+		#else
+			int index = delayLine.nextWriteIndex - 1 - readOffset;
+			
+			if (index < 0)
+				index += delayLine.numSamples;
+			
+			sample = delayLine.samples[index];
+		#endif
+			
+			//
+			
+			readOffseti += readOffsetInci;
 		#else
 			const float readOffset = (readOffset2 * i + readOffset1 * (AUDIO_UPDATE_SIZE - i - 1)) * invAudioUpdateSize;
 			const int readOffseti = int(readOffset);
@@ -255,15 +303,15 @@ struct SpacePoint
 			
 			const float sample1 = delayLine.samples[index1];
 			
-		#if 0
-			sample = sample1;
-		#else
+		#if DO_INTERPOLATION
 			const float sample2 = delayLine.samples[index2];
 			
 			const float t1 = 1.f - readOffset_interpAmount;
 			const float t2 = readOffset_interpAmount;
 			
 			sample = sample1 * t1 + sample2 * t2;
+		#else
+			sample = sample1;
 		#endif
 		#endif
 			
@@ -327,7 +375,7 @@ struct Space
 	
 	double t = 0.0;
 	
-	static Vec3 evalCircle(const float t, const float radius)
+	static Vec3 evalCircle(const double t, const float radius)
 	{
 		Vec3 p;
 		
@@ -337,11 +385,11 @@ struct Space
 		return p * radius;
 	}
 	
-	static Vec3 evalQuad(const float t, const float radius)
+	static Vec3 evalQuad(const double t, const float radius)
 	{
-		const float u = fmodf(t, 1.f) * 4.f;
+		const double u = fmod(fabs(t), 1.0) * 4.0;
 		const int s = int(u);
-		const float f = u - s;
+		const double f = u - s;
 		
 		Vec3 p;
 		
@@ -369,7 +417,7 @@ struct Space
 		return p * radius;
 	}
 	
-	static Vec3 evalSnake(const float t)
+	static Vec3 evalSnake(const double t)
 	{
 		Vec3 p;
 		
@@ -379,19 +427,18 @@ struct Space
 		return p;
 	}
 	
-	static Vec3 evalParticlePosition(const float i, const float t)
+	static Vec3 evalParticlePosition(const float i, const double t)
 	{
-		static double v1 = 0.0;
-		static double v2 = 1.0;
-		
+	#if !ENABLE_MIDI
 		if (keyboard.isDown(SDLK_a))
-			v1 = clamp(v1 + mouse.dy / 100000.0, 0.0, 1.0);
+			s_morph1 = clamp(s_morph1 + mouse.dy / 100000.0, 0.0, 1.0);
 		if (keyboard.isDown(SDLK_s))
-			v2 = clamp(v2 + mouse.dy / 100000.0, 0.0, 1.0);
-		
+			s_morph2 = clamp(s_morph2 + mouse.dy / 100000.0, 0.0, 1.0);
+	#endif
+	
 		//
 		
-		const float pt = t * (i + .5f) / 6.f;
+		const double pt = t * (i + .5f) / 6.f;
 		
 		auto p1 = evalQuad(pt / 1.123, 12.f);
 		auto p2 = evalCircle(pt, 12.f);
@@ -399,17 +446,19 @@ struct Space
 		
 		Vec3 p = p1;
 		
-		p = lerp(p, p2, v1);
-		p = lerp(p, p3, v2);
+		p = lerp(p, p2, s_morph1);
+		p = lerp(p, p3, s_morph2);
 		
 		return p;
 	}
 	
 	void tickParticles()
 	{
-		const double s = lerp(-1.f / 500.f, 1.f / 500.f, mouse.x / float(GFX_SX));
-		
-		t += s;
+	#if !ENABLE_MIDI && !ENABLE_GAMEPAD
+		s_speed = lerp(-1.f / 500.f, 1.f / 500.f, mouse.x / float(GFX_SX));
+	#endif
+	
+		t += s_speed;
 		
 		for (int i = 0; i < MAX_SPACE_POINTS; ++i)
 		{
@@ -442,11 +491,9 @@ struct Space
 		{
 			source->tick();
 			
-			// todo : there should be a delay line between each space point and source point
-			
 			if (inputType == kInputType_Mono)
 			{
-				// todo : process audio for mono output
+				// process audio for mono down mix of all of the particle outputs
 				
 				source->downMix();
 				
@@ -457,7 +504,7 @@ struct Space
 			}
 			else if (inputType == kInputType_Particles)
 			{
-				// todo : process audio for each particle
+				// process audio for each particle
 				
 				for (int i = 0; i < NUM_PARTICLES; ++i)
 				{
@@ -471,6 +518,8 @@ struct Space
 	
 	void processReflection(const AudioBuffer & sourceBuffer, Vec3Arg sourcePosition, const int particleIndex)
 	{
+		// note : there is a modulating delay line between each space point and source point. this is what creates the 'noise effect' when points are moving quickly and the phasing when the space is configured in particular ways
+		
 		for (int i = 0; i < MAX_SPACE_POINTS; ++i)
 		{
 			auto & point = points[i];
@@ -493,7 +542,153 @@ struct Space
 			point.processReflection(sourceBuffer, sourcePosition, delayLine, link->previousReadOffset, link->previousGain);
 		}
 	}
+
+#if AUDIO_USE_SSE
+	void * operator new(size_t size)
+	{
+		return _mm_malloc(size, 32);
+	}
+
+	void operator delete(void * mem)
+	{
+		_mm_free(mem);
+	}
+#endif
 };
+
+#if ENABLE_MIDI || ENABLE_GAMEPAD
+
+struct Controller
+{
+	static const int kNumControlValues = 3;
+	
+	float controlValues[kNumControlValues];
+	
+	Controller()
+	{
+		memset(controlValues, 0, sizeof(controlValues));
+	}
+};
+
+#endif
+
+#if ENABLE_MIDI
+
+struct MidiController : Controller
+{
+	RtMidiIn * midiIn = nullptr;
+	
+	~MidiController()
+	{
+		Assert(midiIn == nullptr);
+		shut();
+	}
+	
+	void init(const int port)
+	{
+		midiIn = new RtMidiIn(RtMidi::UNSPECIFIED, "Midi Controller", 1024);
+		
+		for (int i = 0; i < midiIn->getPortCount(); ++i)
+		{
+			auto name = midiIn->getPortName();
+			
+			logDebug("available MIDI port: %d: %s", i, name.c_str());
+		}
+		
+		if (port < midiIn->getPortCount())
+		{
+			midiIn->openPort(port);
+		}
+	}
+	
+	void shut()
+	{
+		delete midiIn;
+		midiIn = nullptr;
+	}
+	
+	void tick()
+	{
+		// poll MIDI messages
+		
+		std::vector<uint8_t> messageBytes;
+		
+		for (;;)
+		{
+			midiIn->getMessage(&messageBytes);
+			
+			MidiDecoder::Message message;
+			
+			if (messageBytes.empty())
+				break;
+			
+			if (message.decode(&messageBytes[0], messageBytes.size()))
+			{
+				if (message.type == MidiDecoder::kMessageType_ControllerChange)
+				{
+					logDebug("controller change. channel=%d, value=%d", message.controllerChange.note, message.controllerChange.value);
+					
+					// map the KORG nanoKONTROL2 midi controller's buttons and sliders
+					
+					int index = -1;
+					
+					if (message.controllerChange.note == 0) // 1st slider
+						index = 0;
+					if (message.controllerChange.note == 1) // 2nd slider
+						index = 1;
+					if (message.controllerChange.note == 16) // 1st knob
+						index = 2;
+					
+					if (index >= 0 && index < kNumControlValues)
+					{
+						controlValues[index] = message.controllerChange.value / 127.f;
+					}
+				}
+			}
+		}
+	}
+};
+
+#endif
+
+#if ENABLE_GAMEPAD
+
+struct GamepadController : Controller
+{
+	int desiredMorph = 0;
+	
+	bool wasDown = false;
+	
+	void tick()
+	{
+		controlValues[2] = (gamepad[0].getAnalog(0, ANALOG_X) / 2.f + 1.f) / 2.f;
+		
+		const float alpha = (clamp(gamepad[0].getAnalog(0, ANALOG_Y) * 1.5f, -1.f, +1.f) + 1.f) / 2.f;// * (.5f / .6f);
+		
+		const bool isDown = gamepad[0].isDown(GAMEPAD_A);
+		
+		if (isDown && !wasDown)
+			desiredMorph = (desiredMorph + 1) % 3;
+		
+		wasDown = isDown;
+		
+		const float desiredMorphValues[2] =
+		{
+			desiredMorph == 1 ? .7f + alpha / .5f * .3f : desiredMorph == 0 ? (alpha - .5f) * .6f : 0.f,
+			desiredMorph == 2 ? .7f + alpha / .5f * .3f : desiredMorph == 0 ? (alpha - .5f) * .0f : 0.f
+		};
+		
+		const float retain = gamepad[0].isDown(DPAD_DOWN) ? .998f : .99f;
+		const float decay = 1.f - retain;
+		
+		for (int i = 0; i < 2; ++i)
+		{
+			controlValues[i] = controlValues[i] * retain + desiredMorphValues[i] * decay;
+		}
+	}
+};
+
+#endif
 
 struct MyAudioSource : AudioSource
 {
@@ -503,9 +698,17 @@ struct MyAudioSource : AudioSource
 
 	Space * space = nullptr;
 
+#if ENABLE_MIDI
+	MidiController midiController;
+#endif
+
+#if ENABLE_GAMEPAD
+	GamepadController gamepadController;
+#endif
+
 	MyAudioSource()
 	{
-		fillPcmDataCache("testsounds", true, true);
+		fillPcmDataCache("testsounds", true, true, true);
 		pcm.init(getPcmData("music2.ogg"), 0);
 		pcm.play();
 		
@@ -515,10 +718,43 @@ struct MyAudioSource : AudioSource
 		space = new Space();
 
 		space->source = source;
+		
+	#if ENABLE_MIDI
+		midiController.init(0);
+	#endif
 	}
 	
 	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override
 	{
+	#if ENABLE_MIDI || ENABLE_GAMEPAD
+		Controller controller;
+	#endif
+
+	#if ENABLE_MIDI
+		midiController.tick();
+		
+		controller = midiController;
+	#endif
+	
+	#if ENABLE_GAMEPAD
+		gamepadController.tick();
+		
+		controller = gamepadController;
+	#endif
+	
+	#if ENABLE_MIDI || ENABLE_GAMEPAD
+		// update control values
+		
+		s_morph1 = controller.controlValues[0];
+		s_morph2 = controller.controlValues[1];
+		
+		const float speed = (controller.controlValues[2] - .5f) * 2.f;
+		const float speedSign = speed < 0.f ? -1.f : +1.f;
+		const float speedMag = fabs(speed);
+		const float speedMagCurve = powf(speedMag, 3.f);
+		s_speed = speedMagCurve * speedSign / 100.f;
+	#endif
+	
 		s_tickCount++;
 		
 		space->tick();
@@ -534,8 +770,16 @@ int main(int argc, char * argv[])
 {
 	// todo : let source audio come from audio graph instances
 	
+#if FULLSCREEN
+	framework.fullscreen = true;
+#endif
+
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
+	#if ENABLE_MIDI || ENABLE_GAMEPAD
+		mouse.showCursor(false);
+	#endif
+	
 		// initialize audio related systems
 		
 		SDL_mutex * mutex = SDL_CreateMutex();
@@ -572,6 +816,8 @@ int main(int argc, char * argv[])
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
+				setFont("calibri.ttf");
+				
 				gxPushMatrix();
 				gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
 				gxScalef(10, 10, 1);
@@ -598,6 +844,10 @@ int main(int argc, char * argv[])
 				hqEnd();
 				
 				gxPopMatrix();
+				
+			#if defined(DEBUG)
+				drawText(5, 5, 12, +1, +1, "CPU usage: %d%%", (int)round(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100.0));
+			#endif
 			}
 			framework.endDraw();
 		}
@@ -610,6 +860,9 @@ int main(int argc, char * argv[])
 
 		audioGraphMgr.shut();
 		
+		voiceMgr.freeVoice(voice);
+		Assert(voice == nullptr);
+
 		voiceMgr.shut();
 
 		SDL_DestroyMutex(mutex);

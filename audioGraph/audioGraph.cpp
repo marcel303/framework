@@ -59,9 +59,10 @@ AudioGraph::AudioGraph(AudioGraphGlobals * _globals, const bool _isPaused)
 	, activeFlags()
 	, memf()
 	, mems()
-	, events()
+	, activeEvents()
 	, triggeredEvents()
 	, controlValues()
+	, events()
 	, globals(nullptr)
 	, mutex()
 {
@@ -225,7 +226,7 @@ void AudioGraph::tick(const float dt)
 		
 		// update the set of 'active' events. all newly triggered events are processed next tick
 		
-		std::swap(events, triggeredEvents);
+		std::swap(activeEvents, triggeredEvents);
 		triggeredEvents.clear();
 	}
 	mutex.unlock();
@@ -403,6 +404,72 @@ void AudioGraph::exportControlValues()
 	mutex.unlock();
 }
 
+void AudioGraph::registerEvent(const char * name)
+{
+	mutex.lock();
+	{
+		bool exists = false;
+		
+		for (auto & event : events)
+		{
+			if (event.name == name)
+			{
+				event.refCount++;
+				exists = true;
+				break;
+			}
+		}
+		
+		if (exists == false)
+		{
+			events.resize(events.size() + 1);
+			
+			auto & event = events.back();
+			
+			event.name = name;
+			event.refCount = 1;
+			
+			std::sort(events.begin(), events.end(), [](const AudioEvent & a, const AudioEvent & b) { return a.name < b.name; });
+		}
+	}
+	mutex.unlock();
+}
+
+void AudioGraph::unregisterEvent(const char * name)
+{
+	mutex.lock();
+	{
+		bool exists = false;
+		
+		for (auto eventItr = events.begin(); eventItr != events.end(); ++eventItr)
+		{
+			auto & event = *eventItr;
+			
+			if (event.name == name)
+			{
+				event.refCount--;
+				
+				if (event.refCount == 0)
+				{
+					//LOG_DBG("erasing event %s", name);
+					
+					events.erase(eventItr);
+				}
+				
+				exists = true;
+				break;
+			}
+		}
+		
+		Assert(exists);
+		if (exists == false)
+		{
+			LOG_WRN("failed to unregister event %s", name);
+		}
+	}
+	mutex.unlock();
+}
+
 void AudioGraph::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
 	mutex.lock();
@@ -494,7 +561,7 @@ AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & ty
 			const uint64_t t1 = g_TimerRT.TimeUS_get();
 		#endif
 		
-			audioNode = r->create();
+			audioNode = r->create(r->createData);
 			
 		#if AUDIO_GRAPH_ENABLE_TIMING
 			const uint64_t t2 = g_TimerRT.TimeUS_get();
@@ -668,15 +735,14 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 #include "Path.h"
 #include "soundmix.h"
 #include "StringEx.h"
+#include "Timer.h"
 #include <map>
-
-#include "Timer.h" // todo : add routines for capturing and logging timing data
 
 static std::map<std::string, PcmData*> s_pcmDataCache;
 
-void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths)
+void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths, const bool createCaches)
 {
-	LOG_DBG("filling data cache with path: %s", path);
+	LOG_DBG("filling PCM data cache with path: %s", path);
 	
 	const auto t1 = g_TimerRT.TimeUS_get();
 	
@@ -696,7 +762,7 @@ void fillPcmDataCache(const char * path, const bool recurse, const bool stripPat
 		
 		PcmData * pcmData = new PcmData();
 		
-		if (pcmData->load(filenameLower.c_str(), 0) == false)
+		if (pcmData->load(filenameLower.c_str(), 0, createCaches) == false)
 		{
 			delete pcmData;
 			pcmData = nullptr;
@@ -716,7 +782,7 @@ void fillPcmDataCache(const char * path, const bool recurse, const bool stripPat
 	
 	const auto t2 = g_TimerRT.TimeUS_get();
 	
-	printf("load PCM from %s took %.2fms\n", path, (t2 - t1) / 1000.0);
+	printf("loading PCM data from %s took %.2fms\n", path, (t2 - t1) / 1000.0);
 }
 
 void clearPcmDataCache()

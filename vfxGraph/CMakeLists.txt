@@ -75,7 +75,11 @@ endif (WIN32)
 # 2) it speeds up library compilation speed, as all vfx node sources are compiled at once, avoiding the overhead of
 #    compiling them separately
 
-set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.mm)
+if (APPLE)
+	set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.mm)
+else (APPLE)
+	set(headerfile ${CMAKE_CURRENT_SOURCE_DIR}/sources.tmp.cpp)
+endif (APPLE)
 file(WRITE ${headerfile} "// auto-generated. do not hand-edit\n\n")
 foreach(s ${source_vfxnodes})
 	file(APPEND ${headerfile} "#include \"${s}\"\n")

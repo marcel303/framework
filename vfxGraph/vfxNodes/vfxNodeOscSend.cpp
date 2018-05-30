@@ -35,6 +35,7 @@
 VFX_ENUM_TYPE(oscSendMode)
 {
 	elem("onTick");
+	elem("onTimer");
 	elem("onChange");
 	elem("onTrigger");
 }
@@ -46,6 +47,7 @@ VFX_NODE_TYPE(VfxNodeOscSend)
 	in("endpoint", "string");
 	inEnum("sendMode", "oscSendMode");
 	in("path", "string");
+	in("interval", "float", "1");
 	in("value", "float");
 	in("trigger!", "trigger");
 }
@@ -54,6 +56,7 @@ VfxNodeOscSend::VfxNodeOscSend()
 	: VfxNodeBase()
 	, hasLastSentValue(false)
 	, lastSentValue(0.f)
+	, timer(0.f)
 	, history()
 	, numSends()
 {
@@ -61,6 +64,7 @@ VfxNodeOscSend::VfxNodeOscSend()
 	addInput(kInput_EndpointName, kVfxPlugType_String);
 	addInput(kInput_SendMode, kVfxPlugType_Int);
 	addInput(kInput_Path, kVfxPlugType_String);
+	addInput(kInput_Interval, kVfxPlugType_Float);
 	addInput(kInput_Value, kVfxPlugType_Float);
 	addInput(kInput_Trigger, kVfxPlugType_Trigger);
 }
@@ -71,11 +75,23 @@ void VfxNodeOscSend::tick(const float dt)
 	
 	const SendMode sendMode = (SendMode)getInputInt(kInput_SendMode, kSend_OnTick);
 	const char * path = getInputString(kInput_Path, nullptr);
+	const float interval = getInputFloat(kInput_Interval, 1.f);
 	const float value = getInputFloat(kInput_Value, 0.f);
 	
 	if (sendMode == kSend_OnTick)
 	{
 		sendValue(path, value);
+	}
+	else if (sendMode == kSend_OnInterval)
+	{
+		timer += dt;
+			
+		if (timer >= interval)
+		{
+			sendValue(path, value);
+			
+			timer = 0.f;
+		}
 	}
 	else if (sendMode == kSend_OnChange)
 	{
@@ -87,6 +103,13 @@ void VfxNodeOscSend::tick(const float dt)
 			sendValue(path, value);
 		}
 	}
+	
+	//
+	
+	if (sendMode != kSend_OnInterval)
+		timer = 0.f;
+	if (sendMode != kSend_OnChange)
+		hasLastSentValue = false;
 }
 
 void VfxNodeOscSend::handleTrigger(const int inputSocketIndex)
@@ -112,6 +135,15 @@ void VfxNodeOscSend::handleTrigger(const int inputSocketIndex)
 
 void VfxNodeOscSend::getDescription(VfxNodeDescription & d)
 {
+	const SendMode sendMode = (SendMode)getInputInt(kInput_SendMode, kSend_OnTick);
+	
+	if (sendMode == kSend_OnInterval)
+	{
+		const float interval = getInputFloat(kInput_Interval, 1.f);
+		
+		d.add("timer: %.2f / %.2f", timer, interval);
+	}
+	
 	//d.add("target: %s", "");
 	//d.newline();
 	
@@ -158,6 +190,10 @@ void VfxNodeOscSend::sendValue(const char * path, const float value)
 	{
 		LOG_ERR("failed to send OSC message: %s", e.what());
 	}
+	
+	//
+	
+	editorIsTriggered = true;
 	
 	//
 	

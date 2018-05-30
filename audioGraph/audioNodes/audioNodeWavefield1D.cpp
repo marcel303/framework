@@ -32,6 +32,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioResource.h"
 #include "tinyxml2.h"
+#include "tinyxml2_helpers.h"
 
 struct AudioResource_Wavefield1D : AudioResourceBase
 {
@@ -47,21 +48,25 @@ struct AudioResource_Wavefield1D : AudioResourceBase
 	
 	virtual void save(tinyxml2::XMLPrinter * printer) override
 	{
-		// todo
+		printer->PushAttribute("numElems", numElems);
+		
+		pushAttrib_array(printer, "f", f, sizeof(f[0]), numElems);
 	}
 	
 	virtual void load(tinyxml2::XMLElement * elem) override
 	{
-		// todo
+		numElems = intAttrib(elem, "numElems", 0);
+		numElems = clamp(numElems, 0, Wavefield1D::kMaxElems);
 		
-		numElems = 64;
+		arrayAttrib(elem, "f", f, sizeof(f[0]), numElems);
 		
-		for (int i = 0; i < numElems; ++i)
-			f[i] = 1.f;
-		
-		version = 1;
+		version++;
 	}
 };
+
+AUDIO_RESOURCE_TYPE(AudioResource_Wavefield1D, "wavefield.1d");
+
+//
 
 #include "graph.h"
 #include "Noise.h"
@@ -72,20 +77,13 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 	AudioResource_Wavefield1D * resource;
 	
 	UiState uiState;
-	int sx;
-	int sy;
-	int x;
-	int y;
 	
 	Wavefield1D wavefield;
 	
 	ResourceEditor_Wavefield1D()
-		: resource(nullptr)
+		: GraphEdit_ResourceEditorBase(700, 256)
+		, resource(nullptr)
 		, uiState()
-		, sx(700)
-		, sy(256)
-		, x(0)
-		, y(0)
 		, wavefield()
 	{
 		uiState.sx = sx;
@@ -98,19 +96,15 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 		Assert(resource == nullptr);
 	}
 	
-	virtual void getSize(int & _sx, int & _sy) const override
+	virtual void afterPositionChanged() override
 	{
-		_sx = sx;
-		_sy = sy;
-	}
-	
-	virtual void setPosition(const int _x, const int _y) override
-	{
-		x = _x;
-		y = _y;
-		
 		uiState.x = x;
 		uiState.y = y;
+	}
+	
+	virtual void afterSizeChanged() override
+	{
+		uiState.sx = sx;
 	}
 	
 	void randomize()
@@ -145,8 +139,8 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 				wavefield.f[i] = resource->f[i];
 			wavefield.numElems = resource->numElems;
 			
-			for (int i = 0; i < 100; ++i)
-				wavefield.tick(dt / 100.0, 100000.0, 0.8, 0.8, true);
+			for (int i = 0; i < 10; ++i)
+				wavefield.tick(dt / 10.0, 10000.0, 0.8, 0.8, true);
 		}
 		
 		if (g_doDraw)
@@ -155,9 +149,11 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 			gxTranslatef(x, y, 0);
 			gxTranslatef(sx/2, sy/2, 0);
 			gxScalef(sx / float(resource->numElems), sy/2, 1.f);
-			gxTranslatef(-(resource->numElems)/2.f, 0.f, 0.f);
+			gxTranslatef(-(resource->numElems - 1.f)/2.f, 0.f, 0.f);
 			
 			setColor(colorWhite);
+			
+			const float r = clamp(sx / float(resource->numElems + 1.f) / 2.f, 1.f, 6.f);
 			
 			hqBegin(HQ_FILLED_CIRCLES, true);
 			{
@@ -171,7 +167,7 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 					const float a = f[i] / 2.f;
 					
 					setLumif(a);
-					hqFillCircle(i, h, 1.f);
+					hqFillCircle(i, h, r);
 				}
 			}
 			hqEnd();
@@ -188,7 +184,7 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 					const float a = f[i] / 2.f;
 					
 					setLumif(a);
-					hqLine(i, 0.f, 3.f, i, h, 1.f);
+					hqLine(i, 0.f, r, i, h, r);
 				}
 			}
 			hqEnd();
@@ -212,8 +208,8 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 			hqBegin(HQ_LINES, true);
 			{
 				setColor(colorGreen);
-				hqLine(0.f, -1.f, 1.f, resource->numElems, -1.f, 1.f);
-				hqLine(0.f, +1.f, 1.f, resource->numElems, +1.f, 1.f);
+				hqLine(- .5f, -1.f, 1.f, resource->numElems- .5f, -1.f, 1.f);
+				hqLine(- .5f, +1.f, 1.f, resource->numElems- .5f, +1.f, 1.f);
 			}
 			hqEnd();
 			
@@ -257,7 +253,7 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 				doTextBox(numElems, "size", x, sx, false, dt);
 				x += sx;
 				
-				numElems = std::max(0, std::min(Wavefield1D::kMaxElems, numElems));
+				numElems = Wavefield1D::roundNumElems(numElems);
 				
 				if (numElems != resource->numElems)
 				{
@@ -336,7 +332,7 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 	}
 };
 
-AUDIO_RESOURCE_TYPE(AudioResource_Wavefield1D, "wavefield.1d");
+//
 
 AUDIO_NODE_TYPE(wavefield_1d, AudioNodeWavefield1D)
 {

@@ -48,6 +48,8 @@ add_executable(400-editor "400-editor.cpp")
 add_executable(410-readonly-editor "410-readonly-editor.cpp")
 add_executable(420-realtime-editing "420-realtime-editing.cpp")
 add_executable(440-realtime-multiwindow "440-realtime-multiwindow.cpp")
+add_executable(700-go "700-go.cpp")
+add_executable(710-validate "710-validate.cpp")
 add_executable(900-devgrounds "900-devgrounds.cpp")
 
 set(LIBRARIES PRIVATE
@@ -67,12 +69,20 @@ target_link_libraries(400-editor PRIVATE ${LIBRARIES})
 target_link_libraries(410-readonly-editor PRIVATE ${LIBRARIES})
 target_link_libraries(420-realtime-editing PRIVATE ${LIBRARIES})
 target_link_libraries(440-realtime-multiwindow PRIVATE ${LIBRARIES})
+target_link_libraries(700-go PRIVATE ${LIBRARIES})
+target_link_libraries(710-validate PRIVATE ${LIBRARIES})
 target_link_libraries(900-devgrounds PRIVATE ${LIBRARIES})
 
 if (WIN32)
 	# set the current working directory
 	
 	set_target_properties(000-minimal PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
+	set_target_properties(010-multiple-instances PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
+	set_target_properties(012-happy-newyear PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
+	set_target_properties(400-editor PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
+	set_target_properties(410-readonly-editor PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
+	set_target_properties(420-realtime-editing PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
+	set_target_properties(440-realtime-multiwindow PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
 	set_target_properties(900-devgrounds PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data")
 	
 	# copy DLL files to the Debug and Release folders
@@ -104,5 +114,7 @@ if (MSVC)
 	set_property(TARGET 410-readonly-editor APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
 	set_property(TARGET 420-realtime-editing APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
 	set_property(TARGET 440-realtime-multiwindow APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
+	set_property(TARGET 700-go APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
+	set_property(TARGET 710-validate APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
 	set_property(TARGET 900-devgrounds APPEND_STRING PROPERTY LINK_FLAGS "/SAFESEH:NO")
 endif (MSVC)

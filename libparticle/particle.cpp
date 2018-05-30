@@ -531,6 +531,7 @@ ParticleEmitterInfo::ParticleEmitterInfo()
 	, startDelay(0.f)
 	, startLifetime(1.f)
 	, startSpeed(100.f)
+	, startSpeedAngle(90.f)
 	, startSize(100.f)
 	, startRotation(0.f)
 	, startColor(1.f, 1.f, 1.f, 1.f)
@@ -562,6 +563,7 @@ void ParticleEmitterInfo::save(XMLPrinter * printer) const
 	printer->PushAttribute("startDelay", startDelay);
 	printer->PushAttribute("startLifetime", startLifetime);
 	printer->PushAttribute("startSpeed", startSpeed);
+	printer->PushAttribute("startSpeedAngle", startSpeedAngle);
 	printer->PushAttribute("startSize", startSize);
 	printer->PushAttribute("startRotation", startRotation);
 	printer->PushAttribute("gravityMultiplier", gravityMultiplier);
@@ -588,6 +590,7 @@ void ParticleEmitterInfo::load(const XMLElement * elem)
 	startDelay = floatAttrib(elem, "startDelay", startDelay);
 	startLifetime = floatAttrib(elem, "startLifetime", startLifetime);
 	startSpeed = floatAttrib(elem, "startSpeed", startSpeed);
+	startSpeedAngle = floatAttrib(elem, "startSpeedAngle", startSpeedAngle);
 	startSize = floatAttrib(elem, "startSize", startSize);
 	startRotation = floatAttrib(elem, "startRotation", startRotation);
 	auto startColorElem = elem->FirstChildElement("startColor");
@@ -975,7 +978,7 @@ bool ParticleEmitter::emitParticle(const ParticleCallbacks & cbs, const Particle
 		if (pi.randomDirection)
 			speedAngle = cbs.randomFloat(cbs.userData, 0.f, float(2.f * M_PI));
 		else
-			speedAngle = float(M_PI) / 2.f; // todo : add pei.startAngle;
+			speedAngle = pei.startSpeedAngle * float(M_PI / 180.f);
 		p->speed[0] = speedX + cosf(speedAngle) * pei.startSpeed;
 		p->speed[1] = speedY + sinf(speedAngle) * pei.startSpeed;
 		p->rotation = pei.startRotation;
@@ -1094,16 +1097,25 @@ void ParticleSystem::restart()
 
 //
 
-bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float timeStep, const float gravityX, const float gravityY, Particle & p)
+bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float _timeStep, const float gravityX, const float gravityY, Particle & p)
 {
 	assert(p.life > 0.f);
 
-	// todo : clamp timeStep to available life
-
+	// clamp timeStep to available life
+	
+	const float timeRemaining = p.life / p.lifeRcp;
+	const float timeStep = fminf(timeRemaining, _timeStep);
+	
+	// update life
+	
 	p.life -= p.lifeRcp * timeStep;
 	if (p.life < 0.f)
+	{
 		p.life = 0.f;
-
+	}
+	
+	// update movement
+	
 	p.speed[0] += gravityX * pei.gravityMultiplier * timeStep;
 	p.speed[1] += gravityY * pei.gravityMultiplier * timeStep;
 
@@ -1220,7 +1232,10 @@ void handleSubEmitter(const ParticleCallbacks & cbs, const ParticleInfo & pi, co
 			subPool,
 			subPe))
 		{
-			assert(subPi != &pi); // todo : warn about this?
+			// Sub-emitter cannot be the same as the current emitter. Otherwise, we may get into a loop.
+			// Note that this doesn't protect against getting into a loop in a roundabout fashion.. be
+			// guarding against this is much more complicated than this simple check here.
+			assert(subPi != &pi);
 
 			if (subPi != &pi)
 			{
@@ -1420,8 +1435,6 @@ bool tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInf
 		Particle * p;
 		pe.emitParticle(cbs, pei, pi, pool, timeOffset, gravityX, gravityY, 0.f, 0.f, 0.f, 0.f, p);
 	}
-
-	// todo : int maxParticles; // The maximum number of particles in the system at once. Older particles will be removed when the limit is reached.
 
 	return true;
 }

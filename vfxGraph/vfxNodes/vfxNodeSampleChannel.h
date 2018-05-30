@@ -36,6 +36,7 @@ struct VfxNodeSampleChannel : VfxNodeBase
 		kInput_Channel,
 		kInput_X,
 		kInput_Y,
+		kInput_Normalized,
 		kInput_Filter,
 		kInput_COUNT
 	};

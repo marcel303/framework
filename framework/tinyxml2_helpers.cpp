@@ -61,3 +61,97 @@ float floatAttrib(const XMLElement * elem, const char * name, const float defaul
 	else
 		return defaultValue;
 }
+
+//
+
+void pushAttrib_bytes(tinyxml2::XMLPrinter * printer, const char * name, const void * _bytes, const int numBytes)
+{
+	if (numBytes == 0)
+		printer->PushAttribute(name, "");
+	else
+	{
+		const uint8_t * bytes = (uint8_t*)_bytes;
+		
+		char * text = (char*)alloca(numBytes * 2 + 1);
+		
+		for (int i = 0; i < numBytes; ++i)
+		{
+			const uint8_t v = bytes[i];
+			
+			const int v1 = (v >> 0) & 0xf;
+			const int v2 = (v >> 4) & 0xf;
+			
+			const int c1 = v1 >= 0 && v1 <= 9 ? '0' + (v1 - 0) : 'a' + (v1 - 10);
+			const int c2 = v2 >= 0 && v2 <= 9 ? '0' + (v2 - 0) : 'a' + (v2 - 10);
+			
+			text[i * 2 + 0] = c1;
+			text[i * 2 + 1] = c2;
+		}
+		
+		text[numBytes * 2] = 0;
+		
+		printer->PushAttribute(name, text);
+	}
+}
+
+void pushAttrib_array(tinyxml2::XMLPrinter * printer, const char * name, const void * elems, const int elemSize, const int numElems)
+{
+#if defined(__BIG_ENDIAN__)
+	#error "perform endian conversion when needed"
+#endif
+
+	// todo : perform endian conversion when needed
+
+	pushAttrib_bytes(printer, name, elems, elemSize * numElems);
+}
+
+static int decodeAndConsume(const char *& text)
+{
+	if (*text == 0)
+		return 0;
+
+	const char c = *text;
+	
+	const int v =
+		c >= '0' && c <= '9' ?  0 + c - '0' :
+		c >= 'a' && c <= 'f' ? 10 + c - 'a' :
+		0;
+	
+	text++;
+	
+	return v;
+}
+
+void bytesAttrib(tinyxml2::XMLElement * elem, const char * name, void * _bytes, const int numBytes)
+{
+	if (numBytes == 0)
+		return;
+	
+	uint8_t * bytes = (uint8_t*)_bytes;
+	
+	memset(bytes, 0, numBytes);
+	
+	const char * text = stringAttrib(elem, name, nullptr);
+	
+	if (text == nullptr || text[0] == 0)
+		return;
+	
+	for (int i = 0; i < numBytes; ++i)
+	{
+		const int v1 = decodeAndConsume(text);
+		const int v2 = decodeAndConsume(text);
+		
+		bytes[i] = v1 | (v2 << 4);
+	}
+}
+
+void arrayAttrib(tinyxml2::XMLElement * elem, const char * name, void * elems, const int elemSize, const int numElems)
+{
+	bytesAttrib(elem, name, elems, elemSize * numElems);
+
+#if defined(__BIG_ENDIAN__)
+	#error "perform endian conversion when needed"
+#endif
+
+	// todo : perform endian conversion when needed
+}

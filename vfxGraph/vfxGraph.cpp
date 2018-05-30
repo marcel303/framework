@@ -62,11 +62,6 @@ VfxGraph::VfxGraph()
 	, time(0.0)
 {
 	dynamicData = new VfxDynamicData();
-	
-	if (s_dummySurface == nullptr)
-	{
-		s_dummySurface = new Surface(1, 1, false);
-	}
 }
 
 VfxGraph::~VfxGraph()
@@ -326,6 +321,12 @@ int VfxGraph::traverseDraw(const int sx, const int sy) const
 #if 1 // todo : make this depend on whether the graph editor is visible or not ? or whether the node is referenced by the editor ?
 
 	// note : traversal for sub-graphs not connected to the display node should start at nodes without any connected outputs. otherwise we might start in the middle of a sub-graph, resulting in undefined behavior
+	
+// todo : create dummy surface explicitly during init ?
+	if (s_dummySurface == nullptr)
+	{
+		s_dummySurface = new Surface(1, 1, false);
+	}
 	
 	pushSurface(s_dummySurface);
 	{

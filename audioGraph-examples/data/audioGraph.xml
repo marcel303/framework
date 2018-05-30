@@ -44,9 +44,6 @@
     <node id="21" typeName="time" editorX="-479" editorY="146.00003051757812" folded="1">
         <input socket="scale" value="0.200000"/>
     </node>
-    <node id="22" nodeType="1" typeName="" editorX="-107.352294921875" editorY="395.69940185546875">
-        <visualizer nodeId="15" dstSocketName="result" sx="136" sy="105"/>
-    </node>
     <node id="23" typeName="voice" editorX="350" editorY="3"/>
     <link id="1" enabled="1" srcNodeId="2" srcNodeSocketName="source1" dstNodeId="3" dstNodeSocketName="audio"/>
     <link id="3" enabled="1" srcNodeId="3" srcNodeSocketName="pcm" dstNodeId="5" dstNodeSocketName="pcm"/>

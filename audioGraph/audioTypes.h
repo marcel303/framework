@@ -197,6 +197,12 @@ struct AudioControlValue
 	float currentY;
 };
 
+struct AudioEvent
+{
+	std::string name;
+	int refCount = 0;
+};
+
 struct SDL_mutex;
 
 struct AudioMutex_Shared

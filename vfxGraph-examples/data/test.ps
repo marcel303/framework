@@ -1,0 +1,29 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+uniform sampler2D colormap;
+uniform sampler2D image1;
+uniform vec2 screenSize;
+uniform float time;
+uniform float param1;
+uniform float opacity;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	vec2 sampleCoord = texcoord;
+	sampleCoord -= vec2(0.5);
+	sampleCoord *= screenSize;
+	float distance = length(sampleCoord);
+	float valueR = (sin((distance * param1 + time * 20.0) * 1.123) + 1.0) * 0.5;
+	float valueG = (sin((distance * param1 + time * 15.0) * 1.234) + 1.0) * 0.5;
+	float valueB = (sin((distance * param1 + time * 10.0) * 1.345) + 1.0) * 0.5;
+
+	vec4 texColor = texture(image1, texcoord + vec2(sin(time + texcoord.y * 10.0) * 0.02, 0.0));
+	valueB = max(valueB, pow(rgbLuminance(texColor.rgb), 2.0) * 4.0);
+
+	vec4 color = vec4(valueR, valueG, valueB, 1.0);
+	
+	shader_fragColor = mix(texture(colormap, texcoord), color, opacity);
+}

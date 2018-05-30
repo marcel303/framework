@@ -373,6 +373,8 @@ public:
 	int getWidth() const;
 	int getHeight() const;
 	
+	bool getQuitRequested() const;
+	
 	SDL_Window * getWindow() const;
 	class WindowData * getWindowData() const;
 	
@@ -1120,7 +1122,9 @@ class Gamepad
 	float m_analog[2][ANALOG_MAX];
 	float m_vibrationDuration;
 	float m_vibrationStrength;
+#ifdef __WIN32__
 	float m_lastVibrationStrength;
+#endif
 	char name[64];
 
 public:
@@ -1161,6 +1165,7 @@ public:
 	
 	float yaw;
 	float pitch;
+	float roll;
 	
 	double mouseSmooth;
 	float mouseRotationSpeed;
@@ -1396,8 +1401,8 @@ void setShader_GrayscaleLumi(const GLuint source, const float opacity);
 void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const float opacity);
 void setShader_Colorize(const GLuint source, const float hue, const float opacity);
 void setShader_HueShift(const GLuint source, const float hue, const float opacity);
-void setShader_Compositie(const GLuint source1, const GLuint source2);
-void setShader_CompositiePremultiplied(const GLuint source1, const GLuint source2);
+void setShader_Composite(const GLuint source1, const GLuint source2);
+void setShader_CompositePremultiplied(const GLuint source1, const GLuint source2);
 void setShader_Premultiply(const GLuint source);
 void setShader_ColorMultiply(const GLuint source, const Color & color, const float opacity);
 void setShader_ColorTemperature(const GLuint source, const float temperature, const float opacity);

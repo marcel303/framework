@@ -1,0 +1,3 @@
+[submodule "libjsusfx"]
+	path = libjsusfx
+	url = https://github.com/marcel303/jsusfx

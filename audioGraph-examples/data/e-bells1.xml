@@ -14,9 +14,6 @@
         <input socket="trigger.amount" value="1.000000"/>
         <input socket="vel.dampen" value="0.200000"/>
     </node>
-    <node id="32" nodeType="1" typeName="" editorX="-384.08218383789062" editorY="-8.2895126342773438">
-        <visualizer nodeId="30" dstSocketName="audio" sx="216" sy="148"/>
-    </node>
     <node id="34" typeName="noise.1d" editorX="-496.679931640625" editorY="314.4281005859375">
         <input socket="max" value="0.900000"/>
         <input socket="min" value="0.100000"/>
@@ -73,9 +70,6 @@
         <input socket="frequency" value="0.123000"/>
     </node>
     <node id="58" typeName="normalize" editorX="24.0001220703125" editorY="111.26991271972656" folded="1"/>
-    <node id="59" nodeType="1" typeName="" editorX="117.32461547851562" editorY="-389.70458984375">
-        <visualizer nodeId="45" dstSocketName="audio" sx="216" sy="148"/>
-    </node>
     <node id="60" typeName="math" editorX="391.341552734375" editorY="-207.60467529296875">
         <input socket="b" value="12.000000"/>
         <input socket="type" value="3"/>

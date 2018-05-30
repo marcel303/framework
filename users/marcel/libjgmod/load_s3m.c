@@ -19,7 +19,7 @@
 #include "file_io.h"
 
 //#define JG_debug
-#define force_8_bit
+//#define force_8_bit
 
 int fast_loading=TRUE;
 

@@ -127,10 +127,12 @@ struct AudioGraph
 	std::set<std::string> activeFlags;
 	std::map<std::string, Memf> memf;
 	std::map<std::string, Mems> mems;
-	std::vector<std::string> events;
+	std::vector<std::string> activeEvents;
 	std::vector<std::string> triggeredEvents;
 	
 	std::vector<AudioControlValue> controlValues;
+	
+	std::vector<AudioEvent> events;
 	
 	AudioGraphGlobals * globals;
 	
@@ -154,6 +156,10 @@ struct AudioGraph
 	void unregisterControlValue(const char * name);
 	bool findControlValue(const char * name, AudioControlValue & result) const;
 	void exportControlValues();
+	
+	// called from any thread
+	void registerEvent(const char * name);
+	void unregisterEvent(const char * name);
 	
 	// called from any thread
 	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
@@ -221,7 +227,7 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 
 struct PcmData;
 
-void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths);
+void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths, const bool createCaches);
 void clearPcmDataCache();
 const PcmData * getPcmData(const char * filename);
 

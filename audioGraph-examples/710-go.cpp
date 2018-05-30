@@ -41,7 +41,7 @@ static void showHelp()
 	printf("instantiates the audio graph given by <filename> and sends the synthesized sound to the default audio output interface.\n");
 }
 
-static void doControlValue(AudioControlValue & controlValue, const int index, const int selectedIndex, const char type, const char c)
+static void doControlValue(AudioControlValue & controlValue, const int index, const int selectedIndex, const char type, const int c)
 {
 	const bool isSelected = (index == selectedIndex);
 	
@@ -63,6 +63,21 @@ static void doControlValue(AudioControlValue & controlValue, const int index, co
 		controlValue.desiredX);
 }
 
+static void doEvent(AudioGraph * audioGraph, const std::string & event, const int index, const int selectedIndex, const int c)
+{
+	const bool isSelected = (index == selectedIndex);
+	
+	if (isSelected)
+	{
+		if (c == ' ')
+			audioGraph->triggerEvent(event.c_str());
+	}
+	
+	printf("%sEVENT %18s\n",
+		isSelected ? "==> " : "    ",
+		event.c_str());
+}
+
 int main(int argc, char * argv[])
 {
 	const char * filename = nullptr;
@@ -79,9 +94,9 @@ int main(int argc, char * argv[])
 	{
 		// load resources
 		
-		fillPcmDataCache("birds", true, false);
-		fillPcmDataCache("testsounds", true, true);
-		fillPcmDataCache("voice-fragments", false, false);
+		fillPcmDataCache("birds", true, false, true);
+		fillPcmDataCache("testsounds", true, true, true);
+		fillPcmDataCache("voice-fragments", false, false, true);
 		
 		// initialize audio related systems
 		
@@ -118,9 +133,6 @@ int main(int argc, char * argv[])
 			}
 			else
 			{
-				// todo : keyboard/console based ui to
-				// - trigger events
-				
 				int selectedIndex = 0;
 				
 				int c = 0;
@@ -133,7 +145,8 @@ int main(int argc, char * argv[])
 					{
 						const int count =
 							audioGraphMgr.globals->controlValues.size() +
-							instance->audioGraph->controlValues.size();
+							instance->audioGraph->controlValues.size() +
+							instance->audioGraph->events.size();
 						
 						if (count == 0)
 							selectedIndex = 0;
@@ -160,9 +173,17 @@ int main(int argc, char * argv[])
 							
 							index++;
 						}
+						
+						for (auto & event : instance->audioGraph->events)
+						{
+							doEvent(instance->audioGraph, event.name, index, selectedIndex, c);
+							
+							index++;
+						}
 					}
 					SDL_UnlockMutex(mutex);
 					
+					printf("up/down = a/z, increment/decrement = 1/2, trigger event = SPACE, quit = q\n");
 					printf("CPU usage: %d%%\n", int(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100));
 					
 					system("/bin/stty raw");

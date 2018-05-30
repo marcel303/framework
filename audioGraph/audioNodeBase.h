@@ -35,11 +35,14 @@
 
 #define MULTIPLE_AUDIO_INPUT 1
 
+struct GraphEdit_ResourceEditorBase;
 struct GraphEdit_TypeDefinitionLibrary;
 struct GraphNode;
 
 struct AudioFloat;
 struct PcmData;
+
+class Surface;
 
 struct AudioFloat
 {
@@ -478,6 +481,10 @@ struct AudioNodeBase
 	
 	virtual void getDescription(AudioNodeDescription & d) { }
 	virtual bool getFilterResponse(float * magnitude, const int numSteps) const { return false; }
+	
+// todo : perhaps the tick/draw should be handled through the real-time editing interface? we can do locking over there
+	virtual bool tickEditor(const int x, const int y, int & sx, int & sy, bool & inputIsCaptured) { return false; }
+	virtual void drawEditor(Surface * surface, const int x, const int y, const int sx, const int sy) { }
 };
 
 //
@@ -547,7 +554,8 @@ struct AudioNodeTypeRegistration
 	
 	AudioNodeTypeRegistration * next;
 	
-	AudioNodeBase* (*create)();
+	AudioNodeBase* (*create)(void * data);
+	void * createData;
 	
 	GraphEdit_ResourceEditorBase * (*createResourceEditor)();
 	
@@ -572,7 +580,7 @@ struct AudioNodeTypeRegistration
 	{ \
 		name ## __audio_registration() \
 		{ \
-			create = []() -> AudioNodeBase* { return new type(); }; \
+			create = [](void * data) -> AudioNodeBase* { return new type(); }; \
 			init(); \
 		} \
 		void init(); \

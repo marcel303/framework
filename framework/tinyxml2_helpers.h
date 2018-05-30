@@ -38,3 +38,11 @@ const char * stringAttrib(const tinyxml2::XMLElement * elem, const char * name, 
 bool boolAttrib(const tinyxml2::XMLElement * elem, const char * name, const bool defaultValue);
 int intAttrib(const tinyxml2::XMLElement * elem, const char * name, const int defaultValue);
 float floatAttrib(const tinyxml2::XMLElement * elem, const char * name, const float defaultValue);
+
+// higher level functions for dealing with arrays
+
+void pushAttrib_bytes(tinyxml2::XMLPrinter * printer, const char * name, const void * bytes, const int numBytes);
+void pushAttrib_array(tinyxml2::XMLPrinter * printer, const char * name, const void * elems, const int elemSize, const int numElems);
+
+void bytesAttrib(tinyxml2::XMLElement * elem, const char * name, void * bytes, const int numBytes);
+void arrayAttrib(tinyxml2::XMLElement * elem, const char * name, void * elems, const int elemSize, const int numElems);

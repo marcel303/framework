@@ -944,6 +944,8 @@ void Framework::process()
 					windowData->isActive = true;
 				else if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
 					windowData->isActive = false;
+				else if (e.window.event == SDL_WINDOWEVENT_CLOSE)
+					windowData->quitRequested = true;
 				
 				if (windowData == globals.currentWindowData)
 					windowIsActive = windowData->isActive;
@@ -1755,6 +1757,11 @@ int Window::getHeight() const
 	SDL_GetWindowSize(m_window, &sx, &sy);
 	
 	return sy;
+}
+
+bool Window::getQuitRequested() const
+{
+	return m_windowData->quitRequested;
 }
 
 SDL_Window * Window::getWindow() const
@@ -4847,6 +4854,7 @@ Camera3d::Camera3d()
 	, position(0.f, 0.f, 0.f)
 	, yaw(0.f)
 	, pitch(0.f)
+	, roll(0.f)
 	, mouseSmooth(0.75)
 	, mouseRotationSpeed(1.f)
 	, maxForwardSpeed(1.f)
@@ -4923,7 +4931,7 @@ void Camera3d::tick(float dt, bool enableInput)
 
 Mat4x4 Camera3d::getWorldMatrix() const
 {
-	return Mat4x4(true).Translate(position).RotateY(yaw / 180.f * M_PI).RotateX(pitch / 180.f * M_PI);
+	return Mat4x4(true).Translate(position).RotateZ(roll / 180.f * M_PI).RotateY(yaw / 180.f * M_PI).RotateX(pitch / 180.f * M_PI);
 }
 
 Mat4x4 Camera3d::getViewMatrix() const
@@ -5053,7 +5061,7 @@ void applyTransformWithViewportSize(const float sx, const float sy)
 		{
 			gxLoadIdentity();
 			
-			if (surfaceStackSize == 0)
+			if (surfaceStackSize == 0 || surfaceStack[surfaceStackSize - 1] == nullptr)
 			{
 				// flip Y axis so the vertical axis runs top to bottom
 				gxScalef(1.f, -1.f, 1.f);
@@ -6339,7 +6347,7 @@ struct TextAreaData
 
 static const char * eatWord(const char * str)
 {
-	while (*str && *str != ' ')
+	while (*str && *str != ' ' && *str != '\n')
 		str++;
 	while (*str && *str == ' ')
 		str++;
@@ -6382,6 +6390,9 @@ static void prepareTextArea(const float size, const char * text, const float max
 		*(char*)nextptr = 0;
 		strcpy_s(data.lines[data.numLines++], sizeof(data.lines[0]), textptr);
 		*(char*)nextptr = temp;
+
+		if (*nextptr == '\n')
+			nextptr++;
 
 		textptr = nextptr;
 	}
@@ -7815,7 +7826,7 @@ void setShader_HueShift(const GLuint source, const float hue, const float opacit
 	shader.setImmediate("opacity", opacity);
 }
 
-void setShader_Compositie(const GLuint source1, const GLuint source2)
+void setShader_Composite(const GLuint source1, const GLuint source2)
 {
 	//Shader & shader = globals.builtinShaders->compositeAlpha;
 	Shader shader("builtin-composite-alpha");
@@ -7825,7 +7836,7 @@ void setShader_Compositie(const GLuint source1, const GLuint source2)
 	shader.setTexture("source2", 1, source2, true, true);
 }
 
-void setShader_CompositiePremultiplied(const GLuint source1, const GLuint source2)
+void setShader_CompositePremultiplied(const GLuint source1, const GLuint source2)
 {
 	//Shader & shader = globals.builtinShaders->compositeAlphaPremultiplied;
 	Shader shader("builtin-composite-alpha-premultiplied");

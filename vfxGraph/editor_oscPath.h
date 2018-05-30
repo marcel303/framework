@@ -41,8 +41,8 @@ struct ResourceEditor_OscPath : GraphEdit_ResourceEditorBase
 	ResourceEditor_OscPath();
 	virtual ~ResourceEditor_OscPath() override;
 	
-	void getSize(int & sx, int & sy) const override;
-	void setPosition(const int x, const int y) override;
+	void afterSizeChanged() override;
+	void afterPositionChanged() override;
 	
 	void doMenu(const float dt);
 	

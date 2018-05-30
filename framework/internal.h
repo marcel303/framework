@@ -134,7 +134,10 @@ public:
 		}
 		else
 		{
-			hasOldMousePosition = true;
+			if (mouseX != oldMouseX || mouseY != oldMouseY)
+			{
+				hasOldMousePosition = true;
+			}
 			
 			mouseDx = 0;
 			mouseDy = 0;
@@ -153,6 +156,7 @@ public:
 	}
 	
 	bool isActive;
+	bool quitRequested;
 	bool mouseDown[BUTTON_MAX];
 	bool mouseChange[BUTTON_MAX];
 	bool hasOldMousePosition;
@@ -889,6 +893,8 @@ public:
 	BuiltinShader hqStrokedCircle;
 	BuiltinShader hqStrokedRect;
 	BuiltinShader hqStrokedRoundedRect;
+	
+	BuiltinShader hqShadedTriangle;
 	
 	BuiltinShader msdfText;
 };

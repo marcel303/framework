@@ -29,6 +29,7 @@
 #include "ofMain.h"
 #include "Parse.h"
 #include "StringEx.h"
+#include <algorithm>
 
 struct Style
 {

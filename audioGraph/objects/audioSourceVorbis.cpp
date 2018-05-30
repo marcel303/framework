@@ -39,6 +39,7 @@ AudioSourceVorbis::AudioSourceVorbis()
 	, numChannels(0)	
 	, loop(false)
 	, hasLooped(false)
+	, hasEnded(false)
 	, samplePosition(0)
 {
 }
@@ -136,6 +137,8 @@ void AudioSourceVorbis::generate(SAMPLE_ALIGN16 float * __restrict samples, cons
 				
 				memset(samplePtr, 0, numSamplesRemaining * sizeof(float));
 				
+				hasEnded = true;
+				
 				break;
 			}
 		}
@@ -154,6 +157,10 @@ void AudioSourceVorbis::open(const char * _filename, bool _loop)
 	
 	filename = _filename;
 	loop = _loop;
+	
+	hasEnded = false;
+	
+	samplePosition = 0;
 
 	file = fopen(_filename, "rb");
 	
@@ -204,4 +211,9 @@ void AudioSourceVorbis::close()
 		file = 0;
 		LOG_DBG("Vorbis Audio Stream: closed file", 0);
 	}
+}
+
+bool AudioSourceVorbis::isOpen() const
+{
+	return file != nullptr;
 }

@@ -19,7 +19,7 @@
 #include "file_io.h"
 
 //#define JG_debug
-#define force_8_bit
+//#define force_8_bit
 
 int detect_xm (char *filename);
 int detect_unreal_xm (char *filename);

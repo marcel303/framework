@@ -49,13 +49,12 @@ static void doVfxTimeline(VfxTimeline & timeline, int & selectedKeyIndex, const 
 //
 
 ResourceEditor_VfxTimeline::ResourceEditor_VfxTimeline()
-	: GraphEdit_ResourceEditorBase()
+	: GraphEdit_ResourceEditorBase(GRAPHEDIT_SX - 100, 200)
 	, uiState(nullptr)
 	, timeline(nullptr)
 	, selectedKeyIndex(-1)
 {
 	uiState = new UiState();
-	uiState->sx = GRAPHEDIT_SX - 100;
 }
 
 ResourceEditor_VfxTimeline::~ResourceEditor_VfxTimeline()
@@ -66,13 +65,12 @@ ResourceEditor_VfxTimeline::~ResourceEditor_VfxTimeline()
 	uiState = nullptr;
 }
 
-void ResourceEditor_VfxTimeline::getSize(int & sx, int & sy) const
+void ResourceEditor_VfxTimeline::afterSizeChanged()
 {
-	sx = uiState->sx;
-	sy = 200;
+	uiState->sx = sx;
 }
 
-void ResourceEditor_VfxTimeline::setPosition(const int x, const int y)
+void ResourceEditor_VfxTimeline::afterPositionChanged()
 {
 	uiState->x = x;
 	uiState->y = y;

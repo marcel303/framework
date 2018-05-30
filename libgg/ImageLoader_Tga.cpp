@@ -152,7 +152,7 @@ void TgaLoader::LoadData(Stream* stream, const TgaHeader& header, uint8_t** out_
 				case 24:
 					throw ExceptionVA("not implemented: 24 BPP");
 				case 32:
-					LoadData_Raw32_Hack(stream, header.sx, header.sy, *out_Bytes);
+					LoadData_Raw32(stream, header.sx, header.sy, *out_Bytes);
 					break;
 			}
 			break;
@@ -184,10 +184,8 @@ void TgaLoader::LoadData(Stream* stream, const TgaHeader& header, uint8_t** out_
 					throw ExceptionVA("not implemented: 16/24 BPP RLE");
 				case 32:
 				{
-					//LoadData_Rle32(stream, header.sx, header.sy, *out_Bytes);
-					//LoadData_Rle32_Hack(stream, header.sx, header.sy, *out_Bytes);
-					//break;
-					throw ExceptionVA("not implemented: 32 BPP RLE");
+					LoadData_Rle32(stream, header.sx, header.sy, *out_Bytes);
+					break;
 				}
 			}
 			break;
@@ -210,40 +208,13 @@ void TgaLoader::LoadData(Stream* stream, const TgaHeader& header, uint8_t** out_
 	}
 }
 
-#ifdef DEPLOYMENT
-#pragma message("fixme: TGA hack disabled..")
-//#define TGA_HACK 1
-#define TGA_HACK 0
-#else
-#define TGA_HACK 0
-#endif
-
-#if TGA_HACK == 0
-//#define READ8() reader.ReadUInt8()
-//#define READ32(v) v = reader.ReadUInt32()
+#define READ8() reader.ReadUInt8()
+#define READ32(v) v = reader.ReadUInt32()
 #define READ(v, x) reader.Stream_get()->Read(v, x);
-#else
-#include "FileStream.h"
-#define READ8() getc(file)
-#define READ32(v) if (fread(&v, 1, 4, file) != 4) { Assert(false); }
-#define READ(v, x) if (fread(v, 1, x, file) != (size_t)(x)) { Assert(false); }
-#endif
-
-#if defined(WIN32) || defined(LINUX) || defined(MACOS)
-#define TGA_TO_RGBA(rgba) rgba
-#else
-#define TGA_TO_RGBA(rgba) rgba
-//#define TGA_TO_RGBA(rgba) (((rgba >> 16) & 0xFF) << 0) | (((rgba >> 8) & 0xFF) << 8) | (((rgba >> 0) & 0xFF) << 16) | (((rgba >> 24) & 0xFF) << 24)
-//#define TGA_TO_RGBA(rgba) (((rgba >> 16)) << 0) | (((rgba >> 8)) << 8) | (((rgba >> 0)) << 16) | (((rgba >> 24)) << 24)
-#endif
 
 void TgaLoader::LoadData_Raw16_Hack(Stream* stream, int sx, int sy, uint8_t* out_Bytes)
 {
-#if TGA_HACK == 0
 	StreamReader reader(stream, false);
-#else
-	FILE* file = ((FileStream*)stream)->FileHandle_get();
-#endif
 
 	uint32_t* ptr = (uint32_t*)out_Bytes;
 
@@ -261,6 +232,8 @@ void TgaLoader::LoadData_Raw16_Hack(Stream* stream, int sx, int sy, uint8_t* out
 		const int g = c >> 5;
 		const int b = c >> 0;
 
+	// todo : make this endianness aware
+	
 		*ptr = ((r << 3) << 0) | ((g << 3) << 8) | ((b << 3) << 16) | (255 << 24);
 
 		++ptr;
@@ -270,40 +243,18 @@ void TgaLoader::LoadData_Raw16_Hack(Stream* stream, int sx, int sy, uint8_t* out
 	pixels = 0;
 }
 
-void TgaLoader::LoadData_Raw32_Hack(Stream* stream, int sx, int sy, uint8_t* out_Bytes)
+void TgaLoader::LoadData_Raw32(Stream* stream, int sx, int sy, uint8_t* out_Bytes)
 {
-#if TGA_HACK == 0
 	StreamReader reader(stream, false);
-#else
-	FILE* file = ((FileStream*)stream)->FileHandle_get();
-#endif
-
-	int32_t* ptr = (int32_t*)out_Bytes;
-
-	int count = sx * sy;
 	
-#if 1
-	READ(ptr, count * 4);
-#else
-	for (int i = 0; i < count; ++i)
-	{
-		int32_t rgba;
-			
-		READ32(rgba);
-
-		ptr[i] = TGA_TO_RGBA(rgba);
-	}
-#endif
+	const int count = sx * sy;
+	
+	READ(out_Bytes, count * 4);
 }
 
-#if 0
 void TgaLoader::LoadData_Rle32(Stream* stream, int sx, int sy, uint8_t* out_Bytes)
 {
-#if TGA_HACK == 0
 	StreamReader reader(stream, false);
-#else
-	FILE* file = ((FileStream*)stream)->FileHandle_get();
-#endif
 	
 	int32_t* ptr = (int32_t*)out_Bytes;
 	const int32_t* stop = ptr + sx * sy;
@@ -320,75 +271,13 @@ void TgaLoader::LoadData_Rle32(Stream* stream, int sx, int sy, uint8_t* out_Byte
 		{
 			// RLE encoded
 			
-			int32_t rgba;
+			int32_t bgra;
 			
-			READ32(rgba);
-			
-			rgba = TGA_TO_RGBA(rgba);
-			
-#if 1
-			for (int i = 0; i < size; ++i)
-			{
-				ptr[i] = rgba;
-			}
-#else
-			memset_pattern4(ptr, &rgba, size * 4);
-#endif
-			
-			ptr += size;
-		}
-		else
-		{
-			// raw
+			READ32(bgra);
 			
 			for (int i = 0; i < size; ++i)
 			{
-				// read BGRA
-				
-				int32_t rgba;
-				
-				READ32(rgba);
-				
-				ptr[i] = TGA_TO_RGBA(rgba);
-			}
-			
-			ptr += size;
-		}
-	}
-}
-#endif
-
-#if 0
-void TgaLoader::LoadData_Rle32_Hack(Stream* stream, int sx, int sy, uint8_t* out_Bytes)
-{
-#if TGA_HACK == 0
-	StreamReader reader(stream, false);
-#else
-	FILE* file = ((FileStream*)stream)->FileHandle_get();
-#endif
-	
-	int32_t* ptr = (int32_t*)out_Bytes;
-	const int32_t* stop = ptr + sx * sy;
-	
-	while (ptr < stop)
-	{
-		// read header
-		const int header = READ8();
-		
-		// determine packet size
-		const int size = 1 + (header & 0x7f);
-
-		if (header & 0x80)
-		{
-			// RLE encoded
-			
-			int32_t rgba;
-			
-			READ32(rgba);
-			
-			for (int i = 0; i < size; ++i)
-			{
-				ptr[i] = rgba;
+				ptr[i] = bgra;
 			}
 			
 			ptr += size;
@@ -397,24 +286,14 @@ void TgaLoader::LoadData_Rle32_Hack(Stream* stream, int sx, int sy, uint8_t* out
 		{
 			// raw
 			
-#if 0
-			for (int i = 0; i < size; ++i)
-			{
-				// read BGRA
-				
-				READ32(ptr[i]);
-			}
-#else
 			READ(ptr, size * 4);
-#endif
 			
 			ptr += size;
 		}
 	}
 }
-#endif
 
-void TgaLoader::SaveData(Stream* stream, const TgaHeader& header, uint8_t* bytes)
+void TgaLoader::SaveData(Stream* stream, const TgaHeader& header, const uint8_t* bytes)
 {
 	switch (header.image_type)
 	{
@@ -484,9 +363,9 @@ static int Convert8to5_Backward(int v)
 	return v;
 }
 
-void TgaLoader::SaveData_Raw16(Stream* stream, int sx, int sy, uint8_t* bytes)
+void TgaLoader::SaveData_Raw16(Stream* stream, int sx, int sy, const uint8_t* bytes)
 {
-	// todo: convert to 565 range w/ error diffusion
+	// todo : convert to 565 range w/ error diffusion
 	
 	StreamWriter writer(stream, false);
 
@@ -529,23 +408,13 @@ void TgaLoader::SaveData_Raw16(Stream* stream, int sx, int sy, uint8_t* bytes)
 	temp = 0;
 }
 
-void TgaLoader::SaveData_Raw32(Stream* stream, int sx, int sy, uint8_t* bytes)
+void TgaLoader::SaveData_Raw32(Stream* stream, int sx, int sy, const uint8_t* bytes)
 {
 	StreamWriter writer(stream, false);
 
-	int count = sx * sy;
-
-	uint8_t* ptr = bytes;
-
-	for (int i = 0; i < count; ++i)
-	{
-		writer.WriteUInt8(ptr[0]);
-		writer.WriteUInt8(ptr[1]);
-		writer.WriteUInt8(ptr[2]);
-		writer.WriteUInt8(ptr[3]);
-
-		ptr += 4;
-	}
+	const int count = sx * sy;
+	
+	writer.WriteBytes(bytes, count * 4);
 }
 
 static int RepeatCount_32(const uint8_t* bytes, int _x, int sx)
@@ -597,19 +466,25 @@ static int NoRepeatCount_32(const uint8_t* bytes, int _x, int sx)
 	return size;
 }
 
-void TgaLoader::SaveData_Rle32(Stream* stream, int sx, int sy, uint8_t* bytes)
+void TgaLoader::SaveData_Rle32(Stream* stream, int sx, int sy, const uint8_t* bytes)
 {
 	StreamWriter writer(stream, false);
 	
+#if 0
+	// optimize RLE compression by setting RGB values to identical values for aread where the opacity is zero
+	
+// todo : add a function to clear rgb to zero for zero-alpha pixels ?
+// note : this can be a bad idea in combination with filtering. when interpolating pixels, the black may show up
 	for (int i = 0; i < sx * sy; ++i)
 	{
-		uint8_t* pixel = bytes + i * 4;
+		const uint8_t* pixel = bytes + i * 4;
 		
 		if (pixel[3] == 0)
 		{
 			pixel[0] = pixel[1] = pixel[2] = 0;
 		}
 	}
+#endif
 	
 	for (int y = 0; y < sy; ++y)
 	{
@@ -635,22 +510,11 @@ void TgaLoader::SaveData_Rle32(Stream* stream, int sx, int sy, uint8_t* bytes)
 				
 				// write pixels
 				
-				for (int i = 0; i < count; ++i, ++x)
-				{
-					// save BGRA
-					
-#if 0
-					writer.WriteUInt8(bytes[x * 4 + 2]);
-					writer.WriteUInt8(bytes[x * 4 + 1]);
-					writer.WriteUInt8(bytes[x * 4 + 0]);
-					writer.WriteUInt8(bytes[x * 4 + 3]);
-#else
-					writer.WriteUInt8(bytes[x * 4 + 0]);
-					writer.WriteUInt8(bytes[x * 4 + 1]);
-					writer.WriteUInt8(bytes[x * 4 + 2]);
-					writer.WriteUInt8(bytes[x * 4 + 3]);
-#endif
-				}
+				const uint32_t* pixels = (uint32_t*)&bytes[x * 4];
+				
+				writer.WriteBytes(pixels, count * 4);
+				
+				x += count;
 			}
 			
 			// find # repeating pixels
@@ -667,17 +531,9 @@ void TgaLoader::SaveData_Rle32(Stream* stream, int sx, int sy, uint8_t* bytes)
 				
 				// write RLE pixel (BGRA)
 
-#if 0
-				writer.WriteUInt8(bytes[x * 4 + 2]);
-				writer.WriteUInt8(bytes[x * 4 + 1]);
-				writer.WriteUInt8(bytes[x * 4 + 0]);
-				writer.WriteUInt8(bytes[x * 4 + 3]);
-#else
-				writer.WriteUInt8(bytes[x * 4 + 0]);
-				writer.WriteUInt8(bytes[x * 4 + 1]);
-				writer.WriteUInt8(bytes[x * 4 + 2]);
-				writer.WriteUInt8(bytes[x * 4 + 3]);
-#endif
+				const uint32_t* pixel = (uint32_t*)&bytes[x * 4];
+				
+				writer.WriteBytes(pixel, 4);
 				
 				x += count;
 			}
@@ -724,9 +580,9 @@ void ImageLoader_Tga::Load(Image& image, const std::string& fileName)
 		
 		for (int x = 0; x < image.m_Sx; ++x)
 		{
-			dline[x].r = bytesItr[0];
+			dline[x].b = bytesItr[0];
 			dline[x].g = bytesItr[1];
-			dline[x].b = bytesItr[2];
+			dline[x].r = bytesItr[2];
 			dline[x].a = bytesItr[3];
 			
 			bytesItr += 4;
@@ -739,6 +595,35 @@ void ImageLoader_Tga::Load(Image& image, const std::string& fileName)
 
 void ImageLoader_Tga::Save(const Image& image, const std::string& fileName)
 {
+	// convert to bgra and flip the image vertically
+	
+	uint8_t* bytes = new uint8_t[image.m_Sx * image.m_Sy * 4];
+	
+	uint8_t* bytePtr = bytes;
+	
+	for (int y = 0; y < image.m_Sy; ++y)
+	{
+		const ImagePixel* sline = image.GetLine(image.m_Sy - 1 - y);
+		
+		for (int x = 0; x < image.m_Sx; ++x)
+		{
+			bytePtr[0] = (uint8_t)sline[x].b;
+			bytePtr[1] = (uint8_t)sline[x].g;
+			bytePtr[2] = (uint8_t)sline[x].r;
+			bytePtr[3] = (uint8_t)sline[x].a;
+			
+			bytePtr += 4;
+		}
+	}
+	
+	SaveBGRA_vflipped(bytes, image.m_Sx, image.m_Sy, fileName, false);
+
+	delete[] bytes;
+	bytes = 0;
+}
+
+void ImageLoader_Tga::SaveBGRA_vflipped(const uint8_t* bytes, const int sx, const int sy, const std::string& fileName, const bool useRLE)
+{
 	FileStream stream;
 	
 	stream.Open(fileName.c_str(), OpenMode_Write);
@@ -747,12 +632,14 @@ void ImageLoader_Tga::Save(const Image& image, const std::string& fileName)
 	
 	if (SaveColorDepth == 16)
 	{
-		header.Make_Raw16(image.m_Sx, image.m_Sy);
+		header.Make_Raw16(sx, sy);
 	}
 	else if (SaveColorDepth == 32)
 	{
-		//header.Make_Rle32(image.m_Sx, image.m_Sy);
-		header.Make_Raw32(image.m_Sx, image.m_Sy);
+		if (useRLE)
+			header.Make_Rle32(sx, sy);
+		else
+			header.Make_Raw32(sx, sy);
 	}
 	else
 	{
@@ -761,29 +648,7 @@ void ImageLoader_Tga::Save(const Image& image, const std::string& fileName)
 	
 	header.Save(&stream);
 	
-	uint8_t* bytes = new uint8_t[image.m_Sx * image.m_Sy * 4];
-	
-	uint8_t* bytePtr = bytes;
-	
-	for (int y = 0; y < image.m_Sy; ++y)
-	{
-		const ImagePixel* sline = image.GetLine(y);
-		
-		for (int x = 0; x < image.m_Sx; ++x)
-		{
-			bytePtr[0] = (uint8_t)sline[x].r;
-			bytePtr[1] = (uint8_t)sline[x].g;
-			bytePtr[2] = (uint8_t)sline[x].b;
-			bytePtr[3] = (uint8_t)sline[x].a;
-			
-			bytePtr += 4;
-		}
-	}
-	
 	TgaLoader loader;
 	
 	loader.SaveData(&stream, header, bytes);
-	
-	delete[] bytes;
-	bytes = 0;
 }
