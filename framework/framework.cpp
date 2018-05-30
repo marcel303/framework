@@ -461,6 +461,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	
 	// initialize sound player
 	
+#if !defined(LINUX) // todo : make sure PortAudio sound player works correctly on the Raspberry Pi
 	if (!g_soundPlayer.init(numSoundSources))
 	{
 		logError("failed to initialize sound player");
@@ -468,6 +469,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		//	initErrorHandler(INIT_ERROR_SOUND);
 		//return false;
 	}
+#endif
 
 	// initialize real time editing
 
