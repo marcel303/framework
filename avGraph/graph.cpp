@@ -4451,6 +4451,7 @@ void GraphEdit::doMenu(const float dt)
 			showNotification("Saved '%s'", documentInfo.filename.c_str());
 		}
 		
+	// todo
 		if (doButton("save as", size * 2, size, true))
 		{
 			save(documentInfo.filename.c_str());
@@ -4463,6 +4464,15 @@ void GraphEdit::doMenu(const float dt)
 			
 			load(filename.c_str());
 			showNotification("Loaded '%s'", documentInfo.filename.c_str());
+		}
+
+		if (realTimeConnection)
+		{
+			if (doButton("restart"))
+			{
+				realTimeConnection->loadBegin();
+				realTimeConnection->loadEnd(*this);
+			}
 		}
 		
 		doBreak();
