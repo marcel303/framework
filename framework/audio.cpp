@@ -34,6 +34,12 @@
 #include "internal.h"
 #include "Path.h"
 
+// RIFF/WAVE loader constants
+
+#define WAVE_FORMAT_PCM 1
+#define WAVE_FORMAT_IEEE_FLOAT 3
+#define WAVE_FORMAT_EXTENSIBLE -2
+
 //
 
 SoundPlayer g_soundPlayer;
@@ -86,7 +92,7 @@ static bool readChunk(FileReader & r, Chunk & chunk, int32_t & size)
 			chunk = kChunk_RIFF;
 		else if (checkId(id, "data"))
 			chunk = kChunk_DATA;
-		else if (checkId(id, "LIST") || checkId(id, "FLLR") || checkId(id, "JUNK") || checkId(id, "bext"))
+		else if (checkId(id, "LIST") || checkId(id, "FLLR") || checkId(id, "JUNK") || checkId(id, "bext") || checkId(id, "fact"))
 			chunk = kChunk_OTHER;
 		else
 		{
@@ -116,7 +122,7 @@ SoundData * loadSound_WAV(const char * filename)
 	
 	bool hasFmt = false;
 	int32_t fmtLength;
-	int16_t fmtCompressionType;
+	int16_t fmtCompressionType; // format code is a better name. 1 = PCM/integer, 2 = ADPCM, 3 = float, 7 = u-law
 	int16_t fmtChannelCount;
 	int32_t fmtSampleRate;
 	int32_t fmtByteRate;
@@ -157,15 +163,48 @@ SoundData * loadSound_WAV(const char * filename)
 			else
 				fmtExtraLength = 0;
 			
+			if (fmtCompressionType == WAVE_FORMAT_EXTENSIBLE)
+			{
+				// read WAVEFORMATEXTENSIBLE structure and change format accordingly
+				
+				int16_t numValidBits;
+				int32_t channelMask;
+				int32_t guidFormatTag;
+				int8_t guidRemainder[12];
+				
+				ok &= r.read(numValidBits);
+				ok &= r.read(channelMask);
+				ok &= r.read(guidFormatTag);
+				ok &= r.read(guidRemainder, 12);
+				
+				if (guidFormatTag == WAVE_FORMAT_PCM)
+				{
+					fmtCompressionType = WAVE_FORMAT_PCM;
+				}
+				else if (guidFormatTag == WAVE_FORMAT_IEEE_FLOAT)
+				{
+					fmtCompressionType = WAVE_FORMAT_IEEE_FLOAT;
+				}
+				else
+				{
+					logError("unknown format found in WAVEFORMATEXTENSIBLE");
+					ok = false;
+				}
+			}
+			else
+			{
+				ok &= r.skip(fmtExtraLength);
+			}
+			
 			if (!ok)
 			{
 				logError("failed to read FMT chunk");
 				return 0;
 			}
 			
-			if (fmtCompressionType != 1)
+			if (fmtCompressionType != WAVE_FORMAT_PCM && fmtCompressionType != WAVE_FORMAT_IEEE_FLOAT)
 			{
-				logError("only PCM is supported. type: %d", fmtCompressionType);
+				logError("only PCM and IEEE float are supported. type: %d", fmtCompressionType);
 				ok = false;
 			}
 			if (fmtChannelCount <= 0)
@@ -200,27 +239,81 @@ SoundData * loadSound_WAV(const char * filename)
 			
 			// convert data if necessary
 			
-			if (fmtBitDepth == 24)
+			if (fmtCompressionType == WAVE_FORMAT_PCM)
 			{
-				const int sampleCount = byteCount / 3;
-				float * samplesData = new float[sampleCount];
-				
-				for (int i = 0; i < sampleCount; ++i)
+				if (fmtBitDepth == 8)
 				{
-					int32_t value = (bytes[i * 3 + 0] << 8) | (bytes[i * 3 + 1] << 16) | (bytes[i * 3 + 2] << 24);
+					// for 8 bit data the integers are unsigned. convert them to signed here
 					
-					value >>= 8;
+					const uint8_t * srcValues = bytes;
+					int8_t * dstValues = (int8_t*)bytes;
+					const int numValues = byteCount;
 					
-					samplesData[i] = value / float(1 << 23);
+					for (int i = 0; i < numValues; ++i)
+					{
+						const int value = int(srcValues[i]) - 128;
+						
+						dstValues[i] = value;
+					}
 				}
+				else if (fmtBitDepth == 16)
+				{
+					// 16 bit data is already signed. no conversion needed
+				}
+				else if (fmtBitDepth == 24)
+				{
+					const int sampleCount = byteCount / 3;
+					float * samplesData = new float[sampleCount];
+					
+					for (int i = 0; i < sampleCount; ++i)
+					{
+						int32_t value = (bytes[i * 3 + 0] << 8) | (bytes[i * 3 + 1] << 16) | (bytes[i * 3 + 2] << 24);
+						
+						value >>= 8;
+						
+						samplesData[i] = value / float(1 << 23);
+					}
+					
+					delete[] bytes;
+					bytes = nullptr;
+					
+					bytes = (uint8_t*)samplesData;
+					
+					fmtBitDepth = 32;
+					byteCount = byteCount * 4 / 3;
+				}
+				else if (fmtBitDepth == 32)
+				{
+					const int32_t * srcValues = (int32_t*)bytes;
+					float * dstValues = (float*)bytes;
+					const int numValues = byteCount / 4;
+					
+					for (int i = 0; i < numValues; ++i)
+					{
+						dstValues[i] = float(srcValues[i] / double(1 << 31));
+					}
+				}
+			}
+			else if (fmtCompressionType == WAVE_FORMAT_IEEE_FLOAT)
+			{
+				if (fmtBitDepth == 32)
+				{
+					// no conversion is needed
+				}
+				else
+				{
+					logError("only 32 bit IEEE float is supported");
+					delete [] bytes;
+					return 0;
+				}
+			}
+			else
+			{
+				Assert(false);
 				
-				delete[] bytes;
-				bytes = nullptr;
-				
-				bytes = (uint8_t*)samplesData;
-				
-				fmtBitDepth = 32;
-				byteCount = byteCount * 4 / 3;
+				logError("unknown WAVE data format");
+				delete [] bytes;
+				return 0;
 			}
 			
 			numBytes = byteCount;
