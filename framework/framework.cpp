@@ -1605,7 +1605,7 @@ void Framework::endScreenshot(const char * name, const int index, const bool omi
 	surface = nullptr;
 }
 
-void Framework::screenshot(const char * name, int index = -1, bool omitAlpha = true)
+void Framework::screenshot(const char * name, int index, bool omitAlpha)
 {
 	float _sx;
 	float _sy;
