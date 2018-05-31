@@ -106,6 +106,8 @@ static float scale255(const float v)
 	return v * m;
 }
 
+static void getViewportSize(float & sx, float & sy);
+
 // -----
 
 Color colorBlackTranslucent(0, 0, 0, 0);
@@ -1538,6 +1540,148 @@ void Framework::endDraw()
 #endif
 }
 
+// -----
+
+#include "FileStream.h"
+#include "ImageData.h"
+#include "ImageLoader_Tga.h"
+
+static Stack<Surface*, 32> s_screenshotSurfaceStack;
+
+void Framework::beginScreenshot(int r, int g, int b, int a, int scale)
+{
+	Assert(scale >= 1);
+	
+	float sx;
+	float sy;
+	getViewportSize(sx, sy);
+	
+	sx *= scale;
+	sy *= scale;
+	
+// todo : depth buffer
+	Surface * surface = new Surface(sx, sy, false);
+	
+	pushSurface(surface);
+	surface->clear(r, g, b, a);
+	gxPushMatrix();
+	gxScalef(scale, scale, 1);
+	
+	s_screenshotSurfaceStack.push(surface);
+}
+
+void Framework::endScreenshot(const char * name, const int index, const bool omitAlpha)
+{
+	Surface * surface = s_screenshotSurfaceStack.popValue();
+	
+	gxPopMatrix();
+	popSurface();
+	
+	// save the image
+	
+	pushSurface(surface);
+	{
+		// fetch the pixel data
+		
+		const int sx = surface->getWidth();
+		const int sy = surface->getHeight();
+		
+		uint8_t * bytes = new uint8_t[sx * sy * 4];
+		
+		glReadPixels(
+			0, 0,
+			sx,
+			sy,
+			GL_BGRA, GL_UNSIGNED_BYTE,
+			bytes);
+		checkErrorGL();
+		
+		// force alpha to one, if desired
+		
+		if (omitAlpha)
+		{
+			const int numPixels = sx * sy;
+			
+			for (int i = 0; i < numPixels; ++i)
+			{
+				bytes[i * 4 + 3] = 255;
+			}
+		}
+		
+		// flip image along the Y axis (TGA stores the image upside-down)
+		
+		const int lineSize = sx * 4;
+		uint8_t * temp = (uint8_t*)alloca(lineSize);
+		
+		for (int y = 0; y < sy/2; ++y)
+		{
+			const int y1 = y;
+			const int y2 = sy - 1 - y;
+			
+			uint8_t * line1 = bytes + lineSize * y1;
+			uint8_t * line2 = bytes + lineSize * y2;
+			
+			memcpy(temp, line1, lineSize);
+			memcpy(line1, line2, lineSize);
+			memcpy(line2, temp, lineSize);
+		}
+		
+		char filename[PATH_MAX];
+		
+		if (index < 0)
+		{
+			// search for a filename for which the file doesn't exist yet
+			
+			int currentIndex = 0;
+			
+			do
+			{
+				char temp[PATH_MAX];
+				sprintf_s(temp, sizeof(temp), name, currentIndex);
+				sprintf_s(filename, sizeof(filename), "%s.tga", temp);
+				currentIndex++;
+			} while (FileStream::Exists(filename));
+		}
+		else
+		{
+			sprintf_s(filename, sizeof(filename), name, index);
+		}
+		
+		try
+		{
+			ImageLoader_Tga loader;
+			loader.SaveBGRA_vflipped(bytes, sx, sy, filename, true);
+		}
+		catch (std::exception & e)
+		{
+			logError("failed to write image: %s", e.what());
+		}
+		
+		delete [] bytes;
+		bytes = nullptr;
+	}
+	popSurface();
+
+	// draw the captured image to the current surface, as if the temporary surface never happened
+	
+	float sx;
+	float sy;
+	getViewportSize(sx, sy);
+	
+	pushBlend(BLEND_OPAQUE);
+	gxSetTexture(surface->getTexture());
+	drawRect(0, 0, sx, sy);
+	gxSetTexture(0);
+	popBlend();
+	
+	//
+	
+	delete surface;
+	surface = nullptr;
+}
+
+// -----
+
 void Framework::registerShaderSource(const char * name, const char * text)
 {
 	m_shaderSources[name] = text;
@@ -2292,11 +2436,13 @@ void Surface::blitTo(Surface * surface) const
 void Surface::blit(BLEND_MODE blendMode) const
 {
 	pushBlend(blendMode);
+	pushColorMode(COLOR_IGNORE);
 	{
 		gxSetTexture(getTexture());
 		drawRect(0, 0, getWidth(), getHeight());
 		gxSetTexture(0);
 	}
+	popColorMode();
 	popBlend();
 }
 
@@ -5225,6 +5371,13 @@ static void setSurface(Surface * surface)
 
 void pushSurface(Surface * surface)
 {
+	const bool screenshotMode = surface == nullptr && s_screenshotSurfaceStack.stackSize > 0;
+	
+	if (screenshotMode)
+		surface = s_screenshotSurfaceStack.stack[s_screenshotSurfaceStack.stackSize - 1];
+	
+	//
+
 	gxMatrixMode(GL_PROJECTION);
 	gxPushMatrix();
 	gxMatrixMode(GL_MODELVIEW);
@@ -5234,6 +5387,18 @@ void pushSurface(Surface * surface)
 	surfaceStack[surfaceStackSize++] = surface;
 	setSurface(surface);
 	checkErrorGL();
+
+	//
+
+	if (screenshotMode)
+	{
+		int sx;
+		int sy;
+		SDL_GetWindowSize(globals.currentWindow, &sx, &sy);
+		const float scaleX = surface->getWidth() / float(sx);
+		const float scaleY = surface->getHeight() / float(sy);
+		gxScalef(scaleX, scaleY, 1);
+	}
 }
 
 void popSurface()
