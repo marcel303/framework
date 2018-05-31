@@ -47,10 +47,13 @@ gfx_mode
 
 #define DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/"
 
-#define SEARCH_PATH_reaper "/Users/thecat/atk-reaper/plugins/"
+#define SEARCH_PATH_reaper "/Users/thecat/Library/Application Support/REAPER/Effects/"
 #define SEARCH_PATH_geraintluff "/Users/thecat/geraintluff -jsfx/"
 #define SEARCH_PATH_ATK "/Users/thecat/atk-reaper/plugins/"
 #define SEARCH_PATH_kawa "/Users/thecat/Downloads/JSFX-kawa-master/"
+
+#define RENDER_TO_SURFACE 0
+#define ENABLE_SCREENSHOT_API 0
 
 const int GFX_SX = 1000;
 const int GFX_SY = 720;
@@ -510,6 +513,9 @@ struct AudioStream_JsusFxChain : AudioStream
 struct JsusFxWindow
 {
 	Window * window;
+#if RENDER_TO_SURFACE
+	Surface * surface;
+#endif
 	
 	JsusFxPathLibrary_Basic pathLibrary;
 	
@@ -524,6 +530,7 @@ struct JsusFxWindow
 	
 	JsusFxWindow(const char * _filename)
 		: window(nullptr)
+		, surface(nullptr)
 		, pathLibrary(DATA_ROOT)
 		, jsusFx(pathLibrary)
 		, fileAPI()
@@ -555,6 +562,11 @@ struct JsusFxWindow
 	
 	~JsusFxWindow()
 	{
+	#if RENDER_TO_SURFACE
+		delete surface;
+		surface = nullptr;
+	#endif
+		
 		delete window;
 		window = nullptr;
 	}
@@ -580,9 +592,33 @@ struct JsusFxWindow
 		
 		pushWindow(*window);
 		{
+		#if RENDER_TO_SURFACE
+			if (surface == nullptr || surface->getWidth() != window->getWidth() || surface->getHeight() != window->getHeight())
+			{
+				delete surface;
+				surface = nullptr;
+				
+				//
+				
+				surface = new Surface(window->getWidth(), window->getHeight(), false);
+				surface->clear();
+			}
+		#endif
+			
 			framework.beginDraw(0, 0, 0, 0);
 			{
-				gfxAPI.setup(nullptr, window->getWidth(), window->getHeight(), mouse.x, mouse.y, true);
+			#if ENABLE_SCREENSHOT_API
+				const bool doScreenshot = keyboard.wentDown(SDLK_s);
+				
+				if (doScreenshot)
+					framework.beginScreenshot(0, 0, 0, 0, 4);
+			#endif
+
+			#if !RENDER_TO_SURFACE
+				Surface * surface = nullptr;
+			#endif
+
+				gfxAPI.setup(surface, window->getWidth(), window->getHeight(), mouse.x, mouse.y, true);
 				
 				pushFontMode(FONT_SDF);
 				setColorClamp(true);
@@ -591,6 +627,10 @@ struct JsusFxWindow
 				}
 				setColorClamp(false);
 				popFontMode();
+				
+			#if RENDER_TO_SURFACE
+				surface->blit(BLEND_OPAQUE);
+			#endif
 				
 				int x = 10;
 				int y = 10;
@@ -621,6 +661,11 @@ struct JsusFxWindow
 				{
 					window->setSize(sx, sy);
 				}
+				
+			#if ENABLE_SCREENSHOT_API
+				if (doScreenshot)
+					framework.endScreenshot("jsusfx-screenshot%04d");
+			#endif
 			}
 			framework.endDraw();
 		}
@@ -745,6 +790,11 @@ std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool r
 	
 	for (auto & filename : filenames)
 	{
+		if (String::EndsWith(filename, "-example"))
+			continue;
+		if (String::EndsWith(filename, "-template"))
+			continue;
+			
 		auto extension = Path::GetExtension(filename, true);
 		
 		if (extension != "" && extension != "jsfx")
@@ -803,6 +853,9 @@ static void testJsusFxList()
 	MidiKeyboard midiKeyboard;
 	
 	JsusFxChainWindow effectChainWindow(audioStream);
+	
+	bool scrollerIsActive = false;
+	float scrollerPosition = 0.f;
 	
 	for (;;)
 	{
@@ -897,8 +950,61 @@ static void testJsusFxList()
 			
 			auto & filenames = filenamesByLocation[activeLocation];
 			
-			for (auto & filename : filenames)
+			const int kMaxVisible = 30;
+			
+			if (filenames.size() > kMaxVisible)
 			{
+				const float x1 = x;
+				const float y1 = y;
+				const float x2 = x1 + 400;
+				const float y2 = y1 + 16;
+				
+				const float size = (x2 - x1) - 2*2;
+				const float barSize = size * kMaxVisible / float(filenames.size());
+				const float scrollPixels = (size - barSize) * scrollerPosition;
+				
+				const float barX1 = x1 + 2 + scrollPixels;
+				const float barY1 = y1 + 2;
+				const float barX2 = barX1 + barSize;
+				const float barY2 = y2 - 2;
+				
+				const bool isInside = mouse.x >= x1 && mouse.y >= y1 && mouse.x < x2 && mouse.y < y2;
+				
+				if (isInside && mouse.wentDown(BUTTON_LEFT))
+					scrollerIsActive = true;
+				
+				if (mouse.wentUp(BUTTON_LEFT))
+					scrollerIsActive = false;
+				
+				if (scrollerIsActive)
+				{
+					scrollerPosition = clamp((mouse.x - x1) / float(x2 - x1), 0.f, 1.f);
+					drawText(0, 0, 20, +1, +1, "SCROLL: %g", scrollerPosition);
+				}
+				
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				setLumi(100);
+				hqFillRoundedRect(x1, y1, x2, y2, 4);
+				setLumi(isInside ? 200 : 160);
+				hqFillRoundedRect(barX1, barY1, barX2, barY2, 3);
+				hqEnd();
+			}
+			else
+			{
+				scrollerPosition = 0.f;
+				scrollerIsActive = false;
+			}
+			
+			y += 20;
+			
+			const int numVisible = filenames.size() < kMaxVisible ? filenames.size() : kMaxVisible;
+			
+			int index = (filenames.size() - numVisible) * scrollerPosition;
+			
+			for (int i = 0; i < numVisible; ++i, ++index)
+			{
+				auto & filename = filenames[index];
+				
 				setColor(colorWhite);
 				
 				const bool isInside = mouse.x >= x && mouse.y >= y && mouse.x < x + 400 && mouse.y < y + 14;
