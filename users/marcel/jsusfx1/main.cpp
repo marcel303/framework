@@ -530,7 +530,9 @@ struct JsusFxWindow
 	
 	JsusFxWindow(const char * _filename)
 		: window(nullptr)
+	#if RENDER_TO_SURFACE
 		, surface(nullptr)
+	#endif
 		, pathLibrary(DATA_ROOT)
 		, jsusFx(pathLibrary)
 		, fileAPI()
