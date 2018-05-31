@@ -30,6 +30,7 @@
 #include "audioNodeBase.h"
 #include "audioTypes.h"
 
+struct AudioResource_Wavefield2D;
 struct Wavefield2D;
 
 struct AudioNodeWavefield2D : AudioNodeBase
@@ -58,6 +59,9 @@ struct AudioNodeWavefield2D : AudioNodeBase
 		kOutput_Audio,
 		kOutput_COUNT
 	};
+	
+	AudioResource_Wavefield2D * wavefieldData;
+	int currentDataVersion;
 	
 	Wavefield2D * wavefield;
 	

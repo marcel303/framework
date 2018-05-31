@@ -292,6 +292,10 @@ public:
 
 	void beginDraw(int r, int g, int b, int a);
 	void endDraw();
+	
+	void beginScreenshot(int r, int g, int b, int a, int scale);
+	void endScreenshot(const char * name, int index = -1, bool omitAlpha = true);
+	void screenshot(const char * name, int index = -1, bool omitAlpha = true);
 
 	void registerShaderSource(const char * name, const char * text);
 	void unregisterShaderSource(const char * name);
@@ -372,6 +376,8 @@ public:
 	
 	int getWidth() const;
 	int getHeight() const;
+	
+	bool getQuitRequested() const;
 	
 	SDL_Window * getWindow() const;
 	class WindowData * getWindowData() const;
@@ -1120,7 +1126,9 @@ class Gamepad
 	float m_analog[2][ANALOG_MAX];
 	float m_vibrationDuration;
 	float m_vibrationStrength;
+#ifdef __WIN32__
 	float m_lastVibrationStrength;
+#endif
 	char name[64];
 
 public:

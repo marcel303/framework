@@ -120,15 +120,23 @@ void AudioNodeVoice::tick(const float dt)
 	}
 	else if (voice == nullptr || (speaker == kSpeaker_Channel && voice->channelIndex != channelIndex))
 	{
-		const int voiceChannelIndex =
-			speaker == kSpeaker_Channel
-			? channelIndex
-			: -1;
-		
 		if (voice)
 			voiceMgr->freeVoice(voice);
 		
-		voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, voiceChannelIndex);
+		if (speaker == kSpeaker_Channel)
+		{
+			if (channelIndex >= 0)
+				voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, channelIndex);
+		}
+		else
+		{
+			voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, -1);
+		}
+	}
+	
+	if (voice == nullptr)
+	{
+		return;
 	}
 	
 	voice->gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();

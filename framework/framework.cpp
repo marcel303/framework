@@ -106,6 +106,8 @@ static float scale255(const float v)
 	return v * m;
 }
 
+static void getViewportSize(float & sx, float & sy);
+
 // -----
 
 Color colorBlackTranslucent(0, 0, 0, 0);
@@ -461,6 +463,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	
 	// initialize sound player
 	
+#if !defined(LINUX) // todo : make sure PortAudio sound player works correctly on the Raspberry Pi
 	if (!g_soundPlayer.init(numSoundSources))
 	{
 		logError("failed to initialize sound player");
@@ -468,6 +471,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		//	initErrorHandler(INIT_ERROR_SOUND);
 		//return false;
 	}
+#endif
 
 	// initialize real time editing
 
@@ -974,6 +978,8 @@ void Framework::process()
 					windowData->isActive = true;
 				else if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
 					windowData->isActive = false;
+				else if (e.window.event == SDL_WINDOWEVENT_CLOSE)
+					windowData->quitRequested = true;
 				
 				if (windowData == globals.currentWindowData)
 					windowIsActive = windowData->isActive;
@@ -1568,6 +1574,157 @@ void Framework::endDraw()
 #endif
 }
 
+// -----
+
+#include "FileStream.h"
+#include "ImageData.h"
+#include "ImageLoader_Tga.h"
+
+static Stack<Surface*, 32> s_screenshotSurfaceStack;
+
+void Framework::beginScreenshot(int r, int g, int b, int a, int scale)
+{
+	Assert(scale >= 1);
+	
+	float sx;
+	float sy;
+	getViewportSize(sx, sy);
+	
+	sx *= scale;
+	sy *= scale;
+	
+// todo : depth buffer
+	Surface * surface = new Surface(sx, sy, false);
+	
+	pushSurface(surface);
+	surface->clear(r, g, b, a);
+	gxPushMatrix();
+	gxScalef(scale, scale, 1);
+	
+	s_screenshotSurfaceStack.push(surface);
+}
+
+void Framework::endScreenshot(const char * name, const int index, const bool omitAlpha)
+{
+	Surface * surface = s_screenshotSurfaceStack.popValue();
+	
+	gxPopMatrix();
+	popSurface();
+	
+	// save the image
+	
+	pushSurface(surface);
+	{
+		screenshot(name, index, omitAlpha);
+	}
+	popSurface();
+
+	// draw the captured image to the current surface, as if the temporary surface never happened
+	
+	float sx;
+	float sy;
+	getViewportSize(sx, sy);
+	
+	pushBlend(BLEND_OPAQUE);
+	gxSetTexture(surface->getTexture());
+	drawRect(0, 0, sx, sy);
+	gxSetTexture(0);
+	popBlend();
+	
+	//
+	
+	delete surface;
+	surface = nullptr;
+}
+
+void Framework::screenshot(const char * name, int index, bool omitAlpha)
+{
+	float _sx;
+	float _sy;
+	getViewportSize(_sx, _sy);
+
+	// fetch the pixel data
+	
+	const int sx = int(_sx);
+	const int sy = int(_sy);
+	
+	uint8_t * bytes = new uint8_t[sx * sy * 4];
+	
+	glReadPixels(
+		0, 0,
+		sx,
+		sy,
+		GL_BGRA, GL_UNSIGNED_BYTE,
+		bytes);
+	checkErrorGL();
+	
+	// force alpha to one, if desired
+	
+	if (omitAlpha)
+	{
+		const int numPixels = sx * sy;
+		
+		for (int i = 0; i < numPixels; ++i)
+		{
+			bytes[i * 4 + 3] = 255;
+		}
+	}
+	
+	// flip image along the Y axis (TGA stores the image upside-down)
+	
+	const int lineSize = sx * 4;
+	uint8_t * temp = (uint8_t*)alloca(lineSize);
+	
+	for (int y = 0; y < sy/2; ++y)
+	{
+		const int y1 = y;
+		const int y2 = sy - 1 - y;
+		
+		uint8_t * line1 = bytes + lineSize * y1;
+		uint8_t * line2 = bytes + lineSize * y2;
+		
+		memcpy(temp, line1, lineSize);
+		memcpy(line1, line2, lineSize);
+		memcpy(line2, temp, lineSize);
+	}
+	
+	char filename[PATH_MAX];
+	
+	if (index < 0)
+	{
+		// search for a filename for which the file doesn't exist yet
+		
+		int currentIndex = 0;
+		
+		do
+		{
+			char temp[PATH_MAX];
+			sprintf_s(temp, sizeof(temp), name, currentIndex);
+			sprintf_s(filename, sizeof(filename), "%s.tga", temp);
+			currentIndex++;
+		} while (FileStream::Exists(filename));
+	}
+	else
+	{
+		sprintf_s(filename, sizeof(filename), name, index);
+	}
+	
+	try
+	{
+		ImageLoader_Tga loader;
+		loader.SaveBGRA_vflipped(bytes, sx, sy, filename, true);
+	}
+	catch (std::exception & e)
+	{
+		logError("failed to write image: %s", e.what());
+	}
+	
+	delete [] bytes;
+	bytes = nullptr;
+}
+
+// -----
+
 void Framework::registerShaderSource(const char * name, const char * text)
 {
 	m_shaderSources[name] = text;
@@ -1785,6 +1942,11 @@ int Window::getHeight() const
 	SDL_GetWindowSize(m_window, &sx, &sy);
 	
 	return sy;
+}
+
+bool Window::getQuitRequested() const
+{
+	return m_windowData->quitRequested;
 }
 
 SDL_Window * Window::getWindow() const
@@ -2317,11 +2479,13 @@ void Surface::blitTo(Surface * surface) const
 void Surface::blit(BLEND_MODE blendMode) const
 {
 	pushBlend(blendMode);
+	pushColorMode(COLOR_IGNORE);
 	{
 		gxSetTexture(getTexture());
 		drawRect(0, 0, getWidth(), getHeight());
 		gxSetTexture(0);
 	}
+	popColorMode();
 	popBlend();
 }
 
@@ -5250,6 +5414,13 @@ static void setSurface(Surface * surface)
 
 void pushSurface(Surface * surface)
 {
+	const bool screenshotMode = surface == nullptr && s_screenshotSurfaceStack.stackSize > 0;
+	
+	if (screenshotMode)
+		surface = s_screenshotSurfaceStack.stack[s_screenshotSurfaceStack.stackSize - 1];
+	
+	//
+
 	gxMatrixMode(GL_PROJECTION);
 	gxPushMatrix();
 	gxMatrixMode(GL_MODELVIEW);
@@ -5259,6 +5430,18 @@ void pushSurface(Surface * surface)
 	surfaceStack[surfaceStackSize++] = surface;
 	setSurface(surface);
 	checkErrorGL();
+
+	//
+
+	if (screenshotMode)
+	{
+		int sx;
+		int sy;
+		SDL_GetWindowSize(globals.currentWindow, &sx, &sy);
+		const float scaleX = surface->getWidth() / float(sx);
+		const float scaleY = surface->getHeight() / float(sy);
+		gxScalef(scaleX, scaleY, 1);
+	}
 }
 
 void popSurface()

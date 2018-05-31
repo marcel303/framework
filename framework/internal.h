@@ -156,6 +156,7 @@ public:
 	}
 	
 	bool isActive;
+	bool quitRequested;
 	bool mouseDown[BUTTON_MAX];
 	bool mouseChange[BUTTON_MAX];
 	bool hasOldMousePosition;

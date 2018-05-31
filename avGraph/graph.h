@@ -645,12 +645,42 @@ struct GraphEdit_Visualizer
 
 struct GraphEdit_ResourceEditorBase
 {
+	int initSx;
+	int initSy;
+	
+	int x;
+	int y;
+	
+	int sx;
+	int sy;
+	
+	GraphEdit_ResourceEditorBase(const int _sx, const int _sy)
+		: initSx(_sx)
+		, initSy(_sy)
+		, x(0)
+		, y(0)
+		, sx(0)
+		, sy(0)
+	{
+	}
+	
 	virtual ~GraphEdit_ResourceEditorBase()
 	{
 	}
 	
-	virtual void getSize(int & sx, int & sy) const = 0;
-	virtual void setPosition(const int x, const int y) = 0;
+	void init(const int _x, const int _y, const int _sx, const int _sy)
+	{
+		sx = _sx;
+		sy = _sy;
+		afterSizeChanged();
+		
+		x = _x;
+		y = _y;
+		afterPositionChanged();
+	}
+	
+	virtual void afterSizeChanged() = 0;
+	virtual void afterPositionChanged() = 0;
 	
 	virtual bool tick(const float dt, const bool inputIsCaptured) = 0;
 	virtual void draw() const = 0;
@@ -658,19 +688,6 @@ struct GraphEdit_ResourceEditorBase
 	// todo : introduce the concept of a resource path ? perhaps name node-specific resources "<type>:node/<id>"
 	virtual void setResource(const GraphNode & node, const char * type, const char * name) = 0;
 	virtual bool serializeResource(std::string & text) const = 0;
-	
-	//
-	
-	void getPositionForViewCenter(int & x, int & y) const
-	{
-		int sx;
-		int sy;
-		
-		getSize(sx, sy);
-		
-		x = (GRAPHEDIT_SX - sx) / 2;
-		y = (GRAPHEDIT_SY - sy) / 2;
-	}
 };
 
 //

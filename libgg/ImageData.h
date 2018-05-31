@@ -106,9 +106,9 @@ public:
 class SampleGetter : public IErrorDiffusionGetter
 {
 public:
-	SampleGetter(void* data, int stride, int size)
+	SampleGetter(const void* data, int stride, int size)
 	{
-		mData = (uint8_t*)data;
+		mData = (const uint8_t*)data;
 		mStride = stride;
 		mSize = size;
 	}
@@ -118,16 +118,16 @@ public:
 		switch (mSize)
 		{
 		case 1:
-			return *(uint8_t*)(mData + index * mStride);
+			return *(const uint8_t*)(mData + index * mStride);
 		case 2:
-			return *(uint16_t*)(mData + index * mStride);
+			return *(const uint16_t*)(mData + index * mStride);
 		default:
 			//throw ExceptionNA();
 			return 0;
 		}
 	}
 
-	uint8_t* mData;
+	const uint8_t* mData;
 	int mStride;
 	int mSize;
 };

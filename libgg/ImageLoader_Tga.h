@@ -3,6 +3,21 @@
 #include <stdint.h>
 #include "IImageLoader.h"
 
+/*
+
+the TGA loader is capable or reading and writing TGA files, with and without RLE encoding
+
+note : the TGA loader _WILL THROW_ when it encounters any issue reading or writing files. be
+       sure to capture <std::exception> when such error occurs
+       
+the TGA loader stored pixels directly in BGRA format
+
+the first row of pixels in memory, will appear as the bottom row of pixels in the image when viewed
+when an image has rows going top to bottom in memory (as is common for most images and apis), the
+image should be vertically flipped first before wiring it to file, or after reading it from file
+
+*/
+
 class TgaHeader
 {
 public:
@@ -36,15 +51,16 @@ class TgaLoader
 public:
 	void LoadData(Stream* stream, const TgaHeader& header, uint8_t** out_Bytes);
 	void LoadData_Raw16_Hack(Stream* stream, int sx, int sy, uint8_t* out_Bytes);
-	void LoadData_Raw32_Hack(Stream* stream, int sx, int sy, uint8_t* out_Bytes);
-	//void LoadData_Rle32(Stream* stream, int sx, int sy, uint8_t* out_Bytes);
-	//void LoadData_Rle32_Hack(Stream* stream, int sx, int sy, uint8_t* out_Bytes);
+	void LoadData_Raw32(Stream* stream, int sx, int sy, uint8_t* out_Bytes);
+	void LoadData_Rle32(Stream* stream, int sx, int sy, uint8_t* out_Bytes);
 	
-	void SaveData(Stream* stream, const TgaHeader& header, uint8_t* bytes);
-	void SaveData_Raw16(Stream* stream, int sx, int sy, uint8_t* bytes);
-	void SaveData_Raw32(Stream* stream, int sx, int sy, uint8_t* bytes);
-	void SaveData_Rle32(Stream* stream, int sx, int sy, uint8_t* bytes);
+	void SaveData(Stream* stream, const TgaHeader& header, const uint8_t* bytes);
+	void SaveData_Raw16(Stream* stream, int sx, int sy, const uint8_t* bytes);
+	void SaveData_Raw32(Stream* stream, int sx, int sy, const uint8_t* bytes);
+	void SaveData_Rle32(Stream* stream, int sx, int sy, const uint8_t* bytes);
 };
+
+//
 
 class ImageLoader_Tga : public IImageLoader
 {
@@ -53,6 +69,8 @@ public:
 	virtual ~ImageLoader_Tga();
 	virtual void Load(Image& image, const std::string& fileName);
 	virtual void Save(const Image& image, const std::string& fileName);
+	
+	void SaveBGRA_vflipped(const uint8_t* bytes, const int sx, const int sy, const std::string& fileName, const bool useRLE);
 	
 	int SaveColorDepth;
 };
