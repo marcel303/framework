@@ -295,6 +295,7 @@ public:
 	
 	void beginScreenshot(int r, int g, int b, int a, int scale);
 	void endScreenshot(const char * name, int index = -1, bool omitAlpha = true);
+	void screenshot(const char * name, int index = -1, bool omitAlpha = true);
 
 	void registerShaderSource(const char * name, const char * text);
 	void unregisterShaderSource(const char * name);

@@ -1581,84 +1581,7 @@ void Framework::endScreenshot(const char * name, const int index, const bool omi
 	
 	pushSurface(surface);
 	{
-		// fetch the pixel data
-		
-		const int sx = surface->getWidth();
-		const int sy = surface->getHeight();
-		
-		uint8_t * bytes = new uint8_t[sx * sy * 4];
-		
-		glReadPixels(
-			0, 0,
-			sx,
-			sy,
-			GL_BGRA, GL_UNSIGNED_BYTE,
-			bytes);
-		checkErrorGL();
-		
-		// force alpha to one, if desired
-		
-		if (omitAlpha)
-		{
-			const int numPixels = sx * sy;
-			
-			for (int i = 0; i < numPixels; ++i)
-			{
-				bytes[i * 4 + 3] = 255;
-			}
-		}
-		
-		// flip image along the Y axis (TGA stores the image upside-down)
-		
-		const int lineSize = sx * 4;
-		uint8_t * temp = (uint8_t*)alloca(lineSize);
-		
-		for (int y = 0; y < sy/2; ++y)
-		{
-			const int y1 = y;
-			const int y2 = sy - 1 - y;
-			
-			uint8_t * line1 = bytes + lineSize * y1;
-			uint8_t * line2 = bytes + lineSize * y2;
-			
-			memcpy(temp, line1, lineSize);
-			memcpy(line1, line2, lineSize);
-			memcpy(line2, temp, lineSize);
-		}
-		
-		char filename[PATH_MAX];
-		
-		if (index < 0)
-		{
-			// search for a filename for which the file doesn't exist yet
-			
-			int currentIndex = 0;
-			
-			do
-			{
-				char temp[PATH_MAX];
-				sprintf_s(temp, sizeof(temp), name, currentIndex);
-				sprintf_s(filename, sizeof(filename), "%s.tga", temp);
-				currentIndex++;
-			} while (FileStream::Exists(filename));
-		}
-		else
-		{
-			sprintf_s(filename, sizeof(filename), name, index);
-		}
-		
-		try
-		{
-			ImageLoader_Tga loader;
-			loader.SaveBGRA_vflipped(bytes, sx, sy, filename, true);
-		}
-		catch (std::exception & e)
-		{
-			logError("failed to write image: %s", e.what());
-		}
-		
-		delete [] bytes;
-		bytes = nullptr;
+		screenshot(name, index, omitAlpha);
 	}
 	popSurface();
 
@@ -1678,6 +1601,92 @@ void Framework::endScreenshot(const char * name, const int index, const bool omi
 	
 	delete surface;
 	surface = nullptr;
+}
+
+void Framework::screenshot(const char * name, int index = -1, bool omitAlpha = true)
+{
+	float _sx;
+	float _sy;
+	getViewportSize(_sx, _sy);
+
+	// fetch the pixel data
+	
+	const int sx = int(_sx);
+	const int sy = int(_sy);
+	
+	uint8_t * bytes = new uint8_t[sx * sy * 4];
+	
+	glReadPixels(
+		0, 0,
+		sx,
+		sy,
+		GL_BGRA, GL_UNSIGNED_BYTE,
+		bytes);
+	checkErrorGL();
+	
+	// force alpha to one, if desired
+	
+	if (omitAlpha)
+	{
+		const int numPixels = sx * sy;
+		
+		for (int i = 0; i < numPixels; ++i)
+		{
+			bytes[i * 4 + 3] = 255;
+		}
+	}
+	
+	// flip image along the Y axis (TGA stores the image upside-down)
+	
+	const int lineSize = sx * 4;
+	uint8_t * temp = (uint8_t*)alloca(lineSize);
+	
+	for (int y = 0; y < sy/2; ++y)
+	{
+		const int y1 = y;
+		const int y2 = sy - 1 - y;
+		
+		uint8_t * line1 = bytes + lineSize * y1;
+		uint8_t * line2 = bytes + lineSize * y2;
+		
+		memcpy(temp, line1, lineSize);
+		memcpy(line1, line2, lineSize);
+		memcpy(line2, temp, lineSize);
+	}
+	
+	char filename[PATH_MAX];
+	
+	if (index < 0)
+	{
+		// search for a filename for which the file doesn't exist yet
+		
+		int currentIndex = 0;
+		
+		do
+		{
+			char temp[PATH_MAX];
+			sprintf_s(temp, sizeof(temp), name, currentIndex);
+			sprintf_s(filename, sizeof(filename), "%s.tga", temp);
+			currentIndex++;
+		} while (FileStream::Exists(filename));
+	}
+	else
+	{
+		sprintf_s(filename, sizeof(filename), name, index);
+	}
+	
+	try
+	{
+		ImageLoader_Tga loader;
+		loader.SaveBGRA_vflipped(bytes, sx, sy, filename, true);
+	}
+	catch (std::exception & e)
+	{
+		logError("failed to write image: %s", e.what());
+	}
+	
+	delete [] bytes;
+	bytes = nullptr;
 }
 
 // -----
