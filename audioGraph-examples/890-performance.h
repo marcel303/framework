@@ -40,7 +40,7 @@ struct VideoLandscape
 	
 	//
 	
-	void init();
+	void init(const std::vector<std::string> & videoFilenames);
 	void shut();
 	
 	void tick(const float dt);

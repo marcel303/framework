@@ -13,7 +13,7 @@
 #include <cmath>
 
 #define NUM_AUDIOCLIP_SOURCES 16
-#define NUM_VIDEOCLIP_SOURCES 3
+#define NUM_VIDEOCLIP_SOURCES 8
 #define NUM_VIDEOCLIPS 32
 #define NUM_VFXCLIPS 0
 #define NUM_INTERVIEW_SOURCES 7
@@ -1433,13 +1433,18 @@ struct World
 		};
 	}
 
-	void init(binaural::HRIRSampleSet * sampleSet, binaural::Mutex * mutex)
+	void init(binaural::HRIRSampleSet * sampleSet, binaural::Mutex * mutex, const std::vector<std::string> & _videoFilenames)
 	{
 		for (int i = 0; i < NUM_VIDEOCLIP_SOURCES; ++i)
 		{
-			const char * videoFilename = videoFilenames[i];
+			std::string videoFilename;
 			
-			mediaPlayers[i].openAsync(videoFilename, MP::kOutputMode_RGBA);
+			if (_videoFilenames.empty())
+				videoFilename = videoFilenames[i];
+			else
+				videoFilename = _videoFilenames[i % _videoFilenames.size()];
+			
+			mediaPlayers[i].openAsync(videoFilename.c_str(), MP::kOutputMode_RGBA);
 		}
 		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
@@ -2620,7 +2625,7 @@ void VfxNodeScalarSmoothe::tick(const float _dt)
 
 //
 
-void VideoLandscape::init()
+void VideoLandscape::init(const std::vector<std::string> & videoFilenames)
 {
 	// create mask texture for videos
 	
@@ -2662,7 +2667,7 @@ void VideoLandscape::init()
 	//
 	
 	world = new World();
-	world->init(g_sampleSet, g_binauralMutex);
+	world->init(g_sampleSet, g_binauralMutex, videoFilenames);
     s_world = world;
 	
     starfield = new Starfield();

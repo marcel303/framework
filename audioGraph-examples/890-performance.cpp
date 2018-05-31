@@ -203,6 +203,157 @@ VFX_NODE_TYPE(VfxNodeTriggerFilter)
 
 //
 
+#include "Path.h"
+#include "video.h"
+
+#define MEDIA_PATH "/Users/thecat/Sexyshow/media/"
+
+struct MediaElem
+{
+	std::string filename;
+	bool selected = false;
+	
+	MediaPlayer mp;
+	
+	GLuint texture = 0;
+};
+
+static std::vector<std::string> doMediaPicker()
+{
+	std::vector<MediaElem*> elems;
+	
+	auto files = listFiles(MEDIA_PATH, false);
+	
+	for (auto & file : files)
+	{
+		auto ext = Path::GetExtension(file, true);
+		
+		if (ext == "mp4")
+		{
+			MediaElem * e = new MediaElem();
+			
+			e->filename = file;
+			e->mp.openAsync(file.c_str(), MP::kOutputMode_RGBA);
+			
+			elems.push_back(e);
+		}
+	#if 0
+		else if (ext == "jpg")
+		{
+			MediaElem * e = new MediaElem();
+			
+			e->filename = file;
+			e->texture = getTexture(file.c_str());
+			
+			elems.push_back(e);
+		}
+	#endif
+	}
+	
+	for (;;)
+	{
+		framework.process();
+		
+		if (keyboard.wentDown(SDLK_SPACE))
+			break;
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			setFont("calibri.ttf");
+			
+			int index = 0;
+			
+			for (auto & e : elems)
+			{
+				const int sx = 180;
+				const int sy = 120;
+				
+				const int cx = index % 5;
+				const int cy = index / 5;
+				
+				const int x1 = cx * sx;
+				const int y1 = cy * sy;
+				const int x2 = x1 + sx;
+				const int y2 = y1 + sy;
+				
+				const bool hover =
+					mouse.x >= x1 &&
+					mouse.y >= y1 &&
+					mouse.x < x2 &&
+					mouse.y < y2;
+				
+				if (hover && mouse.wentDown(BUTTON_LEFT))
+					e->selected = !e->selected;
+				
+				if (e->mp.isActive(e->mp.context))
+				{
+					e->mp.presentTime += framework.timeStep;
+					
+					e->mp.tick(e->mp.context, true);
+					
+					if (e->mp.presentedLastFrame(e->mp.context))
+					{
+						auto openParams = e->mp.context->openParams;
+						
+						e->mp.close(false);
+						e->mp.presentTime = 0.0;
+						
+						e->mp.openAsync(openParams);
+					}
+				}
+				
+				const GLuint texture = e->texture ? e->texture : e->mp.getTexture();
+				
+				setColor(colorWhite);
+				setLumi(hover ? 255 : 200);
+				gxSetTexture(texture);
+				{
+					drawRect(x1, y1, x2, y2);
+				}
+				gxSetTexture(0);
+				
+				if (e->selected)
+				{
+					const int x = (x1 + x2) / 2;
+					const int y = (y1 + y2) / 2;
+					const int r = 12;
+					
+					hqBegin(HQ_FILLED_CIRCLES);
+					setColor(colorGreen);
+					hqFillCircle(x, y, r);
+					hqEnd();
+					
+					hqBegin(HQ_STROKED_CIRCLES);
+					setColor(colorBlack);
+					hqStrokeCircle(x, y, r, 1.5f);
+					hqEnd();
+				}
+				
+				index++;
+			}
+			
+			setColor(200, 200, 255);
+			drawText(4, GFX_SY - 4, 20, +1, -1, "Select videos for Video Clips in Space, press SPACE when done");
+		}
+		framework.endDraw();
+	}
+	
+	std::vector<std::string> result;
+	
+	for (auto & e : elems)
+		if (e->selected)
+			result.push_back(e->filename);
+	
+	for (auto & e : elems)
+	{
+		delete e;
+	}
+	
+	return result;
+}
+
+//
+
 int main(int argc, char * argv[])
 {
 	srand(time(nullptr));
@@ -216,6 +367,8 @@ int main(int argc, char * argv[])
 
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
+	
+	auto videoFilenames = doMediaPicker();
 	
 #if ENABLE_WELCOME && !USE_STREAMING
 	fillPcmDataCache(".", true, false, false);
@@ -243,7 +396,7 @@ int main(int argc, char * argv[])
 	g_vfxGraphMgr = vfxGraphMgr;
 	
 	VideoLandscape * landscape = new VideoLandscape();
-	landscape->init();
+	landscape->init(videoFilenames);
 	
 	VfxGraphInstance * vfxInstance = vfxGraphMgr->createInstance("v001.xml");
 	vfxGraphMgr->activeInstance = vfxInstance;
