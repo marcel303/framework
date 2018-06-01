@@ -11,7 +11,7 @@
 	#define FINMODE 1
 #endif
 
-#if FINMODE
+#if FINMODE || 1
 const int GFX_SX = 1920;
 const int GFX_SY = 1080;
 #elif 1
@@ -265,8 +265,8 @@ static std::vector<std::string> doMediaPicker()
 			
 			for (auto & e : elems)
 			{
-				const int sx = 180;
-				const int sy = 120;
+				const int sx = 360;
+				const int sy = 240;
 				
 				const int cx = index % 5;
 				const int cy = index / 5;
@@ -363,6 +363,8 @@ int main(int argc, char * argv[])
 	
 #if FINMODE
 	framework.fullscreen = true;
+#else
+	framework.minification = 2;
 #endif
 
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
