@@ -13,10 +13,8 @@
 #include <cmath>
 
 #define NUM_AUDIOCLIP_SOURCES 16
-#define NUM_VIDEOCLIP_SOURCES 8
 #define NUM_VIDEOCLIPS 32
 #define NUM_VFXCLIPS 0
-#define NUM_INTERVIEW_SOURCES 7
 
 #define NUM_SPOKENWORD_SOURCES 3
 
@@ -46,12 +44,12 @@ static const char * audioFilenames[NUM_AUDIOCLIP_SOURCES] =
     "welcome/16 Welcome Refrein 3 zonder zang loop.ogg"
 };
 
-static const char * videoFilenames[NUM_VIDEOCLIP_SOURCES] =
-{
-	"0.640px.mp4",
-	"1.640px.mp4",
-	"2.640px.mp4",
-};
+std::vector<std::string> videoFilenames(
+	{
+		"0.640px.mp4",
+		"1.640px.mp4",
+		"2.640px.mp4",
+	});
 
 static const char * spokenText[NUM_SPOKENWORD_SOURCES] =
 {
@@ -67,20 +65,20 @@ static const char * spokenAudio[NUM_SPOKENWORD_SOURCES] =
 	"wiekspreekt.ogg" // 8:49 ~= 530 seconds
 };
 
-static const char * interviewFilenames[NUM_INTERVIEW_SOURCES] =
-{
-	"interviews/Albert-small.mp4",
-	"interviews/Daan-small.mp4",
-	"interviews/Jasmin-small.mp4",
-	"interviews/Jur-small.mp4",
-	"interviews/Lisa-small.mp4",
-	"interviews/Roos-small.mp4",
-	"interviews/Wiek-small.mp4"
-};
+std::vector<std::string> interviewFilenames(
+	{
+		"interviews/Albert-small.mp4",
+		"interviews/Daan-small.mp4",
+		"interviews/Jasmin-small.mp4",
+		"interviews/Jur-small.mp4",
+		"interviews/Lisa-small.mp4",
+		"interviews/Roos-small.mp4",
+		"interviews/Wiek-small.mp4"
+	});
 
 //
 
-static MediaPlayer mediaPlayers[NUM_VIDEOCLIP_SOURCES];
+static MediaPlayer * mediaPlayers = nullptr;
 
 static VectorMemory vectorMemory;
 
@@ -299,7 +297,7 @@ struct Videoclip
 		{
 			gxMultMatrixf(soundVolume.transform.m_v);
 			
-			const GLuint texture = mediaPlayers[index % NUM_VIDEOCLIP_SOURCES].getTexture();
+			const GLuint texture = mediaPlayers[index % videoFilenames.size()].getTexture();
 			const float perlin1 = scaled_octave_noise_1d(8, .5f, s_videoPerlinScale, 0.f, 1.f, index);
 			const float perlin2 = s_videoPerlinThreshold;
 			
@@ -873,7 +871,7 @@ struct Faces
 		std::vector<int> indices;
 		
 		for (int i = 0; i < numTiles; ++i)
-			indices.push_back(i % NUM_INTERVIEW_SOURCES);
+			indices.push_back(i % interviewFilenames.size());
 		
 		std::random_shuffle(indices.begin(), indices.end());
 		
@@ -890,7 +888,7 @@ struct Faces
 			
 			const int index = indices[i];
 			
-			const char * videoFilename = interviewFilenames[index];
+			const char * videoFilename = interviewFilenames[index].c_str();
 			const std::string audioFilename = Path::ReplaceExtension(videoFilename, "ogg");
 			
 			tile->init(videoFilename, audioFilename.c_str());
@@ -988,7 +986,7 @@ struct Faces
 			
 			FaceTile * tile = tiles[focusIndex];
 			
-			if (!tile->audioSource.isOpen() || tile->audioSource.hasEnded)
+			if (tile->audioSource.isOpen() && tile->audioSource.hasEnded)
 			{
 				endFocus();
 			}
@@ -1433,27 +1431,24 @@ struct World
 		};
 	}
 
-	void init(binaural::HRIRSampleSet * sampleSet, binaural::Mutex * mutex, const std::vector<std::string> & _videoFilenames)
+	void init(binaural::HRIRSampleSet * sampleSet, binaural::Mutex * mutex)
 	{
-		for (int i = 0; i < NUM_VIDEOCLIP_SOURCES; ++i)
+		mediaPlayers = new MediaPlayer[videoFilenames.size()];
+		
+		for (int i = 0; i < videoFilenames.size(); ++i)
 		{
-			std::string videoFilename;
+			const char * videoFilename = videoFilenames[i].c_str();
 			
-			if (_videoFilenames.empty())
-				videoFilename = videoFilenames[i];
-			else
-				videoFilename = _videoFilenames[i % _videoFilenames.size()];
-			
-			mediaPlayers[i].openAsync(videoFilename.c_str(), MP::kOutputMode_RGBA);
+			mediaPlayers[i].openAsync(videoFilename, MP::kOutputMode_RGBA);
 		}
 		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
             const int audioIndex = i % NUM_AUDIOCLIP_SOURCES;
-            const int videoIndex = i % NUM_VIDEOCLIP_SOURCES;
+            const int videoIndex = i % videoFilenames.size();
 			
 			const char * audioFilename = audioFilenames[audioIndex];
-			const char * videoFilename = videoFilenames[videoIndex];
+			const char * videoFilename = videoFilenames[videoIndex].c_str();
 			
 			videoclips[i].init(sampleSet, mutex, i, audioFilename, videoFilename, videoclipsOpacity);
 		}
@@ -1477,10 +1472,13 @@ struct World
 			videoclips[i].shut();
 		}
 		
-		for (int i = 0; i < NUM_VIDEOCLIP_SOURCES; ++i)
+		for (int i = 0; i < videoFilenames.size(); ++i)
 		{
 			mediaPlayers[i].close(true);
 		}
+		
+		delete [] mediaPlayers;
+		mediaPlayers = nullptr;
 	}
 	
 	void beginVideoClips()
@@ -1619,7 +1617,7 @@ struct World
 		
 		// update media players
 		
-		for (int i = 0; i < NUM_VIDEOCLIP_SOURCES; ++i)
+		for (int i = 0; i < videoFilenames.size(); ++i)
 		{
 			mediaPlayers[i].presentTime += dt;
 			
@@ -2625,7 +2623,7 @@ void VfxNodeScalarSmoothe::tick(const float _dt)
 
 //
 
-void VideoLandscape::init(const std::vector<std::string> & videoFilenames)
+void VideoLandscape::init()
 {
 	// create mask texture for videos
 	
@@ -2667,7 +2665,7 @@ void VideoLandscape::init(const std::vector<std::string> & videoFilenames)
 	//
 	
 	world = new World();
-	world->init(g_sampleSet, g_binauralMutex, videoFilenames);
+	world->init(g_sampleSet, g_binauralMutex);
     s_world = world;
 	
     starfield = new Starfield();

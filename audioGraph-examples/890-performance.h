@@ -24,6 +24,9 @@ struct GraphEdit_RealTimeConnection;
 struct GraphEdit_TypeDefinitionLibrary;
 struct VfxGraph;
 
+extern std::vector<std::string> videoFilenames;
+extern std::vector<std::string> interviewFilenames;
+
 struct VideoLandscape
 {
 	const int kFontSize = 16;
@@ -40,7 +43,7 @@ struct VideoLandscape
 	
 	//
 	
-	void init(const std::vector<std::string> & videoFilenames);
+	void init();
 	void shut();
 	
 	void tick(const float dt);

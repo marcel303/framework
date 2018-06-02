@@ -370,7 +370,12 @@ int main(int argc, char * argv[])
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
-	auto videoFilenames = doMediaPicker();
+	videoFilenames = doMediaPicker();
+	
+	auto temp = interviewFilenames;
+	interviewFilenames = videoFilenames;
+	for (auto & videoFilename : temp)
+		interviewFilenames.push_back(videoFilename);
 	
 #if ENABLE_WELCOME && !USE_STREAMING
 	fillPcmDataCache(".", true, false, false);
@@ -398,7 +403,7 @@ int main(int argc, char * argv[])
 	g_vfxGraphMgr = vfxGraphMgr;
 	
 	VideoLandscape * landscape = new VideoLandscape();
-	landscape->init(videoFilenames);
+	landscape->init();
 	
 	VfxGraphInstance * vfxInstance = vfxGraphMgr->createInstance("v001.xml");
 	vfxGraphMgr->activeInstance = vfxInstance;
