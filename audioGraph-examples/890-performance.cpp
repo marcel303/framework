@@ -8,15 +8,15 @@
 #include "vfxGraphRealTimeConnection.h"
 
 #if !defined(DEBUG)
-	#define FINMODE 1
+	#define FINMODE 0
 #endif
 
-#if FINMODE || 1
+#if FINMODE
 const int GFX_SX = 1920;
 const int GFX_SY = 1080;
 #elif 1
-const int GFX_SX = 1920/2;
-const int GFX_SY = 1080/2;
+const int GFX_SX = 1920*2/3;
+const int GFX_SY = 1080*2/3;
 #elif 1
 const int GFX_SX = 2400;
 const int GFX_SY = 1200;
@@ -257,6 +257,9 @@ static std::vector<std::string> doMediaPicker()
 		if (keyboard.wentDown(SDLK_SPACE))
 			break;
 		
+		if (mouse.wentDown(BUTTON_LEFT) && mouse.y > GFX_SY - 20)
+			break;
+		
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			setFont("calibri.ttf");
@@ -265,8 +268,8 @@ static std::vector<std::string> doMediaPicker()
 			
 			for (auto & e : elems)
 			{
-				const int sx = 360;
-				const int sy = 240;
+				const int sx = 360 * GFX_SX / 1920;
+				const int sy = 240 * GFX_SY / 1080;
 				
 				const int cx = index % 5;
 				const int cy = index / 5;
@@ -363,20 +366,17 @@ int main(int argc, char * argv[])
 	
 #if FINMODE
 	framework.fullscreen = true;
-#else
-	framework.minification = 2;
 #endif
 
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
 	videoFilenames = doMediaPicker();
+	std::random_shuffle(videoFilenames.begin(), videoFilenames.end());
 	
 	auto temp = interviewFilenames;
 	interviewFilenames = videoFilenames;
-	for (auto & videoFilename : temp)
-		interviewFilenames.push_back(videoFilename);
-	
+
 #if ENABLE_WELCOME && !USE_STREAMING
 	fillPcmDataCache(".", true, false, false);
 #endif
@@ -441,6 +441,8 @@ int main(int argc, char * argv[])
 		{
 			setFont("calibri.ttf");
 			pushFontMode(FONT_SDF);
+			
+			gxScalef(1920.f / GFX_SX, 1080.f / GFX_SY, 1.f);
 			
 			vfxGraphMgr->draw();
 			
