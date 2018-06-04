@@ -810,7 +810,7 @@ std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool r
 		gfxAPI.init(jsusFx.m_vm);
 		jsusFx.gfx = &gfxAPI;
 		
-		if (!jsusFx.compile(pathLibrary, filename))
+		if (!jsusFx.readHeader(pathLibrary, filename))
 			continue;
 		
 		if (jsusFx.desc[0] == 0)
