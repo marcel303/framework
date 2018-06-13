@@ -7,8 +7,10 @@
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 
+#define APPMODE 0
+
 #if !defined(DEBUG)
-	#define FINMODE 0
+	#define FINMODE 1
 #endif
 
 #if FINMODE
@@ -206,7 +208,15 @@ VFX_NODE_TYPE(VfxNodeTriggerFilter)
 #include "Path.h"
 #include "video.h"
 
-#define MEDIA_PATH "/Users/thecat/Sexyshow/media/"
+#if APPMODE
+	#error this shouldn't be enable except for deployment of the app
+
+	#define MEDIA_PATH "media"
+#else
+	#define MEDIA_PATH "/Users/thecat/Sexyshow/media/"
+#endif
+
+//
 
 struct MediaElem
 {
@@ -359,6 +369,12 @@ static std::vector<std::string> doMediaPicker()
 
 int main(int argc, char * argv[])
 {
+#if APPMODE
+	char * basePath = SDL_GetBasePath();
+	changeDirectory(basePath);
+	SDL_free(basePath);
+#endif
+
 	srand(time(nullptr));
 	
     framework.enableDepthBuffer = true;

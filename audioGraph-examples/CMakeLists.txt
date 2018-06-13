@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11")
 
 set(HAS_LIBGG 0)
 set(HAS_LIBOSC 0)
@@ -75,8 +76,8 @@ add_executable(700-4dworld 700-4dworld.cpp)
 add_executable(710-go 710-go.cpp)
 add_executable(860-thetribe 860-thetribe.cpp textScroller.cpp textScroller.h)
 add_executable(880-talkawave 880-talkawave.cpp)
-add_executable(890-performance 890-performance.cpp 890-performance.h 890-thetribe-video-landscape.cpp audioMixer.cpp audioMixer.h textScroller.cpp textScroller.h)
-add_executable(892-landart 892-landart.cpp 892-landart.h)
+add_executable(890-performance MACOSX_BUNDLE 890-performance.cpp 890-performance.h 890-thetribe-video-landscape.cpp audioMixer.cpp audioMixer.h textScroller.cpp textScroller.h)
+add_executable(892-landart MACOSX_BUNDLE 892-landart.cpp 892-landart.h)
 
 set(LIBRARIES PRIVATE
 	libgg
@@ -86,6 +87,15 @@ set(LIBRARIES PRIVATE
 	vfxgraph
 	${FRAMEWORK_LIBRARIES}
 	${AUDIOGRAPH_LIBRARIES}
+	${VFXGRAPH_LIBRARIES})
+
+set(LIBRARIES_LANDART PRIVATE
+	libgg
+	framework
+	${FRAMEWORK_LIBRARIES}
+	vfxgraph
+	libvideo
+	${LIBVIDEO_LIBRARIES}
 	${VFXGRAPH_LIBRARIES})
 
 target_link_libraries(000-minimal PRIVATE ${LIBRARIES})
@@ -108,7 +118,7 @@ target_link_libraries(710-go PRIVATE ${LIBRARIES})
 target_link_libraries(860-thetribe PRIVATE ${LIBRARIES} libvideo ${LIBVIDEO_LIBRARIES})
 target_link_libraries(880-talkawave PRIVATE ${LIBRARIES} libvideo ${LIBVIDEO_LIBRARIES})
 target_link_libraries(890-performance PRIVATE ${LIBRARIES} libvideo ${LIBVIDEO_LIBRARIES})
-target_link_libraries(892-landart PRIVATE ${LIBRARIES} libvideo ${LIBVIDEO_LIBRARIES})
+target_link_libraries(892-landart PRIVATE ${LIBRARIES_LANDART})
 
 if (WIN32)
 	# set the current working directory
@@ -158,3 +168,5 @@ if (MSVC)
 	set_property(TARGET 892-landart APPEND_STRING PROPERTY LINK_FLAGS /SAFESEH:NO)
 	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT 700-4dworld)
 endif (MSVC)
+
+install(SCRIPT bundle.cmake)

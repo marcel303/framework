@@ -320,6 +320,12 @@ VFX_NODE_TYPE(VfxNodeLandscape)
 
 int main(int argc, char * argv[])
 {
+#if FINMODE
+	char * basePath = SDL_GetBasePath();
+	changeDirectory(basePath);
+	SDL_free(basePath);
+#endif
+
     framework.enableDepthBuffer = false;
 	framework.enableRealTimeEditing = true;
 	
