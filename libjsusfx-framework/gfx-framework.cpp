@@ -244,6 +244,16 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 	}
 	
 	*m_mouse_cap = vflags;
+	
+	lastKey = 0;
+	
+	for (auto & e : framework.events)
+	{
+		if (e.type == SDL_KEYDOWN)
+		{
+			lastKey = e.key.keysym.sym;
+		}
+	}
 }
 
 void JsusFxGfx_Framework::beginDraw()
@@ -1234,6 +1244,27 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 		
 		popColorPost();
 		popBlend();
+	}
+}
+
+int JsusFxGfx_Framework::gfx_getchar(int p)
+{
+	if (p >= 2)
+	{
+		bool found = false;
+		
+		if (lastKey == p)
+			found = true;
+		
+		return found ? 1 : 0;
+	}
+	else
+	{
+		const int result = lastKey;
+		
+		lastKey = 0;
+		
+		return result;
 	}
 }
 

@@ -95,6 +95,7 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	Surface * surface = nullptr;
 	int mouseX = 0;
 	int mouseY = 0;
+	int lastKey = 0;
 	bool inputEnabled = true;
 	
 	JsusFxGfx_Framework(JsusFx & _jsusFx);
@@ -139,4 +140,6 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate) override;
 	virtual void gfx_blitext(EEL_F img, EEL_F * coords, EEL_F angle) override;
 	virtual void gfx_blitext2(int np, EEL_F ** parms, int blitmode) override;
+	
+	virtual int gfx_getchar(int p) override;
 };
