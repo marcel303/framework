@@ -912,8 +912,8 @@ void Framework::process()
 					int windowSy;
 					SDL_GetWindowSize(window, &windowSx, &windowSy);
 					
-					windowData->mouseX = e.motion.x * minification * globals.displaySize[0] / windowSx;
-					windowData->mouseY = e.motion.y * minification * globals.displaySize[1] / windowSy;
+					windowData->mouseX = e.motion.x * globals.displaySize[0] / windowSx;
+					windowData->mouseY = e.motion.y * globals.displaySize[1] / windowSy;
 					
 					//logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, windowData->mouseX, windowData->mouseY);
 				}
