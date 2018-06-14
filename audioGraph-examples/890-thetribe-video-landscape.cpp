@@ -22,6 +22,9 @@
 
 #define PARTICLE_SCALE (GFX_SX / 1024.f)
 
+#define ENABLE_FACETILE_AUDIO 0
+
+
 static const float timeSeed = 1234.f;
 
 static const char * audioFilenames[NUM_AUDIOCLIP_SOURCES] =
@@ -741,6 +744,7 @@ struct FaceTile
 	
 	void beginFocus()
 	{
+	#if ENABLE_FACETILE_AUDIO
 		auto openParams = mp.context->openParams;
 		
 		mp.close(false);
@@ -748,17 +752,20 @@ struct FaceTile
 		mp.presentTime = 0.0;
 	
 		mp.openAsync(openParams);
-		
+	
 		audioSource.open(audioFilename.c_str(), false);
 		
 		g_audioMixer->addPointSource(&audioSource);
+	#endif
 	}
 	
 	void endFocus()
 	{
+	#if ENABLE_FACETILE_AUDIO
 		g_audioMixer->removePointSource(&audioSource);
 		
 		audioSource.close();
+	#endif
 	}
 	
 	void tick(const float dt)
