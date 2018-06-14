@@ -28,6 +28,8 @@ struct VideoLandscape
 
 	void end();
 	
+	void restartVideos();
+	
 	void tick(const float dt);
 	
 	uint32_t getVideoTexture() const;

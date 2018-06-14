@@ -195,6 +195,26 @@ void VideoLandscape::shut()
 void VideoLandscape::end()
 {
 	activeVideo = -1;
+	
+	restartVideos();
+}
+
+void VideoLandscape::restartVideos()
+{
+	for (int i = 0; i < NUM_VIDEOS; ++i)
+	{
+		auto & mp = mediaPlayers[i][activeMediaPlayer[i]];
+		
+		auto openParams = mp.context->openParams;
+		
+		mp.close(false);
+		
+		mp.presentTime = 0.0;
+		
+		mp.openAsync(openParams);
+		
+		activeMediaPlayer[i] = 1 - activeMediaPlayer[i];
+	}
 }
 
 void VideoLandscape::tick(const float dt)
@@ -203,7 +223,7 @@ void VideoLandscape::tick(const float dt)
 	{
 		auto & mp = mediaPlayers[i][activeMediaPlayer[i]];
 		
-		if (i == activeVideo)
+		//if (i == activeVideo)
 		{
 			mp.presentTime += dt * scrollSpeed;
 		}
@@ -281,6 +301,11 @@ struct VfxNodeLandscape : VfxNodeBase
 			s_landscape->end();
 		}
 
+		if (keyboard.wentDown(SDLK_r))
+		{
+			s_landscape->restartVideos();
+		}
+		
 		if (keyboard.wentDown(SDLK_1))
 			s_landscape->activeVideo = 0;
 		else if (keyboard.wentDown(SDLK_2))
