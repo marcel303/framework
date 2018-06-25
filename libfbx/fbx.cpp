@@ -33,10 +33,10 @@ void FbxRecord::read()
 	int32_t propertyListLen;
 	int8_t nameLen;
 	
-	m_reader->read(offset, endOffset);
-	m_reader->read(offset, numProperties);
-	m_reader->read(offset, propertyListLen);
-	m_reader->read(offset, nameLen);
+	m_reader->read(true, offset, endOffset);
+	m_reader->read(true, offset, numProperties);
+	m_reader->read(true, offset, propertyListLen);
+	m_reader->read(false, offset, nameLen);
 	
 	// read name
 	
@@ -148,22 +148,22 @@ void FbxRecord::capturePropertiesAsInt(std::vector<int> & result) const
 			// property type
 			
 			char type;
-			m_reader->read(offset, type);
+			m_reader->read(false, offset, type);
 			
 			if (type == 'Y')
 			{
 				int16_t v;
-				m_reader->read(offset, v);
+				m_reader->read(false, offset, v);
 				result[i] = int(v);
 			}
 			else if (type == 'I')
 			{
-				m_reader->read(offset, result[i]);
+				m_reader->read(false, offset, result[i]);
 			}
 			else if (type == 'L')
 			{
 				int64_t v;
-				m_reader->read(offset, v);
+				m_reader->read(false, offset, v);
 				result[i] = int(v);
 			}
 			else
@@ -199,16 +199,16 @@ void FbxRecord::capturePropertiesAsFloat(std::vector<float> & result) const
 			// property type
 			
 			char type;
-			m_reader->read(offset, type);
+			m_reader->read(false, offset, type);
 			
 			if (type == 'F')
 			{
-				m_reader->read(offset, result[i]);
+				m_reader->read(false, offset, result[i]);
 			}
 			else if (type == 'D')
 			{
 				double v;
-				m_reader->read(offset, v);
+				m_reader->read(false, offset, v);
 				result[i] = float(v);
 			}
 			else
@@ -355,16 +355,43 @@ void FbxReader::throwException() const
 	throw std::exception();
 }
 
-template <typename T> void FbxReader::read(size_t & offset, T & result) const
+template <typename T> void FbxReader::read(const bool isSize, size_t & offset, T & result) const
 {
-	if (offset + sizeof(T) > m_numBytes)
+	if (isSize && m_sizesAre64Bit)
 	{
-		memset(&result, 0, sizeof(result));
-		throwException();
-		return;
+		int64_t result64;
+		
+		if (offset + sizeof(result64) > m_numBytes)
+		{
+			memset(&result, 0, sizeof(result));
+			throwException();
+			return;
+		}
+		
+		result64 = *(int64_t*)&m_bytes[offset];
+		offset += sizeof(int64_t);
+		
+		if (result64 > std::numeric_limits<int32_t>::max())
+		{
+			memset(&result, 0, sizeof(result));
+			throwException();
+			return;
+		}
+		
+		result = result64;
 	}
-	result = *(T*)&m_bytes[offset];
-	offset += sizeof(T);
+	else
+	{
+		if (offset + sizeof(T) > m_numBytes)
+		{
+			memset(&result, 0, sizeof(result));
+			throwException();
+			return;
+		}
+		
+		result = *(T*)&m_bytes[offset];
+		offset += sizeof(T);
+	}
 }
 
 template <typename T> void FbxReader::read(size_t & offset, T & result, size_t numBytes) const
@@ -401,9 +428,9 @@ template <typename T> void FbxReader::skipArray(size_t & offset) const
 	int32_t encoding;
 	int32_t compressedLength;
 	
-	read(offset, arrayLength);
-	read(offset, encoding);
-	read(offset, compressedLength);
+	read(false, offset, arrayLength);
+	read(false, offset, encoding);
+	read(false, offset, compressedLength);
 	
 	// calculate length
 	
@@ -422,13 +449,13 @@ void FbxReader::readPropertyValue(size_t & offset, FbxValue & value) const
 	// property type
 	
 	char type;
-	read(offset, type);
+	read(false, offset, type);
 	
 	switch (type)
 	{
 		// scalars
 		
-	#define READ_SCALAR(code, type, valueType) case code: { type v; read(offset, v); value = FbxValue(valueType(v)); break; }
+	#define READ_SCALAR(code, type, valueType) case code: { type v; read(false, offset, v); value = FbxValue(valueType(v)); break; }
 		
 		READ_SCALAR('C', int8_t, bool)
 		READ_SCALAR('Y', int16_t, int64_t)
@@ -456,7 +483,7 @@ void FbxReader::readPropertyValue(size_t & offset, FbxValue & value) const
 		case 'S':
 		{
 			int32_t length;
-			read(offset, length);
+			read(false, offset, length);
 			char * str = (char*)alloca(length + 1);
 			read(offset, str[0], length);
 			str[length] = 0;
@@ -467,7 +494,7 @@ void FbxReader::readPropertyValue(size_t & offset, FbxValue & value) const
 		case 'R':
 		{
 			int32_t length;
-			read(offset, length);
+			read(false, offset, length);
 			
 		#if 1
 			skip(offset, length);
@@ -485,6 +512,8 @@ FbxReader::FbxReader()
 	m_bytes = 0;
 	m_numBytes = 0;
 	m_firstRecordOffset = 0;
+	
+	m_sizesAre64Bit = false;
 }
 
 void FbxReader::openFromMemory(const void * bytes, size_t numBytes)
@@ -513,11 +542,16 @@ void FbxReader::openFromMemory(const void * bytes, size_t numBytes)
 	// version number
 	
 	int32_t version;
-	read(offset, version);
+	read(false, offset, version);
 	
 	// remember the offset of the first top-level record
 	
 	m_firstRecordOffset = offset;
+	
+	// version 7500+ introduced 64 bit sizes for certain integers, breaking backward compatibility with older formats
+	
+	if (version >= 7500)
+		m_sizesAre64Bit = true;
 }
 
 FbxRecord FbxReader::firstRecord(const char * name) const

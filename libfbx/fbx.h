@@ -181,9 +181,11 @@ class FbxReader
 	size_t m_numBytes;
 	size_t m_firstRecordOffset;
 	
+	bool m_sizesAre64Bit;
+	
 	void throwException() const;
 	
-	template <typename T> void read(size_t & offset, T & result) const;
+	template <typename T> void read(const bool isSize, size_t & offset, T & result) const;
 	template <typename T> void read(size_t & offset, T & result, size_t numBytes) const;
 	void skip(size_t & offset, size_t numBytes) const;
 	void seek(size_t & offset, size_t newOffset) const;
