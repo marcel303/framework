@@ -1482,6 +1482,10 @@ void ModelCacheElem::load(const char * filename)
 					records.push_back(record);
 			}
 		}
+		else
+		{
+			logError("failed to open %s", filename);
+		}
 	}
 	
 	// 2) load the bone set
