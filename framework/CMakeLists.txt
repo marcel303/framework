@@ -26,7 +26,8 @@ file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
 	"${CMAKE_CURRENT_SOURCE_DIR}/audiostream/*.h"
 	"${CMAKE_CURRENT_SOURCE_DIR}/msdfgen/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/msdfgen/*.h"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../libfbx/*.cpp")
+	"${CMAKE_CURRENT_SOURCE_DIR}/../libfbx/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../libfbx/*.h")
 list(REMOVE_ITEM source ../libfbx/main.cpp)
 
 file(GLOB_RECURSE source_msdfgen "msdfgen/*.*")
