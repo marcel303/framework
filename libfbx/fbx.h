@@ -87,6 +87,7 @@ public:
 	template <typename T> inline void captureProperties(std::vector<T> & result) const;
 	template <typename T> inline std::vector<T> captureProperties() const;
 	template <typename T> inline T captureProperty(int index) const;
+	template <typename T> inline void capturePropertyArray(int index, std::vector<T> & result) const;
 	void capturePropertiesAsInt(std::vector<int> & result) const;
 	void capturePropertiesAsFloat(std::vector<float> & result) const;
 	
@@ -165,6 +166,45 @@ template <> inline const char * get(const FbxValue & value) { return value.getSt
 template <> inline std::string  get(const FbxValue & value) { return std::string(value.getString()); }
 
 /* --------------------------------------------------------------------------------
+// FbxValueArray
+// --------------------------------------------------------------------------------
+
+FbxValueArray is used to capture property value arrays. Currently it uses a double representation
+internally, which gets converted by FbxRecord::capturePropertyArray internally to the requested type.
+
+Example:
+	std::vector<float> UVs;
+	record.capturePropertyArray(0, UVs);
+ 
+	for (size_t i = 0; i < UVs.size(); ++i)
+	{
+		printf("value: %g\n", UVs[i]);
+	}
+*/
+
+class FbxValueArray
+{
+	friend class FbxReader;
+	
+	std::vector<double> values;
+	
+public:
+	enum TYPE
+	{
+		TYPE_INVALID,
+		TYPE_REAL
+	};
+	
+	TYPE type;
+	
+	explicit FbxValueArray();
+
+	bool isValid() const;
+	inline int getNumValues() const { return values.size(); }
+	inline double getDouble(const int index) const { return values[index]; }
+};
+
+/* --------------------------------------------------------------------------------
 // FbxReader
 // --------------------------------------------------------------------------------
 
@@ -181,6 +221,7 @@ class FbxReader
 	size_t m_numBytes;
 	size_t m_firstRecordOffset;
 	
+	int32_t m_version;
 	bool m_sizesAre64Bit;
 	
 	void throwException() const;
@@ -190,13 +231,17 @@ class FbxReader
 	void skip(size_t & offset, size_t numBytes) const;
 	void seek(size_t & offset, size_t newOffset) const;
 	template <typename T> void skipArray(size_t & offset) const;
+	template <typename T> void readArray(size_t & offset, FbxValueArray & valueArray) const;
 	void readPropertyValue(size_t & offset, FbxValue & value) const;
+	void readPropertyArray(size_t & offset, FbxValueArray & valueArray) const;
 	
 public:
 	FbxReader();
 	
 	void openFromMemory(const void * bytes, size_t numBytes);
 	FbxRecord firstRecord(const char * name = 0) const;
+	
+	inline int32_t getVersion() const { return m_version; }
 };
 
 // --------------------------------------------------------------------------------
@@ -256,4 +301,38 @@ inline T FbxRecord::captureProperty(int index) const
 	}
 	
 	return T();
+}
+
+template <typename T>
+inline void FbxRecord::capturePropertyArray(int index, std::vector<T> & result) const
+{
+	if (isValid())
+	{
+		size_t offset = m_propertyListOffset;
+		
+		for (size_t i = 0; i < m_numProperties; ++i)
+		{
+			if (int(i) == index)
+			{
+				FbxValueArray valueArray;
+				
+				m_reader->readPropertyArray(offset, valueArray);
+				
+				const size_t numValues = valueArray.getNumValues();
+				
+				result.resize(numValues);
+				
+				for (size_t i = 0; i < numValues; ++i)
+					result[i] = valueArray.getDouble(i);
+				
+				return;
+			}
+			else
+			{
+				FbxValue value;
+				
+				m_reader->readPropertyValue(offset, value);
+			}
+		}
+	}
 }

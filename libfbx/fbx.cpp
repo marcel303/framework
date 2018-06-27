@@ -1,4 +1,5 @@
 #include "fbx.h"
+#include "miniz.h"
 #include <assert.h>
 #include <string.h>
 
@@ -347,6 +348,20 @@ bool FbxValue::operator==(const char * str) const
 }
 
 // --------------------------------------------------------------------------------
+// FbxValueArray
+// --------------------------------------------------------------------------------
+
+FbxValueArray::FbxValueArray()
+{
+	type = TYPE_INVALID;
+}
+
+bool FbxValueArray::isValid() const
+{
+	return type != TYPE_INVALID;
+}
+
+// --------------------------------------------------------------------------------
 // FbxReader
 // --------------------------------------------------------------------------------
 
@@ -444,6 +459,81 @@ template <typename T> void FbxReader::skipArray(size_t & offset) const
 	skip(offset, length);
 }
 
+static bool decompress(const void * __restrict src, const int32_t srcSize, void * __restrict dst, const int32_t dstSize)
+{
+	mz_stream stream = { };
+	mz_inflateInit(&stream);
+
+	stream.next_in = (const uint8_t*)src;
+	stream.avail_in = (int)srcSize;
+	
+	stream.next_out = (uint8_t*)dst;
+	stream.avail_out = (int)dstSize;
+	
+	bool result = true;
+	
+	if (mz_inflate(&stream, MZ_FINISH) != Z_STREAM_END)
+		result = false;
+
+	if (mz_inflateEnd(&stream) != Z_OK)
+		result = false;
+
+	return result;
+}
+
+template <typename T> void FbxReader::readArray(size_t & offset, FbxValueArray & valueArray) const
+{
+	// array description
+	
+	int32_t arrayLength;
+	int32_t encoding;
+	int32_t compressedLength;
+	
+	read(false, offset, arrayLength);
+	read(false, offset, encoding);
+	read(false, offset, compressedLength);
+	
+	// read values
+	
+	std::auto_ptr<T> temp(new T[arrayLength]);
+	
+	T * __restrict values = temp.get();
+	
+	if (encoding == 0) // raw
+	{
+		const size_t numBytes = sizeof(T) * arrayLength;
+		
+		read(offset, values, numBytes);
+	}
+	else if (encoding == 1) // deflate
+	{
+		if (offset + compressedLength > m_numBytes)
+		{
+			throwException();
+		}
+		
+		if (!decompress(m_bytes + offset, compressedLength, values, sizeof(T) * arrayLength))
+		{
+			throwException();
+		}
+		
+		offset += compressedLength;
+	}
+	else
+	{
+		throwException();
+	}
+	
+	// convert to FbxValueArray
+	
+	valueArray.values.resize(arrayLength);
+	
+	for (int i = 0; i < arrayLength; ++i)
+	{
+		valueArray.values[i] = double(values[i]);
+	}
+}
+
 void FbxReader::readPropertyValue(size_t & offset, FbxValue & value) const
 {
 	// property type
@@ -504,6 +594,41 @@ void FbxReader::readPropertyValue(size_t & offset, FbxValue & value) const
 		#endif
 			break;
 		}
+		
+		default:
+		{
+			throwException(); // unknown property type
+			break;
+		}
+	}
+}
+
+void FbxReader::readPropertyArray(size_t & offset, FbxValueArray & value) const
+{
+	// property type
+	
+	char type;
+	read(false, offset, type);
+	
+	switch (type)
+	{
+		// arrays
+		
+	#define READ_ARRAY(code, type) case code: { readArray<type>(offset, value); break; }
+		
+		READ_ARRAY('b', int8_t)
+		READ_ARRAY('i', int32_t)
+		READ_ARRAY('l', int64_t)
+		READ_ARRAY('f', float)
+		READ_ARRAY('d', double)
+		
+	#undef READ_ARRAY
+		
+		default:
+		{
+			throwException(); // unknown property type
+			break;
+		}
 	}
 }
 
@@ -513,6 +638,7 @@ FbxReader::FbxReader()
 	m_numBytes = 0;
 	m_firstRecordOffset = 0;
 	
+	m_version = 0;
 	m_sizesAre64Bit = false;
 }
 
@@ -541,8 +667,7 @@ void FbxReader::openFromMemory(const void * bytes, size_t numBytes)
 	
 	// version number
 	
-	int32_t version;
-	read(false, offset, version);
+	read(false, offset, m_version);
 	
 	// remember the offset of the first top-level record
 	
@@ -550,7 +675,7 @@ void FbxReader::openFromMemory(const void * bytes, size_t numBytes)
 	
 	// version 7500+ introduced 64 bit sizes for certain integers, breaking backward compatibility with older formats
 	
-	if (version >= 7500)
+	if (m_version >= 7500)
 		m_sizesAre64Bit = true;
 }
 
