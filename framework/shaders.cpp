@@ -31,6 +31,8 @@
 
 #include "shaders.h"
 
+#include "data/engine/BasicHardSkinned.vs"
+#include "data/engine/BasicHardSkinned.ps"
 #include "data/engine/BasicSkinned.vs"
 #include "data/engine/BasicSkinned.ps"
 #include "data/engine/Generic.vs"
@@ -109,7 +111,9 @@ void registerBuiltinShaders()
 		#define VS_BLEND_WEIGHTS 5
 		)SHADER"
 	);
-
+	
+	shaderSource("engine/BasicHardSkinned.vs", s_basicHardSkinnedVs);
+	shaderSource("engine/BasicHardSkinned.ps", s_basicHardSkinnedPs);
 	shaderSource("engine/BasicSkinned.vs", s_basicSkinnedVs);
 	shaderSource("engine/BasicSkinned.ps", s_basicSkinnedPs);
 	
