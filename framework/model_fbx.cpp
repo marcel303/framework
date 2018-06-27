@@ -67,6 +67,7 @@ static Mat4x4 matrixTranslation(const Vec3 & v);
 static Mat4x4 matrixRotation(const Vec3 & v, RotationType rotationType);
 static Mat4x4 matrixScaling(const Vec3 & v);
 
+static FbxObject * readFbxGeometry(int & logIndent, const FbxRecord & model, const std::string & objectType, const std::string & objectName);
 static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const std::string & objectType, const std::string & objectName);
 static FbxPose * readFbxPose(int & logIndent, const FbxRecord & pose, const std::string & objectType, const std::string & objectName);
 static FbxObject * readFbxDeformer(int & logIndent, const FbxRecord & deformer, const std::string & objectType, const std::string & objectName);
@@ -155,6 +156,22 @@ static Mat4x4 matrixScaling(const Vec3 & v)
 
 // FBX types
 
+// todo : according to the FBX documentation, FbxMesh should derive from FbxGeometry. this explains why there's so much duplicate code between the two. todo : remove redundant code in FbxMesh and make FbxMesh derive from FbxGeometry
+
+enum MappingType
+{
+	kMappingType_ByPolygonVertex,
+	kMappingType_ByVertex
+};
+
+static MappingType toMappingType(const std::string & name)
+{
+	return
+		name == "ByVertice" || name == "ByVertex"
+		? MappingType::kMappingType_ByVertex
+		: MappingType::kMappingType_ByPolygonVertex;
+}
+
 class FbxObject
 {
 public:
@@ -177,6 +194,28 @@ public:
 	std::string name;
 	bool persistent;
 	FbxObject * parent;
+};
+
+class FbxGeometry : public FbxObject
+{
+public:
+	std::vector<float> vertices;
+	std::vector<int> vertexIndices;
+	std::vector<float> normals;
+	std::vector<float> uvs;
+	std::vector<int> uvIndices;
+	std::vector<float> colors;
+	std::vector<int> colorIndices;
+	
+	MappingType normalMappingType;
+	MappingType uvMappingType;
+	
+	FbxGeometry(const std::string & name)
+		: FbxObject("Geometry", name)
+		, normalMappingType(kMappingType_ByPolygonVertex)
+		, uvMappingType(kMappingType_ByPolygonVertex)
+	{
+	}
 };
 
 class FbxMesh : public FbxObject
@@ -245,8 +284,13 @@ public:
 	std::vector<int> colorIndices;
 	std::vector<Deformer> deformers;
 	
-	FbxMesh(const std::string & type, const std::string & name)
-		: FbxObject("Mesh", name)
+	MappingType normalMappingType;
+	MappingType uvMappingType;
+	
+	FbxMesh(const std::string & name)
+		: FbxObject("Mesh", name, true)
+		, normalMappingType(kMappingType_ByPolygonVertex)
+		, uvMappingType(kMappingType_ByPolygonVertex)
 	{
 	}
 };
@@ -556,6 +600,49 @@ public:
 	std::map<std::string, FbxAnimTransform> transforms;
 };
 
+static FbxObject * readFbxGeometry(int & logIndent, const FbxRecord & model, const std::string & objectType, const std::string & objectName)
+{
+	FbxObject * result = 0;
+	
+	FbxGeometry * geometry = new FbxGeometry(objectName);
+	result = geometry;
+	
+	const FbxRecord vertices = model.firstChild("Vertices");
+	const FbxRecord vertexIndices = model.firstChild("PolygonVertexIndex");
+	
+	const FbxRecord normalsLayer = model.firstChild("LayerElementNormal");
+	const FbxRecord normals = normalsLayer.firstChild("Normals");
+	const std::string normalMappingType = normalsLayer.firstChild("MappingInformationType").captureProperty<std::string>(0);
+	geometry->normalMappingType = toMappingType(normalMappingType);
+	
+	const FbxRecord uvsLayer = model.firstChild("LayerElementUV");
+	const FbxRecord uvs = uvsLayer.firstChild("UV");
+	const FbxRecord uvIndices = uvsLayer.firstChild("UVIndex");
+	const std::string uvMappingType = uvsLayer.firstChild("MappingInformationType").captureProperty<std::string>(0);
+	geometry->uvMappingType = toMappingType(uvMappingType);
+	
+	const FbxRecord colorsLayer = model.firstChild("LayerElementColor");
+	const FbxRecord colors = colorsLayer.firstChild("Colors");
+	const FbxRecord colorIndices = colorsLayer.firstChild("ColorIndex");
+	
+	vertices.capturePropertyArray(0, geometry->vertices);
+	vertexIndices.capturePropertyArray(0, geometry->vertexIndices);
+	normals.capturePropertyArray(0, geometry->normals);
+	uvs.capturePropertyArray(0, geometry->uvs);
+	uvIndices.capturePropertyArray(0, geometry->uvIndices);
+	colors.capturePropertyArray(0, geometry->colors);
+	colorIndices.capturePropertyArray(0, geometry->colorIndices);
+	
+	fbxLog(logIndent, "found a geometry! name: %s, hasVertices: %d (%d), hasNormals: %d, hasUVs: %d\n",
+		objectName.c_str(),
+		vertices.isValid(),
+		int(geometry->vertices.size()),
+		normals.isValid(),
+		uvs.isValid());
+	
+	return result;
+}
+
 static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const std::string & objectType, const std::string & objectName)
 {
 	// todo: allocate generic node object for non mesh
@@ -564,7 +651,7 @@ static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const 
 	
 	//if (treatAsMesh(objectType))
 	{
-		FbxMesh * mesh = new FbxMesh("Mesh", objectName);
+		FbxMesh * mesh = new FbxMesh(objectName);
 		result = mesh;
 		
 		FbxRecord properties = model.firstChild("Properties60");
@@ -671,10 +758,14 @@ static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const 
 		
 		const FbxRecord normalsLayer = model.firstChild("LayerElementNormal");
 		const FbxRecord normals = normalsLayer.firstChild("Normals");
+		const std::string normalMappingType = normalsLayer.firstChild("MappingInformationType").captureProperty<std::string>(0);
+		mesh->normalMappingType = toMappingType(normalMappingType);
 		
 		const FbxRecord uvsLayer = model.firstChild("LayerElementUV");
 		const FbxRecord uvs = uvsLayer.firstChild("UV");
 		const FbxRecord uvIndices = uvsLayer.firstChild("UVIndex");
+		const std::string uvMappingType = uvsLayer.firstChild("MappingInformationType").captureProperty<std::string>(0);
+		mesh->uvMappingType = toMappingType(uvMappingType);
 		
 		const FbxRecord colorsLayer = model.firstChild("LayerElementColor");
 		const FbxRecord colors = colorsLayer.firstChild("Colors");
@@ -1049,8 +1140,10 @@ public:
 		const std::vector<float> & vertices,
 		const std::vector<int> & vertexIndices,
 		const std::vector<float> & normals,
+		const MappingType normalMappingType,
 		const std::vector<float> & uvs,
 		const std::vector<int> & uvIndices,
+		const MappingType uvMappingType,
 		const std::vector<float> & colors,
 		const std::vector<int> & colorIndices,
 		const std::vector<FbxMesh::Deformer> & deformers)
@@ -1100,11 +1193,16 @@ public:
 			
 			// normal
 			
-			if (i < normals.size() / 3)
+			const int normalIndex =
+				normalMappingType == kMappingType_ByVertex
+			 		? vertexIndex
+			 		: i;
+			
+			if (normalIndex < normals.size() / 3)
 			{
-				vertex.nx = normals[i * 3 + 0];
-				vertex.ny = normals[i * 3 + 1];
-				vertex.nz = normals[i * 3 + 2];
+				vertex.nx = normals[normalIndex * 3 + 0];
+				vertex.ny = normals[normalIndex * 3 + 1];
+				vertex.nz = normals[normalIndex * 3 + 2];
 			}
 			else
 			{
@@ -1113,28 +1211,43 @@ public:
 			
 			// uv
 			
-			if (uvIndices.size() >= vertexIndices.size())
+			if (!uvIndices.empty())
 			{
-				// indexed UV
-				
-				const size_t uvIndex = uvIndices[i];
-				
-				if (uvIndex * 2 < uvs.size())
+				if (uvIndices.size() >= vertexIndices.size())
 				{
-					vertex.tx = uvs[uvIndex * 2 + 0];
-					vertex.ty = uvs[uvIndex * 2 + 1];
+					// indexed UV
+					
+					const size_t uvIndex = uvIndices[i];
+					
+					if (uvIndex * 2 < uvs.size())
+					{
+						vertex.tx = uvs[uvIndex * 2 + 0];
+						vertex.ty = uvs[uvIndex * 2 + 1];
+					}
 				}
-			}
-			else if (uvIndices.size() == 0 && i < uvs.size() / 2)
-			{
-				// non-indexed UV
-				
-				vertex.tx = uvs[i * 2 + 0];
-				vertex.ty = uvs[i * 2 + 1];
+				else
+				{
+					vertex.tx = vertex.ty = 0.f;
+				}
 			}
 			else
 			{
-				vertex.tx = vertex.ty = 0.f;
+				const int uvIndex =
+					uvMappingType == kMappingType_ByVertex
+						? vertexIndex
+						: i;
+				
+				if (uvIndex < uvs.size() / 2)
+				{
+					// non-indexed UV
+					
+					vertex.tx = uvs[uvIndex * 2 + 0];
+					vertex.ty = uvs[uvIndex * 2 + 1];
+				}
+				else
+				{
+					vertex.tx = vertex.ty = 0.f;
+				}
 			}
 			
 			// color
@@ -1174,7 +1287,7 @@ public:
 			for (int d = 0; d < numDeformers; ++d)
 			{
 				vertex.boneIndices[d] = deformers[vertexIndex].entries[d].index;
-				vertex.boneWeights[d] = int8_t(deformers[vertexIndex].entries[d].weight * 255.f);
+				vertex.boneWeights[d] = uint8_t(deformers[vertexIndex].entries[d].weight * 255.f);
 				
 				//fbxLog(logIndent, "added %d, %d\n", vertex.blendIndices[d], vertex.boneWeights[d]);
 			}
@@ -1353,11 +1466,33 @@ namespace AnimModel
 			{
 				FbxObject * fbxObject = 0;
 				
-				std::vector<std::string> objectProps = object.captureProperties<std::string>();
-				const std::string objectName = objectProps.size() >= 1 ? objectProps[0] : "";
-				const std::string objectType = objectProps.size() >= 2 ? objectProps[1] : "";
+				std::string objectName;
+				std::string objectType;
 				
-				if (object.name == "Model")
+				if (reader.getVersion() >= 7000)
+				{
+					const int64_t id = object.captureProperty<int64_t>(0);
+					std::vector<std::string> objectProps = object.captureProperties<std::string>();
+					
+					char name[64];
+					sprintf_s(name, sizeof(name), "%lld", id);
+					
+					objectName = name;
+					objectType = objectProps.size() >= 3 ? objectProps[objectProps.size() - 1] : "";
+				}
+				else
+				{
+					std::vector<std::string> objectProps = object.captureProperties<std::string>();
+					
+					objectName = objectProps.size() >= 1 ? objectProps[0] : "";
+					objectType = objectProps.size() >= 2 ? objectProps[1] : "";
+				}
+				
+				if (object.name == "Geometry")
+				{
+					fbxObject = readFbxGeometry(logIndent, object, objectType, objectName);
+				}
+				else if (object.name == "Model")
 				{
 					fbxObject = readFbxModel(logIndent, object, objectType, objectName);
 				}
@@ -1436,7 +1571,11 @@ namespace AnimModel
 		{
 			std::vector<std::string> properties = connection.captureProperties<std::string>();
 			
-			if (properties.size() >= 3)
+			if (properties.size() < 3)
+			{
+				fbxLog(logIndent, "warning: connection doesn't specify from-to");
+			}
+			else
 			{
 				const std::string & fromName = properties[1];
 				const std::string & toName = properties[2];
@@ -1484,6 +1623,86 @@ namespace AnimModel
 			}
 		}
 		
+		// FBX >= 7000 (?)
+		
+		for (FbxRecord connection = connections.firstChild("C"); connection.isValid(); connection = connection.nextSibling("C"))
+		{
+			std::vector<int64_t> properties = connection.captureProperties<int64_t>();
+			
+			if (properties.size() < 3)
+			{
+				fbxLog(logIndent, "warning: connection doesn't specify from-to");
+			}
+			else
+			{
+				char fromNameBuffer[64];
+				char toNameBuffer[64];
+				
+				sprintf_s(fromNameBuffer, sizeof(fromNameBuffer), "%lld", properties[1]);
+				sprintf_s(toNameBuffer, sizeof(toNameBuffer), "%lld", properties[2]);
+				
+				const std::string fromName = fromNameBuffer;
+				const std::string toName = toNameBuffer;
+				
+				if (fromName == toName)
+				{
+					fbxLog(logIndent, "warning: connect to self? %s\n", fromName.c_str());
+				}
+				else
+				{
+					ObjectsByName::iterator from = objectsByName.find(fromName);
+					ObjectsByName::iterator to = objectsByName.find(toName);
+					
+					if (from != objectsByName.end() && to != objectsByName.end())
+					{
+						//fbxLog(logIndent, "connect %s -> %s\n", fromName.c_str(), toName.c_str());
+						
+						FbxObject * fromObject = from->second;
+						FbxObject * toObject = to->second;
+						
+						// todo: figure out a better way to deal with object to object connections
+						//       the current implementation breaks if another type of node object
+						//       is present in the scene
+						if (fromObject->type == "Mesh" && toObject->type == "Deformer")
+						{
+							FbxMesh * mesh = static_cast<FbxMesh*>(fromObject);
+							FbxDeformer * deformer = static_cast<FbxDeformer*>(toObject);
+							
+							deformer->mesh = mesh;
+						}
+						else if (fromObject->type == "Geometry" && toObject->type == "Mesh")
+						{
+							FbxGeometry * geometry = static_cast<FbxGeometry*>(fromObject);
+							FbxMesh * mesh = static_cast<FbxMesh*>(toObject);
+							
+							// todo : would be nice to refactor this and avoid the copying here
+							mesh->vertices = geometry->vertices;
+							mesh->vertexIndices = geometry->vertexIndices;
+							mesh->normals = geometry->normals;
+							mesh->normalMappingType = geometry->normalMappingType;
+							mesh->uvs = geometry->uvs;
+							mesh->uvIndices = geometry->uvIndices;
+							mesh->uvMappingType = geometry->uvMappingType;
+							mesh->colors = geometry->colors;
+							mesh->colorIndices = geometry->colorIndices;
+						}
+						else if (fromObject->type == "Mesh" && toObject->type == "Mesh")
+						{
+							fromObject->parent = toObject;
+						}
+						else
+						{
+							fromObject->parent = toObject;
+						}
+					}
+					else
+					{
+						fbxLog(logIndent, "error: unable to connect %s -> %s\n", fromName.c_str(), toName.c_str());
+					}
+				}
+			}
+		}
+		
 		// purge objects that aren't connected to the scene
 		
 		typedef std::vector<FbxObject*> ObjectList;
@@ -1503,7 +1722,7 @@ namespace AnimModel
 			
 			if (isDead)
 			{
-				fbxLog(logIndent, "garbage collecting object! %s\n", object->name.c_str());
+				fbxLog(logIndent, "garbage collecting object! name=%s, type=%s\n", object->name.c_str(), object->type.c_str());
 				
 				garbage.push_back(object);
 			}
@@ -1669,8 +1888,10 @@ namespace AnimModel
 					fbxMesh->vertices,
 					fbxMesh->vertexIndices,
 					fbxMesh->normals,
+					fbxMesh->normalMappingType,
 					fbxMesh->uvs,
 					fbxMesh->uvIndices,
+					fbxMesh->uvMappingType,
 					fbxMesh->colors,
 					fbxMesh->colorIndices,
 					fbxMesh->deformers);
@@ -1758,9 +1979,31 @@ namespace AnimModel
 				{
 					if (object.name == "Model")
 					{
-						std::vector<std::string> objectProps = object.captureProperties<std::string>();
-						const std::string objectName = objectProps.size() >= 1 ? objectProps[0] : "";
-						const std::string objectType = objectProps.size() >= 2 ? objectProps[1] : "";
+						std::string objectName;
+						std::string objectType;
+						
+						if (reader.getVersion() >= 7000)
+						{
+							const int64_t id = object.captureProperty<int64_t>(0);
+							std::vector<std::string> objectProps = object.captureProperties<std::string>();
+							
+							char name[64];
+							sprintf_s(name, sizeof(name), "%lld", id);
+							
+							objectName = name;
+							objectType = objectProps.size() >= 3 ? objectProps[objectProps.size() - 1] : "";
+						}
+						else
+						{
+							std::vector<std::string> objectProps = object.captureProperties<std::string>();
+							
+							objectName = objectProps.size() >= 1 ? objectProps[0] : "";
+							objectType = objectProps.size() >= 2 ? objectProps[1] : "";
+						}
+						
+						// pretend null nodes or mesh so they will be added to the hierarchy
+						if (objectType == "Null")
+							objectType = "Mesh";
 						
 						if (objectType == "Mesh" && !objectName.empty())
 						{
@@ -1828,6 +2071,52 @@ namespace AnimModel
 			}
 		}
 		
+		// FBX >= 7000 ?
+		
+		for (FbxRecord connection = connections.firstChild("C"); connection.isValid(); connection = connection.nextSibling("C"))
+		{
+			std::vector<int64_t> properties = connection.captureProperties<int64_t>();
+			
+			if (properties.size() < 3)
+			{
+				fbxLog(logIndent, "warning: connection doesn't specify from-to");
+			}
+			else
+			{
+				char fromNameBuffer[64];
+				char toNameBuffer[64];
+				
+				sprintf_s(fromNameBuffer, sizeof(fromNameBuffer), "%lld", properties[1]);
+				sprintf_s(toNameBuffer, sizeof(toNameBuffer), "%lld", properties[2]);
+				
+				const std::string fromName = fromNameBuffer;
+				const std::string toName = toNameBuffer;
+				
+				if (fromName == toName)
+				{
+					fbxLog(logIndent, "warning: connect to self? %s\n", fromName.c_str());
+				}
+				else
+				{
+					ObjectsByName::iterator from = objectsByName.find(fromName);
+					ObjectsByName::iterator to = objectsByName.find(toName);
+					
+					if (from != objectsByName.end() && to != objectsByName.end())
+					{
+						//fbxLog(logIndent, "connect %s -> %s\n", fromName.c_str(), toName.c_str());
+						
+						FbxObject & fromObject = from->second;
+						FbxObject & toObject = to->second;
+						
+						if (toObject.type == "Mesh" && fromObject.type == "Mesh")
+						{
+							fromObject.parent = &toObject;
+						}
+					}
+				}
+			}
+		}
+		
 		// generate indices for meshes
 		
 		typedef std::map<std::string, int> ModelNameToBoneIndex;
@@ -1855,7 +2144,7 @@ namespace AnimModel
 			}
 		}
 		
-		// look for bine pose
+		// look for pose
 		
 		FbxPose * pose = readFbxPose(logIndent, reader);
 		
