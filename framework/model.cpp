@@ -856,8 +856,8 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 		{
 			// todo: hide meshes that shouldn't render
-			if (i != 0)
-				continue;
+			//if (i != 0)
+			//	continue;
 			
 			Mesh * mesh = m_model->meshSet->m_meshes[i];
 			Shader & shader = (overrideShader != nullptr) ? *overrideShader : mesh->m_material.shader;
