@@ -1211,13 +1211,20 @@ public:
 			
 			// uv
 			
+			// todo : should look at ReferenceInformationType in the FBX file for LayerElementNormal, LayerElementUV. it can be Direct or IndexToDirect. in the IndexToDirect case, indices are used. otherwise elements are mapped directly. see https://banexdevblog.wordpress.com/2014/06/23/a-quick-tutorial-about-the-fbx-ascii-format/ for more information
+			
 			if (!uvIndices.empty())
 			{
-				if (uvIndices.size() >= vertexIndices.size())
+				const int lookupIndex =
+					uvMappingType == kMappingType_ByVertex
+						? vertexIndex
+						: i;
+				
+				if (lookupIndex < uvIndices.size())
 				{
 					// indexed UV
 					
-					const size_t uvIndex = uvIndices[i];
+					const size_t uvIndex = uvIndices[lookupIndex];
 					
 					if (uvIndex * 2 < uvs.size())
 					{
