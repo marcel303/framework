@@ -853,6 +853,8 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 	
 	if (drawFlags & DrawMesh)
 	{
+		const Shader * previousShader = nullptr;
+		
 		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 		{
 			// todo: hide meshes that shouldn't render
@@ -866,27 +868,32 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			
 			gxValidateMatrices();
 			
-			// todo: use constant locations for skinningMatrices and drawColor, and move this setting to outside of the loop
-			// set uniform constants for skinning matrices
-			
-			const GLint boneMatrices = shader.getImmediate("skinningMatrices");
-			
-			if (boneMatrices != -1)
+			if (&shader != previousShader)
 			{
-				glUniformMatrix4fv(boneMatrices, m_model->boneSet->m_numBones, GL_FALSE, (GLfloat*)globalMatrices);
-				checkErrorGL();
-			}
-			
-			const GLint drawColor = shader.getImmediate("drawColor");
-			
-			if (drawColor != -1)
-			{
-				glUniform4f(drawColor,
-					(drawFlags & DrawColorTexCoords)    ? 1.f : 0.f,
-					(drawFlags & DrawColorNormals)      ? 1.f : 0.f,
-					(drawFlags & DrawColorBlendIndices) ? 1.f : 0.f,
-					(drawFlags & DrawColorBlendWeights) ? 1.f : 0.f);
-				checkErrorGL();
+				previousShader = &shader;
+				
+				// todo: use constant locations for skinningMatrices and drawColor, and move this setting to outside of the loop
+				// set uniform constants for skinning matrices
+				
+				const GLint boneMatrices = shader.getImmediate("skinningMatrices");
+				
+				if (boneMatrices != -1)
+				{
+					glUniformMatrix4fv(boneMatrices, m_model->boneSet->m_numBones, GL_FALSE, (GLfloat*)globalMatrices);
+					checkErrorGL();
+				}
+				
+				const GLint drawColor = shader.getImmediate("drawColor");
+				
+				if (drawColor != -1)
+				{
+					glUniform4f(drawColor,
+						(drawFlags & DrawColorTexCoords)    ? 1.f : 0.f,
+						(drawFlags & DrawColorNormals)      ? 1.f : 0.f,
+						(drawFlags & DrawColorBlendIndices) ? 1.f : 0.f,
+						(drawFlags & DrawColorBlendWeights) ? 1.f : 0.f);
+					checkErrorGL();
+				}
 			}
 			
 			// bind vertex arrays
