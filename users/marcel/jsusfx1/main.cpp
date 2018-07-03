@@ -451,7 +451,7 @@ struct AudioStream_JsusFxChain : AudioStream
 	{
 		Assert(numSamples == BUFFER_SIZE);
 		
-		source->Provide(numSamples, buffer);
+		const int numSourceSamples = source->Provide(numSamples, buffer);
 		
 		const int kNumBuffers = 4;
 		float bufferData[2][kNumBuffers][BUFFER_SIZE];
@@ -459,10 +459,16 @@ struct AudioStream_JsusFxChain : AudioStream
 		
 		int inputIndex = 0;
 		
-		for (int i = 0; i < numSamples; ++i)
+		for (int i = 0; i < numSourceSamples; ++i)
 		{
 			bufferData[inputIndex][0][i] = buffer[i].channel[0] / float(1 << 15);
 			bufferData[inputIndex][1][i] = buffer[i].channel[1] / float(1 << 15);
+		}
+		
+		for (int i = numSourceSamples; i < numSamples; ++i)
+		{
+			bufferData[inputIndex][0][i] = 0.f;
+			bufferData[inputIndex][1][i] = 0.f;
 		}
 		
 		lock();
