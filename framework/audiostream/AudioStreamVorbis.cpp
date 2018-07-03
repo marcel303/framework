@@ -54,8 +54,6 @@ AudioStream_Vorbis::~AudioStream_Vorbis()
 
 int AudioStream_Vorbis::Provide(int numSamples, AudioSample* __restrict buffer)
 {
-	fassert(mFile != 0);
-	
 	if (mFile == 0)
 		return 0;
 	
