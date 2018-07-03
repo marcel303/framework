@@ -51,6 +51,12 @@
 	#endif
 #endif
 
+#if ENABLE_WDL_FFT
+	#include "WDL/fft.h"
+#endif
+
+#define WDL_REAL_FFT_TEST 0
+
 /*
 
 todo : quality :
@@ -308,6 +314,34 @@ namespace binaural
 		
 		deinterleaveAudioBuffers_4_to_2(filterReal, lFilter.real, rFilter.real);
 		deinterleaveAudioBuffers_4_to_2(filterImag, lFilter.imag, rFilter.imag);
+	#elif ENABLE_WDL_FFT
+		static bool isInit = false;
+		
+		if (isInit == false)
+		{
+			isInit = true;
+			
+			WDL_fft_init();
+		}
+		
+		WDL_FFT4_COMPLEX samples_wdl[HRTF_BUFFER_SIZE];
+		
+		for (int i = 0; i < HRTF_BUFFER_SIZE; ++i)
+		{
+			samples_wdl[i].re.v = _mm_set_ps(0.f, 0.f, rSamples[i], lSamples[i]);
+			samples_wdl[i].im.v = _mm_setzero_ps();
+		}
+		
+		WDL_fft4(samples_wdl, HRTF_BUFFER_SIZE, false);
+		
+		for (int i = 0; i < HRTF_BUFFER_SIZE; ++i)
+		{
+			lFilter.real[i] = samples_wdl[i].re.elem(0);
+			lFilter.imag[i] = samples_wdl[i].im.elem(0);
+			
+			rFilter.real[i] = samples_wdl[i].re.elem(1);
+			rFilter.imag[i] = samples_wdl[i].im.elem(1);
+		}
 	#else
 		// this will generate the HRTF from the HRIR samples
 		
@@ -334,10 +368,14 @@ namespace binaural
 		const float * __restrict src,
 		float * __restrict dst)
 	{
+	#if !ENABLE_FOURIER4 && ENABLE_WDL_FFT
+		memcpy(dst, src, AUDIO_BUFFER_SIZE * sizeof(float));
+	#else
 		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
 		{
 			dst[fftIndices.indices[i]] = src[i];
 		}
+	#endif
 	}
 
 	void convolveAudio(
@@ -375,11 +413,11 @@ namespace binaural
 	{
 		debugTimerBegin("convolveAudio_2");
 		
+	#if ENABLE_FOURIER4
 		// transform audio data from the time-domain into the frequency-domain
 		
 		source.transformToFrequencyDomain(true);
 		
-	#if ENABLE_FOURIER4
 		float4 filterReal[HRTF_BUFFER_SIZE];
 		float4 filterImag[HRTF_BUFFER_SIZE];
 		
@@ -398,7 +436,81 @@ namespace binaural
 		Fourier::fft1D(convolvedReal, convolvedImag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, true, true);
 		
 		deinterleaveAudioBuffers_4(convolvedReal, lResultOld, rResultOld, lResultNew, rResultNew);
+	#elif ENABLE_WDL_FFT
+		static bool isInit = false;
+		
+		if (isInit == false)
+		{
+			isInit = true;
+			
+			WDL_fft_init();
+		}
+		
+		// transform audio data from the time-domain into the frequency-domain
+		
+		WDL_FFT_COMPLEX source_wdl[AUDIO_BUFFER_SIZE];
+		
+	#if WDL_REAL_FFT_TEST
+	// todo : use WDL_real_fft
+		memset(source_wdl, 0, sizeof(source_wdl));
+		memcpy(source_wdl, source.real, AUDIO_BUFFER_SIZE * sizeof(float));
+		WDL_real_fft((WDL_FFT_REAL*)source_wdl, AUDIO_BUFFER_SIZE, false);
+		
+		static int n = 0;
+		n++;
+		
+		if (n >= 10000)
+		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+			printf("R: %03d : %.3f , %.3f\n", i, source_wdl[i].re/2.f, source_wdl[i].im/2.f);
+	#endif
+	
+		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+		{
+			source_wdl[i].re = source.real[i];
+			source_wdl[i].im = source.imag[i];
+		}
+		
+		WDL_fft(source_wdl, AUDIO_BUFFER_SIZE, false);
+		
+	#if WDL_REAL_FFT_TEST
+		if (n >= 10000)
+		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+			printf("C: %03d : %.3f , %.3f\n", i, source_wdl[i].re, source_wdl[i].im);
+	#endif
+		
+		WDL_FFT4_COMPLEX filter_wdl[HRTF_BUFFER_SIZE]; // lOld, rOld, lNew, rNew
+		
+		for (int i = 0; i < HRTF_BUFFER_SIZE; ++i)
+		{
+			filter_wdl[i].re.v = _mm_set_ps(rFilterNew.real[i], lFilterNew.real[i], rFilterOld.real[i], lFilterOld.real[i]);
+			filter_wdl[i].im.v = _mm_set_ps(rFilterNew.imag[i], lFilterNew.imag[i], rFilterOld.imag[i], lFilterOld.imag[i]);
+		}
+		
+		// convolve audio data with impulse-response data in the frequency-domain
+		
+		WDL_fft4_complexmul1(filter_wdl, source_wdl, AUDIO_BUFFER_SIZE);
+		
+		// transform convolved audio data back to the time-domain
+		
+		WDL_fft4(filter_wdl, AUDIO_BUFFER_SIZE, true);
+		
+	// todo : SSE optimize this scaling (or adjust the output gain?)
+		const float scale = 1.f / AUDIO_BUFFER_SIZE;
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+		{
+			const int sortedIndex = i;
+			
+			lResultOld[sortedIndex] = filter_wdl[i].re.elem(0) * scale;
+			rResultOld[sortedIndex] = filter_wdl[i].re.elem(1) * scale;
+			lResultNew[sortedIndex] = filter_wdl[i].re.elem(2) * scale;
+			rResultNew[sortedIndex] = filter_wdl[i].re.elem(3) * scale;
+		}
 	#else
+		// transform audio data from the time-domain into the frequency-domain
+		
+		source.transformToFrequencyDomain(true);
+		
 		// convolve audio data with impulse-response data in the frequency-domain
 		
 		float lResultOldImag[HRTF_BUFFER_SIZE];
@@ -691,33 +803,16 @@ namespace binaural
 	{
 		const float degToRad = M_PI / 180.f;
 		
-	#if 1
 		y = std::sin(elevation * degToRad);
 		
 		x = std::cos(azimuth * degToRad) * std::cos(elevation * degToRad);
 		z = std::sin(azimuth * degToRad) * std::abs(std::cos(elevation * degToRad));
-	#else
-		Mat4x4 matA;
-		Mat4x4 matE;
-		
-		matA.MakeRotationY(azimuth * degToRad);
-		matE.MakeRotationZ(elevation * degToRad);
-		
-		Mat4x4 mat = matA * matE;
-		
-		Vec3 v = mat * Vec3(1.f, 0.f, 0.f);
-		
-		x = +v[0];
-		y = -v[1];
-		z = +v[2];
-	#endif
 	}
 	
 	void cartesianToElevationAndAzimuth(const float x, const float y, const float z, float & elevation, float & azimuth)
 	{
 		const float radToDeg = 180.f / M_PI;
 		
-	#if 1
 		const float zxHypot = std::hypot(z, x);
 		
 		azimuth = std::atan2(z, x) * radToDeg;
@@ -733,10 +828,6 @@ namespace binaural
 		{
 			elevation = std::atan(y / zxHypot) * radToDeg;
 		}
-	#else
-		azimuth = std::atan2(z, x) * radToDeg;
-		elevation = std::asin(y) * radToDeg;
-	#endif
 	}
 	
 	//
@@ -901,7 +992,7 @@ namespace binaural
 		}
 	}
 	
-#if ENABLE_FOURIER4
+#if ENABLE_FOURIER4 || ENABLE_WDL_FFT
 	void AudioBuffer::convolveAndReverseIndices_4(
 		const float4 * __restrict filterReal,
 		const float4 * __restrict filterImag,

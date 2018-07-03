@@ -205,10 +205,16 @@ namespace binaural
 		
 		// prepare audio signal for HRTF application
 		
+	#if !ENABLE_FOURIER4 && ENABLE_WDL_FFT
+		AudioBuffer audioBuffer;
+		memcpy(audioBuffer.real, overlapBuffer, AUDIO_BUFFER_SIZE * sizeof(float));
+		memset(audioBuffer.imag, 0, AUDIO_BUFFER_SIZE * sizeof(float));
+	#else
 		AudioBuffer audioBuffer;
 		reverseSampleIndices(overlapBuffer, audioBuffer.real);
 		memset(audioBuffer.imag, 0, AUDIO_BUFFER_SIZE * sizeof(float));
-		
+	#endif
+	
 		// apply HRTF
 		
 		// convolve audio in the frequency domain
