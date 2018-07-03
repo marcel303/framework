@@ -130,11 +130,11 @@
     <link id="58" srcNodeId="34" srcNodeSocketName="Z" dstNodeId="40" dstNodeSocketName="result"/>
     <link id="59" srcNodeId="3" srcNodeSocketName="color" dstNodeId="25" dstNodeSocketName="color"/>
     <link id="60" srcNodeId="3" srcNodeSocketName="y" dstNodeId="5" dstNodeSocketName="imag"/>
-    <editor nextZKey="271">
-        <dragAndZoom x="150.42063903808594" y="144.90174865722656" zoom="1.2351350784301758"/>
+    <editor nextZKey="272">
+        <dragAndZoom x="179.62541198730469" y="97.00970458984375" zoom="1.2351350784301758"/>
         <nodeDatas>
             <nodeData nodeId="1" x="294.8255615234375" y="15.053955078125" zKey="0"/>
-            <nodeData nodeId="2" x="64" y="-160" zKey="0"/>
+            <nodeData nodeId="2" x="32" y="-160" zKey="271"/>
             <nodeData nodeId="3" x="-304" y="-224" zKey="270"/>
             <nodeData nodeId="4" x="-769" y="-122" zKey="0"/>
             <nodeData nodeId="5" x="-595.00006103515625" y="-101.00003051757812" zKey="0"/>
@@ -166,6 +166,6 @@
             <visualizer id="42" x="96" y="-320" zKey="0" nodeId="27" dstSocketName="channels" sx="216" sy="148"/>
             <visualizer id="43" x="-176" y="-768" zKey="0" nodeId="35" dstSocketName="value" sx="136" sy="98"/>
         </visualizers>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="002d9e90" gridColor="2b2b2b21"/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="002d9e90" gridColor="2b2b2b21"/>
     </editor>
 </graph>

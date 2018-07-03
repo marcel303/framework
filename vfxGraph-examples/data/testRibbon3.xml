@@ -97,8 +97,8 @@
         <param name="out.min" value="0.100000"/>
     </link>
     <link id="69" srcNodeId="38" srcNodeSocketName="strokeSize" dstNodeId="44" dstNodeSocketName="value">
-        <param name="out.max" value="7.000000"/>
-        <param name="out.min" value="1.000000"/>
+        <param name="out.max" value="0.020000"/>
+        <param name="out.min" value="0.010000"/>
     </link>
     <link id="70" srcNodeId="40" srcNodeSocketName="any" dstNodeId="46" dstNodeSocketName="any"/>
     <link id="71" srcNodeId="46" srcNodeSocketName="01" dstNodeId="38" dstNodeSocketName="any"/>
@@ -128,15 +128,15 @@
     <link id="93" srcNodeId="38" srcNodeSocketName="y" dstNodeId="37" dstNodeSocketName="2" dynamic="1"/>
     <link id="94" srcNodeId="38" srcNodeSocketName="r" dstNodeId="37" dstNodeSocketName="3" dynamic="1"/>
     <link id="95" srcNodeId="38" srcNodeSocketName="s" dstNodeId="37" dstNodeSocketName="4" dynamic="1"/>
-    <editor nextZKey="439">
-        <dragAndZoom x="78.112678527832031" y="83.353507995605469" zoom="1"/>
+    <editor nextZKey="443">
+        <dragAndZoom x="820.83868408203125" y="34.715240478515625" zoom="1"/>
         <nodeDatas>
             <nodeData nodeId="1" x="1184" y="0" zKey="337"/>
             <nodeData nodeId="24" x="416" y="0" zKey="418"/>
             <nodeData nodeId="35" x="-256" y="0" zKey="372"/>
             <nodeData nodeId="36" x="-256" y="48" zKey="362"/>
             <nodeData nodeId="37" x="-128" y="0" zKey="437"/>
-            <nodeData nodeId="38" x="16" y="0" zKey="435"/>
+            <nodeData nodeId="38" x="16" y="0" zKey="439"/>
             <nodeData nodeId="40" x="288" y="0" zKey="430"/>
             <nodeData nodeId="42" x="-256" y="96" zKey="397"/>
             <nodeData nodeId="43" x="-384" y="96" zKey="297"/>
@@ -148,8 +148,8 @@
             <nodeData nodeId="50" x="1056" y="0" zKey="354"/>
             <nodeData nodeId="51" x="544" y="0" zKey="346"/>
             <nodeData nodeId="52" x="672" y="0" zKey="353"/>
-            <nodeData nodeId="53" x="928" y="0" zKey="359"/>
-            <nodeData nodeId="54" x="800" y="0" zKey="358"/>
+            <nodeData nodeId="53" x="928" y="0" zKey="442"/>
+            <nodeData nodeId="54" x="800" y="0" zKey="441"/>
             <nodeData nodeId="55" x="160" y="192" zKey="420" folded="1"/>
             <nodeData nodeId="56" x="160" y="336" zKey="370"/>
             <nodeData nodeId="57" x="-256" y="-96" zKey="374"/>
@@ -158,6 +158,6 @@
             <nodeData nodeId="60" x="-256" y="160" zKey="433"/>
         </nodeDatas>
         <visualizers/>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
     </editor>
 </graph>
