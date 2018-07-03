@@ -32,6 +32,9 @@
 
 #include "WDL/wdlstring.h"
 
+#include "data/lice-gradient.ps"
+#include "data/lice-gradient.vs"
+
 #define STUB logDebug("function %s not implemented", __FUNCTION__)
 //#define STUB do { } while (false)
 
@@ -136,6 +139,8 @@ JsusFxGfx_Framework::JsusFxGfx_Framework(JsusFx & _jsusFx)
 	, jsusFx(_jsusFx)
 	, surface(nullptr)
 {
+	shaderSource("lice-gradient.ps", s_liceGradientPs);
+	shaderSource("lice-gradient.vs", s_liceGradientVs);
 }
 
 void JsusFxGfx_Framework::setup(
