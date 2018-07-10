@@ -90,8 +90,8 @@ namespace KinectV2
 	static void depthToCameraXYZ(int px, int py, float depth, float & x, float & y, float & z)
 	{
 		z = depth / 1000.f;
-		x = (px - CameraParams::cx) * depth / CameraParams::fx;
-		y = (py - CameraParams::cy) * depth / CameraParams::fy;
+		x = (px - CameraParams::cx) * z / CameraParams::fx;
+		y = (py - CameraParams::cy) * z / CameraParams::fy;
 	}
 }
 
