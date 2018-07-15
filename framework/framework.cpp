@@ -5343,6 +5343,20 @@ void viewLookat3d(const float originX, const float originY, const float originZ,
 	setTransform(TRANSFORM_3D);
 }
 
+Vec4 transformToWorld(const Vec4 & v)
+{
+	Mat4x4 matM;
+	
+	gxGetMatrixf(GL_MODELVIEW, matM.m_v);
+	checkErrorGL();
+	
+	// from current transfor to world
+	
+	Vec4 t = matM * Vec4(v[0], v[1], v[2], v[3]);
+	
+	return t;
+}
+
 Vec2 transformToScreen(const Vec3 & v)
 {
 	Mat4x4 matP;
@@ -7665,6 +7679,11 @@ void gxNormal3f(float x, float y, float z)
 	s_gxVertex.nz = z;
 }
 
+void gxNormal3fv(const float * v)
+{
+	gxNormal3f(v[0], v[1], v[2]);
+}
+
 void gxVertex2f(float x, float y)
 {
 	s_gxVertex.px = x;
@@ -7698,6 +7717,11 @@ void gxVertex4f(float x, float y, float z, float w)
 void gxVertex3fv(const float * v)
 {
 	gxVertex3f(v[0], v[1], v[2]);
+}
+
+void gxVertex4fv(const float * v)
+{
+	gxVertex4f(v[0], v[1], v[2], v[3]);
 }
 
 void gxEmitVertex()

@@ -1206,6 +1206,7 @@ void popTransform();
 void projectScreen2d();
 void projectPerspective3d(const float fov, const float nearZ, const float farZ);
 void viewLookat3d(const float originX, const float originY, const float originZ, const float targetX, const float targetY, const float targetZ, const float upX, const float upY, const float upZ);
+Vec4 transformToWorld(const Vec4 & v);
 Vec2 transformToScreen(const Vec3 & v);
 
 void pushSurface(Surface * surface);
@@ -1334,10 +1335,12 @@ void gxColor3ub(int r, int g, int b);
 void gxColor4ub(int r, int g, int b, int a);
 void gxTexCoord2f(float u, float v);
 void gxNormal3f(float x, float y, float z);
+void gxNormal3fv(const float * v);
 void gxVertex2f(float x, float y);
 void gxVertex3f(float x, float y, float z);
 void gxVertex3fv(const float * v);
 void gxVertex4f(float x, float y, float z, float w);
+void gxVertex4fv(const float * v);
 void gxSetTexture(GLuint texture);
 
 #else
