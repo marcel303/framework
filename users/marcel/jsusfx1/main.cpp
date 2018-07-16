@@ -42,6 +42,21 @@ gfx_mode
 
 */
 
+/*
+
+test todo :
+
+- add octave select to on-screen MIDI keyboard
+- bring JSFX window to top when selecting it in the effect chain window
+- draw a cross when an effect is active in the effect chain list
+- show CPU-usage per effect (perhaps in the effect chain list?)
+- show effect stats like number of I/O pins, description, sliders when hovering over an effect in the effect chain list
+- don't draw JSFX UI when a window is minimized
+- add an option to hide to JSFX UI from the effect chain list. perhaps hide should be the default behavior of the close button, instead of closing and removing it from the effect chain?
+- add an effect search filter box
+
+*/
+
 #define SAMPLE_RATE 44100
 #define BUFFER_SIZE 64
 
