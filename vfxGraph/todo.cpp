@@ -97,9 +97,6 @@ todo : nodes :
 	- filter is enum: auto, linear or off. auto will look at continuous flag of channels input
 - add doValuePlotter to ui framework
 - add quantize node
-- investigate how to render 2D and 3D shapes
-	+ add surface node. push surface before tick, pop surface after tick
-	- add sequencer node. has multiple any type inputs. inputs are processed in socket order
 - investigate ways of composing/decomposing image data and masking
 	- is it possible to create a texture sharing data with a base texture and to just change the rgba swizzling?
 - timeline node updates:
@@ -378,7 +375,9 @@ todo :
 	+ make graph a command line option
 + audio graph: fix issue with immediate values not being restored properly for most types
 + port Veem changes where desired to master branch
-
++ add reload/refresh/recreate button graph edit
+	+ only visible/active when real-time connection is set
+	+ reload/recreates the implementation, without saving the file to disk
 
 todo : nodes :
 + add ease node
@@ -491,6 +490,10 @@ todo : nodes :
 + add queue system for triggers ? ensure predeps have finished processing before handling triggers
 + add text list node. next! prev! rand!
 + add max number of voices for poly audio graph node
++ add 3D transform node
++ investigate how to render 2D and 3D shapes
+	+ add surface node. push surface before tick, pop surface after tick
+	+ add sequence node. has multiple any type inputs. inputs are processed in socket order
 
 
 todo : fsfx :
