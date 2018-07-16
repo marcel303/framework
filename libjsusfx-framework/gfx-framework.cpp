@@ -35,8 +35,8 @@
 #include "data/lice-gradient.ps"
 #include "data/lice-gradient.vs"
 
-#define STUB logDebug("function %s not implemented", __FUNCTION__)
-//#define STUB do { } while (false)
+//#define STUB logDebug("function %s not implemented", __FUNCTION__)
+#define STUB do { } while (false)
 
 //
 
