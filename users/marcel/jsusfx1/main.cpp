@@ -9,6 +9,7 @@
 
 #include "Path.h"
 #include "StringEx.h"
+#include "Timer.h"
 
 #include <map>
 #include <vector>
@@ -46,14 +47,18 @@ gfx_mode
 
 test todo :
 
-- add octave select to on-screen MIDI keyboard
-- bring JSFX window to top when selecting it in the effect chain window
-- draw a cross when an effect is active in the effect chain list
-- show CPU-usage per effect (perhaps in the effect chain list?)
-- show effect stats like number of I/O pins, description, sliders when hovering over an effect in the effect chain list
++ add octave select to on-screen MIDI keyboard
++ bring JSFX window to top when selecting it in the effect chain window
++ draw a cross when an effect is active in the effect chain list
++ show CPU-usage per effect (perhaps in the effect chain list?)
+- show effect stats when hovering over an effect in the effect chain list like:
+	+ number of I/O pins,
+	- description,
+	- sliders
 - don't draw JSFX UI when a window is minimized
 - add an option to hide to JSFX UI from the effect chain list. perhaps hide should be the default behavior of the close button, instead of closing and removing it from the effect chain?
-- add an effect search filter box
++ add an effect search filter box
+- add button to connect/disconnect midi
 
 */
 
@@ -130,11 +135,12 @@ struct MidiKeyboard
 	
 	struct Key
 	{
-		int note;
 		bool isDown;
 	};
 	
 	Key keys[kNumKeys];
+	
+	int octave = 4;
 	
 	MidiKeyboard()
 	{
@@ -142,7 +148,23 @@ struct MidiKeyboard
 		{
 			auto & key = keys[i];
 			
-			key.note = 32 + i;
+			key.isDown = false;
+		}
+	}
+	
+	int getNote(const int keyIndex) const
+	{
+		return octave * 8 + keyIndex;
+	}
+	
+	void changeOctave(const int direction)
+	{
+		octave = clamp(octave + direction, 0, 10);
+		
+		for (int i = 0; i < kNumKeys; ++i)
+		{
+			auto & key = keys[i];
+			
 			key.isDown = false;
 		}
 	}
@@ -161,12 +183,18 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 {
 	const int keySx = 16;
 	const int keySy = 64;
+	const int octaveSx = 24;
+	const int octaveSy = 24;
 
-	const int sx = keySx * MidiKeyboard::kNumKeys;
-	const int sy = keySy;
+	const int sx = keySx * MidiKeyboard::kNumKeys + octaveSx;
+	const int sy = std::max(keySy, octaveSy * 2);
 
 	const int hoverIndex = mouseY >= 0 && mouseY <= keySy ? mouseX / keySx : -1;
 	const float velocity = clamp(mouseY / float(keySy), 0.f, 1.f);
+	
+	const int octaveX = keySx * MidiKeyboard::kNumKeys + 4;
+	const int octaveY = 4;
+	const int octaveHoverIndex = mouseX >= octaveX && mouseX <= octaveX + octaveSx ? (mouseY - octaveY) / octaveSy : -1;
 	
 	if (doTick)
 	{
@@ -186,15 +214,23 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 				{
 					key.isDown = true;
 					
-					writeMidi(midi, *midiSize, MIDI_ON, key.note, velocity * 127);
+					writeMidi(midi, *midiSize, MIDI_ON, kb.getNote(i), velocity * 127);
 				}
 				else
 				{
-					writeMidi(midi, *midiSize, MIDI_OFF, key.note, velocity * 127);
+					writeMidi(midi, *midiSize, MIDI_OFF, kb.getNote(i), velocity * 127);
 					
 					key.isDown = false;
 				}
 			}
+		}
+		
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			if (octaveHoverIndex == 0)
+				kb.changeOctave(+1);
+			if (octaveHoverIndex == 1)
+				kb.changeOctave(-1);
 		}
 	}
 	
@@ -226,6 +262,41 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 			gxPopMatrix();
 		}
 		
+		hqClearGradient();
+		
+		{
+			gxPushMatrix();
+			{
+				gxTranslatef(octaveX, octaveY, 0);
+				
+				setColor(0 == octaveHoverIndex ? colorkeyHover : colorKey);
+				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
+				hqBegin(HQ_FILLED_RECTS);
+				hqFillRect(0, 0, octaveSx, octaveSy);
+				hqEnd();
+				hqClearGradient();
+				
+				setLumi(40);
+				hqBegin(HQ_FILLED_TRIANGLES);
+				hqFillTriangle(octaveSx/2, 6, octaveSx - 6, octaveSy - 6, 6, octaveSy - 6);
+				hqEnd();
+				
+				gxTranslatef(0, octaveSy, 0);
+				
+				setColor(1 == octaveHoverIndex ? colorkeyHover : colorKey);
+				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
+				hqBegin(HQ_FILLED_RECTS);
+				hqFillRect(0, 0, octaveSx, octaveSy);
+				hqEnd();
+				hqClearGradient();
+				
+				setLumi(40);
+				hqBegin(HQ_FILLED_TRIANGLES);
+				hqFillTriangle(octaveSx/2, octaveSy - 6, octaveSx - 6, 6, 6, 6);
+				hqEnd();
+			}
+			gxPopMatrix();
+		}
 		hqClearGradient();
 	}
 }
@@ -281,6 +352,8 @@ struct AudioStream_JsusFx : AudioStream
 	SDL_mutex * mutex = nullptr;
 	
 	Limiter limiter;
+	
+	uint64_t cpuTime = 0;
 	
 	virtual ~AudioStream_JsusFx() override
 	{
@@ -345,11 +418,17 @@ struct AudioStream_JsusFx : AudioStream
 		
 		lock();
 		{
+			uint64_t time1 = g_TimerRT.TimeUS_get();
+			
 			fx->setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
 			
 			fx->process(input, output, numSamples, 2, 2);
 			
 			s_midiBuffer.numBytes = 0;
+			
+			uint64_t time2 = g_TimerRT.TimeUS_get();
+			
+			cpuTime = time2 - time1;
 		}
 		unlock();
 		
@@ -397,6 +476,8 @@ struct AudioStream_JsusFxChain : AudioStream
 	{
 		bool isPassthrough = false;
 		JsusFx * jsusFx = nullptr;
+		std::string filename;
+		uint64_t cpuTime = 0;
 	};
 	
 	AudioStream * source = nullptr;
@@ -437,12 +518,13 @@ struct AudioStream_JsusFxChain : AudioStream
 		(void)r;
 	}
 	
-	void add(JsusFx * jsusFx)
+	void add(JsusFx * jsusFx, const char * filename)
 	{
 		lock();
 		{
 			EffectElem elem;
 			elem.jsusFx = jsusFx;
+			elem.filename = filename;
 			
 			effects.push_back(elem);
 		}
@@ -491,9 +573,14 @@ struct AudioStream_JsusFxChain : AudioStream
 			for (auto & effect : effects)
 			{
 				if (effect.isPassthrough)
+				{
+					effect.cpuTime = 0;
 					continue;
+				}
 				
 				auto & jsusFx = effect.jsusFx;
+				
+				const uint64_t time1 = g_TimerRT.TimeUS_get();
 				
 				jsusFx->setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
 				
@@ -510,6 +597,10 @@ struct AudioStream_JsusFxChain : AudioStream
 				{
 					inputIndex = 1 - inputIndex;
 				}
+				
+				const uint64_t time2 = g_TimerRT.TimeUS_get();
+				
+				effect.cpuTime = time2 - time1;
 			}
 			
 			s_midiBuffer.numBytes = 0;
@@ -702,11 +793,14 @@ struct JsusFxChainWindow
 	
 	AudioStream_JsusFxChain & effectChain;
 	
+	std::vector<JsusFxWindow*> & windows;
+	
 	int selectedEffectIndex;
 	
-	JsusFxChainWindow(AudioStream_JsusFxChain & _effectChain)
+	JsusFxChainWindow(AudioStream_JsusFxChain & _effectChain, std::vector<JsusFxWindow*> & _windows)
 		: window("Effect Chain", 300, 300, true)
 		, effectChain(_effectChain)
+		, windows(_windows)
 		, selectedEffectIndex(0)
 	{
 	}
@@ -745,6 +839,13 @@ struct JsusFxChainWindow
 						setLumi(effect.isPassthrough ? 0 : 200);
 						drawRect(x1, y1, x2, y2);
 						setLumi(100);
+						if (!effect.isPassthrough)
+						{
+							hqBegin(HQ_LINES);
+							hqLine(x1 + 3, y1 + 3, 1.1f, x2 - 3, y2 - 3, 1.1f);
+							hqLine(x1 + 3, y2 - 3, 1.1f, x2 - 3, y1 + 3, 1.1f);
+							hqEnd();
+						}
 						drawRectLine(x1, y1, x2, y2);
 					}
 					
@@ -761,7 +862,17 @@ struct JsusFxChainWindow
 							mouse.y <= y2;
 						
 						if (isInside && mouse.wentDown(BUTTON_LEFT))
+						{
 							selectedEffectIndex = effectIndex;
+							
+							for (JsusFxWindow * window : windows)
+							{
+								if (&window->jsusFx == effect.jsusFx)
+									window->window->raise();
+							}
+							
+							window.raise();
+						}
 						
 						if (effectIndex == selectedEffectIndex)
 						{
@@ -775,6 +886,16 @@ struct JsusFxChainWindow
 					}
 					
 					effectIndex++;
+				}
+				
+				if (keyboard.wentDown(SDLK_SPACE))
+				{
+					if (selectedEffectIndex >= 0 && selectedEffectIndex < effectChain.effects.size())
+					{
+						auto & effect = effectChain.effects[selectedEffectIndex];
+						
+						effect.isPassthrough = !effect.isPassthrough;
+					}
 				}
 				
 				effectChain.lock();
@@ -792,6 +913,55 @@ struct JsusFxChainWindow
 					}
 				}
 				effectChain.unlock();
+				
+				if (selectedEffectIndex >= 0 && selectedEffectIndex < effectChain.effects.size())
+				{
+					gxPushMatrix();
+					{
+						gxTranslatef(0, window.getHeight() - 70, 0);
+						
+						auto & effect = effectChain.effects[selectedEffectIndex];
+						
+						hqBegin(HQ_FILLED_ROUNDED_RECTS);
+						{
+							setLumi(200);
+							hqFillRoundedRect(0, 0, window.getWidth(), 70, 4.f);
+						}
+						hqEnd();
+						
+						setLumi(40);
+						
+						int x = 7;
+						int y = 7;
+						
+						drawText(x, y, 12, +1, +1, "file: %s", Path::GetFileName(effect.filename).c_str());
+						y += 16;
+						
+						drawText(x, y, 12, +1, +1, "pins: %d in, %d out", effect.jsusFx->numInputs, effect.jsusFx->numOutputs);
+						y += 14;
+						
+						drawText(x, y, 12, +1, +1, "CPU time: %.2f%%", effect.cpuTime * 100 * 44100 / BUFFER_SIZE / 1000000.f);
+						y += 14;
+						
+						
+						
+					#if 0
+						for (int i = 0; i < JsusFx::kMaxSliders; ++i)
+						{
+							if (fx.sliders[i].exists && fx.sliders[i].desc[0] != '-')
+							{
+								gxPushMatrix();
+								gxTranslatef(x, y, 0);
+								doSlider(fx, fx.sliders[i], mouse.x - x, mouse.y - y, sliderIsActive[i]);
+								gxPopMatrix();
+								
+								y += 16;
+							}
+						}
+					#endif
+					}
+					gxPopMatrix();
+				}
 			}
 			framework.endDraw();
 		}
@@ -875,10 +1045,12 @@ static void testJsusFxList()
 	
 	MidiKeyboard midiKeyboard;
 	
-	JsusFxChainWindow effectChainWindow(audioStream);
+	JsusFxChainWindow effectChainWindow(audioStream, windows);
 	
 	bool scrollerIsActive = false;
 	float scrollerPosition = 0.f;
+	
+	std::string filenameFilter;
 	
 	for (;;)
 	{
@@ -935,7 +1107,7 @@ static void testJsusFxList()
 				}
 				audioStream.unlock();
 				
-				doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y, nullptr, nullptr, false, true);
+				doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y - y, nullptr, nullptr, false, true);
 			}
 			gxPopMatrix();
 			
@@ -971,7 +1143,60 @@ static void testJsusFxList()
 			
 			y += 24;
 			
-			auto & filenames = filenamesByLocation[activeLocation];
+			// search filter box
+			
+			{
+				setLumi(filenameFilter.empty() ? 40 : 60);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				hqFillRoundedRect(10, y, 10 + 400, y + 20, 4.f);
+				hqEnd();
+				setLumi(200);
+				drawText(10 + 4, y + 10, 12, +1, 0, "%s", filenameFilter.c_str());
+				for (auto & e : framework.events)
+				{
+					if (e.type == SDL_KEYDOWN)
+					{
+						if (e.key.keysym.sym >= SDLK_a && e.key.keysym.sym <= SDLK_z)
+							filenameFilter.push_back(e.key.keysym.sym - SDLK_a + 'a');
+					}
+				}
+				
+				y += 20;
+			}
+			
+			if (keyboard.wentDown(SDLK_BACKSPACE))
+				filenameFilter.clear();
+			
+			// apply search filter
+			
+			auto & allFilenames = filenamesByLocation[activeLocation];
+			
+			std::vector<std::string> filenames;
+			
+			if (filenameFilter.empty())
+				filenames = allFilenames;
+			else
+			{
+				for (auto & filename : allFilenames)
+					if (strcasestr(filename.c_str(), filenameFilter.c_str()) != nullptr)
+						filenames.push_back(filename);
+			}
+			
+			if (keyboard.wentDown(SDLK_RETURN) && filenames.size() == 1)
+			{
+				auto & filename = filenames[0];
+				
+				JsusFxWindow * window = new JsusFxWindow(filename.c_str());
+			
+				if (window->isValid)
+				{
+					audioStream.add(&window->jsusFx, filename.c_str());
+				}
+			
+				windows.push_back(window);
+			}
+			
+			// filtered effect list
 			
 			const int kMaxVisible = 30;
 			
@@ -1038,7 +1263,7 @@ static void testJsusFxList()
 					
 					if (window->isValid)
 					{
-						audioStream.add(&window->jsusFx);
+						audioStream.add(&window->jsusFx, filename.c_str());
 					}
 					
 					windows.push_back(window);
