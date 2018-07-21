@@ -123,6 +123,8 @@ public:
 		
 		oldMouseX = mouseX;
 		oldMouseY = mouseY;
+		
+		quitRequested = false;
 	}
 	
 	void endProcess()
