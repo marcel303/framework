@@ -62,7 +62,7 @@ test todo :
 + add an effect search filter box
 - add button to connect/disconnect midi
 - add option to organize windows (using box atlas?)
-- make octave buttons round
++ make octave buttons round
 - add ability to load/save effect chains
 
 */
@@ -1137,7 +1137,7 @@ static void testJsusFxList()
 			}
 		}
 		
-	#if // todo : keep or remove ?
+	#if 0 // todo : keep or remove ?
 		if (mouse.wentDown(BUTTON_RIGHT))
 		{
 			BoxAtlas atlas;
