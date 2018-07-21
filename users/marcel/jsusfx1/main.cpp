@@ -7,6 +7,7 @@
 #include "gfx-framework.h"
 #include "jsusfx-framework.h"
 
+#include "BoxAtlas.h"
 #include "Path.h"
 #include "StringEx.h"
 #include "Timer.h"
@@ -57,10 +58,12 @@ test todo :
 	- sliders
 + don't draw JSFX UI when a window is minimized
 + add an option to hide to JSFX UI from the effect chain list
-- perhaps hide should be the default behavior of the close button, instead of closing and removing it from the effect chain?
++ perhaps hide should be the default behavior of the close button, instead of closing and removing it from the effect chain?
 + add an effect search filter box
 - add button to connect/disconnect midi
 - add option to organize windows (using box atlas?)
+- make octave buttons round
+- add ability to load/save effect chains
 
 */
 
@@ -276,8 +279,8 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 				
 				setColor(0 == octaveHoverIndex ? colorkeyHover : colorKey);
 				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
-				hqBegin(HQ_FILLED_RECTS);
-				hqFillRect(0, 0, octaveSx, octaveSy);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				hqFillRoundedRect(0, 0, octaveSx, octaveSy, 2.f);
 				hqEnd();
 				hqClearGradient();
 				
@@ -290,8 +293,8 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 				
 				setColor(1 == octaveHoverIndex ? colorkeyHover : colorKey);
 				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
-				hqBegin(HQ_FILLED_RECTS);
-				hqFillRect(0, 0, octaveSx, octaveSy);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				hqFillRoundedRect(0, 0, octaveSx, octaveSy, 2.f);
 				hqEnd();
 				hqClearGradient();
 				
@@ -697,10 +700,7 @@ struct JsusFxWindow
 		
 		if (window->getQuitRequested())
 		{
-			delete window;
-			window = nullptr;
-			
-			isValid = false;
+			window->hide();
 		}
 	}
 	
@@ -838,6 +838,15 @@ struct JsusFxChainWindow
 					}
 					
 					Assert(effectWindow != nullptr);
+					
+					if (keyboard.wentDown(SDLK_SPACE))
+						if (effectIndex == selectedEffectIndex)
+							effect.isPassthrough = !effect.isPassthrough;
+					
+					if (keyboard.wentDown(SDLK_DELETE) || keyboard.wentDown(SDLK_BACKSPACE))
+						if (effectIndex == selectedEffectIndex)
+							if (effectWindow != nullptr)
+								effectWindow->isValid = false;
 				
 					if (effectWindow != nullptr)
 					{
@@ -939,16 +948,6 @@ struct JsusFxChainWindow
 					}
 					
 					effectIndex++;
-				}
-				
-				if (keyboard.wentDown(SDLK_SPACE))
-				{
-					if (selectedEffectIndex >= 0 && selectedEffectIndex < effectChain.effects.size())
-					{
-						auto & effect = effectChain.effects[selectedEffectIndex];
-						
-						effect.isPassthrough = !effect.isPassthrough;
-					}
 				}
 				
 				effectChain.lock();
@@ -1137,6 +1136,42 @@ static void testJsusFxList()
 				windowItr++;
 			}
 		}
+		
+	#if // todo : keep or remove ?
+		if (mouse.wentDown(BUTTON_RIGHT))
+		{
+			BoxAtlas atlas;
+			
+			atlas.init(1280, 10000); // todo : desktop size
+			
+			struct Elem
+			{
+				Window * window = nullptr;
+				BoxAtlasElem * atlasElem = nullptr;
+			};
+			
+			std::vector<Elem> elems;
+			Elem elem;
+			elem.window = &effectChainWindow.window;
+			elems.push_back(elem);
+			
+			for (auto & window : windows)
+			{
+				Elem elem;
+				elem.window = window->window;
+				elems.push_back(elem);
+			}
+			
+			for (auto & elem : elems)
+				elem.atlasElem = atlas.tryAlloc(elem.window->getWidth(), elem.window->getHeight());
+			
+			atlas.optimize();
+			
+			for (auto & elem : elems)
+				if (elem.atlasElem != nullptr)
+					elem.window->setPosition(elem.atlasElem->x, elem.atlasElem->y);
+		}
+	#endif
 		
 		effectChainWindow.tick(dt);
 		
