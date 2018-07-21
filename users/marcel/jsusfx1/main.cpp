@@ -55,10 +55,12 @@ test todo :
 	+ number of I/O pins,
 	- description,
 	- sliders
-- don't draw JSFX UI when a window is minimized
-- add an option to hide to JSFX UI from the effect chain list. perhaps hide should be the default behavior of the close button, instead of closing and removing it from the effect chain?
++ don't draw JSFX UI when a window is minimized
++ add an option to hide to JSFX UI from the effect chain list
+- perhaps hide should be the default behavior of the close button, instead of closing and removing it from the effect chain?
 + add an effect search filter box
 - add button to connect/disconnect midi
+- add option to organize windows (using box atlas?)
 
 */
 
@@ -268,6 +270,9 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 			gxPushMatrix();
 			{
 				gxTranslatef(octaveX, octaveY, 0);
+				
+				setLumi(200);
+				drawText(octaveSx + 4, 4, 12, +1, +1, "octave: %d", kb.octave);
 				
 				setColor(0 == octaveHoverIndex ? colorkeyHover : colorKey);
 				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
@@ -704,6 +709,9 @@ struct JsusFxWindow
 		if (!isValid)
 			return;
 		
+		if (window->isHidden())
+			return;
+		
 		pushWindow(*window);
 		{
 		#if RENDER_TO_SURFACE
@@ -821,11 +829,57 @@ struct JsusFxChainWindow
 				
 				for (auto & effect : effectChain.effects)
 				{
+					JsusFxWindow * effectWindow = nullptr;
+					
+					for (JsusFxWindow * window : windows)
+					{
+						if (&window->jsusFx == effect.jsusFx)
+							effectWindow = window;
+					}
+					
+					Assert(effectWindow != nullptr);
+				
+					if (effectWindow != nullptr)
 					{
 						const int x1 = x;
 						const int y1 = y;
-						const int x2 = x + 16;
+						const int x2 = x + 36;
 						const int y2 = y + 16;
+						
+						const bool isInside =
+							mouse.x >= x1 &&
+							mouse.y >= y1 &&
+							mouse.x <= x2 &&
+							mouse.y <= y2;
+						
+						hqBegin(HQ_FILLED_ROUNDED_RECTS);
+						setLumi(isInside ? 100 : 40);
+						hqFillRoundedRect(x1, y1, x2, y2, 4.f);
+						hqEnd();
+						
+						setLumi(200);
+						if (effectWindow->window->isHidden())
+							drawText((x1 + x2)/2, (y1 + y2)/2, 12, 0.f, 0.f, "Show");
+						else
+							drawText((x1 + x2)/2, (y1 + y2)/2, 12, 0.f, 0.f, "Hide");
+						
+						if (isInside && mouse.wentDown(BUTTON_LEFT))
+						{
+							if (effectWindow->window->isHidden())
+							{
+								effectWindow->window->show();
+								window.raise();
+							}
+							else
+								effectWindow->window->hide();
+						}
+					}
+					
+					{
+						const int x1 = x + 40;
+						const int y1 = y;
+						const int x2 = x1 + 16;
+						const int y2 = y1 + 16;
 						
 						const bool isInside =
 							mouse.x >= x1 &&
@@ -850,7 +904,7 @@ struct JsusFxChainWindow
 					}
 					
 					{
-						const int x1 = x + 20;
+						const int x1 = x + 60;
 						const int y1 = y;
 						const int x2 = window.getWidth();
 						const int y2 = y + 16;
@@ -865,13 +919,12 @@ struct JsusFxChainWindow
 						{
 							selectedEffectIndex = effectIndex;
 							
-							for (JsusFxWindow * window : windows)
+							if (effectWindow != nullptr)
 							{
-								if (&window->jsusFx == effect.jsusFx)
-									window->window->raise();
-							}
+								effectWindow->window->raise();
 							
-							window.raise();
+								window.raise();
+							}
 						}
 						
 						if (effectIndex == selectedEffectIndex)
