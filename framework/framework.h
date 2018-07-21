@@ -374,6 +374,10 @@ public:
 	void show();
 	void hide();
 	
+	bool isHidden() const;
+	
+	void raise();
+	
 	int getWidth() const;
 	int getHeight() const;
 	

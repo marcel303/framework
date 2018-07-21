@@ -1892,6 +1892,16 @@ void Window::hide()
 	SDL_HideWindow(m_window);
 }
 
+bool Window::isHidden() const
+{
+	return (SDL_GetWindowFlags(m_window) & SDL_WINDOW_HIDDEN) != 0;
+}
+
+void Window::raise()
+{
+	SDL_RaiseWindow(m_window);
+}
+
 int Window::getWidth() const
 {
 	int sx;
