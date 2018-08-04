@@ -1171,10 +1171,15 @@ public:
 		
 		const int time1 = getTimeMS();
 		
-		m_vertices.reserve(vertices.size());
+		const size_t numVertices = vertices.size() / 3;
+		const size_t numNormals = normals.size() / 3;
+		const size_t numUVs = uvs.size() / 3;
+		const size_t numColors = colors.size() / 4;
+		
+		m_vertices.reserve(numVertices);
 		m_indices.reserve(vertexIndices.size());
 		
-		typedef HashMap<Vertex, int, 1000> WeldVertices;
+		typedef HashMap<Vertex, int, 1024> WeldVertices;
 		WeldVertices weldVertices(vertexIndices.size() / 3);
 		
 		for (size_t i = 0; i < vertexIndices.size(); ++i)
@@ -1188,7 +1193,7 @@ public:
 			
 			// position
 			
-			if (vertexIndex < vertices.size() / 3)
+			if (vertexIndex < numVertices)
 			{
 				vertex.px = vertices[vertexIndex * 3 + 0];
 				vertex.py = vertices[vertexIndex * 3 + 1];
@@ -1214,7 +1219,7 @@ public:
 					
 					const size_t normalIndex = normalIndices[lookupIndex];
 					
-					if (normalIndex < normals.size() / 3)
+					if (normalIndex < numNormals)
 					{
 						vertex.nx = normals[normalIndex * 3 + 0];
 						vertex.ny = normals[normalIndex * 3 + 1];
@@ -1237,7 +1242,7 @@ public:
 						? vertexIndex
 						: i;
 				
-				if (normalIndex < normals.size() / 3)
+				if (normalIndex < numNormals)
 				{
 					vertex.nx = normals[normalIndex * 3 + 0];
 					vertex.ny = normals[normalIndex * 3 + 1];
@@ -1266,7 +1271,7 @@ public:
 					
 					const size_t uvIndex = uvIndices[lookupIndex];
 					
-					if (uvIndex * 2 < uvs.size())
+					if (uvIndex < numUVs)
 					{
 						vertex.tx = uvs[uvIndex * 2 + 0];
 						vertex.ty = uvs[uvIndex * 2 + 1];
@@ -1284,7 +1289,7 @@ public:
 						? vertexIndex
 						: i;
 				
-				if (uvIndex < uvs.size() / 2)
+				if (uvIndex < numUVs)
 				{
 					// non-indexed UV
 					
@@ -1305,7 +1310,7 @@ public:
 				
 				const size_t colorIndex = colorIndices[i];
 				
-				if (colorIndex < colors.size() / 4)
+				if (colorIndex < numColors)
 				{
 					vertex.cx = colors[colorIndex * 4 + 0];
 					vertex.cy = colors[colorIndex * 4 + 1];
@@ -1313,7 +1318,7 @@ public:
 					vertex.cw = colors[colorIndex * 4 + 3];
 				}
 			}
-			else if (colorIndices.size() == 0 && i < colors.size() / 4)
+			else if (colorIndices.size() == 0 && i < numColors)
 			{
 				// non-indexed color
 				
@@ -1420,7 +1425,7 @@ public:
 			
 			fbxLog(logIndent, "triangulation result: %d -> %d indices", int(m_indices.size()), int(temp.size()));
 			
-			m_indices = temp;
+			std::swap(m_indices, temp);
 		}
 		
 		const int time2 = getTimeMS();
@@ -1929,7 +1934,7 @@ namespace AnimModel
 				meshes.push_back(MeshBuilder());
 				MeshBuilder & meshBuilder = meshes.back();
 				
-				// todo: triangulate mesh
+				// weld vertices and triangulate mesh
 				
 				meshBuilder.construct(
 					logIndent,
