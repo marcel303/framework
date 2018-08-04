@@ -35,7 +35,7 @@ void main()
 	if (drawColorTexcoords())
 		color.rg *= texcoord.xy;
 	if (drawColorNormals())
-		color.rgb *= (normal + vec3(1.0)) / 2.0;
+		color.rgb *= (normalize(unpackNormal()).xyz + vec3(1.0)) / 2.0;
 	if (drawColorBlendIndices())
 		color.rgb *= skinningBlendIndices.xyz / 32.0;
 	if (drawColorBlendWeights())
