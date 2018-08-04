@@ -290,7 +290,7 @@ public:
 	
 	void setFullscreen(bool fullscreen);
 
-	void beginDraw(int r, int g, int b, int a);
+	void beginDraw(int r, int g, int b, int a, float depth = 1.f);
 	void endDraw();
 	
 	void beginScreenshot(int r, int g, int b, int a, int scale);

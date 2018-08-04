@@ -1478,7 +1478,7 @@ static void updateViewport(Surface * surface, SDL_Window * window)
 	}
 }
 
-void Framework::beginDraw(int r, int g, int b, int a)
+void Framework::beginDraw(int r, int g, int b, int a, float depth)
 {
 #if ENABLE_OPENGL
 	if (enableDrawTiming)
@@ -1487,6 +1487,7 @@ void Framework::beginDraw(int r, int g, int b, int a)
 	// clear back buffer
 	
 	glClearColor(scale255(r), scale255(g), scale255(b), scale255(a));
+	glClearDepth(depth);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	// initialize viewport and OpenGL matrices
