@@ -888,14 +888,8 @@ void Framework::process()
 			if (windowData != nullptr)
 			{
 				//logDebug("mouse %d / %d", e.type, e.button.button);
-
-				const int index = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : -1;
 				
-				if (index >= 0)
-				{
-					windowData->mouseDown[index] = e.button.state == SDL_PRESSED;
-					windowData->mouseChange[index] = true;
-				}
+				windowData->mouseData.addEvent(e);
 			}
 		}
 		else if (e.type == SDL_MOUSEMOTION)
@@ -912,15 +906,17 @@ void Framework::process()
 					int windowSy;
 					SDL_GetWindowSize(window, &windowSx, &windowSy);
 					
-					windowData->mouseX = e.motion.x * globals.displaySize[0] / windowSx;
-					windowData->mouseY = e.motion.y * globals.displaySize[1] / windowSy;
+					SDL_Event scaledEvent = e;
+					scaledEvent.motion.x = e.motion.x * globals.displaySize[0] / windowSx;
+					scaledEvent.motion.y = e.motion.y * globals.displaySize[1] / windowSy;
+					
+					windowData->mouseData.addEvent(scaledEvent);
 					
 					//logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, windowData->mouseX, windowData->mouseY);
 				}
 				else
 				{
-					windowData->mouseX = e.motion.x;
-					windowData->mouseY = e.motion.y;
+					windowData->mouseData.addEvent(e);
 				}
 			}
 		}
@@ -932,7 +928,7 @@ void Framework::process()
 			{
 				if (e.wheel.which != SDL_TOUCH_MOUSEID)
 				{
-					windowData->mouseScrollY += e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
+					windowData->mouseData.mouseScrollY += e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
 				}
 			}
 		}
@@ -4847,7 +4843,7 @@ bool Mouse::isDown(BUTTON button) const
 	const int index = getButtonIndex(button);
 	if (index < 0)
 		return false;
-	return globals.currentWindowData->mouseDown[index];
+	return globals.currentWindowData->mouseData.mouseDown[index];
 }
 
 bool Mouse::wentDown(BUTTON button) const
@@ -4855,7 +4851,7 @@ bool Mouse::wentDown(BUTTON button) const
 	const int index = getButtonIndex(button);
 	if (index < 0)
 		return false;
-	return isDown(button) && globals.currentWindowData->mouseChange[index];
+	return isDown(button) && globals.currentWindowData->mouseData.mouseChange[index];
 }
 
 bool Mouse::wentUp(BUTTON button) const
@@ -4863,7 +4859,7 @@ bool Mouse::wentUp(BUTTON button) const
 	const int index = getButtonIndex(button);
 	if (index < 0)
 		return false;
-	return !isDown(button) && globals.currentWindowData->mouseChange[index];
+	return !isDown(button) && globals.currentWindowData->mouseData.mouseChange[index];
 }
 
 void Mouse::showCursor(bool enabled)
@@ -4879,7 +4875,7 @@ void Mouse::setRelative(bool isRelative)
 
 bool Mouse::isIdle() const
 {
-	return dx == 0 && dy == 0 && !globals.currentWindowData->mouseChange[0] && !globals.currentWindowData->mouseChange[1];
+	return dx == 0 && dy == 0 && !globals.currentWindowData->mouseData.mouseChange[0] && !globals.currentWindowData->mouseData.mouseChange[1];
 }
 
 // -----

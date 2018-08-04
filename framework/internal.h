@@ -108,13 +108,138 @@ struct TextureAtlas;
 
 //
 
-class WindowData
+/*
+MouseData contains the mouse data for a Window (obviously). but less obvious is the way in which mouse events are processed. mouse events are processed over
+multiple frames if we have to. due to the way the mouse API works (mouse.wentDown, mouse.wentUp) we need to process cases where both the mouse down and mouse up
+event arrive during a framework.process call. this may happen for instance when using a touch pad which simulates mouse events during 'soft touches' (touches
+where not physically pressing down a button or a surface). since there is no physical action, and the mouse events are simulated when the finger is released,
+without moving, from the touch pad, there is no delay between the mouse down and mouse up events. in these cases, we may wish to process both events separately,
+as otherwise the behavior of mouse.wentDown and mouse.wentUp doesn't yield the expected behavior
+
+consider the following sequence of events:
+
+	framework.process()
+		(event) MouseDown -> true
+		(event) MouseDown -> false
+ 
+	if (mouse.wentDown(..))
+	{
+		// code doesn't get here
+	}
+
+wentDown returns false here, as isDown is already set to false. so we 'missed' the event
+
+now consider the case where we spead event processing over multiple framework.process calls:
+
+	framework.process()
+		(event) MouseDown -> true
+ 
+	if (mouse.wentDown(..))
+	{
+		// do something useful here
+	}
+ 
+ 	framework.process()
+		(event) MouseDown -> false
+
+it will detect the mouse down event, and during the next process, mouse.wentUp will be true
+*/
+
+class MouseData
 {
 public:
+	bool mouseDown[BUTTON_MAX];
+	bool mouseChange[BUTTON_MAX];
+	bool hasOldMousePosition;
+	
+	int mouseX;
+	int mouseY;
+	int mouseDx;
+	int mouseDy;
+	int mouseScrollY;
+	int oldMouseX;
+	int oldMouseY;
+	
+	std::vector<SDL_Event> events;
+	
+	MouseData()
+	{
+		memset(mouseDown, 0, sizeof(mouseDown));
+		memset(mouseChange, 0, sizeof(mouseChange));
+		hasOldMousePosition = false;
+		
+		mouseX = 0;
+		mouseY = 0;
+		mouseDx = 0;
+		mouseDy = 0;
+		mouseScrollY = 0;
+		oldMouseX = 0;
+		oldMouseY = 0;
+	}
+	
+	void addEvent(const SDL_Event & e)
+	{
+		events.push_back(e);
+	}
+	
+	void processEvents()
+	{
+		if (events.empty())
+			return;
+		
+		const size_t numEvents = events.size();
+		
+		size_t eventIndex = 0;
+		
+		bool stop = false;
+		
+		while (stop == false)
+		{
+			const SDL_Event & e = events[eventIndex];
+			
+			if (e.type == SDL_MOUSEBUTTONDOWN)
+			{
+				const int index = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : -1;
+				
+				if (index >= 0)
+				{
+					mouseDown[index] = true;
+					mouseChange[index] = true;
+					stop = true;
+				}
+			}
+			else if (e.type == SDL_MOUSEBUTTONUP)
+			{
+				const int index = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : -1;
+				
+				if (index >= 0)
+				{
+					mouseDown[index] = false;
+					mouseChange[index] = true;
+					stop = true;
+				}
+			}
+			else if (e.type == SDL_MOUSEMOTION)
+			{
+				mouseX = e.motion.x;
+				mouseY = e.motion.y;
+			}
+			else
+			{
+				Assert(false);
+			}
+			
+			eventIndex++;
+			
+			if (eventIndex == numEvents)
+				stop = true;
+		}
+		
+		events.erase(events.begin(), events.begin() + eventIndex);
+	}
+	
 	void beginProcess()
 	{
-		keyChangeCount = 0;
-		keyRepeatCount = 0;
 		memset(mouseChange, 0, sizeof(mouseChange));
 		
 		mouseDx = 0;
@@ -123,12 +248,14 @@ public:
 		
 		oldMouseX = mouseX;
 		oldMouseY = mouseY;
-		
-		quitRequested = false;
 	}
 	
 	void endProcess()
 	{
+		processEvents();
+		
+		//
+		
 		if (hasOldMousePosition)
 		{
 			mouseDx = mouseX - oldMouseX;
@@ -145,36 +272,47 @@ public:
 			mouseDy = 0;
 		}
 	}
+};
+
+class WindowData
+{
+public:
+	void beginProcess()
+	{
+		quitRequested = false;
+		
+		keyChangeCount = 0;
+		keyRepeatCount = 0;
+		
+		mouseData.beginProcess();
+	}
+	
+	void endProcess()
+	{
+		mouseData.endProcess();
+	}
 	
 	void makeActive() const
 	{
 		framework.windowIsActive = isActive;
 		
-		mouse.x = mouseX;
-		mouse.y = mouseY;
-		mouse.dx = mouseDx;
-		mouse.dy = mouseDy;
-		mouse.scrollY = mouseScrollY;
+		mouse.x = mouseData.mouseX;
+		mouse.y = mouseData.mouseY;
+		mouse.dx = mouseData.mouseDx;
+		mouse.dy = mouseData.mouseDy;
+		mouse.scrollY = mouseData.mouseScrollY;
 	}
 	
 	bool isActive;
 	bool quitRequested;
-	bool mouseDown[BUTTON_MAX];
-	bool mouseChange[BUTTON_MAX];
-	bool hasOldMousePosition;
 	int keyDown[256];
 	int keyDownCount;
 	int keyChange[256];
 	int keyChangeCount;
 	int keyRepeat[256];
 	int keyRepeatCount;
-	int mouseX;
-	int mouseY;
-	int mouseDx;
-	int mouseDy;
-	int mouseScrollY;
-	int oldMouseX;
-	int oldMouseY;
+	
+	MouseData mouseData;
 };
 
 //
