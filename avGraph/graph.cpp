@@ -5096,17 +5096,39 @@ void GraphEdit::draw() const
 		}
 	}
 
-#if 1 // todo : remove. test bezier control points, drawing only circles
+#if 0 // todo : remove. test bezier control points, drawing only circles
 	{
 		for (auto & linkItr : graph->links)
 		{
 			auto linkId = linkItr.first;
+			auto & link = linkItr.second;
 			
 			LinkPath path;
 			
 			if (getLinkPath(linkId, path))
 			{
-				setColor(colorWhite);
+				const bool isEnabled = link.isEnabled;
+				const bool isSelected = selectedLinks.count(linkId) != 0;
+				const bool isHighlighted = highlightedLinks.count(linkId) != 0;
+				
+				Color color;
+				
+				if (!isEnabled)
+					color = Color(191, 191, 191);
+				else if (isSelected)
+					color = Color(127, 127, 255);
+				else if (isHighlighted)
+					color = Color(255, 255, 255);
+				else
+					color = Color(255, 255, 0);
+				
+				if (editorOptions.showOneShotActivity)
+				{
+					const float activeAnim = link.editorIsActiveAnimTime * link.editorIsActiveAnimTimeRcp;
+					color = color.interp(Color(255, 63, 63), activeAnim);
+				}
+				
+				setColor(color);
 				
 				float x1 = path.points[0].x;
 				float y1 = path.points[0].y;
@@ -5137,6 +5159,19 @@ void GraphEdit::draw() const
 				int numPoints = 0;
 				path2d.generatePoints(pxy, hxy, kMaxPoints, 1.f, numPoints);
 				
+			#if 1
+				hqBegin(HQ_LINES);
+				{
+					for (int i = 0; i < numPoints - 1; ++i)
+					{
+						const int index1 = i + 0;
+						const int index2 = i + 1;
+						
+						hqLine(pxy[index1 * 2 + 0], pxy[index1 * 2 + 1], 1.f, pxy[index2 * 2 + 0], pxy[index2 * 2 + 1], 1.f);
+					}
+				}
+				hqEnd();
+			#else
 				hqBegin(HQ_FILLED_CIRCLES);
 				{
 					for (int i = 0; i < numPoints; ++i)
@@ -5145,6 +5180,7 @@ void GraphEdit::draw() const
 					}
 				}
 				hqEnd();
+			#endif
 			}
 		}
 	}
