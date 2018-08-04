@@ -35,6 +35,7 @@
 #include "model.h"
 #include "model_fbx.h"
 #include "model_ogre.h"
+#include "Path.h"
 
 #define DEBUG_TRS 0
 
@@ -1474,6 +1475,7 @@ void ModelCacheElem::load(const char * filename)
 	// 1) read file contents
 	std::vector<SectionRecord> records;
 	
+	if (Path::GetExtension(filename, true) == "txt")
 	{
 		FileReader r;
 		
@@ -1492,6 +1494,20 @@ void ModelCacheElem::load(const char * filename)
 		else
 		{
 			logError("failed to open %s", filename);
+		}
+	}
+	else
+	{
+		std::vector<std::string> lines;
+		lines.push_back(std::string("boneset file:") + filename);
+		lines.push_back(std::string("meshset file:") + filename);
+		
+		for (const std::string & line : lines)
+		{
+			SectionRecord record;
+		
+			if (parseSectionRecord(filename, line, record))
+				records.push_back(record);
 		}
 	}
 	
