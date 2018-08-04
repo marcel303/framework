@@ -202,6 +202,7 @@ public:
 	std::vector<float> vertices;
 	std::vector<int> vertexIndices;
 	std::vector<float> normals;
+	std::vector<int> normalIndices;
 	std::vector<float> uvs;
 	std::vector<int> uvIndices;
 	std::vector<float> colors;
@@ -278,6 +279,7 @@ public:
 	std::vector<float> vertices;
 	std::vector<int> vertexIndices;
 	std::vector<float> normals;
+	std::vector<int> normalIndices;
 	std::vector<float> uvs;
 	std::vector<int> uvIndices;
 	std::vector<float> colors;
@@ -612,6 +614,7 @@ static FbxObject * readFbxGeometry(int & logIndent, const FbxRecord & model, con
 	
 	const FbxRecord normalsLayer = model.firstChild("LayerElementNormal");
 	const FbxRecord normals = normalsLayer.firstChild("Normals");
+	const FbxRecord normalIndices = normalsLayer.firstChild("NormalsIndex");
 	const std::string normalMappingType = normalsLayer.firstChild("MappingInformationType").captureProperty<std::string>(0);
 	geometry->normalMappingType = toMappingType(normalMappingType);
 	
@@ -628,6 +631,7 @@ static FbxObject * readFbxGeometry(int & logIndent, const FbxRecord & model, con
 	vertices.capturePropertyArray(0, geometry->vertices);
 	vertexIndices.capturePropertyArray(0, geometry->vertexIndices);
 	normals.capturePropertyArray(0, geometry->normals);
+	normalIndices.capturePropertyArray(0, geometry->normalIndices);
 	uvs.capturePropertyArray(0, geometry->uvs);
 	uvIndices.capturePropertyArray(0, geometry->uvIndices);
 	colors.capturePropertyArray(0, geometry->colors);
@@ -758,6 +762,7 @@ static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const 
 		
 		const FbxRecord normalsLayer = model.firstChild("LayerElementNormal");
 		const FbxRecord normals = normalsLayer.firstChild("Normals");
+		const FbxRecord normalIndices = normalsLayer.firstChild("NormalsIndex");
 		const std::string normalMappingType = normalsLayer.firstChild("MappingInformationType").captureProperty<std::string>(0);
 		mesh->normalMappingType = toMappingType(normalMappingType);
 		
@@ -774,6 +779,7 @@ static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const 
 		vertices.capturePropertiesAsFloat(mesh->vertices);
 		vertexIndices.capturePropertiesAsInt(mesh->vertexIndices);
 		normals.capturePropertiesAsFloat(mesh->normals);
+		normalIndices.capturePropertiesAsInt(mesh->normalIndices);
 		uvs.capturePropertiesAsFloat(mesh->uvs);
 		uvIndices.capturePropertiesAsInt(mesh->uvIndices);
 		colors.capturePropertiesAsFloat(mesh->colors);
@@ -1140,6 +1146,7 @@ public:
 		const std::vector<float> & vertices,
 		const std::vector<int> & vertexIndices,
 		const std::vector<float> & normals,
+		const std::vector<int> & normalIndices,
 		const MappingType normalMappingType,
 		const std::vector<float> & uvs,
 		const std::vector<int> & uvIndices,
@@ -1152,10 +1159,11 @@ public:
 		
 		logIndent++;
 		
-		fbxLog(logIndent, "input: %d vertices, %d indices, %d normals, %d UVs (%d indices), %d colors (%d indices)",
+		fbxLog(logIndent, "input: %d vertices, %d indices, %d normals (%d indices), %d UVs (%d indices), %d colors (%d indices)",
 			(int)vertices.size()/3,
 			(int)vertexIndices.size(),
 			(int)normals.size()/3,
+			(int)normalIndices.size(),
 			(int)uvs.size()/2,
 			(int)uvIndices.size(),
 			(int)colors.size()/3,
@@ -1193,20 +1201,52 @@ public:
 			
 			// normal
 			
-			const int normalIndex =
-				normalMappingType == kMappingType_ByVertex
-			 		? vertexIndex
-			 		: i;
-			
-			if (normalIndex < normals.size() / 3)
+			if (!normalIndices.empty())
 			{
-				vertex.nx = normals[normalIndex * 3 + 0];
-				vertex.ny = normals[normalIndex * 3 + 1];
-				vertex.nz = normals[normalIndex * 3 + 2];
+				const int lookupIndex =
+					normalMappingType == kMappingType_ByVertex
+						? vertexIndex
+						: i;
+				
+				if (lookupIndex < normalIndices.size())
+				{
+					// indexed UV
+					
+					const size_t normalIndex = normalIndices[lookupIndex];
+					
+					if (normalIndex < normals.size() / 3)
+					{
+						vertex.nx = normals[normalIndex * 3 + 0];
+						vertex.ny = normals[normalIndex * 3 + 1];
+						vertex.nz = normals[normalIndex * 3 + 2];
+					}
+					else
+					{
+						vertex.nx = vertex.ny = vertex.nz = 0.f;
+					}
+				}
+				else
+				{
+					vertex.nx = vertex.ny = vertex.nz = 0.f;
+				}
 			}
 			else
 			{
-				vertex.nx = vertex.ny = vertex.nz = 0.f;
+				const int normalIndex =
+					normalMappingType == kMappingType_ByVertex
+						? vertexIndex
+						: i;
+				
+				if (normalIndex < normals.size() / 3)
+				{
+					vertex.nx = normals[normalIndex * 3 + 0];
+					vertex.ny = normals[normalIndex * 3 + 1];
+					vertex.nz = normals[normalIndex * 3 + 2];
+				}
+				else
+				{
+					vertex.nx = vertex.ny = vertex.nz = 0.f;
+				}
 			}
 			
 			// uv
@@ -1686,6 +1726,7 @@ namespace AnimModel
 							mesh->vertices = geometry->vertices;
 							mesh->vertexIndices = geometry->vertexIndices;
 							mesh->normals = geometry->normals;
+							mesh->normalIndices = geometry->normalIndices;
 							mesh->normalMappingType = geometry->normalMappingType;
 							mesh->uvs = geometry->uvs;
 							mesh->uvIndices = geometry->uvIndices;
@@ -1895,6 +1936,7 @@ namespace AnimModel
 					fbxMesh->vertices,
 					fbxMesh->vertexIndices,
 					fbxMesh->normals,
+					fbxMesh->normalIndices,
 					fbxMesh->normalMappingType,
 					fbxMesh->uvs,
 					fbxMesh->uvIndices,
