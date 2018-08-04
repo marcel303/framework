@@ -1215,7 +1215,7 @@ public:
 				
 				if (lookupIndex < normalIndices.size())
 				{
-					// indexed UV
+					// indexed normal
 					
 					const size_t normalIndex = normalIndices[lookupIndex];
 					
@@ -1244,6 +1244,8 @@ public:
 				
 				if (normalIndex < numNormals)
 				{
+					// non-indexed normal
+					
 					vertex.nx = normals[normalIndex * 3 + 0];
 					vertex.ny = normals[normalIndex * 3 + 1];
 					vertex.nz = normals[normalIndex * 3 + 2];
