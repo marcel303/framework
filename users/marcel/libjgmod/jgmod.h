@@ -388,26 +388,27 @@ typedef struct JGMOD_PLAYER
 		enable_m15 = FALSE;
 	}
 	
+	// main api
 	JGMOD *load_mod (char *filename);
 	static void mod_interrupt_proc (void * data);
 	void mod_interrupt (void);
-	void play_mod (JGMOD *j, int loop);
-	void next_mod_track (void);
-	void prev_mod_track (void);
-	void goto_mod_track (int new_track);
-	void stop_mod (void);
-	int is_mod_playing (void);
-	void pause_mod (void);
-	void resume_mod (void);
-	int is_mod_paused (void);
+	void play (JGMOD *j, int loop);
+	void next_track (void);
+	void prev_track (void);
+	void goto_track (int new_track);
+	void stop (void);
+	int is_playing (void);
+	void pause (void);
+	void resume (void);
+	int is_paused (void);
 	void destroy_mod (JGMOD *j);
-	void set_mod_volume (int volume);
-	int get_mod_volume (void);
+	void set_volume (int volume);
+	int get_volume (void);
 	SAMPLE *get_jgmod_sample (JGMOD *j, int sample_no);
-	void set_mod_speed (int speed);
-	void set_mod_pitch (int pitch);
+	void set_speed (int speed);
+	void set_pitch (int pitch);
 	void toggle_pause_mode (void);
-	int get_mod_info (char *filename, JGMOD_INFO *ji);
+	static int get_info (char *filename, JGMOD_INFO *ji);
 	
 	// -- located in player2.c ---------------------------------------------------
 	int find_lower_period(int period, int times);
@@ -496,7 +497,7 @@ typedef struct JGMOD_PLAYER
 	JGMOD *load_it (char *filename, int start_offset);
 	JGMOD *load_xm (char *filename, int start_offset);
 	JGMOD *load_jgm (JGMOD_FILE *f);
-	void *jgmod_calloc (int size);
+	static void *jgmod_calloc (int size);
 	static int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji);
 	static int get_it_info(char *filename, int start_offset, JGMOD_INFO *ji);
 	static int get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji);

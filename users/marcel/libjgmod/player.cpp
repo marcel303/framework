@@ -78,7 +78,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
 
         if (mi.trk == 0)            // restart the song if trk 0
             {
-            play_mod (of, mi.loop);
+            play (of, mi.loop);
             return;
             }
         }
@@ -155,8 +155,8 @@ void JGMOD_PLAYER::mod_interrupt (void)
             }
        else
            {
-           play_mod (of, TRUE);     // restart the song
-           goto_mod_track (of->restart_pos);
+           play (of, TRUE);     // restart the song
+           goto_track (of->restart_pos);
            return;
            }
         }

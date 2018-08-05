@@ -172,7 +172,7 @@ JGMOD *JGMOD_PLAYER::load_mod (char *filename)
 }
 
 
-void JGMOD_PLAYER::play_mod (JGMOD *j, int loop)
+void JGMOD_PLAYER::play (JGMOD *j, int loop)
 {
     int index;
     int temp;
@@ -184,7 +184,7 @@ void JGMOD_PLAYER::play_mod (JGMOD *j, int loop)
         }
 
     if (of != null)     // make sure only one mod being played.
-        stop_mod();
+        stop();
 
     mi.flag = j->flag;
     for (index=0 ;index<MAX_ALLEG_VOICE; index++)
@@ -340,7 +340,7 @@ void JGMOD_PLAYER::play_mod (JGMOD *j, int loop)
     install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (24 * j->bpm * mi.speed_ratio / 100), this);
 }
 
-void JGMOD_PLAYER::stop_mod (void)
+void JGMOD_PLAYER::stop (void)
 {
     int index;
 
@@ -360,7 +360,7 @@ void JGMOD_PLAYER::stop_mod (void)
     mi.forbid = FALSE;
 }
 
-void JGMOD_PLAYER::next_mod_track (void)
+void JGMOD_PLAYER::next_track (void)
 {
     mi.forbid = TRUE;
 
@@ -370,7 +370,7 @@ void JGMOD_PLAYER::next_mod_track (void)
     mi.forbid = FALSE;
 }
 
-void JGMOD_PLAYER::prev_mod_track (void)
+void JGMOD_PLAYER::prev_track (void)
 {
     mi.forbid = TRUE;
 
@@ -383,7 +383,7 @@ void JGMOD_PLAYER::prev_mod_track (void)
     mi.forbid = FALSE;
 }
 
-void JGMOD_PLAYER::goto_mod_track (int new_track)
+void JGMOD_PLAYER::goto_track (int new_track)
 {
     mi.forbid = TRUE;
 
@@ -395,12 +395,12 @@ void JGMOD_PLAYER::goto_mod_track (int new_track)
     mi.forbid = FALSE;
 }
 
-int JGMOD_PLAYER::is_mod_playing (void)
+int JGMOD_PLAYER::is_playing (void)
 {
     return (mi.is_playing);
 }
 
-void JGMOD_PLAYER::pause_mod (void)
+void JGMOD_PLAYER::pause (void)
 {
     int index;
 
@@ -412,7 +412,7 @@ void JGMOD_PLAYER::pause_mod (void)
     mi.forbid = FALSE;
 }
 
-void JGMOD_PLAYER::resume_mod (void)
+void JGMOD_PLAYER::resume (void)
 {
     int index;
 
@@ -427,9 +427,9 @@ void JGMOD_PLAYER::resume_mod (void)
     mi.forbid = FALSE;
 }
 
-int JGMOD_PLAYER::is_mod_paused (void)
+int JGMOD_PLAYER::is_paused (void)
 {
-    if (is_mod_playing() == FALSE)
+    if (is_playing() == FALSE)
         return FALSE;
 
     return (mi.pause);
@@ -445,7 +445,7 @@ void JGMOD_PLAYER::destroy_mod (JGMOD *j)
         return;
 
     if (of == j)
-        stop_mod();
+        stop();
 
     if (j->si != null)
         {
@@ -488,7 +488,7 @@ void JGMOD_PLAYER::destroy_mod (JGMOD *j)
 }
 
 
-void JGMOD_PLAYER::set_mod_volume (int volume)
+void JGMOD_PLAYER::set_volume (int volume)
 {
     int chn;
 
@@ -503,7 +503,7 @@ void JGMOD_PLAYER::set_mod_volume (int volume)
         voice_set_volume (voice_table[chn], jgmod_player.calc_volume(chn));
 }
 
-int JGMOD_PLAYER::get_mod_volume (void)
+int JGMOD_PLAYER::get_volume (void)
 {
     return mod_volume;
 }
@@ -530,7 +530,7 @@ void remove_mod (void)
 {
     int index;
 
-    jgmod_player.stop_mod();
+    jgmod_player.stop();
     remove_int2 (jgmod_player.mod_interrupt_proc, &jgmod_player);
 
     for (index=0; index<MAX_ALLEG_VOICE; index++)
@@ -544,7 +544,7 @@ void remove_mod (void)
     mod_init = FALSE;
 }
 
-void JGMOD_PLAYER::set_mod_speed (int speed)
+void JGMOD_PLAYER::set_speed (int speed)
 {
     if (speed <= 0)
         speed = 1;
@@ -553,14 +553,14 @@ void JGMOD_PLAYER::set_mod_speed (int speed)
 
     mi.speed_ratio = speed;
 
-    if (is_mod_playing() == TRUE)
+    if (is_playing() == TRUE)
         {
         //remove_int2 (mod_interrupt_proc, this);
         install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (24 * mi.bpm * mi.speed_ratio / 100), this);
         }
 }
 
-void JGMOD_PLAYER::set_mod_pitch (int pitch)
+void JGMOD_PLAYER::set_pitch (int pitch)
 {
     if (pitch <= 0)
         pitch = 1;
@@ -573,14 +573,14 @@ void JGMOD_PLAYER::set_mod_pitch (int pitch)
 
 void JGMOD_PLAYER::toggle_pause_mode (void)
 {
-    if (is_mod_paused() == TRUE)
-        resume_mod();
+    if (is_paused() == TRUE)
+        resume();
     else
-        pause_mod();
+        pause();
 }
 
 
-int JGMOD_PLAYER::get_mod_info (char *filename, JGMOD_INFO *ji)
+int JGMOD_PLAYER::get_info (char *filename, JGMOD_INFO *ji)
 {
     int temp;
 
