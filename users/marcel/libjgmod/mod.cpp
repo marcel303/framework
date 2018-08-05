@@ -100,10 +100,10 @@ int install_mod(int max_chn)
         return -1;
         }
 
-    mi.max_chn = max_chn;
-    mi.is_playing = FALSE;
-    mi.speed_ratio = 100;
-    mi.pitch_ratio = 100;
+    jgmod_player.mi.max_chn = max_chn;
+    jgmod_player.mi.is_playing = FALSE;
+    jgmod_player.mi.speed_ratio = 100;
+    jgmod_player.mi.pitch_ratio = 100;
     mod_init = TRUE;
 
     atexit (remove_mod);

@@ -20,8 +20,6 @@
 #define pitch_ratio     mi.pitch_ratio / 100
 
 // fixme : remove globals
-volatile MUSIC_INFO mi;
-
 JGMOD_PLAYER jgmod_player;
 
 // the core of the mod player.

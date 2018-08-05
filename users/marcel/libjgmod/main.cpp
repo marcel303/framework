@@ -78,7 +78,7 @@ static int do_load(const char * filename)
     if (end_chn > 33)
         end_chn = 33;
 	
-    if (mi.flag & XM_MODE)
+    if (jgmod_player.mi.flag & XM_MODE)
         note_length = 180;
     else
         note_length = 140;
@@ -144,7 +144,7 @@ static void drawTest()
 			jgmod_player.ci[chn].volume < 1 ||
 			jgmod_player.ci[chn].volenv.v < 1 ||
 			voice_get_frequency(voice_table[chn]) <= 0 ||
-			(mi.global_volume <= 0))
+			(jgmod_player.mi.global_volume <= 0))
 		{
 			continue;
 		}
@@ -162,7 +162,7 @@ static void drawTest()
 			
 			float xpos;
 			
-			if (mi.flag & XM_MODE)
+			if (jgmod_player.mi.flag & XM_MODE)
 				xpos = voice_get_frequency(voice_table[chn]);
 			else
 				xpos = voice_get_frequency(voice_table[chn]) * 8363.f / jgmod_player.ci[chn].c2spd;
@@ -273,13 +273,13 @@ int main(int argc, char **argv)
 			jgmod_player.set_mod_volume(jgmod_player.get_mod_volume() - 5);
 		
 		if (keyboard.wentDown(SDLK_F1, true))
-			jgmod_player.set_mod_speed (mi.speed_ratio - 5);
+			jgmod_player.set_mod_speed (jgmod_player.mi.speed_ratio - 5);
 		if (keyboard.wentDown(SDLK_F2, true))
-			jgmod_player.set_mod_speed (mi.speed_ratio + 5);
+			jgmod_player.set_mod_speed (jgmod_player.mi.speed_ratio + 5);
 		if (keyboard.wentDown(SDLK_F3, true))
-			jgmod_player.set_mod_pitch (mi.pitch_ratio - 5);
+			jgmod_player.set_mod_pitch (jgmod_player.mi.pitch_ratio - 5);
 		if (keyboard.wentDown(SDLK_F4, true))
-			jgmod_player.set_mod_pitch (mi.pitch_ratio + 5);
+			jgmod_player.set_mod_pitch (jgmod_player.mi.pitch_ratio + 5);
 		if (keyboard.wentDown(SDLK_F5, true))
 			note_length++;
 		
@@ -359,9 +359,9 @@ int main(int argc, char **argv)
 			
 			// draw playback info
 			
-			drawText(0, 36, 12, +1, +1, "Tempo : %3d  Bpm : %3d  Speed : %3d%%  Pitch : %3d%% ", mi.tempo, mi.bpm, mi.speed_ratio, mi.pitch_ratio);
-			drawText(0, 48, 12, +1, +1, "Global volume : %2d  User volume : %2d ", mi.global_volume, jgmod_player.get_mod_volume());
-			drawText(0, 70, 12, +1, +1, "%03d-%02d-%02d    ", mi.trk, mi.pos, mi.tick < 0 ? 0 : mi.tick);
+			drawText(0, 36, 12, +1, +1, "Tempo : %3d  Bpm : %3d  Speed : %3d%%  Pitch : %3d%% ", jgmod_player.mi.tempo, jgmod_player.mi.bpm, jgmod_player.mi.speed_ratio, jgmod_player.mi.pitch_ratio);
+			drawText(0, 48, 12, +1, +1, "Global volume : %2d  User volume : %2d ", jgmod_player.mi.global_volume, jgmod_player.get_mod_volume());
+			drawText(0, 70, 12, +1, +1, "%03d-%02d-%02d    ", jgmod_player.mi.trk, jgmod_player.mi.pos, jgmod_player.mi.tick < 0 ? 0 : jgmod_player.mi.tick);
 
 			for (int index = 0; index < the_mod->no_chn; ++index)
 			{
@@ -382,7 +382,7 @@ int main(int argc, char **argv)
 					jgmod_player.ci[index].volume >= 1 &&
 					jgmod_player.ci[index].volenv.v >= 1 &&
 					voice_get_frequency(voice_table[index]) > 0 &&
-					mi.global_volume > 0)
+					jgmod_player.mi.global_volume > 0)
 				{
 					drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3d %2d %6dHz %3d ", index+1, jgmod_player.ci[index].sample+1, jgmod_player.ci[index].volume,  voice_get_frequency(voice_table[index]), jgmod_player.ci[index].pan);
 					//textprintf (screen, font, 0,82+(index-start_chn)*bitmap_height, font_color, "%2d: %3d %2d %6dHz %3d %d %d", index+1, ci[index].sample+1, ci[index].volume,  voice_get_frequency(voice_table[index]), ci[index].pan, ci[index].volenv.v, ci[index].volenv.p);
@@ -406,7 +406,7 @@ static void drawCircle(int chn)
     	jgmod_player.ci[chn].volume >= 1 &&
     	jgmod_player.ci[chn].volenv.v >= 1 &&
     	voice_get_frequency(voice_table[chn]) > 0 &&
-    	(mi.global_volume > 0))
+    	(jgmod_player.mi.global_volume > 0))
 	{
 		gxPushMatrix();
 		{
@@ -418,7 +418,7 @@ static void drawCircle(int chn)
 			
 			float xpos;
 			
-			if (mi.flag & XM_MODE)
+			if (jgmod_player.mi.flag & XM_MODE)
 				xpos = voice_get_frequency(voice_table[chn]);
 			else
 				xpos = voice_get_frequency(voice_table[chn]) * 8363.f / jgmod_player.ci[chn].c2spd;

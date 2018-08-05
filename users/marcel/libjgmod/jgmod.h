@@ -359,7 +359,7 @@ typedef struct JGMOD_INFO
 typedef struct JGMOD_PLAYER
 {
 	JGMOD *of;
-	//volatile MUSIC_INFO mi;
+	volatile MUSIC_INFO mi;
 	//volatile int voice_table[];
 	volatile CHANNEL_INFO ci[MAX_ALLEG_VOICE];
 	volatile int mod_volume;
@@ -505,7 +505,6 @@ typedef struct JGMOD_PLAYER
 //-- externs -----------------------------------------------------------------
 
 // fixme : remove globals
-extern volatile MUSIC_INFO mi;
 extern volatile int voice_table[];
 
 extern JGMOD_PLAYER jgmod_player;
