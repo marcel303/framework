@@ -493,11 +493,11 @@ typedef struct JGMOD_PLAYER
 	static int detect_unreal_it (char *filename);
 	static int detect_unreal_xm (char *filename);
 	static int detect_unreal_s3m (char *filename);
-	JGMOD *load_m (char *filename, int no_inst);
-	JGMOD *load_s3m (char *filename, int start_offset);
-	JGMOD *load_it (char *filename, int start_offset);
-	JGMOD *load_xm (char *filename, int start_offset);
-	JGMOD *load_jgm (JGMOD_FILE *f);
+	static JGMOD *load_m (char *filename, int no_inst);
+	static JGMOD *load_s3m (char *filename, int start_offset);
+	static JGMOD *load_it (char *filename, int start_offset);
+	static JGMOD *load_xm (char *filename, int start_offset);
+	static JGMOD *load_jgm (JGMOD_FILE *f);
 	static void *jgmod_calloc (int size);
 	static int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji);
 	static int get_it_info(char *filename, int start_offset, JGMOD_INFO *ji);
