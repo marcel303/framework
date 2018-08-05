@@ -436,6 +436,13 @@ int JGMOD_PLAYER::is_paused (void)
 }
 
 
+void JGMOD_PLAYER::destroy_mod()
+{
+	stop();
+	
+	destroy_mod(of);
+}
+
 void JGMOD_PLAYER::destroy_mod (JGMOD *j)
 {
     int index;
@@ -443,9 +450,6 @@ void JGMOD_PLAYER::destroy_mod (JGMOD *j)
 
     if (j == null)
         return;
-
-    if (of == j)
-        stop();
 
     if (j->si != null)
         {

@@ -59,7 +59,7 @@ static int do_load(const char * filename)
 	if (the_mod)
 	{
 		jgmod_player.stop();
-		jgmod_player.destroy_mod(the_mod);
+		jgmod_player.destroy_mod();
 	}
 	
 	//
@@ -338,7 +338,7 @@ int main(int argc, char **argv)
 		if (keyboard.wentDown(SDLK_ESCAPE) || keyboard.wentDown(SDLK_SPACE))
 		{
 			jgmod_player.stop();
-			jgmod_player.destroy_mod (the_mod);
+			jgmod_player.destroy_mod();
 			return 0;
 		}
 		

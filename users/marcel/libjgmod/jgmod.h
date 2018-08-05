@@ -401,7 +401,8 @@ typedef struct JGMOD_PLAYER
 	void pause (void);
 	void resume (void);
 	int is_paused (void);
-	void destroy_mod (JGMOD *j);
+	void destroy_mod();
+	static void destroy_mod (JGMOD *j); // todo : shouldn't be a member
 	void set_volume (int volume);
 	int get_volume (void);
 	SAMPLE *get_jgmod_sample (JGMOD *j, int sample_no);
