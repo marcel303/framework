@@ -182,8 +182,7 @@ int interpolate(int p, int p1, int p2, int v1, int v2)
     di = p  - p1;
 
     return v1 + ((di*dv) / dp);
-}END_OF_FUNCTION (interpolate)
-
+}
 
 int find_lower_period(int period, int times)
 {
@@ -219,7 +218,7 @@ int find_lower_period(int period, int times)
 
     return result;
 
-}END_OF_FUNCTION (find_lower_period)
+}
 
 // change the volume from scale of 64 to 255
 int JGMOD_PLAYER::calc_volume (int chn)
@@ -232,8 +231,7 @@ int JGMOD_PLAYER::calc_volume (int chn)
     temp >>= 14;                                    // 0...255
 
     return temp;
-}END_OF_FUNCTION (calc_volume)
-
+}
 
 int calc_pan (int chn)
 {
@@ -246,8 +244,7 @@ int calc_pan (int chn)
         temp = 0;
 
     return temp;
-}END_OF_FUNCTION (calc_pan)
-
+}
 
 // return the position of the note
 NOTE_INFO *get_note (JGMOD *j, int pat, int pos, int chn)
@@ -259,8 +256,7 @@ NOTE_INFO *get_note (JGMOD *j, int pat, int pos, int chn)
     ni = pi->ni + (pos*j->no_chn + chn);
 
     return ni;
-}END_OF_FUNCTION (get_note)
-
+}
 
 int note2period (int note, int c2spd)
 {
@@ -303,7 +299,7 @@ int note2period (int note, int c2spd)
         return (NTSC << 2) / temp;
         }
 
-}END_OF_FUNCTION (note2period)
+}
 
 int get_jgmod_sample_no (int instrument_no, int note_no)
 {
@@ -328,7 +324,7 @@ int get_jgmod_sample_no (int instrument_no, int note_no)
     else
         return instrument_no;
 
-}END_OF_FUNCTION (get_jgmod_sample_no)
+}
 
 int period2pitch (int period)
 {
@@ -349,8 +345,7 @@ int period2pitch (int period)
         return 14317456L / period;
     else
         return ((NTSC << 2) / period);
-}END_OF_FUNCTION (period2pitch)
-
+}
 
 void do_position_jump (int extcommand)
 {
@@ -377,7 +372,7 @@ void do_position_jump (int extcommand)
         }
 
 
-}END_OF_FUNCTION (do_position_jump)
+}
 
 void do_pattern_break (int extcommand)
 {
@@ -396,7 +391,7 @@ void do_pattern_break (int extcommand)
 
     if ( (mi.new_pos-1) >= pi->no_pos)
          mi.new_pos -= 1;
-}END_OF_FUNCTION (do_pattern_break)
+}
 
 void do_pro_tempo_bpm (int extcommand)
 {
@@ -411,7 +406,7 @@ void do_pro_tempo_bpm (int extcommand)
         install_int_ex (jgmod_player.mod_interrupt, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio));
         }
 
-}END_OF_FUNCTION (do_pro_tempo_bpm)
+}
 
 void do_pattern_loop (int chn, int extcommand)
 {
@@ -429,8 +424,7 @@ void do_pattern_loop (int chn, int extcommand)
         else
             ci[chn].loop_start = mi.pos+1;
         }
-}END_OF_FUNCTION (do_pattern_loop)
-
+}
 
 void parse_pro_pitch_slide_up (int chn, int extcommand)
 {
@@ -440,7 +434,7 @@ void parse_pro_pitch_slide_up (int chn, int extcommand)
         ci[chn].pro_pitch_slide = (extcommand << 2);
 
     ci[chn].pro_pitch_slide = -ABS(ci[chn].pro_pitch_slide);
-}END_OF_FUNCTION (parse_pro_pitch_slide_up)
+}
 
 void parse_pro_pitch_slide_down (int chn, int extcommand)
 {
@@ -450,7 +444,7 @@ void parse_pro_pitch_slide_down (int chn, int extcommand)
         ci[chn].pro_pitch_slide = (extcommand << 2);
 
     ci[chn].pro_pitch_slide = ABS(ci[chn].pro_pitch_slide);
-}END_OF_FUNCTION (parse_pro_pitch_slide_down)
+}
 
 void parse_pro_volume_slide (int chn, int extcommand)
 {
@@ -458,7 +452,7 @@ void parse_pro_volume_slide (int chn, int extcommand)
         ci[chn].pro_volume_slide = ((extcommand & 0xF0) >> 4);
     else if (extcommand & 0xF)
         ci[chn].pro_volume_slide = -(extcommand & 0xF);
-}END_OF_FUNCTION(parse_pro_volume_slide)
+}
 
 void parse_vibrato (int chn, int extcommand, int shift)
 {
@@ -474,7 +468,7 @@ void parse_vibrato (int chn, int extcommand, int shift)
     if (extcommand & 0xF)
         ci[chn].vibrato_depth = (extcommand & 0xF);
 
-}END_OF_FUNCTION (parse_vibrato)
+}
 
 void do_vibrato (int chn)
 {
@@ -511,8 +505,7 @@ void do_vibrato (int chn)
     if (mi.tick)
         ci[chn].vibrato_pointer += ci[chn].vibrato_speed;
 
-}END_OF_FUNCTION (do_vibrato)
-
+}
 
 void parse_tremolo (int chn, int extcommand, int shift)
 {
@@ -525,7 +518,7 @@ void parse_tremolo (int chn, int extcommand, int shift)
     if (extcommand & 0xF)
         ci[chn].tremolo_depth = (extcommand & 0xF);
 
-}END_OF_FUNCTION (parse_tremolo)
+}
 
 void do_tremolo (int chn)
 {
@@ -560,7 +553,7 @@ void do_tremolo (int chn)
     if (mi.tick)
         ci[chn].tremolo_pointer += ci[chn].tremolo_speed;
 
-}END_OF_FUNCTION (do_tremolo)
+}
 
 void parse_slide2period (int chn, int extcommand, int note)
 {
@@ -581,7 +574,7 @@ void parse_slide2period (int chn, int extcommand, int note)
         return;
 
     ci[chn].slide2period_on = TRUE;
-}END_OF_FUNCTION(parse_slide2period)
+}
 
 void do_slide2period (int chn)
 {
@@ -601,8 +594,7 @@ void do_slide2period (int chn)
 
     ci[chn].temp_period = ci[chn].period;
 
-}END_OF_FUNCTION(do_slide2period)
-
+}
 
 void parse_pro_arpeggio (int chn, int extcommand)
 {
@@ -615,7 +607,7 @@ void parse_pro_arpeggio (int chn, int extcommand)
         ci[chn].arpeggio_on = TRUE;
         }
 
-}END_OF_FUNCTION(parse_pro_arpeggio)
+}
 
 void do_arpeggio (int chn)
 {
@@ -626,7 +618,7 @@ void do_arpeggio (int chn)
     else if ( (mi.tick % 3) == 2)
         ci[chn].temp_period = find_lower_period (ci[chn].period, ci[chn].arpeggio & 0xF);
 
-}END_OF_FUNCTION(do_arpeggio)
+}
 
 void do_delay_sample (int chn)
 {
@@ -638,7 +630,7 @@ void do_delay_sample (int chn)
     else
         ci[chn].kick = FALSE;
 
-}END_OF_FUNCTION(do_delay_sample)
+}
 
 void parse_old_note (int chn, int note, int sample_no)
 {
@@ -670,10 +662,7 @@ void parse_old_note (int chn, int note, int sample_no)
         ci[chn].c2spd = si->c2spd;
         }
 
-}END_OF_FUNCTION(parse_old_note)
-
-
-
+}
 
 void parse_extended_command (int chn, int extcommand)
 {

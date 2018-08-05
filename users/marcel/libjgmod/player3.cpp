@@ -23,7 +23,7 @@ void do_s3m_set_tempo (int extcommand)
     if (extcommand > 0)
         mi.tempo = extcommand;
 
-}END_OF_FUNCTION (do_s3m_set_tempo)
+}
 
 void do_s3m_set_bpm (int extcommand)
 {
@@ -36,7 +36,7 @@ void do_s3m_set_bpm (int extcommand)
 
     //remove_int (mod_interrupt);
     install_int_ex (jgmod_player.mod_interrupt, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio));
-}END_OF_FUNCTION (do_s3m_set_bpm)
+}
 
 void parse_s3m_volume_slide (int chn, int extcommand)
 {
@@ -74,7 +74,7 @@ void parse_s3m_volume_slide (int chn, int extcommand)
     else if (extcommand == 0)          // continue volume slide 
         ci[chn].s3m_volume_slide_on = TRUE;
 
-}END_OF_FUNCTION (parse_s3m_volume_slide);
+}
 
 void do_s3m_volume_slide (int chn)
 {
@@ -89,7 +89,7 @@ void do_s3m_volume_slide (int chn)
         ci[chn].temp_volume += ci[chn].s3m_volume_slide;        
         }
 
-}END_OF_FUNCTION (do_s3m_volume_slide);
+}
 
 void parse_s3m_portamento_up (int chn, int extcommand)
 {
@@ -119,7 +119,7 @@ void parse_s3m_portamento_up (int chn, int extcommand)
 
     ci[chn].s3m_pitch_slide_on = TRUE;
 
-}END_OF_FUNCTION (parse_s3m_portamento_up)
+}
 
 void parse_s3m_portamento_down (int chn, int extcommand)
 {
@@ -150,7 +150,7 @@ void parse_s3m_portamento_down (int chn, int extcommand)
      ci[chn].s3m_pitch_slide_on = TRUE;
 
 
-}END_OF_FUNCTION (parse_s3m_portamento_down)
+}
 
 void do_s3m_portamento (int chn)
 {
@@ -165,7 +165,7 @@ void do_s3m_portamento (int chn)
         ci[chn].temp_period += ci[chn].s3m_pitch_slide;
         }
 
-}END_OF_FUNCTION (do_s3m_portamento)
+}
 
 void parse_s3m_arpeggio (int chn, int extcommand)
 {
@@ -176,8 +176,7 @@ void parse_s3m_arpeggio (int chn, int extcommand)
     if (extcommand)
         ci[chn].arpeggio = extcommand;
 
-}END_OF_FUNCTION (parse_s3m_arpeggio)
-
+}
 
 void parse_tremor (int chn, int extcommand)
 {
@@ -189,8 +188,7 @@ void parse_tremor (int chn, int extcommand)
     ci[chn].tremor_set = (on << 8) + off;
     ci[chn].tremor_on = TRUE;
 
-}END_OF_FUNCTION (parse_tremor)
-
+}
 
 void do_tremor (int chn)
 {
@@ -209,7 +207,7 @@ void do_tremor (int chn)
         
     ci[chn].tremor_count++;
 
-}END_OF_FUNCTION (do_tremor)
+}
 
 void do_global_volume (int extcommand)
 {
@@ -218,7 +216,7 @@ void do_global_volume (int extcommand)
     if (mi.global_volume > 64)
         mi.global_volume = 64;
 
-}END_OF_FUNCTION (do_global_volume)
+}
 
 void parse_s3m_panning (int chn, int extcommand)
 {
@@ -227,7 +225,7 @@ void parse_s3m_panning (int chn, int extcommand)
     else if (extcommand <= 0x80)
         ci[chn].pan = (extcommand << 1) - 1;
 
-}END_OF_FUNCTION (parse_s3m_panning)
+}
 
 void parse_s3m_retrig (int chn, int extcommand)
 {
@@ -239,7 +237,7 @@ void parse_s3m_retrig (int chn, int extcommand)
 
     ci[chn].s3m_retrig_on = TRUE;
 
-}END_OF_FUNCTION (parse_s3m_retrig)
+}
 
 void do_s3m_retrig (int chn)
 {
@@ -301,7 +299,7 @@ void do_s3m_retrig (int chn)
         }
 
 
-}END_OF_FUNCTION (do_s3m_retrig)
+}
 
 void parse_volume_command (int chn, int volume, int note)
 {
@@ -353,7 +351,7 @@ void parse_volume_command (int chn, int volume, int note)
     else if (ci[chn].volume < 0)
         ci[chn].volume = 0;
 
-}END_OF_FUNCTION (parse_volume_command)
+}
 
 void parse_note_command (int chn, int note)
 {
@@ -372,4 +370,4 @@ void parse_note_command (int chn, int note)
         ci[chn].keyon = FALSE;
         }
 
-}END_OF_FUNCTION (parse_note_command)
+}

@@ -574,5 +574,3 @@ void JGMOD_PLAYER::mod_interrupt (void)
             }
         }
 }
-
-END_OF_FUNCTION (mod_interrupt)

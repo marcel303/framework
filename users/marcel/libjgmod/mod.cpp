@@ -338,7 +338,7 @@ void JGMOD_PLAYER::play_mod (JGMOD *j, int loop)
 
     //remove_int (mod_interrupt);
     install_int_ex (mod_interrupt, BPM_TO_TIMER (24 * j->bpm * mi.speed_ratio / 100));
-}END_OF_FUNCTION (play_mod)
+}
 
 void JGMOD_PLAYER::stop_mod (void)
 {
@@ -358,7 +358,7 @@ void JGMOD_PLAYER::stop_mod (void)
         
     of = null;
     mi.forbid = FALSE;
-}END_OF_FUNCTION (stop_mod)
+}
 
 void JGMOD_PLAYER::next_mod_track (void)
 {
@@ -393,8 +393,7 @@ void JGMOD_PLAYER::goto_mod_track (int new_track)
         mi.skip_trk = 1;
 
     mi.forbid = FALSE;
-}END_OF_FUNCTION (goto_mod_track)
-
+}
 
 int JGMOD_PLAYER::is_mod_playing (void)
 {

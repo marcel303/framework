@@ -100,7 +100,7 @@ void parse_new_note (int chn, int note, int sample_no)
             ii->no_panenv, ii->pan_begin, ii->pan_end, ii->pan_susbeg, ii->pan_susend);
         }
 
-}END_OF_FUNCTION (parse_new_note)
+}
 
 void parse_xm_volume_slide (int chn, int extcommand)
 {
@@ -114,14 +114,14 @@ void parse_xm_volume_slide (int chn, int extcommand)
             ci[chn].xm_volume_slide = -(extcommand & 0xF);
         }
 
-}END_OF_FUNCTION (parse_xm_volume_slide)
+}
 
 void do_xm_volume_slide (int chn)
 {
     ci[chn].volume += ci[chn].xm_volume_slide;
     ci[chn].temp_volume += ci[chn].xm_volume_slide;
 
-}END_OF_FUNCTION (do_xm_volume_slide)
+}
 
 void parse_xm_pitch_slide_up (int chn, int extcommand)
 {
@@ -132,8 +132,7 @@ void parse_xm_pitch_slide_up (int chn, int extcommand)
     if (extcommand)
         ci[chn].xm_pitch_slide_up = -(extcommand << 2);
 
-}END_OF_FUNCTION (parse_xm_pitch_slide_up)
-
+}
 
 void parse_xm_pitch_slide_down (int chn, int extcommand)
 {
@@ -144,14 +143,14 @@ void parse_xm_pitch_slide_down (int chn, int extcommand)
     if (extcommand)
         ci[chn].xm_pitch_slide_down = (extcommand << 2);
 
-}END_OF_FUNCTION (parse_xm_pitch_slide_down)
+}
 
 void do_xm_pitch_slide_down (int chn)
 {
     ci[chn].period += ci[chn].xm_pitch_slide_down;
     ci[chn].temp_period += ci[chn].xm_pitch_slide_down;
 
-}END_OF_FUNCTION (do_xm_pitch_slide_down)
+}
 
 void do_xm_pitch_slide_up (int chn)
 {
@@ -164,14 +163,14 @@ void do_xm_pitch_slide_up (int chn)
     if (ci[chn].temp_period < 40)
         ci[chn].temp_period = 40;
 
-}END_OF_FUNCTION (do_xm_pitch_slide_up)
+}
 
 void do_xm_pan_slide (int chn)
 {
     ci[chn].pan += ci[chn].pan_slide_common;
     ci[chn].temp_pan += ci[chn].pan_slide_common;
 
-}END_OF_FUNCTION (do_xm_pan_slide)
+}
 
 void parse_xm_pan_slide (int chn, int extcommand)
 {
@@ -185,7 +184,7 @@ void parse_xm_pan_slide (int chn, int extcommand)
 
     ci[chn].pan_slide_common = ci[chn].pan_slide;
 
-}END_OF_FUNCTION (parse_xm_pan_slide)
+}
 
 void parse_global_volume_slide (int chn, int extcommand)
 {
@@ -199,7 +198,7 @@ void parse_global_volume_slide (int chn, int extcommand)
             ci[chn].global_volume_slide = -(extcommand & 0xF);
         }
 
-}END_OF_FUNCTION (parse_global_volume_slide)
+}
 
 void do_global_volume_slide (int chn)
 {
@@ -210,7 +209,7 @@ void do_global_volume_slide (int chn)
     else if (mi.global_volume < 0)
         mi.global_volume = 0;
 
-}END_OF_FUNCTION (do_global_volume_slide)
+}
 
 void do_xm_x (int chn, int extcommand)
 {
@@ -232,9 +231,7 @@ void do_xm_x (int chn, int extcommand)
         ci[chn].period += ci[chn].xm_x_down;
         }
 
-}END_OF_FUNCTION (do_xm_x)
-
-
+}
 
 void start_envelope (volatile ENVELOPE_INFO *t, int *env, int *pos, int flg,
     int pts, int loopbeg, int loopend, int susbeg, int susend)
@@ -263,9 +260,7 @@ void start_envelope (volatile ENVELOPE_INFO *t, int *env, int *pos, int flg,
     if ( (t->flg & ENV_ON) && (t->pts == 1) )
         t->b = 0;
 
-}END_OF_FUNCTION (start_envelope);
-
-
+}
 
 void process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon)
 {
@@ -325,7 +320,7 @@ void process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon)
         t->b = b;
         }
     
-}END_OF_FUNCTION (process_envelope);
+}
 
 void parse_xm_set_envelop_position (volatile ENVELOPE_INFO *t, int extcommand)
 {
@@ -345,4 +340,4 @@ void parse_xm_set_envelop_position (volatile ENVELOPE_INFO *t, int extcommand)
             t->a = 0;
         }
 
-}END_OF_FUNCTION (parse_xm_set_envelop_position);
+}
