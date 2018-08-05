@@ -15,7 +15,7 @@
 #include "jshare.h"
 
 
-void parse_new_note (int chn, int note, int sample_no)
+void JGMOD_PLAYER::parse_new_note (int chn, int note, int sample_no)
 {
     SAMPLE_INFO *si;
     INSTRUMENT_INFO *ii = null;
@@ -102,7 +102,7 @@ void parse_new_note (int chn, int note, int sample_no)
 
 }
 
-void parse_xm_volume_slide (int chn, int extcommand)
+void JGMOD_PLAYER::parse_xm_volume_slide (int chn, int extcommand)
 {
     ci[chn].xm_volume_slide_on = TRUE;
 
@@ -116,14 +116,14 @@ void parse_xm_volume_slide (int chn, int extcommand)
 
 }
 
-void do_xm_volume_slide (int chn)
+void JGMOD_PLAYER::do_xm_volume_slide (int chn)
 {
     ci[chn].volume += ci[chn].xm_volume_slide;
     ci[chn].temp_volume += ci[chn].xm_volume_slide;
 
 }
 
-void parse_xm_pitch_slide_up (int chn, int extcommand)
+void JGMOD_PLAYER::parse_xm_pitch_slide_up (int chn, int extcommand)
 {
     if (!ci[chn].period)
         return;
@@ -134,7 +134,7 @@ void parse_xm_pitch_slide_up (int chn, int extcommand)
 
 }
 
-void parse_xm_pitch_slide_down (int chn, int extcommand)
+void JGMOD_PLAYER::parse_xm_pitch_slide_down (int chn, int extcommand)
 {
     if (!ci[chn].period)
         return;
@@ -145,14 +145,14 @@ void parse_xm_pitch_slide_down (int chn, int extcommand)
 
 }
 
-void do_xm_pitch_slide_down (int chn)
+void JGMOD_PLAYER::do_xm_pitch_slide_down (int chn)
 {
     ci[chn].period += ci[chn].xm_pitch_slide_down;
     ci[chn].temp_period += ci[chn].xm_pitch_slide_down;
 
 }
 
-void do_xm_pitch_slide_up (int chn)
+void JGMOD_PLAYER::do_xm_pitch_slide_up (int chn)
 {
     ci[chn].period += ci[chn].xm_pitch_slide_up;
     ci[chn].temp_period += ci[chn].xm_pitch_slide_up;
@@ -165,14 +165,14 @@ void do_xm_pitch_slide_up (int chn)
 
 }
 
-void do_xm_pan_slide (int chn)
+void JGMOD_PLAYER::do_xm_pan_slide (int chn)
 {
     ci[chn].pan += ci[chn].pan_slide_common;
     ci[chn].temp_pan += ci[chn].pan_slide_common;
 
 }
 
-void parse_xm_pan_slide (int chn, int extcommand)
+void JGMOD_PLAYER::parse_xm_pan_slide (int chn, int extcommand)
 {
     if (extcommand)
         {
@@ -186,7 +186,7 @@ void parse_xm_pan_slide (int chn, int extcommand)
 
 }
 
-void parse_global_volume_slide (int chn, int extcommand)
+void JGMOD_PLAYER::parse_global_volume_slide (int chn, int extcommand)
 {
     ci[chn].global_volume_slide_on = TRUE;
 
@@ -200,7 +200,7 @@ void parse_global_volume_slide (int chn, int extcommand)
 
 }
 
-void do_global_volume_slide (int chn)
+void JGMOD_PLAYER::do_global_volume_slide (int chn)
 {
     mi.global_volume += ci[chn].global_volume_slide;
 
@@ -211,7 +211,7 @@ void do_global_volume_slide (int chn)
 
 }
 
-void do_xm_x (int chn, int extcommand)
+void JGMOD_PLAYER::do_xm_x (int chn, int extcommand)
 {
     if (!ci[chn].period)
         return;
@@ -233,7 +233,7 @@ void do_xm_x (int chn, int extcommand)
 
 }
 
-void start_envelope (volatile ENVELOPE_INFO *t, int *env, int *pos, int flg,
+void JGMOD_PLAYER::start_envelope (volatile ENVELOPE_INFO *t, int *env, int *pos, int flg,
     int pts, int loopbeg, int loopend, int susbeg, int susend)
 {
     int temp;
@@ -262,7 +262,7 @@ void start_envelope (volatile ENVELOPE_INFO *t, int *env, int *pos, int flg,
 
 }
 
-void process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon)
+void JGMOD_PLAYER::process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon)
 {
     t->v = v;
 
@@ -322,7 +322,7 @@ void process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon)
     
 }
 
-void parse_xm_set_envelop_position (volatile ENVELOPE_INFO *t, int extcommand)
+void JGMOD_PLAYER::parse_xm_set_envelop_position (volatile ENVELOPE_INFO *t, int extcommand)
 {
     int no_points;
     

@@ -18,14 +18,14 @@
 #define speed_ratio     mi.speed_ratio / 100
 #define pitch_ratio     mi.pitch_ratio / 100
 
-void do_s3m_set_tempo (int extcommand)
+void JGMOD_PLAYER::do_s3m_set_tempo (int extcommand)
 {
     if (extcommand > 0)
         mi.tempo = extcommand;
 
 }
 
-void do_s3m_set_bpm (int extcommand)
+void JGMOD_PLAYER::do_s3m_set_bpm (int extcommand)
 {
     if (extcommand >= 32)
         mi.bpm = extcommand;
@@ -38,7 +38,7 @@ void do_s3m_set_bpm (int extcommand)
     install_int_ex2 (jgmod_player.mod_interrupt_proc, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio), &jgmod_player);
 }
 
-void parse_s3m_volume_slide (int chn, int extcommand)
+void JGMOD_PLAYER::parse_s3m_volume_slide (int chn, int extcommand)
 {
     // fine volume slide down
     if ( (extcommand & 0xF0) == 0xF0  && (extcommand & 0xF) != 0) 
@@ -76,7 +76,7 @@ void parse_s3m_volume_slide (int chn, int extcommand)
 
 }
 
-void do_s3m_volume_slide (int chn)
+void JGMOD_PLAYER::do_s3m_volume_slide (int chn)
 {
     if (mi.tick == 0)   //finetunes
         {
@@ -91,7 +91,7 @@ void do_s3m_volume_slide (int chn)
 
 }
 
-void parse_s3m_portamento_up (int chn, int extcommand)
+void JGMOD_PLAYER::parse_s3m_portamento_up (int chn, int extcommand)
 {
     if (!ci[chn].period)
         return;
@@ -121,7 +121,7 @@ void parse_s3m_portamento_up (int chn, int extcommand)
 
 }
 
-void parse_s3m_portamento_down (int chn, int extcommand)
+void JGMOD_PLAYER::parse_s3m_portamento_down (int chn, int extcommand)
 {
     if (!ci[chn].period)
         return;
@@ -152,7 +152,7 @@ void parse_s3m_portamento_down (int chn, int extcommand)
 
 }
 
-void do_s3m_portamento (int chn)
+void JGMOD_PLAYER::do_s3m_portamento (int chn)
 {
     if (mi.tick == 0)
         {
@@ -167,7 +167,7 @@ void do_s3m_portamento (int chn)
 
 }
 
-void parse_s3m_arpeggio (int chn, int extcommand)
+void JGMOD_PLAYER::parse_s3m_arpeggio (int chn, int extcommand)
 {
     if (!ci[chn].period)
         return;
@@ -178,7 +178,7 @@ void parse_s3m_arpeggio (int chn, int extcommand)
 
 }
 
-void parse_tremor (int chn, int extcommand)
+void JGMOD_PLAYER::parse_tremor (int chn, int extcommand)
 {
     int on, off;
 
@@ -190,7 +190,7 @@ void parse_tremor (int chn, int extcommand)
 
 }
 
-void do_tremor (int chn)
+void JGMOD_PLAYER::do_tremor (int chn)
 {
     int on;
     int off;
@@ -209,7 +209,7 @@ void do_tremor (int chn)
 
 }
 
-void do_global_volume (int extcommand)
+void JGMOD_PLAYER::do_global_volume (int extcommand)
 {
     mi.global_volume = extcommand;
 
@@ -218,7 +218,7 @@ void do_global_volume (int extcommand)
 
 }
 
-void parse_s3m_panning (int chn, int extcommand)
+void JGMOD_PLAYER::parse_s3m_panning (int chn, int extcommand)
 {
     if (extcommand == 0)
         ci[chn].pan = 0;
@@ -227,7 +227,7 @@ void parse_s3m_panning (int chn, int extcommand)
 
 }
 
-void parse_s3m_retrig (int chn, int extcommand)
+void JGMOD_PLAYER::parse_s3m_retrig (int chn, int extcommand)
 {
     if (extcommand)
         {
@@ -239,7 +239,7 @@ void parse_s3m_retrig (int chn, int extcommand)
 
 }
 
-void do_s3m_retrig (int chn)
+void JGMOD_PLAYER::do_s3m_retrig (int chn)
 {
     if (ci[chn].s3m_retrig > 0)
         {
@@ -301,7 +301,7 @@ void do_s3m_retrig (int chn)
 
 }
 
-void parse_volume_command (int chn, int volume, int note)
+void JGMOD_PLAYER::parse_volume_command (int chn, int volume, int note)
 {
     if ( (volume >= 0x10) && (volume <= 0x50) )         // set volume
         ci[chn].volume = volume - 0x10;
@@ -353,7 +353,7 @@ void parse_volume_command (int chn, int volume, int note)
 
 }
 
-void parse_note_command (int chn, int note)
+void JGMOD_PLAYER::parse_note_command (int chn, int note)
 {
     if (note == -1)
         ci[chn].volume = 0;

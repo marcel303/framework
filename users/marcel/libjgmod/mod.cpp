@@ -81,7 +81,7 @@ int install_mod(int max_chn)
             temp = -1;
         else
             {
-            ci[index].volume = 0;
+            jgmod_player.ci[index].volume = 0;
             voice_set_volume (voice_table[index], 0);
             voice_start (voice_table[index]);
             }

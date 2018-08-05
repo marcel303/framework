@@ -170,7 +170,7 @@ volatile int voice_table[MAX_ALLEG_VOICE] = {
 
 
 
-int interpolate(int p, int p1, int p2, int v1, int v2)
+int JGMOD_PLAYER::interpolate(int p, int p1, int p2, int v1, int v2)
 {
     int dp, dv, di;
 
@@ -184,7 +184,7 @@ int interpolate(int p, int p1, int p2, int v1, int v2)
     return v1 + ((di*dv) / dp);
 }
 
-int find_lower_period(int period, int times)
+int JGMOD_PLAYER::find_lower_period(int period, int times)
 {
     int result = period;
     int index = 0;
@@ -233,7 +233,7 @@ int JGMOD_PLAYER::calc_volume (int chn)
     return temp;
 }
 
-int calc_pan (int chn)
+int JGMOD_PLAYER::calc_pan (int chn)
 {
     int temp;
 
@@ -247,7 +247,7 @@ int calc_pan (int chn)
 }
 
 // return the position of the note
-NOTE_INFO *get_note (JGMOD *j, int pat, int pos, int chn)
+NOTE_INFO *JGMOD_PLAYER::get_note (JGMOD *j, int pat, int pos, int chn)
 {
     PATTERN_INFO *pi;
     NOTE_INFO *ni;
@@ -258,7 +258,7 @@ NOTE_INFO *get_note (JGMOD *j, int pat, int pos, int chn)
     return ni;
 }
 
-int note2period (int note, int c2spd)
+int JGMOD_PLAYER::note2period (int note, int c2spd)
 {
     if (mi.flag & LINEAR_MODE)
         {
@@ -301,7 +301,7 @@ int note2period (int note, int c2spd)
 
 }
 
-int get_jgmod_sample_no (int instrument_no, int note_no)
+int JGMOD_PLAYER::get_jgmod_sample_no (int instrument_no, int note_no)
 {
     INSTRUMENT_INFO *ii;
 
@@ -326,7 +326,7 @@ int get_jgmod_sample_no (int instrument_no, int note_no)
 
 }
 
-int period2pitch (int period)
+int JGMOD_PLAYER::period2pitch (int period)
 {
     if ( (jgmod_player.of->flag & XM_MODE) && (jgmod_player.of->flag & LINEAR_MODE) )
         {
@@ -347,7 +347,7 @@ int period2pitch (int period)
         return ((NTSC << 2) / period);
 }
 
-void do_position_jump (int extcommand)
+void JGMOD_PLAYER::do_position_jump (int extcommand)
 {
     if (jgmod_player.enable_lasttrk_loop == TRUE)
         {
@@ -374,7 +374,7 @@ void do_position_jump (int extcommand)
 
 }
 
-void do_pattern_break (int extcommand)
+void JGMOD_PLAYER::do_pattern_break (int extcommand)
 {
     PATTERN_INFO *pi;
 
@@ -393,7 +393,7 @@ void do_pattern_break (int extcommand)
          mi.new_pos -= 1;
 }
 
-void do_pro_tempo_bpm (int extcommand)
+void JGMOD_PLAYER::do_pro_tempo_bpm (int extcommand)
 {
     if (extcommand == 0)
         {}
@@ -408,7 +408,7 @@ void do_pro_tempo_bpm (int extcommand)
 
 }
 
-void do_pattern_loop (int chn, int extcommand)
+void JGMOD_PLAYER::do_pattern_loop (int chn, int extcommand)
 {
     if ( (extcommand & 0xF) == 0)
         ci[chn].loop_start = mi.pos;
@@ -426,7 +426,7 @@ void do_pattern_loop (int chn, int extcommand)
         }
 }
 
-void parse_pro_pitch_slide_up (int chn, int extcommand)
+void JGMOD_PLAYER::parse_pro_pitch_slide_up (int chn, int extcommand)
 {
     ci[chn].pro_pitch_slide_on = TRUE;
 
@@ -436,7 +436,7 @@ void parse_pro_pitch_slide_up (int chn, int extcommand)
     ci[chn].pro_pitch_slide = -ABS(ci[chn].pro_pitch_slide);
 }
 
-void parse_pro_pitch_slide_down (int chn, int extcommand)
+void JGMOD_PLAYER::parse_pro_pitch_slide_down (int chn, int extcommand)
 {
     ci[chn].pro_pitch_slide_on = TRUE;
 
@@ -446,7 +446,7 @@ void parse_pro_pitch_slide_down (int chn, int extcommand)
     ci[chn].pro_pitch_slide = ABS(ci[chn].pro_pitch_slide);
 }
 
-void parse_pro_volume_slide (int chn, int extcommand)
+void JGMOD_PLAYER::parse_pro_volume_slide (int chn, int extcommand)
 {
     if (extcommand & 0xF0)
         ci[chn].pro_volume_slide = ((extcommand & 0xF0) >> 4);
@@ -454,7 +454,7 @@ void parse_pro_volume_slide (int chn, int extcommand)
         ci[chn].pro_volume_slide = -(extcommand & 0xF);
 }
 
-void parse_vibrato (int chn, int extcommand, int shift)
+void JGMOD_PLAYER::parse_vibrato (int chn, int extcommand, int shift)
 {
     if (!ci[chn].period)
         return;
@@ -470,7 +470,7 @@ void parse_vibrato (int chn, int extcommand, int shift)
 
 }
 
-void do_vibrato (int chn)
+void JGMOD_PLAYER::do_vibrato (int chn)
 {
     int temp=0;
     int q;
@@ -507,7 +507,7 @@ void do_vibrato (int chn)
 
 }
 
-void parse_tremolo (int chn, int extcommand, int shift)
+void JGMOD_PLAYER::parse_tremolo (int chn, int extcommand, int shift)
 {
     ci[chn].tremolo_on = TRUE;
     ci[chn].tremolo_shift = shift;
@@ -520,7 +520,7 @@ void parse_tremolo (int chn, int extcommand, int shift)
 
 }
 
-void do_tremolo (int chn)
+void JGMOD_PLAYER::do_tremolo (int chn)
 {
     int q;
     int temp;
@@ -555,7 +555,7 @@ void do_tremolo (int chn)
 
 }
 
-void parse_slide2period (int chn, int extcommand, int note)
+void JGMOD_PLAYER::parse_slide2period (int chn, int extcommand, int note)
 {
     if (!ci[chn].period)
         return;
@@ -576,7 +576,7 @@ void parse_slide2period (int chn, int extcommand, int note)
     ci[chn].slide2period_on = TRUE;
 }
 
-void do_slide2period (int chn)
+void JGMOD_PLAYER::do_slide2period (int chn)
 {
     ci[chn].period -= ci[chn].slide2period_spd;
 
@@ -596,7 +596,7 @@ void do_slide2period (int chn)
 
 }
 
-void parse_pro_arpeggio (int chn, int extcommand)
+void JGMOD_PLAYER::parse_pro_arpeggio (int chn, int extcommand)
 {
     if (!ci[chn].period)
         return;
@@ -609,7 +609,7 @@ void parse_pro_arpeggio (int chn, int extcommand)
 
 }
 
-void do_arpeggio (int chn)
+void JGMOD_PLAYER::do_arpeggio (int chn)
 {
     if ( (mi.tick % 3) == 0)
         ci[chn].temp_period = ci[chn].period;
@@ -620,7 +620,7 @@ void do_arpeggio (int chn)
 
 }
 
-void do_delay_sample (int chn)
+void JGMOD_PLAYER::do_delay_sample (int chn)
 {
     if (mi.tick == ci[chn].delay_sample)
         {
@@ -632,7 +632,7 @@ void do_delay_sample (int chn)
 
 }
 
-void parse_old_note (int chn, int note, int sample_no)
+void JGMOD_PLAYER::parse_old_note (int chn, int note, int sample_no)
 {
     SAMPLE_INFO *si;
 
@@ -664,7 +664,7 @@ void parse_old_note (int chn, int note, int sample_no)
 
 }
 
-void parse_extended_command (int chn, int extcommand)
+void JGMOD_PLAYER::parse_extended_command (int chn, int extcommand)
 {
     switch (extcommand >> 4)
         {
