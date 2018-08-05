@@ -19,6 +19,7 @@
 #define speed_ratio     mi.speed_ratio / 100
 #define pitch_ratio     mi.pitch_ratio / 100
 
+// fixme : remove globals
 volatile MUSIC_INFO mi;
 volatile CHANNEL_INFO ci[MAX_ALLEG_VOICE];
 int volatile mod_volume = 255;

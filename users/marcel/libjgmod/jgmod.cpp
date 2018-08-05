@@ -42,6 +42,7 @@ struct OLD_CHN_INFO
 
 //
 
+// fixme : remove globals
 static JGMOD * the_mod = nullptr;
 
 static OLD_CHN_INFO old_chn_info[MAX_ALLEG_VOICE];

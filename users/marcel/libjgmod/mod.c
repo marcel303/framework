@@ -56,6 +56,7 @@ void _unlock_dpmi_data(void *addr, int size);
 #define _unlock_dpmi_data(addr,size)
 #endif
 
+// fixme : remove globals
 static SAMPLE *fake_sample = null;
 static int mod_init=FALSE;
 int enable_lasttrk_loop = TRUE;

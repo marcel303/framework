@@ -21,6 +21,7 @@
 //#define JG_debug
 //#define force_8_bit
 
+// fixme : remove globals
 int fast_loading=TRUE;
 
 
@@ -37,10 +38,11 @@ void *jgmod_calloc (int size);
 int get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji);
 
 
+// fixme : remove globals
 static uchar chn_set[32];
 static char remap[32];
 
-extern volatile int noteperiod[];
+extern volatile const int noteperiod[];
 
 
 int get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji)

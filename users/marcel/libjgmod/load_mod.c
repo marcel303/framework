@@ -24,7 +24,7 @@ typedef struct MODTYPE{    /* struct to identify type of module */
         char   no_channel;
 } MODTYPE;
 
-static MODTYPE modtypes[] = {
+static const MODTYPE modtypes[] = {
     {"M.K.", 4},     // protracker 4 channel
     {"M!K!", 4},     // protracker 4 channel
     {"FLT4", 4},     // startracker 4 channel
@@ -99,7 +99,7 @@ static MODTYPE modtypes[] = {
     {"32FW", 4}      // JG 32 channel
 };
 
-volatile int mod_finetune[]=
+volatile const int mod_finetune[]=
 {
     8363,   8413,   8463,   8529,   8581,   8651,   8723,   8757,
     7895,   7941,   7985,   8046,   8107,   8169,   8232,   8280

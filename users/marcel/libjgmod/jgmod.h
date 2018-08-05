@@ -359,6 +359,7 @@ typedef struct JGMOD_INFO
 
 //-- externs -----------------------------------------------------------------
 
+// fixme : remove globals
 extern JGMOD *of;
 extern volatile MUSIC_INFO mi;
 extern volatile int voice_table[];
