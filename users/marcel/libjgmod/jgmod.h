@@ -389,7 +389,7 @@ typedef struct JGMOD_PLAYER
 	}
 	
 	// main api
-	JGMOD *load_mod (char *filename);
+	static JGMOD *load_mod (char *filename);
 	static void mod_interrupt_proc (void * data);
 	void mod_interrupt (void);
 	void play (JGMOD *j, int loop);
@@ -409,17 +409,18 @@ typedef struct JGMOD_PLAYER
 	void set_speed (int speed);
 	void set_pitch (int pitch);
 	void toggle_pause_mode (void);
+	
 	static int get_info (char *filename, JGMOD_INFO *ji);
 	
 	// -- located in player2.c ---------------------------------------------------
 	int find_lower_period(int period, int times);
-	NOTE_INFO *get_note (JGMOD *j, int pat, int pos, int chn);
+	static NOTE_INFO *get_note (JGMOD *j, int pat, int pos, int chn);
 	int calc_pan (int chn);
 	int calc_volume (int volume);
 	int note2period (int note, int c2spd);
 	int get_jgmod_sample_no (int instrument_no, int note_no);
-	int period2pitch (int period);
-	int interpolate(int p, int p1, int p2, int v1, int v2);
+	static int period2pitch (int period);
+	static int interpolate(int p, int p1, int p2, int v1, int v2);
 
 	void parse_extended_command (int chn, int extcommand);
 	void parse_old_note (int chn, int note, int sample_no);
@@ -479,9 +480,8 @@ typedef struct JGMOD_PLAYER
 	void do_global_volume_slide(int chn);
 	void do_xm_x (int chn, int extcommand);
 
-	void process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon);
-	void start_envelope (volatile ENVELOPE_INFO *t, int *env, int *pos, int flg, int pts,
-    int loopbeg, int loopend, int susbeg, int susend);
+	static void process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon);
+	static void start_envelope (volatile ENVELOPE_INFO *t, int *env, int *pos, int flg, int pts, int loopbeg, int loopend, int susbeg, int susend);
 
 	// mod.cpp internal
 	static int detect_m31 (char *filename);
