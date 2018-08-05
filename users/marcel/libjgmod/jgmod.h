@@ -391,8 +391,6 @@ SAMPLE *get_jgmod_sample (JGMOD *j, int sample_no);
 void set_mod_speed (int speed);
 void set_mod_pitch (int pitch);
 void toggle_pause_mode (void);
-void register_datafile_jgmod(void);
-void destroy_mod_datafile(void *j);
 int get_mod_info (char *filename, JGMOD_INFO *ji);
 
 #ifdef __cplusplus

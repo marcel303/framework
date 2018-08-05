@@ -41,7 +41,6 @@ void lock_jgmod_player4(void);
 void lock_jgmod_mod (void);
 void lock_mod (JGMOD *j);
 void *jgmod_calloc (int size);
-void register_datafile_jgmod(void);
 int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji);
 int get_it_info(char *filename, int start_offset, JGMOD_INFO *ji);
 int get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji);
@@ -70,8 +69,6 @@ int install_mod(int max_chn)
 
     if (mod_init == TRUE)      // don't need to initialize many times
         return 1;
-
-    register_datafile_jgmod();
 
     if ( (max_chn > MAX_ALLEG_VOICE) || (max_chn <= 0) )
         return -1;
@@ -661,36 +658,6 @@ void toggle_pause_mode (void)
         pause_mod();
 }
 
-
-void *load_jgm_datafile (PACKFILE *f, long size)
-{
-#ifdef JGMOD_PACKFILE
-    size = size;
-    return (void *)load_jgm (f);
-#else
-    size = size;
-    f = f;
-    return (void *)null;
-#endif
-}
-
-
-void destroy_mod_datafile(void *j)
-{
-    destroy_mod ((JGMOD *)j);
-}
-
-void register_datafile_jgmod(void)
-{
-#ifdef JGMOD_PACKFILE
-    static int registered = FALSE;
-
-    if (registered == FALSE)
-        register_datafile_object (JGM_ID, load_jgm_datafile, destroy_mod_datafile);
-
-    registered = TRUE;
-#endif
-}
 
 int get_mod_info (char *filename, JGMOD_INFO *ji)
 {
