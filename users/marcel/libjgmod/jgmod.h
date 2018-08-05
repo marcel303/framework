@@ -358,6 +358,9 @@ typedef struct JGMOD_INFO
 
 typedef struct JGMOD_PLAYER
 {
+	int mod_init;
+	SAMPLE *fake_sample;
+	
 	JGMOD *of;
 	volatile MUSIC_INFO mi;
 	volatile int voice_table[MAX_ALLEG_VOICE];
@@ -373,6 +376,9 @@ typedef struct JGMOD_PLAYER
 	
 	JGMOD_PLAYER()
 	{
+		mod_init = FALSE;
+		fake_sample = nullptr;
+		
 		of = nullptr;
 		for (int i = 0; i < MAX_ALLEG_VOICE; ++i)
 			voice_table[i] = -1;

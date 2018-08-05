@@ -18,10 +18,6 @@
 #include "file_io.h"
 #include "StringEx.h"
 
-// fixme : remove globals
-static SAMPLE *fake_sample = null;
-static int mod_init=FALSE;
-
 // todo : make thread local ?
 char jgmod_error[80] = { };
 
