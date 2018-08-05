@@ -51,7 +51,7 @@ target_link_libraries(jgm PRIVATE framework)
 #
 #
 
-add_executable(jgmod jgmod.cpp)
+add_executable(jgmod main.cpp)
 
 target_link_libraries(jgmod PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(jgmod PRIVATE libjgmod)
