@@ -369,7 +369,6 @@ typedef struct JGMOD_PLAYER
 	
 	// mod.cpp
 	int enable_lasttrk_loop;
-	char jgmod_error[80];
 	int enable_m15;
 	
 	JGMOD_PLAYER()
@@ -384,7 +383,6 @@ typedef struct JGMOD_PLAYER
 		
 		// mod.cpp
 		enable_lasttrk_loop = TRUE;
-		jgmod_error[0] = 0;
 		enable_m15 = FALSE;
 	}
 	
@@ -392,7 +390,7 @@ typedef struct JGMOD_PLAYER
 	int init(int no_voices);
 	void shut (void);
 	
-	static JGMOD *load_mod (char *filename);
+	static JGMOD *load_mod (char *filename, int fast_loading = TRUE, int enable_m15 = FALSE);
 	static void mod_interrupt_proc (void * data);
 	void mod_interrupt (void);
 	void play (JGMOD *j, int loop);
@@ -413,7 +411,7 @@ typedef struct JGMOD_PLAYER
 	void set_pitch (int pitch);
 	void toggle_pause_mode (void);
 	
-	static int get_info (char *filename, JGMOD_INFO *ji);
+	static int get_info (char *filename, JGMOD_INFO *ji, int enable_m15 = FALSE);
 	
 	// -- located in player2.c ---------------------------------------------------
 	int find_lower_period(int period, int times);
@@ -422,7 +420,7 @@ typedef struct JGMOD_PLAYER
 	int calc_volume (int volume);
 	int note2period (int note, int c2spd);
 	int get_jgmod_sample_no (int instrument_no, int note_no);
-	static int period2pitch (int period);
+	int period2pitch (int period);
 	static int interpolate(int p, int p1, int p2, int v1, int v2);
 
 	void parse_extended_command (int chn, int extcommand);
@@ -497,7 +495,7 @@ typedef struct JGMOD_PLAYER
 	static int detect_unreal_xm (char *filename);
 	static int detect_unreal_s3m (char *filename);
 	static JGMOD *load_m (char *filename, int no_inst);
-	static JGMOD *load_s3m (char *filename, int start_offset);
+	static JGMOD *load_s3m (char *filename, int start_offset, int fast_loading);
 	static JGMOD *load_it (char *filename, int start_offset);
 	static JGMOD *load_xm (char *filename, int start_offset);
 	static JGMOD *load_jgm (JGMOD_FILE *f);
@@ -511,8 +509,8 @@ typedef struct JGMOD_PLAYER
 
 //-- externs -----------------------------------------------------------------
 
-// fixme : remove globals
-extern JGMOD_PLAYER jgmod_player;
+// todo : remove global
+extern char jgmod_error[80];
 
 void setError(const char * format, ...);
 

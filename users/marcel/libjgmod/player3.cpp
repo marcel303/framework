@@ -35,7 +35,7 @@ void JGMOD_PLAYER::do_s3m_set_bpm (int extcommand)
         mi.bpm -= extcommand - 16;
 
     //remove_int2 (mod_interrupt_proc, this);
-    install_int_ex2 (jgmod_player.mod_interrupt_proc, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio), &jgmod_player);
+    install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio), this);
 }
 
 void JGMOD_PLAYER::parse_s3m_volume_slide (int chn, int extcommand)

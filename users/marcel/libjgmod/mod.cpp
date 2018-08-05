@@ -22,13 +22,16 @@
 static SAMPLE *fake_sample = null;
 static int mod_init=FALSE;
 
+// todo : make thread local ?
+char jgmod_error[80] = { };
+
 void setError(const char * format, ...)
 {
 	va_list args;
 	va_start(args, format);
 	vsprintf_s(
-		jgmod_player.jgmod_error,
-		sizeof(jgmod_player.jgmod_error),
+		jgmod_error,
+		sizeof(jgmod_error),
 		format, args);
 	va_end(args);
 }
@@ -45,7 +48,7 @@ int JGMOD_PLAYER::init(int max_chn)
         return -1;
 
     if (fake_sample == null)
-        fake_sample = (SAMPLE *)jgmod_player.jgmod_calloc (sizeof (SAMPLE));     // use to trick allegro
+        fake_sample = (SAMPLE *)jgmod_calloc (sizeof (SAMPLE));     // use to trick allegro
                                                     // into giving me voice
     if (fake_sample == null)                        // channels
         {
@@ -65,7 +68,7 @@ int JGMOD_PLAYER::init(int max_chn)
     fake_sample->bits = 8;
     fake_sample->len  = 0;
     fake_sample->param = -1;
-    fake_sample->data = jgmod_player.jgmod_calloc (0);
+    fake_sample->data = jgmod_calloc (0);
 
     if (fake_sample->data == null)
         {
@@ -76,34 +79,34 @@ int JGMOD_PLAYER::init(int max_chn)
 
     for (index=0; index<max_chn; index++)    //allocate all the voices
         {
-        jgmod_player.voice_table[index] = allocate_voice (fake_sample);
-        if (jgmod_player.voice_table[index] == -1)
+        voice_table[index] = allocate_voice (fake_sample);
+        if (voice_table[index] == -1)
             temp = -1;
         else
             {
-            jgmod_player.ci[index].volume = 0;
-            voice_set_volume (jgmod_player.voice_table[index], 0);
-            voice_start (jgmod_player.voice_table[index]);
+            ci[index].volume = 0;
+            voice_set_volume (voice_table[index], 0);
+            voice_start (voice_table[index]);
             }
         }
     
     if (temp == -1)
         {
         for (index=0; index<max_chn; index++)
-            if (jgmod_player.voice_table[index] != -1)
+            if (voice_table[index] != -1)
                 {
-                deallocate_voice (jgmod_player.voice_table[index]);
-                jgmod_player.voice_table[index] = -1;
+                deallocate_voice (voice_table[index]);
+                voice_table[index] = -1;
                 }
 
         setError ("JGMOD : Unable to allocate enough voices");
         return -1;
         }
 
-    jgmod_player.mi.max_chn = max_chn;
-    jgmod_player.mi.is_playing = FALSE;
-    jgmod_player.mi.speed_ratio = 100;
-    jgmod_player.mi.pitch_ratio = 100;
+    mi.max_chn = max_chn;
+    mi.is_playing = FALSE;
+    mi.speed_ratio = 100;
+    mi.pitch_ratio = 100;
     mod_init = TRUE;
 
     return 1;
@@ -112,7 +115,7 @@ int JGMOD_PLAYER::init(int max_chn)
 // load supported types of mod files.
 // Detect the type first.
 // Then call for the appropriate loader.
-JGMOD *JGMOD_PLAYER::load_mod (char *filename)
+JGMOD *JGMOD_PLAYER::load_mod (char *filename, int fast_loading, int enable_m15)
 {
     int temp;
 
@@ -142,7 +145,7 @@ JGMOD *JGMOD_PLAYER::load_mod (char *filename)
         return load_xm (filename, 0);
 
     if (detect_s3m (filename) == 1)
-        return load_s3m (filename, 0);
+        return load_s3m (filename, 0, fast_loading);
 
     if (detect_m31 (filename) == 1)
         return load_m (filename, 31);
@@ -157,9 +160,9 @@ JGMOD *JGMOD_PLAYER::load_mod (char *filename)
 
     temp = detect_unreal_s3m (filename);
     if (temp > 0)
-        return load_s3m (filename, temp);
+        return load_s3m (filename, temp, fast_loading);
 
-    if (jgmod_player.enable_m15 == TRUE)            //detect this last
+    if (enable_m15 == TRUE)            //detect this last
         {
         if (detect_m15 (filename) == 1)        
             return load_m (filename, 15);
@@ -502,7 +505,7 @@ void JGMOD_PLAYER::set_volume (int volume)
     mod_volume = volume;
 
     for (chn=0; chn<mi.max_chn ; chn++)
-        voice_set_volume (voice_table[chn], jgmod_player.calc_volume(chn));
+        voice_set_volume (voice_table[chn], calc_volume(chn));
 }
 
 int JGMOD_PLAYER::get_volume (void)
@@ -532,15 +535,15 @@ void JGMOD_PLAYER::shut (void)
 {
     int index;
 
-    jgmod_player.stop();
-    remove_int2 (jgmod_player.mod_interrupt_proc, &jgmod_player);
+    stop();
+    remove_int2 (mod_interrupt_proc, this);
 
     for (index=0; index<MAX_ALLEG_VOICE; index++)
         {
-        if (jgmod_player.voice_table[index] >= 0)
-            deallocate_voice (jgmod_player.voice_table[index]);
+        if (voice_table[index] >= 0)
+            deallocate_voice (voice_table[index]);
 
-        jgmod_player.voice_table[index] = -1;
+        voice_table[index] = -1;
         }
 
     mod_init = FALSE;
@@ -582,7 +585,7 @@ void JGMOD_PLAYER::toggle_pause_mode (void)
 }
 
 
-int JGMOD_PLAYER::get_info (char *filename, JGMOD_INFO *ji)
+int JGMOD_PLAYER::get_info (char *filename, JGMOD_INFO *ji, int enable_m15)
 {
     int temp;
 
@@ -627,7 +630,7 @@ int JGMOD_PLAYER::get_info (char *filename, JGMOD_INFO *ji)
     if (temp > 0)
         return get_s3m_info (filename, temp, ji);
 
-    if (jgmod_player.enable_m15 == TRUE)            //detect this last
+    if (enable_m15 == TRUE)            //detect this last
         {
         if (detect_m15 (filename) == 1)        
             return get_m_info (filename, 15, ji);

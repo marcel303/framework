@@ -44,6 +44,8 @@ struct OLD_CHN_INFO
 
 static JGMOD * the_mod = nullptr;
 
+static JGMOD_PLAYER jgmod_player;
+
 static OLD_CHN_INFO old_chn_info[MAX_ALLEG_VOICE];
 
 static int start_chn;
@@ -68,7 +70,7 @@ static int do_load(const char * filename)
 	
     if (the_mod == nullptr)
 	{
-        logError("%s", jgmod_player.jgmod_error);
+        logError("%s", jgmod_error);
         return 1;
 	}
 
