@@ -106,18 +106,12 @@ volatile const int mod_finetune[]=
 };
 
 // -- Prototypes -------------------------------------------------------------
-int detect_m31 (char *filename);
-int detect_m15 (char *filename);
-JGMOD *load_m (char *filename, int no_inst);
 int get_mod_no_pat (int *table, int max_trk);
-void lock_mod (JGMOD *j);
-void *jgmod_calloc (int size);
-int get_m_info(char *filename, int no_inst, JGMOD_INFO *ji);
 
 //-- Codes -------------------------------------------------------------------
 
 
-int get_m_info(char *filename, int no_inst, JGMOD_INFO *ji)
+int JGMOD_PLAYER::get_m_info(char *filename, int no_inst, JGMOD_INFO *ji)
 {
     JGMOD_FILE *f;
 
@@ -152,7 +146,7 @@ int get_m_info(char *filename, int no_inst, JGMOD_INFO *ji)
 }
 
 //To detect protracker with 31 instruments
-int detect_m31 (char *filename)
+int JGMOD_PLAYER::detect_m31 (char *filename)
 {
     JGMOD_FILE *f;
     char id[4];
@@ -175,7 +169,7 @@ int detect_m31 (char *filename)
 
 // Load protracker 15 or 31 instruments. no_inst is used for
 // determining no of instruments.
-JGMOD *load_m (char *filename, int no_inst)
+JGMOD *JGMOD_PLAYER::load_m (char *filename, int no_inst)
 {
     JGMOD_FILE *f;
     JGMOD *j;
@@ -398,7 +392,7 @@ JGMOD *load_m (char *filename, int no_inst)
 
 // to detect protracker with 15 instruments.
 // not very reliable
-int detect_m15 (char *filename)
+int JGMOD_PLAYER::detect_m15 (char *filename)
 {
     JGMOD_FILE *f;
     int index;
@@ -450,7 +444,7 @@ int get_mod_no_pat (int *table, int max_trk)
     return max;
 }
 
-void *jgmod_calloc (int size)
+void *JGMOD_PLAYER::jgmod_calloc (int size)
 {
 
 #ifdef  __ALLEGRO_WINDOWS__

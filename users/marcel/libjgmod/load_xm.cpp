@@ -21,15 +21,9 @@
 //#define JG_debug
 //#define force_8_bit
 
-int detect_xm (char *filename);
-int detect_unreal_xm (char *filename);
-JGMOD *load_xm (char *filename, int start_offset);
 void load_note (JGMOD *j, JGMOD_FILE *f, NOTE_INFO *ni);
 NOTE_INFO *get_note (JGMOD *j, int pat, int pos, int chn);
 void convert_xm_command (int *command, int *extcommand);
-void lock_mod (JGMOD *j);
-void *jgmod_calloc (int size);
-int get_xm_info (char *filename, int start_offset, JGMOD_INFO *ji);
 
 
 typedef struct VIB_INFO
@@ -107,7 +101,7 @@ void load_note (JGMOD *j, JGMOD_FILE *f, NOTE_INFO *ni)
     convert_xm_command (&ni->command, &ni->extcommand);
 }
 
-int get_xm_info (char *filename, int start_offset, JGMOD_INFO *ji)
+int JGMOD_PLAYER::get_xm_info (char *filename, int start_offset, JGMOD_INFO *ji)
 {
     JGMOD_FILE *f;
 
@@ -137,7 +131,7 @@ int get_xm_info (char *filename, int start_offset, JGMOD_INFO *ji)
 }
 
 // to detect unreal XM files
-int detect_unreal_xm (char *filename)
+int JGMOD_PLAYER::detect_unreal_xm (char *filename)
 {
     JGMOD_FILE *f;
     char id[18];
@@ -190,7 +184,7 @@ int detect_unreal_xm (char *filename)
 
 
 // to detect xm files.
-int detect_xm (char *filename)
+int JGMOD_PLAYER::detect_xm (char *filename)
 {
     JGMOD_FILE *f;
     char id[17];
@@ -209,7 +203,7 @@ int detect_xm (char *filename)
 }
 
 // Load the xm file 
-JGMOD *load_xm (char *filename, int start_offset)
+JGMOD *JGMOD_PLAYER::load_xm (char *filename, int start_offset)
 {
     INSTRUMENT_INFO *ii;
     PATTERN_INFO *pi;

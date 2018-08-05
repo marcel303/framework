@@ -22,17 +22,11 @@
 //#define force_8_bit
 
 
-int detect_s3m (char *filename);
-int detect_unreal_s3m (char *filename);
-JGMOD *load_s3m (char *filename, int start_offset);
 void S3M_get_num_chn(JGMOD_FILE *f);
 void S3M_load_pat(JGMOD_FILE *f, JGMOD *j, NOTE_INFO *n, int no_chn);
 void convert_s3m_command (int *command, int *extcommand);
 void convert_s3m_pitch (int *pitch);
 int get_mod_no_pat (int *table, int max_trk);
-void lock_mod (JGMOD *j);
-void *jgmod_calloc (int size);
-int get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji);
 
 
 // fixme : remove globals
@@ -42,7 +36,7 @@ static char remap[32];
 extern volatile const int noteperiod[];
 
 
-int get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji)
+int JGMOD_PLAYER::get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji)
 {
     JGMOD_FILE *f;
 
@@ -71,7 +65,7 @@ int get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji)
 }
 
 // to detect unreal s3m files
-int detect_unreal_s3m (char *filename)
+int JGMOD_PLAYER::detect_unreal_s3m (char *filename)
 {
     JGMOD_FILE *f;
     char id[4];
@@ -112,7 +106,7 @@ int detect_unreal_s3m (char *filename)
 
 
 // to detect s3m files
-int detect_s3m (char *filename)
+int JGMOD_PLAYER::detect_s3m (char *filename)
 {
     JGMOD_FILE *f;
     char id[4];
@@ -240,7 +234,7 @@ void convert_s3m_pitch (int *pitch)
 
 
 // load a s3m file
-JGMOD *load_s3m (char *filename, int start_offset)
+JGMOD *JGMOD_PLAYER::load_s3m (char *filename, int start_offset)
 {
     JGMOD_FILE *f;
     JGMOD *j;

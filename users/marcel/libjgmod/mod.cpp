@@ -18,38 +18,6 @@
 #include "file_io.h"
 #include "StringEx.h"
 
-
-
-
-int detect_m31 (char *filename);
-int detect_m15 (char *filename);
-int detect_s3m (char *filename);
-int detect_xm (char *filename);
-int detect_it(char *filename);
-int detect_jgm (char *filename);
-int detect_unreal_it (char *filename);
-int detect_unreal_xm (char *filename);
-int detect_unreal_s3m (char *filename);
-JGMOD *load_m (char *filename, int no_inst);
-JGMOD *load_s3m (char *filename, int start_offset);
-JGMOD *load_it (char *filename, int start_offset);
-JGMOD *load_xm (char *filename, int start_offset);
-JGMOD *load_jgm (JGMOD_FILE *f);
-int calc_volume (int volume);
-void lock_jgmod_player (void);
-void lock_jgmod_player2(void);
-void lock_jgmod_player3(void);
-void lock_jgmod_player4(void);
-void lock_jgmod_mod (void);
-void lock_mod (JGMOD *j);
-void *jgmod_calloc (int size);
-int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji);
-int get_it_info(char *filename, int start_offset, JGMOD_INFO *ji);
-int get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji);
-int get_xm_info (char *filename, int start_offset, JGMOD_INFO *ji);
-int get_m_info(char *filename, int no_inst, JGMOD_INFO *ji);
-
-
 #ifdef __ALLEGRO_DJGPP__
 /* <gfoot> I don't understand this. */
 void _unlock_dpmi_data(void *addr, int size);
@@ -84,7 +52,7 @@ int install_mod(int max_chn)
         return -1;
 
     if (fake_sample == null)
-        fake_sample = (SAMPLE *)jgmod_calloc (sizeof (SAMPLE));     // use to trick allegro
+        fake_sample = (SAMPLE *)jgmod_player.jgmod_calloc (sizeof (SAMPLE));     // use to trick allegro
                                                     // into giving me voice
     if (fake_sample == null)                        // channels
         {
@@ -104,7 +72,7 @@ int install_mod(int max_chn)
     fake_sample->bits = 8;
     fake_sample->len  = 0;
     fake_sample->param = -1;
-    fake_sample->data = jgmod_calloc (0);
+    fake_sample->data = jgmod_player.jgmod_calloc (0);
 
     if (fake_sample->data == null)
         {
@@ -146,11 +114,11 @@ int install_mod(int max_chn)
     mod_init = TRUE;
 
     atexit (remove_mod);
-    lock_jgmod_player();    // lock functions and variables in player.c
-    lock_jgmod_player2();   // in player2.c
-    lock_jgmod_player3();   // in player3.c
-    lock_jgmod_player4();   // in player4.c
-    lock_jgmod_mod();       // and mod.c
+    jgmod_player.lock_jgmod_player();    // lock functions and variables in player.c
+    jgmod_player.lock_jgmod_player2();   // in player2.c
+    jgmod_player.lock_jgmod_player3();   // in player3.c
+    jgmod_player.lock_jgmod_player4();   // in player4.c
+    jgmod_player.lock_jgmod_mod();       // and mod.c
 
     return 1;
 }
@@ -158,7 +126,7 @@ int install_mod(int max_chn)
 // load supported types of mod files.
 // Detect the type first.
 // Then call for the appropriate loader.
-JGMOD *load_mod (char *filename)
+JGMOD *JGMOD_PLAYER::load_mod (char *filename)
 {
     int temp;
 
@@ -216,7 +184,7 @@ JGMOD *load_mod (char *filename)
 }
 
 
-void play_mod (JGMOD *j, int loop)
+void JGMOD_PLAYER::play_mod (JGMOD *j, int loop)
 {
     int index;
     int temp;
@@ -384,7 +352,7 @@ void play_mod (JGMOD *j, int loop)
     install_int_ex (mod_interrupt, BPM_TO_TIMER (24 * j->bpm * mi.speed_ratio / 100));
 }END_OF_FUNCTION (play_mod)
 
-void stop_mod (void)
+void JGMOD_PLAYER::stop_mod (void)
 {
     int index;
 
@@ -404,7 +372,7 @@ void stop_mod (void)
     mi.forbid = FALSE;
 }END_OF_FUNCTION (stop_mod)
 
-void next_mod_track (void)
+void JGMOD_PLAYER::next_mod_track (void)
 {
     mi.forbid = TRUE;
 
@@ -414,7 +382,7 @@ void next_mod_track (void)
     mi.forbid = FALSE;
 }
 
-void prev_mod_track (void)
+void JGMOD_PLAYER::prev_mod_track (void)
 {
     mi.forbid = TRUE;
 
@@ -427,7 +395,7 @@ void prev_mod_track (void)
     mi.forbid = FALSE;
 }
 
-void goto_mod_track (int new_track)
+void JGMOD_PLAYER::goto_mod_track (int new_track)
 {
     mi.forbid = TRUE;
 
@@ -440,12 +408,12 @@ void goto_mod_track (int new_track)
 }END_OF_FUNCTION (goto_mod_track)
 
 
-int is_mod_playing (void)
+int JGMOD_PLAYER::is_mod_playing (void)
 {
     return (mi.is_playing);
 }
 
-void pause_mod (void)
+void JGMOD_PLAYER::pause_mod (void)
 {
     int index;
 
@@ -457,7 +425,7 @@ void pause_mod (void)
     mi.forbid = FALSE;
 }
 
-void resume_mod (void)
+void JGMOD_PLAYER::resume_mod (void)
 {
     int index;
 
@@ -472,7 +440,7 @@ void resume_mod (void)
     mi.forbid = FALSE;
 }
 
-int is_mod_paused (void)
+int JGMOD_PLAYER::is_mod_paused (void)
 {
     if (is_mod_playing() == FALSE)
         return FALSE;
@@ -481,7 +449,7 @@ int is_mod_paused (void)
 }
 
 
-void destroy_mod (JGMOD *j)
+void JGMOD_PLAYER::destroy_mod (JGMOD *j)
 {
     int index;
     PATTERN_INFO *pi;
@@ -540,7 +508,7 @@ void destroy_mod (JGMOD *j)
 }
 
 
-void set_mod_volume (int volume)
+void JGMOD_PLAYER::set_mod_volume (int volume)
 {
     int chn;
 
@@ -552,24 +520,24 @@ void set_mod_volume (int volume)
     mod_volume = volume;
 
     for (chn=0; chn<mi.max_chn ; chn++)
-        voice_set_volume (voice_table[chn], calc_volume(chn));
+        voice_set_volume (voice_table[chn], jgmod_player.calc_volume(chn));
 }
 
-int get_mod_volume (void)
+int JGMOD_PLAYER::get_mod_volume (void)
 {
     return mod_volume;
 }
 
 
 //to lock stuff in mod.c
-void lock_jgmod_mod(void)
+void JGMOD_PLAYER::lock_jgmod_mod(void)
 {
     LOCK_FUNCTION (goto_mod_track);
     LOCK_FUNCTION (play_mod);
     LOCK_FUNCTION (stop_mod);
 }
 
-void lock_mod (JGMOD *j)
+void JGMOD_PLAYER::lock_mod (JGMOD *j)
 {
     int index;
     PATTERN_INFO *pi;
@@ -598,7 +566,7 @@ void lock_mod (JGMOD *j)
 }
 
 // get a instrument from JGMOD structure
-SAMPLE *get_jgmod_sample (JGMOD *j, int sample_no)
+SAMPLE *JGMOD_PLAYER::get_jgmod_sample (JGMOD *j, int sample_no)
 {
     if (j == null)
         {
@@ -619,8 +587,8 @@ void remove_mod (void)
 {
     int index;
 
-    stop_mod();
-    remove_int (mod_interrupt);
+    jgmod_player.stop_mod();
+    remove_int (jgmod_player.mod_interrupt);
 
     for (index=0; index<MAX_ALLEG_VOICE; index++)
         {
@@ -633,7 +601,7 @@ void remove_mod (void)
     mod_init = FALSE;
 }
 
-void set_mod_speed (int speed)
+void JGMOD_PLAYER::set_mod_speed (int speed)
 {
     if (speed <= 0)
         speed = 1;
@@ -649,7 +617,7 @@ void set_mod_speed (int speed)
         }
 }
 
-void set_mod_pitch (int pitch)
+void JGMOD_PLAYER::set_mod_pitch (int pitch)
 {
     if (pitch <= 0)
         pitch = 1;
@@ -660,7 +628,7 @@ void set_mod_pitch (int pitch)
     mi.pitch_ratio = pitch;
 }
 
-void toggle_pause_mode (void)
+void JGMOD_PLAYER::toggle_pause_mode (void)
 {
     if (is_mod_paused() == TRUE)
         resume_mod();
@@ -669,7 +637,7 @@ void toggle_pause_mode (void)
 }
 
 
-int get_mod_info (char *filename, JGMOD_INFO *ji)
+int JGMOD_PLAYER::get_mod_info (char *filename, JGMOD_INFO *ji)
 {
     int temp;
 

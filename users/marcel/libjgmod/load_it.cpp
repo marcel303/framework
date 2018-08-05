@@ -21,13 +21,9 @@
 
 
 JGMOD *load_it (char *filename, int start_offset);
-int detect_unreal_it (char *filename);
-int detect_it(char *filename);
-int get_it_info(char *filename, int start_offset, JGMOD_INFO *ji);
-void *jgmod_calloc (int size);
 
 // to detect unreal IT files
-int detect_unreal_it (char *filename)
+int JGMOD_PLAYER::detect_unreal_it (char *filename)
 {
     JGMOD_FILE *f;
     char id[4];
@@ -67,7 +63,7 @@ int detect_unreal_it (char *filename)
 }
 
 
-int detect_it(char *filename)
+int JGMOD_PLAYER::detect_it(char *filename)
 {
     JGMOD_FILE *f;
     char id[4];
@@ -85,7 +81,7 @@ int detect_it(char *filename)
 }
 
 
-int get_it_info(char *filename, int start_offset, JGMOD_INFO *ji)
+int JGMOD_PLAYER::get_it_info(char *filename, int start_offset, JGMOD_INFO *ji)
 {
     JGMOD_FILE *f;
 
@@ -114,7 +110,7 @@ int get_it_info(char *filename, int start_offset, JGMOD_INFO *ji)
 }
 
 
-JGMOD *load_it (char *filename, int start_offset)
+JGMOD *JGMOD_PLAYER::load_it (char *filename, int start_offset)
 {
     JGMOD_FILE *f;
     JGMOD *j;

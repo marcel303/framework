@@ -33,7 +33,7 @@ void lock_jgmod_stuff (void);
 
 
 // the core of the mod player.
-void mod_interrupt (void)
+void JGMOD_PLAYER::mod_interrupt (void)
 {
     int chn=0;
     int  sample_no;
@@ -81,7 +81,7 @@ void mod_interrupt (void)
 
         if (mi.trk == 0)            // restart the song if trk 0
             {
-            play_mod (of, mi.loop);
+            jgmod_player.play_mod (of, mi.loop);
             return;
             }
         }
@@ -158,8 +158,8 @@ void mod_interrupt (void)
             }
        else
            {
-           play_mod (of, TRUE);     // restart the song
-           goto_mod_track (of->restart_pos);
+           jgmod_player.play_mod (of, TRUE);     // restart the song
+           jgmod_player.goto_mod_track (of->restart_pos);
            return;
            }
         }
@@ -563,7 +563,7 @@ void mod_interrupt (void)
 
         process_envelope (&ci[chn].volenv, 64, ci[chn].keyon);
         process_envelope (&ci[chn].panenv, 32, ci[chn].keyon);
-        voice_set_volume (voice_table[chn], calc_volume (chn));
+        voice_set_volume (voice_table[chn], jgmod_player.calc_volume (chn));
         voice_set_pan (voice_table[chn], calc_pan (chn));
 
         if (ci[chn].keyon == TRUE)
@@ -585,7 +585,7 @@ END_OF_FUNCTION (mod_interrupt)
 
 
 // to lock stuff in player.c
-void lock_jgmod_player (void)
+void JGMOD_PLAYER::lock_jgmod_player (void)
 {
     LOCK_FUNCTION(mod_interrupt);
 

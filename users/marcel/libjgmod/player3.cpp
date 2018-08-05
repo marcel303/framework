@@ -35,7 +35,7 @@ void do_s3m_set_bpm (int extcommand)
         mi.bpm -= extcommand - 16;
 
     //remove_int (mod_interrupt);
-    install_int_ex (mod_interrupt, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio));
+    install_int_ex (jgmod_player.mod_interrupt, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio));
 }END_OF_FUNCTION (do_s3m_set_bpm)
 
 void parse_s3m_volume_slide (int chn, int extcommand)
@@ -375,7 +375,7 @@ void parse_note_command (int chn, int note)
 }END_OF_FUNCTION (parse_note_command)
 
 
-void lock_jgmod_player3(void)
+void JGMOD_PLAYER::lock_jgmod_player3(void)
 {
     LOCK_FUNCTION(parse_volume_command);
     LOCK_FUNCTION(parse_note_command);

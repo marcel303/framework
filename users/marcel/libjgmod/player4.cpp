@@ -347,7 +347,7 @@ void parse_xm_set_envelop_position (volatile ENVELOPE_INFO *t, int extcommand)
 
 }END_OF_FUNCTION (parse_xm_set_envelop_position);
 
-void lock_jgmod_player4 (void)
+void JGMOD_PLAYER::lock_jgmod_player4 (void)
 {
     LOCK_FUNCTION (parse_new_note);
     LOCK_FUNCTION (parse_xm_volume_slide);

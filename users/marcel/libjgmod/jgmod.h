@@ -1,6 +1,7 @@
 #ifndef JGMOD_H
 #define JGMOD_H
 
+#include "port.h"
 
 #ifndef JGM_ID
     #define JGM_ID  DAT_ID('J','G','M',' ')
@@ -375,6 +376,55 @@ typedef struct JGMOD_PLAYER
 		jgmod_error[0] = 0;
 		enable_m15 = FALSE;
 	}
+	
+	JGMOD *load_mod (char *filename);
+	static void mod_interrupt (void);
+	void play_mod (JGMOD *j, int loop);
+	void next_mod_track (void);
+	void prev_mod_track (void);
+	void goto_mod_track (int new_track);
+	void stop_mod (void);
+	int is_mod_playing (void);
+	void pause_mod (void);
+	void resume_mod (void);
+	int is_mod_paused (void);
+	void destroy_mod (JGMOD *j);
+	void set_mod_volume (int volume);
+	int get_mod_volume (void);
+	SAMPLE *get_jgmod_sample (JGMOD *j, int sample_no);
+	void set_mod_speed (int speed);
+	void set_mod_pitch (int pitch);
+	void toggle_pause_mode (void);
+	int get_mod_info (char *filename, JGMOD_INFO *ji);
+
+	// mod.cpp internal
+	static int detect_m31 (char *filename);
+	static int detect_m15 (char *filename);
+	static int detect_s3m (char *filename);
+	static int detect_xm (char *filename);
+	static int detect_it(char *filename);
+	static int detect_jgm (char *filename);
+	static int detect_unreal_it (char *filename);
+	static int detect_unreal_xm (char *filename);
+	static int detect_unreal_s3m (char *filename);
+	JGMOD *load_m (char *filename, int no_inst);
+	JGMOD *load_s3m (char *filename, int start_offset);
+	JGMOD *load_it (char *filename, int start_offset);
+	JGMOD *load_xm (char *filename, int start_offset);
+	JGMOD *load_jgm (JGMOD_FILE *f);
+	int calc_volume (int volume);
+	void lock_jgmod_player (void);
+	void lock_jgmod_player2(void);
+	void lock_jgmod_player3(void);
+	void lock_jgmod_player4(void);
+	void lock_jgmod_mod (void);
+	void lock_mod (JGMOD *j);
+	void *jgmod_calloc (int size);
+	static int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji);
+	static int get_it_info(char *filename, int start_offset, JGMOD_INFO *ji);
+	static int get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji);
+	static int get_xm_info (char *filename, int start_offset, JGMOD_INFO *ji);
+	static int get_m_info(char *filename, int no_inst, JGMOD_INFO *ji);
 }JGMOD_PLAYER;
 
 //-- externs -----------------------------------------------------------------
@@ -390,27 +440,7 @@ extern JGMOD_PLAYER jgmod_player;
 
 void setError(const char * format, ...);
 
-//-- Prototypes --------------------------------------------------------------
 int install_mod(int no_voices);
 void remove_mod (void);
-JGMOD *load_mod (char *filename);
-void mod_interrupt (void);
-void play_mod (JGMOD *j, int loop);
-void next_mod_track (void);
-void prev_mod_track (void);
-void goto_mod_track (int new_track);
-void stop_mod (void);
-int is_mod_playing (void);
-void pause_mod (void);
-void resume_mod (void);
-int is_mod_paused (void);
-void destroy_mod (JGMOD *j);
-void set_mod_volume (int volume);
-int get_mod_volume (void);
-SAMPLE *get_jgmod_sample (JGMOD *j, int sample_no);
-void set_mod_speed (int speed);
-void set_mod_pitch (int pitch);
-void toggle_pause_mode (void);
-int get_mod_info (char *filename, JGMOD_INFO *ji);
 
 #endif  // for JGMOD_H

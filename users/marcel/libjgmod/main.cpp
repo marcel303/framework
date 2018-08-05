@@ -58,13 +58,13 @@ static int do_load(const char * filename)
 {
 	if (the_mod)
 	{
-		stop_mod();
-		destroy_mod(the_mod);
+		jgmod_player.stop_mod();
+		jgmod_player.destroy_mod(the_mod);
 	}
 	
 	//
 	
-    the_mod = load_mod((char*)filename);
+    the_mod = jgmod_player.load_mod((char*)filename);
 	
     if (the_mod == nullptr)
 	{
@@ -83,8 +83,8 @@ static int do_load(const char * filename)
     else
         note_length = 140;
 	
-	set_mod_speed(starting_speed);
-    set_mod_pitch(starting_pitch);
+	jgmod_player.set_mod_speed(starting_speed);
+    jgmod_player.set_mod_pitch(starting_pitch);
 	
 	return TRUE;
 }
@@ -99,7 +99,7 @@ static void handleAction(const std::string & action, const Dictionary & d)
 		{
 			do_load(file.c_str());
 			
-			play_mod(the_mod, TRUE);
+			jgmod_player.play_mod(the_mod, TRUE);
 		}
 	}
 }
@@ -256,30 +256,30 @@ int main(int argc, char **argv)
         return 1;
 	}
 	
-    play_mod(the_mod, TRUE);
+    jgmod_player.play_mod(the_mod, TRUE);
 
-    while (is_mod_playing())
+    while (jgmod_player.is_mod_playing())
 	{
         framework.process();
 		
 		if (keyboard.wentDown(SDLK_LEFT, true))
-			prev_mod_track();
+			jgmod_player.prev_mod_track();
 		if (keyboard.wentDown(SDLK_RIGHT, true))
-			next_mod_track();
+			jgmod_player.next_mod_track();
 		
 		if (keyboard.wentDown(SDLK_PLUS, true))
-			set_mod_volume(get_mod_volume() + 5);
+			jgmod_player.set_mod_volume(jgmod_player.get_mod_volume() + 5);
 		if (keyboard.wentDown(SDLK_MINUS, true))
-			set_mod_volume(get_mod_volume() - 5);
+			jgmod_player.set_mod_volume(jgmod_player.get_mod_volume() - 5);
 		
 		if (keyboard.wentDown(SDLK_F1, true))
-			set_mod_speed (mi.speed_ratio - 5);
+			jgmod_player.set_mod_speed (mi.speed_ratio - 5);
 		if (keyboard.wentDown(SDLK_F2, true))
-			set_mod_speed (mi.speed_ratio + 5);
+			jgmod_player.set_mod_speed (mi.speed_ratio + 5);
 		if (keyboard.wentDown(SDLK_F3, true))
-			set_mod_pitch (mi.pitch_ratio - 5);
+			jgmod_player.set_mod_pitch (mi.pitch_ratio - 5);
 		if (keyboard.wentDown(SDLK_F4, true))
-			set_mod_pitch (mi.pitch_ratio + 5);
+			jgmod_player.set_mod_pitch (mi.pitch_ratio + 5);
 		if (keyboard.wentDown(SDLK_F5, true))
 			note_length++;
 		
@@ -303,9 +303,9 @@ int main(int argc, char **argv)
 		}
 		
 		if (keyboard.wentDown(SDLK_r, true))
-			play_mod (the_mod, TRUE);
+			jgmod_player.play_mod (the_mod, TRUE);
 		if (keyboard.wentDown(SDLK_p, true))
-			toggle_pause_mode ();
+			jgmod_player.toggle_pause_mode ();
 		
 		if (keyboard.wentDown(SDLK_DOWN, true))
 		{
@@ -337,8 +337,8 @@ int main(int argc, char **argv)
 
 		if (keyboard.wentDown(SDLK_ESCAPE) || keyboard.wentDown(SDLK_SPACE))
 		{
-			stop_mod();
-			destroy_mod (the_mod);
+			jgmod_player.stop_mod();
+			jgmod_player.destroy_mod (the_mod);
 			return 0;
 		}
 		
@@ -360,7 +360,7 @@ int main(int argc, char **argv)
 			// draw playback info
 			
 			drawText(0, 36, 12, +1, +1, "Tempo : %3d  Bpm : %3d  Speed : %3d%%  Pitch : %3d%% ", mi.tempo, mi.bpm, mi.speed_ratio, mi.pitch_ratio);
-			drawText(0, 48, 12, +1, +1, "Global volume : %2d  User volume : %2d ", mi.global_volume, get_mod_volume());
+			drawText(0, 48, 12, +1, +1, "Global volume : %2d  User volume : %2d ", mi.global_volume, jgmod_player.get_mod_volume());
 			drawText(0, 70, 12, +1, +1, "%03d-%02d-%02d    ", mi.trk, mi.pos, mi.tick < 0 ? 0 : mi.tick);
 
 			for (int index = 0; index < the_mod->no_chn; ++index)

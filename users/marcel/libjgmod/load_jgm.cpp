@@ -22,14 +22,8 @@
 
 //#define JG_debug
 
-void lock_mod (JGMOD *j);
-int detect_jgm (char *filename);
-JGMOD *load_jgm (JGMOD_FILE *f);
-void *jgmod_calloc (int size);
-int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji);
 
-
-int detect_jgm (char *filename)
+int JGMOD_PLAYER::detect_jgm (char *filename)
 {
     char id[18];
     JGMOD_FILE *file;
@@ -48,7 +42,7 @@ int detect_jgm (char *filename)
 }
 
 
-int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji)
+int JGMOD_PLAYER::get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji)
 {
     ji->type = JGM_TYPE;
     sprintf (ji->type_name, "JGM");
@@ -59,7 +53,7 @@ int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji)
 }
 
 
-JGMOD *load_jgm (JGMOD_FILE *f)
+JGMOD *JGMOD_PLAYER::load_jgm (JGMOD_FILE *f)
 {
     INSTRUMENT_INFO *ii;
     PATTERN_INFO *pi;

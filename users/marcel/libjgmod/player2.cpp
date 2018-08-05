@@ -222,7 +222,7 @@ int find_lower_period(int period, int times)
 }END_OF_FUNCTION (find_lower_period)
 
 // change the volume from scale of 64 to 255
-int calc_volume (int chn)
+int JGMOD_PLAYER::calc_volume (int chn)
 {
     int temp;
 
@@ -408,7 +408,7 @@ void do_pro_tempo_bpm (int extcommand)
         {
         mi.bpm = extcommand;
         //remove_int (mod_interrupt);
-        install_int_ex (mod_interrupt, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio));
+        install_int_ex (jgmod_player.mod_interrupt, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio));
         }
 
 }END_OF_FUNCTION (do_pro_tempo_bpm)
@@ -819,7 +819,7 @@ void parse_extended_command (int chn, int extcommand)
 }
 
 
-void lock_jgmod_player2(void)
+void JGMOD_PLAYER::lock_jgmod_player2(void)
 {
     LOCK_FUNCTION(interpolate);
     LOCK_FUNCTION(find_lower_period);
