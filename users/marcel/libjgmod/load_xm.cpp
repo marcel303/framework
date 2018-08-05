@@ -101,7 +101,7 @@ void load_note (JGMOD *j, JGMOD_FILE *f, NOTE_INFO *ni)
     convert_xm_command (&ni->command, &ni->extcommand);
 }
 
-int JGMOD_PLAYER::get_xm_info (char *filename, int start_offset, JGMOD_INFO *ji)
+int JGMOD_PLAYER::get_xm_info (const char *filename, int start_offset, JGMOD_INFO *ji)
 {
     JGMOD_FILE *f;
 
@@ -131,7 +131,7 @@ int JGMOD_PLAYER::get_xm_info (char *filename, int start_offset, JGMOD_INFO *ji)
 }
 
 // to detect unreal XM files
-int JGMOD_PLAYER::detect_unreal_xm (char *filename)
+int JGMOD_PLAYER::detect_unreal_xm (const char *filename)
 {
     JGMOD_FILE *f;
     char id[18];
@@ -184,7 +184,7 @@ int JGMOD_PLAYER::detect_unreal_xm (char *filename)
 
 
 // to detect xm files.
-int JGMOD_PLAYER::detect_xm (char *filename)
+int JGMOD_PLAYER::detect_xm (const char *filename)
 {
     JGMOD_FILE *f;
     char id[17];
@@ -203,7 +203,7 @@ int JGMOD_PLAYER::detect_xm (char *filename)
 }
 
 // Load the xm file 
-JGMOD *JGMOD_PLAYER::load_xm (char *filename, int start_offset)
+JGMOD *JGMOD_PLAYER::load_xm (const char *filename, int start_offset)
 {
     INSTRUMENT_INFO *ii;
     PATTERN_INFO *pi;

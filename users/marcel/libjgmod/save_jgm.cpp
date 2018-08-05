@@ -42,7 +42,7 @@ void save_jgm (JGMOD_FILE *file, JGMOD *j)
     INSTRUMENT_INFO *ii;
 
 
-    jgmod_fwrite ((char*)JGM_SIG , strlen (JGM_SIG), file);
+    jgmod_fwrite (JGM_SIG , strlen (JGM_SIG), file);
     jgmod_fwrite (j->name, 29, file);
     jgmod_putc (0x1a, file);
     jgmod_iputw (j->no_trk, file);

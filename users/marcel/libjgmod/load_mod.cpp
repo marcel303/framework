@@ -111,7 +111,7 @@ int get_mod_no_pat (int *table, int max_trk);
 //-- Codes -------------------------------------------------------------------
 
 
-int JGMOD_PLAYER::get_m_info(char *filename, int no_inst, JGMOD_INFO *ji)
+int JGMOD_PLAYER::get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji)
 {
     JGMOD_FILE *f;
 
@@ -146,7 +146,7 @@ int JGMOD_PLAYER::get_m_info(char *filename, int no_inst, JGMOD_INFO *ji)
 }
 
 //To detect protracker with 31 instruments
-int JGMOD_PLAYER::detect_m31 (char *filename)
+int JGMOD_PLAYER::detect_m31 (const char *filename)
 {
     JGMOD_FILE *f;
     char id[4];
@@ -169,7 +169,7 @@ int JGMOD_PLAYER::detect_m31 (char *filename)
 
 // Load protracker 15 or 31 instruments. no_inst is used for
 // determining no of instruments.
-JGMOD *JGMOD_PLAYER::load_m (char *filename, int no_inst)
+JGMOD *JGMOD_PLAYER::load_m (const char *filename, int no_inst)
 {
     JGMOD_FILE *f;
     JGMOD *j;
@@ -372,7 +372,7 @@ JGMOD *JGMOD_PLAYER::load_m (char *filename, int no_inst)
             s->loop_end     = si->lenght;
             }
 
-        jgmod_fread ((char*)s->data, s->len, f);
+        jgmod_fread (s->data, s->len, f);
         for (temp=0; temp< (signed)(s->len); temp++)
             {
             data = (char *)s->data;
@@ -391,7 +391,7 @@ JGMOD *JGMOD_PLAYER::load_m (char *filename, int no_inst)
 
 // to detect protracker with 15 instruments.
 // not very reliable
-int JGMOD_PLAYER::detect_m15 (char *filename)
+int JGMOD_PLAYER::detect_m15 (const char *filename)
 {
     JGMOD_FILE *f;
     int index;

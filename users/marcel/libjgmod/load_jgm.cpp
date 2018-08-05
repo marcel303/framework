@@ -23,7 +23,7 @@
 //#define JG_debug
 
 
-int JGMOD_PLAYER::detect_jgm (char *filename)
+int JGMOD_PLAYER::detect_jgm (const char *filename)
 {
     char id[18];
     JGMOD_FILE *file;
@@ -191,7 +191,7 @@ JGMOD *JGMOD_PLAYER::load_jgm (JGMOD_FILE *f)
                 return null;
                 }
 
-            jgmod_fread ((char*)s->data, s->len * s->bits / 8, f);
+            jgmod_fread (s->data, s->len * s->bits / 8, f);
             }
         else
             {

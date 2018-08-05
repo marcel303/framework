@@ -111,7 +111,7 @@ int JGMOD_PLAYER::init(int max_chn)
 // load supported types of mod files.
 // Detect the type first.
 // Then call for the appropriate loader.
-JGMOD *JGMOD_PLAYER::load_mod (char *filename, int fast_loading, int enable_m15)
+JGMOD *JGMOD_PLAYER::load_mod (const char *filename, int fast_loading, int enable_m15)
 {
     int temp;
 
@@ -581,7 +581,7 @@ void JGMOD_PLAYER::toggle_pause_mode (void)
 }
 
 
-int JGMOD_PLAYER::get_info (char *filename, JGMOD_INFO *ji, int enable_m15)
+int JGMOD_PLAYER::get_info (const char *filename, JGMOD_INFO *ji, int enable_m15)
 {
     int temp;
 

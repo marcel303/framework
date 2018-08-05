@@ -396,7 +396,7 @@ typedef struct JGMOD_PLAYER
 	int init(int no_voices);
 	void shut (void);
 	
-	static JGMOD *load_mod (char *filename, int fast_loading = TRUE, int enable_m15 = FALSE);
+	static JGMOD *load_mod (const char *filename, int fast_loading = TRUE, int enable_m15 = FALSE);
 	static void mod_interrupt_proc (void * data);
 	void mod_interrupt (void);
 	void play (JGMOD *j, int loop);
@@ -417,7 +417,7 @@ typedef struct JGMOD_PLAYER
 	void set_pitch (int pitch);
 	void toggle_pause_mode (void);
 	
-	static int get_info (char *filename, JGMOD_INFO *ji, int enable_m15 = FALSE);
+	static int get_info (const char *filename, JGMOD_INFO *ji, int enable_m15 = FALSE);
 	
 	// -- located in player2.c ---------------------------------------------------
 	int find_lower_period(int period, int times);
@@ -491,26 +491,26 @@ typedef struct JGMOD_PLAYER
 	static void start_envelope (volatile ENVELOPE_INFO *t, int *env, int *pos, int flg, int pts, int loopbeg, int loopend, int susbeg, int susend);
 
 	// mod.cpp internal
-	static int detect_m31 (char *filename);
-	static int detect_m15 (char *filename);
-	static int detect_s3m (char *filename);
-	static int detect_xm (char *filename);
-	static int detect_it(char *filename);
-	static int detect_jgm (char *filename);
-	static int detect_unreal_it (char *filename);
-	static int detect_unreal_xm (char *filename);
-	static int detect_unreal_s3m (char *filename);
-	static JGMOD *load_m (char *filename, int no_inst);
-	static JGMOD *load_s3m (char *filename, int start_offset, int fast_loading);
-	static JGMOD *load_it (char *filename, int start_offset);
-	static JGMOD *load_xm (char *filename, int start_offset);
+	static int detect_m31 (const char *filename);
+	static int detect_m15 (const char *filename);
+	static int detect_s3m (const char *filename);
+	static int detect_xm (const char *filename);
+	static int detect_it(const char *filename);
+	static int detect_jgm (const char *filename);
+	static int detect_unreal_it (const char *filename);
+	static int detect_unreal_xm (const char *filename);
+	static int detect_unreal_s3m (const char *filename);
+	static JGMOD *load_m (const char *filename, int no_inst);
+	static JGMOD *load_s3m (const char *filename, int start_offset, int fast_loading);
+	static JGMOD *load_it (const char *filename, int start_offset);
+	static JGMOD *load_xm (const char *filename, int start_offset);
 	static JGMOD *load_jgm (JGMOD_FILE *f);
 	static void *jgmod_calloc (int size);
 	static int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji);
-	static int get_it_info(char *filename, int start_offset, JGMOD_INFO *ji);
-	static int get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji);
-	static int get_xm_info (char *filename, int start_offset, JGMOD_INFO *ji);
-	static int get_m_info(char *filename, int no_inst, JGMOD_INFO *ji);
+	static int get_it_info(const char *filename, int start_offset, JGMOD_INFO *ji);
+	static int get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji);
+	static int get_xm_info (const char *filename, int start_offset, JGMOD_INFO *ji);
+	static int get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji);
 }JGMOD_PLAYER;
 
 //-- externs -----------------------------------------------------------------

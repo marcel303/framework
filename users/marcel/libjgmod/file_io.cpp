@@ -17,7 +17,7 @@
 #include "file_io.h"
 #include "jgmod.h"
 
-JGMOD_FILE *jgmod_fopen (char *filename, char *mode)
+JGMOD_FILE *jgmod_fopen (const char *filename, const char *mode)
 {
 #ifdef JGMOD_PACKFILE
     return pack_fopen (filename, mode);
@@ -37,14 +37,13 @@ int jgmod_fclose (JGMOD_FILE *f)
 }
 
 
-void jgmod_fseek (JGMOD_FILE **f, char *filename, int offset)
+void jgmod_fseek (JGMOD_FILE **f, const char *filename, int offset)
 {
 #ifdef JGMOD_PACKFILE
     pack_fclose (*f);
     *f = pack_fopen (filename, "r");
     pack_fseek (*f, offset);
 #else
-    filename[0] = filename[0];
     fseek (*f, offset, SEEK_SET);
 #endif
 }
@@ -60,7 +59,7 @@ void jgmod_skip (JGMOD_FILE *f, int skip)
 }
 
 
-int jgmod_fread (char *buf, int size, JGMOD_FILE *f)
+int jgmod_fread (void *buf, int size, JGMOD_FILE *f)
 {
 #ifdef JGMOD_PACKFILE
     return pack_fread (buf, size, f);
@@ -176,7 +175,7 @@ long jgmod_iputl (long l, JGMOD_FILE *f)
 }
 
 
-int jgmod_fwrite (void *buf, int size, JGMOD_FILE *f)
+int jgmod_fwrite (const void *buf, int size, JGMOD_FILE *f)
 {
 #ifdef JGMOD_PACKFILE
     return pack_fwrite (buf, size, f);

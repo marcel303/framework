@@ -36,7 +36,7 @@ static char remap[32];
 extern volatile const int noteperiod[];
 
 
-int JGMOD_PLAYER::get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji)
+int JGMOD_PLAYER::get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji)
 {
     JGMOD_FILE *f;
 
@@ -65,7 +65,7 @@ int JGMOD_PLAYER::get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji
 }
 
 // to detect unreal s3m files
-int JGMOD_PLAYER::detect_unreal_s3m (char *filename)
+int JGMOD_PLAYER::detect_unreal_s3m (const char *filename)
 {
     JGMOD_FILE *f;
     char id[4];
@@ -106,7 +106,7 @@ int JGMOD_PLAYER::detect_unreal_s3m (char *filename)
 
 
 // to detect s3m files
-int JGMOD_PLAYER::detect_s3m (char *filename)
+int JGMOD_PLAYER::detect_s3m (const char *filename)
 {
     JGMOD_FILE *f;
     char id[4];
@@ -234,7 +234,7 @@ void convert_s3m_pitch (int *pitch)
 
 
 // load a s3m file
-JGMOD *JGMOD_PLAYER::load_s3m (char *filename, int start_offset, int fast_loading)
+JGMOD *JGMOD_PLAYER::load_s3m (const char *filename, int start_offset, int fast_loading)
 {
     JGMOD_FILE *f;
     JGMOD *j;
@@ -295,7 +295,7 @@ JGMOD *JGMOD_PLAYER::load_s3m (char *filename, int start_offset, int fast_loadin
     dp = jgmod_getc(f);
 
     jgmod_skip (f, 10);
-    jgmod_fread ((char*)chn_set, 32, f);
+    jgmod_fread (chn_set, 32, f);
 
     if (j->tempo == 0)
         j->tempo = 6;
@@ -439,7 +439,7 @@ JGMOD *JGMOD_PLAYER::load_s3m (char *filename, int start_offset, int fast_loadin
             s->bits = 8;
             data = (char *)s->data;
 
-            jgmod_fread ((char*)s->data, s->len, f);
+            jgmod_fread (s->data, s->len, f);
             if (sf == 1)
                 for (counter=0; counter<s->len; counter++)
                     data[counter] ^= 0x80;
