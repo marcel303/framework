@@ -359,6 +359,10 @@ typedef struct JGMOD_INFO
 typedef struct JGMOD_PLAYER
 {
 	JGMOD *of;
+	//volatile MUSIC_INFO mi;
+	//volatile int voice_table[];
+	//volatile CHANNEL_INFO ci[MAX_ALLEG_VOICE];
+	volatile int mod_volume;
 	
 	// load_s3m.cpp
 	int fast_loading;
@@ -371,6 +375,7 @@ typedef struct JGMOD_PLAYER
 	JGMOD_PLAYER()
 	{
 		of = nullptr;
+		mod_volume = 255;
 		
 		// load_s3m.cpp
 		fast_loading = TRUE;
@@ -432,7 +437,6 @@ typedef struct JGMOD_PLAYER
 extern volatile MUSIC_INFO mi;
 extern volatile int voice_table[];
 extern volatile CHANNEL_INFO ci[MAX_ALLEG_VOICE];
-extern volatile int mod_volume;
 
 extern JGMOD_PLAYER jgmod_player;
 

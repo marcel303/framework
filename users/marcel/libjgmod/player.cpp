@@ -22,7 +22,6 @@
 // fixme : remove globals
 volatile MUSIC_INFO mi;
 volatile CHANNEL_INFO ci[MAX_ALLEG_VOICE];
-int volatile mod_volume = 255;
 
 JGMOD_PLAYER jgmod_player;
 
