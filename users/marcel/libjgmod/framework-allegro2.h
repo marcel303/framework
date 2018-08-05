@@ -76,6 +76,8 @@ static inline int ABS(int x) { return x < 0 ? -x : +x; }
 
 #ifdef __cplusplus
 
+struct SDL_mutex;
+
 struct AllegroVoiceAPI
 {
 	static const int MAX_VOICES = 128;

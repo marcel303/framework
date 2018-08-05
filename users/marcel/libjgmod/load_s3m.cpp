@@ -21,9 +21,6 @@
 //#define JG_debug
 //#define force_8_bit
 
-// fixme : remove globals
-int fast_loading=TRUE;
-
 
 int detect_s3m (char *filename);
 int detect_unreal_s3m (char *filename);
@@ -52,7 +49,7 @@ int get_s3m_info (char *filename, int start_offset, JGMOD_INFO *ji)
     f = jgmod_fopen (filename, "rb");
     if (f == null)
         {
-        sprintf (jgmod_error, "Unable to open %s", filename);
+        setError ("Unable to open %s", filename);
         return -1;
         }
 
@@ -262,15 +259,15 @@ JGMOD *load_s3m (char *filename, int start_offset)
     f = jgmod_fopen (filename, "rb");
     if (f == null)
         {
-        sprintf (jgmod_error, "Unable to open %s", filename);
+        setError ("Unable to open %s", filename);
         return null;
         }
 
-    j = jgmod_calloc (sizeof(JGMOD) );
+    j = (JGMOD*)jgmod_calloc (sizeof(JGMOD) );
     if (j == null)
         {
         jgmod_fclose (f);
-        sprintf (jgmod_error, "Unable to allocate enough memory for JGMOD structure");
+        setError ("Unable to allocate enough memory for JGMOD structure");
         return null;
         }
 
@@ -281,13 +278,13 @@ JGMOD *load_s3m (char *filename, int start_offset)
     j->no_sample = jgmod_igetw (f);
     j->no_pat = jgmod_igetw (f);
 
-    j->si = jgmod_calloc (sizeof (SAMPLE_INFO) * j->no_sample);
-    j->s  = jgmod_calloc (sizeof (SAMPLE) * j->no_sample);
+    j->si = (SAMPLE_INFO*)jgmod_calloc (sizeof (SAMPLE_INFO) * j->no_sample);
+    j->s  = (SAMPLE*)jgmod_calloc (sizeof (SAMPLE) * j->no_sample);
     if ( (j->si == null) || (j->s == null))
         {
         destroy_mod (j);
         jgmod_fclose(f);
-        sprintf (jgmod_error, "Unable to allocate enough memory for SAMPLE or SAMPLE_INFO");
+        setError ("Unable to allocate enough memory for SAMPLE or SAMPLE_INFO");
         return null;
         }
 
@@ -304,7 +301,7 @@ JGMOD *load_s3m (char *filename, int start_offset)
     dp = jgmod_getc(f);
 
     jgmod_skip (f, 10);
-    jgmod_fread (chn_set, 32, f);
+    jgmod_fread ((char*)chn_set, 32, f);
 
     if (j->tempo == 0)
         j->tempo = 6;
@@ -316,12 +313,12 @@ JGMOD *load_s3m (char *filename, int start_offset)
     for (index=0; index< j->no_trk; index++)
         j->pat_table[index] = jgmod_getc(f);
 
-    parapointer = jgmod_calloc ((j->no_sample + j->no_pat) * sizeof (int));
+    parapointer = (int*)jgmod_calloc ((j->no_sample + j->no_pat) * sizeof (int));
     if (parapointer == null)
         {
         destroy_mod (j);
         jgmod_fclose (f);
-        sprintf (jgmod_error, "Unable to allocate enough memory for parapointer");
+        setError ("Unable to allocate enough memory for parapointer");
         return null;
         }
 
@@ -408,7 +405,7 @@ JGMOD *load_s3m (char *filename, int start_offset)
             free (parapointer);
             destroy_mod (j);
             jgmod_fclose (f);
-            sprintf (jgmod_error, "Unable to allocate enough memory for data sample");
+            setError ("Unable to allocate enough memory for data sample");
             return null;
             }
 
@@ -448,7 +445,7 @@ JGMOD *load_s3m (char *filename, int start_offset)
             s->bits = 8;
             data = (char *)s->data;
 
-            jgmod_fread (s->data, s->len, f);
+            jgmod_fread ((char*)s->data, s->len, f);
             if (sf == 1)
                 for (counter=0; counter<s->len; counter++)
                     data[counter] ^= 0x80;
@@ -467,7 +464,7 @@ JGMOD *load_s3m (char *filename, int start_offset)
     memset (remap, -1, 32*sizeof(char));
 
 
-    if (fast_loading == TRUE)   // fast detection but less accurate
+    if (jgmod_player.fast_loading == TRUE)   // fast detection but less accurate
         {
        for (index=0; index<32; index++)
             {
@@ -529,13 +526,13 @@ JGMOD *load_s3m (char *filename, int start_offset)
 
     // -- this section initialize and load all the patterns -----------------
     // allocate patterns
-    j->pi = jgmod_calloc (sizeof(PATTERN_INFO) * actual_pat);
+    j->pi = (PATTERN_INFO*)jgmod_calloc (sizeof(PATTERN_INFO) * actual_pat);
     if (j->pi == null)
         {
         free (parapointer);
         destroy_mod (j);
         jgmod_fclose (f);
-        sprintf (jgmod_error, "Unable to allocate enough memory for PATTERN_INFO");
+        setError ("Unable to allocate enough memory for PATTERN_INFO");
         return null;
         }
 
@@ -544,13 +541,13 @@ JGMOD *load_s3m (char *filename, int start_offset)
         pi = j->pi + index;
         pi->no_pos = 64;
 
-        pi->ni = jgmod_calloc (sizeof(NOTE_INFO) * 64 * j->no_chn);
+        pi->ni = (NOTE_INFO*)jgmod_calloc (sizeof(NOTE_INFO) * 64 * j->no_chn);
         if (pi->ni == null)
             {
             free (parapointer);
             destroy_mod (j);
             jgmod_fclose (f);
-            sprintf (jgmod_error, "Unable to allocate enough memory for NOTE_INFO");
+            setError ("Unable to allocate enough memory for NOTE_INFO");
             return null;
             }
         }

@@ -354,7 +354,7 @@ int period2pitch (int period)
 
 void do_position_jump (int extcommand)
 {
-    if (enable_lasttrk_loop == TRUE)
+    if (jgmod_player.enable_lasttrk_loop == TRUE)
         {
         mi.new_trk = extcommand + 1;
 

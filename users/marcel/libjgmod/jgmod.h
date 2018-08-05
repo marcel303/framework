@@ -34,10 +34,6 @@
 #define FALSE 0
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define JGMOD_AUTHOR        "Guan Foo Wah"
 #define JGMOD_VERSION       0
 #define JGMOD_SUB_VERSION   99
@@ -357,6 +353,30 @@ typedef struct JGMOD_INFO
 
 }JGMOD_INFO;
 
+// todo : convert to C++ object
+// todo : add setError method, remove sprintf calls
+typedef struct JGMOD_PLAYER
+{
+	// load_s3m.cpp
+	int fast_loading;
+	
+	// mod.cpp
+	int enable_lasttrk_loop;
+	char jgmod_error[80];
+	int enable_m15;
+	
+	JGMOD_PLAYER()
+	{
+		// load_s3m.cpp
+		fast_loading = TRUE;
+		
+		// mod.cpp
+		enable_lasttrk_loop = TRUE;
+		jgmod_error[0] = 0;
+		enable_m15 = FALSE;
+	}
+}JGMOD_PLAYER;
+
 //-- externs -----------------------------------------------------------------
 
 // fixme : remove globals
@@ -365,10 +385,10 @@ extern volatile MUSIC_INFO mi;
 extern volatile int voice_table[];
 extern volatile CHANNEL_INFO ci[MAX_ALLEG_VOICE];
 extern volatile int mod_volume;
-extern int fast_loading;
-extern int enable_m15;
-extern int enable_lasttrk_loop;
-extern char jgmod_error[];
+
+extern JGMOD_PLAYER jgmod_player;
+
+void setError(const char * format, ...);
 
 //-- Prototypes --------------------------------------------------------------
 int install_mod(int no_voices);
@@ -392,9 +412,5 @@ void set_mod_speed (int speed);
 void set_mod_pitch (int pitch);
 void toggle_pause_mode (void);
 int get_mod_info (char *filename, JGMOD_INFO *ji);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif  // for JGMOD_H

@@ -25,6 +25,8 @@ volatile CHANNEL_INFO ci[MAX_ALLEG_VOICE];
 int volatile mod_volume = 255;
 JGMOD *of=null;
 
+JGMOD_PLAYER jgmod_player;
+
 
 // -- Prototypes -------------------------------------------------------------
 void lock_jgmod_stuff (void);

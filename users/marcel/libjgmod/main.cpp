@@ -68,7 +68,7 @@ static int do_load(const char * filename)
 	
     if (the_mod == nullptr)
 	{
-        logError("%s", jgmod_error);
+        logError("%s", jgmod_player.jgmod_error);
         return 1;
 	}
 
@@ -197,9 +197,9 @@ static void drawTest()
 
 int main(int argc, char **argv)
 {
-    fast_loading = FALSE;
-    enable_m15 = TRUE;
-    enable_lasttrk_loop = TRUE;
+    jgmod_player.fast_loading = FALSE;
+    jgmod_player.enable_m15 = TRUE;
+    jgmod_player.enable_lasttrk_loop = TRUE;
 
     srand(time(0));
 

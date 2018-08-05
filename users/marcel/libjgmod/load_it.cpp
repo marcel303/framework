@@ -92,7 +92,7 @@ int get_it_info(char *filename, int start_offset, JGMOD_INFO *ji)
     f = jgmod_fopen (filename, "rb");
     if (f == null)
         {
-        sprintf (jgmod_error, "Unable to open %s", filename);
+        setError ("Unable to open %s", filename);
         return -1;
         }
 
@@ -123,10 +123,10 @@ JGMOD *load_it (char *filename, int start_offset)
     if (f == null)
         return null;
 
-    j = jgmod_calloc ( sizeof (JGMOD));
+    j = (JGMOD*)jgmod_calloc ( sizeof (JGMOD));
     if (j == null)
         {
-        sprintf (jgmod_error, "Unable to allocate enough memory for JGMOD structure");
+        setError ("Unable to allocate enough memory for JGMOD structure");
         jgmod_fclose (f);
         return null;
         }
@@ -140,7 +140,7 @@ JGMOD *load_it (char *filename, int start_offset)
 
 
 
-    sprintf (jgmod_error, "IT support is not completed yet. Wait a few more versions");
+    setError ("IT support is not completed yet. Wait a few more versions");
     jgmod_fclose (f);
     destroy_mod (j);
     return null;

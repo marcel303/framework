@@ -11,10 +11,12 @@
  *
  *  Most of the user functions are located here. */
 
+#include <stdarg.h>
 #include <stdio.h>
 #include "framework-allegro2.h"
 #include "jgmod.h"
 #include "file_io.h"
+#include "StringEx.h"
 
 
 
@@ -58,9 +60,17 @@ void _unlock_dpmi_data(void *addr, int size);
 // fixme : remove globals
 static SAMPLE *fake_sample = null;
 static int mod_init=FALSE;
-int enable_lasttrk_loop = TRUE;
-char jgmod_error[80] = "\n";
-int enable_m15 = FALSE;
+
+void setError(const char * format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(
+		jgmod_player.jgmod_error,
+		sizeof(jgmod_player.jgmod_error),
+		format, args);
+	va_end(args);
+}
 
 int install_mod(int max_chn)
 {
@@ -78,7 +88,7 @@ int install_mod(int max_chn)
                                                     // into giving me voice
     if (fake_sample == null)                        // channels
         {
-        sprintf (jgmod_error, "Unable to setup initialization sample");
+        setError ("Unable to setup initialization sample");
         return -1;
         }
 
@@ -98,7 +108,7 @@ int install_mod(int max_chn)
 
     if (fake_sample->data == null)
         {
-        sprintf (jgmod_error, "JGMOD : Not enough memory to setup initialization sample");
+        setError ("JGMOD : Not enough memory to setup initialization sample");
         free (fake_sample);
         return -1;
         }
@@ -125,7 +135,7 @@ int install_mod(int max_chn)
                 voice_table[index] = -1;
                 }
 
-        sprintf (jgmod_error, "JGMOD : Unable to allocate enough voices");
+        setError ("JGMOD : Unable to allocate enough voices");
         return -1;
         }
 
@@ -166,7 +176,7 @@ JGMOD *load_mod (char *filename)
             }
         else
             {
-            sprintf (jgmod_error, "Unable to open %s", filename);
+            setError ("Unable to open %s", filename);
             return null;
             }
         }
@@ -195,13 +205,13 @@ JGMOD *load_mod (char *filename)
     if (temp > 0)
         return load_s3m (filename, temp);
 
-    if (enable_m15 == TRUE)            //detect this last
+    if (jgmod_player.enable_m15 == TRUE)            //detect this last
         {
         if (detect_m15 (filename) == 1)        
             return load_m (filename, 15);
         }
 
-    sprintf (jgmod_error, "Unsupported MOD type or unable to open file");
+    setError ("Unsupported MOD type or unable to open file");
     return null;
 }
 
@@ -213,7 +223,7 @@ void play_mod (JGMOD *j, int loop)
 
     if (j == null)
         {
-        sprintf (jgmod_error, "Can't play a JGMOD pointer with null value");
+        setError ("Can't play a JGMOD pointer with null value");
         return;
         }
 
@@ -592,13 +602,13 @@ SAMPLE *get_jgmod_sample (JGMOD *j, int sample_no)
 {
     if (j == null)
         {
-        sprintf (jgmod_error, "JGMOD pointer passed in is a NULL value");
+        setError ("JGMOD pointer passed in is a NULL value");
         return null;
         }
 
     if ( (sample_no < 0) || (sample_no >= j->no_sample) )
         {
-        sprintf (jgmod_error, "Incorrect value of no sample found");
+        setError ("Incorrect value of no sample found");
         return null;
         }
     
@@ -704,13 +714,13 @@ int get_mod_info (char *filename, JGMOD_INFO *ji)
     if (temp > 0)
         return get_s3m_info (filename, temp, ji);
 
-    if (enable_m15 == TRUE)            //detect this last
+    if (jgmod_player.enable_m15 == TRUE)            //detect this last
         {
         if (detect_m15 (filename) == 1)        
             return get_m_info (filename, 15, ji);
         }
 
 
-    sprintf (jgmod_error, "Unsupported MOD type or unable to open file");
+    setError ("Unsupported MOD type or unable to open file");
     return -1;
 }
