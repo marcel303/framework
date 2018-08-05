@@ -333,6 +333,5 @@ JGMOD *JGMOD_PLAYER::load_jgm (JGMOD_FILE *f)
 
 #endif
 
-    lock_mod (j);
     return (j);
 }

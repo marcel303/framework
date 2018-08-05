@@ -354,8 +354,8 @@ typedef struct JGMOD_INFO
 
 }JGMOD_INFO;
 
-// todo : convert to C++ object
 // todo : add setError method, remove sprintf calls
+
 typedef struct JGMOD_PLAYER
 {
 	JGMOD *of;
@@ -417,12 +417,6 @@ typedef struct JGMOD_PLAYER
 	JGMOD *load_xm (char *filename, int start_offset);
 	JGMOD *load_jgm (JGMOD_FILE *f);
 	int calc_volume (int volume);
-	void lock_jgmod_player (void);
-	void lock_jgmod_player2(void);
-	void lock_jgmod_player3(void);
-	void lock_jgmod_player4(void);
-	void lock_jgmod_mod (void);
-	void lock_mod (JGMOD *j);
 	void *jgmod_calloc (int size);
 	static int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji);
 	static int get_it_info(char *filename, int start_offset, JGMOD_INFO *ji);

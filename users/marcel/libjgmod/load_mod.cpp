@@ -386,7 +386,6 @@ JGMOD *JGMOD_PLAYER::load_m (char *filename, int no_inst)
         j->restart_pos = 0;
 
     jgmod_fclose (f);
-    lock_mod (j);
     return j;
 }
 

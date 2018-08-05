@@ -18,13 +18,6 @@
 #include "file_io.h"
 #include "StringEx.h"
 
-#ifdef __ALLEGRO_DJGPP__
-/* <gfoot> I don't understand this. */
-void _unlock_dpmi_data(void *addr, int size);
-#else
-#define _unlock_dpmi_data(addr,size)
-#endif
-
 // fixme : remove globals
 static SAMPLE *fake_sample = null;
 static int mod_init=FALSE;
@@ -114,11 +107,6 @@ int install_mod(int max_chn)
     mod_init = TRUE;
 
     atexit (remove_mod);
-    jgmod_player.lock_jgmod_player();    // lock functions and variables in player.c
-    jgmod_player.lock_jgmod_player2();   // in player2.c
-    jgmod_player.lock_jgmod_player3();   // in player3.c
-    jgmod_player.lock_jgmod_player4();   // in player4.c
-    jgmod_player.lock_jgmod_mod();       // and mod.c
 
     return 1;
 }
@@ -462,13 +450,11 @@ void JGMOD_PLAYER::destroy_mod (JGMOD *j)
 
     if (j->si != null)
         {
-        _unlock_dpmi_data (j->si, sizeof (SAMPLE_INFO) * j->no_sample);
         free (j->si);
         }
 
     if (j->ii != null)
         {
-        _unlock_dpmi_data (j->ii, sizeof (INSTRUMENT_INFO) * j->no_instrument);
         free (j->ii);
         }
 
@@ -479,11 +465,9 @@ void JGMOD_PLAYER::destroy_mod (JGMOD *j)
             pi = j->pi+index;
             if (pi->ni != null)
                 {
-                _unlock_dpmi_data (pi->ni, sizeof (NOTE_INFO) * j->no_chn * pi->no_pos);
                 free (pi->ni);
                 }
             }
-        _unlock_dpmi_data (j->pi, sizeof (PATTERN_INFO) * j->no_pat);
         free (j->pi);
         }
 
@@ -493,16 +477,13 @@ void JGMOD_PLAYER::destroy_mod (JGMOD *j)
             {
             if (j->s[index].data)
                 {
-                _unlock_dpmi_data (j->s[index].data, j->s[index].len * (j->s[index].bits / 8) );
                 free (j->s[index].data);
                 }
             }
         }
 
-    _unlock_dpmi_data (j->s, sizeof (SAMPLE) * j->no_sample);
     free (j->s);
 
-    _unlock_dpmi_data (j, sizeof (JGMOD));
     free (j);
     j = null;
 }
@@ -526,43 +507,6 @@ void JGMOD_PLAYER::set_mod_volume (int volume)
 int JGMOD_PLAYER::get_mod_volume (void)
 {
     return mod_volume;
-}
-
-
-//to lock stuff in mod.c
-void JGMOD_PLAYER::lock_jgmod_mod(void)
-{
-    LOCK_FUNCTION (goto_mod_track);
-    LOCK_FUNCTION (play_mod);
-    LOCK_FUNCTION (stop_mod);
-}
-
-void JGMOD_PLAYER::lock_mod (JGMOD *j)
-{
-    int index;
-    PATTERN_INFO *pi;
-
-    if (j == null)
-        return;
-
-#ifdef __ALLEG_DJGPP__
-    _go32_dpmi_lock_data(j, sizeof(JGMOD));
-    _go32_dpmi_lock_data(j->si, sizeof(SAMPLE_INFO) * j->no_sample);
-    _go32_dpmi_lock_data(j->pi, sizeof(PATTERN_INFO) * j->no_pat);
-
-    if (j->ii != null)
-        _go32_dpmi_lock_data(j->ii, sizeof(INSTRUMENT_INFO) * j->no_instrument);
-
-    for (index=0; index<j->no_pat; index++)
-        {
-        pi = j->pi + index;
-        _go32_dpmi_lock_data(pi->ni, sizeof(NOTE_INFO) * pi->no_pos * j->no_chn);
-        }
-#endif
-
-    pi = j->pi;     // this does nothing except to 
-    for (index=0; index < j->no_sample; index++)
-        lock_sample (j->s + index);
 }
 
 // get a instrument from JGMOD structure

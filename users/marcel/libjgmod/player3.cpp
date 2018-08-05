@@ -373,26 +373,3 @@ void parse_note_command (int chn, int note)
         }
 
 }END_OF_FUNCTION (parse_note_command)
-
-
-void JGMOD_PLAYER::lock_jgmod_player3(void)
-{
-    LOCK_FUNCTION(parse_volume_command);
-    LOCK_FUNCTION(parse_note_command);
-
-    LOCK_FUNCTION(parse_s3m_volume_slide);
-    LOCK_FUNCTION(parse_s3m_portamento_down);
-    LOCK_FUNCTION(parse_s3m_portamento_up);
-    LOCK_FUNCTION(parse_s3m_arpeggio);
-    LOCK_FUNCTION(parse_tremor);
-    LOCK_FUNCTION(parse_s3m_panning);
-    LOCK_FUNCTION(parse_s3m_retrig);
-
-    LOCK_FUNCTION(do_s3m_volume_slide);
-    LOCK_FUNCTION(do_s3m_portamento);
-    LOCK_FUNCTION(do_s3m_set_tempo);
-    LOCK_FUNCTION(do_s3m_set_bpm);
-    LOCK_FUNCTION(do_tremor);
-    LOCK_FUNCTION(do_global_volume);
-    LOCK_FUNCTION(do_s3m_retrig);
-}

@@ -346,24 +346,3 @@ void parse_xm_set_envelop_position (volatile ENVELOPE_INFO *t, int extcommand)
         }
 
 }END_OF_FUNCTION (parse_xm_set_envelop_position);
-
-void JGMOD_PLAYER::lock_jgmod_player4 (void)
-{
-    LOCK_FUNCTION (parse_new_note);
-    LOCK_FUNCTION (parse_xm_volume_slide);
-    LOCK_FUNCTION (parse_xm_pitch_slide_up);
-    LOCK_FUNCTION (parse_xm_pitch_slide_down);
-    LOCK_FUNCTION (parse_xm_pan_slide);
-    LOCK_FUNCTION (parse_global_volume_slide);
-    LOCK_FUNCTION (parse_xm_set_envelop_position);
-
-    LOCK_FUNCTION (do_xm_volume_slide);
-    LOCK_FUNCTION (do_xm_pitch_slide_up);
-    LOCK_FUNCTION (do_xm_pitch_slide_down);
-    LOCK_FUNCTION (do_xm_pan_slide);
-    LOCK_FUNCTION (do_global_volume_slide);
-    LOCK_FUNCTION (do_xm_x);
-
-    LOCK_FUNCTION (start_envelope);
-    LOCK_FUNCTION (process_envelope);
-}

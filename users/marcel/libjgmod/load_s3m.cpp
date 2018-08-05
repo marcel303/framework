@@ -594,7 +594,6 @@ JGMOD *JGMOD_PLAYER::load_s3m (char *filename, int start_offset)
 
     free (parapointer);
     jgmod_fclose (f);
-    lock_mod (j);
     return j;
 }
 

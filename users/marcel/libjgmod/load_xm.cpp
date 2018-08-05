@@ -730,7 +730,6 @@ JGMOD *JGMOD_PLAYER::load_xm (char *filename, int start_offset)
 
     free (wv);
     jgmod_fclose (f);
-    lock_mod (j);
     return j;
 }
 

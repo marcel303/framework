@@ -26,11 +26,6 @@ int volatile mod_volume = 255;
 
 JGMOD_PLAYER jgmod_player;
 
-
-// -- Prototypes -------------------------------------------------------------
-void lock_jgmod_stuff (void);
-
-
 // the core of the mod player.
 void JGMOD_PLAYER::mod_interrupt (void)
 {
@@ -581,18 +576,3 @@ void JGMOD_PLAYER::mod_interrupt (void)
 }
 
 END_OF_FUNCTION (mod_interrupt)
-
-
-// to lock stuff in player.c
-void JGMOD_PLAYER::lock_jgmod_player (void)
-{
-    LOCK_FUNCTION(mod_interrupt);
-
-    LOCK_VARIABLE(mi);
-    LOCK_VARIABLE(mod_volume);
-    LOCK_VARIABLE (of);
-
-#ifdef __ALLEGRO_DJGPP__
-    _go32_dpmi_lock_data((void *)ci, sizeof(ci) * MAX_ALLEG_VOICE);
-#endif
-}
