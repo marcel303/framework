@@ -389,6 +389,9 @@ typedef struct JGMOD_PLAYER
 	}
 	
 	// main api
+	int init(int no_voices);
+	void shut (void);
+	
 	static JGMOD *load_mod (char *filename);
 	static void mod_interrupt_proc (void * data);
 	void mod_interrupt (void);
@@ -512,8 +515,5 @@ typedef struct JGMOD_PLAYER
 extern JGMOD_PLAYER jgmod_player;
 
 void setError(const char * format, ...);
-
-int install_mod(int no_voices);
-void remove_mod (void);
 
 #endif  // for JGMOD_H

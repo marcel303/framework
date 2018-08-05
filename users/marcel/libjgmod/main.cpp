@@ -250,7 +250,7 @@ int main(int argc, char **argv)
         old_chn_info[index].color = colorBlack;
 	}
 
-    if (install_mod(MAX_ALLEG_VOICE) < 0)
+    if (jgmod_player.init(MAX_ALLEG_VOICE) < 0)
 	{
         logError("unable to allocate %d voices", MAX_ALLEG_VOICE);
         return 1;
@@ -396,6 +396,10 @@ int main(int argc, char **argv)
 		}
 		framework.endDraw();
 	}
+	
+	jgmod_player.shut();
+	
+	framework.shutdown();
 	
     return 0;
 }

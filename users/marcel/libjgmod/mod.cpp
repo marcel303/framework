@@ -33,7 +33,7 @@ void setError(const char * format, ...)
 	va_end(args);
 }
 
-int install_mod(int max_chn)
+int JGMOD_PLAYER::init(int max_chn)
 {
     int index;
     int temp=0;
@@ -105,8 +105,6 @@ int install_mod(int max_chn)
     jgmod_player.mi.speed_ratio = 100;
     jgmod_player.mi.pitch_ratio = 100;
     mod_init = TRUE;
-
-    atexit (remove_mod);
 
     return 1;
 }
@@ -530,7 +528,7 @@ SAMPLE *JGMOD_PLAYER::get_jgmod_sample (JGMOD *j, int sample_no)
     return &(j->s[sample_no]);
 }
 
-void remove_mod (void)
+void JGMOD_PLAYER::shut (void)
 {
     int index;
 
