@@ -358,6 +358,8 @@ typedef struct JGMOD_INFO
 // todo : add setError method, remove sprintf calls
 typedef struct JGMOD_PLAYER
 {
+	JGMOD *of;
+	
 	// load_s3m.cpp
 	int fast_loading;
 	
@@ -368,6 +370,8 @@ typedef struct JGMOD_PLAYER
 	
 	JGMOD_PLAYER()
 	{
+		of = nullptr;
+		
 		// load_s3m.cpp
 		fast_loading = TRUE;
 		
@@ -430,7 +434,6 @@ typedef struct JGMOD_PLAYER
 //-- externs -----------------------------------------------------------------
 
 // fixme : remove globals
-extern JGMOD *of;
 extern volatile MUSIC_INFO mi;
 extern volatile int voice_table[];
 extern volatile CHANNEL_INFO ci[MAX_ALLEG_VOICE];

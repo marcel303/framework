@@ -312,16 +312,16 @@ int get_jgmod_sample_no (int instrument_no, int note_no)
     if (mi.flag & XM_MODE)
         {
         if (note_no > 95 || note_no < 0)
-            return (of->no_sample - 1);
+            return (jgmod_player.of->no_sample - 1);
 
-        if (instrument_no >= of->no_instrument || instrument_no < 0)
-            return (of->no_sample - 1);
+        if (instrument_no >= jgmod_player.of->no_instrument || instrument_no < 0)
+            return (jgmod_player.of->no_sample - 1);
 
-        ii = of->ii + instrument_no;
-        if (ii->sample_number[note_no] >= of->no_sample)
-            return (of->no_sample - 1);
+        ii = jgmod_player.of->ii + instrument_no;
+        if (ii->sample_number[note_no] >= jgmod_player.of->no_sample)
+            return (jgmod_player.of->no_sample - 1);
         else if (ii->sample_number[note_no] < 0)
-            return (of->no_sample - 1);
+            return (jgmod_player.of->no_sample - 1);
         else
             return ii->sample_number[note_no];
         }
@@ -332,7 +332,7 @@ int get_jgmod_sample_no (int instrument_no, int note_no)
 
 int period2pitch (int period)
 {
-    if ( (of->flag & XM_MODE) && (of->flag & LINEAR_MODE) )
+    if ( (jgmod_player.of->flag & XM_MODE) && (jgmod_player.of->flag & LINEAR_MODE) )
         {
         int temp;
         //char buf[108];
@@ -345,7 +345,7 @@ int period2pitch (int period)
         //temp >>= 2;
         return temp;
         }
-    else if ( (of->flag & XM_MODE) && (of->flag & PERIOD_MODE) )
+    else if ( (jgmod_player.of->flag & XM_MODE) && (jgmod_player.of->flag & PERIOD_MODE) )
         return 14317456L / period;
     else
         return ((NTSC << 2) / period);
@@ -359,7 +359,7 @@ void do_position_jump (int extcommand)
         mi.new_trk = extcommand + 1;
 
         if (mi.loop == TRUE)    
-            if (mi.new_trk > of->no_trk)
+            if (mi.new_trk > jgmod_player.of->no_trk)
                 mi.new_trk = 1;
 
         if (!mi.new_pos)
@@ -367,7 +367,7 @@ void do_position_jump (int extcommand)
         }
     else
         {
-        if (mi.trk < (of->no_trk-1))
+        if (mi.trk < (jgmod_player.of->no_trk-1))
             {
             mi.new_trk = extcommand + 1;
 
@@ -389,10 +389,10 @@ void do_pattern_break (int extcommand)
     mi.new_pos = (extcommand >> 4) * 10 + (extcommand & 0xF) + 1;
 
     if (mi.loop == TRUE)
-        if (mi.new_trk > of->no_trk)
+        if (mi.new_trk > jgmod_player.of->no_trk)
             mi.new_trk = 1;
 
-    pi = of->pi + *(of->pat_table + mi.new_trk-1);
+    pi = jgmod_player.of->pi + *(jgmod_player.of->pat_table + mi.new_trk-1);
 
     if ( (mi.new_pos-1) >= pi->no_pos)
          mi.new_pos -= 1;
@@ -646,7 +646,7 @@ void parse_old_note (int chn, int note, int sample_no)
 
     if (note > 0 && sample_no >= 0)
         {
-        si = of->si+sample_no;
+        si = jgmod_player.of->si+sample_no;
         ci[chn].sample = sample_no;
         ci[chn].volume = si->volume;
         ci[chn].c2spd = si->c2spd;
@@ -655,7 +655,7 @@ void parse_old_note (int chn, int note, int sample_no)
         }
     else if ( (note > 0) && (sample_no < 0) )  // only pitch specified
         {
-        si = of->si + ci[chn].sample;               
+        si = jgmod_player.of->si + ci[chn].sample;
         ci[chn].period = note2period (note, ci[chn].c2spd);
         ci[chn].kick = TRUE;
         }
@@ -664,7 +664,7 @@ void parse_old_note (int chn, int note, int sample_no)
         if ( (ci[chn].sample != sample_no) && (ci[chn].period > 0))
             ci[chn].kick = TRUE;
 
-        si = of->si + sample_no;
+        si = jgmod_player.of->si + sample_no;
         ci[chn].sample = sample_no;
         ci[chn].volume = si->volume;
         ci[chn].c2spd = si->c2spd;

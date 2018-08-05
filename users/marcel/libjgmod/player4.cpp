@@ -46,7 +46,7 @@ void parse_new_note (int chn, int note, int sample_no)
         ci[chn].instrument = sample_no;
         ci[chn].sample = get_jgmod_sample_no (sample_no, ci[chn].note);
 
-        si = of->si+ci[chn].sample;
+        si = jgmod_player.of->si+ci[chn].sample;
 
         ci[chn].volume = si->volume;
         ci[chn].transpose = si->transpose;
@@ -60,7 +60,7 @@ void parse_new_note (int chn, int note, int sample_no)
         ci[chn].note = note;
         ci[chn].sample = get_jgmod_sample_no (ci[chn].instrument, note);
 
-        si = of->si + ci[chn].sample;
+        si = jgmod_player.of->si + ci[chn].sample;
 
         ci[chn].transpose = si->transpose;
         ci[chn].c2spd = si->c2spd;
@@ -86,9 +86,9 @@ void parse_new_note (int chn, int note, int sample_no)
 
 
     // make sure it doesn't access invalid instruments with could happen
-    if ( (ci[chn].instrument < of->no_instrument) && (ci[chn].instrument >= 0) )
+    if ( (ci[chn].instrument < jgmod_player.of->no_instrument) && (ci[chn].instrument >= 0) )
         {
-        ii = of->ii+ci[chn].instrument;
+        ii = jgmod_player.of->ii+ci[chn].instrument;
         ci[chn].instfade = ii->volume_fadeout;
 
         // initialize the volume envelope
