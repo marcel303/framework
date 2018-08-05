@@ -369,7 +369,8 @@ struct TimerReg
 {
 	TimerReg * next;
 	
-	void (*proc)();
+	void (*proc)(void * data);
+	void * data;
 	std::atomic<bool> stop;
 	int delay;
 	int delayInSamples;
@@ -429,11 +430,25 @@ static int TimerThreadProc(void * obj)
 
 #endif
 
+typedef void (*TimerProc)();
+
+static void handle_int(void * data)
+{
+	TimerProc proc = (TimerProc)data;
+	
+	proc();
+}
+
 void install_int_ex(void (*proc)(), int speed)
+{
+	install_int_ex2(handle_int, speed, (void*)proc);
+}
+
+void install_int_ex2(void (*proc)(void * data), int speed, void * data)
 {
 	for (auto r = s_timerRegs; r != nullptr; r = s_timerRegs->next)
 	{
-		if (r->proc == proc)
+		if (r->proc == proc && r->data == data)
 		{
 			r->delay = speed;
 			r->delayInSamples = (int64_t(speed) * DIGI_SAMPLERATE) / 1000000;
@@ -444,6 +459,7 @@ void install_int_ex(void (*proc)(), int speed)
 	TimerReg * r = new TimerReg;
 	
 	r->proc = proc;
+	r->data = data;
 	r->stop = false;
 	r->delay = speed;
 	r->delayInSamples = (int64_t(speed) * DIGI_SAMPLERATE) / 1000000;
@@ -467,13 +483,18 @@ void install_int_ex(void (*proc)(), int speed)
 
 void remove_int(void (*proc)())
 {
+	remove_int2(handle_int, (void*)proc);
+}
+
+void remove_int2(void (*proc)(void * data), void * data)
+{
 	TimerReg ** r = &s_timerRegs;
 	
 	while ((*r) != nullptr)
 	{
 		TimerReg * t = *r;
 		
-		if ((*r)->proc == proc)
+		if ((*r)->proc == proc && (*r)->data == data)
 		{
 		#if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
 			audioStream->lock();
@@ -515,7 +536,7 @@ static void processInterrupts(const int numSamples)
 		{
 			r->sampleTime -= r->delayInSamples;
 			
-			r->proc();
+			r->proc(r->data);
 		}
 	}
 }

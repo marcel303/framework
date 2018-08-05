@@ -34,8 +34,8 @@ void do_s3m_set_bpm (int extcommand)
     else if ( (extcommand > 15) && (extcommand < 32) )
         mi.bpm -= extcommand - 16;
 
-    //remove_int (mod_interrupt);
-    install_int_ex (jgmod_player.mod_interrupt, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio));
+    //remove_int2 (mod_interrupt_proc, this);
+    install_int_ex2 (jgmod_player.mod_interrupt_proc, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio), &jgmod_player);
 }
 
 void parse_s3m_volume_slide (int chn, int extcommand)

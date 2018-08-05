@@ -27,6 +27,13 @@ int volatile mod_volume = 255;
 JGMOD_PLAYER jgmod_player;
 
 // the core of the mod player.
+void JGMOD_PLAYER::mod_interrupt_proc (void * data)
+{
+	JGMOD_PLAYER * self = (JGMOD_PLAYER*)data;
+	
+	self->mod_interrupt();
+}
+
 void JGMOD_PLAYER::mod_interrupt (void)
 {
     int chn=0;
@@ -36,7 +43,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
     NOTE_INFO *ni=null;
     PATTERN_INFO *pi;
 
-    if (jgmod_player.of == null)             //return if not playing music
+    if (of == null)             //return if not playing music
         return;
 
     if (mi.forbid == TRUE)
@@ -50,7 +57,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
         {
         mi.pos = mi.skip_pos-1;
         mi.trk = mi.skip_trk-1;
-        mi.pat = *(jgmod_player.of->pat_table + mi.trk);
+        mi.pat = *(of->pat_table + mi.trk);
         mi.tick = -1;
 
         mi.skip_pos = 0;
@@ -75,7 +82,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
 
         if (mi.trk == 0)            // restart the song if trk 0
             {
-            jgmod_player.play_mod (jgmod_player.of, mi.loop);
+            play_mod (of, mi.loop);
             return;
             }
         }
@@ -94,7 +101,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
         mi.tick = 0;
 
         // those darn pattern loop
-        for (chn=0; chn<(jgmod_player.of->no_chn); chn++)
+        for (chn=0; chn<(of->no_chn); chn++)
             {
             if (chn >= mi.max_chn)
                 continue;
@@ -113,7 +120,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
             {
             mi.pos = mi.new_pos-1;
             mi.trk = mi.new_trk-1;
-            mi.pat = *(jgmod_player.of->pat_table + mi.trk);
+            mi.pat = *(of->pat_table + mi.trk);
 
             mi.new_pos = 0;
             mi.new_trk = 0;
@@ -122,12 +129,12 @@ void JGMOD_PLAYER::mod_interrupt (void)
             {
             mi.pos++;
 
-            pi = jgmod_player.of->pi + mi.pat;
+            pi = of->pi + mi.pat;
             if (mi.pos >= pi->no_pos)
                 {
                 mi.pos = 0;
                 mi.trk++;
-                mi.pat = *(jgmod_player.of->pat_table + mi.trk);
+                mi.pat = *(of->pat_table + mi.trk);
 
                 for (chn=0; chn<mi.max_chn; chn++)
                     {
@@ -139,21 +146,21 @@ void JGMOD_PLAYER::mod_interrupt (void)
         }
 
 
-    if (mi.trk >= jgmod_player.of->no_trk)       //check for end of song
+    if (mi.trk >= of->no_trk)       //check for end of song
         {
         for (chn=0; chn<mi.max_chn; chn++)
             voice_stop (voice_table[chn]);
 
         if (mi.loop == FALSE)       // end the song
             {
-            jgmod_player.of = null;
+            of = null;
             mi.is_playing = FALSE;
             return;
             }
        else
            {
-           jgmod_player.play_mod (jgmod_player.of, TRUE);     // restart the song
-           jgmod_player.goto_mod_track (jgmod_player.of->restart_pos);
+           play_mod (of, TRUE);     // restart the song
+           goto_mod_track (of->restart_pos);
            return;
            }
         }
@@ -161,10 +168,10 @@ void JGMOD_PLAYER::mod_interrupt (void)
 
     if (mi.tick == 0)
         {
-        for (chn=0; chn<(jgmod_player.of->no_chn); chn++)
+        for (chn=0; chn<(of->no_chn); chn++)
             {
             ci[chn].global_volume_slide_on = FALSE;
-            ni = get_note (jgmod_player.of, mi.pat, mi.pos, chn);
+            ni = get_note (of, mi.pat, mi.pos, chn);
 
             if (chn<MAX_ALLEG_VOICE)
                 ci[chn].loop_on = FALSE;
@@ -202,12 +209,12 @@ void JGMOD_PLAYER::mod_interrupt (void)
 
 
         // the following are not global commands. Can be skipped
-        for (chn=0; chn<(jgmod_player.of->no_chn); chn++)
+        for (chn=0; chn<(of->no_chn); chn++)
             {
             if (chn >= mi.max_chn)
                 continue;
 
-            ni = get_note (jgmod_player.of, mi.pat, mi.pos, chn);
+            ni = get_note (of, mi.pat, mi.pos, chn);
 
             ci[chn].pan_slide_common = 0;
             ci[chn].pro_pitch_slide_on = FALSE;
@@ -239,11 +246,11 @@ void JGMOD_PLAYER::mod_interrupt (void)
                     {
                     SAMPLE_INFO *si;
 
-                    si = jgmod_player.of->si + get_jgmod_sample_no (sample_no, ci[chn].note);
+                    si = of->si + get_jgmod_sample_no (sample_no, ci[chn].note);
                     ci[chn].volume = si->volume;
                     }
                 else
-                    ci[chn].volume = jgmod_player.of->si[sample_no].volume;
+                    ci[chn].volume = of->si[sample_no].volume;
                 }
 
             if ( (ni->note > 0 || sample_no >= 0) && (ni->command != PTEFFECT_3)
@@ -412,7 +419,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
 // -- effects updated only after tick 0 --------------------------------------
     if (mi.tick)
         {
-        for (chn=0; chn < (jgmod_player.of->no_chn); chn++)
+        for (chn=0; chn < (of->no_chn); chn++)
             {
             if (chn >= mi.max_chn)
                 continue;
@@ -477,7 +484,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
         }
 
 // -- effects updated every tick ---------------------------------------------
-    for (chn=0; chn < (jgmod_player.of->no_chn); chn++)
+    for (chn=0; chn < (of->no_chn); chn++)
         {
         if (chn >= mi.max_chn)
             continue;
@@ -498,7 +505,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
         
 
 //-- updates the sound output ------------------------------------------------
-    for (chn=0; chn < (jgmod_player.of->no_chn); chn++)
+    for (chn=0; chn < (of->no_chn); chn++)
         {
         if (chn >= mi.max_chn)
             continue;
@@ -531,8 +538,8 @@ void JGMOD_PLAYER::mod_interrupt (void)
 
         if (ci[chn].kick == TRUE)       // start a sample
             {
-            s = jgmod_player.of->s + ci[chn].sample;
-            si= jgmod_player.of->si + ci[chn].sample;
+            s = of->s + ci[chn].sample;
+            si= of->si + ci[chn].sample;
 
             reallocate_voice (voice_table[chn], s);
 
@@ -557,7 +564,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
 
         process_envelope (&ci[chn].volenv, 64, ci[chn].keyon);
         process_envelope (&ci[chn].panenv, 32, ci[chn].keyon);
-        voice_set_volume (voice_table[chn], jgmod_player.calc_volume (chn));
+        voice_set_volume (voice_table[chn], calc_volume (chn));
         voice_set_pan (voice_table[chn], calc_pan (chn));
 
         if (ci[chn].keyon == TRUE)

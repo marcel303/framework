@@ -336,8 +336,8 @@ void JGMOD_PLAYER::play_mod (JGMOD *j, int loop)
 
     of = j;
 
-    //remove_int (mod_interrupt);
-    install_int_ex (mod_interrupt, BPM_TO_TIMER (24 * j->bpm * mi.speed_ratio / 100));
+    //remove_int2 (mod_interrupt_proc, this);
+    install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (24 * j->bpm * mi.speed_ratio / 100), this);
 }
 
 void JGMOD_PLAYER::stop_mod (void)
@@ -531,7 +531,7 @@ void remove_mod (void)
     int index;
 
     jgmod_player.stop_mod();
-    remove_int (jgmod_player.mod_interrupt);
+    remove_int2 (jgmod_player.mod_interrupt_proc, &jgmod_player);
 
     for (index=0; index<MAX_ALLEG_VOICE; index++)
         {
@@ -555,8 +555,8 @@ void JGMOD_PLAYER::set_mod_speed (int speed)
 
     if (is_mod_playing() == TRUE)
         {
-        //remove_int (mod_interrupt);
-        install_int_ex (mod_interrupt, BPM_TO_TIMER (24 * mi.bpm * mi.speed_ratio / 100));
+        //remove_int2 (mod_interrupt_proc, this);
+        install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (24 * mi.bpm * mi.speed_ratio / 100), this);
         }
 }
 

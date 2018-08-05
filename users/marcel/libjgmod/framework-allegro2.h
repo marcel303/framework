@@ -33,7 +33,9 @@ long file_size(const char * filename);
 char * get_extension(const char * filename);
 
 void install_int_ex(void (*proc)(), int speed);
+void install_int_ex2(void (*proc)(void * data), int speed, void * data);
 void remove_int(void (*proc)());
+void remove_int2(void (*proc)(void * data), void * data);
 
 void set_volume(int, int);
 

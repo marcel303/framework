@@ -382,7 +382,8 @@ typedef struct JGMOD_PLAYER
 	}
 	
 	JGMOD *load_mod (char *filename);
-	static void mod_interrupt (void);
+	static void mod_interrupt_proc (void * data);
+	void mod_interrupt (void);
 	void play_mod (JGMOD *j, int loop);
 	void next_mod_track (void);
 	void prev_mod_track (void);
