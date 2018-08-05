@@ -76,24 +76,24 @@ int install_mod(int max_chn)
 
     for (index=0; index<max_chn; index++)    //allocate all the voices
         {
-        voice_table[index] = allocate_voice (fake_sample);
-        if (voice_table[index] == -1)
+        jgmod_player.voice_table[index] = allocate_voice (fake_sample);
+        if (jgmod_player.voice_table[index] == -1)
             temp = -1;
         else
             {
             jgmod_player.ci[index].volume = 0;
-            voice_set_volume (voice_table[index], 0);
-            voice_start (voice_table[index]);
+            voice_set_volume (jgmod_player.voice_table[index], 0);
+            voice_start (jgmod_player.voice_table[index]);
             }
         }
     
     if (temp == -1)
         {
         for (index=0; index<max_chn; index++)
-            if (voice_table[index] != -1)
+            if (jgmod_player.voice_table[index] != -1)
                 {
-                deallocate_voice (voice_table[index]);
-                voice_table[index] = -1;
+                deallocate_voice (jgmod_player.voice_table[index]);
+                jgmod_player.voice_table[index] = -1;
                 }
 
         setError ("JGMOD : Unable to allocate enough voices");
@@ -535,10 +535,10 @@ void remove_mod (void)
 
     for (index=0; index<MAX_ALLEG_VOICE; index++)
         {
-        if (voice_table[index] >= 0)
-            deallocate_voice (voice_table[index]);
+        if (jgmod_player.voice_table[index] >= 0)
+            deallocate_voice (jgmod_player.voice_table[index]);
 
-        voice_table[index] = -1;
+        jgmod_player.voice_table[index] = -1;
         }
 
     mod_init = FALSE;

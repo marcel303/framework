@@ -140,10 +140,10 @@ static void drawTest()
 	
 	for (int chn = start_chn; chn < end_chn; ++chn)
 	{
-		if (voice_get_position(voice_table[chn]) < 0 ||
+		if (voice_get_position(jgmod_player.voice_table[chn]) < 0 ||
 			jgmod_player.ci[chn].volume < 1 ||
 			jgmod_player.ci[chn].volenv.v < 1 ||
-			voice_get_frequency(voice_table[chn]) <= 0 ||
+			voice_get_frequency(jgmod_player.voice_table[chn]) <= 0 ||
 			(jgmod_player.mi.global_volume <= 0))
 		{
 			continue;
@@ -163,9 +163,9 @@ static void drawTest()
 			float xpos;
 			
 			if (jgmod_player.mi.flag & XM_MODE)
-				xpos = voice_get_frequency(voice_table[chn]);
+				xpos = voice_get_frequency(jgmod_player.voice_table[chn]);
 			else
-				xpos = voice_get_frequency(voice_table[chn]) * 8363.f / jgmod_player.ci[chn].c2spd;
+				xpos = voice_get_frequency(jgmod_player.voice_table[chn]) * 8363.f / jgmod_player.ci[chn].c2spd;
 
 			xpos /= note_length;
 			xpos += note_relative_pos;
@@ -378,13 +378,13 @@ int main(int argc, char **argv)
 					drawCircle(index);
 				}
 
-				if (voice_get_position(voice_table[index]) >= 0 &&
+				if (voice_get_position(jgmod_player.voice_table[index]) >= 0 &&
 					jgmod_player.ci[index].volume >= 1 &&
 					jgmod_player.ci[index].volenv.v >= 1 &&
-					voice_get_frequency(voice_table[index]) > 0 &&
+					voice_get_frequency(jgmod_player.voice_table[index]) > 0 &&
 					jgmod_player.mi.global_volume > 0)
 				{
-					drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3d %2d %6dHz %3d ", index+1, jgmod_player.ci[index].sample+1, jgmod_player.ci[index].volume,  voice_get_frequency(voice_table[index]), jgmod_player.ci[index].pan);
+					drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3d %2d %6dHz %3d ", index+1, jgmod_player.ci[index].sample+1, jgmod_player.ci[index].volume,  voice_get_frequency(jgmod_player.voice_table[index]), jgmod_player.ci[index].pan);
 					//textprintf (screen, font, 0,82+(index-start_chn)*bitmap_height, font_color, "%2d: %3d %2d %6dHz %3d %d %d", index+1, ci[index].sample+1, ci[index].volume,  voice_get_frequency(voice_table[index]), ci[index].pan, ci[index].volenv.v, ci[index].volenv.p);
 				}
 				else
@@ -402,10 +402,10 @@ int main(int argc, char **argv)
 
 static void drawCircle(int chn)
 {
-    if (voice_get_position(voice_table[chn]) >= 0 &&
+    if (voice_get_position(jgmod_player.voice_table[chn]) >= 0 &&
     	jgmod_player.ci[chn].volume >= 1 &&
     	jgmod_player.ci[chn].volenv.v >= 1 &&
-    	voice_get_frequency(voice_table[chn]) > 0 &&
+    	voice_get_frequency(jgmod_player.voice_table[chn]) > 0 &&
     	(jgmod_player.mi.global_volume > 0))
 	{
 		gxPushMatrix();
@@ -419,9 +419,9 @@ static void drawCircle(int chn)
 			float xpos;
 			
 			if (jgmod_player.mi.flag & XM_MODE)
-				xpos = voice_get_frequency(voice_table[chn]);
+				xpos = voice_get_frequency(jgmod_player.voice_table[chn]);
 			else
-				xpos = voice_get_frequency(voice_table[chn]) * 8363.f / jgmod_player.ci[chn].c2spd;
+				xpos = voice_get_frequency(jgmod_player.voice_table[chn]) * 8363.f / jgmod_player.ci[chn].c2spd;
 
 			xpos /= note_length;
 			xpos += note_relative_pos;

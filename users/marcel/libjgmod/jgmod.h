@@ -360,7 +360,7 @@ typedef struct JGMOD_PLAYER
 {
 	JGMOD *of;
 	volatile MUSIC_INFO mi;
-	//volatile int voice_table[];
+	volatile int voice_table[MAX_ALLEG_VOICE];
 	volatile CHANNEL_INFO ci[MAX_ALLEG_VOICE];
 	volatile int mod_volume;
 	
@@ -375,6 +375,8 @@ typedef struct JGMOD_PLAYER
 	JGMOD_PLAYER()
 	{
 		of = nullptr;
+		for (int i = 0; i < MAX_ALLEG_VOICE; ++i)
+			voice_table[i] = -1;
 		mod_volume = 255;
 		
 		// load_s3m.cpp
@@ -505,8 +507,6 @@ typedef struct JGMOD_PLAYER
 //-- externs -----------------------------------------------------------------
 
 // fixme : remove globals
-extern volatile int voice_table[];
-
 extern JGMOD_PLAYER jgmod_player;
 
 void setError(const char * format, ...);
