@@ -336,11 +336,11 @@ int JGMOD_PLAYER::period2pitch (int period)
 
 void JGMOD_PLAYER::do_position_jump (int extcommand)
 {
-    if (enable_lasttrk_loop == TRUE)
+    if (enable_lasttrk_loop == true)
         {
         mi.new_trk = extcommand + 1;
 
-        if (mi.loop == TRUE)    
+        if (mi.loop == true)
             if (mi.new_trk > of->no_trk)
                 mi.new_trk = 1;
 
@@ -370,7 +370,7 @@ void JGMOD_PLAYER::do_pattern_break (int extcommand)
 
     mi.new_pos = (extcommand >> 4) * 10 + (extcommand & 0xF) + 1;
 
-    if (mi.loop == TRUE)
+    if (mi.loop == true)
         if (mi.new_trk > of->no_trk)
             mi.new_trk = 1;
 
@@ -407,7 +407,7 @@ void JGMOD_PLAYER::do_pattern_loop (int chn, int extcommand)
             ci[chn].loop_times = extcommand & 0xF;
 
         if (ci[chn].loop_times > 0)
-            ci[chn].loop_on = TRUE;
+            ci[chn].loop_on = true;
         else
             ci[chn].loop_start = mi.pos+1;
         }
@@ -415,7 +415,7 @@ void JGMOD_PLAYER::do_pattern_loop (int chn, int extcommand)
 
 void JGMOD_PLAYER::parse_pro_pitch_slide_up (int chn, int extcommand)
 {
-    ci[chn].pro_pitch_slide_on = TRUE;
+    ci[chn].pro_pitch_slide_on = true;
 
     if (extcommand) 
         ci[chn].pro_pitch_slide = (extcommand << 2);
@@ -425,7 +425,7 @@ void JGMOD_PLAYER::parse_pro_pitch_slide_up (int chn, int extcommand)
 
 void JGMOD_PLAYER::parse_pro_pitch_slide_down (int chn, int extcommand)
 {
-    ci[chn].pro_pitch_slide_on = TRUE;
+    ci[chn].pro_pitch_slide_on = true;
 
     if (extcommand) 
         ci[chn].pro_pitch_slide = (extcommand << 2);
@@ -446,7 +446,7 @@ void JGMOD_PLAYER::parse_vibrato (int chn, int extcommand, int shift)
     if (!ci[chn].period)
         return;
 
-    ci[chn].vibrato_on = TRUE;
+    ci[chn].vibrato_on = true;
     ci[chn].vibrato_shift = shift;
 
     if (extcommand >> 4)
@@ -496,7 +496,7 @@ void JGMOD_PLAYER::do_vibrato (int chn)
 
 void JGMOD_PLAYER::parse_tremolo (int chn, int extcommand, int shift)
 {
-    ci[chn].tremolo_on = TRUE;
+    ci[chn].tremolo_on = true;
     ci[chn].tremolo_shift = shift;
 
     if (extcommand & 0xF0)
@@ -560,7 +560,7 @@ void JGMOD_PLAYER::parse_slide2period (int chn, int extcommand, int note)
     if (!ci[chn].slide2period)
         return;
 
-    ci[chn].slide2period_on = TRUE;
+    ci[chn].slide2period_on = true;
 }
 
 void JGMOD_PLAYER::do_slide2period (int chn)
@@ -591,7 +591,7 @@ void JGMOD_PLAYER::parse_pro_arpeggio (int chn, int extcommand)
     if (extcommand)
         {
         ci[chn].arpeggio = extcommand;
-        ci[chn].arpeggio_on = TRUE;
+        ci[chn].arpeggio_on = true;
         }
 
 }
@@ -611,11 +611,11 @@ void JGMOD_PLAYER::do_delay_sample (int chn)
 {
     if (mi.tick == ci[chn].delay_sample)
         {
-        ci[chn].kick = TRUE;
+        ci[chn].kick = true;
         ci[chn].delay_sample = 0;
         }
     else
-        ci[chn].kick = FALSE;
+        ci[chn].kick = false;
 
 }
 
@@ -630,18 +630,18 @@ void JGMOD_PLAYER::parse_old_note (int chn, int note, int sample_no)
         ci[chn].volume = si->volume;
         ci[chn].c2spd = si->c2spd;
         ci[chn].period = note2period (note, ci[chn].c2spd);
-        ci[chn].kick = TRUE;
+        ci[chn].kick = true;
         }
     else if ( (note > 0) && (sample_no < 0) )  // only pitch specified
         {
         si = of->si + ci[chn].sample;
         ci[chn].period = note2period (note, ci[chn].c2spd);
-        ci[chn].kick = TRUE;
+        ci[chn].kick = true;
         }
     else if ( (note <= 0) && (sample_no >= 0) ) // only sample_spedified
         {
         if ( (ci[chn].sample != sample_no) && (ci[chn].period > 0))
-            ci[chn].kick = TRUE;
+            ci[chn].kick = true;
 
         si = of->si + sample_no;
         ci[chn].sample = sample_no;
@@ -686,9 +686,9 @@ void JGMOD_PLAYER::parse_extended_command (int chn, int extcommand)
         case 3:     // glissando
             {
             if (extcommand & 0xF)
-                ci[chn].glissando = TRUE;
+                ci[chn].glissando = true;
             else
-                ci[chn].glissando = FALSE;
+                ci[chn].glissando = false;
 
             break;
             }

@@ -16,7 +16,7 @@ int detect_unreal_it (const char *filename);
 int detect_unreal_xm (const char *filename);
 int detect_unreal_s3m (const char *filename);
 JGMOD *load_m (const char *filename, int no_inst);
-JGMOD *load_s3m (const char *filename, int start_offset, int fast_loading);
+JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading);
 JGMOD *load_it (const char *filename, int start_offset);
 JGMOD *load_xm (const char *filename, int start_offset);
 JGMOD *load_jgm (JGMOD_FILE *f);

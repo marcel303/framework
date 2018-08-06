@@ -236,7 +236,7 @@ void convert_s3m_pitch (int *pitch)
 
 
 // load a s3m file
-JGMOD *load_s3m (const char *filename, int start_offset, int fast_loading)
+JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
 {
     JGMOD_FILE *f;
     JGMOD *j;
@@ -460,7 +460,7 @@ JGMOD *load_s3m (const char *filename, int start_offset, int fast_loading)
     memset (remap, -1, 32*sizeof(char));
 
 
-    if (fast_loading == TRUE)   // fast detection but less accurate
+    if (fast_loading == true)   // fast detection but less accurate
         {
        for (index=0; index<32; index++)
             {

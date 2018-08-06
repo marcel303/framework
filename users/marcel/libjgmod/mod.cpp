@@ -38,7 +38,7 @@ int JGMOD_PLAYER::init(int max_chn)
     int index;
     int temp=0;
 
-    if (mod_init == TRUE)      // don't need to initialize many times
+    if (mod_init == true)      // don't need to initialize many times
         return 1;
 
     if ( (max_chn > MAX_ALLEG_VOICE) || (max_chn <= 0) )
@@ -101,10 +101,10 @@ int JGMOD_PLAYER::init(int max_chn)
         }
 
     mi.max_chn = max_chn;
-    mi.is_playing = FALSE;
+    mi.is_playing = false;
     mi.speed_ratio = 100;
     mi.pitch_ratio = 100;
-    mod_init = TRUE;
+    mod_init = true;
 
     return 1;
 }
@@ -112,7 +112,7 @@ int JGMOD_PLAYER::init(int max_chn)
 // load supported types of mod files.
 // Detect the type first.
 // Then call for the appropriate loader.
-JGMOD *JGMOD_PLAYER::load_mod (const char *filename, int fast_loading, int enable_m15)
+JGMOD *JGMOD_PLAYER::load_mod (const char *filename, bool fast_loading, bool enable_m15)
 {
     int temp;
 
@@ -159,7 +159,7 @@ JGMOD *JGMOD_PLAYER::load_mod (const char *filename, int fast_loading, int enabl
     if (temp > 0)
         return jgmod::load_s3m (filename, temp, fast_loading);
 
-    if (enable_m15 == TRUE)            //detect this last
+    if (enable_m15 == true)            //detect this last
         {
         if (jgmod::detect_m15 (filename) == 1)
             return jgmod::load_m (filename, 15);
@@ -187,8 +187,8 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop)
     mi.flag = j->flag;
     for (index=0 ;index<MAX_ALLEG_VOICE; index++)
         {
-        ci[index].keyon = FALSE;
-        ci[index].kick = FALSE;
+        ci[index].keyon = false;
+        ci[index].kick = false;
         ci[index].instrument = 0;
         ci[index].note = 0;
         ci[index].sample = 0;
@@ -205,51 +205,51 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop)
         ci[index].pan_slide_left = 0;
         ci[index].pan_slide_right = 0;
 
-        ci[index].pro_pitch_slide_on = FALSE;
+        ci[index].pro_pitch_slide_on = false;
         ci[index].pro_pitch_slide = 0;
         ci[index].pro_fine_pitch_slide = 0;
-        ci[index].s3m_pitch_slide_on = FALSE;
+        ci[index].s3m_pitch_slide_on = false;
         ci[index].s3m_pitch_slide = 0;
         ci[index].s3m_fine_pitch_slide = 0;
-        ci[index].xm_pitch_slide_up_on = FALSE;
+        ci[index].xm_pitch_slide_up_on = false;
         ci[index].xm_pitch_slide_up = 0;
-        ci[index].xm_pitch_slide_down_on = FALSE;
+        ci[index].xm_pitch_slide_down_on = false;
         ci[index].xm_pitch_slide_down = 0;
         ci[index].xm_fine_pitch_slide_up = 0;
         ci[index].xm_fine_pitch_slide_down = 0;
 
         ci[index].pro_volume_slide = 0;
-        ci[index].s3m_volume_slide_on = FALSE;
+        ci[index].s3m_volume_slide_on = false;
         ci[index].s3m_fine_volume_slide = 0;
         ci[index].s3m_volume_slide = 0;
-        ci[index].xm_volume_slide_on = FALSE;
+        ci[index].xm_volume_slide_on = false;
         ci[index].xm_volume_slide = 0;
         ci[index].xm_fine_volume_slide_up = 0;
         ci[index].xm_fine_volume_slide_down = 0;
 
-        ci[index].loop_on = FALSE;
+        ci[index].loop_on = false;
         ci[index].loop_start = 0;
         ci[index].loop_times = 0;
 
-        ci[index].tremolo_on = FALSE;
+        ci[index].tremolo_on = false;
         ci[index].tremolo_waveform = 0;
         ci[index].tremolo_pointer = 0;
         ci[index].tremolo_speed = 0;
         ci[index].tremolo_depth = 0;
         ci[index].tremolo_shift = 6;
 
-        ci[index].vibrato_on = FALSE;
+        ci[index].vibrato_on = false;
         ci[index].vibrato_waveform = 0;
         ci[index].vibrato_pointer = 0;
         ci[index].vibrato_speed = 0;
         ci[index].vibrato_depth = 0;
         ci[index].vibrato_shift = 5;
 
-        ci[index].slide2period_on = FALSE;
+        ci[index].slide2period_on = false;
         ci[index].slide2period_spd = 0;
         ci[index].slide2period = 0;
 
-        ci[index].arpeggio_on = TRUE;
+        ci[index].arpeggio_on = true;
         ci[index].arpeggio = 0;
 
         ci[index].tremor_on = 0;
@@ -258,16 +258,16 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop)
 
         ci[index].delay_sample = 0;
         ci[index].cut_sample = 0;
-        ci[index].glissando = FALSE;
+        ci[index].glissando = false;
         ci[index].retrig = 0;
-        ci[index].s3m_retrig_on = FALSE;
+        ci[index].s3m_retrig_on = false;
         ci[index].s3m_retrig = 0;
         ci[index].s3m_retrig_slide = 0;
 
-        ci[index].sample_offset_on = FALSE;
+        ci[index].sample_offset_on = false;
         ci[index].sample_offset = 0;
 
-        ci[index].global_volume_slide_on = FALSE;
+        ci[index].global_volume_slide_on = false;
         ci[index].global_volume_slide = 0;
 
         ci[index].volenv.flg = 0;
@@ -323,14 +323,14 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop)
     mi.new_pos = 0;
     mi.new_trk = 0;
     mi.pattern_delay = 0;
-    mi.pause   = FALSE;
-    mi.forbid  = FALSE;
-    mi.is_playing = TRUE;
+    mi.pause   = false;
+    mi.forbid  = false;
+    mi.is_playing = true;
 
-    if (loop == FALSE)
-        mi.loop = FALSE;
+    if (loop == false)
+        mi.loop = false;
     else
-        mi.loop = TRUE;
+        mi.loop = true;
 
     of = j;
 
@@ -345,8 +345,8 @@ void JGMOD_PLAYER::stop (void)
     if (of == nullptr)
         return;
 
-    mi.forbid = TRUE;
-    mi.is_playing = FALSE;
+    mi.forbid = true;
+    mi.is_playing = false;
     mi.trk = 0;
     for (index=0; index<(mi.max_chn); index++)
         {
@@ -355,22 +355,22 @@ void JGMOD_PLAYER::stop (void)
         }
         
     of = nullptr;
-    mi.forbid = FALSE;
+    mi.forbid = false;
 }
 
 void JGMOD_PLAYER::next_track (void)
 {
-    mi.forbid = TRUE;
+    mi.forbid = true;
 
     mi.skip_pos = 1;
     mi.skip_trk = mi.trk + 2;
 
-    mi.forbid = FALSE;
+    mi.forbid = false;
 }
 
 void JGMOD_PLAYER::prev_track (void)
 {
-    mi.forbid = TRUE;
+    mi.forbid = true;
 
     mi.skip_pos = 1;
     mi.skip_trk = mi.trk;
@@ -378,22 +378,22 @@ void JGMOD_PLAYER::prev_track (void)
     if (mi.skip_trk < 1)
         mi.skip_trk = 1;
 
-    mi.forbid = FALSE;
+    mi.forbid = false;
 }
 
 void JGMOD_PLAYER::goto_track (int new_track)
 {
-    mi.forbid = TRUE;
+    mi.forbid = true;
 
     mi.skip_pos = 1;
     mi.skip_trk = new_track+1;
     if (mi.skip_trk < 1)
         mi.skip_trk = 1;
 
-    mi.forbid = FALSE;
+    mi.forbid = false;
 }
 
-int JGMOD_PLAYER::is_playing (void)
+bool JGMOD_PLAYER::is_playing (void)
 {
     return (mi.is_playing);
 }
@@ -402,33 +402,33 @@ void JGMOD_PLAYER::pause (void)
 {
     int index;
 
-    mi.forbid = TRUE;
-    mi.pause = TRUE;
+    mi.forbid = true;
+    mi.pause = true;
     for (index=0; index<(mi.max_chn); index++)
         voice_stop (voice_table[index]);
 
-    mi.forbid = FALSE;
+    mi.forbid = false;
 }
 
 void JGMOD_PLAYER::resume (void)
 {
     int index;
 
-    mi.forbid = TRUE;
-    mi.pause = FALSE;
+    mi.forbid = true;
+    mi.pause = false;
     for (index=0; index<(mi.max_chn); index++)
         {
         if (voice_get_position (voice_table[index]) >=0)
             voice_start (voice_table[index]);
         }
 
-    mi.forbid = FALSE;
+    mi.forbid = false;
 }
 
-int JGMOD_PLAYER::is_paused (void)
+bool JGMOD_PLAYER::is_paused (void)
 {
-    if (is_playing() == FALSE)
-        return FALSE;
+    if (is_playing() == false)
+        return false;
 
     return (mi.pause);
 }
@@ -495,7 +495,7 @@ void JGMOD_PLAYER::shut (void)
         voice_table[index] = -1;
         }
 
-    mod_init = FALSE;
+    mod_init = false;
 }
 
 void JGMOD_PLAYER::set_speed (int speed)
@@ -507,7 +507,7 @@ void JGMOD_PLAYER::set_speed (int speed)
 
     mi.speed_ratio = speed;
 
-    if (is_playing() == TRUE)
+    if (is_playing() == true)
         {
         //remove_int2 (mod_interrupt_proc, this);
         install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (24 * mi.bpm * mi.speed_ratio / 100), this);
@@ -527,14 +527,14 @@ void JGMOD_PLAYER::set_pitch (int pitch)
 
 void JGMOD_PLAYER::toggle_pause_mode (void)
 {
-    if (is_paused() == TRUE)
+    if (is_paused() == true)
         resume();
     else
         pause();
 }
 
 
-int JGMOD_PLAYER::get_info (const char *filename, JGMOD_INFO *ji, int enable_m15)
+int JGMOD_PLAYER::get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15)
 {
     int temp;
 
@@ -579,7 +579,7 @@ int JGMOD_PLAYER::get_info (const char *filename, JGMOD_INFO *ji, int enable_m15
     if (temp > 0)
         return jgmod::get_s3m_info (filename, temp, ji);
 
-    if (enable_m15 == TRUE)            //detect this last
+    if (enable_m15 == true)            //detect this last
         {
         if (jgmod::detect_m15 (filename) == 1)
             return jgmod::get_m_info (filename, 15, ji);

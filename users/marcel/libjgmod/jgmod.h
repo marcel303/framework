@@ -7,14 +7,6 @@
     #define JGM_ID  DAT_ID('J','G','M',' ')
 #endif
 
-#ifndef TRUE
-#define TRUE -1
-#endif
-
-#ifndef FALSE
-#define FALSE 0
-#endif
-
 #define JGMOD_AUTHOR        "Guan Foo Wah"
 #define JGMOD_VERSION       0
 #define JGMOD_SUB_VERSION   99
@@ -338,7 +330,7 @@ typedef struct JGMOD_INFO
 
 typedef struct JGMOD_PLAYER
 {
-	int mod_init;
+	bool mod_init;
 	SAMPLE *fake_sample;
 	
 	JGMOD *of;
@@ -348,15 +340,15 @@ typedef struct JGMOD_PLAYER
 	volatile int mod_volume;
 	
 	// load_s3m.cpp
-	int fast_loading;
+	bool fast_loading;
 	
 	// mod.cpp
-	int enable_lasttrk_loop;
-	int enable_m15;
+	bool enable_lasttrk_loop;
+	bool enable_m15;
 	
 	JGMOD_PLAYER()
 	{
-		mod_init = FALSE;
+		mod_init = false;
 		fake_sample = nullptr;
 		
 		of = nullptr;
@@ -365,18 +357,18 @@ typedef struct JGMOD_PLAYER
 		mod_volume = 255;
 		
 		// load_s3m.cpp
-		fast_loading = TRUE;
+		fast_loading = true;
 		
 		// mod.cpp
-		enable_lasttrk_loop = TRUE;
-		enable_m15 = FALSE;
+		enable_lasttrk_loop = true;
+		enable_m15 = false;
 	}
 	
 	// main api
 	int init(int no_voices);
 	void shut (void);
 	
-	static JGMOD *load_mod (const char *filename, int fast_loading = TRUE, int enable_m15 = FALSE);
+	static JGMOD *load_mod (const char *filename, bool fast_loading = true, bool enable_m15 = false);
 	static void mod_interrupt_proc (void * data);
 	void mod_interrupt (void);
 	void play (JGMOD *j, int loop);
@@ -384,10 +376,10 @@ typedef struct JGMOD_PLAYER
 	void prev_track (void);
 	void goto_track (int new_track);
 	void stop (void);
-	int is_playing (void);
+	bool is_playing (void);
 	void pause (void);
 	void resume (void);
-	int is_paused (void);
+	bool is_paused (void);
 	void destroy_mod();
 	void set_volume (int volume);
 	int get_volume (void);
@@ -396,7 +388,7 @@ typedef struct JGMOD_PLAYER
 	void set_pitch (int pitch);
 	void toggle_pause_mode (void);
 	
-	static int get_info (const char *filename, JGMOD_INFO *ji, int enable_m15 = FALSE);
+	static int get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15 = false);
 	
 	// -- located in player2.c ---------------------------------------------------
 	int find_lower_period(int period, int times);

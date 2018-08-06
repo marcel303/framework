@@ -45,7 +45,7 @@ void JGMOD_PLAYER::parse_s3m_volume_slide (int chn, int extcommand)
         {
         ci[chn].s3m_fine_volume_slide = -(extcommand & 0xF);
         ci[chn].s3m_volume_slide = 0;
-        ci[chn].s3m_volume_slide_on = TRUE;
+        ci[chn].s3m_volume_slide_on = true;
         }
 
     // fine volume slide up
@@ -53,7 +53,7 @@ void JGMOD_PLAYER::parse_s3m_volume_slide (int chn, int extcommand)
         {
         ci[chn].s3m_fine_volume_slide = ((extcommand & 0xF0) >> 4);
         ci[chn].s3m_volume_slide = 0;
-        ci[chn].s3m_volume_slide_on = TRUE;
+        ci[chn].s3m_volume_slide_on = true;
         }
 
     // volume slide up
@@ -61,7 +61,7 @@ void JGMOD_PLAYER::parse_s3m_volume_slide (int chn, int extcommand)
         {
         ci[chn].s3m_volume_slide = extcommand >> 4;
         ci[chn].s3m_fine_volume_slide = 0;
-        ci[chn].s3m_volume_slide_on = TRUE;
+        ci[chn].s3m_volume_slide_on = true;
         }
 
     // volume slide down
@@ -69,10 +69,10 @@ void JGMOD_PLAYER::parse_s3m_volume_slide (int chn, int extcommand)
         {
         ci[chn].s3m_volume_slide = -(extcommand & 0xF);
         ci[chn].s3m_fine_volume_slide = 0;
-        ci[chn].s3m_volume_slide_on = TRUE;
+        ci[chn].s3m_volume_slide_on = true;
         }
     else if (extcommand == 0)          // continue volume slide 
-        ci[chn].s3m_volume_slide_on = TRUE;
+        ci[chn].s3m_volume_slide_on = true;
 
 }
 
@@ -117,7 +117,7 @@ void JGMOD_PLAYER::parse_s3m_portamento_up (int chn, int extcommand)
         ci[chn].s3m_fine_pitch_slide = -ABS(ci[chn].s3m_fine_pitch_slide);
         }
 
-    ci[chn].s3m_pitch_slide_on = TRUE;
+    ci[chn].s3m_pitch_slide_on = true;
 
 }
 
@@ -147,7 +147,7 @@ void JGMOD_PLAYER::parse_s3m_portamento_down (int chn, int extcommand)
         ci[chn].s3m_fine_pitch_slide = ABS(ci[chn].s3m_fine_pitch_slide);
      }
 
-     ci[chn].s3m_pitch_slide_on = TRUE;
+     ci[chn].s3m_pitch_slide_on = true;
 
 
 }
@@ -172,7 +172,7 @@ void JGMOD_PLAYER::parse_s3m_arpeggio (int chn, int extcommand)
     if (!ci[chn].period)
         return;
 
-    ci[chn].arpeggio_on = TRUE;
+    ci[chn].arpeggio_on = true;
     if (extcommand)
         ci[chn].arpeggio = extcommand;
 
@@ -186,7 +186,7 @@ void JGMOD_PLAYER::parse_tremor (int chn, int extcommand)
     off = (extcommand & 0xF) + 1;
 
     ci[chn].tremor_set = (on << 8) + off;
-    ci[chn].tremor_on = TRUE;
+    ci[chn].tremor_on = true;
 
 }
 
@@ -235,7 +235,7 @@ void JGMOD_PLAYER::parse_s3m_retrig (int chn, int extcommand)
         ci[chn].s3m_retrig_slide = ((extcommand & 0xF0) >> 4);
         }
 
-    ci[chn].s3m_retrig_on = TRUE;
+    ci[chn].s3m_retrig_on = true;
 
 }
 
@@ -245,7 +245,7 @@ void JGMOD_PLAYER::do_s3m_retrig (int chn)
         {
         if ( (mi.tick % ci[chn].s3m_retrig) == 0)
             {
-            ci[chn].kick = TRUE;
+            ci[chn].kick = true;
                 
             switch (ci[chn].s3m_retrig_slide)
                 {
@@ -360,14 +360,14 @@ void JGMOD_PLAYER::parse_note_command (int chn, int note)
 
     if (note == -2)
         {
-        ci[chn].keyon = TRUE;
+        ci[chn].keyon = true;
         if ( (ci[chn].volenv.flg & ENV_ON) == 0)
             ci[chn].volume = 0;            
         }
 	
     if (note == -3)
         {
-        ci[chn].keyon = FALSE;
+        ci[chn].keyon = false;
         }
 
 }

@@ -88,7 +88,7 @@ static int do_load(const char * filename)
 	jgmod_player.set_speed(starting_speed);
     jgmod_player.set_pitch(starting_pitch);
 	
-	return TRUE;
+	return true;
 }
 
 static void handleAction(const std::string & action, const Dictionary & d)
@@ -101,7 +101,7 @@ static void handleAction(const std::string & action, const Dictionary & d)
 		{
 			do_load(file.c_str());
 			
-			jgmod_player.play(the_mod, TRUE);
+			jgmod_player.play(the_mod, true);
 		}
 	}
 }
@@ -199,9 +199,9 @@ static void drawTest()
 
 int main(int argc, char **argv)
 {
-    jgmod_player.fast_loading = FALSE;
-    jgmod_player.enable_m15 = TRUE;
-    jgmod_player.enable_lasttrk_loop = TRUE;
+    jgmod_player.fast_loading = false;
+    jgmod_player.enable_m15 = true;
+    jgmod_player.enable_lasttrk_loop = true;
 
     srand(time(0));
 
@@ -225,7 +225,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (do_load(argv[1]) == FALSE)
+	if (do_load(argv[1]) == false)
 		return 1;
 	
 	framework.actionHandler = handleAction;
@@ -258,7 +258,7 @@ int main(int argc, char **argv)
         return 1;
 	}
 	
-    jgmod_player.play(the_mod, TRUE);
+    jgmod_player.play(the_mod, true);
 
     while (jgmod_player.is_playing())
 	{
@@ -305,7 +305,7 @@ int main(int argc, char **argv)
 		}
 		
 		if (keyboard.wentDown(SDLK_r, true))
-			jgmod_player.play (the_mod, TRUE);
+			jgmod_player.play (the_mod, true);
 		if (keyboard.wentDown(SDLK_p, true))
 			jgmod_player.toggle_pause_mode ();
 		

@@ -42,10 +42,10 @@ void JGMOD_PLAYER::mod_interrupt (void)
     if (of == nullptr)             //return if not playing music
         return;
 
-    if (mi.forbid == TRUE)
+    if (mi.forbid == true)
         return;
 
-    if (mi.pause == TRUE)       //return if music is paused
+    if (mi.pause == true)       //return if music is paused
         return;
 
     // prev_pattern() or next_pattern()
@@ -102,7 +102,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
             if (chn >= mi.max_chn)
                 continue;
 
-            if (ci[chn].loop_on == FALSE)
+            if (ci[chn].loop_on == false)
                 continue;
 
             if (ci[chn].loop_times > 0)
@@ -147,15 +147,15 @@ void JGMOD_PLAYER::mod_interrupt (void)
         for (chn=0; chn<mi.max_chn; chn++)
             voice_stop (voice_table[chn]);
 
-        if (mi.loop == FALSE)       // end the song
+        if (mi.loop == false)       // end the song
             {
             of = nullptr;
-            mi.is_playing = FALSE;
+            mi.is_playing = false;
             return;
             }
        else
            {
-           play (of, TRUE);     // restart the song
+           play (of, true);     // restart the song
            goto_track (of->restart_pos);
            return;
            }
@@ -166,11 +166,11 @@ void JGMOD_PLAYER::mod_interrupt (void)
         {
         for (chn=0; chn<(of->no_chn); chn++)
             {
-            ci[chn].global_volume_slide_on = FALSE;
+            ci[chn].global_volume_slide_on = false;
             ni = get_note (of, mi.pat, mi.pos, chn);
 
             if (chn<MAX_ALLEG_VOICE)
-                ci[chn].loop_on = FALSE;
+                ci[chn].loop_on = false;
 
             // these are global commands. Should not be skipped
             if (ni->command == PTEFFECT_B)          //position jump
@@ -213,20 +213,20 @@ void JGMOD_PLAYER::mod_interrupt (void)
             ni = get_note (of, mi.pat, mi.pos, chn);
 
             ci[chn].pan_slide_common = 0;
-            ci[chn].pro_pitch_slide_on = FALSE;
-            ci[chn].s3m_volume_slide_on = FALSE;
-            ci[chn].xm_volume_slide_on = FALSE;
-            ci[chn].xm_pitch_slide_down_on = FALSE;
-            ci[chn].xm_pitch_slide_up_on = FALSE;
-            ci[chn].s3m_pitch_slide_on = FALSE;
-            ci[chn].sample_offset_on = FALSE;
-            ci[chn].slide2period_on = FALSE;
-            ci[chn].s3m_retrig_on = FALSE;
-            ci[chn].arpeggio_on = FALSE;
-            ci[chn].vibrato_on = FALSE;
-            ci[chn].tremolo_on = FALSE;
-            ci[chn].tremor_on = FALSE;
-            ci[chn].kick = FALSE;
+            ci[chn].pro_pitch_slide_on = false;
+            ci[chn].s3m_volume_slide_on = false;
+            ci[chn].xm_volume_slide_on = false;
+            ci[chn].xm_pitch_slide_down_on = false;
+            ci[chn].xm_pitch_slide_up_on = false;
+            ci[chn].s3m_pitch_slide_on = false;
+            ci[chn].sample_offset_on = false;
+            ci[chn].slide2period_on = false;
+            ci[chn].s3m_retrig_on = false;
+            ci[chn].arpeggio_on = false;
+            ci[chn].vibrato_on = false;
+            ci[chn].tremolo_on = false;
+            ci[chn].tremor_on = false;
+            ci[chn].kick = false;
 
             ci[chn].delay_sample = 0;
             ci[chn].cut_sample = 0;
@@ -312,8 +312,8 @@ void JGMOD_PLAYER::mod_interrupt (void)
                 {
                 if ((ni->note > 0) || (ni->sample-1 >= 0))
                     {
-                    ci[chn].sample_offset_on = TRUE;
-                    ci[chn].kick = TRUE;
+                    ci[chn].sample_offset_on = true;
+                    ci[chn].kick = true;
                     if (ni->extcommand)
                         ci[chn].sample_offset = (ni->extcommand << 8);
                     }
@@ -393,7 +393,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
 
             else if (ni->command == XMEFFECT_K)         // key off
                 {
-                ci[chn].keyon = TRUE;
+                ci[chn].keyon = true;
                 if ( (ci[chn].volenv.flg & ENV_ON) == 0)
                     ci[chn].volume = 0;            
                 }
@@ -420,13 +420,13 @@ void JGMOD_PLAYER::mod_interrupt (void)
             if (chn >= mi.max_chn)
                 continue;
 
-            if (ci[chn].s3m_retrig_on == TRUE)
+            if (ci[chn].s3m_retrig_on == true)
                 do_s3m_retrig (chn);
 
-            if (ci[chn].arpeggio_on == TRUE)
+            if (ci[chn].arpeggio_on == true)
                 do_arpeggio (chn);
 
-            if (ci[chn].pro_pitch_slide_on == TRUE)
+            if (ci[chn].pro_pitch_slide_on == true)
                 {
                 ci[chn].period += ci[chn].pro_pitch_slide;
                 ci[chn].temp_period += ci[chn].pro_pitch_slide;
@@ -441,7 +441,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
             if (ci[chn].retrig)
                 {
                 if ((mi.tick % ci[chn].retrig) == 0)
-                    ci[chn].kick = TRUE;
+                    ci[chn].kick = true;
                 }
 
             if (ci[chn].cut_sample)
@@ -453,28 +453,28 @@ void JGMOD_PLAYER::mod_interrupt (void)
                     }
                 }
             
-            if (ci[chn].slide2period_on == TRUE)
+            if (ci[chn].slide2period_on == true)
                 do_slide2period(chn);
 
             if (ci[chn].delay_sample)
                 do_delay_sample(chn);
 
-            if (ci[chn].tremor_on == TRUE)
+            if (ci[chn].tremor_on == true)
                 do_tremor (chn);
 
-            if (ci[chn].xm_volume_slide_on == TRUE)
+            if (ci[chn].xm_volume_slide_on == true)
                 do_xm_volume_slide (chn);
 
-            if (ci[chn].xm_pitch_slide_up_on == TRUE)
+            if (ci[chn].xm_pitch_slide_up_on == true)
                 do_xm_pitch_slide_up (chn);
 
-            if (ci[chn].xm_pitch_slide_down_on == TRUE)
+            if (ci[chn].xm_pitch_slide_down_on == true)
                 do_xm_pitch_slide_down (chn);
 
             if (ci[chn].pan_slide_common)
                 do_xm_pan_slide (chn);
 
-            if (ci[chn].global_volume_slide_on == TRUE)
+            if (ci[chn].global_volume_slide_on == true)
                 do_global_volume_slide (chn);
             }
         }
@@ -485,16 +485,16 @@ void JGMOD_PLAYER::mod_interrupt (void)
         if (chn >= mi.max_chn)
             continue;
 
-        if (ci[chn].vibrato_on == TRUE)
+        if (ci[chn].vibrato_on == true)
             do_vibrato (chn);
 
-        if (ci[chn].tremolo_on == TRUE)
+        if (ci[chn].tremolo_on == true)
             do_tremolo (chn);
 
-        if (ci[chn].s3m_volume_slide_on == TRUE)
+        if (ci[chn].s3m_volume_slide_on == true)
             do_s3m_volume_slide (chn);
 
-        if (ci[chn].s3m_pitch_slide_on == TRUE)
+        if (ci[chn].s3m_pitch_slide_on == true)
             do_s3m_portamento (chn);
         }
 
@@ -532,7 +532,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
         else if (ci[chn].temp_pan > 255)
             ci[chn].temp_pan = 255;
 
-        if (ci[chn].kick == TRUE)       // start a sample
+        if (ci[chn].kick == true)       // start a sample
             {
             s = of->s + ci[chn].sample;
             si= of->si + ci[chn].sample;
@@ -549,10 +549,10 @@ void JGMOD_PLAYER::mod_interrupt (void)
             //ci[chn].kick = FALSE;
             }
 
-        if (ci[chn].sample_offset_on == TRUE)
+        if (ci[chn].sample_offset_on == true)
             {
             voice_set_position (voice_table[chn], ci[chn].sample_offset);
-            ci[chn].sample_offset_on = FALSE;
+            ci[chn].sample_offset_on = false;
             }
 
         if (ci[chn].period > 0)
@@ -563,17 +563,17 @@ void JGMOD_PLAYER::mod_interrupt (void)
         voice_set_volume (voice_table[chn], calc_volume (chn));
         voice_set_pan (voice_table[chn], calc_pan (chn));
 
-        if (ci[chn].keyon == TRUE)
+        if (ci[chn].keyon == true)
             {
             ci[chn].volfade -= ci[chn].instfade;
             if (ci[chn].volfade < 0)
                 ci[chn].volfade = 0;
             }
 
-        if (ci[chn].kick == TRUE)
+        if (ci[chn].kick == true)
             {
             voice_start(voice_table[chn]);
-            ci[chn].kick = FALSE;
+            ci[chn].kick = false;
             }
         }
 }

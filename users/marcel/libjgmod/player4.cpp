@@ -21,7 +21,7 @@ void JGMOD_PLAYER::parse_new_note (int chn, int note, int sample_no)
     INSTRUMENT_INFO *ii = nullptr;
 
 
-    ci[chn].keyon = FALSE;
+    ci[chn].keyon = false;
     ci[chn].volfade = 32768;
     ci[chn].instfade = 0;
     
@@ -52,7 +52,7 @@ void JGMOD_PLAYER::parse_new_note (int chn, int note, int sample_no)
         ci[chn].transpose = si->transpose;
         ci[chn].c2spd = si->c2spd;
         ci[chn].period = note2period (ci[chn].note+ci[chn].transpose, ci[chn].c2spd);
-        ci[chn].kick = TRUE;
+        ci[chn].kick = true;
         ci[chn].pan = si->pan;
         }
     else if ( (note >= 0) && (sample_no < 0) )  // only note specified
@@ -65,7 +65,7 @@ void JGMOD_PLAYER::parse_new_note (int chn, int note, int sample_no)
         ci[chn].transpose = si->transpose;
         ci[chn].c2spd = si->c2spd;
         ci[chn].period = note2period (ci[chn].note+ci[chn].transpose, ci[chn].c2spd);
-        ci[chn].kick = TRUE;
+        ci[chn].kick = true;
         }
     /*
     else if ( (note < 0) && (sample_no >= 0) ) // only sample_spedified
@@ -104,7 +104,7 @@ void JGMOD_PLAYER::parse_new_note (int chn, int note, int sample_no)
 
 void JGMOD_PLAYER::parse_xm_volume_slide (int chn, int extcommand)
 {
-    ci[chn].xm_volume_slide_on = TRUE;
+    ci[chn].xm_volume_slide_on = true;
 
     if (extcommand)
         {
@@ -128,7 +128,7 @@ void JGMOD_PLAYER::parse_xm_pitch_slide_up (int chn, int extcommand)
     if (!ci[chn].period)
         return;
 
-    ci[chn].xm_pitch_slide_up_on = TRUE;
+    ci[chn].xm_pitch_slide_up_on = true;
     if (extcommand)
         ci[chn].xm_pitch_slide_up = -(extcommand << 2);
 
@@ -139,7 +139,7 @@ void JGMOD_PLAYER::parse_xm_pitch_slide_down (int chn, int extcommand)
     if (!ci[chn].period)
         return;
 
-    ci[chn].xm_pitch_slide_down_on = TRUE;
+    ci[chn].xm_pitch_slide_down_on = true;
     if (extcommand)
         ci[chn].xm_pitch_slide_down = (extcommand << 2);
 
@@ -188,7 +188,7 @@ void JGMOD_PLAYER::parse_xm_pan_slide (int chn, int extcommand)
 
 void JGMOD_PLAYER::parse_global_volume_slide (int chn, int extcommand)
 {
-    ci[chn].global_volume_slide_on = TRUE;
+    ci[chn].global_volume_slide_on = true;
 
     if (extcommand)
         {
@@ -290,7 +290,7 @@ void JGMOD_PLAYER::process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon
             a = b;
             b++;
 
-            if ( (t->flg & ENV_SUS) && (keyon == FALSE) && (b > t->susend) )
+            if ( (t->flg & ENV_SUS) && (keyon == false) && (b > t->susend) )
                 {
                 a = t->susbeg;
                 p = t->pos[a];
