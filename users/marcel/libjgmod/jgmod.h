@@ -356,7 +356,7 @@ struct JGMOD_PLAYER
 	int init(int no_voices);
 	void shut ();
 	
-	void play (JGMOD *j, int loop);
+	void play (JGMOD *j, int loop, int speed = 100, int pitch = 100);
 	void next_track ();
 	void prev_track ();
 	void goto_track (int new_track);

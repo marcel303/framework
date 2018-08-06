@@ -315,7 +315,7 @@ void JGMOD_PLAYER::shut ()
     is_init = false;
 }
 
-void JGMOD_PLAYER::play (JGMOD *j, int loop)
+void JGMOD_PLAYER::play (JGMOD *j, int loop, int speed, int pitch)
 {
     int index;
     int temp;
@@ -478,6 +478,9 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop)
         mi.loop = true;
 
     of = j;
+	
+    set_speed(speed);
+    set_pitch(pitch);
 
     //remove_int2 (mod_interrupt_proc, this);
     install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (24 * j->bpm * mi.speed_ratio / 100), this);

@@ -80,9 +80,6 @@ static void do_play(JGMOD_PLAYER & player, JGMOD * mod)
     else
         note_length = 140;
 	
-	player.set_speed(starting_speed);
-    player.set_pitch(starting_pitch);
-	
     player.play(mod, true);
 }
 
