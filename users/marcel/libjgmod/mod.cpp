@@ -22,7 +22,7 @@
 // todo : make thread local ?
 char jgmod_error[80] = { };
 
-void setError(const char * format, ...)
+void jgmod_seterror(const char * format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -33,86 +33,10 @@ void setError(const char * format, ...)
 	va_end(args);
 }
 
-int JGMOD_PLAYER::init(int max_chn)
-{
-    int index;
-    int temp=0;
-
-    if (mod_init == true)      // don't need to initialize many times
-        return 1;
-
-    if ( (max_chn > MAX_ALLEG_VOICE) || (max_chn <= 0) )
-        return -1;
-
-    if (fake_sample == nullptr)
-        fake_sample = (SAMPLE *)jgmod_calloc (sizeof (SAMPLE));     // use to trick allegro
-                                                    // into giving me voice
-    if (fake_sample == nullptr)                        // channels
-        {
-        setError ("Unable to setup initialization sample");
-        return -1;
-        }
-
-    fake_sample->freq = 1000;
-    fake_sample->loop_start = 0;
-    fake_sample->loop_end = 0;
-    fake_sample->priority = JGMOD_PRIORITY;
-
-    #ifdef ALLEGRO_DATE         // for compatibility with Allegro 3.0
-    fake_sample->stereo = FALSE;
-    #endif
-
-    fake_sample->bits = 8;
-    fake_sample->len  = 0;
-    fake_sample->param = -1;
-    fake_sample->data = jgmod_calloc (0);
-
-    if (fake_sample->data == nullptr)
-        {
-        setError ("JGMOD : Not enough memory to setup initialization sample");
-        free (fake_sample);
-        return -1;
-        }
-
-    for (index=0; index<max_chn; index++)    //allocate all the voices
-        {
-        voice_table[index] = allocate_voice (fake_sample);
-        if (voice_table[index] == -1)
-            temp = -1;
-        else
-            {
-            ci[index].volume = 0;
-            voice_set_volume (voice_table[index], 0);
-            voice_start (voice_table[index]);
-            }
-        }
-    
-    if (temp == -1)
-        {
-        for (index=0; index<max_chn; index++)
-            if (voice_table[index] != -1)
-                {
-                deallocate_voice (voice_table[index]);
-                voice_table[index] = -1;
-                }
-
-        setError ("JGMOD : Unable to allocate enough voices");
-        return -1;
-        }
-
-    mi.max_chn = max_chn;
-    mi.is_playing = false;
-    mi.speed_ratio = 100;
-    mi.pitch_ratio = 100;
-    mod_init = true;
-
-    return 1;
-}
-
 // load supported types of mod files.
 // Detect the type first.
 // Then call for the appropriate loader.
-JGMOD *JGMOD_PLAYER::load_mod (const char *filename, bool fast_loading, bool enable_m15)
+JGMOD *jgmod_load (const char *filename, bool fast_loading, bool enable_m15)
 {
     int temp;
 
@@ -130,7 +54,7 @@ JGMOD *JGMOD_PLAYER::load_mod (const char *filename, bool fast_loading, bool ena
             }
         else
             {
-            setError ("Unable to open %s", filename);
+            jgmod_seterror ("Unable to open %s", filename);
             return nullptr;
             }
         }
@@ -165,10 +89,153 @@ JGMOD *JGMOD_PLAYER::load_mod (const char *filename, bool fast_loading, bool ena
             return jgmod::load_m (filename, 15);
         }
 
-    setError ("Unsupported MOD type or unable to open file");
+    jgmod_seterror ("Unsupported MOD type or unable to open file");
     return nullptr;
 }
 
+void jgmod_destroy (JGMOD *j)
+{
+    int index;
+    PATTERN_INFO *pi;
+
+    if (j == nullptr)
+        return;
+
+    if (j->si != nullptr)
+        {
+        free (j->si);
+        }
+
+    if (j->ii != nullptr)
+        {
+        free (j->ii);
+        }
+
+    if (j->pi != nullptr)
+        {
+        for (index=0; index<j->no_pat; index++)
+            {
+            pi = j->pi+index;
+            if (pi->ni != nullptr)
+                {
+                free (pi->ni);
+                }
+            }
+        free (j->pi);
+        }
+
+    for (index=0; index < j->no_sample; index++)
+        {
+        if (j->s + index)
+            {
+            if (j->s[index].data)
+                {
+                free (j->s[index].data);
+                }
+            }
+        }
+
+    free (j->s);
+
+    free (j);
+    j = nullptr;
+}
+
+//
+
+int JGMOD_PLAYER::init(int max_chn)
+{
+    int index;
+    int temp=0;
+
+    if (mod_init == true)      // don't need to initialize many times
+        return 1;
+
+    if ( (max_chn > MAX_ALLEG_VOICE) || (max_chn <= 0) )
+        return -1;
+
+    if (fake_sample == nullptr)
+        fake_sample = (SAMPLE *)jgmod_calloc (sizeof (SAMPLE));     // use to trick allegro
+                                                    // into giving me voice
+    if (fake_sample == nullptr)                        // channels
+        {
+        jgmod_seterror ("Unable to setup initialization sample");
+        return -1;
+        }
+
+    fake_sample->freq = 1000;
+    fake_sample->loop_start = 0;
+    fake_sample->loop_end = 0;
+    fake_sample->priority = JGMOD_PRIORITY;
+
+    #ifdef ALLEGRO_DATE         // for compatibility with Allegro 3.0
+    fake_sample->stereo = FALSE;
+    #endif
+
+    fake_sample->bits = 8;
+    fake_sample->len  = 0;
+    fake_sample->param = -1;
+    fake_sample->data = jgmod_calloc (0);
+
+    if (fake_sample->data == nullptr)
+        {
+        jgmod_seterror ("JGMOD : Not enough memory to setup initialization sample");
+        free (fake_sample);
+        return -1;
+        }
+
+    for (index=0; index<max_chn; index++)    //allocate all the voices
+        {
+        voice_table[index] = allocate_voice (fake_sample);
+        if (voice_table[index] == -1)
+            temp = -1;
+        else
+            {
+            ci[index].volume = 0;
+            voice_set_volume (voice_table[index], 0);
+            voice_start (voice_table[index]);
+            }
+        }
+	
+    if (temp == -1)
+        {
+        for (index=0; index<max_chn; index++)
+            if (voice_table[index] != -1)
+                {
+                deallocate_voice (voice_table[index]);
+                voice_table[index] = -1;
+                }
+
+        jgmod_seterror ("JGMOD : Unable to allocate enough voices");
+        return -1;
+        }
+
+    mi.max_chn = max_chn;
+    mi.is_playing = false;
+    mi.speed_ratio = 100;
+    mi.pitch_ratio = 100;
+    mod_init = true;
+
+    return 1;
+}
+
+void JGMOD_PLAYER::shut (void)
+{
+    int index;
+
+    stop();
+    remove_int2 (mod_interrupt_proc, this);
+
+    for (index=0; index<MAX_ALLEG_VOICE; index++)
+        {
+        if (voice_table[index] >= 0)
+            deallocate_voice (voice_table[index]);
+
+        voice_table[index] = -1;
+        }
+
+    mod_init = false;
+}
 
 void JGMOD_PLAYER::play (JGMOD *j, int loop)
 {
@@ -177,7 +244,7 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop)
 
     if (j == nullptr)
         {
-        setError ("Can't play a JGMOD pointer with null value");
+        jgmod_seterror ("Can't play a JGMOD pointer with null value");
         return;
         }
 
@@ -438,7 +505,7 @@ void JGMOD_PLAYER::destroy_mod()
 {
 	stop();
 	
-	jgmod::destroy_mod(of);
+	jgmod_destroy(of);
 }
 
 
@@ -467,35 +534,17 @@ SAMPLE *JGMOD_PLAYER::get_jgmod_sample (JGMOD *j, int sample_no)
 {
     if (j == nullptr)
         {
-        setError ("JGMOD pointer passed in is a NULL value");
+        jgmod_seterror ("JGMOD pointer passed in is a NULL value");
         return nullptr;
         }
 
     if ( (sample_no < 0) || (sample_no >= j->no_sample) )
         {
-        setError ("Incorrect value of no sample found");
+        jgmod_seterror ("Incorrect value of no sample found");
         return nullptr;
         }
     
     return &(j->s[sample_no]);
-}
-
-void JGMOD_PLAYER::shut (void)
-{
-    int index;
-
-    stop();
-    remove_int2 (mod_interrupt_proc, this);
-
-    for (index=0; index<MAX_ALLEG_VOICE; index++)
-        {
-        if (voice_table[index] >= 0)
-            deallocate_voice (voice_table[index]);
-
-        voice_table[index] = -1;
-        }
-
-    mod_init = false;
 }
 
 void JGMOD_PLAYER::set_speed (int speed)
@@ -586,59 +635,6 @@ int JGMOD_PLAYER::get_info (const char *filename, JGMOD_INFO *ji, bool enable_m1
         }
 
 
-    setError ("Unsupported MOD type or unable to open file");
+    jgmod_seterror ("Unsupported MOD type or unable to open file");
     return -1;
-}
-
-namespace jgmod
-{
-
-void destroy_mod (JGMOD *j)
-{
-    int index;
-    PATTERN_INFO *pi;
-
-    if (j == nullptr)
-        return;
-
-    if (j->si != nullptr)
-        {
-        free (j->si);
-        }
-
-    if (j->ii != nullptr)
-        {
-        free (j->ii);
-        }
-
-    if (j->pi != nullptr)
-        {
-        for (index=0; index<j->no_pat; index++)
-            {
-            pi = j->pi+index;
-            if (pi->ni != nullptr)
-                {
-                free (pi->ni);
-                }
-            }
-        free (j->pi);
-        }
-
-    for (index=0; index < j->no_sample; index++)
-        {
-        if (j->s + index)
-            {
-            if (j->s[index].data)
-                {
-                free (j->s[index].data);
-                }
-            }
-        }
-
-    free (j->s);
-
-    free (j);
-    j = nullptr;
-}
-
 }

@@ -47,7 +47,7 @@ int main (int argc, char **argv)
         }
 
     printf ("\nFile Name1 : %s", argv[1]);
-    j = load_mod (argv[1]);
+    j = jgmod_load (argv[1]);
     printf ("\nFile Name2 : %s", argv[1]);
     if (j == null)
         {

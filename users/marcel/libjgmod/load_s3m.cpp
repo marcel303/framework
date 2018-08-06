@@ -45,7 +45,7 @@ int get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji)
     f = jgmod_fopen (filename, "rb");
     if (f == nullptr)
         {
-        setError ("Unable to open %s", filename);
+        jgmod_seterror ("Unable to open %s", filename);
         return -1;
         }
 
@@ -255,7 +255,7 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
     f = jgmod_fopen (filename, "rb");
     if (f == nullptr)
         {
-        setError ("Unable to open %s", filename);
+        jgmod_seterror ("Unable to open %s", filename);
         return nullptr;
         }
 
@@ -263,7 +263,7 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
     if (j == nullptr)
         {
         jgmod_fclose (f);
-        setError ("Unable to allocate enough memory for JGMOD structure");
+        jgmod_seterror ("Unable to allocate enough memory for JGMOD structure");
         return nullptr;
         }
 
@@ -278,9 +278,9 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
     j->s  = (SAMPLE*)jgmod_calloc (sizeof (SAMPLE) * j->no_sample);
     if ( (j->si == nullptr) || (j->s == nullptr))
         {
-        destroy_mod (j);
+        jgmod_destroy (j);
         jgmod_fclose(f);
-        setError ("Unable to allocate enough memory for SAMPLE or SAMPLE_INFO");
+        jgmod_seterror ("Unable to allocate enough memory for SAMPLE or SAMPLE_INFO");
         return nullptr;
         }
 
@@ -312,9 +312,9 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
     parapointer = (int*)jgmod_calloc ((j->no_sample + j->no_pat) * sizeof (int));
     if (parapointer == nullptr)
         {
-        destroy_mod (j);
+        jgmod_destroy (j);
         jgmod_fclose (f);
-        setError ("Unable to allocate enough memory for parapointer");
+        jgmod_seterror ("Unable to allocate enough memory for parapointer");
         return nullptr;
         }
 
@@ -399,9 +399,9 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
         if (s->data == nullptr)
             {
             free (parapointer);
-            destroy_mod (j);
+            jgmod_destroy (j);
             jgmod_fclose (f);
-            setError ("Unable to allocate enough memory for data sample");
+            jgmod_seterror ("Unable to allocate enough memory for data sample");
             return nullptr;
             }
 
@@ -526,9 +526,9 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
     if (j->pi == nullptr)
         {
         free (parapointer);
-        destroy_mod (j);
+        jgmod_destroy (j);
         jgmod_fclose (f);
-        setError ("Unable to allocate enough memory for PATTERN_INFO");
+        jgmod_seterror ("Unable to allocate enough memory for PATTERN_INFO");
         return nullptr;
         }
 
@@ -541,9 +541,9 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
         if (pi->ni == nullptr)
             {
             free (parapointer);
-            destroy_mod (j);
+            jgmod_destroy (j);
             jgmod_fclose (f);
-            setError ("Unable to allocate enough memory for NOTE_INFO");
+            jgmod_seterror ("Unable to allocate enough memory for NOTE_INFO");
             return nullptr;
             }
         }

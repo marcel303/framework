@@ -66,7 +66,7 @@ static int do_load(const char * filename)
 	
 	//
 	
-    the_mod = jgmod_player.load_mod(filename);
+    the_mod = jgmod_load(filename);
 	
     if (the_mod == nullptr)
 	{

@@ -326,8 +326,6 @@ typedef struct JGMOD_INFO
 
 }JGMOD_INFO;
 
-// todo : add setError method, remove sprintf calls
-
 typedef struct JGMOD_PLAYER
 {
 	bool mod_init;
@@ -368,7 +366,6 @@ typedef struct JGMOD_PLAYER
 	int init(int no_voices);
 	void shut (void);
 	
-	static JGMOD *load_mod (const char *filename, bool fast_loading = true, bool enable_m15 = false);
 	static void mod_interrupt_proc (void * data);
 	void mod_interrupt (void);
 	void play (JGMOD *j, int loop);
@@ -467,6 +464,9 @@ typedef struct JGMOD_PLAYER
 // todo : remove global
 extern char jgmod_error[80];
 
-void setError(const char * format, ...);
+JGMOD *jgmod_load (const char *filename, bool fast_loading = true, bool enable_m15 = false);
+void jgmod_destroy (JGMOD *j);
+
+void jgmod_seterror(const char * format, ...);
 
 #endif  // for JGMOD_H

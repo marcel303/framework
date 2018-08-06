@@ -1,10 +1,10 @@
 #ifndef JSHARE_H
 #define JSHARE_H
 
+void *jgmod_calloc (int size);
+
 namespace jgmod
 {
-
-void destroy_mod (JGMOD *j);
 
 int detect_m31 (const char *filename);
 int detect_m15 (const char *filename);
@@ -27,7 +27,5 @@ int get_xm_info (const char *filename, int start_offset, JGMOD_INFO *ji);
 int get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji);
 
 }
-
-void *jgmod_calloc (int size);
 
 #endif

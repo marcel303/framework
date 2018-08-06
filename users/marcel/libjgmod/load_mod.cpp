@@ -130,7 +130,7 @@ int get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji)
         }
     else
         {
-        setError ("MOD must have 15 or 31 samples");
+        jgmod_seterror ("MOD must have 15 or 31 samples");
         return -1;
         }
 
@@ -138,7 +138,7 @@ int get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji)
     f = jgmod_fopen (filename, "rb");
     if (f == nullptr)
         {
-        setError ("Unable to open %s", filename);
+        jgmod_seterror ("Unable to open %s", filename);
         return -1;
         }
 
@@ -187,30 +187,30 @@ JGMOD *load_m (const char *filename, int no_inst)
 
     if (no_inst != 15 && no_inst != 31)
         {
-        setError ("MOD must be 15 or 31 instruments");
+        jgmod_seterror ("MOD must be 15 or 31 instruments");
         return nullptr;
         }
 
     j = (JGMOD*)jgmod_calloc (sizeof (JGMOD ));
     if (j == nullptr)
         {
-        setError ("Unable to allocate enough memory for JGMOD structure");
+        jgmod_seterror ("Unable to allocate enough memory for JGMOD structure");
         return nullptr;
         }
 
     j->si = (SAMPLE_INFO*)jgmod_calloc (sizeof (SAMPLE_INFO) * no_inst);
     if (j->si == nullptr)
         {
-        setError ("Unable to allocate enough memory for SAMPLE_INFO structure");
-        destroy_mod (j);
+        jgmod_seterror ("Unable to allocate enough memory for SAMPLE_INFO structure");
+        jgmod_destroy (j);
         return nullptr;
         }
 
     j->s = (SAMPLE*)jgmod_calloc (sizeof (SAMPLE) * no_inst);
     if (j->s == nullptr)
         {
-        setError ("Unable to allocate enough memory for SAMPLE structure");
-        destroy_mod (j);
+        jgmod_seterror ("Unable to allocate enough memory for SAMPLE structure");
+        jgmod_destroy (j);
         return nullptr;
         }
 
@@ -230,8 +230,8 @@ JGMOD *load_m (const char *filename, int no_inst)
     f = jgmod_fopen (filename, "rb");
     if (f == nullptr)
         {
-        setError ("Unable to open %s", filename);
-        destroy_mod (j);
+        jgmod_seterror ("Unable to open %s", filename);
+        jgmod_destroy (j);
         return nullptr;
         }
 
@@ -285,9 +285,9 @@ JGMOD *load_m (const char *filename, int no_inst)
     j->pi = (PATTERN_INFO*)jgmod_calloc (j->no_pat * sizeof(PATTERN_INFO));
     if (j->pi == nullptr)
         {
-        setError ("Unable to allocate enough memory for PATTERN_INFO");
+        jgmod_seterror ("Unable to allocate enough memory for PATTERN_INFO");
         jgmod_fclose (f);
-        destroy_mod(j);
+        jgmod_destroy(j);
         return nullptr;
         }
 
@@ -298,9 +298,9 @@ JGMOD *load_m (const char *filename, int no_inst)
         pi->ni = (NOTE_INFO*)jgmod_calloc (sizeof(NOTE_INFO) * 64 * j->no_chn);
         if (pi->ni == nullptr)
             {
-            setError ("Unable to allocate enough memory for NOTE_INFO");
+            jgmod_seterror ("Unable to allocate enough memory for NOTE_INFO");
             jgmod_fclose (f);
-            destroy_mod (j);
+            jgmod_destroy (j);
             return nullptr;
             }
         }
@@ -355,9 +355,9 @@ JGMOD *load_m (const char *filename, int no_inst)
         if (s->len)
             if (s->data == nullptr)
                 {
-                setError ("Unable to allocate enough memory for SAMPLE DATA");
+                jgmod_seterror ("Unable to allocate enough memory for SAMPLE DATA");
                 jgmod_fclose (f);
-                destroy_mod (j);
+                jgmod_destroy (j);
                 return nullptr;
                 }
 
