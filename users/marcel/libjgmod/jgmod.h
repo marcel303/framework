@@ -7,22 +7,6 @@
     #define JGM_ID  DAT_ID('J','G','M',' ')
 #endif
 
-#ifndef uchar
-#define uchar   unsigned char
-#endif
-
-#ifndef ushort
-#define ushort  unsigned short
-#endif
-
-#ifndef uint
-#define uint    unsigned int
-#endif
-
-#ifndef NULL
-#define NULL 0
-#endif
-
 #ifndef TRUE
 #define TRUE -1
 #endif

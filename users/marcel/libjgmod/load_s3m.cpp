@@ -13,6 +13,7 @@
 
 
 #include <string.h>
+#include <stdint.h>
 #include <stdio.h>
 #include "framework-allegro2.h"
 #include "jgmod.h"
@@ -34,7 +35,7 @@ void convert_s3m_pitch (int *pitch);
 int get_mod_no_pat (int *table, int max_trk);
 
 // fixme : remove globals
-static uchar chn_set[32];
+static uint8_t chn_set[32];
 static char remap[32];
 
 int get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji)
@@ -334,7 +335,7 @@ JGMOD *load_s3m (const char *filename, int start_offset, int fast_loading)
         char id[4];
         int memseg;
         int type;
-        uint counter;
+        uint32_t counter;
 
         si = j->si + index;
         s =  j->s + index;

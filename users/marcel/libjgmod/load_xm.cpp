@@ -12,6 +12,7 @@
  *  XM and Unreal Tournament's UMX loader. */
 
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "framework-allegro2.h"
@@ -515,7 +516,7 @@ JGMOD *load_xm (const char *filename, int start_offset)
 
     for (index=0; index<j->no_sample; index++)
         {
-        uint counter;
+        uint32_t counter;
         char b8;
         short b16;
 

@@ -12,6 +12,7 @@
  *  Protracker effects and misc stuff are located here */
 
 #include <math.h>
+#include <stdint.h>
 #include "framework-allegro2.h"
 #include "jgmod.h"
 #include "jshare.h"
@@ -129,7 +130,7 @@ static const unsigned long lintab[768] =
 
 
 // for converting note to amiga period
-static volatile const ushort logtab[]={
+static volatile const uint16_t logtab[]={
 	LOGFAC*907,LOGFAC*900,LOGFAC*894,LOGFAC*887,LOGFAC*881,LOGFAC*875,LOGFAC*868,LOGFAC*862,
 	LOGFAC*856,LOGFAC*850,LOGFAC*844,LOGFAC*838,LOGFAC*832,LOGFAC*826,LOGFAC*820,LOGFAC*814,
 	LOGFAC*808,LOGFAC*802,LOGFAC*796,LOGFAC*791,LOGFAC*785,LOGFAC*779,LOGFAC*774,LOGFAC*768,
@@ -257,8 +258,8 @@ int JGMOD_PLAYER::note2period (int note, int c2spd)
         }
     else if (mi.flag & PERIOD_MODE)
         {
-        uchar n, o;
-        ushort p1, p2, i;
+        uint8_t n, o;
+        uint16_t p1, p2, i;
 
         if (note < 0)
             note = 0;
