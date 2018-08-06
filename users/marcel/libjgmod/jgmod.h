@@ -331,7 +331,7 @@ typedef struct JGMOD_INFO
 
 typedef struct JGMOD_PLAYER
 {
-	bool mod_init;
+	bool is_init;
 	SAMPLE *fake_sample;
 	
 	JGMOD *of;
@@ -344,7 +344,7 @@ typedef struct JGMOD_PLAYER
 	
 	JGMOD_PLAYER()
 	{
-		mod_init = false;
+		is_init = false;
 		fake_sample = nullptr;
 		
 		of = nullptr;
@@ -357,28 +357,28 @@ typedef struct JGMOD_PLAYER
 	
 	// main api
 	int init(int no_voices);
-	void shut (void);
+	void shut ();
 	
 	void play (JGMOD *j, int loop);
-	void next_track (void);
-	void prev_track (void);
+	void next_track ();
+	void prev_track ();
 	void goto_track (int new_track);
-	void stop (void);
-	bool is_playing (void);
-	void pause (void);
-	void resume (void);
-	bool is_paused (void);
+	void stop ();
+	bool is_playing ();
+	void pause ();
+	void resume ();
+	bool is_paused ();
 	void destroy_mod();
 	void set_volume (int volume);
-	int get_volume (void);
+	int get_volume ();
 	SAMPLE *get_jgmod_sample (JGMOD *j, int sample_no);
 	void set_speed (int speed);
 	void set_pitch (int pitch);
-	void toggle_pause_mode (void);
+	void toggle_pause_mode ();
 	
 protected:
 	static void mod_interrupt_proc (void * data);
-	void mod_interrupt (void);
+	void mod_interrupt ();
 	
 	// -- located in player2.c ---------------------------------------------------
 	int find_lower_period(int period, int times);

@@ -30,7 +30,7 @@ void JGMOD_PLAYER::mod_interrupt_proc (void * data)
 	self->mod_interrupt();
 }
 
-void JGMOD_PLAYER::mod_interrupt (void)
+void JGMOD_PLAYER::mod_interrupt ()
 {
     int chn=0;
     int  sample_no;

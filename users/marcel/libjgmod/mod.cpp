@@ -209,7 +209,7 @@ int JGMOD_PLAYER::init(int max_chn)
     int index;
     int temp=0;
 
-    if (mod_init == true)      // don't need to initialize many times
+    if (is_init == true)      // don't need to initialize many times
         return 1;
 
     if ( (max_chn > JGMOD_MAX_VOICES) || (max_chn <= 0) )
@@ -275,12 +275,12 @@ int JGMOD_PLAYER::init(int max_chn)
     mi.is_playing = false;
     mi.speed_ratio = 100;
     mi.pitch_ratio = 100;
-    mod_init = true;
+    is_init = true;
 
     return 1;
 }
 
-void JGMOD_PLAYER::shut (void)
+void JGMOD_PLAYER::shut ()
 {
     int index;
 
@@ -295,7 +295,7 @@ void JGMOD_PLAYER::shut (void)
         voice_table[index] = -1;
         }
 
-    mod_init = false;
+    is_init = false;
 }
 
 void JGMOD_PLAYER::play (JGMOD *j, int loop)
@@ -466,7 +466,7 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop)
     install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (24 * j->bpm * mi.speed_ratio / 100), this);
 }
 
-void JGMOD_PLAYER::stop (void)
+void JGMOD_PLAYER::stop ()
 {
     int index;
 
@@ -486,7 +486,7 @@ void JGMOD_PLAYER::stop (void)
     mi.forbid = false;
 }
 
-void JGMOD_PLAYER::next_track (void)
+void JGMOD_PLAYER::next_track ()
 {
     mi.forbid = true;
 
@@ -496,7 +496,7 @@ void JGMOD_PLAYER::next_track (void)
     mi.forbid = false;
 }
 
-void JGMOD_PLAYER::prev_track (void)
+void JGMOD_PLAYER::prev_track ()
 {
     mi.forbid = true;
 
@@ -521,12 +521,12 @@ void JGMOD_PLAYER::goto_track (int new_track)
     mi.forbid = false;
 }
 
-bool JGMOD_PLAYER::is_playing (void)
+bool JGMOD_PLAYER::is_playing ()
 {
     return (mi.is_playing);
 }
 
-void JGMOD_PLAYER::pause (void)
+void JGMOD_PLAYER::pause ()
 {
     int index;
 
@@ -538,7 +538,7 @@ void JGMOD_PLAYER::pause (void)
     mi.forbid = false;
 }
 
-void JGMOD_PLAYER::resume (void)
+void JGMOD_PLAYER::resume ()
 {
     int index;
 
@@ -553,7 +553,7 @@ void JGMOD_PLAYER::resume (void)
     mi.forbid = false;
 }
 
-bool JGMOD_PLAYER::is_paused (void)
+bool JGMOD_PLAYER::is_paused ()
 {
     if (is_playing() == false)
         return false;
@@ -585,7 +585,7 @@ void JGMOD_PLAYER::set_volume (int volume)
         voice_set_volume (voice_table[chn], calc_volume(chn));
 }
 
-int JGMOD_PLAYER::get_volume (void)
+int JGMOD_PLAYER::get_volume ()
 {
     return mod_volume;
 }
@@ -635,7 +635,7 @@ void JGMOD_PLAYER::set_pitch (int pitch)
     mi.pitch_ratio = pitch;
 }
 
-void JGMOD_PLAYER::toggle_pause_mode (void)
+void JGMOD_PLAYER::toggle_pause_mode ()
 {
     if (is_paused() == true)
         resume();
