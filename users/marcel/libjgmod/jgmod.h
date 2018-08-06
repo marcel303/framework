@@ -75,15 +75,18 @@
 
 
 //this is used in get_mod_info() function.
-#define JGMOD_TYPE_MOD15          1
-#define JGMOD_TYPE_MOD31          2
-#define JGMOD_TYPE_S3M            3
-#define JGMOD_TYPE_XM             4
-#define JGMOD_TYPE_IT             5
-#define JGMOD_TYPE_JGM            6
-#define JGMOD_TYPE_UNREAL_S3M     7
-#define JGMOD_TYPE_UNREAL_XM      8
-#define JGMOD_TYPE_UNREAL_IT      9
+enum JGMOD_TYPE
+{
+	JGMOD_TYPE_MOD15,
+	JGMOD_TYPE_MOD31,
+	JGMOD_TYPE_S3M,
+	JGMOD_TYPE_XM,
+	JGMOD_TYPE_IT,
+	JGMOD_TYPE_JGM,
+	JGMOD_TYPE_UNREAL_S3M,
+	JGMOD_TYPE_UNREAL_XM,
+	JGMOD_TYPE_UNREAL_IT,
+};
 
 //-- Header ------------------------------------------------------------------
 typedef struct ENVELOPE_INFO
@@ -320,7 +323,7 @@ typedef struct JGMOD
 
 typedef struct JGMOD_INFO
 {
-    int type;
+    JGMOD_TYPE type;
     char type_name[20];
     char name[29];
 
@@ -457,6 +460,6 @@ const char * jgmod_geterror();
 JGMOD *jgmod_load (const char *filename, bool fast_loading = true, bool enable_m15 = false);
 void jgmod_destroy (JGMOD *j);
 
-static int jgmod_get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15 = false);
+int jgmod_get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15 = false);
 
 #endif  // for JGMOD_H
