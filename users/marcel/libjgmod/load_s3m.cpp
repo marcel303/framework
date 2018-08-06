@@ -16,11 +16,16 @@
 #include <stdio.h>
 #include "framework-allegro2.h"
 #include "jgmod.h"
+#include "jshare.h"
 #include "file_io.h"
 
 //#define JG_debug
 //#define force_8_bit
 
+extern volatile const int noteperiod[];
+
+namespace jgmod
+{
 
 void S3M_get_num_chn(JGMOD_FILE *f);
 void S3M_load_pat(JGMOD_FILE *f, JGMOD *j, NOTE_INFO *n, int no_chn);
@@ -28,15 +33,11 @@ void convert_s3m_command (int *command, int *extcommand);
 void convert_s3m_pitch (int *pitch);
 int get_mod_no_pat (int *table, int max_trk);
 
-
 // fixme : remove globals
 static uchar chn_set[32];
 static char remap[32];
 
-extern volatile const int noteperiod[];
-
-
-int JGMOD_PLAYER::get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji)
+int get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji)
 {
     JGMOD_FILE *f;
 
@@ -65,7 +66,7 @@ int JGMOD_PLAYER::get_s3m_info (const char *filename, int start_offset, JGMOD_IN
 }
 
 // to detect unreal s3m files
-int JGMOD_PLAYER::detect_unreal_s3m (const char *filename)
+int detect_unreal_s3m (const char *filename)
 {
     JGMOD_FILE *f;
     char id[4];
@@ -106,7 +107,7 @@ int JGMOD_PLAYER::detect_unreal_s3m (const char *filename)
 
 
 // to detect s3m files
-int JGMOD_PLAYER::detect_s3m (const char *filename)
+int detect_s3m (const char *filename)
 {
     JGMOD_FILE *f;
     char id[4];
@@ -234,7 +235,7 @@ void convert_s3m_pitch (int *pitch)
 
 
 // load a s3m file
-JGMOD *JGMOD_PLAYER::load_s3m (const char *filename, int start_offset, int fast_loading)
+JGMOD *load_s3m (const char *filename, int start_offset, int fast_loading)
 {
     JGMOD_FILE *f;
     JGMOD *j;
@@ -688,4 +689,6 @@ void convert_s3m_command (int *command, int *extcommand)
         *command = 0;
         *extcommand = 0;
         }
+}
+
 }

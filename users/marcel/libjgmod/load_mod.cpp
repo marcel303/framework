@@ -15,9 +15,8 @@
 #include <stdio.h>
 #include "framework-allegro2.h"
 #include "jgmod.h"
+#include "jshare.h"
 #include "file_io.h"
-
-
 
 typedef struct MODTYPE{    /* struct to identify type of module */
         char    id[5];
@@ -105,13 +104,16 @@ volatile const int mod_finetune[]=
     7895,   7941,   7985,   8046,   8107,   8169,   8232,   8280
 };
 
+namespace jgmod
+{
+
 // -- Prototypes -------------------------------------------------------------
 int get_mod_no_pat (int *table, int max_trk);
 
 //-- Codes -------------------------------------------------------------------
 
 
-int JGMOD_PLAYER::get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji)
+int get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji)
 {
     JGMOD_FILE *f;
 
@@ -146,7 +148,7 @@ int JGMOD_PLAYER::get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji)
 }
 
 //To detect protracker with 31 instruments
-int JGMOD_PLAYER::detect_m31 (const char *filename)
+int detect_m31 (const char *filename)
 {
     JGMOD_FILE *f;
     char id[4];
@@ -169,7 +171,7 @@ int JGMOD_PLAYER::detect_m31 (const char *filename)
 
 // Load protracker 15 or 31 instruments. no_inst is used for
 // determining no of instruments.
-JGMOD *JGMOD_PLAYER::load_m (const char *filename, int no_inst)
+JGMOD *load_m (const char *filename, int no_inst)
 {
     JGMOD_FILE *f;
     JGMOD *j;
@@ -391,7 +393,7 @@ JGMOD *JGMOD_PLAYER::load_m (const char *filename, int no_inst)
 
 // to detect protracker with 15 instruments.
 // not very reliable
-int JGMOD_PLAYER::detect_m15 (const char *filename)
+int detect_m15 (const char *filename)
 {
     JGMOD_FILE *f;
     int index;
@@ -443,7 +445,9 @@ int get_mod_no_pat (int *table, int max_trk)
     return max;
 }
 
-void *JGMOD_PLAYER::jgmod_calloc (int size)
+}
+
+void *jgmod_calloc (int size)
 {
 
 #ifdef  __ALLEGRO_WINDOWS__
@@ -453,5 +457,3 @@ void *JGMOD_PLAYER::jgmod_calloc (int size)
 
     return calloc (1, size);
 }
-
-

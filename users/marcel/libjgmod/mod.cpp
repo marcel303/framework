@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include "framework-allegro2.h"
 #include "jgmod.h"
+#include "jshare.h"
 #include "file_io.h"
 #include "StringEx.h"
 
@@ -115,7 +116,7 @@ JGMOD *JGMOD_PLAYER::load_mod (const char *filename, int fast_loading, int enabl
 {
     int temp;
 
-    if (detect_jgm (filename) == 1)
+    if (jgmod::detect_jgm (filename) == 1)
         {
         JGMOD_FILE *f;
         JGMOD *j;
@@ -123,7 +124,7 @@ JGMOD *JGMOD_PLAYER::load_mod (const char *filename, int fast_loading, int enabl
         f = jgmod_fopen (filename, "rb");
         if (f != null)
             {
-            j = load_jgm (f);
+            j = jgmod::load_jgm (f);
             jgmod_fclose (f);
             return j;
             }
@@ -134,34 +135,34 @@ JGMOD *JGMOD_PLAYER::load_mod (const char *filename, int fast_loading, int enabl
             }
         }
 
-    if (detect_it (filename) == 1)
-        return load_it (filename, 0);
+    if (jgmod::detect_it (filename) == 1)
+        return jgmod::load_it (filename, 0);
 
-    if (detect_xm (filename) == 1)
-        return load_xm (filename, 0);
+    if (jgmod::detect_xm (filename) == 1)
+        return jgmod::load_xm (filename, 0);
 
-    if (detect_s3m (filename) == 1)
-        return load_s3m (filename, 0, fast_loading);
+    if (jgmod::detect_s3m (filename) == 1)
+        return jgmod::load_s3m (filename, 0, fast_loading);
 
-    if (detect_m31 (filename) == 1)
-        return load_m (filename, 31);
+    if (jgmod::detect_m31 (filename) == 1)
+        return jgmod::load_m (filename, 31);
 
-    temp = detect_unreal_it (filename);
+    temp = jgmod::detect_unreal_it (filename);
     if (temp > 0)
-        return load_it (filename, temp);
+        return jgmod::load_it (filename, temp);
 
-    temp = detect_unreal_xm (filename);
+    temp = jgmod::detect_unreal_xm (filename);
     if (temp > 0)
-        return load_xm (filename, temp);
+        return jgmod::load_xm (filename, temp);
 
-    temp = detect_unreal_s3m (filename);
+    temp = jgmod::detect_unreal_s3m (filename);
     if (temp > 0)
-        return load_s3m (filename, temp, fast_loading);
+        return jgmod::load_s3m (filename, temp, fast_loading);
 
     if (enable_m15 == TRUE)            //detect this last
         {
-        if (detect_m15 (filename) == 1)        
-            return load_m (filename, 15);
+        if (jgmod::detect_m15 (filename) == 1)
+            return jgmod::load_m (filename, 15);
         }
 
     setError ("Unsupported MOD type or unable to open file");
@@ -437,55 +438,7 @@ void JGMOD_PLAYER::destroy_mod()
 {
 	stop();
 	
-	destroy_mod(of);
-}
-
-void JGMOD_PLAYER::destroy_mod (JGMOD *j)
-{
-    int index;
-    PATTERN_INFO *pi;
-
-    if (j == null)
-        return;
-
-    if (j->si != null)
-        {
-        free (j->si);
-        }
-
-    if (j->ii != null)
-        {
-        free (j->ii);
-        }
-
-    if (j->pi != null)
-        {
-        for (index=0; index<j->no_pat; index++)
-            {
-            pi = j->pi+index;
-            if (pi->ni != null)
-                {
-                free (pi->ni);
-                }
-            }
-        free (j->pi);
-        }
-
-    for (index=0; index < j->no_sample; index++)
-        {
-        if (j->s + index)
-            {
-            if (j->s[index].data)
-                {
-                free (j->s[index].data);
-                }
-            }
-        }
-
-    free (j->s);
-
-    free (j);
-    j = null;
+	jgmod::destroy_mod(of);
 }
 
 
@@ -589,50 +542,103 @@ int JGMOD_PLAYER::get_info (const char *filename, JGMOD_INFO *ji, int enable_m15
         return -1;
 
     
-    if (detect_jgm (filename) == 1)
+    if (jgmod::detect_jgm (filename) == 1)
         {
         JGMOD_FILE *f;
 
         f = jgmod_fopen (filename, "rb");
         if (f != null)
             {
-            temp = get_jgm_info(f, ji);
+            temp = jgmod::get_jgm_info(f, ji);
             jgmod_fclose (f);
             return temp;
             }
         }
 
-    if (detect_it (filename) == 1)
-        return get_it_info (filename, 0, ji);
+    if (jgmod::detect_it (filename) == 1)
+        return jgmod::get_it_info (filename, 0, ji);
 
-    if (detect_xm (filename) == 1)
-        return get_xm_info (filename, 0, ji);
+    if (jgmod::detect_xm (filename) == 1)
+        return jgmod::get_xm_info (filename, 0, ji);
 
-    if (detect_s3m (filename) == 1)
-        return get_s3m_info (filename, 0, ji);
+    if (jgmod::detect_s3m (filename) == 1)
+        return jgmod::get_s3m_info (filename, 0, ji);
 
-    if (detect_m31 (filename) == 1)
-        return get_m_info (filename, 31, ji);
+    if (jgmod::detect_m31 (filename) == 1)
+        return jgmod::get_m_info (filename, 31, ji);
 
-    temp = detect_unreal_it (filename);
+    temp = jgmod::detect_unreal_it (filename);
     if (temp > 0)
-        return get_it_info (filename, temp, ji);
+        return jgmod::get_it_info (filename, temp, ji);
 
-    temp = detect_unreal_xm (filename);
+    temp = jgmod::detect_unreal_xm (filename);
     if (temp > 0)
-        return get_xm_info (filename, temp, ji);
+        return jgmod::get_xm_info (filename, temp, ji);
 
-    temp = detect_unreal_s3m (filename);
+    temp = jgmod::detect_unreal_s3m (filename);
     if (temp > 0)
-        return get_s3m_info (filename, temp, ji);
+        return jgmod::get_s3m_info (filename, temp, ji);
 
     if (enable_m15 == TRUE)            //detect this last
         {
-        if (detect_m15 (filename) == 1)        
-            return get_m_info (filename, 15, ji);
+        if (jgmod::detect_m15 (filename) == 1)
+            return jgmod::get_m_info (filename, 15, ji);
         }
 
 
     setError ("Unsupported MOD type or unable to open file");
     return -1;
+}
+
+namespace jgmod
+{
+
+void destroy_mod (JGMOD *j)
+{
+    int index;
+    PATTERN_INFO *pi;
+
+    if (j == null)
+        return;
+
+    if (j->si != null)
+        {
+        free (j->si);
+        }
+
+    if (j->ii != null)
+        {
+        free (j->ii);
+        }
+
+    if (j->pi != null)
+        {
+        for (index=0; index<j->no_pat; index++)
+            {
+            pi = j->pi+index;
+            if (pi->ni != null)
+                {
+                free (pi->ni);
+                }
+            }
+        free (j->pi);
+        }
+
+    for (index=0; index < j->no_sample; index++)
+        {
+        if (j->s + index)
+            {
+            if (j->s[index].data)
+                {
+                free (j->s[index].data);
+                }
+            }
+        }
+
+    free (j->s);
+
+    free (j);
+    j = null;
+}
+
 }

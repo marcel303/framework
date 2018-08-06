@@ -15,6 +15,7 @@
 #include <string.h>
 #include "framework-allegro2.h"
 #include "jgmod.h"
+#include "jshare.h"
 #include "file_io.h"
 
 
@@ -22,8 +23,10 @@
 
 //#define JG_debug
 
+namespace jgmod
+{
 
-int JGMOD_PLAYER::detect_jgm (const char *filename)
+int detect_jgm (const char *filename)
 {
     char id[18];
     JGMOD_FILE *file;
@@ -42,7 +45,7 @@ int JGMOD_PLAYER::detect_jgm (const char *filename)
 }
 
 
-int JGMOD_PLAYER::get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji)
+int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji)
 {
     ji->type = JGM_TYPE;
     sprintf (ji->type_name, "JGM");
@@ -53,7 +56,7 @@ int JGMOD_PLAYER::get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji)
 }
 
 
-JGMOD *JGMOD_PLAYER::load_jgm (JGMOD_FILE *f)
+JGMOD *load_jgm (JGMOD_FILE *f)
 {
     INSTRUMENT_INFO *ii;
     PATTERN_INFO *pi;
@@ -334,4 +337,6 @@ JGMOD *JGMOD_PLAYER::load_jgm (JGMOD_FILE *f)
 #endif
 
     return (j);
+}
+
 }

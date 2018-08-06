@@ -409,7 +409,6 @@ typedef struct JGMOD_PLAYER
 	void resume (void);
 	int is_paused (void);
 	void destroy_mod();
-	static void destroy_mod (JGMOD *j); // todo : shouldn't be a member
 	void set_volume (int volume);
 	int get_volume (void);
 	SAMPLE *get_jgmod_sample (JGMOD *j, int sample_no);
@@ -489,28 +488,6 @@ typedef struct JGMOD_PLAYER
 
 	static void process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon);
 	static void start_envelope (volatile ENVELOPE_INFO *t, int *env, int *pos, int flg, int pts, int loopbeg, int loopend, int susbeg, int susend);
-
-	// mod.cpp internal
-	static int detect_m31 (const char *filename);
-	static int detect_m15 (const char *filename);
-	static int detect_s3m (const char *filename);
-	static int detect_xm (const char *filename);
-	static int detect_it(const char *filename);
-	static int detect_jgm (const char *filename);
-	static int detect_unreal_it (const char *filename);
-	static int detect_unreal_xm (const char *filename);
-	static int detect_unreal_s3m (const char *filename);
-	static JGMOD *load_m (const char *filename, int no_inst);
-	static JGMOD *load_s3m (const char *filename, int start_offset, int fast_loading);
-	static JGMOD *load_it (const char *filename, int start_offset);
-	static JGMOD *load_xm (const char *filename, int start_offset);
-	static JGMOD *load_jgm (JGMOD_FILE *f);
-	static void *jgmod_calloc (int size);
-	static int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji);
-	static int get_it_info(const char *filename, int start_offset, JGMOD_INFO *ji);
-	static int get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji);
-	static int get_xm_info (const char *filename, int start_offset, JGMOD_INFO *ji);
-	static int get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji);
 }JGMOD_PLAYER;
 
 //-- externs -----------------------------------------------------------------

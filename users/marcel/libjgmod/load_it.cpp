@@ -14,16 +14,17 @@
 #include <string.h>
 #include "framework-allegro2.h"
 #include "jgmod.h"
+#include "jshare.h"
 #include "file_io.h"
 
 //#define JG_debug
 #define force_8_bit
 
-
-JGMOD *load_it (char *filename, int start_offset);
+namespace jgmod
+{
 
 // to detect unreal IT files
-int JGMOD_PLAYER::detect_unreal_it (const char *filename)
+int detect_unreal_it (const char *filename)
 {
     JGMOD_FILE *f;
     char id[4];
@@ -63,7 +64,7 @@ int JGMOD_PLAYER::detect_unreal_it (const char *filename)
 }
 
 
-int JGMOD_PLAYER::detect_it(const char *filename)
+int detect_it(const char *filename)
 {
     JGMOD_FILE *f;
     char id[4];
@@ -81,7 +82,7 @@ int JGMOD_PLAYER::detect_it(const char *filename)
 }
 
 
-int JGMOD_PLAYER::get_it_info(const char *filename, int start_offset, JGMOD_INFO *ji)
+int get_it_info(const char *filename, int start_offset, JGMOD_INFO *ji)
 {
     JGMOD_FILE *f;
 
@@ -110,7 +111,7 @@ int JGMOD_PLAYER::get_it_info(const char *filename, int start_offset, JGMOD_INFO
 }
 
 
-JGMOD *JGMOD_PLAYER::load_it (const char *filename, int start_offset)
+JGMOD *load_it (const char *filename, int start_offset)
 {
     JGMOD_FILE *f;
     JGMOD *j;
@@ -142,4 +143,4 @@ JGMOD *JGMOD_PLAYER::load_it (const char *filename, int start_offset)
     return null;
 }
 
-
+}

@@ -16,15 +16,18 @@
 #include <string.h>
 #include "framework-allegro2.h"
 #include "jgmod.h"
+#include "jshare.h"
 #include "file_io.h"
 
 //#define JG_debug
 //#define force_8_bit
 
+namespace jgmod
+{
+
 void load_note (JGMOD *j, JGMOD_FILE *f, NOTE_INFO *ni);
 NOTE_INFO *get_note (JGMOD *j, int pat, int pos, int chn);
 void convert_xm_command (int *command, int *extcommand);
-
 
 typedef struct VIB_INFO
 {
@@ -50,7 +53,6 @@ typedef struct XMWAV
     int vibrato_depth;
     int vibrato_rate;
 }XMWAV;
-
 
 void load_note (JGMOD *j, JGMOD_FILE *f, NOTE_INFO *ni)
 {
@@ -101,7 +103,7 @@ void load_note (JGMOD *j, JGMOD_FILE *f, NOTE_INFO *ni)
     convert_xm_command (&ni->command, &ni->extcommand);
 }
 
-int JGMOD_PLAYER::get_xm_info (const char *filename, int start_offset, JGMOD_INFO *ji)
+int get_xm_info (const char *filename, int start_offset, JGMOD_INFO *ji)
 {
     JGMOD_FILE *f;
 
@@ -131,7 +133,7 @@ int JGMOD_PLAYER::get_xm_info (const char *filename, int start_offset, JGMOD_INF
 }
 
 // to detect unreal XM files
-int JGMOD_PLAYER::detect_unreal_xm (const char *filename)
+int detect_unreal_xm (const char *filename)
 {
     JGMOD_FILE *f;
     char id[18];
@@ -184,7 +186,7 @@ int JGMOD_PLAYER::detect_unreal_xm (const char *filename)
 
 
 // to detect xm files.
-int JGMOD_PLAYER::detect_xm (const char *filename)
+int detect_xm (const char *filename)
 {
     JGMOD_FILE *f;
     char id[17];
@@ -203,7 +205,7 @@ int JGMOD_PLAYER::detect_xm (const char *filename)
 }
 
 // Load the xm file 
-JGMOD *JGMOD_PLAYER::load_xm (const char *filename, int start_offset)
+JGMOD *load_xm (const char *filename, int start_offset)
 {
     INSTRUMENT_INFO *ii;
     PATTERN_INFO *pi;
@@ -828,4 +830,6 @@ void convert_xm_command (int *command, int *extcommand)
         *command = 0;
         *extcommand = 0;
         }
+}
+
 }
