@@ -11,14 +11,15 @@
  *
  *  XM and Unreal Tournament's UMX loader. */
 
+#include "jgmod.h"
+#include "jshare.h"
+#include "file_io.h"
+
+#include "framework-allegro2.h"
 
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "framework-allegro2.h"
-#include "jgmod.h"
-#include "jshare.h"
-#include "file_io.h"
 
 //#define JG_debug
 //#define force_8_bit

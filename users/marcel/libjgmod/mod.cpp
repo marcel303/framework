@@ -11,13 +11,16 @@
  *
  *  Most of the user functions are located here. */
 
-#include <stdarg.h>
-#include <stdio.h>
-#include "framework-allegro2.h"
 #include "jgmod.h"
 #include "jshare.h"
 #include "file_io.h"
+
+#include "framework-allegro2.h"
 #include "StringEx.h"
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
 
 // todo : make thread local ?
 static char jgmod_error[80] = { };
@@ -152,7 +155,8 @@ int jgmod_get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15)
 
     if (ji == nullptr)
         return -1;
-
+	
+	memset(ji, 0, sizeof(*ji));
 	
     if (jgmod::detect_jgm (filename) == 1)
         {
@@ -203,6 +207,18 @@ int jgmod_get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15)
 }
 
 //
+
+JGMOD_PLAYER::JGMOD_PLAYER()
+{
+	memset(this, 0, sizeof(*this));
+	
+	for (int i = 0; i < JGMOD_MAX_VOICES; ++i)
+		voice_table[i] = -1;
+
+	mod_volume = 255;
+	
+	enable_lasttrk_loop = true;
+}
 
 int JGMOD_PLAYER::init(int max_chn)
 {
@@ -270,11 +286,12 @@ int JGMOD_PLAYER::init(int max_chn)
         jgmod_seterror ("JGMOD : Unable to allocate enough voices");
         return -1;
         }
-
+	
     mi.max_chn = max_chn;
     mi.is_playing = false;
     mi.speed_ratio = 100;
     mi.pitch_ratio = 100;
+	
     is_init = true;
 
     return 1;

@@ -1,6 +1,8 @@
 #include "audiostream/AudioOutput_PortAudio.h"
 #include "framework.h"
+
 #include "framework-allegro2.h"
+
 #include <atomic>
 #include <stdio.h>
 #include <string.h>

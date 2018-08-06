@@ -11,11 +11,12 @@
  *
  *  File IO routines. For portability reasons. */
 
-
-#include <stdio.h>
-#include "framework-allegro2.h"
 #include "file_io.h"
 #include "jgmod.h"
+
+#include "framework-allegro2.h"
+
+#include <stdio.h>
 
 JGMOD_FILE *jgmod_fopen (const char *filename, const char *mode)
 {

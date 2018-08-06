@@ -1,6 +1,9 @@
 #ifndef JSHARE_H
 #define JSHARE_H
 
+struct JGMOD;
+struct JGMOD_INFO;
+
 void *jgmod_calloc (int size);
 
 namespace jgmod

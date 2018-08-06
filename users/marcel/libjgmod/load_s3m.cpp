@@ -11,14 +11,15 @@
  *
  *  S3M and Unreal S3M loader. */
 
+#include "jgmod.h"
+#include "jshare.h"
+#include "file_io.h"
+
+#include "framework-allegro2.h"
 
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "framework-allegro2.h"
-#include "jgmod.h"
-#include "jshare.h"
-#include "file_io.h"
 
 //#define JG_debug
 //#define force_8_bit

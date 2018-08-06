@@ -10,12 +10,14 @@
  *
  *  IT loader. Unfinished. But you can still keep dreaming on !! */
 
-#include <stdio.h>
-#include <string.h>
-#include "framework-allegro2.h"
 #include "jgmod.h"
 #include "jshare.h"
 #include "file_io.h"
+
+#include "framework-allegro2.h"
+
+#include <stdio.h>
+#include <string.h>
 
 //#define JG_debug
 #define force_8_bit

@@ -10,11 +10,13 @@
  *
  *  JGM loader. */
 
-#include <stdio.h>
-#include <string.h>
-#include "framework-allegro2.h"
 #include "jgmod.h"
 #include "file_io.h"
+
+#include "framework-allegro2.h"
+
+#include <stdio.h>
+#include <string.h>
 
 #define JGM_SIG      "JGMOD 01 module : "
 

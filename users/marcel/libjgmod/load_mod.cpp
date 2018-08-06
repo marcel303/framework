@@ -11,12 +11,14 @@
  *
  *  Protracker 15 and 31 instruments loader. */
 
-#include <string.h>
-#include <stdio.h>
-#include "framework-allegro2.h"
 #include "jgmod.h"
 #include "jshare.h"
 #include "file_io.h"
+
+#include "framework-allegro2.h"
+
+#include <string.h>
+#include <stdio.h>
 
 typedef struct MODTYPE{    /* struct to identify type of module */
         char    id[5];

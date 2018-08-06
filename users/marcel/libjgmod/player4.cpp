@@ -10,10 +10,10 @@
  *
  *  New effects for XM are located here. */
 
-#include "framework-allegro2.h"
 #include "jgmod.h"
 #include "jshare.h"
 
+#include "framework-allegro2.h"
 
 void JGMOD_PLAYER::parse_new_note (int chn, int note, int sample_no)
 {

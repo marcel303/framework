@@ -73,10 +73,25 @@
 #define XMEFFECT_P          38
 #define XMEFFECT_X          39
 
+// Allegro forward declarations
+struct SAMPLE;
 
-//this is used in get_mod_info() function.
+// JGMOD forward declarations
+struct CHANNEL_INFO;
+struct ENVELOPE_INFO;
+struct INSTRUMENT_INFO;
+struct JGMOD;
+struct JGMOD_INFO;
+struct JGMOD_PLAYER;
+struct MUSIC_INFO;
+struct NOTE_INFO;
+struct PATTERN_INFO;
+struct SAMPLE_INFO;
+
+// this is used in jgmod_get_info() function.
 enum JGMOD_TYPE
 {
+	JGMOD_TYPE_INVALID,
 	JGMOD_TYPE_MOD15,
 	JGMOD_TYPE_MOD31,
 	JGMOD_TYPE_S3M,
@@ -88,26 +103,27 @@ enum JGMOD_TYPE
 	JGMOD_TYPE_UNREAL_IT,
 };
 
-//-- Header ------------------------------------------------------------------
-typedef struct ENVELOPE_INFO
+struct ENVELOPE_INFO
 {
     int env[12];
     int pos[12];
+	
     int flg;
     int pts;
+	
     int loopbeg;
     int loopend;
+	
     int susbeg;
     int susend;
+	
     int a;
     int b;
     int p;
     int v;
+};
 
-}ENVELOPE_INFO;
-
-
-typedef struct CHANNEL_INFO
+struct CHANNEL_INFO
 {
     ENVELOPE_INFO volenv;
     ENVELOPE_INFO panenv;
@@ -201,10 +217,9 @@ typedef struct CHANNEL_INFO
 
     int global_volume_slide_on;
     int global_volume_slide;
+};
 
-}CHANNEL_INFO; 
-
-typedef struct MUSIC_INFO
+struct MUSIC_INFO
 {
     int max_chn;
     int no_chn;
@@ -231,20 +246,18 @@ typedef struct MUSIC_INFO
     int pause;          // for pause function
     int forbid;
     int is_playing;
+};
 
-}MUSIC_INFO; 
-
-typedef struct NOTE_INFO
+struct NOTE_INFO
 {
     int sample;
     int note;
     int volume;
     int command;
     int extcommand;
-}NOTE_INFO;
+};
 
-
-typedef struct SAMPLE_INFO
+struct SAMPLE_INFO
 {
     int lenght;
     int c2spd;
@@ -259,11 +272,9 @@ typedef struct SAMPLE_INFO
     int vibrato_spd;
     int vibrato_depth;
     int vibrato_rate;
+};
 
-}SAMPLE_INFO;
-
-
-typedef struct INSTRUMENT_INFO
+struct INSTRUMENT_INFO
 {
     int sample_number[96];
 
@@ -286,23 +297,22 @@ typedef struct INSTRUMENT_INFO
     int pan_end;
 
     int volume_fadeout;
+};
 
-}INSTRUMENT_INFO;
-
-
-typedef struct PATTERN_INFO
+struct PATTERN_INFO
 {
-    NOTE_INFO *ni;
+    NOTE_INFO * ni;
     int no_pos;
-}PATTERN_INFO;
+};
 
-typedef struct JGMOD
+struct JGMOD
 {
     char name[29];
-    SAMPLE_INFO *si;
-    PATTERN_INFO *pi;
-    INSTRUMENT_INFO *ii;
-    SAMPLE *s;
+	
+    SAMPLE_INFO * si;
+    PATTERN_INFO * pi;
+    INSTRUMENT_INFO * ii;
+    SAMPLE * s;
 
     int no_trk;
     int no_pat;
@@ -318,23 +328,22 @@ typedef struct JGMOD
     int no_instrument;
     int no_sample;
     int global_volume;
+};
 
-}JGMOD;
-
-typedef struct JGMOD_INFO
+struct JGMOD_INFO
 {
     JGMOD_TYPE type;
     char type_name[20];
     char name[29];
+};
 
-}JGMOD_INFO;
-
-typedef struct JGMOD_PLAYER
+struct JGMOD_PLAYER
 {
 	bool is_init;
-	SAMPLE *fake_sample;
+	SAMPLE * fake_sample;
 	
-	JGMOD *of;
+	JGMOD * of = nullptr;
+	
 	volatile MUSIC_INFO mi;
 	volatile int voice_table[JGMOD_MAX_VOICES];
 	volatile CHANNEL_INFO ci[JGMOD_MAX_VOICES];
@@ -342,20 +351,8 @@ typedef struct JGMOD_PLAYER
 	
 	bool enable_lasttrk_loop;
 	
-	JGMOD_PLAYER()
-	{
-		is_init = false;
-		fake_sample = nullptr;
-		
-		of = nullptr;
-		for (int i = 0; i < JGMOD_MAX_VOICES; ++i)
-			voice_table[i] = -1;
-		mod_volume = 255;
-		
-		enable_lasttrk_loop = true;
-	}
+	JGMOD_PLAYER();
 	
-	// main api
 	int init(int no_voices);
 	void shut ();
 	
@@ -382,7 +379,7 @@ protected:
 	
 	// -- located in player2.c ---------------------------------------------------
 	int find_lower_period(int period, int times);
-	static NOTE_INFO *get_note (JGMOD *j, int pat, int pos, int chn);
+	static NOTE_INFO * get_note (JGMOD * j, int pat, int pos, int chn);
 	int calc_pan (int chn);
 	int calc_volume (int volume);
 	int note2period (int note, int c2spd);
@@ -439,7 +436,7 @@ protected:
 	void parse_xm_pitch_slide_down (int chn, int extcommand);
 	void parse_xm_pan_slide (int chn, int extcommand);
 	void parse_global_volume_slide (int chn, int extcommand);
-	void parse_xm_set_envelop_position (volatile ENVELOPE_INFO *t, int extcommand);
+	void parse_xm_set_envelop_position (volatile ENVELOPE_INFO * t, int extcommand);
 
 	void do_xm_volume_slide (int chn);
 	void do_xm_pitch_slide_up (int chn);
@@ -448,18 +445,18 @@ protected:
 	void do_global_volume_slide(int chn);
 	void do_xm_x (int chn, int extcommand);
 
-	static void process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon);
-	static void start_envelope (volatile ENVELOPE_INFO *t, int *env, int *pos, int flg, int pts, int loopbeg, int loopend, int susbeg, int susend);
-}JGMOD_PLAYER;
+	static void process_envelope (volatile ENVELOPE_INFO * t, int v, int keyon);
+	static void start_envelope (volatile ENVELOPE_INFO * t, int *env, int *pos, int flg, int pts, int loopbeg, int loopend, int susbeg, int susend);
+};
 
 //-- externs -----------------------------------------------------------------
 
 void jgmod_seterror(const char * format, ...);
 const char * jgmod_geterror();
 
-JGMOD *jgmod_load (const char *filename, bool fast_loading = true, bool enable_m15 = false);
-void jgmod_destroy (JGMOD *j);
+JGMOD *jgmod_load (const char * filename, bool fast_loading = true, bool enable_m15 = false);
+void jgmod_destroy (JGMOD * j);
 
-int jgmod_get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15 = false);
+int jgmod_get_info (const char *filename, JGMOD_INFO * ji, bool enable_m15 = false);
 
 #endif  // for JGMOD_H

@@ -11,11 +11,13 @@
  *
  *  Protracker effects and misc stuff are located here */
 
-#include <math.h>
-#include <stdint.h>
-#include "framework-allegro2.h"
 #include "jgmod.h"
 #include "jshare.h"
+
+#include "framework-allegro2.h"
+
+#include <math.h>
+#include <stdint.h>
 
 #define speed_ratio     mi.speed_ratio / 100
 #define pitch_ratio     mi.pitch_ratio / 100
