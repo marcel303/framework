@@ -270,9 +270,9 @@ static WDL_FFT_COMPLEX d32768[4095];
   }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c2(register WDL_FFTx_COMPLEX *a)
+static void c2(WDL_FFTx_COMPLEX *a)
 {
-  register WDL_FFTx_REAL t1;
+  WDL_FFTx_REAL t1;
 
   t1 = a[1].re;
   a[1].re = a[0].re - t1;
@@ -284,9 +284,9 @@ static void c2(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static inline void c4(register WDL_FFTx_COMPLEX *a)
+static inline void c4(WDL_FFTx_COMPLEX *a)
 {
-  register WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
 
   t5 = a[2].re;
   t1 = a[0].re - t5;
@@ -316,9 +316,9 @@ static inline void c4(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c8(register WDL_FFTx_COMPLEX *a)
+static void c8(WDL_FFTx_COMPLEX *a)
 {
-  register WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
 
   t7 = a[4].im;
   t4 = a[0].im - t7;
@@ -400,9 +400,9 @@ static void c8(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c16(register WDL_FFTx_COMPLEX *a)
+static void c16(WDL_FFTx_COMPLEX *a)
 {
-  register WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
 
   TRANSFORMZERO(a[0],a[4],a[8],a[12]);
   TRANSFORM(a[1],a[5],a[9],a[13],d16[0].re,d16[0].im);
@@ -416,12 +416,12 @@ static void c16(register WDL_FFTx_COMPLEX *a)
 
 /* a[0...8n-1], w[0...2n-2]; n >= 2 */
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void cpass(register WDL_FFTx_COMPLEX *a,register const WDL_FFT_COMPLEX *w,register unsigned int n)
+static void cpass(WDL_FFTx_COMPLEX *a,const WDL_FFT_COMPLEX *w,unsigned int n)
 {
-  register WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
-  register WDL_FFTx_COMPLEX *a1;
-  register WDL_FFTx_COMPLEX *a2;
-  register WDL_FFTx_COMPLEX *a3;
+  WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFTx_COMPLEX *a1;
+  WDL_FFTx_COMPLEX *a2;
+  WDL_FFTx_COMPLEX *a3;
 
   a2 = a + 4 * n;
   a1 = a + 2 * n;
@@ -444,7 +444,7 @@ static void cpass(register WDL_FFTx_COMPLEX *a,register const WDL_FFT_COMPLEX *w
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c32(register WDL_FFTx_COMPLEX *a)
+static void c32(WDL_FFTx_COMPLEX *a)
 {
   cpass<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a,d32,4);
   c8<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 16);
@@ -453,7 +453,7 @@ static void c32(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c64(register WDL_FFTx_COMPLEX *a)
+static void c64(WDL_FFTx_COMPLEX *a)
 {
   cpass<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a,d64,8);
   c16<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 32);
@@ -462,7 +462,7 @@ static void c64(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c128(register WDL_FFTx_COMPLEX *a)
+static void c128(WDL_FFTx_COMPLEX *a)
 {
   cpass<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a,d128,16);
   c32<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 64);
@@ -471,7 +471,7 @@ static void c128(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c256(register WDL_FFTx_COMPLEX *a)
+static void c256(WDL_FFTx_COMPLEX *a)
 {
   cpass<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a,d256,32);
   c64<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 128);
@@ -480,7 +480,7 @@ static void c256(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c512(register WDL_FFTx_COMPLEX *a)
+static void c512(WDL_FFTx_COMPLEX *a)
 {
   cpass<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a,d512,64);
   c128<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 384);
@@ -490,13 +490,13 @@ static void c512(register WDL_FFTx_COMPLEX *a)
 
 /* a[0...8n-1], w[0...n-2]; n even, n >= 4 */
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void cpassbig(register WDL_FFTx_COMPLEX *a,register const WDL_FFT_COMPLEX *w,register unsigned int n)
+static void cpassbig(WDL_FFTx_COMPLEX *a,const WDL_FFT_COMPLEX *w,unsigned int n)
 {
-  register WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
-  register WDL_FFTx_COMPLEX *a1;
-  register WDL_FFTx_COMPLEX *a2;
-  register WDL_FFTx_COMPLEX *a3;
-  register unsigned int k;
+  WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFTx_COMPLEX *a1;
+  WDL_FFTx_COMPLEX *a2;
+  WDL_FFTx_COMPLEX *a3;
+  unsigned int k;
 
   a2 = a + 4 * n;
   a1 = a + 2 * n;
@@ -541,7 +541,7 @@ static void cpassbig(register WDL_FFTx_COMPLEX *a,register const WDL_FFT_COMPLEX
 
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c1024(register WDL_FFTx_COMPLEX *a)
+static void c1024(WDL_FFTx_COMPLEX *a)
 {
   cpassbig<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a,d1024,128);
   c256<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 768);
@@ -550,7 +550,7 @@ static void c1024(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c2048(register WDL_FFTx_COMPLEX *a)
+static void c2048(WDL_FFTx_COMPLEX *a)
 {
   cpassbig<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a,d2048,256);
   c512<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 1536);
@@ -559,7 +559,7 @@ static void c2048(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c4096(register WDL_FFTx_COMPLEX *a)
+static void c4096(WDL_FFTx_COMPLEX *a)
 {
   cpassbig<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a,d4096,512);
   c1024<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 3072);
@@ -568,7 +568,7 @@ static void c4096(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c8192(register WDL_FFTx_COMPLEX *a)
+static void c8192(WDL_FFTx_COMPLEX *a)
 {
   cpassbig<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a,d8192,1024);
   c2048<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 6144);
@@ -577,7 +577,7 @@ static void c8192(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c16384(register WDL_FFTx_COMPLEX *a)
+static void c16384(WDL_FFTx_COMPLEX *a)
 {
   cpassbig<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a,d16384,2048);
   c4096<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 8192 + 4096);
@@ -586,7 +586,7 @@ static void c16384(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void c32768(register WDL_FFTx_COMPLEX *a)
+static void c32768(WDL_FFTx_COMPLEX *a)
 {
   cpassbig<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a,d32768,4096);
   c8192<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 16384 + 8192);
@@ -598,7 +598,7 @@ static void c32768(register WDL_FFTx_COMPLEX *a)
 /* n even, n > 0 */
 void WDL_fft_complexmul(WDL_FFT_COMPLEX *a,WDL_FFT_COMPLEX *b,int n)
 {
-  register WDL_FFT_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFT_REAL t1, t2, t3, t4, t5, t6, t7, t8;
   if (n<2 || (n&1)) return;
 
   do {
@@ -625,7 +625,7 @@ void WDL_fft_complexmul(WDL_FFT_COMPLEX *a,WDL_FFT_COMPLEX *b,int n)
 
 void WDL_fft_complexmul2(WDL_FFT_COMPLEX *c, WDL_FFT_COMPLEX *a, WDL_FFT_COMPLEX *b, int n)
 {
-  register WDL_FFT_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFT_REAL t1, t2, t3, t4, t5, t6, t7, t8;
   if (n<2 || (n&1)) return;
 
   do {
@@ -652,7 +652,7 @@ void WDL_fft_complexmul2(WDL_FFT_COMPLEX *c, WDL_FFT_COMPLEX *a, WDL_FFT_COMPLEX
 }
 void WDL_fft_complexmul3(WDL_FFT_COMPLEX *c, WDL_FFT_COMPLEX *a, WDL_FFT_COMPLEX *b, int n)
 {
-  register WDL_FFT_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFT_REAL t1, t2, t3, t4, t5, t6, t7, t8;
   if (n<2 || (n&1)) return;
 
   do {
@@ -681,7 +681,7 @@ void WDL_fft_complexmul3(WDL_FFT_COMPLEX *c, WDL_FFT_COMPLEX *a, WDL_FFT_COMPLEX
 /* n even, n > 0 */
 void WDL_fft4_complexmul1(WDL_FFT4_COMPLEX *a,WDL_FFT_COMPLEX *b,int n)
 {
-  register WDL_FFT4_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFT4_REAL t1, t2, t3, t4, t5, t6, t7, t8;
   if (n<2 || (n&1)) return;
 
   do {
@@ -709,7 +709,7 @@ void WDL_fft4_complexmul1(WDL_FFT4_COMPLEX *a,WDL_FFT_COMPLEX *b,int n)
 /* n even, n > 0 */
 void WDL_fft4_complexmul4(WDL_FFT4_COMPLEX *a,WDL_FFT4_COMPLEX *b,int n)
 {
-  register WDL_FFT4_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFT4_REAL t1, t2, t3, t4, t5, t6, t7, t8;
   if (n<2 || (n&1)) return;
 
   do {
@@ -736,9 +736,9 @@ void WDL_fft4_complexmul4(WDL_FFT4_COMPLEX *a,WDL_FFT4_COMPLEX *b,int n)
 
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static inline void u4(register WDL_FFTx_COMPLEX *a)
+static inline void u4(WDL_FFTx_COMPLEX *a)
 {
-  register WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
 
   t1 = VOL a[1].re;
   t3 = a[0].re - t1;
@@ -769,9 +769,9 @@ static inline void u4(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void u8(register WDL_FFTx_COMPLEX *a)
+static void u8(WDL_FFTx_COMPLEX *a)
 {
-  register WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
 
   u4<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a);
 
@@ -856,9 +856,9 @@ static void u8(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void u16(register WDL_FFTx_COMPLEX *a)
+static void u16(WDL_FFTx_COMPLEX *a)
 {
-  register WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
 
   u8<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a);
   u4<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 8);
@@ -872,12 +872,12 @@ static void u16(register WDL_FFTx_COMPLEX *a)
 
 /* a[0...8n-1], w[0...2n-2] */
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void upass(register WDL_FFTx_COMPLEX *a,register const WDL_FFT_COMPLEX *w,register unsigned int n)
+static void upass(WDL_FFTx_COMPLEX *a,const WDL_FFT_COMPLEX *w,unsigned int n)
 {
-  register WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
-  register WDL_FFTx_COMPLEX *a1;
-  register WDL_FFTx_COMPLEX *a2;
-  register WDL_FFTx_COMPLEX *a3;
+  WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFTx_COMPLEX *a1;
+  WDL_FFTx_COMPLEX *a2;
+  WDL_FFTx_COMPLEX *a3;
 
   a2 = a + 4 * n;
   a1 = a + 2 * n;
@@ -900,7 +900,7 @@ static void upass(register WDL_FFTx_COMPLEX *a,register const WDL_FFT_COMPLEX *w
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void u32(register WDL_FFTx_COMPLEX *a)
+static void u32(WDL_FFTx_COMPLEX *a)
 {
   u16<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a);
   u8<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 16);
@@ -909,7 +909,7 @@ static void u32(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void u64(register WDL_FFTx_COMPLEX *a)
+static void u64(WDL_FFTx_COMPLEX *a)
 {
   u32<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a);
   u16<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 32);
@@ -918,7 +918,7 @@ static void u64(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void u128(register WDL_FFTx_COMPLEX *a)
+static void u128(WDL_FFTx_COMPLEX *a)
 {
   u64<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a);
   u32<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 64);
@@ -927,7 +927,7 @@ static void u128(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void u256(register WDL_FFTx_COMPLEX *a)
+static void u256(WDL_FFTx_COMPLEX *a)
 {
   u128<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a);
   u64<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 128);
@@ -936,7 +936,7 @@ static void u256(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void u512(register WDL_FFTx_COMPLEX *a)
+static void u512(WDL_FFTx_COMPLEX *a)
 {
   u256<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a);
   u128<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 256);
@@ -947,13 +947,13 @@ static void u512(register WDL_FFTx_COMPLEX *a)
 
 /* a[0...8n-1], w[0...n-2]; n even, n >= 4 */
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void upassbig(register WDL_FFTx_COMPLEX *a,register const WDL_FFT_COMPLEX *w,register unsigned int n)
+static void upassbig(WDL_FFTx_COMPLEX *a,const WDL_FFT_COMPLEX *w,unsigned int n)
 {
-  register WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
-  register WDL_FFTx_COMPLEX *a1;
-  register WDL_FFTx_COMPLEX *a2;
-  register WDL_FFTx_COMPLEX *a3;
-  register unsigned int k;
+  WDL_FFTx_REAL t1, t2, t3, t4, t5, t6, t7, t8;
+  WDL_FFTx_COMPLEX *a1;
+  WDL_FFTx_COMPLEX *a2;
+  WDL_FFTx_COMPLEX *a3;
+  unsigned int k;
 
   a2 = a + 4 * n;
   a1 = a + 2 * n;
@@ -999,7 +999,7 @@ static void upassbig(register WDL_FFTx_COMPLEX *a,register const WDL_FFT_COMPLEX
 
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void u1024(register WDL_FFTx_COMPLEX *a)
+static void u1024(WDL_FFTx_COMPLEX *a)
 {
   u512<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a);
   u256<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 512);
@@ -1008,7 +1008,7 @@ static void u1024(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void u2048(register WDL_FFTx_COMPLEX *a)
+static void u2048(WDL_FFTx_COMPLEX *a)
 {
   u1024<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a);
   u512<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 1024);
@@ -1018,7 +1018,7 @@ static void u2048(register WDL_FFTx_COMPLEX *a)
 
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void u4096(register WDL_FFTx_COMPLEX *a)
+static void u4096(WDL_FFTx_COMPLEX *a)
 {
   u2048<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a);
   u1024<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 2048);
@@ -1027,7 +1027,7 @@ static void u4096(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void u8192(register WDL_FFTx_COMPLEX *a)
+static void u8192(WDL_FFTx_COMPLEX *a)
 {
   u4096<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a);
   u2048<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 4096);
@@ -1036,7 +1036,7 @@ static void u8192(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void u16384(register WDL_FFTx_COMPLEX *a)
+static void u16384(WDL_FFTx_COMPLEX *a)
 {
   u8192<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a);
   u4096<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 8192);
@@ -1045,7 +1045,7 @@ static void u16384(register WDL_FFTx_COMPLEX *a)
 }
 
 template <typename WDL_FFTx_COMPLEX, typename WDL_FFTx_REAL>
-static void u32768(register WDL_FFTx_COMPLEX *a)
+static void u32768(WDL_FFTx_COMPLEX *a)
 {
   u16384<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a);
   u8192<WDL_FFTx_COMPLEX, WDL_FFTx_REAL>(a + 16384);
@@ -1201,9 +1201,9 @@ void WDL_fft4(WDL_FFT4_COMPLEX *buf, int len, int isInverse)
   }
 }
 
-static inline void r2(register WDL_FFT_REAL *a)
+static inline void r2(WDL_FFT_REAL *a)
 {
-  register WDL_FFT_REAL t1, t2;
+  WDL_FFT_REAL t1, t2;
 
   t1 = a[0] + a[1];
   t2 = a[0] - a[1];
@@ -1211,9 +1211,9 @@ static inline void r2(register WDL_FFT_REAL *a)
   a[1] = t2 * 2;
 }
 
-static inline void v2(register WDL_FFT_REAL *a)
+static inline void v2(WDL_FFT_REAL *a)
 {
-  register WDL_FFT_REAL t1, t2;
+  WDL_FFT_REAL t1, t2;
 
   t1 = a[0] + a[1];
   t2 = a[0] - a[1];
