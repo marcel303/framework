@@ -429,7 +429,7 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop)
             ci[index].panenv.pos[temp] = 0;
             }
 
-        if (j->flag & JGMOD_XM_MODE)
+        if (j->flag & JGMOD_MODE_XM)
             ci[index].c2spd = 0;
         else
             ci[index].c2spd = 8363;

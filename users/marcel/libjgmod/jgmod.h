@@ -25,9 +25,9 @@
 #define JGMOD_ENV_SUS       2
 #define JGMOD_ENV_LOOP      4
 
-#define JGMOD_XM_MODE       1
-#define JGMOD_PERIOD_MODE   2
-#define JGMOD_LINEAR_MODE   4
+#define JGMOD_MODE_XM       1
+#define JGMOD_MODE_PERIOD   2
+#define JGMOD_MODE_LINEAR   4
 
 
 #define PTEFFECT_0          0

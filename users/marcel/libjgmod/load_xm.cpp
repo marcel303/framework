@@ -271,11 +271,11 @@ JGMOD *load_xm (const char *filename, int start_offset)
     if (j->bpm == 0)
         j->bpm = 125;
 
-    j->flag = JGMOD_XM_MODE;
+    j->flag = JGMOD_MODE_XM;
     if (freq_type == 0)
-        j->flag |= JGMOD_PERIOD_MODE;
+        j->flag |= JGMOD_MODE_PERIOD;
     else
-        j->flag |= JGMOD_LINEAR_MODE;
+        j->flag |= JGMOD_MODE_LINEAR;
 
     // Now find out the actual number of patterns. The header might report
     // wrongly. 

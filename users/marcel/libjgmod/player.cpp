@@ -238,7 +238,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
             if ( (sample_no >= 0) && ((ni->command == PTEFFECT_3) || (ni->command == PTEFFECT_5)
                 || (ni->command == XMEFFECT_5) || ( (ni->volume & 0xF0) == 0xF0))  )
                 {
-                if (mi.flag & JGMOD_XM_MODE)
+                if (mi.flag & JGMOD_MODE_XM)
                     {
                     SAMPLE_INFO *si;
 
@@ -262,7 +262,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
                 if (ci[chn].tremolo_waveform <= 2)
                     ci[chn].tremolo_pointer = 0;
 
-                if (mi.flag & JGMOD_XM_MODE)
+                if (mi.flag & JGMOD_MODE_XM)
                     parse_new_note (chn, ni->note, sample_no);
                 else
                     parse_old_note (chn, ni->note, sample_no);

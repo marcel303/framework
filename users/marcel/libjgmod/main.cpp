@@ -80,7 +80,7 @@ static int do_load(const char * filename)
     if (end_chn > 33)
         end_chn = 33;
 	
-    if (jgmod_player.mi.flag & JGMOD_XM_MODE)
+    if (jgmod_player.mi.flag & JGMOD_MODE_XM)
         note_length = 180;
     else
         note_length = 140;
@@ -164,7 +164,7 @@ static void drawTest()
 			
 			float xpos;
 			
-			if (jgmod_player.mi.flag & JGMOD_XM_MODE)
+			if (jgmod_player.mi.flag & JGMOD_MODE_XM)
 				xpos = voice_get_frequency(jgmod_player.voice_table[chn]);
 			else
 				xpos = voice_get_frequency(jgmod_player.voice_table[chn]) * 8363.f / jgmod_player.ci[chn].c2spd;
@@ -354,7 +354,7 @@ int main(int argc, char **argv)
 			
 			drawText(0,  0, 12, +1, +1, "Song name   : %s", the_mod->name);
 			drawText(0, 12, 12, +1, +1, "No Channels : %2d  Period Type : %s  No Inst : %2d ",
-				the_mod->no_chn, (the_mod->flag & JGMOD_LINEAR_MODE) ? "Linear" : "Amiga", the_mod->no_instrument);
+				the_mod->no_chn, (the_mod->flag & JGMOD_MODE_LINEAR) ? "Linear" : "Amiga", the_mod->no_instrument);
 			drawText(0, 24, 12, +1, +1, "No Tracks   : %2d  No Patterns : %2d  No Sample : %2d ", the_mod->no_trk, the_mod->no_pat, the_mod->no_sample);
 			
 			// draw playback info
@@ -422,7 +422,7 @@ static void drawCircle(int chn)
 			
 			float xpos;
 			
-			if (jgmod_player.mi.flag & JGMOD_XM_MODE)
+			if (jgmod_player.mi.flag & JGMOD_MODE_XM)
 				xpos = voice_get_frequency(jgmod_player.voice_table[chn]);
 			else
 				xpos = voice_get_frequency(jgmod_player.voice_table[chn]) * 8363.f / jgmod_player.ci[chn].c2spd;

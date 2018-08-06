@@ -173,7 +173,7 @@ void save_note (int no_field, PATTERN_INFO *pi, JGMOD_FILE *file, JGMOD *j)
         if (repeat_type & 0x80)
             for (index=0; index < (repeat & 0x7F); index++)
                 {
-                if (j->flag & JGMOD_XM_MODE) // note is one byte
+                if (j->flag & JGMOD_MODE_XM) // note is one byte
                     jgmod_putc ((signed char)pi->ni[curr_field + index].note, file);
                 else    // note is word
                     {

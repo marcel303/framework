@@ -244,7 +244,7 @@ JGMOD *load_jgm (JGMOD_FILE *f)
             if (repeat & 0x80)
                 for (temp =0; temp < (repeat & 0x7F); temp++)
                     {
-                    if (j->flag & JGMOD_XM_MODE)
+                    if (j->flag & JGMOD_MODE_XM)
                         pi->ni[index + temp].note = (signed char)jgmod_getc (f);
                     else
                         {
