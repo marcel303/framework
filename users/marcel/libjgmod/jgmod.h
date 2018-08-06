@@ -337,12 +337,7 @@ typedef struct JGMOD_PLAYER
 	volatile CHANNEL_INFO ci[MAX_ALLEG_VOICE];
 	volatile int mod_volume;
 	
-	// load_s3m.cpp
-	bool fast_loading;
-	
-	// mod.cpp
 	bool enable_lasttrk_loop;
-	bool enable_m15;
 	
 	JGMOD_PLAYER()
 	{
@@ -354,20 +349,13 @@ typedef struct JGMOD_PLAYER
 			voice_table[i] = -1;
 		mod_volume = 255;
 		
-		// load_s3m.cpp
-		fast_loading = true;
-		
-		// mod.cpp
 		enable_lasttrk_loop = true;
-		enable_m15 = false;
 	}
 	
 	// main api
 	int init(int no_voices);
 	void shut (void);
 	
-	static void mod_interrupt_proc (void * data);
-	void mod_interrupt (void);
 	void play (JGMOD *j, int loop);
 	void next_track (void);
 	void prev_track (void);
@@ -385,7 +373,9 @@ typedef struct JGMOD_PLAYER
 	void set_pitch (int pitch);
 	void toggle_pause_mode (void);
 	
-	static int get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15 = false);
+protected:
+	static void mod_interrupt_proc (void * data);
+	void mod_interrupt (void);
 	
 	// -- located in player2.c ---------------------------------------------------
 	int find_lower_period(int period, int times);
@@ -461,12 +451,12 @@ typedef struct JGMOD_PLAYER
 
 //-- externs -----------------------------------------------------------------
 
-// todo : remove global
-extern char jgmod_error[80];
+void jgmod_seterror(const char * format, ...);
+const char * jgmod_geterror();
 
 JGMOD *jgmod_load (const char *filename, bool fast_loading = true, bool enable_m15 = false);
 void jgmod_destroy (JGMOD *j);
 
-void jgmod_seterror(const char * format, ...);
+static int jgmod_get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15 = false);
 
 #endif  // for JGMOD_H

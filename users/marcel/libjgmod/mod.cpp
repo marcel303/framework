@@ -20,7 +20,7 @@
 #include "StringEx.h"
 
 // todo : make thread local ?
-char jgmod_error[80] = { };
+static char jgmod_error[80] = { };
 
 void jgmod_seterror(const char * format, ...)
 {
@@ -31,6 +31,11 @@ void jgmod_seterror(const char * format, ...)
 		sizeof(jgmod_error),
 		format, args);
 	va_end(args);
+}
+
+const char * jgmod_geterror()
+{
+	return jgmod_error;
 }
 
 // load supported types of mod files.
@@ -139,6 +144,62 @@ void jgmod_destroy (JGMOD *j)
 
     free (j);
     j = nullptr;
+}
+
+int jgmod_get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15)
+{
+    int temp;
+
+    if (ji == nullptr)
+        return -1;
+
+	
+    if (jgmod::detect_jgm (filename) == 1)
+        {
+        JGMOD_FILE *f;
+
+        f = jgmod_fopen (filename, "rb");
+        if (f != nullptr)
+            {
+            temp = jgmod::get_jgm_info(f, ji);
+            jgmod_fclose (f);
+            return temp;
+            }
+        }
+
+    if (jgmod::detect_it (filename) == 1)
+        return jgmod::get_it_info (filename, 0, ji);
+
+    if (jgmod::detect_xm (filename) == 1)
+        return jgmod::get_xm_info (filename, 0, ji);
+
+    if (jgmod::detect_s3m (filename) == 1)
+        return jgmod::get_s3m_info (filename, 0, ji);
+
+    if (jgmod::detect_m31 (filename) == 1)
+        return jgmod::get_m_info (filename, 31, ji);
+
+    temp = jgmod::detect_unreal_it (filename);
+    if (temp > 0)
+        return jgmod::get_it_info (filename, temp, ji);
+
+    temp = jgmod::detect_unreal_xm (filename);
+    if (temp > 0)
+        return jgmod::get_xm_info (filename, temp, ji);
+
+    temp = jgmod::detect_unreal_s3m (filename);
+    if (temp > 0)
+        return jgmod::get_s3m_info (filename, temp, ji);
+
+    if (enable_m15 == true)            //detect this last
+        {
+        if (jgmod::detect_m15 (filename) == 1)
+            return jgmod::get_m_info (filename, 15, ji);
+        }
+
+
+    jgmod_seterror ("Unsupported MOD type or unable to open file");
+    return -1;
 }
 
 //
@@ -580,61 +641,4 @@ void JGMOD_PLAYER::toggle_pause_mode (void)
         resume();
     else
         pause();
-}
-
-
-int JGMOD_PLAYER::get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15)
-{
-    int temp;
-
-    if (ji == nullptr)
-        return -1;
-
-    
-    if (jgmod::detect_jgm (filename) == 1)
-        {
-        JGMOD_FILE *f;
-
-        f = jgmod_fopen (filename, "rb");
-        if (f != nullptr)
-            {
-            temp = jgmod::get_jgm_info(f, ji);
-            jgmod_fclose (f);
-            return temp;
-            }
-        }
-
-    if (jgmod::detect_it (filename) == 1)
-        return jgmod::get_it_info (filename, 0, ji);
-
-    if (jgmod::detect_xm (filename) == 1)
-        return jgmod::get_xm_info (filename, 0, ji);
-
-    if (jgmod::detect_s3m (filename) == 1)
-        return jgmod::get_s3m_info (filename, 0, ji);
-
-    if (jgmod::detect_m31 (filename) == 1)
-        return jgmod::get_m_info (filename, 31, ji);
-
-    temp = jgmod::detect_unreal_it (filename);
-    if (temp > 0)
-        return jgmod::get_it_info (filename, temp, ji);
-
-    temp = jgmod::detect_unreal_xm (filename);
-    if (temp > 0)
-        return jgmod::get_xm_info (filename, temp, ji);
-
-    temp = jgmod::detect_unreal_s3m (filename);
-    if (temp > 0)
-        return jgmod::get_s3m_info (filename, temp, ji);
-
-    if (enable_m15 == true)            //detect this last
-        {
-        if (jgmod::detect_m15 (filename) == 1)
-            return jgmod::get_m_info (filename, 15, ji);
-        }
-
-
-    jgmod_seterror ("Unsupported MOD type or unable to open file");
-    return -1;
 }

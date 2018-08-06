@@ -70,7 +70,7 @@ static int do_load(const char * filename)
 	
     if (the_mod == nullptr)
 	{
-        logError("%s", jgmod_error);
+        logError("%s", jgmod_geterror());
         return 1;
 	}
 
@@ -199,10 +199,6 @@ static void drawTest()
 
 int main(int argc, char **argv)
 {
-    jgmod_player.fast_loading = false;
-    jgmod_player.enable_m15 = true;
-    jgmod_player.enable_lasttrk_loop = true;
-
     srand(time(0));
 
     if (argc != 2)
@@ -224,7 +220,9 @@ int main(int argc, char **argv)
 		logError("%s not found", argv[1]);
 		return 1;
 	}
-
+	
+	jgmod_player.enable_lasttrk_loop = true;
+	
 	if (do_load(argv[1]) == false)
 		return 1;
 	
