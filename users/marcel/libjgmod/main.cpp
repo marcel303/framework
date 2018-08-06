@@ -261,7 +261,15 @@ int main(int argc, char **argv)
         return -1;
 	}
 	
-	//player.enable_lasttrk_loop = true;
+#if 1
+	JGMOD * mod2 = do_load("test3.xm");
+	JGMOD_PLAYER player2;
+	player2.init(JGMOD_MAX_VOICES);
+	player2.enable_lasttrk_loop = true;
+	player2.play(mod2, true);
+#endif
+
+	player.enable_lasttrk_loop = true;
 	
 	do_play(player, mod);
 

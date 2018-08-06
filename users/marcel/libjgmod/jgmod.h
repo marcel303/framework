@@ -349,7 +349,7 @@ struct JGMOD_PLAYER
 	volatile CHANNEL_INFO ci[JGMOD_MAX_VOICES];
 	volatile int mod_volume;
 	
-	bool enable_lasttrk_loop;
+	volatile bool enable_lasttrk_loop;
 	
 	JGMOD_PLAYER();
 	
