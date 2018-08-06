@@ -361,7 +361,7 @@ void JGMOD_PLAYER::parse_note_command (int chn, int note)
     if (note == -2)
         {
         ci[chn].keyon = true;
-        if ( (ci[chn].volenv.flg & ENV_ON) == 0)
+        if ( (ci[chn].volenv.flg & JGMOD_ENV_ON) == 0)
             ci[chn].volume = 0;            
         }
 	

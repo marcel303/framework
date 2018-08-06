@@ -254,10 +254,10 @@ void JGMOD_PLAYER::start_envelope (volatile ENVELOPE_INFO *t, int *env, int *pos
     t->b = 1;
     t->p = 0;
 
-    if ( (t->flg & ENV_SUS) && (t->susbeg == 0) )
+    if ( (t->flg & JGMOD_ENV_SUS) && (t->susbeg == 0) )
         t->b = 0;
 
-    if ( (t->flg & ENV_ON) && (t->pts == 1) )
+    if ( (t->flg & JGMOD_ENV_ON) && (t->pts == 1) )
         t->b = 0;
 
 }
@@ -269,7 +269,7 @@ void JGMOD_PLAYER::process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon
     if ( (t->flg == 0) || (t->pts == 0) )
         return;
 
-    if ( (t->flg & ENV_ON) && t->pts)
+    if ( (t->flg & JGMOD_ENV_ON) && t->pts)
         {
         int a, b, p;
 
@@ -290,7 +290,7 @@ void JGMOD_PLAYER::process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon
             a = b;
             b++;
 
-            if ( (t->flg & ENV_SUS) && (keyon == false) && (b > t->susend) )
+            if ( (t->flg & JGMOD_ENV_SUS) && (keyon == false) && (b > t->susend) )
                 {
                 a = t->susbeg;
                 p = t->pos[a];
@@ -299,7 +299,7 @@ void JGMOD_PLAYER::process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon
                 else
                     b = a + 1;
                 }
-            else if ( (t->flg & ENV_LOOP) && (b > t->loopend) )
+            else if ( (t->flg & JGMOD_ENV_LOOP) && (b > t->loopend) )
                 {
                 a = t->loopbeg;
                 p = t->pos[a];

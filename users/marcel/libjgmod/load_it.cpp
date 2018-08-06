@@ -96,12 +96,12 @@ int get_it_info(const char *filename, int start_offset, JGMOD_INFO *ji)
     if (start_offset ==0)
         {
         sprintf (ji->type_name, "IT");
-        ji->type = IT_TYPE;
+        ji->type = JGMOD_IT_TYPE;
         }
     else
         {
         sprintf (ji->type_name, "Unreal IT (UMX)");
-        ji->type = UNREAL_IT_TYPE;
+        ji->type = JGMOD_UNREAL_IT_TYPE;
         }
 
     jgmod_skip (f, 4 + start_offset);

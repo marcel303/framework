@@ -121,12 +121,12 @@ int get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji)
     if (no_inst == 15)
         {
         sprintf (ji->type_name, "MOD (15 Samples)");
-        ji->type = MOD15_TYPE;
+        ji->type = JGMOD_MOD15_TYPE;
         }
     else if (no_inst == 31)
         {
         sprintf (ji->type_name, "MOD (31 Samples)");
-        ji->type = MOD31_TYPE;
+        ji->type = JGMOD_MOD31_TYPE;
         }
     else
         {
@@ -218,7 +218,7 @@ JGMOD *load_m (const char *filename, int no_inst)
     j->global_volume = 64;
     j->tempo = 6;
     j->bpm = 125;
-    for (index=0; index<MAX_ALLEG_VOICE; index++)            //set the panning position
+    for (index=0; index<JGMOD_MAX_VOICES; index++)            //set the panning position
         {
         if ( (index%4) == 0 || (index%4) == 3)
             *(j->panning + index) = 0;
@@ -328,7 +328,7 @@ JGMOD *load_m (const char *filename, int no_inst)
             ni->volume = 0;
 
             if (ni->note)
-                ni->note = NTSC / ni->note;   //change to hz
+                ni->note = JGMOD_NTSC / ni->note;   //change to hz
 
             ni++;
             }
@@ -363,13 +363,13 @@ JGMOD *load_m (const char *filename, int no_inst)
 
         if (si->replen > 0)         //sample does loop
             {
-            si->loop = LOOP_ON;
+            si->loop = JGMOD_LOOP_ON;
             s->loop_start   = si->repoff;
             s->loop_end     = si->repoff + si->replen;
             }
         else
             {
-            si->loop = LOOP_OFF;
+            si->loop = JGMOD_LOOP_OFF;
             s->loop_start   = 0;
             s->loop_end     = si->lenght;
             }

@@ -176,7 +176,7 @@ int JGMOD_PLAYER::find_lower_period(int period, int times)
     int result = period;
     int index = 0;
 
-    if (mi.flag & XM_MODE)
+    if (mi.flag & JGMOD_XM_MODE)
         {
         while (result >= period)
             {
@@ -247,7 +247,7 @@ NOTE_INFO *JGMOD_PLAYER::get_note (JGMOD *j, int pat, int pos, int chn)
 
 int JGMOD_PLAYER::note2period (int note, int c2spd)
 {
-    if (mi.flag & LINEAR_MODE)
+    if (mi.flag & JGMOD_LINEAR_MODE)
         {
         if (note < 0)
             note = 0;
@@ -256,7 +256,7 @@ int JGMOD_PLAYER::note2period (int note, int c2spd)
 
         return (7680 - (note*64) - (c2spd/2) + 64);
         }
-    else if (mi.flag & PERIOD_MODE)
+    else if (mi.flag & JGMOD_PERIOD_MODE)
         {
         uint8_t n, o;
         uint16_t p1, p2, i;
@@ -283,7 +283,7 @@ int JGMOD_PLAYER::note2period (int note, int c2spd)
             c2spd = 4242;
 
         temp =  note * c2spd / 8363;
-        return (NTSC << 2) / temp;
+        return (JGMOD_NTSC << 2) / temp;
         }
 
 }
@@ -292,7 +292,7 @@ int JGMOD_PLAYER::get_jgmod_sample_no (int instrument_no, int note_no)
 {
     INSTRUMENT_INFO *ii;
 
-    if (mi.flag & XM_MODE)
+    if (mi.flag & JGMOD_XM_MODE)
         {
         if (note_no > 95 || note_no < 0)
             return (of->no_sample - 1);
@@ -315,7 +315,7 @@ int JGMOD_PLAYER::get_jgmod_sample_no (int instrument_no, int note_no)
 
 int JGMOD_PLAYER::period2pitch (int period)
 {
-    if ( (of->flag & XM_MODE) && (of->flag & LINEAR_MODE) )
+    if ( (of->flag & JGMOD_XM_MODE) && (of->flag & JGMOD_LINEAR_MODE) )
         {
         int temp;
         //char buf[108];
@@ -328,10 +328,10 @@ int JGMOD_PLAYER::period2pitch (int period)
         //temp >>= 2;
         return temp;
         }
-    else if ( (of->flag & XM_MODE) && (of->flag & PERIOD_MODE) )
+    else if ( (of->flag & JGMOD_XM_MODE) && (of->flag & JGMOD_PERIOD_MODE) )
         return 14317456L / period;
     else
-        return ((NTSC << 2) / period);
+        return ((JGMOD_NTSC << 2) / period);
 }
 
 void JGMOD_PLAYER::do_position_jump (int extcommand)

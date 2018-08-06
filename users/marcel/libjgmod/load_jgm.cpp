@@ -47,7 +47,7 @@ int detect_jgm (const char *filename)
 
 int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji)
 {
-    ji->type = JGM_TYPE;
+    ji->type = JGMOD_JGM_TYPE;
     sprintf (ji->type_name, "JGM");
 
     jgmod_skip (f, 18);
@@ -244,13 +244,13 @@ JGMOD *load_jgm (JGMOD_FILE *f)
             if (repeat & 0x80)
                 for (temp =0; temp < (repeat & 0x7F); temp++)
                     {
-                    if (j->flag & XM_MODE)
+                    if (j->flag & JGMOD_XM_MODE)
                         pi->ni[index + temp].note = (signed char)jgmod_getc (f);
                     else
                         {
                         pi->ni[index + temp].note = (signed short)jgmod_igetw (f);
                         if (pi->ni[index + temp].note > 0)
-                            pi->ni[index + temp].note = NTSC / pi->ni[index + temp].note; 
+                            pi->ni[index + temp].note = JGMOD_NTSC / pi->ni[index + temp].note; 
                         }
                     }
 

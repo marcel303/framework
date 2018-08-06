@@ -169,7 +169,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
             ci[chn].global_volume_slide_on = false;
             ni = get_note (of, mi.pat, mi.pos, chn);
 
-            if (chn<MAX_ALLEG_VOICE)
+            if (chn<JGMOD_MAX_VOICES)
                 ci[chn].loop_on = false;
 
             // these are global commands. Should not be skipped
@@ -191,11 +191,11 @@ void JGMOD_PLAYER::mod_interrupt (void)
             else if (ni->command == S3EFFECT_V)     // set global volume
                 do_global_volume (ni->extcommand);
 
-            else if (ni->command == XMEFFECT_H && (chn < MAX_ALLEG_VOICE) )     // global volume slide
+            else if (ni->command == XMEFFECT_H && (chn < JGMOD_MAX_VOICES) )     // global volume slide
                 parse_global_volume_slide (chn, ni->extcommand);
 
             // pattern loop
-            else if ( (ni->command == PTEFFECT_E) && (ni->extcommand >> 4 == 6 ) && (chn < MAX_ALLEG_VOICE))
+            else if ( (ni->command == PTEFFECT_E) && (ni->extcommand >> 4 == 6 ) && (chn < JGMOD_MAX_VOICES))
                 do_pattern_loop (chn, ni->extcommand);
 
             // pattern delay
@@ -238,7 +238,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
             if ( (sample_no >= 0) && ((ni->command == PTEFFECT_3) || (ni->command == PTEFFECT_5)
                 || (ni->command == XMEFFECT_5) || ( (ni->volume & 0xF0) == 0xF0))  )
                 {
-                if (mi.flag & XM_MODE)
+                if (mi.flag & JGMOD_XM_MODE)
                     {
                     SAMPLE_INFO *si;
 
@@ -262,7 +262,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
                 if (ci[chn].tremolo_waveform <= 2)
                     ci[chn].tremolo_pointer = 0;
 
-                if (mi.flag & XM_MODE)
+                if (mi.flag & JGMOD_XM_MODE)
                     parse_new_note (chn, ni->note, sample_no);
                 else
                     parse_old_note (chn, ni->note, sample_no);
@@ -394,7 +394,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
             else if (ni->command == XMEFFECT_K)         // key off
                 {
                 ci[chn].keyon = true;
-                if ( (ci[chn].volenv.flg & ENV_ON) == 0)
+                if ( (ci[chn].volenv.flg & JGMOD_ENV_ON) == 0)
                     ci[chn].volume = 0;            
                 }
 
@@ -539,10 +539,10 @@ void JGMOD_PLAYER::mod_interrupt (void)
 
             reallocate_voice (voice_table[chn], s);
 
-            if (si->loop & LOOP_ON)
+            if (si->loop & JGMOD_LOOP_ON)
                 voice_set_playmode (voice_table[chn], PLAYMODE_LOOP);
 
-            if (si->loop & LOOP_BIDI)
+            if (si->loop & JGMOD_LOOP_BIDI)
                 voice_set_playmode (voice_table[chn], PLAYMODE_BIDIR|PLAYMODE_LOOP);
 
             //voice_start(voice_table[chn]);

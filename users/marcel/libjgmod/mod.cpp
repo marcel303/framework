@@ -212,7 +212,7 @@ int JGMOD_PLAYER::init(int max_chn)
     if (mod_init == true)      // don't need to initialize many times
         return 1;
 
-    if ( (max_chn > MAX_ALLEG_VOICE) || (max_chn <= 0) )
+    if ( (max_chn > JGMOD_MAX_VOICES) || (max_chn <= 0) )
         return -1;
 
     if (fake_sample == nullptr)
@@ -287,7 +287,7 @@ void JGMOD_PLAYER::shut (void)
     stop();
     remove_int2 (mod_interrupt_proc, this);
 
-    for (index=0; index<MAX_ALLEG_VOICE; index++)
+    for (index=0; index<JGMOD_MAX_VOICES; index++)
         {
         if (voice_table[index] >= 0)
             deallocate_voice (voice_table[index]);
@@ -313,7 +313,7 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop)
         stop();
 
     mi.flag = j->flag;
-    for (index=0 ;index<MAX_ALLEG_VOICE; index++)
+    for (index=0 ;index<JGMOD_MAX_VOICES; index++)
         {
         ci[index].keyon = false;
         ci[index].kick = false;
@@ -429,7 +429,7 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop)
             ci[index].panenv.pos[temp] = 0;
             }
 
-        if (j->flag & XM_MODE)
+        if (j->flag & JGMOD_XM_MODE)
             ci[index].c2spd = 0;
         else
             ci[index].c2spd = 8363;

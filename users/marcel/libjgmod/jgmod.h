@@ -14,20 +14,20 @@
 #define JGMOD_DATE_STR      "15 October 2001"
 #define JGMOD_DATE          20021015        /* yyyymmdd */
 
-#define NTSC                3579546L
+#define JGMOD_NTSC          3579546L
 #define JGMOD_PRIORITY      192
-#define MAX_ALLEG_VOICE     64
-#define LOOP_OFF            0
-#define LOOP_ON             1
-#define LOOP_BIDI           2
+#define JGMOD_MAX_VOICES    64
+#define JGMOD_LOOP_OFF      0
+#define JGMOD_LOOP_ON       1
+#define JGMOD_LOOP_BIDI     2
 
-#define ENV_ON              1
-#define ENV_SUS             2
-#define ENV_LOOP            4
+#define JGMOD_ENV_ON        1
+#define JGMOD_ENV_SUS       2
+#define JGMOD_ENV_LOOP      4
 
-#define XM_MODE             1
-#define PERIOD_MODE         2
-#define LINEAR_MODE         4
+#define JGMOD_XM_MODE       1
+#define JGMOD_PERIOD_MODE   2
+#define JGMOD_LINEAR_MODE   4
 
 
 #define PTEFFECT_0          0
@@ -75,15 +75,15 @@
 
 
 //this is used in get_mod_info() function.
-#define MOD15_TYPE          1
-#define MOD31_TYPE          2
-#define S3M_TYPE            3
-#define XM_TYPE             4
-#define IT_TYPE             5
-#define JGM_TYPE            6
-#define UNREAL_S3M_TYPE     7
-#define UNREAL_XM_TYPE      8
-#define UNREAL_IT_TYPE      9
+#define JGMOD_MOD15_TYPE          1
+#define JGMOD_MOD31_TYPE          2
+#define JGMOD_S3M_TYPE            3
+#define JGMOD_XM_TYPE             4
+#define JGMOD_IT_TYPE             5
+#define JGMOD_JGM_TYPE            6
+#define JGMOD_UNREAL_S3M_TYPE     7
+#define JGMOD_UNREAL_XM_TYPE      8
+#define JGMOD_UNREAL_IT_TYPE      9
 
 //-- Header ------------------------------------------------------------------
 typedef struct ENVELOPE_INFO
@@ -304,7 +304,7 @@ typedef struct JGMOD
     int no_trk;
     int no_pat;
     int pat_table[256];
-    int panning[MAX_ALLEG_VOICE];
+    int panning[JGMOD_MAX_VOICES];
     int flag;
 
     int tempo;
@@ -333,8 +333,8 @@ typedef struct JGMOD_PLAYER
 	
 	JGMOD *of;
 	volatile MUSIC_INFO mi;
-	volatile int voice_table[MAX_ALLEG_VOICE];
-	volatile CHANNEL_INFO ci[MAX_ALLEG_VOICE];
+	volatile int voice_table[JGMOD_MAX_VOICES];
+	volatile CHANNEL_INFO ci[JGMOD_MAX_VOICES];
 	volatile int mod_volume;
 	
 	bool enable_lasttrk_loop;
@@ -345,7 +345,7 @@ typedef struct JGMOD_PLAYER
 		fake_sample = nullptr;
 		
 		of = nullptr;
-		for (int i = 0; i < MAX_ALLEG_VOICE; ++i)
+		for (int i = 0; i < JGMOD_MAX_VOICES; ++i)
 			voice_table[i] = -1;
 		mod_volume = 255;
 		

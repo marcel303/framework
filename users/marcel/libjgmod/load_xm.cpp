@@ -117,12 +117,12 @@ int get_xm_info (const char *filename, int start_offset, JGMOD_INFO *ji)
 
     if (start_offset == 0)
         {
-        ji->type = XM_TYPE;
+        ji->type = JGMOD_XM_TYPE;
         sprintf (ji->type_name, "XM");
         }
     else
         {
-        ji->type = UNREAL_XM_TYPE;
+        ji->type = JGMOD_UNREAL_XM_TYPE;
         sprintf (ji->type_name, "Unreal XM (UMX)");
         }
     
@@ -271,11 +271,11 @@ JGMOD *load_xm (const char *filename, int start_offset)
     if (j->bpm == 0)
         j->bpm = 125;
 
-    j->flag = XM_MODE;
+    j->flag = JGMOD_XM_MODE;
     if (freq_type == 0)
-        j->flag |= PERIOD_MODE;
+        j->flag |= JGMOD_PERIOD_MODE;
     else
-        j->flag |= LINEAR_MODE;
+        j->flag |= JGMOD_LINEAR_MODE;
 
     // Now find out the actual number of patterns. The header might report
     // wrongly. 
@@ -437,7 +437,7 @@ JGMOD *load_xm (const char *filename, int start_offset)
                 if (ii->no_panenv > 12)
                     ii->no_panenv = 12;
 
-                if ( (ii->no_volenv == 0) && (ii->vol_type & ENV_ON) )
+                if ( (ii->no_volenv == 0) && (ii->vol_type & JGMOD_ENV_ON) )
                     {
                     ii->no_volenv = 1;
                     ii->volpos[0] = 0;

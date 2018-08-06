@@ -51,12 +51,12 @@ int get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji)
 
     if (start_offset == 0)
         {
-        ji->type = S3M_TYPE;
+        ji->type = JGMOD_S3M_TYPE;
         sprintf (ji->type_name, "S3M");
         }
     else
         {
-        ji->type = UNREAL_S3M_TYPE;
+        ji->type = JGMOD_UNREAL_S3M_TYPE;
         sprintf (ji->type_name, "Unreal S3M (UMX)");
         jgmod_skip (f, start_offset);
         }
@@ -231,7 +231,7 @@ void convert_s3m_pitch (int *pitch)
     *pitch = noteperiod[*pitch % 16] >> octave;
 
     if (*pitch != 0)
-        *pitch = NTSC / *pitch;
+        *pitch = JGMOD_NTSC / *pitch;
 }
 
 
@@ -448,9 +448,9 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
             }
 
         if (type & 1)
-            si->loop = LOOP_ON;
+            si->loop = JGMOD_LOOP_ON;
         else
-            si->loop = LOOP_OFF;
+            si->loop = JGMOD_LOOP_OFF;
         }
 
 
