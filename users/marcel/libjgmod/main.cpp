@@ -261,7 +261,7 @@ int main(int argc, char **argv)
         return -1;
 	}
 	
-#if 1
+#if 0
 	JGMOD * mod2 = do_load("test3.xm");
 	JGMOD_PLAYER player2;
 	player2.init(JGMOD_MAX_VOICES);
