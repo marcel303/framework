@@ -51,12 +51,12 @@ int get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji)
 
     if (start_offset == 0)
         {
-        ji->type = JGMOD_S3M_TYPE;
+        ji->type = JGMOD_TYPE_S3M;
         sprintf (ji->type_name, "S3M");
         }
     else
         {
-        ji->type = JGMOD_UNREAL_S3M_TYPE;
+        ji->type = JGMOD_TYPE_UNREAL_S3M;
         sprintf (ji->type_name, "Unreal S3M (UMX)");
         jgmod_skip (f, start_offset);
         }

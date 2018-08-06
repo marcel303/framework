@@ -75,15 +75,15 @@
 
 
 //this is used in get_mod_info() function.
-#define JGMOD_MOD15_TYPE          1
-#define JGMOD_MOD31_TYPE          2
-#define JGMOD_S3M_TYPE            3
-#define JGMOD_XM_TYPE             4
-#define JGMOD_IT_TYPE             5
-#define JGMOD_JGM_TYPE            6
-#define JGMOD_UNREAL_S3M_TYPE     7
-#define JGMOD_UNREAL_XM_TYPE      8
-#define JGMOD_UNREAL_IT_TYPE      9
+#define JGMOD_TYPE_MOD15          1
+#define JGMOD_TYPE_MOD31          2
+#define JGMOD_TYPE_S3M            3
+#define JGMOD_TYPE_XM             4
+#define JGMOD_TYPE_IT             5
+#define JGMOD_TYPE_JGM            6
+#define JGMOD_TYPE_UNREAL_S3M     7
+#define JGMOD_TYPE_UNREAL_XM      8
+#define JGMOD_TYPE_UNREAL_IT      9
 
 //-- Header ------------------------------------------------------------------
 typedef struct ENVELOPE_INFO

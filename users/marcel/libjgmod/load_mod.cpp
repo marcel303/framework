@@ -121,12 +121,12 @@ int get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji)
     if (no_inst == 15)
         {
         sprintf (ji->type_name, "MOD (15 Samples)");
-        ji->type = JGMOD_MOD15_TYPE;
+        ji->type = JGMOD_TYPE_MOD15;
         }
     else if (no_inst == 31)
         {
         sprintf (ji->type_name, "MOD (31 Samples)");
-        ji->type = JGMOD_MOD31_TYPE;
+        ji->type = JGMOD_TYPE_MOD31;
         }
     else
         {

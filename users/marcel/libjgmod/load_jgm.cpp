@@ -47,7 +47,7 @@ int detect_jgm (const char *filename)
 
 int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji)
 {
-    ji->type = JGMOD_JGM_TYPE;
+    ji->type = JGMOD_TYPE_JGM;
     sprintf (ji->type_name, "JGM");
 
     jgmod_skip (f, 18);

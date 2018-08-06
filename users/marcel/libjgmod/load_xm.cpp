@@ -117,12 +117,12 @@ int get_xm_info (const char *filename, int start_offset, JGMOD_INFO *ji)
 
     if (start_offset == 0)
         {
-        ji->type = JGMOD_XM_TYPE;
+        ji->type = JGMOD_TYPE_XM;
         sprintf (ji->type_name, "XM");
         }
     else
         {
-        ji->type = JGMOD_UNREAL_XM_TYPE;
+        ji->type = JGMOD_TYPE_UNREAL_XM;
         sprintf (ji->type_name, "Unreal XM (UMX)");
         }
     
