@@ -42,7 +42,7 @@ int get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji)
     JGMOD_FILE *f;
 
     f = jgmod_fopen (filename, "rb");
-    if (f == null)
+    if (f == nullptr)
         {
         setError ("Unable to open %s", filename);
         return -1;
@@ -74,8 +74,8 @@ int detect_unreal_s3m (const char *filename)
     int start_offset = 0;
 
     f = jgmod_fopen (filename, "rb");
-    if (f == null)
-        return null;
+    if (f == nullptr)
+        return 0;
 
     jgmod_fread (id, 4, f);
     if (memcmp (id, "Áƒ*ž", 4) != 0)    //detect a umx file
@@ -113,8 +113,8 @@ int detect_s3m (const char *filename)
     char id[4];
 
     f = jgmod_fopen (filename, "rb");
-    if (f == null)
-        return null;
+    if (f == nullptr)
+        return 0;
     
     jgmod_skip (f, 0x2c);
     jgmod_fread (id, 4, f);
@@ -248,22 +248,22 @@ JGMOD *load_s3m (const char *filename, int start_offset, int fast_loading)
     int pan[32];
     SAMPLE_INFO *si;
     PATTERN_INFO *pi;
-    SAMPLE *s=null;
+    SAMPLE *s=nullptr;
 
 
     f = jgmod_fopen (filename, "rb");
-    if (f == null)
+    if (f == nullptr)
         {
         setError ("Unable to open %s", filename);
-        return null;
+        return nullptr;
         }
 
     j = (JGMOD*)jgmod_calloc (sizeof(JGMOD) );
-    if (j == null)
+    if (j == nullptr)
         {
         jgmod_fclose (f);
         setError ("Unable to allocate enough memory for JGMOD structure");
-        return null;
+        return nullptr;
         }
 
     jgmod_skip (f, start_offset);
@@ -275,12 +275,12 @@ JGMOD *load_s3m (const char *filename, int start_offset, int fast_loading)
 
     j->si = (SAMPLE_INFO*)jgmod_calloc (sizeof (SAMPLE_INFO) * j->no_sample);
     j->s  = (SAMPLE*)jgmod_calloc (sizeof (SAMPLE) * j->no_sample);
-    if ( (j->si == null) || (j->s == null))
+    if ( (j->si == nullptr) || (j->s == nullptr))
         {
         destroy_mod (j);
         jgmod_fclose(f);
         setError ("Unable to allocate enough memory for SAMPLE or SAMPLE_INFO");
-        return null;
+        return nullptr;
         }
 
     //skip the flag and tracker info
@@ -309,12 +309,12 @@ JGMOD *load_s3m (const char *filename, int start_offset, int fast_loading)
         j->pat_table[index] = jgmod_getc(f);
 
     parapointer = (int*)jgmod_calloc ((j->no_sample + j->no_pat) * sizeof (int));
-    if (parapointer == null)
+    if (parapointer == nullptr)
         {
         destroy_mod (j);
         jgmod_fclose (f);
         setError ("Unable to allocate enough memory for parapointer");
-        return null;
+        return nullptr;
         }
 
     for (index=0; index< (j->no_sample + j->no_pat); index++)
@@ -395,13 +395,13 @@ JGMOD *load_s3m (const char *filename, int start_offset, int fast_loading)
         else if (!(type&4))
             s->data = jgmod_calloc (s->len);
 
-        if (s->data == null)
+        if (s->data == nullptr)
             {
             free (parapointer);
             destroy_mod (j);
             jgmod_fclose (f);
             setError ("Unable to allocate enough memory for data sample");
-            return null;
+            return nullptr;
             }
 
         if (type&4)     //sample is 16bit
@@ -522,13 +522,13 @@ JGMOD *load_s3m (const char *filename, int start_offset, int fast_loading)
     // -- this section initialize and load all the patterns -----------------
     // allocate patterns
     j->pi = (PATTERN_INFO*)jgmod_calloc (sizeof(PATTERN_INFO) * actual_pat);
-    if (j->pi == null)
+    if (j->pi == nullptr)
         {
         free (parapointer);
         destroy_mod (j);
         jgmod_fclose (f);
         setError ("Unable to allocate enough memory for PATTERN_INFO");
-        return null;
+        return nullptr;
         }
 
     for (index=0; index<actual_pat; index++)
@@ -537,13 +537,13 @@ JGMOD *load_s3m (const char *filename, int start_offset, int fast_loading)
         pi->no_pos = 64;
 
         pi->ni = (NOTE_INFO*)jgmod_calloc (sizeof(NOTE_INFO) * 64 * j->no_chn);
-        if (pi->ni == null)
+        if (pi->ni == nullptr)
             {
             free (parapointer);
             destroy_mod (j);
             jgmod_fclose (f);
             setError ("Unable to allocate enough memory for NOTE_INFO");
-            return null;
+            return nullptr;
             }
         }
 

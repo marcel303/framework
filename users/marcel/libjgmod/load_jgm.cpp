@@ -32,7 +32,7 @@ int detect_jgm (const char *filename)
     JGMOD_FILE *file;
 
     file = jgmod_fopen (filename, "rb");
-    if (file == null)
+    if (file == nullptr)
         return -1;
 
     jgmod_fread (id, 18, file);
@@ -69,10 +69,10 @@ JGMOD *load_jgm (JGMOD_FILE *f)
     int repeat;
 
     j = (JGMOD*)jgmod_calloc (sizeof (JGMOD) );
-    if (j == null)
+    if (j == nullptr)
         {
         setError ("Unable to allocate enough memory for JGMOD structure");
-        return null;
+        return nullptr;
         }
     
     jgmod_skip (f, 18);
@@ -99,11 +99,11 @@ JGMOD *load_jgm (JGMOD_FILE *f)
 // -- loading instrument -----------------------------------------------------
 
     j->ii = (INSTRUMENT_INFO*)jgmod_calloc (sizeof (INSTRUMENT_INFO) * j->no_instrument);
-    if (j->ii == null)
+    if (j->ii == nullptr)
         {
         destroy_mod (j);
         setError ("Unable to allocate enough memory for INSTRUMENT_INFO");
-        return null;
+        return nullptr;
         }
 
     for (head_no=0; head_no < j->no_instrument; head_no++)
@@ -151,11 +151,11 @@ JGMOD *load_jgm (JGMOD_FILE *f)
     j->s = (SAMPLE*)jgmod_calloc (sizeof (SAMPLE) * j->no_sample);
     j->si = (SAMPLE_INFO*)jgmod_calloc (sizeof (SAMPLE_INFO) * j->no_sample);
 
-    if ( (j->s == null) || (j->si == null) )
+    if ( (j->s == nullptr) || (j->si == nullptr) )
         {
         destroy_mod (j);
         setError ("Unable to allocate enough memory for SAMPLE or SAMPLE_INFO");
-        return null;
+        return nullptr;
         }
 
     for (head_no=0; head_no < j->no_sample; head_no++)
@@ -187,11 +187,11 @@ JGMOD *load_jgm (JGMOD_FILE *f)
             si->loop = jgmod_getc (f);
 
             s->data = jgmod_calloc (s->len * s->bits / 8);
-            if (s->data == null)
+            if (s->data == nullptr)
                 {
                 destroy_mod (j);
                 setError ("Unable to allocate enough memory for sample data");
-                return null;
+                return nullptr;
                 }
 
             jgmod_fread (s->data, s->len * s->bits / 8, f);
@@ -199,11 +199,11 @@ JGMOD *load_jgm (JGMOD_FILE *f)
         else
             {
             s->data = jgmod_calloc (0);
-            if (s->data == null)
+            if (s->data == nullptr)
                 {
                 destroy_mod (j);
                 setError ("Unable to allcate enough memory for sample data");
-                return null;
+                return nullptr;
                 }
             }
         }
@@ -211,11 +211,11 @@ JGMOD *load_jgm (JGMOD_FILE *f)
 
 // -- loading patterns --------------------------------------------------------
     j->pi = (PATTERN_INFO*)jgmod_calloc (sizeof(PATTERN_INFO) * j->no_pat);
-    if (j->pi == null)
+    if (j->pi == nullptr)
         {
         destroy_mod (j);
         setError ("Unable to allocate enough memory for PATTERN_INFO");
-        return null;
+        return nullptr;
         }
 
     for (head_no=0; head_no < j->no_pat; head_no++)
@@ -228,11 +228,11 @@ JGMOD *load_jgm (JGMOD_FILE *f)
         //readkey();
 
         pi->ni = (NOTE_INFO*)jgmod_calloc (sizeof(NOTE_INFO) * j->no_chn * pi->no_pos);
-        if (pi->ni == null)
+        if (pi->ni == nullptr)
             {
             destroy_mod (j);
             setError ("Unable to allocate enough memory for NOTE_INFO");
-            return null;
+            return nullptr;
             }
 
         // load note first

@@ -136,7 +136,7 @@ int get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji)
 
 
     f = jgmod_fopen (filename, "rb");
-    if (f == null)
+    if (f == nullptr)
         {
         setError ("Unable to open %s", filename);
         return -1;
@@ -155,7 +155,7 @@ int detect_m31 (const char *filename)
     int index;
     
     f = jgmod_fopen (filename, "rb");
-    if (f == null)
+    if (f == nullptr)
         return -1;
 
     jgmod_skip (f, 1080);
@@ -188,30 +188,30 @@ JGMOD *load_m (const char *filename, int no_inst)
     if (no_inst != 15 && no_inst != 31)
         {
         setError ("MOD must be 15 or 31 instruments");
-        return null;
+        return nullptr;
         }
 
     j = (JGMOD*)jgmod_calloc (sizeof (JGMOD ));
-    if (j == null)
+    if (j == nullptr)
         {
         setError ("Unable to allocate enough memory for JGMOD structure");
-        return null;
+        return nullptr;
         }
 
     j->si = (SAMPLE_INFO*)jgmod_calloc (sizeof (SAMPLE_INFO) * no_inst);
-    if (j->si == null)
+    if (j->si == nullptr)
         {
         setError ("Unable to allocate enough memory for SAMPLE_INFO structure");
         destroy_mod (j);
-        return null;
+        return nullptr;
         }
 
     j->s = (SAMPLE*)jgmod_calloc (sizeof (SAMPLE) * no_inst);
-    if (j->s == null)
+    if (j->s == nullptr)
         {
         setError ("Unable to allocate enough memory for SAMPLE structure");
         destroy_mod (j);
-        return null;
+        return nullptr;
         }
 
     j->no_sample = no_inst;
@@ -228,11 +228,11 @@ JGMOD *load_m (const char *filename, int no_inst)
 
 
     f = jgmod_fopen (filename, "rb");
-    if (f == null)
+    if (f == nullptr)
         {
         setError ("Unable to open %s", filename);
         destroy_mod (j);
-        return null;
+        return nullptr;
         }
 
     jgmod_fread (j->name, 20, f);        //get the song name
@@ -283,12 +283,12 @@ JGMOD *load_m (const char *filename, int no_inst)
         j->no_chn = 4;
 
     j->pi = (PATTERN_INFO*)jgmod_calloc (j->no_pat * sizeof(PATTERN_INFO));
-    if (j->pi == null)
+    if (j->pi == nullptr)
         {
         setError ("Unable to allocate enough memory for PATTERN_INFO");
         jgmod_fclose (f);
         destroy_mod(j);
-        return null;
+        return nullptr;
         }
 
     // allocate patterns;
@@ -296,12 +296,12 @@ JGMOD *load_m (const char *filename, int no_inst)
         {
         pi = j->pi+index;
         pi->ni = (NOTE_INFO*)jgmod_calloc (sizeof(NOTE_INFO) * 64 * j->no_chn);
-        if (pi->ni == null)
+        if (pi->ni == nullptr)
             {
             setError ("Unable to allocate enough memory for NOTE_INFO");
             jgmod_fclose (f);
             destroy_mod (j);
-            return null;
+            return nullptr;
             }
         }
 
@@ -353,12 +353,12 @@ JGMOD *load_m (const char *filename, int no_inst)
         s->data         = jgmod_calloc (s->len);
 
         if (s->len)
-            if (s->data == null)
+            if (s->data == nullptr)
                 {
                 setError ("Unable to allocate enough memory for SAMPLE DATA");
                 jgmod_fclose (f);
                 destroy_mod (j);
-                return null;
+                return nullptr;
                 }
 
         if (si->replen > 0)         //sample does loop
@@ -400,8 +400,8 @@ int detect_m15 (const char *filename)
     int temp;
 
     f = jgmod_fopen (filename, "rb");
-    if (f == null)
-        return null;
+    if (f == nullptr)
+        return 0;
 
     jgmod_skip (f, 20);  //skip the name of the music;
 
@@ -412,14 +412,14 @@ int detect_m15 (const char *filename)
         if (temp != 0)          //finetune should be 0
             {
             jgmod_fclose (f);
-            return null;
+            return 0;
             }
 
         temp = jgmod_getc(f);    //get sample volume
         if (temp > 64)          //should be <= 64
             {
             jgmod_fclose (f);
-            return null;
+            return 0;
             }
 
         jgmod_skip (f, 4);       //skip sample repeat offset and length

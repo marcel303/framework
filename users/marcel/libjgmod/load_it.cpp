@@ -32,8 +32,8 @@ int detect_unreal_it (const char *filename)
     int start_offset = 0;
 
     f = jgmod_fopen (filename, "rb");
-    if (f == null)
-        return null;
+    if (f == nullptr)
+        return 0;
 
     jgmod_fread (id, 4, f);
     if (memcmp (id, "Áƒ*ž", 4) != 0)    //detect a umx file
@@ -70,8 +70,8 @@ int detect_it(const char *filename)
     char id[4];
 
     f =  jgmod_fopen (filename, "rb");
-    if (f == null)
-        return null;
+    if (f == nullptr)
+        return 0;
 
     jgmod_fread (id, 4, f);
     if (memcmp (id, "IMPM", 4) == 0)    //detect successful
@@ -87,7 +87,7 @@ int get_it_info(const char *filename, int start_offset, JGMOD_INFO *ji)
     JGMOD_FILE *f;
 
     f = jgmod_fopen (filename, "rb");
-    if (f == null)
+    if (f == nullptr)
         {
         setError ("Unable to open %s", filename);
         return -1;
@@ -117,15 +117,15 @@ JGMOD *load_it (const char *filename, int start_offset)
     JGMOD *j;
 
     f =  jgmod_fopen (filename, "rb");
-    if (f == null)
-        return null;
+    if (f == nullptr)
+        return nullptr;
 
     j = (JGMOD*)jgmod_calloc ( sizeof (JGMOD));
-    if (j == null)
+    if (j == nullptr)
         {
         setError ("Unable to allocate enough memory for JGMOD structure");
         jgmod_fclose (f);
-        return null;
+        return nullptr;
         }
 
     jgmod_skip (f, start_offset);
@@ -140,7 +140,7 @@ JGMOD *load_it (const char *filename, int start_offset)
     setError ("IT support is not completed yet. Wait a few more versions");
     jgmod_fclose (f);
     destroy_mod (j);
-    return null;
+    return nullptr;
 }
 
 }

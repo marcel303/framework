@@ -18,7 +18,7 @@
 void JGMOD_PLAYER::parse_new_note (int chn, int note, int sample_no)
 {
     SAMPLE_INFO *si;
-    INSTRUMENT_INFO *ii = null;
+    INSTRUMENT_INFO *ii = nullptr;
 
 
     ci[chn].keyon = FALSE;

@@ -108,7 +108,7 @@ int get_xm_info (const char *filename, int start_offset, JGMOD_INFO *ji)
     JGMOD_FILE *f;
 
     f = jgmod_fopen (filename,"rb");
-    if (f == null)
+    if (f == nullptr)
         {
         setError ("Unable to open %s", filename);
         return -1;
@@ -142,8 +142,8 @@ int detect_unreal_xm (const char *filename)
 
     id[17] = 0;
     f = jgmod_fopen (filename, "rb");
-    if (f == null)
-        return null;
+    if (f == nullptr)
+        return 0;
 
     jgmod_fread (id, 4, f);
     if (memcmp (id, "Áƒ*ž", 4) != 0)    //detect a umx file
@@ -192,8 +192,8 @@ int detect_xm (const char *filename)
     char id[17];
 
     f =  jgmod_fopen (filename, "rb");
-    if (f == null)
-        return null;
+    if (f == nullptr)
+        return 0;
 
     jgmod_fread (id, 17, f);
     jgmod_fclose (f);
@@ -225,18 +225,18 @@ JGMOD *load_xm (const char *filename, int start_offset)
     int index;
 
     j = (JGMOD*)jgmod_calloc (sizeof (JGMOD));
-    if (j == null)
+    if (j == nullptr)
         {
         setError ("Unable to allocate enough memory for JGMOD structure");
-        return null;
+        return nullptr;
         }
 
     f = jgmod_fopen (filename, "rb");
-    if (f == null)
+    if (f == nullptr)
         {
         destroy_mod (j);
         setError ("Unable to open %s", filename);
-        return null;
+        return nullptr;
         }
 
     loc = start_offset;
@@ -289,12 +289,12 @@ JGMOD *load_xm (const char *filename, int start_offset)
         }
 
     j->pi = (PATTERN_INFO*)jgmod_calloc (sizeof (PATTERN_INFO) * actual_pat);
-    if (j->pi == null)
+    if (j->pi == nullptr)
         {
         jgmod_fclose (f);
         destroy_mod (j);
         setError ("Unable to allocate enough memory for PATTERN_INFO");
-        return null;
+        return nullptr;
         }
 
 // -- Load those patterns ----------------------------------------------------
@@ -314,12 +314,12 @@ JGMOD *load_xm (const char *filename, int start_offset)
         loc += packsize;
 
         pi->ni = (NOTE_INFO*)jgmod_calloc (sizeof (NOTE_INFO) * j->no_chn * pi->no_pos);
-        if (pi->ni == null)
+        if (pi->ni == nullptr)
             {
             jgmod_fclose (f);
             destroy_mod (j);
             setError ("Unable to allocate enough memroy for NOTE_INFO");
-            return null;
+            return nullptr;
             }
 
         ni = pi->ni;
@@ -344,12 +344,12 @@ JGMOD *load_xm (const char *filename, int start_offset)
         j->no_pat = actual_pat;
         pi->no_pos = 64;
         pi->ni = (NOTE_INFO*)jgmod_calloc (sizeof (NOTE_INFO) * j->no_chn * pi->no_pos);
-        if (pi->ni == null)
+        if (pi->ni == nullptr)
             {
             jgmod_fclose (f);
             destroy_mod (j);
             setError ("Unable to allocate enough memory for NOTE_INFO");
-            return null;
+            return nullptr;
             }
         }
 
@@ -357,21 +357,21 @@ JGMOD *load_xm (const char *filename, int start_offset)
 //-- load instruments --------------------------------------------------------
 
     j->ii = (INSTRUMENT_INFO*)jgmod_calloc (sizeof(INSTRUMENT_INFO) * j->no_instrument);
-    if (j->ii == null)
+    if (j->ii == nullptr)
         {
         destroy_mod (j);
         jgmod_fclose (f);
         setError ("Unable to allocate enough memory for INSTRUMENT_INFO");
-        return null;
+        return nullptr;
         }
 
     wv = (XMWAV*)jgmod_calloc (sizeof (XMWAV) * 256);
-    if (wv == null)
+    if (wv == nullptr)
         {
         destroy_mod (j);
         jgmod_fclose(f);
         setError ("Unable to allocate enough memory for XMWAV");
-        return null;
+        return nullptr;
         }
     tempwv = wv;
     
@@ -494,23 +494,23 @@ JGMOD *load_xm (const char *filename, int start_offset)
 //-- load all those samples --------------------------------------------------
 
     j->si = (SAMPLE_INFO*)jgmod_calloc (sizeof(SAMPLE_INFO) * (j->no_sample+1));
-    if (j->si == null)
+    if (j->si == nullptr)
         {
         free (wv);
         destroy_mod (j);
         jgmod_fclose (f);
         setError ("Unable to allocate enough memory for SAMPLE_INFO");
-        return null;
+        return nullptr;
         }
 
     j->s  = (SAMPLE*)jgmod_calloc (sizeof (SAMPLE) * (j->no_sample+1));
-    if (j->s == null)
+    if (j->s == nullptr)
         {
         free (wv);
         destroy_mod (j);
         jgmod_fclose (f);
         setError ("Unable to allocate enough memory for SAMPLE");
-        return null;
+        return nullptr;
         }
 
     for (index=0; index<j->no_sample; index++)
@@ -547,13 +547,13 @@ JGMOD *load_xm (const char *filename, int start_offset)
         s->data = jgmod_calloc (s->len);
 #endif
 
-        if (s->data == null)
+        if (s->data == nullptr)
             {
             free (wv);
             destroy_mod (j);
             jgmod_fclose (f);
             setError ("Unble to allocate enough memory for sample data");
-            return null;
+            return nullptr;
             }
 
         jgmod_fseek (&f, filename, nextwav[index]);
@@ -652,13 +652,13 @@ JGMOD *load_xm (const char *filename, int start_offset)
     #endif
 
     s->data = jgmod_calloc (1);
-    if (s->data == null)
+    if (s->data == nullptr)
         {
         free (wv);
         destroy_mod (j);
         jgmod_fclose (f);
         setError ("Unable to allocate enough memory for sample data");
-        return null;
+        return nullptr;
         }
     j->no_sample++;     
     

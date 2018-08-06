@@ -44,10 +44,10 @@ int JGMOD_PLAYER::init(int max_chn)
     if ( (max_chn > MAX_ALLEG_VOICE) || (max_chn <= 0) )
         return -1;
 
-    if (fake_sample == null)
+    if (fake_sample == nullptr)
         fake_sample = (SAMPLE *)jgmod_calloc (sizeof (SAMPLE));     // use to trick allegro
                                                     // into giving me voice
-    if (fake_sample == null)                        // channels
+    if (fake_sample == nullptr)                        // channels
         {
         setError ("Unable to setup initialization sample");
         return -1;
@@ -67,7 +67,7 @@ int JGMOD_PLAYER::init(int max_chn)
     fake_sample->param = -1;
     fake_sample->data = jgmod_calloc (0);
 
-    if (fake_sample->data == null)
+    if (fake_sample->data == nullptr)
         {
         setError ("JGMOD : Not enough memory to setup initialization sample");
         free (fake_sample);
@@ -122,7 +122,7 @@ JGMOD *JGMOD_PLAYER::load_mod (const char *filename, int fast_loading, int enabl
         JGMOD *j;
 
         f = jgmod_fopen (filename, "rb");
-        if (f != null)
+        if (f != nullptr)
             {
             j = jgmod::load_jgm (f);
             jgmod_fclose (f);
@@ -131,7 +131,7 @@ JGMOD *JGMOD_PLAYER::load_mod (const char *filename, int fast_loading, int enabl
         else
             {
             setError ("Unable to open %s", filename);
-            return null;
+            return nullptr;
             }
         }
 
@@ -166,7 +166,7 @@ JGMOD *JGMOD_PLAYER::load_mod (const char *filename, int fast_loading, int enabl
         }
 
     setError ("Unsupported MOD type or unable to open file");
-    return null;
+    return nullptr;
 }
 
 
@@ -175,13 +175,13 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop)
     int index;
     int temp;
 
-    if (j == null)
+    if (j == nullptr)
         {
         setError ("Can't play a JGMOD pointer with null value");
         return;
         }
 
-    if (of != null)     // make sure only one mod being played.
+    if (of != nullptr)     // make sure only one mod being played.
         stop();
 
     mi.flag = j->flag;
@@ -342,7 +342,7 @@ void JGMOD_PLAYER::stop (void)
 {
     int index;
 
-    if (of == null)
+    if (of == nullptr)
         return;
 
     mi.forbid = TRUE;
@@ -354,7 +354,7 @@ void JGMOD_PLAYER::stop (void)
         voice_set_volume (voice_table[index], 0);
         }
         
-    of = null;
+    of = nullptr;
     mi.forbid = FALSE;
 }
 
@@ -465,16 +465,16 @@ int JGMOD_PLAYER::get_volume (void)
 // get a instrument from JGMOD structure
 SAMPLE *JGMOD_PLAYER::get_jgmod_sample (JGMOD *j, int sample_no)
 {
-    if (j == null)
+    if (j == nullptr)
         {
         setError ("JGMOD pointer passed in is a NULL value");
-        return null;
+        return nullptr;
         }
 
     if ( (sample_no < 0) || (sample_no >= j->no_sample) )
         {
         setError ("Incorrect value of no sample found");
-        return null;
+        return nullptr;
         }
     
     return &(j->s[sample_no]);
@@ -538,7 +538,7 @@ int JGMOD_PLAYER::get_info (const char *filename, JGMOD_INFO *ji, int enable_m15
 {
     int temp;
 
-    if (ji == null)
+    if (ji == nullptr)
         return -1;
 
     
@@ -547,7 +547,7 @@ int JGMOD_PLAYER::get_info (const char *filename, JGMOD_INFO *ji, int enable_m15
         JGMOD_FILE *f;
 
         f = jgmod_fopen (filename, "rb");
-        if (f != null)
+        if (f != nullptr)
             {
             temp = jgmod::get_jgm_info(f, ji);
             jgmod_fclose (f);
@@ -598,25 +598,25 @@ void destroy_mod (JGMOD *j)
     int index;
     PATTERN_INFO *pi;
 
-    if (j == null)
+    if (j == nullptr)
         return;
 
-    if (j->si != null)
+    if (j->si != nullptr)
         {
         free (j->si);
         }
 
-    if (j->ii != null)
+    if (j->ii != nullptr)
         {
         free (j->ii);
         }
 
-    if (j->pi != null)
+    if (j->pi != nullptr)
         {
         for (index=0; index<j->no_pat; index++)
             {
             pi = j->pi+index;
-            if (pi->ni != null)
+            if (pi->ni != nullptr)
                 {
                 free (pi->ni);
                 }
@@ -638,7 +638,7 @@ void destroy_mod (JGMOD *j)
     free (j->s);
 
     free (j);
-    j = null;
+    j = nullptr;
 }
 
 }

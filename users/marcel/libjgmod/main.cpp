@@ -240,7 +240,7 @@ int main(int argc, char **argv)
 	setFont("unispace.ttf");
 	pushFontMode(FONT_SDF);
 	
-    if (install_sound(DIGI_AUTODETECT, MIDI_NONE, null) < 0)
+    if (install_sound(DIGI_AUTODETECT, MIDI_NONE, nullptr) < 0)
 	{
         logError("unable to initialize sound card");
         return 1;

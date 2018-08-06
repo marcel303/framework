@@ -4,7 +4,7 @@
 namespace jgmod
 {
 
-void destroy_mod (JGMOD *j); // todo : shouldn't be a member
+void destroy_mod (JGMOD *j);
 
 int detect_m31 (const char *filename);
 int detect_m15 (const char *filename);

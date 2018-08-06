@@ -34,12 +34,12 @@ void JGMOD_PLAYER::mod_interrupt (void)
 {
     int chn=0;
     int  sample_no;
-    SAMPLE_INFO *si=null;
-    SAMPLE *s= null;
-    NOTE_INFO *ni=null;
+    SAMPLE_INFO *si=nullptr;
+    SAMPLE *s= nullptr;
+    NOTE_INFO *ni=nullptr;
     PATTERN_INFO *pi;
 
-    if (of == null)             //return if not playing music
+    if (of == nullptr)             //return if not playing music
         return;
 
     if (mi.forbid == TRUE)
@@ -149,7 +149,7 @@ void JGMOD_PLAYER::mod_interrupt (void)
 
         if (mi.loop == FALSE)       // end the song
             {
-            of = null;
+            of = nullptr;
             mi.is_playing = FALSE;
             return;
             }
