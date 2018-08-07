@@ -135,7 +135,7 @@ static void drawTest(JGMOD_PLAYER & player)
 	gxScalef(400, 400, 400);
 	gxTranslatef(-.5f, 0, -.5f);
 	setColor(100, 100, 100);
-	drawGrid3dLine(100, 100, 0, 2);
+	drawGrid3dLine(100, 100, 0, 2, true);
 	gxPopMatrix();
 	
 	const int numChannels = end_chn - start_chn + 1;
@@ -276,6 +276,9 @@ int main(int argc, char **argv)
     while (player.is_playing() && !framework.quitRequested)
 	{
         framework.process();
+		
+		// the module may change due to drag and drop in handleAction. make sure to fetch the pointer from the player directly!
+		mod = player.of;
 		
 		if (keyboard.wentDown(SDLK_ESCAPE) || keyboard.wentDown(SDLK_SPACE))
 			framework.quitRequested = true;
