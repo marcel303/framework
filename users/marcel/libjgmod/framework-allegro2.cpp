@@ -90,6 +90,11 @@ void AllegroVoiceAPI::voice_start(int voice)
 	{
 		Assert(voices[voice].used);
 		
+		const int sampleIndex = voices[voice].position >> FIXBITS;
+		
+		if (sampleIndex >= voices[voice].sample->len)
+			voices[voice].position = 0;
+		
 		voices[voice].started = 1;
 	}
 	unlock();
@@ -116,7 +121,16 @@ int AllegroVoiceAPI::voice_get_position(int voice)
 	
 	Assert(voices[voice].used);
 	
-	return voices[voice].position >> FIXBITS;
+	const int sampleIndex = voices[voice].position >> FIXBITS;
+	
+	// return -1 if sample playback has ended
+	
+	if (sampleIndex >= voices[voice].sample->len)
+		return -1;
+	
+	Assert(sampleIndex >= 0 && sampleIndex < voices[voice].sample->len);
+	
+	return sampleIndex;
 }
 
 int AllegroVoiceAPI::voice_get_frequency(int voice)
@@ -170,7 +184,13 @@ void AllegroVoiceAPI::voice_set_position(int voice, int position)
 	{
 		Assert(voices[voice].used);
 		
+		if (position < 0)
+			position = 0;
+		
 		voices[voice].position = int64_t(position) << FIXBITS;
+		
+		if (position >= voices[voice].sample->len)
+			voices[voice].started = 0;
 	}
 	unlock();
 }
@@ -209,7 +229,7 @@ void AllegroVoiceAPI::voice_set_pan(int voice, int pan)
 	unlock();
 }
 
-void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __restrict samples, const int numSamples, float & stereoPanning)
+bool AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __restrict samples, const int numSamples, float & stereoPanning)
 {
 	auto & voice = voices[voiceIndex];
 	
@@ -218,6 +238,8 @@ void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 		memset(samples, 0, numSamples * sizeof(float));
 		
 		stereoPanning = .5f;
+		
+		return false;
 	}
 	
 	stereoPanning = voice.pan / 255.f;
@@ -226,6 +248,8 @@ void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 	
 	for (int i = 0; i < numSamples; ++i)
 	{
+		Assert(sampleIndex >= 0 && sampleIndex < voice.sample->len);
+		
 		if (sampleIndex >= 0 && sampleIndex < voice.sample->len)
 		{
 			if (voice.sample->bits == 8)
@@ -234,7 +258,7 @@ void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 				
 				const int value = int8_t(values[sampleIndex] ^ 0x80) * voice.volume;
 				
-				samples[i] = value / float(1 << 15);
+				samples[i] = value / float(1 << (16 - 1));
 			}
 			else if (voice.sample->bits == 16)
 			{
@@ -242,8 +266,12 @@ void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 				
 				const int value = int16_t(values[sampleIndex] ^ 0x8000) * voice.volume;
 				
-				samples[i] = value / float(1 << 23);
+				samples[i] = value / float(1 << (24 - 1));
 			}
+		}
+		else
+		{
+			samples[i] = 0.f;
 		}
 		
 		// increment sample playback position
@@ -291,7 +319,23 @@ void AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 				}
 			}
 		}
+		else
+		{
+			if (sampleIndex >= voice.sample->len)
+			{
+				Assert(sampleIndex == voice.sample->len);
+				
+				voice.started = false;
+				
+				for (int j = i + 1; j < numSamples; ++j)
+					samples[j] = 0.f;
+				
+				break;
+			}
+		}
 	}
+	
+	return true;
 }
 
 static thread_local AllegroVoiceAPI * voiceAPI = nullptr;
@@ -651,6 +695,38 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 	
 	lock();
 	{
+	#if 0
+		float * __restrict samplesL = (float*)alloca(numSamples * sizeof(float));
+		float * __restrict samplesR = (float*)alloca(numSamples * sizeof(float));
+		
+		memset(samplesL, 0, numSamples * sizeof(float));
+		memset(samplesR, 0, numSamples * sizeof(float));
+		
+		float * __restrict samplesV = (float*)alloca(numSamples * sizeof(float));
+		
+		for (int i = 0; i < AllegroVoiceAPI::MAX_VOICES; ++i)
+		{
+			float stereoPanning;
+			
+			if (voiceAPI->generateSamplesForVoice(i, samplesV, numSamples, stereoPanning))
+			{
+				const float panL = 1.f - stereoPanning;
+				const float panR =       stereoPanning;
+				
+				for (int j = 0; j < numSamples; ++j)
+				{
+					samplesL[j] += samplesV[j] * panL;
+					samplesR[j] += samplesV[j] * panR;
+				}
+			}
+		}
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			buffer[i].channel[0] = samplesL[i] * (1 << (15 - 2));
+			buffer[i].channel[1] = samplesR[i] * (1 << (15 - 2));
+		}
+	#else
 		for (auto & __restrict voice : voiceAPI->voices)
 		{
 			if (voice.used && voice.started && voice.sample->len != 0)
@@ -685,8 +761,8 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 							const int value = int8_t(values[sampleIndex] ^ 0x80);
 						#endif
 							
-							buffer[i].channel[0] += (value * pan1) >> 8 >> 2;
-							buffer[i].channel[1] += (value * pan2) >> 8 >> 2;
+							buffer[i].channel[0] += (value * pan1) >> (8 + 2);
+							buffer[i].channel[1] += (value * pan2) >> (8 + 2);
 						}
 						else if (voice.sample->bits == 16)
 						{
@@ -701,8 +777,8 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 							const int value = int16_t(values[sampleIndex] ^ 0x8000);
 						#endif
 							
-							buffer[i].channel[0] += (value * pan1) >> 16 >> 2;
-							buffer[i].channel[1] += (value * pan2) >> 16 >> 2;
+							buffer[i].channel[0] += (value * pan1) >> (16 + 2);
+							buffer[i].channel[1] += (value * pan2) >> (16 + 2);
 						}
 					}
 					
@@ -791,6 +867,8 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 					{
 						if (sampleIndex >= voice.sample->len)
 						{
+							Assert(sampleIndex == voice.sample->len);
+							
 							voice.started = false;
 							
 							break;
@@ -799,6 +877,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 				}
 			}
 		}
+	#endif
 	}
 	unlock();
 	
