@@ -273,7 +273,7 @@ int main(int argc, char **argv)
 	
 	do_play(player, mod);
 
-    while (player.is_playing() && !framework.quitRequested)
+    while (!framework.quitRequested)
 	{
         framework.process();
 		
@@ -362,49 +362,61 @@ int main(int argc, char **argv)
         	drawTest(player);
 		#endif
 			
+			setColor(100, 100, 100);
+			Sprite("jazz.png").drawEx(0, 0, 0, 2);
+			
 			setColor(colorWhite);
 			
-        	// draw header
-			
-			drawText(0,  0, 12, +1, +1, "Song name   : %s", mod->name);
-			drawText(0, 12, 12, +1, +1, "No Channels : %2d  Period Type : %s  No Inst : %2d ",
-				mod->no_chn, (mod->flag & JGMOD_MODE_LINEAR) ? "Linear" : "Amiga", mod->no_instrument);
-			drawText(0, 24, 12, +1, +1, "No Tracks   : %2d  No Patterns : %2d  No Sample : %2d ", mod->no_trk, mod->no_pat, mod->no_sample);
-			
-			// draw playback info
-			
-			drawText(0, 36, 12, +1, +1, "Tempo : %3d  Bpm : %3d  Speed : %3d%%  Pitch : %3d%% ", player.mi.tempo, player.mi.bpm, player.mi.speed_ratio, player.mi.pitch_ratio);
-			drawText(0, 48, 12, +1, +1, "Global volume : %2d  User volume : %2d ", player.mi.global_volume, player.get_volume());
-			drawText(0, 70, 12, +1, +1, "%03d-%02d-%02d    ", player.mi.trk, player.mi.pos, player.mi.tick < 0 ? 0 : player.mi.tick);
-
-			for (int index = 0; index < mod->no_chn; ++index)
+			if (mod == nullptr)
 			{
-				if (old_chn_info[index].old_sample != player.ci[index].sample)
-					old_chn_info[index].color = Color::fromHSL((rand() % 68 + 32) / 100.f, .5f, .5f);
-
-				old_chn_info[index].old_sample = player.ci[index].sample;
+				// draw header
+				
+				drawText(0,  0, 12, +1, +1, "Song name   : %s", "Load error");
 			}
-
-			for (int index = start_chn; index < end_chn; ++index)
+			else
 			{
-				if (cp_circle)
+				// draw header
+				
+				drawText(0,  0, 12, +1, +1, "Song name   : %s", mod->name);
+				drawText(0, 12, 12, +1, +1, "No Channels : %2d  Period Type : %s  No Inst : %2d ",
+					mod->no_chn, (mod->flag & JGMOD_MODE_LINEAR) ? "Linear" : "Amiga", mod->no_instrument);
+				drawText(0, 24, 12, +1, +1, "No Tracks   : %2d  No Patterns : %2d  No Sample : %2d ", mod->no_trk, mod->no_pat, mod->no_sample);
+				
+				// draw playback info
+				
+				drawText(0, 36, 12, +1, +1, "Tempo : %3d  Bpm : %3d  Speed : %3d%%  Pitch : %3d%% ", player.mi.tempo, player.mi.bpm, player.mi.speed_ratio, player.mi.pitch_ratio);
+				drawText(0, 48, 12, +1, +1, "Global volume : %2d  User volume : %2d ", player.mi.global_volume, player.get_volume());
+				drawText(0, 70, 12, +1, +1, "%03d-%02d-%02d    ", player.mi.trk, player.mi.pos, player.mi.tick < 0 ? 0 : player.mi.tick);
+
+				for (int index = 0; index < mod->no_chn; ++index)
 				{
-					drawCircle(player, index);
+					if (old_chn_info[index].old_sample != player.ci[index].sample)
+						old_chn_info[index].color = Color::fromHSL((rand() % 68 + 32) / 100.f, .5f, .5f);
+
+					old_chn_info[index].old_sample = player.ci[index].sample;
 				}
 
-				if (voice_get_position(player.voice_table[index]) >= 0 &&
-					player.ci[index].volume >= 1 &&
-					player.ci[index].volenv.v >= 1 &&
-					voice_get_frequency(player.voice_table[index]) > 0 &&
-					player.mi.global_volume > 0)
+				for (int index = start_chn; index < end_chn; ++index)
 				{
-					drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3d %2d %6dHz %3d ", index+1, player.ci[index].sample+1, player.ci[index].volume,  voice_get_frequency(player.voice_table[index]), player.ci[index].pan);
-					//textprintf (screen, font, 0,82+(index-start_chn)*bitmap_height, font_color, "%2d: %3d %2d %6dHz %3d %d %d", index+1, ci[index].sample+1, ci[index].volume,  voice_get_frequency(voice_table[index]), ci[index].pan, ci[index].volenv.v, ci[index].volenv.p);
-				}
-				else
-				{
-					drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3s %2s %6sHz %3s  ", index+1, " --", "--",  " -----", "---");
-					//textprintf (screen, font, 0,82+(index-start_chn)*bitmap_height, font_color, "%2d: %3d %2s %6sHz %3s ", index+1, ci[index].sample+1, "--",  " -----", "---");
+					if (cp_circle)
+					{
+						drawCircle(player, index);
+					}
+
+					if (voice_get_position(player.voice_table[index]) >= 0 &&
+						player.ci[index].volume >= 1 &&
+						player.ci[index].volenv.v >= 1 &&
+						voice_get_frequency(player.voice_table[index]) > 0 &&
+						player.mi.global_volume > 0)
+					{
+						drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3d %2d %6dHz %3d ", index+1, player.ci[index].sample+1, player.ci[index].volume,  voice_get_frequency(player.voice_table[index]), player.ci[index].pan);
+						//textprintf (screen, font, 0,82+(index-start_chn)*bitmap_height, font_color, "%2d: %3d %2d %6dHz %3d %d %d", index+1, ci[index].sample+1, ci[index].volume,  voice_get_frequency(voice_table[index]), ci[index].pan, ci[index].volenv.v, ci[index].volenv.p);
+					}
+					else
+					{
+						drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3s %2s %6sHz %3s  ", index+1, " --", "--",  " -----", "---");
+						//textprintf (screen, font, 0,82+(index-start_chn)*bitmap_height, font_color, "%2d: %3d %2s %6sHz %3s ", index+1, ci[index].sample+1, "--",  " -----", "---");
+					}
 				}
 			}
 		}

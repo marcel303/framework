@@ -135,9 +135,9 @@ JGMOD *load_it (const char *filename, int start_offset)
     jgmod_fread (j->name, 26, f);
     jgmod_skip (f, 2);
 
+#ifdef JG_debug
     printf ("%s\n", j->name);
-
-
+#endif
 
     jgmod_seterror ("IT support is not completed yet. Wait a few more versions");
     jgmod_fclose (f);
