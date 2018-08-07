@@ -10,10 +10,13 @@
  *
  *  For converting MODs to JGM  */
 
-#include <stdio.h>
-#include <string.h>
 #include "jgmod.h"
 #include "file_io.h"
+
+#include "framework-allegro2.h"
+
+#include <stdio.h>
+#include <string.h>
 
 extern void save_jgm (JGMOD_FILE *file, JGMOD *j);
 
@@ -25,10 +28,10 @@ int main (int argc, char **argv)
     char *jgm_filename;
     char *temp_ptr;
 
-    fast_loading = FALSE;
-    enable_m15 = TRUE;
+    bool fast_loading = false;
+    bool enable_m15 = true;
 
-    setvbuf(stdout, null, _IONBF, 0);
+    setvbuf(stdout, nullptr, _IONBF, 0);
 
     if (argc != 2)
         {
@@ -47,16 +50,16 @@ int main (int argc, char **argv)
         }
 
     printf ("\nFile Name1 : %s", argv[1]);
-    j = jgmod_load (argv[1]);
+    j = jgmod_load (argv[1], fast_loading, enable_m15);
     printf ("\nFile Name2 : %s", argv[1]);
-    if (j == null)
+    if (j == nullptr)
         {
         printf ("Error : Unsupported Mod type\n");
         return 1;
         }
 
-    jgm_filename = calloc (1, strlen(argv[1]) + 4);
-    if (jgm_filename == null)
+    jgm_filename = (char*)calloc (1, strlen(argv[1]) + 4);
+    if (jgm_filename == nullptr)
         {
         printf ("Error : Insufficient Memory");
         return 1;
@@ -71,7 +74,7 @@ int main (int argc, char **argv)
 
     printf ("\nFile Name : %s", jgm_filename);
     file = jgmod_fopen (jgm_filename, "wb");
-    if (file == null)
+    if (file == nullptr)
         {
         printf ("\nError : Unable to open %s for writing\n", jgm_filename);
         return 1;
