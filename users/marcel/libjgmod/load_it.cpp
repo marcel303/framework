@@ -655,11 +655,6 @@ JGMOD *load_it (const char *filename, int start_offset)
 		}
 	#endif
 		
-		// load sample data
-		
-		assert(sample_data_offset != 0);
-		jgmod_fseek(&f, filename, sample_data_offset);
-		
 		s->freq = si->c2spd;
 		
 		#ifdef ALLEGRO_DATE
@@ -671,39 +666,6 @@ JGMOD *load_it (const char *filename, int start_offset)
         s->loop_start = si->repoff;
         s->loop_end = si->replen;
         s->param = -1;
-        
-		if (sample_flags & kSampleFlag_16bit)
-		{
-			s->data = jgmod_calloc (s->len*2);
-			s->bits = 16;
-			
-			uint16_t * data = (uint16_t*)s->data;
-			
-			for (int i = 0; i < s->len; ++i)
-			{
-				data[i] = jgmod_igetw(f);
-			}
-			
-            if (convert_flags & kConversionFlag_Signed)
-                for (int i = 0; i < s->len; ++i)
-                    data[i] ^= 0x8000;
-		}
-		else
-		{
-			s->data = jgmod_calloc (s->len);
-			s->bits = 8;
-			
-			uint8_t * data = (uint8_t*)s->data;
-			
-			for (int i = 0; i < s->len; ++i)
-			{
-				data[i] = jgmod_getc(f);
-			}
-			
-            if (convert_flags & kConversionFlag_Signed)
-                for (int i = 0; i < s->len; ++i)
-                    data[i] ^= 0x80;
-		}
 		
 		if (sample_flags & kSampleFlag_SustainLoop)
 		{
@@ -721,6 +683,46 @@ JGMOD *load_it (const char *filename, int start_offset)
 		}
 		else
 			si->loop = JGMOD_LOOP_OFF;
+			
+        // load sample data
+		
+		if (sample_data_offset != 0)
+		{
+			jgmod_fseek(&f, filename, sample_data_offset);
+			
+			if (sample_flags & kSampleFlag_16bit)
+			{
+				s->data = jgmod_calloc (s->len*2);
+				s->bits = 16;
+				
+				uint16_t * data = (uint16_t*)s->data;
+				
+				for (int i = 0; i < s->len; ++i)
+				{
+					data[i] = jgmod_igetw(f);
+				}
+				
+				if (convert_flags & kConversionFlag_Signed)
+					for (int i = 0; i < s->len; ++i)
+						data[i] ^= 0x8000;
+			}
+			else
+			{
+				s->data = jgmod_calloc (s->len);
+				s->bits = 8;
+				
+				uint8_t * data = (uint8_t*)s->data;
+				
+				for (int i = 0; i < s->len; ++i)
+				{
+					data[i] = jgmod_getc(f);
+				}
+				
+				if (convert_flags & kConversionFlag_Signed)
+					for (int i = 0; i < s->len; ++i)
+						data[i] ^= 0x80;
+			}
+		}
 	}
 	
 	// read patterns
