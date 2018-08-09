@@ -598,7 +598,10 @@ void JGMOD_PLAYER::set_volume (int volume)
         volume = 0;
     else if (volume > 255)
         volume = 255;
-        
+	
+	if (volume == mod_volume)
+		return;
+	
     mod_volume = volume;
 
     for (chn=0; chn<mi.max_chn ; chn++)
@@ -634,7 +637,10 @@ void JGMOD_PLAYER::set_speed (int speed)
         speed = 1;
     else if (speed > 400)
         speed = 400;
-
+	
+	if (speed == mi.speed_ratio)
+		return;
+		
     mi.speed_ratio = speed;
 
     if (is_playing() == true)
