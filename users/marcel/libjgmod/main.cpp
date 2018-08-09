@@ -12,6 +12,9 @@
  *  The player. Just to demonstrate how JGMOD sounds.
  *  Also used by me for testing MODs. */
 
+// todo : load sample and instrument names
+// todo : check mod, xm, s3m loaders for file seeks that skip bytes and reference vs file formats. perhaps something interesthing is skipped?
+// todo : investigate IT support
 
 #include "framework.h"
 #include "framework-allegro2.h"
@@ -214,19 +217,6 @@ int main(int argc, char **argv)
 		
         return -1;
 	}
-
-    if (exists(argv[1]) == 0)
-	{
-		logError("%s not found", argv[1]);
-		return -1;
-	}
-	
-	JGMOD * mod = do_load(argv[1]);
-	
-	if (mod == nullptr)
-	{
-		return -1;
-	}
 	
 	framework.actionHandler = handleAction;
 	framework.enableDepthBuffer = true;
@@ -261,6 +251,15 @@ int main(int argc, char **argv)
         return -1;
 	}
 	
+	player.enable_lasttrk_loop = true;
+	
+	JGMOD * mod = do_load(argv[1]);
+	
+	if (mod != nullptr)
+	{
+		do_play(player, mod);
+	}
+	
 #if 0
 	JGMOD * mod2 = do_load("test3.xm");
 	JGMOD_PLAYER player2;
@@ -268,10 +267,6 @@ int main(int argc, char **argv)
 	player2.enable_lasttrk_loop = true;
 	player2.play(mod2, true);
 #endif
-
-	player.enable_lasttrk_loop = true;
-	
-	do_play(player, mod);
 
     while (!framework.quitRequested)
 	{
