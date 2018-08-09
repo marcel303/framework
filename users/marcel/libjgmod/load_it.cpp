@@ -98,10 +98,11 @@ void convert_it_pitch (int *pitch)
         return;
 		}
 	
-	*pitch += 1;
-	
-    octave = *pitch >> 4;    //pitch / 16
-    *pitch = noteperiod[*pitch % 16] >> octave;
+    octave = *pitch / 12 - 1;    //pitch / 16
+    if (octave < 0)
+    	*pitch = noteperiod[(*pitch % 12)] << (-octave);
+    else
+    	*pitch = noteperiod[(*pitch % 12)] >> octave;
 
     if (*pitch != 0)
         *pitch = JGMOD_NTSC / *pitch;
@@ -294,6 +295,8 @@ JGMOD *load_it (const char *filename, int start_offset)
 	
     const uint16_t created_with = jgmod_igetw(f); // Created with tracker. Impulse Tracker y.xx = 0yxxh
     const uint16_t created_version = jgmod_igetw(f); // Compatible with tracker with version greater than value. (ie. format version)
+    (void)created_with;
+    (void)created_version;
 	
     const int flags = jgmod_igetw(f);
 /*
@@ -342,6 +345,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 	}
 	
 	const uint16_t special = jgmod_igetw(f);
+	(void)special;
 /*
       Special:  Bit 0: On = song message attached.
                        Song message:
@@ -364,6 +368,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 	
 	j->global_volume = jgmod_getc(f); // Global volume. (0->128) All volumes are adjusted by this.
 	const uint8_t mixing_volume = jgmod_getc(f); // Mix volume (0->128) During mixing, this value controls the magnitude of the wave being mixed.
+	(void)mixing_volume;
 	
 	const uint8_t initial_speed = jgmod_getc(f); // Initial Speed of song.
 	const uint8_t initial_tempo = jgmod_getc(f); // Initial Tempo of song.
@@ -372,10 +377,14 @@ JGMOD *load_it (const char *filename, int start_offset)
 	
 	const uint8_t panning_separation = jgmod_getc(f); // Panning separation between channels (0->128, 128 is max sep.)
 	const uint8_t pitch_wheel_depth = jgmod_getc(f); // Pitch wheel depth for MIDI controllers.
+	(void)panning_separation;
+	(void)pitch_wheel_depth;
 	
 	// message stored with Impulse Tracker file. up to 8000 chars.
 	const uint16_t message_length = jgmod_igetw(f);
 	const uint32_t message_offset = jgmod_igetl(f);
+	(void)message_length;
+	(void)message_offset;
 	
 	jgmod_skip(f, 4); // Reserved.
 	
@@ -442,6 +451,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 		jgmod_getc(f); // 0x00
 		
 		uint8_t global_volume = jgmod_getc(f); // Global volume for instrument, ranges from 0->64
+		(void)global_volume;
 		
 		/*
 		Flags:
@@ -509,6 +519,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 		const uint8_t convert_flags = jgmod_getc(f);
 		
 		const uint8_t default_pan = jgmod_getc(f); // Default Pan. Bits 0->6 = Pan value, Bit 7 ON to USE (opposite of inst).
+		si->pan = default_pan;
 		
 		const uint32_t sample_length = jgmod_igetl(f); // Length of sample in no. of samples NOT no. of bytes.
 		const uint32_t sample_loop_begin = jgmod_igetl(f); // Start of loop (no of samples in, not bytes).
@@ -529,12 +540,17 @@ JGMOD *load_it (const char *filename, int start_offset)
 		
 		const uint32_t sustain_loop_begin = jgmod_igetl(f); // Start of sustain loop.
 		const uint32_t sustain_loop_end = jgmod_igetl(f); // Sample no. AFTER end of sustain loop.
+		(void)sustain_loop_begin;
+		(void)sustain_loop_end;
 		
 		const uint32_t sample_data_offset = jgmod_igetl(f); // 'Long' Offset of sample in file.
 		
 		const uint8_t vibrato_speed = jgmod_getc(f); // Vibrato Speed, ranges from 0->64.
 		const uint8_t vibrato_depth = jgmod_getc(f); // Vibrato Depth, ranges from 0->64.
 		const uint8_t vibrate_rate = jgmod_getc(f); // Vibrato Rate, rate at which vibrato is applied (0->64).
+		(void)vibrato_speed;
+		(void)vibrato_depth;
+		(void)vibrate_rate;
 		/*
 		Vibrato waveform type:
 			0=Sine wave
@@ -543,6 +559,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 			3=Random (speed is irrelevant)
 		*/
 		const uint8_t vibrate_waveform_type = jgmod_getc(f);
+		(void)vibrate_waveform_type;
 		
 		// load sample data
 		
@@ -752,8 +769,8 @@ JGMOD *load_it (const char *filename, int start_offset)
 	}
 
     jgmod_fclose (f);
-    
-#if 1
+	
+#if 0
 	jgmod_seterror ("IT support is not completed yet. Wait a few more versions");
     jgmod_destroy (j);
     j = nullptr;
