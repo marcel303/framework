@@ -317,6 +317,8 @@ JGMOD *load_it (const char *filename, int start_offset)
     jgmod_skip (f, start_offset);
 	
 	// decode with the help of https://github.com/schismtracker/schismtracker/wiki/ITTECH.TXT
+	// https://bitbucket.org/jthlim/impulsetracker/src/default/ReleaseDocumentation/ITTECH.TXT
+	// effect reference: https://bitbucket.org/jthlim/impulsetracker/src/default/ReleaseDocumentation/IT.TXT
 	
     char header[4];
     jgmod_fread(header, 4, f);
@@ -486,6 +488,9 @@ JGMOD *load_it (const char *filename, int start_offset)
 		SAMPLE_INFO * si = j->si + i;
 		SAMPLE * s = j->s + i;
 		
+		if (!sample_headers[i])
+			continue;
+		
 		jgmod_fseek(&f, filename, sample_headers[i]);
 		
 		char header[4];
@@ -515,11 +520,11 @@ JGMOD *load_it (const char *filename, int start_offset)
 		*/
 		enum SampleFlag
 		{
-			kSampleFlag_16bit = 1 << 1,
-			kSampleFlag_Compressed = 1 << 3,
-			kSampleFlag_Loop = 1 << 4,
-			kSampleFlag_SustainLoop = 1 << 5,
-			kSampleFlag_LoopBidir = 1 << 6,
+			kSampleFlag_16bit            = 1 << 1,
+			kSampleFlag_Compressed       = 1 << 3,
+			kSampleFlag_Loop             = 1 << 4,
+			kSampleFlag_SustainLoop      = 1 << 5,
+			kSampleFlag_LoopBidir        = 1 << 6,
 			kSampleFlag_SustainLoopBidir = 1 << 7
 		};
 		const uint8_t sample_flags = jgmod_getc(f);
@@ -535,10 +540,9 @@ JGMOD *load_it (const char *filename, int start_offset)
 		si->volume = default_volume;
 		si->transpose = 0;
 		
-		char sample_name[12];
-		jgmod_fread(sample_name, 12, f);
-		
-		jgmod_skip(f, 14);
+		char sample_name[26];
+		jgmod_fread(sample_name, 26, f);
+		printf("sample name: %s\n", sample_name);
 		
 		/*
 		Conversion flags:
@@ -567,16 +571,19 @@ JGMOD *load_it (const char *filename, int start_offset)
 		};
 		const uint8_t convert_flags = jgmod_getc(f);
 		
+		// panning
 		const uint8_t default_pan = jgmod_getc(f); // Default Pan. Bits 0->6 = Pan value, Bit 7 ON to USE (opposite of inst).
-		si->pan = default_pan;
+		if (default_pan & (1 << 7))
+			si->pan = (default_pan & 63) * 255 / 63;
 		
+		// sample length and loop points
 		const uint32_t sample_length = jgmod_igetl(f); // Length of sample in no. of samples NOT no. of bytes.
 		const uint32_t sample_loop_begin = jgmod_igetl(f); // Start of loop (no of samples in, not bytes).
 		const uint32_t sample_loop_end = jgmod_igetl(f); // Sample no. AFTER end of loop.
 		
 		si->lenght = sample_length;
 		
-		if (sample_flags & (kSampleFlag_Loop | kSampleFlag_LoopBidir))
+		if (sample_flags & kSampleFlag_Loop)
 		{
 			assert(sample_loop_begin < si->lenght);
 			assert(sample_loop_end > sample_loop_begin);
@@ -590,12 +597,34 @@ JGMOD *load_it (const char *filename, int start_offset)
 		}
 		
 		const uint32_t c5_speed = jgmod_igetl(f); // Number of bytes a second for C-5 (ranges from 0->9999999).
+		assert(c5_speed >= 0 && c5_speed <= 9999999);
 		si->c2spd = c5_speed;
 		
 		const uint32_t sustain_loop_begin = jgmod_igetl(f); // Start of sustain loop.
 		const uint32_t sustain_loop_end = jgmod_igetl(f); // Sample no. AFTER end of sustain loop.
 		(void)sustain_loop_begin;
 		(void)sustain_loop_end;
+		
+		if (sample_flags & kSampleFlag_SustainLoop)
+		{
+			// note : sustain loops apply as long as no note-off has been encountered
+			//        so if they're present, they will preceede over normal loops until
+			//        a note is released. if sustain loop is enabled, use it as the sample
+			//        loop for now. this is the closest we can get to the IT's behavior
+			//        with the current voice routines
+			
+			printf("warning: sustain loop not properly implemented yet\n");
+			
+			assert(sustain_loop_begin < si->lenght);
+			assert(sustain_loop_end > sustain_loop_begin);
+			
+			si->repoff = sustain_loop_begin;
+			
+			if (sustain_loop_end > 0)
+				si->replen = sustain_loop_end;
+			else
+				si->replen = si->lenght;
+		}
 		
 		const uint32_t sample_data_offset = jgmod_igetl(f); // 'Long' Offset of sample in file.
 		
@@ -614,9 +643,21 @@ JGMOD *load_it (const char *filename, int start_offset)
 		*/
 		const uint8_t vibrate_waveform_type = jgmod_getc(f);
 		(void)vibrate_waveform_type;
+	#if 1
+		si->vibrato_spd = vibrato_speed;
+		si->vibrato_depth = vibrato_depth;
+		si->vibrato_rate = vibrate_rate;
+		si->vibrato_type = vibrate_waveform_type;
+		
+		if (vibrato_depth != 0)
+		{
+			printf("sample vibrato is not yet supported\n");
+		}
+	#endif
 		
 		// load sample data
 		
+		assert(sample_data_offset != 0);
 		jgmod_fseek(&f, filename, sample_data_offset);
 		
 		s->freq = si->c2spd;
@@ -664,10 +705,20 @@ JGMOD *load_it (const char *filename, int start_offset)
                     data[i] ^= 0x80;
 		}
 		
-		if (sample_flags & kSampleFlag_LoopBidir)
-			si->loop |= JGMOD_LOOP_BIDI;
-		else if (sample_flags & kSampleFlag_Loop)
+		if (sample_flags & kSampleFlag_SustainLoop)
+		{
 			si->loop = JGMOD_LOOP_ON;
+			
+			if (sample_flags & kSampleFlag_SustainLoopBidir)
+				si->loop |= JGMOD_LOOP_BIDI;
+		}
+		else if (sample_flags & kSampleFlag_Loop)
+		{
+			si->loop = JGMOD_LOOP_ON;
+			
+			if (sample_flags & kSampleFlag_LoopBidir)
+				si->loop |= JGMOD_LOOP_BIDI;
+		}
 		else
 			si->loop = JGMOD_LOOP_OFF;
 	}
@@ -680,6 +731,9 @@ JGMOD *load_it (const char *filename, int start_offset)
 	
 	for (auto i = 0; i < j->no_pat; ++i)
 	{
+		if (!pattern_offsets[i])
+			continue;
+		
 		jgmod_fseek(&f, filename, pattern_offsets[i]);
 		
 		PATTERN_INFO * pi = j->pi + i;
