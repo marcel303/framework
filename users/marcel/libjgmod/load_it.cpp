@@ -155,15 +155,15 @@ int get_it_info(const char *filename, int start_offset, JGMOD_INFO *ji)
 }
 
 //convert it commands to protracker like commands
-static void convert_it_command (int *command, int *extcommand)
+static void convert_it_command (int *command, int *extcommand, int & last_special)
 {
 	const char c = (*command) + 0x40;
 	
-    const int no = (*extcommand & 0xF0 ) >> 4;
-	
-	printf("command: %c (%d) %02x\n", c, *command, *extcommand);
+	//printf("command: %c (%d) %02x\n", c, *command, *extcommand);
 	
 // todo : review this list !!
+
+#define experimentalCommands false
 
     if (c == 'A')                      // it set tempo
         *command = S3EFFECT_A;
@@ -189,8 +189,28 @@ static void convert_it_command (int *command, int *extcommand)
         *command = S3EFFECT_K;
     else if (c == 'L')                // porta to note
         *command = S3EFFECT_L;
+#if experimentalCommands
+	else if (c == 'M')
+	{
+		// set channel volume 0..64
+	}
+	else if (c == 'N')
+	{
+		// channel volume slide. works like Dxy but operates on the channel volume instead
+	}
+#endif
     else if (c == 'O')                // set sample offset
         *command = PTEFFECT_9;
+#if experimentalCommands
+	else if (c == 'P')
+	{
+		// PFx = panning fine slide right
+		// PxF = panning fine slide right
+		
+		// P0x = panning slide right
+		// Px0 = panning slide left
+	}
+#endif
     else if (c == 'Q')                // retrigger
         *command = S3EFFECT_Q;
     else if (c == 'R')                // s3m tremolo
@@ -203,52 +223,78 @@ static void convert_it_command (int *command, int *extcommand)
         *command = S3EFFECT_V;
     else if (c == 'X')                // set panning
         *command = S3EFFECT_X;
-	
-    else if (c == 'S' && no == 1)
+    else if (c == 'S')
+    {
+    	if (*extcommand == 0x00)
+    	{
+			*extcommand = last_special;
+		}
+		
+		last_special = *extcommand;
+		
+    	const int no = (*extcommand & 0xF0 ) >> 4;
+		
+    	if (no == 1)           // glissando
         {
-        *command = PTEFFECT_E;
-        *extcommand = (*extcommand & 0xF) | 0x30;
+			*command = PTEFFECT_E;
+			*extcommand = (*extcommand & 0xF) | 0x30;
         }
-
-    else if (c == 'S' && no == 2)      // set finetune
+		else if (no == 2)      // set finetune
         {
-        *command = PTEFFECT_E;
-        *extcommand = (*extcommand & 0xF) | 0x50;
-        }
-    else if (c == 'S' && no == 3)     // set vibrato waveform
+			*command = PTEFFECT_E;
+			*extcommand = (*extcommand & 0xF) | 0x50;
+		}
+        else if (no == 3)     // set vibrato waveform
         {
-        *command = PTEFFECT_E;
-        *extcommand = (*extcommand & 0xF) | 0x40;
-        }
-    else if (c == 'S' && no == 4)     // set tremolo waveform
+			*command = PTEFFECT_E;
+			*extcommand = (*extcommand & 0xF) | 0x40;
+		}
+        else if (no == 4)     // set tremolo waveform
         {
-        *command = PTEFFECT_E;
-        *extcommand = (*extcommand & 0xF) | 0x70;
-        }
-    else if (c == 'S' && no == 8)     // set 16 pan position
-        *command = PTEFFECT_E;
-    else if (c == 'S' && no == 0xA)   // stereo control
+			*command = PTEFFECT_E;
+			*extcommand = (*extcommand & 0xF) | 0x70;
+		}
+        else if (no == 8)     // set 16 pan position
         {
-        *command = PTEFFECT_E;
-        *extcommand = (*extcommand & 0xF) | 0x100;
-        }
-    else if (c == 'S' && no == 0xB)   // pattern loop
+        	*command = PTEFFECT_E;
+		}
+    	else if (no == 0xA)   // stereo control
         {
-        *command = PTEFFECT_E;
-        *extcommand = (*extcommand & 0xF) | 0x60;
+			*command = PTEFFECT_E;
+			*extcommand = (*extcommand & 0xF) | 0x100;
         }
-
-    else if (c == 'S' && no == 0xC)   // note cut
-        *command = PTEFFECT_E;
-    else if (c == 'S' && no == 0xD)   // note delay
-        *command = PTEFFECT_E;
-    else if (c == 'S' && no == 0xE)   // pattern delay
-        *command = PTEFFECT_E;
+    	else if (no == 0xB)   // pattern loop
+        {
+			*command = PTEFFECT_E;
+			*extcommand = (*extcommand & 0xF) | 0x60;
+        }
+    	else if (no == 0xC)   // note cut
+    	{
+        	*command = PTEFFECT_E;
+		}
+		else if (no ==  0xD)   // note delay
+		{
+			*command = PTEFFECT_E;
+		}
+		else if (no ==  0xE)   // pattern delay
+		{
+			*command = PTEFFECT_E;
+		}
+		else
+		{
+			printf("unknown IT 'S' effect type: %d\n", no);
+			
+			*command = 0;
+			*extcommand = 0;
+		}
+	}
     else
-        {
+	{
+		printf("unknown IT command: '%c'\n", c);
+		
         *command = 0;
         *extcommand = 0;
-        }
+	}
 }
 
 JGMOD *load_it (const char *filename, int start_offset)
@@ -366,7 +412,8 @@ JGMOD *load_it (const char *filename, int start_offset)
 		kSpecial_SongMessageAttached = 1 << 0
 	};
 	
-	j->global_volume = jgmod_getc(f); // Global volume. (0->128) All volumes are adjusted by this.
+	// note : JGMOD assumed global_volume 0->64
+	j->global_volume = jgmod_getc(f) / 2; // Global volume. (0->128) All volumes are adjusted by this.
 	const uint8_t mixing_volume = jgmod_getc(f); // Mix volume (0->128) During mixing, this value controls the magnitude of the wave being mixed.
 	(void)mixing_volume;
 	
@@ -404,6 +451,8 @@ JGMOD *load_it (const char *filename, int start_offset)
 	// Volume for each channel. Ranges from 0->64
 	uint8_t channel_volume[64];
 	jgmod_fread(channel_volume, 64, f);
+	for (int i = 0; i < 64; ++i)
+		j->channel_volume[i] = channel_volume[i];
 	
 	uint8_t orders[j->no_trk];
 	jgmod_fread(orders, j->no_trk, f);
@@ -526,13 +575,18 @@ JGMOD *load_it (const char *filename, int start_offset)
 		const uint32_t sample_loop_end = jgmod_igetl(f); // Sample no. AFTER end of loop.
 		
 		si->lenght = sample_length;
-		if (sample_flags & kSampleFlag_Loop)
+		
+		if (sample_flags & (kSampleFlag_Loop | kSampleFlag_LoopBidir))
 		{
 			assert(sample_loop_begin < si->lenght);
 			assert(sample_loop_end > sample_loop_begin);
 			
 			si->repoff = sample_loop_begin;
-			si->replen = sample_loop_end;
+			
+			if (sample_loop_end > 0)
+				si->replen = sample_loop_end;
+			else
+				si->replen = si->lenght;
 		}
 		
 		const uint32_t c5_speed = jgmod_igetl(f); // Number of bytes a second for C-5 (ranges from 0->9999999).
@@ -647,6 +701,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 		int channel_instrument[64];
 		int channel_command[64];
 		int channel_command_param[64];
+		int channel_special[64];
 		
 		int row_index = 0;
 		
@@ -739,7 +794,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 				ni->command = jgmod_getc(f);
 				ni->extcommand = jgmod_getc(f);
 				
-				convert_it_command(&ni->command, &ni->extcommand);
+				convert_it_command(&ni->command, &ni->extcommand, channel_special[channel]);
 				
 				channel_command[channel] = ni->command;
 				channel_command_param[channel] = ni->extcommand;
