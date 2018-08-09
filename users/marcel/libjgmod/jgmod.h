@@ -128,6 +128,7 @@ struct CHANNEL_INFO
     ENVELOPE_INFO volenv;
     ENVELOPE_INFO panenv;
 
+	int channel_volume;
     int instrument;
     int sample;
     int volume;
@@ -318,6 +319,7 @@ struct JGMOD
     int no_pat;
     int pat_table[256];
     int panning[JGMOD_MAX_VOICES];
+    int channel_volume[JGMOD_MAX_VOICES];
     int flag;
 
     int tempo;

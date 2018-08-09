@@ -306,6 +306,9 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
     if (j->bpm == 0)
         j->bpm = 125;
 
+	for (index=0; index<64; index++)
+		j->channel_volume[index] = 64;
+		
     // read the order number
     for (index=0; index< j->no_trk; index++)
         j->pat_table[index] = jgmod_getc(f);

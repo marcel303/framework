@@ -216,6 +216,10 @@ int JGMOD_PLAYER::calc_volume (int chn)
 
     temp = ci[chn].temp_volume * mi.global_volume * ci[chn].volfade; // 0...2^27
     temp >>= 19;                                    // 0...256
+	
+    temp *= ci[chn].channel_volume;
+    temp >>= 6;
+	
     temp *= mod_volume * ci[chn].volenv.v;          // 0...4177920
     temp >>= 14;                                    // 0...255
 

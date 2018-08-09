@@ -334,6 +334,7 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop, int speed, int pitch)
         {
         ci[index].keyon = false;
         ci[index].kick = false;
+        ci[index].channel_volume = j->channel_volume[index];
         ci[index].instrument = 0;
         ci[index].note = 0;
         ci[index].sample = 0;
@@ -640,7 +641,7 @@ void JGMOD_PLAYER::set_speed (int speed)
 	
 	if (speed == mi.speed_ratio)
 		return;
-		
+	
     mi.speed_ratio = speed;
 
     if (is_playing() == true)

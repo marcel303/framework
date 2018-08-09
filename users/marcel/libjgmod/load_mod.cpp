@@ -266,6 +266,9 @@ JGMOD *load_m (const char *filename, int no_inst)
     j->no_trk = jgmod_getc(f);       // get no of track
     j->restart_pos = jgmod_getc(f);  // restart position
 
+	for (index=0; index<64; index++)
+		j->channel_volume[index] = 64;
+		
     for (index=0; index < 128; index++)
         *(j->pat_table + index) = jgmod_getc(f);
     

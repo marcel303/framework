@@ -263,6 +263,9 @@ JGMOD *load_xm (const char *filename, int start_offset)
     j->tempo = jgmod_igetw(f);
     j->bpm = jgmod_igetw(f);
 
+	for (index=0; index<64; index++)
+		j->channel_volume[index] = 64;
+	
     for (index=0; index<256; index++)
         j->pat_table[index] = jgmod_getc(f);
 

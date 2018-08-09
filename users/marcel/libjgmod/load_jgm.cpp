@@ -94,6 +94,9 @@ JGMOD *load_jgm (JGMOD_FILE *f)
     for (index=0; index < j->no_chn; index++)
         j->panning[index] = jgmod_getc(f);
 
+	for (index=0; index<64; index++)
+		j->channel_volume[index] = 64;
+		
     for (index=0; index < j->no_trk; index++)
         j->pat_table[index] = jgmod_getc(f);
 
