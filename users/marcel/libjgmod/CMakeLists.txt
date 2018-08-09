@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(HAS_LIBGG 0)
-set(HAS_FRAMEWORK 0)
-
 set(HAS_LIBJGMOD 1 PARENT_SCOPE)
 message("setting HAS_LIBJGMOD")
 
