@@ -77,6 +77,10 @@ void convert_it_pitch (int *pitch)
 	// 255 = note cut
 	// 254 = note off
 	
+	// -1 sets volume to 0
+	// -2 sets keyon to true. if no envolume, also volume to 0. also enables volfade to zero -> this is key off?
+	// -3 sets keyon to false
+	
 	if (*pitch == 255)  // note off
         {
         *pitch = -3; // todo : not correct!
@@ -850,7 +854,8 @@ JGMOD *load_it (const char *filename, int start_offset)
 				ni->command = jgmod_getc(f);
 				ni->extcommand = jgmod_getc(f);
 				
-				convert_it_command(&ni->command, &ni->extcommand, channel_special[channel]);
+				if (ni->command != 0)
+					convert_it_command(&ni->command, &ni->extcommand, channel_special[channel]);
 				
 				channel_command[channel] = ni->command;
 				channel_command_param[channel] = ni->extcommand;
