@@ -260,9 +260,6 @@ static void drawEditor(const GraphEdit & graphEdit, AudioRealTimeConnection * rt
 
 int main(int argc, char * argv[])
 {
-	//framework.fullscreen = true;
-	framework.enableDepthBuffer = true;
-
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
 		// initialize audio related systems
@@ -297,6 +294,10 @@ int main(int argc, char * argv[])
 		camera.position = Vec3(0.f, 1.5f, -4.f);
 		camera.pitch = -15.f;
 		
+		Surface surface(GFX_SX, GFX_SY, true, false, SURFACE_RGBA8);
+		
+		bool showDefaultEditor = false;
+		
 		while (!framework.quitRequested)
 		{
 			framework.process();
@@ -306,15 +307,22 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
+			if (keyboard.wentDown(SDLK_TAB))
+				showDefaultEditor = !showDefaultEditor;
+			
 			camera.tick(dt, true);
 
-			audioGraphMgr.tickEditor(dt, false);
+			audioGraphMgr.tickEditor(dt, showDefaultEditor == false);
 			
 			framework.beginDraw(220, 220, 220, 0);
 			{
 				setFont("calibri.ttf");
 				pushFontMode(FONT_SDF);
 				{
+					pushSurface(&surface);
+					surface.clear();
+					surface.clearDepth(1.f);
+					
 					const float fov = 60.f;
 					const float near = .01f;
 					const float far = 100.f;
@@ -337,7 +345,26 @@ int main(int argc, char * argv[])
 					}
 					camera.popViewMatrix();
 
+					popSurface();
+					
 					projectScreen2d();
+					
+					float samples[AUDIO_UPDATE_SIZE * 2];
+					voiceMgr.generateAudio(samples, AUDIO_UPDATE_SIZE);
+					float magnitudeSq = 0.f;
+					for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+						magnitudeSq += samples[i] * samples[i];
+					magnitudeSq /= AUDIO_UPDATE_SIZE;
+					const float blurStrength = magnitudeSq * 2000.f;
+					setShader_GaussianBlurV(surface.getTexture(), 30, blurStrength);
+					surface.postprocess();
+					pushBlend(BLEND_OPAQUE);
+					drawRect(0, 0, GFX_SX, GFX_SY);
+					popBlend();
+					clearShader();
+					
+					if (showDefaultEditor)
+						audioGraphMgr.drawEditor();
 					
 					// show CPU usage of the audio thread
 					

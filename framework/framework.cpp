@@ -5107,7 +5107,7 @@ void Camera3d::pushViewMatrix() const
 	
 	const GLenum restoreMatrixMode = gxGetMatrixMode();
 	{
-		gxMatrixMode(GL_MODELVIEW);
+		gxMatrixMode(GL_PROJECTION);
 		gxPushMatrix();
         gxMultMatrixf(matrix.m_v);
 	}
@@ -5118,7 +5118,7 @@ void Camera3d::popViewMatrix() const
 {
 	const GLenum restoreMatrixMode = gxGetMatrixMode();
 	{
-		gxMatrixMode(GL_MODELVIEW);
+		gxMatrixMode(GL_PROJECTION);
 		gxPopMatrix();
 	}
 	gxMatrixMode(restoreMatrixMode);
