@@ -323,7 +323,7 @@ bool AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 		{
 			if (sampleIndex >= voice.sample->len)
 			{
-				Assert(sampleIndex == voice.sample->len);
+				//Assert(sampleIndex == voice.sample->len); // not necessarily true, as sample playback may increment by more than one sample
 				
 				voice.started = false;
 				
@@ -800,6 +800,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 								{
 								#if 1
 									voice.position = (int64_t(voice.sample->loop_end - 1) << FIXBITS << 1) - voice.position;
+									Assert(voice.position >= 0);
 									
 									sampleIndex = voice.position >> FIXBITS;
 								#elif 1
@@ -823,6 +824,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 								{
 								#if 1
 									voice.position = (int64_t(voice.sample->loop_start) << FIXBITS << 1) - voice.position;
+									Assert(voice.position >= 0);
 									
 									sampleIndex = voice.position >> FIXBITS;
 								#elif 1
@@ -867,7 +869,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 					{
 						if (sampleIndex >= voice.sample->len)
 						{
-							Assert(sampleIndex == voice.sample->len);
+							//Assert(sampleIndex == voice.sample->len); // not necessarily true, as sample playback may increment by more than one sample
 							
 							voice.started = false;
 							
