@@ -844,11 +844,13 @@ void Model::drawEx(Vec3Arg position, Vec3Arg axis, const float angle, const floa
 
 void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 {
-	Mat4x4 * localMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * m_model->boneSet->m_numBones, 16);
-	Mat4x4 * worldMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * m_model->boneSet->m_numBones, 16);
-	Mat4x4 * globalMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * m_model->boneSet->m_numBones, 16);
+	const int numBones = calculateBoneMatrices(matrix, nullptr, nullptr, nullptr, 0);
 	
-	calculateBoneMatrices(matrix, localMatrices, worldMatrices, globalMatrices, m_model->boneSet->m_numBones);
+	Mat4x4 * localMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numBones, 16);
+	Mat4x4 * worldMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numBones, 16);
+	Mat4x4 * globalMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numBones, 16);
+	
+	calculateBoneMatrices(matrix, localMatrices, worldMatrices, globalMatrices, numBones);
 	
 	// draw
 	
@@ -1086,7 +1088,23 @@ int Model::calculateBoneMatrices(
 {
 	if (numMatrices == 0)
 	{
-		return m_model->boneSet->m_numBones;
+		// todo : add flag if static mesh or not ?
+		
+		if (m_model->boneSet->m_numBones == 0)
+			return 1;
+		else
+			return m_model->boneSet->m_numBones;
+	}
+	
+	if (m_model->boneSet->m_numBones == 0)
+	{
+		Assert(numMatrices == 1);
+		
+		localMatrices[0].MakeIdentity();
+		worldMatrices[0] = matrix;
+		globalMatrices[0] = worldMatrices[0];
+		
+		return 1;
 	}
 	
 	Assert(numMatrices == m_model->boneSet->m_numBones);
@@ -1291,6 +1309,83 @@ int Model::softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * wor
 	}
 	
 	return 0;
+}
+
+void Model::calculateAABB(Vec3 & min, Vec3 & max, const bool applyAnimation) const
+{
+	const float minFloat = -std::numeric_limits<float>::max();
+	const float maxFloat = +std::numeric_limits<float>::max();
+
+	min = Vec3(maxFloat, maxFloat, maxFloat);
+	max = Vec3(minFloat, minFloat, minFloat);
+	
+	//
+	
+	if (applyAnimation)
+	{
+		Mat4x4 matrix;
+		matrix.MakeScaling(scale, scale, scale);
+		
+		const int numMatrices = calculateBoneMatrices(matrix, nullptr, nullptr, nullptr, 0);
+		
+		Mat4x4 * localMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numMatrices, 16);
+		Mat4x4 * worldMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numMatrices, 16);
+		Mat4x4 * globalMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numMatrices, 16);
+		
+		calculateBoneMatrices(matrix, localMatrices, worldMatrices, globalMatrices, numMatrices);
+		
+		const int numVertices = softBlend(
+			matrix, nullptr, nullptr,  nullptr, numMatrices,
+			false, nullptr, nullptr, nullptr,
+			false, nullptr, nullptr, nullptr, 0);
+		
+		float * __restrict positionX = new float[numVertices];
+		float * __restrict positionY = new float[numVertices];
+		float * __restrict positionZ = new float[numVertices];
+		
+		softBlend(
+			matrix, localMatrices, worldMatrices, globalMatrices, numMatrices,
+			true, positionX, positionY, positionZ,
+			false, nullptr, nullptr, nullptr, numVertices);
+		
+		for (int i = 0; i < numVertices; ++i)
+		{
+			min[0] = fminf(min[0], positionX[i]);
+			min[1] = fminf(min[1], positionY[i]);
+			min[2] = fminf(min[2], positionZ[i]);
+			
+			max[0] = fmaxf(max[0], positionX[i]);
+			max[1] = fmaxf(max[1], positionY[i]);
+			max[2] = fmaxf(max[2], positionZ[i]);
+		}
+		
+		delete [] positionX;
+		delete [] positionY;
+		delete [] positionZ;
+	}
+	else
+	{
+		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
+		{
+			const Mesh * mesh = m_model->meshSet->m_meshes[i];
+			
+			for (int j = 0; j < mesh->m_numVertices; ++j)
+			{
+				const Vertex & vertex = mesh->m_vertices[j];
+				
+				if (vertex.pz >= -1.f)
+					printf("found it");
+					
+				min[0] = fminf(min[0], vertex.px);
+				min[1] = fminf(min[1], vertex.py);
+				min[2] = fminf(min[2], vertex.pz);
+				
+				max[0] = fmaxf(max[0], vertex.px);
+				max[1] = fmaxf(max[1], vertex.py);
+				max[2] = fmaxf(max[2], vertex.pz);
+			}
+		}
+	}
 }
 
 void Model::updateAnimationSegment()

@@ -826,6 +826,8 @@ public:
 		float * __restrict normalZ,
 		const int numVertices) const;
 	
+	void calculateAABB(Vec3 & min, Vec3 & max, const bool applyAnimation) const;
+	
 private:
 	void ctor();
 	
