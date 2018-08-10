@@ -296,6 +296,15 @@ int main(int argc, char * argv[])
 	}
 	
 	popFontMode();
+	
+	for (auto & modelItr : models)
+	{
+		auto & model = modelItr.second;
+		
+		delete model;
+		model = nullptr;
+	}
+	
 	framework.shutdown();
 	
 	return 0;
