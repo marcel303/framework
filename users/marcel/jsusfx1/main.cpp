@@ -7,6 +7,8 @@
 #include "gfx-framework.h"
 #include "jsusfx-framework.h"
 
+#include "audioIO.h"
+
 #include "BoxAtlas.h"
 #include "Path.h"
 #include "StringEx.h"
@@ -64,6 +66,9 @@ test todo :
 - add option to organize windows (using box atlas?)
 + make octave buttons round
 - add ability to load/save effect chains
+	- add load/save to xml
+	- add load/select window for saved effect chains
++ add option to enable live audio input
 
 */
 
@@ -184,15 +189,12 @@ static void writeMidi(uint8_t *& midi, int & midiSize, const int message, const 
 	midiSize += 3;
 }
 
-void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8_t * midi, int * midiSize, const bool doTick, const bool doDraw)
+void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8_t * midi, int * midiSize, const bool doTick, const bool doDraw, int & out_sx, int & out_sy)
 {
 	const int keySx = 16;
 	const int keySy = 64;
 	const int octaveSx = 24;
 	const int octaveSy = 24;
-
-	const int sx = keySx * MidiKeyboard::kNumKeys + octaveSx;
-	const int sy = std::max(keySy, octaveSy * 2);
 
 	const int hoverIndex = mouseY >= 0 && mouseY <= keySy ? mouseX / keySx : -1;
 	const float velocity = clamp(mouseY / float(keySy), 0.f, 1.f);
@@ -200,6 +202,12 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 	const int octaveX = keySx * MidiKeyboard::kNumKeys + 4;
 	const int octaveY = 4;
 	const int octaveHoverIndex = mouseX >= octaveX && mouseX <= octaveX + octaveSx ? (mouseY - octaveY) / octaveSy : -1;
+	
+	const int sx = std::max(keySx * MidiKeyboard::kNumKeys, octaveX + octaveSx);
+	const int sy = std::max(keySy, octaveSy * 2);
+	
+	out_sx = sx;
+	out_sy = sy;
 	
 	if (doTick)
 	{
@@ -274,8 +282,8 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 			{
 				gxTranslatef(octaveX, octaveY, 0);
 				
-				setLumi(200);
-				drawText(octaveSx + 4, 4, 12, +1, +1, "octave: %d", kb.octave);
+				//setLumi(200);
+				//drawText(octaveSx + 4, 4, 12, +1, +1, "octave: %d", kb.octave);
 				
 				setColor(0 == octaveHoverIndex ? colorkeyHover : colorKey);
 				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
@@ -478,7 +486,7 @@ static void handleAction(const std::string & action, const Dictionary & d)
 
 //
 
-struct AudioStream_JsusFxChain : AudioStream
+struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
 {
 	struct EffectElem
 	{
@@ -496,6 +504,13 @@ struct AudioStream_JsusFxChain : AudioStream
 	
 	Limiter limiter;
 	
+	std::atomic<bool> enableInput;
+	
+	AudioStream_JsusFxChain()
+	{
+		enableInput = false;
+	}
+	
 	virtual ~AudioStream_JsusFxChain() override
 	{
 		if (mutex != nullptr)
@@ -505,10 +520,8 @@ struct AudioStream_JsusFxChain : AudioStream
 		}
 	}
 	
-	void init(AudioStream * _source)
+	void init()
 	{
-		source = _source;
-		
 		mutex = SDL_CreateMutex();
 	}
 	
@@ -554,9 +567,57 @@ struct AudioStream_JsusFxChain : AudioStream
 	
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
 	{
-		Assert(numSamples == BUFFER_SIZE);
+		float * samples = (float*)alloca(numSamples * 2 * sizeof(float));
 		
 		const int numSourceSamples = source->Provide(numSamples, buffer);
+		
+		for (int i = 0; i < numSourceSamples; ++i)
+		{
+			samples[i * 2 + 0] = buffer[i].channel[0] / float(1 << 15);
+			samples[i * 2 + 1] = buffer[i].channel[1] / float(1 << 15);
+		}
+		
+		for (int i = numSourceSamples; i < numSamples; ++i)
+		{
+			samples[i * 2 + 0] = 0.f;
+			samples[i * 2 + 1] = 0.f;
+		}
+		
+		process(samples, numSamples);
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			const float valueL = samples[i * 2 + 0];
+			const float valueR = samples[i * 2 + 1];
+			
+			buffer[i].channel[0] = valueL * float((1 << 15) - 2);
+			buffer[i].channel[1] = valueR * float((1 << 15) - 2);
+		}
+		
+		return numSamples;
+	}
+	
+	virtual void audioCallback(const float * input, float * output, const int numSamples) override
+	{
+		if (enableInput)
+		{
+			for (int i = 0; i < numSamples; ++i)
+			{
+				output[i * 2 + 0] = input[i];
+				output[i * 2 + 1] = input[i];
+			}
+		}
+		else
+		{
+			memset(output, 0, numSamples * 2 * sizeof(float));
+		}
+		
+		process(output, numSamples);
+	}
+	
+	void process(float * __restrict samples, const int numSamples)
+	{
+		Assert(numSamples == BUFFER_SIZE);
 		
 		const int kNumBuffers = 4;
 		float bufferData[2][kNumBuffers][BUFFER_SIZE];
@@ -564,16 +625,10 @@ struct AudioStream_JsusFxChain : AudioStream
 		
 		int inputIndex = 0;
 		
-		for (int i = 0; i < numSourceSamples; ++i)
+		for (int i = 0; i < numSamples; ++i)
 		{
-			bufferData[inputIndex][0][i] = buffer[i].channel[0] / float(1 << 15);
-			bufferData[inputIndex][1][i] = buffer[i].channel[1] / float(1 << 15);
-		}
-		
-		for (int i = numSourceSamples; i < numSamples; ++i)
-		{
-			bufferData[inputIndex][0][i] = 0.f;
-			bufferData[inputIndex][1][i] = 0.f;
+			bufferData[inputIndex][0][i] = samples[i * 2 + 0];
+			bufferData[inputIndex][1][i] = samples[i * 2 + 1];
 		}
 		
 		lock();
@@ -622,11 +677,9 @@ struct AudioStream_JsusFxChain : AudioStream
 			const float valueL = limiter.next(bufferData[1 - inputIndex][0][i]);
 			const float valueR = limiter.next(bufferData[1 - inputIndex][1][i]);
 			
-			buffer[i].channel[0] = valueL * float((1 << 15) - 2);
-			buffer[i].channel[1] = valueR * float((1 << 15) - 2);
+			samples[i * 2 + 0] = valueL;
+			samples[i * 2 + 1] = valueR;
 		}
-		
-		return numSamples;
 	}
 };
 
@@ -799,6 +852,8 @@ struct JsusFxChainWindow
 {
 	Window window;
 	
+	Surface * surface;
+	
 	AudioStream_JsusFxChain & effectChain;
 	
 	std::vector<JsusFxWindow*> & windows;
@@ -807,18 +862,36 @@ struct JsusFxChainWindow
 	
 	JsusFxChainWindow(AudioStream_JsusFxChain & _effectChain, std::vector<JsusFxWindow*> & _windows)
 		: window("Effect Chain", 300, 300, true)
+		, surface(nullptr)
 		, effectChain(_effectChain)
 		, windows(_windows)
 		, selectedEffectIndex(0)
 	{
 	}
 	
+	~JsusFxChainWindow()
+	{
+		delete surface;
+		surface = nullptr;
+	}
+	
 	void tick(const float dt)
 	{
 		pushWindow(window);
 		{
-			framework.beginDraw(50, 50, 50, 0);
+			if (surface == nullptr || surface->getWidth() != window.getWidth() || surface->getHeight() != window.getHeight())
 			{
+				delete surface;
+				surface = nullptr;
+				
+				surface = new Surface(window.getWidth(), window.getHeight(), false);
+			}
+			
+			if (!framework.events.empty())
+			{
+				pushSurface(surface);
+				surface->clear(50, 50, 50, 0);
+				
 				setFont("calibri.ttf");
 				setColor(colorWhite);
 				
@@ -904,6 +977,7 @@ struct JsusFxChainWindow
 						setLumi(100);
 						if (!effect.isPassthrough)
 						{
+							// draw a cross when checked
 							hqBegin(HQ_LINES);
 							hqLine(x1 + 3, y1 + 3, 1.1f, x2 - 3, y2 - 3, 1.1f);
 							hqLine(x1 + 3, y2 - 3, 1.1f, x2 - 3, y1 + 3, 1.1f);
@@ -1014,6 +1088,13 @@ struct JsusFxChainWindow
 					}
 					gxPopMatrix();
 				}
+				
+				popSurface();
+			}
+			
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				surface->blit(BLEND_OPAQUE);
 			}
 			framework.endDraw();
 		}
@@ -1089,11 +1170,17 @@ static void testJsusFxList()
 	vorbis.Open("movers.ogg", true);
 	
 	AudioStream_JsusFxChain audioStream;
-	audioStream.init(&vorbis);
+	audioStream.init();
 	
+#if 1
+	AudioIO audioIO;
+	audioIO.Initialize(2, 1, SAMPLE_RATE, BUFFER_SIZE);
+	audioIO.Play(&audioStream);
+#else
 	AudioOutput_PortAudio audioOutput;
 	audioOutput.Initialize(2, SAMPLE_RATE, BUFFER_SIZE);
 	audioOutput.Play(&audioStream);
+#endif
 	
 	MidiKeyboard midiKeyboard;
 	
@@ -1185,21 +1272,68 @@ static void testJsusFxList()
 			x += 10;
 			y += 10;
 			
+			int midiSx;
+			int midiSy;
+			
 			gxPushMatrix();
 			{
 				gxTranslatef(x, y, 0);
 				
 				audioStream.lock();
 				{
-					doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y - y, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false);
+					doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y - y, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false, midiSx, midiSy);
 				}
 				audioStream.unlock();
 				
-				doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y - y, nullptr, nullptr, false, true);
+				doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y - y, nullptr, nullptr, false, true, midiSx, midiSy);
 			}
 			gxPopMatrix();
 			
-			y += 74;
+			gxPushMatrix();
+			{
+				const int old_x = x;
+				
+				x += midiSx;
+				x += 10;
+				
+				gxTranslatef(x, y, 0);
+				
+				const int x1 = 0;
+				const int y1 = 0;
+				const int x2 = 20;
+				const int y2 = 20;
+				
+				const int mx = mouse.x - x;
+				const int my = mouse.y - y;
+				
+				if (mouse.wentDown(BUTTON_LEFT) &&
+					mx >= x1 &&
+					my >= y1 &&
+					mx <= x2 &&
+					my <= y2)
+				{
+					audioStream.enableInput = !audioStream.enableInput;
+				}
+				
+				setLumi(audioStream.enableInput ? 200 : 0);
+				drawRect(x1, y1, x2, y2);
+				setLumi(100);
+				if (audioStream.enableInput)
+				{
+					// draw a cross when checked
+					hqBegin(HQ_LINES);
+					hqLine(x1 + 3, y1 + 3, 1.1f, x2 - 3, y2 - 3, 1.1f);
+					hqLine(x1 + 3, y2 - 3, 1.1f, x2 - 3, y1 + 3, 1.1f);
+					hqEnd();
+				}
+				drawRectLine(x1, y1, x2, y2);
+				
+				x = old_x;
+			}
+			gxPopMatrix();
+			
+			y += midiSy;
+			y += 10;
 			
 			int locationX = 0;
 			
@@ -1371,7 +1505,13 @@ static void testJsusFxList()
 			window->draw();
 	}
 	
+#if 1
+	audioIO.Stop();
+	audioIO.Shutdown();
+#else
 	audioOutput.Stop();
+	audioOutput.Shutdown();
+#endif
 	
 	// todo : free effects, windows etc
 	
@@ -1477,7 +1617,9 @@ int main(int argc, char * argv[])
 
 		audioStream.lock();
 		{
-			doMidiKeyboard(midiKeyboard, mouse.x - 10 - fx.gfx_w, mouse.y - 10, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false);
+			int sx;
+			int sy;
+			doMidiKeyboard(midiKeyboard, mouse.x - 10 - fx.gfx_w, mouse.y - 10, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false, sx, sy);
 		}
 		audioStream.unlock();
 		
@@ -1550,7 +1692,9 @@ int main(int argc, char * argv[])
 			{
 				gxTranslatef(10 + fx.gfx_w, 10, 0);
 				
-				doMidiKeyboard(midiKeyboard, mouse.x - 10 - fx.gfx_w, mouse.y - 10, nullptr, nullptr, false, true);
+				int sx;
+				int sy;
+				doMidiKeyboard(midiKeyboard, mouse.x - 10 - fx.gfx_w, mouse.y - 10, nullptr, nullptr, false, true, sx, sy);
 			}
 			gxPopMatrix();
 		}
