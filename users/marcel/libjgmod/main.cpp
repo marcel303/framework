@@ -29,7 +29,7 @@
 
 //
 
-#define DO_DRAWTEST 1
+#define DO_DRAWTEST 0
 
 //
 
@@ -221,7 +221,7 @@ int main(int argc, char **argv)
 	framework.actionHandler = handleAction;
 	framework.enableDepthBuffer = true;
 	
-	if (framework.init(0, nullptr, 640, 480) == false)
+	if (framework.init(0, nullptr, 320*3, 200*3) == false)
 	{
 		logError("failed to initialize framework");
 		return -1;
@@ -357,8 +357,10 @@ int main(int argc, char **argv)
         	drawTest(player);
 		#endif
 			
-			setColor(100, 100, 100);
-			Sprite("jazz.png").drawEx(0, 0, 0, 2);
+			pushBlend(BLEND_OPAQUE);
+			setColor(20, 40, 60);
+			Sprite("jazz.png").drawEx(0, 0, 0, 3);
+			popBlend();
 			
 			setColor(colorWhite);
 			
