@@ -130,6 +130,10 @@ int main(int argc, char * argv[])
 			drawFlags = drawFlags ^ DrawPoseMatrices;
 		if (keyboard.wentDown(SDLK_n))
 			drawFlags = drawFlags ^ DrawNormals;
+		if (keyboard.wentDown(SDLK_h))
+			drawFlags ^= DrawHardSkinned;
+		if (keyboard.wentDown(SDLK_u))
+			drawFlags ^= DrawUnSkinned;
 		if (keyboard.wentDown(SDLK_1))
 			drawFlags ^= DrawColorBlendWeights;
 		if (keyboard.wentDown(SDLK_2))
@@ -264,7 +268,7 @@ int main(int argc, char * argv[])
 			
 			setColor(0, 0, 0, 180);
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
-			hqFillRoundedRect(0, 0, 270, 276, 14);
+			hqFillRoundedRect(0, 0, 270, 310, 14);
 			hqEnd();
 			
 			setFont("calibri.ttf");
@@ -281,6 +285,8 @@ int main(int argc, char * argv[])
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "B: draw bones [%s]", (drawFlags & DrawBones) ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "M: draw pose matrices [%s]", (drawFlags & DrawPoseMatrices) ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "N: draw normals [%s]", (drawFlags & DrawNormals) ? "on" : "off");
+			y += incrementY; drawText(x, y, fontSize, +1, +1, "H: hard skinned [%s]", (drawFlags & DrawHardSkinned) ? "on" : "off");
+			y += incrementY; drawText(x, y, fontSize, +1, +1, "U: unskinned [%s]", (drawFlags & DrawUnSkinned) ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "1: color blend weights [%s]", (drawFlags & DrawColorBlendWeights) ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "2: color blend indices [%s]", (drawFlags & DrawColorBlendIndices) ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "3: color texture coordinates [%s]", (drawFlags & DrawColorTexCoords) ? "on" : "off");
