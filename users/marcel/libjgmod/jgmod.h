@@ -371,6 +371,7 @@ struct JGMOD_PLAYER
 	void set_volume (int volume);
 	int get_volume ();
 	SAMPLE *get_jgmod_sample (JGMOD *j, int sample_no);
+	void set_loop (bool loop);
 	void set_speed (int speed);
 	void set_pitch (int pitch);
 	void toggle_pause_mode ();

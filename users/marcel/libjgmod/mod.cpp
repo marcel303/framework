@@ -632,6 +632,11 @@ SAMPLE *JGMOD_PLAYER::get_jgmod_sample (JGMOD *j, int sample_no)
     return &(j->s[sample_no]);
 }
 
+void JGMOD_PLAYER::set_loop (bool loop)
+{
+    mi.loop = loop;
+}
+
 void JGMOD_PLAYER::set_speed (int speed)
 {
     if (speed <= 0)
