@@ -28,6 +28,7 @@ shader_attrib vec4 in_skinningBlendWeights;
 // vertex shader constants
 
 uniform vec4 drawColor;
+uniform vec4 drawSkin;
 uniform mat4 skinningMatrices[32];
 
 // functions
@@ -54,6 +55,12 @@ vec4 objectToWorld_Skinned(ivec4 indices, vec4 weights, vec4 v)
 		skinningMatrices[indices.y] * v * weights.y +
 		skinningMatrices[indices.z] * v * weights.z +
 		skinningMatrices[indices.w] * v * weights.w;
+}
+
+vec4 objectToWorld_HardSkinned(ivec4 indices, vec4 weights, vec4 v)
+{
+	return
+		skinningMatrices[indices.x] * v;
 }
 
 ivec4 unpackSkinningBlendIndices()
@@ -105,6 +112,16 @@ bool drawColorBlendIndices()
 bool drawColorBlendWeights()
 {
 	return drawColor.w != 0.0;
+}
+
+bool drawUnSkinned()
+{
+	return drawSkin.x != 0.0;
+}
+
+bool drawHardSkinned()
+{
+	return drawSkin.y != 0.0;
 }
 
 )SHADER";

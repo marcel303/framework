@@ -852,6 +852,12 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 	
 	calculateBoneMatrices(matrix, localMatrices, worldMatrices, globalMatrices, numBones);
 	
+	if (drawFlags & DrawUnSkinned)
+	{
+		gxPushMatrix();
+		gxMultMatrixf(matrix.m_v);
+	}
+	
 	// draw
 	
 	if (drawFlags & DrawMesh)
@@ -882,7 +888,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 				
 				if (boneMatrices != -1)
 				{
-					glUniformMatrix4fv(boneMatrices, m_model->boneSet->m_numBones, GL_FALSE, (GLfloat*)globalMatrices);
+					glUniformMatrix4fv(boneMatrices, numBones, GL_FALSE, (GLfloat*)globalMatrices);
 					checkErrorGL();
 				}
 				
@@ -895,6 +901,18 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 						(drawFlags & DrawColorNormals)      ? 1.f : 0.f,
 						(drawFlags & DrawColorBlendIndices) ? 1.f : 0.f,
 						(drawFlags & DrawColorBlendWeights) ? 1.f : 0.f);
+					checkErrorGL();
+				}
+				
+				const GLint drawSkin = shader.getImmediate("drawSkin");
+				
+				if (drawSkin != -1)
+				{
+					glUniform4f(drawSkin,
+						(drawFlags & DrawUnSkinned)   ? 1.f : 0.f,
+						(drawFlags & DrawHardSkinned) ? 1.f : 0.f,
+						0.f,
+						0.f);
 					checkErrorGL();
 				}
 			}
@@ -917,6 +935,11 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		clearShader();
 	}
 	
+	if (drawFlags & DrawUnSkinned)
+	{
+		gxPopMatrix();
+	}
+	
 	if (drawFlags & DrawNormals)
 	{
 		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
@@ -929,20 +952,41 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 				{
 					const Vertex & vertex = mesh->m_vertices[j];
 					
-					// -- software vertex blend (soft skinned) --
 					Vec3 p(0.f, 0.f, 0.f);
 					Vec3 n(0.f, 0.f, 0.f);
-					for (int b = 0; b < 4; ++b)
+					
+					if (drawFlags & DrawUnSkinned)
 					{
-						if (vertex.boneWeights[b] == 0)
-							continue;
-						const int boneIndex = vertex.boneIndices[b];
-						const float boneWeight = vertex.boneWeights[b] / 255.f;						
-						const Mat4x4 & globalMatrix = globalMatrices[boneIndex];
-						p += globalMatrix.Mul4(Vec3(vertex.px, vertex.py, vertex.pz)) * boneWeight;
-						n += globalMatrix.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz)) * boneWeight;
+						// -- software vertex blend (unskinned) --
+						p = matrix.Mul4(Vec3(vertex.px, vertex.py, vertex.pz));
+						n = matrix.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz));
+						// -- software vertex blend (unskinned) --
 					}
-					// -- software vertex blend (soft skinned) --
+					else if (drawFlags & DrawHardSkinned)
+					{
+						// -- software vertex blend (hard skinned) --
+						const int boneIndex = vertex.boneIndices[0];
+						const Mat4x4 & globalMatrix = globalMatrices[boneIndex];
+						p = globalMatrix.Mul4(Vec3(vertex.px, vertex.py, vertex.pz));
+						n = globalMatrix.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz));
+						// -- software vertex blend (hard skinned) --
+					}
+					else
+					{
+						// -- software vertex blend (soft skinned) --
+						
+						for (int b = 0; b < 4; ++b)
+						{
+							if (vertex.boneWeights[b] == 0)
+								continue;
+							const int boneIndex = vertex.boneIndices[b];
+							const float boneWeight = vertex.boneWeights[b] / 255.f;
+							const Mat4x4 & globalMatrix = globalMatrices[boneIndex];
+							p += globalMatrix.Mul4(Vec3(vertex.px, vertex.py, vertex.pz)) * boneWeight;
+							n += globalMatrix.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz)) * boneWeight;
+						}
+						// -- software vertex blend (soft skinned) --
+					}
 					
 					const float scale = 3.f;
 					
@@ -1373,9 +1417,6 @@ void Model::calculateAABB(Vec3 & min, Vec3 & max, const bool applyAnimation) con
 			{
 				const Vertex & vertex = mesh->m_vertices[j];
 				
-				if (vertex.pz >= -1.f)
-					printf("found it");
-					
 				min[0] = fminf(min[0], vertex.px);
 				min[1] = fminf(min[1], vertex.py);
 				min[2] = fminf(min[2], vertex.pz);

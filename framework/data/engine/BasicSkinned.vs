@@ -8,38 +8,75 @@ shader_out vec2 v_texcoord0;
 void main()
 {
 	vec4 position = unpackPosition();
-	
-	ivec4 skinningBlendIndices = unpackSkinningBlendIndices();
-	vec4 skinningBlendWeights = unpackSkinningBlendWeights();
-	
-	position = objectToWorld_Skinned(
-		skinningBlendIndices,
-		skinningBlendWeights,
-		position);
-	
-	position = objectToProjection(position);
-	
-	vec3 normal = objectToWorld_Skinned(
-		skinningBlendIndices,
-		skinningBlendWeights,
-		unpackNormal()).xyz;
-	
-	normal = normalize(normal);
-	
-	vec2 texcoord = unpackTexcoord(0);
+
+	vec3 normal;
 	
 	// debug color
 	
 	vec4 color = vec4(1.0);
+
+	if (drawUnSkinned())
+	{
+		position = objectToProjection(position);
+
+		normal = objectToProjection(unpackNormal()).xyz;
+
+		normal = normalize(normal);
+	}
+	else if (drawHardSkinned())
+	{
+		ivec4 skinningBlendIndices = unpackSkinningBlendIndices();
+		vec4 skinningBlendWeights = unpackSkinningBlendWeights();
+
+		position = objectToWorld_HardSkinned(
+			skinningBlendIndices,
+			skinningBlendWeights,
+			position);
+		
+		position = objectToProjection(position);
+		
+		normal = objectToWorld_HardSkinned(
+			skinningBlendIndices,
+			skinningBlendWeights,
+			unpackNormal()).xyz;
+		
+		normal = normalize(normal);
+	}
+	else
+	{
+		ivec4 skinningBlendIndices = unpackSkinningBlendIndices();
+		vec4 skinningBlendWeights = unpackSkinningBlendWeights();
+		
+		position = objectToWorld_Skinned(
+			skinningBlendIndices,
+			skinningBlendWeights,
+			position);
+		
+		position = objectToProjection(position);
+		
+		normal = objectToWorld_Skinned(
+			skinningBlendIndices,
+			skinningBlendWeights,
+			unpackNormal()).xyz;
+		
+		normal = normalize(normal);
+
+		// debug color
+
+		if (drawColorBlendIndices())
+			color.rgb *= skinningBlendIndices.xyz / 32.0;
+		if (drawColorBlendWeights())
+			color.rgb *= skinningBlendWeights.xyz;
+	}
 	
+	vec2 texcoord = unpackTexcoord(0);
+	
+	// debug color
+
 	if (drawColorTexcoords())
 		color.rg *= texcoord.xy;
 	if (drawColorNormals())
 		color.rgb *= (normalize(unpackNormal()).xyz + vec3(1.0)) / 2.0;
-	if (drawColorBlendIndices())
-		color.rgb *= skinningBlendIndices.xyz / 32.0;
-	if (drawColorBlendWeights())
-		color.rgb *= skinningBlendWeights.xyz;
 	
 	//
 	

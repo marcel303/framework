@@ -767,7 +767,9 @@ enum ModelDrawFlags
 	DrawColorBlendIndices  = 0x0020,
 	DrawColorBlendWeights  = 0x0040,
 	DrawColorTexCoords     = 0x0080,
-	DrawBoundingBox        = 0x0100
+	DrawBoundingBox        = 0x0100,
+	DrawUnSkinned          = 0x0200,
+	DrawHardSkinned        = 0x0400
 };
 
 class Model
