@@ -382,7 +382,7 @@ int main(int argc, char **argv)
 				// draw playback info
 				
 				drawText(0, 36, 12, +1, +1, "Tempo : %3d  Bpm : %3d  Speed : %3d%%  Pitch : %3d%% ", player.mi.tempo, player.mi.bpm, player.mi.speed_ratio, player.mi.pitch_ratio);
-				drawText(0, 48, 12, +1, +1, "Global volume : %2d  User volume : %2d ", player.mi.global_volume, player.get_volume());
+				drawText(0, 48, 12, +1, +1, "Global volume : %2d  Mixing volume : %2d  User volume : %2d ", player.mi.global_volume, player.of->mixing_volume, player.get_volume());
 				drawText(0, 70, 12, +1, +1, "%03d-%02d-%02d    ", player.mi.trk, player.mi.pos, player.mi.tick < 0 ? 0 : player.mi.tick);
 
 				for (int index = 0; index < mod->no_chn; ++index)
@@ -424,6 +424,8 @@ int main(int argc, char **argv)
 	player.destroy_mod();
 	
 	player.shut();
+	
+	Font("unispace.ttf").saveCache();
 	
 	framework.shutdown();
 	

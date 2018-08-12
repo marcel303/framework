@@ -88,6 +88,7 @@ JGMOD *load_jgm (JGMOD_FILE *f)
     j->tempo = jgmod_igetw (f);
     j->bpm = jgmod_igetw (f);
     j->global_volume = jgmod_igetw (f);
+    j->mixing_volume = 64;
     j->restart_pos = jgmod_igetw (f);
     j->flag = jgmod_igetw(f);
 

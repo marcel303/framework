@@ -291,6 +291,7 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
     sf = jgmod_igetw(f); 
     jgmod_skip (f, 4);  //skip SCRM
     j->global_volume = jgmod_getc(f);
+    j->mixing_volume = 64;
     j->tempo = jgmod_getc(f);
     j->bpm = jgmod_getc(f);
     jgmod_getc(f);

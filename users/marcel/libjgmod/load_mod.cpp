@@ -218,6 +218,7 @@ JGMOD *load_m (const char *filename, int no_inst)
 
     j->no_sample = no_inst;
     j->global_volume = 64;
+    j->mixing_volume = 64;
     j->tempo = 6;
     j->bpm = 125;
     for (index=0; index<JGMOD_MAX_VOICES; index++)            //set the panning position

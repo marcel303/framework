@@ -237,6 +237,7 @@ static void convert_it_command (int *command, int *extcommand, int & last_specia
 		last_special = *extcommand;
 		
     	const int no = (*extcommand & 0xF0 ) >> 4;
+    	const int value = (*extcommand) & 0x0F;
 		
     	if (no == 1)           // glissando
         {
@@ -284,9 +285,13 @@ static void convert_it_command (int *command, int *extcommand, int & last_specia
 		{
 			*command = PTEFFECT_E;
 		}
+		else if (no == 0x9 && value == 1)
+		{
+			// S91 : set surround sound. not supported yet
+		}
 		else
 		{
-			printf("unknown IT 'S' effect type: %d\n", no);
+			printf("unknown IT 'S' effect type: %d, %d\n", no, value);
 			
 			*command = 0;
 			*extcommand = 0;
@@ -427,7 +432,8 @@ JGMOD *load_it (const char *filename, int start_offset)
 	// note : JGMOD assumed global_volume 0->64
 	j->global_volume = jgmod_getc(f) / 2; // Global volume. (0->128) All volumes are adjusted by this.
 	const uint8_t mixing_volume = jgmod_getc(f); // Mix volume (0->128) During mixing, this value controls the magnitude of the wave being mixed.
-	(void)mixing_volume;
+	j->mixing_volume = mixing_volume;
+	printf("mixing volume: %d\n", mixing_volume);
 	
 	const uint8_t initial_speed = jgmod_getc(f); // Initial Speed of song.
 	const uint8_t initial_tempo = jgmod_getc(f); // Initial Tempo of song.
@@ -552,7 +558,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 		
 		char sample_name[26];
 		jgmod_fread(sample_name, 26, f);
-		printf("sample name: %s\n", sample_name);
+		//printf("sample name: %s\n", sample_name);
 		
 		/*
 		Conversion flags:

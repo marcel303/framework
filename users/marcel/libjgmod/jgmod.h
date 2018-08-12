@@ -331,6 +331,7 @@ struct JGMOD
     int no_instrument;
     int no_sample;
     int global_volume;
+    int mixing_volume;
 };
 
 struct JGMOD_INFO
