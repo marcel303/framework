@@ -224,9 +224,9 @@ JGMOD *load_m (const char *filename, int no_inst)
     for (index=0; index<JGMOD_MAX_VOICES; index++)            //set the panning position
         {
         if ( (index%4) == 0 || (index%4) == 3)
-            *(j->panning + index) = 0;
+            j->panning[index] = 0;
         else
-            *(j->panning + index) = 255;
+            j->panning[index] = 255;
         }
 
 

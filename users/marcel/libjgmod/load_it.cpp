@@ -463,8 +463,22 @@ JGMOD *load_it (const char *filename, int start_offset)
 	*/
 	uint8_t channel_panning[64];
 	jgmod_fread(channel_panning, 64, f);
+	
 	for (int i = 0; i < 64; ++i)
-		j->panning[i] = int(channel_panning[i]) * 255 / 64;
+	{
+		const int panning = channel_panning[i] & (~128);
+		const bool disabled = channel_panning[i] & 128;
+		
+		if (panning < 64)
+			j->panning[i] = int(channel_panning[i]) * 255 / 64;
+		else if (panning == 100) // surround mode
+			j->panning[i] = 128;
+		
+		j->channel_disabled[i] = disabled;
+		
+		if (disabled)
+			printf("channel disabled for channel %d\n", i);
+	}
 	
 	// Volume for each channel. Ranges from 0->64
 	uint8_t channel_volume[64];
@@ -854,7 +868,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 				
                 const uint8_t volume_and_panning = jgmod_getc(f);
 				
-				ni->volume = volume_and_panning & 63;
+				ni->volume = (volume_and_panning & 63) + 0x10;
 				
                 channel_volume[channel] = ni->volume;
 			}

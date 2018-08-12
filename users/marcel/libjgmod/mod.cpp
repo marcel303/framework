@@ -453,7 +453,7 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop, int speed, int pitch)
             ci[index].c2spd = 8363;
 
         if (index < mi.max_chn)
-            ci[index].pan = *(j->panning + index);
+            ci[index].pan = j->panning[index];
         }
 
     mi.no_chn = j->no_chn;

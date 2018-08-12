@@ -321,6 +321,7 @@ struct JGMOD
     int pat_table[256];
     int panning[JGMOD_MAX_VOICES];
     int channel_volume[JGMOD_MAX_VOICES];
+    bool channel_disabled[JGMOD_MAX_VOICES];
     int flag;
 
     int tempo;
