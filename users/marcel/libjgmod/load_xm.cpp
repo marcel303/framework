@@ -608,6 +608,7 @@ JGMOD *load_xm (const char *filename, int start_offset)
         si->c2spd = tempwv->finetune+128;
         si->transpose = tempwv->relnote;
         si->volume = tempwv->volume;
+        si->global_volume = 64;
         si->pan = tempwv->panning;
         si->repoff = tempwv->loop_start;
         si->replen = tempwv->loop_start + tempwv->loop_lenght;

@@ -263,7 +263,8 @@ struct SAMPLE_INFO
     int lenght;
     int c2spd;
     int transpose;
-    int volume;
+    int volume;        // default volume for this sample when triggered by note
+    int global_volume; // volume used during mixing for every instance of this sample
     int pan;
     int repoff;
     int replen;

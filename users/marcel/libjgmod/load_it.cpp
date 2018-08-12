@@ -342,6 +342,12 @@ JGMOD *load_it (const char *filename, int start_offset)
     j->no_sample = jgmod_igetw(f);
     j->no_pat = jgmod_igetw(f);
 	
+    printf("no_trk: %d, no_inst: %d, no_sample: %d, no_pat: %d\n",
+    	j->no_trk,
+    	num_instruments,
+    	j->no_sample,
+    	j->no_pat);
+	
     j->si = (SAMPLE_INFO*)jgmod_calloc (sizeof (SAMPLE_INFO) * j->no_sample);
     j->s  = (SAMPLE*)jgmod_calloc (sizeof (SAMPLE) * j->no_sample);
 	
@@ -509,7 +515,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 		jgmod_getc(f); // 0x00
 		
 		uint8_t global_volume = jgmod_getc(f); // Global volume for instrument, ranges from 0->64
-		(void)global_volume;
+		si->global_volume = global_volume;
 		
 		/*
 		Flags:

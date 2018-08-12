@@ -246,6 +246,7 @@ JGMOD *load_m (const char *filename, int no_inst)
         si->lenght = jgmod_mgetw (f);
         si->c2spd = jgmod_getc(f);   //get finetune and change to c2spd
         si->volume = jgmod_getc(f);
+        si->global_volume = 64;
         si->repoff = jgmod_mgetw (f) * 2;
         si->replen = jgmod_mgetw (f);
         si->transpose = 0;

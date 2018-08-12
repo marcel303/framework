@@ -360,6 +360,7 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
         si->repoff = jgmod_igetl (f);
         si->replen = jgmod_igetl (f);
         si->volume = jgmod_getc(f);
+        si->global_volume = 64;
         si->transpose = 0;
         jgmod_getc(f);
         jgmod_getc(f);               // skip packing type

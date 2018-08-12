@@ -184,6 +184,7 @@ JGMOD *load_jgm (JGMOD_FILE *f)
             si->vibrato_depth = jgmod_getc (f);
             si->vibrato_rate = jgmod_getc (f);
             si->volume = jgmod_getc (f);
+            si->global_volume = 64;
             si->pan = jgmod_getc (f);
             si->transpose = (signed char) jgmod_getc (f);
             si->c2spd = jgmod_igetw (f);
