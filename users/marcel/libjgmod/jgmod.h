@@ -260,6 +260,8 @@ struct NOTE_INFO
 
 struct SAMPLE_INFO
 {
+	char name[64];
+	
     int lenght;
     int c2spd;
     int transpose;

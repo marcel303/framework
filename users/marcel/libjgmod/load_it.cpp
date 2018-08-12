@@ -20,6 +20,28 @@
 #include <stdio.h>
 #include <string.h>
 
+/*
+
+todo :
+
+- add IT resonant filter
+
+- add cubic interpolation support
+
+- add instrument support
+	- easy enough to load
+	- requires NNA support to be fully functional
+	- not sure to what degree current player routines cover envelopes
+	- requires multiple-sample support, different sample may be selected per note
+ 
+- add NNA and virtual channel support
+
+- add support for disabled channels
+
+- add sustain loop support
+
+*/
+
 //#define JG_debug
 
 extern volatile const int noteperiod[];
@@ -102,6 +124,7 @@ void convert_it_pitch (int *pitch)
         return;
 		}
 	
+	assert(*pitch >= 0);
     octave = *pitch / 12 - 1;    //pitch / 16
     if (octave < 0)
     	*pitch = noteperiod[(*pitch % 12)] << (-octave);
@@ -288,10 +311,14 @@ static void convert_it_command (int *command, int *extcommand, int & last_specia
 		else if (no == 0x9 && value == 1)
 		{
 			// S91 : set surround sound. not supported yet
+			*command = 0;
+			*extcommand = 0;
 		}
 		else
 		{
+		#ifdef JG_debug
 			printf("unknown IT 'S' effect type: %d, %d\n", no, value);
+		#endif
 			
 			*command = 0;
 			*extcommand = 0;
@@ -299,7 +326,9 @@ static void convert_it_command (int *command, int *extcommand, int & last_specia
 	}
     else
 	{
+	#ifdef JG_debug
 		printf("unknown IT command: '%c'\n", c);
+	#endif
 		
         *command = 0;
         *extcommand = 0;
@@ -347,12 +376,14 @@ JGMOD *load_it (const char *filename, int start_offset)
     j->no_sample = jgmod_igetw(f);
     j->no_pat = jgmod_igetw(f);
 	
+#ifdef JG_debug
     printf("no_trk: %d, no_inst: %d, no_sample: %d, no_pat: %d\n",
     	j->no_trk,
     	num_instruments,
     	j->no_sample,
     	j->no_pat);
-	
+#endif
+
     j->si = (SAMPLE_INFO*)jgmod_calloc (sizeof (SAMPLE_INFO) * j->no_sample);
     j->s  = (SAMPLE*)jgmod_calloc (sizeof (SAMPLE) * j->no_sample);
 	
@@ -404,6 +435,10 @@ JGMOD *load_it (const char *filename, int start_offset)
 	
 	if (flags & kFlag_LinearSlides)
 	{
+	#ifdef JG_debug
+		printf("linear sliders not yet supported properly\n");
+	#endif
+	
 		//j->flag |= JGMOD_MODE_LINEAR;
 	}
 	
@@ -433,7 +468,9 @@ JGMOD *load_it (const char *filename, int start_offset)
 	j->global_volume = jgmod_getc(f) / 2; // Global volume. (0->128) All volumes are adjusted by this.
 	const uint8_t mixing_volume = jgmod_getc(f); // Mix volume (0->128) During mixing, this value controls the magnitude of the wave being mixed.
 	j->mixing_volume = mixing_volume;
+#ifdef JG_debug
 	printf("mixing volume: %d\n", mixing_volume);
+#endif
 	
 	const uint8_t initial_speed = jgmod_getc(f); // Initial Speed of song.
 	const uint8_t initial_tempo = jgmod_getc(f); // Initial Tempo of song.
@@ -476,8 +513,10 @@ JGMOD *load_it (const char *filename, int start_offset)
 		
 		j->channel_disabled[i] = disabled;
 		
+	#ifdef JG_debug
 		if (disabled)
 			printf("channel disabled for channel %d\n", i);
+	#endif
 	}
 	
 	// Volume for each channel. Ranges from 0->64
@@ -572,7 +611,11 @@ JGMOD *load_it (const char *filename, int start_offset)
 		
 		char sample_name[26];
 		jgmod_fread(sample_name, 26, f);
+	#ifdef JG_debug
 		//printf("sample name: %s\n", sample_name);
+	#endif
+		// todo : safe strcpy
+		strcpy(si->name, sample_name);
 		
 		/*
 		Conversion flags:
@@ -643,7 +686,9 @@ JGMOD *load_it (const char *filename, int start_offset)
 			//        loop for now. this is the closest we can get to the IT's behavior
 			//        with the current voice routines
 			
+		#ifdef JG_debug
 			printf("warning: sustain loop not properly implemented yet\n");
+		#endif
 			
 			assert(sustain_loop_begin < si->lenght);
 			assert(sustain_loop_end > sustain_loop_begin);
@@ -679,10 +724,10 @@ JGMOD *load_it (const char *filename, int start_offset)
 		si->vibrato_rate = vibrate_rate;
 		si->vibrato_type = vibrate_waveform_type;
 		
+	#ifdef JG_debug
 		if (vibrato_depth != 0)
-		{
 			printf("sample vibrato is not yet supported\n");
-		}
+	#endif
 	#endif
 		
 		s->freq = si->c2spd;
@@ -699,17 +744,17 @@ JGMOD *load_it (const char *filename, int start_offset)
 		
 		if (sample_flags & kSampleFlag_SustainLoop)
 		{
-			si->loop = JGMOD_LOOP_ON;
-			
 			if (sample_flags & kSampleFlag_SustainLoopBidir)
-				si->loop |= JGMOD_LOOP_BIDI;
+				si->loop = JGMOD_LOOP_BIDI;
+			else
+				si->loop = JGMOD_LOOP_ON;
 		}
 		else if (sample_flags & kSampleFlag_Loop)
 		{
-			si->loop = JGMOD_LOOP_ON;
-			
 			if (sample_flags & kSampleFlag_LoopBidir)
-				si->loop |= JGMOD_LOOP_BIDI;
+				si->loop = JGMOD_LOOP_BIDI;
+			else
+				si->loop = JGMOD_LOOP_ON;
 		}
 		else
 			si->loop = JGMOD_LOOP_OFF;
@@ -764,7 +809,13 @@ JGMOD *load_it (const char *filename, int start_offset)
 	for (auto i = 0; i < j->no_pat; ++i)
 	{
 		if (!pattern_offsets[i])
+		{
+			PATTERN_INFO * pi = j->pi + i;
+			
+			pi->no_pos = 1;
+			pi->ni = (NOTE_INFO*)jgmod_calloc (sizeof(NOTE_INFO) * pi->no_pos * j->no_chn);
 			continue;
+		}
 		
 		jgmod_fseek(&f, filename, pattern_offsets[i]);
 		
@@ -783,11 +834,11 @@ JGMOD *load_it (const char *filename, int start_offset)
 		uint8_t channel_mask[64];
 		memset(channel_mask, 0, sizeof(channel_mask));
 		
-		int channel_note[64];
-		int channel_instrument[64];
-		int channel_command[64];
-		int channel_command_param[64];
-		int channel_special[64];
+		int channel_note[64] = { };
+		int channel_instrument[64] = { };
+		int channel_command[64] = { };
+		int channel_command_param[64] = { };
+		int channel_special[64] = { };
 		
 		int row_index = 0;
 		
@@ -871,6 +922,15 @@ JGMOD *load_it (const char *filename, int start_offset)
 				ni->volume = (volume_and_panning & 63) + 0x10;
 				
                 channel_volume[channel] = ni->volume;
+				
+                if ((volume_and_panning > 64 && volume_and_panning < 128) || (volume_and_panning > 192 && volume_and_panning < 256))
+                {
+                	// todo : interpret the various effects that may be embedded here
+					
+				#ifdef JG_debug
+                	printf("effect(s) not yet implemented: %d\n", volume_and_panning);
+				#endif
+				}
 			}
 			
 			if (channel_mask[channel] & 8) // read command (byte value) and commandvalue

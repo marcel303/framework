@@ -406,7 +406,8 @@ int main(int argc, char **argv)
 						voice_get_frequency(player.voice_table[index]) > 0 &&
 						player.mi.global_volume > 0)
 					{
-						drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3d %2d %6dHz %3d ", index+1, player.ci[index].sample+1, player.ci[index].volume,  voice_get_frequency(player.voice_table[index]), player.ci[index].pan);
+						drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3d %2d %6dHz %3d : %s", index+1, player.ci[index].sample+1, player.ci[index].volume,  voice_get_frequency(player.voice_table[index]), player.ci[index].pan,
+							player.of->si[player.ci[index].sample].name);
 						//textprintf (screen, font, 0,82+(index-start_chn)*bitmap_height, font_color, "%2d: %3d %2d %6dHz %3d %d %d", index+1, ci[index].sample+1, ci[index].volume,  voice_get_frequency(voice_table[index]), ci[index].pan, ci[index].volenv.v, ci[index].volenv.p);
 					}
 					else
