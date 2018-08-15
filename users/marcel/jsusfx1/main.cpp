@@ -14,6 +14,9 @@
 #include "StringEx.h"
 #include "Timer.h"
 
+#include "tinyxml2.h"
+#include "tinyxml2_helpers.h"
+
 #include <map>
 #include <vector>
 
@@ -486,19 +489,138 @@ static void handleAction(const std::string & action, const Dictionary & d)
 
 //
 
+struct JsusFxElem
+{
+	bool isPassthrough = false;
+	std::string filename;
+
+	JsusFx_Framework jsusFx;
+	JsusFxFileAPI_Basic fileAPI;
+	JsusFxGfx_Framework gfxAPI;
+	
+	bool isValid = false;
+	
+	uint64_t cpuTime = 0;
+	
+	JsusFxElem(JsusFxPathLibrary & pathLibrary)
+		: jsusFx(pathLibrary)
+		, fileAPI()
+		, gfxAPI(jsusFx)
+	{
+	}
+	
+	void init()
+	{
+		fileAPI.init(jsusFx.m_vm);
+		jsusFx.fileAPI = &fileAPI;
+		
+		gfxAPI.init(jsusFx.m_vm);
+		jsusFx.gfx = &gfxAPI;
+		
+		if (jsusFx.compile(jsusFx.pathLibrary, filename))
+		{
+			jsusFx.prepare(SAMPLE_RATE, BUFFER_SIZE);
+			
+			isValid = true;
+		}
+	}
+};
+
+struct JsusFxChain
+{
+	JsusFxPathLibrary_Basic pathLibrary;
+	
+	std::vector<JsusFxElem*> effects;
+	
+	JsusFxChain(const char * dataRoot)
+		: pathLibrary(dataRoot)
+	{
+		pathLibrary.addSearchPath("lib");
+	}
+	
+	void add(JsusFxElem * elem)
+	{
+		effects.push_back(elem);
+	}
+	
+	void remove(JsusFxElem * elem)
+	{
+		auto i = std::find(effects.begin(), effects.end(), elem);
+		
+		Assert(i != effects.end());
+		if (i != effects.end())
+		{
+			auto & effect = *i;
+			
+			delete effect;
+			effect = nullptr;
+			
+			effects.erase(i);
+		}
+	}
+	
+	void load(const char * filename)
+	{
+		Assert(effects.empty());
+		
+		tinyxml2::XMLDocument d;
+		
+		if (d.LoadFile(filename) == tinyxml2::XML_SUCCESS)
+		{
+			auto xml_effectChain = d.FirstChildElement("effectChain");
+			
+			if (xml_effectChain != nullptr)
+			{
+				for (auto xml_effect = xml_effectChain->FirstChildElement("effect"); xml_effect != nullptr; xml_effect = xml_effect->NextSiblingElement("effect"))
+				{
+					JsusFxElem * elem = new JsusFxElem(pathLibrary);
+					
+					elem->isPassthrough = boolAttrib(xml_effect, "passthrough", false);
+					elem->filename = stringAttrib(xml_effect, "filename", "");
+					
+					elem->init();
+					
+					effects.push_back(elem);
+				}
+			}
+		}
+	}
+
+	void save(const char * filename)
+	{
+		tinyxml2::XMLPrinter p;
+		
+		p.OpenElement("effectChain");
+		{
+			for (auto & effect : effects)
+			{
+				p.OpenElement("effect");
+				{
+					p.PushAttribute("passthrough", effect->isPassthrough);
+					p.PushAttribute("filename", effect->filename.c_str());
+				}
+				p.CloseElement();
+			}
+		}
+		p.CloseElement();
+		
+		FILE * f = fopen(filename, "wt");
+		
+		if (f != nullptr)
+		{
+			fprintf(f, "%s", p.CStr());
+			
+			fclose(f);
+			f = nullptr;
+		}
+	}
+};
+
 struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
 {
-	struct EffectElem
-	{
-		bool isPassthrough = false;
-		JsusFx * jsusFx = nullptr;
-		std::string filename;
-		uint64_t cpuTime = 0;
-	};
-	
 	AudioStream * source = nullptr;
 	
-	std::vector<EffectElem> effects;
+	JsusFxChain & effectChain;
 	
 	SDL_mutex * mutex = nullptr;
 	
@@ -506,7 +628,8 @@ struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
 	
 	std::atomic<bool> enableInput;
 	
-	AudioStream_JsusFxChain()
+	AudioStream_JsusFxChain(JsusFxChain & _effectChain)
+		: effectChain(_effectChain)
 	{
 		enableInput = false;
 	}
@@ -537,32 +660,6 @@ struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
 		const int r = SDL_UnlockMutex(mutex);
 		Assert(r == 0);
 		(void)r;
-	}
-	
-	void add(JsusFx * jsusFx, const char * filename)
-	{
-		lock();
-		{
-			EffectElem elem;
-			elem.jsusFx = jsusFx;
-			elem.filename = filename;
-			
-			effects.push_back(elem);
-		}
-		unlock();
-	}
-	
-	void remove(JsusFx * jsusFx)
-	{
-		lock();
-		{
-			auto i = std::find_if(effects.begin(), effects.end(), [=](const EffectElem & e) -> bool { return e.jsusFx == jsusFx; });
-			
-			Assert(i != effects.end());
-			if (i != effects.end())
-				effects.erase(i);
-		}
-		unlock();
 	}
 	
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
@@ -633,19 +730,19 @@ struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
 		
 		lock();
 		{
-			for (auto & effect : effects)
+			for (auto & effect : effectChain.effects)
 			{
-				if (effect.isPassthrough)
+				if (effect->isPassthrough)
 				{
-					effect.cpuTime = 0;
+					effect->cpuTime = 0;
 					continue;
 				}
 				
-				auto & jsusFx = effect.jsusFx;
+				auto & jsusFx = effect->jsusFx;
 				
 				const uint64_t time1 = g_TimerRT.TimeUS_get();
 				
-				jsusFx->setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
+				jsusFx.setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
 				
 				const float * input[kNumBuffers];
 				float * output[kNumBuffers];
@@ -656,14 +753,14 @@ struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
 					output[i] = bufferData[1 - inputIndex][i];
 				}
 				
-				if (jsusFx->process(input, output, numSamples, kNumBuffers, kNumBuffers))
+				if (jsusFx.process(input, output, numSamples, kNumBuffers, kNumBuffers))
 				{
 					inputIndex = 1 - inputIndex;
 				}
 				
 				const uint64_t time2 = g_TimerRT.TimeUS_get();
 				
-				effect.cpuTime = time2 - time1;
+				effect->cpuTime = time2 - time1;
 			}
 			
 			s_midiBuffer.numBytes = 0;
@@ -690,49 +787,28 @@ struct JsusFxWindow
 	Surface * surface;
 #endif
 	
-	JsusFxPathLibrary_Basic pathLibrary;
+	JsusFxElem * effectElem;
 	
-	JsusFx_Framework jsusFx;
-	JsusFxFileAPI_Basic fileAPI;
-	JsusFxGfx_Framework gfxAPI;
+	bool cleanup;
 	
-	std::string filename;
-	
-	bool isValid;
 	bool sliderIsActive[JsusFx::kMaxSliders];
 	
-	JsusFxWindow(const char * _filename)
+	JsusFxWindow(JsusFxElem * _effectElem)
 		: window(nullptr)
 	#if RENDER_TO_SURFACE
 		, surface(nullptr)
 	#endif
-		, pathLibrary(DATA_ROOT)
-		, jsusFx(pathLibrary)
-		, fileAPI()
-		, gfxAPI(jsusFx)
-		, filename(_filename)
-		, isValid(false)
+		, effectElem(_effectElem)
+		, cleanup(false)
 	{
 		memset(sliderIsActive, 0, sizeof(sliderIsActive));
 		
-		fileAPI.init(jsusFx.m_vm);
-		jsusFx.fileAPI = &fileAPI;
+		const std::string caption = String::FormatC("%s (%d ins, %d outs)",
+			Path::GetFileName(effectElem->filename).c_str(),
+			effectElem->jsusFx.numInputs,
+			effectElem->jsusFx.numOutputs);
 		
-		gfxAPI.init(jsusFx.m_vm);
-		jsusFx.gfx = &gfxAPI;
-		
-		pathLibrary.addSearchPath("lib");
-		
-		if (jsusFx.compile(pathLibrary, filename))
-		{
-			jsusFx.prepare(SAMPLE_RATE, BUFFER_SIZE);
-			
-			const std::string caption = String::FormatC("%s (%d ins, %d outs)", Path::GetFileName(filename).c_str(), jsusFx.numInputs, jsusFx.numOutputs);
-			
-			window = new Window(caption.c_str(), jsusFx.gfx_w, jsusFx.gfx_h, true);
-			
-			isValid = true;
-		}
+		window = new Window(caption.c_str(), effectElem->jsusFx.gfx_w, effectElem->jsusFx.gfx_h, true);
 	}
 	
 	~JsusFxWindow()
@@ -748,7 +824,7 @@ struct JsusFxWindow
 	
 	void tick(const float dt)
 	{
-		if (!isValid)
+		if (!effectElem->isValid)
 			return;
 		
 		if (window->getQuitRequested())
@@ -759,7 +835,7 @@ struct JsusFxWindow
 	
 	void draw()
 	{
-		if (!isValid)
+		if (!effectElem->isValid)
 			return;
 		
 		if (window->isHidden())
@@ -793,12 +869,12 @@ struct JsusFxWindow
 				Surface * surface = nullptr;
 			#endif
 
-				gfxAPI.setup(surface, window->getWidth(), window->getHeight(), mouse.x, mouse.y, true);
+				effectElem->gfxAPI.setup(surface, window->getWidth(), window->getHeight(), mouse.x, mouse.y, true);
 				
 				pushFontMode(FONT_SDF);
 				setColorClamp(true);
 				{
-					jsusFx.draw();
+					effectElem->jsusFx.draw();
 				}
 				setColorClamp(false);
 				popFontMode();
@@ -812,13 +888,13 @@ struct JsusFxWindow
 				
 				int sliderIndex = 0;
 				
-				for (auto & slider : jsusFx.sliders)
+				for (auto & slider : effectElem->jsusFx.sliders)
 				{
 					if (slider.exists && slider.desc[0] != '-')
 					{
 						gxPushMatrix();
 						gxTranslatef(x, y, 0);
-						doSlider(jsusFx, slider, mouse.x - x, mouse.y - y, sliderIsActive[sliderIndex]);
+						doSlider(effectElem->jsusFx, slider, mouse.x - x, mouse.y - y, sliderIsActive[sliderIndex]);
 						gxPopMatrix();
 						
 						y += 16;
@@ -854,16 +930,19 @@ struct JsusFxChainWindow
 	
 	Surface * surface;
 	
-	AudioStream_JsusFxChain & effectChain;
+	JsusFxChain & effectChain;
+	
+	AudioStream_JsusFxChain & effectChainAudioStream;
 	
 	std::vector<JsusFxWindow*> & windows;
 	
 	int selectedEffectIndex;
 	
-	JsusFxChainWindow(AudioStream_JsusFxChain & _effectChain, std::vector<JsusFxWindow*> & _windows)
+	JsusFxChainWindow(JsusFxChain & _effectChain, AudioStream_JsusFxChain & _effectChainAudioStream, std::vector<JsusFxWindow*> & _windows)
 		: window("Effect Chain", 300, 300, true)
 		, surface(nullptr)
 		, effectChain(_effectChain)
+		, effectChainAudioStream(_effectChainAudioStream)
 		, windows(_windows)
 		, selectedEffectIndex(0)
 	{
@@ -906,7 +985,7 @@ struct JsusFxChainWindow
 					
 					for (JsusFxWindow * window : windows)
 					{
-						if (&window->jsusFx == effect.jsusFx)
+						if (window->effectElem == effect)
 							effectWindow = window;
 					}
 					
@@ -914,12 +993,12 @@ struct JsusFxChainWindow
 					
 					if (keyboard.wentDown(SDLK_SPACE))
 						if (effectIndex == selectedEffectIndex)
-							effect.isPassthrough = !effect.isPassthrough;
+							effect->isPassthrough = !effect->isPassthrough;
 					
 					if (keyboard.wentDown(SDLK_DELETE) || keyboard.wentDown(SDLK_BACKSPACE))
 						if (effectIndex == selectedEffectIndex)
 							if (effectWindow != nullptr)
-								effectWindow->isValid = false;
+								effectWindow->cleanup = true;
 				
 					if (effectWindow != nullptr)
 					{
@@ -970,12 +1049,12 @@ struct JsusFxChainWindow
 							mouse.y <= y2;
 						
 						if (isInside && mouse.wentDown(BUTTON_LEFT))
-							effect.isPassthrough = !effect.isPassthrough;
+							effect->isPassthrough = !effect->isPassthrough;
 						
-						setLumi(effect.isPassthrough ? 0 : 200);
+						setLumi(effect->isPassthrough ? 0 : 200);
 						drawRect(x1, y1, x2, y2);
 						setLumi(100);
-						if (!effect.isPassthrough)
+						if (!effect->isPassthrough)
 						{
 							// draw a cross when checked
 							hqBegin(HQ_LINES);
@@ -1017,14 +1096,14 @@ struct JsusFxChainWindow
 						}
 						
 						setLumi(200);
-						drawText(x1, (y1 + y2)/2, 14, +1, 0, "%s", effect.jsusFx->desc);
+						drawText(x1, (y1 + y2)/2, 14, +1, 0, "%s", effect->jsusFx.desc);
 						y += 20;
 					}
 					
 					effectIndex++;
 				}
 				
-				effectChain.lock();
+				effectChainAudioStream.lock();
 				{
 					if (keyboard.wentDown(SDLK_UP) && selectedEffectIndex - 1 >= 0)
 					{
@@ -1038,7 +1117,7 @@ struct JsusFxChainWindow
 						selectedEffectIndex++;
 					}
 				}
-				effectChain.unlock();
+				effectChainAudioStream.unlock();
 				
 				if (selectedEffectIndex >= 0 && selectedEffectIndex < effectChain.effects.size())
 				{
@@ -1060,13 +1139,13 @@ struct JsusFxChainWindow
 						int x = 7;
 						int y = 7;
 						
-						drawText(x, y, 12, +1, +1, "file: %s", Path::GetFileName(effect.filename).c_str());
+						drawText(x, y, 12, +1, +1, "file: %s", Path::GetFileName(effect->filename).c_str());
 						y += 16;
 						
-						drawText(x, y, 12, +1, +1, "pins: %d in, %d out", effect.jsusFx->numInputs, effect.jsusFx->numOutputs);
+						drawText(x, y, 12, +1, +1, "pins: %d in, %d out", effect->jsusFx.numInputs, effect->jsusFx.numOutputs);
 						y += 14;
 						
-						drawText(x, y, 12, +1, +1, "CPU time: %.2f%%", effect.cpuTime * 100 * 44100 / BUFFER_SIZE / 1000000.f);
+						drawText(x, y, 12, +1, +1, "CPU time: %.2f%%", effect->cpuTime * 100 * 44100 / BUFFER_SIZE / 1000000.f);
 						y += 14;
 						
 						
@@ -1164,12 +1243,23 @@ static void testJsusFxList()
 	
 	std::string activeLocation = "GeraintLuff";
 	
+	JsusFxChain effectChain(DATA_ROOT);
+	
+	effectChain.load("effectChain.xml");
+	
 	std::vector<JsusFxWindow*> windows;
+	
+	for (auto & effect : effectChain.effects)
+	{
+		JsusFxWindow * window = new JsusFxWindow(effect);
+		
+		windows.push_back(window);
+	}
 	
 	AudioStream_Vorbis vorbis;
 	vorbis.Open("movers.ogg", true);
 	
-	AudioStream_JsusFxChain audioStream;
+	AudioStream_JsusFxChain audioStream(effectChain);
 	audioStream.init();
 	
 #if 1
@@ -1184,7 +1274,7 @@ static void testJsusFxList()
 	
 	MidiKeyboard midiKeyboard;
 	
-	JsusFxChainWindow effectChainWindow(audioStream, windows);
+	JsusFxChainWindow effectChainWindow(effectChain, audioStream, windows);
 	
 	bool scrollerIsActive = false;
 	float scrollerPosition = 0.f;
@@ -1209,9 +1299,16 @@ static void testJsusFxList()
 			
 			window->tick(dt);
 			
-			if (window->isValid == false)
+			if (window->cleanup)
 			{
-				audioStream.remove(&window->jsusFx);
+				audioStream.lock();
+				{
+					effectChain.remove(window->effectElem);
+				}
+				audioStream.unlock();
+				
+				delete window->effectElem;
+				window->effectElem = nullptr;
 				
 				delete window;
 				window = nullptr;
@@ -1408,14 +1505,29 @@ static void testJsusFxList()
 			{
 				auto & filename = filenames[0];
 				
-				JsusFxWindow * window = new JsusFxWindow(filename.c_str());
+				JsusFxElem * elem = new JsusFxElem(effectChain.pathLibrary);
+		
+				elem->filename = filename;
+				
+				elem->init();
 			
-				if (window->isValid)
+				if (elem->isValid)
 				{
-					audioStream.add(&window->jsusFx, filename.c_str());
+					audioStream.lock();
+					{
+						effectChain.add(elem);
+					}
+					audioStream.unlock();
+					
+					JsusFxWindow * window = new JsusFxWindow(elem);
+					
+					windows.push_back(window);
 				}
-			
-				windows.push_back(window);
+				else
+				{
+					delete elem;
+					elem = nullptr;
+				}
 			}
 			
 			// filtered effect list
@@ -1481,14 +1593,29 @@ static void testJsusFxList()
 				
 				if (isInside && mouse.wentDown(BUTTON_LEFT))
 				{
-					JsusFxWindow * window = new JsusFxWindow(filename.c_str());
+					JsusFxElem * elem = new JsusFxElem(effectChain.pathLibrary);
 					
-					if (window->isValid)
+					elem->filename = filename;
+					
+					elem->init();
+					
+					if (elem->isValid)
 					{
-						audioStream.add(&window->jsusFx, filename.c_str());
+						audioStream.lock();
+						{
+							effectChain.add(elem);
+						}
+						audioStream.unlock();
+						
+						JsusFxWindow * window = new JsusFxWindow(elem);
+						
+						windows.push_back(window);
 					}
-					
-					windows.push_back(window);
+					else
+					{
+						delete elem;
+						elem = nullptr;
+					}
 				}
 				
 				setLumi(isInside ? 200 : 100);
@@ -1512,6 +1639,8 @@ static void testJsusFxList()
 	audioOutput.Stop();
 	audioOutput.Shutdown();
 #endif
+
+	effectChain.save("effectChain.xml");
 	
 	// todo : free effects, windows etc
 	
