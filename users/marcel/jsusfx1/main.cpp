@@ -1234,6 +1234,14 @@ static void testJsusFxList()
 	
 	std::vector<JsusFxWindow*> windows;
 	
+	//AudioStream_Vorbis vorbis;
+	//vorbis.Open("movers.ogg", true);
+	
+	AudioStream_JsusFxChain audioStream(effectChain);
+	audioStream.init();
+	
+	MidiKeyboard midiKeyboard;
+	
 	{
 		const char * filename = "effectChain.xml";
 		
@@ -1263,6 +1271,20 @@ static void testJsusFxList()
 			
 			if (xml_editor != nullptr)
 			{
+				auto xml_midiKeyboard = xml_editor->FirstChildElement("midiKeyboard");
+				
+				if (xml_midiKeyboard != nullptr)
+				{
+					midiKeyboard.octave = intAttrib(xml_midiKeyboard, "octave", midiKeyboard.octave);
+				}
+				
+				auto xml_audioInput = xml_editor->FirstChildElement("audioInput");
+				
+				if (xml_audioInput != nullptr)
+				{
+					audioStream.enableInput = boolAttrib(xml_audioInput, "enabled", audioStream.enableInput);
+				}
+				
 				auto xml_effectChain = xml_editor->FirstChildElement("effectChain");
 				
 				if (xml_effectChain != nullptr)
@@ -1291,12 +1313,6 @@ static void testJsusFxList()
 		}
 	}
 	
-	AudioStream_Vorbis vorbis;
-	vorbis.Open("movers.ogg", true);
-	
-	AudioStream_JsusFxChain audioStream(effectChain);
-	audioStream.init();
-	
 #if 1
 	AudioIO audioIO;
 	audioIO.Initialize(2, 1, SAMPLE_RATE, BUFFER_SIZE);
@@ -1306,8 +1322,6 @@ static void testJsusFxList()
 	audioOutput.Initialize(2, SAMPLE_RATE, BUFFER_SIZE);
 	audioOutput.Play(&audioStream);
 #endif
-	
-	MidiKeyboard midiKeyboard;
 	
 	JsusFxChainWindow effectChainWindow(effectChain, audioStream, windows);
 	
@@ -1685,6 +1699,18 @@ static void testJsusFxList()
 	
 	p.OpenElement("editor");
 	{
+		p.OpenElement("midiKeyboard");
+		{
+			p.PushAttribute("octave", midiKeyboard.octave);
+		}
+		p.CloseElement();
+		
+		p.OpenElement("audioInput");
+		{
+			p.PushAttribute("enabled", audioStream.enableInput);
+		}
+		p.CloseElement();
+		
 		p.OpenElement("effectChain");
 		{
 			for (JsusFxWindow * window : windows)
