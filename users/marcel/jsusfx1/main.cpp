@@ -1303,7 +1303,11 @@ static void testJsusFxList()
 								
 								const int windowX = intAttrib(xml_effect, "window_x", 0);
 								const int windowY = intAttrib(xml_effect, "window_y", 0);
+								const bool windowIsVisible = boolAttrib(xml_effect, "window_visible", true);
 								
+								if (!windowIsVisible)
+									window->window->hide();
+									
 								window->window->setPosition(windowX, windowY);
 							}
 						}
@@ -1723,6 +1727,7 @@ static void testJsusFxList()
 					window->window->getPosition(windowX, windowY);
 					
 					p.PushAttribute("id", window->effectElem->id);
+					p.PushAttribute("window_visible", !window->window->isHidden());
 					p.PushAttribute("window_x", windowX);
 					p.PushAttribute("window_y", windowY);
 				}
