@@ -1899,6 +1899,11 @@ void Window::raise()
 	SDL_RaiseWindow(m_window);
 }
 
+void Window::getPosition(int & x, int & y) const
+{
+	SDL_GetWindowPosition(m_window, &x, &y);
+}
+
 int Window::getWidth() const
 {
 	int sx;

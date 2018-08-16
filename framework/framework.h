@@ -378,6 +378,7 @@ public:
 	
 	void raise();
 	
+	void getPosition(int & x, int & y) const;
 	int getWidth() const;
 	int getHeight() const;
 	
