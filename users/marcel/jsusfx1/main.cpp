@@ -491,6 +491,7 @@ static void handleAction(const std::string & action, const Dictionary & d)
 
 struct JsusFxElem
 {
+	int id = 0;
 	bool isPassthrough = false;
 	std::string filename;
 
@@ -532,6 +533,8 @@ struct JsusFxChain
 	
 	std::vector<JsusFxElem*> effects;
 	
+	int nextEffectId = 1;
+	
 	JsusFxChain(const char * dataRoot)
 		: pathLibrary(dataRoot)
 	{
@@ -540,6 +543,8 @@ struct JsusFxChain
 	
 	void add(JsusFxElem * elem)
 	{
+		elem->id = nextEffectId++;
+		
 		effects.push_back(elem);
 	}
 	
@@ -559,59 +564,41 @@ struct JsusFxChain
 		}
 	}
 	
-	void load(const char * filename)
+	void loadXml(tinyxml2::XMLElement * xml_effectChain)
 	{
 		Assert(effects.empty());
+		Assert(nextEffectId == 1);
 		
-		tinyxml2::XMLDocument d;
-		
-		if (d.LoadFile(filename) == tinyxml2::XML_SUCCESS)
+		for (auto xml_effect = xml_effectChain->FirstChildElement("effect"); xml_effect != nullptr; xml_effect = xml_effect->NextSiblingElement("effect"))
 		{
-			auto xml_effectChain = d.FirstChildElement("effectChain");
+			JsusFxElem * elem = new JsusFxElem(pathLibrary);
 			
-			if (xml_effectChain != nullptr)
-			{
-				for (auto xml_effect = xml_effectChain->FirstChildElement("effect"); xml_effect != nullptr; xml_effect = xml_effect->NextSiblingElement("effect"))
-				{
-					JsusFxElem * elem = new JsusFxElem(pathLibrary);
-					
-					elem->isPassthrough = boolAttrib(xml_effect, "passthrough", false);
-					elem->filename = stringAttrib(xml_effect, "filename", "");
-					
-					elem->init();
-					
-					effects.push_back(elem);
-				}
-			}
+			elem->id = intAttrib(xml_effect, "id", nextEffectId);
+			
+			elem->isPassthrough = boolAttrib(xml_effect, "passthrough", false);
+			elem->filename = stringAttrib(xml_effect, "filename", "");
+			
+			elem->init();
+			
+			effects.push_back(elem);
+			
+			nextEffectId = std::max(nextEffectId, elem->id) + 1;
 		}
 	}
 
-	void save(const char * filename)
+	void saveXml(tinyxml2::XMLPrinter & p)
 	{
-		tinyxml2::XMLPrinter p;
-		
-		p.OpenElement("effectChain");
+		for (auto & effect : effects)
 		{
-			for (auto & effect : effects)
+			p.OpenElement("effect");
 			{
-				p.OpenElement("effect");
-				{
-					p.PushAttribute("passthrough", effect->isPassthrough);
-					p.PushAttribute("filename", effect->filename.c_str());
-				}
-				p.CloseElement();
+				p.PushAttribute("id", effect->id);
+				p.PushAttribute("passthrough", effect->isPassthrough);
+				p.PushAttribute("filename", effect->filename.c_str());
+				
+				// todo : serialize jsfx data
 			}
-		}
-		p.CloseElement();
-		
-		FILE * f = fopen(filename, "wt");
-		
-		if (f != nullptr)
-		{
-			fprintf(f, "%s", p.CStr());
-			
-			fclose(f);
-			f = nullptr;
+			p.CloseElement();
 		}
 	}
 };
@@ -1245,15 +1232,63 @@ static void testJsusFxList()
 	
 	JsusFxChain effectChain(DATA_ROOT);
 	
-	effectChain.load("effectChain.xml");
-	
 	std::vector<JsusFxWindow*> windows;
 	
-	for (auto & effect : effectChain.effects)
 	{
-		JsusFxWindow * window = new JsusFxWindow(effect);
+		const char * filename = "effectChain.xml";
 		
-		windows.push_back(window);
+		tinyxml2::XMLDocument d;
+
+		if (d.LoadFile(filename) == tinyxml2::XML_SUCCESS)
+		{
+			auto xml_effectChain = d.FirstChildElement("effectChain");
+			
+			if (xml_effectChain != nullptr)
+			{
+				effectChain.loadXml(xml_effectChain);
+			}
+			
+			//
+			
+			for (auto & effect : effectChain.effects)
+			{
+				JsusFxWindow * window = new JsusFxWindow(effect);
+				
+				windows.push_back(window);
+			}
+			
+			//
+			
+			auto xml_editor = d.FirstChildElement("editor");
+			
+			if (xml_editor != nullptr)
+			{
+				auto xml_effectChain = xml_editor->FirstChildElement("effectChain");
+				
+				if (xml_effectChain != nullptr)
+				{
+					for (auto xml_effect = xml_effectChain->FirstChildElement("effect"); xml_effect != nullptr; xml_effect = xml_effect->NextSiblingElement("effect"))
+					{
+						const int id = intAttrib(xml_effect, "id", 0);
+						
+						if (id != 0)
+						{
+							auto windowItr = std::find_if(windows.begin(), windows.end(), [&](JsusFxWindow * w) -> bool { return w->effectElem->id == id; });
+							
+							if (windowItr != windows.end())
+							{
+								JsusFxWindow * window = *windowItr;
+								
+								const int windowX = intAttrib(xml_effect, "window_x", 0);
+								const int windowY = intAttrib(xml_effect, "window_y", 0);
+								
+								window->window->setPosition(windowX, windowY);
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 	
 	AudioStream_Vorbis vorbis;
@@ -1640,7 +1675,51 @@ static void testJsusFxList()
 	audioOutput.Shutdown();
 #endif
 
-	effectChain.save("effectChain.xml");
+	tinyxml2::XMLPrinter p;
+	
+	p.OpenElement("effectChain");
+	{
+		effectChain.saveXml(p);
+	}
+	p.CloseElement();
+	
+	p.OpenElement("editor");
+	{
+		p.OpenElement("effectChain");
+		{
+			for (JsusFxWindow * window : windows)
+			{
+				p.OpenElement("effect");
+				{
+					int windowX;
+					int windowY;
+					
+					window->window->getPosition(windowX, windowY);
+					
+					p.PushAttribute("id", window->effectElem->id);
+					p.PushAttribute("window_x", windowX);
+					p.PushAttribute("window_y", windowY);
+				}
+				p.CloseElement();
+			}
+		}
+		p.CloseElement();
+	}
+	p.CloseElement();
+	
+	{
+		const char * filename = "effectChain.xml";
+		
+		FILE * f = fopen(filename, "wt");
+		
+		if (f != nullptr)
+		{
+			fprintf(f, "%s", p.CStr());
+			
+			fclose(f);
+			f = nullptr;
+		}
+	}
 	
 	// todo : free effects, windows etc
 	
