@@ -99,6 +99,8 @@ bool AudioOutput_PortAudio::initPortAudio(const int numChannels, const int sampl
 		logError("portaudio: failed to start stream: %s", Pa_GetErrorText(err));
 		return false;
 	}
+	
+	m_numChannels = numChannels;
 
 	return true;
 }
@@ -153,7 +155,7 @@ void AudioOutput_PortAudio::portAudioCallback(
 			
 			const int numSamplesRead = m_stream->Provide(numSamples, samples);
 			
-			memset(samples + numSamplesRead, 0, (numSamples - numSamplesRead) * sizeof(AudioSample));
+			memset(samples + numSamplesRead, 0, (numSamples - numSamplesRead) * sizeof(int16_t) * m_numChannels);
 			
 			m_position += numSamplesRead;
 			m_isDone = numSamplesRead == 0;
@@ -184,6 +186,7 @@ AudioOutput_PortAudio::AudioOutput_PortAudio()
 	: m_paStream(nullptr)
 	, m_mutex(nullptr)
 	, m_stream(nullptr)
+	, m_numChannels(0)
 	, m_isPlaying(false)
 	, m_volume(1024)
 	, m_position(0)
