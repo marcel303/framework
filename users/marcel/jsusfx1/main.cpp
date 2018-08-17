@@ -555,11 +555,6 @@ struct JsusFxChain
 		Assert(i != effects.end());
 		if (i != effects.end())
 		{
-			auto & effect = *i;
-			
-			delete effect;
-			effect = nullptr;
-			
 			effects.erase(i);
 		}
 	}
