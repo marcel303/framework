@@ -1816,13 +1816,22 @@ static void testJsusFxList()
 	
 	tinyxml2::XMLDocument d;
 	
-	if (d.Parse(p.CStr()) == tinyxml2::XML_SUCCESS)
+	if (d.Parse(p.CStr()) != tinyxml2::XML_SUCCESS)
+	{
+		logError("failed to parse emitted XML");
+		Assert(false);
+	}
+	else
 	{
 		const char * filename = "effectChain.xml";
 		
 		FILE * f = fopen(filename, "wt");
 		
-		if (f != nullptr)
+		if (f == nullptr)
+		{
+			logError("failed to open file for writing");
+		}
+		else
 		{
 			fprintf(f, "%s", p.CStr());
 			
