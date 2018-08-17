@@ -3,6 +3,7 @@
 #include "jsusfx.h"
 #include "jsusfx_file.h"
 #include "jsusfx_gfx.h"
+#include "jsusfx_serialize.h"
 
 #include "gfx-framework.h"
 #include "jsusfx-framework.h"
@@ -610,7 +611,7 @@ struct JsusFxChain
 				}
 			}
 			
-			JsusFxSerializer_Basic serializer(elem->jsusFx, serializationData, false);
+			JsusFxSerializer_Basic serializer(serializationData);
 			
 			elem->jsusFx.serialize(serializer, false);
 			
@@ -636,7 +637,7 @@ struct JsusFxChain
 				
 				JsusFxSerializationData serializationData;
 				
-				JsusFxSerializer_Basic serializer(effect->jsusFx, serializationData, true);
+				JsusFxSerializer_Basic serializer(serializationData);
 				
 				if (effect->jsusFx.serialize(serializer, true))
 				{
