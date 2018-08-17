@@ -220,10 +220,20 @@ static void convert_it_command (int *command, int *extcommand, int & last_specia
 	else if (c == 'M')
 	{
 		// set channel volume 0..64
+		
+		printf("IT command not implemented: '%c': set channel volume\n", c);
+		
+		*command = 0;
+		*extcommand = 0;
 	}
 	else if (c == 'N')
 	{
 		// channel volume slide. works like Dxy but operates on the channel volume instead
+		
+		printf("IT command not implemented: '%c': channel volume slide\n", c);
+		
+		*command = 0;
+		*extcommand = 0;
 	}
 #endif
     else if (c == 'O')                // set sample offset
@@ -236,6 +246,11 @@ static void convert_it_command (int *command, int *extcommand, int & last_specia
 		
 		// P0x = panning slide right
 		// Px0 = panning slide left
+		
+		printf("IT command not implemented: '%c': channel panning\n", c);
+		
+		*command = 0;
+		*extcommand = 0;
 	}
 #endif
     else if (c == 'Q')                // retrigger
