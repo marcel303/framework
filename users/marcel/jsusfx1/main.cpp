@@ -479,7 +479,9 @@ static void handleAction(const std::string & action, const Dictionary & d)
 			auto filename = d.getString("file", "");
 			
 			JsusFxPathLibrary_Basic pathLibrary(DATA_ROOT);
-			s_fx->compile(pathLibrary, filename);
+			s_fx->compile(pathLibrary, filename,
+				JsusFx::kCompileFlag_CompileGraphicsSection |
+				JsusFx::kCompileFlag_CompileSerializeSection);
 			
 			s_fx->prepare(SAMPLE_RATE, BUFFER_SIZE);
 		}
@@ -518,7 +520,9 @@ struct JsusFxElem
 		gfxAPI.init(jsusFx.m_vm);
 		jsusFx.gfx = &gfxAPI;
 		
-		if (jsusFx.compile(jsusFx.pathLibrary, filename))
+		if (jsusFx.compile(jsusFx.pathLibrary, filename,
+			JsusFx::kCompileFlag_CompileGraphicsSection |
+			JsusFx::kCompileFlag_CompileSerializeSection))
 		{
 			jsusFx.prepare(SAMPLE_RATE, BUFFER_SIZE);
 			
@@ -575,6 +579,43 @@ struct JsusFxChain
 			
 			elem->init();
 			
+			//
+			
+			JsusFxSerializationData serializationData;
+			
+			auto xml_sliders = xml_effect->FirstChildElement("sliders");
+			
+			if (xml_sliders != nullptr)
+			{
+				for (auto xml_slider = xml_sliders->FirstChildElement("slider"); xml_slider != nullptr; xml_slider = xml_slider->NextSiblingElement("slider"))
+				{
+					JsusFxSerializationData::Slider slider;
+					
+					slider.index = intAttrib(xml_slider, "index", -1);
+					slider.value = floatAttrib(xml_slider, "value", 0.f);
+					
+					serializationData.sliders.push_back(slider);
+				}
+			}
+			
+			auto xml_vars = xml_effect->FirstChildElement("vars");
+			
+			if (xml_vars != nullptr)
+			{
+				for (auto xml_var = xml_vars->FirstChildElement("var"); xml_var != nullptr; xml_var = xml_var->NextSiblingElement("var"))
+				{
+					const float value = floatAttrib(xml_var, "value", 0.f);
+					
+					serializationData.vars.push_back(value);
+				}
+			}
+			
+			JsusFxSerializer_Basic serializer(elem->jsusFx, serializationData, false);
+			
+			elem->jsusFx.serialize(serializer, false);
+			
+			//
+			
 			effects.push_back(elem);
 			
 			nextEffectId = std::max(nextEffectId, elem->id) + 1;
@@ -591,7 +632,47 @@ struct JsusFxChain
 				p.PushAttribute("passthrough", effect->isPassthrough);
 				p.PushAttribute("filename", effect->filename.c_str());
 				
-				// todo : serialize jsfx data
+				// serialize jsfx data
+				
+				JsusFxSerializationData serializationData;
+				
+				JsusFxSerializer_Basic serializer(effect->jsusFx, serializationData, true);
+				
+				if (effect->jsusFx.serialize(serializer, true))
+				{
+					if (!serializationData.sliders.empty())
+					{
+						p.OpenElement("sliders");
+						{
+							for (auto & slider : serializationData.sliders)
+							{
+								p.OpenElement("slider");
+								{
+									p.PushAttribute("index", slider.index);
+									p.PushAttribute("value", slider.value);
+								}
+								p.CloseElement();
+							}
+						}
+						p.CloseElement();
+					}
+					
+					if (!serializationData.vars.empty())
+					{
+						p.OpenElement("vars");
+						{
+							for (auto & var : serializationData.vars)
+							{
+								p.OpenElement("var");
+								{
+									p.PushAttribute("value", var);
+								}
+								p.CloseElement();
+							}
+						}
+						p.CloseElement();
+					}
+				}
 			}
 			p.CloseElement();
 		}
@@ -1733,6 +1814,9 @@ static void testJsusFxList()
 	}
 	p.CloseElement();
 	
+	tinyxml2::XMLDocument d;
+	
+	if (d.Parse(p.CStr()) == tinyxml2::XML_SUCCESS)
 	{
 		const char * filename = "effectChain.xml";
 		
@@ -1816,7 +1900,9 @@ int main(int argc, char * argv[])
 	const char * filename = "/Users/thecat/Downloads/Surround_Pan_2-JSFX/Surround Pan 2/Surround Pan 2";
 	//const char * filename = "/Users/thecat/Downloads/QuadraCom-JSFX/QuadraCom/QuadraCom";
 	
-	if (!fx.compile(pathLibrary, filename))
+	if (!fx.compile(pathLibrary, filename,
+		JsusFx::kCompileFlag_CompileGraphicsSection |
+		JsusFx::kCompileFlag_CompileSerializeSection))
 	{
 		logError("failed to load file: %s", filename);
 		return -1;
