@@ -557,7 +557,7 @@ void JGMOD_PLAYER::mod_interrupt ()
             ci[chn].sample_offset_on = false;
             }
 
-        if (ci[chn].period > 0)
+        if (ci[chn].temp_period > 0)
             voice_set_frequency (voice_table[chn], period2pitch (ci[chn].temp_period) * pitch_ratio);
 
         process_envelope (&ci[chn].volenv, 64, ci[chn].keyon);
