@@ -84,7 +84,7 @@ test todo :
 #define SEARCH_PATH_reaper "/Users/thecat/Library/Application Support/REAPER/Effects/"
 #define SEARCH_PATH_geraintluff "/Users/thecat/geraintluff -jsfx/"
 #define SEARCH_PATH_ATK "/Users/thecat/atk-reaper/plugins/"
-#define SEARCH_PATH_kawa "/Users/thecat/Downloads/JSFX-kawa-master/"
+#define SEARCH_PATH_kawa "/Users/thecat/Downloads/JsusFx - Kawa/"
 
 #define RENDER_TO_SURFACE 0
 #define ENABLE_SCREENSHOT_API 0
