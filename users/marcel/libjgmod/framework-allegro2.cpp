@@ -119,18 +119,28 @@ int AllegroVoiceAPI::voice_get_position(int voice)
 	if (voice == -1)
 		return 0;
 	
-	Assert(voices[voice].used);
+	int result;
 	
-	const int sampleIndex = voices[voice].position >> FIXBITS;
+	lock();
+	{
+		Assert(voices[voice].used);
+		
+		const int sampleIndex = voices[voice].position >> FIXBITS;
+		
+		// return -1 if sample playback has ended
+		
+		if (sampleIndex >= voices[voice].sample->len)
+			result = -1;
+		else
+		{
+			Assert(sampleIndex >= 0 && sampleIndex < voices[voice].sample->len);
+			
+			result = sampleIndex;
+		}
+	}
+	unlock();
 	
-	// return -1 if sample playback has ended
-	
-	if (sampleIndex >= voices[voice].sample->len)
-		return -1;
-	
-	Assert(sampleIndex >= 0 && sampleIndex < voices[voice].sample->len);
-	
-	return sampleIndex;
+	return result;
 }
 
 int AllegroVoiceAPI::voice_get_frequency(int voice)
