@@ -1380,12 +1380,15 @@ static void testJsusFxList()
 								
 								const int windowX = intAttrib(xml_effect, "window_x", 0);
 								const int windowY = intAttrib(xml_effect, "window_y", 0);
+								const int windowSx = intAttrib(xml_effect, "window_sx", window->window->getWidth());
+								const int windowSy = intAttrib(xml_effect, "window_sy", window->window->getHeight());
 								const bool windowIsVisible = boolAttrib(xml_effect, "window_visible", true);
 								
 								if (!windowIsVisible)
 									window->window->hide();
-									
+								
 								window->window->setPosition(windowX, windowY);
+								window->window->setSize(windowSx, windowSy);
 							}
 						}
 					}
@@ -1807,6 +1810,8 @@ static void testJsusFxList()
 					p.PushAttribute("window_visible", !window->window->isHidden());
 					p.PushAttribute("window_x", windowX);
 					p.PushAttribute("window_y", windowY);
+					p.PushAttribute("window_sx", window->window->getWidth());
+					p.PushAttribute("window_sy", window->window->getHeight());
 				}
 				p.CloseElement();
 			}
