@@ -604,6 +604,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 		*/
 		enum SampleFlag
 		{
+			kSampleFlag_HasSampleData    = 1 << 0,
 			kSampleFlag_16bit            = 1 << 1,
 			kSampleFlag_Compressed       = 1 << 3,
 			kSampleFlag_Loop             = 1 << 4,
@@ -776,7 +777,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 			
         // load sample data
 		
-		if (sample_data_offset != 0)
+		if ((sample_flags & kSampleFlag_HasSampleData) && sample_data_offset != 0)
 		{
 			jgmod_fseek(&f, filename, sample_data_offset);
 			
