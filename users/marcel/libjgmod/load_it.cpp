@@ -110,7 +110,7 @@ void convert_it_pitch (int *pitch)
         }
     if (*pitch == 254)  // note cut
         {
-        *pitch = -3;
+        *pitch = -2;
         return;
         }
 	if (*pitch == 253) // note none
@@ -529,8 +529,8 @@ JGMOD *load_it (const char *filename, int start_offset)
 		j->channel_disabled[i] = disabled;
 		
 	#ifdef JG_debug
-		if (disabled)
-			printf("channel disabled for channel %d\n", i);
+		//if (disabled)
+		//	printf("channel disabled for channel %d\n", i);
 	#endif
 	}
 	
@@ -664,6 +664,8 @@ JGMOD *load_it (const char *filename, int start_offset)
 		const uint8_t default_pan = jgmod_getc(f); // Default Pan. Bits 0->6 = Pan value, Bit 7 ON to USE (opposite of inst).
 		if (default_pan & (1 << 7))
 			si->pan = (default_pan & 63) * 255 / 63;
+		else
+			si->pan = 127;
 		
 		// sample length and loop points
 		const uint32_t sample_length = jgmod_igetl(f); // Length of sample in no. of samples NOT no. of bytes.
@@ -935,11 +937,13 @@ JGMOD *load_it (const char *filename, int start_offset)
 				
                 const uint8_t volume_and_panning = jgmod_getc(f);
 				
-				ni->volume = (volume_and_panning & 63) + 0x10;
-				
-                channel_volume[channel] = ni->volume;
-				
-                if ((volume_and_panning > 64 && volume_and_panning < 128) || (volume_and_panning > 192 && volume_and_panning < 256))
+				if (volume_and_panning <= 64)
+				{
+					ni->volume = volume_and_panning + 0x10;
+					
+					channel_volume[channel] = ni->volume;
+				}
+				else
                 {
                 	// todo : interpret the various effects that may be embedded here
 					
