@@ -275,7 +275,7 @@ int main(int argc, char **argv)
 		// the module may change due to drag and drop in handleAction. make sure to fetch the pointer from the player directly!
 		mod = player.of;
 		
-		if (keyboard.wentDown(SDLK_ESCAPE) || keyboard.wentDown(SDLK_SPACE))
+		if (keyboard.wentDown(SDLK_ESCAPE))
 			framework.quitRequested = true;
 		
 		if (keyboard.wentDown(SDLK_LEFT, true))
@@ -320,7 +320,7 @@ int main(int argc, char **argv)
 		
 		if (keyboard.wentDown(SDLK_r, true))
 			player.play (mod, true);
-		if (keyboard.wentDown(SDLK_p, true))
+		if (keyboard.wentDown(SDLK_p, true) || keyboard.wentDown(SDLK_SPACE, true))
 			player.toggle_pause_mode ();
 		
 		if (keyboard.wentDown(SDLK_DOWN, true))
