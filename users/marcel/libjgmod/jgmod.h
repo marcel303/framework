@@ -138,7 +138,7 @@ struct CHANNEL_INFO
     int transpose;
     int pan;
     int kick;       // TRUE if sample needs to be restarted
-    int keyon;
+    int keyon;      // FALSE if the key is pressed (sustain). fixme : this seems opposite of what the name intuitively would suggest..
     int volfade;    // volume fadeout
     int instfade;   // how much volume to subtract from volfade
 
