@@ -29,7 +29,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#if defined(SYSTEM_WINDOWS)
+#if defined(WINDOWS)
 	#include <windows.h>
 #endif
 
@@ -48,7 +48,7 @@ namespace MP
 
 			fprintf(stderr, "%s\n", string);
 
-		#if defined(SYSTEM_WINDOWS)
+		#if defined(WINDOWS)
 			strcat(string, "\n");
 			OutputDebugString(string);
 		#endif
