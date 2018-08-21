@@ -244,11 +244,8 @@ using namespace BinauralTestNamespace;
 
 int main(int argc, char * argv[])
 {
-#if 0
-	char * basePath = SDL_GetBasePath();
-	changeDirectory(basePath);
-	changeDirectory("data");
-	SDL_free(basePath);
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
 
 #if FULLSCREEN

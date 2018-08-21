@@ -551,6 +551,10 @@ static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, 
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 	if (!framework.init(0, 0, GFX_SX, GFX_SY))
 		return -1;
 

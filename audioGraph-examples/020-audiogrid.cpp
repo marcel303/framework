@@ -57,6 +57,10 @@ struct Grid
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
 		// initialize audio related systems

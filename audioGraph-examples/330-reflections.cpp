@@ -28,9 +28,9 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "delayLine.h"
 #include "framework.h"
 #include "soundmix.h"
-#include "vfxNodes/delayLine.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -61,7 +61,7 @@
 
 #define ENABLE_MIDI 0
 
-#define ENABLE_GAMEPAD 1
+#define ENABLE_GAMEPAD 0
 
 #if ENABLE_MIDI
 	#include "objects/mididecoder.h"
@@ -768,6 +768,10 @@ struct MyAudioSource : AudioSource
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 	// todo : let source audio come from audio graph instances
 	
 #if FULLSCREEN

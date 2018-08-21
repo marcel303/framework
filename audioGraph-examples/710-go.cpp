@@ -31,6 +31,7 @@
 #include "Debugging.h"
 #include "soundmix.h"
 #include <SDL2/SDL.h>
+#include <unistd.h>
 
 #define CHANNEL_COUNT 64
 
@@ -80,6 +81,10 @@ static void doEvent(AudioGraph * audioGraph, const std::string & event, const in
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	chdir(CHIBI_RESOURCE_PATH);
+#endif
+
 	const char * filename = nullptr;
 
 	if (argc < 2)
