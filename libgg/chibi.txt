@@ -15,3 +15,5 @@ library libgg
 	with_platform macos   compile_definition MACOS   * expose
 	with_platform linux   compile_definition LINUX   * expose
 	with_platform windows compile_definition WINDOWS * expose
+
+	with_platform macos depend_library CoreFoundation find
