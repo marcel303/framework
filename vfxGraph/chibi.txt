@@ -21,7 +21,7 @@ library vfxgraph
 	scan_files h                 group vfxgraph
 	scan_files cpp path objects  group vfxgraph/objects
 	scan_files h   path objects  group vfxgraph/objects
-	scan_files cpp path vfxNodes group vfxgraph          conglomerate vfxNodes_all.inc
+	scan_files cpp path vfxNodes group vfxgraph/vfxNodes conglomerate vfxNodes_all.h
 	scan_files h   path vfxNodes group vfxgraph/vfxNodes
 	scan_files cpp path rtmidi   group vfxgraph/rtmidi
 	scan_files h   path rtmidi   group vfxgraph/rtmidi

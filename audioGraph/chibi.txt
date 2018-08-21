@@ -18,5 +18,5 @@ library audiograph
 	scan_files h                   group audiograph
 	scan_files cpp path objects    group audiograph/objects
 	scan_files h   path objects    group audiograph/objects
-	scan_files cpp path audioNodes group audiograph            conglomerate audioNodes_all.inc
+	scan_files cpp path audioNodes group audiograph/audioNodes conglomerate audioNodes_all.h
 	scan_files h   path audioNodes group audiograph/audioNodes

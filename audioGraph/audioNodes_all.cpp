@@ -7,6 +7,6 @@ we create a single source file which includes all of the source files in the aud
 2) it speeds up library compilation speed, as all audio node sources are compiled at once, avoiding the overhead of compiling them separately
 
 */
-#include "audioNodes_all.inc"
+#include "audioNodes_all.h"
 
 void linkAudioNodes() { }
