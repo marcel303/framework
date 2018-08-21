@@ -298,6 +298,10 @@ static void testParticleLib()
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 #ifdef WIN32
 	_CrtSetDebugFillThreshold(0);
 #endif
