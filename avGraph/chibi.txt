@@ -1,0 +1,8 @@
+library libavgraph
+
+	depend_library framework
+	depend_library libparticle-ui
+
+	add_files graph.cpp graph.h graphEdit_nodeTypeSelect.cpp graphEdit_nodeTypeSelect.h
+
+	header_path . expose

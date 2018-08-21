@@ -1,0 +1,63 @@
+library libmediaplayer
+	
+	depend_library libgg
+	depend_library framework
+
+	scan_files cpp path mediaplayer group mediaplayer
+	scan_files h   path mediaplayer group mediaplayer
+
+	with_platform macos header_path macos/include
+	
+	with_platform macos depend_library macos/lib/libavcodec.a local
+	with_platform macos depend_library macos/lib/libavdevice.a local
+	with_platform macos depend_library macos/lib/libavfilter.a local
+	with_platform macos depend_library macos/lib/libavformat.a local
+	with_platform macos depend_library macos/lib/libavutil.a local
+	with_platform macos depend_library macos/lib/libswresample.a local
+	with_platform macos depend_library macos/lib/libswscale.a local
+	with_platform macos depend_library CoreMedia find
+	with_platform macos depend_library VideoDecodeAcceleration find
+	with_platform macos depend_library VideoToolbox find
+	with_platform macos depend_library Security find
+
+	with_platform linux depend_library avcodec find
+	with_platform linux depend_library avdevice find
+	with_platform linux depend_library avfilter find
+	with_platform linux depend_library avformat find
+	with_platform linux depend_library avutil find
+	with_platform linux depend_library swresample find
+	with_platform linux depend_library swscale find
+
+	with_platform windows depend_library win32/lib/avcodec.lib local
+	with_platform windows depend_library win32/lib/avdevice.lib local
+	with_platform windows depend_library win32/lib/avfilter.lib local
+	with_platform windows depend_library win32/lib/avformat.lib local
+	with_platform windows depend_library win32/lib/avutil.lib local
+	with_platform windows depend_library win32/lib/swresample.lib local
+	with_platform windows depend_library win32/lib/swscale.lib local
+	with_platform windows add_dist_files win32/dll/avcodec-57.dll
+	with_platform windows add_dist_files win32/dll/avdevice-57.dll
+	with_platform windows add_dist_files win32/dll/avfilter-6.dll
+	with_platform windows add_dist_files win32/dll/avformat-57.dll
+	with_platform windows add_dist_files win32/dll/avutil-55.dll
+	with_platform windows add_dist_files win32/dll/swresample-2.dll
+	with_platform windows add_dist_files win32/dll/swscale-4.dll
+
+	header_path . expose
+
+library libvideo
+	
+	depend_library libmediaplayer
+	depend_library framework
+
+	scan_files cpp group video
+	scan_files h   group video
+
+	header_path . expose
+
+app libvideo-example-basic
+
+	depend_library libvideo
+
+	add_files examples/basic.cpp
+	resource_path examples/data

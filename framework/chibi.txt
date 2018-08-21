@@ -1,0 +1,80 @@
+library framework
+	
+	depend_library libgg
+	depend_library libfbx
+
+	scan_files cpp                           group framework
+	scan_files c   path audiostream          group audiostream
+	scan_files cpp path audiostream          group audiostream
+	scan_files cpp path msdfgen     traverse group msdfgen
+
+	scan_files h                                     group framework
+	scan_files h path audiostream                    group audiostream
+	scan_files h path audiostream/oggvorbis traverse group audiostream/oggvorbis
+	scan_files h path msdfgen               traverse group msdfgen
+
+	compile_definition NO_SDL_GLEXT            * expose
+	compile_definition FRAMEWORK_USE_OPENAL    0 expose
+	compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+
+	compile_definition HAVE_M_PI               * expose toolchain msvc
+	compile_definition _USE_MATH_DEFINES       * expose toolchain msvc
+	compile_definition _CRT_SECURE_NO_WARNINGS * expose toolchain msvc
+
+# Not every feature works on Raspberry Pi or is just to slow, so we tweak some settings here
+	with_platform raspberry-pi compile_definition USE_LEGACY_OPENGL    1 expose
+	with_platform raspberry-pi compile_definition ENABLE_HQ_PRIMITIVES 0 expose
+	with_platform raspberry-pi compile_definition ENABLE_MSDF_FONTS    0 expose
+
+# Macos header files includes and libraries
+	with_platform macos header_path macos/include          expose
+	with_platform macos header_path macos/include/freetype
+	with_platform macos depend_library macos/glew/lib/libGLEW.a local
+	with_platform macos depend_library macos/lib/libfreeimage.a local
+	with_platform macos depend_library macos/lib/libfreetype.a  local
+	with_platform macos depend_library macos/lib/libSDL2.a      local
+	with_platform macos depend_library macos/lib/libSDL2main.a  local
+	with_platform macos depend_library macos/lib/libportaudio.a local
+	with_platform macos depend_library Cocoa         find
+	with_platform macos depend_library Carbon        find
+	with_platform macos depend_library CoreAudio     find
+	with_platform macos depend_library CoreVideo     find
+	with_platform macos depend_library IOKit         find
+	with_platform macos depend_library AudioToolbox  find
+	with_platform macos depend_library OpenGL        find
+	with_platform macos depend_library ForceFeedback find
+	with_platform macos depend_library iconv         find
+	with_platform macos depend_library bz2           find
+
+	header_path . expose
+	header_path audiostream/oggvorbis
+
+app framework-example-basic
+	add_files examples/example.cpp
+	resource_path examples/data
+	depend_library framework
+
+app framework-example-model-basic
+	add_files examples/model-basic.cpp
+	resource_path examples/data
+	depend_library framework
+
+app framework-example-model-advanced
+	add_files examples/model.cpp
+	resource_path examples/data
+	depend_library framework
+
+app framework-example-sounds
+	add_files examples/sounds.cpp
+	resource_path examples/data
+	depend_library framework
+
+app framework-example-spriter
+	add_files examples/spriter.cpp
+	resource_path examples/data
+	depend_library framework
+
+app framework-example-sprites
+	add_files examples/sprites.cpp
+	resource_path examples/data
+	depend_library framework

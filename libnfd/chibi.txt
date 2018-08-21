@@ -1,0 +1,9 @@
+library libnfd
+
+	add_files nfd_common.c nfd_common.h nfd.h
+
+	with_platform macos add_files nfd_cocoa.m
+	with_platform linux add_files nfd_gtk.c
+	with_platform win32 add_files nfd_win.cpp
+
+	header_path . expose

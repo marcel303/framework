@@ -1,0 +1,17 @@
+library libgg
+
+	scan_files cpp traverse
+	scan_files h   traverse
+	
+	exclude_files Directory.cpp ImageLoader_FreeImage.cpp test_tga.cpp
+
+	header_path . expose
+
+	compile_definition DEBUG 1 expose
+
+	compile_definition _USE_MATH_DEFINES       * toolchain msvc
+	compile_definition _CRT_SECURE_NO_WARNINGS * toolchain msvc
+
+	with_platform macos   compile_definition MACOS   * expose
+	with_platform linux   compile_definition LINUX   * expose
+	with_platform windows compile_definition WINDOWS * expose

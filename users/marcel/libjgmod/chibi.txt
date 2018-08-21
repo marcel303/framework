@@ -1,0 +1,25 @@
+library libjgmod
+
+	add_files file_io.cpp file_io.h jgmod.h jshare.h load_it.cpp load_jgm.cpp load_mod.cpp load_s3m.cpp load_xm.cpp mod.cpp player.cpp player2.cpp player3.cpp player4.cpp port.h save_jgm.cpp
+
+# todo : remove framework files and library here. let libjgmod expose a mixer interface
+	depend_library framework
+
+	header_path . expose
+
+library libjgmod-framework
+
+	depend_library libjgmod
+	depend_library framework
+
+# todo : add framework files here. let libjgmod expose a mixer interface
+
+	add_files framework-allegro2.cpp framework-allegro2.h
+
+app libjgmod-example
+
+	depend_library libjgmod-framework
+
+	add_files main.cpp
+
+	resource_path files

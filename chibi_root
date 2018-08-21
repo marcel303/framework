@@ -1,0 +1,10 @@
+add 3rdparty/PS3EYEDriver/framework
+add avGraph
+add framework
+add libfbx
+add libgg
+add libnfd
+add libosc
+add libparticle
+add libvideo
+add users/marcel/libjgmod
