@@ -160,3 +160,5 @@ void AudioNodeVoice::tick(const float dt)
 		voice->rampInfo.rampDown(0.f, AUDIO_UPDATE_SIZE / float(SAMPLE_RATE));
 	}
 }
+
+#undef voiceMgr

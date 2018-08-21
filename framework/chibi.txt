@@ -47,7 +47,7 @@ library framework
 	with_platform macos depend_library bz2           find
 
 	header_path . expose
-	header_path audiostream/oggvorbis
+	header_path audiostream/oggvorbis expose
 
 app framework-example-basic
 	add_files examples/example.cpp

@@ -56,7 +56,7 @@ struct AudioResource_Wavefield1D : AudioResourceBase
 	virtual void load(tinyxml2::XMLElement * elem) override
 	{
 		numElems = intAttrib(elem, "numElems", 0);
-		numElems = clamp(numElems, 0, Wavefield1D::kMaxElems);
+		numElems = Wavefield::clamp(numElems, 0, Wavefield1D::kMaxElems);
 		
 		arrayAttrib(elem, "f", f, sizeof(f[0]), numElems);
 		
@@ -68,6 +68,7 @@ AUDIO_RESOURCE_TYPE(AudioResource_Wavefield1D, "wavefield.1d");
 
 //
 
+#include "framework.h"
 #include "graph.h"
 #include "Noise.h"
 #include "../libparticle/ui.h"
