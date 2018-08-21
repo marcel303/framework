@@ -202,6 +202,10 @@ static void drawTest(JGMOD_PLAYER & player)
 
 int main(int argc, char **argv)
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
     srand(time(0));
 
     if (argc != 2)
