@@ -72,6 +72,10 @@ public:
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 	framework.enableDepthBuffer = true;
 	
 	if (!framework.init(argc, (const char **)argv, VIEW_SX, VIEW_SY))
