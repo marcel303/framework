@@ -35,6 +35,10 @@ if (NOT WIN32 AND NOT HAS_LIBPS3EYE)
 	message("including libps3eye")
 	add_subdirectory(../libps3eye libps3eye)
 endif (NOT WIN32 AND NOT HAS_LIBPS3EYE)
+if (NOT HAS_LIBJGMOD)
+	message("including libjgmod")
+	add_subdirectory(../users/marcel/libjgmod libjgmod)
+endif (NOT HAS_LIBJGMOD)
 
 #
 
@@ -102,6 +106,7 @@ target_link_libraries(vfxgraph libvideo)
 if (NOT WIN32)
 	target_link_libraries(vfxgraph libps3eye)
 endif (NOT WIN32)
+target_link_libraries(vfxgraph libjgmod)
 
 target_compile_definitions(vfxgraph PUBLIC
 	ENABLE_KINECT1=0
