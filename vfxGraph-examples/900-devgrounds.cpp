@@ -387,6 +387,10 @@ static void handleAction(const std::string & action, const Dictionary & args)
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 	framework.enableRealTimeEditing = true;
 	
 	framework.enableDepthBuffer = false;

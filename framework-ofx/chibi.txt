@@ -1,0 +1,7 @@
+library framework-ofx
+	
+	depend_library framework
+	
+	add_files ofMain.cpp ofMain.cpp
+
+	header_path . expose

@@ -1,0 +1,49 @@
+app vfxgraph-000-minimal
+	depend_library vfxgraph
+	add_files 000-minimal.cpp
+	resource_path data
+
+app vfxgraph-010-multiple-instances
+	depend_library vfxgraph
+	add_files 010-multiple-instances.cpp
+	resource_path data
+
+app vfxgraph-012-happy-newyear
+	depend_library vfxgraph
+	add_files 012-happy-newyear.cpp
+	resource_path data
+
+app vfxgraph-400-editor
+	depend_library vfxgraph
+	add_files 400-editor.cpp
+	resource_path data
+
+app vfxgraph-410-readonly-editor
+	depend_library vfxgraph
+	add_files 410-readonly-editor.cpp
+	resource_path data
+
+app vfxgraph-420-realtime-editing
+	depend_library vfxgraph
+	add_files 420-realtime-editing.cpp
+	resource_path data
+
+app vfxgraph-440-realtime-multiwindow
+	depend_library vfxgraph
+	add_files 440-realtime-multiwindow.cpp
+	resource_path data
+
+app vfxgraph-700-go
+	depend_library vfxgraph
+	add_files 700-go.cpp
+	resource_path data
+
+app vfxgraph-710-validate
+	depend_library vfxgraph
+	add_files 710-validate.cpp
+	resource_path data
+
+app vfxgraph-900-devgrounds
+	depend_library vfxgraph
+	add_files 900-devgrounds.cpp
+	resource_path data

@@ -1,0 +1,73 @@
+library vfxgraph
+
+	depend_library framework
+	depend_library framework-ofx
+	depend_library libavgraph
+	depend_library libjgmod
+	depend_library libjgmod-framework
+	depend_library libosc
+	depend_library libps3eye
+	depend_library libvideo
+
+	header_path .       expose
+	header_path objects expose
+
+	with_platform macos   header_path macos/include expose
+	with_platform macos   header_path ../libfreenect2/macos/include
+
+	with_platform windows header_path win32/include expose
+
+	scan_files cpp               group vfxgraph
+	scan_files h                 group vfxgraph
+	scan_files cpp path objects  group vfxgraph/objects
+	scan_files h   path objects  group vfxgraph/objects
+	scan_files cpp path vfxNodes group vfxgraph          conglomerate vfxNodes_all.inc
+	scan_files h   path vfxNodes group vfxgraph/vfxNodes
+	scan_files cpp path rtmidi   group vfxgraph/rtmidi
+	scan_files h   path rtmidi   group vfxgraph/rtmidi
+	scan_files cpp path ofxJpegGlitch group vfxgraph/ofxJpegGlitch
+	scan_files h   path ofxJpegGlitch group vfxgraph/ofxJpegGlitch
+
+	with_platform macos scan_files mm path objects group vfxgraph/objects
+	with_platform macos scan_files mm path vfxNodes group vfxgraph/vfxNodes
+
+	compile_definition ENABLE_KINECT1   0
+	compile_definition ENABLE_TURBOJPEG 1
+
+	with_platform macos compile_definition ENABLE_SYPHON     1
+	with_platform macos compile_definition ENABLE_LEAPMOTION 1
+	with_platform macos compile_definition ENABLE_KINECT2    1
+	with_platform macos compile_definition ENABLE_DEEPBELIEF 1
+	with_platform macos compile_definition ENABLE_PS3EYE     1
+	with_platform macos compile_definition ENABLE_WIIMOTE    0
+	with_platform macos compile_definition __MACOSX_CORE__   *
+
+	with_platform macos depend_library macos/framework/DeepBelief.framework local embed_framework
+	with_platform macos depend_library macos/framework/Syphon.framework     local embed_framework
+	with_platform macos depend_library ../libfreenect2/macos/lib/libfreenect2.0.2.0.dylib local embed_framework
+	with_platform macos depend_library macos/lib/libLeap.dylib              local embed_framework
+	with_platform macos depend_library macos/lib/libturbojpeg.0.dylib       local embed_framework
+	with_platform macos depend_library CoreImage find
+	with_platform macos depend_library CoreMIDI find
+	with_platform macos depend_library AVFoundation find
+# Wiimote
+	with_platform macos depend_library IOBluetooth find
+
+	with_platform linux compile_definition ENABLE_SYPHON     0
+	with_platform linux compile_definition ENABLE_LEAPMOTION 0
+	with_platform linux compile_definition ENABLE_KINECT2    0
+	with_platform linux compile_definition ENABLE_DEEPBELIEF 0
+	with_platform linux compile_definition ENABLE_PS3EYE     1
+	with_platform linux compile_definition ENABLE_WIIMOTE    0
+	with_platform linux compile_definition __LINUX_ALSA__    *
+
+	with_platform windows compile_definition ENABLE_SYPHON     0
+	with_platform windows compile_definition ENABLE_LEAPMOTION 1
+	with_platform windows compile_definition ENABLE_KINECT2    0
+	with_platform windows compile_definition ENABLE_DEEPBELIEF 0
+	with_platform windows compile_definition ENABLE_PS3EYE     0
+	with_platform windows compile_definition ENABLE_WIIMOTE    0
+	with_platform windows compile_definition __WINDOWS_MM__    *
+
+	with_platform windows depend_library win32/lib/Leap.lib local
+	with_platform windows depend_library win32/lib/turbojpeg.lib local
