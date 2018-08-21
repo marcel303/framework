@@ -1,6 +1,9 @@
 add 3rdparty/PS3EYEDriver/framework
+add audioGraph
+add audioGraph-examples
 add avGraph
 add framework
+add framework-ofx
 add libfbx
 add libgg
 add libnfd
@@ -8,3 +11,5 @@ add libosc
 add libparticle
 add libvideo
 add users/marcel/libjgmod
+add vfxGraph
+add vfxGraph-examples
