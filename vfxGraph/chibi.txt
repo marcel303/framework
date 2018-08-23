@@ -17,19 +17,19 @@ library vfxgraph
 
 	with_platform windows header_path win32/include expose
 
-	scan_files cpp               group vfxgraph
-	scan_files h                 group vfxgraph
-	scan_files cpp path objects  group vfxgraph/objects
-	scan_files h   path objects  group vfxgraph/objects
-	scan_files cpp path vfxNodes group vfxgraph/vfxNodes conglomerate vfxNodes_all.h
-	scan_files h   path vfxNodes group vfxgraph/vfxNodes
-	scan_files cpp path rtmidi   group vfxgraph/rtmidi
-	scan_files h   path rtmidi   group vfxgraph/rtmidi
-	scan_files cpp path ofxJpegGlitch group vfxgraph/ofxJpegGlitch
-	scan_files h   path ofxJpegGlitch group vfxgraph/ofxJpegGlitch
+	scan_files cpp
+	scan_files h
+	scan_files cpp path objects  group objects
+	scan_files h   path objects  group objects
+	scan_files cpp path vfxNodes group vfxNodes conglomerate vfxNodes_all.h
+	scan_files h   path vfxNodes group vfxNodes
+	scan_files cpp path rtmidi   group rtmidi
+	scan_files h   path rtmidi   group rtmidi
+	scan_files cpp path ofxJpegGlitch group ofxJpegGlitch
+	scan_files h   path ofxJpegGlitch group ofxJpegGlitch
 
-	with_platform macos scan_files mm path objects group vfxgraph/objects
-	with_platform macos scan_files mm path vfxNodes group vfxgraph/vfxNodes
+	with_platform macos scan_files mm path objects group objects
+	with_platform macos scan_files mm path vfxNodes group vfxNodes
 
 	compile_definition ENABLE_KINECT1   0
 	compile_definition ENABLE_TURBOJPEG 1

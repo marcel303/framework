@@ -14,9 +14,9 @@ library audiograph
 	header_path .       expose
 	header_path objects expose
 
-	scan_files cpp                 group audiograph
-	scan_files h                   group audiograph
-	scan_files cpp path objects    group audiograph/objects
-	scan_files h   path objects    group audiograph/objects
-	scan_files cpp path audioNodes group audiograph/audioNodes conglomerate audioNodes_all.h
-	scan_files h   path audioNodes group audiograph/audioNodes
+	scan_files cpp
+	scan_files h
+	scan_files cpp path objects    group objects
+	scan_files h   path objects    group objects
+	scan_files cpp path audioNodes group audioNodes conglomerate audioNodes_all.h
+	scan_files h   path audioNodes group audioNodes

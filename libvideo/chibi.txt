@@ -3,8 +3,8 @@ library libmediaplayer
 	depend_library libgg
 	depend_library framework
 
-	scan_files cpp path mediaplayer group mediaplayer
-	scan_files h   path mediaplayer group mediaplayer
+	scan_files cpp path mediaplayer
+	scan_files h   path mediaplayer
 
 	with_platform macos header_path macos/include
 	
@@ -50,8 +50,8 @@ library libvideo
 	depend_library libmediaplayer
 	depend_library framework
 
-	scan_files cpp group video
-	scan_files h   group video
+	scan_files cpp
+	scan_files h
 
 	header_path . expose
 

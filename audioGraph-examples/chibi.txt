@@ -2,83 +2,100 @@ app audiograph-000-minimal
 	depend_library audiograph
 	add_files 000-minimal.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-010-fileselect
 	depend_library audiograph
 	add_files 010-fileselect.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-020-audiogrid
 	depend_library audiograph
 	add_files 020-audiogrid.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-040-gameoflife
 	depend_library audiograph
 	add_files 040-gameoflife.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-300-binauralizer
 	depend_library audiograph
 	add_files 300-binauralizer.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-310-delaunay
 	depend_library audiograph
 	add_files 310-delaunay.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-320-audioVoices
 	depend_library audiograph
 	add_files 320-audioVoiceManager.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-330-reflections
 	depend_library audiograph
 	add_files 330-reflections.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-340-soundVolumes
 	depend_library audiograph
 	add_files 340-soundVolumes.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-360-speeders
 	depend_library audiograph
 	add_files 360-speeders.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-400-editor
 	depend_library audiograph
 	add_files 400-editor.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-420-realtime-editing
 	depend_library audiograph
 	add_files 420-realtime-editing.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-440-realtime-multiwindow
 	depend_library audiograph
 	add_files 440-realtime-multiwindow.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-480-editor-customdraw
 	depend_library audiograph
 	add_files 480-editor-customdraw.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-500-consoleapp
 	depend_library audiograph
 	add_files 500-consoleapp.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-700-4dworld
 	depend_library audiograph
 	add_files 700-4dworld.cpp
 	resource_path data
+	group audiograph-examples
 
 app audiograph-710-go
 	depend_library audiograph
 	add_files 710-go.cpp
 	resource_path data
+	group audiograph-examples

@@ -1,0 +1,10 @@
+cmake_module_path cmake_modules
+
+library libps3eye
+	
+	scan_files cpp
+	scan_files h
+
+	header_path . expose
+
+	depend_package LibUSB
