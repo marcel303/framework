@@ -121,6 +121,7 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		
 		const binaural::HRIRSampleData * samples[3 * MAX_BINAURALIZERS_PER_VOLUME];
 		float sampleWeights[3 * MAX_BINAURALIZERS_PER_VOLUME];
+		bool lookupResults[MAX_BINAURALIZERS_PER_VOLUME];
 		float gainCopy[MAX_BINAURALIZERS_PER_VOLUME];
 		
 		mutex->lock();
@@ -129,7 +130,7 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 			
 			for (int i = 0; i < MAX_BINAURALIZERS_PER_VOLUME; ++i)
 			{
-				binauralizer[i].sampleSet->lookup_3(
+				lookupResults[i] = binauralizer[i].sampleSet->lookup_3(
 					binauralizer[i].sampleLocation.elevation,
 					binauralizer[i].sampleLocation.azimuth,
 					samples + i * 3,
@@ -148,12 +149,15 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		
 		for (int i = 0; i < MAX_BINAURALIZERS_PER_VOLUME; ++i)
 		{
-			const float gain = gainCopy[i];
-			
-			for (int j = 0; j < 3; ++j)
+			if (lookupResults[i])
 			{
-				audioBufferAdd(combinedHrir.lSamples, samplesPtr[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
-				audioBufferAdd(combinedHrir.rSamples, samplesPtr[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
+				const float gain = gainCopy[i];
+				
+				for (int j = 0; j < 3; ++j)
+				{
+					audioBufferAdd(combinedHrir.lSamples, samplesPtr[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
+					audioBufferAdd(combinedHrir.rSamples, samplesPtr[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
+				}
 			}
 			
 			samplesPtr += 3;
@@ -338,6 +342,10 @@ static const Vec3 s_cubeVertices[8] =
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
@@ -370,9 +378,9 @@ int main(int argc, char * argv[])
 	
 	const char * filenames[] =
 	{
-		"wobbly.ogg",
-		"hrtf/music2.ogg",
-		"hrtf/music.ogg"
+		"thegrooop/wobbly.ogg",
+		"thegrooop/music2.ogg",
+		"thegrooop/music.ogg"
 	};
 	const int numFilenames = sizeof(filenames) / sizeof(filenames[0]);
 	
@@ -388,7 +396,7 @@ int main(int argc, char * argv[])
 	MyMutex binauralMutex(audioMutex);
 	
 	binaural::HRIRSampleSet sampleSet;
-	binaural::loadHRIRSampleSet_Cipic("hrtf/CIPIC/subject147", sampleSet);
+	binaural::loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
 	sampleSet.finalize();
 	
 	MyPortAudioHandler * paHandler = new MyPortAudioHandler();

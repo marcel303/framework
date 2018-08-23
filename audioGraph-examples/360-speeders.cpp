@@ -8,9 +8,7 @@
 #include <cmath>
 
 #define MAX_SOUNDVOLUMES 100
-//#define NUM_SPEEDERS 16
-//#define NUM_SPEEDERS 90
-#define NUM_SPEEDERS 0
+#define NUM_SPEEDERS 90
 
 #define DO_RECORDING 1
 //#define NUM_BUFFERS_PER_RECORDING (4 * 44100 / AUDIO_UPDATE_SIZE)
@@ -222,16 +220,17 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 			const binaural::HRIRSampleData * samples[3];
 			float sampleWeights[3];
 
-			s_sampleSet->lookup_3(
+			if (s_sampleSet->lookup_3(
 				elevation,
 				azimuth,
 				samples,
-				sampleWeights);
-
-			for (int j = 0; j < 3; ++j)
+				sampleWeights))
 			{
-				audioBufferAdd(combinedHrir.lSamples, samples[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
-				audioBufferAdd(combinedHrir.rSamples, samples[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
+				for (int j = 0; j < 3; ++j)
+				{
+					audioBufferAdd(combinedHrir.lSamples, samples[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
+					audioBufferAdd(combinedHrir.rSamples, samples[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
+				}
 			}
 		}
 
@@ -299,7 +298,7 @@ struct MyPortAudioHandler : PortAudioHandler
 		, audioSources()
 		, monoSource()
 	{
-		monoSource.open("wobbly.ogg", true);
+		monoSource.open("thegrooop/wobbly.ogg", true);
 	}
 
 	void addAudioSource(MultiChannelAudioSource_SoundVolume * audioSource)
@@ -740,7 +739,7 @@ static void drawSoundVolume(const SoundVolume & volume)
 		gxPushMatrix(); { gxTranslatef(0, 0, +1); drawGrid3dLine(res, res, 0, 1); } gxPopMatrix();
 	#endif
 	
-		gxSetTexture(getTexture("thegrooop-white.png"));
+		gxSetTexture(getTexture("thegrooop/logo-white.png"));
 		{
 			drawRect(-1, -1, +1, +1);
 		}
@@ -792,7 +791,7 @@ int main(int argc, char * argv[])
 	s_binauralMutex = &binauralMutex;
 	
 	binaural::HRIRSampleSet sampleSet;
-	binaural::loadHRIRSampleSet_Cipic("hrtf/CIPIC/subject147", sampleSet);
+	binaural::loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
 	sampleSet.finalize();
 	s_sampleSet = &sampleSet;
 	
@@ -806,6 +805,8 @@ int main(int argc, char * argv[])
 	PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, paHandler);
 	
+	int nextSpeederIndex = 0;
+	
 	do
 	{
 		framework.process();
@@ -816,6 +817,28 @@ int main(int argc, char * argv[])
 		
 		camera.tick(dt, true);
 		
+		if (camera.position[1] < .3f)
+			camera.position[1] = .3f;
+		
+	#if NUM_SPEEDERS >= 1
+		//if (mouse.wentDown(BUTTON_LEFT))
+		if (mouse.isDown(BUTTON_LEFT))
+		{
+			const Mat4x4 cameraTransform = camera.getWorldMatrix();
+			
+			SDL_LockMutex(audioMutex);
+			{
+				auto & speeder = world.speeders[nextSpeederIndex];
+				
+				speeder.p = cameraTransform.GetTranslation() + cameraTransform.GetAxis(2) * .4f;
+				speeder.v = cameraTransform.GetAxis(2) * 10.f;
+			}
+			SDL_UnlockMutex(audioMutex);
+			
+			nextSpeederIndex = (nextSpeederIndex + 1) % NUM_SPEEDERS;
+		}
+	#endif
+
 		// update the world
 		
 		world.tick(dt);
