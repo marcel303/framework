@@ -341,7 +341,11 @@ void Deepbelief::threadMain(State * state)
 			auto ts1 = g_TimerRT.TimeUS_get();
 		#endif
 			
-			std::sort(predictions.begin(), predictions.end(), [](auto & p1, auto & p2) { return p1.certainty > p2.certainty; });
+			std::sort(predictions.begin(), predictions.end(),
+				[](const DeepbeliefPrediction & p1, const DeepbeliefPrediction & p2)
+				{
+					return p1.certainty > p2.certainty;
+				});
 			
 		#if DO_TIMING
 			auto ts2 = g_TimerRT.TimeUS_get();
