@@ -206,9 +206,16 @@ int main(int argc, char **argv)
 	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
 
-    srand(time(0));
-
+	const char * filename;
+	
+#if defined(CHIBI_RESOURCE_PATH)
     if (argc != 2)
+    	filename = "City1g.it";
+	else
+#endif
+	if (argc == 2)
+		filename = argv[1];
+	else
 	{
         logInfo(
 			"JGMOD %s player by %s\n"
@@ -221,6 +228,8 @@ int main(int argc, char **argv)
 		
         return -1;
 	}
+	
+	srand(time(0));
 	
 	framework.actionHandler = handleAction;
 	framework.enableDepthBuffer = true;
@@ -257,7 +266,7 @@ int main(int argc, char **argv)
 	
 	player.enable_lasttrk_loop = true;
 	
-	JGMOD * mod = do_load(argv[1]);
+	JGMOD * mod = do_load(filename);
 	
 	if (mod != nullptr)
 	{
@@ -362,8 +371,10 @@ int main(int argc, char **argv)
 		#endif
 			
 			pushBlend(BLEND_OPAQUE);
-			setColor(20, 40, 60);
+			setColor(60, 60, 60);
+			pushColorPost(POST_RGB_TO_LUMI);
 			Sprite("jazz.png").drawEx(0, 0, 0, 3);
+			popColorPost();
 			popBlend();
 			
 			setColor(colorWhite);

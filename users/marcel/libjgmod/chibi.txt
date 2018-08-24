@@ -22,4 +22,4 @@ app libjgmod-example
 
 	add_files main.cpp
 
-	resource_path files
+	resource_path data
