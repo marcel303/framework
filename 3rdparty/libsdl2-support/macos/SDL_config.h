@@ -216,14 +216,18 @@
 
 /* Allow disabling of core subsystems */
 /* #undef SDL_ATOMIC_DISABLED */
+#define SDL_ATOMIC_DISABLED 1
 /* #undef SDL_AUDIO_DISABLED */
+#define SDL_AUDIO_DISABLED 1
 /* #undef SDL_CPUINFO_DISABLED */
 /* #undef SDL_EVENTS_DISABLED */
 /* #undef SDL_FILE_DISABLED */
 /* #undef SDL_JOYSTICK_DISABLED */
 /* #undef SDL_HAPTIC_DISABLED */
+#define SDL_HAPTIC_DISABLED 1
 /* #undef SDL_LOADSO_DISABLED */
 /* #undef SDL_RENDER_DISABLED */
+#define SDL_RENDER_DISABLED 1
 /* #undef SDL_THREADS_DISABLED */
 /* #undef SDL_TIMERS_DISABLED */
 /* #undef SDL_VIDEO_DISABLED */
@@ -237,7 +241,7 @@
 /* #undef SDL_AUDIO_DRIVER_ARTS */
 /* #undef SDL_AUDIO_DRIVER_ARTS_DYNAMIC */
 #define SDL_AUDIO_DRIVER_COREAUDIO 1
-#define SDL_AUDIO_DRIVER_DISK 1
+//#define SDL_AUDIO_DRIVER_DISK 1
 /* #undef SDL_AUDIO_DRIVER_DSOUND */
 #define SDL_AUDIO_DRIVER_DUMMY 1
 /* #undef SDL_AUDIO_DRIVER_EMSCRIPTEN */
@@ -282,7 +286,7 @@
 /* #undef SDL_HAPTIC_DUMMY */
 /* #undef SDL_HAPTIC_ANDROID */
 /* #undef SDL_HAPTIC_LINUX */
-#define SDL_HAPTIC_IOKIT 1
+#define SDL_HAPTIC_IOKIT 0
 /* #undef SDL_HAPTIC_DINPUT */
 /* #undef SDL_HAPTIC_XINPUT */
 
