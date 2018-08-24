@@ -28,6 +28,7 @@
 #define JGMOD_MODE_XM       1
 #define JGMOD_MODE_PERIOD   2
 #define JGMOD_MODE_LINEAR   4
+#define JGMOD_MODE_IT       8
 
 
 #define PTEFFECT_0          0

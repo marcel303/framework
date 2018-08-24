@@ -105,7 +105,7 @@ void convert_it_pitch (int *pitch)
 	
 	if (*pitch == 255)  // note off
         {
-        *pitch = -3; // todo : not correct!
+        *pitch = -3;
         return;
         }
     if (*pitch == 254)  // note cut
@@ -200,9 +200,9 @@ static void convert_it_command (int *command, int *extcommand, int & last_specia
         *command = PTEFFECT_D;
     else if (c == 'D')                 // s3m volume slide
         *command = S3EFFECT_D;
-    else if (c == 'E')                 // todo : ? : S3M portamento down
+    else if (c == 'E')                 // s3m portamento down
         *command = S3EFFECT_E;
-    else if (c == 'F')                 // todo : ? : S3M portamento up
+    else if (c == 'F')                 // s3m portamento up
         *command = S3EFFECT_F;
     else if (c == 'G')                 // slide to note
         *command = PTEFFECT_3;
@@ -236,7 +236,7 @@ static void convert_it_command (int *command, int *extcommand, int & last_specia
 		*extcommand = 0;
 	}
 #endif
-    else if (c == 'O')                // set sample offset
+	else if (c == 'O')                // set sample offset
         *command = PTEFFECT_9;
 #if experimentalCommands
 	else if (c == 'P')
@@ -367,6 +367,8 @@ JGMOD *load_it (const char *filename, int start_offset)
         return nullptr;
         }
 
+	j->flag = JGMOD_MODE_IT;
+	
     jgmod_skip (f, start_offset);
 	
 	// decode with the help of https://github.com/schismtracker/schismtracker/wiki/ITTECH.TXT
@@ -457,6 +459,22 @@ JGMOD *load_it (const char *filename, int start_offset)
 		//j->flag |= JGMOD_MODE_LINEAR;
 	}
 	
+	if (flags & kFlag_OldEffects)
+	{
+	#ifdef JG_debug
+		printf("old effects: on\n");
+	#endif
+	}
+	else
+	{
+		// vibrato half as deep, updated every tick
+		// Oxx will set sample offset to END
+		
+	#ifdef JG_debug
+		printf("old effects: off\n");
+	#endif
+	}
+	
 	const uint16_t special = jgmod_igetw(f);
 	(void)special;
 /*
@@ -496,6 +514,9 @@ JGMOD *load_it (const char *filename, int start_offset)
 	const uint8_t pitch_wheel_depth = jgmod_getc(f); // Pitch wheel depth for MIDI controllers.
 	(void)panning_separation;
 	(void)pitch_wheel_depth;
+#ifdef JG_debug
+	printf("mixing panning_separation (0..128): %d\n", panning_separation);
+#endif
 	
 	// message stored with Impulse Tracker file. up to 8000 chars.
 	const uint16_t message_length = jgmod_igetw(f);

@@ -224,7 +224,7 @@ int JGMOD_PLAYER::calc_volume (int chn)
     temp >>= 6;
 	
     temp *= of->mixing_volume; // todo : makes more sense to apply during mixing I guess. same for global volume
-    temp >>= 6;
+    temp >>= 8;
 	
     temp *= mod_volume * ci[chn].volenv.v;          // 0...4177920
     temp >>= 14;                                    // 0...255
@@ -560,7 +560,12 @@ void JGMOD_PLAYER::parse_slide2period (int chn, int extcommand, int note)
         return;
 
     if (extcommand > 0)
-        ci[chn].slide2period_spd = (extcommand << 2);
+    	{
+		if (of->flag & JGMOD_MODE_IT)
+			ci[chn].slide2period_spd = (extcommand << 1);
+		else
+			ci[chn].slide2period_spd = (extcommand << 2);
+		}
 
     if (note > 0)
         ci[chn].slide2period = note2period (note-1, ci[chn].c2spd);

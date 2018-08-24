@@ -99,7 +99,10 @@ void JGMOD_PLAYER::parse_s3m_portamento_up (int chn, int extcommand)
     if ( (extcommand > 0) && (extcommand <= 0xDF) )
         {
         ci[chn].s3m_fine_pitch_slide = 0;
-        ci[chn].s3m_pitch_slide = -extcommand * 4;
+		if (of->flag & JGMOD_MODE_IT)
+			ci[chn].s3m_pitch_slide = -extcommand * 2;
+		else
+        	ci[chn].s3m_pitch_slide = -extcommand * 4;
         }
     else if ( (extcommand >= 0xE0) && (extcommand <= 0xEF) )
         {
@@ -129,7 +132,10 @@ void JGMOD_PLAYER::parse_s3m_portamento_down (int chn, int extcommand)
     if ( (extcommand > 0) && (extcommand <= 0xDF) )
         {
         ci[chn].s3m_fine_pitch_slide = 0;
-        ci[chn].s3m_pitch_slide = extcommand * 4;
+		if (of->flag & JGMOD_MODE_IT)
+			ci[chn].s3m_pitch_slide = extcommand * 2;
+		else
+        	ci[chn].s3m_pitch_slide = extcommand * 4;
         }
     else if ( (extcommand >= 0xE0) && (extcommand <= 0xEF))
         {
