@@ -742,7 +742,10 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 		{
 			if (voice.used && voice.started && voice.sample->len != 0)
 			{
-				const int pan = 127 + ((voice.pan - 127) >> 2);
+				// todo : implement panning separation
+				//const int pan = 127 + ((voice.pan - 127) >> 2);
+				
+				const int pan = voice.pan;
 				
 				const int pan1 = (0xff - pan) * voice.volume;
 				const int pan2 = (       pan) * voice.volume;
