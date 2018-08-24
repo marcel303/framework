@@ -7,7 +7,8 @@ library libsdl2
 
 	scan_files c path libsdl2/src
 	scan_files c path libsdl2/src/atomic group atomic
-	scan_files c path libsdl2/src/audio traverse group audio
+	scan_files c path libsdl2/src/audio group audio
+	scan_files c path libsdl2/src/audio/dummy group audio/dummy
 	scan_files c path libsdl2/src/cpuinfo group cpuinfo
 	scan_files c path libsdl2/src/dynapi group dynapi
 	scan_files c path libsdl2/src/events group events
