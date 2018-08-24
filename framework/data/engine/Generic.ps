@@ -2,6 +2,7 @@
 static const char * s_genericPs = R"SHADER(
 
 include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
 
 uniform vec4 params;
 uniform sampler2D source;
@@ -10,7 +11,7 @@ shader_in vec3 v_normal;
 shader_in vec4 v_color;
 shader_in vec2 v_texcoord0;
 
-// todo : use ShaderUtil functions for applying color mode and color POST_NONE
+// todo : use ShaderUtil functions for applying color mode
 
 void main()
 {
@@ -60,28 +61,7 @@ void main()
 
 	// color post
 
-	/*
-	POST_NONE,
-	POST_RGB_MIX_ALPHA_TO_ZERO,
-	POST_RGB_MIX_ALPHA_TO_ONE,
-	POST_SET_ALPHA_TO_ONE
-	*/
-
-	if (params.z != 0.0)
-	{
-		if (params.z == 1.0)
-		{
-			result.rgb = mix(vec3(0.0), result.rgb, result.a);
-		}
-		else if (params.z == 2.0)
-		{
-			result.rgb = mix(vec3(1.0), result.rgb, result.a);
-		}
-		else if (params.z == 3.0)
-		{
-			result.a = 1.0;
-		}
-	}
+	result = applyColorPost(result, params.z);
 	
 	shader_fragColor = result;
 }
