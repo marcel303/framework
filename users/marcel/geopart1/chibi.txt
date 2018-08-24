@@ -1,0 +1,4 @@
+app geopart1
+	depend_library audiograph
+	add_files main.cpp
+	resource_path data
