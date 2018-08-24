@@ -4,3 +4,6 @@
 [submodule "3rdparty/PS3EYEDriver"]
 	path = 3rdparty/PS3EYEDriver
 	url = https://github.com/marcel303/PS3EYEDriver.git
+[submodule "chibi"]
+	path = chibi
+	url = https://github.com/marcel303/chibi.git
