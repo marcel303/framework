@@ -701,7 +701,8 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 	::voiceAPI = nullptr;
 #endif
 	
-	memset(buffer, 0, numSamples * sizeof(AudioSample));
+	int * __restrict mixingBuffer = (int*)alloca(numSamples * 2 * sizeof(int));
+	memset(mixingBuffer, 0, numSamples * 2 * sizeof(int));
 	
 	lock();
 	{
@@ -741,8 +742,10 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 		{
 			if (voice.used && voice.started && voice.sample->len != 0)
 			{
-				const int pan1 = (0xff - voice.pan) * voice.volume;
-				const int pan2 = (       voice.pan) * voice.volume;
+				const int pan = 127 + ((voice.pan - 127) >> 2);
+				
+				const int pan1 = (0xff - pan) * voice.volume;
+				const int pan2 = (       pan) * voice.volume;
 				
 				int sampleIndex = voice.position >> FIXBITS;
 				
@@ -771,8 +774,8 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 							const int value = int8_t(values[sampleIndex] ^ 0x80);
 						#endif
 							
-							buffer[i].channel[0] += (value * pan1) >> (8 + 2);
-							buffer[i].channel[1] += (value * pan2) >> (8 + 2);
+							mixingBuffer[i * 2 + 0] += (value * pan1) >> 8;
+							mixingBuffer[i * 2 + 1] += (value * pan2) >> 8;
 						}
 						else if (voice.sample->bits == 16)
 						{
@@ -787,8 +790,8 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 							const int value = int16_t(values[sampleIndex] ^ 0x8000);
 						#endif
 							
-							buffer[i].channel[0] += (value * pan1) >> (16 + 2);
-							buffer[i].channel[1] += (value * pan2) >> (16 + 2);
+							mixingBuffer[i * 2 + 0] += (value * pan1) >> 16;
+							mixingBuffer[i * 2 + 1] += (value * pan2) >> 16;
 						}
 					}
 					
@@ -892,6 +895,25 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 	#endif
 	}
 	unlock();
+	
+	for (int i = 0; i < numSamples; ++i)
+	{
+		int vL = mixingBuffer[i * 2 + 0];
+		int vR = mixingBuffer[i * 2 + 1];
+	
+		if (vL > INT16_MAX)
+			vL = INT16_MAX;
+		if (vL < INT16_MIN)
+			vL = INT16_MIN;
+
+		if (vR > INT16_MAX)
+			vR = INT16_MAX;
+		if (vR < INT16_MIN)
+			vR = INT16_MIN;
+
+		buffer[i].channel[0] = vL;
+		buffer[i].channel[1] = vR;
+	}
 	
 	return numSamples;
 }
