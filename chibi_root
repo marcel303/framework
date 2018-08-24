@@ -6,6 +6,8 @@ add framework-ofx
 add vfxGraph
 add vfxGraph-examples
 
+add 3rdparty
+
 global_group libraries
 
 	add 3rdparty/PS3EYEDriver/framework
@@ -16,3 +18,7 @@ global_group libraries
 	add libparticle
 	add libvideo
 	add users/marcel/libjgmod
+
+global_group users/marcel
+
+	add users/marcel/geopart1
