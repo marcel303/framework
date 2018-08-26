@@ -19,6 +19,7 @@
 #include "framework.h"
 #include "framework-allegro2.h"
 #include "jgmod.h"
+#include <time.h>
 
 //
 

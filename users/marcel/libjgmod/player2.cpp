@@ -148,6 +148,7 @@ static volatile const uint16_t logtab[]={
 	LOGFAC*453,LOGFAC*450,LOGFAC*447,LOGFAC*443,LOGFAC*440,LOGFAC*437,LOGFAC*434,LOGFAC*431
 };
 
+extern volatile const int noteperiod[];
 volatile const int noteperiod[] = {
     6848, 6464, 6096, 5760, 5424, 5120, 4832, 4560, 4304, 4064, 3840, 3628
     };
