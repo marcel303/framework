@@ -1653,8 +1653,12 @@ void Framework::screenshot(const char * name, int index, bool omitAlpha)
 		memcpy(line2, temp, lineSize);
 	}
 	
+#if WINDOWS
+	char filename[MAX_PATH];
+#else
 	char filename[PATH_MAX];
-	
+#endif
+
 	if (index < 0)
 	{
 		// search for a filename for which the file doesn't exist yet
@@ -1663,7 +1667,11 @@ void Framework::screenshot(const char * name, int index, bool omitAlpha)
 		
 		do
 		{
+		#if WINDOWS
+			char temp[MAX_PATH];
+		#else
 			char temp[PATH_MAX];
+		#endif
 			sprintf_s(temp, sizeof(temp), name, currentIndex);
 			sprintf_s(filename, sizeof(filename), "%s.tga", temp);
 			currentIndex++;
