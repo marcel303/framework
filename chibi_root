@@ -10,7 +10,7 @@ add 3rdparty
 
 global_group libraries
 
-	add 3rdparty/PS3EYEDriver/framework
+	with_platform macos add 3rdparty/PS3EYEDriver/framework
 	add libfbx
 	add libgg
 	add libnfd

@@ -7,6 +7,7 @@ library libmediaplayer
 	scan_files h   path mediaplayer
 
 	with_platform macos header_path macos/include
+	with_platform windows header_path win32/include
 	
 	with_platform macos depend_library macos/lib/libavcodec.a local
 	with_platform macos depend_library macos/lib/libavdevice.a local

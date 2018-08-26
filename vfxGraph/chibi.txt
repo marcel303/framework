@@ -6,8 +6,10 @@ library vfxgraph
 	depend_library libjgmod
 	depend_library libjgmod-framework
 	depend_library libosc
-	depend_library libps3eye
 	depend_library libvideo
+	
+# todo : add with_library chibi directive ?
+	with_platform macos depend_library libps3eye
 
 	header_path .       expose
 	header_path objects expose

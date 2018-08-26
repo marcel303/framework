@@ -13,6 +13,9 @@ library framework
 	scan_files h path audiostream/oggvorbis traverse group audiostream/oggvorbis
 	scan_files h path msdfgen               traverse group msdfgen
 
+	header_path . expose
+	header_path audiostream/oggvorbis expose
+	
 	compile_definition NO_SDL_GLEXT            * expose
 	compile_definition FRAMEWORK_USE_OPENAL    0 expose
 	compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
@@ -46,20 +49,21 @@ library framework
 	with_platform macos depend_library iconv         find
 	with_platform macos depend_library bz2           find
 
-	header_path . expose
-	header_path audiostream/oggvorbis expose
-
+# Windows header files includes and libraries
+	with_platform windows header_path win32/include          expose
+	with_platform windows header_path win32/include/freetype
+	
 app framework-example-basic
 	add_files examples/example.cpp
 	resource_path examples/data
 	depend_library framework
 	group framework-examples
 
-app framework-example-model-basic
-	add_files examples/model-basic.cpp
-	resource_path examples/data
-	depend_library framework
-	group framework-examples
+#app framework-example-model-basic
+#	add_files examples/model-basic.cpp
+#	resource_path examples/data
+#	depend_library framework
+#	group framework-examples
 
 app framework-example-model-advanced
 	add_files examples/model.cpp
