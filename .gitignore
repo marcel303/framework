@@ -2,3 +2,5 @@
 audioGraph/sources.tmp.cpp
 vfxGraph/sources.tmp.mm
 vfxGraph/sources.tmp.cpp
+vfxGraph/vfxNodes_all.h
+audioGraph/audioNodes_all.h
