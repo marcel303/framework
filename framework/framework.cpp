@@ -83,6 +83,10 @@
 
 #define HIGHDPI_HACK 0 // todo : remove or make it into an init option (allowUpscaling or something) and make it nicer
 
+#if defined(_MSC_VER) && _MSC_VER >= 1900
+	#pragma comment(lib, "legacy_stdio_definitions.lib")
+#endif
+
 #if INDEX_TYPE == GL_UNSIGNED_INT
 typedef unsigned int glindex_t;
 #else
