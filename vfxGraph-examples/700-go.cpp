@@ -25,18 +25,23 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if defined(MACOS) || defined(LINUX)
-
-// todo : make this code cross platform!
-
 #include "framework.h"
 #include "Parse.h"
 #include "Path.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
 
-#include <unistd.h>
+#if defined(MACOS) || defined(LINUX)
+	#include <unistd.h>
+#endif
+
+#if defined(WINDOWS)
+	#include <direct.h>
+#endif
+
+#include <chrono>
 #include <signal.h>
+#include <thread>
 
 int GFX_SX = 640;
 int GFX_SY = 480;
@@ -185,9 +190,7 @@ int main(int argc, char * argv[])
 	{
 		VfxGraph * vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
 		
-		struct timespec start, end;
-		
-		clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+		auto startTime = std::chrono::high_resolution_clock::now();
 		
 		// todo : create a truely headless mode
 		
@@ -207,19 +210,19 @@ int main(int argc, char * argv[])
 			if (framework.quitRequested)
 				break;
 			
-			clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+			auto endTime = std::chrono::high_resolution_clock::now();
+
+			auto deltaTime = endTime - startTime;
 			
-			const int64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
+			auto todo = std::chrono::duration<double>(1.0 / controlRate) - deltaTime;
 			
-			const int64_t todo_us = (1000000 - delta_us) / controlRate;
-			
-			if (todo_us > 0)
+			if (todo.count() > 0)
 			{
-				usleep(todo_us);
+				std::this_thread::sleep_for(deltaTime);
 			}
 			
-			clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-			
+			startTime = std::chrono::high_resolution_clock::now();
+
 			const float dt = 1.f / controlRate;
 			
 			vfxGraph->tick(GFX_SX, GFX_SY, dt);
@@ -273,16 +276,3 @@ int main(int argc, char * argv[])
 
 	return 0;
 }
-
-#else
-
-#include <stdio.h>
-
-int main(int argc, char * argv[])
-{
-	printf("Windows not supported (yet)!\n");
-
-	return -1;
-}
-
-#endif
