@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "video.h"
 
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
 	changeDirectory(CHIBI_RESOURCE_PATH);
