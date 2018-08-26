@@ -6,6 +6,8 @@
 #include "StringEx.h" // _s functions
 #include "ui.h"
 
+#include <algorithm>
+
 using namespace tinyxml2;
 
 #define DO_PARTICLELIB_TEST 0

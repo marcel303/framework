@@ -69,39 +69,39 @@ struct WDL_FFT4_REAL
 	WDL_FFT4_REAL operator+(const WDL_FFT4_REAL & other) const
 	{
 		WDL_FFT4_REAL r;
-		r.v = v + other.v;
+		r.v = _mm_add_ps(v, other.v);
 		return r;
 	}
 	
 	WDL_FFT4_REAL operator-(const WDL_FFT4_REAL & other) const
 	{
 		WDL_FFT4_REAL r;
-		r.v = v - other.v;
+		r.v = _mm_sub_ps(v, other.v);
 		return r;
 	}
 	
 	WDL_FFT4_REAL operator*(const WDL_FFT4_REAL & other) const
 	{
 		WDL_FFT4_REAL r;
-		r.v = v * other.v;
+		r.v = _mm_mul_ps(v, other.v);
 		return r;
 	}
 	
 	WDL_FFT4_REAL & operator+=(const WDL_FFT4_REAL & other)
 	{
-		v += other.v;
+		v = _mm_add_ps(v, other.v);
 		return *this;
 	}
 	
 	WDL_FFT4_REAL & operator-=(const WDL_FFT4_REAL & other)
 	{
-		v -= other.v;
+		v = _mm_sub_ps(v, other.v);
 		return *this;
 	}
 	
 	WDL_FFT4_REAL & operator*=(const WDL_FFT4_REAL & other)
 	{
-		v *= other.v;
+		v = _mm_mul_ps(v, other.v);
 		return *this;
 	}
 	
@@ -110,39 +110,39 @@ struct WDL_FFT4_REAL
 	WDL_FFT4_REAL operator+(const WDL_FFT_REAL other) const
 	{
 		WDL_FFT4_REAL r;
-		r.v = v + _mm_set1_ps(other);
+		r.v = _mm_add_ps(v, _mm_set1_ps(other));
 		return r;
 	}
 	
 	WDL_FFT4_REAL operator-(const WDL_FFT_REAL other) const
 	{
 		WDL_FFT4_REAL r;
-		r.v = v - _mm_set1_ps(other);
+		r.v = _mm_sub_ps(v, _mm_set1_ps(other));
 		return r;
 	}
 	
 	WDL_FFT4_REAL operator*(const WDL_FFT_REAL other) const
 	{
 		WDL_FFT4_REAL r;
-		r.v = v * _mm_set1_ps(other);
+		r.v = _mm_mul_ps(v, _mm_set1_ps(other));
 		return r;
 	}
 	
 	WDL_FFT4_REAL & operator+=(const WDL_FFT_REAL other)
 	{
-		v += _mm_set1_ps(other);
+		v = _mm_add_ps(v, _mm_set1_ps(other));
 		return *this;
 	}
 	
 	WDL_FFT4_REAL & operator-=(const WDL_FFT_REAL other)
 	{
-		v -= _mm_set1_ps(other);
+		v = _mm_sub_ps(v, _mm_set1_ps(other));
 		return *this;
 	}
 	
 	WDL_FFT4_REAL & operator*=(const WDL_FFT_REAL other)
 	{
-		v *= _mm_set1_ps(other);
+		v = _mm_mul_ps(v, _mm_set1_ps(other));
 		return *this;
 	}
 	

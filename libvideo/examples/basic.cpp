@@ -75,4 +75,6 @@ int main(int argc, const char * argv[])
 			framework.endDraw();
 		}
 	}
+
+	return 0;
 }

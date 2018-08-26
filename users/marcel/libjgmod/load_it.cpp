@@ -17,6 +17,7 @@
 #include "framework-allegro2.h"
 
 #include <assert.h>
+#include <malloc.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -561,7 +562,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 	for (int i = 0; i < 64; ++i)
 		j->channel_volume[i] = channel_volume[i];
 	
-	uint8_t orders[j->no_trk];
+	uint8_t * orders = (uint8_t*)alloca(j->no_trk * sizeof(uint8_t));
 	jgmod_fread(orders, j->no_trk, f);
 	for (auto i = 0; i < j->no_trk; ++i)
 		j->pat_table[i] = orders[i];
@@ -574,15 +575,15 @@ JGMOD *load_it (const char *filename, int start_offset)
 	}
     j->no_trk = actual_no_trk;
 	
-	uint32_t instrument_offsets[num_instruments];
+	uint32_t * instrument_offsets = (uint32_t*)alloca(num_instruments * sizeof(uint32_t));
 	for (auto i = 0; i < num_instruments; ++i)
 		instrument_offsets[i] = jgmod_igetl(f);
 	
-	uint32_t sample_headers[j->no_sample];
+	uint32_t * sample_headers = (uint32_t*)alloca(j->no_sample * sizeof(uint32_t));
 	for (auto i = 0; i < j->no_sample; ++i)
 		sample_headers[i] = jgmod_igetl(f);
 
-	uint32_t pattern_offsets[j->no_pat];
+	uint32_t * pattern_offsets = (uint32_t*)alloca(j->no_pat * sizeof(uint32_t));
 	for (auto i = 0; i < j->no_pat; ++i)
 		pattern_offsets[i] = jgmod_igetl(f);
 	
