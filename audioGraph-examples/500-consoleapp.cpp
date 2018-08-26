@@ -31,7 +31,14 @@
 #include "Debugging.h"
 #include "soundmix.h"
 #include <SDL2/SDL.h>
-#include <unistd.h>
+
+#if defined(MACOS) || defined(LINUX)
+	#include <unistd.h>
+#endif
+
+#if defined(WINDOWS)
+	#include <direct.h>
+#endif
 
 #define CHANNEL_COUNT 64
 
