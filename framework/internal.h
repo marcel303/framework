@@ -235,7 +235,10 @@ public:
 				stop = true;
 		}
 		
-		events.erase(events.begin(), events.begin() + eventIndex);
+		if (eventIndex == numEvents)
+			events.clear();
+		else
+			events.erase(events.begin(), events.begin() + eventIndex);
 	}
 	
 	void beginProcess()
