@@ -4,7 +4,7 @@ library libnfd
 
 	with_platform macos add_files nfd_cocoa.m
 	with_platform linux add_files nfd_gtk.c
-	with_platform win32 add_files nfd_win.cpp
+	with_platform windows add_files nfd_win.cpp
 
 	with_platform macos depend_library AppKit find
 
