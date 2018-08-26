@@ -645,6 +645,19 @@ struct RecordedFragment : AudioSource
 		}
 	#endif
 	}
+
+#if AUDIO_USE_SSE
+	// todo : add a helper macro to make objects allocate though the heap at N-alignment
+	void * operator new(size_t size)
+	{
+		return _mm_malloc(size, 32);
+	}
+
+	void operator delete(void * mem)
+	{
+		_mm_free(mem);
+	}
+#endif
 };
 
 struct World
@@ -700,6 +713,18 @@ struct World
 			speeder.tick(dt);
 		}
 	}
+
+#if AUDIO_USE_SSE
+	void * operator new(size_t size)
+	{
+		return _mm_malloc(size, 32);
+	}
+
+	void operator delete(void * mem)
+	{
+		_mm_free(mem);
+	}
+#endif
 };
 
 static World * s_world = nullptr;
@@ -798,9 +823,9 @@ int main(int argc, char * argv[])
 	MyPortAudioHandler * paHandler = new MyPortAudioHandler();
 	s_paHandler = paHandler;
 	
-	World world;
-	world.init();
-	s_world = &world;
+	World * world = new World();
+	world->init();
+	s_world = world;
 	
 	PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, paHandler);
@@ -828,7 +853,7 @@ int main(int argc, char * argv[])
 			
 			SDL_LockMutex(audioMutex);
 			{
-				auto & speeder = world.speeders[nextSpeederIndex];
+				auto & speeder = world->speeders[nextSpeederIndex];
 				
 				speeder.p = cameraTransform.GetTranslation() + cameraTransform.GetAxis(2) * .4f;
 				speeder.v = cameraTransform.GetAxis(2) * 10.f;
@@ -841,7 +866,7 @@ int main(int argc, char * argv[])
 
 		// update the world
 		
-		world.tick(dt);
+		world->tick(dt);
 		
 		// update information to/from audio thread
 		
@@ -914,7 +939,9 @@ int main(int argc, char * argv[])
 	
 	pa.shut();
 	
-	world.shut();
+	world->shut();
+	delete world;
+	world = nullptr;
 	s_world = nullptr;
 	
 	s_paHandler = nullptr;
