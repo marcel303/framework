@@ -7,11 +7,6 @@ message("setting HAS_LIBPS3EYE")
 
 # --- dependencies ---
 
-if (NOT HAS_LIBGG)
-	message("including libgg")
-	add_subdirectory(../libgg libgg)
-endif (NOT HAS_LIBGG)
-
 #
 
 project(libps3eye)
@@ -30,5 +25,5 @@ find_package(LibUSB REQUIRED)
 target_include_directories(libps3eye PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(libps3eye PRIVATE "${PROJECT_SOURCE_DIR}" "${LibUSB_INCLUDE_DIRS}")
 
-target_link_libraries(libps3eye PRIVATE libgg ${LibUSB_LIBRARIES})
+target_link_libraries(libps3eye PRIVATE ${LibUSB_LIBRARIES})
 
