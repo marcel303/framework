@@ -46,6 +46,7 @@ library libsdl2
 	with_platform macos depend_library ForceFeedback find
 	with_platform macos depend_library IOKit find
 	with_platform macos depend_library iconv find
+	with_platform macos depend_library bz2 find
 	with_platform macos depend_library OpenGL find
 	# weak : QuartzCore
 	# weak : Metal
