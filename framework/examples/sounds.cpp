@@ -45,11 +45,14 @@ int main(int argc, char * argv[])
 	Music music("bgm.ogg");
 	bool playMusic = true;
 	
-	while (!keyboard.isDown(SDLK_ESCAPE))
+	while (!framework.quitRequested)
 	{
 		// process
 		
 		framework.process();
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
 		
 		int index = -1;
 		

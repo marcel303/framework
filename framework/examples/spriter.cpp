@@ -55,9 +55,12 @@ int main(int argc, char * argv[])
 	
 	bool isGrounded = true;
 	
-	while (!keyboard.isDown(SDLK_ESCAPE))
+	while (!framework.quitRequested)
 	{
 		framework.process();
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
 		
 		if (isGrounded && ((rand() % 100) == 0 || keyboard.wentDown(SDLK_SPACE)))
 		{

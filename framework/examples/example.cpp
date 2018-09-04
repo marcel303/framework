@@ -117,9 +117,12 @@ int main(int argc, char * argv[])
 	for (int i = 0; i < numSprites; ++i)
 		sprites[i] = createRandomSprite();
 	
-	while (!keyboard.isDown(SDLK_ESCAPE))
+	while (!framework.quitRequested)
 	{
 		framework.process();
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
 		
 		if (keyboard.isDown(SDLK_a))
 		{

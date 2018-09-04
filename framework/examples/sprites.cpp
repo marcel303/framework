@@ -42,9 +42,12 @@ int main(int argc, char * argv[])
 	
 	float angle = 0.f;
 	
-	while (!keyboard.isDown(SDLK_ESCAPE))
+	while (!framework.quitRequested)
 	{
 		framework.process();
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
 		
 		angle += framework.timeStep * 10.f;
 		
