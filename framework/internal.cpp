@@ -1804,7 +1804,12 @@ void FontCacheElem::load(const char * filename)
 	else
 	{
 		logInfo("loaded %s", filename);
-
+		
+		const FT_Error err = FT_Select_Charmap(face, FT_ENCODING_UNICODE);
+		Assert(err == 0);
+		if (err != 0)
+			logWarning("failed to select FreeType unicode character map");
+		
 		// fixme : this is a work around for FreeType returning monochrome data in FT_Load_Char, instead of the 8 bit gray scale data it should be returning, when it finds a stored glyph bitmap in the font itself. since we cannot directly upload bit packed font data to OpenGL, we 'force' FreeType to always render the outline version instead, by setting num_fixed_sizes to zero here
 		//face->num_fixed_sizes = 0;
 		
@@ -1991,7 +1996,8 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 		
 		GlyphCacheElem elem;
 		
-		FT_Set_Pixel_Sizes(face, 0, size);
+		const FT_Error err = FT_Set_Pixel_Sizes(face, 0, size);
+		Assert(err == FT_Err_Ok);
 
 		// note : we use FT_LOAD_NO_BITMAP to avoid getting embedded glyph data. this embedded data uses 1 bpp monochrome pre-rendered versions of the glyphs. we currently do not support unpacking this data, although it may be beneficial (readability-wise) to do so
 		// note : we use FT_LOAD_FORCE_AUTOHINT to improve readability for some fonts at small sizes. perhaps this flag can be removed when FT_LOAD_NO_BITMAP is removed
