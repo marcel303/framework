@@ -3,6 +3,8 @@ library framework
 	depend_library libgg
 	depend_library libfbx
 
+	depend_library libsdl2
+
 	scan_files cpp
 	scan_files c   path audiostream          group audiostream
 	scan_files cpp path audiostream          group audiostream
@@ -35,19 +37,7 @@ library framework
 	with_platform macos depend_library macos/glew/lib/libGLEW.a local
 	with_platform macos depend_library macos/lib/libfreeimage.a local
 	with_platform macos depend_library macos/lib/libfreetype.a  local
-	with_platform macos depend_library macos/lib/libSDL2.a      local
-	with_platform macos depend_library macos/lib/libSDL2main.a  local
 	with_platform macos depend_library macos/lib/libportaudio.a local
-	with_platform macos depend_library Cocoa         find
-	with_platform macos depend_library Carbon        find
-	with_platform macos depend_library CoreAudio     find
-	with_platform macos depend_library CoreVideo     find
-	with_platform macos depend_library IOKit         find
-	with_platform macos depend_library AudioToolbox  find
-	with_platform macos depend_library OpenGL        find
-	with_platform macos depend_library ForceFeedback find
-	with_platform macos depend_library iconv         find
-	with_platform macos depend_library bz2           find
 
 # Windows header files includes and libraries
 	with_platform windows header_path win32/include          expose
