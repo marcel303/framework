@@ -3,7 +3,8 @@ library libsdl2
 	# SDL_config is overridden for macos. the header path _must_ come before SDL itself
 	with_platform macos header_path libsdl2-support/macos expose
 
-	header_path libsdl2/include expose
+	header_path libsdl2/include
+	header_path libsdl2/include alias_through_copy SDL2 expose
 
 	scan_files c path libsdl2/src
 	scan_files c path libsdl2/src/atomic group atomic
