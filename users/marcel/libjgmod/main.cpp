@@ -205,15 +205,20 @@ int main(int argc, char **argv)
 {
 #if defined(CHIBI_RESOURCE_PATH)
 	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
 #endif
 
-	const char * filename;
-	
-#if defined(CHIBI_RESOURCE_PATH)
-    if (argc != 2)
-    	filename = "City1g.it";
-	else
+#if MACOS
+	if (argc >= 2 && strstr(argv[1], "-psn") == argv[1])
+	{
+		argc--;
+		argv++;
+	}
 #endif
+
+	const char * filename = "City1g.it";
+	
 	if (argc == 2)
 		filename = argv[1];
 	else
@@ -227,7 +232,7 @@ int main(int argc, char **argv)
 			JGMOD_AUTHOR,
 			JGMOD_DATE_STR);
 		
-        return -1;
+        //return -1;
 	}
 	
 	srand(time(0));
