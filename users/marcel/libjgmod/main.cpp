@@ -239,6 +239,7 @@ int main(int argc, char **argv)
 	
 	framework.actionHandler = handleAction;
 	framework.enableDepthBuffer = true;
+	framework.filedrop = true;
 	
 	if (framework.init(0, nullptr, 320*3, 200*3) == false)
 	{
