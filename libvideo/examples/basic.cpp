@@ -28,6 +28,8 @@
 #include "framework.h"
 #include "video.h"
 
+static void drawProgressBar(const int x, const int y, const int sx, const int sy, const double time, const double duration);
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
@@ -60,18 +62,32 @@ int main(int argc, char * argv[])
 				mp.presentTime = 0.0;
 				mp.openAsync(openParams);
 			}
-
+			
 			framework.beginDraw(0, 0, 0, 0);
 			{
+				// draw the video frame
+				
 				const GLuint texture = mp.getTexture();
 
 				if (texture != 0)
 				{
+					setColor(colorWhite);
 					gxSetTexture(texture);
 					pushBlend(BLEND_OPAQUE);
 					drawRect(0, 0, 800, 400);
 					popBlend();
 					gxSetTexture(0);
+				}
+				
+				// draw the progress bar
+				
+				int sx;
+				int sy;
+				double duration;
+				
+				if (mp.getVideoProperties(sx, sy, duration))
+				{
+					drawProgressBar(20, 400-20-20, 200, 20, mp.presentTime, duration);
 				}
 			}
 			framework.endDraw();
@@ -79,4 +95,29 @@ int main(int argc, char * argv[])
 	}
 
 	return 0;
+}
+
+static void drawProgressBar(const int x, const int y, const int sx, const int sy, const double time, const double duration)
+{
+	const double t = time / duration;
+	
+	setColor(63, 127, 255, 127);
+	hqBegin(HQ_FILLED_ROUNDED_RECTS);
+	hqFillRoundedRect(x, y, x + sx * t, y + sy, 6);
+	hqEnd();
+	
+	setColor(63, 127, 255, 255);
+	hqBegin(HQ_STROKED_ROUNDED_RECTS);
+	hqStrokeRoundedRect(x, y, x + sx, y + sy, 6, 2);
+	hqEnd();
+	
+	setFont("calibri.ttf");
+	pushFontMode(FONT_SDF);
+	setColor(colorWhite);
+	const int hours = int(floor(time / 3600.0));
+	const int minutes = int(floor(fmod(time / 60.0, 60.0)));
+	const int seconds = int(floor(fmod(time, 60.0)));
+	const int hundreds = int(floor(fmod(time, 1.0) * 100.0));
+	drawText(x + 10, y + sy/2, 12, +1, 0, "%02d:%02d:%02d.%02d", hours, minutes, seconds, hundreds);
+	popFontMode();
 }
