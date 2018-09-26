@@ -7,7 +7,7 @@ library libgg
 
 	header_path . expose
 
-	compile_definition DEBUG 1 expose
+	compile_definition DEBUG 1 config Debug expose
 
 	compile_definition _USE_MATH_DEFINES       * toolchain msvc
 	compile_definition _CRT_SECURE_NO_WARNINGS * toolchain msvc
