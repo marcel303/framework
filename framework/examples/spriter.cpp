@@ -130,6 +130,10 @@ int main(int argc, char * argv[])
 			hqFillRoundedRect(10, VIEW_SY - 10, VIEW_SX - 10, VIEW_SY - 100, 10.f);
 			hqEnd();
 			hqClearGradient();
+			
+			setFont("calibri.ttf");
+			setColor(80, 80, 80);
+			drawText(VIEW_SX/2, 30, 16, 0, +1, "This example demonstrates loading, animating and drawing a character created using 2d skeletal animation software Spriter.");
 		}
 		framework.endDraw();
 	}
