@@ -153,7 +153,7 @@ struct MediaPlayer : public AudioStream
 	bool isActive(Context * context) const;
 	bool presentedLastFrame(Context * context) const;
 	void seekToStart();
-	void seek(const double time);
+	void seek(const double time, const bool nearest);
 	
 	bool updateVideoFrame();
 	void updateTexture();

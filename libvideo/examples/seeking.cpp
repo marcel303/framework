@@ -104,9 +104,11 @@ int main(int argc, char * argv[])
 					
 					if (seek)
 					{
-						mp.seek(seekTime);
+						const bool nearest =
+							keyboard.isDown(SDLK_LSHIFT) ||
+							keyboard.isDown(SDLK_RSHIFT);
 						
-						mp.presentTime = seekTime;
+						mp.seek(seekTime, nearest);
 					
 						framework.process();
 						framework.process();

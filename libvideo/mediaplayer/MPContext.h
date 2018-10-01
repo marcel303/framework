@@ -66,7 +66,7 @@ namespace MP
 		void FillVideoBuffer();
 
 		bool SeekToStart();
-		bool SeekToTime(const double time);
+		bool SeekToTime(const double time, const bool nearest, double & actualTime);
 
 		AVFormatContext * GetFormatContext();
 

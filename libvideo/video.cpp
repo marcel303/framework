@@ -234,14 +234,20 @@ void MediaPlayer::seekToStart()
 	SDL_UnlockMutex(context->mpTickMutex);
 }
 
-void MediaPlayer::seek(const double time)
+void MediaPlayer::seek(const double time, const bool nearest)
 {
 	SDL_LockMutex(context->mpTickMutex);
 	{
 		SDL_LockMutex(context->mpSeekMutex);
 		{
 			if (context->hasBegun)
-				context->mpContext.SeekToTime(time);
+			{
+				double actualTime;
+				
+				context->mpContext.SeekToTime(time, nearest, actualTime);
+				
+				presentTime = actualTime;
+			}
 		}
 		SDL_UnlockMutex(context->mpSeekMutex);
 	}

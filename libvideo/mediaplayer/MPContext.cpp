@@ -371,7 +371,7 @@ namespace MP
 		return result;
 	}
 
-	bool Context::SeekToTime(const double time)
+	bool Context::SeekToTime(const double time, const bool nearest, double & actualTime)
 	{
 		bool result = true;
 		
@@ -395,27 +395,62 @@ namespace MP
 		if (av_seek_frame(m_formatContext, -1, time * AV_TIME_BASE, AVSEEK_FLAG_BACKWARD) < 0)
 			result = false;
 		
-		for (;;)
+		if (nearest == false)
 		{
-			if (FillBuffers() == false)
-				break;
+			// perform accurate seeking by first seeking before the given time stamp (above) and after that, decoding frames up until the requested time stamp (or the end of the stream is encountered)
 			
-			FillAudioBuffer();
-
-			FillVideoBuffer();
-	
-			m_videoContext->m_videoBuffer->AdvanceToTime(time);
-			
-			if (m_videoContext->m_videoBuffer->m_consumeList.empty() == false)
+			for (;;)
 			{
-				VideoFrame * videoFrame = m_videoContext->m_videoBuffer->m_consumeList.front();
+				if (FillBuffers() == false)
+					break;
 				
-				if (videoFrame != nullptr && videoFrame->m_time >= time)
+				FillAudioBuffer();
+
+				FillVideoBuffer();
+		
+				m_videoContext->m_videoBuffer->AdvanceToTime(time);
+				
+				if (m_videoContext->m_videoBuffer->m_consumeList.empty() == false)
+				{
+					VideoFrame * videoFrame = m_videoContext->m_videoBuffer->m_consumeList.front();
+					
+					if (videoFrame != nullptr && videoFrame->m_time >= time)
+						break;
+				}
+				
+				if (Depleted())
 					break;
 			}
+		}
+		else
+		{
+			// decode at least a single frame to find the actual seek time
 			
-			if (Depleted())
-				break;
+			while (m_videoContext->m_videoBuffer->m_consumeList.empty())
+			{
+				if (FillBuffers() == false)
+					break;
+				
+				FillAudioBuffer();
+
+				FillVideoBuffer();
+				
+				if (Depleted())
+					break;
+			}
+
+		}
+		
+		//
+		
+		actualTime = 0.0;
+		
+		if (m_videoContext->m_videoBuffer->m_consumeList.empty() == false)
+		{
+			VideoFrame * videoFrame = m_videoContext->m_videoBuffer->m_consumeList.front();
+			
+			if (videoFrame != nullptr)
+				actualTime = videoFrame->m_time;
 		}
 		
 		return result;
