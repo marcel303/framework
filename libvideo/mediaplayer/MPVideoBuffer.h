@@ -80,7 +80,7 @@ namespace MP
 		bool IsFull() const;
 		void Clear();
 
-	private:
+	//private:
 		mutable Mutex m_mutex;
 
 		std::list<VideoFrame*> m_freeList;

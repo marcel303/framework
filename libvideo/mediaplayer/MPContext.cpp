@@ -374,24 +374,12 @@ namespace MP
 	bool Context::SeekToTime(const double time)
 	{
 		bool result = true;
-
-		int streamIndex = -1;
-
-		if (false)
-		{
-			if (m_videoContext)
-				streamIndex = m_videoContext->GetStreamIndex();
-			else if (m_audioContext)
-				streamIndex = m_audioContext->GetStreamIndex();
-		}
-
-		if (av_seek_frame(m_formatContext, streamIndex, time * AV_TIME_BASE, (1*AVSEEK_FLAG_ANY)) < 0)
-			result = false;
-
+		
 		if (m_audioContext != nullptr)
 		{
 			m_audioContext->m_packetQueue->Clear();
 			m_audioContext->m_audioBuffer->Clear();
+			
 			avcodec_flush_buffers(m_audioContext->m_codecContext);
 		}
 
@@ -399,8 +387,35 @@ namespace MP
 		{
 			m_videoContext->m_packetQueue->Clear();
 			m_videoContext->m_videoBuffer->Clear();
-			m_videoContext->m_time = time;
+			m_videoContext->m_time = 0.0;
+			
 			avcodec_flush_buffers(m_videoContext->m_codecContext);
+		}
+
+		if (av_seek_frame(m_formatContext, -1, time * AV_TIME_BASE, AVSEEK_FLAG_BACKWARD) < 0)
+			result = false;
+		
+		for (;;)
+		{
+			if (FillBuffers() == false)
+				break;
+			
+			FillAudioBuffer();
+
+			FillVideoBuffer();
+	
+			m_videoContext->m_videoBuffer->AdvanceToTime(time);
+			
+			if (m_videoContext->m_videoBuffer->m_consumeList.empty() == false)
+			{
+				VideoFrame * videoFrame = m_videoContext->m_videoBuffer->m_consumeList.front();
+				
+				if (videoFrame != nullptr && videoFrame->m_time >= time)
+					break;
+			}
+			
+			if (Depleted())
+				break;
 		}
 		
 		return result;
