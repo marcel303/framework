@@ -70,7 +70,11 @@ static int ExecMediaPlayerThread(void * param)
 		{
 			cpuTimingBlock(tickMediaPlayer);
 			
+			SDL_LockMutex(context->mpSeekMutex);
+			
 			context->tick();
+			
+			SDL_UnlockMutex(context->mpSeekMutex);
 		}
 		
 		SDL_LockMutex(context->mpTickMutex);
@@ -216,13 +220,30 @@ bool MediaPlayer::presentedLastFrame(Context * context) const
 	return context && context->presentedLastFrame();
 }
 
+void MediaPlayer::seekToStart()
+{
+	SDL_LockMutex(context->mpTickMutex);
+	{
+		SDL_LockMutex(context->mpSeekMutex);
+		{
+			if (context->hasBegun)
+				context->mpContext.SeekToStart();
+		}
+		SDL_UnlockMutex(context->mpSeekMutex);
+	}
+	SDL_UnlockMutex(context->mpTickMutex);
+}
+
 void MediaPlayer::seek(const double time)
 {
 	SDL_LockMutex(context->mpTickMutex);
 	{
-		// todo : should only be allowed from mp thread. else, how do we know context has actually begun?
-		
-		context->mpContext.SeekToTime(time);
+		SDL_LockMutex(context->mpSeekMutex);
+		{
+			if (context->hasBegun)
+				context->mpContext.SeekToTime(time);
+		}
+		SDL_UnlockMutex(context->mpSeekMutex);
 	}
 	SDL_UnlockMutex(context->mpTickMutex);
 }
@@ -438,6 +459,7 @@ void MediaPlayer::startMediaPlayerThread()
 	Assert(mpThread == nullptr);
 	Assert(context->mpTickEvent == nullptr);
 	Assert(context->mpTickMutex == nullptr);
+	Assert(context->mpSeekMutex == nullptr);
 
 	if (s_avcodecMutex == nullptr)
 	{
@@ -450,6 +472,8 @@ void MediaPlayer::startMediaPlayerThread()
 		context->mpTickEvent = SDL_CreateCond();
 	if (context->mpTickMutex == nullptr)
 		context->mpTickMutex = SDL_CreateMutex();
+	if (context->mpSeekMutex == nullptr)
+		context->mpSeekMutex = SDL_CreateMutex();
 
 	if (mpThread == nullptr)
 	{

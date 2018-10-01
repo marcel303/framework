@@ -55,6 +55,7 @@ struct MediaPlayer : public AudioStream
 		Context()
 			: mpTickEvent(nullptr)
 			, mpTickMutex(nullptr)
+			, mpSeekMutex(nullptr)
 			, mpThreadId(-1)
 		#ifndef __WIN32__ // todo : do it like this on Win32 too
 			, hasBegun(false)
@@ -82,6 +83,12 @@ struct MediaPlayer : public AudioStream
 				SDL_DestroyMutex(mpTickMutex);
 				mpTickMutex = nullptr;
 			}
+			
+			if (mpSeekMutex)
+			{
+				SDL_DestroyMutex(mpSeekMutex);
+				mpSeekMutex = nullptr;
+			}
 		}
 
 		void tick();
@@ -93,6 +100,7 @@ struct MediaPlayer : public AudioStream
 		MP::Context mpContext;
 		SDL_cond * mpTickEvent;
 		SDL_mutex * mpTickMutex;
+		SDL_mutex * mpSeekMutex;
 		SDL_threadID mpThreadId;
 
 		// hacky messaging between threads
@@ -144,6 +152,7 @@ struct MediaPlayer : public AudioStream
 
 	bool isActive(Context * context) const;
 	bool presentedLastFrame(Context * context) const;
+	void seekToStart();
 	void seek(const double time);
 	
 	bool updateVideoFrame();
