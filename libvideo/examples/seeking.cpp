@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "video.h"
 
-static void drawProgressBar(const int x, const int y, const int sx, const int sy, const double time, const double duration);
+static void doProgressBar(const int x, const int y, const int sx, const int sy, const double time, const double duration, bool & hover, bool & seek, double & seekTime);
 
 int main(int argc, char * argv[])
 {
@@ -46,9 +46,13 @@ int main(int argc, char * argv[])
 		mp.openAsync("/Users/thecat/Movies/L_SNINGEN.mp4", MP::kOutputMode_RGBA);
 		//mp.openAsync("/Users/thecat/Movies/Game Capture HD Library/Mijn video 13/Segment_0001.mp4", MP::kOutputMode_RGBA);
 
+		SDL_Cursor * handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+		
 		while (!framework.quitRequested)
 		{
 			framework.process();
+			
+			SDL_Cursor * cursor = SDL_GetDefaultCursor();
 
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
@@ -57,31 +61,12 @@ int main(int argc, char * argv[])
 			
 			mp.tick(mp.context, true);
 			
-			if (mp.presentedLastFrame(mp.context) || mouse.wentDown(BUTTON_LEFT))
+			if (mp.presentedLastFrame(mp.context))
 			{
 				auto openParams = mp.context->openParams;
 				mp.close(false);
 				mp.presentTime = 0.0;
 				mp.openAsync(openParams);
-			}
-			
-			if (mouse.wentDown(BUTTON_RIGHT))
-			{
-				int sx;
-				int sy;
-				double duration;
-				
-				if (mp.getVideoProperties(sx, sy, duration))
-				{
-					const double t = random(0.0, duration);
-					
-					mp.seek(t);
-					
-					mp.presentTime = t;
-					
-					framework.process();
-					framework.process();
-				}
 			}
 			
 			framework.beginDraw(0, 0, 0, 0);
@@ -108,18 +93,57 @@ int main(int argc, char * argv[])
 				
 				if (mp.getVideoProperties(sx, sy, duration))
 				{
-					drawProgressBar(20, 400-20-20, 200, 20, mp.presentTime, duration);
+					bool hover = false;
+					bool seek = false;
+					double seekTime;
+					
+					doProgressBar(20, 400-20-20, 200, 20, mp.presentTime, duration, hover, seek, seekTime);
+					
+					if (hover)
+						cursor = handCursor;
+					
+					if (seek)
+					{
+						mp.seek(seekTime);
+						
+						mp.presentTime = seekTime;
+					
+						framework.process();
+						framework.process();
+					}
 				}
 			}
 			framework.endDraw();
+			
+			SDL_SetCursor(cursor);
 		}
+		
+		mp.close(true);
+		
+		framework.shutdown();
 	}
 
 	return 0;
 }
 
-static void drawProgressBar(const int x, const int y, const int sx, const int sy, const double time, const double duration)
+static void doProgressBar(const int x, const int y, const int sx, const int sy, const double time, const double duration, bool & hover, bool & seek, double & seekTime)
 {
+	// tick
+	
+	hover =
+		mouse.x >= x &&
+		mouse.y >= y &&
+		mouse.x < x + sx &&
+		mouse.y < y + sy;
+	
+	if (hover && mouse.wentDown(BUTTON_LEFT))
+	{
+		seek = true;
+		seekTime = clamp((mouse.x - x) / double(sx) * duration, 0.0, duration);
+	}
+	
+	// draw
+	
 	const double t = time / duration;
 	
 	setColor(63, 127, 255, 127);
