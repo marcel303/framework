@@ -92,6 +92,10 @@ int main(int argc, char * argv[])
 			}
 			framework.endDraw();
 		}
+		
+		mp.close(true);
+		
+		framework.shutdown();
 	}
 
 	return 0;
