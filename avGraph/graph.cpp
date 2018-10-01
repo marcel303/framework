@@ -28,6 +28,7 @@
 #include "Calc.h"
 #include "Debugging.h"
 #include "graph.h"
+#include "graphEdit_nodeResourceEditorWindow.h"
 #include "graphEdit_nodeTypeSelect.h"
 #include "Parse.h"
 #include "StringEx.h"
@@ -1895,6 +1896,7 @@ GraphEdit::GraphEdit(
 	, nodeTypeNameSelect(nullptr)
 	, nodeInsertMenu(nullptr)
 	, nodeResourceEditor()
+	, nodeResourceEditorWindows()
 	, displaySx(0)
 	, displaySy(0)
 	, uiState(nullptr)
@@ -2526,6 +2528,25 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			visualizer.nodeId, visualizer.dstSocketName, visualizer.dstSocketIndex);
 	}
 	
+	// update node resource editor windows
+	
+	for (auto resourceEditorItr = nodeResourceEditorWindows.begin(); resourceEditorItr != nodeResourceEditorWindows.end(); )
+	{
+		auto & resourceEditor = *resourceEditorItr;
+		
+		if (resourceEditor->tick(dt))
+		{
+			delete resourceEditor;
+			resourceEditor = nullptr;
+			
+			resourceEditorItr = nodeResourceEditorWindows.erase(resourceEditorItr);
+		}
+		else
+		{
+			resourceEditorItr++;
+		}
+	}
+	
 	//
 	
 	if (realTimeConnection != nullptr)
@@ -2774,11 +2795,27 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							{
 								nodeDoubleClickTime = 0.f;
 								
+							#if 1
+								GraphEdit_NodeResourceEditorWindow * resourceEditorWindow = new GraphEdit_NodeResourceEditorWindow();
+								
+								if (resourceEditorWindow->init(this, hitTestResult.node->id))
+								{
+									nodeResourceEditorWindows.push_back(resourceEditorWindow);
+								}
+								else
+								{
+									delete resourceEditorWindow;
+									resourceEditorWindow = nullptr;
+									
+									showNotification("Failed to create resource editor!");
+								}
+							#else
 								if (nodeResourceEditBegin(hitTestResult.node->id))
 								{
 									state = kState_NodeResourceEdit;
 									break;
 								}
+							#endif
 							}
 							else
 							{

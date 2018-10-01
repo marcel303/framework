@@ -44,6 +44,8 @@ namespace tinyxml2
 	class XMLPrinter;
 }
 
+class Window;
+
 struct UiState;
 struct ParticleColor;
 
@@ -57,6 +59,7 @@ namespace GraphUi
 
 //
 
+struct GraphEdit_NodeResourceEditorWindow;
 struct GraphEdit_NodeTypeSelect;
 struct GraphEdit_ResourceEditorBase;
 struct GraphEdit_TypeDefinitionLibrary;
@@ -1450,6 +1453,8 @@ struct GraphEdit : GraphEditConnection
 	
 	NodeResourceEditor nodeResourceEditor;
 	
+	std::list<GraphEdit_NodeResourceEditorWindow*> nodeResourceEditorWindows;
+	
 	std::list<Notification> notifications;
 	
 	int displaySx;
@@ -1490,6 +1495,7 @@ struct GraphEdit : GraphEditConnection
 	bool tickTouches();
 	void tickMouseScroll(const float dt);
 	void tickKeyboardScroll();
+	void tickNodeResourceEditorWindows();
 	
 	void nodeSelectEnd();
 	void nodeDragEnd();
