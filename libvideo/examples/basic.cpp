@@ -114,10 +114,17 @@ static void drawProgressBar(const int x, const int y, const int sx, const int sy
 	setFont("calibri.ttf");
 	pushFontMode(FONT_SDF);
 	setColor(colorWhite);
+	
 	const int hours = int(floor(time / 3600.0));
 	const int minutes = int(floor(fmod(time / 60.0, 60.0)));
 	const int seconds = int(floor(fmod(time, 60.0)));
 	const int hundreds = int(floor(fmod(time, 1.0) * 100.0));
-	drawText(x + 10, y + sy/2, 12, +1, 0, "%02d:%02d:%02d.%02d", hours, minutes, seconds, hundreds);
+	
+	const int d_hours = int(floor(duration / 3600.0));
+	const int d_minutes = int(floor(fmod(duration / 60.0, 60.0)));
+	const int d_seconds = int(floor(fmod(duration, 60.0)));
+	const int d_hundreds = int(floor(fmod(duration, 1.0) * 100.0));
+	
+	drawText(x + 10, y + sy/2, 12, +1, 0, "%02d:%02d:%02d.%02d / %02d:%02d:%02d.%02d", hours, minutes, seconds, hundreds, d_hours, d_minutes, d_seconds, d_hundreds);
 	popFontMode();
 }
