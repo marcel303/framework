@@ -1684,6 +1684,13 @@ void ModelCacheElem::load(const char * filename)
 	if (boneSet == 0)
 	{
 		boneSet = new BoneSet();
+		boneSet->allocate(1);
+		
+		Bone & bone = boneSet->m_bones[0];
+		bone.name = "root";
+		bone.poseMatrix.MakeIdentity();
+		bone.parent = -1;
+		bone.originalIndex = 0;
 	}
 	
 	// 3) load mesh set and anim sets
