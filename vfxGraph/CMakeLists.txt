@@ -100,7 +100,7 @@ target_link_libraries(vfxgraph libgg)
 target_link_libraries(vfxgraph libosc)
 target_link_libraries(vfxgraph libvideo)
 if (NOT WIN32)
-	target_link_libraries(vfxgraph libps3eye)
+	#target_link_libraries(vfxgraph libps3eye)
 endif (NOT WIN32)
 
 target_compile_definitions(vfxgraph PUBLIC
@@ -112,7 +112,7 @@ if (WIN32)
 endif (WIN32)
 
 if (APPLE)
-	target_compile_definitions(vfxgraph PUBLIC ENABLE_SYPHON=1 ENABLE_LEAPMOTION=1 ENABLE_KINECT2=1 ENABLE_DEEPBELIEF=1 ENABLE_PS3EYE=1 ENABLE_WIIMOTE=1 __MACOSX_CORE__)
+	target_compile_definitions(vfxgraph PUBLIC ENABLE_SYPHON=0 ENABLE_LEAPMOTION=0 ENABLE_KINECT2=0 ENABLE_DEEPBELIEF=0 ENABLE_PS3EYE=0 ENABLE_WIIMOTE=0 __MACOSX_CORE__)
 endif (APPLE)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -127,7 +127,6 @@ endif (WIN32)
 
 if (APPLE)
 	target_include_directories(vfxgraph PUBLIC "macos/include")
-	target_include_directories(vfxgraph PRIVATE "../libfreenect2/macos/include")
 endif (APPLE)
 
 if (WIN32)
@@ -144,20 +143,12 @@ if (WIN32)
 endif (WIN32)
 
 if (APPLE)
-	target_link_libraries(vfxgraph ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/DeepBelief.framework)
-	target_link_libraries(vfxgraph ${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Syphon.framework)
-
 	find_library(COREIMAGE_LIBRARY CoreImage)
 	find_library(COREMIDI_LIBRARY CoreMIDI)
 	find_library(AVFOUNDATION_LIBRARY AVFoundation)
-	find_library(IOBLUETOOH_LIBRARY IOBluetooth) # Wiimote
 
 	set(VFXGRAPH_LIBRARIES
-		${CMAKE_CURRENT_SOURCE_DIR}/../libfreenect2/macos/lib/libfreenect2.0.2.0.dylib
-		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libLeap.dylib
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libturbojpeg.0.dylib
-		${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/DeepBelief.framework
-		${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Syphon.framework
 		${COREIMAGE_LIBRARY}
 		${COREMIDI_LIBRARY}
 		${AVFOUNDATION_LIBRARY}
@@ -165,9 +156,6 @@ if (APPLE)
 		PARENT_SCOPE)
 
 	set(VFXGRAPH_BINARIES
-		${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Deepbelief.framework
-		${CMAKE_CURRENT_SOURCE_DIR}/macos/framework/Syphon.framework
-		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libLeap.dylib
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libturbojpeg.0.dylib
 		PARENT_SCOPE)
 endif (APPLE)
