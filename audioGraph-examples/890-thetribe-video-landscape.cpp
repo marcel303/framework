@@ -2299,7 +2299,9 @@ struct GamepadController
 	
 	void tick()
 	{
-		controlValues[2] = (gamepad[0].getAnalog(0, ANALOG_X) / 2.f + 1.f) / 2.f;
+		// broken joystick reports values for X-axis: -1 .. +0.62, with -0.26 at center position
+		//printf("%g\n", gamepad[0].getAnalog(0, ANALOG_X));
+		controlValues[2] = (gamepad[0].getAnalog(0, ANALOG_X) + .26f) / 1.26f / 1.6f;
 		
 		const float alpha = (clamp(gamepad[0].getAnalog(0, ANALOG_Y) * 1.5f, -1.f, +1.f) + 1.f) / 2.f;// * (.5f / .6f);
 		
@@ -2453,7 +2455,7 @@ struct SpacePoints
 		s_morph1 = controller.controlValues[0];
 		s_morph2 = controller.controlValues[1];
 		
-		const float speed = (controller.controlValues[2] - .5f) * 2.f;
+		const float speed = controller.controlValues[2];
 		const float speedSign = speed < 0.f ? -1.f : +1.f;
 		const float speedMag = fabs(speed);
 		const float speedMagCurve = powf(speedMag, 3.f);
