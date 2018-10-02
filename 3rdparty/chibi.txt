@@ -1,4 +1,4 @@
-library libsdl2
+library libsdl2 shared
 
 	# SDL_config is overridden for macos. the header path _must_ come before SDL itself
 	with_platform macos header_path libsdl2-support/macos expose
@@ -55,3 +55,17 @@ library libsdl2
 app libsdl2-test-basic
 	add_files libsdl2-support/test-basic.cpp
 	depend_library libsdl2
+
+library imgui
+	header_path imgui expose
+	add_files imgui/imgui.cpp imgui/imgui.h imgui/imgui_demo.cpp imgui/imgui_draw.cpp imgui/imgui_widgets.cpp
+
+library ImGuiColorTextEdit
+	depend_library imgui
+	header_path ImGuiColorTextEdit alias_through_copy imgui expose
+	add_files ImGuiColorTextEdit/TextEditor.cpp ImGuiColorTextEdit/TextEditor.h
+
+app ImGuiColorTextEdit-test
+	depend_library framework
+	depend_library ImGuiColorTextEdit
+	add_files ImGuiColorTextEdit-support/test.cpp
