@@ -811,8 +811,13 @@ int main(int argc, char * argv[])
 		{
 			framework.process();
 			
+		#if FULLSCREEN
+			if (keyboard.wentDown(SDLK_ESCAPE) && keyboard.isDown(SDLK_LSHIFT) && keyboard.isDown(SDLK_LCTRL))
+				framework.quitRequested = true;
+		#else
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
+		#endif
 			
 			audioGraphMgr.tickMain();
 			
