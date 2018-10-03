@@ -957,6 +957,18 @@ struct World
 			spokenWords[i].draw2d();
 		}
 	}
+
+#if AUDIO_USE_SSE
+	void * operator new(size_t size)
+	{
+		return _mm_malloc(size, 32);
+	}
+
+	void operator delete(void * mem)
+	{
+		_mm_free(mem);
+	}
+#endif
 };
 
 static World * s_world = nullptr;
