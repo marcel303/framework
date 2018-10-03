@@ -42,8 +42,8 @@
 #endif
 
 #if FULLSCREEN
-	const int GFX_SX = 800;
-	const int GFX_SY = 600;
+	const int GFX_SX = 1920;
+	const int GFX_SY = 1080;
 #else
 	const int GFX_SX = 1400;
 	const int GFX_SY = 400;
@@ -773,7 +773,7 @@ int main(int argc, char * argv[])
 #if FULLSCREEN
 	framework.fullscreen = true;
 	
-	changeDirectory(SDL_GetBasePath());
+	//changeDirectory(SDL_GetBasePath());
 #endif
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
@@ -812,7 +812,7 @@ int main(int argc, char * argv[])
 			framework.process();
 			
 		#if FULLSCREEN
-			if (keyboard.wentDown(SDLK_ESCAPE) && keyboard.isDown(SDLK_LSHIFT) && keyboard.isDown(SDLK_LCTRL))
+			if (keyboard.wentDown(SDLK_ESCAPE) && keyboard.isDown(SDLK_LSHIFT))
 				framework.quitRequested = true;
 		#else
 			if (keyboard.wentDown(SDLK_ESCAPE))
@@ -827,7 +827,7 @@ int main(int argc, char * argv[])
 				
 				gxPushMatrix();
 				gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
-				gxScalef(10, 10, 1);
+				gxScalef(22, 22, 1);
 				
 				hqBegin(HQ_LINES, true);
 				{
