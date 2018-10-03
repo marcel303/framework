@@ -421,7 +421,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 	gxInitialize();
 	
-#ifndef __WIN32__
+//#ifndef __WIN32__
+#if 1
 	// initialize SDL joysticks
 	
 	const int numJoysticks = SDL_NumJoysticks();
@@ -1011,7 +1012,8 @@ void Framework::process()
 	
 	globals.currentWindowData->makeActive();
 
-#ifdef __WIN32__
+//#ifdef __WIN32__
+#if 0
 	// use XInput to poll gamepad state
 	for (int i = 0; i < MAX_GAMEPAD; ++i)
 	{
