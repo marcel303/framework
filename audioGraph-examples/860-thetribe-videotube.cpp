@@ -671,9 +671,9 @@ struct World
 	
 	Videoclip videoclips[NUM_VIDEOCLIPS];
 	
-	Vfxclip vfxclips[NUM_VFXCLIPS];
+	Vfxclip vfxclips[NUM_VFXCLIPS + 1];
 	
-	SpokenWord spokenWords[NUM_SPOKENWORDS];
+	SpokenWord spokenWords[NUM_SPOKENWORDS + 1];
 	
 	HitTestResult hitTestResult;
 	
@@ -709,7 +709,11 @@ struct World
 		
 		camera.position[0] = 0;
 		camera.position[1] = +.3f;
-		camera.position[2] = 0;
+		camera.position[2] = 0.f;
+
+	#if INTERACTIVE_MODE
+		camera.position[2] = 5.f;
+	#endif
 		
 		//
 		
@@ -815,11 +819,11 @@ struct World
 		camera.tick(dt, doCamera);
 		
 	#if INTERACTIVE_MODE
-		const float kMaxDistance = 1.f;
+		const float kMaxDistance = 6.28f;
 		camera.position[0] = clamp(camera.position[0], -kMaxDistance, +kMaxDistance);
 		camera.position[1] = clamp(camera.position[1], -kMaxDistance, +kMaxDistance);
 		
-		if (mouse.isIdle())
+		if (keyboard.isIdle() && mouse.isIdle())
 			idleTime += dt;
 		else
 			idleTime = 0.f;
@@ -830,7 +834,7 @@ struct World
 			
 			camera.position[0] = camera.position[0] * falloff + 0.f * (1.f - falloff);
 			camera.position[1] = camera.position[1] * falloff + .3f * (1.f - falloff);
-			camera.position[2] = camera.position[2] * falloff + 0.f * (1.f - falloff);
+			camera.position[2] = camera.position[2] * falloff + 5.f * (1.f - falloff);
 			
 			camera.yaw *= falloff;
 			camera.pitch *= falloff;

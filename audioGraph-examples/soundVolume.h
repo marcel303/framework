@@ -33,6 +33,7 @@
 #include "objects/binauralizer.h"
 #include "soundmix.h"
 #include "Vec3.h"
+#include <algorithm>
 
 #define MAX_SAMPLELOCATIONS_PER_VOLUME 10 // center + nearest + eight vertices
 
