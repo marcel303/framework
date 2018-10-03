@@ -7,7 +7,7 @@
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 
-#define APPMODE 0
+#define APPMODE 1
 
 #if !defined(DEBUG)
 	#define FINMODE 1
@@ -209,9 +209,9 @@ VFX_NODE_TYPE(VfxNodeTriggerFilter)
 #include "video.h"
 
 #if APPMODE
-	#error this shouldn't be enable except for deployment of the app
+	#warning this shouldn't be enabled except for deployment of the app
 
-	#define MEDIA_PATH "media"
+	#define MEDIA_PATH "/Users/thecat/Sexyshow/media/"
 #else
 	#define MEDIA_PATH "/Users/thecat/Sexyshow/media/"
 #endif
@@ -387,8 +387,32 @@ int main(int argc, char * argv[])
 	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
 		return -1;
 	
+	bool inputIsWorking = false;
+	
+	for (int i = 0; i < 60*10; ++i)
+	{
+		framework.process();
+		
+		if (keyboard.wentDown(SDLK_SPACE))
+		{
+			inputIsWorking = true;
+			break;
+		}
+		
+		SDL_Delay(10);
+		
+		framework.beginDraw(i % 32, 0, 0, 0);
+		framework.endDraw();
+	}
+	
+	if (!inputIsWorking)
+		exit(0);
+	
 	videoFilenames = doMediaPicker();
 	std::random_shuffle(videoFilenames.begin(), videoFilenames.end());
+	
+	if (videoFilenames.empty())
+		exit(0);
 	
 	auto temp = interviewFilenames;
 	interviewFilenames = videoFilenames;
