@@ -306,12 +306,11 @@ struct VfxNodeLandscape : VfxNodeBase
 			s_landscape->restartVideos();
 		}
 		
-		if (keyboard.wentDown(SDLK_1))
-			s_landscape->activeVideo = 0;
-		else if (keyboard.wentDown(SDLK_2))
-			s_landscape->activeVideo = 1;
-		else if (keyboard.wentDown(SDLK_3))
-			s_landscape->activeVideo = 2;
+		for (int i = 0; i < 9; ++i)
+		{
+			if (keyboard.wentDown((SDLKey)(SDLK_1 + i)))
+				s_landscape->activeVideo = i;
+		}
 		
 		if (gamepad[0].wentDown(GAMEPAD_A))
 			s_landscape->activeVideo = (s_landscape->activeVideo + 1) % NUM_VIDEOS;
