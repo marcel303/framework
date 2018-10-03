@@ -5,6 +5,8 @@
 
 namespace Videotube
 {
+#define INTERACTIVE_MODE 1
+
 #define NUM_AUDIOCLIP_SOURCES 16
 #define NUM_VIDEOCLIP_SOURCES 3
 #define NUM_VIDEOCLIPS 16
@@ -675,12 +677,19 @@ struct World
 	
 	HitTestResult hitTestResult;
 	
+#if INTERACTIVE_MODE
+	float idleTime;
+#endif
+	
 	World()
 		: camera()
 		, videoclips()
 		, vfxclips()
 		, spokenWords()
 		, hitTestResult()
+	#if INTERACTIVE_MODE
+		, idleTime(0.f)
+	#endif
 	{
 	}
 
@@ -688,8 +697,12 @@ struct World
 	{
 		camera.gamepadIndex = 0;
 		
+	#if INTERACTIVE_MODE
+		const float kMoveSpeed = 1.f;
+	#else
 		const float kMoveSpeed = .2f;
-		//const float kMoveSpeed = 1.f;
+	#endif
+	
 		camera.maxForwardSpeed *= kMoveSpeed;
 		camera.maxUpSpeed *= kMoveSpeed;
 		camera.maxStrafeSpeed *= kMoveSpeed;
@@ -800,6 +813,30 @@ struct World
 		const bool doCamera = !(keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT));
 		
 		camera.tick(dt, doCamera);
+		
+	#if INTERACTIVE_MODE
+		const float kMaxDistance = 1.f;
+		camera.position[0] = clamp(camera.position[0], -kMaxDistance, +kMaxDistance);
+		camera.position[1] = clamp(camera.position[1], -kMaxDistance, +kMaxDistance);
+		
+		if (mouse.isIdle())
+			idleTime += dt;
+		else
+			idleTime = 0.f;
+		
+		if (idleTime >= 10.f)
+		{
+			const float falloff = powf(.5f, dt);
+			
+			camera.position[0] = camera.position[0] * falloff + 0.f * (1.f - falloff);
+			camera.position[1] = camera.position[1] * falloff + .3f * (1.f - falloff);
+			camera.position[2] = camera.position[2] * falloff + 0.f * (1.f - falloff);
+			
+			camera.yaw *= falloff;
+			camera.pitch *= falloff;
+			camera.roll *= falloff;
+		}
+	#endif
 		
 		//
 		
@@ -1028,7 +1065,13 @@ void main()
 #if DO_CONTROLWINDOW
 	ControlWindow controlWindow(world);
 #endif
-	
+
+#if INTERACTIVE_MODE
+	SDL_CaptureMouse(SDL_TRUE);
+	SDL_SetRelativeMouseMode(SDL_TRUE);
+	SDL_WarpMouseInWindow(nullptr, GFX_SX/2, GFX_SY/2);
+#endif
+
 	do
 	{
 		framework.process();
