@@ -1066,15 +1066,20 @@ void main()
 	ControlWindow controlWindow(world);
 #endif
 
-#if INTERACTIVE_MODE
-	SDL_CaptureMouse(SDL_TRUE);
-	SDL_SetRelativeMouseMode(SDL_TRUE);
-	SDL_WarpMouseInWindow(nullptr, GFX_SX/2, GFX_SY/2);
-#endif
-
 	do
 	{
 		framework.process();
+		
+	#if INTERACTIVE_MODE
+		if (SDL_CaptureMouse(SDL_TRUE) < 0)
+			logError("SDL_CaptureMouse: %s", SDL_GetError());
+		if (SDL_SetRelativeMouseMode(SDL_TRUE) < 0)
+			logError("SDL_SetRelativeMouseMode: %s", SDL_GetError());
+	#endif
+
+	#if INTERACTIVE_MODE
+		SDL_WarpMouseInWindow(nullptr, GFX_SX/2, GFX_SY/2);
+	#endif
 
 		const float dt = framework.timeStep;
 		
