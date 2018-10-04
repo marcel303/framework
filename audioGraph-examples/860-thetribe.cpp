@@ -33,6 +33,13 @@ const int GFX_SY = 480;
 
 int main(int argc, char * argv[])
 {
+	changeDirectory(SDL_GetBasePath());
+	
+#if !defined(DEBUG)
+	framework.fullscreen = true;
+	framework.exclusiveFullscreen = false;
+#endif
+
     framework.enableDepthBuffer = true;
     framework.enableRealTimeEditing = true;
     
