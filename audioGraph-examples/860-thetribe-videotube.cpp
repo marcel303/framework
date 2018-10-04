@@ -679,6 +679,8 @@ struct World
 	
 #if INTERACTIVE_MODE
 	float idleTime;
+	
+	Gamepad oldGamepad;
 #endif
 	
 	World()
@@ -819,10 +821,12 @@ struct World
 		camera.position[0] = clamp(camera.position[0], -kMaxDistance, +kMaxDistance);
 		camera.position[1] = clamp(camera.position[1], -kMaxDistance, +kMaxDistance);
 		
-		if (mouse.isIdle())
+		if (mouse.isIdle() && memcmp(&oldGamepad, &gamepad[0], sizeof(Gamepad)) == 0)
 			idleTime += dt;
 		else
 			idleTime = 0.f;
+		
+		oldGamepad = gamepad[0];
 		
 		if (idleTime >= 10.f)
 		{
@@ -1124,6 +1128,7 @@ void main()
             
 			world.draw2d();
 			
+		#if !INTERACTIVE_MODE
 			if (showUi)
 			{
 				setColor(255, 255, 255, 127);
@@ -1134,6 +1139,7 @@ void main()
 				drawText(10, 40, kFontSize, +1, +1, "N: toggle use nearest point (%s)", enableNearest ? "on" : "off");
 				drawText(10, 60, kFontSize, +1, +1, "V: toggle use vertices (%s)", enableVertices ? "on" : "off");
 			}
+		#endif
 			
 			popFontMode();
 		}
