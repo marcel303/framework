@@ -399,8 +399,6 @@ void main()
 	
 	SDL_DestroyMutex(audioMutex);
 	audioMutex = nullptr;
-	
-	return 0;
 }
 
 }

@@ -27,6 +27,8 @@
 
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
+#include <malloc.h>
+#include <stdint.h>
 
 using namespace tinyxml2;
 

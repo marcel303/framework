@@ -44,6 +44,9 @@
 	#include <Windows.h>
 	#include <Xinput.h>
 	DWORD timeGetTime(void);
+	#ifndef PATH_MAX
+		#define PATH_MAX MAX_PATH
+	#endif
 #else
 	#include <dirent.h>
 	#include <unistd.h>
@@ -234,7 +237,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 	#else
-		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 	#endif
 	}
@@ -418,7 +421,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 	gxInitialize();
 	
-#ifndef __WIN32__
+//#ifndef __WIN32__
+#if 1
 	// initialize SDL joysticks
 	
 	const int numJoysticks = SDL_NumJoysticks();
@@ -1008,7 +1012,8 @@ void Framework::process()
 	
 	globals.currentWindowData->makeActive();
 
-#ifdef __WIN32__
+//#ifdef __WIN32__
+#if 0
 	// use XInput to poll gamepad state
 	for (int i = 0; i < MAX_GAMEPAD; ++i)
 	{

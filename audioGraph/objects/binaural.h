@@ -188,6 +188,18 @@ namespace binaural
 			elevation = _elevation;
 			azimuth = _azimuth;
 		}
+
+	#if BINAURAL_USE_SSE
+		void * operator new(size_t size)
+		{
+			return _mm_malloc(size, 32);
+		}
+
+		void operator delete(void * mem)
+		{
+			_mm_free(mem);
+		}
+	#endif
 	};
 
 	struct HRIRSampleGrid

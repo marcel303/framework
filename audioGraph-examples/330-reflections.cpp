@@ -42,8 +42,8 @@
 #endif
 
 #if FULLSCREEN
-	const int GFX_SX = 800;
-	const int GFX_SY = 600;
+	const int GFX_SX = 1920;
+	const int GFX_SY = 1080;
 #else
 	const int GFX_SX = 1400;
 	const int GFX_SY = 400;
@@ -452,13 +452,16 @@ struct Space
 		return p;
 	}
 	
-	void tickParticles()
+	void tickParticles(const bool isIdle)
 	{
 	#if !ENABLE_MIDI && !ENABLE_GAMEPAD
 		s_speed = lerp(-1.f / 500.f, 1.f / 500.f, mouse.x / float(GFX_SX));
 	#endif
 	
-		t += s_speed;
+		if (isIdle)
+			t *= powf(.5f, 1.f / 100.f);
+		else
+			t += s_speed;
 		
 		for (int i = 0; i < MAX_SPACE_POINTS; ++i)
 		{
@@ -473,14 +476,14 @@ struct Space
 		}
 	}
 	
-	void tick()
+	void tick(const bool isIdle)
 	{
 		if (tickCount == s_tickCount)
 			return;
 		
 		tickCount = s_tickCount;
 		
-		tickParticles();
+		tickParticles(isIdle);
 		
 		for (int i = 0; i < MAX_SPACE_POINTS; ++i)
 		{
@@ -659,8 +662,19 @@ struct GamepadController : Controller
 	
 	bool wasDown = false;
 	
-	void tick()
+	float idleTime = 0.f;
+
+	Gamepad oldGamepad;
+
+	void tick(const float dt)
 	{
+		if (memcmp(&gamepad[0], &oldGamepad, sizeof(Gamepad)) == 0)
+			idleTime += dt;
+		else
+			idleTime = 0.f;
+
+		oldGamepad = gamepad[0];
+
 		controlValues[2] = (gamepad[0].getAnalog(0, ANALOG_X) / 2.f + 1.f) / 2.f;
 		
 		const float alpha = (clamp(gamepad[0].getAnalog(0, ANALOG_Y) * 1.5f, -1.f, +1.f) + 1.f) / 2.f;// * (.5f / .6f);
@@ -737,7 +751,7 @@ struct MyAudioSource : AudioSource
 	#endif
 	
 	#if ENABLE_GAMEPAD
-		gamepadController.tick();
+		gamepadController.tick(numSamples / float(SAMPLE_RATE));
 		
 		controller = gamepadController;
 	#endif
@@ -757,7 +771,13 @@ struct MyAudioSource : AudioSource
 	
 		s_tickCount++;
 		
-		space->tick();
+	#if ENABLE_GAMEPAD
+		const bool isIdle = gamepadController.idleTime >= 10.f;
+	#else
+		const bool isIdle = mouse.isIdle();
+	#endif
+
+		space->tick(isIdle);
 		
 		audioBufferSetZero(samples, numSamples);
 		
@@ -773,7 +793,7 @@ int main(int argc, char * argv[])
 #if FULLSCREEN
 	framework.fullscreen = true;
 	
-	changeDirectory(SDL_GetBasePath());
+	//changeDirectory(SDL_GetBasePath());
 #endif
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
@@ -812,7 +832,7 @@ int main(int argc, char * argv[])
 			framework.process();
 			
 		#if FULLSCREEN
-			if (keyboard.wentDown(SDLK_ESCAPE) && keyboard.isDown(SDLK_LSHIFT) && keyboard.isDown(SDLK_LCTRL))
+			if (keyboard.wentDown(SDLK_ESCAPE) && keyboard.isDown(SDLK_LSHIFT))
 				framework.quitRequested = true;
 		#else
 			if (keyboard.wentDown(SDLK_ESCAPE))
@@ -827,7 +847,7 @@ int main(int argc, char * argv[])
 				
 				gxPushMatrix();
 				gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
-				gxScalef(10, 10, 1);
+				gxScalef(22, 22, 1);
 				
 				hqBegin(HQ_LINES, true);
 				{

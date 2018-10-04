@@ -28,6 +28,7 @@ endif (WIN32)
 if (MSVC)
 	target_compile_definitions(libgg PUBLIC _USE_MATH_DEFINES)
 	target_compile_definitions(libgg PRIVATE _CRT_SECURE_NO_WARNINGS)
+	target_compile_definitions(libgg PUBLIC __SSE2__=1)
 	set_property(TARGET libgg APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
 endif (MSVC)
 

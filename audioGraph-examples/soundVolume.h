@@ -33,6 +33,7 @@
 #include "objects/binauralizer.h"
 #include "soundmix.h"
 #include "Vec3.h"
+#include <algorithm>
 
 #define MAX_SAMPLELOCATIONS_PER_VOLUME 10 // center + nearest + eight vertices
 
@@ -118,13 +119,14 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		
 		const binaural::HRIRSampleData * samples[3 * MAX_SAMPLELOCATIONS_PER_VOLUME];
 		float sampleWeights[3 * MAX_SAMPLELOCATIONS_PER_VOLUME];
+		bool lookupResults[MAX_SAMPLELOCATIONS_PER_VOLUME];
 		float gain[MAX_SAMPLELOCATIONS_PER_VOLUME];
 		
 		mutex->lock();
 		{
 			for (int i = 0; i < MAX_SAMPLELOCATIONS_PER_VOLUME; ++i)
 			{
-				binauralizer.sampleSet->lookup_3(
+				lookupResults[i] = binauralizer.sampleSet->lookup_3(
 					sampleLocation[i].elevation,
 					sampleLocation[i].azimuth,
 					samples + i * 3,
@@ -145,14 +147,17 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		
 		for (int i = 0; i < MAX_SAMPLELOCATIONS_PER_VOLUME; ++i)
 		{
-			for (int j = 0; j < 3; ++j)
+			if (lookupResults[i])
 			{
-				audioBufferAdd(combinedHrir.lSamples, samplesPtr[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain[i]);
-				audioBufferAdd(combinedHrir.rSamples, samplesPtr[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain[i]);
-			}
+				for (int j = 0; j < 3; ++j)
+				{
+					audioBufferAdd(combinedHrir.lSamples, samplesPtr[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain[i]);
+					audioBufferAdd(combinedHrir.rSamples, samplesPtr[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain[i]);
+				}
 			
-			samplesPtr += 3;
-			sampleWeightsPtr += 3;
+				samplesPtr += 3;
+				sampleWeightsPtr += 3;
+			}
 		}
 		
 		// run the binauralizer over the source audio
