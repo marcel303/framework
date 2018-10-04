@@ -26,6 +26,16 @@ FIXUP_BUNDLE("${CMAKE_BINARY_DIR}/Release/890-performance.app" "" "")
 
 #
 
+set(resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe/")
+set(appresources_path "${CMAKE_BINARY_DIR}/Release/860-thetribe.app/Contents/Resources")
+
+execute_process(COMMAND mkdir "-p" "${appresources_path}")
+execute_process(COMMAND rsync "-r" "${resource_path}" "${appresources_path}")
+
+FIXUP_BUNDLE("${CMAKE_BINARY_DIR}/Release/860-thetribe.app" "" "")
+
+#
+
 set(resource_path "/Users/thecat/framework/audioGraph-examples/data/")
 set(appresources_path "${CMAKE_BINARY_DIR}/Release/330-reflections.app/Contents/Resources")
 
