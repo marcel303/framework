@@ -681,6 +681,10 @@ struct World
 	float idleTime;
 	
 	Gamepad oldGamepad;
+	
+	float animTime = 0.f;
+	float desiredYaw = 0.f;
+	Vec3 desiredPosition;
 #endif
 	
 	World()
@@ -816,21 +820,50 @@ struct World
 	{
 		// update the camera
 		
-		const bool doCamera = !(keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT));
+		const bool doCamera = !(keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)) && animTime <= 0.f;
 		
 		camera.tick(dt, doCamera);
 		
+		camera.pitch = clamp(camera.pitch, -70.f, +70.f);
+		
 	#if INTERACTIVE_MODE
+		if (keyboard.wentDown(SDLK_r) || (gamepad[0].wentDown(GAMEPAD_A) || gamepad[0].wentDown(GAMEPAD_B) || gamepad[0].wentDown(GAMEPAD_X) || gamepad[0].wentDown(GAMEPAD_Y) || gamepad[0].wentDown(GAMEPAD_L1) || gamepad[0].wentDown(GAMEPAD_L2) || gamepad[0].wentDown(GAMEPAD_R1) || gamepad[0].wentDown(GAMEPAD_R2)))
+		{
+			Vec3 position;
+			position[0] = random(-5.f, +5.f);
+			position[1] = +.3f;
+			position[2] = random(+5.f, +40.f);
+			
+			const float yaw = atan2f(position[0], -(position[2] - 20.f));
+			
+			desiredYaw = yaw * 180.f / M_PI;
+			desiredPosition = position;
+			animTime = 4.f;
+		}
+		
 		const float kMaxDistance = 6.28f;
 		camera.position[0] = clamp(camera.position[0], -kMaxDistance, +kMaxDistance);
 		camera.position[1] = clamp(camera.position[1], -kMaxDistance, +kMaxDistance);
 		
-		if (keyboard.isIdle() && mouse.isIdle() && memcmp(&oldGamepad, &gamepad[0], sizeof(Gamepad)) == 0)
+		if (keyboard.isIdle() && mouse.isIdle() && memcmp(&oldGamepad, &gamepad[0], sizeof(Gamepad)) == 0 && animTime <= 0.f)
 			idleTime += dt;
 		else
 			idleTime = 0.f;
 		
 		oldGamepad = gamepad[0];
+		
+		if (animTime > 0.f)
+		{
+			animTime -= dt;
+			
+			const float falloff = powf(.5f, dt);
+			const float retain = 1.f - falloff;
+			
+			camera.position = camera.position * falloff + desiredPosition * retain;
+			camera.yaw = camera.yaw * falloff + desiredYaw * retain;
+			camera.pitch *= falloff;
+			camera.roll *= falloff;
+		}
 		
 		if (idleTime >= 10.f)
 		{
@@ -839,6 +872,10 @@ struct World
 			camera.position[0] = camera.position[0] * falloff + 0.f * (1.f - falloff);
 			camera.position[1] = camera.position[1] * falloff + .3f * (1.f - falloff);
 			camera.position[2] = camera.position[2] * falloff + 5.f * (1.f - falloff);
+			
+			camera.yaw = fmodf(camera.yaw, 360.f);
+			camera.pitch = fmodf(camera.pitch, 360.f);
+			camera.roll = fmodf(camera.roll, 360.f);
 			
 			camera.yaw *= falloff;
 			camera.pitch *= falloff;
