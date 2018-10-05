@@ -14,10 +14,10 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
-#if 1
-const int GFX_SX = 1024;
-const int GFX_SY = 768;
-#elif 1
+#if !defined(DEBUG)
+const int GFX_SX = 1280*2;
+const int GFX_SY = 800*2;
+#elif 0
 const int GFX_SX = 2400;
 const int GFX_SY = 1200;
 #else
