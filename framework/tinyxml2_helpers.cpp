@@ -27,8 +27,13 @@
 
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
-#include <malloc.h>
 #include <stdint.h>
+
+#ifdef WIN32
+	#include <malloc.h>
+#else
+	#include <alloca.h>
+#endif
 
 using namespace tinyxml2;
 
