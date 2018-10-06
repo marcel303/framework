@@ -3,6 +3,11 @@
 #include "imgui/TextEditor.h"
 #include <fstream>
 
+#define GFX_SX 800
+#define GFX_SY 800
+
+#define DO_KINETIC_SCROLL 0
+
 static void ShowTextEditor();
 
 struct FrameworkImGuiContext
@@ -18,6 +23,10 @@ struct FrameworkImGuiContext
 	GLuint font_texture_id = 0;
 	
 	ImGuiContext * previous_context = nullptr;
+	
+#if DO_KINETIC_SCROLL
+	float kinetic_scroll = 0.f;
+#endif
 	
 	~FrameworkImGuiContext()
 	{
@@ -121,8 +130,17 @@ struct FrameworkImGuiContext
 		io->MousePos.y = mouse.y;
 		io->MouseDown[0] = mouse.isDown(BUTTON_LEFT);
 		io->MouseDown[1] = mouse.isDown(BUTTON_RIGHT);
+		
+	#if DO_KINETIC_SCROLL
 	// todo : add kinectic scrolling
+		if (mouse.scrollY == 0)
+			kinetic_scroll *= powf(.1f, dt);
+		else
+			kinetic_scroll = mouse.scrollY * -.1f;
+		io->MouseWheel = kinetic_scroll;
+	#else
 		io->MouseWheel = mouse.scrollY * -.1f;
+	#endif
 	
 		io->KeyCtrl = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
 		io->KeyShift = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
@@ -300,7 +318,7 @@ void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 
 int main(int argc, char * argv[])
 {
-	if (framework.init(0, nullptr, 800, 600))
+	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
 		ImGuiContext * imgui_context = ImGui::CreateContext();
 		
@@ -321,7 +339,20 @@ int main(int argc, char * argv[])
 		{
 			framework.process();
 			
-			framework_context.processBegin(framework.timeStep, 800, 600);
+			framework_context.processBegin(framework.timeStep, GFX_SX, GFX_SY);
+			
+			if (ImGui::Begin("Statistics", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				ImGui::Text("vertices: %d, indices: %d",
+					io.MetricsRenderVertices,
+					io.MetricsRenderIndices);
+				ImGui::Text("render_windows: %d, active_windows: %d",
+					io.MetricsRenderWindows,
+					io.MetricsActiveWindows);
+				ImGui::Text("active_allocations: %d",
+					io.MetricsActiveAllocations);
+			}
+			ImGui::End();
 			
 			ShowTextEditor();
 			
@@ -350,13 +381,6 @@ int main(int argc, char * argv[])
 				ImGui::Render();
 				
 				framework_context.render(ImGui::GetDrawData());
-				
-				logDebug("ImGui metrics: #vertices: %d, #indices: %d, #render_windows: %d, #active_windows: %d, #active_allocations: %d",
-					io.MetricsRenderVertices,
-					io.MetricsRenderIndices,
-					io.MetricsRenderWindows,
-					io.MetricsActiveWindows,
-					io.MetricsActiveAllocations);
 			}
 			framework.endDraw();
 		}
