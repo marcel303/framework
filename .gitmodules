@@ -10,3 +10,6 @@
 [submodule "3rdparty/libsdl2"]
 	path = 3rdparty/libsdl2
 	url = https://github.com/spurious/SDL-mirror.git
+[submodule "3rdparty/imgui"]
+	path = 3rdparty/imgui
+	url = https://github.com/marcel303/imgui
