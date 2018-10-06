@@ -5,10 +5,6 @@
 
 static void ShowTextEditor();
 
-static const char * ImGui_ImplSDL2_GetClipboardText(void * user_data);
-static void ImGui_ImplSDL2_SetClipboardText(void * user_data, const char * text);
-static void ImGuiRenderFunction_Framework(const ImDrawData * draw_data);
-
 struct FrameworkImGuiContext
 {
 	ImGuiIO * io = nullptr;
@@ -17,9 +13,19 @@ struct FrameworkImGuiContext
 	
 	char * clipboard_text = nullptr;
 	
+	GLuint font_texture_id = 0;
+	
+	~FrameworkImGuiContext()
+	{
+		fassert(font_texture_id == 0);
+	}
+	
 	void init(ImGuiIO * _io)
 	{
 		io = _io;
+		
+		io->BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
+		io->BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
 		
 		// setup keyboard mappings
 		
@@ -47,8 +53,8 @@ struct FrameworkImGuiContext
 		
 		// set clipboard handling functions
 		
-		io->SetClipboardTextFn = ImGui_ImplSDL2_SetClipboardText;
-		io->GetClipboardTextFn = ImGui_ImplSDL2_GetClipboardText;
+		io->SetClipboardTextFn = setClipboardText;
+		io->GetClipboardTextFn = getClipboardText;
 		io->ClipboardUserData = this;
 		
 		// create mouse cursors
@@ -61,10 +67,25 @@ struct FrameworkImGuiContext
 		mouse_cursors[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
 		mouse_cursors[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
 		mouse_cursors[ImGuiMouseCursor_Hand] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+		
+		// create font texture
+		
+		int sx, sy;
+		uint8_t * pixels = nullptr;
+		io->Fonts->GetTexDataAsRGBA32(&pixels, &sx, &sy);
+		
+		font_texture_id = createTextureFromRGBA8(pixels, sx, sy, false, true);
+		io->Fonts->TexID = (void*)(uintptr_t)font_texture_id;
 	}
 	
 	void shut()
 	{
+		if (font_texture_id != 0)
+		{
+			glDeleteTextures(1, &font_texture_id);
+			font_texture_id = 0;
+		}
+		
 		for (int i = 0; i < ImGuiMouseCursor_COUNT; ++i)
 		{
 			if (mouse_cursors[i] != nullptr)
@@ -73,6 +94,25 @@ struct FrameworkImGuiContext
 				mouse_cursors[i] = nullptr;
 			}
 		}
+	}
+	
+	void process(const float dt, const int displaySx, const int displaySy)
+	{
+		io->DeltaTime = dt;
+		io->DisplaySize.x = displaySx;
+		io->DisplaySize.y = displaySy;
+	
+		io->MousePos.x = mouse.x;
+		io->MousePos.y = mouse.y;
+		io->MouseDown[0] = mouse.isDown(BUTTON_LEFT);
+		io->MouseDown[1] = mouse.isDown(BUTTON_RIGHT);
+	// todo : add kinectic scrolling
+		io->MouseWheel = mouse.scrollY * -.1f;
+	
+		io->KeyCtrl = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
+		io->KeyShift = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
+		io->KeyAlt = keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT);
+		io->KeySuper = keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI);
 	}
 	
 	void update_mouse_cursor()
@@ -100,28 +140,45 @@ struct FrameworkImGuiContext
 			}
 		}
 	}
+	
+	static const char * getClipboardText(void * user_data);
+	static void setClipboardText(void * user_data, const char * text);
+	static void render(const ImDrawData * draw_data);
 };
 
-static const char * ImGui_ImplSDL2_GetClipboardText(void * user_data)
+const char * FrameworkImGuiContext::getClipboardText(void * user_data)
 {
 	FrameworkImGuiContext * context = (FrameworkImGuiContext*)user_data;
 	
     if (context->clipboard_text != nullptr)
+    {
         SDL_free(context->clipboard_text);
+        context->clipboard_text = nullptr;
+	}
+	
+	//
 	
     context->clipboard_text = SDL_GetClipboardText();
 	
     return context->clipboard_text;
 }
 
-static void ImGui_ImplSDL2_SetClipboardText(void * user_data, const char * text)
+void FrameworkImGuiContext::setClipboardText(void * user_data, const char * text)
 {
 	FrameworkImGuiContext * context = (FrameworkImGuiContext*)user_data;
+	
+	if (context->clipboard_text != nullptr)
+    {
+        SDL_free(context->clipboard_text);
+        context->clipboard_text = nullptr;
+	}
+	
+	//
 	
     SDL_SetClipboardText(text);
 }
 
-static void ImGuiRenderFunction_Framework(const ImDrawData * draw_data)
+void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 {
 	glEnable(GL_SCISSOR_TEST);
 	
@@ -187,7 +244,7 @@ static void ImGuiRenderFunction_Framework(const ImDrawData * draw_data)
 				}
 				gxSetTexture(0);
 				
-			#if 1
+			#if 0
 				Assert(cmd->ClipRect.x <= cmd->ClipRect.z);
 				Assert(cmd->ClipRect.y <= cmd->ClipRect.w);
 				setColor(colorWhite);
@@ -210,22 +267,12 @@ int main(int argc, char * argv[])
 {
 	if (framework.init(0, nullptr, 800, 600))
 	{
-		ImGui::CreateContext();
+		ImGuiContext * imgui_context = ImGui::CreateContext();
+		
+		ImGui::SetCurrentContext(imgui_context);
      	ImGuiIO & io = ImGui::GetIO();
 		
-	io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;       // We can honor GetMouseCursor() values (optional)
-    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;        // We can honor io.WantSetMousePos requests (optional, rarely used)
-		
-		//io.GetClipboardTextFn
-		//io.SetClipboardTextFn
 		//io.ImeSetInputScreenPosFn
-		
-		int sx, sy;
-		uint8_t * pixels = nullptr;
-		io.Fonts->GetTexDataAsRGBA32(&pixels, &sx, &sy);
-		
-		const GLuint textureId = createTextureFromRGBA8(pixels, sx, sy, false, true);
-		io.Fonts->TexID = (void*)(uintptr_t)textureId;
 		
 		FrameworkImGuiContext framework_context;
 		
@@ -239,20 +286,7 @@ int main(int argc, char * argv[])
 		{
 			framework.process();
 			
-			io.DeltaTime = framework.timeStep;
-			io.DisplaySize.x = 800;
-			io.DisplaySize.y = 600;
-			
-			io.MousePos.x = mouse.x;
-			io.MousePos.y = mouse.y;
-			io.MouseDown[0] = mouse.isDown(BUTTON_LEFT);
-			io.MouseDown[1] = mouse.isDown(BUTTON_RIGHT);
-		// todo : add kinectic scrolling
-			io.MouseWheel = mouse.scrollY * -.1f;
-			
-			io.KeyCtrl = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
-			io.KeyShift = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
-			io.KeySuper = keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI);
+			framework_context.process(framework.timeStep, 800, 600);
 			
 			for (auto & e : framework.events)
 			{
@@ -263,12 +297,6 @@ int main(int argc, char * argv[])
 				else if (e.type == SDL_TEXTINPUT)
 					io.AddInputCharactersUTF8(e.text.text);
 			}
-			
-					//io.AddInputCharacter(e.key.keysym.sym);
-			//for (int i = 0; i < 256; ++i)
-			//	io.KeysDown[i] = keyboard.isDown((SDLKey)i);
-			//for (int i = 0; i < 512; ++i)
-			//	io.KeysDown[i] = false;
 			
 			//KeyCtrl, KeyShift, KeySuper, KeyDown
 			//AddInputCharacter(..char..) -> IME support ?
@@ -299,7 +327,7 @@ int main(int argc, char * argv[])
 			{
 				ImGui::Render();
 				
-				ImGuiRenderFunction_Framework(ImGui::GetDrawData());
+				framework_context.render(ImGui::GetDrawData());
 				
 				logDebug("ImGui metrics: #vertices: %d, #indices: %d, #render_windows: %d, #active_windows: %d, #active_allocations: %d",
 					io.MetricsRenderVertices,
@@ -313,7 +341,10 @@ int main(int argc, char * argv[])
 		
 		SDL_StopTextInput();
 		
-		ImGui::DestroyContext();
+		framework_context.shut();
+		
+		ImGui::DestroyContext(imgui_context);
+		imgui_context = nullptr;
 
 		framework.shutdown();
 	}
