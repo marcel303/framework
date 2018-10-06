@@ -1,6 +1,8 @@
 #include "fbx.h"
 #include "miniz.h"
 #include <assert.h>
+#include <limits>
+#include <memory>
 #include <string.h>
 
 // --------------------------------------------------------------------------------
