@@ -7,6 +7,8 @@ static void ShowTextEditor();
 
 struct FrameworkImGuiContext
 {
+	ImGuiContext * imgui_context = nullptr;
+	
 	ImGuiIO * io = nullptr;
 	
 	SDL_Cursor * mouse_cursors[ImGuiMouseCursor_COUNT] = { };
@@ -15,14 +17,21 @@ struct FrameworkImGuiContext
 	
 	GLuint font_texture_id = 0;
 	
+	ImGuiContext * previous_context = nullptr;
+	
 	~FrameworkImGuiContext()
 	{
 		fassert(font_texture_id == 0);
 	}
 	
-	void init(ImGuiIO * _io)
+	void init(ImGuiContext * _imgui_context)
 	{
-		io = _io;
+		imgui_context = _imgui_context;
+		
+		previous_context = ImGui::GetCurrentContext();
+		ImGui::SetCurrentContext(imgui_context);
+		
+		io = &ImGui::GetIO();
 		
 		io->BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 		io->BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
@@ -76,6 +85,9 @@ struct FrameworkImGuiContext
 		
 		font_texture_id = createTextureFromRGBA8(pixels, sx, sy, false, true);
 		io->Fonts->TexID = (void*)(uintptr_t)font_texture_id;
+		
+		ImGui::SetCurrentContext(previous_context);
+		previous_context = nullptr;
 	}
 	
 	void shut()
@@ -96,8 +108,11 @@ struct FrameworkImGuiContext
 		}
 	}
 	
-	void process(const float dt, const int displaySx, const int displaySy)
+	void processBegin(const float dt, const int displaySx, const int displaySy)
 	{
+		fassert(previous_context == nullptr);
+		previous_context = ImGui::GetCurrentContext();
+		
 		io->DeltaTime = dt;
 		io->DisplaySize.x = displaySx;
 		io->DisplaySize.y = displaySy;
@@ -113,6 +128,26 @@ struct FrameworkImGuiContext
 		io->KeyShift = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
 		io->KeyAlt = keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT);
 		io->KeySuper = keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI);
+		
+		// handle keyboard and text input
+		
+		for (auto & e : framework.events)
+		{
+			if (e.type == SDL_KEYDOWN)
+				io->KeysDown[e.key.keysym.scancode] = true;
+			else if (e.type == SDL_KEYUP)
+				io->KeysDown[e.key.keysym.scancode] = false;
+			else if (e.type == SDL_TEXTINPUT)
+				io->AddInputCharactersUTF8(e.text.text);
+		}
+		
+		ImGui::NewFrame();
+	}
+	
+	void processEnd()
+	{
+		ImGui::SetCurrentContext(previous_context);
+		previous_context = nullptr;
 	}
 	
 	void update_mouse_cursor()
@@ -276,7 +311,7 @@ int main(int argc, char * argv[])
 		
 		FrameworkImGuiContext framework_context;
 		
-		framework_context.init(&io);
+		framework_context.init(imgui_context);
 		
 		bool showDemoWindow = true;
 		
@@ -286,22 +321,7 @@ int main(int argc, char * argv[])
 		{
 			framework.process();
 			
-			framework_context.process(framework.timeStep, 800, 600);
-			
-			for (auto & e : framework.events)
-			{
-				if (e.type == SDL_KEYDOWN)
-					io.KeysDown[e.key.keysym.scancode] = true;
-				else if (e.type == SDL_KEYUP)
-					io.KeysDown[e.key.keysym.scancode] = false;
-				else if (e.type == SDL_TEXTINPUT)
-					io.AddInputCharactersUTF8(e.text.text);
-			}
-			
-			//KeyCtrl, KeyShift, KeySuper, KeyDown
-			//AddInputCharacter(..char..) -> IME support ?
-			
-			ImGui::NewFrame();
+			framework_context.processBegin(framework.timeStep, 800, 600);
 			
 			ShowTextEditor();
 			
@@ -322,6 +342,8 @@ int main(int argc, char * argv[])
 		// update mouse cursor
 		
 			framework_context.update_mouse_cursor();
+			
+			framework_context.processEnd();
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
