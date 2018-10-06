@@ -5,76 +5,85 @@
 
 static void ShowTextEditor();
 
-static void FrameworkRenderFunction(ImDrawData* drawData)
+static void ImGuiRenderFunction_Framework(const ImDrawData * draw_data)
 {
 	glEnable(GL_SCISSOR_TEST);
 	
-	for (int n = 0; n < drawData->CmdListsCount; n++)
+	for (int i = 0; i < draw_data->CmdListsCount; ++i)
 	{
-		const ImDrawList * cmd_list = drawData->CmdLists[n];
-		const ImDrawVert * vertices = cmd_list->VtxBuffer.Data;
-		const ImDrawIdx * indices = cmd_list->IdxBuffer.Data;
+		const ImDrawList * cmd_list = draw_data->CmdLists[i];
+		const ImDrawVert * vertex_list = cmd_list->VtxBuffer.Data;
+		const ImDrawIdx * index_list = cmd_list->IdxBuffer.Data;
 		
-		for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+		for (int c = 0; c < cmd_list->CmdBuffer.Size; ++c)
 		{
-			const ImDrawCmd * pcmd = &cmd_list->CmdBuffer[cmd_i];
+			const ImDrawCmd * cmd = &cmd_list->CmdBuffer[c];
 			
-			if (pcmd->UserCallback)
+			if (cmd->UserCallback != nullptr)
 			{
-				pcmd->UserCallback(cmd_list, pcmd);
+				cmd->UserCallback(cmd_list, cmd);
 			}
 			else
 			{
-				const ImVec2 & pos = drawData->DisplayPos;
-				const ImVec4 clip_rect = ImVec4(
-					pcmd->ClipRect.x - pos.x,
-					pcmd->ClipRect.y - pos.y,
-					pcmd->ClipRect.z - pos.x,
-					pcmd->ClipRect.w - pos.y);
+				const ImVec2 & display_position = draw_data->DisplayPos;
 				
-                if (clip_rect.x >= 800 || clip_rect.y > 600 || clip_rect.z < 0 || clip_rect.w < 0)
+				const ImVec4 clip_rect = ImVec4(
+					cmd->ClipRect.x - display_position.x,
+					cmd->ClipRect.y - display_position.y,
+					cmd->ClipRect.z - display_position.x,
+					cmd->ClipRect.w - display_position.y);
+				
+                if (clip_rect.x >= draw_data->DisplaySize.x ||
+                	clip_rect.y >= draw_data->DisplaySize.y ||
+                	clip_rect.z < 0 ||
+                	clip_rect.w < 0)
                 	continue;
 				
-				glScissor((int)clip_rect.x, (int)(600 - clip_rect.w), (int)(clip_rect.z - clip_rect.x), (int)(clip_rect.w - clip_rect.y));
+				glScissor(
+					(int)clip_rect.x,
+					(int)(draw_data->DisplaySize.y - clip_rect.w),
+					(int)(clip_rect.z - clip_rect.x),
+					(int)(clip_rect.w - clip_rect.y));
 				
-				const GLuint textureId = (GLuint)(uintptr_t)pcmd->TextureId;
+				const GLuint textureId = (GLuint)(uintptr_t)cmd->TextureId;
+				
 				gxSetTexture(textureId);
-				
-				gxBegin(GL_TRIANGLES);
 				{
-					for (int e = 0; e < pcmd->ElemCount; ++e)
+					gxBegin(GL_TRIANGLES);
 					{
-						const int index = indices[e];
-						
-						const ImDrawVert & vertex = vertices[index];
-						
-						gxColor4ub(
-							(vertex.col >> IM_COL32_R_SHIFT) & 0xff,
-							(vertex.col >> IM_COL32_G_SHIFT) & 0xff,
-							(vertex.col >> IM_COL32_B_SHIFT) & 0xff,
-							(vertex.col >> IM_COL32_A_SHIFT) & 0xff);
-						
-						gxTexCoord2f(vertex.uv.x, vertex.uv.y);
-						gxVertex2f(vertex.pos.x, vertex.pos.y);
+						for (int e = 0; e < cmd->ElemCount; ++e)
+						{
+							const int index = index_list[e];
+							
+							const ImDrawVert & vertex = vertex_list[index];
+							
+							gxColor4ub(
+								(vertex.col >> IM_COL32_R_SHIFT) & 0xff,
+								(vertex.col >> IM_COL32_G_SHIFT) & 0xff,
+								(vertex.col >> IM_COL32_B_SHIFT) & 0xff,
+								(vertex.col >> IM_COL32_A_SHIFT) & 0xff);
+							
+							gxTexCoord2f(vertex.uv.x, vertex.uv.y);
+							gxVertex2f(vertex.pos.x, vertex.pos.y);
+						}
 					}
+					gxEnd();
 				}
-				gxEnd();
-				
 				gxSetTexture(0);
 				
-				#if 1
-				Assert(pcmd->ClipRect.x <= pcmd->ClipRect.z);
-				Assert(pcmd->ClipRect.y <= pcmd->ClipRect.w);
+			#if 1
+				Assert(cmd->ClipRect.x <= cmd->ClipRect.z);
+				Assert(cmd->ClipRect.y <= cmd->ClipRect.w);
 				setColor(colorWhite);
 				drawRectLine(
-					pcmd->ClipRect.x - pos.x,
-					pcmd->ClipRect.y - pos.y,
-					pcmd->ClipRect.z - pos.x,
-					pcmd->ClipRect.w - pos.y);
-				#endif
+					cmd->ClipRect.x - display_position.x,
+					cmd->ClipRect.y - display_position.y,
+					cmd->ClipRect.z - display_position.x,
+					cmd->ClipRect.w - display_position.y);
+			#endif
 			}
 			
-			indices += pcmd->ElemCount;
+			index_list += cmd->ElemCount;
 		}
 	}
 	
@@ -120,7 +129,7 @@ int main(int argc, char * argv[])
 			{
 				ImGui::Render();
 				
-				FrameworkRenderFunction(ImGui::GetDrawData());
+				ImGuiRenderFunction_Framework(ImGui::GetDrawData());
 			}
 			framework.endDraw();
 		}
