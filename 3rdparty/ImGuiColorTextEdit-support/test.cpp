@@ -5,6 +5,122 @@
 
 static void ShowTextEditor();
 
+static const char * ImGui_ImplSDL2_GetClipboardText(void * user_data);
+static void ImGui_ImplSDL2_SetClipboardText(void * user_data, const char * text);
+static void ImGuiRenderFunction_Framework(const ImDrawData * draw_data);
+
+struct FrameworkImGuiContext
+{
+	ImGuiIO * io = nullptr;
+	
+	SDL_Cursor * mouse_cursors[ImGuiMouseCursor_COUNT] = { };
+	
+	char * clipboard_text = nullptr;
+	
+	void init(ImGuiIO * _io)
+	{
+		io = _io;
+		
+		// setup keyboard mappings
+		
+		io->KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
+		io->KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
+		io->KeyMap[ImGuiKey_RightArrow] = SDL_SCANCODE_RIGHT;
+		io->KeyMap[ImGuiKey_UpArrow] = SDL_SCANCODE_UP;
+		io->KeyMap[ImGuiKey_DownArrow] = SDL_SCANCODE_DOWN;
+		io->KeyMap[ImGuiKey_PageUp] = SDL_SCANCODE_PAGEUP;
+		io->KeyMap[ImGuiKey_PageDown] = SDL_SCANCODE_PAGEDOWN;
+		io->KeyMap[ImGuiKey_Home] = SDL_SCANCODE_HOME;
+		io->KeyMap[ImGuiKey_End] = SDL_SCANCODE_END;
+		io->KeyMap[ImGuiKey_Insert] = SDL_SCANCODE_INSERT;
+		io->KeyMap[ImGuiKey_Delete] = SDL_SCANCODE_DELETE;
+		io->KeyMap[ImGuiKey_Backspace] = SDL_SCANCODE_BACKSPACE;
+		io->KeyMap[ImGuiKey_Space] = SDL_SCANCODE_SPACE;
+		io->KeyMap[ImGuiKey_Enter] = SDL_SCANCODE_RETURN;
+		io->KeyMap[ImGuiKey_Escape] = SDL_SCANCODE_ESCAPE;
+		io->KeyMap[ImGuiKey_A] = SDL_SCANCODE_A;
+		io->KeyMap[ImGuiKey_C] = SDL_SCANCODE_C;
+		io->KeyMap[ImGuiKey_V] = SDL_SCANCODE_V;
+		io->KeyMap[ImGuiKey_X] = SDL_SCANCODE_X;
+		io->KeyMap[ImGuiKey_Y] = SDL_SCANCODE_Y;
+		io->KeyMap[ImGuiKey_Z] = SDL_SCANCODE_Z;
+		
+		// set clipboard handling functions
+		
+		io->SetClipboardTextFn = ImGui_ImplSDL2_SetClipboardText;
+		io->GetClipboardTextFn = ImGui_ImplSDL2_GetClipboardText;
+		io->ClipboardUserData = this;
+		
+		// create mouse cursors
+		
+		mouse_cursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+		mouse_cursors[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
+		mouse_cursors[ImGuiMouseCursor_ResizeAll] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
+		mouse_cursors[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
+		mouse_cursors[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
+		mouse_cursors[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
+		mouse_cursors[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
+		mouse_cursors[ImGuiMouseCursor_Hand] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+	}
+	
+	void shut()
+	{
+		for (int i = 0; i < ImGuiMouseCursor_COUNT; ++i)
+		{
+			if (mouse_cursors[i] != nullptr)
+			{
+				SDL_FreeCursor(mouse_cursors[i]);
+				mouse_cursors[i] = nullptr;
+			}
+		}
+	}
+	
+	void update_mouse_cursor()
+	{
+		if ((io->ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) == 0)
+		{
+			const ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
+			
+			if (io->MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None)
+			{
+				// hide OS mouse cursor if imgui is drawing it or if it wants no cursor
+				
+				SDL_ShowCursor(SDL_FALSE);
+			}
+			else
+			{
+				// show OS mouse cursor
+				
+				SDL_SetCursor(
+					mouse_cursors[imgui_cursor] != nullptr
+					? mouse_cursors[imgui_cursor]
+					: mouse_cursors[ImGuiMouseCursor_Arrow]);
+				
+				SDL_ShowCursor(SDL_TRUE);
+			}
+		}
+	}
+};
+
+static const char * ImGui_ImplSDL2_GetClipboardText(void * user_data)
+{
+	FrameworkImGuiContext * context = (FrameworkImGuiContext*)user_data;
+	
+    if (context->clipboard_text != nullptr)
+        SDL_free(context->clipboard_text);
+	
+    context->clipboard_text = SDL_GetClipboardText();
+	
+    return context->clipboard_text;
+}
+
+static void ImGui_ImplSDL2_SetClipboardText(void * user_data, const char * text)
+{
+	FrameworkImGuiContext * context = (FrameworkImGuiContext*)user_data;
+	
+    SDL_SetClipboardText(text);
+}
+
 static void ImGuiRenderFunction_Framework(const ImDrawData * draw_data)
 {
 	glEnable(GL_SCISSOR_TEST);
@@ -95,16 +211,29 @@ int main(int argc, char * argv[])
 	if (framework.init(0, nullptr, 800, 600))
 	{
 		ImGui::CreateContext();
-     	ImGuiIO& io = ImGui::GetIO();
+     	ImGuiIO & io = ImGui::GetIO();
 		
-		int width, height;
-		unsigned char* pixels = NULL;
-		io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+	io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;       // We can honor GetMouseCursor() values (optional)
+    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;        // We can honor io.WantSetMousePos requests (optional, rarely used)
 		
-		const GLuint textureId = createTextureFromRGBA8(pixels, width, height, false, true);
+		//io.GetClipboardTextFn
+		//io.SetClipboardTextFn
+		//io.ImeSetInputScreenPosFn
+		
+		int sx, sy;
+		uint8_t * pixels = nullptr;
+		io.Fonts->GetTexDataAsRGBA32(&pixels, &sx, &sy);
+		
+		const GLuint textureId = createTextureFromRGBA8(pixels, sx, sy, false, true);
 		io.Fonts->TexID = (void*)(uintptr_t)textureId;
 		
+		FrameworkImGuiContext framework_context;
+		
+		framework_context.init(&io);
+		
 		bool showDemoWindow = true;
+		
+		SDL_StartTextInput();
 		
 		while (!framework.quitRequested)
 		{
@@ -113,11 +242,36 @@ int main(int argc, char * argv[])
 			io.DeltaTime = framework.timeStep;
 			io.DisplaySize.x = 800;
 			io.DisplaySize.y = 600;
+			
 			io.MousePos.x = mouse.x;
 			io.MousePos.y = mouse.y;
 			io.MouseDown[0] = mouse.isDown(BUTTON_LEFT);
 			io.MouseDown[1] = mouse.isDown(BUTTON_RIGHT);
+		// todo : add kinectic scrolling
 			io.MouseWheel = mouse.scrollY * -.1f;
+			
+			io.KeyCtrl = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
+			io.KeyShift = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
+			io.KeySuper = keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI);
+			
+			for (auto & e : framework.events)
+			{
+				if (e.type == SDL_KEYDOWN)
+					io.KeysDown[e.key.keysym.scancode] = true;
+				else if (e.type == SDL_KEYUP)
+					io.KeysDown[e.key.keysym.scancode] = false;
+				else if (e.type == SDL_TEXTINPUT)
+					io.AddInputCharactersUTF8(e.text.text);
+			}
+			
+					//io.AddInputCharacter(e.key.keysym.sym);
+			//for (int i = 0; i < 256; ++i)
+			//	io.KeysDown[i] = keyboard.isDown((SDLKey)i);
+			//for (int i = 0; i < 512; ++i)
+			//	io.KeysDown[i] = false;
+			
+			//KeyCtrl, KeyShift, KeySuper, KeyDown
+			//AddInputCharacter(..char..) -> IME support ?
 			
 			ImGui::NewFrame();
 			
@@ -125,14 +279,39 @@ int main(int argc, char * argv[])
 			
 			ImGui::ShowDemoWindow(&showDemoWindow);
 			
+		// todo : check WantCaptureMouse, WantCaptureKeyboard
+		// todo : WantTextInput -> enable IME
+		
+		// update mouse position
+		
+			if (io.WantSetMousePos)
+			{
+				//mouse.setPosition(io.MousePos.x, io.MousePos.y);
+				
+				SDL_WarpMouseInWindow(nullptr, (int)io.MousePos.x, (int)io.MousePos.y);
+			}
+			
+		// update mouse cursor
+		
+			framework_context.update_mouse_cursor();
+			
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				ImGui::Render();
 				
 				ImGuiRenderFunction_Framework(ImGui::GetDrawData());
+				
+				logDebug("ImGui metrics: #vertices: %d, #indices: %d, #render_windows: %d, #active_windows: %d, #active_allocations: %d",
+					io.MetricsRenderVertices,
+					io.MetricsRenderIndices,
+					io.MetricsRenderWindows,
+					io.MetricsActiveWindows,
+					io.MetricsActiveAllocations);
 			}
 			framework.endDraw();
 		}
+		
+		SDL_StopTextInput();
 		
 		ImGui::DestroyContext();
 
