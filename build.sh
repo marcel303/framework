@@ -1,3 +1,6 @@
+# todo : verify all submodules are synced somehow
+# git submodule update --init --recursive
+
 root=$PWD
 chibi_bin="./chibi-build/chibi/chibi"
 
@@ -22,6 +25,13 @@ if [ "$os" == "mac" ]; then
 	# generate Xcode project file
 	mkdir -p chibi-build/xcode
 	cd chibi-build/xcode && cmake -G "Xcode" ../cmake-files
+	cd "$root"
+fi
+
+if [ "$os" == "linux" ]; then
+	# generate Xcode project file
+	mkdir -p chibi-build/xcode
+	cd chibi-build/xcode && cmake -G "Unix Makefiles" ../cmake-files
 	cd "$root"
 fi
 
