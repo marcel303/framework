@@ -6,11 +6,10 @@ add framework-ofx
 add vfxGraph
 add vfxGraph-examples
 
-add 3rdparty
-
 global_group libraries
 
 	with_platform macos add 3rdparty/PS3EYEDriver/framework
+	add 3rdparty
 	add libfbx
 	add libgg
 	add libnfd
