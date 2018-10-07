@@ -1,0 +1,8 @@
+library imgui-framework
+
+	depend_library framework
+	depend_library imgui
+
+	header_path . expose
+
+	add_files imgui-framework.cpp imgui-framework.h

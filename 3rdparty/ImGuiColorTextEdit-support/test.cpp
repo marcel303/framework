@@ -1,131 +1,90 @@
 #include "framework.h"
 #include "imgui.h"
 #include "imgui/TextEditor.h"
+#include "imgui-framework.h"
 #include <fstream>
 
-static void ShowTextEditor();
+#define GFX_SX 800
+#define GFX_SY 800
 
-static void FrameworkRenderFunction(ImDrawData* drawData)
-{
-	glEnable(GL_SCISSOR_TEST);
-	
-	for (int n = 0; n < drawData->CmdListsCount; n++)
-	{
-		const ImDrawList * cmd_list = drawData->CmdLists[n];
-		const ImDrawVert * vertices = cmd_list->VtxBuffer.Data;
-		const ImDrawIdx * indices = cmd_list->IdxBuffer.Data;
-		
-		for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
-		{
-			const ImDrawCmd * pcmd = &cmd_list->CmdBuffer[cmd_i];
-			
-			if (pcmd->UserCallback)
-			{
-				pcmd->UserCallback(cmd_list, pcmd);
-			}
-			else
-			{
-				const ImVec2 & pos = drawData->DisplayPos;
-				const ImVec4 clip_rect = ImVec4(
-					pcmd->ClipRect.x - pos.x,
-					pcmd->ClipRect.y - pos.y,
-					pcmd->ClipRect.z - pos.x,
-					pcmd->ClipRect.w - pos.y);
-				
-                if (clip_rect.x >= 800 || clip_rect.y > 600 || clip_rect.z < 0 || clip_rect.w < 0)
-                	continue;
-				
-				glScissor((int)clip_rect.x, (int)(600 - clip_rect.w), (int)(clip_rect.z - clip_rect.x), (int)(clip_rect.w - clip_rect.y));
-				
-				const GLuint textureId = (GLuint)(uintptr_t)pcmd->TextureId;
-				gxSetTexture(textureId);
-				
-				gxBegin(GL_TRIANGLES);
-				{
-					for (int e = 0; e < pcmd->ElemCount; ++e)
-					{
-						const int index = indices[e];
-						
-						const ImDrawVert & vertex = vertices[index];
-						
-						gxColor4ub(
-							(vertex.col >> IM_COL32_R_SHIFT) & 0xff,
-							(vertex.col >> IM_COL32_G_SHIFT) & 0xff,
-							(vertex.col >> IM_COL32_B_SHIFT) & 0xff,
-							(vertex.col >> IM_COL32_A_SHIFT) & 0xff);
-						
-						gxTexCoord2f(vertex.uv.x, vertex.uv.y);
-						gxVertex2f(vertex.pos.x, vertex.pos.y);
-					}
-				}
-				gxEnd();
-				
-				gxSetTexture(0);
-				
-				#if 1
-				Assert(pcmd->ClipRect.x <= pcmd->ClipRect.z);
-				Assert(pcmd->ClipRect.y <= pcmd->ClipRect.w);
-				setColor(colorWhite);
-				drawRectLine(
-					pcmd->ClipRect.x - pos.x,
-					pcmd->ClipRect.y - pos.y,
-					pcmd->ClipRect.z - pos.x,
-					pcmd->ClipRect.w - pos.y);
-				#endif
-			}
-			
-			indices += pcmd->ElemCount;
-		}
-	}
-	
-	glDisable(GL_SCISSOR_TEST);
-}
+static bool ShowTextEditor();
 
 int main(int argc, char * argv[])
 {
-	if (framework.init(0, nullptr, 800, 600))
+	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
-		ImGui::CreateContext();
-     	ImGuiIO& io = ImGui::GetIO();
+		//io.ImeSetInputScreenPosFn
 		
-		int width, height;
-		unsigned char* pixels = NULL;
-		io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+		FrameworkImGuiContext framework_context;
 		
-		const GLuint textureId = createTextureFromRGBA8(pixels, width, height, false, true);
-		io.Fonts->TexID = (void*)(uintptr_t)textureId;
+		framework_context.init();
 		
-		bool showDemoWindow = true;
+		bool showDemoWindow = false;
+		
+		bool showTextEditor = true;
+		
+		SDL_StartTextInput();
 		
 		while (!framework.quitRequested)
 		{
 			framework.process();
 			
-			io.DeltaTime = framework.timeStep;
-			io.DisplaySize.x = 800;
-			io.DisplaySize.y = 600;
-			io.MousePos.x = mouse.x;
-			io.MousePos.y = mouse.y;
-			io.MouseDown[0] = mouse.isDown(BUTTON_LEFT);
-			io.MouseDown[1] = mouse.isDown(BUTTON_RIGHT);
-			io.MouseWheel = mouse.scrollY * -.1f;
+			framework_context.processBegin(framework.timeStep, GFX_SX, GFX_SY);
 			
-			ImGui::NewFrame();
+			auto & io = ImGui::GetIO();
 			
-			ShowTextEditor();
+			if (ImGui::Begin("Statistics", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				ImGui::Text("vertices: %d, indices: %d",
+					io.MetricsRenderVertices,
+					io.MetricsRenderIndices);
+				ImGui::Text("render_windows: %d, active_windows: %d",
+					io.MetricsRenderWindows,
+					io.MetricsActiveWindows);
+				ImGui::Text("active_allocations: %d",
+					io.MetricsActiveAllocations);
+				
+				if (ImGui::Button("Toggle Text Editor Window"))
+					showTextEditor = !showTextEditor;
+			}
+			ImGui::End();
+			
+			if (showTextEditor)
+			{
+				if (ShowTextEditor() == false)
+					framework.quitRequested = true;
+			}
 			
 			ImGui::ShowDemoWindow(&showDemoWindow);
 			
-			framework.beginDraw(0, 0, 0, 0);
+		// todo : check WantCaptureMouse, WantCaptureKeyboard
+		// todo : WantTextInput -> enable IME
+		
+		// update mouse position
+		
+			if (io.WantSetMousePos)
 			{
-				ImGui::Render();
+				//mouse.setPosition(io.MousePos.x, io.MousePos.y);
 				
-				FrameworkRenderFunction(ImGui::GetDrawData());
+				SDL_WarpMouseInWindow(nullptr, (int)io.MousePos.x, (int)io.MousePos.y);
+			}
+			
+		// update mouse cursor
+		
+			framework_context.updateMouseCursor();
+			
+			framework_context.processEnd();
+			
+			framework.beginDraw(80, 90, 100, 0);
+			{
+				framework_context.draw();
 			}
 			framework.endDraw();
 		}
 		
-		ImGui::DestroyContext();
+		SDL_StopTextInput();
+		
+		framework_context.shut();
 
 		framework.shutdown();
 	}
@@ -133,8 +92,10 @@ int main(int argc, char * argv[])
 	return 0;
 }
 
-static void ShowTextEditor()
+static bool ShowTextEditor()
 {
+	bool result = true;
+	
 	///////////////////////////////////////////////////////////////////////
 	// TEXT EDITOR SAMPLE
 	static TextEditor editor;
@@ -230,6 +191,7 @@ static void ShowTextEditor()
 	ImGui::SetWindowSize(ImVec2(640, 480), ImGuiCond_FirstUseEver);
 	if (ImGui::BeginMenuBar())
 	{
+	#if 0
 		if (ImGui::BeginMenu("File"))
 		{
 			if (ImGui::MenuItem("Save"))
@@ -239,13 +201,12 @@ static void ShowTextEditor()
 			}
 			if (ImGui::MenuItem("Quit", "Alt-F4"))
 			{
-				ImGui::EndMenu();
-				ImGui::EndMenuBar();
-				ImGui::End();
-				return;
+				result = false;
 			}
 			ImGui::EndMenu();
 		}
+	#endif
+	
 		if (ImGui::BeginMenu("Edit"))
 		{
 			bool ro = editor.IsReadOnly();
@@ -294,11 +255,15 @@ static void ShowTextEditor()
 		ImGui::EndMenuBar();
 	}
 
+#if 0
 	ImGui::Text("%6d/%-6d %6d lines  | %s | %s | %s | %s", cpos.mLine + 1, cpos.mColumn + 1, editor.GetTotalLines(),
 		editor.IsOverwrite() ? "Ovr" : "Ins",
 		editor.CanUndo() ? "*" : " ",
 		editor.GetLanguageDefinition().mName.c_str(), fileToEdit);
+#endif
 
 	editor.Render("TextEditor");
 	ImGui::End();
+	
+	return result;
 }

@@ -67,5 +67,6 @@ library ImGuiColorTextEdit
 
 app ImGuiColorTextEdit-test
 	depend_library framework
+	depend_library imgui-framework
 	depend_library ImGuiColorTextEdit
 	add_files ImGuiColorTextEdit-support/test.cpp
