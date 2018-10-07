@@ -17,7 +17,14 @@ context.init();
 while (!framework.quitRequested)
 {
 	/*
-	ImGui calls should be made between processBegin and processEnd calls. The first parameter to processBegin is the time since the last frame for which the ImGui context got processed. The second and third parameters are the display size ImGui should take into consideration when (re)sizing and moving elements. inputIsCaptured is a boolean which is usually set to false, but may be true in case there's ui on top of ImGui which has already captured input. When ImGui captures the input, this boolean will be set to true. In this case, ui and code running 'below' ImGui shouldn't handle mouse and keyboard input, as ImGui has already claimed exclusive access to it.
+	ImGui calls should be made between processBegin and processEnd calls. The first 
+	parameter to processBegin is the time since the last frame for which the ImGui context 
+	got processed. The second and third parameters are the display size ImGui should take 
+	into consideration when (re)sizing and moving elements. inputIsCaptured is a boolean 
+	which is usually set to false, but may be true in case there's ui on top of ImGui 
+	which has already captured input. When ImGui captures the input, this boolean will be 
+	set to true. In this case, ui and code running 'below' ImGui shouldn't handle mouse 
+	and keyboard input, as ImGui has already claimed exclusive access to it.
 	*/
 
 	bool inputIsCaptured = false;
