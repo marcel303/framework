@@ -31,7 +31,7 @@ library framework
 	with_platform raspberry-pi compile_definition ENABLE_HQ_PRIMITIVES 0 expose
 	with_platform raspberry-pi compile_definition ENABLE_MSDF_FONTS    0 expose
 
-# Macos header files includes and libraries
+# Macos header file includes and libraries
 	with_platform macos header_path macos/include          expose
 	with_platform macos header_path macos/include/freetype
 	with_platform macos depend_library macos/glew/lib/libGLEW.a local
@@ -39,7 +39,7 @@ library framework
 	with_platform macos depend_library macos/lib/libfreetype.a  local
 	with_platform macos depend_library macos/lib/libportaudio.a local
 
-# Windows header files includes and libraries
+# Windows header file includes and libraries
 	with_platform windows header_path win32/include          expose
 	with_platform windows header_path win32/include/freetype
 	with_platform windows depend_library win32/lib/FreeImage.lib local
@@ -58,7 +58,17 @@ library framework
 	with_platform windows add_dist_files win32/dll/SDL2.dll
 	with_platform windows add_dist_files win32/dll/XInput9_1_0.dll
 	with_platform windows add_dist_files win32/dll/portaudio_x86.dll
-	
+
+# Raspberry Pi header file includes and libraries
+
+	with_platform raspberry-pi header_path /usr/include/freetype2
+	with_platform raspberry-pi depend_library pthread find
+	with_platform raspberry-pi depend_library portaudio find
+	with_platform raspberry-pi depend_library freeimage find
+	with_platform raspberry-pi depend_package OpenGL
+	with_platform raspberry-pi depend_package GLEW
+	with_platform raspberry-pi depend_package Freetype
+
 app framework-example-basic
 	add_files examples/example.cpp
 	resource_path examples/data
