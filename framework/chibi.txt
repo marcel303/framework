@@ -27,9 +27,9 @@ library framework
 	compile_definition _CRT_SECURE_NO_WARNINGS * expose toolchain msvc
 
 # Not every feature works on Raspberry Pi or is just to slow, so we tweak some settings here
-	with_platform raspberry-pi compile_definition USE_LEGACY_OPENGL    1 expose
-	with_platform raspberry-pi compile_definition ENABLE_HQ_PRIMITIVES 0 expose
-	with_platform raspberry-pi compile_definition ENABLE_MSDF_FONTS    0 expose
+	with_platform linux.raspberry-pi compile_definition USE_LEGACY_OPENGL    1 expose
+	with_platform linux.raspberry-pi compile_definition ENABLE_HQ_PRIMITIVES 0 expose
+	with_platform linux.raspberry-pi compile_definition ENABLE_MSDF_FONTS    0 expose
 
 # Macos header file includes and libraries
 	with_platform macos header_path macos/include          expose
@@ -59,15 +59,16 @@ library framework
 	with_platform windows add_dist_files win32/dll/XInput9_1_0.dll
 	with_platform windows add_dist_files win32/dll/portaudio_x86.dll
 
-# Raspberry Pi header file includes and libraries
+# Linux header file includes and libraries
 
-	with_platform raspberry-pi header_path /usr/include/freetype2
-	with_platform raspberry-pi depend_library pthread find
-	with_platform raspberry-pi depend_library portaudio find
-	with_platform raspberry-pi depend_library freeimage find
-	with_platform raspberry-pi depend_package OpenGL
-	with_platform raspberry-pi depend_package GLEW
-	with_platform raspberry-pi depend_package Freetype
+	# fixme : need a fix for the freetype2 include path
+	with_platform linux header_path /usr/include/freetype2
+	with_platform linux depend_library pthread find
+	with_platform linux depend_library portaudio find
+	with_platform linux depend_library freeimage find
+	with_platform linux depend_package OpenGL
+	with_platform linux depend_package GLEW
+	with_platform linux depend_package Freetype
 
 app framework-example-basic
 	add_files examples/example.cpp
