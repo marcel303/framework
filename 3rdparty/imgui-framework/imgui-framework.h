@@ -50,11 +50,13 @@ struct FrameworkImGuiContext
 	void init();
 	void shut();
 	
-	void processBegin(const float dt, const int displaySx, const int displaySy);
+	void processBegin(const float dt, const int displaySx, const int displaySy, bool & inputIsCaptured);
 	void processEnd();
 	
 	void draw();
 	
+	void pushImGuiContext();
+	void popImGuiContext();
 	void updateMouseCursor();
 	
 	static const char * getClipboardText(void * user_data);

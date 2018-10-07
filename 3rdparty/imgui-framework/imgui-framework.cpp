@@ -38,8 +38,7 @@ void FrameworkImGuiContext::init()
 {
 	imgui_context = ImGui::CreateContext();
 	
-	previous_context = ImGui::GetCurrentContext();
-	ImGui::SetCurrentContext(imgui_context);
+	pushImGuiContext();
 	
 	auto & io = ImGui::GetIO();
 	
@@ -96,8 +95,7 @@ void FrameworkImGuiContext::init()
 	font_texture_id = createTextureFromRGBA8(pixels, sx, sy, false, true);
 	io.Fonts->TexID = (void*)(uintptr_t)font_texture_id;
 	
-	ImGui::SetCurrentContext(previous_context);
-	previous_context = nullptr;
+	popImGuiContext();
 }
 
 void FrameworkImGuiContext::shut()
@@ -124,12 +122,9 @@ void FrameworkImGuiContext::shut()
 	}
 }
 
-void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, const int displaySy)
+void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, const int displaySy, bool & inputIsCaptured)
 {
-	fassert(previous_context == nullptr);
-	previous_context = ImGui::GetCurrentContext();
-	
-	ImGui::SetCurrentContext(imgui_context);
+	pushImGuiContext();
 	
 	auto & io = ImGui::GetIO();
 	
@@ -139,35 +134,56 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 
 	io.MousePos.x = mouse.x;
 	io.MousePos.y = mouse.y;
-	io.MouseDown[0] = mouse.isDown(BUTTON_LEFT);
-	io.MouseDown[1] = mouse.isDown(BUTTON_RIGHT);
 	
-#if DO_KINETIC_SCROLL
-// todo : add kinectic scrolling
-	if (mouse.scrollY == 0)
-		kinetic_scroll *= powf(.1f, dt);
-	else
-		kinetic_scroll = mouse.scrollY * -.1f;
-	io.MouseWheel = kinetic_scroll;
-#else
-	io.MouseWheel = mouse.scrollY * -.1f;
-#endif
-
-	io.KeyCtrl = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
-	io.KeyShift = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
-	io.KeyAlt = keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT);
-	io.KeySuper = keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI);
-	
-	// handle keyboard and text input
-	
-	for (auto & e : framework.events)
+	if (inputIsCaptured)
 	{
-		if (e.type == SDL_KEYDOWN)
-			io.KeysDown[e.key.keysym.scancode] = true;
-		else if (e.type == SDL_KEYUP)
-			io.KeysDown[e.key.keysym.scancode] = false;
-		else if (e.type == SDL_TEXTINPUT)
-			io.AddInputCharactersUTF8(e.text.text);
+		io.MouseDown[0] = false;
+		io.MouseDown[1] = false;
+		
+		io.MouseWheel = 0.f;
+		
+		io.KeyCtrl = false;
+		io.KeyShift = false;
+		io.KeyAlt = false;
+		io.KeySuper = false;
+		
+		memset(io.KeysDown, 0, sizeof(io.KeysDown));
+	}
+	else
+	{
+		io.MouseDown[0] = mouse.isDown(BUTTON_LEFT);
+		io.MouseDown[1] = mouse.isDown(BUTTON_RIGHT);
+		
+	#if DO_KINETIC_SCROLL
+	// todo : add kinectic scrolling
+		if (mouse.scrollY == 0)
+			kinetic_scroll *= powf(.1f, dt);
+		else
+			kinetic_scroll = mouse.scrollY * -.1f;
+		io.MouseWheel = kinetic_scroll;
+	#else
+		io.MouseWheel = mouse.scrollY * -.1f;
+	#endif
+
+		io.KeyCtrl = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
+		io.KeyShift = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
+		io.KeyAlt = keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT);
+		io.KeySuper = keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI);
+		
+		// handle keyboard and text input
+		
+		for (auto & e : framework.events)
+		{
+			if (e.type == SDL_KEYDOWN)
+				io.KeysDown[e.key.keysym.scancode] = true;
+			else if (e.type == SDL_KEYUP)
+				io.KeysDown[e.key.keysym.scancode] = false;
+			else if (e.type == SDL_TEXTINPUT)
+				io.AddInputCharactersUTF8(e.text.text);
+		}
+		
+		inputIsCaptured |= io.WantCaptureKeyboard;
+		inputIsCaptured |= io.WantCaptureMouse;
 	}
 	
 	ImGui::NewFrame();
@@ -175,21 +191,30 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 
 void FrameworkImGuiContext::processEnd()
 {
-	ImGui::SetCurrentContext(previous_context);
-	previous_context = nullptr;
+	popImGuiContext();
 }
 
 void FrameworkImGuiContext::draw()
 {
-	fassert(previous_context == nullptr);
-	previous_context = ImGui::GetCurrentContext();
-	
-	ImGui::SetCurrentContext(imgui_context);
+	pushImGuiContext();
 	{
 		ImGui::Render();
 		
 		render(ImGui::GetDrawData());
 	}
+	popImGuiContext();
+}
+
+void FrameworkImGuiContext::pushImGuiContext()
+{
+	fassert(previous_context == nullptr);
+	previous_context = ImGui::GetCurrentContext();
+	
+	ImGui::SetCurrentContext(imgui_context);
+}
+
+void FrameworkImGuiContext::popImGuiContext()
+{
 	ImGui::SetCurrentContext(previous_context);
 	previous_context = nullptr;
 }
