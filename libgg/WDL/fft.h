@@ -43,7 +43,15 @@ WDL:
 extern "C" {
 #endif
 
-#include <xmmintrin.h>
+#if __SSE2__
+	#define WDL_FFT_USE_SSE 1
+#else
+	#define WDL_FFT_USE_SSE 0
+#endif
+
+#if WDL_FFT_USE_SSE
+	#include <xmmintrin.h>
+#endif
 
 #ifndef WDL_FFT_REALSIZE
 #define WDL_FFT_REALSIZE 4
@@ -59,6 +67,7 @@ typedef double WDL_FFT_REAL;
 
 struct WDL_FFT4_REAL
 {
+#if WDL_FFT_USE_SSE
 	__m128 v;
 	
 	float elem(const int index) const
@@ -151,6 +160,102 @@ struct WDL_FFT4_REAL
 		v = _mm_set1_ps(c);
 		return *this;
 	}
+#else
+	typedef float float4 __attribute__ ((vector_size(16)));
+	
+	float4 v;
+	
+	float elem(const int index) const
+	{
+		return ((float*)&v)[index];
+	}
+	
+	WDL_FFT4_REAL operator+(const WDL_FFT4_REAL & other) const
+	{
+		WDL_FFT4_REAL r;
+		r.v = v + other.v;
+		return r;
+	}
+	
+	WDL_FFT4_REAL operator-(const WDL_FFT4_REAL & other) const
+	{
+		WDL_FFT4_REAL r;
+		r.v = v - other.v;
+		return r;
+	}
+	
+	WDL_FFT4_REAL operator*(const WDL_FFT4_REAL & other) const
+	{
+		WDL_FFT4_REAL r;
+		r.v = v * other.v;
+		return r;
+	}
+	
+	WDL_FFT4_REAL & operator+=(const WDL_FFT4_REAL & other)
+	{
+		v = v + other.v;
+		return *this;
+	}
+	
+	WDL_FFT4_REAL & operator-=(const WDL_FFT4_REAL & other)
+	{
+		v = v - other.v;
+		return *this;
+	}
+	
+	WDL_FFT4_REAL & operator*=(const WDL_FFT4_REAL & other)
+	{
+		v = v * other.v;
+		return *this;
+	}
+	
+	//
+	
+	WDL_FFT4_REAL operator+(const WDL_FFT_REAL other) const
+	{
+		WDL_FFT4_REAL r;
+		r.v = v + other;
+		return r;
+	}
+	
+	WDL_FFT4_REAL operator-(const WDL_FFT_REAL other) const
+	{
+		WDL_FFT4_REAL r;
+		r.v = v - other;
+		return r;
+	}
+	
+	WDL_FFT4_REAL operator*(const WDL_FFT_REAL other) const
+	{
+		WDL_FFT4_REAL r;
+		r.v = v * other;
+		return r;
+	}
+	
+	WDL_FFT4_REAL & operator+=(const WDL_FFT_REAL other)
+	{
+		v = v + other;
+		return *this;
+	}
+	
+	WDL_FFT4_REAL & operator-=(const WDL_FFT_REAL other)
+	{
+		v = v - other;
+		return *this;
+	}
+	
+	WDL_FFT4_REAL & operator*=(const WDL_FFT_REAL other)
+	{
+		v = v * other;
+		return *this;
+	}
+	
+	WDL_FFT4_REAL & operator=(const WDL_FFT_REAL c)
+	{
+		v = float4 { c };
+		return *this;
+	}
+#endif
 };
 
 typedef struct {
@@ -161,8 +266,13 @@ typedef struct {
 struct WDL_FFT4_COMPLEX {
   WDL_FFT4_COMPLEX & operator=(const WDL_FFT_COMPLEX & c)
   {
+  #if WDL_FFT_USE_SSE
   	re.v = _mm_set1_ps(c.re);
   	im.v = _mm_set1_ps(c.im);
+  #else
+  	re.v = WDL_FFT4_REAL::float4 { c.re };
+  	im.v = WDL_FFT4_REAL::float4 { c.im };
+  #endif
   	return *this;
   }
 	
