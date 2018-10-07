@@ -610,3 +610,5 @@ void AudioNodeVoice4DGlobals::tick(const float dt)
 	voiceMgr4D->spat.globalOrigin[1] = getInputAudioFloat(kInput_OriginY, &AudioFloat::Zero)->getMean();
 	voiceMgr4D->spat.globalOrigin[2] = getInputAudioFloat(kInput_OriginZ, &AudioFloat::Zero)->getMean();
 }
+
+#undef voiceMgr
