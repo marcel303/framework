@@ -28,8 +28,10 @@ int main(int argc, char * argv[])
 		while (!framework.quitRequested)
 		{
 			framework.process();
+
+			bool inputIsCaptured = false;
 			
-			framework_context.processBegin(framework.timeStep, GFX_SX, GFX_SY);
+			framework_context.processBegin(framework.timeStep, GFX_SX, GFX_SY, inputIsCaptured);
 			
 			auto & io = ImGui::GetIO();
 			
