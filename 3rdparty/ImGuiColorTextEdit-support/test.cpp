@@ -8,7 +8,7 @@
 
 #define DO_KINETIC_SCROLL 0
 
-static void ShowTextEditor();
+static bool ShowTextEditor();
 
 struct FrameworkImGuiContext
 {
@@ -331,7 +331,9 @@ int main(int argc, char * argv[])
 		
 		framework_context.init(imgui_context);
 		
-		bool showDemoWindow = true;
+		bool showDemoWindow = false;
+		
+		bool showTextEditor = true;
 		
 		SDL_StartTextInput();
 		
@@ -351,10 +353,17 @@ int main(int argc, char * argv[])
 					io.MetricsActiveWindows);
 				ImGui::Text("active_allocations: %d",
 					io.MetricsActiveAllocations);
+				
+				if (ImGui::Button("Toggle Text Editor Window"))
+					showTextEditor = !showTextEditor;
 			}
 			ImGui::End();
 			
-			ShowTextEditor();
+			if (showTextEditor)
+			{
+				if (ShowTextEditor() == false)
+					framework.quitRequested = true;
+			}
 			
 			ImGui::ShowDemoWindow(&showDemoWindow);
 			
@@ -376,7 +385,7 @@ int main(int argc, char * argv[])
 			
 			framework_context.processEnd();
 			
-			framework.beginDraw(0, 0, 0, 0);
+			framework.beginDraw(80, 90, 100, 0);
 			{
 				ImGui::Render();
 				
@@ -398,8 +407,10 @@ int main(int argc, char * argv[])
 	return 0;
 }
 
-static void ShowTextEditor()
+static bool ShowTextEditor()
 {
+	bool result = true;
+	
 	///////////////////////////////////////////////////////////////////////
 	// TEXT EDITOR SAMPLE
 	static TextEditor editor;
@@ -495,6 +506,7 @@ static void ShowTextEditor()
 	ImGui::SetWindowSize(ImVec2(640, 480), ImGuiCond_FirstUseEver);
 	if (ImGui::BeginMenuBar())
 	{
+	#if 0
 		if (ImGui::BeginMenu("File"))
 		{
 			if (ImGui::MenuItem("Save"))
@@ -504,13 +516,12 @@ static void ShowTextEditor()
 			}
 			if (ImGui::MenuItem("Quit", "Alt-F4"))
 			{
-				ImGui::EndMenu();
-				ImGui::EndMenuBar();
-				ImGui::End();
-				return;
+				result = false;
 			}
 			ImGui::EndMenu();
 		}
+	#endif
+	
 		if (ImGui::BeginMenu("Edit"))
 		{
 			bool ro = editor.IsReadOnly();
@@ -559,11 +570,15 @@ static void ShowTextEditor()
 		ImGui::EndMenuBar();
 	}
 
+#if 0
 	ImGui::Text("%6d/%-6d %6d lines  | %s | %s | %s | %s", cpos.mLine + 1, cpos.mColumn + 1, editor.GetTotalLines(),
 		editor.IsOverwrite() ? "Ovr" : "Ins",
 		editor.CanUndo() ? "*" : " ",
 		editor.GetLanguageDefinition().mName.c_str(), fileToEdit);
+#endif
 
 	editor.Render("TextEditor");
 	ImGui::End();
+	
+	return result;
 }
