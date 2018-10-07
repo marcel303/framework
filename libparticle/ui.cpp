@@ -5,6 +5,7 @@
 #include "textfield.h"
 #include "ui.h"
 #include <algorithm>
+#include <string.h>
 
 #define MAX_TEXTBOX_LENGTH 512
 

@@ -7,5 +7,6 @@ library libnfd
 	with_platform windows add_files nfd_win.cpp
 
 	with_platform macos depend_library AppKit find
+	with_platform linux depend_package GTK2
 
 	header_path . expose
