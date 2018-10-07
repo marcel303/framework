@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "textureatlas.h"
+#include <string.h>
 
 TextureAtlas::TextureAtlas()
 	: a()
