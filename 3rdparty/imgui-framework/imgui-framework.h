@@ -25,13 +25,13 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "imgui.h"
+
 #define DO_KINETIC_SCROLL 0
 
 struct FrameworkImGuiContext
 {
 	ImGuiContext * imgui_context = nullptr;
-	
-	ImGuiIO * io = nullptr;
 	
 	SDL_Cursor * mouse_cursors[ImGuiMouseCursor_COUNT] = { };
 	
