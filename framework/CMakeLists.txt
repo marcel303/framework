@@ -104,17 +104,15 @@ if (WIN32)
 endif (WIN32)
 
 if (APPLE)
-	find_library(COCOA_LIBRARY Cocoa)
 	find_library(CARBON_LIBRARY Carbon)
 	find_library(COREAUDIO_LIBRARY CoreAudio)
-	find_library(COREVIDEO_LIBRARY CoreVideo)
-	find_library(IOKIT_LIBRARY IOKit)
 	find_library(AUDIOTOOLBOX_LIBRARY AudioToolbox)
 	find_library(OPENGL_LIBRARY OpenGL)
-	find_library(FF_LIBRARY ForceFeedback)
-	find_library(ICONV_LIBRARY iconv)
 	find_library(FREETYPE_LIBRARY freetype2)
 	find_library(BZ2_LIBRARY bz2)
+
+	find_package(SDL2 REQUIRED)
+	target_include_directories(framework PUBLIC "${SDL2_INCLUDE_DIRS}/..")
 
 	# these libraries are only needed for OpenAL
 	#find_library(AUDIOUNIT_LIBRARY AudioUnit)
@@ -126,19 +124,13 @@ if (APPLE)
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/glew/lib/libGLEW.a
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libfreeimage.a
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libfreetype.a
-		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libSDL2.a
-		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libSDL2main.a
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libportaudio.a
-		${COCOA_LIBRARY}
 		${CARBON_LIBRARY}
 		${COREAUDIO_LIBRARY}
-		${COREVIDEO_LIBRARY}
-		${IOKIT_LIBRARY}
 		${AUDIOTOOLBOX_LIBRARY}
 		${OPENGL_LIBRARY}
-		${FF_LIBRARY}
-		${ICONV_LIBRARY}
 		${BZ2_LIBRARY}
+		${SDL2_LIBRARIES}
 		PARENT_SCOPE)
 
 	set(FRAMEWORK_BINARIES
