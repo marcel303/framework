@@ -32,6 +32,7 @@
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 #include "vfxNodes/oscEndpointMgr.h"
+#include "vfxNodes/vfxNodeVfxGraph.h"
 #include "vfxTypes.h"
 
 #include "mediaplayer/MPUtil.h"
@@ -476,6 +477,103 @@ int main(int argc, char * argv[])
 		
 		//
 		
+		struct GraphEditWindow
+		{
+			Window* window = nullptr;
+			
+			VfxGraph * vfxGraph = nullptr;
+			
+			RealTimeConnection * realTimeConnection = nullptr;
+			
+			GraphEdit * graphEdit = nullptr;
+			
+			GraphEditWindow(GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, const char * filename)
+			{
+				window = new Window(filename, 640, 480, true);
+				
+				vfxGraph = new VfxGraph();
+				
+				realTimeConnection = new RealTimeConnection(vfxGraph);
+				
+				graphEdit = new GraphEdit(window->getWidth(), window->getHeight(), typeDefinitionLibrary, realTimeConnection);
+				
+				graphEdit->load(filename);
+			}
+			
+			~GraphEditWindow()
+			{
+				delete graphEdit;
+				graphEdit = nullptr;
+				
+				delete realTimeConnection;
+				realTimeConnection = nullptr;
+				
+				delete vfxGraph;
+				vfxGraph = nullptr;
+				
+				delete window;
+				window = nullptr;
+			}
+			
+			void process(const float dt)
+			{
+				if (window->hasFocus())
+				{
+					pushWindow(*window);
+					{
+						const int sx = window->getWidth();
+						const int sy = window->getHeight();
+						
+						graphEdit->displaySx = sx;
+						graphEdit->displaySy = sy;
+						
+						graphEdit->tick(dt, false);
+						
+						vfxGraph->tick(sx, sy, dt);
+						
+						framework.beginDraw(0, 0, 0, 0);
+						{
+							vfxGraph->draw(sx, sy);
+							
+							graphEdit->tickVisualizers(dt);
+							
+							graphEdit->draw();
+						}
+						framework.endDraw();
+					}
+					popWindow();
+				}
+			}
+		};
+		
+		std::list<GraphEditWindow*> graphEditWindows;
+		
+		graphEdit->handleNodeDoubleClicked = [&](const GraphNodeId nodeId)
+		{
+			auto node = graphEdit->tryGetNode(nodeId);
+			
+			if (node == nullptr)
+				return;
+			
+			//
+			
+			if (node->typeName == "vfxGraph")
+			{
+				auto value = node->inputValues.find("file");
+				
+				if (value != node->inputValues.end())
+				{
+					const char * filename = value->second.c_str();
+					
+					GraphEditWindow * window = new GraphEditWindow(typeDefinitionLibrary, filename);
+					
+					graphEditWindows.push_back(window);
+				}
+			}
+		};
+		
+		//
+		
 		graphEdit->load(FILENAME);
 		
 		//
@@ -683,6 +781,25 @@ int main(int argc, char * argv[])
 				}
 			}
 			framework.endDraw();
+			
+			//
+			
+			for (auto i = graphEditWindows.begin(); i != graphEditWindows.end(); )
+			{
+				GraphEditWindow *& window = *i;
+				
+				window->process(dt);
+				
+				if (window->window->getQuitRequested())
+				{
+					delete window;
+					window = nullptr;
+					
+					i = graphEditWindows.erase(i);
+				}
+				else
+					++i;
+			}
 		}
 		
 		SDL_StopTextInput();
