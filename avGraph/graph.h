@@ -28,6 +28,7 @@
 #pragma once
 
 #include "Mat4x4.h"
+#include <functional>
 #include <list>
 #include <map>
 #include <set>
@@ -1430,6 +1431,8 @@ struct GraphEdit : GraphEditConnection
 	NodeInsert nodeInsert;
 	
 	float nodeDoubleClickTime;
+	
+	std::function<void(const GraphNodeId)> handleNodeDoubleClicked;
 	
 	Touches touches;
 	

@@ -1885,6 +1885,7 @@ GraphEdit::GraphEdit(
 	, nodeResize()
 	, nodeInsert()
 	, nodeDoubleClickTime(0.f)
+	, handleNodeDoubleClicked()
 	, touches()
 	, mousePosition()
 	, dragAndZoom()
@@ -2794,6 +2795,11 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							if (appendSelection == false && nodeDoubleClickTime > 0.f)
 							{
 								nodeDoubleClickTime = 0.f;
+								
+								if (handleNodeDoubleClicked != nullptr)
+								{
+									handleNodeDoubleClicked(hitTestResult.node->id);
+								}
 								
 							#if 1
 								GraphEdit_NodeResourceEditorWindow * resourceEditorWindow = new GraphEdit_NodeResourceEditorWindow();
