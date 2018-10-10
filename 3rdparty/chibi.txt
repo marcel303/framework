@@ -65,17 +65,21 @@ library ImGuiColorTextEdit
 	header_path ImGuiColorTextEdit alias_through_copy imgui expose
 	add_files ImGuiColorTextEdit/TextEditor.cpp ImGuiColorTextEdit/TextEditor.h
 
-app ImGuiColorTextEdit-test
+app ImGuiColorTextEdit-000-test
 	resource_path .
-	depend_library framework
 	depend_library imgui-framework
 	depend_library ImGuiColorTextEdit
 	add_files ImGuiColorTextEdit-support/test.cpp
 
-app ImGuiColorTextEdit-read-write
-	resource_path .
-	depend_library framework
+app ImGuiColorTextEdit-100-read-write
+	resource_path ImGuiColorTextEdit-support/data
 	depend_library imgui-framework
 	depend_library ImGuiColorTextEdit
 	depend_library libnfd
 	add_files ImGuiColorTextEdit-support/read-write.cpp
+
+app ImGuiColorTextEdit-200-realtime-shader-editing
+	resource_path ImGuiColorTextEdit-support/data
+	depend_library imgui-framework
+	depend_library ImGuiColorTextEdit
+	add_files ImGuiColorTextEdit-support/realtime-shader-editing.cpp
