@@ -66,7 +66,15 @@ library ImGuiColorTextEdit
 	add_files ImGuiColorTextEdit/TextEditor.cpp ImGuiColorTextEdit/TextEditor.h
 
 app ImGuiColorTextEdit-test
+	resource_path .
 	depend_library framework
 	depend_library imgui-framework
 	depend_library ImGuiColorTextEdit
 	add_files ImGuiColorTextEdit-support/test.cpp
+
+app ImGuiColorTextEdit-read-write
+	resource_path .
+	depend_library framework
+	depend_library imgui-framework
+	depend_library ImGuiColorTextEdit
+	add_files ImGuiColorTextEdit-support/read-write.cpp
