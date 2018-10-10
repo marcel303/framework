@@ -4,7 +4,8 @@
 #include "imgui-framework.h"
 #include <fstream>
 
-#include "Benchmark.h"
+#include "data/Shader.vs"
+#include "data/Shader.ps"
 
 #define GFX_SX 800
 #define GFX_SY 800
@@ -21,23 +22,16 @@ int main(int argc, char * argv[])
 
 		textEditor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
 		
-		const char * genericVs = nullptr;
-		const char * genericPs = nullptr;
-		framework.tryGetShaderSource("engine/Generic.vs", genericVs);
-		framework.tryGetShaderSource("engine/Generic.ps", genericPs);
+		shaderSource("shader.vs", s_shaderVs);
+		shaderSource("shader.ps", s_shaderPs);
 		
-		fassert(genericVs != nullptr);
-		fassert(genericPs != nullptr);
-		
-		shaderSource("shader.vs", genericVs);
-		shaderSource("shader.ps", genericPs);
-		
-		if (genericPs != nullptr)
-			textEditor.SetText(genericPs);
+		textEditor.SetText(s_shaderPs);
 		
 		SDL_StartTextInput();
 		
-		std::string shaderPs = genericPs;
+		std::string shaderPs = s_shaderPs;
+		
+		Window window("Preview", 600, 600, true);
 		
 		while (!framework.quitRequested)
 		{
@@ -53,19 +47,17 @@ int main(int argc, char * argv[])
 				ImGui::Begin("Text Editor Demo", nullptr,
 						ImGuiWindowFlags_NoTitleBar |
 						ImGuiWindowFlags_NoResize |
-						ImGuiWindowFlags_HorizontalScrollbar |
-						ImGuiWindowFlags_MenuBar);
+						ImGuiWindowFlags_HorizontalScrollbar);
 				{
 					Shader shader("shader");
 					std::vector<std::string> errorMessages;
+					TextEditor::ErrorMarkers errorMarkers;
 					if (shader.getErrorMessages(errorMessages))
 					{
-						TextEditor::ErrorMarkers errorMarkers;
 						for (size_t i = 0; i < errorMessages.size(); ++i)
 							errorMarkers[i + 1] = errorMessages[i];
-						
-						textEditor.SetErrorMarkers(errorMarkers);
 					}
+					textEditor.SetErrorMarkers(errorMarkers);
 
 					textEditor.Render("TextEditor");
 				}
@@ -89,21 +81,29 @@ int main(int argc, char * argv[])
 			framework.beginDraw(80, 90, 100, 0);
 			{
 				framework_context.draw();
-				
-				Shader shader("shader");
-				shader.setImmediate("time", framework.time);
-				shader.setImmediate("mouse", mouse.x, mouse.y);
-				shader.setImmediate("mouse_down", mouse.isDown(BUTTON_LEFT));
-				
-				if (shader.isValid())
-				{
-					setShader(shader);
-					setColor(colorWhite);
-					drawRect(GFX_SX - 100, GFX_SY - 100, GFX_SX, GFX_SY);
-					clearShader();
-				}
 			}
 			framework.endDraw();
+			
+			pushWindow(window);
+			{
+				framework.beginDraw(0, 0, 0, 0);
+				{
+					Shader shader("shader");
+					shader.setImmediate("time", framework.time);
+					shader.setImmediate("mouse", mouse.x, mouse.y);
+					shader.setImmediate("mouse_down", mouse.isDown(BUTTON_LEFT));
+					
+					if (shader.isValid())
+					{
+						setShader(shader);
+						setColor(colorWhite);
+						drawRect(0, 0, window.getWidth(), window.getHeight());
+						clearShader();
+					}
+				}
+				framework.endDraw();
+			}
+			popWindow();
 		}
 		
 		SDL_StopTextInput();
