@@ -11,6 +11,8 @@ static bool ShowTextEditor();
 
 int main(int argc, char * argv[])
 {
+	changeDirectory(CHIBI_RESOURCE_PATH);
+	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
 		//io.ImeSetInputScreenPosFn
@@ -102,7 +104,7 @@ static bool ShowTextEditor()
 	// TEXT EDITOR SAMPLE
 	static TextEditor editor;
 	
-	static const char* fileToEdit = "/Users/thecat/testrepos/ImGuiColorTextEdit/TextEditor.cpp";
+	static const char* fileToEdit = "ImGuiColorTextEdit/TextEditor.cpp";
 	
 	static bool init = false;
 	
