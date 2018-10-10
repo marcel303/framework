@@ -1705,6 +1705,23 @@ void Framework::screenshot(const char * name, int index, bool omitAlpha)
 void Framework::registerShaderSource(const char * name, const char * text)
 {
 	m_shaderSources[name] = text;
+
+	// refresh shaders which are using this source
+	
+	for (auto & shaderCacheItr : g_shaderCache.m_map)
+	{
+		ShaderCacheElem & cacheElem = shaderCacheItr.second;
+		
+		if (name == cacheElem.vs || name == cacheElem.ps)
+		{
+			cacheElem.reload();
+			
+			if (globals.shader != nullptr && globals.shader->getProgram() == cacheElem.program)
+			{
+				clearShader();
+			}
+		}
+	}
 }
 
 void Framework::unregisterShaderSource(const char * name)
@@ -1904,6 +1921,11 @@ void Window::hide()
 bool Window::isHidden() const
 {
 	return (SDL_GetWindowFlags(m_window) & SDL_WINDOW_HIDDEN) != 0;
+}
+
+bool Window::hasFocus() const
+{
+	return (SDL_GetWindowFlags(m_window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 }
 
 void Window::raise()

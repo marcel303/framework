@@ -376,6 +376,7 @@ public:
 	void hide();
 	
 	bool isHidden() const;
+	bool hasFocus() const;
 	
 	void raise();
 	
