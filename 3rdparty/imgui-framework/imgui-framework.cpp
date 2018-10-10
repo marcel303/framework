@@ -148,6 +148,13 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 		io.KeySuper = false;
 		
 		memset(io.KeysDown, 0, sizeof(io.KeysDown));
+		
+	#if DO_KINETIC_SCROLL
+	#if DO_TOUCH_SCROLL
+		num_touches = 0;
+	#endif
+		kinetic_scroll.SetZero();
+	#endif
 	}
 	else
 	{
@@ -155,12 +162,47 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 		io.MouseDown[1] = mouse.isDown(BUTTON_RIGHT);
 		
 	#if DO_KINETIC_SCROLL
+	#if DO_TOUCH_SCROLL
+		Vec2 new_kinetic_scroll;
+		for (auto & e : framework.events)
+		{
+			if (e.type == SDL_FINGERDOWN)
+			{
+				kinetic_scroll.SetZero();
+				
+				num_touches++;
+			}
+			else if (e.type == SDL_FINGERUP)
+			{
+				num_touches--;
+				
+				if (num_touches < 0)
+					num_touches = 0;
+				
+				if (num_touches < 2 && fabsf(kinetic_scroll.CalcSize()) < .02f)
+					kinetic_scroll.SetZero();
+			}
+			else if (e.type == SDL_FINGERMOTION && num_touches == 2)
+			{
+				new_kinetic_scroll += Vec2(e.tfinger.dx * 100.f, e.tfinger.dy * 10.f);
+			}
+		}
+		
+		if (num_touches == 2)
+			kinetic_scroll = new_kinetic_scroll;
+		else
+			kinetic_scroll *= powf(.1f, dt);
+		
+		io.MouseWheelH = kinetic_scroll[0];
+		io.MouseWheel = kinetic_scroll[1];
+	#else
 	// todo : add kinectic scrolling
 		if (mouse.scrollY == 0)
 			kinetic_scroll *= powf(.1f, dt);
 		else
-			kinetic_scroll = mouse.scrollY * -.1f;
-		io.MouseWheel = kinetic_scroll;
+			kinetic_scroll = Vec2(0.f, mouse.scrollY * -.1f);
+		io.MouseWheel = kinetic_scroll[1];
+	#endif
 	#else
 		io.MouseWheel = mouse.scrollY * -.1f;
 	#endif

@@ -27,7 +27,8 @@
 
 #include "imgui.h"
 
-#define DO_KINETIC_SCROLL 0
+#define DO_KINETIC_SCROLL 1
+#define DO_TOUCH_SCROLL 1
 
 struct FrameworkImGuiContext
 {
@@ -42,7 +43,10 @@ struct FrameworkImGuiContext
 	ImGuiContext * previous_context = nullptr;
 	
 #if DO_KINETIC_SCROLL
-	float kinetic_scroll = 0.f;
+#if DO_TOUCH_SCROLL
+	int num_touches = 0;
+#endif
+	Vec2 kinetic_scroll;
 #endif
 
 	~FrameworkImGuiContext();
