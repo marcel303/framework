@@ -2,7 +2,10 @@
 #include "imgui.h"
 #include "imgui/TextEditor.h"
 #include "imgui-framework.h"
+#include "nfd.h"
 #include <fstream>
+
+#include "Benchmark.h"
 
 #define GFX_SX 800
 #define GFX_SY 800
@@ -85,15 +88,13 @@ static bool load(const char * filename, std::vector<std::string> & lines, LineEn
 
 		if (is_linebreak)
 		{
-			lines.push_back(line);
-
-			line.clear();
+			lines.emplace_back(std::move(line));
 		}
 	}
 	
 	if (line.empty() == false)
 	{
-		lines.push_back(line);
+		lines.emplace_back(std::move(line));
 
 		line.clear();
 	}
@@ -165,6 +166,26 @@ cleanup:
 	return result;
 }
 
+static bool loadIntoTextEditor(const char * filename, LineEndings & lineEndings, TextEditor & textEditor)
+{
+	std::vector<std::string> lines;
+
+	textEditor.SetText("");
+	
+	if (load(filename, lines, lineEndings) == false)
+	{
+		return false;
+	}
+	else
+	{
+		Benchmark bm("loadIntoTextEditor");
+		
+		textEditor.SetText(lines);
+		
+		return true;
+	}
+}
+
 int main(int argc, char * argv[])
 {
 	changeDirectory(CHIBI_RESOURCE_PATH);
@@ -181,30 +202,15 @@ int main(int argc, char * argv[])
 		
 		LineEndings lineEndings;
 		
+		if (loadIntoTextEditor("ImGuiColorTextEdit/TextEditor.cpp", lineEndings, textEditor) == false)
+			logError("failed to load");
+		else
 		{
-			std::vector<std::string> lines;
-			
-			textEditor.SetText("");
-			if (load("ImGuiColorTextEdit/TextEditor.cpp", lines, lineEndings))
-			{
-				std::string text;
-				
-				for (auto & line : lines)
-				{
-					text.append(line);
-					text.append("\n");
-				}
-				
-				textEditor.SetText(text);
-			}
-			
-			if (save("test.txt", lines, lineEndings) == false)
+			if (save("test.txt", textEditor.GetLines(), lineEndings) == false)
 				logError("failed to save");
 		}
 		
 		SDL_StartTextInput();
-		
-		int numFingers = 0;
 		
 		while (!framework.quitRequested)
 		{
@@ -237,7 +243,18 @@ int main(int argc, char * argv[])
 
 							if (ImGui::MenuItem("Load.."))
 							{
-								// todo : load
+								nfdchar_t * filename = nullptr;
+								
+								if (NFD_OpenDialog(nullptr, nullptr, &filename) == NFD_OKAY)
+								{
+									loadIntoTextEditor(filename, lineEndings, textEditor);
+								}
+								
+								if (filename != nullptr)
+								{
+									free(filename);
+									filename = nullptr;
+								}
 							}
 							
 							ImGui::EndMenu();

@@ -77,4 +77,5 @@ app ImGuiColorTextEdit-read-write
 	depend_library framework
 	depend_library imgui-framework
 	depend_library ImGuiColorTextEdit
+	depend_library libnfd
 	add_files ImGuiColorTextEdit-support/read-write.cpp
