@@ -233,12 +233,25 @@ int main(int argc, char * argv[])
 					{
 						if (ImGui::BeginMenu("File"))
 						{
-							if (ImGui::MenuItem("Save"))
+							if (ImGui::MenuItem("Save.."))
 							{
-								std::vector<std::string> lines = textEditor.GetLines();
+								nfdchar_t * filename = nullptr;
 								
-								if (save("test.txt", lines, lineEndings) == false)
-									logError("failed to save");
+								if (NFD_SaveDialog(nullptr, nullptr, &filename) == NFD_OKAY)
+								{
+									std::vector<std::string> lines = textEditor.GetLines();
+									
+									if (save(filename, lines, lineEndings) == false)
+									{
+										SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
+									}
+								}
+								
+								if (filename != nullptr)
+								{
+									free(filename);
+									filename = nullptr;
+								}
 							}
 
 							if (ImGui::MenuItem("Load.."))
