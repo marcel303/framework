@@ -202,7 +202,7 @@ int main(int argc, char * argv[])
 		
 		LineEndings lineEndings;
 		
-		if (loadIntoTextEditor("ImGuiColorTextEdit/TextEditor.cpp", lineEndings, textEditor) == false)
+		if (loadIntoTextEditor("CONTRIBUTING", lineEndings, textEditor) == false)
 			logError("failed to load");
 		else
 		{
