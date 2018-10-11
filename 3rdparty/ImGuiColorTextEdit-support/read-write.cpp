@@ -180,7 +180,7 @@ static bool loadIntoTextEditor(const char * filename, LineEndings & lineEndings,
 	{
 		Benchmark bm("loadIntoTextEditor");
 		
-		textEditor.SetText(lines);
+		textEditor.SetTextLines(lines);
 		
 		return true;
 	}
@@ -206,7 +206,7 @@ int main(int argc, char * argv[])
 			logError("failed to load");
 		else
 		{
-			if (save("test.txt", textEditor.GetLines(), lineEndings) == false)
+			if (save("test.txt", textEditor.GetTextLines(), lineEndings) == false)
 				logError("failed to save");
 		}
 		
@@ -239,7 +239,7 @@ int main(int argc, char * argv[])
 								
 								if (NFD_SaveDialog(nullptr, nullptr, &filename) == NFD_OKAY)
 								{
-									std::vector<std::string> lines = textEditor.GetLines();
+									std::vector<std::string> lines = textEditor.GetTextLines();
 									
 									if (save(filename, lines, lineEndings) == false)
 									{
