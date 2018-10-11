@@ -1,37 +1,46 @@
-<graph nextNodeId="71" nextLinkId="68" nextZKey="665">
-    <node id="61" typeName="binauralizer" editorX="29.6199951171875" editorY="66.704010009765625">
+<graph nextNodeId="71" nextLinkId="68">
+    <node id="61" typeName="binauralizer">
         <input socket="azimuth" value="40.000000"/>
         <input socket="sampleSet" value="cipic.12"/>
     </node>
-    <node id="63" typeName="voice" editorName="left voice" editorX="192" editorY="22">
+    <node id="63" typeName="voice">
         <input socket="speaker" value="1"/>
     </node>
-    <node id="64" typeName="voice" editorName="right voice" editorX="189" editorY="100">
+    <node id="64" typeName="voice">
         <input socket="speaker" value="2"/>
     </node>
-    <node id="65" typeName="audio.sine" editorName="azimuth" editorX="-112" editorY="144" folded="1">
+    <node id="65" typeName="audio.sine">
         <input socket="a" value="-70.000000"/>
         <input socket="b" value="70.000000"/>
         <input socket="fine" value="0"/>
         <input socket="frequency" value="0.123000"/>
     </node>
-    <node id="66" typeName="audio.sine" editorName="elevation" editorX="-112" editorY="96" folded="1">
+    <node id="66" typeName="audio.sine">
         <input socket="a" value="-20.000000"/>
         <input socket="b" value="20.000000"/>
         <input socket="fine" value="0"/>
         <input socket="frequency" value="0.076500"/>
     </node>
-    <node id="68" typeName="audio.pcm" editorName="pcm" editorX="-144" editorY="32" folded="1">
+    <node id="68" typeName="audio.pcm">
         <input socket="filename" value="music2.ogg"/>
     </node>
-    <link id="62" enabled="1" srcNodeId="63" srcNodeSocketName="audio" dstNodeId="61" dstNodeSocketName="leftEar"/>
-    <link id="64" enabled="1" srcNodeId="64" srcNodeSocketName="audio" dstNodeId="61" dstNodeSocketName="rightEar"/>
-    <link id="65" enabled="1" srcNodeId="61" srcNodeSocketName="azimuth" dstNodeId="65" dstNodeSocketName="audio"/>
-    <link id="66" enabled="1" srcNodeId="61" srcNodeSocketName="elevation" dstNodeId="66" dstNodeSocketName="audio"/>
-    <link id="67" enabled="1" srcNodeId="61" srcNodeSocketName="audio" dstNodeId="68" dstNodeSocketName="audio"/>
-    <editor>
+    <link id="62" srcNodeId="63" srcNodeSocketName="audio" dstNodeId="61" dstNodeSocketName="leftEar"/>
+    <link id="64" srcNodeId="64" srcNodeSocketName="audio" dstNodeId="61" dstNodeSocketName="rightEar"/>
+    <link id="65" srcNodeId="61" srcNodeSocketName="azimuth" dstNodeId="65" dstNodeSocketName="audio"/>
+    <link id="66" srcNodeId="61" srcNodeSocketName="elevation" dstNodeId="66" dstNodeSocketName="audio"/>
+    <link id="67" srcNodeId="61" srcNodeSocketName="audio" dstNodeId="68" dstNodeSocketName="audio"/>
+    <editor nextZKey="1">
         <dragAndZoom x="194.45843505859375" y="158.40260314941406" zoom="1.6161668300628662"/>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="1" showCpuHeat="1" backgroundColor="006ab88e" gridColor="ffffff18">
+        <nodeDatas>
+            <nodeData nodeId="61" x="29.6199951171875" y="66.704010009765625" zKey="0"/>
+            <nodeData nodeId="63" x="192" y="22" zKey="0"/>
+            <nodeData nodeId="64" x="189" y="100" zKey="0"/>
+            <nodeData nodeId="65" x="-112" y="144" zKey="0" folded="1"/>
+            <nodeData nodeId="66" x="-112" y="96" zKey="0" folded="1"/>
+            <nodeData nodeId="68" x="-144" y="32" zKey="0" folded="1"/>
+        </nodeDatas>
+        <visualizers/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="1" showCpuHeat="1" backgroundColor="006ab88e" gridColor="ffffff18">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
                 <key t="0.80500000715255737" r="1" g="0.72016811370849609" b="0" a="0.75499999523162842"/>
