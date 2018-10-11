@@ -76,11 +76,11 @@ app framework-example-basic
 	depend_library framework
 	group framework-examples
 
-#app framework-example-model-basic
-#	add_files examples/model-basic.cpp
-#	resource_path examples/data
-#	depend_library framework
-#	group framework-examples
+app framework-example-model-basic
+	add_files examples/model-basic.cpp
+	resource_path examples/data
+	depend_library framework
+	group framework-examples
 
 app framework-example-model-advanced
 	add_files examples/model.cpp
