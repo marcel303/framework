@@ -3,6 +3,7 @@ add audioGraph-examples
 add avGraph
 add framework
 add framework-ofx
+add tests
 add vfxGraph
 add vfxGraph-examples
 
@@ -13,6 +14,7 @@ global_group libraries
 	add 3rdparty/imgui-framework
 	add libfbx
 	add libgg
+	add libjsusfx-framework
 	add libnfd
 	add libosc
 	add libparticle

@@ -1,0 +1,21 @@
+app tests
+
+	depend_library audiograph
+	depend_library framework
+	depend_library framework-ofx
+	depend_library jsusfx-framework
+	depend_library libps3eye
+	depend_library libvideo
+	depend_library vfxgraph
+
+	scan_files c
+	scan_files cpp
+	scan_files h
+	scan_files hpp
+	scan_files mm
+
+	scan_files *.* path ofxDatGui group ofxDatGui traverse
+	scan_files *.* path nanovg group nanovg traverse
+
+	resource_path data
+

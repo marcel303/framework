@@ -216,6 +216,8 @@ void createJsusFxAudioNodes()
 		if (extension != "" && extension != "jsfx")
 			continue;
 		
+	// todo : use JsusFx methods to read description first, before attempting compile
+		
 		JsusFx_Framework jsusFx(pathLibrary);
 		
 		fileAPI.init(jsusFx.m_vm);
@@ -224,7 +226,7 @@ void createJsusFxAudioNodes()
 		gfxAPI.init(jsusFx.m_vm);
 		jsusFx.gfx = &gfxAPI;
 		
-		if (!jsusFx.compile(pathLibrary, filename))
+		if (!jsusFx.compile(pathLibrary, filename, JsusFx::kCompileFlag_CompileGraphicsSection | JsusFx::kCompileFlag_CompileSerializeSection))
 			continue;
 		
 		if (jsusFx.desc[0] == 0)
@@ -332,7 +334,7 @@ AudioNodeJsusFx::~AudioNodeJsusFx()
 
 void AudioNodeJsusFx::load(const char * filename)
 {
-	jsusFxIsValid = jsusFx->compile(*pathLibrary, filename);
+	jsusFxIsValid = jsusFx->compile(*pathLibrary, filename, JsusFx::kCompileFlag_CompileGraphicsSection | JsusFx::kCompileFlag_CompileSerializeSection);
 	
 	if (jsusFxIsValid)
 	{

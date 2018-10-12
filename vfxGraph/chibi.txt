@@ -32,16 +32,17 @@ library vfxgraph
 
 	with_platform macos scan_files mm path objects group objects
 	with_platform macos scan_files mm path vfxNodes group vfxNodes
+	with_platform macos scan_files *.* path xmm group xmm traverse
 
-	compile_definition ENABLE_KINECT1   0
-	compile_definition ENABLE_TURBOJPEG 1
+	compile_definition ENABLE_KINECT1   0 expose
+	compile_definition ENABLE_TURBOJPEG 1 expose
 
-	with_platform macos compile_definition ENABLE_SYPHON     1
-	with_platform macos compile_definition ENABLE_LEAPMOTION 1
-	with_platform macos compile_definition ENABLE_KINECT2    1
-	with_platform macos compile_definition ENABLE_DEEPBELIEF 1
-	with_platform macos compile_definition ENABLE_PS3EYE     1
-	with_platform macos compile_definition ENABLE_WIIMOTE    0
+	with_platform macos compile_definition ENABLE_SYPHON     1 expose
+	with_platform macos compile_definition ENABLE_LEAPMOTION 1 expose
+	with_platform macos compile_definition ENABLE_KINECT2    1 expose
+	with_platform macos compile_definition ENABLE_DEEPBELIEF 1 expose
+	with_platform macos compile_definition ENABLE_PS3EYE     1 expose
+	with_platform macos compile_definition ENABLE_WIIMOTE    0 expose
 	with_platform macos compile_definition __MACOSX_CORE__   *
 
 	with_platform macos depend_library macos/framework/DeepBelief.framework local embed_framework
@@ -55,20 +56,20 @@ library vfxgraph
 # Wiimote
 	with_platform macos depend_library IOBluetooth find
 
-	with_platform linux compile_definition ENABLE_SYPHON     0
-	with_platform linux compile_definition ENABLE_LEAPMOTION 0
-	with_platform linux compile_definition ENABLE_KINECT2    0
-	with_platform linux compile_definition ENABLE_DEEPBELIEF 0
-	with_platform linux compile_definition ENABLE_PS3EYE     1
-	with_platform linux compile_definition ENABLE_WIIMOTE    0
+	with_platform linux compile_definition ENABLE_SYPHON     0 expose
+	with_platform linux compile_definition ENABLE_LEAPMOTION 0 expose
+	with_platform linux compile_definition ENABLE_KINECT2    0 expose
+	with_platform linux compile_definition ENABLE_DEEPBELIEF 0 expose
+	with_platform linux compile_definition ENABLE_PS3EYE     1 expose
+	with_platform linux compile_definition ENABLE_WIIMOTE    0 expose
 	with_platform linux compile_definition __LINUX_ALSA__    *
 
-	with_platform windows compile_definition ENABLE_SYPHON     0
-	with_platform windows compile_definition ENABLE_LEAPMOTION 1
-	with_platform windows compile_definition ENABLE_KINECT2    0
-	with_platform windows compile_definition ENABLE_DEEPBELIEF 0
-	with_platform windows compile_definition ENABLE_PS3EYE     0
-	with_platform windows compile_definition ENABLE_WIIMOTE    0
+	with_platform windows compile_definition ENABLE_SYPHON     0 expose
+	with_platform windows compile_definition ENABLE_LEAPMOTION 1 expose
+	with_platform windows compile_definition ENABLE_KINECT2    0 expose
+	with_platform windows compile_definition ENABLE_DEEPBELIEF 0 expose
+	with_platform windows compile_definition ENABLE_PS3EYE     0 expose
+	with_platform windows compile_definition ENABLE_WIIMOTE    0 expose
 	with_platform windows compile_definition __WINDOWS_MM__    *
 
 	with_platform windows depend_library win32/lib/Leap.lib local

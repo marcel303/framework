@@ -1,0 +1,27 @@
+library jsusfx-wdl
+
+	add_files ../libjsusfx/src/WDL/eel2/nseel-compiler.c ../libjsusfx/src/WDL/eel2/nseel-eval.c ../libjsusfx/src/WDL/eel2/nseel-ram.c ../libjsusfx/src/WDL/eel2/nseel-yylex.c ../libjsusfx/src/WDL/eel2/nseel-cfunc.c
+
+	#../libjsusfx/src/WDL/fft.c
+
+	with_platform macos add_files ../libjsusfx/src/WDL/eel2/asm-nseel-x64-macho.o
+
+	compile_definition WDL_FFT_REALSIZE 8 expose
+	compile_definition EEL_F_SIZE 8 expose
+
+library jsusfx
+
+	depend_library jsusfx-wdl
+
+	add_files ../libjsusfx/src/jsusfx.cpp ../libjsusfx/src/jsusfx_file.cpp ../libjsusfx/src/jsusfx_gfx.cpp ../libjsusfx/src/jsusfx_serialize.cpp ../libjsusfx/src/riff.cpp
+
+	header_path ../libjsusfx/src expose
+
+library jsusfx-framework
+
+	depend_library framework
+	depend_library jsusfx
+
+	add_files gfx-framework.cpp gfx-framework.h jsusfx-framework.cpp jsusfx-framework.h
+
+	header_path . expose
