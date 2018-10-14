@@ -108,11 +108,11 @@ void testDotDetector()
 	
 	if (useVideo)
 	{
-		mp.openAsync("mocapb.mp4", MP::kOutputMode_PlanarYUV);
+		mp.openAsync("mocap2.mp4", MP::kOutputMode_PlanarYUV);
 	}
 	
 	DotTracker dotTracker;
-	bool useDotTracker = true;
+	bool useDotTracker = false;
 	
 	//
 	
