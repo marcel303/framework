@@ -73,6 +73,7 @@ test todo :
 	- add load/save to xml
 	- add load/select window for saved effect chains
 + add option to enable live audio input
+- fix issue with some effect options not being saved (Hammer and String, resonance feedback type for instance)
 
 */
 
@@ -82,12 +83,19 @@ test todo :
 #define DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/"
 
 #define SEARCH_PATH_reaper "/Users/thecat/Library/Application Support/REAPER/Effects/"
-#define SEARCH_PATH_geraintluff "/Users/thecat/geraintluff -jsfx/"
+#define SEARCH_PATH_geraintluff "/Users/thecat/repos/geraintluff -jsfx/"
 #define SEARCH_PATH_ATK "/Users/thecat/atk-reaper/plugins/"
 #define SEARCH_PATH_kawa "/Users/thecat/Downloads/JsusFx - Kawa/"
 
 #define RENDER_TO_SURFACE 0
 #define ENABLE_SCREENSHOT_API 0
+
+#define ENABLE_AUDIOIO 1 // todo : make this the default and remove the option
+#define ENABLE_MIDI 1
+
+#if ENABLE_MIDI
+	#include "rtmidi/RtMidi.h"
+#endif
 
 const int GFX_SX = 1000;
 const int GFX_SY = 720;
@@ -1397,7 +1405,7 @@ static void testJsusFxList()
 		}
 	}
 	
-#if 1
+#if ENABLE_AUDIOIO
 	AudioIO audioIO;
 	audioIO.Initialize(2, 1, SAMPLE_RATE, BUFFER_SIZE);
 	audioIO.Play(&audioStream);
@@ -1405,6 +1413,24 @@ static void testJsusFxList()
 	AudioOutput_PortAudio audioOutput;
 	audioOutput.Initialize(2, SAMPLE_RATE, BUFFER_SIZE);
 	audioOutput.Play(&audioStream);
+#endif
+
+#if ENABLE_MIDI
+	RtMidiIn * midiIn = new RtMidiIn(RtMidi::UNSPECIFIED, "Midi Controller", 1024);
+	
+	for (int i = 0; i < midiIn->getPortCount(); ++i)
+	{
+		auto name = midiIn->getPortName();
+		
+		logDebug("available MIDI port: %d: %s", i, name.c_str());
+	}
+
+	const int port = 0;
+	
+	if (port < midiIn->getPortCount())
+	{
+		midiIn->openPort(port);
+	}
 #endif
 	
 	JsusFxChainWindow effectChainWindow(effectChain, audioStream, windows);
@@ -1512,6 +1538,24 @@ static void testJsusFxList()
 				audioStream.lock();
 				{
 					doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y - y, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false, midiSx, midiSy);
+					
+				#if ENABLE_MIDI
+					std::vector<uint8_t> messageBytes;
+
+					for (;;)
+					{
+						midiIn->getMessage(&messageBytes);
+						
+						if (messageBytes.empty())
+							break;
+						
+						if (s_midiBuffer.numBytes + messageBytes.size() >= MidiBuffer::kMaxBytes)
+							break;
+						
+						for (auto b : messageBytes)
+							s_midiBuffer.bytes[s_midiBuffer.numBytes++] = b;
+					}
+				#endif
 				}
 				audioStream.unlock();
 				
@@ -1765,7 +1809,14 @@ static void testJsusFxList()
 			window->draw();
 	}
 	
-#if 1
+#if ENABLE_MIDI
+	midiIn->closePort();
+	
+	delete midiIn;
+	midiIn = nullptr;
+#endif
+
+#if ENABLE_AUDIOIO
 	audioIO.Stop();
 	audioIO.Shutdown();
 #else
