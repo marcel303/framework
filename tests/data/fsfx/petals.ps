@@ -1,0 +1,62 @@
+include fsfx/common.inc
+
+int numPetals = 16;
+int numInputs = numPetals/2;
+int hoverIndex = int(time * 32.0) % numPetals;
+
+const float PI = 3.1415926535897932384626433832795;
+const float PI2 = PI * 2.0;
+const float PI2_RCP = 1.0 / PI2;
+
+#define ANIMTIME (time / 100.0)
+//#define ANIMTIME 0.0
+
+void computeDistance(vec2 p, out float sdf, out int socketIndex, out int socketType, out bool selected)
+{
+	float size = mix(0.5, 1.0, (cos(time / 11.0) + 1.0) * 0.5);
+
+	float distance = length(p) / size;
+	float angle = mod(atan(p.x, p.y) + PI + ANIMTIME, PI2);
+
+	int petalIndex = int(floor(angle * numPetals * PI2_RCP));
+
+	float petalValue = pow((cos(angle * numPetals) + 1.0) * 0.5, 0.3);
+
+	float petalRadius = mix(1.0 - 1.0 / numPetals, 1.0, petalValue);
+
+	sdf = petalRadius - distance;
+	socketIndex = petalIndex;
+	socketType = petalIndex < numInputs ? 0 : 1;
+	selected = petalIndex == hoverIndex;
+}
+
+vec4 fsfx()
+{
+	vec2 colormapSize = textureSize(colormap, 0);
+	vec2 colormapSizeRcp = 1.f / colormapSize;
+	
+	vec2 coord = texcoord;
+	coord -= vec2(0.5);
+	coord *= 2.0;
+	coord.x *= colormapSize.x / colormapSize.y;
+
+	float sdf;
+	int socketIndex;
+	int socketType;
+	bool selected;
+
+	computeDistance(coord, sdf, socketIndex, socketType, selected);
+
+	float r = smoothstep(-1.0, +1.0, sdf * colormapSize.y * 0.5);
+
+	vec3 color = vec3(r, socketIndex / float(numPetals), -sdf);
+	//vec3 color = vec3(r, 0.0, 0.0);
+	//vec3 color = vec3(sdf);
+
+	if (socketType == 0)
+		color *= 0.5;
+	if (selected)
+		color += vec3(0.5);
+
+	return vec4(color, 1.0);
+}

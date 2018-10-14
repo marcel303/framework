@@ -1,6 +1,6 @@
 <graph nextNodeId="194" nextLinkId="265">
     <node id="114" typeName="audioGraph.poly" passthrough="1">
-        <input socket="file" value="mlworkshopAp.xml"/>
+        <input socket="file" value="audiographs/mlworkshopAp.xml"/>
     </node>
     <node id="115" typeName="channel.literal">
         <input socket="text" value="1 1"/>
@@ -19,7 +19,7 @@
     </node>
     <node id="122" typeName="video">
         <input socket="mode" value="0"/>
-        <input socket="source" value="mocap6.mp4"/>
+        <input socket="source" value="mocapc.mp4"/>
     </node>
     <node id="123" typeName="draw.image">
         <input socket="opacity" value="0.900000"/>
@@ -38,7 +38,7 @@
     <node id="131" typeName="channel.fromFloat"/>
     <node id="132" typeName="channel.fromFloat"/>
     <node id="134" typeName="audioGraph.poly">
-        <input socket="file" value="audioKey.xml"/>
+        <input socket="file" value="audiographs/audioKey.xml"/>
     </node>
     <node id="137" typeName="channel.literal">
         <input socket="text" value="200 50 300 80 1600 1800 2400"/>
@@ -100,7 +100,7 @@
     </node>
     <node id="168" typeName="midi"/>
     <node id="172" typeName="audioGraph.poly">
-        <input socket="file" value="audioKey2.xml"/>
+        <input socket="file" value="audiographs/audioKey2.xml"/>
     </node>
     <node id="176" typeName="channel.math"/>
     <node id="178" typeName="channel.fromFloat"/>
@@ -168,16 +168,16 @@
     <link id="259" srcNodeId="172" srcNodeSocketName="gain" dstNodeId="192" dstNodeSocketName="result" dynamic="1"/>
     <link id="263" srcNodeId="141" srcNodeSocketName="x_norm" dstNodeId="142" dstNodeSocketName="x"/>
     <link id="264" srcNodeId="146" srcNodeSocketName="value1" dstNodeId="142" dstNodeSocketName="y"/>
-    <editor nextZKey="1340">
-        <dragAndZoom x="153.35574340820312" y="-83.006095886230469" zoom="1.1271573305130005"/>
+    <editor nextZKey="1345">
+        <dragAndZoom x="395.1873779296875" y="-193.48275756835938" zoom="0.7976188063621521"/>
         <nodeDatas>
-            <nodeData nodeId="114" x="192" y="-64" zKey="1339"/>
+            <nodeData nodeId="114" x="192" y="-64" zKey="1344"/>
             <nodeData nodeId="115" x="-16" y="-64" zKey="955"/>
             <nodeData nodeId="118" x="-288" y="16" zKey="894"/>
             <nodeData nodeId="119" x="832" y="-128" zKey="1135" folded="1"/>
             <nodeData nodeId="120" x="-32" y="-96" zKey="1051" folded="1"/>
             <nodeData nodeId="121" x="704" y="-128" zKey="1134"/>
-            <nodeData nodeId="122" x="-304" y="-128" zKey="1117" folded="1"/>
+            <nodeData nodeId="122" x="-304" y="-128" zKey="1340" folded="1"/>
             <nodeData nodeId="123" x="-176" y="-128" zKey="1118" folded="1"/>
             <nodeData nodeId="124" x="-32" y="-128" zKey="1109" folded="1"/>
             <nodeData nodeId="125" x="-128" y="16" zKey="990"/>
@@ -187,7 +187,7 @@
             <nodeData nodeId="130" x="-128" y="224" zKey="982"/>
             <nodeData nodeId="131" x="-128" y="320" zKey="976"/>
             <nodeData nodeId="132" x="-128" y="272" zKey="981"/>
-            <nodeData nodeId="134" x="304" y="-400" zKey="1294"/>
+            <nodeData nodeId="134" x="304" y="-400" zKey="1342"/>
             <nodeData nodeId="137" x="48" y="-224" zKey="1196"/>
             <nodeData nodeId="140" x="-240" y="-272" zKey="1129" folded="1"/>
             <nodeData nodeId="141" x="-112" y="-272" zKey="1128"/>
@@ -208,7 +208,7 @@
             <nodeData nodeId="164" x="976" y="-912" zKey="1183"/>
             <nodeData nodeId="166" x="1104" y="-912" zKey="1185"/>
             <nodeData nodeId="168" x="1248" y="-720" zKey="1328"/>
-            <nodeData nodeId="172" x="1504" y="-688" zKey="1323"/>
+            <nodeData nodeId="172" x="1504" y="-688" zKey="1343"/>
             <nodeData nodeId="176" x="1376" y="-560" zKey="1280"/>
             <nodeData nodeId="178" x="1264" y="-464" zKey="1275"/>
             <nodeData nodeId="180" x="1136" y="-464" zKey="1276"/>
@@ -228,6 +228,6 @@
             <visualizer id="167" x="1168" y="-1072" zKey="1186" nodeId="166" dstSocketName="channel" sx="216" sy="148"/>
             <visualizer id="171" x="1568" y="-560" zKey="1208" nodeId="168" dstSocketName="values" sx="216" sy="148"/>
         </visualizers>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="00000071" gridColor="ffffff4c"/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="00000071" gridColor="ffffff4c"/>
     </editor>
 </graph>

@@ -1,0 +1,256 @@
+<graph nextNodeId="197" nextLinkId="269">
+    <node id="114" typeName="audioGraph.poly" passthrough="1">
+        <input socket="file" value="audiographs/mlworkshopAp.xml"/>
+    </node>
+    <node id="115" typeName="channel.literal">
+        <input socket="text" value="1 1"/>
+    </node>
+    <node id="118" typeName="mouse"/>
+    <node id="119" typeName="draw.display"/>
+    <node id="120" typeName="color">
+        <input socket="Y" value="0.200000"/>
+        <input socket="Z" value="0.300000"/>
+        <input socket="mode" value="0"/>
+    </node>
+    <node id="121" typeName="draw.surface">
+        <input socket="format" value="0"/>
+        <input socket="multiplyColor" value="dca7d7ff"/>
+        <input socket="viewMode" value="0"/>
+    </node>
+    <node id="122" typeName="video">
+        <input socket="mode" value="0"/>
+        <input socket="source" value="mocapc.mp4"/>
+    </node>
+    <node id="123" typeName="draw.image">
+        <input socket="opacity" value="0.900000"/>
+        <input socket="sizeMode" value="0"/>
+    </node>
+    <node id="124" typeName="draw.blend">
+        <input socket="mode" value="2"/>
+    </node>
+    <node id="125" typeName="channel.fromFloat"/>
+    <node id="126" typeName="channel.fromFloat"/>
+    <node id="127" typeName="channel.math"/>
+    <node id="128" typeName="channel.literal">
+        <input socket="text" value="1 2 4"/>
+    </node>
+    <node id="130" typeName="channel.fromFloat"/>
+    <node id="131" typeName="channel.fromFloat"/>
+    <node id="132" typeName="channel.fromFloat"/>
+    <node id="134" typeName="audioGraph.poly">
+        <input socket="file" value="audiographs/audioKey.xml"/>
+    </node>
+    <node id="137" typeName="channel.literal">
+        <input socket="text" value="200 50 300 80 1600 1800 2400"/>
+    </node>
+    <node id="140" typeName="channel.literal">
+        <input socket="text" value="1 1 0 1 1 1 0 0 1 0 1 1 0 0 1 1 "/>
+    </node>
+    <node id="141" typeName="channel.rotate"/>
+    <node id="142" typeName="mouse"/>
+    <node id="145" typeName="channel.math">
+        <input socket="type" value="3"/>
+    </node>
+    <node id="146" typeName="channel.fromFloat"/>
+    <node id="147" typeName="channel.curve">
+        <input socket="size" value="2560.000000"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="148" typeName="draw.sequence"/>
+    <node id="149" typeName="draw.primitive">
+        <input socket="color" value="2c2bf559"/>
+        <input socket="screenSize" value="1"/>
+        <input socket="size" value="2.000000"/>
+        <input socket="strokeColor" value="ffffff4f"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="150" typeName="draw.transform2d">
+        <input socket="scale" value="400.000000"/>
+        <input socket="scaleX" value="2.000000"/>
+        <input socket="scaleY" value="0.200000"/>
+        <input socket="x" value="-400.000000"/>
+    </node>
+    <node id="151" typeName="draw.blend">
+        <input socket="mode" value="2"/>
+    </node>
+    <node id="152" typeName="draw.fsfx-v2">
+        <input socket="param1" value="1.000000"/>
+        <input socket="param2" value="2.000000"/>
+        <input socket="shader" value="fsfx/invert.ps"/>
+    </node>
+    <node id="153" typeName="draw.fsfx-v2">
+        <input socket="opacity" value="0.300000"/>
+        <input socket="param1" value="10.000000"/>
+        <input socket="shader" value="fsfx/sample_vline.ps"/>
+    </node>
+    <node id="154" typeName="channel.to1D"/>
+    <node id="155" typeName="channel.fft"/>
+    <node id="157" typeName="channel.fft">
+        <input socket="normalize" value="1"/>
+        <input socket="reverse" value="1"/>
+    </node>
+    <node id="158" typeName="channel.math">
+        <input socket="type" value="2"/>
+    </node>
+    <node id="164" typeName="channel.math">
+        <input socket="type" value="20"/>
+    </node>
+    <node id="166" typeName="channel.rotate">
+        <input socket="x_norm" value="0.500000"/>
+    </node>
+    <node id="168" typeName="midi"/>
+    <node id="172" typeName="audioGraph.poly">
+        <input socket="file" value="audiographs/audioKey2.xml"/>
+    </node>
+    <node id="176" typeName="channel.math"/>
+    <node id="178" typeName="channel.fromFloat"/>
+    <node id="180" typeName="gen.sine">
+        <input socket="frequency" value="10.000000"/>
+    </node>
+    <node id="192" typeName="channel.math">
+        <input socket="type" value="3"/>
+    </node>
+    <node id="193" typeName="channel.literal">
+        <input socket="text" value="8"/>
+    </node>
+    <node id="194" typeName="draw.fsfx-v2">
+        <input socket="color1" value="2e8ca7ff"/>
+        <input socket="opacity" value="0.300000"/>
+        <input socket="param1" value="20.000000"/>
+        <input socket="param2" value="10.000000"/>
+        <input socket="shader" value="fsfx/petals.ps"/>
+        <input socket="time" value="2.000000"/>
+    </node>
+    <node id="195" typeName="time">
+        <input socket="scale" value="0.240000"/>
+    </node>
+    <node id="196" typeName="gen.sine">
+        <input socket="frequency" value="0.400000"/>
+    </node>
+    <link id="162" srcNodeId="114" srcNodeSocketName="volume" dstNodeId="115" dstNodeSocketName="channel"/>
+    <link id="165" srcNodeId="119" srcNodeSocketName="image" dstNodeId="121" dstNodeSocketName="image"/>
+    <link id="166" srcNodeId="121" srcNodeSocketName="clearColor" dstNodeId="120" dstNodeSocketName="color"/>
+    <link id="167" srcNodeId="120" srcNodeSocketName="X" dstNodeId="118" dstNodeSocketName="x"/>
+    <link id="168" srcNodeId="120" srcNodeSocketName="Y" dstNodeId="118" dstNodeSocketName="y"/>
+    <link id="174" srcNodeId="123" srcNodeSocketName="image" dstNodeId="122" dstNodeSocketName="image"/>
+    <link id="176" srcNodeId="124" srcNodeSocketName="any" dstNodeId="123" dstNodeSocketName="any"/>
+    <link id="177" srcNodeId="125" srcNodeSocketName="value1" dstNodeId="118" dstNodeSocketName="x"/>
+    <link id="178" srcNodeId="126" srcNodeSocketName="value1" dstNodeId="118" dstNodeSocketName="y">
+        <param name="out.max" value="0.200000"/>
+        <param name="out.min" value="0.010000"/>
+    </link>
+    <link id="180" srcNodeId="114" srcNodeSocketName="wave.freq" dstNodeId="126" dstNodeSocketName="channel" dynamic="1"/>
+    <link id="181" srcNodeId="127" srcNodeSocketName="a" dstNodeId="125" dstNodeSocketName="channel"/>
+    <link id="182" srcNodeId="114" srcNodeSocketName="tension" dstNodeId="127" dstNodeSocketName="result" dynamic="1"/>
+    <link id="183" srcNodeId="127" srcNodeSocketName="b" dstNodeId="128" dstNodeSocketName="channel"/>
+    <link id="184" srcNodeId="114" srcNodeSocketName="secondary" dstNodeId="130" dstNodeSocketName="channel" dynamic="1"/>
+    <link id="185" srcNodeId="114" srcNodeSocketName="wave.interval" dstNodeId="131" dstNodeSocketName="channel" dynamic="1"/>
+    <link id="186" srcNodeId="114" srcNodeSocketName="wave.amount" dstNodeId="132" dstNodeSocketName="channel" dynamic="1"/>
+    <link id="191" srcNodeId="141" srcNodeSocketName="channel" dstNodeId="140" dstNodeSocketName="channel"/>
+    <link id="193" srcNodeId="134" srcNodeSocketName="volume" dstNodeId="141" dstNodeSocketName="channel"/>
+    <link id="196" srcNodeId="145" srcNodeSocketName="b" dstNodeId="137" dstNodeSocketName="channel"/>
+    <link id="197" srcNodeId="134" srcNodeSocketName="frequency" dstNodeId="145" dstNodeSocketName="result" dynamic="1"/>
+    <link id="198" srcNodeId="145" srcNodeSocketName="a" dstNodeId="146" dstNodeSocketName="channel"/>
+    <link id="201" srcNodeId="148" srcNodeSocketName="01" dstNodeId="124" dstNodeSocketName="any"/>
+    <link id="203" srcNodeId="149" srcNodeSocketName="x" dstNodeId="147" dstNodeSocketName="channel"/>
+    <link id="208" srcNodeId="150" srcNodeSocketName="any" dstNodeId="149" dstNodeSocketName="any"/>
+    <link id="209" srcNodeId="148" srcNodeSocketName="02" dstNodeId="151" dstNodeSocketName="any"/>
+    <link id="210" srcNodeId="151" srcNodeSocketName="any" dstNodeId="150" dstNodeSocketName="transform"/>
+    <link id="212" srcNodeId="152" srcNodeSocketName="before" dstNodeId="148" dstNodeSocketName="any"/>
+    <link id="213" srcNodeId="121" srcNodeSocketName="source" dstNodeId="153" dstNodeSocketName="any"/>
+    <link id="215" srcNodeId="154" srcNodeSocketName="channel" dstNodeId="134" dstNodeSocketName="voices"/>
+    <link id="216" srcNodeId="149" srcNodeSocketName="y" dstNodeId="154" dstNodeSocketName="channel"/>
+    <link id="217" srcNodeId="155" srcNodeSocketName="channel" dstNodeId="154" dstNodeSocketName="channel"/>
+    <link id="218" srcNodeId="155" srcNodeSocketName="real" dstNodeId="154" dstNodeSocketName="channel"/>
+    <link id="219" srcNodeId="157" srcNodeSocketName="real" dstNodeId="155" dstNodeSocketName="real"/>
+    <link id="220" srcNodeId="157" srcNodeSocketName="imag" dstNodeId="155" dstNodeSocketName="imag"/>
+    <link id="221" srcNodeId="158" srcNodeSocketName="a" dstNodeId="154" dstNodeSocketName="channel"/>
+    <link id="222" srcNodeId="158" srcNodeSocketName="b" dstNodeId="157" dstNodeSocketName="real"/>
+    <link id="223" srcNodeId="164" srcNodeSocketName="a" dstNodeId="155" dstNodeSocketName="real"/>
+    <link id="224" srcNodeId="164" srcNodeSocketName="b" dstNodeId="155" dstNodeSocketName="imag"/>
+    <link id="225" srcNodeId="166" srcNodeSocketName="channel" dstNodeId="164" dstNodeSocketName="result"/>
+    <link id="233" srcNodeId="178" srcNodeSocketName="value1" dstNodeId="180" dstNodeSocketName="value">
+        <param name="out.max" value="10.000000"/>
+        <param name="out.min" value="-10.000000"/>
+    </link>
+    <link id="234" srcNodeId="176" srcNodeSocketName="b" dstNodeId="178" dstNodeSocketName="channel"/>
+    <link id="255" srcNodeId="172" srcNodeSocketName="frequency" dstNodeId="168" dstNodeSocketName="frequency" dynamic="1"/>
+    <link id="256" srcNodeId="192" srcNodeSocketName="a" dstNodeId="168" dstNodeSocketName="values"/>
+    <link id="257" srcNodeId="172" srcNodeSocketName="volume" dstNodeId="192" dstNodeSocketName="result"/>
+    <link id="258" srcNodeId="192" srcNodeSocketName="b" dstNodeId="193" dstNodeSocketName="channel"/>
+    <link id="259" srcNodeId="172" srcNodeSocketName="gain" dstNodeId="192" dstNodeSocketName="result" dynamic="1"/>
+    <link id="263" srcNodeId="141" srcNodeSocketName="x_norm" dstNodeId="142" dstNodeSocketName="x"/>
+    <link id="264" srcNodeId="146" srcNodeSocketName="value1" dstNodeId="142" dstNodeSocketName="y"/>
+    <link id="265" srcNodeId="153" srcNodeSocketName="before" dstNodeId="194" dstNodeSocketName="any"/>
+    <link id="266" srcNodeId="194" srcNodeSocketName="before" dstNodeId="152" dstNodeSocketName="any"/>
+    <link id="267" srcNodeId="194" srcNodeSocketName="time" dstNodeId="195" dstNodeSocketName="time"/>
+    <link id="268" srcNodeId="194" srcNodeSocketName="opacity" dstNodeId="196" dstNodeSocketName="value">
+        <param name="out.max" value="0.400000"/>
+        <param name="out.min" value="0.100000"/>
+    </link>
+    <editor nextZKey="1362">
+        <dragAndZoom x="407.2713623046875" y="-61.158718109130859" zoom="0.7976188063621521"/>
+        <nodeDatas>
+            <nodeData nodeId="114" x="192" y="-64" zKey="1344"/>
+            <nodeData nodeId="115" x="-16" y="-64" zKey="955"/>
+            <nodeData nodeId="118" x="-288" y="16" zKey="894"/>
+            <nodeData nodeId="119" x="992" y="-128" zKey="1135" folded="1"/>
+            <nodeData nodeId="120" x="-32" y="-96" zKey="1051" folded="1"/>
+            <nodeData nodeId="121" x="864" y="-128" zKey="1134"/>
+            <nodeData nodeId="122" x="-304" y="-128" zKey="1340" folded="1"/>
+            <nodeData nodeId="123" x="-176" y="-128" zKey="1118" folded="1"/>
+            <nodeData nodeId="124" x="-32" y="-128" zKey="1109" folded="1"/>
+            <nodeData nodeId="125" x="-128" y="16" zKey="990"/>
+            <nodeData nodeId="126" x="-128" y="144" zKey="969"/>
+            <nodeData nodeId="127" x="48" y="-0" zKey="983"/>
+            <nodeData nodeId="128" x="-128" y="64" zKey="986"/>
+            <nodeData nodeId="130" x="-128" y="224" zKey="982"/>
+            <nodeData nodeId="131" x="-128" y="320" zKey="976"/>
+            <nodeData nodeId="132" x="-128" y="272" zKey="981"/>
+            <nodeData nodeId="134" x="304" y="-400" zKey="1342"/>
+            <nodeData nodeId="137" x="48" y="-224" zKey="1196"/>
+            <nodeData nodeId="140" x="-240" y="-272" zKey="1129" folded="1"/>
+            <nodeData nodeId="141" x="-112" y="-272" zKey="1128"/>
+            <nodeData nodeId="142" x="-624" y="-288" zKey="1307"/>
+            <nodeData nodeId="145" x="192" y="-272" zKey="1072"/>
+            <nodeData nodeId="146" x="48" y="-288" zKey="1335"/>
+            <nodeData nodeId="147" x="416" y="-544" zKey="1131"/>
+            <nodeData nodeId="148" x="304" y="-128" zKey="1148" folded="1"/>
+            <nodeData nodeId="149" x="736" y="-544" zKey="1133"/>
+            <nodeData nodeId="150" x="864" y="-544" zKey="1115"/>
+            <nodeData nodeId="151" x="976" y="-544" zKey="1113"/>
+            <nodeData nodeId="152" x="448" y="-128" zKey="1347" folded="1"/>
+            <nodeData nodeId="153" x="736" y="-128" zKey="1348" folded="1"/>
+            <nodeData nodeId="154" x="432" y="-384" zKey="1153"/>
+            <nodeData nodeId="155" x="576" y="-800" zKey="1168"/>
+            <nodeData nodeId="157" x="704" y="-800" zKey="1172"/>
+            <nodeData nodeId="158" x="832" y="-800" zKey="1170"/>
+            <nodeData nodeId="164" x="976" y="-912" zKey="1183"/>
+            <nodeData nodeId="166" x="1104" y="-912" zKey="1185"/>
+            <nodeData nodeId="168" x="1248" y="-720" zKey="1328"/>
+            <nodeData nodeId="172" x="1504" y="-688" zKey="1343"/>
+            <nodeData nodeId="176" x="1376" y="-560" zKey="1280"/>
+            <nodeData nodeId="178" x="1264" y="-464" zKey="1275"/>
+            <nodeData nodeId="180" x="1136" y="-464" zKey="1276"/>
+            <nodeData nodeId="192" x="1376" y="-672" zKey="1329"/>
+            <nodeData nodeId="193" x="1248" y="-576" zKey="1330"/>
+            <nodeData nodeId="194" x="592" y="-128" zKey="1361" folded="1"/>
+            <nodeData nodeId="195" x="352" y="112" zKey="1360"/>
+            <nodeData nodeId="196" x="352" y="224" zKey="1359"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="129" x="80" y="112" zKey="950" nodeId="114" srcSocketName="tension" sx="216" sy="148"/>
+            <visualizer id="133" x="320" y="-64" zKey="1149" nodeId="114" dstSocketName="voices" sx="216" sy="148"/>
+            <visualizer id="139" x="320" y="-288" zKey="1012" nodeId="134" dstSocketName="voices" sx="216" sy="148"/>
+            <visualizer id="143" x="-224" y="-432" zKey="1041" nodeId="141" dstSocketName="channel" sx="216" sy="148"/>
+            <visualizer id="159" x="944" y="-800" zKey="1171" nodeId="158" dstSocketName="result" sx="216" sy="148"/>
+            <visualizer id="160" x="496" y="-960" zKey="1180" nodeId="154" dstSocketName="channel" sx="216" sy="148"/>
+            <visualizer id="161" x="720" y="-960" zKey="1179" nodeId="157" dstSocketName="real" sx="216" sy="148"/>
+            <visualizer id="163" x="336" y="-800" zKey="1181" nodeId="155" dstSocketName="real" sx="216" sy="148"/>
+            <visualizer id="165" x="944" y="-1072" zKey="1184" nodeId="164" dstSocketName="result" sx="216" sy="148"/>
+            <visualizer id="167" x="1168" y="-1072" zKey="1186" nodeId="166" dstSocketName="channel" sx="216" sy="148"/>
+            <visualizer id="171" x="1568" y="-560" zKey="1208" nodeId="168" dstSocketName="values" sx="216" sy="148"/>
+        </visualizers>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="00000071" gridColor="ffffff4c"/>
+    </editor>
+</graph>

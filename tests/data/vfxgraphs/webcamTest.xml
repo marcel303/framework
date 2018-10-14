@@ -1,0 +1,21 @@
+<graph nextNodeId="179" nextLinkId="111">
+    <node id="163" typeName="draw.display"/>
+    <node id="176" typeName="webcam"/>
+    <link id="110" srcNodeId="163" srcNodeSocketName="image" dstNodeId="176" dstNodeSocketName="image"/>
+    <editor nextZKey="845">
+        <dragAndZoom x="0" y="17.057132720947266" zoom="2.25"/>
+        <nodeDatas>
+            <nodeData nodeId="163" x="16" y="64" zKey="843"/>
+            <nodeData nodeId="176" x="-128" y="64" zKey="842"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="178" x="-96" y="-112" zKey="844" nodeId="176" dstSocketName="image" sx="216" sy="160"/>
+        </visualizers>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="d6bf5bff" gridColor="ffffff5f">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0" g="0" b="0" a="0"/>
+                <key t="1" r="1" g="1" b="1" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>
