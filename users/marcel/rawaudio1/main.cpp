@@ -1,3 +1,4 @@
+#include "audiostream/AudioOutput_PortAudio.h"
 #include "framework.h"
 
 #define GFX_SX 1024
@@ -34,6 +35,53 @@ static void readAudio(FILE * file, size_t position)
 	
 }
 
+struct RawAudioStream : AudioStream
+{
+	FILE * file = nullptr;
+	
+	std::atomic<size_t> position;
+	std::atomic<size_t> offset;
+	
+	RawAudioStream()
+		: position(0)
+		, offset(0)
+	{
+	}
+	
+	virtual int Provide(int numSamples, AudioSample * __restrict samples) override
+	{
+		fseek(file, position / 6 * 6 + offset, SEEK_SET);
+		
+		position += numSamples * 6;
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			for (int c = 0; c < 2; ++c)
+			{
+				uint8_t bytes[4];
+				
+				if (fread(bytes, 1, 3, file) == 3)
+				{
+					int32_t value =
+						(bytes[0] << 8) |
+						(bytes[1] << 16) |
+						(bytes[2] << 24);
+					
+					//value >>= 8;
+					
+					samples[i].channel[c] = value >> 8;
+				}
+				else
+				{
+					samples[i].channel[c] = 0;
+				}
+			}
+		}
+		
+		return numSamples;
+	}
+};
+
 int main(int argc, char * argv[])
 {
 	const char * filename = "/Users/thecat/Desktop/H4N_SD.dmg";
@@ -53,6 +101,13 @@ int main(int argc, char * argv[])
 	size_t position = 0;
 	int offset = 0;
 	
+	RawAudioStream audioStream;
+	audioStream.file = fopen(filename, "rb");
+	
+	AudioOutput_PortAudio audioOutput;
+	audioOutput.Initialize(2, 44100, 4096);
+	audioOutput.Play(&audioStream);
+	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
 		while (!framework.quitRequested)
@@ -64,6 +119,9 @@ int main(int argc, char * argv[])
 			if (mouse.isDown(BUTTON_LEFT))
 			{
 				position = uint64_t(mouse.x) * fileSize / GFX_SX;
+				
+				audioStream.position = position;
+				
 				reload = true;
 			}
 			
@@ -75,6 +133,8 @@ int main(int argc, char * argv[])
 					reload = true;
 				}
 			}
+			
+			audioStream.offset = offset;
 			
 			if (reload)
 			{
