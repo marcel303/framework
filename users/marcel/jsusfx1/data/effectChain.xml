@@ -1,15 +1,5 @@
 <effectChain>
     <effect id="15" passthrough="0" filename="/Users/thecat/repos/geraintluff -jsfx//pad-synth.jsfx">
-        <sliders>
-            <slider index="1" value="0"/>
-            <slider index="2" value="0"/>
-            <slider index="3" value="0"/>
-            <slider index="4" value="0"/>
-            <slider index="5" value="0"/>
-            <slider index="6" value="0"/>
-            <slider index="7" value="0"/>
-            <slider index="8" value="0"/>
-        </sliders>
         <vars>
             <var value="1"/>
             <var value="1"/>
@@ -1158,11 +1148,9 @@
             <slider index="3" value="62.580558776855469"/>
             <slider index="4" value="70.095046997070312"/>
             <slider index="5" value="42.209457397460938"/>
-            <slider index="6" value="0"/>
             <slider index="7" value="4977.9296875"/>
             <slider index="8" value="3.2372977733612061"/>
             <slider index="9" value="2.5937576293945312"/>
-            <slider index="10" value="0"/>
         </sliders>
         <vars>
             <var value="1"/>
@@ -1170,18 +1158,11 @@
     </effect>
     <effect id="2" passthrough="0" filename="/Users/thecat/repos/geraintluff -jsfx//Echo-Cycles.jsfx">
         <sliders>
-            <slider index="1" value="0.5"/>
-            <slider index="2" value="0.5"/>
             <slider index="3" value="5.185335636138916"/>
-            <slider index="4" value="0.75"/>
             <slider index="5" value="0.71761000156402588"/>
             <slider index="6" value="4.1420793533325195"/>
-            <slider index="7" value="2.7760000228881836"/>
             <slider index="8" value="0.7942691445350647"/>
             <slider index="9" value="0.69763034582138062"/>
-            <slider index="10" value="2000"/>
-            <slider index="11" value="2"/>
-            <slider index="12" value="2"/>
         </sliders>
         <vars>
             <var value="2"/>
@@ -1190,14 +1171,6 @@
     <effect id="7" passthrough="1" filename="/Users/thecat/repos/geraintluff -jsfx//Bad Connection.jsfx"/>
     <effect id="13" passthrough="1" filename="/Users/thecat/Downloads/JsusFx - Kawa//kawa_XY_Flanger.jsfx"/>
     <effect id="5" passthrough="1" filename="/Users/thecat/repos/geraintluff -jsfx//Vibrato.jsfx">
-        <sliders>
-            <slider index="1" value="30"/>
-            <slider index="2" value="5.0999999046325684"/>
-            <slider index="3" value="500"/>
-            <slider index="4" value="1000"/>
-            <slider index="5" value="0"/>
-            <slider index="6" value="0"/>
-        </sliders>
         <vars>
             <var value="2"/>
         </vars>
