@@ -392,9 +392,16 @@ int main(int argc, char * argv[])
 	
 	const char * filenames[] =
 	{
-		"thegrooop/wobbly.ogg",
-		"thegrooop/music2.ogg",
-		"thegrooop/music.ogg"
+		"thegrooop/welcome/01 Welcome Intro alleeeen zang.ogg",
+		"thegrooop/welcome/02 Welcome Intro zonder zang.ogg",
+		"thegrooop/welcome/03 Welcome couplet 1 alleeen zang.ogg",
+		"thegrooop/welcome/04 Welcome couplet 1 zonder zang.ogg",
+		"thegrooop/welcome/05 Welcome couplet 2 alleen zang.ogg",
+		"thegrooop/welcome/06 Welcome couplet 2 zonder zang.ogg",
+		"thegrooop/welcome/07 Welcome refrein 1 alleen zang.ogg",
+		"thegrooop/welcome/08 Welcome refrein 1 zonder zang.ogg",
+		"thegrooop/welcome/09 Welcome brug alleeeen zang.ogg",
+		"thegrooop/welcome/10 Welcome brug zonder zang.ogg"
 	};
 	const int numFilenames = sizeof(filenames) / sizeof(filenames[0]);
 	
