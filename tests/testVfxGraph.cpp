@@ -41,6 +41,8 @@
 
 #define ENABLE_AUDIO_RTE 1
 
+#define ENABLE_JSUSFX_TEST 0
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 
@@ -313,7 +315,7 @@ struct FileWindow
 		window.setPosition(5, 100);
 		
 		std::vector<std::string> paths;
-		paths = listFiles(".", false);
+		paths = listFiles("vfxgraphs", false);
 		std::sort(paths.begin(), paths.end());
 		
 		for (auto & path : paths)
@@ -481,12 +483,23 @@ struct FileWindow
 	}
 };
 
+#if ENABLE_JSUSFX_TEST
+
+void testVfxGraph_JsusFx();
+
+#endif
+
 void testVfxGraph()
 {
+#if ENABLE_JSUSFX_TEST
+	testVfxGraph_JsusFx();
+	return;
+#endif
+	
 	setAbout("This example shows Vfx Graph in action!");
 	
 	// fixme !
-	fillPcmDataCache("../4dworld/testsounds", true, true);
+	fillPcmDataCache("../4dworld/testsounds", true, true, true);
 	
 	initAudioGraph();
 	
@@ -499,9 +512,9 @@ void testVfxGraph()
 	
 	GraphEdit graphEdit(GFX_SX, GFX_SY, &tdl, &rtc);
 	
-	//graphEdit.load("testRibbon4.xml");
-	//graphEdit.load("mlworkshopVc.xml");
-	graphEdit.load("polyphonic.xml");
+	//graphEdit.load("vfxgraphs/testRibbon4.xml");
+	//graphEdit.load("vfxgraphs/mlworkshopVc.xml");
+	graphEdit.load("vfxgraphs/polyphonic.xml");
 	
 	FileWindow fileWindow(&graphEdit);
 	
@@ -634,6 +647,8 @@ static void shutAudioGraph()
 
 //
 
+#if ENABLE_JSUSFX_TEST
+
 // todo : create a separate JsusFx test
 
 #include "audioNodeBase.h"
@@ -664,16 +679,25 @@ static AudioNodeBase * tryGetSelectedAudioNode(AudioGraphManager_RTE * audioGrap
 	return audioNode;
 }
 
+extern void createJsusFxAudioNodes();
+
 void testVfxGraph_JsusFx()
 {
 	setAbout("This example shows Vfx Graph in action!");
 
-	fillPcmDataCache("../4dworld/testsounds", true, true);
+// fixme !
+	fillPcmDataCache("../4dworld/testsounds", true, true, true);
+	fillPcmDataCache("../4dworld/voice-fragments", true, true, true);
+	
+	createJsusFxAudioNodes();
 	
 	initAudioGraph();
 	
-	AudioGraphInstance * instance = s_audioGraphMgr->createInstance("ag-test.xml");
+	AudioGraphInstance * instance = s_audioGraphMgr->createInstance("audiographs/ag-test.xml");
 	s_audioGraphMgr->selectInstance(instance);
+	
+	int editorX = 0;
+	int editorY = 0;
 	
 	do
 	{
@@ -694,12 +718,23 @@ void testVfxGraph_JsusFx()
 		{
 			g_currentAudioGraph = s_audioGraphMgr->selectedFile->activeInstance->audioGraph;
 			{
-				drawEditor = selectedAudioNode->tickEditor(0, 0, sx, sy, inputIsCaptured) && (sx > 0 && sy > 0);
+				if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+				{
+					editorX = mouse.x;
+					editorY = mouse.y;
+				}
+				
+				drawEditor = selectedAudioNode->tickEditor(editorX, editorY, sx, sy, inputIsCaptured) && (sx > 0 && sy > 0);
 			}
 			g_currentAudioGraph = nullptr;
 		}
 		
 		inputIsCaptured |= s_audioGraphMgr->tickEditor(dt, inputIsCaptured);
+		
+		// graph editor may have removed the selected node
+		selectedAudioNode = tryGetSelectedAudioNode(s_audioGraphMgr);
+		
+		drawEditor &= selectedAudioNode != nullptr;
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -715,7 +750,7 @@ void testVfxGraph_JsusFx()
 					
 					g_currentAudioGraph = s_audioGraphMgr->selectedFile->activeInstance->audioGraph;
 					{
-						selectedAudioNode->drawEditor(&surface, 0, 0, sx, sy);
+						selectedAudioNode->drawEditor(&surface, editorX, editorY, sx, sy);
 					}
 					g_currentAudioGraph = nullptr;
 				}
@@ -724,7 +759,7 @@ void testVfxGraph_JsusFx()
 				pushBlend(BLEND_OPAQUE);
 				pushColorMode(COLOR_IGNORE);
 				gxSetTexture(surface.getTexture());
-				drawRect(0, 0, sx, sy);
+				drawRect(editorX, editorY, editorX + sx, editorY + sy);
 				gxSetTexture(0);
 				popColorMode();
 				popBlend();
@@ -739,3 +774,5 @@ void testVfxGraph_JsusFx()
 	
 	shutAudioGraph();
 }
+
+#endif
