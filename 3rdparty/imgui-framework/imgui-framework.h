@@ -67,3 +67,23 @@ struct FrameworkImGuiContext
 	static void setClipboardText(void * user_data, const char * text);
 	static void render(const ImDrawData * draw_data);
 };
+
+//
+
+#include <vector>
+
+// todo : move this to libgg ?
+
+namespace TextIO
+{
+	enum LineEndings
+	{
+		kLineEndings_Unix,
+		kLineEndings_Windows
+	};
+	
+	bool loadText(const char * text, std::vector<std::string> & lines, LineEndings & lineEndings);
+	
+	bool load(const char * filename, std::vector<std::string> & lines, LineEndings & lineEndings);
+	bool save(const char * filename, const std::vector<std::string> & lines, const LineEndings lineEndings);
+}
