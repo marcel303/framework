@@ -72,6 +72,8 @@ endif (WIN32)
 
 if (APPLE)
 	find_library(COREMEDIA_LIBRARY CoreMedia)
+	find_library(COREVIDEO_LIBRARY CoreVideo)
+	find_library(ICONV_LIBRARY iconv)
 	find_library(VDA_LIBRARY VideoDecodeAcceleration)
 	find_library(VIDEOTOOLBOX_LIBRARY VideoToolbox)
 	find_library(SECURITY_LIBRARY Security)
@@ -85,6 +87,8 @@ if (APPLE)
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libswresample.a
 		${CMAKE_CURRENT_SOURCE_DIR}/macos/lib/libswscale.a
 		${COREMEDIA_LIBRARY}
+		${COREVIDEO_LIBRARY}
+		${ICONV_LIBRARY}
 		${VDA_LIBRARY}
 		${VIDEOTOOLBOX_LIBRARY}
 		${SECURITY_LIBRARY}
