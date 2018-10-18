@@ -53,6 +53,7 @@ app vfxgraph-710-validate
 	group vfxgraph-examples
 
 app vfxgraph-900-devgrounds
+	depend_library imgui-framework
 	depend_library ImGuiColorTextEdit
 	depend_library vfxgraph
 	add_files 900-devgrounds.cpp
