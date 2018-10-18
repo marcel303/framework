@@ -15,4 +15,4 @@
 	url = https://github.com/marcel303/imgui
 [submodule "3rdparty/ImGuiColorTextEdit"]
 	path = 3rdparty/ImGuiColorTextEdit
-	url = https://github.com/BalazsJako/ImGuiColorTextEdit
+	url = https://github.com/marcel303/ImGuiColorTextEdit
