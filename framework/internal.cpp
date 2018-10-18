@@ -1997,7 +1997,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 		GlyphCacheElem elem;
 		
 		const FT_Error err = FT_Set_Pixel_Sizes(face, 0, size);
-		Assert(err == FT_Err_Ok);
+		(void)err; Assert(err == FT_Err_Ok);
 
 		// note : we use FT_LOAD_NO_BITMAP to avoid getting embedded glyph data. this embedded data uses 1 bpp monochrome pre-rendered versions of the glyphs. we currently do not support unpacking this data, although it may be beneficial (readability-wise) to do so
 		// note : we use FT_LOAD_FORCE_AUTOHINT to improve readability for some fonts at small sizes. perhaps this flag can be removed when FT_LOAD_NO_BITMAP is removed
