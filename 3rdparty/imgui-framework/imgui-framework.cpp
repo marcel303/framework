@@ -42,6 +42,8 @@ void FrameworkImGuiContext::init()
 	
 	auto & io = ImGui::GetIO();
 	
+	io.IniFilename = nullptr;
+	
 	io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 	io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
 	
