@@ -116,7 +116,7 @@ static int processLine_SSE2_1channel(
 		
 		if (invert)
 		{
-			value = _mm_subs_epu8(_mm_set1_epi8(255), value);
+			value = _mm_subs_epu8(_mm_set1_epi8((char)255), value);
 		}
 		
 		__m128i valueL = _mm_unpacklo_epi8(value, _mm_setzero_si128());
@@ -168,9 +168,9 @@ static int processLine_SSE2_3channel(
 		
 		if (invert)
 		{
-			value1 = _mm_subs_epu8(_mm_set1_epi8(255), value1);
-			value2 = _mm_subs_epu8(_mm_set1_epi8(255), value2);
-			value3 = _mm_subs_epu8(_mm_set1_epi8(255), value3);
+			value1 = _mm_subs_epu8(_mm_set1_epi8((char)255), value1);
+			value2 = _mm_subs_epu8(_mm_set1_epi8((char)255), value2);
+			value3 = _mm_subs_epu8(_mm_set1_epi8((char)255), value3);
 		}
 		
 		__m128i value1L = _mm_unpacklo_epi8(value1, _mm_setzero_si128());
