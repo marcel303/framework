@@ -63,6 +63,7 @@ struct AudioSourceWavefield1D : AudioSource
 	double m_sampleLocation;
 	double m_sampleLocationSpeed;
 	double m_tension;
+	double m_retain;
 	bool m_closedEnds;
 	
 	float m_gain;
@@ -82,6 +83,7 @@ AudioSourceWavefield1D::AudioSourceWavefield1D()
 	: m_wavefield()
 	, m_sampleLocation(0.0)
 	, m_tension(1.0)
+	, m_retain(0.0001)
 	, m_closedEnds(true)
 	, m_gain(1.f)
 {
@@ -175,9 +177,8 @@ void AudioSourceWavefield1D::generate(float * __restrict samples, const int numS
 	
 	const double dt = 1.0 / SAMPLE_RATE;
 	
-	//const double vRetainPerSecond = 0.45;
-	const double vRetainPerSecond = 0.05;
-	const double pRetainPerSecond = 0.95;
+	const double vRetainPerSecond = fmaxf(m_retain, .0001f);
+	const double pRetainPerSecond = fmaxf(m_retain, .0001f);
 	
 	const bool closedEnds = m_closedEnds;
 	
@@ -204,6 +205,7 @@ struct AudioSourceWavefield2D : AudioSource
 	double m_sampleLocationSpeed[2];
 	double m_tension;
 	double m_retain;
+	bool m_closedEnds;
 	bool m_slowMotion;
 	
 	float m_gain;
@@ -224,6 +226,7 @@ AudioSourceWavefield2D::AudioSourceWavefield2D()
 	, m_sampleLocation()
 	, m_tension(1.0)
 	, m_retain(0.0001)
+	, m_closedEnds(true)
 	, m_slowMotion(false)
 	, m_gain(1.f)
 {
@@ -263,7 +266,7 @@ void AudioSourceWavefield2D::tick(const double dt)
 		m_wavefield.f[int(m_sampleLocation[0])][int(m_sampleLocation[1])] = 1.0;
 	if (keyboard.isDown(SDLK_z))
 		//m_wavefield.f[m_sampleLocation[0]][m_sampleLocation[1]] /= 1.3;
-		m_wavefield.f[int(m_sampleLocation[0])][int(m_sampleLocation[1])] = 0.0;
+		m_wavefield.f[int(m_sampleLocation[0])][int(m_sampleLocation[1])] /= 1.2;
 	
 	if (keyboard.wentDown(SDLK_s) || (gamepad[0].isConnected && gamepad[0].wentDown(GAMEPAD_Y)))
  		m_slowMotion = !m_slowMotion;
@@ -300,8 +303,10 @@ void AudioSourceWavefield2D::generate(float * __restrict samples, const int numS
 	
 	const double dt = 1.0 / SAMPLE_RATE * (m_slowMotion ? 0.001 : 1.0);
 	
-	const double vRetainPerSecond = m_retain;
-	const double pRetainPerSecond = m_retain;
+	const double vRetainPerSecond = fmaxf(m_retain, .0001f);
+	const double pRetainPerSecond = fmaxf(m_retain, .0001f);
+	
+	const bool closedEnds = m_closedEnds;
 	
 	for (int i = 0; i < numSamples; ++i)
 	{
@@ -310,7 +315,7 @@ void AudioSourceWavefield2D::generate(float * __restrict samples, const int numS
 		
 		samples[i] = m_wavefield.sample(m_sampleLocation[0], m_sampleLocation[1]);
 		
-		m_wavefield.tick(dt, m_tension, vRetainPerSecond, pRetainPerSecond, true);
+		m_wavefield.tick(dt, m_tension, vRetainPerSecond, pRetainPerSecond, closedEnds);
 	}
 	
 	s_audioMutex.unlock();
@@ -525,7 +530,7 @@ static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, 
 				const float a = saturate(w.f[x][y]);
 				
 				setColorf(1.f, 1.f, 1.f, a);
-				hqFillCircle(x, y, .2f + std::abs(p));
+				hqFillCircle(x, y, .2f + std::min(4.f, std::abs(p)));
 			}
 		}
 	}
@@ -539,7 +544,7 @@ static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, 
 			const float a = 1.f;
 			
 			setColorf(1.f, 1.f, 0.f, a);
-			hqFillCircle(sampleLocationX, sampleLocationY, 1.f + std::abs(p));
+			hqFillCircle(sampleLocationX, sampleLocationY, 1.f + std::min(4.f, std::abs(p)));
 		}
 		hqEnd();
 	}
@@ -619,18 +624,6 @@ int main(int argc, char * argv[])
 	do
 	{
 		framework.process();
-		
-		//
-		
-		if (keyboard.wentDown(SDLK_a))
-		{
-			world->addCreature();
-		}
-		
-		if (keyboard.wentDown(SDLK_z))
-		{
-			world->removeCreature();
-		}
 		
 		//
 		
@@ -740,12 +733,14 @@ int main(int argc, char * argv[])
 			makeActive(&uiState, true, true);
 			pushMenu("creatures");
 			{
-				if (doButton("add"))
+				doLabel("creatures", 0.f);
+
+				if (doButton("add creature"))
 				{
 					world->addCreature();
 				}
 		
-				if (doButton("remove"))
+				if (doButton("remove creature"))
 				{
 					world->removeCreature();
 				}
@@ -758,6 +753,8 @@ int main(int argc, char * argv[])
 			{
 				doLabel("1D wavefield", 0);
 				doCheckBox(wavefield1DEnabled, "enabled", false);
+				doTextBox(wavefield1D.m_retain, "retain", dt);
+				//doCheckBox(wavefield1D.m_closedEnds, "closed ends", false);
 			}
 			popMenu();
 			
@@ -768,6 +765,7 @@ int main(int argc, char * argv[])
 				doLabel("2D wavefield", 0);
 				doCheckBox(wavefield2DEnabled, "enabled", false);
 				doTextBox(wavefield2D.m_retain, "retain", dt);
+				//doCheckBox(wavefield2D.m_closedEnds, "closed ends", false);
 			}
 			popMenu();
 		
