@@ -42,6 +42,10 @@
 
 #include "../libparticle/ui.h"
 
+#if ENABLE_WDL_FFT
+	#include "WDL/fft.h"
+#endif
+
 using namespace binaural;
 
 #define FULLSCREEN 0
@@ -302,8 +306,9 @@ int main(int argc, char * argv[])
 		Surface view3D(200, 200, false);
 	#endif
 		
+	// todo : rename testsounds/music2.ogg -> thegrooop/talkative.ogg
 		PcmData pcmData;
-		pcmData.load("testsounds/birdTest.ogg", 0, false);
+		pcmData.load("testsounds/music2.ogg", 0, false);
 		
 		MyPortAudioHandler audioHandler;
 		int numSources = 0;
@@ -699,6 +704,10 @@ int main(int argc, char * argv[])
 				
 				//
 				
+			#if ENABLE_WDL_FFT
+				const int * fftPermuteTable = WDL_fft_permute_tab(HRTF_BUFFER_SIZE);
+			#endif
+			
 				gxPushMatrix();
 				{
 					gxTranslatef(0, GFX_SY - 50, 0);
@@ -711,7 +720,11 @@ int main(int argc, char * argv[])
 					pushBlend(BLEND_ADD);
 					for (int i = 0; i < sx; ++i)
 					{
+					#if ENABLE_WDL_FFT
+						const int j = fftPermuteTable[(i + sx/2) % sx];
+					#else
 						const int j = (i + sx/2) % sx;
+					#endif
 						const float power = std::hypotf(hrtf.lFilter.real[j], hrtf.lFilter.imag[j]);
 						setColorf(1.f, 0.f, 0.f, power);
 						drawLine(i, 0, i, sy);
@@ -735,7 +748,11 @@ int main(int argc, char * argv[])
 					pushBlend(BLEND_ADD);
 					for (int i = 0; i < sx; ++i)
 					{
+					#if ENABLE_WDL_FFT
+						const int j = fftPermuteTable[(i + sx/2) % sx];
+					#else
 						const int j = (i + sx/2) % sx;
+					#endif
 						const float power = std::hypotf(hrtf.rFilter.real[j], hrtf.rFilter.imag[j]);
 						setColorf(0.f, 1.f, 0.f, power);
 						drawLine(i, 0, i, sy);
