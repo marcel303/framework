@@ -542,7 +542,8 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 		
 		v[i] += a * cTimesDt * f[i];
 	}
-	
+#endif
+
 	if (closedEnds)
 	{
 		v[0] = 0.f;
@@ -551,7 +552,6 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 		p[0] = 0.f;
 		p[numElems - 1] = 0.f;
 	}
-#endif
 	
 	const float vRetain = std::pow(vRetainPerSecond, dt);
 	const float pRetain = std::pow(pRetainPerSecond, dt);
@@ -747,6 +747,27 @@ void Wavefield2D::tick(const double dt, const double c, const double vRetainPerS
 	
 	tickForces(dt, c, closedEnds);
 	
+	if (closedEnds)
+	{
+		for (int x = 0; x < numElems; ++x)
+		{
+			v[x][0] = 0.f;
+			v[x][numElems - 1] = 0.f;
+			
+			p[x][0] = 0.f;
+			p[x][numElems - 1] = 0.f;
+		}
+		
+		for (int y = 0; y < numElems; ++y)
+		{
+			v[0][y] = 0.f;
+			v[numElems - 1][y] = 0.f;
+			
+			p[0][y] = 0.f;
+			p[numElems - 1][y] = 0.f;
+		}
+	}
+	
 	tickVelocity(dt, vRetainPerSecond, pRetainPerSecond);
 }
 
@@ -828,21 +849,6 @@ void Wavefield2D::tickForces(const double dt, const double c, const bool closedE
 			v[x][y] += a * f[x][y];
 		}
 	}
-	
-	if (closedEnds)
-	{
-		for (int x = 0; x < numElems; ++x)
-		{
-			v[x][0] = 0.f;
-			v[x][numElems - 1] = 0.f;
-		}
-		
-		for (int y = 0; y < numElems; ++y)
-		{
-			v[0][y] = 0.f;
-			v[numElems - 1][y] = 0.f;
-		}
-	}
 }
 
 void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, const double pRetainPerSecond)
@@ -866,7 +872,6 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	{
 		__m256d * __restrict _mm_p = (__m256d*)p[x];
 		__m256d * __restrict _mm_v = (__m256d*)v[x];
-		__m256d * __restrict _mm_f = (__m256d*)f[x];
 		__m256d * __restrict _mm_d = (__m256d*)d[x];
 		
 		for (int i = 0; i < numElems4; ++i)
@@ -892,7 +897,6 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	{
 		__m128d * __restrict _mm_p = (__m128d*)p[x];
 		__m128d * __restrict _mm_v = (__m128d*)v[x];
-		__m128d * __restrict _mm_f = (__m128d*)f[x];
 		__m128d * __restrict _mm_d = (__m128d*)d[x];
 		
 		for (int i = 0; i < numElems2; ++i)
@@ -951,6 +955,7 @@ void Wavefield2D::randomize()
 
 void Wavefield2D::doGaussianImpact(const int _x, const int _y, const int _radius, const double strength)
 {
+#if 1 // todo : remove ?
 	if (_x - _radius < 0 ||
 		_y - _radius < 0 ||
 		_x + _radius >= numElems ||
@@ -958,7 +963,8 @@ void Wavefield2D::doGaussianImpact(const int _x, const int _y, const int _radius
 	{
 		return;
 	}
-	
+#endif
+
 	const int r = _radius;
 	const int spotX = _x;
 	const int spotY = _y;
@@ -1098,6 +1104,27 @@ void Wavefield2Df::tick(const double dt, const double c, const double vRetainPer
 	
 	tickForces(dt * 1000.0, c / 1000.0, closedEnds);
 	
+	if (closedEnds)
+	{
+		for (int x = 0; x < numElems; ++x)
+		{
+			v[x][0] = 0.f;
+			v[x][numElems - 1] = 0.f;
+			
+			p[x][0] = 0.f;
+			p[x][numElems - 1] = 0.f;
+		}
+		
+		for (int y = 0; y < numElems; ++y)
+		{
+			v[0][y] = 0.f;
+			v[numElems - 1][y] = 0.f;
+			
+			p[0][y] = 0.f;
+			p[numElems - 1][y] = 0.f;
+		}
+	}
+	
 	tickVelocity(dt, vRetainPerSecond, pRetainPerSecond);
 }
 
@@ -1179,21 +1206,6 @@ void Wavefield2Df::tickForces(const float dt, const float c, const bool closedEn
 			v[x][y] += a * f[x][y];
 		}
 	}
-	
-	if (closedEnds)
-	{
-		for (int x = 0; x < numElems; ++x)
-		{
-			v[x][0] = 0.f;
-			v[x][numElems - 1] = 0.f;
-		}
-		
-		for (int y = 0; y < numElems; ++y)
-		{
-			v[0][y] = 0.f;
-			v[numElems - 1][y] = 0.f;
-		}
-	}
 }
 
 void Wavefield2Df::tickVelocity(const float dt, const float vRetainPerSecond, const float pRetainPerSecond)
@@ -1217,7 +1229,6 @@ void Wavefield2Df::tickVelocity(const float dt, const float vRetainPerSecond, co
 	{
 		__m256 * __restrict _mm_p = (__m256*)p[x];
 		__m256 * __restrict _mm_v = (__m256*)v[x];
-		__m256 * __restrict _mm_f = (__m256*)f[x];
 		__m256 * __restrict _mm_d = (__m256*)d[x];
 		
 		for (int i = 0; i < numElems8; ++i)
@@ -1243,7 +1254,6 @@ void Wavefield2Df::tickVelocity(const float dt, const float vRetainPerSecond, co
 	{
 		__m128 * __restrict _mm_p = (__m128*)p[x];
 		__m128 * __restrict _mm_v = (__m128*)v[x];
-		__m128 * __restrict _mm_f = (__m128*)f[x];
 		__m128 * __restrict _mm_d = (__m128*)d[x];
 		
 		for (int i = 0; i < numElems4; ++i)
