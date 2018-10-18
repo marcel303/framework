@@ -39,6 +39,8 @@
 #include "../libparticle/ui.h"
 #include "Timer.h"
 #include "tinyxml2.h"
+#include "imgui-framework.h"
+#include "imgui/TextEditor.h"
 #include "vfxNodeBase.h"
 #include <algorithm>
 #include <cmath>
@@ -477,9 +479,20 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		struct GraphEditWindow
+		struct WindowBase
 		{
-			Window* window = nullptr;
+			virtual ~WindowBase()
+			{
+			}
+			
+			virtual void process(const float dt) = 0;
+			
+			virtual bool getQuitRequested() const = 0;
+		};
+		
+		struct GraphEditWindow : WindowBase
+		{
+			Window * window = nullptr;
 			
 			VfxGraph * vfxGraph = nullptr;
 			
@@ -500,7 +513,7 @@ int main(int argc, char * argv[])
 				graphEdit->load(filename);
 			}
 			
-			~GraphEditWindow()
+			virtual ~GraphEditWindow() override
 			{
 				delete graphEdit;
 				graphEdit = nullptr;
@@ -515,7 +528,7 @@ int main(int argc, char * argv[])
 				window = nullptr;
 			}
 			
-			void process(const float dt)
+			virtual void process(const float dt) override
 			{
 				if (window->hasFocus())
 				{
@@ -544,9 +557,172 @@ int main(int argc, char * argv[])
 					popWindow();
 				}
 			}
+			
+			virtual bool getQuitRequested() const override
+			{
+				return window->getQuitRequested();
+			}
 		};
 		
-		std::list<GraphEditWindow*> graphEditWindows;
+		struct ShaderEditWindow : WindowBase
+		{
+			std::string filename;
+			
+			Window * window = nullptr;
+			
+			FrameworkImGuiContext uiContext;
+			
+			TextEditor textEditor;
+			
+			TextIO::LineEndings lineEndings = TextIO::kLineEndings_Unix;
+			
+			bool textIsValid = false;
+			
+			bool quitRequested = false;
+			
+			ShaderEditWindow(const char * in_filename)
+			{
+				filename = in_filename;
+				
+				window = new Window(filename.c_str(), 640, 480, true);
+				
+				uiContext.init();
+				
+				textEditor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
+				
+				load(filename.c_str());
+			}
+			
+			virtual ~ShaderEditWindow() override
+			{
+				uiContext.shut();
+				
+				delete window;
+				window = nullptr;
+			}
+			
+			bool load(const char * filename)
+			{
+				textEditor.SetText("");
+				
+				textIsValid = false;
+				
+				//
+				
+				std::vector<std::string> lines;
+				
+				if (TextIO::load(filename, lines, lineEndings) == false)
+				{
+					logError("failed to read file contents");
+					
+					return false;
+				}
+				else
+				{
+					textEditor.SetTextLines(lines);
+					
+					textIsValid = true;
+					
+					return true;
+				}
+			}
+			
+			virtual void process(const float dt) override
+			{
+				if (window->hasFocus())
+				{
+					pushWindow(*window);
+					{
+						const int sx = window->getWidth();
+						const int sy = window->getHeight();
+						
+						bool inputIsCaptured = false;
+						
+						uiContext.processBegin(dt, sx, sy, inputIsCaptured);
+						{
+							ImGui::SetNextWindowPos(ImVec2(0, 0));
+							ImGui::SetNextWindowSize(ImVec2(sx, sy));
+							
+							if (ImGui::Begin("Text Editor", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_MenuBar))
+							{
+							#if 1
+								if (ImGui::BeginMenuBar())
+								{
+									if (ImGui::BeginMenu("File"))
+									{
+										if (ImGui::MenuItem("Save"))
+										{
+											auto lines = textEditor.GetTextLines();
+											
+											if (TextIO::save(filename.c_str(), lines, lineEndings) == false)
+											{
+												logError("failed to save shader file");
+											}
+										}
+										
+										ImGui::Separator();
+										if (ImGui::MenuItem("Reload"))
+											load(filename.c_str());
+										
+										ImGui::Separator();
+										quitRequested = ImGui::MenuItem("Close");
+										
+										ImGui::EndMenu();
+									}
+									
+									if (ImGui::BeginMenu("Edit"))
+									{
+										if (ImGui::MenuItem("Undo"))
+											textEditor.Undo();
+										if (ImGui::MenuItem("Redo"))
+											textEditor.Redo();
+										
+										ImGui::EndMenu();
+									}
+									
+									if (ImGui::BeginMenu("View"))
+									{
+										if (ImGui::BeginMenu("Line Endings"))
+										{
+											if (ImGui::MenuItem("Unix (LF)", nullptr, lineEndings == TextIO::kLineEndings_Unix))
+												lineEndings = TextIO::kLineEndings_Unix;
+											if (ImGui::MenuItem("Windows (CRLF)", nullptr, lineEndings == TextIO::kLineEndings_Windows))
+												lineEndings = TextIO::kLineEndings_Windows;
+											
+											ImGui::EndMenu();
+										}
+										
+										ImGui::EndMenu();
+									}
+									
+									ImGui::EndMenuBar();
+								}
+							#endif
+							
+								textEditor.Render("Pixel Shader");
+								
+								ImGui::End();
+							}
+						}
+						uiContext.processEnd();
+						
+						framework.beginDraw(0, 0, 0, 0);
+						{
+							uiContext.draw();
+						}
+						framework.endDraw();
+					}
+					popWindow();
+				}
+			}
+			
+			virtual bool getQuitRequested() const override
+			{
+				return window->getQuitRequested() || quitRequested;
+			}
+		};
+		
+		std::list<WindowBase*> windows;
 		
 		graphEdit->handleNodeDoubleClicked = [&](const GraphNodeId nodeId)
 		{
@@ -567,7 +743,20 @@ int main(int argc, char * argv[])
 					
 					GraphEditWindow * window = new GraphEditWindow(typeDefinitionLibrary, filename);
 					
-					graphEditWindows.push_back(window);
+					windows.push_back(window);
+				}
+			}
+			else if (node->typeName == "draw.fsfx")
+			{
+				auto value = node->inputValues.find("shader");
+				
+				if (value != node->inputValues.end())
+				{
+					const std::string filename = value->second + ".ps";
+					
+					ShaderEditWindow * window = new ShaderEditWindow(filename.c_str());
+					
+					windows.push_back(window);
 				}
 			}
 		};
@@ -784,18 +973,18 @@ int main(int argc, char * argv[])
 			
 			//
 			
-			for (auto i = graphEditWindows.begin(); i != graphEditWindows.end(); )
+			for (auto i = windows.begin(); i != windows.end(); )
 			{
-				GraphEditWindow *& window = *i;
+				WindowBase *& window = *i;
 				
 				window->process(dt);
 				
-				if (window->window->getQuitRequested())
+				if (window->getQuitRequested())
 				{
 					delete window;
 					window = nullptr;
 					
-					i = graphEditWindows.erase(i);
+					i = windows.erase(i);
 				}
 				else
 					++i;
