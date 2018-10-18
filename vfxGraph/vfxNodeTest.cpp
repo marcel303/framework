@@ -26,6 +26,7 @@
 */
 
 // todo : remove ?
+// todo : if not remove, at least move to vfx graph examples
 
 #include "framework.h"
 #include "vfxNodeTest.h"
@@ -41,7 +42,7 @@ VFX_NODE_TYPE(VfxNodeTest)
 	in("y", "channel");
 	in("z", "channel");
 	in("scale", "float", "1");
-	out("any", "int");
+	out("any", "draw", "draw");
 }
 
 VfxNodeTest::VfxNodeTest()
@@ -68,9 +69,10 @@ void VfxNodeTest::draw() const
 {
 	const VfxChannel * xChannel = getInputChannel(kInput_XChannel, nullptr);
 	const VfxChannel * yChannel = getInputChannel(kInput_YChannel, nullptr);
+	const VfxChannel * zChannel = getInputChannel(kInput_ZChannel, nullptr);
 	const float scale = getInputFloat(kInput_Scale, 1.f);
 	
-	VfxChannelZipper zipper({ xChannel, yChannel });
+	VfxChannelZipper zipper({ xChannel, yChannel, zChannel });
 	
 	if (!zipper.done())
 	{
@@ -78,20 +80,21 @@ void VfxNodeTest::draw() const
 		{
 			gxScalef(scale, scale, scale);
 			
-			hqBegin(HQ_FILLED_CIRCLES, true);
+			setColor(colorWhite);
+			gxBegin(GL_POINTS);
 			{
 				while (!zipper.done())
 				{
-					setColor(colorWhite);
-					//hqFillCircle(zipper.read(0, 0.f), zipper.read(1, 0.f), 100);
-					hqFillCircle(zipper.read(0, 0.f), zipper.read(1, 0.f), 1);
+					const float x = zipper.read(0, 0.f);
+					const float y = zipper.read(1, 0.f);
+					const float z = zipper.read(2, 1.f);
 					
-					//logDebug("x, y: %f, %f", x.data[i], y.data[i]);
+					gxVertex3f(x, y, z);
 					
 					zipper.next();
 				}
 			}
-			hqEnd();
+			gxEnd();
 		}
 		gxPopMatrix();
 	}
