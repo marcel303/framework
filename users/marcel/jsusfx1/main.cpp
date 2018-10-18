@@ -74,6 +74,7 @@ test todo :
 	- add load/select window for saved effect chains
 + add option to enable live audio input
 - fix issue with some effect options not being saved (Hammer and String, resonance feedback type for instance)
+- add an option to set effect window size to 50%, 75%, 100% of the initial (preferred) size
 
 */
 
@@ -1503,7 +1504,7 @@ static void testJsusFxList()
 			Elem elem;
 			elem.window = &effectChainWindow.window;
 			elems.push_back(elem);
-
+			
 			for (auto & window : windows)
 			{
 				if (window->window->isHidden())
