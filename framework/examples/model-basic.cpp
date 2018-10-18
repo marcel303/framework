@@ -25,6 +25,12 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/*
+Acknowledgement for the use of the Stanford Lucy model:
+	Source: Stanford University Computer Graphics Laboratory
+	http://graphics.stanford.edu/data/3Dscanrep/
+*/
+
 #include "framework.h"
 
 #define VIEW_SX 1200
@@ -44,8 +50,8 @@ int main(int argc, char * argv[])
 	if (!framework.init(argc, (const char **)argv, VIEW_SX, VIEW_SY))
 		return -1;
 	
-	//mouse.showCursor(false);
-	//mouse.setRelative(true);
+	mouse.showCursor(false);
+	mouse.setRelative(true);
 	
 	Model model("stanford-lucy.fbx");
 
@@ -63,6 +69,8 @@ int main(int argc, char * argv[])
 	while (!keyboard.isDown(SDLK_ESCAPE))
 	{
 		framework.process();
+		
+		SDL_WarpMouseInWindow(nullptr, VIEW_SX/2, VIEW_SY/2);
 		
 		if (keyboard.wentDown(SDLK_1))
 			wireframe = !wireframe;
