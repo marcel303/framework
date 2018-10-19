@@ -163,10 +163,6 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 {
 	// update gfx state
 	
-	// todo : correct sx/sy ?
-	//*m_gfx_w = w ? w : GFX_SX;
-	//*m_gfx_h = h ? h : GFX_SY/4;
-	
 	*m_gfx_w = w;
 	*m_gfx_h = h;
 	
@@ -199,6 +195,17 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 	
 	*m_mouse_x = mouseX;
 	*m_mouse_y = mouseY;
+	
+	/*
+	mouse_cap is a bitfield of mouse and keyboard modifier state.
+		1: left mouse button
+		2: right mouse button
+		4: Control key (Windows), Command key (OSX)
+		8: Shift key
+		16: Alt key (Windows), Option key (OSX)
+		32: Windows key (Windows), Control key (OSX) -- REAPER 4.60+
+		64: middle mouse button -- REAPER 4.60+
+	*/
 	
 	int vflags = 0;
 	
@@ -246,6 +253,8 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 		if (keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI))
 			vflags |= 0x20;
 	#endif
+	
+		// note : 0x40 would be middle mouse button
 	}
 	
 	*m_mouse_cap = vflags;
