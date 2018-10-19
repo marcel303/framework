@@ -30,17 +30,6 @@ GFX status:
 
 todo :
 
-mouse_cap
-
-mouse_cap is a bitfield of mouse and keyboard modifier state.
-	1: left mouse button
-	2: right mouse button
-	4: Control key (Windows), Command key (OSX)
-	8: Shift key
-	16: Alt key (Windows), Option key (OSX)
-	32: Windows key (Windows), Control key (OSX) -- REAPER 4.60+
-	64: middle mouse button -- REAPER 4.60+
-
 mouse_wheel
 
 gfx_mode
@@ -58,22 +47,22 @@ test todo :
 + bring JSFX window to top when selecting it in the effect chain window
 + draw a cross when an effect is active in the effect chain list
 + show CPU-usage per effect (perhaps in the effect chain list?)
-- show effect stats when hovering over an effect in the effect chain list like:
++ show effect stats when hovering over an effect in the effect chain list like:
 	+ number of I/O pins,
-	- description,
-	- sliders
+	+ description,
+	# sliders
 + don't draw JSFX UI when a window is minimized
 + add an option to hide to JSFX UI from the effect chain list
 + perhaps hide should be the default behavior of the close button, instead of closing and removing it from the effect chain?
 + add an effect search filter box
 - add button to connect/disconnect midi
-- add option to organize windows (using box atlas?)
+# add option to organize windows (using box atlas?)
 + make octave buttons round
 - add ability to load/save effect chains
-	- add load/save to xml
-	- add load/select window for saved effect chains
+	+ add load/save to xml
+	- add UI to select/load saved effect chains
 + add option to enable live audio input
-- fix issue with some effect options not being saved (Hammer and String, resonance feedback type for instance)
++ fix issue with some effect options not being saved (Hammer and String, resonance feedback type for instance)
 - add an option to set effect window size to 50%, 75%, 100% of the initial (preferred) size
 
 */
@@ -93,6 +82,8 @@ test todo :
 
 #define ENABLE_AUDIOIO 1 // todo : make this the default and remove the option
 #define ENABLE_MIDI 1
+
+#define SHOW_SLIDERS_IN_EFFECT_CHAIN_WINDOW 0
 
 #if ENABLE_MIDI
 	#include "rtmidi/RtMidi.h"
@@ -1013,6 +1004,8 @@ struct JsusFxChainWindow
 	
 	int selectedEffectIndex;
 	
+	bool sliderIsActive[JsusFx::kMaxSliders];
+	
 	JsusFxChainWindow(JsusFxChain & _effectChain, AudioStream_JsusFxChain & _effectChainAudioStream, std::vector<JsusFxWindow*> & _windows)
 		: window("Effect Chain", 300, 300, true)
 		, surface(nullptr)
@@ -1021,12 +1014,18 @@ struct JsusFxChainWindow
 		, windows(_windows)
 		, selectedEffectIndex(0)
 	{
+		memset(sliderIsActive, 0, sizeof(sliderIsActive));
 	}
 	
 	~JsusFxChainWindow()
 	{
 		delete surface;
 		surface = nullptr;
+	}
+	
+	void cancelSliderEditing()
+	{
+		memset(sliderIsActive, 0, sizeof(sliderIsActive));
 	}
 	
 	void tick(const float dt)
@@ -1072,9 +1071,14 @@ struct JsusFxChainWindow
 							effect->isPassthrough = !effect->isPassthrough;
 					
 					if (keyboard.wentDown(SDLK_DELETE) || keyboard.wentDown(SDLK_BACKSPACE))
+					{
 						if (effectIndex == selectedEffectIndex)
+						{
 							if (effectWindow != nullptr)
 								effectWindow->cleanup = true;
+							cancelSliderEditing();
+						}
+					}
 				
 					if (effectWindow != nullptr)
 					{
@@ -1156,6 +1160,7 @@ struct JsusFxChainWindow
 						if (isInside && mouse.wentDown(BUTTON_LEFT))
 						{
 							selectedEffectIndex = effectIndex;
+							cancelSliderEditing();
 							
 							if (effectWindow != nullptr)
 							{
@@ -1185,31 +1190,51 @@ struct JsusFxChainWindow
 					{
 						std::swap(effectChain.effects[selectedEffectIndex], effectChain.effects[selectedEffectIndex - 1]);
 						selectedEffectIndex--;
+						cancelSliderEditing();
 					}
 					
 					if (keyboard.wentDown(SDLK_DOWN) && selectedEffectIndex + 1 < effectChain.effects.size())
 					{
 						std::swap(effectChain.effects[selectedEffectIndex], effectChain.effects[selectedEffectIndex + 1]);
 						selectedEffectIndex++;
+						cancelSliderEditing();
 					}
 				}
 				effectChainAudioStream.unlock();
 				
-				if (selectedEffectIndex >= 0 && selectedEffectIndex < effectChain.effects.size())
+				gxPushMatrix();
 				{
-					gxPushMatrix();
+					JsusFxElem * effect = nullptr;
+					
+					if (selectedEffectIndex >= 0 && selectedEffectIndex < effectChain.effects.size())
+						effect = effectChain.effects[selectedEffectIndex];
+					
+					int numSliders = 0;
+					
+				#if SHOW_SLIDERS_IN_EFFECT_CHAIN_WINDOW
+					if (effect != nullptr)
 					{
-						gxTranslatef(0, window.getHeight() - 70, 0);
-						
-						auto & effect = effectChain.effects[selectedEffectIndex];
-						
-						hqBegin(HQ_FILLED_ROUNDED_RECTS);
-						{
-							setLumi(200);
-							hqFillRoundedRect(0, 0, window.getWidth(), 70, 4.f);
-						}
-						hqEnd();
-						
+						JsusFx & fx = effect->jsusFx;
+					
+						for (int i = 0; i < JsusFx::kMaxSliders; ++i)
+							if (fx.sliders[i].exists && fx.sliders[i].desc[0] != '-')
+								numSliders++;
+					}
+				#endif
+					
+					const int sy = 70 + numSliders * 16;
+					
+					gxTranslatef(0, window.getHeight() - sy, 0);
+					
+					hqBegin(HQ_FILLED_ROUNDED_RECTS);
+					{
+						setLumi(200);
+						hqFillRoundedRect(0, 0, window.getWidth(), sy, 4.f);
+					}
+					hqEnd();
+					
+					if (effect != nullptr)
+					{
 						setLumi(40);
 						
 						int x = 7;
@@ -1218,15 +1243,18 @@ struct JsusFxChainWindow
 						drawText(x, y, 12, +1, +1, "file: %s", Path::GetFileName(effect->filename).c_str());
 						y += 16;
 						
+						drawText(x, y, 12, +1, +1, "desc: %s", effect->jsusFx.desc);
+						y += 16;
+						
 						drawText(x, y, 12, +1, +1, "pins: %d in, %d out", effect->jsusFx.numInputs, effect->jsusFx.numOutputs);
 						y += 14;
 						
 						drawText(x, y, 12, +1, +1, "CPU time: %.2f%%", effect->cpuTime * 100 * 44100 / BUFFER_SIZE / 1000000.f);
 						y += 14;
 						
+					#if SHOW_SLIDERS_IN_EFFECT_CHAIN_WINDOW
+						JsusFx & fx = effect->jsusFx;
 						
-						
-					#if 0
 						for (int i = 0; i < JsusFx::kMaxSliders; ++i)
 						{
 							if (fx.sliders[i].exists && fx.sliders[i].desc[0] != '-')
@@ -1241,8 +1269,8 @@ struct JsusFxChainWindow
 						}
 					#endif
 					}
-					gxPopMatrix();
 				}
+				gxPopMatrix();
 				
 				popBlend();
 				popSurface();
