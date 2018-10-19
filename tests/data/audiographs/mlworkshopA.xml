@@ -1,0 +1,247 @@
+<graph nextNodeId="118" nextLinkId="131">
+    <node id="61" typeName="voice.4d">
+        <input socket="ddiff" value="1"/>
+        <input socket="ddiff.curve" value="0.300000"/>
+        <input socket="ddiff.tresh" value="100.000000"/>
+        <input socket="pos.y" value="10.000000"/>
+        <input socket="rampTime" value="6.000000"/>
+        <input socket="spatd.mode" value="0"/>
+        <input socket="sub.boost" value="1"/>
+    </node>
+    <node id="62" typeName="wavefield.1d">
+        <resource type="wavefield.1d" name="editorData"><![CDATA[<value numElems="128" f="485adec6f36c0ef33dcde1898b870df3644e484604654df3e5d62b3ef7940df37fb5a11b3a0a7cf35f8828c1a7e19cf374564e108486dcf352b57c7fa47d6cf3831232d9cd52dcf3971033e7f3ef8cf33bb04713f0b36df39f73ee93413c1df318f04660ec583df361ac46ff94684df38c62860c6a315cf3f7dd09a1bbf32df3d9147f71a4aa7df357a9330107033df3e0b45f51cbac1df3f07d2ebe6b09bdf38b84453cb5d00ef3dc3f3315d1bb1ef3463f9952e4e4adf362593d13f0382ef3e7d1030d9ae0ddf36672affba1aaadf3337570050cafbdf3d0f845544dd99df33abe0c9a50ad3df3db04f2262b244df37eeae930acf9fcf3150cf02e44acbdf3f989506fa8497df307cefa20254c5df38849e1ddd66b7df3e2d4b7e98807cdf38c66689e7f994df3257bcab1c93d6df307ab723d8eda4df3169f1507a5ab0ef3a1d439c7bbf1edf34514205c72c3bdf3a939e3eec38bfdf31447a0d917fcddf30b653c4405820ef345970197dcf4ddf3f8eeb3441b310ef343482813cd101ef32913b79db95a4ef30c042614653c8ef3efdfebd59d907ef37175e1e634331ef3e17f2657e32b3ef30c06ea693b8a0ef3701ab233c4ba4df3255aaec7ec295df3279abe815d3f8df399ab1bd6d0321ef300c2bb78cc048df377514c4d8b64cdf3ff9198378d2f4ef3d6aefafdd0506ef3eef7956db4628df3c9b3916caba67df3e848c2a3ee93fdf3c2f899be95caadf3bbb8956d9416edf3205cf345f91fcdf3d90137d91d568df3f20d1b04d2b71ef3badbc0890b4a1ef36946a53e9d250ef3579ef7e104fcadf3fc29501926afbdf312537f35937f2ef3419c4d57aa2f7df375fe4f665afc5ef39755590d8e2b7ef3a8d6f1b2893a7df36616767b2df6ddf3e7359563f901edf3b5f96e8c2590edf361c3a4d21e5f9df3691c4d967fb5bdf3e5cbe37f8a3d6df305823a60ffe5bdf3df9179929860fdf30b51f271d5f9edf38e981e5e732abdf3fb34db228e695df31852e6809f103df3377a54228e819df3f8ccdc22072a9df313348c87aad83df3b2ece8ffbc545df3f852443ce5c62ef360fcba46d6c11ef3a907316297525ef3dd0bbb7a66979ef394e6fc69e0c6ddf3bece509742db4ef317e59ce5fd126ef3aee6508bf1696df3aa490ddb8c153ef3a89576e46556bdf3b33707c8f4db4df327026d9d3aeb2df3d7116bc85a264df314c57fd4e0e5bcf3e76b21d1d2812df3ba97eff72deb2df37cf7c67c38cc4df3da18a5af83056df37026a2083c3f3df304f2302174638df3f430f9a426195df3c9c239e8c0170df362dea677fe65edf336c8a8812e43bdf362bf59f05747adf3c5973565daa6cdf3f949b52d86e7ddf3f85660ea72376ef3197832c7f06e1ef32386da6785404ef327ddadeccc113ef3b1d0527aee6fddf304d54889cb70bdf3"/>
+]]></resource>
+        <input socket="gain" value="10.000000"/>
+        <input socket="pos.dampen" value="0.990000"/>
+        <input socket="sample.pos" value="0.300000"/>
+        <input socket="size" value="128"/>
+        <input socket="tension" value="1800.000000"/>
+        <input socket="trigger.amount" value="0.000000"/>
+        <input socket="vel.dampen" value="0.990000"/>
+    </node>
+    <node id="63" typeName="trigger.time">
+        <input socket="interval.max" value="0.200000"/>
+        <input socket="interval.min" value="0.010000"/>
+    </node>
+    <node id="64" typeName="noise.1d">
+        <input socket="fine" value="0"/>
+        <input socket="type" value="1"/>
+    </node>
+    <node id="65" typeName="noise.1d">
+        <input socket="fine" value="0"/>
+        <input socket="min" value="-1.000000"/>
+        <input socket="scale" value="2.000000"/>
+        <input socket="type" value="1"/>
+    </node>
+    <node id="66" typeName="noise.1d">
+        <input socket="scale" value="0.020000"/>
+    </node>
+    <node id="67" typeName="time"/>
+    <node id="70" typeName="wavefield.1d" passthrough="1">
+        <resource type="wavefield.1d" name="editorData"><![CDATA[<value numElems="16" f="a525aa7fbfd6bdf38aecfecabe453cf3db2499ffd5c3faf3f63bb9329c3d0df3bfc5391dd5533df334f1af12d2da1cf3e2c8665acee70bf3b909f0e2a6b5e9f336f295bd1e9769f3928466bf6f971af3944308b072e95df3ce83e3326dd33bf39ec1a60e19bfcaf30ed6ff45a47babf36b6b8e53221cfcf32954311436c30df3"/>
+]]></resource>
+        <input socket="pos.dampen" value="0.900000"/>
+        <input socket="tension" value="100.000000"/>
+        <input socket="trigger.amount" value="0.300000"/>
+        <input socket="vel.dampen" value="0.500000"/>
+    </node>
+    <node id="71" typeName="trigger.time">
+        <input socket="interval.max" value="0.600000"/>
+        <input socket="interval.min" value="0.200000"/>
+    </node>
+    <node id="72" typeName="wavefield.1d">
+        <resource type="wavefield.1d" name="editorData"><![CDATA[<value numElems="300" f="885e3590e7345ef37dae4bf5db5fadf3b10c0fe347704df348629653f937edf39d13a3e1a43caef3e8d33893dcededf37ee8cb6cffb98df3a72110cbabd32ef35d425bb227713ef339e94a58d2abccf362bdf15243a7edf3de6c768cc6e2bef324469d14a4fc2df336c295b886bc1ef3db0803882804ccf34595ae91150daef3fc2bac94e049aef3fca97e923759ddf3858898b2bebf1df3f63d7f650deb9ef37f35948c4fc08ef3eadb7e73c1a59ef307e98e4a4d9c6ef3d52ef259e6927ef32fa808c7b9546ef3798fc05480e0bef3b3fc259d12dc3ef36e4c28c519398ef3b852e8b63eb96ef33344ceb405f90df31833fc8fbc934ef34c0a5561d41f7ef30d303c94c8d94ef335b0b19f82575ef30b8abe7f9c38cdf35329734a51e6dcf3dd4089768231cef3a9a3a15ef11e2df32b6a8597b25f2df3c5ca1f5ff39ccdf399fe2059aa751ef393b1e7be37f98df32c5427de07cbbdf348fbf958066a8ef3e1c5022849e1cef35f6e9a743da25df33438c9a681925df3312d7143ae373ef361b41db95a4caef32aa76ee602fb9ef3462950b1a96aadf3ffdc34e74d293df31867f5330ebc8df3d1c70e83b3ce9ef3d2dfe3993589edf35de484d3b97f2ef300a13927780b8df362d8c73e02cdfdf3872d984064b8edf3aaca9de7fa9c7ef3cfca34badff5aef3f51f60bedbfc4ef3fdff1bbb9eac3ef315f5eedd2c8e5df3bfd98f44db2e4ef325832850ec1abef32f2eacb746b4fdf311e1090588138df3ed9ec8f586c6adf3bb1b068842303ef34bf9c01f56099df30cd3ca1c01bdfdf3ef463cbb47d62ef317bea99a8511bef3d207b5ebbb265ef35386c8f9a2301ef3ed1d9bf091ad5df3d2baf2eae049def3010a40d33da08ef349b3c9f5f86bbef3026190ab8b725ef373b6d71122ee2ef322cf7443e6260df34f89039d655ddcf37c5329270e0b5ef324483986b3f35df3eb0f4207a3349df385629ebabd95bdf3c02a0c1a4f0f8ef35f846de22189fdf34d277d646a916ef389d17b2da95b8ef32caa744865eacef32a77cfeb27430df3e0aa2ea84c026ef34105a5da2bb60ef3b751c561e3144ef30d6934ab34b34ef318569f99030caef3fa81501d8c879df34224a46aa3f07ef3492ef42d487e8df3e5606fa0dc679ef30e65fc3f11c6fdf381c394456deb7ef3efcc89e3d4b84ef3c30f16a8c88bcdf37bcef8d086589ef3dfb502ad5ddcbef3c912e1b567147ef38496de1769f27ef303652a44f2160ef34ef562aaf2ba9ef3b0b12e1353f4cdf312418e18769a2ef379a9a23203f8adf37ca20d8ac6049ef3f1c5e18516a33ef397099d59a49d2df3719ae9c95da1def3e25f5ecea1b58ef354e5320424f59ef39c4f58221f6d0ef30ec127c9132dfcf346c59aaf53eb7df3950e58a0c7158ef39d9a9e968c906ef3cd2b2206eaff0ef3244f6e30caa29ef3503304922ee81ef3444606fdc62daef3ec00d8a2cdb51ef32e6b8c27a8335ef34066c28cba4d2df31bddb67a20ee8df3fec6818bd873cdf3f656b84e1eb88ef3781da4211f824ef353c0f8f33f0c7ef36a5702295f1cbef33f83fc51e54a4ef3e7493ff0869d8ef38adfd780179e6df385737ce5ddf86ef3926efa6e66252ef38ea89a24fc88dcf389fea8fe374dfdf36a1455b60c577ef3e3daa915c837dcf3fe46cb0e8d316df3823f5d02e403bef32fc799436b168df3aa50cdf394841df3fefe5a4bc697adf33162677f920f7ef3960649fd6baa3ef314ddf82321fccdf39e01d9e28d9d2ef33d2043ed68567df34a3cfa2f8cbf9df3171d1490caba3ef30a60f41302d34ef39ab7d25c49f55ef3c0aaac6a993a6ef3ae7aebbd6ff23ef3b13005f246915df35cfb47e78844cef3196855ad6d640ef31e91c9b172f93ef3abd51b1bb0c79ef3e38cd468bfb43ef34a88105b73f80ef3b55c90d037d09ef36f2bf0617e492df3eeedbfa5a2a50ef372346c43cf887ef36591e630b0fe8df3aa3bb452fac45df3330c7e6de53f3ef38301c31b44b22ef3ec6926e213151ef31598dcbfe43a4ef3d55784049ea08ef3380c603ed5c7cdf32fc5bc15d12cbdf35d068adfe2216df334efa312e0eb0df348e707df1b3f7df3eeaed8ab50e84ef306beae8b8c7eddf3a68ffb6fc9dafdf36e31b2e88cf01ef31a52f2de64b0fdf36f946c74fbd6bdf3881262458c01fcf337745d34fa9daef3b0bb956d7b0d5df3ae40c61891f35df34c461d6344a34ef32c0253d56abb4ef3c289b4c346757df330062e17976fadf38f9944970c59edf3ce4f061c9a0d6ef36733f65a0263aef346c9fbcbf9384ef313bb7afd8f4e8ef3a0cc2be39e707ef3a1d9757166e14df3f3cd4ef010d93ef31fc7af9e85856ef3d188a74163657ef30ce57d55070e4ef30053e3baa3a27df3996a294e9ffdfcf3be9a6fb685bb3ef338f9798d0d683ef34e4c3b08ffe69ef38c52d213cc3f9ef3d492e98b73bebdf3d94577b28968edf3ee490b9ecffe7df38e37c80cdcf7adf3c3179d2795d3def34e295231f8d9cef353c657fca9f7def3c634a1e91dfa2ef3ea70ccddf7818ef3610db446ccbacef36de14916a3763ef38f84cafbcbc63df3427e45bc991e8df3e558af4a31e8dcf3a9d00b22f562cef333c8636196ae0df30d3678321db2bef37a6058e28d4a4df30061f69015bb4df3d91a721f80255ef38803e85e885efdf36135a4a922acfdf382d5729c3fa61ef3f96dbd4b4a500ef384a29f6c65735ef373a1148e3e168ef399aeb55cd0e00df36cceeae8cc224ef34fd22e14993b3df37d3ea792ec1cbef37ec36ad032165ef3c5c5468559e50ef36f14e3d26df0cef3322532d450317ef34e299c085dbb9df32d55f8f11c43fdf3889e79db3ac4bdf38ec108f13f311ef32b604fd3f5682df3d3d78b1476d86ef33433016e954eddf3582ca062148a4ef329f7e987bcba0ef3278f6ef09095fdf3351598bec121bef354cdc66f1f059ef317541bbc3d3c4df3809422a384afcef3ccdf8381167f4ef350b3ff6790aabef37d3ecdff3341cef33bda9fb903c4cef3f33e2af380498df3deea46c260161ef3f7e604087c6c6df3cdf4421b059f9ef35fdd962a78a22ef300d6470ef1792ef3d7a99a658e1d9df3a46010ecd00cdcf387174dc684116ef3bc7cf7a552e5cef3d8c1921cb193cef328b8b4057c2f8ef3254e231f3cf6bef305243237378aaef30999cc8179ac4ef356c8315d70714ef3874db7ffb6cc3ef3030710224b84adf3739059bfd8e48ef327d717f1d25fbdf370be3e8c1450aef30f4eb416d5c5cef35637238e2a5fbef3175b635b90320df3fa084e407d666ef3f8a4e700daba4ef3ec24f5d5dcf2bef3e8e7043db15c7df377ed1f43f32cbdf3"/>
+]]></resource>
+        <input socket="gain" value="4.000000"/>
+        <input socket="sample.pos" value="0.400000"/>
+        <input socket="size" value="300"/>
+        <input socket="tension" value="700.000000"/>
+        <input socket="trigger.amount" value="20.000000"/>
+        <input socket="trigger.pos" value="0.665000"/>
+        <input socket="vel.dampen" value="0.990000"/>
+    </node>
+    <node id="73" typeName="trigger.time">
+        <input socket="interval.max" value="0.600000"/>
+        <input socket="interval.min" value="0.150000"/>
+    </node>
+    <node id="75" typeName="audio.sine">
+        <input socket="a" value="0.200000"/>
+        <input socket="b" value="0.600000"/>
+        <input socket="frequency" value="0.040000"/>
+    </node>
+    <node id="79" typeName="trigger.time">
+        <input socket="auto" value="0"/>
+    </node>
+    <node id="81" typeName="ramp">
+        <input socket="rampTime" value="4.000000"/>
+        <input socket="value" value="4.000000"/>
+    </node>
+    <node id="84" typeName="trigger.time">
+        <input socket="auto" value="0"/>
+        <input socket="interval.max" value="0.010000"/>
+        <input socket="interval.min" value="0.010000"/>
+    </node>
+    <node id="85" typeName="trigger.denom" passthrough="1">
+        <input socket="interval" value="24"/>
+    </node>
+    <node id="86" typeName="noise.1d">
+        <input socket="fine" value="0"/>
+        <input socket="max" value="0.700000"/>
+        <input socket="min" value="0.300000"/>
+        <input socket="type" value="1"/>
+    </node>
+    <node id="87" typeName="trigger.denom">
+        <input socket="interval" value="3"/>
+    </node>
+    <node id="92" typeName="flags">
+        <input socket="flag" value="dead"/>
+    </node>
+    <node id="93" typeName="flags">
+        <input socket="flag" value="kill"/>
+    </node>
+    <node id="94" typeName="memf">
+        <input socket="name" value="pos"/>
+    </node>
+    <node id="96" typeName="noise.1d">
+        <input socket="max" value="0.008000"/>
+        <input socket="type" value="3"/>
+    </node>
+    <node id="97" typeName="map.range">
+        <input socket="outMax" value="1500.000000"/>
+        <input socket="outMin" value="700.000000"/>
+    </node>
+    <node id="102" typeName="audio.drywet"/>
+    <node id="109" typeName="in.value">
+        <input socket="defaultX" value="1.000000"/>
+        <input socket="name" value="wave.amount"/>
+    </node>
+    <node id="110" typeName="in.value">
+        <input socket="defaultX" value="0.200000"/>
+        <input socket="max" value="0.400000"/>
+        <input socket="min" value="0.010000"/>
+        <input socket="name" value="wave.interval"/>
+        <input socket="smoothness" value="0.200000"/>
+    </node>
+    <node id="111" typeName="trigger.event">
+        <input socket="name" value="randomize"/>
+    </node>
+    <node id="112" typeName="math">
+        <input socket="a" value="1.500000"/>
+        <input socket="b" value="1.000000"/>
+        <input socket="type" value="3"/>
+    </node>
+    <node id="113" typeName="math">
+        <input socket="a" value="6.000000"/>
+        <input socket="b" value="1.000000"/>
+        <input socket="type" value="3"/>
+    </node>
+    <node id="114" typeName="in.value">
+        <input socket="defaultX" value="0.100000"/>
+        <input socket="name" value="wave.freq"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="115" typeName="trigger.time">
+        <input socket="interval.max" value="6.000000"/>
+        <input socket="interval.min" value="4.000000"/>
+    </node>
+    <node id="116" typeName="in.value">
+        <input socket="defaultX" value="0.500000"/>
+        <input socket="name" value="tension"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="117" typeName="in.value">
+        <input socket="name" value="secondary"/>
+        <input socket="type" value="0"/>
+    </node>
+    <link id="63" srcNodeId="62" srcNodeSocketName="trigger!" dstNodeId="63" dstNodeSocketName="trigger!"/>
+    <link id="64" srcNodeId="62" srcNodeSocketName="trigger.pos" dstNodeId="64" dstNodeSocketName="result"/>
+    <link id="65" srcNodeId="62" srcNodeSocketName="trigger.amount" dstNodeId="65" dstNodeSocketName="result"/>
+    <link id="66" srcNodeId="62" srcNodeSocketName="sample.pos" dstNodeId="66" dstNodeSocketName="result"/>
+    <link id="67" srcNodeId="66" srcNodeSocketName="x" dstNodeId="67" dstNodeSocketName="time"/>
+    <link id="72" srcNodeId="61" srcNodeSocketName="audio" dstNodeId="70" dstNodeSocketName="audio"/>
+    <link id="73" srcNodeId="70" srcNodeSocketName="trigger!" dstNodeId="71" dstNodeSocketName="trigger!"/>
+    <link id="74" srcNodeId="70" srcNodeSocketName="sample.pos" dstNodeId="66" dstNodeSocketName="result"/>
+    <link id="75" srcNodeId="70" srcNodeSocketName="trigger.pos" dstNodeId="64" dstNodeSocketName="result"/>
+    <link id="76" srcNodeId="70" srcNodeSocketName="trigger.amount" dstNodeId="65" dstNodeSocketName="result"/>
+    <link id="77" srcNodeId="72" srcNodeSocketName="trigger!" dstNodeId="73" dstNodeSocketName="trigger!"/>
+    <link id="78" srcNodeId="72" srcNodeSocketName="trigger.amount" dstNodeId="65" dstNodeSocketName="result"/>
+    <link id="82" srcNodeId="81" srcNodeSocketName="rampDown!" dstNodeId="79" dstNodeSocketName="trigger!"/>
+    <link id="84" srcNodeId="81" srcNodeSocketName="value" dstNodeId="72" dstNodeSocketName="audio"/>
+    <link id="85" srcNodeId="61" srcNodeSocketName="audio" dstNodeId="81" dstNodeSocketName="value"/>
+    <link id="86" srcNodeId="84" srcNodeSocketName="trigger!" dstNodeId="81" dstNodeSocketName="rampedDown!"/>
+    <link id="87" srcNodeId="81" srcNodeSocketName="rampUp!" dstNodeId="84" dstNodeSocketName="trigger!"/>
+    <link id="88" srcNodeId="72" srcNodeSocketName="randomize!" dstNodeId="84" dstNodeSocketName="trigger!"/>
+    <link id="89" srcNodeId="85" srcNodeSocketName="trigger!" dstNodeId="73" dstNodeSocketName="trigger!"/>
+    <link id="91" srcNodeId="79" srcNodeSocketName="trigger!" dstNodeId="85" dstNodeSocketName="trigger!"/>
+    <link id="92" srcNodeId="72" srcNodeSocketName="trigger.pos" dstNodeId="86" dstNodeSocketName="result"/>
+    <link id="94" srcNodeId="79" srcNodeSocketName="trigger!" dstNodeId="87" dstNodeSocketName="trigger!"/>
+    <link id="101" srcNodeId="92" srcNodeSocketName="set!" dstNodeId="61" dstNodeSocketName="rampedDown!"/>
+    <link id="102" srcNodeId="61" srcNodeSocketName="rampDown!" dstNodeId="93" dstNodeSocketName="set!"/>
+    <link id="103" srcNodeId="61" srcNodeSocketName="pos.x" dstNodeId="94" dstNodeSocketName="value1"/>
+    <link id="105" srcNodeId="61" srcNodeSocketName="pos.z" dstNodeId="94" dstNodeSocketName="value3"/>
+    <link id="106" srcNodeId="72" srcNodeSocketName="sample.pos" dstNodeId="75" dstNodeSocketName="audio"/>
+    <link id="107" srcNodeId="61" srcNodeSocketName="pos.y" dstNodeId="94" dstNodeSocketName="value2"/>
+    <link id="109" srcNodeId="61" srcNodeSocketName="audio" dstNodeId="96" dstNodeSocketName="result"/>
+    <link id="110" srcNodeId="72" srcNodeSocketName="tension" dstNodeId="97" dstNodeSocketName="result"/>
+    <link id="114" srcNodeId="102" srcNodeSocketName="wet" dstNodeId="62" dstNodeSocketName="audio"/>
+    <link id="119" srcNodeId="61" srcNodeSocketName="audio" dstNodeId="102" dstNodeSocketName="audio"/>
+    <link id="120" srcNodeId="62" srcNodeSocketName="gain" dstNodeId="109" dstNodeSocketName="valueX"/>
+    <link id="121" srcNodeId="63" srcNodeSocketName="interval.max" dstNodeId="110" dstNodeSocketName="valueX"/>
+    <link id="122" srcNodeId="62" srcNodeSocketName="randomize!" dstNodeId="111" dstNodeSocketName="trigger!"/>
+    <link id="123" srcNodeId="70" srcNodeSocketName="randomize!" dstNodeId="111" dstNodeSocketName="trigger!"/>
+    <link id="124" srcNodeId="73" srcNodeSocketName="interval.max" dstNodeId="113" dstNodeSocketName="result"/>
+    <link id="125" srcNodeId="73" srcNodeSocketName="interval.min" dstNodeId="112" dstNodeSocketName="result"/>
+    <link id="126" srcNodeId="113" srcNodeSocketName="b" dstNodeId="114" dstNodeSocketName="valueX"/>
+    <link id="127" srcNodeId="112" srcNodeSocketName="b" dstNodeId="114" dstNodeSocketName="valueX"/>
+    <link id="128" srcNodeId="87" srcNodeSocketName="trigger!" dstNodeId="115" dstNodeSocketName="trigger!"/>
+    <link id="129" srcNodeId="97" srcNodeSocketName="value" dstNodeId="116" dstNodeSocketName="valueX"/>
+    <link id="130" srcNodeId="102" srcNodeSocketName="wetness" dstNodeId="117" dstNodeSocketName="valueX"/>
+    <editor nextZKey="1236">
+        <dragAndZoom x="-110.403076171875" y="-551.1925048828125" zoom="1"/>
+        <nodeDatas>
+            <nodeData nodeId="61" x="273.76177978515625" y="-462.0733642578125" zKey="1222"/>
+            <nodeData nodeId="62" x="-17" y="-159.12118530273438" zKey="1235"/>
+            <nodeData nodeId="63" x="-159.99961853027344" y="-77.999832153320312" zKey="0"/>
+            <nodeData nodeId="64" x="-303.27487182617188" y="-0.113861083984375" zKey="0"/>
+            <nodeData nodeId="65" x="-476.99990844726562" y="-408.10107421875" zKey="0"/>
+            <nodeData nodeId="66" x="-256.26358032226562" y="-315.11700439453125" zKey="0"/>
+            <nodeData nodeId="67" x="-411.00018310546875" y="-148.00003051757812" zKey="0"/>
+            <nodeData nodeId="70" x="8" y="-456.08377075195312" zKey="1234"/>
+            <nodeData nodeId="71" x="-211.9996337890625" y="-410.5809326171875" zKey="0" folded="1"/>
+            <nodeData nodeId="72" x="-129.9991455078125" y="-716.234130859375" zKey="1233"/>
+            <nodeData nodeId="73" x="-831" y="-567" zKey="1199"/>
+            <nodeData nodeId="75" x="-288" y="-768" zKey="0" folded="1"/>
+            <nodeData nodeId="79" x="-448" y="-608" zKey="0" folded="1"/>
+            <nodeData nodeId="81" x="38" y="-700" zKey="0"/>
+            <nodeData nodeId="84" x="-366.01434326171875" y="-995.3406982421875" zKey="0"/>
+            <nodeData nodeId="85" x="-596.98699951171875" y="-745.9989013671875" zKey="1216"/>
+            <nodeData nodeId="86" x="-283.98062133789062" y="-578.14703369140625" zKey="0" folded="1"/>
+            <nodeData nodeId="87" x="-592" y="-608" zKey="1203" folded="1"/>
+            <nodeData nodeId="92" x="417.93389892578125" y="-496" displayName="dead" zKey="0"/>
+            <nodeData nodeId="93" x="128" y="224" displayName="kill" zKey="0" folded="1"/>
+            <nodeData nodeId="94" x="144" y="-368" displayName="pos" zKey="0" folded="1"/>
+            <nodeData nodeId="96" x="42" y="-763" zKey="0" folded="1"/>
+            <nodeData nodeId="97" x="-524" y="-926.1617431640625" zKey="1210"/>
+            <nodeData nodeId="102" x="128" y="-64" zKey="1232" folded="1"/>
+            <nodeData nodeId="109" x="-134.99993896484375" y="-176" displayName="wave.amount" zKey="0" folded="1"/>
+            <nodeData nodeId="110" x="-288" y="-64" displayName="wave.interval" zKey="0" folded="1"/>
+            <nodeData nodeId="111" x="-526.60906982421875" y="74.88037109375" displayName="randomize" zKey="0" folded="1"/>
+            <nodeData nodeId="112" x="-976" y="-560" zKey="0" folded="1"/>
+            <nodeData nodeId="113" x="-976" y="-528" zKey="0" folded="1"/>
+            <nodeData nodeId="114" x="-1104" y="-560" zKey="1207" folded="1"/>
+            <nodeData nodeId="115" x="-592" y="-640" zKey="1205" folded="1"/>
+            <nodeData nodeId="116" x="-636.5771484375" y="-927" zKey="1223" folded="1"/>
+            <nodeData nodeId="117" x="124.4228515625" y="-98.96337890625" zKey="1231" folded="1"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="82" x="179.7181396484375" y="-815.43365478515625" zKey="-1" nodeId="81" dstSocketName="value" sx="216" sy="148"/>
+        </visualizers>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="0a3265cc" gridColor="b600ff96">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

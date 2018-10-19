@@ -1,0 +1,174 @@
+<graph nextNodeId="114" nextLinkId="162">
+    <node id="1" typeName="draw.display"/>
+    <node id="50" typeName="draw.surface">
+        <input socket="clearColor" value="ffffff00"/>
+        <input socket="format" value="0"/>
+        <input socket="viewMode" value="0"/>
+    </node>
+    <node id="53" typeName="draw.fsfx-v2">
+        <input socket="opacity" value="0.800000"/>
+        <input socket="param1" value="0.800000"/>
+        <input socket="shader" value="fsfx/darken.ps"/>
+    </node>
+    <node id="54" typeName="draw.fsfx-v2" passthrough="1">
+        <input socket="opacity" value="0.070000"/>
+        <input socket="param1" value="186.000000"/>
+        <input socket="shader" value="fsfx/sample_circle.ps"/>
+    </node>
+    <node id="62" typeName="draw.sequence"/>
+    <node id="63" typeName="draw.text" passthrough="1">
+        <input socket="color" value="5197e4ff"/>
+        <input socket="sizeMode" value="0"/>
+        <input socket="text" value="framework :: vfx- &amp; audioGraph"/>
+    </node>
+    <node id="64" typeName="draw.transform2d">
+        <input socket="scale" value="0.460000"/>
+        <input socket="y" value="220.000000"/>
+    </node>
+    <node id="66" typeName="audioGraph">
+        <input socket="comb4.gain" value="1.000000"/>
+        <input socket="comb5.fade" value="0.010000"/>
+        <input socket="comb5.gain" value="1.000000"/>
+        <input socket="file" value="audiographs/mlworkshopA.xml"/>
+        <input socket="limit" value="0"/>
+        <input socket="mode" value="0"/>
+        <input socket="secondary" value="2.000000"/>
+        <input socket="tension" value="1.000000"/>
+        <input socket="wave.amount" value="10.000000"/>
+        <input socket="wave.freq" value="0.030000"/>
+        <input socket="wave.interval" value="5.000000"/>
+    </node>
+    <node id="90" typeName="draw.transform2d">
+        <input socket="scale" value="0.500000"/>
+        <input socket="y" value="270.000000"/>
+    </node>
+    <node id="91" typeName="draw.text" passthrough="1">
+        <input socket="color" value="d79c6dff"/>
+        <input socket="sizeMode" value="0"/>
+        <input socket="text" value="http://centuryofthecat.nl"/>
+    </node>
+    <node id="92" typeName="creature">
+        <input socket="angleSpeed" value="200.000000"/>
+        <input socket="moveSpeed" value="100.000000"/>
+    </node>
+    <node id="93" typeName="gen.sine">
+        <input socket="frequency" value="0.021000"/>
+    </node>
+    <node id="94" typeName="gen.sine">
+        <input socket="frequency" value="0.032100"/>
+    </node>
+    <node id="95" typeName="draw.transform2d"/>
+    <node id="96" typeName="gen.sine">
+        <input socket="frequency" value="0.025600"/>
+    </node>
+    <node id="97" typeName="draw.surface">
+        <input socket="format" value="0"/>
+        <input socket="viewMode" value="0"/>
+    </node>
+    <node id="98" typeName="draw.image">
+        <input socket="sizeMode" value="0"/>
+    </node>
+    <node id="99" typeName="draw.blend">
+        <input socket="mode" value="0"/>
+    </node>
+    <node id="100" typeName="gen.sine">
+        <input socket="frequency" value="0.027800"/>
+    </node>
+    <node id="101" typeName="gen.sine">
+        <input socket="frequency" value="0.014300"/>
+    </node>
+    <node id="102" typeName="gen.sine">
+        <input socket="frequency" value="0.007800"/>
+    </node>
+    <node id="103" typeName="draw.fsfx-v2">
+        <input socket="opacity" value="0.200000"/>
+        <input socket="param1" value="60.000000"/>
+        <input socket="shader" value="fsfx/gaussian-v.ps"/>
+    </node>
+    <node id="104" typeName="channel.math">
+        <input socket="type" value="3"/>
+    </node>
+    <node id="109" typeName="channel.literal">
+        <input socket="text" value="0 0.2 0.4 0.6 0.8 1.0"/>
+    </node>
+    <link id="76" srcNodeId="1" srcNodeSocketName="image" dstNodeId="50" dstNodeSocketName="image"/>
+    <link id="83" srcNodeId="53" srcNodeSocketName="before" dstNodeId="54" dstNodeSocketName="any"/>
+    <link id="99" srcNodeId="62" srcNodeSocketName="03" dstNodeId="64" dstNodeSocketName="transform"/>
+    <link id="100" srcNodeId="64" srcNodeSocketName="any" dstNodeId="63" dstNodeSocketName="any"/>
+    <link id="129" srcNodeId="62" srcNodeSocketName="04" dstNodeId="90" dstNodeSocketName="transform"/>
+    <link id="130" srcNodeId="90" srcNodeSocketName="any" dstNodeId="91" dstNodeSocketName="any"/>
+    <link id="134" srcNodeId="92" srcNodeSocketName="moveSpeed" dstNodeId="93" dstNodeSocketName="value">
+        <param name="out.max" value="100.000000"/>
+        <param name="out.min" value="50.000000"/>
+    </link>
+    <link id="135" srcNodeId="92" srcNodeSocketName="angleSpeed" dstNodeId="94" dstNodeSocketName="value">
+        <param name="out.max" value="200.000000"/>
+        <param name="out.min" value="50.000000"/>
+    </link>
+    <link id="138" srcNodeId="95" srcNodeSocketName="scale" dstNodeId="96" dstNodeSocketName="value">
+        <param name="in.max" value="0.000000"/>
+        <param name="in.min" value="1.000000"/>
+        <param name="out.max" value="17.000000"/>
+        <param name="out.min" value="1.600000"/>
+    </link>
+    <link id="139" srcNodeId="62" srcNodeSocketName="01" dstNodeId="99" dstNodeSocketName="any"/>
+    <link id="140" srcNodeId="99" srcNodeSocketName="any" dstNodeId="98" dstNodeSocketName="any"/>
+    <link id="141" srcNodeId="98" srcNodeSocketName="image" dstNodeId="97" dstNodeSocketName="image"/>
+    <link id="143" srcNodeId="54" srcNodeSocketName="before" dstNodeId="62" dstNodeSocketName="any"/>
+    <link id="144" srcNodeId="97" srcNodeSocketName="source" dstNodeId="95" dstNodeSocketName="transform"/>
+    <link id="145" srcNodeId="95" srcNodeSocketName="any" dstNodeId="92" dstNodeSocketName="draw"/>
+    <link id="146" srcNodeId="66" srcNodeSocketName="wave.interval" dstNodeId="100" dstNodeSocketName="value" dynamic="1">
+        <param name="out.min" value="0.010000"/>
+    </link>
+    <link id="147" srcNodeId="66" srcNodeSocketName="wave.freq" dstNodeId="101" dstNodeSocketName="value" dynamic="1">
+        <param name="out.max" value="0.800000"/>
+        <param name="out.min" value="0.100000"/>
+    </link>
+    <link id="148" srcNodeId="95" srcNodeSocketName="x" dstNodeId="102" dstNodeSocketName="value">
+        <param name="out.max" value="140.000000"/>
+        <param name="out.min" value="-140.000000"/>
+    </link>
+    <link id="150" srcNodeId="92" srcNodeSocketName="strokeSize" dstNodeId="96" dstNodeSocketName="value">
+        <param name="out.max" value="0.800000"/>
+        <param name="out.min" value="0.600000"/>
+    </link>
+    <link id="151" srcNodeId="50" srcNodeSocketName="source" dstNodeId="103" dstNodeSocketName="any"/>
+    <link id="152" srcNodeId="103" srcNodeSocketName="before" dstNodeId="53" dstNodeSocketName="any"/>
+    <link id="158" srcNodeId="104" srcNodeSocketName="b" dstNodeId="109" dstNodeSocketName="channel"/>
+    <link id="159" srcNodeId="92" srcNodeSocketName="channels" dstNodeId="66" dstNodeSocketName="channel1" dynamic="1"/>
+    <link id="160" srcNodeId="104" srcNodeSocketName="a" dstNodeId="66" dstNodeSocketName="channel1" dynamic="1"/>
+    <editor nextZKey="885">
+        <dragAndZoom x="531.20831298828125" y="9.7054405212402344" zoom="1.3065896034240723"/>
+        <nodeDatas>
+            <nodeData nodeId="1" x="1888" y="0" zKey="337"/>
+            <nodeData nodeId="50" x="1760" y="0" zKey="768"/>
+            <nodeData nodeId="53" x="1504" y="0" zKey="852"/>
+            <nodeData nodeId="54" x="1376" y="0" zKey="854"/>
+            <nodeData nodeId="62" x="1248" y="0" zKey="674"/>
+            <nodeData nodeId="63" x="992" y="128" zKey="796" folded="1"/>
+            <nodeData nodeId="64" x="1120" y="128" zKey="752" folded="1"/>
+            <nodeData nodeId="66" x="320" y="0" zKey="881"/>
+            <nodeData nodeId="90" x="1120" y="160" zKey="675" folded="1"/>
+            <nodeData nodeId="91" x="992" y="160" zKey="795" folded="1"/>
+            <nodeData nodeId="92" x="608" y="0" zKey="842"/>
+            <nodeData nodeId="93" x="432" y="48" zKey="730"/>
+            <nodeData nodeId="94" x="432" y="144" zKey="729"/>
+            <nodeData nodeId="95" x="736" y="0" zKey="774"/>
+            <nodeData nodeId="96" x="608" y="112" zKey="812"/>
+            <nodeData nodeId="97" x="864" y="0" zKey="777"/>
+            <nodeData nodeId="98" x="992" y="0" zKey="763"/>
+            <nodeData nodeId="99" x="1120" y="0" zKey="840"/>
+            <nodeData nodeId="100" x="160" y="176" zKey="828"/>
+            <nodeData nodeId="101" x="176" y="64" zKey="831"/>
+            <nodeData nodeId="102" x="592" y="-128" zKey="820"/>
+            <nodeData nodeId="103" x="1632" y="0" zKey="853"/>
+            <nodeData nodeId="104" x="640" y="-256" zKey="873"/>
+            <nodeData nodeId="109" x="480" y="-224" zKey="878"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="110" x="752" y="-256" zKey="869" nodeId="104" dstSocketName="result" sx="216" sy="148"/>
+            <visualizer id="111" x="352" y="-160" zKey="875" nodeId="66" dstSocketName="channel1" sx="216" sy="148"/>
+        </visualizers>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="00000071" gridColor="ffffff4c"/>
+    </editor>
+</graph>
