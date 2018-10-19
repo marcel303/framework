@@ -782,40 +782,6 @@ int main(int argc, char * argv[])
 			vfxCpuTimingBlock(tick);
 			vfxGpuTimingBlock(tick);
 			
-			// todo : remove. test here to estimate how much memory using serialization as the undo/redo mechanism would use
-			if (false && keyboard.wentDown(SDLK_m))
-			{
-				std::vector<std::string> historyList;
-				historyList.resize(1000);
-				
-				for (auto & history : historyList)
-				{
-					bool result = true;
-					
-					tinyxml2::XMLPrinter xmlGraph;
-					
-					xmlGraph.OpenElement("graph");
-					{
-						result &= graphEdit->graph->saveXml(xmlGraph, graphEdit->typeDefinitionLibrary);
-						
-						xmlGraph.OpenElement("editor");
-						{
-							result &= graphEdit->saveXml(xmlGraph);
-						}
-						xmlGraph.CloseElement();
-					}
-					xmlGraph.CloseElement();
-					
-					Assert(result);
-					if (result)
-					{
-						history = xmlGraph.CStr();
-					}
-				}
-				
-				for (;;);
-			}
-			
 			// when real-time preview is disabled and all animations are done, wait for events to arrive. otherwise just keep processing and drawing frames
 			
 			if (graphEdit->editorOptions.realTimePreview == false && realtimePreviewAnim == 0.f && graphEdit->animationIsDone)
