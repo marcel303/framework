@@ -444,6 +444,7 @@ AudioGraphManager_Basic::AudioGraphManager_Basic(bool _cacheOnCreate)
 	, cacheOnCreate(false)
 	, instances()
 	, audioMutex(nullptr)
+	, allocatedGlobals()
 	, globals(nullptr)
 {
 	cacheOnCreate = _cacheOnCreate;
@@ -468,7 +469,7 @@ void AudioGraphManager_Basic::init(SDL_mutex * mutex, AudioVoiceManager * voiceM
 	
 	audioMutex.mutex = mutex;
 	
-	globals = new AudioGraphGlobals();
+	globals = createGlobals();
 	globals->init(mutex, voiceMgr, this);
 }
 
@@ -487,8 +488,7 @@ void AudioGraphManager_Basic::shut()
 	{
 		globals->shut();
 		
-		delete globals;
-		globals = nullptr;
+		freeGlobals(globals);
 	}
 	
 	audioMutex.mutex = nullptr;
@@ -509,6 +509,23 @@ void AudioGraphManager_Basic::addGraphToCache(const char * filename)
 		
 		elem.isValid = elem.graph.load(filename, typeDefinitionLibrary);
 	}
+}
+
+AudioGraphGlobals * AudioGraphManager_Basic::createGlobals()
+{
+	AudioGraphGlobals * globals = new AudioGraphGlobals();
+	
+	allocatedGlobals.insert(globals);
+	
+	return globals;
+}
+
+void AudioGraphManager_Basic::freeGlobals(AudioGraphGlobals *& globals)
+{
+	allocatedGlobals.erase(globals);
+	
+	delete globals;
+	globals = nullptr;
 }
 
 AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filename, AudioGraphGlobals * globals, const bool createdPaused)
@@ -634,7 +651,8 @@ void AudioGraphManager_Basic::tickAudio(const float dt)
 {
 	audioMutex.lock();
 	{
-		globals->tick(dt);
+		for (auto & globals : allocatedGlobals)
+			globals->tick(dt);
 		
 		// tick graph instances
 		
@@ -656,6 +674,7 @@ AudioGraphManager_RTE::AudioGraphManager_RTE(const int _displaySx, const int _di
 	, files()
 	, selectedFile(nullptr)
 	, audioMutex(nullptr)
+	, allocatedGlobals()
 	, globals(nullptr)
 	, displaySx(0)
 	, displaySy(0)
@@ -683,7 +702,7 @@ void AudioGraphManager_RTE::init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr
 	
 	audioMutex = mutex;
 	
-	globals = new AudioGraphGlobals();
+	globals = createGlobals();
 	globals->init(mutex, voiceMgr, this);
 }
 
@@ -705,8 +724,7 @@ void AudioGraphManager_RTE::shut()
 	{
 		globals->shut();
 		
-		delete globals;
-		globals = nullptr;
+		freeGlobals(globals);
 	}
 	
 	audioMutex = nullptr;
@@ -777,6 +795,23 @@ void AudioGraphManager_RTE::selectInstance(const AudioGraphInstance * instance)
 		}
 	}
 	SDL_UnlockMutex(audioMutex);
+}
+
+AudioGraphGlobals * AudioGraphManager_RTE::createGlobals()
+{
+	AudioGraphGlobals * globals = new AudioGraphGlobals();
+	
+	allocatedGlobals.insert(globals);
+	
+	return globals;
+}
+
+void AudioGraphManager_RTE::freeGlobals(AudioGraphGlobals *& globals)
+{
+	allocatedGlobals.erase(globals);
+	
+	delete globals;
+	globals = nullptr;
 }
 
 AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename, AudioGraphGlobals * globals, const bool createdPaused)
@@ -953,7 +988,8 @@ void AudioGraphManager_RTE::tickAudio(const float dt)
 {
 	SDL_LockMutex(audioMutex);
 	{
-		globals->tick(dt);
+		for (auto & globals : allocatedGlobals)
+			globals->tick(dt);
 		
 		// tick graph instances
 		
@@ -995,6 +1031,25 @@ void AudioGraphManager_RTE::drawEditor()
 	if (selectedFile != nullptr)
 	{
 		selectedFile->graphEdit->draw();
+		
+	#if 0 // todo : add a nice UI for drawing the filter response
+		if (selectedFile->activeInstance != nullptr && selectedFile->graphEdit->selectedNodes.size() == 1)
+		{
+			auto audioGraph = selectedFile->activeInstance->audioGraph;
+			
+			const GraphNodeId nodeId = *selectedFile->graphEdit->selectedNodes.begin();
+			
+			auto nodeItr = audioGraph->nodes.find(nodeId);
+	
+			Assert(nodeItr != audioGraph->nodes.end());
+			if (nodeItr != audioGraph->nodes.end())
+			{
+				const AudioNodeBase * audioNode = nodeItr->second;
+				
+				drawFilterResponse(audioNode, 200.f, 100.f);
+			}
+		}
+	#endif
 	}
 }
 
@@ -1006,6 +1061,7 @@ AudioGraphManager_MultiRTE::AudioGraphManager_MultiRTE(const int _displaySx, con
 	, files()
 	, selectedFile(nullptr)
 	, audioMutex(nullptr)
+	, allocatedGlobals()
 	, globals(nullptr)
 	, displaySx(0)
 	, displaySy(0)
@@ -1033,7 +1089,7 @@ void AudioGraphManager_MultiRTE::init(SDL_mutex * mutex, AudioVoiceManager * voi
 	
 	audioMutex = mutex;
 	
-	globals = new AudioGraphGlobals();
+	globals = createGlobals();
 	globals->init(mutex, voiceMgr, this);
 }
 
@@ -1055,8 +1111,7 @@ void AudioGraphManager_MultiRTE::shut()
 	{
 		globals->shut();
 		
-		delete globals;
-		globals = nullptr;
+		freeGlobals(globals);
 	}
 	
 	audioMutex = nullptr;
@@ -1111,6 +1166,23 @@ void AudioGraphManager_MultiRTE::selectInstance(const AudioGraphInstance * insta
 		}
 	}
 	SDL_UnlockMutex(audioMutex);
+}
+
+AudioGraphGlobals * AudioGraphManager_MultiRTE::createGlobals()
+{
+	AudioGraphGlobals * globals = new AudioGraphGlobals();
+	
+	allocatedGlobals.insert(globals);
+	
+	return globals;
+}
+
+void AudioGraphManager_MultiRTE::freeGlobals(AudioGraphGlobals *& globals)
+{
+	allocatedGlobals.erase(globals);
+	
+	delete globals;
+	globals = nullptr;
 }
 
 AudioGraphInstance * AudioGraphManager_MultiRTE::createInstance(const char * filename, AudioGraphGlobals * globals, const bool createdPaused)
@@ -1287,7 +1359,8 @@ void AudioGraphManager_MultiRTE::tickAudio(const float dt)
 {
 	SDL_LockMutex(audioMutex);
 	{
-		globals->tick(dt);
+		for (auto & globals : allocatedGlobals)
+			globals->tick(dt);
 		
 		// tick graph instances
 		

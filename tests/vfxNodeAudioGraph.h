@@ -72,7 +72,7 @@ struct VfxNodeAudioGraph : VfxNodeBase
 	
 	VoiceMgr voiceMgr;
 	
-	AudioGraphGlobals globals;
+	AudioGraphGlobals * globals;
 	
 	AudioGraphInstance * audioGraphInstance;
 	

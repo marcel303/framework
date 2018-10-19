@@ -84,7 +84,7 @@ void VfxNodeAudioGraph::VoiceMgr::freeVoice(AudioVoice *& voice)
 VfxNodeAudioGraph::VfxNodeAudioGraph()
 	: VfxNodeBase()
 	, voiceMgr()
-	, globals()
+	, globals(nullptr)
 	, audioGraphInstance(nullptr)
 	, currentFilename()
 	, currentControlValues()
@@ -99,7 +99,8 @@ VfxNodeAudioGraph::VfxNodeAudioGraph()
 	addInput(kInput_Limit, kVfxPlugType_Bool);
 	addInput(kInput_LimitPeak, kVfxPlugType_Float);
 	
-	globals.init(g_vfxAudioMutex, &voiceMgr, g_vfxAudioGraphMgr);
+	globals = g_vfxAudioGraphMgr->createGlobals();
+	globals->init(g_vfxAudioMutex, &voiceMgr, g_vfxAudioGraphMgr);
 }
 
 VfxNodeAudioGraph::~VfxNodeAudioGraph()
@@ -108,6 +109,8 @@ VfxNodeAudioGraph::~VfxNodeAudioGraph()
 	
 	delete [] channelOutputs;
 	channelOutputs = nullptr;
+	
+	g_vfxAudioGraphMgr->freeGlobals(globals);
 }
 
 void VfxNodeAudioGraph::updateDynamicInputs()
@@ -265,7 +268,8 @@ void VfxNodeAudioGraph::tick(const float dt)
 		
 		//
 		
-		audioGraphInstance = g_vfxAudioGraphMgr->createInstance(filename, &globals);
+		audioGraphInstance = g_vfxAudioGraphMgr->createInstance(filename, globals);
+		//static_cast<AudioGraphManager_RTE*>(g_vfxAudioGraphMgr)->selectInstance(audioGraphInstance); // fixme : let multi editor show UI to select file or instance ?
 		
 		currentFilename = filename;
 	}
