@@ -425,20 +425,15 @@ struct Controller
 	{
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			setFont("calibri.ttf");
-			pushFontMode(FONT_SDF);
+			gxPushMatrix();
 			{
-				gxPushMatrix();
-				{
-					drawCameraUi(0);
-					gxTranslatef(CAMVIEW_SX, 0, 0);
-					
-					drawCameraUi(1);
-					gxTranslatef(CAMVIEW_SX, 0, 0);
-				}
-				gxPopMatrix();
+				drawCameraUi(0);
+				gxTranslatef(CAMVIEW_SX, 0, 0);
+				
+				drawCameraUi(1);
+				gxTranslatef(CAMVIEW_SX, 0, 0);
 			}
-			popFontMode();
+			gxPopMatrix();
 		}
 		framework.endDraw();
 	}
