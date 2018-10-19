@@ -198,7 +198,6 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 		io.MouseWheelH = kinetic_scroll[0];
 		io.MouseWheel = kinetic_scroll[1];
 	#else
-	// todo : add kinectic scrolling
 		if (mouse.scrollY == 0)
 			kinetic_scroll *= powf(.1f, dt);
 		else
