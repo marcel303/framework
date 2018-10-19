@@ -1,0 +1,10 @@
+app marcel-veem-sound
+	depend_library audiograph
+	depend_library framework
+	depend_library libvideo
+	depend_library vfxgraph
+	
+	scan_files *.cpp
+	scan_files *.h
+
+	resource_path "/Users/thecat/Google Drive/SDN0-Veem/veem-sound"

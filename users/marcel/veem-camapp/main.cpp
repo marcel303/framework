@@ -556,9 +556,13 @@ void changeDirectory(const char * path);
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
-	
+#endif
+
 #if 1
 	// show connected devices
 	

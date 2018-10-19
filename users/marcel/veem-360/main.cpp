@@ -27,7 +27,7 @@ struct MyAudioHandler : PortAudioHandler
 	
 	void init(const char * filename)
 	{
-		soundData = loadSound("sound.wav");
+		soundData = loadSound(filename);
 		
 		decoder.Configure(1, true, kAmblib_CustomSpeakerSetUp, 2);
 		
@@ -127,12 +127,16 @@ struct MyAudioHandler : PortAudioHandler
 
 int main(int argc, char * argv[])
 {
-#ifdef DEBUG
-	framework.enableRealTimeEditing = true;
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
 #else
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
-	
+#endif
+
+#ifdef DEBUG
+	framework.enableRealTimeEditing = true;
+#else
 	framework.fullscreen = true;
 #endif
 	

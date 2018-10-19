@@ -1,0 +1,9 @@
+app marcel-veem-360
+	depend_library audiograph
+	depend_library framework
+	depend_library libvideo
+	
+	scan_files *.cpp
+	scan_files *.h
+
+	resource_path "/Users/thecat/Google Drive/SDN0-Veem/veem-360"

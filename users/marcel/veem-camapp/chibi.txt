@@ -1,0 +1,8 @@
+app marcel-veem-camapp
+	depend_library framework
+	depend_library libosc
+	depend_library libps3eye
+	
+	add_files main.cpp
+
+	resource_path data

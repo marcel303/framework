@@ -658,7 +658,9 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 
 int main(int argc, char * argv[])
 {
-#if DEPLOYMENT_BUILD
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#elif DEPLOYMENT_BUILD
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
 #endif
@@ -671,11 +673,11 @@ int main(int argc, char * argv[])
 	initUi();
 	
 #if ENABLE_AUDIO
-	fillPcmDataCache("bang", false, false);
-	fillPcmDataCache("droplets", false, false);
-	fillPcmDataCache("droplets2", false, false);
-	fillPcmDataCache("env", false, false);
-	fillPcmDataCache("sats", false, false);
+	fillPcmDataCache("bang", false, false, true);
+	fillPcmDataCache("droplets", false, false, true);
+	fillPcmDataCache("droplets2", false, false, true);
+	fillPcmDataCache("env", false, false, true);
+	fillPcmDataCache("sats", false, false, true);
 #endif
 
 	int inputDeviceIndex = -1;

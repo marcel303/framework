@@ -318,7 +318,9 @@ struct SatellitesApp
 
 int main(int argc, char * argv[])
 {
-#if 1
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#elif 1
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
 #endif
@@ -331,7 +333,7 @@ int main(int argc, char * argv[])
 	initUi();
 	
 #if ENABLE_AUDIO
-	fillPcmDataCache("sats", false, false);
+	fillPcmDataCache("sats", false, false, true);
 #endif
 
 	SatellitesApp app;
