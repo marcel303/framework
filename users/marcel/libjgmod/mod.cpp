@@ -22,8 +22,11 @@
 #include <stdio.h>
 #include <string.h>
 
-// todo : make thread local ?
-static char jgmod_error[80] = { };
+#ifdef WIN32
+	static __declspec(thread) char jgmod_error[80] = { };
+#else
+	static __thread char jgmod_error[80] = { };
+#endif
 
 void jgmod_seterror(const char * format, ...)
 {
