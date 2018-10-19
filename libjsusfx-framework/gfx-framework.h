@@ -107,8 +107,6 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	virtual void beginDraw() override;
 	virtual void endDraw() override;
 	
-	virtual void handleReset(); // todo : mark override and add virtual to JsusFxGfx; called by JsusFx when code is released
-	
 	void updatePrimType(PrimType _primType);
 	void updateBlendMode();
 	void updateColor();

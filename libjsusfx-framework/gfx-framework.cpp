@@ -296,13 +296,6 @@ void JsusFxGfx_Framework::endDraw()
 	//surface = nullptr;
 }
 
-void JsusFxGfx_Framework::handleReset()
-{
-	m_fontSize = 12.f;
-	
-	imageCache.free();
-}
-
 void JsusFxGfx_Framework::updatePrimType(PrimType _primType)
 {
 	if (_primType != primType)
