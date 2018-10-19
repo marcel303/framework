@@ -1,0 +1,8 @@
+include fsfx/common.inc
+
+vec4 fsfx()
+{
+	vec4 color = texture(colormap, vec2(1.0 - texcoord.x, texcoord.y));
+
+	return color;
+}

@@ -1,0 +1,37 @@
+include fsfx/common.inc
+
+vec4 fsfx()
+{
+	vec2 colormapSize = textureSize(colormap, 0);
+	vec2 colormapSizeRcp = 1.f / colormapSize;
+	
+	vec2 coord = texcoord;
+	coord *= colormapSize;
+	
+	float totalAlpha = 1.0;
+	
+	for (int i = 0; i < 10; ++i)
+	{
+		float radius = (i + 1) * 30;
+		float size = 5.0 + mod(i * 30.0, 55.0);
+		
+		radius += 20.0 * (sin(time * i / 2.0) + 1.0) / 2.0;
+		
+		float dx = coord.x - colormapSize.x / 2.0;
+		float dy = coord.y - colormapSize.y / 2.0;
+		float ds = sqrt(dx * dx + dy * dy);
+		
+		if (ds >= radius && ds <= radius + size)
+		{
+			float alpha = (mod(i, 3) + 1) / 3;
+			
+			totalAlpha = totalAlpha * (1.0 - alpha);
+		}
+	}
+	
+	fsfxOpacity = 1.0 - totalAlpha;
+
+	vec4 color = color1;
+
+	return vec4(color);
+}
