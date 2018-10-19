@@ -38,6 +38,9 @@
 #include "Timer.h"
 #include <complex>
 
+// todo : use a longer test sound
+// todo : make 3D view optional
+
 #define HRTF_BUFFER_SIZE 512
 #define AUDIO_BUFFER_SIZE 512
 #define AUDIO_UPDATE_SIZE (AUDIO_BUFFER_SIZE/2)
@@ -926,10 +929,10 @@ void testHrtf()
 	// load impulse-response audio files
 	
 	HRIRSet hrirSet;
-	hrirSet.loadMitDatabase("hrtf/MIT-HRTF-DIFFUSE");
+	hrirSet.loadMitDatabase("binaural/MIT-HRTF-DIFFUSE");
 	
 	AudioSource_StreamOgg sound;
-	sound.load("hrtf/music2.ogg");
+	sound.load("menuselect.ogg");
 	
 	AudioSource_Binaural binaural;
 	binaural.source = &sound;
@@ -1068,8 +1071,6 @@ void testHrtf()
 			gxPushMatrix();
 			gxLoadIdentity();
 			
-			// todo : show source and head position
-			
 			gxPushMatrix();
 			{
 				gxMultMatrixf(objectToView.m_v);
@@ -1120,9 +1121,8 @@ void testHrtf()
 			gxPopMatrix();
 			
 			setFont("calibri.ttf");
-			setColor(colorWhite);
-			
-			drawText(10, 10, 24, 1, 1, "time: %.4fms", binaural.processTimeAvg / 1000.0);
+			setColor(200, 200, 200);
+			drawText(10, 10, 14, 1, 1, "time: %.4fms", binaural.processTimeAvg / 1000.0);
 			
 			drawTestUi();
 		}
