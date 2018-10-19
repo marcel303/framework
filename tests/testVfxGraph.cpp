@@ -310,7 +310,7 @@ struct FileWindow
 		, scrollY(0.f)
 		, desiredScrollY(0.f)
 	{
-		window.setPosition(5, 100);
+		window.setPosition(10, 100);
 		
 		std::vector<std::string> paths;
 		paths = listFiles("vfxgraphs", false);
@@ -466,7 +466,7 @@ struct FileWindow
 							setLumi(255);
 						else
 							setLumi(200);
-						drawText(x, y, 14, 0, 0, "%s", filename.c_str());
+						drawText(x, y, 14, 0, 0, "%s", Path::GetFileName(filename).c_str());
 						
 						y += item_sy + item_spacing;
 						
