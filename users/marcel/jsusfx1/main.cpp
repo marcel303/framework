@@ -1312,12 +1312,6 @@ std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool r
 		
 		JsusFx_Framework jsusFx(pathLibrary);
 		
-		fileAPI.init(jsusFx.m_vm);
-		jsusFx.fileAPI = &fileAPI;
-		
-		gfxAPI.init(jsusFx.m_vm);
-		jsusFx.gfx = &gfxAPI;
-		
 		if (!jsusFx.readHeader(pathLibrary, filename))
 			continue;
 		
