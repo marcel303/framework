@@ -39,6 +39,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "../libparticle/ui.h"
+
 #define ENABLE_AUDIO_RTE 1
 
 extern const int GFX_SX;
@@ -547,6 +549,14 @@ void testVfxGraph()
 			else
 				s_audioGraphMgr->drawEditor();
 		#endif
+		
+			makeActive(graphEdit.uiState, true, true);
+			pushMenu("editor-type");
+			g_drawX = 10;
+			g_drawY = GFX_SY - 110;
+			if (doButton("Switch editor type"))
+				editor = 1 - editor;
+			popMenu();
 			
 			drawTestUi();
 		}
