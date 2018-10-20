@@ -269,7 +269,8 @@ void VfxNodeAudioGraph::tick(const float dt)
 		//
 		
 		audioGraphInstance = g_vfxAudioGraphMgr->createInstance(filename, globals);
-		static_cast<AudioGraphManager_RTE*>(g_vfxAudioGraphMgr)->selectInstance(audioGraphInstance); // fixme : let multi editor show UI to select file or instance ?
+		
+		//static_cast<AudioGraphManager_RTE*>(g_vfxAudioGraphMgr)->selectInstance(audioGraphInstance); // fixme : let multi editor show UI to select file or instance ?
 		
 		currentFilename = filename;
 	}
