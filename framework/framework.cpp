@@ -8169,6 +8169,79 @@ static void setShader_HqStrokedRoundedRects()
 	setShader(globals.builtinShaders->hqStrokedRoundedRect.get());
 }
 
+static void applyHqShaderConstants()
+{
+	Shader & shader = *static_cast<Shader*>(globals.shader);
+	
+	fassert(shader.getType() == SHADER_VSPS);
+	
+	const ShaderCacheElem & shaderElem = shader.getCacheElem();
+	
+	if (shaderElem.params[ShaderCacheElem::kSp_ShadingParams].index != -1)
+	{
+		shader.setImmediate(
+			shaderElem.params[ShaderCacheElem::kSp_ShadingParams].index,
+			globals.hqGradientType,
+			globals.hqTextureEnabled,
+			globals.hqUseScreenSize);
+	}
+	
+	if (globals.hqGradientType != GRADIENT_NONE)
+	{
+		if (shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index != -1)
+		{
+			const Mat4x4 & cmat = globals.hqGradientMatrix;
+			
+			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index, cmat.m_v);
+		}
+		
+		if (shaderElem.params[ShaderCacheElem::kSp_GradientInfo].index != -1)
+		{
+			Mat4x4 gradientInfo;
+			gradientInfo(0, 0) = globals.hqGradientType;
+			gradientInfo(0, 1) = globals.hqGradientBias;
+			gradientInfo(0, 2) = globals.hqGradientScale;
+			gradientInfo(0, 3) = globals.hqGradientColorMode;
+			gradientInfo(1, 0) = globals.hqGradientColor1.r;
+			gradientInfo(1, 1) = globals.hqGradientColor1.g;
+			gradientInfo(1, 2) = globals.hqGradientColor1.b;
+			gradientInfo(1, 3) = globals.hqGradientColor1.a;
+			gradientInfo(2, 0) = globals.hqGradientColor2.r;
+			gradientInfo(2, 1) = globals.hqGradientColor2.g;
+			gradientInfo(2, 2) = globals.hqGradientColor2.b;
+			gradientInfo(2, 3) = globals.hqGradientColor2.a;
+			gradientInfo(3, 0) = 0.f;
+			gradientInfo(3, 1) = 0.f;
+			gradientInfo(3, 2) = 0.f;
+			gradientInfo(3, 3) = 0.f;
+			
+			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_GradientInfo].index, gradientInfo.m_v);
+		}
+	}
+	
+	if (globals.hqTextureEnabled)
+	{
+		if (shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index != -1)
+		{
+			const Mat4x4 & tmat = globals.hqTextureMatrix;
+			
+			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index, tmat.m_v);
+		}
+		
+		shader.setTextureUnit("source", 0);
+	}
+	
+
+#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+	//shader.setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
+	//shader.setImmediate("disableAA", cos(framework.time) < 0.f ? 0.f : 1.f);
+
+	shader.setImmediate("disableOptimizations", 0.f);
+	shader.setImmediate("disableAA", 0.f);
+	shader.setImmediate("_debugHq", 0.f);
+#endif
+}
+
 void hqBegin(HQ_TYPE type, bool useScreenSize)
 {
 	switch (type)
@@ -8224,6 +8297,8 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 	}
 	
 	globals.hqUseScreenSize = useScreenSize;
+	
+	applyHqShaderConstants();
 }
 
 void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
@@ -8274,82 +8349,12 @@ void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 	}
 	
 	globals.hqUseScreenSize = useScreenSize;
+	
+	applyHqShaderConstants();
 }
 
 void hqEnd()
 {
-	{
-		Shader & shader = *static_cast<Shader*>(globals.shader);
-		
-		fassert(shader.getType() == SHADER_VSPS);
-		
-		const ShaderCacheElem & shaderElem = shader.getCacheElem();
-		
-		if (shaderElem.params[ShaderCacheElem::kSp_ShadingParams].index != -1)
-		{
-			shader.setImmediate(
-				shaderElem.params[ShaderCacheElem::kSp_ShadingParams].index,
-				globals.hqGradientType,
-				globals.hqTextureEnabled,
-				globals.hqUseScreenSize);
-		}
-		
-		if (globals.hqGradientType != GRADIENT_NONE)
-		{
-			if (shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index != -1)
-			{
-				const Mat4x4 & cmat = globals.hqGradientMatrix;
-				
-				shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index, cmat.m_v);
-			}
-			
-			if (shaderElem.params[ShaderCacheElem::kSp_GradientInfo].index != -1)
-			{
-				Mat4x4 gradientInfo;
-				gradientInfo(0, 0) = globals.hqGradientType;
-				gradientInfo(0, 1) = globals.hqGradientBias;
-				gradientInfo(0, 2) = globals.hqGradientScale;
-				gradientInfo(0, 3) = globals.hqGradientColorMode;
-				gradientInfo(1, 0) = globals.hqGradientColor1.r;
-				gradientInfo(1, 1) = globals.hqGradientColor1.g;
-				gradientInfo(1, 2) = globals.hqGradientColor1.b;
-				gradientInfo(1, 3) = globals.hqGradientColor1.a;
-				gradientInfo(2, 0) = globals.hqGradientColor2.r;
-				gradientInfo(2, 1) = globals.hqGradientColor2.g;
-				gradientInfo(2, 2) = globals.hqGradientColor2.b;
-				gradientInfo(2, 3) = globals.hqGradientColor2.a;
-				gradientInfo(3, 0) = 0.f;
-				gradientInfo(3, 1) = 0.f;
-				gradientInfo(3, 2) = 0.f;
-				gradientInfo(3, 3) = 0.f;
-				
-				shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_GradientInfo].index, gradientInfo.m_v);
-			}
-		}
-		
-		if (globals.hqTextureEnabled)
-		{
-			if (shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index != -1)
-			{
-				const Mat4x4 & tmat = globals.hqTextureMatrix;
-				
-				shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index, tmat.m_v);
-			}
-			
-			shader.setTextureUnit("source", 0);
-		}
-		
-
-	#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
-		//shader.setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
-		//shader.setImmediate("disableAA", cos(framework.time) < 0.f ? 0.f : 1.f);
-
-		shader.setImmediate("disableOptimizations", 0.f);
-		shader.setImmediate("disableAA", 0.f);
-		shader.setImmediate("_debugHq", 0.f);
-	#endif
-	}
-	
 	gxEnd();
 
 	clearShader();
