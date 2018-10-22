@@ -716,16 +716,28 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 	return result;
 }
 
-static bool preprocessShader(const std::string & source, std::string & destination, std::vector<std::string> & errorMessages)
+static void addLineAndFileMarker(std::string & destination, const int lineNumber, const int fileId)
+{
+	char lineText[128];
+	sprintf_s(lineText, sizeof(lineText), "#line %d %d\n", int(lineNumber), fileId);
+	destination.append(lineText);
+}
+
+static bool preprocessShader(const std::string & source, std::string & destination, std::vector<std::string> & errorMessages, int & fileId)
 {
 	bool result = true;
 
 	std::vector<std::string> lines;
 
 	splitString(source, lines, '\n');
-
+	
 	for (size_t i = 0; i < lines.size(); ++i)
 	{
+		if (i == 0)
+		{
+			addLineAndFileMarker(destination, i, fileId);
+		}
+		
 		const std::string & line = lines[i];
 		const std::string trimmedLine = String::TrimLeft(lines[i]);
 
@@ -749,8 +761,10 @@ static bool preprocessShader(const std::string & source, std::string & destinati
 			else
 			{
 				std::string temp(bytes, numBytes);
+				
+				int nextFileId = fileId + 1;
 
-				if (!preprocessShader(temp, destination, errorMessages))
+				if (!preprocessShader(temp, destination, errorMessages, nextFileId))
 				{
 					result = false;
 				}
@@ -758,6 +772,8 @@ static bool preprocessShader(const std::string & source, std::string & destinati
 				delete [] bytes;
 				bytes = 0;
 				numBytes = 0;
+				
+				addLineAndFileMarker(destination, i + 1, fileId);
 			}
 		}
 		else
@@ -787,14 +803,16 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 	{
 		std::string source;
 		std::string temp(bytes, numBytes);
+		
+		int fileId = 0;
 
-		if (!preprocessShader(temp, source, errorMessages))
+		if (!preprocessShader(temp, source, errorMessages, fileId))
 		{
 			result = false;
 		}
 		else
 		{
-			//logDebug("shader source: %s", source.c_str());
+			//printf("shader source:\n%s", source.c_str());
 
 			shader = glCreateShader(type);
 
@@ -1224,6 +1242,8 @@ void splitString(const std::string & str, std::vector<std::string> & result, Pol
 			// found start
 			if (!policy.isBreak(c))
 				start = i;
+			else
+				result.push_back(std::string());
 		}
 		else if (policy.isBreak(c))
 		{
