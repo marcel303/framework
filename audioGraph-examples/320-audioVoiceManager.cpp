@@ -754,7 +754,7 @@ int main(int argc, char * argv[])
 				doLabel("1D wavefield", 0);
 				doCheckBox(wavefield1DEnabled, "enabled", false);
 				doTextBox(wavefield1D.m_retain, "retain", dt);
-				//doCheckBox(wavefield1D.m_closedEnds, "closed ends", false);
+				doCheckBox(wavefield1D.m_closedEnds, "closed ends", false);
 			}
 			popMenu();
 			
@@ -765,7 +765,7 @@ int main(int argc, char * argv[])
 				doLabel("2D wavefield", 0);
 				doCheckBox(wavefield2DEnabled, "enabled", false);
 				doTextBox(wavefield2D.m_retain, "retain", dt);
-				//doCheckBox(wavefield2D.m_closedEnds, "closed ends", false);
+				doCheckBox(wavefield2D.m_closedEnds, "closed ends", false);
 			}
 			popMenu();
 		
