@@ -49,6 +49,7 @@ void getFsfxShaderList(std::vector<std::string> & shaderList)
 	{
 		shaderListIsInitialized = true;
 		auto files = listFiles("fsfx", true);
+		std::sort(files.begin(), files.end());
 		
 		for (auto & file : files)
 		{
