@@ -4,6 +4,9 @@
 root=$PWD
 chibi_bin="./chibi-build/chibi/chibi"
 
+# end the shell script when an error occurs
+set -e
+
 # detect operating system
 unameOut="$(uname -s)"
 case "${unameOut}" in
