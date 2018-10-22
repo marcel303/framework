@@ -84,7 +84,7 @@ AUDIO_RESOURCE_TYPE(AudioResource_Wavefield2D, "wavefield.2d");
 
 #include "graph.h"
 #include "Noise.h"
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 {

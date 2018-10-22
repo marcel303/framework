@@ -216,7 +216,7 @@ static void handleError(const char * format, ...)
 	#include <portaudio/portaudio.h>
 #endif
 
-#include "../../../libparticle/ui.h"
+#include "ui.h"
 
 static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inputDeviceIndex, int & outputDeviceIndex, int & numOutputChannels)
 {

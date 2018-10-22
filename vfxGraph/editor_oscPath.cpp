@@ -28,11 +28,11 @@
 #include "Debugging.h"
 #include "editor_oscPath.h"
 #include "tinyxml2.h"
+#include "ui.h" // todo : remove
 #include "vfxNodes/oscEndpointMgr.h"
 #include "vfxNodes/oscReceiver.h"
 #include "vfxResource.h"
 #include "vfxTypes.h"
-#include "../libparticle/ui.h" // todo : remove
 
 extern int GRAPHEDIT_SX;
 extern int GRAPHEDIT_SY;

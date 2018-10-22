@@ -30,7 +30,7 @@
 #include "delaunay/vector2.h"
 #include "framework.h"
 
-#include "../../libparticle/ui.h"
+#include "ui.h"
 
 const int GFX_SX = 1300;
 const int GFX_SY = 760;

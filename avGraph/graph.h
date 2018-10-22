@@ -849,7 +849,7 @@ struct GraphEdit_RealTimeConnection
 
 //
 
-#include "../libparticle/particle.h" // todo : remove ParticleColor dependency
+#include "particle.h" // todo : remove ParticleColor dependency
 
 struct SDL_Cursor;
 

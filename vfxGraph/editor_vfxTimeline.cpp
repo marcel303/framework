@@ -28,9 +28,9 @@
 #include "editor_vfxTimeline.h"
 #include "framework.h"
 #include "tinyxml2.h"
+#include "ui.h" // todo : remove
 #include "vfxResource.h"
 #include "vfxTypes.h"
-#include "../libparticle/ui.h" // todo : remove
 #include <cmath>
 
 //

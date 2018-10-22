@@ -35,8 +35,8 @@
 #include "Path.h"
 #include "soundmix.h" // AudioVoiceManager. todo : move to its own source file
 #include "StringEx.h"
+#include "ui.h"
 #include "Vec3.h"
-#include "../libparticle/ui.h"
 #include <algorithm>
 #include <cmath>
 #include <functional>

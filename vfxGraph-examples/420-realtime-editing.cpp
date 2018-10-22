@@ -27,9 +27,9 @@
 
 #include "framework.h"
 #include "graph.h"
+#include "ui.h"
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
-#include "../libparticle/ui.h"
 #include <algorithm>
 
 #define FILENAME "testRibbon2.xml"

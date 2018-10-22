@@ -39,7 +39,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 #define ENABLE_AUDIO_RTE 1
 

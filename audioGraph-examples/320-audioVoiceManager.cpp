@@ -30,8 +30,8 @@
 #include "framework.h"
 #include "Noise.h"
 #include "soundmix.h"
+#include "ui.h"
 #include "wavefield.h"
-#include "../libparticle/ui.h"
 #include <algorithm>
 #include <cmath>
 

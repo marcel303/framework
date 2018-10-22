@@ -40,7 +40,7 @@
 #include <atomic>
 #include <cmath>
 
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 #if ENABLE_WDL_FFT
 	#include "WDL/fft.h"

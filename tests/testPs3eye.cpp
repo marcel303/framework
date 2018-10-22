@@ -3,7 +3,7 @@
 #include "vfxNodes/openglTexture.h"
 #include "ps3eye.h"
 
-#include "../libparticle/ui.h"
+#include "ui.h"
 #include "vfxNodes/dotDetector.h"
 #include "vfxNodes/dotTracker.h"
 

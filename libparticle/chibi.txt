@@ -5,6 +5,8 @@ library libparticle-ui
 
 	add_files ui.cpp ui.h textfield.cpp textfield.h colorwheel.cpp colorwheel.h particle.cpp particle.h
 
+	header_path . expose
+
 library libparticle
 
 	depend_library libparticle-ui

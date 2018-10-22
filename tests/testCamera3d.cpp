@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "testBase.h"
 
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;

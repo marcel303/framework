@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "graph.h"
 #include "graphEdit_nodeTypeSelect.h"
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 typedef std::map<std::string, std::vector<const GraphEdit_TypeDefinition*>> TypeDefinitionsByCategory;
 

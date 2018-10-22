@@ -12,7 +12,7 @@
 #include "vfxNodes/vfxNodeDisplay.h"
 #include "vfxNodes/oscEndpointMgr.h"
 
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 #define ENABLE_AUDIO 1
 #define DO_AUDIODEVICE_SELECT (ENABLE_AUDIO && 1)
@@ -99,7 +99,7 @@ AUDIO_NODE_TYPE(random, AudioNodeRandom)
 
 #if DO_AUDIODEVICE_SELECT
 
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 #if LINUX
 	#include <portaudio.h>

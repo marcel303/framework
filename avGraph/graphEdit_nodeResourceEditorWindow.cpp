@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "graph.h"
 #include "graphEdit_nodeResourceEditorWindow.h"
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 GraphEdit_NodeResourceEditorWindow::GraphEdit_NodeResourceEditorWindow()
 	: graphEdit(nullptr)
