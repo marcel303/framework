@@ -147,8 +147,8 @@ void tickForces(const double * __restrict p, const double c, double * __restrict
 	}
 	else
 	{
-		p1[0] = p1[numElems - 1];
-		p3[numElems - 1] = p3[0];
+		p1[0] = p[numElems - 1];
+		p3[numElems - 1] = p[0];
 	}
 	
 	//
@@ -461,8 +461,8 @@ void tickForces(const float * __restrict p, const float c, float * __restrict v,
 	}
 	else
 	{
-		p1[0] = p1[numElems - 1];
-		p3[numElems - 1] = p3[0];
+		p1[0] = p[numElems - 1];
+		p3[numElems - 1] = p[0];
 	}
 	
 	//
