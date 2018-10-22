@@ -54,6 +54,7 @@ struct VfxNodeJgmod : VfxNodeBase
 		kOutput_Track,
 		kOutput_Pattern,
 		kOutput_Row,
+		kOutput_End,
 		kOutput_COUNT
 	};
 
@@ -62,6 +63,8 @@ struct VfxNodeJgmod : VfxNodeBase
 	JGMOD * mod;
 	
 	JGMOD_PLAYER * player;
+	
+	bool isPlaying;
 	
 	float trackOutput;
 	float patternOutput;

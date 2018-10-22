@@ -53,6 +53,7 @@ VFX_NODE_TYPE(VfxNodeJgmod)
 	out("track", "float");
 	out("pattern", "float");
 	out("row", "float");
+	out("end!", "trigger");
 }
 
 VfxNodeJgmod::VfxNodeJgmod()
@@ -60,6 +61,7 @@ VfxNodeJgmod::VfxNodeJgmod()
 	, currentFilename()
 	, mod(nullptr)
 	, player(nullptr)
+	, isPlaying(false)
 	, trackOutput(0.f)
 	, patternOutput(0.f)
 	, rowOutput(0.f)
@@ -79,6 +81,7 @@ VfxNodeJgmod::VfxNodeJgmod()
 	addOutput(kOutput_Track, kVfxPlugType_Float, &trackOutput);
 	addOutput(kOutput_Pattern, kVfxPlugType_Float, &patternOutput);
 	addOutput(kOutput_Row, kVfxPlugType_Float, &rowOutput);
+	addOutput(kOutput_End, kVfxPlugType_Trigger, nullptr);
 	
 	if (install_sound(DIGI_AUTODETECT, MIDI_NONE, nullptr) < 0)
 	{
@@ -132,6 +135,8 @@ void VfxNodeJgmod::tick(const float dt)
 		if (autoplay)
 		{
 			player->play(mod, loop, 100, 100);
+			
+			isPlaying = true;
 		}
 	}
 	
@@ -151,6 +156,13 @@ void VfxNodeJgmod::tick(const float dt)
 	}
 	else
 	{
+		if (isPlaying)
+		{
+			isPlaying = false;
+			
+			trigger(kOutput_End);
+		}
+		
 		trackOutput = 0;
 		patternOutput = 0;
 		rowOutput = 0;
@@ -166,6 +178,8 @@ void VfxNodeJgmod::handleTrigger(const int index)
 			const bool loop = getInputBool(kInput_Loop, true);
 			
 			player->play(mod, loop, 100, 100);
+			
+			isPlaying = true;
 		}
 	}
 	else if (index == kInput_Pause)
