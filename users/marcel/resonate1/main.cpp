@@ -160,6 +160,10 @@ struct ResponseProbe
 	void init(const double in_frequency)
 	{
 		frequency = in_frequency;
+		phase = 0.0;
+		
+		responseX = 0.0;
+		responseY = 0.0;
 	}
 	
 	void next(const double value, const double dt)
@@ -190,8 +194,9 @@ int main(int argc, char * argv[])
 
 	ResonShape shape;
 	
-	const int gridSx = 13;
-	const int gridSy = 23;
+	int gridSx = 13;
+	int gridSy = 23;
+	
 	const float physicalSize = .5f;
 	buildPlate(shape, gridSx, gridSy, physicalSize);
 	
@@ -202,7 +207,7 @@ int main(int argc, char * argv[])
 	ResponseProbe probes[kNumProbeLayers][kNumProbes];
 	for (int l = 0; l < kNumProbeLayers; ++l)
 		for (int i = 0; i < kNumProbes; ++i)
-			probes[l][i].init(10.0 * pow(2.0, i / 4.0));
+			probes[l][i].init(40.0 * pow(2.0, i / 8.0));
 	
 	bool applyResonantExcitation = false;
 	double resonantExcitationPhase = 0.0;
@@ -228,13 +233,33 @@ int main(int argc, char * argv[])
 		{
 			ImGui::Begin("Interaction");
 			{
-				if (ImGui::Button("Reset"))
-					shape.reset();
+				const bool reset = ImGui::Button("Reset");
 				
 				ImGui::Checkbox("Pull down", &interact_pullDown);
 				ImGui::Checkbox("Contract", &interact_contract);
 				ImGui::Checkbox("Randomize (0, 0)", &interact_random00);
 				ImGui::Checkbox("Randomize", &interact_random);
+				
+				const int oldSx = gridSx;
+				const int oldSy = gridSy;
+				ImGui::InputInt("Grid Width", &gridSx);
+				ImGui::InputInt("Grid Height", &gridSy);
+				
+				gridSx = clamp(gridSx, 1, 50);
+				gridSy = clamp(gridSy, 1, 50);
+				
+				if (reset || gridSx != oldSx || gridSy != oldSy)
+				{
+					shape = ResonShape();
+					
+					buildPlate(shape, gridSx, gridSy, physicalSize);
+					
+					for (auto & probeArray : probes)
+						for (auto & probe : probeArray)
+							probe.init(probe.frequency);
+					
+					time_ms = 0.0;
+				}
 			}
 			ImGui::End();
 		}
@@ -341,9 +366,11 @@ int main(int argc, char * argv[])
 			
 			gxPushMatrix();
 			{
+				const int gridSize = gridSx > gridSy ? gridSx : gridSy;
+				
 				gxTranslatef(320, 240, 0);
 				gxScalef(400 / physicalSize, 400 / physicalSize, 1);
-				gxTranslatef(-physicalSize/2.f, -physicalSize/2.f, 0);
+				gxTranslatef(- gridSx / float(gridSize) * physicalSize/2.f, - gridSy / float(gridSize) * physicalSize/2.f, 0);
 				
 			#if 1
 				// draw edges connecting vertices
@@ -363,6 +390,7 @@ int main(int argc, char * argv[])
 				hqEnd();
 			#endif
 			
+			#if 1
 				// draw colored vertices
 				
 				hqBegin(HQ_FILLED_CIRCLES, true);
@@ -377,6 +405,7 @@ int main(int argc, char * argv[])
 					}
 				}
 				hqEnd();
+			#endif
 			}
 			gxPopMatrix();
 			
@@ -386,7 +415,7 @@ int main(int argc, char * argv[])
 			// draw response graph
 			
 			const int graphSx = 600;
-				const int graphSy = 200;
+			const int graphSy = 200;
 			
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
