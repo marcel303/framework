@@ -5,6 +5,7 @@
 
 #include "audio.h"
 #include "audiostream/AudioOutput.h"
+#include "audiostream/AudioOutput_PortAudio.h"
 
 #ifdef WIN32
 	#include <Windows.h>
@@ -1031,13 +1032,13 @@ bool doGame()
 {
 	OptionMenu optionsMenu;
 
-	AudioOutput_OpenAL ao;
+	AudioOutput_PortAudio ao;
 	MyAudioStream mas;
 	mas.Open("Sound Assets/Music/Loops/Music_Layer_%02d_Loop.ogg", "Sound Assets/Music/Loops/Choir_Layer_%02d_Loop.ogg", "Sound Assets/AMB/AMB_STATE_%02d_LOOP.ogg");
-	ao.Initialize(2, 48000, 1 << 14);
-	ao.Play();
+	ao.Initialize(2, 48000, 1 << 8);
 	AudioStream_Capture asc;
 	asc.mSource = &mas;
+	ao.Play(&asc);
 
 	SpriterState heartState;
 	SpriterState explosion;
@@ -1093,7 +1094,7 @@ bool doGame()
 		framework.process();
 
 		asc.mTime = framework.time;
-		ao.Update(&asc);
+		ao.Update();
 		fftProcess(framework.time);
 
 		static bool doOptions = false;
@@ -1564,6 +1565,10 @@ bool doGame()
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 #ifdef DEBUG
 	if (1 == 1)
 	{
@@ -1581,7 +1586,7 @@ int main(int argc, char * argv[])
 	srand(GetTickCount());
 #endif
 
-	if (framework.init(0, 0, SX, SY))
+	if (framework.init(SX, SY))
 	{
 		mouse.showCursor(false);
 
