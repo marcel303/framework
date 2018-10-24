@@ -1,34 +1,44 @@
-<graph nextNodeId="32" nextLinkId="39" nextZKey="273">
-    <node id="1" typeName="voice" editorX="496.06341552734375" editorY="95.936134338378906"/>
-    <node id="2" typeName="audio.in" editorX="48" editorY="96" folded="1"/>
-    <node id="25" typeName="trigger.event" editorX="176" editorY="96" folded="1">
+<graph nextNodeId="32" nextLinkId="39">
+    <node id="1" typeName="voice"/>
+    <node id="2" typeName="audio.in"/>
+    <node id="25" typeName="trigger.event">
         <input socket="name" value="record-begin"/>
     </node>
-    <node id="26" typeName="trigger.event" editorX="176" editorY="128" folded="1">
+    <node id="26" typeName="trigger.event">
         <input socket="name" value="record-end"/>
     </node>
-    <node id="27" typeName="recordAndPlay" editorX="320" editorY="96"/>
-    <node id="28" typeName="memf" editorX="48" editorY="175.92153930664062" folded="1">
+    <node id="27" typeName="recordAndPlay"/>
+    <node id="28" typeName="memf">
         <input socket="name" value="playSpeed"/>
     </node>
-    <node id="29" typeName="trigger.event" editorX="176" editorY="160" folded="1">
+    <node id="29" typeName="trigger.event">
         <input socket="name" value="play-begin"/>
     </node>
-    <node id="30" typeName="trigger.event" editorX="176" editorY="192" folded="1">
+    <node id="30" typeName="trigger.event">
         <input socket="name" value="play-end"/>
     </node>
-    <node id="31" nodeType="1" typeName="" editorX="434.85958862304688" editorY="167.94012451171875">
-        <visualizer nodeId="27" dstSocketName="audio" sx="142.7293701171875" sy="84.183578491210938"/>
-    </node>
-    <link id="32" enabled="1" srcNodeId="27" srcNodeSocketName="audio" dstNodeId="2" dstNodeSocketName="audio"/>
-    <link id="33" enabled="1" srcNodeId="27" srcNodeSocketName="recordBegin" dstNodeId="25" dstNodeSocketName="trigger!"/>
-    <link id="34" enabled="1" srcNodeId="27" srcNodeSocketName="recordEnd" dstNodeId="26" dstNodeSocketName="trigger!"/>
-    <link id="35" enabled="1" srcNodeId="1" srcNodeSocketName="audio" dstNodeId="27" dstNodeSocketName="audio"/>
-    <link id="36" enabled="1" srcNodeId="27" srcNodeSocketName="playSpeed" dstNodeId="28" dstNodeSocketName="value1"/>
-    <link id="37" enabled="1" srcNodeId="27" srcNodeSocketName="play" dstNodeId="29" dstNodeSocketName="trigger!"/>
-    <link id="38" enabled="1" srcNodeId="27" srcNodeSocketName="playEnd" dstNodeId="30" dstNodeSocketName="trigger!"/>
-    <editor>
+    <link id="32" srcNodeId="27" srcNodeSocketName="audio" dstNodeId="2" dstNodeSocketName="audio"/>
+    <link id="33" srcNodeId="27" srcNodeSocketName="recordBegin" dstNodeId="25" dstNodeSocketName="trigger!"/>
+    <link id="34" srcNodeId="27" srcNodeSocketName="recordEnd" dstNodeId="26" dstNodeSocketName="trigger!"/>
+    <link id="35" srcNodeId="1" srcNodeSocketName="audio" dstNodeId="27" dstNodeSocketName="audio"/>
+    <link id="36" srcNodeId="27" srcNodeSocketName="playSpeed" dstNodeId="28" dstNodeSocketName="value1"/>
+    <link id="37" srcNodeId="27" srcNodeSocketName="play" dstNodeId="29" dstNodeSocketName="trigger!"/>
+    <link id="38" srcNodeId="27" srcNodeSocketName="playEnd" dstNodeId="30" dstNodeSocketName="trigger!"/>
+    <editor nextZKey="273">
         <dragAndZoom x="322.6533203125" y="201.703857421875" zoom="1.2692661285400391"/>
-        <editorOptions menuIsVisible="1" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="001c37cc" gridColor="ffffff1e"/>
+        <nodeDatas>
+            <nodeData nodeId="1" x="496.06341552734375" y="95.936134338378906" zKey="0"/>
+            <nodeData nodeId="2" x="48" y="96" zKey="0" folded="1"/>
+            <nodeData nodeId="25" x="176" y="96" zKey="0" folded="1"/>
+            <nodeData nodeId="26" x="176" y="128" zKey="0" folded="1"/>
+            <nodeData nodeId="27" x="320" y="96" zKey="0"/>
+            <nodeData nodeId="28" x="48" y="175.92153930664062" zKey="0" folded="1"/>
+            <nodeData nodeId="29" x="176" y="160" zKey="0" folded="1"/>
+            <nodeData nodeId="30" x="176" y="192" zKey="0" folded="1"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="31" x="434.85958862304688" y="167.94012451171875" zKey="-1" nodeId="27" dstSocketName="audio" sx="142.7293701171875" sy="84.183578491210938"/>
+        </visualizers>
+        <editorOptions comment="" menuIsVisible="1" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="001c37cc" gridColor="ffffff1e"/>
     </editor>
 </graph>

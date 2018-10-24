@@ -10,7 +10,7 @@
 #include "wavefield.h"
 #include <cmath>
 
-#define DEVMODE 0
+#define DEVMODE 1
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -862,7 +862,9 @@ static void playMenuSound()
 
 int main(int argc, char * argv[])
 {
-#if DEVMODE == 0
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#elif DEVMODE == 0
 #if MACOS
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
