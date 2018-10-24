@@ -1,0 +1,8 @@
+app marcel-twinkle
+
+	depend_library framework
+	
+	scan_files *.cpp
+	scan_files *.h
+
+	resource_path "/Users/thecat/Dropbox/Gamejam 2016"
