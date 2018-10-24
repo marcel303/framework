@@ -1,0 +1,10 @@
+app marcel-vfxedit
+
+	depend_library framework
+	depend_library libosc
+	
+	add_files main.cpp midiio.cpp midiio.h xml.cpp xml.h
+
+	scan_files *.* path midifile group midifile
+
+	resource_path "/Users/thecat/Google Drive/ACASHA/vfx"

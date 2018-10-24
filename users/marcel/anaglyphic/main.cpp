@@ -2,6 +2,7 @@
 #include "framework.h"
 #include "Timer.h"
 #include "video.h"
+#include <cmath>
 #include <list>
 
 #include <array>

@@ -1,0 +1,6 @@
+app marcel-anaglyphic
+
+	depend_library framework
+	depend_library libvideo
+	
+	add_files main.cpp videoin.cpp videoin.h

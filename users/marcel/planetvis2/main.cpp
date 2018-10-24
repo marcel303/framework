@@ -7,6 +7,8 @@
 #include "FileStream.h"
 #include "Noise.h"
 
+#include <cmath>
+
 #define GFX_SX 1024
 #define GFX_SY 1024
 
