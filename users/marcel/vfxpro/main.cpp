@@ -1243,7 +1243,7 @@ int main(int argc, char * argv[])
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
 
-	if (framework.init(0, 0, GFX_SX * GFX_SCALE, GFX_SY * GFX_SCALE))
+	if (framework.init(GFX_SX * GFX_SCALE, GFX_SY * GFX_SCALE))
 	{
 	#if ENABLE_RESOURCE_PRECACHE
 		framework.fillCachesCallback = fillCachesCallback;

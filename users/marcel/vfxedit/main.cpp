@@ -819,7 +819,7 @@ int main(int argc, char * argv[])
 	framework.windowTitle = "vfx.edit";
 	framework.windowY = 100;
 
-	if (framework.init(0, nullptr, GFX_SX * SCALE, GFX_SY * SCALE))
+	if (framework.init(GFX_SX * SCALE, GFX_SY * SCALE))
 	{
 		g_audioUpdateEvent = SDL_RegisterEvents(1);
 

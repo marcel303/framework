@@ -176,7 +176,7 @@ int main(int argc, char * argv[])
 	framework.windowY = 0;
 #endif
 
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 	#if !defined(DEBUG)
 		mouse.setRelative(true);

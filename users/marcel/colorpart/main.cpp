@@ -574,7 +574,7 @@ int main(int argc, char * argv[])
 	framework.exclusiveFullscreen = false;
 #endif
 
-	if (framework.init(0, nullptr, GFX_SX_SCALED, GFX_SY_SCALED))
+	if (framework.init(GFX_SX_SCALED, GFX_SY_SCALED))
 	{
 		mediaPlayer = new MediaPlayer();
 

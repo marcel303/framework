@@ -1348,7 +1348,7 @@ int main(int argc, char * argv[])
 
 	framework.enableRealTimeEditing = true;
 
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 	#if DO_VOXELTRACE
 		DataSet<_DS_SX, _DS_SY, _DS_SZ> * dataSet = new DataSet<_DS_SX, _DS_SY, _DS_SZ>();

@@ -780,7 +780,7 @@ int main(int argc, char * argv[])
 
 	framework.enableDepthBuffer = true;
 
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 	#if ENABLE_VIDEOIN
 		videoInput * VI = new videoInput();

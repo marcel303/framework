@@ -925,7 +925,7 @@ void testJpegStreamer()
 	//
 
 #if 1
-	framework.init(0, nullptr, GFX_SX, GFX_SY);
+	framework.init(GFX_SX, GFX_SY);
 	{
 		const int fps = 24;
 		const double duration = 1800.0;

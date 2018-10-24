@@ -1407,7 +1407,7 @@ bool App::init()
 	framework.windowTitle = "S.P.A.C.E.";
 	framework.actionHandler = HandleAction;
 
-	if (framework.init(0, 0, GFX_SX * 2, GFX_SY))
+	if (framework.init(GFX_SX * 2, GFX_SY))
 	{
 		if (!g_devMode)
 		{

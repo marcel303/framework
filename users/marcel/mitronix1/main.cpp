@@ -871,7 +871,7 @@ int main(int argc, char * argv[])
 #endif
 #endif
 	
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		for (int i = 0; i < 4; ++i)
 		{

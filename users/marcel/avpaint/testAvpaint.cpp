@@ -108,7 +108,7 @@ void testAvpaint()
 {
 	changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome");
 
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 	#if ENABLE_LEAPMOTION
 		// initialise LeapMotion controller
