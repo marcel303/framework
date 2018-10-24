@@ -189,7 +189,7 @@ int main(int argc, char * argv[])
 	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
 
-	if (!framework.init(0, nullptr, 640, 480))
+	if (!framework.init(640, 480))
 		return -1;
 
 	ResonShape shape;

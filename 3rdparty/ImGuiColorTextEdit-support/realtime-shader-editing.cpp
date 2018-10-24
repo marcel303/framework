@@ -12,7 +12,7 @@
 
 int main(int argc, char * argv[])
 {
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		FrameworkImGuiContext framework_context;
 		

@@ -39,7 +39,7 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
-	if (!framework.init(argc, (const char**)argv, VIEW_SX, VIEW_SY))
+	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 	
 	Spriter spriter("character/Sprite.scml");

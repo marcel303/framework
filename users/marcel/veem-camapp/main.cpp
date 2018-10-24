@@ -318,7 +318,7 @@ struct Controller
 	
 	void init(Recorder * _recorder1, Recorder * _recorder2)
 	{
-		framework.init(0, nullptr, GFX_SX, GFX_SY);
+		framework.init(GFX_SX, GFX_SY);
 		
 		recorder1 = _recorder1;
 		recorder2 = _recorder2;

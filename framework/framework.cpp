@@ -177,7 +177,7 @@ Framework::~Framework()
 {
 }
 
-bool Framework::init(int argc, const char * argv[], int sx, int sy)
+bool Framework::init(int sx, int sy)
 {
 #ifdef WIN32
 	SetProcessDPIAware();

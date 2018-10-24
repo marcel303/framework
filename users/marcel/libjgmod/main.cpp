@@ -241,7 +241,7 @@ int main(int argc, char **argv)
 	framework.enableDepthBuffer = true;
 	framework.filedrop = true;
 	
-	if (framework.init(0, nullptr, 320*3, 200*3) == false)
+	if (framework.init(320*3, 200*3) == false)
 	{
 		logError("failed to initialize framework");
 		return -1;

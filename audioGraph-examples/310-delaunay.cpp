@@ -94,7 +94,7 @@ int main(int argc, char * argv[])
 
 	//framework.waitForEvents = true;
 	
-	if (!framework.init(0, 0, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 
 	initUi();

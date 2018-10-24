@@ -1328,7 +1328,7 @@ std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool r
 
 static void testJsusFxList()
 {
-	if (!framework.init(0, nullptr, 420, 720))
+	if (!framework.init(420, 720))
 		return;
 	
 	JsusFx::init();
@@ -1962,7 +1962,7 @@ int main(int argc, char * argv[])
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
 	
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	JsusFx::init();

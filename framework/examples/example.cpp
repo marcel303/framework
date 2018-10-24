@@ -92,7 +92,7 @@ int main(int argc, char * argv[])
 		}
 	}
 
-	if (!framework.init(argc, (const char **)argv, sx, sy))
+	if (!framework.init(sx, sy))
 		return -1;
 	framework.fillCachesWithPath(".", true);
 	

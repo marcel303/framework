@@ -45,7 +45,7 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		// initialize audio related systems
 		

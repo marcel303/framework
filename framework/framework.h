@@ -281,7 +281,7 @@ public:
 	Framework();
 	~Framework();
 	
-	bool init(int argc, const char * argv[], int sx, int sy);
+	bool init(int sx, int sy);
 	bool shutdown();
 	void process();
 	void processAction(const std::string & action, const Dictionary & args);

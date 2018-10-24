@@ -38,7 +38,7 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
-	if (framework.init(0, nullptr, 800, 400))
+	if (framework.init(800, 400))
 	{
 		MediaPlayer mp;
 

@@ -108,7 +108,7 @@ int main(int argc, char * argv[])
 	audioOutput.Initialize(2, 44100, 4096);
 	audioOutput.Play(&audioStream);
 	
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		while (!framework.quitRequested)
 		{

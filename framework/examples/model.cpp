@@ -80,7 +80,7 @@ int main(int argc, char * argv[])
 
 	framework.enableDepthBuffer = true;
 	
-	if (!framework.init(argc, (const char **)argv, VIEW_SX, VIEW_SY))
+	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 	
 	pushFontMode(FONT_SDF);

@@ -211,7 +211,7 @@ static void testParticleLib()
 	}
 #endif
 
-	if (framework.init(0, nullptr, 1400, 900))
+	if (framework.init(1400, 900))
 	{
 		while (!framework.quitRequested)
 		{
@@ -321,7 +321,7 @@ int main(int argc, char * argv[])
 	const int windowSx = 1400;
 	const int windowSy = 900;
 
-	if (framework.init(argc, (const char**)argv, windowSx, windowSy))
+	if (framework.init(windowSx, windowSy))
 	{
 		initUi();
 		pushFontMode(FONT_SDF);

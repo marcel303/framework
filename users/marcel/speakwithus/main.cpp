@@ -410,7 +410,7 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 	
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 	{
 		handleError("Failed to initialize system");
 		return -1;

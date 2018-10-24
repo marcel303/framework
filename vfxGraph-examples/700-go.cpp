@@ -169,7 +169,7 @@ int main(int argc, char * argv[])
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
 	
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY) == false)
+	if (framework.init(GFX_SX, GFX_SY) == false)
 	{
 		return -1;
 	}

@@ -13,7 +13,7 @@ int main(int argc, char * argv[])
 {
 	changeDirectory(CHIBI_RESOURCE_PATH);
 	
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		//io.ImeSetInputScreenPosFn
 		

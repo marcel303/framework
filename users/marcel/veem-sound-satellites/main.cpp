@@ -327,7 +327,7 @@ int main(int argc, char * argv[])
 
 	framework.windowX = 10 + 140 + 10;
 	
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	initUi();

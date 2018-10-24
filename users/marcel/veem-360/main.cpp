@@ -140,7 +140,7 @@ int main(int argc, char * argv[])
 	framework.fullscreen = true;
 #endif
 	
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	pushFontMode(FONT_SDF);
 	
