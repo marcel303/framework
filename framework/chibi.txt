@@ -70,6 +70,12 @@ library framework
 	with_platform linux depend_package GLEW
 	with_platform linux depend_package Freetype
 
+app framework-example-aniplay
+	add_files examples/aniplay.cpp
+	resource_path examples/data
+	depend_library framework
+	group framework-examples
+
 app framework-example-basic
 	add_files examples/example.cpp
 	resource_path examples/data

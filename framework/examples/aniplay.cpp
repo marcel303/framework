@@ -71,6 +71,10 @@ static void handleAction(const std::string & action, const Dictionary & args)
 
 int main(int argc, char ** argv)
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 	framework.windowTitle = "aniplay";
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
@@ -87,7 +91,7 @@ int main(int argc, char ** argv)
 	logDebug("   LEFT: previous animation frame");
 	logDebug("  RIGHT: next animation frame");
 
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		size_t selectedAnimIndex = 0;
 		bool mustRestartAnim = true;
@@ -97,6 +101,10 @@ int main(int argc, char ** argv)
 		if (argc >= 2)
 		{
 			loadSprite(argv[1]);
+		}
+		else
+		{
+			loadSprite("sprite.png");
 		}
 
 		float scale = 1.f;
