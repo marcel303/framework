@@ -1229,7 +1229,7 @@ void AnimCacheElem::free()
 }
 
 template <typename Policy>
-void splitString(const std::string & str, std::vector<std::string> & result, Policy policy)
+void splitString(const std::string & str, std::vector<std::string> & result, Policy policy, const bool keepEmptyElements)
 {
 	int start = -1;
 	
@@ -1242,7 +1242,7 @@ void splitString(const std::string & str, std::vector<std::string> & result, Pol
 			// found start
 			if (!policy.isBreak(c))
 				start = i;
-			else
+			else if (keepEmptyElements)
 				result.push_back(std::string());
 		}
 		else if (policy.isBreak(c))
@@ -1267,11 +1267,18 @@ public:
 	}
 };
 
+void splitString(const std::string & str, std::vector<std::string> & result, bool keepEmptyElements)
+{
+	WhiteSpacePolicy policy;
+	
+	splitString<WhiteSpacePolicy>(str, result, policy, keepEmptyElements);
+}
+
 void splitString(const std::string & str, std::vector<std::string> & result)
 {
 	WhiteSpacePolicy policy;
 	
-	splitString<WhiteSpacePolicy>(str, result, policy);
+	splitString<WhiteSpacePolicy>(str, result, policy, false);
 }
 
 class CharPolicy
@@ -1296,7 +1303,7 @@ void splitString(const std::string & str, std::vector<std::string> & result, cha
 {
 	CharPolicy policy(c);
 	
-	splitString<CharPolicy>(str, result, policy);
+	splitString<CharPolicy>(str, result, policy, true);
 }
 
 void AnimCacheElem::load(const char * filename)
