@@ -358,53 +358,18 @@ static void drawExtrusion(const int numX, const int numY, const GLuint texture)
 
 struct Camera
 {
-	Vec3 position;
-	Vec3 rotation;
+	Camera3d controllerCamera;
 
 	Camera()
-		: position()
-		, rotation()
+		: controllerCamera()
 	{
+		controllerCamera.maxForwardSpeed = 200.f;
+		controllerCamera.maxStrafeSpeed = 200.f;
 	}
 
 	void tick(const float dt)
 	{
-		rotation[0] -= mouse.dy / 100.f;
-		rotation[1] -= mouse.dx / 100.f;
-
-		if (gamepad[0].isConnected)
-		{
-			rotation[0] -= gamepad[0].getAnalog(1, ANALOG_Y) * dt;
-			rotation[1] -= gamepad[0].getAnalog(1, ANALOG_X) * dt;
-		}
-
-		Mat4x4 mat;
-
-		calculateTransform(0.f, 0.f, 0.f, mat);
-
-		const Vec3 xAxis(mat(0, 0), mat(0, 1), mat(0, 2));
-		const Vec3 zAxis(mat(2, 0), mat(2, 1), mat(2, 2));
-
-		Vec3 direction;
-
-		if (keyboard.isDown(SDLK_UP))
-			direction += zAxis;
-		if (keyboard.isDown(SDLK_DOWN))
-			direction -= zAxis;
-		if (keyboard.isDown(SDLK_LEFT))
-			direction -= xAxis;
-		if (keyboard.isDown(SDLK_RIGHT))
-			direction += xAxis;
-
-		if (gamepad[0].isConnected)
-		{
-			direction -= zAxis * gamepad[0].getAnalog(0, ANALOG_Y);
-			direction += xAxis * gamepad[0].getAnalog(0, ANALOG_X);
-		}
-
-		const float speed = 200.f;
-
-		position += direction * speed * dt;
+		controllerCamera.tick(dt, true);
 	}
 
 	void calculateTransform(const float eyeOffset, const float eyeX, const float eyeY, Mat4x4 & matrix) const
@@ -420,7 +385,12 @@ struct Camera
 		// where L is the left eye, R is the right eye and O is where the head rotates around the axis
 		// in real life, the head and eyes rotate a little more complicated..
 
-		matrix = Mat4x4(true).Translate(position).Translate(eyeX, eyeY, 0.f).RotateY(rotation[1]).RotateX(rotation[0]).Translate(eyeOffset, 0.f, 0.f).Scale(1, -1, 1);
+		matrix = Mat4x4(true)
+			.Translate(controllerCamera.position)
+			.Translate(eyeX, eyeY, 0.f)
+			.RotateY(controllerCamera.yaw * M_PI / 180.f)
+			.RotateX(controllerCamera.pitch * M_PI / 180.f)
+			.Translate(eyeOffset, 0.f, 0.f).Scale(1, -1, 1);
 	}
 };
 
@@ -445,7 +415,7 @@ struct Scene
 		, vm()
 		, mp(nullptr)
 	{
-		camera.position = Vec3(0.f, 170.f, -180.f);
+		camera.controllerCamera.position = Vec3(0.f, 170.f, -180.f);
 
 		for (int x = -2; x <= +2; ++x)
 		{
