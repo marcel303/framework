@@ -4,3 +4,5 @@ app marcel-anaglyphic
 	depend_library libvideo
 	
 	add_files main.cpp videoin.cpp videoin.h
+
+	resource_path "/Users/thecat/Google Drive/Projects/anaglyphic"

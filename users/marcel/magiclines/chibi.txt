@@ -1,0 +1,7 @@
+app marcel-magiclines
+
+	depend_library framework
+	
+	add_files main.cpp
+
+	resource_path "/Users/thecat/Google Drive/Projects/magiclines"

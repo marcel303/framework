@@ -738,6 +738,10 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 #if !defined(DEBUG) && 1
 	framework.fullscreen = true;
 	framework.exclusiveFullscreen = false;

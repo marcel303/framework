@@ -10,7 +10,9 @@ extern void testImu9250();
 
 int main(int argc, char * argv[])
 {
-#if MACOS
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#elif MACOS
     const char * basePath = SDL_GetBasePath();
     changeDirectory(basePath);
 #else
