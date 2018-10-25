@@ -1125,6 +1125,10 @@ static void doStressTest()
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 	if (!config.load("settings.xml"))
 	{
 		logError("failed to load: settings.xml");

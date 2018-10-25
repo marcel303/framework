@@ -302,7 +302,7 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 			case kOp_Max:
 				return std::max(value1, value2);
 			case kOp_Pow:
-				return std::powf(value1, value2);
+				return powf(value1, value2);
 			default:
 				Assert(false);
 				return value1;

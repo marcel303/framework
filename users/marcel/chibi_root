@@ -1,5 +1,7 @@
+add 4d-imu9250
 add anaglyphic
 add jsusfx1
+add magiclines
 add mitronix1
 add planetvis
 add planetvis2
@@ -14,3 +16,4 @@ add veem-osc
 add veem-sound
 add veem-sound-satellites
 add vfxedit
+add vfxpro

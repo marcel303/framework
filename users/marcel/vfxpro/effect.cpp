@@ -3,6 +3,7 @@
 #include "tinyxml2.h"
 #include "videoloop.h"
 #include "xml.h"
+#include <cmath>
 
 //
 
@@ -1333,7 +1334,7 @@ Effect_Video::Effect_Video(const char * name, const char * filename, const char 
 
 	if (kVideoPreload)
 	{
-		m_mediaPlayer.openAsync(m_filename.c_str(), m_yuv);
+		m_mediaPlayer.openAsync(m_filename.c_str(), m_yuv ? MP::kOutputMode_PlanarYUV : MP::kOutputMode_RGBA);
 	}
 
 	if (play)
@@ -1353,11 +1354,11 @@ void Effect_Video::tick(const float dt)
 	{
 		m_mediaPlayer.presentTime = m_time;
 
-		m_mediaPlayer.tick(m_mediaPlayer.context);
+		m_mediaPlayer.tick(m_mediaPlayer.context, true);
 
 		if (m_hideWhenDone && m_mediaPlayer.presentedLastFrame(m_mediaPlayer.context))
 		{
-			m_mediaPlayer.close();
+			m_mediaPlayer.close(false);
 
 			m_playing = false;
 		}
@@ -1423,10 +1424,10 @@ void Effect_Video::handleSignal(const std::string & name)
 		{
 			if (m_mediaPlayer.isActive(m_mediaPlayer.context))
 			{
-				m_mediaPlayer.close();
+				m_mediaPlayer.close(false);
 			}
 
-			m_mediaPlayer.openAsync(m_filename.c_str(), m_yuv);
+			m_mediaPlayer.openAsync(m_filename.c_str(), m_yuv ? MP::kOutputMode_PlanarYUV : MP::kOutputMode_RGBA);
 		}
 
 		m_startTime = g_currentScene->m_time;
@@ -1444,7 +1445,7 @@ void Effect_Video::syncTime(const float time)
 		if (videoTime >= 0.0)
 		{
 			m_mediaPlayer.presentTime = -1.0;
-			m_mediaPlayer.seek(videoTime);
+			m_mediaPlayer.seek(videoTime, true);
 			m_mediaPlayer.presentTime = videoTime;
 
 			m_time = videoTime;
@@ -2539,7 +2540,7 @@ static float mixValue(const float t1, const float t2, const float o, const float
 
 	const float v = (t - o1) / (o2 - o1);
 
-	return (1.f - std::cosf(v * Calc::m2PI)) / 2.f;
+	return (1.f - cosf(v * Calc::m2PI)) / 2.f;
 }
 
 void Effect_Bezier::draw()
@@ -2676,17 +2677,17 @@ Vec2F sampleThrowPoint(const float t)
 
 	// right -> center
 	x[0] = 500.f - (mt - d0) * 500.f;
-	y[0] = + std::cosf((mt - d0 + 0.f) * Calc::mPI) * h;
+	y[0] = + cosf((mt - d0 + 0.f) * Calc::mPI) * h;
 	w[0] = mixValue(d0, d1, o, mt);
 
 	// center circle
-	x[1] = - std::sinf((mt - d1) * Calc::mPI) * h;
-	y[1] = - std::cosf((mt - d1) * Calc::mPI) * h;
+	x[1] = - sinf((mt - d1) * Calc::mPI) * h;
+	y[1] = - cosf((mt - d1) * Calc::mPI) * h;
 	w[1] = mixValue(d1, d2, o, mt);
 
 	// center -> left
 	x[2] = - (mt - d2) * 500.f;
-	y[2] = + std::cosf((mt - d2 + 1.f) * Calc::mPI) * h;
+	y[2] = + cosf((mt - d2 + 1.f) * Calc::mPI) * h;
 	w[2] = mixValue(d2, d3, o, mt);
 
 	// sample
@@ -3354,8 +3355,8 @@ void Effect_Sparklies::tick(const float dt)
 				m_particleSystem.y[id] = random(0.f, (float)GFX_SY);
 				m_particleSystem.sx[id] = m_size;
 				m_particleSystem.sy[id] = m_size;
-				m_particleSystem.vx[id] = std::cosf(speedAngle) * m_speed;
-				m_particleSystem.vy[id] = std::sinf(speedAngle) * m_speed;
+				m_particleSystem.vx[id] = cosf(speedAngle) * m_speed;
+				m_particleSystem.vy[id] = sinf(speedAngle) * m_speed;
 			}
 		}
 	}
@@ -3394,10 +3395,10 @@ void Effect_Sparklies::draw()
 				const float x = m_particleSystem.x[i];
 				const float y = m_particleSystem.y[i];
 
-				gxColor4f(x, y, 1.f, (1.f - std::cosf(value * Calc::m2PI)) / 2.f * m_alpha);
+				gxColor4f(x, y, 1.f, (1.f - cosf(value * Calc::m2PI)) / 2.f * m_alpha);
 
-				const float s = std::sinf(m_particleSystem.angle[i]);
-				const float c = std::cosf(m_particleSystem.angle[i]);
+				const float s = sinf(m_particleSystem.angle[i]);
+				const float c = cosf(m_particleSystem.angle[i]);
 
 				const float sx_2 = m_particleSystem.sx[i] * .5f;
 				const float sy_2 = m_particleSystem.sy[i] * .5f;
@@ -3722,7 +3723,7 @@ void Effect_Wobbly::draw()
 			opacity *= 1.0 - drop.fadeInTime * drop.fadeInTimeRcp;
 			
 			double radius = drop.applyRadius;
-			radius *= Calc::Lerp(1.f, .7f, (std::cosf(drop.x / 40.f) + 1.f) / 2.f);
+			radius *= Calc::Lerp(1.f, .7f, (cosf(drop.x / 40.f) + 1.f) / 2.f);
 			radius *= 0.5;
 			radius *= drop.applyTime * drop.applyTimeRcp;
 			

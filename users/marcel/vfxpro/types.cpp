@@ -138,8 +138,8 @@ void ParticleSystem::draw(const float alpha)
 
 				gxColor4f(1.f, 1.f, 1.f, alpha * value);
 
-				const float s = std::sinf(angle[i]);
-				const float c = std::cosf(angle[i]);
+				const float s = sinf(angle[i]);
+				const float c = cosf(angle[i]);
 
 				const float sx_2 = sx[i] * .5f;
 				const float sy_2 = sy[i] * .5f;

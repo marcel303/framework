@@ -32,7 +32,7 @@ void VideoLoop::tick(const float dt)
 		if (mediaPlayer == nullptr || mediaPlayer->presentTime >= 1.0)
 		{
 			mediaPlayer2 = new MediaPlayer();
-			mediaPlayer2->openAsync(filename.c_str(), false);
+			mediaPlayer2->openAsync(filename.c_str(), MP::kOutputMode_RGBA);
 		}
 	}
 	
@@ -53,7 +53,7 @@ void VideoLoop::tick(const float dt)
 	
 	if (mediaPlayer)
 	{
-		mediaPlayer->tick(mediaPlayer->context);
+		mediaPlayer->tick(mediaPlayer->context, true);
 		
 		if (firstFrame == nullptr)
 		{
@@ -91,7 +91,7 @@ void VideoLoop::tick(const float dt)
 	
 	if (mediaPlayer2)
 	{
-		mediaPlayer2->tick(mediaPlayer2->context);
+		mediaPlayer2->tick(mediaPlayer2->context, true);
 	}
 }
 

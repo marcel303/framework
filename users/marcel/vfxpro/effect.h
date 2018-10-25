@@ -903,7 +903,7 @@ struct Effect_Wobbly : Effect
 		
 		void tick(const double dt)
 		{
-			const double f = std::pow(1.0 - falloffD, dt);
+			const double f = pow(1.0 - falloffD, dt);
 			
 			falloff *= f;
 		}
