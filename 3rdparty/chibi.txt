@@ -87,3 +87,10 @@ app ImGuiColorTextEdit-200-realtime-shader-editing
 library rtmidi
 	add_files rtmidi/RtMidi.cpp rtmidi/RtMidi.h
 	header_path rtmidi alias_through_copy rtmidi expose
+	
+	with_platform macos compile_definition __MACOSX_CORE__ *
+	with_platform linux compile_definition __LINUX_ALSA__ *
+	with_platform windows compile_definition __WINDOWS_MM__ *
+	
+	with_platform macos depend_library CoreMIDI find
+	with_platform linux depend_library asound find
