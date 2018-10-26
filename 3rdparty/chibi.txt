@@ -83,3 +83,7 @@ app ImGuiColorTextEdit-200-realtime-shader-editing
 	depend_library imgui-framework
 	depend_library ImGuiColorTextEdit
 	add_files ImGuiColorTextEdit-support/realtime-shader-editing.cpp
+
+library rtmidi
+	add_files rtmidi/RtMidi.cpp rtmidi/RtMidi.h
+	header_path rtmidi alias_through_copy rtmidi expose
