@@ -10,7 +10,7 @@
 #include "wavefield.h"
 #include <cmath>
 
-#define DEVMODE 1
+#define DEVMODE 0
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -1177,6 +1177,7 @@ int main(int argc, char * argv[])
 		handCursor = nullptr;
 		
 		Font("calibri.ttf").saveCache();
+		Font("manus.ttf").saveCache();
 		
 		framework.shutdown();
 	}
