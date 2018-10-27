@@ -165,10 +165,7 @@ void RealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	
 	vfxGraph->nodes.erase(nodeItr);
 	
-	if (vfxGraph->displayNodeIds.count(nodeId) != 0)
-	{
-		vfxGraph->displayNodeIds.erase(nodeId);
-	}
+	Assert(vfxGraph->displayNodeIds.count(nodeId) == 0);
 }
 
 void RealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)

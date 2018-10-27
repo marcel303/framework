@@ -39,4 +39,12 @@ void VfxNodeDisplay::init(const GraphNode & node)
 {
 	Assert(g_currentVfxGraph->displayNodeIds.count(node.id) == 0);
 	g_currentVfxGraph->displayNodeIds.insert(node.id);
+	
+	nodeId = node.id;
+}
+
+VfxNodeDisplay::~VfxNodeDisplay()
+{
+	Assert(g_currentVfxGraph->displayNodeIds.count(nodeId) != 0);
+	g_currentVfxGraph->displayNodeIds.erase(nodeId);
 }
