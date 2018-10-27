@@ -78,6 +78,12 @@ const int GFX_SY = 768;
 
 //
 
+extern void testDynamicInputs();
+extern void testRoutingEditor();
+extern void testVfxNodeCreation();
+
+//
+
 struct VfxNodeResourceTest : VfxNodeBase
 {
 	enum Input
@@ -163,211 +169,6 @@ VFX_NODE_TYPE(VfxNodeResourceTest)
 
 //
 
-static VfxPlugType stringToVfxPlugType(const std::string & typeName)
-{
-	VfxPlugType type = kVfxPlugType_None;
-
-	if (typeName == "bool")
-		type = kVfxPlugType_Bool;
-	else if (typeName == "int")
-		type = kVfxPlugType_Int;
-	else if (typeName == "float")
-		type = kVfxPlugType_Float;
-	else if (typeName == "string")
-		type = kVfxPlugType_String;
-	else if (typeName == "channel")
-		type = kVfxPlugType_Channel;
-	else if (typeName == "color")
-		type = kVfxPlugType_Color;
-	else if (typeName == "image")
-		type = kVfxPlugType_Image;
-	else if (typeName == "image_cpu")
-		type = kVfxPlugType_ImageCpu;
-	else if (typeName == "draw")
-		type = kVfxPlugType_Draw;
-	else if (typeName == "trigger")
-		type = kVfxPlugType_Trigger;
-	
-	return type;
-}
-
-static void testVfxNodeCreation()
-{
-	VfxGraph vfxGraph;
-	
-	Assert(g_currentVfxGraph == nullptr);
-	g_currentVfxGraph = &vfxGraph;
-	
-	for (VfxNodeTypeRegistration * registration = g_vfxNodeTypeRegistrationList; registration != nullptr; registration = registration->next)
-	{
-		const int64_t t1 = g_TimerRT.TimeUS_get();
-		
-		VfxNodeBase * vfxNode = registration->create();
-		
-		GraphNode node;
-		
-		vfxNode->initSelf(node);
-		
-		vfxNode->init(node);
-		
-		// check if vfx node is created properly
-		
-		Assert(vfxNode->inputs.size() == registration->inputs.size());
-		const int numInputs = std::max(vfxNode->inputs.size(), registration->inputs.size());
-		for (int i = 0; i < numInputs; ++i)
-		{
-			if (i >= vfxNode->inputs.size())
-			{
-				logError("input in registration doesn't exist in vfx node: index=%d, name=%s", i, registration->inputs[i].name.c_str());
-			}
-			else if (i >= registration->inputs.size())
-			{
-				logError("input in vfx node doesn't exist in registration: index=%d, type=%d", i, vfxNode->inputs[i].type);
-			}
-			else
-			{
-				auto & r = registration->inputs[i];
-				
-				const VfxPlugType type = stringToVfxPlugType(r.typeName);
-				
-				if (type == kVfxPlugType_None)
-					logError("unknown type name in registration: index=%d, typeName=%s", i, r.typeName.c_str());
-				else if (type != vfxNode->inputs[i].type)
-					logError("different types in registration vs vfx node. index=%d, typeName=%s", i, r.typeName.c_str());
-			}
-		}
-		
-		Assert(vfxNode->outputs.size() == registration->outputs.size());
-		const int numOutputs = std::max(vfxNode->outputs.size(), registration->outputs.size());
-		for (int i = 0; i < numOutputs; ++i)
-		{
-			if (i >= vfxNode->outputs.size())
-			{
-				logError("output in registration doesn't exist in vfx node: index=%d, name=%s", i, registration->outputs[i].name.c_str());
-			}
-			else if (i >= registration->outputs.size())
-			{
-				logError("output in vfx node doesn't exist in registration: index=%d, type=%d", i, vfxNode->outputs[i].type);
-			}
-			else
-			{
-				auto & r = registration->outputs[i];
-				
-				const VfxPlugType type = stringToVfxPlugType(r.typeName);
-				
-				if (type == kVfxPlugType_None)
-					logError("unknown type name in registration: index=%d, typeName=%s", i, r.typeName.c_str());
-				else if (type != vfxNode->outputs[i].type)
-					logError("different types in registration vs vfx node. index=%d, typeName=%s", i, r.typeName.c_str());
-			}
-		}
-		
-		delete vfxNode;
-		vfxNode = nullptr;
-		
-		const int64_t t2 = g_TimerRT.TimeUS_get();
-		
-		logDebug("node create/destroy took %dus. nodeType=%s", t2 - t1, registration->typeName.c_str()); (void)t1; (void)t2;
-	}
-	
-	g_currentVfxGraph = nullptr;
-}
-
-//
-
-static void testDynamicInputs()
-{
-	VfxGraph g;
-	
-	VfxNodeBase * node1 = new VfxNodeBase();
-	VfxNodeBase * node2 = new VfxNodeBase();
-	
-	g.nodes[0] = node1;
-	g.nodes[1] = node2;
-	
-	float values[32];
-	for (int i = 0; i < 32; ++i)
-		values[i] = i;
-	
-	node1->resizeSockets(1, 2);
-	node2->resizeSockets(2, 1);
-	
-	node1->addInput(0, kVfxPlugType_Float);
-	node1->addOutput(0, kVfxPlugType_Float, &values[0]);
-	node1->addOutput(1, kVfxPlugType_Float, &values[1]);
-	node2->addInput(0, kVfxPlugType_Float);
-	node2->addInput(1, kVfxPlugType_Float);
-	node2->addOutput(0, kVfxPlugType_Float, &values[16]);
-	
-	node1->tryGetInput(0)->connectTo(*node2->tryGetOutput(0));
-	node2->tryGetInput(0)->connectTo(*node1->tryGetOutput(0));
-	node2->tryGetInput(1)->connectTo(*node1->tryGetOutput(1));
-	
-	{
-		VfxDynamicLink link;
-		link.srcNodeId = 0;
-		link.srcSocketName = "a";
-		link.srcSocketIndex = -1;
-		link.dstNodeId = 1;
-		link.dstSocketIndex = 0;
-		g.dynamicData->links.push_back(link);
-	}
-	
-	{
-		VfxDynamicLink link;
-		link.srcNodeId = 0;
-		link.srcSocketName = "b";
-		link.srcSocketIndex = -1;
-		link.dstNodeId = 1;
-		link.dstSocketIndex = 0;
-		g.dynamicData->links.push_back(link);
-	}
-	
-	{
-		VfxDynamicLink link;
-		link.srcNodeId = 0;
-		link.srcSocketName = "b";
-		link.srcSocketIndex = -1;
-		link.dstNodeId = 1;
-		link.dstSocketName = "a";
-		link.dstSocketIndex = -1;
-		g.dynamicData->links.push_back(link);
-	}
-	
-	g_currentVfxGraph = &g;
-	{
-		VfxNodeBase::DynamicInput inputs[2];
-		inputs[0].name = "a";
-		inputs[0].type = kVfxPlugType_Float;
-		inputs[1].name = "b";
-		inputs[1].type = kVfxPlugType_Float;
-		
-		node1->setDynamicInputs(inputs, 2);
-		
-		node1->setDynamicInputs(nullptr, 0);
-		
-		node1->setDynamicInputs(inputs, 2);
-		
-		//
-		
-		float value = 1.f;
-		
-		VfxNodeBase::DynamicOutput outputs[1];
-		outputs[0].name = "a";
-		outputs[0].type = kVfxPlugType_Float;
-		outputs[0].mem = &value;
-		
-		node2->setDynamicOutputs(outputs, 1);
-		
-		node2->setDynamicOutputs(nullptr, 0);
-		
-		node2->setDynamicOutputs(outputs, 1);
-	}
-	g_currentVfxGraph = nullptr;
-}
-
-//
-
 #include "Path.h"
 
 static std::string filedrop;
@@ -416,6 +217,8 @@ int main(int argc, char * argv[])
 		//testVfxNodeCreation();
 		
 		//testDynamicInputs();
+		
+		//testRoutingEditor();
 		
 		//
 		
