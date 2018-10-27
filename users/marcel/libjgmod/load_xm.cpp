@@ -141,6 +141,7 @@ int detect_unreal_xm (const char *filename)
     char id[18];
     int index;
     int start_offset = 0;
+    unsigned char umx_id[4] = { 0xc2, 0xa1, 0xc3, 0x89 };
 
     id[17] = 0;
     f = jgmod_fopen (filename, "rb");
@@ -148,7 +149,7 @@ int detect_unreal_xm (const char *filename)
         return 0;
 
     jgmod_fread (id, 4, f);
-    if (memcmp (id, "Áƒ*ž", 4) != 0)    //detect a umx file
+    if (memcmp (id, umx_id, 4) != 0)    //detect a umx file
         {
         jgmod_fclose (f);
         return -1;
