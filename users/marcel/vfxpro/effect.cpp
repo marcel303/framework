@@ -3558,8 +3558,8 @@ double Effect_Wobbly::WaterDrop::checkIntersection(const WaterSim & sim, const d
 
 Effect_Wobbly::Effect_Wobbly(const char * name, const char * shader)
 	: Effect(name)
-	, m_showDrops(1.f)
 	, m_drop(0.f)
+	, m_showDrops(1.f)
 	, m_wobbliness(20000.f)
 	, m_closedEnds(1.f)
 	, m_stretch(1.f)

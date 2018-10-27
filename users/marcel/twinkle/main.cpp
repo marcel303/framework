@@ -1400,7 +1400,6 @@ bool doGame()
 			gxPushMatrix();
 			{
 				const float zoomMin = .5f;
-				const float zoomMax = 1.2f;
 				const float zoomAmount = .25f;
 				const float backgroundZoom = Calc::Clamp(zoom / zoomMin * zoomAmount + (1.f - zoomAmount), 1.f, 2.f);
 

@@ -620,7 +620,7 @@ struct Bird : EntityBase
 	void beginFlying()
 	{
 		const float currentRadius = Vec2(currentPos[0], currentPos[1]).CalcSize();
-		const float currentAngle = atan2f(currentPos[2], currentPos[0]);
+		//const float currentAngle = atan2f(currentPos[2], currentPos[0]);
 		
 		float desiredRadius;
 		float desiredAngle;

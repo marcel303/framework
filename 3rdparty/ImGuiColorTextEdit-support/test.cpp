@@ -190,7 +190,7 @@ static bool ShowTextEditor()
 	
 	//
 	
-	auto cpos = editor.GetCursorPosition();
+	//auto cpos = editor.GetCursorPosition();
 	ImGui::Begin("Text Editor Demo", nullptr, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
 	ImGui::SetWindowSize(ImVec2(640, 480), ImGuiCond_FirstUseEver);
 	if (ImGui::BeginMenuBar())

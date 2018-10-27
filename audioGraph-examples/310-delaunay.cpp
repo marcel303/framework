@@ -99,7 +99,7 @@ int main(int argc, char * argv[])
 
 	initUi();
 
-	const int numPoints = 20;
+	//const int numPoints = 20;
 	
 	typedef Vector2<float> Pointf;
 	typedef Triangle<float> Trianglef;

@@ -70,6 +70,8 @@ static void drawGrid(const int numQuadsX, const int numQuadsY)
 	gxEnd();
 }
 
+#if DO_FUNKYCAT
+
 static void drawPicture(const Mat4x4 & pictureTransform, const Mat4x4 & lineTransform, const GLuint texture)
 {
 	gxPushMatrix();
@@ -95,6 +97,8 @@ static void drawPicture(const Mat4x4 & pictureTransform, const Mat4x4 & lineTran
 	}
 	gxPopMatrix();
 }
+
+#endif
 
 int main(int argc, char * argv[])
 {

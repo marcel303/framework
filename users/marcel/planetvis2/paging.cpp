@@ -54,6 +54,7 @@ bool pageLoad(const char * name, const int baseSize, const int pageSize, const i
 	char filename[1024];
 
 	const int64_t t1 = g_TimerRT.TimeUS_get();
+	(void)t1;
 
 	if (result)
 	{
@@ -61,7 +62,8 @@ bool pageLoad(const char * name, const int baseSize, const int pageSize, const i
 	}
 
 	const int64_t t2 = g_TimerRT.TimeUS_get();
-
+	(void)t2;
+	
 	if (result)
 	{
 		result &= pageLoad(filename, pageData);
@@ -71,6 +73,7 @@ bool pageLoad(const char * name, const int baseSize, const int pageSize, const i
 	}
 
 	const int64_t t3 = g_TimerRT.TimeUS_get();
+	(void)t3;
 
 	//printf("pageLoad took %dus + %dus\n", int(t2 - t1), int(t3 - t2));
 
@@ -107,12 +110,14 @@ bool pageLoad(const char * filename, PageData & pageData)
 	bool result = true;
 
 	const int64_t t1 = g_TimerRT.TimeUS_get();
+	(void)t1;
 
 	FILE * f = fopen(filename, "rb");
 
 	result &= f != nullptr;
 
 	const int64_t t2 = g_TimerRT.TimeUS_get();
+	(void)t2;
 
 	if (result)
 	{
@@ -125,6 +130,7 @@ bool pageLoad(const char * filename, PageData & pageData)
 	}
 
 	const int64_t t3 = g_TimerRT.TimeUS_get();
+	(void)t3;
 
 	if (f != nullptr)
 	{
@@ -133,6 +139,7 @@ bool pageLoad(const char * filename, PageData & pageData)
 	}
 
 	const int64_t t4 = g_TimerRT.TimeUS_get();
+	(void)t4;
 
 	//printf("pageLoad took %dus + %dus + %dus\n", int(t2 - t1), int(t3 - t2), int(t4 - t3));
 

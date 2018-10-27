@@ -1135,6 +1135,7 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 	coords[7] = np > 8 ? parms[8][0] : coords[3] * scale;
 
 	const bool isFromFB = bmIndex == -1; // todo : allow blit from image index -1 ?
+	(void)isFromFB;
 
 	const bool isOverlapping = bmIndex == destIndex;
 	
