@@ -8,6 +8,7 @@ library vfxgraph
 	depend_library libjgmod-framework
 	depend_library libosc
 	depend_library libvideo
+	depend_library rtmidi
 	
 # todo : add with_library chibi directive ?
 	with_platform macos depend_library libps3eye
@@ -26,13 +27,12 @@ library vfxgraph
 	scan_files h   path objects  group objects
 	scan_files cpp path vfxNodes group vfxNodes conglomerate vfxNodes_all.h
 	scan_files h   path vfxNodes group vfxNodes
-	scan_files cpp path rtmidi   group rtmidi
-	scan_files h   path rtmidi   group rtmidi
 	scan_files cpp path ofxJpegGlitch group ofxJpegGlitch
 	scan_files h   path ofxJpegGlitch group ofxJpegGlitch
 
+	with_platform macos add_files vfxNodes_all-mac.mm
 	with_platform macos scan_files mm path objects group objects
-	with_platform macos scan_files mm path vfxNodes group vfxNodes
+	with_platform macos scan_files mm path vfxNodes group vfxNodes conglomerate vfxNodes_all-mac.h
 	with_platform macos scan_files *.* path xmm group xmm traverse
 
 	compile_definition ENABLE_KINECT1   0 expose

@@ -7,6 +7,8 @@ we create a single source file which includes all of the source files in the vfx
 2) it speeds up library compilation speed, as all vfx node sources are compiled at once, avoiding the overhead of compiling them separately
 
 */
-#include "vfxNodes_all.h"
+#include <GL/glew.h>
 
-void linkVfxNodes() { }
+#include "vfxNodes_all-mac.h"
+
+void linkVfxNodes_Mac() { }
