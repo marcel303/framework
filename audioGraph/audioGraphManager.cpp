@@ -437,6 +437,21 @@ AudioGraphGlobals::Memf AudioGraphGlobals::getMemf(const char * name)
 
 //
 
+#include "graph.h"
+
+AudioGraphManager_Basic::GraphCacheElem::GraphCacheElem()
+	: isValid(false)
+	, graph(nullptr)
+{
+	graph = new Graph();
+}
+
+AudioGraphManager_Basic::GraphCacheElem::~GraphCacheElem()
+{
+	delete graph;
+	graph = nullptr;
+}
+
 AudioGraphManager_Basic::AudioGraphManager_Basic(bool _cacheOnCreate)
 	: AudioGraphManager()
 	, typeDefinitionLibrary(nullptr)
@@ -507,7 +522,7 @@ void AudioGraphManager_Basic::addGraphToCache(const char * filename)
 		
 		auto & elem = e.first->second;
 		
-		elem.isValid = elem.graph.load(filename, typeDefinitionLibrary);
+		elem.isValid = elem.graph->load(filename, typeDefinitionLibrary);
 	}
 }
 
@@ -545,7 +560,7 @@ AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filena
 		
 		if (elem.isValid)
 		{
-			audioGraph = constructAudioGraph(elem.graph, typeDefinitionLibrary, globals, createdPaused);
+			audioGraph = constructAudioGraph(*elem.graph, typeDefinitionLibrary, globals, createdPaused);
 		}
 	}
 	else
@@ -556,11 +571,11 @@ AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filena
 			
 			auto & elem = e.first->second;
 			
-			elem.isValid = elem.graph.load(filename, typeDefinitionLibrary);
+			elem.isValid = elem.graph->load(filename, typeDefinitionLibrary);
 			
 			if (elem.isValid)
 			{
-				audioGraph = constructAudioGraph(elem.graph, typeDefinitionLibrary, globals, createdPaused);
+				audioGraph = constructAudioGraph(*elem.graph, typeDefinitionLibrary, globals, createdPaused);
 			}
 		}
 		else

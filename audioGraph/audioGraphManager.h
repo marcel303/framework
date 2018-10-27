@@ -30,6 +30,7 @@
 #include "audioTypes.h"
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -93,7 +94,10 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	struct GraphCacheElem
 	{
 		bool isValid;
-		Graph graph;
+		Graph * graph;
+		
+		GraphCacheElem();
+		~GraphCacheElem();
 	};
 	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
