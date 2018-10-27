@@ -161,8 +161,7 @@ private:
 
 		Item * m_next;
 	};
-
-	const char * m_path;
+	
 	StatTimerView * m_next;
 
 	Item * m_itemHead;

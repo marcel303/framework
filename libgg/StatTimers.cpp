@@ -182,8 +182,7 @@ StatTimerView::Item::Item(Item *& head, Item *& tail, StatTimer * timer, uint8_t
 }
 
 StatTimerView::StatTimerView(const char * path)
-	: m_path(path)
-	, m_next(0)
+	: m_next(0)
 	, m_itemHead(0)
 	, m_itemTail(0)
 {
