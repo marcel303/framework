@@ -862,6 +862,8 @@ JGMOD *load_it (const char *filename, int start_offset)
 		PATTERN_INFO * pi = j->pi + i;
 		
 		const uint16_t packed_length = jgmod_igetw(f); // Length of packed pattern, not including the 8 byte header. Note that the pattern + the 8 byte header will ALWAYS be less than 64k
+		(void)packed_length;
+		
 		const uint16_t num_rows = jgmod_igetw(f); // Number of rows in this pattern (Ranges from 32->200).
 		
 		pi->no_pos = num_rows;
