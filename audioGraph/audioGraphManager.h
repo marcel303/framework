@@ -38,6 +38,7 @@ struct AudioGraphFileRTC;
 struct AudioGraphGlobals;
 struct AudioRealTimeConnection;
 struct AudioValueHistorySet;
+struct AudioVoiceManager;
 struct Graph;
 struct GraphEdit;
 struct GraphEdit_TypeDefinitionLibrary;
