@@ -220,13 +220,13 @@ struct OscPacketListener : osc::OscPacketListener
 	{
 		SDL_LockMutex(s_mutex);
 		{
-			// todo : check address
+			// check address
 			
 			const char * address = m.AddressPattern();
 			
 			if (address != nullptr)
 			{
-				// todo : record value
+				// record value
 				
 				OscMessageHistory::Elem & elem = s_oscMessageHistory.getElem(address);
 				
