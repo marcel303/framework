@@ -83,10 +83,18 @@ VfxNodeJgmod::VfxNodeJgmod()
 	addOutput(kOutput_Row, kVfxPlugType_Float, &rowOutput);
 	addOutput(kOutput_End, kVfxPlugType_Trigger, nullptr);
 	
-	if (install_sound(DIGI_AUTODETECT, MIDI_NONE, nullptr) < 0)
+// todo : move allegro init elsewhere, or remove the need for init altogether by abstracting the mixer
+
+	static bool isInitialized = false;
+	
+	if (isInitialized == false)
 	{
-        logError("unable to initialize sound card");
-        //
+		isInitialized = true;
+		
+		if (install_sound(DIGI_AUTODETECT, MIDI_NONE, nullptr) < 0)
+		{
+			logError("unable to initialize sound card");
+		}
 	}
 	
 	player = new JGMOD_PLAYER();
