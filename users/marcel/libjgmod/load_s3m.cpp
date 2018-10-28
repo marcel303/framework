@@ -24,20 +24,17 @@
 //#define JG_debug
 //#define force_8_bit
 
-extern volatile const int noteperiod[];
+extern const int noteperiod[];
 
 namespace jgmod
 {
 
-void S3M_get_num_chn(JGMOD_FILE *f);
-void S3M_load_pat(JGMOD_FILE *f, JGMOD *j, NOTE_INFO *n, int no_chn);
+void S3M_get_num_chn(JGMOD_FILE *f, uint8_t chn_set[32], char remap[32]);
+void S3M_load_pat(JGMOD_FILE *f, JGMOD *j, NOTE_INFO *n, int no_chn, char remap[32]);
 void convert_s3m_command (int *command, int *extcommand);
 void convert_s3m_pitch (int *pitch);
 int get_mod_no_pat (int *table, int max_trk);
 
-// fixme : remove globals
-static uint8_t chn_set[32];
-static char remap[32];
 
 int get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji)
 {
@@ -132,7 +129,7 @@ int detect_s3m (const char *filename)
 
 // to get the number of channels actually used.
 // must seek to the pattern first
-void S3M_get_num_chn(JGMOD_FILE *f)
+void S3M_get_num_chn(JGMOD_FILE *f, uint8_t chn_set[32], char remap[32])
 {
     int row=0, flag, ch;
 
@@ -162,7 +159,7 @@ void S3M_get_num_chn(JGMOD_FILE *f)
 
 
 // similar to s3m_get_num_chn but load the notes into the jgmod structure
-void S3M_load_pat(JGMOD_FILE *f, JGMOD *j, NOTE_INFO *n, int no_chn)
+void S3M_load_pat(JGMOD_FILE *f, JGMOD *j, NOTE_INFO *n, int no_chn, char remap[32])
 {
     NOTE_INFO dummy;
     NOTE_INFO *ni;
@@ -252,6 +249,8 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
     SAMPLE_INFO *si;
     PATTERN_INFO *pi;
     SAMPLE *s=nullptr;
+    uint8_t chn_set[32];
+    char remap[32];
 
 
     f = jgmod_fopen (filename, "rb");
@@ -480,7 +479,7 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
         for (index=0; index<j->no_pat; index++)
             {
             jgmod_fseek (&f, filename, parapointer[j->no_sample + index] + 2 + start_offset);
-            S3M_get_num_chn(f);
+            S3M_get_num_chn(f, chn_set, remap);
             }
         }
  
@@ -564,7 +563,7 @@ JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
 
         pi = j->pi + index;
         jgmod_fseek (&f, filename, parapointer[j->no_sample + index] + 2 + start_offset);
-        S3M_load_pat(f, j, pi->ni, j->no_chn);
+        S3M_load_pat(f, j, pi->ni, j->no_chn, remap);
         }
     j->no_pat = actual_pat;
 

@@ -45,7 +45,7 @@ todo :
 
 //#define JG_debug
 
-extern volatile const int noteperiod[];
+extern const int noteperiod[];
 
 namespace jgmod
 {

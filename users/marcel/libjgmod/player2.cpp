@@ -25,7 +25,7 @@
 #define LOGFAC 32
 
 
-extern volatile const int mod_finetune[];
+extern const int mod_finetune[];
 
 int find_lower_period(int period, int times);
 
@@ -132,7 +132,7 @@ static const unsigned long lintab[768] =
 
 
 // for converting note to amiga period
-static volatile const uint16_t logtab[]={
+static const uint16_t logtab[]={
 	LOGFAC*907,LOGFAC*900,LOGFAC*894,LOGFAC*887,LOGFAC*881,LOGFAC*875,LOGFAC*868,LOGFAC*862,
 	LOGFAC*856,LOGFAC*850,LOGFAC*844,LOGFAC*838,LOGFAC*832,LOGFAC*826,LOGFAC*820,LOGFAC*814,
 	LOGFAC*808,LOGFAC*802,LOGFAC*796,LOGFAC*791,LOGFAC*785,LOGFAC*779,LOGFAC*774,LOGFAC*768,
@@ -148,13 +148,13 @@ static volatile const uint16_t logtab[]={
 	LOGFAC*453,LOGFAC*450,LOGFAC*447,LOGFAC*443,LOGFAC*440,LOGFAC*437,LOGFAC*434,LOGFAC*431
 };
 
-extern volatile const int noteperiod[];
-volatile const int noteperiod[] = {
+extern const int noteperiod[];
+const int noteperiod[] = {
     6848, 6464, 6096, 5760, 5424, 5120, 4832, 4560, 4304, 4064, 3840, 3628
     };
 
 // for vibrato and tremolo
-static volatile const int vib_table[] = {
+static const int vib_table[] = {
     0,   24,  49,  74,  97,  120, 141, 161,
     180, 197, 212, 224, 235, 244, 250, 253,
     255, 253, 250, 244, 235, 224, 212, 197,
