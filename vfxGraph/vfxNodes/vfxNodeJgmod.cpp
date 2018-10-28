@@ -214,8 +214,6 @@ void VfxNodeJgmod::handleTrigger(const int index)
 
 void VfxNodeJgmod::getDescription(VfxNodeDescription & d)
 {
-	// todo : add filename, name, channel info
-	
 	d.add("filename: %s", currentFilename.c_str());
 	
 	if (mod == nullptr)
