@@ -28,8 +28,8 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "Debugging.h"
-#include "soundmix.h"
 #include <SDL2/SDL.h>
 
 #if defined(MACOS) || defined(LINUX)

@@ -29,7 +29,6 @@
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
 #include "framework.h"
-#include "soundmix.h"
 
 const int GFX_SX = 1024;
 const int GFX_SY = 768;

@@ -39,7 +39,6 @@
 //
 
 #include "audioNodeBase.h"
-#include "soundmix.h"
 #include "Timer.h"
 
 AudioValueHistory::AudioValueHistory()

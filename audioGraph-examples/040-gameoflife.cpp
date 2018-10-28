@@ -28,8 +28,8 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "framework.h"
-#include "soundmix.h"
 #include <algorithm>
 #include <cmath>
 

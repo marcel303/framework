@@ -29,7 +29,7 @@
 #include "audioVoiceManager4D.h"
 #include "framework.h"
 #include "Noise.h"
-#include "soundmix.h"
+#include "soundmix.h" // AudioSource
 #include "ui.h"
 #include "wavefield.h"
 #include <algorithm>

@@ -28,6 +28,7 @@
 #include "audioVoiceManager4D.h"
 #include "Debugging.h"
 #include "Log.h"
+#include "soundmix.h" // AudioSource, audio buffer routines
 
 AudioVoiceManager4D::AudioVoiceManager4D()
 	: AudioVoiceManager(kType_4DSOUND)

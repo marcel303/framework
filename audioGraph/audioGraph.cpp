@@ -30,6 +30,7 @@
 #include "framework.h" // listFiles
 #include "Log.h"
 #include "Parse.h"
+#include "soundmix.h"
 #include <algorithm>
 
 #if AUDIO_GRAPH_ENABLE_TIMING
@@ -733,7 +734,6 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 //
 
 #include "Path.h"
-#include "soundmix.h"
 #include "StringEx.h"
 #include "Timer.h"
 #include <map>

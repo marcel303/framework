@@ -28,6 +28,7 @@
 #pragma once
 
 #include "audioGraph.h"
+#include "audioVoiceManager.h"
 #include "vfxNodeBase.h"
 
 struct AudioGraphInstance;

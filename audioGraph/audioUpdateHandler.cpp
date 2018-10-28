@@ -31,7 +31,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioUpdateHandler.h"
 #include "Debugging.h"
 #include "osc4d.h"
-#include "soundmix.h"
 #include "Timer.h"
 #include <SDL2/SDL.h>
 

@@ -1,12 +1,12 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "audioNodeBase.h"
 #include "framework.h"
 #include "graph.h"
 #include "Noise.h"
 #include "slideshow.h"
-#include "soundmix.h"
 #include "wavefield.h"
 #include <cmath>
 
@@ -679,7 +679,6 @@ AUDIO_NODE_TYPE(mitronix, AudioNodeMitronix)
 
 //
 
-#include "soundmix.h"
 #include "vfxNodes/delayLine.h"
 
 struct AudioNodeRecordPlay : AudioNodeBase

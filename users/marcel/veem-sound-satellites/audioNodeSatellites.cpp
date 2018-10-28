@@ -27,6 +27,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioGraph.h"
 #include "audioNodeSatellites.h"
+#include "audioVoiceManager.h"
+#include "soundmix.h"
 #include <string.h>
 
 #define voiceMgr g_currentAudioGraph->globals->voiceMgr

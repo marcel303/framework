@@ -1,7 +1,7 @@
 #include "audioGraphManager.h"
+#include "audioVoiceManager.h"
 #include "Debugging.h"
 #include "framework.h"
-#include "soundmix.h"
 #include "Timer.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"

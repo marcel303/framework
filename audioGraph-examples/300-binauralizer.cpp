@@ -34,7 +34,7 @@
 #include "binauralizer.h"
 #include "framework.h"
 #include "paobject.h"
-#include "soundmix.h"
+#include "soundmix.h" // PcmData, audio buffer routines
 #include "Timer.h"
 #include <algorithm>
 #include <atomic>

@@ -30,8 +30,8 @@
 #include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "framework.h"
-#include "soundmix.h"
 #include <cmath>
 
 const int GFX_SX = 1024;

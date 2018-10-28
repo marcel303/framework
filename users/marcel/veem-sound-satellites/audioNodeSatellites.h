@@ -31,6 +31,7 @@
 #include "soundmix.h" // AudioSource
 
 struct AudioGraph;
+struct AudioVoice;
 
 struct AudioNodeSatellites : AudioNodeBase
 {

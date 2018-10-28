@@ -34,8 +34,8 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "vfxNodes/oscEndpointMgr.h"
-#include "soundmix.h"
 #include <algorithm>
 #include <cmath>
 

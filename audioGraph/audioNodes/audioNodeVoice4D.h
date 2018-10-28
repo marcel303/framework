@@ -28,6 +28,7 @@
 #pragma once
 
 #include "audioNodeBase.h"
+#include "audioVoiceManager.h"
 #include "soundmix.h" // AudioSource
 
 struct AudioNodeVoice4D : AudioNodeBase
