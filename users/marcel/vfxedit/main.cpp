@@ -20,11 +20,6 @@
 	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
-// todo : + send OSC messages
-// todo : # load confirmation
-// todo : + combined PCM and sequence data load
-// todo : + playback pause/resume
-
 using namespace tinyxml2;
 
 #define GFX_SX 1400
