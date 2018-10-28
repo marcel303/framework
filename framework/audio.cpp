@@ -1074,6 +1074,8 @@ bool SoundPlayer_PortAudio::initPortAudio(const int numChannels, const int sampl
 
 	//
 	
+	fassert(m_paStream == nullptr);
+	
 	if ((err = Pa_OpenStream(&m_paStream, nullptr, &outputParameters, sampleRate, bufferSize, paDitherOff, portaudioCallback, this)) != paNoError)
 	{
 		logError("portaudio: failed to open stream: %s", Pa_GetErrorText(err));
@@ -1151,11 +1153,14 @@ bool SoundPlayer_PortAudio::init(int numSources)
 {
 	// initialize threading
 	
+	fassert(m_mutex == nullptr);
 	m_mutex = SDL_CreateMutex();
 	fassert(m_mutex != nullptr);
 	
 	// create audio sources
 	
+	fassert(m_numSources == 0);
+	fassert(m_sources == nullptr);
 	m_numSources = numSources;
 	m_sources = new Source[numSources];
 	memset(m_sources, 0, sizeof(Source) * numSources);
@@ -1166,6 +1171,7 @@ bool SoundPlayer_PortAudio::init(int numSources)
 	
 	// create music source
 	
+	fassert(m_musicStream == nullptr);
 	m_musicStream = new AudioStream_Vorbis();
 	m_musicVolume = 1.f;
 	
