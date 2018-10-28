@@ -71,8 +71,6 @@ VfxGraph::~VfxGraph()
 
 void VfxGraph::destroy()
 {
-	displayNodeIds.clear();
-	
 	for (auto i : valuesToFree)
 	{
 		switch (i.type)
@@ -129,6 +127,8 @@ void VfxGraph::destroy()
 		logDebug("delete %s took %.2fms", typeName.c_str(), (t2 - t1) / 1000.0);
 	#endif
 	}
+	
+	Assert(displayNodeIds.empty());
 	
 	g_currentVfxGraph = nullptr;
 	
