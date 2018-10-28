@@ -14,7 +14,6 @@
 
 // todo : load sample and instrument names
 // todo : check mod, xm, s3m loaders for file seeks that skip bytes and reference vs file formats. perhaps something interesthing is skipped?
-// todo : investigate IT support
 
 #include "framework.h"
 #include "framework-allegro2.h"
