@@ -1297,6 +1297,7 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 		
 		auto srcNode = srcNodeItr->second;
 		
+	// fixme : both input and output could be dynamic (srcSocketIndex == -1), so we should check for this case and search in the dynamic list if dynamic
 		auto srcSocket = srcNode->tryGetInput(link.srcSocketIndex);
 		
 		if (srcSocket == nullptr)
