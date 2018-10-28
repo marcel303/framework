@@ -437,7 +437,7 @@ struct VfxPlug
 	mutable VfxFloatArray floatArray;
 #endif
 
-	bool editorIsTriggered; // only here for real-time connection with graph editor
+	int editorIsTriggeredTick; // only here for real-time connection with graph editor
 	
 	VfxPlug()
 		: type(kVfxPlugType_None)
@@ -449,7 +449,7 @@ struct VfxPlug
 	#if EXTENDED_INPUTS
 		, floatArray()
 	#endif
-		, editorIsTriggered(false)
+		, editorIsTriggeredTick(false)
 	{
 	}
 	
@@ -614,7 +614,7 @@ struct VfxNodeBase
 	
 	int lastTickTraversalId;
 	int lastDrawTraversalId;
-	bool editorIsTriggered; // only here for real-time connection with graph editor
+	int editorIsTriggeredTick; // only here for real-time connection with graph editor
 	mutable std::string editorIssue;
 	
 	bool isPassthrough;

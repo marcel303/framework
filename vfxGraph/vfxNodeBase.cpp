@@ -941,7 +941,7 @@ VfxNodeBase::VfxNodeBase()
 	, flags(0)
 	, lastTickTraversalId(-1)
 	, lastDrawTraversalId(-1)
-	, editorIsTriggered(false)
+	, editorIsTriggeredTick(-1)
 	, editorIssue()
 	, isPassthrough(false)
 #if ENABLE_VFXGRAPH_CPU_TIMING
@@ -1099,7 +1099,7 @@ void VfxNodeBase::traverseDraw(const int traversalId)
 
 void VfxNodeBase::trigger(const int outputSocketIndex)
 {
-	editorIsTriggered = true;
+	editorIsTriggeredTick = g_currentVfxGraph->currentTickTraversalId;
 	
 	Assert(outputSocketIndex >= 0 && outputSocketIndex < outputs.size());
 	if (outputSocketIndex >= 0 && outputSocketIndex < outputs.size())
@@ -1108,7 +1108,7 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 		Assert(outputSocket.type == kVfxPlugType_Trigger);
 		if (outputSocket.type == kVfxPlugType_Trigger)
 		{
-			outputSocket.editorIsTriggered = true;
+			outputSocket.editorIsTriggeredTick = g_currentVfxGraph->currentTickTraversalId;
 			
 			// iterate the list of outgoing connections, call queueTrigger on nodes with correct outputSocketIndex
 			
@@ -1116,7 +1116,7 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 			{
 				if (triggerTarget.dstSocketIndex == outputSocketIndex)
 				{
-					triggerTarget.srcNode->editorIsTriggered = true;
+					triggerTarget.srcNode->editorIsTriggeredTick = g_currentVfxGraph->currentTickTraversalId;
 					
 					triggerTarget.srcNode->queueTrigger(triggerTarget.srcSocketIndex);
 				}

@@ -193,7 +193,7 @@ void VfxNodeOscSend::sendValue(const char * path, const float value)
 	
 	//
 	
-	editorIsTriggered = true;
+	editorIsTriggeredTick = g_currentVfxGraph->currentTickTraversalId;
 	
 	//
 	

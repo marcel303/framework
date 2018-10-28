@@ -1008,7 +1008,7 @@ void RealTimeConnection::handleSrcSocketPressed(const GraphNodeId nodeId, const 
 	if (input == nullptr)
 		return;
 	
-	node->editorIsTriggered = true;
+	node->editorIsTriggeredTick = vfxGraph->currentTickTraversalId;;
 	
 	node->handleTrigger(srcSocketIndex);
 }
@@ -1123,11 +1123,9 @@ int RealTimeConnection::getNodeActivity(const GraphNodeId nodeId)
 	if (node->lastDrawTraversalId + 1 == vfxGraph->nextDrawTraversalId)
 		result |= kActivity_Continuous;
 	
-	if (node->editorIsTriggered)
+	if (node->editorIsTriggeredTick == vfxGraph->currentTickTraversalId)
 	{
 		result |= kActivity_OneShot;
-		
-		node->editorIsTriggered = false;
 	}
 	
 	return result;
@@ -1169,12 +1167,8 @@ int RealTimeConnection::getLinkActivity(const GraphLinkId linkId, const GraphNod
 	
 	bool result = false;
 	
-	if (dstInput->editorIsTriggered)
+	if (dstInput->editorIsTriggeredTick == vfxGraph->currentTickTraversalId)
 	{
-		// fixme : setting this to false here won't work correctly when there's multiple outgoing connections for this socket. we should report true for all of these connections. we should, instead, clear all of these flags prior to processing the VfxGraph
-		
-		dstInput->editorIsTriggered = false;
-		
 		result = true;
 	}
 	
