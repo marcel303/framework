@@ -564,6 +564,14 @@ struct JsusFxChain
 		}
 	}
 	
+	void clear()
+	{
+		while (effects.empty() == false)
+		{
+			remove(effects.front());
+		}
+	}
+	
 	void loadXml(tinyxml2::XMLElement * xml_effectChain)
 	{
 		Assert(effects.empty());
@@ -700,16 +708,21 @@ struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
 	
 	virtual ~AudioStream_JsusFxChain() override
 	{
-		if (mutex != nullptr)
-		{
-			SDL_DestroyMutex(mutex);
-			mutex = nullptr;
-		}
+		shut();
 	}
 	
 	void init()
 	{
 		mutex = SDL_CreateMutex();
+	}
+	
+	void shut()
+	{
+		if (mutex != nullptr)
+		{
+			SDL_DestroyMutex(mutex);
+			mutex = nullptr;
+		}
 	}
 	
 	void lock()
@@ -1941,7 +1954,21 @@ static void testJsusFxList()
 		}
 	}
 	
-	// todo : free effects, windows etc
+	// free effects, windows etc
+
+	audioStream.shut();
+
+	for (auto & window : windows)
+	{
+		delete window;
+		window = nullptr;
+	}
+
+	windows.clear();
+
+	effectChain.clear();
+
+	filenamesByLocation.clear();
 	
 	framework.shutdown();
 }
