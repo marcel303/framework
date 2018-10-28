@@ -68,15 +68,17 @@ void VfxNodeTriggerTimer::tick(const float dt)
 		timer = 0.f;
 	}
 	
-	if (isPassthrough || interval == 0.f || isStarted == false)
+	if (isPassthrough || interval <= 0.f || isStarted == false)
 	{
 		timer = 0.f;
 	}
-	else if (timer < interval)
+	else
 	{
 		timer += dt;
 		
-		if (timer >= interval)
+	// todo : clamp interval to some minimum value (= maximum frequency) to avoid getting stuck in this while loop ?
+	
+		while (timer >= interval)
 		{
 			triggerCount++;
 			triggerCountOutput = triggerCount;
@@ -84,9 +86,14 @@ void VfxNodeTriggerTimer::tick(const float dt)
 			trigger(kOutput_Trigger);
 			
 			if (startAuto)
-				timer = 0.f;
+			{
+				timer -= interval;
+			}
 			else
+			{
 				isStarted = false;
+				break;
+			}
 		}
 	}
 }
