@@ -1163,7 +1163,7 @@ int RealTimeConnection::getLinkActivity(const GraphLinkId linkId, const GraphNod
 	if (dstInput == nullptr)
 		return false;
 	
-	// todo : check if the link was triggered
+	// check if the link was triggered
 	
 	bool result = false;
 	
