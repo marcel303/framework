@@ -27,7 +27,7 @@
 
 #include "audioNodeTriggerTreshold.h"
 
-AUDIO_NODE_TYPE(trigger_threshold, AudioNodeTriggerThreshold)
+AUDIO_NODE_TYPE(AudioNodeTriggerThreshold)
 {
 	typeName = "trigger.treshold";
 	

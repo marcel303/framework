@@ -28,7 +28,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioGraph.h"
 #include "audioNodeFlags.h"
 
-AUDIO_NODE_TYPE(flags, AudioNodeFlags)
+AUDIO_NODE_TYPE(AudioNodeFlags)
 {
 	typeName = "flags";
 	

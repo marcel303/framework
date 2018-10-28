@@ -318,7 +318,7 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 
 //
 
-AUDIO_NODE_TYPE(wavefield_2d, AudioNodeWavefield2D)
+AUDIO_NODE_TYPE(AudioNodeWavefield2D)
 {
 	typeName = "wavefield.2d";
 	

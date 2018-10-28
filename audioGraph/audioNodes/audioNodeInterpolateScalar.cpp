@@ -27,7 +27,7 @@
 
 #include "audioNodeInterpolateScalar.h"
 
-AUDIO_NODE_TYPE(interpolate_scalar, AudioNodeInterpolateScalar)
+AUDIO_NODE_TYPE(AudioNodeInterpolateScalar)
 {
 	typeName = "interp.scalar";
 	

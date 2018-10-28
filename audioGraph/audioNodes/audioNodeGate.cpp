@@ -27,7 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioNodeGate.h"
 
-AUDIO_NODE_TYPE(gate, AudioNodeGate)
+AUDIO_NODE_TYPE(AudioNodeGate)
 {
 	typeName = "gate";
 	

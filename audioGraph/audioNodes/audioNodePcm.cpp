@@ -28,7 +28,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioGraph.h"
 #include "audioNodePcm.h"
 
-AUDIO_NODE_TYPE(audioSourcePcm, AudioNodeSourcePcm)
+AUDIO_NODE_TYPE(AudioNodeSourcePcm)
 {
 	typeName = "audio.pcm";
 	

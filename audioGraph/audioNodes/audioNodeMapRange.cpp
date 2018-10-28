@@ -27,7 +27,7 @@
 
 #include "audioNodeMapRange.h"
 
-AUDIO_NODE_TYPE(mapRange, AudioNodeMapRange)
+AUDIO_NODE_TYPE(AudioNodeMapRange)
 {
 	typeName = "map.range";
 	

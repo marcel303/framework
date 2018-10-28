@@ -158,7 +158,7 @@ struct AudioNodeMechanism : AudioNodeBase
 	}
 };
 
-AUDIO_NODE_TYPE(mechanism, AudioNodeMechanism)
+AUDIO_NODE_TYPE(AudioNodeMechanism)
 {
 	typeName = "mechanism";
 	
@@ -563,7 +563,7 @@ struct AudioNodeRandom : AudioNodeBase
 	}
 };
 
-AUDIO_NODE_TYPE(random, AudioNodeRandom)
+AUDIO_NODE_TYPE(AudioNodeRandom)
 {
 	typeName = "random";
 	

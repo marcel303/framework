@@ -28,7 +28,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioGraph.h"
 #include "audioNodeMems.h"
 
-AUDIO_NODE_TYPE(mems, AudioNodeMems)
+AUDIO_NODE_TYPE(AudioNodeMems)
 {
 	typeName = "mems";
 	

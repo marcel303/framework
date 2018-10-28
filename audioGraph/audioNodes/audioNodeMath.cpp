@@ -141,7 +141,7 @@ AUDIO_ENUM_TYPE(mathType)
 	elem("semitone");
 }
 
-AUDIO_NODE_TYPE(math, AudioNodeMath)
+AUDIO_NODE_TYPE(AudioNodeMath)
 {
 	typeName = "math";
 	
@@ -262,7 +262,7 @@ struct name : AudioNodeMathBase \
 		} \
 	} \
 }; \
-AUDIO_NODE_TYPE(name, name) \
+AUDIO_NODE_TYPE(name) \
 { \
 	typeName = _typeName; \
 	in("a", "audioValue"); \

@@ -28,7 +28,7 @@
 #include "audioNodeInput.h"
 #include "audioUpdateHandler.h"
 
-AUDIO_NODE_TYPE(input, AudioNodeInput)
+AUDIO_NODE_TYPE(AudioNodeInput)
 {
 	typeName = "audio.in";
 	

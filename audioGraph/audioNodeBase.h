@@ -575,19 +575,19 @@ struct AudioNodeTypeRegistration
 	void outEditable(const char * name);
 };
 
-#define AUDIO_NODE_TYPE(name, type) \
-	struct name ## __audio_registration : AudioNodeTypeRegistration \
+#define AUDIO_NODE_TYPE(type) \
+	struct type ## __registration : AudioNodeTypeRegistration \
 	{ \
-		name ## __audio_registration() \
+		type ## __registration() \
 		{ \
 			create = [](void * data) -> AudioNodeBase* { return new type(); }; \
 			init(); \
 		} \
 		void init(); \
 	}; \
-	extern name ## __audio_registration name ## __audio_registrationInstance; \
-	name ## __audio_registration name ## __audio_registrationInstance; \
-	void name ## __audio_registration :: init()
+	extern type ## __registration type ## __registrationInstance; \
+	type ## __registration type ## __registrationInstance; \
+	void type ## __registration :: init()
 
 extern AudioEnumTypeRegistration * g_audioEnumTypeRegistrationList;
 extern AudioNodeTypeRegistration * g_audioNodeTypeRegistrationList;

@@ -37,7 +37,7 @@ AUDIO_ENUM_TYPE(pcmSelectMode)
 	elem("random");
 }
 
-AUDIO_NODE_TYPE(audioSourcePcmSelect, AudioNodeSourcePcmSelect)
+AUDIO_NODE_TYPE(AudioNodeSourcePcmSelect)
 {
 	typeName = "audio.pcmSelect";
 	

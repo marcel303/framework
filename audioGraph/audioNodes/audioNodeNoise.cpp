@@ -38,7 +38,7 @@ AUDIO_ENUM_TYPE(noiseType)
 	elem("brown");
 }
 
-AUDIO_NODE_TYPE(noise, AudioNodeNoise)
+AUDIO_NODE_TYPE(AudioNodeNoise)
 {
 	typeName = "noise.1d";
 	

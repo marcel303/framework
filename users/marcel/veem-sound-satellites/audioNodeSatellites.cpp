@@ -33,7 +33,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #define voiceMgr g_currentAudioGraph->globals->voiceMgr
 
-AUDIO_NODE_TYPE(satellites, AudioNodeSatellites)
+AUDIO_NODE_TYPE(AudioNodeSatellites)
 {
 	typeName = "satellites";
 	

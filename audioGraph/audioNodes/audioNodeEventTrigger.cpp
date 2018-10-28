@@ -28,7 +28,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioGraph.h"
 #include "audioNodeEventTrigger.h"
 
-AUDIO_NODE_TYPE(trigger_event, AudioNodeEventTrigger)
+AUDIO_NODE_TYPE(AudioNodeEventTrigger)
 {
 	typeName = "trigger.event";
 	

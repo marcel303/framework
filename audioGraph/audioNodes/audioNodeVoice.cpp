@@ -40,7 +40,7 @@ AUDIO_ENUM_TYPE(voiceSpeaker)
 	elem("channel");
 }
 
-AUDIO_NODE_TYPE(voice, AudioNodeVoice)
+AUDIO_NODE_TYPE(AudioNodeVoice)
 {
 	typeName = "voice";
 	

@@ -38,7 +38,7 @@ AUDIO_ENUM_TYPE(biquadType)
 	elem("highshelf");
 }
 
-AUDIO_NODE_TYPE(filter_biquad, AudioNodeBiquad)
+AUDIO_NODE_TYPE(AudioNodeBiquad)
 {
 	typeName = "filter.biquad";
 	

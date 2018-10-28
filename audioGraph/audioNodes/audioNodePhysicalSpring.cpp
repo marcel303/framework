@@ -28,7 +28,7 @@
 #include "audioNodePhysicalSpring.h"
 #include <math.h>
 
-AUDIO_NODE_TYPE(physical_spring, AudioNodePhysicalSpring)
+AUDIO_NODE_TYPE(AudioNodePhysicalSpring)
 {
 	typeName = "physical.spring";
 	

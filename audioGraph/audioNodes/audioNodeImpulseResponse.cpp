@@ -28,7 +28,7 @@
 #include "audioNodeImpulseResponse.h"
 #include <math.h>
 
-AUDIO_NODE_TYPE(impulse_response, AudioNodeImpulseResponse)
+AUDIO_NODE_TYPE(AudioNodeImpulseResponse)
 {
 	typeName = "impulse.response";
 	

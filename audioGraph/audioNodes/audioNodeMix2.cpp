@@ -121,7 +121,7 @@ AUDIO_ENUM_TYPE(audioMixMode)
 	elem("mul");
 }
 
-AUDIO_NODE_TYPE(audioMix, AudioNodeMix)
+AUDIO_NODE_TYPE(AudioNodeMix)
 {
 	typeName = "mix";
 	

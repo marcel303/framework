@@ -85,7 +85,7 @@ struct AudioNodeRandom : AudioNodeBase
 	}
 };
 
-AUDIO_NODE_TYPE(random, AudioNodeRandom)
+AUDIO_NODE_TYPE(AudioNodeRandom)
 {
 	typeName = "random";
 	

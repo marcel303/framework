@@ -55,7 +55,7 @@ AUDIO_ENUM_TYPE(subboost)
 	elem("3");
 }
 
-AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
+AUDIO_NODE_TYPE(AudioNodeVoice4D)
 {
 	typeName = "voice.4d";
 	
@@ -380,7 +380,7 @@ void AudioNodeVoice4D::getDescription(AudioNodeDescription & d)
 
 //
 
-AUDIO_NODE_TYPE(return_4d, AudioNodeVoice4DReturn)
+AUDIO_NODE_TYPE(AudioNodeVoice4DReturn)
 {
 	typeName = "return.4d";
 	
@@ -552,7 +552,7 @@ void AudioNodeVoice4DReturn::tick(const float dt)
 
 #include "osc4d.h"
 
-AUDIO_NODE_TYPE(globals_4d, AudioNodeVoice4DGlobals)
+AUDIO_NODE_TYPE(AudioNodeVoice4DGlobals)
 {
 	typeName = "globals.4d";
 	

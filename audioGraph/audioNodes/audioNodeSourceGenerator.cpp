@@ -41,7 +41,7 @@ AUDIO_ENUM_TYPE(audioSineMode)
 	elem("minMax");
 }
 
-AUDIO_NODE_TYPE(audioSourceSine, AudioNodeSourceSine)
+AUDIO_NODE_TYPE(AudioNodeSourceSine)
 {
 	typeName = "audio.sine";
 	

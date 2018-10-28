@@ -28,7 +28,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioNodePhase.h"
 #include <math.h>
 
-AUDIO_NODE_TYPE(phase, AudioNodePhase)
+AUDIO_NODE_TYPE(AudioNodePhase)
 {
 	typeName = "phase";
 	

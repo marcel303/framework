@@ -34,7 +34,7 @@ AUDIO_ENUM_TYPE(timeMode)
 	elem("audio");
 }
 
-AUDIO_NODE_TYPE(time, AudioNodeTime)
+AUDIO_NODE_TYPE(AudioNodeTime)
 {
 	typeName = "time";
 	

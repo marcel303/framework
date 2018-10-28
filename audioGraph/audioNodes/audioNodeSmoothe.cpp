@@ -34,7 +34,7 @@ AUDIO_ENUM_TYPE(smoothing_mode)
 	elem("perMillisecond");
 }
 
-AUDIO_NODE_TYPE(smoothe, AudioNodeSmoothe)
+AUDIO_NODE_TYPE(AudioNodeSmoothe)
 {
 	typeName = "smoothe";
 	

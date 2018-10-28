@@ -669,7 +669,7 @@ struct AudioNodeMitronix : AudioNodeBase
 	}
 };
 
-AUDIO_NODE_TYPE(mitronix, AudioNodeMitronix)
+AUDIO_NODE_TYPE(AudioNodeMitronix)
 {
 	typeName = "mitronix";
 	
@@ -823,7 +823,7 @@ struct AudioNodeRecordPlay : AudioNodeBase
 	}
 };
 
-AUDIO_NODE_TYPE(record_play, AudioNodeRecordPlay)
+AUDIO_NODE_TYPE(AudioNodeRecordPlay)
 {
 	typeName = "recordAndPlay";
 	

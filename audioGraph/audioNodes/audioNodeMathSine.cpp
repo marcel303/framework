@@ -76,7 +76,7 @@ struct AudioNodeMathSine : AudioNodeBase
 	}
 };
 
-AUDIO_NODE_TYPE(sine, AudioNodeMathSine)
+AUDIO_NODE_TYPE(AudioNodeMathSine)
 {
 	typeName = "math.sine";
 	
