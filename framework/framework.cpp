@@ -345,6 +345,7 @@ bool Framework::init(int sx, int sy)
 	actualSy /= 2;
 #endif
 
+	fassert(globals.mainWindow == nullptr);
 	globals.mainWindow = SDL_CreateWindow(
 		windowTitle.c_str(),
 		windowX == -1 ? SDL_WINDOWPOS_CENTERED : windowX,
@@ -369,6 +370,7 @@ bool Framework::init(int sx, int sy)
 	windowSy = sy;
 	
 #if ENABLE_OPENGL
+	fassert(globals.glContext == nullptr);
 	globals.glContext = SDL_GL_CreateContext(globals.mainWindow);
 	checkErrorGL();
 	
@@ -429,6 +431,7 @@ bool Framework::init(int sx, int sy)
 	
 	for (int i = 0; i < numJoysticks && i < MAX_GAMEPAD; ++i)
 	{
+		fassert(globals.joystick[i] == nullptr);
 		globals.joystick[i] = SDL_JoystickOpen(i);
 	}
 #endif
@@ -436,12 +439,14 @@ bool Framework::init(int sx, int sy)
 #if ENABLE_PROFILING
 	if (framework.enableProfiling)
 	{
+		fassert(globals.rmt == nullptr);
 		if (rmt_CreateGlobalInstance(&globals.rmt) != RMT_ERROR_NONE)
 			return false;
 		rmt_BindOpenGL();
 	}
 #endif
 
+	fassert(globals.builtinShaders == nullptr);
 	globals.builtinShaders = new BuiltinShaders();
 
 	if (enableMidi)
@@ -457,6 +462,7 @@ bool Framework::init(int sx, int sy)
 
 	// initialize FreeType
 	
+	fassert(globals.freeType == nullptr);
 	if (FT_Init_FreeType(&globals.freeType) != 0)
 	{
 		logError("failed to initialize FreeType");
@@ -501,6 +507,7 @@ bool Framework::init(int sx, int sy)
 	
 	// make sure we are focused
 	
+	fassert(globals.currentWindow == nullptr);
 	globals.currentWindow = globals.mainWindow;
 
 	SDL_RaiseWindow(globals.currentWindow);
@@ -7293,6 +7300,9 @@ static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
 static bool s_gxTextureEnabled = false;
 
+static int s_gxLastPrimitiveType = -1;
+static int s_gxLastVertexCount = -1;
+
 static const VsInput vsInputs[] =
 {
 	{ VS_POSITION, 4, GL_FLOAT, 0, offsetof(GxVertex, px) },
@@ -7358,6 +7368,7 @@ void gxInitialize()
 	{
 		const GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 		const int bufferSize = sizeof(GxVertex) * 1024;
+		fassert(s_gxVertexBufferRing == 0);
 		glGenBuffers(1, &s_gxVertexBufferRing);
 		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferRing);
 		glBufferStorage(GL_ARRAY_BUFFER, bufferSize, 0, flags);
@@ -7387,6 +7398,17 @@ void gxShutdown()
 		glDeleteBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
 		memset(s_gxIndexBufferObject, 0, sizeof(s_gxIndexBufferObject));
 	}
+	
+	s_gxPrimitiveType = -1;
+	s_gxVertices = nullptr;
+	s_gxVertexCount = 0;
+	s_gxMaxVertexCount = 0;
+	s_gxPrimitiveSize = 0;
+	s_gxVertex = GxVertex();
+	s_gxTextureEnabled = false;
+	
+	s_gxLastPrimitiveType = -1;
+	s_gxLastVertexCount = -1;
 }
 
 static void gxFlush(bool endOfBatch)
@@ -7434,13 +7456,10 @@ static void gxFlush(bool endOfBatch)
 	#else
 		bool needToRegenerateIndexBuffer = false;
         
-        static int lastPrimitiveType = -1;
-        static int lastVertexCount = -1;
-        
-		if (s_gxPrimitiveType != lastPrimitiveType || s_gxVertexCount != lastVertexCount)
+		if (s_gxPrimitiveType != s_gxLastPrimitiveType || s_gxVertexCount != s_gxLastVertexCount)
 		{
-			lastPrimitiveType = s_gxPrimitiveType;
-			lastVertexCount = s_gxVertexCount;
+			s_gxLastPrimitiveType = s_gxPrimitiveType;
+			s_gxLastVertexCount = s_gxVertexCount;
 
 			needToRegenerateIndexBuffer = true;
 		}
