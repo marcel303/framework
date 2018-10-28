@@ -82,11 +82,11 @@ void AudioNodeBiquad::tick(const float dt)
 	{
 		resultOutput.set(*input);
 	}
-	else if (Fc == 0.f)
+	else if (Fc == 0.0)
 	{
 		resultOutput.setZero();
 		
-		biquad = BiquadFilter();
+		biquad = BiquadFilter<double>();
 	}
 	else
 	{

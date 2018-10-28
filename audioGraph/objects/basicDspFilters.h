@@ -31,9 +31,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #define BIQUAD_OPTIMIZE 1
 
-extern const float kBiquadFlatQ;
-
-// todo : use float or double for biquad ?
+extern const double kBiquadFlatQ;
 
 enum BiquadType
 {
@@ -46,27 +44,44 @@ enum BiquadType
     kBiquadHighshelf
 };
 
+template <typename real>
 struct BiquadFilter
 {
-	double a0;
-	double a1;
-	double a2;
-	double b1;
-	double b2;
+	real a0;
+	real a1;
+	real a2;
+	real b1;
+	real b2;
 	
 #if BIQUAD_OPTIMIZE
-	double h1;
-	double h2;
+	real h1;
+	real h2;
 #else
-	double x1;
-	double x2;
-	double y1;
-	double y2;
+	real x1;
+	real x2;
+	real y1;
+	real y2;
 #endif
 
-	BiquadFilter();
+	BiquadFilter()
+		: a0(0)
+		, a1(0)
+		, a2(0)
+		, b1(0)
+		, b2(0)
+	#if BIQUAD_OPTIMIZE
+		, h1(0)
+		, h2(0)
+	#else
+		, x1(0)
+		, x2(0)
+		, y1(0)
+		, y2(0)
+	#endif
+	{
+	}
 	
-	void make(const BiquadType type, const double Fc, const double Q, const double peakGainDB)
+	void make(const BiquadType type, const real Fc, const real Q, const real peakGainDB)
 	{
 		switch (type)
 		{
@@ -100,11 +115,11 @@ struct BiquadFilter
 		}
 	}
 	
-	void makeLowpass(const double Fc, const double Q, const double peakGainDB)
+	void makeLowpass(const real Fc, const real Q, const real peakGainDB)
 	{
-		const double K = std::tan(M_PI * Fc);
+		const real K = std::tan(real(M_PI) * Fc);
 		
-		const double norm = 1 / (1 + K / Q + K * K);
+		const real norm = 1 / (1 + K / Q + K * K);
 		
 		a0 = K * K * norm;
 		a1 = 2 * a0;
@@ -113,11 +128,11 @@ struct BiquadFilter
 		b2 = (1 - K / Q + K * K) * norm;
 	}
 	
-	void makeHighpass(const double Fc, const double Q, const double peakGainDB)
+	void makeHighpass(const real Fc, const real Q, const real peakGainDB)
 	{
-		const double K = std::tan(M_PI * Fc);
+		const real K = std::tan(real(M_PI) * Fc);
 		
-		const double norm = 1 / (1 + K / Q + K * K);
+		const real norm = 1 / (1 + K / Q + K * K);
 		
 		a0 = 1 * norm;
 		a1 = -2 * a0;
@@ -126,11 +141,11 @@ struct BiquadFilter
 		b2 = (1 - K / Q + K * K) * norm;
 	}
 	
-	void makeBandpass(const double Fc, const double Q, const double peakGainDB)
+	void makeBandpass(const real Fc, const real Q, const real peakGainDB)
 	{
-		const double K = std::tan(M_PI * Fc);
+		const real K = std::tan(real(M_PI) * Fc);
 		
-		const double norm = 1 / (1 + K / Q + K * K);
+		const real norm = 1 / (1 + K / Q + K * K);
 		
 		a0 = K / Q * norm;
 		a1 = 0;
@@ -139,11 +154,11 @@ struct BiquadFilter
 		b2 = (1 - K / Q + K * K) * norm;
 	}
 	
-	void makeNotch(const double Fc, const double Q, const double peakGainDB)
+	void makeNotch(const real Fc, const real Q, const real peakGainDB)
 	{
-		const double K = std::tan(M_PI * Fc);
+		const real K = std::tan(real(M_PI) * Fc);
 		
-		const double norm = 1 / (1 + K / Q + K * K);
+		const real norm = 1 / (1 + K / Q + K * K);
 		
 		a0 = (1 + K * K) * norm;
 		a1 = 2 * (K * K - 1) * norm;
@@ -152,15 +167,15 @@ struct BiquadFilter
 		b2 = (1 - K / Q + K * K) * norm;
 	}
 	
-	void makePeak(const double Fc, const double Q, const double peakGainDB)
+	void makePeak(const real Fc, const real Q, const real peakGainDB)
 	{
-		const double K = std::tan(M_PI * Fc);
-		const double V = std::pow(10.0, std::abs(peakGainDB) / 20.0);
+		const real K = std::tan(real(M_PI) * Fc);
+		const real V = std::pow(real(10), std::abs(peakGainDB) / real(20));
 		
 		if (peakGainDB >= 0)
 		{
 			// boost
-			const double norm = 1 / (1 + 1/Q * K + K * K);
+			const real norm = 1 / (1 + 1/Q * K + K * K);
 			a0 = (1 + V/Q * K + K * K) * norm;
 			a1 = 2 * (K * K - 1) * norm;
 			a2 = (1 - V/Q * K + K * K) * norm;
@@ -170,7 +185,7 @@ struct BiquadFilter
 		else
 		{
 			// cut
-			const double norm = 1 / (1 + V/Q * K + K * K);
+			const real norm = 1 / (1 + V/Q * K + K * K);
 			a0 = (1 + 1/Q * K + K * K) * norm;
 			a1 = 2 * (K * K - 1) * norm;
 			a2 = (1 - 1/Q * K + K * K) * norm;
@@ -179,15 +194,15 @@ struct BiquadFilter
 		}
 	}
 	
-	void makeLowshelf(const double Fc, const double Q, const double peakGainDB)
+	void makeLowshelf(const real Fc, const real Q, const real peakGainDB)
 	{
-		const double K = std::tan(M_PI * Fc);
-		const double V = std::pow(10.0, std::abs(peakGainDB) / 20.0);
+		const real K = std::tan(real(M_PI) * Fc);
+		const real V = std::pow(real(10), std::abs(peakGainDB) / real(20));
 		
 		if (peakGainDB >= 0)
 		{
 			// boost
-			const double norm = 1 / (1 + sqrt(2) * K + K * K);
+			const real norm = 1 / (1 + sqrt(2) * K + K * K);
 			a0 = (1 + sqrt(2*V) * K + V * K * K) * norm;
 			a1 = 2 * (V * K * K - 1) * norm;
 			a2 = (1 - sqrt(2*V) * K + V * K * K) * norm;
@@ -197,7 +212,7 @@ struct BiquadFilter
 		else
 		{
 			// cut
-			const double norm = 1 / (1 + sqrt(2*V) * K + V * K * K);
+			const real norm = 1 / (1 + sqrt(2*V) * K + V * K * K);
 			a0 = (1 + sqrt(2) * K + K * K) * norm;
 			a1 = 2 * (K * K - 1) * norm;
 			a2 = (1 - sqrt(2) * K + K * K) * norm;
@@ -206,15 +221,15 @@ struct BiquadFilter
 		}
 	}
 	
-	void makeHighshelf(const double Fc, const double Q, const double peakGainDB)
+	void makeHighshelf(const real Fc, const real Q, const real peakGainDB)
 	{
-		const double K = std::tan(M_PI * Fc);
-		const double V = std::pow(10.0, std::abs(peakGainDB) / 20.0);
+		const real K = std::tan(real(M_PI) * Fc);
+		const real V = std::pow(real(10), std::abs(peakGainDB) / real(20));
 		
 		if (peakGainDB >= 0)
 		{
 			// boost
-			const double norm = 1 / (1 + sqrt(2) * K + K * K);
+			const real norm = 1 / (1 + sqrt(2) * K + K * K);
 			a0 = (V + sqrt(2*V) * K + K * K) * norm;
 			a1 = 2 * (K * K - V) * norm;
 			a2 = (V - sqrt(2*V) * K + K * K) * norm;
@@ -224,7 +239,7 @@ struct BiquadFilter
 		else
 		{
 			// cut
-			const double norm = 1 / (V + sqrt(2*V) * K + K * K);
+			const real norm = 1 / (V + sqrt(2*V) * K + K * K);
 			a0 = (1 + sqrt(2) * K + K * K) * norm;
 			a1 = 2 * (K * K - 1) * norm;
 			a2 = (1 - sqrt(2) * K + K * K) * norm;
@@ -234,9 +249,9 @@ struct BiquadFilter
 	}
 	
 #if BIQUAD_OPTIMIZE
-	double processSingle(const double value)
+	real processSingle(const real value)
 	{
-		const double result = value * a0 + h1;
+		const real result = value * a0 + h1;
 		
 		h1 = value * a1 + h2 - b1 * result;
 		h2 = value * a2      - b2 * result;
@@ -244,9 +259,9 @@ struct BiquadFilter
 		return result;
 	}
 #else
-	double processSingle(const double x0)
+	real processSingle(const real x0)
 	{
-		const double y0 = a0 * x0 + a1 * x1 + a2 * x2 - b1 * y1 - b2 * y2;
+		const real y0 = a0 * x0 + a1 * x1 + a2 * x2 - b1 * y1 - b2 * y2;
 
 		x2 = x1;
 		x1 = x0;

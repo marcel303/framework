@@ -59,7 +59,7 @@ struct AudioNodeBiquad : AudioNodeBase
 		kOutput_COUNT
 	};
 	
-	BiquadFilter biquad;
+	BiquadFilter<double> biquad;
 	
 	AudioFloat resultOutput;
 

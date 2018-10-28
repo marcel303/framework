@@ -29,12 +29,7 @@
 #include <complex>
 #include <string.h>
 
-const float kBiquadFlatQ = 1.f / sqrtf(2.f);
-
-BiquadFilter::BiquadFilter()
-{
-	memset(this, 0, sizeof(*this));
-}
+const double kBiquadFlatQ = 1.0 / sqrt(2.0);
 
 static std::complex<double> evaluateCoefficients(const double * coeffs, const int numCoefficients, const double w)
 {
