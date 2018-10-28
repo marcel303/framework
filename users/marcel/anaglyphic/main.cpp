@@ -796,9 +796,7 @@ int main(int argc, char * argv[])
 			const float dt = framework.timeStep;
 
 			scene->tick(dt);
-
-			// todo : colour switch background or line style after x amount of time
-
+			
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				const float eyeX = 0.f;
