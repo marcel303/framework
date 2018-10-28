@@ -5,7 +5,16 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "Timer.h" // todo : remove
+#if defined(DEBUG)
+	#define ENABLE_TIMING 1
+#else
+	#define ENABLE_TIMING 0
+#endif
+
+#if ENABLE_TIMING
+	#include "Timer.h"
+#endif
+
 // todo : use a single page file, use block-aligned IO
 // todo : make page file location an init option
 
@@ -53,16 +62,18 @@ bool pageLoad(const char * name, const int baseSize, const int pageSize, const i
 
 	char filename[1024];
 
+#if ENABLE_TIMING
 	const int64_t t1 = g_TimerRT.TimeUS_get();
-	(void)t1;
+#endif
 
 	if (result)
 	{
 		result &= pageFilename(name, baseSize, pageSize, cubeSide, levelSize, pageX, pageY, filename, sizeof(filename));
 	}
 
+#if ENABLE_TIMING
 	const int64_t t2 = g_TimerRT.TimeUS_get();
-	(void)t2;
+#endif
 	
 	if (result)
 	{
@@ -72,10 +83,13 @@ bool pageLoad(const char * name, const int baseSize, const int pageSize, const i
 			logError("failed to load page %s", filename);
 	}
 
+#if ENABLE_TIMING
 	const int64_t t3 = g_TimerRT.TimeUS_get();
-	(void)t3;
+#endif
 
-	//printf("pageLoad took %dus + %dus\n", int(t2 - t1), int(t3 - t2));
+#if ENABLE_TIMING
+	printf("pageLoad took %dus + %dus\n", int(t2 - t1), int(t3 - t2));
+#endif
 
 	return result;
 }
@@ -109,15 +123,17 @@ bool pageLoad(const char * filename, PageData & pageData)
 {
 	bool result = true;
 
+#if ENABLE_TIMING
 	const int64_t t1 = g_TimerRT.TimeUS_get();
-	(void)t1;
+#endif
 
 	FILE * f = fopen(filename, "rb");
 
 	result &= f != nullptr;
 
+#if ENABLE_TIMING
 	const int64_t t2 = g_TimerRT.TimeUS_get();
-	(void)t2;
+#endif
 
 	if (result)
 	{
@@ -129,8 +145,9 @@ bool pageLoad(const char * filename, PageData & pageData)
 #endif
 	}
 
+#if ENABLE_TIMING
 	const int64_t t3 = g_TimerRT.TimeUS_get();
-	(void)t3;
+#endif
 
 	if (f != nullptr)
 	{
@@ -138,10 +155,13 @@ bool pageLoad(const char * filename, PageData & pageData)
 		f = nullptr;
 	}
 
+#if ENABLE_TIMING
 	const int64_t t4 = g_TimerRT.TimeUS_get();
-	(void)t4;
+#endif
 
-	//printf("pageLoad took %dus + %dus + %dus\n", int(t2 - t1), int(t3 - t2), int(t4 - t3));
+#if ENABLE_TIMING
+	printf("pageLoad took %dus + %dus + %dus\n", int(t2 - t1), int(t3 - t2), int(t4 - t3));
+#endif
 
 	return result;
 }
