@@ -108,6 +108,9 @@ void testVfxNodeCreation()
 					logError("unknown type name in registration: nodeTypeName=%s, index=%d, typeName=%s", registration->typeName.c_str(), i, r.typeName.c_str());
 				else if (type != vfxNode->inputs[i].type)
 					logError("different types in registration vs vfx node. nodeTypeName=%s, index=%d, typeName=%s", registration->typeName.c_str(), i, r.typeName.c_str());
+				
+				if (type == kVfxPlugType_Trigger && r.name.size() > 0 && r.name.back() != '!')
+					logError("name for input trigger doesn't end with '!'. nodeTypeName=%s, index=%d, typeName=%s", registration->typeName.c_str(), i, r.typeName.c_str());
 			}
 		}
 		
@@ -133,6 +136,9 @@ void testVfxNodeCreation()
 					logError("unknown type name in registration: nodeTypeName=%s, index=%d, typeName=%s", registration->typeName.c_str(), i, r.typeName.c_str());
 				else if (type != vfxNode->outputs[i].type)
 					logError("different types in registration vs vfx node. nodeTypeName=%s, index=%d, typeName=%s", registration->typeName.c_str(), i, r.typeName.c_str());
+				
+				if (type == kVfxPlugType_Trigger && r.name.size() > 0 && r.name.back() != '!')
+					logError("name for output trigger doesn't end with '!'. nodeTypeName=%s, index=%d, typeName=%s", registration->typeName.c_str(), i, r.typeName.c_str());
 			}
 		}
 		
