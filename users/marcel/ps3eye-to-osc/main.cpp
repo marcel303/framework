@@ -23,7 +23,7 @@
 #define FPS 187
 
 #include "framework.h"
-#include "../../../libparticle/ui.h" // todo : rename
+#include "ui.h"
 
 #include "../../../vfxGraph/objects/blobDetector.h"
 #include "../../../vfxGraph/objects/blobDetector.cpp"
