@@ -146,13 +146,15 @@ void VfxNodeSound::tick(const float dt)
 	
 	//
 	
-	const char * source = getInputString(kInput_Source, "");
+	const char * source = getInputString(kInput_Source, nullptr);
 	const bool loop = getInputBool(kInput_Loop, true);
 	const bool autoPlay = getInputBool(kInput_AutoPlay, true);
 	const float volume = getInputFloat(kInput_Volume, 1.f);
 	
 	if (audioStream == nullptr)
 	{
+		// ensure audio stream exists
+		
 		Assert(audioStream == nullptr);
 		audioStream = new AudioStream_Vorbis();
 		
@@ -160,6 +162,8 @@ void VfxNodeSound::tick(const float dt)
 			audioStream->Open(source, loop);
 		
 		Assert(mixingAudioStream.timeInSamples == 0);
+		
+		// ensure audio output exists
 		
 		Assert(audioOutput == nullptr);
 		audioOutput = new AudioOutput_PortAudio();
@@ -170,23 +174,40 @@ void VfxNodeSound::tick(const float dt)
 	
 	//
 	
-	if (audioStream->IsOpen_get() || autoPlay)
+	if (source == nullptr)
 	{
-		if (strcmp(source, audioStream->FileName_get()) != 0 || loop != audioStream->Loop_get())
+		SDL_LockMutex(mutex);
 		{
-			SDL_LockMutex(mutex);
-			{
-				audioStream->Open(source, loop);
-				
-				mixingAudioStream.timeInSamples = 0;
-			}
-			SDL_UnlockMutex(mutex);
+			audioStream->Close();
+			
+			mixingAudioStream.timeInSamples = 0;
 		}
+		SDL_UnlockMutex(mutex);
+		
+		timeOutput = 0.f;
+		
+		beatCountOutput = 0;
 	}
+	else
+	{
+		if (audioStream->IsOpen_get() || autoPlay)
+		{
+			if (strcmp(source, audioStream->FileName_get()) != 0 || loop != audioStream->Loop_get())
+			{
+				SDL_LockMutex(mutex);
+				{
+					audioStream->Open(source, loop);
+					
+					mixingAudioStream.timeInSamples = 0;
+				}
+				SDL_UnlockMutex(mutex);
+			}
+		}
+		
+		audioOutput->Volume_set(volume);
 	
-	audioOutput->Volume_set(volume);
-	
-	audioOutput->Update();
+		audioOutput->Update();
+	}
 	
 	{
 		const double bpm = getInputFloat(kInput_BPM, 60.f);
@@ -213,32 +234,30 @@ void VfxNodeSound::tick(const float dt)
 
 void VfxNodeSound::init(const GraphNode & node)
 {
-	const char * source = getInputString(kInput_Source, "");
+	if (isPassthrough)
+		return;
+	
+	const char * source = getInputString(kInput_Source, nullptr);
 	const bool loop = getInputBool(kInput_Loop, true);
 	const bool autoPlay = getInputBool(kInput_AutoPlay, true);
 	const float volume = getInputFloat(kInput_Volume, 1.f);
 	
-	if (autoPlay)
+	audioStream = new AudioStream_Vorbis();
+	
+	if (autoPlay && source != nullptr)
 	{
-		audioStream = new AudioStream_Vorbis();
 		audioStream->Open(source, loop);
 		
 		mixingAudioStream.timeInSamples = 0;
 		
-		isPaused = false;
-		
-		audioOutput = new AudioOutput_PortAudio();
-		audioOutput->Initialize(2, 44100, 256);
-		audioOutput->Volume_set(volume);
-		audioOutput->Play(&mixingAudioStream);
-		
 		Assert(timeOutput == 0.f);
 		Assert(beatCountOutput == 0);
 	}
-	else
-	{
-		isPaused = true;
-	}
+	
+	audioOutput = new AudioOutput_PortAudio();
+	audioOutput->Initialize(2, 44100, 256);
+	audioOutput->Volume_set(volume);
+	audioOutput->Play(&mixingAudioStream);
 }
 
 void VfxNodeSound::handleTrigger(const int inputSocketIndex)
