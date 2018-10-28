@@ -648,12 +648,12 @@ JGMOD *load_it (const char *filename, int start_offset)
 		si->volume = default_volume;
 		si->transpose = 0;
 		
-		char sample_name[26];
+		char sample_name[27];
 		jgmod_fread(sample_name, 26, f);
+		sample_name[26] = 0;
 	#ifdef JG_debug
 		//printf("sample name: %s\n", sample_name);
 	#endif
-		// todo : safe strcpy
 		strcpy(si->name, sample_name);
 		
 		/*
