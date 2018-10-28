@@ -55,14 +55,21 @@ int main(int argc, char * argv[])
 					TextEditor::ErrorMarkers errorMarkers;
 					if (shader.getErrorMessages(errorMessages))
 					{
+						// make sure the buffers passed to sscanf are large enough to store the result
+						
+						size_t maxSize = 0;
+						
+						for (size_t i = 0; i < errorMessages.size(); ++i)
+							if (errorMessages[i].size() > maxSize)
+								maxSize = errorMessages[i].size();
+						
+						char * type = new char[maxSize + 1];
+						char * message = new char[maxSize + 1];
+						
 						for (size_t i = 0; i < errorMessages.size(); ++i)
 						{
-							char type[128];
 							int lineNumber;
 							int fileId;
-							char message[4096];
-							
-							// fixme : this is very unsafe. there is no gaurantee we won't cause a buffer overflow in either type or message buffers!
 							
 							const int n = sscanf(errorMessages[i].c_str(), "%s %d:%d: %s", type, &fileId, &lineNumber, message);
 							
@@ -71,6 +78,9 @@ int main(int argc, char * argv[])
 								errorMarkers[lineNumber + 1] = message;
 							}
 						}
+						
+						delete [] type;
+						delete [] message;
 					}
 					textEditor.SetErrorMarkers(errorMarkers);
 
@@ -81,8 +91,12 @@ int main(int argc, char * argv[])
 						const GLuint program = shader.getProgram();
 						
 						GLint numUniforms = 0;
-						glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &numUniforms);
-						checkErrorGL();
+						
+						if (shader.isValid())
+						{
+							glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &numUniforms);
+							checkErrorGL();
+						}
 						
 						for (auto i = 0; i < numUniforms; ++i)
 						{
