@@ -287,7 +287,8 @@ struct Recorder
 			
 			//LOG_DBG("got frame data!", 0);
 			
-			// todo : make thread safe
+			// note : we copy the OSC address prefix to ensure it's thread safe to use later
+			//        it may change and become invalid due to ui interactions otherwise
 			
 			std::string oscAddressPrefix;
 			
