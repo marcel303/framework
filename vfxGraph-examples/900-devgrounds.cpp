@@ -169,6 +169,87 @@ VFX_NODE_TYPE(VfxNodeResourceTest)
 
 //
 
+struct VfxNodeTestDynamicSockets : VfxNodeBase
+{
+	enum Inputs
+	{
+		kInput_TestInputs,
+		kInput_TestOutputs,
+		kInput_COUNT
+	};
+	
+	enum Outputs
+	{
+		kOutput_COUNT
+	};
+	
+	VfxNodeTestDynamicSockets()
+		: VfxNodeBase()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_TestInputs, kVfxPlugType_Bool);
+		addInput(kInput_TestOutputs, kVfxPlugType_Bool);
+	}
+	
+	virtual void tick(const float dt)
+	{
+		const bool testInputs = getInputBool(kInput_TestInputs, false);
+		const bool testOutputs = getInputBool(kInput_TestOutputs, false);
+		
+		if (testInputs)
+		{
+			// test dynamically growing and shrinking list of inputs as a stress test
+			
+			const int kNumInputs = std::round(std::sin(framework.time) * 4.f + 5.f);
+
+			DynamicInput inputs[kNumInputs];
+			
+			for (int i = 0; i < kNumInputs; ++i)
+			{
+				char name[32];
+				sprintf_s(name, sizeof(name), "dynamic%d", i + 1);
+				
+				inputs[i].name = name;
+				inputs[i].type = kVfxPlugType_Float;
+			}
+			
+			setDynamicInputs(inputs, kNumInputs);
+		}
+
+		if (testOutputs)
+		{
+			// test dynamically growing and shrinking list of inputs as a stress test
+			
+			const int kNumOutputs = std::round(std::sin(framework.time) * 4.f + 5.f);
+
+			DynamicOutput outputs[kNumOutputs];
+			
+			static float value = 1.f;
+			
+			for (int i = 0; i < kNumOutputs; ++i)
+			{
+				char name[32];
+				sprintf_s(name, sizeof(name), "dynamic%d", i + 1);
+				
+				outputs[i].name = name;
+				outputs[i].type = kVfxPlugType_Float;
+				outputs[i].mem = &value;
+			}
+			
+			setDynamicOutputs(outputs, kNumOutputs);
+		}
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeTestDynamicSockets)
+{
+	typeName = "test.dynamicSockets";
+	in("testInputs", "bool", "0");
+	in("testOutputs", "bool", "0");
+}
+
+//
+
 #include "Path.h"
 
 static std::string filedrop;
