@@ -205,7 +205,7 @@ void Osc4D::sourceDoppler(const bool enable, const float scale, const float smoo
 	}
 }
 
-void Osc4D::sourceDistanceIntensity(const bool enable, const float treshold, const float curve)
+void Osc4D::sourceDistanceIntensity(const bool enable, const float threshold, const float curve)
 {
 	beginSource("distanceIntensity/enable");
 	b(enable);
@@ -214,7 +214,7 @@ void Osc4D::sourceDistanceIntensity(const bool enable, const float treshold, con
 	if (enable)
 	{
 		beginSource("distanceIntensity/threshold");
-		f(treshold);
+		f(threshold);
 		end();
 
 		beginSource("distanceIntensity/curve");
@@ -223,7 +223,7 @@ void Osc4D::sourceDistanceIntensity(const bool enable, const float treshold, con
 	}
 }
 
-void Osc4D::sourceDistanceDamping(const bool enable, const float treshold, const float curve)
+void Osc4D::sourceDistanceDamping(const bool enable, const float threshold, const float curve)
 {
 	beginSource("distanceDamping/enable");
 	b(enable);
@@ -232,7 +232,7 @@ void Osc4D::sourceDistanceDamping(const bool enable, const float treshold, const
 	if (enable)
 	{
 		beginSource("distanceDamping/threshold");
-		f(treshold);
+		f(threshold);
 		end();
 
 		beginSource("distanceDamping/curve");
@@ -241,7 +241,7 @@ void Osc4D::sourceDistanceDamping(const bool enable, const float treshold, const
 	}
 }
 
-void Osc4D::sourceDistanceDiffusion(const bool enable, const float treshold, const float curve)
+void Osc4D::sourceDistanceDiffusion(const bool enable, const float threshold, const float curve)
 {
 	beginSource("distanceDiffusion/enable");
 	b(enable);
@@ -250,7 +250,7 @@ void Osc4D::sourceDistanceDiffusion(const bool enable, const float treshold, con
 	if (enable)
 	{
 		beginSource("distanceDiffusion/threshold");
-		f(treshold);
+		f(threshold);
 		end();
 
 		beginSource("distanceDiffusion/curve");
@@ -324,7 +324,7 @@ void Osc4D::setReturn(const int index, const char * path)
 	sprintf_s(returnOscName, sizeof(returnOscName), "/return%d/%s/", index + 1, path);
 }
 
-void Osc4D::returnDistanceIntensity(const int index, const bool enable, const float treshold, const float curve)
+void Osc4D::returnDistanceIntensity(const int index, const bool enable, const float threshold, const float curve)
 {
 	setReturn(index, "distanceIntensity");
 	
@@ -335,7 +335,7 @@ void Osc4D::returnDistanceIntensity(const int index, const bool enable, const fl
 	if (enable)
 	{
 		beginReturn("threshold");
-		f(treshold);
+		f(threshold);
 		end();
 		
 		beginReturn("curve");
@@ -344,7 +344,7 @@ void Osc4D::returnDistanceIntensity(const int index, const bool enable, const fl
 	}
 }
 
-void Osc4D::returnDistanceDamping(const int index, const bool enable, const float treshold, const float curve)
+void Osc4D::returnDistanceDamping(const int index, const bool enable, const float threshold, const float curve)
 {
 	setReturn(index, "distanceDamping");
 	
@@ -355,7 +355,7 @@ void Osc4D::returnDistanceDamping(const int index, const bool enable, const floa
 	if (enable)
 	{
 		beginReturn("threshold");
-		f(treshold);
+		f(threshold);
 		end();
 		
 		beginReturn("curve");

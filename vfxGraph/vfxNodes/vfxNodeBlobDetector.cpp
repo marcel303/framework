@@ -74,7 +74,7 @@ VfxNodeBlobDetector::VfxNodeBlobDetector()
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
 	addInput(kInput_Channel, kVfxPlugType_Int);
 	addInput(kInput_Invert, kVfxPlugType_Bool);
-	addInput(kInput_TresholdValue, kVfxPlugType_Float);
+	addInput(kInput_ThresholdValue, kVfxPlugType_Float);
 	addInput(kInput_MaxBlobs, kVfxPlugType_Int);
 	addOutput(kOutput_Mask, kVfxPlugType_ImageCpu, &maskOutput);
 	addOutput(kOutput_X, kVfxPlugType_Channel, &xOutput);
@@ -94,7 +94,7 @@ VfxNodeBlobDetector::~VfxNodeBlobDetector()
 static int processLine_SSE2_1channel(
 	const uint8_t * __restrict src,
 	const int srcSize,
-	const int tresholdValue,
+	const int thresholdValue,
 	const bool invert,
 	uint8_t * __restrict dst)
 {
@@ -103,8 +103,8 @@ static int processLine_SSE2_1channel(
 	
 	const int srcSize_16 = srcSize / 16;
 	
-	const int sub = tresholdValue;
-	const int max = (255 - tresholdValue) * 1;
+	const int sub = thresholdValue;
+	const int max = (255 - thresholdValue) * 1;
 	const int mul = max ? (255 * 256 / max) : 0;
 	
 	const __m128i sub_8 = _mm_set1_epi16(sub);
@@ -142,7 +142,7 @@ static int processLine_SSE2_3channel(
 	const uint8_t * __restrict src2,
 	const uint8_t * __restrict src3,
 	const int srcSize,
-	const int tresholdValue,
+	const int thresholdValue,
 	const bool invert,
 	uint8_t * __restrict dst)
 {
@@ -153,8 +153,8 @@ static int processLine_SSE2_3channel(
 	
 	const int srcSize_16 = srcSize / 16;
 	
-	const int sub = tresholdValue * 3;
-	const int max = (255 - tresholdValue) * 3;
+	const int sub = thresholdValue * 3;
+	const int max = (255 - thresholdValue) * 3;
 	const int mul = max ? (255 * 256 / max) : 0;
 	
 	const __m128i sub_8 = _mm_set1_epi16(sub);
@@ -209,7 +209,7 @@ void VfxNodeBlobDetector::tick(const float dt)
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const Channel channel = (Channel)getInputInt(kInput_Channel, kChannel_RGB);
 	const bool invert = getInputBool(kInput_Invert, false);
-	const int tresholdValue = getInputFloat(kInput_TresholdValue, .5f) * 255.f;
+	const int thresholdValue = getInputFloat(kInput_ThresholdValue, .5f) * 255.f;
 	const int maxBlobs = std::max(0, std::min(kMaxBlobs, getInputInt(kInput_MaxBlobs, 256)));
 	
 	if (image == nullptr || isPassthrough)
@@ -232,12 +232,12 @@ void VfxNodeBlobDetector::tick(const float dt)
 		
 		// create mask
 		
-		const int add1 = - tresholdValue * 1;
-		const int max1 = (255 - tresholdValue) * 1;
+		const int add1 = - thresholdValue * 1;
+		const int max1 = (255 - thresholdValue) * 1;
 		const int mul1 = max1 ? (255 * 256 / max1) : 0;
 		
-		const int add3 = - tresholdValue * 3;
-		const int max3 = (255 - tresholdValue) * 3;
+		const int add3 = - thresholdValue * 3;
+		const int max3 = (255 - thresholdValue) * 3;
 		const int mul3 = max3 ? (255 * 256 / max3) : 0;
 		
 		if (image->numChannels == 1)
@@ -254,7 +254,7 @@ void VfxNodeBlobDetector::tick(const float dt)
 				int begin = 0;
 				
 			#if __SSE2__
-				begin = processLine_SSE2_1channel(src, maskSx, tresholdValue, invert, dst);
+				begin = processLine_SSE2_1channel(src, maskSx, thresholdValue, invert, dst);
 			#endif
 			
 				for (int x = begin; x < maskSx; ++x)
@@ -287,7 +287,7 @@ void VfxNodeBlobDetector::tick(const float dt)
 				
 			#if __SSE2__
 				// without SSE: 1200-1400us -> 290-300us with SSE
-				begin = processLine_SSE2_3channel(srcR, srcG, srcB, image->sx, tresholdValue, invert, dst);
+				begin = processLine_SSE2_3channel(srcR, srcG, srcB, image->sx, thresholdValue, invert, dst);
 			#endif
 			
 				for (int x = begin; x < maskSx; ++x)
@@ -332,7 +332,7 @@ void VfxNodeBlobDetector::tick(const float dt)
 				int begin = 0;
 				
 			#if __SSE2__
-				begin = processLine_SSE2_1channel(src, image->sx, tresholdValue, invert, dst);
+				begin = processLine_SSE2_1channel(src, image->sx, thresholdValue, invert, dst);
 			#endif
 			
 				for (int x = begin; x < image->sx; ++x)

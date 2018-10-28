@@ -146,13 +146,13 @@ void testBlobDetection()
 		
 		// detect blobs
 		
-		const int treshold = 255 * mouse.x / GFX_SX;
+		const int threshold = 255 * mouse.x / GFX_SX;
 		
 		const int kMaxBlobs = 128;
 		Blob blobs[kMaxBlobs];
 		
 		uint8_t values[SURFACE_SX * SURFACE_SY];
-		BlobDetector::computeValuesFromRGBA(rgba, SURFACE_SX, SURFACE_SY, treshold, values);
+		BlobDetector::computeValuesFromRGBA(rgba, SURFACE_SX, SURFACE_SY, threshold, values);
 		texture.upload(values, 1, SURFACE_SX, GL_RED, GL_UNSIGNED_BYTE);
 		
 		const int numBlobs = BlobDetector::detectBlobs(values, SURFACE_SX, SURFACE_SY, blobs, kMaxBlobs);

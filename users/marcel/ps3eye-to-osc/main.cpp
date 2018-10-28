@@ -114,7 +114,7 @@ static OscSender * s_oscSender = nullptr;
 
 //
 
-static void applyTreshold(
+static void applyThreshold(
 	const uint8_t * __restrict color_surface,
 	const int sx, const int sy,
 	const int _threshold,
@@ -154,7 +154,7 @@ struct FrameData
 	
 	uint8_t cameraImage[CAM_SX * CAM_SY];
 	
-	uint8_t tresholdedValues[CAM_SX * CAM_SY];
+	uint8_t thresholdedValues[CAM_SX * CAM_SY];
 	
 	uint8_t mask[CAM_SX * CAM_SY];
 	
@@ -166,7 +166,7 @@ struct FrameData
 	
 	void doDotDetection()
 	{
-		DotDetector::treshold(tresholdedValues, CAM_SX, mask, CAM_SX, CAM_SX, CAM_SY, DotDetector::kTresholdTest_GreaterEqual, 127);
+		DotDetector::threshold(thresholdedValues, CAM_SX, mask, CAM_SX, CAM_SX, CAM_SY, DotDetector::kThresholdTest_GreaterEqual, 127);
 		
 		numIslands = DotDetector::detectDots(mask, CAM_SX, CAM_SY, 20.f, islands, kMaxIslands, true);
 		
@@ -178,7 +178,7 @@ struct FrameData
 		Benchmark bm("blobDetection");
 		
 		uint8_t values[CAM_SX * CAM_SY];
-		memcpy(values, tresholdedValues, sizeof(values));
+		memcpy(values, thresholdedValues, sizeof(values));
 		
 		numBlobs = BlobDetector::detectBlobs(values, CAM_SX, CAM_SY, blobs, kMaxBlobs);
 		
@@ -464,9 +464,9 @@ struct Recorder
 			
 			//LOG_DBG("got frame data!", 0);
 			
-			applyTreshold(self->frameData.cameraImage, CAM_SX, CAM_SY, self->threshold, self->frameData.tresholdedValues);
+			applyThreshold(self->frameData.cameraImage, CAM_SX, CAM_SY, self->threshold, self->frameData.thresholdedValues);
 			
-			self->downsampledImage.downsample(self->frameData.tresholdedValues, 4.f);
+			self->downsampledImage.downsample(self->frameData.thresholdedValues, 4.f);
 			
 			self->frameData.doDotDetection();
 			
@@ -622,7 +622,7 @@ struct Controller
 		if (recorder != nullptr && recorder->frameData.cameraImage != nullptr)
 		{
 			//GLuint texture = createTextureFromR8(recorder->frameData, CAM_SX, CAM_SY, false, true);
-			GLuint texture = createTextureFromR8(recorder->frameData.tresholdedValues, CAM_SX, CAM_SY, false, true);
+			GLuint texture = createTextureFromR8(recorder->frameData.thresholdedValues, CAM_SX, CAM_SY, false, true);
 			
 			if (texture != 0)
 			{

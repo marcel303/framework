@@ -46,28 +46,28 @@ static __m128i _mm_cmpge_epu8(__m128i x, __m128i y)
 
 #endif
 
-void DotDetector::treshold(const uint8_t * __restrict src, const int srcPitch, uint8_t * __restrict dst, const int dstPitch, const int sx, const int sy, const TresholdTest test, const uint8_t tresholdValue)
+void DotDetector::threshold(const uint8_t * __restrict src, const int srcPitch, uint8_t * __restrict dst, const int dstPitch, const int sx, const int sy, const ThresholdTest test, const uint8_t thresholdValue)
 {
-	// creste treshold mask
+	// creste threshold mask
 	
 	for (int y = 0; y < sy; ++y)
 	{
 		const uint8_t * __restrict srcItr = src + srcPitch * y;
 			  uint8_t * __restrict dstItr = dst + dstPitch * y;
 		
-		if (test == kTresholdTest_GreaterEqual)
+		if (test == kThresholdTest_GreaterEqual)
 		{
 			const int numPixels = sx;
 			
 		#if USE_SSE2
-			const __m128i tresholdVec = _mm_set1_epi8(tresholdValue);
+			const __m128i thresholdVec = _mm_set1_epi8(thresholdValue);
 			
 			const int numPixels16 = numPixels >> 4;
 			
 			for (int i = 0; i < numPixels16; ++i)
 			{
 				const __m128i srcVec = _mm_loadu_si128((__m128i*)srcItr);
-				const __m128i dstVec = _mm_cmpge_epu8(srcVec, tresholdVec);
+				const __m128i dstVec = _mm_cmpge_epu8(srcVec, thresholdVec);
 				
 				_mm_storeu_si128((__m128i*)dstItr, dstVec);
 				
@@ -79,14 +79,14 @@ void DotDetector::treshold(const uint8_t * __restrict src, const int srcPitch, u
 			{
 				const uint8_t value = *srcItr++;
 				
-				*dstItr++ = value >= tresholdValue ? 0xff : 0x00;
+				*dstItr++ = value >= thresholdValue ? 0xff : 0x00;
 			}
 		#else
 			for (int i = 0; i < numPixels; ++i)
 			{
 				const uint8_t value = *srcItr++;
 				
-				*dstItr++ = value >= tresholdValue ? 0xff : 0x00;
+				*dstItr++ = value >= thresholdValue ? 0xff : 0x00;
 			}
 		#endif
 		}
@@ -95,14 +95,14 @@ void DotDetector::treshold(const uint8_t * __restrict src, const int srcPitch, u
 			const int numPixels = sx;
 			
 		#if USE_SSE2
-			const __m128i tresholdVec = _mm_set1_epi8(tresholdValue);
+			const __m128i thresholdVec = _mm_set1_epi8(thresholdValue);
 			
 			const int numPixels16 = numPixels >> 4;
 			
 			for (int i = 0; i < numPixels16; ++i)
 			{
 				const __m128i srcVec = _mm_loadu_si128((__m128i*)srcItr);
-				const __m128i dstVec = _mm_cmple_epu8(srcVec, tresholdVec);
+				const __m128i dstVec = _mm_cmple_epu8(srcVec, thresholdVec);
 				
 				_mm_storeu_si128((__m128i*)dstItr, dstVec);
 				
@@ -114,14 +114,14 @@ void DotDetector::treshold(const uint8_t * __restrict src, const int srcPitch, u
 			{
 				const uint8_t value = *srcItr++;
 				
-				*dstItr++ = value <= tresholdValue ? 0xff : 0x00;
+				*dstItr++ = value <= thresholdValue ? 0xff : 0x00;
 			}
 		#else
 			for (int i = 0; i < numPixels; ++i)
 			{
 				const uint8_t value = *srcItr++;
 				
-				*dstItr++ = value <= tresholdValue ? 0xff : 0x00;
+				*dstItr++ = value <= thresholdValue ? 0xff : 0x00;
 			}
 		#endif
 		}
@@ -178,7 +178,7 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 		for (int x = 0; x < sx; )
 		{
 		#if USE_SSE2
-			// see if any of the next 16 pixels passes the treshold test. if not, skip the next 16 pixels
+			// see if any of the next 16 pixels passes the threshold test. if not, skip the next 16 pixels
 			// we only do this test once every 16 pixels, to avoid redundant calculations
 			
 			if ((x & 15) == 0)

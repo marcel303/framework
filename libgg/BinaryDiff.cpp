@@ -2,7 +2,7 @@
 #include "BinaryDiff.h"
 #include "Log.h"
 
-BinaryDiffResult BinaryDiff(const void * bytes1, const void * bytes2, uint32_t byteCount, uint32_t skipTreshold)
+BinaryDiffResult BinaryDiff(const void * bytes1, const void * bytes2, uint32_t byteCount, uint32_t skipThreshold)
 {
 	uint32_t diffCount = 0;
 	uint32_t diffBytes = 0;
@@ -27,7 +27,7 @@ BinaryDiffResult BinaryDiff(const void * bytes1, const void * bytes2, uint32_t b
 
 		if (inBatch)
 		{
-			if (atEnd || (equal && skipSize == skipTreshold))
+			if (atEnd || (equal && skipSize == skipThreshold))
 			{
 				// end current batch
 

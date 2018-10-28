@@ -121,8 +121,8 @@ void testDotDetector()
 	uint64_t averageTimeM = 0;
 	
 	bool useGrid = true;
-	int tresholdFunction = 1;
-	int tresholdValue = 32;
+	int thresholdFunction = 1;
+	int thresholdValue = 32;
 	int maxRadius = 10;
 	
 #if USE_READPIXELS_OPTIMIZE
@@ -160,11 +160,11 @@ void testDotDetector()
 		if (keyboard.wentDown(SDLK_g))
 			useGrid = !useGrid;
 		if (keyboard.wentDown(SDLK_t))
-			tresholdFunction = (tresholdFunction + 1) % 2;
+			thresholdFunction = (thresholdFunction + 1) % 2;
 		if (keyboard.wentDown(SDLK_UP, true))
-			tresholdValue += 1;
+			thresholdValue += 1;
 		if (keyboard.wentDown(SDLK_DOWN, true))
-			tresholdValue -= 1;
+			thresholdValue -= 1;
 		if (keyboard.wentDown(SDLK_a, true))
 			maxRadius += 1;
 		if (keyboard.wentDown(SDLK_z, true) && maxRadius > 1)
@@ -312,10 +312,10 @@ void testDotDetector()
 			checkErrorGL();
 		#endif
 			
-			const int treshold = tresholdFunction == 0 ? 255 - tresholdValue : tresholdValue;
-			const DotDetector::TresholdTest test = tresholdFunction == 0 ? DotDetector::kTresholdTest_GreaterEqual : DotDetector::kTresholdTest_LessEqual;
+			const int threshold = thresholdFunction == 0 ? 255 - thresholdValue : thresholdValue;
+			const DotDetector::ThresholdTest test = thresholdFunction == 0 ? DotDetector::kThresholdTest_GreaterEqual : DotDetector::kThresholdTest_LessEqual;
 			
-			DotDetector::treshold(surfaceData, sx, maskedData, sx, sx, sy, test, treshold);
+			DotDetector::threshold(surfaceData, sx, maskedData, sx, sx, sy, test, threshold);
 			
 		#if USE_READPIXELS_OPTIMIZE
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
@@ -428,11 +428,11 @@ void testDotDetector()
 			
 			drawText(5, y, fontSize, +1, +1, "detected %d dots. process took %.02fms, average %.02fms", numIslands, (td2 - td1) / 1000.f, averageTime / 1000.f);
 			y += spacing;
-			drawText(5, y, fontSize, +1, +1, "opengl-read took %.02fms, treshold took %.02fms", averageTimeR / 1000.f, averageTimeM / 1000.f);
+			drawText(5, y, fontSize, +1, +1, "opengl-read took %.02fms, threshold took %.02fms", averageTimeR / 1000.f, averageTimeM / 1000.f);
 			y += spacing;
-			drawText(5, y, fontSize, +1, +1, "useGrid: %d, tresholdFunction: %d, tresholdValue: %d", useGrid ? 1 : 0, tresholdFunction, tresholdValue);
+			drawText(5, y, fontSize, +1, +1, "useGrid: %d, thresholdFunction: %d, thresholdValue: %d", useGrid ? 1 : 0, thresholdFunction, thresholdValue);
 			y += spacing;
-			drawText(5, y, fontSize, +1, +1, "G = toggle grid. T = next treshold function. UP/DOWN = change treshold");
+			drawText(5, y, fontSize, +1, +1, "G = toggle grid. T = next threshold function. UP/DOWN = change threshold");
 			y += spacing;
 			drawText(5, y, fontSize, +1, +1, "SPACE = quit test. MOUSE_LBUTTON = enable speed/radius test");
 			y += spacing;

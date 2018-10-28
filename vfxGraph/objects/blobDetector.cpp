@@ -39,11 +39,11 @@
 void BlobDetector::computeValuesFromRGBA(
 	const uint8_t * __restrict rgba_surface,
 	const int sx, const int sy,
-	const int treshold,
+	const int threshold,
 	uint8_t * __restrict value_surface)
 {
-	const int add3 = - treshold * 3;
-	const int max3 = (255 - treshold) * 3;
+	const int add3 = - threshold * 3;
+	const int max3 = (255 - threshold) * 3;
 	const int mul3 = 255 * 256 / max3;
 	
 	for (int y = 0; y < sy; ++y)
@@ -186,7 +186,7 @@ int BlobDetector::detectBlobs(
 		for (int x = 0; x < sx; )
 		{
 		#if __SSE2__
-			// see if any of the next 16 pixels passes the treshold test. if not, skip the next 16 pixels
+			// see if any of the next 16 pixels passes the threshold test. if not, skip the next 16 pixels
 			
 			if (x + 16 <= sx)
 			{

@@ -134,10 +134,10 @@ void registerBuiltinShaders()
 	shaderSource("engine/builtin-gaussian-h.vs", s_guassianHVs);
 	shaderSource("engine/builtin-gaussian-v.ps", s_guassianVPs);
 	shaderSource("engine/builtin-gaussian-v.vs", s_guassianVVs);
-	shaderSource("engine/builtin-treshold.ps", s_tresholdPs);
-	shaderSource("engine/builtin-treshold.vs", s_tresholdVs);
-	shaderSource("engine/builtin-treshold-componentwise.ps", s_tresholdComponentwisePs);
-	shaderSource("engine/builtin-treshold-componentwise.vs", s_tresholdComponentwiseVs);
+	shaderSource("engine/builtin-threshold.ps", s_tresholdPs);
+	shaderSource("engine/builtin-threshold.vs", s_tresholdVs);
+	shaderSource("engine/builtin-threshold-componentwise.ps", s_tresholdComponentwisePs);
+	shaderSource("engine/builtin-threshold-componentwise.vs", s_tresholdComponentwiseVs);
 	
 	shaderSource("engine/builtin-hq-common.txt", s_hqCommonPs);
 	shaderSource("engine/builtin-hq-common-vs.txt", s_hqCommonVs);

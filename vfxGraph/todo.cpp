@@ -134,7 +134,7 @@ todo : nodes :
 	+ add node and shader
 	+ let user select colour space
 	- verify color spaces. check what avcodec does, QuickTime player, etc .. there's many ways to go from yuv -> rgb !
-- add depth data treshold node. actually this is more like a general purpose channel value treshold node ..
+- add depth data threshold node. actually this is more like a general purpose channel value threshold node ..
 	- select which channel contains depth
 	- remove items from channels where depth at index fails test
 		- allocate new channels object to store results
@@ -398,7 +398,7 @@ todo : nodes :
 + add restart signal to oscillators ? if input > 0, reset phase
 + add spring node ? does physical simulation of a spring
 + add node which sends a trigger when a value changes. send new value as trigger data
-+ add node which sends a trigger when a value crosses a treshold
++ add node which sends a trigger when a value crosses a threshold
 + add pitch and semitone nodes
 + video: add loop input
 + video: add playback speed input
@@ -538,7 +538,7 @@ todo : media player
 todo : UI
 + add drop down list for (large) enums
 + add load/save notifications to UI., maybe a UI message that briefly appears on the bottom. white text on dark background ?
-+ touch zoom on moving fingers treshold distance apart. also, try to convert normalized touch coords into inches or cms
++ touch zoom on moving fingers threshold distance apart. also, try to convert normalized touch coords into inches or cms
 + fix issue with shift + <char> not resulting in desired character in text fields
 
 

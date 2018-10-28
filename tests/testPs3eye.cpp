@@ -173,7 +173,7 @@ void testPs3eye()
 
 					// perform dot detection by first performing a masking operation and then detecting the dots
 
-					DotDetector::treshold(lumiData, sx, maskData, sx, sx, sy, DotDetector::kTresholdTest_GreaterEqual, 127);
+					DotDetector::threshold(lumiData, sx, maskData, sx, sx, sy, DotDetector::kThresholdTest_GreaterEqual, 127);
 
 					DotIsland islands[MAX_DOTS];
 

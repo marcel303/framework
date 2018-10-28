@@ -29,13 +29,13 @@
 
 #include "audioNodeBase.h"
 
-struct AudioNodeTriggerTreshold : AudioNodeBase
+struct AudioNodeTriggerThreshold : AudioNodeBase
 {
 	enum Input
 	{
 		kInput_Value,
-		kInput_UpTreshold,
-		kInput_DownTreshold,
+		kInput_UpThreshold,
+		kInput_DownThreshold,
 		kInput_COUNT
 	};
 	
@@ -49,7 +49,7 @@ struct AudioNodeTriggerTreshold : AudioNodeBase
 	bool wasUp;
 	bool wasDown;
 	
-	AudioNodeTriggerTreshold();
+	AudioNodeTriggerThreshold();
 	
 	virtual void tick(const float dt) override;
 };

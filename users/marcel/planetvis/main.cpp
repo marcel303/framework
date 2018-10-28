@@ -145,7 +145,7 @@ struct VoxelSet
 		float & oy,
 		float & oz) const
 	{
-		const float treshold = .1f;
+		const float threshold = .1f;
 
 		float tx = px;
 		float ty = py;
@@ -155,7 +155,7 @@ struct VoxelSet
 		{
 			const float distance = sampleDistance(tx, ty, tz);
 
-			if (distance < treshold)
+			if (distance < threshold)
 			{
 				ox = tx;
 				oy = ty;

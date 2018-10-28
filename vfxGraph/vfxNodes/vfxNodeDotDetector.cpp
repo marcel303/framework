@@ -41,7 +41,7 @@ VFX_ENUM_TYPE(dotDetectorChannel)
 	elem("a");
 }
 
-VFX_ENUM_TYPE(dotDetectorTresholdTest)
+VFX_ENUM_TYPE(dotDetectorThresholdTest)
 {
 	elem("greaterEqual");
 	elem("lessEqual");
@@ -53,7 +53,7 @@ VFX_NODE_TYPE(VfxNodeDotDetector)
 	
 	in("image", "image_cpu");
 	inEnum("channel", "dotDetectorChannel");
-	inEnum("tresholdTest", "dotDetectorTresholdTest");
+	inEnum("thresholdTest", "dotDetectorThresholdTest");
 	in("tresholdValue", "float", "0.5");
 	in("maxDots", "int", "256");
 	in("maxRadius", "float", "10");
@@ -84,8 +84,8 @@ VfxNodeDotDetector::VfxNodeDotDetector()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
 	addInput(kInput_Channel, kVfxPlugType_Int);
-	addInput(kInput_TresholdTest, kVfxPlugType_Int);
-	addInput(kInput_TresholdValue, kVfxPlugType_Float);
+	addInput(kInput_ThresholdTest, kVfxPlugType_Int);
+	addInput(kInput_ThresholdValue, kVfxPlugType_Float);
 	addInput(kInput_MaxDots, kVfxPlugType_Int);
 	addInput(kInput_MaxRadius, kVfxPlugType_Float);
 	addOutput(kOutput_Lumi, kVfxPlugType_ImageCpu, &lumiOutput);
@@ -111,8 +111,8 @@ void VfxNodeDotDetector::tick(const float dt)
 	
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const Channel channel = (Channel)getInputInt(kInput_Channel, kChannel_RGB);
-	const DotDetector::TresholdTest test = getInputInt(kInput_TresholdTest, 0) == 0 ? DotDetector::kTresholdTest_GreaterEqual : DotDetector::kTresholdTest_LessEqual;
-	const int tresholdValue = getInputFloat(kInput_TresholdValue, .5f) * 255.f;
+	const DotDetector::ThresholdTest test = getInputInt(kInput_ThresholdTest, 0) == 0 ? DotDetector::kThresholdTest_GreaterEqual : DotDetector::kThresholdTest_LessEqual;
+	const int thresholdValue = getInputFloat(kInput_ThresholdValue, .5f) * 255.f;
 	const int maxRadius = std::max(1, int(std::round(getInputFloat(kInput_MaxRadius, 10.f))));
 	const int maxIslands = std::max(0, std::min(kMaxIslands, getInputInt(kInput_MaxDots, 256)));
 	
@@ -226,9 +226,9 @@ void VfxNodeDotDetector::tick(const float dt)
 		
 		lumiOutput.setDataR8(lumiPtr, maskSx, maskSy, lumiAlignment, lumiPitch);
 
-		// do tresholding
+		// do thresholding
 		
-		DotDetector::treshold(lumiPtr, lumiPitch, mask, maskSx, maskSx, maskSy, test, tresholdValue);
+		DotDetector::threshold(lumiPtr, lumiPitch, mask, maskSx, maskSx, maskSy, test, thresholdValue);
 
 		// do dot detection
 		

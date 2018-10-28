@@ -1410,10 +1410,10 @@ void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma = 1.6
 
 void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius);
 void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius);
-void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity);
-void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor, const float opacity);
-void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor, const float opacity);
-void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor, const float opacity);
+void setShader_ThresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity);
+void setShader_ThresholdLumiFail(const GLuint source, const float lumi, const Color & failColor, const float opacity);
+void setShader_ThresholdLumiPass(const GLuint source, const float lumi, const Color & passColor, const float opacity);
+void setShader_ThresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor, const float opacity);
 // todo : implement these shaders .. ! and make source code shared/includable
 void setShader_GrayscaleLumi(const GLuint source, const float opacity);
 void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const float opacity);

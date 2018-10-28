@@ -39,7 +39,7 @@
 #define USE_GRID 1 // improves matching result as we find the closest island when enabled. also greatly increases detection speed when there's many dots being detected
 
 #if __SSE2__
-	#define USE_SSE2 1 // improves tresholding and detection speed
+	#define USE_SSE2 1 // improves thresholding and detection speed
 #else
 	#define USE_SSE2 0
 #endif
@@ -68,17 +68,17 @@ struct DotIsland
 
 struct DotDetector
 {
-	enum TresholdTest
+	enum ThresholdTest
 	{
-		kTresholdTest_LessEqual,
-		kTresholdTest_GreaterEqual
+		kThresholdTest_LessEqual,
+		kThresholdTest_GreaterEqual
 	};
 
-	static void treshold(
+	static void threshold(
 		const uint8_t * __restrict src, const int srcPitch,
 		      uint8_t * __restrict dst, const int dstPitch,
 		const int sx, const int sy,
-		const TresholdTest test, const uint8_t tresholdValue);
+		const ThresholdTest test, const uint8_t thresholdValue);
 
 	static int detectDots(
 		const uint8_t * __restrict data,

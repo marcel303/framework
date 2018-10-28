@@ -216,7 +216,7 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 		bool isActive;
 		int rangeBegin;
 		int rangeEnd;
-		double treshold;
+		double threshold;
 		std::string onUp;
 		std::string onDown;
 

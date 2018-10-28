@@ -55,7 +55,7 @@ VfxNodeDeepbelief::VfxNodeDeepbelief()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Network, kVfxPlugType_String);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
-	addInput(kInput_Treshold, kVfxPlugType_Float);
+	addInput(kInput_Threshold, kVfxPlugType_Float);
 	addInput(kInput_UpdateInterval, kVfxPlugType_Float);
 	addOutput(kOutput_Label, kVfxPlugType_String, &labelOutput);
 	addOutput(kOutput_Certainty, kVfxPlugType_Float, &certaintyOutput);
@@ -78,7 +78,7 @@ void VfxNodeDeepbelief::tick(const float dt)
 	
 	const char * newNetworkFilename = getInputString(kInput_Network, "");
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
-	const float treshold = getInputFloat(kInput_Treshold, .01f);
+	const float threshold = getInputFloat(kInput_Threshold, .01f);
 	const float updateInterval = getInputFloat(kInput_UpdateInterval, 0.f);
 
 	if (newNetworkFilename != networkFilename)
@@ -99,7 +99,7 @@ void VfxNodeDeepbelief::tick(const float dt)
 		
 		if (image->numChannels == 1)
 		{
-			deepbelief.process(image->channel[0].data, image->sx, image->sy, 1, image->channel[0].pitch, treshold);
+			deepbelief.process(image->channel[0].data, image->sx, image->sy, 1, image->channel[0].pitch, threshold);
 		}
 		else
 		{
@@ -114,7 +114,7 @@ void VfxNodeDeepbelief::tick(const float dt)
 				bytes, image->sx * 3,
 				image->sx, image->sy);
 			
-			deepbelief.process(bytes, image->sx, image->sy, 3, image->sx * 3, treshold);
+			deepbelief.process(bytes, image->sx, image->sy, 3, image->sx * 3, threshold);
 			
 			delete [] bytes;
 			bytes = nullptr;

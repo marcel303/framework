@@ -104,7 +104,7 @@ void Deepbelief::shut()
 	state = nullptr;
 }
 
-void Deepbelief::process(const uint8_t * bytes, const int sx, const int sy, const int numChannels, const int pitch, const float certaintyTreshold)
+void Deepbelief::process(const uint8_t * bytes, const int sx, const int sy, const int numChannels, const int pitch, const float certaintyThreshold)
 {
 	if (state == nullptr)
 		return;
@@ -122,7 +122,7 @@ void Deepbelief::process(const uint8_t * bytes, const int sx, const int sy, cons
 	newWork->sy = sy;
 	newWork->numChannels = numChannels;
 	newWork->pitch = pitch;
-	newWork->certaintyTreshold = certaintyTreshold;
+	newWork->certaintyThreshold = certaintyThreshold;
 	
 	SDL_LockMutex(state->mutex);
 	{
@@ -322,7 +322,7 @@ void Deepbelief::threadMain(State * state)
 				{
 					const float predictionValue = predictionValues[i];
 
-					if (predictionValue >= work->certaintyTreshold)
+					if (predictionValue >= work->certaintyThreshold)
 					{
 						DeepbeliefPrediction p;
 						p.certainty = predictionValue;

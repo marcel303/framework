@@ -6,7 +6,7 @@
 #include "ImageLoader_Tga.h"
 
 #define TGA_LOG(x, ...)
-#define RLE_TRESHOLD 3
+#define RLE_THRESHOLD 3
 
 void TgaHeader::Load(Stream* stream)
 {
@@ -457,7 +457,7 @@ static int NoRepeatCount_32(const uint8_t* bytes, int _x, int sx)
 	
 	for (int x = scanX1; x <= scanX2; ++x)
 	{
-		if (RepeatCount_32(bytes, x, sx) >= RLE_TRESHOLD)
+		if (RepeatCount_32(bytes, x, sx) >= RLE_THRESHOLD)
 			break;
 		else
 			size++;
@@ -521,7 +521,7 @@ void TgaLoader::SaveData_Rle32(Stream* stream, int sx, int sy, const uint8_t* by
 			
 			count = RepeatCount_32(bytes, x, sx);
 			
-			if (count >= RLE_TRESHOLD)
+			if (count >= RLE_THRESHOLD)
 			{
 				TGA_LOG("save: RLE: %d", (int)count);
 				

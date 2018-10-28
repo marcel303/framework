@@ -1055,9 +1055,9 @@ void Scene::tick(const float dt)
 				power /= (end - begin + 1);
 			}
 
-			const bool wasBelow = b.lastValue < b.treshold;
+			const bool wasBelow = b.lastValue < b.threshold;
 			b.lastValue = power;
-			const bool isBelow = b.lastValue < b.treshold;
+			const bool isBelow = b.lastValue < b.threshold;
 
 			if (wasBelow && !isBelow)
 			{
@@ -1430,7 +1430,7 @@ bool Scene::load(const char * filename)
 					const bool enabled = boolAttrib(xmlBucket, "enabled", true);
 					const int id = intAttrib(xmlBucket, "id", -1);
 					const std::string range = stringAttrib(xmlBucket, "range", "");
-					const float treshold = floatAttrib(xmlBucket, "treshold", .5f);
+					const float threshold = floatAttrib(xmlBucket, "treshold", .5f);
 					const std::string onUp = stringAttrib(xmlBucket, "on_up", "");
 					const std::string onDown = stringAttrib(xmlBucket, "on_down", "");
 					
@@ -1456,7 +1456,7 @@ bool Scene::load(const char * filename)
 								b.isActive = true;
 								b.rangeBegin = Parse::Int32(rangeElems[0]);
 								b.rangeEnd = Parse::Int32(rangeElems[1]);
-								b.treshold = treshold;
+								b.threshold = threshold;
 								b.onUp = onUp;
 								b.onDown = onDown;
 							}

@@ -27,7 +27,7 @@
 
 #include "audioNodeTriggerTreshold.h"
 
-AUDIO_NODE_TYPE(trigger_treshold, AudioNodeTriggerTreshold)
+AUDIO_NODE_TYPE(trigger_threshold, AudioNodeTriggerThreshold)
 {
 	typeName = "trigger.treshold";
 	
@@ -38,30 +38,30 @@ AUDIO_NODE_TYPE(trigger_treshold, AudioNodeTriggerTreshold)
 	out("wentDown!", "trigger");
 }
 
-AudioNodeTriggerTreshold::AudioNodeTriggerTreshold()
+AudioNodeTriggerThreshold::AudioNodeTriggerThreshold()
 	: AudioNodeBase()
 	, wasUp(false)
 	, wasDown(false)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Value, kAudioPlugType_FloatVec);
-	addInput(kInput_UpTreshold, kAudioPlugType_FloatVec);
-	addInput(kInput_DownTreshold, kAudioPlugType_FloatVec);
+	addInput(kInput_UpThreshold, kAudioPlugType_FloatVec);
+	addInput(kInput_DownThreshold, kAudioPlugType_FloatVec);
 	addOutput(kOutput_WentUp, kAudioPlugType_Trigger, nullptr);
 	addOutput(kOutput_WentDown, kAudioPlugType_Trigger, nullptr);
 }
 
-void AudioNodeTriggerTreshold::tick(const float dt)
+void AudioNodeTriggerThreshold::tick(const float dt)
 {
-	audioCpuTimingBlock(AudioNodeTriggerTreshold);
+	audioCpuTimingBlock(AudioNodeTriggerThreshold);
 	
 	const float value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero)->getMean();
-	const float upTreshold = getInputAudioFloat(kInput_UpTreshold, &AudioFloat::Half)->getMean();
-	auto downTresholdVec = getInputAudioFloat(kInput_DownTreshold, nullptr);
-	const float downTreshold = downTresholdVec == nullptr ? upTreshold : downTresholdVec->getMean();
+	const float upThreshold = getInputAudioFloat(kInput_UpThreshold, &AudioFloat::Half)->getMean();
+	auto downThresholdVec = getInputAudioFloat(kInput_DownThreshold, nullptr);
+	const float downThreshold = downThresholdVec == nullptr ? upThreshold : downThresholdVec->getMean();
 
-	const bool isUp = value > upTreshold;
-	const bool isDown = value < downTreshold;
+	const bool isUp = value > upThreshold;
+	const bool isDown = value < downThreshold;
 	
 	if (isPassthrough)
 	{

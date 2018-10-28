@@ -191,9 +191,9 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 			const Vec3 position_view = s_worldToViewTransform.Mul4(position_world);
 			
 			const float distanceToHead = position_view.CalcSize();
-			const float kDistanceToHeadTreshold = .1f; // 10cm. related to head size, but exact size is subjective
+			const float kDistanceToHeadThreshold = .1f; // 10cm. related to head size, but exact size is subjective
 			
-			const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadTreshold);
+			const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadThreshold);
 			
 			float elevation;
 			float azimuth;

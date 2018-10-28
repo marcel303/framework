@@ -74,7 +74,7 @@ void testDeepbelief()
 	
 	bool sampleVideo = true;
 	
-	float certaintyTreshold = .01f;
+	float certaintyThreshold = .01f;
 	
 	bool isFirstFrame = true;
 	
@@ -133,23 +133,23 @@ void testDeepbelief()
 		{
 			isFirstFrame = false;
 			
-			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyThreshold);
 		}
 		
 		if (keyboard.wentDown(SDLK_p))
 		{
-			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyThreshold);
 		}
 		
 		if (keyboard.wentDown(SDLK_w))
 		{
-			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyThreshold);
 			d->wait();
 		}
 		
 		if (keyboard.isDown(SDLK_r))
 		{
-			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyThreshold);
 		}
 		
 		if (keyboard.wentDown(SDLK_a))
@@ -178,7 +178,7 @@ void testDeepbelief()
 		
 		if (automaticUpdates)
 		{
-			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyThreshold);
 		}
 		
 		mediaPlayer.presentTime += framework.timeStep;

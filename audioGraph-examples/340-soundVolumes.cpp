@@ -551,9 +551,9 @@ int main(int argc, char * argv[])
 					const Vec3 pView = camera.getViewMatrix().Mul4(pWorld);
 					
 					const float distanceToHead = pView.CalcSize();
-					const float kDistanceToHeadTreshold = .1f; // 10cm. related to head size, but exact size is subjective
+					const float kDistanceToHeadThreshold = .1f; // 10cm. related to head size, but exact size is subjective
 					
-					const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadTreshold);
+					const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadThreshold);
 					
 					float elevation;
 					float azimuth;

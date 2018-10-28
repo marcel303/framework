@@ -2,7 +2,7 @@
 #include "Stream.h"
 #include "StreamWriter.h"
 
-#define RLE_TRESHOLD 3
+#define RLE_THRESHOLD 3
 #define RLE_MAX 127
 
 namespace PsdCompression
@@ -46,7 +46,7 @@ namespace PsdCompression
 		
 		for (int x = scanX1; x <= scanX2; ++x)
 		{
-			if (RleRepeatCount(bytes, x, sx) >= RLE_TRESHOLD)
+			if (RleRepeatCount(bytes, x, sx) >= RLE_THRESHOLD)
 				break;
 			else
 				size++;
@@ -95,7 +95,7 @@ namespace PsdCompression
 				
 				count = RleRepeatCount(bytes, x, sx);
 				
-				if (count >= RLE_TRESHOLD)
+				if (count >= RLE_THRESHOLD)
 				{
 					// write header
 					
