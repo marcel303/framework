@@ -62,6 +62,8 @@
         <input socket="frequency" value="0.050000"/>
     </node>
     <node id="76" typeName="wavefield.1d">
+        <resource type="wavefield.1d" name="editorData"><![CDATA[<value numElems="128" f="ed98062167a32ef38331f9a32316bdf3b7d268cb46b66df332d20168e5a34df36d55aa52855b2df34061f2d2b6d03df3589b33264dbc2df3b31de5a5b6521df341333c884f432df39c606cf048194df31b2d550b75df5df3c81af286ca966df3f0632ba451b56df32a5051bf00ee1df31daada2791d41df3da86feb6dbb04df319f82ce002fe5df338d67076ea4a8df3d9cf0d47134addf364d0818ebe870ef31cc3aa76024a1ef35763b0ccefaf1ef394eae037be1d2ef3070dbcfe58713ef354e0c64a71d03ef3bf4f0158c3871ef38514760d7488ddf3cca3df3d31759df33962f4ea6c539df3fd0088d082ac8df3479ea38327fcbdf3295678b5e429bdf3081ecac246cf9df3950ffeb24997adf32e9c31380ec6adf3ba2fd5904eb6cdf3b6e766143f4eedf380b6ac15b9070ef3a15a0726c8791ef3ec3b5f4f991c1ef3f4cb974b9d6f1ef38c556b91a93d1ef3b3691c53410c3ef345282c334fea5ef3163357447e486ef3ed45478fb31a7ef3bfc7a846f39d8ef31244050197d59ef37ae44c9456f7bef3117dff46cb11bef37ae23372c0799ef37df05fc6d2466ef3dcfb763cfba14ef331aca70c30c92ef3219a67bc50301ef3da3b0a828b131ef371c9ef18afbd1ef3fcae53440f421ef30477717120731ef308ab4c79d2eb3ef3056fc50292205ef354430da03c3b5ef3b0abaed65ed05ef3f725710314c42ef3f01c9a2d6b021ef31e23c7780badfdf35004a7de11610ef3d0223c7144461ef335aa339b1f510ef349d800fad9a90ef36f06c7cb1b7f1ef3008b9f5ee9a92ef37fbe76e9d8553ef3ad74282f01cc3ef382eac4f4a1044ef3422efc8eb8c25ef3727a96931ab27ef37a3827ba71ec6ef377c92db048e85ef31441986b83063ef32486b9b89b4a2ef3dae06f2100cd0ef3a5fa947bd824edf34f81aed841e7cdf3c0448b0aff93ddf32270640a63f40ef357c64ddb25ba0ef3e2ab4f5b36050ef358b081d276dbfdf3578829e836bdedf31ce6273ccd77edf31da6449845ededf3ab0f10b8c5540ef3ddbb432e70ed0ef303f6af0cf5172ef3026c0d2a44515ef37ed7aef450637ef3eb125faeaa938ef3f6ceae06ce829ef33882d05e559faef3008e260091149ef358cafd07779c6ef36a8aff0eb3844ef32afc367807e82ef30fd16febad1ffdf39c8fee6f631addf3ad1f023a3bf2ddf36a51c220a177bdf3544c5fe732df6df346768cf234127df38332fe65cd0b8df317fb5f2be5969df30e072e540281bdf3363bdf168095adf313646b0ffbb57df305726f05308f5df327307b1aafba7df33e4390d775d2edf351945e80ff9d0ef3f5cadfdad05a2ef3da75fc1137cb4ef39fb2935797466ef3316a2749c9766ef3ca08d4ea4e545ef3d7519b22377d4ef38bb10e92d45f2ef38d4041394bc50ef3461efbba3a0dedf3"/>
+]]></resource>
         <input socket="pos.dampen" value="0.100000"/>
         <input socket="sample.pos" value="0.300000"/>
         <input socket="size" value="128"/>
@@ -103,7 +105,7 @@
     <link id="105" srcNodeId="81" srcNodeSocketName="frequency" dstNodeId="79" dstNodeSocketName="result"/>
     <link id="106" srcNodeId="83" srcNodeSocketName="a" dstNodeId="78" dstNodeSocketName="value1"/>
     <link id="107" srcNodeId="75" srcNodeSocketName="frequency" dstNodeId="83" dstNodeSocketName="result"/>
-    <editor nextZKey="1">
+    <editor nextZKey="2">
         <dragAndZoom x="502.67095947265625" y="-8.5275077819824219" zoom="1.1941521167755127"/>
         <nodeDatas>
             <nodeData nodeId="58" x="790.7506103515625" y="-194.78195190429688" zKey="0"/>
@@ -120,7 +122,7 @@
             <nodeData nodeId="73" x="651.63714599609375" y="-180.8353271484375" zKey="0"/>
             <nodeData nodeId="74" x="393.43539428710938" y="-226.89022827148438" zKey="0"/>
             <nodeData nodeId="75" x="633.44598388671875" y="-50.96343994140625" zKey="0"/>
-            <nodeData nodeId="76" x="42.584884643554688" y="-97.8243408203125" zKey="0"/>
+            <nodeData nodeId="76" x="42.57086181640625" y="-97.8243408203125" zKey="1"/>
             <nodeData nodeId="78" x="189.21450805664062" y="334.239990234375" zKey="0"/>
             <nodeData nodeId="79" x="333.24978637695312" y="305.76785278320312" zKey="0"/>
             <nodeData nodeId="81" x="489.00885009765625" y="220.35157775878906" zKey="0"/>

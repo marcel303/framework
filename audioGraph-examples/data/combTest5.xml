@@ -51,6 +51,8 @@
         <input socket="frequency" value="0.050000"/>
     </node>
     <node id="76" typeName="wavefield.1d">
+        <resource type="wavefield.1d" name="editorData"><![CDATA[<value numElems="32" f="0000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff3"/>
+]]></resource>
         <input socket="pos.dampen" value="0.200000"/>
         <input socket="sample.pos" value="0.300000"/>
         <input socket="size" value="32"/>
@@ -108,8 +110,8 @@
     <link id="136" srcNodeId="68" srcNodeSocketName="a" dstNodeId="60" dstNodeSocketName="audio"/>
     <link id="137" srcNodeId="58" srcNodeSocketName="audio" dstNodeId="69" dstNodeSocketName="value"/>
     <link id="138" srcNodeId="90" srcNodeSocketName="trigger!" dstNodeId="60" dstNodeSocketName="loop!"/>
-    <editor nextZKey="1">
-        <dragAndZoom x="685.0654296875" y="-139.74655151367188" zoom="1"/>
+    <editor nextZKey="2">
+        <dragAndZoom x="557.0654296875" y="-139.74655151367188" zoom="1"/>
         <nodeDatas>
             <nodeData nodeId="58" x="790.79852294921875" y="-194.7744140625" zKey="0"/>
             <nodeData nodeId="59" x="-64" y="-320" zKey="0" folded="1"/>
@@ -122,7 +124,7 @@
             <nodeData nodeId="73" x="651.63720703125" y="-180.8353271484375" zKey="0"/>
             <nodeData nodeId="74" x="-95.071136474609375" y="-204.89027404785156" zKey="0"/>
             <nodeData nodeId="75" x="633.44598388671875" y="-50.96343994140625" zKey="0"/>
-            <nodeData nodeId="76" x="89.949737548828125" y="-108.23648071289062" zKey="0"/>
+            <nodeData nodeId="76" x="96" y="-112" zKey="1"/>
             <nodeData nodeId="79" x="333.24978637695312" y="305.76785278320312" zKey="0"/>
             <nodeData nodeId="81" x="489.00885009765625" y="220.55992126464844" zKey="0"/>
             <nodeData nodeId="83" x="355.1116943359375" y="177.73255920410156" zKey="0"/>

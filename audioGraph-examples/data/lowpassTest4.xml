@@ -64,6 +64,8 @@
         <input socket="frequency" value="0.050000"/>
     </node>
     <node id="76" typeName="wavefield.1d">
+        <resource type="wavefield.1d" name="editorData"><![CDATA[<value numElems="128" f="0ef1ca68c0395ef369b77304fd7e4ef3b3b2483ddb745ef3c2d9b5a5f4663ef33b31f656b6b93ef351b95b9a99e02ef3c36f3cca18504ef3c4ffa50942f03ef399079b4e0bc13ef3da8e7ac77a714ef31d2727ba837d4ef3607f52b84c233ef35ed5c05f37134ef3d4b5e8c47ce22ef3d8b928cd577b2ef3e997308f10dc3ef300ef07e6403d3ef3be91fbb37e5e5ef38ec6d5f4daf84ef34cc507e7029b7ef3ba2cd8eb1b7f7ef38ed0ee6a84738ef3cf837e114fc28ef3954c571391e49ef3f36a1eba03a87ef34f1144e8ee967ef391f370f9e3ab4ef3e88998b042a64ef3f183931e1bdf5ef3cb248ec855dd2ef3e2d57831b0575ef3e3dd6b11af8b3ef370ddaa9d958c4ef3c4b8b7e412f54ef32bdbe8dcd8cb4ef31692b5eb134a5ef39b26d80d063d6ef3f8759bfb92745ef3841da6205c7a8ef3bda49f2c87c36ef3a1d259927d2d7ef3d55cd13a03c18ef3ee567e28a4c66ef37ee718e063747ef30b4d9f1cf62daef375793a2d862caef37cbd3a5a6441cef3f43f32109fddaef33882ec3eb543bef30a33521a8264aef316263dd7c2ffcef38122343930659ef3a198d06ec86b8ef384e8b68907706ef38af239c28d5f5ef31665879b2b437ef30081b9fadc595ef33e63d10542ed7ef3f91af440d9ab5ef3a96402596dfa6ef3461613e2e0a29ef3a5b2307dd6387ef39f42a5f2fa0e7ef32cd319fc8cc98ef3465cf5e9d6c27ef3ae0da3c5260b6ef3a6679a2270f77ef3498d80080f868ef35eecb3a7ff977ef3b6bb896e19867ef3bd0b317238836ef330d8c21572366ef3aaf9e72d2b459ef31e8ef93ed8437ef37cf0edab981f8ef310f0f8aaecf69ef3daaa9c45091d7ef317100083e9ca9ef3101ac6abf4f68ef3864d7788d3276ef36426b14dea958ef38bb3ede5134c5ef387f2d56a8e9d6ef37ceeae8c11906ef35cade3735ed74ef30a3cf74972a17ef3cdc3f90045546ef3b22b7a9e38366ef3bafa5ae0abea6ef3c86714831fc55ef38086732a6bac5ef3ecc6551d86964ef318fda81b8bd66ef311fc6ceb19076ef3bdc7f89367547ef3307465a1ccce6ef32811f40308e5bef3da4a4e04a668aef3905ace0fdce6cef3ba6d2060aed7aef330a7b49a5860bef3721cb67093b28ef3d0454857b2c58ef31fffb4b7ebf38ef3ae960d633d166ef31a5695b6a31c6ef3d144cdffe7ce4ef31a65da3912444ef3fa4d72e9b59c4ef366006ba616683ef359004822f9844ef373c9227b79c74ef33b5841d75d884ef35a520346c5c34ef3ea359e9f3ed64ef31815026414ea2ef3116020ef0e1c3ef3b04a2df653fa4ef322ea8d1552517ef30303c1760cc46ef35924d038b01d6ef3daaaf84eafcdaef3900c437fce528ef37eff3b1aa4b29ef3c7cb7a16e95f7ef3ea9c188cad9c6ef32a803c2a37f26ef38773142493935ef3"/>
+]]></resource>
         <input socket="pos.dampen" value="0.100000"/>
         <input socket="sample.pos" value="0.300000"/>
         <input socket="size" value="128"/>
@@ -89,6 +91,7 @@
     </node>
     <node id="84" typeName="mix">
         <input socket="gainB" value="0.400000"/>
+        <input socket="mode" value="0"/>
     </node>
     <node id="85" typeName="pcm.fromFile">
         <input socket="filename" value="twatwa-milton.ogg"/>
@@ -126,12 +129,12 @@
     <link id="113" srcNodeId="74" srcNodeSocketName="trigger!" dstNodeId="86" dstNodeSocketName="loop!"/>
     <link id="115" srcNodeId="86" srcNodeSocketName="play!" dstNodeId="88" dstNodeSocketName="trigger!"/>
     <link id="116" srcNodeId="60" srcNodeSocketName="play!" dstNodeId="87" dstNodeSocketName="trigger!"/>
-    <editor nextZKey="1">
+    <editor nextZKey="12">
         <dragAndZoom x="377.79055786132812" y="-183.348388671875" zoom="1"/>
         <nodeDatas>
             <nodeData nodeId="58" x="790.7506103515625" y="-194.78300476074219" zKey="0"/>
-            <nodeData nodeId="59" x="-64" y="-320" zKey="0" folded="1"/>
-            <nodeData nodeId="60" x="48" y="-320.0955810546875" zKey="0" folded="1"/>
+            <nodeData nodeId="59" x="-64" y="-320" zKey="9" folded="1"/>
+            <nodeData nodeId="60" x="48" y="-320.0955810546875" zKey="11" folded="1"/>
             <nodeData nodeId="62" x="192.53176879882812" y="2.91143798828125" zKey="0"/>
             <nodeData nodeId="63" x="55.095733642578125" y="159.44497680664062" zKey="0"/>
             <nodeData nodeId="66" x="837.1826171875" y="-397.64614868164062" zKey="0" folded="1"/>
@@ -143,16 +146,16 @@
             <nodeData nodeId="73" x="651.63714599609375" y="-180.8353271484375" zKey="0"/>
             <nodeData nodeId="74" x="393.43539428710938" y="-226.89022827148438" zKey="0"/>
             <nodeData nodeId="75" x="633.44598388671875" y="-50.96343994140625" zKey="0"/>
-            <nodeData nodeId="76" x="42.584884643554688" y="-97.8243408203125" zKey="0"/>
+            <nodeData nodeId="76" x="64" y="-128" zKey="0"/>
             <nodeData nodeId="78" x="189.21450805664062" y="334.239990234375" zKey="0"/>
             <nodeData nodeId="79" x="333.24978637695312" y="305.76785278320312" zKey="0"/>
             <nodeData nodeId="81" x="489.00885009765625" y="220.35157775878906" zKey="0"/>
             <nodeData nodeId="83" x="355.1116943359375" y="177.73255920410156" zKey="0"/>
-            <nodeData nodeId="84" x="177.02940368652344" y="-350.09500122070312" zKey="0"/>
-            <nodeData nodeId="85" x="-64" y="-272" zKey="0" folded="1"/>
-            <nodeData nodeId="86" x="48" y="-272" zKey="0" folded="1"/>
+            <nodeData nodeId="84" x="177.02940368652344" y="-350.09500122070312" zKey="10"/>
+            <nodeData nodeId="85" x="-64" y="-272" zKey="8" folded="1"/>
+            <nodeData nodeId="86" x="48" y="-272" zKey="5" folded="1"/>
             <nodeData nodeId="87" x="-99.744728088378906" y="-382.40252685546875" zKey="0"/>
-            <nodeData nodeId="88" x="-86.86029052734375" y="-227.39175415039062" zKey="0"/>
+            <nodeData nodeId="88" x="-86.86029052734375" y="-227.39175415039062" zKey="6"/>
         </nodeDatas>
         <visualizers/>
         <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="1" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="b600ff96">

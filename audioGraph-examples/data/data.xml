@@ -1,7 +1,14 @@
-<graph nextNodeId="2" nextLinkId="1" nextZKey="2">
-    <node id="1" typeName="wavefield.1d" editorX="-206" editorY="-114"/>
-    <editor>
+<graph nextNodeId="2" nextLinkId="1">
+    <node id="1" typeName="wavefield.1d">
+        <resource type="wavefield.1d" name="editorData"><![CDATA[<value numElems="16" f="65ccab4537133ef30fb1cc0b540f1ef3ff9368323ecd6ef3f32fdc555db18ef3b754d7ba27a54ef39cfeea0231fd3ef3276854813e1ccdf30d0dcdb3372a4ef3e8b572a944a49ef370aea3c988ba1ef3ea549015aa6dedf3f5c58c93b0240ef311e17d7b2b204ef345cb1cc4a2e1fdf3fabaacc51f861ef3a5b64c3391633ef3"/>
+]]></resource>
+    </node>
+    <editor nextZKey="3">
         <dragAndZoom x="0" y="0" zoom="1"/>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
+        <nodeDatas>
+            <nodeData nodeId="1" x="-206.07913208007812" y="-113.98013305664062" zKey="2"/>
+        </nodeDatas>
+        <visualizers/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
     </editor>
 </graph>
