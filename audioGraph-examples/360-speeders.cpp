@@ -646,7 +646,7 @@ struct RecordedFragment : AudioSource
 	}
 
 #if AUDIO_USE_SSE
-	// todo : add a helper macro to make objects allocate though the heap at N-alignment
+	// todo : add a helper macro to make objects allocate through the heap at N-alignment
 	void * operator new(size_t size)
 	{
 		return _mm_malloc(size, 32);
