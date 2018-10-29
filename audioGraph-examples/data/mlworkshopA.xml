@@ -9,6 +9,8 @@
         <input socket="sub.boost" value="1"/>
     </node>
     <node id="62" typeName="wavefield.1d">
+        <resource type="wavefield.1d" name="editorData"><![CDATA[<value numElems="128" f="7b059ebedab89cf3bfd247fc21204ef32445d11f00c62df3392295031f6dfdf359111710dc6bddf360cd761896bfadf39a4c8807a01b5ef3ef2a752136479df30acc07dd907bbcf30038f67da869ecf33a8a53c884bcbcf3efde618029703ef30b3df5d01de49cf3f67ed9a05ea8edf35baacc8ea5a02ef3990b4da76d870cf3dbb0076748ff3ef349122ee3a19e6cf3131870567e056cf3e1b0e34297385df3bd86d99b39413ef3b38d33d783284df380fca11d94e2acf3e45820bd88f6bef33a052275a1135ef3ad6a5a5086431cf3d9b839cbe8052ef3c3f4d378e32b2ef309e110ada5d32ef362edc7470efe5ef38ab05f116a458cf378be1ac27fe86cf34f963b654fa49ef36de512542be86cf3b4584eca42f82ef384d2e94debb09df35c39fef1cacd4ef34801e179372b8df3d33f6d88884c4df3dc803ef9d1771ef3401d7535126a5ef35df6ac092e353cf3a19904a79ba21cf33319a845188a4df3afb3bb496a7f3ef382db9e7041252ef3d83795c36fc51ef3b6c52067d8936ef30d54760158ebddf3bfbc6bfec7d68df3d60ab3702acfaef35cc2bdeb5da9fcf34d9b559fe1883df3cbc1c6914a67dcf35ad1ec27634a7ef3584080e57a97bdf33b2225824e0f1cf367aa266661aa2df37527bdc319568ef3a62e079b41561cf3b41f12ce43f98cf39737b2c257853ef3950487e822c93ef3888146c631965ef3d7f305a3208e0df395303f8deee9bcf3464ea6809afb3ef3df907441cc629df3b4bbcd7d5a35dcf3a4d38d0cb4944df395c1dc96245f2ef32e0efb2d89321ef371ea5b11307e9df356371445f3753df3489d936752d8dcf3afc0cba273c67df319e8943e267d5ef31bbee683b5a8dcf304e6a1785f441ef37e8bae5d43b51ef36c6934806ecdfcf3e81553aa317dcdf3b1f29598279c1df38c5a8d2ffb0d0cf30dccdb075b0e3df38d53dd36b9d13ef33e751b6707fa5df31baa34478fbd8cf3650b7fb70b793df3a55faa8218660df3a8a8c67a0089ddf3578db23473837ef33405532d85682df3e6c0452e5daa9ef342bbb9c700049df3bb64953eab683ef3594b34c2e432bef3de75dc0c34762ef3b7d2aa7d3e1dfdf3cec93e28b33d8ef312a3b7221403ddf3a87e46e4778d8df3838d4c7c27b8ecf38faf567a23fcbcf3060743e0c1f51df3015ce3a451b25ef39cf3e0d1c4c0bcf33b2faec7872f1ef301c2d30f93b03df3e013ed4bfe4f6ef3d639c3f70a5c4ef3a0945ddd870b6ef30bf53265197a6ef3fac01cb946a17df3b920fc29aca12ef35095fa543ed1fdf328092b3415e18df3a4365ae676236ef32b0ccf14ac0e0ef31f9519d24d6caef3ff350566a1235cf341a31c5470307df3c56e796fa708bef39388d05c9e45cdf3b1178dd2a21a9ef3067e774543d16df3173b8c9ee9267cf30db5d117c9bfbdf3"/>
+]]></resource>
         <input socket="gain" value="10.000000"/>
         <input socket="pos.dampen" value="0.990000"/>
         <input socket="sample.pos" value="0.300000"/>
@@ -36,6 +38,8 @@
     </node>
     <node id="67" typeName="time"/>
     <node id="70" typeName="wavefield.1d" passthrough="1">
+        <resource type="wavefield.1d" name="editorData"><![CDATA[<value numElems="16" f="c201b5544a65eef3c1c8c383f2daeef3d179bb7e171fdef3fbcada21b41edef368484141d608eef39d6cc7a20f90eef349ab15872930eef3d66322122a32eef375f8a912ea48eef34f3b81ac16c0eef3e598dd3faa34eef36c747717361ddef305818f50ed41eef30009723a8a2ddef3b4683559e20adef3097dc221edccdef3"/>
+]]></resource>
         <input socket="pos.dampen" value="0.900000"/>
         <input socket="tension" value="100.000000"/>
         <input socket="trigger.amount" value="0.300000"/>
@@ -46,6 +50,8 @@
         <input socket="interval.min" value="0.200000"/>
     </node>
     <node id="72" typeName="wavefield.1d">
+        <resource type="wavefield.1d" name="editorData"><![CDATA[<value numElems="300" f="7eba033759142af35d81234c1fa1cdf36934314c27216df359805e947a7dbcf32718bdcdd7fb9cf373a985b92aef5df340d784fe54fc5df3d6d513edb6641af3bcb54096a4160df32a0980e60c724cf35bbc486745855df349241e24022a1df3c3e88f3460e0bdf3a8d4c47c4b642df3c5bdfe4cd4560df311cc0106c4f66df328bb74b1cc0f2df39d7ae4afadb22df3618d9de4e78f6bf3c85af214590f4bf3201a1bec37841ef306fd1e8da0430df3a7a726e1cea48df37d1851e64030cdf30277296bc52eddf3f7eff45a85ba98f34c25707745e5fcf310e64ccba5689df3c01998cceff2bdf33dc32ea92c244cf38c934c6c29740ef366d6a1ff44242af317209001f867ddf3a0d8ca28500c9df3963885b683f20ef37852c2331718cbf3536c5cb435c8bdf38901f71f6db32df336fec08ebbdb0ef3f29f0de8b330daf3b488a30ef84ddcf3a0b8fed18f39ddf36b41f2407e5c19f39eb26274a2ef3ef3ebbc5d5159817cf35dcb0d2036f90ef3676f0446cd2c1ef3da542ce665e20ef319a15b492dfb3cf3ba3dfc5cd8b03ef312e68c6ddf086cf34eb5880c4f1d4ef3a0f297777ed45df3f628b34b76a23ef3933fa2e6438b2bf3721e8a1518d0abf3c01837f38c503ef3d48964c9fa5cbdf3e2dffeb3e171ebf33eaa6816e07b48f329cb351d9b857cf334aed01314900df3c7ba238a4b241ef377ba11cabcb47cf324f3419314fe4cf312f97aeeb9970ef39055c8a1fe9f0cf32b2fdd99f6703ef31e895af4cb16d9f3b0a3f4b7ac837df3e36da98358818cf3291a3a5dd6b89bf305bcdc61aeaac9f320e2795190f59df3d9d493ee83f40df3a01b5baad443ccf35fb052912bd9ddf31510e2e93b970df3aa880ebfaf2e9cf300be5cbeb69a5ef3e5dff18132f73af3a6f7a1130ed43bf3b4cadb8ace15edf3d88973ec29142df36aa09d3857d23df32552c07b6436bbf36295d8aa77c76df309fdafd28f8b7df33deae1603b67adf3b1cf3f3751917af34abb5b902dcf67f33db494dd4424ebf3e6291da82489adf3f3a5101b0cdc4af3e160763f7b901cf33b647ec127ec3cf3857b2de6bb702ef3f905fce682c76ef3f3bb47a753fe5ef3fa515c6f9f257ef358888268b3757ef3c176d3a9f35babf318a638845896adf375441668fae8fbf3f00c93e387613df33791eb91db040ef399a2b06c58e86df37fe5ee879ae79df32bc85aa15112dbf392ee89d28fc46df3d02789f74ee3ccf31b1cf79172d6ebf3bc55d83898a65df3bcb9a23149b3fdf37ad0fd1dfbcb8cf37070c3fceeecc9f3defb1fa79bca7cf37c33c7997d0a1ef3b9e7e8fabe818cf36a4ed73dade44df341324909cc0a1df3555041042f1d9bf3ef7c5aa16b3478f36b6318cbd6b12ef391f38fee40c41ef3eb9f5653c1ad1ef38ec47aa739163df3f38d1535e0cb0df348a35585686a2cf31b88b11e07f86df3fa6cbb10a38fdcf303ce5ec6e8481df3ad5ba86a7bdc2df3cf422e0bd1c9edf3037261bfec029df3e553062fdc5f2df39b6dc87f1fc5acf3593362af7ce61df36730014e73e4bcf3a45737b9561a0bf35fd5f409cd8e2cf3c5f1df18ada46df31bf05934baffebf35c4fab3ae9126df3a38258973694ecf381dd07a2e44badf321398c5ae8444bf30c10e6c8f941cdf392291d6a524bdcf31a0bcbecfd2addf387c6efcd8e0d7df31c5ce41c45acfdf326cbfa8ed2c12bf3135161b25327cdf3e306b0a2c30f2ef31bd8bd97e9b3abf3b74c3ab528397bf30cfbee38e008fdf3aeb011766546ddf3074b59bd84aeadf310227d21369c3cf39a44df17cb5849f32c0a15495db66df3b5f6a4dbd8364bf3623b53b3a7880ef33223d61e1ac8cdf38a70de86b8af3df3e66d623c944fbdf32494837c6dc3ebf384f9777df9407cf30b5fad6c4a078cf317524b4a36f37ef3d40d6a547be35cf3529768dcd2de2ef338de3a8d52159ef3e70386fcdbb25bf36f3b5838c120edf3230033b45a564ef30524c6d8c284abf3ca8bc0469440edf32fcf0ec9ac112ef34b3824446f8f3ef343fa273836793cf3b75aa44b06730ef336c0620a5c6d8df3e3832d4fb049edf34ba553969b8fddf3ba1f7cb73330dcf394e71484adf10df3826cf914b84d2df374000193a83297f3bfcaeba1aeccadf30a453efe47c1fdf337d66c35765ebdf3f1652d145e414af3b05a9ec6923cddf3c6995e64eaffdcf36321220df1508df32b42ea2e91483bf31d695d7ad72b79f31a83722b07347ef3132b6b91919c5ef349a9fd79eb19adf3b0d5e9e948660cf391629ea96aa458f31a6924c711d6fdf37e789c9e002b2df3581cc7eb251c1df334aca69e99d91df34adfb5cf8804dbf359123983f80cfdf351dd702aab4c1df35ab2df9f784e0df302902ab39a6e8cf3ea8a3b0c9b245df31bee5c0be3d1dbf361d7c5ab89d8ecf3b30d4092851a7df3ad7526146a4f5df3325a64c7f6777df3659556c866b65cf36a570fad68814ef340b6fd906ba02df3607bf495f8587ef3d58bb496b2586ef3a790c8e4160d9df30941a7b84d3a2df3a04ea55b11fb8cf31bd64ea3ffd95ef3ca839b3e7bfd3df3484cf1b8a3083ef346284d54a9ad2cf3a05de2b07a226cf3d6a752322e77adf30a8549614983cdf37b94ebce243aedf3a8924580ad449df3edd652cb298a6df38ea5791465c2bcf3d3f7904a0b9e8cf3793117f886113ef3665b1c3cd95b4ef3fac7c2ae98514cf3585b695ed4a03ef3127f0b5e3f63acf31d8bcadfb77f0bf3674c467f6cc83cf347ed4eb95ffb0df3d2dd9492598a1df3b156b806bd5d4cf34e2a4157d242ccf3ab8c96fb3d051cf3f2d6d438c6b6ddf36d62641ec214ccf3e5dde12d60cd6df3123ece2d4c3b3cf3710734815704cdf3e7cf9cea5ea16cf3454d66d5659d1bf3076b6c5b4b141cf3f7c1d290aef08df3bbf54001a80f1df3b09928e2d208cdf30eca2d8064593df32172d5e60e992ef3a9c3947448f2dbf3f417f2fa4cceddf366b43cc17e18ecf3ac6a6e1d62216ef30d7125252f181cf30486219f3fcd0ef381d0725dd2a8acf30fe9364d42280ef3eb5ec2fff255edf36d44233aef005bf39fc0cb13c20d0df322a6bbeec915fdf3f65d610a46b1dcf3bd21f4abcdd42ef3d0a102918bab2ef3b481fd06da3f1ef3186cfd9586ae8df38e324b5122d4ddf3120754e303688af383f4216047d09cf3e2f7134978bd5ef33713940fe04c6ef3db45ba969dac3cf369e6b9ddca05dcf30fa4ddbd25c1bdf3d0984a98398f1bf3b7824b214886ccf3bed2b52ebb5e0ef35091e596cd075bf3e553e1c5716c4cf3011e1895acd6fdf328af672a29431cf32d83282724fc8cf34f32e75ddb805df34938132eba26bdf3"/>
+]]></resource>
         <input socket="gain" value="4.000000"/>
         <input socket="sample.pos" value="0.400000"/>
         <input socket="size" value="300"/>
@@ -193,19 +199,19 @@
     <link id="128" srcNodeId="87" srcNodeSocketName="trigger!" dstNodeId="115" dstNodeSocketName="trigger!"/>
     <link id="129" srcNodeId="97" srcNodeSocketName="value" dstNodeId="116" dstNodeSocketName="valueX"/>
     <link id="130" srcNodeId="102" srcNodeSocketName="wetness" dstNodeId="117" dstNodeSocketName="valueX"/>
-    <editor nextZKey="1233">
-        <dragAndZoom x="-110.403076171875" y="-711.1925048828125" zoom="1"/>
+    <editor nextZKey="1236">
+        <dragAndZoom x="17.596893310546875" y="-231.19256591796875" zoom="1"/>
         <nodeDatas>
             <nodeData nodeId="61" x="273.76177978515625" y="-462.0733642578125" zKey="1222"/>
-            <nodeData nodeId="62" x="-17" y="-159.12118530273438" zKey="0"/>
+            <nodeData nodeId="62" x="-17" y="-159.12118530273438" zKey="1235"/>
             <nodeData nodeId="63" x="-159.99961853027344" y="-77.999832153320312" zKey="0"/>
             <nodeData nodeId="64" x="-303.27487182617188" y="-0.113861083984375" zKey="0"/>
             <nodeData nodeId="65" x="-476.99990844726562" y="-408.10107421875" zKey="0"/>
             <nodeData nodeId="66" x="-256.26358032226562" y="-315.11700439453125" zKey="0"/>
             <nodeData nodeId="67" x="-411.00018310546875" y="-148.00003051757812" zKey="0"/>
-            <nodeData nodeId="70" x="8" y="-456.08602905273438" zKey="0"/>
+            <nodeData nodeId="70" x="9.19573974609375" y="-456.01937866210938" zKey="1234"/>
             <nodeData nodeId="71" x="-211.9996337890625" y="-410.5809326171875" zKey="0" folded="1"/>
-            <nodeData nodeId="72" x="-129.9991455078125" y="-716.234130859375" zKey="0"/>
+            <nodeData nodeId="72" x="-130.09954833984375" y="-716.416015625" zKey="1233"/>
             <nodeData nodeId="73" x="-831" y="-567" zKey="1199"/>
             <nodeData nodeId="75" x="-288" y="-768" zKey="0" folded="1"/>
             <nodeData nodeId="79" x="-448" y="-608" zKey="0" folded="1"/>
@@ -233,7 +239,7 @@
         <visualizers>
             <visualizer id="82" x="179.7181396484375" y="-815.43365478515625" zKey="-1" nodeId="81" dstSocketName="value" sx="216" sy="148"/>
         </visualizers>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="0a3265cc" gridColor="b600ff96">
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="0a3265cc" gridColor="b600ff96">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
                 <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
