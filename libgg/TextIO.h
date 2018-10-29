@@ -25,45 +25,21 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "imgui.h"
+#pragma once
 
-#define DO_KINETIC_SCROLL 1
-#define DO_TOUCH_SCROLL 1
+#include <string>
+#include <vector>
 
-struct FrameworkImGuiContext
+namespace TextIO
 {
-	ImGuiContext * imgui_context = nullptr;
+	enum LineEndings
+	{
+		kLineEndings_Unix,
+		kLineEndings_Windows
+	};
 	
-	SDL_Cursor * mouse_cursors[ImGuiMouseCursor_COUNT] = { };
+	bool loadText(const char * text, std::vector<std::string> & lines, LineEndings & lineEndings);
 	
-	char * clipboard_text = nullptr;
-	
-	GLuint font_texture_id = 0;
-	
-	ImGuiContext * previous_context = nullptr;
-	
-#if DO_KINETIC_SCROLL
-#if DO_TOUCH_SCROLL
-	int num_touches = 0;
-#endif
-	Vec2 kinetic_scroll;
-#endif
-
-	~FrameworkImGuiContext();
-	
-	void init();
-	void shut();
-	
-	void processBegin(const float dt, const int displaySx, const int displaySy, bool & inputIsCaptured);
-	void processEnd();
-	
-	void draw();
-	
-	void pushImGuiContext();
-	void popImGuiContext();
-	void updateMouseCursor();
-	
-	static const char * getClipboardText(void * user_data);
-	static void setClipboardText(void * user_data, const char * text);
-	static void render(const ImDrawData * draw_data);
-};
+	bool load(const char * filename, std::vector<std::string> & lines, LineEndings & lineEndings);
+	bool save(const char * filename, const std::vector<std::string> & lines, const LineEndings lineEndings);
+}

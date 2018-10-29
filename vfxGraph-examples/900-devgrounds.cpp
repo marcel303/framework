@@ -28,6 +28,7 @@
 #include "framework.h"
 #include "graph.h"
 #include "StringEx.h"
+#include "TextIO.h"
 
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"

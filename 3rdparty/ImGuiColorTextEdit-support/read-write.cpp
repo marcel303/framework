@@ -3,6 +3,7 @@
 #include "imgui/TextEditor.h"
 #include "imgui-framework.h"
 #include "nfd.h"
+#include "TextIO.h"
 #include <fstream>
 
 #include "Benchmark.h"
