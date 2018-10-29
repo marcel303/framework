@@ -397,7 +397,7 @@ void TgaLoader::SaveData_Raw16(Stream* stream, int sx, int sy, const uint8_t* by
 		const int g = ptr[1];
 		const int b = ptr[2];
 		
-		uint16_t c = (b << 0) | (g << 5) | (r << 10);
+		uint16_t c = (b << 0) | (g << 5) | (r << 10); // todo : shouldn't r be shifted 11 bits ?
 		
 		writer.WriteUInt16(c);
 
@@ -469,22 +469,6 @@ static int NoRepeatCount_32(const uint8_t* bytes, int _x, int sx)
 void TgaLoader::SaveData_Rle32(Stream* stream, int sx, int sy, const uint8_t* bytes)
 {
 	StreamWriter writer(stream, false);
-	
-#if 0
-	// optimize RLE compression by setting RGB values to identical values for aread where the opacity is zero
-	
-// todo : add a function to clear rgb to zero for zero-alpha pixels ?
-// note : this can be a bad idea in combination with filtering. when interpolating pixels, the black may show up
-	for (int i = 0; i < sx * sy; ++i)
-	{
-		const uint8_t* pixel = bytes + i * 4;
-		
-		if (pixel[3] == 0)
-		{
-			pixel[0] = pixel[1] = pixel[2] = 0;
-		}
-	}
-#endif
 	
 	for (int y = 0; y < sy; ++y)
 	{
