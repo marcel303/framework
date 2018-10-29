@@ -191,11 +191,10 @@ int Deepbelief::threadMainProc(void * arg)
 {
 	State * state = (State*)arg;
 	
-	if (threadInit(state))
+	threadInit(state);
 	{
 		threadMain(state);
 	}
-	
 	threadShut(state);
 
 	delete state;
@@ -208,6 +207,9 @@ bool Deepbelief::threadInit(State * state)
 {
 	LOG_DBG("creating deepbelief network", 0);
 	
+	Assert(state->isInitialized == false);
+	Assert(state->network == nullptr);
+	
 	if (state->networkFilename.empty())
 	{
 		return false;
@@ -215,10 +217,12 @@ bool Deepbelief::threadInit(State * state)
 	else
 	{
 		state->network = jpcnn_create_network(state->networkFilename.c_str());
-		Assert(state->network);
 		
 		if (state->network == nullptr)
+		{
+			LOG_ERR("failed to load deepbelief network. filename=%s", state->networkFilename.c_str());
 			return false;
+		}
 		
 		state->isInitialized = true;
 		
@@ -314,9 +318,12 @@ void Deepbelief::threadMain(State * state)
 				char ** predictionsLabels = nullptr;
 				int predictionsLabelsLength = 0;
 				
-				jpcnn_classify_image(
-					state->network, buffer, JPCNN_RANDOM_SAMPLE, 0,
-					&predictionValues, &predictionValuesLength, &predictionsLabels, &predictionsLabelsLength);
+				if (state->network != nullptr)
+				{
+					jpcnn_classify_image(
+						state->network, buffer, JPCNN_RANDOM_SAMPLE, 0,
+						&predictionValues, &predictionValuesLength, &predictionsLabels, &predictionsLabelsLength);
+				}
 				
 				for (int i = 0; i < predictionValuesLength; ++i)
 				{
