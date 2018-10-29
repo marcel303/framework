@@ -250,7 +250,7 @@ void createJsusFxAudioNodes()
 
 //
 
-AUDIO_NODE_TYPE(jsusfx, AudioNodeJsusFx)
+AUDIO_NODE_TYPE(AudioNodeJsusFx)
 {
 	typeName = "jsusfx";
 	
@@ -312,6 +312,18 @@ AudioNodeJsusFx::AudioNodeJsusFx(const bool _preInitialized)
 		addOutput(kOutput_Audio3, kAudioPlugType_FloatVec, &audioOutputs[2]);
 		addOutput(kOutput_Audio4, kAudioPlugType_FloatVec, &audioOutputs[3]);
 	}
+}
+
+AudioNodeJsusFx::~AudioNodeJsusFx()
+{
+	free();
+}
+
+void AudioNodeJsusFx::load(const char * filename)
+{
+	free();
+	
+	//
 	
 	pathLibrary = new JsusFxPathLibrary_Basic(DATA_ROOT);
 	pathLibrary->addSearchPath(SEARCH_PATH);
@@ -325,15 +337,9 @@ AudioNodeJsusFx::AudioNodeJsusFx(const bool _preInitialized)
 	jsusFx_gfx = new JsusFxGfx_Framework(*jsusFx);
 	jsusFx_gfx->init(jsusFx->m_vm);
 	jsusFx->gfx = jsusFx_gfx;
-}
-
-AudioNodeJsusFx::~AudioNodeJsusFx()
-{
-	free();
-}
-
-void AudioNodeJsusFx::load(const char * filename)
-{
+	
+	//
+	
 	jsusFxIsValid = jsusFx->compile(*pathLibrary, filename, JsusFx::kCompileFlag_CompileGraphicsSection | JsusFx::kCompileFlag_CompileSerializeSection);
 	
 	if (jsusFxIsValid)
@@ -446,14 +452,15 @@ void AudioNodeJsusFx::tick(const float dt)
 	}
 	else
 	{
-		// todo : passthrough support
-
 		const char * filename = getInputString(kInput_Filename, nullptr);
 		
 		if (isPassthrough || filename == nullptr)
 		{
-			//currentFilename.clear();
+			free();
+			currentFilename.clear();
+			
 			clearOutputs();
+			
 			return;
 		}
 		
