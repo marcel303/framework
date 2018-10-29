@@ -49,7 +49,7 @@ void testDeepbelief()
 	//const char * imageFilename = "deepbelief/rainbow.png"; // apparently it looks like a banana! :-)
 	const char * imageFilename = "deepbelief/tea.jpg";
 	//const char * videoFilename = "mocapb.mp4";
-	const char * videoFilename = "deepbelief/objects1.mp4";
+	const char * videoFilename = "deepbelief/super-zoom-craze.mp4";
 	
 	ImageData * image = loadImage(imageFilename);
 	Assert(image);
@@ -248,6 +248,7 @@ void testDeepbelief()
 			drawText(GFX_SX/2, 80, 14, +1, +1, "S: shut down deep belief object");
 			drawText(GFX_SX/2, 100, 14, +1, +1, "A: toggle automatic processing (%s)", automaticUpdates ? "on" : "off");
 			drawText(GFX_SX/2, 120, 14, +1, +1, "R: process (continuously)");
+			drawText(GFX_SX/2, 120, 14, +1, +1, "V: toggle between video or image input");
 			popFontMode();
 			
 			int index = 0;
