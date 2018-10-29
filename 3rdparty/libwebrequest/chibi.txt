@@ -7,3 +7,9 @@ library libwebrequest
 app libwebrequest-test
 	depend_library libwebrequest
 	add_files test.cpp
+
+app libwebrequest-test-downloadcache
+	depend_library framework
+	depend_library libwebrequest
+	add_files test-downloadcache.cpp
+	resource_path data

@@ -12,6 +12,7 @@ global_group libraries
 	with_platform macos add 3rdparty/PS3EYEDriver/framework
 	add 3rdparty
 	add 3rdparty/imgui-framework
+	add 3rdparty/libwebrequest
 	add libfbx
 	add libgg
 	add libjsusfx-framework
