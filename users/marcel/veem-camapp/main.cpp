@@ -19,7 +19,7 @@
 #if defined(LINUX)
 	#define DO_CONTROLLER 0
 #else
-	#define DO_CONTROLLER 0
+	#define DO_CONTROLLER 1
 #endif
 
 #if DO_CONTROLLER
