@@ -189,11 +189,11 @@ static std::vector<SceneEffect*> buildEffectsList()
 
 /*
 
-:: todo :: OSC
+:: ideas :: OSC
 
 	-
 
-:: todo :: configuration
+:: ideas :: configuration
 
 	# prompt for MIDI controller at startup. or select by name in XML config file?
 		+ defined in settings.xml instead
@@ -203,25 +203,25 @@ static std::vector<SceneEffect*> buildEffectsList()
 	+ define scene XML representation
 	+ discuss with Max what would be needed for life act
 
-:: todo :: projector output
+:: ideas :: projector output
 
 	- add brightness control
 		+ write shader which does a lookup based on the luminance of the input and transforms the input
 		- add ability to change the setting
 	- add border blends to hide projector seam. unless eg MadMapper already does this, it may be necessary to do it ourselvess
 
-:: todo :: utility functions
+:: ideas :: utility functions
 
 	+ add PCM capture
 	+ add FFT calculation PCM data
 	+ add loudness calculation PCM data
 
-:: todo :: post processing and graphics quality
+:: ideas :: post processing and graphics quality
 
 	- smooth line drawing with high AA. use a post process pass to blur the result ?
 	+ add FXAA post process
 
-:: todo :: visuals tech 2D
+:: ideas :: visuals tech 2D
 
 	+ add a box blur shader. allow it to darken the output too
 
@@ -242,7 +242,7 @@ static std::vector<SceneEffect*> buildEffectsList()
 
 	- UV displacement flow map thingy
 
-:: todo :: visuals tech 3D
+:: ideas :: visuals tech 3D
 
 	- virtual camera positioning
 		- allow positioning of the virtual camera based on settings XML
@@ -252,7 +252,7 @@ static std::vector<SceneEffect*> buildEffectsList()
 
 	+ add lighting shader code
 
-:: todo :: effects
+:: ideas :: effects
 
 	- particle effect : sea
 
@@ -264,19 +264,19 @@ static std::vector<SceneEffect*> buildEffectsList()
 
 	- particle effect :: star cluster
 
-:: todo :: particle system
+:: ideas :: particle system
 
 	- ability to toggle particle trails
 
-:: todo :: color controls
+:: ideas :: color controls
 
 	- 
 
-:: notes
+:: ideas : general
 
-	- seamless transitions between scenes
+	+ seamless transitions between scenes
 
-:: shaders
+:: ideas : shaders
 
 	- add power tween value to vignette falloff
 	- rename vignette distance to falloff and inner_radius to radius

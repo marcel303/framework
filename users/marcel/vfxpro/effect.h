@@ -12,8 +12,6 @@
 #include <map>
 #include <vector>
 
-#include "StringEx.h" // todo : to cpp
-
 //
 
 extern float virtualToScreenX(const float x);

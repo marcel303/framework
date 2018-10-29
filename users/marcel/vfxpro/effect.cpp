@@ -1,5 +1,6 @@
 #include "effect.h"
 #include "Parse.h"
+#include "StringEx.h"
 #include "tinyxml2.h"
 #include "videoloop.h"
 #include "xml.h"
@@ -71,9 +72,18 @@ bool EffectInfosByName::load(const char * filename)
 					effectInfo.paramName[2] = param3;
 					effectInfo.paramName[3] = param4;
 
-					// todo : check not already set
-
-					(*this)[name] = effectInfo;
+					// check not already set
+					
+					if (count(name) != 0)
+					{
+						logError("effect with name %s already exists", name.c_str());
+						
+						result = false;
+					}
+					else
+					{
+						(*this)[name] = effectInfo;
+					}
 				}
 			}
 		}
