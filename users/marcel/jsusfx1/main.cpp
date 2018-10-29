@@ -43,6 +43,14 @@ gfx_mode
 
 test todo :
 
+- add button to connect/disconnect midi
+- add ability to load/save effect chains
+	+ add load/save to xml
+	- add UI to select/load saved effect chains
+- add an option to set effect window size to 50%, 75%, 100% of the initial (preferred) size
+
+test done :
+
 + add octave select to on-screen MIDI keyboard
 + bring JSFX window to top when selecting it in the effect chain window
 + draw a cross when an effect is active in the effect chain list
@@ -55,15 +63,10 @@ test todo :
 + add an option to hide to JSFX UI from the effect chain list
 + perhaps hide should be the default behavior of the close button, instead of closing and removing it from the effect chain?
 + add an effect search filter box
-- add button to connect/disconnect midi
 # add option to organize windows (using box atlas?)
 + make octave buttons round
-- add ability to load/save effect chains
-	+ add load/save to xml
-	- add UI to select/load saved effect chains
 + add option to enable live audio input
 + fix issue with some effect options not being saved (Hammer and String, resonance feedback type for instance)
-- add an option to set effect window size to 50%, 75%, 100% of the initial (preferred) size
 
 */
 
