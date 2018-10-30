@@ -39,6 +39,8 @@
 
 using namespace tinyxml2;
 
+#define ENABLE_FILE_FIXUPS 1
+
 //
 
 GraphNodeId kGraphNodeIdInvalid = 0;
@@ -184,12 +186,12 @@ static bool testLineOverlap(
 		if (dd < dMin || dd > dMax)
 			return false;
 		
-		const double dTreshold = cr;
+		const double dThreshold = cr;
 		const double d = std::abs(cx * nx + cy * ny - nd);
 		
-		//printf("d = %f / %f\n", float(d), float(dTreshold));
+		//printf("d = %f / %f\n", float(d), float(dThreshold));
 		
-		if (d <= dTreshold)
+		if (d <= dThreshold)
 			return true;
 	}
 	
@@ -457,6 +459,12 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 	
 	for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
 	{
+	#if ENABLE_FILE_FIXUPS
+		const int nodeType = intAttrib(xmlNode, "nodeType", 0);
+		if (nodeType != 0)
+			continue;
+	#endif
+	
 		GraphNode node;
 		node.id = intAttrib(xmlNode, "id", node.id);
 		node.typeName = stringAttrib(xmlNode, "typeName", node.typeName.c_str());
@@ -714,8 +722,8 @@ bool Graph::load(const char * filename, const GraphEdit_TypeDefinitionLibrary * 
 //
 
 #include "framework.h"
-#include "../libparticle/particle.h"
-#include "../libparticle/ui.h"
+#include "particle.h"
+#include "ui.h"
 
 int GRAPHEDIT_SX = 0;
 int GRAPHEDIT_SY = 0;
@@ -2794,34 +2802,37 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						{
 							if (appendSelection == false && nodeDoubleClickTime > 0.f)
 							{
-								nodeDoubleClickTime = 0.f;
-								
-								if (handleNodeDoubleClicked != nullptr)
+								if (enabled(kFlag_NodeResourceEdit))
 								{
-									handleNodeDoubleClicked(hitTestResult.node->id);
-								}
-								
-							#if 1
-								GraphEdit_NodeResourceEditorWindow * resourceEditorWindow = new GraphEdit_NodeResourceEditorWindow();
-								
-								if (resourceEditorWindow->init(this, hitTestResult.node->id))
-								{
-									nodeResourceEditorWindows.push_back(resourceEditorWindow);
-								}
-								else
-								{
-									delete resourceEditorWindow;
-									resourceEditorWindow = nullptr;
+									nodeDoubleClickTime = 0.f;
 									
-									showNotification("Failed to create resource editor!");
+									if (handleNodeDoubleClicked != nullptr)
+									{
+										handleNodeDoubleClicked(hitTestResult.node->id);
+									}
+									
+								#if 1
+									GraphEdit_NodeResourceEditorWindow * resourceEditorWindow = new GraphEdit_NodeResourceEditorWindow();
+									
+									if (resourceEditorWindow->init(this, hitTestResult.node->id))
+									{
+										nodeResourceEditorWindows.push_back(resourceEditorWindow);
+									}
+									else
+									{
+										delete resourceEditorWindow;
+										resourceEditorWindow = nullptr;
+										
+										showNotification("Failed to create resource editor!");
+									}
+								#else
+									if (nodeResourceEditBegin(hitTestResult.node->id))
+									{
+										state = kState_NodeResourceEdit;
+										break;
+									}
+								#endif
 								}
-							#else
-								if (nodeResourceEditBegin(hitTestResult.node->id))
-								{
-									state = kState_NodeResourceEdit;
-									break;
-								}
-							#endif
 							}
 							else
 							{
@@ -4568,6 +4579,9 @@ static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, con
 
 void GraphEdit::doLinkParams(const float dt)
 {
+	if (!enabled(kFlag_LinkEdit))
+		return;
+	
 	pushMenu("linkParams");
 	{
 		if (selectedLinks.size() != 1)
@@ -5809,6 +5823,9 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	
 	hqBegin(HQ_FILLED_ROUNDED_RECTS);
 	{
+		setColor(isSelected ? colorWhite : colorBlack);
+		hqFillRoundedRect(0.f, 0, sx, sy, radius + border/2);
+		
 		setColor(color);
 		hqFillRoundedRect(0.f + border/2, 0.f + border/2, sx - border/2, sy - border/2, radius);
 	}
@@ -5987,6 +6004,71 @@ bool GraphEdit::load(const char * filename)
 		{
 			result &= graph->loadXml(xmlGraph, typeDefinitionLibrary);
 			
+		#if ENABLE_FILE_FIXUPS
+			// fixup zkey allocation
+			
+			nextZKey = intAttrib(xmlGraph, "nextZKey", nextZKey);
+			
+			// fixup node datas. todo : remove these fixups
+			
+			for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
+			{
+				const int nodeType = intAttrib(xmlNode, "nodeType", 0);
+				if (nodeType != 0)
+					continue;
+				
+				const GraphNodeId nodeId = intAttrib(xmlNode, "id", kGraphNodeIdInvalid);
+				if (nodeId == kGraphNodeIdInvalid)
+					continue;
+				
+				auto nodeDataPtr = tryGetNodeData(nodeId);
+				Assert(nodeDataPtr != nullptr);
+				if (nodeDataPtr == nullptr)
+					continue;
+				
+				auto & nodeData = *nodeDataPtr;
+				
+				nodeData.x = floatAttrib(xmlNode, "editorX", nodeData.x);
+				nodeData.y = floatAttrib(xmlNode, "editorY", nodeData.y);
+				nodeData.zKey = intAttrib(xmlNode, "zKey", nodeData.zKey);
+				nodeData.isFolded = boolAttrib(xmlNode, "folded", nodeData.isFolded);
+				nodeData.foldAnimProgress = nodeData.isFolded ? 0.f : 1.f;
+				
+				nodeData.displayName = stringAttrib(xmlNode, "editorName", nodeData.displayName.c_str());
+			}
+			
+			// fixup visualizers
+			for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
+			{
+				const int nodeType = intAttrib(xmlNode, "nodeType", 0);
+				if (nodeType != 1)
+					continue;
+				
+				auto visualizerId = intAttrib(xmlNode, "id", kGraphNodeIdInvalid);
+				Assert(visualizerId != kGraphNodeIdInvalid);
+				if (visualizerId == kGraphNodeIdInvalid)
+					continue;
+				
+				const XMLElement * xmlVisualizer = xmlNode->FirstChildElement("visualizer");
+				Assert(xmlVisualizer != nullptr);
+				if (xmlVisualizer == nullptr)
+					continue;
+				
+				EditorVisualizer & visualizer = visualizers[visualizerId];
+				
+				visualizer.id = visualizerId;
+				visualizer.x = floatAttrib(xmlNode, "editorX", visualizer.x);
+				visualizer.y = floatAttrib(xmlNode, "editorY", visualizer.y);
+				visualizer.zKey = intAttrib(xmlNode, "zKey", visualizer.zKey);
+				
+				visualizer.nodeId = visualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", visualizer.nodeId);
+				visualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", visualizer.srcSocketName.c_str());
+				visualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", visualizer.dstSocketName.c_str());
+				visualizer.sx = floatAttrib(xmlVisualizer, "sx", visualizer.sx);
+				visualizer.sy = floatAttrib(xmlVisualizer, "sy", visualizer.sy);
+			}
+		#endif
+		
 			const XMLElement * xmlEditor = xmlGraph->FirstChildElement("editor");
 			if (xmlEditor != nullptr)
 			{
