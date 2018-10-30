@@ -70,6 +70,7 @@ extern void testGradientShader();
 extern void testVfxGraph();
 extern void testCamera3d();
 extern void testOscilloscope();
+extern void testAudioGraph_JsusFx();
 
 extern void testMain();
 extern void testMenu();
@@ -495,6 +496,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	doButton("Cam", "3D Camera", testCamera3d);
 	doButton("Osc", "Oscilloscope", testOscilloscope);
 	//doButton("Aud", "Audio Graph", testAudioGraph);
+	doButton("JsFx", "Audio Graph (JsusFx)", testAudioGraph_JsusFx);
 #ifndef WIN32
 	doButton("XMM", "XMM Gesture Follower", testXmm);
 #endif
