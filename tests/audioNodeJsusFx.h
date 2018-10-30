@@ -40,34 +40,30 @@ struct AudioNodeJsusFx : AudioNodeBase
 {
 	enum Input
 	{
-		kInput_Filename,
-		kInput_Slider1,
-		kInput_Slider2,
-		kInput_Slider3,
-		kInput_Slider4,
-		kInput_Input1,
-		kInput_Input2,
-		kInput_Input3,
-		kInput_Input4,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
-		kOutput_Audio1,
-		kOutput_Audio2,
-		kOutput_Audio3,
-		kOutput_Audio4,
 		kOutput_COUNT
 	};
 	
-	bool preInitialized;
+	struct SliderInput
+	{
+		std::string name;
+		float defaultValue; // todo : honour default value when fetching slider values
+		int sliderIndex;
+		int socketIndex;
+	};
+	
+	std::string filename;
+	
+	std::vector<SliderInput> sliderInputs;
+	
+	std::string currentFilename;
 	
 	int numAudioInputs;
-	int numSliderInputs;
 	int numAudioOutputs;
-	
-	std::vector<float> defaultSliderValues;
 	
 	std::vector<AudioFloat> audioOutputs;
 	
@@ -78,27 +74,20 @@ struct AudioNodeJsusFx : AudioNodeBase
 	JsusFxFileAPI_Basic * jsusFx_fileAPI;
 	JsusFxGfx_Framework * jsusFx_gfx;
 	
-	std::string currentFilename;
-	
-	bool hasFocus;
-	
 	AudioResource_JsusFx * resource;
 	int resourceVersion;
 	
-	AudioNodeJsusFx(const bool preInitialized = false);
+	AudioNodeJsusFx();
 	~AudioNodeJsusFx();
 	
 	void load(const char * filename);
 	void free();
 	
 	void clearOutputs();
-	bool isSliderConnected(const int index) const;
-	void updateImmediateValues();
 	
 	virtual void init(const GraphNode & node) override;
 	
 	virtual void tick(const float dt) override;
 	
-	virtual bool tickEditor(const int x, const int y, int & sx, int & sy, bool & inputIsCaptured) override;
-	virtual void drawEditor(Surface * surface, const int x, const int y, const int sx, const int sy) override;
+	virtual void getDescription(AudioNodeDescription & d) override;
 };
