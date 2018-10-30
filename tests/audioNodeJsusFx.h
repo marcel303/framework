@@ -36,6 +36,12 @@ struct JsusFxFileAPI_Basic;
 struct JsusFxGfx_Framework;
 struct JsusFxPathLibrary_Basic;
 
+//
+
+void createJsusFxAudioNodes(const char * dataRoot, const char * searchPath, const bool recurse);
+
+//
+
 struct AudioNodeJsusFx : AudioNodeBase
 {
 	enum Input
@@ -77,7 +83,7 @@ struct AudioNodeJsusFx : AudioNodeBase
 	AudioResource_JsusFx * resource;
 	int resourceVersion;
 	
-	AudioNodeJsusFx();
+	AudioNodeJsusFx(const char * dataRoot, const char * searchPath);
 	~AudioNodeJsusFx();
 	
 	void load(const char * filename);

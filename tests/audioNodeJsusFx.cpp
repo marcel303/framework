@@ -38,10 +38,6 @@
 #include "gfx-framework.h"
 #include "jsusfx-framework.h"
 
-#define SEARCH_PATH "/Users/thecat/atk-reaper/plugins/" // fixme : remove hard coded ATK scripts path
-
-#define DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/" // fixme : remove hard coded Reaper data path
-
 #define SLIDER_INDEX(i) (i)
 #define AUDIOINPUT_INDEX(i) (sliderInputs.size() + (i))
 
@@ -168,10 +164,10 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 	JsusFxGfx_Framework gfx;
 	bool jsusFxIsValid;
 	
-	ResourceEditor_JsusFx(const char * filename)
+	ResourceEditor_JsusFx(const char * filename, const char * dataRoot, const char * searchPath)
 		: GraphEdit_ResourceEditorBase(400, 400)
 		, resource(nullptr)
-		, pathLibrary(DATA_ROOT)
+		, pathLibrary(dataRoot)
 		, fileAPI()
 		, jsusFx(pathLibrary)
 		, gfx(jsusFx)
@@ -181,7 +177,7 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 		
 		// setup interfaces
 		
-		pathLibrary.addSearchPath(SEARCH_PATH);
+		pathLibrary.addSearchPath(searchPath);
 		
 		fileAPI.init(jsusFx.m_vm);
 		jsusFx.fileAPI = &fileAPI;
@@ -306,6 +302,9 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 
 struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 {
+	std::string dataRoot;
+	std::string searchPath;
+	
 	std::string filename;
 	
 	std::vector<AudioNodeJsusFx::SliderInput> sliderInputs;
@@ -388,7 +387,7 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 
 static AudioNodeBase * createJsusFxNode(const AudioNodeTypeRegistration_JsusFx * r)
 {
-	AudioNodeJsusFx * fx = new AudioNodeJsusFx();
+	AudioNodeJsusFx * fx = new AudioNodeJsusFx(r->dataRoot.c_str(), r->searchPath.c_str());
 	
 	fx->resizeSockets(r->sliderInputs.size() + r->numInputs, r->numOutputs);
 	
@@ -423,13 +422,13 @@ static AudioNodeBase * createJsusFxNode(const AudioNodeTypeRegistration_JsusFx *
 	return fx;
 }
 
-void createJsusFxAudioNodes()
+void createJsusFxAudioNodes(const char * dataRoot, const char * searchPath, const bool recurse)
 {
 	JsusFx::init();
 	
-	auto filenames = listFiles(SEARCH_PATH, true);
+	auto filenames = listFiles(searchPath, recurse);
 	
-	JsusFxPathLibrary_Basic pathLibrary(DATA_ROOT);
+	JsusFxPathLibrary_Basic pathLibrary(dataRoot);
 	
 	for (auto & filename : filenames)
 	{
@@ -448,6 +447,9 @@ void createJsusFxAudioNodes()
 		
 		AudioNodeTypeRegistration_JsusFx * r = new AudioNodeTypeRegistration_JsusFx();
 		
+		r->dataRoot = dataRoot;
+		r->searchPath = searchPath;
+		
 		r->initFromJsusFx(jsusFx, filename.c_str());
 		
 		r->create = [](void * data)
@@ -465,14 +467,14 @@ void createJsusFxAudioNodes()
 		{
 			const AudioNodeTypeRegistration_JsusFx * r = (AudioNodeTypeRegistration_JsusFx*)data;
 			
-			return new ResourceEditor_JsusFx(r->filename.c_str());
+			return new ResourceEditor_JsusFx(r->filename.c_str(), r->dataRoot.c_str(), r->searchPath.c_str());
 		};
 	}
 }
 
 //
 
-AudioNodeJsusFx::AudioNodeJsusFx()
+AudioNodeJsusFx::AudioNodeJsusFx(const char * dataRoot, const char * searchPath)
 	: AudioNodeBase()
 	, filename()
 	, currentFilename()
@@ -487,6 +489,9 @@ AudioNodeJsusFx::AudioNodeJsusFx()
 	, resource(nullptr)
 	, resourceVersion(0)
 {
+	Assert(pathLibrary == nullptr);
+	pathLibrary = new JsusFxPathLibrary_Basic(dataRoot);
+	pathLibrary->addSearchPath(searchPath);
 }
 
 AudioNodeJsusFx::~AudioNodeJsusFx()
@@ -495,6 +500,9 @@ AudioNodeJsusFx::~AudioNodeJsusFx()
 	
 	freeAudioNodeResource(resource);
 	Assert(resource == nullptr);
+	
+	delete pathLibrary;
+	pathLibrary = nullptr;
 }
 
 void AudioNodeJsusFx::load(const char * filename)
@@ -502,10 +510,6 @@ void AudioNodeJsusFx::load(const char * filename)
 	free();
 	
 	//
-	
-	Assert(pathLibrary == nullptr);
-	pathLibrary = new JsusFxPathLibrary_Basic(DATA_ROOT);
-	pathLibrary->addSearchPath(SEARCH_PATH);
 	
 	Assert(jsusFx == nullptr);
 	jsusFx = new JsusFx_Framework(*pathLibrary);
@@ -550,9 +554,6 @@ void AudioNodeJsusFx::free()
 	
 	delete jsusFx;
 	jsusFx = nullptr;
-	
-	delete pathLibrary;
-	pathLibrary = nullptr;
 }
 
 void AudioNodeJsusFx::clearOutputs()
@@ -689,7 +690,5 @@ void AudioNodeJsusFx::getDescription(AudioNodeDescription & d)
 	}
 }
 
-#undef SEARCH_PATH
-#undef DATA_ROOT
 #undef SLIDER_INDEX
 #undef AUDIOINPUT_INDEX
