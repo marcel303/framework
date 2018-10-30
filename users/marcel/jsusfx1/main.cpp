@@ -595,6 +595,8 @@ struct JsusFxChain
 			
 			JsusFxSerializationData serializationData;
 			
+		// todo : create helper functions for this in jsusfx-framework
+		
 			auto xml_sliders = xml_effect->FirstChildElement("sliders");
 			
 			if (xml_sliders != nullptr)
