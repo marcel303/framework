@@ -67,7 +67,7 @@ bool GraphEdit_NodeResourceEditorWindow::init(GraphEdit * in_graphEdit, const Gr
 			{
 				resourceTypeName = typeDefinition->resourceTypeName;
 				if (typeDefinition->resourceEditor.create != nullptr)
-					resourceEditor = typeDefinition->resourceEditor.create();
+					resourceEditor = typeDefinition->resourceEditor.create(typeDefinition->resourceEditor.createData);
 				
 				Assert(resourceEditor != nullptr);
 				if (resourceEditor != nullptr)

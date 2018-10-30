@@ -4371,7 +4371,7 @@ bool GraphEdit::nodeResourceEditBegin(const GraphNodeId nodeId)
 				nodeResourceEditor.nodeId = nodeId;
 				nodeResourceEditor.resourceTypeName = resourceTypeName;
 				if (typeDefinition->resourceEditor.create != nullptr)
-					nodeResourceEditor.resourceEditor = typeDefinition->resourceEditor.create();
+					nodeResourceEditor.resourceEditor = typeDefinition->resourceEditor.create(typeDefinition->resourceEditor.createData);
 				
 				Assert(nodeResourceEditor.resourceEditor != nullptr);
 				if (nodeResourceEditor.resourceEditor != nullptr)

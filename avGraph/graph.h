@@ -312,10 +312,12 @@ struct GraphEdit_TypeDefinition
 	
 	struct ResourceEditor
 	{
-		GraphEdit_ResourceEditorBase * (*create)();
+		GraphEdit_ResourceEditorBase * (*create)(void * data);
+		void * createData;
 		
 		ResourceEditor()
 			: create(nullptr)
+			, createData(nullptr)
 		{
 		}
 	};

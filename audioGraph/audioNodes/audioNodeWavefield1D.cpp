@@ -341,7 +341,7 @@ AUDIO_NODE_TYPE(AudioNodeWavefield1D)
 	
 	resourceTypeName = "wavefield.1d";
 	
-	createResourceEditor = []() -> GraphEdit_ResourceEditorBase*
+	createResourceEditor = [](void * data) -> GraphEdit_ResourceEditorBase*
 	{
 		return new ResourceEditor_Wavefield1D();
 	};

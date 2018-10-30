@@ -850,6 +850,7 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 		}
 		
 		typeDefinition.resourceEditor.create = registration->createResourceEditor;
+		typeDefinition.resourceEditor.createData = registration->createData;
 		
 		typeDefinition.createUi();
 		

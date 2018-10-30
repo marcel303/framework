@@ -888,7 +888,7 @@ struct VfxNodeTypeRegistration
 	
 	VfxNodeBase * (*create)();
 	
-	GraphEdit_ResourceEditorBase * (*createResourceEditor)();
+	GraphEdit_ResourceEditorBase * (*createResourceEditor)(void * data);
 	
 	std::string typeName;
 	std::string displayName;

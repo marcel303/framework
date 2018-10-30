@@ -557,7 +557,7 @@ struct AudioNodeTypeRegistration
 	AudioNodeBase* (*create)(void * data);
 	void * createData;
 	
-	GraphEdit_ResourceEditorBase * (*createResourceEditor)();
+	GraphEdit_ResourceEditorBase * (*createResourceEditor)(void * data);
 	
 	std::string typeName;
 	std::string displayName;
