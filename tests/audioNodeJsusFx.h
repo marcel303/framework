@@ -29,6 +29,8 @@
 
 #include "audioNodeBase.h"
 
+struct AudioResource_JsusFx;
+
 class JsusFx;
 struct JsusFxFileAPI_Basic;
 struct JsusFxGfx_Framework;
@@ -79,6 +81,9 @@ struct AudioNodeJsusFx : AudioNodeBase
 	std::string currentFilename;
 	
 	bool hasFocus;
+	
+	AudioResource_JsusFx * resource;
+	int resourceVersion;
 	
 	AudioNodeJsusFx(const bool preInitialized = false);
 	~AudioNodeJsusFx();
