@@ -175,7 +175,7 @@ void testAudioGraph_JsusFx()
 			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_ESCAPE));
+	} while (tickTestUi());
 	
 	s_audioGraphMgr->free(instance, false);
 	
