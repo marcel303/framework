@@ -666,7 +666,7 @@ struct VfxNodeBase
 		}
 	}
 	
-	void reconnectDynamicInputs(const int dstNodeId = -1);
+	void reconnectDynamicInputs();
 	void setDynamicInputs(const DynamicInput * newInputs, const int numInputs);
 	void setDynamicOutputs(const DynamicOutput * newOutputs, const int numOutputs);
 	

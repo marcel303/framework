@@ -1125,7 +1125,7 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 	}
 }
 
-void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
+void VfxNodeBase::reconnectDynamicInputs()
 {
 	const int numStaticInputs = inputs.size() - dynamicInputs.size();
 	
@@ -1163,76 +1163,68 @@ void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
 	
 	for (auto & link : g_currentVfxGraph->dynamicData->links)
 	{
-		if (link.srcNodeId != id)
-			continue;
-		if (dstNodeId != -1 && link.dstNodeId != dstNodeId)
+		if (link.srcNodeId != id || link.srcSocketIndex != -1)
 			continue;
 		
-		if (link.srcSocketIndex == -1)
+		VfxPlug * input = nullptr;
+		
+		for (int i = 0; i < dynamicInputs.size(); ++i)
 		{
-			VfxPlug * input = nullptr;
+			if (link.srcSocketName == dynamicInputs[i].name)
+				input = &inputs[numStaticInputs + i];
+		}
+		
+		if (input == nullptr)
+		{
+			// this can happen when an input doesn't exist (yet)
+			continue;
+		}
+		
+		auto dstNodeItr = g_currentVfxGraph->nodes.find(link.dstNodeId);
+		
+		if (dstNodeItr == g_currentVfxGraph->nodes.end())
+		{
+			logError("failed to find output node. nodeId=%d", link.dstNodeId);
+			continue;
+		}
+		
+		auto dstNode = dstNodeItr->second;
+		
+		VfxPlug * output = nullptr;
+		
+		if (link.dstSocketIndex == -1)
+		{
+			const int numStaticOutputs = dstNode->outputs.size() - dstNode->dynamicOutputs.size();
 			
-			for (int i = 0; i < dynamicInputs.size(); ++i)
+			for (int i = 0; i < dstNode->dynamicOutputs.size(); ++i)
 			{
-				if (link.srcSocketName == dynamicInputs[i].name)
-					input = &inputs[numStaticInputs + i];
+				if (link.dstSocketName == dstNode->dynamicOutputs[i].name)
+					output = &dstNode->outputs[numStaticOutputs + i];
+			}
+		}
+		else
+		{
+			output = dstNode->tryGetOutput(link.dstSocketIndex);
+		}
+		
+		if (output == nullptr)
+		{
+			if (link.dstSocketIndex != -1)
+			{
+				// can happen when the output for the link doesn't exist (yet). otherwise this should not happend
+				logError("failed to find output node socket. nodeId=%d, socketIndex=%d, socketName=%s", link.dstNodeId, link.dstSocketIndex, link.dstSocketName.c_str());
 			}
 			
-			if (input == nullptr)
-			{
-				if (link.srcSocketIndex != -1)
-				{
-					logError("failed to find input node socket. nodeId=%d, socketName=%s", link.srcNodeId, link.srcSocketName.c_str());
-				}
-				
-				continue;
-			}
-			
-			auto dstNodeItr = g_currentVfxGraph->nodes.find(link.dstNodeId);
-			
-			if (dstNodeItr == g_currentVfxGraph->nodes.end())
-			{
-				logError("failed to find output node. nodeId=%d", link.dstNodeId);
-				continue;
-			}
-			
-			auto dstNode = dstNodeItr->second;
-			
-			VfxPlug * output = nullptr;
-			
-			if (link.dstSocketIndex == -1)
-			{
-				const int numStaticOutputs = dstNode->outputs.size() - dstNode->dynamicOutputs.size();
-				
-				for (int i = 0; i < dstNode->dynamicOutputs.size(); ++i)
-				{
-					if (link.dstSocketName == dstNode->dynamicOutputs[i].name)
-						output = &dstNode->outputs[numStaticOutputs + i];
-				}
-			}
-			else
-			{
-				output = dstNode->tryGetOutput(link.dstSocketIndex);
-			}
-			
-			if (output == nullptr)
-			{
-				if (link.dstSocketIndex != -1)
-				{
-					logError("failed to find output node socket. nodeId=%d, socketIndex=%d, socketName=%s", link.dstNodeId, link.dstSocketIndex, link.dstSocketName.c_str());
-				}
-				
-				continue;
-			}
-			
-			connectVfxSockets(this, link.srcSocketIndex, input, dstNode, link.dstSocketIndex, output, link.params, false);
-			
-			// make sure the output is up to date, as it may have been skipped during traversal as it was possibly ot connected
-			
-			if (dstNode->lastTickTraversalId != g_currentVfxGraph->currentTickTraversalId)
-			{
-				dstNode->traverseTick(g_currentVfxGraph->currentTickTraversalId, 0.f);
-			}
+			continue;
+		}
+		
+		connectVfxSockets(this, link.srcSocketIndex, input, dstNode, link.dstSocketIndex, output, link.params, false);
+		
+		// make sure the output is up to date, as it may have been skipped during traversal as it was possibly ot connected
+		
+		if (dstNode->lastTickTraversalId != g_currentVfxGraph->currentTickTraversalId)
+		{
+			dstNode->traverseTick(g_currentVfxGraph->currentTickTraversalId, 0.f);
 		}
 	}
 }
@@ -1297,11 +1289,33 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 		
 		auto srcNode = srcNodeItr->second;
 		
-	// fixme : both input and output could be dynamic (srcSocketIndex == -1), so we should check for this case and search in the dynamic list if dynamic
-		auto srcSocket = srcNode->tryGetInput(link.srcSocketIndex);
+		VfxPlug * srcSocket = nullptr;
+		
+		if (link.srcSocketIndex == -1)
+		{
+			const int numStaticInputs = srcNode->inputs.size() - srcNode->dynamicInputs.size();
+			
+			for (int i = 0; i < srcNode->dynamicInputs.size(); ++i)
+			{
+				if (link.srcSocketName == srcNode->dynamicInputs[i].name)
+					srcSocket = &srcNode->inputs[numStaticInputs + i];
+			}
+		}
+		else
+		{
+			srcSocket = srcNode->tryGetInput(link.srcSocketIndex);
+		}
 		
 		if (srcSocket == nullptr)
-			continue; // can happen when the input for the link doesn't exist (yet)
+		{
+			if (link.srcSocketIndex != -1)
+			{
+				// can happen when the input for the link doesn't exist (yet). otherwise this should not happend
+				logError("failed to find input node socket. nodeId=%d, socketName=%s", link.srcNodeId, link.srcSocketName.c_str());
+			}
+			
+			continue;
+		}
 		
 		srcSocket->disconnect(dstSocket->mem);
 	}
@@ -1355,10 +1369,33 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 		
 		auto srcNode = srcNodeItr->second;
 		
-		auto srcSocket = srcNode->tryGetInput(link.srcSocketIndex);
+		VfxPlug * srcSocket = nullptr;
+		
+		if (link.srcSocketIndex == -1)
+		{
+			const int numStaticInputs = srcNode->inputs.size() - srcNode->dynamicInputs.size();
+			
+			for (int i = 0; i < srcNode->dynamicInputs.size(); ++i)
+			{
+				if (link.srcSocketName == srcNode->dynamicInputs[i].name)
+					srcSocket = &srcNode->inputs[numStaticInputs + i];
+			}
+		}
+		else
+		{
+			srcSocket = srcNode->tryGetInput(link.srcSocketIndex);
+		}
 		
 		if (srcSocket == nullptr)
-			continue; // can happen when the input for the link doesn't exist (yet)
+		{
+			if (link.srcSocketIndex != -1)
+			{
+				// can happen when the input for the link doesn't exist (yet). otherwise this should not happend
+				logError("failed to find input node socket. nodeId=%d, socketName=%s", link.srcNodeId, link.srcSocketName.c_str());
+			}
+			
+			continue;
+		}
 		
 		connectVfxSockets(srcNode, link.srcSocketIndex, srcSocket, this, link.dstSocketIndex, dstSocket, link.params, false);
 	}
