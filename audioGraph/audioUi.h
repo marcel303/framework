@@ -31,5 +31,5 @@
 
 struct AudioGraphManager_RTE;
 
-void doAudioGraphSelect(AudioGraphManager_RTE & audioGraphMgr);
-void doAudioGraphInstanceSelect(AudioGraphManager_RTE & audioGraphMgr, std::string & activeInstanceName);
+bool doAudioGraphSelect(AudioGraphManager_RTE & audioGraphMgr);
+bool doAudioGraphInstanceSelect(AudioGraphManager_RTE & audioGraphMgr, std::string & activeInstanceName);

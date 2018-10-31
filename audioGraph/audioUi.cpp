@@ -30,8 +30,10 @@
 #include "StringEx.h"
 #include "ui.h"
 
-void doAudioGraphSelect(AudioGraphManager_RTE & audioGraphMgr)
+bool doAudioGraphSelect(AudioGraphManager_RTE & audioGraphMgr)
 {
+	bool result = false;
+	
 	for (auto & fileItr : audioGraphMgr.files)
 	{
 		auto & filename = fileItr.first;
@@ -39,12 +41,18 @@ void doAudioGraphSelect(AudioGraphManager_RTE & audioGraphMgr)
 		if (doButton(filename.c_str()))
 		{
 			audioGraphMgr.selectFile(filename.c_str());
+			
+			result = true;
 		}
 	}
+	
+	return result;
 }
 
-void doAudioGraphInstanceSelect(AudioGraphManager_RTE & audioGraphMgr, std::string & activeInstanceName)
+bool doAudioGraphInstanceSelect(AudioGraphManager_RTE & audioGraphMgr, std::string & activeInstanceName)
 {
+	bool result = true;
+	
 	for (auto & fileItr : audioGraphMgr.files)
 	{
 		auto & filename = fileItr.first;
@@ -61,8 +69,12 @@ void doAudioGraphInstanceSelect(AudioGraphManager_RTE & audioGraphMgr, std::stri
 					activeInstanceName = name;
 					
 					audioGraphMgr.selectInstance(instance);
+					
+					result = true;
 				}
 			}
 		}
 	}
+	
+	return result;
 }

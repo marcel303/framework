@@ -33,6 +33,7 @@
 
 #include "audioGraph.h"
 #include "audioGraphManager.h"
+#include "audioUi.h"
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
 #include "vfxNodes/oscEndpointMgr.h"
@@ -551,8 +552,13 @@ void testVfxGraph()
 		#endif
 		
 			makeActive(graphEdit.uiState, true, true);
-			pushMenu("editor-type");
 			g_drawX = 10;
+			g_drawY = GFX_SY - 160;
+			pushMenu("graph-select");
+			if (doAudioGraphSelect(*s_audioGraphMgr))
+				editor = 1;
+			popMenu();
+			pushMenu("editor-type");
 			g_drawY = GFX_SY - 110;
 			if (doButton("Switch editor type"))
 				editor = 1 - editor;
