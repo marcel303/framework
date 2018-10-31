@@ -10,6 +10,7 @@ library audiograph
 	depend_library libavgraph
 	depend_library libdelaunay
 	depend_library libosc
+	depend_library libparticle-ui
 
 	header_path .       expose
 	header_path objects expose
