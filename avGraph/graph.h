@@ -1521,6 +1521,7 @@ struct GraphEdit : GraphEditConnection
 	bool tryAddNode(const std::string & typeName, const float x, const float y, const bool select, GraphNodeId * nodeId);
 	bool tryAddVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex, const float x, const float y, const bool select, EditorVisualizer ** visualizer);
 	
+	void updateDynamicSockets();
 	void resolveSocketIndices(
 		const GraphNodeId srcNodeId, const std::string & srcNodeSocketName, int & srcNodeSocketIndex,
 		const GraphNodeId dstNodeId, const std::string & dstNodeSocketName, int & dstNodeSocketIndex);

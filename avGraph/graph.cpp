@@ -2167,8 +2167,8 @@ const GraphEdit_LinkTypeDefinition * GraphEdit::tryGetLinkTypeDefinition(const G
 		auto srcSocket = tryGetInputSocket(link->srcNodeId, link->srcNodeSocketIndex);
 		auto dstSocket = tryGetOutputSocket(link->dstNodeId, link->dstNodeSocketIndex);
 		
-		Assert(srcSocket != nullptr);
-		Assert(dstSocket != nullptr);
+		Assert(srcSocket != nullptr || link->isDynamic); // if the link is dynamic the socket may not exist (yet)
+		Assert(dstSocket != nullptr || link->isDynamic); // if the link is dynamic the socket may not exist (yet)
 		
 		if (srcSocket != nullptr && dstSocket != nullptr)
 		{
@@ -2491,26 +2491,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 	
 	// update dynamic sockets
 	
-	for (auto & nodeDataItr : nodeDatas)
-	{
-		auto nodeId = nodeDataItr.first;
-		auto & nodeData = nodeDataItr.second;
-		auto & node = graph->nodes[nodeId];
-		
-		std::vector<GraphEdit_RealTimeConnection::DynamicInput> inputs;
-		std::vector<GraphEdit_RealTimeConnection::DynamicOutput> outputs;
-		
-		if (realTimeConnection == nullptr || realTimeConnection->getNodeDynamicSockets(node.id, inputs, outputs) == false)
-		{
-			nodeData.dynamicSockets.reset();
-		}
-		else
-		{
-			auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
-			
-			nodeData.dynamicSockets.update(*typeDefinition, inputs, outputs);
-		}
-	}
+	updateDynamicSockets();
 	
 	// update dynamic links
 	
@@ -2524,17 +2505,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		resolveSocketIndices(
 			link.srcNodeId, link.srcNodeSocketName, link.srcNodeSocketIndex,
 			link.dstNodeId, link.dstNodeSocketName, link.dstNodeSocketIndex);
-	}
-	
-	// update dynamic visualizers
-	
-	for (auto & visualizerItr : visualizers)
-	{
-		auto & visualizer = visualizerItr.second;
-		
-		resolveSocketIndices(
-			visualizer.nodeId, visualizer.srcSocketName, visualizer.srcSocketIndex,
-			visualizer.nodeId, visualizer.dstSocketName, visualizer.dstSocketIndex);
 	}
 	
 	// update node resource editor windows
@@ -4224,6 +4194,34 @@ bool GraphEdit::tickTouches()
 
 void GraphEdit::tickVisualizers(const float dt)
 {
+	// update dynamic sockets
+	
+	updateDynamicSockets();
+	
+	// update dynamic visualizers
+	
+	for (auto & visualizerItr : visualizers)
+	{
+		auto & visualizer = visualizerItr.second;
+		
+		resolveSocketIndices(
+			visualizer.nodeId, visualizer.srcSocketName, visualizer.srcSocketIndex,
+			visualizer.nodeId, visualizer.dstSocketName, visualizer.dstSocketIndex);
+	}
+	
+	if (realTimeSocketCapture.visualizer.nodeId != kGraphNodeIdInvalid)
+	{
+		resolveSocketIndices(
+			realTimeSocketCapture.visualizer.nodeId,
+			realTimeSocketCapture.visualizer.srcSocketName,
+			realTimeSocketCapture.visualizer.srcSocketIndex,
+			realTimeSocketCapture.visualizer.nodeId,
+			realTimeSocketCapture.visualizer.dstSocketName,
+			realTimeSocketCapture.visualizer.dstSocketIndex);
+	}
+	
+	//
+	
 	if (realTimeSocketCapture.visualizer.nodeId != kGraphNodeIdInvalid)
 	{
 		realTimeSocketCapture.visualizer.tick(*this, dt);
@@ -4792,6 +4790,30 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 			*out_visualizer = &visualizer;
 		
 		return true;
+	}
+}
+
+void GraphEdit::updateDynamicSockets()
+{
+	for (auto & nodeDataItr : nodeDatas)
+	{
+		auto nodeId = nodeDataItr.first;
+		auto & nodeData = nodeDataItr.second;
+		auto & node = graph->nodes[nodeId];
+		
+		std::vector<GraphEdit_RealTimeConnection::DynamicInput> inputs;
+		std::vector<GraphEdit_RealTimeConnection::DynamicOutput> outputs;
+		
+		if (realTimeConnection == nullptr || realTimeConnection->getNodeDynamicSockets(node.id, inputs, outputs) == false)
+		{
+			nodeData.dynamicSockets.reset();
+		}
+		else
+		{
+			auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+			
+			nodeData.dynamicSockets.update(*typeDefinition, inputs, outputs);
+		}
 	}
 }
 
