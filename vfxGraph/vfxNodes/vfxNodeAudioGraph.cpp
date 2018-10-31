@@ -52,6 +52,7 @@ VFX_ENUM_TYPE(audioGraphOutputMode)
 {
 	elem("mono");
 	elem("stereo");
+	elem("multichannel");
 };
 
 VFX_NODE_TYPE(VfxNodeAudioGraph)
@@ -62,6 +63,7 @@ VFX_NODE_TYPE(VfxNodeAudioGraph)
 	inEnum("mode", "audioGraphOutputMode");
 	in("limit", "bool", "1");
 	in("limitPeak", "float", "1");
+	in("numChannels", "int", "8");
 }
 
 bool VfxNodeAudioGraph::VoiceMgr::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
@@ -97,6 +99,7 @@ VfxNodeAudioGraph::VfxNodeAudioGraph()
 	addInput(kInput_OutputMode, kVfxPlugType_Int);
 	addInput(kInput_Limit, kVfxPlugType_Bool);
 	addInput(kInput_LimitPeak, kVfxPlugType_Float);
+	addInput(kInput_NumChannels, kVfxPlugType_Int);
 	
 	globals = g_vfxAudioGraphMgr->createGlobals();
 	globals->init(g_vfxAudioMutex, &voiceMgr, g_vfxAudioGraphMgr);
@@ -251,6 +254,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 	const OutputMode _outputMode = (OutputMode)getInputInt(kInput_OutputMode, 0);
 	const bool limit = getInputBool(kInput_Limit, false);
 	const float limitPeak = getInputFloat(kInput_LimitPeak, 1.f);
+	const int _numChannels = getInputInt(kInput_NumChannels, 8);
 	
 	if (isPassthrough || filename == nullptr)
 	{
@@ -280,7 +284,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 	const int numChannels =
 		_outputMode == kOutputMode_Mono ? 1 :
 		_outputMode == kOutputMode_Stereo ? 2 :
-		1;
+		_numChannels;
 	
 	//
 	
@@ -297,24 +301,30 @@ void VfxNodeAudioGraph::tick(const float dt)
 	
 	// generate channel data
 	
-	const AudioVoiceManager::OutputMode outputMode =
-		_outputMode == kOutputMode_Mono ? AudioVoiceManager::kOutputMode_Mono :
-		_outputMode == kOutputMode_Stereo ? AudioVoiceManager::kOutputMode_Stereo :
-		AudioVoiceManager::kOutputMode_Mono;
+	AudioMutex_Shared mutex(g_vfxAudioMutex);
 	
-	const int numVoices = voiceMgr.voices.size();
-	AudioVoice * voices[numVoices];
-	int voiceIndex = 0;
-	for (auto & voice : voiceMgr.voices)
-		voices[voiceIndex++] = voice;
-	
-	g_vfxAudioVoiceMgr->generateAudio(
-		voices, numVoices,
-		channelData.data, numSamples, numChannels,
-		limit, limitPeak,
-		false,
-		1.f,
-		outputMode, false);
+	mutex.lock();
+	{
+		const AudioVoiceManager::OutputMode outputMode =
+			_outputMode == kOutputMode_Mono ? AudioVoiceManager::kOutputMode_Mono :
+			_outputMode == kOutputMode_Stereo ? AudioVoiceManager::kOutputMode_Stereo :
+			AudioVoiceManager::kOutputMode_MultiChannel;
+		
+		const int numVoices = voiceMgr.voices.size();
+		AudioVoice * voices[numVoices];
+		int voiceIndex = 0;
+		for (auto & voice : voiceMgr.voices)
+			voices[voiceIndex++] = voice;
+		
+		g_vfxAudioVoiceMgr->generateAudio(
+			voices, numVoices,
+			channelData.data, numSamples, numChannels,
+			limit, limitPeak,
+			false,
+			1.f,
+			outputMode, false);
+	}
+	mutex.unlock();
 	
 	//
 	

@@ -56,6 +56,7 @@ struct VfxNodeAudioGraph : VfxNodeBase
 		kInput_OutputMode,
 		kInput_Limit,
 		kInput_LimitPeak,
+		kInput_NumChannels,
 		kInput_COUNT
 	};
 	
