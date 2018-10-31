@@ -439,19 +439,6 @@ AudioGraphGlobals::Memf AudioGraphGlobals::getMemf(const char * name)
 
 #include "graph.h"
 
-AudioGraphManager_Basic::GraphCacheElem::GraphCacheElem()
-	: isValid(false)
-	, graph(nullptr)
-{
-	graph = new Graph();
-}
-
-AudioGraphManager_Basic::GraphCacheElem::~GraphCacheElem()
-{
-	delete graph;
-	graph = nullptr;
-}
-
 AudioGraphManager_Basic::AudioGraphManager_Basic(bool _cacheOnCreate)
 	: AudioGraphManager()
 	, typeDefinitionLibrary(nullptr)
@@ -510,6 +497,10 @@ void AudioGraphManager_Basic::shut()
 	
 	delete typeDefinitionLibrary;
 	typeDefinitionLibrary = nullptr;
+	
+	for (auto & i : graphCache)
+		delete i.second.graph;
+	graphCache.clear();
 }
 
 void AudioGraphManager_Basic::addGraphToCache(const char * filename)
@@ -522,6 +513,7 @@ void AudioGraphManager_Basic::addGraphToCache(const char * filename)
 		
 		auto & elem = e.first->second;
 		
+		elem.graph = new Graph();
 		elem.isValid = elem.graph->load(filename, typeDefinitionLibrary);
 	}
 }
@@ -571,6 +563,7 @@ AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filena
 			
 			auto & elem = e.first->second;
 			
+			elem.graph = new Graph();
 			elem.isValid = elem.graph->load(filename, typeDefinitionLibrary);
 			
 			if (elem.isValid)

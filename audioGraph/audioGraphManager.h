@@ -96,8 +96,11 @@ struct AudioGraphManager_Basic : AudioGraphManager
 		bool isValid;
 		Graph * graph;
 		
-		GraphCacheElem();
-		~GraphCacheElem();
+		GraphCacheElem()
+			: isValid(false)
+			, graph(nullptr)
+		{
+		}
 	};
 	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
