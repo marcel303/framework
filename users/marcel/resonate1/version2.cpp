@@ -21,7 +21,7 @@ From: https://learnopengl.com/Advanced-OpenGL/Cubemaps
 const int VIEW_SX = 1000;
 const int VIEW_SY = 600;
 
-const int kTextureSize = 64;
+const int kTextureSize = 32;
 const int kTextureArraySize = 128;
 
 extern void splitString(const std::string & str, std::vector<std::string> & result);
@@ -281,19 +281,39 @@ static void projectDirectionToCubeFace(Vec3Arg direction, int & cubeFaceIndex, V
 
 struct Lattice
 {
+	struct Vector
+	{
+		float x;
+		float y;
+		float z;
+		
+		void set(const float in_x, const float in_y, const float in_z)
+		{
+			x = in_x;
+			y = in_y;
+			z = in_z;
+		}
+		
+		void setZero()
+		{
+			x = y = z = 0.f;
+		}
+	};
+	
 	struct Vertex
 	{
-		Vec3 p;
+		Vector p;
 		
 		// physics stuff
-		Vec3 f;
-		Vec3 v;
+		Vector f;
+		Vector v;
 	};
 	
 	struct Edge
 	{
 		int vertex1;
 		int vertex2;
+		float weight;
 		
 		// physics stuff
 		float initialDistance;
@@ -323,14 +343,14 @@ struct Lattice
 		
 					Vec3 p = matrix.Mul4(Vec3(xf, yf, 1.f));
 					
-					vertices[index].p = p;
+					vertices[index].p.set(p[0], p[1], p[2]);
 				}
 			}
 		}
 		
 		// setup up edges for face interiors
 		
-		auto addEdge = [&](const int faceIndex, const int x1, const int y1, const int x2, const int y2)
+		auto addEdge = [&](const int faceIndex, const int x1, const int y1, const int x2, const int y2, const float weight)
 		{
 			const int index1 =
 				faceIndex * kTextureSize * kTextureSize +
@@ -345,6 +365,7 @@ struct Lattice
 			Edge edge;
 			edge.vertex1 = index1;
 			edge.vertex2 = index2;
+			edge.weight = weight;
 			
 			edges.push_back(edge);
 		};
@@ -355,11 +376,11 @@ struct Lattice
 			{
 				for (int y = 0; y < kTextureSize - 1; ++y)
 				{
-					addEdge(i, x + 0, y + 0, x + 1, y + 0);
-					addEdge(i, x + 0, y + 0, x + 0, y + 1);
+					addEdge(i, x + 0, y + 0, x + 1, y + 0, 1.f);
+					addEdge(i, x + 0, y + 0, x + 0, y + 1, 1.f);
 					
-					addEdge(i, x + 0, y + 0, x + 1, y + 1);
-					addEdge(i, x + 0, y + 1, x + 1, y + 0);
+					addEdge(i, x + 0, y + 0, x + 1, y + 1, 1.f / sqrtf(2.f));
+					addEdge(i, x + 0, y + 1, x + 1, y + 0, 1.f / sqrtf(2.f));
 				
 				}
 			}
@@ -375,9 +396,11 @@ struct Lattice
 			const auto & p1 = vertices[edge.vertex1].p;
 			const auto & p2 = vertices[edge.vertex2].p;
 			
-			const auto delta = p2 - p1;
+			const float dx = p2.x - p1.x;
+			const float dy = p2.y - p1.y;
+			const float dz = p2.z - p1.z;
 			
-			const float distance = delta.CalcSize();
+			const float distance = sqrtf(dx * dx + dy * dy + dz * dz);
 			
 			edge.initialDistance = distance;
 		}
@@ -392,9 +415,15 @@ static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & s
 	{
 		auto & p = lattice.vertices[i].p;
 		
-		const float t = shape.intersectRay_directional(p);
+		const float t = shape.intersectRay_directional(Vec3(p.x, p.y, p.z));
 		
-		lattice.vertices[i].p = p * t;
+		lattice.vertices[i].p.set(
+			p.x * t,
+			p.y * t,
+			p.z * t);
+		
+		lattice.vertices[i].f.setZero();
+		lattice.vertices[i].v.setZero();
 	}
 	
 	lattice.finalize();
@@ -410,7 +439,7 @@ static void drawLatticeVertices(const Lattice & lattice)
 		{
 			auto & p = lattice.vertices[i].p;
 			
-			gxVertex3f(p[0], p[1], p[2]);
+			gxVertex3f(p.x, p.y, p.z);
 		}
 	}
 	gxEnd();
@@ -425,8 +454,8 @@ static void drawLatticeEdges(const Lattice & lattice)
 			const auto & p1 = lattice.vertices[edge.vertex1].p;
 			const auto & p2 = lattice.vertices[edge.vertex2].p;
 			
-			gxVertex3f(p1[0], p1[1], p1[2]);
-			gxVertex3f(p2[0], p2[1], p2[2]);
+			gxVertex3f(p1.x, p1.y, p1.z);
+			gxVertex3f(p2.x, p2.y, p2.z);
 		}
 	}
 	gxEnd();
@@ -442,7 +471,7 @@ static void simulateLattice(Lattice & lattice, const float dt, const float tensi
 	{
 		auto & v = lattice.vertices[i];
 		
-		v.f.SetZero();
+		v.f.setZero();
 	}
 	
 	for (auto & edge : lattice.edges)
@@ -450,29 +479,53 @@ static void simulateLattice(Lattice & lattice, const float dt, const float tensi
 		auto & v1 = lattice.vertices[edge.vertex1];
 		auto & v2 = lattice.vertices[edge.vertex2];
 		
-		const Vec3 delta = v2.p - v1.p;
+		const float dx = v2.p.x - v1.p.x;
+		const float dy = v2.p.y - v1.p.y;
+		const float dz = v2.p.z - v1.p.z;
 		
-		const float distance = delta.CalcSize();
+		const float distance = sqrtf(dx * dx + dy * dy + dz * dz);
 		
 		if (distance < eps)
 			continue;
 		
-		const Vec3 direction = delta / distance;
+		const float distance_inverse = 1.f / distance;
 		
-		const float pull = distance - edge.initialDistance;
+		const float directionX = dx * distance_inverse;
+		const float directionY = dy * distance_inverse;
+		const float directionZ = dz * distance_inverse;
 		
-		const Vec3 f = direction * pull * tension;
+		const float force = (distance - edge.initialDistance) * edge.weight * tension;
 		
-		v1.f += f;
-		v2.f -= f;
+		const float fx = directionX * force;
+		const float fy = directionY * force;
+		const float fz = directionZ * force;
+		
+		v1.f.x += fx;
+		v1.f.y += fy;
+		v1.f.z += fz;
+		
+		v2.f.x -= fx;
+		v2.f.y -= fy;
+		v2.f.z -= fz;
 	}
+	
+	const float falloff = powf(.8f, dt);
 	
 	for (int i = 0; i < numVertices; ++i)
 	{
 		auto & v = lattice.vertices[i];
 		
-		v.v += v.f * dt;
-		v.p += v.v * dt;
+		v.v.x *= falloff;
+		v.v.y *= falloff;
+		v.v.z *= falloff;
+		
+		v.v.x += v.f.x * dt;
+		v.v.y += v.f.y * dt;
+		v.v.z += v.f.z * dt;
+		
+		v.p.x += v.v.x * dt;
+		v.p.y += v.v.y * dt;
+		v.p.z += v.v.z * dt;
 	}
 }
 
@@ -534,6 +587,8 @@ int main(int argc, char * argv[])
 	bool showLatticeEdges = false;
 	bool simulateLattice = false;
 	float latticeTension = 1.f;
+	float simulationTimeStep = 1.f / 1000.f;
+	int numSimulationStepsPerDraw = 10;
 	
 	bool doCameraControl = false;
 	
@@ -581,11 +636,18 @@ int main(int argc, char * argv[])
 				ImGui::Checkbox("Show lattice edges", &showLatticeEdges);
 				ImGui::Checkbox("Simulate lattice", &simulateLattice);
 				ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100.f);
+				ImGui::SliderFloat("Simulation time step", &simulationTimeStep, 0.f, 1.f / 10.f);
+				ImGui::SliderInt("Num simulation steps per draw", &numSimulationStepsPerDraw, 1, 1000);
 				if (ImGui::Button("Squash lattice"))
 				{
 					const int numVertices = 6 * kTextureSize * kTextureSize;
 					for (int i = 0; i < numVertices; ++i)
-						lattice.vertices[i].p *= .95f;
+					{
+						auto & p = lattice.vertices[i].p;
+						p.x *= .95f;
+						p.y *= .95f;
+						p.z *= .95f;
+					}
 				}
 				
 				ImGui::Separator();
@@ -613,7 +675,8 @@ int main(int argc, char * argv[])
 		
 		if (simulateLattice)
 		{
-			::simulateLattice(lattice, dt, latticeTension);
+			for (int i = 0; i < numSimulationStepsPerDraw; ++i)
+				::simulateLattice(lattice, simulationTimeStep, latticeTension);
 		}
 
 		framework.beginDraw(0, 0, 0, 0);
