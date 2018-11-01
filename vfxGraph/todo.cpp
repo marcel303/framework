@@ -2,14 +2,14 @@
 
 top priority items:
 
-- fix threshold typo (treshold) throughout the entire code base
-
 - add node which generates a trigger signal once when a graph is created
 
 - add ability for nodes to report warnings and errors
 
 - make it possible to have voice nodes in audio graph which do not generate audible sound ?
+
 - add an option to audio graph and poly audio graph nodes to output audio or not
+
 - add options to poly and regular audio graph nodes to output mono, stereo, or multi-channel
 	- requires an extra mixing level ? perhaps add a voice manager interface. or store voices in audio graph ? let voice manager allocate channel indices, but do mixing itself differently ? or perhaps add voice groups or something ..
 
@@ -22,16 +22,13 @@ top priority items:
 
 - add ability for audio nodes to draw a filter response graph ?
 	- or add to audio graph manager : draw filter response and FFT of selected node/socket
-- save wavefield data when saving. should be faster to restore than randomizing values. and also allows for finding nice sounds and saving them
-	- review resource implementation vfx graph
-	- port resource implementation vfx graph to audio graph
-	- add 1D wavefield resource
-	- add 2D wavefield resource
+
 - add shared control value inputs to poly audio graph node
 	- make sure both the poly and the regular audio graph nodes have both type of inputs
 
 - add DC blocker node
 
+- add ability to add a note to a node
 
 todo :
 - add undo/redo support. just serialize/deserialize graph for every action?
@@ -74,8 +71,6 @@ todo :
 - add text field to node type select
 - raise a menu when socket connect is released on a node itself. ask for which socket to connect to
 - OSC endpoint: resend count? or just OSC send node?
-+ add interval (once every N seconds) mode to OSC send mode
-+ add a note field in editor options -> for versioning
 
 
 todo : creativity investigation :
@@ -105,19 +100,7 @@ todo : nodes :
 	- add time! input trigger. performs seek operation
 - add pitch control to oscillators ?
 - add pulse size to square oscillator
-- add audio playback node
-	+ add play! trigger
-	+ add pause! trigger
-	+ add resume! trigger
-	- add play! output trigger
-	- add pause! output trigger
-	+ add time output
-	- add loop! output
-	+ add restart on filename change
-	+ add restart on loop change
-	+ add BPM and beat output trigger
-	- fix issue with output time not stable when paused
-	- fix issue with output time not reset on filename change or looping. remember start time? -> capture time on next provide
+- sound node : fix issue with output time not reset on filename change or looping. remember start time? -> capture time on next provide
 - add note (like C1) to MIDI note
 - add adsr node
 - perhaps add string names to channels, for more convenient selection ? would reduce remixing capability I fear .. maybe let nodes which produce channels to document in their node description what those channels represent, semantically .. but not let the user use those semantics to select channels
@@ -184,6 +167,12 @@ todo : framework
 
 
 todo :
++ fix threshold typo (treshold) throughout the entire code base
++ save wavefield data when saving. should be faster to restore than randomizing values. and also allows for finding nice sounds and saving them
+	+ review resource implementation vfx graph
+	+ port resource implementation vfx graph to audio graph
+	+ add 1D wavefield resource
+	+ add 2D wavefield resource
 + replace surface type inputs and outputs to image type
 + add VfxImageBase type. let VfxPlug use this type for image type inputs and outputs. has virtual getTexture method
 + add VfxImage_Surface type. let VfxNodeFsfx use this type
@@ -378,6 +367,8 @@ todo :
 + add reload/refresh/recreate button graph edit
 	+ only visible/active when real-time connection is set
 	+ reload/recreates the implementation, without saving the file to disk
++ add a note field in editor options -> for versioning
+
 
 todo : nodes :
 + add ease node
@@ -494,6 +485,19 @@ todo : nodes :
 + investigate how to render 2D and 3D shapes
 	+ add surface node. push surface before tick, pop surface after tick
 	+ add sequence node. has multiple any type inputs. inputs are processed in socket order
++ add interval (once every N seconds) mode to OSC send mode
+- add audio playback node
+	+ add play! trigger
+	+ add pause! trigger
+	+ add resume! trigger
+	+ add play! output trigger
+	+ add pause! output trigger
+	+ add time output
+	+ add loop! output
+	+ add restart on filename change
+	+ add restart on loop change
+	+ add BPM and beat output trigger
+	+ fix issue with output time not stable when paused
 
 
 todo : fsfx :
