@@ -111,7 +111,8 @@ static Mat4x4 createCubeFaceMatrix(const GLenum cubeFace)
 	return mat;
 }
 
-static Mat4x4 s_cubeFaceMatrices[6];
+static Mat4x4 s_cubeFaceToWorldMatrices[6];
+static Mat4x4 s_worldToCubeFaceMatrices[6];
 
 struct ShapeDefinition
 {
@@ -196,7 +197,7 @@ struct ShapeDefinition
 		}
 	}
 	
-	float intersectRay(Vec3Arg rayDirection) const
+	float intersectRay_directional(Vec3Arg rayDirection) const
 	{
 		float t = std::numeric_limits<float>::infinity();
 		
@@ -218,7 +219,262 @@ struct ShapeDefinition
 		
 		return t;
 	}
+	
+	float intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection) const
+	{
+		float t = std::numeric_limits<float>::infinity();
+		
+		for (int i = 0; i < numPlanes; ++i)
+		{
+			const float dd = planes[i].normal * rayDirection;
+			
+			if (dd > 0.f)
+			{
+				const float d1 = planes[i].offset - planes[i].normal * rayOrigin;
+				const float pt = d1 / dd;
+				
+				if (pt >= 0.f && pt < t)
+					t = pt;
+			}
+		}
+		
+		return t;
+	}
 };
+
+static void projectDirectionToCubeFace(Vec3Arg direction, int & cubeFaceIndex, Vec2 & cubeFacePosition)
+{
+	const float absDirection[3] =
+	{
+		fabsf(direction[0]),
+		fabsf(direction[1]),
+		fabsf(direction[2])
+	};
+	
+	int majorAxis = 0;
+	
+	if (absDirection[1] > absDirection[majorAxis])
+		majorAxis = 1;
+	if (absDirection[2] > absDirection[majorAxis])
+		majorAxis = 2;
+	
+	/*
+	work out the cube face index given this list
+	
+	GL_TEXTURE_CUBE_MAP_POSITIVE_X
+	GL_TEXTURE_CUBE_MAP_NEGATIVE_X
+	GL_TEXTURE_CUBE_MAP_POSITIVE_Y
+	GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
+	GL_TEXTURE_CUBE_MAP_POSITIVE_Z
+	GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+	*/
+	
+	cubeFaceIndex = majorAxis * 2 + (direction[majorAxis] < 0 ? 1 : 0);
+	
+	const Mat4x4 & worldToCubeFaceMatrix = s_worldToCubeFaceMatrices[cubeFaceIndex];
+	
+	const Vec3 direction_cubeFace = worldToCubeFaceMatrix.Mul4(direction);
+	
+	cubeFacePosition[0] = direction_cubeFace[0] / direction_cubeFace[2];
+	cubeFacePosition[1] = direction_cubeFace[1] / direction_cubeFace[2];
+}
+
+struct Lattice
+{
+	struct Vertex
+	{
+		Vec3 p;
+		
+		// physics stuff
+		Vec3 f;
+		Vec3 v;
+	};
+	
+	struct Edge
+	{
+		int vertex1;
+		int vertex2;
+		
+		// physics stuff
+		float initialDistance;
+	};
+	
+	Vertex vertices[6 * kTextureSize * kTextureSize];
+	
+	std::vector<Edge> edges;
+	
+	void init()
+	{
+		for (int i = 0; i < 6; ++i)
+		{
+			const Mat4x4 & matrix = s_cubeFaceToWorldMatrices[i];
+			
+			for (int x = 0; x < kTextureSize; ++x)
+			{
+				for (int y = 0; y < kTextureSize; ++y)
+				{
+					const int index =
+						i * kTextureSize * kTextureSize +
+						y * kTextureSize +
+						x;
+					
+					const float xf = ((x + .5f) / float(kTextureSize) - .5f) * 2.f;
+					const float yf = ((y + .5f) / float(kTextureSize) - .5f) * 2.f;
+		
+					Vec3 p = matrix.Mul4(Vec3(xf, yf, 1.f));
+					
+					vertices[index].p = p;
+				}
+			}
+		}
+		
+		// setup up edges for face interiors
+		
+		auto addEdge = [&](const int faceIndex, const int x1, const int y1, const int x2, const int y2)
+		{
+			const int index1 =
+				faceIndex * kTextureSize * kTextureSize +
+				y1 * kTextureSize +
+				x1;
+			
+			const int index2 =
+				faceIndex * kTextureSize * kTextureSize +
+				y2 * kTextureSize +
+				x2;
+			
+			Edge edge;
+			edge.vertex1 = index1;
+			edge.vertex2 = index2;
+			
+			edges.push_back(edge);
+		};
+		
+		for (int i = 0; i < 6; ++i)
+		{
+			for (int x = 0; x < kTextureSize - 1; ++x)
+			{
+				for (int y = 0; y < kTextureSize - 1; ++y)
+				{
+					addEdge(i, x + 0, y + 0, x + 1, y + 0);
+					addEdge(i, x + 0, y + 0, x + 0, y + 1);
+					
+					addEdge(i, x + 0, y + 0, x + 1, y + 1);
+					addEdge(i, x + 0, y + 1, x + 1, y + 0);
+				
+				}
+			}
+		}
+		
+		finalize();
+	}
+	
+	void finalize()
+	{
+		for (auto & edge : edges)
+		{
+			const auto & p1 = vertices[edge.vertex1].p;
+			const auto & p2 = vertices[edge.vertex2].p;
+			
+			const auto delta = p2 - p1;
+			
+			const float distance = delta.CalcSize();
+			
+			edge.initialDistance = distance;
+		}
+	}
+};
+
+static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & shape)
+{
+	const int numVertices = 6 * kTextureSize * kTextureSize;
+
+	for (int i = 0; i < numVertices; ++i)
+	{
+		auto & p = lattice.vertices[i].p;
+		
+		const float t = shape.intersectRay_directional(p);
+		
+		lattice.vertices[i].p = p * t;
+	}
+	
+	lattice.finalize();
+}
+
+static void drawLatticeVertices(const Lattice & lattice)
+{
+	gxBegin(GL_POINTS);
+	{
+		const int numVertices = 6 * kTextureSize * kTextureSize;
+		
+		for (int i = 0; i < numVertices; ++i)
+		{
+			auto & p = lattice.vertices[i].p;
+			
+			gxVertex3f(p[0], p[1], p[2]);
+		}
+	}
+	gxEnd();
+}
+
+static void drawLatticeEdges(const Lattice & lattice)
+{
+	gxBegin(GL_LINES);
+	{
+		for (auto & edge : lattice.edges)
+		{
+			const auto & p1 = lattice.vertices[edge.vertex1].p;
+			const auto & p2 = lattice.vertices[edge.vertex2].p;
+			
+			gxVertex3f(p1[0], p1[1], p1[2]);
+			gxVertex3f(p2[0], p2[1], p2[2]);
+		}
+	}
+	gxEnd();
+}
+
+static void simulateLattice(Lattice & lattice, const float dt, const float tension)
+{
+	const float eps = 1e-4f;
+	
+	const int numVertices = 6 * kTextureSize * kTextureSize;
+	
+	for (int i = 0; i < numVertices; ++i)
+	{
+		auto & v = lattice.vertices[i];
+		
+		v.f.SetZero();
+	}
+	
+	for (auto & edge : lattice.edges)
+	{
+		auto & v1 = lattice.vertices[edge.vertex1];
+		auto & v2 = lattice.vertices[edge.vertex2];
+		
+		const Vec3 delta = v2.p - v1.p;
+		
+		const float distance = delta.CalcSize();
+		
+		if (distance < eps)
+			continue;
+		
+		const Vec3 direction = delta / distance;
+		
+		const float pull = distance - edge.initialDistance;
+		
+		const Vec3 f = direction * pull * tension;
+		
+		v1.f += f;
+		v2.f -= f;
+	}
+	
+	for (int i = 0; i < numVertices; ++i)
+	{
+		auto & v = lattice.vertices[i];
+		
+		v.v += v.f * dt;
+		v.p += v.v * dt;
+	}
+}
 
 int main(int argc, char * argv[])
 {
@@ -236,7 +492,9 @@ int main(int argc, char * argv[])
 	
 	for (int i = 0; i < 6; ++i)
 	{
-		s_cubeFaceMatrices[i] = createCubeFaceMatrix(s_cubeFaceNamesGL[i]);
+		s_cubeFaceToWorldMatrices[i] = createCubeFaceMatrix(s_cubeFaceNamesGL[i]);
+		
+		s_worldToCubeFaceMatrices[i] = s_cubeFaceToWorldMatrices[i].CalcInv();
 	}
 	
 	Cube * cube = new Cube();
@@ -259,15 +517,23 @@ int main(int argc, char * argv[])
 	
 	shapeDefinition.loadFromFile("shape1.txt");
 	
+	Lattice lattice;
+	lattice.init();
+	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
 	
 	bool showCube = false;
-	bool showIntersectionPoints = true;
+	bool showIntersectionPoints = false;
 	bool showAxis = true;
-	bool showCubePoints = false;
+	bool showCubePoints = true;
 	float cubePointScale = 1.f;
 	bool projectCubePoints = false;
 	bool colorizeCubePoints = false;
+	bool raycastCubePointsUsingMouse = true;
+	bool showLatticeVertices = false;
+	bool showLatticeEdges = false;
+	bool simulateLattice = false;
+	float latticeTension = 1.f;
 	
 	bool doCameraControl = false;
 	
@@ -297,14 +563,29 @@ int main(int argc, char * argv[])
 				ImGui::SliderFloat("Cube points scale", &cubePointScale, 0.f, 2.f);
 				ImGui::Checkbox("Project cube points", &projectCubePoints);
 				ImGui::Checkbox("Colorize cube points", &colorizeCubePoints);
+				ImGui::Checkbox("Raycast cube points with mouse", &raycastCubePointsUsingMouse);
 				
 				ImGui::Separator();
 				ImGui::Text("Shape generation");
 				ImGui::SliderInt("Shape planes", &numPlanesForRandomization, 0, ShapeDefinition::kMaxPlanes);
-				
 				if (ImGui::Button("Randomize shape"))
-				{
 					shapeDefinition.makeRandomShape(numPlanesForRandomization);
+				
+				ImGui::Separator();
+				ImGui::Text("Lattice");
+				if (ImGui::Button("Initialize lattice"))
+					lattice.init();
+				if (ImGui::Button("Project lattice onto shape"))
+					projectLatticeOntoShape(lattice, shapeDefinition);
+				ImGui::Checkbox("Show lattice vertices", &showLatticeVertices);
+				ImGui::Checkbox("Show lattice edges", &showLatticeEdges);
+				ImGui::Checkbox("Simulate lattice", &simulateLattice);
+				ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100.f);
+				if (ImGui::Button("Squash lattice"))
+				{
+					const int numVertices = 6 * kTextureSize * kTextureSize;
+					for (int i = 0; i < numVertices; ++i)
+						lattice.vertices[i].p *= .95f;
 				}
 				
 				ImGui::Separator();
@@ -329,6 +610,11 @@ int main(int argc, char * argv[])
 		}
 		
 		camera.tick(dt, doCameraControl);
+		
+		if (simulateLattice)
+		{
+			::simulateLattice(lattice, dt, latticeTension);
+		}
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -388,7 +674,7 @@ int main(int argc, char * argv[])
 					{
 						gxSetTexture(textureGL[i]);
 						gxPushMatrix();
-						gxMultMatrixf(s_cubeFaceMatrices[i].m_v);
+						gxMultMatrixf(s_cubeFaceToWorldMatrices[i].m_v);
 						gxTranslatef(0, 0, 1);
 						setColor(colorWhite);
 						drawRect(-1, -1, +1, +1);
@@ -402,7 +688,7 @@ int main(int argc, char * argv[])
 					setColor(colorBlue);
 					for (int i = 0; i < 6; ++i)
 					{
-						const Mat4x4 & matrix = s_cubeFaceMatrices[i];
+						const Mat4x4 & matrix = s_cubeFaceToWorldMatrices[i];
 						
 						gxBegin(GL_POINTS);
 						for (int x = 0; x < kTextureSize; ++x)
@@ -416,7 +702,7 @@ int main(int argc, char * argv[])
 								
 								if (projectCubePoints)
 								{
-									const float t = shapeDefinition.intersectRay(p);
+									const float t = shapeDefinition.intersectRay_directional(p);
 									
 									p = p * t;
 								}
@@ -435,6 +721,53 @@ int main(int argc, char * argv[])
 						gxEnd();
 					}
 				}
+				
+				if (raycastCubePointsUsingMouse)
+				{
+					const Vec3 rayOrigin = camera.position;
+					const Vec3 rayDirection = camera.getWorldMatrix().GetAxis(2);
+					
+					const float t = shapeDefinition.intersectRay(rayOrigin, rayDirection);
+					
+					const Vec3 p = rayOrigin + rayDirection * t;
+					
+					const float pointSize = clamp<float>(4.f / t, .01f, 80.f);
+					
+					setColor(colorYellow);
+					glPointSize(pointSize);
+					gxBegin(GL_POINTS);
+					gxVertex3f(p[0], p[1], p[2]);
+					gxEnd();
+					glPointSize(1);
+					
+					// show the location in cube face space
+					
+					int cubeFaceIndex;
+					Vec2 cubeFacePosition;
+		
+					projectDirectionToCubeFace(p, cubeFaceIndex, cubeFacePosition);
+		
+					const float fontSize = t * .05f;
+					
+					gxPushMatrix();
+					gxTranslatef(p[0], p[1], p[2]);
+					gxRotatef(-camera.yaw, 0, 1, 0);
+					gxScalef(1, -1, 1);
+					setColor(colorWhite);
+					drawText(0, 0, fontSize, +1, +1, "cube face: %d, cube position: %.2f, %.2f",
+						cubeFaceIndex,
+						cubeFacePosition[0],
+						cubeFacePosition[1]);
+					const int texturePosition[2] =
+					{
+						(int)roundf((cubeFacePosition[0] / 2.f + .5f) * kTextureSize - .5f),
+						(int)roundf((cubeFacePosition[1] / 2.f + .5f) * kTextureSize - .5f)
+					};
+					drawText(0, fontSize, fontSize, +1, +1, "texture position: %d, %d",
+						texturePosition[0],
+						texturePosition[1]);
+					gxPopMatrix();
+				}
 			
 				if (showIntersectionPoints)
 				{
@@ -448,7 +781,7 @@ int main(int argc, char * argv[])
 						
 						const Vec3 rayDirection(dx, dy, dz);
 						
-						const float t = shapeDefinition.intersectRay(rayDirection);
+						const float t = shapeDefinition.intersectRay_directional(rayDirection);
 						
 						const Vec3 pointOfIntersection = rayDirection * t;
 						
@@ -458,6 +791,18 @@ int main(int argc, char * argv[])
 							pointOfIntersection[2]);
 					}
 					gxEnd();
+				}
+				
+				if (showLatticeVertices)
+				{
+					setColor(colorWhite);
+					drawLatticeVertices(lattice);
+				}
+				
+				if (showLatticeEdges)
+				{
+					setColor(colorGreen);
+					drawLatticeEdges(lattice);
 				}
 				
 				glDisable(GL_DEPTH_TEST);
@@ -472,6 +817,8 @@ int main(int argc, char * argv[])
 		}
 		framework.endDraw();
 	}
+	
+	Font("calibri.ttf").saveCache();
 	
 	glDeleteTextures(6, textureGL);
 	
