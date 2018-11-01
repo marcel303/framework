@@ -18,8 +18,8 @@ From: https://learnopengl.com/Advanced-OpenGL/Cubemaps
 
 */
 
-const int VIEW_SX = 1000;
-const int VIEW_SY = 600;
+const int VIEW_SX = 1200;
+const int VIEW_SY = 700;
 
 const int kTextureSize = 32;
 const int kTextureArraySize = 128;
@@ -344,6 +344,9 @@ struct Lattice
 					Vec3 p = matrix.Mul4(Vec3(xf, yf, 1.f));
 					
 					vertices[index].p.set(p[0], p[1], p[2]);
+					
+					vertices[index].f.setZero();
+					vertices[index].v.setZero();
 				}
 			}
 		}
@@ -461,7 +464,7 @@ static void drawLatticeEdges(const Lattice & lattice)
 	gxEnd();
 }
 
-static void simulateLattice(Lattice & lattice, const float dt, const float tension)
+static void simulateLattice(Lattice & lattice, const float dt, const float tension, const float falloff)
 {
 	const float eps = 1e-4f;
 	
@@ -509,15 +512,15 @@ static void simulateLattice(Lattice & lattice, const float dt, const float tensi
 		v2.f.z -= fz;
 	}
 	
-	const float falloff = powf(.8f, dt);
+	const float retain = powf(1.f - falloff, dt);
 	
 	for (int i = 0; i < numVertices; ++i)
 	{
 		auto & v = lattice.vertices[i];
 		
-		v.v.x *= falloff;
-		v.v.y *= falloff;
-		v.v.z *= falloff;
+		v.v.x *= retain;
+		v.v.y *= retain;
+		v.v.z *= retain;
 		
 		v.v.x += v.f.x * dt;
 		v.v.y += v.f.y * dt;
@@ -589,6 +592,7 @@ int main(int argc, char * argv[])
 	float latticeTension = 1.f;
 	float simulationTimeStep = 1.f / 1000.f;
 	int numSimulationStepsPerDraw = 10;
+	float velocityFalloff = .2f;
 	
 	bool doCameraControl = false;
 	
@@ -638,6 +642,7 @@ int main(int argc, char * argv[])
 				ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100.f);
 				ImGui::SliderFloat("Simulation time step", &simulationTimeStep, 0.f, 1.f / 10.f);
 				ImGui::SliderInt("Num simulation steps per draw", &numSimulationStepsPerDraw, 1, 1000);
+				ImGui::SliderFloat("Velocity falloff", &velocityFalloff, 0.f, 1.f);
 				if (ImGui::Button("Squash lattice"))
 				{
 					const int numVertices = 6 * kTextureSize * kTextureSize;
@@ -676,7 +681,7 @@ int main(int argc, char * argv[])
 		if (simulateLattice)
 		{
 			for (int i = 0; i < numSimulationStepsPerDraw; ++i)
-				::simulateLattice(lattice, simulationTimeStep, latticeTension);
+				::simulateLattice(lattice, simulationTimeStep, latticeTension, velocityFalloff);
 		}
 
 		framework.beginDraw(0, 0, 0, 0);
