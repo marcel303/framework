@@ -1008,9 +1008,14 @@ void RealTimeConnection::handleSrcSocketPressed(const GraphNodeId nodeId, const 
 	if (input == nullptr)
 		return;
 	
-	node->editorIsTriggeredTick = vfxGraph->currentTickTraversalId;;
+	node->editorIsTriggeredTick = vfxGraph->currentTickTraversalId;
 	
-	node->handleTrigger(srcSocketIndex);
+	Assert(g_currentVfxGraph == nullptr);
+	g_currentVfxGraph = vfxGraph;
+	{
+		node->handleTrigger(srcSocketIndex);
+	}
+	g_currentVfxGraph = nullptr;
 }
 
 bool RealTimeConnection::getNodeIssues(const GraphNodeId nodeId, std::vector<std::string> & issues)
