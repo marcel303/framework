@@ -1,5 +1,7 @@
 #include "framework.h"
 #include "imgui-framework.h"
+#include "Parse.h"
+#include "TextIO.h"
 
 /*
 
@@ -21,6 +23,8 @@ const int VIEW_SY = 600;
 
 const int kTextureSize = 64;
 const int kTextureArraySize = 128;
+
+extern void splitString(const std::string & str, std::vector<std::string> & result);
 
 struct Texture
 {
@@ -122,6 +126,56 @@ struct ShapeDefinition
 	Plane planes[kMaxPlanes];
 	int numPlanes;
 	
+	void loadFromFile(const char * filename)
+	{
+		numPlanes = 0;
+		
+		//
+		
+		std::vector<std::string> lines;
+		TextIO::LineEndings lineEndings;
+		
+		if (TextIO::load(filename, lines, lineEndings) == false)
+		{
+			// todo : error
+		}
+		else
+		{
+			for (auto & line : lines)
+			{
+				std::vector<std::string> parts;
+				
+				splitString(line, parts);
+				
+				if (parts.empty())
+					continue;
+				
+				if (parts[0] == "plane")
+				{
+					// plane definition
+					
+					if (numPlanes == kMaxPlanes)
+					{
+						// todo : error
+					}
+					else
+					{
+						auto & plane = planes[numPlanes++];
+						
+						if (parts.size() - 1 >= 4)
+						{
+							plane.normal[0] = Parse::Float(parts[1]);
+							plane.normal[1] = Parse::Float(parts[2]);
+							plane.normal[2] = Parse::Float(parts[3]);
+							
+							plane.offset = Parse::Float(parts[4]);
+						}
+					}
+				}
+			}
+		}
+	}
+	
 	void makeRandomShape(const int in_numPlanes)
 	{
 		Assert(in_numPlanes <= kMaxPlanes);
@@ -202,6 +256,8 @@ int main(int argc, char * argv[])
 	
 	ShapeDefinition shapeDefinition;
 	shapeDefinition.makeRandomShape(ShapeDefinition::kMaxPlanes);
+	
+	shapeDefinition.loadFromFile("shape1.txt");
 	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
 	
@@ -353,8 +409,8 @@ int main(int argc, char * argv[])
 						{
 							for (int y = 0; y < kTextureSize; ++y)
 							{
-								const float xf = (x / float(kTextureSize - 1) - .5f) * 2.f * cubePointScale;
-								const float yf = (y / float(kTextureSize - 1) - .5f) * 2.f * cubePointScale;
+								const float xf = ((x + .5f) / float(kTextureSize) - .5f) * 2.f * cubePointScale;
+								const float yf = ((y + .5f) / float(kTextureSize) - .5f) * 2.f * cubePointScale;
 								
 								Vec3 p = matrix.Mul4(Vec3(xf, yf, 1.f));
 								
