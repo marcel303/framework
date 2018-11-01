@@ -1,0 +1,139 @@
+<graph nextNodeId="24" nextLinkId="39">
+    <node id="3" typeName="audio.sine">
+        <input socket="a" value="-100.000000"/>
+        <input socket="b" value="100.000000"/>
+        <input socket="frequency" value="2.345000"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="4" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="6" typeName="audio.sine">
+        <input socket="b" value="0.500000"/>
+        <input socket="frequency" value="543.000000"/>
+        <input socket="type" value="1"/>
+    </node>
+    <node id="9" typeName="jsusfx.ATK FOA Transform Dominate">
+        <resource type="jsusfx" name="editorData"><![CDATA[<value>
+    <sliders>
+        <slider index="1" value="-39.522632598876953"/>
+        <slider index="3" value="6.5501770973205566"/>
+    </sliders>
+</value>
+]]></resource>
+        <input socket="slider3" value="4.000000"/>
+    </node>
+    <node id="10" typeName="audio.sine">
+        <input socket="a" value="-180.000000"/>
+        <input socket="b" value="180.000000"/>
+        <input socket="frequency" value="1.234000"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="11" typeName="audio.sine">
+        <input socket="b" value="0.500000"/>
+        <input socket="frequency" value="321.000000"/>
+        <input socket="type" value="1"/>
+    </node>
+    <node id="12" typeName="audio.sine">
+        <input socket="b" value="0.500000"/>
+        <input socket="frequency" value="432.000000"/>
+        <input socket="type" value="1"/>
+    </node>
+    <node id="13" typeName="audio.sine">
+        <input socket="b" value="0.500000"/>
+        <input socket="frequency" value="654.000000"/>
+        <input socket="type" value="1"/>
+    </node>
+    <node id="14" typeName="jsusfx.ATK FOA Encode Planewave">
+        <resource type="jsusfx" name="editorData"><![CDATA[<value>
+    <sliders>
+        <slider index="1" value="-0.87467676401138306"/>
+    </sliders>
+</value>
+]]></resource>
+    </node>
+    <node id="15" typeName="jsusfx.ATK FOA Transform RotateTiltTumble">
+        <resource type="jsusfx" name="editorData"><![CDATA[<value>
+    <sliders>
+        <slider index="1" value="-0.75884014368057251"/>
+        <slider index="2" value="-2.8421051502227783"/>
+        <slider index="3" value="-3.7894737720489502"/>
+    </sliders>
+</value>
+]]></resource>
+    </node>
+    <node id="16" typeName="audio.sine">
+        <input socket="b" value="0.300000"/>
+        <input socket="frequency" value="440.000000"/>
+        <input socket="mode" value="0"/>
+        <input socket="skew" value="0.200000"/>
+        <input socket="type" value="2"/>
+    </node>
+    <node id="17" typeName="jsusfx.ATK FOA Decode Binaural">
+        <resource type="jsusfx" name="editorData"><![CDATA[<value>
+    <sliders>
+        <slider index="3" value="1"/>
+    </sliders>
+</value>
+]]></resource>
+        <input socket="slider1" value="9"/>
+        <input socket="slider3" value="1"/>
+    </node>
+    <node id="18" typeName="voice">
+        <input socket="speaker" value="1"/>
+    </node>
+    <node id="19" typeName="voice">
+        <input socket="speaker" value="2"/>
+    </node>
+    <node id="21" typeName="audio.sine">
+        <input socket="a" value="-90.000000"/>
+        <input socket="b" value="90.000000"/>
+        <input socket="fine" value="0"/>
+        <input socket="frequency" value="0.678000"/>
+        <input socket="type" value="0"/>
+    </node>
+    <link id="10" srcNodeId="4" srcNodeSocketName="audio" dstNodeId="9" dstNodeSocketName="out1"/>
+    <link id="11" srcNodeId="9" srcNodeSocketName="in2" dstNodeId="6" dstNodeSocketName="audio"/>
+    <link id="20" srcNodeId="9" srcNodeSocketName="in1" dstNodeId="11" dstNodeSocketName="audio"/>
+    <link id="22" srcNodeId="9" srcNodeSocketName="slider2" dstNodeId="10" dstNodeSocketName="audio"/>
+    <link id="23" srcNodeId="9" srcNodeSocketName="slider1" dstNodeId="3" dstNodeSocketName="audio"/>
+    <link id="24" srcNodeId="9" srcNodeSocketName="in4" dstNodeId="12" dstNodeSocketName="audio"/>
+    <link id="25" srcNodeId="9" srcNodeSocketName="in3" dstNodeId="13" dstNodeSocketName="audio"/>
+    <link id="26" srcNodeId="14" srcNodeSocketName="in1" dstNodeId="16" dstNodeSocketName="audio"/>
+    <link id="27" srcNodeId="15" srcNodeSocketName="in1" dstNodeId="14" dstNodeSocketName="out1"/>
+    <link id="28" srcNodeId="15" srcNodeSocketName="in2" dstNodeId="14" dstNodeSocketName="out2"/>
+    <link id="29" srcNodeId="15" srcNodeSocketName="in3" dstNodeId="14" dstNodeSocketName="out3"/>
+    <link id="30" srcNodeId="15" srcNodeSocketName="in4" dstNodeId="14" dstNodeSocketName="out4"/>
+    <link id="31" srcNodeId="17" srcNodeSocketName="in1" dstNodeId="15" dstNodeSocketName="out1"/>
+    <link id="32" srcNodeId="17" srcNodeSocketName="in2" dstNodeId="15" dstNodeSocketName="out2"/>
+    <link id="33" srcNodeId="17" srcNodeSocketName="in3" dstNodeId="15" dstNodeSocketName="out3"/>
+    <link id="34" srcNodeId="17" srcNodeSocketName="in4" dstNodeId="15" dstNodeSocketName="out4"/>
+    <link id="35" srcNodeId="18" srcNodeSocketName="audio" dstNodeId="17" dstNodeSocketName="out1"/>
+    <link id="36" srcNodeId="19" srcNodeSocketName="audio" dstNodeId="17" dstNodeSocketName="out2"/>
+    <link id="38" srcNodeId="15" srcNodeSocketName="slider1" dstNodeId="21" dstNodeSocketName="audio"/>
+    <editor nextZKey="237">
+        <dragAndZoom x="265.27493286132812" y="127.2928466796875" zoom="1.4214566946029663"/>
+        <nodeDatas>
+            <nodeData nodeId="3" x="-208" y="-304" zKey="182" folded="1"/>
+            <nodeData nodeId="4" x="192" y="-208" zKey="220"/>
+            <nodeData nodeId="6" x="-256" y="-128" zKey="178" folded="1"/>
+            <nodeData nodeId="9" x="-16" y="-208" zKey="183"/>
+            <nodeData nodeId="10" x="-208" y="-256" zKey="212" folded="1"/>
+            <nodeData nodeId="11" x="-256" y="-160" zKey="180" folded="1"/>
+            <nodeData nodeId="12" x="-256" y="-64" zKey="206" folded="1"/>
+            <nodeData nodeId="13" x="-256" y="-96" zKey="186" folded="1"/>
+            <nodeData nodeId="14" x="-208" y="80" zKey="230"/>
+            <nodeData nodeId="15" x="-47.982086181640625" y="80.000076293945312" zKey="231"/>
+            <nodeData nodeId="16" x="-368" y="128" zKey="227"/>
+            <nodeData nodeId="17" x="144" y="80" zKey="233"/>
+            <nodeData nodeId="18" x="368" y="64" zKey="236"/>
+            <nodeData nodeId="19" x="368" y="176" zKey="235"/>
+            <nodeData nodeId="21" x="-208" y="48" zKey="224" folded="1"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="22" x="112.7513427734375" y="-95.508087158203125" zKey="221" nodeId="9" dstSocketName="out4" sx="216" sy="148"/>
+            <visualizer id="23" x="-452.298828125" y="-28.884979248046875" zKey="228" nodeId="16" dstSocketName="audio" sx="216" sy="148"/>
+        </visualizers>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
+    </editor>
+</graph>
