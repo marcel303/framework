@@ -653,12 +653,6 @@ void AudioRealTimeConnection::setSrcSocketValue(const GraphNodeId nodeId, const 
 	{
 		audioGraph->connectToInputLiteral(*input, value);
 	}
-	
-// fixme : keep this code or is it a hack ?
-	g_currentAudioGraph = audioGraph;
-// note : needed to refresh/reload JsusFx scripts
-	node->tick(0.f);
-	g_currentAudioGraph = nullptr;
 }
 
 bool AudioRealTimeConnection::getSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, std::string & value)
