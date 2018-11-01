@@ -27,6 +27,7 @@
 
 #include "audiostream/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStreamVorbis.h"
+#include "FileStream.h"
 #include "vfxNodeSound.h"
 #include <math.h>
 #include <SDL2/SDL.h>
@@ -44,6 +45,9 @@ int VfxNodeSound_AudioStream::Provide(int numSamples, AudioSample * __restrict b
 			const int numSamplesRead = soundNode->audioStream->Provide(numSamples, buffer);
 			
 			timeInSamples += numSamplesRead;
+			
+			if (soundNode->audioStream->HasLooped_get())
+				hasLooped = true;
 			
 			result = numSamplesRead;
 		}
@@ -72,6 +76,7 @@ VFX_NODE_TYPE(VfxNodeSound)
 	out("time", "float");
 	out("play!", "trigger");
 	out("pause!", "trigger");
+	out("loop!", "trigger");
 	out("beat!", "trigger");
 	out("beatCount", "int");
 }
@@ -99,6 +104,7 @@ VfxNodeSound::VfxNodeSound()
 	addOutput(kOutput_Time, kVfxPlugType_Float, &timeOutput);
 	addOutput(kOutput_Play, kVfxPlugType_Trigger, nullptr);
 	addOutput(kOutput_Pause, kVfxPlugType_Trigger, nullptr);
+	addOutput(kOutput_Loop, kVfxPlugType_Trigger, nullptr);
 	addOutput(kOutput_Beat, kVfxPlugType_Trigger, nullptr);
 	addOutput(kOutput_BeatCount, kVfxPlugType_Int, &beatCountOutput);
 	
@@ -134,6 +140,7 @@ void VfxNodeSound::tick(const float dt)
 		audioStream = nullptr;
 	
 		mixingAudioStream.timeInSamples = 0;
+		mixingAudioStream.hasLooped = false;
 		
 		isPaused = false;
 		
@@ -162,6 +169,7 @@ void VfxNodeSound::tick(const float dt)
 			audioStream->Open(source, loop);
 		
 		Assert(mixingAudioStream.timeInSamples == 0);
+		Assert(mixingAudioStream.hasLooped == false);
 		
 		// ensure audio output exists
 		
@@ -181,6 +189,7 @@ void VfxNodeSound::tick(const float dt)
 			audioStream->Close();
 			
 			mixingAudioStream.timeInSamples = 0;
+			mixingAudioStream.hasLooped = false;
 		}
 		SDL_UnlockMutex(mutex);
 		
@@ -196,9 +205,13 @@ void VfxNodeSound::tick(const float dt)
 			{
 				SDL_LockMutex(mutex);
 				{
-					audioStream->Open(source, loop);
+					if (FileStream::Exists(source))
+						audioStream->Open(source, loop);
+					else
+						audioStream->Close();
 					
 					mixingAudioStream.timeInSamples = 0;
+					mixingAudioStream.hasLooped = false;
 				}
 				SDL_UnlockMutex(mutex);
 			}
@@ -230,6 +243,15 @@ void VfxNodeSound::tick(const float dt)
 			trigger(kOutput_Beat);
 		}
 	}
+	
+	{
+		const bool hasLooped = mixingAudioStream.hasLooped.exchange(false);
+		
+		if (hasLooped)
+		{
+			trigger(kOutput_Loop);
+		}
+	}
 }
 
 void VfxNodeSound::init(const GraphNode & node)
@@ -249,6 +271,7 @@ void VfxNodeSound::init(const GraphNode & node)
 		audioStream->Open(source, loop);
 		
 		mixingAudioStream.timeInSamples = 0;
+		mixingAudioStream.hasLooped = false;
 		
 		Assert(timeOutput == 0.f);
 		Assert(beatCountOutput == 0);
@@ -271,9 +294,13 @@ void VfxNodeSound::handleTrigger(const int inputSocketIndex)
 			
 			SDL_LockMutex(mutex);
 			{
-				audioStream->Open(source, loop);
+				if (FileStream::Exists(source))
+					audioStream->Open(source, loop);
+				else
+					audioStream->Close();
 				
 				mixingAudioStream.timeInSamples = 0;
+				mixingAudioStream.hasLooped = false;
 			}
 			SDL_UnlockMutex(mutex);
 			
@@ -293,6 +320,7 @@ void VfxNodeSound::handleTrigger(const int inputSocketIndex)
 			audioStream->Close();
 			
 			mixingAudioStream.timeInSamples = 0;
+			mixingAudioStream.hasLooped = false;
 		}
 		SDL_UnlockMutex(mutex);
 		
@@ -307,9 +335,13 @@ void VfxNodeSound::handleTrigger(const int inputSocketIndex)
 		
 		SDL_LockMutex(mutex);
 		{
-			audioStream->Open(source, loop);
+			if (FileStream::Exists(source))
+				audioStream->Open(source, loop);
+			else
+				audioStream->Close();
 			
 			mixingAudioStream.timeInSamples = 0;
+			mixingAudioStream.hasLooped = false;
 		}
 		SDL_UnlockMutex(mutex);
 		
