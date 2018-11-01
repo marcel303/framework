@@ -3,3 +3,9 @@ app marcel-resonate1
 	depend_library imgui-framework
 	add_files main.cpp
 	resource_path data
+
+app marcel-resonate2
+	depend_library framework
+	depend_library imgui-framework
+	add_files version2.cpp
+	resource_path data
