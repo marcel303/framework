@@ -90,10 +90,10 @@ static Mat4x4 createCubeFaceMatrix(const GLenum cubeFace)
 		mat.MakeRotationY(+90 * degToRad);
 		break;
 	case GL_TEXTURE_CUBE_MAP_POSITIVE_Y: // Top
-		mat.MakeRotationX(-90 * degToRad);
+		mat.MakeRotationX(+90 * degToRad);
 		break;
 	case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y: // Bottom
-		mat.MakeRotationX(+90 * degToRad);
+		mat.MakeRotationX(-90 * degToRad);
 		break;
 	case GL_TEXTURE_CUBE_MAP_POSITIVE_Z: // Back
 		mat.MakeRotationY(180 * degToRad);
@@ -375,19 +375,201 @@ struct Lattice
 		
 		for (int i = 0; i < 6; ++i)
 		{
-			for (int x = 0; x < kTextureSize - 1; ++x)
+			for (int x = 0; x < kTextureSize; ++x)
 			{
-				for (int y = 0; y < kTextureSize - 1; ++y)
+				for (int y = 0; y < kTextureSize; ++y)
 				{
-					addEdge(i, x + 0, y + 0, x + 1, y + 0, 1.f);
-					addEdge(i, x + 0, y + 0, x + 0, y + 1, 1.f);
+					if (x + 1 < kTextureSize)
+						addEdge(i, x + 0, y + 0, x + 1, y + 0, 1.f);
+					if (y + 1 < kTextureSize)
+						addEdge(i, x + 0, y + 0, x + 0, y + 1, 1.f);
 					
-					addEdge(i, x + 0, y + 0, x + 1, y + 1, 1.f / sqrtf(2.f));
-					addEdge(i, x + 0, y + 1, x + 1, y + 0, 1.f / sqrtf(2.f));
-				
+					if (x + 1 < kTextureSize && y + 1 < kTextureSize)
+					{
+						addEdge(i, x + 0, y + 0, x + 1, y + 1, 1.f / sqrtf(2.f));
+						addEdge(i, x + 0, y + 1, x + 1, y + 0, 1.f / sqrtf(2.f));
+					}
 				}
 			}
 		}
+		
+		// setup edges between faces
+		
+		auto addEdge2 = [&](const int faceIndex1, const int x1, const int y1, const int faceIndex2, const int x2, const int y2, const float weight)
+		{
+			const int index1 =
+				faceIndex1 * kTextureSize * kTextureSize +
+				y1 * kTextureSize +
+				x1;
+			
+			const int index2 =
+				faceIndex2 * kTextureSize * kTextureSize +
+				y2 * kTextureSize +
+				x2;
+			
+			Edge edge;
+			edge.vertex1 = index1;
+			edge.vertex2 = index2;
+			edge.weight = weight;
+			
+			edges.push_back(edge);
+		};
+		
+	#if 0
+		for (int i = 0; i < 4; ++i)
+		{
+			// first we deal with the sides. they're relatively easy to setup
+			
+			const int faceIndices[4] = { 0, 4, 1, 5 };
+			
+			const int faceIndex1 = faceIndices[(i + 0) % 4];
+			const int faceIndex2 = faceIndices[(i + 1) % 4];
+			
+			const int x1 = kTextureSize - 1;
+			const int x2 = 0;
+			
+			for (int y = 0; y < kTextureSize - 1; ++y)
+			{
+				addEdge2(faceIndex1, x1, y + 0, faceIndex2, x2, y + 0, 1.f);
+				addEdge2(faceIndex1, x1, y + 0, faceIndex1, x1, y + 1, 1.f);
+			
+				addEdge2(faceIndex1, x1, y + 0, faceIndex2, x2, y + 1, 1.f / sqrtf(2.f));
+				addEdge2(faceIndex1, x1, y + 1, faceIndex2, x2, y + 0, 1.f / sqrtf(2.f));
+			}
+		}
+	#endif
+		
+		auto processSeam = [&](
+			const int faceIndex1,
+			const int face1_x1,
+			const int face1_y1,
+			const int face1_x2,
+			const int face1_y2,
+			const int faceIndex2,
+			const int face2_x1,
+			const int face2_y1,
+			const int face2_x2,
+			const int face2_y2)
+		{
+			const int face1_stepx = face1_x2 - face1_x1;
+			const int face1_stepy = face1_y2 - face1_y1;
+			int face1_x = face1_x1 * (kTextureSize - 1);
+			int face1_y = face1_y1 * (kTextureSize - 1);
+			
+			const int face2_stepx = face2_x2 - face2_x1;
+			const int face2_stepy = face2_y2 - face2_y1;
+			int face2_x = face2_x1 * (kTextureSize - 1);
+			int face2_y = face2_y1 * (kTextureSize - 1);
+			
+			for (int i = 0; i < kTextureSize - 1; ++i)
+			{
+				Assert(face1_x >= 0 && face1_x < kTextureSize);
+				Assert(face1_y >= 0 && face1_y < kTextureSize);
+				Assert(face2_x >= 0 && face2_x < kTextureSize);
+				Assert(face2_y >= 0 && face2_y < kTextureSize);
+				
+			#if 0
+				addEdge2(faceIndex1, face1_x, face1_y + face1_stepy * 0, faceIndex2, face2_x + face2_stepx * 1, face2_y + face2_stepy * 0, 1.f);
+				addEdge2(faceIndex1, face1_x, face1_y + face1_stepy * 0, faceIndex1, face1_x + face1_stepx * 0, face1_y + face1_stepy * 1, 1.f);
+			
+				addEdge2(faceIndex1, face1_x, face1_y + face1_stepy * 0, faceIndex2, face2_x + face2_stepx * 1, face2_y + face2_stepy * 1, 1.f / sqrtf(2.f));
+				addEdge2(faceIndex1, face1_x, face1_y + face1_stepy * 1, faceIndex2, face2_x + face2_stepx * 1, face2_y + face2_stepy * 0, 1.f / sqrtf(2.f));
+			#endif
+			
+			#if 1
+				addEdge2(faceIndex1, face1_x + face1_stepx * 0, face1_y + face1_stepy * 0, faceIndex2, face2_x + face2_stepx * 1, face2_y + face2_stepy * 1, 1.f / sqrtf(2.f));
+				addEdge2(faceIndex1, face1_x + face1_stepx * 1, face1_y + face1_stepy * 1, faceIndex2, face2_x + face2_stepx * 0, face2_y + face2_stepy * 0, 1.f / sqrtf(2.f));
+			#endif
+			
+				face1_x += face1_stepx;
+				face1_y += face1_stepy;
+				face2_x += face2_stepx;
+				face2_y += face2_stepy;
+			}
+		};
+		
+		{
+			// now deal with the rest of the seams
+			
+			//0, 0, 0, +1, +0 -> 0, m, +0, -1
+			
+			processSeam(
+				0, 0, 0, 1, 0,
+				3, 1, 1, 1, 0);
+		}
+
+		const int face_sx[4] = { -1, +1, +1, -1 };
+		const int face_sy[4] = { -1, -1, +1, +1 };
+		
+		const int face_ux[4] = { 0, 1, 1, 0 };
+		const int face_uy[4] = { 0, 0, 1, 1 };
+		
+		struct CubeFace
+		{
+			Vec3 transformedPosition[4];
+		};
+		
+		CubeFace cubeFaces[6];
+		
+		for (int i = 0; i < 6; ++i)
+		{
+			const Mat4x4 & matrix = s_cubeFaceToWorldMatrices[i];
+			
+			for (int v = 0; v < 4; ++v)
+			{
+				cubeFaces[i].transformedPosition[v] = matrix.Mul4(Vec3(face_sx[v], face_sy[v], 1.f));
+				
+				printf("transformed position: (%.2f, %.2f, %.2f)\n",
+					cubeFaces[i].transformedPosition[v][0],
+					cubeFaces[i].transformedPosition[v][1],
+					cubeFaces[i].transformedPosition[v][2]);
+			}
+		}
+		
+		int numEdges = 0;
+		int numValidEdges = 0;
+		
+		for (int f1 = 0; f1 < 6; ++f1)
+		{
+			for (int f1_v1 = 0; f1_v1 < 4; ++f1_v1)
+			{
+				const int f1_v2 = (f1_v1 + 1) % 4;
+				
+				const Vec3 & f1_p1 = cubeFaces[f1].transformedPosition[f1_v1];
+				const Vec3 & f1_p2 = cubeFaces[f1].transformedPosition[f1_v2];
+				
+				for (int f2 = f1 + 1; f2 < 6; ++f2)
+				{
+					for (int f2_v1 = 0; f2_v1 < 4; ++f2_v1)
+					{
+						const int f2_v2 = (f2_v1 + 1) % 4;
+						
+						const Vec3 & f2_p1 = cubeFaces[f2].transformedPosition[f2_v1];
+						const Vec3 & f2_p2 = cubeFaces[f2].transformedPosition[f2_v2];
+						
+						const bool pass1 = ((f2_p1 - f1_p1).CalcSize() <= .05f && (f2_p2 - f1_p2).CalcSize() <= .05f);
+						const bool pass2 = ((f2_p1 - f1_p2).CalcSize() <= .05f && (f2_p2 - f1_p1).CalcSize() <= .05f);
+						
+						if (pass1 || pass2)
+						{
+							printf("found an edge!\n");
+							
+							numEdges++;
+							
+							printf("found coords: %d:(%d, %d) -> %d:(%d, %d)\n",
+								f1, face_sx[f1_v1], face_sy[f1_v1],
+								f1, face_sx[f1_v2], face_sy[f1_v2]);
+							
+							processSeam(
+								f1, face_ux[f1_v1], face_uy[f1_v1], face_ux[f1_v2], face_uy[f1_v2],
+								f2, face_ux[f2_v2], face_uy[f2_v2], face_ux[f2_v1], face_uy[f2_v1]);
+						}
+					}
+				}
+			}
+		}
+		
+		printf("found %d edges, %d valid edges!\n", numEdges, numValidEdges);
 		
 		finalize();
 	}
@@ -609,8 +791,25 @@ int main(int argc, char * argv[])
 		
 		guiContext.processBegin(framework.timeStep, VIEW_SX, VIEW_SY, inputIsCaptured);
 		{
-			ImGui::Begin("Interaction");
+			ImGui::Begin("Interaction", nullptr,
+				ImGuiWindowFlags_MenuBar);
 			{
+				if (ImGui::BeginMenuBar())
+				{
+					if (ImGui::BeginMenu("File"))
+					{
+						ImGui::MenuItem("Load shape..");
+						ImGui::MenuItem("Load simulated data..");
+						ImGui::MenuItem("Save simulated data..");
+						ImGui::Separator();
+						if (ImGui::MenuItem("Quit"))
+							framework.quitRequested = true;
+						
+						ImGui::EndMenu();
+					}
+					ImGui::EndMenuBar();
+				}
+				
 				ImGui::Text("Visibility");
 				ImGui::Checkbox("Show cube", &showCube);
 				ImGui::Checkbox("Show intersection points", &showIntersectionPoints);
@@ -639,7 +838,7 @@ int main(int argc, char * argv[])
 				ImGui::Checkbox("Show lattice vertices", &showLatticeVertices);
 				ImGui::Checkbox("Show lattice edges", &showLatticeEdges);
 				ImGui::Checkbox("Simulate lattice", &simulateLattice);
-				ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100.f);
+				ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100000.f, "%.2f", 4.f);
 				ImGui::SliderFloat("Simulation time step", &simulationTimeStep, 0.f, 1.f / 10.f);
 				ImGui::SliderInt("Num simulation steps per draw", &numSimulationStepsPerDraw, 1, 1000);
 				ImGui::SliderFloat("Velocity falloff", &velocityFalloff, 0.f, 1.f);
@@ -649,9 +848,9 @@ int main(int argc, char * argv[])
 					for (int i = 0; i < numVertices; ++i)
 					{
 						auto & p = lattice.vertices[i].p;
-						p.x *= .95f;
-						p.y *= .95f;
-						p.z *= .95f;
+						p.x *= .99f;
+						p.y *= .99f;
+						p.z *= .99f;
 					}
 				}
 				
@@ -869,7 +1068,7 @@ int main(int argc, char * argv[])
 				
 				if (showLatticeEdges)
 				{
-					setColor(colorGreen);
+					setColor(0, 127, 0);
 					drawLatticeEdges(lattice);
 				}
 				
