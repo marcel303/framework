@@ -415,30 +415,6 @@ struct Lattice
 			edges.push_back(edge);
 		};
 		
-	#if 0
-		for (int i = 0; i < 4; ++i)
-		{
-			// first we deal with the sides. they're relatively easy to setup
-			
-			const int faceIndices[4] = { 0, 4, 1, 5 };
-			
-			const int faceIndex1 = faceIndices[(i + 0) % 4];
-			const int faceIndex2 = faceIndices[(i + 1) % 4];
-			
-			const int x1 = kTextureSize - 1;
-			const int x2 = 0;
-			
-			for (int y = 0; y < kTextureSize - 1; ++y)
-			{
-				addEdge2(faceIndex1, x1, y + 0, faceIndex2, x2, y + 0, 1.f);
-				addEdge2(faceIndex1, x1, y + 0, faceIndex1, x1, y + 1, 1.f);
-			
-				addEdge2(faceIndex1, x1, y + 0, faceIndex2, x2, y + 1, 1.f / sqrtf(2.f));
-				addEdge2(faceIndex1, x1, y + 1, faceIndex2, x2, y + 0, 1.f / sqrtf(2.f));
-			}
-		}
-	#endif
-		
 		auto processSeam = [&](
 			const int faceIndex1,
 			const int face1_x1,
@@ -468,15 +444,9 @@ struct Lattice
 				Assert(face2_x >= 0 && face2_x < kTextureSize);
 				Assert(face2_y >= 0 && face2_y < kTextureSize);
 				
-			#if 0
-				addEdge2(faceIndex1, face1_x, face1_y + face1_stepy * 0, faceIndex2, face2_x + face2_stepx * 1, face2_y + face2_stepy * 0, 1.f);
-				addEdge2(faceIndex1, face1_x, face1_y + face1_stepy * 0, faceIndex1, face1_x + face1_stepx * 0, face1_y + face1_stepy * 1, 1.f);
-			
-				addEdge2(faceIndex1, face1_x, face1_y + face1_stepy * 0, faceIndex2, face2_x + face2_stepx * 1, face2_y + face2_stepy * 1, 1.f / sqrtf(2.f));
-				addEdge2(faceIndex1, face1_x, face1_y + face1_stepy * 1, faceIndex2, face2_x + face2_stepx * 1, face2_y + face2_stepy * 0, 1.f / sqrtf(2.f));
-			#endif
-			
 			#if 1
+				addEdge2(faceIndex1, face1_x + face1_stepx * 0, face1_y + face1_stepy * 0, faceIndex2, face2_x + face2_stepx * 0, face2_y + face2_stepy * 0, 1.f);
+				
 				addEdge2(faceIndex1, face1_x + face1_stepx * 0, face1_y + face1_stepy * 0, faceIndex2, face2_x + face2_stepx * 1, face2_y + face2_stepy * 1, 1.f / sqrtf(2.f));
 				addEdge2(faceIndex1, face1_x + face1_stepx * 1, face1_y + face1_stepy * 1, faceIndex2, face2_x + face2_stepx * 0, face2_y + face2_stepy * 0, 1.f / sqrtf(2.f));
 			#endif
@@ -488,22 +458,15 @@ struct Lattice
 			}
 		};
 		
-		{
-			// now deal with the rest of the seams
-			
-			//0, 0, 0, +1, +0 -> 0, m, +0, -1
-			
-			processSeam(
-				0, 0, 0, 1, 0,
-				3, 1, 1, 1, 0);
-		}
-
+		// signed vertex coordinates for a face in cube face space
 		const int face_sx[4] = { -1, +1, +1, -1 };
 		const int face_sy[4] = { -1, -1, +1, +1 };
 		
+		// unsigned vertex coordinates for a face in cube face space
 		const int face_ux[4] = { 0, 1, 1, 0 };
 		const int face_uy[4] = { 0, 0, 1, 1 };
 		
+		// transform signed face vertex positions into world space, so we can come vertices and edges of our faces in world space
 		struct CubeFace
 		{
 			Vec3 transformedPosition[4];
@@ -519,15 +482,18 @@ struct Lattice
 			{
 				cubeFaces[i].transformedPosition[v] = matrix.Mul4(Vec3(face_sx[v], face_sy[v], 1.f));
 				
+			#if 0
 				printf("transformed position: (%.2f, %.2f, %.2f)\n",
 					cubeFaces[i].transformedPosition[v][0],
 					cubeFaces[i].transformedPosition[v][1],
 					cubeFaces[i].transformedPosition[v][2]);
+			#endif
 			}
 		}
 		
+		// loop over all of the faces and all of their edges and try to find a second face which shared the same edge (meaning : sharing two vertices with equal world positions)
+		
 		int numEdges = 0;
-		int numValidEdges = 0;
 		
 		for (int f1 = 0; f1 < 6; ++f1)
 		{
@@ -550,15 +516,19 @@ struct Lattice
 						const bool pass1 = ((f2_p1 - f1_p1).CalcSize() <= .05f && (f2_p2 - f1_p2).CalcSize() <= .05f);
 						const bool pass2 = ((f2_p1 - f1_p2).CalcSize() <= .05f && (f2_p2 - f1_p1).CalcSize() <= .05f);
 						
-						if (pass1 || pass2)
+						// the cases for pass1 and pass2 are different only in the respect the face space x/y's for the second face are swapped
+						
+						if (pass1)
 						{
-							printf("found an edge!\n");
-							
 							numEdges++;
 							
-							printf("found coords: %d:(%d, %d) -> %d:(%d, %d)\n",
-								f1, face_sx[f1_v1], face_sy[f1_v1],
-								f1, face_sx[f1_v2], face_sy[f1_v2]);
+							processSeam(
+								f1, face_ux[f1_v1], face_uy[f1_v1], face_ux[f1_v2], face_uy[f1_v2],
+								f2, face_ux[f2_v1], face_uy[f2_v1], face_ux[f2_v2], face_uy[f2_v2]);
+						}
+						else if (pass2)
+						{
+							numEdges++;
 							
 							processSeam(
 								f1, face_ux[f1_v1], face_uy[f1_v1], face_ux[f1_v2], face_uy[f1_v2],
@@ -569,7 +539,7 @@ struct Lattice
 			}
 		}
 		
-		printf("found %d edges, %d valid edges!\n", numEdges, numValidEdges);
+		//printf("found %d edges, %d valid edges!\n", numEdges, numValidEdges);
 		
 		finalize();
 	}
