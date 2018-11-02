@@ -437,19 +437,21 @@ struct Lattice
 			int face2_x = face2_x1 * (kTextureSize - 1);
 			int face2_y = face2_y1 * (kTextureSize - 1);
 			
-			for (int i = 0; i < kTextureSize - 1; ++i)
+			for (int i = 0; i < kTextureSize; ++i)
 			{
 				Assert(face1_x >= 0 && face1_x < kTextureSize);
 				Assert(face1_y >= 0 && face1_y < kTextureSize);
 				Assert(face2_x >= 0 && face2_x < kTextureSize);
 				Assert(face2_y >= 0 && face2_y < kTextureSize);
 				
-			#if 1
 				addEdge2(faceIndex1, face1_x + face1_stepx * 0, face1_y + face1_stepy * 0, faceIndex2, face2_x + face2_stepx * 0, face2_y + face2_stepy * 0, 1.f);
 				
-				addEdge2(faceIndex1, face1_x + face1_stepx * 0, face1_y + face1_stepy * 0, faceIndex2, face2_x + face2_stepx * 1, face2_y + face2_stepy * 1, 1.f / sqrtf(2.f));
-				addEdge2(faceIndex1, face1_x + face1_stepx * 1, face1_y + face1_stepy * 1, faceIndex2, face2_x + face2_stepx * 0, face2_y + face2_stepy * 0, 1.f / sqrtf(2.f));
-			#endif
+				if (i + 1 < kTextureSize)
+				{
+					addEdge2(faceIndex1, face1_x + face1_stepx * 0, face1_y + face1_stepy * 0, faceIndex2, face2_x + face2_stepx * 1, face2_y + face2_stepy * 1, 1.f / sqrtf(2.f));
+				
+					addEdge2(faceIndex1, face1_x + face1_stepx * 1, face1_y + face1_stepy * 1, faceIndex2, face2_x + face2_stepx * 0, face2_y + face2_stepy * 0, 1.f / sqrtf(2.f));
+				}
 			
 				face1_x += face1_stepx;
 				face1_y += face1_stepy;
