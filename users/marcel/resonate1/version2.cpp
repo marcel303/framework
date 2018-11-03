@@ -1051,13 +1051,13 @@ struct GpuSimulationContext
 			return false;
 		}
 		
-		if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(numEdges & ~63), cl::NDRange(64)) != CL_SUCCESS)
+		if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(numEdges & ~63)) != CL_SUCCESS)
 		{
 			logError("failed to enqueue kernel");
 			return false;
 		}
 		
-		gpuContext.commandQueue->finish();
+		gpuContext.commandQueue->enqueueBarrierWithWaitList();
 		
 		return true;
 	}
@@ -1088,7 +1088,7 @@ struct GpuSimulationContext
 			return false;
 		}
 		
-		gpuContext.commandQueue->finish();
+		gpuContext.commandQueue->enqueueBarrierWithWaitList();
 		
 		return true;
 	}
@@ -1126,49 +1126,12 @@ bool gpuShut()
 	return true;
 }
 
-static void simulateLattice_Integrate(Lattice & lattice, const float dt, const float falloff)
+void simulateLattice_computeEdgeForces(Lattice & lattice, const float tension)
 {
-	Benchmark bm("simulateLattice_Integrate");
+	Benchmark bm("computeEdgeForces");
 	
-	const int numVertices = 6 * kTextureSize * kTextureSize;
-	
-	const float retain = powf(1.f - falloff, dt);
-	
-	for (int i = 0; i < numVertices; ++i)
-	{
-		auto & v = lattice.vertices[i];
-		
-		v.v.x *= retain;
-		v.v.y *= retain;
-		v.v.z *= retain;
-		
-		v.v.x += v.f.x * dt;
-		v.v.y += v.f.y * dt;
-		v.v.z += v.f.z * dt;
-		
-		v.p.x += v.v.x * dt;
-		v.p.y += v.v.y * dt;
-		v.p.z += v.v.z * dt;
-	}
-}
-
-static void simulateLattice(Lattice & lattice, const float dt, const float tension, const float falloff)
-{
-#if 0
 	const float eps = 1e-4f;
 	
-	const int numVertices = 6 * kTextureSize * kTextureSize;
-	
-	for (int i = 0; i < numVertices; ++i)
-	{
-		auto & v = lattice.vertices[i];
-		
-		v.f.setZero();
-	}
-	
-	{
-	Benchmark bm("computeEdgeForces");
-		
 	for (auto & edge : lattice.edges)
 	{
 		auto & v1 = lattice.vertices[edge.vertex1];
@@ -1203,14 +1166,48 @@ static void simulateLattice(Lattice & lattice, const float dt, const float tensi
 		v2.f.y -= fy;
 		v2.f.z -= fz;
 	}
-	}
+}
+
+static void simulateLattice_integrate(Lattice & lattice, const float dt, const float falloff)
+{
+	Benchmark bm("simulateLattice_Integrate");
 	
-	simulateLattice_Integrate(lattice, dt, falloff);
-#else
+	const int numVertices = 6 * kTextureSize * kTextureSize;
+	
+	const float retain = powf(1.f - falloff, dt);
+	
+	for (int i = 0; i < numVertices; ++i)
+	{
+		auto & v = lattice.vertices[i];
+		
+		v.v.x *= retain;
+		v.v.y *= retain;
+		v.v.z *= retain;
+		
+		v.v.x += v.f.x * dt;
+		v.v.y += v.f.y * dt;
+		v.v.z += v.f.z * dt;
+		
+		v.p.x += v.v.x * dt;
+		v.p.y += v.v.y * dt;
+		v.p.z += v.v.z * dt;
+		
+		v.f.setZero();
+	}
+}
+
+static void simulateLattice(Lattice & lattice, const float dt, const float tension, const float falloff)
+{
+	simulateLattice_computeEdgeForces(lattice, tension);
+	
+	simulateLattice_integrate(lattice, dt, falloff);
+}
+
+static void simulateLattice_gpu(Lattice & lattice, const float dt, const float tension, const float falloff)
+{
 	s_gpuSimulationContext->computeEdgeForces(tension);
 	
 	s_gpuSimulationContext->integrate(lattice, dt, falloff);
-#endif
 }
 
 int main(int argc, char * argv[])
@@ -1353,12 +1350,16 @@ int main(int argc, char * argv[])
 				ImGui::Separator();
 				ImGui::Text("Lattice");
 				if (ImGui::Button("Initialize lattice"))
+				{
 					lattice.init();
+					s_gpuSimulationContext->sendVerticesToGpu();
+					s_gpuSimulationContext->sendEdgesToGpu();
+				}
 				if (ImGui::Button("Project lattice onto shape"))
 				{
 					projectLatticeOntoShape(lattice, shapeDefinition);
-					s_gpuSimulationContext->sendEdgesToGpu();
 					s_gpuSimulationContext->sendVerticesToGpu();
+					s_gpuSimulationContext->sendEdgesToGpu();
 				}
 				ImGui::Checkbox("Show lattice vertices", &showLatticeVertices);
 				ImGui::Checkbox("Show lattice edges", &showLatticeEdges);
@@ -1457,10 +1458,24 @@ int main(int argc, char * argv[])
 		
 		if (simulateLattice)
 		{
-			for (int i = 0; i < numSimulationStepsPerDraw; ++i)
-				::simulateLattice(lattice, simulationTimeStep, latticeTension, velocityFalloff);
+			const bool useGpu = true;
 			
-			s_gpuSimulationContext->fetchVerticesFromGpu();
+			if (useGpu)
+			{
+				Benchmark bm("simulate_gpu");
+				
+				for (int i = 0; i < numSimulationStepsPerDraw; ++i)
+					::simulateLattice_gpu(lattice, simulationTimeStep, latticeTension, velocityFalloff);
+				
+				s_gpuSimulationContext->fetchVerticesFromGpu();
+			}
+			else
+			{
+				Benchmark bm("simulate");
+				
+				for (int i = 0; i < numSimulationStepsPerDraw; ++i)
+					::simulateLattice(lattice, simulationTimeStep, latticeTension, velocityFalloff);
+			}
 		}
 
 		framework.beginDraw(0, 0, 0, 0);
