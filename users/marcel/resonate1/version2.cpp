@@ -7,7 +7,7 @@
 #include "StringEx.h"
 #include "TextIO.h"
 
-#define __CL_ENABLE_EXCEPTIONS
+//#define __CL_ENABLE_EXCEPTIONS
 
 #include "cl.hpp"
 
@@ -29,7 +29,7 @@ From: https://learnopengl.com/Advanced-OpenGL/Cubemaps
 const int VIEW_SX = 1200;
 const int VIEW_SY = 700;
 
-const int kTextureSize = 64;
+const int kTextureSize = 32;
 const int kTextureArraySize = 128;
 
 extern void splitString(const std::string & str, std::vector<std::string> & result);
@@ -636,6 +636,8 @@ struct GpuProgram
 	
 	cl::Program * program = nullptr;
 	
+	std::string source;
+	
 	GpuProgram(cl::Device & in_device, cl::Context & in_context)
 		: device(in_device)
 		, context(in_context)
@@ -655,11 +657,11 @@ struct GpuProgram
 		program = nullptr;
 	}
 	
-	bool updateSource(const char * source)
+	bool updateSource(const char * in_source)
 	{
 		cl::Program::Sources sources;
 		
-		sources.push_back({ source, strlen(source) });
+		sources.push_back({ in_source, strlen(in_source) });
 	
 		cl::Program newProgram(context, sources);
 		
@@ -682,6 +684,8 @@ struct GpuProgram
 		program = nullptr;
 		
 		program = new cl::Program(newProgram);
+		
+		source = in_source;
 		
 		return true;
 	}
@@ -816,102 +820,100 @@ struct GpuSimulationContext
 			
 			const char  *computeEdgeForces_source =
 				R"SHADER(
-			
-				typedef struct Vector
-				{
-					float x;
-					float y;
-					float z;
-				} Vector;
-				
-				typedef struct Vertex
-				{
-					Vector p;
-					
-					// physics stuff
-					Vector f;
-					Vector v;
-				} Vertex;
-			
-				typedef struct Edge
-				{
-					int vertex1;
-					int vertex2;
-					float weight;
-					
-					// physics stuff
-					float initialDistance;
-				} Edge;
-			
-				void atomicAdd_g_f(volatile __global float *addr, float val)
-				{
-					union
-					{
-						unsigned int u32;
-						float        f32;
-					} next, expected, current;
-					
-					current.f32    = *addr;
-					
-					do
-					{
-						expected.f32 = current.f32;
-						next.f32     = expected.f32 + val;
-						current.u32  = atomic_cmpxchg(
-							(volatile __global unsigned int *)addr,
-							expected.u32, next.u32);
-					} while( current.u32 != expected.u32 );
-				}
-			
-				void kernel computeEdgeForces(
-					global Edge * restrict edges,
-					global Vertex * restrict vertices,
-					float tension)
-				{
-					const float eps = 1e-4f;
-					
-					const int ID = get_global_id(0);
-					
-					const Edge edge = edges[ID];
-					
-					const Vector p1 = vertices[edge.vertex1].p;
-					const Vector p2 = vertices[edge.vertex2].p;
-					
-					const float dx = p2.x - p1.x;
-					const float dy = p2.y - p1.y;
-					const float dz = p2.z - p1.z;
-					
-					const float distance = sqrt(dx * dx + dy * dy + dz * dz);
-					
-					if (distance < eps)
-						return;
-					
-					const float distance_inverse = 1.f / distance;
-					
-					const float directionX = dx * distance_inverse;
-					const float directionY = dy * distance_inverse;
-					const float directionZ = dz * distance_inverse;
-					
-					const float force = (distance - edge.initialDistance) * edge.weight * tension;
-					
-					const float fx = directionX * force;
-					const float fy = directionY * force;
-					const float fz = directionZ * force;
-				
-					// let's kill some performance here by using atomics!
-					// todo : store forces in edges and let vertices gather forces in a follow-up step
-					
-				#if 1
-					atomicAdd_g_f(&vertices[edge.vertex1].f.x, +fx);
-					atomicAdd_g_f(&vertices[edge.vertex1].f.y, +fy);
-					atomicAdd_g_f(&vertices[edge.vertex1].f.z, +fz);
-					
-					atomicAdd_g_f(&vertices[edge.vertex2].f.x, -fx);
-					atomicAdd_g_f(&vertices[edge.vertex2].f.y, -fy);
-					atomicAdd_g_f(&vertices[edge.vertex2].f.z, -fz);
-				#endif
-				}
-			
+typedef struct Vector
+{
+	float x;
+	float y;
+	float z;
+} Vector;
+
+typedef struct Vertex
+{
+	Vector p;
+	
+	// physics stuff
+	Vector f;
+	Vector v;
+} Vertex;
+
+typedef struct Edge
+{
+	int vertex1;
+	int vertex2;
+	float weight;
+	
+	// physics stuff
+	float initialDistance;
+} Edge;
+
+void atomicAdd_g_f(volatile __global float *addr, float val)
+{
+	union
+	{
+		unsigned int u32;
+		float        f32;
+	} next, expected, current;
+	
+	current.f32    = *addr;
+	
+	do
+	{
+		expected.f32 = current.f32;
+		next.f32     = expected.f32 + val;
+		current.u32  = atomic_cmpxchg(
+			(volatile __global unsigned int *)addr,
+			expected.u32, next.u32);
+	} while( current.u32 != expected.u32 );
+}
+
+void kernel computeEdgeForces(
+	global Edge * restrict edges,
+	global Vertex * restrict vertices,
+	float tension)
+{
+	const float eps = 1e-4f;
+	
+	const int ID = get_global_id(0);
+	
+	const Edge edge = edges[ID];
+	
+	const Vector p1 = vertices[edge.vertex1].p;
+	const Vector p2 = vertices[edge.vertex2].p;
+	
+	const float dx = p2.x - p1.x;
+	const float dy = p2.y - p1.y;
+	const float dz = p2.z - p1.z;
+	
+	const float distance = sqrt(dx * dx + dy * dy + dz * dz);
+	
+	if (distance < eps)
+		return;
+	
+	const float distance_inverse = 1.f / distance;
+	
+	const float directionX = dx * distance_inverse;
+	const float directionY = dy * distance_inverse;
+	const float directionZ = dz * distance_inverse;
+	
+	const float force = (distance - edge.initialDistance) * edge.weight * tension;
+	
+	const float fx = directionX * force;
+	const float fy = directionY * force;
+	const float fz = directionZ * force;
+
+	// let's kill some performance here by using atomics!
+	// todo : store forces in edges and let vertices gather forces in a follow-up step
+	
+#if 1
+	atomicAdd_g_f(&vertices[edge.vertex1].f.x, +fx);
+	atomicAdd_g_f(&vertices[edge.vertex1].f.y, +fy);
+	atomicAdd_g_f(&vertices[edge.vertex1].f.z, +fz);
+	
+	atomicAdd_g_f(&vertices[edge.vertex2].f.x, -fx);
+	atomicAdd_g_f(&vertices[edge.vertex2].f.y, -fy);
+	atomicAdd_g_f(&vertices[edge.vertex2].f.z, -fz);
+#endif
+}
 				)SHADER";
 			
 			computeEdgeForcesProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
@@ -923,51 +925,49 @@ struct GpuSimulationContext
 			
 			const char * integrate_source =
 				R"SHADER(
-			
-				typedef struct Vector
-				{
-					float x;
-					float y;
-					float z;
-				} Vector;
-			
-				typedef struct Vertex
-				{
-					Vector p;
-					
-					// physics stuff
-					Vector f;
-					Vector v;
-				} Vertex;
-			
-				void kernel integrate(
-					global Vertex * restrict vertices,
-					float dt,
-					float retain)
-				{
-					int ID = get_global_id(0);
-					
-					Vertex v = vertices[ID];
-					
-					v.v.x *= retain;
-					v.v.y *= retain;
-					v.v.z *= retain;
-					
-					v.v.x += v.f.x * dt;
-					v.v.y += v.f.y * dt;
-					v.v.z += v.f.z * dt;
-					
-					v.p.x += v.v.x * dt;
-					v.p.y += v.v.y * dt;
-					v.p.z += v.v.z * dt;
-					
-					v.f.x = 0.0;
-					v.f.y = 0.0;
-					v.f.z = 0.0;
-					
-					vertices[ID] = v;
-				}
-			
+typedef struct Vector
+{
+	float x;
+	float y;
+	float z;
+} Vector;
+
+typedef struct Vertex
+{
+	Vector p;
+	
+	// physics stuff
+	Vector f;
+	Vector v;
+} Vertex;
+
+void kernel integrate(
+	global Vertex * restrict vertices,
+	float dt,
+	float retain)
+{
+	int ID = get_global_id(0);
+	
+	Vertex v = vertices[ID];
+	
+	v.v.x *= retain;
+	v.v.y *= retain;
+	v.v.z *= retain;
+	
+	v.v.x += v.f.x * dt;
+	v.v.y += v.f.y * dt;
+	v.v.z += v.f.z * dt;
+	
+	v.p.x += v.v.x * dt;
+	v.p.y += v.v.y * dt;
+	v.p.z += v.v.z * dt;
+	
+	v.f.x = 0.0;
+	v.f.y = 0.0;
+	v.f.z = 0.0;
+	
+	vertices[ID] = v;
+}
 				)SHADER";
 			
 			integrateProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
@@ -1233,8 +1233,6 @@ int main(int argc, char * argv[])
 	FrameworkImGuiContext guiContext;
 	guiContext.init(true);
 	
-	TextEditor textEditor;
-	
 	for (int i = 0; i < 6; ++i)
 	{
 		s_cubeFaceToWorldMatrices[i] = createCubeFaceMatrix(s_cubeFaceNamesGL[i]);
@@ -1269,6 +1267,53 @@ int main(int argc, char * argv[])
 	
 	Assert(sizeof(Lattice::Vertex) == 3*3*4);
 	Assert(sizeof(Lattice::Edge) == 16);
+	
+	struct ComputeEditor
+	{
+		GpuProgram *& program;
+		
+		TextEditor textEditor;
+		
+		bool sourceIsValid = true;
+		
+		std::string oldText;
+		
+		ComputeEditor(GpuProgram *& in_program)
+			: program(in_program)
+		{
+			if (program != nullptr)
+			{
+				textEditor.SetText(program->source);
+				
+				oldText = textEditor.GetText();
+			}
+		}
+		
+		void Render()
+		{
+			TextEditor::ErrorMarkers errorMarkers;
+			if (sourceIsValid == false)
+				errorMarkers[1] = "Compile error";
+			textEditor.SetErrorMarkers(errorMarkers);
+			
+			textEditor.Render("");
+			
+			const std::string newText = textEditor.GetText();
+		
+			if (newText != oldText)
+			{
+				if (program != nullptr)
+				{
+					sourceIsValid = program->updateSource(newText.c_str());
+				}
+				
+				oldText = newText;
+			}
+		}
+	};
+	
+	ComputeEditor computeEdgeForcesEditor(s_gpuSimulationContext->computeEdgeForcesProgram);
+	ComputeEditor integrateEditor(s_gpuSimulationContext->integrateProgram);
 	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
 	
@@ -1383,12 +1428,13 @@ int main(int argc, char * argv[])
 						s_gpuSimulationContext->fetchVerticesFromGpu();
 				}
 				ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100000.f, "%.2f", 4.f);
-				ImGui::SliderFloat("Simulation time step", &simulationTimeStep, 0.f, 1.f / 10.f);
+				ImGui::SliderFloat("Simulation time step", &simulationTimeStep, 0.f, 1.f / 40.f);
 				ImGui::SliderInt("Num simulation steps per draw", &numSimulationStepsPerDraw, 1, 1000);
 				ImGui::SliderFloat("Velocity falloff", &velocityFalloff, 0.f, 1.f);
 				if (ImGui::Button("Squash lattice"))
 				{
-					s_gpuSimulationContext->fetchVerticesFromGpu();
+					if (simulateUsingGpu)
+						s_gpuSimulationContext->fetchVerticesFromGpu();
 					
 					const int numVertices = 6 * kTextureSize * kTextureSize;
 					
@@ -1400,7 +1446,8 @@ int main(int argc, char * argv[])
 						p.z *= .99f;
 					}
 					
-					s_gpuSimulationContext->sendVerticesToGpu();
+					if (simulateUsingGpu)
+						s_gpuSimulationContext->sendVerticesToGpu();
 				}
 				
 				ImGui::Separator();
@@ -1448,12 +1495,19 @@ int main(int argc, char * argv[])
 			}
 			ImGui::End();
 			
-			ImGui::SetNextWindowSize(ImVec2(300, 400));
-			
-			if (ImGui::Begin("Compute", nullptr,
+			ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
+			if (ImGui::Begin("Compute #1", nullptr,
 				ImGuiWindowFlags_MenuBar))
 			{
-				textEditor.Render("");
+				computeEdgeForcesEditor.Render();
+			}
+			ImGui::End();
+			
+			ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
+			if (ImGui::Begin("Compute #2", nullptr,
+				ImGuiWindowFlags_MenuBar))
+			{
+				integrateEditor.Render();
 			}
 			ImGui::End();
 		}
