@@ -766,8 +766,14 @@ struct GpuSimulationContext
 {
 	GpuContext & gpuContext;
 	
-	cl::Buffer * vertexBuffer = nullptr;
+	Lattice * lattice = nullptr;
+	int numVertices = 0;
+	int numEdges = 0;
 	
+	cl::Buffer * vertexBuffer = nullptr;
+	cl::Buffer * edgeBuffer = nullptr;
+	
+	GpuProgram * computeEdgeForcesProgram = nullptr;
 	GpuProgram * integrateProgram = nullptr;
 	
 	GpuSimulationContext(GpuContext & in_gpuContext)
@@ -781,7 +787,7 @@ struct GpuSimulationContext
 		Assert(integrateProgram == nullptr);
 	}
 	
-	bool init()
+	bool init(Lattice & in_lattice)
 	{
 		if (gpuContext.isValid() == false)
 		{
@@ -789,13 +795,103 @@ struct GpuSimulationContext
 		}
 		else
 		{
-			integrateProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
-			
-			const int numVertices = 6 * kTextureSize * kTextureSize;
+			lattice = &in_lattice;
+			numVertices = 6 * kTextureSize * kTextureSize;
+			numEdges = in_lattice.edges.size();
 			
 			vertexBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(Lattice::Vertex) * numVertices);
 			
-			const char * source =
+			edgeBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_ONLY, sizeof(Lattice::Edge) * numEdges);
+			
+			//
+			
+			const char  *computeEdgeForces_source =
+				R"SHADER(
+			
+				typedef struct Vector
+				{
+					float x;
+					float y;
+					float z;
+				} Vector;
+			
+				typedef struct Vertex
+				{
+					Vector p;
+					
+					// physics stuff
+					Vector f;
+					Vector v;
+				} Vertex;
+			
+				typedef struct Edge
+				{
+					int vertex1;
+					int vertex2;
+					float weight;
+					
+					// physics stuff
+					float initialDistance;
+				} Edge;
+			
+				void kernel computeEdgeForces(
+					global Edge * edges,
+					global Vertex * vertices,
+					float tension)
+				{
+					const float eps = 1e-4f;
+					
+					int ID = get_global_id(0);
+					
+					Edge edge = edges[ID];
+					
+					Vector p1 = vertices[edge.vertex1].p;
+					Vector p2 = vertices[edge.vertex2].p;
+					
+					const float dx = p2.x - p1.x;
+					const float dy = p2.y - p1.y;
+					const float dz = p2.z - p1.z;
+					
+					const float distance = sqrtf(dx * dx + dy * dy + dz * dz);
+					
+					if (distance < eps)
+						return;
+					
+					const float distance_inverse = 1.f / distance;
+					
+					const float directionX = dx * distance_inverse;
+					const float directionY = dy * distance_inverse;
+					const float directionZ = dz * distance_inverse;
+					
+					const float force = (distance - edge.initialDistance) * edge.weight * tension;
+					
+					const float fx = directionX * force;
+					const float fy = directionY * force;
+					const float fz = directionZ * force;
+				
+				#if 0
+					v1.f.x += fx;
+					v1.f.y += fy;
+					v1.f.z += fz;
+					
+					v2.f.x -= fx;
+					v2.f.y -= fy;
+					v2.f.z -= fz;
+					
+					vertices[ID] = v;
+				#endif
+				}
+			
+				)SHADER";
+			
+			computeEdgeForcesProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
+			
+			if (computeEdgeForcesProgram->updateSource(computeEdgeForces_source) == false)
+				return false;
+			
+			//
+			
+			const char * integrate_source =
 				R"SHADER(
 			
 				typedef struct Vector
@@ -841,8 +937,12 @@ struct GpuSimulationContext
 			
 				)SHADER";
 			
-			if (integrateProgram->updateSource(source) == false)
+			integrateProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
+			
+			if (integrateProgram->updateSource(integrate_source) == false)
 				return false;
+			
+			updateEdges();
 			
 			return true;
 		}
@@ -855,6 +955,76 @@ struct GpuSimulationContext
 		
 		delete vertexBuffer;
 		vertexBuffer = nullptr;
+		
+		return true;
+	}
+	
+	bool updateEdges()
+	{
+		// send the vertex data to the GPU
+		
+		if (gpuContext.commandQueue->enqueueWriteBuffer(
+			*edgeBuffer,
+			CL_TRUE,
+			0, sizeof(Lattice::Edge) * numEdges,
+			&lattice->edges[0]) != CL_SUCCESS)
+		{
+			logError("failed to send edge data to the GPU");
+			return false;
+		}
+		
+		return true;
+	}
+	
+	bool computeEdgeForces(Lattice & lattice, const float tension)
+	{
+		Benchmark bm("computeEdgeForces_GPU");
+		
+	#if 1
+		// send the vertex data to the GPU
+		
+		if (gpuContext.commandQueue->enqueueWriteBuffer(
+			*vertexBuffer,
+			CL_TRUE,
+			0, sizeof(Lattice::Vertex) * numVertices,
+			lattice.vertices) != CL_SUCCESS)
+		{
+			logError("failed to send vertex data to the GPU");
+			return false;
+		}
+	#endif
+		
+		// run the integration program on the GPU
+		
+		cl::Kernel kernel(*computeEdgeForcesProgram->program, "computeEdgeForces");
+		
+		if (kernel.setArg(0, *edgeBuffer) != CL_SUCCESS ||
+			kernel.setArg(1, *vertexBuffer) != CL_SUCCESS ||
+			kernel.setArg(2, tension) != CL_SUCCESS)
+		{
+			logError("failed to set buffer arguments for kernel");
+			return false;
+		}
+		
+		if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange((numEdges + 63) & ~63), cl::NDRange(64)) != CL_SUCCESS)
+		{
+			logError("failed to enqueue kernel");
+			return false;
+		}
+		
+	#if 1
+		// fetch the vertex data from the GPU
+		
+		if (gpuContext.commandQueue->enqueueReadBuffer(
+			*vertexBuffer,
+			CL_TRUE,
+			0, sizeof(Lattice::Vertex) * numVertices,
+			lattice.vertices) != CL_SUCCESS)
+		{
+			logError("failed to fetch vertices from the GPU");
+			return false;
+		}
+	#endif
 		
 		return true;
 	}
@@ -919,7 +1089,7 @@ static GpuContext * s_gpuContext = nullptr;
 
 static GpuSimulationContext * s_gpuSimulationContext = nullptr;
 
-static bool gpuInit()
+static bool gpuInit(Lattice & lattice)
 {
 	s_gpuContext = new GpuContext();
 	
@@ -928,7 +1098,7 @@ static bool gpuInit()
 	
 	s_gpuSimulationContext = new GpuSimulationContext(*s_gpuContext);
 	
-	if (!s_gpuSimulationContext->init())
+	if (!s_gpuSimulationContext->init(lattice))
 		return false;
 
 	return true;
@@ -986,6 +1156,9 @@ static void simulateLattice(Lattice & lattice, const float dt, const float tensi
 		v.f.setZero();
 	}
 	
+	{
+		Benchmark bm("computeEdgeForces");
+		
 	for (auto & edge : lattice.edges)
 	{
 		auto & v1 = lattice.vertices[edge.vertex1];
@@ -1020,6 +1193,9 @@ static void simulateLattice(Lattice & lattice, const float dt, const float tensi
 		v2.f.y -= fy;
 		v2.f.z -= fz;
 	}
+	}
+	
+	s_gpuSimulationContext->computeEdgeForces(lattice, tension);
 	
 	simulateLattice_Integrate(lattice, dt, falloff);
 	
@@ -1041,8 +1217,6 @@ int main(int argc, char * argv[])
 	guiContext.init(true);
 	
 	TextEditor textEditor;
-	
-	gpuInit();
 	
 	for (int i = 0; i < 6; ++i)
 	{
@@ -1073,6 +1247,8 @@ int main(int argc, char * argv[])
 	
 	Lattice lattice;
 	lattice.init();
+	
+	gpuInit(lattice);
 	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
 	
