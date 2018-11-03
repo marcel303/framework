@@ -834,6 +834,26 @@ struct GpuSimulationContext
 					float initialDistance;
 				} Edge;
 			
+				void atomicAdd_g_f(volatile __global float *addr, float val)
+				{
+					union
+					{
+						unsigned int u32;
+						float        f32;
+					} next, expected, current;
+					
+					current.f32    = *addr;
+					
+					do
+					{
+						expected.f32 = current.f32;
+						next.f32     = expected.f32 + val;
+						current.u32  = atomic_cmpxchg(
+							(volatile __global unsigned int *)addr,
+							expected.u32, next.u32);
+					} while( current.u32 != expected.u32 );
+				}
+			
 				void kernel computeEdgeForces(
 					global Edge * edges,
 					global Vertex * vertices,
@@ -852,7 +872,7 @@ struct GpuSimulationContext
 					const float dy = p2.y - p1.y;
 					const float dz = p2.z - p1.z;
 					
-					const float distance = sqrtf(dx * dx + dy * dy + dz * dz);
+					const float distance = sqrt(dx * dx + dy * dy + dz * dz);
 					
 					if (distance < eps)
 						return;
@@ -869,17 +889,16 @@ struct GpuSimulationContext
 					const float fy = directionY * force;
 					const float fz = directionZ * force;
 				
-				#if 0
-					v1.f.x += fx;
-					v1.f.y += fy;
-					v1.f.z += fz;
+					// let's kill some performance here by using atomics!
+					// todo : store forces in edges and let vertices gather forces in a follow-up step
 					
-					v2.f.x -= fx;
-					v2.f.y -= fy;
-					v2.f.z -= fz;
+					atomicAdd_g_f(&vertices[edge.vertex1].f.x, +fx);
+					atomicAdd_g_f(&vertices[edge.vertex1].f.y, +fy);
+					atomicAdd_g_f(&vertices[edge.vertex1].f.z, +fz);
 					
-					vertices[ID] = v;
-				#endif
+					atomicAdd_g_f(&vertices[edge.vertex2].f.x, -fx);
+					atomicAdd_g_f(&vertices[edge.vertex2].f.y, -fy);
+					atomicAdd_g_f(&vertices[edge.vertex2].f.z, -fz);
 				}
 			
 				)SHADER";
@@ -1006,7 +1025,7 @@ struct GpuSimulationContext
 			return false;
 		}
 		
-		if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange((numEdges + 63) & ~63), cl::NDRange(64)) != CL_SUCCESS)
+		if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(numEdges & ~63), cl::NDRange(64)) != CL_SUCCESS)
 		{
 			logError("failed to enqueue kernel");
 			return false;
@@ -1156,6 +1175,7 @@ static void simulateLattice(Lattice & lattice, const float dt, const float tensi
 		v.f.setZero();
 	}
 	
+#if 0
 	{
 		Benchmark bm("computeEdgeForces");
 		
@@ -1194,12 +1214,13 @@ static void simulateLattice(Lattice & lattice, const float dt, const float tensi
 		v2.f.z -= fz;
 	}
 	}
-	
+#endif
+
 	s_gpuSimulationContext->computeEdgeForces(lattice, tension);
 	
-	simulateLattice_Integrate(lattice, dt, falloff);
+	//simulateLattice_Integrate(lattice, dt, falloff);
 	
-	//s_gpuSimulationContext->integrate(lattice, dt, falloff);
+	s_gpuSimulationContext->integrate(lattice, dt, falloff);
 }
 
 int main(int argc, char * argv[])
@@ -1249,6 +1270,9 @@ int main(int argc, char * argv[])
 	lattice.init();
 	
 	gpuInit(lattice);
+	
+	Assert(sizeof(Lattice::Vertex) == 3*3*4);
+	Assert(sizeof(Lattice::Edge) == 16);
 	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
 	
@@ -1341,7 +1365,10 @@ int main(int argc, char * argv[])
 				if (ImGui::Button("Initialize lattice"))
 					lattice.init();
 				if (ImGui::Button("Project lattice onto shape"))
+				{
 					projectLatticeOntoShape(lattice, shapeDefinition);
+					s_gpuSimulationContext->updateEdges();
+				}
 				ImGui::Checkbox("Show lattice vertices", &showLatticeVertices);
 				ImGui::Checkbox("Show lattice edges", &showLatticeEdges);
 				ImGui::Checkbox("Simulate lattice", &simulateLattice);
