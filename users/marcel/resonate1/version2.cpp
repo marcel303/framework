@@ -932,8 +932,7 @@ struct GpuSimulationContext
 				void kernel integrate(
 					global Vertex * vertices,
 					float dt,
-					float retain,
-					int numVertices)
+					float retain)
 				{
 					int ID = get_global_id(0);
 					
@@ -951,6 +950,10 @@ struct GpuSimulationContext
 					v.p.y += v.v.y * dt;
 					v.p.z += v.v.z * dt;
 					
+					v.f.x = 0.0;
+					v.f.y = 0.0;
+					v.f.z = 0.0;
+					
 					vertices[ID] = v;
 				}
 			
@@ -961,7 +964,8 @@ struct GpuSimulationContext
 			if (integrateProgram->updateSource(integrate_source) == false)
 				return false;
 			
-			updateEdges();
+			sendEdgesToGpu();
+			sendVerticesToGpu();
 			
 			return true;
 		}
@@ -978,9 +982,43 @@ struct GpuSimulationContext
 		return true;
 	}
 	
-	bool updateEdges()
+	bool sendVerticesToGpu()
 	{
 		// send the vertex data to the GPU
+		
+		if (gpuContext.commandQueue->enqueueWriteBuffer(
+			*vertexBuffer,
+			CL_TRUE,
+			0, sizeof(Lattice::Vertex) * numVertices,
+			lattice->vertices) != CL_SUCCESS)
+		{
+			logError("failed to send vertex data to the GPU");
+			return false;
+		}
+		
+		return true;
+	}
+	
+	bool fetchVerticesFromGpu()
+	{
+		// fetch the vertex data from the GPU
+		
+		if (gpuContext.commandQueue->enqueueReadBuffer(
+			*vertexBuffer,
+			CL_TRUE,
+			0, sizeof(Lattice::Vertex) * numVertices,
+			lattice->vertices) != CL_SUCCESS)
+		{
+			logError("failed to fetch vertices from the GPU");
+			return false;
+		}
+		
+		return true;
+	}
+	
+	bool sendEdgesToGpu()
+	{
+		// send the edge data to the GPU
 		
 		if (gpuContext.commandQueue->enqueueWriteBuffer(
 			*edgeBuffer,
@@ -995,22 +1033,12 @@ struct GpuSimulationContext
 		return true;
 	}
 	
-	bool computeEdgeForces(Lattice & lattice, const float tension)
+	bool computeEdgeForces(const float tension)
 	{
 		Benchmark bm("computeEdgeForces_GPU");
 		
 	#if 1
-		// send the vertex data to the GPU
-		
-		if (gpuContext.commandQueue->enqueueWriteBuffer(
-			*vertexBuffer,
-			CL_TRUE,
-			0, sizeof(Lattice::Vertex) * numVertices,
-			lattice.vertices) != CL_SUCCESS)
-		{
-			logError("failed to send vertex data to the GPU");
-			return false;
-		}
+		sendVerticesToGpu();
 	#endif
 		
 		// run the integration program on the GPU
@@ -1031,18 +1059,10 @@ struct GpuSimulationContext
 			return false;
 		}
 		
-	#if 1
-		// fetch the vertex data from the GPU
+		gpuContext.commandQueue->finish();
 		
-		if (gpuContext.commandQueue->enqueueReadBuffer(
-			*vertexBuffer,
-			CL_TRUE,
-			0, sizeof(Lattice::Vertex) * numVertices,
-			lattice.vertices) != CL_SUCCESS)
-		{
-			logError("failed to fetch vertices from the GPU");
-			return false;
-		}
+	#if 1
+		fetchVerticesFromGpu();
 	#endif
 		
 		return true;
@@ -1052,35 +1072,21 @@ struct GpuSimulationContext
 	{
 		Benchmark bm("simulateLattice_Integrate_GPU");
 		
-		// send the vertex data to the GPU
-		
 		const int numVertices = 6 * kTextureSize * kTextureSize;
 		
-		if (gpuContext.commandQueue->enqueueWriteBuffer(
-			*vertexBuffer,
-			CL_TRUE,
-			0, sizeof(Lattice::Vertex) * numVertices,
-			lattice.vertices) != CL_SUCCESS)
-		{
-			logError("failed to send vertex data to the GPU");
-			return false;
-		}
+		const float retain = powf(1.f - falloff, dt);
 		
 		// run the integration program on the GPU
 		
 		cl::Kernel integrateKernel(*integrateProgram->program, "integrate");
 		
-		if (integrateKernel.setArg(0, *vertexBuffer) != CL_SUCCESS)
+		if (integrateKernel.setArg(0, *vertexBuffer) != CL_SUCCESS ||
+			integrateKernel.setArg(1, dt) != CL_SUCCESS ||
+			integrateKernel.setArg(2, retain) != CL_SUCCESS)
 		{
 			logError("failed to set buffer arguments for kernel");
 			return false;
 		}
-		
-		const float retain = powf(1.f - falloff, dt);
-		
-		integrateKernel.setArg(1, dt);
-		integrateKernel.setArg(2, retain);
-		integrateKernel.setArg(3, numVertices);
 		
 		if (gpuContext.commandQueue->enqueueNDRangeKernel(integrateKernel, cl::NullRange, cl::NDRange(numVertices), cl::NDRange(64)) != CL_SUCCESS)
 		{
@@ -1088,17 +1094,7 @@ struct GpuSimulationContext
 			return false;
 		}
 		
-		// fetch the vertex data from the GPU
-		
-		if (gpuContext.commandQueue->enqueueReadBuffer(
-			*vertexBuffer,
-			CL_TRUE,
-			0, sizeof(Lattice::Vertex) * numVertices,
-			lattice.vertices) != CL_SUCCESS)
-		{
-			logError("failed to fetch vertices from the GPU");
-			return false;
-		}
+		gpuContext.commandQueue->finish();
 		
 		return true;
 	}
@@ -1164,6 +1160,7 @@ static void simulateLattice_Integrate(Lattice & lattice, const float dt, const f
 
 static void simulateLattice(Lattice & lattice, const float dt, const float tension, const float falloff)
 {
+#if 0
 	const float eps = 1e-4f;
 	
 	const int numVertices = 6 * kTextureSize * kTextureSize;
@@ -1175,9 +1172,8 @@ static void simulateLattice(Lattice & lattice, const float dt, const float tensi
 		v.f.setZero();
 	}
 	
-#if 0
 	{
-		Benchmark bm("computeEdgeForces");
+	Benchmark bm("computeEdgeForces");
 		
 	for (auto & edge : lattice.edges)
 	{
@@ -1214,13 +1210,15 @@ static void simulateLattice(Lattice & lattice, const float dt, const float tensi
 		v2.f.z -= fz;
 	}
 	}
-#endif
-
-	s_gpuSimulationContext->computeEdgeForces(lattice, tension);
 	
-	//simulateLattice_Integrate(lattice, dt, falloff);
+	simulateLattice_Integrate(lattice, dt, falloff);
+#else
+	s_gpuSimulationContext->computeEdgeForces(tension);
 	
 	s_gpuSimulationContext->integrate(lattice, dt, falloff);
+	
+	s_gpuSimulationContext->fetchVerticesFromGpu();
+#endif
 }
 
 int main(int argc, char * argv[])
@@ -1367,7 +1365,8 @@ int main(int argc, char * argv[])
 				if (ImGui::Button("Project lattice onto shape"))
 				{
 					projectLatticeOntoShape(lattice, shapeDefinition);
-					s_gpuSimulationContext->updateEdges();
+					s_gpuSimulationContext->sendEdgesToGpu();
+					s_gpuSimulationContext->sendVerticesToGpu();
 				}
 				ImGui::Checkbox("Show lattice vertices", &showLatticeVertices);
 				ImGui::Checkbox("Show lattice edges", &showLatticeEdges);
