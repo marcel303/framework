@@ -7,6 +7,10 @@
 #include "StringEx.h"
 #include "TextIO.h"
 
+#define __CL_ENABLE_EXCEPTIONS
+
+#include "cl.hpp"
+
 /*
 
 From: https://learnopengl.com/Advanced-OpenGL/Cubemaps
@@ -624,10 +628,6 @@ static void drawLatticeEdges(const Lattice & lattice)
 
 //
 
-#define __CL_ENABLE_EXCEPTIONS
-
-#include "cl.hpp"
-
 struct GpuProgram
 {
 	cl::Device & device;
@@ -711,13 +711,13 @@ struct GpuContext
 		
 		if (platforms.empty())
 		{
-			logError("no OpenCL platform(s) found");
+			logInfo("no OpenCL platform(s) found");
 			return false;
 		}
 		
 		for (auto & platform : platforms)
 		{
-			logDebug("available OpenCL platform: %s", platform.getInfo<CL_PLATFORM_NAME>().c_str());
+			logInfo("available OpenCL platform: %s", platform.getInfo<CL_PLATFORM_NAME>().c_str());
 		}
 		
 		const cl::Platform & defaultPlatform = platforms[0];
@@ -734,16 +734,18 @@ struct GpuContext
 		
 		for (auto & device : devices)
 		{
-			logDebug("available GPU device: %s", device.getInfo<CL_DEVICE_NAME>().c_str());
+			logInfo("available GPU device: %s", device.getInfo<CL_DEVICE_NAME>().c_str());
 		}
 		
 		device = new cl::Device(devices[0]);
+		
+		logInfo("using GPU device: %s", device->getInfo<CL_DEVICE_NAME>().c_str());
 		
 		context = new cl::Context(*device);
 		
 		// create a command queue
 		
-		commandQueue = new cl::CommandQueue(*context, *device);
+		commandQueue = new cl::CommandQueue(*context, *device, CL_QUEUE_PROFILING_ENABLE * 0);
 		
 		return true;
 	}
@@ -821,7 +823,7 @@ struct GpuSimulationContext
 					float y;
 					float z;
 				} Vector;
-			
+				
 				typedef struct Vertex
 				{
 					Vector p;
@@ -862,8 +864,8 @@ struct GpuSimulationContext
 				}
 			
 				void kernel computeEdgeForces(
-					global Edge * edges,
-					global Vertex * vertices,
+					global Edge * restrict edges,
+					global Vertex * restrict vertices,
 					float tension)
 				{
 					const float eps = 1e-4f;
@@ -939,7 +941,7 @@ struct GpuSimulationContext
 				} Vertex;
 			
 				void kernel integrate(
-					global Vertex * vertices,
+					global Vertex * restrict vertices,
 					float dt,
 					float retain)
 				{
