@@ -51,7 +51,7 @@ struct FrameworkImGuiContext
 
 	~FrameworkImGuiContext();
 	
-	void init();
+	void init(const bool enableIniFiles = false);
 	void shut();
 	
 	void processBegin(const float dt, const int displaySx, const int displaySy, bool & inputIsCaptured);

@@ -34,7 +34,7 @@ FrameworkImGuiContext::~FrameworkImGuiContext()
 	fassert(font_texture_id == 0);
 }
 
-void FrameworkImGuiContext::init()
+void FrameworkImGuiContext::init(const bool enableIniFiles)
 {
 	imgui_context = ImGui::CreateContext();
 	
@@ -42,7 +42,10 @@ void FrameworkImGuiContext::init()
 	
 	auto & io = ImGui::GetIO();
 	
-	io.IniFilename = nullptr;
+	if (enableIniFiles == false)
+	{
+		io.IniFilename = nullptr;
+	}
 	
 	io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 	io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
