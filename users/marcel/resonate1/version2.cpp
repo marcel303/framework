@@ -1210,8 +1210,6 @@ static void simulateLattice(Lattice & lattice, const float dt, const float tensi
 	s_gpuSimulationContext->computeEdgeForces(tension);
 	
 	s_gpuSimulationContext->integrate(lattice, dt, falloff);
-	
-	s_gpuSimulationContext->fetchVerticesFromGpu();
 #endif
 }
 
@@ -1461,6 +1459,8 @@ int main(int argc, char * argv[])
 		{
 			for (int i = 0; i < numSimulationStepsPerDraw; ++i)
 				::simulateLattice(lattice, simulationTimeStep, latticeTension, velocityFalloff);
+			
+			s_gpuSimulationContext->fetchVerticesFromGpu();
 		}
 
 		framework.beginDraw(0, 0, 0, 0);
