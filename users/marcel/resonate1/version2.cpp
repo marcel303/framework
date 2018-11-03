@@ -1,6 +1,10 @@
+#include "Benchmark.h"
 #include "framework.h"
 #include "imgui-framework.h"
+#include "imgui/TextEditor.h"
+#include "nfd.h"
 #include "Parse.h"
+#include "StringEx.h"
 #include "TextIO.h"
 
 /*
@@ -21,7 +25,7 @@ From: https://learnopengl.com/Advanced-OpenGL/Cubemaps
 const int VIEW_SX = 1200;
 const int VIEW_SY = 700;
 
-const int kTextureSize = 32;
+const int kTextureSize = 64;
 const int kTextureArraySize = 128;
 
 extern void splitString(const std::string & str, std::vector<std::string> & result);
@@ -618,6 +622,357 @@ static void drawLatticeEdges(const Lattice & lattice)
 	gxEnd();
 }
 
+//
+
+#define __CL_ENABLE_EXCEPTIONS
+
+#include "cl.hpp"
+
+struct GpuProgram
+{
+	cl::Device & device;
+	
+	cl::Context & context;
+	
+	cl::Program * program = nullptr;
+	
+	GpuProgram(cl::Device & in_device, cl::Context & in_context)
+		: device(in_device)
+		, context(in_context)
+	{
+	}
+	
+	~GpuProgram()
+	{
+		Assert(program == nullptr);
+		
+		shut();
+	}
+	
+	void shut()
+	{
+		delete program;
+		program = nullptr;
+	}
+	
+	bool updateSource(const char * source)
+	{
+		cl::Program::Sources sources;
+		
+		sources.push_back({ source, strlen(source) });
+	
+		cl::Program newProgram(context, sources);
+		
+		if (newProgram.build({ device }) != CL_SUCCESS)
+		{
+			logError("failed to build OpenCL program");
+			logError("%s", newProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str());
+			
+			return false;
+		}
+		
+		delete program;
+		program = nullptr;
+		
+		program = new cl::Program(newProgram);
+		
+		return true;
+	}
+};
+
+struct GpuContext
+{
+	cl::Device * device = nullptr;
+	
+	cl::Context * context = nullptr;
+	
+	cl::CommandQueue * commandQueue = nullptr;
+	
+	~GpuContext()
+	{
+		Assert(device == nullptr);
+		Assert(context == nullptr);
+		Assert(commandQueue == nullptr);
+		
+		shut();
+	}
+	
+	bool init()
+	{
+		std::vector<cl::Platform> platforms;
+		cl::Platform::get(&platforms);
+		
+		if (platforms.empty())
+		{
+			logError("no OpenCL platform(s) found");
+			return false;
+		}
+		
+		for (auto & platform : platforms)
+		{
+			logDebug("available OpenCL platform: %s", platform.getInfo<CL_PLATFORM_NAME>().c_str());
+		}
+		
+		const cl::Platform & defaultPlatform = platforms[0];
+		
+		std::vector<cl::Device> devices;
+		
+		defaultPlatform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
+		
+		if (devices.empty())
+		{
+			logError("no OpenGL GPU device(s) found");
+			return false;
+		}
+		
+		for (auto & device : devices)
+		{
+			logDebug("available GPU device: %s", device.getInfo<CL_DEVICE_NAME>().c_str());
+		}
+		
+		device = new cl::Device(devices[0]);
+		
+		context = new cl::Context(*device);
+		
+		// create a command queue
+		
+		commandQueue = new cl::CommandQueue(*context, *device);
+		
+		return true;
+	}
+	
+	void shut()
+	{
+		delete commandQueue;
+		commandQueue = nullptr;
+		
+		delete context;
+		context = nullptr;
+		
+		delete device;
+		device = nullptr;
+	}
+	
+	bool isValid() const
+	{
+		return
+			device != nullptr &&
+			context != nullptr &&
+			commandQueue != nullptr;
+	}
+};
+
+struct GpuSimulationContext
+{
+	GpuContext & gpuContext;
+	
+	cl::Buffer * vertexBuffer = nullptr;
+	
+	GpuProgram * integrateProgram = nullptr;
+	
+	GpuSimulationContext(GpuContext & in_gpuContext)
+		: gpuContext(in_gpuContext)
+	{
+	}
+	
+	~GpuSimulationContext()
+	{
+		Assert(vertexBuffer == nullptr);
+		Assert(integrateProgram == nullptr);
+	}
+	
+	bool init()
+	{
+		if (gpuContext.isValid() == false)
+		{
+			return false;
+		}
+		else
+		{
+			integrateProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
+			
+			const int numVertices = 6 * kTextureSize * kTextureSize;
+			
+			vertexBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(Lattice::Vertex) * numVertices);
+			
+			const char * source =
+				R"SHADER(
+			
+				typedef struct Vector
+				{
+					float x;
+					float y;
+					float z;
+				} Vector;
+			
+				typedef struct Vertex
+				{
+					Vector p;
+					
+					// physics stuff
+					Vector f;
+					Vector v;
+				} Vertex;
+			
+				void kernel integrate(
+					global Vertex * vertices,
+					float dt,
+					float retain,
+					int numVertices)
+				{
+					int ID = get_global_id(0);
+					
+					Vertex v = vertices[ID];
+					
+					v.v.x *= retain;
+					v.v.y *= retain;
+					v.v.z *= retain;
+					
+					v.v.x += v.f.x * dt;
+					v.v.y += v.f.y * dt;
+					v.v.z += v.f.z * dt;
+					
+					v.p.x += v.v.x * dt;
+					v.p.y += v.v.y * dt;
+					v.p.z += v.v.z * dt;
+					
+					vertices[ID] = v;
+				}
+			
+				)SHADER";
+			
+			if (integrateProgram->updateSource(source) == false)
+				return false;
+			
+			return true;
+		}
+	}
+	
+	bool shut()
+	{
+		delete integrateProgram;
+		integrateProgram = nullptr;
+		
+		delete vertexBuffer;
+		vertexBuffer = nullptr;
+		
+		return true;
+	}
+	
+	bool integrate(Lattice & lattice, const float dt, const float falloff)
+	{
+		Benchmark bm("simulateLattice_Integrate_GPU");
+		
+		// send the vertex data to the GPU
+		
+		const int numVertices = 6 * kTextureSize * kTextureSize;
+		
+		if (gpuContext.commandQueue->enqueueWriteBuffer(
+			*vertexBuffer,
+			CL_TRUE,
+			0, sizeof(Lattice::Vertex) * numVertices,
+			lattice.vertices) != CL_SUCCESS)
+		{
+			logError("failed to send vertex data to the GPU");
+			return false;
+		}
+		
+		// run the integration program on the GPU
+		
+		cl::Kernel integrateKernel(*integrateProgram->program, "integrate");
+		
+		if (integrateKernel.setArg(0, *vertexBuffer) != CL_SUCCESS)
+		{
+			logError("failed to set buffer arguments for kernel");
+			return false;
+		}
+		
+		const float retain = powf(1.f - falloff, dt);
+		
+		integrateKernel.setArg(1, dt);
+		integrateKernel.setArg(2, retain);
+		integrateKernel.setArg(3, numVertices);
+		
+		if (gpuContext.commandQueue->enqueueNDRangeKernel(integrateKernel, cl::NullRange, cl::NDRange(numVertices), cl::NDRange(64)) != CL_SUCCESS)
+		{
+			logError("failed to enqueue kernel");
+			return false;
+		}
+		
+		// fetch the vertex data from the GPU
+		
+		if (gpuContext.commandQueue->enqueueReadBuffer(
+			*vertexBuffer,
+			CL_TRUE,
+			0, sizeof(Lattice::Vertex) * numVertices,
+			lattice.vertices) != CL_SUCCESS)
+		{
+			logError("failed to fetch vertices from the GPU");
+			return false;
+		}
+		
+		return true;
+	}
+};
+
+static GpuContext * s_gpuContext = nullptr;
+
+static GpuSimulationContext * s_gpuSimulationContext = nullptr;
+
+static bool gpuInit()
+{
+	s_gpuContext = new GpuContext();
+	
+	if (!s_gpuContext->init())
+		return false;
+	
+	s_gpuSimulationContext = new GpuSimulationContext(*s_gpuContext);
+	
+	if (!s_gpuSimulationContext->init())
+		return false;
+
+	return true;
+}
+
+bool gpuShut()
+{
+	if (s_gpuContext != nullptr)
+	{
+		s_gpuContext->shut();
+		
+		delete s_gpuContext;
+		s_gpuContext = nullptr;
+	}
+	
+	return true;
+}
+
+static void simulateLattice_Integrate(Lattice & lattice, const float dt, const float falloff)
+{
+	Benchmark bm("simulateLattice_Integrate");
+	
+	const int numVertices = 6 * kTextureSize * kTextureSize;
+	
+	const float retain = powf(1.f - falloff, dt);
+	
+	for (int i = 0; i < numVertices; ++i)
+	{
+		auto & v = lattice.vertices[i];
+		
+		v.v.x *= retain;
+		v.v.y *= retain;
+		v.v.z *= retain;
+		
+		v.v.x += v.f.x * dt;
+		v.v.y += v.f.y * dt;
+		v.v.z += v.f.z * dt;
+		
+		v.p.x += v.v.x * dt;
+		v.p.y += v.v.y * dt;
+		v.p.z += v.v.z * dt;
+	}
+}
+
 static void simulateLattice(Lattice & lattice, const float dt, const float tension, const float falloff)
 {
 	const float eps = 1e-4f;
@@ -666,24 +1021,9 @@ static void simulateLattice(Lattice & lattice, const float dt, const float tensi
 		v2.f.z -= fz;
 	}
 	
-	const float retain = powf(1.f - falloff, dt);
+	simulateLattice_Integrate(lattice, dt, falloff);
 	
-	for (int i = 0; i < numVertices; ++i)
-	{
-		auto & v = lattice.vertices[i];
-		
-		v.v.x *= retain;
-		v.v.y *= retain;
-		v.v.z *= retain;
-		
-		v.v.x += v.f.x * dt;
-		v.v.y += v.f.y * dt;
-		v.v.z += v.f.z * dt;
-		
-		v.p.x += v.v.x * dt;
-		v.p.y += v.v.y * dt;
-		v.p.z += v.v.z * dt;
-	}
+	//s_gpuSimulationContext->integrate(lattice, dt, falloff);
 }
 
 int main(int argc, char * argv[])
@@ -698,7 +1038,11 @@ int main(int argc, char * argv[])
 		return -1;
 
 	FrameworkImGuiContext guiContext;
-	guiContext.init();
+	guiContext.init(true);
+	
+	TextEditor textEditor;
+	
+	gpuInit();
 	
 	for (int i = 0; i < 6; ++i)
 	{
@@ -763,14 +1107,27 @@ int main(int argc, char * argv[])
 		
 		guiContext.processBegin(framework.timeStep, VIEW_SX, VIEW_SY, inputIsCaptured);
 		{
-			ImGui::Begin("Interaction", nullptr,
-				ImGuiWindowFlags_MenuBar);
+			if (ImGui::Begin("Interaction", nullptr,
+				ImGuiWindowFlags_MenuBar))
 			{
 				if (ImGui::BeginMenuBar())
 				{
 					if (ImGui::BeginMenu("File"))
 					{
-						ImGui::MenuItem("Load shape..");
+						if (ImGui::MenuItem("Load shape.."))
+						{
+							nfdchar_t * path = nullptr;
+							const nfdresult_t result = NFD_OpenDialog("txt", "", &path);
+
+							if (result == NFD_OKAY)
+							{
+								shapeDefinition.loadFromFile(path);
+							}
+							
+							delete path;
+								path = nullptr;
+						}
+						
 						ImGui::MenuItem("Load simulated data..");
 						ImGui::MenuItem("Save simulated data..");
 						ImGui::Separator();
@@ -781,6 +1138,8 @@ int main(int argc, char * argv[])
 					}
 					ImGui::EndMenuBar();
 				}
+				
+				ImGui::PushItemWidth(140);
 				
 				ImGui::Text("Visibility");
 				ImGui::Checkbox("Show cube", &showCube);
@@ -829,6 +1188,54 @@ int main(int argc, char * argv[])
 				ImGui::Separator();
 				ImGui::Text("Statistics");
 				ImGui::LabelText("Cube size (kbyte)", "%lu", sizeof(Cube) / 1024);
+				
+				ImGui::PopItemWidth();
+			}
+			ImGui::End();
+			
+			if (ImGui::Begin("Inspect", nullptr,
+				ImGuiWindowFlags_MenuBar))
+			{
+				const char * items[ShapeDefinition::kMaxPlanes];
+				
+				char lines[ShapeDefinition::kMaxPlanes][128];
+				for (int i = 0; i < shapeDefinition.numPlanes; ++i)
+				{
+					auto & p = shapeDefinition.planes[i];
+					
+					sprintf_s(lines[i], sizeof(lines[i]), "%+.2f, %+.2f, %+.2f @ %.2f\n",
+						p.normal[0],
+						p.normal[1],
+						p.normal[2],
+						p.offset);
+					
+					items[i] = lines[i];
+				}
+				int selectedItem = - 1;
+				ImGui::ListBox("Shape planes", &selectedItem, items, shapeDefinition.numPlanes);
+				
+				for (int i = 0; i < shapeDefinition.numPlanes; ++i)
+				{
+					ImGui::PushID(i);
+					ImGui::PushItemWidth(200.f);
+					ImGui::InputFloat3("Plane", &shapeDefinition.planes[i].normal[0], -1.f, +1.f);
+					ImGui::PopItemWidth();
+					
+					ImGui::SameLine();
+					ImGui::PushItemWidth(100.f);
+					ImGui::SliderFloat("Offset", &shapeDefinition.planes[i].offset, 0.f, +2.f);
+					ImGui::PopItemWidth();
+					ImGui::PopID();
+				}
+			}
+			ImGui::End();
+			
+			ImGui::SetNextWindowSize(ImVec2(300, 400));
+			
+			if (ImGui::Begin("Compute", nullptr,
+				ImGuiWindowFlags_MenuBar))
+			{
+				textEditor.Render("");
 			}
 			ImGui::End();
 		}
@@ -1063,7 +1470,9 @@ int main(int argc, char * argv[])
 	
 	delete cube;
 	cube = nullptr;
-
+	
+	gpuShut();
+	
 	guiContext.shut();
 	
 	framework.shutdown();
