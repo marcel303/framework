@@ -892,6 +892,7 @@ struct GpuSimulationContext
 					// let's kill some performance here by using atomics!
 					// todo : store forces in edges and let vertices gather forces in a follow-up step
 					
+				#if 1
 					atomicAdd_g_f(&vertices[edge.vertex1].f.x, +fx);
 					atomicAdd_g_f(&vertices[edge.vertex1].f.y, +fy);
 					atomicAdd_g_f(&vertices[edge.vertex1].f.z, +fz);
@@ -899,6 +900,7 @@ struct GpuSimulationContext
 					atomicAdd_g_f(&vertices[edge.vertex2].f.x, -fx);
 					atomicAdd_g_f(&vertices[edge.vertex2].f.y, -fy);
 					atomicAdd_g_f(&vertices[edge.vertex2].f.z, -fz);
+				#endif
 				}
 			
 				)SHADER";
@@ -1037,10 +1039,6 @@ struct GpuSimulationContext
 	{
 		Benchmark bm("computeEdgeForces_GPU");
 		
-	#if 1
-		sendVerticesToGpu();
-	#endif
-		
 		// run the integration program on the GPU
 		
 		cl::Kernel kernel(*computeEdgeForcesProgram->program, "computeEdgeForces");
@@ -1060,10 +1058,6 @@ struct GpuSimulationContext
 		}
 		
 		gpuContext.commandQueue->finish();
-		
-	#if 1
-		fetchVerticesFromGpu();
-	#endif
 		
 		return true;
 	}
@@ -1377,7 +1371,10 @@ int main(int argc, char * argv[])
 				ImGui::SliderFloat("Velocity falloff", &velocityFalloff, 0.f, 1.f);
 				if (ImGui::Button("Squash lattice"))
 				{
+					s_gpuSimulationContext->fetchVerticesFromGpu();
+					
 					const int numVertices = 6 * kTextureSize * kTextureSize;
+					
 					for (int i = 0; i < numVertices; ++i)
 					{
 						auto & p = lattice.vertices[i].p;
@@ -1385,6 +1382,8 @@ int main(int argc, char * argv[])
 						p.y *= .99f;
 						p.z *= .99f;
 					}
+					
+					s_gpuSimulationContext->sendVerticesToGpu();
 				}
 				
 				ImGui::Separator();
