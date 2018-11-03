@@ -1274,6 +1274,7 @@ int main(int argc, char * argv[])
 	bool showLatticeVertices = false;
 	bool showLatticeEdges = false;
 	bool simulateLattice = false;
+	bool simulateUsingGpu = false;
 	float latticeTension = 1.f;
 	float simulationTimeStep = 1.f / 1000.f;
 	int numSimulationStepsPerDraw = 10;
@@ -1364,6 +1365,14 @@ int main(int argc, char * argv[])
 				ImGui::Checkbox("Show lattice vertices", &showLatticeVertices);
 				ImGui::Checkbox("Show lattice edges", &showLatticeEdges);
 				ImGui::Checkbox("Simulate lattice", &simulateLattice);
+				if (ImGui::Checkbox("Use GPU", &simulateUsingGpu))
+				{
+					// make sure the vertices are synced between cpu and gpu at this point
+					if (simulateUsingGpu)
+						s_gpuSimulationContext->sendVerticesToGpu();
+					else
+						s_gpuSimulationContext->fetchVerticesFromGpu();
+				}
 				ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100000.f, "%.2f", 4.f);
 				ImGui::SliderFloat("Simulation time step", &simulationTimeStep, 0.f, 1.f / 10.f);
 				ImGui::SliderInt("Num simulation steps per draw", &numSimulationStepsPerDraw, 1, 1000);
@@ -1458,9 +1467,7 @@ int main(int argc, char * argv[])
 		
 		if (simulateLattice)
 		{
-			const bool useGpu = true;
-			
-			if (useGpu)
+			if (simulateUsingGpu)
 			{
 				Benchmark bm("simulate_gpu");
 				
