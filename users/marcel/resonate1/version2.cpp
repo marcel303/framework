@@ -663,7 +663,14 @@ struct GpuProgram
 	
 		cl::Program newProgram(context, sources);
 		
-		if (newProgram.build({ device }) != CL_SUCCESS)
+		if (newProgram.build({ device },
+			"-cl-single-precision-constant "
+			"-cl-denorms-are-zero "
+			"-cl-strict-aliasing "
+			"-cl-mad-enable "
+			"-cl-no-signed-zeros "
+			"-cl-unsafe-math-optimizations "
+			"-cl-finite-math-only ") != CL_SUCCESS)
 		{
 			logError("failed to build OpenCL program");
 			logError("%s", newProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str());
@@ -861,12 +868,12 @@ struct GpuSimulationContext
 				{
 					const float eps = 1e-4f;
 					
-					int ID = get_global_id(0);
+					const int ID = get_global_id(0);
 					
-					Edge edge = edges[ID];
+					const Edge edge = edges[ID];
 					
-					Vector p1 = vertices[edge.vertex1].p;
-					Vector p2 = vertices[edge.vertex2].p;
+					const Vector p1 = vertices[edge.vertex1].p;
+					const Vector p2 = vertices[edge.vertex2].p;
 					
 					const float dx = p2.x - p1.x;
 					const float dy = p2.y - p1.y;
@@ -1037,7 +1044,7 @@ struct GpuSimulationContext
 	
 	bool computeEdgeForces(const float tension)
 	{
-		Benchmark bm("computeEdgeForces_GPU");
+		//Benchmark bm("computeEdgeForces_GPU");
 		
 		// run the integration program on the GPU
 		
@@ -1064,7 +1071,7 @@ struct GpuSimulationContext
 	
 	bool integrate(Lattice & lattice, const float dt, const float falloff)
 	{
-		Benchmark bm("simulateLattice_Integrate_GPU");
+		//Benchmark bm("simulateLattice_Integrate_GPU");
 		
 		const int numVertices = 6 * kTextureSize * kTextureSize;
 		
@@ -1128,7 +1135,7 @@ bool gpuShut()
 
 void simulateLattice_computeEdgeForces(Lattice & lattice, const float tension)
 {
-	Benchmark bm("computeEdgeForces");
+	//Benchmark bm("computeEdgeForces");
 	
 	const float eps = 1e-4f;
 	
@@ -1170,7 +1177,7 @@ void simulateLattice_computeEdgeForces(Lattice & lattice, const float tension)
 
 static void simulateLattice_integrate(Lattice & lattice, const float dt, const float falloff)
 {
-	Benchmark bm("simulateLattice_Integrate");
+	//Benchmark bm("simulateLattice_Integrate");
 	
 	const int numVertices = 6 * kTextureSize * kTextureSize;
 	
