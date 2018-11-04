@@ -4,5 +4,7 @@ app marcel-resonate2
 	depend_library ImGuiColorTextEdit
 	depend_library libnfd
 	depend_package OpenCL
-	add_files version2.cpp
+	scan_files *.cpp
+	scan_files *.h
+	scan_files *.hpp
 	resource_path data
