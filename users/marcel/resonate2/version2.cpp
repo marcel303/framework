@@ -4,12 +4,12 @@
 #include "framework.h"
 #include "gpu.h"
 #include "gpuSimulationContext.h"
-#include "gpuSources.h"
 #include "imgui-framework.h"
 #include "lattice.h"
 #include "nfd.h"
 #include "shape.h"
 #include "StringEx.h"
+#include <math.h>
 
 //#define __CL_ENABLE_EXCEPTIONS
 
@@ -205,6 +205,24 @@ static void drawLatticeEdges(const Lattice & lattice)
 			const auto & p1 = lattice.vertices[edge.vertex1].p;
 			const auto & p2 = lattice.vertices[edge.vertex2].p;
 			
+		#if 0
+			const float dx = p2.x - p1.x;
+			const float dy = p2.y - p1.y;
+			const float dz = p2.z - p1.z;
+			const float d = sqrtf(dx * dx + dy * dy + dz * dz);
+			const float s = 1.f - fabsf(edge.initialDistance - d) * 1000.f;
+			setColorf(s, s, s);
+		#elif 1
+			const float vx = lattice.vertices[edge.vertex1].v.x;
+			const float vy = lattice.vertices[edge.vertex1].v.y;
+			const float vz = lattice.vertices[edge.vertex1].v.z;
+			const float scale = 400.f;
+			const float r = vx * scale + .5f;
+			const float g = vy * scale + .5f;
+			const float b = vz * scale + .5f;
+			setColorf(r, g, b);
+		#endif
+			
 			gxVertex3f(p1.x, p1.y, p1.z);
 			gxVertex3f(p2.x, p2.y, p2.z);
 		}
@@ -294,7 +312,7 @@ static void simulateLattice_integrate(Lattice & lattice, const float dt, const f
 	
 	const int numVertices = 6 * kTextureSize * kTextureSize;
 	
-	const float retain = powf(1.f - falloff, dt);
+	const float retain = powf(1.f - falloff, dt / 1000.f);
 	
 	for (int i = 0; i < numVertices; ++i)
 	{
@@ -329,6 +347,66 @@ static void simulateLattice_gpu(Lattice & lattice, const float dt, const float t
 	
 	s_gpuSimulationContext->integrate(lattice, dt, falloff);
 }
+
+//
+
+const int kNumProbeFrequencies = 64;
+
+struct ImpulseResponsePhaseState
+{
+	float frequency[kNumProbeFrequencies];
+	float phase[kNumProbeFrequencies];
+	
+	float cos_sin[kNumProbeFrequencies][2];
+	
+	void init()
+	{
+		memset(this, 0, sizeof(*this));
+		
+		for (int i = 0; i < kNumProbeFrequencies; ++i)
+		{
+			frequency[i] = 40.f * pow(2.f, i / 8.f);
+		}
+	}
+	
+	void next(const float dt)
+	{
+		for (int i = 0; i < kNumProbeFrequencies; ++i)
+		{
+			phase[i] += dt * frequency[i];
+			
+			phase[i] = fmodf(phase[i], 1.f);
+			
+			cos_sin[i][0] = cosf(phase[i] * 2.f * M_PI);
+			cos_sin[i][1] = sinf(phase[i] * 2.f * M_PI);
+		}
+	}
+};
+
+struct ImpulseResponseProbe
+{
+	float response[kNumProbeFrequencies][2];
+	
+	void init()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+	
+	void measure(const ImpulseResponsePhaseState & state, const float value)
+	{
+		for (int i = 0; i < kNumProbeFrequencies; ++i)
+		{
+			response[i][0] += state.cos_sin[i][0] * value;
+			response[i][1] += state.cos_sin[i][1] * value;
+		}
+	}
+	
+	void calcResponseMagnitude(float * result) const
+	{
+		for (int i = 0; i < kNumProbeFrequencies; ++i)
+			result[i] = hypotf(response[i][0], response[i][1]);
+	}
+};
 
 int main(int argc, char * argv[])
 {
@@ -382,6 +460,13 @@ int main(int argc, char * argv[])
 	ComputeEditor computeEdgeForcesEditor(s_gpuSimulationContext->computeEdgeForcesProgram);
 	ComputeEditor integrateEditor(s_gpuSimulationContext->integrateProgram);
 	
+	ImpulseResponsePhaseState impulseResponsePhaseState;
+	impulseResponsePhaseState.init();
+	
+	ImpulseResponseProbe impulseResponseProbe;
+	impulseResponseProbe.init();
+	int lastResponseProbeVertexIndex = -1;
+	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
 	
 	bool showCube = false;
@@ -397,13 +482,19 @@ int main(int argc, char * argv[])
 	bool simulateLattice = false;
 	bool simulateUsingGpu = false;
 	float latticeTension = 1.f;
-	float simulationTimeStep = 1.f / 1000.f;
+	float simulationTimeStep_ms = .1f;
 	int numSimulationStepsPerDraw = 10;
 	float velocityFalloff = .2f;
 	
 	bool doCameraControl = false;
 	
 	Camera3d camera;
+	
+	bool hasMouseCubeFace = false;
+	int mouseCubeFaceIndex = -1;
+	int mouseCubeFacePosition[2] = { -1, -1 };
+	
+	float simulationTime_ms = 0.f;
 	
 	while (!framework.quitRequested)
 	{
@@ -476,12 +567,14 @@ int main(int argc, char * argv[])
 					lattice.init();
 					s_gpuSimulationContext->sendVerticesToGpu();
 					s_gpuSimulationContext->sendEdgesToGpu();
+					simulationTime_ms = 0.f;
 				}
 				if (ImGui::Button("Project lattice onto shape"))
 				{
 					projectLatticeOntoShape(lattice, shapeDefinition);
 					s_gpuSimulationContext->sendVerticesToGpu();
 					s_gpuSimulationContext->sendEdgesToGpu();
+					simulationTime_ms = 0.f;
 				}
 				ImGui::Checkbox("Show lattice vertices", &showLatticeVertices);
 				ImGui::Checkbox("Show lattice edges", &showLatticeEdges);
@@ -494,8 +587,8 @@ int main(int argc, char * argv[])
 					else
 						s_gpuSimulationContext->fetchVerticesFromGpu();
 				}
-				ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100000.f, "%.2f", 4.f);
-				ImGui::SliderFloat("Simulation time step", &simulationTimeStep, 0.f, 1.f / 40.f);
+				ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 10.f, "%.3f", 4.f);
+				ImGui::SliderFloat("Simulation time step (ms)", &simulationTimeStep_ms, 0.f, .1f, "%.3f", 2.f);
 				ImGui::SliderInt("Num simulation steps per draw", &numSimulationStepsPerDraw, 1, 1000);
 				ImGui::SliderFloat("Velocity falloff", &velocityFalloff, 0.f, 1.f);
 				if (ImGui::Button("Squash lattice"))
@@ -602,7 +695,7 @@ int main(int argc, char * argv[])
 				Benchmark bm("simulate_gpu");
 				
 				for (int i = 0; i < numSimulationStepsPerDraw; ++i)
-					::simulateLattice_gpu(lattice, simulationTimeStep, latticeTension, velocityFalloff);
+					::simulateLattice_gpu(lattice, simulationTimeStep_ms, latticeTension, velocityFalloff);
 				
 				s_gpuSimulationContext->fetchVerticesFromGpu();
 			}
@@ -611,7 +704,50 @@ int main(int argc, char * argv[])
 				Benchmark bm("simulate");
 				
 				for (int i = 0; i < numSimulationStepsPerDraw; ++i)
-					::simulateLattice(lattice, simulationTimeStep, latticeTension, velocityFalloff);
+				{
+					::simulateLattice(lattice, simulationTimeStep_ms, latticeTension, velocityFalloff);
+					
+					simulationTime_ms += simulationTimeStep_ms;
+					
+					if (hasMouseCubeFace)
+					{
+						// perform impulse response at mouse location
+						
+						const int vertexIndex =
+							mouseCubeFaceIndex * kTextureSize * kTextureSize +
+							mouseCubeFacePosition[0] * kTextureSize +
+							mouseCubeFacePosition[1];
+						
+						if (vertexIndex != lastResponseProbeVertexIndex)
+						{
+							lastResponseProbeVertexIndex = vertexIndex;
+							impulseResponseProbe.init();
+						}
+						
+						const Lattice::Vertex & vertex = lattice.vertices[vertexIndex];
+						
+					#if 0
+						const float value =
+							fabsf(vertex.v.x) +
+							fabsf(vertex.v.y) +
+							fabsf(vertex.v.z);
+					#elif 1
+						const float value =
+							sqrtf(
+								vertex.v.x * vertex.v.x +
+								vertex.v.y * vertex.v.y +
+								vertex.v.z * vertex.v.z);
+					#endif
+							
+						impulseResponseProbe.measure(impulseResponsePhaseState, value);
+						
+						impulseResponsePhaseState.next(simulationTimeStep_ms / 1000.f);
+					}
+					else
+					{
+						lastResponseProbeVertexIndex = -1;
+					}
+				}
 			}
 		}
 
@@ -766,8 +902,19 @@ int main(int argc, char * argv[])
 						texturePosition[0],
 						texturePosition[1]);
 					gxPopMatrix();
+					
+					//
+					
+					hasMouseCubeFace = true;
+					mouseCubeFaceIndex = cubeFaceIndex;
+					mouseCubeFacePosition[0] = texturePosition[0];
+					mouseCubeFacePosition[1] = texturePosition[1];
 				}
-			
+				else
+				{
+					hasMouseCubeFace = false;
+				}
+				
 				if (showIntersectionPoints)
 				{
 					setColor(colorWhite);
@@ -809,6 +956,58 @@ int main(int argc, char * argv[])
 			}
 			camera.popViewMatrix();
 			projectScreen2d();
+			
+			if (hasMouseCubeFace)
+			{
+				// show the results of the impulse response measurement
+				
+				float responses[kNumProbeFrequencies];
+				
+				impulseResponseProbe.calcResponseMagnitude(responses);
+				
+				float maxResponse = 1e-6f;
+				for (auto response : responses)
+					maxResponse = fmax(maxResponse, response);
+				
+				const float graphSx = 370.f;
+				const float graphSy = 170.f;
+				
+				gxPushMatrix();
+				gxTranslatef(mouse.x, mouse.y, 0);
+				hqBegin(HQ_LINES);
+				{
+					// draw graph lines
+					
+					setColor(Color::fromHSL(.5f, .5f, .5f));
+					
+					for (int i = 0; i < kNumProbeFrequencies - 1; ++i)
+					{
+						const float response1 = responses[i + 0];
+						const float response2 = responses[i + 1];
+						const float strokeSize = 2.f;
+						
+						hqLine(
+							(i + 0) * graphSx / kNumProbeFrequencies, graphSy - response1 * graphSy / maxResponse, strokeSize,
+							(i + 1) * graphSx / kNumProbeFrequencies, graphSy - response2 * graphSy / maxResponse, strokeSize);
+					}
+				}
+				hqEnd();
+				
+				for (int i = 0; i < kNumProbeFrequencies; i += 2)
+				{
+					gxPushMatrix();
+					gxTranslatef((i + .5f) * graphSx / kNumProbeFrequencies, graphSy + 4, 0);
+					gxRotatef(90, 0, 0, 1);
+					setColor(colorWhite);
+					drawText(0, 0, 13, +1, +1, "%dHz", int(impulseResponsePhaseState.frequency[i]));
+					gxPopMatrix();
+				}
+				
+				gxPopMatrix();
+			}
+			
+			setColor(colorWhite);
+			drawText(8, VIEW_SY - 20, 14, +1, +1, "time %.2fms", simulationTime_ms);
 			
 			guiContext.draw();
 			

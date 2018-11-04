@@ -149,7 +149,7 @@ bool GpuSimulationContext::integrate(Lattice & lattice, const float dt, const fl
 	
 	const int numVertices = 6 * kTextureSize * kTextureSize;
 	
-	const float retain = powf(1.f - falloff, dt);
+	const float retain = powf(1.f - falloff, dt / 1000.f);
 	
 	// run the integration program on the GPU
 	
