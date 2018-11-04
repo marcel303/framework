@@ -168,6 +168,9 @@ static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & s
 		
 		const float t = shape.intersectRay_directional(Vec3(p.x, p.y, p.z));
 		
+	// uncomment to project onto a sphere:
+		//const float t = 1.f / Vec3(p.x, p.y, p.z).CalcSize();
+		
 		lattice.vertices[i].p.set(
 			p.x * t,
 			p.y * t,
@@ -230,6 +233,57 @@ static void drawLatticeEdges(const Lattice & lattice)
 	gxEnd();
 }
 
+static void drawLatticeFaces(const Lattice & lattice)
+{
+	gxBegin(GL_TRIANGLES);
+	{
+		for (int i = 0; i < 6; ++i)
+		{
+			for (int y = 0; y < kTextureSize - 1; ++y)
+			{
+				const int index1 =
+					i * kTextureSize * kTextureSize +
+					(y + 0) * kTextureSize;
+				
+				const int index2 =
+					i * kTextureSize * kTextureSize +
+					(y + 1) * kTextureSize;
+				
+				for (int x = 0; x < kTextureSize - 1; ++x)
+				{
+					const int index00 = index1 + x + 0;
+					const int index10 = index1 + x + 1;
+					const int index01 = index2 + x + 0;
+					const int index11 = index2 + x + 1;
+					
+					const auto & p00 = lattice.vertices[index00].p;
+					const auto & p10 = lattice.vertices[index10].p;
+					const auto & p01 = lattice.vertices[index01].p;
+					const auto & p11 = lattice.vertices[index11].p;
+					
+					const float vx = lattice.vertices[index00].v.x;
+					const float vy = lattice.vertices[index00].v.y;
+					const float vz = lattice.vertices[index00].v.z;
+					const float scale = 400.f;
+					const float r = vx * scale + .5f;
+					const float g = vy * scale + .5f;
+					const float b = vz * scale + .5f;
+					setColorf(r, g, b);
+					
+					gxVertex3f(p00.x, p00.y, p00.z);
+					gxVertex3f(p10.x, p10.y, p10.z);
+					gxVertex3f(p11.x, p11.y, p11.z);
+					
+					gxVertex3f(p00.x, p00.y, p00.z);
+					gxVertex3f(p11.x, p11.y, p11.z);
+					gxVertex3f(p01.x, p01.y, p01.z);
+				}
+			}
+		}
+	}
+	gxEnd();
+}
+
 //
 
 static GpuContext * s_gpuContext = nullptr;
@@ -274,6 +328,9 @@ void simulateLattice_computeEdgeForces(Lattice & lattice, const float tension)
 	{
 		auto & v1 = lattice.vertices[edge.vertex1];
 		auto & v2 = lattice.vertices[edge.vertex2];
+		
+	// todo : remove ?
+		//edge.weight = 1.f / edge.initialDistance * 1.f / edge.initialDistance * 1.f / edge.initialDistance / 10000.f;
 		
 		const float dx = v2.p.x - v1.p.x;
 		const float dy = v2.p.y - v1.p.y;
@@ -479,6 +536,7 @@ int main(int argc, char * argv[])
 	bool raycastCubePointsUsingMouse = true;
 	bool showLatticeVertices = false;
 	bool showLatticeEdges = false;
+	bool showLatticeFaces = false;
 	bool simulateLattice = false;
 	bool simulateUsingGpu = false;
 	float latticeTension = 1.f;
@@ -578,6 +636,7 @@ int main(int argc, char * argv[])
 				}
 				ImGui::Checkbox("Show lattice vertices", &showLatticeVertices);
 				ImGui::Checkbox("Show lattice edges", &showLatticeEdges);
+				ImGui::Checkbox("Show lattice faces", &showLatticeFaces);
 				ImGui::Checkbox("Simulate lattice", &simulateLattice);
 				if (ImGui::Checkbox("Use GPU", &simulateUsingGpu))
 				{
@@ -949,6 +1008,12 @@ int main(int argc, char * argv[])
 				{
 					setColor(0, 127, 0);
 					drawLatticeEdges(lattice);
+				}
+				
+				if (showLatticeFaces)
+				{
+					setColor(127, 0, 0);
+					drawLatticeFaces(lattice);
 				}
 				
 				glDisable(GL_DEPTH_TEST);
