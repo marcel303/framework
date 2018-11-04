@@ -59,6 +59,12 @@ bool GpuSimulationContext::shut()
 	delete integrateProgram;
 	integrateProgram = nullptr;
 	
+	delete computeEdgeForcesProgram;
+	computeEdgeForcesProgram = nullptr;
+	
+	delete edgeBuffer;
+	edgeBuffer = nullptr;
+	
 	delete vertexBuffer;
 	vertexBuffer = nullptr;
 	

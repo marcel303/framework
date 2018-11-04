@@ -307,6 +307,14 @@ static bool gpuInit(Lattice & lattice)
 
 bool gpuShut()
 {
+	if (s_gpuSimulationContext != nullptr)
+	{
+		s_gpuSimulationContext->shut();
+		
+		delete s_gpuSimulationContext;
+		s_gpuSimulationContext = nullptr;
+	}
+	
 	if (s_gpuContext != nullptr)
 	{
 		s_gpuContext->shut();
