@@ -121,12 +121,12 @@ void drawLatticeFaces(const Lattice & lattice)
 	{
 		for (int i = 0; i < 6; ++i)
 		{
-			for (int y = 0; y < kTextureSize - 1; ++y)
+			for (int y = 0; y < kGridSize - 1; ++y)
 			{
 				const int index1 = calcVertexIndex(i, 0, y + 0);
 				const int index2 = calcVertexIndex(i, 0, y + 1);
 				
-				for (int x = 0; x < kTextureSize - 1; ++x)
+				for (int x = 0; x < kGridSize - 1; ++x)
 				{
 					const int index00 = index1 + x + 0;
 					const int index10 = index1 + x + 1;

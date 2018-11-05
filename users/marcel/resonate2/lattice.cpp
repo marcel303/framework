@@ -17,14 +17,14 @@ void Lattice::init()
 		Vector n;
 		n.set(zAxis[0], zAxis[1], zAxis[2]);
 		
-		for (int x = 0; x < kTextureSize; ++x)
+		for (int x = 0; x < kGridSize; ++x)
 		{
-			for (int y = 0; y < kTextureSize; ++y)
+			for (int y = 0; y < kGridSize; ++y)
 			{
 				const int index = calcVertexIndex(i, x, y);
 				
-				const float xf = ((x + .5f) / float(kTextureSize) - .5f) * 2.f;
-				const float yf = ((y + .5f) / float(kTextureSize) - .5f) * 2.f;
+				const float xf = ((x + .5f) / float(kGridSize) - .5f) * 2.f;
+				const float yf = ((y + .5f) / float(kGridSize) - .5f) * 2.f;
 	
 				Vec3 p = matrix.Mul4(Vec3(xf, yf, 1.f));
 				
@@ -52,16 +52,16 @@ void Lattice::init()
 	
 	for (int i = 0; i < 6; ++i)
 	{
-		for (int x = 0; x < kTextureSize; ++x)
+		for (int x = 0; x < kGridSize; ++x)
 		{
-			for (int y = 0; y < kTextureSize; ++y)
+			for (int y = 0; y < kGridSize; ++y)
 			{
-				if (x + 1 < kTextureSize)
+				if (x + 1 < kGridSize)
 					addEdge(i, x + 0, y + 0, x + 1, y + 0, 1.f);
-				if (y + 1 < kTextureSize)
+				if (y + 1 < kGridSize)
 					addEdge(i, x + 0, y + 0, x + 0, y + 1, 1.f);
 				
-				if (x + 1 < kTextureSize && y + 1 < kTextureSize)
+				if (x + 1 < kGridSize && y + 1 < kGridSize)
 				{
 					addEdge(i, x + 0, y + 0, x + 1, y + 1, 1.f / sqrtf(2.f));
 					addEdge(i, x + 0, y + 1, x + 1, y + 0, 1.f / sqrtf(2.f));
@@ -99,24 +99,24 @@ void Lattice::init()
 	{
 		const int face1_stepx = face1_x2 - face1_x1;
 		const int face1_stepy = face1_y2 - face1_y1;
-		int face1_x = face1_x1 * (kTextureSize - 1);
-		int face1_y = face1_y1 * (kTextureSize - 1);
+		int face1_x = face1_x1 * (kGridSize - 1);
+		int face1_y = face1_y1 * (kGridSize - 1);
 		
 		const int face2_stepx = face2_x2 - face2_x1;
 		const int face2_stepy = face2_y2 - face2_y1;
-		int face2_x = face2_x1 * (kTextureSize - 1);
-		int face2_y = face2_y1 * (kTextureSize - 1);
+		int face2_x = face2_x1 * (kGridSize - 1);
+		int face2_y = face2_y1 * (kGridSize - 1);
 		
-		for (int i = 0; i < kTextureSize; ++i)
+		for (int i = 0; i < kGridSize; ++i)
 		{
-			Assert(face1_x >= 0 && face1_x < kTextureSize);
-			Assert(face1_y >= 0 && face1_y < kTextureSize);
-			Assert(face2_x >= 0 && face2_x < kTextureSize);
-			Assert(face2_y >= 0 && face2_y < kTextureSize);
+			Assert(face1_x >= 0 && face1_x < kGridSize);
+			Assert(face1_y >= 0 && face1_y < kGridSize);
+			Assert(face2_x >= 0 && face2_x < kGridSize);
+			Assert(face2_y >= 0 && face2_y < kGridSize);
 			
 			addEdge2(faceIndex1, face1_x + face1_stepx * 0, face1_y + face1_stepy * 0, faceIndex2, face2_x + face2_stepx * 0, face2_y + face2_stepy * 0, 1.f);
 			
-			if (i + 1 < kTextureSize)
+			if (i + 1 < kGridSize)
 			{
 				addEdge2(faceIndex1, face1_x + face1_stepx * 0, face1_y + face1_stepy * 0, faceIndex2, face2_x + face2_stepx * 1, face2_y + face2_stepy * 1, 1.f / sqrtf(2.f));
 			

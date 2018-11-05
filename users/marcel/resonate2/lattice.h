@@ -4,7 +4,7 @@
 #include <math.h>
 #include <vector>
 
-static const int kNumVertices = 6 * kTextureSize * kTextureSize;
+static const int kNumVertices = 6 * kGridSize * kGridSize;
 
 struct Lattice
 {
@@ -79,7 +79,7 @@ struct Lattice
 static inline int calcVertexIndex(const int cubeFaceIndex, const int x, const int y)
 {
 	return
-		cubeFaceIndex * kTextureSize * kTextureSize +
-		y * kTextureSize +
+		cubeFaceIndex * kGridSize * kGridSize +
+		y * kGridSize +
 		x;
 }

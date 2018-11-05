@@ -1,6 +1,7 @@
 #pragma once
 
-const int kTextureSize = 32;
-const int kTextureArraySize = 128;
+const int kGridSize = 64;
 
+const int kProbeGridSize = 64;
+const int kNumProbes = 6 * kProbeGridSize * kProbeGridSize;
 const int kNumProbeFrequencies = 128;

@@ -39,12 +39,12 @@ const int VIEW_SY = 700;
 
 struct Texture
 {
-	float value[kTextureSize][kTextureSize];
+	float value[kProbeGridSize][kProbeGridSize];
 };
 
 struct CubeFace
 {
-	Texture textureArray[kTextureArraySize];
+	Texture textures[kNumProbeFrequencies];
 };
 
 struct Cube
@@ -54,9 +54,9 @@ struct Cube
 
 static void randomizeTexture(Texture & texture, const float min, const float max)
 {
-	for (int x = 0; x < kTextureSize; ++x)
+	for (int x = 0; x < kProbeGridSize; ++x)
 	{
-		for (int y = 0; y < kTextureSize; ++y)
+		for (int y = 0; y < kProbeGridSize; ++y)
 		{
 			texture.value[y][x] = random<float>(min, max);
 		}
@@ -67,13 +67,13 @@ static void randomizeCubeFace(CubeFace & cubeFace, const int firstTexture, const
 {
 	for (int i = 0; i < numTextures; ++i)
 	{
-		randomizeTexture(cubeFace.textureArray[firstTexture + i], min, max);
+		randomizeTexture(cubeFace.textures[firstTexture + i], min, max);
 	}
 }
 
 static GLuint textureToGL(const Texture & texture)
 {
-	return createTextureFromR32F(texture.value, kTextureSize, kTextureSize, false, true);
+	return createTextureFromR32F(texture.value, kProbeGridSize, kProbeGridSize, false, true);
 }
 
 static const GLenum s_cubeFaceNamesGL[6] =
@@ -529,8 +529,6 @@ int main(int argc, char * argv[])
 	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
 
-	//testRaster();
-
 	framework.enableDepthBuffer = true;
 
 	if (!framework.init(VIEW_SX, VIEW_SY))
@@ -562,7 +560,7 @@ int main(int argc, char * argv[])
 	
 	for (int i = 0; i < 6; ++i)
 	{
-		textureGL[i] = textureToGL(cube->faces[i].textureArray[0]);
+		textureGL[i] = textureToGL(cube->faces[i].textures[0]);
 	}
 	
 	// initialize the shape
@@ -582,9 +580,6 @@ int main(int argc, char * argv[])
 	ImpulseResponseState impulseResponseState;
 	impulseResponseState.init();
 	
-	const int kProbeGridSize = 64;
-	const int kNumProbes = 6 * kProbeGridSize * kProbeGridSize;
-	
 	ImpulseResponseProbe * impulseResponseProbes = new ImpulseResponseProbe[kNumProbes];
 	
 	for (int cubeFaceIndex = 0; cubeFaceIndex < 6; ++cubeFaceIndex)
@@ -598,8 +593,8 @@ int main(int argc, char * argv[])
 					y * kProbeGridSize +
 					x;
 				
-				const int faceX = x * kTextureSize / kProbeGridSize;
-				const int faceY = y * kTextureSize / kProbeGridSize;
+				const int faceX = x * kGridSize / kProbeGridSize;
+				const int faceY = y * kGridSize / kProbeGridSize;
 				
 				auto & probe = impulseResponseProbes[probeIndex];
 				
@@ -962,7 +957,7 @@ int main(int argc, char * argv[])
 		
 		if (simulateLattice)
 		{
-			const float scaledLatticeTension = latticeTension * kTextureSize * kTextureSize / 1000.f;
+			const float scaledLatticeTension = latticeTension * kGridSize * kGridSize / 1000.f;
 			
 			if (simulateUsingGpu)
 			{
@@ -1098,12 +1093,12 @@ int main(int argc, char * argv[])
 						
 						setColor(63, 63, 255);
 						gxBegin(GL_POINTS);
-						for (int x = 0; x < kTextureSize; ++x)
+						for (int x = 0; x < kGridSize; ++x)
 						{
-							for (int y = 0; y < kTextureSize; ++y)
+							for (int y = 0; y < kGridSize; ++y)
 							{
-								const float xf = ((x + .5f) / float(kTextureSize) - .5f) * 2.f * cubePointScale;
-								const float yf = ((y + .5f) / float(kTextureSize) - .5f) * 2.f * cubePointScale;
+								const float xf = ((x + .5f) / float(kGridSize) - .5f) * 2.f * cubePointScale;
+								const float yf = ((y + .5f) / float(kGridSize) - .5f) * 2.f * cubePointScale;
 								
 								Vec3 p = matrix.Mul4(Vec3(xf, yf, 1.f));
 								
@@ -1182,8 +1177,8 @@ int main(int argc, char * argv[])
 					// show the impulse response probe locations at the mouse cursor
 					
 					const int cubeFaceIndex = mouseCubeFaceIndex;
-					const int x = mouseCubeFacePosition[0] * kProbeGridSize / kTextureSize;
-					const int y = mouseCubeFacePosition[1] * kProbeGridSize / kTextureSize;
+					const int x = mouseCubeFacePosition[0] * kProbeGridSize / kGridSize;
+					const int y = mouseCubeFacePosition[1] * kProbeGridSize / kGridSize;
 					
 					Assert(x >= 0 && x < kProbeGridSize);
 					Assert(y >= 0 && y < kProbeGridSize);
@@ -1253,8 +1248,8 @@ int main(int argc, char * argv[])
 						cubeFacePosition[1]);
 					const int texturePosition[2] =
 					{
-						(int)roundf((cubeFacePosition[0] / 2.f + .5f) * kTextureSize - .5f),
-						(int)roundf((cubeFacePosition[1] / 2.f + .5f) * kTextureSize - .5f)
+						(int)roundf((cubeFacePosition[0] / 2.f + .5f) * kGridSize - .5f),
+						(int)roundf((cubeFacePosition[1] / 2.f + .5f) * kGridSize - .5f)
 					};
 					drawText(0, fontSize, fontSize, +1, +1, "texture position: %d, %d",
 						texturePosition[0],
@@ -1289,8 +1284,8 @@ int main(int argc, char * argv[])
 					gxTranslatef(VIEW_SX - 740, 10, 0);
 					
 					const int cubeFaceIndex = mouseCubeFaceIndex;
-					const int x = mouseCubeFacePosition[0] * kProbeGridSize / kTextureSize;
-					const int y = mouseCubeFacePosition[1] * kProbeGridSize / kTextureSize;
+					const int x = mouseCubeFacePosition[0] * kProbeGridSize / kGridSize;
+					const int y = mouseCubeFacePosition[1] * kProbeGridSize / kGridSize;
 			
 					Assert(y >= 0 && y < kProbeGridSize);
 			
@@ -1300,16 +1295,16 @@ int main(int argc, char * argv[])
 					
 					const auto probes = impulseResponseProbes + probeIndex;
 					
-					float responses[kTextureSize * kNumProbeFrequencies];
+					float responses[kGridSize * kNumProbeFrequencies];
 					
-					for (int i = 0; i < kTextureSize; ++i)
+					for (int i = 0; i < kGridSize; ++i)
 					{
 						auto & probe = probes[i];
 						
 						probe.calcResponseMagnitude(responses + i * kNumProbeFrequencies);
 					}
 					
-					drawImpulseResponseGraphs(impulseResponseState, responses, kTextureSize, true, -1.f, x);
+					drawImpulseResponseGraphs(impulseResponseState, responses, kGridSize, true, -1.f, x);
 				}
 				gxPopMatrix();
 			}
