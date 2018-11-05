@@ -104,10 +104,10 @@ static Mat4x4 createCubeFaceMatrix(const GLenum cubeFace)
 		mat.MakeRotationX(-90 * degToRad);
 		break;
 	case GL_TEXTURE_CUBE_MAP_POSITIVE_Z: // Back
-		mat.MakeRotationY(180 * degToRad);
+		mat.MakeIdentity();
 		break;
 	case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z: // Front
-		mat.MakeIdentity();
+		mat.MakeRotationY(180 * degToRad);
 		break;
 		
 	default:
@@ -151,12 +151,17 @@ static void projectDirectionToCubeFace(Vec3Arg direction, int & cubeFaceIndex, V
 	
 	cubeFaceIndex = majorAxis * 2 + (direction[majorAxis] < 0 ? 1 : 0);
 	
+	Assert(cubeFaceIndex >= 0 && cubeFaceIndex < 6);
+	
 	const Mat4x4 & worldToCubeFaceMatrix = s_worldToCubeFaceMatrices[cubeFaceIndex];
 	
 	const Vec3 direction_cubeFace = worldToCubeFaceMatrix.Mul4(direction);
 	
 	cubeFacePosition[0] = direction_cubeFace[0] / direction_cubeFace[2];
 	cubeFacePosition[1] = direction_cubeFace[1] / direction_cubeFace[2];
+	
+	Assert(cubeFacePosition[0] >= -1.f && cubeFacePosition[0] <= +1.f);
+	Assert(cubeFacePosition[1] >= -1.f && cubeFacePosition[1] <= +1.f);
 }
 
 static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & shape)
@@ -995,7 +1000,7 @@ int main(int argc, char * argv[])
 	
 	gpuInit(lattice);
 	
-	Assert(sizeof(Lattice::Vertex) == 3*3*4);
+	Assert(sizeof(Lattice::Vertex) == 5*3*4);
 	Assert(sizeof(Lattice::Edge) == 16);
 	
 	ComputeEditor computeEdgeForcesEditor(s_gpuSimulationContext->computeEdgeForcesProgram);
@@ -1514,6 +1519,8 @@ int main(int argc, char * argv[])
 				{
 					const int cubeFaceIndex = mouseCubeFaceIndex;
 					const int y = mouseCubeFacePosition[1] * kProbeGridSize / kTextureSize;
+					
+					Assert(y >= 0 && y < kProbeGridSize);
 					
 					const int probeIndex =
 						cubeFaceIndex * kProbeGridSize * kProbeGridSize +
