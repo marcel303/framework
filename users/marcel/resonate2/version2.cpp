@@ -63,6 +63,30 @@ static void randomizeTexture(Texture & texture, const float min, const float max
 	}
 }
 
+static void fillCube(const Lattice & lattice, const ImpulseResponseProbe * probes, const int frequencyIndex, Cube & cube)
+{
+	for (int faceIndex = 0; faceIndex < 6; ++faceIndex)
+	{
+		CubeFace & face = cube.faces[faceIndex];
+		
+		Texture & texture = face.textures[frequencyIndex];
+		
+		for (int x = 0; x < kProbeGridSize; ++x)
+		{
+			for (int y = 0; y < kProbeGridSize; ++y)
+			{
+				const int probeIndex = calcProbeIndex(faceIndex, x, y);
+				
+				auto & probe = probes[probeIndex];
+				
+				const float value = probe.calcResponseMagnitudeForFrequencyIndex(frequencyIndex) * 10000.f;
+				
+				texture.value[y][x] = value;
+			}
+		}
+	}
+}
+
 static void randomizeCubeFace(CubeFace & cubeFace, const int firstTexture, const int numTextures, const float min, const float max)
 {
 	for (int i = 0; i < numTextures; ++i)
@@ -588,10 +612,7 @@ int main(int argc, char * argv[])
 		{
 			for (int x = 0; x < kProbeGridSize; ++x)
 			{
-				const int probeIndex =
-					cubeFaceIndex * kProbeGridSize * kProbeGridSize +
-					y * kProbeGridSize +
-					x;
+				const int probeIndex = calcProbeIndex(cubeFaceIndex, x, y);
 				
 				const int faceX = x * kGridSize / kProbeGridSize;
 				const int faceY = y * kGridSize / kProbeGridSize;
@@ -638,6 +659,7 @@ int main(int argc, char * argv[])
 	float simulationTimeStep_ms = .1f;
 	int numSimulationStepsPerDraw = 10;
 	float velocityFalloff = .2f;
+	int fillCubeFrequencyIndex = kNumProbeFrequencies / 2;
 	
 	// camera control and ray cast
 	
@@ -863,6 +885,23 @@ int main(int argc, char * argv[])
 						impulseResponseProbes[i].init(impulseResponseProbes[i].vertexIndex);
 					simulateLattice = true;
 					simulationTime_ms = 0.f;
+				}
+				
+				ImGui::Separator();
+				ImGui::Text("Cube map");
+				if (ImGui::Button("Fill cube map"))
+				{
+					fillCube(lattice, impulseResponseProbes, fillCubeFrequencyIndex, *cube);
+					glDeleteTextures(6, textureGL);
+					for (int i = 0; i < 6; ++i)
+						textureGL[i] = textureToGL(cube->faces[i].textures[fillCubeFrequencyIndex]);
+				}
+				if (ImGui::SliderInt("Frequency index", &fillCubeFrequencyIndex, 0, kNumProbeFrequencies - 1))
+				{
+					fillCube(lattice, impulseResponseProbes, fillCubeFrequencyIndex, *cube);
+					glDeleteTextures(6, textureGL);
+					for (int i = 0; i < 6; ++i)
+						textureGL[i] = textureToGL(cube->faces[i].textures[fillCubeFrequencyIndex]);
 				}
 				
 				ImGui::Separator();
@@ -1183,9 +1222,7 @@ int main(int argc, char * argv[])
 					Assert(x >= 0 && x < kProbeGridSize);
 					Assert(y >= 0 && y < kProbeGridSize);
 					
-					const int probeIndex =
-						cubeFaceIndex * kProbeGridSize * kProbeGridSize +
-						y * kProbeGridSize;
+					const int probeIndex = calcProbeIndex(cubeFaceIndex, 0, y);
 					
 					// draw the impulse response probe directly underneath the mouse cursor
 					setColor(255, 200, 200);
@@ -1289,9 +1326,7 @@ int main(int argc, char * argv[])
 			
 					Assert(y >= 0 && y < kProbeGridSize);
 			
-					const int probeIndex =
-						cubeFaceIndex * kProbeGridSize * kProbeGridSize +
-						y * kProbeGridSize;
+					const int probeIndex = calcProbeIndex(cubeFaceIndex, 0, y);
 					
 					const auto probes = impulseResponseProbes + probeIndex;
 					

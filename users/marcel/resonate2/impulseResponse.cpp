@@ -80,3 +80,12 @@ void ImpulseResponseProbe::calcResponseMagnitude(float * result) const
 	for (int i = 0; i < kNumProbeFrequencies; ++i)
 		result[i] = hypotf(response[i][0], response[i][1]);
 }
+
+float ImpulseResponseProbe::calcResponseMagnitudeForFrequencyIndex(const int frequencyIndex) const
+{
+	const float result = hypotf(
+		response[frequencyIndex][0],
+		response[frequencyIndex][1]);
+	
+	return result;
+}

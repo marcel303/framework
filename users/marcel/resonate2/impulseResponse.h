@@ -31,4 +31,15 @@ struct ImpulseResponseProbe
 	void measureAtVertex(const ImpulseResponseState & state, const Lattice & lattice);
 	
 	void calcResponseMagnitude(float * result) const;
+	float calcResponseMagnitudeForFrequencyIndex(const int frequencyIndex) const;
 };
+
+static inline int calcProbeIndex(const int cubeFaceIndex, const int x, const int y)
+{
+	const int probeIndex =
+		cubeFaceIndex * kProbeGridSize * kProbeGridSize +
+		y * kProbeGridSize +
+		x;
+	
+	return probeIndex;
+}
