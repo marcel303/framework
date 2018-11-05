@@ -237,13 +237,13 @@ bool GpuSimulationContext::computeEdgeForces(const float tension)
 		return false;
 	}
 	
-	if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(numEdges & ~63)) != CL_SUCCESS)
+	if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(numEdges/* & ~63*/)) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to enqueue kernel", 0);
 		return false;
 	}
 	
-	gpuContext.commandQueue->enqueueBarrierWithWaitList();
+	//gpuContext.commandQueue->enqueueBarrierWithWaitList();
 	
 	return true;
 }
@@ -268,13 +268,13 @@ bool GpuSimulationContext::integrate(Lattice & lattice, const float dt, const fl
 		return false;
 	}
 	
-	if (gpuContext.commandQueue->enqueueNDRangeKernel(integrateKernel, cl::NullRange, cl::NDRange(numVertices), cl::NDRange(64)) != CL_SUCCESS)
+	if (gpuContext.commandQueue->enqueueNDRangeKernel(integrateKernel, cl::NullRange, cl::NDRange(numVertices)) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to enqueue kernel", 0);
 		return false;
 	}
 	
-	gpuContext.commandQueue->enqueueBarrierWithWaitList();
+	//gpuContext.commandQueue->enqueueBarrierWithWaitList();
 	
 	return true;
 }
@@ -298,7 +298,7 @@ bool GpuSimulationContext::integrateImpulseResponse(const float dt)
 		return false;
 	}
 	
-	gpuContext.commandQueue->enqueueBarrierWithWaitList();
+	//gpuContext.commandQueue->enqueueBarrierWithWaitList();
 	
 	return true;
 }

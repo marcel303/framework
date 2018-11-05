@@ -16,6 +16,12 @@ void ImpulseResponsePhaseState::init()
 void ImpulseResponsePhaseState::processBegin(const float in_dt)
 {
 	dt = in_dt;
+	
+	for (int i = 0; i < kNumProbeFrequencies; ++i)
+	{
+		cos_sin[i][0] = cosf(phase[i] * 2.f * M_PI);
+		cos_sin[i][1] = sinf(phase[i] * 2.f * M_PI);
+	}
 }
 
 void ImpulseResponsePhaseState::processEnd()
@@ -25,9 +31,6 @@ void ImpulseResponsePhaseState::processEnd()
 		phase[i] += dt * frequency[i];
 		
 		phase[i] = fmodf(phase[i], 1.f);
-		
-		cos_sin[i][0] = cosf(phase[i] * 2.f * M_PI);
-		cos_sin[i][1] = sinf(phase[i] * 2.f * M_PI);
 	}
 }
 
