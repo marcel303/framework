@@ -340,7 +340,7 @@ static const char * s_vertexColorModeNames[kVertexColorMode_COUNT] =
 	"surface normal"
 };
 
-static VertexColorMode s_vertexColorMode = kVertexColorMode_N;
+static VertexColorMode s_vertexColorMode = kVertexColorMode_VelocityDotN;
 
 static void colorizeLatticeVertices(const Lattice & lattice, Color * colors)
 {
@@ -1017,7 +1017,7 @@ int main(int argc, char * argv[])
 	for (int i = 0; i < kTextureSize; ++i)
 		impulseResponseProbesOverLineSegment[i].init(calcVertexIndex(0, i, kTextureSize/5));
 	
-	const int kProbeGridSize = 16;
+	const int kProbeGridSize = 64;
 	const int kNumProbes = 6 * kProbeGridSize * kProbeGridSize;
 	ImpulseResponseProbe * impulseResponseProbesOverCube = new ImpulseResponseProbe[kNumProbes];
 	for (int cubeFaceIndex = 0; cubeFaceIndex < 6; ++cubeFaceIndex)
@@ -1627,6 +1627,7 @@ int main(int argc, char * argv[])
 			}
 		#endif
 		
+		#if 0
 			if (showImpulseResponseGraph)
 			{
 				gxPushMatrix();
@@ -1646,6 +1647,38 @@ int main(int argc, char * argv[])
 				}
 				gxPopMatrix();
 			}
+		#else
+			if (showImpulseResponseGraph && hasMouseCubeFace)
+			{
+				gxPushMatrix();
+				{
+					gxTranslatef(VIEW_SX - 740, 10, 0);
+					
+					const int cubeFaceIndex = mouseCubeFaceIndex;
+					const int y = mouseCubeFacePosition[1] * kProbeGridSize / kTextureSize;
+			
+					Assert(y >= 0 && y < kProbeGridSize);
+			
+					const int probeIndex =
+						cubeFaceIndex * kProbeGridSize * kProbeGridSize +
+						y * kProbeGridSize;
+					
+					const auto probes = impulseResponseProbesOverCube + probeIndex;
+					
+					float responses[kTextureSize * kNumProbeFrequencies];
+					
+					for (int i = 0; i < kTextureSize; ++i)
+					{
+						auto & probe = probes[i];
+						
+						probe.calcResponseMagnitude(responses + i * kNumProbeFrequencies);
+					}
+					
+					drawImpulseResponseGraphs(impulseResponsePhaseState, responses, kTextureSize, true);
+				}
+				gxPopMatrix();
+			}
+		#endif
 			
 			setColor(colorWhite);
 			drawText(8, VIEW_SY - 20, 14, +1, +1, "time %.2fms", simulationTime_ms);
