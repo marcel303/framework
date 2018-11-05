@@ -167,10 +167,9 @@ static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & s
 	{
 		auto & p = lattice.vertices[i].p;
 		
-		const float t = shape.intersectRay_directional(Vec3(p.x, p.y, p.z));
+		int planeIndex;
 		
-	// uncomment to project onto a sphere:
-		//const float t = 1.f / Vec3(p.x, p.y, p.z).CalcSize();
+		const float t = shape.intersectRay_directional(Vec3(p.x, p.y, p.z), planeIndex);
 		
 		lattice.vertices[i].p.set(
 			p.x * t,
@@ -179,6 +178,34 @@ static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & s
 		
 		lattice.vertices[i].f.setZero();
 		lattice.vertices[i].v.setZero();
+		
+		const Vec3 & n = shape.planes[planeIndex].normal;
+		
+		lattice.vertices[i].n.set(n[0], n[1], n[2]);
+	}
+
+	lattice.finalize();
+}
+
+static void projectLatticeOntoShere(Lattice & lattice)
+{
+	const int numVertices = 6 * kTextureSize * kTextureSize;
+	
+	for (int i = 0; i < numVertices; ++i)
+	{
+		auto & p = lattice.vertices[i].p;
+		
+		const float t = 1.f / Vec3(p.x, p.y, p.z).CalcSize();
+		
+		lattice.vertices[i].p.set(
+			p.x * t,
+			p.y * t,
+			p.z * t);
+		
+		lattice.vertices[i].f.setZero();
+		lattice.vertices[i].v.setZero();
+		
+		lattice.vertices[i].n = lattice.vertices[i].p;
 	}
 
 	lattice.finalize();
@@ -293,6 +320,76 @@ static void createFibonnacciSphere(Lattice & lattice)
 	}
 }
 
+enum VertexColorMode
+{
+	kVertexColorMode_Velocity,
+	kVertexColorMode_VelocityDotN,
+	kVertexColorMode_N,
+	kVertexColorMode_COUNT
+};
+
+static const char * s_vertexColorModeNames[kVertexColorMode_COUNT] =
+{
+	"velocity",
+	"dot(velocity, surface normal)",
+	"surface normal"
+};
+
+static VertexColorMode s_vertexColorMode = kVertexColorMode_N;
+
+static void colorizeLatticeVertices(const Lattice & lattice, Color * colors)
+{
+	const int numVertices = 6 * kTextureSize * kTextureSize;
+	
+	if (s_vertexColorMode == kVertexColorMode_Velocity)
+	{
+		for (int i = 0; i < numVertices; ++i)
+		{
+			const float vx = lattice.vertices[i].v.x;
+			const float vy = lattice.vertices[i].v.y;
+			const float vz = lattice.vertices[i].v.z;
+			
+			const float scale = 400.f;
+			
+			const float r = vx * scale + .5f;
+			const float g = vy * scale + .5f;
+			const float b = vz * scale + .5f;
+			
+			colors[i].set(r, g, b, 1.f);
+		}
+	}
+	else if (s_vertexColorMode == kVertexColorMode_VelocityDotN)
+	{
+		for (int i = 0; i < numVertices; ++i)
+		{
+			const float vx = lattice.vertices[i].v.x;
+			const float vy = lattice.vertices[i].v.y;
+			const float vz = lattice.vertices[i].v.z;
+			
+			const float dot = lattice.vertices[i].n.dot(vx, vy, vz);
+			
+			const float scale = 400.f;
+			
+			const float v = dot * scale + .5f;
+			
+			colors[i].set(v, v, v, 1.f);
+		}
+	}
+	else if (s_vertexColorMode == kVertexColorMode_N)
+	{
+		for (int i = 0; i < numVertices; ++i)
+		{
+			const float scale = .5f;
+			
+			const float r = lattice.vertices[i].n.x * scale + .5f;
+			const float g = lattice.vertices[i].n.y * scale + .5f;
+			const float b = lattice.vertices[i].n.z * scale + .5f;
+			
+			colors[i].set(r, g, b, 1.f);
+		}
+	}
+}
+
 static void drawLatticeVertices(const Lattice & lattice)
 {
 	gxBegin(GL_POINTS);
@@ -315,17 +412,7 @@ static void drawLatticeEdges(const Lattice & lattice)
 	
 	Color colors[numVertices];
 	
-	for (int i = 0; i < numVertices; ++i)
-	{
-		const float vx = lattice.vertices[i].v.x;
-		const float vy = lattice.vertices[i].v.y;
-		const float vz = lattice.vertices[i].v.z;
-		const float scale = 400.f;
-		const float r = vx * scale + .5f;
-		const float g = vy * scale + .5f;
-		const float b = vz * scale + .5f;
-		colors[i].set(r, g, b, 1.f);
-	}
+	colorizeLatticeVertices(lattice, colors);
 	
 	gxBegin(GL_LINES);
 	{
@@ -334,23 +421,11 @@ static void drawLatticeEdges(const Lattice & lattice)
 			const auto & p1 = lattice.vertices[edge.vertex1].p;
 			const auto & p2 = lattice.vertices[edge.vertex2].p;
 			
-		#if 0
-			const float dx = p2.x - p1.x;
-			const float dy = p2.y - p1.y;
-			const float dz = p2.z - p1.z;
-			const float d = sqrtf(dx * dx + dy * dy + dz * dz);
-			const float s = 1.f - fabsf(edge.initialDistance - d) * 1000.f;
-			setColorf(s, s, s);
-			
-			gxVertex3f(p1.x, p1.y, p1.z);
-			gxVertex3f(p2.x, p2.y, p2.z);
-		#elif 1
 			setColor(colors[edge.vertex1]);
 			gxVertex3f(p1.x, p1.y, p1.z);
 			
 			setColor(colors[edge.vertex2]);
 			gxVertex3f(p2.x, p2.y, p2.z);
-		#endif
 		}
 	}
 	gxEnd();
@@ -362,17 +437,7 @@ static void drawLatticeFaces(const Lattice & lattice)
 	
 	Color colors[numVertices];
 	
-	for (int i = 0; i < numVertices; ++i)
-	{
-		const float vx = lattice.vertices[i].v.x;
-		const float vy = lattice.vertices[i].v.y;
-		const float vz = lattice.vertices[i].v.z;
-		const float scale = 400.f;
-		const float r = vx * scale + .5f;
-		const float g = vy * scale + .5f;
-		const float b = vz * scale + .5f;
-		colors[i].set(r, g, b, 1.f);
-	}
+	colorizeLatticeVertices(lattice, colors);
 	
 	gxBegin(GL_TRIANGLES);
 	{
@@ -912,7 +977,8 @@ int main(int argc, char * argv[])
 	bool showCube = false;
 	bool showIntersectionPoints = false;
 	bool showAxis = true;
-	bool showCubePoints = true;
+	bool showImpulseResponseGraph = true;
+	bool showCubePoints = false;
 	float cubePointScale = 1.f;
 	bool projectCubePoints = false;
 	bool colorizeCubePoints = false;
@@ -986,6 +1052,7 @@ int main(int argc, char * argv[])
 				ImGui::Checkbox("Show cube", &showCube);
 				ImGui::Checkbox("Show intersection points", &showIntersectionPoints);
 				ImGui::Checkbox("Show axis", &showAxis);
+				ImGui::Checkbox("Show impulse response graph", &showImpulseResponseGraph);
 				
 				ImGui::Separator();
 				ImGui::Text("Cube points");
@@ -1017,9 +1084,19 @@ int main(int argc, char * argv[])
 					s_gpuSimulationContext->sendEdgesToGpu();
 					simulationTime_ms = 0.f;
 				}
+				if (ImGui::Button("Project lattice onto sphere"))
+				{
+					projectLatticeOntoShere(lattice);
+					s_gpuSimulationContext->sendVerticesToGpu();
+					s_gpuSimulationContext->sendEdgesToGpu();
+					simulationTime_ms = 0.f;
+				}
 				ImGui::Checkbox("Show lattice vertices", &showLatticeVertices);
 				ImGui::Checkbox("Show lattice edges", &showLatticeEdges);
 				ImGui::Checkbox("Show lattice faces", &showLatticeFaces);
+				int colorMode = s_vertexColorMode;
+				ImGui::Combo("Color mode", &colorMode, s_vertexColorModeNames, kVertexColorMode_COUNT);
+				s_vertexColorMode = (VertexColorMode)colorMode;
 				if (ImGui::Button("Squash lattice"))
 				{
 					if (simulateUsingGpu)
@@ -1309,7 +1386,9 @@ int main(int argc, char * argv[])
 								
 								if (projectCubePoints)
 								{
-									const float t = shapeDefinition.intersectRay_directional(p);
+									int planeIndex;
+									
+									const float t = shapeDefinition.intersectRay_directional(p, planeIndex);
 									
 									p = p * t;
 								}
@@ -1329,64 +1408,6 @@ int main(int argc, char * argv[])
 					}
 				}
 				
-				if (raycastCubePointsUsingMouse)
-				{
-					const Vec3 rayOrigin = camera.position;
-					const Vec3 rayDirection = camera.getWorldMatrix().GetAxis(2);
-					
-					const float t = shapeDefinition.intersectRay(rayOrigin, rayDirection);
-					
-					const Vec3 p = rayOrigin + rayDirection * t;
-					
-					const float pointSize = clamp<float>(4.f / t, .01f, 80.f);
-					
-					setColor(colorYellow);
-					glPointSize(pointSize);
-					gxBegin(GL_POINTS);
-					gxVertex3f(p[0], p[1], p[2]);
-					gxEnd();
-					glPointSize(1);
-					
-					// show the location in cube face space
-					
-					int cubeFaceIndex;
-					Vec2 cubeFacePosition;
-		
-					projectDirectionToCubeFace(p, cubeFaceIndex, cubeFacePosition);
-		
-					const float fontSize = t * .05f;
-					
-					gxPushMatrix();
-					gxTranslatef(p[0], p[1], p[2]);
-					gxRotatef(-camera.yaw, 0, 1, 0);
-					gxScalef(1, -1, 1);
-					setColor(colorWhite);
-					drawText(0, 0, fontSize, +1, +1, "cube face: %d, cube position: %.2f, %.2f",
-						cubeFaceIndex,
-						cubeFacePosition[0],
-						cubeFacePosition[1]);
-					const int texturePosition[2] =
-					{
-						(int)roundf((cubeFacePosition[0] / 2.f + .5f) * kTextureSize - .5f),
-						(int)roundf((cubeFacePosition[1] / 2.f + .5f) * kTextureSize - .5f)
-					};
-					drawText(0, fontSize, fontSize, +1, +1, "texture position: %d, %d",
-						texturePosition[0],
-						texturePosition[1]);
-					gxPopMatrix();
-					
-					//
-					
-					hasMouseCubeFace = true;
-					mouseCubeFaceIndex = cubeFaceIndex;
-					mouseCubeFacePosition[0] = texturePosition[0];
-					mouseCubeFacePosition[1] = texturePosition[1];
-				}
-				else
-				{
-					hasMouseCubeFace = false;
-				}
-				
 				if (showIntersectionPoints)
 				{
 					setColor(colorWhite);
@@ -1399,7 +1420,9 @@ int main(int argc, char * argv[])
 						
 						const Vec3 rayDirection(dx, dy, dz);
 						
-						const float t = shapeDefinition.intersectRay_directional(rayDirection);
+						int planeIndex;
+						
+						const float t = shapeDefinition.intersectRay_directional(rayDirection, planeIndex);
 						
 						const Vec3 pointOfIntersection = rayDirection * t;
 						
@@ -1429,12 +1452,73 @@ int main(int argc, char * argv[])
 					drawLatticeFaces(lattice);
 				}
 				
+				if (raycastCubePointsUsingMouse)
+				{
+					const Vec3 rayOrigin = camera.position;
+					const Vec3 rayDirection = camera.getWorldMatrix().GetAxis(2);
+					
+					const float t = shapeDefinition.intersectRay(rayOrigin, rayDirection);
+					
+					const Vec3 p = rayOrigin + rayDirection * t;
+					
+					const float pointSize = clamp<float>(4.f / t, .01f, 80.f);
+					
+					setColor(colorYellow);
+					glPointSize(pointSize);
+					gxBegin(GL_POINTS);
+					gxVertex3f(p[0], p[1], p[2]);
+					gxEnd();
+					glPointSize(1);
+					
+					// show the location in cube face space
+					
+					int cubeFaceIndex;
+					Vec2 cubeFacePosition;
+		
+					projectDirectionToCubeFace(p, cubeFaceIndex, cubeFacePosition);
+					
+					const float fontSize = t * .05f;
+					
+					gxPushMatrix();
+					glDisable(GL_DEPTH_TEST);
+					gxTranslatef(p[0], p[1], p[2]);
+					gxRotatef(-camera.yaw, 0, 1, 0);
+					gxScalef(1, -1, 1);
+					setColor(colorWhite);
+					drawText(0, 0, fontSize, +1, +1, "cube face: %d, cube position: %.2f, %.2f",
+						cubeFaceIndex,
+						cubeFacePosition[0],
+						cubeFacePosition[1]);
+					const int texturePosition[2] =
+					{
+						(int)roundf((cubeFacePosition[0] / 2.f + .5f) * kTextureSize - .5f),
+						(int)roundf((cubeFacePosition[1] / 2.f + .5f) * kTextureSize - .5f)
+					};
+					drawText(0, fontSize, fontSize, +1, +1, "texture position: %d, %d",
+						texturePosition[0],
+						texturePosition[1]);
+					glEnable(GL_DEPTH_TEST);
+					gxPopMatrix();
+					
+					//
+					
+					hasMouseCubeFace = true;
+					mouseCubeFaceIndex = cubeFaceIndex;
+					mouseCubeFacePosition[0] = texturePosition[0];
+					mouseCubeFacePosition[1] = texturePosition[1];
+				}
+				else
+				{
+					hasMouseCubeFace = false;
+				}
+				
 				glDisable(GL_DEPTH_TEST);
 				checkErrorGL();
 			}
 			camera.popViewMatrix();
 			projectScreen2d();
 			
+		#if 0
 			if (hasMouseCubeFace)
 			{
 				// show the results of the impulse response measurement
@@ -1454,7 +1538,11 @@ int main(int argc, char * argv[])
 					drawImpulseResponseGraph(impulseResponsePhaseState, responses, true);
 				}
 				gxPopMatrix();
-				
+			}
+		#endif
+		
+			if (showImpulseResponseGraph)
+			{
 				gxPushMatrix();
 				{
 					gxTranslatef(VIEW_SX - 740, 10, 0);

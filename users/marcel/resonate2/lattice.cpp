@@ -10,6 +10,11 @@ void Lattice::init()
 	{
 		const Mat4x4 & matrix = s_cubeFaceToWorldMatrices[i];
 		
+		const Vec3 zAxis = matrix.GetAxis(2);
+		
+		Vector n;
+		n.set(zAxis[0], zAxis[1], zAxis[2]);
+		
 		for (int x = 0; x < kTextureSize; ++x)
 		{
 			for (int y = 0; y < kTextureSize; ++y)
@@ -28,6 +33,7 @@ void Lattice::init()
 				
 				vertices[index].f.setZero();
 				vertices[index].v.setZero();
+				vertices[index].n = n;
 			}
 		}
 	}

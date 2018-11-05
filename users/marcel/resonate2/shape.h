@@ -19,6 +19,6 @@ struct ShapeDefinition
 
 	void makeRandomShape(const int in_numPlanes);
 	
-	float intersectRay_directional(Vec3Arg rayDirection) const;
+	float intersectRay_directional(Vec3Arg rayDirection, int & planeIndex) const;
 	float intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection) const;
 };

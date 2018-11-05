@@ -77,9 +77,11 @@ void ShapeDefinition::makeRandomShape(const int in_numPlanes)
 	}
 }
 
-float ShapeDefinition::intersectRay_directional(Vec3Arg rayDirection) const
+float ShapeDefinition::intersectRay_directional(Vec3Arg rayDirection, int & planeIndex) const
 {
 	float t = std::numeric_limits<float>::infinity();
+	
+	planeIndex = -1;
 	
 	for (int i = 0; i < numPlanes; ++i)
 	{
@@ -93,9 +95,14 @@ float ShapeDefinition::intersectRay_directional(Vec3Arg rayDirection) const
 			Assert(pt >= 0.f);
 			
 			if (pt < t)
+			{
 				t = pt;
+				planeIndex = i;
+			}
 		}
 	}
+	
+	Assert(planeIndex != -1);
 	
 	return t;
 }

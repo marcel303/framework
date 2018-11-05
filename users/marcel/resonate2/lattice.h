@@ -34,12 +34,21 @@ struct Lattice
 			
 			return result;
 		}
+		
+		float dot(const float in_x, const float in_y, const float in_z) const
+		{
+			return
+				x * in_x +
+				y * in_y +
+				z * in_z;
+		}
 	};
 	
 	struct Vertex
 	{
 		Vector p;
 		Vector p_init;
+		Vector n;
 		
 		// physics stuff
 		Vector f;
