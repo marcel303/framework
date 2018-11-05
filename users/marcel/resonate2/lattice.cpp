@@ -229,6 +229,11 @@ void Lattice::init()
 
 void Lattice::finalize()
 {
+	for (auto & vertex : vertices)
+	{
+		vertex.p_init = vertex.p;
+	}
+	
 	for (auto & edge : edges)
 	{
 		const auto & p1 = vertices[edge.vertex1].p;

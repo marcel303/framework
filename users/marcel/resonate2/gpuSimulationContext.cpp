@@ -56,11 +56,21 @@ bool GpuSimulationContext::init(Lattice & in_lattice)
 
 bool GpuSimulationContext::shut()
 {
-	delete integrateProgram;
-	integrateProgram = nullptr;
+	if (integrateProgram != nullptr)
+	{
+		integrateProgram->shut();
+		
+		delete integrateProgram;
+		integrateProgram = nullptr;
+	}
 	
-	delete computeEdgeForcesProgram;
-	computeEdgeForcesProgram = nullptr;
+	if (computeEdgeForcesProgram != nullptr)
+	{
+		computeEdgeForcesProgram->shut();
+		
+		delete computeEdgeForcesProgram;
+		computeEdgeForcesProgram = nullptr;
+	}
 	
 	delete edgeBuffer;
 	edgeBuffer = nullptr;

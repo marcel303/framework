@@ -9,6 +9,7 @@
 #include "nfd.h"
 #include "shape.h"
 #include "StringEx.h"
+#include <cmath>
 #include <math.h>
 
 //#define __CL_ENABLE_EXCEPTIONS
@@ -161,7 +162,7 @@ static void projectDirectionToCubeFace(Vec3Arg direction, int & cubeFaceIndex, V
 static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & shape)
 {
 	const int numVertices = 6 * kTextureSize * kTextureSize;
-
+	
 	for (int i = 0; i < numVertices; ++i)
 	{
 		auto & p = lattice.vertices[i].p;
@@ -179,8 +180,117 @@ static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & s
 		lattice.vertices[i].f.setZero();
 		lattice.vertices[i].v.setZero();
 	}
-	
+
 	lattice.finalize();
+}
+
+static void generateFibonacciSpherePoints(const int numPoints, Vec3 * points)
+{
+    float rnd = 1.f;
+	
+    if (false)
+        rnd = random<float>(0.f, numPoints);
+
+    const float offset = 2.f / numPoints;
+    const float increment = M_PI * (3.f - sqrtf(5.f));
+
+	for (int i = 0; i < numPoints; ++i)
+    {
+        const float y = ((i * offset) - 1) + (offset / 2.f);
+        const float r = sqrtf(1.f - y * y);
+
+        const float phi = fmodf((i + rnd), numPoints) * increment;
+
+        const float x = cosf(phi) * r;
+        const float z = sinf(phi) * r;
+		
+        points[i] = Vec3(x, y, z);
+	}
+}
+
+static void createFibonnacciSphere(Lattice & lattice)
+{
+	const int numVertices = 6 * kTextureSize * kTextureSize;
+	
+	Vec3 points[numVertices];
+	generateFibonacciSpherePoints(numVertices, points);
+	
+	for (int i = 0; i < numVertices; ++i)
+	{
+		lattice.vertices[i].p.set(
+			points[i][0],
+			points[i][1],
+			points[i][2]);
+		
+		lattice.vertices[i].f.setZero();
+		lattice.vertices[i].v.setZero();
+	}
+	
+	for (int i = 0; i < numVertices; ++i)
+	{
+		const auto & p1 = lattice.vertices[i].p;
+		
+		struct Result
+		{
+			int index;
+			float distance;
+			
+			bool operator<(const Result & other) const
+			{
+				return distance < other.distance;
+			}
+		};
+		
+		const int kMaxResults = 6;
+		Result results[kMaxResults];
+		int numResults = 0;
+		
+		for (int j = 0; j < numVertices; ++j)
+		{
+			if (j == i)
+				continue;
+			
+			const auto & p2 = lattice.vertices[j].p;
+			
+			const float dx = p2.x - p1.x;
+			const float dy = p2.y - p1.y;
+			const float dz = p2.z - p1.z;
+			
+			const float dSquared = dx * dx + dy * dy + dz * dz;
+			
+			if (numResults < kMaxResults)
+			{
+				results[numResults].distance = dSquared;
+				results[numResults].index = j;
+				
+				numResults++;
+				
+				if (numResults == kMaxResults)
+					std::sort(results, results + kMaxResults);
+			}
+			else
+			{
+				if (dSquared < results[kMaxResults - 1].distance)
+				{
+					results[kMaxResults - 1].distance = dSquared;
+					results[kMaxResults - 1].index = j;
+					
+					std::sort(results, results + kMaxResults);
+				}
+			}
+		}
+		
+		for (int r = 0; r < numResults; ++r)
+		{
+			Lattice::Edge edge;
+			edge.vertex1 = i;
+			edge.vertex2 = results[r].index;
+			edge.initialDistance = sqrtf(results[r].distance);
+			edge.weight = 1.f;
+			
+			lattice.edges.push_back(edge);
+		}
+	}
 }
 
 static void drawLatticeVertices(const Lattice & lattice)
@@ -201,6 +311,22 @@ static void drawLatticeVertices(const Lattice & lattice)
 
 static void drawLatticeEdges(const Lattice & lattice)
 {
+	const int numVertices = 6 * kTextureSize * kTextureSize;
+	
+	Color colors[numVertices];
+	
+	for (int i = 0; i < numVertices; ++i)
+	{
+		const float vx = lattice.vertices[i].v.x;
+		const float vy = lattice.vertices[i].v.y;
+		const float vz = lattice.vertices[i].v.z;
+		const float scale = 400.f;
+		const float r = vx * scale + .5f;
+		const float g = vy * scale + .5f;
+		const float b = vz * scale + .5f;
+		colors[i].set(r, g, b, 1.f);
+	}
+	
 	gxBegin(GL_LINES);
 	{
 		for (auto & edge : lattice.edges)
@@ -215,19 +341,16 @@ static void drawLatticeEdges(const Lattice & lattice)
 			const float d = sqrtf(dx * dx + dy * dy + dz * dz);
 			const float s = 1.f - fabsf(edge.initialDistance - d) * 1000.f;
 			setColorf(s, s, s);
-		#elif 1
-			const float vx = lattice.vertices[edge.vertex1].v.x;
-			const float vy = lattice.vertices[edge.vertex1].v.y;
-			const float vz = lattice.vertices[edge.vertex1].v.z;
-			const float scale = 400.f;
-			const float r = vx * scale + .5f;
-			const float g = vy * scale + .5f;
-			const float b = vz * scale + .5f;
-			setColorf(r, g, b);
-		#endif
 			
 			gxVertex3f(p1.x, p1.y, p1.z);
 			gxVertex3f(p2.x, p2.y, p2.z);
+		#elif 1
+			setColor(colors[edge.vertex1]);
+			gxVertex3f(p1.x, p1.y, p1.z);
+			
+			setColor(colors[edge.vertex2]);
+			gxVertex3f(p2.x, p2.y, p2.z);
+		#endif
 		}
 	}
 	gxEnd();
@@ -235,6 +358,22 @@ static void drawLatticeEdges(const Lattice & lattice)
 
 static void drawLatticeFaces(const Lattice & lattice)
 {
+	const int numVertices = 6 * kTextureSize * kTextureSize;
+	
+	Color colors[numVertices];
+	
+	for (int i = 0; i < numVertices; ++i)
+	{
+		const float vx = lattice.vertices[i].v.x;
+		const float vy = lattice.vertices[i].v.y;
+		const float vz = lattice.vertices[i].v.z;
+		const float scale = 400.f;
+		const float r = vx * scale + .5f;
+		const float g = vy * scale + .5f;
+		const float b = vz * scale + .5f;
+		colors[i].set(r, g, b, 1.f);
+	}
+	
 	gxBegin(GL_TRIANGLES);
 	{
 		for (int i = 0; i < 6; ++i)
@@ -261,22 +400,13 @@ static void drawLatticeFaces(const Lattice & lattice)
 					const auto & p01 = lattice.vertices[index01].p;
 					const auto & p11 = lattice.vertices[index11].p;
 					
-					const float vx = lattice.vertices[index00].v.x;
-					const float vy = lattice.vertices[index00].v.y;
-					const float vz = lattice.vertices[index00].v.z;
-					const float scale = 400.f;
-					const float r = vx * scale + .5f;
-					const float g = vy * scale + .5f;
-					const float b = vz * scale + .5f;
-					setColorf(r, g, b);
+					setColor(colors[index00]); gxVertex3f(p00.x, p00.y, p00.z);
+					setColor(colors[index10]); gxVertex3f(p10.x, p10.y, p10.z);
+					setColor(colors[index11]); gxVertex3f(p11.x, p11.y, p11.z);
 					
-					gxVertex3f(p00.x, p00.y, p00.z);
-					gxVertex3f(p10.x, p10.y, p10.z);
-					gxVertex3f(p11.x, p11.y, p11.z);
-					
-					gxVertex3f(p00.x, p00.y, p00.z);
-					gxVertex3f(p11.x, p11.y, p11.z);
-					gxVertex3f(p01.x, p01.y, p01.z);
+					setColor(colors[index00]); gxVertex3f(p00.x, p00.y, p00.z);
+					setColor(colors[index11]); gxVertex3f(p11.x, p11.y, p11.z);
+					setColor(colors[index01]); gxVertex3f(p01.x, p01.y, p01.z);
 				}
 			}
 		}
@@ -330,7 +460,7 @@ void simulateLattice_computeEdgeForces(Lattice & lattice, const float tension)
 {
 	//Benchmark bm("computeEdgeForces");
 	
-	const float eps = 1e-4f;
+	const float eps = 1e-12f;
 	
 	for (auto & edge : lattice.edges)
 	{
@@ -387,9 +517,35 @@ static void simulateLattice_integrate(Lattice & lattice, const float dt, const f
 		v.v.y *= retain;
 		v.v.z *= retain;
 		
+	#if 1
+		// constrain the vertex to the line emanating from (0, 0, 0) towards this vertex. this helps to stabalize
+		// the simulation while at the same time making the resulting impulse-response more pleasing. it sort of
+		// models a more rigid structure where vertices are held in place 'xy' on the plane they sit in through
+		// the forces of the elements in the structure below them
+		
+		// todo : constrain vertices using the normal of the plane they sit in instead of the line to (0, 0, 0)
+		
+		float nx = v.p.x;
+		float ny = v.p.y;
+		float nz = v.p.z;
+		const float ns = sqrtf(nx * nx + ny * ny + nz * nz);
+		nx /= ns;
+		ny /= ns;
+		nz /= ns;
+		
+		const float dot =
+			nx * v.f.x +
+			ny * v.f.y +
+			nz * v.f.z;
+		
+		v.v.x += nx * dot * dt;
+		v.v.y += ny * dot * dt;
+		v.v.z += nz * dot * dt;
+	#else
 		v.v.x += v.f.x * dt;
 		v.v.y += v.f.y * dt;
 		v.v.z += v.f.z * dt;
+	#endif
 		
 		v.p.x += v.v.x * dt;
 		v.p.y += v.v.y * dt;
@@ -415,7 +571,7 @@ static void simulateLattice_gpu(Lattice & lattice, const float dt, const float t
 
 //
 
-const int kNumProbeFrequencies = 64;
+const int kNumProbeFrequencies = 128;
 
 struct ImpulseResponsePhaseState
 {
@@ -430,7 +586,8 @@ struct ImpulseResponsePhaseState
 		
 		for (int i = 0; i < kNumProbeFrequencies; ++i)
 		{
-			frequency[i] = 40.f * pow(2.f, i / 8.f);
+			//frequency[i] = 40.f * pow(2.f, i / 16.f);
+			frequency[i] = 4.f * pow(2.f, i / 16.f);
 		}
 	}
 	
@@ -473,11 +630,225 @@ struct ImpulseResponseProbe
 	}
 };
 
+static void drawImpulseResponseGraph(const ImpulseResponsePhaseState & state, const float responses[kNumProbeFrequencies], const bool drawFrequencyTable, const float in_maxResponse = -1.f, const float saturation = .5f)
+{
+	float maxResponse;
+	
+	if (in_maxResponse < 0.f)
+	{
+		maxResponse = 0.f;
+		for (int i = 0; i < kNumProbeFrequencies; ++i)
+			maxResponse = fmax(maxResponse, responses[i]);
+	}
+	else
+	{
+		maxResponse = in_maxResponse;
+	}
+	
+	maxResponse = fmax(maxResponse, 1e-6f);
+
+	const float graphSx = 700.f;
+	const float graphSy = 120.f;
+	
+	hqBegin(HQ_LINES);
+	{
+		// draw graph lines
+		
+		setColor(Color::fromHSL(.5f, saturation, .5f));
+		
+		for (int i = 0; i < kNumProbeFrequencies - 1; ++i)
+		{
+			const float response1 = responses[i + 0];
+			const float response2 = responses[i + 1];
+			const float strokeSize = 2.f;
+			
+			hqLine(
+				(i + 0) * graphSx / kNumProbeFrequencies, graphSy - response1 * graphSy / maxResponse, strokeSize,
+				(i + 1) * graphSx / kNumProbeFrequencies, graphSy - response2 * graphSy / maxResponse, strokeSize);
+		}
+	}
+	hqEnd();
+	
+	if (drawFrequencyTable)
+	{
+		for (int i = 0; i < kNumProbeFrequencies; i += 2)
+		{
+			gxPushMatrix();
+			gxTranslatef((i + .5f) * graphSx / kNumProbeFrequencies, graphSy + 4, 0);
+			gxRotatef(90, 0, 0, 1);
+			setColor(colorWhite);
+			drawText(0, 0, 13, +1, +1, "%dHz", int(state.frequency[i]));
+			gxPopMatrix();
+		}
+	}
+}
+
+static void drawImpulseResponseGraphs(const ImpulseResponsePhaseState & state, const float * responses, const int numGraphs, const bool drawFrequencyTable, const float maxResponse = -1.f)
+{
+	gxPushMatrix();
+	{
+		for (int i = 0; i < numGraphs; ++i)
+		{
+			drawImpulseResponseGraph(
+				state,
+				responses + i * kNumProbeFrequencies,
+				drawFrequencyTable && (i == numGraphs - 1),
+				maxResponse,
+				(i + .5f) / numGraphs);
+			
+			gxTranslatef(1, 3, 0);
+		}
+	}
+	gxPopMatrix();
+}
+
+static void squashLattice(Lattice & lattice)
+{
+	const int numVertices = 6 * kTextureSize * kTextureSize;
+
+	for (int i = 0; i < numVertices; ++i)
+	{
+		auto & p = lattice.vertices[i].p;
+		p.x *= .99f;
+		p.y *= .99f;
+		p.z *= .99f;
+	}
+}
+
+static void testRaster()
+{
+	framework.enableRealTimeEditing = true;
+	
+	if (!framework.init(256, 256))
+		return;
+	
+	float init_px = 0.f;
+	float init_py = 0.f;
+	float a = 0.f;
+	
+	const int kSize = 16;
+	
+	Surface surface(kSize, kSize, false, false, SURFACE_R32F);
+	
+	for (;;)
+	{
+		framework.process();
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			break;
+		
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			init_px = random(-1.f, 1.f);
+			init_py = random(-1.f, 1.f);
+			a = random<float>(0.f, 2.f * M_PI);
+		}
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			pushSurface(&surface);
+			surface.clear();
+			
+			pushBlend(BLEND_ADD);
+			
+			Shader shader("test");
+			setShader(shader);
+			{
+				const float step = mouse.x / 256.f * 2.f * M_PI * 2.f;
+
+				glHint(GL_LINE_SMOOTH_HINT, GL_FASTEST);
+				
+				gxBegin(GL_LINES);
+				{
+					for (int x = 0; x < kSize; ++x)
+					{
+						for (int y = 0; y < kSize; ++y)
+						{
+							for (float a = 0.f; a <= 2.f * M_PI; a += 2.f * M_PI / 8.f)
+							{
+							float radians = 0.f;
+							
+							//float px = (mouse.x / 256.f - .5f) * 2.f;
+							//float py = (mouse.y / 256.f - .5f) * 2.f;
+							
+							float px = (x / float(kSize) - .5f) * 2.f;
+							float py = (y / float(kSize) - .5f) * 2.f;
+				
+							float dx = cosf(a);
+							float dy = sinf(a);
+							
+							for (int i = 0; i < 100; ++i)
+							{
+								const float t[4] =
+								{
+									(-1.f - px) / dx,
+									(+1.f - px) / dx,
+									(-1.f - py) / dy,
+									(+1.f - py) / dy
+								};
+								
+								int idx = -1;
+								
+								for (int i = 0; i < 4; ++i)
+									if (t[i] >= 1e-3f && (idx == -1 || t[i] < t[idx]))
+										idx = i;
+								
+								if (idx == -1)
+									break;
+								
+							#define emit gxVertex2f((px + 1.f) / 2.f * kSize, (py + 1.f) / 2.f * kSize)
+								gxTexCoord2f(radians, 0.f); emit;
+								radians += step * t[idx];
+								px += dx * t[idx];
+								py += dy * t[idx];
+								gxTexCoord2f(radians, 0.f); emit;
+								
+								if (idx == 0 || idx == 1)
+									dx = -dx;
+								else
+									dy = -dy;
+								
+							#if 0
+								gxTexCoord2f(radians, 0.f); gxVertex2f(0, y);
+								radians += step;
+								gxTexCoord2f(radians, 0.f); gxVertex2f(256, y);
+								
+								gxTexCoord2f(radians, 0.f); gxVertex2f(256, y);
+								radians += step;
+								gxTexCoord2f(radians, 0.f); gxVertex2f(0, y);
+							#endif
+								}
+							}
+						}
+					}
+				}
+				gxEnd();
+			}
+			clearShader();
+			
+			popBlend();
+			popSurface();
+			
+			pushBlend(BLEND_OPAQUE);
+			gxSetTexture(surface.getTexture());
+			setColor(colorWhite);
+			setLumif(1.f / 20.f);
+			drawRect(0, 0, 256, 256);
+			popBlend();
+		}
+		framework.endDraw();
+	}
+	
+	framework.shutdown();
+}
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
 	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
+
+	//testRaster();
 
 	framework.enableDepthBuffer = true;
 
@@ -531,6 +902,10 @@ int main(int argc, char * argv[])
 	ImpulseResponseProbe impulseResponseProbe;
 	impulseResponseProbe.init();
 	int lastResponseProbeVertexIndex = -1;
+	
+	ImpulseResponseProbe impulseResponseProbesOverTexture[kTextureSize];
+	for (int i = 0; i < kTextureSize; ++i)
+		impulseResponseProbesOverTexture[i].init();
 	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
 	
@@ -645,6 +1020,17 @@ int main(int argc, char * argv[])
 				ImGui::Checkbox("Show lattice vertices", &showLatticeVertices);
 				ImGui::Checkbox("Show lattice edges", &showLatticeEdges);
 				ImGui::Checkbox("Show lattice faces", &showLatticeFaces);
+				if (ImGui::Button("Squash lattice"))
+				{
+					if (simulateUsingGpu)
+						s_gpuSimulationContext->fetchVerticesFromGpu();
+					squashLattice(lattice);
+					if (simulateUsingGpu)
+						s_gpuSimulationContext->sendVerticesToGpu();
+				}
+				
+				ImGui::Separator();
+				ImGui::Text("Simulation");
 				ImGui::Checkbox("Simulate lattice", &simulateLattice);
 				if (ImGui::Checkbox("Use GPU", &simulateUsingGpu))
 				{
@@ -654,27 +1040,22 @@ int main(int argc, char * argv[])
 					else
 						s_gpuSimulationContext->fetchVerticesFromGpu();
 				}
-				ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 10.f, "%.3f", 4.f);
-				ImGui::SliderFloat("Simulation time step (ms)", &simulationTimeStep_ms, 0.f, .1f, "%.3f", 2.f);
-				ImGui::SliderInt("Num simulation steps per draw", &numSimulationStepsPerDraw, 1, 1000);
+				ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100.f, "%.3f", 4.f);
+				ImGui::SliderFloat("Simulation time step (ms)", &simulationTimeStep_ms, 1.f / 1000.f, .1f, "%.3f", 2.f);
+				ImGui::SliderInt("Num simulation steps per draw", &numSimulationStepsPerDraw, 1, 100);
 				ImGui::SliderFloat("Velocity falloff", &velocityFalloff, 0.f, 1.f);
-				if (ImGui::Button("Squash lattice"))
+				if (ImGui::Button("(Re)start simulation"))
 				{
-					if (simulateUsingGpu)
-						s_gpuSimulationContext->fetchVerticesFromGpu();
-					
-					const int numVertices = 6 * kTextureSize * kTextureSize;
-					
-					for (int i = 0; i < numVertices; ++i)
-					{
-						auto & p = lattice.vertices[i].p;
-						p.x *= .99f;
-						p.y *= .99f;
-						p.z *= .99f;
-					}
-					
-					if (simulateUsingGpu)
-						s_gpuSimulationContext->sendVerticesToGpu();
+					lattice.init();
+					projectLatticeOntoShape(lattice, shapeDefinition);
+					squashLattice(lattice);
+					s_gpuSimulationContext->sendVerticesToGpu();
+					s_gpuSimulationContext->sendEdgesToGpu();
+					impulseResponseProbe.init();
+					for (auto & probe : impulseResponseProbesOverTexture)
+						probe.init();
+					simulateLattice = true;
+					simulationTime_ms = 0.f;
 				}
 				
 				ImGui::Separator();
@@ -757,12 +1138,14 @@ int main(int argc, char * argv[])
 		
 		if (simulateLattice)
 		{
+			const float scaledLatticeTension = latticeTension * kTextureSize * kTextureSize / 1000.f;
+			
 			if (simulateUsingGpu)
 			{
 				Benchmark bm("simulate_gpu");
 				
 				for (int i = 0; i < numSimulationStepsPerDraw; ++i)
-					::simulateLattice_gpu(lattice, simulationTimeStep_ms, latticeTension, velocityFalloff);
+					::simulateLattice_gpu(lattice, simulationTimeStep_ms, scaledLatticeTension, velocityFalloff);
 				
 				s_gpuSimulationContext->fetchVerticesFromGpu();
 			}
@@ -772,7 +1155,7 @@ int main(int argc, char * argv[])
 				
 				for (int i = 0; i < numSimulationStepsPerDraw; ++i)
 				{
-					::simulateLattice(lattice, simulationTimeStep_ms, latticeTension, velocityFalloff);
+					::simulateLattice(lattice, simulationTimeStep_ms, scaledLatticeTension, velocityFalloff);
 					
 					simulationTime_ms += simulationTimeStep_ms;
 					
@@ -799,20 +1182,42 @@ int main(int argc, char * argv[])
 							fabsf(vertex.v.y) +
 							fabsf(vertex.v.z);
 					#elif 1
-						const float value =
-							sqrtf(
-								vertex.v.x * vertex.v.x +
-								vertex.v.y * vertex.v.y +
-								vertex.v.z * vertex.v.z);
+						const float value = vertex.v.calcMagnitude();
 					#endif
 							
-						impulseResponseProbe.measure(impulseResponsePhaseState, value);
+						impulseResponseProbe.measure(impulseResponsePhaseState, value * simulationTimeStep_ms);
 						
 						impulseResponsePhaseState.next(simulationTimeStep_ms / 1000.f);
 					}
 					else
 					{
 						lastResponseProbeVertexIndex = -1;
+					}
+					
+					for (int i = 0; i < kTextureSize; ++i)
+					{
+						auto & probe = impulseResponseProbesOverTexture[i];
+						
+						const int faceIndex = 0;
+						const int x = i;
+						const int y = kTextureSize / 5;
+						
+						const int vertexIndex =
+							faceIndex * kTextureSize * kTextureSize +
+							y * kTextureSize +
+							x;
+						
+						auto & vertex = lattice.vertices[vertexIndex];
+						
+						const float dx = vertex.p.x - vertex.p_init.x;
+						const float dy = vertex.p.y - vertex.p_init.y;
+						const float dz = vertex.p.z - vertex.p_init.z;
+						
+						const float value = sqrtf(dx * dx + dy * dy + dz * dz);
+						
+						//const float value = vertex.v.calcMagnitude();
+						
+						probe.measure(impulseResponsePhaseState, value * simulationTimeStep_ms);
 					}
 				}
 			}
@@ -1034,48 +1439,37 @@ int main(int argc, char * argv[])
 			{
 				// show the results of the impulse response measurement
 				
-				float responses[kNumProbeFrequencies];
+				gxPushMatrix();
+				{
+					gxTranslatef(mouse.x, mouse.y, 0);
+
+					float responses[kNumProbeFrequencies];
 				
-				impulseResponseProbe.calcResponseMagnitude(responses);
-				
-				float maxResponse = 1e-6f;
-				for (auto response : responses)
-					maxResponse = fmax(maxResponse, response);
-				
-				const float graphSx = 370.f;
-				const float graphSy = 170.f;
+					impulseResponseProbe.calcResponseMagnitude(responses);
+					
+					float maxResponse = 1e-6f;
+					for (auto response : responses)
+						maxResponse = fmax(maxResponse, response);
+					
+					drawImpulseResponseGraph(impulseResponsePhaseState, responses, true);
+				}
+				gxPopMatrix();
 				
 				gxPushMatrix();
-				gxTranslatef(mouse.x, mouse.y, 0);
-				hqBegin(HQ_LINES);
 				{
-					// draw graph lines
+					gxTranslatef(VIEW_SX - 740, 10, 0);
 					
-					setColor(Color::fromHSL(.5f, .5f, .5f));
+					float responses[kTextureSize * kNumProbeFrequencies];
 					
-					for (int i = 0; i < kNumProbeFrequencies - 1; ++i)
+					for (int i = 0; i < kTextureSize; ++i)
 					{
-						const float response1 = responses[i + 0];
-						const float response2 = responses[i + 1];
-						const float strokeSize = 2.f;
+						auto & probe = impulseResponseProbesOverTexture[i];
 						
-						hqLine(
-							(i + 0) * graphSx / kNumProbeFrequencies, graphSy - response1 * graphSy / maxResponse, strokeSize,
-							(i + 1) * graphSx / kNumProbeFrequencies, graphSy - response2 * graphSy / maxResponse, strokeSize);
+						probe.calcResponseMagnitude(responses + i * kNumProbeFrequencies);
 					}
+					
+					drawImpulseResponseGraphs(impulseResponsePhaseState, responses, kTextureSize, true);
 				}
-				hqEnd();
-				
-				for (int i = 0; i < kNumProbeFrequencies; i += 2)
-				{
-					gxPushMatrix();
-					gxTranslatef((i + .5f) * graphSx / kNumProbeFrequencies, graphSy + 4, 0);
-					gxRotatef(90, 0, 0, 1);
-					setColor(colorWhite);
-					drawText(0, 0, 13, +1, +1, "%dHz", int(impulseResponsePhaseState.frequency[i]));
-					gxPopMatrix();
-				}
-				
 				gxPopMatrix();
 			}
 			

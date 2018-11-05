@@ -1,6 +1,7 @@
 #pragma once
 
 #include "constants.h"
+#include <math.h>
 #include <vector>
 
 struct Lattice
@@ -22,11 +23,23 @@ struct Lattice
 		{
 			x = y = z = 0.f;
 		}
+		
+		float calcMagnitude() const
+		{
+			const float result =
+				sqrtf(
+					x * x +
+					y * y +
+					z * z);
+			
+			return result;
+		}
 	};
 	
 	struct Vertex
 	{
 		Vector p;
+		Vector p_init;
 		
 		// physics stuff
 		Vector f;
