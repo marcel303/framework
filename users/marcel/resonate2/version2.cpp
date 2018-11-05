@@ -79,7 +79,7 @@ static void fillCube(const Lattice & lattice, const ImpulseResponseProbe * probe
 				
 				auto & probe = probes[probeIndex];
 				
-				const float value = probe.calcResponseMagnitudeForFrequencyIndex(frequencyIndex) * 10000.f;
+				const float value = probe.calcResponseMagnitudeForFrequencyIndex(frequencyIndex) * 4000.f;
 				
 				texture.value[y][x] = value;
 			}
@@ -718,262 +718,264 @@ int main(int argc, char * argv[])
 		
 		guiContext.processBegin(framework.timeStep, VIEW_SX, VIEW_SY, inputIsCaptured);
 		{
-			if (showGui && ImGui::Begin("Interaction", nullptr,
-				ImGuiWindowFlags_MenuBar))
+			if (showGui)
 			{
-				if (ImGui::BeginMenuBar())
+				if (ImGui::Begin("Interaction", nullptr,
+					ImGuiWindowFlags_MenuBar))
 				{
-					if (ImGui::BeginMenu("File"))
+					if (ImGui::BeginMenuBar())
 					{
-						if (ImGui::MenuItem("Load shape.."))
+						if (ImGui::BeginMenu("File"))
 						{
-							nfdchar_t * path = nullptr;
-							const nfdresult_t result = NFD_OpenDialog("txt", "", &path);
-
-							if (result == NFD_OKAY)
+							if (ImGui::MenuItem("Load shape.."))
 							{
-								shapeDefinition.loadFromFile(path);
-							}
-							
-							delete path;
-							path = nullptr;
-						}
-						
-						if (ImGui::MenuItem("Load simulated data.."))
-						{
-							nfdchar_t * path = nullptr;
-							const nfdresult_t result = NFD_OpenDialog("cird", "", &path);
+								nfdchar_t * path = nullptr;
+								const nfdresult_t result = NFD_OpenDialog("txt", "", &path);
 
-							if (result == NFD_OKAY)
-							{
-								framework.process(); // to make sure the NFD dialog disappears
-								
-								CIRD cird;
-								
-								if (cird.loadFromFile(path))
+								if (result == NFD_OKAY)
 								{
-									cirdToImpulseResponseData(
-										cird,
-										impulseResponseState,
-										impulseResponseProbes,
-										kProbeGridSize);
+									shapeDefinition.loadFromFile(path);
 								}
+								
+								delete path;
+								path = nullptr;
 							}
 							
-							delete path;
-							path = nullptr;
-							
-							simulateLattice = false;
-						}
-						if (ImGui::MenuItem("Save simulated data.."))
-						{
-							nfdchar_t * path = nullptr;
-							const nfdresult_t result = NFD_SaveDialog("cird", "", &path);
-
-							if (result == NFD_OKAY)
+							if (ImGui::MenuItem("Load simulated data.."))
 							{
-								CIRD cird;
-								
-								if (impulseResponseDataToCird(
-									impulseResponseState,
-									impulseResponseProbes,
-									kProbeGridSize,
-									cird))
+								nfdchar_t * path = nullptr;
+								const nfdresult_t result = NFD_OpenDialog("cird", "", &path);
+
+								if (result == NFD_OKAY)
 								{
 									framework.process(); // to make sure the NFD dialog disappears
 									
-									cird.saveToFile(path);
+									CIRD cird;
+									
+									if (cird.loadFromFile(path))
+									{
+										cirdToImpulseResponseData(
+											cird,
+											impulseResponseState,
+											impulseResponseProbes,
+											kProbeGridSize);
+									}
 								}
+								
+								delete path;
+								path = nullptr;
+								
+								simulateLattice = false;
 							}
+							if (ImGui::MenuItem("Save simulated data.."))
+							{
+								nfdchar_t * path = nullptr;
+								const nfdresult_t result = NFD_SaveDialog("cird", "", &path);
+
+								if (result == NFD_OKAY)
+								{
+									CIRD cird;
+									
+									if (impulseResponseDataToCird(
+										impulseResponseState,
+										impulseResponseProbes,
+										kProbeGridSize,
+										cird))
+									{
+										framework.process(); // to make sure the NFD dialog disappears
+										
+										cird.saveToFile(path);
+									}
+								}
+								
+								delete path;
+								path = nullptr;
+							}
+							ImGui::Separator();
+							if (ImGui::MenuItem("Quit"))
+								framework.quitRequested = true;
 							
-							delete path;
-							path = nullptr;
+							ImGui::EndMenu();
 						}
-						ImGui::Separator();
-						if (ImGui::MenuItem("Quit"))
-							framework.quitRequested = true;
-						
-						ImGui::EndMenu();
+						ImGui::EndMenuBar();
 					}
-					ImGui::EndMenuBar();
-				}
-				
-				ImGui::PushItemWidth(140);
-				
-				ImGui::Text("Visibility");
-				ImGui::Checkbox("Show cube", &showCube);
-				ImGui::Checkbox("Show intersection points", &showIntersectionPoints);
-				ImGui::Checkbox("Show axis", &showAxis);
-				ImGui::Checkbox("Show impulse response graph", &showImpulseResponseGraph);
-				ImGui::Checkbox("Show impulse response probes", &showImpulseResponseProbeLocations);
-				
-				ImGui::Separator();
-				ImGui::Text("Cube points");
-				ImGui::Checkbox("Show cube points", &showCubePoints);
-				ImGui::SliderFloat("Cube points scale", &cubePointScale, 0.f, 2.f);
-				ImGui::Checkbox("Project cube points", &projectCubePoints);
-				ImGui::Checkbox("Colorize cube points", &colorizeCubePoints);
-				ImGui::Checkbox("Raycast cube points with mouse", &raycastCubePointsUsingMouse);
-				
-				ImGui::Separator();
-				ImGui::Text("Shape generation");
-				ImGui::SliderInt("Shape planes", &numPlanesForRandomization, 0, ShapeDefinition::kMaxPlanes);
-				if (ImGui::Button("Randomize shape"))
-					shapeDefinition.makeRandomShape(numPlanesForRandomization);
-				
-				ImGui::Separator();
-				ImGui::Text("Lattice");
-				if (ImGui::Button("Initialize lattice"))
-				{
-					lattice.init();
-					s_gpuSimulationContext->sendVerticesToGpu();
-					s_gpuSimulationContext->sendEdgesToGpu();
-					simulationTime_ms = 0.f;
-				}
-				if (ImGui::Button("Project lattice onto shape"))
-				{
-					projectLatticeOntoShape(lattice, shapeDefinition);
-					s_gpuSimulationContext->sendVerticesToGpu();
-					s_gpuSimulationContext->sendEdgesToGpu();
-					simulationTime_ms = 0.f;
-				}
-				if (ImGui::Button("Project lattice onto sphere"))
-				{
-					projectLatticeOntoShere(lattice);
-					s_gpuSimulationContext->sendVerticesToGpu();
-					s_gpuSimulationContext->sendEdgesToGpu();
-					simulationTime_ms = 0.f;
-				}
-				ImGui::Checkbox("Show lattice vertices", &showLatticeVertices);
-				ImGui::Checkbox("Show lattice edges", &showLatticeEdges);
-				ImGui::Checkbox("Show lattice faces", &showLatticeFaces);
-				int colorMode = s_vertexColorMode;
-				ImGui::Combo("Color mode", &colorMode, s_vertexColorModeNames, kVertexColorMode_COUNT);
-				s_vertexColorMode = (VertexColorMode)colorMode;
-				if (ImGui::Button("Squash lattice"))
-				{
-					if (simulateUsingGpu)
-						s_gpuSimulationContext->fetchVerticesFromGpu();
-					squashLattice(lattice);
-					if (simulateUsingGpu)
+					
+					ImGui::PushItemWidth(140);
+					
+					ImGui::Text("Visibility");
+					ImGui::Checkbox("Show cube", &showCube);
+					ImGui::Checkbox("Show intersection points", &showIntersectionPoints);
+					ImGui::Checkbox("Show axis", &showAxis);
+					ImGui::Checkbox("Show impulse response graph", &showImpulseResponseGraph);
+					ImGui::Checkbox("Show impulse response probes", &showImpulseResponseProbeLocations);
+					
+					ImGui::Separator();
+					ImGui::Text("Cube points");
+					ImGui::Checkbox("Show cube points", &showCubePoints);
+					ImGui::SliderFloat("Cube points scale", &cubePointScale, 0.f, 2.f);
+					ImGui::Checkbox("Project cube points", &projectCubePoints);
+					ImGui::Checkbox("Colorize cube points", &colorizeCubePoints);
+					ImGui::Checkbox("Raycast cube points with mouse", &raycastCubePointsUsingMouse);
+					
+					ImGui::Separator();
+					ImGui::Text("Shape generation");
+					ImGui::SliderInt("Shape planes", &numPlanesForRandomization, 0, ShapeDefinition::kMaxPlanes);
+					if (ImGui::Button("Randomize shape"))
+						shapeDefinition.makeRandomShape(numPlanesForRandomization);
+					
+					ImGui::Separator();
+					ImGui::Text("Lattice");
+					if (ImGui::Button("Initialize lattice"))
+					{
+						lattice.init();
 						s_gpuSimulationContext->sendVerticesToGpu();
-				}
-				
-				ImGui::Separator();
-				ImGui::Text("Simulation");
-				ImGui::Checkbox("Simulate lattice", &simulateLattice);
-				if (ImGui::Checkbox("Use GPU", &simulateUsingGpu))
-				{
-					// make sure the vertices are synced between cpu and gpu at this point
-					if (simulateUsingGpu)
+						s_gpuSimulationContext->sendEdgesToGpu();
+						simulationTime_ms = 0.f;
+					}
+					if (ImGui::Button("Project lattice onto shape"))
+					{
+						projectLatticeOntoShape(lattice, shapeDefinition);
 						s_gpuSimulationContext->sendVerticesToGpu();
-					else
-						s_gpuSimulationContext->fetchVerticesFromGpu();
+						s_gpuSimulationContext->sendEdgesToGpu();
+						simulationTime_ms = 0.f;
+					}
+					if (ImGui::Button("Project lattice onto sphere"))
+					{
+						projectLatticeOntoShere(lattice);
+						s_gpuSimulationContext->sendVerticesToGpu();
+						s_gpuSimulationContext->sendEdgesToGpu();
+						simulationTime_ms = 0.f;
+					}
+					ImGui::Checkbox("Show lattice vertices", &showLatticeVertices);
+					ImGui::Checkbox("Show lattice edges", &showLatticeEdges);
+					ImGui::Checkbox("Show lattice faces", &showLatticeFaces);
+					int colorMode = s_vertexColorMode;
+					ImGui::Combo("Color mode", &colorMode, s_vertexColorModeNames, kVertexColorMode_COUNT);
+					s_vertexColorMode = (VertexColorMode)colorMode;
+					if (ImGui::Button("Squash lattice"))
+					{
+						if (simulateUsingGpu)
+							s_gpuSimulationContext->fetchVerticesFromGpu();
+						squashLattice(lattice);
+						if (simulateUsingGpu)
+							s_gpuSimulationContext->sendVerticesToGpu();
+					}
+					
+					ImGui::Separator();
+					ImGui::Text("Simulation");
+					ImGui::Checkbox("Simulate lattice", &simulateLattice);
+					if (ImGui::Checkbox("Use GPU", &simulateUsingGpu))
+					{
+						// make sure the vertices are synced between cpu and gpu at this point
+						if (simulateUsingGpu)
+							s_gpuSimulationContext->sendVerticesToGpu();
+						else
+							s_gpuSimulationContext->fetchVerticesFromGpu();
+					}
+					ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100.f, "%.3f", 4.f);
+					ImGui::SliderFloat("Simulation time step (ms)", &simulationTimeStep_ms, 1.f / 1000.f, .1f, "%.3f", 2.f);
+					ImGui::SliderInt("Num simulation steps per draw", &numSimulationStepsPerDraw, 1, 100);
+					ImGui::SliderFloat("Velocity falloff", &velocityFalloff, 0.f, 1.f);
+					if (ImGui::Button("(Re)start simulation"))
+					{
+						lattice.init();
+						projectLatticeOntoShape(lattice, shapeDefinition);
+						squashLattice(lattice);
+						s_gpuSimulationContext->sendVerticesToGpu();
+						s_gpuSimulationContext->sendEdgesToGpu();
+						for (int i = 0; i < kNumProbes; ++i)
+							impulseResponseProbes[i].init(impulseResponseProbes[i].vertexIndex);
+						simulateLattice = true;
+						simulationTime_ms = 0.f;
+					}
+					
+					ImGui::Separator();
+					ImGui::Text("Cube map");
+					if (ImGui::Button("Fill cube map"))
+					{
+						fillCube(lattice, impulseResponseProbes, fillCubeFrequencyIndex, *cube);
+						glDeleteTextures(6, textureGL);
+						for (int i = 0; i < 6; ++i)
+							textureGL[i] = textureToGL(cube->faces[i].textures[fillCubeFrequencyIndex]);
+					}
+					if (ImGui::SliderInt("Frequency index", &fillCubeFrequencyIndex, 0, kNumProbeFrequencies - 1))
+					{
+						fillCube(lattice, impulseResponseProbes, fillCubeFrequencyIndex, *cube);
+						glDeleteTextures(6, textureGL);
+						for (int i = 0; i < 6; ++i)
+							textureGL[i] = textureToGL(cube->faces[i].textures[fillCubeFrequencyIndex]);
+					}
+					
+					ImGui::Separator();
+					ImGui::Text("Statistics");
+					ImGui::LabelText("Cube size (kbyte)", "%lu", sizeof(Cube) / 1024);
+					ImGui::LabelText("Probes size (kbyte)", "%lu", sizeof(ImpulseResponseProbe) * kNumProbes / 1024);
+					
+					ImGui::PopItemWidth();
 				}
-				ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100.f, "%.3f", 4.f);
-				ImGui::SliderFloat("Simulation time step (ms)", &simulationTimeStep_ms, 1.f / 1000.f, .1f, "%.3f", 2.f);
-				ImGui::SliderInt("Num simulation steps per draw", &numSimulationStepsPerDraw, 1, 100);
-				ImGui::SliderFloat("Velocity falloff", &velocityFalloff, 0.f, 1.f);
-				if (ImGui::Button("(Re)start simulation"))
-				{
-					lattice.init();
-					projectLatticeOntoShape(lattice, shapeDefinition);
-					squashLattice(lattice);
-					s_gpuSimulationContext->sendVerticesToGpu();
-					s_gpuSimulationContext->sendEdgesToGpu();
-					for (int i = 0; i < kNumProbes; ++i)
-						impulseResponseProbes[i].init(impulseResponseProbes[i].vertexIndex);
-					simulateLattice = true;
-					simulationTime_ms = 0.f;
-				}
-				
-				ImGui::Separator();
-				ImGui::Text("Cube map");
-				if (ImGui::Button("Fill cube map"))
-				{
-					fillCube(lattice, impulseResponseProbes, fillCubeFrequencyIndex, *cube);
-					glDeleteTextures(6, textureGL);
-					for (int i = 0; i < 6; ++i)
-						textureGL[i] = textureToGL(cube->faces[i].textures[fillCubeFrequencyIndex]);
-				}
-				if (ImGui::SliderInt("Frequency index", &fillCubeFrequencyIndex, 0, kNumProbeFrequencies - 1))
-				{
-					fillCube(lattice, impulseResponseProbes, fillCubeFrequencyIndex, *cube);
-					glDeleteTextures(6, textureGL);
-					for (int i = 0; i < 6; ++i)
-						textureGL[i] = textureToGL(cube->faces[i].textures[fillCubeFrequencyIndex]);
-				}
-				
-				ImGui::Separator();
-				ImGui::Text("Statistics");
-				ImGui::LabelText("Cube size (kbyte)", "%lu", sizeof(Cube) / 1024);
-				ImGui::LabelText("Probes size (kbyte)", "%lu", sizeof(ImpulseResponseProbe) * kNumProbes / 1024);
-				
-				ImGui::PopItemWidth();
-			}
-			if (showGui)
 				ImGui::End();
-			
-			if (ImGui::Begin("Inspect", nullptr,
-				ImGuiWindowFlags_MenuBar))
-			{
-				const char * items[ShapeDefinition::kMaxPlanes];
 				
-				char lines[ShapeDefinition::kMaxPlanes][128];
-				for (int i = 0; i < shapeDefinition.numPlanes; ++i)
+				if (ImGui::Begin("Inspect", nullptr,
+					ImGuiWindowFlags_MenuBar))
 				{
-					auto & p = shapeDefinition.planes[i];
+					const char * items[ShapeDefinition::kMaxPlanes];
 					
-					sprintf_s(lines[i], sizeof(lines[i]), "%+.2f, %+.2f, %+.2f @ %.2f\n",
-						p.normal[0],
-						p.normal[1],
-						p.normal[2],
-						p.offset);
+					char lines[ShapeDefinition::kMaxPlanes][128];
+					for (int i = 0; i < shapeDefinition.numPlanes; ++i)
+					{
+						auto & p = shapeDefinition.planes[i];
+						
+						sprintf_s(lines[i], sizeof(lines[i]), "%+.2f, %+.2f, %+.2f @ %.2f\n",
+							p.normal[0],
+							p.normal[1],
+							p.normal[2],
+							p.offset);
+						
+						items[i] = lines[i];
+					}
+					int selectedItem = - 1;
+					ImGui::ListBox("Shape planes", &selectedItem, items, shapeDefinition.numPlanes);
 					
-					items[i] = lines[i];
+					for (int i = 0; i < shapeDefinition.numPlanes; ++i)
+					{
+						ImGui::PushID(i);
+						ImGui::PushItemWidth(200.f);
+						ImGui::InputFloat3("Plane", &shapeDefinition.planes[i].normal[0], -1.f, +1.f);
+						ImGui::PopItemWidth();
+						
+						ImGui::SameLine();
+						ImGui::PushItemWidth(100.f);
+						ImGui::SliderFloat("Offset", &shapeDefinition.planes[i].offset, 0.f, +2.f);
+						ImGui::PopItemWidth();
+						ImGui::PopID();
+					}
 				}
-				int selectedItem = - 1;
-				ImGui::ListBox("Shape planes", &selectedItem, items, shapeDefinition.numPlanes);
+				ImGui::End();
 				
-				for (int i = 0; i < shapeDefinition.numPlanes; ++i)
+				ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
+				if (ImGui::Begin("Compute #1", nullptr,
+					ImGuiWindowFlags_MenuBar))
 				{
-					ImGui::PushID(i);
-					ImGui::PushItemWidth(200.f);
-					ImGui::InputFloat3("Plane", &shapeDefinition.planes[i].normal[0], -1.f, +1.f);
-					ImGui::PopItemWidth();
-					
-					ImGui::SameLine();
-					ImGui::PushItemWidth(100.f);
-					ImGui::SliderFloat("Offset", &shapeDefinition.planes[i].offset, 0.f, +2.f);
-					ImGui::PopItemWidth();
-					ImGui::PopID();
+					computeEdgeForcesEditor.Render();
 				}
+				ImGui::End();
+				
+				ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
+				if (ImGui::Begin("Compute #2", nullptr,
+					ImGuiWindowFlags_MenuBar))
+				{
+					integrateEditor.Render();
+				}
+				ImGui::End();
+				
+				ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
+				if (ImGui::Begin("Compute #2", nullptr,
+					ImGuiWindowFlags_MenuBar))
+				{
+					integrateImpulseResponseEditor.Render();
+				}
+				ImGui::End();
 			}
-			ImGui::End();
-			
-			ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
-			if (ImGui::Begin("Compute #1", nullptr,
-				ImGuiWindowFlags_MenuBar))
-			{
-				computeEdgeForcesEditor.Render();
-			}
-			ImGui::End();
-			
-			ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
-			if (ImGui::Begin("Compute #2", nullptr,
-				ImGuiWindowFlags_MenuBar))
-			{
-				integrateEditor.Render();
-			}
-			ImGui::End();
-			
-			ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
-			if (ImGui::Begin("Compute #2", nullptr,
-				ImGuiWindowFlags_MenuBar))
-			{
-				integrateImpulseResponseEditor.Render();
-			}
-			ImGui::End();
 		}
 		guiContext.processEnd();
 		
