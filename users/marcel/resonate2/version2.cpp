@@ -968,9 +968,9 @@ int main(int argc, char * argv[])
 	impulseResponseProbe.init();
 	int lastResponseProbeVertexIndex = -1;
 	
-	ImpulseResponseProbe impulseResponseProbesOverTexture[kTextureSize];
+	ImpulseResponseProbe impulseResponseProbesOverLineSegment[kTextureSize];
 	for (int i = 0; i < kTextureSize; ++i)
-		impulseResponseProbesOverTexture[i].init();
+		impulseResponseProbesOverLineSegment[i].init();
 	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
 	
@@ -1129,7 +1129,7 @@ int main(int argc, char * argv[])
 					s_gpuSimulationContext->sendVerticesToGpu();
 					s_gpuSimulationContext->sendEdgesToGpu();
 					impulseResponseProbe.init();
-					for (auto & probe : impulseResponseProbesOverTexture)
+					for (auto & probe : impulseResponseProbesOverLineSegment)
 						probe.init();
 					simulateLattice = true;
 					simulationTime_ms = 0.f;
@@ -1273,7 +1273,7 @@ int main(int argc, char * argv[])
 					
 					for (int i = 0; i < kTextureSize; ++i)
 					{
-						auto & probe = impulseResponseProbesOverTexture[i];
+						auto & probe = impulseResponseProbesOverLineSegment[i];
 						
 						const int faceIndex = 0;
 						const int x = i;
@@ -1551,7 +1551,7 @@ int main(int argc, char * argv[])
 					
 					for (int i = 0; i < kTextureSize; ++i)
 					{
-						auto & probe = impulseResponseProbesOverTexture[i];
+						auto & probe = impulseResponseProbesOverLineSegment[i];
 						
 						probe.calcResponseMagnitude(responses + i * kNumProbeFrequencies);
 					}
