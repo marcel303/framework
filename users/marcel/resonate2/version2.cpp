@@ -632,6 +632,35 @@ static void simulateLattice_gpu(Lattice & lattice, const float dt, const float t
 	s_gpuSimulationContext->integrate(lattice, dt, falloff);
 }
 
+static void integrateImpulseResponses(const Lattice & lattice, ImpulseResponsePhaseState & state, ImpulseResponseProbe * probes, const int numProbes, const float dt)
+{
+	state.processBegin(dt);
+
+	for (int i = 0; i < numProbes; ++i)
+	{
+		auto & probe = probes[i];
+		
+		probe.measureAtVertex(state, lattice);
+	}
+
+	state.processEnd();
+}
+
+static void integrateImpulseResponses_gpu(const Lattice & lattice, ImpulseResponsePhaseState & state, ImpulseResponseProbe * probes, const int numProbes, const float dt)
+{
+	state.processBegin(dt);
+
+	// send impulse response state to the gpu
+
+	s_gpuSimulationContext->sendImpulseResponseStateToGpu();
+
+	// execute impulse-response integration kernel
+
+	s_gpuSimulationContext->integrateImpulseResponse(dt);
+
+	state.processEnd();
+}
+
 //
 
 static void drawImpulseResponseProbes(const ImpulseResponseProbe * probes, const int numProbes, const Lattice & lattice)
@@ -1251,17 +1280,12 @@ int main(int argc, char * argv[])
 					
 					//
 					
-					impulseResponsePhaseState.processBegin(simulationTimeStep_ms / 1000.f);
-					
-					// send impulse response state to the gpu
-					
-					s_gpuSimulationContext->sendImpulseResponseStateToGpu();
-					
-					// execute impulse-response integration kernel
-					
-					s_gpuSimulationContext->integrateImpulseResponse(impulseResponsePhaseState.dt);
-					
-					impulseResponsePhaseState.processEnd();
+					integrateImpulseResponses_gpu(
+						lattice,
+						impulseResponsePhaseState,
+						impulseResponseProbesOverCube,
+						kNumProbes,
+						simulationTimeStep_ms / 1000.f);
 				}
 				
 				s_gpuSimulationContext->fetchVerticesFromGpu();
@@ -1280,16 +1304,12 @@ int main(int argc, char * argv[])
 					
 					//
 					
-					impulseResponsePhaseState.processBegin(simulationTimeStep_ms / 1000.f);
-					
-					for (int i = 0; i < kNumProbes; ++i)
-					{
-						auto & probe = impulseResponseProbesOverCube[i];
-						
-						probe.measureAtVertex(impulseResponsePhaseState, lattice);
-					}
-					
-					impulseResponsePhaseState.processEnd();
+					integrateImpulseResponses(
+						lattice,
+						impulseResponsePhaseState,
+						impulseResponseProbesOverCube,
+						kNumProbes,
+						simulationTimeStep_ms / 1000.f);
 				}
 			}
 		}
