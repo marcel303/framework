@@ -640,6 +640,8 @@ struct ImpulseResponsePhaseState
 	
 	float cos_sin[kNumProbeFrequencies][2];
 	
+	float dt = 0.f;
+	
 	void init()
 	{
 		memset(this, 0, sizeof(*this));
@@ -651,7 +653,12 @@ struct ImpulseResponsePhaseState
 		}
 	}
 	
-	void next(const float dt)
+	void processBegin(const float in_dt)
+	{
+		dt = in_dt;
+	}
+	
+	void processEnd()
 	{
 		for (int i = 0; i < kNumProbeFrequencies; ++i)
 		{
@@ -678,13 +685,26 @@ struct ImpulseResponseProbe
 		vertexIndex = in_vertexIndex;
 	}
 	
-	void measure(const ImpulseResponsePhaseState & state, const float value)
+	void measureValue(const ImpulseResponsePhaseState & state, const float value)
 	{
 		for (int i = 0; i < kNumProbeFrequencies; ++i)
 		{
 			response[i][0] += state.cos_sin[i][0] * value;
 			response[i][1] += state.cos_sin[i][1] * value;
 		}
+	}
+	
+	void measureAtVertex(const ImpulseResponsePhaseState & state, const Lattice & lattice)
+	{
+		const auto & vertex = lattice.vertices[vertexIndex];
+		
+		const float dx = vertex.p.x - vertex.p_init.x;
+		const float dy = vertex.p.y - vertex.p_init.y;
+		const float dz = vertex.p.z - vertex.p_init.z;
+
+		const float value = sqrtf(dx * dx + dy * dy + dz * dz);
+		
+		measureValue(state, value);
 	}
 	
 	void calcResponseMagnitude(float * result) const
@@ -967,9 +987,33 @@ int main(int argc, char * argv[])
 	impulseResponseProbe.init(calcVertexIndex(0, kTextureSize/2, kTextureSize/5));
 	int lastResponseProbeVertexIndex = -1;
 	
-	ImpulseResponseProbe impulseResponseProbesOverLineSegment[kTextureSize];
+	ImpulseResponseProbe * impulseResponseProbesOverLineSegment = new ImpulseResponseProbe[kTextureSize];
 	for (int i = 0; i < kTextureSize; ++i)
 		impulseResponseProbesOverLineSegment[i].init(calcVertexIndex(0, i, kTextureSize/5));
+	
+	const int kProbeGridSize = 16;
+	const int kNumProbes = 6 * kProbeGridSize * kProbeGridSize;
+	ImpulseResponseProbe * impulseResponseProbesOverCube = new ImpulseResponseProbe[kNumProbes];
+	for (int cubeFaceIndex = 0; cubeFaceIndex < 6; ++cubeFaceIndex)
+	{
+		for (int y = 0; y < kProbeGridSize; ++y)
+		{
+			for (int x = 0; x < kProbeGridSize; ++x)
+			{
+				const int probeIndex =
+					cubeFaceIndex * kProbeGridSize * kProbeGridSize +
+					y * kProbeGridSize +
+					x;
+				
+				const int faceX = x * kTextureSize / kProbeGridSize;
+				const int faceY = y * kTextureSize / kProbeGridSize;
+				
+				auto & probe = impulseResponseProbesOverCube[probeIndex];
+				
+				probe.init(calcVertexIndex(cubeFaceIndex, faceX, faceY));
+			}
+		}
+	}
 	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
 	
@@ -1130,8 +1174,10 @@ int main(int argc, char * argv[])
 					s_gpuSimulationContext->sendVerticesToGpu();
 					s_gpuSimulationContext->sendEdgesToGpu();
 					impulseResponseProbe.init(impulseResponseProbe.vertexIndex);
-					for (auto & probe : impulseResponseProbesOverLineSegment)
-						probe.init(probe.vertexIndex);
+					for (int i = 0; i < kTextureSize; ++i)
+					impulseResponseProbesOverLineSegment[i].init(impulseResponseProbesOverLineSegment[i].vertexIndex);
+					for (int i = 0; i < kNumProbes; ++i)
+						impulseResponseProbesOverCube[i].init(impulseResponseProbesOverCube[i].vertexIndex);
 					simulateLattice = true;
 					simulationTime_ms = 0.f;
 				}
@@ -1237,6 +1283,8 @@ int main(int argc, char * argv[])
 					
 					simulationTime_ms += simulationTimeStep_ms;
 					
+					impulseResponsePhaseState.processBegin(simulationTimeStep_ms / 1000.f);
+					
 					if (hasMouseCubeFace)
 					{
 						// perform impulse response at mouse location
@@ -1263,9 +1311,7 @@ int main(int argc, char * argv[])
 						const float value = vertex.v.calcMagnitude();
 					#endif
 							
-						impulseResponseProbe.measure(impulseResponsePhaseState, value * simulationTimeStep_ms);
-						
-						impulseResponsePhaseState.next(simulationTimeStep_ms / 1000.f);
+						impulseResponseProbe.measureValue(impulseResponsePhaseState, value);
 					}
 					else
 					{
@@ -1276,18 +1322,10 @@ int main(int argc, char * argv[])
 					{
 						auto & probe = impulseResponseProbesOverLineSegment[i];
 						
-						auto & vertex = lattice.vertices[probe.vertexIndex];
-						
-						const float dx = vertex.p.x - vertex.p_init.x;
-						const float dy = vertex.p.y - vertex.p_init.y;
-						const float dz = vertex.p.z - vertex.p_init.z;
-						
-						const float value = sqrtf(dx * dx + dy * dy + dz * dz);
-						
-						//const float value = vertex.v.calcMagnitude();
-						
-						probe.measure(impulseResponsePhaseState, value * simulationTimeStep_ms);
+						probe.measureAtVertex(impulseResponsePhaseState, lattice);
 					}
+					
+					impulseResponsePhaseState.processEnd();
 				}
 			}
 		}
@@ -1449,12 +1487,21 @@ int main(int argc, char * argv[])
 					setColor(colorRed);
 					glPointSize(10.f);
 					gxBegin(GL_POINTS);
-					for (auto & probe : impulseResponseProbesOverLineSegment)
+					for (int i = 0; i < kTextureSize; ++i)
 					{
+						const auto & probe = impulseResponseProbesOverLineSegment[i];
 						const auto & vertex = lattice.vertices[probe.vertexIndex];
-						
 						const float offset = -.01f;
-						
+						gxVertex3f(
+							vertex.p.x + vertex.n.x * offset,
+							vertex.p.y + vertex.n.y * offset,
+							vertex.p.z + vertex.n.z * offset);
+					}
+					for (int i = 0; i < kNumProbes; ++i)
+					{
+						const auto & probe = impulseResponseProbesOverCube[i];
+						const auto & vertex = lattice.vertices[probe.vertexIndex];
+						const float offset = -.01f;
 						gxVertex3f(
 							vertex.p.x + vertex.n.x * offset,
 							vertex.p.y + vertex.n.y * offset,
@@ -1589,6 +1636,12 @@ int main(int argc, char * argv[])
 	
 	delete cube;
 	cube = nullptr;
+	
+	delete [] impulseResponseProbesOverCube;
+	impulseResponseProbesOverCube = nullptr;
+	
+	delete [] impulseResponseProbesOverLineSegment;
+	impulseResponseProbesOverLineSegment = nullptr;
 	
 	gpuShut();
 	
