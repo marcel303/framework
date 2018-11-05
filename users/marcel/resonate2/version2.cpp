@@ -1518,14 +1518,21 @@ int main(int argc, char * argv[])
 				if (showImpulseResponseProbeLocations && hasMouseCubeFace)
 				{
 					const int cubeFaceIndex = mouseCubeFaceIndex;
+					const int x = mouseCubeFacePosition[0] * kProbeGridSize / kTextureSize;
 					const int y = mouseCubeFacePosition[1] * kProbeGridSize / kTextureSize;
 					
+					Assert(x >= 0 && x < kProbeGridSize);
 					Assert(y >= 0 && y < kProbeGridSize);
 					
 					const int probeIndex =
 						cubeFaceIndex * kProbeGridSize * kProbeGridSize +
 						y * kProbeGridSize;
 					
+					// draw the impulse reponse probe directly underneath the mouse cursor
+					setColor(255, 200, 200);
+					drawImpulseResponseProbes(impulseResponseProbesOverCube + probeIndex + x, 1, lattice);
+					
+					// draw the line of impulse reponse probes along the a-xis underneath the mouse cursor
 					setColor(255, 63, 63);
 					drawImpulseResponseProbes(impulseResponseProbesOverCube + probeIndex, kProbeGridSize, lattice);
 				}
