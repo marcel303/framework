@@ -2,6 +2,7 @@
 #include "gpu.h"
 #include "gpuSimulationContext.h"
 #include "gpuSources.h"
+#include "impulseResponse.h"
 #include "lattice.h"
 #include "Log.h"
 #include <math.h>
@@ -15,9 +16,10 @@ GpuSimulationContext::~GpuSimulationContext()
 {
 	Assert(vertexBuffer == nullptr);
 	Assert(integrateProgram == nullptr);
+	Assert(integrateImpulseResponseProgram == nullptr);
 }
 
-bool GpuSimulationContext::init(Lattice & in_lattice)
+bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseProbe * in_probes, const int in_numProbes)
 {
 	if (gpuContext.isValid() == false)
 	{
@@ -35,6 +37,15 @@ bool GpuSimulationContext::init(Lattice & in_lattice)
 		
 		//
 		
+		probes = in_probes;
+		numProbes = in_numProbes;
+		
+		cosSinBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(float) * 2 * kNumProbeFrequencies);
+		
+		impulseResponseProbesBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_ONLY, sizeof(ImpulseResponseProbe) * numProbes);
+		
+		//
+		
 		computeEdgeForcesProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
 		
 		if (computeEdgeForcesProgram->updateSource(computeEdgeForces_source) == false)
@@ -47,8 +58,19 @@ bool GpuSimulationContext::init(Lattice & in_lattice)
 		if (integrateProgram->updateSource(integrate_source) == false)
 			return false;
 		
+		//
+		
+		integrateImpulseResponseProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
+		
+		if (integrateImpulseResponseProgram->updateSource(integrateImpulseResponse_source) == false)
+			return false;
+		
+		//
+		
 		sendEdgesToGpu();
 		sendVerticesToGpu();
+		
+		sendImpulseReponsesToGpu();
 		
 		return true;
 	}
@@ -56,6 +78,14 @@ bool GpuSimulationContext::init(Lattice & in_lattice)
 
 bool GpuSimulationContext::shut()
 {
+	if (integrateImpulseResponseProgram != nullptr)
+	{
+		integrateImpulseResponseProgram->shut();
+		
+		delete integrateImpulseResponseProgram;
+		integrateImpulseResponseProgram = nullptr;
+	}
+	
 	if (integrateProgram != nullptr)
 	{
 		integrateProgram->shut();
@@ -71,6 +101,12 @@ bool GpuSimulationContext::shut()
 		delete computeEdgeForcesProgram;
 		computeEdgeForcesProgram = nullptr;
 	}
+	
+	delete impulseResponseProbesBuffer;
+	impulseResponseProbesBuffer = nullptr;
+	
+	delete cosSinBuffer;
+	cosSinBuffer = nullptr;
 	
 	delete edgeBuffer;
 	edgeBuffer = nullptr;
@@ -132,6 +168,18 @@ bool GpuSimulationContext::sendEdgesToGpu()
 	return true;
 }
 
+bool GpuSimulationContext::sendImpulseReponsesToGpu()
+{
+	Assert(false); // todo : implement
+	return false;
+}
+
+bool GpuSimulationContext::fetchImpulseResponsesFromGpu()
+{
+	Assert(false); // todo : implement
+	return false;
+}
+
 bool GpuSimulationContext::computeEdgeForces(const float tension)
 {
 	//Benchmark bm("computeEdgeForces_GPU");
@@ -174,6 +222,30 @@ bool GpuSimulationContext::integrate(Lattice & lattice, const float dt, const fl
 	if (integrateKernel.setArg(0, *vertexBuffer) != CL_SUCCESS ||
 		integrateKernel.setArg(1, dt) != CL_SUCCESS ||
 		integrateKernel.setArg(2, retain) != CL_SUCCESS)
+	{
+		LOG_ERR("failed to set buffer arguments for kernel", 0);
+		return false;
+	}
+	
+	if (gpuContext.commandQueue->enqueueNDRangeKernel(integrateKernel, cl::NullRange, cl::NDRange(numVertices), cl::NDRange(64)) != CL_SUCCESS)
+	{
+		LOG_ERR("failed to enqueue kernel", 0);
+		return false;
+	}
+	
+	gpuContext.commandQueue->enqueueBarrierWithWaitList();
+	
+	return true;
+}
+
+bool GpuSimulationContext::integrateImpulseResponse(const float dt)
+{
+	cl::Kernel integrateKernel(*integrateImpulseResponseProgram->program, "integrateImpulseResponse");
+	
+	if (integrateKernel.setArg(0, *vertexBuffer) != CL_SUCCESS ||
+		integrateKernel.setArg(1, *cosSinBuffer) != CL_SUCCESS ||
+		integrateKernel.setArg(2, *impulseResponseProbesBuffer) != CL_SUCCESS ||
+		integrateKernel.setArg(3, dt) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to set buffer arguments for kernel", 0);
 		return false;

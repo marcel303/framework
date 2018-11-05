@@ -483,7 +483,7 @@ static GpuContext * s_gpuContext = nullptr;
 
 static GpuSimulationContext * s_gpuSimulationContext = nullptr;
 
-static bool gpuInit(Lattice & lattice)
+static bool gpuInit(Lattice & lattice, ImpulseResponseProbe * probes, const int numProbes)
 {
 	s_gpuContext = new GpuContext();
 	
@@ -492,7 +492,7 @@ static bool gpuInit(Lattice & lattice)
 	
 	s_gpuSimulationContext = new GpuSimulationContext(*s_gpuContext);
 	
-	if (!s_gpuSimulationContext->init(lattice))
+	if (!s_gpuSimulationContext->init(lattice, probes, numProbes))
 		return false;
 
 	return true;
@@ -883,6 +883,8 @@ int main(int argc, char * argv[])
 	FrameworkImGuiContext guiContext;
 	guiContext.init(true);
 	
+	//
+	
 	for (int i = 0; i < 6; ++i)
 	{
 		s_cubeFaceToWorldMatrices[i] = createCubeFaceMatrix(s_cubeFaceNamesGL[i]);
@@ -898,6 +900,8 @@ int main(int argc, char * argv[])
 		randomizeCubeFace(cube->faces[i], 0, 1, 0.f, 1.f);
 	}
 	
+	//
+	
 	GLuint textureGL[6];
 	
 	for (int i = 0; i < 6; ++i)
@@ -905,21 +909,19 @@ int main(int argc, char * argv[])
 		textureGL[i] = textureToGL(cube->faces[i].textureArray[0]);
 	}
 	
+	//
+	
 	ShapeDefinition shapeDefinition;
 	shapeDefinition.makeRandomShape(ShapeDefinition::kMaxPlanes);
 	
 	shapeDefinition.loadFromFile("shape1.txt");
 	
+	//
+	
 	Lattice lattice;
 	lattice.init();
 	
-	gpuInit(lattice);
-	
-	Assert(sizeof(Lattice::Vertex) == 5*3*4);
-	Assert(sizeof(Lattice::Edge) == 16);
-	
-	ComputeEditor computeEdgeForcesEditor(s_gpuSimulationContext->computeEdgeForcesProgram);
-	ComputeEditor integrateEditor(s_gpuSimulationContext->integrateProgram);
+	//
 	
 	ImpulseResponsePhaseState impulseResponsePhaseState;
 	impulseResponsePhaseState.init();
@@ -947,6 +949,16 @@ int main(int argc, char * argv[])
 			}
 		}
 	}
+	
+	//
+	
+	gpuInit(lattice, impulseResponseProbesOverCube, kNumProbes);
+	
+	Assert(sizeof(Lattice::Vertex) == 5*3*4);
+	Assert(sizeof(Lattice::Edge) == 16);
+	
+	ComputeEditor computeEdgeForcesEditor(s_gpuSimulationContext->computeEdgeForcesProgram);
+	ComputeEditor integrateEditor(s_gpuSimulationContext->integrateProgram);
 	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
 	

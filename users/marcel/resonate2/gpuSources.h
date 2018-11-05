@@ -172,3 +172,67 @@ void kernel integrate(
 	vertices[ID] = v;
 }
 )SHADER";
+
+static const char * integrateImpulseResponse_source =
+R"SHADER(
+typedef struct Vector
+{
+	float x;
+	float y;
+	float z;
+} Vector;
+
+typedef struct Vertex
+{
+	Vector p;
+	Vector p_init;
+	Vector n;
+	
+	// physics stuff
+	Vector f;
+	Vector v;
+} Vertex;
+
+#define kNumProbeFrequencies 128 // todo : must match declaration in cpp file!
+
+typedef struct CosSinTable
+{
+	float cosSin[kNumProbeFrequencies][2];
+} CosSinTable;
+
+typedef struct ImpulseResponseProbe
+{
+	float response[kNumProbeFrequencies][2];
+	
+	int vertexIndex;
+} ImpulseResponseProbe;
+
+void kernel integrateImpulseResponse(
+	global Vertex * restrict vertices,
+	global CosSinTable * restrict cosSinTable, // todo : should be made constant ?
+	global ImpulseResponseProbe * restrict probes,
+	float dt)
+{
+	int ID = get_global_id(0);
+	
+	// measureValueAtVertex(..)
+	
+	Vertex vertex = vertices[ID];
+	
+	const float dx = vertex.p.x - vertex.p_init.x;
+	const float dy = vertex.p.y - vertex.p_init.y;
+	const float dz = vertex.p.z - vertex.p_init.z;
+
+	const float value = sqrt(dx * dx + dy * dy + dz * dz);
+	
+	// measureValue(..)
+	
+	global ImpulseResponseProbe * probe = probes + ID;
+	
+	for (int i = 0; i < kNumProbeFrequencies; ++i)
+	{
+		probe->response[i][0] += cosSinTable->cosSin[i][0] * value * dt;
+		probe->response[i][1] += cosSinTable->cosSin[i][1] * value * dt;
+	}
+}
+)SHADER";
