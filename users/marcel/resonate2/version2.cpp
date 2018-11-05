@@ -161,7 +161,7 @@ static void projectDirectionToCubeFace(Vec3Arg direction, int & cubeFaceIndex, V
 
 static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & shape)
 {
-	const int numVertices = 6 * kTextureSize * kTextureSize;
+	const int numVertices = kNumVertices;
 	
 	for (int i = 0; i < numVertices; ++i)
 	{
@@ -189,7 +189,7 @@ static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & s
 
 static void projectLatticeOntoShere(Lattice & lattice)
 {
-	const int numVertices = 6 * kTextureSize * kTextureSize;
+	const int numVertices = kNumVertices;
 	
 	for (int i = 0; i < numVertices; ++i)
 	{
@@ -237,7 +237,7 @@ static void generateFibonacciSpherePoints(const int numPoints, Vec3 * points)
 
 static void createFibonnacciSphere(Lattice & lattice)
 {
-	const int numVertices = 6 * kTextureSize * kTextureSize;
+	const int numVertices = kNumVertices;
 	
 	Vec3 points[numVertices];
 	generateFibonacciSpherePoints(numVertices, points);
@@ -339,7 +339,7 @@ static VertexColorMode s_vertexColorMode = kVertexColorMode_N;
 
 static void colorizeLatticeVertices(const Lattice & lattice, Color * colors)
 {
-	const int numVertices = 6 * kTextureSize * kTextureSize;
+	const int numVertices = kNumVertices;
 	
 	if (s_vertexColorMode == kVertexColorMode_Velocity)
 	{
@@ -394,7 +394,7 @@ static void drawLatticeVertices(const Lattice & lattice)
 {
 	gxBegin(GL_POINTS);
 	{
-		const int numVertices = 6 * kTextureSize * kTextureSize;
+		const int numVertices = kNumVertices;
 		
 		for (int i = 0; i < numVertices; ++i)
 		{
@@ -408,7 +408,7 @@ static void drawLatticeVertices(const Lattice & lattice)
 
 static void drawLatticeEdges(const Lattice & lattice)
 {
-	const int numVertices = 6 * kTextureSize * kTextureSize;
+	const int numVertices = kNumVertices;
 	
 	Color colors[numVertices];
 	
@@ -433,7 +433,7 @@ static void drawLatticeEdges(const Lattice & lattice)
 
 static void drawLatticeFaces(const Lattice & lattice)
 {
-	const int numVertices = 6 * kTextureSize * kTextureSize;
+	const int numVertices = kNumVertices;
 	
 	Color colors[numVertices];
 	
@@ -445,13 +445,8 @@ static void drawLatticeFaces(const Lattice & lattice)
 		{
 			for (int y = 0; y < kTextureSize - 1; ++y)
 			{
-				const int index1 =
-					i * kTextureSize * kTextureSize +
-					(y + 0) * kTextureSize;
-				
-				const int index2 =
-					i * kTextureSize * kTextureSize +
-					(y + 1) * kTextureSize;
+				const int index1 = calcVertexIndex(i, 0, y + 0);
+				const int index2 = calcVertexIndex(i, 0, y + 1);
 				
 				for (int x = 0; x < kTextureSize - 1; ++x)
 				{
@@ -570,7 +565,7 @@ static void simulateLattice_integrate(Lattice & lattice, const float dt, const f
 {
 	//Benchmark bm("simulateLattice_Integrate");
 	
-	const int numVertices = 6 * kTextureSize * kTextureSize;
+	const int numVertices = kNumVertices;
 	
 	const float retain = powf(1.f - falloff, dt / 1000.f);
 	
@@ -674,9 +669,13 @@ struct ImpulseResponseProbe
 {
 	float response[kNumProbeFrequencies][2];
 	
-	void init()
+	int vertexIndex;
+	
+	void init(const int in_vertexIndex)
 	{
 		memset(this, 0, sizeof(*this));
+		
+		vertexIndex = in_vertexIndex;
 	}
 	
 	void measure(const ImpulseResponsePhaseState & state, const float value)
@@ -769,7 +768,7 @@ static void drawImpulseResponseGraphs(const ImpulseResponsePhaseState & state, c
 
 static void squashLattice(Lattice & lattice)
 {
-	const int numVertices = 6 * kTextureSize * kTextureSize;
+	const int numVertices = kNumVertices;
 
 	for (int i = 0; i < numVertices; ++i)
 	{
@@ -965,12 +964,12 @@ int main(int argc, char * argv[])
 	impulseResponsePhaseState.init();
 	
 	ImpulseResponseProbe impulseResponseProbe;
-	impulseResponseProbe.init();
+	impulseResponseProbe.init(calcVertexIndex(0, kTextureSize/2, kTextureSize/5));
 	int lastResponseProbeVertexIndex = -1;
 	
 	ImpulseResponseProbe impulseResponseProbesOverLineSegment[kTextureSize];
 	for (int i = 0; i < kTextureSize; ++i)
-		impulseResponseProbesOverLineSegment[i].init();
+		impulseResponseProbesOverLineSegment[i].init(calcVertexIndex(0, i, kTextureSize/5));
 	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
 	
@@ -1128,9 +1127,9 @@ int main(int argc, char * argv[])
 					squashLattice(lattice);
 					s_gpuSimulationContext->sendVerticesToGpu();
 					s_gpuSimulationContext->sendEdgesToGpu();
-					impulseResponseProbe.init();
+					impulseResponseProbe.init(impulseResponseProbe.vertexIndex);
 					for (auto & probe : impulseResponseProbesOverLineSegment)
-						probe.init();
+						probe.init(probe.vertexIndex);
 					simulateLattice = true;
 					simulationTime_ms = 0.f;
 				}
@@ -1240,18 +1239,18 @@ int main(int argc, char * argv[])
 					{
 						// perform impulse response at mouse location
 						
-						const int vertexIndex =
-							mouseCubeFaceIndex * kTextureSize * kTextureSize +
-							mouseCubeFacePosition[0] * kTextureSize +
-							mouseCubeFacePosition[1];
+						const int vertexIndex = calcVertexIndex(
+							mouseCubeFaceIndex,
+							mouseCubeFacePosition[0],
+							mouseCubeFacePosition[1]);
 						
 						if (vertexIndex != lastResponseProbeVertexIndex)
 						{
 							lastResponseProbeVertexIndex = vertexIndex;
-							impulseResponseProbe.init();
+							impulseResponseProbe.init(vertexIndex);
 						}
 						
-						const Lattice::Vertex & vertex = lattice.vertices[vertexIndex];
+						const Lattice::Vertex & vertex = lattice.vertices[impulseResponseProbe.vertexIndex];
 						
 					#if 0
 						const float value =
@@ -1275,16 +1274,7 @@ int main(int argc, char * argv[])
 					{
 						auto & probe = impulseResponseProbesOverLineSegment[i];
 						
-						const int faceIndex = 0;
-						const int x = i;
-						const int y = kTextureSize / 5;
-						
-						const int vertexIndex =
-							faceIndex * kTextureSize * kTextureSize +
-							y * kTextureSize +
-							x;
-						
-						auto & vertex = lattice.vertices[vertexIndex];
+						auto & vertex = lattice.vertices[probe.vertexIndex];
 						
 						const float dx = vertex.p.x - vertex.p_init.x;
 						const float dy = vertex.p.y - vertex.p_init.y;

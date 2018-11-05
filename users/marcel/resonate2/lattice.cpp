@@ -19,10 +19,7 @@ void Lattice::init()
 		{
 			for (int y = 0; y < kTextureSize; ++y)
 			{
-				const int index =
-					i * kTextureSize * kTextureSize +
-					y * kTextureSize +
-					x;
+				const int index = calcVertexIndex(i, x, y);
 				
 				const float xf = ((x + .5f) / float(kTextureSize) - .5f) * 2.f;
 				const float yf = ((y + .5f) / float(kTextureSize) - .5f) * 2.f;
@@ -42,15 +39,8 @@ void Lattice::init()
 	
 	auto addEdge = [&](const int faceIndex, const int x1, const int y1, const int x2, const int y2, const float weight)
 	{
-		const int index1 =
-			faceIndex * kTextureSize * kTextureSize +
-			y1 * kTextureSize +
-			x1;
-		
-		const int index2 =
-			faceIndex * kTextureSize * kTextureSize +
-			y2 * kTextureSize +
-			x2;
+		const int index1 = calcVertexIndex(faceIndex, x1, y1);
+		const int index2 = calcVertexIndex(faceIndex, x2, y2);
 		
 		Edge edge;
 		edge.vertex1 = index1;
@@ -84,15 +74,8 @@ void Lattice::init()
 	
 	auto addEdge2 = [&](const int faceIndex1, const int x1, const int y1, const int faceIndex2, const int x2, const int y2, const float weight)
 	{
-		const int index1 =
-			faceIndex1 * kTextureSize * kTextureSize +
-			y1 * kTextureSize +
-			x1;
-		
-		const int index2 =
-			faceIndex2 * kTextureSize * kTextureSize +
-			y2 * kTextureSize +
-			x2;
+		const int index1 = calcVertexIndex(faceIndex1, x1, y1);
+		const int index2 = calcVertexIndex(faceIndex2, x2, y2);
 		
 		Edge edge;
 		edge.vertex1 = index1;

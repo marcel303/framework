@@ -4,6 +4,8 @@
 #include <math.h>
 #include <vector>
 
+static const int kNumVertices = 6 * kTextureSize * kTextureSize;
+
 struct Lattice
 {
 	struct Vector
@@ -65,7 +67,7 @@ struct Lattice
 		float initialDistance;
 	};
 	
-	Vertex vertices[6 * kTextureSize * kTextureSize];
+	Vertex vertices[kNumVertices];
 	
 	std::vector<Edge> edges;
 	
@@ -73,3 +75,11 @@ struct Lattice
 	
 	void finalize();
 };
+
+static inline int calcVertexIndex(const int cubeFaceIndex, const int x, const int y)
+{
+	return
+		cubeFaceIndex * kTextureSize * kTextureSize +
+		y * kTextureSize +
+		x;
+}

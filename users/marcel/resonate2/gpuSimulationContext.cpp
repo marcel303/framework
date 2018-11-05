@@ -26,7 +26,7 @@ bool GpuSimulationContext::init(Lattice & in_lattice)
 	else
 	{
 		lattice = &in_lattice;
-		numVertices = 6 * kTextureSize * kTextureSize;
+		numVertices = kNumVertices;
 		numEdges = in_lattice.edges.size();
 		
 		vertexBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(Lattice::Vertex) * numVertices);
@@ -163,7 +163,7 @@ bool GpuSimulationContext::integrate(Lattice & lattice, const float dt, const fl
 {
 	//Benchmark bm("simulateLattice_Integrate_GPU");
 	
-	const int numVertices = 6 * kTextureSize * kTextureSize;
+	const int numVertices = kNumVertices;
 	
 	const float retain = powf(1.f - falloff, dt / 1000.f);
 	
