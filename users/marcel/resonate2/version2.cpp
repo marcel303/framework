@@ -738,18 +738,20 @@ static void drawImpulseResponseGraph(const ImpulseResponseState & state, const f
 	}
 }
 
-static void drawImpulseResponseGraphs(const ImpulseResponseState & state, const float * responses, const int numGraphs, const bool drawFrequencyTable, const float maxResponse = -1.f)
+static void drawImpulseResponseGraphs(const ImpulseResponseState & state, const float * responses, const int numGraphs, const bool drawFrequencyTable, const float maxResponse = -1.f, const int highlightIndex = -1)
 {
 	gxPushMatrix();
 	{
 		for (int i = 0; i < numGraphs; ++i)
 		{
+			const float saturation = (i == highlightIndex) ? 1.f : ((i + .5f) / numGraphs);
+			
 			drawImpulseResponseGraph(
 				state,
 				responses + i * kNumProbeFrequencies,
 				drawFrequencyTable && (i == numGraphs - 1),
 				maxResponse,
-				(i + .5f) / numGraphs);
+				saturation);
 			
 			gxTranslatef(1, 3, 0);
 		}
@@ -897,9 +899,9 @@ static void testRaster()
 	framework.shutdown();
 }
 
-static bool cirdToImpulseResponseProbes(const CIRD & cird, ImpulseResponseState & state, ImpulseResponseProbe * probes, const int probeGridSize)
+static bool cirdToImpulseResponseData(const CIRD & cird, ImpulseResponseState & state, ImpulseResponseProbe * probes, const int probeGridSize)
 {
-	// copy information from CIRD to impulse response probes
+	// check if we can handle the CIRD data. that is, whether it isn't too big to fit our arrays
 	
 	if (cird.header.numFrequencies > kNumProbeFrequencies ||
 		cird.header.cubeMapSx != probeGridSize ||
@@ -908,9 +910,13 @@ static bool cirdToImpulseResponseProbes(const CIRD & cird, ImpulseResponseState 
 		return false;
 	}
 	
+	// initialize the impulse response state with the frequency table from the CIRD
+	
 	state = ImpulseResponseState();
 	
 	state.init(cird.header.frequencies, cird.header.numFrequencies);
+	
+	// copy the information from the CIRD to the impulse response probes
 	
 	const int numProbes = probeGridSize * probeGridSize;
 
@@ -950,19 +956,22 @@ static bool cirdToImpulseResponseProbes(const CIRD & cird, ImpulseResponseState 
 	return true;
 }
 
-static bool impulseResponseProbesToCird(const ImpulseResponseState & state, const ImpulseResponseProbe * probes, const int probeGridSize, CIRD & cird)
+static bool impulseResponseDataToCird(const ImpulseResponseState & state, const ImpulseResponseProbe * probes, const int probeGridSize, CIRD & cird)
 {
+	// initialize the CIRD with our frequency table
+	
 	float frequencies[kNumProbeFrequencies];
 	for (int i = 0; i < kNumProbeFrequencies; ++i)
 		frequencies[i] = state.frequency[i];
 
 	if (cird.initialize(kNumProbeFrequencies, probeGridSize, probeGridSize, frequencies) == false)
 	{
+		logError("failed to initialize the CIRD");
 		return false;
 	}
 	else
 	{
-		// todo : save impulse response data to CIRD image arrays
+		// save the impulse response data to the CIRD image arrays
 		
 		for (int faceIndex = 0; faceIndex < 6; ++faceIndex)
 		{
@@ -1014,7 +1023,7 @@ int main(int argc, char * argv[])
 	FrameworkImGuiContext guiContext;
 	guiContext.init(true);
 	
-	//
+	// initialize the cube map and associated data
 	
 	for (int i = 0; i < 6; ++i)
 	{
@@ -1040,26 +1049,28 @@ int main(int argc, char * argv[])
 		textureGL[i] = textureToGL(cube->faces[i].textureArray[0]);
 	}
 	
-	//
+	// initialize the shape
 	
 	ShapeDefinition shapeDefinition;
 	shapeDefinition.makeRandomShape(ShapeDefinition::kMaxPlanes);
 	
 	shapeDefinition.loadFromFile("shape1.txt");
 	
-	//
+	// initialize the lattice
 	
 	Lattice lattice;
 	lattice.init();
 	
-	//
+	// initialize the impulse response probes and associated state
 	
 	ImpulseResponseState impulseResponseState;
 	impulseResponseState.init();
 	
 	const int kProbeGridSize = 64;
 	const int kNumProbes = 6 * kProbeGridSize * kProbeGridSize;
+	
 	ImpulseResponseProbe * impulseResponseProbes = new ImpulseResponseProbe[kNumProbes];
+	
 	for (int cubeFaceIndex = 0; cubeFaceIndex < 6; ++cubeFaceIndex)
 	{
 		for (int y = 0; y < kProbeGridSize; ++y)
@@ -1081,7 +1092,7 @@ int main(int argc, char * argv[])
 		}
 	}
 	
-	//
+	// initialize the GPU simulation context
 	
 	gpuInit(lattice, &impulseResponseState, impulseResponseProbes, kNumProbes);
 	
@@ -1090,6 +1101,9 @@ int main(int argc, char * argv[])
 	
 	ComputeEditor computeEdgeForcesEditor(s_gpuSimulationContext->computeEdgeForcesProgram);
 	ComputeEditor integrateEditor(s_gpuSimulationContext->integrateProgram);
+	ComputeEditor integrateImpulseResponseEditor(s_gpuSimulationContext->integrateImpulseResponseProgram);
+	
+	// editable state through ImGui
 	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
 	
@@ -1114,6 +1128,8 @@ int main(int argc, char * argv[])
 	int numSimulationStepsPerDraw = 10;
 	float velocityFalloff = .2f;
 	
+	// camera control and ray cast
+	
 	bool doCameraControl = false;
 	
 	Camera3d camera;
@@ -1122,10 +1138,14 @@ int main(int argc, char * argv[])
 	int mouseCubeFaceIndex = -1;
 	int mouseCubeFacePosition[2] = { -1, -1 };
 	
+	// simulation state
+	
 	float simulationTime_ms = 0.f;
 	
 	while (!framework.quitRequested)
 	{
+		// when camera control is active, hide the mouse cursor and set it to relative mode
+		
 		if (doCameraControl)
 		{
 			mouse.showCursor(false);
@@ -1142,6 +1162,8 @@ int main(int argc, char * argv[])
 		if (keyboard.wentDown(SDLK_ESCAPE))
 			framework.quitRequested = true;
 		
+		// toggle UI visibility when the tab key is pressed
+		
 		if (keyboard.wentDown(SDLK_TAB))
 		{
 			showGui = !showGui;
@@ -1156,6 +1178,8 @@ int main(int argc, char * argv[])
 			else
 				doCameraControl = false;
 		}
+		
+		// show the UI
 		
 		bool inputIsCaptured = doCameraControl;
 		
@@ -1195,7 +1219,7 @@ int main(int argc, char * argv[])
 								
 								if (cird.loadFromFile(path))
 								{
-									cirdToImpulseResponseProbes(
+									cirdToImpulseResponseData(
 										cird,
 										impulseResponseState,
 										impulseResponseProbes,
@@ -1217,7 +1241,7 @@ int main(int argc, char * argv[])
 							{
 								CIRD cird;
 								
-								if (impulseResponseProbesToCird(
+								if (impulseResponseDataToCird(
 									impulseResponseState,
 									impulseResponseProbes,
 									kProbeGridSize,
@@ -1392,10 +1416,20 @@ int main(int argc, char * argv[])
 				integrateEditor.Render();
 			}
 			ImGui::End();
+			
+			ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
+			if (ImGui::Begin("Compute #2", nullptr,
+				ImGuiWindowFlags_MenuBar))
+			{
+				integrateImpulseResponseEditor.Render();
+			}
+			ImGui::End();
 		}
 		guiContext.processEnd();
 		
 		const float dt = framework.timeStep;
+		
+		// toggle camera control when the left mouse button is pressed (and ImGui doesn't already capture input)
 		
 		if (doCameraControl)
 		{
@@ -1420,6 +1454,7 @@ int main(int argc, char * argv[])
 				
 				// send impulse response values to the gpu
 			// todo : only upload impulse-response values once, similar to how we cache vertices and edges on the gpu
+			
 				s_gpuSimulationContext->sendImpulseResponseProbesToGpu();
 				
 				for (int i = 0; i < numSimulationStepsPerDraw; ++i)
@@ -1437,6 +1472,8 @@ int main(int argc, char * argv[])
 						kNumProbes,
 						simulationTimeStep_ms / 1000.f);
 				}
+				
+				// refresh the vertices and impulse responses with the data computed on the GPU. we will need it for visualization purposes
 				
 				s_gpuSimulationContext->fetchVerticesFromGpu();
 				
@@ -1478,6 +1515,8 @@ int main(int argc, char * argv[])
 				
 				if (showAxis)
 				{
+					// show XYZ axis
+					
 					gxBegin(GL_LINES);
 					setColor(colorRed);
 					gxVertex3f(0, 0, 0);
@@ -1518,6 +1557,8 @@ int main(int argc, char * argv[])
 			
 				if (showCube)
 				{
+					// todo : update cube map with data from the impulse response probes
+					
 					for (int i = 0; i < 6; ++i)
 					{
 						gxSetTexture(textureGL[i]);
@@ -1533,11 +1574,13 @@ int main(int argc, char * argv[])
 				
 				if (showCubePoints)
 				{
-					setColor(63, 63, 255);
+					// draw a point for each texel of the cube map. optionally project these points onto the shape
+					
 					for (int i = 0; i < 6; ++i)
 					{
 						const Mat4x4 & matrix = s_cubeFaceToWorldMatrices[i];
 						
+						setColor(63, 63, 255);
 						gxBegin(GL_POINTS);
 						for (int x = 0; x < kTextureSize; ++x)
 						{
@@ -1574,9 +1617,11 @@ int main(int argc, char * argv[])
 				
 				if (showIntersectionPoints)
 				{
+					// show a random distribution of points projected onto the shape
+					
 					setColor(colorWhite);
 					gxBegin(GL_POINTS);
-					for (int i = 0; i < 10000; ++i)
+					for (int i = 0; i < 20000; ++i)
 					{
 						const float dx = random(-1.f, +1.f);
 						const float dy = random(-1.f, +1.f);
@@ -1618,6 +1663,8 @@ int main(int argc, char * argv[])
 				
 				if (raycastCubePointsUsingMouse && hasMouseCubeFace)
 				{
+					// show the impulse response probe locations at the mouse cursor
+					
 					const int cubeFaceIndex = mouseCubeFaceIndex;
 					const int x = mouseCubeFacePosition[0] * kProbeGridSize / kTextureSize;
 					const int y = mouseCubeFacePosition[1] * kProbeGridSize / kTextureSize;
@@ -1640,12 +1687,17 @@ int main(int argc, char * argv[])
 				
 				if (showImpulseResponseProbeLocations)
 				{
+					// show all of the impulse response probe locations
+					
 					setColor(127, 0, 0);
 					drawImpulseResponseProbes(impulseResponseProbes, kNumProbes, lattice);
 				}
 				
 				if (raycastCubePointsUsingMouse)
 				{
+					// intersect the shape using a raycast from the camera into the scene and show some
+					// useful information about the location we hit
+					
 					const Vec3 rayOrigin = camera.position;
 					const Vec3 rayDirection = camera.getWorldMatrix().GetAxis(2);
 					
@@ -1654,6 +1706,8 @@ int main(int argc, char * argv[])
 					const Vec3 p = rayOrigin + rayDirection * t;
 					
 					const float pointSize = clamp<float>(4.f / t, .01f, 80.f);
+					
+					// show a yellow rectangle at the point of intersection
 					
 					setColor(colorYellow);
 					glPointSize(pointSize);
@@ -1692,7 +1746,7 @@ int main(int argc, char * argv[])
 					glEnable(GL_DEPTH_TEST);
 					gxPopMatrix();
 					
-					//
+					// cache the raycast information so it can be used elsewhere
 					
 					hasMouseCubeFace = true;
 					mouseCubeFaceIndex = cubeFaceIndex;
@@ -1712,11 +1766,14 @@ int main(int argc, char * argv[])
 			
 			if (showImpulseResponseGraph && hasMouseCubeFace)
 			{
+				// show the impulse response graphs for the location of the raycast
+				
 				gxPushMatrix();
 				{
 					gxTranslatef(VIEW_SX - 740, 10, 0);
 					
 					const int cubeFaceIndex = mouseCubeFaceIndex;
+					const int x = mouseCubeFacePosition[0] * kProbeGridSize / kTextureSize;
 					const int y = mouseCubeFacePosition[1] * kProbeGridSize / kTextureSize;
 			
 					Assert(y >= 0 && y < kProbeGridSize);
@@ -1736,7 +1793,7 @@ int main(int argc, char * argv[])
 						probe.calcResponseMagnitude(responses + i * kNumProbeFrequencies);
 					}
 					
-					drawImpulseResponseGraphs(impulseResponseState, responses, kTextureSize, true);
+					drawImpulseResponseGraphs(impulseResponseState, responses, kTextureSize, true, -1.f, x);
 				}
 				gxPopMatrix();
 			}
