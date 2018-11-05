@@ -1,6 +1,7 @@
 #include "Benchmark.h"
 #include "computeEditor.h"
 #include "constants.h"
+#include "fmt_cird.h"
 #include "framework.h"
 #include "gpu.h"
 #include "gpuSimulationContext.h"
@@ -896,6 +897,107 @@ static void testRaster()
 	framework.shutdown();
 }
 
+static bool cirdToImpulseResponseProbes(const CIRD & cird, ImpulseResponsePhaseState & state, ImpulseResponseProbe * probes, const int probeGridSize)
+{
+	// copy information from CIRD to impulse response probes
+	
+	if (cird.header.numFrequencies > kNumProbeFrequencies ||
+		cird.header.cubeMapSx != probeGridSize ||
+		cird.header.cubeMapSy != probeGridSize)
+	{
+		return false;
+	}
+	
+	state = ImpulseResponsePhaseState();
+	
+	state.init(cird.header.frequencies, cird.header.numFrequencies);
+	
+	const int numProbes = probeGridSize * probeGridSize;
+
+	for (int i = 0; i < numProbes; ++i)
+		probes[i].init(probes[i].vertexIndex);
+	
+	for (int faceIndex = 0; faceIndex < 6; ++faceIndex)
+	{
+		const CIRD::Face & face = cird.cube.faces[faceIndex];
+		
+		for (int imageIndex = 0; imageIndex < cird.header.numFrequencies; ++imageIndex)
+		{
+			const int frequencyIndex = imageIndex;
+			
+			const CIRD::Image & image = face.images[imageIndex];
+			
+			for (int y = 0; y < cird.header.cubeMapSy; ++y)
+			{
+				for (int x = 0; x < cird.header.cubeMapSx; ++x)
+				{
+					const int probeIndex =
+						faceIndex * probeGridSize * probeGridSize +
+						y * probeGridSize +
+						x;
+					
+					ImpulseResponseProbe & probe = probes[probeIndex];
+					
+					const int imageValueIndex = cird.calcImageValueIndex(x, y);
+					
+					probe.response[frequencyIndex][0] = image.values[imageValueIndex].real;
+					probe.response[frequencyIndex][1] = image.values[imageValueIndex].imag;
+				}
+			}
+		}
+	}
+	
+	return true;
+}
+
+static bool impulseResponseProbesToCird(const ImpulseResponsePhaseState & state, const ImpulseResponseProbe * probes, const int probeGridSize, CIRD & cird)
+{
+	float frequencies[kNumProbeFrequencies];
+	for (int i = 0; i < kNumProbeFrequencies; ++i)
+		frequencies[i] = state.frequency[i];
+
+	if (cird.initialize(kNumProbeFrequencies, probeGridSize, probeGridSize, frequencies) == false)
+	{
+		return false;
+	}
+	else
+	{
+		// todo : save impulse response data to CIRD image arrays
+		
+		for (int faceIndex = 0; faceIndex < 6; ++faceIndex)
+		{
+			CIRD::Face & face = cird.cube.faces[faceIndex];
+			
+			for (int imageIndex = 0; imageIndex < cird.header.numFrequencies; ++imageIndex)
+			{
+				const int frequencyIndex = imageIndex;
+				
+				CIRD::Image & image = face.images[imageIndex];
+				
+				for (int y = 0; y < cird.header.cubeMapSy; ++y)
+				{
+					for (int x = 0; x < cird.header.cubeMapSx; ++x)
+					{
+						const int probeIndex =
+							faceIndex * probeGridSize * probeGridSize +
+							y * probeGridSize +
+							x;
+						
+						const ImpulseResponseProbe & probe = probes[probeIndex];
+						
+						const int imageValueIndex = cird.calcImageValueIndex(x, y);
+						
+						image.values[imageValueIndex].real = probe.response[frequencyIndex][0];
+						image.values[imageValueIndex].imag = probe.response[frequencyIndex][1];
+					}
+				}
+			}
+		}
+		
+		return true;
+	}
+}
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
@@ -996,7 +1098,7 @@ int main(int argc, char * argv[])
 	bool showIntersectionPoints = false;
 	bool showAxis = true;
 	bool showImpulseResponseGraph = true;
-	bool showImpulseResponseProbeLocations = false;
+	bool showImpulseResponseProbeLocations = true;
 	bool showCubePoints = false;
 	float cubePointScale = 1.f;
 	bool projectCubePoints = false;
@@ -1077,11 +1179,59 @@ int main(int argc, char * argv[])
 							}
 							
 							delete path;
-								path = nullptr;
+							path = nullptr;
 						}
 						
-						ImGui::MenuItem("Load simulated data..");
-						ImGui::MenuItem("Save simulated data..");
+						if (ImGui::MenuItem("Load simulated data.."))
+						{
+							nfdchar_t * path = nullptr;
+							const nfdresult_t result = NFD_OpenDialog("cird", "", &path);
+
+							if (result == NFD_OKAY)
+							{
+								framework.process(); // to make sure the NFD dialog disappears
+								
+								CIRD cird;
+								
+								if (cird.loadFromFile(path))
+								{
+									cirdToImpulseResponseProbes(
+										cird,
+										impulseResponsePhaseState,
+										impulseResponseProbesOverCube,
+										kProbeGridSize);
+								}
+							}
+							
+							delete path;
+							path = nullptr;
+							
+							simulateLattice = false;
+						}
+						if (ImGui::MenuItem("Save simulated data.."))
+						{
+							nfdchar_t * path = nullptr;
+							const nfdresult_t result = NFD_SaveDialog("cird", "", &path);
+
+							if (result == NFD_OKAY)
+							{
+								CIRD cird;
+								
+								if (impulseResponseProbesToCird(
+									impulseResponsePhaseState,
+									impulseResponseProbesOverCube,
+									kProbeGridSize,
+									cird))
+								{
+									framework.process(); // to make sure the NFD dialog disappears
+									
+									cird.saveToFile(path);
+								}
+							}
+							
+							delete path;
+							path = nullptr;
+						}
 						ImGui::Separator();
 						if (ImGui::MenuItem("Quit"))
 							framework.quitRequested = true;

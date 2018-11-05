@@ -13,7 +13,7 @@ struct ImpulseResponsePhaseState
 	
 	float dt = 0.f;
 	
-	void init();
+	void init(const float * frequencies = nullptr, const int numFrequencies = 0);
 	
 	void processBegin(const float in_dt);
 	void processEnd();

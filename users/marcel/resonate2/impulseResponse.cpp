@@ -2,14 +2,22 @@
 #include "lattice.h"
 #include <string.h>
 
-void ImpulseResponsePhaseState::init()
+void ImpulseResponsePhaseState::init(const float * in_frequencies, const int numFrequencies)
 {
 	memset(this, 0, sizeof(*this));
 	
-	for (int i = 0; i < kNumProbeFrequencies; ++i)
+	if (in_frequencies != nullptr)
 	{
-		//frequency[i] = 40.f * pow(2.f, i / 16.f);
-		frequency[i] = 4.f * pow(2.f, i / 16.f);
+		for (int i = 0; i < numFrequencies; ++i)
+			frequency[i] = in_frequencies[i];
+	}
+	else
+	{
+		for (int i = 0; i < kNumProbeFrequencies; ++i)
+		{
+			//frequency[i] = 40.f * pow(2.f, i / 16.f);
+			frequency[i] = 4.f * pow(2.f, i / 16.f);
+		}
 	}
 }
 
