@@ -1239,6 +1239,10 @@ int main(int argc, char * argv[])
 			{
 				Benchmark bm("simulate_gpu");
 				
+				// send impulse response values to the gpu
+			// todo : only upload impulse-response values once, similar to how we cache vertices and edges on the gpu
+				s_gpuSimulationContext->sendImpulseResponseProbesToGpu();
+				
 				for (int i = 0; i < numSimulationStepsPerDraw; ++i)
 				{
 					::simulateLattice_gpu(lattice, simulationTimeStep_ms, scaledLatticeTension, velocityFalloff);
@@ -1249,24 +1253,20 @@ int main(int argc, char * argv[])
 					
 					impulseResponsePhaseState.processBegin(simulationTimeStep_ms / 1000.f);
 					
-					// send impulse response state and values to the gpu
-				// todo : only upload impulse-response values once, similar to how we cache vertices and edges on the gpu
+					// send impulse response state to the gpu
+					
 					s_gpuSimulationContext->sendImpulseResponseStateToGpu();
-					s_gpuSimulationContext->sendImpulseResponseProbesToGpu();
 					
 					// execute impulse-response integration kernel
 					
 					s_gpuSimulationContext->integrateImpulseResponse(impulseResponsePhaseState.dt);
 					
-					// fetch impulse response values from gpu
-				// todo : remove this step
-					
-					s_gpuSimulationContext->fetchImpulseResponseProbesFromGpu();
-					
 					impulseResponsePhaseState.processEnd();
 				}
 				
 				s_gpuSimulationContext->fetchVerticesFromGpu();
+				
+				s_gpuSimulationContext->fetchImpulseResponseProbesFromGpu();
 			}
 			else
 			{

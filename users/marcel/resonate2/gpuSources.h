@@ -217,7 +217,9 @@ void kernel integrateImpulseResponse(
 	
 	// measureValueAtVertex(..)
 	
-	Vertex vertex = vertices[ID];
+	global ImpulseResponseProbe * probe = probes + ID;
+	
+	const Vertex vertex = vertices[probe->vertexIndex];
 	
 	const float dx = vertex.p.x - vertex.p_init.x;
 	const float dy = vertex.p.y - vertex.p_init.y;
@@ -226,8 +228,6 @@ void kernel integrateImpulseResponse(
 	const float value = sqrt(dx * dx + dy * dy + dz * dz);
 	
 	// measureValue(..)
-	
-	global ImpulseResponseProbe * probe = probes + ID;
 	
 	for (int i = 0; i < kNumProbeFrequencies; ++i)
 	{
