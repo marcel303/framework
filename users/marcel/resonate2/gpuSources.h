@@ -10,6 +10,8 @@ typedef struct Vector
 typedef struct Vertex
 {
 	Vector p;
+	Vector p_init;
+	Vector n;
 	
 	// physics stuff
 	Vector f;
@@ -51,7 +53,7 @@ void kernel computeEdgeForces(
 	global Vertex * restrict vertices,
 	float tension)
 {
-	const float eps = 1e-4f;
+	const float eps = 1e-12f;
 	
 	const int ID = get_global_id(0);
 	
@@ -108,6 +110,8 @@ typedef struct Vector
 typedef struct Vertex
 {
 	Vector p;
+	Vector p_init;
+	Vector n;
 	
 	// physics stuff
 	Vector f;
@@ -127,9 +131,35 @@ void kernel integrate(
 	v.v.y *= retain;
 	v.v.z *= retain;
 	
+#if 1
+	// constrain the vertex to the line emanating from (0, 0, 0) towards this vertex. this helps to stabalize
+	// the simulation while at the same time making the resulting impulse-response more pleasing. it sort of
+	// models a more rigid structure where vertices are held in place 'xy' on the plane they sit in through
+	// the forces of the elements in the structure below them
+
+	// todo : constrain vertices using the normal of the plane they sit in instead of the line to (0, 0, 0)
+
+	float nx = v.p.x;
+	float ny = v.p.y;
+	float nz = v.p.z;
+	const float ns = sqrt(nx * nx + ny * ny + nz * nz);
+	nx /= ns;
+	ny /= ns;
+	nz /= ns;
+
+	const float dot =
+		nx * v.f.x +
+		ny * v.f.y +
+		nz * v.f.z;
+
+	v.v.x += nx * dot * dt;
+	v.v.y += ny * dot * dt;
+	v.v.z += nz * dot * dt;
+#else
 	v.v.x += v.f.x * dt;
 	v.v.y += v.f.y * dt;
 	v.v.z += v.f.z * dt;
+#endif
 	
 	v.p.x += v.v.x * dt;
 	v.p.y += v.v.y * dt;

@@ -6,6 +6,8 @@ extern Mat4x4 s_cubeFaceToWorldMatrices[6];
 
 void Lattice::init()
 {
+	edges.clear();
+	
 	for (int i = 0; i < 6; ++i)
 	{
 		const Mat4x4 & matrix = s_cubeFaceToWorldMatrices[i];
@@ -28,8 +30,6 @@ void Lattice::init()
 				
 				vertices[index].p.set(p[0], p[1], p[2]);
 				
-				vertices[index].f.setZero();
-				vertices[index].v.setZero();
 				vertices[index].n = n;
 			}
 		}
@@ -221,6 +221,9 @@ void Lattice::finalize()
 	for (auto & vertex : vertices)
 	{
 		vertex.p_init = vertex.p;
+		
+		vertex.f.setZero();
+		vertex.v.setZero();
 	}
 	
 	for (auto & edge : edges)

@@ -170,23 +170,20 @@ static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & s
 	
 	for (int i = 0; i < numVertices; ++i)
 	{
-		auto & p = lattice.vertices[i].p;
+		auto & v = lattice.vertices[i];
 		
 		int planeIndex;
 		
-		const float t = shape.intersectRay_directional(Vec3(p.x, p.y, p.z), planeIndex);
+		const float t = shape.intersectRay_directional(Vec3(v.p.x, v.p.y, v.p.z), planeIndex);
 		
-		lattice.vertices[i].p.set(
-			p.x * t,
-			p.y * t,
-			p.z * t);
-		
-		lattice.vertices[i].f.setZero();
-		lattice.vertices[i].v.setZero();
+		v.p.set(
+			v.p.x * t,
+			v.p.y * t,
+			v.p.z * t);
 		
 		const Vec3 & n = shape.planes[planeIndex].normal;
 		
-		lattice.vertices[i].n.set(n[0], n[1], n[2]);
+		v.n.set(n[0], n[1], n[2]);
 	}
 
 	lattice.finalize();
@@ -1043,6 +1040,7 @@ int main(int argc, char * argv[])
 	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
 	
+	bool showGui = true;
 	bool showCube = false;
 	bool showIntersectionPoints = false;
 	bool showAxis = true;
@@ -1075,16 +1073,42 @@ int main(int argc, char * argv[])
 	
 	while (!framework.quitRequested)
 	{
+		if (doCameraControl)
+		{
+			mouse.showCursor(false);
+			mouse.setRelative(true);
+		}
+		else
+		{
+			mouse.showCursor(true);
+			mouse.setRelative(false);
+		}
+		
 		framework.process();
 		
 		if (keyboard.wentDown(SDLK_ESCAPE))
 			framework.quitRequested = true;
-
+		
+		if (keyboard.wentDown(SDLK_TAB))
+		{
+			showGui = !showGui;
+			
+			if (showGui == false)
+			{
+				doCameraControl = true;
+				
+				mouse.dx = 0;
+				mouse.dy = 0;
+			}
+			else
+				doCameraControl = false;
+		}
+		
 		bool inputIsCaptured = doCameraControl;
 		
 		guiContext.processBegin(framework.timeStep, VIEW_SX, VIEW_SY, inputIsCaptured);
 		{
-			if (ImGui::Begin("Interaction", nullptr,
+			if (showGui && ImGui::Begin("Interaction", nullptr,
 				ImGuiWindowFlags_MenuBar))
 			{
 				if (ImGui::BeginMenuBar())
@@ -1211,10 +1235,12 @@ int main(int argc, char * argv[])
 				ImGui::Separator();
 				ImGui::Text("Statistics");
 				ImGui::LabelText("Cube size (kbyte)", "%lu", sizeof(Cube) / 1024);
+				ImGui::LabelText("Probes size (kbyte)", "%lu", sizeof(ImpulseResponseProbe) * kNumProbes / 1024);
 				
 				ImGui::PopItemWidth();
 			}
-			ImGui::End();
+			if (showGui)
+				ImGui::End();
 			
 			if (ImGui::Begin("Inspect", nullptr,
 				ImGuiWindowFlags_MenuBar))
@@ -1295,7 +1321,11 @@ int main(int argc, char * argv[])
 				Benchmark bm("simulate_gpu");
 				
 				for (int i = 0; i < numSimulationStepsPerDraw; ++i)
+				{
 					::simulateLattice_gpu(lattice, simulationTimeStep_ms, scaledLatticeTension, velocityFalloff);
+					
+					simulationTime_ms += simulationTimeStep_ms;
+				}
 				
 				s_gpuSimulationContext->fetchVerticesFromGpu();
 			}
@@ -1308,6 +1338,8 @@ int main(int argc, char * argv[])
 					::simulateLattice(lattice, simulationTimeStep_ms, scaledLatticeTension, velocityFalloff);
 					
 					simulationTime_ms += simulationTimeStep_ms;
+					
+					//
 					
 					impulseResponsePhaseState.processBegin(simulationTimeStep_ms / 1000.f);
 					

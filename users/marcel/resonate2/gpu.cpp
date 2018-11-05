@@ -30,13 +30,15 @@ bool GpuProgram::updateSource(const char * in_source)
 	cl::Program newProgram(context, sources);
 	
 	if (newProgram.build({ device },
+		""
 		"-cl-single-precision-constant "
 		"-cl-denorms-are-zero "
 		"-cl-strict-aliasing "
 		"-cl-mad-enable "
 		"-cl-no-signed-zeros "
 		"-cl-unsafe-math-optimizations "
-		"-cl-finite-math-only ") != CL_SUCCESS)
+		"-cl-finite-math-only "
+		) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to build OpenCL program", 0);
 		LOG_ERR("%s", newProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str());
