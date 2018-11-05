@@ -1006,14 +1006,6 @@ int main(int argc, char * argv[])
 	ImpulseResponsePhaseState impulseResponsePhaseState;
 	impulseResponsePhaseState.init();
 	
-	ImpulseResponseProbe impulseResponseProbe;
-	impulseResponseProbe.init(calcVertexIndex(0, kTextureSize/2, kTextureSize/5));
-	int lastResponseProbeVertexIndex = -1;
-	
-	ImpulseResponseProbe * impulseResponseProbesOverLineSegment = new ImpulseResponseProbe[kTextureSize];
-	for (int i = 0; i < kTextureSize; ++i)
-		impulseResponseProbesOverLineSegment[i].init(calcVertexIndex(0, i, kTextureSize/5));
-	
 	const int kProbeGridSize = 64;
 	const int kNumProbes = 6 * kProbeGridSize * kProbeGridSize;
 	ImpulseResponseProbe * impulseResponseProbesOverCube = new ImpulseResponseProbe[kNumProbes];
@@ -1223,9 +1215,6 @@ int main(int argc, char * argv[])
 					squashLattice(lattice);
 					s_gpuSimulationContext->sendVerticesToGpu();
 					s_gpuSimulationContext->sendEdgesToGpu();
-					impulseResponseProbe.init(impulseResponseProbe.vertexIndex);
-					for (int i = 0; i < kTextureSize; ++i)
-					impulseResponseProbesOverLineSegment[i].init(impulseResponseProbesOverLineSegment[i].vertexIndex);
 					for (int i = 0; i < kNumProbes; ++i)
 						impulseResponseProbesOverCube[i].init(impulseResponseProbesOverCube[i].vertexIndex);
 					simulateLattice = true;
@@ -1342,46 +1331,6 @@ int main(int argc, char * argv[])
 					//
 					
 					impulseResponsePhaseState.processBegin(simulationTimeStep_ms / 1000.f);
-					
-					if (hasMouseCubeFace)
-					{
-						// perform impulse response at mouse location
-						
-						const int vertexIndex = calcVertexIndex(
-							mouseCubeFaceIndex,
-							mouseCubeFacePosition[0],
-							mouseCubeFacePosition[1]);
-						
-						if (vertexIndex != lastResponseProbeVertexIndex)
-						{
-							lastResponseProbeVertexIndex = vertexIndex;
-							impulseResponseProbe.init(vertexIndex);
-						}
-						
-						const Lattice::Vertex & vertex = lattice.vertices[impulseResponseProbe.vertexIndex];
-						
-					#if 0
-						const float value =
-							fabsf(vertex.v.x) +
-							fabsf(vertex.v.y) +
-							fabsf(vertex.v.z);
-					#elif 1
-						const float value = vertex.v.calcMagnitude();
-					#endif
-							
-						impulseResponseProbe.measureValue(impulseResponsePhaseState, value);
-					}
-					else
-					{
-						lastResponseProbeVertexIndex = -1;
-					}
-					
-					for (int i = 0; i < kTextureSize; ++i)
-					{
-						auto & probe = impulseResponseProbesOverLineSegment[i];
-						
-						probe.measureAtVertex(impulseResponsePhaseState, lattice);
-					}
 					
 					for (int i = 0; i < kNumProbes; ++i)
 					{
@@ -1571,8 +1520,6 @@ int main(int argc, char * argv[])
 				
 				if (showImpulseResponseProbeLocations)
 				{
-					setColor(255, 0, 0);
-					drawImpulseResponseProbes(impulseResponseProbesOverLineSegment, kTextureSize, lattice);
 					setColor(127, 0, 0);
 					drawImpulseResponseProbes(impulseResponseProbesOverCube, kNumProbes, lattice);
 				}
@@ -1666,27 +1613,6 @@ int main(int argc, char * argv[])
 			}
 		#endif
 		
-		#if 0
-			if (showImpulseResponseGraph)
-			{
-				gxPushMatrix();
-				{
-					gxTranslatef(VIEW_SX - 740, 10, 0);
-					
-					float responses[kTextureSize * kNumProbeFrequencies];
-					
-					for (int i = 0; i < kTextureSize; ++i)
-					{
-						auto & probe = impulseResponseProbesOverLineSegment[i];
-						
-						probe.calcResponseMagnitude(responses + i * kNumProbeFrequencies);
-					}
-					
-					drawImpulseResponseGraphs(impulseResponsePhaseState, responses, kTextureSize, true);
-				}
-				gxPopMatrix();
-			}
-		#else
 			if (showImpulseResponseGraph && hasMouseCubeFace)
 			{
 				gxPushMatrix();
@@ -1717,7 +1643,6 @@ int main(int argc, char * argv[])
 				}
 				gxPopMatrix();
 			}
-		#endif
 			
 			setColor(colorWhite);
 			drawText(8, VIEW_SY - 20, 14, +1, +1, "time %.2fms", simulationTime_ms);
@@ -1738,9 +1663,6 @@ int main(int argc, char * argv[])
 	
 	delete [] impulseResponseProbesOverCube;
 	impulseResponseProbesOverCube = nullptr;
-	
-	delete [] impulseResponseProbesOverLineSegment;
-	impulseResponseProbesOverLineSegment = nullptr;
 	
 	gpuShut();
 	
