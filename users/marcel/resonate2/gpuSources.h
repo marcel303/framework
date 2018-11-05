@@ -49,7 +49,7 @@ void atomicAdd_g_f(volatile __global float *addr, float val)
 }
 
 void kernel computeEdgeForces(
-	global Edge * restrict edges,
+	global const Edge * restrict edges,
 	global Vertex * restrict vertices,
 	float tension)
 {
@@ -208,8 +208,8 @@ typedef struct ImpulseResponseProbe
 } ImpulseResponseProbe;
 
 void kernel integrateImpulseResponse(
-	global Vertex * restrict vertices,
-	global CosSinTable * restrict cosSinTable, // todo : should be made constant ?
+	global const Vertex * restrict vertices,
+	global const CosSinTable * restrict cosSinTable, // todo : should be made constant ?
 	global ImpulseResponseProbe * restrict probes,
 	float dt)
 {

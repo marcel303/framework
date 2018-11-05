@@ -483,7 +483,7 @@ static GpuContext * s_gpuContext = nullptr;
 
 static GpuSimulationContext * s_gpuSimulationContext = nullptr;
 
-static bool gpuInit(Lattice & lattice, ImpulseResponseProbe * probes, const int numProbes)
+static bool gpuInit(Lattice & lattice, ImpulseResponsePhaseState * impulseResponseState, ImpulseResponseProbe * probes, const int numProbes)
 {
 	s_gpuContext = new GpuContext();
 	
@@ -492,7 +492,7 @@ static bool gpuInit(Lattice & lattice, ImpulseResponseProbe * probes, const int 
 	
 	s_gpuSimulationContext = new GpuSimulationContext(*s_gpuContext);
 	
-	if (!s_gpuSimulationContext->init(lattice, probes, numProbes))
+	if (!s_gpuSimulationContext->init(lattice, impulseResponseState, probes, numProbes))
 		return false;
 
 	return true;
@@ -952,7 +952,7 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	gpuInit(lattice, impulseResponseProbesOverCube, kNumProbes);
+	gpuInit(lattice, &impulseResponsePhaseState, impulseResponseProbesOverCube, kNumProbes);
 	
 	Assert(sizeof(Lattice::Vertex) == 5*3*4);
 	Assert(sizeof(Lattice::Edge) == 16);
@@ -1249,14 +1249,17 @@ int main(int argc, char * argv[])
 					
 					impulseResponsePhaseState.processBegin(simulationTimeStep_ms / 1000.f);
 					
-					// todo : upload cos-sin table
-					
-					// todo : upload impulse-response values
-					// todo : only upload impulse-response values once, similar to how we cache vertices and edges on the gpu
+					// send impulse response state and values to the gpu
+				// todo : only upload impulse-response values once, similar to how we cache vertices and edges on the gpu
+					s_gpuSimulationContext->sendImpulseResponseStateToGpu();
+					s_gpuSimulationContext->sendImpulseResponseProbesToGpu();
 					
 					// todo : execute impulse-response integration kernel
 					
-					// todo : fetch impulse response values from gpu
+					// fetch impulse response values from gpu
+				// todo : remove this step
+					
+					s_gpuSimulationContext->fetchImpulseResponseProbesFromGpu();
 					
 					impulseResponsePhaseState.processEnd();
 				}
@@ -1454,11 +1457,11 @@ int main(int argc, char * argv[])
 						cubeFaceIndex * kProbeGridSize * kProbeGridSize +
 						y * kProbeGridSize;
 					
-					// draw the impulse reponse probe directly underneath the mouse cursor
+					// draw the impulse response probe directly underneath the mouse cursor
 					setColor(255, 200, 200);
 					drawImpulseResponseProbes(impulseResponseProbesOverCube + probeIndex + x, 1, lattice);
 					
-					// draw the line of impulse reponse probes along the a-xis underneath the mouse cursor
+					// draw the line of impulse response probes along the a-xis underneath the mouse cursor
 					setColor(255, 63, 63);
 					drawImpulseResponseProbes(impulseResponseProbesOverCube + probeIndex, kProbeGridSize, lattice);
 				}

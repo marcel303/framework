@@ -19,7 +19,7 @@ GpuSimulationContext::~GpuSimulationContext()
 	Assert(integrateImpulseResponseProgram == nullptr);
 }
 
-bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseProbe * in_probes, const int in_numProbes)
+bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponsePhaseState * in_impulseResponseState, ImpulseResponseProbe * in_probes, const int in_numProbes)
 {
 	if (gpuContext.isValid() == false)
 	{
@@ -37,12 +37,14 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseProbe * in_
 		
 		//
 		
+		impulseResponseState = in_impulseResponseState;
+		
 		probes = in_probes;
 		numProbes = in_numProbes;
 		
-		cosSinBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(float) * 2 * kNumProbeFrequencies);
+		cosSinBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_ONLY, sizeof(float) * 2 * kNumProbeFrequencies);
 		
-		impulseResponseProbesBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_ONLY, sizeof(ImpulseResponseProbe) * numProbes);
+		impulseResponseProbesBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(ImpulseResponseProbe) * numProbes);
 		
 		//
 		
@@ -70,7 +72,7 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseProbe * in_
 		sendEdgesToGpu();
 		sendVerticesToGpu();
 		
-		sendImpulseReponsesToGpu();
+		sendImpulseResponseProbesToGpu();
 		
 		return true;
 	}
@@ -168,16 +170,55 @@ bool GpuSimulationContext::sendEdgesToGpu()
 	return true;
 }
 
-bool GpuSimulationContext::sendImpulseReponsesToGpu()
+bool GpuSimulationContext::sendImpulseResponseStateToGpu()
 {
-	Assert(false); // todo : implement
-	return false;
+	// send the impulse response state to the GPU
+	
+	if (gpuContext.commandQueue->enqueueWriteBuffer(
+		*cosSinBuffer,
+		CL_TRUE,
+		0, sizeof(float) * 2 * kNumProbeFrequencies,
+		impulseResponseState->cos_sin) != CL_SUCCESS)
+	{
+		LOG_ERR("failed to send impulse response state to the GPU", 0);
+		return false;
+	}
+	
+	return true;
 }
 
-bool GpuSimulationContext::fetchImpulseResponsesFromGpu()
+bool GpuSimulationContext::sendImpulseResponseProbesToGpu()
 {
-	Assert(false); // todo : implement
-	return false;
+	// send the impulse response data to the GPU
+	
+	if (gpuContext.commandQueue->enqueueWriteBuffer(
+		*impulseResponseProbesBuffer,
+		CL_TRUE,
+		0, sizeof(ImpulseResponseProbe) * numProbes,
+		probes) != CL_SUCCESS)
+	{
+		LOG_ERR("failed to send impulse response data to the GPU", 0);
+		return false;
+	}
+	
+	return true;
+}
+
+bool GpuSimulationContext::fetchImpulseResponseProbesFromGpu()
+{
+	// fetch the impulse response data from the GPU
+	
+	if (gpuContext.commandQueue->enqueueReadBuffer(
+		*impulseResponseProbesBuffer,
+		CL_TRUE,
+		0, sizeof(ImpulseResponseProbe) * numProbes,
+		probes) != CL_SUCCESS)
+	{
+		LOG_ERR("failed to fetch impulse response data from the GPU", 0);
+		return false;
+	}
+	
+	return true;
 }
 
 bool GpuSimulationContext::computeEdgeForces(const float tension)
