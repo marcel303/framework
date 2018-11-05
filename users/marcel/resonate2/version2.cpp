@@ -714,6 +714,27 @@ struct ImpulseResponseProbe
 	}
 };
 
+static void drawImpulseResponseProbes(const ImpulseResponseProbe * probes, const int numProbes, const Lattice & lattice)
+{
+	glPointSize(10.f);
+	gxBegin(GL_POINTS);
+	for (int i = 0; i < numProbes; ++i)
+	{
+		const auto & probe = probes[i];
+		
+		const auto & vertex = lattice.vertices[probe.vertexIndex];
+		
+		const float offset = -.01f;
+		
+		gxVertex3f(
+			vertex.p.x + vertex.n.x * offset,
+			vertex.p.y + vertex.n.y * offset,
+			vertex.p.z + vertex.n.z * offset);
+	}
+	gxEnd();
+	glPointSize(1.f);
+}
+
 static void drawImpulseResponseGraph(const ImpulseResponsePhaseState & state, const float responses[kNumProbeFrequencies], const bool drawFrequencyTable, const float in_maxResponse = -1.f, const float saturation = .5f)
 {
 	float maxResponse;
@@ -1325,6 +1346,13 @@ int main(int argc, char * argv[])
 						probe.measureAtVertex(impulseResponsePhaseState, lattice);
 					}
 					
+					for (int i = 0; i < kNumProbes; ++i)
+					{
+						auto & probe = impulseResponseProbesOverCube[i];
+						
+						probe.measureAtVertex(impulseResponsePhaseState, lattice);
+					}
+					
 					impulseResponsePhaseState.processEnd();
 				}
 			}
@@ -1482,33 +1510,25 @@ int main(int argc, char * argv[])
 					drawLatticeFaces(lattice);
 				}
 				
+				if (showImpulseResponseProbeLocations && hasMouseCubeFace)
+				{
+					const int cubeFaceIndex = mouseCubeFaceIndex;
+					const int y = mouseCubeFacePosition[1] * kProbeGridSize / kTextureSize;
+					
+					const int probeIndex =
+						cubeFaceIndex * kProbeGridSize * kProbeGridSize +
+						y * kProbeGridSize;
+					
+					setColor(255, 63, 63);
+					drawImpulseResponseProbes(impulseResponseProbesOverCube + probeIndex, kProbeGridSize, lattice);
+				}
+				
 				if (showImpulseResponseProbeLocations)
 				{
-					setColor(colorRed);
-					glPointSize(10.f);
-					gxBegin(GL_POINTS);
-					for (int i = 0; i < kTextureSize; ++i)
-					{
-						const auto & probe = impulseResponseProbesOverLineSegment[i];
-						const auto & vertex = lattice.vertices[probe.vertexIndex];
-						const float offset = -.01f;
-						gxVertex3f(
-							vertex.p.x + vertex.n.x * offset,
-							vertex.p.y + vertex.n.y * offset,
-							vertex.p.z + vertex.n.z * offset);
-					}
-					for (int i = 0; i < kNumProbes; ++i)
-					{
-						const auto & probe = impulseResponseProbesOverCube[i];
-						const auto & vertex = lattice.vertices[probe.vertexIndex];
-						const float offset = -.01f;
-						gxVertex3f(
-							vertex.p.x + vertex.n.x * offset,
-							vertex.p.y + vertex.n.y * offset,
-							vertex.p.z + vertex.n.z * offset);
-					}
-					gxEnd();
-					glPointSize(1.f);
+					setColor(255, 0, 0);
+					drawImpulseResponseProbes(impulseResponseProbesOverLineSegment, kTextureSize, lattice);
+					setColor(127, 0, 0);
+					drawImpulseResponseProbes(impulseResponseProbesOverCube, kNumProbes, lattice);
 				}
 				
 				if (raycastCubePointsUsingMouse)
