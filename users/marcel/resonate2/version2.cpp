@@ -5,6 +5,7 @@
 #include "gpu.h"
 #include "gpuSimulationContext.h"
 #include "imgui-framework.h"
+#include "impulseResponse.h"
 #include "lattice.h"
 #include "nfd.h"
 #include "shape.h"
@@ -633,89 +634,6 @@ static void simulateLattice_gpu(Lattice & lattice, const float dt, const float t
 
 //
 
-const int kNumProbeFrequencies = 128;
-
-struct ImpulseResponsePhaseState
-{
-	float frequency[kNumProbeFrequencies];
-	float phase[kNumProbeFrequencies];
-	
-	float cos_sin[kNumProbeFrequencies][2];
-	
-	float dt = 0.f;
-	
-	void init()
-	{
-		memset(this, 0, sizeof(*this));
-		
-		for (int i = 0; i < kNumProbeFrequencies; ++i)
-		{
-			//frequency[i] = 40.f * pow(2.f, i / 16.f);
-			frequency[i] = 4.f * pow(2.f, i / 16.f);
-		}
-	}
-	
-	void processBegin(const float in_dt)
-	{
-		dt = in_dt;
-	}
-	
-	void processEnd()
-	{
-		for (int i = 0; i < kNumProbeFrequencies; ++i)
-		{
-			phase[i] += dt * frequency[i];
-			
-			phase[i] = fmodf(phase[i], 1.f);
-			
-			cos_sin[i][0] = cosf(phase[i] * 2.f * M_PI);
-			cos_sin[i][1] = sinf(phase[i] * 2.f * M_PI);
-		}
-	}
-};
-
-struct ImpulseResponseProbe
-{
-	float response[kNumProbeFrequencies][2];
-	
-	int vertexIndex;
-	
-	void init(const int in_vertexIndex)
-	{
-		memset(this, 0, sizeof(*this));
-		
-		vertexIndex = in_vertexIndex;
-	}
-	
-	void measureValue(const ImpulseResponsePhaseState & state, const float value)
-	{
-		for (int i = 0; i < kNumProbeFrequencies; ++i)
-		{
-			response[i][0] += state.cos_sin[i][0] * value;
-			response[i][1] += state.cos_sin[i][1] * value;
-		}
-	}
-	
-	void measureAtVertex(const ImpulseResponsePhaseState & state, const Lattice & lattice)
-	{
-		const auto & vertex = lattice.vertices[vertexIndex];
-		
-		const float dx = vertex.p.x - vertex.p_init.x;
-		const float dy = vertex.p.y - vertex.p_init.y;
-		const float dz = vertex.p.z - vertex.p_init.z;
-
-		const float value = sqrtf(dx * dx + dy * dy + dz * dz);
-		
-		measureValue(state, value);
-	}
-	
-	void calcResponseMagnitude(float * result) const
-	{
-		for (int i = 0; i < kNumProbeFrequencies; ++i)
-			result[i] = hypotf(response[i][0], response[i][1]);
-	}
-};
-
 static void drawImpulseResponseProbes(const ImpulseResponseProbe * probes, const int numProbes, const Lattice & lattice)
 {
 	glPointSize(10.f);
@@ -1314,6 +1232,21 @@ int main(int argc, char * argv[])
 					::simulateLattice_gpu(lattice, simulationTimeStep_ms, scaledLatticeTension, velocityFalloff);
 					
 					simulationTime_ms += simulationTimeStep_ms;
+					
+					//
+					
+					impulseResponsePhaseState.processBegin(simulationTimeStep_ms / 1000.f);
+					
+					// todo : upload cos-sin table
+					
+					// todo : upload impulse-response values
+					// todo : only upload impulse-response values once, similar to how we cache vertices and edges on the gpu
+					
+					// todo : execute impulse-response integration kernel
+					
+					// todo : fetch impulse response values from gpu
+					
+					impulseResponsePhaseState.processEnd();
 				}
 				
 				s_gpuSimulationContext->fetchVerticesFromGpu();
