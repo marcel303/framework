@@ -478,7 +478,9 @@ int main(int argc, char * argv[])
 		}
 		framework.endDraw();
 	}
-
+	
+	guiContext.shut();
+	
 	framework.shutdown();
 	
 	return 0;
