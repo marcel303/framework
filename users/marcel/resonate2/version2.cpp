@@ -977,6 +977,7 @@ int main(int argc, char * argv[])
 	bool showIntersectionPoints = false;
 	bool showAxis = true;
 	bool showImpulseResponseGraph = true;
+	bool showImpulseResponseProbeLocations = false;
 	bool showCubePoints = false;
 	float cubePointScale = 1.f;
 	bool projectCubePoints = false;
@@ -1052,6 +1053,7 @@ int main(int argc, char * argv[])
 				ImGui::Checkbox("Show intersection points", &showIntersectionPoints);
 				ImGui::Checkbox("Show axis", &showAxis);
 				ImGui::Checkbox("Show impulse response graph", &showImpulseResponseGraph);
+				ImGui::Checkbox("Show impulse response probes", &showImpulseResponseProbeLocations);
 				
 				ImGui::Separator();
 				ImGui::Text("Cube points");
@@ -1440,6 +1442,26 @@ int main(int argc, char * argv[])
 				{
 					setColor(127, 0, 0);
 					drawLatticeFaces(lattice);
+				}
+				
+				if (showImpulseResponseProbeLocations)
+				{
+					setColor(colorRed);
+					glPointSize(10.f);
+					gxBegin(GL_POINTS);
+					for (auto & probe : impulseResponseProbesOverLineSegment)
+					{
+						const auto & vertex = lattice.vertices[probe.vertexIndex];
+						
+						const float offset = -.01f;
+						
+						gxVertex3f(
+							vertex.p.x + vertex.n.x * offset,
+							vertex.p.y + vertex.n.y * offset,
+							vertex.p.z + vertex.n.z * offset);
+					}
+					gxEnd();
+					glPointSize(1.f);
 				}
 				
 				if (raycastCubePointsUsingMouse)
