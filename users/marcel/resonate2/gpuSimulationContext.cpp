@@ -19,7 +19,7 @@ GpuSimulationContext::~GpuSimulationContext()
 	Assert(integrateImpulseResponseProgram == nullptr);
 }
 
-bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponsePhaseState * in_impulseResponseState, ImpulseResponseProbe * in_probes, const int in_numProbes)
+bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_impulseResponseState, ImpulseResponseProbe * in_probes, const int in_numProbes)
 {
 	if (gpuContext.isValid() == false)
 	{

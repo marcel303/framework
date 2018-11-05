@@ -2,7 +2,7 @@
 #include "lattice.h"
 #include <string.h>
 
-void ImpulseResponsePhaseState::init(const float * in_frequencies, const int numFrequencies)
+void ImpulseResponseState::init(const float * in_frequencies, const int numFrequencies)
 {
 	memset(this, 0, sizeof(*this));
 	
@@ -21,7 +21,7 @@ void ImpulseResponsePhaseState::init(const float * in_frequencies, const int num
 	}
 }
 
-void ImpulseResponsePhaseState::processBegin(const float in_dt)
+void ImpulseResponseState::processBegin(const float in_dt)
 {
 	dt = in_dt;
 	
@@ -32,7 +32,7 @@ void ImpulseResponsePhaseState::processBegin(const float in_dt)
 	}
 }
 
-void ImpulseResponsePhaseState::processEnd()
+void ImpulseResponseState::processEnd()
 {
 	for (int i = 0; i < kNumProbeFrequencies; ++i)
 	{
@@ -51,7 +51,7 @@ void ImpulseResponseProbe::init(const int in_vertexIndex)
 	vertexIndex = in_vertexIndex;
 }
 
-void ImpulseResponseProbe::measureValue(const ImpulseResponsePhaseState & state, const float in_value)
+void ImpulseResponseProbe::measureValue(const ImpulseResponseState & state, const float in_value)
 {
 	const float value = in_value * state.dt;
 	
@@ -62,7 +62,7 @@ void ImpulseResponseProbe::measureValue(const ImpulseResponsePhaseState & state,
 	}
 }
 
-void ImpulseResponseProbe::measureAtVertex(const ImpulseResponsePhaseState & state, const Lattice & lattice)
+void ImpulseResponseProbe::measureAtVertex(const ImpulseResponseState & state, const Lattice & lattice)
 {
 	const auto & vertex = lattice.vertices[vertexIndex];
 	

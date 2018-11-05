@@ -4,7 +4,7 @@
 
 struct Lattice;
 
-struct ImpulseResponsePhaseState
+struct ImpulseResponseState
 {
 	float frequency[kNumProbeFrequencies];
 	float phase[kNumProbeFrequencies];
@@ -27,8 +27,8 @@ struct ImpulseResponseProbe
 	
 	void init(const int in_vertexIndex);
 	
-	void measureValue(const ImpulseResponsePhaseState & state, const float value);
-	void measureAtVertex(const ImpulseResponsePhaseState & state, const Lattice & lattice);
+	void measureValue(const ImpulseResponseState & state, const float value);
+	void measureAtVertex(const ImpulseResponseState & state, const Lattice & lattice);
 	
 	void calcResponseMagnitude(float * result) const;
 };

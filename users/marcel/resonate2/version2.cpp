@@ -484,7 +484,7 @@ static GpuContext * s_gpuContext = nullptr;
 
 static GpuSimulationContext * s_gpuSimulationContext = nullptr;
 
-static bool gpuInit(Lattice & lattice, ImpulseResponsePhaseState * impulseResponseState, ImpulseResponseProbe * probes, const int numProbes)
+static bool gpuInit(Lattice & lattice, ImpulseResponseState * impulseResponseState, ImpulseResponseProbe * probes, const int numProbes)
 {
 	s_gpuContext = new GpuContext();
 	
@@ -633,7 +633,7 @@ static void simulateLattice_gpu(Lattice & lattice, const float dt, const float t
 	s_gpuSimulationContext->integrate(lattice, dt, falloff);
 }
 
-static void integrateImpulseResponses(const Lattice & lattice, ImpulseResponsePhaseState & state, ImpulseResponseProbe * probes, const int numProbes, const float dt)
+static void integrateImpulseResponses(const Lattice & lattice, ImpulseResponseState & state, ImpulseResponseProbe * probes, const int numProbes, const float dt)
 {
 	state.processBegin(dt);
 
@@ -647,7 +647,7 @@ static void integrateImpulseResponses(const Lattice & lattice, ImpulseResponsePh
 	state.processEnd();
 }
 
-static void integrateImpulseResponses_gpu(const Lattice & lattice, ImpulseResponsePhaseState & state, ImpulseResponseProbe * probes, const int numProbes, const float dt)
+static void integrateImpulseResponses_gpu(const Lattice & lattice, ImpulseResponseState & state, ImpulseResponseProbe * probes, const int numProbes, const float dt)
 {
 	state.processBegin(dt);
 
@@ -685,7 +685,7 @@ static void drawImpulseResponseProbes(const ImpulseResponseProbe * probes, const
 	glPointSize(1.f);
 }
 
-static void drawImpulseResponseGraph(const ImpulseResponsePhaseState & state, const float responses[kNumProbeFrequencies], const bool drawFrequencyTable, const float in_maxResponse = -1.f, const float saturation = .5f)
+static void drawImpulseResponseGraph(const ImpulseResponseState & state, const float responses[kNumProbeFrequencies], const bool drawFrequencyTable, const float in_maxResponse = -1.f, const float saturation = .5f)
 {
 	float maxResponse;
 	
@@ -738,7 +738,7 @@ static void drawImpulseResponseGraph(const ImpulseResponsePhaseState & state, co
 	}
 }
 
-static void drawImpulseResponseGraphs(const ImpulseResponsePhaseState & state, const float * responses, const int numGraphs, const bool drawFrequencyTable, const float maxResponse = -1.f)
+static void drawImpulseResponseGraphs(const ImpulseResponseState & state, const float * responses, const int numGraphs, const bool drawFrequencyTable, const float maxResponse = -1.f)
 {
 	gxPushMatrix();
 	{
@@ -897,7 +897,7 @@ static void testRaster()
 	framework.shutdown();
 }
 
-static bool cirdToImpulseResponseProbes(const CIRD & cird, ImpulseResponsePhaseState & state, ImpulseResponseProbe * probes, const int probeGridSize)
+static bool cirdToImpulseResponseProbes(const CIRD & cird, ImpulseResponseState & state, ImpulseResponseProbe * probes, const int probeGridSize)
 {
 	// copy information from CIRD to impulse response probes
 	
@@ -908,7 +908,7 @@ static bool cirdToImpulseResponseProbes(const CIRD & cird, ImpulseResponsePhaseS
 		return false;
 	}
 	
-	state = ImpulseResponsePhaseState();
+	state = ImpulseResponseState();
 	
 	state.init(cird.header.frequencies, cird.header.numFrequencies);
 	
@@ -950,7 +950,7 @@ static bool cirdToImpulseResponseProbes(const CIRD & cird, ImpulseResponsePhaseS
 	return true;
 }
 
-static bool impulseResponseProbesToCird(const ImpulseResponsePhaseState & state, const ImpulseResponseProbe * probes, const int probeGridSize, CIRD & cird)
+static bool impulseResponseProbesToCird(const ImpulseResponseState & state, const ImpulseResponseProbe * probes, const int probeGridSize, CIRD & cird)
 {
 	float frequencies[kNumProbeFrequencies];
 	for (int i = 0; i < kNumProbeFrequencies; ++i)
@@ -1054,12 +1054,12 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	ImpulseResponsePhaseState impulseResponsePhaseState;
-	impulseResponsePhaseState.init();
+	ImpulseResponseState impulseResponseState;
+	impulseResponseState.init();
 	
 	const int kProbeGridSize = 64;
 	const int kNumProbes = 6 * kProbeGridSize * kProbeGridSize;
-	ImpulseResponseProbe * impulseResponseProbesOverCube = new ImpulseResponseProbe[kNumProbes];
+	ImpulseResponseProbe * impulseResponseProbes = new ImpulseResponseProbe[kNumProbes];
 	for (int cubeFaceIndex = 0; cubeFaceIndex < 6; ++cubeFaceIndex)
 	{
 		for (int y = 0; y < kProbeGridSize; ++y)
@@ -1074,7 +1074,7 @@ int main(int argc, char * argv[])
 				const int faceX = x * kTextureSize / kProbeGridSize;
 				const int faceY = y * kTextureSize / kProbeGridSize;
 				
-				auto & probe = impulseResponseProbesOverCube[probeIndex];
+				auto & probe = impulseResponseProbes[probeIndex];
 				
 				probe.init(calcVertexIndex(cubeFaceIndex, faceX, faceY));
 			}
@@ -1083,7 +1083,7 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	gpuInit(lattice, &impulseResponsePhaseState, impulseResponseProbesOverCube, kNumProbes);
+	gpuInit(lattice, &impulseResponseState, impulseResponseProbes, kNumProbes);
 	
 	Assert(sizeof(Lattice::Vertex) == 5*3*4);
 	Assert(sizeof(Lattice::Edge) == 16);
@@ -1197,8 +1197,8 @@ int main(int argc, char * argv[])
 								{
 									cirdToImpulseResponseProbes(
 										cird,
-										impulseResponsePhaseState,
-										impulseResponseProbesOverCube,
+										impulseResponseState,
+										impulseResponseProbes,
 										kProbeGridSize);
 								}
 							}
@@ -1218,8 +1218,8 @@ int main(int argc, char * argv[])
 								CIRD cird;
 								
 								if (impulseResponseProbesToCird(
-									impulseResponsePhaseState,
-									impulseResponseProbesOverCube,
+									impulseResponseState,
+									impulseResponseProbes,
 									kProbeGridSize,
 									cird))
 								{
@@ -1325,7 +1325,7 @@ int main(int argc, char * argv[])
 					s_gpuSimulationContext->sendVerticesToGpu();
 					s_gpuSimulationContext->sendEdgesToGpu();
 					for (int i = 0; i < kNumProbes; ++i)
-						impulseResponseProbesOverCube[i].init(impulseResponseProbesOverCube[i].vertexIndex);
+						impulseResponseProbes[i].init(impulseResponseProbes[i].vertexIndex);
 					simulateLattice = true;
 					simulationTime_ms = 0.f;
 				}
@@ -1432,8 +1432,8 @@ int main(int argc, char * argv[])
 					
 					integrateImpulseResponses_gpu(
 						lattice,
-						impulseResponsePhaseState,
-						impulseResponseProbesOverCube,
+						impulseResponseState,
+						impulseResponseProbes,
 						kNumProbes,
 						simulationTimeStep_ms / 1000.f);
 				}
@@ -1456,8 +1456,8 @@ int main(int argc, char * argv[])
 					
 					integrateImpulseResponses(
 						lattice,
-						impulseResponsePhaseState,
-						impulseResponseProbesOverCube,
+						impulseResponseState,
+						impulseResponseProbes,
 						kNumProbes,
 						simulationTimeStep_ms / 1000.f);
 				}
@@ -1631,17 +1631,17 @@ int main(int argc, char * argv[])
 					
 					// draw the impulse response probe directly underneath the mouse cursor
 					setColor(255, 200, 200);
-					drawImpulseResponseProbes(impulseResponseProbesOverCube + probeIndex + x, 1, lattice);
+					drawImpulseResponseProbes(impulseResponseProbes + probeIndex + x, 1, lattice);
 					
 					// draw the line of impulse response probes along the a-xis underneath the mouse cursor
 					setColor(255, 63, 63);
-					drawImpulseResponseProbes(impulseResponseProbesOverCube + probeIndex, kProbeGridSize, lattice);
+					drawImpulseResponseProbes(impulseResponseProbes + probeIndex, kProbeGridSize, lattice);
 				}
 				
 				if (showImpulseResponseProbeLocations)
 				{
 					setColor(127, 0, 0);
-					drawImpulseResponseProbes(impulseResponseProbesOverCube, kNumProbes, lattice);
+					drawImpulseResponseProbes(impulseResponseProbes, kNumProbes, lattice);
 				}
 				
 				if (raycastCubePointsUsingMouse)
@@ -1725,7 +1725,7 @@ int main(int argc, char * argv[])
 						cubeFaceIndex * kProbeGridSize * kProbeGridSize +
 						y * kProbeGridSize;
 					
-					const auto probes = impulseResponseProbesOverCube + probeIndex;
+					const auto probes = impulseResponseProbes + probeIndex;
 					
 					float responses[kTextureSize * kNumProbeFrequencies];
 					
@@ -1736,7 +1736,7 @@ int main(int argc, char * argv[])
 						probe.calcResponseMagnitude(responses + i * kNumProbeFrequencies);
 					}
 					
-					drawImpulseResponseGraphs(impulseResponsePhaseState, responses, kTextureSize, true);
+					drawImpulseResponseGraphs(impulseResponseState, responses, kTextureSize, true);
 				}
 				gxPopMatrix();
 			}
@@ -1758,8 +1758,8 @@ int main(int argc, char * argv[])
 	delete cube;
 	cube = nullptr;
 	
-	delete [] impulseResponseProbesOverCube;
-	impulseResponseProbesOverCube = nullptr;
+	delete [] impulseResponseProbes;
+	impulseResponseProbes = nullptr;
 	
 	gpuShut();
 	

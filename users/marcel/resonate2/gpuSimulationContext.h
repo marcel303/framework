@@ -2,8 +2,8 @@
 
 struct GpuContext;
 struct GpuProgram;
-struct ImpulseResponsePhaseState;
 struct ImpulseResponseProbe;
+struct ImpulseResponseState;
 struct Lattice;
 
 struct GpuSimulationContext
@@ -14,7 +14,7 @@ struct GpuSimulationContext
 	int numVertices = 0;
 	int numEdges = 0;
 	
-	ImpulseResponsePhaseState * impulseResponseState = nullptr;
+	ImpulseResponseState * impulseResponseState = nullptr;
 	ImpulseResponseProbe * probes = nullptr;
 	int numProbes = 0;
 	
@@ -30,7 +30,7 @@ struct GpuSimulationContext
 	GpuSimulationContext(GpuContext & in_gpuContext);
 	~GpuSimulationContext();
 	
-	bool init(Lattice & in_lattice, ImpulseResponsePhaseState * impulseResponseState, ImpulseResponseProbe * probes, const int numProbes);
+	bool init(Lattice & in_lattice, ImpulseResponseState * impulseResponseState, ImpulseResponseProbe * probes, const int numProbes);
 	bool shut();
 	
 	bool sendVerticesToGpu();
