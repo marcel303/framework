@@ -40,8 +40,10 @@ void ImpulseResponseProbe::init(const int in_vertexIndex)
 	vertexIndex = in_vertexIndex;
 }
 
-void ImpulseResponseProbe::measureValue(const ImpulseResponsePhaseState & state, const float value)
+void ImpulseResponseProbe::measureValue(const ImpulseResponsePhaseState & state, const float in_value)
 {
+	const float value = in_value * state.dt;
+	
 	for (int i = 0; i < kNumProbeFrequencies; ++i)
 	{
 		response[i][0] += state.cos_sin[i][0] * value;

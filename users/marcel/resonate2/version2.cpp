@@ -1254,7 +1254,9 @@ int main(int argc, char * argv[])
 					s_gpuSimulationContext->sendImpulseResponseStateToGpu();
 					s_gpuSimulationContext->sendImpulseResponseProbesToGpu();
 					
-					// todo : execute impulse-response integration kernel
+					// execute impulse-response integration kernel
+					
+					s_gpuSimulationContext->integrateImpulseResponse(impulseResponsePhaseState.dt);
 					
 					// fetch impulse response values from gpu
 				// todo : remove this step
@@ -1538,29 +1540,6 @@ int main(int argc, char * argv[])
 			camera.popViewMatrix();
 			projectScreen2d();
 			
-		#if 0
-			if (hasMouseCubeFace)
-			{
-				// show the results of the impulse response measurement
-				
-				gxPushMatrix();
-				{
-					gxTranslatef(mouse.x, mouse.y, 0);
-
-					float responses[kNumProbeFrequencies];
-				
-					impulseResponseProbe.calcResponseMagnitude(responses);
-					
-					float maxResponse = 1e-6f;
-					for (auto response : responses)
-						maxResponse = fmax(maxResponse, response);
-					
-					drawImpulseResponseGraph(impulseResponsePhaseState, responses, true);
-				}
-				gxPopMatrix();
-			}
-		#endif
-		
 			if (showImpulseResponseGraph && hasMouseCubeFace)
 			{
 				gxPushMatrix();

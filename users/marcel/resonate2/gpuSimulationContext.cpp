@@ -292,7 +292,7 @@ bool GpuSimulationContext::integrateImpulseResponse(const float dt)
 		return false;
 	}
 	
-	if (gpuContext.commandQueue->enqueueNDRangeKernel(integrateKernel, cl::NullRange, cl::NDRange(numVertices), cl::NDRange(64)) != CL_SUCCESS)
+	if (gpuContext.commandQueue->enqueueNDRangeKernel(integrateKernel, cl::NullRange, cl::NDRange(numProbes)) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to enqueue kernel", 0);
 		return false;
