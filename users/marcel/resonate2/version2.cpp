@@ -1616,7 +1616,7 @@ int main(int argc, char * argv[])
 					drawLatticeFaces(lattice);
 				}
 				
-				if (showImpulseResponseProbeLocations && hasMouseCubeFace)
+				if (raycastCubePointsUsingMouse && hasMouseCubeFace)
 				{
 					const int cubeFaceIndex = mouseCubeFaceIndex;
 					const int x = mouseCubeFacePosition[0] * kProbeGridSize / kTextureSize;
