@@ -454,7 +454,7 @@ static bool cirdToImpulseResponseData(const CIRD & cird, ImpulseResponseState & 
 	
 	state = ImpulseResponseState();
 	
-	state.init(cird.header.frequencies, cird.header.numFrequencies);
+	state.init(cird.frequencyTable.frequencies, cird.header.numFrequencies);
 	
 	// copy the information from the CIRD to the impulse response probes
 	
@@ -658,7 +658,7 @@ int main(int argc, char * argv[])
 	float latticeTension = 1.f;
 	float simulationTimeStep_ms = .1f;
 	int numSimulationStepsPerDraw = 10;
-	float velocityFalloff = .2f;
+	float velocityFalloff = .6f;
 	int fillCubeFrequencyIndex = kNumProbeFrequencies / 2;
 	
 	// camera control and ray cast
@@ -904,6 +904,7 @@ int main(int argc, char * argv[])
 						glDeleteTextures(6, textureGL);
 						for (int i = 0; i < 6; ++i)
 							textureGL[i] = textureToGL(cube->faces[i].textures[fillCubeFrequencyIndex]);
+						showCube = true;
 					}
 					
 					ImGui::Separator();
