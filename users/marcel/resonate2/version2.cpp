@@ -547,6 +547,18 @@ static bool impulseResponseDataToCird(const ImpulseResponseState & state, const 
 
 struct Sonify : AudioStream
 {
+	struct DCBlocker
+	{
+		double average = 0.0;
+		
+		float next(const double value)
+		{
+			average = average * .9998 + value * .0002;
+			
+			return value - average;
+		}
+	};
+	
 	const ImpulseResponseState * state = nullptr;
 	
 	float oldMagnitudes[kNumProbeFrequencies];
@@ -554,7 +566,12 @@ struct Sonify : AudioStream
 	
 	float phase[kNumProbeFrequencies];
 	
+	float desiredFrequencyMultiplier = 1.f;
+	float currentFrequencyMultiplier = 1.f;
+	
 	SDL_mutex * mutex = nullptr;
+	
+	DCBlocker dcBlocker;
 	
 	AudioOutput_PortAudio * audioOutput = nullptr;
 	
@@ -581,6 +598,8 @@ struct Sonify : AudioStream
 		mutex = SDL_CreateMutex();
 		Assert(mutex != nullptr);
 		
+		dcBlocker = DCBlocker();
+		
 		audioOutput = new AudioOutput_PortAudio();
 		audioOutput->Initialize(2, 44100, 256);
 		audioOutput->Play(this);
@@ -605,7 +624,7 @@ struct Sonify : AudioStream
 		state = nullptr;
 	}
 	
-	void update(const ImpulseResponseProbe & probe)
+	void update(const ImpulseResponseProbe & probe, const float in_frequencyMultiplier)
 	{
 		float magnitudes[kNumProbeFrequencies];
 		probe.calcResponseMagnitude(magnitudes);
@@ -613,6 +632,8 @@ struct Sonify : AudioStream
 		Verify(SDL_LockMutex(mutex) == 0);
 		{
 			memcpy(newMagnitudes, magnitudes, sizeof(newMagnitudes));
+			
+			desiredFrequencyMultiplier = in_frequencyMultiplier;
 		}
 		Verify(SDL_UnlockMutex(mutex) == 0);
 	}
@@ -624,9 +645,13 @@ struct Sonify : AudioStream
 		
 		float newMagnitudesCopy[kNumProbeFrequencies];
 		
+		float desiredFrequencyMultiplierCopy;
+		
 		Verify(SDL_LockMutex(mutex) == 0);
 		{
 			memcpy(newMagnitudesCopy, newMagnitudes, sizeof(newMagnitudesCopy));
+			
+			desiredFrequencyMultiplierCopy = desiredFrequencyMultiplier;
 		}
 		Verify(SDL_UnlockMutex(mutex) == 0);
 		
@@ -645,10 +670,19 @@ struct Sonify : AudioStream
 		
 		const float twoPi = 2.f * M_PI;
 		
-		const float dt_times_twoPi = twoPi / 44100.f;
+		const float dt = 1.f / 44100.f;
+		
+		const float retain = powf(.2f, dt);
+		const float falloff = 1.f - retain;
 		
 		for (int s = 0; s < numSamples; ++s)
 		{
+			currentFrequencyMultiplier =
+				currentFrequencyMultiplier * retain +
+				desiredFrequencyMultiplierCopy * falloff;
+			
+			const float dt_times_twoPi = twoPi / 44100.f * currentFrequencyMultiplier;
+			
 			// accumulate per-frequency oscillators
 			
 			float value = 0.f;
@@ -665,6 +699,10 @@ struct Sonify : AudioStream
 			// apply gain
 			
 			value *= 100.f;
+			
+			// apply DC blocking to remove a potential offset from zero from the synthesized signal
+			
+			value = dcBlocker.next(value);
 			
 			// clipping
 			
@@ -791,8 +829,6 @@ int main(int argc, char * argv[])
 	
 	Sonify * sonify = new Sonify();
 	
-	sonify->init(&impulseResponseState);
-	
 	// editable state through ImGui
 	
 	int numPlanesForRandomization = ShapeDefinition::kMaxPlanes;
@@ -818,6 +854,8 @@ int main(int argc, char * argv[])
 	int numSimulationStepsPerDraw = 10;
 	float velocityFalloff = .6f;
 	int fillCubeFrequencyIndex = kNumProbeFrequencies / 2;
+	bool sonifyImpulseResponseMeasurement = false;
+	float sonificationFrequencyMultiplier = 1.f;
 	
 	// camera control and ray cast
 	
@@ -1064,6 +1102,17 @@ int main(int argc, char * argv[])
 							textureGL[i] = textureToGL(cube->faces[i].textures[fillCubeFrequencyIndex]);
 						showCube = true;
 					}
+					
+					ImGui::Separator();
+					ImGui::Text("Sonification");
+					if (ImGui::Checkbox("Sonify impulse response", &sonifyImpulseResponseMeasurement))
+					{
+						if (sonifyImpulseResponseMeasurement)
+							sonify->init(&impulseResponseState);
+						else
+							sonify->shut();
+					}
+					ImGui::SliderFloat("Frequency multiplier", &sonificationFrequencyMultiplier, .1f, 16.f, "%.4f", 4.f);
 					
 					ImGui::Separator();
 					ImGui::Text("Statistics");
@@ -1506,7 +1555,7 @@ int main(int argc, char * argv[])
 				gxPopMatrix();
 			}
 			
-			if (true && hasMouseCubeFace)
+			if (sonifyImpulseResponseMeasurement && hasMouseCubeFace)
 			{
 				const int cubeFaceIndex = mouseCubeFaceIndex;
 				const int x = mouseCubeFacePosition[0] * kProbeGridSize / kGridSize;
@@ -1519,11 +1568,11 @@ int main(int argc, char * argv[])
 			
 				const auto & probe = impulseResponseProbes[probeIndex];
 				
-				sonify->update(probe);
+				sonify->update(probe, sonificationFrequencyMultiplier);
 			}
 			
 			setColor(colorWhite);
-			drawText(8, VIEW_SY - 20, 14, +1, +1, "time %.2fms", simulationTime_ms);
+			drawText(8, VIEW_SY - 20, 14, +1, +1, "simulation time %.2fms", simulationTime_ms);
 			
 			guiContext.draw();
 			
