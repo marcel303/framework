@@ -222,15 +222,21 @@ void kernel integrateImpulseResponse(
 {
 	int ID = get_global_id(0);
 	
+	int range_ID = get_global_id(1);
+	
+	const int range1 = range_ID * kNumProbeFrequencies/8;
+	const int range2 = range_ID * kNumProbeFrequencies/8 + kNumProbeFrequencies/8;
+
 	// measureValueAtVertex(..)
 	
 	global ImpulseResponseProbe * restrict probe = probes + ID;
 	
-	const Vertex vertex = vertices[probe->vertexIndex];
+	const Vector p = vertices[probe->vertexIndex].p;
+	const Vector p_init = vertices[probe->vertexIndex].p_init;
 	
-	const float dx = vertex.p.x - vertex.p_init.x;
-	const float dy = vertex.p.y - vertex.p_init.y;
-	const float dz = vertex.p.z - vertex.p_init.z;
+	const float dx = p.x - p_init.x;
+	const float dy = p.y - p_init.y;
+	const float dz = p.z - p_init.z;
 
 	const float value = sqrt(dx * dx + dy * dy + dz * dz);
 	
@@ -238,7 +244,7 @@ void kernel integrateImpulseResponse(
 
 	// measureValue(..)
 
-	for (int i = 0; i < kNumProbeFrequencies; ++i)
+	for (int i = range1; i < range2; ++i)
 	{
 		probe->response[i][0] += state->cos_sin[i][0] * value_times_dt;
 		probe->response[i][1] += state->cos_sin[i][1] * value_times_dt;
