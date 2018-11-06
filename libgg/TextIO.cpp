@@ -100,7 +100,11 @@ namespace TextIO
 		bool result = false;
 		
 		FILE * file = nullptr;
+	#if WINDOWS
+		long size = 0;
+	#else
 		ssize_t size = 0;
+	#endif
 		char * text = nullptr;
 
 		std::string line;

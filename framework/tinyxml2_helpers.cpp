@@ -30,6 +30,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#ifdef WIN32
+	#include <malloc.h>
+#else
+	#include <alloca.h>
+#endif
+
 using namespace tinyxml2;
 
 const char * stringAttrib(const XMLElement * elem, const char * name, const char * defaultValue)
