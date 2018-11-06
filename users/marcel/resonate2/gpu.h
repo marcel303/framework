@@ -1,6 +1,14 @@
 #pragma
 
-#include "cl.hpp"
+#include <string>
+
+namespace cl
+{
+	class CommandQueue;
+	class Context;
+	class Device;
+	class Program;
+}
 
 struct GpuProgram
 {

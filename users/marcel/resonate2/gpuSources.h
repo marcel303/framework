@@ -1,3 +1,5 @@
+#pragma once
+
 static const char * computeEdgeForces_source =
 R"SHADER(
 typedef struct Vector

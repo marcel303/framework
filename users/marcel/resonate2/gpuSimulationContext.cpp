@@ -1,3 +1,4 @@
+#include "constants.h"
 #include "Debugging.h"
 #include "gpu.h"
 #include "gpuSimulationContext.h"
@@ -6,6 +7,8 @@
 #include "lattice.h"
 #include "Log.h"
 #include <math.h>
+
+#include "cl.hpp"
 
 GpuSimulationContext::GpuSimulationContext(GpuContext & in_gpuContext)
 	: gpuContext(in_gpuContext)

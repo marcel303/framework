@@ -1,10 +1,19 @@
-#include "cl.hpp"
+#pragma once
 
 struct GpuContext;
 struct GpuProgram;
 struct ImpulseResponseProbe;
 struct ImpulseResponseState;
 struct Lattice;
+
+namespace cl
+{
+	class Buffer;
+	class CommandQueue;
+	class Context;
+	class Device;
+	class Program;
+}
 
 struct GpuSimulationContext
 {

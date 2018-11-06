@@ -1,6 +1,9 @@
+#include "constants.h"
 #include "Debugging.h"
 #include "gpu.h"
 #include "Log.h"
+
+#include "cl.hpp"
 
 GpuProgram::GpuProgram(cl::Device & in_device, cl::Context & in_context)
 	: device(in_device)
