@@ -38,6 +38,7 @@ struct SDL_mutex;
 
 class AudioOutput_PortAudio : AudioOutput
 {
+	bool m_paInitialized;
 	PaStream * m_paStream;
 	SDL_mutex * m_mutex;
 	AudioStream * m_stream;
