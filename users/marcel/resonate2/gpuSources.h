@@ -197,10 +197,15 @@ typedef struct Vertex
 
 #define kNumProbeFrequencies 128 // todo : must match declaration in cpp file!
 
-typedef struct CosSinTable
+typedef struct ImpulseResponseState
 {
-	float cosSin[kNumProbeFrequencies][2];
-} CosSinTable;
+	float frequency[kNumProbeFrequencies];
+	float phase[kNumProbeFrequencies];
+	
+	float cos_sin[kNumProbeFrequencies][2];
+	
+	float dt;
+} ImpulseResponseState;
 
 typedef struct ImpulseResponseProbe
 {
@@ -211,7 +216,7 @@ typedef struct ImpulseResponseProbe
 
 void kernel integrateImpulseResponse(
 	global const Vertex * restrict vertices,
-	global const CosSinTable * restrict cosSinTable, // todo : should be made constant ?
+	global const ImpulseResponseState * restrict state,
 	global ImpulseResponseProbe * restrict probes,
 	float dt)
 {
@@ -219,7 +224,7 @@ void kernel integrateImpulseResponse(
 	
 	// measureValueAtVertex(..)
 	
-	global ImpulseResponseProbe * probe = probes + ID;
+	global ImpulseResponseProbe * restrict probe = probes + ID;
 	
 	const Vertex vertex = vertices[probe->vertexIndex];
 	
@@ -229,12 +234,44 @@ void kernel integrateImpulseResponse(
 
 	const float value = sqrt(dx * dx + dy * dy + dz * dz);
 	
+	const float value_times_dt = value * dt;
+
 	// measureValue(..)
-	
+
 	for (int i = 0; i < kNumProbeFrequencies; ++i)
 	{
-		probe->response[i][0] += cosSinTable->cosSin[i][0] * value * dt;
-		probe->response[i][1] += cosSinTable->cosSin[i][1] * value * dt;
+		probe->response[i][0] += state->cos_sin[i][0] * value_times_dt;
+		probe->response[i][1] += state->cos_sin[i][1] * value_times_dt;
 	}
+}
+)SHADER";
+
+static const char * advanceImpulseResponse_source =
+R"SHADER(
+
+#define kNumProbeFrequencies 128 // todo : must match declaration in cpp file!
+
+typedef struct ImpulseResponseState
+{
+	float frequency[kNumProbeFrequencies];
+	float phase[kNumProbeFrequencies];
+	
+	float cos_sin[kNumProbeFrequencies][2];
+	
+	float dt;
+} ImpulseResponseState;
+
+void kernel advanceImpulseResponse(
+	global ImpulseResponseState * restrict state,
+	float dt)
+{
+	int ID = get_global_id(0);
+	
+	state->phase[ID] = fmod(state->phase[ID] + state->frequency[ID] * dt, 1.0);
+
+	const float twoPi = 2.f * 3.14159265358979323846;
+
+	state->cos_sin[ID][0] = cos(state->phase[ID] * twoPi);
+	state->cos_sin[ID][1] = sin(state->phase[ID] * twoPi);
 }
 )SHADER";

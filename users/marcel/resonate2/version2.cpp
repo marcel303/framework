@@ -415,17 +415,19 @@ static void integrateImpulseResponses(const Lattice & lattice, ImpulseResponseSt
 
 static void integrateImpulseResponses_gpu(const Lattice & lattice, ImpulseResponseState & state, ImpulseResponseProbe * probes, const int numProbes, const float dt)
 {
-	state.processBegin(dt);
+	//state.processBegin(dt);
 
 	// send impulse response state to the gpu
 
-	s_gpuSimulationContext->sendImpulseResponseStateToGpu();
+	//s_gpuSimulationContext->sendImpulseResponseStateToGpu();
+
+	s_gpuSimulationContext->advanceImpulseState(dt);
 
 	// execute impulse-response integration kernel
 
 	s_gpuSimulationContext->integrateImpulseResponse(dt);
 
-	state.processEnd();
+	//state.processEnd();
 }
 
 //

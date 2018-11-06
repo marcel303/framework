@@ -86,7 +86,7 @@ bool GpuContext::init()
 		LOG_INF("available OpenCL platform: %s", platform.getInfo<CL_PLATFORM_NAME>().c_str());
 	}
 	
-	const cl::Platform & defaultPlatform = platforms[0];
+	const cl::Platform & defaultPlatform = platforms.back();
 	
 	std::vector<cl::Device> devices;
 	

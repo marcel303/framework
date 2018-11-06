@@ -45,7 +45,7 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 		probes = in_probes;
 		numProbes = in_numProbes;
 		
-		cosSinBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_ONLY, sizeof(float) * 2 * kNumProbeFrequencies);
+		cosSinBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(ImpulseResponseState));
 		
 		impulseResponseProbesBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(ImpulseResponseProbe) * numProbes);
 		
@@ -56,25 +56,41 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 		if (computeEdgeForcesProgram->updateSource(computeEdgeForces_source) == false)
 			return false;
 		
+		computeEdgeForcesKernel = new cl::Kernel(*computeEdgeForcesProgram->program, "computeEdgeForces");
+
 		//
 		
 		integrateProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
 		
 		if (integrateProgram->updateSource(integrate_source) == false)
 			return false;
-		
+
+		integrateKernel = new cl::Kernel(*integrateProgram->program, "integrate");
+
 		//
-		
+
 		integrateImpulseResponseProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
-		
+
 		if (integrateImpulseResponseProgram->updateSource(integrateImpulseResponse_source) == false)
 			return false;
-		
+
+		integrateImpulseResponseKernel = new cl::Kernel(*integrateImpulseResponseProgram->program, "integrateImpulseResponse");
+
+		//
+
+		advanceImpulseResponseProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
+
+		if (advanceImpulseResponseProgram->updateSource(advanceImpulseResponse_source) == false)
+			return false;
+
+		advanceImpulseResponseKernel = new cl::Kernel(*advanceImpulseResponseProgram->program, "advanceImpulseResponse");
+
 		//
 		
 		sendEdgesToGpu();
 		sendVerticesToGpu();
 		
+		sendImpulseResponseStateToGpu();
 		sendImpulseResponseProbesToGpu();
 		
 		return true;
@@ -83,6 +99,9 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 
 bool GpuSimulationContext::shut()
 {
+	delete integrateImpulseResponseKernel;
+	integrateImpulseResponseKernel = nullptr;
+
 	if (integrateImpulseResponseProgram != nullptr)
 	{
 		integrateImpulseResponseProgram->shut();
@@ -91,6 +110,9 @@ bool GpuSimulationContext::shut()
 		integrateImpulseResponseProgram = nullptr;
 	}
 	
+	delete integrateKernel;
+	integrateKernel = nullptr;
+
 	if (integrateProgram != nullptr)
 	{
 		integrateProgram->shut();
@@ -99,6 +121,9 @@ bool GpuSimulationContext::shut()
 		integrateProgram = nullptr;
 	}
 	
+	delete computeEdgeForcesKernel;
+	computeEdgeForcesKernel = nullptr;
+
 	if (computeEdgeForcesProgram != nullptr)
 	{
 		computeEdgeForcesProgram->shut();
@@ -177,15 +202,29 @@ bool GpuSimulationContext::sendImpulseResponseStateToGpu()
 {
 	// send the impulse response state to the GPU
 	
+#if 0
+	const int dataSize = sizeof(ImpulseResponseState);
+
+	void * data = gpuContext.commandQueue->enqueueMapBuffer(
+		*cosSinBuffer,
+		CL_TRUE,
+		CL_MAP_WRITE_INVALIDATE_REGION,
+		0, dataSize);
+
+	memcpy(data, impulseResponseState, dataSize);
+
+	gpuContext.commandQueue->enqueueUnmapMemObject(*cosSinBuffer, data);
+#else
 	if (gpuContext.commandQueue->enqueueWriteBuffer(
 		*cosSinBuffer,
 		CL_TRUE,
-		0, sizeof(float) * 2 * kNumProbeFrequencies,
-		impulseResponseState->cos_sin) != CL_SUCCESS)
+		0, sizeof(ImpulseResponseState),
+		impulseResponseState) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to send impulse response state to the GPU", 0);
 		return false;
 	}
+#endif
 	
 	return true;
 }
@@ -230,7 +269,7 @@ bool GpuSimulationContext::computeEdgeForces(const float tension)
 	
 	// run the integration program on the GPU
 	
-	cl::Kernel kernel(*computeEdgeForcesProgram->program, "computeEdgeForces");
+	cl::Kernel & kernel = *computeEdgeForcesKernel;
 	
 	if (kernel.setArg(0, *edgeBuffer) != CL_SUCCESS ||
 		kernel.setArg(1, *vertexBuffer) != CL_SUCCESS ||
@@ -261,17 +300,17 @@ bool GpuSimulationContext::integrate(Lattice & lattice, const float dt, const fl
 	
 	// run the integration program on the GPU
 	
-	cl::Kernel integrateKernel(*integrateProgram->program, "integrate");
+	cl::Kernel & kernel = *integrateKernel;
 	
-	if (integrateKernel.setArg(0, *vertexBuffer) != CL_SUCCESS ||
-		integrateKernel.setArg(1, dt) != CL_SUCCESS ||
-		integrateKernel.setArg(2, retain) != CL_SUCCESS)
+	if (kernel.setArg(0, *vertexBuffer) != CL_SUCCESS ||
+		kernel.setArg(1, dt) != CL_SUCCESS ||
+		kernel.setArg(2, retain) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to set buffer arguments for kernel", 0);
 		return false;
 	}
 	
-	if (gpuContext.commandQueue->enqueueNDRangeKernel(integrateKernel, cl::NullRange, cl::NDRange(numVertices)) != CL_SUCCESS)
+	if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(numVertices)) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to enqueue kernel", 0);
 		return false;
@@ -284,7 +323,7 @@ bool GpuSimulationContext::integrate(Lattice & lattice, const float dt, const fl
 
 bool GpuSimulationContext::integrateImpulseResponse(const float dt)
 {
-	cl::Kernel integrateKernel(*integrateImpulseResponseProgram->program, "integrateImpulseResponse");
+	cl::Kernel & integrateKernel = *integrateImpulseResponseKernel;
 	
 	if (integrateKernel.setArg(0, *vertexBuffer) != CL_SUCCESS ||
 		integrateKernel.setArg(1, *cosSinBuffer) != CL_SUCCESS ||
@@ -303,5 +342,25 @@ bool GpuSimulationContext::integrateImpulseResponse(const float dt)
 	
 	//gpuContext.commandQueue->enqueueBarrierWithWaitList();
 	
+	return true;
+}
+
+bool GpuSimulationContext::advanceImpulseState(const float dt)
+{
+	cl::Kernel & kernel = *advanceImpulseResponseKernel;
+
+	if (kernel.setArg(0, *cosSinBuffer) != CL_SUCCESS ||
+		kernel.setArg(1, dt) != CL_SUCCESS)
+	{
+		LOG_ERR("failed to set buffer arguments for kernel", 0);
+		return false;
+	}
+
+	if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(kNumProbeFrequencies)) != CL_SUCCESS)
+	{
+		LOG_ERR("failed to enqueue kernel", 0);
+		return false;
+	}
+
 	return true;
 }

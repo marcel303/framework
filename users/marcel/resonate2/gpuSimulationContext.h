@@ -12,6 +12,7 @@ namespace cl
 	class CommandQueue;
 	class Context;
 	class Device;
+	class Kernel;
 	class Program;
 }
 
@@ -35,6 +36,12 @@ struct GpuSimulationContext
 	GpuProgram * computeEdgeForcesProgram = nullptr;
 	GpuProgram * integrateProgram = nullptr;
 	GpuProgram * integrateImpulseResponseProgram = nullptr;
+	GpuProgram * advanceImpulseResponseProgram = nullptr;
+
+	cl::Kernel * computeEdgeForcesKernel = nullptr;
+	cl::Kernel * integrateKernel = nullptr;
+	cl::Kernel * integrateImpulseResponseKernel = nullptr;
+	cl::Kernel * advanceImpulseResponseKernel = nullptr;
 	
 	GpuSimulationContext(GpuContext & in_gpuContext);
 	~GpuSimulationContext();
@@ -54,4 +61,5 @@ struct GpuSimulationContext
 	bool computeEdgeForces(const float tension);
 	bool integrate(Lattice & lattice, const float dt, const float falloff);
 	bool integrateImpulseResponse(const float dt);
+	bool advanceImpulseState(const float dt);
 };
