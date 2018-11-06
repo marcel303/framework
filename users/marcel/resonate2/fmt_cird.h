@@ -34,6 +34,8 @@ planes.
 struct CIRD
 {
 	const static int kMaxFrequencies = 1024;
+	
+	typedef uint8_t FourCC[4];
 
 	struct Header
 	{
@@ -42,11 +44,16 @@ struct CIRD
 		uint32_t cubeMapSy; // Height of the cube map.
 		uint32_t numFrequencies; // The number of valid frequencies in the frequencies table and the size of the image arrays.
 		
-		uint32_t reserved[1024 - 3];
-
+		uint32_t reserved[1024 - 4];
+		
+		Header();
+	};
+	
+	struct FrequencyTable
+	{
 		float frequencies[kMaxFrequencies];
 
-		Header();
+		FrequencyTable();
 	};
 
 	struct Value
@@ -71,6 +78,8 @@ struct CIRD
 	};
 
 	Header header;
+	
+	FrequencyTable frequencyTable;
 
 	Cube cube;
 
@@ -84,7 +93,7 @@ struct CIRD
 	bool loadFromFile(const char * filename);
 	bool saveToFile(const char * filename);
 
-	int allocate(const int numFrequencies, const int cubeMapSx, const int cubeMapSy);
+	void allocate(const int numFrequencies, const int cubeMapSx, const int cubeMapSy);
 	void free();
 	
 	int calcImageValueIndex(const int x, const int y) const

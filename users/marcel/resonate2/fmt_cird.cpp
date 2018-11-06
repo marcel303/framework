@@ -3,9 +3,25 @@
 #include <stdio.h> // FILE
 #include <string.h> // memset
 
+static void logError(const char * msg)
+{
+	printf("error: %s\n", msg);
+}
+
 CIRD::Header::Header()
 {
+	assert(sizeof(*this) == 1024*4);
+	
 	// Initialize the entire header to zero.
+	
+	memset(this, 0, sizeof(*this));
+}
+
+CIRD::FrequencyTable::FrequencyTable()
+{
+	assert(sizeof(*this) == 1024*4);
+	
+	// Initialize the entire frequency table to zero.
 	
 	memset(this, 0, sizeof(*this));
 }
@@ -23,6 +39,8 @@ bool CIRD::initialize(const int numFrequencies, const int cubeMapSx, const int c
 	
 	header = Header();
 	
+	frequencyTable = FrequencyTable();
+	
 	if (numFrequencies > kMaxFrequencies)
 		return false;
 	
@@ -31,7 +49,7 @@ bool CIRD::initialize(const int numFrequencies, const int cubeMapSx, const int c
 	header.cubeMapSx = cubeMapSx;
 	header.cubeMapSy = cubeMapSy;
 	
-	memcpy(header.frequencies, frequencies, sizeof(float) * numFrequencies);
+	memcpy(frequencyTable.frequencies, frequencies, sizeof(float) * numFrequencies);
 	
 	allocate(numFrequencies, cubeMapSx, cubeMapSy);
 	
@@ -45,24 +63,108 @@ bool CIRD::loadFromFile(const char * filename)
 	FILE * file = fopen(filename, "rb");
 
 	if (file == nullptr)
+	{
+		logError("failed to open file for read");
 		result = false;
+	}
+	
+	// read header
 
 	if (result)
 	{
-		if (fread(&header, sizeof(Header), 1, file) != 1)
+		FourCC fourCC;
+		
+		if (fread(&fourCC, sizeof(FourCC), 1, file) != 1)
+		{
+			logError("failed to read file format identifier");
 			result = false;
+		}
+		
+		// check if the identifier is as expected
+		if (memcmp(&fourCC, "cird", 4) != 0)
+		{
+			logError("file format identifier mismatch");
+			result = false;
+		}
+	}
+	
+	if (result)
+	{
+		if (fread(&header, sizeof(Header), 1, file) != 1)
+		{
+			logError("failed to read header data");
+			result = false;
+		}
 
 		// check if the version number is correct
 		if (header.version != 1000)
+		{
+			logError("version number mismatch");
 			result = false;
+		}
 
 		// check if the number of frequencies is sane
-		if (header.numFrequencies > 256)
+		if (header.numFrequencies > kMaxFrequencies)
+		{
+			logError("frequency table too big");
 			result = false;
+		}
 
 		// check if the cube map size is sane
 		if (header.cubeMapSx > 256 || header.cubeMapSy > 256)
+		{
+			logError("cube map dimensions too large");
 			result = false;
+		}
+	}
+	
+	// read the frequency table
+	
+	if (result)
+	{
+		FourCC fourCC;
+		
+		if (fread(&fourCC, sizeof(FourCC), 1, file) != 1)
+		{
+			logError("failed to read file format identifier");
+			result = false;
+		}
+		
+		// check if the identifier is as expected
+		if (memcmp(&fourCC, "freq", 4) != 0)
+		{
+			logError("frequency table identifier mismatch");
+			result = false;
+		}
+	}
+	
+	if (result)
+	{
+		if (fread(&frequencyTable, sizeof(FrequencyTable), 1, file) != 1)
+		{
+			logError("failed to read frequency table");
+			result = false;
+		}
+	}
+	
+	// read the cube map data
+	
+	if (result)
+	{
+		FourCC fourCC;
+		
+		if (fread(&fourCC, sizeof(FourCC), 1, file) != 1)
+		{
+			logError("failed to read data identifier");
+			result = false;
+		}
+		
+		// check if the identifier is as expected
+		if (memcmp(&fourCC, "data", 4) != 0)
+		{
+			logError("data identifier mismatch");
+			result = false;
+		}
 	}
 
 	if (result)
@@ -70,8 +172,13 @@ bool CIRD::loadFromFile(const char * filename)
 		allocate(header.numFrequencies, header.cubeMapSx, header.cubeMapSy);
 
 		if (fread(allValues, numValues * sizeof(Value), 1, file) != 1)
+		{
+			logError("failed to read cube map data");
 			result = false;
+		}
 	}
+	
+	//
 	
 	if (file != nullptr)
 	{
@@ -89,19 +196,72 @@ bool CIRD::saveToFile(const char * filename)
 	FILE * file = fopen(filename, "wb");
 	
 	if (file == nullptr)
+	{
+		logError("failed to open file for write");
 		result = false;
+	}
+	
+	// write header
+	
+	if (result)
+	{
+		if (fwrite("cird", 4, 1, file) != 1)
+		{
+			logError("failed to write file format identifier");
+			result = false;
+		}
+	}
 	
 	if (result)
 	{
 		if (fwrite(&header, sizeof(Header), 1, file) != 1)
+		{
+			logError("failed to write header data");
 			result = false;
+		}
+	}
+	
+	// write frequency table
+	
+	if (result)
+	{
+		if (fwrite("freq", 4, 1, file) != 1)
+		{
+			logError("failed to write file format identifier");
+			result = false;
+		}
+	}
+	
+	if (result)
+	{
+		if (fwrite(&frequencyTable, sizeof(FrequencyTable), 1, file) != 1)
+		{
+			logError("failed to write frequency table");
+			result = false;
+		}
+	}
+	
+	// write cube map data
+	
+	if (result)
+	{
+		if (fwrite("data", 4, 1, file) != 1)
+		{
+			logError("failed to write data identifier");
+			result = false;
+		}
 	}
 	
 	if (result)
 	{
 		if (fwrite(allValues, numValues * sizeof(Value), 1, file) != 1)
+		{
+			logError("failed to write cube map data");
 			result = false;
+		}
 	}
+	
+	//
 	
 	if (file != nullptr)
 	{
@@ -112,7 +272,7 @@ bool CIRD::saveToFile(const char * filename)
 	return result;
 }
 
-int CIRD::allocate(const int numFrequencies, const int cubeMapSx, const int cubeMapSy)
+void CIRD::allocate(const int numFrequencies, const int cubeMapSx, const int cubeMapSy)
 {
 	free();
 
@@ -140,8 +300,6 @@ int CIRD::allocate(const int numFrequencies, const int cubeMapSx, const int cube
 			valuePtr += cubeMapSx * cubeMapSy;
 		}
 	}
-
-	return numValues;
 }
 
 void CIRD::free()
