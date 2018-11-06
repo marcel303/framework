@@ -6031,7 +6031,7 @@ public:
      */
     cl_int enqueueFillImage(
         const Image& image,
-        cl_int4 fillColor,
+        const cl_int4& fillColor,
         const size_t<3>& origin,
         const size_t<3>& region,
         const VECTOR_CLASS<Event>* events = NULL,
@@ -6042,7 +6042,7 @@ public:
             ::clEnqueueFillImage(
                 object_, 
                 image(),
-                static_cast<void*>(&fillColor), 
+                static_cast<const void*>(&fillColor), 
                 (const ::size_t *) origin, 
                 (const ::size_t *) region,
                 (events != NULL) ? (cl_uint) events->size() : 0,
@@ -6065,7 +6065,7 @@ public:
      */
     cl_int enqueueFillImage(
         const Image& image,
-        cl_uint4 fillColor,
+        const cl_uint4& fillColor,
         const size_t<3>& origin,
         const size_t<3>& region,
         const VECTOR_CLASS<Event>* events = NULL,
@@ -6076,7 +6076,7 @@ public:
             ::clEnqueueFillImage(
                 object_, 
                 image(),
-                static_cast<void*>(&fillColor), 
+                static_cast<const void*>(&fillColor), 
                 (const ::size_t *) origin, 
                 (const ::size_t *) region,
                 (events != NULL) ? (cl_uint) events->size() : 0,

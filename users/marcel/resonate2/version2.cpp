@@ -14,6 +14,12 @@
 #include "StringEx.h"
 #include <math.h>
 
+#ifdef WIN32
+	#include <malloc.h>
+#else
+	#include <alloca.h>
+#endif
+
 #include "audiostream/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStream.h"
 
@@ -547,6 +553,8 @@ static bool impulseResponseDataToCird(const ImpulseResponseState & state, const 
 
 struct Sonify : AudioStream
 {
+	static const int kBufferSize = 256;
+
 	struct DCBlocker
 	{
 		double average = 0.0;
@@ -604,7 +612,7 @@ struct Sonify : AudioStream
 		dcBlocker = DCBlocker();
 		
 		audioOutput = new AudioOutput_PortAudio();
-		audioOutput->Initialize(2, 44100, 256);
+		audioOutput->Initialize(2, 44100, kBufferSize);
 		audioOutput->Play(this);
 	}
 	
@@ -644,6 +652,8 @@ struct Sonify : AudioStream
 	
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
 	{
+		Assert(numSamples == kBufferSize);
+
 		// create a copy of the new magnitudes so we can work with the latest values
 		// do it first to avoid locking the mutex around the entire synthesis section
 		
@@ -663,8 +673,8 @@ struct Sonify : AudioStream
 		
 		// create ramps to blend between the old and the new magnitude values
 		
-		float newRamp[numSamples];
-		float oldRamp[numSamples];
+		float newRamp[kBufferSize];
+		float oldRamp[kBufferSize];
 		
 		for (int s = 0; s < numSamples; ++s)
 		{

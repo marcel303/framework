@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "lattice.h"
+#include <algorithm>
 
 // fibonacci sphere
 
