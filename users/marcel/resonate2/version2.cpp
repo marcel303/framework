@@ -12,12 +12,10 @@
 #include "nfd.h"
 #include "shape.h"
 #include "StringEx.h"
-#include <cmath>
 #include <math.h>
 
-//#define __CL_ENABLE_EXCEPTIONS
-
-#include "cl.hpp"
+#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiostream/AudioStream.h"
 
 /*
 
@@ -547,6 +545,158 @@ static bool impulseResponseDataToCird(const ImpulseResponseState & state, const 
 	}
 }
 
+struct Sonify : AudioStream
+{
+	const ImpulseResponseState * state = nullptr;
+	
+	float oldMagnitudes[kNumProbeFrequencies];
+	float newMagnitudes[kNumProbeFrequencies];
+	
+	float phase[kNumProbeFrequencies];
+	
+	SDL_mutex * mutex = nullptr;
+	
+	AudioOutput_PortAudio * audioOutput = nullptr;
+	
+	virtual ~Sonify() override
+	{
+		Assert(audioOutput == nullptr);
+		
+		shut();
+	}
+	
+	void init(const ImpulseResponseState * in_state)
+	{
+		shut();
+		
+		//
+		
+		state = in_state;
+		
+		memset(oldMagnitudes, 0, sizeof(oldMagnitudes));
+		memset(newMagnitudes, 0, sizeof(newMagnitudes));
+		
+		memset(phase, 0, sizeof(phase));
+		
+		mutex = SDL_CreateMutex();
+		Assert(mutex != nullptr);
+		
+		audioOutput = new AudioOutput_PortAudio();
+		audioOutput->Initialize(2, 44100, 256);
+		audioOutput->Play(this);
+	}
+	
+	void shut()
+	{
+		if (audioOutput != nullptr)
+		{
+			audioOutput->Shutdown();
+			
+			delete audioOutput;
+			audioOutput = nullptr;
+		}
+		
+		if (mutex != nullptr)
+		{
+			SDL_DestroyMutex(mutex);
+			mutex = nullptr;
+		}
+		
+		state = nullptr;
+	}
+	
+	void update(const ImpulseResponseProbe & probe)
+	{
+		float magnitudes[kNumProbeFrequencies];
+		probe.calcResponseMagnitude(magnitudes);
+		
+		Verify(SDL_LockMutex(mutex) == 0);
+		{
+			memcpy(newMagnitudes, magnitudes, sizeof(newMagnitudes));
+		}
+		Verify(SDL_UnlockMutex(mutex) == 0);
+	}
+	
+	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
+	{
+		// create a copy of the new magnitudes so we can work with the latest values
+		// do it first to avoid locking the mutex around the entire synthesis section
+		
+		float newMagnitudesCopy[kNumProbeFrequencies];
+		
+		Verify(SDL_LockMutex(mutex) == 0);
+		{
+			memcpy(newMagnitudesCopy, newMagnitudes, sizeof(newMagnitudesCopy));
+		}
+		Verify(SDL_UnlockMutex(mutex) == 0);
+		
+		// create ramps to blend between the old and the new magnitude values
+		
+		float newRamp[numSamples];
+		float oldRamp[numSamples];
+		
+		for (int s = 0; s < numSamples; ++s)
+		{
+			newRamp[s] = s / float(numSamples);
+			oldRamp[s] = 1.f - newRamp[s];
+		}
+		
+		// synthesize signal
+		
+		const float twoPi = 2.f * M_PI;
+		
+		const float dt_times_twoPi = twoPi / 44100.f;
+		
+		for (int s = 0; s < numSamples; ++s)
+		{
+			// accumulate per-frequency oscillators
+			
+			float value = 0.f;
+			
+			for (int i = 0; i < kNumProbeFrequencies; ++i)
+			{
+				const float phaseValue = sinf(phase[i]);
+				
+				value +=
+					phaseValue * newMagnitudesCopy[i] * newRamp[s] +
+					phaseValue * oldMagnitudes[i]     * oldRamp[s];
+			}
+			
+			// apply gain
+			
+			value *= 100.f;
+			
+			// clipping
+			
+			if (value < -1.f)
+				value = -1.f;
+			else if (value > +1.f)
+				value = +1.f;
+			
+			// write to buffer
+			
+			const int valueAsInt = value * ((1 << 15) - 1);
+			
+			buffer[s].channel[0] = valueAsInt;
+			buffer[s].channel[1] = valueAsInt;
+			
+			// increment the phase for each frequency
+			
+			for (int i = 0; i < kNumProbeFrequencies; ++i)
+			{
+				phase[i] = phase[i] + state->frequency[i] * dt_times_twoPi;
+				
+				while (phase[i] >= twoPi)
+					phase[i] -= twoPi;
+			}
+		}
+		
+		memcpy(oldMagnitudes, newMagnitudesCopy, sizeof(oldMagnitudes));
+		
+		return numSamples;
+	}
+};
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
@@ -596,7 +746,9 @@ int main(int argc, char * argv[])
 	
 	// initialize the lattice
 	
-	Lattice lattice;
+	Lattice * latticePtr = new Lattice();
+	
+	Lattice & lattice = *latticePtr;
 	lattice.init();
 	
 	// initialize the impulse response probes and associated state
@@ -634,6 +786,12 @@ int main(int argc, char * argv[])
 	ComputeEditor computeEdgeForcesEditor(s_gpuSimulationContext->computeEdgeForcesProgram);
 	ComputeEditor integrateEditor(s_gpuSimulationContext->integrateProgram);
 	ComputeEditor integrateImpulseResponseEditor(s_gpuSimulationContext->integrateImpulseResponseProgram);
+	
+	// sonification
+	
+	Sonify * sonify = new Sonify();
+	
+	sonify->init(&impulseResponseState);
 	
 	// editable state through ImGui
 	
@@ -1327,6 +1485,7 @@ int main(int argc, char * argv[])
 					const int x = mouseCubeFacePosition[0] * kProbeGridSize / kGridSize;
 					const int y = mouseCubeFacePosition[1] * kProbeGridSize / kGridSize;
 			
+					Assert(x >= 0 && x < kProbeGridSize);
 					Assert(y >= 0 && y < kProbeGridSize);
 			
 					const int probeIndex = calcProbeIndex(cubeFaceIndex, 0, y);
@@ -1347,6 +1506,22 @@ int main(int argc, char * argv[])
 				gxPopMatrix();
 			}
 			
+			if (true && hasMouseCubeFace)
+			{
+				const int cubeFaceIndex = mouseCubeFaceIndex;
+				const int x = mouseCubeFacePosition[0] * kProbeGridSize / kGridSize;
+				const int y = mouseCubeFacePosition[1] * kProbeGridSize / kGridSize;
+		
+				Assert(x >= 0 && x < kProbeGridSize);
+				Assert(y >= 0 && y < kProbeGridSize);
+		
+				const int probeIndex = calcProbeIndex(cubeFaceIndex, x, y);
+			
+				const auto & probe = impulseResponseProbes[probeIndex];
+				
+				sonify->update(probe);
+			}
+			
 			setColor(colorWhite);
 			drawText(8, VIEW_SY - 20, 14, +1, +1, "time %.2fms", simulationTime_ms);
 			
@@ -1358,6 +1533,13 @@ int main(int argc, char * argv[])
 	}
 	
 	Font("calibri.ttf").saveCache();
+	
+	sonify->shut();
+	delete sonify;
+	sonify = nullptr;
+	
+	delete latticePtr;
+	latticePtr = nullptr;
 	
 	glDeleteTextures(6, textureGL);
 	
