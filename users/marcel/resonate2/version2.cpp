@@ -566,6 +566,9 @@ struct Sonify : AudioStream
 	
 	float phase[kNumProbeFrequencies];
 	
+	float desiredVolume = 1.f;
+	float currentVolume = 1.f;
+	
 	float desiredFrequencyMultiplier = 1.f;
 	float currentFrequencyMultiplier = 1.f;
 	
@@ -624,7 +627,7 @@ struct Sonify : AudioStream
 		state = nullptr;
 	}
 	
-	void update(const ImpulseResponseProbe & probe, const float in_frequencyMultiplier)
+	void update(const ImpulseResponseProbe & probe, const float volume, const float frequencyMultiplier)
 	{
 		float magnitudes[kNumProbeFrequencies];
 		probe.calcResponseMagnitude(magnitudes);
@@ -633,7 +636,8 @@ struct Sonify : AudioStream
 		{
 			memcpy(newMagnitudes, magnitudes, sizeof(newMagnitudes));
 			
-			desiredFrequencyMultiplier = in_frequencyMultiplier;
+			desiredVolume = volume;
+			desiredFrequencyMultiplier = frequencyMultiplier;
 		}
 		Verify(SDL_UnlockMutex(mutex) == 0);
 	}
@@ -645,12 +649,14 @@ struct Sonify : AudioStream
 		
 		float newMagnitudesCopy[kNumProbeFrequencies];
 		
+		float desiredVolumeCopy;
 		float desiredFrequencyMultiplierCopy;
 		
 		Verify(SDL_LockMutex(mutex) == 0);
 		{
 			memcpy(newMagnitudesCopy, newMagnitudes, sizeof(newMagnitudesCopy));
 			
+			desiredVolumeCopy = desiredVolume;
 			desiredFrequencyMultiplierCopy = desiredFrequencyMultiplier;
 		}
 		Verify(SDL_UnlockMutex(mutex) == 0);
@@ -677,6 +683,10 @@ struct Sonify : AudioStream
 		
 		for (int s = 0; s < numSamples; ++s)
 		{
+			currentVolume =
+				currentVolume * retain +
+				desiredVolumeCopy * falloff;
+			
 			currentFrequencyMultiplier =
 				currentFrequencyMultiplier * retain +
 				desiredFrequencyMultiplierCopy * falloff;
@@ -703,6 +713,10 @@ struct Sonify : AudioStream
 			// apply DC blocking to remove a potential offset from zero from the synthesized signal
 			
 			value = dcBlocker.next(value);
+			
+			// apply volume
+			
+			value *= currentVolume;
 			
 			// clipping
 			
@@ -855,6 +869,7 @@ int main(int argc, char * argv[])
 	float velocityFalloff = .6f;
 	int fillCubeFrequencyIndex = kNumProbeFrequencies / 2;
 	bool sonifyImpulseResponseMeasurement = false;
+	float sonificationVolume = 0.f;
 	float sonificationFrequencyMultiplier = 1.f;
 	
 	// camera control and ray cast
@@ -1112,7 +1127,8 @@ int main(int argc, char * argv[])
 						else
 							sonify->shut();
 					}
-					ImGui::SliderFloat("Frequency multiplier", &sonificationFrequencyMultiplier, .1f, 16.f, "%.4f", 4.f);
+					ImGui::SliderFloat("Volume", &sonificationVolume, 0.f, 1.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Frequency multiplier", &sonificationFrequencyMultiplier, .02f, 16.f, "%.4f", 4.f);
 					
 					ImGui::Separator();
 					ImGui::Text("Statistics");
@@ -1568,7 +1584,7 @@ int main(int argc, char * argv[])
 			
 				const auto & probe = impulseResponseProbes[probeIndex];
 				
-				sonify->update(probe, sonificationFrequencyMultiplier);
+				sonify->update(probe, sonificationVolume, sonificationFrequencyMultiplier);
 			}
 			
 			setColor(colorWhite);
