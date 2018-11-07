@@ -18,6 +18,8 @@ GpuSimulationContext::GpuSimulationContext(GpuContext & in_gpuContext)
 GpuSimulationContext::~GpuSimulationContext()
 {
 	Assert(vertexBuffer == nullptr);
+	Assert(vertex_p_Buffer == nullptr);
+	Assert(vertex_p_init_Buffer == nullptr);
 	Assert(integrateProgram == nullptr);
 	Assert(integrateImpulseResponseProgram == nullptr);
 }
@@ -36,6 +38,12 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 		
 		vertexBuffer = new GpuBuffer();
 		vertexBuffer->initReadWrite(&gpuContext, in_lattice.vertices, sizeof(Lattice::Vertex) * numVertices, true, "vertex data");
+		
+		vertex_p_Buffer = new GpuBuffer();
+		vertex_p_Buffer->initReadWrite(&gpuContext, in_lattice.vertices_p, sizeof(Lattice::Vector) * numVertices, true, "vertex p data");
+		
+		vertex_p_init_Buffer = new GpuBuffer();
+		vertex_p_init_Buffer->initReadWrite(&gpuContext, in_lattice.vertices_p_init, sizeof(Lattice::Vector) * numVertices, true, "vertex p_init data");
 		
 		edgeBuffer = new GpuBuffer();
 		edgeBuffer->initReadOnly(&gpuContext, &in_lattice.edges[0], sizeof(Lattice::Edge) * numEdges, true, "edge data");
@@ -137,6 +145,12 @@ bool GpuSimulationContext::shut()
 	delete edgeBuffer;
 	edgeBuffer = nullptr;
 	
+	delete vertex_p_init_Buffer;
+	vertex_p_init_Buffer = nullptr;
+	
+	delete vertex_p_Buffer;
+	vertex_p_Buffer = nullptr;
+	
 	delete vertexBuffer;
 	vertexBuffer = nullptr;
 	
@@ -145,12 +159,18 @@ bool GpuSimulationContext::shut()
 
 bool GpuSimulationContext::sendVerticesToGpu()
 {
-	return vertexBuffer->sendToGpu();
+	return
+		vertexBuffer->sendToGpu() &&
+		vertex_p_Buffer->sendToGpu() &&
+		vertex_p_init_Buffer->sendToGpu();
 }
 
 bool GpuSimulationContext::fetchVerticesFromGpu()
 {
-	return vertexBuffer->fetchFromGpu();
+	return
+		vertexBuffer->fetchFromGpu() &&
+		vertex_p_Buffer->fetchFromGpu() &&
+		vertex_p_init_Buffer->fetchFromGpu();
 }
 
 bool GpuSimulationContext::sendEdgesToGpu()
@@ -188,7 +208,8 @@ bool GpuSimulationContext::computeEdgeForces(const float tension)
 	
 	if (kernel.setArg(0, *edgeBuffer->buffer) != CL_SUCCESS ||
 		kernel.setArg(1, *vertexBuffer->buffer) != CL_SUCCESS ||
-		kernel.setArg(2, tension) != CL_SUCCESS)
+		kernel.setArg(2, *vertex_p_Buffer->buffer) != CL_SUCCESS ||
+		kernel.setArg(3, tension) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to set buffer arguments for kernel", 0);
 		return false;
@@ -220,8 +241,9 @@ bool GpuSimulationContext::integrate(Lattice & lattice, const float dt, const fl
 	cl::Kernel & kernel = *integrateKernel;
 	
 	if (kernel.setArg(0, *vertexBuffer->buffer) != CL_SUCCESS ||
-		kernel.setArg(1, dt) != CL_SUCCESS ||
-		kernel.setArg(2, retain) != CL_SUCCESS)
+		kernel.setArg(1, *vertex_p_Buffer->buffer) != CL_SUCCESS ||
+		kernel.setArg(2, dt) != CL_SUCCESS ||
+		kernel.setArg(3, retain) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to set buffer arguments for kernel", 0);
 		return false;
@@ -244,10 +266,11 @@ bool GpuSimulationContext::integrateImpulseResponse(const float dt)
 {
 	cl::Kernel & integrateKernel = *integrateImpulseResponseKernel;
 	
-	if (integrateKernel.setArg(0, *vertexBuffer->buffer) != CL_SUCCESS ||
-		integrateKernel.setArg(1, *impulseResponseStateBuffer->buffer) != CL_SUCCESS ||
-		integrateKernel.setArg(2, *impulseResponseProbesBuffer->buffer) != CL_SUCCESS ||
-		integrateKernel.setArg(3, dt) != CL_SUCCESS)
+	if (integrateKernel.setArg(0, *vertex_p_Buffer->buffer) != CL_SUCCESS ||
+		integrateKernel.setArg(1, *vertex_p_init_Buffer->buffer) != CL_SUCCESS ||
+		integrateKernel.setArg(2, *impulseResponseStateBuffer->buffer) != CL_SUCCESS ||
+		integrateKernel.setArg(3, *impulseResponseProbesBuffer->buffer) != CL_SUCCESS ||
+		integrateKernel.setArg(4, dt) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to set buffer arguments for kernel", 0);
 		return false;

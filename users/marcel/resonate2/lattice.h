@@ -48,8 +48,6 @@ struct Lattice
 	
 	struct Vertex
 	{
-		Vector p;
-		Vector p_init;
 		Vector n;
 		
 		// physics stuff
@@ -68,6 +66,8 @@ struct Lattice
 	};
 	
 	Vertex vertices[kNumVertices];
+	Vector vertices_p[kNumVertices];
+	Vector vertices_p_init[kNumVertices];
 	
 	std::vector<Edge> edges;
 	

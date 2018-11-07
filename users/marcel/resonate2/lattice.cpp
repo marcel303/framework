@@ -28,7 +28,7 @@ void Lattice::init()
 	
 				const Vec3 p = matrix.Mul4(Vec3(xf, yf, 0.f));
 				
-				vertices[index].p.set(p[0], p[1], p[2]);
+				vertices_p[index].set(p[0], p[1], p[2]);
 				
 				vertices[index].n = n;
 			}
@@ -218,9 +218,11 @@ void Lattice::init()
 
 void Lattice::finalize()
 {
-	for (auto & vertex : vertices)
+	for (int i = 0; i < kNumVertices; ++i)
 	{
-		vertex.p_init = vertex.p;
+		auto & vertex = vertices[i];
+		
+		vertices_p_init[i] = vertices_p[i];
 		
 		vertex.f.setZero();
 		vertex.v.setZero();
@@ -228,8 +230,8 @@ void Lattice::finalize()
 	
 	for (auto & edge : edges)
 	{
-		const auto & p1 = vertices[edge.vertex1].p;
-		const auto & p2 = vertices[edge.vertex2].p;
+		const auto & p1 = vertices_p[edge.vertex1];
+		const auto & p2 = vertices_p[edge.vertex2];
 		
 		const float dx = p2.x - p1.x;
 		const float dy = p2.y - p1.y;

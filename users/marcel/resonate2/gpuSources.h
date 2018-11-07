@@ -11,8 +11,6 @@ typedef struct Vector
 
 typedef struct Vertex
 {
-	Vector p;
-	Vector p_init;
 	Vector n;
 	
 	// physics stuff
@@ -53,6 +51,7 @@ void atomicAdd_g_f(volatile __global float *addr, float val)
 void kernel computeEdgeForces(
 	global const Edge * restrict edges,
 	global Vertex * restrict vertices,
+	global Vector * restrict vertices_p,
 	float tension)
 {
 	const float eps = 1e-12f;
@@ -61,8 +60,8 @@ void kernel computeEdgeForces(
 	
 	const Edge edge = edges[ID];
 	
-	const Vector p1 = vertices[edge.vertex1].p;
-	const Vector p2 = vertices[edge.vertex2].p;
+	const Vector p1 = vertices_p[edge.vertex1];
+	const Vector p2 = vertices_p[edge.vertex2];
 	
 	const float dx = p2.x - p1.x;
 	const float dy = p2.y - p1.y;
@@ -119,8 +118,6 @@ typedef struct Vector
 
 typedef struct Vertex
 {
-	Vector p;
-	Vector p_init;
 	Vector n;
 	
 	// physics stuff
@@ -130,12 +127,15 @@ typedef struct Vertex
 
 void kernel integrate(
 	global Vertex * restrict vertices,
+	global Vector * restrict vertices_p,
 	float dt,
 	float retain)
 {
 	int ID = get_global_id(0);
 	
 	Vertex v = vertices[ID];
+	
+	Vector v_p = vertices_p[ID];
 	
 	v.v.x *= retain;
 	v.v.y *= retain;
@@ -149,9 +149,9 @@ void kernel integrate(
 
 	// todo : constrain vertices using the normal of the plane they sit in instead of the line to (0, 0, 0)
 
-	float nx = v.p.x;
-	float ny = v.p.y;
-	float nz = v.p.z;
+	float nx = v_p.x;
+	float ny = v_p.y;
+	float nz = v_p.z;
 	const float ns = sqrt(nx * nx + ny * ny + nz * nz);
 	nx /= ns;
 	ny /= ns;
@@ -171,15 +171,17 @@ void kernel integrate(
 	v.v.z += v.f.z * dt;
 #endif
 	
-	v.p.x += v.v.x * dt;
-	v.p.y += v.v.y * dt;
-	v.p.z += v.v.z * dt;
+	v_p.x += v.v.x * dt;
+	v_p.y += v.v.y * dt;
+	v_p.z += v.v.z * dt;
 	
 	v.f.x = 0.0;
 	v.f.y = 0.0;
 	v.f.z = 0.0;
 	
 	vertices[ID] = v;
+	
+	vertices_p[ID] = v_p;
 }
 )SHADER";
 
@@ -194,8 +196,6 @@ typedef struct Vector
 
 typedef struct Vertex
 {
-	Vector p;
-	Vector p_init;
 	Vector n;
 	
 	// physics stuff
@@ -223,7 +223,8 @@ typedef struct ImpulseResponseProbe
 } ImpulseResponseProbe;
 
 void kernel integrateImpulseResponse(
-	global const Vertex * restrict vertices,
+	global const Vector * restrict vertices_p,
+	global const Vector * restrict vertices_p_init,
 	constant const ImpulseResponseState * restrict state,
 	global ImpulseResponseProbe * restrict probes,
 	float dt)
@@ -239,8 +240,8 @@ void kernel integrateImpulseResponse(
 	
 	global ImpulseResponseProbe * restrict probe = probes + ID;
 	
-	const Vector p = vertices[probe->vertexIndex].p;
-	const Vector p_init = vertices[probe->vertexIndex].p_init;
+	const Vector p = vertices_p[probe->vertexIndex];
+	const Vector p_init = vertices_p_init[probe->vertexIndex];
 	
 	const float dx = p.x - p_init.x;
 	const float dy = p.y - p_init.y;

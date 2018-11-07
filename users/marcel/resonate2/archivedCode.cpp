@@ -37,7 +37,7 @@ static void createFibonnacciSphere(Lattice & lattice)
 	
 	for (int i = 0; i < numVertices; ++i)
 	{
-		lattice.vertices[i].p.set(
+		lattice.vertices_p[i].set(
 			points[i][0],
 			points[i][1],
 			points[i][2]);
@@ -48,7 +48,7 @@ static void createFibonnacciSphere(Lattice & lattice)
 	
 	for (int i = 0; i < numVertices; ++i)
 	{
-		const auto & p1 = lattice.vertices[i].p;
+		const auto & p1 = lattice.vertices_p[i];
 		
 		struct Result
 		{
@@ -70,7 +70,7 @@ static void createFibonnacciSphere(Lattice & lattice)
 			if (j == i)
 				continue;
 			
-			const auto & p2 = lattice.vertices[j].p;
+			const auto & p2 = lattice.vertices_p[j];
 			
 			const float dx = p2.x - p1.x;
 			const float dy = p2.y - p1.y;

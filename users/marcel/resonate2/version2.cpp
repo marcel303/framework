@@ -206,14 +206,16 @@ static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & s
 	{
 		auto & v = lattice.vertices[i];
 		
+		auto & v_p = lattice.vertices_p[i];
+		
 		int planeIndex;
 		
-		const float t = shape.intersectRay_directional(Vec3(v.p.x, v.p.y, v.p.z), planeIndex);
+		const float t = shape.intersectRay_directional(Vec3(v_p.x, v_p.y, v_p.z), planeIndex);
 		
-		v.p.set(
-			v.p.x * t,
-			v.p.y * t,
-			v.p.z * t);
+		v_p.set(
+			v_p.x * t,
+			v_p.y * t,
+			v_p.z * t);
 		
 		const Vec3 & n = shape.planes[planeIndex].normal;
 		
@@ -229,11 +231,11 @@ static void projectLatticeOntoShere(Lattice & lattice)
 	
 	for (int i = 0; i < numVertices; ++i)
 	{
-		auto & p = lattice.vertices[i].p;
+		auto & p = lattice.vertices_p[i];
 		
 		const float t = 1.f / Vec3(p.x, p.y, p.z).CalcSize();
 		
-		lattice.vertices[i].p.set(
+		lattice.vertices_p[i].set(
 			p.x * t,
 			p.y * t,
 			p.z * t);
@@ -241,7 +243,7 @@ static void projectLatticeOntoShere(Lattice & lattice)
 		lattice.vertices[i].f.setZero();
 		lattice.vertices[i].v.setZero();
 		
-		lattice.vertices[i].n = lattice.vertices[i].p;
+		lattice.vertices[i].n = lattice.vertices_p[i];
 	}
 
 	lattice.finalize();
@@ -300,12 +302,15 @@ void simulateLattice_computeEdgeForces(Lattice & lattice, const float tension)
 		auto & v1 = lattice.vertices[edge.vertex1];
 		auto & v2 = lattice.vertices[edge.vertex2];
 		
+		auto & v1_p = lattice.vertices_p[edge.vertex1];
+		auto & v2_p = lattice.vertices_p[edge.vertex2];
+		
 	// todo : remove ?
 		//edge.weight = 1.f / edge.initialDistance * 1.f / edge.initialDistance * 1.f / edge.initialDistance / 10000.f;
 		
-		const float dx = v2.p.x - v1.p.x;
-		const float dy = v2.p.y - v1.p.y;
-		const float dz = v2.p.z - v1.p.z;
+		const float dx = v2_p.x - v1_p.x;
+		const float dy = v2_p.y - v1_p.y;
+		const float dz = v2_p.z - v1_p.z;
 		
 		const float distance = sqrtf(dx * dx + dy * dy + dz * dz);
 		
@@ -346,6 +351,8 @@ static void simulateLattice_integrate(Lattice & lattice, const float dt, const f
 	{
 		auto & v = lattice.vertices[i];
 		
+		auto & v_p = lattice.vertices_p[i];
+		
 		v.v.x *= retain;
 		v.v.y *= retain;
 		v.v.z *= retain;
@@ -358,9 +365,9 @@ static void simulateLattice_integrate(Lattice & lattice, const float dt, const f
 		
 		// todo : constrain vertices using the normal of the plane they sit in instead of the line to (0, 0, 0)
 		
-		float nx = v.p.x;
-		float ny = v.p.y;
-		float nz = v.p.z;
+		float nx = v_p.x;
+		float ny = v_p.y;
+		float nz = v_p.z;
 		const float ns = sqrtf(nx * nx + ny * ny + nz * nz);
 		nx /= ns;
 		ny /= ns;
@@ -380,9 +387,9 @@ static void simulateLattice_integrate(Lattice & lattice, const float dt, const f
 		v.v.z += v.f.z * dt;
 	#endif
 		
-		v.p.x += v.v.x * dt;
-		v.p.y += v.v.y * dt;
-		v.p.z += v.v.z * dt;
+		v_p.x += v.v.x * dt;
+		v_p.y += v.v.y * dt;
+		v_p.z += v.v.z * dt;
 		
 		v.f.setZero();
 	}
@@ -435,7 +442,7 @@ static void squashLattice(Lattice & lattice)
 
 	for (int i = 0; i < numVertices; ++i)
 	{
-		auto & p = lattice.vertices[i].p;
+		auto & p = lattice.vertices_p[i];
 		p.x *= .99f;
 		p.y *= .99f;
 		p.z *= .99f;

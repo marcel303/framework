@@ -69,11 +69,12 @@ void ImpulseResponseProbe::measureValue(const ImpulseResponseState & state, cons
 
 void ImpulseResponseProbe::measureAtVertex(const ImpulseResponseState & state, const Lattice & lattice)
 {
-	const auto & vertex = lattice.vertices[vertexIndex];
+	const auto & p = lattice.vertices_p[vertexIndex];
+	const auto & p_init = lattice.vertices_p_init[vertexIndex];
 	
-	const float dx = vertex.p.x - vertex.p_init.x;
-	const float dy = vertex.p.y - vertex.p_init.y;
-	const float dz = vertex.p.z - vertex.p_init.z;
+	const float dx = p.x - p_init.x;
+	const float dy = p.y - p_init.y;
+	const float dz = p.z - p_init.z;
 
 	const float value = sqrtf(dx * dx + dy * dy + dz * dz);
 	

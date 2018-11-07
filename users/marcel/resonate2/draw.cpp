@@ -76,7 +76,7 @@ void drawLatticeVertices(const Lattice & lattice)
 		
 		for (int i = 0; i < numVertices; ++i)
 		{
-			auto & p = lattice.vertices[i].p;
+			auto & p = lattice.vertices_p[i];
 			
 			gxVertex3f(p.x, p.y, p.z);
 		}
@@ -96,8 +96,8 @@ void drawLatticeEdges(const Lattice & lattice)
 	{
 		for (auto & edge : lattice.edges)
 		{
-			const auto & p1 = lattice.vertices[edge.vertex1].p;
-			const auto & p2 = lattice.vertices[edge.vertex2].p;
+			const auto & p1 = lattice.vertices_p[edge.vertex1];
+			const auto & p2 = lattice.vertices_p[edge.vertex2];
 			
 			setColor(colors[edge.vertex1]);
 			gxVertex3f(p1.x, p1.y, p1.z);
@@ -123,7 +123,7 @@ void drawLatticeFaces(const Lattice & lattice, const int faceIndex)
 		{
 			if (faceIndex != -1 && i != faceIndex)
 				continue;
-				
+			
 			for (int y = 0; y < kGridSize - 1; ++y)
 			{
 				const int index1 = calcVertexIndex(i, 0, y + 0);
@@ -136,10 +136,10 @@ void drawLatticeFaces(const Lattice & lattice, const int faceIndex)
 					const int index01 = index2 + x + 0;
 					const int index11 = index2 + x + 1;
 					
-					const auto & p00 = lattice.vertices[index00].p;
-					const auto & p10 = lattice.vertices[index10].p;
-					const auto & p01 = lattice.vertices[index01].p;
-					const auto & p11 = lattice.vertices[index11].p;
+					const auto & p00 = lattice.vertices_p[index00];
+					const auto & p10 = lattice.vertices_p[index10];
+					const auto & p01 = lattice.vertices_p[index01];
+					const auto & p11 = lattice.vertices_p[index11];
 					
 					setColor(colors[index00]); gxVertex3f(p00.x, p00.y, p00.z);
 					setColor(colors[index10]); gxVertex3f(p10.x, p10.y, p10.z);
@@ -165,12 +165,14 @@ void drawImpulseResponseProbes(const ImpulseResponseProbe * probes, const int nu
 		
 		const auto & vertex = lattice.vertices[probe.vertexIndex];
 		
+		const auto & vertex_p = lattice.vertices_p[probe.vertexIndex];
+		
 		const float offset = -.01f;
 		
 		gxVertex3f(
-			vertex.p.x + vertex.n.x * offset,
-			vertex.p.y + vertex.n.y * offset,
-			vertex.p.z + vertex.n.z * offset);
+			vertex_p.x + vertex.n.x * offset,
+			vertex_p.y + vertex.n.y * offset,
+			vertex_p.z + vertex.n.z * offset);
 	}
 	gxEnd();
 	glPointSize(1.f);
