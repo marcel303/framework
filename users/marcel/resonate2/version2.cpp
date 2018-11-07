@@ -48,7 +48,7 @@ struct Texture
 
 struct CubeFace
 {
-	Texture textures[kNumProbeFrequencies];
+	Texture texture;
 };
 
 struct Cube
@@ -73,8 +73,6 @@ static void fillCube(const Lattice & lattice, const ImpulseResponseProbe * probe
 	{
 		CubeFace & face = cube.faces[faceIndex];
 		
-		Texture & texture = face.textures[frequencyIndex];
-		
 		for (int x = 0; x < kProbeGridSize; ++x)
 		{
 			for (int y = 0; y < kProbeGridSize; ++y)
@@ -85,23 +83,10 @@ static void fillCube(const Lattice & lattice, const ImpulseResponseProbe * probe
 				
 				const float value = probe.calcResponseMagnitudeForFrequencyIndex(frequencyIndex) * 4000.f;
 				
-				texture.value[y][x] = value;
+				face.texture.value[y][x] = value;
 			}
 		}
 	}
-}
-
-static void randomizeCubeFace(CubeFace & cubeFace, const int firstTexture, const int numTextures, const float min, const float max)
-{
-	for (int i = 0; i < numTextures; ++i)
-	{
-		randomizeTexture(cubeFace.textures[firstTexture + i], min, max);
-	}
-}
-
-static GLuint textureToGL(const Texture & texture)
-{
-	return createTextureFromR32F(texture.value, kProbeGridSize, kProbeGridSize, false, true);
 }
 
 static void updateCubemapTextureGL(Cube & cube, const GLuint textureId, const int frequencyIndex)
@@ -124,7 +109,7 @@ static void updateCubemapTextureGL(Cube & cube, const GLuint textureId, const in
         	0, GL_RED,
         	kGridSize, kGridSize, 0,
         	GL_RED, GL_FLOAT,
-        	(float*)cube.faces[faceIndex].textures[frequencyIndex].value);
+        	(float*)cube.faces[faceIndex].texture.value);
 		checkErrorGL();
     }
 	
@@ -803,17 +788,10 @@ int main(int argc, char * argv[])
 	
 	for (int i = 0; i < 6; ++i)
 	{
-		randomizeCubeFace(cube->faces[i], 0, 1, 0.f, 1.f);
+		randomizeTexture(cube->faces[i].texture, 0.f, 1.f);
 	}
 	
 	//
-	
-	GLuint textureGL[6];
-	
-	for (int i = 0; i < 6; ++i)
-	{
-		textureGL[i] = textureToGL(cube->faces[i].textures[0]);
-	}
 	
 	GLuint cubemapTexture = 0;
 	glGenTextures(1, &cubemapTexture);
@@ -1147,17 +1125,11 @@ int main(int argc, char * argv[])
 					if (ImGui::Button("Fill cube map"))
 					{
 						fillCube(lattice, impulseResponseProbes, fillCubeFrequencyIndex, *cube);
-						glDeleteTextures(6, textureGL);
-						for (int i = 0; i < 6; ++i)
-							textureGL[i] = textureToGL(cube->faces[i].textures[fillCubeFrequencyIndex]);
 						updateCubemapTextureGL(*cube, cubemapTexture, fillCubeFrequencyIndex);
 					}
 					if (ImGui::SliderInt("Frequency index", &fillCubeFrequencyIndex, 0, kNumProbeFrequencies - 1))
 					{
 						fillCube(lattice, impulseResponseProbes, fillCubeFrequencyIndex, *cube);
-						glDeleteTextures(6, textureGL);
-						for (int i = 0; i < 6; ++i)
-							textureGL[i] = textureToGL(cube->faces[i].textures[fillCubeFrequencyIndex]);
 						updateCubemapTextureGL(*cube, cubemapTexture, fillCubeFrequencyIndex);
 						showCube = true;
 					}
@@ -1372,7 +1344,6 @@ int main(int argc, char * argv[])
 			
 				if (showCube)
 				{
-				#if 1
 					for (int i = 0; i < 6; ++i)
 					{
 						Shader shader("cube");
@@ -1387,20 +1358,6 @@ int main(int argc, char * argv[])
 						}
 						clearShader();
 					}
-				#else
-					// todo : update cube map with data from the impulse response probes
-					
-					for (int i = 0; i < 6; ++i)
-					{
-						gxSetTexture(textureGL[i]);
-						gxPushMatrix();
-						gxMultMatrixf(s_cubeFaceToWorldMatrices[i].m_v);
-						setColor(colorWhite);
-						drawRect(-1, -1, +1, +1);
-						gxPopMatrix();
-						gxSetTexture(0);
-					}
-				#endif
 				}
 				
 				if (showCubePoints)
@@ -1670,7 +1627,8 @@ int main(int argc, char * argv[])
 	delete latticePtr;
 	latticePtr = nullptr;
 	
-	glDeleteTextures(6, textureGL);
+	glDeleteTextures(1, &cubemapTexture);
+	cubemapTexture = 0;
 	
 	delete cube;
 	cube = nullptr;
