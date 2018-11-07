@@ -198,7 +198,7 @@ bool GpuSimulationContext::sendEdgesToGpu()
 
 bool GpuSimulationContext::sendImpulseResponseStateToGpu()
 {
-	return edgeBuffer->fetchFromGpu();
+	return impulseResponseStateBuffer->sendToGpu();
 }
 
 bool GpuSimulationContext::fetchImpulseResponseStateFromGpu()
