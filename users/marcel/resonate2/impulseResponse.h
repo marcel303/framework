@@ -15,6 +15,8 @@ struct ImpulseResponseState
 	
 	void init(const float * frequencies = nullptr, const int numFrequencies = 0);
 	
+	void restart();
+	
 	void processBegin(const float in_dt);
 	void processEnd();
 };

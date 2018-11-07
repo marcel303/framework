@@ -55,6 +55,7 @@ struct GpuSimulationContext
 	bool sendEdgesToGpu();
 	
 	bool sendImpulseResponseStateToGpu();
+	bool fetchImpulseResponseStateFromGpu();
 	bool sendImpulseResponseProbesToGpu();
 	bool fetchImpulseResponseProbesFromGpu();
 	

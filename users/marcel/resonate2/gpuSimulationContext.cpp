@@ -202,19 +202,6 @@ bool GpuSimulationContext::sendImpulseResponseStateToGpu()
 {
 	// send the impulse response state to the GPU
 	
-#if 0
-	const int dataSize = sizeof(ImpulseResponseState);
-
-	void * data = gpuContext.commandQueue->enqueueMapBuffer(
-		*cosSinBuffer,
-		CL_TRUE,
-		CL_MAP_WRITE_INVALIDATE_REGION,
-		0, dataSize);
-
-	memcpy(data, impulseResponseState, dataSize);
-
-	gpuContext.commandQueue->enqueueUnmapMemObject(*cosSinBuffer, data);
-#else
 	if (gpuContext.commandQueue->enqueueWriteBuffer(
 		*cosSinBuffer,
 		CL_TRUE,
@@ -224,7 +211,23 @@ bool GpuSimulationContext::sendImpulseResponseStateToGpu()
 		LOG_ERR("failed to send impulse response state to the GPU", 0);
 		return false;
 	}
-#endif
+	
+	return true;
+}
+
+bool GpuSimulationContext::fetchImpulseResponseStateFromGpu()
+{
+	// fetch the impulse response state from the GPU
+	
+	if (gpuContext.commandQueue->enqueueReadBuffer(
+		*cosSinBuffer,
+		CL_TRUE,
+		0, sizeof(ImpulseResponseState),
+		probes) != CL_SUCCESS)
+	{
+		LOG_ERR("failed to fetch impulse response state from the GPU", 0);
+		return false;
+	}
 	
 	return true;
 }

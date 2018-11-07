@@ -21,6 +21,11 @@ void ImpulseResponseState::init(const float * in_frequencies, const int numFrequ
 	}
 }
 
+void ImpulseResponseState::restart()
+{
+	memset(phase, 0, sizeof(phase));
+}
+
 void ImpulseResponseState::processBegin(const float in_dt)
 {
 	dt = in_dt;
