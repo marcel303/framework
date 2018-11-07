@@ -208,10 +208,20 @@ void kernel integrateImpulseResponse(
 {
 	int ID = get_global_id(0);
 
-	int range_ID = get_global_id(1);
-	
-	const int range1 = range_ID * kNumProbeFrequencies/8;
-	const int range2 = range_ID * kNumProbeFrequencies/8 + kNumProbeFrequencies/8;
+	local float cos_sin[kNumProbeFrequencies][2];
+
+    const int local_ID = get_local_id(0);
+
+    const int i1 = local_ID * kNumProbeFrequencies / get_local_size(0);
+    const int i2 = (local_ID + 1) * kNumProbeFrequencies / get_local_size(0);
+
+    for (int i = i1; i < i2; ++i)
+    {
+        cos_sin[i][0] = state->cos_sin[i][0];
+        cos_sin[i][1] = state->cos_sin[i][1];
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
 
 	// measureValueAtVertex(..)
 	
@@ -230,10 +240,10 @@ void kernel integrateImpulseResponse(
 
 	// measureValue(..)
 
-	for (int i = range1; i < range2; ++i)
+	for (int i = 0; i < kNumProbeFrequencies; ++i)
 	{
-		probe->response[i][0] += state->cos_sin[i][0] * value_times_dt;
-		probe->response[i][1] += state->cos_sin[i][1] * value_times_dt;
+		probe->response[i][0] += cos_sin[i][0] * value_times_dt;
+		probe->response[i][1] += cos_sin[i][1] * value_times_dt;
 	}
 }
 )SHADER";
