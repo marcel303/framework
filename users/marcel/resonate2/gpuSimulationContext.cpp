@@ -223,7 +223,7 @@ bool GpuSimulationContext::fetchImpulseResponseStateFromGpu()
 		*impulseResponseStateBuffer,
 		CL_TRUE,
 		0, sizeof(ImpulseResponseState),
-		probes) != CL_SUCCESS)
+		impulseResponseState) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to fetch impulse response state from the GPU", 0);
 		return false;
@@ -288,6 +288,8 @@ bool GpuSimulationContext::computeEdgeForces(const float tension)
 		return false;
 	}
 	
+	gpuContext.commandQueue->flush();
+	
 	//gpuContext.commandQueue->enqueueBarrierWithWaitList();
 	
 	return true;
@@ -319,6 +321,8 @@ bool GpuSimulationContext::integrate(Lattice & lattice, const float dt, const fl
 		return false;
 	}
 	
+	gpuContext.commandQueue->flush();
+	
 	//gpuContext.commandQueue->enqueueBarrierWithWaitList();
 	
 	return true;
@@ -343,6 +347,8 @@ bool GpuSimulationContext::integrateImpulseResponse(const float dt)
 		return false;
 	}
 	
+	gpuContext.commandQueue->flush();
+	
 	//gpuContext.commandQueue->enqueueBarrierWithWaitList();
 	
 	return true;
@@ -364,6 +370,8 @@ bool GpuSimulationContext::advanceImpulseState(const float dt)
 		LOG_ERR("failed to enqueue kernel", 0);
 		return false;
 	}
+	
+	gpuContext.commandQueue->flush();
 
 	return true;
 }

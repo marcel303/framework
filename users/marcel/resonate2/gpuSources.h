@@ -96,6 +96,14 @@ void kernel computeEdgeForces(
 	atomicAdd_g_f(&vertices[edge.vertex2].f.x, -fx);
 	atomicAdd_g_f(&vertices[edge.vertex2].f.y, -fy);
 	atomicAdd_g_f(&vertices[edge.vertex2].f.z, -fz);
+#else
+	vertices[edge.vertex1].f.x += fx;
+	vertices[edge.vertex1].f.y += fy;
+	vertices[edge.vertex1].f.z += fz;
+	
+	vertices[edge.vertex2].f.x -= fx;
+	vertices[edge.vertex2].f.y -= fy;
+	vertices[edge.vertex2].f.z -= fz;
 #endif
 }
 )SHADER";
@@ -216,12 +224,12 @@ typedef struct ImpulseResponseProbe
 
 void kernel integrateImpulseResponse(
 	global const Vertex * restrict vertices,
-	global const ImpulseResponseState * restrict state,
+	constant const ImpulseResponseState * restrict state,
 	global ImpulseResponseProbe * restrict probes,
 	float dt)
 {
 	int ID = get_global_id(0);
-	
+
 	int range_ID = get_global_id(1);
 	
 	const int range1 = range_ID * kNumProbeFrequencies/8;
@@ -273,7 +281,7 @@ void kernel advanceImpulseResponse(
 {
 	int ID = get_global_id(0);
 	
-	state->phase[ID] = fmod(state->phase[ID] + state->frequency[ID] * dt, 1.0);
+	state->phase[ID] = fmod(state->phase[ID] + state->frequency[ID] * dt, 1.f);
 
 	const float twoPi = 2.f * 3.14159265358979323846;
 

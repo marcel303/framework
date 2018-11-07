@@ -111,7 +111,9 @@ bool GpuContext::init()
 	
 	// create a command queue
 	
-	commandQueue = new cl::CommandQueue(*context, *device, CL_QUEUE_PROFILING_ENABLE * 0);
+	commandQueue = new cl::CommandQueue(*context, *device,
+		(CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE * 0) |
+		(CL_QUEUE_PROFILING_ENABLE * 0));
 	
 	return true;
 }
