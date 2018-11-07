@@ -137,3 +137,71 @@ bool GpuContext::isValid() const
 		context != nullptr &&
 		commandQueue != nullptr;
 }
+
+//
+
+GpuBuffer::~GpuBuffer()
+{
+	delete buffer;
+	buffer = nullptr;
+}
+
+void GpuBuffer::initReadWrite(GpuContext * in_context, void * in_data, const int in_size, const bool in_sendToGpu, const char * in_desc)
+{
+	context = in_context;
+	buffer = new cl::Buffer(*in_context->context, CL_MEM_READ_WRITE, in_size);
+	data = in_data;
+	size = in_size;
+	readOnly = false;
+	desc = in_desc;
+	
+	if (in_sendToGpu)
+		sendToGpu();
+}
+
+void GpuBuffer::initReadOnly(GpuContext * in_context, void * in_data, const int in_size, const bool in_sendToGpu, const char * in_desc)
+{
+	context = in_context;
+	buffer = new cl::Buffer(*context->context, CL_MEM_READ_ONLY, in_size);
+	data = in_data;
+	size = in_size;
+	readOnly = false;
+	desc = in_desc;
+	
+	if (in_sendToGpu)
+		sendToGpu();
+}
+
+bool GpuBuffer::sendToGpu()
+{
+	// send the data to the GPU
+	
+	if (context->commandQueue->enqueueWriteBuffer(
+		*buffer,
+		CL_TRUE,
+		0, size,
+		data) != CL_SUCCESS)
+	{
+		LOG_ERR("failed to send %s to the GPU", desc.c_str());
+		return false;
+	}
+	
+	return true;
+}
+
+bool GpuBuffer::fetchFromGpu()
+{
+	// fetch the data from the GPU
+	
+	if (context->commandQueue->enqueueReadBuffer(
+		*buffer,
+		CL_TRUE,
+		0, size,
+		data) != CL_SUCCESS)
+	{
+		LOG_ERR("failed to fetch %s from the GPU", desc.c_str());
+		return false;
+	}
+	
+	return true;
+}

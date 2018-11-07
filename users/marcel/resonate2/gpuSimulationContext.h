@@ -1,5 +1,6 @@
 #pragma once
 
+struct GpuBuffer;
 struct GpuContext;
 struct GpuProgram;
 struct ImpulseResponseProbe;
@@ -28,10 +29,10 @@ struct GpuSimulationContext
 	ImpulseResponseProbe * probes = nullptr;
 	int numProbes = 0;
 	
-	cl::Buffer * vertexBuffer = nullptr;
-	cl::Buffer * edgeBuffer = nullptr;
-	cl::Buffer * impulseResponseStateBuffer = nullptr;
-	cl::Buffer * impulseResponseProbesBuffer = nullptr;
+	GpuBuffer * vertexBuffer = nullptr;
+	GpuBuffer * edgeBuffer = nullptr;
+	GpuBuffer * impulseResponseStateBuffer = nullptr;
+	GpuBuffer * impulseResponseProbesBuffer = nullptr;
 	
 	GpuProgram * computeEdgeForcesProgram = nullptr;
 	GpuProgram * integrateProgram = nullptr;

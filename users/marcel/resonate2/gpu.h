@@ -4,6 +4,7 @@
 
 namespace cl
 {
+	class Buffer;
 	class CommandQueue;
 	class Context;
 	class Device;
@@ -42,4 +43,23 @@ struct GpuContext
 	void shut();
 	
 	bool isValid() const;
+};
+
+struct GpuBuffer
+{
+	GpuContext * context = nullptr;
+	
+	cl::Buffer * buffer = nullptr;
+	int size = 0;
+	void * data = nullptr;
+	bool readOnly = true;
+	std::string desc;
+	
+	~GpuBuffer();
+	
+	void initReadWrite(GpuContext * context, void * data, const int size, const bool sendToGpu, const char * desc);
+	void initReadOnly(GpuContext * context, void * data, const int size, const bool sendToGpu, const char * desc);
+	
+	bool sendToGpu();
+	bool fetchFromGpu();
 };

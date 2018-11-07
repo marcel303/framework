@@ -34,9 +34,11 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 		numVertices = kNumVertices;
 		numEdges = in_lattice.edges.size();
 		
-		vertexBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(Lattice::Vertex) * numVertices);
+		vertexBuffer = new GpuBuffer();
+		vertexBuffer->initReadWrite(&gpuContext, in_lattice.vertices, sizeof(Lattice::Vertex) * numVertices, true, "vertex data");
 		
-		edgeBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_ONLY, sizeof(Lattice::Edge) * numEdges);
+		edgeBuffer = new GpuBuffer();
+		edgeBuffer->initReadOnly(&gpuContext, &in_lattice.edges[0], sizeof(Lattice::Edge) * numEdges, true, "edge data");
 		
 		//
 		
@@ -45,9 +47,11 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 		probes = in_probes;
 		numProbes = in_numProbes;
 		
-		impulseResponseStateBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(ImpulseResponseState));
+		impulseResponseStateBuffer = new GpuBuffer();
+		impulseResponseStateBuffer->initReadWrite(&gpuContext, impulseResponseState, sizeof(ImpulseResponseState), true, "impulse response state");
 		
-		impulseResponseProbesBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(ImpulseResponseProbe) * numProbes);
+		impulseResponseProbesBuffer = new GpuBuffer();
+		impulseResponseProbesBuffer->initReadWrite(&gpuContext, probes, sizeof(ImpulseResponseProbe) * numProbes, true, "impulse response probes");
 		
 		//
 		
@@ -85,14 +89,6 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 
 		advanceImpulseResponseKernel = new cl::Kernel(*advanceImpulseResponseProgram->program, "advanceImpulseResponse");
 
-		//
-		
-		sendEdgesToGpu();
-		sendVerticesToGpu();
-		
-		sendImpulseResponseStateToGpu();
-		sendImpulseResponseProbesToGpu();
-		
 		return true;
 	}
 }
@@ -149,121 +145,37 @@ bool GpuSimulationContext::shut()
 
 bool GpuSimulationContext::sendVerticesToGpu()
 {
-	// send the vertex data to the GPU
-	
-	if (gpuContext.commandQueue->enqueueWriteBuffer(
-		*vertexBuffer,
-		CL_TRUE,
-		0, sizeof(Lattice::Vertex) * numVertices,
-		lattice->vertices) != CL_SUCCESS)
-	{
-		LOG_ERR("failed to send vertex data to the GPU", 0);
-		return false;
-	}
-	
-	return true;
+	return vertexBuffer->sendToGpu();
 }
 
 bool GpuSimulationContext::fetchVerticesFromGpu()
 {
-	// fetch the vertex data from the GPU
-	
-	if (gpuContext.commandQueue->enqueueReadBuffer(
-		*vertexBuffer,
-		CL_TRUE,
-		0, sizeof(Lattice::Vertex) * numVertices,
-		lattice->vertices) != CL_SUCCESS)
-	{
-		LOG_ERR("failed to fetch vertices from the GPU", 0);
-		return false;
-	}
-	
-	return true;
+	return vertexBuffer->fetchFromGpu();
 }
 
 bool GpuSimulationContext::sendEdgesToGpu()
 {
-	// send the edge data to the GPU
-	
-	if (gpuContext.commandQueue->enqueueWriteBuffer(
-		*edgeBuffer,
-		CL_TRUE,
-		0, sizeof(Lattice::Edge) * numEdges,
-		&lattice->edges[0]) != CL_SUCCESS)
-	{
-		LOG_ERR("failed to send edge data to the GPU", 0);
-		return false;
-	}
-	
-	return true;
+	return edgeBuffer->sendToGpu();
 }
 
 bool GpuSimulationContext::sendImpulseResponseStateToGpu()
 {
-	// send the impulse response state to the GPU
-	
-	if (gpuContext.commandQueue->enqueueWriteBuffer(
-		*impulseResponseStateBuffer,
-		CL_TRUE,
-		0, sizeof(ImpulseResponseState),
-		impulseResponseState) != CL_SUCCESS)
-	{
-		LOG_ERR("failed to send impulse response state to the GPU", 0);
-		return false;
-	}
-	
-	return true;
+	return edgeBuffer->fetchFromGpu();
 }
 
 bool GpuSimulationContext::fetchImpulseResponseStateFromGpu()
 {
-	// fetch the impulse response state from the GPU
-	
-	if (gpuContext.commandQueue->enqueueReadBuffer(
-		*impulseResponseStateBuffer,
-		CL_TRUE,
-		0, sizeof(ImpulseResponseState),
-		impulseResponseState) != CL_SUCCESS)
-	{
-		LOG_ERR("failed to fetch impulse response state from the GPU", 0);
-		return false;
-	}
-	
-	return true;
+	return impulseResponseStateBuffer->fetchFromGpu();
 }
 
 bool GpuSimulationContext::sendImpulseResponseProbesToGpu()
 {
-	// send the impulse response data to the GPU
-	
-	if (gpuContext.commandQueue->enqueueWriteBuffer(
-		*impulseResponseProbesBuffer,
-		CL_TRUE,
-		0, sizeof(ImpulseResponseProbe) * numProbes,
-		probes) != CL_SUCCESS)
-	{
-		LOG_ERR("failed to send impulse response data to the GPU", 0);
-		return false;
-	}
-	
-	return true;
+	return impulseResponseProbesBuffer->sendToGpu();
 }
 
 bool GpuSimulationContext::fetchImpulseResponseProbesFromGpu()
 {
-	// fetch the impulse response data from the GPU
-	
-	if (gpuContext.commandQueue->enqueueReadBuffer(
-		*impulseResponseProbesBuffer,
-		CL_TRUE,
-		0, sizeof(ImpulseResponseProbe) * numProbes,
-		probes) != CL_SUCCESS)
-	{
-		LOG_ERR("failed to fetch impulse response data from the GPU", 0);
-		return false;
-	}
-	
-	return true;
+	return impulseResponseProbesBuffer->fetchFromGpu();
 }
 
 bool GpuSimulationContext::computeEdgeForces(const float tension)
@@ -274,8 +186,8 @@ bool GpuSimulationContext::computeEdgeForces(const float tension)
 	
 	cl::Kernel & kernel = *computeEdgeForcesKernel;
 	
-	if (kernel.setArg(0, *edgeBuffer) != CL_SUCCESS ||
-		kernel.setArg(1, *vertexBuffer) != CL_SUCCESS ||
+	if (kernel.setArg(0, *edgeBuffer->buffer) != CL_SUCCESS ||
+		kernel.setArg(1, *vertexBuffer->buffer) != CL_SUCCESS ||
 		kernel.setArg(2, tension) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to set buffer arguments for kernel", 0);
@@ -307,7 +219,7 @@ bool GpuSimulationContext::integrate(Lattice & lattice, const float dt, const fl
 	
 	cl::Kernel & kernel = *integrateKernel;
 	
-	if (kernel.setArg(0, *vertexBuffer) != CL_SUCCESS ||
+	if (kernel.setArg(0, *vertexBuffer->buffer) != CL_SUCCESS ||
 		kernel.setArg(1, dt) != CL_SUCCESS ||
 		kernel.setArg(2, retain) != CL_SUCCESS)
 	{
@@ -332,9 +244,9 @@ bool GpuSimulationContext::integrateImpulseResponse(const float dt)
 {
 	cl::Kernel & integrateKernel = *integrateImpulseResponseKernel;
 	
-	if (integrateKernel.setArg(0, *vertexBuffer) != CL_SUCCESS ||
-		integrateKernel.setArg(1, *impulseResponseStateBuffer) != CL_SUCCESS ||
-		integrateKernel.setArg(2, *impulseResponseProbesBuffer) != CL_SUCCESS ||
+	if (integrateKernel.setArg(0, *vertexBuffer->buffer) != CL_SUCCESS ||
+		integrateKernel.setArg(1, *impulseResponseStateBuffer->buffer) != CL_SUCCESS ||
+		integrateKernel.setArg(2, *impulseResponseProbesBuffer->buffer) != CL_SUCCESS ||
 		integrateKernel.setArg(3, dt) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to set buffer arguments for kernel", 0);
@@ -358,7 +270,7 @@ bool GpuSimulationContext::advanceImpulseState(const float dt)
 {
 	cl::Kernel & kernel = *advanceImpulseResponseKernel;
 
-	if (kernel.setArg(0, *impulseResponseStateBuffer) != CL_SUCCESS ||
+	if (kernel.setArg(0, *impulseResponseStateBuffer->buffer) != CL_SUCCESS ||
 		kernel.setArg(1, dt) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to set buffer arguments for kernel", 0);
