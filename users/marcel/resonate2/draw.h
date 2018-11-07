@@ -20,7 +20,7 @@ extern VertexColorMode s_vertexColorMode;
 void colorizeLatticeVertices(const Lattice & lattice, Color * colors);
 void drawLatticeVertices(const Lattice & lattice);
 void drawLatticeEdges(const Lattice & lattice);
-void drawLatticeFaces(const Lattice & lattice);
+void drawLatticeFaces(const Lattice & lattice, const int faceIndex = -1);
 
 void drawImpulseResponseProbes(const ImpulseResponseProbe * probes, const int numProbes, const Lattice & lattice);
 void drawImpulseResponseGraph(const ImpulseResponseState & state, const float responses[kNumProbeFrequencies], const bool drawFrequencyTable, const float in_maxResponse = -1.f, const float saturation = .5f);

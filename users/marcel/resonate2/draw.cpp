@@ -109,7 +109,7 @@ void drawLatticeEdges(const Lattice & lattice)
 	gxEnd();
 }
 
-void drawLatticeFaces(const Lattice & lattice)
+void drawLatticeFaces(const Lattice & lattice, const int faceIndex)
 {
 	const int numVertices = kNumVertices;
 	
@@ -121,6 +121,9 @@ void drawLatticeFaces(const Lattice & lattice)
 	{
 		for (int i = 0; i < 6; ++i)
 		{
+			if (faceIndex != -1 && i != faceIndex)
+				continue;
+				
 			for (int y = 0; y < kGridSize - 1; ++y)
 			{
 				const int index1 = calcVertexIndex(i, 0, y + 0);
