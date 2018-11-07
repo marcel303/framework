@@ -7,16 +7,8 @@ typedef struct Vector
 	float x;
 	float y;
 	float z;
+	float padding;
 } Vector;
-
-typedef struct Vertex
-{
-	Vector n;
-	
-	// physics stuff
-	Vector f;
-	Vector v;
-} Vertex;
 
 typedef struct Edge
 {
@@ -50,8 +42,8 @@ void atomicAdd_g_f(volatile __global float *addr, float val)
 
 void kernel computeEdgeForces(
 	global const Edge * restrict edges,
-	global Vertex * restrict vertices,
 	global Vector * restrict vertices_p,
+	global Vector * restrict vertices_f,
 	float tension)
 {
 	const float eps = 1e-12f;
@@ -88,21 +80,21 @@ void kernel computeEdgeForces(
 	// todo : store forces in edges and let vertices gather forces in a follow-up step
 	
 #if 1
-	atomicAdd_g_f(&vertices[edge.vertex1].f.x, +fx);
-	atomicAdd_g_f(&vertices[edge.vertex1].f.y, +fy);
-	atomicAdd_g_f(&vertices[edge.vertex1].f.z, +fz);
+	atomicAdd_g_f(&vertices_f[edge.vertex1].x, +fx);
+	atomicAdd_g_f(&vertices_f[edge.vertex1].y, +fy);
+	atomicAdd_g_f(&vertices_f[edge.vertex1].z, +fz);
 	
-	atomicAdd_g_f(&vertices[edge.vertex2].f.x, -fx);
-	atomicAdd_g_f(&vertices[edge.vertex2].f.y, -fy);
-	atomicAdd_g_f(&vertices[edge.vertex2].f.z, -fz);
+	atomicAdd_g_f(&vertices_f[edge.vertex2].x, -fx);
+	atomicAdd_g_f(&vertices_f[edge.vertex2].y, -fy);
+	atomicAdd_g_f(&vertices_f[edge.vertex2].z, -fz);
 #else
-	vertices[edge.vertex1].f.x += fx;
-	vertices[edge.vertex1].f.y += fy;
-	vertices[edge.vertex1].f.z += fz;
+	vertices_f[edge.vertex1].f.x += fx;
+	vertices_f[edge.vertex1].f.y += fy;
+	vertices_f[edge.vertex1].f.z += fz;
 	
-	vertices[edge.vertex2].f.x -= fx;
-	vertices[edge.vertex2].f.y -= fy;
-	vertices[edge.vertex2].f.z -= fz;
+	vertices_f[edge.vertex2].x -= fx;
+	vertices_f[edge.vertex2].y -= fy;
+	vertices_f[edge.vertex2].z -= fz;
 #endif
 }
 )SHADER";
@@ -114,32 +106,25 @@ typedef struct Vector
 	float x;
 	float y;
 	float z;
+	float padding;
 } Vector;
 
-typedef struct Vertex
-{
-	Vector n;
-	
-	// physics stuff
-	Vector f;
-	Vector v;
-} Vertex;
-
 void kernel integrate(
-	global Vertex * restrict vertices,
 	global Vector * restrict vertices_p,
+	global Vector * restrict vertices_f,
+	global Vector * restrict vertices_v,
 	float dt,
 	float retain)
 {
 	int ID = get_global_id(0);
 	
-	Vertex v = vertices[ID];
-	
 	Vector v_p = vertices_p[ID];
+	Vector v_f = vertices_f[ID];
+	Vector v_v = vertices_v[ID];
 	
-	v.v.x *= retain;
-	v.v.y *= retain;
-	v.v.z *= retain;
+	v_v.x *= retain;
+	v_v.y *= retain;
+	v_v.z *= retain;
 	
 #if 1
 	// constrain the vertex to the line emanating from (0, 0, 0) towards this vertex. this helps to stabalize
@@ -158,30 +143,30 @@ void kernel integrate(
 	nz /= ns;
 
 	const float dot =
-		nx * v.f.x +
-		ny * v.f.y +
-		nz * v.f.z;
+		nx * v_f.x +
+		ny * v_f.y +
+		nz * v_f.z;
 
-	v.v.x += nx * dot * dt;
-	v.v.y += ny * dot * dt;
-	v.v.z += nz * dot * dt;
+	v_v.x += nx * dot * dt;
+	v_v.y += ny * dot * dt;
+	v_v.z += nz * dot * dt;
 #else
-	v.v.x += v.f.x * dt;
-	v.v.y += v.f.y * dt;
-	v.v.z += v.f.z * dt;
+	v_v.x += v_f.x * dt;
+	v_v.y += v_f.y * dt;
+	v_v.z += v_f.z * dt;
 #endif
 	
-	v_p.x += v.v.x * dt;
-	v_p.y += v.v.y * dt;
-	v_p.z += v.v.z * dt;
+	v_p.x += v_v.x * dt;
+	v_p.y += v_v.y * dt;
+	v_p.z += v_v.z * dt;
 	
-	v.f.x = 0.0;
-	v.f.y = 0.0;
-	v.f.z = 0.0;
-	
-	vertices[ID] = v;
+	v_f.x = 0.0;
+	v_f.y = 0.0;
+	v_f.z = 0.0;
 	
 	vertices_p[ID] = v_p;
+	vertices_f[ID] = v_f;
+	vertices_v[ID] = v_v;
 }
 )SHADER";
 
@@ -192,16 +177,8 @@ typedef struct Vector
 	float x;
 	float y;
 	float z;
+	float padding;
 } Vector;
-
-typedef struct Vertex
-{
-	Vector n;
-	
-	// physics stuff
-	Vector f;
-	Vector v;
-} Vertex;
 
 #define kNumProbeFrequencies 128 // todo : must match declaration in cpp file!
 

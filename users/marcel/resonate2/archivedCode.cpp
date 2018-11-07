@@ -42,8 +42,8 @@ static void createFibonnacciSphere(Lattice & lattice)
 			points[i][1],
 			points[i][2]);
 		
-		lattice.vertices[i].f.setZero();
-		lattice.vertices[i].v.setZero();
+		lattice.vertices_f[i].setZero();
+		lattice.vertices_v[i].setZero();
 	}
 	
 	for (int i = 0; i < numVertices; ++i)

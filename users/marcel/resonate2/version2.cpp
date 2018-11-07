@@ -204,9 +204,8 @@ static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & s
 	
 	for (int i = 0; i < numVertices; ++i)
 	{
-		auto & v = lattice.vertices[i];
-		
 		auto & v_p = lattice.vertices_p[i];
+		auto & v_n = lattice.vertices_n[i];
 		
 		int planeIndex;
 		
@@ -219,7 +218,7 @@ static void projectLatticeOntoShape(Lattice & lattice, const ShapeDefinition & s
 		
 		const Vec3 & n = shape.planes[planeIndex].normal;
 		
-		v.n.set(n[0], n[1], n[2]);
+		v_n.set(n[0], n[1], n[2]);
 	}
 
 	lattice.finalize();
@@ -240,10 +239,10 @@ static void projectLatticeOntoShere(Lattice & lattice)
 			p.y * t,
 			p.z * t);
 		
-		lattice.vertices[i].f.setZero();
-		lattice.vertices[i].v.setZero();
+		lattice.vertices_f[i].setZero();
+		lattice.vertices_v[i].setZero();
 		
-		lattice.vertices[i].n = lattice.vertices_p[i];
+		lattice.vertices_n[i] = lattice.vertices_p[i];
 	}
 
 	lattice.finalize();
@@ -299,11 +298,10 @@ void simulateLattice_computeEdgeForces(Lattice & lattice, const float tension)
 	
 	for (auto & edge : lattice.edges)
 	{
-		auto & v1 = lattice.vertices[edge.vertex1];
-		auto & v2 = lattice.vertices[edge.vertex2];
-		
 		auto & v1_p = lattice.vertices_p[edge.vertex1];
+		auto & v1_f = lattice.vertices_f[edge.vertex1];
 		auto & v2_p = lattice.vertices_p[edge.vertex2];
+		auto & v2_f = lattice.vertices_f[edge.vertex2];
 		
 	// todo : remove ?
 		//edge.weight = 1.f / edge.initialDistance * 1.f / edge.initialDistance * 1.f / edge.initialDistance / 10000.f;
@@ -329,13 +327,13 @@ void simulateLattice_computeEdgeForces(Lattice & lattice, const float tension)
 		const float fy = directionY * force;
 		const float fz = directionZ * force;
 		
-		v1.f.x += fx;
-		v1.f.y += fy;
-		v1.f.z += fz;
+		v1_f.x += fx;
+		v1_f.y += fy;
+		v1_f.z += fz;
 		
-		v2.f.x -= fx;
-		v2.f.y -= fy;
-		v2.f.z -= fz;
+		v2_f.x -= fx;
+		v2_f.y -= fy;
+		v2_f.z -= fz;
 	}
 }
 
@@ -349,13 +347,13 @@ static void simulateLattice_integrate(Lattice & lattice, const float dt, const f
 	
 	for (int i = 0; i < numVertices; ++i)
 	{
-		auto & v = lattice.vertices[i];
-		
 		auto & v_p = lattice.vertices_p[i];
+		auto & v_f = lattice.vertices_f[i];
+		auto & v_v = lattice.vertices_v[i];
 		
-		v.v.x *= retain;
-		v.v.y *= retain;
-		v.v.z *= retain;
+		v_v.x *= retain;
+		v_v.y *= retain;
+		v_v.z *= retain;
 		
 	#if 1
 		// constrain the vertex to the line emanating from (0, 0, 0) towards this vertex. this helps to stabalize
@@ -374,24 +372,24 @@ static void simulateLattice_integrate(Lattice & lattice, const float dt, const f
 		nz /= ns;
 		
 		const float dot =
-			nx * v.f.x +
-			ny * v.f.y +
-			nz * v.f.z;
+			nx * v_f.x +
+			ny * v_f.y +
+			nz * v_f.z;
 		
-		v.v.x += nx * dot * dt;
-		v.v.y += ny * dot * dt;
-		v.v.z += nz * dot * dt;
+		v_v.x += nx * dot * dt;
+		v_v.y += ny * dot * dt;
+		v_v.z += nz * dot * dt;
 	#else
-		v.v.x += v.f.x * dt;
-		v.v.y += v.f.y * dt;
-		v.v.z += v.f.z * dt;
+		v_v.x += v_f.x * dt;
+		v_v.y += v_f.y * dt;
+		v_v.z += v_f.z * dt;
 	#endif
 		
-		v_p.x += v.v.x * dt;
-		v_p.y += v.v.y * dt;
-		v_p.z += v.v.z * dt;
+		v_p.x += v_v.x * dt;
+		v_p.y += v_v.y * dt;
+		v_p.z += v_v.z * dt;
 		
-		v.f.setZero();
+		v_f.setZero();
 	}
 }
 

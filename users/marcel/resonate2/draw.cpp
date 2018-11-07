@@ -23,9 +23,9 @@ void colorizeLatticeVertices(const Lattice & lattice, Color * colors)
 	{
 		for (int i = 0; i < numVertices; ++i)
 		{
-			const float vx = lattice.vertices[i].v.x;
-			const float vy = lattice.vertices[i].v.y;
-			const float vz = lattice.vertices[i].v.z;
+			const float vx = lattice.vertices_v[i].x;
+			const float vy = lattice.vertices_v[i].y;
+			const float vz = lattice.vertices_v[i].z;
 			
 			const float scale = 400.f;
 			
@@ -40,11 +40,11 @@ void colorizeLatticeVertices(const Lattice & lattice, Color * colors)
 	{
 		for (int i = 0; i < numVertices; ++i)
 		{
-			const float vx = lattice.vertices[i].v.x;
-			const float vy = lattice.vertices[i].v.y;
-			const float vz = lattice.vertices[i].v.z;
+			const float vx = lattice.vertices_v[i].x;
+			const float vy = lattice.vertices_v[i].y;
+			const float vz = lattice.vertices_v[i].z;
 			
-			const float dot = lattice.vertices[i].n.dot(vx, vy, vz);
+			const float dot = lattice.vertices_n[i].dot(vx, vy, vz);
 			
 			const float scale = 400.f;
 			
@@ -59,9 +59,9 @@ void colorizeLatticeVertices(const Lattice & lattice, Color * colors)
 		{
 			const float scale = .5f;
 			
-			const float r = lattice.vertices[i].n.x * scale + .5f;
-			const float g = lattice.vertices[i].n.y * scale + .5f;
-			const float b = lattice.vertices[i].n.z * scale + .5f;
+			const float r = lattice.vertices_n[i].x * scale + .5f;
+			const float g = lattice.vertices_n[i].y * scale + .5f;
+			const float b = lattice.vertices_n[i].z * scale + .5f;
 			
 			colors[i].set(r, g, b, 1.f);
 		}
@@ -163,16 +163,15 @@ void drawImpulseResponseProbes(const ImpulseResponseProbe * probes, const int nu
 	{
 		const auto & probe = probes[i];
 		
-		const auto & vertex = lattice.vertices[probe.vertexIndex];
-		
 		const auto & vertex_p = lattice.vertices_p[probe.vertexIndex];
+		const auto & vertex_n = lattice.vertices_n[probe.vertexIndex];
 		
 		const float offset = -.01f;
 		
 		gxVertex3f(
-			vertex_p.x + vertex.n.x * offset,
-			vertex_p.y + vertex.n.y * offset,
-			vertex_p.z + vertex.n.z * offset);
+			vertex_p.x + vertex_n.x * offset,
+			vertex_p.y + vertex_n.y * offset,
+			vertex_p.z + vertex_n.z * offset);
 	}
 	gxEnd();
 	glPointSize(1.f);

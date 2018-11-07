@@ -13,6 +13,7 @@ struct Lattice
 		float x;
 		float y;
 		float z;
+		float padding;
 		
 		void set(const float in_x, const float in_y, const float in_z)
 		{
@@ -46,15 +47,6 @@ struct Lattice
 		}
 	};
 	
-	struct Vertex
-	{
-		Vector n;
-		
-		// physics stuff
-		Vector f;
-		Vector v;
-	};
-	
 	struct Edge
 	{
 		int vertex1;
@@ -65,9 +57,11 @@ struct Lattice
 		float initialDistance;
 	};
 	
-	Vertex vertices[kNumVertices];
 	Vector vertices_p[kNumVertices];
 	Vector vertices_p_init[kNumVertices];
+	Vector vertices_n[kNumVertices];
+	Vector vertices_f[kNumVertices];      // physics stuff
+	Vector vertices_v[kNumVertices];      // physics stuff
 	
 	std::vector<Edge> edges;
 	

@@ -30,7 +30,7 @@ void Lattice::init()
 				
 				vertices_p[index].set(p[0], p[1], p[2]);
 				
-				vertices[index].n = n;
+				vertices_n[index] = n;
 			}
 		}
 	}
@@ -220,12 +220,10 @@ void Lattice::finalize()
 {
 	for (int i = 0; i < kNumVertices; ++i)
 	{
-		auto & vertex = vertices[i];
-		
 		vertices_p_init[i] = vertices_p[i];
 		
-		vertex.f.setZero();
-		vertex.v.setZero();
+		vertices_f[i].setZero();
+		vertices_v[i].setZero();
 	}
 	
 	for (auto & edge : edges)
