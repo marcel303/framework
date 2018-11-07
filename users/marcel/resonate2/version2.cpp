@@ -104,48 +104,62 @@ static GLuint textureToGL(const Texture & texture)
 	return createTextureFromR32F(texture.value, kProbeGridSize, kProbeGridSize, false, true);
 }
 
-static const GLenum s_cubeFaceNamesGL[6] =
+static void updateCubemapTextureGL(Cube & cube, const GLuint textureId, const int frequencyIndex)
 {
-	GL_TEXTURE_CUBE_MAP_POSITIVE_X,
-	GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-	GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
-	GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
-	GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
-	GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
-};
+	if (textureId == 0)
+		return;
+	
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureId);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	checkErrorGL();
+	
+	for (int faceIndex = 0; faceIndex < 6; ++faceIndex)
+	{
+		glTexImage2D(
+        	GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex,
+        	0, GL_RED,
+        	kGridSize, kGridSize, 0,
+        	GL_RED, GL_FLOAT,
+        	(float*)cube.faces[faceIndex].textures[frequencyIndex].value);
+		checkErrorGL();
+    }
+	
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    checkErrorGL();
+}
 
-static Mat4x4 createCubeFaceMatrix(const GLenum cubeFace)
+static Mat4x4 createCubeFaceMatrix(const int faceIndex)
 {
 	Mat4x4 mat;
 	
-	const float degToRad = M_PI / 180.f;
-	
-	switch (cubeFace)
+	const Vec3 target[6] =
 	{
-	case GL_TEXTURE_CUBE_MAP_POSITIVE_X: // Right
-		mat.MakeRotationY(-90 * degToRad);
-		break;
-	case GL_TEXTURE_CUBE_MAP_NEGATIVE_X: // Left
-		mat.MakeRotationY(+90 * degToRad);
-		break;
-	case GL_TEXTURE_CUBE_MAP_POSITIVE_Y: // Top
-		mat.MakeRotationX(+90 * degToRad);
-		break;
-	case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y: // Bottom
-		mat.MakeRotationX(-90 * degToRad);
-		break;
-	case GL_TEXTURE_CUBE_MAP_POSITIVE_Z: // Back
-		mat.MakeIdentity();
-		break;
-	case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z: // Front
-		mat.MakeRotationY(180 * degToRad);
-		break;
-		
-	default:
-		Assert(false);
-		mat.MakeIdentity();
-		break;
-	}
+		Vec3(+1.f,  0.f,  0.f),
+		Vec3(-1.f,  0.f,  0.f),
+		Vec3( 0.f, +1.f,  0.f),
+		Vec3( 0.f, -1.f,  0.f),
+		Vec3( 0.f,  0.f, +1.f),
+		Vec3( 0.f,  0.f, -1.f)
+	};
+	const Vec3 up[6] =
+	{
+		Vec3(0.f, -1.0f,  0.f),
+		Vec3(0.f, -1.0f,  0.f),
+		Vec3(0.f,   0.f, +1.f),
+		Vec3(0.f,   0.f, -1.f),
+		Vec3(0.f, -1.0f,  0.f),
+		Vec3(0.f, -1.0f,  0.f)
+	};
+	
+	mat.MakeLookat(Vec3(0.f, 0.f, 0.f), -target[faceIndex], up[faceIndex]);
+	
+	mat = mat.CalcInv();
+	
+	mat = mat.Translate(0, 0, -1);
 	
 	return mat;
 }
@@ -186,10 +200,14 @@ static void projectDirectionToCubeFace(Vec3Arg direction, int & cubeFaceIndex, V
 	
 	const Mat4x4 & worldToCubeFaceMatrix = s_worldToCubeFaceMatrices[cubeFaceIndex];
 	
-	const Vec3 direction_cubeFace = worldToCubeFaceMatrix.Mul4(direction);
+	Vec3 position_world = direction / absDirection[majorAxis];
 	
-	cubeFacePosition[0] = direction_cubeFace[0] / direction_cubeFace[2];
-	cubeFacePosition[1] = direction_cubeFace[1] / direction_cubeFace[2];
+	const Vec3 position_cubeFace = worldToCubeFaceMatrix.Mul4(position_world);
+	
+	Assert(position_cubeFace[2] >= -.001f && position_cubeFace[2] <= +.001f);
+	
+	cubeFacePosition[0] = position_cubeFace[0];
+	cubeFacePosition[1] = position_cubeFace[1];
 	
 	Assert(cubeFacePosition[0] >= -1.f && cubeFacePosition[0] <= +1.f);
 	Assert(cubeFacePosition[1] >= -1.f && cubeFacePosition[1] <= +1.f);
@@ -415,19 +433,13 @@ static void integrateImpulseResponses(const Lattice & lattice, ImpulseResponseSt
 
 static void integrateImpulseResponses_gpu(const Lattice & lattice, ImpulseResponseState & state, ImpulseResponseProbe * probes, const int numProbes, const float dt)
 {
-	//state.processBegin(dt);
-
-	// send impulse response state to the gpu
-
-	//s_gpuSimulationContext->sendImpulseResponseStateToGpu();
-
+	// advance the impulse response state
+	
 	s_gpuSimulationContext->advanceImpulseState(dt);
 
 	// execute impulse-response integration kernel
 
 	s_gpuSimulationContext->integrateImpulseResponse(dt);
-
-	//state.processEnd();
 }
 
 //
@@ -767,6 +779,8 @@ int main(int argc, char * argv[])
 	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
 
+	framework.enableRealTimeEditing = true;
+
 	framework.enableDepthBuffer = true;
 
 	if (!framework.init(VIEW_SX, VIEW_SY))
@@ -779,7 +793,7 @@ int main(int argc, char * argv[])
 	
 	for (int i = 0; i < 6; ++i)
 	{
-		s_cubeFaceToWorldMatrices[i] = createCubeFaceMatrix(s_cubeFaceNamesGL[i]);
+		s_cubeFaceToWorldMatrices[i] = createCubeFaceMatrix(i);
 		
 		s_worldToCubeFaceMatrices[i] = s_cubeFaceToWorldMatrices[i].CalcInv();
 	}
@@ -800,6 +814,11 @@ int main(int argc, char * argv[])
 	{
 		textureGL[i] = textureToGL(cube->faces[i].textures[0]);
 	}
+	
+	GLuint cubemapTexture = 0;
+	glGenTextures(1, &cubemapTexture);
+	
+	updateCubemapTextureGL(*cube, cubemapTexture, 0);
 	
 	// initialize the shape
 	
@@ -1091,9 +1110,17 @@ int main(int argc, char * argv[])
 					{
 						// make sure the vertices are synced between cpu and gpu at this point
 						if (simulateUsingGpu)
+						{
 							s_gpuSimulationContext->sendVerticesToGpu();
+							s_gpuSimulationContext->sendImpulseResponseStateToGpu();
+							s_gpuSimulationContext->sendImpulseResponseProbesToGpu();
+						}
 						else
+						{
 							s_gpuSimulationContext->fetchVerticesFromGpu();
+							s_gpuSimulationContext->fetchImpulseResponseStateFromGpu();
+							s_gpuSimulationContext->fetchImpulseResponseProbesFromGpu();
+						}
 					}
 					ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100.f, "%.3f", 4.f);
 					ImGui::SliderFloat("Simulation time step (ms)", &simulationTimeStep_ms, 1.f / 1000.f, .1f, "%.3f", 2.f);
@@ -1106,8 +1133,11 @@ int main(int argc, char * argv[])
 						squashLattice(lattice);
 						s_gpuSimulationContext->sendVerticesToGpu();
 						s_gpuSimulationContext->sendEdgesToGpu();
+						impulseResponseState.restart();
 						for (int i = 0; i < kNumProbes; ++i)
 							impulseResponseProbes[i].init(impulseResponseProbes[i].vertexIndex);
+						s_gpuSimulationContext->sendImpulseResponseStateToGpu();
+						s_gpuSimulationContext->sendImpulseResponseProbesToGpu();
 						simulateLattice = true;
 						simulationTime_ms = 0.f;
 					}
@@ -1120,6 +1150,7 @@ int main(int argc, char * argv[])
 						glDeleteTextures(6, textureGL);
 						for (int i = 0; i < 6; ++i)
 							textureGL[i] = textureToGL(cube->faces[i].textures[fillCubeFrequencyIndex]);
+						updateCubemapTextureGL(*cube, cubemapTexture, fillCubeFrequencyIndex);
 					}
 					if (ImGui::SliderInt("Frequency index", &fillCubeFrequencyIndex, 0, kNumProbeFrequencies - 1))
 					{
@@ -1127,6 +1158,7 @@ int main(int argc, char * argv[])
 						glDeleteTextures(6, textureGL);
 						for (int i = 0; i < 6; ++i)
 							textureGL[i] = textureToGL(cube->faces[i].textures[fillCubeFrequencyIndex]);
+						updateCubemapTextureGL(*cube, cubemapTexture, fillCubeFrequencyIndex);
 						showCube = true;
 					}
 					
@@ -1240,11 +1272,6 @@ int main(int argc, char * argv[])
 			{
 				Benchmark bm("simulate_gpu");
 				
-				// send impulse response values to the gpu
-			// todo : only upload impulse-response values once, similar to how we cache vertices and edges on the gpu
-			
-				s_gpuSimulationContext->sendImpulseResponseProbesToGpu();
-				
 				for (int i = 0; i < numSimulationStepsPerDraw; ++i)
 				{
 					::simulateLattice_gpu(lattice, simulationTimeStep_ms, scaledLatticeTension, velocityFalloff);
@@ -1345,6 +1372,22 @@ int main(int argc, char * argv[])
 			
 				if (showCube)
 				{
+				#if 1
+					for (int i = 0; i < 6; ++i)
+					{
+						Shader shader("cube");
+						setShader(shader);
+						shader.setTextureCube("cubemap", 0, cubemapTexture);
+						shader.setImmediateMatrix4x4("transform", s_cubeFaceToWorldMatrices[i].m_v);
+						{
+							gxPushMatrix();
+							gxMultMatrixf(s_cubeFaceToWorldMatrices[i].m_v);
+							drawRect(-1, -1, +1, +1);
+							gxPopMatrix();
+						}
+						clearShader();
+					}
+				#else
 					// todo : update cube map with data from the impulse response probes
 					
 					for (int i = 0; i < 6; ++i)
@@ -1352,12 +1395,12 @@ int main(int argc, char * argv[])
 						gxSetTexture(textureGL[i]);
 						gxPushMatrix();
 						gxMultMatrixf(s_cubeFaceToWorldMatrices[i].m_v);
-						gxTranslatef(0, 0, 1);
 						setColor(colorWhite);
 						drawRect(-1, -1, +1, +1);
 						gxPopMatrix();
 						gxSetTexture(0);
 					}
+				#endif
 				}
 				
 				if (showCubePoints)
@@ -1377,7 +1420,7 @@ int main(int argc, char * argv[])
 								const float xf = ((x + .5f) / float(kGridSize) - .5f) * 2.f * cubePointScale;
 								const float yf = ((y + .5f) / float(kGridSize) - .5f) * 2.f * cubePointScale;
 								
-								Vec3 p = matrix.Mul4(Vec3(xf, yf, 1.f));
+								Vec3 p = matrix.Mul4(Vec3(xf, yf, 0.f));
 								
 								if (projectCubePoints)
 								{
@@ -1446,7 +1489,7 @@ int main(int argc, char * argv[])
 				if (showLatticeFaces)
 				{
 					setColor(127, 0, 0);
-					drawLatticeFaces(lattice);
+					drawLatticeFaces(lattice, keyboard.isDown(SDLK_p) ? mouseCubeFaceIndex : -1);
 				}
 				
 				if (raycastCubePointsUsingMouse && hasMouseCubeFace)
@@ -1529,6 +1572,15 @@ int main(int argc, char * argv[])
 					drawText(0, fontSize, fontSize, +1, +1, "texture position: %d, %d",
 						texturePosition[0],
 						texturePosition[1]);
+					const int probeX = mouseCubeFacePosition[0] * kProbeGridSize / kGridSize;
+					const int probeY = mouseCubeFacePosition[1] * kProbeGridSize / kGridSize;
+					drawText(0, fontSize * 2, fontSize, +1, +1, "probe position: %d, %d, probe index %d, vertex index %d",
+						probeX,
+						probeY,
+						calcProbeIndex(cubeFaceIndex, probeX, probeY),
+						calcVertexIndex(cubeFaceIndex, mouseCubeFacePosition[0], mouseCubeFacePosition[1]));
+					drawText(0, fontSize * 3, fontSize, +1, +1, "raycast position: %.2f, %.2f, %.2f",
+						p[0], p[1], p[2]);
 					glEnable(GL_DEPTH_TEST);
 					gxPopMatrix();
 					
@@ -1569,16 +1621,16 @@ int main(int argc, char * argv[])
 					
 					const auto probes = impulseResponseProbes + probeIndex;
 					
-					float responses[kGridSize * kNumProbeFrequencies];
+					float responses[kProbeGridSize * kNumProbeFrequencies];
 					
-					for (int i = 0; i < kGridSize; ++i)
+					for (int i = 0; i < kProbeGridSize; ++i)
 					{
 						auto & probe = probes[i];
 						
 						probe.calcResponseMagnitude(responses + i * kNumProbeFrequencies);
 					}
 					
-					drawImpulseResponseGraphs(impulseResponseState, responses, kGridSize, true, -1.f, x);
+					drawImpulseResponseGraphs(impulseResponseState, responses, kProbeGridSize, true, -1.f, x);
 				}
 				gxPopMatrix();
 			}

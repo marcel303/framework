@@ -26,7 +26,7 @@ void Lattice::init()
 				const float xf = ((x + .5f) / float(kGridSize) - .5f) * 2.f;
 				const float yf = ((y + .5f) / float(kGridSize) - .5f) * 2.f;
 	
-				Vec3 p = matrix.Mul4(Vec3(xf, yf, 1.f));
+				const Vec3 p = matrix.Mul4(Vec3(xf, yf, 0.f));
 				
 				vertices[index].p.set(p[0], p[1], p[2]);
 				
@@ -152,7 +152,7 @@ void Lattice::init()
 		
 		for (int v = 0; v < 4; ++v)
 		{
-			cubeFaces[i].transformedPosition[v] = matrix.Mul4(Vec3(face_sx[v], face_sy[v], 1.f));
+			cubeFaces[i].transformedPosition[v] = matrix.Mul4(Vec3(face_sx[v], face_sy[v], 0.f));
 			
 		#if 0
 			printf("transformed position: (%.2f, %.2f, %.2f)\n",
