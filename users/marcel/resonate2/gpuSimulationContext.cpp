@@ -45,7 +45,7 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 		probes = in_probes;
 		numProbes = in_numProbes;
 		
-		cosSinBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(ImpulseResponseState));
+		impulseResponseStateBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(ImpulseResponseState));
 		
 		impulseResponseProbesBuffer = new cl::Buffer(*gpuContext.context, CL_MEM_READ_WRITE, sizeof(ImpulseResponseProbe) * numProbes);
 		
@@ -135,8 +135,8 @@ bool GpuSimulationContext::shut()
 	delete impulseResponseProbesBuffer;
 	impulseResponseProbesBuffer = nullptr;
 	
-	delete cosSinBuffer;
-	cosSinBuffer = nullptr;
+	delete impulseResponseStateBuffer;
+	impulseResponseStateBuffer = nullptr;
 	
 	delete edgeBuffer;
 	edgeBuffer = nullptr;
@@ -203,7 +203,7 @@ bool GpuSimulationContext::sendImpulseResponseStateToGpu()
 	// send the impulse response state to the GPU
 	
 	if (gpuContext.commandQueue->enqueueWriteBuffer(
-		*cosSinBuffer,
+		*impulseResponseStateBuffer,
 		CL_TRUE,
 		0, sizeof(ImpulseResponseState),
 		impulseResponseState) != CL_SUCCESS)
@@ -220,7 +220,7 @@ bool GpuSimulationContext::fetchImpulseResponseStateFromGpu()
 	// fetch the impulse response state from the GPU
 	
 	if (gpuContext.commandQueue->enqueueReadBuffer(
-		*cosSinBuffer,
+		*impulseResponseStateBuffer,
 		CL_TRUE,
 		0, sizeof(ImpulseResponseState),
 		probes) != CL_SUCCESS)
@@ -329,7 +329,7 @@ bool GpuSimulationContext::integrateImpulseResponse(const float dt)
 	cl::Kernel & integrateKernel = *integrateImpulseResponseKernel;
 	
 	if (integrateKernel.setArg(0, *vertexBuffer) != CL_SUCCESS ||
-		integrateKernel.setArg(1, *cosSinBuffer) != CL_SUCCESS ||
+		integrateKernel.setArg(1, *impulseResponseStateBuffer) != CL_SUCCESS ||
 		integrateKernel.setArg(2, *impulseResponseProbesBuffer) != CL_SUCCESS ||
 		integrateKernel.setArg(3, dt) != CL_SUCCESS)
 	{
@@ -352,7 +352,7 @@ bool GpuSimulationContext::advanceImpulseState(const float dt)
 {
 	cl::Kernel & kernel = *advanceImpulseResponseKernel;
 
-	if (kernel.setArg(0, *cosSinBuffer) != CL_SUCCESS ||
+	if (kernel.setArg(0, *impulseResponseStateBuffer) != CL_SUCCESS ||
 		kernel.setArg(1, dt) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to set buffer arguments for kernel", 0);

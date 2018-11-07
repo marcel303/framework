@@ -30,7 +30,7 @@ struct GpuSimulationContext
 	
 	cl::Buffer * vertexBuffer = nullptr;
 	cl::Buffer * edgeBuffer = nullptr;
-	cl::Buffer * cosSinBuffer = nullptr;
+	cl::Buffer * impulseResponseStateBuffer = nullptr;
 	cl::Buffer * impulseResponseProbesBuffer = nullptr;
 	
 	GpuProgram * computeEdgeForcesProgram = nullptr;
