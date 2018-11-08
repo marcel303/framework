@@ -84,11 +84,11 @@ void drawLatticeVertices(const Lattice & lattice)
 	gxEnd();
 }
 
+static Color colors[kNumVertices];
+
 void drawLatticeEdges(const Lattice & lattice)
 {
 	const int numVertices = kNumVertices;
-	
-	Color colors[numVertices];
 	
 	colorizeLatticeVertices(lattice, colors);
 	
@@ -112,8 +112,6 @@ void drawLatticeEdges(const Lattice & lattice)
 void drawLatticeFaces(const Lattice & lattice, const int faceIndex)
 {
 	const int numVertices = kNumVertices;
-	
-	Color colors[numVertices];
 	
 	colorizeLatticeVertices(lattice, colors);
 	

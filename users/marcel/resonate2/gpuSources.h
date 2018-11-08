@@ -42,7 +42,7 @@ void atomicAdd_g_f(volatile __global float *addr, float val)
 
 void kernel computeEdgeForces(
 	global const Edge * restrict edges,
-	global Vector * restrict vertices_p,
+	global const Vector * restrict vertices_p,
 	global Vector * restrict vertices_f,
 	float tension)
 {
@@ -88,9 +88,9 @@ void kernel computeEdgeForces(
 	atomicAdd_g_f(&vertices_f[edge.vertex2].y, -fy);
 	atomicAdd_g_f(&vertices_f[edge.vertex2].z, -fz);
 #else
-	vertices_f[edge.vertex1].f.x += fx;
-	vertices_f[edge.vertex1].f.y += fy;
-	vertices_f[edge.vertex1].f.z += fz;
+	vertices_f[edge.vertex1].x += fx;
+	vertices_f[edge.vertex1].y += fy;
+	vertices_f[edge.vertex1].z += fz;
 	
 	vertices_f[edge.vertex2].x -= fx;
 	vertices_f[edge.vertex2].y -= fy;

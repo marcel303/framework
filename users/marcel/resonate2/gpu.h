@@ -55,6 +55,8 @@ struct GpuBuffer
 	bool readOnly = true;
 	std::string desc;
 	
+	GpuBuffer() { }
+	GpuBuffer(const bool readOnly, GpuContext * context, void * data, const int size, const bool sendToGpu, const char * desc);
 	~GpuBuffer();
 	
 	void initReadWrite(GpuContext * context, void * data, const int size, const bool sendToGpu, const char * desc);

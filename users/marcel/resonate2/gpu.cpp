@@ -86,6 +86,7 @@ bool GpuContext::init()
 		LOG_INF("available OpenCL platform: %s", platform.getInfo<CL_PLATFORM_NAME>().c_str());
 	}
 	
+	//const cl::Platform & defaultPlatform = platforms.front();
 	const cl::Platform & defaultPlatform = platforms.back();
 	
 	std::vector<cl::Device> devices;
@@ -139,6 +140,14 @@ bool GpuContext::isValid() const
 }
 
 //
+
+GpuBuffer::GpuBuffer(const bool readOnly, GpuContext * context, void * data, const int size, const bool sendToGpu, const char * desc)
+{
+	if (readOnly)
+		initReadOnly(context, data, size, sendToGpu, desc);
+	else
+		initReadWrite(context, data, size, sendToGpu, desc);
+}
 
 GpuBuffer::~GpuBuffer()
 {

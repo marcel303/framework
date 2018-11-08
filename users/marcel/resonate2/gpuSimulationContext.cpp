@@ -38,23 +38,13 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 		numVertices = kNumVertices;
 		numEdges = in_lattice.edges.size();
 		
-		vertex_p_Buffer = new GpuBuffer();
-		vertex_p_Buffer->initReadWrite(&gpuContext, in_lattice.vertices_p, sizeof(Lattice::Vector) * numVertices, true, "vertex p data");
+		vertex_p_Buffer = new GpuBuffer(false, &gpuContext, in_lattice.vertices_p, sizeof(Lattice::Vector) * numVertices, true, "vertex p data");
+		vertex_p_init_Buffer = new GpuBuffer(true, &gpuContext, in_lattice.vertices_p_init, sizeof(Lattice::Vector) * numVertices, true, "vertex p_init data");
+		vertex_n_Buffer = new GpuBuffer(true, &gpuContext, in_lattice.vertices_n, sizeof(Lattice::Vector) * numVertices, true, "vertex n data");
+		vertex_f_Buffer = new GpuBuffer(false, &gpuContext, in_lattice.vertices_f, sizeof(Lattice::Vector) * numVertices, true, "vertex f data");
+		vertex_v_Buffer = new GpuBuffer(false, &gpuContext, in_lattice.vertices_v, sizeof(Lattice::Vector) * numVertices, true, "vertex v data");
 		
-		vertex_p_init_Buffer = new GpuBuffer();
-		vertex_p_init_Buffer->initReadWrite(&gpuContext, in_lattice.vertices_p_init, sizeof(Lattice::Vector) * numVertices, true, "vertex p_init data");
-		
-		vertex_n_Buffer = new GpuBuffer();
-		vertex_n_Buffer->initReadOnly(&gpuContext, in_lattice.vertices_n, sizeof(Lattice::Vector) * numVertices, true, "vertex n data");
-		
-		vertex_f_Buffer = new GpuBuffer();
-		vertex_f_Buffer->initReadWrite(&gpuContext, in_lattice.vertices_f, sizeof(Lattice::Vector) * numVertices, true, "vertex f data");
-		
-		vertex_v_Buffer = new GpuBuffer();
-		vertex_v_Buffer->initReadWrite(&gpuContext, in_lattice.vertices_v, sizeof(Lattice::Vector) * numVertices, true, "vertex v data");
-		
-		edgeBuffer = new GpuBuffer();
-		edgeBuffer->initReadOnly(&gpuContext, &in_lattice.edges[0], sizeof(Lattice::Edge) * numEdges, true, "edge data");
+		edgeBuffer = new GpuBuffer(true, &gpuContext, &in_lattice.edges[0], sizeof(Lattice::Edge) * numEdges, true, "edge data");
 		
 		//
 		
