@@ -288,8 +288,6 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 				
 				addHistoryElem(kHistoryType_InstanceCreate, (t2 - t1) / 1000.0);
 				
-				//static_cast<AudioGraphManager_RTE*>(g_vfxAudioGraphMgr)->selectInstance(instances[index]); // fixme
-				
 				newInstances[numNewInstances] = instances[index];
 				numNewInstances++;
 			}

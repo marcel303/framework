@@ -661,12 +661,7 @@ struct RecordedFragment : AudioSource
 
 struct World
 {
-#ifdef WIN32
-	// fixme : work around for "struct 'World' has an illegal zero-sized array" error when compiling with MSVC
-	Speeder speeders[NUM_SPEEDERS + 1];
-#else
-	Speeder speeders[NUM_SPEEDERS];
-#endif
+	Speeder speeders[NUM_SPEEDERS + 1]; // note : the "+1" is a work around for "struct 'World' has an illegal zero-sized array" error when compiling with MSVC
 	
 	std::vector<RecordedFragment*> recordedFragments;
 	

@@ -37,6 +37,8 @@
 
 #define ENABLE_AUDIO_RTE 1
 
+// todo : ask a few plugin developers if it's ok to bundle their app on framework's repo as a test/demo of jsfx support
+
 #define JSFX_SEARCH_PATH "/Users/thecat/atk-reaper/plugins/" // fixme : remove hard coded ATK scripts path
 
 #define JSFX_DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/" // fixme : remove hard coded Reaper data path
