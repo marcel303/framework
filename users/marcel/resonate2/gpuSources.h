@@ -225,8 +225,6 @@ typedef struct Vector
 	float padding;
 } Vector;
 
-#define kNumProbeFrequencies 128 // todo : must match declaration in cpp file!
-
 typedef struct ImpulseResponseState
 {
 	float frequency[kNumProbeFrequencies];
@@ -295,8 +293,6 @@ void kernel integrateImpulseResponse(
 
 static const char * advanceImpulseResponse_source =
 R"SHADER(
-
-#define kNumProbeFrequencies 128 // todo : must match declaration in cpp file!
 
 typedef struct ImpulseResponseState
 {

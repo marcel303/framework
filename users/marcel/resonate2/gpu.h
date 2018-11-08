@@ -20,8 +20,9 @@ struct GpuProgram
 	cl::Program * program = nullptr;
 	
 	std::string source;
+	std::string buildOptions;
 	
-	GpuProgram(cl::Device & in_device, cl::Context & in_context);
+	GpuProgram(cl::Device & in_device, cl::Context & in_context, const char * buildOptions);
 	~GpuProgram();
 	
 	void shut();

@@ -120,7 +120,12 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 		
 		//
 		
-		computeEdgeForcesProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
+		char buildOptions[1024];
+		sprintf(buildOptions, "-DkNumProbeFrequencies=%d", kNumProbeFrequencies);
+		
+		//
+		
+		computeEdgeForcesProgram = new GpuProgram(*gpuContext.device, *gpuContext.context, buildOptions);
 		
 		if (computeEdgeForcesProgram->updateSource(computeEdgeForces_source) == false)
 			return false;
@@ -129,7 +134,7 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 
 		//
 		
-		gatherEdgeForcesProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
+		gatherEdgeForcesProgram = new GpuProgram(*gpuContext.device, *gpuContext.context, buildOptions);
 
 		if (gatherEdgeForcesProgram->updateSource(gatherEdgeForces_source) == false)
 			return false;
@@ -138,7 +143,7 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 
 		//
 
-		integrateProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
+		integrateProgram = new GpuProgram(*gpuContext.device, *gpuContext.context, buildOptions);
 		
 		if (integrateProgram->updateSource(integrate_source) == false)
 			return false;
@@ -147,7 +152,7 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 
 		//
 
-		integrateImpulseResponseProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
+		integrateImpulseResponseProgram = new GpuProgram(*gpuContext.device, *gpuContext.context, buildOptions);
 
 		if (integrateImpulseResponseProgram->updateSource(integrateImpulseResponse_source) == false)
 			return false;
@@ -156,7 +161,7 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 
 		//
 
-		advanceImpulseResponseProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
+		advanceImpulseResponseProgram = new GpuProgram(*gpuContext.device, *gpuContext.context, buildOptions);
 
 		if (advanceImpulseResponseProgram->updateSource(advanceImpulseResponse_source) == false)
 			return false;
