@@ -306,9 +306,6 @@ void simulateLattice_computeEdgeForces(Lattice & lattice, const float tension)
 		auto & v2_p = lattice.vertices_p[edgeVertices.vertex2];
 		auto & v2_f = lattice.vertices_f[edgeVertices.vertex2];
 		
-	// todo : remove ?
-		//edge.weight = 1.f / edge.initialDistance * 1.f / edge.initialDistance * 1.f / edge.initialDistance / 10000.f;
-		
 		const float dx = v2_p.x - v1_p.x;
 		const float dy = v2_p.y - v1_p.y;
 		const float dz = v2_p.z - v1_p.z;
@@ -965,7 +962,10 @@ int main(int argc, char * argv[])
 
 								if (result == NFD_OKAY)
 								{
-									shapeDefinition.loadFromFile(path);
+									ShapeDefinition shapeDefinitionFromFile;
+									
+									if (shapeDefinitionFromFile.loadFromFile(path))
+										shapeDefinition = shapeDefinitionFromFile;
 								}
 								
 								delete path;
