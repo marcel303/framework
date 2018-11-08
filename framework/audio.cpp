@@ -1236,6 +1236,7 @@ int SoundPlayer_PortAudio::playSound(const void * buffer, const float volume, co
 	}
 	else
 	{
+	// todo : handle sounds with a different sample rate
 		source->playId = m_playId++;
 		source->buffer = (Buffer*)buffer;
 		source->bufferPosition = 0;

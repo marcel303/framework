@@ -3102,7 +3102,6 @@ void ComputeShader::dispatch(const int dispatchSx, const int dispatchSy, const i
 	checkErrorGL();
 
 	// todo : let application insert barriers
-	//glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 	checkErrorGL();
 }
