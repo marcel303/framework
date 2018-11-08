@@ -2782,18 +2782,29 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 									}
 									
 								#if 1
-									GraphEdit_NodeResourceEditorWindow * resourceEditorWindow = new GraphEdit_NodeResourceEditorWindow();
+									// open a resource editor window if there's a resource editor associated with the node
 									
-									if (resourceEditorWindow->init(this, hitTestResult.node->id))
+									auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(hitTestResult.node->typeName);
+									
+									Assert(typeDefinition != nullptr);
+									if (typeDefinition != nullptr)
 									{
-										nodeResourceEditorWindows.push_back(resourceEditorWindow);
-									}
-									else
-									{
-										delete resourceEditorWindow;
-										resourceEditorWindow = nullptr;
-										
-										showNotification("Failed to create resource editor!");
+										if (typeDefinition->resourceEditor.create != nullptr)
+										{
+											GraphEdit_NodeResourceEditorWindow * resourceEditorWindow = new GraphEdit_NodeResourceEditorWindow();
+											
+											if (resourceEditorWindow->init(this, hitTestResult.node->id))
+											{
+												nodeResourceEditorWindows.push_back(resourceEditorWindow);
+											}
+											else
+											{
+												delete resourceEditorWindow;
+												resourceEditorWindow = nullptr;
+												
+												showNotification("Failed to create resource editor!");
+											}
+										}
 									}
 								#else
 									if (nodeResourceEditBegin(hitTestResult.node->id))
