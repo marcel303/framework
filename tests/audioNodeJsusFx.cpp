@@ -43,22 +43,6 @@
 
 //
 
-extern SDL_mutex * g_vfxAudioMutex; // fixme : remove this dependency
-
-static void lock()
-{
-	const int r = SDL_LockMutex(g_vfxAudioMutex); // fixme : mutex lock around draw code is a horrible idea!
-	Assert(r == 0);
-}
-
-static void unlock()
-{
-	const int r = SDL_UnlockMutex(g_vfxAudioMutex); // fixme : mutex lock around draw code is a horrible idea!
-	Assert(r == 0);
-}
-
-//
-
 #include "jsusfx_serialize.h"
 #include "StringEx.h"
 #include "tinyxml2.h"
@@ -70,10 +54,32 @@ struct AudioResource_JsusFx : AudioResourceBase
 	
 	JsusFxSerializationData serializationData;
 	
+	SDL_mutex * mutex; // mutex for serialization purposed between the resource editor and the audio node which both run on different threads
+	
 	AudioResource_JsusFx()
 		: version(0)
 		, serializationData()
+		, mutex(nullptr)
 	{
+		mutex = SDL_CreateMutex();
+	}
+	
+	virtual ~AudioResource_JsusFx() override
+	{
+		SDL_DestroyMutex(mutex);
+		mutex = nullptr;
+	}
+	
+	void lock()
+	{
+		const int r = SDL_LockMutex(mutex);
+		Assert(r == 0); (void)r;
+	}
+
+	void unlock()
+	{
+		const int r = SDL_UnlockMutex(mutex);
+		Assert(r == 0); (void)r;
 	}
 	
 	virtual void save(tinyxml2::XMLPrinter * printer) override
@@ -157,6 +163,8 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 {
 	AudioResource_JsusFx * resource = nullptr;
 	
+	int version = 0;
+	
 	// we need to create a jsusfx instance to visually edit the resource
 	JsusFxPathLibrary_Basic pathLibrary;
 	JsusFxFileAPI_Basic fileAPI;
@@ -221,6 +229,17 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 		
 		if (jsusFxIsValid && resource != nullptr)
 		{
+			if (resource->version != version)
+			{
+				version = resource->version;
+				
+				// the resource changed without us knowing it. perhaps there's a second editor operating on it. refresh!
+				
+				JsusFxSerializer_Basic serializer(resource->serializationData);
+				
+				jsusFx.serialize(serializer, false);
+			}
+			
 			// it's difficult to tell if the user interacted with the effect's ui and made changes. so we just
 			// serialize the effect each tick and see if it's different from the current serialization data
 			
@@ -234,13 +253,15 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 				{
 					// it changed! update the resource
 					
-					lock();
+					resource->lock();
 					{
 						resource->serializationData = serializationData;
 						
 						resource->version++;
+						
+						version = resource->version;
 					}
-					unlock();
+					resource->unlock();
 				}
 			}
 		}
@@ -262,6 +283,8 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 		
 		if (createAudioNodeResource(node, type, name, resource))
 		{
+			version = resource->version;
+			
 			if (jsusFxIsValid)
 			{
 				// load the initial data into the effect
@@ -595,7 +618,7 @@ void AudioNodeJsusFx::tick(const float dt)
 	
 	if (resourceVersion != resource->version)
 	{
-		lock();
+		resource->lock();
 		{
 			resourceVersion = resource->version;
 			
@@ -606,7 +629,7 @@ void AudioNodeJsusFx::tick(const float dt)
 				jsusFx->serialize(serializer, false);
 			}
 		}
-		unlock();
+		resource->unlock();
 	}
 	
 	if (jsusFxIsValid == false)
