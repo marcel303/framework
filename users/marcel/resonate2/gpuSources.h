@@ -49,7 +49,8 @@ void kernel computeEdgeForces(
 	global const Edge * restrict edges,
 	global const Vector * restrict vertices_p,
 	global Vector * restrict vertices_f,
-	float tension)
+	float tension,
+	global Vector * restrict edgeForces)
 {
 	const float eps = 1e-12f;
 	
@@ -69,7 +70,12 @@ void kernel computeEdgeForces(
 	const float distance = sqrt(dx * dx + dy * dy + dz * dz);
 	
 	if (distance < eps)
+	{
+		edgeForces[ID].x = 0.f;
+		edgeForces[ID].y = 0.f;
+		edgeForces[ID].z = 0.f;
 		return;
+	}
 	
 	const float distance_inverse = 1.f / distance;
 	
@@ -79,30 +85,67 @@ void kernel computeEdgeForces(
 	
 	const float force = (distance - edge.initialDistance) * edge.weight * tension;
 	
-	const float fx = directionX * force;
-	const float fy = directionY * force;
-	const float fz = directionZ * force;
+	Vector f;
 
-	// let's kill some performance here by using atomics!
-	// todo : store forces in edges and let vertices gather forces in a follow-up step
+	f.x = directionX * force;
+	f.y = directionY * force;
+	f.z = directionZ * force;
+
+	edgeForces[ID] = f;
+}
+)SHADER";
+
+static const char * gatherEdgeForces_source =
+R"SHADER(
+typedef struct Vector
+{
+	float x;
+	float y;
+	float z;
+	float padding;
+} Vector;
+
+void kernel gatherEdgeForces(
+	global const Vector * restrict edgeForces,
+	global const int * restrict gatherMap,
+	global Vector * restrict vertices_f)
+{
+	const int ID = get_global_id(0);
 	
-#if 1
-	atomicAdd_g_f(&vertices_f[edge_vertices.vertex1].x, +fx);
-	atomicAdd_g_f(&vertices_f[edge_vertices.vertex1].y, +fy);
-	atomicAdd_g_f(&vertices_f[edge_vertices.vertex1].z, +fz);
-	
-	atomicAdd_g_f(&vertices_f[edge_vertices.vertex2].x, -fx);
-	atomicAdd_g_f(&vertices_f[edge_vertices.vertex2].y, -fy);
-	atomicAdd_g_f(&vertices_f[edge_vertices.vertex2].z, -fz);
-#else
-	vertices_f[edge_vertices.vertex1].x += fx;
-	vertices_f[edge_vertices.vertex1].y += fy;
-	vertices_f[edge_vertices.vertex1].z += fz;
-	
-	vertices_f[edge_vertices.vertex2].x -= fx;
-	vertices_f[edge_vertices.vertex2].y -= fy;
-	vertices_f[edge_vertices.vertex2].z -= fz;
-#endif
+	global const int * restrict map = gatherMap + ID * 8;
+
+	Vector f;
+
+	f.x = 0.f;
+	f.y = 0.f;
+	f.z = 0.f;
+
+	for (int i = 0; i < 8; ++i)
+	{
+		const int edgeIndex = map[i];
+		
+		if (edgeIndex != -1)
+		{
+			if (edgeIndex >= 0)
+			{
+				Vector ef = edgeForces[edgeIndex];
+			
+				f.x += ef.x;
+				f.y += ef.y;
+				f.z += ef.z;
+			}
+			else
+			{
+				Vector ef = edgeForces[-2 - edgeIndex];
+			
+				f.x -= ef.x;
+				f.y -= ef.y;
+				f.z -= ef.z;
+			}
+		}
+	}
+
+	vertices_f[ID] = f;
 }
 )SHADER";
 
@@ -118,7 +161,7 @@ typedef struct Vector
 
 void kernel integrate(
 	global Vector * restrict vertices_p,
-	global Vector * restrict vertices_f,
+	global const Vector * restrict vertices_f,
 	global Vector * restrict vertices_v,
 	float dt,
 	float retain)
@@ -167,12 +210,7 @@ void kernel integrate(
 	v_p.y += v_v.y * dt;
 	v_p.z += v_v.z * dt;
 	
-	v_f.x = 0.0;
-	v_f.y = 0.0;
-	v_f.z = 0.0;
-	
 	vertices_p[ID] = v_p;
-	vertices_f[ID] = v_f;
 	vertices_v[ID] = v_v;
 }
 )SHADER";

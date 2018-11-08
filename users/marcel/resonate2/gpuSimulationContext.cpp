@@ -10,6 +10,10 @@
 
 #include "cl.hpp"
 
+struct LatticeVector : Lattice::Vector
+{
+};
+
 GpuSimulationContext::GpuSimulationContext(GpuContext & in_gpuContext)
 	: gpuContext(in_gpuContext)
 {
@@ -24,8 +28,14 @@ GpuSimulationContext::~GpuSimulationContext()
 	Assert(vertex_v_Buffer == nullptr);
 	Assert(edge_vertices_Buffer == nullptr);
 	Assert(edgeBuffer == nullptr);
+	Assert(edge_f_Buffer == nullptr);
+	
+	Assert(edgeForces == nullptr);
+
+	Assert(computeEdgeForcesProgram == nullptr);
 	Assert(integrateProgram == nullptr);
 	Assert(integrateImpulseResponseProgram == nullptr);
+	Assert(advanceImpulseResponseProgram == nullptr);
 }
 
 bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_impulseResponseState, ImpulseResponseProbe * in_probes, const int in_numProbes)
@@ -39,7 +49,48 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 		lattice = &in_lattice;
 		numVertices = kNumVertices;
 		numEdges = in_lattice.edges.size();
+
+		edgeForces = new LatticeVector[numEdges];
+		memset(edgeForces, 0, sizeof(LatticeVector) * numEdges);
+
+		typedef int32_t GatherType;
+		GatherType * gatherMap = new GatherType[numVertices * 8];
+		memset(gatherMap, -1, sizeof(GatherType) * numVertices * 8);
+		for (int e = 0; e < numEdges; ++e)
+		{
+			GatherType * vertex1 = gatherMap + in_lattice.edgeVertices[e].vertex1 * 8;
+			GatherType * vertex2 = gatherMap + in_lattice.edgeVertices[e].vertex2 * 8;
+
+			for (int i = 0; i < 8; ++i)
+			{
+				if (vertex1[i] == -1)
+				{
+					vertex1[i] = e;
+					break;
+				}
+
+				Assert(i != 7);
+			}
+
+			for (int i = 0; i < 8; ++i)
+			{
+				if (vertex2[i] == -1)
+				{
+					vertex2[i] = -2 - e;
+					break;
+				}
+
+				Assert(i != 7);
+			}
+		}
 		
+#if 0
+		for (int i = 0; i < numVertices * 8; ++i)
+		{
+			printf("gather: %04d : %04d\n", i / 8, gatherMap[i]);
+		}
+#endif
+
 		vertex_p_Buffer = new GpuBuffer(false, &gpuContext, in_lattice.vertices_p, sizeof(Lattice::Vector) * numVertices, true, "vertex p data");
 		vertex_p_init_Buffer = new GpuBuffer(true, &gpuContext, in_lattice.vertices_p_init, sizeof(Lattice::Vector) * numVertices, true, "vertex p_init data");
 		vertex_n_Buffer = new GpuBuffer(true, &gpuContext, in_lattice.vertices_n, sizeof(Lattice::Vector) * numVertices, true, "vertex n data");
@@ -48,7 +99,12 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 		
 		edge_vertices_Buffer = new GpuBuffer(true, &gpuContext, &in_lattice.edgeVertices[0], sizeof(Lattice::EdgeVertices) * numEdges, true, "edge vertices");
 		edgeBuffer = new GpuBuffer(true, &gpuContext, &in_lattice.edges[0], sizeof(Lattice::Edge) * numEdges, true, "edge data");
-		
+		edge_f_Buffer = new GpuBuffer(false, &gpuContext, &edgeForces[0], sizeof(LatticeVector) * numEdges, true, "edge forces");
+		edge_f_gather_Buffer = new GpuBuffer(true, &gpuContext, gatherMap, sizeof(GatherType) * numVertices * 8, true, "edge forces gather map");
+
+		delete [] gatherMap;
+		gatherMap = nullptr;
+
 		//
 		
 		impulseResponseState = in_impulseResponseState;
@@ -73,6 +129,15 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 
 		//
 		
+		gatherEdgeForcesProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
+
+		if (gatherEdgeForcesProgram->updateSource(gatherEdgeForces_source) == false)
+			return false;
+
+		gatherEdgeForcesKernel = new cl::Kernel(*gatherEdgeForcesProgram->program, "gatherEdgeForces");
+
+		//
+
 		integrateProgram = new GpuProgram(*gpuContext.device, *gpuContext.context);
 		
 		if (integrateProgram->updateSource(integrate_source) == false)
@@ -104,6 +169,17 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 
 bool GpuSimulationContext::shut()
 {
+	delete advanceImpulseResponseKernel;
+	advanceImpulseResponseKernel = nullptr;
+
+	if (advanceImpulseResponseProgram != nullptr)
+	{
+		advanceImpulseResponseProgram->shut();
+
+		delete advanceImpulseResponseProgram;
+		advanceImpulseResponseProgram = nullptr;
+	}
+
 	delete integrateImpulseResponseKernel;
 	integrateImpulseResponseKernel = nullptr;
 
@@ -126,6 +202,17 @@ bool GpuSimulationContext::shut()
 		integrateProgram = nullptr;
 	}
 	
+	delete gatherEdgeForcesKernel;
+	gatherEdgeForcesKernel = nullptr;
+
+	if (gatherEdgeForcesProgram != nullptr)
+	{
+		gatherEdgeForcesProgram->shut();
+
+		delete gatherEdgeForcesProgram;
+		gatherEdgeForcesProgram = nullptr;
+	}
+
 	delete computeEdgeForcesKernel;
 	computeEdgeForcesKernel = nullptr;
 
@@ -143,8 +230,14 @@ bool GpuSimulationContext::shut()
 	delete impulseResponseStateBuffer;
 	impulseResponseStateBuffer = nullptr;
 	
+	delete edge_f_Buffer;
+	edge_f_Buffer = nullptr;
+
 	delete edgeBuffer;
 	edgeBuffer = nullptr;
+
+	delete edge_vertices_Buffer;
+	edge_vertices_Buffer = nullptr;
 	
 	delete vertex_v_Buffer;
 	vertex_v_Buffer = nullptr;
@@ -160,6 +253,9 @@ bool GpuSimulationContext::shut()
 	
 	delete vertex_p_Buffer;
 	vertex_p_Buffer = nullptr;
+
+	delete [] edgeForces;
+	edgeForces = nullptr;
 	
 	return true;
 }
@@ -223,7 +319,8 @@ bool GpuSimulationContext::computeEdgeForces(const float tension)
 		kernel.setArg(1, *edgeBuffer->buffer) != CL_SUCCESS ||
 		kernel.setArg(2, *vertex_p_Buffer->buffer) != CL_SUCCESS ||
 		kernel.setArg(3, *vertex_f_Buffer->buffer) != CL_SUCCESS ||
-		kernel.setArg(4, tension) != CL_SUCCESS)
+		kernel.setArg(4, tension) != CL_SUCCESS ||
+		kernel.setArg(5, *edge_f_Buffer->buffer) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to set buffer arguments for kernel", 0);
 		return false;
@@ -239,6 +336,33 @@ bool GpuSimulationContext::computeEdgeForces(const float tension)
 	
 	//gpuContext.commandQueue->enqueueBarrierWithWaitList();
 	
+	return true;
+}
+
+bool GpuSimulationContext::gatherEdgeForces()
+{
+	//Benchmark bm("gatherEdgeForces_GPU");
+
+	cl::Kernel & kernel = *gatherEdgeForcesKernel;
+
+	if (kernel.setArg(0, *edge_f_Buffer->buffer) != CL_SUCCESS ||
+		kernel.setArg(1, *edge_f_gather_Buffer->buffer) != CL_SUCCESS ||
+		kernel.setArg(2, *vertex_f_Buffer->buffer) != CL_SUCCESS)
+	{
+		LOG_ERR("failed to set buffer arguments for kernel", 0);
+		return false;
+	}
+
+	if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(numVertices)) != CL_SUCCESS)
+	{
+		LOG_ERR("failed to enqueue kernel", 0);
+		return false;
+	}
+
+	gpuContext.commandQueue->flush();
+
+	//gpuContext.commandQueue->enqueueBarrierWithWaitList();
+
 	return true;
 }
 

@@ -407,6 +407,8 @@ static void simulateLattice_gpu(Lattice & lattice, const float dt, const float t
 {
 	s_gpuSimulationContext->computeEdgeForces(tension);
 	
+	s_gpuSimulationContext->gatherEdgeForces();
+	
 	s_gpuSimulationContext->integrate(lattice, dt, falloff);
 }
 
@@ -850,7 +852,8 @@ int main(int argc, char * argv[])
 	gpuInit(lattice, &impulseResponseState, impulseResponseProbes, kNumProbes);
 	
 	Assert(sizeof(Lattice::Vector) == 4*4);
-	Assert(sizeof(Lattice::Edge) == 16);
+	Assert(sizeof(Lattice::EdgeVertices) == 8);
+	Assert(sizeof(Lattice::Edge) == 8);
 	
 	ComputeEditor computeEdgeForcesEditor(s_gpuSimulationContext->computeEdgeForcesProgram);
 	ComputeEditor integrateEditor(s_gpuSimulationContext->integrateProgram);
