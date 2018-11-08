@@ -182,7 +182,7 @@ int main(int argc, char * argv[])
 
 	downloadCache.add(url, "jetpac.ntwk");
 	
-	for (int i = 0; i < 100; ++i)
+	for (int i = 0; i < 20; ++i)
 	{
 		const char * url = "http://webserver.com/";
 		const std::string filename = String::FormatC("testfile%03d.txt", i);
@@ -197,10 +197,10 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 		
-		downloadCache.tick(10);
+		downloadCache.tick(4);
 		
-		if (downloadCache.downloadQueue.isEmpty())
-			break;
+		//if (downloadCache.downloadQueue.isEmpty())
+		//	break;
 		
 		LOG_DBG("downloading..", 0);
 		
@@ -230,6 +230,13 @@ int main(int argc, char * argv[])
 				
 				setColor(200, 200, 200);
 				drawText(10, y, 12, +1, +1, "[queued] %s -> %s", e.url.c_str(), e.filename.c_str());
+				y += 14;
+			}
+			
+			for (auto & filename : downloadCache.readyFiles)
+			{
+				setColor(220, 220, 220);
+				drawText(10, y, 12, +1, +1, "[ready] %s", filename.c_str());
 				y += 14;
 			}
 		}
