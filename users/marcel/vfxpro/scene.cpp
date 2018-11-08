@@ -1078,7 +1078,7 @@ void Scene::tick(const float dt)
 
 	for (auto & map : m_midiMaps)
 	{
-		const bool g_live = false; // todo : add a global live variable
+		const bool g_live = false; // todo-vfxpro : add a global live variable
 
 		if (g_live && !map.liveEnabled)
 			continue;

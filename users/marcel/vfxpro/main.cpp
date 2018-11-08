@@ -915,7 +915,7 @@ public:
 			auto hands = frame.hands();
 			if (!hands.isEmpty())
 			{
-				// todo : track whether it's the same hand ?
+				// todo-vfxpro : track whether it's the same hand ?
 
 				auto & hand = *hands.begin();
 				auto palmPosition = hand.palmPosition();
@@ -1359,11 +1359,11 @@ int main(int argc, char * argv[])
 					audioInProvideTime = framework.time;
 				}
 
-				// todo : increment depending on time passed, not not 1/60 assuming 60 fps
+				// todo-vfxpro : increment depending on time passed, not 1/60 assuming 60 fps
 				numSamplesThisFrame = Calc::Min(config.audioIn.sampleRate / 60, audioInHistorySize);
 				Assert(audioInHistorySize >= numSamplesThisFrame);
 
-				// todo : secure this code
+				// todo-vfxpro : secure this code
 
 				samplesThisFrame = new float[numSamplesThisFrame];
 
@@ -1832,8 +1832,8 @@ int main(int argc, char * argv[])
 
 				Camera cameras[NUM_SCREENS];
 
-				const float dx = +sqrtf(2.f) / 2.f; // todo : rotate the screen instead of hacking their positions
-				const float dz = -sqrtf(2.f) / 2.f; // todo : rotate the screen instead of hacking their positions
+				const float dx = +sqrtf(2.f) / 2.f; // todo-vfxpro : rotate the screen instead of hacking their positions
+				const float dz = -sqrtf(2.f) / 2.f; // todo-vfxpro : rotate the screen instead of hacking their positions
 
 			#if NUM_SCREENS == 1
 				Vec3 _screenCorners[4] =
@@ -2009,7 +2009,7 @@ int main(int argc, char * argv[])
 
 					setBlend(BLEND_ALPHA);
 
-				#if 0 // todo : move to camera viewport rendering ?
+				#if 0 // todo-vfxpro : move to camera viewport rendering ?
 					// draw projector bounds
 
 					setColorf(1.f, 1.f, 1.f, .25f);

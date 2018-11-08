@@ -189,7 +189,7 @@ AudioIn::~AudioIn()
 
 bool AudioIn::init(int deviceIndex, int channelCount, int sampleRate, int bufferSampleCount)
 {
-	// todo : let the user select a device
+	// todo-vfxpro : let the user select a device
 
 	//const int numDevices = waveInGetNumDevs();
 

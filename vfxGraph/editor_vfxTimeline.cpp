@@ -28,7 +28,7 @@
 #include "editor_vfxTimeline.h"
 #include "framework.h"
 #include "tinyxml2.h"
-#include "ui.h" // todo : remove
+#include "ui.h"
 #include "vfxResource.h"
 #include "vfxTypes.h"
 #include <cmath>

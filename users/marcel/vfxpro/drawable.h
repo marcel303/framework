@@ -43,7 +43,7 @@ struct DrawableList
 
 	~DrawableList()
 	{
-		// todo : use a transient allocator instead of malloc/free
+		// note : using a transient allocator instead of malloc/free would be faster. in practice this never became a problem so I haven't implemented it
 
 		for (int i = 0; i < numDrawables; ++i)
 		{

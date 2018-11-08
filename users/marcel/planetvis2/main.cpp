@@ -661,7 +661,7 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 	checkErrorGL();
 
 #if DO_ALEX_BATHOLOMEUS
-	// todo : what's the fastest way to stream pages once we want to do it async?
+	// todo-planetvis : what's the fastest way to stream pages once we want to do it async?
 	if (levelSize == params.cube->m_initSize)
 	{
 		Surface s(128, 128, false);
@@ -693,7 +693,7 @@ void QuadNode::traverse(const int level, const int x, const int y, const int siz
 {
 	const bool doTraverse = traverseImpl(level, x, y, size, params) || (level == 0);
 
-	// todo : remove children check ?
+	// todo-planetvis : remove children check ?
 
 	if (doTraverse)
 	{
