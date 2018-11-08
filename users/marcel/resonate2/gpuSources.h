@@ -10,10 +10,14 @@ typedef struct Vector
 	float padding;
 } Vector;
 
+typedef struct EdgeVertices
+{
+	unsigned int vertex1;
+	unsigned int vertex2;
+} EdgeVertices;
+
 typedef struct Edge
 {
-	int vertex1;
-	int vertex2;
 	float weight;
 	
 	// physics stuff
@@ -41,6 +45,7 @@ void atomicAdd_g_f(volatile __global float *addr, float val)
 }
 
 void kernel computeEdgeForces(
+	global const EdgeVertices * restrict edgeVertices,
 	global const Edge * restrict edges,
 	global const Vector * restrict vertices_p,
 	global Vector * restrict vertices_f,
@@ -50,10 +55,12 @@ void kernel computeEdgeForces(
 	
 	const int ID = get_global_id(0);
 	
+	const EdgeVertices edge_vertices = edgeVertices[ID];
+
 	const Edge edge = edges[ID];
 	
-	const Vector p1 = vertices_p[edge.vertex1];
-	const Vector p2 = vertices_p[edge.vertex2];
+	const Vector p1 = vertices_p[edge_vertices.vertex1];
+	const Vector p2 = vertices_p[edge_vertices.vertex2];
 	
 	const float dx = p2.x - p1.x;
 	const float dy = p2.y - p1.y;
@@ -80,21 +87,21 @@ void kernel computeEdgeForces(
 	// todo : store forces in edges and let vertices gather forces in a follow-up step
 	
 #if 1
-	atomicAdd_g_f(&vertices_f[edge.vertex1].x, +fx);
-	atomicAdd_g_f(&vertices_f[edge.vertex1].y, +fy);
-	atomicAdd_g_f(&vertices_f[edge.vertex1].z, +fz);
+	atomicAdd_g_f(&vertices_f[edge_vertices.vertex1].x, +fx);
+	atomicAdd_g_f(&vertices_f[edge_vertices.vertex1].y, +fy);
+	atomicAdd_g_f(&vertices_f[edge_vertices.vertex1].z, +fz);
 	
-	atomicAdd_g_f(&vertices_f[edge.vertex2].x, -fx);
-	atomicAdd_g_f(&vertices_f[edge.vertex2].y, -fy);
-	atomicAdd_g_f(&vertices_f[edge.vertex2].z, -fz);
+	atomicAdd_g_f(&vertices_f[edge_vertices.vertex2].x, -fx);
+	atomicAdd_g_f(&vertices_f[edge_vertices.vertex2].y, -fy);
+	atomicAdd_g_f(&vertices_f[edge_vertices.vertex2].z, -fz);
 #else
-	vertices_f[edge.vertex1].x += fx;
-	vertices_f[edge.vertex1].y += fy;
-	vertices_f[edge.vertex1].z += fz;
+	vertices_f[edge_vertices.vertex1].x += fx;
+	vertices_f[edge_vertices.vertex1].y += fy;
+	vertices_f[edge_vertices.vertex1].z += fz;
 	
-	vertices_f[edge.vertex2].x -= fx;
-	vertices_f[edge.vertex2].y -= fy;
-	vertices_f[edge.vertex2].z -= fz;
+	vertices_f[edge_vertices.vertex2].x -= fx;
+	vertices_f[edge_vertices.vertex2].y -= fy;
+	vertices_f[edge_vertices.vertex2].z -= fz;
 #endif
 }
 )SHADER";

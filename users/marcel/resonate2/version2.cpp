@@ -296,12 +296,15 @@ void simulateLattice_computeEdgeForces(Lattice & lattice, const float tension)
 	
 	const float eps = 1e-12f;
 	
-	for (auto & edge : lattice.edges)
+	for (size_t i = 0; i < lattice.edgeVertices.size(); ++i)
 	{
-		auto & v1_p = lattice.vertices_p[edge.vertex1];
-		auto & v1_f = lattice.vertices_f[edge.vertex1];
-		auto & v2_p = lattice.vertices_p[edge.vertex2];
-		auto & v2_f = lattice.vertices_f[edge.vertex2];
+		const auto & edgeVertices = lattice.edgeVertices[i];
+		const auto & edge = lattice.edges[i];
+
+		auto & v1_p = lattice.vertices_p[edgeVertices.vertex1];
+		auto & v1_f = lattice.vertices_f[edgeVertices.vertex1];
+		auto & v2_p = lattice.vertices_p[edgeVertices.vertex2];
+		auto & v2_f = lattice.vertices_f[edgeVertices.vertex2];
 		
 	// todo : remove ?
 		//edge.weight = 1.f / edge.initialDistance * 1.f / edge.initialDistance * 1.f / edge.initialDistance / 10000.f;
@@ -846,7 +849,7 @@ int main(int argc, char * argv[])
 	
 	gpuInit(lattice, &impulseResponseState, impulseResponseProbes, kNumProbes);
 	
-	Assert(sizeof(Lattice::Vertex) == 5*3*4);
+	Assert(sizeof(Lattice::Vector) == 4*4);
 	Assert(sizeof(Lattice::Edge) == 16);
 	
 	ComputeEditor computeEdgeForcesEditor(s_gpuSimulationContext->computeEdgeForcesProgram);
@@ -1353,7 +1356,7 @@ int main(int argc, char * argv[])
 					{
 						Shader shader("cube");
 						setShader(shader);
-						shader.setTextureCube("cubemap", 0, cubemapTexture);
+						//shader.setTextureCube("cubemap", 0, cubemapTexture);
 						shader.setImmediateMatrix4x4("transform", s_cubeFaceToWorldMatrices[i].m_v);
 						{
 							gxPushMatrix();

@@ -34,6 +34,7 @@ struct GpuSimulationContext
 	GpuBuffer * vertex_n_Buffer = nullptr;
 	GpuBuffer * vertex_f_Buffer = nullptr;
 	GpuBuffer * vertex_v_Buffer = nullptr;
+	GpuBuffer * edge_vertices_Buffer = nullptr;
 	GpuBuffer * edgeBuffer = nullptr;
 	GpuBuffer * impulseResponseStateBuffer = nullptr;
 	GpuBuffer * impulseResponseProbesBuffer = nullptr;

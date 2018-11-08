@@ -6,6 +6,7 @@ extern Mat4x4 s_cubeFaceToWorldMatrices[6];
 
 void Lattice::init()
 {
+	edgeVertices.clear();
 	edges.clear();
 	
 	for (int i = 0; i < 6; ++i)
@@ -42,11 +43,13 @@ void Lattice::init()
 		const int index1 = calcVertexIndex(faceIndex, x1, y1);
 		const int index2 = calcVertexIndex(faceIndex, x2, y2);
 		
+		EdgeVertices edge_vertices;
 		Edge edge;
-		edge.vertex1 = index1;
-		edge.vertex2 = index2;
+		edge_vertices.vertex1 = index1;
+		edge_vertices.vertex2 = index2;
 		edge.weight = weight;
 		
+		edgeVertices.push_back(edge_vertices);
 		edges.push_back(edge);
 	};
 	
@@ -77,11 +80,13 @@ void Lattice::init()
 		const int index1 = calcVertexIndex(faceIndex1, x1, y1);
 		const int index2 = calcVertexIndex(faceIndex2, x2, y2);
 		
+		EdgeVertices edge_vertices;
 		Edge edge;
-		edge.vertex1 = index1;
-		edge.vertex2 = index2;
+		edge_vertices.vertex1 = index1;
+		edge_vertices.vertex2 = index2;
 		edge.weight = weight;
 		
+		edgeVertices.push_back(edge_vertices);
 		edges.push_back(edge);
 	};
 	
@@ -226,10 +231,12 @@ void Lattice::finalize()
 		vertices_v[i].setZero();
 	}
 	
-	for (auto & edge : edges)
+	for (size_t i = 0; i < edges.size(); ++i)
 	{
-		const auto & p1 = vertices_p[edge.vertex1];
-		const auto & p2 = vertices_p[edge.vertex2];
+		auto & edge = edges[i];
+
+		const auto & p1 = vertices_p[edgeVertices[i].vertex1];
+		const auto & p2 = vertices_p[edgeVertices[i].vertex2];
 		
 		const float dx = p2.x - p1.x;
 		const float dy = p2.y - p1.y;

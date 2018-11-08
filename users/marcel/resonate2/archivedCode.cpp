@@ -103,11 +103,13 @@ static void createFibonnacciSphere(Lattice & lattice)
 		for (int r = 0; r < numResults; ++r)
 		{
 			Lattice::Edge edge;
-			edge.vertex1 = i;
-			edge.vertex2 = results[r].index;
+			Lattice::EdgeVertices edgeVertices;
+			edgeVertices.vertex1 = i;
+			edgeVertices.vertex2 = results[r].index;
 			edge.initialDistance = sqrtf(results[r].distance);
 			edge.weight = 1.f;
 			
+			lattice.edgeVertices.push_back(edgeVertices);
 			lattice.edges.push_back(edge);
 		}
 	}

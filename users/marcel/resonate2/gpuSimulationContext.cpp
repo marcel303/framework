@@ -22,6 +22,8 @@ GpuSimulationContext::~GpuSimulationContext()
 	Assert(vertex_n_Buffer == nullptr);
 	Assert(vertex_f_Buffer == nullptr);
 	Assert(vertex_v_Buffer == nullptr);
+	Assert(edge_vertices_Buffer == nullptr);
+	Assert(edgeBuffer == nullptr);
 	Assert(integrateProgram == nullptr);
 	Assert(integrateImpulseResponseProgram == nullptr);
 }
@@ -44,6 +46,7 @@ bool GpuSimulationContext::init(Lattice & in_lattice, ImpulseResponseState * in_
 		vertex_f_Buffer = new GpuBuffer(false, &gpuContext, in_lattice.vertices_f, sizeof(Lattice::Vector) * numVertices, true, "vertex f data");
 		vertex_v_Buffer = new GpuBuffer(false, &gpuContext, in_lattice.vertices_v, sizeof(Lattice::Vector) * numVertices, true, "vertex v data");
 		
+		edge_vertices_Buffer = new GpuBuffer(true, &gpuContext, &in_lattice.edgeVertices[0], sizeof(Lattice::EdgeVertices) * numEdges, true, "edge vertices");
 		edgeBuffer = new GpuBuffer(true, &gpuContext, &in_lattice.edges[0], sizeof(Lattice::Edge) * numEdges, true, "edge data");
 		
 		//
@@ -183,7 +186,9 @@ bool GpuSimulationContext::fetchVerticesFromGpu()
 
 bool GpuSimulationContext::sendEdgesToGpu()
 {
-	return edgeBuffer->sendToGpu();
+	return
+		edge_vertices_Buffer->sendToGpu() &&
+		edgeBuffer->sendToGpu();
 }
 
 bool GpuSimulationContext::sendImpulseResponseStateToGpu()
@@ -214,10 +219,11 @@ bool GpuSimulationContext::computeEdgeForces(const float tension)
 	
 	cl::Kernel & kernel = *computeEdgeForcesKernel;
 	
-	if (kernel.setArg(0, *edgeBuffer->buffer) != CL_SUCCESS ||
-		kernel.setArg(1, *vertex_p_Buffer->buffer) != CL_SUCCESS ||
-		kernel.setArg(2, *vertex_f_Buffer->buffer) != CL_SUCCESS ||
-		kernel.setArg(3, tension) != CL_SUCCESS)
+	if (kernel.setArg(0, *edge_vertices_Buffer->buffer) != CL_SUCCESS ||
+		kernel.setArg(1, *edgeBuffer->buffer) != CL_SUCCESS ||
+		kernel.setArg(2, *vertex_p_Buffer->buffer) != CL_SUCCESS ||
+		kernel.setArg(3, *vertex_f_Buffer->buffer) != CL_SUCCESS ||
+		kernel.setArg(4, tension) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to set buffer arguments for kernel", 0);
 		return false;

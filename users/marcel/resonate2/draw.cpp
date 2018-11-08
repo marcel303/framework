@@ -94,15 +94,18 @@ void drawLatticeEdges(const Lattice & lattice)
 	
 	gxBegin(GL_LINES);
 	{
-		for (auto & edge : lattice.edges)
+		for (auto & edge : lattice.edgeVertices)
 		{
-			const auto & p1 = lattice.vertices_p[edge.vertex1];
-			const auto & p2 = lattice.vertices_p[edge.vertex2];
+			const int vertex1 = edge.vertex1;
+			const int vertex2 = edge.vertex2;
+
+			const auto & p1 = lattice.vertices_p[vertex1];
+			const auto & p2 = lattice.vertices_p[vertex2];
 			
-			setColor(colors[edge.vertex1]);
+			setColor(colors[vertex1]);
 			gxVertex3f(p1.x, p1.y, p1.z);
 			
-			setColor(colors[edge.vertex2]);
+			setColor(colors[vertex2]);
 			gxVertex3f(p2.x, p2.y, p2.z);
 		}
 	}

@@ -47,22 +47,27 @@ struct Lattice
 		}
 	};
 	
+	struct EdgeVertices
+	{
+		uint32_t vertex1;
+		uint32_t vertex2;
+	};
+
 	struct Edge
 	{
-		int vertex1;
-		int vertex2;
 		float weight;
 		
 		// physics stuff
 		float initialDistance;
 	};
-	
+
 	Vector vertices_p[kNumVertices];
 	Vector vertices_p_init[kNumVertices];
 	Vector vertices_n[kNumVertices];
 	Vector vertices_f[kNumVertices];      // physics stuff
 	Vector vertices_v[kNumVertices];      // physics stuff
 	
+	std::vector<EdgeVertices> edgeVertices;
 	std::vector<Edge> edges;
 	
 	void init();
