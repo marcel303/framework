@@ -637,7 +637,7 @@ bool Framework::shutdown()
 	fillCachesUnknownResourceCallback = 0;
 	realTimeEditCallback = 0;
 	initErrorHandler = 0;
-
+	
 	return result;
 }
 
@@ -2766,6 +2766,17 @@ void Shader::setTextureArray(const char * name, int unit, GLuint texture, bool f
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+}
+
+void Shader::setTextureCube(const char * name, int unit, GLuint texture)
+{
+	SET_UNIFORM(name, glUniform1i(index, unit));
+	checkErrorGL();
+
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
 	glActiveTexture(GL_TEXTURE0);
 	checkErrorGL();
 }
