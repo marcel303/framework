@@ -1,0 +1,2 @@
+app marcel-biquad-simd
+	add_files main.cpp
