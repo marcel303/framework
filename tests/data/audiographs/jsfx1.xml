@@ -13,7 +13,7 @@
         <input socket="frequency" value="543.000000"/>
         <input socket="type" value="1"/>
     </node>
-    <node id="9" typeName="jsusfx.ATK FOA Transform Dominate">
+    <node id="9" typeName="jsusfx.FOA/Transform/Dominate">
         <resource type="jsusfx" name="editorData"><![CDATA[<value>
     <sliders>
         <slider index="1" value="-39.522632598876953"/>
@@ -44,7 +44,7 @@
         <input socket="frequency" value="654.000000"/>
         <input socket="type" value="1"/>
     </node>
-    <node id="14" typeName="jsusfx.ATK FOA Encode Planewave">
+    <node id="14" typeName="jsusfx.FOA/Encode/Planewave">
         <resource type="jsusfx" name="editorData"><![CDATA[<value>
     <sliders>
         <slider index="1" value="-0.87467676401138306"/>
@@ -52,7 +52,7 @@
 </value>
 ]]></resource>
     </node>
-    <node id="15" typeName="jsusfx.ATK FOA Transform RotateTiltTumble">
+    <node id="15" typeName="jsusfx.FOA/Transform/RotateTiltTumble">
         <resource type="jsusfx" name="editorData"><![CDATA[<value>
     <sliders>
         <slider index="1" value="-0.75884014368057251"/>
@@ -69,7 +69,7 @@
         <input socket="skew" value="0.200000"/>
         <input socket="type" value="2"/>
     </node>
-    <node id="17" typeName="jsusfx.ATK FOA Decode Binaural">
+    <node id="17" typeName="jsusfx.FOA/Decode/Binaural">
         <resource type="jsusfx" name="editorData"><![CDATA[<value>
     <sliders>
         <slider index="3" value="1"/>

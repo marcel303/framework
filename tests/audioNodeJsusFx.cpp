@@ -335,11 +335,13 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 	int numInputs = 0;
 	int numOutputs = 0;
 	
-	void initFromJsusFx(const JsusFx_Framework & jsusFx, const char * _filename)
+	void initFromJsusFx(const JsusFx_Framework & jsusFx, const char * _filename, const char * _typeName)
 	{
 		filename = _filename;
 		
-		typeName = String::FormatC("jsusfx.%s", jsusFx.desc);
+		typeName = String::FormatC("jsusfx.%s", _typeName);
+		
+		displayName = jsusFx.desc;
 		
 		// add slider inputs
 		
@@ -473,7 +475,13 @@ void createJsusFxAudioNodes(const char * dataRoot, const char * searchPath, cons
 		r->dataRoot = dataRoot;
 		r->searchPath = searchPath;
 		
-		r->initFromJsusFx(jsusFx, filename.c_str());
+		const char * typeName = filename.c_str();
+		for (size_t i = 0; searchPath[i] != 0 && *typeName == searchPath[i]; ++i)
+			typeName++;
+		while (*typeName == '/')
+			typeName++;
+		
+		r->initFromJsusFx(jsusFx, filename.c_str(), typeName);
 		
 		r->create = [](void * data)
 		{
