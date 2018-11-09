@@ -124,7 +124,7 @@ int main(int argc, char * argv[])
 							int lineNumber;
 							int fileId;
 							
-							const int n = sscanf(errorMessages[i].c_str(), "%s %d:%d: %s", type, &fileId, &lineNumber, message);
+							const int n = sscanf(errorMessages[i].c_str(), "%s %d:%d: %[^]", type, &fileId, &lineNumber, message);
 							
 							if (n == 4 && fileId == 0 && strstr(type, "ERROR") != nullptr)
 							{
@@ -346,4 +346,15 @@ static void showStatistics(Shader & shader)
 
 static void showErrors(Shader & shader)
 {
+	std::vector<std::string> errorMessages;
+	TextEditor::ErrorMarkers errorMarkers;
+	if (shader.getErrorMessages(errorMessages))
+	{
+		const int numItems = int(errorMessages.size());
+		const char ** items = (const char**)alloca(sizeof(char*) * numItems);
+		for (size_t i = 0; i < numItems; ++i)
+			items[i] = errorMessages[i].c_str();
+		int currentItem = -1;
+		ImGui::ListBox("Errors", &currentItem, items, numItems);
+	}
 }
