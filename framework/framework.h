@@ -246,6 +246,11 @@ struct SpriterState;
 class Surface;
 class Window;
 
+namespace AnimModel
+{
+	class BoneTransform;
+}
+
 namespace spriter
 {
 	struct Drawable;
@@ -789,12 +794,11 @@ public:
 	float scale;
 	Shader * overrideShader;
 	
-	// fixme : remove mutable qualifiers
-	mutable bool animIsActive;
+	bool animIsActive;
 	bool animIsPaused;
-	mutable float animTime;
-	mutable int animLoop;
-	mutable int animLoopCount;
+	float animTime;
+	int animLoop;
+	int animLoopCount;
 	float animSpeed;
 	Vec3 animRootMotion;
 	bool animRootMotionEnabled;
@@ -836,6 +840,7 @@ public:
 	
 private:
 	void ctor();
+	void ctorEnd();
 	
 	// book keeping
 	Model * m_prev;
@@ -849,6 +854,7 @@ private:
 	void * m_currentAnim;
 	void * m_animSegment;
 	bool m_isAnimStarted;
+	AnimModel::BoneTransform * m_boneTransforms;
 	
 	bool m_autoUpdate;
 

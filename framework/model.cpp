@@ -732,6 +732,9 @@ Model::Model(const char * filename, const bool autoUpdate)
 	ctor();
 	
 	m_model = &g_modelCache.findOrCreate(filename);
+	
+	ctorEnd();
+	
 }
 
 Model::Model(ModelCacheElem & cacheElem, const bool autoUpdate)
@@ -740,6 +743,8 @@ Model::Model(ModelCacheElem & cacheElem, const bool autoUpdate)
 	ctor();
 	
 	m_model = &cacheElem;
+	
+	ctorEnd();
 }
 
 void Model::ctor()
@@ -765,13 +770,27 @@ void Model::ctor()
 	animLoopCount = 0;
 	animSpeed = 1.f;
 	animRootMotionEnabled = true;
+	m_boneTransforms = nullptr;
 	
 	if (m_autoUpdate)
 		framework.registerModel(this);
 }
 
+void Model::ctorEnd()
+{
+	const int numBones = m_model->boneSet->m_numBones;
+	
+	m_boneTransforms = new BoneTransform[numBones];
+	
+	for (int i = 0; i < numBones; ++i)
+		m_boneTransforms[i] = m_model->boneSet->m_bones[i].transform;
+}
+
 Model::~Model()
 {
+	delete [] m_boneTransforms;
+	m_boneTransforms = nullptr;
+	
 	if (m_autoUpdate)
 		framework.unregisterModel(this);
 }
@@ -1153,57 +1172,13 @@ int Model::calculateBoneMatrices(
 	
 	Assert(numMatrices == m_model->boneSet->m_numBones);
 	
-	// calculate transforms in local bone space
-	
-	BoneTransform * transforms = (BoneTransform*)ALIGNED_ALLOCA(sizeof(BoneTransform) * m_model->boneSet->m_numBones, 16);
-	
-	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
-	{
-		transforms[i] = m_model->boneSet->m_bones[i].transform;
-	}
-	
-	// apply animations
-	
-	// todo: move to updateAnimation
-	if (m_isAnimStarted && m_animSegment && !animIsPaused)
-	{
-		Anim * anim = reinterpret_cast<Anim*>(m_animSegment);
-		
-		const bool isDone = anim->evaluate(animTime, transforms);
-		
-		if (anim->m_rootMotion)
-		{
-			int boneIndex = m_model->boneSet->findBone(m_model->rootNode);
-			
-			if (boneIndex != -1)
-			{
-				transforms[boneIndex].translation = m_model->boneSet->m_bones[boneIndex].transform.translation;
-			}
-		}
-		
-		if (isDone)
-		{
-			if (animLoop > 0 || animLoop < 0)
-			{
-				animTime = 0.f;
-				animLoopCount++;
-				if (animLoop > 0)
-					animLoop--;
-			}
-			else
-			{
-				animIsActive = false;
-			}
-		}
-	}
-	
 	// convert translation / rotation pairs into matrices
 	
 	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
 	{
 		// todo: scale?
 		
-		const BoneTransform & transform = transforms[i];
+		const BoneTransform & transform = m_boneTransforms[i];
 		
 		Mat4x4 & boneMatrix = localMatrices[i];
 		
@@ -1455,13 +1430,55 @@ void Model::updateAnimationSegment()
 
 void Model::updateAnimation(float timeStep)
 {
-	// todo: evaluate bone transforms, and update root motion
-	
 	animRootMotion.SetZero();
 	
 	const float oldTime = animTime;
-	animTime += animSpeed * timeStep;
+	if (!animIsPaused)
+		animTime += animSpeed * timeStep;
 	const float newTime = animTime;
+	
+	// calculate transforms in local bone space
+	
+	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
+	{
+		m_boneTransforms[i] = m_model->boneSet->m_bones[i].transform;
+	}
+	
+	// apply animations
+	
+	if (m_isAnimStarted && m_animSegment)
+	{
+		Anim * anim = reinterpret_cast<Anim*>(m_animSegment);
+		
+		const bool isDone = anim->evaluate(animTime, m_boneTransforms);
+		
+		if (anim->m_rootMotion)
+		{
+			int boneIndex = m_model->boneSet->findBone(m_model->rootNode);
+			
+			if (boneIndex != -1)
+			{
+				m_boneTransforms[boneIndex].translation = m_model->boneSet->m_bones[boneIndex].transform.translation;
+			}
+		}
+		
+		if (isDone)
+		{
+			if (animLoop > 0 || animLoop < 0)
+			{
+				animTime = 0.f;
+				animLoopCount++;
+				if (animLoop > 0)
+					animLoop--;
+			}
+			else
+			{
+				animIsActive = false;
+			}
+		}
+	}
+	
+	// update root motion
 	
 	Anim * anim = static_cast<Anim*>(m_animSegment);
 	
