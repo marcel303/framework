@@ -127,11 +127,13 @@ namespace TextIO
 		if (fseek(file, 0, SEEK_SET) != 0)
 			goto cleanup;
 
-		text = new char[size];
+		text = new char[size + 1];
 		
 		if (fread(text, 1, size, file) != size)
 			goto cleanup;
 
+		text[size] = 0;
+		
 		loadText(text, lines, lineEndings);
 	
 		result = true;
