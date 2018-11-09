@@ -336,6 +336,17 @@ struct MidiBuffer
 	
 	uint8_t bytes[kMaxBytes];
 	int numBytes = 0;
+	
+	bool append(const uint8_t * in_bytes, const int in_numBytes)
+	{
+		if (numBytes + in_numBytes > MidiBuffer::kMaxBytes)
+			return false;
+		
+		for (int i = 0; i < in_numBytes; ++i)
+			bytes[numBytes++] = in_bytes[i];
+		
+		return true;
+	}
 };
 
 static MidiBuffer s_midiBuffer;
@@ -812,6 +823,13 @@ struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
 		
 		lock();
 		{
+			MidiBuffer midiRecvBuffer;
+			MidiBuffer midiSendBuffer;
+			
+			// consume received midi data
+			midiRecvBuffer = s_midiBuffer;
+			s_midiBuffer.numBytes = 0;
+			
 			for (auto & effect : effectChain.effects)
 			{
 				if (effect->isPassthrough)
@@ -823,8 +841,9 @@ struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
 				auto & jsusFx = effect->jsusFx;
 				
 				const uint64_t time1 = g_TimerRT.TimeUS_get();
-				
-				jsusFx.setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
+	
+				jsusFx.setMidi(midiRecvBuffer.bytes, midiRecvBuffer.numBytes);
+				jsusFx.setMidiSendBuffer(midiSendBuffer.bytes, MidiBuffer::kMaxBytes);
 				
 				const float * input[kNumBuffers];
 				float * output[kNumBuffers];
@@ -840,12 +859,18 @@ struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
 					inputIndex = 1 - inputIndex;
 				}
 				
+				// fill in the midi receive buffer for the next effect
+				
+				if (midiRecvBuffer.append(jsusFx.midi, jsusFx.midiSize) == false ||
+					midiRecvBuffer.append(jsusFx.midiSendBuffer, jsusFx.midiSendBufferSize) == false)
+				{
+					logWarning("midi receive buffer overflow during effect chain processing");
+				}
+				
 				const uint64_t time2 = g_TimerRT.TimeUS_get();
 				
 				effect->cpuTime = time2 - time1;
 			}
-			
-			s_midiBuffer.numBytes = 0;
 		}
 		unlock();
 		
@@ -1580,11 +1605,8 @@ static void testJsusFxList()
 				if (messageBytes.empty())
 					break;
 				
-				if (s_midiBuffer.numBytes + messageBytes.size() >= MidiBuffer::kMaxBytes)
+				if (s_midiBuffer.append(&messageBytes[0], messageBytes.size()) == false)
 					break;
-				
-				for (auto b : messageBytes)
-					s_midiBuffer.bytes[s_midiBuffer.numBytes++] = b;
 			}
 		}
 		audioStream.unlock();
