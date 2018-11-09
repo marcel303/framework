@@ -890,6 +890,10 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			//	continue;
 			
 			Mesh * mesh = m_model->meshSet->m_meshes[i];
+			
+			if (mesh->m_numIndices == 0)
+				continue;
+			
 			Shader & shader = (overrideShader != nullptr) ? *overrideShader : mesh->m_material.shader;
 			
 			setShader(shader);
@@ -961,12 +965,12 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 	
 	if (drawFlags & DrawNormals)
 	{
-		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
+		gxBegin(GL_LINES);
 		{
-			const Mesh * mesh = m_model->meshSet->m_meshes[i];
-			
-			gxBegin(GL_LINES);
+			for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 			{
+				const Mesh * mesh = m_model->meshSet->m_meshes[i];
+			
 				for (int j = 0; j < mesh->m_numVertices; ++j)
 				{
 					const Vertex & vertex = mesh->m_vertices[j];
@@ -1018,8 +1022,8 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 					gxVertex3f(p2[0], p2[1], p2[2]);
 				}
 			}
-			gxEnd();
 		}
+		gxEnd();
 	}
 	
 	if (drawFlags & DrawBones)
