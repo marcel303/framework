@@ -2,6 +2,8 @@
 #include "imgui.h"
 #include "imgui/TextEditor.h"
 #include "imgui-framework.h"
+#include "Path.h"
+#include "TextIO.h"
 #include <fstream>
 
 #include "data/Shader.vs"
@@ -10,7 +12,7 @@
 #define GFX_SX 800
 #define GFX_SY 800
 
-static void showFileBrowser();
+static bool showFileBrowser(Shader & shader, const std::vector<std::string> & files, std::string & filename);
 static void showUniforms(Shader & shader);
 static void showStatistics(Shader & shader);
 static void showErrors(Shader & shader);
@@ -25,6 +27,10 @@ enum Tab
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 	if (framework.init(GFX_SX, GFX_SY))
 	{
 		FrameworkImGuiContext framework_context;
@@ -35,8 +41,8 @@ int main(int argc, char * argv[])
 
 		textEditor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
 		
-		shaderSource("shader.vs", s_shaderVs);
-		shaderSource("shader.ps", s_shaderPs);
+		shaderSource("demoShader.vs", s_shaderVs);
+		shaderSource("demoShader.ps", s_shaderPs);
 		
 		textEditor.SetText(s_shaderPs);
 		
@@ -46,9 +52,11 @@ int main(int argc, char * argv[])
 		
 		Window window("Preview", 600, 600, true);
 		
-		Shader shader("shader");
+		Shader shader("demoShader");
 		
 		Tab tab = kTab_Uniforms;
+		
+		auto files = listFiles("testShaders", false);
 		
 		while (!framework.quitRequested)
 		{
@@ -156,7 +164,18 @@ int main(int argc, char * argv[])
 					ImGui::BeginChild("Tabs", ImVec2(0, 170));
 					{
 						if (tab == kTab_FileBrowser)
-							showFileBrowser();
+						{
+							std::string filename;
+							
+							if (showFileBrowser(shader, files, filename))
+							{
+								std::vector<std::string> lines;
+								TextIO::LineEndings lineEndings;
+								
+								if (TextIO::load(filename.c_str(), lines, lineEndings))
+									textEditor.SetTextLines(lines);
+							}
+						}
 						else if (tab == kTab_Uniforms)
 							showUniforms(shader);
 						else if (tab == kTab_Statistics)
@@ -321,22 +340,28 @@ static void showUniforms(Shader & shader)
 	}
 }
 
-static void showFileBrowser()
+static bool showFileBrowser(Shader & shader, const std::vector<std::string> & files, std::string & filename)
 {
-	const char * items[] =
-	{
-		"circles.glsl",
-		"squares.glsl",
-		"rectangles.glsl"
-	};
-	
-	const int numItems = sizeof(items) / sizeof(items[0]);
+	const int numItems = int(files.size());
+	const char ** items = (const char **)alloca(sizeof(char*) * numItems);
+	for (int i = 0; i < numItems; ++i)
+		items[i] = files[i].c_str();
 	
 	int currentItem = -1;
 	
 	if (ImGui::ListBox("File", &currentItem, items, numItems))
 	{
-		logDebug("selected %s!", items[currentItem]);
+		filename = items[currentItem];
+		
+		const std::string name = Path::StripExtension(filename) + ".ps";
+		
+		shader = Shader(name.c_str(), "testShader.vs", filename.c_str());
+		
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
 
