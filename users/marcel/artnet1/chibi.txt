@@ -1,0 +1,4 @@
+app marcel-artnet1
+	depend_library framework
+	depend_library libosc
+	add_files main.cpp
