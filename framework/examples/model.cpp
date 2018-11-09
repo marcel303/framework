@@ -189,6 +189,11 @@ int main(int argc, char * argv[])
 						model->startAnim(name.c_str(), loop ? -1 : 1);
 						model->animSpeed = animSpeed;
 					}
+					
+					if (keyboard.wentDown(SDLK_o))
+						model->pauseAnim();
+					if (keyboard.wentDown(SDLK_i))
+						model->resumeAnim();
 				}
 			}
 		}
@@ -277,7 +282,7 @@ int main(int argc, char * argv[])
 			
 			setColor(0, 0, 0, 180);
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
-			hqFillRoundedRect(0, 0, 270, 310, 14);
+			hqFillRoundedRect(0, 0, 270, 340, 14);
 			hqEnd();
 			
 			setFont("calibri.ttf");
@@ -304,6 +309,8 @@ int main(int argc, char * argv[])
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "A: rotate view [%s]", rotate ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "L: loop animations [%s]", loop ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "P: auto play animations [%s]", autoPlay ? "on" : "off");
+			y += incrementY; drawText(x, y, fontSize, +1, +1, "O: pause animations");
+			y += incrementY; drawText(x, y, fontSize, +1, +1, "I: resume animations");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "UP: increase animation speed [%.2f]", animSpeed);
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "DOWN: decrease animation speed [%.2f]", animSpeed);
 		}
