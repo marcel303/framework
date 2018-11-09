@@ -10,6 +10,19 @@
 #define GFX_SX 800
 #define GFX_SY 800
 
+static void showFileBrowser();
+static void showUniforms(Shader & shader);
+static void showStatistics(Shader & shader);
+static void showErrors(Shader & shader);
+
+enum Tab
+{
+	kTab_Uniforms,
+	kTab_Errors,
+	kTab_Statistics,
+	kTab_FileBrowser
+};
+
 int main(int argc, char * argv[])
 {
 	if (framework.init(GFX_SX, GFX_SY))
@@ -35,10 +48,15 @@ int main(int argc, char * argv[])
 		
 		Shader shader("shader");
 		
+		Tab tab = kTab_Uniforms;
+		
 		while (!framework.quitRequested)
 		{
 			framework.process();
-
+			
+			if (keyboard.wentDown(SDLK_ESCAPE))
+				framework.quitRequested = true;
+			
 			bool inputIsCaptured = false;
 			
 			framework_context.processBegin(framework.timeStep, GFX_SX, GFX_SY, inputIsCaptured);
@@ -49,8 +67,43 @@ int main(int argc, char * argv[])
 				ImGui::Begin("Text Editor Demo", nullptr,
 						ImGuiWindowFlags_NoTitleBar |
 						ImGuiWindowFlags_NoResize |
-						ImGuiWindowFlags_HorizontalScrollbar);
+						ImGuiWindowFlags_HorizontalScrollbar |
+						ImGuiWindowFlags_MenuBar);
 				{
+					if (ImGui::BeginMenuBar())
+					{
+						if (ImGui::BeginMenu("File"))
+						{
+							ImGui::MenuItem("Load..");
+							ImGui::MenuItem("Save as..");
+							ImGui::EndMenu();
+						}
+						
+						if (ImGui::BeginMenu("Edit"))
+						{
+							if (ImGui::MenuItem("Undo"))
+								textEditor.Undo();
+							if (ImGui::MenuItem("Redo"))
+								textEditor.Redo();
+							
+							ImGui::Separator();
+							if (ImGui::MenuItem("Copy"))
+								textEditor.Copy();
+							if (ImGui::MenuItem("Cut"))
+								textEditor.Cut();
+							if (ImGui::MenuItem("Paste"))
+								textEditor.Paste();
+							
+							ImGui::Separator();
+							if (ImGui::MenuItem("Select all"))
+								textEditor.SelectAll();
+							
+							ImGui::EndMenu();
+						}
+						
+						ImGui::EndMenuBar();
+					}
+					
 					std::vector<std::string> errorMessages;
 					TextEditor::ErrorMarkers errorMarkers;
 					if (shader.getErrorMessages(errorMessages))
@@ -84,107 +137,40 @@ int main(int argc, char * argv[])
 					}
 					textEditor.SetErrorMarkers(errorMarkers);
 
-					textEditor.Render("TextEditor", ImVec2(0, GFX_SY - 130));
+					textEditor.Render("TextEditor", ImVec2(0, GFX_SY - 170 - 30));
 					
-					ImGui::BeginChild("ShaderConstants", ImVec2(0, 100));
+				#if 1
+					if (ImGui::RadioButton("File browser", tab == kTab_FileBrowser))
+						tab = kTab_FileBrowser;
+					ImGui::SameLine();
+					if (ImGui::RadioButton("Uniforms", tab == kTab_Uniforms))
+						tab = kTab_Uniforms;
+					ImGui::SameLine();
+					if (ImGui::RadioButton("Statistics", tab == kTab_Statistics))
+						tab = kTab_Statistics;
+					ImGui::SameLine();
+					if (ImGui::RadioButton("Errors", tab == kTab_Errors))
+						tab = kTab_Errors;
+				#endif
+					
+					ImGui::BeginChild("Tabs", ImVec2(0, 170));
 					{
-						const GLuint program = shader.getProgram();
-						
-						GLint numUniforms = 0;
-						
-						if (shader.isValid())
-						{
-							glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &numUniforms);
-							checkErrorGL();
-						}
-						
-						for (auto i = 0; i < numUniforms; ++i)
-						{
-							GLint size = 0;
-							GLenum type = GL_INVALID_ENUM;
-							const GLsizei kMaxNameSize = 64;
-							GLchar name[kMaxNameSize];
-							GLsizei nameSize = 0;
-							
-							glGetActiveUniform(program, (GLuint)i, kMaxNameSize, &nameSize, &size, &type, name);
-							checkErrorGL();
-							
-							if (nameSize <= 0)
-								continue;
-							
-							const GLint location = glGetUniformLocation(program, name);
-							
-							if (location == 0)
-								continue;
-							
-							ImGui::PushID(i);
-							
-							if (type == GL_FLOAT)
-							{
-								float value[1] = { 0.f };
-								glGetUniformfv(program, location, value);
-								checkErrorGL();
-								
-								if (ImGui::InputFloat(name, value))
-									shader.setImmediate(name, value[0]);
-							}
-							else if (type == GL_FLOAT_VEC2)
-							{
-								float value[2] = { 0.f };
-								glGetUniformfv(program, location, value);
-								checkErrorGL();
-								
-								if (ImGui::InputFloat2(name, value))
-									shader.setImmediate(name, value[0], value[1]);
-							}
-							else if (type == GL_FLOAT_VEC3)
-							{
-								float value[3] = { 0.f };
-								glGetUniformfv(program, location, value);
-								checkErrorGL();
-								
-								if (ImGui::InputFloat3(name, value))
-									shader.setImmediate(name, value[0], value[1], value[2]);
-							}
-							else if (type == GL_FLOAT_VEC4)
-							{
-								float value[4] = { 0.f };
-								glGetUniformfv(program, location, value);
-								checkErrorGL();
-								
-								if (ImGui::InputFloat4(name, value))
-									shader.setImmediate(name, value[0], value[1], value[2], value[3]);
-							}
-							else if (type == GL_SAMPLER_2D)
-							{
-								GLint value = 0;
-								glGetUniformiv(program, location, &value);
-								checkErrorGL();
-								
-								glActiveTexture(GL_TEXTURE0 + value);
-								checkErrorGL();
-								
-								GLint texture = 0;
-								glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
-								checkErrorGL();
-								
-								if (ImGui::InputInt(name, &texture))
-									shader.setTexture(name, value, texture);
-								
-								glActiveTexture(GL_TEXTURE0);
-								checkErrorGL();
-							}
-							
-							clearShader();
-							
-							ImGui::PopID();
-						}
+						if (tab == kTab_FileBrowser)
+							showFileBrowser();
+						else if (tab == kTab_Uniforms)
+							showUniforms(shader);
+						else if (tab == kTab_Statistics)
+							showStatistics(shader);
+						else if (tab == kTab_Errors)
+							showErrors(shader);
+						else
+							Assert(false);
 					}
 					ImGui::EndChild();
 				}
 				ImGui::End();
 			
-			// update mouse cursor
+				// update mouse cursor
 			
 				framework_context.updateMouseCursor();
 			}
@@ -207,11 +193,14 @@ int main(int argc, char * argv[])
 			
 			pushWindow(window);
 			{
+				if (keyboard.wentDown(SDLK_ESCAPE))
+					framework.quitRequested = true;
+				
 				framework.beginDraw(0, 0, 0, 0);
 				{
 					setShader(shader);
 					shader.setImmediate("time", framework.time);
-					shader.setImmediate("mouse", mouse.x, mouse.y);
+					shader.setImmediate("mouse", mouse.x / float(window.getWidth()), mouse.y / float(window.getHeight()));
 					shader.setImmediate("mouse_down", mouse.isDown(BUTTON_LEFT));
 					
 					if (shader.isValid())
@@ -235,4 +224,126 @@ int main(int argc, char * argv[])
 	}
 
 	return 0;
+}
+
+static void showUniforms(Shader & shader)
+{
+	const GLuint program = shader.getProgram();
+	
+	GLint numUniforms = 0;
+
+	if (shader.isValid())
+	{
+		glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &numUniforms);
+		checkErrorGL();
+	}
+
+	for (auto i = 0; i < numUniforms; ++i)
+	{
+		GLint size = 0;
+		GLenum type = GL_INVALID_ENUM;
+		const GLsizei kMaxNameSize = 64;
+		GLchar name[kMaxNameSize];
+		GLsizei nameSize = 0;
+		
+		glGetActiveUniform(program, (GLuint)i, kMaxNameSize, &nameSize, &size, &type, name);
+		checkErrorGL();
+		
+		if (nameSize <= 0)
+			continue;
+		
+		const GLint location = glGetUniformLocation(program, name);
+		
+		if (location == 0)
+			continue;
+		
+		ImGui::PushID(i);
+		
+		if (type == GL_FLOAT)
+		{
+			float value[1] = { 0.f };
+			glGetUniformfv(program, location, value);
+			checkErrorGL();
+			
+			if (ImGui::InputFloat(name, value))
+				shader.setImmediate(name, value[0]);
+		}
+		else if (type == GL_FLOAT_VEC2)
+		{
+			float value[2] = { 0.f };
+			glGetUniformfv(program, location, value);
+			checkErrorGL();
+			
+			if (ImGui::InputFloat2(name, value))
+				shader.setImmediate(name, value[0], value[1]);
+		}
+		else if (type == GL_FLOAT_VEC3)
+		{
+			float value[3] = { 0.f };
+			glGetUniformfv(program, location, value);
+			checkErrorGL();
+			
+			if (ImGui::InputFloat3(name, value))
+				shader.setImmediate(name, value[0], value[1], value[2]);
+		}
+		else if (type == GL_FLOAT_VEC4)
+		{
+			float value[4] = { 0.f };
+			glGetUniformfv(program, location, value);
+			checkErrorGL();
+			
+			if (ImGui::InputFloat4(name, value))
+				shader.setImmediate(name, value[0], value[1], value[2], value[3]);
+		}
+		else if (type == GL_SAMPLER_2D)
+		{
+			GLint value = 0;
+			glGetUniformiv(program, location, &value);
+			checkErrorGL();
+			
+			glActiveTexture(GL_TEXTURE0 + value);
+			checkErrorGL();
+			
+			GLint texture = 0;
+			glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
+			checkErrorGL();
+			
+			if (ImGui::InputInt(name, &texture))
+				shader.setTexture(name, value, texture);
+			
+			glActiveTexture(GL_TEXTURE0);
+			checkErrorGL();
+		}
+		
+		clearShader();
+		
+		ImGui::PopID();
+	}
+}
+
+static void showFileBrowser()
+{
+	const char * items[] =
+	{
+		"circles.glsl",
+		"squares.glsl",
+		"rectangles.glsl"
+	};
+	
+	const int numItems = sizeof(items) / sizeof(items[0]);
+	
+	int currentItem = -1;
+	
+	if (ImGui::ListBox("File", &currentItem, items, numItems))
+	{
+		logDebug("selected %s!", items[currentItem]);
+	}
+}
+
+static void showStatistics(Shader & shader)
+{
+}
+
+static void showErrors(Shader & shader)
+{
 }
