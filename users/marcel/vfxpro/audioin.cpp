@@ -26,7 +26,8 @@ int portaudioCallback(
 }
 
 AudioIn::AudioIn()
-	: m_stream(nullptr)
+	: m_paInitialized(false)
+	, m_stream(nullptr)
 	, m_sampleBuffer(nullptr)
 	, m_sampleBufferSize(0)
 	, m_hasData(false)
@@ -56,6 +57,8 @@ bool AudioIn::init(int deviceIndex, int channelCount, int sampleRate, int buffer
 	}
 	
 	LOG_DBG("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
+	
+	m_paInitialized = true;
 	
 	PaStreamParameters parameters;
 	memset(&parameters, 0, sizeof(parameters));
@@ -123,11 +126,16 @@ void AudioIn::shutdown()
 		m_stream = nullptr;
 	}
 	
-	err = Pa_Terminate();
-	
-	if (err != paNoError)
+	if (m_paInitialized)
 	{
-		LOG_ERR("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
+		m_paInitialized = false;
+		
+		err = Pa_Terminate();
+		
+		if (err != paNoError)
+		{
+			LOG_ERR("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
+		}
 	}
 	
 	delete [] m_sampleBuffer;

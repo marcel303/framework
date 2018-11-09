@@ -38,6 +38,7 @@ struct AudioIOCallback
 
 class AudioIO
 {
+	bool m_paInitialized;
 	PaStream * m_paStream;
 	SDL_mutex * m_mutex;
 	AudioIOCallback * m_callback;

@@ -161,6 +161,7 @@ class SoundPlayer_PortAudio
 	
 	//
 	
+	bool m_paInitialized;
 	PaStream * m_paStream;
 	
 	//

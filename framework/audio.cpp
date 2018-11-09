@@ -1060,6 +1060,8 @@ bool SoundPlayer_PortAudio::initPortAudio(const int numChannels, const int sampl
 
 	logDebug("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
 	
+	m_paInitialized = true;
+	
 	PaStreamParameters outputParameters;
 	memset(&outputParameters, 0, sizeof(outputParameters));
 
@@ -1115,10 +1117,15 @@ bool SoundPlayer_PortAudio::shutPortAudio()
 		m_paStream = nullptr;
 	}
 	
-	if ((err = Pa_Terminate()) != paNoError)
+	if (m_paInitialized)
 	{
-		logError("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
-		return false;
+		m_paInitialized = false;
+		
+		if ((err = Pa_Terminate()) != paNoError)
+		{
+			logError("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
+			return false;
+		}
 	}
 	
 	return true;
@@ -1142,6 +1149,7 @@ SoundPlayer_PortAudio::SoundPlayer_PortAudio()
 	
 	//
 	
+	m_paInitialized = false;
 	m_paStream = nullptr;
 }
 
