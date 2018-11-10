@@ -12,7 +12,7 @@
 #define GFX_SX 800
 #define GFX_SY 800
 
-static bool showFileBrowser(Shader & shader, const std::vector<std::string> & files, std::string & filename);
+static bool showFileBrowser(std::string & shaderNamePs, const std::vector<std::string> & files, std::string & filename);
 static void showUniforms(Shader & shader);
 static void showStatistics(Shader & shader);
 static void showErrors(Shader & shader);
@@ -53,10 +53,14 @@ int main(int argc, char * argv[])
 		Window window("Preview", 600, 600, true);
 		
 		Shader shader("demoShader");
+		std::string shaderNamePs = "demoShader.ps";
 		
 		Tab tab = kTab_Uniforms;
 		
 		auto files = listFiles("testShaders", false);
+		auto removed = std::remove_if(files.begin(), files.end(), [](const std::string & s) { return Path::GetExtension(s, true) != "ps"; });
+		files.erase(removed, files.end());
+		std::sort(files.begin(), files.end());
 		
 		while (!framework.quitRequested)
 		{
@@ -167,13 +171,29 @@ int main(int argc, char * argv[])
 						{
 							std::string filename;
 							
-							if (showFileBrowser(shader, files, filename))
+							if (showFileBrowser(shaderNamePs, files, filename))
 							{
 								std::vector<std::string> lines;
 								TextIO::LineEndings lineEndings;
 								
 								if (TextIO::load(filename.c_str(), lines, lineEndings))
+								{
 									textEditor.SetTextLines(lines);
+								
+									// we need to create a virtual copy of the shader from disk. otherwise,
+									// when the automatic shader reloading kicks in, it will reload the file
+									// from disk, instead of the cached shader source we give it here
+									// we just simply append '-copy' to the original file name to make it distinct
+									shaderNamePs = shaderNamePs + "-copy";
+									
+									// register the shader's source code with framework
+									const std::string & source = textEditor.GetText();
+									shaderSource(shaderNamePs.c_str(), source.c_str());
+									shaderPs = source;
+									
+									// and set the shader
+									shader = Shader(shaderNamePs.c_str(), "testShader.vs", shaderNamePs.c_str());
+								}
 							}
 						}
 						else if (tab == kTab_Uniforms)
@@ -201,7 +221,7 @@ int main(int argc, char * argv[])
 			{
 				shaderPs = newShaderPs;
 				
-				shaderSource("shader.ps", shaderPs.c_str());
+				shaderSource(shaderNamePs.c_str(), shaderPs.c_str());
 			}
 			
 			framework.beginDraw(80, 90, 100, 0);
@@ -340,7 +360,7 @@ static void showUniforms(Shader & shader)
 	}
 }
 
-static bool showFileBrowser(Shader & shader, const std::vector<std::string> & files, std::string & filename)
+static bool showFileBrowser(std::string & shaderNamePs, const std::vector<std::string> & files, std::string & filename)
 {
 	const int numItems = int(files.size());
 	const char ** items = (const char **)alloca(sizeof(char*) * numItems);
@@ -353,9 +373,7 @@ static bool showFileBrowser(Shader & shader, const std::vector<std::string> & fi
 	{
 		filename = items[currentItem];
 		
-		const std::string name = Path::StripExtension(filename) + ".ps";
-		
-		shader = Shader(name.c_str(), "testShader.vs", filename.c_str());
+		shaderNamePs = filename;
 		
 		return true;
 	}
