@@ -162,7 +162,7 @@ static void doProgressBar(const int x, const int y, const int sx, const int sy, 
 		mouse.x < x + sx &&
 		mouse.y < y + sy;
 	
-	if (hover && mouse.wentDown(BUTTON_LEFT))
+	if (hover && (mouse.wentDown(BUTTON_LEFT) || (keyboard.isDown(SDLK_LCTRL) && mouse.isDown(BUTTON_LEFT))))
 	{
 		seek = true;
 		seekTime = clamp((mouse.x - x) / double(sx) * duration, 0.0, duration);
