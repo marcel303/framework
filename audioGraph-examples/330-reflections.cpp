@@ -775,8 +775,6 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
-	// todo : let source audio come from audio graph instances
-	
 #if FULLSCREEN
 	framework.fullscreen = true;
 #endif

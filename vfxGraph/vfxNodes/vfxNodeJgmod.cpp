@@ -91,6 +91,8 @@ VfxNodeJgmod::VfxNodeJgmod()
 	audioStream = new AudioStream_AllegroVoiceMixer(voiceApi);
 	audioStream->timerAPI = timerApi;
 	
+// todo : to make sure audio nodes added 'at the same time' (graph construction) are perfectly in sync, audio streaming should be paused globally, to avoid things from triggering ahead of things, before all streams are registered. this pleads for a global vfx graph controlled audio stream
+
 	audioOutput = new AudioOutput_PortAudio();
 	audioOutput->Initialize(2, DIGI_SAMPLERATE, 64);
 	audioOutput->Play(audioStream);

@@ -248,7 +248,7 @@ void testDeepbelief()
 			drawText(GFX_SX/2, 80, 14, +1, +1, "S: shut down deep belief object");
 			drawText(GFX_SX/2, 100, 14, +1, +1, "A: toggle automatic processing (%s)", automaticUpdates ? "on" : "off");
 			drawText(GFX_SX/2, 120, 14, +1, +1, "R: process (continuously)");
-			drawText(GFX_SX/2, 120, 14, +1, +1, "V: toggle between video or image input");
+			drawText(GFX_SX/2, 140, 14, +1, +1, "V: toggle between video or image input");
 			popFontMode();
 			
 			int index = 0;
