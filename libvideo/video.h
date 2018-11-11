@@ -41,6 +41,7 @@ struct MediaPlayer : public AudioStream
 			, outputMode(MP::kOutputMode_RGBA)
 			, enableAudioStream(true)
 			, enableVideoStream(true)
+			, desiredAudioStreamIndex(-1)
 		{
 		}
 		
@@ -48,6 +49,7 @@ struct MediaPlayer : public AudioStream
 		MP::OutputMode outputMode;
 		bool enableAudioStream;
 		bool enableVideoStream;
+		int desiredAudioStreamIndex;
 	};
 	
 	struct Context

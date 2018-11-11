@@ -46,19 +46,17 @@ namespace MP
 
 	bool AudioBuffer::ReadSamples(int16_t * __restrict samples, size_t & sampleCount, double & timeStamp)
 	{
-		bool result = true;
+		bool hasMore = true;
 
-		if (m_segments.empty())
+		m_mutex.Lock();
 		{
-			result = false;
-			
-			sampleCount = 0;
-			
-			timeStamp = 0.0;
-		}
-		else
-		{
-			m_mutex.Lock();
+			if (m_segments.empty())
+			{
+				sampleCount = 0;
+				
+				hasMore = false;
+			}
+			else
 			{
 				size_t samplesRead = 0;
 				
@@ -89,21 +87,18 @@ namespace MP
 					}
 					else
 					{
-						size_t numSamples = sampleCount;
-
-						memset(samples, 0, numSamples * sizeof(int16_t));
-
-						samples += numSamples;
-						sampleCount -= numSamples;
+						hasMore = false;
+						
+						break;
 					}
 				}
 				
 				sampleCount = samplesRead;
 			}
-			m_mutex.Unlock();
 		}
+		m_mutex.Unlock();
 
-		return result;
+		return hasMore;
 	}
 
 	bool AudioBuffer::Depleted() const

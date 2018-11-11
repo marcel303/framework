@@ -50,6 +50,7 @@ int main(int argc, char * argv[])
 		openParams.outputMode = MP::kOutputMode_RGBA;
 		openParams.enableAudioStream = true;
 		openParams.enableVideoStream = true;
+		openParams.desiredAudioStreamIndex = 1;
 		mp.openAsync(openParams);
 		
 		AudioOutput_PortAudio audioOutput;

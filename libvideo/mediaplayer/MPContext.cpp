@@ -69,7 +69,7 @@ namespace MP
 		Assert(m_videoContext == nullptr);
 	}
 
-	bool Context::Begin(const std::string & filename, const bool enableAudioStream, const bool enableVideoStream, const OutputMode outputMode)
+	bool Context::Begin(const std::string & filename, const bool enableAudioStream, const bool enableVideoStream, const OutputMode outputMode, const int desiredAudioStreamIndex)
 	{
 		Assert(m_begun == false);
 
@@ -101,7 +101,7 @@ namespace MP
 
 		if (result)
 		{
-			if (GetStreamIndices(audioStreamIndex, videoStreamIndex) != true)
+			if (GetStreamIndices(audioStreamIndex, videoStreamIndex, desiredAudioStreamIndex) != true)
 			{
 				Debug::Print("Failed to get stream indices.");
 				result &= false;
@@ -461,17 +461,19 @@ namespace MP
 		return m_formatContext;
 	}
 
-	bool Context::GetStreamIndices(size_t & out_audioStreamIndex, size_t & out_videoStreamIndex)
+	bool Context::GetStreamIndices(size_t & out_audioStreamIndex, size_t & out_videoStreamIndex, const int desiredAudioStreamIndex)
 	{
 		out_audioStreamIndex = STREAM_NOT_FOUND;
 		out_videoStreamIndex = STREAM_NOT_FOUND;
-
+		
 		// Get stream info.
 		if (avformat_find_stream_info(m_formatContext, nullptr) < 0)
 		{
 			Debug::Print("unable to get stream info");
 			return false;
 		}
+		
+		int audioStreamIndex = 0;
 
 		// Find the first audio & video streams and use those during rendering.
 		for (size_t i = 0; i < static_cast<size_t>(m_formatContext->nb_streams); ++i)
@@ -479,9 +481,13 @@ namespace MP
 			// Show stream info.
 			av_dump_format(m_formatContext, i, m_filename.c_str(), false);
 			
-			if (out_audioStreamIndex == STREAM_NOT_FOUND)
-				if (m_formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)
+			if (m_formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)
+			{
+				if (out_audioStreamIndex == STREAM_NOT_FOUND || audioStreamIndex == desiredAudioStreamIndex)
 					out_audioStreamIndex = i;
+				
+				audioStreamIndex++;
+			}
 
 			if (out_videoStreamIndex == STREAM_NOT_FOUND)
 				if (m_formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)

@@ -227,28 +227,42 @@ namespace MP
 
 		Debug::Print("Audio: begin request.");
 
-		while (frameCount > 0 && stop == false)
+		while (stop == false)
 		{
 			size_t numSamples = frameCount * m_codecContext->channels;
 
-			if (!m_audioBuffer->ReadSamples(out_samples, numSamples, m_time))
+			const bool hasMore = m_audioBuffer->ReadSamples(out_samples, numSamples, m_time);
+			
+			const size_t numFrames = numSamples / m_codecContext->channels;
+
+			if (numFrames > 0)
 			{
-				stop = true;
-			}
-			else
-			{
-				const size_t numFrames = numSamples / m_codecContext->channels;
-
-				out_samples += numFrames * m_codecContext->channels;
-
-				frameCount -= numFrames;
-
 				Debug::Print("\tAudio: read from buffer. time: %03.3f", m_time);
-
+				
+				out_samples += numFrames * m_codecContext->channels;
+				
+				frameCount -= numFrames;
+			}
+			
+			if (hasMore)
+			{
 				if (frameCount == 0)
 				{
 					Debug::Print("\tAudio: read done.");
+					
+					stop = true;
 				}
+			}
+			else
+			{
+				const size_t numSamplesRemaining = frameCount * m_codecContext->channels;
+				
+				if (numSamplesRemaining > 0)
+				{
+					memset(out_samples, 0, numSamplesRemaining * sizeof(int16_t));
+				}
+				
+				stop = true;
 			}
 		}
 
