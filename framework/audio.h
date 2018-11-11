@@ -130,13 +130,15 @@ class SoundPlayer_PortAudio
 	{
 		short * sampleData;
 		int sampleCount;
+		int sampleRate;
 		int channelCount;
 	};
 	
 	struct Source
 	{
 		Buffer * buffer;
-		int bufferPosition;
+		int64_t bufferPosition_fp;
+		int64_t bufferIncrement_fp;
 		
 		int playId;
 		bool loop;
@@ -163,6 +165,7 @@ class SoundPlayer_PortAudio
 	
 	bool m_paInitialized;
 	PaStream * m_paStream;
+	int m_sampleRate;
 	
 	//
 	
@@ -174,7 +177,7 @@ class SoundPlayer_PortAudio
 		~MutexScope() { SDL_UnlockMutex(m_mutex); }
 	};
 	
-	void * createBuffer(const void * sampleData, const int sampleCount, const int channelSize, const int channelCount);
+	void * createBuffer(const void * sampleData, const int sampleCount, const int sampleRate, const int channelSize, const int channelCount);
 	void destroyBuffer(void *& buffer);
 	Source * allocSource();
 	

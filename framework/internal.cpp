@@ -1699,7 +1699,7 @@ void SoundCacheElem::load(const char * filename)
 				soundData->channelSize);
 		}
 	#else
-		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->channelSize, soundData->channelCount);
+		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->sampleRate, soundData->channelSize, soundData->channelCount);
 
 		if (buffer != nullptr)
 		{
