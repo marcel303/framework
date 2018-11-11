@@ -29,6 +29,11 @@
 
 #include "vfxNodeBase.h"
 
+struct AllegroTimerApi;
+struct AllegroVoiceAPI;
+class AudioOutput_PortAudio; // todo : have a single global audio output which mixes everything ? separate init/shutdown for each audio node is wasteful. perhaps integrate with framework which already has a global sound player and thus an audio stream active in the background
+struct AudioStream_AllegroVoiceMixer;
+
 struct JGMOD_PLAYER;
 
 struct VfxNodeJgmod : VfxNodeBase
@@ -59,6 +64,12 @@ struct VfxNodeJgmod : VfxNodeBase
 	};
 
 	std::string currentFilename;
+	
+	AllegroTimerApi * timerApi;
+	AllegroVoiceAPI * voiceApi;
+	
+	AudioOutput_PortAudio * audioOutput;
+	AudioStream_AllegroVoiceMixer * audioStream;
 	
 	JGMOD * mod;
 	

@@ -85,20 +85,18 @@ VfxNodeJgmod::VfxNodeJgmod()
 	
 // todo : move allegro init elsewhere, or remove the need for init altogether by abstracting the mixer
 
-	static bool isInitialized = false;
+	timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Manual);
+	voiceApi = new AllegroVoiceAPI(DIGI_SAMPLERATE);
 	
-	if (isInitialized == false)
-	{
-		isInitialized = true;
-		
-		if (install_sound(DIGI_AUTODETECT, MIDI_NONE, nullptr) < 0)
-		{
-			logError("unable to initialize sound card");
-		}
-	}
+	audioStream = new AudioStream_AllegroVoiceMixer(voiceApi);
+	audioStream->timerAPI = timerApi;
 	
+	audioOutput = new AudioOutput_PortAudio();
+	audioOutput->Initialize(2, DIGI_SAMPLERATE, 64);
+	audioOutput->Play(audioStream);
+
 	player = new JGMOD_PLAYER();
-	player->init(JGMOD_MAX_VOICES);
+	player->init(JGMOD_MAX_VOICES, timerApi, voiceApi);
 }
 
 VfxNodeJgmod::~VfxNodeJgmod()
@@ -107,6 +105,18 @@ VfxNodeJgmod::~VfxNodeJgmod()
 	
 	delete player;
 	player = nullptr;
+	
+	delete audioOutput;
+	audioOutput = nullptr;
+	
+	delete audioStream;
+	audioStream = nullptr;
+	
+	delete voiceApi;
+	voiceApi = nullptr;
+	
+	delete timerApi;
+	timerApi = nullptr;
 }
 
 void VfxNodeJgmod::tick(const float dt)
@@ -248,17 +258,17 @@ void VfxNodeJgmod::getDescription(VfxNodeDescription & d)
 		
 		for (int index = 0; index < mod->no_chn; ++index)
 		{
-			if (voice_get_position(player->voice_table[index]) >= 0 &&
+			if (voiceApi->voice_get_position(player->voice_table[index]) >= 0 &&
 				player->ci[index].volume >= 1 &&
 				player->ci[index].volenv.v >= 1 &&
-				voice_get_frequency(player->voice_table[index]) > 0 &&
+				voiceApi->voice_get_frequency(player->voice_table[index]) > 0 &&
 				player->mi.global_volume > 0)
 			{
 				d.add("%2d: %3d %2d %6dHz %3d ",
 					index+1,
 					player->ci[index].sample+1,
 					player->ci[index].volume,
-					voice_get_frequency(player->voice_table[index]),
+					voiceApi->voice_get_frequency(player->voice_table[index]),
 					player->ci[index].pan);
 			}
 			else
