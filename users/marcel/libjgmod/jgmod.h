@@ -77,6 +77,10 @@
 // Allegro forward declarations
 struct SAMPLE;
 
+// Allegro <-> framework forward declarations
+struct AllegroTimerApi;
+struct AllegroVoiceAPI;
+
 // JGMOD forward declarations
 struct CHANNEL_INFO;
 struct ENVELOPE_INFO;
@@ -352,6 +356,9 @@ struct JGMOD_PLAYER
 	
 	JGMOD * of = nullptr;
 	
+	AllegroTimerApi * timerApi = nullptr;
+	AllegroVoiceAPI * voiceApi = nullptr;
+	
 	volatile MUSIC_INFO mi;
 	volatile int voice_table[JGMOD_MAX_VOICES];
 	volatile CHANNEL_INFO ci[JGMOD_MAX_VOICES];
@@ -361,7 +368,7 @@ struct JGMOD_PLAYER
 	
 	JGMOD_PLAYER();
 	
-	int init(int no_voices);
+	int init(int no_voices, AllegroTimerApi * timerApi, AllegroVoiceAPI * voiceApi);
 	void shut ();
 	
 	void play (JGMOD *j, int loop, int speed = 100, int pitch = 100);

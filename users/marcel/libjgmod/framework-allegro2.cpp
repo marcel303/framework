@@ -10,13 +10,199 @@
 //#define DIGI_SAMPLERATE 44100
 #define DIGI_SAMPLERATE 192000
 
-#define PROCESS_INTERRUPTS_ON_AUDIO_THREAD 1
-
 #define INTERP_LINEAR 1
 
 #define FIXBITS 32
 
 //
+
+static int TimerThreadProc(void * obj);
+
+//
+
+typedef void (*TimerProc)();
+
+struct AllegroTimerReg
+{
+	AllegroTimerReg * next;
+	AllegroTimerApi * owner;
+	
+	void (*proc)(void * data);
+	void * data;
+	std::atomic<bool> stop;
+	int delay;
+	int64_t delayInMilliSamples;
+	
+	int sampleTime; // when processing manually
+	SDL_Thread * thread; // when using threaded processing
+};
+
+//
+
+
+AllegroTimerApi::AllegroTimerApi(const Mode in_mode)
+	: mutex(nullptr)
+	, mode(in_mode)
+{
+	mutex = SDL_CreateMutex();
+}
+
+AllegroTimerApi::~AllegroTimerApi()
+{
+	SDL_DestroyMutex(mutex);
+	mutex = nullptr;
+}
+
+void AllegroTimerApi::handle_int(void * data)
+{
+	TimerProc proc = (TimerProc)data;
+	
+	proc();
+}
+
+void AllegroTimerApi::install_int_ex(void (*proc)(), int speed)
+{
+	install_int_ex2(handle_int, speed, (void*)proc);
+}
+
+void AllegroTimerApi::install_int_ex2(void (*proc)(void * data), int speed, void * data)
+{
+	bool preexisting = false;
+	
+	lock();
+	{
+		for (auto r = timerRegs; r != nullptr; r = timerRegs->next)
+		{
+			if (r->proc == proc && r->data == data)
+			{
+				r->delay = speed;
+				r->delayInMilliSamples = (int64_t(speed) * DIGI_SAMPLERATE) / 1000;
+				preexisting = true;
+				break;
+			}
+		}
+	}
+	unlock();
+	
+	if (preexisting)
+		return;
+	
+	AllegroTimerReg * r = new AllegroTimerReg();
+	
+	r->owner = this;
+	r->proc = proc;
+	r->data = data;
+	r->stop = false;
+	r->delay = speed;
+	r->delayInMilliSamples = (int64_t(speed) * DIGI_SAMPLERATE) / 1000;
+	
+	r->sampleTime = 0;
+	r->thread = nullptr;
+	
+	lock();
+	{
+		r->next = timerRegs;
+		timerRegs = r;
+	}
+	unlock();
+	
+	if (mode == kMode_Threaded)
+	{
+		r->thread = SDL_CreateThread(TimerThreadProc, "Allegro timer", r);
+	}
+}
+
+void AllegroTimerApi::remove_int(void (*proc)())
+{
+	remove_int2(handle_int, (void*)proc);
+}
+
+void AllegroTimerApi::remove_int2(void (*proc)(void * data), void * data)
+{
+	lock();
+	
+	AllegroTimerReg ** r = &timerRegs;
+	
+	while ((*r) != nullptr)
+	{
+		AllegroTimerReg * t = *r;
+		
+		if ((*r)->proc == proc && (*r)->data == data)
+		{
+			*r = t->next;
+			
+			//
+			
+			if (t->thread != nullptr)
+			{
+				unlock(); // temporarily give up our lock, to make sure the work executing on the thread has access to the timer api too
+				{
+					t->stop = true;
+				
+					SDL_WaitThread(t->thread, nullptr);
+				}
+				lock();
+			}
+			
+			delete t;
+			t = nullptr;
+		}
+		else
+		{
+			r = &t->next;
+		}
+	}
+	
+	unlock();
+}
+
+void AllegroTimerApi::lock()
+{
+	Verify(SDL_LockMutex(mutex) == 0);
+}
+
+void AllegroTimerApi::unlock()
+{
+	Verify(SDL_UnlockMutex(mutex) == 0);
+}
+
+void AllegroTimerApi::processInterrupts(const int numSamples)
+{
+	Assert(mode == kMode_Manual);
+	if (mode != kMode_Manual)
+		return;
+	
+	lock();
+	{
+		for (AllegroTimerReg * r = timerRegs; r != nullptr; r = r->next)
+		{
+			r->sampleTime += numSamples * 1000;
+			
+			if (r->sampleTime >= r->delayInMilliSamples)
+			{
+				r->sampleTime -= r->delayInMilliSamples;
+				
+				r->proc(r->data);
+			}
+		}
+	}
+	unlock();
+}
+
+//
+
+AllegroVoiceAPI::AllegroVoiceAPI(const int in_sampleRate)
+	: sampleRate(in_sampleRate)
+	, mutex(nullptr)
+{
+	mutex = SDL_CreateMutex();
+}
+
+AllegroVoiceAPI::~AllegroVoiceAPI()
+{
+	SDL_DestroyMutex(mutex);
+	mutex = nullptr;
+}
 
 int AllegroVoiceAPI::allocate_voice(SAMPLE * sample)
 {
@@ -239,6 +425,16 @@ void AllegroVoiceAPI::voice_set_pan(int voice, int pan)
 	unlock();
 }
 
+void AllegroVoiceAPI::lock()
+{
+	Verify(SDL_LockMutex(mutex) == 0);
+}
+
+void AllegroVoiceAPI::unlock()
+{
+	Verify(SDL_UnlockMutex(mutex) == 0);
+}
+
 bool AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __restrict samples, const int numSamples, float & stereoPanning)
 {
 	auto & voice = voices[voiceIndex];
@@ -348,6 +544,8 @@ bool AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 	return true;
 }
 
+static AllegroTimerApi * s_timerApi = nullptr;
+
 static thread_local AllegroVoiceAPI * voiceAPI = nullptr;
 
 extern "C"
@@ -355,14 +553,28 @@ extern "C"
 static AudioOutput_PortAudio * audioOutput = nullptr;
 static AudioStream_AllegroVoiceMixer * audioStream = nullptr;
 
+int install_timer()
+{
+	if (s_timerApi != nullptr)
+		return -1;
+	
+	s_timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Threaded);
+	
+	return 0;
+}
+
 int install_sound(int digi, int midi, const char * cfg_path)
 {
+	if (voiceAPI != nullptr)
+		return -1;
+	
 	voiceAPI = new AllegroVoiceAPI(DIGI_SAMPLERATE);
 	
 	audioOutput = new AudioOutput_PortAudio();
 	audioOutput->Initialize(2, DIGI_SAMPLERATE, 64);
 	
 	audioStream = new AudioStream_AllegroVoiceMixer(voiceAPI);
+	audioStream->timerAPI = s_timerApi;
 	audioOutput->Play(audioStream);
 	
 	return 0;
@@ -421,32 +633,11 @@ char * get_extension(const char * filename)
 		return (char*)filename + dot + 1;
 }
 
-struct TimerReg
-{
-	TimerReg * next;
-	
-	void (*proc)(void * data);
-	void * data;
-	std::atomic<bool> stop;
-	int delay;
-	int delayInSamples;
-	
-#if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
-	int sampleTime;
-#else
-	SDL_Thread * thread;
-#endif
-};
-
-static TimerReg * s_timerRegs = nullptr;
-
-#if !PROCESS_INTERRUPTS_ON_AUDIO_THREAD
-
 #include <unistd.h>
 
 static int TimerThreadProc(void * obj)
 {
-	TimerReg * r = (TimerReg*)obj;
+	AllegroTimerReg * r = (AllegroTimerReg*)obj;
 	
 	// todo : use POSIX timer API ?
 	
@@ -457,11 +648,7 @@ static int TimerThreadProc(void * obj)
 	
 	while (r->stop == false)
 	{
-		audioStream->lock();
-		{
-			r->proc();
-		}
-		audioStream->unlock();
+		r->proc(r->data);
 		
 		clock_gettime(CLOCK_MONOTONIC_RAW, &end);
 		
@@ -484,120 +671,27 @@ static int TimerThreadProc(void * obj)
 	return 0;
 }
 
-#endif
-
-typedef void (*TimerProc)();
-
-static void handle_int(void * data)
-{
-	TimerProc proc = (TimerProc)data;
-	
-	proc();
-}
+//
 
 void install_int_ex(void (*proc)(), int speed)
 {
-	install_int_ex2(handle_int, speed, (void*)proc);
+	s_timerApi->install_int_ex(proc, speed);
 }
 
 void install_int_ex2(void (*proc)(void * data), int speed, void * data)
 {
-	for (auto r = s_timerRegs; r != nullptr; r = s_timerRegs->next)
-	{
-		if (r->proc == proc && r->data == data)
-		{
-			r->delay = speed;
-			r->delayInSamples = (int64_t(speed) * DIGI_SAMPLERATE) / 1000000;
-			return;
-		}
-	}
-	
-	TimerReg * r = new TimerReg;
-	
-	r->proc = proc;
-	r->data = data;
-	r->stop = false;
-	r->delay = speed;
-	r->delayInSamples = (int64_t(speed) * DIGI_SAMPLERATE) / 1000000;
-	
-#if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
-	r->sampleTime = 0;
-	
-	audioStream->lock();
-	{
-		r->next = s_timerRegs;
-		s_timerRegs = r;
-	}
-	audioStream->unlock();
-#else
-	r->next = s_timerRegs;
-	s_timerRegs = r;
-	
-	r->thread = SDL_CreateThread(TimerThreadProc, "Allegro timer", r);
-#endif
+	s_timerApi->install_int_ex2(proc, speed, data);
 }
 
 void remove_int(void (*proc)())
 {
-	remove_int2(handle_int, (void*)proc);
+	s_timerApi->remove_int(proc);
 }
 
 void remove_int2(void (*proc)(void * data), void * data)
 {
-	TimerReg ** r = &s_timerRegs;
-	
-	while ((*r) != nullptr)
-	{
-		TimerReg * t = *r;
-		
-		if ((*r)->proc == proc && (*r)->data == data)
-		{
-		#if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
-			audioStream->lock();
-		#endif
-		
-			*r = t->next;
-			
-		#if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
-			audioStream->unlock();
-		#endif
-		
-			//
-			
-		#if !PROCESS_INTERRUPTS_ON_AUDIO_THREAD
-			t->stop = true;
-			
-			SDL_WaitThread(t->thread, nullptr);
-		#endif
-			
-			delete t;
-			t = nullptr;
-		}
-		else
-		{
-			r = &t->next;
-		}
-	}
+	s_timerApi->remove_int2(proc, data);
 }
-
-#if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
-
-static void processInterrupts(const int numSamples)
-{
-	for (TimerReg * r = s_timerRegs; r != nullptr; r = r->next)
-	{
-		r->sampleTime += numSamples;
-		
-		if (r->sampleTime >= r->delayInSamples)
-		{
-			r->sampleTime -= r->delayInSamples;
-			
-			r->proc(r->data);
-		}
-	}
-}
-
-#endif
 
 void set_volume(int, int)
 {
@@ -669,42 +763,26 @@ void lock_sample(SAMPLE * sample)
 
 }
 
-AudioStream_AllegroVoiceMixer::AudioStream_AllegroVoiceMixer(AllegroVoiceAPI * _voiceAPI)
+AudioStream_AllegroVoiceMixer::AudioStream_AllegroVoiceMixer(AllegroVoiceAPI * in_voiceAPI)
 	: AudioStream()
-	, mutex(nullptr)
-	, voiceAPI(_voiceAPI)
+	, voiceAPI(in_voiceAPI)
+	, timerAPI(nullptr)
 {
-	mutex = SDL_CreateMutex();
-}
-
-AudioStream_AllegroVoiceMixer::~AudioStream_AllegroVoiceMixer()
-{
-	SDL_DestroyMutex(mutex);
-	mutex = nullptr;
-}
-
-void AudioStream_AllegroVoiceMixer::lock()
-{
-	SDL_LockMutex(mutex);
-}
-
-void AudioStream_AllegroVoiceMixer::unlock()
-{
-	SDL_UnlockMutex(mutex);
 }
 
 int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restrict buffer)
 {
-#if PROCESS_INTERRUPTS_ON_AUDIO_THREAD
-	::voiceAPI = this->voiceAPI;
-	processInterrupts(numSamples);
-	::voiceAPI = nullptr;
-#endif
+	if (timerAPI != nullptr && timerAPI->mode == AllegroTimerApi::kMode_Manual)
+	{
+		::voiceAPI = this->voiceAPI;
+		timerAPI->processInterrupts(numSamples);
+		::voiceAPI = nullptr;
+	}
 	
 	int * __restrict mixingBuffer = (int*)alloca(numSamples * 2 * sizeof(int));
 	memset(mixingBuffer, 0, numSamples * 2 * sizeof(int));
 	
-	lock();
+	voiceAPI->lock();
 	{
 	#if 0
 		float * __restrict samplesL = (float*)alloca(numSamples * sizeof(float));
@@ -897,7 +975,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 		}
 	#endif
 	}
-	unlock();
+	voiceAPI->unlock();
 	
 	for (int i = 0; i < numSamples; ++i)
 	{

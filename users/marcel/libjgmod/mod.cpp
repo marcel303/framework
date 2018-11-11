@@ -223,7 +223,7 @@ JGMOD_PLAYER::JGMOD_PLAYER()
 	enable_lasttrk_loop = true;
 }
 
-int JGMOD_PLAYER::init(int max_chn)
+int JGMOD_PLAYER::init(int max_chn, AllegroTimerApi * in_timerApi, AllegroVoiceAPI * in_voiceApi)
 {
     int index;
     int temp=0;
@@ -234,6 +234,9 @@ int JGMOD_PLAYER::init(int max_chn)
     if ( (max_chn > JGMOD_MAX_VOICES) || (max_chn <= 0) )
         return -1;
 
+	timerApi = in_timerApi;
+	voiceApi = in_voiceApi;
+	
     if (fake_sample == nullptr)
         fake_sample = (SAMPLE *)jgmod_calloc (sizeof (SAMPLE));     // use to trick allegro
                                                     // into giving me voice
@@ -266,14 +269,14 @@ int JGMOD_PLAYER::init(int max_chn)
 
     for (index=0; index<max_chn; index++)    //allocate all the voices
         {
-        voice_table[index] = allocate_voice (fake_sample);
+        voice_table[index] = voiceApi->allocate_voice (fake_sample);
         if (voice_table[index] == -1)
             temp = -1;
         else
             {
             ci[index].volume = 0;
-            voice_set_volume (voice_table[index], 0);
-            voice_start (voice_table[index]);
+            voiceApi->voice_set_volume (voice_table[index], 0);
+            voiceApi->voice_start (voice_table[index]);
             }
         }
 	
@@ -282,7 +285,7 @@ int JGMOD_PLAYER::init(int max_chn)
         for (index=0; index<max_chn; index++)
             if (voice_table[index] != -1)
                 {
-                deallocate_voice (voice_table[index]);
+                voiceApi->deallocate_voice (voice_table[index]);
                 voice_table[index] = -1;
                 }
 
@@ -305,12 +308,12 @@ void JGMOD_PLAYER::shut ()
     int index;
 
     stop();
-    remove_int2 (mod_interrupt_proc, this);
+    timerApi->remove_int2 (mod_interrupt_proc, this);
 
     for (index=0; index<JGMOD_MAX_VOICES; index++)
         {
         if (voice_table[index] >= 0)
-            deallocate_voice (voice_table[index]);
+            voiceApi->deallocate_voice (voice_table[index]);
 
         voice_table[index] = -1;
         }
@@ -486,8 +489,8 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop, int speed, int pitch)
     set_speed(speed);
     set_pitch(pitch);
 
-    //remove_int2 (mod_interrupt_proc, this);
-    install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (24 * j->bpm * mi.speed_ratio / 100), this);
+    //timerApi->remove_int2 (mod_interrupt_proc, this);
+    timerApi->install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (24 * j->bpm * mi.speed_ratio / 100), this);
 }
 
 void JGMOD_PLAYER::stop ()
@@ -502,8 +505,8 @@ void JGMOD_PLAYER::stop ()
     mi.trk = 0;
     for (index=0; index<(mi.max_chn); index++)
         {
-        voice_stop (voice_table[index]);
-        voice_set_volume (voice_table[index], 0);
+        voiceApi->voice_stop (voice_table[index]);
+        voiceApi->voice_set_volume (voice_table[index], 0);
         }
         
     of = nullptr;
@@ -557,7 +560,7 @@ void JGMOD_PLAYER::pause ()
     mi.forbid = true;
     mi.pause = true;
     for (index=0; index<(mi.max_chn); index++)
-        voice_stop (voice_table[index]);
+        voiceApi->voice_stop (voice_table[index]);
 
     mi.forbid = false;
 }
@@ -570,8 +573,8 @@ void JGMOD_PLAYER::resume ()
     mi.pause = false;
     for (index=0; index<(mi.max_chn); index++)
         {
-        if (voice_get_position (voice_table[index]) >=0)
-            voice_start (voice_table[index]);
+        if (voiceApi->voice_get_position (voice_table[index]) >=0)
+            voiceApi->voice_start (voice_table[index]);
         }
 
     mi.forbid = false;
@@ -609,7 +612,7 @@ void JGMOD_PLAYER::set_volume (int volume)
     mod_volume = volume;
 
     for (chn=0; chn<mi.max_chn ; chn++)
-        voice_set_volume (voice_table[chn], calc_volume(chn));
+        voiceApi->voice_set_volume (voice_table[chn], calc_volume(chn));
 }
 
 int JGMOD_PLAYER::get_volume ()
@@ -654,8 +657,8 @@ void JGMOD_PLAYER::set_speed (int speed)
 
     if (is_playing() == true)
         {
-        //remove_int2 (mod_interrupt_proc, this);
-        install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (24 * mi.bpm * mi.speed_ratio / 100), this);
+        //timerApi->remove_int2 (mod_interrupt_proc, this);
+        timerApi->install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (24 * mi.bpm * mi.speed_ratio / 100), this);
         }
 }
 

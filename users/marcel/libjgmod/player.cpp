@@ -71,8 +71,8 @@ void JGMOD_PLAYER::mod_interrupt ()
         for (chn=0; chn<mi.max_chn; chn++)
             {
             ci[chn].volume = 0;
-            voice_set_volume (voice_table[chn], 0);
-            voice_stop (voice_table[chn]);
+            voiceApi->voice_set_volume (voice_table[chn], 0);
+            voiceApi->voice_stop (voice_table[chn]);
             }
 
         if (mi.trk == 0)            // restart the song if trk 0
@@ -144,7 +144,7 @@ void JGMOD_PLAYER::mod_interrupt ()
     if (mi.trk >= of->no_trk)       //check for end of song
         {
         for (chn=0; chn<mi.max_chn; chn++)
-            voice_stop (voice_table[chn]);
+            voiceApi->voice_stop (voice_table[chn]);
 
         if (mi.loop == false)       // end the song
             {
@@ -536,13 +536,13 @@ void JGMOD_PLAYER::mod_interrupt ()
             s = of->s + ci[chn].sample;
             si= of->si + ci[chn].sample;
 
-            reallocate_voice (voice_table[chn], s);
+            voiceApi->reallocate_voice (voice_table[chn], s);
 
             if (si->loop & JGMOD_LOOP_ON)
-                voice_set_playmode (voice_table[chn], PLAYMODE_LOOP);
+                voiceApi->voice_set_playmode (voice_table[chn], PLAYMODE_LOOP);
 
             if (si->loop & JGMOD_LOOP_BIDI)
-                voice_set_playmode (voice_table[chn], PLAYMODE_BIDIR|PLAYMODE_LOOP);
+                voiceApi->voice_set_playmode (voice_table[chn], PLAYMODE_BIDIR|PLAYMODE_LOOP);
 
             //voice_start(voice_table[chn]);
             //ci[chn].kick = FALSE;
@@ -550,17 +550,17 @@ void JGMOD_PLAYER::mod_interrupt ()
 
         if (ci[chn].sample_offset_on == true)
             {
-            voice_set_position (voice_table[chn], ci[chn].sample_offset);
+            voiceApi->voice_set_position (voice_table[chn], ci[chn].sample_offset);
             ci[chn].sample_offset_on = false;
             }
 
         if (ci[chn].temp_period > 0)
-            voice_set_frequency (voice_table[chn], period2pitch (ci[chn].temp_period) * pitch_ratio);
+            voiceApi->voice_set_frequency (voice_table[chn], period2pitch (ci[chn].temp_period) * pitch_ratio);
 
         process_envelope (&ci[chn].volenv, 64, ci[chn].keyon);
         process_envelope (&ci[chn].panenv, 32, ci[chn].keyon);
-        voice_set_volume (voice_table[chn], calc_volume (chn));
-        voice_set_pan (voice_table[chn], calc_pan (chn));
+        voiceApi->voice_set_volume (voice_table[chn], calc_volume (chn));
+        voiceApi->voice_set_pan (voice_table[chn], calc_pan (chn));
 
         if (ci[chn].keyon == true)
             {
@@ -571,7 +571,7 @@ void JGMOD_PLAYER::mod_interrupt ()
 
         if (ci[chn].kick == true)
             {
-            voice_start(voice_table[chn]);
+            voiceApi->voice_start(voice_table[chn]);
             ci[chn].kick = false;
             }
         }

@@ -402,8 +402,8 @@ void JGMOD_PLAYER::do_pro_tempo_bpm (int extcommand)
     else
         {
         mi.bpm = extcommand;
-        //remove_int2 (mod_interrupt_proc, this);
-        install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio), this);
+        //timerApi->remove_int2 (mod_interrupt_proc, this);
+        timerApi->install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio), this);
         }
 
 }

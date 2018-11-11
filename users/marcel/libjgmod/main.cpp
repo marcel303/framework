@@ -15,6 +15,7 @@
 // todo : load sample and instrument names
 // todo : check mod, xm, s3m loaders for file seeks that skip bytes and reference vs file formats. perhaps something interesthing is skipped?
 
+#include "audiostream/AudioOutput_PortAudio.h"
 #include "framework.h"
 #include "framework-allegro2.h"
 #include "jgmod.h"
@@ -28,6 +29,9 @@
 #define starting_pitch  100
 
 //
+
+// fixme : AllegroTimerApi makes a horrible assumption about sample rates. make it use nanoseconds or something instead of 'samples'
+#define DIGI_SAMPLERATE 192000
 
 #define DO_DRAWTEST 0
 
@@ -249,12 +253,16 @@ int main(int argc, char **argv)
 	setFont("unispace.ttf");
 	pushFontMode(FONT_SDF);
 	
-    if (install_sound(DIGI_AUTODETECT, MIDI_NONE, nullptr) < 0)
-	{
-        logError("unable to initialize sound card");
-        return -1;
-	}
-
+	AllegroTimerApi * timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Manual);
+	AllegroVoiceAPI * voiceApi = new AllegroVoiceAPI(DIGI_SAMPLERATE);
+	
+	AudioOutput_PortAudio audioOutput;
+	audioOutput.Initialize(2, DIGI_SAMPLERATE, 64);
+	
+	AudioStream_AllegroVoiceMixer audioStream(voiceApi);
+	audioStream.timerAPI = timerApi;
+	audioOutput.Play(&audioStream);
+	
     for (int index = 0; index < JGMOD_MAX_VOICES; ++index)
 	{
         old_chn_info[index].old_sample = -1;
@@ -264,7 +272,7 @@ int main(int argc, char **argv)
 	JGMOD_PLAYER player;
 	s_player = &player;
 	
-    if (player.init(JGMOD_MAX_VOICES) < 0)
+    if (player.init(JGMOD_MAX_VOICES, timerApi, voiceApi) < 0)
 	{
         logError("unable to allocate %d voices", JGMOD_MAX_VOICES);
         return -1;
@@ -421,13 +429,13 @@ int main(int argc, char **argv)
 						drawCircle(player, index);
 					}
 
-					if (voice_get_position(player.voice_table[index]) >= 0 &&
+					if (voiceApi->voice_get_position(player.voice_table[index]) >= 0 &&
 						player.ci[index].volume >= 1 &&
 						player.ci[index].volenv.v >= 1 &&
-						voice_get_frequency(player.voice_table[index]) > 0 &&
+						voiceApi->voice_get_frequency(player.voice_table[index]) > 0 &&
 						player.mi.global_volume > 0)
 					{
-						drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3d %2d %6dHz %3d : %s", index+1, player.ci[index].sample+1, player.ci[index].volume,  voice_get_frequency(player.voice_table[index]), player.ci[index].pan,
+						drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3d %2d %6dHz %3d : %s", index+1, player.ci[index].sample+1, player.ci[index].volume,  voiceApi->voice_get_frequency(player.voice_table[index]), player.ci[index].pan,
 							player.of->si[player.ci[index].sample].name);
 						//textprintf (screen, font, 0,82+(index-start_chn)*bitmap_height, font_color, "%2d: %3d %2d %6dHz %3d %d %d", index+1, ci[index].sample+1, ci[index].volume,  voice_get_frequency(voice_table[index]), ci[index].pan, ci[index].volenv.v, ci[index].volenv.p);
 					}
@@ -447,6 +455,15 @@ int main(int argc, char **argv)
 	
 	player.shut();
 	
+	audioOutput.Stop();
+	audioOutput.Shutdown();
+	
+	delete voiceApi;
+	voiceApi = nullptr;
+	
+	delete timerApi;
+	timerApi = nullptr;
+	
 	Font("unispace.ttf").saveCache();
 	
 	framework.shutdown();
@@ -456,10 +473,10 @@ int main(int argc, char **argv)
 
 static void drawCircle(JGMOD_PLAYER & player, int chn)
 {
-    if (voice_get_position(player.voice_table[chn]) >= 0 &&
+    if (player.voiceApi->voice_get_position(player.voice_table[chn]) >= 0 &&
     	player.ci[chn].volume >= 1 &&
     	player.ci[chn].volenv.v >= 1 &&
-    	voice_get_frequency(player.voice_table[chn]) > 0 &&
+		player.voiceApi->voice_get_frequency(player.voice_table[chn]) > 0 &&
     	(player.mi.global_volume > 0))
 	{
 		gxPushMatrix();
@@ -473,9 +490,9 @@ static void drawCircle(JGMOD_PLAYER & player, int chn)
 			float xpos;
 			
 			if (player.mi.flag & JGMOD_MODE_XM)
-				xpos = voice_get_frequency(player.voice_table[chn]);
+				xpos = player.voiceApi->voice_get_frequency(player.voice_table[chn]);
 			else
-				xpos = voice_get_frequency(player.voice_table[chn]) * 8363.f / player.ci[chn].c2spd;
+				xpos = player.voiceApi->voice_get_frequency(player.voice_table[chn]) * 8363.f / player.ci[chn].c2spd;
 
 			xpos /= note_length;
 			xpos += note_relative_pos;
