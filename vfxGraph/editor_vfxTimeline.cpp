@@ -65,19 +65,12 @@ ResourceEditor_VfxTimeline::~ResourceEditor_VfxTimeline()
 	uiState = nullptr;
 }
 
-void ResourceEditor_VfxTimeline::afterSizeChanged()
-{
-	uiState->sx = sx;
-}
-
-void ResourceEditor_VfxTimeline::afterPositionChanged()
-{
-	uiState->x = x;
-	uiState->y = y;
-}
-	
 bool ResourceEditor_VfxTimeline::tick(const float dt, const bool inputIsCaptured)
 {
+	uiState->sx = sx;
+	uiState->x = x;
+	uiState->y = y;
+	
 	makeActive(uiState, true, false);
 
 	if (timeline != nullptr)
@@ -90,6 +83,10 @@ bool ResourceEditor_VfxTimeline::tick(const float dt, const bool inputIsCaptured
 
 void ResourceEditor_VfxTimeline::draw() const
 {
+	uiState->sx = sx;
+	uiState->x = x;
+	uiState->y = y;
+	
 	makeActive(uiState, false, true);
 
 	if (timeline != nullptr)

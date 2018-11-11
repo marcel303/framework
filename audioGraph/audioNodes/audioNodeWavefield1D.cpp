@@ -97,17 +97,6 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 		Assert(resource == nullptr);
 	}
 	
-	virtual void afterPositionChanged() override
-	{
-		uiState.x = x;
-		uiState.y = y;
-	}
-	
-	virtual void afterSizeChanged() override
-	{
-		uiState.sx = sx;
-	}
-	
 	void randomize()
 	{
 		const double xRatio = random(0.0, 1.0 / 10.0);
@@ -220,6 +209,10 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 	
 	void doMenus(const bool doAction, const bool doDraw, const float dt)
 	{
+		uiState.sx = sx;
+		uiState.x = x;
+		uiState.y = y;
+		
 		makeActive(&uiState, doAction, doDraw);
 		pushMenu("buttons");
 		{

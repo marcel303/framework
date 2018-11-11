@@ -210,14 +210,6 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 		Assert(resource == nullptr);
 	}
 	
-	virtual void afterSizeChanged() override
-	{
-	}
-	
-	virtual void afterPositionChanged() override
-	{
-	}
-	
 	virtual bool tick(const float dt, const bool inputIsCaptured) override
 	{
 		if (jsusFxIsValid)

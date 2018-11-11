@@ -39,9 +39,6 @@ struct ResourceEditor_VfxTimeline : GraphEdit_ResourceEditorBase
 
 	ResourceEditor_VfxTimeline();
 	virtual ~ResourceEditor_VfxTimeline() override;
-
-	virtual void afterSizeChanged() override;
-	virtual void afterPositionChanged() override;
 	
 	virtual bool tick(const float dt, const bool inputIsCaptured) override;
 	virtual void draw() const override;

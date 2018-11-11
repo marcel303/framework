@@ -57,19 +57,13 @@ ResourceEditor_OscPath::~ResourceEditor_OscPath()
 	uiState = nullptr;
 }
 
-void ResourceEditor_OscPath::afterSizeChanged()
+void ResourceEditor_OscPath::doMenu(const bool doTick, const bool doDraw, const float dt)
 {
 	uiState->sx = sx;
-}
-
-void ResourceEditor_OscPath::afterPositionChanged()
-{
 	uiState->x = x;
 	uiState->y = y;
-}
-
-void ResourceEditor_OscPath::doMenu(const float dt)
-{
+	
+	makeActive(uiState, doTick, doDraw);
 	pushMenu("osc.path");
 	
 	if (g_doActions && isLearning)
@@ -112,16 +106,14 @@ void ResourceEditor_OscPath::doMenu(const float dt)
 
 bool ResourceEditor_OscPath::tick(const float dt, const bool inputIsCaptured)
 {
-	makeActive(uiState, true, false);
-	doMenu(dt);
+	doMenu(true, false, dt);
 	
 	return uiState->activeElem != nullptr;
 }
 
 void ResourceEditor_OscPath::draw() const
 {
-	makeActive(uiState, false, true);
-	const_cast<ResourceEditor_OscPath*>(this)->doMenu(0.f);
+	const_cast<ResourceEditor_OscPath*>(this)->doMenu(false, true, 0.f);
 }
 
 void ResourceEditor_OscPath::setResource(const GraphNode & node, const char * type, const char * name)

@@ -685,8 +685,8 @@ struct GraphEdit_ResourceEditorBase
 		afterPositionChanged();
 	}
 	
-	virtual void afterSizeChanged() = 0;
-	virtual void afterPositionChanged() = 0;
+	virtual void afterSizeChanged() { }
+	virtual void afterPositionChanged() { }
 	
 	virtual bool tick(const float dt, const bool inputIsCaptured) = 0;
 	virtual void draw() const = 0;
