@@ -12,6 +12,8 @@
 #define GFX_SX 800
 #define GFX_SY 800
 
+#define ENABLE_PREVIEW_WINDOW 0
+
 static bool showFileBrowser(std::string & shaderNamePs, const std::vector<std::string> & files, std::string & filename);
 static void showUniforms(Shader & shader);
 static void showStatistics(Shader & shader);
@@ -50,7 +52,9 @@ int main(int argc, char * argv[])
 		
 		std::string shaderPs = s_shaderPs;
 		
+	#if ENABLE_PREVIEW_WINDOW
 		Window window("Preview", 600, 600, true);
+	#endif
 		
 		Shader shader("demoShader");
 		std::string shaderNamePs = "demoShader.ps";
@@ -62,6 +66,10 @@ int main(int argc, char * argv[])
 		files.erase(removed, files.end());
 		std::sort(files.begin(), files.end());
 		
+		float idleTime = 0.f;
+		float alphaAnim = 0.f;
+		bool showEditor = true;
+		
 		while (!framework.quitRequested)
 		{
 			framework.process();
@@ -69,10 +77,31 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
+			if (keyboard.isDown(SDLK_LSHIFT) && keyboard.wentDown(SDLK_TAB))
+				showEditor = !showEditor;
+			
+			if (keyboard.isIdle() && mouse.isIdle())
+				idleTime += framework.timeStep;
+			else
+				idleTime = 0.f;
+			
+			if (idleTime < 4.f && showEditor)
+				alphaAnim -= framework.timeStep / .5f;
+			else
+				alphaAnim += framework.timeStep / (showEditor ? 2.f : .5f);
+			
+			alphaAnim = clamp(alphaAnim, 0.f, 1.f);
+			
 			bool inputIsCaptured = false;
+			
+			if (showEditor == false)
+				inputIsCaptured = true;
 			
 			framework_context.processBegin(framework.timeStep, GFX_SX, GFX_SY, inputIsCaptured);
 			{
+				const float alpha = lerp(.9f, .0f, alphaAnim);
+				ImGui::GetStyle().Alpha = alpha;
+				
 				ImGui::SetNextWindowPos(ImVec2(0, 0));
 				ImGui::SetNextWindowSize(ImVec2(GFX_SX, GFX_SY));
 				
@@ -224,12 +253,28 @@ int main(int argc, char * argv[])
 				shaderSource(shaderNamePs.c_str(), shaderPs.c_str());
 			}
 			
-			framework.beginDraw(80, 90, 100, 0);
+			auto setShaderConstants = [&](const int viewSx, const int viewSy)
 			{
+				shader.setImmediate("time", framework.time);
+				shader.setImmediate("mouse", mouse.x / float(viewSx), mouse.y / float(viewSy));
+				shader.setImmediate("mouse_down", mouse.isDown(BUTTON_LEFT));
+			};
+			
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				if (shader.isValid())
+				{
+					setShader(shader);
+					setShaderConstants(GFX_SX, GFX_SY);
+					drawRect(0, 0, GFX_SX, GFX_SY);
+					clearShader();
+				}
+				
 				framework_context.draw();
 			}
 			framework.endDraw();
 			
+		#if ENABLE_PREVIEW_WINDOW
 			pushWindow(window);
 			{
 				if (keyboard.wentDown(SDLK_ESCAPE))
@@ -237,22 +282,18 @@ int main(int argc, char * argv[])
 				
 				framework.beginDraw(0, 0, 0, 0);
 				{
-					setShader(shader);
-					shader.setImmediate("time", framework.time);
-					shader.setImmediate("mouse", mouse.x / float(window.getWidth()), mouse.y / float(window.getHeight()));
-					shader.setImmediate("mouse_down", mouse.isDown(BUTTON_LEFT));
-					
 					if (shader.isValid())
 					{
-						setColor(colorWhite);
+						setShader(shader);
+						setShaderConstants(window.getWidth(), window.getHeight());
 						drawRect(0, 0, window.getWidth(), window.getHeight());
+						clearShader();
 					}
-					
-					clearShader();
 				}
 				framework.endDraw();
 			}
 			popWindow();
+		#endif
 		}
 		
 		SDL_StopTextInput();
