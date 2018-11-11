@@ -59,7 +59,10 @@ static WDL_FFT_COMPLEX d32768[4095];
 
 #define sqrthalf (d16[1].re)
 
-// fixme : this doesn't work correctly yet. but is it needed?
+// note : adding volatile doesn't work correctly, due to mixed simd (vector) and scalar types used in various places,
+//        instead of only scalars as before the simd version was implemented. there may be a possible performance issue
+//        with this? or perhaps it was used to speed up compile time due to less register optimisation being necessary
+//        for the compiler? in either case it's not worrying me for now
 //#define VOL *(volatile WDL_FFT_REAL *)&
 #define VOL
 
