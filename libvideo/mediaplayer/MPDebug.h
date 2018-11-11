@@ -28,16 +28,22 @@
 #ifndef __MPDEBUG_H__
 #define __MPDEBUG_H__
 
-#if defined(DEBUG)
-	#define DEBUG_MEDIAPLAYER 0 // fixme : make config option
-#else
-	#define DEBUG_MEDIAPLAYER 0 // do not alter
+#if !defined(DEBUG_MEDIAPLAYER)
+	#if defined(DEBUG)
+		#define DEBUG_MEDIAPLAYER 0
+	#else
+		#define DEBUG_MEDIAPLAYER 0 // do not alter
+	#endif
 #endif
 
 #if DEBUG_MEDIAPLAYER
-	#define DEBUG_MEDIAPLAYER_VIDEO_ALLOCS 1
+	#if !defined(DEBUG_MEDIAPLAYER_VIDEO_ALLOCS)
+		#define DEBUG_MEDIAPLAYER_VIDEO_ALLOCS 1
+	#endif
 #else
-	#define DEBUG_MEDIAPLAYER_VIDEO_ALLOCS 0 // do not alter
+	#if !defined(DEBUG_MEDIAPLAYER_VIDEO_ALLOCS)
+		#define DEBUG_MEDIAPLAYER_VIDEO_ALLOCS 0 // do not alter
+	#endif
 #endif
 
 namespace MP
