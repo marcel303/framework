@@ -69,3 +69,10 @@ app libvideo-example-seeking
 
 	add_files examples/seeking.cpp
 	resource_path examples/data
+
+app libvideo-example-audio
+
+	depend_library libvideo
+
+	add_files examples/audio.cpp
+	resource_path examples/data

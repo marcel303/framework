@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "audiostream/AudioOutput_PortAudio.h"
 #include "framework.h"
 #include "video.h"
 
@@ -41,13 +42,22 @@ int main(int argc, char * argv[])
 	if (framework.init(800, 400))
 	{
 		MediaPlayer mp;
-
+		
 	// fixme : don't use a local file path
-		//mp.openAsync("lucy.mp4", MP::kOutputMode_RGBA);
-		mp.openAsync("/Users/thecat/Movies/L_SNINGEN.mp4", MP::kOutputMode_RGBA);
-		//mp.openAsync("/Users/thecat/Movies/Game Capture HD Library/Mijn video 13/Segment_0001.mp4", MP::kOutputMode_RGBA);
+		MediaPlayer::OpenParams openParams;
+		//openParams.filename = "lucy.mp4";
+		openParams.filename = "/Users/thecat/Downloads/Lisbon Story.avi/Lisbon Story.avi";
+		openParams.outputMode = MP::kOutputMode_RGBA;
+		openParams.enableAudioStream = true;
+		openParams.enableVideoStream = true;
+		mp.openAsync(openParams);
+		
+		AudioOutput_PortAudio audioOutput;
 
 		SDL_Cursor * handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+		
+		int channelCount = 0;
+		int sampleRate = 0;
 		
 		while (!framework.quitRequested)
 		{
@@ -58,7 +68,16 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 
-			mp.presentTime += framework.timeStep;
+			if (audioOutput.IsPlaying_get() == false)
+			{
+				if (mp.getAudioProperties(channelCount, sampleRate))
+				{
+					audioOutput.Initialize(channelCount, sampleRate, 256);
+					audioOutput.Play(&mp);
+				}
+			}
+			
+			mp.presentTime = mp.context->mpContext.GetAudioTime();
 			
 			mp.tick(mp.context, true);
 			
@@ -105,11 +124,11 @@ int main(int argc, char * argv[])
 					
 					if (seek)
 					{
-						const bool nearest =
+						const bool exact =
 							keyboard.isDown(SDLK_LSHIFT) ||
 							keyboard.isDown(SDLK_RSHIFT);
 						
-						mp.seek(seekTime, nearest);
+						mp.seek(seekTime, exact == false);
 					
 						framework.process();
 						framework.process();
@@ -120,6 +139,9 @@ int main(int argc, char * argv[])
 			
 			SDL_SetCursor(cursor);
 		}
+		
+		audioOutput.Stop();
+		audioOutput.Shutdown();
 		
 		mp.close(true);
 		

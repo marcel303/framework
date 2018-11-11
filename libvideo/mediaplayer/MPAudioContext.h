@@ -62,10 +62,10 @@ namespace MP
 		AVCodecContext * m_codecContext;
 		AVCodec * m_codec;
 		SwrContext * m_swrContext;
+		double m_timeBase;
 
 		size_t m_streamIndex;
 		double m_time;
-		size_t m_frameTime;
 
 		bool m_initialized;
 	};

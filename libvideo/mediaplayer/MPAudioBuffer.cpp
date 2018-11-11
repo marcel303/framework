@@ -44,20 +44,24 @@ namespace MP
 		m_mutex.Unlock();
 	}
 
-	bool AudioBuffer::ReadSamples(int16_t * __restrict samples, size_t & sampleCount)
+	bool AudioBuffer::ReadSamples(int16_t * __restrict samples, size_t & sampleCount, double & timeStamp)
 	{
 		bool result = true;
-
-		size_t samplesRead = 0;
 
 		if (m_segments.empty())
 		{
 			result = false;
+			
+			sampleCount = 0;
+			
+			timeStamp = 0.0;
 		}
 		else
 		{
 			m_mutex.Lock();
 			{
+				size_t samplesRead = 0;
+				
 				while (sampleCount > 0)
 				{
 					if (!m_segments.empty())
@@ -75,6 +79,8 @@ namespace MP
 						samplesRead += numSamples;
 
 						segment.m_readOffset += numSamples;
+						
+						timeStamp = segment.m_time;
 
 						if (segment.m_readOffset == segment.m_numSamples)
 						{
@@ -91,11 +97,11 @@ namespace MP
 						sampleCount -= numSamples;
 					}
 				}
+				
+				sampleCount = samplesRead;
 			}
 			m_mutex.Unlock();
 		}
-
-		sampleCount = samplesRead;
 
 		return result;
 	}

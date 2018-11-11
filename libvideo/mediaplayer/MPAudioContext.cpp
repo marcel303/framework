@@ -49,9 +49,9 @@ namespace MP
 		, m_codecContext(nullptr)
 		, m_codec(nullptr)
 		, m_swrContext(nullptr)
+		, m_timeBase(0.0)
 		, m_streamIndex(-1)
 		, m_time(0.0)
-		, m_frameTime(0)
 		, m_initialized(false)
 	{
 	}
@@ -75,7 +75,6 @@ namespace MP
 
 		m_streamIndex = streamIndex;
 		m_time = 0.0;
-		m_frameTime = 0;
 		
 		Assert(m_packetQueue == nullptr);
 		m_packetQueue = new PacketQueue();
@@ -137,6 +136,8 @@ namespace MP
 			Debug::Print("Audio: failed to alloc/init swr context.");
 			return false;
 		}
+		
+		m_timeBase = av_q2d(context->GetFormatContext()->streams[streamIndex]->time_base);
 		
 		return true;
 	}
@@ -230,7 +231,7 @@ namespace MP
 		{
 			size_t numSamples = frameCount * m_codecContext->channels;
 
-			if (!m_audioBuffer->ReadSamples(out_samples, numSamples))
+			if (!m_audioBuffer->ReadSamples(out_samples, numSamples, m_time))
 			{
 				stop = true;
 			}
@@ -241,8 +242,6 @@ namespace MP
 				out_samples += numFrames * m_codecContext->channels;
 
 				frameCount -= numFrames;
-				m_frameTime += numFrames;
-				m_time = m_frameTime / (double)m_codecContext->sample_rate;
 
 				Debug::Print("\tAudio: read from buffer. time: %03.3f", m_time);
 
@@ -315,7 +314,7 @@ namespace MP
 				
 				//swr_convert(m_swrContext, out, out_count, in, in_count);
 				
-				if (frame->nb_samples > 0)
+				if (gotFrame && frame->nb_samples > 0)
 				{
 					if (m_codecContext->channels != 0)
 					{
@@ -327,13 +326,38 @@ namespace MP
 						{
 							for (int c = 0; c < m_codecContext->channels; ++c)
 							{
-								const int16_t * __restrict src = (int16_t*)frame->data[c];
-								
-								*dst++ = src[i];
+								if (frame->format == AV_SAMPLE_FMT_S16P)
+								{
+									const int16_t * __restrict src = (int16_t*)frame->data[c];
+									
+									*dst++ = src[i];
+								}
+								else if (frame->format == AV_SAMPLE_FMT_S32P)
+								{
+									const int32_t * __restrict src = (int32_t*)frame->data[c];
+									
+									*dst++ = src[i] >> 16;
+								}
+								else if (frame->format == AV_SAMPLE_FMT_FLTP)
+								{
+									const float * __restrict src = (float*)frame->data[c];
+									
+									//Assert(src[i] >= -1.f && src[i] <= +1.f);
+									
+									*dst++ = src[i] * ((1 << 15) - 1);
+								}
+								else
+								{
+									Assert(false);
+									
+									*dst++ = 0;
+								}
 							}
 						}
 						
 						segment.m_numSamples = frame->nb_samples * m_codecContext->channels;
+						
+						segment.m_time = av_frame_get_best_effort_timestamp(frame) * m_timeBase;
 
 						m_audioBuffer->AddSegment(segment);
 
@@ -342,7 +366,7 @@ namespace MP
 				}
 				else
 				{
-					Assert(0);
+					Assert(gotFrame == false);
 				}
 			}
 		}

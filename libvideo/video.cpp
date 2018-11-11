@@ -451,6 +451,11 @@ bool MediaPlayer::getAudioProperties(int & channelCount, int & sampleRate) const
 
 int MediaPlayer::Provide(int numSamples, AudioSample* __restrict buffer)
 {
+	if (!context->hasBegun)
+	{
+		return 0;
+	}
+	
 	bool gotAudio = false;
 
 	context->mpContext.RequestAudio((int16_t*)buffer, numSamples, gotAudio);
