@@ -54,9 +54,8 @@ namespace MP
 
 		size_t GetAudioFrameRate() const;
 		size_t GetAudioChannelCount() const;
-		double GetAudioTime() const;
 
-		bool RequestAudio(int16_t * __restrict out_samples, const size_t frameCount, bool & out_gotAudio);
+		bool RequestAudio(int16_t * __restrict out_samples, const size_t frameCount, bool & out_gotAudio, double & out_audioTime);
 		bool RequestVideo(const double time, VideoFrame ** out_frame, bool & out_gotVideo);
 
 		bool FillBuffers();

@@ -300,7 +300,9 @@ namespace MP
 
 			Assert(frame != m_currentFrame);
 			
-			//memset(frame->m_frameBuffer, 0xcc, frame->m_frameBufferSize);
+		#if DEBUG_MEDIAPLAYER_VIDEO_ALLOCS
+			memset(frame->m_frameBuffer, 0xcc, frame->m_frameBufferSize);
+		#endif
 		}
 		m_mutex.Unlock();
 
@@ -324,51 +326,63 @@ namespace MP
 	void VideoBuffer::AdvanceToTime(double time)
 	{
 		m_mutex.Lock();
-
-		// Skip as many frame necessary to reach the specified time.
-		// Stop moving forward until the current write position (last written frame) is reached.
-
-		int skipCount = 0;
-
-		while (!m_consumeList.empty() && (m_consumeList.front()->m_time < time || m_consumeList.front()->m_isFirstFrame))
 		{
-			if (m_currentFrame != nullptr)
-			{
-				Assert(m_currentFrame != m_consumeList.front());
-				Assert(m_currentFrame->m_isValidForRead);
-				m_currentFrame->m_isValidForRead = false;
-				m_freeList.push_back(m_currentFrame);
-				m_currentFrame = nullptr;
-			}
-
-			m_currentFrame = m_consumeList.front();
-			m_consumeList.pop_front();
+			int skipCount = 0;
 			
-			Assert(!m_currentFrame->m_isValidForRead);
-			m_currentFrame->m_isValidForRead = true;
+			// Skip as many frame necessary to reach the specified time.
+			// Stop moving forward until the current write position (last written frame) is reached.
 
-			++skipCount;
+			while (!m_consumeList.empty() && (m_consumeList.front()->m_time < time || m_consumeList.front()->m_isFirstFrame))
+			{
+				if (m_currentFrame != nullptr)
+				{
+					Assert(m_currentFrame != m_consumeList.front());
+					Assert(m_currentFrame->m_isValidForRead);
+					m_currentFrame->m_isValidForRead = false;
+					m_freeList.push_back(m_currentFrame);
+					m_currentFrame = nullptr;
+				}
 
-			Debug::Print("Video: Advancing frame.");
+				m_currentFrame = m_consumeList.front();
+				m_consumeList.pop_front();
+				
+				Assert(!m_currentFrame->m_isValidForRead);
+				m_currentFrame->m_isValidForRead = true;
+
+				++skipCount;
+
+				Debug::Print("Video: Advancing frame.");
+			}
+			
+			if (skipCount > 1)
+			{
+				Debug::Print("Video: Warning: Skipped %d frames.", skipCount - 1);
+			}
 		}
-
 		m_mutex.Unlock();
-
-		if (skipCount > 1)
-		{
-			Debug::Print("Video: Warning: Skipped %d frames.", skipCount - 1);
-		}
 	}
 
 	bool VideoBuffer::Depleted() const
 	{
-		return m_consumeList.empty();
+		bool result = false;
+		
+		m_mutex.Lock();
+		{
+			result = m_consumeList.empty();
+		}
+		m_mutex.Unlock();
+		
+		return result;
 	}
 
 	bool VideoBuffer::IsFull() const
 	{
+		bool result;
+		
 		m_mutex.Lock();
-		const bool result = m_freeList.empty();
+		{
+			result = m_freeList.empty();
+		}
 		m_mutex.Unlock();
 		
 		return result;

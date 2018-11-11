@@ -34,6 +34,12 @@
 	#define DEBUG_MEDIAPLAYER 0 // do not alter
 #endif
 
+#if DEBUG_MEDIAPLAYER
+	#define DEBUG_MEDIAPLAYER_VIDEO_ALLOCS 1
+#else
+	#define DEBUG_MEDIAPLAYER_VIDEO_ALLOCS 0 // do not alter
+#endif
+
 namespace MP
 {
 	namespace Debug

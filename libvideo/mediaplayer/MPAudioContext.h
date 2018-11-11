@@ -46,10 +46,9 @@ namespace MP
 		bool Destroy();
 
 		size_t GetStreamIndex() const;
-		double GetTime() const;
 
 		bool FillAudioBuffer();
-		bool RequestAudio(int16_t * out_samples, const size_t frameCount, bool & out_gotAudio);
+		bool RequestAudio(int16_t * out_samples, const size_t frameCount, bool & out_gotAudio, double & out_audioTime);
 
 		bool IsQueueFull() const;
 		bool AddPacket(AVPacket & packet);
@@ -65,7 +64,6 @@ namespace MP
 		double m_timeBase;
 
 		size_t m_streamIndex;
-		double m_time;
 
 		bool m_initialized;
 	};

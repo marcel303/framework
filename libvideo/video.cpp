@@ -36,6 +36,8 @@ static SDL_mutex * s_avcodecMutex = nullptr;
 static std::atomic_int s_numVideoThreads;
 static const int kMaxVideoThreads = 64;
 
+static thread_local SDL_threadID s_mpThreadId = -1;
+
 static int ExecMediaPlayerThread(void * param)
 {
 	MediaPlayer::Context * context = (MediaPlayer::Context*)param;
@@ -48,7 +50,7 @@ static int ExecMediaPlayerThread(void * param)
 
 	SDL_LockMutex(context->mpTickMutex);
 
-	context->mpThreadId = SDL_GetThreadID(nullptr);
+	s_mpThreadId = SDL_GetThreadID(nullptr);
 
 	SDL_LockMutex(s_avcodecMutex);
 	{
@@ -85,6 +87,8 @@ static int ExecMediaPlayerThread(void * param)
 	}
 
 	// media player thread is completely detached from the main thread at this point
+	
+	s_mpThreadId = -1;
 
 	if (context)
 	{
@@ -125,7 +129,7 @@ void MediaPlayer::Context::tick()
 
 bool MediaPlayer::Context::presentedLastFrame() const
 {
-	if (SDL_GetThreadID(nullptr) == mpThreadId)
+	if (SDL_GetThreadID(nullptr) == s_mpThreadId)
 	{
 		// todo : actually check if the frame was presented
 
@@ -228,7 +232,12 @@ void MediaPlayer::seekToStart()
 		SDL_LockMutex(context->mpSeekMutex);
 		{
 			if (context->hasBegun)
+			{
 				context->mpContext.SeekToStart();
+				
+				presentTime = 0.0;
+				audioTime = 0.0;
+			}
 		}
 		SDL_UnlockMutex(context->mpSeekMutex);
 	}
@@ -248,6 +257,7 @@ void MediaPlayer::seek(const double time, const bool nearest)
 				context->mpContext.SeekToTime(time, nearest, actualTime);
 				
 				presentTime = actualTime;
+				audioTime = actualTime;
 			}
 		}
 		SDL_UnlockMutex(context->mpSeekMutex);
@@ -264,7 +274,7 @@ bool MediaPlayer::updateVideoFrame()
 
 	Assert(context->mpContext.HasBegun());
 
-	const double time = presentTime >= 0.0 ? presentTime : context->mpContext.GetAudioTime();
+	const double time = presentTime >= 0.0 ? presentTime : 0.0;
 	
 	bool gotVideo = false;
 	context->mpContext.RequestVideo(time, &videoFrame, gotVideo);
@@ -459,7 +469,10 @@ int MediaPlayer::Provide(int numSamples, AudioSample* __restrict buffer)
 	
 	bool gotAudio = false;
 
-	context->mpContext.RequestAudio((int16_t*)buffer, numSamples, gotAudio);
+	double audioTime;
+	
+	if (context->mpContext.RequestAudio((int16_t*)buffer, numSamples, gotAudio, audioTime))
+		this->audioTime = audioTime;
 
 	SDL_CondSignal(context->mpTickEvent);
 
@@ -514,10 +527,10 @@ void MediaPlayer::stopMediaPlayerThread()
 		SDL_LockMutex(context->mpTickMutex);
 		{
 			context->stopMpThread = true;
+			
+			SDL_CondSignal(context->mpTickEvent);
 		}
 		SDL_UnlockMutex(context->mpTickMutex);
-		
-		SDL_CondSignal(context->mpTickEvent);
 
 		context = nullptr;
 		mpThread = nullptr;

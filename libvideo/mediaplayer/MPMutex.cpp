@@ -45,8 +45,8 @@ namespace MP
 			mutex = nullptr;
 		}
 	}
-
-	void Mutex::Lock()
+	
+	void Mutex::Lock() const
 	{
 		if (SDL_LockMutex(mutex) < 0)
 		{
@@ -54,7 +54,7 @@ namespace MP
 		}
 	}
 
-	void Mutex::Unlock()
+	void Mutex::Unlock() const
 	{
 		if (SDL_UnlockMutex(mutex) < 0)
 		{

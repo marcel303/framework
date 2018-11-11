@@ -78,7 +78,7 @@ int main(int argc, char * argv[])
 				}
 			}
 			
-			mp.presentTime = mp.context->mpContext.GetAudioTime();
+			mp.presentTime = mp.audioTime;
 			
 			mp.tick(mp.context, true);
 			

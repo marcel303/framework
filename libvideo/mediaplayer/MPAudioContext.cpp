@@ -51,7 +51,6 @@ namespace MP
 		, m_swrContext(nullptr)
 		, m_timeBase(0.0)
 		, m_streamIndex(-1)
-		, m_time(0.0)
 		, m_initialized(false)
 	{
 	}
@@ -74,7 +73,6 @@ namespace MP
 		m_initialized = true;
 
 		m_streamIndex = streamIndex;
-		m_time = 0.0;
 		
 		Assert(m_packetQueue == nullptr);
 		m_packetQueue = new PacketQueue();
@@ -82,7 +80,7 @@ namespace MP
 		Assert(m_audioBuffer == nullptr);
 		m_audioBuffer = new AudioBuffer();
 		
-		AVCodecParameters * audioParams = context->GetFormatContext()->streams[m_streamIndex]->codecpar;\
+		AVCodecParameters * audioParams = context->GetFormatContext()->streams[m_streamIndex]->codecpar;
 		if (!audioParams)
 		{
 			Debug::Print("Audio: failed to find audio params.");
@@ -188,11 +186,6 @@ namespace MP
 		return m_streamIndex;
 	}
 
-	double AudioContext::GetTime() const
-	{
-		return m_time;
-	}
-
 	bool AudioContext::FillAudioBuffer()
 	{
 		bool result = true;
@@ -213,9 +206,9 @@ namespace MP
 		return result;
 	}
 
-	bool AudioContext::RequestAudio(int16_t * out_samples, const size_t _frameCount, bool & out_gotAudio)
+	bool AudioContext::RequestAudio(int16_t * out_samples, const size_t frameCount, bool & out_gotAudio, double & out_audioTime)
 	{
-		size_t frameCount = _frameCount;
+		size_t numFramesLeft = frameCount;
 		
 		Assert(out_samples);
 
@@ -229,24 +222,33 @@ namespace MP
 
 		while (stop == false)
 		{
-			size_t numSamples = frameCount * m_codecContext->channels;
-
-			const bool hasMore = m_audioBuffer->ReadSamples(out_samples, numSamples, m_time);
+			const size_t numSamplesToRead = numFramesLeft * m_codecContext->channels;
 			
-			const size_t numFrames = numSamples / m_codecContext->channels;
+			// read samples from the audio buffer
+			
+			size_t numSamplesRead;
+			const bool hasMore = m_audioBuffer->ReadSamples(out_samples, numSamplesToRead, numSamplesRead, out_audioTime);
+			
+			// update the output buffer pointer and the number of frames left
+			
+			const size_t numFramesRead = numSamplesRead / m_codecContext->channels;
+			Assert((numSamplesRead % m_codecContext->channels) == 0);
+			Assert(numFramesRead * m_codecContext->channels == numSamplesRead);
 
-			if (numFrames > 0)
+			if (numFramesRead > 0)
 			{
-				Debug::Print("\tAudio: read from buffer. time: %03.3f", m_time);
+				Debug::Print("\tAudio: read from buffer. time: %03.3f", out_audioTime);
 				
-				out_samples += numFrames * m_codecContext->channels;
+				out_samples += numFramesRead * m_codecContext->channels;
 				
-				frameCount -= numFrames;
+				numFramesLeft -= numFramesRead;
 			}
 			
 			if (hasMore)
 			{
-				if (frameCount == 0)
+				// there's more audio data left inside the audio buffer. loop until done
+				
+				if (numFramesLeft == 0)
 				{
 					Debug::Print("\tAudio: read done.");
 					
@@ -255,7 +257,10 @@ namespace MP
 			}
 			else
 			{
-				const size_t numSamplesRemaining = frameCount * m_codecContext->channels;
+				// the audio buffer is empty. calculate the number of remaining samples, set the remaining
+				// samples to zero, and end the loop
+				
+				const size_t numSamplesRemaining = numFramesLeft * m_codecContext->channels;
 				
 				if (numSamplesRemaining > 0)
 				{

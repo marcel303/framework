@@ -58,13 +58,15 @@ namespace MP
 		AudioBuffer();
 
 		void AddSegment(const AudioBufferSegment & segment);
-		bool ReadSamples(int16_t * __restrict samples, size_t & sampleCount, double & timeStamp);
+		bool ReadSamples(
+			int16_t * __restrict samples, const size_t numSamples,
+			size_t & out_numSamplesRead, double & out_timeStamp);
 
 		bool Depleted() const;
 		void Clear();
 
 	private:
-		mutable Mutex m_mutex;
+		Mutex m_mutex;
 
 		std::list<AudioBufferSegment> m_segments;
 	};

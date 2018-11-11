@@ -33,13 +33,13 @@ namespace MP
 {
 	class Mutex
 	{
-		SDL_mutex * mutex;
+		mutable SDL_mutex * mutex;
 
 	public:
 		Mutex();
 		~Mutex();
-
-		void Lock();
-		void Unlock();
+		
+		void Lock() const;
+		void Unlock() const;
 	};
 }

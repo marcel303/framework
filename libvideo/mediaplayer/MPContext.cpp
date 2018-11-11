@@ -251,15 +251,7 @@ namespace MP
 			return 0;
 	}
 
-	double Context::GetAudioTime() const
-	{
-		if (m_audioContext)
-			return m_audioContext->GetTime();
-		else
-			return 0.0;
-	}
-
-	bool Context::RequestAudio(int16_t * __restrict out_samples, const size_t frameCount, bool & out_gotAudio)
+	bool Context::RequestAudio(int16_t * __restrict out_samples, const size_t frameCount, bool & out_gotAudio, double & out_audioTime)
 	{
 		Assert(m_begun == true);
 		Assert(m_audioContext);
@@ -268,7 +260,7 @@ namespace MP
 
 		if (m_audioContext == nullptr)
 			result = false;
-		else if (m_audioContext->RequestAudio(out_samples, frameCount, out_gotAudio) != true)
+		else if (m_audioContext->RequestAudio(out_samples, frameCount, out_gotAudio, out_audioTime) != true)
 			result = false;
 
 		return result;

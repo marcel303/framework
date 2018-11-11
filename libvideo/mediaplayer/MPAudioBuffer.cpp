@@ -44,42 +44,53 @@ namespace MP
 		m_mutex.Unlock();
 	}
 
-	bool AudioBuffer::ReadSamples(int16_t * __restrict samples, size_t & sampleCount, double & timeStamp)
+	bool AudioBuffer::ReadSamples(
+		int16_t * __restrict samples, const size_t numSamples,
+		size_t & numSamplesRead, double & timeStamp)
 	{
 		bool hasMore = true;
 
+		numSamplesRead = 0;
+		
 		m_mutex.Lock();
 		{
 			if (m_segments.empty())
 			{
-				sampleCount = 0;
-				
 				hasMore = false;
 			}
 			else
 			{
-				size_t samplesRead = 0;
+				size_t numSamplesLeft = numSamples;
 				
-				while (sampleCount > 0)
+				while (numSamplesLeft > 0)
 				{
 					if (!m_segments.empty())
 					{
 						AudioBufferSegment & segment = m_segments.front();
-
-						size_t numSamples = segment.m_numSamples - segment.m_readOffset;
-						if (numSamples > sampleCount)
-							numSamples = sampleCount;
-
-						memcpy(samples, &segment.m_samples[segment.m_readOffset], numSamples * sizeof(int16_t));
-
-						samples += numSamples;
-						sampleCount -= numSamples;
-						samplesRead += numSamples;
-
-						segment.m_readOffset += numSamples;
+						
+						// copy the time stamp from the current segment
 						
 						timeStamp = segment.m_time;
+						
+						// consume samples from the current segment
+						
+						size_t numSamplesFromSegment = segment.m_numSamples - segment.m_readOffset;
+						
+						if (numSamplesFromSegment > numSamplesLeft)
+							numSamplesFromSegment = numSamplesLeft;
 
+						memcpy(samples, &segment.m_samples[segment.m_readOffset], numSamplesFromSegment * sizeof(int16_t));
+
+						samples += numSamplesFromSegment;
+						numSamplesLeft -= numSamplesFromSegment;
+						numSamplesRead += numSamplesFromSegment;
+						
+						// update the read offset within the segment
+						
+						segment.m_readOffset += numSamplesFromSegment;
+						
+						// remove the segment from the list if we read until the end
+						
 						if (segment.m_readOffset == segment.m_numSamples)
 						{
 							m_segments.pop_front();
@@ -92,8 +103,6 @@ namespace MP
 						break;
 					}
 				}
-				
-				sampleCount = samplesRead;
 			}
 		}
 		m_mutex.Unlock();
@@ -103,11 +112,23 @@ namespace MP
 
 	bool AudioBuffer::Depleted() const
 	{
-		return m_segments.empty();
+		bool result = false;
+		
+		m_mutex.Lock();
+		{
+			result = m_segments.empty();
+		}
+		m_mutex.Unlock();
+		
+		return result;
 	}
 
 	void AudioBuffer::Clear()
 	{
-		m_segments.clear();
+		m_mutex.Lock();
+		{
+			m_segments.clear();
+		}
+		m_mutex.Unlock();
 	}
 };
