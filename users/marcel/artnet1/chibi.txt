@@ -1,4 +1,9 @@
+library artnet
+	add_files artnet.cpp artnet.h
+	header_path . expose
+
 app marcel-artnet1
+	depend_library artnet
 	depend_library framework
 	depend_library libosc
 	add_files main.cpp
