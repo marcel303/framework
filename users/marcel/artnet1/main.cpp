@@ -27,44 +27,40 @@ struct ArtnetPacket
 	uint8_t data[kMaxSize];
 	uint16_t dataSize = 0;
 
-	template <typename T>
-	static void write(uint8_t *& dst, const T & src)
-	{
-		memcpy(dst, &src, sizeof(src));
-		dst += sizeof(src);
-	}
-
-	static void writeByte(uint8_t *& dst, const uint8_t byte)
+	static inline void writeByte(uint8_t *& dst, const uint8_t byte)
 	{
 		*dst++ = byte;
 	}
 
-	static void write(uint8_t *& dst, const void * src, const int srcSize)
+	static inline void writeBytes(uint8_t *& dst, const void * src, const int srcSize)
 	{
 		memcpy(dst, src, srcSize);
 		dst += srcSize;
 	}
 
-	static uint8_t lo16(const uint16_t value)
+	static inline uint8_t lo16(const uint16_t value)
 	{
 		return value & 0xff;
 	}
 
-	static uint8_t hi16(const uint16_t value)
+	static inline uint8_t hi16(const uint16_t value)
 	{
 		return (value >> 8) & 0xff;
 	}
 
-	void makeDMX512(const uint8_t sequence, const uint8_t physical, const uint16_t universe,
-		const uint8_t * values, const int numValues)
+	bool makeDMX512(const uint8_t sequence, const uint8_t physical, const uint16_t universe,
+		const uint8_t * __restrict values, const int numValues)
 	{
-		uint8_t * p = data;
+		if (numValues > 512)
+			return false;
 
 		const uint16_t opcode = kArtnetOpcode_ArtDMX;
 		const uint16_t version = kArtnetVersion_14;
 		const uint16_t length = numValues;
+
+		uint8_t * __restrict p = data;
 		
-		write(p, kArtnetID, sizeof(kArtnetID));
+		writeBytes(p, kArtnetID, sizeof(kArtnetID));
 		writeByte(p, lo16(opcode));
 		writeByte(p, hi16(opcode));
 		writeByte(p, hi16(version));
@@ -75,9 +71,11 @@ struct ArtnetPacket
 		writeByte(p, hi16(universe));
 		writeByte(p, hi16(length));
 		writeByte(p, lo16(length));
-		write(p, values, numValues * sizeof(uint8_t));
+		writeBytes(p, values, numValues * sizeof(uint8_t));
 
 		dataSize = p - data;
+
+		return true;
 	}
 };
 
