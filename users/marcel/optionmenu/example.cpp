@@ -1,14 +1,25 @@
 #include "framework.h"
 #include "OptionMenu.h"
 #include "Options.h"
+#include "StatTimerMenu.h"
+#include "StatTimers.h"
 
 OPTION_DECLARE(bool, s_checkbox, true);
 OPTION_DECLARE(int, s_integer, 10);
 OPTION_DECLARE(float, s_float, 3.14f);
+OPTION_DECLARE(float, s_suboption1, 1.f);
+OPTION_DECLARE(float, s_suboption2, 1.f);
 
 OPTION_DEFINE(bool, s_checkbox, "Checkbox Option");
 OPTION_DEFINE(int, s_integer, "Integer Option");
 OPTION_DEFINE(float, s_float, "Float Option");
+OPTION_DEFINE(float, s_suboption1, "Suboptions/Option 1");
+OPTION_DEFINE(float, s_suboption2, "Suboptions/Option 2");
+
+COMMAND_OPTION(s_command, "Command Option", []{ });
+
+TIMER_DEFINE(s_timer1, StatTimer::PerFrame, "Timer 1");
+TIMER_DEFINE(s_timer2, StatTimer::PerSecond, "Timer 2");
 
 int main(int argc, char * argv[])
 {
@@ -21,8 +32,12 @@ int main(int argc, char * argv[])
 
 	OptionMenu optionMenu;
 	
+	StatTimerMenu statMenu;
+	
 	for (;;)
 	{
+		TIMER_INC(s_timer2);
+		
 		framework.process();
 		
 		if (keyboard.wentDown(SDLK_ESCAPE))
@@ -32,7 +47,19 @@ int main(int argc, char * argv[])
 			break;
 		
 		const float dt = framework.timeStep;
+		
+		TIMER_ADD_SECONDS(s_timer1, dt);
+		
+		//
+		
+		g_statTimerManager.Update();
+		
+		optionMenu.Update();
+		
+		statMenu.Update();
 	
+		//
+		
 		MultiLevelMenuBase * menu = &optionMenu;
 	
 		if (keyboard.isDown(SDLK_UP) || gamepad[0].isDown(DPAD_UP))
@@ -51,13 +78,19 @@ int main(int argc, char * argv[])
 		if (keyboard.wentDown(SDLK_RIGHT, true) || gamepad[0].wentDown(DPAD_RIGHT))
 			menu->HandleAction(OptionMenu::Action_ValueIncrement, dt);
 
-		framework.beginDraw(0, 0, 0, 0);
+		framework.beginDraw(80, 40, 20, 0);
 		{
 			setFont("calibri.ttf");
 			
-			optionMenu.Update();
+			Shader shader("shader");
+			shader.setImmediate("time", framework.time);
+			setShader(shader);
+			drawRect(0, 0, 800, 600);
+			clearShader();
 			
-			optionMenu.Draw(10, 10, 300, 500);
+			optionMenu.Draw(40, 170, 300, 500);
+			
+			statMenu.Draw(410, 200, 340, 500);
 		}
 		framework.endDraw();
 	}

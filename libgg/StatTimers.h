@@ -196,6 +196,7 @@ public:
 #define TIMER_START(name) name.Start()
 #define TIMER_STOP(name) name.Stop()
 #define TIMER_ADD_MICROSECONDS(name, count) name.AddTimeUS(count)
+#define TIMER_ADD_SECONDS(name, count) name.AddTimeUS(count * 1000000)
 #define TIMER_SCOPE(name) StatTimerScope name ## _scope(&name)
 
 // timer views

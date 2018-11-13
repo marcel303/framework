@@ -1,0 +1,22 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+uniform float time;
+
+shader_in vec4 v_position;
+shader_in vec2 v_texcoord;
+
+#define time (mix(0.99, 1.0, v_texcoord.y) * time * 2)
+#define v_texcoord (vec2(mix(-2, +5.6, (sin(time / 4.567) + 1.0) / 2.0), 0.0) + v_texcoord * 2.0)
+
+void main()
+{
+	vec4 result = vec4(
+		sin((v_texcoord.x + time) / 1.123),
+		sin((v_texcoord.y + time) / 1.234),
+		sin((v_texcoord.x + v_texcoord.y + time) / 1.345), 1.0);
+	
+	result.rgb = mix(result.rgb, vec3(rgbLuminance(result.rgb)), 0.8);
+	
+	shader_fragColor = result;
+}

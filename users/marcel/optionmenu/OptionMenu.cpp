@@ -3,6 +3,8 @@
 #include "Options.h"
 #include "StringEx.h"
 
+#define HIGH_QUALITY 1
+
 OptionMenu::OptionMenu()
 	: MultiLevelMenuBase()
 {
@@ -49,17 +51,23 @@ void OptionMenu::Draw(int x, int y, int sx, int sy)
 	if (m_currentNode->m_currentSelection == 0)
 		return; // empty tree
 
-	const int fontSize = 30;
-	const int lineSize = 40;
+	const int fontSize = 18;
+	const int lineSize = 24;
 
 	int numNodes = 0;
 
 	for (Node * node = m_currentNode->m_firstChild; node != 0; node = node->m_nextSibling)
 		numNodes++;
 
-	setColor(0, 0, 0, 191);
+	setColor(0, 0, 0, 120);
+#if HIGH_QUALITY
+	hqBegin(HQ_FILLED_ROUNDED_RECTS);
+	hqFillRoundedRect(x, y, x + sx, y + numNodes * lineSize, 8.f);
+	hqEnd();
+#else
 	drawRect(x, y, x + sx, y + numNodes * lineSize);
-
+#endif
+	
 	int index = 0;
 	for (Node * node = m_currentNode->m_firstChild; node != 0; node = node->m_nextSibling, index++)
 	{
@@ -68,10 +76,17 @@ void OptionMenu::Draw(int x, int y, int sx, int sy)
 		if (node == m_currentNode->m_currentSelection)
 		{
 			if (option && option->GetType() == OptionBase::kType_Command)
-				setColor(255, 227, 127, 191);
+				setColor(255, 227, 127, 240);
 			else
-				setColor(127, 227, 255, 191);
+				setColor(127, 227, 255, 240);
+			
+		#if HIGH_QUALITY
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			hqFillRoundedRect(x, y + index * lineSize, x + sx, y + (index + 1) * lineSize, 8.f);
+			hqEnd();
+		#else
 			drawRect(x, y + index * lineSize, x + sx, y + (index + 1) * lineSize);
+		#endif
 			setColor(0, 0, 0);
 		}
 		else
@@ -81,21 +96,21 @@ void OptionMenu::Draw(int x, int y, int sx, int sy)
 			else
 				setColor(127, 227, 255);
 		}
-		drawText(x + 2, y + index * lineSize, fontSize, +1.f, +1.f, option ? "%s" : "[ %s ]", node->m_name.c_str());
+		drawText(x + 2 + 4, y + (index + .5f) * lineSize, fontSize, +1.f, 0.f, option ? "%s" : "[ %s ]", node->m_name.c_str());
 		if (option)
 		{
 			const int bufferSize = 256;
 			char buffer[bufferSize];
 			option->ToString(buffer, bufferSize);
-
+			
 			const OptionValueAlias * alias;
 			for (alias = option->GetValueAliasList(); alias != 0; alias = alias->GetNext())
 				if (!strcmp(alias->GetValue(), buffer))
 					break;
 			if (alias)
 				strcpy_s(buffer, sizeof(buffer), alias->GetAlias());
-
-			drawText(x + sx - 1 - 2, y + index * lineSize, fontSize, -1.f, +1.f, "%s", buffer);
+			
+			drawText(x + sx - 1 - 4 - 2, y + (index + .5f) * lineSize, fontSize, -1.f, 0.f, buffer);
 		}
 	}
 

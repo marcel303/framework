@@ -2,6 +2,8 @@
 #include "StatTimerMenu.h"
 #include "StatTimers.h"
 
+#define HIGH_QUALITY 1
+
 StatTimerMenu::StatTimerMenu()
 	: MultiLevelMenuBase()
 {
@@ -28,8 +30,8 @@ void StatTimerMenu::Draw(int x, int y, int sx, int sy)
 	if (m_currentNode->m_currentSelection == 0)
 		return; // empty tree
 
-	const int fontSize = 30;
-	const int lineSize = 40;
+	const int fontSize = 18;
+	const int lineSize = 24;
 	const int captionSize = 100;
 
 	int numNodes = 0;
@@ -37,14 +39,20 @@ void StatTimerMenu::Draw(int x, int y, int sx, int sy)
 	for (Node * node = m_currentNode->m_firstChild; node != 0; node = node->m_nextSibling)
 		numNodes++;
 
-	setColor(0, 0, 0, 191);
+	setColor(0, 0, 0, 120);
+#if HIGH_QUALITY
+	hqBegin(HQ_FILLED_ROUNDED_RECTS);
+	hqFillRoundedRect(x, y, x + sx, y + (numNodes + 1) * lineSize, 8.f);
+	hqEnd();
+#else
 	drawRect(x, y, x + sx, y + (numNodes + 1) * lineSize);
+#endif
 
 	int currentY = y;
 
 	setColor(127, 227, 255);
-	drawText(x + sx - 2 - captionSize, currentY + lineSize * .5f, fontSize, -1.f, 0.f, "time");
-	drawText(x + sx - 2              , currentY + lineSize * .5f, fontSize, -1.f, 0.f, "count");
+	drawText(x + sx - 8 - 2 - captionSize, currentY + lineSize * .5f, fontSize, -1.f, 0.f, "time");
+	drawText(x + sx - 8 - 2              , currentY + lineSize * .5f, fontSize, -1.f, 0.f, "count");
 
 	currentY += lineSize;
 
@@ -55,8 +63,14 @@ void StatTimerMenu::Draw(int x, int y, int sx, int sy)
 
 		if (node == m_currentNode->m_currentSelection)
 		{
-			setColor(127, 227, 255, 191);
+			setColor(127, 227, 255, 240);
+		#if HIGH_QUALITY
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			hqFillRoundedRect(x, currentY, x + sx, currentY + lineSize, 4.f);
+			hqEnd();
+		#else
 			drawRect(x, currentY, x + sx, currentY + lineSize);
+		#endif
 			setColor(0, 0, 0);
 		}
 		else
