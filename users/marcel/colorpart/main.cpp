@@ -1,4 +1,4 @@
-#include "audiostream/AudioOutput.h"
+#include "audiostream/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStream.h"
 #include "Calc.h"
 #include "framework.h"
@@ -124,7 +124,7 @@ struct ParticleSystem
 	void tick(const float dt)
 	{
 		const float vfPerSecond = .1f;
-		const float vf = std::powf(1.f - vfPerSecond, dt);
+		const float vf = powf(1.f - vfPerSecond, dt);
 
 		for (auto & p : particles)
 		{
@@ -147,7 +147,7 @@ struct ParticleSystem
 			{
 				// maintain fixed speed
 
-				const float vs = std::sqrtf(p.vx * p.vx + p.vy * p.vy);
+				const float vs = sqrtf(p.vx * p.vx + p.vy * p.vy);
 				p.vx /= vs;
 				p.vy /= vs;
 				p.vx *= 100.f;
@@ -206,83 +206,14 @@ static void randomizeParticles(ParticleSystem & ps, const float cx, const float 
 		p.fixedColor = (rand() % 50) == 0;
 
 		const float angle = random(0.f, Calc::m2PI);
-		p.vx = std::cosf(angle) * speed;
-		p.vy = std::sinf(angle) * speed;
+		p.vx = cosf(angle) * speed;
+		p.vy = sinf(angle) * speed;
 
 		p.r = 1.f;
 
 		p.takeColor(1.f);
 	}
 }
-
-class AudioOutputThread
-{
-	SDL_Thread * m_thread;
-
-	AudioOutput * m_output;
-	AudioStream * m_stream;
-
-	volatile bool m_stop;
-
-	static int ThreadMain(void * obj)
-	{
-		AudioOutputThread * self = (AudioOutputThread*)obj;
-
-		self->run();
-
-		return 0;
-	}
-
-	void run()
-	{
-		SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
-		
-		while (!m_stop)
-		{
-			m_output->Update(m_stream);
-
-			SDL_Delay(5);
-		}
-	}
-
-public:
-	AudioOutputThread(AudioOutput * output, AudioStream * stream)
-		: m_thread(nullptr)
-		, m_output(output)
-		, m_stream(stream)
-		, m_stop(false)
-	{
-	}
-
-	~AudioOutputThread()
-	{
-		shutdown();
-	}
-
-	void init()
-	{
-		Assert(m_thread == nullptr);
-		Assert(m_stop == false);
-
-		if (m_thread == nullptr)
-		{
-			m_thread = SDL_CreateThread(ThreadMain, "AudioOutputThread", this);
-		}
-	}
-
-	void shutdown()
-	{
-		if (m_thread != nullptr)
-		{
-			m_stop = true;
-
-			SDL_WaitThread(m_thread, nullptr);
-			m_thread = nullptr;
-
-			m_stop = false;
-		}
-	}
-};
 
 static void blurSurface(Surface * src, Surface * dst, const float blurAmount)
 {
@@ -367,16 +298,16 @@ struct Grid
 		const float sx = GFX_SX / NUMTILES_X / 2.f;
 		const float sy = GFX_SY / NUMTILES_Y / 2.f;
 	#if 1
-		const float h = std::hypotf(mouseX - px, mouseY - py);
+		const float h = hypotf(mouseX - px, mouseY - py);
 		const float scale = 1.2f / (h / 400.f + 1.f);
-		//const float angle = Calc::DegToRad(std::sinf(framework.time) * 20.f);
-		const float angle = Calc::Lerp(0.f, Calc::DegToRad(std::sinf(framework.time) * 20.f), h / 400.f);
+		//const float angle = Calc::DegToRad(sinf(framework.time) * 20.f);
+		const float angle = Calc::Lerp(0.f, Calc::DegToRad(sinf(framework.time) * 20.f), h / 400.f);
 	#else
 		const float scale = 1.f;
 		const float angle = 0.f;
 	#endif
 
-		const float scaleX = !forDraw ? 1.f : std::cosf((1.f - cell.scaleTimer * cell.scaleTimerRcp) * Calc::mPI2);
+		const float scaleX = !forDraw ? 1.f : cosf((1.f - cell.scaleTimer * cell.scaleTimerRcp) * Calc::mPI2);
 		const float scaleY = !forDraw ? 1.f : 1.f;
 
 		result = Mat4x4(true).Translate(px, py, 0.f).Scale(sx * scale, sy * scale, 1.f).Scale(scaleX, scaleY, 1.f).RotateZ(angle);
@@ -554,6 +485,8 @@ static void randomizeImage()
 
 int main(int argc, char * argv[])
 {
+	changeDirectory("/Users/thecat/Google Drive/Projects/colorpart");
+	
 	Srt srt;
 	
 	loadSrt("roar.srt", srt);
@@ -581,10 +514,10 @@ int main(int argc, char * argv[])
 	#if DO_VIDEO
 		MediaPlayer::OpenParams params;
 		params.filename = "roar.mpg";
+		params.enableAudioStream = true;
 		mediaPlayer->openAsync(params);
 
-		AudioOutput_OpenAL * audioOutput = nullptr;
-		AudioOutputThread * audioOutputThread = nullptr;
+		AudioOutput_PortAudio * audioOutput = nullptr;
 	#endif
 
 		//Music("song.ogg").play(true);
@@ -624,6 +557,8 @@ int main(int argc, char * argv[])
 
 			if (mediaPlayer->isActive(mediaPlayer->context))
 			{
+				mediaPlayer->presentTime = mediaPlayer->audioTime;
+				
 				mediaPlayer->tick(mediaPlayer->context, true);
 
 			#if DO_VIDEO
@@ -634,13 +569,16 @@ int main(int argc, char * argv[])
 
 					if (mediaPlayer->getAudioProperties(channelCount, sampleRate))
 					{
-						audioOutput = new AudioOutput_OpenAL();
-						audioOutput->Initialize(channelCount, sampleRate, 4096);
-						audioOutput->Play();
-
-						audioOutputThread = new AudioOutputThread(audioOutput, mediaPlayer);
-						audioOutputThread->init();
+						audioOutput = new AudioOutput_PortAudio();
+						
+						audioOutput->Initialize(channelCount, sampleRate, 256);
+						audioOutput->Play(mediaPlayer);
 					}
+				}
+				
+				if (audioOutput != nullptr)
+				{
+					audioOutput->Update();
 				}
 			#endif
 			}
@@ -671,13 +609,13 @@ int main(int argc, char * argv[])
 				randomizeImage();
 			}
 
-			const float particlePickupPerSec = std::powf((std::sinf(framework.time / 3.210f) + 1.f) / 2.f, 8.f);
-			//const float particlePickupPerSec = std::powf(mouseX / float(GFX_SX), 8.f);
+			const float particlePickupPerSec = powf((sinf(framework.time / 3.210f) + 1.f) / 2.f, 8.f);
+			//const float particlePickupPerSec = powf(mouseX / float(GFX_SX), 8.f);
 
-			particlePickup = 1.f - std::powf(particlePickupPerSec, dt);
+			particlePickup = 1.f - powf(particlePickupPerSec, dt);
 
-			gravityX = std::cosf(framework.time / 2.345f) * 200.f + GFX_SX/2.f;
-			gravityY = std::sinf(framework.time / 1.234f) * 100.f + GFX_SY/2.f;
+			gravityX = cosf(framework.time / 2.345f) * 200.f + GFX_SX/2.f;
+			gravityY = sinf(framework.time / 1.234f) * 100.f + GFX_SY/2.f;
 
 			ps->tick(dt);
 
@@ -689,13 +627,13 @@ int main(int argc, char * argv[])
 
 				pushSurface(finalSurface);
 				{
-					const float blurAmount = (std::sinf(framework.time / 2.f) + 1.f) / 2.f;
+					const float blurAmount = (sinf(framework.time / 2.f) + 1.f) / 2.f;
 					blurSurface(particleSurface, blurAmount);
 
 					pushSurface(particleSurface);
 					{
-						const float falloffPerSecond = (std::sinf(framework.time / 4.f) + 1.f) / 2.f;
-						const float falloff = 1.f - std::powf(falloffPerSecond, dt);
+						const float falloffPerSecond = (sinf(framework.time / 4.f) + 1.f) / 2.f;
+						const float falloff = 1.f - powf(falloffPerSecond, dt);
 						setColorf(0.f, 0.f, 0.f, falloff);
 						drawRect(0, 0, particleSurface->getWidth(), particleSurface->getHeight());
 
@@ -721,7 +659,7 @@ int main(int argc, char * argv[])
 						shader.setImmediate("param3", 0);
 						shader.setImmediate("param4", 0);
 						shader.setImmediate("time", time * 5.f);
-						shader.setImmediate("alpha", (std::sinf(framework.time * .1f) + 1.f)/2.f/4.f);
+						shader.setImmediate("alpha", (sinf(framework.time * .1f) + 1.f)/2.f/4.f);
 						setShader(shader);
 						{
 							pushBlend(BLEND_OPAQUE);
@@ -812,7 +750,7 @@ int main(int argc, char * argv[])
 						drawRect(0, 0, textOverlay->getWidth(), textOverlay->getHeight());
 						popBlend();
 
-						const SrtFrame * srtFrame = srt.findFrameByTime(mediaPlayer->context->mpContext.GetAudioTime());
+						const SrtFrame * srtFrame = srt.findFrameByTime(mediaPlayer->audioTime);
 
 						if (srtFrame != nullptr)
 						{
@@ -869,9 +807,6 @@ int main(int argc, char * argv[])
 		image = nullptr;
 
 	#if DO_VIDEO
-		delete audioOutputThread;
-		audioOutputThread = nullptr;
-
 		delete audioOutput;
 		audioOutput = nullptr;
 	#endif
