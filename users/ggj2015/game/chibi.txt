@@ -1,0 +1,4 @@
+app marcel-ggj2015
+	depend_library framework
+	add_files csv.cpp csv.h gamedefs.cpp gamedefs.h gamerules.cpp gamerules.h gamestate.cpp gamestate.h main.cpp main.h OptionMenu.cpp OptionMenu.h StatTimerMenu.cpp StatTimerMenu.h
+	resource_path "/Users/thecat/Dropbox/Gamejam 2015/game/data"
