@@ -9,10 +9,6 @@
 	#include "leap/Leap.h"
 #endif
 
-extern void testAvpaint();
-extern void testJpegStreamer();
-extern void testPortaudio();
-
 // todo : integrate Facebook Messenger Node.js app with https://cloud.google.com/vision/, for inappropriate content detection
 // todo : write something to extract dominant colors from (crowd sourced) images
 
@@ -699,22 +695,14 @@ int main(int argc, char * argv[])
 
 	//
 	
-	testAvpaint();
-	
-	testJpegStreamer();
-	
-	//
-	
 	//framework.fullscreen = true;
 	
 	if (framework.init(GFX_SX, GFX_SY))
 	{
-		testPortaudio();
-		
 	#ifdef WIN32
-		changeDirectory("C:/Users/Marcel/Google Drive/The Grooop - Welcome");
+		changeDirectory("C:/Users/Marcel/Google Drive/The Grooop - Welcome/app");
 	#else
-		changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome");
+		changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome/app");
 	#endif
 	
 		framework.fillCachesWithPath(".", false);
@@ -765,9 +753,15 @@ int main(int argc, char * argv[])
 		int uploadedImageIndex = 0;
 		float uploadedImageFade = 0.f;
 		
-		while (!framework.quitRequested)
+		for (;;)
 		{
 			framework.process();
+			
+			if (keyboard.wentDown(SDLK_ESCAPE))
+				framework.quitRequested = true;
+			
+			if (framework.quitRequested)
+				break;
 			
 		#if ENABLE_LEAPMOTION
 			// process LeapMotion input

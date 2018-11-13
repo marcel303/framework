@@ -1,0 +1,4 @@
+app marcel-ambisonics1
+	depend_library framework
+	scan_files *.cpp
+	scan_files *.h

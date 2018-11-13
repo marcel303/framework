@@ -1,8 +1,3 @@
-#define DO_VIDEOLOOPS 0
-#define ENABLE_LEAPMOTION 1
-
-#if DO_VIDEOLOOPS
-
 #include "avtypes.h"
 #include "Calc.h"
 #include "framework.h"
@@ -17,10 +12,8 @@
 #define MAX_LAYERS 3
 #define NUM_LAYERS 3
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
-extern void applyFsfx(Surface & surface, const char * name, const float strength = 1.f, const float param1 = 0.f, const float param2 = 0.f, const float param3 = 0.f, const float param4 = 0.f, GLuint texture1 = 0);
+const int GFX_SX = 1024;
+const int GFX_SY = 768;
 
 //
 
@@ -104,9 +97,23 @@ static void applyMask(GLuint a, GLuint b, GLuint mask)
 	clearShader();
 }
 
-void testAvpaint()
+void applyFsfx(Surface & surface, const char * name, const float strength = 1.f, const float param1 = 0.f, const float param2 = 0.f, const float param3 = 0.f, const float param4 = 0.f, GLuint texture1 = 0)
 {
-	changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome");
+	Shader shader(name, "fsfx/fsfx.vs", name);
+	setShader(shader);
+	{
+		shader.setImmediate("params1", strength, 0.f, 0.f, 0.f);
+		shader.setImmediate("params2", param1, param2, param3, param4);
+		shader.setTexture("colormap", 0, surface.getTexture());
+		shader.setTexture("texture1", 1, texture1);
+		surface.postprocess();
+	}
+	clearShader();
+}
+
+int main(int argc, char * argv[])
+{
+	changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome/app");
 
 	if (framework.init(GFX_SX, GFX_SY))
 	{
@@ -186,9 +193,15 @@ void testAvpaint()
 		GrainsEffect grainsEffect;
 		int nextGrainIndex = 0;
 		
-		while (!framework.quitRequested)
+		for (;;)
 		{
 			framework.process();
+			
+			if (keyboard.wentDown(SDLK_ESCAPE))
+				framework.quitRequested = true;
+			
+			if (framework.quitRequested)
+				break;
 
 		#if ENABLE_LEAPMOTION
 			// process LeapMotion input
@@ -692,11 +705,3 @@ void testAvpaint()
 		framework.shutdown();
 	}
 }
-
-#else
-
-void testAvpaint()
-{
-}
-
-#endif

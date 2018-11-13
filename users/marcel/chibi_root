@@ -1,6 +1,8 @@
 add 4d-imu9250
+add ambisonics1
 add anaglyphic
 add artnet1
+add avpaint
 add biquad-simd
 add jsusfx1
 add magiclines
