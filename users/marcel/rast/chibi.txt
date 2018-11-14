@@ -1,0 +1,4 @@
+app marcel-rast
+	depend_library framework
+	add_files main.cpp md3.cpp md3.h util.h
+	resource_path .
