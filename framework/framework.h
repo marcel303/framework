@@ -479,6 +479,7 @@ class ShaderBase
 public:
 	virtual ~ShaderBase() { }
 	
+	virtual bool isValid() const = 0;
 	virtual GLuint getProgram() const = 0;
 	virtual SHADER_TYPE getType() const = 0;
 	virtual int getVersion() const = 0;
@@ -498,7 +499,7 @@ public:
 	virtual ~Shader();
 	
 	void load(const char * name, const char * filenameVs, const char * filenamePs);
-	bool isValid() const;
+	virtual bool isValid() const override;
 	virtual GLuint getProgram() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	virtual int getVersion() const override;
@@ -552,7 +553,7 @@ public:
 	virtual ~ComputeShader();
 
 	void load(const char * filename, const int groupSx = kDefaultGroupSx, const int groupSy = kDefaultGroupSy, const int groupSz = kDefaultGroupSz);
-	bool isValid() const { return m_shader != 0; }
+	virtual bool isValid() const override { return m_shader != 0; }
 	virtual GLuint getProgram() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_CS; }
 	virtual int getVersion() const override;

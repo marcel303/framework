@@ -7553,26 +7553,33 @@ static void gxFlush(bool endOfBatch)
 			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
 		}
-
-		if (indexed)
+		
+		if (shader.isValid())
 		{
-			#if GX_USE_UBERBUFFER
-			glDrawElementsBaseVertex(s_gxPrimitiveType, numElements, INDEX_TYPE, (void*)(s_gxUberIndexBufferPosition * sizeof(glindex_t)), s_gxUberVertexBufferPosition);
-			#elif GX_USE_ELEMENT_ARRAY_BUFFER
-			glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, 0);
-			#else
-			glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, indices);
-			#endif
-			checkErrorGL();
+			if (indexed)
+			{
+				#if GX_USE_UBERBUFFER
+				glDrawElementsBaseVertex(s_gxPrimitiveType, numElements, INDEX_TYPE, (void*)(s_gxUberIndexBufferPosition * sizeof(glindex_t)), s_gxUberVertexBufferPosition);
+				#elif GX_USE_ELEMENT_ARRAY_BUFFER
+				glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, 0);
+				#else
+				glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, indices);
+				#endif
+				checkErrorGL();
+			}
+			else
+			{
+				#if GX_USE_UBERBUFFER
+				glDrawArrays(s_gxPrimitiveType, s_gxUberVertexBufferPosition, numElements);
+				#else
+				glDrawArrays(s_gxPrimitiveType, 0, numElements);
+				#endif
+				checkErrorGL();
+			}
 		}
 		else
 		{
-			#if GX_USE_UBERBUFFER
-			glDrawArrays(s_gxPrimitiveType, s_gxUberVertexBufferPosition, numElements);
-			#else
-			glDrawArrays(s_gxPrimitiveType, 0, numElements);
-			#endif
-			checkErrorGL();
+			logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
 		}
 		
 	#if GX_USE_UBERBUFFER
