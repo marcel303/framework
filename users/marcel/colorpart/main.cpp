@@ -450,10 +450,12 @@ struct Grid
 
 				gxColor4f(1.f, 1.f, 1.f, ca);
 
-				gxVertex2f(p1[0], p1[1]); gxVertex2f(p2[0], p2[1]);
-				gxVertex2f(p2[0], p2[1]); gxVertex2f(p3[0], p3[1]);
-				gxVertex2f(p3[0], p3[1]); gxVertex2f(p4[0], p4[1]);
-				gxVertex2f(p4[0], p4[1]); gxVertex2f(p1[0], p1[1]);
+				const float stroke = 1.3f;
+				
+				hqLine(p1[0], p1[1], stroke, p2[0], p2[1], stroke);
+				hqLine(p2[0], p2[1], stroke, p3[0], p3[1], stroke);
+				hqLine(p3[0], p3[1], stroke, p4[0], p4[1], stroke);
+				hqLine(p4[0], p4[1], stroke, p1[0], p1[1], stroke);
 			}
 		}
 	}
@@ -713,14 +715,11 @@ int main(int argc, char * argv[])
 								pushBlend(BLEND_ALPHA);
 								{
 									setColor(255, 255, 255, 255, 63);
-									glEnable(GL_LINE_SMOOTH);
-									glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-									gxBegin(GL_LINES);
+									hqBegin(HQ_LINES);
 									{
 										grid.drawFG();
 									}
-									gxEnd();
-									glDisable(GL_LINE_SMOOTH);
+									hqEnd();
 								}
 								popBlend();
 							}
