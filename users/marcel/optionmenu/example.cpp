@@ -16,10 +16,12 @@ OPTION_DEFINE(float, s_float, "Float Option");
 OPTION_DEFINE(float, s_suboption1, "Suboptions/Option 1");
 OPTION_DEFINE(float, s_suboption2, "Suboptions/Option 2");
 
-COMMAND_OPTION(s_command, "Command Option", []{ });
+static float s_flash = 0.f;
+COMMAND_OPTION(s_command, "Command Option", []{ logDebug("Command!"); s_flash = 1.f; });
 
 TIMER_DEFINE(s_timer1, StatTimer::PerFrame, "Timer 1");
 TIMER_DEFINE(s_timer2, StatTimer::PerSecond, "Timer 2");
+TIMER_DEFINE(s_drawTime, StatTimer::PerFrame, "Draw");
 
 int main(int argc, char * argv[])
 {
@@ -33,6 +35,8 @@ int main(int argc, char * argv[])
 	OptionMenu optionMenu;
 	
 	StatTimerMenu statMenu;
+	
+	Shader shader("shader");
 	
 	for (;;)
 	{
@@ -49,6 +53,8 @@ int main(int argc, char * argv[])
 		const float dt = framework.timeStep;
 		
 		TIMER_ADD_SECONDS(s_timer1, dt);
+		
+		s_flash = fmaxf(s_flash - dt, 0.f);
 		
 		//
 		
@@ -80,10 +86,12 @@ int main(int argc, char * argv[])
 
 		framework.beginDraw(80, 40, 20, 0);
 		{
+			TIMER_SCOPE(s_drawTime);
+			
 			setFont("calibri.ttf");
 			
-			Shader shader("shader");
 			shader.setImmediate("time", framework.time);
+			shader.setImmediate("flash", s_flash);
 			setShader(shader);
 			drawRect(0, 0, 800, 600);
 			clearShader();
