@@ -62,8 +62,8 @@ static inline uint8_t hi16(const uint16_t value)
 }
 
 bool ArtnetPacket::makeDMX512(
-	const uint8_t sequence, const uint8_t physical, const uint16_t universe,
-	const uint8_t * __restrict values, const int numValues)
+	const uint8_t * __restrict values, const int numValues,
+	const uint8_t sequence, const uint8_t physical, const uint16_t universe)
 {
 	if (numValues > 512)
 		return false;

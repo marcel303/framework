@@ -49,13 +49,13 @@ struct ArtnetPacket
 
 	/*
 	Create a ArtNet-DMX packet with 1 to 512 DMX values.
+	@values: The array of DMX values between 0 and 255.
+	@numValues: The number of values in the DMX values array. This can be anywhere between 1 and 512
 	@sequenceNumber: The DMX packet sequence number. If 0, the sequence number is ignored. If between 1 and 255, the receiver will use these numbers to re-order data packets.
 	@physical: The physical ID of the sender. Usually ignored and 0.
 	@universe: The universe of the DMX values. Usually 0 when the DMX setup isn't segmented into universes.
-	@values: The array of DMX values between 0 and 255.
-	@numValues: The number of values in the DMX values array. This can be anywhere between 1 and 512
 	*/
 	bool makeDMX512(
-		const uint8_t sequenceNumber, const uint8_t physical, const uint16_t universe,
-		const uint8_t * __restrict values, const int numValues);
+		const uint8_t * __restrict values, const int numValues,
+		const uint8_t sequenceNumber = 0, const uint8_t physical = 0, const uint16_t universe = 0);
 };

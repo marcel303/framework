@@ -92,7 +92,7 @@ int main(int argc, char * argv[])
 			SDL_Delay(25);
 
 			ArtnetPacket packet;
-			packet.makeDMX512(sequence, 0, 0, values, 3);
+			packet.makeDMX512(values, 3, sequence);
 
 			if (sequence != 0x00)
 			{
