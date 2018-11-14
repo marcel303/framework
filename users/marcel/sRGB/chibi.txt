@@ -1,0 +1,3 @@
+app marcel-srgb
+	depend_library framework
+	add_files main.cpp
