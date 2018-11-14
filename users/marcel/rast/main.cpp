@@ -1,14 +1,12 @@
-#include <assert.h>
 #include <emmintrin.h>
-#include <exception>
 #include <math.h>
-#include <vector>
 #include <xmmintrin.h>
 #include "framework.h"
 #include "image.h"
+#include "md3.h"
 #include "SIMD.h"
 #include "SimdMat4x4.h"
-#include "md3.h"
+#include "Timer.h"
 
 #if 0
 	#define FTOI(v) _mm_cvtss_si32(_mm_set_ss(v))
@@ -24,75 +22,11 @@
 	#define _MM_ACCESS_I32(v, i) ((v).m128i_i32[i])
 #endif
 
-#if !defined(_MSC_VER)
-#include <sys/time.h>
-class Timer
-{
-public:
-	void Start()
-	{
-		gettimeofday(&t1, 0);
-	}
-	
-	void Stop()
-	{
-		gettimeofday(&t2, 0);
-	}
-	
-	unsigned int usec()
-	{
-		timeval d;
-		timersub(&t2, &t1, &d);
-		return d.tv_sec * 1000000 + d.tv_usec;
-	}
-	
-	timeval t1;
-	timeval t2;
-};
-#else
-#include <windows.h>
-class Timer
-{
-public:
-	void Start()
-	{
-		t1 = timeGetTime();
-	}
-
-	void Stop()
-	{
-		t2 = timeGetTime();
-	}
-
-	unsigned int usec()
-	{
-		return (t2 - t1) * 1000;
-	}
-
-	DWORD t1;
-	DWORD t2;
-};
-#endif
-
-#define ASSERT assert
-//#define ASSERT(expr) do { } while (false)
-
-#if 0
-class exception : public std::exception
-{
-public:
-	exception(const char * msg) : m_msg(msg) { }
-	virtual const char * what() const throw() { return m_msg; }
-private:
-	const char * m_msg;
-};
-#else
 static void throw_exception(const char* msg)
 {
 	printf("%s", msg);
 	exit(-1);
 }
-#endif
 
 typedef unsigned int ptr_t;
 typedef unsigned char u8;
@@ -220,7 +154,7 @@ public:
 
 		unsigned int size = m_Size >> 1;
 
-		ASSERT(size >= 1);
+		Assert(size >= 1);
 
 		level->SetSize(size);
 
@@ -627,7 +561,7 @@ static FORCEINLINE void Fill(
 
 static void Fill(ScreenCoordValue y)
 {
-	ASSERT(y < g_Surface.sy);
+	Assert(y < g_Surface.sy);
 	
 	float x1f = g_ScanExtentsX[y][0];
 	float x2f = g_ScanExtentsX[y][1];
@@ -693,8 +627,8 @@ static void Fill(ScreenCoordValue y)
 	if (x2 <= x1)
 		return;
 
-	ASSERT(x1 <= 65535);
-	ASSERT(x2 <= 65535);
+	Assert(x1 <= 65535);
+	Assert(x2 <= 65535);
 
 #if USE_SUBPIXEL == 1
 	const float xd = x1 - x1f + 1.0f;
@@ -797,8 +731,8 @@ static int g_ScanExtents[2];
 
 static FORCEINLINE void Fill(int y1, int y2)
 {
-	ASSERT(y1 >= 0);
-	ASSERT(y2 <= g_Surface.sy);
+	Assert(y1 >= 0);
+	Assert(y2 <= g_Surface.sy);
 
 	if (y1 < 0)
 		y1 = 0;
@@ -807,7 +741,7 @@ static FORCEINLINE void Fill(int y1, int y2)
 	
 	for (int y = y1; y < y2; ++y)
 	{
-		ASSERT(g_ScanState[y] == 2);
+		Assert(g_ScanState[y] == 2);
 		//if (g_ScanState[y] == 2)
 		{
 			Fill(y);
@@ -919,7 +853,7 @@ static void Scan(const Vert * __restrict v1, const Vert * __restrict v2)
 	if (y2 > g_Surface.sy)
 		y2 = g_Surface.sy;
 
-	ASSERT(y1 < y2);
+	Assert(y1 < y2);
 
 	if (y1 < g_ScanExtents[0] || g_ScanExtents[0] == EXT_UNDEFINED)
 		g_ScanExtents[0] = y1;
@@ -932,7 +866,7 @@ static void Scan(const Vert * __restrict v1, const Vert * __restrict v2)
 
 		ScanStateValue state = g_ScanState[y];
 		
-		ASSERT(state <= 1);
+		Assert(state <= 1);
 
 		//if (state <= 1)
 		{
@@ -983,7 +917,7 @@ static FORCEINLINE void WriteVert(Vert * __restrict rv, const DataVert * __restr
 
 static FORCEINLINE void WriteVert(Vert * __restrict rv, const DataVert * __restrict dv, SimdVecArg v, SimdVecArg p)
 {
-	ASSERT(v.Z() > 0.0f);
+	Assert(v.Z() > 0.0f);
 #if 0
 	SimdVec p2 = p.Mul(screenSize).Add(mid);
 	rv->x = p2.X();
@@ -1120,46 +1054,19 @@ private:
 	double mFalloff;
 };
 
-#ifdef WINDOWS
-int mswindows_handle_hardware_exceptions (DWORD code)
-{
-	printf("Handling exception\n");
-	if (code == STATUS_DATATYPE_MISALIGNMENT)
-	{
-		printf("misalignment fault!\n");
-		return EXCEPTION_EXECUTE_HANDLER;
-	}
-	else
-		return EXCEPTION_CONTINUE_SEARCH;
-}
-#endif
-
 static void Execute()
 {
 #if defined(CHIBI_RESOURCE_PATH)
 	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
 
-#if defined(WINDOWS)
-	HANDLE process = GetCurrentProcess();
-	SetPriorityClass(process, HIGH_PRIORITY_CLASS);
-	HANDLE thread = GetCurrentThread();
-	if (!SetThreadPriority(thread, THREAD_PRIORITY_HIGHEST))
-		throw_exception("failed to set thread priority");
-	if (!SetThreadPriorityBoost(thread, FALSE))
-		throw_exception("failed to set thread priority boost");
-	//if (!SetThreadAffinityMask(thread, 2))
-	//	throw_exception("failed to set thread affinity");
-#endif
-
-	if (!framework.init(640, 480))
+	const int gfxSx = 640; const int gfxSy = 480;
+	//const int gfxSx = 1280; const int gfxSy = 720;
+	
+	if (!framework.init(gfxSx, gfxSy))
 		throw_exception("failed to initialize SDL");
 
-	ImageData surface(640, 480);
-	//SDL_Surface* surface = SDL_SetVideoMode(1024, 768, 32, 0);
-	//SDL_Surface* surface = SDL_SetVideoMode(320, 240, 32, 0);
-	//SDL_Surface* surface = SDL_SetVideoMode(1920, 1080, 32, SDL_FULLSCREEN);
-	//SDL_Surface* surface = SDL_SetVideoMode(1280, 1024, 32, SDL_FULLSCREEN);
+	ImageData surface(gfxSx, gfxSy);
 
 	g_Surface.sx = surface.sx;
 	g_Surface.sy = surface.sy;
@@ -1210,10 +1117,6 @@ static void Execute()
 
 	while (stop == false)
 	{
-#ifdef WINDOWS
-		__try
-		{
-#endif
 		framework.process();
 
 		if (framework.quitRequested)
@@ -1340,9 +1243,7 @@ static void Execute()
 			Fill();
 		}
 		
-		Timer time;
-		
-		time.Start();
+		uint64_t time = -g_TimerRT.TimeUS_get();
 
 #if 1
 		{
@@ -1402,13 +1303,13 @@ static void Execute()
 		}
 #endif
 
-		time.Stop();
+		time += g_TimerRT.TimeUS_get();
 
 #if 1
 		//if (frame % 100 == 0)
 		{
 			//printf("time: %gms\n", time / 100.0f);
-			printf("time: %gms\n", time.usec() / 1000.0f);
+			printf("time: %gms\n", time / 1000.0f);
 			//time = 0;
 		}
 #endif
@@ -1419,7 +1320,7 @@ static void Execute()
 		{
 			gxSetTexture(texture);
 			pushBlend(BLEND_OPAQUE);
-			drawRect(0, 0, 640, 480);
+			drawRect(0, 0, surface.sx, surface.sy);
 			popBlend();
 			gxSetTexture(0);
 		}
@@ -1429,13 +1330,6 @@ static void Execute()
 		texture = 0;
 
 		++frame;
-
-#ifdef WINDOWS
-		}
-		__except(mswindows_handle_hardware_exceptions (GetExceptionCode ()))
-		{
-		}
-#endif
 	}
 
 	g_Texture = 0;
@@ -1453,15 +1347,7 @@ static void Execute()
 
 int main(int argc, char* argv[])
 {
-	try
-	{
-		Execute();
+	Execute();
 
-		return 0;
-	}
-	catch (std::exception & e)
-	{
-		printf("error: %s\n", e.what());
-		return -1;
-	}
+	return 0;
 }
