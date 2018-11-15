@@ -151,7 +151,7 @@ GameState::GameState()
 
 void GameState::setupPlayerGoals()
 {
-	// fixme : need at least one unique goal per player..
+	// fixme-ggj215 : need at least one unique goal per player..
 
 	for (int i = 0; i < 2; ++i)
 	{
