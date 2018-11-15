@@ -43,14 +43,12 @@ int main(int argc, char * argv[])
 	{
 		MediaPlayer mp;
 		
-	// fixme : don't use a local file path
 		MediaPlayer::OpenParams openParams;
-		//openParams.filename = "lucy.mp4";
-		openParams.filename = "/Users/thecat/Downloads/Lisbon Story.avi/Lisbon Story.avi";
+		openParams.filename = "newpath.mp4";
 		openParams.outputMode = MP::kOutputMode_RGBA;
 		openParams.enableAudioStream = true;
 		openParams.enableVideoStream = true;
-		openParams.desiredAudioStreamIndex = 1;
+		openParams.desiredAudioStreamIndex = 1; // select second audio stream, if available
 		mp.openAsync(openParams);
 		
 		AudioOutput_PortAudio audioOutput;

@@ -41,11 +41,8 @@ int main(int argc, char * argv[])
 	if (framework.init(800, 400))
 	{
 		MediaPlayer mp;
-
-	// fixme : don't use a local file path
-		//mp.openAsync("lucy.mp4", MP::kOutputMode_RGBA);
-		mp.openAsync("/Users/thecat/Movies/L_SNINGEN.mp4", MP::kOutputMode_RGBA);
-		//mp.openAsync("/Users/thecat/Movies/Game Capture HD Library/Mijn video 13/Segment_0001.mp4", MP::kOutputMode_RGBA);
+		
+		mp.openAsync("newpath.mp4", MP::kOutputMode_RGBA);
 
 		SDL_Cursor * handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 		
