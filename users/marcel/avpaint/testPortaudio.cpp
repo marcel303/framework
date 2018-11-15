@@ -99,6 +99,8 @@ struct TriangleOsc : BaseOsc
 	float phase;
 	float phaseStep;
 	
+	float currentPhaseStep;
+	
 	virtual ~TriangleOsc() override
 	{
 	}
@@ -107,15 +109,15 @@ struct TriangleOsc : BaseOsc
 	{
 		phase = 0.f;
 		phaseStep = frequency / SAMPLERATE * 2.f;
+		
+		currentPhaseStep = phaseStep;
 	}
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
 	{
-		//const float phaseStep = this->phaseStep * mousePx;
-		
 		const float targetPhaseStep = this->phaseStep * (mousePx + 1.f);
 		
-		static float phaseStep = this->phaseStep; // fixme : non-static
+		float phaseStep = this->currentPhaseStep;
 		
 		const float retain1 = .999f;
 		const float retain2 = 1.f - retain1;
