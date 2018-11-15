@@ -1,0 +1,123 @@
+static const char * s_msdfUtil = R"SHADER(
+
+float median(float r, float g, float b)
+{
+    return max(min(r, g), min(max(r, g), b));
+}
+
+vec2 safeNormalize(vec2 v)
+{
+	float len = length(v);
+	len = (len > 0.0) ? 1.0 / len : 0.0;
+	return v * len;
+}
+
+float sampleMsdf_Marcel1(sampler2D msdf, vec2 texcoord)
+{
+	vec3 msdfSample = texture(msdf, texcoord).rgb;
+	float sigDist = median(msdfSample.r, msdfSample.g, msdfSample.b) - 0.5;
+	float w = fwidth(sigDist);
+	return smoothstep(-w, +w, sigDist);
+}
+
+float sampleMsdf_Marcel2(sampler2D msdf, vec2 texcoord)
+{
+	vec3 msdfSample = texture(msdf, texcoord).rgb;
+	float sigDist = median(msdfSample.r, msdfSample.g, msdfSample.b) - 0.5;
+	float w = length(vec2(dFdx(sigDist), dFdy(sigDist)));
+	return smoothstep(-w, +w, sigDist);
+}
+
+float sampleMsdf_PHoux1a(sampler2D msdf, vec2 TexCoord)
+{
+	vec3 msdfSample = texture( msdf, TexCoord ).rgb;
+	vec2 sz = textureSize( msdf, 0 );
+	float dx = dFdx( TexCoord.x ) * sz.x;
+	float dy = dFdy( TexCoord.y ) * sz.y;
+	float toPixels = 2.0 * inversesqrt( dx * dx + dy * dy );
+	float sigDist = median( msdfSample.r, msdfSample.g, msdfSample.b ) - 0.5;
+	return sigDist * toPixels + 0.5;
+}
+
+float sampleMsdf_PHoux1b(sampler2D msdf, vec2 TexCoord)
+{
+	vec3 msdfSample = texture( msdf, TexCoord ).rgb;
+	vec2 sz = textureSize( msdf, 0 );
+	float dx = dFdx( TexCoord.x ) * sz.x;
+	float dy = dFdy( TexCoord.y ) * sz.y;
+	float toPixels = inversesqrt( dx * dx + dy * dy ); // originally got multiplied by 8 .. but generates very opaque looking edges .. ?
+	float sigDist = median( msdfSample.r, msdfSample.g, msdfSample.b ) - 0.5;
+	return sigDist * toPixels + 0.5;
+}
+
+float sampleMsdf_PHoux1_Marcel(sampler2D msdf, vec2 TexCoord)
+{
+	vec3 msdfSample = texture( msdf, TexCoord ).rgb;
+	vec2 sz = textureSize( msdf, 0 );
+	float dx = dFdx( TexCoord.x ) * sz.x;
+	float dy = dFdy( TexCoord.y ) * sz.y;
+	float toPixels = 1.4 * inversesqrt( dx * dx + dy * dy ); // originally got multiplied by 8 .. but generates very opaque looking edges .. ?
+	float sigDist = median( msdfSample.r, msdfSample.g, msdfSample.b ) - 0.5;
+	return sigDist * toPixels + 0.5;
+}
+
+float sampleMsdf(sampler2D msdf, vec2 texcoord, int sampleMethod)
+{
+	float opacity;
+
+	if (sampleMethod == 0)
+		opacity = sampleMsdf_Marcel1(msdf, texcoord);
+	else if (sampleMethod == 1)
+		opacity = sampleMsdf_Marcel2(msdf, texcoord);
+	else if (sampleMethod == 2)
+		opacity = sampleMsdf_PHoux1a(msdf, texcoord);
+	else if (sampleMethod == 3)
+		opacity = sampleMsdf_PHoux1b(msdf, texcoord);
+	else if (sampleMethod == 4)
+		opacity = sampleMsdf_PHoux1_Marcel(msdf, texcoord);
+	else
+		opacity = texcoord.y;
+
+	return clamp(opacity, 0.0, 1.0);
+}
+
+float sampleMsdf_aa(sampler2D msdf, vec2 texcoord, int sampleMethod, bool useSuperSampling)
+{
+	vec2 msdfSize = textureSize(msdf, 0);
+
+    float opacity = 0.0;
+
+    if (useSuperSampling == false)
+    {
+    	opacity = sampleMsdf(msdf, texcoord, sampleMethod);
+    }
+    else if (length(dFdx(texcoord * msdfSize)) <= 1.0)
+    {
+		opacity = sampleMsdf(msdf, texcoord, sampleMethod);
+    }
+    else
+    {
+	    int kernelSize = min(5, int(length(dFdx(texcoord * msdfSize))) + 1);
+
+	    // note : devision by two provides sharpening and is more correct, as we sample in the range [-0.5, +0.5] of the derivative of texcoord, for a total sampled area of 1.0 x 1.0 = 1.0
+	    vec2 du = dFdx(texcoord) / kernelSize / 2.0;
+		vec2 dv = dFdy(texcoord) / kernelSize / 2.0;
+
+		for (int i = -kernelSize; i <= +kernelSize; ++i)
+		{
+			for (int j = -kernelSize; j <= +kernelSize; ++j)
+			{
+				vec2 texcoord = texcoord + du * i + dv * j;
+
+	    		opacity += sampleMsdf(msdf, texcoord, sampleMethod);
+			}
+		}
+
+		int numSamples = (kernelSize*2+1) * (kernelSize*2+1);
+	    opacity /= numSamples;
+	}
+
+    return opacity;
+}
+
+)SHADER";

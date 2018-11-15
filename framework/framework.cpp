@@ -6195,6 +6195,9 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 #if ENABLE_MSDF_FONTS
 
 // fixme : settle on one method
+	// todo : add shared MSDF include with various implementations
+	// todo : rework MSDF test to use a custom shader using these various implementations
+	// todo : reword MSDF shader to use only one of the various implementations
 static int sampleMethod = 3;
 static bool useSuperSampling = true;
 
