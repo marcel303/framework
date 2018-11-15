@@ -6194,13 +6194,6 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 
 #if ENABLE_MSDF_FONTS
 
-// fixme : settle on one method
-	// todo : add shared MSDF include with various implementations
-	// todo : rework MSDF test to use a custom shader using these various implementations
-	// todo : reword MSDF shader to use only one of the various implementations
-static int sampleMethod = 3;
-static bool useSuperSampling = true;
-
 static void measureText_MSDF(const stbtt_fontinfo & fontInfo, const float size, const GlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
 
 {
@@ -6279,8 +6272,6 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 		setShader(shader);
 		
 		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture);
-		shader.setImmediate("sampleMethod", sampleMethod);
-		shader.setImmediate("useSuperSampling", useSuperSampling);
 		
 		gxBegin(GL_QUADS);
 	}
@@ -6429,7 +6420,7 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 #endif
 }
 
-void beginTextBatch()
+void beginTextBatch(Shader * overrideShader)
 {
 	if (globals.fontMode == FONT_BITMAP)
 	{
@@ -6450,12 +6441,12 @@ void beginTextBatch()
 		
 		globals.isInTextBatchMSDF = true;
 		
-		Shader & shader = globals.builtinShaders->msdfText.get();
-		setShader(shader);
+		Shader & shader = overrideShader
+			? *overrideShader
+			: globals.builtinShaders->msdfText.get();
 		
+		setShader(shader);
 		shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture);
-		shader.setImmediate("sampleMethod", sampleMethod);
-		shader.setImmediate("useSuperSampling", useSuperSampling);
 		
 		gxBegin(GL_QUADS);
 	}

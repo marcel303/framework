@@ -58,6 +58,8 @@ void testMsdfgen()
 		if (keyboard.wentDown(SDLK_z))
 			sampleMethod = (sampleMethod - 1 + kNumSampleMethods) % kNumSampleMethods;
 		
+		Shader msdfShader("msdf");
+		
 		framework.beginDraw(255, 255, 255, 0);
 		{
 			setColor(colorBlack);
@@ -89,10 +91,15 @@ void testMsdfgen()
 				
 				bool verify = keyboard.isDown(SDLK_v);
 				
-				pushFontMode(verify ? FONT_BITMAP : FONT_SDF);
+				if (verify == false)
+				{
+					msdfShader.setImmediate("sampleMethod", sampleMethod);
+					msdfShader.setImmediate("useSuperSampling", useSuperSampling);
+					
+					pushFontMode(FONT_SDF);
+					beginTextBatch(&msdfShader);
+				}
 				
-				if (!verify)
-					beginTextBatch();
 				{
 					int x = 0;
 					int y = 0;
@@ -110,10 +117,14 @@ void testMsdfgen()
 						x += 10;
 					}
 				}
-				if (!verify)
-					endTextBatch();
 				
-				popFontMode();
+				if (verify == false)
+				{
+					endTextBatch();
+					popFontMode();
+					
+					clearShader();
+				}
 			}
 			gxPopMatrix();
 			

@@ -1274,7 +1274,7 @@ void drawRectLine(float x1, float y1, float x2, float y2);
 void drawCircle(float x, float y, float radius, int numSegments);
 void fillCircle(float x, float y, float radius, int numSegments);
 void measureText(float size, float & sx, float & sy, const char * format, ...);
-void beginTextBatch();
+void beginTextBatch(Shader * overrideShader = nullptr);
 void endTextBatch();
 void drawText(float x, float y, float size, float alignX, float alignY, const char * format, ...);
 void measureTextArea(float size, float maxSx, float & sx, float & sy, const char * format, ...);
