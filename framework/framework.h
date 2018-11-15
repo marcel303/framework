@@ -346,6 +346,8 @@ public:
 	std::vector<SDL_Event> events;
 	
 private:
+	uint32_t m_lastTick;
+	
 	Sprite * m_sprites;
 	Model * m_models;
 	Window * m_windows;

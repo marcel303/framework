@@ -167,6 +167,8 @@ Framework::Framework()
 	quitRequested = false;
 	time = 0.f;
 	timeStep = 1.f / 60.f;
+	
+	m_lastTick = -1;
 
 	m_sprites = 0;
 	m_models = 0;
@@ -637,6 +639,10 @@ bool Framework::shutdown()
 	fillCachesUnknownResourceCallback = 0;
 	realTimeEditCallback = 0;
 	initErrorHandler = 0;
+	
+	events.clear();
+	
+	m_lastTick = -1;
 	
 	return result;
 }
@@ -1217,12 +1223,12 @@ void Framework::process()
 	
 	//
 	
-	static int tstamp1 = SDL_GetTicks();
-	const int tstamp2 = SDL_GetTicks();
-	int delta = tstamp2 - tstamp1;
-	tstamp1 = tstamp2;
-	//if (delta == 0)
-	//	delta = 1;
+	const uint32_t tickCount = SDL_GetTicks();
+	if (m_lastTick == -1)
+		m_lastTick = tickCount;
+	const uint32_t delta = tickCount - m_lastTick;
+	m_lastTick = tickCount;
+
 	timeStep = delta / 1000.f;
 
 	time += timeStep;
