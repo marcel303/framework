@@ -116,7 +116,7 @@ struct AllegroTimerApi
 	void lock();
 	void unlock();
 	
-	void processInterrupts(const int numSamples);
+	void processInterrupts(const int numMicroseconds);
 };
 
 struct AllegroVoiceAPI

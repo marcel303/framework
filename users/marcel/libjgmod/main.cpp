@@ -30,7 +30,6 @@
 
 //
 
-// fixme : AllegroTimerApi makes a horrible assumption about sample rates. make it use nanoseconds or something instead of 'samples'
 #define DIGI_SAMPLERATE 192000
 
 #define DO_DRAWTEST 0

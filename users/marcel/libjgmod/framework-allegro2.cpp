@@ -31,7 +31,7 @@ struct AllegroTimerReg
 	void * data;
 	std::atomic<bool> stop;
 	int delay;
-	int64_t delayInMilliSamples;
+	int delayInMicroseconds;
 	
 	int sampleTime; // when processing manually
 	SDL_Thread * thread; // when using threaded processing
@@ -76,7 +76,7 @@ void AllegroTimerApi::install_int_ex2(void (*proc)(void * data), int speed, void
 			if (r->proc == proc && r->data == data)
 			{
 				r->delay = speed;
-				r->delayInMilliSamples = (int64_t(speed) * DIGI_SAMPLERATE) / 1000;
+				r->delayInMicroseconds = int64_t(speed);
 				preexisting = true;
 				break;
 			}
@@ -94,7 +94,7 @@ void AllegroTimerApi::install_int_ex2(void (*proc)(void * data), int speed, void
 	r->data = data;
 	r->stop = false;
 	r->delay = speed;
-	r->delayInMilliSamples = (int64_t(speed) * DIGI_SAMPLERATE) / 1000;
+	r->delayInMicroseconds = int64_t(speed);
 	
 	r->sampleTime = 0;
 	r->thread = nullptr;
@@ -166,7 +166,7 @@ void AllegroTimerApi::unlock()
 	Verify(SDL_UnlockMutex(mutex) == 0);
 }
 
-void AllegroTimerApi::processInterrupts(const int numSamples)
+void AllegroTimerApi::processInterrupts(const int numMicroseconds)
 {
 	Assert(mode == kMode_Manual);
 	if (mode != kMode_Manual)
@@ -176,11 +176,11 @@ void AllegroTimerApi::processInterrupts(const int numSamples)
 	{
 		for (AllegroTimerReg * r = timerRegs; r != nullptr; r = r->next)
 		{
-			r->sampleTime += numSamples * 1000;
+			r->sampleTime += numMicroseconds;
 			
-			if (r->sampleTime >= r->delayInMilliSamples)
+			if (r->sampleTime >= r->delayInMicroseconds)
 			{
-				r->sampleTime -= r->delayInMilliSamples;
+				r->sampleTime -= r->delayInMicroseconds;
 				
 				r->proc(r->data);
 			}
@@ -775,7 +775,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 	if (timerAPI != nullptr && timerAPI->mode == AllegroTimerApi::kMode_Manual)
 	{
 		::voiceAPI = this->voiceAPI;
-		timerAPI->processInterrupts(numSamples);
+		timerAPI->processInterrupts(int64_t(numSamples) * 1000000 / DIGI_SAMPLERATE);
 		::voiceAPI = nullptr;
 	}
 	
