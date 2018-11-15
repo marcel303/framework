@@ -6,7 +6,7 @@
 #include "Path.h"
 #include "script.h"
 
-#include "audiostream/AudioOutput.h"
+#include "audiostream/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStreamVorbis.h"
 
 #if defined(WIN32)
@@ -26,7 +26,6 @@ static const int kFFTBucketCount = 32;
 static audiofft::AudioFFT s_fft;
 
 static float s_fftInputBuffer[4096];
-static float s_fftInput[kFFTSize] = { };
 static float s_fftReal[kFFTComplexSize] = { };
 static float s_fftImaginary[kFFTComplexSize] = { };
 static float s_fftBuckets[kFFTBucketCount] = { };
@@ -78,7 +77,7 @@ static void fftProcess()
 
 //
 
-// fixme : move these
+// todo : move these
 
 float EffectCtxImpl::fftBucketValue(int index) const
 {
@@ -355,11 +354,15 @@ static void drawCube(const Cube & cube)
 					{
 						const float value = cube.m_value[x][y][z];
 
-						//gxColor4f(value, value, value, 1.f);
+					#if 1
+						gxColor4f(value, value, value, 1.f);
+					#else
 						gxColor4f(
 							value * cube.m_color[x][y][z][0],
 							value * cube.m_color[x][y][z][1],
 							value * cube.m_color[x][y][z][2], 1.f);
+					#endif
+					
 						gxVertex3f(x, y, z);
 					}
 				}
@@ -639,6 +642,10 @@ public:
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 #if USE_AUDIO_INPUT
 	AudioIn audioIn;
 
@@ -663,10 +670,10 @@ int main(int argc, char * argv[])
 		AudioStream_Capture audioStream;
 		audioStream.mSource = &audioStreamOGG;
 
-		AudioOutput_OpenAL audioOutput;
-		audioOutput.Initialize(2, audioStreamOGG.mSampleRate, 1 << 14);
+		AudioOutput_PortAudio audioOutput;
+		audioOutput.Initialize(2, audioStreamOGG.mSampleRate, 256);
 		audioOutput.Volume_set(1.f);
-		audioOutput.Play();
+		audioOutput.Play(&audioStreamOGG);
 	#endif
 
 		Cube cube;
@@ -714,7 +721,10 @@ int main(int argc, char * argv[])
 				s_fftProvideTime = framework.time;
 			}
 		#else
-			audioOutput.Update(&audioStream);
+			audioOutput.Update();
+			
+			for (int i = 0; i < 4096; ++i)
+				s_fftInputBuffer[i] = random(-.1f, +.1f);
 		#endif
 
 			// generate FFT
