@@ -1,5 +1,6 @@
 library vfxgraph
 
+	depend_library artnet
 	depend_library audiograph
 	depend_library framework
 	depend_library framework-ofx
