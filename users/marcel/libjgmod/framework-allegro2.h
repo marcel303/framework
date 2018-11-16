@@ -119,7 +119,7 @@ struct AllegroTimerApi
 	void processInterrupts(const int numMicroseconds);
 };
 
-struct AllegroVoiceAPI
+struct AllegroVoiceApi
 {
 	static const int MAX_VOICES = 128;
 
@@ -147,8 +147,8 @@ struct AllegroVoiceAPI
 	
 	SDL_mutex * mutex;
 	
-	AllegroVoiceAPI(const int sampleRate);
-	~AllegroVoiceAPI();
+	AllegroVoiceApi(const int sampleRate);
+	~AllegroVoiceApi();
 	
 	int allocate_voice(SAMPLE * sample);
 	void reallocate_voice(int voice, SAMPLE * sample);
@@ -173,10 +173,10 @@ struct AllegroVoiceAPI
 
 struct AudioStream_AllegroVoiceMixer : AudioStream
 {
-	AllegroVoiceAPI * voiceAPI;
-	AllegroTimerApi * timerAPI;
+	AllegroVoiceApi * voiceApi;
+	AllegroTimerApi * timerApi;
 	
-	AudioStream_AllegroVoiceMixer(AllegroVoiceAPI * voiceAPI);
+	AudioStream_AllegroVoiceMixer(AllegroVoiceApi * voiceApi);
 	
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override;
 };

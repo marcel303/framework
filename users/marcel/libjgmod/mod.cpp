@@ -223,7 +223,7 @@ JGMOD_PLAYER::JGMOD_PLAYER()
 	enable_lasttrk_loop = true;
 }
 
-int JGMOD_PLAYER::init(int max_chn, AllegroTimerApi * in_timerApi, AllegroVoiceAPI * in_voiceApi)
+int JGMOD_PLAYER::init(int max_chn, AllegroTimerApi * in_timerApi, AllegroVoiceApi * in_voiceApi)
 {
     int index;
     int temp=0;

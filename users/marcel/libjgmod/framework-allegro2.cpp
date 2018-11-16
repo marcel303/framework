@@ -191,20 +191,20 @@ void AllegroTimerApi::processInterrupts(const int numMicroseconds)
 
 //
 
-AllegroVoiceAPI::AllegroVoiceAPI(const int in_sampleRate)
+AllegroVoiceApi::AllegroVoiceApi(const int in_sampleRate)
 	: sampleRate(in_sampleRate)
 	, mutex(nullptr)
 {
 	mutex = SDL_CreateMutex();
 }
 
-AllegroVoiceAPI::~AllegroVoiceAPI()
+AllegroVoiceApi::~AllegroVoiceApi()
 {
 	SDL_DestroyMutex(mutex);
 	mutex = nullptr;
 }
 
-int AllegroVoiceAPI::allocate_voice(SAMPLE * sample)
+int AllegroVoiceApi::allocate_voice(SAMPLE * sample)
 {
 	int result = -1;
 	
@@ -233,7 +233,7 @@ int AllegroVoiceAPI::allocate_voice(SAMPLE * sample)
 	return result;
 }
 
-void AllegroVoiceAPI::reallocate_voice(int voice, SAMPLE * sample)
+void AllegroVoiceApi::reallocate_voice(int voice, SAMPLE * sample)
 {
 	if (voice == -1)
 		return;
@@ -253,7 +253,7 @@ void AllegroVoiceAPI::reallocate_voice(int voice, SAMPLE * sample)
 	unlock();
 }
 
-void AllegroVoiceAPI::deallocate_voice(int voice)
+void AllegroVoiceApi::deallocate_voice(int voice)
 {
 	if (voice == -1)
 		return;
@@ -267,7 +267,7 @@ void AllegroVoiceAPI::deallocate_voice(int voice)
 	unlock();
 }
 
-void AllegroVoiceAPI::voice_start(int voice)
+void AllegroVoiceApi::voice_start(int voice)
 {
 	if (voice == -1)
 		return;
@@ -286,7 +286,7 @@ void AllegroVoiceAPI::voice_start(int voice)
 	unlock();
 }
 
-void AllegroVoiceAPI::voice_stop(int voice)
+void AllegroVoiceApi::voice_stop(int voice)
 {
 	if (voice == -1)
 		return;
@@ -300,7 +300,7 @@ void AllegroVoiceAPI::voice_stop(int voice)
 	unlock();
 }
 
-int AllegroVoiceAPI::voice_get_position(int voice)
+int AllegroVoiceApi::voice_get_position(int voice)
 {
 	if (voice == -1)
 		return 0;
@@ -329,7 +329,7 @@ int AllegroVoiceAPI::voice_get_position(int voice)
 	return result;
 }
 
-int AllegroVoiceAPI::voice_get_frequency(int voice)
+int AllegroVoiceApi::voice_get_frequency(int voice)
 {
 	if (voice == -1)
 		return 0;
@@ -339,7 +339,7 @@ int AllegroVoiceAPI::voice_get_frequency(int voice)
 	return voices[voice].frequency;
 }
 
-void AllegroVoiceAPI::voice_set_volume(int voice, int volume)
+void AllegroVoiceApi::voice_set_volume(int voice, int volume)
 {
 	Assert(volume >= 0 && volume <= 255);
 	
@@ -355,7 +355,7 @@ void AllegroVoiceAPI::voice_set_volume(int voice, int volume)
 	unlock();
 }
 
-void AllegroVoiceAPI::voice_set_playmode(int voice, int mode)
+void AllegroVoiceApi::voice_set_playmode(int voice, int mode)
 {
 	if (voice == -1)
 		return;
@@ -369,7 +369,7 @@ void AllegroVoiceAPI::voice_set_playmode(int voice, int mode)
 	unlock();
 }
 
-void AllegroVoiceAPI::voice_set_position(int voice, int position)
+void AllegroVoiceApi::voice_set_position(int voice, int position)
 {
 	Assert(position >= 0);
 	
@@ -391,7 +391,7 @@ void AllegroVoiceAPI::voice_set_position(int voice, int position)
 	unlock();
 }
 
-void AllegroVoiceAPI::voice_set_frequency(int voice, int freq)
+void AllegroVoiceApi::voice_set_frequency(int voice, int freq)
 {
 	Assert(freq >= 0);
 	
@@ -409,7 +409,7 @@ void AllegroVoiceAPI::voice_set_frequency(int voice, int freq)
 	unlock();
 }
 
-void AllegroVoiceAPI::voice_set_pan(int voice, int pan)
+void AllegroVoiceApi::voice_set_pan(int voice, int pan)
 {
 	Assert(pan >= 0 && pan <= 255);
 	
@@ -425,17 +425,17 @@ void AllegroVoiceAPI::voice_set_pan(int voice, int pan)
 	unlock();
 }
 
-void AllegroVoiceAPI::lock()
+void AllegroVoiceApi::lock()
 {
 	Verify(SDL_LockMutex(mutex) == 0);
 }
 
-void AllegroVoiceAPI::unlock()
+void AllegroVoiceApi::unlock()
 {
 	Verify(SDL_UnlockMutex(mutex) == 0);
 }
 
-bool AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __restrict samples, const int numSamples, float & stereoPanning)
+bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __restrict samples, const int numSamples, float & stereoPanning)
 {
 	auto & voice = voices[voiceIndex];
 	
@@ -546,7 +546,7 @@ bool AllegroVoiceAPI::generateSamplesForVoice(const int voiceIndex, float * __re
 
 static AllegroTimerApi * s_timerApi = nullptr;
 
-static thread_local AllegroVoiceAPI * voiceAPI = nullptr;
+static thread_local AllegroVoiceApi * voiceApi = nullptr;
 
 extern "C"
 {
@@ -565,16 +565,16 @@ int install_timer()
 
 int install_sound(int digi, int midi, const char * cfg_path)
 {
-	if (voiceAPI != nullptr)
+	if (voiceApi != nullptr)
 		return -1;
 	
-	voiceAPI = new AllegroVoiceAPI(DIGI_SAMPLERATE);
+	voiceApi = new AllegroVoiceApi(DIGI_SAMPLERATE);
 	
 	audioOutput = new AudioOutput_PortAudio();
 	audioOutput->Initialize(2, DIGI_SAMPLERATE, 64);
 	
-	audioStream = new AudioStream_AllegroVoiceMixer(voiceAPI);
-	audioStream->timerAPI = s_timerApi;
+	audioStream = new AudioStream_AllegroVoiceMixer(voiceApi);
+	audioStream->timerApi = s_timerApi;
 	audioOutput->Play(audioStream);
 	
 	return 0;
@@ -699,62 +699,62 @@ void set_volume(int, int)
 
 int allocate_voice(SAMPLE * sample)
 {
-	return voiceAPI->allocate_voice(sample);
+	return voiceApi->allocate_voice(sample);
 }
 
 void reallocate_voice(int voice, SAMPLE * sample)
 {
-	voiceAPI->reallocate_voice(voice, sample);
+	voiceApi->reallocate_voice(voice, sample);
 }
 
 void deallocate_voice(int voice)
 {
-	voiceAPI->deallocate_voice(voice);
+	voiceApi->deallocate_voice(voice);
 }
 
 void voice_start(int voice)
 {
-	voiceAPI->voice_start(voice);
+	voiceApi->voice_start(voice);
 }
 
 void voice_stop(int voice)
 {
-	voiceAPI->voice_stop(voice);
+	voiceApi->voice_stop(voice);
 }
 
 int voice_get_position(int voice)
 {
-	return voiceAPI->voice_get_position(voice);
+	return voiceApi->voice_get_position(voice);
 }
 
 int voice_get_frequency(int voice)
 {
-	return voiceAPI->voice_get_frequency(voice);
+	return voiceApi->voice_get_frequency(voice);
 }
 
 void voice_set_volume(int voice, int volume)
 {
-	voiceAPI->voice_set_volume(voice, volume);
+	voiceApi->voice_set_volume(voice, volume);
 }
 
 void voice_set_playmode(int voice, int mode)
 {
-	voiceAPI->voice_set_playmode(voice, mode);
+	voiceApi->voice_set_playmode(voice, mode);
 }
 
 void voice_set_position(int voice, int position)
 {
-	voiceAPI->voice_set_position(voice, position);
+	voiceApi->voice_set_position(voice, position);
 }
 
 void voice_set_frequency(int voice, int freq)
 {
-	voiceAPI->voice_set_frequency(voice, freq);
+	voiceApi->voice_set_frequency(voice, freq);
 }
 
 void voice_set_pan(int voice, int pan)
 {
-	voiceAPI->voice_set_pan(voice, pan);
+	voiceApi->voice_set_pan(voice, pan);
 }
 
 void lock_sample(SAMPLE * sample)
@@ -763,26 +763,26 @@ void lock_sample(SAMPLE * sample)
 
 }
 
-AudioStream_AllegroVoiceMixer::AudioStream_AllegroVoiceMixer(AllegroVoiceAPI * in_voiceAPI)
+AudioStream_AllegroVoiceMixer::AudioStream_AllegroVoiceMixer(AllegroVoiceApi * in_voiceApi)
 	: AudioStream()
-	, voiceAPI(in_voiceAPI)
-	, timerAPI(nullptr)
+	, voiceApi(in_voiceApi)
+	, timerApi(nullptr)
 {
 }
 
 int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restrict buffer)
 {
-	if (timerAPI != nullptr && timerAPI->mode == AllegroTimerApi::kMode_Manual)
+	if (timerApi != nullptr && timerApi->mode == AllegroTimerApi::kMode_Manual)
 	{
-		::voiceAPI = this->voiceAPI;
-		timerAPI->processInterrupts(int64_t(numSamples) * 1000000 / DIGI_SAMPLERATE);
-		::voiceAPI = nullptr;
+		::voiceApi = this->voiceApi;
+		timerApi->processInterrupts(int64_t(numSamples) * 1000000 / DIGI_SAMPLERATE);
+		::voiceApi = nullptr;
 	}
 	
 	int * __restrict mixingBuffer = (int*)alloca(numSamples * 2 * sizeof(int));
 	memset(mixingBuffer, 0, numSamples * 2 * sizeof(int));
 	
-	voiceAPI->lock();
+	voiceApi->lock();
 	{
 	#if 0
 		float * __restrict samplesL = (float*)alloca(numSamples * sizeof(float));
@@ -793,11 +793,11 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 		
 		float * __restrict samplesV = (float*)alloca(numSamples * sizeof(float));
 		
-		for (int i = 0; i < AllegroVoiceAPI::MAX_VOICES; ++i)
+		for (int i = 0; i < AllegroVoiceApi::MAX_VOICES; ++i)
 		{
 			float stereoPanning;
 			
-			if (voiceAPI->generateSamplesForVoice(i, samplesV, numSamples, stereoPanning))
+			if (voiceApi->generateSamplesForVoice(i, samplesV, numSamples, stereoPanning))
 			{
 				const float panL = 1.f - stereoPanning;
 				const float panR =       stereoPanning;
@@ -816,7 +816,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 			buffer[i].channel[1] = samplesR[i] * (1 << (15 - 2));
 		}
 	#else
-		for (auto & __restrict voice : voiceAPI->voices)
+		for (auto & __restrict voice : voiceApi->voices)
 		{
 			if (voice.used && voice.started && voice.sample->len != 0)
 			{
@@ -975,7 +975,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 		}
 	#endif
 	}
-	voiceAPI->unlock();
+	voiceApi->unlock();
 	
 	for (int i = 0; i < numSamples; ++i)
 	{
