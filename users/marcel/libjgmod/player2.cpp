@@ -295,7 +295,7 @@ int JGMOD_PLAYER::note2period (int note, int c2spd)
         if (c2spd == 0)
             c2spd = 4242;
 
-        temp =  note * c2spd / 8363;
+        temp =  int64_t(note) * c2spd / 8363;
         return (JGMOD_NTSC << 2) / temp;
         }
 
