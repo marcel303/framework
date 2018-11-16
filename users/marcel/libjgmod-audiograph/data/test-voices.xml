@@ -1,6 +1,6 @@
 <graph nextNodeId="9" nextLinkId="5">
     <node id="1" typeName="jgmod">
-        <input socket="filename" value="Menu.s3m"/>
+        <input socket="filename" value="gslinger.mod"/>
     </node>
     <node id="2" typeName="voice">
         <input socket="speaker" value="0"/>
