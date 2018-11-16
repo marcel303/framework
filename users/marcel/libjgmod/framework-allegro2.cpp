@@ -191,17 +191,24 @@ void AllegroTimerApi::processInterrupts(const int numMicroseconds)
 
 //
 
-AllegroVoiceApi::AllegroVoiceApi(const int in_sampleRate)
+AllegroVoiceApi::AllegroVoiceApi(const int in_sampleRate, const bool in_useMutex)
 	: sampleRate(in_sampleRate)
 	, mutex(nullptr)
+	, useMutex(in_useMutex)
 {
-	mutex = SDL_CreateMutex();
+	if (useMutex)
+	{
+		mutex = SDL_CreateMutex();
+	}
 }
 
 AllegroVoiceApi::~AllegroVoiceApi()
 {
-	SDL_DestroyMutex(mutex);
-	mutex = nullptr;
+	if (useMutex)
+	{
+		SDL_DestroyMutex(mutex);
+		mutex = nullptr;
+	}
 }
 
 int AllegroVoiceApi::allocate_voice(SAMPLE * sample)
@@ -427,12 +434,18 @@ void AllegroVoiceApi::voice_set_pan(int voice, int pan)
 
 void AllegroVoiceApi::lock()
 {
-	Verify(SDL_LockMutex(mutex) == 0);
+	if (useMutex)
+	{
+		Verify(SDL_LockMutex(mutex) == 0);
+	}
 }
 
 void AllegroVoiceApi::unlock()
 {
-	Verify(SDL_UnlockMutex(mutex) == 0);
+	if (useMutex)
+	{
+		Verify(SDL_UnlockMutex(mutex) == 0);
+	}
 }
 
 bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __restrict samples, const int numSamples, float & stereoPanning)
@@ -450,7 +463,12 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 	
 	stereoPanning = voice.pan / 255.f;
 	
-	int sampleIndex = voice.position >> FIXBITS;
+	int64_t voice_position = voice.position;
+	
+	int sampleIndex = voice_position >> FIXBITS;
+	
+	const float scale16 = 1.f / float(1 << (16 - 1));
+	const float scale24 = 1.f / float(1 << (24 - 1));
 	
 	for (int i = 0; i < numSamples; ++i)
 	{
@@ -460,19 +478,19 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 		{
 			if (voice.sample->bits == 8)
 			{
-				const unsigned char * values = (unsigned char*)voice.sample->data;
+				const unsigned char * __restrict values = (unsigned char*)voice.sample->data;
 				
 				const int value = int8_t(values[sampleIndex] ^ 0x80) * voice.volume;
 				
-				samples[i] = value / float(1 << (16 - 1));
+				samples[i] = value * scale16;
 			}
 			else if (voice.sample->bits == 16)
 			{
-				const unsigned short * values = (unsigned short*)voice.sample->data;
+				const unsigned short * __restrict values = (unsigned short*)voice.sample->data;
 				
 				const int value = int16_t(values[sampleIndex] ^ 0x8000) * voice.volume;
 				
-				samples[i] = value / float(1 << (24 - 1));
+				samples[i] = value * scale24;
 			}
 		}
 		else
@@ -482,9 +500,9 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 		
 		// increment sample playback position
 		
-		voice.position += voice.sampleIncrement;
+		voice_position += voice.sampleIncrement;
 		
-		sampleIndex = voice.position >> FIXBITS;
+		sampleIndex = voice_position >> FIXBITS;
 		
 		// handle looping and ping-pong
 		
@@ -496,9 +514,9 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 				{
 					if (sampleIndex >= voice.sample->loop_end)
 					{
-						voice.position = (int64_t(voice.sample->loop_end - 1) << FIXBITS << 1) - voice.position;
+						voice_position = (int64_t(voice.sample->loop_end - 1) << FIXBITS << 1) - voice_position;
 						
-						sampleIndex = voice.position >> FIXBITS;
+						sampleIndex = voice_position >> FIXBITS;
 						
 						voice.sampleIncrement = -voice.sampleIncrement;
 					}
@@ -507,9 +525,9 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 				{
 					if (sampleIndex < voice.sample->loop_start)
 					{
-						voice.position = (int64_t(voice.sample->loop_start) << FIXBITS << 1) - voice.position;
+						voice_position = (int64_t(voice.sample->loop_start) << FIXBITS << 1) - voice_position;
 						
-						sampleIndex = voice.position >> FIXBITS;
+						sampleIndex = voice_position >> FIXBITS;
 						
 						voice.sampleIncrement = -voice.sampleIncrement;
 					}
@@ -519,9 +537,9 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 			{
 				if (sampleIndex >= voice.sample->loop_end)
 				{
-					voice.position -= int64_t(voice.sample->loop_end - voice.sample->loop_start) << FIXBITS;
+					voice_position -= int64_t(voice.sample->loop_end - voice.sample->loop_start) << FIXBITS;
 					
-					sampleIndex = voice.position >> FIXBITS;
+					sampleIndex = voice_position >> FIXBITS;
 				}
 			}
 		}
@@ -540,6 +558,8 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 			}
 		}
 	}
+	
+	voice.position = voice_position;
 	
 	return true;
 }
@@ -568,7 +588,7 @@ int install_sound(int digi, int midi, const char * cfg_path)
 	if (voiceApi != nullptr)
 		return -1;
 	
-	voiceApi = new AllegroVoiceApi(DIGI_SAMPLERATE);
+	voiceApi = new AllegroVoiceApi(DIGI_SAMPLERATE, true);
 	
 	audioOutput = new AudioOutput_PortAudio();
 	audioOutput->Initialize(2, DIGI_SAMPLERATE, 64);

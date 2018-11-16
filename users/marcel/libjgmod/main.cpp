@@ -253,13 +253,13 @@ int main(int argc, char **argv)
 	pushFontMode(FONT_SDF);
 	
 	AllegroTimerApi * timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Manual);
-	AllegroVoiceAPI * voiceApi = new AllegroVoiceAPI(DIGI_SAMPLERATE);
+	AllegroVoiceApi * voiceApi = new AllegroVoiceApi(DIGI_SAMPLERATE, true);
 	
 	AudioOutput_PortAudio audioOutput;
 	audioOutput.Initialize(2, DIGI_SAMPLERATE, 64);
 	
 	AudioStream_AllegroVoiceMixer audioStream(voiceApi);
-	audioStream.timerAPI = timerApi;
+	audioStream.timerApi = timerApi;
 	audioOutput.Play(&audioStream);
 	
     for (int index = 0; index < JGMOD_MAX_VOICES; ++index)

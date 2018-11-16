@@ -146,8 +146,9 @@ struct AllegroVoiceApi
 	int sampleRate;
 	
 	SDL_mutex * mutex;
+	bool useMutex;
 	
-	AllegroVoiceApi(const int sampleRate);
+	AllegroVoiceApi(const int sampleRate, const bool useMutex);
 	~AllegroVoiceApi();
 	
 	int allocate_voice(SAMPLE * sample);

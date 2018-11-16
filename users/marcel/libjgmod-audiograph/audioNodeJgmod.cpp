@@ -63,7 +63,7 @@ void AudioNodeJgmod::updateJgmod()
 		currentFilename = filename;
 		
 		timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Manual);
-		voiceApi = new AllegroVoiceApi(SAMPLE_RATE);
+		voiceApi = new AllegroVoiceApi(SAMPLE_RATE, false);
 		
 		jgmod = jgmod_load(filename);
 		
