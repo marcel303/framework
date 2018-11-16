@@ -7,6 +7,7 @@ add biquad-simd
 add colorpart
 add cuber
 add jsusfx1
+add libjgmod-audiograph
 add magiclines
 add mitronix1
 add planetvis

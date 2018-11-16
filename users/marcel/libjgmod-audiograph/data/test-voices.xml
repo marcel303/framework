@@ -1,0 +1,28 @@
+<graph nextNodeId="9" nextLinkId="5">
+    <node id="1" typeName="jgmod">
+        <input socket="filename" value="Menu.s3m"/>
+    </node>
+    <node id="2" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="3" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <link id="1" srcNodeId="2" srcNodeSocketName="audio" dstNodeId="1" dstNodeSocketName="ch1"/>
+    <link id="2" srcNodeId="3" srcNodeSocketName="audio" dstNodeId="1" dstNodeSocketName="ch2"/>
+    <link id="3" srcNodeId="2" srcNodeSocketName="audio" dstNodeId="1" dstNodeSocketName="ch3"/>
+    <link id="4" srcNodeId="3" srcNodeSocketName="audio" dstNodeId="1" dstNodeSocketName="ch4"/>
+    <editor nextZKey="29">
+        <dragAndZoom x="129.70648193359375" y="-19.085111618041992" zoom="1.2906752824783325"/>
+        <nodeDatas>
+            <nodeData nodeId="1" x="-96.18096923828125" y="-128.00050354003906" zKey="22"/>
+            <nodeData nodeId="2" x="64" y="-128" zKey="27"/>
+            <nodeData nodeId="3" x="64" y="-16" zKey="28"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="4" x="176" y="-176" zKey="9" nodeId="2" srcSocketName="audio" sx="216" sy="148"/>
+            <visualizer id="5" x="176" y="-16" zKey="10" nodeId="3" srcSocketName="audio" sx="216" sy="148"/>
+        </visualizers>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
+    </editor>
+</graph>

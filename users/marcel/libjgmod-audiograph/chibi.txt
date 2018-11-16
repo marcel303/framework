@@ -1,0 +1,17 @@
+library jgmod-audiograph shared
+
+	depend_library audiograph
+	depend_library libjgmod
+
+# todo : rename libjgmod-framework to something more sensible
+	depend_library libjgmod-framework
+
+	add_files audioNodeJgmod.cpp audioNodeJgmod.h
+
+app jgmod-audiograph-test
+
+	depend_library jgmod-audiograph
+
+	add_files test.cpp
+
+	resource_path data
