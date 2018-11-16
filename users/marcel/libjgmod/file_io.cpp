@@ -94,13 +94,20 @@ int jgmod_mgetw (JGMOD_FILE *f)
 
 long jgmod_mgetl (JGMOD_FILE *f)
 {
-    long b1, b2, b3, b4;
-
+#if 1
+	uint8_t b[4];
+	
+	if (jgmod_fread(b, 4, f) == 4)
+		return ( (b[0] << 24) + (b[1] << 16) + (b[2] << 8) + b[3] );
+#else
+	long b1, b2, b3, b4;
+	
     if ( (b1=jgmod_getc(f)) != EOF)
         if ( (b2=jgmod_getc(f)) != EOF)
             if ( (b3=jgmod_getc(f)) != EOF)
                 if ( (b4=jgmod_getc(f)) != EOF)
                     return ( (b1 << 24) + (b2 << 16) + (b3 << 8) + b4 );
+#endif
 
     return EOF;
 }
@@ -120,6 +127,12 @@ int jgmod_igetw (JGMOD_FILE *f)
 
 long jgmod_igetl (JGMOD_FILE *f)
 {
+#if 1
+	uint8_t b[4];
+	
+	if (jgmod_fread(b, 4, f) == 4)
+		return ( (b[3] << 24) + (b[2] << 16) + (b[1] << 8) + b[0] );
+#else
     long b1, b2, b3, b4;
 
     if ( (b1=jgmod_getc(f)) != EOF)
@@ -127,6 +140,7 @@ long jgmod_igetl (JGMOD_FILE *f)
             if ( (b3=jgmod_getc(f)) != EOF)
                 if ( (b4=jgmod_getc(f)) != EOF)
                     return ( (b4 << 24) + (b3 << 16) + (b2 << 8) + b1 );
+#endif
 
     return EOF;
 }
