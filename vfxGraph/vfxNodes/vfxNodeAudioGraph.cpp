@@ -101,8 +101,7 @@ VfxNodeAudioGraph::VfxNodeAudioGraph()
 	addInput(kInput_LimitPeak, kVfxPlugType_Float);
 	addInput(kInput_NumChannels, kVfxPlugType_Int);
 	
-	globals = g_vfxAudioGraphMgr->createGlobals();
-	globals->init(g_vfxAudioMutex, &voiceMgr, g_vfxAudioGraphMgr);
+	globals = g_vfxAudioGraphMgr->createGlobals(g_vfxAudioMutex, &voiceMgr);
 }
 
 VfxNodeAudioGraph::~VfxNodeAudioGraph()
@@ -309,7 +308,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 			AudioVoiceManager::kOutputMode_MultiChannel;
 		
 		const int numVoices = voiceMgr.voices.size();
-		AudioVoice * voices[numVoices];
+		AudioVoice * voices[numVoices + 1];
 		int voiceIndex = 0;
 		for (auto & voice : voiceMgr.voices)
 			voices[voiceIndex++] = voice;

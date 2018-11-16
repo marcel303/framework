@@ -78,7 +78,7 @@ struct AudioGraphManager
 	virtual ~AudioGraphManager() { }
 	
 	// called from the app thread
-	virtual AudioGraphGlobals * createGlobals() = 0;
+	virtual AudioGraphGlobals * createGlobals(SDL_mutex * mutex, AudioVoiceManager * voiceMgr) = 0;
 	virtual void freeGlobals(AudioGraphGlobals *& globals) = 0;
 	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr, const bool createdPaused = false) = 0;
 	virtual void free(AudioGraphInstance *& instance, const bool doRampDown) = 0;
@@ -124,7 +124,7 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	void addGraphToCache(const char * filename);
 	
 	// called from the app thread
-	virtual AudioGraphGlobals * createGlobals() override;
+	virtual AudioGraphGlobals * createGlobals(SDL_mutex * mutex, AudioVoiceManager * voiceMgr) override;
 	virtual void freeGlobals(AudioGraphGlobals *& globals) override;
 	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr, const bool createdPaused = false) override;
 	virtual void free(AudioGraphInstance *& instance, const bool doRampDown) override;
@@ -163,7 +163,7 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
-	virtual AudioGraphGlobals * createGlobals() override;
+	virtual AudioGraphGlobals * createGlobals(SDL_mutex * mutex, AudioVoiceManager * voiceMgr) override;
 	virtual void freeGlobals(AudioGraphGlobals *& globals) override;
 	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr, const bool createdPaused = false) override;
 	virtual void free(AudioGraphInstance *& instance, const bool doRampDown) override;
@@ -208,7 +208,7 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
-	virtual AudioGraphGlobals * createGlobals() override;
+	virtual AudioGraphGlobals * createGlobals(SDL_mutex * mutex, AudioVoiceManager * voiceMgr) override;
 	virtual void freeGlobals(AudioGraphGlobals *& globals) override;
 	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr, const bool createdPaused = false) override;
 	virtual void free(AudioGraphInstance *& instance, const bool doRampDown) override;
