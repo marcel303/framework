@@ -13,7 +13,7 @@ library jsusfx
 
 	depend_library jsusfx-wdl
 
-	add_files ../libjsusfx/src/jsusfx.cpp ../libjsusfx/src/jsusfx_file.cpp ../libjsusfx/src/jsusfx_gfx.cpp ../libjsusfx/src/jsusfx_serialize.cpp ../libjsusfx/src/riff.cpp
+	add_files ../libjsusfx/src/jsusfx.cpp ../libjsusfx/src/jsusfx.h ../libjsusfx/src/jsusfx_file.cpp ../libjsusfx/src/jsusfx_file.h ../libjsusfx/src/jsusfx_gfx.cpp ../libjsusfx/src/jsusfx_gfx.h ../libjsusfx/src/jsusfx_serialize.cpp ../libjsusfx/src/jsusfx_serialize.h ../libjsusfx/src/riff.cpp ../libjsusfx/src/riff.h
 
 	header_path ../libjsusfx/src expose
 
