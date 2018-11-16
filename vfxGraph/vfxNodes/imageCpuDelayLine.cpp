@@ -98,6 +98,7 @@ ImageCpuDelayLine::HistoryItem::~HistoryItem()
 
 ImageCpuDelayLine::WorkItem::WorkItem()
 	: imageData(nullptr)
+	, imageDataIsConsumed(true)
 	, jpegQualityLevel(0)
 	, timestamp(0.0)
 	, jpegData(nullptr)
@@ -110,6 +111,8 @@ ImageCpuDelayLine::WorkItem::~WorkItem()
 	jpegData = nullptr;
 	
 	jpegQualityLevel = 0;
+	
+	imageDataIsConsumed = true;
 	
 	delete imageData;
 	imageData = nullptr;
@@ -157,6 +160,7 @@ void ImageCpuDelayLine::init(const int _maxHistorySize, const int _saveBufferSiz
 	historySize = 0;
 	
 	Assert(work.imageData == nullptr);
+	Assert(work.imageDataIsConsumed);
 	Assert(work.jpegQualityLevel == 0);
 	Assert(work.jpegData == nullptr);
 	work = WorkItem();
@@ -225,6 +229,7 @@ void ImageCpuDelayLine::shut()
 	}
 	
 	Assert(work.imageData == nullptr);
+	Assert(work.imageDataIsConsumed);
 	Assert(work.jpegQualityLevel == 0);
 	Assert(work.jpegData == nullptr);
 	work = WorkItem();
@@ -525,7 +530,7 @@ ImageCpuDelayLine::MemoryUsage ImageCpuDelayLine::getMemoryUsage() const
 		
 		result.numSaveBufferBytes += saveBufferSize;
 		
-		if (work.imageData != nullptr)
+		if (work.imageDataIsConsumed == false)
 		{
 			result.numSaveBufferBytes += work.imageData->image.getMemoryUsage();
 		}
@@ -649,6 +654,8 @@ void ImageCpuDelayLine::threadMain()
 		
 			JpegData * jpegData = nullptr;
 			
+			work.imageDataIsConsumed = true;
+			
 			SDL_UnlockMutex(mutex);
 			{
 				if (stop == false)
@@ -669,6 +676,7 @@ void ImageCpuDelayLine::threadMain()
 			
 			// check if these work members were left untouched
 			Assert(work.imageData == imageData);
+			Assert(work.imageDataIsConsumed);
 			Assert(work.jpegQualityLevel == jpegQualityLevel);
 			work.imageData = nullptr;
 			work.jpegQualityLevel = 0;
@@ -698,9 +706,11 @@ void ImageCpuDelayLine::compressWork(const VfxImageCpu & image, const int jpegQu
 	SDL_LockMutex(mutex);
 	{
 		Assert(work.imageData == nullptr);
+		Assert(work.imageDataIsConsumed);
 		Assert(work.jpegQualityLevel == 0);
 		Assert(work.timestamp == 0.0);
 		work.imageData = imageData;
+		work.imageDataIsConsumed = false;
 		work.jpegQualityLevel = jpegQualityLevel;
 		work.timestamp = timestamp;
 
@@ -719,6 +729,7 @@ void ImageCpuDelayLine::compressWait()
 	}
 	
 	Assert(work.imageData == nullptr);
+	Assert(work.imageDataIsConsumed);
 	Assert(work.jpegQualityLevel == 0);
 	
 	if (work.jpegData != nullptr)
