@@ -283,10 +283,8 @@ bool MediaPlayer::updateVideoFrame()
 	bool gotVideo = false;
 	context->mpContext.RequestVideo(time, &videoFrame, gotVideo);
 	
-	// fixme : there seems to be an issues with signalling .. it's possible to never awaken the media player thread again under certain conditions, so just signal it each update for now ..
 	if (gotVideo)
 	{
-	// todo : figure out if signaling works ok now
 		SDL_CondSignal(context->mpTickEvent);
 		
 		//logDebug("gotVideo. t=%06dms, sx=%d, sy=%d", int(time * 1000.0), textureSx, textureSy);
