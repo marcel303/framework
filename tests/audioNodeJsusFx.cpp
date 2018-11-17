@@ -50,37 +50,7 @@
 
 struct AudioResource_JsusFx : AudioResourceBase
 {
-	int version;
-	
 	JsusFxSerializationData serializationData;
-	
-	SDL_mutex * mutex; // mutex for serialization purposed between the resource editor and the audio node which both run on different threads
-	
-	AudioResource_JsusFx()
-		: version(0)
-		, serializationData()
-		, mutex(nullptr)
-	{
-		mutex = SDL_CreateMutex();
-	}
-	
-	virtual ~AudioResource_JsusFx() override
-	{
-		SDL_DestroyMutex(mutex);
-		mutex = nullptr;
-	}
-	
-	void lock()
-	{
-		const int r = SDL_LockMutex(mutex);
-		Assert(r == 0); (void)r;
-	}
-
-	void unlock()
-	{
-		const int r = SDL_UnlockMutex(mutex);
-		Assert(r == 0); (void)r;
-	}
 	
 	virtual void save(tinyxml2::XMLPrinter * printer) override
 	{
@@ -223,13 +193,17 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 		{
 			if (resource->version != version)
 			{
-				version = resource->version;
-				
-				// the resource changed without us knowing it. perhaps there's a second editor operating on it. refresh!
-				
-				JsusFxSerializer_Basic serializer(resource->serializationData);
-				
-				jsusFx.serialize(serializer, false);
+				resource->lock();
+				{
+					version = resource->version;
+					
+					// the resource changed without us knowing it. perhaps there's a second editor operating on it. refresh!
+					
+					JsusFxSerializer_Basic serializer(resource->serializationData);
+					
+					jsusFx.serialize(serializer, false);
+				}
+				resource->unlock();
 			}
 			
 			// it's difficult to tell if the user interacted with the effect's ui and made changes. so we just
