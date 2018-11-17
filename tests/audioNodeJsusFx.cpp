@@ -614,13 +614,6 @@ void AudioNodeJsusFx::tick(const float dt)
 	{
 		// update slider values
 		
-	// fixme : automated slider changes should directly set the slider values
-	//         moveSlider / @slider should not be invoked. only when the user
-	//         changes the slider through the Reaper slider UI
-	// at least, this is what the Reaper documentation and forum posts are telling me..
-	// but does this make sense? it wouldn't work with the ATK code I've seen for instance..
-	// how does Reaper handle automation events?
-		
 		AudioFloat defaultValue;
 		
 		for (auto & sliderInput : sliderInputs)
