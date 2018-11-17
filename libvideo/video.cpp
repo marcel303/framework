@@ -237,6 +237,8 @@ void MediaPlayer::seekToStart()
 				
 				presentTime = 0.0;
 				audioTime = 0.0;
+				
+				SDL_CondSignal(context->mpTickEvent);
 			}
 		}
 		SDL_UnlockMutex(context->mpSeekMutex);
@@ -258,6 +260,8 @@ void MediaPlayer::seek(const double time, const bool nearest)
 				
 				presentTime = actualTime;
 				audioTime = actualTime;
+				
+				SDL_CondSignal(context->mpTickEvent);
 			}
 		}
 		SDL_UnlockMutex(context->mpSeekMutex);
@@ -280,8 +284,9 @@ bool MediaPlayer::updateVideoFrame()
 	context->mpContext.RequestVideo(time, &videoFrame, gotVideo);
 	
 	// fixme : there seems to be an issues with signalling .. it's possible to never awaken the media player thread again under certain conditions, so just signal it each update for now ..
-	//if (gotVideo)
+	if (gotVideo)
 	{
+	// todo : figure out if signaling works ok now
 		SDL_CondSignal(context->mpTickEvent);
 		
 		//logDebug("gotVideo. t=%06dms, sx=%d, sy=%d", int(time * 1000.0), textureSx, textureSy);
@@ -469,12 +474,14 @@ int MediaPlayer::Provide(int numSamples, AudioSample* __restrict buffer)
 	
 	bool gotAudio = false;
 
-	double audioTime;
+	double audioTime = this->audioTime;
 	
 	if (context->mpContext.RequestAudio((int16_t*)buffer, numSamples, gotAudio, audioTime))
+	{
 		this->audioTime = audioTime;
 
-	SDL_CondSignal(context->mpTickEvent);
+		SDL_CondSignal(context->mpTickEvent);
+	}
 
 	return numSamples;
 }
