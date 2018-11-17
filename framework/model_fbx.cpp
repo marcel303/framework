@@ -1970,7 +1970,10 @@ namespace AnimModel
 			
 			mesh->allocateVB(meshBuilder.m_vertices.size());
 			
-			memcpy(mesh->m_vertices, &meshBuilder.m_vertices[0], sizeof(mesh->m_vertices[0]) * mesh->m_numVertices);
+			if (!meshBuilder.m_vertices.empty())
+			{
+				memcpy(mesh->m_vertices, &meshBuilder.m_vertices[0], sizeof(mesh->m_vertices[0]) * mesh->m_numVertices);
+			}
 			
 			mesh->allocateIB(meshBuilder.m_indices.size());
 			
