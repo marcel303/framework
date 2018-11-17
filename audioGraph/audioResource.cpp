@@ -32,6 +32,7 @@
 #include "tinyxml2.h"
 #include "audioResource.h"
 #include "audioTypes.h"
+#include <SDL2/SDL_mutex.h>
 
 using namespace tinyxml2;
 
@@ -79,6 +80,43 @@ struct AudioResourceElem
 	{
 	}
 };
+
+//
+
+AudioResourceBase::~AudioResourceBase()
+{
+	if (mutex != nullptr)
+	{
+		SDL_DestroyMutex(mutex);
+		mutex = nullptr;
+	}
+}
+
+void AudioResourceBase::lock()
+{
+	if (mutex == nullptr)
+	{
+		for (;;)
+		{
+			int expected = 0;
+			
+			if (mutexCreationLock.compare_exchange_strong(expected, 1))
+				break;
+		}
+		
+		mutex = SDL_CreateMutex();
+		Assert(mutex != nullptr);
+		
+		mutexCreationLock.exchange(0);
+	}
+	
+	Verify(SDL_LockMutex(mutex) == 0);
+}
+
+void AudioResourceBase::unlock()
+{
+	Verify(SDL_UnlockMutex(mutex) == 0);
+}
 
 //
 

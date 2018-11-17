@@ -30,7 +30,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "wavefield.h"
 #include <cmath>
 
-
 #include "audioResource.h"
 #include "StringEx.h"
 #include "tinyxml2.h"
@@ -40,11 +39,10 @@ struct AudioResource_Wavefield2D : AudioResourceBase
 {
 	float f[Wavefield2D::kMaxElems][Wavefield2D::kMaxElems];
 	int numElems;
-	int version;
 	
 	AudioResource_Wavefield2D()
-		: numElems(0)
-		, version(0)
+		: AudioResourceBase()
+		, numElems(0)
 	{
 	}
 	
@@ -230,16 +228,20 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 				
 				if (numElems != resource->numElems)
 				{
-					for (int x = resource->numElems; x < numElems; ++x)
-						for (int y = 0; y < numElems; ++y)
-							resource->f[x][y] = 1.f;
-					for (int y = resource->numElems; y < numElems; ++y)
-						for (int x = 0; x < numElems; ++x)
-							resource->f[x][y] = 1.f;
-					
-					resource->numElems = numElems;
-					
-					resource->version++;
+					resource->lock();
+					{
+						for (int x = resource->numElems; x < numElems; ++x)
+							for (int y = 0; y < numElems; ++y)
+								resource->f[x][y] = 1.f;
+						for (int y = resource->numElems; y < numElems; ++y)
+							for (int x = 0; x < numElems; ++x)
+								resource->f[x][y] = 1.f;
+						
+						resource->numElems = numElems;
+						
+						resource->version++;
+					}
+					resource->unlock();
 					
 					//
 					
@@ -437,13 +439,17 @@ void AudioNodeWavefield2D::tick(const float _dt)
 	
 	if (wavefieldData->version != currentDataVersion)
 	{
-		wavefield->init(wavefieldData->numElems);
-		
-		for (int x = 0; x < wavefield->numElems; ++x)
-			for (int y = 0; y < wavefield->numElems; ++y)
-				wavefield->f[x][y] = wavefieldData->f[x][y];
-		
-		currentDataVersion = wavefieldData->version;
+		wavefieldData->lock();
+		{
+			wavefield->init(wavefieldData->numElems);
+			
+			for (int x = 0; x < wavefield->numElems; ++x)
+				for (int y = 0; y < wavefield->numElems; ++y)
+					wavefield->f[x][y] = wavefieldData->f[x][y];
+			
+			currentDataVersion = wavefieldData->version;
+		}
+		wavefieldData->unlock();
 	}
 	
 	//

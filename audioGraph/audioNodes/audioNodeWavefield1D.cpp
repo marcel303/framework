@@ -38,11 +38,10 @@ struct AudioResource_Wavefield1D : AudioResourceBase
 {
 	double f[Wavefield1D::kMaxElems];
 	int numElems;
-	int version;
 	
 	AudioResource_Wavefield1D()
-		: numElems(0)
-		, version(0)
+		: AudioResourceBase()
+		, numElems(0)
 	{
 	}
 	
@@ -251,12 +250,16 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 				
 				if (numElems != resource->numElems)
 				{
-					for (int i = resource->numElems; i < numElems; ++i)
-						resource->f[i] = 1.f;
-					
-					resource->numElems = numElems;
-					
-					resource->version++;
+					resource->lock();
+					{
+						for (int i = resource->numElems; i < numElems; ++i)
+							resource->f[i] = 1.f;
+						
+						resource->numElems = numElems;
+						
+						resource->version++;
+					}
+					resource->unlock();
 					
 					//
 					
@@ -444,12 +447,16 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	
 	if (wavefieldData->version != currentDataVersion)
 	{
-		wavefield->init(wavefieldData->numElems);
-		
-		for (int i = 0; i < wavefield->numElems; ++i)
-			wavefield->f[i] = wavefieldData->f[i];
-		
-		currentDataVersion = wavefieldData->version;
+		wavefieldData->lock();
+		{
+			wavefield->init(wavefieldData->numElems);
+			
+			for (int i = 0; i < wavefield->numElems; ++i)
+				wavefield->f[i] = wavefieldData->f[i];
+			
+			currentDataVersion = wavefieldData->version;
+		}
+		wavefieldData->unlock();
 	}
 	
 	//
