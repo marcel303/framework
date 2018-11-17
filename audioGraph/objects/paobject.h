@@ -44,13 +44,15 @@ struct PortAudioHandler
 
 struct PortAudioObject
 {
+	bool paInitialized;
 	PaStream * stream;
 	PortAudioHandler * handler;
 	int numOutputChannels;
 	int numInputChannels;
 	
 	PortAudioObject()
-		: stream(nullptr)
+		: paInitialized(false)
+		, stream(nullptr)
 		, handler(nullptr)
 		, numOutputChannels(0)
 		, numInputChannels(0)
