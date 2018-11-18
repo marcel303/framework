@@ -31,8 +31,6 @@
 #include "jgmod.h"
 #include "vfxNodeJgmod.h"
 
-// todo : remove install_sound etc and manage audio output ourselves. requires refactoring of jgmod voice management
-
 #define DIGI_SAMPLERATE 192000
 
 VFX_NODE_TYPE(VfxNodeJgmod)
@@ -82,8 +80,6 @@ VfxNodeJgmod::VfxNodeJgmod()
 	addOutput(kOutput_Pattern, kVfxPlugType_Float, &patternOutput);
 	addOutput(kOutput_Row, kVfxPlugType_Float, &rowOutput);
 	addOutput(kOutput_End, kVfxPlugType_Trigger, nullptr);
-	
-// todo : move allegro init elsewhere, or remove the need for init altogether by abstracting the mixer
 
 	timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Manual);
 	voiceApi = new AllegroVoiceApi(DIGI_SAMPLERATE, true);
@@ -293,20 +289,11 @@ void VfxNodeJgmod::load(const char * filename)
 
 void VfxNodeJgmod::free()
 {
-	if (player->of != nullptr)
-	{
-		// todo : stop should clear 'of' member of player, making destroy_mod redundant ?
-		
-		player->stop();
-		
-		player->destroy_mod();
-		
-		mod = nullptr;
-	}
-	else if (mod != nullptr)
+	player->stop();
+	
+	if (mod != nullptr)
 	{
 		jgmod_destroy(mod);
-		
 		mod = nullptr;
 	}
 	
