@@ -617,10 +617,13 @@ struct JpegStreamer
 			
 			//
 			
-			// fixme : stop here is not guaranteed to work (I think)
-			
 			if (fileContents == nullptr)
-				break;
+			{
+				delete imageContents;
+				imageContents = nullptr;
+				
+				continue;
+			}
 			
 			//
 			
