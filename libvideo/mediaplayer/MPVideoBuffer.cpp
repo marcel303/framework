@@ -54,7 +54,9 @@ namespace MP
 		, m_pixelFormat(AV_PIX_FMT_NONE)
 		, m_frame(nullptr)
 		, m_frameBuffer(nullptr)
+	#if MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG
 		, m_frameBufferSize(0)
+	#endif
 		, m_time(0.0)
 		, m_isFirstFrame(false)
 		, m_isValidForRead(false)
@@ -71,7 +73,9 @@ namespace MP
 		Assert(m_pixelFormat == AV_PIX_FMT_NONE);
 		Assert(m_frame == nullptr);
 		Assert(m_frameBuffer == nullptr);
+	#if MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG
 		Assert(m_frameBufferSize == 0);
+	#endif
 		Assert(m_time == 0.0);
 		Assert(m_isFirstFrame == false);
 		Assert(m_isValidForRead == false);
@@ -99,13 +103,13 @@ namespace MP
 		}
 	
 		// Allocate buffer to use for RGB frame.
-		m_frameBufferSize = av_image_get_buffer_size(
+		const int frameBufferSize = av_image_get_buffer_size(
 			pixelFormat,
 			static_cast<int>(width),
 			static_cast<int>(height),
 			16);
 		
-		m_frameBuffer = (uint8_t*)MemAlloc(m_frameBufferSize, 16);
+		m_frameBuffer = (uint8_t*)MemAlloc(frameBufferSize, 16);
 		
 		if (!m_frameBuffer)
 		{
@@ -113,6 +117,10 @@ namespace MP
 			m_frameBuffer = nullptr;
 			return false;
 		}
+		
+	#if MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG
+		m_frameBufferSize = frameBufferSize;
+	#endif
 		
 	#if DEBUG_MEDIAPLAYER
 		s_numFrameBufferAllocations++;
@@ -123,6 +131,7 @@ namespace MP
 		m_frame->height = height;
 		const int requiredFrameBufferSize = av_image_fill_arrays(m_frame->data, m_frame->linesize, m_frameBuffer, pixelFormat, width, height, 16);
 		
+	#if MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG
 		Debug::Print("Video: frameBufferSize: %d.", m_frameBufferSize);
 		Debug::Print("Video: requiredFrameBufferSize: %d.", requiredFrameBufferSize);
 		
@@ -131,6 +140,7 @@ namespace MP
 			Debug::Print("Video: required frame buffer size exceeds allocated frame buffer size.");
 			return false;
 		}
+	#endif
 		
 		return true;
 	}
@@ -151,7 +161,9 @@ namespace MP
 		{
 			MemFree(m_frameBuffer);
 			m_frameBuffer = nullptr;
+		#if MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG
 			m_frameBufferSize = 0;
+		#endif
 			
 		#if DEBUG_MEDIAPLAYER
 			s_numFrameBufferAllocations--;
