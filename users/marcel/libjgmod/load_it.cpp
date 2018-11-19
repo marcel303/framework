@@ -14,6 +14,8 @@
 #include "jshare.h"
 #include "file_io.h"
 
+#include "it_compression.h"
+
 #include "framework-allegro2.h"
 
 #include <assert.h>
@@ -44,6 +46,9 @@ todo :
 */
 
 //#define JG_debug
+
+#define ENABLE_INSTRUMENTS 1
+#define ENABLE_COMPRESSION 1
 
 extern const int noteperiod[];
 
@@ -103,7 +108,7 @@ void convert_it_pitch (int *pitch)
 	
 	// -1 sets volume to 0
 	// -2 sets keyon to true. if no envolume, also volume to 0. also enables volfade to zero -> this is key off?
-	// -3 sets keyon to false
+	// -3 sets keyon to false, which enters the sustain loop when sustain envelope is used -> this is key on?
 	
 	if (*pitch == 255)  // note off
         {
@@ -360,7 +365,7 @@ JGMOD *load_it (const char *filename, int start_offset)
     f =  jgmod_fopen (filename, "rb");
     if (f == nullptr)
         return nullptr;
-
+	
     j = (JGMOD*)jgmod_calloc ( sizeof (JGMOD));
     if (j == nullptr)
         {
@@ -392,6 +397,9 @@ JGMOD *load_it (const char *filename, int start_offset)
 	
     j->no_trk = jgmod_igetw(f);
     const uint16_t num_instruments = jgmod_igetw(f);
+#if ENABLE_INSTRUMENTS
+	j->no_instrument = num_instruments;
+#endif
     j->no_sample = jgmod_igetw(f);
     j->no_pat = jgmod_igetw(f);
 	
@@ -403,6 +411,9 @@ JGMOD *load_it (const char *filename, int start_offset)
     	j->no_pat);
 #endif
 
+#if ENABLE_INSTRUMENTS
+	j->ii = (INSTRUMENT_INFO*)jgmod_calloc(sizeof (INSTRUMENT_INFO) * j->no_instrument);
+#endif
     j->si = (SAMPLE_INFO*)jgmod_calloc (sizeof (SAMPLE_INFO) * j->no_sample);
     j->s  = (SAMPLE*)jgmod_calloc (sizeof (SAMPLE) * j->no_sample);
 	
@@ -446,11 +457,22 @@ JGMOD *load_it (const char *filename, int start_offset)
 		kFlag_OldEffects = 1 << 4
 	};
 	
+#if ENABLE_INSTRUMENTS
+	if (flags & kFlag_UseInstruments)
+	{
+		if (created_version < 0x200)
+		{
+			jgmod_seterror("OLD IT instrument format is not yet supported");
+			return nullptr;
+		}
+	}
+#else
 	if (flags & kFlag_UseInstruments)
 	{
 		jgmod_seterror("IT instruments are not yet supported");
 		return nullptr;
 	}
+#endif
 	
 	if (flags & kFlag_LinearSlides)
 	{
@@ -588,6 +610,163 @@ JGMOD *load_it (const char *filename, int start_offset)
 	for (auto i = 0; i < j->no_pat; ++i)
 		pattern_offsets[i] = jgmod_igetl(f);
 	
+#if ENABLE_INSTRUMENTS
+	// load instruments
+	
+	for (auto i = 0; i < j->no_instrument; ++i)
+	{
+		INSTRUMENT_INFO * ii = j->ii + i;
+		
+		if (!instrument_offsets[i])
+			continue;
+		
+		jgmod_fseek(&f, filename, instrument_offsets[i]);
+		
+	// todo : handle old instrument format
+	
+		char header[4];
+		jgmod_fread(header, 4, f);
+		
+		if (strncmp(header, "IMPI", 4))
+			return nullptr;
+		
+		char dos_filename[12];
+		jgmod_fread(dos_filename, 12, f);
+		
+		jgmod_getc(f); // 0x00
+		const uint8_t NNA = jgmod_getc(f); // NNA = New Note Action. 0=cut, 1=continue, 2=note off, 3=note fade
+		const uint8_t DCT = jgmod_getc(f); // DCT = Duplicate Check Type. 0=off, 1=note, 2=sample, 3=instrument
+		const uint8_t DCA = jgmod_getc(f); // DCA: Duplicate Check Action. 0=cut, 1=note off, 2=note fade
+		const uint16_t FadeOut = jgmod_igetw(f);
+		const uint8_t PPS = jgmod_getc(f); // PPS: Pitch-Pan separation, range -32 -> +32
+		const uint8_t PPC = jgmod_getc(f); // PPC: Pitch-Pan center: C-0 to B-9 represented as 0->119 inclusive
+		const uint8_t GbV = jgmod_getc(f); // GbV: Global Volume, 0->128
+		const uint8_t DfP = jgmod_getc(f); // DfP: Default Pan, 0->64, &128 => Don't use
+		const uint8_t RV = jgmod_getc(f); // RV: Random volume variation (percentage)
+		const uint8_t RP = jgmod_getc(f); // RP: Random panning variation (panning change - not implemented yet)
+		const uint16_t TrkVers = jgmod_igetw(f);
+		const uint8_t NoS = jgmod_getc(f);
+		jgmod_getc(f); // x
+		(void)NNA;
+		(void)DCT;
+		(void)DCA;
+		(void)PPS;
+		(void)PPC;
+		(void)GbV;
+		(void)DfP;
+		(void)RV;
+		(void)RP;
+		(void)TrkVers;
+		(void)NoS;
+		
+		ii->volume_fadeout = FadeOut;
+		
+		char name[27];
+		jgmod_fread(name, 26, f);
+		name[26] = 0;
+	#ifdef JG_debug
+		printf("instrument name: %s\n", name);
+	#endif
+		//strcpy(ii->name, name); // todo : copy name to instrument
+		
+		const uint8_t IFC = jgmod_getc(f); // IFC = Initial Filter cutoff
+		const uint8_t IFR = jgmod_getc(f); // IFR = Initial Filter resonance
+		const uint8_t MCh = jgmod_getc(f); // MCh = MIDI Channel
+		const uint8_t MPr = jgmod_getc(f); // MPr = MIDI Program (Instrument)
+		const uint16_t MIDIBnk = jgmod_igetw(f); // ..
+		(void)IFC;
+		(void)IFR;
+		(void)MCh;
+		(void)MPr;
+		(void)MIDIBnk;
+		
+		uint8_t NoteSample_KeyboardTable[240];
+		jgmod_fread(NoteSample_KeyboardTable, 240, f);
+		
+	#if 0 // todo : make changes to player code to handle IT instruments
+		for (int i = 0; i < 120; ++i)
+		{
+			const uint8_t note = NoteSample_KeyboardTable[i * 2 + 0];
+			const uint8_t sample = NoteSample_KeyboardTable[i * 2 + 1];
+			
+			if (note >= 0 && note < 120)
+				ii->sample_number[note] = sample;
+		}
+	#endif
+		
+		// envelopes
+		
+		struct it_envelope
+		{
+			uint8_t Flg; // 0x01 = envelope on/off, 0x02 = loop on/off, 0x04 = sus loop on/off
+			uint8_t Num; // number of points
+			uint8_t LpB; // LpB = Loop beginning
+			uint8_t LpE; // LpE = Loop end
+			uint8_t SLB; // SLB = Sustain loop beginning
+			uint8_t SLE; // SLE = Sustain loop end
+			
+			/*
+			Node point =
+				1 byte for y-value (0->64 for vol, -32->+32 for panning or pitch)
+				1 word (2 bytes) for tick number (0->9999)
+			*/
+			uint8_t node_points[25 * 3];
+		};
+		
+		assert(sizeof(it_envelope) == 81);
+		
+		// envelopes are volume, panning, pitch
+		
+		for (int i = 0; i < 3; ++i)
+		{
+			it_envelope env;
+			
+			if (jgmod_fread(&env, sizeof(env), f) != sizeof(env))
+				return nullptr;
+			
+			jgmod_getc(f); // there is an empty alignment related byte at the end of the structure
+			
+		// todo : increase the maximum number of envelope points. limit the numbers for now..
+			auto limit = [](uint8_t & e)
+			{
+				if (e > 12)
+					e = 12;
+			};
+			
+			limit(env.Num);
+			limit(env.LpB);
+			limit(env.LpE);
+			limit(env.SLB);
+			limit(env.SLE);
+			
+			auto fill_envelope = [](const it_envelope & env, int * val, int * pos, int & no_env, int & type, int & susbeg, int & susend, int & begin, int & end)
+			{
+				for (int i = 0; i < env.Num; ++i)
+				{
+					val[i] = int8_t(env.node_points[i * 3 + 0]);
+					pos[i] = env.node_points[i * 3 + 1] | (env.node_points[i * 3 + 2] << 8);
+				}
+				
+				no_env = env.Num;
+				type = env.Flg;
+				susbeg = env.SLB;
+				susend = env.SLE;
+				begin = env.LpB;
+				end = env.LpE;
+			};
+			
+			if (i == 0)
+			{
+				fill_envelope(env, ii->volenv, ii->volpos, ii->no_volenv, ii->vol_type, ii->vol_susbeg, ii->vol_susend, ii->vol_begin, ii->vol_end);
+			}
+			else if (i == 1)
+			{
+				fill_envelope(env, ii->panenv, ii->panpos, ii->no_panenv, ii->pan_type, ii->pan_susbeg, ii->pan_susend, ii->pan_begin, ii->pan_end);
+			}
+		}
+	}
+#endif
+	
 	// load samples
 	
 	for (auto i = 0; i < j->no_sample; ++i)
@@ -637,12 +816,13 @@ JGMOD *load_it (const char *filename, int start_offset)
 		};
 		const uint8_t sample_flags = jgmod_getc(f);
 		
+	#if !ENABLE_COMPRESSION
 		if (sample_flags & kSampleFlag_Compressed)
 		{
-			// todo : integrate https://github.com/schismtracker/schismtracker/blob/master/fmt/compression.c ?
-			jgmod_seterror("Compress IT samples are not supported");
+			jgmod_seterror("Compressed IT samples are not supported");
 			return nullptr;
 		}
+	#endif
 		
 		const uint8_t default_volume = jgmod_getc(f); // Default volume for instrument.
 		si->volume = default_volume;
@@ -679,7 +859,8 @@ JGMOD *load_it (const char *filename, int start_offset)
         */
         enum ConversionFlag
         {
-			kConversionFlag_Signed = 1 << 0
+			kConversionFlag_Signed = 1 << 0,
+			kConversionFlag_SamplesAreDeltas = 1 << 2
 		};
 		const uint8_t convert_flags = jgmod_getc(f);
 		
@@ -806,37 +987,78 @@ JGMOD *load_it (const char *filename, int start_offset)
 		{
 			jgmod_fseek(&f, filename, sample_data_offset);
 			
-			if (sample_flags & kSampleFlag_16bit)
+		#if ENABLE_COMPRESSION
+			if (sample_flags & kSampleFlag_Compressed)
 			{
-				s->data = jgmod_calloc (s->len*2);
-				s->bits = 16;
+				const int compressed_len_est = s->len * 4;
+				void * compressed_data = jgmod_calloc(compressed_len_est);
+				const int compressed_len = jgmod_fread(compressed_data, compressed_len_est, f);
 				
-				uint16_t * data = (uint16_t*)s->data;
-				
-				for (int i = 0; i < s->len; ++i)
+				if (sample_flags & kSampleFlag_16bit)
 				{
-					data[i] = jgmod_igetw(f);
+					s->data = jgmod_calloc (s->len*2);
+					s->bits = 16;
+					
+					it_decompress16(s->data, s->len, compressed_data, compressed_len, convert_flags & kConversionFlag_SamplesAreDeltas, 1);
+					
+					uint16_t * data = (uint16_t*)s->data;
+					
+					if (convert_flags & kConversionFlag_Signed)
+						for (int i = 0; i < s->len; ++i)
+							data[i] ^= 0x8000;
+				}
+				else
+				{
+					s->data = jgmod_calloc (s->len);
+					s->bits = 8;
+					
+					it_decompress8(s->data, s->len, compressed_data, compressed_len, convert_flags & kConversionFlag_SamplesAreDeltas, 1);
+					
+					uint8_t * data = (uint8_t*)s->data;
+					
+					if (convert_flags & kConversionFlag_Signed)
+						for (int i = 0; i < s->len; ++i)
+							data[i] ^= 0x80;
 				}
 				
-				if (convert_flags & kConversionFlag_Signed)
-					for (int i = 0; i < s->len; ++i)
-						data[i] ^= 0x8000;
+				free(compressed_data);
+				compressed_data = nullptr;
 			}
 			else
+		#endif
 			{
-				s->data = jgmod_calloc (s->len);
-				s->bits = 8;
-				
-				uint8_t * data = (uint8_t*)s->data;
-				
-				for (int i = 0; i < s->len; ++i)
+				if (sample_flags & kSampleFlag_16bit)
 				{
-					data[i] = jgmod_getc(f);
-				}
-				
-				if (convert_flags & kConversionFlag_Signed)
+					s->data = jgmod_calloc (s->len*2);
+					s->bits = 16;
+					
+					uint16_t * data = (uint16_t*)s->data;
+					
 					for (int i = 0; i < s->len; ++i)
-						data[i] ^= 0x80;
+					{
+						data[i] = jgmod_igetw(f);
+					}
+					
+					if (convert_flags & kConversionFlag_Signed)
+						for (int i = 0; i < s->len; ++i)
+							data[i] ^= 0x8000;
+				}
+				else
+				{
+					s->data = jgmod_calloc (s->len);
+					s->bits = 8;
+					
+					uint8_t * data = (uint8_t*)s->data;
+					
+					for (int i = 0; i < s->len; ++i)
+					{
+						data[i] = jgmod_getc(f);
+					}
+					
+					if (convert_flags & kConversionFlag_Signed)
+						for (int i = 0; i < s->len; ++i)
+							data[i] ^= 0x80;
+				}
 			}
 		}
 	}
