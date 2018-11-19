@@ -237,7 +237,7 @@ void JGMOD_PLAYER::mod_interrupt ()
             if ( (sample_no >= 0) && ((ni->command == PTEFFECT_3) || (ni->command == PTEFFECT_5)
                 || (ni->command == XMEFFECT_5) || ( (ni->volume & 0xF0) == 0xF0))  )
                 {
-                if (mi.flag & JGMOD_MODE_XM)
+                if (mi.flag & (JGMOD_MODE_XM | JGMOD_MODE_IT))
                     {
                     SAMPLE_INFO *si;
 

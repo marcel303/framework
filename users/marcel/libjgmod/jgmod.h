@@ -18,6 +18,7 @@
 #define JGMOD_PRIORITY      192
 #define JGMOD_MAX_VOICES    64
 #define JGMOD_MAX_ENVPTS    25
+#define JGMOD_MAX_INSTKEYS  120
 #define JGMOD_LOOP_OFF      0
 #define JGMOD_LOOP_ON       1
 #define JGMOD_LOOP_BIDI     2
@@ -291,8 +292,8 @@ struct INSTRUMENT_INFO
 {
 	char name[64];
 	
-	int key_to_note[120];
-    int sample_number[120];
+	int key_to_note[JGMOD_MAX_INSTKEYS];
+    int sample_number[JGMOD_MAX_INSTKEYS];
 
     int volenv[JGMOD_MAX_ENVPTS];
     int volpos[JGMOD_MAX_ENVPTS];
