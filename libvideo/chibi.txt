@@ -76,3 +76,12 @@ app libvideo-example-audio
 
 	add_files examples/audio.cpp
 	resource_path examples/data
+
+app libvideo-example-mediaplayer
+
+	depend_library artnet
+	depend_library libosc
+	depend_library libvideo
+
+	add_files examples/mediaplayer.cpp
+	resource_path examples/data
