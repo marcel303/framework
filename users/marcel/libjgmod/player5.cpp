@@ -50,16 +50,44 @@ void JGMOD_PLAYER::parse_it_note (int chn, int key, int note, int sample_no)
 			
 			// when using instruments, sample_no is actually instrument_no and we need to map key to note and sample number
 			
-			sample_no = ii->sample_number[key];
-			sample_no--;
+			/*
 			
-			if (ii->key_to_note[key] != 0)
+			IT notes:
+			
+			0 = NONE
+			1 = first note
+			120 = last note
+			> 120 = control notes
+				254 = cut
+				255 = off
+			*/
+			
+			if (key >= 1 && key < 120)
 			{
-				note = ii->key_to_note[key];
+			// todo : not sure why sample_number doesn't need the '-1 offset' and key_to_note does
+			//        but verified Blue Flame plays the correct samples without sample offset, and
+			//        pocket.it plays the correct notes with the note offset
+			
+				const int map_index = key;
+				
+				sample_no = ii->sample_number[map_index];
+				sample_no--;
+				
+				note = ii->key_to_note[map_index - 1] + 1;
 				jgmod::convert_it_pitch(&note);
 			}
-			
-			assert(note >= 0);
+			else if (key == 0)
+			{
+				// assume note also reflects note none
+				
+				assert(note == 0);
+			}
+			else
+			{
+				// assume note is a control note
+				
+				assert(note < 0);
+			}
 			
 			// set instrument fadeout
 			ci[chn].instfade = ii->volume_fadeout;
@@ -76,7 +104,11 @@ void JGMOD_PLAYER::parse_it_note (int chn, int key, int note, int sample_no)
 		}
 	}
 	
-    if (note > 0 && sample_no >= 0)
+	if (note < 0)
+	{
+		parse_note_command(chn, note);
+	}
+    else if (note > 0 && sample_no >= 0)
 	{
         const SAMPLE_INFO *si = of->si+sample_no;
 		
@@ -92,7 +124,7 @@ void JGMOD_PLAYER::parse_it_note (int chn, int key, int note, int sample_no)
         ci[chn].period = note2period (note, ci[chn].c2spd);
         ci[chn].kick = true;
 	}
-    else if ( (note <= 0) && (sample_no >= 0) ) // only sample_spedified
+    else if ( (note == 0) && (sample_no >= 0) ) // only sample spedified
 	{
         if ( (ci[chn].sample != sample_no) && (ci[chn].period > 0))
             ci[chn].kick = true;
@@ -102,5 +134,9 @@ void JGMOD_PLAYER::parse_it_note (int chn, int key, int note, int sample_no)
         ci[chn].volume = si->volume;
         ci[chn].c2spd = si->c2spd;
         ci[chn].pan = si->pan;
+	}
+	else
+	{
+		//printf("??? no note and no sample\n");
 	}
 }

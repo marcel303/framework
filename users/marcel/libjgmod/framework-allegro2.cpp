@@ -659,8 +659,6 @@ static int TimerThreadProc(void * obj)
 {
 	AllegroTimerReg * r = (AllegroTimerReg*)obj;
 	
-	// todo : use POSIX timer API ?
-	
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 	
 	struct timespec start, end;
@@ -840,9 +838,6 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 		{
 			if (voice.used && voice.started && voice.sample->len != 0)
 			{
-				// todo : implement panning separation
-				//const int pan = 127 + ((voice.pan - 127) >> 2);
-				
 				const int pan = voice.pan;
 				
 				const int pan1 = (0xff - pan) * voice.volume;

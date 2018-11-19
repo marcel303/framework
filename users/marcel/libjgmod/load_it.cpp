@@ -32,10 +32,10 @@ todo :
 - add cubic interpolation support
 
 - add instrument support
-	- easy enough to load
+	+ easy enough to load
 	- requires NNA support to be fully functional
-	- not sure to what degree current player routines cover envelopes
-	- requires multiple-sample support, different sample may be selected per note
+	- add pitch envelope support
+	+ requires multiple-sample support, different sample may be selected per note
  
 - add NNA and virtual channel support
 
@@ -129,6 +129,11 @@ void convert_it_pitch (int *pitch)
 		{
 		*pitch = -3; // todo : not correct!
         return;
+		}
+	if (*pitch == 0)
+		{
+		*pitch = 0;
+		return;
 		}
 	
 	assert(*pitch >= 0);
@@ -685,11 +690,6 @@ JGMOD *load_it (const char *filename, int start_offset)
 		uint8_t note_and_sample[240];
 		jgmod_fread(note_and_sample, 240, f);
 		
-		// todo : make changes to player code to handle IT instruments:
-		// - increase size of note to sample mapping
-		// - increase number of envelope control points
-		// - handle note to sample mappings
-		
 		for (int i = 0; i < 120; ++i)
 		{
 			const uint8_t note = note_and_sample[i * 2 + 0];
@@ -1129,10 +1129,10 @@ JGMOD *load_it (const char *filename, int start_offset)
 				
 				ni->it_note = jgmod_getc(f);
 				
-				ni->note = ni->it_note;
-				convert_it_pitch (&ni->note);
+                channel_note[channel] = ni->it_note;
 				
-                channel_note[channel] = ni->note;
+                ni->note = ni->it_note;
+				convert_it_pitch (&ni->note);
 			}
 			
 			if (channel_mask[channel] & 2) // read instrument (byte value)
@@ -1210,7 +1210,10 @@ JGMOD *load_it (const char *filename, int start_offset)
 			
 			if (channel_mask[channel] & 16) // note = lastnote for channel
 			{
-				ni->note = channel_note[channel];
+				ni->it_note = channel_note[channel];
+				
+				ni->note = ni->it_note;
+				convert_it_pitch (&ni->note);
 			}
 			
 			if (channel_mask[channel] & 32) // instrument = lastinstrument for channel
