@@ -423,6 +423,8 @@ static void drawCubeSlices(const Cube & cube)
 		}
 	}
 
+	// send output towards hardware by blitting it to the screen!
+	
 #if ENABLE_OPENGL
 	GLuint texture = createTextureFromRGBA8(slices, SX * SZ, SY, true, true);
 
@@ -736,8 +738,6 @@ int main(int argc, char * argv[])
 			effect.tick(framework.timeStep);
 
 			evalCube(cube, &effect);
-
-			// todo : send output towards hardware
 
 			framework.beginDraw(0, 0, 0, 0);
 			{

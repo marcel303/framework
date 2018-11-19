@@ -44,6 +44,10 @@ class Delaunay
 			float midx = (minX + maxX) / 2.f;
 			float midy = (minY + maxY) / 2.f;
 
+// fixme : the super triangle cannot be determined this simply from the overall fitting aabb
+// -> needs some trig to figure it out
+// OR, determine the mxsimum axis (x or y) and orient triangle based on it
+
 		#if 1 // triangulation was giving wrong results ..
 			// fixme : find proper solution. for now, use this work-around
 			VertexType p1(midx - 20 * deltaMax, midy - deltaMax * 20);

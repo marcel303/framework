@@ -622,7 +622,7 @@ void AudioNodeJsusFx::tick(const float dt)
 			
 			Assert(input != nullptr);
 			if (input == nullptr || !input->isConnected())
-				continue;
+				continue; // todo : move slider to its default value when input is not connected. or to whatever is set inside the serialiation data..
 			
 			const float value = input->getAudioFloat().getMean();
 			
