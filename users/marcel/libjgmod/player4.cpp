@@ -233,7 +233,7 @@ void JGMOD_PLAYER::do_xm_x (int chn, int extcommand)
 
 }
 
-void JGMOD_PLAYER::start_envelope (volatile ENVELOPE_INFO *t, int *env, int *pos, int flg,
+void JGMOD_PLAYER::start_envelope (volatile ENVELOPE_INFO *t, const int *env, const int *pos, int flg,
     int pts, int loopbeg, int loopend, int susbeg, int susend)
 {
     int temp;

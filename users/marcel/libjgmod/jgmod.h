@@ -469,7 +469,7 @@ protected:
 	void do_xm_x (int chn, int extcommand);
 
 	static void process_envelope (volatile ENVELOPE_INFO * t, int v, int keyon);
-	static void start_envelope (volatile ENVELOPE_INFO * t, int *env, int *pos, int flg, int pts, int loopbeg, int loopend, int susbeg, int susend);
+	static void start_envelope (volatile ENVELOPE_INFO * t, const int *env, const int *pos, int flg, int pts, int loopbeg, int loopend, int susbeg, int susend);
 	
 	// -- located in player5.c ---------------------------------------------------
 	void parse_it_note (int chn, int key, int note, int sample_no);
