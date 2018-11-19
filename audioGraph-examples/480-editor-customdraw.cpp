@@ -91,9 +91,8 @@ static void drawEditor(const GraphEdit & graphEdit, AudioRealTimeConnection * rt
 	const float scale = .01f;
 	const float kRadius = 40.f;
 	
-	// todo : would be nice to have an axis swizzle function
-	gxScalef(scale, scale, scale);
-	gxRotatef(180, 1, 0, 0);
+	// note : negate the y-axis to make sure text renders up-right
+	gxScalef(scale, -scale, scale);
 	
 	// draw links
 	
@@ -145,7 +144,7 @@ static void drawEditor(const GraphEdit & graphEdit, AudioRealTimeConnection * rt
 			setColor(20, 20, 20);
 			fillCircle(0, 0, kRadius, 100);
 			
-			gxTranslatef(0, 0, 1.f);
+			gxTranslatef(0, 0, -1.f);
 			
 			auto typeDefinition = graphEdit.typeDefinitionLibrary->tryGetTypeDefinition(node->typeName.c_str());
 			
@@ -300,7 +299,7 @@ int main(int argc, char * argv[])
 		camera.position = Vec3(0.f, 1.5f, -4.f);
 		camera.pitch = -15.f;
 		
-		Surface surface(GFX_SX, GFX_SY, true, false, SURFACE_RGBA8);
+		Surface surface(GFX_SX, GFX_SY, true, true, SURFACE_RGBA8);
 		
 		bool showDefaultEditor = false;
 		
@@ -365,7 +364,7 @@ int main(int argc, char * argv[])
 					setShader_GaussianBlurV(surface.getTexture(), 30, blurStrength);
 					surface.postprocess();
 					pushBlend(BLEND_OPAQUE);
-					drawRect(0, 0, GFX_SX, GFX_SY);
+					drawRect(0, GFX_SY, GFX_SX, 0);
 					popBlend();
 					clearShader();
 					
