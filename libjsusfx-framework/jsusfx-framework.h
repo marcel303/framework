@@ -29,6 +29,14 @@
 
 #include "jsusfx.h"
 
+namespace tinyxml2
+{
+	class XMLElement;
+	class XMLPrinter;
+}
+
+struct JsusFxSerializationData;
+
 struct JsusFx_Framework : public JsusFx
 {
 	JsusFx_Framework(JsusFxPathLibrary &pathLibrary);
@@ -36,3 +44,7 @@ struct JsusFx_Framework : public JsusFx
     virtual void displayMsg(const char *fmt, ...) override;
     virtual void displayError(const char *fmt, ...) override;
 };
+
+void saveJsusFxSerializationDataToXml(const JsusFxSerializationData & serializationData, tinyxml2::XMLPrinter & p);
+bool loadJsusFxSerializationDataFromXml(const tinyxml2::XMLElement * e, JsusFxSerializationData & serializationData);
+
