@@ -465,6 +465,8 @@ JGMOD *load_it (const char *filename, int start_offset)
 			jgmod_seterror("OLD IT instrument format is not yet supported");
 			return nullptr;
 		}
+		
+		j->flag |= JGMOD_MODE_IT_INST;
 	}
 #else
 	if (flags & kFlag_UseInstruments)
@@ -1125,7 +1127,9 @@ JGMOD *load_it (const char *filename, int start_offset)
                 // Others = note fade (already programmed into IT's player
                 //                     but not available in the editor)
 				
-				ni->note = jgmod_getc(f);
+				ni->it_note = jgmod_getc(f);
+				
+				ni->note = ni->it_note;
 				convert_it_pitch (&ni->note);
 				
                 channel_note[channel] = ni->note;

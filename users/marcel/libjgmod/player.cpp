@@ -263,6 +263,8 @@ void JGMOD_PLAYER::mod_interrupt ()
 
                 if (mi.flag & JGMOD_MODE_XM)
                     parse_new_note (chn, ni->note, sample_no);
+                else if (mi.flag & JGMOD_MODE_IT)
+                    parse_it_note (chn, ni->it_note, ni->note, sample_no);
                 else
                     parse_old_note (chn, ni->note, sample_no);
                 }

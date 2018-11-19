@@ -30,6 +30,7 @@
 #define JGMOD_MODE_PERIOD   2
 #define JGMOD_MODE_LINEAR   4
 #define JGMOD_MODE_IT       8
+#define JGMOD_MODE_IT_INST  16
 
 
 #define PTEFFECT_0          0
@@ -262,6 +263,8 @@ struct NOTE_INFO
     int volume;
     int command;
     int extcommand;
+	
+    int it_note;
 };
 
 struct SAMPLE_INFO
@@ -467,6 +470,9 @@ protected:
 
 	static void process_envelope (volatile ENVELOPE_INFO * t, int v, int keyon);
 	static void start_envelope (volatile ENVELOPE_INFO * t, int *env, int *pos, int flg, int pts, int loopbeg, int loopend, int susbeg, int susend);
+	
+	// -- located in player5.c ---------------------------------------------------
+	void parse_it_note (int chn, int key, int note, int sample_no);
 };
 
 //-- externs -----------------------------------------------------------------
