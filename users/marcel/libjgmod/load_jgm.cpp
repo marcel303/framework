@@ -120,7 +120,7 @@ JGMOD *load_jgm (JGMOD_FILE *f)
             ii->sample_number[index] = jgmod_getc (f);
 
         // load volume envelope points
-        for (index=0; index < 12; index++)
+        for (index=0; index < JGMOD_MAX_ENVPTS; index++)
             {
             ii->volpos[index] = jgmod_igetw(f);
             ii->volenv[index] = jgmod_igetw(f);
@@ -135,7 +135,7 @@ JGMOD *load_jgm (JGMOD_FILE *f)
 
 
         // load panning envelope points
-        for (index=0; index < 12; index++)
+        for (index=0; index < JGMOD_MAX_ENVPTS; index++)
             {
             ii->panpos[index] = jgmod_igetw(f);
             ii->panenv[index] = jgmod_igetw(f);

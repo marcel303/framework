@@ -238,7 +238,7 @@ void JGMOD_PLAYER::start_envelope (volatile ENVELOPE_INFO *t, int *env, int *pos
 {
     int temp;
 
-    for (temp = 0; temp < 12; temp++)
+    for (temp = 0; temp < JGMOD_MAX_ENVPTS; temp++)
         {
         t->env[temp] = env[temp];
         t->pos[temp] = pos[temp];
@@ -291,14 +291,14 @@ void JGMOD_PLAYER::process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon
             b++;
 
             if ( (t->flg & JGMOD_ENV_SUS) && (keyon == false) && (b > t->susend) )
-                {
-                a = t->susbeg;
-                p = t->pos[a];
-                if (t->susbeg == t->susend)
-                    b = a;
-                else
-                    b = a + 1;
-                }
+                	{
+					a = t->susbeg;
+					p = t->pos[a];
+					if (t->susbeg == t->susend)
+						b = a;
+					else
+						b = a + 1;
+					}
             else if ( (t->flg & JGMOD_ENV_LOOP) && (b > t->loopend) )
                 {
                 a = t->loopbeg;

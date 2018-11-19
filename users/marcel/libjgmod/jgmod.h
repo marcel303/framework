@@ -17,6 +17,7 @@
 #define JGMOD_NTSC          3579546L
 #define JGMOD_PRIORITY      192
 #define JGMOD_MAX_VOICES    64
+#define JGMOD_MAX_ENVPTS    25
 #define JGMOD_LOOP_OFF      0
 #define JGMOD_LOOP_ON       1
 #define JGMOD_LOOP_BIDI     2
@@ -110,8 +111,8 @@ enum JGMOD_TYPE
 
 struct ENVELOPE_INFO
 {
-    int env[12];
-    int pos[12];
+    int env[JGMOD_MAX_ENVPTS];
+    int pos[JGMOD_MAX_ENVPTS];
 	
     int flg;
     int pts;
@@ -285,10 +286,13 @@ struct SAMPLE_INFO
 
 struct INSTRUMENT_INFO
 {
-    int sample_number[96];
+	char name[64];
+	
+	int key_to_note[120];
+    int sample_number[120];
 
-    int volenv[12];
-    int volpos[12];
+    int volenv[JGMOD_MAX_ENVPTS];
+    int volpos[JGMOD_MAX_ENVPTS];
     int no_volenv;
     int vol_type;
     int vol_susbeg;
@@ -296,8 +300,8 @@ struct INSTRUMENT_INFO
     int vol_begin;
     int vol_end;
 
-    int panenv[12];
-    int panpos[12];
+    int panenv[JGMOD_MAX_ENVPTS];
+    int panpos[JGMOD_MAX_ENVPTS];
     int no_panenv;
     int pan_type;
     int pan_susbeg;

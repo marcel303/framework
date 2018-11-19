@@ -444,7 +444,7 @@ void JGMOD_PLAYER::play (JGMOD *j, int loop, int speed, int pitch)
         ci[index].panenv.p = 0;
         ci[index].panenv.v = 32;
 
-        for (temp=0; temp < 12; temp++)
+        for (temp=0; temp < JGMOD_MAX_ENVPTS; temp++)
             {
             ci[index].volenv.env[temp] = 0;
             ci[index].volenv.pos[temp] = 0;

@@ -667,7 +667,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 	#ifdef JG_debug
 		printf("instrument name: %s\n", name);
 	#endif
-		//strcpy(ii->name, name); // todo : copy name to instrument
+		strcpy(ii->name, name);
 		
 		const uint8_t IFC = jgmod_getc(f); // IFC = Initial Filter cutoff
 		const uint8_t IFR = jgmod_getc(f); // IFR = Initial Filter resonance
@@ -680,19 +680,22 @@ JGMOD *load_it (const char *filename, int start_offset)
 		(void)MPr;
 		(void)MIDIBnk;
 		
-		uint8_t NoteSample_KeyboardTable[240];
-		jgmod_fread(NoteSample_KeyboardTable, 240, f);
+		uint8_t note_and_sample[240];
+		jgmod_fread(note_and_sample, 240, f);
 		
-	#if 0 // todo : make changes to player code to handle IT instruments
+		// todo : make changes to player code to handle IT instruments:
+		// - increase size of note to sample mapping
+		// - increase number of envelope control points
+		// - handle note to sample mappings
+		
 		for (int i = 0; i < 120; ++i)
 		{
-			const uint8_t note = NoteSample_KeyboardTable[i * 2 + 0];
-			const uint8_t sample = NoteSample_KeyboardTable[i * 2 + 1];
+			const uint8_t note = note_and_sample[i * 2 + 0];
+			const uint8_t sample = note_and_sample[i * 2 + 1];
 			
-			if (note >= 0 && note < 120)
-				ii->sample_number[note] = sample;
+			ii->key_to_note[i] = note;
+			ii->sample_number[i] = sample;
 		}
-	#endif
 		
 		// envelopes
 		
@@ -725,19 +728,6 @@ JGMOD *load_it (const char *filename, int start_offset)
 				return nullptr;
 			
 			jgmod_getc(f); // there is an empty alignment related byte at the end of the structure
-			
-		// todo : increase the maximum number of envelope points. limit the numbers for now..
-			auto limit = [](uint8_t & e)
-			{
-				if (e > 12)
-					e = 12;
-			};
-			
-			limit(env.Num);
-			limit(env.LpB);
-			limit(env.LpE);
-			limit(env.SLB);
-			limit(env.SLE);
 			
 			auto fill_envelope = [](const it_envelope & env, int * val, int * pos, int & no_env, int & type, int & susbeg, int & susend, int & begin, int & end)
 			{
