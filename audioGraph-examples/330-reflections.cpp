@@ -27,6 +27,7 @@
 
 #include "audioGraph.h"
 #include "audioGraphManager.h"
+#include "audioTypes.h"
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
 #include "delayLine.h"
@@ -544,17 +545,7 @@ struct Space
 		}
 	}
 
-#if AUDIO_USE_SSE
-	void * operator new(size_t size)
-	{
-		return _mm_malloc(size, 32);
-	}
-
-	void operator delete(void * mem)
-	{
-		_mm_free(mem);
-	}
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 #if ENABLE_MIDI || ENABLE_GAMEPAD

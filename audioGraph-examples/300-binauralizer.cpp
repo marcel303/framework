@@ -160,17 +160,7 @@ namespace BinauralTestNamespace
 			binauralizer.generateInterleaved(samples, AUDIO_UPDATE_SIZE);
 		}
 
-	#if AUDIO_USE_SSE
-		void * operator new(size_t size)
-		{
-			return _mm_malloc(size, 32);
-		}
-
-		void operator delete(void * mem)
-		{
-			_mm_free(mem);
-		}
-	#endif
+		ALIGNED_AUDIO_NEW_AND_DELETE();
 	};
 
 	struct MyPortAudioHandler : PortAudioHandler

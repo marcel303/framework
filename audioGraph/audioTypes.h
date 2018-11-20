@@ -239,3 +239,29 @@ struct AudioRNG
 	float nextf(const float min, const float max);
 	double nextd(const double min, const double max);
 };
+
+#if AUDIO_USE_SSE
+	#define ALIGNED_AUDIO_NEW_AND_DELETE() \
+		void * operator new(size_t size) \
+		{ \
+			return _mm_malloc(size, 32); \
+		} \
+		void operator delete(void * mem) \
+		{ \
+			_mm_free(mem); \
+		}
+#elif AUDIO_USE_GCC_VECTOR
+	#define ALIGNED_AUDIO_NEW_AND_DELETE() \
+		void * operator new(size_t size) { \
+			void * result = nullptr; \
+			posix_memalign(&result, 32, size); \
+			return result; \
+		} \
+		void operator delete(void * mem) \
+		{ \
+			_mm_free(mem); \
+		}
+#else
+	#define ALIGNED_AUDIO_NEW_AND_DELETE()
+#endif
+

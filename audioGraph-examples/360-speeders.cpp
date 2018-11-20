@@ -1,3 +1,4 @@
+#include "audioTypes.h"
 #include "framework.h"
 #include "objects/audioSourceVorbis.h"
 #include "objects/binauralizer.h"
@@ -645,18 +646,7 @@ struct RecordedFragment : AudioSource
 	#endif
 	}
 
-#if AUDIO_USE_SSE
-	// todo : add a helper macro to make objects allocate through the heap at N-alignment
-	void * operator new(size_t size)
-	{
-		return _mm_malloc(size, 32);
-	}
-
-	void operator delete(void * mem)
-	{
-		_mm_free(mem);
-	}
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 struct World
@@ -708,17 +698,7 @@ struct World
 		}
 	}
 
-#if AUDIO_USE_SSE
-	void * operator new(size_t size)
-	{
-		return _mm_malloc(size, 32);
-	}
-
-	void operator delete(void * mem)
-	{
-		_mm_free(mem);
-	}
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 static World * s_world = nullptr;

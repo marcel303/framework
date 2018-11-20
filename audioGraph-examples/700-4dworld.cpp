@@ -27,6 +27,7 @@
 
 #include "audioGraph.h"
 #include "audioGraphManager.h"
+#include "audioTypes.h"
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager4D.h"
 #include "Calc.h"
@@ -1723,8 +1724,7 @@ struct World : WorldInterface
 		return wavefield.sample(samplePosition[0], samplePosition[1]);
 	}
 	
-	void * operator new(size_t size) { return MemAlloc(size, 32); }
-	void operator delete(void * mem) { MemFree(mem); }
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 //
