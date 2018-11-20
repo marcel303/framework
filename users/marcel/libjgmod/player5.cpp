@@ -56,8 +56,8 @@ void JGMOD_PLAYER::parse_it_note (int chn, int key, int note, int sample_no)
 			
 			0 = NONE
 			1 = first note
-			120 = last note
-			> 120 = control notes
+			119 = last note
+			>= 120 = control notes
 				254 = cut
 				255 = off
 			*/
@@ -73,7 +73,7 @@ void JGMOD_PLAYER::parse_it_note (int chn, int key, int note, int sample_no)
 				sample_no = ii->sample_number[map_index];
 				sample_no--;
 				
-				note = ii->key_to_note[map_index - 1] + 1;
+				note = ii->key_to_note[map_index];
 				jgmod::convert_it_pitch(&note);
 			}
 			else if (key == 0)
