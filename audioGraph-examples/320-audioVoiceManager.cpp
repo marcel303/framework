@@ -111,7 +111,7 @@ void AudioSourceWavefield1D::tick(const double dt)
 			const int spot = radius + (rand() % remainingSize);
 			const double strength = random(-1.f, +1.f) * .5f;
 			
-			m_wavefield.doGaussianImpact(spot, radius, strength);
+			m_wavefield.doGaussianImpact(spot, radius, strength, 1.f);
 		}
 	}
 	
@@ -674,7 +674,7 @@ int main(int argc, char * argv[])
 				
 				s_audioMutex.lock();
 				{
-					wavefield2D.m_wavefield.doGaussianImpact(spotX, spotY, r, strength);
+					wavefield2D.m_wavefield.doGaussianImpact(spotX, spotY, r, strength, 1.f);
 					
 					if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
 					{

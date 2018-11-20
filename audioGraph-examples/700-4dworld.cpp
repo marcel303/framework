@@ -1408,7 +1408,7 @@ struct World : WorldInterface
 					const float impactX = mouseWavefield[0];
 					const float impactY = mouseWavefield[1];
 					
-					wavefield.doGaussianImpact(impactX, impactY, 3, currentParams.wavefieldD);
+					wavefield.doGaussianImpact(impactX, impactY, 3, currentParams.wavefieldD, 1.f);
 					
 					if (mouse.wentUp(BUTTON_LEFT))
 					{
@@ -1700,14 +1700,14 @@ struct World : WorldInterface
 	{
 		const Vec2 samplePosition = constrainSamplePosition(wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2])), 3);
 		
-		wavefield.doGaussianImpact(samplePosition[0], samplePosition[1], 3, amount);
+		wavefield.doGaussianImpact(samplePosition[0], samplePosition[1], 3, amount, 1.f);
 	}
 	
 	virtual void rippleFlight(const Vec3 & p) override
 	{
 		const Vec2 samplePosition = constrainSamplePosition(wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2])), 2);
 		
-		wavefield.doGaussianImpact(samplePosition[0], samplePosition[1], 2, .05f);
+		wavefield.doGaussianImpact(samplePosition[0], samplePosition[1], 2, .05f, 1.f);
 	}
 	
 	virtual float measureSound(const Vec3 & p) override

@@ -234,7 +234,7 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 				{
 					const int x = rand() % wavefield.numElems;
 					
-					wavefield.doGaussianImpact(x, 1, 1.f);
+					wavefield.doGaussianImpact(x, 1, 1.f, 1.f);
 				}
 			}
 			x += sx;

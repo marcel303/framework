@@ -212,7 +212,7 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 					const int x = rand() % wavefield.numElems;
 					const int y = rand() % wavefield.numElems;
 					
-					wavefield.doGaussianImpact(x, y, 1, 1.f);
+					wavefield.doGaussianImpact(x, y, 1, 1.f, 1.f);
 				}
 			}
 			x += sx;
@@ -499,7 +499,7 @@ void AudioNodeWavefield2D::handleTrigger(const int inputSocketIndex)
 			if (triggerSize == 1.f)
 				wavefield->d[elemX][elemY] += triggerAmount;
 			else
-				wavefield->doGaussianImpact(elemX, elemX, triggerSize, triggerAmount);
+				wavefield->doGaussianImpact(elemX, elemX, triggerSize, triggerAmount, 1.f);
 		}
 	}
 	else if (inputSocketIndex == kInput_Randomize)
