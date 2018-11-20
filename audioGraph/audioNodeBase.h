@@ -481,10 +481,6 @@ struct AudioNodeBase
 	
 	virtual void getDescription(AudioNodeDescription & d) { }
 	virtual bool getFilterResponse(float * magnitude, const int numSteps) const { return false; }
-	
-// todo : perhaps the tick/draw should be handled through the real-time editing interface? we can do locking over there
-	virtual bool tickEditor(const int x, const int y, int & sx, int & sy, bool & inputIsCaptured) { return false; }
-	virtual void drawEditor(Surface * surface, const int x, const int y, const int sx, const int sy) { }
 };
 
 //
