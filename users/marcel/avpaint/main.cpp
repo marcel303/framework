@@ -9,14 +9,21 @@
 	#include "leap/Leap.h"
 #endif
 
-// todo : integrate Facebook Messenger Node.js app with https://cloud.google.com/vision/, for inappropriate content detection
-// todo : write something to extract dominant colors from (crowd sourced) images
+/*
 
-// todo : mask using rotating and scaling objects as mask alpha
-// todo : grooop logo animation
-// todo : think of ways to mix/vj
-// todo : use touchpad for map-like moving and scaling videos?
-// todo : multitouch touch pad? can SDL handle this? else look for api
+ideas:
+
+* integrate Facebook Messenger Node.js app with https://cloud.google.com/vision/, for inappropriate content detection
+
+* write something to extract dominant colors from (crowd sourced) images
+
+* mask using rotating and scaling objects as mask alpha
+* grooop logo animation
+* think of ways to mix/vj
+* use touchpad for map-like moving and scaling videos?
+* multitouch touch pad? can SDL handle this? else look for api
+
+*/
 
 /*
 
