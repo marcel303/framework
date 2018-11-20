@@ -37,12 +37,24 @@
 #endif
 
 #if DEBUG_MEDIAPLAYER
+	#if !defined(DEBUG_MEDIAPLAYER_LOGGING)
+		#define DEBUG_MEDIAPLAYER_LOGGING 0
+	#endif
 	#if !defined(DEBUG_MEDIAPLAYER_VIDEO_ALLOCS)
 		#define DEBUG_MEDIAPLAYER_VIDEO_ALLOCS 1
 	#endif
+	#if !defined(DEBUG_MEDIAPLAYER_SIMULATE_HICKUPS)
+		#define DEBUG_MEDIAPLAYER_SIMULATE_HICKUPS 1
+	#endif
 #else
+	#if !defined(DEBUG_MEDIAPLAYER_LOGGING)
+		#define DEBUG_MEDIAPLAYER_LOGGING 0 // do not alter
+	#endif
 	#if !defined(DEBUG_MEDIAPLAYER_VIDEO_ALLOCS)
 		#define DEBUG_MEDIAPLAYER_VIDEO_ALLOCS 0 // do not alter
+	#endif
+	#if !defined(DEBUG_MEDIAPLAYER_SIMULATE_HICKUPS)
+		#define DEBUG_MEDIAPLAYER_SIMULATE_HICKUPS 0 // do not alter
 	#endif
 #endif
 
@@ -51,6 +63,8 @@ namespace MP
 	namespace Debug
 	{
         void Print(const char * format, ...);
+		
+        void SimulateHickup();
 	};
 };
 

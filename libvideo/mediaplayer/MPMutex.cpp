@@ -52,6 +52,10 @@ namespace MP
 		{
 			Debug::Print("SDL mutex lock failed");
 		}
+		
+	#if DEBUG_MEDIAPLAYER_SIMULATE_HICKUPS
+		Debug::SimulateHickup();
+	#endif
 	}
 
 	void Mutex::Unlock() const

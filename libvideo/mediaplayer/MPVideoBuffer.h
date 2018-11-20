@@ -27,12 +27,13 @@
 
 #pragma once
 
+#include "MPDebug.h"
 #include "MPForward.h"
 #include "MPMutex.h"
 #include <list>
 #include <stdint.h>
 
-#define MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG 0 // todo : remove once decode buffer optimize issue is fixed ? or only compile in debug
+#define MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG (0 || DEBUG_MEDIAPLAYER_VIDEO_ALLOCS) // todo : remove once decode buffer optimize issue is fixed ? or only compile in debug
 
 namespace MP
 {
