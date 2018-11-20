@@ -667,14 +667,20 @@ int main(int argc, char * argv[])
 			{
 				const int gfxSize = std::min(GFX_SX, GFX_SY);
 				
-				const int spotX = (mouse.x - GFX_SX/2.0) / gfxSize * (wavefield2D.m_wavefield.numElems - 1) + (wavefield2D.m_wavefield.numElems-1)/2.f;
-				const int spotY = (mouse.y - GFX_SY/2.0) / gfxSize * (wavefield2D.m_wavefield.numElems - 1) + (wavefield2D.m_wavefield.numElems-1)/2.f;
+				const double spotX = (mouse.x - GFX_SX/2.0) / gfxSize * (wavefield2D.m_wavefield.numElems - 1.0) + (wavefield2D.m_wavefield.numElems-1)/2.0;
+				const double spotY = (mouse.y - GFX_SY/2.0) / gfxSize * (wavefield2D.m_wavefield.numElems - 1.0) + (wavefield2D.m_wavefield.numElems-1)/2.0;
 				const int r = spotX / float(wavefield2D.m_wavefield.numElems - 1.f) * 10 + 1;
 				const double strength = random(0.f, +1.f) * 4.0;
 				
 				s_audioMutex.lock();
 				{
 					wavefield2D.m_wavefield.doGaussianImpact(spotX, spotY, r, strength);
+					
+					if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+					{
+						wavefield2D.m_sampleLocation[0] = spotX;
+						wavefield2D.m_sampleLocation[1] = spotY;
+					}
 				}
 				s_audioMutex.unlock();
 			}
