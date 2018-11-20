@@ -27,15 +27,20 @@
 
 #include "audiostream/AudioOutput_PortAudio.h"
 #include "framework.h"
+#include "StringEx.h"
 #include "video.h"
 
-#include "mediaplayer/MPVideoBuffer.h"
+#define ENABLE_ARTNET 1 // when enabled, the averaged smoothed RGB color of the video is sent to DMX channels 0..2 to the host defined below
 
-#include "artnet.h"
-#include "ip/UdpSocket.h"
+#if ENABLE_ARTNET
+	#include "artnet.h"
+	#include "ip/UdpSocket.h"
 
-#define HOST_IP "192.168.1.220"
-#define HOST_PORT 6454
+	#include "mediaplayer/MPVideoBuffer.h"
+
+	#define HOST_IP "192.168.1.220"
+	#define HOST_PORT 6454
+#endif
 
 static void doProgressBar(const int x, const int y, const int sx, const int sy, const double time, const double duration, const float opacity, bool & hover, bool & seek, double & seekTime);
 
@@ -47,8 +52,10 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
+#if ENABLE_ARTNET
 	IpEndpointName endpointName(HOST_IP, HOST_PORT);
 	UdpTransmitSocket transmitSocket(endpointName);
+#endif
 
 	framework.filedrop = true;
 	
@@ -91,9 +98,16 @@ int main(int argc, char * argv[])
 
 		float progressBarTimer = 0.f;
 		
+		std::string osdText;
+		float osdTimer = 0.f;
+		
+		double videoTimeOffset = 0.0;
+		
 		Window window("Video", 640, 480, true);
 		
+	#if ENABLE_ARTNET
 		Color averageColor = colorBlack;
+	#endif
 		
 		while (!framework.quitRequested)
 		{
@@ -106,6 +120,21 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 
+			if (keyboard.wentDown(SDLK_1))
+			{
+				if (keyboard.isDown(SDLK_LCTRL))
+					videoTimeOffset = 0.0;
+				else if (keyboard.isDown(SDLK_LSHIFT))
+					videoTimeOffset -= 10.0 / 1000.0;
+				else
+					videoTimeOffset += 10.0 / 1000.0;
+				
+				videoTimeOffset = clamp<double>(videoTimeOffset, -0.5, +0.5);
+				
+				osdText = String::FormatC("Video time offset %dms", int(round(videoTimeOffset * 1000.0)));
+				osdTimer = 1.f;
+			}
+			
 			if (mouse.isIdle())
 				progressBarTimer -= framework.timeStep / 3.f;
 			else
@@ -116,6 +145,8 @@ int main(int argc, char * argv[])
 			else
 				mouse.showCursor(true);
 			
+			osdTimer -= framework.timeStep / 3.f;
+			
 			if (audioOutput.IsPlaying_get() == false)
 			{
 				if (mp.getAudioProperties(channelCount, sampleRate))
@@ -125,10 +156,11 @@ int main(int argc, char * argv[])
 				}
 			}
 			
-			mp.presentTime = mp.audioTime;
+			mp.presentTime = mp.audioTime + videoTimeOffset;
 			
 			mp.tick(mp.context, true);
 			
+		#if ENABLE_ARTNET
 			if (mp.videoFrame != nullptr)
 			{
 				int sx;
@@ -207,6 +239,7 @@ int main(int argc, char * argv[])
 					}
 				}
 			}
+		#endif
 			
 			if (mp.presentedLastFrame(mp.context))
 			{
@@ -224,12 +257,43 @@ int main(int argc, char * argv[])
 
 				if (texture != 0)
 				{
-					setColor(colorWhite);
-					gxSetTexture(texture);
-					pushBlend(BLEND_OPAQUE);
-					drawRect(0, 0, window.getWidth() + 14, window.getHeight());
-					popBlend();
-					gxSetTexture(0);
+					int sx;
+					int sy;
+					
+					{
+						GLuint restoreTexture;
+						glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+						checkErrorGL();
+						
+						glBindTexture(GL_TEXTURE_2D, texture);
+						glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sx);
+						glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
+						checkErrorGL();
+						
+						glBindTexture(GL_TEXTURE_2D, restoreTexture);
+					}
+					
+					const float scaleX = window.getWidth() / float(sx);
+					const float scaleY = window.getHeight() / float(sy);
+					const float scale = fminf(scaleX, scaleY);
+					const float scaledSx = sx * scale;
+					const float scaledSy = sy * scale;
+					const float offsetX = (window.getWidth() - scaledSx) / 2.f;
+					const float offsetY = (window.getHeight() - scaledSy) / 2.f;
+					
+					gxPushMatrix();
+					{
+						gxTranslatef(offsetX, offsetY, 0.f);
+						gxScalef(scale, scale, 1);
+						
+						setColor(colorWhite);
+						gxSetTexture(texture);
+						pushBlend(BLEND_OPAQUE);
+						drawRect(0, 0, sx, sy);
+						popBlend();
+						gxSetTexture(0);
+					}
+					gxPopMatrix();
 				}
 				
 				// draw the progress bar
@@ -244,7 +308,7 @@ int main(int argc, char * argv[])
 					bool seek = false;
 					double seekTime;
 					
-					doProgressBar(20, window.getHeight()-20-20, 200, 20, mp.presentTime, duration, saturate(progressBarTimer / (1.f - .6f)), hover, seek, seekTime);
+					doProgressBar(20, window.getHeight()-20-20, window.getWidth() * 4/5, 20, mp.presentTime, duration, saturate(progressBarTimer / (1.f - .6f)), hover, seek, seekTime);
 					
 					if (hover)
 						cursor = handCursor;
@@ -260,6 +324,14 @@ int main(int argc, char * argv[])
 						framework.process();
 						framework.process();
 					}
+				}
+				
+				const float osdOpacity = saturate(osdTimer / (1.f - .6f));
+				
+				if (osdOpacity > 0.f)
+				{
+					setColorf(1.f, 1.f, 1.f, osdOpacity);
+					drawText(window.getWidth() / 2, window.getHeight() / 2, 24, 0, 0, "%s", osdText.c_str());
 				}
 			}
 			framework.endDraw();
