@@ -27,6 +27,7 @@
 
 #include "audioGraph.h"
 #include "audioNodeBase.h"
+#include "audioVoiceManager.h"
 #include "framework.h" // listFiles
 #include "Log.h"
 #include "Parse.h"
@@ -91,6 +92,11 @@ void AudioGraph::destroy()
 	}
 	Assert(g_currentAudioGraph == this);
 	g_currentAudioGraph = nullptr;
+	
+// todo : perhaps more convenient and less error prone would be to free all of the voices ourselves and remove the task from audio nodes. it would safe calling shut on each instance
+
+	// all of the voice nodes should have freed their voices when shut was called
+	Assert(audioVoices.empty());
 	
 	for (auto i : valuesToFree)
 	{
@@ -213,6 +219,31 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 	}
 }
 
+bool AudioGraph::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
+{
+	if (globals->voiceMgr->allocVoice(voice, source, name, doRamping, rampDelay, rampTime, channelIndex))
+	{
+		Assert(audioVoices.count(voice) == 0);
+		audioVoices.insert(voice);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+void AudioGraph::freeVoice(AudioVoice *& voice)
+{
+	if (voice != nullptr)
+	{
+		Assert(audioVoices.count(voice) != 0);
+		audioVoices.erase(voice);
+		
+		globals->voiceMgr->freeVoice(voice);
+	}
+}
+
 void AudioGraph::tickMain()
 {
 	pushStateDescriptorUpdate();
@@ -319,7 +350,15 @@ void AudioGraph::tick(const float dt)
 	//
 	
 	if (rampDown)
-		rampedDown = true;
+	{
+		bool isRamped = false;
+		
+		for (AudioVoice * voice : audioVoices)
+			isRamped |= voice->rampInfo.isRamped;
+		
+		if (isRamped == false)
+			rampedDown = true;
+	}
 	
 	//
 	

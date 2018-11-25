@@ -48,6 +48,8 @@ struct AudioGraphGlobals;
 struct AudioNodeBase;
 struct AudioOutputChannel;
 struct AudioPlug;
+struct AudioSource;
+struct AudioVoice;
 struct AudioVoiceManager;
 
 struct SDL_mutex;
@@ -161,6 +163,8 @@ struct AudioGraph
 	
 	std::vector<ValueToFree> valuesToFree;
 	
+	std::set<AudioVoice*> audioVoices;
+	
 	double time;
 	
 	StateDescriptor stateDescriptor;
@@ -180,6 +184,9 @@ struct AudioGraph
 	
 	void destroy();
 	void connectToInputLiteral(AudioPlug & input, const std::string & inputValue);
+	
+	bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex);
+	void freeVoice(AudioVoice *& voice);
 	
 	// called from the main thread
 	void tickMain();
