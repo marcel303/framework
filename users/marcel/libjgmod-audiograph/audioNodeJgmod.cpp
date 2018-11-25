@@ -128,7 +128,7 @@ void AudioNodeJgmod::tick(const float dt)
 	
 	timerApi->processInterrupts(dt * 1000000.f);
 	
-	for (int i = 0; i < jgmod->no_chn; ++i)
+	for (int i = 0; i < jgmod->no_chn && i < kNumChannels; ++i)
 	{
 		output[i].setVector();
 	
