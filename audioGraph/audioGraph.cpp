@@ -317,24 +317,38 @@ void AudioGraph::setFlag(const char * name, const bool value)
 {
 	// todo : assert this is called from the main thread
 	
-	if (value)
-		activeFlags.insert(name);
-	else
-		activeFlags.erase(name);
+	mutex.lock();
+	{
+		if (value)
+			activeFlags.insert(name);
+		else
+			activeFlags.erase(name);
+	}
+	mutex.unlock();
 }
 
 void AudioGraph::resetFlag(const char * name)
 {
 	// todo : assert this is called from the main thread
 	
-	activeFlags.erase(name);
+	mutex.lock();
+	{
+		activeFlags.erase(name);
+	}
+	mutex.unlock();
 }
 
 bool AudioGraph::isFLagSet(const char * name) const
 {
 	// todo : assert this is called from the audio thread
 	
-	const bool result = stateDescriptor.activeFlags.count(name) != 0;
+	bool result;
+	
+	mutex.lock();
+	{
+		result = activeFlags.count(name) != 0;
+	}
+	mutex.unlock();
 	
 	return result;
 }
@@ -424,23 +438,28 @@ void AudioGraph::pushStateDescriptorUpdate()
 {
 	// build and push a state descriptor update message
 
-	stateDescriptorUpdate.activeFlags = activeFlags;
+	StateDescriptorUpdateMessage * update = new StateDescriptorUpdateMessage(stateDescriptorUpdate);
 	
-	stateDescriptorUpdate.controlValues.resize(stateDescriptor.controlValues.size());
+	stateDescriptorUpdate = StateDescriptorUpdateMessage();
+	
+	mutex.lock();
+	{
+	// fixme : use separate flags to communicate from main -> audio thread and audio to main thread (?)
+		update->activeFlags = activeFlags;
+	}
+	mutex.unlock();
+	
+	update->controlValues.resize(stateDescriptor.controlValues.size());
 	
 	for (size_t i = 0; i < stateDescriptor.controlValues.size(); ++i)
 	{
 		const auto & srcControlValue = stateDescriptor.controlValues[i];
-		auto & dstControlValue = stateDescriptorUpdate.controlValues[i];
+		auto & dstControlValue = update->controlValues[i];
 		
 		dstControlValue.name = srcControlValue.name;
 		dstControlValue.desiredX = srcControlValue.desiredX;
 		dstControlValue.desiredY = srcControlValue.desiredY;
 	}
-	
-	StateDescriptorUpdateMessage * update = new StateDescriptorUpdateMessage(stateDescriptorUpdate);
-	
-	stateDescriptorUpdate = StateDescriptorUpdateMessage();
 	
 	mutex.lock();
 	{
