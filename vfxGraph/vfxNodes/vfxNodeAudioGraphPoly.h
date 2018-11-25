@@ -53,20 +53,30 @@ struct VoiceMgr_VoiceGroup : AudioVoiceManager
 	{
 	}
 	
+	virtual ~VoiceMgr_VoiceGroup() override
+	{
+		Assert(voices.empty());
+	}
+	
 	void setMode(const Mode mode)
 	{
 		if (mode != currentMode)
 		{
 			// todo : remove all voices
 			
-			// todo : add all voices
+			// todo : if mode is passthrough -> add all voices
+			// todo : if mode is downmix to mono -> add special voice to perform downmix based on the set of voices we manage here
+			// todo : if mode is muted -> don't add any voices
 		}
 	}
 	
 	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
 	virtual void freeVoice(AudioVoice *& voice) override;
 	
-	virtual void generateAudio(float * __restrict samples, const int numSamples) override { }
+	virtual void generateAudio(float * __restrict samples, const int numSamples) override
+	{
+		// todo : implement
+	}
 };
 
 struct VfxNodeAudioGraphPoly : VfxNodeBase
@@ -102,7 +112,7 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 	
 	VoiceMgr_VoiceGroup voiceMgr;
 	
-	AudioGraphGlobals globals;
+	AudioGraphGlobals * globals;
 	
 	AudioGraphInstance * instances[kMaxInstances];
 	
