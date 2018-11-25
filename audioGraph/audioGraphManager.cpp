@@ -368,29 +368,6 @@ void AudioGraphGlobals::unregisterControlValue(const char * name)
 	SDL_UnlockMutex(audioMutex);
 }
 
-bool AudioGraphGlobals::findControlValue(const char * name, AudioControlValue & result) const
-{
-	bool found = false;
-	
-	SDL_LockMutex(audioMutex);
-	{
-		for (auto controlValueItr = controlValues.begin(); controlValueItr != controlValues.end(); ++controlValueItr)
-		{
-			auto & controlValue = *controlValueItr;
-			
-			if (controlValue.name == name)
-			{
-				result = controlValue;
-				found = true;
-				break;
-			}
-		}
-	}
-	SDL_UnlockMutex(audioMutex);
-	
-	return found;
-}
-
 void AudioGraphGlobals::exportControlValues()
 {
 	SDL_LockMutex(audioMutex);
@@ -648,6 +625,8 @@ void AudioGraphManager_Basic::free(AudioGraphInstance *& instance, const bool do
 
 void AudioGraphManager_Basic::tickMain()
 {
+	// prune instances
+	
 	std::vector<AudioGraphInstance*> instancesToRemove;
 
 	for (auto & instance : instances)
@@ -661,6 +640,13 @@ void AudioGraphManager_Basic::tickMain()
 	for (auto & instanceToRemove : instancesToRemove)
 	{
 		free(instanceToRemove, false);
+	}
+	
+	// tick audio graphs
+	
+	for (auto & instance : instances)
+	{
+		instance->audioGraph->tickMain();
 	}
 }
 
@@ -991,6 +977,8 @@ void AudioGraphManager_RTE::free(AudioGraphInstance *& instance, const bool doRa
 
 void AudioGraphManager_RTE::tickMain()
 {
+	// prune instances
+	
 	std::vector<AudioGraphInstance*> instancesToRemove;
 
 	for (auto & file : files)
@@ -1007,6 +995,16 @@ void AudioGraphManager_RTE::tickMain()
 	for (auto & instanceToRemove : instancesToRemove)
 	{
 		free(instanceToRemove, false);
+	}
+	
+	// tick audio graphs
+	
+	for (auto & file : files)
+	{
+		for (auto & instance : file.second->instanceList)
+		{
+			instance->audioGraph->tickMain();
+		}
 	}
 }
 
@@ -1371,6 +1369,8 @@ void AudioGraphManager_MultiRTE::free(AudioGraphInstance *& instance, const bool
 
 void AudioGraphManager_MultiRTE::tickMain()
 {
+	// prune instances
+	
 	std::vector<AudioGraphInstance*> instancesToRemove;
 
 	for (auto & file : files)
@@ -1387,6 +1387,16 @@ void AudioGraphManager_MultiRTE::tickMain()
 	for (auto & instanceToRemove : instancesToRemove)
 	{
 		free(instanceToRemove, false);
+	}
+	
+	// tick audio graphs
+	
+	for (auto & file : files)
+	{
+		for (auto & instance : file.second->instanceList)
+		{
+			instance->audioGraph->tickMain();
+		}
 	}
 }
 

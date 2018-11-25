@@ -57,17 +57,17 @@ AudioGraph::AudioGraph(AudioGraphGlobals * _globals, const bool _isPaused)
 #endif
 	, valuesToFree()
 	, time(0.0)
-	, activeFlags()
-	, memf()
-	, mems()
-	, activeEvents()
-	, triggeredEvents()
-	, controlValues()
-	, events()
+	, stateDescriptor()
+	, pushedStateDescriptorUpdate(nullptr)
 	, globals(nullptr)
 	, mutex()
+	, rteMutex()
 {
+// todo : use the mutex from globals, so the audio graph can share it with all other graphs, ensuring state descriptor updates are sync'ed across all audio graph instances
+
 	mutex.init();
+	
+	rteMutex.init();
 	
 	globals = _globals;
 }
@@ -137,6 +137,8 @@ void AudioGraph::destroy()
 	graph = nullptr;
 #endif
 
+	rteMutex.shut();
+	
 	mutex.shut();
 }
 
@@ -198,6 +200,11 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 	}
 }
 
+void AudioGraph::tickMain()
+{
+	pushStateDescriptorUpdate();
+}
+
 void AudioGraph::tick(const float dt)
 {
 	audioCpuTimingBlock(AudioGraph_Tick);
@@ -211,26 +218,70 @@ void AudioGraph::tick(const float dt)
 	if (rampDownRequested)
 		rampDown = true;
 	
+	rteMutex.lock();
+	
+	stateDescriptor.activeEvents.clear();
+	
 	mutex.lock();
 	{
-		// update control values
-		
-		for (auto & controlValue : controlValues)
+		if (pushedStateDescriptorUpdate != nullptr)
 		{
-			const float retain = powf(controlValue.smoothness, dt);
+			std::swap(stateDescriptor.activeFlags, pushedStateDescriptorUpdate->activeFlags);
 			
-			controlValue.currentX = controlValue.currentX * retain + controlValue.desiredX * (1.f - retain);
-			controlValue.currentY = controlValue.currentY * retain + controlValue.desiredY * (1.f - retain);
+			for (auto & memf_itr : pushedStateDescriptorUpdate->memf)
+			{
+				stateDescriptor.memf[memf_itr.first] = memf_itr.second;
+			}
+			
+			for (auto & mems_itr : pushedStateDescriptorUpdate->mems)
+			{
+				stateDescriptor.mems[mems_itr.first] = mems_itr.second;
+			}
+			
+			for (auto & pushedControlValue : pushedStateDescriptorUpdate->controlValues)
+			{
+				for (auto & controlValue : stateDescriptor.controlValues)
+				{
+					if (controlValue.name == pushedControlValue.name)
+					{
+						controlValue.active_desiredX = pushedControlValue.desiredX;
+						controlValue.active_desiredY = pushedControlValue.desiredY;
+					}
+				}
+			}
+			
+			std::swap(stateDescriptor.activeEvents, pushedStateDescriptorUpdate->triggeredEvents);
+			
+		// todo : perform memory allocs/frees on the main thread
+			delete pushedStateDescriptorUpdate;
+			pushedStateDescriptorUpdate = nullptr;
 		}
-
-		exportControlValues();
-		
-		// update the set of 'active' events. all newly triggered events are processed next tick
-		
-		std::swap(activeEvents, triggeredEvents);
-		triggeredEvents.clear();
 	}
 	mutex.unlock();
+	
+	// update control values
+	
+	for (auto & controlValue : stateDescriptor.controlValues)
+	{
+		const float retain = powf(controlValue.smoothness, dt);
+		
+		controlValue.active_currentX = controlValue.active_currentX * retain + controlValue.active_desiredX * (1.f - retain);
+		controlValue.active_currentY = controlValue.active_currentY * retain + controlValue.active_desiredY * (1.f - retain);
+		
+		// fixme : make sure this is thread safe. use atomics?
+		
+		controlValue.currentX = controlValue.active_currentX;
+		controlValue.currentY = controlValue.active_currentY;
+		
+		// update associated memory inside the state descriptor
+		
+		auto & mem = stateDescriptor.memf[controlValue.name];
+		
+		mem.value1 = controlValue.active_currentX;
+		mem.value2 = controlValue.active_currentY;
+		mem.value3 = 0.f;
+		mem.value4 = 0.f;
+	}
 		
 	// process nodes
 	
@@ -245,6 +296,8 @@ void AudioGraph::tick(const float dt)
 			node->traverseTick(currentTickTraversalId, dt);
 		}
 	}
+	
+	rteMutex.unlock();
 	
 	//
 	
@@ -262,45 +315,37 @@ void AudioGraph::tick(const float dt)
 
 void AudioGraph::setFlag(const char * name, const bool value)
 {
-	mutex.lock();
-	{
-		if (value)
-			activeFlags.insert(name);
-		else
-			activeFlags.erase(name);
-	}
-	mutex.unlock();
+	// todo : assert this is called from the main thread
+	
+	if (value)
+		activeFlags.insert(name);
+	else
+		activeFlags.erase(name);
 }
 
 void AudioGraph::resetFlag(const char * name)
 {
-	mutex.lock();
-	{
-		activeFlags.erase(name);
-	}
-	mutex.unlock();
+	// todo : assert this is called from the main thread
+	
+	activeFlags.erase(name);
 }
 
 bool AudioGraph::isFLagSet(const char * name) const
 {
-	bool result = false;
+	// todo : assert this is called from the audio thread
 	
-	mutex.lock();
-	{
-		result = activeFlags.count(name) != 0;
-	}
-	mutex.unlock();
+	const bool result = stateDescriptor.activeFlags.count(name) != 0;
 	
 	return result;
 }
 
 void AudioGraph::registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY)
 {
-	mutex.lock();
+	rteMutex.lock();
 	{
 		bool exists = false;
 		
-		for (auto & controlValue : controlValues)
+		for (auto & controlValue : stateDescriptor.controlValues)
 		{
 			if (controlValue.name == name)
 			{
@@ -312,9 +357,9 @@ void AudioGraph::registerControlValue(AudioControlValue::Type type, const char *
 		
 		if (exists == false)
 		{
-			controlValues.resize(controlValues.size() + 1);
+			stateDescriptor.controlValues.resize(stateDescriptor.controlValues.size() + 1);
 			
-			auto & controlValue = controlValues.back();
+			auto & controlValue = stateDescriptor.controlValues.back();
 			
 			controlValue.type = type;
 			controlValue.name = name;
@@ -329,19 +374,24 @@ void AudioGraph::registerControlValue(AudioControlValue::Type type, const char *
 			controlValue.currentX = defaultX;
 			controlValue.currentY = defaultY;
 			
-			std::sort(controlValues.begin(), controlValues.end(), [](const AudioControlValue & a, const AudioControlValue & b) { return a.name < b.name; });
+			controlValue.active_desiredX = controlValue.desiredX;
+			controlValue.active_desiredY = controlValue.desiredY;
+			controlValue.active_currentX = controlValue.currentX;
+			controlValue.active_currentY = controlValue.currentY;
+			
+			std::sort(stateDescriptor.controlValues.begin(), stateDescriptor.controlValues.end(), [](const AudioControlValue & a, const AudioControlValue & b) { return a.name < b.name; });
 		}
 	}
-	mutex.unlock();
+	rteMutex.unlock();
 }
 
 void AudioGraph::unregisterControlValue(const char * name)
 {
-	mutex.lock();
+	rteMutex.lock();
 	{
 		bool exists = false;
 		
-		for (auto controlValueItr = controlValues.begin(); controlValueItr != controlValues.end(); ++controlValueItr)
+		for (auto controlValueItr = stateDescriptor.controlValues.begin(); controlValueItr != stateDescriptor.controlValues.end(); ++controlValueItr)
 		{
 			auto & controlValue = *controlValueItr;
 			
@@ -353,7 +403,7 @@ void AudioGraph::unregisterControlValue(const char * name)
 				{
 					//LOG_DBG("erasing control value %s", name);
 					
-					controlValues.erase(controlValueItr);
+					stateDescriptor.controlValues.erase(controlValueItr);
 				}
 				
 				exists = true;
@@ -367,51 +417,67 @@ void AudioGraph::unregisterControlValue(const char * name)
 			LOG_WRN("failed to unregister control value %s", name);
 		}
 	}
-	mutex.unlock();
+	rteMutex.unlock();
 }
 
-bool AudioGraph::findControlValue(const char * name, AudioControlValue & result) const
+void AudioGraph::pushStateDescriptorUpdate()
 {
-	bool found = false;
+	// build and push a state descriptor update message
+
+	stateDescriptorUpdate.activeFlags = activeFlags;
 	
-	mutex.lock();
+	stateDescriptorUpdate.controlValues.resize(stateDescriptor.controlValues.size());
+	
+	for (size_t i = 0; i < stateDescriptor.controlValues.size(); ++i)
 	{
-		for (auto controlValueItr = controlValues.begin(); controlValueItr != controlValues.end(); ++controlValueItr)
-		{
-			auto & controlValue = *controlValueItr;
-			
-			if (controlValue.name == name)
-			{
-				result = controlValue;
-				found = true;
-				break;
-			}
-		}
+		const auto & srcControlValue = stateDescriptor.controlValues[i];
+		auto & dstControlValue = stateDescriptorUpdate.controlValues[i];
+		
+		dstControlValue.name = srcControlValue.name;
+		dstControlValue.desiredX = srcControlValue.desiredX;
+		dstControlValue.desiredY = srcControlValue.desiredY;
 	}
-	mutex.unlock();
 	
-	return found;
-}
-
-void AudioGraph::exportControlValues()
-{
+	StateDescriptorUpdateMessage * update = new StateDescriptorUpdateMessage(stateDescriptorUpdate);
+	
+	stateDescriptorUpdate = StateDescriptorUpdateMessage();
+	
 	mutex.lock();
 	{
-		for (auto & controlValue : controlValues)
+		if (pushedStateDescriptorUpdate != nullptr)
 		{
-			setMemf(controlValue.name.c_str(), controlValue.currentX, controlValue.currentY);
+			// copy updates from the previous (non-processed) update into the current update
+			
+			for (auto & memf_itr : pushedStateDescriptorUpdate->memf)
+				if (update->memf.count(memf_itr.first) == 0)
+					update->memf.insert(memf_itr);
+			
+			for (auto & mems_itr : pushedStateDescriptorUpdate->mems)
+				if (update->mems.count(mems_itr.first) == 0)
+					update->mems.insert(mems_itr);
+			
+			update->triggeredEvents.insert(
+				pushedStateDescriptorUpdate->triggeredEvents.begin(),
+				pushedStateDescriptorUpdate->triggeredEvents.end());
+			
+			// free the previous (non-processed) update and replace it with the current update
+			
+			delete pushedStateDescriptorUpdate;
+			pushedStateDescriptorUpdate = nullptr;
 		}
+		
+		pushedStateDescriptorUpdate = update;
 	}
 	mutex.unlock();
 }
 
 void AudioGraph::registerEvent(const char * name)
 {
-	mutex.lock();
+	rteMutex.lock();
 	{
 		bool exists = false;
 		
-		for (auto & event : events)
+		for (auto & event : stateDescriptor.events)
 		{
 			if (event.name == name)
 			{
@@ -423,26 +489,26 @@ void AudioGraph::registerEvent(const char * name)
 		
 		if (exists == false)
 		{
-			events.resize(events.size() + 1);
+			stateDescriptor.events.resize(stateDescriptor.events.size() + 1);
 			
-			auto & event = events.back();
+			auto & event = stateDescriptor.events.back();
 			
 			event.name = name;
 			event.refCount = 1;
 			
-			std::sort(events.begin(), events.end(), [](const AudioEvent & a, const AudioEvent & b) { return a.name < b.name; });
+			std::sort(stateDescriptor.events.begin(), stateDescriptor.events.end(), [](const AudioEvent & a, const AudioEvent & b) { return a.name < b.name; });
 		}
 	}
-	mutex.unlock();
+	rteMutex.unlock();
 }
 
 void AudioGraph::unregisterEvent(const char * name)
 {
-	mutex.lock();
+	rteMutex.lock();
 	{
 		bool exists = false;
 		
-		for (auto eventItr = events.begin(); eventItr != events.end(); ++eventItr)
+		for (auto eventItr = stateDescriptor.events.begin(); eventItr != stateDescriptor.events.end(); ++eventItr)
 		{
 			auto & event = *eventItr;
 			
@@ -454,7 +520,7 @@ void AudioGraph::unregisterEvent(const char * name)
 				{
 					//LOG_DBG("erasing event %s", name);
 					
-					events.erase(eventItr);
+					stateDescriptor.events.erase(eventItr);
 				}
 				
 				exists = true;
@@ -468,77 +534,65 @@ void AudioGraph::unregisterEvent(const char * name)
 			LOG_WRN("failed to unregister event %s", name);
 		}
 	}
-	mutex.unlock();
+	rteMutex.unlock();
 }
 
 void AudioGraph::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
-	mutex.lock();
-	{
-		auto & mem = memf[name];
-		
-		mem.value1 = value1;
-		mem.value2 = value2;
-		mem.value3 = value3;
-		mem.value4 = value4;
-	}
-	mutex.unlock();
+// todo : assert this is the main thread
+
+	auto & mem = stateDescriptorUpdate.memf[name];
+	
+	mem.value1 = value1;
+	mem.value2 = value2;
+	mem.value3 = value3;
+	mem.value4 = value4;
 }
 
 AudioGraph::Memf AudioGraph::getMemf(const char * name) const
 {
+// todo : assert this is the audio thread
+
 	Memf result;
 	
-	mutex.lock();
+	auto memItr = stateDescriptor.memf.find(name);
+	
+	if (memItr != stateDescriptor.memf.end())
 	{
-		auto memItr = memf.find(name);
-		
-		if (memItr != memf.end())
-		{
-			result = memItr->second;
-		}
+		result = memItr->second;
 	}
-	mutex.unlock();
 	
 	return result;
 }
 
 void AudioGraph::setMems(const char * name, const char * value)
 {
-	mutex.lock();
-	{
-		auto & mem = mems[name];
-		
-		mem.value = value;
-	}
-	mutex.unlock();
+// todo : assert this is the main thread
+
+	auto & mem = stateDescriptorUpdate.mems[name];
+	
+	mem.value = value;
 }
 
 AudioGraph::Mems AudioGraph::getMems(const char * name) const
 {
+// todo : assert this is the audio thread
+
 	Mems result;
+
+	auto memItr = stateDescriptor.mems.find(name);
 	
-	mutex.lock();
+	if (memItr != stateDescriptor.mems.end())
 	{
-		auto memItr = mems.find(name);
-		
-		if (memItr != mems.end())
-		{
-			result = memItr->second;
-		}
+		result = memItr->second;
 	}
-	mutex.unlock();
 	
 	return result;
 }
 
 void AudioGraph::triggerEvent(const char * event)
 {
-	mutex.lock();
-	{
-		triggeredEvents.push_back(event);
-	}
-	mutex.unlock();
+	stateDescriptorUpdate.triggeredEvents.insert(event);
 }
 
 //
@@ -724,6 +778,8 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 		
 		audioNode->init(node);
 	}
+	
+	audioGraph->pushStateDescriptorUpdate();
 	
 	Assert(g_currentAudioGraph == audioGraph);
 	g_currentAudioGraph = nullptr;

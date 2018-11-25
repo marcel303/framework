@@ -195,6 +195,12 @@ struct AudioControlValue
 	float desiredY;
 	float currentX;
 	float currentY;
+	
+	// note : these 'active' values are updated and used on the audio thread and are unsafe to use from any other thread. please don't touch them unless you know what you're doing!
+	float active_desiredX;
+	float active_desiredY;
+	float active_currentX;
+	float active_currentY;
 };
 
 struct AudioEvent
