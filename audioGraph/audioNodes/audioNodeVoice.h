@@ -55,6 +55,7 @@ struct AudioNodeVoice : AudioNodeBase
 		kInput_Audio,
 		kInput_Gain,
 		kInput_Speaker,
+		kInput_RampTime,
 		kInput_ChannelIndex,
 		kInput_COUNT
 	};

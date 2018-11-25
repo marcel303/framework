@@ -47,6 +47,7 @@ AUDIO_NODE_TYPE(AudioNodeVoice)
 	in("audio", "audioValue");
 	in("gain", "audioValue", "1");
 	inEnum("speaker", "voiceSpeaker");
+	in("rampTime", "audioValue", "0.2");
 	in("channel", "int");
 }
 
@@ -85,6 +86,7 @@ AudioNodeVoice::AudioNodeVoice()
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);
 	addInput(kInput_Gain, kAudioPlugType_FloatVec);
 	addInput(kInput_Speaker, kAudioPlugType_Int);
+	addInput(kInput_RampTime, kAudioPlugType_FloatVec);
 	addInput(kInput_ChannelIndex, kAudioPlugType_Int);
 	
 	//
@@ -124,16 +126,25 @@ void AudioNodeVoice::tick(const float dt)
 		if (voice)
 			voiceMgr->freeVoice(voice);
 		
-	// todo : made ramping, ramping delay and ramping time options.
-	
+		AudioFloat defaultRampTime(.2f);
+		const float rampTime = getInputAudioFloat(kInput_RampTime, &defaultRampTime)->getMean();
+		
 		if (speaker == kSpeaker_Channel)
 		{
 			if (channelIndex >= 0)
-				voiceMgr->allocVoice(voice, &source, "voice", false, 0.f, 1.f, channelIndex);
+			{
+				voiceMgr->allocVoice(
+					voice, &source, "voice",
+					rampTime > 0.f, 0.f, rampTime,
+					channelIndex);
+			}
 		}
 		else
 		{
-			voiceMgr->allocVoice(voice, &source, "voice", false, 0.f, 1.f, -1);
+			voiceMgr->allocVoice(
+				voice, &source, "voice",
+				rampTime > .0f, 0.f, rampTime,
+				-1);
 		}
 	}
 	
