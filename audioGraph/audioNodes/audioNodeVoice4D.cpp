@@ -32,8 +32,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "Mat4x4.h"
 #include "StringBuilder.h"
 
-#define voiceMgr g_currentAudioGraph->globals->voiceMgr
-
 static const int kReturnBase = 41;
 static const int kMaxReturns = 4;
 
@@ -187,7 +185,7 @@ void AudioNodeVoice4D::shut()
 {
 	if (voice != nullptr)
 	{
-		voiceMgr->freeVoice(voice);
+		g_currentAudioGraph->freeVoice(voice);
 	}
 }
 
@@ -199,7 +197,7 @@ void AudioNodeVoice4D::tick(const float dt)
 	{
 		if (voice != nullptr)
 		{
-			voiceMgr->freeVoice(voice);
+			g_currentAudioGraph->freeVoice(voice);
 		}
 		
 		return;
@@ -208,7 +206,7 @@ void AudioNodeVoice4D::tick(const float dt)
 	{
 		const float rampTime = getInputAudioFloat(kInput_RampTime, &AudioFloat::One)->getMean();
 		
-		voiceMgr->allocVoice(voice, &source, "voice.4d", true, .3f, rampTime, -1);
+		g_currentAudioGraph->allocVoice(voice, &source, "voice.4d", true, .3f, rampTime, -1);
 		
 		if (voice->type == AudioVoice::kType_4DSOUND)
 		{
@@ -481,7 +479,7 @@ AudioNodeVoice4DReturn::~AudioNodeVoice4DReturn()
 {
 	if (voice != nullptr)
 	{
-		voiceMgr->freeVoice(voice);
+		g_currentAudioGraph->freeVoice(voice);
 	}
 }
 
@@ -497,7 +495,7 @@ void AudioNodeVoice4DReturn::tick(const float dt)
 		{
 			if (voice != nullptr)
 			{
-				voiceMgr->freeVoice(voice);
+				g_currentAudioGraph->freeVoice(voice);
 			}
 			
 			//
@@ -505,7 +503,7 @@ void AudioNodeVoice4DReturn::tick(const float dt)
 			const float rampTime = getInputAudioFloat(kInput_RampTime, &AudioFloat::One)->getMean();
 			
 			source.returnNode = this;
-			if (voiceMgr->allocVoice(voice, &source, "return.4d", true, .2f, rampTime, absoluteIndex))
+			if (g_currentAudioGraph->allocVoice(voice, &source, "return.4d", true, .2f, rampTime, absoluteIndex))
 			{
 				voice->speaker = AudioVoice::kSpeaker_LeftAndRight;
 				
@@ -583,6 +581,8 @@ void AudioNodeVoice4DGlobals::tick(const float dt)
 		return;
 	}
 	
+	AudioVoiceManager * voiceMgr = g_currentAudioGraph->globals->voiceMgr;
+	
 	if (voiceMgr->type != AudioVoiceManager::kType_4DSOUND)
 	{
 		return;
@@ -610,5 +610,3 @@ void AudioNodeVoice4DGlobals::tick(const float dt)
 	voiceMgr4D->spat.globalOrigin[1] = getInputAudioFloat(kInput_OriginY, &AudioFloat::Zero)->getMean();
 	voiceMgr4D->spat.globalOrigin[2] = getInputAudioFloat(kInput_OriginZ, &AudioFloat::Zero)->getMean();
 }
-
-#undef voiceMgr
