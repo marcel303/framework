@@ -97,7 +97,7 @@ AudioNodeVoice::AudioNodeVoice()
 	audioGraph = g_currentAudioGraph;
 }
 
-AudioNodeVoice::~AudioNodeVoice()
+void AudioNodeVoice::shut()
 {
 	if (voice != nullptr)
 	{
@@ -124,14 +124,16 @@ void AudioNodeVoice::tick(const float dt)
 		if (voice)
 			voiceMgr->freeVoice(voice);
 		
+	// todo : made ramping, ramping delay and ramping time options.
+	
 		if (speaker == kSpeaker_Channel)
 		{
 			if (channelIndex >= 0)
-				voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, channelIndex);
+				voiceMgr->allocVoice(voice, &source, "voice", false, 0.f, 1.f, channelIndex);
 		}
 		else
 		{
-			voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, -1);
+			voiceMgr->allocVoice(voice, &source, "voice", false, 0.f, 1.f, -1);
 		}
 	}
 	

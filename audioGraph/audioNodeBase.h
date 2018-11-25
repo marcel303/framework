@@ -476,6 +476,7 @@ struct AudioNodeBase
 	
 	virtual void initSelf(const GraphNode & node) { }
 	virtual void init(const GraphNode & node) { }
+	virtual void shut() { }
 	virtual void tick(const float dt) { }
 	virtual void handleTrigger(const int inputSocketIndex) { }
 	

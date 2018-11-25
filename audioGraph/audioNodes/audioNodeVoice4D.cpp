@@ -183,7 +183,7 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	audioGraph = g_currentAudioGraph;
 }
 
-AudioNodeVoice4D::~AudioNodeVoice4D()
+void AudioNodeVoice4D::shut()
 {
 	if (voice != nullptr)
 	{

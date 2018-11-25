@@ -99,7 +99,7 @@ struct AudioNodeVoice4D : AudioNodeBase
 	AudioGraph * audioGraph;
 	
 	AudioNodeVoice4D();
-	~AudioNodeVoice4D() override;
+	virtual void shut() override;
 	
 	virtual void tick(const float dt) override;
 	

@@ -79,6 +79,19 @@ AudioGraph::~AudioGraph()
 
 void AudioGraph::destroy()
 {
+	Assert(g_currentAudioGraph == nullptr);
+	g_currentAudioGraph = this;
+	{
+		for (auto & nodeItr : nodes)
+		{
+			AudioNodeBase * node = nodeItr.second;
+			
+			node->shut();
+		}
+	}
+	Assert(g_currentAudioGraph == this);
+	g_currentAudioGraph = nullptr;
+	
 	for (auto i : valuesToFree)
 	{
 		switch (i.type)
