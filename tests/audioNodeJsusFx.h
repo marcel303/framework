@@ -78,7 +78,6 @@ struct AudioNodeJsusFx : AudioNodeBase
 	bool jsusFxIsValid;
 	
 	JsusFxFileAPI_Basic * jsusFx_fileAPI;
-	JsusFxGfx_Framework * jsusFx_gfx;
 	
 	AudioResource_JsusFx * resource;
 	int resourceVersion;

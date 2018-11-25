@@ -32,7 +32,6 @@
 
 #include "jsusfx.h"
 #include "jsusfx_file.h"
-#include "jsusfx_gfx.h"
 
 #include "framework.h"
 #include "gfx-framework.h"
@@ -482,7 +481,6 @@ AudioNodeJsusFx::AudioNodeJsusFx(const char * dataRoot, const char * searchPath)
 	, jsusFx(nullptr)
 	, jsusFxIsValid(false)
 	, jsusFx_fileAPI(nullptr)
-	, jsusFx_gfx(nullptr)
 	, resource(nullptr)
 	, resourceVersion(0)
 {
@@ -516,16 +514,11 @@ void AudioNodeJsusFx::load(const char * filename)
 	jsusFx_fileAPI->init(jsusFx->m_vm);
 	jsusFx->fileAPI = jsusFx_fileAPI;
 	
-	Assert(jsusFx_gfx == nullptr);
-	jsusFx_gfx = new JsusFxGfx_Framework(*jsusFx);
-	jsusFx_gfx->init(jsusFx->m_vm);
-	jsusFx->gfx = jsusFx_gfx;
-	
 	//
 	
 	Assert(jsusFxIsValid == false);
 	
-	jsusFxIsValid = jsusFx->compile(*pathLibrary, filename, JsusFx::kCompileFlag_CompileGraphicsSection | JsusFx::kCompileFlag_CompileSerializeSection);
+	jsusFxIsValid = jsusFx->compile(*pathLibrary, filename, JsusFx::kCompileFlag_CompileSerializeSection);
 	
 	if (jsusFxIsValid)
 	{
@@ -536,12 +529,6 @@ void AudioNodeJsusFx::load(const char * filename)
 void AudioNodeJsusFx::free()
 {
 	jsusFxIsValid = false;
-	
-	delete jsusFx_gfx;
-	jsusFx_gfx = nullptr;
-	
-	if (jsusFx != nullptr)
-		jsusFx->gfx = nullptr;
 	
 	delete jsusFx_fileAPI;
 	jsusFx_fileAPI = nullptr;
@@ -579,7 +566,16 @@ void AudioNodeJsusFx::tick(const float dt)
 {
 	if (isPassthrough)
 	{
-		clearOutputs();
+		for (int i = 0; i < audioOutputs.size() && i < numAudioInputs; ++i)
+		{
+			const AudioFloat * audioInput = getInputAudioFloat(AUDIOINPUT_INDEX(i), &AudioFloat::Zero);
+			
+			audioOutputs[i].set(*audioInput);
+		}
+		
+		for (int i = numAudioInputs; i < audioOutputs.size(); ++i)
+			audioOutputs[i].setZero();
+		
 		return;
 	}
 	
@@ -618,6 +614,12 @@ void AudioNodeJsusFx::tick(const float dt)
 		
 		for (auto & sliderInput : sliderInputs)
 		{
+		#if 0
+		// todo : slider input default value should come from resource ..
+			defaultValue.setScalar(sliderInput.defaultValue);
+			
+			const float value = getInputAudioFloat(sliderInput.socketIndex, &defaultValue)->getMean();
+		#else
 			auto input = tryGetInput(sliderInput.socketIndex);
 			
 			Assert(input != nullptr);
@@ -625,7 +627,8 @@ void AudioNodeJsusFx::tick(const float dt)
 				continue; // todo : move slider to its default value when input is not connected. or to whatever is set inside the serialiation data..
 			
 			const float value = input->getAudioFloat().getMean();
-			
+		#endif
+		
 			Assert(jsusFx->sliders[sliderInput.sliderIndex].exists);
 			
 			jsusFx->moveSlider(sliderInput.sliderIndex, value);
@@ -661,6 +664,9 @@ void AudioNodeJsusFx::tick(const float dt)
 
 void AudioNodeJsusFx::getDescription(AudioNodeDescription & d)
 {
+	if (jsusFx == nullptr)
+		return;
+		
 	for (int i = 0; i < JsusFx::kMaxSliders; ++i)
 	{
 		auto & slider = jsusFx->sliders[i];
