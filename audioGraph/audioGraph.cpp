@@ -351,12 +351,16 @@ void AudioGraph::tick(const float dt)
 	
 	if (rampDown)
 	{
-		bool isRamped = false;
+		bool isRampedDown = true;
 		
 		for (AudioVoice * voice : audioVoices)
-			isRamped |= voice->rampInfo.isRamped;
+		{
+			Assert(voice->rampInfo.ramp == false);
+			
+			isRampedDown &= voice->rampInfo.rampValue == 0.f;
+		}
 		
-		if (isRamped == false)
+		if (isRampedDown)
 			rampedDown = true;
 	}
 	
