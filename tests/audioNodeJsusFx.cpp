@@ -481,8 +481,9 @@ AudioNodeJsusFx::AudioNodeJsusFx(const char * dataRoot, const char * searchPath)
 	, jsusFx(nullptr)
 	, jsusFxIsValid(false)
 	, jsusFx_fileAPI(nullptr)
+	, jsusFx_gfxAPI(nullptr)
 	, resource(nullptr)
-	, resourceVersion(0)
+	, resourceVersion(-1)
 {
 	Assert(pathLibrary == nullptr);
 	pathLibrary = new JsusFxPathLibrary_Basic(dataRoot);
@@ -514,6 +515,11 @@ void AudioNodeJsusFx::load(const char * filename)
 	jsusFx_fileAPI->init(jsusFx->m_vm);
 	jsusFx->fileAPI = jsusFx_fileAPI;
 	
+	Assert(jsusFx_gfxAPI == nullptr);
+	jsusFx_gfxAPI = new JsusFxGfx();
+	jsusFx_gfxAPI->init(jsusFx->m_vm);
+	jsusFx->gfx = jsusFx_gfxAPI;
+	
 	//
 	
 	Assert(jsusFxIsValid == false);
@@ -522,6 +528,16 @@ void AudioNodeJsusFx::load(const char * filename)
 	
 	if (jsusFxIsValid)
 	{
+		resource->lock();
+		{
+			resourceVersion = resource->version;
+			
+			JsusFxSerializer_Basic serializer(resource->serializationData);
+			
+			jsusFx->serialize(serializer, false);
+		}
+		resource->unlock();
+		
 		jsusFx->prepare(SAMPLE_RATE, AUDIO_UPDATE_SIZE);
 	}
 }
@@ -530,6 +546,12 @@ void AudioNodeJsusFx::free()
 {
 	jsusFxIsValid = false;
 	
+	delete jsusFx_gfxAPI;
+	jsusFx_gfxAPI = nullptr;
+	
+	if (jsusFx != nullptr)
+		jsusFx->gfx = nullptr;
+		
 	delete jsusFx_fileAPI;
 	jsusFx_fileAPI = nullptr;
 	
