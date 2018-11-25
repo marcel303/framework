@@ -104,7 +104,7 @@ AudioNodeSatellites::AudioNodeSatellites()
 	audioGraph = g_currentAudioGraph;
 }
 
-AudioNodeSatellites::~AudioNodeSatellites()
+void AudioNodeSatellites::shut()
 {
 	for (int i = 0; i < kNumChannels; ++i)
 	{
