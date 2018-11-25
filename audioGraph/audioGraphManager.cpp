@@ -511,6 +511,25 @@ AudioGraphGlobals * AudioGraphManager_Basic::createGlobals(SDL_mutex * mutex, Au
 
 void AudioGraphManager_Basic::freeGlobals(AudioGraphGlobals *& globals)
 {
+	// prune ramp down instances referencing these globals
+	
+	std::vector<AudioGraphInstance*> instancesToRemove;
+
+	for (auto & instance : instances)
+	{
+		if (instance->audioGraph->rampDown && instance->audioGraph->globals == globals)
+		{
+			instancesToRemove.push_back(instance);
+		}
+	}
+	
+	for (auto & instanceToRemove : instancesToRemove)
+	{
+		free(instanceToRemove, false);
+	}
+	
+	// actually remove the globals
+	
 	audioMutex.lock();
 	{
 		allocatedGlobals.erase(globals);
@@ -816,6 +835,28 @@ AudioGraphGlobals * AudioGraphManager_RTE::createGlobals(SDL_mutex * mutex, Audi
 
 void AudioGraphManager_RTE::freeGlobals(AudioGraphGlobals *& globals)
 {
+	// prune ramp down instances referencing these globals
+	
+	std::vector<AudioGraphInstance*> instancesToRemove;
+
+	for (auto & file : files)
+	{
+		for (auto & instance : file.second->instanceList)
+		{
+			if (instance->audioGraph->rampDown && instance->audioGraph->globals == globals)
+			{
+				instancesToRemove.push_back(instance);
+			}
+		}
+	}
+	
+	for (auto & instanceToRemove : instancesToRemove)
+	{
+		free(instanceToRemove, false);
+	}
+	
+	// actually remove the globals
+	
 	SDL_LockMutex(audioMutex);
 	{
 		allocatedGlobals.erase(globals);
@@ -1208,6 +1249,28 @@ AudioGraphGlobals * AudioGraphManager_MultiRTE::createGlobals(SDL_mutex * mutex,
 
 void AudioGraphManager_MultiRTE::freeGlobals(AudioGraphGlobals *& globals)
 {
+	// prune ramp down instances referencing these globals
+	
+	std::vector<AudioGraphInstance*> instancesToRemove;
+
+	for (auto & file : files)
+	{
+		for (auto & instance : file.second->instanceList)
+		{
+			if (instance->audioGraph->rampDown && instance->audioGraph->globals == globals)
+			{
+				instancesToRemove.push_back(instance);
+			}
+		}
+	}
+	
+	for (auto & instanceToRemove : instancesToRemove)
+	{
+		free(instanceToRemove, false);
+	}
+	
+	// actually remove the globals
+	
 	SDL_LockMutex(audioMutex);
 	{
 		allocatedGlobals.erase(globals);
