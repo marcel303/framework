@@ -31,8 +31,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "soundmix.h"
 #include <string.h>
 
-#define voiceMgr g_currentAudioGraph->globals->voiceMgr
-
 AUDIO_NODE_TYPE(AudioNodeSatellites)
 {
 	typeName = "satellites";
@@ -112,7 +110,7 @@ void AudioNodeSatellites::shut()
 		
 		if (voice != nullptr)
 		{
-			voiceMgr->freeVoice(voice);
+			g_currentAudioGraph->freeVoice(voice);
 		}
 	}
 }
@@ -127,7 +125,7 @@ void AudioNodeSatellites::tick(const float dt)
 			
 			if (voice != nullptr)
 			{
-				voiceMgr->freeVoice(voice);
+				g_currentAudioGraph->freeVoice(voice);
 			}
 		}
 		
@@ -152,15 +150,15 @@ void AudioNodeSatellites::tick(const float dt)
 		{
 			if (voice != nullptr)
 			{
-				voiceMgr->freeVoice(voice);
+				g_currentAudioGraph->freeVoice(voice);
 			}
 		}
 		else if (voice == nullptr || voice->channelIndex != channel)
 		{
 			if (voice != nullptr)
-				voiceMgr->freeVoice(voice);
+				g_currentAudioGraph->freeVoice(voice);
 			
-			voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, channel);
+			g_currentAudioGraph->allocVoice(voice, &source, "voice", true, 0.f, 1.f, channel);
 		}
 		
 		if (voice != nullptr)
