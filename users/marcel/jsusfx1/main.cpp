@@ -28,15 +28,6 @@ GFX status:
 - JSFX-Kawa (https://github.com/kawaCat/JSFX-kawa) works.
 - ATK for Reaper works.
 
-todo :
-
-mouse_wheel
-
-gfx_mode
-	0x1 = additive
-	0x2 = disable source alpha for gfx_blit (make it opaque)
-	0x4 = disable filtering for gfx_blit (point sampling)
-
 */
 
 /*
@@ -387,6 +378,8 @@ struct AudioStream_JsusFx : AudioStream
 	
 	Limiter limiter;
 	
+	double playbackTime = 0.0;
+	
 	uint64_t cpuTime = 0;
 	
 	virtual ~AudioStream_JsusFx() override
@@ -454,9 +447,17 @@ struct AudioStream_JsusFx : AudioStream
 		{
 			uint64_t time1 = g_TimerRT.TimeUS_get();
 			
+			const double beatPosition = 0.0;
+			const int tsNum = 0;
+			const int tsDenom = 4;
+			
+			fx->setTransportValues(120, JsusFx::kPlaybackState_Playing, playbackTime, beatPosition, tsNum, tsDenom);
+			
 			fx->setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
 			
 			fx->process(input, output, numSamples, 2, 2);
+			
+			playbackTime += numSamples / float(SAMPLE_RATE);
 			
 			s_midiBuffer.numBytes = 0;
 			
@@ -606,38 +607,16 @@ struct JsusFxChain
 			
 			JsusFxSerializationData serializationData;
 			
-		// todo : create helper functions for this in jsusfx-framework
-		
-			auto xml_sliders = xml_effect->FirstChildElement("sliders");
-			
-			if (xml_sliders != nullptr)
+			if (!loadJsusFxSerializationDataFromXml(xml_effect, serializationData))
 			{
-				for (auto xml_slider = xml_sliders->FirstChildElement("slider"); xml_slider != nullptr; xml_slider = xml_slider->NextSiblingElement("slider"))
-				{
-					JsusFxSerializationData::Slider slider;
-					
-					slider.index = intAttrib(xml_slider, "index", -1);
-					slider.value = floatAttrib(xml_slider, "value", 0.f);
-					
-					serializationData.sliders.push_back(slider);
-				}
+				logError("failed to load jsfx serialization data from xml");
 			}
-			
-			auto xml_vars = xml_effect->FirstChildElement("vars");
-			
-			if (xml_vars != nullptr)
+			else
 			{
-				for (auto xml_var = xml_vars->FirstChildElement("var"); xml_var != nullptr; xml_var = xml_var->NextSiblingElement("var"))
-				{
-					const float value = floatAttrib(xml_var, "value", 0.f);
-					
-					serializationData.vars.push_back(value);
-				}
+				JsusFxSerializer_Basic serializer(serializationData);
+				
+				elem->jsusFx.serialize(serializer, false);
 			}
-			
-			JsusFxSerializer_Basic serializer(serializationData);
-			
-			elem->jsusFx.serialize(serializer, false);
 			
 			//
 			
@@ -665,38 +644,7 @@ struct JsusFxChain
 				
 				if (effect->jsusFx.serialize(serializer, true))
 				{
-					if (!serializationData.sliders.empty())
-					{
-						p.OpenElement("sliders");
-						{
-							for (auto & slider : serializationData.sliders)
-							{
-								p.OpenElement("slider");
-								{
-									p.PushAttribute("index", slider.index);
-									p.PushAttribute("value", slider.value);
-								}
-								p.CloseElement();
-							}
-						}
-						p.CloseElement();
-					}
-					
-					if (!serializationData.vars.empty())
-					{
-						p.OpenElement("vars");
-						{
-							for (auto & var : serializationData.vars)
-							{
-								p.OpenElement("var");
-								{
-									p.PushAttribute("value", var);
-								}
-								p.CloseElement();
-							}
-						}
-						p.CloseElement();
-					}
+					saveJsusFxSerializationDataToXml(serializationData, p);
 				}
 			}
 			p.CloseElement();
@@ -1345,6 +1293,8 @@ std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool r
 	{
 		if (String::EndsWith(filename, "-example"))
 			continue;
+		if (String::EndsWith(filename, "-inc"))
+			continue;
 		if (String::EndsWith(filename, "-template"))
 			continue;
 			
@@ -1551,45 +1501,6 @@ static void testJsusFxList()
 				windowItr++;
 			}
 		}
-		
-	#if 0 // todo : keep or remove ?
-		if (mouse.wentDown(BUTTON_RIGHT))
-		{
-			BoxAtlas atlas;
-			
-			atlas.init(1280, 10000); // todo : desktop size
-			
-			struct Elem
-			{
-				Window * window = nullptr;
-				BoxAtlasElem * atlasElem = nullptr;
-			};
-			
-			std::vector<Elem> elems;
-			Elem elem;
-			elem.window = &effectChainWindow.window;
-			elems.push_back(elem);
-			
-			for (auto & window : windows)
-			{
-				if (window->window->isHidden())
-					continue;
-				
-				Elem elem;
-				elem.window = window->window;
-				elems.push_back(elem);
-			}
-			
-			for (auto & elem : elems)
-				elem.atlasElem = atlas.tryAlloc(elem.window->getWidth(), elem.window->getHeight());
-			
-			atlas.optimize();
-			
-			for (auto & elem : elems)
-				if (elem.atlasElem != nullptr)
-					elem.window->setPosition(elem.atlasElem->x, elem.atlasElem->y);
-		}
-	#endif
 		
 		effectChainWindow.tick(dt);
 		
