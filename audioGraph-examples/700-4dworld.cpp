@@ -413,7 +413,6 @@ struct Ball : EntityBase
 			}
 		}
 		
-		
 		graphInstance->audioGraph->setMemf("pos", pos[0], pos[1], pos[2]);
 		graphInstance->audioGraph->setMemf("vel", vel[0], vel[1], vel[2]);
 		
@@ -2142,6 +2141,44 @@ int main(int argc, char * argv[])
 						}
 					}
 					SDL_UnlockMutex(audioGraphMgr.globals->audioMutex);
+					
+					// per instance control values
+					if (audioGraphMgr.selectedFile != nullptr && audioGraphMgr.selectedFile->activeInstance != nullptr)
+					{
+						auto audioGraph = audioGraphMgr.selectedFile->activeInstance->audioGraph;
+						
+						auto & controlValues = audioGraph->stateDescriptor.controlValues;
+						
+						int padIndex = 0;
+						for (int i = 0; i < controlValues.size(); ++i)
+						{
+							auto & controlValue = controlValues[i];
+							
+							if (controlValue.type == AudioControlValue::kType_Vector1d)
+							{
+								doSliderWithPreview(controlValue.desiredX, controlValue.name.c_str(), controlValue.currentX, dt);
+							}
+							else if (controlValue.type == AudioControlValue::kType_Vector2d)
+							{
+								const bool nextIsPad = i + 1 < controlValues.size() && controlValues[i + 1].type == AudioControlValue::kType_Vector2d;
+								
+								doPad(
+									controlValue.desiredX,
+									controlValue.desiredY,
+									controlValue.name.c_str(),
+									controlValue.currentX,
+									controlValue.currentY,
+									(padIndex % 3) / 3.f, 1.f / 3.f,
+									(padIndex % 3) == 2 || nextIsPad == false,
+									dt);
+								
+								if (nextIsPad)
+									padIndex++;
+								else
+									padIndex = 0;
+							}
+						}
+					}
 				}
 			}
 		}
@@ -2300,6 +2337,10 @@ int main(int argc, char * argv[])
 		{
 			inputIsCaptured |= world->tick(dt);
 		}
+		
+		//
+		
+		audioGraphMgr.tickMain();
 		
 		//
 		
