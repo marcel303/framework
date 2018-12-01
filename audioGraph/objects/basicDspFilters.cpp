@@ -45,7 +45,7 @@ static std::complex<double> evaluateCoefficients(const double * coeffs, const in
 	return r;
 }
 
-float evaluateFilter(const double * a, const double * b, const int numCoefficients, const double w)
+double evaluateFilter(const double * a, const double * b, const int numCoefficients, const double w)
 {
 	const std::complex<double> zeroes = evaluateCoefficients(a, numCoefficients, w);
 	const std::complex<double> poles  = evaluateCoefficients(b, numCoefficients, w);

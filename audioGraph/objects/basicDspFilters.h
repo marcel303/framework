@@ -275,5 +275,5 @@ struct BiquadFilter
 
 //
 
-float evaluateFilter(const double * a, const double * b, const int numCoefficients, const double w);
+double evaluateFilter(const double * a, const double * b, const int numCoefficients, const double w);
 void evaluateFilter(const double * a, const double * b, const int numCoefficients, const double w1, const double w2, float * magnitude, const int numSteps);
