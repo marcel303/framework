@@ -483,6 +483,14 @@ AudioNodeVoice4DReturn::~AudioNodeVoice4DReturn()
 	}
 }
 
+void AudioNodeVoice4DReturn::shut()
+{
+	if (voice != nullptr)
+	{
+		g_currentAudioGraph->freeVoice(voice);
+	}
+}
+
 void AudioNodeVoice4DReturn::tick(const float dt)
 {
 	const int index = getInputInt(kInput_Index, 0);
