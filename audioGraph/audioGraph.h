@@ -95,12 +95,36 @@ struct AudioGraph
 		float value3;
 		float value4;
 		
+		float pushed_value1;
+		float pushed_value2;
+		float pushed_value3;
+		float pushed_value4;
+		
+		float active_value1;
+		float active_value2;
+		float active_value3;
+		float active_value4;
+		
 		Memf()
 			: value1(0.f)
 			, value2(0.f)
 			, value3(0.f)
 			, value4(0.f)
 		{
+			finalize();
+		}
+		
+		void finalize()
+		{
+			pushed_value1 = value1;
+			pushed_value2 = value2;
+			pushed_value3 = value3;
+			pushed_value4 = value4;
+			
+			active_value1 = value1;
+			active_value2 = value2;
+			active_value3 = value3;
+			active_value4 = value4;
 		}
 	};
 	
@@ -130,7 +154,7 @@ struct AudioGraph
 	
 	struct StateDescriptorUpdateMessage
 	{
-		std::map<std::string, Memf> memf;
+		//std::map<std::string, Memf> memf;
 		std::map<std::string, Mems> mems;
 		
 		std::set<std::string> activeFlags;
@@ -167,7 +191,8 @@ struct AudioGraph
 	
 	AudioMutex mutex;
 	
-	AudioMutex rteMutex;
+	AudioMutex rteMutex_main;
+	AudioMutex rteMutex_audio;
 	
 	AudioGraph(AudioGraphGlobals * globals, const bool isPaused);
 	~AudioGraph();
@@ -180,6 +205,8 @@ struct AudioGraph
 	
 	// called from the main thread
 	void tickMain();
+	void lockControlValues();
+	void unlockControlValues();
 	
 	// called from the audio thread
 	void syncMainToAudio(); // synchronize control values and other state from the main thread to the audio thread
@@ -192,6 +219,8 @@ struct AudioGraph
 	bool isFLagSet(const char * name) const;
 	
 	// called from any thread
+	void registerMemf(const char * name, const float value1, const float value2, const float value3, const float value4);
+	void registerMems(const char * name);
 	void registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY);
 	void unregisterControlValue(const char * name);
 	

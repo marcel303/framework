@@ -2147,37 +2147,41 @@ int main(int argc, char * argv[])
 					{
 						auto audioGraph = audioGraphMgr.selectedFile->activeInstance->audioGraph;
 						
-						auto & controlValues = audioGraph->stateDescriptor.controlValues;
-						
-						int padIndex = 0;
-						for (int i = 0; i < controlValues.size(); ++i)
+						audioGraph->lockControlValues();
 						{
-							auto & controlValue = controlValues[i];
+							auto & controlValues = audioGraph->stateDescriptor.controlValues;
 							
-							if (controlValue.type == AudioControlValue::kType_Vector1d)
+							int padIndex = 0;
+							for (int i = 0; i < controlValues.size(); ++i)
 							{
-								doSliderWithPreview(controlValue.desiredX, controlValue.name.c_str(), controlValue.currentX, dt);
-							}
-							else if (controlValue.type == AudioControlValue::kType_Vector2d)
-							{
-								const bool nextIsPad = i + 1 < controlValues.size() && controlValues[i + 1].type == AudioControlValue::kType_Vector2d;
+								auto & controlValue = controlValues[i];
 								
-								doPad(
-									controlValue.desiredX,
-									controlValue.desiredY,
-									controlValue.name.c_str(),
-									controlValue.currentX,
-									controlValue.currentY,
-									(padIndex % 3) / 3.f, 1.f / 3.f,
-									(padIndex % 3) == 2 || nextIsPad == false,
-									dt);
-								
-								if (nextIsPad)
-									padIndex++;
-								else
-									padIndex = 0;
+								if (controlValue.type == AudioControlValue::kType_Vector1d)
+								{
+									doSliderWithPreview(controlValue.desiredX, controlValue.name.c_str(), controlValue.currentX, dt);
+								}
+								else if (controlValue.type == AudioControlValue::kType_Vector2d)
+								{
+									const bool nextIsPad = i + 1 < controlValues.size() && controlValues[i + 1].type == AudioControlValue::kType_Vector2d;
+									
+									doPad(
+										controlValue.desiredX,
+										controlValue.desiredY,
+										controlValue.name.c_str(),
+										controlValue.currentX,
+										controlValue.currentY,
+										(padIndex % 3) / 3.f, 1.f / 3.f,
+										(padIndex % 3) == 2 || nextIsPad == false,
+										dt);
+									
+									if (nextIsPad)
+										padIndex++;
+									else
+										padIndex = 0;
+								}
 							}
 						}
+						audioGraph->unlockControlValues();
 					}
 				}
 			}

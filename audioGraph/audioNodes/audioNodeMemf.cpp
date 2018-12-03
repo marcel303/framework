@@ -41,6 +41,7 @@ AUDIO_NODE_TYPE(AudioNodeMemf)
 
 AudioNodeMemf::AudioNodeMemf()
 	: AudioNodeBase()
+	, currentName()
 	, valueOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -57,6 +58,8 @@ void AudioNodeMemf::tick(const float dt)
 
 	if (isPassthrough || name == nullptr)
 	{
+		currentName.clear();
+		
 		valueOutput[0].setScalar(0.f);
 		valueOutput[1].setScalar(0.f);
 		valueOutput[2].setScalar(0.f);
@@ -64,6 +67,13 @@ void AudioNodeMemf::tick(const float dt)
 	}
 	else
 	{
+		if (name != currentName)
+		{
+			currentName = name;
+			
+			g_currentAudioGraph->registerMemf(name, 0.f, 0.f, 0.f, 0.f);
+		}
+		
 		const AudioGraph::Memf memf = g_currentAudioGraph->getMemf(name);
 
 		valueOutput[0].setScalar(memf.value1);
@@ -71,4 +81,16 @@ void AudioNodeMemf::tick(const float dt)
 		valueOutput[2].setScalar(memf.value3);
 		valueOutput[3].setScalar(memf.value4);
 	}
+}
+
+void AudioNodeMemf::init(const GraphNode & node)
+{
+	const char * name = getInputString(kInput_Name, nullptr);
+
+	if (isPassthrough || name == nullptr)
+		return;
+	
+	currentName = name;
+	
+	g_currentAudioGraph->registerMemf(name, 0.f, 0.f, 0.f, 0.f);
 }

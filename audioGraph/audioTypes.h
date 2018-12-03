@@ -205,9 +205,12 @@ struct AudioControlValue
 		active_desiredY = desiredY;
 		active_currentX = currentX;
 		active_currentY = currentY;
+		
+		stored_currentX = currentX;
+		stored_currentY = currentY;
 	}
 	
-	// note : these 'pushed' values are update on the main thread, when pushing control values to the audio thread. they just contain the updated desiredX, desiredY
+	// note : these 'pushed' values are updated on the main thread, when pushing control values to the audio thread. they just contain the updated desiredX, desiredY
 	float pushed_desiredX;
 	float pushed_desiredY;
 	
@@ -216,6 +219,10 @@ struct AudioControlValue
 	float active_desiredY;
 	float active_currentX;
 	float active_currentY;
+	
+	// note : these 'stored' values are updated on the audio thread, when updating control values on the audio thread. they just contain the updated currentX, currentY
+	float stored_currentX;
+	float stored_currentY;
 };
 
 struct AudioEvent
