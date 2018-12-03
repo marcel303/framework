@@ -130,18 +130,8 @@ struct AudioGraph
 	
 	struct StateDescriptorUpdateMessage
 	{
-		struct ControlValueUpdate
-		{
-			std::string name;
-			
-			float desiredX;
-			float desiredY;
-		};
-		
 		std::map<std::string, Memf> memf;
 		std::map<std::string, Mems> mems;
-		
-		std::vector<ControlValueUpdate> controlValues;
 		
 		std::set<std::string> activeFlags;
 		
@@ -192,7 +182,8 @@ struct AudioGraph
 	void tickMain();
 	
 	// called from the audio thread
-	void tick(const float dt);
+	void syncMainToAudio(); // synchronize control values and other state from the main thread to the audio thread
+	void tick(const float dt, const bool fetchStateUpdates);
 	
 	// called from the main thread
 	void setFlag(const char * name, const bool value = true);

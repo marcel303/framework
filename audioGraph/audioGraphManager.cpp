@@ -294,6 +294,8 @@ void AudioGraphGlobals::tick(const float dt)
 
 void AudioGraphGlobals::registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY)
 {
+	//rteMutex.lock(); // todo
+	
 	SDL_LockMutex(audioMutex);
 	{
 		bool exists = false;
@@ -327,10 +329,18 @@ void AudioGraphGlobals::registerControlValue(AudioControlValue::Type type, const
 			controlValue.currentX = defaultX;
 			controlValue.currentY = defaultY;
 			
+			controlValue.finalize();
+			
 			std::sort(controlValues.begin(), controlValues.end(), [](const AudioControlValue & a, const AudioControlValue & b) { return a.name < b.name; });
+			
+			// immediately export it. this is necessary during real-time editing only. for regular processing, it would export the control values before processing the audio graph anyway
+			
+			setMemf(controlValue.name.c_str(), controlValue.currentX, controlValue.currentY);
 		}
 	}
 	SDL_UnlockMutex(audioMutex);
+	
+	//rteMutex.unlock();
 }
 
 void AudioGraphGlobals::unregisterControlValue(const char * name)
@@ -676,10 +686,15 @@ void AudioGraphManager_Basic::tickAudio(const float dt)
 		for (auto & globals : allocatedGlobals)
 			globals->tick(dt);
 		
+		// synchronize state from main to audio thread
+		
+		for (auto & instance : instances)
+			instance->audioGraph->syncMainToAudio();
+		
 		// tick graph instances
 		
 		for (auto & instance : instances)
-			instance->audioGraph->tick(dt);
+			instance->audioGraph->tick(dt, false);
 	}
 	audioMutex.unlock();
 }
@@ -1056,11 +1071,17 @@ void AudioGraphManager_RTE::tickAudio(const float dt)
 		for (auto & globals : allocatedGlobals)
 			globals->tick(dt);
 		
+		// synchronize state from main to audio thread
+		
+		for (auto & file : files)
+			for (auto & instance : file.second->instanceList)
+				instance->audioGraph->syncMainToAudio();
+		
 		// tick graph instances
 		
 		for (auto & file : files)
 			for (auto & instance : file.second->instanceList)
-				instance->audioGraph->tick(dt);
+				instance->audioGraph->tick(dt, false);
 	}
 	SDL_UnlockMutex(audioMutex);
 }
@@ -1470,11 +1491,17 @@ void AudioGraphManager_MultiRTE::tickAudio(const float dt)
 		for (auto & globals : allocatedGlobals)
 			globals->tick(dt);
 		
+		// synchronize state from main to audio thread
+		
+		for (auto & file : files)
+			for (auto & instance : file.second->instanceList)
+				instance->audioGraph->syncMainToAudio();
+		
 		// tick graph instances
 		
 		for (auto & file : files)
 			for (auto & instance : file.second->instanceList)
-				instance->audioGraph->tick(dt);
+				instance->audioGraph->tick(dt, false);
 	}
 	SDL_UnlockMutex(audioMutex);
 }

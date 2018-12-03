@@ -249,7 +249,41 @@ void AudioGraph::tickMain()
 	pushStateDescriptorUpdate();
 }
 
-void AudioGraph::tick(const float dt)
+void AudioGraph::syncMainToAudio()
+{
+	mutex.lock();
+	{
+		for (auto & controlValue : stateDescriptor.controlValues)
+		{
+			controlValue.active_desiredX = controlValue.pushed_desiredX;
+			controlValue.active_desiredY = controlValue.pushed_desiredY;
+		}
+		
+		if (pushedStateDescriptorUpdate != nullptr)
+		{
+			std::swap(stateDescriptor.activeFlags, pushedStateDescriptorUpdate->activeFlags);
+			
+			for (auto & memf_itr : pushedStateDescriptorUpdate->memf)
+			{
+				stateDescriptor.memf[memf_itr.first] = memf_itr.second;
+			}
+			
+			for (auto & mems_itr : pushedStateDescriptorUpdate->mems)
+			{
+				stateDescriptor.mems[mems_itr.first] = mems_itr.second;
+			}
+			
+			std::swap(stateDescriptor.activeEvents, pushedStateDescriptorUpdate->triggeredEvents);
+			
+		// todo : perform memory allocs/frees on the main thread
+			delete pushedStateDescriptorUpdate;
+			pushedStateDescriptorUpdate = nullptr;
+		}
+	}
+	mutex.unlock();
+}
+
+void AudioGraph::tick(const float dt, const bool in_syncMainToAudio)
 {
 	audioCpuTimingBlock(AudioGraph_Tick);
 	
@@ -266,42 +300,14 @@ void AudioGraph::tick(const float dt)
 	
 	stateDescriptor.activeEvents.clear();
 	
-	mutex.lock();
+	if (in_syncMainToAudio)
 	{
-		if (pushedStateDescriptorUpdate != nullptr)
+		mutex.lock();
 		{
-			std::swap(stateDescriptor.activeFlags, pushedStateDescriptorUpdate->activeFlags);
-			
-			for (auto & memf_itr : pushedStateDescriptorUpdate->memf)
-			{
-				stateDescriptor.memf[memf_itr.first] = memf_itr.second;
-			}
-			
-			for (auto & mems_itr : pushedStateDescriptorUpdate->mems)
-			{
-				stateDescriptor.mems[mems_itr.first] = mems_itr.second;
-			}
-			
-			for (auto & pushedControlValue : pushedStateDescriptorUpdate->controlValues)
-			{
-				for (auto & controlValue : stateDescriptor.controlValues)
-				{
-					if (controlValue.name == pushedControlValue.name)
-					{
-						controlValue.active_desiredX = pushedControlValue.desiredX;
-						controlValue.active_desiredY = pushedControlValue.desiredY;
-					}
-				}
-			}
-			
-			std::swap(stateDescriptor.activeEvents, pushedStateDescriptorUpdate->triggeredEvents);
-			
-		// todo : perform memory allocs/frees on the main thread
-			delete pushedStateDescriptorUpdate;
-			pushedStateDescriptorUpdate = nullptr;
+			syncMainToAudio();
 		}
+		mutex.unlock();
 	}
-	mutex.unlock();
 	
 	// update control values
 	
@@ -444,12 +450,13 @@ void AudioGraph::registerControlValue(AudioControlValue::Type type, const char *
 			controlValue.currentX = defaultX;
 			controlValue.currentY = defaultY;
 			
-			controlValue.active_desiredX = controlValue.desiredX;
-			controlValue.active_desiredY = controlValue.desiredY;
-			controlValue.active_currentX = controlValue.currentX;
-			controlValue.active_currentY = controlValue.currentY;
+			controlValue.finalize();
 			
 			std::sort(stateDescriptor.controlValues.begin(), stateDescriptor.controlValues.end(), [](const AudioControlValue & a, const AudioControlValue & b) { return a.name < b.name; });
+			
+			// immediately export it. this is necessary during real-time editing only. for regular processing, it would export the control values before processing the audio graph anyway
+			
+			setMemf(controlValue.name.c_str(), controlValue.currentX, controlValue.currentY);
 		}
 	}
 	rteMutex.unlock();
@@ -501,24 +508,16 @@ void AudioGraph::pushStateDescriptorUpdate()
 	mutex.lock();
 	{
 	// fixme : use separate flags to communicate from main -> audio thread and audio to main thread (?)
+	// fixme : same for memf/mems ? make them explicitly directional
+	
 		update->activeFlags = activeFlags;
-	}
-	mutex.unlock();
-	
-	update->controlValues.resize(stateDescriptor.controlValues.size());
-	
-	for (size_t i = 0; i < stateDescriptor.controlValues.size(); ++i)
-	{
-		const auto & srcControlValue = stateDescriptor.controlValues[i];
-		auto & dstControlValue = update->controlValues[i];
 		
-		dstControlValue.name = srcControlValue.name;
-		dstControlValue.desiredX = srcControlValue.desiredX;
-		dstControlValue.desiredY = srcControlValue.desiredY;
-	}
-	
-	mutex.lock();
-	{
+		for (auto & controlValue : stateDescriptor.controlValues)
+		{
+			controlValue.pushed_desiredX = controlValue.desiredX;
+			controlValue.pushed_desiredY = controlValue.desiredY;
+		}
+		
 		if (pushedStateDescriptorUpdate != nullptr)
 		{
 			// copy updates from the previous (non-processed) update into the current update
