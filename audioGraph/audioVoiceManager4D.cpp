@@ -171,12 +171,8 @@ void AudioVoiceManager4D::freeVoice(AudioVoice *& voice)
 
 void AudioVoiceManager4D::updateChannelIndices()
 {
-#ifdef WIN32
-	bool used[1024]; // fixme : use a general fix for variable sized arrays
-#else
-	bool used[numDynamicChannels];
-#endif
-	memset(used, 0, sizeof(used));
+	bool * used = (bool*)alloca(numDynamicChannels * sizeof(bool));
+	memset(used, 0, numDynamicChannels * sizeof(bool));
 	
 	for (auto & voice : voices)
 	{
