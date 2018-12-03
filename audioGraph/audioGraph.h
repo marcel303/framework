@@ -131,6 +131,15 @@ struct AudioGraph
 	struct Mems
 	{
 		std::string value;
+		
+		std::string pushed_value;
+		std::string active_value;
+		
+		void finalize()
+		{
+			pushed_value = value;
+			active_value = value;
+		}
 	};
 	
 	/*
@@ -154,9 +163,6 @@ struct AudioGraph
 	
 	struct StateDescriptorUpdateMessage
 	{
-		//std::map<std::string, Memf> memf;
-		std::map<std::string, Mems> mems;
-		
 		std::set<std::string> activeFlags;
 		
 		std::set<std::string> triggeredEvents;
@@ -220,7 +226,7 @@ struct AudioGraph
 	
 	// called from any thread
 	void registerMemf(const char * name, const float value1, const float value2, const float value3, const float value4);
-	void registerMems(const char * name);
+	void registerMems(const char * name, const char * value);
 	void registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY);
 	void unregisterControlValue(const char * name);
 	
@@ -239,7 +245,7 @@ struct AudioGraph
 	// called from the main thread
 	void setMems(const char * name, const char * value);
 	// called from the audio thread
-	Mems getMems(const char * name) const;
+	std::string getMems(const char * name) const;
 	
 	// called from the main thread
 	void triggerEvent(const char * event);
@@ -299,6 +305,7 @@ AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefini
 //
 
 // todo : replace this with a decent PCM data cache object and make it a global
+// todo : move PCM data cache to somewhere else
 
 struct PcmData;
 
@@ -309,6 +316,7 @@ const PcmData * getPcmData(const char * filename);
 //
 
 // todo : replace this with a decent sample set cache object and make it a global
+// todo : move binaural sample set cache to somewhere else
 
 namespace binaural
 {

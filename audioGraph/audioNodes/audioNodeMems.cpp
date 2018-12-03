@@ -61,12 +61,12 @@ void AudioNodeMems::tick(const float dt)
 		{
 			currentName = name;
 			
-			g_currentAudioGraph->registerMems(name);
+			g_currentAudioGraph->registerMems(name, "");
 		}
 		
-		const AudioGraph::Mems mems = g_currentAudioGraph->getMems(name);
-
-		valueOutput = mems.value;
+		const std::string value = g_currentAudioGraph->getMems(name);
+		
+		valueOutput = value;
 	}
 }
 
@@ -79,5 +79,5 @@ void AudioNodeMems::init(const GraphNode & node)
 	
 	currentName = name;
 	
-	g_currentAudioGraph->registerMems(name);
+	g_currentAudioGraph->registerMems(name, "");
 }
