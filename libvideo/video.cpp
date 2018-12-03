@@ -67,8 +67,6 @@ static int ExecMediaPlayerThread(void * param)
 	{
 		SDL_UnlockMutex(context->mpTickMutex);
 		
-		// todo : tick event on video or audio buffer consumption *only*
-		
 		if (context->hasBegun)
 		{
 			cpuTimingBlock(tickMediaPlayer);
@@ -474,11 +472,51 @@ int MediaPlayer::Provide(int numSamples, AudioSample* __restrict buffer)
 
 	double audioTime = this->audioTime;
 	
-	if (context->mpContext.RequestAudio((int16_t*)buffer, numSamples, gotAudio, audioTime))
+	const int numChannels = context->mpContext.GetAudioChannelCount();
+	
+	int16_t * tempBuffer = (int16_t*)alloca(numSamples * numChannels * sizeof(int16_t));
+	
+	if (context->mpContext.RequestAudio(tempBuffer, numSamples, gotAudio, audioTime))
 	{
 		this->audioTime = audioTime;
 
 		SDL_CondSignal(context->mpTickEvent);
+	}
+	
+	if (numChannels == 0)
+	{
+		memset(buffer, 0, numSamples * sizeof(AudioSample));
+	}
+	else if (numChannels == 1)
+	{
+		for (int i = 0; i < numSamples; ++i)
+		{
+			buffer[i].channel[0] = tempBuffer[i];
+			buffer[i].channel[1] = tempBuffer[i];
+		}
+	}
+	else if (numChannels == 2)
+	{
+		for (int i = 0; i < numSamples; ++i)
+		{
+			buffer[i].channel[0] = tempBuffer[i * 2 + 0];
+			buffer[i].channel[1] = tempBuffer[i * 2 + 1];
+		}
+	}
+	else
+	{
+		// todo : handle multi-channel the correct way and apply the multi-channel to stereo mixing matrix (with a little help from avcodec)
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			int sum = 0;
+			
+			for (int c = 0; c < numChannels; ++c)
+				sum += tempBuffer[i * numChannels + c];
+			
+			buffer[i].channel[0] = sum;
+			buffer[i].channel[1] = sum;
+		}
 	}
 
 	return numSamples;
