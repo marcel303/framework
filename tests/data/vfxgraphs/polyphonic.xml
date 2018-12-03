@@ -41,7 +41,7 @@
         <input socket="file" value="audiographs/audioKey.xml"/>
     </node>
     <node id="137" typeName="channel.literal">
-        <input socket="text" value="200 50 300 80 1600 1800 2400"/>
+        <input socket="text" value="200 150 300 810 1600 1800 2400"/>
     </node>
     <node id="140" typeName="channel.literal">
         <input socket="text" value="1 1 0 1 1 1 0 0 1 0 1 1 0 0 1 1 "/>
@@ -167,12 +167,15 @@
     <link id="258" srcNodeId="192" srcNodeSocketName="b" dstNodeId="193" dstNodeSocketName="channel"/>
     <link id="259" srcNodeId="172" srcNodeSocketName="gain" dstNodeId="192" dstNodeSocketName="result" dynamic="1"/>
     <link id="263" srcNodeId="141" srcNodeSocketName="x_norm" dstNodeId="142" dstNodeSocketName="x"/>
-    <link id="264" srcNodeId="146" srcNodeSocketName="value1" dstNodeId="142" dstNodeSocketName="y"/>
-    <editor nextZKey="1345">
-        <dragAndZoom x="395.1873779296875" y="-193.48275756835938" zoom="0.7976188063621521"/>
+    <link id="264" srcNodeId="146" srcNodeSocketName="value1" dstNodeId="142" dstNodeSocketName="y">
+        <param name="out.max" value="2.000000"/>
+        <param name="out.min" value="0.500000"/>
+    </link>
+    <editor nextZKey="1351">
+        <dragAndZoom x="384.0023193359375" y="-160.00006103515625" zoom="1"/>
         <nodeDatas>
             <nodeData nodeId="114" x="192" y="-64" zKey="1344"/>
-            <nodeData nodeId="115" x="-16" y="-64" zKey="955"/>
+            <nodeData nodeId="115" x="-16" y="-64" zKey="1347"/>
             <nodeData nodeId="118" x="-288" y="16" zKey="894"/>
             <nodeData nodeId="119" x="832" y="-128" zKey="1135" folded="1"/>
             <nodeData nodeId="120" x="-32" y="-96" zKey="1051" folded="1"/>
@@ -180,20 +183,20 @@
             <nodeData nodeId="122" x="-304" y="-128" zKey="1340" folded="1"/>
             <nodeData nodeId="123" x="-176" y="-128" zKey="1118" folded="1"/>
             <nodeData nodeId="124" x="-32" y="-128" zKey="1109" folded="1"/>
-            <nodeData nodeId="125" x="-128" y="16" zKey="990"/>
+            <nodeData nodeId="125" x="-128" y="16" zKey="1346"/>
             <nodeData nodeId="126" x="-128" y="144" zKey="969"/>
             <nodeData nodeId="127" x="48" y="-0" zKey="983"/>
-            <nodeData nodeId="128" x="-128" y="64" zKey="986"/>
+            <nodeData nodeId="128" x="-128" y="64" zKey="1345"/>
             <nodeData nodeId="130" x="-128" y="224" zKey="982"/>
             <nodeData nodeId="131" x="-128" y="320" zKey="976"/>
             <nodeData nodeId="132" x="-128" y="272" zKey="981"/>
             <nodeData nodeId="134" x="304" y="-400" zKey="1342"/>
-            <nodeData nodeId="137" x="48" y="-224" zKey="1196"/>
+            <nodeData nodeId="137" x="48" y="-224" zKey="1349"/>
             <nodeData nodeId="140" x="-240" y="-272" zKey="1129" folded="1"/>
             <nodeData nodeId="141" x="-112" y="-272" zKey="1128"/>
             <nodeData nodeId="142" x="-624" y="-288" zKey="1307"/>
-            <nodeData nodeId="145" x="192" y="-272" zKey="1072"/>
-            <nodeData nodeId="146" x="48" y="-288" zKey="1335"/>
+            <nodeData nodeId="145" x="192" y="-272" zKey="1348"/>
+            <nodeData nodeId="146" x="64" y="-336" zKey="1350"/>
             <nodeData nodeId="147" x="416" y="-544" zKey="1131"/>
             <nodeData nodeId="148" x="304" y="-128" zKey="1148" folded="1"/>
             <nodeData nodeId="149" x="736" y="-544" zKey="1133"/>
