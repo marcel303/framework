@@ -259,6 +259,8 @@ void AudioGraph::syncMainToAudio()
 			controlValue.active_desiredY = controlValue.pushed_desiredY;
 		}
 		
+		stateDescriptor.activeEvents.clear();
+		
 		if (pushedStateDescriptorUpdate != nullptr)
 		{
 			std::swap(stateDescriptor.activeFlags, pushedStateDescriptorUpdate->activeFlags);
@@ -297,8 +299,6 @@ void AudioGraph::tick(const float dt, const bool in_syncMainToAudio)
 		rampDown = true;
 	
 	rteMutex.lock();
-	
-	stateDescriptor.activeEvents.clear();
 	
 	if (in_syncMainToAudio)
 	{
