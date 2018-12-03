@@ -238,6 +238,8 @@ struct AudioGraphGlobals
 	
 	AudioGraphManager * audioGraphMgr;
 	
+	AudioThreadId mainThreadId;
+	
 	AudioGraphGlobals();
 	
 	// called from the app thread

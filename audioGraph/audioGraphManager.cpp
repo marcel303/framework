@@ -268,6 +268,8 @@ void AudioGraphGlobals::init(SDL_mutex * mutex, AudioVoiceManager * _voiceMgr, A
 	voiceMgr = _voiceMgr;
 	
 	audioGraphMgr = _audioGraphMgr;
+	
+	mainThreadId.initThreadId();
 }
 
 void AudioGraphGlobals::shut()

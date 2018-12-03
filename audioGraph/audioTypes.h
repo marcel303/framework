@@ -253,6 +253,17 @@ struct AudioMutex
 	void debugCheckIsLocked();
 };
 
+struct AudioThreadId
+{
+	int64_t id;
+	
+	AudioThreadId();
+	
+	void initThreadId();
+	
+	bool checkThreadId() const;
+};
+
 struct AudioRNG
 {
 	AudioRNG();

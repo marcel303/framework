@@ -377,8 +377,6 @@ void AudioGraph::tick(const float dt, const bool in_syncMainToAudio)
 
 void AudioGraph::setFlag(const char * name, const bool value)
 {
-	// todo : assert this is called from the main thread
-	
 	mutex.lock();
 	{
 		if (value)
@@ -391,8 +389,6 @@ void AudioGraph::setFlag(const char * name, const bool value)
 
 void AudioGraph::resetFlag(const char * name)
 {
-	// todo : assert this is called from the main thread
-	
 	mutex.lock();
 	{
 		activeFlags.erase(name);
@@ -402,8 +398,6 @@ void AudioGraph::resetFlag(const char * name)
 
 bool AudioGraph::isFLagSet(const char * name) const
 {
-	// todo : assert this is called from the audio thread
-	
 	bool result;
 	
 	mutex.lock();
@@ -499,6 +493,8 @@ void AudioGraph::unregisterControlValue(const char * name)
 
 void AudioGraph::pushStateDescriptorUpdate()
 {
+	Assert(globals->mainThreadId.checkThreadId() == true);
+	
 	// build and push a state descriptor update message
 
 	StateDescriptorUpdateMessage * update = new StateDescriptorUpdateMessage(stateDescriptorUpdate);
@@ -613,7 +609,7 @@ void AudioGraph::unregisterEvent(const char * name)
 
 void AudioGraph::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
-// todo : assert this is the main thread
+	Assert(globals->mainThreadId.checkThreadId() == true);
 
 	auto & mem = stateDescriptorUpdate.memf[name];
 	
@@ -625,7 +621,7 @@ void AudioGraph::setMemf(const char * name, const float value1, const float valu
 
 AudioGraph::Memf AudioGraph::getMemf(const char * name) const
 {
-// todo : assert this is the audio thread
+	Assert(globals->mainThreadId.checkThreadId() == false);
 
 	Memf result;
 	
@@ -641,7 +637,7 @@ AudioGraph::Memf AudioGraph::getMemf(const char * name) const
 
 void AudioGraph::setMems(const char * name, const char * value)
 {
-// todo : assert this is the main thread
+	Assert(globals->mainThreadId.checkThreadId() == true);
 
 	auto & mem = stateDescriptorUpdate.mems[name];
 	
@@ -650,7 +646,7 @@ void AudioGraph::setMems(const char * name, const char * value)
 
 AudioGraph::Mems AudioGraph::getMems(const char * name) const
 {
-// todo : assert this is the audio thread
+	Assert(globals->mainThreadId.checkThreadId() == false);
 
 	Mems result;
 
@@ -666,6 +662,8 @@ AudioGraph::Mems AudioGraph::getMems(const char * name) const
 
 void AudioGraph::triggerEvent(const char * event)
 {
+	Assert(globals->mainThreadId.checkThreadId() == true);
+	
 	stateDescriptorUpdate.triggeredEvents.insert(event);
 }
 
