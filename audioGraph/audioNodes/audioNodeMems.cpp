@@ -64,9 +64,7 @@ void AudioNodeMems::tick(const float dt)
 			g_currentAudioGraph->registerMems(name, "");
 		}
 		
-		const std::string value = g_currentAudioGraph->getMems(name);
-		
-		valueOutput = value;
+		g_currentAudioGraph->getMems(name, valueOutput);
 	}
 }
 

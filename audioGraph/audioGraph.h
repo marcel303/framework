@@ -245,7 +245,7 @@ struct AudioGraph
 	// called from the main thread
 	void setMems(const char * name, const char * value);
 	// called from the audio thread
-	std::string getMems(const char * name) const;
+	void getMems(const char * name, std::string & result) const;
 	
 	// called from the main thread
 	void triggerEvent(const char * event);

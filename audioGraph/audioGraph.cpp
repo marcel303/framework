@@ -770,11 +770,9 @@ void AudioGraph::setMems(const char * name, const char * value)
 	rteMutex_main.unlock();
 }
 
-std::string AudioGraph::getMems(const char * name) const
+void AudioGraph::getMems(const char * name, std::string & result) const
 {
 	Assert(globals->mainThreadId.checkThreadId() == false);
-
-	std::string result;
 
 	rteMutex_audio.lock();
 	{
@@ -787,10 +785,12 @@ std::string AudioGraph::getMems(const char * name) const
 			
 			result = mem.active_value;
 		}
+		else
+		{
+			result.clear();
+		}
 	}
 	rteMutex_audio.unlock();
-	
-	return result;
 }
 
 void AudioGraph::triggerEvent(const char * event)
