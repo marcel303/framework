@@ -37,6 +37,7 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	VfxGraph ** vfxGraphPtr;
 	
 	bool isLoading;
+	std::map<std::string, std::string> serializedMems;
 	
 	RealTimeConnection(VfxGraph *& _vfxGraph)
 		: GraphEdit_RealTimeConnection()

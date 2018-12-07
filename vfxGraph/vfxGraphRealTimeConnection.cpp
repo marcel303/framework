@@ -41,6 +41,10 @@ void RealTimeConnection::loadBegin()
 	
 	isLoading = true;
 	
+	Assert(serializedMems.empty());
+	if (vfxGraph != nullptr)
+		serializedMems = vfxGraph->mems;
+	
 	delete vfxGraph;
 	
 	vfxGraph = nullptr;
@@ -51,6 +55,9 @@ void RealTimeConnection::loadEnd(GraphEdit & graphEdit)
 {
 	vfxGraph = constructVfxGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary);
 	*vfxGraphPtr = vfxGraph;
+	
+	vfxGraph->mems = serializedMems;
+	serializedMems.clear();
 	
 	isLoading = false;
 	
