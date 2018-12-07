@@ -101,6 +101,8 @@ struct VfxGraph
 	
 	std::vector<ValueToFree> valuesToFree;
 	
+	std::map<std::string, std::string> mems;
+	
 	double time;
 	
 	VfxGraph();
@@ -114,6 +116,9 @@ struct VfxGraph
 	int traverseDraw(const int sx, const int sy) const;
 	
 	VfxNodeDisplay * getMainDisplayNode() const;
+	
+	void setMems(const char * name, const char * value);
+	bool getMems(const char * name, std::string & result) const;
 };
 
 //

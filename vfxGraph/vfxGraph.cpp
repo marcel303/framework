@@ -390,6 +390,24 @@ VfxNodeDisplay * VfxGraph::getMainDisplayNode() const
 	return nullptr;
 }
 
+void VfxGraph::setMems(const char * name, const char * value)
+{
+	mems[name] = value;
+}
+
+bool VfxGraph::getMems(const char * name, std::string & result) const
+{
+	auto i = mems.find(name);
+	
+	if (i == mems.end())
+		return false;
+	else
+	{
+		result = i->second;
+		return true;
+	}
+}
+
 //
 
 float VfxDynamicLink::floatParam(const char * name, const float defaultValue) const
