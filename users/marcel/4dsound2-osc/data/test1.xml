@@ -1,4 +1,4 @@
-<graph nextNodeId="12" nextLinkId="7">
+<graph nextNodeId="17" nextLinkId="15">
     <node id="1" typeName="gen.sine">
         <input socket="frequency" value="0.234000"/>
     </node>
@@ -53,6 +53,21 @@
     <node id="11" typeName="gen.sine">
         <input socket="frequency" value="0.345000"/>
     </node>
+    <node id="12" typeName="in.string">
+        <input socket="name" value="id"/>
+    </node>
+    <node id="13" typeName="string.append">
+        <input socket="a" value="/source"/>
+    </node>
+    <node id="14" typeName="string.append">
+        <input socket="b" value="/path"/>
+    </node>
+    <node id="15" typeName="string.append">
+        <input socket="b" value="/modulation"/>
+    </node>
+    <node id="16" typeName="string.append">
+        <input socket="b" value="/shape"/>
+    </node>
     <link id="1" srcNodeId="3" srcNodeSocketName="scale" dstNodeId="1" dstNodeSocketName="value" dynamic="1">
         <param name="out.max" value="2.000000"/>
         <param name="out.min" value="0.500000"/>
@@ -66,23 +81,35 @@
     <link id="6" srcNodeId="7" srcNodeSocketName="frequency" dstNodeId="11" dstNodeSocketName="value">
         <param name="out.max" value="6.000000"/>
     </link>
-    <editor nextZKey="59">
-        <dragAndZoom x="-173.5191650390625" y="9.8486328125" zoom="0.60975110530853271"/>
+    <link id="7" srcNodeId="13" srcNodeSocketName="b" dstNodeId="12" dstNodeSocketName="value"/>
+    <link id="8" srcNodeId="14" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
+    <link id="9" srcNodeId="3" srcNodeSocketName="oscPrefix" dstNodeId="14" dstNodeSocketName="result"/>
+    <link id="10" srcNodeId="15" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
+    <link id="11" srcNodeId="8" srcNodeSocketName="oscPrefix" dstNodeId="15" dstNodeSocketName="result"/>
+    <link id="12" srcNodeId="16" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
+    <link id="14" srcNodeId="10" srcNodeSocketName="oscPrefix" dstNodeId="16" dstNodeSocketName="result"/>
+    <editor nextZKey="99">
+        <dragAndZoom x="-3.063690185546875" y="146.23670959472656" zoom="0.68386387825012207"/>
         <nodeDatas>
-            <nodeData nodeId="1" x="-162.83538818359375" y="268.2840576171875" zKey="58" folded="1"/>
-            <nodeData nodeId="3" x="12.259780883789062" y="7.9001960754394531" zKey="43"/>
-            <nodeData nodeId="4" x="-301.25360107421875" y="115.09867858886719" zKey="46"/>
-            <nodeData nodeId="5" x="-166.66493225097656" y="201.63990783691406" zKey="47" folded="1"/>
-            <nodeData nodeId="7" x="-177.55621337890625" y="90.069046020507812" zKey="55" folded="1"/>
-            <nodeData nodeId="8" x="172.27919006347656" y="-162.78530883789062" zKey="40"/>
-            <nodeData nodeId="9" x="367.33038330078125" y="-137.7030029296875" zKey="48"/>
-            <nodeData nodeId="10" x="-15.854263305664062" y="354.21041870117188" zKey="45"/>
-            <nodeData nodeId="11" x="-299.93716430664062" y="38.057037353515625" zKey="57" folded="1"/>
+            <nodeData nodeId="1" x="-160" y="272" zKey="58" folded="1"/>
+            <nodeData nodeId="3" x="16" y="0" zKey="68"/>
+            <nodeData nodeId="4" x="-304" y="112" zKey="46"/>
+            <nodeData nodeId="5" x="-160" y="208" zKey="47" folded="1"/>
+            <nodeData nodeId="7" x="-176" y="96" zKey="55" folded="1"/>
+            <nodeData nodeId="8" x="176" y="-160" zKey="76"/>
+            <nodeData nodeId="9" x="-432" y="-192" displayName="monitor" zKey="98" folded="1"/>
+            <nodeData nodeId="10" x="-288" y="384" zKey="89"/>
+            <nodeData nodeId="11" x="-304" y="32" zKey="57" folded="1"/>
+            <nodeData nodeId="12" x="-656" y="-96" displayName="id" zKey="97"/>
+            <nodeData nodeId="13" x="-512" y="-96" displayName="OSC:source" zKey="73"/>
+            <nodeData nodeId="14" x="-112" y="32" displayName="OSC:path" zKey="91" folded="1"/>
+            <nodeData nodeId="15" x="48" y="-128" displayName="OSC:modulation" zKey="93" folded="1"/>
+            <nodeData nodeId="16" x="-416" y="416" displayName="OSC:shape" zKey="92" folded="1"/>
         </nodeDatas>
         <visualizers>
-            <visualizer id="2" x="-92" y="-118" zKey="2" nodeId="1" dstSocketName="value" sx="136" sy="98"/>
+            <visualizer id="2" x="-96" y="-112" zKey="2" nodeId="1" dstSocketName="value" sx="136" sy="98"/>
         </visualizers>
-        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="4a71bbcc" gridColor="ffffff4c">
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="4a71bbcc" gridColor="ffffff4c">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0.0050000054761767387" r="0.19463661313056946" g="0.24416729807853699" b="1" a="1"/>
                 <key t="0.98500001430511475" r="1" g="0.16160251200199127" b="0.62492769956588745" a="1"/>

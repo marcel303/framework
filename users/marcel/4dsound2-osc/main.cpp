@@ -13,6 +13,101 @@
 // - node gets highlighted when dragging a link endpoint over it
 // - a list pops up asking to connect to one of the inputs when released
 
+const int VIEW_SX = 1000;
+const int VIEW_SY = 740;
+
+struct VfxNodeMems : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Name,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	std::string valueOutput;
+	
+	VfxNodeMems()
+		: VfxNodeBase()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Name, kVfxPlugType_String);
+		addOutput(kOutput_Value, kVfxPlugType_String, &valueOutput);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const char * name = getInputString(kInput_Name, nullptr);
+		
+		if (name == nullptr)
+		{
+			valueOutput.clear();
+		}
+		else
+		{
+			if (g_currentVfxGraph->getMems(name, valueOutput) == false)
+				valueOutput.clear();
+		}
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeMems)
+{
+	typeName = "in.string";
+	
+	in("name", "string");
+	out("value", "string");
+}
+
+struct VfxNodeStringAppend : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_A,
+		kInput_B,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Result,
+		kOutput_COUNT
+	};
+	
+	std::string resultOutput;
+	
+	VfxNodeStringAppend()
+		: VfxNodeBase()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_A, kVfxPlugType_String);
+		addInput(kInput_B, kVfxPlugType_String);
+		addOutput(kOutput_Result, kVfxPlugType_String, &resultOutput);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const char * a = getInputString(kInput_A, "");
+		const char * b = getInputString(kInput_B, "");
+		
+		resultOutput = std::string(a) + b;
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeStringAppend)
+{
+	typeName = "string.append";
+	
+	in("a", "string");
+	in("b", "string");
+	out("result", "string");
+}
+
 struct VfxNode4DSoundObject : VfxNodeBase
 {
 	enum Input
@@ -282,7 +377,7 @@ int main(int argc, char * argv[])
 	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
 	
-	if (!framework.init(640, 480))
+	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 
 // todo : create vfx graph
@@ -293,9 +388,11 @@ int main(int argc, char * argv[])
 	GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
 	createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
 	
-	GraphEdit graphEdit(640, 480, &typeDefinitionLibrary, &rtc);
+	GraphEdit graphEdit(VIEW_SX, VIEW_SY, &typeDefinitionLibrary, &rtc);
 	
 	graphEdit.load("test1.xml");
+	
+	vfxGraph->setMems("id", "1");
 
 	while (!framework.quitRequested)
 	{
@@ -316,7 +413,7 @@ int main(int argc, char * argv[])
 		
 		// update vfx graph
 		
-		vfxGraph->tick(640, 480, dt);
+		vfxGraph->tick(VIEW_SX, VIEW_SY, dt);
 		
 		// update the visualizers after the vfx graph has been updated
 		
@@ -326,7 +423,7 @@ int main(int argc, char * argv[])
 		{
 			// draw the vfx graph
 			
-			vfxGraph->draw(640, 480);
+			vfxGraph->draw(VIEW_SX, VIEW_SY);
 		
 			// draw the graph editor
 			
