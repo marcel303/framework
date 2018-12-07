@@ -4534,6 +4534,19 @@ void GraphEdit::doMenu(const float dt)
 			if (doButton("restart"))
 			{
 				realTimeConnection->loadBegin();
+				{
+					// reset cached dynamic socket data and 'resolve' socket indices to ensure dynamic socket indices are set back to -1
+					
+					for (auto & nodeData_itr : nodeDatas)
+						nodeData_itr.second.dynamicSockets = NodeData::DynamicSockets();
+					
+					for (auto & link_itr : graph->links)
+					{
+						auto & link = link_itr.second;
+						
+						resolveSocketIndices(link.srcNodeId, link.srcNodeSocketName, link.srcNodeSocketIndex, link.dstNodeId, link.dstNodeSocketName, link.dstNodeSocketIndex);
+					}
+				}
 				realTimeConnection->loadEnd(*this);
 			}
 		}
