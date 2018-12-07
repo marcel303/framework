@@ -1,0 +1,92 @@
+<graph nextNodeId="12" nextLinkId="7">
+    <node id="1" typeName="gen.sine">
+        <input socket="frequency" value="0.234000"/>
+    </node>
+    <node id="3" typeName="4d.soundObject">
+        <input socket="Enable" value="1"/>
+        <input socket="oscEndpoint" value="local"/>
+        <input socket="oscPrefix" value="/source1/path"/>
+        <input socket="particleOpacity" value="0.800000"/>
+    </node>
+    <node id="4" typeName="osc.endpoint">
+        <input socket="name" value="local"/>
+        <input socket="recv" value="0"/>
+        <input socket="sendIpAddress" value="127.0.0.1"/>
+        <input socket="sendPort" value="7000"/>
+    </node>
+    <node id="5" typeName="gen.sine">
+        <input socket="frequency" value="0.100000"/>
+    </node>
+    <node id="7" typeName="gen.saw">
+        <input socket="frequency" value="9.000000"/>
+    </node>
+    <node id="8" typeName="4d.soundObject">
+        <input socket="Enable" value="1"/>
+        <input socket="Speed" value="1.000000"/>
+        <input socket="XEnable" value="1"/>
+        <input socket="YEnable" value="1"/>
+        <input socket="ZEnable" value="1"/>
+        <input socket="oscEndpoint" value="local"/>
+        <input socket="oscPrefix" value="/source1/modulation"/>
+        <input socket="particleOpacity" value="0.800000"/>
+    </node>
+    <node id="9" typeName="4d.soundObject">
+        <input socket="Enable" value="1"/>
+        <input socket="Speed" value="1.000000"/>
+        <input socket="XEnable" value="1"/>
+        <input socket="YEnable" value="1"/>
+        <input socket="ZEnable" value="1"/>
+        <input socket="oscEndpoint" value="local"/>
+        <input socket="oscPrefix" value="/monitor"/>
+        <input socket="particleOpacity" value="0.800000"/>
+        <input socket="showPaths" value="1"/>
+        <input socket="showShapes" value="1"/>
+    </node>
+    <node id="10" typeName="4d.soundObject">
+        <input socket="Enable" value="1"/>
+        <input socket="oscEndpoint" value="local"/>
+        <input socket="oscPrefix" value="/source1/shape"/>
+        <input socket="particleOpacity" value="0.800000"/>
+        <input socket="resolution" value="5"/>
+        <input socket="scale" value="5.000000"/>
+    </node>
+    <node id="11" typeName="gen.sine">
+        <input socket="frequency" value="0.345000"/>
+    </node>
+    <link id="1" srcNodeId="3" srcNodeSocketName="scale" dstNodeId="1" dstNodeSocketName="value" dynamic="1">
+        <param name="out.max" value="2.000000"/>
+        <param name="out.min" value="0.500000"/>
+    </link>
+    <link id="2" srcNodeId="3" srcNodeSocketName="rotation.x" dstNodeId="5" dstNodeSocketName="value" dynamic="1">
+        <param name="out.max" value="90.000000"/>
+    </link>
+    <link id="3" srcNodeId="3" srcNodeSocketName="rotation.y" dstNodeId="5" dstNodeSocketName="value" dynamic="1"/>
+    <link id="4" srcNodeId="3" srcNodeSocketName="rotation.z" dstNodeId="5" dstNodeSocketName="value" dynamic="1"/>
+    <link id="5" srcNodeId="3" srcNodeSocketName="phase" dstNodeId="7" dstNodeSocketName="value" dynamic="1"/>
+    <link id="6" srcNodeId="7" srcNodeSocketName="frequency" dstNodeId="11" dstNodeSocketName="value">
+        <param name="out.max" value="6.000000"/>
+    </link>
+    <editor nextZKey="59">
+        <dragAndZoom x="-173.5191650390625" y="9.8486328125" zoom="0.60975110530853271"/>
+        <nodeDatas>
+            <nodeData nodeId="1" x="-162.83538818359375" y="268.2840576171875" zKey="58" folded="1"/>
+            <nodeData nodeId="3" x="12.259780883789062" y="7.9001960754394531" zKey="43"/>
+            <nodeData nodeId="4" x="-301.25360107421875" y="115.09867858886719" zKey="46"/>
+            <nodeData nodeId="5" x="-166.66493225097656" y="201.63990783691406" zKey="47" folded="1"/>
+            <nodeData nodeId="7" x="-177.55621337890625" y="90.069046020507812" zKey="55" folded="1"/>
+            <nodeData nodeId="8" x="172.27919006347656" y="-162.78530883789062" zKey="40"/>
+            <nodeData nodeId="9" x="367.33038330078125" y="-137.7030029296875" zKey="48"/>
+            <nodeData nodeId="10" x="-15.854263305664062" y="354.21041870117188" zKey="45"/>
+            <nodeData nodeId="11" x="-299.93716430664062" y="38.057037353515625" zKey="57" folded="1"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="2" x="-92" y="-118" zKey="2" nodeId="1" dstSocketName="value" sx="136" sy="98"/>
+        </visualizers>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="4a71bbcc" gridColor="ffffff4c">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0.0050000054761767387" r="0.19463661313056946" g="0.24416729807853699" b="1" a="1"/>
+                <key t="0.98500001430511475" r="1" g="0.16160251200199127" b="0.62492769956588745" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>
