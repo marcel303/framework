@@ -1147,7 +1147,7 @@ void VfxNodeBase::reconnectDynamicInputs()
 	
 		for (int i = 0; i < dynamicInputs.size(); ++i)
 		{
-			if (inputSocketValue.socketName == dynamicInputs[i].name)
+			if (inputSocketValue.nodeId == id && inputSocketValue.socketName == dynamicInputs[i].name)
 				input = &inputs[numStaticInputs + i];
 		}
 		
