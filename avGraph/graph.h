@@ -711,6 +711,7 @@ struct GraphEdit_RealTimeConnection
 	{
 		std::string name;
 		std::string typeName;
+		std::string defaultValue;
 	};
 	
 	struct DynamicOutput
@@ -948,6 +949,7 @@ struct GraphEdit : GraphEditConnection
 					
 					input.name = newInput.name;
 					input.typeName = newInput.typeName;
+					input.defaultValue = newInput.defaultValue;
 					input.isDynamic = true;
 					input.index = inputSocketIndex;
 					

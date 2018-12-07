@@ -1241,6 +1241,7 @@ bool RealTimeConnection::getNodeDynamicSockets(const GraphNodeId nodeId, std::ve
 		{
 			inputs[index].name = input.name;
 			inputs[index].typeName = vfxPlugTypeToValueTypeName(input.type);
+			inputs[index].defaultValue = input.defaultValue;
 			
 			index++;
 		}

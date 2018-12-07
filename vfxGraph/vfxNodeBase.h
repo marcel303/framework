@@ -591,6 +591,7 @@ struct VfxNodeBase
 	{
 		std::string name;
 		VfxPlugType type;
+		std::string defaultValue;
 	};
 	
 	struct DynamicOutput
