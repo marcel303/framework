@@ -57,7 +57,7 @@ unsigned long GetHostByName( const char *name )
     if( h ){
         struct in_addr a;
         void * a_ptr = (void*)&a;
-        void * h_ptr = (void*)&h->h_addr_list[0];
+        void * h_ptr = (void*)h->h_addr_list[0];
         memcpy( a_ptr, h_ptr, h->h_length );
         result = ntohl(a.s_addr);
     }
