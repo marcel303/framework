@@ -304,11 +304,11 @@ void AudioGraph::syncMainToAudio()
 	
 		stateDescriptor.activeEvents.clear();
 		
+		std::swap(stateDescriptor.activeEvents, triggeredEvents_pushed);
+		
 		if (pushedStateDescriptorUpdate != nullptr)
 		{
 			std::swap(stateDescriptor.activeFlags, pushedStateDescriptorUpdate->activeFlags);
-			
-			std::swap(stateDescriptor.activeEvents, pushedStateDescriptorUpdate->triggeredEvents);
 			
 		// todo : perform memory allocs/frees on the main thread
 			delete pushedStateDescriptorUpdate;
@@ -614,16 +614,14 @@ void AudioGraph::pushStateDescriptorUpdate()
 		}
 		rteMutex_main.unlock();
 	
+		triggeredEvents_pushed.insert(triggeredEvents.begin(), triggeredEvents.end());
+		
+		triggeredEvents.clear();
+		
 		update->activeFlags = activeFlags;
 		
 		if (pushedStateDescriptorUpdate != nullptr)
 		{
-			// copy updates from the previous (non-processed) update into the current update
-			
-			update->triggeredEvents.insert(
-				pushedStateDescriptorUpdate->triggeredEvents.begin(),
-				pushedStateDescriptorUpdate->triggeredEvents.end());
-			
 			// free the previous (non-processed) update and replace it with the current update
 			
 			delete pushedStateDescriptorUpdate;
@@ -797,7 +795,7 @@ void AudioGraph::triggerEvent(const char * event)
 {
 	Assert(globals->mainThreadId.checkThreadId() == true);
 	
-	stateDescriptorUpdate.triggeredEvents.insert(event);
+	triggeredEvents.insert(event);
 }
 
 //

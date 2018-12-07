@@ -164,9 +164,10 @@ struct AudioGraph
 	struct StateDescriptorUpdateMessage
 	{
 		std::set<std::string> activeFlags;
-		
-		std::set<std::string> triggeredEvents;
 	};
+	
+	std::set<std::string> triggeredEvents;
+	std::set<std::string> triggeredEvents_pushed;
 	
 	std::atomic<bool> isPaused;
 	std::atomic<bool> rampDownRequested;
