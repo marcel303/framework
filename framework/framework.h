@@ -33,7 +33,6 @@
 
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
-#include <float.h>
 #include <map>
 #include <string>
 #include <vector>
@@ -41,6 +40,10 @@
 #include "Mat4x4.h"
 #include "Vec3.h"
 #include "Vec4.h"
+
+#if 0 // todo : required to build on Windows or Linux?
+	#include <float.h>
+#endif
 
 #if defined(DEBUG)
 	#define fassert(x) Assert(x)
