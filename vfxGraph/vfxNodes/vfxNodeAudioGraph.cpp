@@ -111,6 +111,7 @@ VfxNodeAudioGraph::~VfxNodeAudioGraph()
 	delete [] channelOutputs;
 	channelOutputs = nullptr;
 	
+	// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeGlobals will prune any instances still left fading out that reference our globals
 	g_vfxAudioGraphMgr->freeGlobals(globals);
 }
 
@@ -174,6 +175,7 @@ void VfxNodeAudioGraph::updateDynamicInputs()
 				
 				dynamicInput.name = controlValue.name;
 				dynamicInput.type = kVfxPlugType_Float;
+				dynamicInput.defaultValue = String::FormatC("%f", controlValue.defaultX);
 				
 				currentControlValues.push_back(controlValue.name);
 				
@@ -337,17 +339,17 @@ void VfxNodeAudioGraph::tick(const float dt)
 			
 			SDL_LockMutex(audioGraph->globals->audioMutex);
 			{
-				for (auto & controlValue : audioGraph->globals->controlValues)
+			for (auto & controlValue : audioGraph->globals->controlValues)
+			{
+				if (controlValue.name == dynamicInput.name)
 				{
-					if (controlValue.name == dynamicInput.name)
-					{
-						if (input->isConnected())
-							controlValue.desiredX = input->getFloat();
-						else
-							controlValue.desiredX = controlValue.defaultX;
-					}
+					if (input->isConnected())
+						controlValue.desiredX = input->getFloat();
+					else
+						controlValue.desiredX = controlValue.defaultX;
 				}
 			}
+		}
 			SDL_UnlockMutex(audioGraph->globals->audioMutex);
 		}
 		

@@ -173,6 +173,7 @@ void VfxNodeAudioGraphPoly::updateDynamicInputs()
 				
 				dynamicInput.name = controlValue.name;
 				dynamicInput.type = kVfxPlugType_Channel;
+				dynamicInput.defaultValue = String::FormatC("%f", controlValue.defaultX);
 				
 				currentControlValues.push_back(controlValue.name);
 				
