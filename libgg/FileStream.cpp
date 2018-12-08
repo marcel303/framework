@@ -242,7 +242,11 @@ void FileStream::Seek(int seek, SeekMode mode)
 
 bool FileStream::EOF_get()
 {
+#ifdef PSP
 	return Position_get() >= Length_get();
+#else
+	return feof(m_File);
+#endif
 }
 
 bool FileStream::IsOpen_get() const
