@@ -13,8 +13,14 @@
 // - node gets highlighted when dragging a link endpoint over it
 // - a list pops up asking to connect to one of the inputs when released
 
+// todo : changed files in framework
+// todo : + use corrrect osc sheet file
+// todo : + detect osc sheet changes
+
 const int VIEW_SX = 1000;
 const int VIEW_SY = 740;
+
+static std::set<std::string> s_changedFiles;
 
 struct VfxNodeMems : VfxNodeBase
 {
@@ -135,14 +141,14 @@ struct VfxNode4DSoundObject : VfxNodeBase
 	};
 	
 	std::string currentOscPrefix;
+	std::string currentOscSheet;
 	
 	std::vector<InputInfo> inputInfos;
-	
-	// todo : parse OSC sheet. detect which parameters belong to this sound object. create dynamic inputs
 	
 	VfxNode4DSoundObject()
 		: VfxNodeBase()
 		, currentOscPrefix()
+		, currentOscSheet()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_OscEndpoint, kVfxPlugType_String);
@@ -157,26 +163,36 @@ struct VfxNode4DSoundObject : VfxNodeBase
 			? ""
 			: getInputString(kInput_OscPrefix, "");
 		
-		if (oscPrefix == currentOscPrefix)
+		const char * oscSheet = getInputString(kInput_OscSheet, "");
+		
+		if (s_changedFiles.count(oscSheet) != 0)
+		{
+			currentOscSheet.clear();
+		}
+		
+		if (oscPrefix == currentOscPrefix && oscSheet == currentOscSheet)
 		{
 			return;
 		}
 		
 		currentOscPrefix = oscPrefix;
+		currentOscSheet = oscSheet;
 		
 		inputInfos.clear();
 		
-		if (oscPrefix[0] == 0)
+		if (oscPrefix[0] == 0 || oscSheet[0] == 0)
 		{
 			setDynamicInputs(nullptr, 0);
 		}
 		else
 		{
+			// parse OSC sheet. detect which parameters belong to this sound object. create dynamic inputs
+			
 			std::vector<VfxNodeBase::DynamicInput> inputs;
 			
 			CsvDocument csvDocument;
 			
-			if (csvDocument.load("osc-sheet.txt", true, '\t'))
+			if (csvDocument.load(oscSheet, true, '\t'))
 			{
 				for (auto & row : csvDocument.m_rows)
 				{
@@ -255,6 +271,21 @@ struct VfxNode4DSoundObject : VfxNodeBase
 						inputInfo.defaultBool = Parse::Bool(defaultValue);
 						inputInfos.push_back(inputInfo);
 					}
+					/*
+					else if (strstr(type, "enum") != nullptr)
+					{
+						VfxNodeBase::DynamicInput input;
+						input.type = kVfxPlugType_Int;
+						input.name = name;
+						input.defaultValue = strcmp(defaultValue, "true") == 0 ? "1" : "0";
+						inputs.push_back(input);
+						
+						InputInfo inputInfo;
+						inputInfo.oscAddress = oscAddress;
+						inputInfo.defaultBool = Parse::Bool(defaultValue);
+						inputInfos.push_back(inputInfo);
+					}
+					*/
 					else
 					{
 						logDebug("unknown OSC data type: %s", type);
@@ -377,9 +408,16 @@ int main(int argc, char * argv[])
 	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
 	
+	framework.enableRealTimeEditing = true;
+	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 
+	framework.realTimeEditCallback = [](const std::string & filename)
+	{
+		s_changedFiles.insert(filename);
+	};
+	
 // todo : create vfx graph
 	VfxGraph * vfxGraph = nullptr;
 	
@@ -396,6 +434,8 @@ int main(int argc, char * argv[])
 
 	while (!framework.quitRequested)
 	{
+		s_changedFiles.clear();
+		
 		framework.process();
 		
 		if (keyboard.wentDown(SDLK_ESCAPE))

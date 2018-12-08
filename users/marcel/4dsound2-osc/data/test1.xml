@@ -1,11 +1,11 @@
-<graph nextNodeId="17" nextLinkId="15">
+<graph nextNodeId="30" nextLinkId="39">
     <node id="1" typeName="gen.sine">
         <input socket="frequency" value="0.234000"/>
     </node>
     <node id="3" typeName="4d.soundObject">
         <input socket="Enable" value="1"/>
         <input socket="oscEndpoint" value="local"/>
-        <input socket="oscPrefix" value="/source1/path"/>
+        <input socket="oscSheet" value="osc-sheet.txt"/>
         <input socket="particleOpacity" value="0.800000"/>
     </node>
     <node id="4" typeName="osc.endpoint">
@@ -17,17 +17,17 @@
     <node id="5" typeName="gen.sine">
         <input socket="frequency" value="0.100000"/>
     </node>
-    <node id="7" typeName="gen.saw">
-        <input socket="frequency" value="9.000000"/>
-    </node>
+    <node id="7" typeName="gen.saw"/>
     <node id="8" typeName="4d.soundObject">
         <input socket="Enable" value="1"/>
         <input socket="Speed" value="1.000000"/>
         <input socket="XEnable" value="1"/>
         <input socket="YEnable" value="1"/>
+        <input socket="YFrequency" value="2.000000"/>
         <input socket="ZEnable" value="1"/>
+        <input socket="ZFrequency" value="3.000000"/>
         <input socket="oscEndpoint" value="local"/>
-        <input socket="oscPrefix" value="/source1/modulation"/>
+        <input socket="oscSheet" value="osc-sheet.txt"/>
         <input socket="particleOpacity" value="0.800000"/>
     </node>
     <node id="9" typeName="4d.soundObject">
@@ -38,14 +38,15 @@
         <input socket="ZEnable" value="1"/>
         <input socket="oscEndpoint" value="local"/>
         <input socket="oscPrefix" value="/monitor"/>
-        <input socket="particleOpacity" value="0.800000"/>
+        <input socket="oscSheet" value="osc-sheet.txt"/>
+        <input socket="particleOpacity" value="0.250000"/>
         <input socket="showPaths" value="1"/>
-        <input socket="showShapes" value="1"/>
     </node>
     <node id="10" typeName="4d.soundObject">
         <input socket="Enable" value="1"/>
+        <input socket="hollow" value="1"/>
         <input socket="oscEndpoint" value="local"/>
-        <input socket="oscPrefix" value="/source1/shape"/>
+        <input socket="oscSheet" value="osc-sheet.txt"/>
         <input socket="particleOpacity" value="0.800000"/>
         <input socket="resolution" value="5"/>
         <input socket="scale" value="5.000000"/>
@@ -68,48 +69,131 @@
     <node id="16" typeName="string.append">
         <input socket="b" value="/shape"/>
     </node>
+    <node id="18" typeName="literal.string" editorValue="1"/>
+    <node id="19" typeName="gen.sine">
+        <input socket="frequency" value="0.012300"/>
+    </node>
+    <node id="20" typeName="4d.soundObject">
+        <input socket="Enable" value="1"/>
+        <input socket="Rotation.x" value="1.000000"/>
+        <input socket="Rotation.y" value="9.000000"/>
+        <input socket="Rotation.z" value="90.000000"/>
+        <input socket="hollow" value="1"/>
+        <input socket="oscEndpoint" value="local"/>
+        <input socket="oscSheet" value="osc-sheet.txt"/>
+        <input socket="particleOpacity" value="0.800000"/>
+        <input socket="resolution" value="5"/>
+        <input socket="scale" value="5.000000"/>
+    </node>
+    <node id="21" typeName="string.append">
+        <input socket="b" value="/input"/>
+    </node>
+    <node id="23" typeName="string.append">
+        <input socket="b" value="/particle"/>
+    </node>
+    <node id="24" typeName="4d.soundObject">
+        <input socket="Enable" value="1"/>
+        <input socket="Scale" value="0.200000"/>
+        <input socket="hollow" value="1"/>
+        <input socket="oscEndpoint" value="local"/>
+        <input socket="oscSheet" value="osc-sheet.txt"/>
+        <input socket="particleOpacity" value="0.800000"/>
+        <input socket="resolution" value="5"/>
+        <input socket="scale" value="5.000000"/>
+    </node>
+    <node id="25" typeName="gen.sine">
+        <input socket="frequency" value="0.234000"/>
+    </node>
+    <node id="26" typeName="string.append">
+        <input socket="b" value="/hue"/>
+    </node>
+    <node id="27" typeName="4d.soundObject">
+        <input socket="Enable" value="1"/>
+        <input socket="Speed" value="1.000000"/>
+        <input socket="XEnable" value="1"/>
+        <input socket="YEnable" value="1"/>
+        <input socket="YFrequency" value="2.000000"/>
+        <input socket="ZEnable" value="1"/>
+        <input socket="ZFrequency" value="3.000000"/>
+        <input socket="oscEndpoint" value="local"/>
+        <input socket="oscSheet" value="osc-sheet.txt"/>
+        <input socket="particleOpacity" value="0.800000"/>
+    </node>
+    <node id="28" typeName="gen.sine">
+        <input socket="frequency" value="0.321000"/>
+    </node>
+    <node id="29" typeName="gen.sine"/>
     <link id="1" srcNodeId="3" srcNodeSocketName="scale" dstNodeId="1" dstNodeSocketName="value" dynamic="1">
         <param name="out.max" value="2.000000"/>
         <param name="out.min" value="0.500000"/>
     </link>
-    <link id="2" srcNodeId="3" srcNodeSocketName="rotation.x" dstNodeId="5" dstNodeSocketName="value" dynamic="1">
-        <param name="out.max" value="90.000000"/>
-    </link>
-    <link id="3" srcNodeId="3" srcNodeSocketName="rotation.y" dstNodeId="5" dstNodeSocketName="value" dynamic="1"/>
-    <link id="4" srcNodeId="3" srcNodeSocketName="rotation.z" dstNodeId="5" dstNodeSocketName="value" dynamic="1"/>
     <link id="5" srcNodeId="3" srcNodeSocketName="phase" dstNodeId="7" dstNodeSocketName="value" dynamic="1"/>
     <link id="6" srcNodeId="7" srcNodeSocketName="frequency" dstNodeId="11" dstNodeSocketName="value">
-        <param name="out.max" value="6.000000"/>
+        <param name="out.max" value="0.500000"/>
     </link>
-    <link id="7" srcNodeId="13" srcNodeSocketName="b" dstNodeId="12" dstNodeSocketName="value"/>
     <link id="8" srcNodeId="14" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
     <link id="9" srcNodeId="3" srcNodeSocketName="oscPrefix" dstNodeId="14" dstNodeSocketName="result"/>
     <link id="10" srcNodeId="15" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
     <link id="11" srcNodeId="8" srcNodeSocketName="oscPrefix" dstNodeId="15" dstNodeSocketName="result"/>
     <link id="12" srcNodeId="16" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
     <link id="14" srcNodeId="10" srcNodeSocketName="oscPrefix" dstNodeId="16" dstNodeSocketName="result"/>
-    <editor nextZKey="99">
-        <dragAndZoom x="-3.063690185546875" y="146.23670959472656" zoom="0.68386387825012207"/>
+    <link id="17" srcNodeId="13" srcNodeSocketName="b" dstNodeId="18" dstNodeSocketName="value"/>
+    <link id="19" srcNodeId="21" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
+    <link id="20" srcNodeId="20" srcNodeSocketName="oscPrefix" dstNodeId="21" dstNodeSocketName="result"/>
+    <link id="22" srcNodeId="20" srcNodeSocketName="Position.x" dstNodeId="19" dstNodeSocketName="value" dynamic="1">
+        <param name="out.max" value="4.000000"/>
+        <param name="out.min" value="-4.000000"/>
+    </link>
+    <link id="27" srcNodeId="23" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
+    <link id="28" srcNodeId="24" srcNodeSocketName="oscPrefix" dstNodeId="23" dstNodeSocketName="result"/>
+    <link id="33" srcNodeId="24" srcNodeSocketName="Dimensions.y" dstNodeId="25" dstNodeSocketName="value" dynamic="1">
+        <param name="out.max" value="100.000000"/>
+        <param name="out.min" value="1.000000"/>
+    </link>
+    <link id="34" srcNodeId="3" srcNodeSocketName="dimensions.y" dstNodeId="5" dstNodeSocketName="value" dynamic="1">
+        <param name="out.max" value="2.000000"/>
+        <param name="out.min" value="0.500000"/>
+    </link>
+    <link id="35" srcNodeId="26" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
+    <link id="36" srcNodeId="27" srcNodeSocketName="oscPrefix" dstNodeId="26" dstNodeSocketName="result"/>
+    <link id="37" srcNodeId="27" srcNodeSocketName="" dstNodeId="28" dstNodeSocketName="value" dynamic="1">
+        <param name="out.max" value="360.000000"/>
+    </link>
+    <link id="38" srcNodeId="20" srcNodeSocketName="Rotation.y" dstNodeId="29" dstNodeSocketName="value" dynamic="1">
+        <param name="out.max" value="90.000000"/>
+        <param name="out.min" value="-90.000000"/>
+    </link>
+    <editor nextZKey="240">
+        <dragAndZoom x="-80.434326171875" y="19.36859130859375" zoom="1"/>
         <nodeDatas>
             <nodeData nodeId="1" x="-160" y="272" zKey="58" folded="1"/>
-            <nodeData nodeId="3" x="16" y="0" zKey="68"/>
-            <nodeData nodeId="4" x="-304" y="112" zKey="46"/>
-            <nodeData nodeId="5" x="-160" y="208" zKey="47" folded="1"/>
-            <nodeData nodeId="7" x="-176" y="96" zKey="55" folded="1"/>
-            <nodeData nodeId="8" x="176" y="-160" zKey="76"/>
-            <nodeData nodeId="9" x="-432" y="-192" displayName="monitor" zKey="98" folded="1"/>
-            <nodeData nodeId="10" x="-288" y="384" zKey="89"/>
-            <nodeData nodeId="11" x="-304" y="32" zKey="57" folded="1"/>
-            <nodeData nodeId="12" x="-656" y="-96" displayName="id" zKey="97"/>
-            <nodeData nodeId="13" x="-512" y="-96" displayName="OSC:source" zKey="73"/>
+            <nodeData nodeId="3" x="16" y="0" zKey="227"/>
+            <nodeData nodeId="4" x="-304" y="-192" zKey="189" folded="1"/>
+            <nodeData nodeId="5" x="-192" y="144" zKey="179"/>
+            <nodeData nodeId="7" x="-176" y="96" zKey="177" folded="1"/>
+            <nodeData nodeId="8" x="176" y="-160" zKey="226"/>
+            <nodeData nodeId="9" x="-416" y="-192" displayName="monitor" zKey="238" folded="1"/>
+            <nodeData nodeId="10" x="-288" y="384" zKey="228"/>
+            <nodeData nodeId="11" x="-304" y="32" zKey="210" folded="1"/>
+            <nodeData nodeId="12" x="-656" y="-96" displayName="id" zKey="231"/>
+            <nodeData nodeId="13" x="-512" y="-96" displayName="OSC:source" zKey="232"/>
             <nodeData nodeId="14" x="-112" y="32" displayName="OSC:path" zKey="91" folded="1"/>
-            <nodeData nodeId="15" x="48" y="-128" displayName="OSC:modulation" zKey="93" folded="1"/>
-            <nodeData nodeId="16" x="-416" y="416" displayName="OSC:shape" zKey="92" folded="1"/>
+            <nodeData nodeId="15" x="48" y="-128" displayName="OSC:modulation" zKey="199" folded="1"/>
+            <nodeData nodeId="16" x="-416" y="416" displayName="OSC:shape" zKey="132"/>
+            <nodeData nodeId="18" x="-736" y="0" zKey="233"/>
+            <nodeData nodeId="19" x="-752" y="672" zKey="160"/>
+            <nodeData nodeId="20" x="-560" y="512" zKey="229"/>
+            <nodeData nodeId="21" x="-736" y="544" displayName="OSC:input" zKey="153"/>
+            <nodeData nodeId="23" x="-1056" y="544" displayName="OSC:particle" zKey="186"/>
+            <nodeData nodeId="24" x="-912" y="528" zKey="230"/>
+            <nodeData nodeId="25" x="-1120" y="656" zKey="221"/>
+            <nodeData nodeId="26" x="-192" y="-304" displayName="OSC:monitor" zKey="208"/>
+            <nodeData nodeId="27" x="16" y="-416" zKey="237"/>
+            <nodeData nodeId="28" x="-240" y="-416" zKey="216"/>
+            <nodeData nodeId="29" x="-1088" y="768" zKey="224"/>
         </nodeDatas>
-        <visualizers>
-            <visualizer id="2" x="-96" y="-112" zKey="2" nodeId="1" dstSocketName="value" sx="136" sy="98"/>
-        </visualizers>
-        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="4a71bbcc" gridColor="ffffff4c">
+        <visualizers/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="192743cc" gridColor="ffffff4c">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0.0050000054761767387" r="0.19463661313056946" g="0.24416729807853699" b="1" a="1"/>
                 <key t="0.98500001430511475" r="1" g="0.16160251200199127" b="0.62492769956588745" a="1"/>
