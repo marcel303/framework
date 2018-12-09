@@ -3,6 +3,7 @@
 #include "osc/OscOutboundPacketStream.h"
 #include "Parse.h"
 #include "StringEx.h"
+#include "ui.h"
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 #include "vfxNodeBase.h"
@@ -121,6 +122,9 @@ struct VfxNode4DSoundObject : VfxNodeBase
 						
 						const char * name = oscAddress + currentOscPrefixSize;
 						
+						if (*name != '/')
+							continue;
+							
 						while (*name == '/')
 							name++;
 						
@@ -894,6 +898,41 @@ struct VfxGraphManager_RTE : VfxGraphManager
 	}
 };
 
+
+// todo : move to vfxUi.cpp
+
+static bool doVfxGraphInstanceSelect(VfxGraphManager_RTE & vfxGraphMgr, std::string & activeInstanceName)
+{
+	bool result = true;
+	
+	for (auto & fileItr : vfxGraphMgr.files)
+	{
+		auto & filename = fileItr.first;
+		auto file = fileItr.second;
+		
+		for (auto instance : file->instances)
+		{
+			std::string name = String::FormatC("%s: %p", filename.c_str(), instance->vfxGraph);
+			
+			if (doButton(name.c_str()))
+			{
+				if (name != activeInstanceName)
+				{
+					activeInstanceName = name;
+					
+					vfxGraphMgr.selectInstance(instance);
+					
+					result = true;
+				}
+			}
+		}
+	}
+	
+	return result;
+}
+
+//
+
 static VfxGraphManager * s_vfxGraphMgr = nullptr;
 
 struct Creature
@@ -903,10 +942,10 @@ struct Creature
 	Vec2 currentPos;
 	Vec2 desiredPos;
 	
+	float moveTimer = 0.f;
+	
 	void init(const int id)
 	{
-		desiredPos.Set(random(-10.f, +10.f), random(-10.f, +10.f));
-		
 		vfxInstance = s_vfxGraphMgr->createInstance("test1.xml", 64, 64);
 		
 		vfxInstance->vfxGraph->setMems("id", String::FormatC("%d", id + 1).c_str());
@@ -922,6 +961,15 @@ struct Creature
 	
 	void tick(const float dt)
 	{
+		moveTimer -= dt;
+		
+		if (moveTimer <= 0.f)
+		{
+			moveTimer = random(0.f, 10.f);
+			
+			desiredPos.Set(random(-10.f, +10.f), random(-10.f, +10.f));
+		}
+		
 		const float retainPerSecond = .7f;
 		const float retain = powf(retainPerSecond, dt);
 		const float attain = 1.f - retain;
@@ -974,7 +1022,7 @@ struct World
 		gxPushMatrix();
 		{
 			gxTranslatef(VIEW_SX/2.f, VIEW_SY/2.f, 0.f);
-			gxScalef(20, 20, 1);
+			gxScalef(40, 40, 1);
 			
 			for (int i = 0; i < kNumCreatures; ++i)
 				creatures[i].draw();
@@ -1019,6 +1067,20 @@ int main(int argc, char * argv[])
 	
 	vfxGraphMgr.selectInstance(world.creatures[0].vfxInstance);
 	
+	UiState uiState;
+	uiState.x = 20;
+	uiState.y = VIEW_SY - 140;
+	uiState.sx = 200;
+	std::string activeInstanceName;
+	
+	auto doMenus = [&](const bool doActions, const bool doDraw)
+	{
+		makeActive(&uiState, doActions, doDraw);
+		pushMenu("vfx select");
+		doVfxGraphInstanceSelect(vfxGraphMgr, activeInstanceName);
+		popMenu();
+	};
+	
 	while (!framework.quitRequested)
 	{
 		s_changedFiles.clear();
@@ -1030,9 +1092,17 @@ int main(int argc, char * argv[])
 
 		const float dt = framework.timeStep;
 		
+		bool inputIsCaptured = false;
+		
+		// update menus
+		
+		doMenus(true, false);
+		
+		inputIsCaptured |= uiState.activeElem != nullptr;
+		
 		// update the graph editor
 		
-		vfxGraphMgr.tickEditor(dt, false);
+		inputIsCaptured |= vfxGraphMgr.tickEditor(dt, inputIsCaptured);
 		
 		// update OSC messages
 		
@@ -1063,6 +1133,10 @@ int main(int argc, char * argv[])
 			// draw the graph editor
 			
 			vfxGraphMgr.drawEditor();
+			
+			// draw the menus
+			
+			doMenus(false, true);
 		}
 		framework.endDraw();
 	}
