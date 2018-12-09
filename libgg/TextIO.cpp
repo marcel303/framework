@@ -29,6 +29,87 @@
 
 namespace TextIO
 {
+	bool loadTextWithCallback(const char * text, LineEndings & lineEndings, LineCallback lineCallback, void * userData)
+	{
+		bool found_cr = false;
+		bool found_lf = false;
+
+		int lineBegin = -1;
+		int lineSize = 0;
+		
+		//
+
+		for (int i = 0; text[i] != 0; )
+		{
+			bool is_linebreak = false;
+
+			if (text[i] == '\r')
+			{
+				is_linebreak = true;
+
+				found_cr = true;
+
+				i++;
+
+				if (text[i] != 0 && text[i] == '\n')
+				{
+					found_lf = true;
+
+					i++;
+				}
+			}
+			else if (text[i] == '\n')
+			{
+				is_linebreak = true;
+
+				found_lf = true;
+				
+				i++;
+			}
+			else
+			{
+				if (lineBegin == -1)
+				{
+					lineBegin = i;
+					lineSize = 0;
+				}
+				
+				lineSize++;
+
+				i++;
+			}
+
+			if (is_linebreak)
+			{
+				const char * begin = text + lineBegin;
+				const char * end = begin + lineSize;
+				
+				lineCallback(userData, begin, end);
+				
+				lineBegin = -1;
+			}
+		}
+		
+		if (lineBegin != -1)
+		{
+			const char * begin = text + lineBegin;
+			const char * end = begin + lineSize;
+			
+			lineCallback(userData, begin, end);
+
+			lineBegin = -1;
+		}
+		
+		//
+		
+		lineEndings =
+			found_cr && found_lf
+			? kLineEndings_Windows
+			: kLineEndings_Unix;
+
+		return true;
+	}
+	
 	bool loadText(const char * text, std::vector<std::string> & lines, LineEndings & lineEndings)
 	{
 		bool found_cr = false;
@@ -95,22 +176,20 @@ namespace TextIO
 		return true;
 	}
 	
-	bool load(const char * filename, std::vector<std::string> & lines, LineEndings & lineEndings)
+	bool loadFileContents(const char * filename,
+		char *& text,
+	#if WINDOWS
+		long & size)
+	#else
+		ssize_t & size)
+	#endif
 	{
 		bool result = false;
 		
 		FILE * file = nullptr;
-	#if WINDOWS
-		long size = 0;
-	#else
-		ssize_t size = 0;
-	#endif
-		char * text = nullptr;
-
-		std::string line;
 		
 		//
-
+		
 		file = fopen(filename, "rb");
 
 		if (file == nullptr)
@@ -134,13 +213,14 @@ namespace TextIO
 
 		text[size] = 0;
 		
-		loadText(text, lines, lineEndings);
-	
 		result = true;
-	
+		
 	cleanup:
-		delete [] text;
-		text = nullptr;
+		if (result == false)
+		{
+			delete [] text;
+			text = nullptr;
+		}
 
 		if (file != nullptr)
 		{
@@ -148,6 +228,64 @@ namespace TextIO
 			file = nullptr;
 		}
 
+		return result;
+	}
+	
+	bool load(const char * filename, std::vector<std::string> & lines, LineEndings & lineEndings)
+	{
+		bool result = false;
+		
+	#if WINDOWS
+		long size = 0;
+	#else
+		ssize_t size = 0;
+	#endif
+		char * text = nullptr;
+
+		std::string line;
+		
+		//
+
+		if (loadFileContents(filename, text, size) == false)
+			goto cleanup;
+
+		if (loadText(text, lines, lineEndings) == false)
+			goto cleanup;
+	
+		result = true;
+	
+	cleanup:
+		delete [] text;
+		text = nullptr;
+
+		return result;
+	}
+	
+	bool loadWithCallback(const char * filename, char *& text, LineEndings & lineEndings, LineCallback lineCallback, void * userData)
+	{
+		bool result = false;
+		
+	#if WINDOWS
+		long size = 0;
+	#else
+		ssize_t size = 0;
+	#endif
+	
+		if (loadFileContents(filename, text, size) == false)
+			goto cleanup;
+		
+		if (loadTextWithCallback(text, lineEndings, lineCallback, userData) == false)
+			goto cleanup;
+		
+		result = true;
+
+	cleanup:
+		if (result == false)
+		{
+			delete [] text;
+			text = nullptr;
+		}
+		
 		return result;
 	}
 
