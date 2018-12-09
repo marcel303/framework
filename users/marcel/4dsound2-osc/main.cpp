@@ -22,50 +22,6 @@ const int VIEW_SY = 740;
 
 static std::set<std::string> s_changedFiles;
 
-struct VfxNodeStringAppend : VfxNodeBase
-{
-	enum Input
-	{
-		kInput_A,
-		kInput_B,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Result,
-		kOutput_COUNT
-	};
-	
-	std::string resultOutput;
-	
-	VfxNodeStringAppend()
-		: VfxNodeBase()
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_A, kVfxPlugType_String);
-		addInput(kInput_B, kVfxPlugType_String);
-		addOutput(kOutput_Result, kVfxPlugType_String, &resultOutput);
-	}
-	
-	virtual void tick(const float dt) override
-	{
-		const char * a = getInputString(kInput_A, "");
-		const char * b = getInputString(kInput_B, "");
-		
-		resultOutput = std::string(a) + b;
-	}
-};
-
-VFX_NODE_TYPE(VfxNodeStringAppend)
-{
-	typeName = "string.append";
-	
-	in("a", "string");
-	in("b", "string");
-	out("result", "string");
-}
-
 struct VfxNode4DSoundObject : VfxNodeBase
 {
 	enum Input
