@@ -907,15 +907,16 @@ struct VfxGraphManager_RTE : VfxGraphManager
 		//
 	
 		auto vfxGraph = constructVfxGraph(*file->graphEdit->graph, typeDefinitionLibrary);
-		auto realTimeConnection = new RealTimeConnection(vfxGraph);
-		
-		//
 		
 		VfxGraphInstance * instance = new VfxGraphInstance();
 		instance->vfxGraph = vfxGraph;
 		instance->sx = sx;
 		instance->sy = sy;
+		
+		auto realTimeConnection = new RealTimeConnection(instance->vfxGraph);
 		instance->realTimeConnection = realTimeConnection;
+		
+		//
 	
 		file->instances.push_back(instance);
 	
