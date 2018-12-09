@@ -1251,6 +1251,17 @@ bool RealTimeConnection::getNodeDynamicSockets(const GraphNodeId nodeId, std::ve
 			inputs[index].typeName = vfxPlugTypeToValueTypeName(input.type);
 			inputs[index].defaultValue = input.defaultValue;
 			
+			if (input.enumElems.empty() == false)
+			{
+				inputs[index].enumElems.resize(input.enumElems.size());
+				
+				for (size_t i = 0; i < input.enumElems.size(); ++i)
+				{
+					inputs[index].enumElems[i].name = input.enumElems[i].name;
+					inputs[index].enumElems[i].valueText = input.enumElems[i].valueText;
+				}
+			}
+			
 			index++;
 		}
 		
