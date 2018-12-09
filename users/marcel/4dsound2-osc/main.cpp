@@ -22,6 +22,64 @@ const int VIEW_SY = 740;
 
 static std::set<std::string> s_changedFiles;
 
+struct VfxNodeMemf : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Name,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value1,
+		kOutput_Value2,
+		kOutput_Value3,
+		kOutput_Value4,
+		kOutput_COUNT
+	};
+	
+	Vec4 valueOutput;
+	
+	VfxNodeMemf()
+		: VfxNodeBase()
+		, valueOutput()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Name, kVfxPlugType_String);
+		addOutput(kOutput_Value1, kVfxPlugType_Float, &valueOutput[0]);
+		addOutput(kOutput_Value2, kVfxPlugType_Float, &valueOutput[1]);
+		addOutput(kOutput_Value3, kVfxPlugType_Float, &valueOutput[2]);
+		addOutput(kOutput_Value4, kVfxPlugType_Float, &valueOutput[3]);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const char * name = getInputString(kInput_Name, nullptr);
+		
+		if (name == nullptr)
+		{
+			valueOutput.SetZero();
+		}
+		else
+		{
+			if (g_currentVfxGraph->getMemf(name, valueOutput) == false)
+				valueOutput.SetZero();
+		}
+	}
+};
+
+VFX_NODE_TYPE(VfxNodeMemf)
+{
+	typeName = "in.value";
+	
+	in("name", "string");
+	out("value1", "float");
+	out("value2", "float");
+	out("value3", "float");
+	out("value4", "float");
+}
+
 struct VfxNodeMems : VfxNodeBase
 {
 	enum Input
@@ -402,6 +460,55 @@ VFX_NODE_TYPE(VfxNode4DSoundObject)
 	in("oscSheet", "string");
 }
 
+struct VfxGraphInstance
+{
+	VfxGraph * vfxGraph = nullptr;
+	int sx = 0;
+	int sy = 0;
+	
+	GLuint texture = 0;
+};
+
+struct VfxGraphManager
+{
+	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
+	
+	std::vector<VfxGraphInstance*> instances;
+	
+	VfxGraphManager(GraphEdit_TypeDefinitionLibrary * in_typeDefinitionLibrary)
+		: typeDefinitionLibrary(in_typeDefinitionLibrary)
+	{
+	}
+	
+	VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy)
+	{
+		Graph graph;
+		graph.load(filename, typeDefinitionLibrary);
+		
+		VfxGraphInstance * instance = new VfxGraphInstance();
+		
+		instance->vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
+		instance->sx = sx;
+		instance->sy = sy;
+		
+		instances.push_back(instance);
+		
+		return instance;
+	}
+	
+	void tick(const float dt)
+	{
+		for (auto instance : instances)
+			instance->vfxGraph->tick(instance->sx, instance->sy, dt);
+	}
+	
+	void traverseDraw() const
+	{
+		for (auto instance : instances)
+			instance->texture = instance->vfxGraph->traverseDraw(instance->sx, instance->sy);
+	}
+};
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
@@ -431,7 +538,20 @@ int main(int argc, char * argv[])
 	graphEdit.load("test1.xml");
 	
 	vfxGraph->setMems("id", "1");
-
+	
+	//
+	
+	VfxGraphManager vfxGraphMgr(&typeDefinitionLibrary);
+	
+	for (int i = 0; i < 3; ++i)
+	{
+		auto instance = vfxGraphMgr.createInstance("test1.xml", 200, 200);
+		
+		instance->vfxGraph->setMems("id", String::FormatC("%d", i + 2).c_str());
+		
+		instance->vfxGraph->setMemf("pos", i * 10, 0.f, 0.f);
+	}
+	
 	while (!framework.quitRequested)
 	{
 		s_changedFiles.clear();
@@ -447,7 +567,7 @@ int main(int argc, char * argv[])
 		
 		graphEdit.tick(dt, false);
 		
-		// update OSC message
+		// update OSC messages
 		
 		g_oscEndpointMgr.tick();
 		
@@ -458,6 +578,10 @@ int main(int argc, char * argv[])
 		// update the visualizers after the vfx graph has been updated
 		
 		graphEdit.tickVisualizers(dt);
+		
+		// update vfx graphs
+		
+		vfxGraphMgr.tick(dt);
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -468,6 +592,10 @@ int main(int argc, char * argv[])
 			// draw the graph editor
 			
 			graphEdit.draw();
+			
+			// draw vfx graphs
+			
+			vfxGraphMgr.traverseDraw();
 		}
 		framework.endDraw();
 	}

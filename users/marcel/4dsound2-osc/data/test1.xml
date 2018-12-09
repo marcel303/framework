@@ -1,4 +1,4 @@
-<graph nextNodeId="30" nextLinkId="39">
+<graph nextNodeId="31" nextLinkId="44">
     <node id="1" typeName="gen.sine">
         <input socket="frequency" value="0.234000"/>
     </node>
@@ -123,6 +123,9 @@
         <input socket="frequency" value="0.321000"/>
     </node>
     <node id="29" typeName="gen.sine"/>
+    <node id="30" typeName="in.value">
+        <input socket="name" value="pos"/>
+    </node>
     <link id="1" srcNodeId="3" srcNodeSocketName="scale" dstNodeId="1" dstNodeSocketName="value" dynamic="1">
         <param name="out.max" value="2.000000"/>
         <param name="out.min" value="0.500000"/>
@@ -137,17 +140,12 @@
     <link id="11" srcNodeId="8" srcNodeSocketName="oscPrefix" dstNodeId="15" dstNodeSocketName="result"/>
     <link id="12" srcNodeId="16" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
     <link id="14" srcNodeId="10" srcNodeSocketName="oscPrefix" dstNodeId="16" dstNodeSocketName="result"/>
-    <link id="17" srcNodeId="13" srcNodeSocketName="b" dstNodeId="18" dstNodeSocketName="value"/>
     <link id="19" srcNodeId="21" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
     <link id="20" srcNodeId="20" srcNodeSocketName="oscPrefix" dstNodeId="21" dstNodeSocketName="result"/>
-    <link id="22" srcNodeId="20" srcNodeSocketName="Position.x" dstNodeId="19" dstNodeSocketName="value" dynamic="1">
-        <param name="out.max" value="4.000000"/>
-        <param name="out.min" value="-4.000000"/>
-    </link>
     <link id="27" srcNodeId="23" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
     <link id="28" srcNodeId="24" srcNodeSocketName="oscPrefix" dstNodeId="23" dstNodeSocketName="result"/>
     <link id="33" srcNodeId="24" srcNodeSocketName="Dimensions.y" dstNodeId="25" dstNodeSocketName="value" dynamic="1">
-        <param name="out.max" value="100.000000"/>
+        <param name="out.max" value="10.000000"/>
         <param name="out.min" value="1.000000"/>
     </link>
     <link id="34" srcNodeId="3" srcNodeSocketName="dimensions.y" dstNodeId="5" dstNodeSocketName="value" dynamic="1">
@@ -163,15 +161,20 @@
         <param name="out.max" value="90.000000"/>
         <param name="out.min" value="-90.000000"/>
     </link>
-    <editor nextZKey="240">
-        <dragAndZoom x="-80.434326171875" y="19.36859130859375" zoom="1"/>
+    <link id="39" srcNodeId="13" srcNodeSocketName="b" dstNodeId="12" dstNodeSocketName="value"/>
+    <link id="40" srcNodeId="20" srcNodeSocketName="Position.z" dstNodeId="19" dstNodeSocketName="value" dynamic="1"/>
+    <link id="41" srcNodeId="20" srcNodeSocketName="Position.x" dstNodeId="30" dstNodeSocketName="value1" dynamic="1"/>
+    <link id="42" srcNodeId="20" srcNodeSocketName="Position.y" dstNodeId="30" dstNodeSocketName="value2" dynamic="1"/>
+    <link id="43" srcNodeId="20" srcNodeSocketName="Position.z" dstNodeId="30" dstNodeSocketName="value3" dynamic="1"/>
+    <editor nextZKey="254">
+        <dragAndZoom x="-182.138916015625" y="181.38253784179688" zoom="1"/>
         <nodeDatas>
             <nodeData nodeId="1" x="-160" y="272" zKey="58" folded="1"/>
-            <nodeData nodeId="3" x="16" y="0" zKey="227"/>
+            <nodeData nodeId="3" x="16" y="0" zKey="252"/>
             <nodeData nodeId="4" x="-304" y="-192" zKey="189" folded="1"/>
             <nodeData nodeId="5" x="-192" y="144" zKey="179"/>
             <nodeData nodeId="7" x="-176" y="96" zKey="177" folded="1"/>
-            <nodeData nodeId="8" x="176" y="-160" zKey="226"/>
+            <nodeData nodeId="8" x="176" y="-160" zKey="253"/>
             <nodeData nodeId="9" x="-416" y="-192" displayName="monitor" zKey="238" folded="1"/>
             <nodeData nodeId="10" x="-288" y="384" zKey="228"/>
             <nodeData nodeId="11" x="-304" y="32" zKey="210" folded="1"/>
@@ -181,16 +184,17 @@
             <nodeData nodeId="15" x="48" y="-128" displayName="OSC:modulation" zKey="199" folded="1"/>
             <nodeData nodeId="16" x="-416" y="416" displayName="OSC:shape" zKey="132"/>
             <nodeData nodeId="18" x="-736" y="0" zKey="233"/>
-            <nodeData nodeId="19" x="-752" y="672" zKey="160"/>
+            <nodeData nodeId="19" x="-736" y="640" zKey="243" folded="1"/>
             <nodeData nodeId="20" x="-560" y="512" zKey="229"/>
             <nodeData nodeId="21" x="-736" y="544" displayName="OSC:input" zKey="153"/>
             <nodeData nodeId="23" x="-1056" y="544" displayName="OSC:particle" zKey="186"/>
-            <nodeData nodeId="24" x="-912" y="528" zKey="230"/>
+            <nodeData nodeId="24" x="-912" y="528" zKey="248"/>
             <nodeData nodeId="25" x="-1120" y="656" zKey="221"/>
             <nodeData nodeId="26" x="-192" y="-304" displayName="OSC:monitor" zKey="208"/>
             <nodeData nodeId="27" x="16" y="-416" zKey="237"/>
             <nodeData nodeId="28" x="-240" y="-416" zKey="216"/>
-            <nodeData nodeId="29" x="-1088" y="768" zKey="224"/>
+            <nodeData nodeId="29" x="-752" y="800" zKey="245"/>
+            <nodeData nodeId="30" x="-736" y="672" zKey="251"/>
         </nodeDatas>
         <visualizers/>
         <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="192743cc" gridColor="ffffff4c">
