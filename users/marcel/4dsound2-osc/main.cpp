@@ -509,6 +509,83 @@ struct VfxGraphManager
 	}
 };
 
+static VfxGraphManager * s_vfxGraphMgr = nullptr;
+
+struct Creature
+{
+	VfxGraphInstance * vfxInstance = nullptr;
+	
+	Vec2 currentPos;
+	Vec2 desiredPos;
+	
+	void init(const int id)
+	{
+		desiredPos.Set(random(-10.f, +10.f), random(-10.f, +10.f));
+		
+		vfxInstance = s_vfxGraphMgr->createInstance("test1.xml", 64, 64);
+		
+		vfxInstance->vfxGraph->setMems("id", String::FormatC("%d", id + 1).c_str());
+		
+		vfxInstance->vfxGraph->setMemf("pos", currentPos[0], currentPos[1]);
+	}
+	
+	void tick(const float dt)
+	{
+		const float retainPerSecond = .7f;
+		const float retain = powf(retainPerSecond, dt);
+		const float attain = 1.f - retain;
+		
+		currentPos = currentPos * retain + desiredPos * attain;
+		
+		vfxInstance->vfxGraph->setMemf("pos", currentPos[0], currentPos[1]);
+	}
+	
+	void draw() const
+	{
+		Assert(vfxInstance->texture != 0);
+		gxSetTexture(vfxInstance->texture);
+		{
+			setColor(colorWhite);
+			drawRect(
+				currentPos[0] - 1.f, currentPos[1] - 1.f,
+				currentPos[0] + 1.f, currentPos[1] + 1.f);
+		}
+		gxSetTexture(0);
+	}
+};
+
+struct World
+{
+	static const int kNumCreatures = 4;
+	
+	Creature creatures[kNumCreatures];
+	
+	void init()
+	{
+		for (int i = 0; i < kNumCreatures; ++i)
+			creatures[i].init(i);
+	}
+	
+	void tick(const float dt)
+	{
+		for (int i = 0; i < kNumCreatures; ++i)
+			creatures[i].tick(dt);
+	}
+	
+	void draw() const
+	{
+		gxPushMatrix();
+		{
+			gxTranslatef(VIEW_SX/2.f, VIEW_SY/2.f, 0.f);
+			gxScalef(20, 20, 1);
+			
+			for (int i = 0; i < kNumCreatures; ++i)
+				creatures[i].draw();
+		}
+		gxPopMatrix();
+	}
+};
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
@@ -542,6 +619,9 @@ int main(int argc, char * argv[])
 	//
 	
 	VfxGraphManager vfxGraphMgr(&typeDefinitionLibrary);
+	s_vfxGraphMgr = &vfxGraphMgr;
+	
+	//
 	
 	for (int i = 0; i < 3; ++i)
 	{
@@ -551,6 +631,11 @@ int main(int argc, char * argv[])
 		
 		instance->vfxGraph->setMemf("pos", i * 10, 0.f, 0.f);
 	}
+	
+	//
+	
+	World world;
+	world.init();
 	
 	while (!framework.quitRequested)
 	{
@@ -582,20 +667,28 @@ int main(int argc, char * argv[])
 		// update vfx graphs
 		
 		vfxGraphMgr.tick(dt);
+		
+		// update world
+		
+		world.tick(dt);
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			// draw the vfx graph
 			
 			vfxGraph->draw(VIEW_SX, VIEW_SY);
-		
-			// draw the graph editor
-			
-			graphEdit.draw();
 			
 			// draw vfx graphs
 			
 			vfxGraphMgr.traverseDraw();
+			
+			// draw world
+			
+			world.draw();
+		
+			// draw the graph editor
+			
+			graphEdit.draw();
 		}
 		framework.endDraw();
 	}

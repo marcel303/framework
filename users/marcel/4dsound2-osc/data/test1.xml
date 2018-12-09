@@ -1,4 +1,4 @@
-<graph nextNodeId="31" nextLinkId="44">
+<graph nextNodeId="35" nextLinkId="47">
     <node id="1" typeName="gen.sine">
         <input socket="frequency" value="0.234000"/>
     </node>
@@ -126,6 +126,16 @@
     <node id="30" typeName="in.value">
         <input socket="name" value="pos"/>
     </node>
+    <node id="31" typeName="draw.display"/>
+    <node id="32" typeName="draw.surface">
+        <input socket="clearColor" value="9281c3b8"/>
+        <input socket="format" value="0"/>
+        <input socket="viewMode" value="0"/>
+    </node>
+    <node id="34" typeName="draw.text">
+        <input socket="sizeMode" value="0"/>
+        <input socket="text" value="A"/>
+    </node>
     <link id="1" srcNodeId="3" srcNodeSocketName="scale" dstNodeId="1" dstNodeSocketName="value" dynamic="1">
         <param name="out.max" value="2.000000"/>
         <param name="out.min" value="0.500000"/>
@@ -166,8 +176,10 @@
     <link id="41" srcNodeId="20" srcNodeSocketName="Position.x" dstNodeId="30" dstNodeSocketName="value1" dynamic="1"/>
     <link id="42" srcNodeId="20" srcNodeSocketName="Position.y" dstNodeId="30" dstNodeSocketName="value2" dynamic="1"/>
     <link id="43" srcNodeId="20" srcNodeSocketName="Position.z" dstNodeId="30" dstNodeSocketName="value3" dynamic="1"/>
-    <editor nextZKey="254">
-        <dragAndZoom x="-182.138916015625" y="181.38253784179688" zoom="1"/>
+    <link id="44" srcNodeId="31" srcNodeSocketName="image" dstNodeId="32" dstNodeSocketName="image"/>
+    <link id="46" srcNodeId="32" srcNodeSocketName="source" dstNodeId="34" dstNodeSocketName="any"/>
+    <editor nextZKey="266">
+        <dragAndZoom x="157.543701171875" y="622.2340087890625" zoom="0.68120402097702026"/>
         <nodeDatas>
             <nodeData nodeId="1" x="-160" y="272" zKey="58" folded="1"/>
             <nodeData nodeId="3" x="16" y="0" zKey="252"/>
@@ -195,6 +207,9 @@
             <nodeData nodeId="28" x="-240" y="-416" zKey="216"/>
             <nodeData nodeId="29" x="-752" y="800" zKey="245"/>
             <nodeData nodeId="30" x="-736" y="672" zKey="251"/>
+            <nodeData nodeId="31" x="288" y="528" zKey="256"/>
+            <nodeData nodeId="32" x="160" y="528" zKey="265"/>
+            <nodeData nodeId="34" x="32" y="528" zKey="263"/>
         </nodeDatas>
         <visualizers/>
         <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="192743cc" gridColor="ffffff4c">
