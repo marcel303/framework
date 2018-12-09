@@ -467,10 +467,16 @@ struct VfxGraphInstance
 	int sy = 0;
 	
 	GLuint texture = 0;
+	
+	RealTimeConnection * realTimeConnection = nullptr;
 };
 
 struct VfxGraphManager
 {
+	virtual ~VfxGraphManager()
+	{
+	}
+	
 	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy) = 0;
 	virtual void free(VfxGraphInstance *& instance) = 0;
 	
@@ -489,6 +495,18 @@ struct VfxGraphManager_Basic : VfxGraphManager
 	VfxGraphManager_Basic(GraphEdit_TypeDefinitionLibrary * in_typeDefinitionLibrary)
 		: typeDefinitionLibrary(in_typeDefinitionLibrary)
 	{
+	}
+	
+	virtual ~VfxGraphManager_Basic() override
+	{
+		Assert(instances.empty());
+		
+		while (!instances.empty())
+		{
+			auto instance = instances.front();
+			
+			free(instance);
+		}
 	}
 	
 	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy) override
@@ -536,6 +554,180 @@ struct VfxGraphManager_Basic : VfxGraphManager
 	}
 };
 
+struct VfxGraphFile
+{
+	std::string filename;
+	
+	std::vector<VfxGraphInstance*> instances;
+	
+	VfxGraphInstance * activeInstance = nullptr;
+	
+	//RealTimeConnection * realTimeConnection = nullptr;
+	
+	GraphEdit * graphEdit = nullptr;
+};
+
+struct VfxGraphManager_RTE : VfxGraphManager
+{
+	int displaySx = 0;
+	int displaySy = 0;
+	
+	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
+	
+	std::map<std::string, VfxGraphFile*> files;
+	
+	VfxGraphManager_RTE(const int in_displaySx, const int in_displaySy, GraphEdit_TypeDefinitionLibrary * in_typeDefinitionLibrary)
+		: displaySx(in_displaySx)
+		, displaySy(in_displaySy)
+		, typeDefinitionLibrary(in_typeDefinitionLibrary)
+	{
+	}
+	
+	virtual ~VfxGraphManager_RTE()
+	{
+		for (auto & fileItr : files)
+		{
+			auto & file = fileItr.second;
+			Assert(file->instances.empty());
+			
+			while (!file->instances.empty())
+			{
+				auto instance = file->instances.front();
+				
+				free(instance);
+			}
+			
+			delete file;
+			file = nullptr;
+		}
+		
+		files.clear();
+	}
+	
+	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy) override
+	{
+		VfxGraphFile * file = nullptr;
+		
+		auto fileItr = files.find(filename);
+		
+		if (fileItr != files.end())
+		{
+			file = fileItr->second;
+		}
+		else
+		{
+			file = new VfxGraphFile();
+			file->filename = filename;
+			
+			file->graphEdit = new GraphEdit(displaySx, displaySy, typeDefinitionLibrary);
+			//file->graphEdit->realTimeConnection = file->realTimeConnection;
+			
+			file->graphEdit->load(filename);
+			
+			files[filename] = file;
+		}
+	
+		//
+	
+		auto vfxGraph = constructVfxGraph(*file->graphEdit->graph, typeDefinitionLibrary);
+		auto realTimeConnection = new RealTimeConnection(vfxGraph);
+		
+		//
+		
+		VfxGraphInstance * instance = new VfxGraphInstance();
+		instance->vfxGraph = vfxGraph;
+		instance->sx = sx;
+		instance->sy = sy;
+		instance->realTimeConnection = realTimeConnection;
+	
+		file->instances.push_back(instance);
+	
+		//
+		
+		if (file->activeInstance == nullptr)
+		{
+			file->activeInstance = instance;
+		}
+	
+		return instance;
+	}
+	
+	virtual void free(VfxGraphInstance *& instance) override
+	{
+		if (instance == nullptr)
+		{
+			return;
+		}
+		
+		bool found = false;
+		
+		for (auto fileItr = files.begin(); fileItr != files.end(); )
+		{
+			auto & file = fileItr->second;
+			
+			for (auto instanceItr = file->instances.begin(); instanceItr != file->instances.end(); )
+			{
+				if (*instanceItr == instance)
+				{
+					found = true;
+					
+					instanceItr = file->instances.erase(instanceItr);
+					
+					if (instance == file->activeInstance)
+					{
+						if (file->instances.empty())
+						{
+							file->activeInstance = nullptr;
+						}
+						else
+						{
+							file->activeInstance = file->instances.front();
+						}
+					}
+				}
+				else
+				{
+					instanceItr++;
+				}
+			}
+			
+			fileItr++;
+		}
+		
+		Assert(found);
+		
+		delete instance;
+		instance = nullptr;
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		for (auto & file_itr : files)
+		{
+			for (auto & instance : file_itr.second->instances)
+			{
+				instance->vfxGraph->tick(instance->sx, instance->sy, dt);
+			}
+		}
+	}
+	
+	virtual void tickVisualizers() override
+	{
+	
+	}
+	
+	virtual void traverseDraw() const override
+	{
+		for (auto & file_itr : files)
+		{
+			for (auto instance : file_itr.second->instances)
+			{
+				instance->texture = instance->vfxGraph->traverseDraw(instance->sx, instance->sy);
+			}
+		}
+	}
+};
+
 static VfxGraphManager * s_vfxGraphMgr = nullptr;
 
 struct Creature
@@ -554,6 +746,12 @@ struct Creature
 		vfxInstance->vfxGraph->setMems("id", String::FormatC("%d", id + 1).c_str());
 		
 		vfxInstance->vfxGraph->setMemf("pos", currentPos[0], currentPos[1]);
+	}
+	
+	void shut()
+	{
+		s_vfxGraphMgr->free(vfxInstance);
+		Assert(vfxInstance == nullptr);
 	}
 	
 	void tick(const float dt)
@@ -591,6 +789,12 @@ struct World
 	{
 		for (int i = 0; i < kNumCreatures; ++i)
 			creatures[i].init(i + 1);
+	}
+	
+	void shut()
+	{
+		for (int i = 0; i < kNumCreatures; ++i)
+			creatures[i].shut();
 	}
 	
 	void tick(const float dt)
@@ -645,7 +849,8 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	VfxGraphManager_Basic vfxGraphMgr(&typeDefinitionLibrary);
+	//VfxGraphManager_Basic vfxGraphMgr(&typeDefinitionLibrary);
+	VfxGraphManager_RTE vfxGraphMgr(VIEW_SX, VIEW_SY, &typeDefinitionLibrary);
 	s_vfxGraphMgr = &vfxGraphMgr;
 	
 	//
@@ -708,6 +913,8 @@ int main(int argc, char * argv[])
 		}
 		framework.endDraw();
 	}
+	
+	world.shut();
 
 	Font("calibri.ttf").saveCache();
 	
