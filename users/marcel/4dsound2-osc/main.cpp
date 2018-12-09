@@ -248,107 +248,113 @@ struct VfxNode4DSoundObject : VfxNodeBase
 			
 			std::vector<VfxNodeBase::DynamicInput> inputs;
 			
-			CsvDocument csvDocument;
+			ReadOnlyCsvDocument csvDocument;
 			
 			if (csvDocument.load(oscSheet, true, '\t'))
 			{
-				for (auto & row : csvDocument.m_rows)
+				const int oscAddress_index = csvDocument.getColumnIndex("OSC Address");
+				const int type_index = csvDocument.getColumnIndex("Type");
+				const int defaultValue_index = csvDocument.getColumnIndex("Default value");
+				
+				const size_t currentOscPrefixSize = currentOscPrefix.size();
+				
+				if (oscAddress_index >= 0 && type_index >= 0 && defaultValue_index >= 0)
 				{
-					const char * oscAddress = row.getString("OSC Address", nullptr);
-					const char * type = row.getString("Type", nullptr);
-					const char * defaultValue = row.getString("Default value", "");
-					
-					if (oscAddress == nullptr || type == nullptr)
-						continue;
-					
-					if (strstr(oscAddress, oscPrefix) != oscAddress)
-						continue;
-					
-					const char * name = oscAddress + currentOscPrefix.size();
-					
-					while (*name == '/')
-						name++;
-					
-					bool skipped = false;
-					
-					if (strcmp(type, "f") == 0)
+					for (auto i = csvDocument.firstRow(); i != csvDocument.lastRow(); i = csvDocument.nextRow(i))
 					{
-						VfxNodeBase::DynamicInput input;
-						input.type = kVfxPlugType_Float;
-						input.name = name;
-						input.defaultValue = defaultValue;
-						inputs.push_back(input);
+						const char * oscAddress = i[oscAddress_index];
+						const char * type = i[type_index];
+						const char * defaultValue = i[defaultValue_index];
 						
-						InputInfo inputInfo;
-						inputInfo.oscAddress = oscAddress;
-						inputInfo.defaultFloat = Parse::Float(defaultValue);
-						inputInfos.push_back(inputInfo);
-					}
-					else if (strcmp(type, "f f f") == 0) // todo : not yet supported
-					{
-						for (int i = 0; i < 3; ++i)
+						if (strstr(oscAddress, oscPrefix) != oscAddress)
+							continue;
+						
+						const char * name = oscAddress + currentOscPrefixSize;
+						
+						while (*name == '/')
+							name++;
+						
+						bool skipped = false;
+						
+						if (strcmp(type, "f") == 0)
 						{
-							const char elem[3] = { 'x', 'y', 'z' };
-							
 							VfxNodeBase::DynamicInput input;
 							input.type = kVfxPlugType_Float;
-							input.name = String::FormatC("%s.%c", name, elem[i]);
+							input.name = name;
 							input.defaultValue = defaultValue;
 							inputs.push_back(input);
 							
 							InputInfo inputInfo;
 							inputInfo.oscAddress = oscAddress;
-							inputInfo.isVec3f = true;
 							inputInfo.defaultFloat = Parse::Float(defaultValue);
 							inputInfos.push_back(inputInfo);
 						}
-					}
-					else if (strcmp(type, "i") == 0)
-					{
-						VfxNodeBase::DynamicInput input;
-						input.type = kVfxPlugType_Int;
-						input.name = name;
-						input.defaultValue = defaultValue;
-						inputs.push_back(input);
-						
-						InputInfo inputInfo;
-						inputInfo.oscAddress = oscAddress;
-						inputInfo.defaultInt = Parse::Int32(defaultValue);
-						inputInfos.push_back(inputInfo);
-					}
-					else if (strstr(type, "boolean") != nullptr)
-					{
-						VfxNodeBase::DynamicInput input;
-						input.type = kVfxPlugType_Bool;
-						input.name = name;
-						input.defaultValue = strcmp(defaultValue, "true") == 0 ? "1" : "0";
-						inputs.push_back(input);
-						
-						InputInfo inputInfo;
-						inputInfo.oscAddress = oscAddress;
-						inputInfo.defaultBool = Parse::Bool(defaultValue);
-						inputInfos.push_back(inputInfo);
-					}
-					/*
-					else if (strstr(type, "enum") != nullptr)
-					{
-						VfxNodeBase::DynamicInput input;
-						input.type = kVfxPlugType_Int;
-						input.name = name;
-						input.defaultValue = strcmp(defaultValue, "true") == 0 ? "1" : "0";
-						inputs.push_back(input);
-						
-						InputInfo inputInfo;
-						inputInfo.oscAddress = oscAddress;
-						inputInfo.defaultBool = Parse::Bool(defaultValue);
-						inputInfos.push_back(inputInfo);
-					}
-					*/
-					else
-					{
-						logDebug("unknown OSC data type: %s", type);
-						
-						skipped = true;
+						else if (strcmp(type, "f f f") == 0) // todo : not yet supported
+						{
+							for (int i = 0; i < 3; ++i)
+							{
+								const char elem[3] = { 'x', 'y', 'z' };
+								
+								VfxNodeBase::DynamicInput input;
+								input.type = kVfxPlugType_Float;
+								input.name = String::FormatC("%s.%c", name, elem[i]);
+								input.defaultValue = defaultValue;
+								inputs.push_back(input);
+								
+								InputInfo inputInfo;
+								inputInfo.oscAddress = oscAddress;
+								inputInfo.isVec3f = true;
+								inputInfo.defaultFloat = Parse::Float(defaultValue);
+								inputInfos.push_back(inputInfo);
+							}
+						}
+						else if (strcmp(type, "i") == 0)
+						{
+							VfxNodeBase::DynamicInput input;
+							input.type = kVfxPlugType_Int;
+							input.name = name;
+							input.defaultValue = defaultValue;
+							inputs.push_back(input);
+							
+							InputInfo inputInfo;
+							inputInfo.oscAddress = oscAddress;
+							inputInfo.defaultInt = Parse::Int32(defaultValue);
+							inputInfos.push_back(inputInfo);
+						}
+						else if (strstr(type, "boolean") != nullptr)
+						{
+							VfxNodeBase::DynamicInput input;
+							input.type = kVfxPlugType_Bool;
+							input.name = name;
+							input.defaultValue = strcmp(defaultValue, "true") == 0 ? "1" : "0";
+							inputs.push_back(input);
+							
+							InputInfo inputInfo;
+							inputInfo.oscAddress = oscAddress;
+							inputInfo.defaultBool = Parse::Bool(defaultValue);
+							inputInfos.push_back(inputInfo);
+						}
+						/*
+						else if (strstr(type, "enum") != nullptr)
+						{
+							VfxNodeBase::DynamicInput input;
+							input.type = kVfxPlugType_Int;
+							input.name = name;
+							input.defaultValue = strcmp(defaultValue, "true") == 0 ? "1" : "0";
+							inputs.push_back(input);
+						 
+							InputInfo inputInfo;
+							inputInfo.oscAddress = oscAddress;
+							inputInfo.defaultBool = Parse::Bool(defaultValue);
+							inputInfos.push_back(inputInfo);
+						}
+						*/
+						else
+						{
+							logDebug("unknown OSC data type: %s", type);
+							
+							skipped = true;
+						}
 					}
 				}
 			}
@@ -469,6 +475,15 @@ struct VfxGraphInstance
 	GLuint texture = 0;
 	
 	RealTimeConnection * realTimeConnection = nullptr;
+	
+	~VfxGraphInstance()
+	{
+		delete realTimeConnection;
+		realTimeConnection = nullptr;
+		
+		delete vfxGraph;
+		vfxGraph = nullptr;
+	}
 };
 
 struct VfxGraphManager
