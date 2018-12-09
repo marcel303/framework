@@ -1861,6 +1861,77 @@ void GraphEdit::EditorVisualizer::updateSize(const GraphEdit & graphEdit)
 	}
 }
 
+//
+
+void GraphEdit::NodeData::DynamicSockets::update(
+	const GraphEdit_TypeDefinition & typeDefinition,
+	const std::vector<GraphEdit_RealTimeConnection::DynamicInput> & newInputs,
+	const std::vector<GraphEdit_RealTimeConnection::DynamicOutput> & newOutputs)
+{
+	hasDynamicSockets = true;
+	
+	inputSockets.resize(typeDefinition.inputSockets.size() + newInputs.size());
+	
+	int inputSocketIndex = 0;
+	
+	for (auto & inputSocket : typeDefinition.inputSockets)
+	{
+		inputSockets[inputSocketIndex] = inputSocket;
+		
+		inputSocketIndex++;
+	}
+	
+	enumDefinitions.clear();
+	
+	for (auto & newInput : newInputs)
+	{
+		auto & input = inputSockets[inputSocketIndex];
+		
+		input.name = newInput.name;
+		input.typeName = newInput.typeName;
+		input.defaultValue = newInput.defaultValue;
+		input.isDynamic = true;
+		input.index = inputSocketIndex;
+		
+		if (newInput.enumElems.empty() == false)
+		{
+			input.enumName = newInput.name + "_dynInputEnum";
+			
+			GraphEdit_EnumDefinition enumDefinition;
+			enumDefinition.enumName = input.enumName;
+			enumDefinition.enumElems = newInput.enumElems;
+			enumDefinitions.push_back(enumDefinition);
+		}
+		
+		inputSocketIndex++;
+	}
+	
+	//
+	
+	outputSockets.resize(typeDefinition.outputSockets.size() + newOutputs.size());
+	
+	int outputSocketIndex = 0;
+	
+	for (auto & outputSocket : typeDefinition.outputSockets)
+	{
+		outputSockets[outputSocketIndex] = outputSocket;
+		
+		outputSocketIndex++;
+	}
+	
+	for (auto & newOutput : newOutputs)
+	{
+		auto & output = outputSockets[outputSocketIndex];
+		
+		output.name = newOutput.name;
+		output.typeName = newOutput.typeName;
+		output.isDynamic = true;
+		output.index = outputSocketIndex;
+		
+		outputSocketIndex++;
+	}
+}
+
 void GraphEdit::NodeData::setIsFolded(const bool _isFolded)
 {
 	if (_isFolded == isFolded)
@@ -6772,7 +6843,14 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 				
 				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(inputSocket.typeName);
 				
-				const GraphEdit_EnumDefinition * enumDefinition = typeLibrary->tryGetEnumDefinition(inputSocket.enumName);
+				const GraphEdit_EnumDefinition * enumDefinition = nullptr;
+				
+				for (auto & e : nodeData->dynamicSockets.enumDefinitions)
+					if (e.enumName == inputSocket.enumName)
+						enumDefinition = &e;
+				
+				if (enumDefinition == nullptr)
+					enumDefinition = typeLibrary->tryGetEnumDefinition(inputSocket.enumName);
 				
 				bool pressed = false;
 				
