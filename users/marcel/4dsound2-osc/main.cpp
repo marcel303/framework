@@ -471,16 +471,27 @@ struct VfxGraphInstance
 
 struct VfxGraphManager
 {
+	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy) = 0;
+	virtual void free(VfxGraphInstance *& instance) = 0;
+	
+	virtual void tick(const float dt) = 0;
+	virtual void tickVisualizers() = 0;
+	
+	virtual void traverseDraw() const = 0;
+};
+
+struct VfxGraphManager_Basic : VfxGraphManager
+{
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
 	
 	std::vector<VfxGraphInstance*> instances;
 	
-	VfxGraphManager(GraphEdit_TypeDefinitionLibrary * in_typeDefinitionLibrary)
+	VfxGraphManager_Basic(GraphEdit_TypeDefinitionLibrary * in_typeDefinitionLibrary)
 		: typeDefinitionLibrary(in_typeDefinitionLibrary)
 	{
 	}
 	
-	VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy)
+	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy) override
 	{
 		Graph graph;
 		graph.load(filename, typeDefinitionLibrary);
@@ -496,13 +507,29 @@ struct VfxGraphManager
 		return instance;
 	}
 	
-	void tick(const float dt)
+	virtual void free(VfxGraphInstance *& instance) override
+	{
+		auto i = std::find(instances.begin(), instances.end(), instance);
+		
+		if (i != instances.end())
+			instances.erase(i);
+		
+		delete instance;
+		instance = nullptr;
+	}
+	
+	virtual void tick(const float dt) override
 	{
 		for (auto instance : instances)
 			instance->vfxGraph->tick(instance->sx, instance->sy, dt);
 	}
 	
-	void traverseDraw() const
+	virtual void tickVisualizers() override
+	{
+	
+	}
+	
+	virtual void traverseDraw() const override
 	{
 		for (auto instance : instances)
 			instance->texture = instance->vfxGraph->traverseDraw(instance->sx, instance->sy);
@@ -563,7 +590,7 @@ struct World
 	void init()
 	{
 		for (int i = 0; i < kNumCreatures; ++i)
-			creatures[i].init(i);
+			creatures[i].init(i + 1);
 	}
 	
 	void tick(const float dt)
@@ -618,19 +645,8 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	VfxGraphManager vfxGraphMgr(&typeDefinitionLibrary);
+	VfxGraphManager_Basic vfxGraphMgr(&typeDefinitionLibrary);
 	s_vfxGraphMgr = &vfxGraphMgr;
-	
-	//
-	
-	for (int i = 0; i < 3; ++i)
-	{
-		auto instance = vfxGraphMgr.createInstance("test1.xml", 200, 200);
-		
-		instance->vfxGraph->setMems("id", String::FormatC("%d", i + 2).c_str());
-		
-		instance->vfxGraph->setMemf("pos", i * 10, 0.f, 0.f);
-	}
 	
 	//
 	
