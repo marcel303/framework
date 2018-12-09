@@ -387,16 +387,55 @@ struct VfxGraphManager
 
 struct VfxGraphManager_Basic : VfxGraphManager
 {
+	struct GraphCacheElem
+	{
+		bool isValid;
+		Graph * graph;
+		
+		GraphCacheElem()
+			: isValid(false)
+			, graph(nullptr)
+		{
+		}
+	};
+	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
+	
+	std::map<std::string, GraphCacheElem> graphCache;
+	bool cacheOnCreate;
 	
 	std::vector<VfxGraphInstance*> instances;
 	
-	VfxGraphManager_Basic(GraphEdit_TypeDefinitionLibrary * in_typeDefinitionLibrary)
-		: typeDefinitionLibrary(in_typeDefinitionLibrary)
+	VfxGraphManager_Basic(const bool in_cacheOnCreate)
+		: typeDefinitionLibrary(nullptr)
+		, graphCache()
+		, cacheOnCreate(false)
+		, instances()
 	{
+		cacheOnCreate = in_cacheOnCreate;
+		
+		//
+		
+		init();
 	}
 	
 	virtual ~VfxGraphManager_Basic() override
+	{
+		shut();
+	}
+	
+	void init()
+	{
+		shut();
+		
+		//
+		
+		typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+		
+		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary);
+	}
+	
+	void shut()
 	{
 		Assert(instances.empty());
 		
@@ -405,6 +444,30 @@ struct VfxGraphManager_Basic : VfxGraphManager
 			auto instance = instances.front();
 			
 			free(instance);
+		}
+		
+		//
+		
+		delete typeDefinitionLibrary;
+		typeDefinitionLibrary = nullptr;
+		
+		for (auto & i : graphCache)
+			delete i.second.graph;
+		graphCache.clear();
+	}
+	
+	void addGraphToCache(const char * filename)
+	{
+		auto i = graphCache.find(filename);
+		
+		if (i == graphCache.end())
+		{
+			auto e = graphCache.emplace(filename, GraphCacheElem());
+			
+			auto & elem = e.first->second;
+			
+			elem.graph = new Graph();
+			elem.isValid = elem.graph->load(filename, typeDefinitionLibrary);
 		}
 	}
 	
@@ -418,12 +481,40 @@ struct VfxGraphManager_Basic : VfxGraphManager
 	
 	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy) override
 	{
-		Graph graph;
-		graph.load(filename, typeDefinitionLibrary);
+		VfxGraph * vfxGraph = nullptr;
+		
+		if (cacheOnCreate)
+		{
+			auto e = graphCache.emplace(filename, GraphCacheElem());
+			
+			auto & elem = e.first->second;
+			
+			elem.graph = new Graph();
+			elem.isValid = elem.graph->load(filename, typeDefinitionLibrary);
+			
+			if (elem.isValid)
+			{
+				vfxGraph = constructVfxGraph(*elem.graph, typeDefinitionLibrary);
+			}
+		}
+		else
+		{
+			Graph graph;
+			
+			if (graph.load(filename, typeDefinitionLibrary))
+			{
+				vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
+			}
+		}
+		
+		if (vfxGraph == nullptr)
+		{
+			vfxGraph = new VfxGraph();
+		}
 		
 		VfxGraphInstance * instance = new VfxGraphInstance();
 		
-		instance->vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
+		instance->vfxGraph = vfxGraph;
 		instance->sx = sx;
 		instance->sy = sy;
 		
@@ -1078,7 +1169,7 @@ int main(int argc, char * argv[])
 	
 	// create vfx graph manager
 	
-	//VfxGraphManager_Basic vfxGraphMgr(&typeDefinitionLibrary);
+	//VfxGraphManager_Basic vfxGraphMgr(true);
 	VfxGraphManager_RTE vfxGraphMgr(VIEW_SX, VIEW_SY, &typeDefinitionLibrary);
 	s_vfxGraphMgr = &vfxGraphMgr;
 	
