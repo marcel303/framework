@@ -633,6 +633,18 @@ struct VfxGraphFileRTC : GraphEdit_RealTimeConnection
 			instance->realTimeConnection->linkRemove(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
 	}
 	
+	virtual void setLinkParameter(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex, const std::string & name, const std::string & value) override
+	{
+		for (auto & instance : file->instances)
+			instance->realTimeConnection->setLinkParameter(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex, name, value);
+	}
+	
+	virtual void clearLinkParameter(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex, const std::string & name) override
+	{
+		for (auto & instance : file->instances)
+			instance->realTimeConnection->clearLinkParameter(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex, name);
+	}
+	
 	virtual void setNodeIsPassthrough(const GraphNodeId nodeId, const bool isPassthrough) override
 	{
 		for (auto & instance : file->instances)
@@ -703,6 +715,14 @@ struct VfxGraphFileRTC : GraphEdit_RealTimeConnection
 			return file->activeInstance->realTimeConnection->getNodeDescription(nodeId, lines);
 	}
 	
+	virtual bool getNodeIssues(const GraphNodeId nodeId, std::vector<std::string> & issues) override
+	{
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getNodeIssues(nodeId, issues);
+	}
+	
 	virtual int getNodeActivity(const GraphNodeId nodeId) override
 	{
 		if (file->activeInstance == nullptr)
@@ -719,6 +739,14 @@ struct VfxGraphFileRTC : GraphEdit_RealTimeConnection
 			return file->activeInstance->realTimeConnection->getLinkActivity(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
 	}
 
+	virtual bool getNodeDynamicSockets(const GraphNodeId nodeId, std::vector<DynamicInput> & inputs, std::vector<DynamicOutput> & outputs) const override
+	{
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getNodeDynamicSockets(nodeId, inputs, outputs);
+	}
+	
 	virtual int getNodeCpuHeatMax() const override
 	{
 		if (file->activeInstance == nullptr)
@@ -733,6 +761,22 @@ struct VfxGraphFileRTC : GraphEdit_RealTimeConnection
 			return 0;
 		else
 			return file->activeInstance->realTimeConnection->getNodeCpuTimeUs(nodeId);
+	}
+	
+	virtual int getNodeGpuHeatMax() const override
+	{
+		if (file->activeInstance == nullptr)
+			return 1000 * 1000;
+		else
+			return file->activeInstance->realTimeConnection->getNodeGpuHeatMax();
+	}
+	
+	virtual int getNodeGpuTimeUs(const GraphNodeId nodeId) const override
+	{
+		if (file->activeInstance == nullptr)
+			return 0;
+		else
+			return file->activeInstance->realTimeConnection->getNodeGpuTimeUs(nodeId);
 	}
 };
 
@@ -1044,7 +1088,7 @@ struct World
 	void init()
 	{
 		for (int i = 0; i < kNumCreatures; ++i)
-			creatures[i].init(i + 1);
+			creatures[i].init(i);
 	}
 	
 	void shut()
