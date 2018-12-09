@@ -23,12 +23,15 @@ const int VIEW_SY = 740;
 
 static std::set<std::string> s_changedFiles;
 
+extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
+
 struct VfxNode4DSoundObject : VfxNodeBase
 {
 	enum Input
 	{
 		kInput_OscEndpoint,
 		kInput_OscPrefix,
+		kInput_GroupPrefix,
 		kInput_OscSheet,
 		kInput_COUNT
 	};
@@ -51,6 +54,7 @@ struct VfxNode4DSoundObject : VfxNodeBase
 	
 	std::string currentOscPrefix;
 	std::string currentOscSheet;
+	bool currentGroupPrefix;
 	
 	std::vector<InputInfo> inputInfos;
 	
@@ -58,10 +62,12 @@ struct VfxNode4DSoundObject : VfxNodeBase
 		: VfxNodeBase()
 		, currentOscPrefix()
 		, currentOscSheet()
+		, currentGroupPrefix(false)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_OscEndpoint, kVfxPlugType_String);
 		addInput(kInput_OscPrefix, kVfxPlugType_String);
+		addInput(kInput_GroupPrefix, kVfxPlugType_Bool);
 		addInput(kInput_OscSheet, kVfxPlugType_String);
 	}
 	
@@ -72,6 +78,8 @@ struct VfxNode4DSoundObject : VfxNodeBase
 			? ""
 			: getInputString(kInput_OscPrefix, "");
 		
+		const bool groupPrefix = getInputBool(kInput_GroupPrefix, true);
+		
 		const char * oscSheet = getInputString(kInput_OscSheet, "");
 		
 		if (s_changedFiles.count(oscSheet) != 0)
@@ -79,13 +87,14 @@ struct VfxNode4DSoundObject : VfxNodeBase
 			currentOscSheet.clear();
 		}
 		
-		if (oscPrefix == currentOscPrefix && oscSheet == currentOscSheet)
+		if (oscPrefix == currentOscPrefix && oscSheet == currentOscSheet && groupPrefix == currentGroupPrefix)
 		{
 			return;
 		}
 		
 		currentOscPrefix = oscPrefix;
 		currentOscSheet = oscSheet;
+		currentGroupPrefix = groupPrefix;
 		
 		inputInfos.clear();
 		
@@ -106,6 +115,7 @@ struct VfxNode4DSoundObject : VfxNodeBase
 				const int oscAddress_index = csvDocument.getColumnIndex("OSC Address");
 				const int type_index = csvDocument.getColumnIndex("Type");
 				const int defaultValue_index = csvDocument.getColumnIndex("Default value");
+				const int enumValues_index = csvDocument.getColumnIndex("Enumeration Values");
 				
 				const size_t currentOscPrefixSize = currentOscPrefix.size();
 				
@@ -122,9 +132,9 @@ struct VfxNode4DSoundObject : VfxNodeBase
 						
 						const char * name = oscAddress + currentOscPrefixSize;
 						
-						if (*name != '/')
+						if (groupPrefix && *name != '/')
 							continue;
-							
+						
 						while (*name == '/')
 							name++;
 						
@@ -188,13 +198,27 @@ struct VfxNode4DSoundObject : VfxNodeBase
 							inputInfo.defaultBool = Parse::Bool(defaultValue);
 							inputInfos.push_back(inputInfo);
 						}
-						/*
 						else if (strstr(type, "enum") != nullptr)
 						{
 							VfxNodeBase::DynamicInput input;
 							input.type = kVfxPlugType_Int;
 							input.name = name;
 							input.defaultValue = strcmp(defaultValue, "true") == 0 ? "1" : "0";
+							
+							if (enumValues_index >= 0)
+							{
+								std::vector<std::string> enumNames;
+								splitString(i[enumValues_index], enumNames, ',');
+								
+								input.enumElems.resize(enumNames.size());
+								
+								for (size_t i = 0; i < enumNames.size(); ++i)
+								{
+									input.enumElems[i].name = enumNames[i];
+									input.enumElems[i].valueText = String::FormatC("%d", i);
+								}
+							}
+							
 							inputs.push_back(input);
 						 
 							InputInfo inputInfo;
@@ -202,7 +226,6 @@ struct VfxNode4DSoundObject : VfxNodeBase
 							inputInfo.defaultBool = Parse::Bool(defaultValue);
 							inputInfos.push_back(inputInfo);
 						}
-						*/
 						else
 						{
 							logDebug("unknown OSC data type: %s", type);
@@ -317,6 +340,7 @@ VFX_NODE_TYPE(VfxNode4DSoundObject)
 	
 	in("oscEndpoint", "string");
 	in("oscPrefix", "string");
+	in("groupPrefix", "bool", "1");
 	in("oscSheet", "string");
 }
 
