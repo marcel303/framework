@@ -781,14 +781,31 @@ struct VfxGraphManager_RTE : VfxGraphManager
 	
 	VfxGraphFile * selectedFile = nullptr;
 	
-	VfxGraphManager_RTE(const int in_displaySx, const int in_displaySy, GraphEdit_TypeDefinitionLibrary * in_typeDefinitionLibrary)
+	VfxGraphManager_RTE(const int in_displaySx, const int in_displaySy)
 		: displaySx(in_displaySx)
 		, displaySy(in_displaySy)
-		, typeDefinitionLibrary(in_typeDefinitionLibrary)
+		, typeDefinitionLibrary(nullptr)
 	{
+		init();
 	}
 	
 	virtual ~VfxGraphManager_RTE()
+	{
+		shut();
+	}
+	
+	void init()
+	{
+		shut();
+		
+		//
+		
+		typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+		
+		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary);
+	}
+	
+	void shut()
 	{
 		for (auto & fileItr : files)
 		{
@@ -1099,10 +1116,14 @@ struct Creature
 		Assert(vfxInstance->texture != 0);
 		gxSetTexture(vfxInstance->texture);
 		{
+			pushBlend(BLEND_OPAQUE);
+			
 			setColor(colorWhite);
 			drawRect(
 				currentPos[0] - 1.f, currentPos[1] - 1.f,
 				currentPos[0] + 1.f, currentPos[1] + 1.f);
+			
+			popBlend();
 		}
 		gxSetTexture(0);
 	}
@@ -1170,7 +1191,7 @@ int main(int argc, char * argv[])
 	// create vfx graph manager
 	
 	//VfxGraphManager_Basic vfxGraphMgr(true);
-	VfxGraphManager_RTE vfxGraphMgr(VIEW_SX, VIEW_SY, &typeDefinitionLibrary);
+	VfxGraphManager_RTE vfxGraphMgr(VIEW_SX, VIEW_SY);
 	s_vfxGraphMgr = &vfxGraphMgr;
 	
 	// setup world
