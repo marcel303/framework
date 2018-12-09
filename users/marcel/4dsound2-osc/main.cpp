@@ -477,13 +477,19 @@ struct VfxGraphManager
 	{
 	}
 	
+	virtual void selectFile(const char * filename) = 0;
+	virtual void selectInstance(const VfxGraphInstance * instance) = 0;
+
 	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy) = 0;
 	virtual void free(VfxGraphInstance *& instance) = 0;
 	
 	virtual void tick(const float dt) = 0;
-	virtual void tickVisualizers() = 0;
+	virtual void tickVisualizers(const float dt) = 0;
 	
 	virtual void traverseDraw() const = 0;
+	
+	virtual bool tickEditor(const float dt, const bool isInputCaptured) = 0;
+	virtual void drawEditor() = 0;
 };
 
 struct VfxGraphManager_Basic : VfxGraphManager
@@ -507,6 +513,14 @@ struct VfxGraphManager_Basic : VfxGraphManager
 			
 			free(instance);
 		}
+	}
+	
+	virtual void selectFile(const char * filename) override
+	{
+	}
+	
+	virtual void selectInstance(const VfxGraphInstance * instance) override
+	{
 	}
 	
 	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy) override
@@ -542,9 +556,8 @@ struct VfxGraphManager_Basic : VfxGraphManager
 			instance->vfxGraph->tick(instance->sx, instance->sy, dt);
 	}
 	
-	virtual void tickVisualizers() override
+	virtual void tickVisualizers(const float dt) override
 	{
-	
 	}
 	
 	virtual void traverseDraw() const override
@@ -552,7 +565,18 @@ struct VfxGraphManager_Basic : VfxGraphManager
 		for (auto instance : instances)
 			instance->texture = instance->vfxGraph->traverseDraw(instance->sx, instance->sy);
 	}
+	
+	virtual bool tickEditor(const float dt, const bool isInputCaptured) override
+	{
+		return false;
+	}
+	
+	virtual void drawEditor() override
+	{
+	}
 };
+
+struct VfxGraphFileRTC;
 
 struct VfxGraphFile
 {
@@ -560,12 +584,163 @@ struct VfxGraphFile
 	
 	std::vector<VfxGraphInstance*> instances;
 	
-	VfxGraphInstance * activeInstance = nullptr;
+	const VfxGraphInstance * activeInstance = nullptr;
 	
-	//RealTimeConnection * realTimeConnection = nullptr;
+	VfxGraphFileRTC * realTimeConnection = nullptr;
 	
 	GraphEdit * graphEdit = nullptr;
+	
+	VfxGraphFile();
 };
+
+struct VfxGraphFileRTC : GraphEdit_RealTimeConnection
+{
+	VfxGraphFile * file = nullptr;
+	
+	virtual void loadBegin() override
+	{
+		for (auto & instance : file->instances)
+			instance->realTimeConnection->loadBegin();
+	}
+
+	virtual void loadEnd(GraphEdit & graphEdit) override
+	{
+		for (auto & instance : file->instances)
+			instance->realTimeConnection->loadEnd(graphEdit);
+	}
+	
+	virtual void nodeAdd(const GraphNodeId nodeId, const std::string & typeName) override
+	{
+		for (auto & instance : file->instances)
+			instance->realTimeConnection->nodeAdd(nodeId, typeName);
+	}
+
+	virtual void nodeRemove(const GraphNodeId nodeId) override
+	{
+		for (auto & instance : file->instances)
+			instance->realTimeConnection->nodeRemove(nodeId);
+	}
+
+	virtual void linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
+	{
+		for (auto & instance : file->instances)
+			instance->realTimeConnection->linkAdd(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
+	}
+
+	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
+	{
+		for (auto & instance : file->instances)
+			instance->realTimeConnection->linkRemove(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
+	}
+	
+	virtual void setNodeIsPassthrough(const GraphNodeId nodeId, const bool isPassthrough) override
+	{
+		for (auto & instance : file->instances)
+			instance->realTimeConnection->setNodeIsPassthrough(nodeId, isPassthrough);
+	}
+	
+	virtual void setSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, const std::string & value) override
+	{
+		for (auto & instance : file->instances)
+			instance->realTimeConnection->setSrcSocketValue(nodeId, srcSocketIndex, srcSocketName, value);
+	}
+
+	virtual bool getSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, std::string & value) override
+	{
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getSrcSocketValue(nodeId, srcSocketIndex, srcSocketName, value);
+	}
+
+	virtual void setDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, const std::string & value) override
+	{
+		for (auto & instance : file->instances)
+			instance->realTimeConnection->setDstSocketValue(nodeId, dstSocketIndex, dstSocketName, value);
+	}
+
+	virtual bool getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value) override
+	{
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getDstSocketValue(nodeId, dstSocketIndex, dstSocketName, value);
+	}
+	
+	virtual void clearSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName) override
+	{
+		for (auto & instance : file->instances)
+			instance->realTimeConnection->clearSrcSocketValue(nodeId, srcSocketIndex, srcSocketName);
+	}
+	
+	virtual bool getSrcSocketChannelData(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, GraphEdit_ChannelData & channels) override
+	{
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getSrcSocketChannelData(nodeId, srcSocketIndex, srcSocketName, channels);
+	}
+
+	virtual bool getDstSocketChannelData(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, GraphEdit_ChannelData & channels) override
+	{
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getDstSocketChannelData(nodeId, dstSocketIndex, dstSocketName, channels);
+	}
+	
+	virtual void handleSrcSocketPressed(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName) override
+	{
+		if (file->activeInstance != nullptr)
+			file->activeInstance->realTimeConnection->handleSrcSocketPressed(nodeId, srcSocketIndex, srcSocketName);
+	}
+	
+	virtual bool getNodeDescription(const GraphNodeId nodeId, std::vector<std::string> & lines) override
+	{
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getNodeDescription(nodeId, lines);
+	}
+	
+	virtual int getNodeActivity(const GraphNodeId nodeId) override
+	{
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getNodeActivity(nodeId);
+	}
+
+	virtual int getLinkActivity(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
+	{
+		if (file->activeInstance == nullptr)
+			return false;
+		else
+			return file->activeInstance->realTimeConnection->getLinkActivity(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
+	}
+
+	virtual int getNodeCpuHeatMax() const override
+	{
+		if (file->activeInstance == nullptr)
+			return 1000 * 1000;
+		else
+			return file->activeInstance->realTimeConnection->getNodeCpuHeatMax();
+	}
+
+	virtual int getNodeCpuTimeUs(const GraphNodeId nodeId) const override
+	{
+		if (file->activeInstance == nullptr)
+			return 0;
+		else
+			return file->activeInstance->realTimeConnection->getNodeCpuTimeUs(nodeId);
+	}
+};
+
+VfxGraphFile::VfxGraphFile()
+{
+	realTimeConnection = new VfxGraphFileRTC();
+	realTimeConnection->file = this;
+}
 
 struct VfxGraphManager_RTE : VfxGraphManager
 {
@@ -575,6 +750,8 @@ struct VfxGraphManager_RTE : VfxGraphManager
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
 	
 	std::map<std::string, VfxGraphFile*> files;
+	
+	VfxGraphFile * selectedFile = nullptr;
 	
 	VfxGraphManager_RTE(const int in_displaySx, const int in_displaySy, GraphEdit_TypeDefinitionLibrary * in_typeDefinitionLibrary)
 		: displaySx(in_displaySx)
@@ -604,6 +781,62 @@ struct VfxGraphManager_RTE : VfxGraphManager
 		files.clear();
 	}
 	
+	virtual void selectFile(const char * filename) override
+	{
+		VfxGraphFile * newSelectedFile = nullptr;
+		
+		if (filename != nullptr)
+		{
+			auto fileItr = files.find(filename);
+			
+			if (fileItr != files.end())
+			{
+				newSelectedFile = fileItr->second;
+			}
+		}
+		
+		if (newSelectedFile != selectedFile)
+		{
+			if (selectedFile != nullptr)
+			{
+				selectedFile->graphEdit->cancelEditing();
+				
+				selectedFile = nullptr;
+			}
+			
+			//
+			
+			selectedFile = newSelectedFile;
+			
+			selectedFile->graphEdit->beginEditing();
+		}
+	}
+
+	virtual void selectInstance(const VfxGraphInstance * instance) override
+	{
+		if (instance == nullptr)
+		{
+			selectFile(nullptr);
+		}
+		else
+		{
+			for (auto & fileItr : files)
+			{
+				auto file = fileItr.second;
+				
+				for (auto & instanceInFile : file->instances)
+				{
+					if (instance == instanceInFile)
+					{
+						selectFile(fileItr.first.c_str());
+						
+						file->activeInstance = instance;
+					}
+				}
+			}
+		}
+	}
+	
 	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy) override
 	{
 		VfxGraphFile * file = nullptr;
@@ -620,7 +853,7 @@ struct VfxGraphManager_RTE : VfxGraphManager
 			file->filename = filename;
 			
 			file->graphEdit = new GraphEdit(displaySx, displaySy, typeDefinitionLibrary);
-			//file->graphEdit->realTimeConnection = file->realTimeConnection;
+			file->graphEdit->realTimeConnection = file->realTimeConnection;
 			
 			file->graphEdit->load(filename);
 			
@@ -711,9 +944,12 @@ struct VfxGraphManager_RTE : VfxGraphManager
 		}
 	}
 	
-	virtual void tickVisualizers() override
+	virtual void tickVisualizers(const float dt) override
 	{
-	
+		if (selectedFile != nullptr)
+		{
+			selectedFile->graphEdit->tickVisualizers(dt);
+		}
 	}
 	
 	virtual void traverseDraw() const override
@@ -724,6 +960,26 @@ struct VfxGraphManager_RTE : VfxGraphManager
 			{
 				instance->texture = instance->vfxGraph->traverseDraw(instance->sx, instance->sy);
 			}
+		}
+	}
+	
+	virtual bool tickEditor(const float dt, const bool isInputCaptured) override
+	{
+		bool result = false;
+		
+		if (selectedFile != nullptr)
+		{
+			result |= selectedFile->graphEdit->tick(dt, isInputCaptured);
+		}
+		
+		return result;
+	}
+
+	virtual void drawEditor() override
+	{
+		if (selectedFile != nullptr)
+		{
+			selectedFile->graphEdit->draw();
 		}
 	}
 };
@@ -833,30 +1089,25 @@ int main(int argc, char * argv[])
 		s_changedFiles.insert(filename);
 	};
 	
-// todo : create vfx graph
-	VfxGraph * vfxGraph = nullptr;
-	
-	RealTimeConnection rtc(vfxGraph);
+	// create vfx type definition library
 	
 	GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
 	createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
 	
-	GraphEdit graphEdit(VIEW_SX, VIEW_SY, &typeDefinitionLibrary, &rtc);
-	
-	graphEdit.load("test1.xml");
-	
-	vfxGraph->setMems("id", "1");
-	
-	//
+	// create vfx graph manager
 	
 	//VfxGraphManager_Basic vfxGraphMgr(&typeDefinitionLibrary);
 	VfxGraphManager_RTE vfxGraphMgr(VIEW_SX, VIEW_SY, &typeDefinitionLibrary);
 	s_vfxGraphMgr = &vfxGraphMgr;
 	
-	//
+	// setup world
 	
 	World world;
 	world.init();
+	
+	// select instance for editing
+	
+	vfxGraphMgr.selectInstance(world.creatures[0].vfxInstance);
 	
 	while (!framework.quitRequested)
 	{
@@ -871,45 +1122,37 @@ int main(int argc, char * argv[])
 		
 		// update the graph editor
 		
-		graphEdit.tick(dt, false);
+		vfxGraphMgr.tickEditor(dt, false);
 		
 		// update OSC messages
 		
 		g_oscEndpointMgr.tick();
 		
-		// update vfx graph
+		// update world
 		
-		vfxGraph->tick(VIEW_SX, VIEW_SY, dt);
-		
-		// update the visualizers after the vfx graph has been updated
-		
-		graphEdit.tickVisualizers(dt);
+		world.tick(dt);
 		
 		// update vfx graphs
 		
 		vfxGraphMgr.tick(dt);
 		
-		// update world
+		// update the visualizers after the vfx graphs have been updated
 		
-		world.tick(dt);
+		vfxGraphMgr.tickVisualizers(dt);
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			// draw the vfx graph
-			
-			vfxGraph->draw(VIEW_SX, VIEW_SY);
-			
 			// draw vfx graphs
 			
 			vfxGraphMgr.traverseDraw();
 			
-			// draw world
+			// draw the world
 			
 			world.draw();
 		
 			// draw the graph editor
 			
-			graphEdit.draw();
+			vfxGraphMgr.drawEditor();
 		}
 		framework.endDraw();
 	}
