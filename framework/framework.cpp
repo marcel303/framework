@@ -7226,8 +7226,6 @@ void gxScalef(float x, float y, float z)
 void gxValidateMatrices()
 {
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
-
-	// todo: check if matrices are dirty
 	
 	//printf("validate1\n");
 	
@@ -7242,6 +7240,8 @@ void gxValidateMatrices()
 		Shader * shader = static_cast<Shader*>(globals.shader);
 
 		const ShaderCacheElem & shaderElem = shader->getCacheElem();
+		
+		// check if matrices are dirty
 		
 		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index >= 0)
 		{

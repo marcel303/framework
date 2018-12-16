@@ -28,11 +28,10 @@
 #include <algorithm>
 #include <list>
 #include <time.h>
+#include "fbx.h"
 #include "framework.h"
 #include "internal.h"
 #include "model_fbx.h"
-
-#include "../libfbx/fbx.h" // todo: move to framework
 
 /*
 
@@ -1909,7 +1908,7 @@ namespace AnimModel
 		
 		// finalize meshes by invoking the powers of the awesome vertex welding machine
 		
-		std::list<MeshBuilder> meshes; // todo: deprecate and use framework classes
+		std::list<MeshBuilder> meshes;
 		std::list<std::string> meshNames;
 		
 		for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)

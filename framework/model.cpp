@@ -687,7 +687,7 @@ namespace AnimModel
 		
 		for (std::map<std::string, Anim*>::iterator i = m_animations.begin(); i != m_animations.end(); ++i)
 		{
-			const std::string newName = name;
+			const std::string & newName = name;
 			
 			Anim * anim = i->second;
 			
@@ -906,7 +906,6 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			{
 				previousShader = &shader;
 				
-				// todo: use constant locations for skinningMatrices and drawColor, and move this setting to outside of the loop
 				// set uniform constants for skinning matrices
 				
 				const ShaderCacheElem & shaderElem = shader.getCacheElem();
@@ -917,6 +916,8 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 					checkErrorGL();
 				}
 				
+			// todo : use constant locations for drawColor and drawSkin
+			
 				const GLint drawColor = shader.getImmediate("drawColor");
 				
 				if (drawColor != -1)
@@ -1182,7 +1183,7 @@ int Model::calculateBoneMatrices(
 	
 	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
 	{
-		// todo: scale?
+		// todo : scale?
 		
 		const BoneTransform & transform = m_boneTransforms[i];
 		
