@@ -293,6 +293,7 @@ int main(int argc, char * argv[])
 			int x = 17;
 			int y = 17;
 			
+			beginTextBatch();
 			y -= incrementY;
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "S: stress test [%s]", stressTest ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "W: wireframe [%s]", wireframe ? "on" : "off");
@@ -313,6 +314,7 @@ int main(int argc, char * argv[])
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "I: resume animations");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "UP: increase animation speed [%.2f]", animSpeed);
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "DOWN: decrease animation speed [%.2f]", animSpeed);
+			endTextBatch();
 		}
 		framework.endDraw();
 	}
