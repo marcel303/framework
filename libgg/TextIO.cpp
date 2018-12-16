@@ -25,7 +25,12 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "Debugging.h"
 #include "TextIO.h"
+
+#if 1
+#include <sys/stat.h>
+#endif
 
 namespace TextIO
 {
@@ -34,7 +39,7 @@ namespace TextIO
 		bool found_cr = false;
 		bool found_lf = false;
 
-		int lineBegin = -1;
+		int lineBegin = 0;
 		int lineSize = 0;
 		
 		//
@@ -51,7 +56,7 @@ namespace TextIO
 
 				i++;
 
-				if (text[i] != 0 && text[i] == '\n')
+				if (text[i] == '\n')
 				{
 					found_lf = true;
 
@@ -68,12 +73,6 @@ namespace TextIO
 			}
 			else
 			{
-				if (lineBegin == -1)
-				{
-					lineBegin = i;
-					lineSize = 0;
-				}
-				
 				lineSize++;
 
 				i++;
@@ -81,23 +80,24 @@ namespace TextIO
 
 			if (is_linebreak)
 			{
+				assert(lineBegin != -1);
+				
 				const char * begin = text + lineBegin;
 				const char * end = begin + lineSize;
 				
 				lineCallback(userData, begin, end);
 				
-				lineBegin = -1;
+				lineBegin = i;
+				lineSize = 0;
 			}
 		}
 		
-		if (lineBegin != -1)
+		if (lineSize > 0)
 		{
 			const char * begin = text + lineBegin;
 			const char * end = begin + lineSize;
 			
 			lineCallback(userData, begin, end);
-
-			lineBegin = -1;
 		}
 		
 		//
@@ -195,6 +195,13 @@ namespace TextIO
 		if (file == nullptr)
 			goto cleanup;
 
+	#if 1
+		struct stat buffer;
+		if (fstat(fileno(file), &buffer) != 0)
+			goto cleanup;
+		
+		size = buffer.st_size;
+	#else
 		if (fseek(file, 0, SEEK_END) != 0)
 			goto cleanup;
 
@@ -205,7 +212,8 @@ namespace TextIO
 
 		if (fseek(file, 0, SEEK_SET) != 0)
 			goto cleanup;
-
+	#endif
+	
 		text = new char[size + 1];
 		
 		if (fread(text, 1, size, file) != size)
