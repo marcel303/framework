@@ -1,3 +1,4 @@
+#include "ErrorDiffusion.h"
 #include "Exception.h"
 #include "FileStream.h"
 #include "StreamReader.h"
