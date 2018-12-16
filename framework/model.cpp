@@ -36,6 +36,7 @@
 #include "model_fbx.h"
 #include "model_ogre.h"
 #include "Path.h"
+#include "StringEx.h"
 
 #define DEBUG_TRS 0
 
@@ -66,6 +67,8 @@ namespace AnimModel
 	
 	Mesh::Mesh()
 	{
+		m_isVisible = true;
+		
 		m_vertices = 0;
 		m_numVertices = 0;
 		
@@ -885,11 +888,10 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		
 		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 		{
-			// todo: hide meshes that shouldn't render
-			//if (i != 0)
-			//	continue;
-			
 			Mesh * mesh = m_model->meshSet->m_meshes[i];
+			
+			if (mesh->m_isVisible == false)
+				continue;
 			
 			if (mesh->m_numIndices == 0)
 				continue;
@@ -907,11 +909,11 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 				// todo: use constant locations for skinningMatrices and drawColor, and move this setting to outside of the loop
 				// set uniform constants for skinning matrices
 				
-				const GLint boneMatrices = shader.getImmediate("skinningMatrices");
+				const ShaderCacheElem & shaderElem = shader.getCacheElem();
 				
-				if (boneMatrices != -1)
+				if (shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index >= 0)
 				{
-					glUniformMatrix4fv(boneMatrices, numBones, GL_FALSE, (GLfloat*)globalMatrices);
+					glUniformMatrix4fv(shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index, numBones, GL_FALSE, (GLfloat*)globalMatrices);
 					checkErrorGL();
 				}
 				
@@ -1742,6 +1744,59 @@ void ModelCacheElem::load(const char * filename)
 					{
 						meshSet = loader->loadMeshSet(file.c_str(), boneSet);
 						delete loader;
+						
+						if (meshSet)
+						{
+							const std::string show = record.args.getString("show", "");
+							const std::string hide = record.args.getString("hide", "");
+							
+							if (!show.empty())
+							{
+								// first mark everything invisible
+								
+								for (int i = 0; i < meshSet->m_numMeshes; ++i)
+									meshSet->m_meshes[i]->m_isVisible = false;
+								
+								// mark selected meshes visible
+								
+								std::vector<std::string> wildcards;
+								splitString(show, wildcards, ',');
+								
+								for (int i = 0; i < meshSet->m_numMeshes; ++i)
+								{
+									Mesh * mesh = meshSet->m_meshes[i];
+									
+									for (auto & wildcard : wildcards)
+									{
+										if (String::MatchesWildcard(mesh->m_name.c_str(), wildcard.c_str()))
+										{
+											mesh->m_isVisible = true;
+										}
+									}
+								}
+							}
+							
+							if (!hide.empty())
+							{
+								// mark selected meshes invisible
+								
+								std::vector<std::string> wildcards;
+								splitString(hide, wildcards, ',');
+								
+								for (int i = 0; i < meshSet->m_numMeshes; ++i)
+								{
+									Mesh * mesh = meshSet->m_meshes[i];
+									
+									for (auto & wildcard : wildcards)
+									{
+										if (String::MatchesWildcard(mesh->m_name.c_str(), wildcard.c_str()))
+										{
+											mesh->m_isVisible = false;
+										}
+									}
+								}
+							}
+						}
 					}
 				}
 			}

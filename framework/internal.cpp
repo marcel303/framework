@@ -989,6 +989,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 			params[kSp_ModelViewMatrix].set(glGetUniformLocation(program, "ModelViewMatrix"));
 			params[kSp_ModelViewProjectionMatrix].set(glGetUniformLocation(program, "ModelViewProjectionMatrix"));
 			params[kSp_ProjectionMatrix].set(glGetUniformLocation(program, "ProjectionMatrix"));
+			params[kSp_SkinningMatrices].set(glGetUniformLocation(program, "skinningMatrices"));
 			params[kSp_Texture].set(glGetUniformLocation(program, "texture0"));
 			params[kSp_Params].set(glGetUniformLocation(program, "params"));
 			params[kSp_ShadingParams].set(glGetUniformLocation(program, "shadingParams"));
