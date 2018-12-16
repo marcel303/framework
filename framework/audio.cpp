@@ -1001,7 +1001,7 @@ void SoundPlayer_PortAudio::generateAudio(float * __restrict samples, const int 
 							samples[i * 2 + 0] += value;
 							samples[i * 2 + 1] += value;
 						}
-						if (buffer.channelCount == 2)
+						else if (buffer.channelCount == 2)
 						{
 							const short * values = buffer.sampleData;
 							
