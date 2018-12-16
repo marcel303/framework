@@ -283,6 +283,50 @@ bool String::Equals(const char* text1, const char* text2)
 	return strcmp(text1, text2) == 0;
 }
 
+bool String::MatchesWildcard(const char * in_text, const char * wildcard)
+{
+	const char * text = in_text;
+	
+	while (wildcard[0] != 0)
+	{
+		if (wildcard[0] == ';')
+		{
+			text = in_text;
+			wildcard++;
+		}
+		else if (wildcard[0] == '*')
+		{
+			if (wildcard[1] == 0 || wildcard[1] == ';')
+				return true;
+			else
+			{
+				while (text[0] != 0 && text[0] != wildcard[1])
+					text++;
+				
+				if (text[0] == 0)
+					return false;
+				
+				wildcard++;
+			}
+		}
+		else
+		{
+			if (text[0] != wildcard[0])
+			{
+				while (wildcard[0] != 0 && wildcard[0] != ';')
+					wildcard++;
+			}
+			else
+			{
+				text++;
+				wildcard++;
+			}
+		}
+	}
+	
+	return text[0] == 0;
+}
+
 std::string String::Join(const std::vector<std::string>& strings)
 {
 	std::string result;
