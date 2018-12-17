@@ -3698,7 +3698,11 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	
 	// animation
 	const char * sheetFilename = 0;
-	std::string sheetFilenameStr;
+#if WINDOWS
+	char sheetFilenameBuffer[MAX_PATH];
+#else
+	char sheetFilenameBuffer[PATH_MAX];
+#endif
 	if (hasSpriteSheet)
 	{
 		if (spritesheet)
@@ -3707,11 +3711,19 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 		}
 		else
 		{
-			sheetFilenameStr = filename;
-			size_t dot = sheetFilenameStr.rfind('.');
-			if (dot != std::string::npos)
-				sheetFilenameStr = sheetFilenameStr.substr(0, dot) + ".txt";
-			sheetFilename = sheetFilenameStr.c_str();
+			strcpy_s(sheetFilenameBuffer, sizeof(sheetFilenameBuffer), filename);
+			int dot = -1;
+			for (int i = 0; filename[i] != 0; ++i)
+				if (filename[i] == '.')
+					dot = i;
+			if (dot != -1 && dot + 4 < sizeof(sheetFilenameBuffer))
+			{
+				sheetFilenameBuffer[dot + 1] = 't';
+				sheetFilenameBuffer[dot + 2] = 'x';
+				sheetFilenameBuffer[dot + 3] = 't';
+				sheetFilenameBuffer[dot + 4] = 0;
+				sheetFilename = sheetFilenameBuffer;
+			}
 		}
 	}
 	
