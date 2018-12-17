@@ -27,7 +27,7 @@ struct DownloadQueue
 	std::map<std::string, Elem> queuedElems;
 	std::map<std::string, Elem> activeElems;
 	
-	std::set<std::string> completions;
+	std::map<std::string, bool> completions;
 
 	void add(const char * url, const char * filename)
 	{
@@ -66,7 +66,15 @@ struct DownloadQueue
 			const std::string & filename = i->first;
 			const Elem & activeElem = i->second;
 
-			if (activeElem.webRequest->isDone())
+			if (activeElem.webRequest == nullptr)
+			{
+				// canceled before it started
+				
+				completions.insert(std::make_pair(filename, false));
+
+				i = activeElems.erase(i);
+			}
+			else if (activeElem.webRequest->isDone())
 			{
 				if (activeElem.webRequest->isSuccess())
 				{
@@ -89,9 +97,13 @@ struct DownloadQueue
 							LOG_ERR("failed to write download to disk: %s", e.what());
 						}
 					}
+					
+					completions.insert(std::make_pair(filename, true));
 				}
-
-				completions.insert(filename);
+				else
+				{
+					completions.insert(std::make_pair(filename, false));
+				}
 
 				i = activeElems.erase(i);
 			}
@@ -121,6 +133,27 @@ struct DownloadQueue
 		}
 	}
 	
+	void cancelActiveDownloads()
+	{
+		for (auto & activeElem : activeElems)
+			activeElem.second.webRequest->cancel();
+	}
+	
+	void cancelQueuedDownloads()
+	{
+		for (auto & queuedElem : queuedElems)
+			queuedElem.second.isSuccess = false;
+		
+		activeElems.insert(queuedElems.begin(), queuedElems.end());
+		
+		queuedElems.clear();
+	}
+	
+	void clearQueuedDownloads()
+	{
+		queuedElems.clear();
+	}
+	
 	void tick(const int maxActiveDownloads)
 	{
 		checkCompletions();
@@ -133,7 +166,7 @@ struct DownloadCache
 {
 	DownloadQueue downloadQueue;
 	
-	std::set<std::string> readyFiles;
+	std::map<std::string, bool> readyFiles;
 	
 	void tick(const int maxActiveDownloads)
 	{
@@ -144,7 +177,7 @@ struct DownloadCache
 	
 	void add(const char * url, const char * filename)
 	{
-		if (readyFiles.count(filename) != 0)
+		if (readyFiles.count(filename) != 0 && readyFiles[filename] == true)
 		{
 			// already completed
 		}
@@ -156,14 +189,33 @@ struct DownloadCache
 		{
 			// already exists on disk
 			
-			readyFiles.insert(filename);
+			readyFiles.insert(std::make_pair(filename, true));
 		}
 		else
 		{
 			// file doesn't exist yet. schedule a download
 			
+			readyFiles.erase(filename);
+			
 			downloadQueue.add(url, filename);
 		}
+	}
+	
+	void cancel()
+	{
+		downloadQueue.cancelActiveDownloads();
+		downloadQueue.cancelQueuedDownloads();
+	}
+	
+	void clear()
+	{
+		downloadQueue.cancelActiveDownloads();
+		downloadQueue.clearQueuedDownloads();
+		
+		for (auto & readyFile : readyFiles)
+			FileStream::Delete(readyFile.first.c_str());
+		
+		readyFiles.clear();
 	}
 };
 
@@ -178,17 +230,22 @@ int main(int argc, char * argv[])
 	
 	DownloadCache downloadCache;
 
-	const char * url = "http://centuryofthecat.nl/shared_media/framework/tests/deepbelief/jetpac.ntwk";
-
-	downloadCache.add(url, "jetpac.ntwk");
-	
-	for (int i = 0; i < 20; ++i)
+	auto addFilesToDownloadCache = [&]()
 	{
-		const char * url = "http://webserver.com/";
-		const std::string filename = String::FormatC("testfile%03d.txt", i);
+		const char * url = "http://centuryofthecat.nl/shared_media/framework/tests/deepbelief/jetpac.ntwk";
+
+		downloadCache.add(url, "jetpac.ntwk");
 		
-		downloadCache.add(url, filename.c_str());
-	}
+		for (int i = 0; i < 20; ++i)
+		{
+			const char * url = "http://webserver.com/";
+			const std::string filename = String::FormatC("testfile%03d.txt", i);
+			
+			downloadCache.add(url, filename.c_str());
+		}
+	};
+	
+	addFilesToDownloadCache();
 	
 	for (;;)
 	{
@@ -197,12 +254,33 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 		
-		downloadCache.tick(4);
+		if (keyboard.wentDown(SDLK_r))
+		{
+			downloadCache.clear();
+			
+			addFilesToDownloadCache();
+		}
 		
-		//if (downloadCache.downloadQueue.isEmpty())
-		//	break;
+		if (keyboard.wentDown(SDLK_c))
+		{
+			downloadCache.cancel();
+		}
 		
-		LOG_DBG("downloading..", 0);
+		if (keyboard.wentDown(SDLK_k))
+		{
+			downloadCache.downloadQueue.cancelActiveDownloads();
+			downloadCache.downloadQueue.clearQueuedDownloads();
+		}
+		
+		if (keyboard.wentDown(SDLK_a))
+		{
+			addFilesToDownloadCache();
+		}
+		
+		downloadCache.tick(2);
+		
+		if (downloadCache.downloadQueue.isEmpty() == false)
+			LOG_DBG("downloading..", 0);
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -210,6 +288,16 @@ int main(int argc, char * argv[])
 			setColor(colorWhite);
 			
 			int y = 10;
+			
+			setColor(200, 200, 200);
+			drawText(10, y, 12, +1, +1, "Press 'R' to clear download cache and reschedule downloads");
+			y += 20;
+			drawText(10, y, 12, +1, +1, "Press 'C' to cancel active download(s)");
+			y += 20;
+			drawText(10, y, 12, +1, +1, "Press 'K' to cancel active download(s) and clear download queue");
+			y += 20;
+			drawText(10, y, 12, +1, +1, "Press 'A' to schedule downloads");
+			y += 20;
 			
 			for (auto i : downloadCache.downloadQueue.activeElems)
 			{
@@ -233,10 +321,17 @@ int main(int argc, char * argv[])
 				y += 14;
 			}
 			
-			for (auto & filename : downloadCache.readyFiles)
+			for (auto & readyFile : downloadCache.readyFiles)
 			{
-				setColor(220, 220, 220);
-				drawText(10, y, 12, +1, +1, "[ready] %s", filename.c_str());
+				auto & filename = readyFile.first;
+				auto isSuccess = readyFile.second;
+				
+				if (isSuccess)
+					setColor(220, 220, 220);
+				else
+					setColor(220, 180, 180);
+				
+				drawText(10, y, 12, +1, +1, "[%s] %s", isSuccess ? "ready" : "failed", filename.c_str());
 				y += 14;
 			}
 		}

@@ -11,6 +11,7 @@ struct WebRequest
     virtual bool isSuccess() = 0;
     virtual bool getResultAsData(uint8_t *& bytes, size_t & numBytes) = 0;
     virtual bool getResultAsCString(char *& result) = 0;
+    virtual void cancel() = 0;
 };
 
 WebRequest * createWebRequest(const char * url);

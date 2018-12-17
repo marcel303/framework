@@ -20,7 +20,7 @@ struct WebRequestCocoa : WebRequest
  		NSURLRequest * request = [NSURLRequest requestWithURL:url];
 
 		NSURLSession * session = [NSURLSession sharedSession];
-
+		
 		task = [session dataTaskWithRequest:request completionHandler:
 			^(NSData * data, NSURLResponse * response, NSError * error)
 			{
@@ -125,6 +125,11 @@ struct WebRequestCocoa : WebRequest
 			}
 		}
     }
+	
+    virtual void cancel() override
+    {
+		[task cancel];
+	}
 };
 
 WebRequest * createWebRequest(const char * url)
