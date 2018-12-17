@@ -3,7 +3,7 @@ library libgg
 	scan_files cpp traverse
 	scan_files h   traverse
 	
-	exclude_files Directory.cpp ImageLoader_FreeImage.cpp test_tga.cpp
+	exclude_files ImageLoader_FreeImage.cpp test_tga.cpp
 
 	header_path . expose
 
