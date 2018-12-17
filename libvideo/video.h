@@ -42,6 +42,7 @@ struct MediaPlayer : public AudioStream
 			, enableAudioStream(true)
 			, enableVideoStream(true)
 			, desiredAudioStreamIndex(-1)
+			, audioOutputMode(MP::kAudioOutputMode_Stereo)
 		{
 		}
 		
@@ -50,6 +51,7 @@ struct MediaPlayer : public AudioStream
 		bool enableAudioStream;
 		bool enableVideoStream;
 		int desiredAudioStreamIndex;
+		MP::AudioOutputMode audioOutputMode;
 	};
 	
 	struct Context

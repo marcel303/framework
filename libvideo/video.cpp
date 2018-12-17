@@ -59,7 +59,8 @@ static int ExecMediaPlayerThread(void * param)
 			context->openParams.enableAudioStream,
 			context->openParams.enableVideoStream,
 			context->openParams.outputMode,
-			context->openParams.desiredAudioStreamIndex);
+			context->openParams.desiredAudioStreamIndex,
+			context->openParams.audioOutputMode);
 	}
 	SDL_UnlockMutex(s_avcodecMutex);
 
