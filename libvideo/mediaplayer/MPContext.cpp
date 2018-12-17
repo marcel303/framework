@@ -69,7 +69,13 @@ namespace MP
 		Assert(m_videoContext == nullptr);
 	}
 
-	bool Context::Begin(const std::string & filename, const bool enableAudioStream, const bool enableVideoStream, const OutputMode outputMode, const int desiredAudioStreamIndex)
+	bool Context::Begin(
+		const std::string & filename,
+		const bool enableAudioStream,
+		const bool enableVideoStream,
+		const OutputMode outputMode,
+		const int desiredAudioStreamIndex,
+		const AudioOutputMode audioOutputMode)
 	{
 		Assert(m_begun == false);
 
@@ -118,7 +124,7 @@ namespace MP
 			{
 				// Initialize audio stream/context.
 				m_audioContext = new AudioContext();
-				if (!m_audioContext->Initialize(this, audioStreamIndex))
+				if (!m_audioContext->Initialize(this, audioStreamIndex, audioOutputMode))
 					result &= false;
 			}
 		}
@@ -246,7 +252,7 @@ namespace MP
 		Assert(m_begun == true);
 
 		if (m_audioContext)
-			return m_audioContext->m_codecContext->channels;
+			return m_audioContext->m_outputChannelCount;
 		else
 			return 0;
 	}

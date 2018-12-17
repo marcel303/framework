@@ -42,7 +42,7 @@ namespace MP
 		AudioContext();
 		~AudioContext();
 
-		bool Initialize(Context * context, const size_t streamIndex);
+		bool Initialize(Context * context, const size_t streamIndex, const AudioOutputMode outputMode);
 		bool Destroy();
 
 		size_t GetStreamIndex() const;
@@ -61,6 +61,7 @@ namespace MP
 		AVCodecContext * m_codecContext;
 		AVCodec * m_codec;
 		SwrContext * m_swrContext;
+		int m_outputChannelCount;
 		double m_timeBase;
 
 		size_t m_streamIndex;
