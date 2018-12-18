@@ -1053,6 +1053,8 @@ int main(int argc, char * argv[])
 		
 			inputIsCaptured |= audioGraphMgr->tickEditor(dt, inputIsCaptured);
 			
+			audioGraphMgr->tickMain();
+			
 			slideshow.tick(dt);
 			
 			if (hasMouseHover || (audioGraphMgr->selectedFile && audioGraphMgr->selectedFile->graphEdit->mousePosition.hover))
