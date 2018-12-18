@@ -593,8 +593,7 @@ int install_sound(int digi, int midi, const char * cfg_path)
 	audioOutput = new AudioOutput_PortAudio();
 	audioOutput->Initialize(2, DIGI_SAMPLERATE, 64);
 	
-	audioStream = new AudioStream_AllegroVoiceMixer(voiceApi);
-	audioStream->timerApi = s_timerApi;
+	audioStream = new AudioStream_AllegroVoiceMixer(voiceApi, s_timerApi);
 	audioOutput->Play(audioStream);
 	
 	return 0;
@@ -781,10 +780,10 @@ void lock_sample(SAMPLE * sample)
 
 }
 
-AudioStream_AllegroVoiceMixer::AudioStream_AllegroVoiceMixer(AllegroVoiceApi * in_voiceApi)
+AudioStream_AllegroVoiceMixer::AudioStream_AllegroVoiceMixer(AllegroVoiceApi * in_voiceApi, AllegroTimerApi * in_timerApi)
 	: AudioStream()
 	, voiceApi(in_voiceApi)
-	, timerApi(nullptr)
+	, timerApi(in_timerApi)
 {
 }
 

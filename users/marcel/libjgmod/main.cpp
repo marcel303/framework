@@ -258,8 +258,7 @@ int main(int argc, char **argv)
 	AudioOutput_PortAudio audioOutput;
 	audioOutput.Initialize(2, DIGI_SAMPLERATE, 64);
 	
-	AudioStream_AllegroVoiceMixer audioStream(voiceApi);
-	audioStream.timerApi = timerApi;
+	AudioStream_AllegroVoiceMixer audioStream(voiceApi, timerApi);
 	audioOutput.Play(&audioStream);
 	
     for (int index = 0; index < JGMOD_MAX_VOICES; ++index)

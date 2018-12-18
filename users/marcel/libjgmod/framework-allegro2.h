@@ -177,7 +177,7 @@ struct AudioStream_AllegroVoiceMixer : AudioStream
 	AllegroVoiceApi * voiceApi;
 	AllegroTimerApi * timerApi;
 	
-	AudioStream_AllegroVoiceMixer(AllegroVoiceApi * voiceApi);
+	AudioStream_AllegroVoiceMixer(AllegroVoiceApi * voiceApi, AllegroTimerApi * timerApi);
 	
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override;
 };
