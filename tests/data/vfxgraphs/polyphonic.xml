@@ -168,11 +168,11 @@
     <link id="259" srcNodeId="172" srcNodeSocketName="gain" dstNodeId="192" dstNodeSocketName="result" dynamic="1"/>
     <link id="263" srcNodeId="141" srcNodeSocketName="x_norm" dstNodeId="142" dstNodeSocketName="x"/>
     <link id="264" srcNodeId="146" srcNodeSocketName="value1" dstNodeId="142" dstNodeSocketName="y">
-        <param name="out.max" value="2.000000"/>
+        <param name="out.max" value="50.000000"/>
         <param name="out.min" value="0.500000"/>
     </link>
     <editor nextZKey="1351">
-        <dragAndZoom x="384.0023193359375" y="-160.00006103515625" zoom="1"/>
+        <dragAndZoom x="364.65426635742188" y="-278.60516357421875" zoom="1.6497825384140015"/>
         <nodeDatas>
             <nodeData nodeId="114" x="192" y="-64" zKey="1344"/>
             <nodeData nodeId="115" x="-16" y="-64" zKey="1347"/>
