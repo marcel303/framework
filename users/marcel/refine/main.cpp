@@ -4,6 +4,7 @@
 #include "Path.h"
 #include "StringEx.h"
 #include "TextIO.h"
+#include "ui.h"
 #include <algorithm>
 #include <functional>
 
@@ -63,6 +64,7 @@ struct FileBrowser
 		// list files
 
 		const char * rootFolder = "/Users/thecat/framework/vfxGraph-examples/data";
+		//const char * rootFolder = "/Users/thecat/framework/";
 		
 		auto files = listFiles(rootFolder, true);
 		
@@ -163,7 +165,9 @@ struct FileBrowser
 	{
 		// todo : draw foldable menu items for each file
 		
-		if (ImGui::Begin("File Browser"))
+		ImGui::SetNextWindowSize(ImVec2(300, 0));
+		if (ImGui::Begin("File Browser", nullptr, ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoScrollWithMouse*0))
 		{
 			ImGui::PushID("root");
 			{
@@ -181,7 +185,7 @@ struct FileEditor
 	{
 	}
 	
-	virtual void tick(const float dt, bool & inputIsCaptured) = 0;
+	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) = 0;
 };
 
 #define IMGUI_DEFINE_MATH_OPERATORS
@@ -196,11 +200,8 @@ struct FileEditor_VfxGraph : FileEditor
 	VfxGraphManager_RTE vfxGraphMgr;
 	VfxGraphInstance * instance = nullptr;
 	
-	Surface surface;
-	
 	FileEditor_VfxGraph(const char * path)
 		: vfxGraphMgr(defaultSx, defaultSy)
-		, surface(defaultSx, defaultSy, false)
 	{
 		vfxGraphMgr.init();
 		
@@ -216,64 +217,35 @@ struct FileEditor_VfxGraph : FileEditor
 		vfxGraphMgr.shut();
 	}
 	
-	bool doGraphEdit(const char * label, const float dt)
+	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
 	{
-		const ImVec2 size_arg(instance->sx, instance->sy);
+		// update real-time editing
 		
-		ImGuiWindow* window = ImGui::GetCurrentWindow();
-		if (window->SkipItems)
-			return false;
+		inputIsCaptured |= vfxGraphMgr.tickEditor(dt, inputIsCaptured);
 		
-		const ImGuiID id = window->GetID(label);
+		// resize instance and tick & draw vfx graph
 		
-		ImGuiContext& g = *GImGui;
-		const ImGuiStyle& style = g.Style;
-		ImVec2 pos = window->DC.CursorPos;
+		instance->sx = sx;
+		instance->sy = sy;
 	
-		ImVec2 size = ImGui::CalcItemSize(size_arg, style.FramePadding.x * 2.0f, style.FramePadding.y * 2.0f);
-	
-		const ImRect bb(pos, pos + size);
-		ImGui::ItemSize(bb, style.FramePadding.y);
-		if (!ImGui::ItemAdd(bb, id))
-			return false;
+		vfxGraphMgr.tick(dt);
 		
-		bool inputIsCaptured = false;
+		vfxGraphMgr.traverseDraw();
 		
-		auto oldMouse = mouse;
-		auto mousePos = ImGui::GetMousePos();
-		auto cursorPos = pos;//ImGui::GetCursorScreenPos();
-		mouse.x = mousePos.x - cursorPos.x;
-		mouse.y = mousePos.y - cursorPos.y;
-		inputIsCaptured |= vfxGraphMgr.tickEditor(dt, ImGui::IsWindowFocused() == false);
-		mouse = oldMouse;
+		// draw vfx graph
 		
-		pushSurface(&surface);
-		{
-			surface.clear(100, 100, 100, 255);
-			
-			vfxGraphMgr.tick(dt);
-			
-			vfxGraphMgr.traverseDraw();
-			
-			vfxGraphMgr.tickVisualizers(dt);
-			
-			vfxGraphMgr.drawEditor();
-		}
-		popSurface();
+		pushBlend(BLEND_OPAQUE);
+		gxSetTexture(instance->texture);
+		setColor(colorWhite);
+		drawRect(0, 0, instance->sx, instance->sy);
+		gxSetTexture(0);
+		popBlend();
 		
-		window->DrawList->AddRect(bb.Min, bb.Max, ImGui::GetColorU32(ImVec4(0,0,0,0)), 0.0f);
-        window->DrawList->AddImage((ImTextureID)(uintptr_t)surface.getTexture(), bb.Min, bb.Max, ImVec2(0.f, 0.f), ImVec2(1.f, 1.f), ImGui::GetColorU32(ImVec4(1.f, 1.f, 1.f, 1.f)));
+		// update visualizers and draw editor
 		
-		return true;
-	}
-	
-	virtual void tick(const float dt, bool & inputIsCaptured) override
-	{
-		doGraphEdit("graphEdit", dt);
+		vfxGraphMgr.tickVisualizers(dt);
 		
-		//ImGui::Image((ImTextureID)(uintptr_t)surface.getTexture(), ImVec2(defaultSx, defaultSy));
-		
-		//ImGui::Image((ImTextureID)(uintptr_t)instance->texture, ImVec2(defaultSx, defaultSy));
+		vfxGraphMgr.drawEditor();
 	}
 };
 
@@ -284,6 +256,8 @@ struct FileEditor_Text : FileEditor
 	TextIO::LineEndings lineEndings;
 	bool isValid = false;
 	
+	FrameworkImGuiContext guiContext;
+	
 	FileEditor_Text(const char * in_path)
 	{
 		path = in_path;
@@ -292,13 +266,51 @@ struct FileEditor_Text : FileEditor
 		isValid = TextIO::load(path.c_str(), lines, lineEndings);
 		
 		textEditor.SetTextLines(lines);
+		
+		guiContext.init();
 	}
 	
-	virtual void tick(const float dt, bool & inputIsCaptured) override
+	virtual ~FileEditor_Text() override
 	{
-		auto filename = Path::GetFileName(path);
+		guiContext.shut();
+	}
+	
+	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	{
+		guiContext.processBegin(dt, sx, sy, inputIsCaptured);
+		{
+			auto filename = Path::GetFileName(path);
+			
+			ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+			ImGui::SetNextWindowSize(ImVec2(sx, sy), ImGuiCond_Always);
+			if (ImGui::Begin("editor", nullptr,
+				ImGuiWindowFlags_NoTitleBar*1 |
+				ImGuiWindowFlags_NoResize |
+				ImGuiWindowFlags_NoMove))
+			{
+				textEditor.Render(filename.c_str(), ImVec2(sx - 20, sy - 20), false);
+			}
+			ImGui::End();
+		}
+		guiContext.processEnd();
 		
-		textEditor.Render(filename.c_str());
+		guiContext.draw();
+	}
+};
+
+struct FileEditor_Sprite : FileEditor
+{
+	Sprite sprite;
+	
+	FileEditor_Sprite(const char * path)
+		: sprite(path)
+	{
+	}
+	
+	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	{
+		setColor(colorWhite);
+		sprite.draw();
 	}
 };
 
@@ -311,6 +323,8 @@ int main(int argc, char * argv[])
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 
+	initUi();
+	
 	auto dataFolder = getDirectory();
 	framework.fillCachesWithPath(".", true);
 	
@@ -323,6 +337,7 @@ int main(int argc, char * argv[])
 	fileBrowser.init();
 
 	FileEditor * editor = nullptr;
+	Surface * editorSurface = new Surface(VIEW_SX - 300, VIEW_SY, false);
 	
 	fileBrowser.onFileSelected = [&](const std::string & path)
 	{
@@ -339,9 +354,18 @@ int main(int argc, char * argv[])
 		auto filename = Path::GetFileName(path);
 		auto extension = Path::GetExtension(filename, true);
 		
-		if (extension == "ps" || extension == "vs" || extension == "txt" || extension == "ini")
+		if (extension == "ps" ||
+			extension == "vs" ||
+			extension == "txt" ||
+			extension == "ini" ||
+			extension == "cpp" ||
+			extension == "h")
 		{
 			editor = new FileEditor_Text(filename.c_str());
+		}
+		else if (extension == "bmp" || extension == "jpg" || extension == "jpeg" || extension == "png" || extension == "tga")
+		{
+			editor = new FileEditor_Sprite(filename.c_str());
 		}
 		else if (extension == "xml")
 		{
@@ -371,13 +395,67 @@ int main(int argc, char * argv[])
 			
 			if (editor != nullptr)
 			{
+				ImVec2 pos(300, 0);
+				ImVec2 size(editorSurface->getWidth(), editorSurface->getHeight());
+				
+				ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+				ImGui::SetNextWindowSize(size, ImGuiCond_Always);
+				
 				if (ImGui::Begin("editor", nullptr,
-					/*ImGuiWindowFlags_NoTitleBar |*/
-					/*ImGuiWindowFlags_NoMove |*/
+					ImGuiWindowFlags_NoTitleBar |
+					ImGuiWindowFlags_NoMove |
 					ImGuiWindowFlags_NoScrollbar |
 					ImGuiWindowFlags_NoScrollWithMouse))
 				{
-					editor->tick(dt, inputIsCaptured);
+					auto window = ImGui::GetCurrentWindow();
+					
+					const ImGuiID id = window->GetID("editorContent");
+					const ImRect bb(pos, pos + size);
+					
+					ImGui::ItemSize(bb);
+					if (ImGui::ItemAdd(bb, id))
+					{
+						auto & io = ImGui::GetIO();
+						
+						if (ImGui::IsItemHovered() && io.MouseClicked[0])
+						{
+							//ImGui::SetActiveID(id, window);
+                    		ImGui::SetFocusID(id, window);
+                			ImGui::FocusWindow(window);
+						}
+						
+						auto oldMouse = mouse;
+						mouse.x -= pos.x;
+						mouse.y -= pos.y;
+						
+						pushSurface(editorSurface);
+						{
+							editorSurface->clear(100, 100, 100, 255);
+							
+							bool inputIsCaptured = ImGui::IsItemHovered() == false;
+							
+							editor->tick(
+								size.x,
+								size.y,
+								dt,
+								inputIsCaptured);
+						}
+						popSurface();
+						
+						editorSurface->setAlphaf(1.f);
+						
+						mouse = oldMouse;
+						
+						//
+						
+						window->DrawList->AddRect(bb.Min, bb.Max, ImGui::GetColorU32(ImVec4(0,0,0,0)), 0.0f);
+						window->DrawList->AddImage(
+							(ImTextureID)(uintptr_t)editorSurface->getTexture(),
+							bb.Min, bb.Max,
+							ImVec2(0.f, 0.f),
+							ImVec2(1.f, 1.f),
+							ImGui::GetColorU32(ImVec4(1.f, 1.f, 1.f, 1.f)));
+					}
 				}
 				ImGui::End();
 			}
