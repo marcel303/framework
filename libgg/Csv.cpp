@@ -182,6 +182,8 @@ bool ReadOnlyCsvDocument::load(const char * filename, const bool hasHeader, cons
 	
 	if (result == true)
 	{
+		m_cells.reserve(100);
+		
 		if (TextIO::loadWithCallback(filename, m_text, lineEndings, lineCallback, &userData) == false)
 			result = false;
 		else if (userData.result == false)
