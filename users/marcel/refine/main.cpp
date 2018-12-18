@@ -63,8 +63,8 @@ struct FileBrowser
 
 		// list files
 
-		const char * rootFolder = "/Users/thecat/framework/vfxGraph-examples/data";
-		//const char * rootFolder = "/Users/thecat/framework/";
+		//const char * rootFolder = "/Users/thecat/framework/vfxGraph-examples/data";
+		const char * rootFolder = "/Users/thecat/framework/";
 		
 		auto files = listFiles(rootFolder, true);
 		
@@ -314,6 +314,55 @@ struct FileEditor_Sprite : FileEditor
 	}
 };
 
+#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiostream/AudioStreamVorbis.h"
+
+struct FileEditor_AudioStream_Vorbis : FileEditor
+{
+	AudioOutput_PortAudio audioOutput;
+	AudioStream_Vorbis * audioStream = nullptr;
+	
+	FileEditor_AudioStream_Vorbis(const char * path)
+	{
+		audioStream = new AudioStream_Vorbis();
+		audioStream->Open(path, true);
+		
+		audioOutput.Initialize(2, audioStream->SampleRate_get(), 256);
+		audioOutput.Play(audioStream);
+	}
+	
+	virtual ~FileEditor_AudioStream_Vorbis()
+	{
+		audioOutput.Shutdown();
+		
+		delete audioStream;
+		audioStream = nullptr;
+	}
+	
+	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	{
+		audioOutput.Update();
+		
+		if (audioStream->Duration_get() > 0)
+		{
+			gxPushMatrix();
+			gxTranslatef(0, sy/2, 0);
+			
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			setColor(100, 100, 200);
+			hqFillRoundedRect(4, -10, int64_t(sx - 4) * audioStream->Position_get() / audioStream->Duration_get(), +10, 10);
+			hqEnd();
+			
+			hqBegin(HQ_STROKED_ROUNDED_RECTS);
+			setColor(140, 140, 200);
+			hqStrokeRoundedRect(4, -10, sx - 4, +10, 10, 2.f);
+			hqEnd();
+			
+			gxPopMatrix();
+		}
+	}
+};
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
@@ -366,6 +415,10 @@ int main(int argc, char * argv[])
 		else if (extension == "bmp" || extension == "jpg" || extension == "jpeg" || extension == "png" || extension == "tga")
 		{
 			editor = new FileEditor_Sprite(filename.c_str());
+		}
+		else if (extension == "ogg")
+		{
+			editor = new FileEditor_AudioStream_Vorbis(filename.c_str());
 		}
 		else if (extension == "xml")
 		{
@@ -430,7 +483,7 @@ int main(int argc, char * argv[])
 						
 						pushSurface(editorSurface);
 						{
-							editorSurface->clear(100, 100, 100, 255);
+							editorSurface->clear(0, 0, 0, 0);
 							
 							bool inputIsCaptured = ImGui::IsItemHovered() == false;
 							
