@@ -122,6 +122,8 @@ void shutUi()
 
 void drawUiRectCheckered(float x1, float y1, float x2, float y2, float scale)
 {
+	fassert(checkersTexture != 0);
+	
 	gxSetTexture(checkersTexture);
 	{
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
