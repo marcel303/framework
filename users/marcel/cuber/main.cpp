@@ -673,7 +673,7 @@ int main(int argc, char * argv[])
 		audioStream.mSource = &audioStreamOGG;
 
 		AudioOutput_PortAudio audioOutput;
-		audioOutput.Initialize(2, audioStreamOGG.mSampleRate, 256);
+		audioOutput.Initialize(2, audioStreamOGG.SampleRate_get(), 256);
 		audioOutput.Volume_set(1.f);
 		audioOutput.Play(&audioStreamOGG);
 	#endif

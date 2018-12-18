@@ -357,7 +357,7 @@ SoundData * loadSound_OGG(const char * filename)
 	
 	AudioStream_Vorbis stream;
 	stream.Open(filename, false);
-	const int sampleRate = stream.mSampleRate;
+	const int sampleRate = stream.SampleRate_get();
 	for (;;)
 	{
 		const int numSamples = stream.Provide(kMaxSamples, samples);
@@ -810,7 +810,7 @@ void SoundPlayer_OpenAL::playMusic(const char * filename, bool loop)
 		m_musicStream->Open(filename, loop);
 		m_musicOutput->Play(m_musicStream);
 		
-		Assert(m_musicStream->mSampleRate == 44100); // todo : handle different sample rates?
+		Assert(m_musicStream->SampleRate_get() == 44100); // todo : handle different sample rates?
 	}
 }
 
@@ -1331,7 +1331,7 @@ void SoundPlayer_PortAudio::playMusic(const char * filename, const bool loop)
 	
 	m_musicStream->Open(filename, loop);
 	
-	Assert(m_musicStream->mSampleRate == 44100); // todo : handle different sample rates?
+	Assert(m_musicStream->SampleRate_get() == 44100); // todo : handle different sample rates?
 }
 
 void SoundPlayer_PortAudio::stopMusic()
