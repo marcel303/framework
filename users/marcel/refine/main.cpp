@@ -310,6 +310,14 @@ struct FileEditor_Sprite : FileEditor
 	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
 	{
 		setColor(colorWhite);
+		drawUiRectCheckered(0, 0, sx, sy, 8);
+		
+		const float scaleX = sx / float(sprite.getWidth());
+		const float scaleY = sy / float(sprite.getHeight());
+		const float scale = fminf(1.f, fminf(scaleX, scaleY));
+		
+		setColor(colorWhite);
+		sprite.scale = scale;
 		sprite.draw();
 	}
 };
@@ -363,6 +371,199 @@ struct FileEditor_AudioStream_Vorbis : FileEditor
 	}
 };
 
+struct FileEditor_Model : FileEditor
+{
+	Model model;
+	Vec3 min;
+	Vec3 max;
+	
+	FileEditor_Model(const char * path)
+		: model(path)
+	{
+		model.calculateAABB(min, max, false);
+	}
+	
+	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	{
+		setColor(colorWhite);
+		drawUiRectCheckered(0, 0, sx, sy, 8);
+		
+		projectPerspective3d(60.f, .01f, 100.f);
+		{
+			glEnable(GL_DEPTH_TEST);
+			glDepthFunc(GL_LESS);
+			
+			const Vec3 delta = max - min;
+			const Vec3 middle = (max + min) / 2.f;
+			const float maxAxis = fmaxf(delta[0], fmaxf(delta[1], delta[2]));
+			
+			if (maxAxis > 0.f)
+			{
+				gxPushMatrix();
+				gxTranslatef(0, 0, 1.f);
+				gxScalef(1.f / maxAxis, 1.f / maxAxis, 1.f / maxAxis);
+				gxTranslatef(-middle[0], -middle[1], -middle[2]);
+				model.draw(DrawMesh | DrawColorNormals);
+				gxPopMatrix();
+			}
+			
+			glDisable(GL_DEPTH_TEST);
+		}
+		projectScreen2d();
+	}
+};
+
+struct FileEditor_Spriter : FileEditor
+{
+	Spriter spriter;
+	SpriterState spriterState;
+	
+	bool firstFrame = true;
+	
+	FileEditor_Spriter(const char * path)
+		: spriter(path)
+	{
+		spriterState.startAnim(spriter, "Idle");
+	}
+	
+	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	{
+		spriterState.updateAnim(spriter, dt);
+		
+		if (firstFrame)
+		{
+			firstFrame = false;
+			
+			spriterState.x = sx/2.f;
+			spriterState.y = sy/2.f;
+		}
+		
+		if (mouse.isDown(BUTTON_LEFT))
+		{
+			spriterState.x = mouse.x;
+			spriterState.y = mouse.y;
+		}
+		
+		setColor(colorWhite);
+		drawUiRectCheckered(0, 0, sx, sy, 8);
+		
+		setColor(colorWhite);
+		spriter.draw(spriterState);
+	}
+};
+
+#include "video.h"
+
+struct FileEditor_Video : FileEditor
+{
+	MediaPlayer mp;
+	AudioOutput_PortAudio audioOutput;
+	
+	bool audioIsStarted = false;
+	
+	FileEditor_Video(const char * path)
+	{
+		MediaPlayer::OpenParams openParams;
+		openParams.enableAudioStream = true;
+		openParams.enableVideoStream = true;
+		openParams.filename = path;
+		openParams.outputMode = MP::kOutputMode_RGBA;
+		openParams.audioOutputMode = MP::kAudioOutputMode_Stereo;
+		
+		mp.openAsync(openParams);
+	}
+	
+	virtual ~FileEditor_Video() override
+	{
+		audioOutput.Shutdown();
+		
+		mp.close(true);
+	}
+	
+	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	{
+		int channelCount;
+		int sampleRate;
+		
+		if (audioIsStarted == false && mp.getAudioProperties(channelCount, sampleRate))
+		{
+			audioIsStarted = true;
+			
+			audioOutput.Initialize(channelCount, sampleRate, 256);
+			audioOutput.Play(&mp);
+		}
+		
+		mp.presentTime = mp.audioTime;
+		
+		mp.tick(mp.context, true);
+		
+		//
+		
+		setColor(colorWhite);
+		drawUiRectCheckered(0, 0, sx, sy, 8);
+		
+		auto texture = mp.getTexture();
+		
+		int videoSx;
+		int videoSy;
+		double duration;
+		
+		if (texture != 0 && mp.getVideoProperties(videoSx, videoSy, duration))
+		{
+			pushBlend(BLEND_OPAQUE);
+			{
+				gxSetTexture(texture);
+				setColor(colorWhite);
+				drawRect(0, 0, videoSx, videoSy);
+				gxSetTexture(0);
+			}
+			popBlend();
+		}
+	}
+};
+
+#include "framework-allegro2.h"
+#include "jgmod.h"
+
+struct FileEditor_Jgmod : FileEditor
+{
+	AllegroTimerApi timerApi;
+	AllegroVoiceApi voiceApi;
+	
+	JGMOD * jgmod = nullptr;
+	
+	JGMOD_PLAYER player;
+	
+	AudioOutput_PortAudio audioOutput;
+	AudioStream_AllegroVoiceMixer voiceMixer;
+	
+	FileEditor_Jgmod(const char * path)
+		: timerApi(AllegroTimerApi::kMode_Manual)
+		, voiceApi(192000, false)
+		, voiceMixer(&voiceApi, &timerApi)
+	{
+		jgmod = jgmod_load(path);
+		
+		player.init(64, &timerApi, &voiceApi);
+		player.play(jgmod, true);
+		
+		audioOutput.Initialize(2, 192000, 32);
+		audioOutput.Play(&voiceMixer);
+	}
+	
+	virtual ~FileEditor_Jgmod() override
+	{
+		audioOutput.Shutdown();
+		
+		jgmod_destroy(jgmod);
+	}
+	
+	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	{
+	}
+	
+};
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
@@ -386,7 +587,7 @@ int main(int argc, char * argv[])
 	fileBrowser.init();
 
 	FileEditor * editor = nullptr;
-	Surface * editorSurface = new Surface(VIEW_SX - 300, VIEW_SY, false);
+	Surface * editorSurface = new Surface(VIEW_SX - 300, VIEW_SY, false, true);
 	
 	fileBrowser.onFileSelected = [&](const std::string & path)
 	{
@@ -412,13 +613,29 @@ int main(int argc, char * argv[])
 		{
 			editor = new FileEditor_Text(filename.c_str());
 		}
-		else if (extension == "bmp" || extension == "jpg" || extension == "jpeg" || extension == "png" || extension == "tga")
+		else if (extension == "bmp" || extension == "jpg" || extension == "jpeg" || extension == "png" || extension == "psd" || extension == "tga")
 		{
 			editor = new FileEditor_Sprite(filename.c_str());
 		}
 		else if (extension == "ogg")
 		{
 			editor = new FileEditor_AudioStream_Vorbis(filename.c_str());
+		}
+		else if (extension == "fbx")
+		{
+			editor = new FileEditor_Model(filename.c_str());
+		}
+		else if (extension == "scml")
+		{
+			editor = new FileEditor_Spriter(filename.c_str());
+		}
+		else if (extension == "mpg" || extension == "mpeg" || extension == "mp4" || extension == "avi" || extension == "mov")
+		{
+			editor = new FileEditor_Video(filename.c_str());
+		}
+		else if (extension == "s3m" || extension == "xm" || extension == "mod" || extension == "it" || extension == "umx")
+		{
+			editor = new FileEditor_Jgmod(filename.c_str());
 		}
 		else if (extension == "xml")
 		{
@@ -483,7 +700,8 @@ int main(int argc, char * argv[])
 						
 						pushSurface(editorSurface);
 						{
-							editorSurface->clear(0, 0, 0, 0);
+							editorSurface->clear();
+							editorSurface->clearDepth(1.f);
 							
 							bool inputIsCaptured = ImGui::IsItemHovered() == false;
 							
