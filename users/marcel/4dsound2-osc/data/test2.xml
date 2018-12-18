@@ -138,10 +138,10 @@
     <node id="31" typeName="draw.display"/>
     <node id="32" typeName="draw.surface">
         <input socket="clear" value="0"/>
-        <input socket="clearColor" value="5750ffff"/>
+        <input socket="clearColor" value="d2ff4fff"/>
         <input socket="format" value="1"/>
         <input socket="multiply" value="1"/>
-        <input socket="multiplyColor" value="fff6eaff"/>
+        <input socket="multiplyColor" value="eafcffff"/>
         <input socket="viewMode" value="0"/>
     </node>
     <node id="34" typeName="draw.text">
@@ -222,11 +222,11 @@
     <link id="53" srcNodeId="34" srcNodeSocketName="text" dstNodeId="42" dstNodeSocketName="value"/>
     <link id="54" srcNodeId="45" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
     <link id="55" srcNodeId="44" srcNodeSocketName="oscPrefix" dstNodeId="45" dstNodeSocketName="result"/>
-    <editor nextZKey="365">
-        <dragAndZoom x="48.829582214355469" y="145.48268127441406" zoom="1.644720196723938"/>
+    <editor nextZKey="367">
+        <dragAndZoom x="384.423828125" y="258.18380737304688" zoom="0.36238771677017212"/>
         <nodeDatas>
             <nodeData nodeId="1" x="-160" y="272" zKey="58" folded="1"/>
-            <nodeData nodeId="3" x="16" y="0" zKey="364"/>
+            <nodeData nodeId="3" x="16" y="0" zKey="336"/>
             <nodeData nodeId="4" x="-304" y="-192" zKey="189" folded="1"/>
             <nodeData nodeId="5" x="-192" y="144" zKey="179"/>
             <nodeData nodeId="7" x="-176" y="96" zKey="177" folded="1"/>
@@ -252,8 +252,8 @@
             <nodeData nodeId="29" x="-752" y="800" zKey="326"/>
             <nodeData nodeId="30" x="-736" y="672" zKey="251"/>
             <nodeData nodeId="31" x="512" y="528" zKey="266"/>
-            <nodeData nodeId="32" x="384" y="528" zKey="363"/>
-            <nodeData nodeId="34" x="-16" y="528" zKey="362"/>
+            <nodeData nodeId="32" x="384" y="528" zKey="366"/>
+            <nodeData nodeId="34" x="-16" y="528" zKey="364"/>
             <nodeData nodeId="35" x="256" y="528" zKey="342"/>
             <nodeData nodeId="40" x="128" y="528" zKey="361"/>
             <nodeData nodeId="41" x="-16" y="736" zKey="356"/>
