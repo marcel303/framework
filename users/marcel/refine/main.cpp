@@ -193,9 +193,15 @@ struct FileEditor
 	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) = 0;
 };
 
+#include "audioGraphManager.h"
+#include "audioVoiceManager.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
 #include "vfxGraphManager.h"
+
+extern SDL_mutex * g_vfxAudioMutex;
+extern AudioVoiceManager * g_vfxAudioVoiceMgr;
+extern AudioGraphManager * g_vfxAudioGraphMgr;
 
 struct FileEditor_VfxGraph : FileEditor
 {
@@ -205,20 +211,47 @@ struct FileEditor_VfxGraph : FileEditor
 	VfxGraphManager_RTE vfxGraphMgr;
 	VfxGraphInstance * instance = nullptr;
 	
+	AudioMutex audioMutex;
+	AudioVoiceManagerBasic audioVoiceMgr;
+	AudioGraphManager_Basic audioGraphMgr;
+	
 	FileEditor_VfxGraph(const char * path)
 		: vfxGraphMgr(defaultSx, defaultSy)
+		, audioGraphMgr(true)
 	{
+		// init vfx graph
 		vfxGraphMgr.init();
 		
+		// init audio graph
+		audioMutex.init();
+		audioVoiceMgr.init(audioMutex.mutex, 64, 64);
+		audioGraphMgr.init(audioMutex.mutex, &audioVoiceMgr);
+		
+		g_vfxAudioMutex = audioMutex.mutex;
+		g_vfxAudioVoiceMgr = &audioVoiceMgr;
+		g_vfxAudioGraphMgr = &audioGraphMgr;
+		
+		// create instance
 		instance = vfxGraphMgr.createInstance(path, defaultSx, defaultSy);
 		vfxGraphMgr.selectInstance(instance);
 	}
 	
 	virtual ~FileEditor_VfxGraph() override
 	{
+		// free instance
 		vfxGraphMgr.free(instance);
 		Assert(instance == nullptr);
 		
+		// shut audio graph
+		g_vfxAudioMutex = nullptr; // todo : needs a nicer solution .. make it part of globals .. side data for additional node support .. ?
+		g_vfxAudioVoiceMgr = nullptr;
+		g_vfxAudioGraphMgr = nullptr;
+		
+		audioGraphMgr.shut();
+		audioVoiceMgr.shut();
+		audioMutex.shut();
+		
+		// shut vfx graph
 		vfxGraphMgr.shut();
 	}
 	
