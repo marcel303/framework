@@ -8,6 +8,22 @@
 #include <algorithm>
 #include <functional>
 
+#include "audioGraphManager.h"
+#include "audioVoiceManager.h"
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "imgui_internal.h"
+#include "vfxGraphManager.h"
+
+#include "nfd.h"
+
+#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiostream/AudioStreamVorbis.h"
+
+#include "video.h"
+
+#include "framework-allegro2.h"
+#include "jgmod.h"
+
 static const int VIEW_SX = 900;
 static const int VIEW_SY = 600;
 struct FileElem
@@ -193,12 +209,6 @@ struct FileEditor
 	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) = 0;
 };
 
-#include "audioGraphManager.h"
-#include "audioVoiceManager.h"
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include "imgui_internal.h"
-#include "vfxGraphManager.h"
-
 extern SDL_mutex * g_vfxAudioMutex;
 extern AudioVoiceManager * g_vfxAudioVoiceMgr;
 extern AudioGraphManager * g_vfxAudioGraphMgr;
@@ -287,6 +297,24 @@ struct FileEditor_VfxGraph : FileEditor
 	}
 };
 
+static bool loadIntoTextEditor(const char * filename, TextIO::LineEndings & lineEndings, TextEditor & textEditor)
+{
+	std::vector<std::string> lines;
+
+	textEditor.SetText("");
+	
+	if (TextIO::load(filename, lines, lineEndings) == false)
+	{
+		return false;
+	}
+	else
+	{
+		textEditor.SetTextLines(lines);
+		
+		return true;
+	}
+}
+
 struct FileEditor_Text : FileEditor
 {
 	std::string path;
@@ -300,10 +328,7 @@ struct FileEditor_Text : FileEditor
 	{
 		path = in_path;
 		
-		std::vector<std::string> lines;
-		isValid = TextIO::load(path.c_str(), lines, lineEndings);
-		
-		textEditor.SetTextLines(lines);
+		isValid = loadIntoTextEditor(path.c_str(), lineEndings, textEditor);
 		
 		guiContext.init();
 	}
@@ -322,10 +347,82 @@ struct FileEditor_Text : FileEditor
 			ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
 			ImGui::SetNextWindowSize(ImVec2(sx, sy), ImGuiCond_Always);
 			if (ImGui::Begin("editor", nullptr,
-				ImGuiWindowFlags_NoTitleBar*1 |
+				ImGuiWindowFlags_MenuBar |
+				ImGuiWindowFlags_NoTitleBar |
 				ImGuiWindowFlags_NoResize |
 				ImGuiWindowFlags_NoMove))
 			{
+				if (ImGui::BeginMenuBar())
+				{
+					if (ImGui::BeginMenu("File"))
+					{
+						if (ImGui::MenuItem("Load.."))
+						{
+							nfdchar_t * filename = nullptr;
+							
+							if (NFD_OpenDialog(nullptr, nullptr, &filename) == NFD_OKAY)
+							{
+								isValid = loadIntoTextEditor(filename, lineEndings, textEditor);
+							}
+							
+							if (filename != nullptr)
+							{
+								free(filename);
+								filename = nullptr;
+							}
+						}
+						
+						if (ImGui::MenuItem("Save", nullptr, false, isValid) && isValid)
+						{
+							const std::vector<std::string> lines = textEditor.GetTextLines();
+							
+							if (TextIO::save(path.c_str(), lines, lineEndings) == false)
+							{
+								SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
+							}
+						}
+						
+						if (ImGui::MenuItem("Save as..", nullptr, false, isValid) && isValid)
+						{
+							nfdchar_t * filename = nullptr;
+							
+							if (NFD_SaveDialog(nullptr, nullptr, &filename) == NFD_OKAY)
+							{
+								std::vector<std::string> lines = textEditor.GetTextLines();
+								
+								if (TextIO::save(filename, lines, lineEndings) == false)
+								{
+									SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
+								}
+								else
+								{
+									path = filename;
+								}
+							}
+							
+							if (filename != nullptr)
+							{
+								free(filename);
+								filename = nullptr;
+							}
+						}
+						
+						ImGui::EndMenu();
+					}
+					
+					if (ImGui::BeginMenu("Line Endings"))
+					{
+						if (ImGui::MenuItem("Unix", nullptr, lineEndings == TextIO::kLineEndings_Unix))
+							lineEndings = TextIO::kLineEndings_Unix;
+						if (ImGui::MenuItem("Windows", nullptr, lineEndings == TextIO::kLineEndings_Windows))
+							lineEndings = TextIO::kLineEndings_Windows;
+						
+						ImGui::EndMenu();
+					}
+
+					ImGui::EndMenuBar();
+				}
+				
 				textEditor.Render(filename.c_str(), ImVec2(sx - 20, sy - 20), false);
 			}
 			ImGui::End();
@@ -415,9 +512,6 @@ struct FileEditor_Sprite : FileEditor
 		guiContext.draw();
 	}
 };
-
-#include "audiostream/AudioOutput_PortAudio.h"
-#include "audiostream/AudioStreamVorbis.h"
 
 struct FileEditor_AudioStream_Vorbis : FileEditor
 {
@@ -594,8 +688,6 @@ struct FileEditor_Spriter : FileEditor
 	}
 };
 
-#include "video.h"
-
 struct FileEditor_Video : FileEditor
 {
 	MediaPlayer mp;
@@ -674,9 +766,6 @@ struct FileEditor_Video : FileEditor
 		}
 	}
 };
-
-#include "framework-allegro2.h"
-#include "jgmod.h"
 
 struct FileEditor_Jgmod : FileEditor
 {
