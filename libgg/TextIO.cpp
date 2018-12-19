@@ -84,6 +84,7 @@ namespace TextIO
 				
 				const char * begin = text + lineBegin;
 				const char * end = begin + lineSize;
+				*const_cast<char*>(end) = 0;
 				
 				lineCallback(userData, begin, end);
 				
@@ -96,6 +97,7 @@ namespace TextIO
 		{
 			const char * begin = text + lineBegin;
 			const char * end = begin + lineSize;
+			*const_cast<char*>(end) = 0;
 			
 			lineCallback(userData, begin, end);
 		}
