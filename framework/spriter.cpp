@@ -719,6 +719,14 @@ namespace spriter
 		logWarning("failed to find animation: %s", name);
 		return -1;
 	}
+	
+	const char * Entity::getAnimName(int index) const
+	{
+		Assert(index >= 0 && index < (int)m_animations.size());
+		if (index < 0 || index >= (int)m_animations.size())
+			return 0;
+		return m_animations[index]->name.c_str();
+	}
 
 	int Entity::getAnimLength(int index) const
 	{

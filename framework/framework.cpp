@@ -4261,6 +4261,14 @@ int Spriter::getAnimCount() const
 	return (int)m_spriter->m_scene->m_entities[0]->m_animations.size();
 }
 
+const char * Spriter::getAnimName(const int animIndex) const
+{
+	if (m_spriter->m_scene->m_entities.empty())
+		return 0;
+	
+	return m_spriter->m_scene->m_entities[0]->getAnimName(animIndex);
+}
+
 int Spriter::getAnimIndexByName(const char * name) const
 {
 	if (m_spriter->m_scene->m_entities.empty())

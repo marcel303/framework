@@ -917,6 +917,7 @@ public:
 	void draw(const SpriterState & state, const spriter::Drawable * drawables, int numDrawables);
 
 	int getAnimCount() const;
+	const char * getAnimName(const int animIndex) const;
 	int getAnimIndexByName(const char * name) const;
 	float getAnimLength(int animIndex) const;
 	bool isAnimDoneAtTime(int animIndex, float time) const;
