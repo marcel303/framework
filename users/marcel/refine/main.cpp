@@ -65,6 +65,7 @@ struct FileBrowser
 
 		//const char * rootFolder = "/Users/thecat/framework/vfxGraph-examples/data";
 		const char * rootFolder = "/Users/thecat/framework/";
+		//const char * rootFolder = "/Users/thecat/";
 		
 		auto files = listFiles(rootFolder, true);
 		
@@ -165,8 +166,12 @@ struct FileBrowser
 	{
 		// todo : draw foldable menu items for each file
 		
+		ImGui::SetNextWindowPos(ImVec2(0, 0));
 		ImGui::SetNextWindowSize(ImVec2(300, 0));
-		if (ImGui::Begin("File Browser", nullptr, ImGuiWindowFlags_NoScrollbar |
+		if (ImGui::Begin("File Browser", nullptr,
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoScrollbar*0 |
 			ImGuiWindowFlags_NoScrollWithMouse*0))
 		{
 			ImGui::PushID("root");
@@ -301,14 +306,29 @@ struct FileEditor_Text : FileEditor
 struct FileEditor_Sprite : FileEditor
 {
 	Sprite sprite;
+	std::string path;
+	char sheetFilename[64];
 	
-	FileEditor_Sprite(const char * path)
-		: sprite(path)
+	FrameworkImGuiContext guiContext;
+	
+	FileEditor_Sprite(const char * in_path)
+		: sprite(in_path)
+		, path(in_path)
 	{
+		sheetFilename[0] = 0;
+		
+		guiContext.init();
+	}
+	
+	virtual ~FileEditor_Sprite() override
+	{
+		guiContext.shut();
 	}
 	
 	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
 	{
+		sprite.update(dt);
+		
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
 		
@@ -317,8 +337,49 @@ struct FileEditor_Sprite : FileEditor
 		const float scale = fminf(1.f, fminf(scaleX, scaleY));
 		
 		setColor(colorWhite);
+		sprite.x = (sx - sprite.getWidth() * scale) / 2;
+		sprite.y = (sy - sprite.getHeight() * scale) / 2;
 		sprite.scale = scale;
 		sprite.draw();
+		
+		guiContext.processBegin(dt, sx, sy, inputIsCaptured);
+		{
+			ImGui::SetNextWindowPos(ImVec2(4, 4));
+			ImGui::SetNextWindowSize(ImVec2(240, 60));
+			if (ImGui::Begin("Sprite", nullptr,
+				ImGuiWindowFlags_NoTitleBar |
+				ImGuiWindowFlags_NoMove))
+			{
+				if (ImGui::InputText("Sheet", sheetFilename, sizeof(sheetFilename)))
+				{
+					if (sheetFilename[0] == 0)
+						sprite = Sprite(path.c_str());
+					else
+						sprite = Sprite(path.c_str(), 0.f, 0.f, sheetFilename);
+				}
+				
+				auto animList = sprite.getAnimList();
+				
+				if (!animList.empty())
+				{
+					const char ** animItems = (const char**)alloca(animList.size() * sizeof(char*));
+					auto & animName = sprite.getAnim();
+					int animIndex = -1;
+					for (int i = 0; i < (int)animList.size(); ++i)
+					{
+						if (animList[i] == animName)
+							animIndex = i;
+						animItems[i]= animList[i].c_str();
+					}
+					if (ImGui::Combo("Animation", &animIndex, animItems, animList.size()))
+						sprite.startAnim(animItems[animIndex]);
+				}
+			}
+			ImGui::End();
+		}
+		guiContext.processEnd();
+		
+		guiContext.draw();
 	}
 };
 
@@ -376,11 +437,13 @@ struct FileEditor_Model : FileEditor
 	Model model;
 	Vec3 min;
 	Vec3 max;
+	float rotationX = 0.f;
+	float rotationY = 0.f;
 	
 	FileEditor_Model(const char * path)
 		: model(path)
 	{
-		model.calculateAABB(min, max, false);
+		model.calculateAABB(min, max, true);
 	}
 	
 	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
@@ -388,13 +451,18 @@ struct FileEditor_Model : FileEditor
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
 		
+		if (mouse.isDown(BUTTON_LEFT))
+		{
+			rotationX += mouse.dy;
+			rotationY -= mouse.dx;
+		}
+			
 		projectPerspective3d(60.f, .01f, 100.f);
 		{
 			glEnable(GL_DEPTH_TEST);
 			glDepthFunc(GL_LESS);
 			
 			const Vec3 delta = max - min;
-			const Vec3 middle = (max + min) / 2.f;
 			const float maxAxis = fmaxf(delta[0], fmaxf(delta[1], delta[2]));
 			
 			if (maxAxis > 0.f)
@@ -402,7 +470,9 @@ struct FileEditor_Model : FileEditor
 				gxPushMatrix();
 				gxTranslatef(0, 0, 1.f);
 				gxScalef(1.f / maxAxis, 1.f / maxAxis, 1.f / maxAxis);
-				gxTranslatef(-middle[0], -middle[1], -middle[2]);
+				gxTranslatef(0.f, 0.f, 1.f);
+				gxRotatef(rotationY, 0.f, 1.f, 0.f);
+				gxRotatef(rotationX, 1.f, 0.f, 0.f);
 				model.draw(DrawMesh | DrawColorNormals);
 				gxPopMatrix();
 			}
@@ -420,16 +490,23 @@ struct FileEditor_Spriter : FileEditor
 	
 	bool firstFrame = true;
 	
+	FrameworkImGuiContext guiContext;
+	
 	FileEditor_Spriter(const char * path)
 		: spriter(path)
 	{
 		spriterState.startAnim(spriter, "Idle");
+		
+		guiContext.init();
+	}
+	
+	virtual ~FileEditor_Spriter() override
+	{
+		guiContext.shut();
 	}
 	
 	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
 	{
-		spriterState.updateAnim(spriter, dt);
-		
 		if (firstFrame)
 		{
 			firstFrame = false;
@@ -438,8 +515,38 @@ struct FileEditor_Spriter : FileEditor
 			spriterState.y = sy/2.f;
 		}
 		
-		if (mouse.isDown(BUTTON_LEFT))
+		spriterState.updateAnim(spriter, dt);
+		
+		//
+		
+		guiContext.processBegin(dt, sx, sy, inputIsCaptured);
 		{
+			ImGui::SetNextWindowPos(ImVec2(4, 4));
+			ImGui::SetNextWindowSize(ImVec2(240, 0));
+			if (ImGui::Begin("Spriter"))
+			{
+				const int animCount = spriter.getAnimCount();
+				
+				if (animCount > 0)
+				{
+					const char ** animItems = (const char**)alloca(animCount * sizeof(char*));
+					int animIndex = spriterState.animIndex;
+					for (int i = 0; i < animCount; ++i)
+						animItems[i]= spriter.getAnimName(i);
+					if (ImGui::Combo("Animation", &animIndex, animItems, animCount))
+						spriterState.startAnim(spriter, animIndex);
+					if (ImGui::Button("Restart animation"))
+						spriterState.startAnim(spriter, spriterState.animIndex);
+				}
+			}
+			ImGui::End();
+		}
+		guiContext.processEnd();
+		
+		if (inputIsCaptured == false && mouse.isDown(BUTTON_LEFT))
+		{
+			inputIsCaptured = true;
+			
 			spriterState.x = mouse.x;
 			spriterState.y = mouse.y;
 		}
@@ -449,6 +556,8 @@ struct FileEditor_Spriter : FileEditor
 		
 		setColor(colorWhite);
 		spriter.draw(spriterState);
+		
+		guiContext.draw();
 	}
 };
 
@@ -512,10 +621,21 @@ struct FileEditor_Video : FileEditor
 		{
 			pushBlend(BLEND_OPAQUE);
 			{
-				gxSetTexture(texture);
-				setColor(colorWhite);
-				drawRect(0, 0, videoSx, videoSy);
-				gxSetTexture(0);
+				const float scaleX = sx / float(videoSx);
+				const float scaleY = sy / float(videoSy);
+				const float scale = fminf(1.f, fminf(scaleX, scaleY));
+				
+				gxPushMatrix();
+				{
+					gxTranslatef((sx - videoSx * scale) / 2, (sy - videoSy * scale) / 2, 0);
+					gxScalef(scale, scale, 1.f);
+					
+					gxSetTexture(texture);
+					setColor(colorWhite);
+					drawRect(0, 0, videoSx, videoSy);
+					gxSetTexture(0);
+				}
+				gxPopMatrix();
 			}
 			popBlend();
 		}
@@ -581,7 +701,7 @@ int main(int argc, char * argv[])
 // todo : create ImGui context
 
 	FrameworkImGuiContext guiContext;
-	guiContext.init(true);
+	guiContext.init();
 
 	FileBrowser fileBrowser;
 	fileBrowser.init();
@@ -613,7 +733,7 @@ int main(int argc, char * argv[])
 		{
 			editor = new FileEditor_Text(filename.c_str());
 		}
-		else if (extension == "bmp" || extension == "jpg" || extension == "jpeg" || extension == "png" || extension == "psd" || extension == "tga")
+		else if (extension == "bmp" || extension == "jpg" || extension == "jpeg" || extension == "png" || extension == "psd" || extension == "tga" || extension == "gif")
 		{
 			editor = new FileEditor_Sprite(filename.c_str());
 		}
