@@ -9,9 +9,11 @@
 #include <functional>
 
 #include "audioGraphManager.h"
+#include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
+#include "paobject.h"
 #include "vfxGraphManager.h"
 
 #include "nfd.h"
@@ -294,6 +296,75 @@ struct FileEditor_VfxGraph : FileEditor
 		vfxGraphMgr.tickVisualizers(dt);
 		
 		vfxGraphMgr.drawEditor();
+	}
+};
+
+struct FileEditor_AudioGraph : FileEditor
+{
+	static const int defaultSx = 600;
+	static const int defaultSy = 600;
+	
+	AudioMutex audioMutex;
+	AudioVoiceManagerBasic audioVoiceMgr;
+	AudioGraphManager_RTE audioGraphMgr;
+	
+	AudioUpdateHandler audioUpdateHandler;
+	PortAudioObject paObject;
+	
+	AudioGraphInstance * instance = nullptr;
+	
+	FileEditor_AudioGraph(const char * path)
+		: audioGraphMgr(defaultSx, defaultSy)
+	{
+		// init audio graph
+		audioMutex.init();
+		audioVoiceMgr.init(audioMutex.mutex, 64, 64);
+		audioVoiceMgr.outputStereo = true;
+		audioGraphMgr.init(audioMutex.mutex, &audioVoiceMgr);
+		
+		// init audio output
+		audioUpdateHandler.init(audioMutex.mutex, nullptr, 0);
+		audioUpdateHandler.voiceMgr = &audioVoiceMgr;
+		audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
+		
+		paObject.init(44100, 2, 0, 256, &audioUpdateHandler);
+		
+		// create instance
+		instance = audioGraphMgr.createInstance(path);
+		audioGraphMgr.selectInstance(instance);
+	}
+	
+	virtual ~FileEditor_AudioGraph() override
+	{
+		// free instance
+		audioGraphMgr.free(instance, false);
+		Assert(instance == nullptr);
+		
+		// shut audio output
+		paObject.shut();
+		audioUpdateHandler.shut();
+		
+		// shut audio graph
+		audioGraphMgr.shut();
+		audioVoiceMgr.shut();
+		audioMutex.shut();
+	}
+	
+	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	{
+		// update real-time editing
+		
+		inputIsCaptured |= audioGraphMgr.tickEditor(dt, inputIsCaptured);
+		
+		// tick audio graph
+		
+		audioGraphMgr.tickMain();
+		
+		// update visualizers and draw editor
+		
+		audioGraphMgr.tickVisualizers();
+		
+		audioGraphMgr.drawEditor();
 	}
 };
 
@@ -881,7 +952,40 @@ int main(int argc, char * argv[])
 		}
 		else if (extension == "xml")
 		{
-			editor = new FileEditor_VfxGraph(filename.c_str());
+			// determine content type
+			
+			char * text = nullptr;
+			TextIO::LineEndings lineEndings;
+			
+			char type = 0;
+			
+			TextIO::loadWithCallback(filename.c_str(), text, lineEndings, [](void * userData, const char * begin, const char * end)
+			{
+				if (strstr(begin, "typeName=\"voice\"") != nullptr || strstr(begin, "typeName=\"voice.4d\"") != nullptr)
+				{
+					char * type = (char*)userData;
+					
+					*type = 'a';
+				}
+				else if (strstr(begin, "typeName=\"draw.display\"") != nullptr)
+				{
+					char * type = (char*)userData;
+					
+					*type = 'a';
+				}
+			}, &type);
+			
+			delete [] text;
+			text = nullptr;
+			
+			if (type == 'a')
+			{
+				editor = new FileEditor_AudioGraph(filename.c_str());
+			}
+			else
+			{
+				editor = new FileEditor_VfxGraph(filename.c_str());
+			}
 		}
 	};
 	
