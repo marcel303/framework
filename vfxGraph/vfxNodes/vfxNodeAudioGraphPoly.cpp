@@ -378,11 +378,14 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	
 	for (int i = 0; i < numNewInstances; ++i)
 	{
-		Assert(newInstances[i]->audioGraph->isPaused);
-		newInstances[i]->audioGraph->isPaused = false;
-		
-		// todo : there should be an on-start type of trigger
-		newInstances[i]->audioGraph->triggerEvent("begin");
+		if (newInstances[i] != nullptr)
+		{
+			Assert(newInstances[i]->audioGraph->isPaused);
+			newInstances[i]->audioGraph->isPaused = false;
+			
+			// todo : there should be an on-start type of trigger
+			newInstances[i]->audioGraph->triggerEvent("begin");
+		}
 	}
 	
 	AudioMutex_Shared mutex(g_vfxAudioMutex);
