@@ -17,6 +17,50 @@
 
 #define SAMPLERATE (44100.0)
 
+#if defined(MACOS) || defined(LINUX)
+	#define ALIGN16 __attribute__((aligned(16)))
+	#define ALIGN32 __attribute__((aligned(32)))
+#else
+	#define ALIGN16 __declspec(align(16))
+	#define ALIGN32 __declspec(align(32))
+#endif
+
+#if defined(WIN32)
+
+// Clang and GCC support this nice syntax where vector types support the same basic operations as floats or integers. on Windows we need to re-implement a subset here to make the code compile
+
+inline __m128 operator+(__m128 a, __m128 b)
+{
+	return _mm_add_ps(a, b);
+}
+
+inline __m128 operator-(__m128 a, __m128 b)
+{
+	return _mm_sub_ps(a, b);
+}
+
+inline __m128 operator*(__m128 a, __m128 b)
+{
+	return _mm_mul_ps(a, b);
+}
+
+inline __m128d operator+(__m128d a, __m128d b)
+{
+	return _mm_add_pd(a, b);
+}
+
+inline __m128d operator-(__m128d a, __m128d b)
+{
+	return _mm_sub_pd(a, b);
+}
+
+inline __m128d operator*(__m128d a, __m128d b)
+{
+	return _mm_mul_pd(a, b);
+}
+
+#endif
+
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
 
@@ -176,9 +220,9 @@ struct SpringOsc1D : BaseOsc
 	{
 		static const int kNumElems = 256;
 		
-		__attribute__((aligned(32))) double p[kNumElems];
-		__attribute__((aligned(32))) double v[kNumElems];
-		__attribute__((aligned(32))) double f[kNumElems];
+		ALIGN32 double p[kNumElems];
+		ALIGN32 double v[kNumElems];
+		ALIGN32 double f[kNumElems];
 		
 		WaterSim()
 		{
@@ -395,10 +439,10 @@ struct SpringOsc2D : BaseOsc
 	{
 		static const int kNumElems = 32;
 		
-		__attribute__((aligned(32))) double p[kNumElems][kNumElems];
-		__attribute__((aligned(32))) double v[kNumElems][kNumElems];
-		__attribute__((aligned(32))) double f[kNumElems][kNumElems];
-		__attribute__((aligned(32))) double d[kNumElems][kNumElems];
+		ALIGN32 double p[kNumElems][kNumElems];
+		ALIGN32 double v[kNumElems][kNumElems];
+		ALIGN32 double f[kNumElems][kNumElems];
+		ALIGN32 double d[kNumElems][kNumElems];
 		
 		WaterSim()
 		{
