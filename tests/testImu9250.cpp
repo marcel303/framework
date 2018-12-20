@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#ifndef WIN32
+
 #include "framework.h"
 #include "Log.h"
 #include "Timer.h"
@@ -627,3 +629,12 @@ void testImu9250()
 	
 	//exit(0);
 }
+
+#else
+
+void testImu9250()
+{
+	// todo
+}
+
+#endif

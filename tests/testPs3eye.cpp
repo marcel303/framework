@@ -1,3 +1,5 @@
+#ifndef WIN32
+
 #include "Benchmark.h"
 #include "framework.h"
 #include "vfxNodes/openglTexture.h"
@@ -350,3 +352,13 @@ void testPs3eye()
 	SDL_DestroyMutex(mutex);
 	mutex = nullptr;
 }
+
+#else
+
+// fixme
+
+void testPs3eye()
+{
+}
+
+#endif

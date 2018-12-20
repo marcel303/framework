@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifndef WIN32
+
 // define types
 
 typedef float float4_value __attribute__ ((vector_size(16)));
@@ -471,3 +473,12 @@ int main(int argc, char * argv[])
 
 	return 0;
 }
+
+#else
+
+int main(int argc, char * argv[])
+{
+	return 0;
+}
+
+#endif
