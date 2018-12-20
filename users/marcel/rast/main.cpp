@@ -1,13 +1,12 @@
-#include <assert.h>
 #include <emmintrin.h>
-#include <exception>
 #include <math.h>
-#include <SDL/SDL.h>
-#include <vector>
 #include <xmmintrin.h>
-#include "../../../libgg/SIMD.h"
-#include "../../../libgg/SimdMat4x4.h"
+#include "framework.h"
+#include "image.h"
 #include "md3.h"
+#include "SIMD.h"
+#include "SimdMat4x4.h"
+#include "Timer.h"
 
 #if 0
 	#define FTOI(v) _mm_cvtss_si32(_mm_set_ss(v))
@@ -23,75 +22,11 @@
 	#define _MM_ACCESS_I32(v, i) ((v).m128i_i32[i])
 #endif
 
-#if !defined(_MSC_VER)
-#include <sys/time.h>
-class Timer
-{
-public:
-	void Start()
-	{
-		gettimeofday(&t1, 0);
-	}
-	
-	void Stop()
-	{
-		gettimeofday(&t2, 0);
-	}
-	
-	unsigned int usec()
-	{
-		timeval d;
-		timersub(&t2, &t1, &d);
-		return d.tv_sec * 1000000 + d.tv_usec;
-	}
-	
-	timeval t1;
-	timeval t2;
-};
-#else
-#include <windows.h>
-class Timer
-{
-public:
-	void Start()
-	{
-		t1 = timeGetTime();
-	}
-
-	void Stop()
-	{
-		t2 = timeGetTime();
-	}
-
-	unsigned int usec()
-	{
-		return (t2 - t1) * 1000;
-	}
-
-	DWORD t1;
-	DWORD t2;
-};
-#endif
-
-#define ASSERT assert
-//#define ASSERT(expr) do { } while (false)
-
-#if 0
-class exception : public std::exception
-{
-public:
-	exception(const char * msg) : m_msg(msg) { }
-	virtual const char * what() const throw() { return m_msg; }
-private:
-	const char * m_msg;
-};
-#else
 static void throw_exception(const char* msg)
 {
 	printf("%s", msg);
 	exit(-1);
 }
-#endif
 
 typedef unsigned int ptr_t;
 typedef unsigned char u8;
@@ -107,7 +42,6 @@ typedef int ScreenCoordValue;
 #define USE_NEAREST 0
 #define USE_SUBPIXEL 1
 #define FORCE_WHITE_COLOR 1
-#define USE_SDL_SHIFTS 1
 
 //
 
@@ -125,9 +59,6 @@ struct g_Surface
 	int sy;
 	int* pixels;
 	int pitch;
-	int shiftR;
-	int shiftG;
-	int shiftB;
 } g_Surface;
 
 //
@@ -223,7 +154,7 @@ public:
 
 		unsigned int size = m_Size >> 1;
 
-		ASSERT(size >= 1);
+		Assert(size >= 1);
 
 		level->SetSize(size);
 
@@ -630,7 +561,7 @@ static FORCEINLINE void Fill(
 
 static void Fill(ScreenCoordValue y)
 {
-	ASSERT(y < g_Surface.sy);
+	Assert(y < g_Surface.sy);
 	
 	float x1f = g_ScanExtentsX[y][0];
 	float x2f = g_ScanExtentsX[y][1];
@@ -696,8 +627,8 @@ static void Fill(ScreenCoordValue y)
 	if (x2 <= x1)
 		return;
 
-	ASSERT(x1 <= 65535);
-	ASSERT(x2 <= 65535);
+	Assert(x1 <= 65535);
+	Assert(x2 <= 65535);
 
 #if USE_SUBPIXEL == 1
 	const float xd = x1 - x1f + 1.0f;
@@ -728,12 +659,6 @@ static void Fill(ScreenCoordValue y)
 #if 0
 	Fill(v_zuvl_scan, dzuvl_dx, line_scan, depth_scan, x2 - x1);
 	return;
-#endif
-
-#if USE_SDL_SHIFTS == 1
-	const int shiftR = g_Surface.shiftR;
-	const int shiftG = g_Surface.shiftG;
-	const int shiftB = g_Surface.shiftB;
 #endif
 
 	for (ScreenCoordValue _x = x2 - x1; _x != 0; --_x, ++depth_scan, ++line_scan)
@@ -781,9 +706,9 @@ static void Fill(ScreenCoordValue y)
 
 #if 1
 			*line_scan =
-				/* R */ _MM_ACCESS_I32(v, 0) << shiftR |
-				/* G */ _MM_ACCESS_I32(v, 1) << shiftG |
-				/* B */ _MM_ACCESS_I32(v, 2) << shiftB;
+				/* R */ _MM_ACCESS_I32(v, 0) |
+				/* G */ _MM_ACCESS_I32(v, 1) << 8 |
+				/* B */ _MM_ACCESS_I32(v, 2) << 16;
 #else
 			_mm_storeu_si128((__m128i*)line_scan, v);
 #endif
@@ -806,8 +731,8 @@ static int g_ScanExtents[2];
 
 static FORCEINLINE void Fill(int y1, int y2)
 {
-	ASSERT(y1 >= 0);
-	ASSERT(y2 <= g_Surface.sy);
+	Assert(y1 >= 0);
+	Assert(y2 <= g_Surface.sy);
 
 	if (y1 < 0)
 		y1 = 0;
@@ -816,7 +741,7 @@ static FORCEINLINE void Fill(int y1, int y2)
 	
 	for (int y = y1; y < y2; ++y)
 	{
-		ASSERT(g_ScanState[y] == 2);
+		Assert(g_ScanState[y] == 2);
 		//if (g_ScanState[y] == 2)
 		{
 			Fill(y);
@@ -928,7 +853,7 @@ static void Scan(const Vert * __restrict v1, const Vert * __restrict v2)
 	if (y2 > g_Surface.sy)
 		y2 = g_Surface.sy;
 
-	ASSERT(y1 < y2);
+	Assert(y1 < y2);
 
 	if (y1 < g_ScanExtents[0] || g_ScanExtents[0] == EXT_UNDEFINED)
 		g_ScanExtents[0] = y1;
@@ -941,7 +866,7 @@ static void Scan(const Vert * __restrict v1, const Vert * __restrict v2)
 
 		ScanStateValue state = g_ScanState[y];
 		
-		ASSERT(state <= 1);
+		Assert(state <= 1);
 
 		//if (state <= 1)
 		{
@@ -992,7 +917,7 @@ static FORCEINLINE void WriteVert(Vert * __restrict rv, const DataVert * __restr
 
 static FORCEINLINE void WriteVert(Vert * __restrict rv, const DataVert * __restrict dv, SimdVecArg v, SimdVecArg p)
 {
-	ASSERT(v.Z() > 0.0f);
+	Assert(v.Z() > 0.0f);
 #if 0
 	SimdVec p2 = p.Mul(screenSize).Add(mid);
 	rv->x = p2.X();
@@ -1032,11 +957,7 @@ static FORCEINLINE void WriteVert(Vert * __restrict rv, const DataVert * __restr
 static void RenderMd3(const SimdMat4x4 & mat, const Md3 & md3)
 {
 	mid = SimdVec(g_Surface.sx / 2.0f, g_Surface.sy / 2.0f, 0.0f, 0.0f);
-
-#if 1
-	SimdMat4x4 temp = mat.CalcTranspose();
-#endif
-
+	
 	Vert tri[3];
 
 	for (unsigned int i = 0; i < md3.SurfCount; ++i)
@@ -1056,23 +977,23 @@ static void RenderMd3(const SimdMat4x4 & mat, const Md3 & md3)
 			const DataVert * __restrict dv2 = dv + index2;
 			const DataVert * __restrict dv3 = dv + index3;
 			
-			SimdVec v1 = mat.Mul4x4(dv1->p);
-			SimdVec v2 = mat.Mul4x4(dv2->p);
-			SimdVec v3 = mat.Mul4x4(dv3->p);
+			const SimdVec v1 = mat.Mul4x4(dv1->p);
+			const SimdVec v2 = mat.Mul4x4(dv2->p);
+			const SimdVec v3 = mat.Mul4x4(dv3->p);
 
 			//printf("%g, %g, %g\n", v1(0), v1(1), v1(2));
 			
 #if 1
-			SimdVec p1 = v1.Div(v1.ReplicateZ());
-			SimdVec p2 = v2.Div(v2.ReplicateZ());
-			SimdVec p3 = v3.Div(v3.ReplicateZ());
+			const SimdVec p1 = v1.Div(v1.ReplicateZ());
+			const SimdVec p2 = v2.Div(v2.ReplicateZ());
+			const SimdVec p3 = v3.Div(v3.ReplicateZ());
 
-			SimdVec d1 = p2.Sub(p1);
-			SimdVec d2 = p3.Sub(p2);
-			SimdVec dc = d1.Cross3(d2);
+			const SimdVec d1 = p2.Sub(p1);
+			const SimdVec d2 = p3.Sub(p2);
+			const SimdVec dc = d1.Cross3(d2);
 			
 #if 1
-			SimdVec zzzz = dc.ReplicateZ();
+			const SimdVec zzzz = dc.ReplicateZ();
 			if (zzzz.ANY_LE4(VEC_ZERO))
 				continue;
 #else
@@ -1133,51 +1054,22 @@ private:
 	double mFalloff;
 };
 
-#ifdef WINDOWS
-int mswindows_handle_hardware_exceptions (DWORD code)
-{
-	printf("Handling exception\n");
-	if (code == STATUS_DATATYPE_MISALIGNMENT)
-	{
-		printf("misalignment fault!\n");
-		return EXCEPTION_EXECUTE_HANDLER;
-	}
-	else
-		return EXCEPTION_CONTINUE_SEARCH;
-}
-#endif
-
 static void Execute()
 {
-#if defined(WINDOWS)
-	HANDLE process = GetCurrentProcess();
-	SetPriorityClass(process, HIGH_PRIORITY_CLASS);
-	HANDLE thread = GetCurrentThread();
-	if (!SetThreadPriority(thread, THREAD_PRIORITY_HIGHEST))
-		throw_exception("failed to set thread priority");
-	if (!SetThreadPriorityBoost(thread, FALSE))
-		throw_exception("failed to set thread priority boost");
-	//if (!SetThreadAffinityMask(thread, 2))
-	//	throw_exception("failed to set thread affinity");
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
 
-	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) < 0)
+	const int gfxSx = 640; const int gfxSy = 480;
+	//const int gfxSx = 1280; const int gfxSy = 720;
+	
+	if (!framework.init(gfxSx, gfxSy))
 		throw_exception("failed to initialize SDL");
 
-	SDL_Surface* surface = SDL_SetVideoMode(640, 480, 32, 0);
-	//SDL_Surface* surface = SDL_SetVideoMode(1024, 768, 32, 0);
-	//SDL_Surface* surface = SDL_SetVideoMode(320, 240, 32, 0);
-	//SDL_Surface* surface = SDL_SetVideoMode(1920, 1080, 32, SDL_FULLSCREEN);
-	//SDL_Surface* surface = SDL_SetVideoMode(1280, 1024, 32, SDL_FULLSCREEN);
+	ImageData surface(gfxSx, gfxSy);
 
-	if (surface == 0)
-		throw_exception("failed to set video mode");
-
-	g_Surface.sx = surface->w;
-	g_Surface.sy = surface->h;
-	g_Surface.shiftR = surface->format->Rshift;
-	g_Surface.shiftG = surface->format->Gshift;
-	g_Surface.shiftB = surface->format->Bshift;
+	g_Surface.sx = surface.sx;
+	g_Surface.sy = surface.sy;
 
 	g_DepthBuffer = new DepthBuffer();
 	g_DepthBuffer->Initialize(g_Surface.sx, g_Surface.sy);
@@ -1185,8 +1077,8 @@ static void Execute()
 	Texture* texture1 = new Texture();
 	Texture* texture2 = new Texture();
 	texture1->Load("texture.bmp");
-	//texture2->Load("shotgun.bmp");
-	texture2->Load("briareos.bmp");
+	texture2->Load("shotgun.bmp");
+	//texture2->Load("briareos.bmp");
 	g_Texture = texture2;
 
 	Md3 md3;
@@ -1225,58 +1117,39 @@ static void Execute()
 
 	while (stop == false)
 	{
-#ifdef WINDOWS
-		__try
-		{
-#endif
+		framework.process();
 
-		SDL_Event e;
+		if (framework.quitRequested)
+			stop = true;
 
-		while (SDL_PollEvent(&e))
-		{
-			if (e.type == SDL_KEYDOWN)
-			{
-				if (e.key.keysym.sym == SDLK_ESCAPE || e.key.keysym.sym == SDLK_q)
-					stop = true;
-				if (e.key.keysym.sym == SDLK_LSHIFT)
-					g_Texture = g_Texture == texture1 ? texture2 : texture1;
-				if (e.key.keysym.sym == SDLK_SPACE)
-					flat = true;
-				if (e.key.keysym.sym == SDLK_b)
-					back = true;
-				if (e.key.keysym.sym == SDLK_c)
-					clear = true;
-			}
-			if (e.type == SDL_KEYUP)
-			{
-				if (e.key.keysym.sym == SDLK_SPACE)
-					flat = false;
-				if (e.key.keysym.sym == SDLK_b)
-					back = false;
-				if (e.key.keysym.sym == SDLK_c)
-					clear = false;
-			}
-			if (e.type == SDL_MOUSEMOTION)
-			{
-				mrx.SetDesiredValue(mrx.GetDesiredValue() + e.motion.xrel / 20.0f);
-				mry.SetDesiredValue(mry.GetDesiredValue() + e.motion.yrel / 20.0f);
-			}
-			if (e.type == SDL_QUIT)
-			{
-				stop = true;
-			}
-		}
+		if (keyboard.wentDown(SDLK_ESCAPE) || keyboard.wentDown(SDLK_q))
+			stop = true;
+		if (keyboard.wentDown(SDLK_LSHIFT))
+			g_Texture = g_Texture == texture1 ? texture2 : texture1;
+		if (keyboard.wentDown(SDLK_SPACE))
+			flat = true;
+		if (keyboard.wentDown(SDLK_b))
+			back = true;
+		if (keyboard.wentDown(SDLK_c))
+			clear = true;
+
+		if (keyboard.wentUp(SDLK_SPACE))
+			flat = false;
+		if (keyboard.wentUp(SDLK_b))
+			back = false;
+		if (keyboard.wentUp(SDLK_c))
+			clear = false;
+
+		mrx.SetDesiredValue(mrx.GetDesiredValue() + mouse.dx / 20.0f);
+		mry.SetDesiredValue(mry.GetDesiredValue() + mouse.dy / 20.0f);
 
 		const float dt = 1.0f / 60.0f;
 
 		mrx.Update(dt);
 		mry.Update(dt);
 
-		if (SDL_LockSurface(surface) < 0)
-			throw_exception("failed to lock surface");
-
-		g_Surface.pixels = reinterpret_cast<int*>(surface->pixels);
-		g_Surface.pitch = surface->pitch >> 2;
+		g_Surface.pixels = reinterpret_cast<int*>(surface.getLine(0));
+		g_Surface.pitch = surface.sx;
 		
 		if (clear)
 		{
@@ -1370,16 +1243,14 @@ static void Execute()
 			Fill();
 		}
 		
-		Timer time;
-		
-		time.Start();
+		uint64_t time = -g_TimerRT.TimeUS_get();
 
 #if 1
 		{
 		//const int mn = 1;
 		//const int mn = 25;
-		const int mn = 49;
-		//const int mn = 9;
+		//const int mn = 49;
+		const int mn = 9;
 		static float rx[mn];
 		static float ry[mn];
 		static float rz[mn];
@@ -1412,14 +1283,15 @@ static void Execute()
 			ix -= (is - 1) / 2;
 			iy -= (is - 1) / 2;
 			//matT.MakeTranslation(ix * 5.0f, iy * 5.0f, 0.0f);
-			matT.MakeTranslation(ix * 2.0f, iy * 2.0f, 10.0f);
+			matT.MakeTranslation(ix * 5.0f, iy * 5.0f, 10.0f);
+			//matT.MakeTranslation(ix * 2.0f, iy * 2.0f, 10.0f);
 			//matT.MakeTranslation(ix * 1.0f, iy * 1.0f, 10.0f);
 			//float scale = 4.0f;
 			//float scale = 2.0f;
 			//float scale = 1.0f;
 			//float scale = 0.8f;
-			//float scale = 0.25f;
-			float scale = 0.1f;
+			float scale = 0.25f;
+			//float scale = 0.1f;
 			//float scale = 0.05f;
 			//float scale = 0.03f;
 			matS.MakeScaling3f(scale, scale, scale);
@@ -1431,31 +1303,33 @@ static void Execute()
 		}
 #endif
 
-		time.Stop();
+		time += g_TimerRT.TimeUS_get();
 
 #if 1
 		//if (frame % 100 == 0)
 		{
 			//printf("time: %gms\n", time / 100.0f);
-			printf("time: %gms\n", time.usec() / 1000.0f);
+			printf("time: %gms\n", time / 1000.0f);
 			//time = 0;
 		}
 #endif
 
-		SDL_UnlockSurface(surface);
+		GLuint texture = createTextureFromRGBA8(surface.getLine(0), surface.sx, surface.sy, false, true);
 
-		//if ((frame % 10) == 0)
-		if (SDL_Flip(surface) < 0)
-			throw_exception("failed to flip back buffer");
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			gxSetTexture(texture);
+			pushBlend(BLEND_OPAQUE);
+			drawRect(0, 0, surface.sx, surface.sy);
+			popBlend();
+			gxSetTexture(0);
+		}
+		framework.endDraw();
+
+		glDeleteTextures(1, &texture);
+		texture = 0;
 
 		++frame;
-
-#ifdef WINDOWS
-		}
-		__except(mswindows_handle_hardware_exceptions (GetExceptionCode ()))
-		{
-		}
-#endif
 	}
 
 	g_Texture = 0;
@@ -1468,22 +1342,12 @@ static void Execute()
 	delete g_DepthBuffer;
 	g_DepthBuffer = 0;
 
-	SDL_FreeSurface(surface);
-
-	SDL_Quit();
+	framework.shutdown();
 }
 
 int main(int argc, char* argv[])
 {
-	try
-	{
-		Execute();
+	Execute();
 
-		return 0;
-	}
-	catch (std::exception & e)
-	{
-		printf("error: %s\n", e.what());
-		return -1;
-	}
+	return 0;
 }

@@ -31,8 +31,6 @@
 #include "jgmod.h"
 #include "vfxNodeJgmod.h"
 
-// todo : remove install_sound etc and manage audio output ourselves. requires refactoring of jgmod voice management
-
 #define DIGI_SAMPLERATE 192000
 
 VFX_NODE_TYPE(VfxNodeJgmod)
@@ -82,23 +80,20 @@ VfxNodeJgmod::VfxNodeJgmod()
 	addOutput(kOutput_Pattern, kVfxPlugType_Float, &patternOutput);
 	addOutput(kOutput_Row, kVfxPlugType_Float, &rowOutput);
 	addOutput(kOutput_End, kVfxPlugType_Trigger, nullptr);
-	
-// todo : move allegro init elsewhere, or remove the need for init altogether by abstracting the mixer
 
-	static bool isInitialized = false;
+	timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Manual);
+	voiceApi = new AllegroVoiceApi(DIGI_SAMPLERATE, true);
 	
-	if (isInitialized == false)
-	{
-		isInitialized = true;
-		
-		if (install_sound(DIGI_AUTODETECT, MIDI_NONE, nullptr) < 0)
-		{
-			logError("unable to initialize sound card");
-		}
-	}
+	audioStream = new AudioStream_AllegroVoiceMixer(voiceApi, timerApi);
 	
+// todo : to make sure audio nodes added 'at the same time' (graph construction) are perfectly in sync, audio streaming should be paused globally, to avoid things from triggering ahead of things, before all streams are registered. this pleads for a global vfx graph controlled audio stream
+
+	audioOutput = new AudioOutput_PortAudio();
+	audioOutput->Initialize(2, DIGI_SAMPLERATE, 64);
+	audioOutput->Play(audioStream);
+
 	player = new JGMOD_PLAYER();
-	player->init(JGMOD_MAX_VOICES);
+	player->init(JGMOD_MAX_VOICES, timerApi, voiceApi);
 }
 
 VfxNodeJgmod::~VfxNodeJgmod()
@@ -107,6 +102,18 @@ VfxNodeJgmod::~VfxNodeJgmod()
 	
 	delete player;
 	player = nullptr;
+	
+	delete audioOutput;
+	audioOutput = nullptr;
+	
+	delete audioStream;
+	audioStream = nullptr;
+	
+	delete voiceApi;
+	voiceApi = nullptr;
+	
+	delete timerApi;
+	timerApi = nullptr;
 }
 
 void VfxNodeJgmod::tick(const float dt)
@@ -248,17 +255,17 @@ void VfxNodeJgmod::getDescription(VfxNodeDescription & d)
 		
 		for (int index = 0; index < mod->no_chn; ++index)
 		{
-			if (voice_get_position(player->voice_table[index]) >= 0 &&
+			if (voiceApi->voice_get_position(player->voice_table[index]) >= 0 &&
 				player->ci[index].volume >= 1 &&
 				player->ci[index].volenv.v >= 1 &&
-				voice_get_frequency(player->voice_table[index]) > 0 &&
+				voiceApi->voice_get_frequency(player->voice_table[index]) > 0 &&
 				player->mi.global_volume > 0)
 			{
 				d.add("%2d: %3d %2d %6dHz %3d ",
 					index+1,
 					player->ci[index].sample+1,
 					player->ci[index].volume,
-					voice_get_frequency(player->voice_table[index]),
+					voiceApi->voice_get_frequency(player->voice_table[index]),
 					player->ci[index].pan);
 			}
 			else
@@ -281,20 +288,11 @@ void VfxNodeJgmod::load(const char * filename)
 
 void VfxNodeJgmod::free()
 {
-	if (player->of != nullptr)
-	{
-		// todo : stop should clear 'of' member of player, making destroy_mod redundant ?
-		
-		player->stop();
-		
-		player->destroy_mod();
-		
-		mod = nullptr;
-	}
-	else if (mod != nullptr)
+	player->stop();
+	
+	if (mod != nullptr)
 	{
 		jgmod_destroy(mod);
-		
 		mod = nullptr;
 	}
 	

@@ -135,8 +135,8 @@ struct AudioFile : public AudioStream
 			{
 				m_filename = filename;
 				m_pcmData = pcmData;
-				m_sampleRate = audioStream.mSampleRate;
-				m_duration = pcmData.size() / double(audioStream.mSampleRate);
+				m_sampleRate = audioStream.SampleRate_get();
+				m_duration = pcmData.size() / double(audioStream.SampleRate_get());
 			}
 			SDL_UnlockMutex(m_mutex);
 		}

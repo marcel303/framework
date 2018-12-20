@@ -357,7 +357,7 @@ SoundData * loadSound_OGG(const char * filename)
 	
 	AudioStream_Vorbis stream;
 	stream.Open(filename, false);
-	const int sampleRate = stream.mSampleRate;
+	const int sampleRate = stream.SampleRate_get();
 	for (;;)
 	{
 		const int numSamples = stream.Provide(kMaxSamples, samples);
@@ -810,7 +810,7 @@ void SoundPlayer_OpenAL::playMusic(const char * filename, bool loop)
 		m_musicStream->Open(filename, loop);
 		m_musicOutput->Play(m_musicStream);
 		
-		Assert(m_musicStream->mSampleRate == 44100); // todo : handle different sample rates?
+		Assert(m_musicStream->SampleRate_get() == 44100); // todo : handle different sample rates?
 	}
 }
 
@@ -833,7 +833,9 @@ void SoundPlayer_OpenAL::setMusicVolume(float volume)
 
 #if FRAMEWORK_USE_PORTAUDIO
 
-void * SoundPlayer_PortAudio::createBuffer(const void * sampleData, const int sampleCount, const int channelSize, const int channelCount)
+#define RESAMPLE_FIXEDBITS 32
+
+void * SoundPlayer_PortAudio::createBuffer(const void * sampleData, const int sampleCount, const int sampleRate, const int channelSize, const int channelCount)
 {
 	if (sampleCount > 0 && channelSize == 2 && (channelCount == 1 || channelCount == 2))
 	{
@@ -843,6 +845,7 @@ void * SoundPlayer_PortAudio::createBuffer(const void * sampleData, const int sa
 		buffer->sampleData = new short[numValues];
 		memcpy(buffer->sampleData, sampleData, numValues * sizeof(short));
 		buffer->sampleCount = sampleCount;
+		buffer->sampleRate = sampleRate;
 		buffer->channelCount = channelCount;
 		
 		return buffer;
@@ -969,76 +972,78 @@ void SoundPlayer_PortAudio::generateAudio(float * __restrict samples, const int 
 		
 		for (int i = 0; i < m_numSources; ++i)
 		{
-			if (m_sources[i].playId != -1 && m_sources[i].buffer != nullptr)
+			Source & source = m_sources[i];
+			
+			if (source.playId != -1 && source.buffer != nullptr)
 			{
-				fassert(m_sources[i].buffer != nullptr);
+				fassert(source.buffer != nullptr);
 				
 				// read samples from the buffer
 				
-				const Buffer * buffer = m_sources[i].buffer;
-				int bufferPosition = m_sources[i].bufferPosition;
+				const Buffer & buffer = *source.buffer;
 				
-				int sampleIndex = 0;
+				const float scale = source.volume / (1 << 15);
 				
-				const float scale = m_sources[i].volume / (1 << 15);
+				int sampleIndex = source.bufferPosition_fp >> RESAMPLE_FIXEDBITS;
 				
-				if (buffer->channelCount == 1)
+				for (int i = 0; i < numSamples; ++i)
 				{
-					while (sampleIndex < numSamples)
+					Assert(sampleIndex >= 0 && sampleIndex < buffer.sampleCount);
+					
+					if (sampleIndex >= 0 && sampleIndex < buffer.sampleCount)
 					{
-						if (bufferPosition == buffer->sampleCount)
+						if (buffer.channelCount == 1)
 						{
-							if (m_sources[i].loop)
-							{
-								bufferPosition = 0;
-							}
-							else
-							{
-								m_sources[i].playId = -1;
-								m_sources[i].buffer = nullptr;
-								break;
-							}
+							const short * values = buffer.sampleData;
+							
+							const float value = values[sampleIndex] * scale;
+							
+							samples[i * 2 + 0] += value;
+							samples[i * 2 + 1] += value;
 						}
-						
-						const float value = buffer->sampleData[bufferPosition] * scale;
-						
-						samples[sampleIndex * 2 + 0] += value;
-						samples[sampleIndex * 2 + 1] += value;
-						
-						bufferPosition++;
-						sampleIndex++;
+						else if (buffer.channelCount == 2)
+						{
+							const short * values = buffer.sampleData;
+							
+							const float value1 = values[sampleIndex * 2 + 0] * scale;
+							const float value2 = values[sampleIndex * 2 + 1] * scale;
+							
+							samples[i * 2 + 0] += value1;
+							samples[i * 2 + 1] += value2;
+						}
+						else
+						{
+							Assert(false);
+						}
+					}
+					
+					// increment sample playback position
+					
+					source.bufferPosition_fp += source.bufferIncrement_fp;
+					
+					sampleIndex = source.bufferPosition_fp >> RESAMPLE_FIXEDBITS;
+					
+					// handle looping
+					
+					if (source.loop)
+					{
+						if (sampleIndex >= buffer.sampleCount)
+						{
+							source.bufferPosition_fp -= int64_t(buffer.sampleCount) << RESAMPLE_FIXEDBITS;
+							
+							sampleIndex = source.bufferPosition_fp >> RESAMPLE_FIXEDBITS;
+						}
+					}
+					else
+					{
+						if (sampleIndex >= buffer.sampleCount)
+						{
+							source.playId = -1;
+							source.buffer = nullptr;
+							break;
+						}
 					}
 				}
-				else if (buffer->channelCount == 2)
-				{
-					while (sampleIndex < numSamples)
-					{
-						if (bufferPosition == buffer->sampleCount)
-						{
-							if (m_sources[i].loop)
-							{
-								bufferPosition = 0;
-							}
-							else
-							{
-								m_sources[i].playId = -1;
-								m_sources[i].buffer = nullptr;
-								break;
-							}
-						}
-						
-						const float value1 = buffer->sampleData[bufferPosition * 2 + 0] * scale;
-						const float value2 = buffer->sampleData[bufferPosition * 2 + 1] * scale;
-						
-						samples[sampleIndex * 2 + 0] += value1;
-						samples[sampleIndex * 2 + 1] += value2;
-						
-						bufferPosition++;
-						sampleIndex++;
-					}
-				}
-				
-				m_sources[i].bufferPosition = bufferPosition;
 			}
 		}
 	}
@@ -1059,6 +1064,9 @@ bool SoundPlayer_PortAudio::initPortAudio(const int numChannels, const int sampl
 	}
 
 	logDebug("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
+	
+	m_paInitialized = true;
+	m_sampleRate = sampleRate;
 	
 	PaStreamParameters outputParameters;
 	memset(&outputParameters, 0, sizeof(outputParameters));
@@ -1115,10 +1123,15 @@ bool SoundPlayer_PortAudio::shutPortAudio()
 		m_paStream = nullptr;
 	}
 	
-	if ((err = Pa_Terminate()) != paNoError)
+	if (m_paInitialized)
 	{
-		logError("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
-		return false;
+		m_paInitialized = false;
+		
+		if ((err = Pa_Terminate()) != paNoError)
+		{
+			logError("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
+			return false;
+		}
 	}
 	
 	return true;
@@ -1142,7 +1155,9 @@ SoundPlayer_PortAudio::SoundPlayer_PortAudio()
 	
 	//
 	
+	m_paInitialized = false;
 	m_paStream = nullptr;
+	m_sampleRate = 0;
 }
 
 SoundPlayer_PortAudio::~SoundPlayer_PortAudio()
@@ -1238,7 +1253,8 @@ int SoundPlayer_PortAudio::playSound(const void * buffer, const float volume, co
 	{
 		source->playId = m_playId++;
 		source->buffer = (Buffer*)buffer;
-		source->bufferPosition = 0;
+		source->bufferPosition_fp = 0;
+		source->bufferIncrement_fp = ((int64_t(source->buffer->sampleRate) << RESAMPLE_FIXEDBITS) / m_sampleRate);
 		source->loop = loop;
 		source->volume = volume;
 		
@@ -1315,7 +1331,7 @@ void SoundPlayer_PortAudio::playMusic(const char * filename, const bool loop)
 	
 	m_musicStream->Open(filename, loop);
 	
-	Assert(m_musicStream->mSampleRate == 44100); // todo : handle different sample rates?
+	Assert(m_musicStream->SampleRate_get() == 44100); // todo : handle different sample rates?
 }
 
 void SoundPlayer_PortAudio::stopMusic()

@@ -32,7 +32,6 @@
 
 #include "jsusfx.h"
 #include "jsusfx_file.h"
-#include "jsusfx_gfx.h"
 
 #include "framework.h"
 #include "gfx-framework.h"
@@ -43,22 +42,6 @@
 
 //
 
-extern SDL_mutex * g_vfxAudioMutex; // fixme : remove this dependency
-
-static void lock()
-{
-	const int r = SDL_LockMutex(g_vfxAudioMutex); // fixme : mutex lock around draw code is a horrible idea!
-	Assert(r == 0);
-}
-
-static void unlock()
-{
-	const int r = SDL_UnlockMutex(g_vfxAudioMutex); // fixme : mutex lock around draw code is a horrible idea!
-	Assert(r == 0);
-}
-
-//
-
 #include "jsusfx_serialize.h"
 #include "StringEx.h"
 #include "tinyxml2.h"
@@ -66,15 +49,7 @@ static void unlock()
 
 struct AudioResource_JsusFx : AudioResourceBase
 {
-	int version;
-	
 	JsusFxSerializationData serializationData;
-	
-	AudioResource_JsusFx()
-		: version(0)
-		, serializationData()
-	{
-	}
 	
 	virtual void save(tinyxml2::XMLPrinter * printer) override
 	{
@@ -157,6 +132,8 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 {
 	AudioResource_JsusFx * resource = nullptr;
 	
+	int version = 0;
+	
 	// we need to create a jsusfx instance to visually edit the resource
 	JsusFxPathLibrary_Basic pathLibrary;
 	JsusFxFileAPI_Basic fileAPI;
@@ -202,14 +179,6 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 		Assert(resource == nullptr);
 	}
 	
-	virtual void afterSizeChanged() override
-	{
-	}
-	
-	virtual void afterPositionChanged() override
-	{
-	}
-	
 	virtual bool tick(const float dt, const bool inputIsCaptured) override
 	{
 		if (jsusFxIsValid)
@@ -221,6 +190,21 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 		
 		if (jsusFxIsValid && resource != nullptr)
 		{
+			if (resource->version != version)
+			{
+				resource->lock();
+				{
+					version = resource->version;
+					
+					// the resource changed without us knowing it. perhaps there's a second editor operating on it. refresh!
+					
+					JsusFxSerializer_Basic serializer(resource->serializationData);
+					
+					jsusFx.serialize(serializer, false);
+				}
+				resource->unlock();
+			}
+			
 			// it's difficult to tell if the user interacted with the effect's ui and made changes. so we just
 			// serialize the effect each tick and see if it's different from the current serialization data
 			
@@ -234,13 +218,15 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 				{
 					// it changed! update the resource
 					
-					lock();
+					resource->lock();
 					{
 						resource->serializationData = serializationData;
 						
 						resource->version++;
+						
+						version = resource->version;
 					}
-					unlock();
+					resource->unlock();
 				}
 			}
 		}
@@ -262,6 +248,8 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 		
 		if (createAudioNodeResource(node, type, name, resource))
 		{
+			version = resource->version;
+			
 			if (jsusFxIsValid)
 			{
 				// load the initial data into the effect
@@ -312,11 +300,13 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 	int numInputs = 0;
 	int numOutputs = 0;
 	
-	void initFromJsusFx(const JsusFx_Framework & jsusFx, const char * _filename)
+	void initFromJsusFx(const JsusFx_Framework & jsusFx, const char * _filename, const char * _typeName)
 	{
 		filename = _filename;
 		
-		typeName = String::FormatC("jsusfx.%s", jsusFx.desc);
+		typeName = String::FormatC("jsusfx.%s", _typeName);
+		
+		displayName = jsusFx.desc;
 		
 		// add slider inputs
 		
@@ -450,7 +440,13 @@ void createJsusFxAudioNodes(const char * dataRoot, const char * searchPath, cons
 		r->dataRoot = dataRoot;
 		r->searchPath = searchPath;
 		
-		r->initFromJsusFx(jsusFx, filename.c_str());
+		const char * typeName = filename.c_str();
+		for (size_t i = 0; searchPath[i] != 0 && *typeName == searchPath[i]; ++i)
+			typeName++;
+		while (*typeName == '/')
+			typeName++;
+		
+		r->initFromJsusFx(jsusFx, filename.c_str(), typeName);
 		
 		r->create = [](void * data)
 		{
@@ -485,9 +481,9 @@ AudioNodeJsusFx::AudioNodeJsusFx(const char * dataRoot, const char * searchPath)
 	, jsusFx(nullptr)
 	, jsusFxIsValid(false)
 	, jsusFx_fileAPI(nullptr)
-	, jsusFx_gfx(nullptr)
+	, jsusFx_gfxAPI(nullptr)
 	, resource(nullptr)
-	, resourceVersion(0)
+	, resourceVersion(-1)
 {
 	Assert(pathLibrary == nullptr);
 	pathLibrary = new JsusFxPathLibrary_Basic(dataRoot);
@@ -519,19 +515,29 @@ void AudioNodeJsusFx::load(const char * filename)
 	jsusFx_fileAPI->init(jsusFx->m_vm);
 	jsusFx->fileAPI = jsusFx_fileAPI;
 	
-	Assert(jsusFx_gfx == nullptr);
-	jsusFx_gfx = new JsusFxGfx_Framework(*jsusFx);
-	jsusFx_gfx->init(jsusFx->m_vm);
-	jsusFx->gfx = jsusFx_gfx;
+	Assert(jsusFx_gfxAPI == nullptr);
+	jsusFx_gfxAPI = new JsusFxGfx();
+	jsusFx_gfxAPI->init(jsusFx->m_vm);
+	jsusFx->gfx = jsusFx_gfxAPI;
 	
 	//
 	
 	Assert(jsusFxIsValid == false);
 	
-	jsusFxIsValid = jsusFx->compile(*pathLibrary, filename, JsusFx::kCompileFlag_CompileGraphicsSection | JsusFx::kCompileFlag_CompileSerializeSection);
+	jsusFxIsValid = jsusFx->compile(*pathLibrary, filename, JsusFx::kCompileFlag_CompileSerializeSection);
 	
 	if (jsusFxIsValid)
 	{
+		resource->lock();
+		{
+			resourceVersion = resource->version;
+			
+			JsusFxSerializer_Basic serializer(resource->serializationData);
+			
+			jsusFx->serialize(serializer, false);
+		}
+		resource->unlock();
+		
 		jsusFx->prepare(SAMPLE_RATE, AUDIO_UPDATE_SIZE);
 	}
 }
@@ -540,12 +546,12 @@ void AudioNodeJsusFx::free()
 {
 	jsusFxIsValid = false;
 	
-	delete jsusFx_gfx;
-	jsusFx_gfx = nullptr;
+	delete jsusFx_gfxAPI;
+	jsusFx_gfxAPI = nullptr;
 	
 	if (jsusFx != nullptr)
 		jsusFx->gfx = nullptr;
-	
+		
 	delete jsusFx_fileAPI;
 	jsusFx_fileAPI = nullptr;
 	
@@ -582,7 +588,16 @@ void AudioNodeJsusFx::tick(const float dt)
 {
 	if (isPassthrough)
 	{
-		clearOutputs();
+		for (int i = 0; i < audioOutputs.size() && i < numAudioInputs; ++i)
+		{
+			const AudioFloat * audioInput = getInputAudioFloat(AUDIOINPUT_INDEX(i), &AudioFloat::Zero);
+			
+			audioOutputs[i].set(*audioInput);
+		}
+		
+		for (int i = numAudioInputs; i < audioOutputs.size(); ++i)
+			audioOutputs[i].setZero();
+		
 		return;
 	}
 	
@@ -595,7 +610,7 @@ void AudioNodeJsusFx::tick(const float dt)
 	
 	if (resourceVersion != resource->version)
 	{
-		lock();
+		resource->lock();
 		{
 			resourceVersion = resource->version;
 			
@@ -606,7 +621,7 @@ void AudioNodeJsusFx::tick(const float dt)
 				jsusFx->serialize(serializer, false);
 			}
 		}
-		unlock();
+		resource->unlock();
 	}
 	
 	if (jsusFxIsValid == false)
@@ -617,25 +632,25 @@ void AudioNodeJsusFx::tick(const float dt)
 	{
 		// update slider values
 		
-	// fixme : automated slider changes should directly set the slider values
-	//         moveSlider / @slider should not be invoked. only when the user
-	//         changes the slider through the Reaper slider UI
-	// at least, this is what the Reaper documentation and forum posts are telling me..
-	// but does this make sense? it wouldn't work with the ATK code I've seen for instance..
-	// how does Reaper handle automation events?
-		
 		AudioFloat defaultValue;
 		
 		for (auto & sliderInput : sliderInputs)
 		{
+		#if 0
+		// todo : slider input default value should come from resource ..
+			defaultValue.setScalar(sliderInput.defaultValue);
+			
+			const float value = getInputAudioFloat(sliderInput.socketIndex, &defaultValue)->getMean();
+		#else
 			auto input = tryGetInput(sliderInput.socketIndex);
 			
 			Assert(input != nullptr);
 			if (input == nullptr || !input->isConnected())
-				continue;
+				continue; // todo : move slider to its default value when input is not connected. or to whatever is set inside the serialiation data..
 			
 			const float value = input->getAudioFloat().getMean();
-			
+		#endif
+		
 			Assert(jsusFx->sliders[sliderInput.sliderIndex].exists);
 			
 			jsusFx->moveSlider(sliderInput.sliderIndex, value);
@@ -671,6 +686,9 @@ void AudioNodeJsusFx::tick(const float dt)
 
 void AudioNodeJsusFx::getDescription(AudioNodeDescription & d)
 {
+	if (jsusFx == nullptr)
+		return;
+		
 	for (int i = 0; i < JsusFx::kMaxSliders; ++i)
 	{
 		auto & slider = jsusFx->sliders[i];

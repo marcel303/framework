@@ -36,6 +36,7 @@
 #include "StringEx.h"
 #include "testBase.h"
 #include "Timer.h"
+#include <atomic>
 #include <complex>
 
 // todo : use a longer test sound
@@ -750,7 +751,7 @@ struct AudioSource_Binaural : AudioSource
 	
 	HRTF hrtf;
 	
-	uint64_t processTimeAvg;
+	std::atomic<uint64_t> processTimeAvg;
 	
 	SDL_mutex * mutex;
 	

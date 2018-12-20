@@ -79,6 +79,9 @@ namespace AnimModel
 	class Mesh
 	{
 	public:
+		std::string m_name;
+		bool m_isVisible;
+		
 		Vertex * m_vertices;
 		int m_numVertices;
 		

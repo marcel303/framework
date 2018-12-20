@@ -101,8 +101,7 @@ VfxNodeAudioGraph::VfxNodeAudioGraph()
 	addInput(kInput_LimitPeak, kVfxPlugType_Float);
 	addInput(kInput_NumChannels, kVfxPlugType_Int);
 	
-	globals = g_vfxAudioGraphMgr->createGlobals();
-	globals->init(g_vfxAudioMutex, &voiceMgr, g_vfxAudioGraphMgr);
+	globals = g_vfxAudioGraphMgr->createGlobals(g_vfxAudioMutex, &voiceMgr);
 }
 
 VfxNodeAudioGraph::~VfxNodeAudioGraph()
@@ -112,6 +111,7 @@ VfxNodeAudioGraph::~VfxNodeAudioGraph()
 	delete [] channelOutputs;
 	channelOutputs = nullptr;
 	
+	// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeGlobals will prune any instances still left fading out that reference our globals
 	g_vfxAudioGraphMgr->freeGlobals(globals);
 }
 
@@ -175,6 +175,7 @@ void VfxNodeAudioGraph::updateDynamicInputs()
 				
 				dynamicInput.name = controlValue.name;
 				dynamicInput.type = kVfxPlugType_Float;
+				dynamicInput.defaultValue = String::FormatC("%f", controlValue.defaultX);
 				
 				currentControlValues.push_back(controlValue.name);
 				
@@ -273,8 +274,6 @@ void VfxNodeAudioGraph::tick(const float dt)
 		
 		audioGraphInstance = g_vfxAudioGraphMgr->createInstance(filename, globals);
 		
-		//static_cast<AudioGraphManager_RTE*>(g_vfxAudioGraphMgr)->selectInstance(audioGraphInstance); // fixme : let multi editor show UI to select file or instance ?
-		
 		currentFilename = filename;
 	}
 	
@@ -311,7 +310,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 			AudioVoiceManager::kOutputMode_MultiChannel;
 		
 		const int numVoices = voiceMgr.voices.size();
-		AudioVoice * voices[numVoices];
+		AudioVoice * voices[numVoices + 1];
 		int voiceIndex = 0;
 		for (auto & voice : voiceMgr.voices)
 			voices[voiceIndex++] = voice;
@@ -340,17 +339,17 @@ void VfxNodeAudioGraph::tick(const float dt)
 			
 			SDL_LockMutex(audioGraph->globals->audioMutex);
 			{
-				for (auto & controlValue : audioGraph->globals->controlValues)
+			for (auto & controlValue : audioGraph->globals->controlValues)
+			{
+				if (controlValue.name == dynamicInput.name)
 				{
-					if (controlValue.name == dynamicInput.name)
-					{
-						if (input->isConnected())
-							controlValue.desiredX = input->getFloat();
-						else
-							controlValue.desiredX = controlValue.defaultX;
-					}
+					if (input->isConnected())
+						controlValue.desiredX = input->getFloat();
+					else
+						controlValue.desiredX = controlValue.defaultX;
 				}
 			}
+		}
 			SDL_UnlockMutex(audioGraph->globals->audioMutex);
 		}
 		

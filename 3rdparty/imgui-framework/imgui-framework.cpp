@@ -91,16 +91,11 @@ void FrameworkImGuiContext::init(const bool enableIniFiles)
 	mouse_cursors[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
 	mouse_cursors[ImGuiMouseCursor_Hand] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 	
-	// create font texture
-	
-	int sx, sy;
-	uint8_t * pixels = nullptr;
-	io.Fonts->GetTexDataAsRGBA32(&pixels, &sx, &sy);
-	
-	font_texture_id = createTextureFromRGBA8(pixels, sx, sy, false, true);
-	io.Fonts->TexID = (void*)(uintptr_t)font_texture_id;
-	
 	popImGuiContext();
+	
+	// update the font texture
+	
+	updateFontTexture();
 }
 
 void FrameworkImGuiContext::shut()
@@ -291,6 +286,30 @@ void FrameworkImGuiContext::updateMouseCursor()
 			SDL_ShowCursor(SDL_TRUE);
 		}
 	}
+}
+
+void FrameworkImGuiContext::updateFontTexture()
+{
+	pushImGuiContext();
+	
+	auto & io = ImGui::GetIO();
+	
+	if (font_texture_id != 0)
+	{
+		glDeleteTextures(1, &font_texture_id);
+		font_texture_id = 0;
+	}
+	
+	// create font texture
+	
+	int sx, sy;
+	uint8_t * pixels = nullptr;
+	io.Fonts->GetTexDataAsRGBA32(&pixels, &sx, &sy);
+	
+	font_texture_id = createTextureFromRGBA8(pixels, sx, sy, false, true);
+	io.Fonts->TexID = (void*)(uintptr_t)font_texture_id;
+	
+	popImGuiContext();
 }
 
 const char * FrameworkImGuiContext::getClipboardText(void * user_data)

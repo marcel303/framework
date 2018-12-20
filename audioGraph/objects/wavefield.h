@@ -64,13 +64,10 @@ struct Wavefield1D
 	
 	void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds);
 	
-	void doGaussianImpact(const int x, const int radius, const double strength);
+	void doGaussianImpact(const int x, const int radius, const double strength, const double intensity);
 	float sample(const float x) const;
 	
-#if AUDIO_USE_SSE
-	void * operator new(size_t size);
-	void operator delete(void * mem);
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 //
@@ -94,13 +91,10 @@ struct Wavefield1Df
 	
 	void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds);
 	
-	void doGaussianImpact(const int x, const int radius, const float strength);
+	void doGaussianImpact(const int x, const int radius, const float strength, const float intensity);
 	float sample(const float x) const;
 	
-#if AUDIO_USE_SSE
-	void * operator new(size_t size);
-	void operator delete(void * mem);
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 //
@@ -131,15 +125,12 @@ struct Wavefield2D
 	
 	void randomize();
 	
-	void doGaussianImpact(const int x, const int y, const int radius, const double strength);
+	void doGaussianImpact(const int x, const int y, const int radius, const double strength, const double intensity);
 	float sample(const float x, const float y) const;
 	
 	void copyFrom(const Wavefield2D & other, const bool copyP, const bool copyV, const bool copyF);
 	
-#if AUDIO_USE_SSE
-	void * operator new(size_t size);
-	void operator delete(void * mem);
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 //
@@ -170,13 +161,10 @@ struct Wavefield2Df
 	
 	void randomize();
 	
-	void doGaussianImpact(const int _x, const int _y, const int _radius, const float strength);
+	void doGaussianImpact(const int x, const int y, const int radius, const float strength, const float intensity);
 	float sample(const float x, const float y) const;
 	
 	void copyFrom(const Wavefield2Df & other, const bool copyP, const bool copyV, const bool copyF);
 	
-#if AUDIO_USE_SSE
-	void * operator new(size_t size);
-	void operator delete(void * mem);
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };

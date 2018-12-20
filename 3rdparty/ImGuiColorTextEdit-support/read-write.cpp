@@ -33,7 +33,11 @@ static bool loadIntoTextEditor(const char * filename, TextIO::LineEndings & line
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
 	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
 	
 	if (framework.init(GFX_SX, GFX_SY))
 	{

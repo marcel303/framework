@@ -70,7 +70,8 @@ struct AudioNodeSatellites : AudioNodeBase
 	AudioGraph * audioGraph;
 	
 	AudioNodeSatellites();
-	virtual ~AudioNodeSatellites() override;
+	
+	virtual void shut() override;
 	
 	virtual void tick(const float dt) override;
 };

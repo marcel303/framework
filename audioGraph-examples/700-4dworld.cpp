@@ -27,6 +27,7 @@
 
 #include "audioGraph.h"
 #include "audioGraphManager.h"
+#include "audioTypes.h"
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager4D.h"
 #include "Calc.h"
@@ -411,7 +412,6 @@ struct Ball : EntityBase
 				vel[i] *= -1.f;
 			}
 		}
-		
 		
 		graphInstance->audioGraph->setMemf("pos", pos[0], pos[1], pos[2]);
 		graphInstance->audioGraph->setMemf("vel", vel[0], vel[1], vel[2]);
@@ -1407,7 +1407,7 @@ struct World : WorldInterface
 					const float impactX = mouseWavefield[0];
 					const float impactY = mouseWavefield[1];
 					
-					wavefield.doGaussianImpact(impactX, impactY, 3, currentParams.wavefieldD);
+					wavefield.doGaussianImpact(impactX, impactY, 3, currentParams.wavefieldD, 1.f);
 					
 					if (mouse.wentUp(BUTTON_LEFT))
 					{
@@ -1699,14 +1699,14 @@ struct World : WorldInterface
 	{
 		const Vec2 samplePosition = constrainSamplePosition(wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2])), 3);
 		
-		wavefield.doGaussianImpact(samplePosition[0], samplePosition[1], 3, amount);
+		wavefield.doGaussianImpact(samplePosition[0], samplePosition[1], 3, amount, 1.f);
 	}
 	
 	virtual void rippleFlight(const Vec3 & p) override
 	{
 		const Vec2 samplePosition = constrainSamplePosition(wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2])), 2);
 		
-		wavefield.doGaussianImpact(samplePosition[0], samplePosition[1], 2, .05f);
+		wavefield.doGaussianImpact(samplePosition[0], samplePosition[1], 2, .05f, 1.f);
 	}
 	
 	virtual float measureSound(const Vec3 & p) override
@@ -1723,8 +1723,7 @@ struct World : WorldInterface
 		return wavefield.sample(samplePosition[0], samplePosition[1]);
 	}
 	
-	void * operator new(size_t size) { return MemAlloc(size, 32); }
-	void operator delete(void * mem) { MemFree(mem); }
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 //
@@ -2142,6 +2141,48 @@ int main(int argc, char * argv[])
 						}
 					}
 					SDL_UnlockMutex(audioGraphMgr.globals->audioMutex);
+					
+					// per instance control values
+					if (audioGraphMgr.selectedFile != nullptr && audioGraphMgr.selectedFile->activeInstance != nullptr)
+					{
+						auto audioGraph = audioGraphMgr.selectedFile->activeInstance->audioGraph;
+						
+						audioGraph->lockControlValues();
+						{
+							auto & controlValues = audioGraph->stateDescriptor.controlValues;
+							
+							int padIndex = 0;
+							for (int i = 0; i < controlValues.size(); ++i)
+							{
+								auto & controlValue = controlValues[i];
+								
+								if (controlValue.type == AudioControlValue::kType_Vector1d)
+								{
+									doSliderWithPreview(controlValue.desiredX, controlValue.name.c_str(), controlValue.currentX, dt);
+								}
+								else if (controlValue.type == AudioControlValue::kType_Vector2d)
+								{
+									const bool nextIsPad = i + 1 < controlValues.size() && controlValues[i + 1].type == AudioControlValue::kType_Vector2d;
+									
+									doPad(
+										controlValue.desiredX,
+										controlValue.desiredY,
+										controlValue.name.c_str(),
+										controlValue.currentX,
+										controlValue.currentY,
+										(padIndex % 3) / 3.f, 1.f / 3.f,
+										(padIndex % 3) == 2 || nextIsPad == false,
+										dt);
+									
+									if (nextIsPad)
+										padIndex++;
+									else
+										padIndex = 0;
+								}
+							}
+						}
+						audioGraph->unlockControlValues();
+					}
 				}
 			}
 		}
@@ -2300,6 +2341,10 @@ int main(int argc, char * argv[])
 		{
 			inputIsCaptured |= world->tick(dt);
 		}
+		
+		//
+		
+		audioGraphMgr.tickMain();
 		
 		//
 		

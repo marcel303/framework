@@ -15,8 +15,8 @@
 	#include "Timer.h"
 #endif
 
-// todo : use a single page file, use block-aligned IO
-// todo : make page file location an init option
+// todo-planetvis : use a single page file, use block-aligned IO
+// todo-planetvis : make page file location an init option
 
 PageIoManager * pageIoMgr = nullptr;
 

@@ -29,6 +29,7 @@ struct AudioSample;
 
 class AudioIn
 {
+	bool m_paInitialized;
 	void * m_stream;
 	AudioSample * m_sampleBuffer;
 	int m_sampleBufferSize;

@@ -1,13 +1,16 @@
+#include "framework.h"
+#include "image.h"
+#include "SIMD.h"
+#include "Timer.h"
 #include <algorithm>
 #include <cmath>
-#include <CoreFoundation/CoreFoundation.h>
-#include <SDL/SDL.h>
-#include "../../../libgg/SIMD.h"
 
 typedef SimdVec Vec;
 typedef SimdVecArg VecArg;
 
-#define SHOW_NONLINEAR 1
+#define SHOW_NONLINEAR 0 // when one, show the left sphere using non-linear color space
+
+#define ACCURATE_GAMME_CONVERSION 1 // when zero, use fast but slightly less accurate gamma conversion routines
 
 inline Vec operator+(VecArg v1, VecArg v2) { return v1.Add(v2); }
 inline Vec operator-(VecArg v1, VecArg v2) { return v1.Sub(v2); }
@@ -24,7 +27,7 @@ inline Vec operator-(VecArg v) { return v.Neg(); }
 
 const static float kGamma = 2.2f;
 
-#if 1
+#if ACCURATE_GAMME_CONVERSION
 inline float GammaToLinear(float v)
 {
 	return std::pow(v, kGamma);
@@ -245,39 +248,29 @@ int RayPlane(
 
 int main(int argc, char * argv[])
 {
-	SDL_Init(SDL_INIT_EVERYTHING);
-	//SDL_Surface * surface = SDL_SetVideoMode(300, 200, 32, SDL_DOUBLEBUF | SDL_SWSURFACE);
-	//SDL_Surface * surface = SDL_SetVideoMode(600, 400, 32, SDL_DOUBLEBUF | SDL_SWSURFACE);
-	SDL_Surface * surface = SDL_SetVideoMode(800, 600, 32, SDL_DOUBLEBUF | SDL_SWSURFACE);
-	if (!surface)
-		return 0;
+	if (!framework.init(800, 600))
+		return -1;
 	
-	bool stop = false;
+	ImageData image(800, 600);
 	
-	while (!stop)
+	for (;;)
 	{
-		SDL_Event e;
-		while (SDL_PollEvent(&e))
-		{
-			if (e.type == SDL_KEYDOWN)
-				stop = true;
-		}
+		framework.process();
 		
-		SDL_LockSurface(surface);
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
 		
-		int * pixels = reinterpret_cast<int*>(surface->pixels);
-		const int pitch = surface->pitch >> 2;
-			
-		const int shiftR = surface->format->Rshift;
-		const int shiftG = surface->format->Gshift;
-		const int shiftB = surface->format->Bshift;
-
-	#define PUTPIX(x, y, r, g, b) pixels[(x) + (y) * pitch] = (int(r) << shiftR) | (int(g) << shiftG) | ((int)b << shiftB)
+		if (framework.quitRequested)
+			break;
+		
+		uint32_t * __restrict pixels = reinterpret_cast<uint32_t*>(image.getLine(0));
+		
+	#define PUTPIX(x, y, r, g, b) pixels[(x) + (y) * image.sx] = (int(r) << 0) | (int(g) << 8) | ((int)b << 16)
 		
 		static int l = 0;
 		l = (l + 1) & 255;
 		
-		int s = surface->w/3;
+		const int s = image.sx/3;
 		for (int y = 0; y < s; ++y)
 		{
 			for (int x = 0; x < s; ++x)
@@ -292,8 +285,7 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		double time = 0.0;
-		time -= CFAbsoluteTimeGetCurrent();
+		uint64_t time = -g_TimerRT.TimeUS_get();
 		
 		static float animationTime = 0.f;
 		animationTime += 1.f / 160.f;
@@ -340,16 +332,16 @@ int main(int argc, char * argv[])
 			for (int i = 0; i < numLights; ++i)
 				lightColor[i] = GammaToLinear(lightColorBase[i]);
 			
-			const float viewScaleRcp = 1.f / (surface->h / 2.f);
-			const float viewCenterX = surface->w / 2.f;
-			const float viewCenterY = surface->h / 2.f;
+			const float viewScaleRcp = 1.f / (image.sy / 2.f);
+			const float viewCenterX = image.sx / 2.f;
+			const float viewCenterY = image.sy / 2.f;
 			
 			const Vec rayDirectionX(0.f);
 			const Vec rayDirectionY(0.f);
 			const Vec rayDirectionZ(1.f);
 			
 			//#pragma omp parallel for
-			for (int y = 0; y < surface->h; ++y)			
+			for (int y = 0; y < image.sy; ++y)
 			{
 				Vec rayOriginX;
 				Vec rayOriginY;
@@ -357,7 +349,7 @@ int main(int argc, char * argv[])
 				for (int i = 0; i < 4; ++i)
 					rayOriginY(i) = (y - viewCenterY) * viewScaleRcp;
 
-				for (int x = 0; x < surface->w / 4; ++x)
+				for (int x = 0; x < image.sx / 4; ++x)
 				{
 					for (int i = 0; i < 4; ++i)
 						rayOriginX(i) = ((x * 4 + i) - viewCenterX) * viewScaleRcp;
@@ -432,7 +424,7 @@ int main(int argc, char * argv[])
 							if (i == 0 && numLights != 1)
 								lightIntensity += Vec(.2f);
 							//lightIntensity = lightIntensity.Add(Vec(.2f)).Mul(Vec(1.f/1.2f)); // rim lighting
-							lightIntensity = lightIntensity.Mul(Vec(.5));
+							lightIntensity = lightIntensity.Mul(Vec(.5f));
 							lightIntensity = lightIntensity.Max(VEC_ZERO);
 							
 						#if SHOW_NONLINEAR
@@ -483,15 +475,27 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		time += CFAbsoluteTimeGetCurrent();
+		time += g_TimerRT.TimeUS_get();
 		
-		printf("trace took %f ms\n", float(time * 1000.0));
+		printf("trace took %f ms\n", float(time / 1000.0));
 	
-		SDL_UnlockSurface(surface);
-		SDL_Flip(surface);
+		GLuint texture = createTextureFromRGBA8(pixels, image.sx, image.sy, false, true);
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			gxSetTexture(texture);
+			pushBlend(BLEND_OPAQUE);
+			drawRect(0, 0, 800, 600);
+			popBlend();
+			gxSetTexture(0);
+		}
+		framework.endDraw();
+		
+		glDeleteTextures(1, &texture);
+		texture = 0;
 	}
 	
-	SDL_Quit();
+	framework.shutdown();
 	
-	return 0;	
+	return 0;
 }

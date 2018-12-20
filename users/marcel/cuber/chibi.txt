@@ -1,0 +1,10 @@
+app marcel-cuber
+	
+	depend_library framework
+	
+	add_files config.h cube.cpp cube.h GameOfLife.h script.cpp script.h simplexnoise.cpp simplexnoise.h simplextextures.cpp simplextextures.h
+	add_files main.cpp
+	add_files AudioFFT.cpp AudioFFT.h
+	add_files OpenSimplexNoise.cpp OpenSimplexNoise.h
+
+	resource_path "/Users/thecat/Google Drive/Projects/cuber"

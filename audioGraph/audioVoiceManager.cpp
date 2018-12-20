@@ -484,7 +484,7 @@ void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int
 	#ifdef _MSC_VER
 		AudioVoice ** voiceArray = (AudioVoice**)alloca(numVoices * sizeof(AudioVoice*));
 	#else
-		AudioVoice * voiceArray[numVoices];
+		AudioVoice * voiceArray[numVoices + 1];
 	#endif
 		int voiceIndex = 0;
 		for (auto & voice : voices)

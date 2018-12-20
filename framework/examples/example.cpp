@@ -105,7 +105,7 @@ int main(int argc, char * argv[])
 	float y = sy/4.f;
 	
 	Music bgm("bgm.ogg");
-	//bgm.play();
+	bgm.play();
 
 	Shader shader("shader1");
 	Shader postprocess("shader2");

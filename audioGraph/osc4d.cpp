@@ -65,7 +65,41 @@ void Osc4D::setSource(const int _source)
 {
 	source = _source;
 	
+#if 1
+	// construct the full OSC prefix '/source%d/'
+	
+	// first convert the source index to a (reversed) number string
+	
+	char number[16];
+	int numberLength = 0;
+	int remainder = source + 1;
+	while (remainder != 0)
+	{
+		const int next = remainder / 10;
+		const int digit = remainder - next * 10;
+		number[numberLength++] = '0' + digit;
+		remainder = next;
+	}
+	
+	int textLength = 0;
+	
+	// add prefix
+	const char * prefix = "/source";
+	for (int i = 0; i < sizeof(prefix) - 1; ++i)
+		sourceOscName[textLength++] = prefix[i];
+	
+	// add number (in reversed order)
+	for (int i = numberLength - 1; i >= 0; --i)
+		sourceOscName[textLength++] = number[i];
+	
+	// add the final slash
+	sourceOscName[textLength++] = '/';
+	
+	// and terminate the string
+	sourceOscName[textLength] = 0;
+#else
 	sprintf_s(sourceOscName, sizeof(sourceOscName), "/source%d/", source + 1);
+#endif
 }
 
 void Osc4D::sourceColor(const float r, const float g, const float b)

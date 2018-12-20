@@ -67,7 +67,7 @@ VFX_NODE_TYPE(VfxNodeAudioGraphPoly)
 VfxNodeAudioGraphPoly::VfxNodeAudioGraphPoly()
 	: VfxNodeBase()
 	, voiceMgr()
-	, globals()
+	, globals(nullptr)
 	, instances()
 	, currentFilename()
 	, voicesData()
@@ -84,7 +84,7 @@ VfxNodeAudioGraphPoly::VfxNodeAudioGraphPoly()
 	
 	memset(instances, 0, sizeof(instances));
 	
-	globals.init(g_vfxAudioMutex, &voiceMgr, g_vfxAudioGraphMgr);
+	globals = g_vfxAudioGraphMgr->createGlobals(g_vfxAudioMutex, &voiceMgr);
 }
 
 VfxNodeAudioGraphPoly::~VfxNodeAudioGraphPoly()
@@ -94,6 +94,9 @@ VfxNodeAudioGraphPoly::~VfxNodeAudioGraphPoly()
 		if (instances[i] != nullptr)
 			g_vfxAudioGraphMgr->free(instances[i], false);
 	}
+	
+	// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeGlobals will prune any instances still left fading out that reference our globals
+	g_vfxAudioGraphMgr->freeGlobals(globals);
 }
 
 void VfxNodeAudioGraphPoly::updateDynamicInputs()
@@ -124,9 +127,7 @@ void VfxNodeAudioGraphPoly::updateDynamicInputs()
 	{
 		auto audioGraph = audioGraphInstance->audioGraph;
 		
-		audioGraph->mutex.lock();
-		auto controlValues = audioGraph->controlValues;
-		audioGraph->mutex.unlock();
+		const auto & controlValues = audioGraph->stateDescriptor.controlValues;
 		
 		bool equal = true;
 		
@@ -172,6 +173,7 @@ void VfxNodeAudioGraphPoly::updateDynamicInputs()
 				
 				dynamicInput.name = controlValue.name;
 				dynamicInput.type = kVfxPlugType_Channel;
+				dynamicInput.defaultValue = String::FormatC("%f", controlValue.defaultX);
 				
 				currentControlValues.push_back(controlValue.name);
 				
@@ -283,12 +285,10 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			if (instances[index] == nullptr)
 			{
 				auto t1 = g_TimerRT.TimeUS_get();
-				instances[index] = g_vfxAudioGraphMgr->createInstance(filename, &globals, true);
+				instances[index] = g_vfxAudioGraphMgr->createInstance(filename, globals, true);
 				auto t2 = g_TimerRT.TimeUS_get();
 				
 				addHistoryElem(kHistoryType_InstanceCreate, (t2 - t1) / 1000.0);
-				
-				//static_cast<AudioGraphManager_RTE*>(g_vfxAudioGraphMgr)->selectInstance(instances[index]); // fixme
 				
 				newInstances[numNewInstances] = instances[index];
 				numNewInstances++;
@@ -355,18 +355,13 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 					
 					auto audioGraph = instances[instanceIndex]->audioGraph;
 					
-					// todo : remove the need for a mutex lock when updating control values. or at least limit its scope
-					audioGraph->mutex.lock();
+					for (auto & controlValue : audioGraph->stateDescriptor.controlValues)
 					{
-						for (auto & controlValue : audioGraph->controlValues)
+						if (controlValue.name == dynamicInput.name)
 						{
-							if (controlValue.name == dynamicInput.name)
-							{
-								controlValue.desiredX = zipper.read(inputIndex + 1, controlValue.defaultX);
-							}
+							controlValue.desiredX = zipper.read(inputIndex + 1, controlValue.defaultX);
 						}
 					}
-					audioGraph->mutex.unlock();
 					
 					numInstances++;
 				}
@@ -383,11 +378,14 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	
 	for (int i = 0; i < numNewInstances; ++i)
 	{
-		Assert(newInstances[i]->audioGraph->isPaused);
-		newInstances[i]->audioGraph->isPaused = false;
-		
-		// todo : there should be an on-start type of trigger
-		newInstances[i]->audioGraph->triggerEvent("begin");
+		if (newInstances[i] != nullptr)
+		{
+			Assert(newInstances[i]->audioGraph->isPaused);
+			newInstances[i]->audioGraph->isPaused = false;
+			
+			// todo : there should be an on-start type of trigger
+			newInstances[i]->audioGraph->triggerEvent("begin");
+		}
 	}
 	
 	AudioMutex_Shared mutex(g_vfxAudioMutex);

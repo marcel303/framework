@@ -41,6 +41,8 @@ struct MediaPlayer : public AudioStream
 			, outputMode(MP::kOutputMode_RGBA)
 			, enableAudioStream(true)
 			, enableVideoStream(true)
+			, desiredAudioStreamIndex(-1)
+			, audioOutputMode(MP::kAudioOutputMode_Stereo)
 		{
 		}
 		
@@ -48,6 +50,8 @@ struct MediaPlayer : public AudioStream
 		MP::OutputMode outputMode;
 		bool enableAudioStream;
 		bool enableVideoStream;
+		int desiredAudioStreamIndex;
+		MP::AudioOutputMode audioOutputMode;
 	};
 	
 	struct Context
@@ -56,7 +60,6 @@ struct MediaPlayer : public AudioStream
 			: mpTickEvent(nullptr)
 			, mpTickMutex(nullptr)
 			, mpSeekMutex(nullptr)
-			, mpThreadId(-1)
 		#ifndef __WIN32__ // todo : do it like this on Win32 too
 			, hasBegun(false)
 			, stopMpThread(false)
@@ -101,7 +104,6 @@ struct MediaPlayer : public AudioStream
 		SDL_cond * mpTickEvent;
 		SDL_mutex * mpTickMutex;
 		SDL_mutex * mpSeekMutex;
-		SDL_threadID mpThreadId;
 
 		// hacky messaging between threads
 		std::atomic_bool hasBegun;
@@ -121,6 +123,8 @@ struct MediaPlayer : public AudioStream
 
 	int audioChannelCount;
 	int audioSampleRate;
+	
+	std::atomic<double> audioTime;
 
 	// threading related
 	SDL_Thread * mpThread;
@@ -135,8 +139,9 @@ struct MediaPlayer : public AudioStream
 		, presentTime(-0.0001)
 		, audioChannelCount(-1)
 		, audioSampleRate(-1)
+		, audioTime(0.0)
 		// threading related
-		, mpThread(0)
+		, mpThread(nullptr)
 	{
 	}
 

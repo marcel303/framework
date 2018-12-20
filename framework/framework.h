@@ -33,7 +33,6 @@
 
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
-#include <float.h>
 #include <map>
 #include <string>
 #include <vector>
@@ -41,6 +40,10 @@
 #include "Mat4x4.h"
 #include "Vec3.h"
 #include "Vec4.h"
+
+#if 0 // todo : required to build on Windows or Linux?
+	#include <float.h>
+#endif
 
 #if defined(DEBUG)
 	#define fassert(x) Assert(x)
@@ -246,6 +249,11 @@ struct SpriterState;
 class Surface;
 class Window;
 
+namespace AnimModel
+{
+	class BoneTransform;
+}
+
 namespace spriter
 {
 	struct Drawable;
@@ -341,6 +349,8 @@ public:
 	std::vector<SDL_Event> events;
 	
 private:
+	uint32_t m_lastTick;
+	
 	Sprite * m_sprites;
 	Model * m_models;
 	Window * m_windows;
@@ -474,6 +484,7 @@ class ShaderBase
 public:
 	virtual ~ShaderBase() { }
 	
+	virtual bool isValid() const = 0;
 	virtual GLuint getProgram() const = 0;
 	virtual SHADER_TYPE getType() const = 0;
 	virtual int getVersion() const = 0;
@@ -493,7 +504,7 @@ public:
 	virtual ~Shader();
 	
 	void load(const char * name, const char * filenameVs, const char * filenamePs);
-	bool isValid() const;
+	virtual bool isValid() const override;
 	virtual GLuint getProgram() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	virtual int getVersion() const override;
@@ -519,6 +530,7 @@ public:
 	void setTextureUniform(GLint index, int unit, GLuint texture);
 	void setTextureArray(const char * name, int unit, GLuint texture);
 	void setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
+	void setTextureCube(const char * name, int unit, GLuint texture);
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
 	void setBuffer(GLint index, const ShaderBuffer & buffer);
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
@@ -546,7 +558,7 @@ public:
 	virtual ~ComputeShader();
 
 	void load(const char * filename, const int groupSx = kDefaultGroupSx, const int groupSy = kDefaultGroupSy, const int groupSz = kDefaultGroupSz);
-	bool isValid() const { return m_shader != 0; }
+	virtual bool isValid() const override { return m_shader != 0; }
 	virtual GLuint getProgram() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_CS; }
 	virtual int getVersion() const override;
@@ -788,12 +800,11 @@ public:
 	float scale;
 	Shader * overrideShader;
 	
-	// fixme : remove mutable qualifiers
-	mutable bool animIsActive;
+	bool animIsActive;
 	bool animIsPaused;
-	mutable float animTime;
-	mutable int animLoop;
-	mutable int animLoopCount;
+	float animTime;
+	int animLoop;
+	int animLoopCount;
 	float animSpeed;
 	Vec3 animRootMotion;
 	bool animRootMotionEnabled;
@@ -835,6 +846,7 @@ public:
 	
 private:
 	void ctor();
+	void ctorEnd();
 	
 	// book keeping
 	Model * m_prev;
@@ -848,6 +860,7 @@ private:
 	void * m_currentAnim;
 	void * m_animSegment;
 	bool m_isAnimStarted;
+	AnimModel::BoneTransform * m_boneTransforms;
 	
 	bool m_autoUpdate;
 
@@ -904,6 +917,7 @@ public:
 	void draw(const SpriterState & state, const spriter::Drawable * drawables, int numDrawables);
 
 	int getAnimCount() const;
+	const char * getAnimName(const int animIndex) const;
 	int getAnimIndexByName(const char * name) const;
 	float getAnimLength(int animIndex) const;
 	bool isAnimDoneAtTime(int animIndex, float time) const;
@@ -1264,7 +1278,7 @@ void drawRectLine(float x1, float y1, float x2, float y2);
 void drawCircle(float x, float y, float radius, int numSegments);
 void fillCircle(float x, float y, float radius, int numSegments);
 void measureText(float size, float & sx, float & sy, const char * format, ...);
-void beginTextBatch();
+void beginTextBatch(Shader * overrideShader = nullptr);
 void endTextBatch();
 void drawText(float x, float y, float size, float alignX, float alignY, const char * format, ...);
 void measureTextArea(float size, float maxSx, float & sx, float & sy, const char * format, ...);

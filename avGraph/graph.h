@@ -685,8 +685,8 @@ struct GraphEdit_ResourceEditorBase
 		afterPositionChanged();
 	}
 	
-	virtual void afterSizeChanged() = 0;
-	virtual void afterPositionChanged() = 0;
+	virtual void afterSizeChanged() { }
+	virtual void afterPositionChanged() { }
 	
 	virtual bool tick(const float dt, const bool inputIsCaptured) = 0;
 	virtual void draw() const = 0;
@@ -711,6 +711,9 @@ struct GraphEdit_RealTimeConnection
 	{
 		std::string name;
 		std::string typeName;
+		std::string defaultValue;
+		
+		std::vector<GraphEdit_EnumDefinition::Elem> enumElems;
 	};
 	
 	struct DynamicOutput
@@ -906,6 +909,8 @@ struct GraphEdit : GraphEditConnection
 			std::vector<GraphEdit_TypeDefinition::InputSocket> inputSockets;
 			std::vector<GraphEdit_TypeDefinition::OutputSocket> outputSockets;
 			
+			std::vector<GraphEdit_EnumDefinition> enumDefinitions;
+			
 			DynamicSockets()
 				: hasDynamicSockets(false)
 				, inputSockets()
@@ -921,64 +926,15 @@ struct GraphEdit : GraphEditConnection
 					
 					inputSockets.clear();
 					outputSockets.clear();
+					
+					enumDefinitions.clear();
 				}
 			}
 			
 			void update(
 				const GraphEdit_TypeDefinition & typeDefinition,
 				const std::vector<GraphEdit_RealTimeConnection::DynamicInput> & newInputs,
-				const std::vector<GraphEdit_RealTimeConnection::DynamicOutput> & newOutputs)
-			{
-				hasDynamicSockets = true;
-				
-				inputSockets.resize(typeDefinition.inputSockets.size() + newInputs.size());
-				
-				int inputSocketIndex = 0;
-				
-				for (auto & inputSocket : typeDefinition.inputSockets)
-				{
-					inputSockets[inputSocketIndex] = inputSocket;
-					
-					inputSocketIndex++;
-				}
-				
-				for (auto & newInput : newInputs)
-				{
-					auto & input = inputSockets[inputSocketIndex];
-					
-					input.name = newInput.name;
-					input.typeName = newInput.typeName;
-					input.isDynamic = true;
-					input.index = inputSocketIndex;
-					
-					inputSocketIndex++;
-				}
-				
-				//
-				
-				outputSockets.resize(typeDefinition.outputSockets.size() + newOutputs.size());
-				
-				int outputSocketIndex = 0;
-				
-				for (auto & outputSocket : typeDefinition.outputSockets)
-				{
-					outputSockets[outputSocketIndex] = outputSocket;
-					
-					outputSocketIndex++;
-				}
-				
-				for (auto & newOutput : newOutputs)
-				{
-					auto & output = outputSockets[outputSocketIndex];
-					
-					output.name = newOutput.name;
-					output.typeName = newOutput.typeName;
-					output.isDynamic = true;
-					output.index = outputSocketIndex;
-					
-					outputSocketIndex++;
-				}
-			}
+				const std::vector<GraphEdit_RealTimeConnection::DynamicOutput> & newOutputs);
 		};
 	
 		float x;
@@ -1015,8 +971,6 @@ struct GraphEdit : GraphEditConnection
 		}
 		
 		void setIsFolded(const bool isFolded);
-		
-		void setVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 	};
 	
 	struct EditorVisualizer : GraphEdit_Visualizer

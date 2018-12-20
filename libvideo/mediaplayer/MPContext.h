@@ -39,7 +39,13 @@ namespace MP
 		Context();
 		~Context();
 
-		bool Begin(const std::string & filename, const bool enableAudioStream = true, const bool enableVideoStream = true, const OutputMode outputMode = kOutputMode_RGBA);
+		bool Begin(
+			const std::string & filename,
+			const bool enableAudioStream = true,
+			const bool enableVideoStream = true,
+			const OutputMode outputMode = kOutputMode_RGBA,
+			const int desiredAudioStreamIndex = -1,
+			const AudioOutputMode audioOutputMode = kAudioOutputMode_Stereo);
 		bool End();
 
 		bool HasBegun() const { return m_begun; }
@@ -54,9 +60,8 @@ namespace MP
 
 		size_t GetAudioFrameRate() const;
 		size_t GetAudioChannelCount() const;
-		double GetAudioTime() const;
 
-		bool RequestAudio(int16_t * __restrict out_samples, const size_t frameCount, bool & out_gotAudio);
+		bool RequestAudio(int16_t * __restrict out_samples, const size_t frameCount, bool & out_gotAudio, double & out_audioTime);
 		bool RequestVideo(const double time, VideoFrame ** out_frame, bool & out_gotVideo);
 
 		bool FillBuffers();
@@ -71,7 +76,7 @@ namespace MP
 		AVFormatContext * GetFormatContext();
 
 	private:
-		bool GetStreamIndices(size_t & out_audioStreamIndex, size_t & out_videoStreamIndex);
+		bool GetStreamIndices(size_t & out_audioStreamIndex, size_t & out_videoStreamIndex, const int desiredAudioStreamIndex);
 		bool NextPacket();
 		bool ProcessPacket(AVPacket & packet);
 		bool ReadPacket(AVPacket & out_packet);

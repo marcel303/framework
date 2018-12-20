@@ -1,15 +1,26 @@
 add 4d-imu9250
+add 4dsound2-osc
+add ambisonics1
 add anaglyphic
+add artnet1
+add avpaint
+add biquad-simd
+add colorpart
+add cuber
 add jsusfx1
+add libjgmod-audiograph
 add magiclines
 add mitronix1
 add planetvis
 add planetvis2
 add ps3eye-to-osc
+add rast
 add rawaudio1
+add refine
 add resonate1
 add resonate2
 add speakwithus
+add sRGB
 add twinkle
 add veem-360
 add veem-camapp
@@ -18,3 +29,5 @@ add veem-sound
 add veem-sound-satellites
 add vfxedit
 add vfxpro
+
+add ../ggj2015/game

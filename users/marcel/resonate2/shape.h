@@ -15,7 +15,7 @@ struct ShapeDefinition
 	Plane planes[kMaxPlanes];
 	int numPlanes;
 	
-	void loadFromFile(const char * filename);
+	bool loadFromFile(const char * filename);
 
 	void makeRandomShape(const int in_numPlanes);
 	

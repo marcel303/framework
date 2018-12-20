@@ -41,6 +41,10 @@ void RealTimeConnection::loadBegin()
 	
 	isLoading = true;
 	
+	Assert(serializedMems.empty());
+	if (vfxGraph != nullptr)
+		serializedMems = vfxGraph->mems;
+	
 	delete vfxGraph;
 	
 	vfxGraph = nullptr;
@@ -49,8 +53,12 @@ void RealTimeConnection::loadBegin()
 
 void RealTimeConnection::loadEnd(GraphEdit & graphEdit)
 {
+	Assert(vfxGraph == nullptr);
 	vfxGraph = constructVfxGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary);
 	*vfxGraphPtr = vfxGraph;
+	
+	vfxGraph->mems = serializedMems;
+	serializedMems.clear();
 	
 	isLoading = false;
 	
@@ -1241,6 +1249,18 @@ bool RealTimeConnection::getNodeDynamicSockets(const GraphNodeId nodeId, std::ve
 		{
 			inputs[index].name = input.name;
 			inputs[index].typeName = vfxPlugTypeToValueTypeName(input.type);
+			inputs[index].defaultValue = input.defaultValue;
+			
+			if (input.enumElems.empty() == false)
+			{
+				inputs[index].enumElems.resize(input.enumElems.size());
+				
+				for (size_t i = 0; i < input.enumElems.size(); ++i)
+				{
+					inputs[index].enumElems[i].name = input.enumElems[i].name;
+					inputs[index].enumElems[i].valueText = input.enumElems[i].valueText;
+				}
+			}
 			
 			index++;
 		}

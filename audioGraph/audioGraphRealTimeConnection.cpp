@@ -301,6 +301,8 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	auto oldAudioGraph = g_currentAudioGraph;
 	g_currentAudioGraph = audioGraph;
 	{
+		node->shut();
+		
 		delete node;
 		node = nullptr;
 	}

@@ -36,6 +36,8 @@ static SDL_mutex * s_avcodecMutex = nullptr;
 static std::atomic_int s_numVideoThreads;
 static const int kMaxVideoThreads = 64;
 
+static thread_local SDL_threadID s_mpThreadId = -1;
+
 static int ExecMediaPlayerThread(void * param)
 {
 	MediaPlayer::Context * context = (MediaPlayer::Context*)param;
@@ -48,7 +50,7 @@ static int ExecMediaPlayerThread(void * param)
 
 	SDL_LockMutex(context->mpTickMutex);
 
-	context->mpThreadId = SDL_GetThreadID(nullptr);
+	s_mpThreadId = SDL_GetThreadID(nullptr);
 
 	SDL_LockMutex(s_avcodecMutex);
 	{
@@ -56,15 +58,15 @@ static int ExecMediaPlayerThread(void * param)
 			context->openParams.filename,
 			context->openParams.enableAudioStream,
 			context->openParams.enableVideoStream,
-			context->openParams.outputMode);
+			context->openParams.outputMode,
+			context->openParams.desiredAudioStreamIndex,
+			context->openParams.audioOutputMode);
 	}
 	SDL_UnlockMutex(s_avcodecMutex);
 
 	while (!context->stopMpThread)
 	{
 		SDL_UnlockMutex(context->mpTickMutex);
-		
-		// todo : tick event on video or audio buffer consumption *only*
 		
 		if (context->hasBegun)
 		{
@@ -84,6 +86,8 @@ static int ExecMediaPlayerThread(void * param)
 	}
 
 	// media player thread is completely detached from the main thread at this point
+	
+	s_mpThreadId = -1;
 
 	if (context)
 	{
@@ -124,7 +128,7 @@ void MediaPlayer::Context::tick()
 
 bool MediaPlayer::Context::presentedLastFrame() const
 {
-	if (SDL_GetThreadID(nullptr) == mpThreadId)
+	if (SDL_GetThreadID(nullptr) == s_mpThreadId)
 	{
 		// todo : actually check if the frame was presented
 
@@ -227,7 +231,14 @@ void MediaPlayer::seekToStart()
 		SDL_LockMutex(context->mpSeekMutex);
 		{
 			if (context->hasBegun)
+			{
 				context->mpContext.SeekToStart();
+				
+				presentTime = 0.0;
+				audioTime = 0.0;
+				
+				SDL_CondSignal(context->mpTickEvent);
+			}
 		}
 		SDL_UnlockMutex(context->mpSeekMutex);
 	}
@@ -247,6 +258,9 @@ void MediaPlayer::seek(const double time, const bool nearest)
 				context->mpContext.SeekToTime(time, nearest, actualTime);
 				
 				presentTime = actualTime;
+				audioTime = actualTime;
+				
+				SDL_CondSignal(context->mpTickEvent);
 			}
 		}
 		SDL_UnlockMutex(context->mpSeekMutex);
@@ -263,13 +277,12 @@ bool MediaPlayer::updateVideoFrame()
 
 	Assert(context->mpContext.HasBegun());
 
-	const double time = presentTime >= 0.0 ? presentTime : context->mpContext.GetAudioTime();
+	const double time = presentTime >= 0.0 ? presentTime : 0.0;
 	
 	bool gotVideo = false;
 	context->mpContext.RequestVideo(time, &videoFrame, gotVideo);
 	
-	// fixme : there seems to be an issues with signalling .. it's possible to never awaken the media player thread again under certain conditions, so just signal it each update for now ..
-	//if (gotVideo)
+	if (gotVideo)
 	{
 		SDL_CondSignal(context->mpTickEvent);
 		
@@ -451,11 +464,61 @@ bool MediaPlayer::getAudioProperties(int & channelCount, int & sampleRate) const
 
 int MediaPlayer::Provide(int numSamples, AudioSample* __restrict buffer)
 {
+	if (!context->hasBegun)
+	{
+		return 0;
+	}
+	
 	bool gotAudio = false;
 
-	context->mpContext.RequestAudio((int16_t*)buffer, numSamples, gotAudio);
+	double audioTime = this->audioTime;
+	
+	const int numChannels = context->mpContext.GetAudioChannelCount();
+	
+	int16_t * tempBuffer = (int16_t*)alloca(numSamples * numChannels * sizeof(int16_t));
+	
+	if (context->mpContext.RequestAudio(tempBuffer, numSamples, gotAudio, audioTime))
+	{
+		this->audioTime = audioTime;
 
-	SDL_CondSignal(context->mpTickEvent);
+		SDL_CondSignal(context->mpTickEvent);
+	}
+	
+	if (numChannels == 0)
+	{
+		memset(buffer, 0, numSamples * sizeof(AudioSample));
+	}
+	else if (numChannels == 1)
+	{
+		for (int i = 0; i < numSamples; ++i)
+		{
+			buffer[i].channel[0] = tempBuffer[i];
+			buffer[i].channel[1] = tempBuffer[i];
+		}
+	}
+	else if (numChannels == 2)
+	{
+		for (int i = 0; i < numSamples; ++i)
+		{
+			buffer[i].channel[0] = tempBuffer[i * 2 + 0];
+			buffer[i].channel[1] = tempBuffer[i * 2 + 1];
+		}
+	}
+	else
+	{
+		// todo : handle multi-channel the correct way and apply the multi-channel to stereo mixing matrix (with a little help from avcodec)
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			int sum = 0;
+			
+			for (int c = 0; c < numChannels; ++c)
+				sum += tempBuffer[i * numChannels + c];
+			
+			buffer[i].channel[0] = sum;
+			buffer[i].channel[1] = sum;
+		}
+	}
 
 	return numSamples;
 }
@@ -508,10 +571,10 @@ void MediaPlayer::stopMediaPlayerThread()
 		SDL_LockMutex(context->mpTickMutex);
 		{
 			context->stopMpThread = true;
+			
+			SDL_CondSignal(context->mpTickEvent);
 		}
 		SDL_UnlockMutex(context->mpTickMutex);
-		
-		SDL_CondSignal(context->mpTickEvent);
 
 		context = nullptr;
 		mpThread = nullptr;

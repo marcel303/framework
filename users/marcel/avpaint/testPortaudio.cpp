@@ -1,11 +1,8 @@
-#define DO_PORTAUDIO 1
 #define DO_PORTAUDIO_BASIC_OSCS 0
 #define DO_PORTAUDIO_SPRING_OSC1D 0
 #define DO_PORTAUDIO_SPRING_OSC2D 1
 #define DO_PORTAUDIO_AUDIODSP 0
 #define DO_MONDRIAAN 0
-
-#if DO_PORTAUDIO
 
 #include "Calc.h"
 #include "framework.h"
@@ -15,11 +12,12 @@
 #include <emmintrin.h>
 #include <immintrin.h>
 #include <portaudio/portaudio.h>
+#include <set>
 
 #define SAMPLERATE (44100.0)
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+const int GFX_SX = 1024;
+const int GFX_SY = 768;
 
 static float mousePx = 0.f;
 static float mousePy = 0.f;
@@ -101,6 +99,8 @@ struct TriangleOsc : BaseOsc
 	float phase;
 	float phaseStep;
 	
+	float currentPhaseStep;
+	
 	virtual ~TriangleOsc() override
 	{
 	}
@@ -109,15 +109,15 @@ struct TriangleOsc : BaseOsc
 	{
 		phase = 0.f;
 		phaseStep = frequency / SAMPLERATE * 2.f;
+		
+		currentPhaseStep = phaseStep;
 	}
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
 	{
-		//const float phaseStep = this->phaseStep * mousePx;
-		
 		const float targetPhaseStep = this->phaseStep * (mousePx + 1.f);
 		
-		static float phaseStep = this->phaseStep; // fixme : non-static
+		float phaseStep = this->currentPhaseStep;
 		
 		const float retain1 = .999f;
 		const float retain2 = 1.f - retain1;
@@ -1157,8 +1157,11 @@ static void floodFill(SpringOsc2D & osc, const ImageData * image, std::set<int> 
 
 #endif
 
-void testPortaudio()
+int main(int argc, char * argv[])
 {
+	if (!framework.init(GFX_SX, GFX_SY))
+		return -1;
+	
 	initOsc();
 	
 	if (initAudioOutput())
@@ -1211,9 +1214,15 @@ void testPortaudio()
 	#endif
 	#endif
 		
-		do
+		for (;;)
 		{
 			framework.process();
+			
+			if (keyboard.wentDown(SDLK_ESCAPE))
+				framework.quitRequested = true;
+			
+			if (framework.quitRequested)
+				break;
 			
 			mousePx = mouse.x / float(GFX_SX);
 			mousePy = mouse.y / float(GFX_SY);
@@ -1245,7 +1254,7 @@ void testPortaudio()
 				}
 				hqEnd();
 				
-				hqBegin(HQ_LINES);
+				hqBegin(HQ_LINES, true);
 				{
 					for (int i = 0; i < osc.m_waterSim.kNumElems; ++i)
 					{
@@ -1365,18 +1374,10 @@ void testPortaudio()
 			}
 			framework.endDraw();
 		#endif
-		} while (!keyboard.wentDown(SDLK_SPACE));
+		}
 	}
 	
 	shutAudioOutput();
 	
 	shutOsc();
 }
-
-#else
-
-void testPortaudio()
-{
-}
-
-#endif

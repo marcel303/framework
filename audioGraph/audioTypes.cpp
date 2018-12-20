@@ -106,6 +106,23 @@ void AudioMutex::unlock() const
 
 //
 
+AudioThreadId::AudioThreadId()
+	: id(-1)
+{
+}
+
+void AudioThreadId::initThreadId()
+{
+	id = SDL_GetThreadID(nullptr);
+}
+
+bool AudioThreadId::checkThreadId() const
+{
+	return SDL_GetThreadID(nullptr) == id;
+}
+
+//
+
 AudioRNG::AudioRNG()
 {
 }

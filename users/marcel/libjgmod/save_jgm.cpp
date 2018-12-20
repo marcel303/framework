@@ -77,7 +77,7 @@ void save_jgm (JGMOD_FILE *file, JGMOD *j)
             jgmod_putc ((signed char)ii->sample_number[index], file);
 
         // save volume envelope points
-        for (index=0; index < 12; index++)
+        for (index=0; index < JGMOD_MAX_ENVPTS; index++)
             {
             jgmod_iputw (ii->volpos[index], file);            
             jgmod_iputw (ii->volenv[index], file);
@@ -90,7 +90,7 @@ void save_jgm (JGMOD_FILE *file, JGMOD *j)
         jgmod_putc (ii->vol_end, file);
 
         // save panning envelope points
-        for (index=0; index < 12; index++)
+        for (index=0; index < JGMOD_MAX_ENVPTS; index++)
             {
             jgmod_iputw (ii->panpos[index], file);            
             jgmod_iputw (ii->panenv[index], file);

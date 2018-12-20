@@ -924,7 +924,7 @@ struct SparseTextureObject
 
 				if (isWanted)
 				{
-					// todo : we actually want an accurate intersection test with the viewport here
+					// todo-planetvis : we actually want an accurate intersection test with the viewport here
 
 					if (min[0] > vsx ||
 						min[1] > vsy ||

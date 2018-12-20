@@ -54,7 +54,9 @@ namespace MP
 		, m_pixelFormat(AV_PIX_FMT_NONE)
 		, m_frame(nullptr)
 		, m_frameBuffer(nullptr)
+	#if MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG
 		, m_frameBufferSize(0)
+	#endif
 		, m_time(0.0)
 		, m_isFirstFrame(false)
 		, m_isValidForRead(false)
@@ -71,7 +73,9 @@ namespace MP
 		Assert(m_pixelFormat == AV_PIX_FMT_NONE);
 		Assert(m_frame == nullptr);
 		Assert(m_frameBuffer == nullptr);
+	#if MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG
 		Assert(m_frameBufferSize == 0);
+	#endif
 		Assert(m_time == 0.0);
 		Assert(m_isFirstFrame == false);
 		Assert(m_isValidForRead == false);
@@ -99,13 +103,13 @@ namespace MP
 		}
 	
 		// Allocate buffer to use for RGB frame.
-		m_frameBufferSize = av_image_get_buffer_size(
+		const int frameBufferSize = av_image_get_buffer_size(
 			pixelFormat,
 			static_cast<int>(width),
 			static_cast<int>(height),
 			16);
 		
-		m_frameBuffer = (uint8_t*)MemAlloc(m_frameBufferSize, 16);
+		m_frameBuffer = (uint8_t*)MemAlloc(frameBufferSize, 16);
 		
 		if (!m_frameBuffer)
 		{
@@ -113,6 +117,10 @@ namespace MP
 			m_frameBuffer = nullptr;
 			return false;
 		}
+		
+	#if MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG
+		m_frameBufferSize = frameBufferSize;
+	#endif
 		
 	#if DEBUG_MEDIAPLAYER
 		s_numFrameBufferAllocations++;
@@ -123,6 +131,7 @@ namespace MP
 		m_frame->height = height;
 		const int requiredFrameBufferSize = av_image_fill_arrays(m_frame->data, m_frame->linesize, m_frameBuffer, pixelFormat, width, height, 16);
 		
+	#if MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG
 		Debug::Print("Video: frameBufferSize: %d.", m_frameBufferSize);
 		Debug::Print("Video: requiredFrameBufferSize: %d.", requiredFrameBufferSize);
 		
@@ -131,6 +140,7 @@ namespace MP
 			Debug::Print("Video: required frame buffer size exceeds allocated frame buffer size.");
 			return false;
 		}
+	#endif
 		
 		return true;
 	}
@@ -151,7 +161,9 @@ namespace MP
 		{
 			MemFree(m_frameBuffer);
 			m_frameBuffer = nullptr;
+		#if MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG
 			m_frameBufferSize = 0;
+		#endif
 			
 		#if DEBUG_MEDIAPLAYER
 			s_numFrameBufferAllocations--;
@@ -300,7 +312,9 @@ namespace MP
 
 			Assert(frame != m_currentFrame);
 			
-			//memset(frame->m_frameBuffer, 0xcc, frame->m_frameBufferSize);
+		#if DEBUG_MEDIAPLAYER_VIDEO_ALLOCS
+			memset(frame->m_frameBuffer, 0xcc, frame->m_frameBufferSize);
+		#endif
 		}
 		m_mutex.Unlock();
 
@@ -324,51 +338,63 @@ namespace MP
 	void VideoBuffer::AdvanceToTime(double time)
 	{
 		m_mutex.Lock();
-
-		// Skip as many frame necessary to reach the specified time.
-		// Stop moving forward until the current write position (last written frame) is reached.
-
-		int skipCount = 0;
-
-		while (!m_consumeList.empty() && (m_consumeList.front()->m_time < time || m_consumeList.front()->m_isFirstFrame))
 		{
-			if (m_currentFrame != nullptr)
-			{
-				Assert(m_currentFrame != m_consumeList.front());
-				Assert(m_currentFrame->m_isValidForRead);
-				m_currentFrame->m_isValidForRead = false;
-				m_freeList.push_back(m_currentFrame);
-				m_currentFrame = nullptr;
-			}
-
-			m_currentFrame = m_consumeList.front();
-			m_consumeList.pop_front();
+			int skipCount = 0;
 			
-			Assert(!m_currentFrame->m_isValidForRead);
-			m_currentFrame->m_isValidForRead = true;
+			// Skip as many frame necessary to reach the specified time.
+			// Stop moving forward until the current write position (last written frame) is reached.
 
-			++skipCount;
+			while (!m_consumeList.empty() && (m_consumeList.front()->m_time < time || m_consumeList.front()->m_isFirstFrame))
+			{
+				if (m_currentFrame != nullptr)
+				{
+					Assert(m_currentFrame != m_consumeList.front());
+					Assert(m_currentFrame->m_isValidForRead);
+					m_currentFrame->m_isValidForRead = false;
+					m_freeList.push_back(m_currentFrame);
+					m_currentFrame = nullptr;
+				}
 
-			Debug::Print("Video: Advancing frame.");
+				m_currentFrame = m_consumeList.front();
+				m_consumeList.pop_front();
+				
+				Assert(!m_currentFrame->m_isValidForRead);
+				m_currentFrame->m_isValidForRead = true;
+
+				++skipCount;
+
+				Debug::Print("Video: Advancing frame.");
+			}
+			
+			if (skipCount > 1)
+			{
+				Debug::Print("Video: Warning: Skipped %d frames.", skipCount - 1);
+			}
 		}
-
 		m_mutex.Unlock();
-
-		if (skipCount > 1)
-		{
-			Debug::Print("Video: Warning: Skipped %d frames.", skipCount - 1);
-		}
 	}
 
 	bool VideoBuffer::Depleted() const
 	{
-		return m_consumeList.empty();
+		bool result = false;
+		
+		m_mutex.Lock();
+		{
+			result = m_consumeList.empty();
+		}
+		m_mutex.Unlock();
+		
+		return result;
 	}
 
 	bool VideoBuffer::IsFull() const
 	{
+		bool result;
+		
 		m_mutex.Lock();
-		const bool result = m_freeList.empty();
+		{
+			result = m_freeList.empty();
+		}
 		m_mutex.Unlock();
 		
 		return result;

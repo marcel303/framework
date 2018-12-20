@@ -78,6 +78,7 @@
 #include "data/engine/builtin-hq-stroked-triangle.ps"
 #include "data/engine/builtin-hq-stroked-triangle.vs"
 
+#include "data/engine/MsdfUtil.txt"
 #include "data/engine/builtin-msdf-text.ps"
 #include "data/engine/builtin-msdf-text.vs"
 
@@ -162,6 +163,7 @@ void registerBuiltinShaders()
 	shaderSource("engine/builtin-hq-stroked-triangle.ps", s_hqStrokedTrianglePs);
 	shaderSource("engine/builtin-hq-stroked-triangle.vs", s_hqStrokedTriangleVs);
 	
+	shaderSource("engine/MsdfUtil.txt", s_msdfUtil);
 	shaderSource("engine/builtin-msdf-text.ps", s_msdfTextPs);
 	shaderSource("engine/builtin-msdf-text.vs", s_msdfTextVs);
 }

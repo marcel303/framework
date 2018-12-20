@@ -27,6 +27,11 @@ public:
 		m_v[2] = xyz[2];
 		m_v[3] = w;
 	}
+	
+	inline void SetZero()
+	{
+		m_v[0] = m_v[1] = m_v[2] = m_v[3] = 0.0f;
+	}
 
 	inline float CalcSize() const
 	{

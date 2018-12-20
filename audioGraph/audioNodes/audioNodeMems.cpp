@@ -51,12 +51,31 @@ void AudioNodeMems::tick(const float dt)
 
 	if (isPassthrough || name == nullptr)
 	{
+		currentName.clear();
+		
 		valueOutput.clear();
 	}
 	else
 	{
-		const AudioGraph::Mems mems = g_currentAudioGraph->getMems(name);
-
-		valueOutput = mems.value;
+		if (name != currentName)
+		{
+			currentName = name;
+			
+			g_currentAudioGraph->registerMems(name, "");
+		}
+		
+		g_currentAudioGraph->getMems(name, valueOutput);
 	}
+}
+
+void AudioNodeMems::init(const GraphNode & node)
+{
+	const char * name = getInputString(kInput_Name, nullptr);
+
+	if (isPassthrough || name == nullptr)
+		return;
+	
+	currentName = name;
+	
+	g_currentAudioGraph->registerMems(name, "");
 }

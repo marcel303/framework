@@ -73,16 +73,18 @@ void AudioNodeBiquad::tick(const float dt)
 	const AudioFloat * input = getInputAudioFloat(kInput_Input, &AudioFloat::Zero);
 	const Type type = (Type)getInputInt(kInput_Type, 0);
 	const AudioFloat * frequency = getInputAudioFloat(kInput_Frequency, &defaultFrequency);
-	const AudioFloat * Q = getInputAudioFloat(kInput_Q, &defaultQ);
+	const AudioFloat * Q_in = getInputAudioFloat(kInput_Q, &defaultQ);
 	const AudioFloat * peakGain = getInputAudioFloat(kInput_PeakGain, &defaultPeakGain);
 	
 	const double Fc = frequency->getMean() / SAMPLE_RATE;
+	
+	const float Q = Q_in->getMean();
 	
 	if (isPassthrough)
 	{
 		resultOutput.set(*input);
 	}
-	else if (Fc == 0.0)
+	else if (Fc <= 0.0 || Q <= 0.0)
 	{
 		resultOutput.setZero();
 		
@@ -93,31 +95,31 @@ void AudioNodeBiquad::tick(const float dt)
 		switch (type)
 		{
 		case kType_Lowpass:
-			biquad.makeLowpass(Fc, Q->getMean(), peakGain->getMean());
+			biquad.makeLowpass(Fc, Q, peakGain->getMean());
 			break;
 			
 		case kType_Highpass:
-			biquad.makeHighpass(Fc, Q->getMean(), peakGain->getMean());
+			biquad.makeHighpass(Fc, Q, peakGain->getMean());
 			break;
 			
 		case kType_Bandpass:
-			biquad.makeBandpass(Fc, Q->getMean(), peakGain->getMean());
+			biquad.makeBandpass(Fc, Q, peakGain->getMean());
 			break;
 			
 		case kType_Notch:
-			biquad.makeNotch(Fc, Q->getMean(), peakGain->getMean());
+			biquad.makeNotch(Fc, Q, peakGain->getMean());
 			break;
 			
 		case kType_Peak:
-			biquad.makePeak(Fc, Q->getMean(), peakGain->getMean());
+			biquad.makePeak(Fc, Q, peakGain->getMean());
 			break;
 			
 		case kType_Lowshelf:
-			biquad.makeLowshelf(Fc, Q->getMean(), peakGain->getMean());
+			biquad.makeLowshelf(Fc, Q, peakGain->getMean());
 			break;
 			
 		case kType_Highshelf:
-			biquad.makeHighshelf(Fc, Q->getMean(), peakGain->getMean());
+			biquad.makeHighshelf(Fc, Q, peakGain->getMean());
 			break;
 		}
 		

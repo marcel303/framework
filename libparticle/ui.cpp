@@ -122,6 +122,8 @@ void shutUi()
 
 void drawUiRectCheckered(float x1, float y1, float x2, float y2, float scale)
 {
+	fassert(checkersTexture != 0);
+	
 	gxSetTexture(checkersTexture);
 	{
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -712,13 +714,12 @@ static UiTextboxResult doTextBoxImpl(T & value, const char * name, const float x
 		{
 			textFieldIsInit = true;
 			
-			// fixme : it's not technically correct to open and close just to init
 			textField.open(MAX_TEXTBOX_LENGTH, false, false);
-
-			char temp[MAX_TEXTBOX_LENGTH];
-			valueToString(value, temp, sizeof(temp));
-			textField.setText(temp);
-
+			{
+				char temp[MAX_TEXTBOX_LENGTH];
+				valueToString(value, temp, sizeof(temp));
+				textField.setText(temp);
+			}
 			textField.close();
 		}
 		

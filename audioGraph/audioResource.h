@@ -27,15 +27,33 @@
 
 #pragma once
 
+#include <atomic>
+
+//
+
 struct GraphNode;
+
+struct SDL_mutex;
 
 //
 
 struct AudioResourceBase
 {
-	virtual ~AudioResourceBase()
+	std::atomic<int> version;
+	std::atomic<int> mutexCreationLock;
+	SDL_mutex * mutex;
+
+	AudioResourceBase()
+		: version(0)
+		, mutexCreationLock(0)
+		, mutex(nullptr)
 	{
 	}
+
+	virtual ~AudioResourceBase();
+	
+	void lock();
+	void unlock();
 	
 	virtual void save(tinyxml2::XMLPrinter * printer) = 0;
 	virtual void load(tinyxml2::XMLElement * elem) = 0;

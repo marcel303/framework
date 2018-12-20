@@ -1,3 +1,4 @@
+#include "audioTypes.h"
 #include "framework.h"
 #include "objects/audioSourceVorbis.h"
 #include "objects/binauralizer.h"
@@ -275,17 +276,7 @@ struct MyPortAudioHandler : PortAudioHandler
 		}
 	}
 
-#if AUDIO_USE_SSE
-	void * operator new(size_t size)
-	{
-		return _mm_malloc(size, 32);
-	}
-
-	void operator delete(void * mem)
-	{
-		_mm_free(mem);
-	}
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 static void drawSoundVolume(const SoundVolume & volume)

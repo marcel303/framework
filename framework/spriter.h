@@ -95,6 +95,7 @@ namespace spriter
 		~Entity();
 
 		int getAnimIndexByName(const char * name) const;
+		const char * getAnimName(int index) const;
 		int getAnimLength(int index) const;
 		bool isAnimLooped(int index) const;
 		void getDrawableListAtTime(int animIndex, int characterMap, float time, Drawable * drawables, int & numDrawables) const;

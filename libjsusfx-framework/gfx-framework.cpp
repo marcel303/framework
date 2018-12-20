@@ -259,6 +259,8 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 	
 	*m_mouse_cap = vflags;
 	
+	*m_mouse_wheel = mouse.scrollY;
+	
 	lastKey = 0;
 	
 	for (auto & e : framework.events)

@@ -544,13 +544,18 @@ void testVfxGraph()
 			graphEdit.tickVisualizers(framework.timeStep);
 			
 			// draw the editor!
+		
+		#if ENABLE_AUDIO_RTE
+			// draw the editor!
 			if (editor == 0)
 				graphEdit.draw();
-		#if ENABLE_AUDIO_RTE
 			else
 				s_audioGraphMgr->drawEditor();
+		#else
+			graphEdit.draw();
 		#endif
-		
+			
+		#if ENABLE_AUDIO_RTE
 			makeActive(graphEdit.uiState, true, true);
 			g_drawX = 10;
 			g_drawY = GFX_SY - 160;
@@ -563,6 +568,7 @@ void testVfxGraph()
 			if (doButton("Switch editor type"))
 				editor = 1 - editor;
 			popMenu();
+		#endif
 			
 			drawTestUi();
 		}

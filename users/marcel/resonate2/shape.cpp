@@ -1,4 +1,5 @@
 #include "framework.h"
+#include "Log.h"
 #include "Parse.h"
 #include "shape.h"
 #include "TextIO.h"
@@ -7,7 +8,7 @@
 
 extern void splitString(const std::string & str, std::vector<std::string> & result);
 
-void ShapeDefinition::loadFromFile(const char * filename)
+bool ShapeDefinition::loadFromFile(const char * filename)
 {
 	numPlanes = 0;
 	
@@ -18,7 +19,8 @@ void ShapeDefinition::loadFromFile(const char * filename)
 	
 	if (TextIO::load(filename, lines, lineEndings) == false)
 	{
-		// todo : error
+		LOG_ERR("failed to load text from file", 0);
+		return false;
 	}
 	else
 	{
@@ -37,7 +39,8 @@ void ShapeDefinition::loadFromFile(const char * filename)
 				
 				if (numPlanes == kMaxPlanes)
 				{
-					// todo : error
+					LOG_ERR("shape defines too many planes. maximum count is %d", kMaxPlanes);
+					return false;
 				}
 				else
 				{
@@ -53,8 +56,15 @@ void ShapeDefinition::loadFromFile(const char * filename)
 					}
 				}
 			}
+			else
+			{
+				LOG_ERR("syntax error: %s", line.c_str());
+				return false;
+			}
 		}
 	}
+	
+	return true;
 }
 
 void ShapeDefinition::makeRandomShape(const int in_numPlanes)

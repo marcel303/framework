@@ -59,6 +59,8 @@ VfxGraph::VfxGraph()
 	, currentTickTraversalId(-1)
 	, nextDrawTraversalId(0)
 	, valuesToFree()
+	, memf()
+	, mems()
 	, time(0.0)
 {
 	dynamicData = new VfxDynamicData();
@@ -388,6 +390,42 @@ VfxNodeDisplay * VfxGraph::getMainDisplayNode() const
 	}
 	
 	return nullptr;
+}
+
+void VfxGraph::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
+{
+	memf[name] = Vec4(value1, value2, value3, value4);
+}
+
+bool VfxGraph::getMemf(const char * name, Vec4 & result) const
+{
+	auto i = memf.find(name);
+	
+	if (i == memf.end())
+		return false;
+	else
+	{
+		result = i->second;
+		return true;
+	}
+}
+
+void VfxGraph::setMems(const char * name, const char * value)
+{
+	mems[name] = value;
+}
+
+bool VfxGraph::getMems(const char * name, std::string & result) const
+{
+	auto i = mems.find(name);
+	
+	if (i == mems.end())
+		return false;
+	else
+	{
+		result = i->second;
+		return true;
+	}
 }
 
 //

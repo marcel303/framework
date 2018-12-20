@@ -295,7 +295,7 @@ int JGMOD_PLAYER::note2period (int note, int c2spd)
         if (c2spd == 0)
             c2spd = 4242;
 
-        temp =  note * c2spd / 8363;
+        temp =  int64_t(note) * c2spd / 8363;
         return (JGMOD_NTSC << 2) / temp;
         }
 
@@ -303,26 +303,24 @@ int JGMOD_PLAYER::note2period (int note, int c2spd)
 
 int JGMOD_PLAYER::get_jgmod_sample_no (int instrument_no, int note_no)
 {
-    INSTRUMENT_INFO *ii;
-
-    if (mi.flag & JGMOD_MODE_XM)
-        {
-        if (note_no > 95 || note_no < 0)
+    if (mi.flag & (JGMOD_MODE_XM | JGMOD_MODE_IT))
+	{
+        if (note_no < 0 || note_no >= JGMOD_MAX_INSTKEYS)
             return (of->no_sample - 1);
-
-        if (instrument_no >= of->no_instrument || instrument_no < 0)
+        else if (instrument_no < 0 || instrument_no >= of->no_instrument)
             return (of->no_sample - 1);
-
-        ii = of->ii + instrument_no;
-        if (ii->sample_number[note_no] >= of->no_sample)
+            
+		const int sample_no = of->ii[instrument_no].sample_number[note_no];
+		
+        if (sample_no < 0 || sample_no >= of->no_sample)
             return (of->no_sample - 1);
-        else if (ii->sample_number[note_no] < 0)
-            return (of->no_sample - 1);
-        else
-            return ii->sample_number[note_no];
-        }
+		
+		return sample_no;
+	}
     else
+    {
         return instrument_no;
+	}
 
 }
 
@@ -402,8 +400,8 @@ void JGMOD_PLAYER::do_pro_tempo_bpm (int extcommand)
     else
         {
         mi.bpm = extcommand;
-        //remove_int2 (mod_interrupt_proc, this);
-        install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio), this);
+        //timerApi->remove_int2 (mod_interrupt_proc, this);
+        timerApi->install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio), this);
         }
 
 }

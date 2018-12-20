@@ -989,6 +989,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 			params[kSp_ModelViewMatrix].set(glGetUniformLocation(program, "ModelViewMatrix"));
 			params[kSp_ModelViewProjectionMatrix].set(glGetUniformLocation(program, "ModelViewProjectionMatrix"));
 			params[kSp_ProjectionMatrix].set(glGetUniformLocation(program, "ProjectionMatrix"));
+			params[kSp_SkinningMatrices].set(glGetUniformLocation(program, "skinningMatrices"));
 			params[kSp_Texture].set(glGetUniformLocation(program, "texture0"));
 			params[kSp_Params].set(glGetUniformLocation(program, "params"));
 			params[kSp_ShadingParams].set(glGetUniformLocation(program, "shadingParams"));
@@ -1699,7 +1700,7 @@ void SoundCacheElem::load(const char * filename)
 				soundData->channelSize);
 		}
 	#else
-		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->channelSize, soundData->channelCount);
+		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->sampleRate, soundData->channelSize, soundData->channelCount);
 
 		if (buffer != nullptr)
 		{
@@ -1836,9 +1837,6 @@ void FontCacheElem::load(const char * filename)
 		Assert(err == 0);
 		if (err != 0)
 			logWarning("failed to select FreeType unicode character map");
-		
-		// fixme : this is a work around for FreeType returning monochrome data in FT_Load_Char, instead of the 8 bit gray scale data it should be returning, when it finds a stored glyph bitmap in the font itself. since we cannot directly upload bit packed font data to OpenGL, we 'force' FreeType to always render the outline version instead, by setting num_fixed_sizes to zero here
-		//face->num_fixed_sizes = 0;
 		
 		loaded = true;
 	}
@@ -2525,7 +2523,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 {
 	bool result = true;
 	
-	if (globals.fontMSDF->m_glyphCache->m_isLoaded == false)
+	if (m_isLoaded == false)
 	{
 		return false;
 	}

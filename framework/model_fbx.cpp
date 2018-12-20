@@ -28,11 +28,10 @@
 #include <algorithm>
 #include <list>
 #include <time.h>
+#include "fbx.h"
 #include "framework.h"
 #include "internal.h"
 #include "model_fbx.h"
-
-#include "../libfbx/fbx.h" // todo: move to framework
 
 /*
 
@@ -1909,7 +1908,8 @@ namespace AnimModel
 		
 		// finalize meshes by invoking the powers of the awesome vertex welding machine
 		
-		std::list<MeshBuilder> meshes; // todo: deprecate and use framework classes
+		std::list<MeshBuilder> meshes;
+		std::list<std::string> meshNames;
 		
 		for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)
 		{
@@ -1934,6 +1934,8 @@ namespace AnimModel
 				}
 				
 				meshes.push_back(MeshBuilder());
+				meshNames.push_back(fbxMesh->name);
+				
 				MeshBuilder & meshBuilder = meshes.back();
 				
 				// weld vertices and triangulate mesh
@@ -1962,15 +1964,24 @@ namespace AnimModel
 		
 		std::vector<Mesh*> meshes2;
 		
-		for (std::list<MeshBuilder>::iterator i = meshes.begin(); i != meshes.end(); ++i)
+		auto mesh_itr = meshes.begin();
+		auto meshName_itr = meshNames.begin();
+		
+		for (; mesh_itr != meshes.end(); ++mesh_itr, ++meshName_itr)
 		{
-			const MeshBuilder & meshBuilder = *i;
+			const MeshBuilder & meshBuilder = *mesh_itr;
+			const std::string & meshName = *meshName_itr;
 			
 			Mesh * mesh = new Mesh();
 			
+			mesh->m_name = meshName;
+			
 			mesh->allocateVB(meshBuilder.m_vertices.size());
 			
-			memcpy(mesh->m_vertices, &meshBuilder.m_vertices[0], sizeof(mesh->m_vertices[0]) * mesh->m_numVertices);
+			if (!meshBuilder.m_vertices.empty())
+			{
+				memcpy(mesh->m_vertices, &meshBuilder.m_vertices[0], sizeof(mesh->m_vertices[0]) * mesh->m_numVertices);
+			}
 			
 			mesh->allocateIB(meshBuilder.m_indices.size());
 			

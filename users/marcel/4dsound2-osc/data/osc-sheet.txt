@@ -1,0 +1,797 @@
+OSC Address	Type	Default value	Has Range	Range Minimum	Range Maximum	Enumeration Values
+/global1/dimensions	f f f	1	n	-	-	-
+/global1/origin	f f f	0	n	-	-	-
+/global1/plode	f f f	1	n	-	-	-
+/global1/plodeScale	f	1	y	0	10	-
+/global1/position	f f f	0	n	-	-	-
+/global1/rotation	f f f	0	y	-360	360	-
+/global1/stretch	f f f	1	n	-	-	-
+/global2/dimensions	f f f	1	n	-	-	-
+/global2/origin	f f f	0	n	-	-	-
+/global2/plode	f f f	1	n	-	-	-
+/global2/plodeScale	f	1	y	0	10	-
+/global2/position	f f f	0	n	-	-	-
+/global2/rotation	f f f	0	y	-360	360	-
+/global2/stretch	f f f	1	n	-	-	-
+/global3/dimensions	f f f	1	n	-	-	-
+/global3/origin	f f f	0	n	-	-	-
+/global3/plode	f f f	1	n	-	-	-
+/global3/plodeScale	f	1	y	0	10	-
+/global3/position	f f f	0	n	-	-	-
+/global3/rotation	f f f	0	y	-360	360	-
+/global3/stretch	f f f	1	n	-	-	-
+/monitor/oldSkoolSpeakers	i (boolean)	false	n	-	-	-
+/monitor/particleOpacity	f	0.5	n	-	-	-
+/monitor/showAxesHelpers	i (boolean)	false	n	-	-	-
+/monitor/showParticles	i (boolean)	true	n	-	-	-
+/monitor/showPaths	i (boolean)	false	n	-	-	-
+/monitor/showShapes	i (boolean)	false	n	-	-	-
+/monitor/showSpeakers	i (boolean)	true	n	-	-	-
+/source1/anchorPoint	f f f	0	n	-	-	-
+/source1/axesHelper/visible	i (boolean)	true	n	-	-	-
+/source1/color	f f f	0	y	0	1	-
+/source1/distanceDampingCurvature	f	-0.4	y	-1	1	-
+/source1/distanceDampingEnable	i (boolean)	false	n	-	-	-
+/source1/distanceDampingThreshold	f	100	y	0.001	1000	-
+/source1/distanceIntensityCurvature	f	-0.4	y	-1	1	-
+/source1/distanceIntensityEnable	i (boolean)	false	n	-	-	-
+/source1/distanceIntensityThreshold	f	100	y	0.001	1000	-
+/source1/distanceReverbCurvature	f	-0.4	y	-1	1	-
+/source1/distanceReverbThreshold	f	100	y	0.001	1000	-
+/source1/dryGain	f	1	y	0	1	-
+/source1/elevationFilterAboveContrast	f	1	y	0	1	-
+/source1/elevationFilterAboveCurvature	f	0.4	y	-1	1	-
+/source1/elevationFilterAboveEnable	i (boolean)	false	n	-	-	-
+/source1/elevationFilterAboveThreshold	f	100	y	0.001	1000	-
+/source1/elevationFilterBelowContrast	f	1	y	0	1	-
+/source1/elevationFilterBelowCurvature	f	0.4	y	-1	1	-
+/source1/elevationFilterBelowEnable	i (boolean)	false	n	-	-	-
+/source1/elevationFilterBelowThreshold	f	100	y	0.001	1000	-
+/source1/externalInputChannel	i	1	y	1	64	-
+/source1/externalInputEnable	i (boolean)	true	n	-	-	-
+/source1/follow	s (enum)	none	n	-	-	none,source2,source3,source4
+/source1/granulatorAmplitude	f	1	y	0	2	-
+/source1/granulatorAmplitudeDev	f	0	y	0	1	-
+/source1/granulatorAttackDecay	f	0	y	0.5	100	-
+/source1/granulatorDensity	f	1	y	0.2	50	-
+/source1/granulatorDetune	f	0	y	0	1	-
+/source1/granulatorDiffusion	f	10	y	1	2000	-
+/source1/granulatorDrywet	f	0	y	0	1	-
+/source1/granulatorDuration	f	50	y	5	5000	-
+/source1/granulatorEnable	i (boolean)	false	n	-	-	-
+/source1/granulatorIrregularity	f	1	y	0	2	-
+/source1/granulatorPitch	f	1	y	0.5	2	-
+/source1/granulatorShape	s (enum)	hanning	n	-	-	hanning,expodec,rexpodec
+/source1/grids/satellites/articulation	f	0	y	-1	1	-
+/source1/grids/satellites/boostLevel	f	0	y	0	1	-
+/source1/grids/satellites/level	f	1	y	0	1	-
+/source1/grids/satellites/orthogonalProjection	i (boolean)	false	n	-	-	-
+/source1/grids/satellites/projectionPoint	f f f	0	n	-	-	-
+/source1/hue	f	0	y	0	360	-
+/source1/inputDistanceIntensityCurvature	f	0	y	-1	1	-
+/source1/inputDistanceIntensityEnable	i (boolean)	false	n	-	-	-
+/source1/inputDistanceIntensityThreshold	f	100	y	0	1000	-
+/source1/inputPosition	f f f	0	n	-	-	-
+/source1/inputRotation	f f f	0	y	-360	360	-
+/source1/invertX	i (boolean)	false	n	-	-	-
+/source1/invertY	i (boolean)	false	n	-	-	-
+/source1/invertZ	i (boolean)	false	n	-	-	-
+/source1/modulationEnable	i (boolean)	false	n	-	-	-
+/source1/modulationScale	f	1	y	0	100	-
+/source1/modulationSpeed	f	0	y	0	20	-
+/source1/modulationXDepth	f	1	y	0	100	-
+/source1/modulationXEnable	i (boolean)	false	n	-	-	-
+/source1/modulationXFrequency	f	1	y	0	100	-
+/source1/modulationXInvert	i (boolean)	false	n	-	-	-
+/source1/modulationXMode	s (enum)	sine	n	-	-	sine,triangle,linear,random
+/source1/modulationXPhase	f	0	y	0	1	-
+/source1/modulationXPower	f	1	y	0	10	-
+/source1/modulationYDepth	f	1	y	0	100	-
+/source1/modulationYEnable	i (boolean)	false	n	-	-	-
+/source1/modulationYFrequency	f	1	y	0	100	-
+/source1/modulationYInvert	i (boolean)	false	n	-	-	-
+/source1/modulationYMode	s (enum)	sine	n	-	-	sine,triangle,linear,random
+/source1/modulationYPhase	f	0	y	0	1	-
+/source1/modulationYPower	f	1	y	0	10	-
+/source1/modulationZDepth	f	1	y	0	100	-
+/source1/modulationZEnable	i (boolean)	false	n	-	-	-
+/source1/modulationZFrequency	f	1	y	0	100	-
+/source1/modulationZInvert	i (boolean)	false	n	-	-	-
+/source1/modulationZMode	s (enum)	sine	n	-	-	sine,triangle,linear,random
+/source1/modulationZPhase	f	0	y	0	1	-
+/source1/modulationZPower	f	1	y	0	10	-
+/source1/particleCountGainScaling	f	0.5	y	0.5	1	-
+/source1/particleDimensions	f f f	1	y	0	20	-
+/source1/particleScale	f	0	y	0	10	-
+/source1/particleVisualization/visible	i (boolean)	true	n	-	-	-
+/source1/path/dimensions	f f f	1	n	-	-	-
+/source1/path/phase	f	0	y	0	1	-
+/source1/path/rotation	f f f	0	y	-360	360	-
+/source1/path/scale	f	1	y	0	10	-
+/source1/path/type	s (enum)	verticalLine	n	-	-	verticalLine,line,square,circle,halfCircle,figure-of-8,triangle,zigzag,spiral
+/source1/pathEnable	i (boolean)	false	n	-	-	-
+/source1/pathVisualization/visible	i (boolean)	true	n	-	-	-
+/source1/plasma/deviation	f	1	y	0	10	-
+/source1/plasma/duration	f	1000	y	0	10000	-
+/source1/plasma/field	f f f	10	n	-	-	-
+/source1/plasma/reset	i (boolean)	false	n	-	-	-
+/source1/plasma/scale	f	1	y	0	10	-
+/source1/plasma/steps	i	7	y	1	100	-
+/source1/plasma/trigger	i (boolean)	false	n	-	-	-
+/source1/plasmaEnable	i (boolean)	true	n	-	-	-
+/source1/position	f f f	0	n	-	-	-
+/source1/positionRotation	f f f	0	y	-360	360	-
+/source1/resonance/filter1/bandwidth	f	1	y	0	10000	-
+/source1/resonance/filter1/centerFrequency	f	100	y	0	10000	-
+/source1/resonance/filter1/level	f	1	y	0	2	-
+/source1/resonance/filter2/bandwidth	f	2	y	0	10000	-
+/source1/resonance/filter2/centerFrequency	f	200	y	0	10000	-
+/source1/resonance/filter2/level	f	1	y	0	2	-
+/source1/resonance/filter3/bandwidth	f	3	y	0	10000	-
+/source1/resonance/filter3/centerFrequency	f	300	y	0	10000	-
+/source1/resonance/filter3/level	f	1	y	0	2	-
+/source1/resonance/filter4/bandwidth	f	4	y	0	10000	-
+/source1/resonance/filter4/centerFrequency	f	400	y	0	10000	-
+/source1/resonance/filter4/level	f	1	y	0	2	-
+/source1/resonance/filter5/bandwidth	f	5	y	0	10000	-
+/source1/resonance/filter5/centerFrequency	f	500	y	0	10000	-
+/source1/resonance/filter5/level	f	1	y	0	2	-
+/source1/resonance/filter6/bandwidth	f	6	y	0	10000	-
+/source1/resonance/filter6/centerFrequency	f	600	y	0	10000	-
+/source1/resonance/filter6/level	f	1	y	0	2	-
+/source1/resonance/filter7/bandwidth	f	7	y	0	10000	-
+/source1/resonance/filter7/centerFrequency	f	700	y	0	10000	-
+/source1/resonance/filter7/level	f	1	y	0	2	-
+/source1/resonance/filter8/bandwidth	f	8	y	0	10000	-
+/source1/resonance/filter8/centerFrequency	f	800	y	0	10000	-
+/source1/resonance/filter8/level	f	1	y	0	2	-
+/source1/resonanceBandwidthMultiply	f	1	y	0	100	-
+/source1/resonanceDry	f	0	y	0	1	-
+/source1/resonanceEnable	i (boolean)	false	n	-	-	-
+/source1/resonanceFrequencyDeviation	f	0	y	0	100	-
+/source1/resonanceFrequencyDeviationPattern	i (boolean)	false	n	-	-	-
+/source1/resonanceFrequencyMultiply	f	1	y	0	20	-
+/source1/resonanceFrequencyShift	f	1	y	-10000	10000	-
+/source1/resonanceGainBoost	f	1	y	1	4	-
+/source1/resonanceMode	s (enum)	manual	n	-	-	manual,shape
+/source1/resonancePartialCount	i	8	y	1	8	-
+/source1/resonanceShapeScaleEnable	i (boolean)	false	n	-	-	-
+/source1/resonanceWet	f	1	y	0	1	-
+/source1/reverbDamping	f	0.5	y	0	1	-
+/source1/reverbDrywet	f	1	y	0	1	-
+/source1/reverbEnable	i (boolean)	false	n	-	-	-
+/source1/reverbFb1	f	0.9	y	0	1	-
+/source1/reverbFb2	f	0.7	y	0	1	-
+/source1/reverbMode	s (enum)	distance	n	-	-	distance,manual
+/source1/reverbSpread	f	0.2	y	0	1	-
+/source1/rotationAngleAxis	f f f f	0	n	-	-	-
+/source1/rotationMode	s (enum)	fixed	n	-	-	fixed,movement,center
+/source1/shake/duration	f	1000	y	0	10000	-
+/source1/shake/field	f f f	10	n	-	-	-
+/source1/shake/reset	i (boolean)	false	n	-	-	-
+/source1/shake/scale	f	1	y	0	10	-
+/source1/shake/trigger	i (boolean)	false	n	-	-	-
+/source1/shakeEnable	i (boolean)	true	n	-	-	-
+/source1/shape/dimensions	f f f	1	n	-	-	-
+/source1/shape/fillMode	s (enum)	absolute	n	-	-	absolute,lattice
+/source1/shape/hollow	i (boolean)	false	n	-	-	-
+/source1/shape/latticeSpacing	f	1	y	0.05	10	-
+/source1/shape/resolution	i	1	y	1	10	-
+/source1/shape/scale	f	1	y	0	10	-
+/source1/shape/speed	f	1	y	-10	10	-
+/source1/shape/type	s (enum)	circle	n	-	-	circle,point,line,triangle,square,pentagon,hexagon,tetrahedron,octahedron,cube,icosahedron,dodecahedron,sphere,circleTorus,spiralTorus,archimedeanSpiral,tripleSpiral,helix,pythonTest
+/source1/shapeVisualization/visible	i (boolean)	true	n	-	-	-
+/source1/shapes/archimedeanSpiral/a	f	0.2	y	0	1	-
+/source1/shapes/archimedeanSpiral/b	f	0	y	0	1	-
+/source1/shapes/circleTorus/a	f	1	y	0	2	-
+/source1/shapes/helix/a	f	1	y	0	1	-
+/source1/shapes/helix/b	f	0.1	y	0	1	-
+/source1/shapes/helix/c	f	0.9	y	0	1	-
+/source1/shapes/pythonTest/happy	f	1	y	-1	1	-
+/source1/shapes/spiralTorus/a	f	1	y	0	10	-
+/source1/shapes/spiralTorus/b	f	1	y	0	10	-
+/source1/shapes/spiralTorus/c	f	1	y	0	10	-
+/source1/shapes/tripleSpiral/a	f	0.2	y	0	1	-
+/source1/shapes/tripleSpiral/b	f	0	y	0	1	-
+/source1/spasm/duration	f	1000	y	0	10000	-
+/source1/spasm/field	f f f	10	n	-	-	-
+/source1/spasm/reset	i (boolean)	false	n	-	-	-
+/source1/spasm/scale	f	1	y	0	10	-
+/source1/spasm/steps	i	7	y	1	100	-
+/source1/spasm/trigger	i (boolean)	false	n	-	-	-
+/source1/spasmEnable	i (boolean)	true	n	-	-	-
+/source1/spatialdelayDrywet	f	0	y	0	1	-
+/source1/spatialdelayEnable	i (boolean)	false	n	-	-	-
+/source1/spatialdelayFeedback	f	0	y	0	0.99	-
+/source1/spatialdelaySmooth	f	0.05	y	0	1	-
+/source1/spatialdelayTimeDistanceScale	f	20	y	0	100	-
+/source1/spatialdelayTimeDopplerScale	f	20	y	0	100	-
+/source1/spatialdelayTimeNoiseDepth	f	0	y	0	1	-
+/source1/spatialdelayTimeNoiseSpeed	f	1	y	0	100	-
+/source1/spatialdelayTimePeripheralScale	f	20	y	0	100	-
+/source1/spatialdelayTimeRandomPatternScale	f	20	y	0	100	-
+/source1/spatialdelayTimeRandomValueTrigger	i (boolean)	false	n	-	-	-
+/source1/transformations/global1Enable	i (boolean)	false	n	-	-	-
+/source1/transformations/global2Enable	i (boolean)	false	n	-	-	-
+/source1/transformations/global3Enable	i (boolean)	false	n	-	-	-
+/source1/transformations/source2Enable	i (boolean)	false	n	-	-	-
+/source1/transformations/source3Enable	i (boolean)	false	n	-	-	-
+/source1/transformations/source4Enable	i (boolean)	false	n	-	-	-
+/source1/vantagePoint	f f f	0	n	-	-	-
+/source2/anchorPoint	f f f	0	n	-	-	-
+/source2/axesHelper/visible	i (boolean)	true	n	-	-	-
+/source2/color	f f f	0	y	0	1	-
+/source2/distanceDampingCurvature	f	-0.4	y	-1	1	-
+/source2/distanceDampingEnable	i (boolean)	false	n	-	-	-
+/source2/distanceDampingThreshold	f	100	y	0.001	1000	-
+/source2/distanceIntensityCurvature	f	-0.4	y	-1	1	-
+/source2/distanceIntensityEnable	i (boolean)	false	n	-	-	-
+/source2/distanceIntensityThreshold	f	100	y	0.001	1000	-
+/source2/distanceReverbCurvature	f	-0.4	y	-1	1	-
+/source2/distanceReverbThreshold	f	100	y	0.001	1000	-
+/source2/dryGain	f	1	y	0	1	-
+/source2/elevationFilterAboveContrast	f	1	y	0	1	-
+/source2/elevationFilterAboveCurvature	f	0.4	y	-1	1	-
+/source2/elevationFilterAboveEnable	i (boolean)	false	n	-	-	-
+/source2/elevationFilterAboveThreshold	f	100	y	0.001	1000	-
+/source2/elevationFilterBelowContrast	f	1	y	0	1	-
+/source2/elevationFilterBelowCurvature	f	0.4	y	-1	1	-
+/source2/elevationFilterBelowEnable	i (boolean)	false	n	-	-	-
+/source2/elevationFilterBelowThreshold	f	100	y	0.001	1000	-
+/source2/externalInputChannel	i	1	y	1	64	-
+/source2/externalInputEnable	i (boolean)	true	n	-	-	-
+/source2/follow	s (enum)	none	n	-	-	none,source1,source3,source4
+/source2/granulatorAmplitude	f	1	y	0	2	-
+/source2/granulatorAmplitudeDev	f	0	y	0	1	-
+/source2/granulatorAttackDecay	f	0	y	0.5	100	-
+/source2/granulatorDensity	f	1	y	0.2	50	-
+/source2/granulatorDetune	f	0	y	0	1	-
+/source2/granulatorDiffusion	f	10	y	1	2000	-
+/source2/granulatorDrywet	f	0	y	0	1	-
+/source2/granulatorDuration	f	50	y	5	5000	-
+/source2/granulatorEnable	i (boolean)	false	n	-	-	-
+/source2/granulatorIrregularity	f	1	y	0	2	-
+/source2/granulatorPitch	f	1	y	0.5	2	-
+/source2/granulatorShape	s (enum)	hanning	n	-	-	hanning,expodec,rexpodec
+/source2/grids/satellites/articulation	f	0	y	-1	1	-
+/source2/grids/satellites/boostLevel	f	0	y	0	1	-
+/source2/grids/satellites/level	f	1	y	0	1	-
+/source2/grids/satellites/orthogonalProjection	i (boolean)	false	n	-	-	-
+/source2/grids/satellites/projectionPoint	f f f	0	n	-	-	-
+/source2/hue	f	0	y	0	360	-
+/source2/inputDistanceIntensityCurvature	f	0	y	-1	1	-
+/source2/inputDistanceIntensityEnable	i (boolean)	false	n	-	-	-
+/source2/inputDistanceIntensityThreshold	f	100	y	0	1000	-
+/source2/inputPosition	f f f	0	n	-	-	-
+/source2/inputRotation	f f f	0	y	-360	360	-
+/source2/invertX	i (boolean)	false	n	-	-	-
+/source2/invertY	i (boolean)	false	n	-	-	-
+/source2/invertZ	i (boolean)	false	n	-	-	-
+/source2/modulationEnable	i (boolean)	false	n	-	-	-
+/source2/modulationScale	f	1	y	0	100	-
+/source2/modulationSpeed	f	0	y	0	20	-
+/source2/modulationXDepth	f	1	y	0	100	-
+/source2/modulationXEnable	i (boolean)	false	n	-	-	-
+/source2/modulationXFrequency	f	1	y	0	100	-
+/source2/modulationXInvert	i (boolean)	false	n	-	-	-
+/source2/modulationXMode	s (enum)	sine	n	-	-	sine,triangle,linear,random
+/source2/modulationXPhase	f	0	y	0	1	-
+/source2/modulationXPower	f	1	y	0	10	-
+/source2/modulationYDepth	f	1	y	0	100	-
+/source2/modulationYEnable	i (boolean)	false	n	-	-	-
+/source2/modulationYFrequency	f	1	y	0	100	-
+/source2/modulationYInvert	i (boolean)	false	n	-	-	-
+/source2/modulationYMode	s (enum)	sine	n	-	-	sine,triangle,linear,random
+/source2/modulationYPhase	f	0	y	0	1	-
+/source2/modulationYPower	f	1	y	0	10	-
+/source2/modulationZDepth	f	1	y	0	100	-
+/source2/modulationZEnable	i (boolean)	false	n	-	-	-
+/source2/modulationZFrequency	f	1	y	0	100	-
+/source2/modulationZInvert	i (boolean)	false	n	-	-	-
+/source2/modulationZMode	s (enum)	sine	n	-	-	sine,triangle,linear,random
+/source2/modulationZPhase	f	0	y	0	1	-
+/source2/modulationZPower	f	1	y	0	10	-
+/source2/particleCountGainScaling	f	0.5	y	0.5	1	-
+/source2/particleDimensions	f f f	1	y	0	20	-
+/source2/particleScale	f	0	y	0	10	-
+/source2/particleVisualization/visible	i (boolean)	true	n	-	-	-
+/source2/path/dimensions	f f f	1	n	-	-	-
+/source2/path/phase	f	0	y	0	1	-
+/source2/path/rotation	f f f	0	y	-360	360	-
+/source2/path/scale	f	1	y	0	10	-
+/source2/path/type	s (enum)	verticalLine	n	-	-	verticalLine,line,square,circle,halfCircle,figure-of-8,triangle,zigzag,spiral
+/source2/pathEnable	i (boolean)	false	n	-	-	-
+/source2/pathVisualization/visible	i (boolean)	true	n	-	-	-
+/source2/plasma/deviation	f	1	y	0	10	-
+/source2/plasma/duration	f	1000	y	0	10000	-
+/source2/plasma/field	f f f	10	n	-	-	-
+/source2/plasma/reset	i (boolean)	false	n	-	-	-
+/source2/plasma/scale	f	1	y	0	10	-
+/source2/plasma/steps	i	7	y	1	100	-
+/source2/plasma/trigger	i (boolean)	false	n	-	-	-
+/source2/plasmaEnable	i (boolean)	true	n	-	-	-
+/source2/position	f f f	0	n	-	-	-
+/source2/positionRotation	f f f	0	y	-360	360	-
+/source2/resonance/filter1/bandwidth	f	1	y	0	10000	-
+/source2/resonance/filter1/centerFrequency	f	100	y	0	10000	-
+/source2/resonance/filter1/level	f	1	y	0	2	-
+/source2/resonance/filter2/bandwidth	f	2	y	0	10000	-
+/source2/resonance/filter2/centerFrequency	f	200	y	0	10000	-
+/source2/resonance/filter2/level	f	1	y	0	2	-
+/source2/resonance/filter3/bandwidth	f	3	y	0	10000	-
+/source2/resonance/filter3/centerFrequency	f	300	y	0	10000	-
+/source2/resonance/filter3/level	f	1	y	0	2	-
+/source2/resonance/filter4/bandwidth	f	4	y	0	10000	-
+/source2/resonance/filter4/centerFrequency	f	400	y	0	10000	-
+/source2/resonance/filter4/level	f	1	y	0	2	-
+/source2/resonance/filter5/bandwidth	f	5	y	0	10000	-
+/source2/resonance/filter5/centerFrequency	f	500	y	0	10000	-
+/source2/resonance/filter5/level	f	1	y	0	2	-
+/source2/resonance/filter6/bandwidth	f	6	y	0	10000	-
+/source2/resonance/filter6/centerFrequency	f	600	y	0	10000	-
+/source2/resonance/filter6/level	f	1	y	0	2	-
+/source2/resonance/filter7/bandwidth	f	7	y	0	10000	-
+/source2/resonance/filter7/centerFrequency	f	700	y	0	10000	-
+/source2/resonance/filter7/level	f	1	y	0	2	-
+/source2/resonance/filter8/bandwidth	f	8	y	0	10000	-
+/source2/resonance/filter8/centerFrequency	f	800	y	0	10000	-
+/source2/resonance/filter8/level	f	1	y	0	2	-
+/source2/resonanceBandwidthMultiply	f	1	y	0	100	-
+/source2/resonanceDry	f	0	y	0	1	-
+/source2/resonanceEnable	i (boolean)	false	n	-	-	-
+/source2/resonanceFrequencyDeviation	f	0	y	0	100	-
+/source2/resonanceFrequencyDeviationPattern	i (boolean)	false	n	-	-	-
+/source2/resonanceFrequencyMultiply	f	1	y	0	20	-
+/source2/resonanceFrequencyShift	f	1	y	-10000	10000	-
+/source2/resonanceGainBoost	f	1	y	1	4	-
+/source2/resonanceMode	s (enum)	manual	n	-	-	manual,shape
+/source2/resonancePartialCount	i	8	y	1	8	-
+/source2/resonanceShapeScaleEnable	i (boolean)	false	n	-	-	-
+/source2/resonanceWet	f	1	y	0	1	-
+/source2/reverbDamping	f	0.5	y	0	1	-
+/source2/reverbDrywet	f	1	y	0	1	-
+/source2/reverbEnable	i (boolean)	false	n	-	-	-
+/source2/reverbFb1	f	0.9	y	0	1	-
+/source2/reverbFb2	f	0.7	y	0	1	-
+/source2/reverbMode	s (enum)	distance	n	-	-	distance,manual
+/source2/reverbSpread	f	0.2	y	0	1	-
+/source2/rotationAngleAxis	f f f f	0	n	-	-	-
+/source2/rotationMode	s (enum)	fixed	n	-	-	fixed,movement,center
+/source2/shake/duration	f	1000	y	0	10000	-
+/source2/shake/field	f f f	10	n	-	-	-
+/source2/shake/reset	i (boolean)	false	n	-	-	-
+/source2/shake/scale	f	1	y	0	10	-
+/source2/shake/trigger	i (boolean)	false	n	-	-	-
+/source2/shakeEnable	i (boolean)	true	n	-	-	-
+/source2/shape/dimensions	f f f	1	n	-	-	-
+/source2/shape/fillMode	s (enum)	absolute	n	-	-	absolute,lattice
+/source2/shape/hollow	i (boolean)	false	n	-	-	-
+/source2/shape/latticeSpacing	f	1	y	0.05	10	-
+/source2/shape/resolution	i	1	y	1	10	-
+/source2/shape/scale	f	1	y	0	10	-
+/source2/shape/speed	f	1	y	-10	10	-
+/source2/shape/type	s (enum)	circle	n	-	-	circle,point,line,triangle,square,pentagon,hexagon,tetrahedron,octahedron,cube,icosahedron,dodecahedron,sphere,circleTorus,spiralTorus,archimedeanSpiral,tripleSpiral,helix,pythonTest
+/source2/shapeVisualization/visible	i (boolean)	true	n	-	-	-
+/source2/shapes/archimedeanSpiral/a	f	0.2	y	0	1	-
+/source2/shapes/archimedeanSpiral/b	f	0	y	0	1	-
+/source2/shapes/circleTorus/a	f	1	y	0	2	-
+/source2/shapes/helix/a	f	1	y	0	1	-
+/source2/shapes/helix/b	f	0.1	y	0	1	-
+/source2/shapes/helix/c	f	0.9	y	0	1	-
+/source2/shapes/pythonTest/happy	f	1	y	-1	1	-
+/source2/shapes/spiralTorus/a	f	1	y	0	10	-
+/source2/shapes/spiralTorus/b	f	1	y	0	10	-
+/source2/shapes/spiralTorus/c	f	1	y	0	10	-
+/source2/shapes/tripleSpiral/a	f	0.2	y	0	1	-
+/source2/shapes/tripleSpiral/b	f	0	y	0	1	-
+/source2/spasm/duration	f	1000	y	0	10000	-
+/source2/spasm/field	f f f	10	n	-	-	-
+/source2/spasm/reset	i (boolean)	false	n	-	-	-
+/source2/spasm/scale	f	1	y	0	10	-
+/source2/spasm/steps	i	7	y	1	100	-
+/source2/spasm/trigger	i (boolean)	false	n	-	-	-
+/source2/spasmEnable	i (boolean)	true	n	-	-	-
+/source2/spatialdelayDrywet	f	0	y	0	1	-
+/source2/spatialdelayEnable	i (boolean)	false	n	-	-	-
+/source2/spatialdelayFeedback	f	0	y	0	0.99	-
+/source2/spatialdelaySmooth	f	0.05	y	0	1	-
+/source2/spatialdelayTimeDistanceScale	f	20	y	0	100	-
+/source2/spatialdelayTimeDopplerScale	f	20	y	0	100	-
+/source2/spatialdelayTimeNoiseDepth	f	0	y	0	1	-
+/source2/spatialdelayTimeNoiseSpeed	f	1	y	0	100	-
+/source2/spatialdelayTimePeripheralScale	f	20	y	0	100	-
+/source2/spatialdelayTimeRandomPatternScale	f	20	y	0	100	-
+/source2/spatialdelayTimeRandomValueTrigger	i (boolean)	false	n	-	-	-
+/source2/transformations/global1Enable	i (boolean)	false	n	-	-	-
+/source2/transformations/global2Enable	i (boolean)	false	n	-	-	-
+/source2/transformations/global3Enable	i (boolean)	false	n	-	-	-
+/source2/transformations/source1Enable	i (boolean)	false	n	-	-	-
+/source2/transformations/source3Enable	i (boolean)	false	n	-	-	-
+/source2/transformations/source4Enable	i (boolean)	false	n	-	-	-
+/source2/vantagePoint	f f f	0	n	-	-	-
+/source3/anchorPoint	f f f	0	n	-	-	-
+/source3/axesHelper/visible	i (boolean)	true	n	-	-	-
+/source3/color	f f f	0	y	0	1	-
+/source3/distanceDampingCurvature	f	-0.4	y	-1	1	-
+/source3/distanceDampingEnable	i (boolean)	false	n	-	-	-
+/source3/distanceDampingThreshold	f	100	y	0.001	1000	-
+/source3/distanceIntensityCurvature	f	-0.4	y	-1	1	-
+/source3/distanceIntensityEnable	i (boolean)	false	n	-	-	-
+/source3/distanceIntensityThreshold	f	100	y	0.001	1000	-
+/source3/distanceReverbCurvature	f	-0.4	y	-1	1	-
+/source3/distanceReverbThreshold	f	100	y	0.001	1000	-
+/source3/dryGain	f	1	y	0	1	-
+/source3/elevationFilterAboveContrast	f	1	y	0	1	-
+/source3/elevationFilterAboveCurvature	f	0.4	y	-1	1	-
+/source3/elevationFilterAboveEnable	i (boolean)	false	n	-	-	-
+/source3/elevationFilterAboveThreshold	f	100	y	0.001	1000	-
+/source3/elevationFilterBelowContrast	f	1	y	0	1	-
+/source3/elevationFilterBelowCurvature	f	0.4	y	-1	1	-
+/source3/elevationFilterBelowEnable	i (boolean)	false	n	-	-	-
+/source3/elevationFilterBelowThreshold	f	100	y	0.001	1000	-
+/source3/externalInputChannel	i	1	y	1	64	-
+/source3/externalInputEnable	i (boolean)	true	n	-	-	-
+/source3/follow	s (enum)	none	n	-	-	none,source1,source2,source4
+/source3/granulatorAmplitude	f	1	y	0	2	-
+/source3/granulatorAmplitudeDev	f	0	y	0	1	-
+/source3/granulatorAttackDecay	f	0	y	0.5	100	-
+/source3/granulatorDensity	f	1	y	0.2	50	-
+/source3/granulatorDetune	f	0	y	0	1	-
+/source3/granulatorDiffusion	f	10	y	1	2000	-
+/source3/granulatorDrywet	f	0	y	0	1	-
+/source3/granulatorDuration	f	50	y	5	5000	-
+/source3/granulatorEnable	i (boolean)	false	n	-	-	-
+/source3/granulatorIrregularity	f	1	y	0	2	-
+/source3/granulatorPitch	f	1	y	0.5	2	-
+/source3/granulatorShape	s (enum)	hanning	n	-	-	hanning,expodec,rexpodec
+/source3/grids/satellites/articulation	f	0	y	-1	1	-
+/source3/grids/satellites/boostLevel	f	0	y	0	1	-
+/source3/grids/satellites/level	f	1	y	0	1	-
+/source3/grids/satellites/orthogonalProjection	i (boolean)	false	n	-	-	-
+/source3/grids/satellites/projectionPoint	f f f	0	n	-	-	-
+/source3/hue	f	0	y	0	360	-
+/source3/inputDistanceIntensityCurvature	f	0	y	-1	1	-
+/source3/inputDistanceIntensityEnable	i (boolean)	false	n	-	-	-
+/source3/inputDistanceIntensityThreshold	f	100	y	0	1000	-
+/source3/inputPosition	f f f	0	n	-	-	-
+/source3/inputRotation	f f f	0	y	-360	360	-
+/source3/invertX	i (boolean)	false	n	-	-	-
+/source3/invertY	i (boolean)	false	n	-	-	-
+/source3/invertZ	i (boolean)	false	n	-	-	-
+/source3/modulationEnable	i (boolean)	false	n	-	-	-
+/source3/modulationScale	f	1	y	0	100	-
+/source3/modulationSpeed	f	0	y	0	20	-
+/source3/modulationXDepth	f	1	y	0	100	-
+/source3/modulationXEnable	i (boolean)	false	n	-	-	-
+/source3/modulationXFrequency	f	1	y	0	100	-
+/source3/modulationXInvert	i (boolean)	false	n	-	-	-
+/source3/modulationXMode	s (enum)	sine	n	-	-	sine,triangle,linear,random
+/source3/modulationXPhase	f	0	y	0	1	-
+/source3/modulationXPower	f	1	y	0	10	-
+/source3/modulationYDepth	f	1	y	0	100	-
+/source3/modulationYEnable	i (boolean)	false	n	-	-	-
+/source3/modulationYFrequency	f	1	y	0	100	-
+/source3/modulationYInvert	i (boolean)	false	n	-	-	-
+/source3/modulationYMode	s (enum)	sine	n	-	-	sine,triangle,linear,random
+/source3/modulationYPhase	f	0	y	0	1	-
+/source3/modulationYPower	f	1	y	0	10	-
+/source3/modulationZDepth	f	1	y	0	100	-
+/source3/modulationZEnable	i (boolean)	false	n	-	-	-
+/source3/modulationZFrequency	f	1	y	0	100	-
+/source3/modulationZInvert	i (boolean)	false	n	-	-	-
+/source3/modulationZMode	s (enum)	sine	n	-	-	sine,triangle,linear,random
+/source3/modulationZPhase	f	0	y	0	1	-
+/source3/modulationZPower	f	1	y	0	10	-
+/source3/particleCountGainScaling	f	0.5	y	0.5	1	-
+/source3/particleDimensions	f f f	1	y	0	20	-
+/source3/particleScale	f	0	y	0	10	-
+/source3/particleVisualization/visible	i (boolean)	true	n	-	-	-
+/source3/path/dimensions	f f f	1	n	-	-	-
+/source3/path/phase	f	0	y	0	1	-
+/source3/path/rotation	f f f	0	y	-360	360	-
+/source3/path/scale	f	1	y	0	10	-
+/source3/path/type	s (enum)	verticalLine	n	-	-	verticalLine,line,square,circle,halfCircle,figure-of-8,triangle,zigzag,spiral
+/source3/pathEnable	i (boolean)	false	n	-	-	-
+/source3/pathVisualization/visible	i (boolean)	true	n	-	-	-
+/source3/plasma/deviation	f	1	y	0	10	-
+/source3/plasma/duration	f	1000	y	0	10000	-
+/source3/plasma/field	f f f	10	n	-	-	-
+/source3/plasma/reset	i (boolean)	false	n	-	-	-
+/source3/plasma/scale	f	1	y	0	10	-
+/source3/plasma/steps	i	7	y	1	100	-
+/source3/plasma/trigger	i (boolean)	false	n	-	-	-
+/source3/plasmaEnable	i (boolean)	true	n	-	-	-
+/source3/position	f f f	0	n	-	-	-
+/source3/positionRotation	f f f	0	y	-360	360	-
+/source3/receive1	f	0	y	0	1	-
+/source3/receive2	f	0	y	0	1	-
+/source3/resonance/filter1/bandwidth	f	1	y	0	10000	-
+/source3/resonance/filter1/centerFrequency	f	100	y	0	10000	-
+/source3/resonance/filter1/level	f	1	y	0	2	-
+/source3/resonance/filter2/bandwidth	f	2	y	0	10000	-
+/source3/resonance/filter2/centerFrequency	f	200	y	0	10000	-
+/source3/resonance/filter2/level	f	1	y	0	2	-
+/source3/resonance/filter3/bandwidth	f	3	y	0	10000	-
+/source3/resonance/filter3/centerFrequency	f	300	y	0	10000	-
+/source3/resonance/filter3/level	f	1	y	0	2	-
+/source3/resonance/filter4/bandwidth	f	4	y	0	10000	-
+/source3/resonance/filter4/centerFrequency	f	400	y	0	10000	-
+/source3/resonance/filter4/level	f	1	y	0	2	-
+/source3/resonance/filter5/bandwidth	f	5	y	0	10000	-
+/source3/resonance/filter5/centerFrequency	f	500	y	0	10000	-
+/source3/resonance/filter5/level	f	1	y	0	2	-
+/source3/resonance/filter6/bandwidth	f	6	y	0	10000	-
+/source3/resonance/filter6/centerFrequency	f	600	y	0	10000	-
+/source3/resonance/filter6/level	f	1	y	0	2	-
+/source3/resonance/filter7/bandwidth	f	7	y	0	10000	-
+/source3/resonance/filter7/centerFrequency	f	700	y	0	10000	-
+/source3/resonance/filter7/level	f	1	y	0	2	-
+/source3/resonance/filter8/bandwidth	f	8	y	0	10000	-
+/source3/resonance/filter8/centerFrequency	f	800	y	0	10000	-
+/source3/resonance/filter8/level	f	1	y	0	2	-
+/source3/resonanceBandwidthMultiply	f	1	y	0	100	-
+/source3/resonanceDry	f	0	y	0	1	-
+/source3/resonanceEnable	i (boolean)	false	n	-	-	-
+/source3/resonanceFrequencyDeviation	f	0	y	0	100	-
+/source3/resonanceFrequencyDeviationPattern	i (boolean)	false	n	-	-	-
+/source3/resonanceFrequencyMultiply	f	1	y	0	20	-
+/source3/resonanceFrequencyShift	f	1	y	-10000	10000	-
+/source3/resonanceGainBoost	f	1	y	1	4	-
+/source3/resonanceMode	s (enum)	manual	n	-	-	manual,shape
+/source3/resonancePartialCount	i	8	y	1	8	-
+/source3/resonanceShapeScaleEnable	i (boolean)	false	n	-	-	-
+/source3/resonanceWet	f	1	y	0	1	-
+/source3/reverbDamping	f	0.5	y	0	1	-
+/source3/reverbDrywet	f	1	y	0	1	-
+/source3/reverbEnable	i (boolean)	false	n	-	-	-
+/source3/reverbFb1	f	0.9	y	0	1	-
+/source3/reverbFb2	f	0.7	y	0	1	-
+/source3/reverbMode	s (enum)	distance	n	-	-	distance,manual
+/source3/reverbSpread	f	0.2	y	0	1	-
+/source3/rotationAngleAxis	f f f f	0	n	-	-	-
+/source3/rotationMode	s (enum)	fixed	n	-	-	fixed,movement,center
+/source3/shake/duration	f	1000	y	0	10000	-
+/source3/shake/field	f f f	10	n	-	-	-
+/source3/shake/reset	i (boolean)	false	n	-	-	-
+/source3/shake/scale	f	1	y	0	10	-
+/source3/shake/trigger	i (boolean)	false	n	-	-	-
+/source3/shakeEnable	i (boolean)	true	n	-	-	-
+/source3/shape/dimensions	f f f	1	n	-	-	-
+/source3/shape/fillMode	s (enum)	absolute	n	-	-	absolute,lattice
+/source3/shape/hollow	i (boolean)	false	n	-	-	-
+/source3/shape/latticeSpacing	f	1	y	0.05	10	-
+/source3/shape/resolution	i	1	y	1	10	-
+/source3/shape/scale	f	1	y	0	10	-
+/source3/shape/speed	f	1	y	-10	10	-
+/source3/shape/type	s (enum)	circle	n	-	-	circle,point,line,triangle,square,pentagon,hexagon,tetrahedron,octahedron,cube,icosahedron,dodecahedron,sphere,circleTorus,spiralTorus,archimedeanSpiral,tripleSpiral,helix,pythonTest
+/source3/shapeVisualization/visible	i (boolean)	true	n	-	-	-
+/source3/shapes/archimedeanSpiral/a	f	0.2	y	0	1	-
+/source3/shapes/archimedeanSpiral/b	f	0	y	0	1	-
+/source3/shapes/circleTorus/a	f	1	y	0	2	-
+/source3/shapes/helix/a	f	1	y	0	1	-
+/source3/shapes/helix/b	f	0.1	y	0	1	-
+/source3/shapes/helix/c	f	0.9	y	0	1	-
+/source3/shapes/pythonTest/happy	f	1	y	-1	1	-
+/source3/shapes/spiralTorus/a	f	1	y	0	10	-
+/source3/shapes/spiralTorus/b	f	1	y	0	10	-
+/source3/shapes/spiralTorus/c	f	1	y	0	10	-
+/source3/shapes/tripleSpiral/a	f	0.2	y	0	1	-
+/source3/shapes/tripleSpiral/b	f	0	y	0	1	-
+/source3/spasm/duration	f	1000	y	0	10000	-
+/source3/spasm/field	f f f	10	n	-	-	-
+/source3/spasm/reset	i (boolean)	false	n	-	-	-
+/source3/spasm/scale	f	1	y	0	10	-
+/source3/spasm/steps	i	7	y	1	100	-
+/source3/spasm/trigger	i (boolean)	false	n	-	-	-
+/source3/spasmEnable	i (boolean)	true	n	-	-	-
+/source3/spatialdelayDrywet	f	0	y	0	1	-
+/source3/spatialdelayEnable	i (boolean)	false	n	-	-	-
+/source3/spatialdelayFeedback	f	0	y	0	0.99	-
+/source3/spatialdelaySmooth	f	0.05	y	0	1	-
+/source3/spatialdelayTimeDistanceScale	f	20	y	0	100	-
+/source3/spatialdelayTimeDopplerScale	f	20	y	0	100	-
+/source3/spatialdelayTimeNoiseDepth	f	0	y	0	1	-
+/source3/spatialdelayTimeNoiseSpeed	f	1	y	0	100	-
+/source3/spatialdelayTimePeripheralScale	f	20	y	0	100	-
+/source3/spatialdelayTimeRandomPatternScale	f	20	y	0	100	-
+/source3/spatialdelayTimeRandomValueTrigger	i (boolean)	false	n	-	-	-
+/source3/transformations/global1Enable	i (boolean)	false	n	-	-	-
+/source3/transformations/global2Enable	i (boolean)	false	n	-	-	-
+/source3/transformations/global3Enable	i (boolean)	false	n	-	-	-
+/source3/transformations/source1Enable	i (boolean)	false	n	-	-	-
+/source3/transformations/source2Enable	i (boolean)	false	n	-	-	-
+/source3/transformations/source4Enable	i (boolean)	false	n	-	-	-
+/source3/vantagePoint	f f f	0	n	-	-	-
+/source4/anchorPoint	f f f	0	n	-	-	-
+/source4/axesHelper/visible	i (boolean)	true	n	-	-	-
+/source4/color	f f f	0	y	0	1	-
+/source4/distanceDampingCurvature	f	-0.4	y	-1	1	-
+/source4/distanceDampingEnable	i (boolean)	false	n	-	-	-
+/source4/distanceDampingThreshold	f	100	y	0.001	1000	-
+/source4/distanceIntensityCurvature	f	-0.4	y	-1	1	-
+/source4/distanceIntensityEnable	i (boolean)	false	n	-	-	-
+/source4/distanceIntensityThreshold	f	100	y	0.001	1000	-
+/source4/distanceReverbCurvature	f	-0.4	y	-1	1	-
+/source4/distanceReverbThreshold	f	100	y	0.001	1000	-
+/source4/dryGain	f	1	y	0	1	-
+/source4/elevationFilterAboveContrast	f	1	y	0	1	-
+/source4/elevationFilterAboveCurvature	f	0.4	y	-1	1	-
+/source4/elevationFilterAboveEnable	i (boolean)	false	n	-	-	-
+/source4/elevationFilterAboveThreshold	f	100	y	0.001	1000	-
+/source4/elevationFilterBelowContrast	f	1	y	0	1	-
+/source4/elevationFilterBelowCurvature	f	0.4	y	-1	1	-
+/source4/elevationFilterBelowEnable	i (boolean)	false	n	-	-	-
+/source4/elevationFilterBelowThreshold	f	100	y	0.001	1000	-
+/source4/externalInputChannel	i	1	y	1	64	-
+/source4/externalInputEnable	i (boolean)	true	n	-	-	-
+/source4/follow	s (enum)	none	n	-	-	none,source1,source2,source3
+/source4/granulatorAmplitude	f	1	y	0	2	-
+/source4/granulatorAmplitudeDev	f	0	y	0	1	-
+/source4/granulatorAttackDecay	f	0	y	0.5	100	-
+/source4/granulatorDensity	f	1	y	0.2	50	-
+/source4/granulatorDetune	f	0	y	0	1	-
+/source4/granulatorDiffusion	f	10	y	1	2000	-
+/source4/granulatorDrywet	f	0	y	0	1	-
+/source4/granulatorDuration	f	50	y	5	5000	-
+/source4/granulatorEnable	i (boolean)	false	n	-	-	-
+/source4/granulatorIrregularity	f	1	y	0	2	-
+/source4/granulatorPitch	f	1	y	0.5	2	-
+/source4/granulatorShape	s (enum)	hanning	n	-	-	hanning,expodec,rexpodec
+/source4/grids/satellites/articulation	f	0	y	-1	1	-
+/source4/grids/satellites/boostLevel	f	0	y	0	1	-
+/source4/grids/satellites/level	f	1	y	0	1	-
+/source4/grids/satellites/orthogonalProjection	i (boolean)	false	n	-	-	-
+/source4/grids/satellites/projectionPoint	f f f	0	n	-	-	-
+/source4/hue	f	0	y	0	360	-
+/source4/inputDistanceIntensityCurvature	f	0	y	-1	1	-
+/source4/inputDistanceIntensityEnable	i (boolean)	false	n	-	-	-
+/source4/inputDistanceIntensityThreshold	f	100	y	0	1000	-
+/source4/inputPosition	f f f	0	n	-	-	-
+/source4/inputRotation	f f f	0	y	-360	360	-
+/source4/invertX	i (boolean)	false	n	-	-	-
+/source4/invertY	i (boolean)	false	n	-	-	-
+/source4/invertZ	i (boolean)	false	n	-	-	-
+/source4/modulationEnable	i (boolean)	false	n	-	-	-
+/source4/modulationScale	f	1	y	0	100	-
+/source4/modulationSpeed	f	0	y	0	20	-
+/source4/modulationXDepth	f	1	y	0	100	-
+/source4/modulationXEnable	i (boolean)	false	n	-	-	-
+/source4/modulationXFrequency	f	1	y	0	100	-
+/source4/modulationXInvert	i (boolean)	false	n	-	-	-
+/source4/modulationXMode	s (enum)	sine	n	-	-	sine,triangle,linear,random
+/source4/modulationXPhase	f	0	y	0	1	-
+/source4/modulationXPower	f	1	y	0	10	-
+/source4/modulationYDepth	f	1	y	0	100	-
+/source4/modulationYEnable	i (boolean)	false	n	-	-	-
+/source4/modulationYFrequency	f	1	y	0	100	-
+/source4/modulationYInvert	i (boolean)	false	n	-	-	-
+/source4/modulationYMode	s (enum)	sine	n	-	-	sine,triangle,linear,random
+/source4/modulationYPhase	f	0	y	0	1	-
+/source4/modulationYPower	f	1	y	0	10	-
+/source4/modulationZDepth	f	1	y	0	100	-
+/source4/modulationZEnable	i (boolean)	false	n	-	-	-
+/source4/modulationZFrequency	f	1	y	0	100	-
+/source4/modulationZInvert	i (boolean)	false	n	-	-	-
+/source4/modulationZMode	s (enum)	sine	n	-	-	sine,triangle,linear,random
+/source4/modulationZPhase	f	0	y	0	1	-
+/source4/modulationZPower	f	1	y	0	10	-
+/source4/particleCountGainScaling	f	0.5	y	0.5	1	-
+/source4/particleDimensions	f f f	1	y	0	20	-
+/source4/particleScale	f	0	y	0	10	-
+/source4/particleVisualization/visible	i (boolean)	true	n	-	-	-
+/source4/path/dimensions	f f f	1	n	-	-	-
+/source4/path/phase	f	0	y	0	1	-
+/source4/path/rotation	f f f	0	y	-360	360	-
+/source4/path/scale	f	1	y	0	10	-
+/source4/path/type	s (enum)	verticalLine	n	-	-	verticalLine,line,square,circle,halfCircle,figure-of-8,triangle,zigzag,spiral
+/source4/pathEnable	i (boolean)	false	n	-	-	-
+/source4/pathVisualization/visible	i (boolean)	true	n	-	-	-
+/source4/plasma/deviation	f	1	y	0	10	-
+/source4/plasma/duration	f	1000	y	0	10000	-
+/source4/plasma/field	f f f	10	n	-	-	-
+/source4/plasma/reset	i (boolean)	false	n	-	-	-
+/source4/plasma/scale	f	1	y	0	10	-
+/source4/plasma/steps	i	7	y	1	100	-
+/source4/plasma/trigger	i (boolean)	false	n	-	-	-
+/source4/plasmaEnable	i (boolean)	true	n	-	-	-
+/source4/position	f f f	0	n	-	-	-
+/source4/positionRotation	f f f	0	y	-360	360	-
+/source4/receive1	f	0	y	0	1	-
+/source4/receive2	f	0	y	0	1	-
+/source4/resonance/filter1/bandwidth	f	1	y	0	10000	-
+/source4/resonance/filter1/centerFrequency	f	100	y	0	10000	-
+/source4/resonance/filter1/level	f	1	y	0	2	-
+/source4/resonance/filter2/bandwidth	f	2	y	0	10000	-
+/source4/resonance/filter2/centerFrequency	f	200	y	0	10000	-
+/source4/resonance/filter2/level	f	1	y	0	2	-
+/source4/resonance/filter3/bandwidth	f	3	y	0	10000	-
+/source4/resonance/filter3/centerFrequency	f	300	y	0	10000	-
+/source4/resonance/filter3/level	f	1	y	0	2	-
+/source4/resonance/filter4/bandwidth	f	4	y	0	10000	-
+/source4/resonance/filter4/centerFrequency	f	400	y	0	10000	-
+/source4/resonance/filter4/level	f	1	y	0	2	-
+/source4/resonance/filter5/bandwidth	f	5	y	0	10000	-
+/source4/resonance/filter5/centerFrequency	f	500	y	0	10000	-
+/source4/resonance/filter5/level	f	1	y	0	2	-
+/source4/resonance/filter6/bandwidth	f	6	y	0	10000	-
+/source4/resonance/filter6/centerFrequency	f	600	y	0	10000	-
+/source4/resonance/filter6/level	f	1	y	0	2	-
+/source4/resonance/filter7/bandwidth	f	7	y	0	10000	-
+/source4/resonance/filter7/centerFrequency	f	700	y	0	10000	-
+/source4/resonance/filter7/level	f	1	y	0	2	-
+/source4/resonance/filter8/bandwidth	f	8	y	0	10000	-
+/source4/resonance/filter8/centerFrequency	f	800	y	0	10000	-
+/source4/resonance/filter8/level	f	1	y	0	2	-
+/source4/resonanceBandwidthMultiply	f	1	y	0	100	-
+/source4/resonanceDry	f	0	y	0	1	-
+/source4/resonanceEnable	i (boolean)	false	n	-	-	-
+/source4/resonanceFrequencyDeviation	f	0	y	0	100	-
+/source4/resonanceFrequencyDeviationPattern	i (boolean)	false	n	-	-	-
+/source4/resonanceFrequencyMultiply	f	1	y	0	20	-
+/source4/resonanceFrequencyShift	f	1	y	-10000	10000	-
+/source4/resonanceGainBoost	f	1	y	1	4	-
+/source4/resonanceMode	s (enum)	manual	n	-	-	manual,shape
+/source4/resonancePartialCount	i	8	y	1	8	-
+/source4/resonanceShapeScaleEnable	i (boolean)	false	n	-	-	-
+/source4/resonanceWet	f	1	y	0	1	-
+/source4/reverbDamping	f	0.5	y	0	1	-
+/source4/reverbDrywet	f	1	y	0	1	-
+/source4/reverbEnable	i (boolean)	false	n	-	-	-
+/source4/reverbFb1	f	0.9	y	0	1	-
+/source4/reverbFb2	f	0.7	y	0	1	-
+/source4/reverbMode	s (enum)	distance	n	-	-	distance,manual
+/source4/reverbSpread	f	0.2	y	0	1	-
+/source4/rotationAngleAxis	f f f f	0	n	-	-	-
+/source4/rotationMode	s (enum)	fixed	n	-	-	fixed,movement,center
+/source4/shake/duration	f	1000	y	0	10000	-
+/source4/shake/field	f f f	10	n	-	-	-
+/source4/shake/reset	i (boolean)	false	n	-	-	-
+/source4/shake/scale	f	1	y	0	10	-
+/source4/shake/trigger	i (boolean)	false	n	-	-	-
+/source4/shakeEnable	i (boolean)	true	n	-	-	-
+/source4/shape/dimensions	f f f	1	n	-	-	-
+/source4/shape/fillMode	s (enum)	absolute	n	-	-	absolute,lattice
+/source4/shape/hollow	i (boolean)	false	n	-	-	-
+/source4/shape/latticeSpacing	f	1	y	0.05	10	-
+/source4/shape/resolution	i	1	y	1	10	-
+/source4/shape/scale	f	1	y	0	10	-
+/source4/shape/speed	f	1	y	-10	10	-
+/source4/shape/type	s (enum)	circle	n	-	-	circle,point,line,triangle,square,pentagon,hexagon,tetrahedron,octahedron,cube,icosahedron,dodecahedron,sphere,circleTorus,spiralTorus,archimedeanSpiral,tripleSpiral,helix,pythonTest
+/source4/shapeVisualization/visible	i (boolean)	true	n	-	-	-
+/source4/shapes/archimedeanSpiral/a	f	0.2	y	0	1	-
+/source4/shapes/archimedeanSpiral/b	f	0	y	0	1	-
+/source4/shapes/circleTorus/a	f	1	y	0	2	-
+/source4/shapes/helix/a	f	1	y	0	1	-
+/source4/shapes/helix/b	f	0.1	y	0	1	-
+/source4/shapes/helix/c	f	0.9	y	0	1	-
+/source4/shapes/pythonTest/happy	f	1	y	-1	1	-
+/source4/shapes/spiralTorus/a	f	1	y	0	10	-
+/source4/shapes/spiralTorus/b	f	1	y	0	10	-
+/source4/shapes/spiralTorus/c	f	1	y	0	10	-
+/source4/shapes/tripleSpiral/a	f	0.2	y	0	1	-
+/source4/shapes/tripleSpiral/b	f	0	y	0	1	-
+/source4/spasm/duration	f	1000	y	0	10000	-
+/source4/spasm/field	f f f	10	n	-	-	-
+/source4/spasm/reset	i (boolean)	false	n	-	-	-
+/source4/spasm/scale	f	1	y	0	10	-
+/source4/spasm/steps	i	7	y	1	100	-
+/source4/spasm/trigger	i (boolean)	false	n	-	-	-
+/source4/spasmEnable	i (boolean)	true	n	-	-	-
+/source4/spatialdelayDrywet	f	0	y	0	1	-
+/source4/spatialdelayEnable	i (boolean)	false	n	-	-	-
+/source4/spatialdelayFeedback	f	0	y	0	0.99	-
+/source4/spatialdelaySmooth	f	0.05	y	0	1	-
+/source4/spatialdelayTimeDistanceScale	f	20	y	0	100	-
+/source4/spatialdelayTimeDopplerScale	f	20	y	0	100	-
+/source4/spatialdelayTimeNoiseDepth	f	0	y	0	1	-
+/source4/spatialdelayTimeNoiseSpeed	f	1	y	0	100	-
+/source4/spatialdelayTimePeripheralScale	f	20	y	0	100	-
+/source4/spatialdelayTimeRandomPatternScale	f	20	y	0	100	-
+/source4/spatialdelayTimeRandomValueTrigger	i (boolean)	false	n	-	-	-
+/source4/transformations/global1Enable	i (boolean)	false	n	-	-	-
+/source4/transformations/global2Enable	i (boolean)	false	n	-	-	-
+/source4/transformations/global3Enable	i (boolean)	false	n	-	-	-
+/source4/transformations/source1Enable	i (boolean)	false	n	-	-	-
+/source4/transformations/source2Enable	i (boolean)	false	n	-	-	-
+/source4/transformations/source3Enable	i (boolean)	false	n	-	-	-
+/source4/vantagePoint	f f f	0	n	-	-	-

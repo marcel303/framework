@@ -28,15 +28,6 @@ GFX status:
 - JSFX-Kawa (https://github.com/kawaCat/JSFX-kawa) works.
 - ATK for Reaper works.
 
-todo :
-
-mouse_wheel
-
-gfx_mode
-	0x1 = additive
-	0x2 = disable source alpha for gfx_blit (make it opaque)
-	0x4 = disable filtering for gfx_blit (point sampling)
-
 */
 
 /*
@@ -336,6 +327,17 @@ struct MidiBuffer
 	
 	uint8_t bytes[kMaxBytes];
 	int numBytes = 0;
+	
+	bool append(const uint8_t * in_bytes, const int in_numBytes)
+	{
+		if (numBytes + in_numBytes > MidiBuffer::kMaxBytes)
+			return false;
+		
+		for (int i = 0; i < in_numBytes; ++i)
+			bytes[numBytes++] = in_bytes[i];
+		
+		return true;
+	}
 };
 
 static MidiBuffer s_midiBuffer;
@@ -375,6 +377,8 @@ struct AudioStream_JsusFx : AudioStream
 	SDL_mutex * mutex = nullptr;
 	
 	Limiter limiter;
+	
+	double playbackTime = 0.0;
 	
 	uint64_t cpuTime = 0;
 	
@@ -443,9 +447,17 @@ struct AudioStream_JsusFx : AudioStream
 		{
 			uint64_t time1 = g_TimerRT.TimeUS_get();
 			
+			const double beatPosition = 0.0;
+			const int tsNum = 0;
+			const int tsDenom = 4;
+			
+			fx->setTransportValues(120, JsusFx::kPlaybackState_Playing, playbackTime, beatPosition, tsNum, tsDenom);
+			
 			fx->setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
 			
 			fx->process(input, output, numSamples, 2, 2);
+			
+			playbackTime += numSamples / float(SAMPLE_RATE);
 			
 			s_midiBuffer.numBytes = 0;
 			
@@ -595,38 +607,16 @@ struct JsusFxChain
 			
 			JsusFxSerializationData serializationData;
 			
-		// todo : create helper functions for this in jsusfx-framework
-		
-			auto xml_sliders = xml_effect->FirstChildElement("sliders");
-			
-			if (xml_sliders != nullptr)
+			if (!loadJsusFxSerializationDataFromXml(xml_effect, serializationData))
 			{
-				for (auto xml_slider = xml_sliders->FirstChildElement("slider"); xml_slider != nullptr; xml_slider = xml_slider->NextSiblingElement("slider"))
-				{
-					JsusFxSerializationData::Slider slider;
-					
-					slider.index = intAttrib(xml_slider, "index", -1);
-					slider.value = floatAttrib(xml_slider, "value", 0.f);
-					
-					serializationData.sliders.push_back(slider);
-				}
+				logError("failed to load jsfx serialization data from xml");
 			}
-			
-			auto xml_vars = xml_effect->FirstChildElement("vars");
-			
-			if (xml_vars != nullptr)
+			else
 			{
-				for (auto xml_var = xml_vars->FirstChildElement("var"); xml_var != nullptr; xml_var = xml_var->NextSiblingElement("var"))
-				{
-					const float value = floatAttrib(xml_var, "value", 0.f);
-					
-					serializationData.vars.push_back(value);
-				}
+				JsusFxSerializer_Basic serializer(serializationData);
+				
+				elem->jsusFx.serialize(serializer, false);
 			}
-			
-			JsusFxSerializer_Basic serializer(serializationData);
-			
-			elem->jsusFx.serialize(serializer, false);
 			
 			//
 			
@@ -654,38 +644,7 @@ struct JsusFxChain
 				
 				if (effect->jsusFx.serialize(serializer, true))
 				{
-					if (!serializationData.sliders.empty())
-					{
-						p.OpenElement("sliders");
-						{
-							for (auto & slider : serializationData.sliders)
-							{
-								p.OpenElement("slider");
-								{
-									p.PushAttribute("index", slider.index);
-									p.PushAttribute("value", slider.value);
-								}
-								p.CloseElement();
-							}
-						}
-						p.CloseElement();
-					}
-					
-					if (!serializationData.vars.empty())
-					{
-						p.OpenElement("vars");
-						{
-							for (auto & var : serializationData.vars)
-							{
-								p.OpenElement("var");
-								{
-									p.PushAttribute("value", var);
-								}
-								p.CloseElement();
-							}
-						}
-						p.CloseElement();
-					}
+					saveJsusFxSerializationDataToXml(serializationData, p);
 				}
 			}
 			p.CloseElement();
@@ -812,6 +771,13 @@ struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
 		
 		lock();
 		{
+			MidiBuffer midiRecvBuffer;
+			MidiBuffer midiSendBuffer;
+			
+			// consume received midi data
+			midiRecvBuffer = s_midiBuffer;
+			s_midiBuffer.numBytes = 0;
+			
 			for (auto & effect : effectChain.effects)
 			{
 				if (effect->isPassthrough)
@@ -823,8 +789,9 @@ struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
 				auto & jsusFx = effect->jsusFx;
 				
 				const uint64_t time1 = g_TimerRT.TimeUS_get();
-				
-				jsusFx.setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
+	
+				jsusFx.setMidi(midiRecvBuffer.bytes, midiRecvBuffer.numBytes);
+				jsusFx.setMidiSendBuffer(midiSendBuffer.bytes, MidiBuffer::kMaxBytes);
 				
 				const float * input[kNumBuffers];
 				float * output[kNumBuffers];
@@ -840,12 +807,18 @@ struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
 					inputIndex = 1 - inputIndex;
 				}
 				
+				// fill in the midi receive buffer for the next effect
+				
+				if (midiRecvBuffer.append(jsusFx.midi, jsusFx.midiSize) == false ||
+					midiRecvBuffer.append(jsusFx.midiSendBuffer, jsusFx.midiSendBufferSize) == false)
+				{
+					logWarning("midi receive buffer overflow during effect chain processing");
+				}
+				
 				const uint64_t time2 = g_TimerRT.TimeUS_get();
 				
 				effect->cpuTime = time2 - time1;
 			}
-			
-			s_midiBuffer.numBytes = 0;
 		}
 		unlock();
 		
@@ -1320,6 +1293,8 @@ std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool r
 	{
 		if (String::EndsWith(filename, "-example"))
 			continue;
+		if (String::EndsWith(filename, "-inc"))
+			continue;
 		if (String::EndsWith(filename, "-template"))
 			continue;
 			
@@ -1527,45 +1502,6 @@ static void testJsusFxList()
 			}
 		}
 		
-	#if 0 // todo : keep or remove ?
-		if (mouse.wentDown(BUTTON_RIGHT))
-		{
-			BoxAtlas atlas;
-			
-			atlas.init(1280, 10000); // todo : desktop size
-			
-			struct Elem
-			{
-				Window * window = nullptr;
-				BoxAtlasElem * atlasElem = nullptr;
-			};
-			
-			std::vector<Elem> elems;
-			Elem elem;
-			elem.window = &effectChainWindow.window;
-			elems.push_back(elem);
-			
-			for (auto & window : windows)
-			{
-				if (window->window->isHidden())
-					continue;
-				
-				Elem elem;
-				elem.window = window->window;
-				elems.push_back(elem);
-			}
-			
-			for (auto & elem : elems)
-				elem.atlasElem = atlas.tryAlloc(elem.window->getWidth(), elem.window->getHeight());
-			
-			atlas.optimize();
-			
-			for (auto & elem : elems)
-				if (elem.atlasElem != nullptr)
-					elem.window->setPosition(elem.atlasElem->x, elem.atlasElem->y);
-		}
-	#endif
-		
 		effectChainWindow.tick(dt);
 		
 	#if ENABLE_MIDI
@@ -1580,11 +1516,8 @@ static void testJsusFxList()
 				if (messageBytes.empty())
 					break;
 				
-				if (s_midiBuffer.numBytes + messageBytes.size() >= MidiBuffer::kMaxBytes)
+				if (s_midiBuffer.append(&messageBytes[0], messageBytes.size()) == false)
 					break;
-				
-				for (auto b : messageBytes)
-					s_midiBuffer.bytes[s_midiBuffer.numBytes++] = b;
 			}
 		}
 		audioStream.unlock();

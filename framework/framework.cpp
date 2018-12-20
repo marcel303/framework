@@ -167,6 +167,8 @@ Framework::Framework()
 	quitRequested = false;
 	time = 0.f;
 	timeStep = 1.f / 60.f;
+	
+	m_lastTick = -1;
 
 	m_sprites = 0;
 	m_models = 0;
@@ -637,7 +639,11 @@ bool Framework::shutdown()
 	fillCachesUnknownResourceCallback = 0;
 	realTimeEditCallback = 0;
 	initErrorHandler = 0;
-
+	
+	events.clear();
+	
+	m_lastTick = -1;
+	
 	return result;
 }
 
@@ -1217,12 +1223,12 @@ void Framework::process()
 	
 	//
 	
-	static int tstamp1 = SDL_GetTicks();
-	const int tstamp2 = SDL_GetTicks();
-	int delta = tstamp2 - tstamp1;
-	tstamp1 = tstamp2;
-	//if (delta == 0)
-	//	delta = 1;
+	const uint32_t tickCount = SDL_GetTicks();
+	if (m_lastTick == -1)
+		m_lastTick = tickCount;
+	const uint32_t delta = tickCount - m_lastTick;
+	m_lastTick = tickCount;
+
 	timeStep = delta / 1000.f;
 
 	time += timeStep;
@@ -2770,6 +2776,17 @@ void Shader::setTextureArray(const char * name, int unit, GLuint texture, bool f
 	checkErrorGL();
 }
 
+void Shader::setTextureCube(const char * name, int unit, GLuint texture)
+{
+	SET_UNIFORM(name, glUniform1i(index, unit));
+	checkErrorGL();
+
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+}
+
 #undef SET_UNIFORM
 
 void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
@@ -3091,7 +3108,6 @@ void ComputeShader::dispatch(const int dispatchSx, const int dispatchSy, const i
 	checkErrorGL();
 
 	// todo : let application insert barriers
-	//glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 	checkErrorGL();
 }
@@ -3682,7 +3698,11 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	
 	// animation
 	const char * sheetFilename = 0;
-	std::string sheetFilenameStr;
+#if WINDOWS
+	char sheetFilenameBuffer[MAX_PATH];
+#else
+	char sheetFilenameBuffer[PATH_MAX];
+#endif
 	if (hasSpriteSheet)
 	{
 		if (spritesheet)
@@ -3691,11 +3711,19 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 		}
 		else
 		{
-			sheetFilenameStr = filename;
-			size_t dot = sheetFilenameStr.rfind('.');
-			if (dot != std::string::npos)
-				sheetFilenameStr = sheetFilenameStr.substr(0, dot) + ".txt";
-			sheetFilename = sheetFilenameStr.c_str();
+			strcpy_s(sheetFilenameBuffer, sizeof(sheetFilenameBuffer), filename);
+			int dot = -1;
+			for (int i = 0; filename[i] != 0; ++i)
+				if (filename[i] == '.')
+					dot = i;
+			if (dot != -1 && dot + 4 < sizeof(sheetFilenameBuffer))
+			{
+				sheetFilenameBuffer[dot + 1] = 't';
+				sheetFilenameBuffer[dot + 2] = 'x';
+				sheetFilenameBuffer[dot + 3] = 't';
+				sheetFilenameBuffer[dot + 4] = 0;
+				sheetFilename = sheetFilenameBuffer;
+			}
 		}
 	}
 	
@@ -4231,6 +4259,14 @@ int Spriter::getAnimCount() const
 	if (m_spriter->m_scene->m_entities.empty())
 		return 0;
 	return (int)m_spriter->m_scene->m_entities[0]->m_animations.size();
+}
+
+const char * Spriter::getAnimName(const int animIndex) const
+{
+	if (m_spriter->m_scene->m_entities.empty())
+		return 0;
+	
+	return m_spriter->m_scene->m_entities[0]->getAnimName(animIndex);
 }
 
 int Spriter::getAnimIndexByName(const char * name) const
@@ -6178,10 +6214,6 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 
 #if ENABLE_MSDF_FONTS
 
-// fixme : settle on one method
-static int sampleMethod = 3;
-static bool useSuperSampling = false;
-
 static void measureText_MSDF(const stbtt_fontinfo & fontInfo, const float size, const GlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
 
 {
@@ -6260,8 +6292,6 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 		setShader(shader);
 		
 		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture);
-		shader.setImmediate("sampleMethod", sampleMethod);
-		shader.setImmediate("useSuperSampling", useSuperSampling);
 		
 		gxBegin(GL_QUADS);
 	}
@@ -6410,7 +6440,7 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 #endif
 }
 
-void beginTextBatch()
+void beginTextBatch(Shader * overrideShader)
 {
 	if (globals.fontMode == FONT_BITMAP)
 	{
@@ -6431,12 +6461,12 @@ void beginTextBatch()
 		
 		globals.isInTextBatchMSDF = true;
 		
-		Shader & shader = globals.builtinShaders->msdfText.get();
-		setShader(shader);
+		Shader & shader = overrideShader
+			? *overrideShader
+			: globals.builtinShaders->msdfText.get();
 		
+		setShader(shader);
 		shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture);
-		shader.setImmediate("sampleMethod", sampleMethod);
-		shader.setImmediate("useSuperSampling", useSuperSampling);
 		
 		gxBegin(GL_QUADS);
 	}
@@ -7216,8 +7246,6 @@ void gxScalef(float x, float y, float z)
 void gxValidateMatrices()
 {
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
-
-	// todo: check if matrices are dirty
 	
 	//printf("validate1\n");
 	
@@ -7232,6 +7260,8 @@ void gxValidateMatrices()
 		Shader * shader = static_cast<Shader*>(globals.shader);
 
 		const ShaderCacheElem & shaderElem = shader->getCacheElem();
+		
+		// check if matrices are dirty
 		
 		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index >= 0)
 		{
@@ -7543,26 +7573,33 @@ static void gxFlush(bool endOfBatch)
 			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
 		}
-
-		if (indexed)
+		
+		if (shader.isValid())
 		{
-			#if GX_USE_UBERBUFFER
-			glDrawElementsBaseVertex(s_gxPrimitiveType, numElements, INDEX_TYPE, (void*)(s_gxUberIndexBufferPosition * sizeof(glindex_t)), s_gxUberVertexBufferPosition);
-			#elif GX_USE_ELEMENT_ARRAY_BUFFER
-			glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, 0);
-			#else
-			glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, indices);
-			#endif
-			checkErrorGL();
+			if (indexed)
+			{
+				#if GX_USE_UBERBUFFER
+				glDrawElementsBaseVertex(s_gxPrimitiveType, numElements, INDEX_TYPE, (void*)(s_gxUberIndexBufferPosition * sizeof(glindex_t)), s_gxUberVertexBufferPosition);
+				#elif GX_USE_ELEMENT_ARRAY_BUFFER
+				glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, 0);
+				#else
+				glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, indices);
+				#endif
+				checkErrorGL();
+			}
+			else
+			{
+				#if GX_USE_UBERBUFFER
+				glDrawArrays(s_gxPrimitiveType, s_gxUberVertexBufferPosition, numElements);
+				#else
+				glDrawArrays(s_gxPrimitiveType, 0, numElements);
+				#endif
+				checkErrorGL();
+			}
 		}
 		else
 		{
-			#if GX_USE_UBERBUFFER
-			glDrawArrays(s_gxPrimitiveType, s_gxUberVertexBufferPosition, numElements);
-			#else
-			glDrawArrays(s_gxPrimitiveType, 0, numElements);
-			#endif
-			checkErrorGL();
+			logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
 		}
 		
 	#if GX_USE_UBERBUFFER

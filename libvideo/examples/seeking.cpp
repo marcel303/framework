@@ -41,10 +41,8 @@ int main(int argc, char * argv[])
 	if (framework.init(800, 400))
 	{
 		MediaPlayer mp;
-
-		//mp.openAsync("lucy.mp4", MP::kOutputMode_RGBA);
-		mp.openAsync("/Users/thecat/Movies/L_SNINGEN.mp4", MP::kOutputMode_RGBA);
-		//mp.openAsync("/Users/thecat/Movies/Game Capture HD Library/Mijn video 13/Segment_0001.mp4", MP::kOutputMode_RGBA);
+		
+		mp.openAsync("newpath.mp4", MP::kOutputMode_RGBA);
 
 		SDL_Cursor * handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 		
@@ -138,7 +136,7 @@ static void doProgressBar(const int x, const int y, const int sx, const int sy, 
 		mouse.x < x + sx &&
 		mouse.y < y + sy;
 	
-	if (hover && mouse.wentDown(BUTTON_LEFT))
+	if (hover && (mouse.wentDown(BUTTON_LEFT) || (keyboard.isDown(SDLK_LCTRL) && mouse.isDown(BUTTON_LEFT))))
 	{
 		seek = true;
 		seekTime = clamp((mouse.x - x) / double(sx) * duration, 0.0, duration);

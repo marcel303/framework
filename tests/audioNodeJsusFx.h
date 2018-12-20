@@ -33,7 +33,7 @@ struct AudioResource_JsusFx;
 
 class JsusFx;
 struct JsusFxFileAPI_Basic;
-struct JsusFxGfx_Framework;
+struct JsusFxGfx;
 struct JsusFxPathLibrary_Basic;
 
 //
@@ -78,7 +78,7 @@ struct AudioNodeJsusFx : AudioNodeBase
 	bool jsusFxIsValid;
 	
 	JsusFxFileAPI_Basic * jsusFx_fileAPI;
-	JsusFxGfx_Framework * jsusFx_gfx;
+	JsusFxGfx * jsusFx_gfxAPI;
 	
 	AudioResource_JsusFx * resource;
 	int resourceVersion;

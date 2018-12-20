@@ -5,10 +5,24 @@
 
 #include "cl.hpp"
 
-GpuProgram::GpuProgram(cl::Device & in_device, cl::Context & in_context)
+GpuProgram::GpuProgram(cl::Device & in_device, cl::Context & in_context, const char * in_buildOptions)
 	: device(in_device)
 	, context(in_context)
 {
+	char text[4096];
+	sprintf(text,
+		""
+		"-cl-single-precision-constant "
+		"-cl-denorms-are-zero "
+		"-cl-strict-aliasing "
+		"-cl-mad-enable "
+		"-cl-no-signed-zeros "
+		"-cl-unsafe-math-optimizations "
+		"-cl-finite-math-only "
+		"%s",
+		in_buildOptions);
+	
+	buildOptions = text;
 }
 
 GpuProgram::~GpuProgram()
@@ -32,16 +46,7 @@ bool GpuProgram::updateSource(const char * in_source)
 
 	cl::Program newProgram(context, sources);
 	
-	if (newProgram.build({ device },
-		""
-		"-cl-single-precision-constant "
-		"-cl-denorms-are-zero "
-		"-cl-strict-aliasing "
-		"-cl-mad-enable "
-		"-cl-no-signed-zeros "
-		"-cl-unsafe-math-optimizations "
-		"-cl-finite-math-only "
-		) != CL_SUCCESS)
+	if (newProgram.build({ device }, buildOptions.c_str()) != CL_SUCCESS)
 	{
 		LOG_ERR("failed to build OpenCL program", 0);
 		LOG_ERR("%s", newProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str());

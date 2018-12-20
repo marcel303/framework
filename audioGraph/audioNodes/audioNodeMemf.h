@@ -46,9 +46,13 @@ struct AudioNodeMemf : AudioNodeBase
 		kOutput_COUNT
 	};
 	
+	std::string currentName;
+	
 	AudioFloat valueOutput[4];
 
 	AudioNodeMemf();
 	
 	virtual void tick(const float dt) override;
+	
+	virtual void init(const GraphNode & node) override;
 };

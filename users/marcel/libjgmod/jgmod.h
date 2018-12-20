@@ -17,6 +17,8 @@
 #define JGMOD_NTSC          3579546L
 #define JGMOD_PRIORITY      192
 #define JGMOD_MAX_VOICES    64
+#define JGMOD_MAX_ENVPTS    25
+#define JGMOD_MAX_INSTKEYS  120
 #define JGMOD_LOOP_OFF      0
 #define JGMOD_LOOP_ON       1
 #define JGMOD_LOOP_BIDI     2
@@ -29,6 +31,7 @@
 #define JGMOD_MODE_PERIOD   2
 #define JGMOD_MODE_LINEAR   4
 #define JGMOD_MODE_IT       8
+#define JGMOD_MODE_IT_INST  16
 
 
 #define PTEFFECT_0          0
@@ -77,6 +80,10 @@
 // Allegro forward declarations
 struct SAMPLE;
 
+// Allegro <-> framework forward declarations
+struct AllegroTimerApi;
+struct AllegroVoiceApi;
+
 // JGMOD forward declarations
 struct CHANNEL_INFO;
 struct ENVELOPE_INFO;
@@ -106,8 +113,8 @@ enum JGMOD_TYPE
 
 struct ENVELOPE_INFO
 {
-    int env[12];
-    int pos[12];
+    int env[JGMOD_MAX_ENVPTS];
+    int pos[JGMOD_MAX_ENVPTS];
 	
     int flg;
     int pts;
@@ -257,6 +264,8 @@ struct NOTE_INFO
     int volume;
     int command;
     int extcommand;
+	
+    int it_note;
 };
 
 struct SAMPLE_INFO
@@ -281,10 +290,13 @@ struct SAMPLE_INFO
 
 struct INSTRUMENT_INFO
 {
-    int sample_number[96];
+	char name[64];
+	
+	int key_to_note[JGMOD_MAX_INSTKEYS];
+    int sample_number[JGMOD_MAX_INSTKEYS];
 
-    int volenv[12];
-    int volpos[12];
+    int volenv[JGMOD_MAX_ENVPTS];
+    int volpos[JGMOD_MAX_ENVPTS];
     int no_volenv;
     int vol_type;
     int vol_susbeg;
@@ -292,8 +304,8 @@ struct INSTRUMENT_INFO
     int vol_begin;
     int vol_end;
 
-    int panenv[12];
-    int panpos[12];
+    int panenv[JGMOD_MAX_ENVPTS];
+    int panpos[JGMOD_MAX_ENVPTS];
     int no_panenv;
     int pan_type;
     int pan_susbeg;
@@ -352,6 +364,9 @@ struct JGMOD_PLAYER
 	
 	JGMOD * of = nullptr;
 	
+	AllegroTimerApi * timerApi = nullptr;
+	AllegroVoiceApi * voiceApi = nullptr;
+	
 	volatile MUSIC_INFO mi;
 	volatile int voice_table[JGMOD_MAX_VOICES];
 	volatile CHANNEL_INFO ci[JGMOD_MAX_VOICES];
@@ -361,7 +376,7 @@ struct JGMOD_PLAYER
 	
 	JGMOD_PLAYER();
 	
-	int init(int no_voices);
+	int init(int no_voices, AllegroTimerApi * timerApi, AllegroVoiceApi * voiceApi);
 	void shut ();
 	
 	void play (JGMOD *j, int loop, int speed = 100, int pitch = 100);
@@ -455,7 +470,10 @@ protected:
 	void do_xm_x (int chn, int extcommand);
 
 	static void process_envelope (volatile ENVELOPE_INFO * t, int v, int keyon);
-	static void start_envelope (volatile ENVELOPE_INFO * t, int *env, int *pos, int flg, int pts, int loopbeg, int loopend, int susbeg, int susend);
+	static void start_envelope (volatile ENVELOPE_INFO * t, const int *env, const int *pos, int flg, int pts, int loopbeg, int loopend, int susbeg, int susend);
+	
+	// -- located in player5.c ---------------------------------------------------
+	void parse_it_note (int chn, int key, int note, int sample_no);
 };
 
 //-- externs -----------------------------------------------------------------

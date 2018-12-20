@@ -29,8 +29,10 @@ public:
 	static std::string SubString(const std::string& text, size_t offset);
 	static std::string SubString(const std::string& text, size_t offset, size_t length);
 	static bool Equals(const char* text1, const char* text2);
+	static bool MatchesWildcard(const char * text, const char * wildcard);
 	static std::string Join(const std::vector<std::string>& strings);
 	static std::string Join(const std::vector<std::string>& strings, const std::string& separator);
+	
 };
 
 #if defined(PSP) || defined(__GNUC__)

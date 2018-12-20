@@ -1,3 +1,4 @@
+#include "audioTypes.h"
 #include "framework.h"
 #include "objects/audioSourceVorbis.h"
 #include "objects/binauralizer.h"
@@ -645,28 +646,12 @@ struct RecordedFragment : AudioSource
 	#endif
 	}
 
-#if AUDIO_USE_SSE
-	// todo : add a helper macro to make objects allocate through the heap at N-alignment
-	void * operator new(size_t size)
-	{
-		return _mm_malloc(size, 32);
-	}
-
-	void operator delete(void * mem)
-	{
-		_mm_free(mem);
-	}
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 struct World
 {
-#ifdef WIN32
-	// fixme : work around for "struct 'World' has an illegal zero-sized array" error when compiling with MSVC
-	Speeder speeders[NUM_SPEEDERS + 1];
-#else
-	Speeder speeders[NUM_SPEEDERS];
-#endif
+	Speeder speeders[NUM_SPEEDERS + 1]; // note : the "+1" is a work around for "struct 'World' has an illegal zero-sized array" error when compiling with MSVC
 	
 	std::vector<RecordedFragment*> recordedFragments;
 	
@@ -713,17 +698,7 @@ struct World
 		}
 	}
 
-#if AUDIO_USE_SSE
-	void * operator new(size_t size)
-	{
-		return _mm_malloc(size, 32);
-	}
-
-	void operator delete(void * mem)
-	{
-		_mm_free(mem);
-	}
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 static World * s_world = nullptr;

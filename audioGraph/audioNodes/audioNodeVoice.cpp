@@ -30,8 +30,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioVoiceManager.h"
 #include <string.h>
 
-#define voiceMgr g_currentAudioGraph->globals->voiceMgr
-
 AUDIO_ENUM_TYPE(voiceSpeaker)
 {
 	elem("left+right");
@@ -47,6 +45,8 @@ AUDIO_NODE_TYPE(AudioNodeVoice)
 	in("audio", "audioValue");
 	in("gain", "audioValue", "1");
 	inEnum("speaker", "voiceSpeaker");
+	in("rampTime", "audioValue", "0.2");
+	in("fadeTime", "audioValue", "0.2");
 	in("channel", "int");
 }
 
@@ -85,6 +85,8 @@ AudioNodeVoice::AudioNodeVoice()
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);
 	addInput(kInput_Gain, kAudioPlugType_FloatVec);
 	addInput(kInput_Speaker, kAudioPlugType_Int);
+	addInput(kInput_RampTime, kAudioPlugType_FloatVec);
+	addInput(kInput_FadeTime, kAudioPlugType_FloatVec);
 	addInput(kInput_ChannelIndex, kAudioPlugType_Int);
 	
 	//
@@ -97,11 +99,11 @@ AudioNodeVoice::AudioNodeVoice()
 	audioGraph = g_currentAudioGraph;
 }
 
-AudioNodeVoice::~AudioNodeVoice()
+void AudioNodeVoice::shut()
 {
 	if (voice != nullptr)
 	{
-		voiceMgr->freeVoice(voice);
+		g_currentAudioGraph->freeVoice(voice);
 	}
 }
 
@@ -114,7 +116,7 @@ void AudioNodeVoice::tick(const float dt)
 	{
 		if (voice != nullptr)
 		{
-			voiceMgr->freeVoice(voice);
+			g_currentAudioGraph->freeVoice(voice);
 		}
 		
 		return;
@@ -122,16 +124,27 @@ void AudioNodeVoice::tick(const float dt)
 	else if (voice == nullptr || (speaker == kSpeaker_Channel && voice->channelIndex != channelIndex))
 	{
 		if (voice)
-			voiceMgr->freeVoice(voice);
+			g_currentAudioGraph->freeVoice(voice);
+		
+		AudioFloat defaultRampTime(.2f);
+		const float rampTime = getInputAudioFloat(kInput_RampTime, &defaultRampTime)->getMean();
 		
 		if (speaker == kSpeaker_Channel)
 		{
 			if (channelIndex >= 0)
-				voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, channelIndex);
+			{
+				g_currentAudioGraph->allocVoice(
+					voice, &source, "voice",
+					rampTime > 0.f, 0.f, rampTime,
+					channelIndex);
+			}
 		}
 		else
 		{
-			voiceMgr->allocVoice(voice, &source, "voice", true, 0.f, 1.f, -1);
+			g_currentAudioGraph->allocVoice(
+				voice, &source, "voice",
+				rampTime > .0f, 0.f, rampTime,
+				-1);
 		}
 	}
 	
@@ -158,8 +171,9 @@ void AudioNodeVoice::tick(const float dt)
 	
 	if (g_currentAudioGraph->rampDown)
 	{
-		voice->rampInfo.rampDown(0.f, AUDIO_UPDATE_SIZE / float(SAMPLE_RATE));
+		AudioFloat defaultFadeTime(.2f);
+		const float fadeTime = getInputAudioFloat(kInput_FadeTime, &defaultFadeTime)->getMean();
+		
+		voice->rampInfo.rampDown(0.f, fadeTime);
 	}
 }
-
-#undef voiceMgr

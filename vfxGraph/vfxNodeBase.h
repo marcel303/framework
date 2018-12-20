@@ -589,8 +589,17 @@ struct VfxNodeBase
 	
 	struct DynamicInput
 	{
+		struct EnumElem
+		{
+			std::string name;
+			std::string valueText;
+		};
+		
 		std::string name;
 		VfxPlugType type;
+		std::string defaultValue;
+		
+		std::vector<EnumElem> enumElems;
 	};
 	
 	struct DynamicOutput

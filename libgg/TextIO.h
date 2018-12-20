@@ -38,8 +38,12 @@ namespace TextIO
 		kLineEndings_Windows
 	};
 	
+	typedef void (*LineCallback)(void * userData, const char * begin, const char * end);
+	
 	bool loadText(const char * text, std::vector<std::string> & lines, LineEndings & lineEndings);
+	bool loadTextWithCallback(const char * text, LineEndings & lineEndings, LineCallback lineCallback, void * userData);
 	
 	bool load(const char * filename, std::vector<std::string> & lines, LineEndings & lineEndings);
+	bool loadWithCallback(const char * filename, char *& text, LineEndings & lineEndings, LineCallback lineCallback, void * userData);
 	bool save(const char * filename, const std::vector<std::string> & lines, const LineEndings lineEndings);
 }

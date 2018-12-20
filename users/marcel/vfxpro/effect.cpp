@@ -214,7 +214,7 @@ Vec3 Effect::localToWorld(Vec3Arg v, const bool withTranslation) const
 void Effect::setTextures(Shader & shader)
 {
 	shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-	// fixme : setting colormap_clamp will override sampler settings colormap
+	// fixme-vfxpro : setting colormap_clamp will override sampler settings colormap
 	//shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, true);
 	shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, false);
 	shader.setTexture("pcm", 2, g_pcmTexture, true, false);
@@ -404,7 +404,7 @@ void Effect_StarCluster::draw()
 Effect_Cloth::Effect_Cloth(const char * name)
 	: Effect(name)
 {
-	// todo : set is2D (?)
+	// todo-vfxpro : set is2D (?)
 
 	sx = 0;
 	sy = 0;
@@ -529,7 +529,7 @@ void Effect_Cloth::draw(DrawableList & list)
 	new (list) EffectDrawable(this);
 }
 
-// todo : make the transform a part of the drawable or effect
+// todo-vfxpro : make the transform a part of the drawable or effect
 
 void Effect_Cloth::draw()
 {
@@ -2908,8 +2908,6 @@ void Effect_Smoke::draw()
 
 		setBlend(BLEND_OPAQUE);
 		setColor(colorWhite);
-
-		// todo : effect parameters
 
 		Shader shader("smoke");
 		setShader(shader);
