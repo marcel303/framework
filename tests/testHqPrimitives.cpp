@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "testBase.h"
+#include <algorithm>
 #include <cmath>
 
 extern const int GFX_SX;

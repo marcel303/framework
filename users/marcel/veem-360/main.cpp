@@ -2,6 +2,7 @@
 #include "framework.h"
 #include "objects/paobject.h"
 #include "video.h"
+#include <algorithm>
 
 #include "AmbisonicDecoder.h"
 

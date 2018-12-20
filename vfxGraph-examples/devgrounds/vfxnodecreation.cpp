@@ -5,6 +5,7 @@
 #include "Timer.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
+#include <algorithm>
 
 extern AudioVoiceManager * g_vfxAudioVoiceMgr;
 extern AudioGraphManager * g_vfxAudioGraphMgr;

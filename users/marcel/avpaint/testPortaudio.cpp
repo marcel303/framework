@@ -8,6 +8,7 @@
 #include "framework.h"
 #include "image.h"
 #include "Noise.h"
+#include <algorithm>
 #include <cmath>
 #include <emmintrin.h>
 #include <immintrin.h>

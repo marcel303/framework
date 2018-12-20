@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "types.h"
+#include <algorithm>
 #include <string>
 #include <vector>
 

@@ -1162,4 +1162,6 @@ int main(int argc, char * argv[])
 	}
 	framework.shutdown();
 #endif
+
+	return 0;
 }
