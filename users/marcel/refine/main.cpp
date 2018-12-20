@@ -26,6 +26,8 @@
 #include "framework-allegro2.h"
 #include "jgmod.h"
 
+#include "particle_editor.h"
+
 static const int VIEW_SX = 900;
 static const int VIEW_SY = 600;
 struct FileElem
@@ -874,7 +876,28 @@ struct FileEditor_Jgmod : FileEditor
 	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
 	{
 	}
+};
+
+struct FileEditor_ParticleSystem : FileEditor
+{
+	ParticleEditor particleEditor;
 	
+	FileEditor_ParticleSystem(const char * path)
+	{
+		particleEditor.load(path);
+	}
+	
+	virtual ~FileEditor_ParticleSystem() override
+	{
+		
+	}
+	
+	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	{
+		particleEditor.tick(inputIsCaptured == false, sx, sy, dt);
+		
+		particleEditor.draw(inputIsCaptured == false, sx, sy);
+	}
 };
 
 int main(int argc, char * argv[])
@@ -950,6 +973,10 @@ int main(int argc, char * argv[])
 		{
 			editor = new FileEditor_Jgmod(filename.c_str());
 		}
+		else if (extension == "pfx")
+		{
+			editor = new FileEditor_ParticleSystem(filename.c_str());
+		}
 		else if (extension == "xml")
 		{
 			// determine content type
@@ -971,7 +998,7 @@ int main(int argc, char * argv[])
 				{
 					char * type = (char*)userData;
 					
-					*type = 'a';
+					*type = 'v';
 				}
 			}, &type);
 			

@@ -2,8 +2,9 @@ app refine
 	depend_library framework
 	depend_library imgui-framework
 	depend_library ImGuiColorTextEdit
-	depend_library jgmod
-	depend_library jgmod-framework
+	depend_library libjgmod
+	depend_library libjgmod-framework
+	depend_library libparticle
 	depend_library libvideo
 	depend_library vfxgraph
 	add_files main.cpp
