@@ -1,5 +1,6 @@
 with_platform macos add libsdl2-support
 with_platform linux add libsdl2-support
+with_platform windows add libsdl2-win32
 
 library imgui
 	header_path imgui expose

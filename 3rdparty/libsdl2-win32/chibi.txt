@@ -1,0 +1,6 @@
+library libsdl2
+	depend_library lib/SDL2.lib local
+	depend_library lib/SDL2main.lib local
+	add_dist_files dll/SDL2.dll
+	add_files dummy.cpp
+	header_path include expose
