@@ -46,8 +46,6 @@ library framework
 	with_platform windows depend_library win32/lib/freetype252.lib local
 	with_platform windows depend_library win32/lib/glew32.lib local
 	with_platform windows depend_library win32/lib/OpenAL32.lib local
-	with_platform windows depend_library win32/lib/SDL2.lib local
-	with_platform windows depend_library win32/lib/SDL2main.lib local
 	with_platform windows depend_library win32/lib/XInput9_1_0.lib local
 	with_platform windows depend_library win32/lib/portaudio_x86.lib local
 	with_platform windows depend_library Winmm.lib global
@@ -55,7 +53,6 @@ library framework
 	with_platform windows add_dist_files win32/dll/FreeImage.dll
 	with_platform windows add_dist_files win32/dll/glew32.dll
 	with_platform windows add_dist_files win32/dll/OpenAL32.dll
-	with_platform windows add_dist_files win32/dll/SDL2.dll
 	with_platform windows add_dist_files win32/dll/XInput9_1_0.dll
 	with_platform windows add_dist_files win32/dll/portaudio_x86.dll
 
