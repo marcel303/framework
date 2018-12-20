@@ -27,6 +27,7 @@
 
 #include "Debugging.h"
 #include "TextIO.h"
+#include <assert.h>
 
 #if 1
 #include <sys/stat.h>

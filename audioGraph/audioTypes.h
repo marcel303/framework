@@ -36,7 +36,7 @@
 #define SAMPLE_RATE 44100
 
 #ifndef AUDIO_USE_SSE
-	#if __SSE2__
+	#ifdef __SSE2__
 		#define AUDIO_USE_SSE 1
 	#else
 		#define AUDIO_USE_SSE 0 // do not alter
