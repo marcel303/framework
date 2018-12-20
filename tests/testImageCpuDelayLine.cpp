@@ -34,6 +34,7 @@
 #include "../libvideo/video.h"
 #include "mediaplayer/MPVideoBuffer.h"
 
+#include <algorithm>
 #include <cmath>
 
 extern const int GFX_SX;

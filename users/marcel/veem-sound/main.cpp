@@ -11,6 +11,7 @@
 #include "vfxNodeBase.h"
 #include "vfxNodes/vfxNodeDisplay.h"
 #include "vfxNodes/oscEndpointMgr.h"
+#include <algorithm>
 
 #include "mechanism.h"
 #include "thermalizer.h"

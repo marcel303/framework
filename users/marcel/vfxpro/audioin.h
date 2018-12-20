@@ -2,15 +2,12 @@
 
 #ifdef WIN32
 
-#include <Windows.h>
-
+struct AudioInWave;
 struct AudioSample;
 
 class AudioIn
 {
-	HWAVEIN m_waveIn;
-	WAVEFORMATEX m_waveFormat;
-	WAVEHDR m_waveHeader;
+	AudioInWave * m_wave;
 	short * m_buffer;
 
 public:

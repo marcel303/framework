@@ -27,7 +27,7 @@
 
 #include "vfxNodeImageCpuToChannels.h"
 
-#if __SSE2__
+#ifdef __SSE2__
 	#include <immintrin.h>
 #endif
 
@@ -75,7 +75,7 @@ VfxNodeImageCpuToChannels::~VfxNodeImageCpuToChannels()
 	channelData.free();
 }
 
-#if __SSE2__
+#ifdef __SSE2__
 
 static int fillFloats_SSE(const uint8_t * __restrict src, const int sx, float * __restrict dst)
 {
@@ -130,7 +130,7 @@ static void fillFloats(float * __restrict floatValues, const VfxImageCpu * image
 		
 		int begin = 0;
 		
-	#if __SSE2__
+	#ifdef __SSE2__
 		// 1.25ms no SSE -> 1.25ms with SSE. exactly the same! must be memory bandwidth bound..
 		// let's hope faster memory is on the way, so my time spending on this won't be in vain! ;-)
 		begin = fillFloats_SSE(src, image->sx, dst);

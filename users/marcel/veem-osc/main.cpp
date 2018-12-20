@@ -4,6 +4,7 @@
 #include "Timer.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 

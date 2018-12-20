@@ -35,7 +35,7 @@
 
 //
 
-#if __SSE2__
+#ifdef __SSE2__
 	// for interleave and deinterleave methods of VfxImageCpu
 	#include <xmmintrin.h>
 
@@ -275,7 +275,7 @@ void VfxImageCpu::interleave4(const Channel & channel1, const Channel & channel2
 		
 		int begin = 0;
 		
-	#if __SSE2__
+	#ifdef __SSE2__
 		/*
 		// without SSE
 			[II] Benchmark: interleave4: 0.000067 sec
@@ -398,7 +398,7 @@ void VfxImageCpu::deinterleave4(
 		
 		int begin = 0;
 		
-	#if __SSE2__
+	#ifdef __SSE2__
 		/*
 		without SSE:
 			[II] Benchmark: deinterleave4: 0.000278 sec

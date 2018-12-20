@@ -28,6 +28,7 @@
 #include "Ease.h"
 #include "framework.h"
 #include "testBase.h"
+#include <algorithm>
 #include <map>
 
 extern const int GFX_SX;

@@ -3,6 +3,7 @@
 #include "image.h"
 #include "Noise.h"
 #include "Timer.h"
+#include <algorithm>
 #include <cmath>
 
 #define GFX_SX (1600/2)

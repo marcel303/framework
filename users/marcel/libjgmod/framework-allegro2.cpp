@@ -16,7 +16,10 @@
 
 //
 
-static int TimerThreadProc(void * obj);
+extern "C"
+{
+	static int TimerThreadProc(void * obj);
+};
 
 //
 
@@ -652,7 +655,9 @@ char * get_extension(const char * filename)
 		return (char*)filename + dot + 1;
 }
 
-#include <unistd.h>
+#ifndef WIN32
+	#include <unistd.h>
+#endif
 
 static int TimerThreadProc(void * obj)
 {
@@ -660,13 +665,16 @@ static int TimerThreadProc(void * obj)
 	
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 	
+#ifndef WIN32
 	struct timespec start, end;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-	
+#endif
+
 	while (r->stop == false)
 	{
 		r->proc(r->data);
 		
+	#ifndef WIN32
 		clock_gettime(CLOCK_MONOTONIC_RAW, &end);
 		
 		const int64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
@@ -683,6 +691,7 @@ static int TimerThreadProc(void * obj)
 		}
 		
 		clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+	#endif
 	}
 	
 	return 0;

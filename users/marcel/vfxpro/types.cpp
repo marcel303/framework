@@ -2,6 +2,7 @@
 #include "Debugging.h"
 #include "framework.h"
 #include "types.h"
+#include <algorithm>
 
 ParticleSystem::ParticleSystem(const int numElements)
 	: numParticles(0)

@@ -25,7 +25,7 @@
 #include <sys/stat.h>
 
 #ifdef WIN32
-	#include <Windows.h>
+	//#include <Windows.h>
 #endif
 
 #if ENABLE_VIDEO

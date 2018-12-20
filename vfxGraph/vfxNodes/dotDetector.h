@@ -38,7 +38,7 @@
 
 #define USE_GRID 1 // improves matching result as we find the closest island when enabled. also greatly increases detection speed when there's many dots being detected
 
-#if __SSE2__
+#ifdef __SSE2__
 	#define USE_SSE2 1 // improves thresholding and detection speed
 #else
 	#define USE_SSE2 0

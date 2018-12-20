@@ -39,7 +39,9 @@
 #define __3dNOW__
 #endif
 #define __SSE__
+#ifndef __SSE2__
 #define __SSE2__
+#endif
 #elif defined(__MINGW64_VERSION_MAJOR)
 #include <intrin.h>
 #else

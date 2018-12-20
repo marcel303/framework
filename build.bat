@@ -13,7 +13,7 @@ cd %~dp0
 
 rem generate cmake files using chibi
 mkdir "chibi-build\cmake-files"
-%chibi_bin% . chibi-build/cmake-files -target framework* -target audio*
+%chibi_bin% . chibi-build/cmake-files
 cd %~dp0
 
 rem generate Visual Studio project file

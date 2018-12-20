@@ -71,4 +71,6 @@ int main(int argc, char * argv[])
 	audioMutex = nullptr;
 	
 	framework.shutdown();
+
+	return 0;
 }
