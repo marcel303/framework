@@ -7,6 +7,7 @@
 #include "FileStream.h"
 #include "Noise.h"
 
+#include <algorithm>
 #include <cmath>
 
 #define GFX_SX 1024

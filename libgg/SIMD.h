@@ -5,6 +5,10 @@
 #include <xmmintrin.h>
 #include "MemOps.h"
 
+#if defined(_MSC_VER)
+	#include <smmintrin.h>
+#endif
+
 #define _MM_SHUFFLE_XYZW(x, y, z, w) _MM_SHUFFLE(w, z, y, x)
 
 #if !defined(_MSC_VER)

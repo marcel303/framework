@@ -740,7 +740,7 @@ ParticleEditor::~ParticleEditor()
 
 bool ParticleEditor::load(const char * filename)
 {
-	state->load(filename);
+	return state->load(filename);
 }
 
 void ParticleEditor::tick(const bool menuActive, const float sx, const float sy, const float dt)

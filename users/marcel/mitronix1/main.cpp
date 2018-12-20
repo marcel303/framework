@@ -8,6 +8,7 @@
 #include "Noise.h"
 #include "slideshow.h"
 #include "wavefield.h"
+#include <algorithm>
 #include <cmath>
 
 #define DEVMODE 0

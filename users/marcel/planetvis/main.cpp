@@ -1,6 +1,7 @@
 #include "Calc.h"
 #include "framework.h"
 #include "Timer.h"
+#include <algorithm>
 #include <cmath>
 
 #define GFX_SX 1024
