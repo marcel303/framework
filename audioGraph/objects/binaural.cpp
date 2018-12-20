@@ -46,7 +46,7 @@
 #endif
 
 #if BINAURAL_USE_SIMD == 0
-	#if __SSE2__
+	#ifdef __SSE2__
 		#warning "BINAURAL_USE_SSE is set to 0. is this intended?"
 	#endif
 #endif

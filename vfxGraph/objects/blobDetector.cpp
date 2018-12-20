@@ -28,7 +28,7 @@
 #include "blobDetector.h"
 #include <string.h>
 
-#if __SSE2__
+#ifdef __SSE2__
 	#include <immintrin.h>
 #endif
 
@@ -185,7 +185,7 @@ int BlobDetector::detectBlobs(
 		
 		for (int x = 0; x < sx; )
 		{
-		#if __SSE2__
+		#ifdef __SSE2__
 			// see if any of the next 16 pixels passes the threshold test. if not, skip the next 16 pixels
 			
 			if (x + 16 <= sx)

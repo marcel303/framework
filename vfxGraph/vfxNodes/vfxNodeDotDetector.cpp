@@ -165,7 +165,7 @@ void VfxNodeDotDetector::tick(const float dt)
 				
 				int begin = 0;
 				
-			#if __SSE2__
+			#ifdef __SSE2__
 				if (image->alignment >= 16)
 				{
 					const int sx_16 = image->sx / 16;

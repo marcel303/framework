@@ -29,7 +29,7 @@
 #include "vfxNodeImageCpuDownsample.h"
 #include <algorithm>
 
-#if __SSE2__
+#ifdef __SSE2__
 	#include <immintrin.h>
 	#include <xmmintrin.h>
 
@@ -283,7 +283,7 @@ void VfxNodeImageCpuDownsample::freeImage()
 	imageOutput.reset();
 }
 
-#if __SSE2__
+#ifdef __SSE2__
 
 static int downsampleLine2x2_1channel_SSE(
 	const uint8_t * __restrict _srcLine1,
@@ -426,7 +426,7 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 				
 				int numPixelsProcessed = 0;
 				
-			#if __SSE2__
+			#ifdef __SSE2__
 				if (((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(dstItr)) & 0xf) == 0)
 				{
 				#if __AVX__
@@ -481,7 +481,7 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 				
 				int numPixelsProcessed = 0;
 				
-			#if __SSE2__
+			#ifdef __SSE2__
 				if (((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(srcItr3) | uintptr_t(srcItr4) | uintptr_t(dstItr)) & 0xf) == 0)
 				{
 					numPixelsProcessed = downsampleLine4x4_1channel_SSE(srcItr1, srcItr2, srcItr3, srcItr4, downsampledSx, dstItr);

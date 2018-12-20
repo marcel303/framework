@@ -14,7 +14,7 @@ using namespace tinyxml2;
 
 //
 
-#if __SSE2__
+#ifdef __SSE2__
 	#include <xmmintrin.h>
 
 	#if defined(__GNUC__)
@@ -1151,7 +1151,7 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 			p.speed[0] -= nx * d * (1.f + pi.bounciness);
 			p.speed[1] -= ny * d * (1.f + pi.bounciness);
 			
-		#if __SSE2__
+		#ifdef __SSE2__
 			const float particleSpeed = _MM_ACCESS(_mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])), 0);
 		#else
 			const float particleSpeed = hypotf(p.speed[0], p.speed[1] * p.speed[1]);
@@ -1178,7 +1178,7 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 	}
 
 	const float particleLife = 1.f - p.life;
-#if __SSE2__
+#ifdef __SSE2__
 	const float particleSpeed = _MM_ACCESS(_mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])), 0);
 #else
 	const float particleSpeed = hypotf(p.speed[0], p.speed[1]);

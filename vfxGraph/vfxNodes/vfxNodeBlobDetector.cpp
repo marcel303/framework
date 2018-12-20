@@ -89,7 +89,7 @@ VfxNodeBlobDetector::~VfxNodeBlobDetector()
 	freeChannels();
 }
 
-#if __SSE2__
+#ifdef __SSE2__
 
 static int processLine_SSE2_1channel(
 	const uint8_t * __restrict src,
@@ -253,7 +253,7 @@ void VfxNodeBlobDetector::tick(const float dt)
 				
 				int begin = 0;
 				
-			#if __SSE2__
+			#ifdef __SSE2__
 				begin = processLine_SSE2_1channel(src, maskSx, thresholdValue, invert, dst);
 			#endif
 			
@@ -285,7 +285,7 @@ void VfxNodeBlobDetector::tick(const float dt)
 				
 				int begin = 0;
 				
-			#if __SSE2__
+			#ifdef __SSE2__
 				// without SSE: 1200-1400us -> 290-300us with SSE
 				begin = processLine_SSE2_3channel(srcR, srcG, srcB, image->sx, thresholdValue, invert, dst);
 			#endif
@@ -331,7 +331,7 @@ void VfxNodeBlobDetector::tick(const float dt)
 				
 				int begin = 0;
 				
-			#if __SSE2__
+			#ifdef __SSE2__
 				begin = processLine_SSE2_1channel(src, image->sx, thresholdValue, invert, dst);
 			#endif
 			
