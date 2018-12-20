@@ -43,7 +43,7 @@ WDL:
 extern "C" {
 #endif
 
-#if __SSE2__
+#ifdef __SSE2__
 	#define WDL_FFT_USE_SSE 1
 #else
 	#define WDL_FFT_USE_SSE 0

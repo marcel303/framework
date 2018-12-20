@@ -68,7 +68,7 @@ within the triangle.
 #endif
 
 #if !defined(BINAURAL_USE_SSE)
-	#if __SSE2__
+	#ifdef __SSE2__
 		#define BINAURAL_USE_SSE 1
 	#else
 		#define BINAURAL_USE_SSE 0 // do not alter

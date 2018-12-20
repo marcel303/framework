@@ -1,6 +1,6 @@
 #pragma once
 
-#if __SSE2__
+#ifdef __SSE2__
 	#include <xmmintrin.h>
 	#define HAS_MM_MALLOC 1
 #else
