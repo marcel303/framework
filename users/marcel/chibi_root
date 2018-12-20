@@ -13,7 +13,8 @@ add magiclines
 add mitronix1
 add planetvis
 add planetvis2
-add ps3eye-to-osc
+# todo : add with_library ?
+with_platform macos add ps3eye-to-osc
 add rast
 add rawaudio1
 add refine
@@ -23,7 +24,8 @@ add speakwithus
 add sRGB
 add twinkle
 add veem-360
-add veem-camapp
+# todo : add with_library ?
+with_platform macos add veem-camapp
 add veem-osc
 add veem-sound
 add veem-sound-satellites
