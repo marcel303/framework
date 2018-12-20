@@ -159,6 +159,42 @@ struct Menu_LoadSave
 	}
 };
 
+bool load(const char * path)
+{
+	XMLDocument d;
+
+	if (d.LoadFile(path) != XML_NO_ERROR)
+	{
+		return false;
+	}
+	else
+	{
+		for (int i = 0; i < kMaxParticleInfos; ++i)
+		{
+			g_peiList[i] = ParticleEmitterInfo();
+			g_piList[i] = ParticleInfo();
+			g_pe[i].clearParticles(g_pool[i]);
+			fassert(g_pool[i].head == 0);
+			fassert(g_pool[i].tail == 0);
+			g_pe[i] = ParticleEmitter();
+		}
+
+		int peiIdx = 0;
+		for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
+		{
+			g_peiList[peiIdx++].load(emitterElem);
+		}
+
+		int piIdx = 0;
+		for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
+		{
+			g_piList[piIdx++].load(particleElem);
+		}
+		
+		return true;
+	}
+}
+
 void doMenu_LoadSave(Menu_LoadSave & menu, const float dt)
 {
 	if (doButton("Load", 0.f, 1.f, true))
@@ -168,37 +204,12 @@ void doMenu_LoadSave(Menu_LoadSave & menu, const float dt)
 
 		if (result == NFD_OKAY)
 		{
-			XMLDocument d;
+			load(path);
+			
+			menu.activeFilename = path;
 
-			if (d.LoadFile(path) == XML_NO_ERROR)
-			{
-				for (int i = 0; i < kMaxParticleInfos; ++i)
-				{
-					g_peiList[i] = ParticleEmitterInfo();
-					g_piList[i] = ParticleInfo();
-					g_pe[i].clearParticles(g_pool[i]);
-					fassert(g_pool[i].head == 0);
-					fassert(g_pool[i].tail == 0);
-					g_pe[i] = ParticleEmitter();
-				}
-
-				int peiIdx = 0;
-				for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
-				{
-					g_peiList[peiIdx++].load(emitterElem);
-				}
-
-				int piIdx = 0;
-				for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
-				{
-					g_piList[piIdx++].load(particleElem);
-				}
-
-				menu.activeFilename = path;
-
-				g_activeEditingIndex = 0;
-				refreshUi();
-			}
+			g_activeEditingIndex = 0;
+			refreshUi();
 		}
 	}
 
@@ -725,6 +736,11 @@ ParticleEditor::~ParticleEditor()
 {
 	delete state;
 	state = nullptr;
+}
+
+bool ParticleEditor::load(const char * filename)
+{
+	state->load(filename);
 }
 
 void ParticleEditor::tick(const bool menuActive, const float sx, const float sy, const float dt)
