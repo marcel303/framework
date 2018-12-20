@@ -82,6 +82,22 @@ int main(int argc, char * argv[])
 					{
 						if (ImGui::BeginMenu("File"))
 						{
+							if (ImGui::MenuItem("Load.."))
+							{
+								nfdchar_t * filename = nullptr;
+								
+								if (NFD_OpenDialog(nullptr, nullptr, &filename) == NFD_OKAY)
+								{
+									loadIntoTextEditor(filename, lineEndings, textEditor);
+								}
+								
+								if (filename != nullptr)
+								{
+									free(filename);
+									filename = nullptr;
+								}
+							}
+							
 							if (ImGui::MenuItem("Save.."))
 							{
 								nfdchar_t * filename = nullptr;
@@ -94,22 +110,6 @@ int main(int argc, char * argv[])
 									{
 										SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
 									}
-								}
-								
-								if (filename != nullptr)
-								{
-									free(filename);
-									filename = nullptr;
-								}
-							}
-
-							if (ImGui::MenuItem("Load.."))
-							{
-								nfdchar_t * filename = nullptr;
-								
-								if (NFD_OpenDialog(nullptr, nullptr, &filename) == NFD_OKAY)
-								{
-									loadIntoTextEditor(filename, lineEndings, textEditor);
 								}
 								
 								if (filename != nullptr)
