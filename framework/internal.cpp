@@ -363,6 +363,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 			catch (std::exception & e)
 			{
 				logError("failed to read cache data: %s", e.what());
+				(void)e;
 
 				delete imageData;
 				imageData = 0;
@@ -394,6 +395,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 			catch (std::exception & e)
 			{
 				logError("failed to write cache data: %s", e.what());
+				(void)e;
 			}
 		}
 	#endif

@@ -259,7 +259,7 @@ static void fft1DImpl(
 		dimag[xReversed] = 0.0;
 	}
 	
-	const real pi2 = M_PI * 2.0;
+	const real pi2 = real(M_PI * 2.0);
 	const real scale = 1.0 / transformSize;
 	
 	int n = 1;

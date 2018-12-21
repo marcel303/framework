@@ -28,7 +28,7 @@
 #include "audioNodeMath.h"
 #include <math.h>
 
-static const float twoPi = M_PI * 2.f;
+static const float twoPi = float(M_PI * 2.f);
 
 template <AudioNodeMath::Type _type>
 inline float evalMathOp(const float a, const float b, const AudioNodeMath::Type type2)

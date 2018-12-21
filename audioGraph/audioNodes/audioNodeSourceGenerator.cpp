@@ -79,7 +79,7 @@ void AudioNodeSourceSine::drawSine()
 	const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
 	const AudioFloat * b = getInputAudioFloat(kInput_B, &AudioFloat::One);
 	
-	const float twoPi = 2.f * M_PI;
+	const float twoPi = float(2.f * M_PI);
 	
 	const double dt = 1.0 / SAMPLE_RATE;
 	

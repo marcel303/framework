@@ -801,7 +801,7 @@ namespace binaural
 	
 	void elevationAndAzimuthToCartesian(const float elevation, const float azimuth, float & x, float & y, float & z)
 	{
-		const float degToRad = M_PI / 180.f;
+		const float degToRad = float(M_PI) / 180.f;
 		
 		y = std::sin(elevation * degToRad);
 		
@@ -811,7 +811,7 @@ namespace binaural
 	
 	void cartesianToElevationAndAzimuth(const float x, const float y, const float z, float & elevation, float & azimuth)
 	{
-		const float radToDeg = 180.f / M_PI;
+		const float radToDeg = 180.f / float(M_PI);
 		
 		const float zxHypot = std::hypot(z, x);
 		

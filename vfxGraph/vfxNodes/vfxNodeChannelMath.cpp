@@ -28,7 +28,7 @@
 #include "vfxNodeChannelMath.h"
 #include <math.h>
 
-static const float twoPi = M_PI * 2.f;
+static const float twoPi = float(M_PI * 2.f);
 
 static float evalMathOp(const float a, const float b, const VfxNodeChannelMath::Type type)
 {

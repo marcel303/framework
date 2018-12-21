@@ -58,7 +58,7 @@ struct AudioNodeMathSine : AudioNodeBase
 	virtual void tick(const float dt) override
 	{
 		const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
-		const float twoPi = 2.f * M_PI;
+		const float twoPi = float(2.f * M_PI);
 		
 		if (value->isScalar)
 		{

@@ -1081,7 +1081,7 @@ void Framework::process()
 				XInputSetState(i, &v);
 			}
 			
-			sprintf_s(gamepad[i].name, "XInput", i + 1);
+			sprintf_s(gamepad[i].name, "XInput %d", i + 1);
 		}
 		else
 		{
@@ -1707,6 +1707,7 @@ void Framework::screenshot(const char * name, int index, bool omitAlpha)
 	catch (std::exception & e)
 	{
 		logError("failed to write image: %s", e.what());
+		(void)e;
 	}
 	
 	delete [] bytes;
@@ -8849,8 +8850,12 @@ std::string getDirectory()
 {
 	char temp[1024];
 	
+#if WINDOWS
+	_getcwd(temp, sizeof(temp));
+#else
 	getcwd(temp, sizeof(temp));
-	
+#endif
+
 	return temp;
 }
 

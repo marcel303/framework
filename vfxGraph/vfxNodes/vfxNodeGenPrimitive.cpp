@@ -67,7 +67,7 @@ void VfxNodeGenPrimitive::evalSine(const float dt)
 	const float frequency = getInputFloat(kInput_Frequency, 1.f);
 	const float amplitude = getInputFloat(kInput_Amplitude, 1.f);
 	
-	const float twoPi = 2.f * M_PI;
+	const float twoPi = float(2.f * M_PI);
 	
 	if (isSigned)
 	{
