@@ -1,4 +1,4 @@
-library jgmod-audiograph shared
+library jgmod-audiograph
 
 	depend_library audiograph
 	depend_library libjgmod
