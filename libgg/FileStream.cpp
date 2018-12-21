@@ -245,7 +245,7 @@ bool FileStream::EOF_get()
 #ifdef PSP
 	return Position_get() >= Length_get();
 #else
-	return feof(m_File);
+	return feof(m_File) != 0;
 #endif
 }
 
