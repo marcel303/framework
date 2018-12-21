@@ -4,11 +4,13 @@ library libwebrequest
 	with_platform macos depend_library CoreFoundation find
 	with_platform macos depend_library Foundation find
 	with_platform windows add_files webrequest-winhttp.cpp
+	header_path . expose
 
 library libwebrequest-downloadcache
 	depend_library libgg
 	depend_library libwebrequest
 	add_files DownloadCache.cpp DownloadCache.h
+	header_path . expose
 	
 app libwebrequest-test
 	depend_library libwebrequest
