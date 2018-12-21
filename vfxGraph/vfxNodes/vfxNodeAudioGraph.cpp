@@ -231,20 +231,26 @@ void VfxNodeAudioGraph::updateDynamicOutputs(const int numSamples, const int num
 			
 			channelOutputs = new VfxChannel[numChannels];
 			
-			DynamicOutput outputs[numChannels];
-			
-			for (int i = 0; i < numChannels; ++i)
+			if (numChannels == 0)
+				setDynamicOutputs(nullptr, 0);
+			else
 			{
-				auto & o = outputs[i];
-				
-				o.type = kVfxPlugType_Channel;
-				o.name = String::FormatC("channel%d", i + 1);
-				o.mem = &channelOutputs[i];
-				
-				channelOutputs[i].setData(channelData.data + numSamples * i, true, numSamples);
-			}
+				std::vector<DynamicOutput> outputs;
+				outputs.resize(numChannels);
 			
-			setDynamicOutputs(outputs, numChannels);
+				for (int i = 0; i < numChannels; ++i)
+				{
+					auto & o = outputs[i];
+				
+					o.type = kVfxPlugType_Channel;
+					o.name = String::FormatC("channel%d", i + 1);
+					o.mem = &channelOutputs[i];
+				
+					channelOutputs[i].setData(channelData.data + numSamples * i, true, numSamples);
+				}
+			
+				setDynamicOutputs(&outputs.front(), numChannels);
+			}
 		}
 	}
 }
@@ -310,7 +316,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 			AudioVoiceManager::kOutputMode_MultiChannel;
 		
 		const int numVoices = voiceMgr.voices.size();
-		AudioVoice * voices[numVoices + 1];
+		AudioVoice ** voices = (AudioVoice**)alloca((numVoices + 1) * sizeof(AudioVoice*));
 		int voiceIndex = 0;
 		for (auto & voice : voiceMgr.voices)
 			voices[voiceIndex++] = voice;
