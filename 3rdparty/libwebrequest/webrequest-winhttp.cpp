@@ -58,9 +58,11 @@ bool Worker::init(const char * url)
 
 bool Worker::initImpl(const char * url)
 {
+	// todo : add WINHTTP_FLAG_ASYNC at some point
+
 	hSession = WinHttpOpen(
 		L"libwebrequest",  
-		WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+		WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
 		WINHTTP_NO_PROXY_NAME,
 		WINHTTP_NO_PROXY_BYPASS, 0);
 
@@ -103,7 +105,8 @@ bool Worker::initImpl(const char * url)
 	{
 		hConnect = WinHttpConnect(
 			hSession, urlComp.lpszHostName,
-			INTERNET_DEFAULT_HTTPS_PORT, 0);
+			INTERNET_DEFAULT_PORT,
+			0);
 	}
 	urlComp.lpszHostName[urlComp.dwHostNameLength] = c;
 
@@ -122,7 +125,7 @@ bool Worker::initImpl(const char * url)
 			nullptr,
 			WINHTTP_NO_REFERER, 
 			WINHTTP_DEFAULT_ACCEPT_TYPES, 
-			WINHTTP_FLAG_SECURE);
+			WINHTTP_FLAG_SECURE*0);
 	}
 	urlComp.lpszUrlPath[urlComp.dwUrlPathLength] = c;
 
@@ -132,7 +135,11 @@ bool Worker::initImpl(const char * url)
 		return false;
 	}
 
-	WinHttpSetTimeouts(hRequest, 2000, 2000, 2000, 2000);
+	if (WinHttpSetTimeouts(hRequest, 2000, 2000, 2000, 2000) == FALSE)
+	{
+		handleError("failed to set WinHTTP timeouts");
+		return false;
+	}
 
 	BOOL bResult = WinHttpSendRequest(
 		hRequest,
