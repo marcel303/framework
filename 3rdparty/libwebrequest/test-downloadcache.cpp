@@ -64,7 +64,7 @@ struct DownloadQueue
 		for (auto i = activeElems.begin(); i != activeElems.end(); )
 		{
 			const std::string & filename = i->first;
-			const Elem & activeElem = i->second;
+			Elem & activeElem = i->second;
 
 			if (activeElem.webRequest == nullptr)
 			{
@@ -104,6 +104,9 @@ struct DownloadQueue
 				{
 					completions.insert(std::make_pair(filename, false));
 				}
+
+				delete activeElem.webRequest;
+				activeElem.webRequest = nullptr;
 
 				i = activeElems.erase(i);
 			}
@@ -238,7 +241,8 @@ int main(int argc, char * argv[])
 		
 		for (int i = 0; i < 20; ++i)
 		{
-			const char * url = "http://webserver.com/";
+			//const char * url = "http://webserver.com/";
+			const char * url = "http://yahoo.com/";
 			const std::string filename = String::FormatC("testfile%03d.txt", i);
 			
 			downloadCache.add(url, filename.c_str());
