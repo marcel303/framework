@@ -84,6 +84,9 @@ test done :
 	#include "rtmidi/RtMidi.h"
 #endif
 
+#undef min
+#undef max
+
 const int GFX_SX = 1000;
 const int GFX_SY = 720;
 
