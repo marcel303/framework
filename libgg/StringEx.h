@@ -44,5 +44,6 @@ public:
 #endif
 
 #if defined(WINDOWS)
+	#define strcasecmp _stricmp
 	extern char * strcasestr(const char * haystack, const char * needle);
 #endif
