@@ -5,6 +5,14 @@
 #include "StreamWriter.h"
 #include "webrequest.h"
 
+int DownloadQueue::Elem::getProgress() const
+{
+	if (webRequest == nullptr)
+		return 0;
+	else
+		return webRequest->getProgress();
+}
+
 void DownloadQueue::add(const char * url, const char * filename)
 {
 	Assert(queuedElems.count(filename) == 0);

@@ -16,6 +16,8 @@ struct DownloadQueue
 		
 		uint8_t * bytes = nullptr;
 		size_t numBytes = 0;
+
+		int getProgress() const;
 	};
 	
 	std::map<std::string, Elem> queuedElems;
