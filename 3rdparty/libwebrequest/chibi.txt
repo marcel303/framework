@@ -5,12 +5,17 @@ library libwebrequest
 	with_platform macos depend_library Foundation find
 	with_platform windows add_files webrequest-winhttp.cpp
 
+library libwebrequest-downloadcache
+	depend_library libgg
+	depend_library libwebrequest
+	add_files DownloadCache.cpp DownloadCache.h
+	
 app libwebrequest-test
 	depend_library libwebrequest
 	add_files test.cpp
 
 app libwebrequest-test-downloadcache
 	depend_library framework
-	depend_library libwebrequest
+	depend_library libwebrequest-downloadcache
 	add_files test-downloadcache.cpp
 	resource_path data
