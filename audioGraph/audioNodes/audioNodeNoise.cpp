@@ -233,7 +233,7 @@ void AudioNodeNoise::drawBrown()
 	const AudioFloat * max = getInputAudioFloat(kInput_Max, &AudioFloat::One);
 	
 	const double falloffPerSample = 0.98;
-	const double wanderPerSample = 0.1;
+	const float wanderPerSample = .1f;
 	
 	auto & rng = pinkNumber.rng;
 	
@@ -256,7 +256,7 @@ void AudioNodeNoise::drawBrown()
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			resultOutput.samples[i] = ((minValue + maxValue) + brownValue * (maxValue - minValue)) * .5f;
+			resultOutput.samples[i] = ((minValue + maxValue) + (float)brownValue * (maxValue - minValue)) * .5f;
 
 			brownValue *= falloffPerSample;
 			brownValue += rng.nextf(-wanderPerSample, +wanderPerSample);
@@ -274,7 +274,7 @@ void AudioNodeNoise::drawBrown()
 			const float minValue = min->samples[i];
 			const float maxValue = max->samples[i];
 			
-			resultOutput.samples[i] = ((minValue + maxValue) + brownValue * (maxValue - minValue)) * .5f;
+			resultOutput.samples[i] = ((minValue + maxValue) + (float)brownValue * (maxValue - minValue)) * .5f;
 
 			brownValue *= falloffPerSample;
 			brownValue += rng.nextf(-wanderPerSample, +wanderPerSample);
