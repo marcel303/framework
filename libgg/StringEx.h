@@ -42,3 +42,7 @@ public:
     #define strcpy_s(d, ds, s) strcpy(d, s)
     #define sscanf_s sscanf
 #endif
+
+#if defined(WINDOWS)
+	extern char * strcasestr(const char * haystack, const char * needle);
+#endif

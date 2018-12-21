@@ -368,3 +368,31 @@ std::string String::Join(const std::vector<std::string>& strings, const std::str
 	
 	return result;
 }
+
+//
+
+#if defined(WINDOWS)
+
+char * strcasestr(const char * haystack, const char * needle)
+{
+	const auto haystack_len = strlen(haystack);
+	const auto needle_len = strlen(needle);
+
+	char * haystack_lower = (char*)alloca(haystack_len + 1);
+	char * needle_lower = (char*)alloca(needle_len + 1);
+
+	memcpy(haystack_lower, haystack, haystack_len + 1);
+	memcpy(needle_lower, needle, needle_len + 1);
+
+	_strlwr(haystack_lower);
+	_strlwr(needle_lower);
+
+	const char * pos = strstr(haystack_lower, needle_lower);
+
+	if (pos == nullptr)
+		return nullptr;
+	else
+		return (char*)haystack + (pos - haystack_lower);
+}
+
+#endif
