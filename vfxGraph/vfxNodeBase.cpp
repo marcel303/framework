@@ -516,7 +516,7 @@ void VfxChannelData::alloc(const int _size)
 	
 	if (_size > 0)
 	{
-		data = new float[_size];
+		data = (float*)MemAlloc(_size * sizeof(float), 16);
 		size = _size;
 	}
 }
@@ -531,7 +531,7 @@ void VfxChannelData::allocOnSizeChange(const int _size)
 
 void VfxChannelData::free()
 {
-	delete[] data;
+	MemFree(data);
 	data = nullptr;
 	
 	size = 0;
