@@ -3,6 +3,7 @@ library libwebrequest
 	with_platform macos add_files webrequest-cocoa.mm
 	with_platform macos depend_library CoreFoundation find
 	with_platform macos depend_library Foundation find
+	with_platform windows add_files webrequest-winhttp.cpp
 
 app libwebrequest-test
 	depend_library libwebrequest
