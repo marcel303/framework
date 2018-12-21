@@ -26,6 +26,7 @@
 */
 
 #include "audiostream/AudioOutput_PortAudio.h"
+#include "DownloadCache.h"
 #include "framework.h"
 #include "StringEx.h"
 #include "video.h"
@@ -43,6 +44,7 @@
 #endif
 
 static void doProgressBar(const int x, const int y, const int sx, const int sy, const double time, const double duration, const float opacity, bool & hover, bool & seek, double & seekTime);
+static void downloadMediaFiles();
 
 int main(int argc, char * argv[])
 {
@@ -61,6 +63,8 @@ int main(int argc, char * argv[])
 	
 	if (framework.init(800, 400))
 	{
+		downloadMediaFiles();
+
 		MediaPlayer mp;
 		
 		MediaPlayer::OpenParams openParams;
@@ -398,4 +402,36 @@ static void doProgressBar(const int x, const int y, const int sx, const int sy, 
 	
 	drawText(x + 10, y + sy/2, 12, +1, 0, "%02d:%02d:%02d.%02d / %02d:%02d:%02d.%02d", hours, minutes, seconds, hundreds, d_hours, d_minutes, d_seconds, d_hundreds);
 	popFontMode();
+}
+
+static void downloadMediaFiles()
+{
+	const char * url = "http://centuryofthecat.nl/shared_media/framework/libvideo-examples/newpath.mp4";
+	const char * filename = "newpath.mp4";
+
+	DownloadCache downloadCache;
+
+	downloadCache.add(url, filename);
+
+	while (downloadCache.downloadQueue.isEmpty() == false)
+	{
+		framework.process();
+
+		downloadCache.tick(4);
+
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			setFont("calibri.ttf");
+			setColor(colorWhite);
+			drawText(400, 200, 16, 0, 0, "Downloading media files..");
+
+			int y = 200 + 20;
+			for (auto & e : downloadCache.downloadQueue.activeElems)
+			{
+				drawText(400, 200 + 20, 14, 0, 0, "Downloading %s/%dkb..", e.first.c_str(), e.second.getProgress());
+				y += 18;
+			}
+		}
+		framework.endDraw();
+	}
 }

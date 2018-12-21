@@ -66,6 +66,7 @@ app libvideo-example-basic
 app libvideo-example-seeking
 
 	depend_library libvideo
+	depend_library libwebrequest-downloadcache
 
 	add_files examples/seeking.cpp
 	resource_path examples/data
@@ -73,6 +74,7 @@ app libvideo-example-seeking
 app libvideo-example-audio
 
 	depend_library libvideo
+	depend_library libwebrequest-downloadcache
 
 	add_files examples/audio.cpp
 	resource_path examples/data
@@ -82,6 +84,7 @@ app libvideo-example-mediaplayer
 	depend_library artnet
 	depend_library libosc
 	depend_library libvideo
+	depend_library libwebrequest-downloadcache
 
 	add_files examples/mediaplayer.cpp
 	resource_path examples/data
