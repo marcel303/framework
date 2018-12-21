@@ -203,18 +203,24 @@ struct VfxNodeTestDynamicSockets : VfxNodeBase
 			
 			const int kNumInputs = std::round(std::sin(framework.time) * 4.f + 5.f);
 
-			DynamicInput inputs[kNumInputs];
-			
-			for (int i = 0; i < kNumInputs; ++i)
+			if (kNumInputs == 0)
+				setDynamicInputs(nullptr, 0);
+			else
 			{
-				char name[32];
-				sprintf_s(name, sizeof(name), "dynamic%d", i + 1);
-				
-				inputs[i].name = name;
-				inputs[i].type = kVfxPlugType_Float;
-			}
+				std::vector<DynamicInput> inputs;
+				inputs.resize(kNumInputs);
 			
-			setDynamicInputs(inputs, kNumInputs);
+				for (int i = 0; i < kNumInputs; ++i)
+				{
+					char name[32];
+					sprintf_s(name, sizeof(name), "dynamic%d", i + 1);
+				
+					inputs[i].name = name;
+					inputs[i].type = kVfxPlugType_Float;
+				}
+			
+				setDynamicInputs(&inputs.front(), kNumInputs);
+			}
 		}
 
 		if (testOutputs)
@@ -223,21 +229,29 @@ struct VfxNodeTestDynamicSockets : VfxNodeBase
 			
 			const int kNumOutputs = std::round(std::sin(framework.time) * 4.f + 5.f);
 
-			DynamicOutput outputs[kNumOutputs];
-			
-			static float value = 1.f;
-			
-			for (int i = 0; i < kNumOutputs; ++i)
+			if (kNumOutputs == 0)
 			{
-				char name[32];
-				sprintf_s(name, sizeof(name), "dynamic%d", i + 1);
-				
-				outputs[i].name = name;
-				outputs[i].type = kVfxPlugType_Float;
-				outputs[i].mem = &value;
+				setDynamicOutputs(nullptr, 0);
 			}
+			else
+			{
+				std::vector<DynamicOutput> outputs;
+				outputs.resize(kNumOutputs);
 			
-			setDynamicOutputs(outputs, kNumOutputs);
+				static float value = 1.f;
+			
+				for (int i = 0; i < kNumOutputs; ++i)
+				{
+					char name[32];
+					sprintf_s(name, sizeof(name), "dynamic%d", i + 1);
+				
+					outputs[i].name = name;
+					outputs[i].type = kVfxPlugType_Float;
+					outputs[i].mem = &value;
+				}
+			
+				setDynamicOutputs(&outputs.front(), kNumOutputs);
+			}
 		}
 	}
 };
