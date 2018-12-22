@@ -346,8 +346,6 @@ void FrameworkImGuiContext::setClipboardText(void * user_data, const char * text
 
 void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 {
-	glEnable(GL_SCISSOR_TEST);
-	
 	for (int i = 0; i < draw_data->CmdListsCount; ++i)
 	{
 		const ImDrawList * cmd_list = draw_data->CmdLists[i];
@@ -378,9 +376,9 @@ void FrameworkImGuiContext::render(const ImDrawData * draw_data)
                 	clip_rect.w < 0)
                 	continue;
 				
-				glScissor(
+				setDrawRect(
 					(int)clip_rect.x,
-					(int)(draw_data->DisplaySize.y - clip_rect.w),
+					(int)clip_rect.y,
 					(int)(clip_rect.z - clip_rect.x),
 					(int)(clip_rect.w - clip_rect.y));
 				
@@ -426,5 +424,5 @@ void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 		}
 	}
 	
-	glDisable(GL_SCISSOR_TEST);
+	clearDrawRect();
 }
