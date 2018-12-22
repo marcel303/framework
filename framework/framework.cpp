@@ -5532,15 +5532,36 @@ void popSurface()
 
 void setDrawRect(int x, int y, int sx, int sy)
 {
-	y = globals.displaySize[1] - y - sy;
-	
-	x /= framework.minification;
-	y /= framework.minification;
-	sx /= framework.minification;
-	sy /= framework.minification;
-	
-	glScissor(x, y, sx, sy);
-	glEnable(GL_SCISSOR_TEST);
+	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+
+	if (surface != nullptr)
+	{
+		x /= framework.minification;
+		y /= framework.minification;
+		sx /= framework.minification;
+		sy /= framework.minification;
+
+		glScissor(x, y, sx, sy);
+		checkErrorGL();
+
+		glEnable(GL_SCISSOR_TEST);
+		checkErrorGL();
+	}
+	else
+	{
+		y = globals.displaySize[1] - y - sy;
+
+		x /= framework.minification;
+		y /= framework.minification;
+		sx /= framework.minification;
+		sy /= framework.minification;
+
+		glScissor(x, y, sx, sy);
+		checkErrorGL();
+
+		glEnable(GL_SCISSOR_TEST);
+		checkErrorGL();
+	}
 }
 
 void clearDrawRect()
