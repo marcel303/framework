@@ -84,8 +84,9 @@ struct FileBrowser
 		// list files
 
 		//const char * rootFolder = "/Users/thecat/framework/vfxGraph-examples/data";
-		const char * rootFolder = "/Users/thecat/framework/";
+		//const char * rootFolder = "/Users/thecat/framework/";
 		//const char * rootFolder = "/Users/thecat/";
+		const char * rootFolder = "d:/repos";
 		
 		auto files = listFiles(rootFolder, true);
 		
@@ -401,6 +402,8 @@ struct FileEditor_Text : FileEditor
 	{
 		path = in_path;
 		
+		textEditor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
+
 		isValid = loadIntoTextEditor(path.c_str(), lineEndings, textEditor);
 		
 		guiContext.init();
@@ -651,8 +654,10 @@ struct FileEditor_Model : FileEditor
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
 		
-		if (mouse.isDown(BUTTON_LEFT))
+		if (inputIsCaptured == false && mouse.isDown(BUTTON_LEFT))
 		{
+			inputIsCaptured = true;
+
 			rotationX += mouse.dy;
 			rotationY -= mouse.dx;
 		}
@@ -766,6 +771,7 @@ struct FileEditor_Video : FileEditor
 	MediaPlayer mp;
 	AudioOutput_PortAudio audioOutput;
 	
+	bool hasAudioInfo = false;
 	bool audioIsStarted = false;
 	
 	FileEditor_Video(const char * path)
@@ -789,20 +795,56 @@ struct FileEditor_Video : FileEditor
 	
 	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
 	{
+		// attempt to get information about the video so we can start the audio
+
 		int channelCount;
 		int sampleRate;
 		
-		if (audioIsStarted == false && mp.getAudioProperties(channelCount, sampleRate))
+		if (hasAudioInfo == false && mp.getAudioProperties(channelCount, sampleRate))
 		{
-			audioIsStarted = true;
+			hasAudioInfo = true;
+
+			if (channelCount > 0)
+			{
+				audioIsStarted = true;
 			
-			audioOutput.Initialize(channelCount, sampleRate, 256);
-			audioOutput.Play(&mp);
+				audioOutput.Initialize(channelCount, sampleRate, 256);
+				audioOutput.Play(&mp);
+			}
 		}
 		
-		mp.presentTime = mp.audioTime;
+		// update presentation time stamp for the video
+
+		if (audioIsStarted)
+			mp.presentTime = mp.audioTime;
+		else if (hasAudioInfo)
+			mp.presentTime += dt;
 		
+		// update video
+
 		mp.tick(mp.context, true);
+
+		int videoSx;
+		int videoSy;
+		double duration;
+
+		const bool hasVideoInfo = mp.getVideoProperties(videoSx, videoSy, duration);
+
+		// check if the video ended and needs to be looped
+
+		if (mp.presentedLastFrame(mp.context))
+		{
+			auto openParams = mp.context->openParams;
+
+			mp.close(false);
+			mp.presentTime = 0.0;
+			mp.openAsync(openParams);
+
+			audioOutput.Shutdown();
+
+			hasAudioInfo = false;
+			audioIsStarted = false;
+		}
 		
 		//
 		
@@ -811,11 +853,7 @@ struct FileEditor_Video : FileEditor
 		
 		auto texture = mp.getTexture();
 		
-		int videoSx;
-		int videoSy;
-		double duration;
-		
-		if (texture != 0 && mp.getVideoProperties(videoSx, videoSy, duration))
+		if (texture != 0 && hasVideoInfo)
 		{
 			pushBlend(BLEND_OPAQUE);
 			{
@@ -900,6 +938,86 @@ struct FileEditor_ParticleSystem : FileEditor
 	}
 };
 
+#include "gfx-framework.h"
+#include "jsusfx_file.h"
+#include "jsusfx-framework.h"
+
+struct FileEditor_JsusFx : FileEditor
+{
+	JsusFx_Framework jsusFx;
+
+	JsusFxGfx_Framework gfx;
+	JsusFxFileAPI_Basic fileApi;
+	JsusFxPathLibrary_Basic pathLibary;
+
+	Surface *& surface;
+
+	bool isValid = false;
+
+	FileEditor_JsusFx(const char * path, Surface *& in_surface)
+		: jsusFx(pathLibary)
+		, gfx(jsusFx)
+		, pathLibary(".")
+		, surface(in_surface)
+	{
+		jsusFx.init();
+
+		fileApi.init(jsusFx.m_vm);
+		jsusFx.fileAPI = &fileApi;
+
+		gfx.init(jsusFx.m_vm);
+		jsusFx.gfx = &gfx;
+
+		isValid = jsusFx.compile(pathLibary, path, JsusFx::kCompileFlag_CompileGraphicsSection);
+
+		if (isValid)
+		{
+			jsusFx.prepare(44100, 256);
+		}
+	}
+
+	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	{
+		if (isValid == false)
+			return;
+
+		jsusFx.process(nullptr, nullptr, 256, 0, 0);
+
+		setFont("calibri.ttf");
+		pushFontMode(FONT_SDF);
+		setColorClamp(true);
+		{
+			gfx.setup(surface, sx, sy, mouse.x, mouse.y, inputIsCaptured == false);
+
+			jsusFx.draw();
+		}
+		setColorClamp(false);
+		popFontMode();
+
+	#if 0
+		int x = 10;
+		int y = 10;
+
+		int sliderIndex = 0;
+
+		for (auto & slider : effectElem->jsusFx.sliders)
+		{
+			if (slider.exists && slider.desc[0] != '-')
+			{
+				gxPushMatrix();
+				gxTranslatef(x, y, 0);
+				doSlider(effectElem->jsusFx, slider, mouse.x - x, mouse.y - y, sliderIsActive[sliderIndex]);
+				gxPopMatrix();
+
+				y += 16;
+			}
+
+			sliderIndex++;
+		}
+	#endif
+	}
+};
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
@@ -934,7 +1052,10 @@ int main(int argc, char * argv[])
 		
 	// fixme : ugly hack to construct an absolute path here
 	
-		auto directory = "/" + Path::GetDirectory(path);
+		auto directory = Path::GetDirectory(path);
+	#ifndef WIN32
+		directory = "/" + directory;
+	#endif
 		changeDirectory(directory.c_str());
 		
 		auto filename = Path::GetFileName(path);
@@ -945,7 +1066,13 @@ int main(int argc, char * argv[])
 			extension == "txt" ||
 			extension == "ini" ||
 			extension == "cpp" ||
-			extension == "h")
+			extension == "h" ||
+			extension == "py" ||
+			extension == "jsfx-inc" ||
+			extension == "inc" ||
+			extension == "md" ||
+			extension == "bat" ||
+			extension == "sh")
 		{
 			editor = new FileEditor_Text(filename.c_str());
 		}
@@ -976,6 +1103,10 @@ int main(int argc, char * argv[])
 		else if (extension == "pfx")
 		{
 			editor = new FileEditor_ParticleSystem(filename.c_str());
+		}
+		else if (extension == "jsfx")
+		{
+			editor = new FileEditor_JsusFx(filename.c_str(), editorSurface);
 		}
 		else if (extension == "xml")
 		{
