@@ -935,7 +935,7 @@ EEL_F JsusFxGfx_Framework::gfx_setimgdim(int img, EEL_F * w, EEL_F * h)
 		if (use_h > 2048)
 			use_h = 2048;
 		
-		logDebug("resizing image %d to (%d, %d)", img, use_w, use_h);
+		//logDebug("resizing image %d to (%d, %d)", img, use_w, use_h);
 		
 		image.resize(use_w, use_h);
 	}
