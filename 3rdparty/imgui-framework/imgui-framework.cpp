@@ -206,6 +206,9 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 		io.MouseWheel = mouse.scrollY * -.1f;
 	#endif
 
+		if (mouse.scrollY != 0)
+			io.MouseWheel = mouse.scrollY;
+
 		io.KeyCtrl = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
 		io.KeyShift = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
 		io.KeyAlt = keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT);
