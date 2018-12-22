@@ -207,7 +207,7 @@ int main(int argc, char * argv[])
 		
 		// update the graph editor
 		
-		inputIsCaptured |= vfxGraphMgr.tickEditor(dt, inputIsCaptured);
+		inputIsCaptured |= vfxGraphMgr.tickEditor(VIEW_SX, VIEW_SY, dt, inputIsCaptured);
 		
 		// update OSC messages
 		
@@ -237,7 +237,7 @@ int main(int argc, char * argv[])
 		
 			// draw the graph editor
 			
-			vfxGraphMgr.drawEditor();
+			vfxGraphMgr.drawEditor(VIEW_SX, VIEW_SY);
 			
 			// draw the menus
 			
