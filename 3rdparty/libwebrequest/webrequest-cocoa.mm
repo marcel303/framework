@@ -68,9 +68,9 @@ struct WebRequestCocoa : WebRequest
 		}
 	}
 
-	float getProgress() override
+	int getProgress() override
 	{
-		return task.progress.fractionCompleted;
+		return task.countOfBytesReceived;
 	}
 
     virtual bool isDone() override

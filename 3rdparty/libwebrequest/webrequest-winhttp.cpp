@@ -297,9 +297,9 @@ struct WebRequest_WinHttp : WebRequest
 		}
 	}
 
-	virtual float getProgress() override
+	virtual int getProgress() override
 	{
-		return numBytesReceived / float(1024 * 1024);
+		return numBytesReceived;
 	}
 
 	virtual bool isDone() override
