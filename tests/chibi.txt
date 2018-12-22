@@ -7,6 +7,7 @@ app tests
 # todo : add with_library ?
 	with_platform macos depend_library libps3eye
 	depend_library libvideo
+	depend_library libwebrequest-downloadcache
 	depend_library vfxgraph
 
 	scan_files c

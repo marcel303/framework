@@ -43,6 +43,15 @@ void testDeepbelief()
 {
 	setAbout("This example demonstrates the use of the Deep Belief SDK. The Deep Belief SDK uses machine learning to classify images. In this example Deep Belief is asked to classify objects in a video being shown to it. Can you guess the right object before Deep Belief does?");
 	
+	const char * downloads[] =
+	{
+		"http://centuryofthecat.nl/shared_media/framework/tests/deepbelief/jetpac.ntwk",
+		"deepbelief/jetpac.ntwk"
+	};
+	
+	if (!downloadTestFiles(downloads, 1))
+		return;
+	
 	const char * networkFilename = "deepbelief/jetpac.ntwk";
 	//const char * networkFilename = "deepbelief/ccv2010.ntwk";
 	//const char * imageFilename = "deepbelief/dog.jpg";
