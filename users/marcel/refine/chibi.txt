@@ -2,6 +2,8 @@ app refine
 	depend_library framework
 	depend_library imgui-framework
 	depend_library ImGuiColorTextEdit
+	depend_library jsusfx
+	depend_library jsusfx-framework
 	depend_library libjgmod
 	depend_library libjgmod-framework
 	depend_library libparticle
