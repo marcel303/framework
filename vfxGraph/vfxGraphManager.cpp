@@ -200,12 +200,12 @@ void VfxGraphManager_Basic::traverseDraw() const
 		instance->texture = instance->vfxGraph->traverseDraw(instance->sx, instance->sy);
 }
 
-bool VfxGraphManager_Basic::tickEditor(const float dt, const bool isInputCaptured)
+bool VfxGraphManager_Basic::tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured)
 {
 	return false;
 }
 
-void VfxGraphManager_Basic::drawEditor()
+void VfxGraphManager_Basic::drawEditor(const int sx, const int sy)
 {
 }
 
@@ -634,22 +634,28 @@ void VfxGraphManager_RTE::traverseDraw() const
 	}
 }
 
-bool VfxGraphManager_RTE::tickEditor(const float dt, const bool isInputCaptured)
+bool VfxGraphManager_RTE::tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured)
 {
 	bool result = false;
 	
 	if (selectedFile != nullptr)
 	{
+		selectedFile->graphEdit->displaySx = sx;
+		selectedFile->graphEdit->displaySy = sy;
+
 		result |= selectedFile->graphEdit->tick(dt, isInputCaptured);
 	}
 	
 	return result;
 }
 
-void VfxGraphManager_RTE::drawEditor()
+void VfxGraphManager_RTE::drawEditor(const int sx, const int sy)
 {
 	if (selectedFile != nullptr)
 	{
+		selectedFile->graphEdit->displaySx = sx;
+		selectedFile->graphEdit->displaySy = sy;
+
 		selectedFile->graphEdit->draw();
 	}
 }

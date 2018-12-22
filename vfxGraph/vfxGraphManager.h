@@ -64,8 +64,8 @@ struct VfxGraphManager
 	
 	virtual void traverseDraw() const = 0;
 	
-	virtual bool tickEditor(const float dt, const bool isInputCaptured) = 0;
-	virtual void drawEditor() = 0;
+	virtual bool tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured) = 0;
+	virtual void drawEditor(const int sx, const int sy) = 0;
 };
 
 struct VfxGraphManager_Basic : VfxGraphManager
@@ -108,8 +108,8 @@ struct VfxGraphManager_Basic : VfxGraphManager
 
 	virtual void traverseDraw() const override;
 	
-	virtual bool tickEditor(const float dt, const bool isInputCaptured) override;
-	virtual void drawEditor() override;
+	virtual bool tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured) override;
+	virtual void drawEditor(const int sx, const int sy) override;
 };
 
 struct VfxGraphFileRTC;
@@ -157,6 +157,6 @@ struct VfxGraphManager_RTE : VfxGraphManager
 	
 	virtual void traverseDraw() const override;
 	
-	virtual bool tickEditor(const float dt, const bool isInputCaptured) override;
-	virtual void drawEditor() override;
+	virtual bool tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured) override;
+	virtual void drawEditor(const int sx, const int sy) override;
 };

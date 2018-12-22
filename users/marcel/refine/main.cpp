@@ -28,8 +28,11 @@
 
 #include "particle_editor.h"
 
-static const int VIEW_SX = 900;
-static const int VIEW_SY = 600;
+static const int VIEW_SX = 1200;
+static const int VIEW_SY = 800;
+
+static std::string s_dataFolder;
+
 struct FileElem
 {
 	bool isFolded = true;
@@ -274,7 +277,7 @@ struct FileEditor_VfxGraph : FileEditor
 	{
 		// update real-time editing
 		
-		inputIsCaptured |= vfxGraphMgr.tickEditor(dt, inputIsCaptured);
+		inputIsCaptured |= vfxGraphMgr.tickEditor(sx, sy, dt, inputIsCaptured);
 		
 		// resize instance and tick & draw vfx graph
 		
@@ -298,7 +301,7 @@ struct FileEditor_VfxGraph : FileEditor
 		
 		vfxGraphMgr.tickVisualizers(dt);
 		
-		vfxGraphMgr.drawEditor();
+		vfxGraphMgr.drawEditor(sx, sy);
 	}
 };
 
@@ -407,6 +410,14 @@ struct FileEditor_Text : FileEditor
 		isValid = loadIntoTextEditor(path.c_str(), lineEndings, textEditor);
 		
 		guiContext.init();
+	#if 0
+		// todo : find a good mono spaced font for the editor
+		guiContext.pushImGuiContext();
+		ImGuiIO& io = ImGui::GetIO();
+		io.FontDefault = io.Fonts->AddFontFromFileTTF((s_dataFolder + "/unispace.ttf").c_str(), 16)
+		guiContext.popImGuiContext();
+		guiContext.updateFontTexture();
+	#endif
 	}
 	
 	virtual ~FileEditor_Text() override
@@ -954,6 +965,12 @@ struct FileEditor_JsusFx : FileEditor
 
 	bool isValid = false;
 
+	bool firstFrame = true;
+
+	int offsetX = 0;
+	int offsetY = 0;
+	bool isDragging = false;
+
 	FileEditor_JsusFx(const char * path, Surface *& in_surface)
 		: jsusFx(pathLibary)
 		, gfx(jsusFx)
@@ -983,13 +1000,67 @@ struct FileEditor_JsusFx : FileEditor
 
 		jsusFx.process(nullptr, nullptr, 256, 0, 0);
 
+		setColor(colorWhite);
+		drawUiRectCheckered(0, 0, sx, sy, 8);
+
 		setFont("calibri.ttf");
 		pushFontMode(FONT_SDF);
 		setColorClamp(true);
 		{
-			gfx.setup(surface, sx, sy, mouse.x, mouse.y, inputIsCaptured == false);
+			const int gfxSx = jsusFx.gfx_w;
+			const int gfxSy = jsusFx.gfx_h;
 
-			jsusFx.draw();
+			if (firstFrame)
+			{
+				firstFrame = false;
+
+				offsetX = (sx - gfxSx) / 2;
+				offsetY = (sy - gfxSy) / 2;
+			}
+
+			if (inputIsCaptured == false)
+			{
+				const bool isOutside =
+					mouse.x < offsetX || mouse.x > offsetX + jsusFx.gfx_w ||
+					mouse.y < offsetY || mouse.y > offsetY + jsusFx.gfx_h;
+
+				if (isOutside && mouse.wentDown(BUTTON_LEFT))
+				{
+					isDragging = true;
+				}
+
+				if (mouse.wentUp(BUTTON_LEFT))
+				{
+					isDragging = false;
+				}
+			}
+			else
+			{
+				isDragging = false;
+			}
+
+			if (isDragging)
+			{
+				inputIsCaptured = true;
+
+				offsetX = mouse.x - gfxSx/2;
+				offsetY = mouse.y;
+			}
+
+			mouse.x -= offsetX;
+			mouse.y -= offsetY;
+			{
+				setDrawRect(offsetX, offsetY, gfxSx, gfxSy);
+				gfx.drawTransform.MakeTranslation(offsetX, offsetY, 0.f);
+
+				gfx.setup(surface, gfxSx, gfxSy, mouse.x, mouse.y, inputIsCaptured == false);
+
+				jsusFx.draw();
+
+				clearDrawRect();
+			}
+			mouse.x += offsetX;
+			mouse.y += offsetY;
 		}
 		setColorClamp(false);
 		popFontMode();
@@ -1029,13 +1100,18 @@ int main(int argc, char * argv[])
 
 	initUi();
 	
-	auto dataFolder = getDirectory();
+	s_dataFolder = getDirectory();
 	framework.fillCachesWithPath(".", true);
 	
 // todo : create ImGui context
 
 	FrameworkImGuiContext guiContext;
 	guiContext.init();
+	guiContext.pushImGuiContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.FontDefault = io.Fonts->AddFontFromFileTTF("calibri.ttf", 16);
+	guiContext.popImGuiContext();
+	guiContext.updateFontTexture();
 
 	FileBrowser fileBrowser;
 	fileBrowser.init();
@@ -1246,7 +1322,7 @@ int main(int argc, char * argv[])
 		framework.endDraw();
 	}
 	
-	changeDirectory(dataFolder.c_str());
+	changeDirectory(s_dataFolder.c_str());
 	
 	guiContext.shut();
 
