@@ -44,6 +44,9 @@ int main(int argc, char * argv[])
 	{
 		framework.process();
 		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
+
 		if (framework.quitRequested)
 			break;
 		
@@ -97,8 +100,8 @@ int main(int argc, char * argv[])
 				auto & e = i.second;
 				
 				setColor(colorYellow);
-				drawText(10, y, 12, +1, +1, "[downloading %d%%] %s -> %s",
-					int(e.webRequest->getProgress() * 100.f),
+				drawText(10, y, 12, +1, +1, "[downloading %dkb] %s -> %s",
+					e.webRequest->getProgress() / 1024,
 					e.url.c_str(),
 					e.filename.c_str());
 				
