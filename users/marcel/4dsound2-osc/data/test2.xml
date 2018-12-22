@@ -2,7 +2,7 @@
     <node id="1" typeName="gen.sine">
         <input socket="frequency" value="0.234000"/>
     </node>
-    <node id="3" typeName="4d.soundObject">
+    <node id="3" typeName="osc.sheet">
         <input socket="Enable" value="1"/>
         <input socket="groupPrefix" value="0"/>
         <input socket="oscEndpoint" value="local"/>
@@ -20,7 +20,7 @@
         <input socket="frequency" value="0.100000"/>
     </node>
     <node id="7" typeName="gen.saw"/>
-    <node id="8" typeName="4d.soundObject">
+    <node id="8" typeName="osc.sheet">
         <input socket="Enable" value="1"/>
         <input socket="Speed" value="1.000000"/>
         <input socket="XEnable" value="1"/>
@@ -28,11 +28,12 @@
         <input socket="YFrequency" value="2.000000"/>
         <input socket="ZEnable" value="1"/>
         <input socket="ZFrequency" value="3.000000"/>
+        <input socket="groupPrefix" value="0"/>
         <input socket="oscEndpoint" value="local"/>
         <input socket="oscSheet" value="osc-sheet.txt"/>
         <input socket="particleOpacity" value="0.800000"/>
     </node>
-    <node id="9" typeName="4d.soundObject">
+    <node id="9" typeName="osc.sheet">
         <input socket="Enable" value="1"/>
         <input socket="Speed" value="1.000000"/>
         <input socket="XEnable" value="1"/>
@@ -44,7 +45,7 @@
         <input socket="showPaths" value="1"/>
         <input socket="showShapes" value="1"/>
     </node>
-    <node id="10" typeName="4d.soundObject">
+    <node id="10" typeName="osc.sheet">
         <input socket="Enable" value="1"/>
         <input socket="hollow" value="1"/>
         <input socket="oscEndpoint" value="local"/>
@@ -76,7 +77,7 @@
     <node id="19" typeName="gen.sine">
         <input socket="frequency" value="0.012300"/>
     </node>
-    <node id="20" typeName="4d.soundObject">
+    <node id="20" typeName="osc.sheet">
         <input socket="Enable" value="1"/>
         <input socket="Rotation.x" value="1.000000"/>
         <input socket="Rotation.y" value="9.000000"/>
@@ -95,7 +96,7 @@
     <node id="23" typeName="string.append">
         <input socket="b" value="/particle"/>
     </node>
-    <node id="24" typeName="4d.soundObject">
+    <node id="24" typeName="osc.sheet">
         <input socket="Dimensions.z" value="10.000000"/>
         <input socket="Enable" value="1"/>
         <input socket="Scale" value="0.200000"/>
@@ -113,7 +114,7 @@
     <node id="26" typeName="string.append">
         <input socket="b" value="/hue"/>
     </node>
-    <node id="27" typeName="4d.soundObject">
+    <node id="27" typeName="osc.sheet">
         <input socket="Enable" value="1"/>
         <input socket="Speed" value="1.000000"/>
         <input socket="XEnable" value="1"/>
@@ -159,7 +160,7 @@
     <node id="42" typeName="in.string">
         <input socket="name" value="id"/>
     </node>
-    <node id="44" typeName="4d.soundObject">
+    <node id="44" typeName="osc.sheet">
         <input socket="Enable" value="1"/>
         <input socket="hollow" value="1"/>
         <input socket="oscEndpoint" value="local"/>
@@ -222,7 +223,7 @@
     <link id="53" srcNodeId="34" srcNodeSocketName="text" dstNodeId="42" dstNodeSocketName="value"/>
     <link id="54" srcNodeId="45" srcNodeSocketName="a" dstNodeId="13" dstNodeSocketName="result"/>
     <link id="55" srcNodeId="44" srcNodeSocketName="oscPrefix" dstNodeId="45" dstNodeSocketName="result"/>
-    <editor nextZKey="367">
+    <editor nextZKey="368">
         <dragAndZoom x="384.423828125" y="258.18380737304688" zoom="0.36238771677017212"/>
         <nodeDatas>
             <nodeData nodeId="1" x="-160" y="272" zKey="58" folded="1"/>
@@ -230,7 +231,7 @@
             <nodeData nodeId="4" x="-304" y="-192" zKey="189" folded="1"/>
             <nodeData nodeId="5" x="-192" y="144" zKey="179"/>
             <nodeData nodeId="7" x="-176" y="96" zKey="177" folded="1"/>
-            <nodeData nodeId="8" x="176" y="-160" zKey="253"/>
+            <nodeData nodeId="8" x="176" y="-160" zKey="367"/>
             <nodeData nodeId="9" x="-416" y="-192" displayName="monitor" zKey="331" folded="1"/>
             <nodeData nodeId="10" x="-288" y="384" zKey="333"/>
             <nodeData nodeId="11" x="-304" y="32" zKey="210" folded="1"/>
