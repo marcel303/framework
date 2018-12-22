@@ -98,6 +98,8 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	int lastKey = 0;
 	bool inputEnabled = true;
 	
+	Mat4x4 drawTransform;
+
 	JsusFxGfx_Framework(JsusFx & _jsusFx);
 	
 	void setup(Surface * surface, const int w, const int h, const int mouseX, const int mouseY, const bool inputEnabled);

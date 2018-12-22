@@ -138,6 +138,7 @@ JsusFxGfx_Framework::JsusFxGfx_Framework(JsusFx & _jsusFx)
 	: JsusFxGfx()
 	, jsusFx(_jsusFx)
 	, surface(nullptr)
+	, drawTransform(true)
 {
 	shaderSource("lice-gradient.ps", s_liceGradientPs);
 	shaderSource("lice-gradient.vs", s_liceGradientVs);
@@ -277,8 +278,9 @@ void JsusFxGfx_Framework::beginDraw()
 	Assert(primType == kPrimType_Other);
 	
 	pushSurface(surface);
+	gxLoadMatrixf(drawTransform.m_v);
 	currentImageIndex = -1;
-	
+
 	pushBlend(BLEND_OPAQUE);
 	currentBlendMode = -1;
 	updateBlendMode();
@@ -362,7 +364,10 @@ void JsusFxGfx_Framework::updateSurface()
 		popSurface();
 		
 		if (index == -1)
+		{
 			pushSurface(surface);
+			gxLoadMatrixf(drawTransform.m_v);
+		}
 		else
 		{
 			auto image = &imageCache.get(index);
