@@ -261,8 +261,6 @@ struct WebRequest_WinHttp : WebRequest
 			{
 				if (this->failure)
 					contents.clear();
-				else
-					contents.push_back(0);
 
 				//
 
@@ -316,11 +314,11 @@ struct WebRequest_WinHttp : WebRequest
 	{
 		if (done && failure == false)
 		{
-			assert(contents.size() >= 1);
+			bytes = new uint8_t[contents.size()];
+			numBytes = contents.size();
 
-			bytes = &contents.front();
-
-			numBytes = contents.size() - 1;
+			if (!contents.empty())
+				memcpy(bytes, &contents.front(), contents.size());
 
 			return true;
 		}
@@ -334,10 +332,12 @@ struct WebRequest_WinHttp : WebRequest
 	{
 		if (done && failure == false)
 		{
-			assert(contents.size() >= 1);
-			assert(contents.back() == 0);
+			result = new char[contents.size() + 1];
 
-			result = (char*)&contents.front();
+			if (!contents.empty())
+				memcpy(result, &contents.front(), contents.size());
+
+			result[contents.size()] = 0;
 
 			return true;
 		}

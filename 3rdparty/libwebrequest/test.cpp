@@ -28,11 +28,14 @@ int main(int argc, char * argv[])
 	
 	if (webRequest->getResultAsData(bytes, numBytes))
 	{
-		printf("numBytes: %zU\n", numBytes);
+		printf("numBytes: %zu\n", numBytes);
 		
 		delete [] bytes;
 		bytes = nullptr;
 	}
+
+	delete webRequest;
+	webRequest = nullptr;
 	
 	return 0;
 }

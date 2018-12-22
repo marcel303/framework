@@ -80,6 +80,9 @@ void DownloadQueue::checkCompletions()
 					{
 						LOG_ERR("failed to write download to disk: %s", e.what());
 					}
+
+					delete [] bytes;
+					bytes = nullptr;
 				}
 				
 				completions.insert(std::make_pair(filename, true));
