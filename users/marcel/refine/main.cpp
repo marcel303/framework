@@ -450,6 +450,8 @@ struct FileEditor_Text : FileEditor
 							if (NFD_OpenDialog(nullptr, nullptr, &filename) == NFD_OKAY)
 							{
 								isValid = loadIntoTextEditor(filename, lineEndings, textEditor);
+								
+								// fixme : remember path !
 							}
 							
 							if (filename != nullptr)
@@ -528,6 +530,8 @@ struct FileEditor_Sprite : FileEditor
 	
 	FrameworkImGuiContext guiContext;
 	
+	bool firstFrame = true;
+	
 	FileEditor_Sprite(const char * in_path)
 		: sprite(in_path)
 		, path(in_path)
@@ -549,23 +553,28 @@ struct FileEditor_Sprite : FileEditor
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
 		
-		const float scaleX = sx / float(sprite.getWidth());
-		const float scaleY = sy / float(sprite.getHeight());
-		const float scale = fminf(1.f, fminf(scaleX, scaleY));
+		if (firstFrame)
+		{
+			firstFrame = false;
+			const float scaleX = sx / float(sprite.getWidth());
+			const float scaleY = sy / float(sprite.getHeight());
+			const float scale = fminf(1.f, fminf(scaleX, scaleY));
+			
+			sprite.scale = scale;
+		}
 		
 		setColor(colorWhite);
-		sprite.x = (sx - sprite.getWidth() * scale) / 2;
-		sprite.y = (sy - sprite.getHeight() * scale) / 2;
-		sprite.scale = scale;
+		sprite.x = (sx - sprite.getWidth() * sprite.scale) / 2;
+		sprite.y = (sy - sprite.getHeight() * sprite.scale) / 2;
 		sprite.draw();
 		
 		guiContext.processBegin(dt, sx, sy, inputIsCaptured);
 		{
 			ImGui::SetNextWindowPos(ImVec2(4, 4));
-			ImGui::SetNextWindowSize(ImVec2(240, 60));
 			if (ImGui::Begin("Sprite", nullptr,
 				ImGuiWindowFlags_NoTitleBar |
-				ImGuiWindowFlags_NoMove))
+				ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				if (ImGui::InputText("Sheet", sheetFilename, sizeof(sheetFilename)))
 				{
@@ -574,6 +583,13 @@ struct FileEditor_Sprite : FileEditor
 					else
 						sprite = Sprite(path.c_str(), 0.f, 0.f, sheetFilename);
 				}
+				
+				ImGui::SliderFloat("angle", &sprite.angle, -360.f, +360.f);
+				ImGui::SliderFloat("scale", &sprite.scale, 0.f, 100.f, "%.2f", 2);
+				ImGui::Checkbox("flip X", &sprite.flipX);
+				ImGui::Checkbox("flip Y", &sprite.flipY);
+				ImGui::InputFloat("pivot X", &sprite.pivotX);
+				ImGui::InputFloat("pivot Y", &sprite.pivotY);
 				
 				auto animList = sprite.getAnimList();
 				
@@ -1089,6 +1105,41 @@ struct FileEditor_JsusFx : FileEditor
 	}
 };
 
+struct FileEditor_Font : FileEditor
+{
+	std::string path;
+	
+	FileEditor_Font(const char * in_path)
+		: path(in_path)
+	{
+	}
+	
+	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	{
+		setFont(path.c_str());
+		pushFontMode(FONT_BITMAP);
+		setColor(colorWhite);
+		
+		const int fontSize = std::max(4, std::min(sx, sy) / 16);
+		
+		for (int xi = 0; xi < 16; ++xi)
+		{
+			for (int yi = 0; yi < 8; ++yi)
+			{
+				const int x = (xi + .5f) * sx / 16;
+				const int y = (yi + .5f) * sy / 16 + sy/4;
+				
+				const char c = xi + yi * 16;
+				
+				if (isprint(c))
+					drawText(x, y, fontSize, 0, -1, " %c", c);
+			}
+		}
+		
+		popFontMode();
+	}
+};
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
@@ -1183,6 +1234,10 @@ int main(int argc, char * argv[])
 		else if (extension == "jsfx")
 		{
 			editor = new FileEditor_JsusFx(filename.c_str(), editorSurface);
+		}
+		else if (extension == "ttf" || extension == "otf")
+		{
+			editor = new FileEditor_Font(filename.c_str());
 		}
 		else if (extension == "xml")
 		{
