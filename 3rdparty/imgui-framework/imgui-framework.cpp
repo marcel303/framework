@@ -202,11 +202,9 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 			kinetic_scroll = Vec2(0.f, mouse.scrollY * -.1f);
 		io.MouseWheel = kinetic_scroll[1];
 	#endif
-	#else
-		io.MouseWheel = mouse.scrollY * -.1f;
 	#endif
 
-		if (mouse.scrollY != 0)
+		if (SDL_GetNumTouchDevices() == 0)
 			io.MouseWheel = mouse.scrollY;
 
 		io.KeyCtrl = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
