@@ -360,7 +360,7 @@ struct FileEditor_AudioGraph : FileEditor
 	{
 		// update real-time editing
 		
-		inputIsCaptured |= audioGraphMgr.tickEditor(dt, inputIsCaptured);
+		inputIsCaptured |= audioGraphMgr.tickEditor(sx, sy, dt, inputIsCaptured);
 		
 		// tick audio graph
 		
@@ -368,9 +368,7 @@ struct FileEditor_AudioGraph : FileEditor
 		
 		// update visualizers and draw editor
 		
-		audioGraphMgr.tickVisualizers();
-		
-		audioGraphMgr.drawEditor();
+		audioGraphMgr.drawEditor(sx, sy);
 	}
 };
 
