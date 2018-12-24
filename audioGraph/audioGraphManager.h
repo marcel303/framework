@@ -192,8 +192,8 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	virtual void tickVisualizers() override;
 	
 	// called from the app thread
-	bool tickEditor(const float dt, const bool isInputCaptured);
-	void drawEditor();
+	bool tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured);
+	void drawEditor(const int sx, const int sy);
 };
 
 //
@@ -239,6 +239,6 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	virtual void tickVisualizers() override;
 	
 	// called from the app thread
-	bool tickEditor(const float dt, const bool isInputCaptured);
-	void drawEditor();
+	bool tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured);
+	void drawEditor(const int sx, const int sy);
 };

@@ -1100,12 +1100,15 @@ void AudioGraphManager_RTE::tickVisualizers()
 	SDL_UnlockMutex(audioMutex);
 }
 
-bool AudioGraphManager_RTE::tickEditor(const float dt, const bool isInputCaptured)
+bool AudioGraphManager_RTE::tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured)
 {
 	bool result = false;
 	
 	if (selectedFile != nullptr)
 	{
+		selectedFile->graphEdit->displaySx = sx;
+		selectedFile->graphEdit->displaySy = sy;
+
 		result |= selectedFile->graphEdit->tick(dt, isInputCaptured);
 		
 		selectedFile->graphEdit->tickVisualizers(dt);
@@ -1114,10 +1117,13 @@ bool AudioGraphManager_RTE::tickEditor(const float dt, const bool isInputCapture
 	return result;
 }
 
-void AudioGraphManager_RTE::drawEditor()
+void AudioGraphManager_RTE::drawEditor(const int sx, const int sy)
 {
 	if (selectedFile != nullptr)
 	{
+		selectedFile->graphEdit->displaySx = sx;
+		selectedFile->graphEdit->displaySy = sy;
+
 		selectedFile->graphEdit->draw();
 		
 	#if 0 // todo : add a nice UI for drawing the filter response
@@ -1525,12 +1531,15 @@ void AudioGraphManager_MultiRTE::tickVisualizers()
 	SDL_UnlockMutex(audioMutex);
 }
 
-bool AudioGraphManager_MultiRTE::tickEditor(const float dt, const bool isInputCaptured)
+bool AudioGraphManager_MultiRTE::tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured)
 {
 	bool result = false;
 	
 	if (selectedFile != nullptr)
 	{
+		selectedFile->graphEdit->displaySx = sx;
+		selectedFile->graphEdit->displaySy = sy;
+
 		result |= selectedFile->graphEdit->tick(dt, isInputCaptured);
 		
 		selectedFile->graphEdit->tickVisualizers(dt);
@@ -1539,10 +1548,13 @@ bool AudioGraphManager_MultiRTE::tickEditor(const float dt, const bool isInputCa
 	return result;
 }
 
-void AudioGraphManager_MultiRTE::drawEditor()
+void AudioGraphManager_MultiRTE::drawEditor(const int sx, const int sy)
 {
 	if (selectedFile != nullptr)
 	{
+		selectedFile->graphEdit->displaySx = sx;
+		selectedFile->graphEdit->displaySy = sy;
+
 		selectedFile->graphEdit->draw();
 	}
 }
