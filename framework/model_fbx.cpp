@@ -1501,7 +1501,16 @@ namespace AnimModel
 		
 		FbxReader reader;
 		
-		reader.openFromMemory(&bytes[0], bytes.size());
+		try
+		{
+			reader.openFromMemory(&bytes[0], bytes.size());
+		}
+		catch (std::exception & e)
+		{
+			fbxLog(logIndent, "failed to open FBX from memory: %s", e.what());
+			(void)e;
+			return 0;
+		}
 		
 		// gather a list of all objects
 		
@@ -2030,7 +2039,16 @@ namespace AnimModel
 		
 		FbxReader reader;
 		
-		reader.openFromMemory(&bytes[0], bytes.size());
+		try
+		{
+			reader.openFromMemory(&bytes[0], bytes.size());
+		}
+		catch (std::exception & e)
+		{
+			fbxLog(logIndent, "failed to open FBX from memory: %s", e.what());
+			(void)e;
+			return 0;
+		}
 		
 		// gather a list of all meshes
 		
@@ -2325,7 +2343,16 @@ namespace AnimModel
 		
 		FbxReader reader;
 		
-		reader.openFromMemory(&bytes[0], bytes.size());
+		try
+		{
+			reader.openFromMemory(&bytes[0], bytes.size());
+		}
+		catch (std::exception & e)
+		{
+			fbxLog(logIndent, "failed to open FBX from memory: %s", e.what());
+			(void)e;
+			return 0;
+		}
 		
 		// read take data
 		
