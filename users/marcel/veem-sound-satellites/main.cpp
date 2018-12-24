@@ -398,7 +398,7 @@ int main(int argc, char * argv[])
 		}
 		else
 		{
-			inputIsCaptured |= app.audioGraphMgr->tickEditor(dt, inputIsCaptured);
+			inputIsCaptured |= app.audioGraphMgr->tickEditor(GFX_SX, GFX_SY, dt, inputIsCaptured);
 			
 			bool isEditing = false;
 			
@@ -444,7 +444,7 @@ int main(int argc, char * argv[])
 			{
 				if (!app.audioGraphMgr->files.empty() && app.audioGraphMgr->selectedFile == nullptr)
 					app.audioGraphMgr->selectFile(app.audioGraphMgr->files.begin()->first.c_str());
-				app.audioGraphMgr->drawEditor();
+				app.audioGraphMgr->drawEditor(GFX_SX, GFX_SY);
 			}
 		#endif
 			

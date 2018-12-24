@@ -527,7 +527,7 @@ void testVfxGraph()
 		s_audioGraphMgr->tickMain();
 		
 	#if ENABLE_AUDIO_RTE
-		s_audioGraphMgr->tickEditor(framework.timeStep, editor != 1);
+		s_audioGraphMgr->tickEditor(GFX_SX, GFX_SY, framework.timeStep, editor != 1);
 	#endif
 		
 		// update the vfx graph!
@@ -550,7 +550,7 @@ void testVfxGraph()
 			if (editor == 0)
 				graphEdit.draw();
 			else
-				s_audioGraphMgr->drawEditor();
+				s_audioGraphMgr->drawEditor(GFX_SX, GFX_SY);
 		#else
 			graphEdit.draw();
 		#endif

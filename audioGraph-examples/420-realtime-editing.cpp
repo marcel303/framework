@@ -86,14 +86,14 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
-			audioGraphMgr.tickEditor(framework.timeStep, false);
+			audioGraphMgr.tickEditor(GFX_SX, GFX_SY, framework.timeStep, false);
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				setFont("calibri.ttf");
 				pushFontMode(FONT_SDF);
 				{
-					audioGraphMgr.drawEditor();
+					audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
 					
 					// show CPU usage of the audio thread
 					

@@ -87,11 +87,11 @@ int main(int argc, char * argv[])
 			pushWindow(window);
 			{
 				audioGraphMgr.selectInstance(instance1);
-				audioGraphMgr.tickEditor(framework.timeStep, false);
+				audioGraphMgr.tickEditor(GFX_SX, GFX_SY, framework.timeStep, false);
 				
 				framework.beginDraw(15, 31, 63, 0);
 				{
-					audioGraphMgr.drawEditor();
+					audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
 				}
 				framework.endDraw();
 			}
@@ -100,11 +100,11 @@ int main(int argc, char * argv[])
 			//
 			
 			audioGraphMgr.selectInstance(instance2);
-			audioGraphMgr.tickEditor(framework.timeStep, false);
+			audioGraphMgr.tickEditor(GFX_SX, GFX_SY, framework.timeStep, false);
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
-				audioGraphMgr.drawEditor();
+				audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
 			}
 			framework.endDraw();
 		}

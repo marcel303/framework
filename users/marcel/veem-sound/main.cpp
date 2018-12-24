@@ -804,7 +804,7 @@ int main(int argc, char * argv[])
 		}
 		else
 		{
-			inputIsCaptured |= audioGraphMgr.tickEditor(dt, inputIsCaptured);
+			inputIsCaptured |= audioGraphMgr.tickEditor(GFX_SX, GFX_SY, dt, inputIsCaptured);
 			
 			bool isEditing = false;
 			
@@ -878,7 +878,7 @@ int main(int argc, char * argv[])
 		#if ENABLE_AUDIO
 			if (s_editor == kEditor_AudioGraph)
 			{
-				audioGraphMgr.drawEditor();
+				audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
 			}
 		#endif
 			

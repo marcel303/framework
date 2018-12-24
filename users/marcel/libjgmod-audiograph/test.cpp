@@ -47,11 +47,11 @@ int main(int argc, char * argv[])
 		
 		const float dt = framework.timeStep;
 		
-		audioGraphMgr.tickEditor(dt, false);
+		audioGraphMgr.tickEditor(800, 600, dt, false);
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			audioGraphMgr.drawEditor();
+			audioGraphMgr.drawEditor(800, 600);
 		}
 		framework.endDraw();
 	}

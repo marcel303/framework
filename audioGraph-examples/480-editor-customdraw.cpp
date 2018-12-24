@@ -317,7 +317,7 @@ int main(int argc, char * argv[])
 			
 			camera.tick(dt, true);
 
-			audioGraphMgr.tickEditor(dt, showDefaultEditor == false);
+			audioGraphMgr.tickEditor(GFX_SX, GFX_SY, dt, showDefaultEditor == false);
 			
 			framework.beginDraw(220, 220, 220, 0);
 			{
@@ -369,7 +369,7 @@ int main(int argc, char * argv[])
 					clearShader();
 					
 					if (showDefaultEditor)
-						audioGraphMgr.drawEditor();
+						audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
 					
 					// show CPU usage of the audio thread
 					

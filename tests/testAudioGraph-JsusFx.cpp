@@ -168,11 +168,11 @@ void testAudioGraph_JsusFx()
 		
 		bool inputIsCaptured = false;
 		
-		inputIsCaptured |= s_audioGraphMgr->tickEditor(dt, false);
+		inputIsCaptured |= s_audioGraphMgr->tickEditor(GFX_SX, GFX_SY, dt, false);
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			s_audioGraphMgr->drawEditor();
+			s_audioGraphMgr->drawEditor(GFX_SX, GFX_SY);
 			
 			drawTestUi();
 		}

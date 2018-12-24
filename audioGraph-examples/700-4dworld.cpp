@@ -2330,7 +2330,7 @@ int main(int argc, char * argv[])
 			inputIsCaptured |= doMenus(true, false, dt);
 		}
 		
-		inputIsCaptured |= audioGraphMgr.tickEditor(dt, inputIsCaptured);
+		inputIsCaptured |= audioGraphMgr.tickEditor(GFX_SX, GFX_SY, dt, inputIsCaptured);
 		
 		if (audioGraphMgr.selectedFile)
 		{
@@ -2365,7 +2365,7 @@ int main(int argc, char * argv[])
 					glBlendEquation(GL_FUNC_ADD);
 					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
 					
-					audioGraphMgr.drawEditor();
+					audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
 					
 					popBlend();
 				}

@@ -390,7 +390,7 @@ struct InstrumentButtons
 		Color color;
 		std::string caption;
 		
-		float updateSpeed;
+		double updateSpeed;
 		double defaultValue;
 		double desiredValue;
 		double currentValue;
@@ -408,7 +408,7 @@ struct InstrumentButtons
 			, radius(12.f)
 			, color(colorBlue)
 			, caption()
-			, updateSpeed(1.f)
+			, updateSpeed(1.0)
 			, defaultValue(0.0)
 			, desiredValue(0.0)
 			, currentValue(0.0)
@@ -1052,7 +1052,7 @@ int main(int argc, char * argv[])
 			}
 		#endif
 		
-			inputIsCaptured |= audioGraphMgr->tickEditor(dt, inputIsCaptured);
+			inputIsCaptured |= audioGraphMgr->tickEditor(GFX_SX, GFX_SY, dt, inputIsCaptured);
 			
 			audioGraphMgr->tickMain();
 			
@@ -1076,7 +1076,7 @@ int main(int argc, char * argv[])
 						slideshow.draw();
 					#endif
 						
-						audioGraphMgr->drawEditor();
+						audioGraphMgr->drawEditor(GFX_SX, GFX_SY);
 						
 						instrumentButtons.process(nullptr, false, true, dt);
 					}
