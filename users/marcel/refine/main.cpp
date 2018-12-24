@@ -508,7 +508,7 @@ struct FileEditor_Text : FileEditor
 					ImGui::EndMenuBar();
 				}
 				
-				textEditor.Render(filename.c_str(), ImVec2(sx - 20, sy - 20), false);
+				textEditor.Render(filename.c_str(), ImVec2(sx - 20, sy - 40), false);
 			}
 			ImGui::End();
 		}
@@ -1087,6 +1087,44 @@ struct FileEditor_JsusFx : FileEditor
 	}
 };
 
+struct EditorWindow
+{
+	Window window;
+
+	FileEditor * editor = nullptr;
+
+	EditorWindow(FileEditor * in_editor)
+		: window("View", 800, 600, true)
+		, editor(in_editor)
+	{
+		process(0.f);
+	}
+
+	~EditorWindow()
+	{
+		delete editor;
+		editor = nullptr;
+	}
+
+	void process(const float dt)
+	{
+		if (!window.hasFocus())
+			return;
+
+		pushWindow(window);
+		{
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				bool inputIsCaptured = false;
+
+				editor->tick(window.getWidth(), window.getHeight(), dt, inputIsCaptured);
+			}
+			framework.endDraw();
+		}
+		popWindow();
+	}
+};
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
@@ -1221,6 +1259,8 @@ int main(int argc, char * argv[])
 		}
 	};
 	
+	std::vector<EditorWindow*> editorWindows;
+
 	for (;;)
 	{
 		framework.process();
@@ -1233,6 +1273,37 @@ int main(int argc, char * argv[])
 
 		const float dt = framework.timeStep;
 		
+		// update editor windows
+
+		if (editor != nullptr)
+		{
+			if (keyboard.wentDown(SDLK_e) && keyboard.isDown(SDLK_LSHIFT))
+			{
+				EditorWindow * window = new EditorWindow(editor);
+
+				editorWindows.push_back(window);
+
+				editor = nullptr;
+			}
+		}
+
+		for (auto i = editorWindows.begin(); i != editorWindows.end(); )
+		{
+			auto editorWindow = *i;
+
+			editorWindow->process(dt);
+
+			if (editorWindow->window.getQuitRequested())
+			{
+				delete editorWindow;
+				editorWindow = nullptr;
+
+				i = editorWindows.erase(i);
+			}
+			else
+				++i;
+		}
+
 		// todo : process ui
 
 		bool inputIsCaptured = false;
