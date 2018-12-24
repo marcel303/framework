@@ -28,6 +28,13 @@
 
 #include "particle_editor.h"
 
+#include "gfx-framework.h"
+#include "jsusfx_file.h"
+#include "jsusfx-framework.h"
+
+#undef min
+#undef max
+
 static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
 
@@ -962,10 +969,6 @@ struct FileEditor_ParticleSystem : FileEditor
 		particleEditor.draw(inputIsCaptured == false, sx, sy);
 	}
 };
-
-#include "gfx-framework.h"
-#include "jsusfx_file.h"
-#include "jsusfx-framework.h"
 
 struct FileEditor_JsusFx : FileEditor
 {
