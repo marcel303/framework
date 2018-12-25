@@ -189,7 +189,7 @@ struct FileBrowser
 			if (childElem.isFile == true)
 				if (ImGui::Button(childElem.name.c_str()))
 					onFileSelected(childElem.path);
-			
+		
 		ImGui::PopID();
 	}
 	
@@ -575,7 +575,7 @@ struct FileEditor_Sprite : FileEditor
 		
 		guiContext.processBegin(dt, sx, sy, inputIsCaptured);
 		{
-			ImGui::SetNextWindowPos(ImVec2(4, 4));
+			ImGui::SetNextWindowPos(ImVec2(8, 8));
 			if (ImGui::Begin("Sprite", nullptr,
 				ImGuiWindowFlags_NoTitleBar |
 				ImGuiWindowFlags_NoMove |
@@ -675,16 +675,57 @@ struct FileEditor_Model : FileEditor
 	float rotationX = 0.f;
 	float rotationY = 0.f;
 	
+	FrameworkImGuiContext guiContext;
+	
 	FileEditor_Model(const char * path)
 		: model(path)
 	{
 		model.calculateAABB(min, max, true);
+		
+		guiContext.init();
+	}
+	
+	virtual ~FileEditor_Model() override
+	{
+		guiContext.shut();
 	}
 	
 	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
 	{
-		setColor(colorWhite);
-		drawUiRectCheckered(0, 0, sx, sy, 8);
+		// tick
+		
+		guiContext.processBegin(dt, sx, sy, inputIsCaptured);
+		{
+			ImGui::SetNextWindowPos(ImVec2(8, 8), ImGuiCond_Always);
+			if (ImGui::Begin("Model", nullptr,
+				ImGuiWindowFlags_NoTitleBar |
+				ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				auto animList = model.getAnimList();
+				
+				const char ** animItems = (const char**)alloca(animList.size() * sizeof(char*));
+				const char * animName = model.getAnimName();
+				int animIndex = -1;
+				for (int i = 0; i < (int)animList.size(); ++i)
+				{
+					if (animList[i] == animName)
+						animIndex = i;
+					animItems[i]= animList[i].c_str();
+				}
+				if (ImGui::Combo("Animation", &animIndex, animItems, animList.size()))
+					model.startAnim(animItems[animIndex]);
+				
+				if (ImGui::Button("Stop animation"))
+					model.stopAnim();
+				if (ImGui::Button("Restart animation"))
+					model.startAnim(model.getAnimName());
+				
+				ImGui::SliderFloat("Animation speed", &model.animSpeed, 0.f, 10.f, "%.2f", 2.f);
+			}
+			ImGui::End();
+		}
+		guiContext.processEnd();
 		
 		if (inputIsCaptured == false && mouse.isDown(BUTTON_LEFT))
 		{
@@ -693,19 +734,30 @@ struct FileEditor_Model : FileEditor
 			rotationX += mouse.dy;
 			rotationY -= mouse.dx;
 		}
-			
+		
+		model.animRootMotionEnabled = false;
+		
+		model.tick(dt);
+		
+		// draw
+		
+		setColor(colorWhite);
+		drawUiRectCheckered(0, 0, sx, sy, 8);
+		
 		projectPerspective3d(60.f, .01f, 100.f);
 		{
 			glEnable(GL_DEPTH_TEST);
 			glDepthFunc(GL_LESS);
 			
-			const Vec3 delta = max - min;
-			const float maxAxis = fmaxf(delta[0], fmaxf(delta[1], delta[2]));
+			float maxAxis = 0.f;
+			
+			for (int i = 0; i < 3; ++i)
+				maxAxis = fmaxf(maxAxis, fmaxf(fabsf(min[i]), fabsf(max[i])));
 			
 			if (maxAxis > 0.f)
 			{
 				gxPushMatrix();
-				gxTranslatef(0, 0, 1.f);
+				gxTranslatef(0, 0, 2.f);
 				gxScalef(1.f / maxAxis, 1.f / maxAxis, 1.f / maxAxis);
 				gxTranslatef(0.f, 0.f, 1.f);
 				gxRotatef(rotationY, 0.f, 1.f, 0.f);
@@ -717,6 +769,8 @@ struct FileEditor_Model : FileEditor
 			glDisable(GL_DEPTH_TEST);
 		}
 		projectScreen2d();
+		
+		guiContext.draw();
 	}
 };
 
@@ -758,7 +812,7 @@ struct FileEditor_Spriter : FileEditor
 		
 		guiContext.processBegin(dt, sx, sy, inputIsCaptured);
 		{
-			ImGui::SetNextWindowPos(ImVec2(4, 4));
+			ImGui::SetNextWindowPos(ImVec2(8, 8));
 			ImGui::SetNextWindowSize(ImVec2(240, 0));
 			if (ImGui::Begin("Spriter"))
 			{
@@ -970,7 +1024,7 @@ struct FileEditor_ParticleSystem : FileEditor
 	}
 };
 
-struct FileEditor_JsusFx : FileEditor
+struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 {
 	JsusFx_Framework jsusFx;
 
@@ -989,6 +1043,8 @@ struct FileEditor_JsusFx : FileEditor
 	bool isDragging = false;
 	
 	bool sliderIsActive[JsusFx::kMaxSliders] = { };
+	
+	PortAudioObject paObject;
 
 	FileEditor_JsusFx(const char * path, Surface *& in_surface)
 		: jsusFx(pathLibary)
@@ -1009,6 +1065,45 @@ struct FileEditor_JsusFx : FileEditor
 		if (isValid)
 		{
 			jsusFx.prepare(44100, 256);
+			
+			paObject.init(44100, 2, 0, 256, this);
+		}
+	}
+	
+	virtual ~FileEditor_JsusFx() override
+	{
+		paObject.shut();
+	}
+	
+	virtual void portAudioCallback(
+		const void * inputBuffer,
+		const int numInputChannels,
+		void * outputBuffer,
+		const int framesPerBuffer) override
+	{
+		Assert(framesPerBuffer == 256);
+		
+		float inputSamples[2][256];
+		
+		for (int i = 0; i < 256; ++i)
+		{
+			inputSamples[0][i] = random(-1.f, +1.f);
+			inputSamples[1][i] = random(-1.f, +1.f);
+		}
+		
+		float outputSamples[2][256];
+		
+		const float * inputs[2] = { inputSamples[0], inputSamples[1] };
+		float * outputs[2] = { outputSamples[0], outputSamples[1] };
+		
+		jsusFx.process(inputs, outputs, framesPerBuffer, 2, 2);
+		
+		float * outputBufferf = (float*)outputBuffer;
+		
+		for (int i = 0; i < 256; ++i)
+		{
+			outputBufferf[i * 2 + 0] = outputSamples[0][i];
+			outputBufferf[i * 2 + 1] = outputSamples[1][i];
 		}
 	}
 
@@ -1016,8 +1111,6 @@ struct FileEditor_JsusFx : FileEditor
 	{
 		if (isValid == false)
 			return;
-
-		jsusFx.process(nullptr, nullptr, 256, 0, 0);
 
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
@@ -1328,7 +1421,10 @@ int main(int argc, char * argv[])
 			extension == "bat" ||
 			extension == "sh")
 		{
-			editor = new FileEditor_Text(filename.c_str());
+			if (extension == "txt" && (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)))
+				editor = new FileEditor_Model(filename.c_str());
+			else
+				editor = new FileEditor_Text(filename.c_str());
 		}
 		else if (extension == "bmp" || extension == "jpg" || extension == "jpeg" || extension == "png" || extension == "psd" || extension == "tga" || extension == "gif")
 		{
