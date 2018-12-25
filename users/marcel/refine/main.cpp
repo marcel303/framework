@@ -1408,18 +1408,23 @@ int main(int argc, char * argv[])
 		auto filename = Path::GetFileName(path);
 		auto extension = Path::GetExtension(filename, true);
 		
-		if (extension == "ps" ||
-			extension == "vs" ||
+		if (extension == "ps" || // Pixel shader
+			extension == "vs" || // Vertex shader
+			extension == "frag" || // Fragment shader
 			extension == "txt" ||
 			extension == "ini" ||
-			extension == "cpp" ||
-			extension == "h" ||
-			extension == "py" ||
-			extension == "jsfx-inc" ||
-			extension == "inc" ||
-			extension == "md" ||
-			extension == "bat" ||
-			extension == "sh")
+			extension == "c" || // c
+			extension == "cpp" || // c++
+			extension == "h" || // Header file
+			extension == "py" || // Python
+			extension == "jsfx-inc" || // JsusFx include file
+			extension == "inc" || // Include file
+			extension == "md" || // Markdown
+			extension == "bat" || // Batch file
+			extension == "sh" || // Shell script
+			extension == "java" ||
+			extension == "pde" || // Processing sketch
+			extension == "ino") // Arduino sketch)
 		{
 			if (extension == "txt" && (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)))
 				editor = new FileEditor_Model(filename.c_str());
