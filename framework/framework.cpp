@@ -7316,7 +7316,6 @@ struct GxVertex
 };
 
 #define GX_USE_BUFFER_RENAMING 0
-#define GX_ENABLE_BUFFER_BINDING_OPTIMIZE 1
 #define GX_BUFFER_DRAW_MODE GL_DYNAMIC_DRAW
 //#define GX_BUFFER_DRAW_MODE GL_STREAM_DRAW
 #if defined(MACOS)
@@ -7445,10 +7444,8 @@ static void gxFlush(bool endOfBatch)
 		static int vaoIndex = 0;
 		vaoIndex = (vaoIndex + 1) % GX_VAO_COUNT;
 
-	#if GX_ENABLE_BUFFER_BINDING_OPTIMIZE
 		glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
 		checkErrorGL();
-	#endif
 
 		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[vaoIndex]);
 		#if GX_USE_BUFFER_RENAMING
@@ -7475,8 +7472,9 @@ static void gxFlush(bool endOfBatch)
 			needToRegenerateIndexBuffer = true;
 		}
 	#endif
-
-	#if 1
+	
+		// convert quads to triangles
+		
 		if (s_gxPrimitiveType == GL_QUADS)
 		{
 			fassert(s_gxVertexCount < 65536);
@@ -7521,12 +7519,6 @@ static void gxFlush(bool endOfBatch)
 			
 			indexed = true;
 		}
-	#endif
-		
-	#if !GX_ENABLE_BUFFER_BINDING_OPTIMIZE
-		glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
-		checkErrorGL();
-	#endif
 		
 		const ShaderCacheElem & shaderElem = shader.getCacheElem();
 		
@@ -7567,11 +7559,6 @@ static void gxFlush(bool endOfBatch)
 		{
 			logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
 		}
-		
-	#if !GX_ENABLE_BUFFER_BINDING_OPTIMIZE
-		glBindVertexArray(0);
-		checkErrorGL();
-	#endif
 		
 		if (endOfBatch)
 		{
