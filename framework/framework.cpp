@@ -7315,8 +7315,8 @@ struct GxVertex
 	float tx, ty;
 };
 
-#define GX_USE_RINGBUFFER 0
 #define GX_USE_BUFFER_RENAMING 0
+#define GX_ENABLE_BUFFER_BINDING_OPTIMIZE 1
 #define GX_BUFFER_DRAW_MODE GL_DYNAMIC_DRAW
 //#define GX_BUFFER_DRAW_MODE GL_STREAM_DRAW
 #if defined(MACOS)
@@ -7331,10 +7331,6 @@ static GLuint s_gxVertexArrayObject[GX_VAO_COUNT] = { };
 static GLuint s_gxVertexBufferObject[GX_VAO_COUNT] = { };
 static GLuint s_gxIndexBufferObject[GX_VAO_COUNT] = { };
 static GxVertex s_gxVertexBuffer[1024*16];
-
-#if GX_USE_RINGBUFFER
-static GLuint s_gxVertexBufferRing = 0;
-#endif
 
 static int s_gxPrimitiveType = -1;
 static GxVertex * s_gxVertices = 0;
@@ -7398,21 +7394,6 @@ void gxInitialize()
 
 	glBindVertexArray(0);
 	checkErrorGL();
-	
-	#if GX_USE_RINGBUFFER
-	if (glBufferStorage)
-	{
-		const GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
-		const int bufferSize = sizeof(GxVertex) * 1024;
-		fassert(s_gxVertexBufferRing == 0);
-		glGenBuffers(1, &s_gxVertexBufferRing);
-		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferRing);
-		glBufferStorage(GL_ARRAY_BUFFER, bufferSize, 0, flags);
-		checkErrorGL();
-		glMapBufferRange(GL_ARRAY_BUFFER, 0, bufferSize, flags);
-		checkErrorGL();
-	}
-	#endif
 }
 
 void gxShutdown()
@@ -7447,8 +7428,6 @@ void gxShutdown()
 	s_gxLastVertexCount = -1;
 }
 
-#define ENABLE_BUFFER_BINDING_OPTIMIZE 1
-
 static void gxFlush(bool endOfBatch)
 {
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
@@ -7466,7 +7445,7 @@ static void gxFlush(bool endOfBatch)
 		static int vaoIndex = 0;
 		vaoIndex = (vaoIndex + 1) % GX_VAO_COUNT;
 
-	#if ENABLE_BUFFER_BINDING_OPTIMIZE
+	#if GX_ENABLE_BUFFER_BINDING_OPTIMIZE
 		glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
 		checkErrorGL();
 	#endif
@@ -7544,7 +7523,7 @@ static void gxFlush(bool endOfBatch)
 		}
 	#endif
 		
-	#if !ENABLE_BUFFER_BINDING_OPTIMIZE
+	#if !GX_ENABLE_BUFFER_BINDING_OPTIMIZE
 		glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
 		checkErrorGL();
 	#endif
@@ -7589,7 +7568,7 @@ static void gxFlush(bool endOfBatch)
 			logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
 		}
 		
-	#if !ENABLE_BUFFER_BINDING_OPTIMIZE
+	#if !GX_ENABLE_BUFFER_BINDING_OPTIMIZE
 		glBindVertexArray(0);
 		checkErrorGL();
 	#endif
