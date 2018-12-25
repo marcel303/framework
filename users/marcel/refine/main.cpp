@@ -1024,6 +1024,207 @@ struct FileEditor_ParticleSystem : FileEditor
 	}
 };
 
+#define MIDI_OFF 0x80
+#define MIDI_ON 0x90
+
+struct MidiBuffer
+{
+	static const int kMaxBytes = 1000 * 3;
+
+	uint8_t bytes[kMaxBytes];
+	int numBytes = 0;
+
+	bool append(const uint8_t * in_bytes, const int in_numBytes)
+	{
+		if (numBytes + in_numBytes > MidiBuffer::kMaxBytes)
+			return false;
+
+		for (int i = 0; i < in_numBytes; ++i)
+			bytes[numBytes++] = in_bytes[i];
+
+		return true;
+	}
+};
+
+struct MidiKeyboard
+{
+	static const int kNumKeys = 16;
+
+	struct Key
+	{
+		bool isDown;
+	};
+
+	Key keys[kNumKeys];
+
+	int octave = 4;
+
+	MidiKeyboard()
+	{
+		for (int i = 0; i < kNumKeys; ++i)
+		{
+			auto & key = keys[i];
+
+			key.isDown = false;
+		}
+	}
+
+	int getNote(const int keyIndex) const
+	{
+		return octave * 8 + keyIndex;
+	}
+
+	void changeOctave(const int direction)
+	{
+		octave = clamp(octave + direction, 0, 10);
+
+		for (int i = 0; i < kNumKeys; ++i)
+		{
+			auto & key = keys[i];
+
+			key.isDown = false;
+		}
+	}
+};
+
+void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, MidiBuffer & midiBuffer, const bool doTick, const bool doDraw, int & out_sx, int & out_sy, bool & inputIsCaptured)
+{
+	const int keySx = 16;
+	const int keySy = 64;
+	const int octaveSx = 24;
+	const int octaveSy = 24;
+
+	const int hoverIndex = mouseY >= 0 && mouseY <= keySy ? mouseX / keySx : -1;
+	const float velocity = clamp(mouseY / float(keySy), 0.f, 1.f);
+
+	const int octaveX = keySx * MidiKeyboard::kNumKeys + 4;
+	const int octaveY = 4;
+	const int octaveHoverIndex = mouseX >= octaveX && mouseX <= octaveX + octaveSx ? (mouseY - octaveY) / octaveSy : -1;
+
+	const int sx = std::max(keySx * MidiKeyboard::kNumKeys, octaveX + octaveSx);
+	const int sy = std::max(keySy, octaveSy * 2);
+
+	out_sx = sx;
+	out_sy = sy;
+
+	if (doTick)
+	{
+		bool isDown[MidiKeyboard::kNumKeys];
+		memset(isDown, 0, sizeof(isDown));
+
+		if (inputIsCaptured == false)
+		{
+			if (mouse.isDown(BUTTON_LEFT) && hoverIndex >= 0 && hoverIndex < MidiKeyboard::kNumKeys)
+				isDown[hoverIndex] = true;
+		}
+
+		for (int i = 0; i < MidiKeyboard::kNumKeys; ++i)
+		{
+			auto & key = kb.keys[i];
+
+			if (key.isDown != isDown[i])
+			{
+				if (isDown[i])
+				{
+					key.isDown = true;
+
+					const uint8_t message[3] = { MIDI_ON, kb.getNote(i), velocity * 127 };
+					
+					midiBuffer.append(message, 3);
+				}
+				else
+				{
+					const uint8_t message[3] = { MIDI_OFF, kb.getNote(i), velocity * 127 };
+
+					midiBuffer.append(message, 3);
+
+					key.isDown = false;
+				}
+			}
+		}
+
+		if (inputIsCaptured == false && mouse.wentDown(BUTTON_LEFT))
+		{
+			if (octaveHoverIndex == 0)
+				kb.changeOctave(+1);
+			if (octaveHoverIndex == 1)
+				kb.changeOctave(-1);
+		}
+
+		for (int i = 0; i < MidiKeyboard::kNumKeys; ++i)
+			inputIsCaptured |= kb.keys[i].isDown;
+	}
+
+	if (doDraw)
+	{
+		setColor(colorBlack);
+		drawRect(0, 0, sx, sy);
+
+		const Color colorKey(200, 200, 200);
+		const Color colorkeyHover(255, 255, 255);
+		const Color colorKeyDown(100, 100, 100);
+
+		hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / keySy, 1.f), Color(140, 180, 220), colorWhite, COLOR_MUL);
+
+		for (int i = 0; i < MidiKeyboard::kNumKeys; ++i)
+		{
+			auto & key = kb.keys[i];
+
+			gxPushMatrix();
+			{
+				gxTranslatef(keySx * i, 0, 0);
+
+				setColor(key.isDown ? colorKeyDown : i == hoverIndex ? colorkeyHover : colorKey);
+
+				hqBegin(HQ_FILLED_RECTS);
+				hqFillRect(0, 0, keySx, keySy);
+				hqEnd();
+			}
+			gxPopMatrix();
+		}
+
+		hqClearGradient();
+
+		{
+			gxPushMatrix();
+			{
+				gxTranslatef(octaveX, octaveY, 0);
+
+				//setLumi(200);
+				//drawText(octaveSx + 4, 4, 12, +1, +1, "octave: %d", kb.octave);
+
+				setColor(0 == octaveHoverIndex ? colorkeyHover : colorKey);
+				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				hqFillRoundedRect(0, 0, octaveSx, octaveSy, 2.f);
+				hqEnd();
+				hqClearGradient();
+
+				setLumi(40);
+				hqBegin(HQ_FILLED_TRIANGLES);
+				hqFillTriangle(octaveSx/2, 6, octaveSx - 6, octaveSy - 6, 6, octaveSy - 6);
+				hqEnd();
+
+				gxTranslatef(0, octaveSy, 0);
+
+				setColor(1 == octaveHoverIndex ? colorkeyHover : colorKey);
+				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				hqFillRoundedRect(0, 0, octaveSx, octaveSy, 2.f);
+				hqEnd();
+				hqClearGradient();
+
+				setLumi(40);
+				hqBegin(HQ_FILLED_TRIANGLES);
+				hqFillTriangle(octaveSx/2, octaveSy - 6, octaveSx - 6, 6, 6, 6);
+				hqEnd();
+			}
+			gxPopMatrix();
+		}
+		hqClearGradient();
+	}
+}
+
 struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 {
 	JsusFx_Framework jsusFx;
@@ -1045,6 +1246,10 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 	bool sliderIsActive[JsusFx::kMaxSliders] = { };
 	
 	PortAudioObject paObject;
+	SDL_mutex * mutex = nullptr;
+
+	MidiBuffer midiBuffer;
+	MidiKeyboard midiKeyboard;
 
 	FileEditor_JsusFx(const char * path, Surface *& in_surface)
 		: jsusFx(pathLibary)
@@ -1064,6 +1269,8 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 
 		if (isValid)
 		{
+			mutex = SDL_CreateMutex();
+
 			jsusFx.prepare(44100, 256);
 			
 			paObject.init(44100, 2, 0, 256, this);
@@ -1073,6 +1280,12 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 	virtual ~FileEditor_JsusFx() override
 	{
 		paObject.shut();
+
+		if (mutex != nullptr)
+		{
+			SDL_DestroyMutex(mutex);
+			mutex = nullptr;
+		}
 	}
 	
 	virtual void portAudioCallback(
@@ -1085,16 +1298,35 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 		
 		float inputSamples[2][256];
 		
-		for (int i = 0; i < 256; ++i)
+		if (false)
+			memset(inputSamples, 0, sizeof(inputSamples));
+		else
 		{
-			inputSamples[0][i] = random(-1.f, +1.f);
-			inputSamples[1][i] = random(-1.f, +1.f);
+			const float s = .1f;
+
+			for (int i = 0; i < 256; ++i)
+			{
+				inputSamples[0][i] = random(-1.f, +1.f) * s;
+				inputSamples[1][i] = random(-1.f, +1.f) * s;
+			}
 		}
 		
 		float outputSamples[2][256];
 		
 		const float * inputs[2] = { inputSamples[0], inputSamples[1] };
 		float * outputs[2] = { outputSamples[0], outputSamples[1] };
+		
+		MidiBuffer midiBufferCopy;
+
+		SDL_LockMutex(mutex);
+		{
+			midiBufferCopy = midiBuffer;
+
+			midiBuffer.numBytes = 0;
+		}
+		SDL_UnlockMutex(mutex);
+
+		jsusFx.setMidi(midiBufferCopy.bytes, midiBufferCopy.numBytes);
 		
 		jsusFx.process(inputs, outputs, framesPerBuffer, 2, 2);
 		
@@ -1115,6 +1347,11 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
 		
+		int midiSx;
+		int midiSy;
+
+		doMidiKeyboard(midiKeyboard, mouse.x, mouse.y, midiBuffer, true, false, midiSx, midiSy, inputIsCaptured);
+
 		if (jsusFx.hasGraphicsSection())
 		{
 			setFont("calibri.ttf");
@@ -1284,6 +1521,8 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 			}
 			popFontMode();
 		}
+
+		doMidiKeyboard(midiKeyboard, mouse.x, mouse.y, midiBuffer, false, true, midiSx, midiSy, inputIsCaptured);
 	}
 };
 
