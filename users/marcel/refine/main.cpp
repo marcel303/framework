@@ -1209,7 +1209,7 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 				const int sy = 20;
 				const int advanceY = 22;
 				
-				auto doSlider = [](JsusFx & fx, JsusFx_Slider & slider, int x, int y, bool & isActive)
+				auto doSlider = [&](JsusFx & fx, JsusFx_Slider & slider, int x, int y, bool & isActive)
 					{
 						const bool isInside =
 							x >= 0 && x <= sx &&
