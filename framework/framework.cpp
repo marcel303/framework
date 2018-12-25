@@ -7463,6 +7463,8 @@ void gxShutdown()
 	s_gxLastVertexCount = -1;
 }
 
+#define ENABLE_BUFFER_BINDING_OPTIMIZE 1
+
 static void gxFlush(bool endOfBatch)
 {
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
@@ -7479,6 +7481,11 @@ static void gxFlush(bool endOfBatch)
 		
 		static int vaoIndex = 0;
 		vaoIndex = (vaoIndex + 1) % GX_VAO_COUNT;
+
+	#if ENABLE_BUFFER_BINDING_OPTIMIZE
+		glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
+		checkErrorGL();
+	#endif
 
 	#if GX_USE_UBERBUFFER
 		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
@@ -7575,8 +7582,10 @@ static void gxFlush(bool endOfBatch)
 		}
 	#endif
 		
+	#if !ENABLE_BUFFER_BINDING_OPTIMIZE
 		glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
 		checkErrorGL();
+	#endif
 		
 		const ShaderCacheElem & shaderElem = shader.getCacheElem();
 		
@@ -7628,6 +7637,11 @@ static void gxFlush(bool endOfBatch)
 		//logDebug("uber offsets: %d, %d", s_gxUberVertexBufferPosition, s_gxUberIndexBufferPosition);
 		s_gxUberVertexBufferPosition += s_gxVertexCount;
 		s_gxUberIndexBufferPosition += numIndices;
+	#endif
+	
+	#if !ENABLE_BUFFER_BINDING_OPTIMIZE
+		glBindVertexArray(0);
+		checkErrorGL();
 	#endif
 		
 		if (endOfBatch)
