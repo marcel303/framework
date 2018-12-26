@@ -454,9 +454,20 @@ struct FileEditor_Text : FileEditor
 							
 							if (NFD_OpenDialog(nullptr, nullptr, &filename) == NFD_OKAY)
 							{
+								// attempt to load file into editor
+								
 								isValid = loadIntoTextEditor(filename, lineEndings, textEditor);
 								
-								// fixme : remember path !
+								// remember path
+								
+								if (isValid)
+								{
+									path = filename;
+								}
+								else
+								{
+									path.clear();
+								}
 							}
 							
 							if (filename != nullptr)
@@ -480,7 +491,16 @@ struct FileEditor_Text : FileEditor
 						{
 							nfdchar_t * filename = nullptr;
 							
-							if (NFD_SaveDialog(nullptr, nullptr, &filename) == NFD_OKAY)
+							nfdchar_t * defaultPath = nullptr;
+							
+							if (isValid && !path.empty())
+							{
+								defaultPath = new char[path.length() + 1];
+							
+								strcpy(defaultPath, path.c_str());
+							}
+							
+							if (NFD_SaveDialog(nullptr, defaultPath, &filename) == NFD_OKAY)
 							{
 								std::vector<std::string> lines = textEditor.GetTextLines();
 								
@@ -499,6 +519,12 @@ struct FileEditor_Text : FileEditor
 								free(filename);
 								filename = nullptr;
 							}
+							
+							if (defaultPath != nullptr)
+							{
+								free(defaultPath);
+								defaultPath = nullptr;
+							}
 						}
 						
 						ImGui::EndMenu();
@@ -516,6 +542,15 @@ struct FileEditor_Text : FileEditor
 
 					ImGui::EndMenuBar();
 				}
+				
+				auto cpos = textEditor.GetCursorPosition();
+				ImGui::Text("%6d/%-6d %6d lines  | %s | %s | %s | %s | %s", cpos.mLine + 1, cpos.mColumn + 1, textEditor.GetTotalLines(),
+					lineEndings == TextIO::kLineEndings_Unix ? "Unix" :
+					lineEndings == TextIO::kLineEndings_Windows ? "Win " :
+					"",
+					textEditor.IsOverwrite() ? "Ovr" : "Ins",
+					textEditor.CanUndo() ? "*" : " ",
+					textEditor.GetLanguageDefinition().mName.c_str(), path.c_str());
 				
 				textEditor.Render(filename.c_str(), ImVec2(sx - 20, sy - 40), false);
 			}
@@ -1128,13 +1163,13 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, MidiB
 				{
 					key.isDown = true;
 
-					const uint8_t message[3] = { MIDI_ON, kb.getNote(i), velocity * 127 };
+					const uint8_t message[3] = { MIDI_ON, (uint8_t)kb.getNote(i), uint8_t(velocity * 127) };
 					
 					midiBuffer.append(message, 3);
 				}
 				else
 				{
-					const uint8_t message[3] = { MIDI_OFF, kb.getNote(i), velocity * 127 };
+					const uint8_t message[3] = { MIDI_OFF, (uint8_t)kb.getNote(i), uint8_t(velocity * 127) };
 
 					midiBuffer.append(message, 3);
 
