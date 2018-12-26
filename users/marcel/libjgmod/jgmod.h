@@ -384,13 +384,13 @@ struct JGMOD_PLAYER
 	void prev_track ();
 	void goto_track (int new_track);
 	void stop ();
-	bool is_playing ();
+	bool is_playing () const;
 	void pause ();
 	void resume ();
-	bool is_paused ();
+	bool is_paused () const;
 	void destroy_mod();
 	void set_volume (int volume);
-	int get_volume ();
+	int get_volume () const;
 	SAMPLE *get_jgmod_sample (JGMOD *j, int sample_no);
 	void set_loop (bool loop);
 	void set_speed (int speed);
@@ -402,13 +402,13 @@ protected:
 	void mod_interrupt ();
 	
 	// -- located in player2.c ---------------------------------------------------
-	int find_lower_period(int period, int times);
+	int find_lower_period(int period, int times) const;
 	static NOTE_INFO * get_note (JGMOD * j, int pat, int pos, int chn);
-	int calc_pan (int chn);
-	int calc_volume (int volume);
-	int note2period (int note, int c2spd);
-	int get_jgmod_sample_no (int instrument_no, int note_no);
-	int period2pitch (int period);
+	int calc_pan (int chn) const;
+	int calc_volume (int volume) const;
+	int note2period (int note, int c2spd) const;
+	int get_jgmod_sample_no (int instrument_no, int note_no) const;
+	int period2pitch (int period) const;
 	static int interpolate(int p, int p1, int p2, int v1, int v2);
 
 	void parse_extended_command (int chn, int extcommand);

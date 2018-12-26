@@ -548,7 +548,7 @@ void JGMOD_PLAYER::goto_track (int new_track)
     mi.forbid = false;
 }
 
-bool JGMOD_PLAYER::is_playing ()
+bool JGMOD_PLAYER::is_playing () const
 {
     return (mi.is_playing);
 }
@@ -580,7 +580,7 @@ void JGMOD_PLAYER::resume ()
     mi.forbid = false;
 }
 
-bool JGMOD_PLAYER::is_paused ()
+bool JGMOD_PLAYER::is_paused () const
 {
     if (is_playing() == false)
         return false;
@@ -615,7 +615,7 @@ void JGMOD_PLAYER::set_volume (int volume)
         voiceApi->voice_set_volume (voice_table[chn], calc_volume(chn));
 }
 
-int JGMOD_PLAYER::get_volume ()
+int JGMOD_PLAYER::get_volume () const
 {
     return mod_volume;
 }

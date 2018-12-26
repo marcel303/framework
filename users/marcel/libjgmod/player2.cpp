@@ -174,7 +174,7 @@ int JGMOD_PLAYER::interpolate(int p, int p1, int p2, int v1, int v2)
     return v1 + ((di*dv) / dp);
 }
 
-int JGMOD_PLAYER::find_lower_period(int period, int times)
+int JGMOD_PLAYER::find_lower_period(int period, int times) const
 {
     int result = period;
     int index = 0;
@@ -211,7 +211,7 @@ int JGMOD_PLAYER::find_lower_period(int period, int times)
 }
 
 // change the volume from scale of 64 to 255
-int JGMOD_PLAYER::calc_volume (int chn)
+int JGMOD_PLAYER::calc_volume (int chn) const
 {
     int temp;
 
@@ -233,7 +233,7 @@ int JGMOD_PLAYER::calc_volume (int chn)
     return temp;
 }
 
-int JGMOD_PLAYER::calc_pan (int chn)
+int JGMOD_PLAYER::calc_pan (int chn) const
 {
     int temp;
 
@@ -258,7 +258,7 @@ NOTE_INFO *JGMOD_PLAYER::get_note (JGMOD *j, int pat, int pos, int chn)
     return ni;
 }
 
-int JGMOD_PLAYER::note2period (int note, int c2spd)
+int JGMOD_PLAYER::note2period (int note, int c2spd) const
 {
     if (mi.flag & JGMOD_MODE_LINEAR)
         {
@@ -301,7 +301,7 @@ int JGMOD_PLAYER::note2period (int note, int c2spd)
 
 }
 
-int JGMOD_PLAYER::get_jgmod_sample_no (int instrument_no, int note_no)
+int JGMOD_PLAYER::get_jgmod_sample_no (int instrument_no, int note_no) const
 {
     if (mi.flag & (JGMOD_MODE_XM | JGMOD_MODE_IT))
 	{
@@ -324,7 +324,7 @@ int JGMOD_PLAYER::get_jgmod_sample_no (int instrument_no, int note_no)
 
 }
 
-int JGMOD_PLAYER::period2pitch (int period)
+int JGMOD_PLAYER::period2pitch (int period) const
 {
     if ( (of->flag & JGMOD_MODE_XM) && (of->flag & JGMOD_MODE_LINEAR) )
         {
