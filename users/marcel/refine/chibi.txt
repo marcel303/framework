@@ -6,6 +6,7 @@ app refine
 	depend_library jsusfx-framework
 	depend_library libjgmod
 	depend_library libjgmod-framework
+	depend_library libjgmod-vis
 	depend_library libparticle
 	depend_library libvideo
 	depend_library vfxgraph

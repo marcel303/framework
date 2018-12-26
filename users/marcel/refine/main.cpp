@@ -25,6 +25,7 @@
 
 #include "framework-allegro2.h"
 #include "jgmod.h"
+#include "jgvis.h"
 
 #include "particle_editor.h"
 
@@ -1034,6 +1035,13 @@ struct FileEditor_Jgmod : FileEditor
 	
 	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
 	{
+		setFont("calibri.ttf");
+		pushFontMode(FONT_SDF);
+		{
+			gxTranslatef(12, 12, 0);
+			jgmod_draw(player, true);
+		}
+		popFontMode();
 	}
 };
 
