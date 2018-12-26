@@ -13,6 +13,8 @@ struct OLD_CHN_INFO
 
 static void drawCircle(const JGMOD_PLAYER & player, const int chn, const int start_chn, const int note_length);
 
+// todo : remove this global state!
+
 static OLD_CHN_INFO old_chn_info[JGMOD_MAX_VOICES];
 
 void jgmod_draw(const JGMOD_PLAYER & player, const bool drawCircles)
