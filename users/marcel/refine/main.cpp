@@ -171,7 +171,9 @@ struct FileBrowser
 	void tickRecurse(FileElem & elem)
 	{
 		ImGui::PushID(elem.name.c_str());
-			
+		
+		// draw foldable menu items for each file
+		
 		for (auto & childElem : elem.childElems)
 		{
 			if (childElem.isFile == false)
@@ -195,8 +197,6 @@ struct FileBrowser
 	
 	void tick()
 	{
-		// todo : draw foldable menu items for each file
-		
 		ImGui::SetNextWindowPos(ImVec2(0, 0));
 		ImGui::SetNextWindowSize(ImVec2(300, 0));
 		if (ImGui::Begin("File Browser", nullptr,
@@ -1645,10 +1645,12 @@ int main(int argc, char * argv[])
 
 	initUi();
 	
+	// remember the initial path and load all of the resources in there now, as we'll be changing the current working directory later
+	
 	s_dataFolder = getDirectory();
 	framework.fillCachesWithPath(".", true);
 	
-// todo : create ImGui context
+	// create ImGui context and set a custom font
 
 	FrameworkImGuiContext guiContext;
 	guiContext.init();
@@ -1658,9 +1660,11 @@ int main(int argc, char * argv[])
 	guiContext.popImGuiContext();
 	guiContext.updateFontTexture();
 
+	// file browser
 	FileBrowser fileBrowser;
 	fileBrowser.init();
 
+	// file editor
 	FileEditor * editor = nullptr;
 	Surface * editorSurface = new Surface(VIEW_SX - 300, VIEW_SY, false, true);
 	
@@ -1700,6 +1704,7 @@ int main(int argc, char * argv[])
 			extension == "pde" || // Processing sketch
 			extension == "ino") // Arduino sketch)
 		{
+		// todo : think of a nicer way to open files with ambiguous filename extensions
 			if (extension == "txt" && (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)))
 				editor = new FileEditor_Model(filename.c_str());
 			else
@@ -1825,7 +1830,7 @@ int main(int argc, char * argv[])
 				++i;
 		}
 
-		// todo : process ui
+		// process ui
 
 		bool inputIsCaptured = false;
 
@@ -1905,7 +1910,7 @@ int main(int argc, char * argv[])
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			// todo : draw ui
+			// draw ui
 
 			guiContext.draw();
 		}
