@@ -20,6 +20,7 @@ library libsdl2 shared
 	scan_files c path ../libsdl2/src/power group power
 	scan_files c path ../libsdl2/src/render traverse group render
 	scan_files c path ../libsdl2/src/sensor group sensor
+	scan_files c path ../libsdl2/src/sensor/dummy group sensor/dummy
 	scan_files c path ../libsdl2/src/stdlib group stdlib
 	scan_files c path ../libsdl2/src/thread group thread
 	scan_files c path ../libsdl2/src/thread/pthread group thread/pthread
