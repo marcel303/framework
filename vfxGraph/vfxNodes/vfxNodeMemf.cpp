@@ -83,8 +83,11 @@ void VfxNodeMemf::tick(const float dt)
 	{
 		if (name != currentName)
 		{
-			g_currentVfxGraph->unregisterMemf(currentName.c_str());
-			currentName.clear();
+			if (currentName.empty() == false)
+			{
+				g_currentVfxGraph->unregisterMemf(currentName.c_str());
+				currentName.clear();
+			}
 			
 			g_currentVfxGraph->registerMemf(name, 4);
 			currentName = name;
