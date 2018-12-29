@@ -37,23 +37,68 @@ VFX_NODE_TYPE(VfxNodeMems)
 
 VfxNodeMems::VfxNodeMems()
 	: VfxNodeBase()
+	, currentName()
+	, valueOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Name, kVfxPlugType_String);
 	addOutput(kOutput_Value, kVfxPlugType_String, &valueOutput);
 }
 
+VfxNodeMems::~VfxNodeMems()
+{
+	if (currentName.empty() == false)
+	{
+		g_currentVfxGraph->unregisterMems(currentName.c_str());
+		currentName.clear();
+	}
+}
+
 void VfxNodeMems::tick(const float dt)
 {
 	const char * name = getInputString(kInput_Name, nullptr);
 	
-	if (name == nullptr)
+	if (name == nullptr || isPassthrough)
 	{
-		valueOutput.clear();
+		if (currentName.empty() == false)
+		{
+			g_currentVfxGraph->unregisterMems(currentName.c_str());
+			currentName.clear();
+			
+			valueOutput.clear();
+		}
+		else
+		{
+			Assert(currentName.empty());
+			Assert(valueOutput.empty());
+		}
 	}
 	else
 	{
+		if (name != currentName)
+		{
+			if (currentName.empty() == false)
+			{
+				g_currentVfxGraph->unregisterMems(currentName.c_str());
+				currentName.clear();
+			}
+			
+			g_currentVfxGraph->registerMems(name);
+			currentName = name;
+		}
+		
 		if (g_currentVfxGraph->getMems(name, valueOutput) == false)
 			valueOutput.clear();
+	}
+}
+
+void VfxNodeMems::init(const GraphNode & node)
+{
+	const char * name = getInputString(kInput_Name, nullptr);
+	
+	if (name != nullptr && isPassthrough == false)
+	{
+		g_currentVfxGraph->registerMems(name);
+		currentName = name;
 	}
 }

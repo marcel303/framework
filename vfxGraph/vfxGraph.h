@@ -88,6 +88,21 @@ struct VfxGraph
 		}
 	};
 	
+	struct Memf
+	{
+		int refCount = 0;
+		int numElements = 0;
+		
+		Vec4 value;
+	};
+	
+	struct Mems
+	{
+		int refCount = 0;
+		
+		std::string value;
+	};
+	
 	std::map<GraphNodeId, VfxNodeBase*> nodes;
 	std::set<GraphNodeId> nodesFailedToCreate;
 	
@@ -101,8 +116,8 @@ struct VfxGraph
 	
 	std::vector<ValueToFree> valuesToFree;
 	
-	std::map<std::string, Vec4> memf;
-	std::map<std::string, std::string> mems;
+	std::map<std::string, Memf> memf;
+	std::map<std::string, Mems> mems;
 	
 	double time;
 	
@@ -118,9 +133,13 @@ struct VfxGraph
 	
 	VfxNodeDisplay * getMainDisplayNode() const;
 	
+	void registerMemf(const char * name, const int numElements);
+	void unregisterMemf(const char * name);
 	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
 	bool getMemf(const char * name, Vec4 & result) const;
 	
+	void registerMems(const char * name);
+	void unregisterMems(const char * name);
 	void setMems(const char * name, const char * value);
 	bool getMems(const char * name, std::string & result) const;
 };

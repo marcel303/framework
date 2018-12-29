@@ -41,9 +41,14 @@ struct VfxNodeMems : VfxNodeBase
 		kOutput_COUNT
 	};
 	
+	std::string currentName;
+	
 	std::string valueOutput;
 	
 	VfxNodeMems();
+	virtual ~VfxNodeMems() override;
 	
 	virtual void tick(const float dt) override;
+	
+	virtual void init(const GraphNode & node) override;
 };
