@@ -15,6 +15,7 @@
 #include "imgui_internal.h"
 #include "paobject.h"
 #include "vfxGraphManager.h"
+#include "vfxUi.h"
 
 #include "nfd.h"
 
@@ -241,6 +242,8 @@ struct FileEditor_VfxGraph : FileEditor
 	AudioVoiceManagerBasic audioVoiceMgr;
 	AudioGraphManager_Basic audioGraphMgr;
 	
+	UiState uiState;
+	
 	FileEditor_VfxGraph(const char * path)
 		: vfxGraphMgr(defaultSx, defaultSy)
 		, audioGraphMgr(true)
@@ -283,6 +286,24 @@ struct FileEditor_VfxGraph : FileEditor
 	
 	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
 	{
+		auto doMenus = [&](const bool doActions, const bool doDraw)
+		{
+			uiState.x = 10;
+			uiState.y = VIEW_SY - 100;
+			uiState.sx = 200;
+			
+			makeActive(&uiState, doActions, doDraw);
+			pushMenu("mem editor");
+			doVfxMemEditor(*vfxGraphMgr.selectedFile->activeInstance->vfxGraph, dt);
+			popMenu();
+		};
+		
+		// update memory editing
+		
+		doMenus(true, false);
+		
+		inputIsCaptured |= uiState.activeElem != nullptr;
+		
 		// update real-time editing
 		
 		inputIsCaptured |= vfxGraphMgr.tickEditor(sx, sy, dt, inputIsCaptured);
@@ -310,6 +331,8 @@ struct FileEditor_VfxGraph : FileEditor
 		vfxGraphMgr.tickVisualizers(dt);
 		
 		vfxGraphMgr.drawEditor(sx, sy);
+		
+		doMenus(false, true);
 	}
 };
 
