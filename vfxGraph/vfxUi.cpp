@@ -27,6 +27,7 @@
 
 #include "StringEx.h"
 #include "ui.h"
+#include "vfxGraph.h"
 #include "vfxGraphManager.h"
 #include "vfxUi.h"
 
@@ -86,4 +87,33 @@ bool doVfxGraphInstanceSelect(VfxGraphManager_RTE & vfxGraphMgr, std::string & a
 	}
 	
 	return result;
+}
+
+void doVfxMemEditor(VfxGraph & vfxGraph, const float dt)
+{
+	for (auto & mem_itr : vfxGraph.mems)
+	{
+		auto & name = mem_itr.first;
+		auto & mem = mem_itr.second;
+		
+		std::string value = mem.value;
+		
+		doTextBox(value, name.c_str(), dt);
+		
+		if (value != mem.value)
+			vfxGraph.setMems(name.c_str(), value.c_str());
+	}
+
+	for (auto & mem : vfxGraph.memf)
+	{
+		Vec4 value = mem.second.value;
+		
+		if (doTextBox(value[0], String::FormatC("%s.x", mem.first.c_str()).c_str(), 0.f / 4.f, 1.f / 4.f, false, dt) ||
+			doTextBox(value[1], String::FormatC("%s.y", mem.first.c_str()).c_str(), 1.f / 4.f, 1.f / 4.f, false, dt) ||
+			doTextBox(value[2], String::FormatC("%s.z", mem.first.c_str()).c_str(), 2.f / 4.f, 1.f / 4.f, false, dt) ||
+			doTextBox(value[3], String::FormatC("%s.w", mem.first.c_str()).c_str(), 3.f / 4.f, 1.f / 4.f, false, dt))
+		{
+			vfxGraph.setMemf(mem.first.c_str(), value[0], value[1], value[2], value[3]);
+		}
+	}
 }
