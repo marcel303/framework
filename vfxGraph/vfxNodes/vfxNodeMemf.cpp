@@ -36,12 +36,14 @@ VFX_NODE_TYPE(VfxNodeMemf)
 	out("value2", "float");
 	out("value3", "float");
 	out("value4", "float");
+	out("channel", "channel");
 }
 
 VfxNodeMemf::VfxNodeMemf()
 	: VfxNodeBase()
 	, currentName()
 	, valueOutput()
+	, channelOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Name, kVfxPlugType_String);
@@ -49,6 +51,7 @@ VfxNodeMemf::VfxNodeMemf()
 	addOutput(kOutput_Value2, kVfxPlugType_Float, &valueOutput[1]);
 	addOutput(kOutput_Value3, kVfxPlugType_Float, &valueOutput[2]);
 	addOutput(kOutput_Value4, kVfxPlugType_Float, &valueOutput[3]);
+	addOutput(kOutput_Channel, kVfxPlugType_Channel, &channelOutput);
 }
 
 VfxNodeMemf::~VfxNodeMemf()
@@ -72,6 +75,8 @@ void VfxNodeMemf::tick(const float dt)
 			currentName.clear();
 			
 			valueOutput.SetZero();
+			
+			channelOutput.reset();
 		}
 		else
 		{
@@ -94,7 +99,15 @@ void VfxNodeMemf::tick(const float dt)
 		}
 		
 		if (g_currentVfxGraph->memory.getMemf(name, valueOutput) == false)
+		{
 			valueOutput.SetZero();
+			
+			channelOutput.reset();
+		}
+		else
+		{
+			channelOutput.setData2D(&valueOutput[0], false, 1, 4);
+		}
 	}
 }
 
