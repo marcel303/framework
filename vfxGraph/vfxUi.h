@@ -35,3 +35,9 @@ struct VfxGraphManager_RTE;
 bool doVfxGraphSelect(VfxGraphManager_RTE & vfxGraphMgr);
 bool doVfxGraphInstanceSelect(VfxGraphManager_RTE & vfxGraphMgr, std::string & activeInstanceName);
 void doVfxMemEditor(VfxGraph & vfxGraph, const float dt);
+
+//
+
+struct MemoryComponent;
+
+void doMemEditor(MemoryComponent & memory, const float dt);
