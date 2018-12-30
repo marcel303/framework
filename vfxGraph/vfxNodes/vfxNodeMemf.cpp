@@ -55,7 +55,7 @@ VfxNodeMemf::~VfxNodeMemf()
 {
 	if (currentName.empty() == false)
 	{
-		g_currentVfxGraph->unregisterMemf(currentName.c_str());
+		g_currentVfxGraph->memory.unregisterMemf(currentName.c_str());
 		currentName.clear();
 	}
 }
@@ -68,7 +68,7 @@ void VfxNodeMemf::tick(const float dt)
 	{
 		if (currentName.empty() == false)
 		{
-			g_currentVfxGraph->unregisterMemf(currentName.c_str());
+			g_currentVfxGraph->memory.unregisterMemf(currentName.c_str());
 			currentName.clear();
 			
 			valueOutput.SetZero();
@@ -85,15 +85,15 @@ void VfxNodeMemf::tick(const float dt)
 		{
 			if (currentName.empty() == false)
 			{
-				g_currentVfxGraph->unregisterMemf(currentName.c_str());
+				g_currentVfxGraph->memory.unregisterMemf(currentName.c_str());
 				currentName.clear();
 			}
 			
-			g_currentVfxGraph->registerMemf(name, 4);
+			g_currentVfxGraph->memory.registerMemf(name, 4);
 			currentName = name;
 		}
 		
-		if (g_currentVfxGraph->getMemf(name, valueOutput) == false)
+		if (g_currentVfxGraph->memory.getMemf(name, valueOutput) == false)
 			valueOutput.SetZero();
 	}
 }
@@ -104,7 +104,7 @@ void VfxNodeMemf::init(const GraphNode & node)
 	
 	if (name != nullptr && isPassthrough == false)
 	{
-		g_currentVfxGraph->registerMemf(name, 4);
+		g_currentVfxGraph->memory.registerMemf(name, 4);
 		currentName = name;
 	}
 }

@@ -91,7 +91,7 @@ bool doVfxGraphInstanceSelect(VfxGraphManager_RTE & vfxGraphMgr, std::string & a
 
 void doVfxMemEditor(VfxGraph & vfxGraph, const float dt)
 {
-	for (auto & mem_itr : vfxGraph.mems)
+	for (auto & mem_itr : vfxGraph.memory.mems)
 	{
 		auto & name = mem_itr.first;
 		auto & mem = mem_itr.second;
@@ -101,10 +101,10 @@ void doVfxMemEditor(VfxGraph & vfxGraph, const float dt)
 		doTextBox(value, name.c_str(), dt);
 		
 		if (value != mem.value)
-			vfxGraph.setMems(name.c_str(), value.c_str());
+			vfxGraph.memory.setMems(name.c_str(), value.c_str());
 	}
 
-	for (auto & mem_itr : vfxGraph.memf)
+	for (auto & mem_itr : vfxGraph.memory.memf)
 	{
 		auto & name = mem_itr.first;
 		auto & mem = mem_itr.second;
@@ -121,7 +121,7 @@ void doVfxMemEditor(VfxGraph & vfxGraph, const float dt)
 			value[2] != mem.value[2] ||
 			value[3] != mem.value[3])
 		{
-			vfxGraph.setMemf(name.c_str(), value[0], value[1], value[2], value[3]);
+			vfxGraph.memory.setMemf(name.c_str(), value[0], value[1], value[2], value[3]);
 		}
 	}
 }

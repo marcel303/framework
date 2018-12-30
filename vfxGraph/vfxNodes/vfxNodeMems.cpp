@@ -49,7 +49,7 @@ VfxNodeMems::~VfxNodeMems()
 {
 	if (currentName.empty() == false)
 	{
-		g_currentVfxGraph->unregisterMems(currentName.c_str());
+		g_currentVfxGraph->memory.unregisterMems(currentName.c_str());
 		currentName.clear();
 	}
 }
@@ -62,7 +62,7 @@ void VfxNodeMems::tick(const float dt)
 	{
 		if (currentName.empty() == false)
 		{
-			g_currentVfxGraph->unregisterMems(currentName.c_str());
+			g_currentVfxGraph->memory.unregisterMems(currentName.c_str());
 			currentName.clear();
 			
 			valueOutput.clear();
@@ -79,15 +79,15 @@ void VfxNodeMems::tick(const float dt)
 		{
 			if (currentName.empty() == false)
 			{
-				g_currentVfxGraph->unregisterMems(currentName.c_str());
+				g_currentVfxGraph->memory.unregisterMems(currentName.c_str());
 				currentName.clear();
 			}
 			
-			g_currentVfxGraph->registerMems(name);
+			g_currentVfxGraph->memory.registerMems(name);
 			currentName = name;
 		}
 		
-		if (g_currentVfxGraph->getMems(name, valueOutput) == false)
+		if (g_currentVfxGraph->memory.getMems(name, valueOutput) == false)
 			valueOutput.clear();
 	}
 }
@@ -98,7 +98,7 @@ void VfxNodeMems::init(const GraphNode & node)
 	
 	if (name != nullptr && isPassthrough == false)
 	{
-		g_currentVfxGraph->registerMems(name);
+		g_currentVfxGraph->memory.registerMems(name);
 		currentName = name;
 	}
 }
