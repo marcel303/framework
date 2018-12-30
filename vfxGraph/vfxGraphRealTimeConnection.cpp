@@ -37,8 +37,8 @@
 
 struct SavedVfxMemory
 {
-	std::map<std::string, VfxGraph::Memf> memf;
-	std::map<std::string, VfxGraph::Mems> mems;
+	std::map<std::string, MemoryComponent::Memf> memf;
+	std::map<std::string, MemoryComponent::Mems> mems;
 };
 
 void RealTimeConnection::loadBegin()
@@ -51,8 +51,8 @@ void RealTimeConnection::loadBegin()
 	
 	Assert(savedVfxMemory == nullptr);
 	savedVfxMemory = new SavedVfxMemory();
-	savedVfxMemory->memf = vfxGraph->memf;
-	savedVfxMemory->mems = vfxGraph->mems;
+	savedVfxMemory->memf = vfxGraph->memory.memf;
+	savedVfxMemory->mems = vfxGraph->memory.mems;
 	
 	//
 	
@@ -71,9 +71,9 @@ void RealTimeConnection::loadEnd(GraphEdit & graphEdit)
 	// restore saved memory
 	
 	for (auto & memf_itr : savedVfxMemory->memf)
-		vfxGraph->setMemf(memf_itr.first.c_str(), memf_itr.second.value[0], memf_itr.second.value[1], memf_itr.second.value[2], memf_itr.second.value[3]);
+		vfxGraph->memory.setMemf(memf_itr.first.c_str(), memf_itr.second.value[0], memf_itr.second.value[1], memf_itr.second.value[2], memf_itr.second.value[3]);
 	for (auto & mems_itr : savedVfxMemory->mems)
-		vfxGraph->setMems(mems_itr.first.c_str(), mems_itr.second.value.c_str());
+		vfxGraph->memory.setMems(mems_itr.first.c_str(), mems_itr.second.value.c_str());
 	
 	delete savedVfxMemory;
 	savedVfxMemory = nullptr;
