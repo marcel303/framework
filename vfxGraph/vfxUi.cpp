@@ -98,6 +98,10 @@ void doVfxMemEditor(VfxGraph & vfxGraph, const float dt)
 
 void doMemEditor(MemoryComponent & memory, const float dt)
 {
+	auto oldOffset = g_uiState->textBoxTextOffset;
+	
+	g_uiState->textBoxTextOffset = g_uiState->sx / 3;
+	
 	for (auto & mem_itr : memory.mems)
 	{
 		auto & name = mem_itr.first;
@@ -110,6 +114,8 @@ void doMemEditor(MemoryComponent & memory, const float dt)
 		if (value != mem.value)
 			memory.setMems(name.c_str(), value.c_str());
 	}
+	
+	g_uiState->textBoxTextOffset = 12;
 
 	for (auto & mem_itr : memory.memf)
 	{
@@ -118,10 +124,12 @@ void doMemEditor(MemoryComponent & memory, const float dt)
 		
 		Vec4 value = mem.value;
 		
-		doTextBox(value[0], String::FormatC("%s.x", name.c_str()).c_str(), 0.f / 4.f, 1.f / 4.f, false, dt);
-		doTextBox(value[1], String::FormatC("%s.y", name.c_str()).c_str(), 1.f / 4.f, 1.f / 4.f, false, dt);
-		doTextBox(value[2], String::FormatC("%s.z", name.c_str()).c_str(), 2.f / 4.f, 1.f / 4.f, false, dt);
-		doTextBox(value[3], String::FormatC("%s.w", name.c_str()).c_str(), 3.f / 4.f, 1.f / 4.f, false, dt);
+		doLabel(name.c_str(), 0.f);
+		
+		doTextBox(value[0], "x", 0.f / 4.f, 1.f / 4.f, false, dt);
+		doTextBox(value[1], "y", 1.f / 4.f, 1.f / 4.f, false, dt);
+		doTextBox(value[2], "z", 2.f / 4.f, 1.f / 4.f, false, dt);
+		doTextBox(value[3], "w", 3.f / 4.f, 1.f / 4.f, false, dt);
 		
 		if (value[0] != mem.value[0] ||
 			value[1] != mem.value[1] ||
@@ -131,4 +139,6 @@ void doMemEditor(MemoryComponent & memory, const float dt)
 			memory.setMemf(name.c_str(), value[0], value[1], value[2], value[3]);
 		}
 	}
+	
+	g_uiState->textBoxTextOffset = oldOffset;
 }
