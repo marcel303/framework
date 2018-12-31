@@ -792,6 +792,18 @@ struct FileEditor_Model : FileEditor
 	float rotationX = 0.f;
 	float rotationY = 0.f;
 	
+	bool showColorNormals = true;
+	bool showColorTexCoords = false;
+	bool showNormals = false;
+	float normalsScale = 1.f;
+	bool showBones = false;
+	bool showBindPose = false;
+	bool showUnskinned = false;
+	bool showHardskinned = false;
+	bool showColorBlendIndices = false;
+	bool showColorBlendWeights = false;
+	bool showBoundingBox = false;
+	
 	FrameworkImGuiContext guiContext;
 	
 	FileEditor_Model(const char * path)
@@ -842,6 +854,18 @@ struct FileEditor_Model : FileEditor
 					model.startAnim(model.getAnimName());
 				
 				ImGui::SliderFloat("Animation speed", &model.animSpeed, 0.f, 10.f, "%.2f", 2.f);
+				
+				ImGui::Checkbox("Show colored normals", &showColorNormals);
+				ImGui::Checkbox("Show colored texture UVs", &showColorTexCoords);
+				ImGui::Checkbox("Show normals", &showNormals);
+				ImGui::SliderFloat("Normals scale", &normalsScale, 0.f, 100.f, "%.2f", 2.f);
+				ImGui::Checkbox("Show bones", &showBones);
+				ImGui::Checkbox("Show bind pose", &showBindPose);
+				ImGui::Checkbox("Unskinned", &showUnskinned);
+				ImGui::Checkbox("Hard skinned", &showHardskinned);
+				ImGui::Checkbox("Show colored blend indices", &showColorBlendIndices);
+				ImGui::Checkbox("Show colored blend weights", &showColorBlendWeights);
+				ImGui::Checkbox("Show bounding box", &showBoundingBox);
 			}
 			ImGui::End();
 		}
@@ -880,13 +904,28 @@ struct FileEditor_Model : FileEditor
 			
 			if (maxAxis > 0.f)
 			{
+				const int drawFlags =
+					DrawMesh
+					| DrawColorNormals * showColorNormals
+					| DrawNormals * showNormals
+					| DrawColorTexCoords * showColorTexCoords
+					| DrawBones * showBones
+					| DrawPoseMatrices * showBindPose
+					| DrawUnSkinned * showUnskinned
+					| DrawHardSkinned * showHardskinned
+					| DrawColorBlendIndices * showColorBlendIndices
+					| DrawColorBlendWeights * showColorBlendWeights
+					| DrawBoundingBox * showBoundingBox;
+				
+				model.drawNormalsScale = normalsScale;
+				
 				gxPushMatrix();
 				gxTranslatef(0, 0, 2.f);
 				gxScalef(1.f / maxAxis, 1.f / maxAxis, 1.f / maxAxis);
 				gxTranslatef(0.f, 0.f, 1.f);
 				gxRotatef(rotationY, 0.f, 1.f, 0.f);
 				gxRotatef(rotationX, 1.f, 0.f, 0.f);
-				model.draw(DrawMesh | DrawColorNormals);
+				model.draw(drawFlags);
 				gxPopMatrix();
 			}
 			
