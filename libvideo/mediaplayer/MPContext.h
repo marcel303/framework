@@ -57,6 +57,7 @@ namespace MP
 
 		size_t GetVideoWidth() const;
 		size_t GetVideoHeight() const;
+		double GetVideoSampleAspectRatio() const;
 
 		size_t GetAudioFrameRate() const;
 		size_t GetAudioChannelCount() const;

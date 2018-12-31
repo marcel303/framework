@@ -236,6 +236,23 @@ namespace MP
 		else
 			return 0;
 	}
+	
+	double Context::GetVideoSampleAspectRatio() const
+	{
+		Assert(m_begun == true);
+
+		if (m_videoContext)
+		{
+			const AVRational ratio = av_guess_sample_aspect_ratio(m_formatContext, m_formatContext->streams[m_videoContext->m_streamIndex], nullptr);
+			
+			if (ratio.num == 0 || ratio.den == 0)
+				return 1.0;
+			else
+				return ratio.num / double(ratio.den);
+		}
+		else
+			return 0;
+	}
 
 	size_t Context::GetAudioFrameRate() const
 	{
