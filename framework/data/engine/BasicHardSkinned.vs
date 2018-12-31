@@ -17,9 +17,9 @@ void main()
 	
 	vec2 texcoord = unpackTexcoord(0);
 	
+	vec4 color = unpackColor();
+
 	// debug color
-	
-	vec4 color = vec4(1.0);
 	
 	if (drawColorTexcoords())
 		color.rg *= texcoord.xy;
