@@ -181,6 +181,9 @@ void MediaPlayer::close(const bool _freeTexture)
 	
 	videoFrame = nullptr;
 	
+	audioChannelCount = -1;
+	audioSampleRate = -1;
+	
 	if (_freeTexture)
 	{
 		const int t1 = SDL_GetTicks();
@@ -411,13 +414,14 @@ uint32_t MediaPlayer::getTexture() const
 	return texture;
 }
 
-bool MediaPlayer::getVideoProperties(int & sx, int & sy, double & duration) const
+bool MediaPlayer::getVideoProperties(int & sx, int & sy, double & duration, double & sampleAspectRatio) const
 {
 	if (context->hasBegun)
 	{
 		sx = context->mpContext.GetVideoWidth();
 		sy = context->mpContext.GetVideoHeight();
 		duration = context->mpContext.GetDuration();
+		sampleAspectRatio = context->mpContext.GetVideoSampleAspectRatio();
 		
 		return true;
 	}
