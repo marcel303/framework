@@ -1027,6 +1027,40 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		gxEnd();
 	}
 	
+	if (drawFlags & DrawBoundingBox)
+	{
+		Vec3 min;
+		Vec3 max;
+		
+		calculateAABB(min, max, false);
+		
+		gxPushMatrix();
+		gxMultMatrixf(matrix.m_v);
+		{
+			gxBegin(GL_LINES);
+			{
+				const float x[2] = { min[0], max[0] };
+				const float y[2] = { min[1], max[1] };
+				const float z[2] = { min[2], max[2] };
+				
+				gxColor3ub(127, 127, 127);
+				for (int x1 = 0; x1 <= 1; ++x1)
+					for (int y1 = 0; y1 <= 1; ++y1)
+						for (int z1 = 0; z1 <= 1; ++z1)
+							for (int x2 = 0; x2 <= 1; ++x2)
+								for (int y2 = 0; y2 <= 1; ++y2)
+									for (int z2 = 0; z2 <= 1; ++z2)
+										if (std::abs(x1-x2) + std::abs(y1-y2) + std::abs(z2-z1) == 1)
+										{
+											gxVertex3f(x[x1], y[y1], z[z1]);
+											gxVertex3f(x[x2], y[y2], z[z2]);
+										}
+			}
+			gxEnd();
+		}
+		gxPopMatrix();
+	}
+	
 	if (drawFlags & DrawBones)
 	{
 		GLint restoreDepthTest;
