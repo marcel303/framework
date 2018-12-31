@@ -225,9 +225,12 @@ struct VideoEffect
 		int sx;
 		int sy;
 		double duration;
+		double sampleAspectRatio;
 		
-		if (currVideoLoop != nullptr && currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, duration))
+		if (currVideoLoop != nullptr && currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, duration, sampleAspectRatio))
 		{
+			Assert(sampleAspectRatio == 1.0);
+			
 			if (surface == nullptr)
 			{
 				surface = new Surface(sx, sy, true);
@@ -506,12 +509,17 @@ struct VideoGame
 		int sy;
 		double durationL;
 		double durationR;
+		double sampleAspectRatioL;
+		double sampleAspectRatioR;
 		
-		hasDurationL = videoEffectL->currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, durationL);
-		hasDurationR = videoEffectR->currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, durationR);
+		hasDurationL = videoEffectL->currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, durationL, sampleAspectRatioL);
+		hasDurationR = videoEffectR->currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, durationR, sampleAspectRatioR);
 		
 		if (hasDurationL && hasDurationR)
 		{
+			Assert(sampleAspectRatioL == 1.0);
+			Assert(sampleAspectRatioR == 1.0);
+			
 			const double positionL = videoEffectL->currVideoLoop->mediaPlayer->presentTime;
 			const double positionR = videoEffectR->currVideoLoop->mediaPlayer->presentTime;
 			

@@ -84,8 +84,9 @@ int main(int argc, char * argv[])
 				int sx;
 				int sy;
 				double duration;
+				double sampleAspectRatio;
 				
-				if (mp.getVideoProperties(sx, sy, duration))
+				if (mp.getVideoProperties(sx, sy, duration, sampleAspectRatio))
 				{
 					drawProgressBar(20, 400-20-20, 200, 20, mp.presentTime, duration);
 				}

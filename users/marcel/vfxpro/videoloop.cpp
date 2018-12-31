@@ -60,9 +60,12 @@ void VideoLoop::tick(const float dt)
 			int sx;
 			int sy;
 			double duration;
+			double sampleAspectRatio;
 			
-			if (mediaPlayer->getVideoProperties(sx, sy, duration) && mediaPlayer->getTexture())
+			if (mediaPlayer->getVideoProperties(sx, sy, duration, sampleAspectRatio) && mediaPlayer->getTexture())
 			{
+				Assert(sampleAspectRatio == 1.0);
+				
 				firstFrame = new Surface(sx, sy, false);
 				
 				pushSurface(firstFrame);
@@ -105,17 +108,18 @@ GLuint VideoLoop::getFirstFrameTexture() const
 	return firstFrame ? firstFrame->getTexture() : 0;
 }
 
-bool VideoLoop::getVideoProperties(int & sx, int & sy, double & duration) const
+bool VideoLoop::getVideoProperties(int & sx, int & sy, double & duration, double & sampleAspectRatio) const
 {
 	if (mediaPlayer)
 	{
-		return mediaPlayer->getVideoProperties(sx, sy, duration);
+		return mediaPlayer->getVideoProperties(sx, sy, duration, sampleAspectRatio);
 	}
 	else
 	{
 		sx = 0;
 		sy = 0;
 		duration = 0.f;
+		sampleAspectRatio = 0.f;
 		
 		return false;
 	}
