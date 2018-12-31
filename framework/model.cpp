@@ -1014,10 +1014,8 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 						// -- software vertex blend (soft skinned) --
 					}
 					
-					const float scale = 3.f;
-					
 					const Vec3 & p1 = p;
-					const Vec3   p2 = p + n * scale;
+					const Vec3   p2 = p + n * drawNormalsScale;
 					
 					gxColor3ub(127, 127, 127);
 					gxNormal3f(n[0], n[1], n[2]);
