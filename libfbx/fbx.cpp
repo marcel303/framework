@@ -419,7 +419,23 @@ template <typename T> void FbxReader::read(size_t & offset, T & result, size_t n
 		throwException();
 		return;
 	}
+	
 	memcpy(&result, &m_bytes[offset], numBytes);
+	offset += numBytes;
+}
+
+template <typename T> void FbxReader::readArray(size_t & offset, T * result, size_t numElems) const
+{
+	const size_t numBytes = numElems * sizeof(T);
+	
+	if (offset + numBytes > m_numBytes)
+	{
+		memset(&result, 0, numBytes);
+		throwException();
+		return;
+	}
+	
+	memcpy(result, &m_bytes[offset], numBytes);
 	offset += numBytes;
 }
 
@@ -505,7 +521,7 @@ template <typename T> void FbxReader::readArray(size_t & offset, FbxValueArray &
 	{
 		const size_t numBytes = sizeof(T) * arrayLength;
 		
-		read(offset, values, numBytes);
+		readArray(offset, values, numBytes);
 	}
 	else if (encoding == 1) // deflate
 	{
