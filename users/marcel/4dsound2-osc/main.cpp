@@ -47,9 +47,9 @@ struct Creature
 		
 		vfxInstance = s_vfxGraphMgr->createInstance(filename, 64, 64);
 		
-		vfxInstance->vfxGraph->setMems("id", String::FormatC("%d", id + 1).c_str());
+		vfxInstance->vfxGraph->memory.setMems("id", String::FormatC("%d", id + 1).c_str());
 		
-		vfxInstance->vfxGraph->setMemf("pos", currentPos[0], currentPos[1]);
+		vfxInstance->vfxGraph->memory.setMemf("pos", currentPos[0], currentPos[1]);
 	}
 	
 	void shut()
@@ -75,7 +75,7 @@ struct Creature
 		
 		currentPos = currentPos * retain + desiredPos * attain;
 		
-		vfxInstance->vfxGraph->setMemf("pos", currentPos[0], currentPos[1]);
+		vfxInstance->vfxGraph->memory.setMemf("pos", currentPos[0], currentPos[1]);
 	}
 	
 	void draw() const
