@@ -219,11 +219,30 @@ struct FileBrowser
 
 struct FileEditor
 {
+	Surface * surface = nullptr;
+	
 	virtual ~FileEditor()
 	{
 	}
 	
-	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) = 0;
+	void clearSurface(const int r, const int g, const int b, const int a)
+	{
+		surface->clear(r, g, b, a);
+		
+		surface->clearDepth(1.f);
+	}
+	
+	void tickBegin(Surface * in_surface)
+	{
+		surface = in_surface;
+	}
+	
+	void tickEnd()
+	{
+		surface = nullptr;
+	}
+	
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) = 0;
 };
 
 extern SDL_mutex * g_vfxAudioMutex;
@@ -284,7 +303,7 @@ struct FileEditor_VfxGraph : FileEditor
 		vfxGraphMgr.shut();
 	}
 	
-	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
 		auto doMenus = [&](const bool doActions, const bool doDraw)
 		{
@@ -308,6 +327,13 @@ struct FileEditor_VfxGraph : FileEditor
 		
 		inputIsCaptured |= vfxGraphMgr.tickEditor(sx, sy, dt, inputIsCaptured);
 		
+		// update vfx graph and draw ?
+		
+		const GraphEdit * graphEdit = vfxGraphMgr.selectedFile->graphEdit;
+		
+		if (hasFocus == false && graphEdit->animationIsDone)
+			return;
+		
 		// resize instance and tick & draw vfx graph
 		
 		instance->sx = sx;
@@ -316,6 +342,10 @@ struct FileEditor_VfxGraph : FileEditor
 		vfxGraphMgr.tick(dt);
 		
 		vfxGraphMgr.traverseDraw();
+		
+		// draw
+		
+		clearSurface(0, 0, 0, 0);
 		
 		// draw vfx graph
 		
@@ -387,7 +417,7 @@ struct FileEditor_AudioGraph : FileEditor
 		audioMutex.shut();
 	}
 	
-	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
 		// update real-time editing
 		
@@ -396,6 +426,15 @@ struct FileEditor_AudioGraph : FileEditor
 		// tick audio graph
 		
 		audioGraphMgr.tickMain();
+		
+		// draw ?
+		
+		if (hasFocus == false && audioGraphMgr.selectedFile->graphEdit->animationIsDone)
+			return;
+		
+		// draw
+		
+		clearSurface(0, 0, 0, 0);
 		
 		// update visualizers and draw editor
 		
@@ -454,8 +493,11 @@ struct FileEditor_Text : FileEditor
 		guiContext.shut();
 	}
 	
-	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
+		if (hasFocus == false)
+			return;
+		
 		guiContext.processBegin(dt, sx, sy, inputIsCaptured);
 		{
 			auto filename = Path::GetFileName(path);
@@ -582,6 +624,10 @@ struct FileEditor_Text : FileEditor
 		}
 		guiContext.processEnd();
 		
+		// draw
+		
+		clearSurface(0, 0, 0, 0);
+		
 		guiContext.draw();
 	}
 };
@@ -610,9 +656,16 @@ struct FileEditor_Sprite : FileEditor
 		guiContext.shut();
 	}
 	
-	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
+		if (hasFocus == false)
+			return;
+		
 		sprite.update(dt);
+		
+		// draw
+		
+		clearSurface(0, 0, 0, 0);
 		
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
@@ -702,9 +755,14 @@ struct FileEditor_AudioStream_Vorbis : FileEditor
 		audioStream = nullptr;
 	}
 	
-	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
 		audioOutput.Update();
+		
+		if (hasFocus == false)
+			return;
+		
+		clearSurface(0, 0, 0, 0);
 		
 		if (audioStream->Duration_get() > 0)
 		{
@@ -749,8 +807,11 @@ struct FileEditor_Model : FileEditor
 		guiContext.shut();
 	}
 	
-	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
+		if (hasFocus == false)
+			return;
+		
 		// tick
 		
 		guiContext.processBegin(dt, sx, sy, inputIsCaptured);
@@ -794,11 +855,15 @@ struct FileEditor_Model : FileEditor
 			rotationY -= mouse.dx;
 		}
 		
+		//
+		
 		model.animRootMotionEnabled = false;
 		
 		model.tick(dt);
 		
 		// draw
+		
+		clearSurface(0, 0, 0, 0);
 		
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
@@ -855,8 +920,11 @@ struct FileEditor_Spriter : FileEditor
 		guiContext.shut();
 	}
 	
-	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
+		if (hasFocus == false)
+			return;
+		
 		if (firstFrame)
 		{
 			firstFrame = false;
@@ -901,6 +969,10 @@ struct FileEditor_Spriter : FileEditor
 			spriterState.y = mouse.y;
 		}
 		
+		// draw
+		
+		clearSurface(0, 0, 0, 0);
+		
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
 		
@@ -938,7 +1010,7 @@ struct FileEditor_Video : FileEditor
 		mp.close(true);
 	}
 	
-	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
 		// attempt to get information about the video so we can start the audio
 
@@ -972,8 +1044,9 @@ struct FileEditor_Video : FileEditor
 		int videoSx;
 		int videoSy;
 		double duration;
+		double sampleAspectRatio;
 
-		const bool hasVideoInfo = mp.getVideoProperties(videoSx, videoSy, duration);
+		const bool hasVideoInfo = mp.getVideoProperties(videoSx, videoSy, duration, sampleAspectRatio);
 
 		// check if the video ended and needs to be looped
 
@@ -993,6 +1066,8 @@ struct FileEditor_Video : FileEditor
 		
 		//
 		
+		clearSurface(0, 0, 0, 0);
+		
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
 		
@@ -1000,6 +1075,8 @@ struct FileEditor_Video : FileEditor
 		
 		if (texture != 0 && hasVideoInfo)
 		{
+			videoSx *= sampleAspectRatio;
+			
 			pushBlend(BLEND_OPAQUE);
 			{
 				const float scaleX = sx / float(videoSx);
@@ -1056,8 +1133,13 @@ struct FileEditor_Jgmod : FileEditor
 		jgmod_destroy(jgmod);
 	}
 	
-	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
+		if (hasFocus == false)
+			return;
+		
+		clearSurface(0, 0, 0, 0);
+		
 		setFont("calibri.ttf");
 		pushFontMode(FONT_SDF);
 		{
@@ -1082,8 +1164,13 @@ struct FileEditor_ParticleSystem : FileEditor
 		
 	}
 	
-	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
+		if (hasFocus == false)
+			return;
+		
+		clearSurface(0, 0, 0, 0);
+		
 		particleEditor.tick(inputIsCaptured == false, sx, sy, dt);
 		
 		particleEditor.draw(inputIsCaptured == false, sx, sy);
@@ -1405,11 +1492,16 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 		}
 	}
 
-	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
 		if (isValid == false)
 			return;
 
+		if (hasFocus == false)
+			return;
+		
+		clearSurface(0, 0, 0, 0);
+		
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
 		
@@ -1601,8 +1693,13 @@ struct FileEditor_Font : FileEditor
 	{
 	}
 	
-	virtual void tick(const int sx, const int sy, const float dt, bool & inputIsCaptured) override
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
+		if (hasFocus == false)
+			return;
+		
+		clearSurface(0, 0, 0, 0);
+		
 		setFont(path.c_str());
 		pushFontMode(FONT_BITMAP);
 		setColor(colorWhite);
@@ -1632,6 +1729,8 @@ struct EditorWindow
 	Window window;
 
 	FileEditor * editor = nullptr;
+	
+	Surface * surface = nullptr;
 
 	EditorWindow(FileEditor * in_editor)
 		: window("View", 800, 600, true)
@@ -1648,16 +1747,36 @@ struct EditorWindow
 
 	void process(const float dt)
 	{
-		if (!window.hasFocus())
-			return;
-
+		if (surface == nullptr || surface->getWidth() != window.getWidth() || surface->getHeight() != window.getHeight())
+		{
+			delete surface;
+			surface = nullptr;
+			
+			surface = new Surface(window.getWidth(), window.getHeight(), false, true);
+		}
+		
 		pushWindow(window);
 		{
-			framework.beginDraw(0, 0, 0, 0);
+			pushSurface(surface);
 			{
 				bool inputIsCaptured = false;
-
-				editor->tick(window.getWidth(), window.getHeight(), dt, inputIsCaptured);
+				
+				editor->tickBegin(surface);
+				{
+					editor->tick(
+						surface->getWidth(),
+						surface->getHeight(),
+						dt,
+						window.hasFocus(),
+						inputIsCaptured);
+				}
+				editor->tickEnd();
+			}
+			popSurface();
+			
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				surface->blit(BLEND_OPAQUE);
 			}
 			framework.endDraw();
 		}
@@ -1906,20 +2025,22 @@ int main(int argc, char * argv[])
 						
 						pushSurface(editorSurface);
 						{
-							editorSurface->clear();
-							editorSurface->clearDepth(1.f);
-							
 							bool inputIsCaptured = ImGui::IsItemHovered() == false;
 							
-							editor->tick(
-								size.x,
-								size.y,
-								dt,
-								inputIsCaptured);
+							editor->tickBegin(editorSurface);
+							{
+								editor->tick(
+									size.x,
+									size.y,
+									dt,
+									true,
+									inputIsCaptured);
+							}
+							editor->tickEnd();
 						}
 						popSurface();
 						
-						editorSurface->setAlphaf(1.f);
+						editorSurface->setAlphaf(1.f); // fix for ImGui drawing the surface translucently. ideally we'd draw it opaque, but the only way to do that through ImGui is to force the alpha to one, here
 						
 						mouse = oldMouse;
 						
