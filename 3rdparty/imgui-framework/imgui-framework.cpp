@@ -169,6 +169,8 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 			if (e.type == SDL_FINGERDOWN)
 			{
 				kinetic_scroll.SetZero();
+				kinetic_scroll_smoothed[0] = 0.0;
+				kinetic_scroll_smoothed[1] = 0.0;
 				
 				num_touches++;
 			}
@@ -179,22 +181,37 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 				if (num_touches < 0)
 					num_touches = 0;
 				
-				if (num_touches < 2 && fabsf(kinetic_scroll.CalcSize()) < .02f)
-					kinetic_scroll.SetZero();
+				if (num_touches == 1)
+				{
+					if (abs(kinetic_scroll_smoothed[0]) < 1.2f)
+						kinetic_scroll_smoothed[0] = 0.0;
+					if (abs(kinetic_scroll_smoothed[1]) < 1.2f)
+						kinetic_scroll_smoothed[1] = 0.0;
+					
+					kinetic_scroll = Vec2(kinetic_scroll_smoothed[0], kinetic_scroll_smoothed[1]);
+					
+					kinetic_scroll_smoothed[0] = 0.0;
+					kinetic_scroll_smoothed[1] = 0.0;
+				}
 			}
-			else if (e.type == SDL_FINGERMOTION && num_touches == 2)
+			else if (e.type == SDL_FINGERMOTION && num_touches == 2 && dt > 0.f)
 			{
-				new_kinetic_scroll += Vec2(e.tfinger.dx * 100.f, e.tfinger.dy * 10.f);
+				new_kinetic_scroll += Vec2(e.tfinger.dx * 100.f, e.tfinger.dy * 10.f) / dt;
 			}
 		}
+		
+		const double retain = pow(.001, dt);
+		const double attain = 1.0 - retain;
+		kinetic_scroll_smoothed[0] = kinetic_scroll_smoothed[0] * retain + new_kinetic_scroll[0] * attain;
+		kinetic_scroll_smoothed[1] = kinetic_scroll_smoothed[1] * retain + new_kinetic_scroll[1] * attain;
 		
 		if (num_touches == 2)
 			kinetic_scroll = new_kinetic_scroll;
 		else
 			kinetic_scroll *= powf(.1f, dt);
 		
-		io.MouseWheelH = kinetic_scroll[0];
-		io.MouseWheel = kinetic_scroll[1];
+		io.MouseWheelH = kinetic_scroll[0] * dt;
+		io.MouseWheel = kinetic_scroll[1] * dt;
 	#else
 		if (mouse.scrollY == 0)
 			kinetic_scroll *= powf(.1f, dt);

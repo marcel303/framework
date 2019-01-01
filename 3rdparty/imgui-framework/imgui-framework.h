@@ -47,6 +47,7 @@ struct FrameworkImGuiContext
 	int num_touches = 0;
 #endif
 	Vec2 kinetic_scroll;
+	double kinetic_scroll_smoothed[2] = { };
 #endif
 
 	~FrameworkImGuiContext();
