@@ -389,25 +389,28 @@ bool downloadTestFiles(const char * urls_and_filenames[], const int numFiles)
 			
 			if (state == kState_AskConfirmation)
 			{
-				int y = GFX_SY/3;
-				int x = GFX_SX/3;
+				int y = GFX_SY/2 - 100;
+				int x = GFX_SX/4;
 				
 				setLumi(255);
-				drawText(x, y, 20, +1, 0, "The following files will need to be downloaded,");
-				y += 22;
+				drawText(x, y, 24, +1, 0, "The following files will need to be downloaded,");
+				y += 26;
+				x += 12;
 				
-				y += 4;
+				y += 12;
 				for (auto & e : downloadCache.downloadQueue.queuedElems)
 				{
 					setLumi(200);
 					drawText(x, y, 16, +1, 0, "%s", e.second.filename.c_str());
 					y += 18;
 				}
-				y += 4;
+				y += 12;
 				
+				y += 8;
 				setLumi(255);
-				drawText(x, y, 20, +1, 0, "Proceed?");
-				y += 22;
+				drawText(x, y, 24, +1, 0, "Proceed?");
+				y += 26;
+				y += 8;
 				
 				s_testState.tickMenu = true;
 				s_testState.drawMenu = true;
@@ -425,21 +428,22 @@ bool downloadTestFiles(const char * urls_and_filenames[], const int numFiles)
 				
 				//
 				
-				int y = GFX_SY/3;
-				int x = GFX_SX/3;
+				int y = GFX_SY/2 - 100;
+				int x = GFX_SX/4;
 				
 				setLumi(255);
-				drawText(x, y, 20, +1, 0, "Downloading files..");
-				y += 22;
+				drawText(x, y, 24, +1, 0, "Downloading files..");
+				y += 26;
+				x += 12;
 			
-				y += 4;
+				y += 12;
 				for (auto & e : downloadCache.downloadQueue.activeElems)
 				{
 					setLumi(200);
 					drawText(x + 10, y, 16, +1, 0, "Downloading %s.. (%dkb)", e.first.c_str(), e.second.getProgress() / 1024);
 					y += 18;
 				}
-				y += 4;
+				y += 12;
 				
 				s_testState.tickMenu = true;
 				s_testState.drawMenu = true;

@@ -46,10 +46,12 @@ void testDeepbelief()
 	const char * downloads[] =
 	{
 		"http://centuryofthecat.nl/shared_media/framework/tests/deepbelief/jetpac.ntwk",
-		"deepbelief/jetpac.ntwk"
+		"deepbelief/jetpac.ntwk",
+		"http://centuryofthecat.nl/shared_media/framework/tests/deepbelief/super-zoom-craze.mp4",
+		"deepbelief/super-zoom-craze.mp4"
 	};
 	
-	if (!downloadTestFiles(downloads, 1))
+	if (!downloadTestFiles(downloads, sizeof(downloads) / sizeof(downloads[0]) / 2))
 		return;
 	
 	const char * networkFilename = "deepbelief/jetpac.ntwk";

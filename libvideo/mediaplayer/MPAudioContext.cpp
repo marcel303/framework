@@ -175,6 +175,8 @@ namespace MP
 
 		m_initialized = false;
 
+		m_outputChannelCount = 0;
+		
 		if (m_swrContext)
 		{
 			swr_free(&m_swrContext);

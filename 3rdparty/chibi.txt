@@ -28,6 +28,7 @@ app ImGuiColorTextEdit-200-realtime-shader-editing
 	resource_path ImGuiColorTextEdit-support/data
 	depend_library imgui-framework
 	depend_library ImGuiColorTextEdit
+	depend_library libnfd
 	add_files ImGuiColorTextEdit-support/realtime-shader-editing.cpp
 
 library rtmidi

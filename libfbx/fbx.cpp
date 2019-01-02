@@ -2,7 +2,6 @@
 #include "miniz.h"
 #include <assert.h>
 #include <limits>
-#include <memory>
 #include <string.h>
 
 // --------------------------------------------------------------------------------
@@ -419,7 +418,23 @@ template <typename T> void FbxReader::read(size_t & offset, T & result, size_t n
 		throwException();
 		return;
 	}
+	
 	memcpy(&result, &m_bytes[offset], numBytes);
+	offset += numBytes;
+}
+
+template <typename T> void FbxReader::readArray(size_t & offset, T * result, size_t numElems) const
+{
+	const size_t numBytes = numElems * sizeof(T);
+	
+	if (offset + numBytes > m_numBytes)
+	{
+		memset(&result, 0, numBytes);
+		throwException();
+		return;
+	}
+	
+	memcpy(result, &m_bytes[offset], numBytes);
 	offset += numBytes;
 }
 
@@ -497,25 +512,23 @@ template <typename T> void FbxReader::readArray(size_t & offset, FbxValueArray &
 	
 	// read values
 	
-	std::auto_ptr<T> temp(new T[arrayLength]);
-	
-	T * __restrict values = temp.get();
+	T * __restrict values = new T[arrayLength];
 	
 	if (encoding == 0) // raw
 	{
-		const size_t numBytes = sizeof(T) * arrayLength;
-		
-		read(offset, values, numBytes);
+		readArray(offset, values, arrayLength);
 	}
 	else if (encoding == 1) // deflate
 	{
 		if (offset + compressedLength > m_numBytes)
 		{
+			delete [] values;
 			throwException();
 		}
 		
 		if (!decompress(m_bytes + offset, compressedLength, values, sizeof(T) * arrayLength))
 		{
+			delete [] values;
 			throwException();
 		}
 		
@@ -523,6 +536,7 @@ template <typename T> void FbxReader::readArray(size_t & offset, FbxValueArray &
 	}
 	else
 	{
+		delete [] values;
 		throwException();
 	}
 	
@@ -534,6 +548,8 @@ template <typename T> void FbxReader::readArray(size_t & offset, FbxValueArray &
 	{
 		valueArray.values[i] = double(values[i]);
 	}
+	
+	delete [] values;
 }
 
 void FbxReader::readPropertyValue(size_t & offset, FbxValue & value) const

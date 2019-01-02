@@ -56,6 +56,37 @@ struct VfxNodeOutput;
 extern VfxGraph * g_currentVfxGraph;
 extern Surface * g_currentVfxSurface;
 
+struct MemoryComponent
+{
+	struct Memf
+	{
+		int refCount = 0;
+		int numElements = 0;
+		
+		Vec4 value;
+	};
+	
+	struct Mems
+	{
+		int refCount = 0;
+		
+		std::string value;
+	};
+	
+	std::map<std::string, Memf> memf;
+	std::map<std::string, Mems> mems;
+	
+	void registerMemf(const char * name, const int numElements);
+	void unregisterMemf(const char * name);
+	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
+	bool getMemf(const char * name, Vec4 & result) const;
+	
+	void registerMems(const char * name);
+	void unregisterMems(const char * name);
+	void setMems(const char * name, const char * value);
+	bool getMems(const char * name, std::string & result) const;
+};
+
 struct VfxGraph
 {
 	struct ValueToFree
@@ -101,8 +132,7 @@ struct VfxGraph
 	
 	std::vector<ValueToFree> valuesToFree;
 	
-	std::map<std::string, Vec4> memf;
-	std::map<std::string, std::string> mems;
+	MemoryComponent memory;
 	
 	double time;
 	
@@ -117,12 +147,6 @@ struct VfxGraph
 	int traverseDraw(const int sx, const int sy) const;
 	
 	VfxNodeDisplay * getMainDisplayNode() const;
-	
-	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
-	bool getMemf(const char * name, Vec4 & result) const;
-	
-	void setMems(const char * name, const char * value);
-	bool getMems(const char * name, std::string & result) const;
 };
 
 //

@@ -52,6 +52,101 @@ static Surface * s_dummySurface = nullptr; // todo : add explicit vfx graph init
 
 //
 
+void MemoryComponent::registerMemf(const char * name, const int numElements)
+{
+	auto & mem = memf[name];
+	
+	mem.refCount++;
+	
+	if (numElements > mem.numElements)
+		mem.numElements = numElements;
+}
+
+void MemoryComponent::unregisterMemf(const char * name)
+{
+	auto mem_itr = memf.find(name);
+	Assert(mem_itr != memf.end());
+	
+	mem_itr->second.refCount--;
+	
+	if (mem_itr->second.refCount == 0)
+	{
+		memf.erase(mem_itr);
+	}
+}
+
+void MemoryComponent::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
+{
+	auto mem_itr = memf.find(name);
+	
+	if (mem_itr != memf.end())
+	{
+		auto & mem = mem_itr->second;
+		
+		mem.value = Vec4(value1, value2, value3, value4);
+	}
+}
+
+bool MemoryComponent::getMemf(const char * name, Vec4 & result) const
+{
+	auto i = memf.find(name);
+	
+	if (i == memf.end())
+		return false;
+	else
+	{
+		result = i->second.value;
+		return true;
+	}
+}
+
+void MemoryComponent::registerMems(const char * name)
+{
+	auto & mem = mems[name];
+	
+	mem.refCount++;
+}
+
+void MemoryComponent::unregisterMems(const char * name)
+{
+	auto mem_itr = mems.find(name);
+	Assert(mem_itr != mems.end());
+	
+	mem_itr->second.refCount--;
+	
+	if (mem_itr->second.refCount == 0)
+	{
+		mems.erase(mem_itr);
+	}
+}
+
+void MemoryComponent::setMems(const char * name, const char * value)
+{
+	auto mem_itr = mems.find(name);
+	
+	if (mem_itr != mems.end())
+	{
+		auto & mem = mem_itr->second;
+		
+		mem.value = value;
+	}
+}
+
+bool MemoryComponent::getMems(const char * name, std::string & result) const
+{
+	auto i = mems.find(name);
+	
+	if (i == mems.end())
+		return false;
+	else
+	{
+		result = i->second.value;
+		return true;
+	}
+}
+
+//
+
 VfxGraph::VfxGraph()
 	: nodes()
 	, dynamicData(nullptr)
@@ -59,8 +154,7 @@ VfxGraph::VfxGraph()
 	, currentTickTraversalId(-1)
 	, nextDrawTraversalId(0)
 	, valuesToFree()
-	, memf()
-	, mems()
+	, memory()
 	, time(0.0)
 {
 	dynamicData = new VfxDynamicData();
@@ -390,42 +484,6 @@ VfxNodeDisplay * VfxGraph::getMainDisplayNode() const
 	}
 	
 	return nullptr;
-}
-
-void VfxGraph::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
-{
-	memf[name] = Vec4(value1, value2, value3, value4);
-}
-
-bool VfxGraph::getMemf(const char * name, Vec4 & result) const
-{
-	auto i = memf.find(name);
-	
-	if (i == memf.end())
-		return false;
-	else
-	{
-		result = i->second;
-		return true;
-	}
-}
-
-void VfxGraph::setMems(const char * name, const char * value)
-{
-	mems[name] = value;
-}
-
-bool VfxGraph::getMems(const char * name, std::string & result) const
-{
-	auto i = mems.find(name);
-	
-	if (i == mems.end())
-		return false;
-	else
-	{
-		result = i->second;
-		return true;
-	}
 }
 
 //

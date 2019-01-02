@@ -1521,11 +1521,14 @@ void Effect_VideoLoop::draw()
 	int sx;
 	int sy;
 	double duration;
+	double sampleAspectRatio;
 	
 	const uint32_t texture = m_videoLoop->getTexture();
 
-	if (texture != 0 && m_videoLoop->getVideoProperties(sx, sy, duration))
+	if (texture != 0 && m_videoLoop->getVideoProperties(sx, sy, duration, sampleAspectRatio))
 	{
+		Assert(sampleAspectRatio == 1.0);
+		
 		gxPushMatrix();
 		{
 			const float scaleX = SCREEN_SX / float(sx);

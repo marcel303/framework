@@ -223,6 +223,8 @@ bool AudioOutput_PortAudio::Initialize(const int numChannels, const int sampleRa
 
 bool AudioOutput_PortAudio::Shutdown()
 {
+	Stop();
+	
 	return shutPortAudio();
 }
 

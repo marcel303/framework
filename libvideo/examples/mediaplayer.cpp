@@ -76,22 +76,33 @@ int main(int argc, char * argv[])
 		mp.openAsync(openParams);
 		
 		AudioOutput_PortAudio audioOutput;
+		static AudioOutput_PortAudio & s_audioOutput = audioOutput;
 		
-		static MediaPlayer * s_mp = &mp;
+		bool hasAudioInfo = false;
+		static bool & s_hasAudioInfo = hasAudioInfo;
+		
+		static MediaPlayer & s_mp = mp;
 		
 		framework.actionHandler = [](const std::string & action, const Dictionary & d)
 		{
 			if (action == "filedrop")
 			{
+				// close the video
+				s_mp.close(true);
+				s_mp.presentTime = 0.0;
+				
+				// close the audio output
+				s_audioOutput.Shutdown();
+				s_hasAudioInfo = false;
+				
+				// open the new file
+				
 				auto filename = d.getString("file", "");
 				
-				auto openParams = s_mp->context->openParams;
+				auto openParams = s_mp.context->openParams;
 				openParams.filename = filename;
 				
-				s_mp->close(true);
-				s_mp->presentTime = 0.0;
-				
-				s_mp->openAsync(openParams);
+				s_mp.openAsync(openParams);
 			}
 		};
 
@@ -151,16 +162,35 @@ int main(int argc, char * argv[])
 			
 			osdTimer -= framework.timeStep / 3.f;
 			
-			if (audioOutput.IsPlaying_get() == false)
+			if (hasAudioInfo == false)
 			{
+				// try to fetch audio properties and start audio (if audio is available)
+				
+				Assert(audioOutput.IsPlaying_get() == false);
+				
 				if (mp.getAudioProperties(channelCount, sampleRate))
 				{
-					audioOutput.Initialize(channelCount, sampleRate, 256);
-					audioOutput.Play(&mp);
+					hasAudioInfo = true;
+					
+					// does the video have audio ? if so start audio output
+					
+					if (channelCount > 0)
+					{
+						audioOutput.Initialize(channelCount, sampleRate, 256);
+						audioOutput.Play(&mp);
+					}
 				}
 			}
 			
-			mp.presentTime = mp.audioTime + videoTimeOffset;
+			if (hasAudioInfo)
+			{
+				// use the current audio time if the video has audio. otherwise, increment the presentation time stamp based on the elapsed time
+				
+				if (audioOutput.IsPlaying_get())
+					mp.presentTime = mp.audioTime + videoTimeOffset;
+				else
+					mp.presentTime += framework.timeStep;
+			}
 			
 			mp.tick(mp.context, true);
 			
@@ -255,27 +285,20 @@ int main(int argc, char * argv[])
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
+				int sx;
+				int sy;
+				double duration;
+				double sampleAspectRatio;
+				
+				const bool hasVideoInfo = mp.getVideoProperties(sx, sy, duration, sampleAspectRatio);
+				
 				// draw the video frame
 				
 				const GLuint texture = mp.getTexture();
 
-				if (texture != 0)
+				if (texture != 0 && hasVideoInfo)
 				{
-					int sx;
-					int sy;
-					
-					{
-						GLuint restoreTexture;
-						glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-						checkErrorGL();
-						
-						glBindTexture(GL_TEXTURE_2D, texture);
-						glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sx);
-						glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
-						checkErrorGL();
-						
-						glBindTexture(GL_TEXTURE_2D, restoreTexture);
-					}
+					sx *= sampleAspectRatio;
 					
 					const float scaleX = window.getWidth() / float(sx);
 					const float scaleY = window.getHeight() / float(sy);
@@ -302,11 +325,7 @@ int main(int argc, char * argv[])
 				
 				// draw the progress bar
 				
-				int sx;
-				int sy;
-				double duration;
-				
-				if (mp.getVideoProperties(sx, sy, duration))
+				if (hasVideoInfo)
 				{
 					bool hover = false;
 					bool seek = false;

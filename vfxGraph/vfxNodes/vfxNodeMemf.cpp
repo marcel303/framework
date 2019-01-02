@@ -36,11 +36,14 @@ VFX_NODE_TYPE(VfxNodeMemf)
 	out("value2", "float");
 	out("value3", "float");
 	out("value4", "float");
+	out("channel", "channel");
 }
 
 VfxNodeMemf::VfxNodeMemf()
 	: VfxNodeBase()
+	, currentName()
 	, valueOutput()
+	, channelOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Name, kVfxPlugType_String);
@@ -48,19 +51,73 @@ VfxNodeMemf::VfxNodeMemf()
 	addOutput(kOutput_Value2, kVfxPlugType_Float, &valueOutput[1]);
 	addOutput(kOutput_Value3, kVfxPlugType_Float, &valueOutput[2]);
 	addOutput(kOutput_Value4, kVfxPlugType_Float, &valueOutput[3]);
+	addOutput(kOutput_Channel, kVfxPlugType_Channel, &channelOutput);
+}
+
+VfxNodeMemf::~VfxNodeMemf()
+{
+	if (currentName.empty() == false)
+	{
+		g_currentVfxGraph->memory.unregisterMemf(currentName.c_str());
+		currentName.clear();
+	}
 }
 
 void VfxNodeMemf::tick(const float dt)
 {
 	const char * name = getInputString(kInput_Name, nullptr);
 	
-	if (name == nullptr)
+	if (name == nullptr || isPassthrough)
 	{
-		valueOutput.SetZero();
+		if (currentName.empty() == false)
+		{
+			g_currentVfxGraph->memory.unregisterMemf(currentName.c_str());
+			currentName.clear();
+			
+			valueOutput.SetZero();
+			
+			channelOutput.reset();
+		}
+		else
+		{
+			Assert(currentName.empty());
+			Assert(valueOutput[0] == 0.f);
+		}
 	}
 	else
 	{
-		if (g_currentVfxGraph->getMemf(name, valueOutput) == false)
+		if (name != currentName)
+		{
+			if (currentName.empty() == false)
+			{
+				g_currentVfxGraph->memory.unregisterMemf(currentName.c_str());
+				currentName.clear();
+			}
+			
+			g_currentVfxGraph->memory.registerMemf(name, 4);
+			currentName = name;
+		}
+		
+		if (g_currentVfxGraph->memory.getMemf(name, valueOutput) == false)
+		{
 			valueOutput.SetZero();
+			
+			channelOutput.reset();
+		}
+		else
+		{
+			channelOutput.setData2D(&valueOutput[0], false, 1, 4);
+		}
+	}
+}
+
+void VfxNodeMemf::init(const GraphNode & node)
+{
+	const char * name = getInputString(kInput_Name, nullptr);
+	
+	if (name != nullptr && isPassthrough == false)
+	{
+		g_currentVfxGraph->memory.registerMemf(name, 4);
+		currentName = name;
 	}
 }

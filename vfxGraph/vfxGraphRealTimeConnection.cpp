@@ -35,15 +35,26 @@
 
 #define VFXGRAPH_DEBUG_PREDEPS 0
 
+struct SavedVfxMemory
+{
+	std::map<std::string, MemoryComponent::Memf> memf;
+	std::map<std::string, MemoryComponent::Mems> mems;
+};
+
 void RealTimeConnection::loadBegin()
 {
 	Assert(g_currentVfxGraph == nullptr);
 	
 	isLoading = true;
 	
-	Assert(serializedMems.empty());
-	if (vfxGraph != nullptr)
-		serializedMems = vfxGraph->mems;
+	// save memory
+	
+	Assert(savedVfxMemory == nullptr);
+	savedVfxMemory = new SavedVfxMemory();
+	savedVfxMemory->memf = vfxGraph->memory.memf;
+	savedVfxMemory->mems = vfxGraph->memory.mems;
+	
+	//
 	
 	delete vfxGraph;
 	
@@ -57,8 +68,17 @@ void RealTimeConnection::loadEnd(GraphEdit & graphEdit)
 	vfxGraph = constructVfxGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary);
 	*vfxGraphPtr = vfxGraph;
 	
-	vfxGraph->mems = serializedMems;
-	serializedMems.clear();
+	// restore saved memory
+	
+	for (auto & memf_itr : savedVfxMemory->memf)
+		vfxGraph->memory.setMemf(memf_itr.first.c_str(), memf_itr.second.value[0], memf_itr.second.value[1], memf_itr.second.value[2], memf_itr.second.value[3]);
+	for (auto & mems_itr : savedVfxMemory->mems)
+		vfxGraph->memory.setMems(mems_itr.first.c_str(), mems_itr.second.value.c_str());
+	
+	delete savedVfxMemory;
+	savedVfxMemory = nullptr;
+	
+	//
 	
 	isLoading = false;
 	

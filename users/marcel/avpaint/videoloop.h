@@ -93,9 +93,12 @@ struct VideoLoop
 				int sx;
 				int sy;
 				double duration;
+				double sampleAspectRatio;
 				
-				if (mediaPlayer->getVideoProperties(sx, sy, duration) && mediaPlayer->getTexture())
+				if (mediaPlayer->getVideoProperties(sx, sy, duration, sampleAspectRatio) && mediaPlayer->getTexture())
 				{
+					Assert(sampleAspectRatio == 1.0);
+					
 					firstFrame = new Surface(sx, sy, false);
 					
 					pushSurface(firstFrame);

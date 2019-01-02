@@ -2,6 +2,7 @@
 #include "imgui.h"
 #include "imgui/TextEditor.h"
 #include "imgui-framework.h"
+#include "nfd.h"
 #include "Path.h"
 #include "TextIO.h"
 #include <fstream>
@@ -14,8 +15,23 @@
 
 #define ENABLE_PREVIEW_WINDOW 0
 
+// during real-time edits of the shader, the program is recompiled and the currently set uniforms are lost.
+// to avoid this loss, uniforms are saved and restored before and after the program is recompiled
+struct SavedUniform
+{
+	static const GLsizei kMaxNameSize = 64;
+	
+	GLenum type = GL_INVALID_ENUM;
+	GLchar name[kMaxNameSize];
+	GLfloat floatValue[4] = { };
+	GLint intValue = 0;
+};
+
 static bool showFileBrowser(std::string & shaderNamePs, const std::vector<std::string> & files, std::string & filename);
+static bool loadIntoTextEditor(const char * filename, TextIO::LineEndings & lineEndings, TextEditor & textEditor);
 static void showUniforms(Shader & shader);
+static void saveUniforms(Shader & shader, std::vector<SavedUniform> & result);
+static void loadUniforms(Shader & shader, const std::vector<SavedUniform> & uniforms, const bool allowMissingUniforms);
 static void showStatistics(Shader & shader);
 static void showErrors(Shader & shader);
 
@@ -70,6 +86,13 @@ int main(int argc, char * argv[])
 		float alphaAnim = 0.f;
 		bool showEditor = true;
 		
+		std::vector<SavedUniform> savedUniforms;
+		
+		std::string path;
+		bool pathIsValid = false;
+		
+		TextIO::LineEndings lineEndings = TextIO::kLineEndings_Unix;
+		
 		while (!framework.quitRequested)
 		{
 			framework.process();
@@ -77,8 +100,18 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
+			Assert(pathIsValid == !path.empty());
+			
+			bool inputIsCaptured = false;
+			
 			if (keyboard.isDown(SDLK_LSHIFT) && keyboard.wentDown(SDLK_TAB))
+			{
+				inputIsCaptured = true;
 				showEditor = !showEditor;
+			}
+			
+			if (showEditor == false)
+				inputIsCaptured = true;
 			
 			if (keyboard.isIdle() && mouse.isIdle())
 				idleTime += framework.timeStep;
@@ -91,11 +124,6 @@ int main(int argc, char * argv[])
 				alphaAnim += framework.timeStep / (showEditor ? 2.f : .5f);
 			
 			alphaAnim = clamp(alphaAnim, 0.f, 1.f);
-			
-			bool inputIsCaptured = false;
-			
-			if (showEditor == false)
-				inputIsCaptured = true;
 			
 			framework_context.processBegin(framework.timeStep, GFX_SX, GFX_SY, inputIsCaptured);
 			{
@@ -115,8 +143,73 @@ int main(int argc, char * argv[])
 					{
 						if (ImGui::BeginMenu("File"))
 						{
-							ImGui::MenuItem("Load..");
-							ImGui::MenuItem("Save as..");
+							if (ImGui::MenuItem("Load.."))
+							{
+								nfdchar_t * filename = nullptr;
+								
+								if (NFD_OpenDialog(nullptr, nullptr, &filename) == NFD_OKAY)
+								{
+									if (loadIntoTextEditor(filename, lineEndings, textEditor))
+									{
+										path = filename;
+										pathIsValid = true;
+									}
+									else
+									{
+										path.clear();
+										pathIsValid = false;
+									}
+								}
+								
+								if (filename != nullptr)
+								{
+									free(filename);
+									filename = nullptr;
+								}
+							}
+							
+							if (ImGui::MenuItem("Save", nullptr, false, pathIsValid))
+							{
+								if (pathIsValid)
+								{
+									auto lines = textEditor.GetTextLines();
+									
+									if (TextIO::save(path.c_str(), lines, lineEndings) == false)
+									{
+										SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
+									}
+								}
+							}
+							
+							if (ImGui::MenuItem("Save as.."))
+							{
+								nfdchar_t * filename = nullptr;
+								
+								if (NFD_SaveDialog(nullptr, nullptr, &filename) == NFD_OKAY)
+								{
+									auto lines = textEditor.GetTextLines();
+									
+									if (TextIO::save(filename, lines, lineEndings) == false)
+									{
+										SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
+										
+										path.clear();
+										pathIsValid = false;
+									}
+									else
+									{
+										path = filename;
+										pathIsValid = true;
+									}
+								}
+								
+								if (filename != nullptr)
+								{
+									free(filename);
+									filename = nullptr;
+								}
+							}
+							
 							ImGui::EndMenu();
 						}
 						
@@ -205,7 +298,12 @@ int main(int argc, char * argv[])
 								std::vector<std::string> lines;
 								TextIO::LineEndings lineEndings;
 								
-								if (TextIO::load(filename.c_str(), lines, lineEndings))
+								if (TextIO::load(filename.c_str(), lines, lineEndings) == false)
+								{
+									path.clear();
+									pathIsValid = false;
+								}
+								else
 								{
 									textEditor.SetTextLines(lines);
 								
@@ -222,6 +320,9 @@ int main(int argc, char * argv[])
 									
 									// and set the shader
 									shader = Shader(shaderNamePs.c_str(), "testShader.vs", shaderNamePs.c_str());
+									
+									path = filename;
+									pathIsValid = true;
 								}
 							}
 						}
@@ -250,7 +351,12 @@ int main(int argc, char * argv[])
 			{
 				shaderPs = newShaderPs;
 				
+				if (shader.isValid())
+					saveUniforms(shader, savedUniforms);
+				
 				shaderSource(shaderNamePs.c_str(), shaderPs.c_str());
+				
+				loadUniforms(shader, savedUniforms, true);
 			}
 			
 			auto setShaderConstants = [&](const int viewSx, const int viewSy)
@@ -330,12 +436,18 @@ static void showUniforms(Shader & shader)
 		checkErrorGL();
 		
 		if (nameSize <= 0)
+		{
+			logDebug("unable to fetch name (possibly too long). skipping uniform %d", (int)i);
 			continue;
+		}
 		
 		const GLint location = glGetUniformLocation(program, name);
 		
 		if (location == 0)
+		{
+			logDebug("failed to fetch location for uniform %d", (int)i);
 			continue;
+		}
 		
 		ImGui::PushID(i);
 		
@@ -375,6 +487,7 @@ static void showUniforms(Shader & shader)
 			if (ImGui::InputFloat4(name, value))
 				shader.setImmediate(name, value[0], value[1], value[2], value[3]);
 		}
+		/*
 		else if (type == GL_SAMPLER_2D)
 		{
 			GLint value = 0;
@@ -393,11 +506,114 @@ static void showUniforms(Shader & shader)
 			
 			glActiveTexture(GL_TEXTURE0);
 			checkErrorGL();
+			
+			ImGui::Image((ImTextureID)(uintptr_t)texture, ImVec2(30, 30));
 		}
+		*/
 		
-		clearShader();
+		//clearShader();
 		
 		ImGui::PopID();
+	}
+}
+
+static void saveUniforms(Shader & shader, std::vector<SavedUniform> & result)
+{
+	result.clear();
+	
+	Assert(shader.isValid());
+	if (!shader.isValid())
+		return;
+	
+	//
+	
+	const GLuint program = shader.getProgram();
+	
+	GLint numUniforms = 0;
+
+	glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &numUniforms);
+	checkErrorGL();
+
+	for (auto i = 0; i < numUniforms; ++i)
+	{
+		SavedUniform savedUniform;
+		
+		GLint size = 0;
+		GLsizei nameSize = 0;
+		
+		glGetActiveUniform(
+			program, (GLuint)i,
+			savedUniform.kMaxNameSize, &nameSize,
+			&size, &savedUniform.type,
+			savedUniform.name);
+		checkErrorGL();
+		
+		if (nameSize <= 0)
+		{
+			logDebug("unable to fetch name (possibly too long). skipping uniform %d", (int)i);
+			continue;
+		}
+		
+		const GLint location = glGetUniformLocation(program, savedUniform.name);
+		
+		if (location == 0)
+			continue;
+		
+		if (savedUniform.type == GL_FLOAT || savedUniform.type == GL_FLOAT_VEC2 || savedUniform.type == GL_FLOAT_VEC3 || savedUniform.type == GL_FLOAT_VEC4)
+		{
+			glGetUniformfv(program, location, savedUniform.floatValue);
+			checkErrorGL();
+			result.push_back(savedUniform);
+		}
+		else if (savedUniform.type == GL_SAMPLER_2D)
+		{
+			glGetUniformiv(program, location, &savedUniform.intValue);
+			checkErrorGL();
+			result.push_back(savedUniform);
+		}
+		else
+		{
+			logDebug("unknown uniform type for %s", savedUniform.name);
+		}
+	}
+}
+
+static void loadUniforms(Shader & shader, const std::vector<SavedUniform> & uniforms, const bool allowMissingUniforms)
+{
+	const GLuint program = shader.getProgram();
+	
+	for (auto & uniform : uniforms)
+	{
+		if (uniform.type == GL_FLOAT)
+			shader.setImmediate(uniform.name, uniform.floatValue[0]);
+		else if (uniform.type == GL_FLOAT_VEC2)
+			shader.setImmediate(uniform.name, uniform.floatValue[0], uniform.floatValue[1]);
+		else if (uniform.type == GL_FLOAT_VEC3)
+			shader.setImmediate(uniform.name, uniform.floatValue[0], uniform.floatValue[1], uniform.floatValue[2]);
+		else if (uniform.type == GL_FLOAT_VEC4)
+			shader.setImmediate(uniform.name, uniform.floatValue[0], uniform.floatValue[1], uniform.floatValue[2], uniform.floatValue[3]);
+		//else if (uniform.type == GL_SAMPLER_2D)
+		//	shader.setTexture(uniform.name, textureUnit, uniform.intValue);
+		
+		const GLint location = glGetUniformLocation(program, uniform.name);
+		
+		if (location == 0)
+			continue;
+		
+	#if 0
+		// todo : check if new uniform shares same or similar type, and set directly instead of using above method ?
+		
+		if (uniform.type == GL_FLOAT || uniform.type == GL_FLOAT_VEC2 || uniform.type == GL_FLOAT_VEC3 || uniform.type == GL_FLOAT_VEC4)
+		{
+			glGetUniformfv(program, location, uniform.floatValue);
+			checkErrorGL();
+		}
+		else if (uniform.type == GL_SAMPLER_2D)
+		{
+			glGetUniformiv(program, location, &uniform.intValue);
+			checkErrorGL();
+		}
+	#endif
 	}
 }
 
@@ -421,6 +637,24 @@ static bool showFileBrowser(std::string & shaderNamePs, const std::vector<std::s
 	else
 	{
 		return false;
+	}
+}
+
+static bool loadIntoTextEditor(const char * filename, TextIO::LineEndings & lineEndings, TextEditor & textEditor)
+{
+	std::vector<std::string> lines;
+
+	textEditor.SetText("");
+	
+	if (TextIO::load(filename, lines, lineEndings) == false)
+	{
+		return false;
+	}
+	else
+	{
+		textEditor.SetTextLines(lines);
+		
+		return true;
 	}
 }
 

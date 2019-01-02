@@ -809,6 +809,8 @@ public:
 	Vec3 animRootMotion;
 	bool animRootMotionEnabled;
 	
+	float drawNormalsScale = 1.f;
+	
 	Model(const char * filename, bool autoUpdate = false);
 	Model(class ModelCacheElem & cacheElem, bool autoUpdate);
 	~Model();

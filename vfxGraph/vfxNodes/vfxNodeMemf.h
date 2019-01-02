@@ -41,12 +41,20 @@ struct VfxNodeMemf : VfxNodeBase
 		kOutput_Value2,
 		kOutput_Value3,
 		kOutput_Value4,
+		kOutput_Channel,
 		kOutput_COUNT
 	};
 	
+	std::string currentName;
+	
 	Vec4 valueOutput;
 	
+	VfxChannel channelOutput;
+	
 	VfxNodeMemf();
+	virtual ~VfxNodeMemf() override;
 
 	virtual void tick(const float dt) override;
+	
+	virtual void init(const GraphNode & node) override;
 };

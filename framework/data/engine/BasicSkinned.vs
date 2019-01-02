@@ -11,9 +11,7 @@ void main()
 
 	vec3 normal;
 	
-	// debug color
-	
-	vec4 color = vec4(1.0);
+	vec4 color = unpackColor();
 
 	if (drawUnSkinned())
 	{

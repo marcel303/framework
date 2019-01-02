@@ -27,6 +27,7 @@
 
 #include "StringEx.h"
 #include "ui.h"
+#include "vfxGraph.h"
 #include "vfxGraphManager.h"
 #include "vfxUi.h"
 
@@ -86,4 +87,58 @@ bool doVfxGraphInstanceSelect(VfxGraphManager_RTE & vfxGraphMgr, std::string & a
 	}
 	
 	return result;
+}
+
+void doVfxMemEditor(VfxGraph & vfxGraph, const float dt)
+{
+	doMemEditor(vfxGraph.memory, dt);
+}
+
+//
+
+void doMemEditor(MemoryComponent & memory, const float dt)
+{
+	auto oldOffset = g_uiState->textBoxTextOffset;
+	
+	g_uiState->textBoxTextOffset = g_uiState->sx / 3;
+	
+	for (auto & mem_itr : memory.mems)
+	{
+		auto & name = mem_itr.first;
+		auto & mem = mem_itr.second;
+		
+		std::string value = mem.value;
+		
+		doTextBox(value, name.c_str(), dt);
+		
+		if (value != mem.value)
+			memory.setMems(name.c_str(), value.c_str());
+	}
+	
+	g_uiState->textBoxTextOffset = 12;
+
+	for (auto & mem_itr : memory.memf)
+	{
+		auto & name = mem_itr.first;
+		auto & mem = mem_itr.second;
+		
+		Vec4 value = mem.value;
+		
+		doLabel(name.c_str(), 0.f);
+		
+		doTextBox(value[0], "x", 0.f / 4.f, 1.f / 4.f, false, dt);
+		doTextBox(value[1], "y", 1.f / 4.f, 1.f / 4.f, false, dt);
+		doTextBox(value[2], "z", 2.f / 4.f, 1.f / 4.f, false, dt);
+		doTextBox(value[3], "w", 3.f / 4.f, 1.f / 4.f, false, dt);
+		
+		if (value[0] != mem.value[0] ||
+			value[1] != mem.value[1] ||
+			value[2] != mem.value[2] ||
+			value[3] != mem.value[3])
+		{
+			memory.setMemf(name.c_str(), value[0], value[1], value[2], value[3]);
+		}
+	}
+	
+	g_uiState->textBoxTextOffset = oldOffset;
 }
