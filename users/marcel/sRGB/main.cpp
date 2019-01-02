@@ -285,7 +285,7 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		uint64_t time = -g_TimerRT.TimeUS_get();
+		int64_t time = -(int64_t)g_TimerRT.TimeUS_get();
 		
 		static float animationTime = 0.f;
 		animationTime += 1.f / 160.f;

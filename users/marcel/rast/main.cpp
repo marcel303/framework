@@ -1243,7 +1243,7 @@ static void Execute()
 			Fill();
 		}
 		
-		uint64_t time = -g_TimerRT.TimeUS_get();
+		int64_t time = -(int64_t)g_TimerRT.TimeUS_get();
 
 #if 1
 		{
