@@ -1356,7 +1356,7 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, MidiB
 		const Color colorkeyHover(255, 255, 255);
 		const Color colorKeyDown(100, 100, 100);
 
-		hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / keySy, 1.f), Color(140, 180, 220), colorWhite, COLOR_MUL);
+		hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(float(M_PI)/2.f).Scale(1.f, 1.f / keySy, 1.f), Color(140, 180, 220), colorWhite, COLOR_MUL);
 
 		for (int i = 0; i < MidiKeyboard::kNumKeys; ++i)
 		{
@@ -1386,7 +1386,7 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, MidiB
 				//drawText(octaveSx + 4, 4, 12, +1, +1, "octave: %d", kb.octave);
 
 				setColor(0 == octaveHoverIndex ? colorkeyHover : colorKey);
-				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
+				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(float(M_PI)/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				hqFillRoundedRect(0, 0, octaveSx, octaveSy, 2.f);
 				hqEnd();
@@ -1400,7 +1400,7 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, MidiB
 				gxTranslatef(0, octaveSy, 0);
 
 				setColor(1 == octaveHoverIndex ? colorkeyHover : colorKey);
-				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
+				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(float(M_PI)/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				hqFillRoundedRect(0, 0, octaveSx, octaveSy, 2.f);
 				hqEnd();

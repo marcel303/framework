@@ -433,7 +433,7 @@ int main(int argc, char * argv[])
 				const float speed = random(5.f, 15.f);
 				grain.vx = mouse.dx * speed;
 				grain.vy = mouse.dy * speed;
-				grain.vfalloff = .9;
+				grain.vfalloff = .9f;
 				
 			#if 1
 				pushSurface(layerAlphas[activeLayer]);

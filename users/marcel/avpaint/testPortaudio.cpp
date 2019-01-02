@@ -1425,4 +1425,6 @@ int main(int argc, char * argv[])
 	shutAudioOutput();
 	
 	shutOsc();
+
+	return 0;
 }

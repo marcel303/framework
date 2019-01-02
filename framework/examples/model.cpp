@@ -205,7 +205,7 @@ int main(int argc, char * argv[])
 		
 		// set 3D transform
 		
-		const float fov = 90.f * M_PI / 180.f;
+		const float fov = 90.f * float(M_PI) / 180.f;
 		const float aspect = VIEW_SY / float(VIEW_SX);
 		
 		Mat4x4 transform3d;

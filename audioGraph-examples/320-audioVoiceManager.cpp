@@ -356,7 +356,7 @@ struct Creature
 		pos[1] = random(0.f, kWorldSy);
 		pos[2] = random<float>(-kWorldSz, +kWorldSz);
 		
-		const float angle = random<float>(0.f, M_PI * 2.f);
+		const float angle = random<float>(0.f, float(M_PI) * 2.f);
 		const float speed = 1.f;
 		
 		vel[0] = cosf(angle) * speed;

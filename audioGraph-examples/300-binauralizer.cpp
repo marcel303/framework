@@ -384,7 +384,7 @@ int main(int argc, char * argv[])
 			float * __restrict samples = overlapBuffer + AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE;
 			
 			float oscillatorPhaseStep = 1.f / 50.f;
-			const float twoPi = M_PI * 2.f;
+			const float twoPi = float(M_PI) * 2.f;
 			
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{

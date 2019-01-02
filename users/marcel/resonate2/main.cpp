@@ -690,7 +690,7 @@ struct Sonify : AudioStream
 		
 		// synthesize signal
 		
-		const float twoPi = 2.f * M_PI;
+		const float twoPi = 2.f * float(M_PI);
 		
 		const float dt = 1.f / 44100.f;
 		

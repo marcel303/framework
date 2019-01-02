@@ -750,7 +750,7 @@ int main(int argc, char * argv[])
 				gxPushMatrix();
 				{
 					Mat4x4 t;
-					t.MakePerspectiveGL(M_PI/2.f, 1.f, .1f, 10.f);
+					t.MakePerspectiveGL(float(M_PI)/2.f, 1.f, .1f, 10.f);
 					gxLoadMatrixf(t.m_v);
 					gxScalef(1.f, -1.f, 1.f);
 

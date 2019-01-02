@@ -143,7 +143,7 @@ static void testRaster()
 		{
 			init_px = random(-1.f, 1.f);
 			init_py = random(-1.f, 1.f);
-			a = random<float>(0.f, 2.f * M_PI);
+			a = random<float>(0.f, 2.f * float(M_PI));
 		}
 		
 		framework.beginDraw(0, 0, 0, 0);
@@ -166,7 +166,7 @@ static void testRaster()
 					{
 						for (int y = 0; y < kSize; ++y)
 						{
-							for (float a = 0.f; a <= 2.f * M_PI; a += 2.f * M_PI / 8.f)
+							for (float a = 0.f; a <= 2.f * float(M_PI); a += 2.f * float(M_PI) / 8.f)
 							{
 							float radians = 0.f;
 							
