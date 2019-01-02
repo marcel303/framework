@@ -547,7 +547,7 @@ void JGMOD_PLAYER::mod_interrupt ()
                 voiceApi->voice_set_playmode (voice_table[chn], PLAYMODE_BIDIR|PLAYMODE_LOOP);
 
             //voice_start(voice_table[chn]);
-            //ci[chn].kick = FALSE;
+            //ci[chn].kick = false;
             }
 
         if (ci[chn].sample_offset_on == true)

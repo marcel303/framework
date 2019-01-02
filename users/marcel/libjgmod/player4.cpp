@@ -71,7 +71,7 @@ void JGMOD_PLAYER::parse_new_note (int chn, int note, int sample_no)
     else if ( (note < 0) && (sample_no >= 0) ) // only sample_spedified
         {
         if ( (ci[chn].instrument != sample_no) && (ci[chn].period > 0))
-            ci[chn].kick = TRUE;
+            ci[chn].kick = true;
 
         ci[chn].instrument = sample_no;
         ci[chn].sample = get_jgmod_sample_no (sample_no, ci[chn].note);
@@ -262,7 +262,7 @@ void JGMOD_PLAYER::start_envelope (volatile ENVELOPE_INFO *t, const int *env, co
 
 }
 
-void JGMOD_PLAYER::process_envelope (volatile ENVELOPE_INFO *t, int v, int keyon)
+void JGMOD_PLAYER::process_envelope (volatile ENVELOPE_INFO *t, int v, bool keyon)
 {
     t->v = v;
 

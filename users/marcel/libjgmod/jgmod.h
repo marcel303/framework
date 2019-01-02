@@ -136,96 +136,96 @@ struct CHANNEL_INFO
     ENVELOPE_INFO volenv;
     ENVELOPE_INFO panenv;
 
-	int channel_volume;
-    int instrument;
-    int sample;
-    int volume;
-    int note;
-    int period;
-    int c2spd;
-    int transpose;
-    int pan;
-    int kick;       // TRUE if sample needs to be restarted
-    int keyon;      // FALSE if the key is pressed (sustain). fixme : this seems opposite of what the name intuitively would suggest..
-    int volfade;    // volume fadeout
-    int instfade;   // how much volume to subtract from volfade
+	int  channel_volume;
+    int  instrument;
+    int  sample;
+    int  volume;
+    int  note;
+    int  period;
+    int  c2spd;
+    int  transpose;
+    int  pan;
+    bool kick;      // TRUE if sample needs to be restarted
+    bool keyon;     // FALSE if the key is pressed (sustain). fixme : this seems opposite of what the name intuitively would suggest..
+    int  volfade;    // volume fadeout
+    int  instfade;   // how much volume to subtract from volfade
 
-    int temp_volume;
-    int temp_period;
-    int temp_pan;
+    int  temp_volume;
+    int  temp_period;
+    int  temp_pan;
 
-    int pan_slide_common;
-    int pan_slide;
-    int pan_slide_left;
-    int pan_slide_right;
+    int  pan_slide_common;
+    int  pan_slide;
+    int  pan_slide_left;
+    int  pan_slide_right;
 
-    int pro_pitch_slide_on;
-    int pro_pitch_slide;
-    int pro_fine_pitch_slide;
-    int s3m_pitch_slide_on;
-    int s3m_pitch_slide;
-    int s3m_fine_pitch_slide;
-    int xm_pitch_slide_up_on;
-    int xm_pitch_slide_up;
-    int xm_pitch_slide_down_on;
-    int xm_pitch_slide_down;
-    int xm_fine_pitch_slide_up;
-    int xm_fine_pitch_slide_down;
-    int xm_extra_fine_pitch_slide_up;
-    int xm_x_up;
-    int xm_x_down;
+    bool pro_pitch_slide_on;
+    int  pro_pitch_slide;
+    int  pro_fine_pitch_slide;
+    bool s3m_pitch_slide_on;
+    int  s3m_pitch_slide;
+    int  s3m_fine_pitch_slide;
+    bool xm_pitch_slide_up_on;
+    int  xm_pitch_slide_up;
+    bool xm_pitch_slide_down_on;
+    int  xm_pitch_slide_down;
+    int  xm_fine_pitch_slide_up;
+    int  xm_fine_pitch_slide_down;
+    int  xm_extra_fine_pitch_slide_up;
+    int  xm_x_up;
+    int  xm_x_down;
 
-    int pro_volume_slide;
-    int s3m_volume_slide_on;
-    int s3m_fine_volume_slide;
-    int s3m_volume_slide;
-    int xm_volume_slide_on;
-    int xm_volume_slide;
-    int xm_fine_volume_slide_up;
-    int xm_fine_volume_slide_down;
+    int  pro_volume_slide;
+    bool s3m_volume_slide_on;
+    int  s3m_fine_volume_slide;
+    int  s3m_volume_slide;
+    bool xm_volume_slide_on;
+    int  xm_volume_slide;
+    int  xm_fine_volume_slide_up;
+    int  xm_fine_volume_slide_down;
 
-    int loop_on;
-    int loop_times;
-    int loop_start;
+    bool loop_on;
+    int  loop_times;
+    int  loop_start;
 
-    int tremolo_on;
-    int tremolo_waveform;
+    bool tremolo_on;
+    int  tremolo_waveform;
     char tremolo_pointer;
-    int tremolo_speed;
-    int tremolo_depth;
-    int tremolo_shift;
+    int  tremolo_speed;
+    int  tremolo_depth;
+    int  tremolo_shift;
     
-    int vibrato_on;    
-    int vibrato_waveform;
+    bool vibrato_on;    
+    int  vibrato_waveform;
     char vibrato_pointer;
-    int vibrato_speed;
-    int vibrato_depth;
-    int vibrato_shift;
+    int  vibrato_speed;
+    int  vibrato_depth;
+    int  vibrato_shift;
 
-    int slide2period_on;
-    int slide2period_spd;
-    int slide2period;
+    bool slide2period_on;
+    int  slide2period_spd;
+    int  slide2period;
 
-    int arpeggio_on;
-    int arpeggio;
+    bool arpeggio_on;
+    int  arpeggio;
 
-    int tremor_on;
-    int tremor_count;
-    int tremor_set;
+    bool tremor_on;
+    int  tremor_count;
+    int  tremor_set;
 
-    int delay_sample;
-    int cut_sample;
-    int glissando;
-    int retrig;
-    int s3m_retrig_on;
-    int s3m_retrig;
-    int s3m_retrig_slide;
+    int  delay_sample;
+    int  cut_sample;
+    bool glissando;
+	int  retrig;
+    bool s3m_retrig_on;
+    int  s3m_retrig;
+    int  s3m_retrig_slide;
 
-    int sample_offset_on;
-    int sample_offset;
+    bool sample_offset_on;
+    int  sample_offset;
 
-    int global_volume_slide_on;
-    int global_volume_slide;
+    bool global_volume_slide_on;
+    int  global_volume_slide;
 };
 
 struct MUSIC_INFO
@@ -249,12 +249,12 @@ struct MUSIC_INFO
     int new_trk;        // or position jump
     int pattern_delay;  // pattern delay
 
-    int skip_pos;       // for next_pattern
-    int skip_trk;       // or prev_pattern
-    int loop;           // replay the music if ended
-    int pause;          // for pause function
-    int forbid;
-    int is_playing;
+    int  skip_pos;      // for next_pattern
+    int  skip_trk;      // or prev_pattern
+	bool loop;          // replay the music if ended
+	bool pause;         // for pause function
+    bool forbid;
+    bool is_playing;
 };
 
 struct NOTE_INFO
@@ -379,7 +379,7 @@ struct JGMOD_PLAYER
 	int init(int no_voices, AllegroTimerApi * timerApi, AllegroVoiceApi * voiceApi);
 	void shut ();
 	
-	void play (JGMOD *j, int loop, int speed = 100, int pitch = 100);
+	void play (JGMOD *j, bool loop, int speed = 100, int pitch = 100);
 	void next_track ();
 	void prev_track ();
 	void goto_track (int new_track);
@@ -469,7 +469,7 @@ protected:
 	void do_global_volume_slide(int chn);
 	void do_xm_x (int chn, int extcommand);
 
-	static void process_envelope (volatile ENVELOPE_INFO * t, int v, int keyon);
+	static void process_envelope (volatile ENVELOPE_INFO * t, int v, bool keyon);
 	static void start_envelope (volatile ENVELOPE_INFO * t, const int *env, const int *pos, int flg, int pts, int loopbeg, int loopend, int susbeg, int susend);
 	
 	// -- located in player5.c ---------------------------------------------------

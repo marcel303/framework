@@ -321,7 +321,7 @@ void JGMOD_PLAYER::shut ()
     is_init = false;
 }
 
-void JGMOD_PLAYER::play (JGMOD *j, int loop, int speed, int pitch)
+void JGMOD_PLAYER::play (JGMOD *j, bool loop, int speed, int pitch)
 {
     int index;
     int temp;
