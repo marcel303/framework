@@ -575,7 +575,7 @@ JGMOD *load_it (const char *filename, int start_offset)
 	for (int i = 0; i < 64; ++i)
 	{
 		const int panning = channel_panning[i] & (~128);
-		const bool disabled = channel_panning[i] & 128;
+		const bool disabled = (channel_panning[i] & 128) != 0;
 		
 		if (panning < 64)
 			j->panning[i] = int(channel_panning[i]) * 255 / 64;

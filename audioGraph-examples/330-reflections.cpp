@@ -195,6 +195,8 @@ struct Source
 			monoOutput.samples[i] = sum;
 		}
 	}
+
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 #define USE_FIXEDPOINT_SAMPLING 0

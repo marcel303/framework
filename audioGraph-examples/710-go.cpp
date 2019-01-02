@@ -89,7 +89,7 @@ static void doEvent(AudioGraph * audioGraph, const std::string & event, const in
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
-	chdir(CHIBI_RESOURCE_PATH);
+	_chdir(CHIBI_RESOURCE_PATH);
 #endif
 
 	const char * filename = nullptr;

@@ -5,7 +5,10 @@ library jsusfx-wdl
 	#../libjsusfx/src/WDL/fft.c
 
 	with_platform macos add_files ../libjsusfx/src/WDL/eel2/asm-nseel-x64-macho.o
-
+	
+	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
+	with_platform windows compile_definition _CRT_NONSTDC_NO_WARNINGS *
+	
 	compile_definition WDL_FFT_REALSIZE 8 expose
 	compile_definition EEL_F_SIZE 8 expose
 
@@ -14,6 +17,9 @@ library jsusfx
 	depend_library jsusfx-wdl
 
 	add_files ../libjsusfx/src/jsusfx.cpp ../libjsusfx/src/jsusfx.h ../libjsusfx/src/jsusfx_file.cpp ../libjsusfx/src/jsusfx_file.h ../libjsusfx/src/jsusfx_gfx.cpp ../libjsusfx/src/jsusfx_gfx.h ../libjsusfx/src/jsusfx_serialize.cpp ../libjsusfx/src/jsusfx_serialize.h ../libjsusfx/src/riff.cpp ../libjsusfx/src/riff.h
+	
+	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
+	with_platform windows compile_definition _CRT_NONSTDC_NO_WARNINGS *
 
 	header_path ../libjsusfx/src expose
 

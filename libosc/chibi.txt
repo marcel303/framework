@@ -9,6 +9,8 @@ library libosc
 	with_platform macos   scan_files h   path ip/posix group ip/posix
 	with_platform windows scan_files cpp path ip/win32 group ip/win32
 	with_platform windows scan_files h   path ip/win32 group ip/win32
+	
+	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
 
 	header_path . expose
 	

@@ -8,5 +8,7 @@ library libnfd
 
 	with_platform macos depend_library AppKit find
 	with_platform linux depend_package GTK2
+	
+	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
 
 	header_path . expose

@@ -327,6 +327,8 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 			return false;
 		}
 	}
+
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 //
