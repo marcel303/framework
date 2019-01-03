@@ -1156,6 +1156,10 @@ void WDL_fft_init()
   }
 }
 
+#if defined(__clang__)
+	// Clang produces 400kb of additional code with optimizations enabled. we avoid this by temporarily turning off optimizations here
+	#pragma clang optimize off
+#endif
 void WDL_fft(WDL_FFT_COMPLEX *buf, int len, int isInverse)
 {
   switch (len)
@@ -1179,7 +1183,14 @@ void WDL_fft(WDL_FFT_COMPLEX *buf, int len, int isInverse)
 #undef TMP
   }
 }
+#if defined(__clang__)
+	#pragma clang optimize on
+#endif
 
+#if defined(__clang__)
+	// Clang takes ages to compile this with optimizations turned on and produces three megabytes of additional code. we avoid this by temporarily turning off optimizations here
+	#pragma clang optimize off
+#endif
 void WDL_fft4(WDL_FFT4_COMPLEX *buf, int len, int isInverse)
 {
   switch (len)
@@ -1203,6 +1214,9 @@ void WDL_fft4(WDL_FFT4_COMPLEX *buf, int len, int isInverse)
 #undef TMP
   }
 }
+#if defined(__clang__)
+	#pragma clang optimize on
+#endif
 
 static inline void r2(WDL_FFT_REAL *a)
 {
