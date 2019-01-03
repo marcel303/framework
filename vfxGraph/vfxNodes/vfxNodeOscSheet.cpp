@@ -66,14 +66,10 @@ void VfxNodeOscSheet::updateOscSheet()
 	
 	const char * oscSheet = getInputString(kInput_OscSheet, "");
 	
-#if 0
-	// todo : add changed files to framework
-
-	if (s_changedFiles.count(oscSheet) != 0)
+	if (framework.changedFiles.count(oscSheet) != 0)
 	{
 		currentOscSheet.clear();
 	}
-#endif
 	
 	if (oscPrefix == currentOscPrefix && oscSheet == currentOscSheet && groupPrefix == currentGroupPrefix)
 	{

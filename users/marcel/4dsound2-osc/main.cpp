@@ -20,8 +20,6 @@
 const int VIEW_SX = 700;
 const int VIEW_SY = 800;
 
-static std::set<std::string> s_changedFiles;
-
 //
 
 static VfxGraphManager * s_vfxGraphMgr = nullptr;
@@ -146,11 +144,6 @@ int main(int argc, char * argv[])
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
-
-	framework.realTimeEditCallback = [](const std::string & filename)
-	{
-		s_changedFiles.insert(filename);
-	};
 	
 	// create vfx type definition library
 	
@@ -188,8 +181,6 @@ int main(int argc, char * argv[])
 	
 	while (!framework.quitRequested)
 	{
-		s_changedFiles.clear();
-		
 		framework.process();
 		
 		if (keyboard.wentDown(SDLK_ESCAPE))
