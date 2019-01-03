@@ -348,6 +348,8 @@ public:
 	
 	std::vector<SDL_Event> events;
 	
+	std::map<std::string, bool> changedFiles;
+	
 private:
 	uint32_t m_lastTick;
 	

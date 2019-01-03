@@ -642,6 +642,8 @@ bool Framework::shutdown()
 	
 	events.clear();
 	
+	changedFiles.clear();
+	
 	m_lastTick = -1;
 	
 	return result;
@@ -826,6 +828,8 @@ void Framework::process()
 	unlockMidi();
 	
 	events.clear();
+	
+	changedFiles.clear();
 
 	SDL_Event e;
 	
