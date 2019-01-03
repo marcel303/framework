@@ -1179,7 +1179,7 @@ struct FileEditor_Jgmod : FileEditor
 		
 		clearSurface(0, 0, 0, 0);
 		
-		setFont("calibri.ttf");
+		setFont("unispace.ttf");
 		pushFontMode(FONT_SDF);
 		{
 			gxTranslatef(12, 12, 0);
