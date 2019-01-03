@@ -200,7 +200,7 @@ namespace TextIO
 
 	#if 1
 		struct stat buffer;
-		if (fstat(fileno(file), &buffer) != 0)
+		if (fstat(_fileno(file), &buffer) != 0)
 			goto cleanup;
 		
 		size = buffer.st_size;
