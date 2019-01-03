@@ -238,7 +238,24 @@ public:
 		if (eventIndex == numEvents)
 			events.clear();
 		else
+		{
+		#ifdef WIN32
+			std::reverse(events.begin(), events.end());
+			for (int i = 0; i < eventIndex; ++i)
+				events.pop_back();
+			std::reverse(events.begin(), events.end());
+#if 0
+			printf("size: %d\n", (int)events.size());
+			for (int i = 0; i < eventIndex; ++i)
+			{
+				auto itr = events.begin();
+				events.erase(itr);
+			}
+#endif
+		#else
 			events.erase(events.begin(), events.begin() + eventIndex);
+		#endif
+		}
 	}
 	
 	void beginProcess()
