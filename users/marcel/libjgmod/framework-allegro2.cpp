@@ -801,7 +801,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 	if (timerApi != nullptr && timerApi->mode == AllegroTimerApi::kMode_Manual)
 	{
 		::voiceApi = this->voiceApi;
-		timerApi->processInterrupts(int64_t(numSamples) * 1000000 / DIGI_SAMPLERATE);
+		timerApi->processInterrupts(int64_t(numSamples) * 1000000 / voiceApi->sampleRate);
 		::voiceApi = nullptr;
 	}
 	
