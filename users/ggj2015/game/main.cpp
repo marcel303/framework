@@ -1439,6 +1439,7 @@ bool App::init()
 		catch (std::exception & e)
 		{
 			logError(e.what());
+			(void)e;
 		}
 
 		return true;

@@ -189,6 +189,7 @@ public:
 		catch (std::exception & e)
 		{
 			logError(e.what());
+			(void)e;
 			return false;
 		}
 	}
@@ -207,6 +208,7 @@ public:
 		catch (std::exception & e)
 		{
 			logError(e.what());
+			(void)e;
 		}
 	}
 

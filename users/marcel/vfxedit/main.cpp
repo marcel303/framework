@@ -143,6 +143,7 @@ struct AudioFile : public AudioStream
 		catch (std::exception & e)
 		{
 			logError("error: %s", e.what());
+			(void)e;
 
 			reset();
 		}

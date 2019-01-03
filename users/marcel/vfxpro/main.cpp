@@ -409,6 +409,7 @@ protected:
 		catch (osc::Exception & e)
 		{
 			logError("error while parsing message: %s: %s", m.AddressPattern(), e.what());
+			(void)e;
 		}
 	}
 };
@@ -806,6 +807,7 @@ static void preloadSceneFiles()
 			catch (std::exception & e)
 			{
 				logError("%s", e.what());
+				(void)e;
 			}
 		}
 	}
