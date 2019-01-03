@@ -565,7 +565,14 @@ void FbxReader::readPropertyValue(size_t & offset, FbxValue & value) const
 		
 	#define READ_SCALAR(code, type, valueType) case code: { type v; read(false, offset, v); value = FbxValue(valueType(v)); break; }
 		
-		READ_SCALAR('C', int8_t, bool)
+	case 'C':
+		{
+			uint8_t v;
+			read(false, offset, v);
+			value = FbxValue(bool(v != 0));
+			break;
+		}
+
 		READ_SCALAR('Y', int16_t, int64_t)
 		READ_SCALAR('I', int32_t, int64_t)
 		READ_SCALAR('L', int64_t, int64_t)
