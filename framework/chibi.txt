@@ -36,7 +36,7 @@ library framework
 	with_platform macos header_path macos/include/freetype
 	with_platform macos depend_library macos/glew/lib/libGLEW.a local
 	with_platform macos depend_library macos/lib/libfreeimage.a local
-	with_platform macos depend_library macos/lib/libfreetype.a  local
+	with_platform macos depend_library macos/lib/libfreetype.6.dylib local embed_framework
 	with_platform macos depend_library macos/lib/libportaudio.a local
 
 # Windows header file includes and libraries

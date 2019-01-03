@@ -1,10 +1,10 @@
 /***************************************************************************/
 /*                                                                         */
-/*  svotval.h                                                              */
+/*  ftpsprop.h                                                             */
 /*                                                                         */
-/*    The FreeType OpenType validation service (specification).            */
+/*    Get and set properties of PostScript drivers (specification).        */
 /*                                                                         */
-/*  Copyright 2004-2018 by                                                 */
+/*  Copyright 2017-2018 by                                                 */
 /*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
 /*                                                                         */
 /*  This file is part of the FreeType project, and may only be used,       */
@@ -16,40 +16,33 @@
 /***************************************************************************/
 
 
-#ifndef SVOTVAL_H_
-#define SVOTVAL_H_
+#ifndef FTPSPROP_H_
+#define FTPSPROP_H_
 
-#include FT_OPENTYPE_VALIDATE_H
-#include FT_INTERNAL_VALIDATE_H
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 
 FT_BEGIN_HEADER
 
 
-#define FT_SERVICE_ID_OPENTYPE_VALIDATE  "opentype-validate"
+  FT_BASE_CALLBACK( FT_Error )
+  ps_property_set( FT_Module    module,         /* PS_Driver */
+                   const char*  property_name,
+                   const void*  value,
+                   FT_Bool      value_is_string );
 
-
-  typedef FT_Error
-  (*otv_validate_func)( FT_Face volatile  face,
-                        FT_UInt           ot_flags,
-                        FT_Bytes         *base,
-                        FT_Bytes         *gdef,
-                        FT_Bytes         *gpos,
-                        FT_Bytes         *gsub,
-                        FT_Bytes         *jstf );
-
-
-  FT_DEFINE_SERVICE( OTvalidate )
-  {
-    otv_validate_func  validate;
-  };
-
-  /* */
+  FT_BASE_CALLBACK( FT_Error )
+  ps_property_get( FT_Module    module,         /* PS_Driver */
+                   const char*  property_name,
+                   void*        value );
 
 
 FT_END_HEADER
 
 
-#endif /* SVOTVAL_H_ */
+#endif /* FTPSPROP_H_ */
 
 
 /* END */

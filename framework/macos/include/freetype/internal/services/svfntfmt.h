@@ -1,10 +1,10 @@
 /***************************************************************************/
 /*                                                                         */
-/*  svotval.h                                                              */
+/*  svfntfmt.h                                                             */
 /*                                                                         */
-/*    The FreeType OpenType validation service (specification).            */
+/*    The FreeType font format service (specification only).               */
 /*                                                                         */
-/*  Copyright 2004-2018 by                                                 */
+/*  Copyright 2003-2018 by                                                 */
 /*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
 /*                                                                         */
 /*  This file is part of the FreeType project, and may only be used,       */
@@ -16,32 +16,32 @@
 /***************************************************************************/
 
 
-#ifndef SVOTVAL_H_
-#define SVOTVAL_H_
+#ifndef SVFNTFMT_H_
+#define SVFNTFMT_H_
 
-#include FT_OPENTYPE_VALIDATE_H
-#include FT_INTERNAL_VALIDATE_H
+#include FT_INTERNAL_SERVICE_H
+
 
 FT_BEGIN_HEADER
 
 
-#define FT_SERVICE_ID_OPENTYPE_VALIDATE  "opentype-validate"
+  /*
+   *  A trivial service used to return the name of a face's font driver,
+   *  according to the XFree86 nomenclature.  Note that the service data
+   *  is a simple constant string pointer.
+   */
 
+#define FT_SERVICE_ID_FONT_FORMAT  "font-format"
 
-  typedef FT_Error
-  (*otv_validate_func)( FT_Face volatile  face,
-                        FT_UInt           ot_flags,
-                        FT_Bytes         *base,
-                        FT_Bytes         *gdef,
-                        FT_Bytes         *gpos,
-                        FT_Bytes         *gsub,
-                        FT_Bytes         *jstf );
-
-
-  FT_DEFINE_SERVICE( OTvalidate )
-  {
-    otv_validate_func  validate;
-  };
+#define FT_FONT_FORMAT_TRUETYPE  "TrueType"
+#define FT_FONT_FORMAT_TYPE_1    "Type 1"
+#define FT_FONT_FORMAT_BDF       "BDF"
+#define FT_FONT_FORMAT_PCF       "PCF"
+#define FT_FONT_FORMAT_TYPE_42   "Type 42"
+#define FT_FONT_FORMAT_CID       "CID Type 1"
+#define FT_FONT_FORMAT_CFF       "CFF"
+#define FT_FONT_FORMAT_PFR       "PFR"
+#define FT_FONT_FORMAT_WINFNT    "Windows FNT"
 
   /* */
 
@@ -49,7 +49,7 @@ FT_BEGIN_HEADER
 FT_END_HEADER
 
 
-#endif /* SVOTVAL_H_ */
+#endif /* SVFNTFMT_H_ */
 
 
 /* END */
