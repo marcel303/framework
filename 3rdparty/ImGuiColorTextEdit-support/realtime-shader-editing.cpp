@@ -258,7 +258,7 @@ int main(int argc, char * argv[])
 							int lineNumber;
 							int fileId;
 							
-							const int n = sscanf(errorMessages[i].c_str(), "%s %d:%d: %[^]", type, &fileId, &lineNumber, message);
+							const int n = sscanf(errorMessages[i].c_str(), "%s %d:%d: %[^\n]", type, &fileId, &lineNumber, message);
 							
 							if (n == 4 && fileId == 0 && strstr(type, "ERROR") != nullptr)
 							{
@@ -443,7 +443,7 @@ static void showUniforms(Shader & shader)
 		
 		const GLint location = glGetUniformLocation(program, name);
 		
-		if (location == 0)
+		if (location == -1)
 		{
 			logDebug("failed to fetch location for uniform %d", (int)i);
 			continue;
@@ -556,7 +556,7 @@ static void saveUniforms(Shader & shader, std::vector<SavedUniform> & result)
 		
 		const GLint location = glGetUniformLocation(program, savedUniform.name);
 		
-		if (location == 0)
+		if (location == -1)
 			continue;
 		
 		if (savedUniform.type == GL_FLOAT || savedUniform.type == GL_FLOAT_VEC2 || savedUniform.type == GL_FLOAT_VEC3 || savedUniform.type == GL_FLOAT_VEC4)
@@ -597,7 +597,7 @@ static void loadUniforms(Shader & shader, const std::vector<SavedUniform> & unif
 		
 		const GLint location = glGetUniformLocation(program, uniform.name);
 		
-		if (location == 0)
+		if (location == -1)
 			continue;
 		
 	#if 0
