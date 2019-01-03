@@ -9,6 +9,7 @@ app tests
 	depend_library libvideo
 	depend_library libwebrequest-downloadcache
 	depend_library vfxgraph
+	with_platform macos depend_library xmm
 
 	scan_files c
 	scan_files cpp

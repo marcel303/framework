@@ -13,6 +13,7 @@ global_group libraries
 	add 3rdparty
 	add 3rdparty/imgui-framework
 	add 3rdparty/libwebrequest
+	with_platform macos add 3rdparty/xmm-support
 	add libfbx
 	add libgg
 	add libjsusfx-framework
