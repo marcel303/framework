@@ -43,7 +43,7 @@ library framework
 	with_platform windows header_path win32/include          expose
 	with_platform windows header_path win32/include/freetype
 	with_platform windows depend_library win32/lib/FreeImage.lib local
-	with_platform windows depend_library win32/lib/freetype252.lib local
+	with_platform windows depend_library win32/lib/freetype.lib local
 	with_platform windows depend_library win32/lib/glew32.lib local
 	with_platform windows depend_library win32/lib/OpenAL32.lib local
 	with_platform windows depend_library win32/lib/XInput9_1_0.lib local
@@ -51,6 +51,7 @@ library framework
 	with_platform windows depend_library Winmm.lib global
 	with_platform windows depend_library OpenGL32.lib global
 	with_platform windows add_dist_files win32/dll/FreeImage.dll
+	with_platform windows add_dist_files win32/dll/freetype.dll
 	with_platform windows add_dist_files win32/dll/glew32.dll
 	with_platform windows add_dist_files win32/dll/OpenAL32.dll
 	with_platform windows add_dist_files win32/dll/XInput9_1_0.dll
