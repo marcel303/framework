@@ -1,0 +1,3 @@
+app codingChallenges-129-kockFractalSnowflake
+	depend_library framework
+	add_files 129-kockFractalSnowflake.cpp
