@@ -55,11 +55,15 @@ int main(int argc, char * argv[])
 				ImGui::SliderInt("Resolution", &halfSize, 0, 50);
 				ImGui::SliderFloat("Animation speed", &animSpeed, 0.f, 40.f, "%.2f", 2.f);
 				
-				ImGui::ColorPicker3("Color 1", (float*)&color1);
-				ImGui::SameLine();
-				ImGui::ColorPicker3("Color 2", (float*)&color2);
-				ImGui::SameLine();
-				ImGui::ColorPicker3("Color 3", (float*)&color3);
+				ImGui::PushItemWidth(ImGui::CalcItemWidth() * .6f);
+				{
+					ImGui::ColorPicker3("Color 1", (float*)&color1);
+					ImGui::SameLine();
+					ImGui::ColorPicker3("Color 2", (float*)&color2);
+					ImGui::SameLine();
+					ImGui::ColorPicker3("Color 3", (float*)&color3);
+				}
+				ImGui::PopItemWidth();
 			}
 			ImGui::End();
 		}
