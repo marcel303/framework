@@ -10,70 +10,6 @@ static Color color1(1.f, 0.f, 0.f);
 static Color color2(0.f, 1.f, 0.f);
 static Color color3(0.f, 0.f, 1.f);
 
-static void drawCube(Vec3Arg position, Vec3Arg size)
-{
-	const float vertice[8][3] =
-	{
-		{ -1, -1, -1 },
-		{ +1, -1, -1 },
-		{ +1, +1, -1 },
-		{ -1, +1, -1 },
-		{ -1, -1, +1 },
-		{ +1, -1, +1 },
-		{ +1, +1, +1 },
-		{ -1, +1, +1 }
-	};
-
-	const int face[6][4] =
-	{
-		{ 3, 2, 1, 0 },
-		{ 4, 5, 6, 7 },
-		{ 0, 4, 7, 3 },
-		{ 2, 6, 5, 1 },
-		{ 0, 1, 5, 4 },
-		{ 7, 6, 2, 3 }
-	};
-
-	const float normal[6][3] =
-	{
-		{ 0, 0, -1 },
-		{ 0, 0, +1 },
-		{ -1, 0, 0 },
-		{ +1, 0, 0 },
-		{ 0, -1, 0 },
-		{ 0, +1, 0 }
-	};
-	
-	gxBegin(GL_QUADS);
-	{
-		for (int face_idx = 0; face_idx < 6; ++face_idx)
-		{
-			const float * norm = normal[face_idx];
-			
-			gxNormal3fv(norm);
-			
-			const auto c1 = color1.mulRGB(fabsf(norm[0]));
-			const auto c2 = color2.mulRGB(fabsf(norm[1]));
-			const auto c3 = color3.mulRGB(fabsf(norm[2]));
-			
-			const auto color = c1.addRGB(c2.addRGB(c3));
-			
-			setColor(color);
-			
-			for (int vert_idx = 0; vert_idx < 4; ++vert_idx)
-			{
-				const float * vert = vertice[face[face_idx][vert_idx]];
-				
-				gxVertex3f(
-					position[0] + size[0] * vert[0] / 2.f,
-					position[1] + size[1] * vert[1] / 2.f,
-					position[2] + size[2] * vert[2] / 2.f);
-			}
-		}
-	}
-	gxEnd();
-}
-
 Vec3 computeSize(const float x, const float y, const float time)
 {
 	const float phase = hypotf(x, y) * 6.f - time * 2.f;
@@ -87,6 +23,10 @@ Vec3 computeSize(const float x, const float y, const float time)
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 	framework.enableDepthBuffer = true;
 	
 	if (!framework.init(1000, 800))
@@ -155,11 +95,16 @@ int main(int argc, char * argv[])
 						
 						Vec3 size = computeSize(x, z, animTime);
 						
-						size[0] /= halfSize;
-						size[2] /= halfSize;
+						size[0] /= halfSize * 2.f;
+						size[2] /= halfSize * 2.f;
 						
-						setColorf(size[0], size[1], size[2]);
-						drawCube(Vec3(x, 0, z), size);
+						Shader shader("086-cube");
+						shader.setImmediate("color1", color1.r, color1.g, color1.b, color1.a);
+						shader.setImmediate("color2", color2.r, color2.g, color2.b, color2.a);
+						shader.setImmediate("color3", color3.r, color3.g, color3.b, color3.a);
+						
+						setColor(colorWhite);
+						fillCube(Vec3(x, 0, z), size);
 					}
 				}
 			}

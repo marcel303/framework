@@ -2,6 +2,7 @@ app codingChallenges-086-cubeWave
 	depend_library framework
 	depend_library imgui-framework
 	add_files 086-cubeWave.cpp
+	resource_path data
 
 app codingChallenges-116-lissajousCurveTable
 	depend_library framework
