@@ -321,7 +321,11 @@ static void fft1D_slowImpl(
 	
 	// create temporary storage needed for index reversal
 	
+#if FOURIER_USE_SSE
+	real * temp = (real*)_mm_malloc(transformSize * 2 * sizeof(real), 16);
+#else
 	real * temp = new real[transformSize * 2];
+#endif
 	
 	real * __restrict treal = temp + transformSize * 0;
 	real * __restrict timag = temp + transformSize * 1;
@@ -347,8 +351,13 @@ static void fft1D_slowImpl(
 	
 	// free temporary storage
 	
+#if FOURIER_USE_SSE
+	_mm_free(temp);
+	temp = nullptr;
+#else
 	delete[] temp;
 	temp = nullptr;
+#endif
 }
 
 void Fourier::fft1D(
