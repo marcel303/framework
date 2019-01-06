@@ -90,4 +90,6 @@ int main(int argc, char * argv[])
 		}
 		framework.endDraw();
 	}
+
+	return 0;
 }
