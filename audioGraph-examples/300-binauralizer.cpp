@@ -220,7 +220,7 @@ namespace BinauralTestNamespace
 			
 			for (auto & sound : sounds)
 			{
-				float soundSamples[AUDIO_UPDATE_SIZE * 2];
+				ALIGN16 float soundSamples[AUDIO_UPDATE_SIZE * 2];
 				
 				sound->generate(soundSamples);
 				
