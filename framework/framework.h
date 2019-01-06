@@ -348,6 +348,8 @@ public:
 	
 	std::vector<SDL_Event> events;
 	
+	std::map<std::string, bool> changedFiles;
+	
 private:
 	uint32_t m_lastTick;
 	
@@ -1292,6 +1294,7 @@ void drawLine3d(int axis = 0);
 void drawRect3d(int axis1 = 0, int axis2 = 1);
 void drawGrid3d(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1);
 void drawGrid3dLine(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1, bool optimized = false);
+void fillCube(Vec3Arg position, Vec3Arg size);
 
 GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
 GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp);

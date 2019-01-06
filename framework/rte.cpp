@@ -84,6 +84,8 @@ static void handleFileChange(const std::string & filename)
 	{
 		framework.realTimeEditCallback(filename);
 	}
+	
+	framework.changedFiles.insert(std::make_pair(filename, true));
 }
 
 #if 1
@@ -108,7 +110,7 @@ static void fillFileInfos()
 		if (f)
 		{
 			struct stat s;
-			if (fstat(_fileno(f), &s) == 0)
+			if (fstat(fileno(f), &s) == 0)
 			{
 				RTEFileInfo fi;
 				fi.filename = file;
@@ -141,7 +143,7 @@ static void checkFileInfos()
 			bool changed = false;
 
 			struct stat s;
-			if (fstat(_fileno(f), &s) == 0)
+			if (fstat(fileno(f), &s) == 0)
 			{
 				if (fi.time < s.st_mtime)
 				{

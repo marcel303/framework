@@ -40,6 +40,10 @@
 	#include <direct.h>
 #endif
 
+#ifdef WIN32
+	#define chdir _chdir
+#endif
+
 #define CHANNEL_COUNT 64
 
 static void showHelp()
@@ -89,7 +93,7 @@ static void doEvent(AudioGraph * audioGraph, const std::string & event, const in
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
-	_chdir(CHIBI_RESOURCE_PATH);
+	chdir(CHIBI_RESOURCE_PATH);
 #endif
 
 	const char * filename = nullptr;

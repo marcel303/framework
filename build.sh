@@ -15,6 +15,22 @@ case "${unameOut}" in
     *)          os="unknown"
 esac
 
+# create "-filter <...>" command line arguments to be passed to chibi if this shell script received any arguments of its own
+target_arg=""
+for arg in "$@"
+do
+    target_arg="$target_arg-target $arg "
+done
+
+if [ "$target_arg" != "" ]; then
+	#tput smul; # underline
+	tput bold; # bold
+	#tput setab 0; # bg = black
+	tput setaf 2; # fg = green
+	echo "using filter: $target_arg"
+	tput sgr0; # reset text formatting
+fi
+
 # build chibi binary
 mkdir -p chibi-build/chibi
 cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --build .
@@ -22,7 +38,7 @@ cd "$root"
 
 # generate cmake files using chibi
 mkdir -p chibi-build/cmake-files
-"$chibi_bin" . chibi-build/cmake-files
+"$chibi_bin" . chibi-build/cmake-files $target_arg
 
 if [ "$os" == "mac" ]; then
 	# generate Xcode project file

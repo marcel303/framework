@@ -32,11 +32,13 @@ library framework
 	with_platform linux.raspberry-pi compile_definition ENABLE_MSDF_FONTS    0 expose
 
 # Macos header file includes and libraries
+# note : freetype was configured using : ./configure --disable-static --without-zlib --without-png --without-bzip2
+# note : freetype dylib was updated using : install_name_tool -id "@rpath/libfreetype.6.dylib" libfreetype.6.dylib
 	with_platform macos header_path macos/include          expose
 	with_platform macos header_path macos/include/freetype
 	with_platform macos depend_library macos/glew/lib/libGLEW.a local
 	with_platform macos depend_library macos/lib/libfreeimage.a local
-	with_platform macos depend_library macos/lib/libfreetype.a  local
+	with_platform macos depend_library macos/lib/libfreetype.6.dylib local embed_framework
 	with_platform macos depend_library macos/lib/libportaudio.a local
 
 # Windows header file includes and libraries

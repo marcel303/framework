@@ -51,8 +51,11 @@ void RealTimeConnection::loadBegin()
 	
 	Assert(savedVfxMemory == nullptr);
 	savedVfxMemory = new SavedVfxMemory();
-	savedVfxMemory->memf = vfxGraph->memory.memf;
-	savedVfxMemory->mems = vfxGraph->memory.mems;
+	if (vfxGraph != nullptr)
+	{
+		savedVfxMemory->memf = vfxGraph->memory.memf;
+		savedVfxMemory->mems = vfxGraph->memory.mems;
+	}
 	
 	//
 	

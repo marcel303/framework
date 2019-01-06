@@ -1,7 +1,7 @@
 library libmediaplayer
 	
 	depend_library libgg
-	depend_library framework
+	depend_library libsdl2
 
 	scan_files cpp path mediaplayer
 	scan_files h   path mediaplayer

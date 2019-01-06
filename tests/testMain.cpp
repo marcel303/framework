@@ -501,7 +501,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	doButton("XMM", "XMM Gesture Follower", testXmm);
 #endif
 
-	const bool result = doButton("BACK", "Back", nullptr, true);
+	const bool result = doButton("QUIT", "Quit", nullptr, true);
 	
 	if (menuTick)
 	{

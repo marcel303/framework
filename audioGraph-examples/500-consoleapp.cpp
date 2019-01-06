@@ -40,12 +40,16 @@
 	#include <direct.h>
 #endif
 
+#ifdef WIN32
+	#define chdir _chdir
+#endif
+
 #define CHANNEL_COUNT 64
 
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
-	_chdir(CHIBI_RESOURCE_PATH);
+	chdir(CHIBI_RESOURCE_PATH);
 #endif
 
 	if (SDL_Init(0) >= 0)
