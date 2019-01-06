@@ -790,6 +790,16 @@ struct SpringOsc2D : BaseOsc
 		
 		return v;
 	}
+
+	void * operator new(size_t size)
+	{
+		return _mm_malloc(size, 32);
+	}
+	
+	void operator delete(void * mem)
+	{
+		_mm_free(mem);
+	}
 };
 
 #endif
