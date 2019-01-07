@@ -33,7 +33,6 @@
 
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
-#include <map>
 #include <string>
 #include <vector>
 #include "Debugging.h"
@@ -659,12 +658,16 @@ public:
 
 //
 
+class DictionaryStorage;
+
 class Dictionary
 {
-	typedef std::map<std::string, std::string> Map;
-	Map m_map;
+	DictionaryStorage * m_storage;
 	
 public:
+	Dictionary();
+	~Dictionary();
+	
 	bool load(const char * filename);
 	bool save(const char * filename);
 	bool parse(const std::string & line, bool clear = true); // line = key1:value1 key2:value2 key3:value3 ..

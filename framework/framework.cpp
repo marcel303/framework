@@ -3475,11 +3475,30 @@ Color Color::mulRGB(float t) const
 
 // -----
 
+class DictionaryStorage
+{
+public:
+	typedef std::map<std::string, std::string> Map;
+	Map m_map;
+};
+
+Dictionary::Dictionary()
+	: m_storage(nullptr)
+{
+	m_storage = new DictionaryStorage();
+}
+
+Dictionary::~Dictionary()
+{
+	delete m_storage;
+	m_storage = nullptr;
+}
+
 bool Dictionary::load(const char * filename)
 {
 	bool result = true;
 
-	m_map.clear();
+	m_storage->m_map.clear();
 
 	FileReader reader;
 
@@ -3517,7 +3536,7 @@ bool Dictionary::save(const char * filename)
 	}
 	else
 	{
-		for (auto & i : m_map)
+		for (auto & i : m_storage->m_map)
 		{
 			const char * key = i.first.c_str();
 			const char * value = i.second.c_str();
@@ -3538,7 +3557,7 @@ bool Dictionary::parse(const std::string & line, bool clear)
 	
 	if (clear)
 	{
-		m_map.clear();
+		m_storage->m_map.clear();
 	}
 	
 	std::vector<std::string> parts;
@@ -3580,12 +3599,12 @@ bool Dictionary::parse(const std::string & line, bool clear)
 
 bool Dictionary::contains(const char * name) const
 {
-	return m_map.count(name) != 0;
+	return m_storage->m_map.count(name) != 0;
 }
 
 void Dictionary::setString(const char * name, const char * value)
 {
-	m_map[name] = value;
+	m_storage->m_map[name] = value;
 }
 
 void Dictionary::setInt(const char * name, int value)
@@ -3623,8 +3642,8 @@ void Dictionary::setPtr(const char * name, void * value)
 
 std::string Dictionary::getString(const char * name, const char * _default) const
 {
-	Map::const_iterator i = m_map.find(name);
-	if (i != m_map.end())
+	DictionaryStorage::Map::const_iterator i = m_storage->m_map.find(name);
+	if (i != m_storage->m_map.end())
 		return i->second;
 	else
 		return _default;
@@ -3632,8 +3651,8 @@ std::string Dictionary::getString(const char * name, const char * _default) cons
 
 int Dictionary::getInt(const char * name, int _default) const
 {
-	Map::const_iterator i = m_map.find(name);
-	if (i != m_map.end())
+	DictionaryStorage::Map::const_iterator i = m_storage->m_map.find(name);
+	if (i != m_storage->m_map.end())
 		return atoi(i->second.c_str());
 	else
 		return _default;
@@ -3642,14 +3661,14 @@ int Dictionary::getInt(const char * name, int _default) const
 int64_t Dictionary::getInt64(const char * name, int64_t _default) const
 {
 #if defined(WINDOWS)
-    Map::const_iterator i = m_map.find(name);
-    if (i != m_map.end())
+    DictionaryStorage::Map::const_iterator i = m_storage->m_map.find(name);
+    if (i != m_storage->m_map.end())
 		return _atoi64(i->second.c_str());
     else
         return _default;
 #else
-    Map::const_iterator i = m_map.find(name);
-    if (i != m_map.end())
+    DictionaryStorage::Map::const_iterator i = m_storage->m_map.find(name);
+    if (i != m_storage->m_map.end())
         return atoll(i->second.c_str());
     else
         return _default;
@@ -3663,8 +3682,8 @@ bool Dictionary::getBool(const char * name, bool _default) const
 
 float Dictionary::getFloat(const char * name, float _default) const
 {
-	Map::const_iterator i = m_map.find(name);
-	if (i != m_map.end())
+	DictionaryStorage::Map::const_iterator i = m_storage->m_map.find(name);
+	if (i != m_storage->m_map.end())
 		return atof(i->second.c_str());
 	else
 		return _default;
@@ -3677,7 +3696,7 @@ void * Dictionary::getPtr(const char * name, void * _default) const
 
 std::string & Dictionary::operator[](const char * name)
 {
-	return m_map[name];
+	return m_storage->m_map[name];
 }
 
 // -----
