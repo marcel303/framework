@@ -133,6 +133,8 @@ Midi midi;
 
 // -----
 
+static std::map<std::string, std::string> s_shaderSources;
+
 Framework::Framework()
 {
 	waitForEvents = false;
@@ -513,6 +515,8 @@ bool Framework::init(int sx, int sy)
 	globals.currentWindow = globals.mainWindow;
 
 	SDL_RaiseWindow(globals.currentWindow);
+	
+	fassert(s_shaderSources.empty());
 
 	SDL_DisableScreenSaver();
 
@@ -577,7 +581,7 @@ bool Framework::shutdown()
 
 	gxShutdown();
 	
-	m_shaderSources.clear();
+	s_shaderSources.clear();
 
 	glBlendEquation = 0;
 	glClampColor = 0;
@@ -1722,7 +1726,7 @@ void Framework::screenshot(const char * name, int index, bool omitAlpha)
 
 void Framework::registerShaderSource(const char * name, const char * text)
 {
-	m_shaderSources[name] = text;
+	s_shaderSources[name] = text;
 
 	// refresh shaders which are using this source
 	
@@ -1744,18 +1748,18 @@ void Framework::registerShaderSource(const char * name, const char * text)
 
 void Framework::unregisterShaderSource(const char * name)
 {
-	auto i = m_shaderSources.find(name);
+	auto i = s_shaderSources.find(name);
 
-	fassert(i != m_shaderSources.end());
-	if (i != m_shaderSources.end())
-		m_shaderSources.erase(i);
+	fassert(i != s_shaderSources.end());
+	if (i != s_shaderSources.end())
+		s_shaderSources.erase(i);
 }
 
 bool Framework::tryGetShaderSource(const char * name, const char *& text) const
 {
-	auto i = m_shaderSources.find(name);
+	auto i = s_shaderSources.find(name);
 
-	if (i != m_shaderSources.end())
+	if (i != s_shaderSources.end())
 	{
 		text = i->second.c_str();
 		return true;
@@ -1764,6 +1768,15 @@ bool Framework::tryGetShaderSource(const char * name, const char *& text) const
 	{
 		return false;
 	}
+}
+
+bool Framework::fileHasChanged(const char * filename) const
+{
+	for (auto & file : changedFiles)
+		if (file == filename)
+			return true;
+	
+	return false;
 }
 
 void Framework::blinkTaskbarIcon(int count)

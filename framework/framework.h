@@ -309,6 +309,8 @@ public:
 	void registerShaderSource(const char * name, const char * text);
 	void unregisterShaderSource(const char * name);
 	bool tryGetShaderSource(const char * name, const char *& text) const;
+	
+	bool fileHasChanged(const char * filename) const;
 
 	void blinkTaskbarIcon(int count);
 
@@ -347,8 +349,7 @@ public:
 	InitErrorHandler initErrorHandler;
 	
 	std::vector<SDL_Event> events;
-	
-	std::map<std::string, bool> changedFiles;
+	std::vector<std::string> changedFiles;
 	
 private:
 	uint32_t m_lastTick;
@@ -356,8 +357,6 @@ private:
 	Sprite * m_sprites;
 	Model * m_models;
 	Window * m_windows;
-	
-	std::map<std::string, std::string> m_shaderSources;
 
 	void registerSprite(Sprite * sprite);
 	void unregisterSprite(Sprite * sprite);

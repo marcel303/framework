@@ -85,7 +85,7 @@ static void handleFileChange(const std::string & filename)
 		framework.realTimeEditCallback(filename);
 	}
 	
-	framework.changedFiles.insert(std::make_pair(filename, true));
+	framework.changedFiles.push_back(filename);
 }
 
 #if 1
