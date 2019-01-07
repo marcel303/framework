@@ -6,3 +6,5 @@ vfxGraph/vfxNodes_all.h
 audioGraph/audioNodes_all.h
 veem-osc.xml
 settings.xml
+tests/data/deepbelief/jetpac.ntwk
+tests/data/deepbelief/super-zoom-craze.mp4
