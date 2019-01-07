@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <map>
 
 // for inbound OSC messages
 #include "osc/OscPacketListener.h"

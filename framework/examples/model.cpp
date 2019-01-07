@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include <map>
 
 #include <time.h>
 static int getTimeUS() { return clock() * 1000000 / CLOCKS_PER_SEC; }

@@ -7,6 +7,8 @@
 #include "audiostream/AudioOutput.h"
 #include "audiostream/AudioOutput_PortAudio.h"
 
+#include <map>
+
 #ifdef WIN32
 	#include <Windows.h>
 #endif
