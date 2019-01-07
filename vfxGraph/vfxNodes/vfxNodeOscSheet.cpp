@@ -66,7 +66,7 @@ void VfxNodeOscSheet::updateOscSheet()
 	
 	const char * oscSheet = getInputString(kInput_OscSheet, "");
 	
-	if (framework.changedFiles.count(oscSheet) != 0)
+	if (framework.fileHasChanged(oscSheet))
 	{
 		currentOscSheet.clear();
 	}
