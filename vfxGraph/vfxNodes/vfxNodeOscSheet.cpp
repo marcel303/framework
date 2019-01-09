@@ -137,6 +137,25 @@ void VfxNodeOscSheet::updateOscSheet()
 						inputInfo.defaultFloat = Parse::Float(defaultValue);
 						inputInfos.push_back(inputInfo);
 					}
+					else if (strcmp(type, "f f") == 0) // todo : not yet supported
+					{
+						for (int i = 0; i < 2; ++i)
+						{
+							const char elem[2] = { 'x', 'y' };
+							
+							VfxNodeBase::DynamicInput input;
+							input.type = kVfxPlugType_Float;
+							input.name = String::FormatC("%s.%c", name, elem[i]);
+							input.defaultValue = defaultValue;
+							inputs.push_back(input);
+							
+							InputInfo inputInfo;
+							inputInfo.oscAddress = oscAddress;
+							inputInfo.isVec2f = true;
+							inputInfo.defaultFloat = Parse::Float(defaultValue);
+							inputInfos.push_back(inputInfo);
+						}
+					}
 					else if (strcmp(type, "f f f") == 0) // todo : not yet supported
 					{
 						for (int i = 0; i < 3; ++i)
@@ -259,7 +278,15 @@ void VfxNodeOscSheet::tick(const float dt)
 			
 			stream << osc::BeginMessage(inputInfos[i].oscAddress.c_str());
 			{
-				if (inputInfo.isVec3f)
+				if (inputInfo.isVec2f)
+				{
+					stream
+						<< getInputFloat(kInput_COUNT + i + 0, inputInfo.defaultFloat)
+						<< getInputFloat(kInput_COUNT + i + 1, inputInfo.defaultFloat);
+					
+					i += 2;
+				}
+				else if (inputInfo.isVec3f)
 				{
 					stream
 						<< getInputFloat(kInput_COUNT + i + 0, inputInfo.defaultFloat)

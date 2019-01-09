@@ -49,6 +49,7 @@ struct VfxNodeOscSheet : VfxNodeBase
 	{
 		std::string oscAddress;
 		
+		bool isVec2f = false;
 		bool isVec3f = false;
 		
 		float defaultFloat = 0.f;
