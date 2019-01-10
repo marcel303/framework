@@ -55,7 +55,7 @@ int main(int argc, char * argv[])
 					const int pps = 30000;
 					const int repeatCount = 1;
 					
-					const int numPoints = 500; // 30000/60 = 50 (60fps)
+					const int numPoints = 500; // 30000/60 = 500 (60fps)
 					
 					etherdream_point pts[numPoints];
 					
