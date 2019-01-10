@@ -1,0 +1,8 @@
+library libetherdream shared
+	add_files etherdream.c
+	header_path . expose
+	depend_library pthread find
+
+app libetherdream-test
+	depend_library libetherdream
+	add_files test.c
