@@ -1,0 +1,4 @@
+app marcel-etherdream1
+	depend_library framework
+	depend_library libetherdream
+	add_files main.cpp
