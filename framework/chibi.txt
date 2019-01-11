@@ -8,7 +8,7 @@ library framework
 	scan_files cpp
 	scan_files c   path audiostream          group audiostream
 	scan_files cpp path audiostream          group audiostream
-	scan_files cpp path msdfgen     traverse group msdfgen
+	scan_files cpp path msdfgen     traverse group msdfgen conglomerate msdfgen_all.cpp
 
 	scan_files h
 	scan_files h path audiostream                    group audiostream
