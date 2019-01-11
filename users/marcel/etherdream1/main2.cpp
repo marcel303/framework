@@ -1,6 +1,7 @@
 #include "etherdream.h"
 #include "framework.h"
 #include "imgui-framework.h"
+#include "laserTypes.h"
 #include <algorithm>
 #include <map>
 
@@ -387,6 +388,45 @@ struct GraviticSource
 	}
 };
 
+static uint16_t unormFloatToU16(float in_v)
+{
+	if (in_v < 0.f)
+		in_v = 0.f;
+	else if (in_v > 1.f)
+		in_v = 1.f;
+	
+	return uint16_t(in_v * ((1 << 16) - 1));
+}
+
+static uint16_t snormFloatToS16(float in_v)
+{
+	if (in_v < -1.f)
+		in_v = -1.f;
+	else if (in_v > +1.f)
+		in_v = +1.f;
+	
+	return int16_t(in_v * ((1 << 15) - 1));
+}
+
+static void convertLaserImageToEtherdream(
+	const LaserPoint * points,
+	const int numPoints,
+	etherdream_point * out_points)
+{
+	for (int i = 0; i < numPoints; ++i)
+	{
+		auto & src = points[i];
+		auto & dst = out_points[i];
+		
+		dst.x = snormFloatToS16(src.x);
+		dst.y = snormFloatToS16(src.y);
+		
+		dst.r = unormFloatToU16(src.r);
+		dst.g = unormFloatToU16(src.g);
+		dst.b = unormFloatToU16(src.b);
+	}
+}
+
 int main(int argc, char * argv[])
 {
 	if (!framework.init(800, 600))
@@ -566,8 +606,8 @@ int main(int argc, char * argv[])
 						auto & p_src = line.points[i];
 						auto & p_dst = pts[i];
 						
-						p_dst.x = (int)roundf(p_src.x * 16000.f);
-						p_dst.y = (int)roundf(p_src.y * 16000.f);
+						p_dst.x = snormFloatToS16(+ p_src.x * 2.f - 1.f);
+						p_dst.y = snormFloatToS16(- p_src.y);
 						
 						p_dst.r = (intensity * ((1 << 16) - 1));
 						p_dst.g = (intensity * ((1 << 16) - 1));
@@ -577,6 +617,17 @@ int main(int argc, char * argv[])
 						p_dst.u2 = 0;
 					}
 					
+				#if 0
+					static int rev = 0;
+					rev++;
+					
+					if ((rev % 1) == 0)
+					{
+						for (int i = 0; i < numPoints / 2; ++i)
+							std::swap(pts[i], pts[numPoints - 1 - i]);
+					}
+				#endif
+				
 					const int result = etherdream_write(
 						e,
 						pts,
