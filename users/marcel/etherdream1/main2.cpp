@@ -392,19 +392,25 @@ int main(int argc, char * argv[])
 	if (!framework.init(800, 600))
 		return -1;
 	
+	FrameworkImGuiContext guiCtx;
+	guiCtx.init();
+	
 	const bool isEtherdreamStarted = etherdream_lib_start() == 0;
 	
 	for (int i = 0; i < Line::kNumPoints; ++i)
 		Line::initialLineXs[i] = i / float(Line::kNumPointsPerLaser);
 	
-	PhysicalString1D<1> string;
+	PhysicalString1D<4> string;
 	string.init(1.0, 100.0);
 	
 	GraviticSource gravitic;
+	gravitic.z = .2f;
+	gravitic.force = 1.f;
+	gravitic.minimumDistance = .04f;
 	
 	PurpleRain rain;
 	
-	const float dropInterval = .01f;
+	float dropInterval = .01f;
 	float dropTimer = 0.f;
 	
 	while (!framework.quitRequested)
@@ -413,11 +419,34 @@ int main(int argc, char * argv[])
 		
 		framework.process();
 		
+		bool inputIscaptured = false;
+		
+		guiCtx.processBegin(framework.timeStep, 800, 600, inputIscaptured);
+		{
+			if (ImGui::Begin("Controls"))
+			{
+				{
+					float mass = string.mass;
+					float tension = string.tension;
+					ImGui::SliderFloat("String mass", &mass, 0.f, 10.f, "%.4f", 2.f);
+					ImGui::SliderFloat("String tension", &tension, 0.f, 1000.f, "%.4f", 2.f);
+					string.mass = mass;
+					string.tension = tension;
+				}
+				ImGui::SliderFloat("Rain drop interval", &dropInterval, 0.001f, 2.f, "%.4f", 2.f);
+				ImGui::SliderFloat("Gravitic force", &gravitic.force, 0.f, 10.f, "%.4f", 2.f);
+				ImGui::SliderFloat("Gravitic minimum distance", &gravitic.minimumDistance, 0.f, 1.f, "%.4f", 2.f);
+				ImGui::SliderFloat("Gravitic z position", &gravitic.z, -1.f, +1.f, "%.4f", 2.f);
+			}
+			ImGui::End();
+		}
+		guiCtx.processEnd();
+		
 		const float dt = keyboard.isDown(SDLK_SPACE) ? 0.f : framework.timeStep;
 		
 		dropTimer += dt;
 		
-		while (dropTimer >= dropInterval)
+		while (dropTimer >= dropInterval && dropInterval != 0.f)
 		{
 			dropTimer -= dropInterval;
 			
@@ -428,8 +457,10 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		if (mouse.wentDown(BUTTON_LEFT))
+		if (inputIscaptured == false && mouse.wentDown(BUTTON_LEFT))
 		{
+			inputIscaptured = true;
+			
 			const int offset = rand() % string.kNumPoints;
 			
 			const int radius = 200;
@@ -460,13 +491,6 @@ int main(int argc, char * argv[])
 		
 		gravitic.x = mouse.x / 200.f;
 		gravitic.y = (mouse.y - 200.f) / 200.f;
-		gravitic.z = .2f;
-		gravitic.force = 4.f;
-		//gravitic.force = -10.f;
-		gravitic.minimumDistance = .04f;
-		
-		//gravitic.force = 200.f;
-		//gravitic.minimumDistance = .5f;
 		
 		for (int i = 0; i < string.kNumPoints; ++i)
 		{
@@ -628,9 +652,15 @@ int main(int argc, char * argv[])
 				gxEnd();
 			}
 			popBlend();
+			
+			guiCtx.draw();
 		}
 		framework.endDraw();
 	}
+	
+	guiCtx.shut();
+	
+	framework.shutdown();
 	
 	return 0;
 }
