@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <map>
 
+static const int kFrameSize = 500;
+
 // etherdream DACs
 
 struct DacInfo
@@ -168,7 +170,7 @@ struct PurpleRain
 
 struct Line
 {
-	static const int kNumPointsPerLaser = 500;
+	static const int kNumPointsPerLaser = kFrameSize;
 	static const int kNumLasers = 4;
 
 	static const int kNumPoints = kNumPointsPerLaser * kNumLasers;
@@ -424,8 +426,17 @@ static void convertLaserImageToEtherdream(
 		dst.r = unormFloatToU16(src.r);
 		dst.g = unormFloatToU16(src.g);
 		dst.b = unormFloatToU16(src.b);
+		
+		dst.i = uint16_t(-1);
+		dst.u1 = 0; // unused
+		dst.u2 = 0;
 	}
 }
+
+struct LaserFrame
+{
+	LaserPoint points[kFrameSize];
+};
 
 int main(int argc, char * argv[])
 {
@@ -579,44 +590,32 @@ int main(int argc, char * argv[])
 				{
 					//logDebug("DAC is ready. index: %d", i);
 					
+					// create laser frame from line
+					
+					LaserFrame frame;
+					
+					for (int i = 0; i < kFrameSize; ++i)
+					{
+						auto & p_src = line.points[i];
+						auto & p_dst = frame.points[i];
+						
+						p_dst.x = + p_src.x * 2.f - 1.f;
+						p_dst.y = - p_src.y;
+						
+						p_dst.r = 1.f;
+						p_dst.g = 0.f;
+						p_dst.b = 0.f;
+					}
+					
 					const int pps = 30000;
 					const int repeatCount = 1;
 					
-					const int numPoints = line.kNumPointsPerLaser; // 30000/60 = 500 (60fps)
+					const int numPoints = kFrameSize; // 30000/60 = 500 (60fps)
 					const int padding = 50;
 					
 					etherdream_point pts[numPoints];
 					
-					/*
-					struct etherdream_point {
-						int16_t x;
-						int16_t y;
-						uint16_t r;
-						uint16_t g;
-						uint16_t b;
-						uint16_t i;
-						uint16_t u1;
-						uint16_t u2;
-					};
-					*/
-					
-					const float intensity = 1.f;
-					
-					for (int i = 0; i < numPoints; ++i)
-					{
-						auto & p_src = line.points[i];
-						auto & p_dst = pts[i];
-						
-						p_dst.x = snormFloatToS16(+ p_src.x * 2.f - 1.f);
-						p_dst.y = snormFloatToS16(- p_src.y);
-						
-						p_dst.r = (intensity * ((1 << 16) - 1));
-						p_dst.g = (intensity * ((1 << 16) - 1));
-						p_dst.b = (intensity * ((1 << 16) - 1));
-						p_dst.i = uint16_t(-1);
-						p_dst.u1 = 0; // unused
-						p_dst.u2 = 0;
-					}
+					convertLaserImageToEtherdream(frame.points, kFrameSize, pts);
 					
 					etherdream_point padded_pts[numPoints + padding * 2];
 					
