@@ -607,6 +607,8 @@ int main(int argc, char * argv[])
 						p_dst.b = 0.f;
 					}
 					
+					//
+					
 					const int pps = 30000;
 					const int repeatCount = 1;
 					
@@ -637,6 +639,13 @@ int main(int argc, char * argv[])
 					
 					for (int i = 0; i < numPoints; ++i)
 						padded_pts[padding + i] = pts[i];
+					
+				#if 0
+					// todo : add delay lines for r, g, b
+					
+					for (int i = 0; i < 6; ++i)
+						padded_pts[padding + i].r = 0;
+				#endif
 					
 					for (int i = 0; i < padding; ++i)
 						padded_pts[padding + numPoints + i] = last_pt;
