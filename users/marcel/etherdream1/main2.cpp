@@ -1,3 +1,4 @@
+#include "calibration.h"
 #include "etherdream.h"
 #include "framework.h"
 #include "imgui-framework.h"
@@ -609,6 +610,22 @@ int main(int argc, char * argv[])
 					
 					//
 					
+					//drawCalibrationImage_rectangle(frame.points, kFrameSize);
+					//drawCalibrationImage_line_vscroll(frame.points, kFrameSize, framework.time * .3f);
+					//drawCalibrationImage_line_hscroll(frame.points, kFrameSize, framework.time * .4f);
+					
+					for (auto & point : frame.points)
+					{
+						// todo : do a proper transform
+						
+						const float canvasScale = .8f;
+						
+						point.x *= canvasScale;
+						point.y *= canvasScale;
+					}
+					
+					//
+					
 					const int pps = 30000;
 					const int repeatCount = 1;
 					
@@ -640,7 +657,7 @@ int main(int argc, char * argv[])
 					for (int i = 0; i < numPoints; ++i)
 						padded_pts[padding + i] = pts[i];
 					
-				#if 0
+				#if 1
 					// todo : add delay lines for r, g, b
 					
 					for (int i = 0; i < 6; ++i)
@@ -649,6 +666,13 @@ int main(int argc, char * argv[])
 					
 					for (int i = 0; i < padding; ++i)
 						padded_pts[padding + numPoints + i] = last_pt;
+					
+				#if 1
+					// todo : add delay lines for r, g, b
+					
+					for (int i = 0; i < 6; ++i)
+						padded_pts[padding + numPoints + i].r = pts[numPoints - 1].r;
+				#endif
 					
 				#if 0
 					static int rev = 0;
