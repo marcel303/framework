@@ -583,6 +583,7 @@ int main(int argc, char * argv[])
 					const int repeatCount = 1;
 					
 					const int numPoints = line.kNumPointsPerLaser; // 30000/60 = 500 (60fps)
+					const int padding = 50;
 					
 					etherdream_point pts[numPoints];
 					
@@ -617,6 +618,30 @@ int main(int argc, char * argv[])
 						p_dst.u2 = 0;
 					}
 					
+					etherdream_point padded_pts[numPoints + padding * 2];
+					
+					auto first_pt = pts[0];
+					auto last_pt = pts[numPoints - 1];
+					
+					first_pt.r =
+						first_pt.g =
+						first_pt.b =
+						first_pt.i = 0;
+					
+					last_pt.r =
+						last_pt.g =
+						last_pt.b =
+						last_pt.i = 0;
+					
+					for (int i = 0; i < padding; ++i)
+						padded_pts[i] = first_pt;
+					
+					for (int i = 0; i < numPoints; ++i)
+						padded_pts[padding + i] = pts[i];
+					
+					for (int i = 0; i < padding; ++i)
+						padded_pts[padding + numPoints + i] = last_pt;
+					
 				#if 0
 					static int rev = 0;
 					rev++;
@@ -630,8 +655,8 @@ int main(int argc, char * argv[])
 				
 					const int result = etherdream_write(
 						e,
-						pts,
-                     	500,
+						padded_pts,
+                     	numPoints + padding * 2,
                      	pps,
                      	repeatCount);
 					
