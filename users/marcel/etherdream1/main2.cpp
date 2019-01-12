@@ -795,12 +795,14 @@ int main(int argc, char * argv[])
 	
 	PurpleRain rain;
 	
-	float dropInterval = .2f;
+	bool pauseSimulation = false;
+	float dropInterval = .4f;
 	float dropTimer = 0.f;
 	
 	bool showLine = false;
 	bool showLaserFrame = true;
 	bool enableMask = false;
+	bool maskSmoothing = true;
 	float laserIntensity = 0.f;
 	bool enableOutput = true;
 	bool outputRedOnly = false;
@@ -885,6 +887,7 @@ int main(int argc, char * argv[])
 					ImGui::Checkbox("Show line", &showLine);
 					ImGui::Checkbox("Show laser frame", &showLaserFrame);
 					ImGui::Checkbox("Enable masking", &enableMask);
+					ImGui::Checkbox("Enable mask smoothing", &maskSmoothing);
 					doDacSelection();
 					ImGui::Checkbox("Enable laser output", &enableOutput);
 					ImGui::Checkbox("Output red only", &outputRedOnly);
@@ -896,6 +899,7 @@ int main(int argc, char * argv[])
 				}
 				else if (tab == kTab_Simulation)
 				{
+					ImGui::Checkbox("Pause simulation", &pauseSimulation);
 					{
 						float mass = string.mass;
 						float tension = string.tension;
@@ -989,7 +993,7 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		const float dt = keyboard.isDown(SDLK_SPACE) ? 0.f : framework.timeStep;
+		const float dt = pauseSimulation ? 0.f : keyboard.isDown(SDLK_SPACE) ? 0.f : framework.timeStep;
 		
 		dropTimer += dt;
 		
@@ -997,7 +1001,7 @@ int main(int argc, char * argv[])
 		{
 			dropTimer -= dropInterval;
 			
-			rain.addRainDrop(random(0.f, 1.f), 1.f);
+			rain.addRainDrop(random(0.f, 1.f), 2.f);
 		}
 		
 		rain.tick(dt);
@@ -1068,7 +1072,7 @@ int main(int argc, char * argv[])
 		{
 			if (rainDrop.life > 0.f)
 			{
-				const float size = .1f * rainDrop.life;
+				const float size = .02f * rainDrop.life;
 				
 				const float begin = rainDrop.position - size/2.f;
 				const float end = rainDrop.position + size/2.f;
@@ -1123,8 +1127,60 @@ int main(int argc, char * argv[])
 						point_index++;
 					}
 					
+					if (maskSmoothing && point_index < kLineSize && point_index > 0)
+					{
+						const float x = segment.begin * 2.f - 1.f;
+						
+						const float x1 = points[point_index - 1].x;
+						const float x2 = points[point_index - 0].x;
+						
+						const float y1 = points[point_index - 1].y;
+						const float y2 = points[point_index - 0].y;
+						
+						// x1 + (x2 - x1) * t = x
+						// t = (x - x1) / (x2 - x1)
+						
+						const float t = (x - x1) / (x2 - x1);
+						Assert(t >= 0.f && t <= 1.f);
+						
+						points[point_index - 1].x = x1 + (x2 - x1) * t;
+						points[point_index - 1].y = y1 + (y2 - y1) * t;
+						
+					// fixme : wrong color
+						points[point_index - 1].r = 1.f;
+						points[point_index - 1].g = 1.f;
+						points[point_index - 1].b = 1.f;
+					}
+					
 					while (point_index < kLineSize && (points[point_index].x + 1.f)/2.f /* fixme : hack */ <= segment.end)
 						point_index++;
+					
+					if (maskSmoothing && point_index < kLineSize && point_index > 0)
+					{
+						const float x = segment.end * 2.f - 1.f;
+						
+						const float x1 = points[point_index - 1].x;
+						const float x2 = points[point_index - 0].x;
+						
+						const float y1 = points[point_index - 1].y;
+						const float y2 = points[point_index - 0].y;
+						
+						// x1 + (x2 - x1) * t = x
+						// t = (x - x1) / (x2 - x1)
+						
+						const float t = (x - x1) / (x2 - x1);
+						Assert(t >= 0.f && t <= 1.f);
+						
+						points[point_index - 0].x = x1 + (x2 - x1) * t;
+						points[point_index - 0].y = y1 + (y2 - y1) * t;
+						
+					// fixme : wrong color
+						points[point_index - 0].r = 1.f;
+						points[point_index - 0].g = 1.f;
+						points[point_index - 0].b = 1.f;
+						
+						point_index++;
+					}
 					
 					++segment_index;
 				}
@@ -1263,6 +1319,16 @@ int main(int argc, char * argv[])
 						}
 					}
 					gxEnd();
+					
+					hqBegin(HQ_FILLED_CIRCLES, true);
+					{
+						for (auto & point : frame.points)
+						{
+							setColorf(point.r, point.g, point.b);
+							hqFillCircle(point.x, point.y, 4.f);
+						}
+					}
+					hqEnd();
 				}
 				gxPopMatrix();
 				popBlend();
