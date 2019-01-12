@@ -449,17 +449,10 @@ struct Calibration
 	
 	void init()
 	{
-	#if 0
-		homography.v00.viewPosition.Set(-.5f, -.5f);
-		homography.v10.viewPosition.Set(+.5f, -.5f);
-		homography.v01.viewPosition.Set(-.5f, +.5f);
-		homography.v11.viewPosition.Set(+.5f, +.5f);
-	#else
 		homography.v00.viewPosition.Set(0.f, 0.f);
 		homography.v10.viewPosition.Set(1.f, 0.f);
 		homography.v01.viewPosition.Set(0.f, 1.f);
 		homography.v11.viewPosition.Set(1.f, 1.f);
-	#endif
 	}
 	
 	void applyTransform(LaserFrame & frame)
@@ -813,7 +806,7 @@ int main(int argc, char * argv[])
 	float laserIntensity = 0.f;
 	bool enableOutput = true;
 	bool outputRedOnly = false;
-	bool enableCalibration = true;
+	bool enablePerspectiveCorrection = true;
 	bool enablePinchCorrection = true;
 	float pinchFactor = 0.f;
 	bool rotate90 = false;
@@ -924,8 +917,8 @@ int main(int argc, char * argv[])
 					ImGui::SliderFloat("Canvas rotation (for testing)", &rotationAngle, 0.f, 360.f);
 				
 					ImGui::NewLine();
-					ImGui::Checkbox("Enable projection calibration", &enableCalibration);
-					ImGui::Checkbox("Enable pinch calibration", &enablePinchCorrection);
+					ImGui::Checkbox("Enable perspective correction", &enablePerspectiveCorrection);
+					ImGui::Checkbox("Enable pinch correction", &enablePinchCorrection);
 					ImGui::InputFloat("Pinch amount", &pinchFactor, -1.f, 1.f);
 					
 					ImGui::Separator();
@@ -1111,25 +1104,9 @@ int main(int argc, char * argv[])
 					std::swap(point.x, point.y);
 			}
 			
-			if (enableCalibration)
+			if (enablePerspectiveCorrection)
 			{
-			#if 0
-				for (auto & point : laserInstance.frame.points)
-				{
-					point.x = (point.x + 1.f) / 2.f;
-					point.y = (point.y + 1.f) / 2.f;
-				}
-			#endif
-			
 				laserInstance.calibration.applyTransform(laserInstance.frame);
-				
-			#if 0
-				for (auto & point : laserInstance.frame.points)
-				{
-					point.x = point.x * 2.f;
-					point.y = point.y * 2.f;
-				}
-			#endif
 			}
 			
 			if (scaleFactor != 1.f)
