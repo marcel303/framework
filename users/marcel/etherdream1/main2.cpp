@@ -11,7 +11,7 @@ const int VIEW_SX = 800;
 const int VIEW_SY = 600;
 
 static const int kFrameSize = 500; // 30000/60 = 500 (60fps)
-static const int kFramePadding = 30;
+static const int kFramePadding = 50;
 static const int kNumLasers = 4;
 static const int kLineSize = kFrameSize - kFramePadding*2;
 
@@ -797,7 +797,9 @@ int main(int argc, char * argv[])
 	bool enableCalibration = true;
 	bool enablePinchCorrection = true;
 	float pinchFactor = 0.f;
+	bool rotate90 = false;
 	float scaleFactor = 1.f;
+	float rotationAngle = 0.f;
 	
 	enum CalibrationImage
 	{
@@ -843,7 +845,9 @@ int main(int argc, char * argv[])
 				ImGui::Text("Calibration (pinch)");
 				ImGui::Checkbox("Enable pinch correction", &enablePinchCorrection);
 				ImGui::InputFloat("Pinch", &pinchFactor, 0.f, 1.f);
-				ImGui::SliderFloat("Scale factor (for testing)", &scaleFactor, 0.2f, 1.f);
+				ImGui::Checkbox("Rotate canvas 90 degrees", &rotate90);
+				ImGui::SliderFloat("Canvas scale factor (for testing)", &scaleFactor, 0.2f, 1.f);
+				ImGui::SliderFloat("Canvas rotation (for testing)", &rotationAngle, 0.f, 360.f);
 				
 				{
 					int itemIndex = calibrationImage;
@@ -996,8 +1000,20 @@ int main(int argc, char * argv[])
 			else
 				Assert(calibrationImage == kCalibrationImage_None);
 			
-			//if (rotate90)
-			if (true)
+			if (rotationAngle != 0.f)
+			{
+				Mat4x4 mat;
+				mat.MakeRotationZ(rotationAngle * float(M_PI) / 180.f);
+				
+				for (auto & point : laserInstance.frame.points)
+				{
+					auto p = mat.Mul(Vec2(point.x, point.y));
+					point.x = p[0];
+					point.y = p[1];
+				}
+			}
+			
+			if (rotate90)
 			{
 				for (auto & point : laserInstance.frame.points)
 					std::swap(point.x, point.y);
