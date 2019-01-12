@@ -511,7 +511,7 @@ struct CalibrationUi
 	{
 		auto mousePos = calculateMousePosition();
 		
-		logDebug("mouse pos: %.2f, %.2f", mousePos[0], mousePos[1]);
+		//logDebug("mouse pos: %.2f, %.2f", mousePos[0], mousePos[1]);
 		
 		calibration->homography.tickEditor(mousePos, dt, inputIscaptured);
 	}
