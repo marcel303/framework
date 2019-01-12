@@ -8,6 +8,7 @@
 #include <map>
 
 static const int kFrameSize = 500;
+static const int kNumLasers = 4;
 
 // etherdream DACs
 
@@ -172,10 +173,7 @@ struct PurpleRain
 
 struct Line
 {
-	static const int kNumPointsPerLaser = kFrameSize;
-	static const int kNumLasers = 4;
-
-	static const int kNumPoints = kNumPointsPerLaser * kNumLasers;
+	static const int kNumPoints = kFrameSize * kNumLasers;
 
 	static float initialLineXs[kNumPoints];
 
@@ -440,14 +438,9 @@ struct LaserFrame
 	LaserPoint points[kFrameSize];
 };
 
-struct CalibrationUi
+struct Calibration
 {
 	Homography homography;
-	
-	int x = 0;
-	int y = 0;
-	int sx = 1;
-	int sy = 1;
 	
 	void init()
 	{
@@ -455,6 +448,34 @@ struct CalibrationUi
 		homography.v10.viewPosition.Set(+1.f, -1.f);
 		homography.v01.viewPosition.Set(-1.f, +1.f);
 		homography.v11.viewPosition.Set(+1.f, +1.f);
+	}
+	
+	void applyTransform(LaserFrame & frame)
+	{
+		for (auto & point : frame.points)
+		{
+			// todo : do a proper transform
+			
+			const float canvasScale = .8f;
+			
+			point.x *= canvasScale;
+			point.y *= canvasScale;
+		}
+	}
+};
+
+struct CalibrationUi
+{
+	Calibration * calibration = nullptr;
+	
+	int x = 0;
+	int y = 0;
+	int sx = 1;
+	int sy = 1;
+	
+	void init(Calibration * in_calibration)
+	{
+		calibration = in_calibration;
 	}
 	
 	void setEditorArea(const int in_x, const int in_y, const int in_sx, const int in_sy)
@@ -478,7 +499,7 @@ struct CalibrationUi
 		
 		logDebug("mouse pos: %.2f, %.2f", mousePos[0], mousePos[1]);
 		
-		homography.tickEditor(mousePos, dt, inputIscaptured);
+		calibration->homography.tickEditor(mousePos, dt, inputIscaptured);
 	}
 	
 	void drawEditorPreview() const
@@ -489,7 +510,7 @@ struct CalibrationUi
 		gxTranslatef(1.f, 1.f, 0.f);
 		
 		float m[9];
-		homography.calcHomographyMatrix(m);
+		calibration->homography.calcHomographyMatrix(m);
 		
 		Mat4x4 m4(true);
 		for (int x = 0; x < 3; ++x)
@@ -550,11 +571,175 @@ struct CalibrationUi
 			gxScalef(sx / 2.f, sy / 2.f, 1.f);
 			gxTranslatef(1.f, 1.f, 0.f);
 			
-			homography.drawEditor();
+			calibration->homography.drawEditor();
 		}
 		gxPopMatrix();
 	}
 };
+
+struct LaserController
+{
+	unsigned long dacId = 0;
+	
+	void init(const char * in_dacId)
+	{
+		dacId = strtoll(in_dacId, nullptr, 16);
+	}
+	
+	void send(const LaserFrame & frame)
+	{
+		DacInfo * dacInfo = nullptr;
+		
+		etherdream * e = nullptr;
+		
+		// attemp to find our DAC
+		
+		{
+			const int numDACs = etherdream_dac_count();
+			//logDebug("num DACs: %d", numDACs);
+			
+			for (int i = 0; i < numDACs; ++i)
+			{
+				etherdream * e_itr = etherdream_get(i);
+				
+				if (etherdream_get_id(e_itr) == dacId)
+				{
+					e = e_itr;
+					
+					dacInfo = &s_dacInfos[i];
+				}
+			}
+		}
+		
+		if (e != nullptr)
+		{
+			if (dacInfo->connected == false)
+			{
+				if (dacInfo->connectTimer == 0)
+				{
+					dacInfo->connectTimer = 1000;
+					
+					if (etherdream_connect(e) == 0)
+					{
+						dacInfo->connected = true;
+					}
+				}
+			}
+			
+			if (etherdream_is_ready(e))
+			{
+				//logDebug("DAC is ready. index: %d", i);
+				
+				//
+				
+				const int pps = 30000;
+				const int repeatCount = 1;
+				
+				const int numPoints = kFrameSize; // 30000/60 = 500 (60fps)
+				const int padding = 50;
+				
+				etherdream_point pts[numPoints];
+				
+				convertLaserImageToEtherdream(frame.points, kFrameSize, pts);
+				
+				etherdream_point padded_pts[numPoints + padding * 2];
+				
+				auto first_pt = pts[0];
+				auto last_pt = pts[numPoints - 1];
+				
+				first_pt.r =
+					first_pt.g =
+					first_pt.b =
+					first_pt.i = 0;
+				
+				last_pt.r =
+					last_pt.g =
+					last_pt.b =
+					last_pt.i = 0;
+				
+				for (int i = 0; i < padding; ++i)
+					padded_pts[i] = first_pt;
+				
+				for (int i = 0; i < numPoints; ++i)
+					padded_pts[padding + i] = pts[i];
+				
+			#if 1
+				// todo : add delay lines for r, g, b
+				
+				for (int i = 0; i < 6; ++i)
+					padded_pts[padding + i].r = 0;
+			#endif
+				
+				for (int i = 0; i < padding; ++i)
+					padded_pts[padding + numPoints + i] = last_pt;
+				
+			#if 1
+				// todo : add delay lines for r, g, b
+				
+				for (int i = 0; i < 6; ++i)
+					padded_pts[padding + numPoints + i].r = pts[numPoints - 1].r;
+			#endif
+				
+			#if 0
+				static int rev = 0;
+				rev++;
+				
+				if ((rev % 1) == 0)
+				{
+					for (int i = 0; i < numPoints / 2; ++i)
+						std::swap(pts[i], pts[numPoints - 1 - i]);
+				}
+			#endif
+			
+				const int result = etherdream_write(
+					e,
+					padded_pts,
+					numPoints + padding * 2,
+					pps,
+					repeatCount);
+				
+				if (result != 0)
+				{
+					logDebug("etherdream_write failed with code %d", result);
+				}
+			}
+		}
+	}
+};
+
+struct LaserInstance
+{
+	Calibration calibration;
+	
+	CalibrationUi calibrationUi;
+	
+	LaserController laserController;
+	
+	LaserFrame frame;
+	
+	void init(const char * dacId)
+	{
+		laserController.init(dacId);
+		
+		calibration.init();
+	
+		calibrationUi.init(&calibration);
+		calibrationUi.setEditorArea(100, 100, 200, 200);
+	}
+};
+
+static void drawLaserFrame(const LaserFrame & frame)
+{
+	gxBegin(GL_LINES);
+	{
+		for (auto & point : frame.points)
+		{
+			gxColor4f(point.r, point.g, point.b, 1.f);
+			gxVertex2f(point.x, point.y);
+		}
+	}
+	gxEnd();
+}
 
 int main(int argc, char * argv[])
 {
@@ -566,8 +751,17 @@ int main(int argc, char * argv[])
 	
 	const bool isEtherdreamStarted = etherdream_lib_start() == 0;
 	
+	LaserInstance laserInstances[kNumLasers];
+	
+	for (int i = 0; i < kNumLasers; ++i)
+	{
+		const char * dacId = i == 0 ? "ab1ae3" : "";
+		
+		laserInstances[i].init(dacId);
+	}
+	
 	for (int i = 0; i < Line::kNumPoints; ++i)
-		Line::initialLineXs[i] = i / float(Line::kNumPointsPerLaser);
+		Line::initialLineXs[i] = i / float(kFrameSize);
 	
 	PhysicalString1D<4> string;
 	string.init(1.0, 100.0);
@@ -582,10 +776,6 @@ int main(int argc, char * argv[])
 	float dropInterval = .01f;
 	float dropTimer = 0.f;
 	
-	CalibrationUi calibrationUi;
-	calibrationUi.init();
-	calibrationUi.setEditorArea(100, 100, 200, 200);
-	
 	while (!framework.quitRequested)
 	{
 		SDL_Delay(10);
@@ -594,7 +784,10 @@ int main(int argc, char * argv[])
 		
 		bool inputIscaptured = false;
 		
-		calibrationUi.tickEditor(framework.timeStep, inputIscaptured);
+		for (auto & laserInstance : laserInstances)
+		{
+			laserInstance.calibrationUi.tickEditor(framework.timeStep, inputIscaptured);
+		}
 		
 		guiCtx.processBegin(framework.timeStep, 800, 600, inputIscaptured);
 		{
@@ -612,6 +805,30 @@ int main(int argc, char * argv[])
 				ImGui::SliderFloat("Gravitic force", &gravitic.force, 0.f, 10.f, "%.4f", 2.f);
 				ImGui::SliderFloat("Gravitic minimum distance", &gravitic.minimumDistance, 0.f, 1.f, "%.4f", 2.f);
 				ImGui::SliderFloat("Gravitic z position", &gravitic.z, -1.f, +1.f, "%.4f", 2.f);
+				
+				for (auto & laserInstance : laserInstances)
+				{
+					ImGui::PushID(&laserInstance);
+					{
+						ImGui::Text("Laser Instance");
+						
+						for (int i = 0; i < 4; ++i)
+						{
+							Homography::Vertex * vertices[4] =
+							{
+								&laserInstance.calibration.homography.v00,
+								&laserInstance.calibration.homography.v01,
+								&laserInstance.calibration.homography.v10,
+								&laserInstance.calibration.homography.v11
+							};
+							
+							char name[32];
+							sprintf(name, "v%d", i + 1);
+							ImGui::SliderFloat2(name, (float*)&vertices[i]->viewPosition, -1.f, +1.f, "%.6f", .2f);
+						}
+					}
+					ImGui::PopID();
+				}
 			}
 			ImGui::End();
 		}
@@ -686,141 +903,38 @@ int main(int argc, char * argv[])
 		string.toLine(stringLine);
 		line.add(stringLine);
 		
-		if (isEtherdreamStarted)
+		for (int i = 0; i < kNumLasers; ++i)
 		{
-			const int numDACs = etherdream_dac_count();
-			//logDebug("num DACs: %d", numDACs);
+			auto & laserInstance = laserInstances[i];
 			
-			for (int i = 0; i < numDACs; ++i)
+			// create laser frame from line
+	
+			LaserFrame & frame = laserInstance.frame;
+			
+			const int offset = i * kFrameSize;
+			
+			for (int i = 0; i < kFrameSize; ++i)
 			{
-				etherdream * e = etherdream_get(i);
+				auto & p_src = line.points[offset + i];
+				auto & p_dst = frame.points[i];
 				
-				DacInfo & dacInfo = s_dacInfos[i];
+				p_dst.x = + p_src.x * 2.f - 1.f;
+				p_dst.y = - p_src.y;
 				
-				if (dacInfo.connected == false)
-				{
-					if (dacInfo.connectTimer == 0)
-					{
-						dacInfo.connectTimer = 1000;
-						
-						if (etherdream_connect(e) == 0)
-						{
-							dacInfo.connected = true;
-						}
-					}
-				}
-				
-				if (etherdream_is_ready(e))
-				{
-					//logDebug("DAC is ready. index: %d", i);
-					
-					// create laser frame from line
-					
-					LaserFrame frame;
-					
-					for (int i = 0; i < kFrameSize; ++i)
-					{
-						auto & p_src = line.points[i];
-						auto & p_dst = frame.points[i];
-						
-						p_dst.x = + p_src.x * 2.f - 1.f;
-						p_dst.y = - p_src.y;
-						
-						p_dst.r = 1.f;
-						p_dst.g = 0.f;
-						p_dst.b = 0.f;
-					}
-					
-					//
-					
-					//drawCalibrationImage_rectangle(frame.points, kFrameSize);
-					//drawCalibrationImage_line_vscroll(frame.points, kFrameSize, framework.time * .3f);
-					//drawCalibrationImage_line_hscroll(frame.points, kFrameSize, framework.time * .4f);
-					
-					for (auto & point : frame.points)
-					{
-						// todo : do a proper transform
-						
-						const float canvasScale = .8f;
-						
-						point.x *= canvasScale;
-						point.y *= canvasScale;
-					}
-					
-					//
-					
-					const int pps = 30000;
-					const int repeatCount = 1;
-					
-					const int numPoints = kFrameSize; // 30000/60 = 500 (60fps)
-					const int padding = 50;
-					
-					etherdream_point pts[numPoints];
-					
-					convertLaserImageToEtherdream(frame.points, kFrameSize, pts);
-					
-					etherdream_point padded_pts[numPoints + padding * 2];
-					
-					auto first_pt = pts[0];
-					auto last_pt = pts[numPoints - 1];
-					
-					first_pt.r =
-						first_pt.g =
-						first_pt.b =
-						first_pt.i = 0;
-					
-					last_pt.r =
-						last_pt.g =
-						last_pt.b =
-						last_pt.i = 0;
-					
-					for (int i = 0; i < padding; ++i)
-						padded_pts[i] = first_pt;
-					
-					for (int i = 0; i < numPoints; ++i)
-						padded_pts[padding + i] = pts[i];
-					
-				#if 1
-					// todo : add delay lines for r, g, b
-					
-					for (int i = 0; i < 6; ++i)
-						padded_pts[padding + i].r = 0;
-				#endif
-					
-					for (int i = 0; i < padding; ++i)
-						padded_pts[padding + numPoints + i] = last_pt;
-					
-				#if 1
-					// todo : add delay lines for r, g, b
-					
-					for (int i = 0; i < 6; ++i)
-						padded_pts[padding + numPoints + i].r = pts[numPoints - 1].r;
-				#endif
-					
-				#if 0
-					static int rev = 0;
-					rev++;
-					
-					if ((rev % 1) == 0)
-					{
-						for (int i = 0; i < numPoints / 2; ++i)
-							std::swap(pts[i], pts[numPoints - 1 - i]);
-					}
-				#endif
-				
-					const int result = etherdream_write(
-						e,
-						padded_pts,
-                     	numPoints + padding * 2,
-                     	pps,
-                     	repeatCount);
-					
-					if (result != 0)
-					{
-						logDebug("etherdream_write failed with code %d", result);
-					}
-				}
+				p_dst.r = 1.f;
+				p_dst.g = 0.f;
+				p_dst.b = 0.f;
 			}
+	
+			//
+			
+			//drawCalibrationImage_rectangle(frame.points, kFrameSize);
+			//drawCalibrationImage_line_vscroll(frame.points, kFrameSize, framework.time * .3f);
+			//drawCalibrationImage_line_hscroll(frame.points, kFrameSize, framework.time * .4f);
+			
+			laserInstance.calibration.applyTransform(laserInstance.frame);
+			
+			laserInstance.laserController.send(laserInstance.frame);
 		}
 		
 		framework.beginDraw(0, 0, 0, 0);
@@ -886,9 +1000,12 @@ int main(int argc, char * argv[])
 			
 			guiCtx.draw();
 			
-			calibrationUi.drawEditorPreview();
-			
-			calibrationUi.drawEditor();
+			for (auto & laserInstance : laserInstances)
+			{
+				laserInstance.calibrationUi.drawEditorPreview();
+				
+				laserInstance.calibrationUi.drawEditor();
+			}
 		}
 		framework.endDraw();
 	}
