@@ -754,19 +754,6 @@ static void addPaddingForLaserFrame(LaserFrame & frame)
 #endif
 }
 
-static void drawLaserFrame(const LaserFrame & frame)
-{
-	gxBegin(GL_LINES);
-	{
-		for (auto & point : frame.points)
-		{
-			gxColor4f(point.r, point.g, point.b, 1.f);
-			gxVertex2f(point.x, point.y);
-		}
-	}
-	gxEnd();
-}
-
 int main(int argc, char * argv[])
 {
 	if (!framework.init(VIEW_SX, VIEW_SY))
@@ -798,7 +785,7 @@ int main(int argc, char * argv[])
 	for (int i = 0; i < Line::kNumPoints; ++i)
 		Line::initialLineXs[i] = i / float(kLineSize);
 	
-	PhysicalString1D<4> string;
+	PhysicalString1D<1> string;
 	string.init(1.0, 100.0);
 	
 	GraviticSource gravitic;
@@ -808,11 +795,12 @@ int main(int argc, char * argv[])
 	
 	PurpleRain rain;
 	
-	float dropInterval = .01f;
+	float dropInterval = .2f;
 	float dropTimer = 0.f;
 	
 	bool showLine = false;
 	bool showLaserFrame = true;
+	bool enableMask = false;
 	float laserIntensity = 0.f;
 	bool enableOutput = true;
 	bool outputRedOnly = false;
@@ -896,6 +884,7 @@ int main(int argc, char * argv[])
 					ImGui::Text("Visibility");
 					ImGui::Checkbox("Show line", &showLine);
 					ImGui::Checkbox("Show laser frame", &showLaserFrame);
+					ImGui::Checkbox("Enable masking", &enableMask);
 					doDacSelection();
 					ImGui::Checkbox("Enable laser output", &enableOutput);
 					ImGui::Checkbox("Output red only", &outputRedOnly);
@@ -1008,7 +997,7 @@ int main(int argc, char * argv[])
 		{
 			dropTimer -= dropInterval;
 			
-			rain.addRainDrop(random(0.f, 1.f), 6.f);
+			rain.addRainDrop(random(0.f, 1.f), 1.f);
 		}
 		
 		rain.tick(dt);
@@ -1065,9 +1054,34 @@ int main(int argc, char * argv[])
 		for (int i = 0; i < 10; ++i)
 			string.tick(dt / 10.0);
 		
+		// compose line
+		
 		Line stringLine;
 		string.toLine(stringLine);
 		line.add(stringLine);
+		
+		// generate mask
+		
+		Mask mask;
+
+		for (auto & rainDrop : rain.rainDrops)
+		{
+			if (rainDrop.life > 0.f)
+			{
+				const float size = .1f * rainDrop.life;
+				
+				const float begin = rainDrop.position - size/2.f;
+				const float end = rainDrop.position + size/2.f;
+				
+				mask.addSegment(begin, end);
+				
+				//drawLine(begin * 400.f, 500.f, end * 400.f, 500.f);
+			}
+		}
+
+		mask.finalize();
+		
+		//
 		
 		for (int i = 0; i < kNumLasers; ++i)
 		{
@@ -1080,6 +1094,50 @@ int main(int argc, char * argv[])
 			const int offset = i * kLineSize;
 			
 			drawLineToLaserPoints(line.points + offset, kLineSize, -Line::initialLineXs[offset], frame.points + kFramePadding);
+			
+			// apply mask to frame
+		
+			if (enableMask)
+			{
+				auto points = frame.points + kFramePadding;
+				
+				// todo : determine begin and end for line segment
+				
+				int point_index = 0;
+				
+				int segment_index = 0;
+				
+				while (segment_index < mask.numMergedSegments && mask.mergedSegments[segment_index].end < 0.f)
+					++segment_index;
+				
+				while (segment_index < mask.numMergedSegments && mask.mergedSegments[segment_index].begin < 1.f)
+				{
+					auto & segment = mask.mergedSegments[segment_index];
+					
+					while (point_index < kLineSize && (points[point_index].x + 1.f)/2.f /* fixme : hack */ < segment.begin)
+					{
+						points[point_index].r = 0.f;
+						points[point_index].g = 0.f;
+						points[point_index].b = 0.f;
+						
+						point_index++;
+					}
+					
+					while (point_index < kLineSize && (points[point_index].x + 1.f)/2.f /* fixme : hack */ <= segment.end)
+						point_index++;
+					
+					++segment_index;
+				}
+				
+				while (point_index < kLineSize)
+				{
+					points[point_index].r = 0.f;
+					points[point_index].g = 0.f;
+					points[point_index].b = 0.f;
+					
+					point_index++;
+				}
+			}
 			
 			addPaddingForLaserFrame(frame);
 	
@@ -1210,29 +1268,10 @@ int main(int argc, char * argv[])
 				popBlend();
 			}
 			
-		#if 0
+		#if 1
 			pushBlend(BLEND_ADD);
 			{
-				Mask mask;
-				
 				setColor(200, 150, 100);
-				
-				for (auto & rainDrop : rain.rainDrops)
-				{
-					if (rainDrop.life > 0.f)
-					{
-						const float size = .02f * rainDrop.life;
-						
-						const float begin = rainDrop.position - size/2.f;
-						const float end = rainDrop.position + size/2.f;
-						
-						mask.addSegment(begin, end);
-						
-						drawLine(begin * 400.f, 500.f, end * 400.f, 500.f);
-					}
-				}
-				
-				mask.finalize();
 				
 				gxBegin(GL_LINES);
 				{
