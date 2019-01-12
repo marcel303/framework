@@ -9,4 +9,5 @@ app marcel-etherdream2
 	depend_library libetherdream
 	add_files main2.cpp
 	add_files laserTypes.h
+	add_files homography.cpp homography.h
 	add_files calibration.cpp calibration.h

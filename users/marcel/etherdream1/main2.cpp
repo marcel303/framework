@@ -1,6 +1,7 @@
 #include "calibration.h"
 #include "etherdream.h"
 #include "framework.h"
+#include "homography.h"
 #include "imgui-framework.h"
 #include "laserTypes.h"
 #include <algorithm>
@@ -439,6 +440,122 @@ struct LaserFrame
 	LaserPoint points[kFrameSize];
 };
 
+struct CalibrationUi
+{
+	Homography homography;
+	
+	int x = 0;
+	int y = 0;
+	int sx = 1;
+	int sy = 1;
+	
+	void init()
+	{
+		homography.v00.viewPosition.Set(-1.f, -1.f);
+		homography.v10.viewPosition.Set(+1.f, -1.f);
+		homography.v01.viewPosition.Set(-1.f, +1.f);
+		homography.v11.viewPosition.Set(+1.f, +1.f);
+	}
+	
+	void setEditorArea(const int in_x, const int in_y, const int in_sx, const int in_sy)
+	{
+		x = in_x;
+		y = in_y;
+		sx = in_sx;
+		sy = in_sy;
+	}
+	
+	Vec2 calculateMousePosition() const
+	{
+		return Vec2(
+			-1.f + (mouse.x - x) / float(sx / 2.f),
+			-1.f + (mouse.y - y) / float(sy / 2.f));
+	}
+	
+	void tickEditor(const float dt, bool & inputIscaptured)
+	{
+		auto mousePos = calculateMousePosition();
+		
+		logDebug("mouse pos: %.2f, %.2f", mousePos[0], mousePos[1]);
+		
+		homography.tickEditor(mousePos, dt, inputIscaptured);
+	}
+	
+	void drawEditorPreview() const
+	{
+		gxPushMatrix();
+		gxTranslatef(x, y, 0.f);
+		gxScalef(sx / 2.f, sy / 2.f, 1.f);
+		gxTranslatef(1.f, 1.f, 0.f);
+		
+		float m[9];
+		homography.calcHomographyMatrix(m);
+		
+		Mat4x4 m4(true);
+		for (int x = 0; x < 3; ++x)
+			for (int y = 0; y < 3; ++y)
+				m4(x, y) = m[x + y * 3];
+		
+		for (int x = 0; x < 10; ++x)
+		{
+			for (int y = 0; y < 10; ++y)
+			{
+				const float x1 = (x + 0) / 10.f;
+				const float y1 = (y + 0) / 10.f;
+				const float x2 = (x + 1) / 10.f;
+				const float y2 = (y + 1) / 10.f;
+				
+				Vec3 p1 = m4.Mul3(Vec3(x1, y1, 1.f));
+				Vec3 p2 = m4.Mul3(Vec3(x2, y2, 1.f));
+				
+				if (p1[2] > 0.f && p2[2] > 0.f)
+				{
+					p1 /= p1[2];
+					p2 /= p2[2];
+					
+					setColorf(x1, y1, x2);
+					drawRect(p1[0], p1[1], p2[0], p2[1]);
+				}
+			}
+		}
+		
+		setColor(255, 255, 255, 127);
+		gxBegin(GL_LINE_STRIP);
+		glEnable(GL_LINE_SMOOTH); // todo : remove, replace with hq lines
+		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+		checkErrorGL();
+		for (int i = 0; i < 1000; ++i)
+		{
+			const float angle = i / 1000.f * 2.f * float(M_PI);
+			const float x = .5f + cosf(angle) / 3.f;
+			const float y = .5f + sinf(angle) / 3.f;
+			
+			Vec3 p = m4.Mul3(Vec3(x, y, 1.f));
+			
+			p /= p[2];
+			
+			gxVertex2f(p[0], p[1]);
+		}
+		gxEnd();
+		glDisable(GL_LINE_SMOOTH);
+		
+		gxPopMatrix();
+	}
+	
+	void drawEditor() const
+	{
+		gxPushMatrix();
+		{
+			gxTranslatef(x, y, 0.f);
+			gxScalef(sx / 2.f, sy / 2.f, 1.f);
+			gxTranslatef(1.f, 1.f, 0.f);
+			
+			homography.drawEditor();
+		}
+		gxPopMatrix();
+	}
+};
+
 int main(int argc, char * argv[])
 {
 	if (!framework.init(800, 600))
@@ -465,6 +582,10 @@ int main(int argc, char * argv[])
 	float dropInterval = .01f;
 	float dropTimer = 0.f;
 	
+	CalibrationUi calibrationUi;
+	calibrationUi.init();
+	calibrationUi.setEditorArea(100, 100, 200, 200);
+	
 	while (!framework.quitRequested)
 	{
 		SDL_Delay(10);
@@ -472,6 +593,8 @@ int main(int argc, char * argv[])
 		framework.process();
 		
 		bool inputIscaptured = false;
+		
+		calibrationUi.tickEditor(framework.timeStep, inputIscaptured);
 		
 		guiCtx.processBegin(framework.timeStep, 800, 600, inputIscaptured);
 		{
@@ -762,6 +885,10 @@ int main(int argc, char * argv[])
 			popBlend();
 			
 			guiCtx.draw();
+			
+			calibrationUi.drawEditorPreview();
+			
+			calibrationUi.drawEditor();
 		}
 		framework.endDraw();
 	}
