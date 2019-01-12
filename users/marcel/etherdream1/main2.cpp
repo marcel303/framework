@@ -7,8 +7,13 @@
 #include <algorithm>
 #include <map>
 
-static const int kFrameSize = 500;
+const int VIEW_SX = 800;
+const int VIEW_SY = 600;
+
+static const int kFrameSize = 500; // 30000/60 = 500 (60fps)
+static const int kFramePadding = 30;
 static const int kNumLasers = 4;
+static const int kLineSize = kFrameSize - kFramePadding*2;
 
 // etherdream DACs
 
@@ -173,7 +178,7 @@ struct PurpleRain
 
 struct Line
 {
-	static const int kNumPoints = kFrameSize * kNumLasers;
+	static const int kNumPoints = kLineSize * kNumLasers;
 
 	static float initialLineXs[kNumPoints];
 
@@ -444,22 +449,31 @@ struct Calibration
 	
 	void init()
 	{
-		homography.v00.viewPosition.Set(-1.f, -1.f);
-		homography.v10.viewPosition.Set(+1.f, -1.f);
-		homography.v01.viewPosition.Set(-1.f, +1.f);
-		homography.v11.viewPosition.Set(+1.f, +1.f);
+		homography.v00.viewPosition.Set(-.5f, -.5f);
+		homography.v10.viewPosition.Set(+.5f, -.5f);
+		homography.v01.viewPosition.Set(-.5f, +.5f);
+		homography.v11.viewPosition.Set(+.5f, +.5f);
 	}
 	
 	void applyTransform(LaserFrame & frame)
 	{
-		for (auto & point : frame.points)
+		float m[9];
+		homography.calcHomographyMatrix(m);
+		
+		Mat4x4 m4(true);
+		for (int x = 0; x < 3; ++x)
+			for (int y = 0; y < 3; ++y)
+				m4(x, y) = m[x + y * 3];
+		
+		for (int i = 0; i < kFrameSize; ++i)
 		{
-			// todo : do a proper transform
+			auto & point = frame.points[i];
 			
-			const float canvasScale = .8f;
+			auto transformed = m4.Mul3(Vec3(point.x, point.y, 1.f));
 			
-			point.x *= canvasScale;
-			point.y *= canvasScale;
+			Assert(transformed[2] > 0.f);
+			point.x = transformed[0] / transformed[2];
+			point.y = transformed[1] / transformed[2];
 		}
 	}
 };
@@ -635,66 +649,14 @@ struct LaserController
 				const int pps = 30000;
 				const int repeatCount = 1;
 				
-				const int numPoints = kFrameSize; // 30000/60 = 500 (60fps)
-				const int padding = 50;
-				
-				etherdream_point pts[numPoints];
+				etherdream_point pts[kFrameSize];
 				
 				convertLaserImageToEtherdream(frame.points, kFrameSize, pts);
-				
-				etherdream_point padded_pts[numPoints + padding * 2];
-				
-				auto first_pt = pts[0];
-				auto last_pt = pts[numPoints - 1];
-				
-				first_pt.r =
-					first_pt.g =
-					first_pt.b =
-					first_pt.i = 0;
-				
-				last_pt.r =
-					last_pt.g =
-					last_pt.b =
-					last_pt.i = 0;
-				
-				for (int i = 0; i < padding; ++i)
-					padded_pts[i] = first_pt;
-				
-				for (int i = 0; i < numPoints; ++i)
-					padded_pts[padding + i] = pts[i];
-				
-			#if 1
-				// todo : add delay lines for r, g, b
-				
-				for (int i = 0; i < 6; ++i)
-					padded_pts[padding + i].r = 0;
-			#endif
-				
-				for (int i = 0; i < padding; ++i)
-					padded_pts[padding + numPoints + i] = last_pt;
-				
-			#if 1
-				// todo : add delay lines for r, g, b
-				
-				for (int i = 0; i < 6; ++i)
-					padded_pts[padding + numPoints + i].r = pts[numPoints - 1].r;
-			#endif
-				
-			#if 0
-				static int rev = 0;
-				rev++;
-				
-				if ((rev % 1) == 0)
-				{
-					for (int i = 0; i < numPoints / 2; ++i)
-						std::swap(pts[i], pts[numPoints - 1 - i]);
-				}
-			#endif
 			
 				const int result = etherdream_write(
 					e,
-					padded_pts,
-					numPoints + padding * 2,
+					pts,
+					kFrameSize,
 					pps,
 					repeatCount);
 				
@@ -727,6 +689,59 @@ struct LaserInstance
 		calibrationUi.setEditorArea(100, 100, 200, 200);
 	}
 };
+
+static void drawLineToLaserPoints(const Line::Point * points, const int numPoints, LaserPoint * laserPoints)
+{
+	const float src_r = 1.f;
+	const float src_g = 0.f;
+	const float src_b = 0.f;
+	
+	for (int i = 0; i < numPoints; ++i)
+	{
+		auto & p_src = points[i];
+		auto & p_dst = laserPoints[i];
+		
+		p_dst.x = + p_src.x * 2.f - 1.f;
+		p_dst.y = + p_src.y;
+		
+		p_dst.r = src_r;
+		p_dst.g = src_g;
+		p_dst.b = src_b;
+	}
+}
+
+static void addPaddingForLaserFrame(LaserFrame & frame)
+{
+	LaserPoint first_pt = frame.points[kFramePadding];
+	first_pt.r = first_pt.g = first_pt.b = 0.f;
+	
+	LaserPoint last_pt = frame.points[kFrameSize - 1 - kFramePadding];
+	last_pt.r = last_pt.g = last_pt.b = 0.f;
+	
+	auto p_dst = frame.points;
+	
+	for (int i = 0; i < kFramePadding; ++i)
+		p_dst[i] = first_pt;
+	
+#if 1
+	// todo : add delay lines for r, g, b
+
+	for (int i = 0; i < 6; ++i)
+		p_dst[i].r = 0;
+#endif
+
+	p_dst = frame.points + kFrameSize - kFramePadding;
+
+	for (int i = 0; i < kFramePadding; ++i)
+		p_dst[i] = last_pt;
+
+#if 1
+	// todo : add delay lines for r, g, b
+
+	for (int i = 0; i < 6; ++i)
+		p_dst[i].r = frame.points[kFrameSize - 1 - kFramePadding].r;
+#endif
+}
 
 static void drawLaserFrame(const LaserFrame & frame)
 {
@@ -761,7 +776,7 @@ int main(int argc, char * argv[])
 	}
 	
 	for (int i = 0; i < Line::kNumPoints; ++i)
-		Line::initialLineXs[i] = i / float(kFrameSize);
+		Line::initialLineXs[i] = i / float(kLineSize);
 	
 	PhysicalString1D<4> string;
 	string.init(1.0, 100.0);
@@ -780,11 +795,15 @@ int main(int argc, char * argv[])
 	bool showLaserFrame = false;
 	bool enableOutput = true;
 	bool enableCalibration = true;
+	bool enablePinchCorrection = true;
+	float pinchFactor = 0.f;
+	float scaleFactor = 1.f;
 	
 	enum CalibrationImage
 	{
 		kCalibrationImage_None,
 		kCalibrationImage_Rectangle,
+		kCalibrationImage_RectanglePoints,
 		kCalibrationImage_VScroll,
 		kCalibrationImage_HScroll,
 		kCalibrationImage_COUNT
@@ -818,14 +837,21 @@ int main(int argc, char * argv[])
 				ImGui::Checkbox("Show laser frame", &showLaserFrame);
 				ImGui::Checkbox("Enable laser output", &enableOutput);
 				
-				ImGui::Text("Calibration");
-				ImGui::Checkbox("Enable correction", &enableCalibration);
+				ImGui::Text("Calibration (perspective)");
+				ImGui::Checkbox("Enable perspective correction", &enableCalibration);
+				
+				ImGui::Text("Calibration (pinch)");
+				ImGui::Checkbox("Enable pinch correction", &enablePinchCorrection);
+				ImGui::InputFloat("Pinch", &pinchFactor, 0.f, 1.f);
+				ImGui::SliderFloat("Scale factor (for testing)", &scaleFactor, 0.2f, 1.f);
+				
 				{
 					int itemIndex = calibrationImage;
 					const char * items[kCalibrationImage_COUNT] =
 					{
 						"None",
 						"Rectangle",
+						"Rectangle points",
 						"V-Scroll",
 						"H-Scroll"
 					};
@@ -864,7 +890,7 @@ int main(int argc, char * argv[])
 							
 							char name[32];
 							sprintf(name, "v%d", i + 1);
-							ImGui::SliderFloat2(name, (float*)&vertices[i]->viewPosition, -1.f, +1.f, "%.6f", .2f);
+							ImGui::SliderFloat2(name, (float*)&vertices[i]->viewPosition, -.5f, +.5f, "%.6f", .2f);
 						}
 					}
 					ImGui::PopID();
@@ -948,28 +974,21 @@ int main(int argc, char * argv[])
 			auto & laserInstance = laserInstances[i];
 			
 			// create laser frame from line
-	
+			
 			LaserFrame & frame = laserInstance.frame;
 			
-			const int offset = i * kFrameSize;
+			const int offset = i * kLineSize;
 			
-			for (int i = 0; i < kFrameSize; ++i)
-			{
-				auto & p_src = line.points[offset + i];
-				auto & p_dst = frame.points[i];
-				
-				p_dst.x = + p_src.x * 2.f - 1.f;
-				p_dst.y = - p_src.y;
-				
-				p_dst.r = 1.f;
-				p_dst.g = 0.f;
-				p_dst.b = 0.f;
-			}
+			drawLineToLaserPoints(line.points + offset, kLineSize, frame.points + kFramePadding);
+			
+			addPaddingForLaserFrame(frame);
 	
 			//
 			
 			if (calibrationImage == kCalibrationImage_Rectangle)
 				drawCalibrationImage_rectangle(frame.points, kFrameSize);
+			else if (calibrationImage == kCalibrationImage_RectanglePoints)
+				drawCalibrationImage_rectanglePoints(frame.points, kFrameSize);
 			else if (calibrationImage == kCalibrationImage_VScroll)
 				drawCalibrationImage_line_vscroll(frame.points, kFrameSize, framework.time * .3f);
 			else if (calibrationImage == kCalibrationImage_HScroll)
@@ -977,9 +996,37 @@ int main(int argc, char * argv[])
 			else
 				Assert(calibrationImage == kCalibrationImage_None);
 			
+			//if (rotate90)
+			if (true)
+			{
+				for (auto & point : laserInstance.frame.points)
+					std::swap(point.x, point.y);
+			}
+			
 			if (enableCalibration)
 			{
+				for (auto & point : laserInstance.frame.points)
+				{
+					point.x = (point.x + 1.f) / 2.f;
+					point.y = (point.y + 1.f) / 2.f;
+				}
+				
 				laserInstance.calibration.applyTransform(laserInstance.frame);
+				
+				for (auto & point : laserInstance.frame.points)
+				{
+					point.x = point.x * 2.f;
+					point.y = point.y * 2.f;
+				}
+			}
+			
+			if (scaleFactor != 1.f)
+			{
+				for (auto & point : laserInstance.frame.points)
+				{
+					point.x *= scaleFactor;
+					point.y *= scaleFactor;
+				}
 			}
 			
 			if (enableOutput)
@@ -1024,12 +1071,12 @@ int main(int argc, char * argv[])
 				pushBlend(BLEND_ADD);
 				gxPushMatrix();
 				{
-					gxTranslatef(400, 300, 0);
-					gxScalef(200, 200, 1);
+					gxTranslatef(VIEW_SX/2, VIEW_SY/2, 0);
+					gxScalef(300, 300, 1);
 					
 					gxBegin(GL_LINE_LOOP);
 					{
-						for (int i = 0; i < kFrameSize; ++i)
+						for (int i = 0; i < kFrameSize - 1; ++i) // todo : closed
 						{
 							auto & point1 = frame.points[(i + 0) % kFrameSize];
 							auto & point2 = frame.points[(i + 1) % kFrameSize];
