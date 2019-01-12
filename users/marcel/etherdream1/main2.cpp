@@ -776,6 +776,22 @@ int main(int argc, char * argv[])
 	float dropInterval = .01f;
 	float dropTimer = 0.f;
 	
+	bool showLine = true;
+	bool showLaserFrame = false;
+	bool enableOutput = true;
+	bool enableCalibration = true;
+	
+	enum CalibrationImage
+	{
+		kCalibrationImage_None,
+		kCalibrationImage_Rectangle,
+		kCalibrationImage_VScroll,
+		kCalibrationImage_HScroll,
+		kCalibrationImage_COUNT
+	};
+	
+	CalibrationImage calibrationImage = kCalibrationImage_None;
+	
 	while (!framework.quitRequested)
 	{
 		SDL_Delay(10);
@@ -784,8 +800,12 @@ int main(int argc, char * argv[])
 		
 		bool inputIscaptured = false;
 		
-		for (auto & laserInstance : laserInstances)
+		for (int i = 0; i < kNumLasers; ++i)
 		{
+			auto & laserInstance = laserInstances[i];
+			
+			laserInstance.calibrationUi.setEditorArea(20 + i * 100, 20, 80, 80);
+			
 			laserInstance.calibrationUi.tickEditor(framework.timeStep, inputIscaptured);
 		}
 		
@@ -793,6 +813,26 @@ int main(int argc, char * argv[])
 		{
 			if (ImGui::Begin("Controls"))
 			{
+				ImGui::Text("Visibility");
+				ImGui::Checkbox("Show line", &showLine);
+				ImGui::Checkbox("Show laser frame", &showLaserFrame);
+				ImGui::Checkbox("Enable laser output", &enableOutput);
+				
+				ImGui::Text("Calibration");
+				ImGui::Checkbox("Enable correction", &enableCalibration);
+				{
+					int itemIndex = calibrationImage;
+					const char * items[kCalibrationImage_COUNT] =
+					{
+						"None",
+						"Rectangle",
+						"V-Scroll",
+						"H-Scroll"
+					};
+					ImGui::Combo("Calibration image", &itemIndex, items, kCalibrationImage_COUNT);
+					calibrationImage = (CalibrationImage)itemIndex;
+				}
+				
 				{
 					float mass = string.mass;
 					float tension = string.tension;
@@ -928,40 +968,86 @@ int main(int argc, char * argv[])
 	
 			//
 			
-			//drawCalibrationImage_rectangle(frame.points, kFrameSize);
-			//drawCalibrationImage_line_vscroll(frame.points, kFrameSize, framework.time * .3f);
-			//drawCalibrationImage_line_hscroll(frame.points, kFrameSize, framework.time * .4f);
+			if (calibrationImage == kCalibrationImage_Rectangle)
+				drawCalibrationImage_rectangle(frame.points, kFrameSize);
+			else if (calibrationImage == kCalibrationImage_VScroll)
+				drawCalibrationImage_line_vscroll(frame.points, kFrameSize, framework.time * .3f);
+			else if (calibrationImage == kCalibrationImage_HScroll)
+				drawCalibrationImage_line_hscroll(frame.points, kFrameSize, framework.time * .4f);
+			else
+				Assert(calibrationImage == kCalibrationImage_None);
 			
-			laserInstance.calibration.applyTransform(laserInstance.frame);
+			if (enableCalibration)
+			{
+				laserInstance.calibration.applyTransform(laserInstance.frame);
+			}
 			
-			laserInstance.laserController.send(laserInstance.frame);
+			if (enableOutput)
+			{
+				laserInstance.laserController.send(laserInstance.frame);
+			}
 		}
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			gxPushMatrix();
+			if (showLine)
 			{
-				gxTranslatef(0, 200, 0);
-				gxScalef(200, 200, 1);
-				
-				setColor(colorWhite);
-				gxBegin(GL_LINES);
+				gxPushMatrix();
 				{
-					for (int i = 0; i < Line::kNumPoints - 1; ++i)
+					gxTranslatef(0, 200, 0);
+					gxScalef(200, 200, 1);
+					
+					setColor(colorWhite);
+					gxBegin(GL_LINES);
 					{
-						auto & point1 = line.points[i + 0];
-						auto & point2 = line.points[i + 1];
-						
-						gxVertex2f(point1.x, point1.y);
-						gxVertex2f(point2.x, point2.y);
+						for (int i = 0; i < Line::kNumPoints - 1; ++i)
+						{
+							auto & point1 = line.points[i + 0];
+							auto & point2 = line.points[i + 1];
+							
+							gxVertex2f(point1.x, point1.y);
+							gxVertex2f(point2.x, point2.y);
+						}
 					}
+					gxEnd();
+					
+					drawCircle(gravitic.x, gravitic.y, .1f, 10);
 				}
-				gxEnd();
-				
-				drawCircle(gravitic.x, gravitic.y, .1f, 10);
+				gxPopMatrix();
 			}
-			gxPopMatrix();
 			
+			if (showLaserFrame)
+			{
+				auto & laserInstance = laserInstances[0];
+				auto & frame = laserInstance.frame;
+				
+				pushBlend(BLEND_ADD);
+				gxPushMatrix();
+				{
+					gxTranslatef(400, 300, 0);
+					gxScalef(200, 200, 1);
+					
+					gxBegin(GL_LINE_LOOP);
+					{
+						for (int i = 0; i < kFrameSize; ++i)
+						{
+							auto & point1 = frame.points[(i + 0) % kFrameSize];
+							auto & point2 = frame.points[(i + 1) % kFrameSize];
+							
+							gxColor4f(point1.r, point1.g, point1.b, 1.f);
+							gxVertex2f(point1.x, point1.y);
+							
+							gxColor4f(point2.r, point2.g, point2.b, 1.f);
+							gxVertex2f(point2.x, point2.y);
+						}
+					}
+					gxEnd();
+				}
+				gxPopMatrix();
+				popBlend();
+			}
+			
+		#if 0
 			pushBlend(BLEND_ADD);
 			{
 				Mask mask;
@@ -997,7 +1083,8 @@ int main(int argc, char * argv[])
 				gxEnd();
 			}
 			popBlend();
-			
+		#endif
+		
 			guiCtx.draw();
 			
 			for (auto & laserInstance : laserInstances)
