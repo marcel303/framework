@@ -85,7 +85,7 @@ void Homography::calcInverseMatrix(const float * mat, float * out_mat)
 	out_mat[8] = o33;
 }
 
-void Homography::tickEditor(Vec2Arg mousePos, const float dt, bool & inputIscaptured)
+void Homography::tickEditor(Vec2Arg mousePos, const float sensitivity, const float dt, bool & inputIscaptured)
 {
 	Vertex * vertices[4] = { &v00, &v01, &v10, &v11 };
 	
@@ -94,8 +94,7 @@ void Homography::tickEditor(Vec2Arg mousePos, const float dt, bool & inputIscapt
 	
 	if (inputIscaptured)
 	{
-		hoveredVertex = nullptr;
-		draggedVertex = nullptr;
+		cancelEditing();
 	}
 	else
 	{
@@ -128,7 +127,7 @@ void Homography::tickEditor(Vec2Arg mousePos, const float dt, bool & inputIscapt
 	
 	if (draggedVertex != nullptr)
 	{
-		draggedVertex->viewPosition += mouseDelta;
+		draggedVertex->viewPosition += mouseDelta * sensitivity;
 	}
 	
 	previousMousePos = mousePos;
@@ -187,4 +186,10 @@ void Homography::drawEditor() const
 		hqStrokeCircle(v->viewPosition[0], v->viewPosition[1], radius, 1.f);
 		hqEnd();
 	}
+}
+
+void Homography::cancelEditing()
+{
+	hoveredVertex = nullptr;
+	draggedVertex = nullptr;
 }

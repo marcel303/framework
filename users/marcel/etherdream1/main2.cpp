@@ -425,8 +425,8 @@ static void convertLaserImageToEtherdream(
 		auto & src = points[i];
 		auto & dst = out_points[i];
 		
-		dst.x = snormFloatToS16(src.x);
-		dst.y = snormFloatToS16(src.y);
+		dst.x = snormFloatToS16(+src.x);
+		dst.y = snormFloatToS16(-src.y);
 		
 		dst.r = unormFloatToU16(src.r);
 		dst.g = unormFloatToU16(src.g);
@@ -449,16 +449,24 @@ struct Calibration
 	
 	void init()
 	{
+	#if 0
 		homography.v00.viewPosition.Set(-.5f, -.5f);
 		homography.v10.viewPosition.Set(+.5f, -.5f);
 		homography.v01.viewPosition.Set(-.5f, +.5f);
 		homography.v11.viewPosition.Set(+.5f, +.5f);
+	#else
+		homography.v00.viewPosition.Set(0.f, 0.f);
+		homography.v10.viewPosition.Set(1.f, 0.f);
+		homography.v01.viewPosition.Set(0.f, 1.f);
+		homography.v11.viewPosition.Set(1.f, 1.f);
+	#endif
 	}
 	
 	void applyTransform(LaserFrame & frame)
 	{
 		float m[9];
 		homography.calcHomographyMatrix(m);
+		homography.calcInverseMatrix(m, m);
 		
 		Mat4x4 m4(true);
 		for (int x = 0; x < 3; ++x)
@@ -507,13 +515,18 @@ struct CalibrationUi
 			-1.f + (mouse.y - y) / float(sy / 2.f));
 	}
 	
-	void tickEditor(const float dt, bool & inputIscaptured)
+	void tickEditor(const float sensitivity, const float dt, bool & inputIscaptured)
 	{
 		auto mousePos = calculateMousePosition();
 		
 		//logDebug("mouse pos: %.2f, %.2f", mousePos[0], mousePos[1]);
 		
-		calibration->homography.tickEditor(mousePos, dt, inputIscaptured);
+		calibration->homography.tickEditor(mousePos, sensitivity, dt, inputIscaptured);
+	}
+	
+	void cancelEditing()
+	{
+		calibration->homography.cancelEditing();
 	}
 	
 	void drawEditorPreview() const
@@ -697,8 +710,8 @@ struct LaserInstance
 static void drawLineToLaserPoints(const Line::Point * points, const int numPoints, LaserPoint * laserPoints)
 {
 	const float src_r = 1.f;
-	const float src_g = 0.f;
-	const float src_b = 0.f;
+	const float src_g = 1.f;
+	const float src_b = 1.f;
 	
 	for (int i = 0; i < numPoints; ++i)
 	{
@@ -795,9 +808,11 @@ int main(int argc, char * argv[])
 	float dropInterval = .01f;
 	float dropTimer = 0.f;
 	
-	bool showLine = true;
-	bool showLaserFrame = false;
+	bool showLine = false;
+	bool showLaserFrame = true;
+	float laserIntensity = 0.f;
 	bool enableOutput = true;
+	bool outputRedOnly = false;
 	bool enableCalibration = true;
 	bool enablePinchCorrection = true;
 	float pinchFactor = 0.f;
@@ -836,15 +851,6 @@ int main(int argc, char * argv[])
 		framework.process();
 		
 		bool inputIscaptured = false;
-		
-		for (int i = 0; i < kNumLasers; ++i)
-		{
-			auto & laserInstance = laserInstances[i];
-			
-			laserInstance.calibrationUi.setEditorArea(20 + i * 100, 20, 80, 80);
-			
-			laserInstance.calibrationUi.tickEditor(framework.timeStep, inputIscaptured);
-		}
 		
 		guiCtx.processBegin(framework.timeStep, VIEW_SX, VIEW_SY, inputIscaptured);
 		{
@@ -888,6 +894,8 @@ int main(int argc, char * argv[])
 					ImGui::Checkbox("Show line", &showLine);
 					ImGui::Checkbox("Show laser frame", &showLaserFrame);
 					ImGui::Checkbox("Enable laser output", &enableOutput);
+					ImGui::Checkbox("Output red only", &outputRedOnly);
+					ImGui::SliderFloat("Laser intensity", &laserIntensity, 0.f, 1.f);
 				}
 				else if (tab == kTab_Control)
 				{
@@ -944,6 +952,7 @@ int main(int argc, char * argv[])
 						
 						ImGui::Text("Calibration points");
 						ImGui::PushID(laserInstance.name.c_str());
+						ImGui::PushItemWidth(400);
 						{
 							for (int i = 0; i < 4; ++i)
 							{
@@ -957,9 +966,10 @@ int main(int argc, char * argv[])
 								
 								char name[32];
 								sprintf(name, "v%d", i + 1);
-								ImGui::SliderFloat2(name, (float*)&vertices[i]->viewPosition, -.5f, +.5f, "%.6f", .2f);
+								ImGui::SliderFloat2(name, (float*)&vertices[i]->viewPosition, -.5f, +.5f, "%.6f", .1f);
 							}
 						}
+						ImGui::PopItemWidth();
 						ImGui::PopID();
 					}
 				}
@@ -967,6 +977,24 @@ int main(int argc, char * argv[])
 			ImGui::End();
 		}
 		guiCtx.processEnd();
+		
+		for (int i = 0; i < kNumLasers; ++i)
+		{
+			auto & laserInstance = laserInstances[i];
+			
+			if (tab == kTab_Calibration && selectedLaserInstanceIndex == i)
+			{
+				laserInstance.calibrationUi.setEditorArea(50, 50, 700, 700);
+				
+				const float sensitivity = (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)) ? .2f : .02f;
+				
+				laserInstance.calibrationUi.tickEditor(sensitivity, framework.timeStep, inputIscaptured);
+			}
+			else
+			{
+				laserInstance.calibrationUi.cancelEditing();
+			}
+		}
 		
 		const float dt = keyboard.isDown(SDLK_SPACE) ? 0.f : framework.timeStep;
 		
@@ -1085,19 +1113,23 @@ int main(int argc, char * argv[])
 			
 			if (enableCalibration)
 			{
+			#if 0
 				for (auto & point : laserInstance.frame.points)
 				{
 					point.x = (point.x + 1.f) / 2.f;
 					point.y = (point.y + 1.f) / 2.f;
 				}
-				
+			#endif
+			
 				laserInstance.calibration.applyTransform(laserInstance.frame);
 				
+			#if 0
 				for (auto & point : laserInstance.frame.points)
 				{
 					point.x = point.x * 2.f;
 					point.y = point.y * 2.f;
 				}
+			#endif
 			}
 			
 			if (scaleFactor != 1.f)
@@ -1106,6 +1138,22 @@ int main(int argc, char * argv[])
 				{
 					point.x *= scaleFactor;
 					point.y *= scaleFactor;
+				}
+			}
+			
+			for (auto & point : frame.points)
+			{
+				point.r *= laserIntensity;
+				point.g *= laserIntensity;
+				point.b *= laserIntensity;
+			}
+			
+			if (outputRedOnly)
+			{
+				for (auto & point : frame.points)
+				{
+					point.g = 0.f;
+					point.b = 0.f;
 				}
 			}
 			
@@ -1154,7 +1202,7 @@ int main(int argc, char * argv[])
 					gxTranslatef(VIEW_SX/2, VIEW_SY/2, 0);
 					gxScalef(300, 300, 1);
 					
-					gxBegin(GL_LINE_LOOP);
+					gxBegin(GL_LINES);
 					{
 						for (int i = 0; i < kFrameSize - 1; ++i) // todo : closed
 						{
@@ -1212,14 +1260,19 @@ int main(int argc, char * argv[])
 			popBlend();
 		#endif
 		
-			guiCtx.draw();
-			
-			for (auto & laserInstance : laserInstances)
+			for (int i = 0; i < kNumLasers; ++i)
 			{
-				laserInstance.calibrationUi.drawEditorPreview();
-				
-				laserInstance.calibrationUi.drawEditor();
+				if (tab == kTab_Calibration && selectedLaserInstanceIndex == i)
+				{
+					auto & laserInstance = laserInstances[i];
+					
+					laserInstance.calibrationUi.drawEditorPreview();
+					
+					laserInstance.calibrationUi.drawEditor();
+				}
 			}
+			
+			guiCtx.draw();
 		}
 		framework.endDraw();
 	}
