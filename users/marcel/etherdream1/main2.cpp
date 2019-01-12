@@ -7,8 +7,8 @@
 #include <algorithm>
 #include <map>
 
-const int VIEW_SX = 800;
-const int VIEW_SY = 600;
+const int VIEW_SX = 1200;
+const int VIEW_SY = 800;
 
 static const int kFrameSize = 500; // 30000/60 = 500 (60fps)
 static const int kFramePadding = 50;
@@ -671,6 +671,8 @@ struct LaserController
 
 struct LaserInstance
 {
+	std::string name;
+	
 	Calibration calibration;
 	
 	CalibrationUi calibrationUi;
@@ -681,6 +683,8 @@ struct LaserInstance
 	
 	void init(const char * dacId)
 	{
+		name = dacId;
+		
 		laserController.init(dacId);
 		
 		calibration.init();
@@ -758,7 +762,7 @@ static void drawLaserFrame(const LaserFrame & frame)
 
 int main(int argc, char * argv[])
 {
-	if (!framework.init(800, 600))
+	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 	
 	FrameworkImGuiContext guiCtx;
@@ -813,6 +817,18 @@ int main(int argc, char * argv[])
 	
 	CalibrationImage calibrationImage = kCalibrationImage_None;
 	
+	enum Tab
+	{
+		kTab_Visibility,
+		kTab_Control,
+		kTab_Calibration,
+		kTab_Simulation
+	};
+
+	Tab tab = kTab_Visibility;
+	
+	int selectedLaserInstanceIndex = -1;
+	
 	while (!framework.quitRequested)
 	{
 		SDL_Delay(10);
@@ -830,74 +846,122 @@ int main(int argc, char * argv[])
 			laserInstance.calibrationUi.tickEditor(framework.timeStep, inputIscaptured);
 		}
 		
-		guiCtx.processBegin(framework.timeStep, 800, 600, inputIscaptured);
+		guiCtx.processBegin(framework.timeStep, VIEW_SX, VIEW_SY, inputIscaptured);
 		{
-			if (ImGui::Begin("Controls"))
+			if (ImGui::Begin("Control", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 			{
-				ImGui::Text("Visibility");
-				ImGui::Checkbox("Show line", &showLine);
-				ImGui::Checkbox("Show laser frame", &showLaserFrame);
-				ImGui::Checkbox("Enable laser output", &enableOutput);
-				
-				ImGui::Text("Calibration (perspective)");
-				ImGui::Checkbox("Enable perspective correction", &enableCalibration);
-				
-				ImGui::Text("Calibration (pinch)");
-				ImGui::Checkbox("Enable pinch correction", &enablePinchCorrection);
-				ImGui::InputFloat("Pinch", &pinchFactor, 0.f, 1.f);
-				ImGui::Checkbox("Rotate canvas 90 degrees", &rotate90);
-				ImGui::SliderFloat("Canvas scale factor (for testing)", &scaleFactor, 0.2f, 1.f);
-				ImGui::SliderFloat("Canvas rotation (for testing)", &rotationAngle, 0.f, 360.f);
-				
+				ImGui::PushItemWidth(100);
 				{
-					int itemIndex = calibrationImage;
-					const char * items[kCalibrationImage_COUNT] =
-					{
-						"None",
-						"Rectangle",
-						"Rectangle points",
-						"V-Scroll",
-						"H-Scroll"
-					};
-					ImGui::Combo("Calibration image", &itemIndex, items, kCalibrationImage_COUNT);
-					calibrationImage = (CalibrationImage)itemIndex;
+					if (ImGui::Button("Visibility"))
+						tab = kTab_Visibility;
+					
+					ImGui::SameLine();
+					if (ImGui::Button("Control"))
+						tab = kTab_Control;
+					
+					ImGui::SameLine();
+					if (ImGui::Button("Calibration"))
+						tab = kTab_Calibration;
+					
+					ImGui::SameLine();
+					if (ImGui::Button("Simulation (debugging)"))
+						tab = kTab_Simulation;
 				}
+				ImGui::PopItemWidth();
 				
+				auto doDacSelection = [&]()
 				{
-					float mass = string.mass;
-					float tension = string.tension;
-					ImGui::SliderFloat("String mass", &mass, 0.f, 10.f, "%.4f", 2.f);
-					ImGui::SliderFloat("String tension", &tension, 0.f, 1000.f, "%.4f", 2.f);
-					string.mass = mass;
-					string.tension = tension;
+					const char * items[kNumLasers + 1];
+					int numItems = 0;
+					items[numItems++] = "(none)";
+					for (int i = 0; i < kNumLasers; ++i)
+						items[numItems++] = laserInstances[i].name.c_str();
+					
+					int selectedItem = selectedLaserInstanceIndex + 1;
+					ImGui::Combo("Selected DAC", &selectedItem, items, numItems);
+					selectedLaserInstanceIndex = selectedItem - 1;
+				};
+				
+				if (tab == kTab_Visibility)
+				{
+					ImGui::Text("Visibility");
+					ImGui::Checkbox("Show line", &showLine);
+					ImGui::Checkbox("Show laser frame", &showLaserFrame);
+					ImGui::Checkbox("Enable laser output", &enableOutput);
 				}
-				ImGui::SliderFloat("Rain drop interval", &dropInterval, 0.001f, 2.f, "%.4f", 2.f);
-				ImGui::SliderFloat("Gravitic force", &gravitic.force, 0.f, 10.f, "%.4f", 2.f);
-				ImGui::SliderFloat("Gravitic minimum distance", &gravitic.minimumDistance, 0.f, 1.f, "%.4f", 2.f);
-				ImGui::SliderFloat("Gravitic z position", &gravitic.z, -1.f, +1.f, "%.4f", 2.f);
-				
-				for (auto & laserInstance : laserInstances)
+				else if (tab == kTab_Control)
 				{
-					ImGui::PushID(&laserInstance);
+				
+				}
+				else if (tab == kTab_Simulation)
+				{
 					{
-						ImGui::Text("Laser Instance");
-						
-						for (int i = 0; i < 4; ++i)
-						{
-							Homography::Vertex * vertices[4] =
-							{
-								&laserInstance.calibration.homography.v00,
-								&laserInstance.calibration.homography.v01,
-								&laserInstance.calibration.homography.v10,
-								&laserInstance.calibration.homography.v11
-							};
-							
-							char name[32];
-							sprintf(name, "v%d", i + 1);
-							ImGui::SliderFloat2(name, (float*)&vertices[i]->viewPosition, -.5f, +.5f, "%.6f", .2f);
-						}
+						float mass = string.mass;
+						float tension = string.tension;
+						ImGui::SliderFloat("String mass", &mass, 0.f, 10.f, "%.4f", 2.f);
+						ImGui::SliderFloat("String tension", &tension, 0.f, 1000.f, "%.4f", 2.f);
+						string.mass = mass;
+						string.tension = tension;
 					}
-					ImGui::PopID();
+					ImGui::SliderFloat("Rain drop interval", &dropInterval, 0.001f, 2.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Gravitic force", &gravitic.force, 0.f, 10.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Gravitic minimum distance", &gravitic.minimumDistance, 0.f, 1.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Gravitic z position", &gravitic.z, -1.f, +1.f, "%.4f", 2.f);
+				}
+				else if (tab == kTab_Calibration)
+				{
+					ImGui::Text("Canvas setup (global)");
+					ImGui::Checkbox("Rotate canvas 90 degrees", &rotate90);
+					ImGui::SliderFloat("Canvas scale factor", &scaleFactor, 0.2f, 1.f);
+					ImGui::SliderFloat("Canvas rotation (for testing)", &rotationAngle, 0.f, 360.f);
+				
+					ImGui::NewLine();
+					ImGui::Checkbox("Enable projection calibration", &enableCalibration);
+					ImGui::Checkbox("Enable pinch calibration", &enablePinchCorrection);
+					ImGui::InputFloat("Pinch amount", &pinchFactor, -1.f, 1.f);
+					
+					ImGui::Separator();
+					
+					doDacSelection();
+					
+					if (selectedLaserInstanceIndex != -1)
+					{
+						{
+							int itemIndex = calibrationImage;
+							const char * items[kCalibrationImage_COUNT] =
+							{
+								"None",
+								"Rectangle",
+								"Rectangle points",
+								"V-Scroll",
+								"H-Scroll"
+							};
+							ImGui::Combo("Calibration image", &itemIndex, items, kCalibrationImage_COUNT);
+							calibrationImage = (CalibrationImage)itemIndex;
+						}
+					
+						auto & laserInstance = laserInstances[selectedLaserInstanceIndex];
+						
+						ImGui::Text("Calibration points");
+						ImGui::PushID(laserInstance.name.c_str());
+						{
+							for (int i = 0; i < 4; ++i)
+							{
+								Homography::Vertex * vertices[4] =
+								{
+									&laserInstance.calibration.homography.v00,
+									&laserInstance.calibration.homography.v01,
+									&laserInstance.calibration.homography.v10,
+									&laserInstance.calibration.homography.v11
+								};
+								
+								char name[32];
+								sprintf(name, "v%d", i + 1);
+								ImGui::SliderFloat2(name, (float*)&vertices[i]->viewPosition, -.5f, +.5f, "%.6f", .2f);
+							}
+						}
+						ImGui::PopID();
+					}
 				}
 			}
 			ImGui::End();
