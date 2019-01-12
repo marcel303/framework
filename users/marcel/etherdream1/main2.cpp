@@ -6,6 +6,7 @@
 #include "laserTypes.h"
 #include <algorithm>
 #include <map>
+#include <sstream>
 
 const int VIEW_SX = 1200;
 const int VIEW_SY = 800;
@@ -700,7 +701,7 @@ struct LaserInstance
 	}
 };
 
-static void drawLineToLaserPoints(const Line::Point * points, const int numPoints, LaserPoint * laserPoints)
+static void drawLineToLaserPoints(const Line::Point * points, const int numPoints, const float xOffset, LaserPoint * laserPoints)
 {
 	const float src_r = 1.f;
 	const float src_g = 1.f;
@@ -711,7 +712,7 @@ static void drawLineToLaserPoints(const Line::Point * points, const int numPoint
 		auto & p_src = points[i];
 		auto & p_dst = laserPoints[i];
 		
-		p_dst.x = + p_src.x * 2.f - 1.f;
+		p_dst.x = + (p_src.x + xOffset) * 2.f - 1.f;
 		p_dst.y = + p_src.y;
 		
 		p_dst.r = src_r;
@@ -780,9 +781,18 @@ int main(int argc, char * argv[])
 	
 	for (int i = 0; i < kNumLasers; ++i)
 	{
-		const char * dacId = i == 0 ? "ab1ae3" : "";
+		std::string name;
 		
-		laserInstances[i].init(dacId);
+		if (i == 0)
+			name = "ab1ae3";
+		else
+		{
+			std::ostringstream s;
+			s << "dac " << (i + 1);
+			name = s.str();
+		}
+		
+		laserInstances[i].init(name.c_str());
 	}
 	
 	for (int i = 0; i < Line::kNumPoints; ++i)
@@ -886,6 +896,7 @@ int main(int argc, char * argv[])
 					ImGui::Text("Visibility");
 					ImGui::Checkbox("Show line", &showLine);
 					ImGui::Checkbox("Show laser frame", &showLaserFrame);
+					doDacSelection();
 					ImGui::Checkbox("Enable laser output", &enableOutput);
 					ImGui::Checkbox("Output red only", &outputRedOnly);
 					ImGui::SliderFloat("Laser intensity", &laserIntensity, 0.f, 1.f);
@@ -1068,7 +1079,7 @@ int main(int argc, char * argv[])
 			
 			const int offset = i * kLineSize;
 			
-			drawLineToLaserPoints(line.points + offset, kLineSize, frame.points + kFramePadding);
+			drawLineToLaserPoints(line.points + offset, kLineSize, -Line::initialLineXs[offset], frame.points + kFramePadding);
 			
 			addPaddingForLaserFrame(frame);
 	
@@ -1168,9 +1179,9 @@ int main(int argc, char * argv[])
 				gxPopMatrix();
 			}
 			
-			if (showLaserFrame)
+			if (showLaserFrame && selectedLaserInstanceIndex != -1)
 			{
-				auto & laserInstance = laserInstances[0];
+				auto & laserInstance = laserInstances[selectedLaserInstanceIndex];
 				auto & frame = laserInstance.frame;
 				
 				pushBlend(BLEND_ADD);
