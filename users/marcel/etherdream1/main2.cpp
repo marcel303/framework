@@ -182,23 +182,34 @@ struct Line
 {
 	static const int kNumPoints = kLineSize * kNumLasers;
 
-	static float initialLineXs[kNumPoints];
-
 	struct Point
 	{
 		float x;
 		float y;
 	};
 	
-	Point points[kNumPoints];
+	std::vector<Point> points;
 	
-	void init()
+	void init(const int size, const float x1, const float x2)
 	{
-		for (int i = 0; i < kNumPoints; ++i)
+		points.resize(size);
+		
+		for (int i = 0; i < size; ++i)
 		{
 			auto & point = points[i];
 			
-			point.x = initialLineXs[i];
+			const float t = i / float(size - 1);
+			const float x = x1 * (1.f - t) + x2 * t;
+			
+			point.x = x;
+			point.y = 0.f;
+		}
+	}
+	
+	void newFrame()
+	{
+		for (auto & point : points)
+		{
 			point.y = 0.f;
 		}
 	}
@@ -207,19 +218,16 @@ struct Line
 	{
 		for (int i = 0; i < kNumPoints; ++i)
 		{
-		// fixme : actually add
-			points[i].x = line.points[i].x;// - initialLineXs[i];
-			points[i].y = line.points[i].y;
+			points[i].x += line.points[i].x;
+			points[i].y += line.points[i].y;
 		}
 	}
 };
 
-float Line::initialLineXs[kNumPoints];
-
 // physically simulated line with a templated down scaling factor for CPU-usage reduction
 
 template <int DownScale>
-struct PhysicalString1D
+struct PhysicalString1DSim
 {
 	static const int kNumPoints = Line::kNumPoints / DownScale;
 	
@@ -238,11 +246,6 @@ struct PhysicalString1D
 		
 		mass = in_mass;
 		tension = in_tension;
-	}
-	
-	float getX(const int index) const
-	{
-		return Line::initialLineXs[index * DownScale];
 	}
 	
 	void tick(const float dt)
@@ -283,89 +286,74 @@ struct PhysicalString1D
 		memset(forces, 0, sizeof(forces));
 	}
 	
-	void toLine(Line & line)
+	void drawOntoLine(Line & line, const float x1, const float x2)
 	{
-		for (int i = 0; i < Line::kNumPoints; ++i)
+		auto begin = std::lower_bound(
+			line.points.begin(),
+			line.points.end(),
+			x1,
+			[](const Line::Point & p, const float x) -> bool { return p.x < x; });
+		
+		auto end = std::upper_bound(
+			line.points.begin(),
+			line.points.end(),
+			x2,
+			[](const float x, const Line::Point & p) -> bool { return x < p.x; });
+		
+		for (auto i = begin; i < end; ++i)
 		{
-			line.points[i].x = Line::initialLineXs[i];
-			line.points[i].y = positions[i / DownScale];
+			Line::Point & dst = *i;
+			
+			// x = x1 + (x2 - x1) * t
+			// t = (x - x1) / (x2 - x1)
+			
+			const float t = (dst.x - x1) / (x2 - x1);
+			Assert(t >= 0.f && t <= 1.f);
+			
+			const float src_index = t * (kNumPoints - 1);
+			const int src_index1 = (int)floorf(src_index);
+			const int src_index2 = src_index1 + 1;
+			const float src_t = src_index - src_index1;
+			
+			if (src_index1 >= 0 && src_index2 < kNumPoints)
+			{
+				const float y1 = positions[src_index1];
+				const float y2 = positions[src_index2];
+				
+				const float y = y1 * (1.f - src_t) + y2 * src_t;
+				
+				dst.y += y;
+			}
 		}
 	}
 };
 
 template <int DownScale>
-struct PhysicalString2D
+struct PhysicalString1D : PhysicalString1DSim<DownScale>
 {
-	static const int kNumPoints = Line::kNumPoints / DownScale;
+	typedef PhysicalString1DSim<DownScale> Base;
 	
-	double positions[kNumPoints][2];
-	double velocities[kNumPoints][2];
-	double forces[kNumPoints][2];
+	float x1 = 0.0;
+	float x2 = 1.0;
 	
-	double mass = 1.0;
-	double tension = 1.0;
-	
-	void init()
+	void init(const double in_mass, const double in_tension, const float in_x1, const float in_x2)
 	{
-		memset(positions, 0, sizeof(positions));
-		memset(velocities, 0, sizeof(velocities));
-		memset(forces, 0, sizeof(forces));
+		Base::init(in_mass, in_tension);
 		
-		for (int i = 0; i < kNumPoints; ++i)
-		{
-			positions[i][0] = Line::initialLineXs[i * DownScale];
-		}
+		x1 = in_x1;
+		x2 = in_x2;
 	}
 	
-	void tick(const float dt)
+	float getXForPointIndex(const int pointIndex) const
 	{
-		const double retain = pow(0.5, dt);
+		const float t = pointIndex / float(Base::kNumPoints);
 		
-		for (int i = 0; i < kNumPoints; ++i)
-		{
-			forces[i][0] /= mass;
-			forces[i][1] /= mass;
-			
-			for (int d = 0; d < 2; ++d)
-			{
-				const double deltaPrev = positions[d][i - 1 >=            0 ? i - 1 : i][d];
-				const double deltaCurr = positions[d][i                                ][d];
-				const double deltaNext = positions[d][i + 1 <= kNumPoints-1 ? i + 1 : i][d];
-				
-				const double N = 2.0;
-				
-				const double delta = (deltaCurr * N - deltaPrev - deltaNext) / N;
-				
-				const double force = - delta * tension;
-				
-				forces[i][d] += force;
-		
-				forces[0][d] = 0.0;
-				forces[kNumPoints - 1][d] = 0.0;
-				
-				velocities[i][d] += forces[i][d] * dt;
-				
-				positions[i][d] += velocities[i][d] * dt;
-				
-				velocities[i][d] *= retain;
-				
-				if (d == 0)
-					positions[i][d] = lerp((double)Line::initialLineXs[i * DownScale], positions[i][d], retain);
-				else
-					positions[i][d] *= retain;
-			}
-		}
-		
-		memset(forces, 0, sizeof(forces));
+		return x1 * (1.f - t) + x2 * t;
 	}
 	
-	void toLine(Line & line)
+	void drawOntoLine(Line & line)
 	{
-		for (int i = 0; i < Line::kNumPoints; ++i)
-		{
-			line.points[i].x = positions[i / DownScale][0];
-			line.points[i].y = positions[i / DownScale][1];
-		}
+		PhysicalString1DSim<DownScale>::drawOntoLine(line, x1, x2);
 	}
 };
 
@@ -740,11 +728,8 @@ int main(int argc, char * argv[])
 		laserInstances[i].init(name.c_str());
 	}
 	
-	for (int i = 0; i < Line::kNumPoints; ++i)
-		Line::initialLineXs[i] = i / float(kLineSize);
-	
-	PhysicalString1D<1> string;
-	string.init(1.0, 100.0);
+	PhysicalString1D<4> string;
+	string.init(1.0, 100.0, 0.0, 1.0);
 	
 	GraviticSource gravitic;
 	gravitic.z = .2f;
@@ -996,15 +981,14 @@ int main(int argc, char * argv[])
 		//
 		
 		Line line;
-		line.init();
+		line.init(Line::kNumPoints, 0.f, kNumLasers);
 		
 		gravitic.x = mouse.x / 200.f;
 		gravitic.y = (mouse.y - 200.f) / 200.f;
 		
 		for (int i = 0; i < string.kNumPoints; ++i)
 		{
-			//const float x = line.points[i * Line::kNumPoints / string.kNumPoints].x;
-			const float x = string.getX(i);
+			const float x = string.getXForPointIndex(i);
 			const float y = string.positions[i];
 		
 			const Vec2 force = gravitic.calculateForce(x, y);
@@ -1018,9 +1002,8 @@ int main(int argc, char * argv[])
 		
 		// compose line
 		
-		Line stringLine;
-		string.toLine(stringLine);
-		line.add(stringLine);
+		line.newFrame();
+		string.drawOntoLine(line);
 		
 		// generate mask
 		
@@ -1055,7 +1038,9 @@ int main(int argc, char * argv[])
 			
 			const int offset = i * kLineSize;
 			
-			drawLineToLaserPoints(line.points + offset, kLineSize, -Line::initialLineXs[offset], frame.points + kFramePadding);
+			auto & firstPoint = line.points[offset];
+			
+			drawLineToLaserPoints(&firstPoint, kLineSize, -firstPoint.x, frame.points + kFramePadding);
 			
 			// apply mask to frame
 		
