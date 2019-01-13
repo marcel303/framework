@@ -179,7 +179,7 @@ struct PhysicalString1DSim
 		memset(forces, 0, sizeof(forces));
 	}
 	
-	void drawOntoLine(Line & line, const float x1, const float x2)
+	void drawOntoLine(Line & line, const float x1, const float x2, const float amplitude, const float exponential)
 	{
 		auto begin = std::lower_bound(
 			line.points.begin(),
@@ -215,7 +215,17 @@ struct PhysicalString1DSim
 				
 				const float y = y1 * (1.f - src_t) + y2 * src_t;
 				
-				dst.y += y;
+				//const float curve = powf((1.f - cosf(t * float(M_PI) * 2.f)) * .5f, exponential);
+				float c = (t - .5f) * 2.f;
+				c = fabsf(c);
+				c = 1.f - c;
+				c = fminf(1.f, c * exponential);
+				c = (1.f - cosf(c * float(M_PI))) * .5f;
+				//c = powf(c, exponential);
+				//const float curve = (1.f - cosf(powf(t, exponential) * float(M_PI) * 2.f)) * .5f;
+				const float curve = c;
+				
+				dst.y += y * curve * amplitude;
 			}
 		}
 	}
@@ -226,15 +236,19 @@ struct PhysicalString1D : PhysicalString1DSim<kNumPoints>
 {
 	typedef PhysicalString1DSim<kNumPoints> Base;
 	
-	float x1 = 0.0;
-	float x2 = 1.0;
+	float x1 = 0.f;
+	float x2 = 1.f;
 	
-	void init(const double in_mass, const double in_tension, const float in_x1, const float in_x2)
+	float amplitude = 1.f;
+	
+	void init(const double in_mass, const double in_tension, const float in_amplitude, const float in_x1, const float in_x2)
 	{
 		Base::init(in_mass, in_tension);
 		
 		x1 = in_x1;
 		x2 = in_x2;
+
+		amplitude = in_amplitude;
 	}
 	
 	float getXForPointIndex(const int pointIndex) const
@@ -244,9 +258,9 @@ struct PhysicalString1D : PhysicalString1DSim<kNumPoints>
 		return x1 * (1.f - t) + x2 * t;
 	}
 	
-	void drawOntoLine(Line & line)
+	void drawOntoLine(Line & line, const float exponential)
 	{
-		Base::drawOntoLine(line, x1, x2);
+		Base::drawOntoLine(line, x1, x2, amplitude, exponential);
 	}
 };
 
@@ -268,7 +282,9 @@ struct GraviticSource
 		const float distanceSq = fmaxf(minimumDistanceSq, dx * dx + dy * dy + dz * dz);
 		const float distance = sqrtf(distanceSq);
 		
+	// todo : add option to toggle between distance squared, distance
 		const float falloff = 1.f / distanceSq;
+		//const float falloff = 1.f / distance;
 		
 		const float magnitude = force * falloff;
 		
@@ -527,11 +543,15 @@ struct LaserInstance
 	
 	LaserFrame frame;
 	
-	void init(const char * dacId)
+	int lineSegmentIndex = 0;
+	
+	void init(const char * in_dacId, const int in_lineSegmentIndex)
 	{
-		name = dacId;
+		name = in_dacId;
 		
-		laserController.init(dacId);
+		laserController.init(in_dacId);
+		
+		lineSegmentIndex = in_lineSegmentIndex;
 		
 		calibration.init();
 	
@@ -618,14 +638,15 @@ int main(int argc, char * argv[])
 			name = s.str();
 		}
 		
-		laserInstances[i].init(name.c_str());
+		laserInstances[i].init(name.c_str(), i);
 	}
 	
-	static const int kNumStrings = 2;
+	static const int kNumStrings = 3;
 	
-	PhysicalString1D<kLineSize * kNumLasers / 4> strings[kNumStrings];
-	strings[0].init(1.0, 100.0, 0.0, 1.0);
-	strings[1].init(1.0, 100.0, 2.0, 3.0);
+	PhysicalString1D<kLineSize * kNumLasers> strings[kNumStrings];
+	strings[0].init(1.0, 100.0, 0.2, 0.0, 1.0);
+	strings[1].init(1.0, 100.0, 0.2, 2.0, 3.0);
+	strings[2].init(4.0, 100.0, 1.0, 0.0, kNumLasers);
 	
 	GraviticSource gravitic;
 	gravitic.z = .2f;
@@ -636,20 +657,28 @@ int main(int argc, char * argv[])
 	
 	bool pauseSimulation = false;
 	float dropInterval = 1.f;
+	float dropLife = .2f;
+	float dropSize = .4f;
 	float dropTimer = 0.f;
 	
-	bool showLine = false;
+	bool showLine = true;
 	bool showLaserFrame = true;
-	bool enableMask = false;
-	bool maskSmoothing = true;
+	bool enableMask = true;
+	bool maskSmoothing = false;
+	float maskValue1 = 0.f;
+	float maskValue2 = 1.f;
+	bool enableColorCycle = false;
+	float colorCycleSpeed = .1f;
+	float colorCyclePhase = 0.f;
+	float colorCycleStretch = .1f;
 	float laserIntensity = 0.f;
 	bool enableOutput = true;
-	bool outputRedOnly = false;
+	bool outputRedOnly = true;
 	bool enablePerspectiveCorrection = true;
-	bool enablePinchCorrection = true;
+	bool enablePinchCorrection = false;
 	float pinchFactor = 0.f;
-	bool rotate90 = false;
-	float scaleFactor = 1.f;
+	bool rotate90 = true;
+	float scaleFactor = .8f;
 	float rotationAngle = 0.f;
 	
 	enum CalibrationImage
@@ -727,6 +756,11 @@ int main(int argc, char * argv[])
 					ImGui::Checkbox("Show laser frame", &showLaserFrame);
 					ImGui::Checkbox("Enable masking", &enableMask);
 					ImGui::Checkbox("Enable mask smoothing", &maskSmoothing);
+					ImGui::SliderFloat("Mask value 1", &maskValue1, 0.f, 1.f);
+					ImGui::SliderFloat("Mask value 2", &maskValue2, 0.f, 1.f);
+					ImGui::Checkbox("Enable color cycle", &enableColorCycle);
+					ImGui::SliderFloat("Color cycle speed", &colorCycleSpeed, 0.f, 4.f, "%.3f", 2.f);
+					ImGui::SliderFloat("Color cycle stretch", &colorCycleStretch, 0.f, 1.f, "%.3f", 2.f);
 					doDacSelection();
 					ImGui::Checkbox("Enable laser output", &enableOutput);
 					ImGui::Checkbox("Output red only", &outputRedOnly);
@@ -734,15 +768,29 @@ int main(int argc, char * argv[])
 				}
 				else if (tab == kTab_Control)
 				{
-				
+					doDacSelection();
+					
+					if (selectedLaserInstanceIndex != -1)
+					{
+						auto & laserInstance = laserInstances[selectedLaserInstanceIndex];
+					
+						ImGui::SliderInt("Line segment", &laserInstance.lineSegmentIndex, 0, kNumLasers - 1);
+					}
 				}
 				else if (tab == kTab_Simulation)
 				{
 					ImGui::Checkbox("Pause simulation", &pauseSimulation);
+					
+					ImGui::SliderFloat("Rain drop interval", &dropInterval, 0.001f, 2.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Rain drop life", &dropLife, 0.001f, 2.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Rain drop size", &dropSize, 0.001f, 2.f, "%.4f", 2.f);
+					
 					for (int i = 0; i < kNumStrings; ++i)
 					{
 						ImGui::PushID(i);
 						{
+							ImGui::Text("String %d", i + 1);
+							
 							float mass = strings[i].mass;
 							float tension = strings[i].tension;
 							ImGui::SliderFloat("String mass", &mass, 0.f, 10.f, "%.4f", 2.f);
@@ -752,7 +800,6 @@ int main(int argc, char * argv[])
 						}
 						ImGui::PopID();
 					}
-					ImGui::SliderFloat("Rain drop interval", &dropInterval, 0.001f, 2.f, "%.4f", 2.f);
 					ImGui::SliderFloat("Gravitic force", &gravitic.force, 0.f, 10.f, "%.4f", 2.f);
 					ImGui::SliderFloat("Gravitic minimum distance", &gravitic.minimumDistance, 0.f, 1.f, "%.4f", 2.f);
 					ImGui::SliderFloat("Gravitic z position", &gravitic.z, -1.f, +1.f, "%.4f", 2.f);
@@ -845,7 +892,12 @@ int main(int argc, char * argv[])
 		{
 			dropTimer -= dropInterval;
 			
-			rain.addRainDrop(random(0.f, 1.f), .4f);
+			rain.addRainDrop(random(0.f, 1.f), dropLife);
+		}
+		
+		if (enableColorCycle)
+		{
+			colorCyclePhase = fmodf(colorCyclePhase + dt * colorCycleSpeed, 1.f);
 		}
 		
 		rain.tick(dt);
@@ -917,7 +969,7 @@ int main(int argc, char * argv[])
 		
 		for (auto & string : strings)
 		{
-			string.drawOntoLine(line);
+			string.drawOntoLine(line, 2.f);
 		}
 		
 		// generate mask
@@ -928,7 +980,7 @@ int main(int argc, char * argv[])
 		{
 			if (rainDrop.life > 0.f)
 			{
-				const float size = .4f * rainDrop.life;
+				const float size = dropSize * rainDrop.life;
 				
 				const float begin = rainDrop.position - size/2.f;
 				const float end = rainDrop.position + size/2.f;
@@ -951,11 +1003,34 @@ int main(int argc, char * argv[])
 			
 			LaserFrame & frame = laserInstance.frame;
 			
-			const int offset = i * kLineSize;
+			if (laserInstance.lineSegmentIndex >= 0 && laserInstance.lineSegmentIndex < kNumLasers)
+			{
+				const int offset = laserInstance.lineSegmentIndex * kLineSize;
+				
+				auto & firstPoint = line.points[offset];
+				
+				drawLineToLaserPoints(&firstPoint, kLineSize, -firstPoint.x, frame.points + kFramePadding);
+			}
+			else
+			{
+				memset(&frame, 0, sizeof(frame));
+			}
 			
-			auto & firstPoint = line.points[offset];
+			// apply color cycle
 			
-			drawLineToLaserPoints(&firstPoint, kLineSize, -firstPoint.x, frame.points + kFramePadding);
+			if (enableColorCycle)
+			{
+				for (auto & point : frame.points)
+				{
+					const float angle = colorCyclePhase + point.x * colorCycleStretch;
+					
+					auto color = Color::fromHSL(angle, 1.f, .5f);
+					
+					point.r = color.r;
+					point.g = color.g;
+					point.b = color.b;
+				}
+			}
 			
 			// apply mask to frame
 		
@@ -978,9 +1053,9 @@ int main(int argc, char * argv[])
 					
 					while (point_index < kLineSize && (points[point_index].x + 1.f)/2.f /* fixme : hack */ < segment.begin)
 					{
-						points[point_index].r = 0.f;
-						points[point_index].g = 0.f;
-						points[point_index].b = 0.f;
+						points[point_index].r *= maskValue1;
+						points[point_index].g *= maskValue1;
+						points[point_index].b *= maskValue1;
 						
 						point_index++;
 					}
@@ -1015,7 +1090,13 @@ int main(int argc, char * argv[])
 				#endif
 					
 					while (point_index < kLineSize && (points[point_index].x + 1.f)/2.f /* fixme : hack */ <= segment.end)
+					{
+						points[point_index].r *= maskValue2;
+						points[point_index].g *= maskValue2;
+						points[point_index].b *= maskValue2;
+						
 						point_index++;
+					}
 					
 				#if 1
 					if (maskSmoothing && point_index < kLineSize && point_index > 0)
@@ -1085,9 +1166,9 @@ int main(int argc, char * argv[])
 				
 				while (point_index < kLineSize)
 				{
-					points[point_index].r = 0.f;
-					points[point_index].g = 0.f;
-					points[point_index].b = 0.f;
+					points[point_index].r *= maskValue1;
+					points[point_index].g *= maskValue1;
+					points[point_index].b *= maskValue1;
 					
 					point_index++;
 				}
