@@ -796,7 +796,7 @@ int main(int argc, char * argv[])
 	PurpleRain rain;
 	
 	bool pauseSimulation = false;
-	float dropInterval = .4f;
+	float dropInterval = 1.f;
 	float dropTimer = 0.f;
 	
 	bool showLine = false;
@@ -1001,7 +1001,7 @@ int main(int argc, char * argv[])
 		{
 			dropTimer -= dropInterval;
 			
-			rain.addRainDrop(random(0.f, 1.f), 2.f);
+			rain.addRainDrop(random(0.f, 1.f), .4f);
 		}
 		
 		rain.tick(dt);
@@ -1072,7 +1072,7 @@ int main(int argc, char * argv[])
 		{
 			if (rainDrop.life > 0.f)
 			{
-				const float size = .02f * rainDrop.life;
+				const float size = .4f * rainDrop.life;
 				
 				const float begin = rainDrop.position - size/2.f;
 				const float end = rainDrop.position + size/2.f;
@@ -1127,6 +1127,7 @@ int main(int argc, char * argv[])
 						point_index++;
 					}
 					
+				#if 1
 					if (maskSmoothing && point_index < kLineSize && point_index > 0)
 					{
 						const float x = segment.begin * 2.f - 1.f;
@@ -1151,10 +1152,14 @@ int main(int argc, char * argv[])
 						points[point_index - 1].g = 1.f;
 						points[point_index - 1].b = 1.f;
 					}
+				#else
+					const int begin_index = point_index > 0 ? point_index - 1 : point_index;
+				#endif
 					
 					while (point_index < kLineSize && (points[point_index].x + 1.f)/2.f /* fixme : hack */ <= segment.end)
 						point_index++;
 					
+				#if 1
 					if (maskSmoothing && point_index < kLineSize && point_index > 0)
 					{
 						const float x = segment.end * 2.f - 1.f;
@@ -1181,6 +1186,41 @@ int main(int argc, char * argv[])
 						
 						point_index++;
 					}
+				#else
+					if (point_index < kLineSize)
+						point_index++;
+					
+					const int end_index = point_index;
+				#endif
+				
+				#if 0
+					if (begin_index < kLineSize)
+					{
+						const int end_index_clamped = end_index <= kLineSize ? end_index : kLineSize;
+					
+						const int num_points = end_index_clamped - begin_index;
+						
+						if (num_points >= 2)
+						{
+							const float x1 = fmaxf(segment.begin * 2.f - 1.f, points[0].x);
+							const float x2 = fminf(segment.end * 2.f - 1.f, points[kLineSize - 1].x);
+							
+							for (int i = begin_index; i < end_index_clamped; ++i)
+							{
+								Assert(i >= 0 && i < kLineSize);
+								
+								const float t = (i - begin_index) / float(num_points - 1);
+								Assert(t >= 0.f && t <= 1.f);
+								
+								points[i].x = x1 + (x2 - x1) * t;
+							}
+						}
+						else
+						{
+							logDebug("no interp");
+						}
+					}
+				#endif
 					
 					++segment_index;
 				}
