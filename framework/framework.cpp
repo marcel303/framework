@@ -515,8 +515,6 @@ bool Framework::init(int sx, int sy)
 	globals.currentWindow = globals.mainWindow;
 
 	SDL_RaiseWindow(globals.currentWindow);
-	
-	fassert(s_shaderSources.empty());
 
 	SDL_DisableScreenSaver();
 
@@ -7391,6 +7389,8 @@ void gxEmitVertex();
 
 void gxInitialize()
 {
+	fassert(s_shaderSources.empty());
+	
 	registerBuiltinShaders();
 
 	s_gxShader.load("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
