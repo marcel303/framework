@@ -296,6 +296,8 @@ public:
 	void reloadCaches();
 	void fillCachesWithPath(const char * path, bool recurse);
 	
+	Window & getMainWindow();
+	Window & getCurrentWindow();
 	void setFullscreen(bool fullscreen);
 
 	void beginDraw(int r, int g, int b, int a, float depth = 1.f);
@@ -372,6 +374,9 @@ private:
 
 class Window
 {
+private:
+	Window(SDL_Window * window);
+	
 public:
 	friend class Framework;
 	

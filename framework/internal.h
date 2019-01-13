@@ -355,8 +355,7 @@ public:
 		gxShaderIsDirty = true;
 	}
 	
-	SDL_Window * mainWindow;
-	WindowData mainWindowData;
+	Window * mainWindow;
 	SDL_Window * currentWindow;
 	WindowData * currentWindowData;
 	SDL_GLContext glContext;

@@ -350,7 +350,7 @@ bool Framework::init(int sx, int sy)
 #endif
 
 	fassert(globals.mainWindow == nullptr);
-	globals.mainWindow = SDL_CreateWindow(
+	SDL_Window * mainWindow = SDL_CreateWindow(
 		windowTitle.c_str(),
 		windowX == -1 ? SDL_WINDOWPOS_CENTERED : windowX,
 		windowY == -1 ? SDL_WINDOWPOS_CENTERED : windowY,
@@ -358,7 +358,7 @@ bool Framework::init(int sx, int sy)
 		actualSy,
 		flags);
 
-	if (!globals.mainWindow)
+	if (!mainWindow)
 	{
 		logError("failed to set video mode (%dx%d @ %dbpp): %s", sx / minification, sy / minification, 32, SDL_GetError());
 		if (initErrorHandler)
@@ -366,16 +366,19 @@ bool Framework::init(int sx, int sy)
 		return false;
 	}
 	
-	SDL_RaiseWindow(globals.mainWindow);
+	globals.mainWindow = new Window(mainWindow);
 	
-	globals.currentWindowData = &globals.mainWindowData;
+	fassert(globals.currentWindow == nullptr);
+	fassert(globals.currentWindowData == nullptr);
+	globals.currentWindow = globals.mainWindow->m_window;
+	globals.currentWindowData = globals.mainWindow->m_windowData;
 	
 	windowSx = sx;
 	windowSy = sy;
 	
 #if ENABLE_OPENGL
 	fassert(globals.glContext == nullptr);
-	globals.glContext = SDL_GL_CreateContext(globals.mainWindow);
+	globals.glContext = SDL_GL_CreateContext(globals.mainWindow->m_window);
 	checkErrorGL();
 	
 	if (!globals.glContext)
@@ -504,16 +507,13 @@ bool Framework::init(int sx, int sy)
 	{
 		ImageData * iconData = loadImage(windowIcon.c_str());
 		SDL_Surface * surface = SDL_CreateRGBSurfaceFrom(iconData->imageData, iconData->sx, iconData->sy, 32, iconData->sx * sizeof(ImageData::Pixel), 0xff << 0, 0xff << 8, 0xff << 16, 0xff << 24);
-		SDL_SetWindowIcon(globals.mainWindow, surface);
+		SDL_SetWindowIcon(globals.mainWindow->m_window, surface);
 		SDL_FreeSurface(surface);
 		delete iconData;
 	}
 	
 	// make sure we are focused
 	
-	fassert(globals.currentWindow == nullptr);
-	globals.currentWindow = globals.mainWindow;
-
 	SDL_RaiseWindow(globals.currentWindow);
 
 	SDL_DisableScreenSaver();
@@ -596,8 +596,14 @@ bool Framework::shutdown()
 	
 	if (globals.mainWindow)
 	{
-		SDL_DestroyWindow(globals.mainWindow);
-		globals.mainWindow = 0;
+		fassert(globals.currentWindow == globals.mainWindow->m_window);
+		fassert(globals.currentWindowData == globals.mainWindow->m_windowData);
+		
+		delete globals.mainWindow;
+		globals.mainWindow = nullptr;
+		
+		globals.currentWindow = nullptr;
+		globals.currentWindowData = nullptr;
 	}
 	
 	// shut down SDL
@@ -816,7 +822,6 @@ void Framework::process()
 	
 	keyboard.events.clear();
 	
-	globals.mainWindowData.beginProcess();
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		window->m_windowData->beginProcess();
 
@@ -832,7 +837,7 @@ void Framework::process()
 	events.clear();
 	
 	changedFiles.clear();
-
+	
 	SDL_Event e;
 	
 	bool hasWaited = false;
@@ -923,7 +928,7 @@ void Framework::process()
 			{
 				SDL_Window * window = SDL_GetWindowFromID(e.motion.windowID);
 				
-				if (window == globals.mainWindow)
+				if (window == globals.mainWindow->m_window)
 				{
 					int windowSx;
 					int windowSy;
@@ -971,7 +976,7 @@ void Framework::process()
 				if (windowData == globals.currentWindowData)
 					windowIsActive = windowData->isActive;
 				
-				if (reloadCachesOnActivate && e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED && windowData == &globals.mainWindowData)
+				if (reloadCachesOnActivate && e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED && windowData == globals.mainWindow->m_windowData)
 				{
 					doReload |= true;
 				}
@@ -989,7 +994,6 @@ void Framework::process()
 		}
 	}
 
-	globals.mainWindowData.endProcess();
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		window->m_windowData->endProcess();
 	
@@ -1469,12 +1473,27 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 		fillCachesCallback(1.f);
 }
 
+Window & Framework::getMainWindow()
+{
+	return *globals.mainWindow;
+}
+
+Window & Framework::getCurrentWindow()
+{
+	for (Window * window = m_windows; window != nullptr; window = window->m_next)
+		if (window->m_window == globals.currentWindow)
+			return *window;
+	
+	logError("failed to find current window. this should not be possible unless framework failed to initialize!");
+	return *globals.mainWindow;
+}
+
 void Framework::setFullscreen(bool fullscreen)
 {
 	if (fullscreen)
-		SDL_SetWindowFullscreen(globals.mainWindow, SDL_WINDOW_FULLSCREEN);
+		SDL_SetWindowFullscreen(globals.mainWindow->m_window, SDL_WINDOW_FULLSCREEN);
 	else
-		SDL_SetWindowFullscreen(globals.mainWindow, 0);
+		SDL_SetWindowFullscreen(globals.mainWindow->m_window, 0);
 }
 
 static void updateViewport(Surface * surface, SDL_Window * window)
@@ -1883,9 +1902,6 @@ void Framework::unregisterWindow(Window * window)
 
 WindowData * Framework::findWindowDataById(const int id)
 {
-	if (id == SDL_GetWindowID(globals.mainWindow))
-		return &globals.mainWindowData;
-	
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		if (SDL_GetWindowID(window->m_window) == id)
 			return window->m_windowData;
@@ -1894,6 +1910,20 @@ WindowData * Framework::findWindowDataById(const int id)
 }
 
 // -----
+
+Window::Window(SDL_Window * window)
+	: m_prev(nullptr)
+	, m_next(nullptr)
+	, m_window(nullptr)
+	, m_windowData(nullptr)
+{
+	m_window = window;
+	
+	m_windowData = new WindowData();
+	memset(m_windowData, 0, sizeof(WindowData));
+	
+	framework.registerWindow(this);
+}
 
 Window::Window(const char * title, const int sx, const int sy, const bool resizable)
 	: m_prev(nullptr)
@@ -5293,7 +5323,7 @@ static void getViewportSize(float & sx, float & sy)
 	}
 	else
 	{
-		if (globals.currentWindow == globals.mainWindow)
+		if (globals.currentWindow == globals.mainWindow->getWindow())
 		{
 			sx = globals.displaySize[0];
 			sy = globals.displaySize[1];
