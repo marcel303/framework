@@ -79,8 +79,6 @@ struct PurpleRain
 
 struct Line
 {
-	static const int kNumPoints = kLineSize * kNumLasers;
-
 	struct Point
 	{
 		float x;
@@ -89,15 +87,17 @@ struct Line
 	
 	std::vector<Point> points;
 	
-	void init(const int size, const float x1, const float x2)
+	void init(const int numPoints, const float x1, const float x2)
 	{
-		points.resize(size);
+		Assert(numPoints >= 2);
 		
-		for (int i = 0; i < size; ++i)
+		points.resize(numPoints);
+		
+		for (int i = 0; i < numPoints; ++i)
 		{
 			auto & point = points[i];
 			
-			const float t = i / float(size - 1);
+			const float t = i / float(numPoints - 1);
 			const float x = x1 * (1.f - t) + x2 * t;
 			
 			point.x = x;
@@ -112,24 +112,13 @@ struct Line
 			point.y = 0.f;
 		}
 	}
-	
-	void add(const Line & line)
-	{
-		for (int i = 0; i < kNumPoints; ++i)
-		{
-			points[i].x += line.points[i].x;
-			points[i].y += line.points[i].y;
-		}
-	}
 };
 
 // physically simulated line with a templated down scaling factor for CPU-usage reduction
 
-template <int DownScale>
+template <int kNumPoints>
 struct PhysicalString1DSim
 {
-	static const int kNumPoints = Line::kNumPoints / DownScale;
-	
 	double positions[kNumPoints];
 	double velocities[kNumPoints];
 	double forces[kNumPoints];
@@ -145,6 +134,11 @@ struct PhysicalString1DSim
 		
 		mass = in_mass;
 		tension = in_tension;
+	}
+	
+	int getNumPoints() const
+	{
+		return kNumPoints;
 	}
 	
 	void tick(const float dt)
@@ -227,10 +221,10 @@ struct PhysicalString1DSim
 	}
 };
 
-template <int DownScale>
-struct PhysicalString1D : PhysicalString1DSim<DownScale>
+template <int kNumPoints>
+struct PhysicalString1D : PhysicalString1DSim<kNumPoints>
 {
-	typedef PhysicalString1DSim<DownScale> Base;
+	typedef PhysicalString1DSim<kNumPoints> Base;
 	
 	float x1 = 0.0;
 	float x2 = 1.0;
@@ -245,14 +239,14 @@ struct PhysicalString1D : PhysicalString1DSim<DownScale>
 	
 	float getXForPointIndex(const int pointIndex) const
 	{
-		const float t = pointIndex / float(Base::kNumPoints);
+		const float t = pointIndex / float(kNumPoints);
 		
 		return x1 * (1.f - t) + x2 * t;
 	}
 	
 	void drawOntoLine(Line & line)
 	{
-		PhysicalString1DSim<DownScale>::drawOntoLine(line, x1, x2);
+		Base::drawOntoLine(line, x1, x2);
 	}
 };
 
@@ -627,8 +621,11 @@ int main(int argc, char * argv[])
 		laserInstances[i].init(name.c_str());
 	}
 	
-	PhysicalString1D<4> string;
-	string.init(1.0, 100.0, 0.0, 1.0);
+	static const int kNumStrings = 2;
+	
+	PhysicalString1D<kLineSize * kNumLasers / 4> strings[kNumStrings];
+	strings[0].init(1.0, 100.0, 0.0, 1.0);
+	strings[1].init(1.0, 100.0, 2.0, 3.0);
 	
 	GraviticSource gravitic;
 	gravitic.z = .2f;
@@ -742,13 +739,18 @@ int main(int argc, char * argv[])
 				else if (tab == kTab_Simulation)
 				{
 					ImGui::Checkbox("Pause simulation", &pauseSimulation);
+					for (int i = 0; i < kNumStrings; ++i)
 					{
-						float mass = string.mass;
-						float tension = string.tension;
-						ImGui::SliderFloat("String mass", &mass, 0.f, 10.f, "%.4f", 2.f);
-						ImGui::SliderFloat("String tension", &tension, 0.f, 1000.f, "%.4f", 2.f);
-						string.mass = mass;
-						string.tension = tension;
+						ImGui::PushID(i);
+						{
+							float mass = strings[i].mass;
+							float tension = strings[i].tension;
+							ImGui::SliderFloat("String mass", &mass, 0.f, 10.f, "%.4f", 2.f);
+							ImGui::SliderFloat("String tension", &tension, 0.f, 1000.f, "%.4f", 2.f);
+							strings[i].mass = mass;
+							strings[i].tension = tension;
+						}
+						ImGui::PopID();
 					}
 					ImGui::SliderFloat("Rain drop interval", &dropInterval, 0.001f, 2.f, "%.4f", 2.f);
 					ImGui::SliderFloat("Gravitic force", &gravitic.force, 0.f, 10.f, "%.4f", 2.f);
@@ -854,7 +856,7 @@ int main(int argc, char * argv[])
 		{
 			inputIscaptured = true;
 			
-			const int offset = rand() % string.kNumPoints;
+			const int offset = rand() % strings[0].getNumPoints();
 			
 			const int radius = 200;
 			
@@ -862,7 +864,7 @@ int main(int argc, char * argv[])
 			{
 				const int position = offset + i - radius;;
 				
-				if (position >= 0 && position < string.kNumPoints)
+				if (position >= 0 && position < strings[0].getNumPoints())
 				{
 					const float t = i / float(radius);
 					
@@ -872,7 +874,7 @@ int main(int argc, char * argv[])
 					
 					value *= powf(random(0.f, +1.f), 2.f) * sign;
 					
-					string.positions[position] += value * .2f;
+					strings[0].positions[position] += value * .2f;
 				}
 			}
 		}
@@ -880,29 +882,43 @@ int main(int argc, char * argv[])
 		//
 		
 		Line line;
-		line.init(Line::kNumPoints, 0.f, kNumLasers);
+		line.init(kLineSize * kNumLasers, 0.f, kNumLasers);
+		
+		// update gravitic source location
 		
 		gravitic.x = mouse.x / 200.f;
 		gravitic.y = (mouse.y - 200.f) / 200.f;
 		
-		for (int i = 0; i < string.kNumPoints; ++i)
-		{
-			const float x = string.getXForPointIndex(i);
-			const float y = string.positions[i];
+		// apply gravitic source
 		
-			const Vec2 force = gravitic.calculateForce(x, y);
-			//const Vec2 force = gravitic.calculateForce(x, 0.f);
+		for (auto & string : strings)
+		{
+			for (int i = 0; i < string.getNumPoints(); ++i)
+			{
+				const float x = string.getXForPointIndex(i);
+				const float y = string.positions[i];
 			
-			string.forces[i] += force[1];
+				const Vec2 force = gravitic.calculateForce(x, y);
+				//const Vec2 force = gravitic.calculateForce(x, 0.f);
+				
+				string.forces[i] += force[1];
+			}
 		}
 		
-		for (int i = 0; i < 10; ++i)
-			string.tick(dt / 10.0);
+		for (auto & string : strings)
+		{
+			for (int i = 0; i < 10; ++i)
+				string.tick(dt / 10.0);
+		}
 		
 		// compose line
 		
 		line.newFrame();
-		string.drawOntoLine(line);
+		
+		for (auto & string : strings)
+		{
+			string.drawOntoLine(line);
+		}
 		
 		// generate mask
 		
@@ -1159,7 +1175,7 @@ int main(int argc, char * argv[])
 					setColor(colorWhite);
 					gxBegin(GL_LINES);
 					{
-						for (int i = 0; i < Line::kNumPoints - 1; ++i)
+						for (int i = 0; i < line.points.size() - 1; ++i)
 						{
 							auto & point1 = line.points[i + 0];
 							auto & point2 = line.points[i + 1];
