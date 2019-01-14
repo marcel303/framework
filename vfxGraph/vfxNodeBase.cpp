@@ -863,6 +863,37 @@ void VfxNodeDescription::add(const VfxChannel & channel)
 	add("MEMORY: %.2f Kb", channel.size * sizeof(float) / 1024.0);
 }
 
+void VfxNodeDescription::addGxTexture(const char * name, const GxTexture & texture)
+{
+	if (texture.isValid() == false)
+	{
+		add("%s. id: %d", name, texture.id);
+	}
+	else
+	{
+		const char * formatString =
+			texture.format == GX_R8_UNORM ? "R8, 8 bpp (unorm)" :
+			texture.format == GX_RG8_UNORM  ? "R8G8, 16 bpp (unorm)" :
+			texture.format == GX_R16_FLOAT ? "R16F, 16 bpp (float)" :
+			texture.format == GX_R32_FLOAT ? "R32F, 32 bpp (float)" :
+			texture.format == GX_RGB8_UNORM  ? "RGB888, 24 bpp (unorm)" :
+			texture.format == GX_RGBA8_UNORM  ? "RGBA8888, 32 bpp (unorm)" :
+			"n/a";
+		
+		const int bpp =
+			texture.format == GX_R8_UNORM ? 8 :
+			texture.format == GX_RG8_UNORM ? 16 :
+			texture.format == GX_R16_FLOAT ? 16 :
+			texture.format == GX_R32_FLOAT ? 32 :
+			texture.format == GX_RGB8_UNORM ? 24 :
+			texture.format == GX_RGBA8_UNORM ? 32 :
+			0;
+		
+		add("%s. size: %d x %d, id: %d", name, texture.sx, texture.sy, texture.id);
+		add("format: %s, size: %.2f Mb (estimate)", formatString, (texture.sx * texture.sy * bpp / 8) / 1024.0 / 1024.0);
+	}
+}
+
 void VfxNodeDescription::addOpenglTexture(const char * name, const uint32_t id)
 {
 	if (id == 0)
