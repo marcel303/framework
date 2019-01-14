@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // glBlendFuncSeparate. todo : extend Framework's blending
+
 #include "framework.h"
 #include "graph.h"
 #include "StringEx.h"

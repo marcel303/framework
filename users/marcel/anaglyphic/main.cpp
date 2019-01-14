@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_PROGRAM_POINT_SIZE. todo : remove ?
 #include "Calc.h"
 #include "framework.h"
 #include "Timer.h"

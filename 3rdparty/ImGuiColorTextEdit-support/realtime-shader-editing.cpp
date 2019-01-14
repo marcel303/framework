@@ -1,3 +1,4 @@
+#include <GL/glew.h> // glGetUniformfv etc. todo : remove and add inspection functionality to Shader object ?
 #include "framework.h"
 #include "imgui.h"
 #include "imgui/TextEditor.h"

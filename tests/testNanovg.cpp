@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // NanoVG
 #include "framework.h"
 #include "testBase.h"
 #include <algorithm>

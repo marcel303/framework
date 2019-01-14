@@ -1,3 +1,4 @@
+#include <GL/glew.h> // virtual textures
 #include "Calc.h"
 #include "CubeSides.txt"
 #include "framework.h"

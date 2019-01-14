@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // GL_ACTIVE_UNIFORMS. todo : remove with Framework-provided shader inspection funcitonality
 #include "framework.h"
 #include "Path.h"
 #include "StringEx.h"

@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // GL_TEXTURE_SWIZZLE_RGBA. todo : remove with Framework-provided texture object
 #include "framework.h"
 #include "image.h"
 #include "testBase.h"

@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_R32F
 #include "ip/UdpSocket.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "osc/OscPacketListener.h"

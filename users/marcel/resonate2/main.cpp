@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_TEXTURE_CUBE_MAP_SEAMLESS. todo : remove and replace with functionality in Framework-provided cube map object
 #include "Benchmark.h"
 #include "computeEditor.h"
 #include "constants.h"

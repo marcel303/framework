@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_TEXTURE_SWIZZLE_RGBA. todo : remove and replace with Framework-provided texture object
 #include "Log.h"
 #include "ps3eye.h"
 #include "StringEx.h"

@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // glBlendFuncSeparate. todo : extend Framework's blending
+
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioTypes.h"

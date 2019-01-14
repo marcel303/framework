@@ -1,5 +1,7 @@
 #ifndef WIN32
 
+#include <GL/glew.h> // GL_R8. todo : remove with Framework-provided texture object
+
 #include "Benchmark.h"
 #include "framework.h"
 #include "vfxNodes/openglTexture.h"

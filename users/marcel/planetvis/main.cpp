@@ -1,3 +1,4 @@
+#include <GL/glew.h> // virtual textures
 #include "Calc.h"
 #include "framework.h"
 #include "Timer.h"

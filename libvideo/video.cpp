@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // GL_R8. todo : remove in favor of a Framework-provided texture object
 #include "framework.h"
 #include "video.h"
 #include <atomic>

@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_TEXTURE_2D_ARRAY
 #include "effect.h"
 #include "Parse.h"
 #include "StringEx.h"

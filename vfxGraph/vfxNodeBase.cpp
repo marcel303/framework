@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // GL_R8, RG8, R16F, .. todo : remove and replace with Framework-provided texture object
 #include "framework.h"
 #include "MemAlloc.h"
 #include "StringEx.h"
