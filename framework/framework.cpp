@@ -50,6 +50,8 @@
 	#define _chdir chdir
 #endif
 
+#include <GL/glew.h>
+
 #include "audio.h"
 #include "data/engine/ShaderCommon.txt"
 #include "framework.h"
@@ -102,6 +104,14 @@ extern void unlockMidi();
 
 #if ENABLE_OPENGL && !USE_LEGACY_OPENGL
 static void gxFlush(bool endOfBatch);
+#endif
+
+#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+#if defined(WIN32)
+	void __stdcall debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const GLvoid*);
+#else
+	void debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const GLvoid*);
+#endif
 #endif
 
 static float scale255(const float v)
@@ -2655,11 +2665,6 @@ GLint Shader::getImmediate(const char * name)
 	return glGetUniformLocation(getProgram(), name);
 }
 
-GLint Shader::getAttribute(const char * name)
-{
-	return glGetAttribLocation(getProgram(), name);
-}
-
 #define SET_UNIFORM(name, op) \
 	if (getProgram()) \
 	{ \
@@ -2977,11 +2982,6 @@ int ComputeShader::toThreadSz(const int sz) const
 GLint ComputeShader::getImmediate(const char * name)
 {
 	return glGetUniformLocation(getProgram(), name);
-}
-
-GLint ComputeShader::getAttribute(const char * name)
-{
-	return glGetAttribLocation(getProgram(), name);
 }
 
 #define SET_UNIFORM(name, op) \

@@ -31,8 +31,8 @@
 //        which should hopefully rarely be needed
 // for now we seem to depend mostly on: SDL_event, SDL_mutex, SDL_thread and SDL_timer
 
-#include <GL/glew.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
 #include <string>
 #include <vector>
 #include "Debugging.h"
@@ -278,6 +278,14 @@ typedef void (*InitErrorHandler)(INIT_ERROR error);
 
 //
 
+typedef uint32_t GxTextureId;
+typedef int32_t GxImmediateIndex;
+typedef uint32_t GxFramebufferId;
+typedef uint32_t GxShaderId;
+typedef uint32_t GxShaderBufferId;
+
+//
+
 class Framework
 {
 public:
@@ -436,9 +444,9 @@ class Surface
 	int m_bufferId;
 	SURFACE_FORMAT m_format;
 	bool m_doubleBuffered;
-	GLuint m_buffer[2];
-	GLuint m_texture[2];
-	GLuint m_depthTexture;
+	GxFramebufferId m_buffer[2];
+	GxTextureId m_texture[2];
+	GxTextureId m_depthTexture;
 	
 	void construct();
 	void destruct();
@@ -452,10 +460,10 @@ public:
 	void swapBuffers();
 
 	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered);
-	GLuint getFramebuffer() const;
-	GLuint getTexture() const;
+	GxFramebufferId getFramebuffer() const;
+	GxTextureId getTexture() const;
 	bool hasDepthTexture() const;
-	GLuint getDepthTexture() const;
+	GxTextureId getDepthTexture() const;
 	int getWidth() const;
 	int getHeight() const;
 	SURFACE_FORMAT getFormat() const;
@@ -490,7 +498,7 @@ public:
 	virtual ~ShaderBase() { }
 	
 	virtual bool isValid() const = 0;
-	virtual GLuint getProgram() const = 0;
+	virtual GxShaderId getProgram() const = 0;
 	virtual SHADER_TYPE getType() const = 0;
 	virtual int getVersion() const = 0;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const = 0;
@@ -510,36 +518,35 @@ public:
 	
 	void load(const char * name, const char * filenameVs, const char * filenamePs);
 	virtual bool isValid() const override;
-	virtual GLuint getProgram() const override;
+	virtual GxShaderId getProgram() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
 	
-	GLint getImmediate(const char * name);
-	GLint getAttribute(const char * name);
+	GxImmediateIndex getImmediate(const char * name);
 	
 	void setImmediate(const char * name, float x);	
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
 	void setImmediate(const char * name, float x, float y, float z, float w);
-	void setImmediate(GLint index, float x);
-	void setImmediate(GLint index, float x, float y);
-	void setImmediate(GLint index, float x, float y, float z);
-	void setImmediate(GLint index, float x, float y, float z, float w);
+	void setImmediate(GxImmediateIndex index, float x);
+	void setImmediate(GxImmediateIndex index, float x, float y);
+	void setImmediate(GxImmediateIndex index, float x, float y, float z);
+	void setImmediate(GxImmediateIndex index, float x, float y, float z, float w);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
-	void setImmediateMatrix4x4(GLint index, const float * matrix);
+	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
 	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
-	void setTextureUnit(GLint index, int unit); // bind <name> to GL_TEXTURE0 + unit
-	void setTexture(const char * name, int unit, GLuint texture);
-	void setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
-	void setTextureUniform(GLint index, int unit, GLuint texture);
-	void setTextureArray(const char * name, int unit, GLuint texture);
-	void setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
-	void setTextureCube(const char * name, int unit, GLuint texture);
+	void setTextureUnit(GxImmediateIndex index, int unit); // bind <name> to GL_TEXTURE0 + unit
+	void setTexture(const char * name, int unit, GxTextureId texture);
+	void setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
+	void setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture);
+	void setTextureArray(const char * name, int unit, GxTextureId texture);
+	void setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
+	void setTextureCube(const char * name, int unit, GxTextureId texture);
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
-	void setBuffer(GLint index, const ShaderBuffer & buffer);
+	void setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer);
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
-	void setBufferRw(GLint index, const ShaderBufferRw & buffer);
+	void setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer);
 
 	const ShaderCacheElem & getCacheElem() const { return *m_shader; }
 	void reload();
@@ -564,7 +571,7 @@ public:
 
 	void load(const char * filename, const int groupSx = kDefaultGroupSx, const int groupSy = kDefaultGroupSy, const int groupSz = kDefaultGroupSz);
 	virtual bool isValid() const override { return m_shader != 0; }
-	virtual GLuint getProgram() const override;
+	virtual GxShaderId getProgram() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_CS; }
 	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
@@ -576,24 +583,23 @@ public:
 	int toThreadSy(const int sy) const;
 	int toThreadSz(const int sz) const;
 
-	GLint getImmediate(const char * name);
-	GLint getAttribute(const char * name);
+	GxImmediateIndex getImmediate(const char * name);
 
 	void setImmediate(const char * name, float x);	
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
 	void setImmediate(const char * name, float x, float y, float z, float w);
-	void setImmediate(GLint index, float x, float y);
-	void setImmediate(GLint index, float x, float y, float z, float w);
+	void setImmediate(GxImmediateIndex index, float x, float y);
+	void setImmediate(GxImmediateIndex index, float x, float y, float z, float w);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
-	void setImmediateMatrix4x4(GLint index, const float * matrix);
-	void setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
-	void setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
-	void setTextureRw(const char * name, int unit, GLuint texture, GLuint format, bool filtered, bool clamp = true);
+	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
+	void setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
+	void setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
+	void setTextureRw(const char * name, int unit, GxTextureId texture, GLuint format, bool filtered, bool clamp = true);
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
-	void setBuffer(GLint index, const ShaderBuffer & buffer);
+	void setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer);
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
-	void setBufferRw(GLint index, const ShaderBufferRw & buffer);
+	void setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer);
 
 	void dispatch(const int dispatchSx, const int dispatchSy, const int dispatchSz);
 
@@ -605,13 +611,13 @@ public:
 
 class ShaderBuffer
 {
-	GLuint m_buffer;
+	GxShaderBufferId m_buffer;
 
 public:
 	ShaderBuffer();
 	~ShaderBuffer();
 
-	GLuint getBuffer() const;
+	GxShaderBufferId getBuffer() const;
 
 	void setData(const void * bytes, int numBytes);
 };
@@ -620,13 +626,13 @@ public:
 
 class ShaderBufferRw
 {
-	GLuint m_buffer;
+	GxShaderBufferId m_buffer;
 
 public:
 	ShaderBufferRw();
 	~ShaderBufferRw();
 
-	GLuint getBuffer() const;
+	GxShaderBufferId getBuffer() const;
 
 	void setDataRaw(const void * bytes, int numBytes);
 
@@ -702,7 +708,7 @@ public:
 
 //
 
-GLuint getTexture(const char * filename);
+GxTextureId getTexture(const char * filename);
 
 //
 
@@ -747,7 +753,7 @@ public:
 	
 	int getWidth() const;
 	int getHeight() const;
-	GLuint getTexture() const;
+	GxTextureId getTexture() const;
 	
 	// animation
 	float animSpeed;
@@ -1306,12 +1312,12 @@ void drawGrid3d(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1);
 void drawGrid3dLine(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1, bool optimized = false);
 void fillCube(Vec3Arg position, Vec3Arg size);
 
-GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
-GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp);
-GLuint createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp);
-GLuint createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp);
-GLuint createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp);
-GLuint createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp);
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 

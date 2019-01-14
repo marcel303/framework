@@ -82,14 +82,6 @@ static int fopen_s(FILE ** file, const char * filename, const char * mode)
 void splitString(const std::string & str, std::vector<std::string> & result);
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
-#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
-#if defined(WIN32)
-	void __stdcall debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const GLvoid*);
-#else
-	void debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const GLvoid*);
-#endif
-#endif
-
 //
 
 struct BoxAtlasElem;
