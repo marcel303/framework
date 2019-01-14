@@ -34,6 +34,7 @@ static GLenum toOpenGLInternalFormat(const GX_TEXTURE_FORMAT format)
 #define C(src, dst) if (format == src) return dst
 	C(GX_UNKNOWN_FORMAT, GL_INVALID_ENUM);
 	C(GX_R8_UNORM, GL_R8);
+	C(GX_RGB8_UNORM, GL_RGB8);
 	C(GX_RGBA8_UNORM, GL_RGBA8);
 #undef C
 
@@ -48,6 +49,7 @@ static void toOpenGLUploadType(const GX_TEXTURE_FORMAT format, GLenum & uploadFo
 #define C(src, dstFormat, dstElementType) if (format == src) { uploadFormat = dstFormat; uploadElementType = dstElementType; }
 	C(GX_UNKNOWN_FORMAT, GL_INVALID_ENUM, GL_INVALID_ENUM);
 	C(GX_R8_UNORM, GL_RED, GL_UNSIGNED_BYTE);
+	C(GX_RGB8_UNORM, GL_RGB, GL_UNSIGNED_BYTE);
 	C(GX_RGBA8_UNORM, GL_RGBA, GL_UNSIGNED_BYTE);
 #undef C
 }
@@ -216,11 +218,13 @@ void GxTexture::setSampling(const bool _filter, const bool _clamp)
 	checkErrorGL();
 }
 
-void GxTexture::upload(const void * src, const int _srcAlignment, const int srcPitch)
+void GxTexture::upload(const void * src, const int _srcAlignment, const int _srcPitch)
 {
 	Assert(id != 0);
 	if (id == 0)
 		return;
+	
+	const int srcPitch = _srcPitch == 0 ? sx : _srcPitch;
 	
 	const int srcAlignment = ((srcPitch & (_srcAlignment - 1)) == 0) ? _srcAlignment : 1;
 	

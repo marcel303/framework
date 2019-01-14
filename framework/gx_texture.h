@@ -35,6 +35,7 @@ enum GX_TEXTURE_FORMAT
 	
 	// integer unsigned normalized
 	GX_R8_UNORM,
+	GX_RGB8_UNORM,
 	GX_RGBA8_UNORM,
 	//GX_R16_UNORM,
 	//GX_RG16_UNORM,
@@ -50,6 +51,8 @@ enum GX_TEXTURE_SWIZZLE
 	GX_SWIZZLE_ZERO = -1,
 	GX_SWIZZLE_ONE = -2
 };
+
+typedef uint32_t GxTextureId;
 
 struct GxTexture
 {

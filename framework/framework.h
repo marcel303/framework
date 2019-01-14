@@ -279,7 +279,6 @@ typedef void (*InitErrorHandler)(INIT_ERROR error);
 
 //
 
-typedef uint32_t GxTextureId;
 typedef int32_t GxImmediateIndex;
 typedef uint32_t GxFramebufferId;
 typedef uint32_t GxShaderId;

@@ -396,7 +396,7 @@ struct Controller
 			
 			if (texture.isValid())
 			{
-				texture.upload(recorder->frameData, 1, 320);
+				texture.upload(recorder->frameData, 1, 0);
 				texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 
 				gxSetTexture(texture.id);
