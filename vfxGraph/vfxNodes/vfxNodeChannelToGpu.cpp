@@ -28,7 +28,6 @@
 #include "vfxNodeChannelToGpu.h"
 #include <algorithm>
 #include <cmath>
-#include <GL/glew.h> // GL_RED
 
 VFX_NODE_TYPE(VfxNodeChannelToGpu)
 {
@@ -62,12 +61,12 @@ void VfxNodeChannelToGpu::tick(const float dt)
 	{
 		vfxGpuTimingBlock(VfxNodeChannelToGpu);
 		
-		if (texture.isChanged(channel->sx, channel->sy, GL_R32F) || texture.isSamplingChange(channel->continuous, true))
+		if (texture.isChanged(channel->sx, channel->sy, GX_R32_FLOAT) || texture.isSamplingChange(channel->continuous, true))
 		{
 			allocateImage(channel->sx, channel->sy, channel->continuous);
 		}
 		
-		texture.upload(channel->data, 4, channel->sx, GL_RED, GL_FLOAT);
+		texture.upload(channel->data, 4, channel->sx);
 	}
 }
 
@@ -87,8 +86,8 @@ void VfxNodeChannelToGpu::allocateImage(const int sx, const int sy, const bool i
 {
 	freeImage();
 
-	texture.allocate(sx, sy, GL_R32F, isContinuous, true);
-	texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+	texture.allocate(sx, sy, GX_R32_FLOAT, isContinuous, true);
+	texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 
 	imageOutput.texture = texture.id;
 }
