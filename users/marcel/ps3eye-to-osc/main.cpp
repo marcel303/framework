@@ -1,4 +1,3 @@
-#include <GL/glew.h> // GL_TEXTURE_SWIZZLE_RGBA. todo : remove and replace with Framework-provided texture object
 #include "Log.h"
 #include "ps3eye.h"
 #include "StringEx.h"
@@ -622,26 +621,20 @@ struct Controller
 		
 		if (recorder != nullptr && recorder->frameData.cameraImage != nullptr)
 		{
-			//GLuint texture = createTextureFromR8(recorder->frameData, CAM_SX, CAM_SY, false, true);
-			GLuint texture = createTextureFromR8(recorder->frameData.thresholdedValues, CAM_SX, CAM_SY, false, true);
+			GxTexture texture;
+			texture.allocate(CAM_SX, CAM_SY, GX_R8_UNORM, false, true);
 			
-			if (texture != 0)
+			if (texture.isValid())
 			{
-				glBindTexture(GL_TEXTURE_2D, texture);
-				GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-				checkErrorGL();
-				glBindTexture(GL_TEXTURE_2D, 0);
-				checkErrorGL();
-
-				gxSetTexture(texture);
+				//texture.upload(recorder->frameData.cameraImage, 1, 0);
+				texture.upload(recorder->frameData.thresholdedValues, 1, 0);
+				
+				texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
+			
+				gxSetTexture(texture.id);
 				setColor(colorWhite);
 				drawRect(0, 0, CAMVIEW_SX, CAMVIEW_SY);
 				gxSetTexture(0);
-				
-				glDeleteTextures(1, &texture);
-				texture = 0;
-				checkErrorGL();
 			}
 		}
 		
