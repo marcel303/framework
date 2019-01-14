@@ -25,8 +25,9 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "framework.h"
 #include "ofMain.h"
+
+#include "framework.h"
 #include "Parse.h"
 #include "StringEx.h"
 #include <algorithm>

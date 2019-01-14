@@ -21,9 +21,9 @@
     SOFTWARE.
 */
 
-
-#include "framework.h"
 #include "ofxSmartFont.h"
+#include "framework.h"
+
 vector<shared_ptr<ofxSmartFont>> ofxSmartFont::mFonts;
 
 /*
