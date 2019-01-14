@@ -114,10 +114,7 @@ struct MediaPlayer : public AudioStream
 	Context * context;
 	
 	MP::VideoFrame * videoFrame;
-	uint32_t texture;
-	int textureSx;
-	int textureSy;
-	int textureFormat;
+	GxTexture * texture;
 	
 	double presentTime;
 
@@ -132,10 +129,7 @@ struct MediaPlayer : public AudioStream
 	MediaPlayer()
 		: context(nullptr)
 		, videoFrame(nullptr)
-		, texture(0)
-		, textureSx(0)
-		, textureSy(0)
-		, textureFormat(-1)
+		, texture(nullptr)
 		, presentTime(-0.0001)
 		, audioChannelCount(-1)
 		, audioSampleRate(-1)

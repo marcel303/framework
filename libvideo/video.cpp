@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // GL_R8. todo : remove in favor of a Framework-provided texture object
 #include "framework.h"
 #include "video.h"
 #include <atomic>
@@ -312,15 +311,13 @@ void MediaPlayer::updateTexture()
 		int sy = 0;
 		int pitch = 0;
 		
-		GLenum internalFormat = 0;
-		GLenum uploadFormat = 0;
+		GX_TEXTURE_FORMAT format = GX_UNKNOWN_FORMAT;
 		
 		if (context->openParams.outputMode == MP::kOutputMode_PlanarYUV)
 		{
 			bytes = videoFrame->getY(sx, sy, pitch);
 			
-			internalFormat = GL_R8;
-			uploadFormat = GL_RED;
+			format = GX_R8_UNORM;
 		}
 		else
 		{
@@ -333,86 +330,43 @@ void MediaPlayer::updateTexture()
 			
 			pitch = (((sx * 4) + alignment - 1) & alignmentMask) / 4;
 			
-			internalFormat = GL_RGBA8;
-			uploadFormat = GL_RGBA;
+			format = GX_RGBA8_UNORM;
 		}
 		
-		if (texture == 0 || sx != textureSx || sy != textureSy || internalFormat != textureFormat)
+		if (texture == nullptr || sx != texture->sx || sy != texture->sy || format != texture->format)
 		{
 			freeTexture();
 			
-			glGenTextures(1, &texture);
-			glBindTexture(GL_TEXTURE_2D, texture);
 		#if USE_LEGACY_OPENGL
-			const GLenum glFormat = internalFormat == GL_R8 ? GL_LUMINANCE8 : GL_RGBA8;
-			const GLenum uploadFormat = internalFormat == GL_R8 ? GL_RED : GL_RGBA;
-			const GLenum uploadType = GL_UNSIGNED_BYTE;
-			glTexImage2D(GL_TEXTURE_2D, 0, glFormat, sx, sy, 0, uploadFormat, uploadType, nullptr);
-			checkErrorGL();
+			#error todo : implement legacy code path again. it used GL_LUMINANCE8 before when format is planar
 		#else
-			glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, sx, sy);
-			checkErrorGL();
+			texture = new GxTexture();
+			texture->allocate(sx, sy, format, true, true);
 			
-			if (internalFormat == GL_R8)
-			{
-				GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-				checkErrorGL();
-			}
+			if (format == GX_R8_UNORM)
+				texture->setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		#endif
-			
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-			checkErrorGL();
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			checkErrorGL();
-			
-			textureSx = sx;
-			textureSy = sy;
-			textureFormat = internalFormat;
 		}
 		
-		if (texture)
+		if (texture != nullptr)
 		{
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch);
-			checkErrorGL();
-			
-			// copy image data
-
-			glBindTexture(GL_TEXTURE_2D, texture);
-			glTexSubImage2D(
-				GL_TEXTURE_2D,
-				0, 0, 0,
-				sx, sy,
-				uploadFormat,
-				GL_UNSIGNED_BYTE,
-				bytes);
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, 0);
-			
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-			checkErrorGL();
+			texture->upload(bytes, 1, pitch);
 		}
 	}
 }
 
 void MediaPlayer::freeTexture()
 {
-	if (texture != 0)
+	if (texture != nullptr)
 	{
-		glDeleteTextures(1, &texture);
-		texture = 0;
+		delete texture;
+		texture = nullptr;
 	}
 }
 
 uint32_t MediaPlayer::getTexture() const
 {
-	return texture;
+	return texture ? texture->id : 0;
 }
 
 bool MediaPlayer::getVideoProperties(int & sx, int & sy, double & duration, double & sampleAspectRatio) const

@@ -1396,9 +1396,10 @@ void Effect_Video::draw()
 	{
 		gxPushMatrix();
 		{
-			const int sx = m_mediaPlayer.textureSx;
-			const int sy = m_mediaPlayer.textureSy;
+			const int sx = m_mediaPlayer.texture->sx;
+			const int sy = m_mediaPlayer.texture->sy;
 			const float scaleX = SCREEN_SX / float(sx);
+			
 			const float scaleY = SCREEN_SY / float(sy);
 			const float scale = Calc::Min(scaleX, scaleY);
 
@@ -1412,14 +1413,14 @@ void Effect_Video::draw()
 				setShader(shader);
 				shader.setTexture("colormap", 0, texture, true, true);
 				setColorf(1.f, 1.f, 1.f, m_alpha);
-				drawRect(0, 0, m_mediaPlayer.textureSx, m_mediaPlayer.textureSy);
+				drawRect(0, 0, m_mediaPlayer.texture->sx, m_mediaPlayer.texture->sy);
 				clearShader();
 			}
 			else
 			{
 				setColorf(1.f, 1.f, 1.f, m_alpha);
 				gxSetTexture(texture);
-				drawRect(0, 0, m_mediaPlayer.textureSx, m_mediaPlayer.textureSy);
+				drawRect(0, 0, m_mediaPlayer.texture->sx, m_mediaPlayer.texture->sy);
 				gxSetTexture(0);
 			}
 		}
