@@ -3516,6 +3516,14 @@ Dictionary::Dictionary()
 	m_storage = new DictionaryStorage();
 }
 
+Dictionary::Dictionary(const Dictionary & other)
+	: m_storage(nullptr)
+{
+	m_storage = new DictionaryStorage();
+	
+	*m_storage = *other.m_storage;
+}
+
 Dictionary::~Dictionary()
 {
 	delete m_storage;
@@ -3725,6 +3733,13 @@ void * Dictionary::getPtr(const char * name, void * _default) const
 std::string & Dictionary::operator[](const char * name)
 {
 	return m_storage->m_map[name];
+}
+
+Dictionary & Dictionary::operator=(const Dictionary & other)
+{
+	*m_storage = *other.m_storage;
+	
+	return *this;
 }
 
 // -----

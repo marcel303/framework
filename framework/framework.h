@@ -671,6 +671,7 @@ class Dictionary
 	
 public:
 	Dictionary();
+	Dictionary(const Dictionary & other);
 	~Dictionary();
 	
 	bool load(const char * filename);
@@ -695,6 +696,8 @@ public:
 	template <typename T> T * getPtrType(const char * name, T * _default) const { return (T*)getPtr(name, _default); }
 	
 	std::string & operator[](const char * name);
+	
+	Dictionary & operator=(const Dictionary & other);
 };
 
 //
