@@ -218,9 +218,9 @@ void Effect::setTextures(Shader & shader)
 	// fixme-vfxpro : setting colormap_clamp will override sampler settings colormap
 	//shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, true);
 	shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, false);
-	shader.setTexture("pcm", 2, g_pcmTexture, true, false);
-	shader.setTexture("fft", 3, g_fftTexture, true, false);
-	shader.setTexture("fft_faded", 4, g_fftTextureWithFade, true, false);
+	shader.setTexture("pcm", 2, g_pcmTexture.id, true, false);
+	shader.setTexture("fft", 3, g_fftTexture.id, true, false);
+	shader.setTexture("fft_faded", 4, g_fftTextureWithFade.id, true, false);
 }
 
 void Effect::applyBlendMode() const

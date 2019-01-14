@@ -28,9 +28,9 @@ extern int GFX_SY;
 extern Config config;
 
 extern float g_pcmVolume;
-extern GLuint g_pcmTexture;
-extern GLuint g_fftTexture;
-extern GLuint g_fftTextureWithFade;
+extern GxTexture g_pcmTexture;
+extern GxTexture g_fftTexture;
+extern GxTexture g_fftTextureWithFade;
 
 extern bool g_isReplay;
 

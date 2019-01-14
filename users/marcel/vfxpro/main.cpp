@@ -1,4 +1,3 @@
-#include <GL/glew.h> // GL_R32F
 #include "ip/UdpSocket.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "osc/OscPacketListener.h"
@@ -71,9 +70,9 @@ float g_prevSceneTime = 0.f;
 float g_prevSceneTimeRcp = 0.f;
 
 float g_pcmVolume = 0.f;
-GLuint g_pcmTexture = 0;
-GLuint g_fftTexture = 0;
-GLuint g_fftTextureWithFade = 0;
+GxTexture g_pcmTexture;
+GxTexture g_fftTexture;
+GxTexture g_fftTextureWithFade;
 
 void nextScene(const char * filename)
 {
@@ -1266,14 +1265,9 @@ int main(int argc, char * argv[])
 
 		g_sceneSurfacePool = new SceneSurfacePool(16);
 
-		Assert(g_pcmTexture == 0);
-		glGenTextures(1, &g_pcmTexture);
-
-		Assert(g_fftTexture == 0);
-		glGenTextures(1, &g_fftTexture);
-		
-		Assert(g_fftTextureWithFade == 0);
-		glGenTextures(1, &g_fftTextureWithFade);
+		Assert(g_pcmTexture.id == 0);
+		Assert(g_fftTexture.id == 0);
+		Assert(g_fftTextureWithFade.id == 0);
 
 		std::list<TimeDilationEffect> timeDilationEffects;
 
@@ -1778,44 +1772,23 @@ int main(int argc, char * argv[])
 
 			// convert PCM data to shader input texture
 
-			glBindTexture(GL_TEXTURE_2D, g_pcmTexture);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, numSamplesThisFrame, 1, 0, GL_RED, GL_FLOAT, samplesThisFrame);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			checkErrorGL();
+			g_pcmTexture.allocate(numSamplesThisFrame, 1, GX_R32_FLOAT, true, true);
+			g_pcmTexture.upload(samplesThisFrame, 4, 0);
 
 			// convert FFT data to shader input texture
 
-			glBindTexture(GL_TEXTURE_2D, g_fftTexture);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 			float powerValues[kFFTComplexSize];
 			for (int i = 0; i < kFFTComplexSize; ++i)
 				powerValues[i] = fftPowerValue(i);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, kFFTComplexSize, 1, 0, GL_RED, GL_FLOAT, powerValues);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			checkErrorGL();
-
-			glBindTexture(GL_TEXTURE_2D, g_fftTextureWithFade);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			g_fftTexture.allocate(kFFTComplexSize, 1, GX_R32_FLOAT, true, true);
+			g_fftTexture.upload(powerValues, 4, 0);
+			
 			static float powerValuesWithFade[kFFTComplexSize] = { };
 			const float fftFadeA = std::powf(g_scene->m_fftFade, dtReal);
 			for (int i = 0; i < kFFTComplexSize; ++i)
 				powerValuesWithFade[i] = std::max(powerValuesWithFade[i] * fftFadeA, powerValues[i]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, kFFTComplexSize, 1, 0, GL_RED, GL_FLOAT, powerValuesWithFade);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			checkErrorGL();
+			g_fftTextureWithFade.allocate(kFFTComplexSize, 1, GX_R32_FLOAT, true, true);
+			g_fftTextureWithFade.upload(powerValuesWithFade, 4, 0);
 
 			//
 
@@ -2298,7 +2271,7 @@ int main(int argc, char * argv[])
 
 					setBlend(BLEND_ALPHA);
 					setColorf(s, s, s, .5f);
-					gxSetTexture(g_fftTexture);
+					gxSetTexture(g_fftTexture.id);
 					gxBegin(GL_QUADS);
 					{
 						gxTexCoord2f(0.f, 0.f); gxVertex2f(x,      y     );
@@ -2399,14 +2372,9 @@ int main(int argc, char * argv[])
 		delete surface;
 		surface = nullptr;
 
-		glDeleteTextures(1, &g_fftTextureWithFade);
-		g_fftTextureWithFade = 0;
-
-		glDeleteTextures(1, &g_fftTexture);
-		g_fftTexture = 0;
-
-		glDeleteTextures(1, &g_pcmTexture);
-		g_pcmTexture = 0;
+		g_fftTextureWithFade.free();
+		g_fftTexture.free();
+		g_pcmTexture.free();
 
 		framework.shutdown();
 	}
