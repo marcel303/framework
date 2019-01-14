@@ -27,14 +27,13 @@
 
 #pragma once
 
-#include "framework.h"
-
 enum GX_TEXTURE_FORMAT
 {
 	GX_UNKNOWN_FORMAT,
 	
 	// integer unsigned normalized
 	GX_R8_UNORM,
+	GX_RG8_UNORM,
 	GX_RGB8_UNORM,
 	GX_RGBA8_UNORM,
 	//GX_R16_UNORM,
@@ -46,6 +45,7 @@ enum GX_TEXTURE_FORMAT
 	//GX_RG16F_SNORM
 	
 	// floating point
+	GX_R16_FLOAT,
 	GX_R32_FLOAT
 };
 
