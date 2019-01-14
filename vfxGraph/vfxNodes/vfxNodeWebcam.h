@@ -29,7 +29,7 @@
 
 #ifdef MACOS
 
-#include "openglTexture.h"
+#include "gx_texture.h"
 #include "vfxNodeBase.h"
 
 struct MacWebcam;
@@ -53,7 +53,7 @@ struct VfxNodeWebcam : VfxNodeBase
 	MacWebcam * webcam;
 	int lastImageIndex;
 
-	OpenglTexture texture;
+	GxTexture texture;
 
 	VfxImage_Texture imageOutput;
 	VfxImageCpuData imageCpuOutput;
