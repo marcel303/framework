@@ -36,6 +36,7 @@
 #include <string>
 #include <vector>
 #include "Debugging.h"
+#include "gx_texture.h"
 #include "Mat4x4.h"
 #include "Vec3.h"
 #include "Vec4.h"
