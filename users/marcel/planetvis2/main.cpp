@@ -499,7 +499,7 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 #endif
 	}
 
-	auto t1 = SDL_GetTicks();
+	//auto t1 = SDL_GetTicks();
 
 	glTexPageCommitmentARB(
 		GL_TEXTURE_2D_ARRAY,
@@ -509,7 +509,7 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 		isResident);
 	checkErrorGL();
 
-	auto t2 = SDL_GetTicks();
+	//auto t2 = SDL_GetTicks();
 
 	//printf("glTexPageCommitmentARB took %dms\n", int(t2 - t1));
 

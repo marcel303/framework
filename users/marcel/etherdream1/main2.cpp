@@ -623,7 +623,7 @@ int main(int argc, char * argv[])
 	FrameworkImGuiContext guiCtx;
 	guiCtx.init();
 	
-	const bool isEtherdreamStarted = etherdream_lib_start() == 0;
+	etherdream_lib_start();
 	
 	LaserInstance laserInstances[kNumLasers];
 	

@@ -619,7 +619,7 @@ struct Controller
 	{
 		Recorder * recorder = getRecorder(index);
 		
-		if (recorder != nullptr && recorder->frameData.cameraImage != nullptr)
+		if (recorder != nullptr)
 		{
 			GxTexture texture;
 			texture.allocate(CAM_SX, CAM_SY, GX_R8_UNORM, false, true);
