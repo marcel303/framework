@@ -31,7 +31,6 @@ Acknowledgement for the use of the Stanford Lucy model:
 	http://graphics.stanford.edu/data/3Dscanrep/
 */
 
-#include <GL/glew.h> // glPolygonMode
 #include "framework.h"
 
 #define VIEW_SX 1200
@@ -99,8 +98,7 @@ int main(int argc, char * argv[])
 			pushBlend(BLEND_OPAQUE);
 			setColor(255, 255, 255);
 			
-			glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
-			checkErrorGL();
+			pushWireframe(wireframe);
 			
 			gxPushMatrix();
 			{
@@ -120,8 +118,7 @@ int main(int argc, char * argv[])
 			}
 			gxPopMatrix();
 			
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			checkErrorGL();
+			popWireframe();
 			
 			popBlend();
 			

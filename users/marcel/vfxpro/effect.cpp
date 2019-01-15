@@ -1087,7 +1087,7 @@ void Effect_Boxes::draw(DrawableList & list)
 void Effect_Boxes::draw()
 {
 	if (m_outline)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		pushWireframe(true);
 
 	gxPushMatrix();
 	{
@@ -1166,7 +1166,8 @@ void Effect_Boxes::draw()
 	}
 	gxPopMatrix();
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (m_outline)
+		popWireframe();
 }
 
 void Effect_Boxes::handleSignal(const std::string & message)

@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // glPolygonMode
 #include "framework.h"
 #include <map>
 
@@ -222,8 +221,7 @@ int main(int argc, char * argv[])
 			
 			pushDepthTest(true, DEPTH_LESS);
 			
-			glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
-			checkErrorGL();
+			pushWireframe(wireframe);
 			
 			gxPushMatrix();
 			{
@@ -265,8 +263,7 @@ int main(int argc, char * argv[])
 			}
 			gxPopMatrix();
 			
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			checkErrorGL();
+			popWireframe();
 			
 			popDepthTest();
 			

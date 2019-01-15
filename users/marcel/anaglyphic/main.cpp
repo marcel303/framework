@@ -1,4 +1,4 @@
-#include <GL/glew.h> // GL_PROGRAM_POINT_SIZE, glPolygonMode. todo : remove ?
+#include <GL/glew.h> // GL_PROGRAM_POINT_SIZE. todo : remove ?
 #include "Calc.h"
 #include "framework.h"
 #include "Timer.h"
@@ -569,11 +569,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 			{
 				gxLoadIdentity();
 
-				if (keyboard.isDown(SDLK_l))
-				{
-					glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-					checkErrorGL();
-				}
+				pushWireframe(keyboard.isDown(SDLK_l));
 
 				for (const Model * model : models)
 				{
@@ -612,8 +608,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 					gxPopMatrix();
 				}
 
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-				checkErrorGL();
+				popWireframe();
 
 				//
 
@@ -632,8 +627,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 
 							const bool wireMode = (i == 0);
 
-							glPolygonMode(GL_FRONT_AND_BACK, wireMode ? GL_LINE : GL_FILL);
-							checkErrorGL();
+							pushWireframe(wireMode);
 
 							pushBlend(BLEND_OPAQUE);
 							Shader shader("waves");
@@ -648,8 +642,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 							clearShader();
 							popBlend();
 
-							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-							checkErrorGL();
+							popWireframe();
 						}
 						gxPopMatrix();
 					}

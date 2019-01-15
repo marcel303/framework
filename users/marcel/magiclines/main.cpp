@@ -1,4 +1,3 @@
-#include <GL/glew.h> // glPolygonMode
 #include "Calc.h"
 #include "framework.h"
 #include "image.h"
@@ -405,15 +404,13 @@ int main(int argc, char * argv[])
 
 								const bool wireMode = true;
 
-								glPolygonMode(GL_FRONT_AND_BACK, wireMode ? GL_LINE : GL_FILL);
-								checkErrorGL();
+								pushWireframe(wireMode);
 
 								setBlend(BLEND_OPAQUE);
 								setColor(127, 127, 127);
 								drawGrid(40, 40);
 
-								glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-								checkErrorGL();
+								popWireframe();
 							}
 							gxPopMatrix();
 

@@ -86,7 +86,6 @@ class ofxDatGuiTimeGraph : public ofxDatGuiComponent {
         {
             float px = this->x + mPlotterRect.x;
             float py = this->y + mPlotterRect.y;
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
             gxBegin(GX_TRIANGLE_STRIP);
             for (int i=0; i<pts.size(); i++) {
                 gxVertex2f(px+ pts[i].x, py + mPlotterRect.height);
