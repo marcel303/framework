@@ -40,6 +40,8 @@
 	#define DO_BLUR 1
 #endif
 
+#define ALL_TESTS 0
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 
@@ -71,6 +73,13 @@ extern void testVfxGraph();
 extern void testCamera3d();
 extern void testOscilloscope();
 extern void testAudioGraph_JsusFx();
+#ifndef WIN32
+extern void testPs3eye();
+#endif
+extern void testBlobDetection();
+#ifdef MACOS
+extern void testMacWebcam();
+#endif
 
 extern void testMain();
 extern void testMenu();
@@ -480,7 +489,6 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	doButton("DtDt", "Dot Detector", testDotDetector);
 	doButton("DtTr", "Dot Tracker", testDotTracker);
 	doButton("DTAtl", "Dynamic Texture Atlas", testDynamicTextureAtlas);
-	//doButton("Fr1D", "1D Fourier Analysis", testFourier1d);
 	doButton("Fr2D", "2D Fourier Analysis", testFourier2d);
 	doButton("ImDL", "CPU-image delay line", testImageCpuDelayLine);
 	doButton("DrPr", "Drawing Primitives", testHqPrimitives);
@@ -488,17 +496,28 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	doButton("IRm", "Impulse-Response", testImpulseResponseMeasurement);
 	doButton("MSDF", "MSDFGEN", testMsdfgen);
 	doButton("NVg", "NanoVG", testNanovg);
-	//doButton("TT", "STB TrueType", testStbTruetype);
-	//doButton("TAtl", "Texture Atlas", testTextureAtlas);
-	//doButton("Thr", "Threading", testThreading);
 	doButton("Grd", "HQ Gradient & Texture", testGradientShader);
 	doButton("Vfx", "Vfx Graph", testVfxGraph);
 	doButton("Cam", "3D Camera", testCamera3d);
 	doButton("Osc", "Oscilloscope", testOscilloscope);
-	//doButton("Aud", "Audio Graph", testAudioGraph);
 	doButton("JsFx", "Audio Graph (JsusFx)", testAudioGraph_JsusFx);
 #ifndef WIN32
 	doButton("XMM", "XMM Gesture Follower", testXmm);
+#endif
+
+#if ALL_TESTS
+	doButton("Fr1D", "1D Fourier Analysis", testFourier1d);
+	doButton("TT", "STB TrueType", testStbTruetype);
+	doButton("TAtl", "Texture Atlas", testTextureAtlas);
+	doButton("Thr", "Threading", testThreading);
+	doButton("Aud", "Audio Graph", testAudioGraph);
+#ifndef WIN32
+	doButton("PS3", "PS3 Eye Camera", testPs3eye);
+#endif
+	doButton("BlDt", "Blob Detector", testBlobDetection);
+#ifdef MACOS
+	doButton("McCm", "Mac Camera Input", testMacWebcam);
+#endif
 #endif
 
 	const bool result = doButton("QUIT", "Quit", nullptr, true);
