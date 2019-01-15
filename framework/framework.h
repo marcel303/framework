@@ -31,22 +31,16 @@
 //        which should hopefully rarely be needed
 // for now we seem to depend mostly on: SDL_event, SDL_mutex, SDL_thread and SDL_timer
 
-#if defined(WIN32)
-	#include <GL/glew.h> // <SDL2/SDL_opengl.h> includes <Windows.h>, which introduces a lot of #define's we don't want. Instead we include GLEW here (for now) which doesn't pollute the global namespace as much. Once framework.h really doesn't depend on OpenGL anymore this can be removed.
-	#include <SDL2/SDL.h>
-#else
-	#include <SDL2/SDL.h>
-	#include <GL/glew.h> // todo : remove OpenGL header file include
-#endif
-#include <string>
-#include <vector>
 #include "Debugging.h"
 #include "gx_texture.h"
 #include "Mat4x4.h"
 #include "Vec3.h"
 #include "Vec4.h"
+#include <SDL2/SDL.h>
+#include <string>
+#include <vector>
 
-#if 0 // todo : required to build on Windows or Linux?
+#if 0 // todo : required to build on Linux?
 	#include <float.h>
 #endif
 
