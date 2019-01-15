@@ -33,7 +33,11 @@ const int GFX_SY = 480;
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
 	changeDirectory(SDL_GetBasePath());
+#endif
 	
 #if !defined(DEBUG)
 	framework.fullscreen = true;
@@ -43,7 +47,7 @@ int main(int argc, char * argv[])
     framework.enableDepthBuffer = true;
     framework.enableRealTimeEditing = true;
     
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
     
     //Cagedsounds::main();

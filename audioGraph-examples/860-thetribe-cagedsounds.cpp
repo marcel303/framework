@@ -194,12 +194,9 @@ struct World
 	void draw3d()
 	{
 		camera.pushViewMatrix();
-		
-		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-		glEnable(GL_LINE_SMOOTH);
+		pushLineSmooth(true);
 
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
+		pushDepthTest(true, DEPTH_LESS);
 		{
 			pushBlend(BLEND_OPAQUE);
 			{
@@ -207,10 +204,9 @@ struct World
 			}
 			popBlend();
 		}
-		glDisable(GL_DEPTH_TEST);
+		popDepthTest();
 		
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
+		pushDepthTest(true, DEPTH_LESS, false);
 		{
 			gxPushMatrix();
 			{
@@ -222,9 +218,9 @@ struct World
 			
 			// todo : draw cage sounds, translucent
 		}
-		glDepthMask(GL_TRUE);
-		glDisable(GL_DEPTH_TEST);
+		popDepthTest();
 		
+		popLineSmooth();
 		camera.popViewMatrix();
 	}
 	

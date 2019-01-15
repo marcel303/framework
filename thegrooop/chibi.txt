@@ -1,3 +1,17 @@
+app thegrooop-860-thetribe
+	depend_library audiograph
+	depend_library vfxgraph
+	add_files ../audioGraph-examples/860-thetribe.cpp
+	#add_files ../audioGraph-examples/860-thetribe-cagedsounds.cpp
+	#add_files ../audioGraph-examples/860-thetribe-spokenword.cpp
+	#add_files ../audioGraph-examples/860-thetribe-video360.cpp
+	#add_files ../audioGraph-examples/860-thetribe-videomixer.cpp
+	#add_files ../audioGraph-examples/860-thetribe-videotube.cpp
+	add_files ../audioGraph-examples/textScroller.cpp
+	add_files ../audioGraph-examples/textScroller.h
+	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	group thegrooop
+
 app thegrooop-880-talkawave
 	depend_library audiograph
 	add_files ../audioGraph-examples/880-talkawave.cpp

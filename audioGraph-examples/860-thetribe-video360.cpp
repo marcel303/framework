@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_TEXTURE_CUBE_MAP
 #include "FileStream.h"
 #include "StreamReader.h"
 #include "StringEx.h"
@@ -512,7 +513,7 @@ struct Vfxclip
 			
 			const VfxNodeDisplay * displayNode = vfxGraph->getMainDisplayNode();
 			
-			const GLuint texture = displayNode ? displayNode->getImage()->getTexture() : 0;
+			const GxTextureId texture = displayNode ? displayNode->getImage()->getTexture() : 0;
 			
 			gxSetTexture(texture);
 			{
@@ -907,12 +908,9 @@ struct World
 	void draw3d()
 	{
 		camera.pushViewMatrix();
-		
-		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-		glEnable(GL_LINE_SMOOTH);
+		pushLineSmooth(true);
 
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
+		pushDepthTest(true, DEPTH_LESS);
 		{
 			pushBlend(BLEND_OPAQUE);
 			{
@@ -933,10 +931,9 @@ struct World
 			}
 			popBlend();
 		}
-		glDisable(GL_DEPTH_TEST);
+		popDepthTest();
 		
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
+		pushDepthTest(true, DEPTH_LESS, false);
 		{
 			gxPushMatrix();
 			{
@@ -961,9 +958,9 @@ struct World
 				spokenWords[i].drawTranslucent();
 			}
 		}
-		glDepthMask(GL_TRUE);
-		glDisable(GL_DEPTH_TEST);
+		popDepthTest();
 		
+		popLineSmooth();
 		camera.popViewMatrix();
 	}
 	
@@ -984,7 +981,7 @@ static void handleAction(const std::string & action, const Dictionary & args)
 	{
 		const std::string filename = args.getString("file", "");
 		
-		const GLuint texture = getTexture(filename.c_str());
+		const GxTextureId texture = getTexture(filename.c_str());
 		
 		if (texture != 0)
 		{
@@ -1072,9 +1069,7 @@ static void drawCube()
         { GL_TEXTURE_CUBE_MAP_POSITIVE_Z, Vec3(0,0,+1), Vec3(0,+1,0) },
         { GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, Vec3(0,0,-1), Vec3(0,+1,0) }
     };
-    
-    //glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-    
+	
     Surface surface(kCubeSx, kCubeSy, true, false, SURFACE_RGBA8);
     pushSurface(&surface);
     
@@ -1120,7 +1115,7 @@ static void drawCube()
             checkErrorGL();
         }
         
-        gxBegin(GL_QUADS);
+        gxBegin(GX_QUADS);
         {
             drawRect(0, 0, GFX_SX, GFX_SY);
         }
@@ -1241,7 +1236,7 @@ void main()
 				const float x2 = 10 + preview.getWidth();
 				const float y2 = 10 + preview.getHeight();
 				
-				gxBegin(GL_QUADS);
+				gxBegin(GX_QUADS);
 				{
 					gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y1);
 					gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y1);
