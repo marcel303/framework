@@ -457,6 +457,8 @@ struct LaserController
 {
 	unsigned long dacId = 0;
 	
+	bool isDetected = false;
+	
 	void init(const char * in_dacId)
 	{
 		dacId = strtoll(in_dacId, nullptr, 16);
@@ -483,6 +485,8 @@ struct LaserController
 					e = e_itr;
 					
 					dacInfo = &s_dacInfos[i];
+					
+					isDetected = true;
 				}
 			}
 		}
@@ -631,6 +635,8 @@ int main(int argc, char * argv[])
 		
 		if (i == 0)
 			name = "ab1ae3";
+		else if (i == 1)
+			name = "593834";
 		else
 		{
 			std::ostringstream s;
@@ -774,6 +780,8 @@ int main(int argc, char * argv[])
 					{
 						auto & laserInstance = laserInstances[selectedLaserInstanceIndex];
 					
+						ImGui::RadioButton("Detected", laserInstance.laserController.isDetected);
+						
 						ImGui::SliderInt("Line segment", &laserInstance.lineSegmentIndex, 0, kNumLasers - 1);
 					}
 				}
