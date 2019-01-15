@@ -366,7 +366,7 @@ void VfxGraph::tick(const int sx, const int sy, const float dt)
 
 void VfxGraph::draw(const int sx, const int sy) const
 {
-	const GLuint texture = traverseDraw(sx, sy);
+	const GxTextureId texture = traverseDraw(sx, sy);
 	
 	if (texture != 0)
 	{

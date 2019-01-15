@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_PROJECTION, GL_MODELVIEW, ..
 #include "AudioFFT.h"
 #include "Calc.h"
 #include "config.h"
@@ -428,7 +429,7 @@ static void drawCubeSlices(const Cube & cube)
 	// send output towards hardware by blitting it to the screen!
 	
 #if ENABLE_OPENGL
-	GLuint texture = createTextureFromRGBA8(slices, SX * SZ, SY, true, true);
+	GxTextureId texture = createTextureFromRGBA8(slices, SX * SZ, SY, true, true);
 
 	if (texture)
 	{
@@ -442,7 +443,7 @@ static void drawCubeSlices(const Cube & cube)
 		gxPopMatrix();
 		gxSetTexture(0);
 
-		glDeleteTextures(1, &texture);
+		freeTexture(texture);
 	}
 #else
 	SDL_Surface * surface = getWindowSurface();

@@ -105,7 +105,7 @@ struct VideoLoop
 					{
 						gxSetTexture(mediaPlayer->getTexture());
 						setColor(colorWhite);
-						gxBegin(GL_QUADS);
+						gxBegin(GX_QUADS);
 						{
 							gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f, 0.f);
 							gxTexCoord2f(1.f, 0.f); gxVertex2f(sx,  0.f);
@@ -131,12 +131,12 @@ struct VideoLoop
 		}
 	}
 	
-	GLuint getTexture() const
+	GxTextureId getTexture() const
 	{
 		return mediaPlayer->getTexture();
 	}
 	
-	GLuint getFirstFrameTexture() const
+	GxTextureId getFirstFrameTexture() const
 	{
 		return firstFrame ? firstFrame->getTexture() : 0;
 	}

@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // GL_TEXTURE_WIDTH, GL_TEXTURE_HEIGHT
 #include "framework.h"
 #include "gfx-framework.h"
 #include "jsusfx.h"
@@ -843,7 +844,7 @@ EEL_F JsusFxGfx_Framework::gfx_loadimg(JsusFx & jsusFx, int index, EEL_F loadFro
 		
 		const char * filename = jsusFx.fileInfos[fileIndex].filename.c_str();
 		
-		const GLuint texture = getTexture(filename);
+		const GxTextureId texture = getTexture(filename);
 		
 		if (texture == 0)
 		{

@@ -7139,6 +7139,12 @@ GxTextureId createTextureFromR32F(const void * source, int sx, int sy, bool filt
 	return createTexture(source, sx, sy, filter, clamp, GL_R32F, GL_RED, GL_FLOAT);
 }
 
+void freeTexture(GxTextureId & textureId)
+{
+	glDeleteTextures(1, &textureId);
+	textureId = 0;
+}
+
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
 {
 	if (globals.debugDraw.numLines < globals.debugDraw.kMaxLines)

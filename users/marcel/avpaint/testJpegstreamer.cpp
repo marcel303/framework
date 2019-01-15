@@ -1,6 +1,7 @@
 #define STREAM_ID "b"
 #define NUM_JPEG_LOOPS 4
 
+#include <GL/glew.h> // texture stuff
 #include "Calc.h"
 #include "framework.h"
 #include "StringEx.h"
@@ -708,7 +709,7 @@ struct JpegLoop
 	unsigned char ** dstBuffer;
 	int * dstBufferSize;
 	
-	GLuint texture;
+	GLuint texture; // todo : replace with GxTexture
 	
 	JpegLoop(const char * _baseFilename, const double _fps, unsigned char * _fileBuffer, int _fileBufferSize, unsigned char ** _dstBuffer, int * _dstBufferSize)
 		: baseFilename(_baseFilename)

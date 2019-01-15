@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_DEPTH_TEST
 #include "audioTypes.h"
 #include "framework.h"
 #include "objects/audioSourceVorbis.h"

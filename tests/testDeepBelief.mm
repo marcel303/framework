@@ -207,7 +207,7 @@ void testDeepbelief()
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			const GLuint texture = sampleVideo ? mediaPlayer.getTexture() : getTexture(imageFilename);
+			const GxTextureId texture = sampleVideo ? mediaPlayer.getTexture() : getTexture(imageFilename);
 			
 			const int size = 400;
 			const int padding = (GFX_SX - size * 2) / 3;

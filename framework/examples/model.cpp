@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // GL_DEPTH_TEST
 #include "framework.h"
 #include <map>
 

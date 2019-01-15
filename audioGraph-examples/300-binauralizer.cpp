@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // glPointSize
 #include "audio.h"
 #include "audioTypes.h"
 #include "binaural.h"

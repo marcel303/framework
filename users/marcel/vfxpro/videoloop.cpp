@@ -98,12 +98,12 @@ void VideoLoop::tick(const float dt)
 	}
 }
 
-GLuint VideoLoop::getTexture() const
+uint32_t VideoLoop::getTexture() const
 {
 	return mediaPlayer ? mediaPlayer->getTexture() : 0;
 }
 
-GLuint VideoLoop::getFirstFrameTexture() const
+uint32_t VideoLoop::getFirstFrameTexture() const
 {
 	return firstFrame ? firstFrame->getTexture() : 0;
 }

@@ -29,6 +29,7 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include <GL/glew.h>
 #include <map>
 #include <SDL2/SDL.h>
 #include <string>

@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // GL_PROJECTION, GL_MODELVIEW
 #include "audio.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "Calc.h"

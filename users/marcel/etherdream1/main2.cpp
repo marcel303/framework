@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_LINE_SMOOTH
 #include "calibration.h"
 #include "edreamUtils.h"
 #include "etherdream.h"

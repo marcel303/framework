@@ -77,7 +77,7 @@ struct GrainsEffect
 	}
 };
 
-static void applyMask(GLuint a, GLuint b, GLuint mask)
+static void applyMask(GxTextureId a, GxTextureId b, GxTextureId mask)
 {
 	Shader shader("mask");
 	setShader(shader);
@@ -97,7 +97,7 @@ static void applyMask(GLuint a, GLuint b, GLuint mask)
 	clearShader();
 }
 
-void applyFsfx(Surface & surface, const char * name, const float strength = 1.f, const float param1 = 0.f, const float param2 = 0.f, const float param3 = 0.f, const float param4 = 0.f, GLuint texture1 = 0)
+void applyFsfx(Surface & surface, const char * name, const float strength = 1.f, const float param1 = 0.f, const float param2 = 0.f, const float param3 = 0.f, const float param4 = 0.f, GxTextureId texture1 = 0)
 {
 	Shader shader(name, "fsfx/fsfx.vs", name);
 	setShader(shader);
@@ -328,7 +328,7 @@ int main(int argc, char * argv[])
 									Shader shader("paint-smudge");
 									setShader(shader);
 									{
-										const GLuint brush = getTexture("brushes/brush1006.png");
+										const GxTextureId brush = getTexture("brushes/brush1006.png");
 										shader.setTexture("brush", 0, brush);
 										shader.setTexture("colormap", 1, surface->getTexture());
 										
@@ -482,7 +482,7 @@ int main(int argc, char * argv[])
 				}
 				else
 				{
-					GLuint layerVideos[NUM_LAYERS] = { };
+					GxTextureId layerVideos[NUM_LAYERS] = { };
 					
 					for (int i = 0; i < NUM_LAYERS; ++i)
 					{
@@ -598,7 +598,7 @@ int main(int argc, char * argv[])
 				#elif 1
 					{
 						pushBlend(BLEND_OPAQUE);
-						GLuint texture = surface.getTexture();
+						GxTextureId texture = surface.getTexture();
 						surface.swapBuffers();
 						pushSurface(&surface);
 						{
@@ -635,7 +635,7 @@ int main(int argc, char * argv[])
 					popBlend();
 				#elif 1
 					pushBlend(BLEND_OPAQUE);
-					GLuint texture = surface.getTexture();
+					GxTextureId texture = surface.getTexture();
 					surface.swapBuffers();
 					pushSurface(&surface);
 					{

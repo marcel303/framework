@@ -694,7 +694,7 @@ int main(int argc, char * argv[])
 						
 						if (mediaPlayer->isActive(mediaPlayer->context))
 						{
-							const GLuint texture = mediaPlayer->getTexture();
+							const GxTextureId texture = mediaPlayer->getTexture();
 							
 							if (texture != 0)
 							{

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <GL/glew.h> // texture arrays
 #include "BezierPath.h"
 #include "Calc.h"
 #include "config.h"

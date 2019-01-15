@@ -1358,8 +1358,7 @@ int main(int argc, char * argv[])
 
 					pushSurface(g_audioFileSurface);
 					{
-						glClearColor(0.f, 0.f, 0.f, 0.f);
-						glClear(GL_COLOR_BUFFER_BIT);
+						g_audioFileSurface->clear();
 
 						setColor(colorWhite);
 

@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_TEXTURE_CUBE_MAP
 #include "Benchmark.h"
 #include "computeEditor.h"
 #include "constants.h"

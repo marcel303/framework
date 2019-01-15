@@ -153,7 +153,7 @@ struct UIMixingPanel
 
 static UIMixingPanel mixingPanel;
 
-void applyFsfx(Surface & surface, const char * name, const float strength = 1.f, const float param1 = 0.f, const float param2 = 0.f, const float param3 = 0.f, const float param4 = 0.f, GLuint texture1 = 0)
+void applyFsfx(Surface & surface, const char * name, const float strength = 1.f, const float param1 = 0.f, const float param2 = 0.f, const float param3 = 0.f, const float param4 = 0.f, GxTextureId texture1 = 0)
 {
 	Shader shader(name, "fsfx/fsfx.vs", name);
 	setShader(shader);
@@ -265,12 +265,12 @@ struct VideoEffect
 		}
 	}
 	
-	GLuint getTexture() const
+	GxTextureId getTexture() const
 	{
 		return surface ? surface->getTexture() : 0;
 	}
 	
-	GLuint getFirstFrameTexture() const
+	GxTextureId getFirstFrameTexture() const
 	{
 		return currVideoLoop->getFirstFrameTexture();
 	}
@@ -906,7 +906,7 @@ int main(int argc, char * argv[])
 					{
 						const char * filename = uploadedImages[uploadedImageIndex].c_str();
 						
-						const GLuint texture = getTexture(filename);
+						const GxTextureId texture = getTexture(filename);
 						
 						gxPushMatrix();
 						{
@@ -947,7 +947,7 @@ int main(int argc, char * argv[])
 						const int x = cx * (sx + px/2);
 						const int y = cy * (sy + py/2);
 						
-						const GLuint texture = getTexture(uploadedImages[i].c_str());
+						const GxTextureId texture = getTexture(uploadedImages[i].c_str());
 						
 						gxSetTexture(texture);
 						{

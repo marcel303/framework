@@ -67,7 +67,7 @@ int main(int argc, char * argv[])
 			{
 				// draw the video frame
 				
-				const GLuint texture = mp.getTexture();
+				const GxTextureId texture = mp.getTexture();
 
 				if (texture != 0)
 				{

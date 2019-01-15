@@ -31,6 +31,7 @@ Acknowledgement for the use of the Stanford Lucy model:
 	http://graphics.stanford.edu/data/3Dscanrep/
 */
 
+#include <GL/glew.h> // GL_DEPTH_TEST
 #include "framework.h"
 
 #define VIEW_SX 1200

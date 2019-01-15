@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_DEPTH_TEST
 #include "Calc.h"
 #include "framework.h"
 #include "image.h"

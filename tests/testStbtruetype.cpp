@@ -66,7 +66,7 @@ void testStbTruetype()
 	stbtt_BakeFontBitmap(ttf_buffer, 0, 32.0, temp_bitmap, 512, 512, 32, 96, cdata); // no guarantee this fits!
 
 	// can free ttf_buffer at this point
-	GLuint fontTexture = createTextureFromR8(temp_bitmap, 512, 512, false, true);
+	GxTextureId fontTexture = createTextureFromR8(temp_bitmap, 512, 512, false, true);
 	
 	Path2d path;
 	
@@ -113,4 +113,6 @@ void testStbTruetype()
 		framework.endDraw();
 	}
 	while (tickTestUi());
+	
+	freeTexture(fontTexture);
 }

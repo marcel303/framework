@@ -1314,7 +1314,7 @@ static void Execute()
 		}
 #endif
 
-		GLuint texture = createTextureFromRGBA8(surface.getLine(0), surface.sx, surface.sy, false, true);
+		GxTextureId texture = createTextureFromRGBA8(surface.getLine(0), surface.sx, surface.sy, false, true);
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -1326,8 +1326,7 @@ static void Execute()
 		}
 		framework.endDraw();
 
-		glDeleteTextures(1, &texture);
-		texture = 0;
+		freeTexture(texture);
 
 		++frame;
 	}

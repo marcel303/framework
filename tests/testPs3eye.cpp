@@ -243,7 +243,7 @@ void testPs3eye()
 			setFont("calibri.ttf");
 			pushFontMode(FONT_SDF);
 			
-			const GLuint textureId =
+			const GxTextureId textureId =
 				keyboard.isDown(SDLK_m) ? textureMask.id :
 				keyboard.isDown(SDLK_l) ? textureLumi.id :
 				texture.id;

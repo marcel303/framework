@@ -669,7 +669,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 							gxRotatef(std::sinf(framework.time * .123f) * 30.f, 0.f, 1.f, 0.f);
 							gxScalef(scaleX, scaleY, scaleZ);
 
-							const GLuint texture = mp->getTexture();
+							const GxTextureId texture = mp->getTexture();
 
 							if (texture != 0)
 							{

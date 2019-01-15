@@ -27,6 +27,8 @@
 
 #ifndef WIN32
 
+#include <GL/glew.h> // GL_DEPTH_TEST
+
 #include "framework.h"
 #include "Log.h"
 #include "Timer.h"

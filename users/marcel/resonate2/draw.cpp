@@ -1,3 +1,4 @@
+#include <GL/glew.h> // glPointSize
 #include "constants.h"
 #include "draw.h"
 #include "framework.h"

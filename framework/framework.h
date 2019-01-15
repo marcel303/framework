@@ -36,7 +36,7 @@
 	#include <SDL2/SDL.h>
 #else
 	#include <SDL2/SDL.h>
-	#include <SDL2/SDL_opengl.h>
+	#include <GL/glew.h> // todo : remove OpenGL header file include
 #endif
 #include <string>
 #include <vector>
@@ -292,7 +292,7 @@ typedef uint32_t GxShaderBufferId;
 
 #if USE_LEGACY_OPENGL || true // todo : remove legacy OpenGL constraint
 
-// these must match the OpenGL definition for things to work
+// these must match the OpenGL definition for things to work when mapping GX calls to legacy OpenGL
 
 enum GX_PRIMITIVE_TYPE
 {
@@ -1358,6 +1358,8 @@ GxTextureId createTextureFromR8(const void * source, int sx, int sy, bool filter
 GxTextureId createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp);
 GxTextureId createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp);
 GxTextureId createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp);
+
+void freeTexture(GxTextureId & textureId);
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 

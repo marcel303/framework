@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_LINE_SMOOTH
 #include "framework.h"
 #include "lattice.h"
 #include <algorithm>

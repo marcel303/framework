@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_MODELVIEW
 #include <ctime>
 #include "Calc.h"
 #include "FileStream.h"

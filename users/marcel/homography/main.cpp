@@ -1,3 +1,4 @@
+#include <GL/glew.h> // GL_LINE_SMOOTH
 #include "framework.h"
 #include "Mat4x4.h"
 #include <vector>

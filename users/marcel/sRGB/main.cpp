@@ -479,7 +479,7 @@ int main(int argc, char * argv[])
 		
 		printf("trace took %f ms\n", float(time / 1000.0));
 	
-		GLuint texture = createTextureFromRGBA8(pixels, image.sx, image.sy, false, true);
+		GxTextureId texture = createTextureFromRGBA8(pixels, image.sx, image.sy, false, true);
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -491,8 +491,7 @@ int main(int argc, char * argv[])
 		}
 		framework.endDraw();
 		
-		glDeleteTextures(1, &texture);
-		texture = 0;
+		freeTexture(texture);
 	}
 	
 	framework.shutdown();

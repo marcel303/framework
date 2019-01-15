@@ -1752,7 +1752,7 @@ static void generateTextureArray(const char * name, const int baseSize, const in
 	}
 	else
 	{
-		GLuint texture = createTextureFromRGBA8(image->imageData, image->sx, image->sy, true, false);
+		GxTextureId texture = createTextureFromRGBA8(image->imageData, image->sx, image->sy, true, false);
 
 		delete image;
 		image = nullptr;
@@ -1836,8 +1836,7 @@ static void generateTextureArray(const char * name, const int baseSize, const in
 				Assert(values == nullptr);
 			}
 
-			glDeleteTextures(1, &texture);
-			texture = 0;
+			freeTexture(texture);
 		}
 	}
 }
@@ -2223,7 +2222,7 @@ int main(int argc, char * argv[])
 					PageData pageData;
 					if (pageLoad(CUBE_PAGE_NAME, baseSize, pageSize, cubeSide, levelSize, pageX, pageY, pageData))
 					{
-						GLuint texture = createTextureFromRGBA8(pageData.bytes, pageSize, pageSize, false, true);
+						GxTextureId texture = createTextureFromRGBA8(pageData.bytes, pageSize, pageSize, false, true);
 						gxSetTexture(texture);
 						{
 							setColor(colorWhite);
@@ -2232,7 +2231,7 @@ int main(int argc, char * argv[])
 							setBlend(BLEND_ALPHA);
 						}
 						gxSetTexture(0);
-						glDeleteTextures(1, &texture);
+						freeTexture(texture);
 					}
 
 					pageX++;
