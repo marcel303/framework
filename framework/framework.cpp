@@ -5809,9 +5809,13 @@ static void setLineSmooth(bool enabled)
 	{
 		glEnable(GL_LINE_SMOOTH);
 		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+		checkErrorGL();
 	}
 	else
+	{
 		glDisable(GL_LINE_SMOOTH);
+		checkErrorGL();
+	}
 }
 
 void pushLineSmooth(bool enabled)
@@ -5831,6 +5835,7 @@ void popLineSmooth()
 static void setWireframe(bool enabled)
 {
 	glPolygonMode(GL_FRONT_AND_BACK, enabled ? GL_LINE : GL_FILL);
+	checkErrorGL();
 }
 
 void pushWireframe(bool enabled)
