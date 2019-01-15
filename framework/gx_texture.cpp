@@ -224,6 +224,31 @@ void GxTexture::setSampling(const bool _filter, const bool _clamp)
 	checkErrorGL();
 }
 
+void GxTexture::clearf(const float r, const float g, const float b, const float a)
+{
+	GLuint oldBuffer = 0;
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
+	{
+		GLuint frameBuffer = 0;
+		
+		glGenFramebuffers(1, &frameBuffer);
+		checkErrorGL();
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, id, 0);
+		checkErrorGL();
+		{
+			glClearColor(r, g, b, a);
+			glClear(GL_COLOR_BUFFER_BIT);
+		}
+		glDeleteFramebuffers(1, &frameBuffer);
+		frameBuffer = 0;
+		checkErrorGL();
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+	checkErrorGL();
+}
+
 void GxTexture::upload(const void * src, const int _srcAlignment, const int _srcPitch)
 {
 	Assert(id != 0);
