@@ -279,8 +279,11 @@ void VfxNodeVideo::getDescription(VfxNodeDescription & d)
 	}
 	d.newline();
 	
-	d.addOpenglTexture("texture", mediaPlayer->getTexture());
-	d.newline();
+	if (mediaPlayer->texture != nullptr)
+	{
+		d.addGxTexture("texture", *mediaPlayer->texture);
+		d.newline();
+	}
 	
 	d.add("RGBA image", imageCpuOutputRGBA);
 	d.newline();

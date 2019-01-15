@@ -185,5 +185,5 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 
 void VfxNodeImageCpuToGpu::getDescription(VfxNodeDescription & d)
 {
-	d.addOpenglTexture("output image", imageOutput.texture);
+	d.addGxTexture("output image", texture);
 }

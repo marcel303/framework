@@ -29,7 +29,6 @@
 
 #include "Log.h"
 #include "vfxNodePs3eye.h"
-#include <GL/glew.h>
 #include <SDL2/SDL.h>
 
 // todo : add mutex and copy captured frame data
@@ -225,18 +224,18 @@ void VfxNodePs3eye::tick(const float dt)
 			{
 				vfxGpuTimingBlock(VfxNodePs3eye);
 				
-				const int internalFormat = enableColor ? GL_RGB8 : GL_R8;
+				const GX_TEXTURE_FORMAT format = enableColor ? GX_RGB8_UNORM : GX_R8_UNORM;
 
-				if (texture.isChanged(sx, sy, internalFormat))
+				if (texture.isChanged(sx, sy, format))
 				{
-					allocateImage(sx, sy, internalFormat);
+					allocateImage(sx, sy, format);
 					if (enableColor)
-						texture.setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ONE);
+						texture.setSwizzle(0, 1, 2, GX_SWIZZLE_ONE);
 					else
-						texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+						texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 				}
 				
-				texture.upload(frameData, 1, sx, enableColor ? GL_RGB : GL_RED, GL_UNSIGNED_BYTE);
+				texture.upload(frameData, 1, sx);
 			}
 			
 			if (enableColor)
@@ -275,11 +274,11 @@ void VfxNodePs3eye::freeImage()
 	imageCpuOutput.reset();
 }
 
-void VfxNodePs3eye::allocateImage(const int sx, const int sy, const int internalFormat)
+void VfxNodePs3eye::allocateImage(const int sx, const int sy, const GX_TEXTURE_FORMAT format)
 {
 	freeImage();
 
-	texture.allocate(sx, sy, internalFormat, true, true);
+	texture.allocate(sx, sy, format, true, true);
 	
 	imageOutput.texture = texture.id;
 }

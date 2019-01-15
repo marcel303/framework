@@ -29,7 +29,7 @@
 
 #if ENABLE_PS3EYE
 
-#include "openglTexture.h"
+#include "gx_texture.h"
 #include "ps3eye.h"
 #include "vfxNodeBase.h"
 #include <atomic>
@@ -96,7 +96,7 @@ struct VfxNodePs3eye : VfxNodeBase
 	EyeParams eyeParams;
 	EyeParams currentEyeParams;
 
-	OpenglTexture texture;
+	GxTexture texture;
 	VfxImage_Texture imageOutput;
 	
 	VfxImageCpuData imageCpuData;
@@ -110,7 +110,7 @@ struct VfxNodePs3eye : VfxNodeBase
 	virtual void getDescription(VfxNodeDescription & d) override;
 	
 	void freeImage();
-	void allocateImage(const int sx, const int sy, const int internalFormat);
+	void allocateImage(const int sx, const int sy, const GX_TEXTURE_FORMAT format);
 	
 	static int captureThreadProc(void * obj);
 	void stopCapture();
