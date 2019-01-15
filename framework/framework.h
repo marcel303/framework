@@ -1387,7 +1387,7 @@ void gxVertex3f(float x, float y, float z);
 void gxVertex3fv(const float * v);
 void gxVertex4f(float x, float y, float z, float w);
 void gxVertex4fv(const float * v);
-void gxSetTexture(GLuint texture);
+void gxSetTexture(GxTextureId texture);
 
 #else
 
@@ -1443,22 +1443,22 @@ void showErrorMessage(const char * caption, const char * format, ...);
 
 void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma = 1.632f);
 
-void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius);
-void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius);
-void setShader_ThresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity);
-void setShader_ThresholdLumiFail(const GLuint source, const float lumi, const Color & failColor, const float opacity);
-void setShader_ThresholdLumiPass(const GLuint source, const float lumi, const Color & passColor, const float opacity);
-void setShader_ThresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor, const float opacity);
+void setShader_GaussianBlurH(const GxTextureId source, const int kernelSize, const float radius);
+void setShader_GaussianBlurV(const GxTextureId source, const int kernelSize, const float radius);
+void setShader_ThresholdLumi(const GxTextureId source, const float lumi, const Color & failColor, const Color & passColor, const float opacity);
+void setShader_ThresholdLumiFail(const GxTextureId source, const float lumi, const Color & failColor, const float opacity);
+void setShader_ThresholdLumiPass(const GxTextureId source, const float lumi, const Color & passColor, const float opacity);
+void setShader_ThresholdValue(const GxTextureId source, const Color & value, const Color & failColor, const Color & passColor, const float opacity);
 // todo : implement these shaders .. ! and make source code shared/includable
-void setShader_GrayscaleLumi(const GLuint source, const float opacity);
-void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const float opacity);
-void setShader_Colorize(const GLuint source, const float hue, const float opacity);
-void setShader_HueShift(const GLuint source, const float hue, const float opacity);
-void setShader_Composite(const GLuint source1, const GLuint source2);
-void setShader_CompositePremultiplied(const GLuint source1, const GLuint source2);
-void setShader_Premultiply(const GLuint source);
-void setShader_ColorMultiply(const GLuint source, const Color & color, const float opacity);
-void setShader_ColorTemperature(const GLuint source, const float temperature, const float opacity);
+void setShader_GrayscaleLumi(const GxTextureId source, const float opacity);
+void setShader_GrayscaleWeights(const GxTextureId source, const Vec3 & weights, const float opacity);
+void setShader_Colorize(const GxTextureId source, const float hue, const float opacity);
+void setShader_HueShift(const GxTextureId source, const float hue, const float opacity);
+void setShader_Composite(const GxTextureId source1, const GxTextureId source2);
+void setShader_CompositePremultiplied(const GxTextureId source1, const GxTextureId source2);
+void setShader_Premultiply(const GxTextureId source);
+void setShader_ColorMultiply(const GxTextureId source, const Color & color, const float opacity);
+void setShader_ColorTemperature(const GxTextureId source, const float temperature, const float opacity);
 
 // high quality rendering
 
@@ -1489,7 +1489,7 @@ void hqEnd();
 void hqSetGradient(GRADIENT_TYPE gradientType, const Mat4x4 & matrix, const Color & color1, const Color & color2, const COLOR_MODE colorMode, const float bias = 0.f, const float scale = 1.f);
 void hqClearGradient();
 
-void hqSetTexture(const Mat4x4 & matrix, const GLuint texture);
+void hqSetTexture(const Mat4x4 & matrix, const GxTextureId texture);
 void hqClearTexture();
 
 void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2);
