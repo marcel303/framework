@@ -288,8 +288,6 @@ typedef void (*InitErrorHandler)(INIT_ERROR error);
 
 //
 
-typedef uint32_t GxEnum;
-
 typedef int32_t GxImmediateIndex;
 typedef uint32_t GxShaderId;
 typedef uint32_t GxShaderBufferId;
