@@ -40,20 +40,6 @@ cd "$root"
 mkdir -p chibi-build/cmake-files
 "$chibi_bin" . chibi-build/cmake-files $target_arg
 
-if [ "$os" == "mac" ]; then
-	# generate Xcode project file
-	mkdir -p chibi-build/xcode
-	cd chibi-build/xcode && cmake -G "Xcode" ../cmake-files
-	cd "$root"
-fi
-
-if [ "$os" == "linux" ]; then
-	# generate Unix Makefiles
-	mkdir -p chibi-build/makefiles
-	cd chibi-build/makefiles && cmake -G "Unix Makefiles" ../cmake-files
-	cd "$root"
-fi
-
 # build all of the libraries and example and test app binaries. this will take a while
 mkdir -p chibi-build/bin
 cd chibi-build/bin && cmake -DCMAKE_BUILD_TYPE=Release ../cmake-files && cmake --build .
