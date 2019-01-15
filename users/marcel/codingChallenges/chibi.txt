@@ -16,3 +16,7 @@ app codingChallenges-127-flockingSimulation
 app codingChallenges-129-kochFractalSnowflake
 	depend_library framework
 	add_files 129-kochFractalSnowflake.cpp
+
+app codingChallenges-u01-extrusion
+	depend_library framework
+	add_files u01-extrusion.cpp
