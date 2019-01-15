@@ -34,7 +34,7 @@ static stbtt_bakedchar cdata[96]; // ASCII 32..126 is 95 glyphs
 static void stbTruetype_Print(float x, float y, const char *text)
 {
 	// assume orthographic projection with units = screen pixels, origin at top left
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		while (*text)
 		{
@@ -78,7 +78,7 @@ void testStbTruetype()
 		{
 			auto myDrawRect = [](float x1, float y1, float x2, float y2)
 			{
-				gxBegin(GL_QUADS);
+				gxBegin(GX_QUADS);
 				{
 					gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 					gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);

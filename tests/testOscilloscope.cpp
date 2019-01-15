@@ -67,7 +67,7 @@ void testOscilloscope()
 				shader.setImmediate("uColor", 1.f, 1.f, 1.f, 1.f);
 				shader.setImmediate("uNumPoints", kNumPoints);
 				
-				gxBegin(GL_QUADS);
+				gxBegin(GX_QUADS);
 				{
 					for (int i = 0; i < kNumPoints - 1; ++i)
 					{

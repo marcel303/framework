@@ -313,7 +313,7 @@ static void drawSoundVolume_Translucent(const SoundVolume & volume)
 
 static void drawPoint(Vec3Arg p, const Color & c1, const Color & c2, const Color & c3, const float size)
 {
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		setColor(c1);
 		gxVertex3f(p[0]-size, p[1], p[2]);

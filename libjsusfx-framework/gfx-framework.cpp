@@ -318,9 +318,9 @@ void JsusFxGfx_Framework::updatePrimType(PrimType _primType)
 		primType = _primType;
 		
 		if (primType == kPrimType_Rect)
-			gxBegin(GL_QUADS);
+			gxBegin(GX_QUADS);
 		else if (primType == kPrimType_RectLine)
-			gxBegin(GL_LINES);
+			gxBegin(GX_LINES);
 		else if (primType == kPrimType_HqLine)
 			hqBegin(HQ_LINES);
 		else if (primType == kPrimType_HqFillCircle)
@@ -1244,7 +1244,7 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 					int(*m_gfx_dest), dx, dy, dsx, dsy);
 			#endif
 			
-				gxBegin(GL_QUADS);
+				gxBegin(GX_QUADS);
 				{
 					gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
 					gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);

@@ -1076,7 +1076,7 @@ void testHrtf()
 			{
 				gxMultMatrixf(objectToView.m_v);
 				
-				gxBegin(GL_LINES);
+				gxBegin(GX_LINES);
 				{
 					setColor(colorRed);
 					gxVertex3f(-1.f, 0.f, 0.f);
@@ -1093,7 +1093,7 @@ void testHrtf()
 				gxEnd();
 				
 				glPointSize(5.f);
-				gxBegin(GL_POINTS);
+				gxBegin(GX_POINTS);
 				{
 					for (auto & s : hrirSet.sampleLocations)
 					{

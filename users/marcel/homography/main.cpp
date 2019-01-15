@@ -233,7 +233,7 @@ int main(int argc, char * argv[])
 			}
 			
 			setColor(255, 255, 255, 127);
-			gxBegin(GL_LINE_STRIP);
+			gxBegin(GX_LINE_STRIP);
 			glEnable(GL_LINE_SMOOTH);
 			glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 			checkErrorGL();

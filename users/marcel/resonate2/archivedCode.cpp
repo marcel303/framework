@@ -160,7 +160,7 @@ static void testRaster()
 
 				glHint(GL_LINE_SMOOTH_HINT, GL_FASTEST);
 				
-				gxBegin(GL_LINES);
+				gxBegin(GX_LINES);
 				{
 					for (int x = 0; x < kSize; ++x)
 					{

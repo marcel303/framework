@@ -148,7 +148,7 @@ int main(int argc, char * argv[])
 				gxScalef(GFX_SX / float(NUM_SAMPLES), GFX_SY/2, 1);
 				
 				setColor(colorWhite);
-				gxBegin(GL_LINES);
+				gxBegin(GX_LINES);
 				{
 					for (int i = 0; i < NUM_SAMPLES - 1; i += 2)
 					{

@@ -87,7 +87,7 @@ class ofxDatGuiTimeGraph : public ofxDatGuiComponent {
             float px = this->x + mPlotterRect.x;
             float py = this->y + mPlotterRect.y;
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            gxBegin(GL_TRIANGLE_STRIP);
+            gxBegin(GX_TRIANGLE_STRIP);
             for (int i=0; i<pts.size(); i++) {
                 gxVertex2f(px+ pts[i].x, py + mPlotterRect.height);
                 gxVertex2f(px+ pts[i].x, py + pts[i].y);
@@ -100,7 +100,7 @@ class ofxDatGuiTimeGraph : public ofxDatGuiComponent {
             float px = this->x + mPlotterRect.x;
             float py = this->y + mPlotterRect.y;
             glLineWidth(mLineWeight);
-            gxBegin(GL_LINE_LOOP);
+            gxBegin(GX_LINE_LOOP);
             gxVertex2f(px+mPlotterRect.width, py+mPlotterRect.height);
             for (int i=0; i<pts.size(); i++) gxVertex2f(px+pts[i].x, py+pts[i].y);
             gxVertex2f(px, py+mPlotterRect.height);
@@ -112,7 +112,7 @@ class ofxDatGuiTimeGraph : public ofxDatGuiComponent {
             float px = this->x + mPlotterRect.x;
             float py = this->y + mPlotterRect.y;
             glLineWidth(mLineWeight);
-            gxBegin(GL_LINE_STRIP);
+            gxBegin(GX_LINE_STRIP);
             for (int i=0; i<pts.size(); i++) gxVertex2f(px+pts[i].x, py+pts[i].y);
             gxEnd();
         }
@@ -123,7 +123,7 @@ class ofxDatGuiTimeGraph : public ofxDatGuiComponent {
             float py = this->y + mPlotterRect.y;
             glPointSize(mLineWeight);
             glLineWidth(mLineWeight);
-            gxBegin(GL_POINTS);
+            gxBegin(GX_POINTS);
             for (int i=0; i<pts.size(); i++) gxVertex2f(px+pts[i].x, py+pts[i].y);
             gxEnd();
         }

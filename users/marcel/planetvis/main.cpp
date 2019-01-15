@@ -1548,7 +1548,7 @@ int main(int argc, char * argv[])
 						gxScalef(1.f / mx, 1.f / my, 1.f / mz);
 						gxTranslatef(-mx, -my, -mz);
 
-						gxBegin(GL_POINTS);
+						gxBegin(GX_POINTS);
 						{
 							const float step = .4f;
 
@@ -1730,7 +1730,7 @@ int main(int argc, char * argv[])
 						shader.setTexture("texture", 0, sparseTextureObject.texture);
 						setShader(shader);
 						{
-							gxBegin(GL_QUADS);
+							gxBegin(GX_QUADS);
 							{
 								gxTexCoord2f(0.f, 0.f); gxVertex2f(0, 0);
 								gxTexCoord2f(1.f, 0.f); gxVertex2f(sparseTextureObject.textureSx, 0);
@@ -1836,7 +1836,7 @@ int main(int argc, char * argv[])
 						shader.setImmediate("lod", mouse.isDown(BUTTON_RIGHT) ? (mouse.x / float(GFX_SX) * quadTree.numAllocatedLevels) : -1);
 						shader.setImmediate("numLods", quadTree.numAllocatedLevels);
 						{
-							gxBegin(GL_QUADS);
+							gxBegin(GX_QUADS);
 							{
 								gxTexCoord2f(0.f, 0.f); gxVertex2f(quadTree.initSize * 0, quadTree.initSize * 0);
 								gxTexCoord2f(1.f, 0.f); gxVertex2f(quadTree.initSize * 1, quadTree.initSize * 0);

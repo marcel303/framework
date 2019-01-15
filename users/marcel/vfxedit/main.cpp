@@ -1327,7 +1327,7 @@ int main(int argc, char * argv[])
 
 				if (g_sequence.bpm > 0.0)
 				{
-					gxBegin(GL_LINES);
+					gxBegin(GX_LINES);
 					{
 						for (int i = 0; true; ++i)
 						{
@@ -1363,7 +1363,7 @@ int main(int argc, char * argv[])
 
 						setColor(colorWhite);
 
-						gxBegin(GL_LINES);
+						gxBegin(GX_LINES);
 						{
 							for (int x = 0; x < sx; ++x)
 							{

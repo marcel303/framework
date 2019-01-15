@@ -132,7 +132,7 @@ void drawUiRectCheckered(float x1, float y1, float x2, float y2, float scale)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		checkErrorGL();
 		
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		{
 			gxTexCoord2f(0.f,               (y2 - y1) / scale); gxVertex2f(x1, y1);
 			gxTexCoord2f((x2 - x1) / scale, (y2 - y1) / scale); gxVertex2f(x2, y1);

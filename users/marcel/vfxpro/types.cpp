@@ -129,7 +129,7 @@ void ParticleSystem::tick(const float dt)
 
 void ParticleSystem::draw(const float alpha)
 {
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int i = 0; i < numParticles; ++i)
 		{

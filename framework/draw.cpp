@@ -61,7 +61,7 @@ void fillCube(Vec3Arg position, Vec3Arg size)
 		{  0, +1,  0 }
 	};
 	
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int face_idx = 0; face_idx < 6; ++face_idx)
 		{

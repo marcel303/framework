@@ -550,7 +550,7 @@ int main(int argc, char * argv[])
 					gxRotatef(framework.time * .1f, 0, 1, 0);
 					
 					glPointSize(2.f);
-					gxBegin(GL_POINTS);
+					gxBegin(GX_POINTS);
 					{
 						for (auto & sample : sampleSet.samples)
 						{
@@ -567,7 +567,7 @@ int main(int argc, char * argv[])
 					gxEnd();
 					glPointSize(1.f);
 					
-					gxBegin(GL_LINES);
+					gxBegin(GX_LINES);
 					{
 						gxColor4f(1, 0, 0, 1); gxVertex3f(0, 0, 0); gxVertex3f(1, 0, 0);
 						gxColor4f(0, 1, 0, 1); gxVertex3f(0, 0, 0); gxVertex3f(0, 1, 0);
@@ -893,7 +893,7 @@ static void drawHrirSampleGrid(const HRIRSampleSet & sampleSet, const Vec2 & hov
 	}
 	hqEnd();
 	
-	gxBegin(GL_POINTS);
+	gxBegin(GX_POINTS);
 	{
 		for (auto & sample : sampleSet.samples)
 		{

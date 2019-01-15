@@ -50,7 +50,7 @@ static void drawGrid(const int numQuadsX, const int numQuadsY)
 	const float stepX = 1.f / (numQuadsX + 1);
 	const float stepY = 1.f / (numQuadsY + 1);
 
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int x = 0; x < numQuadsX; ++x)
 		{
@@ -484,7 +484,7 @@ int main(int argc, char * argv[])
 							shader.setTexture("texture2", 1, texture2, true, true);
 							shader.setImmediate("testOr", (mode == 1 || mode == 3) ? 1.f : 0.f, 0.f);
 							{
-								gxBegin(GL_LINES);
+								gxBegin(GX_LINES);
 								{
 									for (int i = 0; i < kMaxLines; ++i)
 									{
@@ -521,8 +521,8 @@ int main(int argc, char * argv[])
 								setShader(shader);
 								if (true)
 								{
-									gxBegin(GL_POINTS);
-									//gxBegin(GL_LINES);
+									gxBegin(GX_POINTS);
+									//gxBegin(GX_LINES);
 									{
 										for (int y = 0; y < rgbSy; ++y)
 											for (int x = 0; x < rgbSx; ++x)
@@ -536,7 +536,7 @@ int main(int argc, char * argv[])
 
 						#if DO_GUASSIAN_PDF
 							setColor(colorWhite);
-							gxBegin(GL_LINES);
+							gxBegin(GX_LINES);
 							{
 								auto dist = [](double x) { return 0.5 * erfc(-x * M_SQRT1_2); };
 
@@ -585,7 +585,7 @@ int main(int argc, char * argv[])
 									const float x2 = integralImage->sx;
 									const float y2 = integralImage->sy;
 
-									gxBegin(GL_QUADS);
+									gxBegin(GX_QUADS);
 									{
 										gxVertex2f(x1, y1);
 										gxVertex2f(x2, y1);

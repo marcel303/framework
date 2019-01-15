@@ -571,7 +571,7 @@ static void drawTestObjects()
 			gxRotatef(framework.time / (k + 1.234f) * Calc::rad2deg, 0.f, 1.f, 0.f);
 			gxRotatef(framework.time / (k + 1.345f) * Calc::rad2deg, 0.f, 0.f, 1.f);
 
-			gxBegin(GL_TRIANGLES);
+			gxBegin(GX_TRIANGLES);
 			{
 				gxColor4f(1.f, 0.f, 0.f, 1.f); gxVertex3f(-1.f,  0.f,  0.f); gxVertex3f(+1.f,  0.f,  0.f); gxVertex3f(+1.f, 0.3f, 0.2f);
 				gxColor4f(0.f, 1.f, 0.f, 1.f); gxVertex3f( 0.f, -1.f,  0.f); gxVertex3f( 0.f, +1.f,  0.f); gxVertex3f(0.4f, +1.f, 0.4f);
@@ -586,7 +586,7 @@ static void drawTestObjects()
 static void drawGroundPlane(const float y)
 {
 	gxColor4f(.2f, .2f, .2f, 1.f);
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		gxVertex3f(-100.f, y, -100.f);
 		gxVertex3f(+100.f, y, -100.f);
@@ -609,7 +609,7 @@ static void drawCamera(const Camera & camera, const float alpha)
 		gxPushMatrix();
 		{
 			gxScalef(.2f, .2f, .2f);
-			gxBegin(GL_LINES);
+			gxBegin(GX_LINES);
 			{
 				gxColor4f(1.f, 0.f, 0.f, alpha); gxVertex3f(0.f, 0.f, 0.f); gxVertex3f(1.f, 0.f, 0.f);
 				gxColor4f(0.f, 1.f, 0.f, alpha); gxVertex3f(0.f, 0.f, 0.f); gxVertex3f(0.f, 1.f, 0.f);
@@ -633,7 +633,7 @@ static void drawCamera(const Camera & camera, const float alpha)
 		gxPushMatrix();
 		{
 			gxScalef(1.f, 1.f, 1.f);
-			gxBegin(GL_LINES);
+			gxBegin(GX_LINES);
 			{
 				for (int i = 0; i < 4; ++i)
 				{
@@ -669,7 +669,7 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 	setColor(colorWhite);
 	gxSetTexture(surfaceTexture);
 	{
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		{
 			gxTexCoord2f(1.f / NUM_SCREENS * (screenId + 0), 0.f); gxVertex3f(screenPoints[0][0], screenPoints[0][1], screenPoints[0][2]);
 			gxTexCoord2f(1.f / NUM_SCREENS * (screenId + 1), 0.f); gxVertex3f(screenPoints[1][0], screenPoints[1][1], screenPoints[1][2]);
@@ -684,7 +684,7 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 	setBlend(BLEND_ADD);
 
 	setColor(colorWhite);
-	gxBegin(GL_LINE_LOOP);
+	gxBegin(GX_LINE_LOOP);
 	{
 		for (int i = 0; i < 4; ++i)
 			gxVertex3fv(&screenPoints[i][0]);
@@ -2272,7 +2272,7 @@ int main(int argc, char * argv[])
 					setBlend(BLEND_ALPHA);
 					setColorf(s, s, s, .5f);
 					gxSetTexture(g_fftTexture.id);
-					gxBegin(GL_QUADS);
+					gxBegin(GX_QUADS);
 					{
 						gxTexCoord2f(0.f, 0.f); gxVertex2f(x,      y     );
 						gxTexCoord2f(w,   0.f); gxVertex2f(x + sx, y     );

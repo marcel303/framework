@@ -85,7 +85,7 @@ static void applyMask(GLuint a, GLuint b, GLuint mask)
 		shader.setTexture("colormapA", 0, a);
 		shader.setTexture("colormapB", 1, b);
 		shader.setTexture("mask", 2, mask);
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		{
 			gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f * GFX_SX, 0.f * GFX_SY);
 			gxTexCoord2f(1.f, 0.f); gxVertex2f(1.f * GFX_SX, 0.f * GFX_SY);
@@ -337,7 +337,7 @@ int main(int argc, char * argv[])
 										pushSurface(surface);
 										{
 											setColor(colorWhite);
-											gxBegin(GL_QUADS);
+											gxBegin(GX_QUADS);
 											{
 												const float s = 30.f;
 												gxTexCoord2f(0.f, 0.f); gxVertex4f(e.x - s, e.y - s, e.dx, e.dy);
@@ -611,7 +611,7 @@ int main(int argc, char * argv[])
 								const float blurStrengthModifier = std::cos(i / 10.f + framework.time);
 								const float radius = blurStrength * blurStrengthModifier * std::cos(framework.time / 6.789f) * 200.f;
 								setShader_GaussianBlurH(texture, 63, radius);
-								gxBegin(GL_QUADS);
+								gxBegin(GX_QUADS);
 								{
 									gxTexCoord2f(0.f, t1); gxVertex2f(0,      y1);
 									gxTexCoord2f(1.f, t1); gxVertex2f(GFX_SX, y1);
@@ -648,7 +648,7 @@ int main(int argc, char * argv[])
 							const float blurStrengthModifier = std::cos(i / 10.f + framework.time);
 							const float radius = blurStrength * blurStrengthModifier * std::cos(framework.time / 3.456f) * 100.f;
 							setShader_GaussianBlurV(texture, 63, radius);
-							gxBegin(GL_QUADS);
+							gxBegin(GX_QUADS);
 							{
 								gxTexCoord2f(t1, 0.f); gxVertex2f(x1, 0.f);
 								gxTexCoord2f(t2, 0.f); gxVertex2f(x2, 0.f);

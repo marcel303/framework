@@ -662,7 +662,7 @@ void draw(const bool menuActive, const float sx, const float sy)
 		//if (rand() % 2)
 		if (true)
 		{
-			gxBegin(GL_QUADS);
+			gxBegin(GX_QUADS);
 			{
 				for (Particle * p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? g_pool[i].head : g_pool[i].tail;
 							 p; p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)

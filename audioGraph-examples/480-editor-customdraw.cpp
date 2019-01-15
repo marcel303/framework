@@ -46,7 +46,7 @@ static void drawChannels(const GraphEdit_ChannelData & channelData, const float 
 		if (channel.numValues < 2)
 			continue;
 		
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			const float xScale = sx / (channel.numValues - 1);
 			const float xOffset = -sx/2.f;
@@ -198,7 +198,7 @@ static void drawEditor(const GraphEdit & graphEdit, AudioRealTimeConnection * rt
 					
 					if (audioNode->getFilterResponse(magnitude, numSteps))
 					{
-						gxBegin(GL_LINES);
+						gxBegin(GX_LINES);
 						{
 							const float sx = 30.f;
 							const float sy = 30.f;

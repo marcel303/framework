@@ -176,7 +176,7 @@ struct ParticleSystem
 
 	void draw() const
 	{
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			for (auto & p : particles)
 			{
@@ -702,7 +702,7 @@ int main(int argc, char * argv[])
 								{
 									pushBlend(BLEND_ALPHA);
 									{
-										gxBegin(GL_QUADS);
+										gxBegin(GX_QUADS);
 										{
 											grid.drawBG();
 										}

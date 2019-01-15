@@ -369,7 +369,7 @@ static void fft2D_draw(const real * __restrict dreal, const real * __restrict di
 		const real scaleX =  10.0 * mouse.x / real(GFX_SX);
 		const real scaleY = 100.0 * mouse.y / real(GFX_SX);
 		
-		gxBegin(GL_POINTS);
+		gxBegin(GX_POINTS);
 		{
 			for (int y = 0; y < transformSy; ++y)
 			{

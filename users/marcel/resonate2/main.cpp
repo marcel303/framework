@@ -1315,7 +1315,7 @@ int main(int argc, char * argv[])
 				{
 					// show XYZ axis
 					
-					gxBegin(GL_LINES);
+					gxBegin(GX_LINES);
 					setColor(colorRed);
 					gxVertex3f(0, 0, 0);
 					gxVertex3f(1, 0, 0);
@@ -1380,7 +1380,7 @@ int main(int argc, char * argv[])
 						const Mat4x4 & matrix = s_cubeFaceToWorldMatrices[i];
 						
 						setColor(63, 63, 255);
-						gxBegin(GL_POINTS);
+						gxBegin(GX_POINTS);
 						for (int x = 0; x < kGridSize; ++x)
 						{
 							for (int y = 0; y < kGridSize; ++y)
@@ -1419,7 +1419,7 @@ int main(int argc, char * argv[])
 					// show a random distribution of points projected onto the shape
 					
 					setColor(colorWhite);
-					gxBegin(GL_POINTS);
+					gxBegin(GX_POINTS);
 					for (int i = 0; i < 20000; ++i)
 					{
 						const float dx = random(-1.f, +1.f);
@@ -1508,7 +1508,7 @@ int main(int argc, char * argv[])
 					
 					setColor(colorYellow);
 					glPointSize(pointSize);
-					gxBegin(GL_POINTS);
+					gxBegin(GX_POINTS);
 					gxVertex3f(p[0], p[1], p[2]);
 					gxEnd();
 					glPointSize(1);

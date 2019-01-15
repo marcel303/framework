@@ -276,7 +276,7 @@ int main(int argc, char * argv[])
 			setColor(colorWhite);
 			gxSetTexture(mp->getTexture());
 			glPointSize(10.f);
-			gxBegin(GL_POINTS);
+			gxBegin(GX_POINTS);
 			for (float u = -1.f; u <= +1.f; u += 1.f / 200.f)
 			{
 				for (float v = -1.f; v <= +1.f; v += 1.f / 200.f)

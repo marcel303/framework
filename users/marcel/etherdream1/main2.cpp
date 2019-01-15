@@ -417,7 +417,7 @@ struct CalibrationUi
 		}
 		
 		setColor(255, 255, 255, 127);
-		gxBegin(GL_LINE_STRIP);
+		gxBegin(GX_LINE_STRIP);
 		glEnable(GL_LINE_SMOOTH); // todo : remove, replace with hq lines
 		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 		checkErrorGL();
@@ -1262,7 +1262,7 @@ int main(int argc, char * argv[])
 					gxScalef(200, 200, 1);
 					
 					setColor(colorWhite);
-					gxBegin(GL_LINES);
+					gxBegin(GX_LINES);
 					{
 						for (int i = 0; i < line.points.size() - 1; ++i)
 						{
@@ -1291,7 +1291,7 @@ int main(int argc, char * argv[])
 					gxTranslatef(VIEW_SX/2, VIEW_SY/2, 0);
 					gxScalef(300, 300, 1);
 					
-					gxBegin(GL_LINES);
+					gxBegin(GX_LINES);
 					{
 						for (int i = 0; i < kFrameSize - 1; ++i) // todo : closed
 						{
@@ -1326,7 +1326,7 @@ int main(int argc, char * argv[])
 			{
 				setColor(200, 150, 100);
 				
-				gxBegin(GL_LINES);
+				gxBegin(GX_LINES);
 				{
 					for (int i = 0; i < mask.numMergedSegments; ++i)
 					{

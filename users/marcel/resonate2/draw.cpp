@@ -70,7 +70,7 @@ void colorizeLatticeVertices(const Lattice & lattice, Color * colors)
 
 void drawLatticeVertices(const Lattice & lattice)
 {
-	gxBegin(GL_POINTS);
+	gxBegin(GX_POINTS);
 	{
 		const int numVertices = kNumVertices;
 		
@@ -92,7 +92,7 @@ void drawLatticeEdges(const Lattice & lattice)
 	
 	colorizeLatticeVertices(lattice, colors);
 	
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		for (auto & edge : lattice.edgeVertices)
 		{
@@ -118,7 +118,7 @@ void drawLatticeFaces(const Lattice & lattice, const int faceIndex)
 	
 	colorizeLatticeVertices(lattice, colors);
 	
-	gxBegin(GL_TRIANGLES);
+	gxBegin(GX_TRIANGLES);
 	{
 		for (int i = 0; i < 6; ++i)
 		{
@@ -159,7 +159,7 @@ void drawLatticeFaces(const Lattice & lattice, const int faceIndex)
 void drawImpulseResponseProbes(const ImpulseResponseProbe * probes, const int numProbes, const Lattice & lattice)
 {
 	glPointSize(10.f);
-	gxBegin(GL_POINTS);
+	gxBegin(GX_POINTS);
 	for (int i = 0; i < numProbes; ++i)
 	{
 		const auto & probe = probes[i];

@@ -264,7 +264,7 @@ static void testParticleLib()
 			#endif
 
 			#if 1
-				gxBegin(GL_QUADS);
+				gxBegin(GX_QUADS);
 				{
 					const int sx = 5;
 					const int sy = 100;
@@ -283,7 +283,7 @@ static void testParticleLib()
 				gxEnd();
 
 			#if 0 // work around for weird (driver?) issue where next draw call retains the color of the previous one
-				gxBegin(GL_TRIANGLES);
+				gxBegin(GX_TRIANGLES);
 				gxColor4f(0.f, 0.f, 0.f, 0.f);
 				gxEnd();
 			#endif

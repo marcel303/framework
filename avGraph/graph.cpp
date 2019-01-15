@@ -1615,7 +1615,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		const int xOffset = history.maxHistorySize - history.historySize;
 		
 		setColor(127, 127, 255);
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		{
 			for (int i = 0; i < history.historySize; ++i)
 			{

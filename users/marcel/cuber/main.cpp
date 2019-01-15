@@ -322,7 +322,7 @@ static void drawCube(const Cube & cube)
 
 	#if 1
 		// the most beautiful way ever to draw the edges of a cube..
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			gxColor4f(1.f, 1.f, 1.f, .25f);
 			for (int x1 = 0; x1 <= 1; ++x1)
@@ -346,7 +346,7 @@ static void drawCube(const Cube & cube)
 		glPointSize(2.f);
 		setBlend(BLEND_ADD);
 
-		gxBegin(GL_POINTS);
+		gxBegin(GX_POINTS);
 		{
 			for (int x = 0; x < SX; ++x)
 			{
@@ -780,7 +780,7 @@ int main(int argc, char * argv[])
 					gxScalef(800.f, -10.f, 1.f);
 					//gxScalef(2400.f, -10.f, 1.f);
 					setColor(colorWhite);
-					gxBegin(GL_LINE_LOOP);
+					gxBegin(GX_LINE_LOOP);
 					{
 						gxVertex2f(0.f, 400.f);
 

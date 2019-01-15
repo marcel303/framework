@@ -552,7 +552,7 @@ void Effect_Cloth::doDraw()
 {
 	gxColor4f(1.f, 1.f, 1.f, .2f);
 
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		for (int x = 0; x < sx - 1; ++x)
 		{
@@ -1131,7 +1131,7 @@ void Effect_Boxes::draw()
 				else if (b.m_axis == 2)
 					gxRotatef(90, 1, 0, 0);
 
-				gxBegin(GL_QUADS);
+				gxBegin(GX_QUADS);
 				{
 					gxNormal3f(0.f, 0.f, -1.f);
 					gxVertex3f(-1.f, -1.f, -1.f);
@@ -1993,7 +1993,7 @@ void Effect_Blit::draw()
 		gxColor4f(1.f, 1.f, 1.f, m_alpha);
 		gxSetTexture(layer->m_surface->getTexture());
 		{
-			gxBegin(GL_QUADS);
+			gxBegin(GX_QUADS);
 			{
 				float x1, y1, x2, y2;
 				float u1, v1, u2, v2;
@@ -2100,7 +2100,7 @@ void Effect_Blocks::draw()
 		shader.setImmediate("imageAlpha", imageAlpha);
 		shader.setImmediate("alpha", alpha);
 
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		{
 			gxTexCoord2f(0.f, 0.f); gxVertex2f(b.x - sx, b.y - sy);
 			gxTexCoord2f(1.f, 0.f); gxVertex2f(b.x + sx, b.y - sy);
@@ -2385,7 +2385,7 @@ void Effect_Bars::draw()
 	if (m_alpha <= 0.f)
 		return;
 
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int layer = 0; layer < kNumLayers; ++layer)
 		{
@@ -2603,7 +2603,7 @@ void Effect_Bezier::draw()
 			glEnable(GL_LINE_SMOOTH);
 			glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 
-			gxBegin(GL_LINE_STRIP);
+			gxBegin(GX_LINE_STRIP);
 			{
 				const Color color = baseColor.mulRGBA(s.color);
 
@@ -3308,7 +3308,7 @@ void Effect_Fireworks::draw()
 	glEnable(GL_LINE_SMOOTH);
 	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		for (int i = 0; i < PS; ++i)
 		{
@@ -3398,7 +3398,7 @@ void Effect_Sparklies::draw()
 	setShader(shader);
 	shader.setTexture("image", 5, Sprite(m_image.c_str()).getTexture(), true, true);
 
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int i = 0; i < m_particleSystem.numParticles; ++i)
 		{

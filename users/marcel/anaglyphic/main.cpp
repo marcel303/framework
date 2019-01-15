@@ -101,7 +101,7 @@ struct ParticleSystem
 		glEnable(GL_PROGRAM_POINT_SIZE);
 		checkErrorGL();
 
-		gxBegin(GL_POINTS);
+		gxBegin(GX_POINTS);
 		{
 			for (int i = 0; i < kMaxParticles; ++i)
 			{
@@ -180,7 +180,7 @@ struct VectorMemory
 		glEnable(GL_LINE_SMOOTH);
 		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 		
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			for (int i = 0; i < kMaxLines; ++i)
 			{
@@ -208,7 +208,7 @@ static void drawGrid(const int numQuadsX, const int numQuadsY)
 	const float stepX = 1.f / (numQuadsX + 1);
 	const float stepY = 1.f / (numQuadsY + 1);
 
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int x = 0; x < numQuadsX; ++x)
 		{
@@ -266,7 +266,7 @@ static void drawExtrusion(const int numX, const int numY, const GLuint texture)
 	shader.setTexture("source", 0, texture, true, true);
 	setShader(shader);
 	{
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		{
 			for (int x = 0; x < numX; ++x)
 			{
@@ -299,7 +299,7 @@ static void drawExtrusion(const int numX, const int numY, const GLuint texture)
 	shader.setImmediate("mode", 1);
 	setShader(shader);
 	{
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		{
 			for (int x = 0; x < numX; ++x)
 			{
@@ -597,7 +597,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 							pushBlend(BLEND_OPAQUE);
 							setColor(colorWhite);
 							gxSetTexture(getTexture("tile2.jpg"));
-							gxBegin(GL_QUADS);
+							gxBegin(GX_QUADS);
 							{
 								const float s = 70.f;
 

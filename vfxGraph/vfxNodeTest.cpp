@@ -81,7 +81,7 @@ void VfxNodeTest::draw() const
 			gxScalef(scale, scale, scale);
 			
 			setColor(colorWhite);
-			gxBegin(GL_POINTS);
+			gxBegin(GX_POINTS);
 			{
 				while (!zipper.done())
 				{

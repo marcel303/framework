@@ -374,7 +374,7 @@ struct Cube
 
 					const float cubeSizeRcp = 1.f / size;
 
-					gxBegin(GL_QUADS);
+					gxBegin(GX_QUADS);
 					{
 						const int x1 = x;
 						const int y1 = y;
@@ -748,7 +748,7 @@ void QuadNode::traverse(const int level, const int x, const int y, const int siz
 			const int sphereDistance = calculateSphereDistance(level, x, y, size, params);
 			const float cubeSizeRcp = 1.f / params.tree->m_initSize;
 
-			gxBegin(GL_QUADS);
+			gxBegin(GX_QUADS);
 			{
 				const int x1 = x;
 				const int y1 = y;
@@ -790,7 +790,7 @@ void QuadNode::traverse(const int level, const int x, const int y, const int siz
 
 #if DO_CUBE_QUADS_INFOS
 		setColorf(1.f, 1.f, 1.f, 1.f / (d / 200.f + 1.f));
-		gxBegin(GL_LINE_LOOP);
+		gxBegin(GX_LINE_LOOP);
 		{
 			const int x1 = x;
 			const int y1 = y;
@@ -905,7 +905,7 @@ void CubeSide::eval(const QuadParams & params)
 		gxTranslatef(-cubeSize/2, -cubeSize/2, -cubeSize/2);
 
 		setColor(colorWhite);
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			const int cubeSize = m_quadTree.m_initSize;
 			int v1[3];
@@ -936,7 +936,7 @@ void CubeSide::eval(const QuadParams & params)
 		drawRectLine(0, 0, m_quadTree.m_initSize, m_quadTree.m_initSize);
 
 	#if 1
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			setColor(255, 255, 0);
 			gxVertex3f(localParams.viewX, localParams.viewY, localParams.viewZ * .9f);
@@ -1114,7 +1114,7 @@ static void drawPointGrid(const int x, const int y, const int size, const int st
 	const int cubeRadius = cubeSize / 2;
 
 	glPointSize(2);
-	gxBegin(GL_POINTS);
+	gxBegin(GX_POINTS);
 	{
 		for (int ox = 0; ox < size; ox += step)
 		{
@@ -1290,7 +1290,7 @@ static void drawFractalSpherePart(const Vertex & v1, const Vertex & v2, const Ve
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	gxBegin(GL_TRIANGLES);
+	gxBegin(GX_TRIANGLES);
 	{
 		//for (int i = numTrianglesUsed * 3; i != 0; --i, ++start)
 		for (int i = numTrianglesUsed; i != 0; --i)
@@ -2103,7 +2103,7 @@ int main(int argc, char * argv[])
 							gxTranslatef(-cubeSize/2, -cubeSize/2, -cubeSize/2);
 
 							glPointSize(10.f);
-							gxBegin(GL_POINTS);
+							gxBegin(GX_POINTS);
 							{
 								gxColor4f(1.f, 1.f, .5f, 1.f);
 								gxVertex3f(params.viewX, params.viewY, params.viewZ);
