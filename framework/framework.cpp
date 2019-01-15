@@ -5267,7 +5267,7 @@ void Camera3d::pushViewMatrix() const
 {
 	const Mat4x4 matrix = getViewMatrix();
 	
-	const GLenum restoreMatrixMode = gxGetMatrixMode();
+	const GxEnum restoreMatrixMode = gxGetMatrixMode();
 	{
 		gxMatrixMode(GL_PROJECTION);
 		gxPushMatrix();
@@ -5278,7 +5278,7 @@ void Camera3d::pushViewMatrix() const
 
 void Camera3d::popViewMatrix() const
 {
-	const GLenum restoreMatrixMode = gxGetMatrixMode();
+	const GxEnum restoreMatrixMode = gxGetMatrixMode();
 	{
 		gxMatrixMode(GL_PROJECTION);
 		gxPopMatrix();
@@ -7231,7 +7231,7 @@ static GxMatrixStack s_gxModelView;
 static GxMatrixStack s_gxProjection;
 static GxMatrixStack * s_gxMatrixStack = &s_gxModelView;
 
-void gxMatrixMode(GLenum mode)
+void gxMatrixMode(GxEnum mode)
 {
 	switch (mode)
 	{
@@ -7247,7 +7247,7 @@ void gxMatrixMode(GLenum mode)
 	}
 }
 
-GLenum gxGetMatrixMode()
+GxEnum gxGetMatrixMode()
 {
 	if (s_gxMatrixStack == &s_gxModelView)
 		return GL_MODELVIEW;
@@ -7280,7 +7280,7 @@ void gxLoadMatrixf(const float * m)
 	memcpy(s_gxMatrixStack->getRw().m_v, m, sizeof(float) * 16);
 }
 
-void gxGetMatrixf(GLenum mode, float * m)
+void gxGetMatrixf(GxEnum mode, float * m)
 {
 	switch (mode)
 	{
@@ -7296,7 +7296,7 @@ void gxGetMatrixf(GLenum mode, float * m)
 	}
 }
 
-void gxSetMatrixf(GLenum mode, const float * m)
+void gxSetMatrixf(GxEnum mode, const float * m)
 {
 	switch (mode)
 	{
@@ -7902,7 +7902,7 @@ void gxInitialize()
 	registerBuiltinShaders();
 }
 
-void gxGetMatrixf(GLenum mode, float * m)
+void gxGetMatrixf(GxEnum mode, float * m)
 {
 	switch (mode)
 	{
@@ -7922,14 +7922,14 @@ void gxGetMatrixf(GLenum mode, float * m)
 	}
 }
 
-GLenum gxGetMatrixMode()
+GxEnum gxGetMatrixMode()
 {
 	GLint mode = 0;
 	
 	glGetIntegerv(GL_MATRIX_MODE, &mode);
 	checkErrorGL();
 	
-	return (GLenum)mode;
+	return (GxEnum)mode;
 }
 
 void gxEnd()

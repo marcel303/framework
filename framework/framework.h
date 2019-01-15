@@ -31,8 +31,13 @@
 //        which should hopefully rarely be needed
 // for now we seem to depend mostly on: SDL_event, SDL_mutex, SDL_thread and SDL_timer
 
+#if defined(WIN32)
+#include <GL/glew.h> // <SDL2/SDL_opengl.h> includes <Windows.h>, which introduces a lot of #define's we don't want. Instead we include GLEW here (for now) which doesn't pollute the global namespace as much. Once framework.h really doesn't depend on OpenGL anymore this can be removed.
+#include <SDL2/SDL.h>
+#else
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#endif
 #include <string>
 #include <vector>
 #include "Debugging.h"
@@ -278,6 +283,8 @@ typedef void (*RealTimeEditCallback)(const std::string & filename);
 typedef void (*InitErrorHandler)(INIT_ERROR error);
 
 //
+
+typedef uint32_t GxEnum;
 
 typedef int32_t GxImmediateIndex;
 typedef uint32_t GxShaderId;
@@ -594,7 +601,7 @@ public:
 	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
 	void setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
 	void setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
-	void setTextureRw(const char * name, int unit, GxTextureId texture, GLuint format, bool filtered, bool clamp = true);
+	void setTextureRw(const char * name, int unit, GxTextureId texture, uint32_t format, bool filtered, bool clamp = true); // todo : add enum for graphics api independent buffer formats
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
 	void setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer);
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
@@ -1326,12 +1333,12 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 
 SDL_Surface * getWindowSurface();
 
-static inline void gxMatrixMode(GLenum mode) { }
+static inline void gxMatrixMode(GxEnum mode) { }
 static inline void gxPopMatrix() { }
 static inline void gxPushMatrix() { }
 static inline void gxLoadIdentity() { }
 static inline void gxLoadMatrixf(const float * m) { }
-static inline void gxGetMatrixf(GLenum mode, float * m) { }
+static inline void gxGetMatrixf(GxEnum mode, float * m) { }
 static inline void gxMultMatrixf(const float * m) { }
 static inline void gxTranslatef(float x, float y, float z) { }
 static inline void gxRotatef(float angle, float x, float y, float z) { }
@@ -1351,18 +1358,18 @@ static inline void gxNormal3f(float x, float y, float z) { }
 static inline void gxVertex2f(float x, float y) { }
 static inline void gxVertex3f(float x, float y, float z) { }
 static inline void gxVertex4f(float x, float y, float z, float w) { }
-static inline void gxSetTexture(GLuint texture) { }
+static inline void gxSetTexture(GxTextureId texture) { }
 
 #elif !USE_LEGACY_OPENGL
 
-void gxMatrixMode(GLenum mode);
-GLenum gxGetMatrixMode();
+void gxMatrixMode(GxEnum mode);
+GxEnum gxGetMatrixMode();
 void gxPopMatrix();
 void gxPushMatrix();
 void gxLoadIdentity();
 void gxLoadMatrixf(const float * m);
-void gxGetMatrixf(GLenum mode, float * m);
-void gxSetMatrixf(GLenum mode, float * m);
+void gxGetMatrixf(GxEnum mode, float * m);
+void gxSetMatrixf(GxEnum mode, float * m);
 void gxMultMatrixf(const float * m);
 void gxTranslatef(float x, float y, float z);
 void gxRotatef(float angle, float x, float y, float z);
@@ -1391,12 +1398,12 @@ void gxSetTexture(GxTextureId texture);
 #else
 
 #define gxMatrixMode glMatrixMode
-GLenum gxGetMatrixMode();
+GxEnum gxGetMatrixMode();
 #define gxPopMatrix glPopMatrix
 #define gxPushMatrix glPushMatrix
 #define gxLoadIdentity glLoadIdentity
 #define gxLoadMatrixf glLoadMatrixf
-void gxGetMatrixf(GLenum mode, float * m);
+void gxGetMatrixf(GxEnum mode, float * m);
 #define gxMultMatrixf glMultMatrixf
 #define gxTranslatef glTranslatef
 #define gxRotatef glRotatef
@@ -1419,7 +1426,7 @@ void gxEnd();
 #define gxVertex3fv glVertex3fv
 #define gxVertex4f glVertex4f
 #define gxVertex4fv glVertex4fv
-void gxSetTexture(GLuint texture);
+void gxSetTexture(GxTextureId texture);
 
 
 #endif
