@@ -2125,13 +2125,6 @@ void Surface::destruct()
 	m_doubleBuffered = false;
 }
 
-void Surface::swapBuffers()
-{
-	fassert(m_doubleBuffered);
-
-	m_bufferId = (m_bufferId + 1) % 2;
-}
-
 Surface::Surface()
 {
 	construct();
@@ -2154,6 +2147,13 @@ Surface::Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURF
 Surface::~Surface()
 {
 	destruct();
+}
+
+void Surface::swapBuffers()
+{
+	fassert(m_doubleBuffered);
+
+	m_bufferId = (m_bufferId + 1) % 2;
 }
 
 bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered)
@@ -2335,12 +2335,12 @@ bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, 
 	return result;
 }
 
-GLuint Surface::getFramebuffer() const
+uint32_t Surface::getFramebuffer() const
 {
 	return m_buffer[m_bufferId];
 }
 
-GLuint Surface::getTexture() const
+GxTextureId Surface::getTexture() const
 {
 	return m_texture[m_bufferId];
 }
@@ -2350,7 +2350,7 @@ bool Surface::hasDepthTexture() const
 	return m_depthTexture != 0;
 }
 
-GLuint Surface::getDepthTexture() const
+GxTextureId Surface::getDepthTexture() const
 {
 	return m_depthTexture;
 }
@@ -2637,7 +2637,7 @@ bool Shader::isValid() const
 	return m_shader != 0 && m_shader->program != 0;
 }
 
-GLuint Shader::getProgram() const
+GxShaderId Shader::getProgram() const
 {
 	return m_shader ? m_shader->program : 0;
 }
@@ -2660,7 +2660,7 @@ bool Shader::getErrorMessages(std::vector<std::string> & errorMessages) const
 	}
 }
 
-GLint Shader::getImmediate(const char * name)
+GxImmediateIndex Shader::getImmediate(const char * name)
 {
 	return glGetUniformLocation(getProgram(), name);
 }
@@ -2704,7 +2704,7 @@ void Shader::setImmediate(const char * name, float x, float y, float z, float w)
 	checkErrorGL();
 }
 
-void Shader::setImmediate(GLint index, float x)
+void Shader::setImmediate(GxImmediateIndex index, float x)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2712,7 +2712,7 @@ void Shader::setImmediate(GLint index, float x)
 	checkErrorGL();
 }
 
-void Shader::setImmediate(GLint index, float x, float y)
+void Shader::setImmediate(GxImmediateIndex index, float x, float y)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2720,7 +2720,7 @@ void Shader::setImmediate(GLint index, float x, float y)
 	checkErrorGL();
 }
 
-void Shader::setImmediate(GLint index, float x, float y, float z)
+void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2728,7 +2728,7 @@ void Shader::setImmediate(GLint index, float x, float y, float z)
 	checkErrorGL();
 }
 
-void Shader::setImmediate(GLint index, float x, float y, float z, float w)
+void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, float w)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2742,7 +2742,7 @@ void Shader::setImmediateMatrix4x4(const char * name, const float * matrix)
 	checkErrorGL();
 }
 
-void Shader::setImmediateMatrix4x4(GLint index, const float * matrix)
+void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2756,7 +2756,7 @@ void Shader::setTextureUnit(const char * name, int unit)
 	checkErrorGL();
 }
 
-void Shader::setTextureUnit(GLint index, int unit)
+void Shader::setTextureUnit(GxImmediateIndex index, int unit)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2764,7 +2764,7 @@ void Shader::setTextureUnit(GLint index, int unit)
 	checkErrorGL();
 }
 
-void Shader::setTexture(const char * name, int unit, GLuint texture)
+void Shader::setTexture(const char * name, int unit, GxTextureId texture)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -2775,7 +2775,7 @@ void Shader::setTexture(const char * name, int unit, GLuint texture)
 	checkErrorGL();
 }
 
-void Shader::setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamped)
+void Shader::setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamped)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -2790,7 +2790,7 @@ void Shader::setTexture(const char * name, int unit, GLuint texture, bool filter
 	checkErrorGL();
 }
 
-void Shader::setTextureUniform(GLint index, int unit, GLuint texture)
+void Shader::setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2801,7 +2801,7 @@ void Shader::setTextureUniform(GLint index, int unit, GLuint texture)
 	glBindTexture(GL_TEXTURE_2D, texture);
 }
 
-void Shader::setTextureArray(const char * name, int unit, GLuint texture)
+void Shader::setTextureArray(const char * name, int unit, GxTextureId texture)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -2812,7 +2812,7 @@ void Shader::setTextureArray(const char * name, int unit, GLuint texture)
 	checkErrorGL();
 }
 
-void Shader::setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamped)
+void Shader::setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamped)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -2827,7 +2827,7 @@ void Shader::setTextureArray(const char * name, int unit, GLuint texture, bool f
 	checkErrorGL();
 }
 
-void Shader::setTextureCube(const char * name, int unit, GLuint texture)
+void Shader::setTextureCube(const char * name, int unit, GxTextureId texture)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -2854,7 +2854,7 @@ void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 		setBuffer(index, buffer);
 }
 
-void Shader::setBuffer(GLint index, const ShaderBuffer & buffer)
+void Shader::setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer)
 {
 	fassert(globals.shader == this);
 
@@ -2878,7 +2878,7 @@ void Shader::setBufferRw(const char * name, const ShaderBufferRw & buffer)
 		setBufferRw(index, buffer);
 }
 
-void Shader::setBufferRw(GLint index, const ShaderBufferRw & buffer)
+void Shader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer)
 {
 	fassert(globals.shader == this);
 
@@ -2918,7 +2918,7 @@ void ComputeShader::load(const char * filename, const int groupSx, const int gro
 	m_shader = &g_computeShaderCache.findOrCreate(filename, groupSx, groupSy, groupSz);
 }
 
-GLuint ComputeShader::getProgram() const
+GxShaderId ComputeShader::getProgram() const
 {
 	return m_shader ? m_shader->program : 0;
 }
@@ -2979,7 +2979,7 @@ int ComputeShader::toThreadSz(const int sz) const
 	return calcThreadSize(sz, getGroupSz());
 }
 
-GLint ComputeShader::getImmediate(const char * name)
+GxImmediateIndex ComputeShader::getImmediate(const char * name)
 {
 	return glGetUniformLocation(getProgram(), name);
 }
@@ -3023,7 +3023,7 @@ void ComputeShader::setImmediate(const char * name, float x, float y, float z, f
 	checkErrorGL();
 }
 
-void ComputeShader::setImmediate(GLint index, float x, float y)
+void ComputeShader::setImmediate(GxImmediateIndex index, float x, float y)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -3031,7 +3031,7 @@ void ComputeShader::setImmediate(GLint index, float x, float y)
 	checkErrorGL();
 }
 
-void ComputeShader::setImmediate(GLint index, float x, float y, float z, float w)
+void ComputeShader::setImmediate(GxImmediateIndex index, float x, float y, float z, float w)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -3045,7 +3045,7 @@ void ComputeShader::setImmediateMatrix4x4(const char * name, const float * matri
 	checkErrorGL();
 }
 
-void ComputeShader::setImmediateMatrix4x4(GLint index, const float * matrix)
+void ComputeShader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -3053,7 +3053,7 @@ void ComputeShader::setImmediateMatrix4x4(GLint index, const float * matrix)
 	checkErrorGL();
 }
 
-void ComputeShader::setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamped)
+void ComputeShader::setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamped)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -3068,7 +3068,7 @@ void ComputeShader::setTexture(const char * name, int unit, GLuint texture, bool
 	checkErrorGL();
 }
 
-void ComputeShader::setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamped)
+void ComputeShader::setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamped)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -3083,7 +3083,7 @@ void ComputeShader::setTextureArray(const char * name, int unit, GLuint texture,
 	checkErrorGL();
 }
 
-void ComputeShader::setTextureRw(const char * name, int unit, GLuint texture, GLuint format, bool filtered, bool clamp)
+void ComputeShader::setTextureRw(const char * name, int unit, GxTextureId texture, GLuint format, bool filtered, bool clamp)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -3108,7 +3108,7 @@ void ComputeShader::setBuffer(const char * name, const ShaderBuffer & buffer)
 		setBuffer(index, buffer);
 }
 
-void ComputeShader::setBuffer(GLint index, const ShaderBuffer & buffer)
+void ComputeShader::setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer)
 {
 	fassert(globals.shader == this);
 
@@ -3132,7 +3132,7 @@ void ComputeShader::setBufferRw(const char * name, const ShaderBufferRw & buffer
 		setBufferRw(index, buffer);
 }
 
-void ComputeShader::setBufferRw(GLint index, const ShaderBufferRw & buffer)
+void ComputeShader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer)
 {
 	fassert(globals.shader == this);
 
@@ -3201,7 +3201,7 @@ ShaderBuffer::~ShaderBuffer()
 	}
 }
 
-GLuint ShaderBuffer::getBuffer() const
+GxShaderBufferId ShaderBuffer::getBuffer() const
 {
 	return m_buffer;
 }
@@ -3239,7 +3239,7 @@ ShaderBufferRw::~ShaderBufferRw()
 	}
 }
 
-GLuint ShaderBufferRw::getBuffer() const
+GxShaderBufferId ShaderBufferRw::getBuffer() const
 {
 	return m_buffer;
 }
@@ -3744,7 +3744,7 @@ Dictionary & Dictionary::operator=(const Dictionary & other)
 
 // -----
 
-GLuint getTexture(const char * filename)
+GxTextureId getTexture(const char * filename)
 {
 	const TextureCacheElem & elem = g_textureCache.findOrCreate(filename, 1, 1);
 
@@ -4161,7 +4161,7 @@ int Sprite::getHeight() const
 	return m_texture->sy / m_anim->m_gridSize[1];
 }
 
-GLuint Sprite::getTexture() const
+GxTextureId Sprite::getTexture() const
 {
 	if (m_texture->textures)
 		return m_texture->textures[0];
@@ -7053,7 +7053,7 @@ void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool
 	}
 }
 
-static GLuint createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat, GLenum uploadElementType)
+static GxTextureId createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat, GLenum uploadElementType)
 {
 	checkErrorGL();
 
@@ -7109,32 +7109,32 @@ static GLuint createTexture(const void * source, int sx, int sy, bool filter, bo
 	return texture;
 }
 
-GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
+GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
 }
 
-GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp)
+GxTextureId createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE);
 }
 
-GLuint createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp)
+GxTextureId createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
 }
 
-GLuint createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp)
+GxTextureId createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_RGB32F, GL_RGB, GL_FLOAT);
 }
 
-GLuint createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp)
+GxTextureId createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_R16, GL_RED, GL_UNSIGNED_SHORT);
 }
 
-GLuint createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp)
+GxTextureId createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_R32F, GL_RED, GL_FLOAT);
 }
@@ -7878,7 +7878,7 @@ void gxEmitVertex()
 	}
 }
 
-void gxSetTexture(GLuint texture)
+void gxSetTexture(GxTextureId texture)
 {
 	glActiveTexture(GL_TEXTURE0);
 	
@@ -7938,7 +7938,7 @@ void gxEnd()
 	checkErrorGL();
 }
 
-void gxSetTexture(GLuint texture)
+void gxSetTexture(GxTextureId texture)
 {
 	if (texture)
 	{
@@ -7999,7 +7999,7 @@ void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma)
 	kernel.setData(values, sizeof(float) * kernelSize);
 }
 
-void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius)
+void setShader_GaussianBlurH(const GxTextureId source, const int kernelSize, const float radius)
 {
 	Shader & shader = globals.builtinShaders->gaussianBlurH.get();
 	setShader(shader);
@@ -8013,7 +8013,7 @@ void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const fl
 	shader.setBuffer("kernel", kernel);
 }
 
-void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius)
+void setShader_GaussianBlurV(const GxTextureId source, const int kernelSize, const float radius)
 {
 	Shader & shader = globals.builtinShaders->gaussianBlurV.get();
 	setShader(shader);
@@ -8028,7 +8028,7 @@ void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const fl
 }
 
 static void setShader_ThresholdLumiEx(
-	const GLuint source,
+	const GxTextureId source,
 	const float threshold,
 	const Vec4 weights,
 	bool doFailReplacement,
@@ -8049,7 +8049,7 @@ static void setShader_ThresholdLumiEx(
 
 static const Vec4 lumiVec(.30f, .59f, .11f, 0.f);
 
-void setShader_ThresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity)
+void setShader_ThresholdLumi(const GxTextureId source, const float lumi, const Color & failColor, const Color & passColor, const float opacity)
 {
 	setShader_ThresholdLumiEx(
 		source,
@@ -8062,7 +8062,7 @@ void setShader_ThresholdLumi(const GLuint source, const float lumi, const Color 
 		opacity);
 }
 
-void setShader_ThresholdLumiFail(const GLuint source, const float lumi, const Color & failColor, const float opacity)
+void setShader_ThresholdLumiFail(const GxTextureId source, const float lumi, const Color & failColor, const float opacity)
 {
 	setShader_ThresholdLumiEx(
 		source,
@@ -8075,7 +8075,7 @@ void setShader_ThresholdLumiFail(const GLuint source, const float lumi, const Co
 		opacity);
 }
 
-void setShader_ThresholdLumiPass(const GLuint source, const float lumi, const Color & passColor, const float opacity)
+void setShader_ThresholdLumiPass(const GxTextureId source, const float lumi, const Color & passColor, const float opacity)
 {
 	setShader_ThresholdLumiEx(
 		source,
@@ -8089,7 +8089,7 @@ void setShader_ThresholdLumiPass(const GLuint source, const float lumi, const Co
 }
 
 static void setShader_ThresholdValueEx(
-	const GLuint source,
+	const GxTextureId source,
 	const Vec4 threshold,
 	bool doFailReplacement,
 	bool doPassReplacement,
@@ -8108,7 +8108,7 @@ static void setShader_ThresholdValueEx(
 	shader.setImmediate("opacities", opacity[0], opacity[1], opacity[2], opacity[3]);
 }
 
-void setShader_ThresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor, const float opacity)
+void setShader_ThresholdValue(const GxTextureId source, const Color & value, const Color & failColor, const Color & passColor, const float opacity)
 {
 	setShader_ThresholdValueEx(
 		source,
@@ -8122,7 +8122,7 @@ void setShader_ThresholdValue(const GLuint source, const Color & value, const Co
 
 // todo : move these shaders to BuiltinShaders and supply shader source
 
-void setShader_GrayscaleLumi(const GLuint source, const float opacity)
+void setShader_GrayscaleLumi(const GxTextureId source, const float opacity)
 {
 	//Shader & shader = globals.builtinShaders->grayscaleLumi;
 	static Shader shader("builtin-grayscale-lumi", "builtin-effect.vs", "builtin-grayscale-lumi.ps");
@@ -8132,7 +8132,7 @@ void setShader_GrayscaleLumi(const GLuint source, const float opacity)
 	shader.setTexture("source", 0, source, true, true);
 }
 
-void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const float opacity)
+void setShader_GrayscaleWeights(const GxTextureId source, const Vec3 & weights, const float opacity)
 {
 	//Shader & shader = globals.builtinShaders->grayscaleWeights;
 	static Shader shader("builtin-grayscale-weights", "builtin-effect.vs", "builtin-grayscale-weights.ps");
@@ -8143,7 +8143,7 @@ void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const
 	shader.setImmediate("opacity", opacity);
 }
 
-void setShader_Colorize(const GLuint source, const float hue, const float opacity)
+void setShader_Colorize(const GxTextureId source, const float hue, const float opacity)
 {
 	//Shader & shader = globals.builtinShaders->hueAssign;
 	static Shader shader("builtin-hue-assign", "builtin-effect.vs", "builtin-hue-assign.ps");
@@ -8154,7 +8154,7 @@ void setShader_Colorize(const GLuint source, const float hue, const float opacit
 	shader.setImmediate("opacity", opacity);
 }
 
-void setShader_HueShift(const GLuint source, const float hue, const float opacity)
+void setShader_HueShift(const GxTextureId source, const float hue, const float opacity)
 {
 	//Shader & shader = globals.builtinShaders->hueShift;
 	static Shader shader("builtin-hue-shift", "builtin-effect.vs", "builtin-hue-shift.ps");
@@ -8165,7 +8165,7 @@ void setShader_HueShift(const GLuint source, const float hue, const float opacit
 	shader.setImmediate("opacity", opacity);
 }
 
-void setShader_Composite(const GLuint source1, const GLuint source2)
+void setShader_Composite(const GxTextureId source1, const GxTextureId source2)
 {
 	//Shader & shader = globals.builtinShaders->compositeAlpha;
 	Shader shader("builtin-composite-alpha");
@@ -8175,7 +8175,7 @@ void setShader_Composite(const GLuint source1, const GLuint source2)
 	shader.setTexture("source2", 1, source2, true, true);
 }
 
-void setShader_CompositePremultiplied(const GLuint source1, const GLuint source2)
+void setShader_CompositePremultiplied(const GxTextureId source1, const GxTextureId source2)
 {
 	//Shader & shader = globals.builtinShaders->compositeAlphaPremultiplied;
 	Shader shader("builtin-composite-alpha-premultiplied");
@@ -8185,7 +8185,7 @@ void setShader_CompositePremultiplied(const GLuint source1, const GLuint source2
 	shader.setTexture("source2", 1, source2, true, true);
 }
 
-void setShader_Premultiply(const GLuint source)
+void setShader_Premultiply(const GxTextureId source)
 {
 	//Shader & shader = globals.builtinShaders->premultiplyAlpha;
 	Shader shader("builtin-premultiply-alpha");
@@ -8194,7 +8194,7 @@ void setShader_Premultiply(const GLuint source)
 	shader.setTexture("source", 0, source, true, true);
 }
 
-void setShader_ColorMultiply(const GLuint source, const Color & color, const float opacity)
+void setShader_ColorMultiply(const GxTextureId source, const Color & color, const float opacity)
 {
 	Shader & shader = globals.builtinShaders->colorMultiply.get();
 	setShader(shader);
@@ -8205,7 +8205,7 @@ void setShader_ColorMultiply(const GLuint source, const Color & color, const flo
 
 }
 
-void setShader_ColorTemperature(const GLuint source, const float temperature, const float opacity)
+void setShader_ColorTemperature(const GxTextureId source, const float temperature, const float opacity)
 {
 	Shader & shader = globals.builtinShaders->colorTemperature.get();
 	setShader(shader);
@@ -8596,7 +8596,7 @@ void hqClearGradient()
 	globals.hqGradientType = GRADIENT_NONE;
 }
 
-void hqSetTexture(const Mat4x4 & matrix, const GLuint texture)
+void hqSetTexture(const Mat4x4 & matrix, const GxTextureId texture)
 {
 	globals.hqTextureEnabled = true;
 	globals.hqTextureMatrix = matrix;

@@ -280,7 +280,6 @@ typedef void (*InitErrorHandler)(INIT_ERROR error);
 //
 
 typedef int32_t GxImmediateIndex;
-typedef uint32_t GxFramebufferId;
 typedef uint32_t GxShaderId;
 typedef uint32_t GxShaderBufferId;
 
@@ -444,7 +443,7 @@ class Surface
 	int m_bufferId;
 	SURFACE_FORMAT m_format;
 	bool m_doubleBuffered;
-	GxFramebufferId m_buffer[2];
+	uint32_t m_buffer[2];
 	GxTextureId m_texture[2];
 	GxTextureId m_depthTexture;
 	
@@ -460,7 +459,7 @@ public:
 	void swapBuffers();
 
 	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered);
-	GxFramebufferId getFramebuffer() const;
+	uint32_t getFramebuffer() const; // todo : make internally accessible only
 	GxTextureId getTexture() const;
 	bool hasDepthTexture() const;
 	GxTextureId getDepthTexture() const;
@@ -498,7 +497,7 @@ public:
 	virtual ~ShaderBase() { }
 	
 	virtual bool isValid() const = 0;
-	virtual GxShaderId getProgram() const = 0;
+	virtual GxShaderId getProgram() const = 0; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const = 0;
 	virtual int getVersion() const = 0;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const = 0;
@@ -518,7 +517,7 @@ public:
 	
 	void load(const char * name, const char * filenameVs, const char * filenamePs);
 	virtual bool isValid() const override;
-	virtual GxShaderId getProgram() const override;
+	virtual GxShaderId getProgram() const override; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
@@ -571,7 +570,7 @@ public:
 
 	void load(const char * filename, const int groupSx = kDefaultGroupSx, const int groupSy = kDefaultGroupSy, const int groupSz = kDefaultGroupSz);
 	virtual bool isValid() const override { return m_shader != 0; }
-	virtual GxShaderId getProgram() const override;
+	virtual GxShaderId getProgram() const override; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const override { return SHADER_CS; }
 	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
@@ -617,7 +616,7 @@ public:
 	ShaderBuffer();
 	~ShaderBuffer();
 
-	GxShaderBufferId getBuffer() const;
+	GxShaderBufferId getBuffer() const; // todo : make internally accessible only
 
 	void setData(const void * bytes, int numBytes);
 };
@@ -632,7 +631,7 @@ public:
 	ShaderBufferRw();
 	~ShaderBufferRw();
 
-	GxShaderBufferId getBuffer() const;
+	GxShaderBufferId getBuffer() const; // todo : make internally accessible only
 
 	void setDataRaw(const void * bytes, int numBytes);
 
