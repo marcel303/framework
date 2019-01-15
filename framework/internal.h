@@ -355,6 +355,8 @@ public:
 		transform2d.MakeIdentity();
 		transform3d.MakeIdentity();
 		gxShaderIsDirty = true;
+		depthTest = DEPTH_LESS;
+		depthTestWriteEnabled = true;
 	}
 	
 	Window * mainWindow;
