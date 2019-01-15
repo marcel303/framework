@@ -7474,10 +7474,16 @@ void gxInitialize()
 
 	glBindVertexArray(0);
 	checkErrorGL();
+	
+	// enable seamless cube map sampling along the edges
+	
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 }
 
 void gxShutdown()
 {
+	glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+	
 	if (s_gxVertexArrayObject[0] != 0)
 	{
 		glDeleteVertexArrays(GX_VAO_COUNT, s_gxVertexArrayObject);
