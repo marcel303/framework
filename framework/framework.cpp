@@ -7518,6 +7518,8 @@ static GLenum toOpenGLPrimitiveType(const int /*GX_PRIMITIVE_TYPE*/ primitiveTyp
 {
 	switch (primitiveType)
 	{
+	case GX_POINTS:
+		return GL_POINTS;
 	case GX_LINES:
 		return GL_LINES;
 	case GX_LINE_LOOP:
