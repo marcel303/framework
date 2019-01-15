@@ -1,4 +1,3 @@
-#include <GL/glew.h> // GL_MODELVIEW
 #include <ctime>
 #include "Calc.h"
 #include "FileStream.h"
@@ -583,7 +582,7 @@ public:
 
 	void draw()
 	{
-		gxMatrixMode(GL_MODELVIEW);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
 
 		if (g_flipScreen)
@@ -927,7 +926,7 @@ public:
 
 	void draw()
 	{
-		gxMatrixMode(GL_MODELVIEW);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
 
 		if (!g_flipScreen)

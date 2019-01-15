@@ -114,9 +114,9 @@ void VfxNodeDrawSyphon::draw() const
 			checkErrorGL();
 			{
 				glViewport(0, 0, sx, sy);
-				gxMatrixMode(GL_MODELVIEW);
+				gxMatrixMode(GX_MODELVIEW);
 				gxLoadIdentity();
-				gxMatrixMode(GL_PROJECTION);
+				gxMatrixMode(GX_PROJECTION);
 				gxLoadIdentity();
 				
 				gxSetTexture(image->getTexture());

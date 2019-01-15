@@ -1519,7 +1519,7 @@ int main(int argc, char * argv[])
 				setBlend(BLEND_OPAQUE);
 
 			#if DO_VOXELTRACE
-				gxMatrixMode(GL_PROJECTION);
+				gxMatrixMode(GX_PROJECTION);
 				gxPushMatrix();
 				{
 					Mat4x4 matP;
@@ -1534,7 +1534,7 @@ int main(int argc, char * argv[])
 
 					//
 
-					gxMatrixMode(GL_MODELVIEW);
+					gxMatrixMode(GX_MODELVIEW);
 					gxPushMatrix();
 					{
 						gxLoadIdentity();
@@ -1673,13 +1673,13 @@ int main(int argc, char * argv[])
 						}
 						gxEnd();
 					}
-					gxMatrixMode(GL_MODELVIEW);
+					gxMatrixMode(GX_MODELVIEW);
 					gxPopMatrix();
 				}
-				gxMatrixMode(GL_PROJECTION);
+				gxMatrixMode(GX_PROJECTION);
 				gxPopMatrix();
 
-				gxMatrixMode(GL_MODELVIEW);
+				gxMatrixMode(GX_MODELVIEW);
 			#endif
 
 			#if DO_DISTANCE_TEXTURE

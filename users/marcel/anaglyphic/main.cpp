@@ -559,13 +559,13 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 		camera.calculateTransform(68.f/10.f/2.f * eyeOffset, eyeX, eyeY, matC);
 		matC = matC.Invert();
 
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
 		{
 			gxLoadMatrixf(matP.m_v);
 			gxMultMatrixf(matC.m_v);
 
-			gxMatrixMode(GL_MODELVIEW);
+			gxMatrixMode(GX_MODELVIEW);
 			gxPushMatrix();
 			{
 				gxLoadIdentity();
@@ -716,10 +716,10 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 					}
 				}
 			}
-			gxMatrixMode(GL_MODELVIEW);
+			gxMatrixMode(GX_MODELVIEW);
 			gxPopMatrix();
 		}
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_PROJECTION);
 		gxPopMatrix();
 
 		popDepthTest();

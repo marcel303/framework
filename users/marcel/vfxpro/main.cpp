@@ -506,12 +506,12 @@ struct Camera
 
 	void beginView(int c, int & sx, int & sy) const
 	{
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
 		gxLoadMatrixf(cameraToView.m_v);
 		gxMultMatrixf(worldToCamera.m_v);
 
-		gxMatrixMode(GL_MODELVIEW);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
 	#if NUM_SCREENS == 1
 		const int x1 = virtualToScreenX(-150);
@@ -537,9 +537,9 @@ struct Camera
 
 	void endView() const
 	{
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_PROJECTION);
 		gxPopMatrix();
-		gxMatrixMode(GL_MODELVIEW);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPopMatrix();
 
 		// dirty hack to restore viewport
@@ -600,7 +600,7 @@ static void drawCamera(const Camera & camera, const float alpha)
 {
 	// draw local axis
 
-	gxMatrixMode(GL_MODELVIEW);
+	gxMatrixMode(GX_MODELVIEW);
 	gxPushMatrix();
 	{
 		gxMultMatrixf(camera.cameraToWorld.m_v);
@@ -646,7 +646,7 @@ static void drawCamera(const Camera & camera, const float alpha)
 		}
 		gxPopMatrix();
 	}
-	gxMatrixMode(GL_MODELVIEW);
+	gxMatrixMode(GX_MODELVIEW);
 	gxPopMatrix();
 }
 
@@ -2001,11 +2001,11 @@ int main(int argc, char * argv[])
 					{
 						Mat4x4 projection;
 						projection.MakePerspectiveLH(90.f * Calc::deg2rad, float(GFX_SY) / float(GFX_SX), 0.01f, 100.f);
-						gxMatrixMode(GL_PROJECTION);
+						gxMatrixMode(GX_PROJECTION);
 						gxPushMatrix();
 						gxLoadMatrixf(projection.m_v);
 						{
-							gxMatrixMode(GL_MODELVIEW);
+							gxMatrixMode(GX_MODELVIEW);
 							gxPushMatrix();
 							gxLoadMatrixf(cameraMatrix.m_v);
 							{
@@ -2036,13 +2036,13 @@ int main(int argc, char * argv[])
 
 								setBlend(BLEND_ALPHA);
 							}
-							gxMatrixMode(GL_MODELVIEW);
+							gxMatrixMode(GX_MODELVIEW);
 							gxPopMatrix();
 						}
-						gxMatrixMode(GL_PROJECTION);
+						gxMatrixMode(GX_PROJECTION);
 						gxPopMatrix();
 
-						gxMatrixMode(GL_MODELVIEW);
+						gxMatrixMode(GX_MODELVIEW);
 					}
 					glDisable(GL_DEPTH_TEST);
 				}

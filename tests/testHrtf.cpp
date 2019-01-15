@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // GL_PROJECTION, GL_MODELVIEW
+#include <GL/glew.h> // glPointSize
 #include "audio.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "Calc.h"
@@ -1066,10 +1066,10 @@ void testHrtf()
 		{
 			Mat4x4 projectionMatrix;
 			projectionMatrix.MakePerspectiveLH(Calc::DegToRad(90.f), GFX_SY / float(GFX_SX), .01f, 1000.f);
-			gxMatrixMode(GL_PROJECTION);
+			gxMatrixMode(GX_PROJECTION);
 			gxPushMatrix();
 			gxLoadMatrixf(projectionMatrix.m_v);
-			gxMatrixMode(GL_MODELVIEW);
+			gxMatrixMode(GX_MODELVIEW);
 			gxPushMatrix();
 			gxLoadIdentity();
 			
@@ -1117,9 +1117,9 @@ void testHrtf()
 			}
 			gxPopMatrix();
 			
-			gxMatrixMode(GL_PROJECTION);
+			gxMatrixMode(GX_PROJECTION);
 			gxPopMatrix();
-			gxMatrixMode(GL_MODELVIEW);
+			gxMatrixMode(GX_MODELVIEW);
 			gxPopMatrix();
 			
 			setFont("calibri.ttf");

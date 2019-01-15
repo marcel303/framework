@@ -2051,10 +2051,10 @@ int main(int argc, char * argv[])
 
 				matP = matP * matV;
 
-				gxMatrixMode(GL_PROJECTION);
+				gxMatrixMode(GX_PROJECTION);
 				gxPushMatrix();
 				gxLoadMatrixf(matP.m_v);
-				gxMatrixMode(GL_MODELVIEW);
+				gxMatrixMode(GX_MODELVIEW);
 				gxPushMatrix();
 				gxLoadIdentity();
 				{
@@ -2119,9 +2119,9 @@ int main(int argc, char * argv[])
 
 					setBlend(BLEND_ALPHA);
 				}
-				gxMatrixMode(GL_PROJECTION);
+				gxMatrixMode(GX_PROJECTION);
 				gxPopMatrix();
-				gxMatrixMode(GL_MODELVIEW);
+				gxMatrixMode(GX_MODELVIEW);
 				gxPopMatrix();
 
 			#if 0

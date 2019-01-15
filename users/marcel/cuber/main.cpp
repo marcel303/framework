@@ -1,4 +1,4 @@
-#include <GL/glew.h> // GL_PROJECTION, GL_MODELVIEW, ..
+#include <GL/glew.h> // glPointSize
 #include "AudioFFT.h"
 #include "Calc.h"
 #include "config.h"
@@ -749,7 +749,7 @@ int main(int argc, char * argv[])
 
 				setFont("calibri.ttf");
 
-				gxMatrixMode(GL_PROJECTION);
+				gxMatrixMode(GX_PROJECTION);
 				gxPushMatrix();
 				{
 					Mat4x4 t;
@@ -757,7 +757,7 @@ int main(int argc, char * argv[])
 					gxLoadMatrixf(t.m_v);
 					gxScalef(1.f, -1.f, 1.f);
 
-					gxMatrixMode(GL_MODELVIEW);
+					gxMatrixMode(GX_MODELVIEW);
 					gxPushMatrix();
 					{
 						const float scale = 1.f;
@@ -770,10 +770,10 @@ int main(int argc, char * argv[])
 					}
 					gxPopMatrix();
 				}
-				gxMatrixMode(GL_PROJECTION);
+				gxMatrixMode(GX_PROJECTION);
 				gxPopMatrix();
 
-				gxMatrixMode(GL_MODELVIEW);
+				gxMatrixMode(GX_MODELVIEW);
 
 				gxPushMatrix();
 				{
