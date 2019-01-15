@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 enum GX_TEXTURE_FORMAT
 {
 	GX_UNKNOWN_FORMAT,
