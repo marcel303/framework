@@ -28,6 +28,7 @@
 #include <GL/glew.h>
 #include "framework.h"
 #include "gx_texture.h"
+#include <algorithm>
 
 static GLenum toOpenGLInternalFormat(const GX_TEXTURE_FORMAT format)
 {
