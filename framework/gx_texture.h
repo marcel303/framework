@@ -46,7 +46,8 @@ enum GX_TEXTURE_FORMAT
 	
 	// floating point
 	GX_R16_FLOAT,
-	GX_R32_FLOAT
+	GX_R32_FLOAT,
+	GX_RGB32_FLOAT
 };
 
 enum GX_TEXTURE_SWIZZLE

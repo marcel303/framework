@@ -39,6 +39,7 @@ static GLenum toOpenGLInternalFormat(const GX_TEXTURE_FORMAT format)
 	C(GX_RGBA8_UNORM, GL_RGBA8);
 	C(GX_R16_FLOAT, GL_R16F);
 	C(GX_R32_FLOAT, GL_R32F);
+	C(GX_RGB32_FLOAT, GL_RGB32F);
 #undef C
 
 	return GL_INVALID_ENUM;
@@ -57,6 +58,7 @@ static void toOpenGLUploadType(const GX_TEXTURE_FORMAT format, GLenum & uploadFo
 	C(GX_RGBA8_UNORM, GL_RGBA, GL_UNSIGNED_BYTE);
 	C(GX_R16_FLOAT, GL_RED, GL_FLOAT);
 	C(GX_R32_FLOAT, GL_RED, GL_FLOAT);
+	C(GX_RGB32_FLOAT, GL_RGB, GL_FLOAT);
 #undef C
 }
 
