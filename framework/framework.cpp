@@ -5326,6 +5326,7 @@ static int surfaceStackSize = 0;
 static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
 static Stack<COLOR_MODE, 32> colorModeStack(COLOR_MUL);
 static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
+static Stack<bool, 32> lineSmoothStack(false);
 static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
 
 static void getViewportSize(float & sx, float & sy)
@@ -5799,6 +5800,31 @@ void popColorPost()
 	const COLOR_POST value = colorPostStack.popValue();
 	
 	setColorPost(value);
+}
+
+static void setLineSmooth(bool enabled)
+{
+	if (enabled)
+	{
+		glEnable(GL_LINE_SMOOTH);
+		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+	}
+	else
+		glDisable(GL_LINE_SMOOTH);
+}
+
+void pushLineSmooth(bool enabled)
+{
+	lineSmoothStack.push(globals.lineSmoothEnabled);
+	
+	setLineSmooth(enabled);
+}
+
+void popLineSmooth()
+{
+	const bool value = lineSmoothStack.popValue();
+	
+	setLineSmooth(value);
 }
 
 static GLenum toOpenGLDepthFunc(DEPTH_TEST test)

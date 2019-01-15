@@ -1325,6 +1325,9 @@ void setColorPost(COLOR_POST colorPost);
 void pushColorPost(COLOR_POST colorPost);
 void popColorPost();
 
+void pushLineSmooth(bool enabled);
+void popLineSmooth();
+
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void popDepthTest();

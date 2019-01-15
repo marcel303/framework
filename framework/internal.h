@@ -370,6 +370,7 @@ public:
 	BLEND_MODE blendMode;
 	COLOR_MODE colorMode;
 	COLOR_POST colorPost;
+	bool lineSmoothEnabled;
 	FONT_MODE fontMode;
 	Color color;
 	bool colorClamp;
