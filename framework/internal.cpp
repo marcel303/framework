@@ -1847,10 +1847,10 @@ void FontCacheElem::load(const char * filename)
 #if USE_GLYPH_ATLAS
 	if (loaded)
 	{
-		const GLint swizzleMask[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
+		const int swizzleMask[4] = { GX_SWIZZLE_ONE, GX_SWIZZLE_ONE, GX_SWIZZLE_ONE, 0 };
 		
 		textureAtlas = new TextureAtlas();
-		textureAtlas->init(256, 16, GL_R8, false, false, swizzleMask);
+		textureAtlas->init(256, 16, GX_R8_UNORM, false, false, swizzleMask);
 	}
 #endif
 }
@@ -2197,7 +2197,7 @@ void MsdfGlyphCache::allocTextureAtlas()
 	m_textureAtlas = nullptr;
 	
 	m_textureAtlas = new TextureAtlas();
-	m_textureAtlas->init(kAtlasSx, kAtlasSy, GL_RGB32F, true, true, nullptr);
+	m_textureAtlas->init(kAtlasSx, kAtlasSy, GX_RGB32_FLOAT, true, true, nullptr);
 	
 	m_map.clear();
 }
@@ -2575,7 +2575,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 		result &= frameBuffer != 0;
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureAtlas->texture, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureAtlas->texture->id, 0);
 		checkErrorGL();
 		
 		glReadBuffer(GL_COLOR_ATTACHMENT0);

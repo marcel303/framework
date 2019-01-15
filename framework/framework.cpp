@@ -6228,7 +6228,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 #if USE_GLYPH_ATLAS
 	if (globals.isInTextBatch == false)
 	{
-		gxSetTexture(globals.font->textureAtlas->texture);
+		gxSetTexture(globals.font->textureAtlas->texture->id);
 		
 		gxBegin(GL_QUADS);
 	}
@@ -6392,7 +6392,7 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 		Shader & shader = globals.builtinShaders->msdfText.get();
 		setShader(shader);
 		
-		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture);
+		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id);
 		
 		gxBegin(GL_QUADS);
 	}
@@ -6549,7 +6549,7 @@ void beginTextBatch(Shader * overrideShader)
 		Assert(!globals.isInTextBatch);
 		globals.isInTextBatch = true;
 		
-		gxSetTexture(globals.font->textureAtlas->texture);
+		gxSetTexture(globals.font->textureAtlas->texture->id);
 		gxBegin(GL_QUADS);
 	#endif
 	}
@@ -6567,7 +6567,7 @@ void beginTextBatch(Shader * overrideShader)
 			: globals.builtinShaders->msdfText.get();
 		
 		setShader(shader);
-		shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture);
+		shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture->id);
 		
 		gxBegin(GL_QUADS);
 	}
