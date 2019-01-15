@@ -478,11 +478,19 @@ struct FileEditor_Text : FileEditor
 		isValid = loadIntoTextEditor(path.c_str(), lineEndings, textEditor);
 		
 		guiContext.init();
+		
+		// set a custom background color on the text editor
+		const float lightness = .08f;
+		TextEditor::Palette palette = textEditor.GetPalette();
+		palette[(int)TextEditor::PaletteIndex::Background] = ImGui::ColorConvertFloat4ToU32(ImVec4(lightness, lightness, lightness, 1.f));
+		textEditor.SetPalette(palette);
+		
 	#if 0
+		// set a custom font on the text editor
 		// todo : find a good mono spaced font for the editor
 		guiContext.pushImGuiContext();
 		ImGuiIO& io = ImGui::GetIO();
-		io.FontDefault = io.Fonts->AddFontFromFileTTF((s_dataFolder + "/unispace.ttf").c_str(), 16)
+		io.FontDefault = io.Fonts->AddFontFromFileTTF((s_dataFolder + "/SFMono-Medium.otf").c_str(), 16);
 		guiContext.popImGuiContext();
 		guiContext.updateFontTexture();
 	#endif
@@ -618,9 +626,12 @@ struct FileEditor_Text : FileEditor
 					textEditor.CanUndo() ? "*" : " ",
 					textEditor.GetLanguageDefinition().mName.c_str(), path.c_str());
 				
-				textEditor.Render(filename.c_str(), ImVec2(sx - 20, sy - 40), false);
+				ImGui::SetNextWindowFocus();
+				textEditor.Render(filename.c_str(), ImVec2(sx - 20, sy - 70), false);
 			}
 			ImGui::End();
+			
+			guiContext.updateMouseCursor();
 		}
 		guiContext.processEnd();
 		
@@ -894,8 +905,7 @@ struct FileEditor_Model : FileEditor
 		
 		projectPerspective3d(60.f, .01f, 100.f);
 		{
-			glEnable(GL_DEPTH_TEST);
-			glDepthFunc(GL_LESS);
+			pushDepthTest(true, DEPTH_LESS);
 			
 			float maxAxis = 0.f;
 			
@@ -929,7 +939,7 @@ struct FileEditor_Model : FileEditor
 				gxPopMatrix();
 			}
 			
-			glDisable(GL_DEPTH_TEST);
+			popDepthTest();
 		}
 		projectScreen2d();
 		
