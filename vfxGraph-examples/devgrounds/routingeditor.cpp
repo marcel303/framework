@@ -1,5 +1,6 @@
 #include "framework.h"
 #include <set>
+#include <tuple>
 
 void testRoutingEditor()
 {
