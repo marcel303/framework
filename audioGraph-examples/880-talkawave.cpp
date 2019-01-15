@@ -302,7 +302,7 @@ struct MyPortAudioHandler : PortAudioHandler
 		, audioSources()
 		, monoSource()
 	{
-		monoSource.open("talkative.ogg", true);
+		monoSource.open("thegrooop/talkative.ogg", true);
 	}
 
 	void addAudioSource(MultiChannelAudioSource_SoundVolume * audioSource)
