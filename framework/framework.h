@@ -290,7 +290,7 @@ typedef int32_t GxImmediateIndex;
 typedef uint32_t GxShaderId;
 typedef uint32_t GxShaderBufferId;
 
-#if USE_LEGACY_OPENGL || true // todo : remove legacy OpenGL constraint
+#if USE_LEGACY_OPENGL
 
 // these must match the OpenGL definition for things to work when mapping GX calls to legacy OpenGL
 
