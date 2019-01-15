@@ -37,7 +37,7 @@ int g_drawY;
 
 UiState * g_uiState = nullptr;
 
-static GLuint checkersTexture = 0;
+static GxTexture checkersTexture;
 
 //
 
@@ -103,7 +103,7 @@ void UiState::reset()
 void initUi()
 {
 	// create a checkered texture
-	fassert(checkersTexture == 0);
+	fassert(checkersTexture.id == 0);
 	const uint8_t v1 = 31;
 	const uint8_t v2 = 63;
 	uint32_t rgba[4];
@@ -112,26 +112,21 @@ void initUi()
 	rgba1[0] = v1; rgba1[1] = v1; rgba1[2] = v1; rgba1[3] = 255;
 	rgba2[0] = v2; rgba2[1] = v2; rgba2[2] = v2; rgba2[3] = 255;
 	rgba[0] = c1; rgba[1] = c2; rgba[2] = c2; rgba[3] = c1;
-	checkersTexture = createTextureFromRGBA8(rgba, 2, 2, false, false);
+	checkersTexture.allocate(2, 2, GX_RGBA8_UNORM, false, false);
+	checkersTexture.upload(rgba, 1, 0);
 }
 
 void shutUi()
 {
-	glDeleteTextures(1, &checkersTexture);
+	checkersTexture.free();
 }
 
 void drawUiRectCheckered(float x1, float y1, float x2, float y2, float scale)
 {
-	fassert(checkersTexture != 0);
+	fassert(checkersTexture.isValid());
 	
-	gxSetTexture(checkersTexture);
+	gxSetTexture(checkersTexture.id);
 	{
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		checkErrorGL();
-		
 		gxBegin(GX_QUADS);
 		{
 			gxTexCoord2f(0.f,               (y2 - y1) / scale); gxVertex2f(x1, y1);
