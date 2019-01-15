@@ -150,7 +150,8 @@ enum DEPTH_TEST
 	DEPTH_LESS,
 	DEPTH_LEQUAL,
 	DEPTH_GREATER,
-	DEPTH_GEQUAL
+	DEPTH_GEQUAL,
+	DEPTH_ALWAYS
 };
 
 enum FONT_MODE // setFontMode
@@ -310,6 +311,12 @@ enum GX_PRIMITIVE_TYPE
 	GX_QUADS = GL_QUADS
 };
 
+enum GX_MATRIX
+{
+	GX_MODELVIEW = GL_MODELVIEW,
+	GX_PROJECTION = GL_PROJECTION
+};
+
 #else
 
 enum GX_PRIMITIVE_TYPE
@@ -323,6 +330,12 @@ enum GX_PRIMITIVE_TYPE
 	GX_TRIANGLE_FAN,
 	GX_TRIANGLE_STRIP,
 	GX_QUADS
+};
+
+enum GX_MATRIX
+{
+	GX_MODELVIEW,
+	GX_PROJECTION
 };
 
 #endif
@@ -1318,6 +1331,9 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void popDepthTest();
 
+void pushDepthWrite(bool enabled);
+void popDepthWrite();
+
 void setColor(const Color & color);
 void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
 void setColorf(float r, float g, float b, float a = 1.f, float rgbMul = 1.f);
@@ -1376,12 +1392,12 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 
 SDL_Surface * getWindowSurface();
 
-static inline void gxMatrixMode(GxEnum mode) { }
+static inline void gxMatrixMode(GX_MATRIX mode) { }
 static inline void gxPopMatrix() { }
 static inline void gxPushMatrix() { }
 static inline void gxLoadIdentity() { }
 static inline void gxLoadMatrixf(const float * m) { }
-static inline void gxGetMatrixf(GxEnum mode, float * m) { }
+static inline void gxGetMatrixf(GX_MATRIX mode, float * m) { }
 static inline void gxMultMatrixf(const float * m) { }
 static inline void gxTranslatef(float x, float y, float z) { }
 static inline void gxRotatef(float angle, float x, float y, float z) { }
@@ -1405,14 +1421,14 @@ static inline void gxSetTexture(GxTextureId texture) { }
 
 #elif !USE_LEGACY_OPENGL
 
-void gxMatrixMode(GxEnum mode);
-GxEnum gxGetMatrixMode();
+void gxMatrixMode(GX_MATRIX mode);
+GX_MATRIX gxGetMatrixMode();
 void gxPopMatrix();
 void gxPushMatrix();
 void gxLoadIdentity();
 void gxLoadMatrixf(const float * m);
-void gxGetMatrixf(GxEnum mode, float * m);
-void gxSetMatrixf(GxEnum mode, float * m);
+void gxGetMatrixf(GX_MATRIX mode, float * m);
+void gxSetMatrixf(GX_MATRIX mode, float * m);
 void gxMultMatrixf(const float * m);
 void gxTranslatef(float x, float y, float z);
 void gxRotatef(float angle, float x, float y, float z);
@@ -1441,12 +1457,12 @@ void gxSetTexture(GxTextureId texture);
 #else
 
 #define gxMatrixMode glMatrixMode
-GxEnum gxGetMatrixMode();
+GX_MATRIX gxGetMatrixMode();
 #define gxPopMatrix glPopMatrix
 #define gxPushMatrix glPushMatrix
 #define gxLoadIdentity glLoadIdentity
 #define gxLoadMatrixf glLoadMatrixf
-void gxGetMatrixf(GxEnum mode, float * m);
+void gxGetMatrixf(GX_MATRIX mode, float * m);
 #define gxMultMatrixf glMultMatrixf
 #define gxTranslatef glTranslatef
 #define gxRotatef glRotatef

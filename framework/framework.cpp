@@ -5267,9 +5267,9 @@ void Camera3d::pushViewMatrix() const
 {
 	const Mat4x4 matrix = getViewMatrix();
 	
-	const GxEnum restoreMatrixMode = gxGetMatrixMode();
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
 	{
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
         gxMultMatrixf(matrix.m_v);
 	}
@@ -5278,9 +5278,9 @@ void Camera3d::pushViewMatrix() const
 
 void Camera3d::popViewMatrix() const
 {
-	const GxEnum restoreMatrixMode = gxGetMatrixMode();
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
 	{
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_PROJECTION);
 		gxPopMatrix();
 	}
 	gxMatrixMode(restoreMatrixMode);
@@ -5381,7 +5381,7 @@ void applyTransformWithViewportSize(const float sx, const float sy)
 {
 	// calculate screen matrix (we need it to transform vertices to screen space)
 	{
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
 		{
 			gxLoadIdentity();
@@ -5400,14 +5400,14 @@ void applyTransformWithViewportSize(const float sx, const float sy)
 			gxScalef(1.f / sx, 1.f / sy, 1.f);
 			
 			// capture transform
-			gxGetMatrixf(GL_PROJECTION, globals.transformScreen.m_v);
+			gxGetMatrixf(GX_PROJECTION, globals.transformScreen.m_v);
 		}
 		gxPopMatrix();
 	}
 	
 	// apply current transform
 	
-	gxMatrixMode(GL_PROJECTION);
+	gxMatrixMode(GX_PROJECTION);
 	
 	switch (globals.transform)
 	{
@@ -5434,7 +5434,7 @@ void applyTransformWithViewportSize(const float sx, const float sy)
 		}
 	}
 	
-	gxMatrixMode(GL_MODELVIEW);
+	gxMatrixMode(GX_MODELVIEW);
 	gxLoadIdentity();
 	checkErrorGL();
 }
@@ -5465,8 +5465,8 @@ void pushTransform()
 	TransformData t;
 	
 	t.transform = globals.transform;
-	gxGetMatrixf(GL_PROJECTION, t.projection.m_v);
-	gxGetMatrixf(GL_MODELVIEW, t.modelView.m_v);
+	gxGetMatrixf(GX_PROJECTION, t.projection.m_v);
+	gxGetMatrixf(GX_MODELVIEW, t.modelView.m_v);
 	
 	s_transformStack.push(t);
 }
@@ -5476,9 +5476,9 @@ void popTransform()
 	TransformData t = s_transformStack.popValue();
 	
 	setTransform(t.transform);
-	gxMatrixMode(GL_PROJECTION);
+	gxMatrixMode(GX_PROJECTION);
 	gxLoadMatrixf(t.projection.m_v);
-	gxMatrixMode(GL_MODELVIEW);
+	gxMatrixMode(GX_MODELVIEW);
 	gxLoadMatrixf(t.modelView.m_v);
 }
 
@@ -5517,7 +5517,7 @@ Vec4 transformToWorld(const Vec4 & v)
 {
 	Mat4x4 matM;
 	
-	gxGetMatrixf(GL_MODELVIEW, matM.m_v);
+	gxGetMatrixf(GX_MODELVIEW, matM.m_v);
 	checkErrorGL();
 	
 	// from current transfor to world
@@ -5532,8 +5532,8 @@ Vec2 transformToScreen(const Vec3 & v)
 	Mat4x4 matP;
 	Mat4x4 matM;
 	
-	gxGetMatrixf(GL_PROJECTION, matP.m_v);
-	gxGetMatrixf(GL_MODELVIEW, matM.m_v);
+	gxGetMatrixf(GX_PROJECTION, matP.m_v);
+	gxGetMatrixf(GX_MODELVIEW, matM.m_v);
 	checkErrorGL();
 	
 	// from current transfor to view
@@ -5573,9 +5573,9 @@ void pushSurface(Surface * surface)
 	
 	//
 
-	gxMatrixMode(GL_PROJECTION);
+	gxMatrixMode(GX_PROJECTION);
 	gxPushMatrix();
-	gxMatrixMode(GL_MODELVIEW);
+	gxMatrixMode(GX_MODELVIEW);
 	gxPushMatrix();
 
 	fassert(surfaceStackSize < kMaxSurfaceStackSize);
@@ -5604,9 +5604,9 @@ void popSurface()
 	setSurface(surface);
 	checkErrorGL();
 
-	gxMatrixMode(GL_PROJECTION);
+	gxMatrixMode(GX_PROJECTION);
 	gxPopMatrix();
-	gxMatrixMode(GL_MODELVIEW);
+	gxMatrixMode(GX_MODELVIEW);
 	gxPopMatrix();
 }
 
@@ -5815,6 +5815,8 @@ static GLenum toOpenGLDepthFunc(DEPTH_TEST test)
 		return GL_GREATER;
 	case DEPTH_GEQUAL:
 		return GL_GEQUAL;
+	case DEPTH_ALWAYS:
+		return GL_ALWAYS;
 	default:
 		Assert(false);
 		return GL_LESS;
@@ -5860,6 +5862,16 @@ void popDepthTest()
 	const DepthTestInfo depthTestInfo = depthTestStack.popValue();
 	
 	setDepthTest(depthTestInfo.testEnabled, depthTestInfo.test, depthTestInfo.writeEnabled);
+}
+
+void pushDepthWrite(bool enabled)
+{
+	pushDepthTest(globals.depthTestEnabled, globals.depthTest, enabled);
+}
+
+void popDepthWrite()
+{
+	popDepthTest();
 }
 
 void setColor(const Color & color)
@@ -6722,7 +6734,7 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 		
 		drawText_FreeType(face, sizei, glyphs, textLength, x, y);
 	#else
-		gxMatrixMode(GL_MODELVIEW);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
 		{
 			x += sx * (alignX - 1.f) / 2.f;
@@ -7299,14 +7311,14 @@ static GxMatrixStack s_gxModelView;
 static GxMatrixStack s_gxProjection;
 static GxMatrixStack * s_gxMatrixStack = &s_gxModelView;
 
-void gxMatrixMode(GxEnum mode)
+void gxMatrixMode(GX_MATRIX mode)
 {
 	switch (mode)
 	{
-		case GL_MODELVIEW:
+		case GX_MODELVIEW:
 			s_gxMatrixStack = &s_gxModelView;
 			break;
-		case GL_PROJECTION:
+		case GX_PROJECTION:
 			s_gxMatrixStack = &s_gxProjection;
 			break;
 		default:
@@ -7315,16 +7327,16 @@ void gxMatrixMode(GxEnum mode)
 	}
 }
 
-GxEnum gxGetMatrixMode()
+GX_MATRIX gxGetMatrixMode()
 {
 	if (s_gxMatrixStack == &s_gxModelView)
-		return GL_MODELVIEW;
+		return GX_MODELVIEW;
 	if (s_gxMatrixStack == &s_gxProjection)
-		return GL_PROJECTION;
+		return GX_PROJECTION;
 	else
 	{
 		Assert(false);
-		return GL_MODELVIEW;
+		return GX_MODELVIEW;
 	}
 }
 
@@ -7348,14 +7360,14 @@ void gxLoadMatrixf(const float * m)
 	memcpy(s_gxMatrixStack->getRw().m_v, m, sizeof(float) * 16);
 }
 
-void gxGetMatrixf(GxEnum mode, float * m)
+void gxGetMatrixf(GX_MATRIX mode, float * m)
 {
 	switch (mode)
 	{
-		case GL_PROJECTION:
+		case GX_PROJECTION:
 			memcpy(m, s_gxProjection.get().m_v, sizeof(float) * 16);
 			break;
-		case GL_MODELVIEW:
+		case GX_MODELVIEW:
 			memcpy(m, s_gxModelView.get().m_v, sizeof(float) * 16);
 			break;
 		default:
@@ -7364,14 +7376,14 @@ void gxGetMatrixf(GxEnum mode, float * m)
 	}
 }
 
-void gxSetMatrixf(GxEnum mode, const float * m)
+void gxSetMatrixf(GX_MATRIX mode, const float * m)
 {
 	switch (mode)
 	{
-		case GL_PROJECTION:
+		case GX_PROJECTION:
 			memcpy(s_gxProjection.getRw().m_v, m, sizeof(float) * 16);
 			break;
-		case GL_MODELVIEW:
+		case GX_MODELVIEW:
 			memcpy(s_gxModelView.getRw().m_v, m, sizeof(float) * 16);
 			break;
 		default:
@@ -7998,16 +8010,16 @@ void gxInitialize()
 	registerBuiltinShaders();
 }
 
-void gxGetMatrixf(GxEnum mode, float * m)
+void gxGetMatrixf(GX_MATRIX mode, float * m)
 {
 	switch (mode)
 	{
-	case GL_PROJECTION:
+	case GX_PROJECTION:
 		glGetFloatv(GL_PROJECTION_MATRIX, m);
 		checkErrorGL();
 		break;
 
-	case GL_MODELVIEW:
+	case GX_MODELVIEW:
 		glGetFloatv(GL_MODELVIEW_MATRIX, m);
 		checkErrorGL();
 		break;
@@ -8018,14 +8030,14 @@ void gxGetMatrixf(GxEnum mode, float * m)
 	}
 }
 
-GxEnum gxGetMatrixMode()
+GX_MATRIX gxGetMatrixMode()
 {
 	GLint mode = 0;
 	
 	glGetIntegerv(GL_MATRIX_MODE, &mode);
 	checkErrorGL();
 	
-	return (GxEnum)mode;
+	return (GX_MATRIX)mode;
 }
 
 void gxEnd()
@@ -8563,7 +8575,7 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 	{
 		Mat4x4 matM;
 		
-		gxGetMatrixf(GL_MODELVIEW, matM.m_v);
+		gxGetMatrixf(GX_MODELVIEW, matM.m_v);
 		checkErrorGL();
 		
 		const float scale = matM.GetAxis(0).CalcSize();
