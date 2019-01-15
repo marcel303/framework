@@ -280,6 +280,8 @@ void GxTexture::upload(const void * src, const int _srcAlignment, const int _src
 	glBindTexture(GL_TEXTURE_2D, id);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, std::min(8, srcAlignment));
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, srcPitch);
+	checkErrorGL();
+	
 	glTexSubImage2D(
 		GL_TEXTURE_2D,
 		0, 0, 0,
@@ -287,6 +289,46 @@ void GxTexture::upload(const void * src, const int _srcAlignment, const int _src
 		uploadFormat,
 		uploadElementType,
 		src);
+	checkErrorGL();
+
+	// restore previous OpenGL states
+
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, restorePitch);
+	checkErrorGL();
+}
+
+void GxTexture::uploadArea(const void * src, const int srcAlignment, const int _srcPitch, const int srcSx, const int srcSy, const int dstX, const int dstY)
+{
+	Assert(id != 0);
+	if (id == 0)
+		return;
+	
+	const int srcPitch = _srcPitch == 0 ? srcSx : _srcPitch;
+	
+	// capture current OpenGL states before we change them
+	
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+	GLint restoreUnpack;
+	glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
+	GLint restorePitch;
+	glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restorePitch);
+	checkErrorGL();
+	
+	//
+	
+	GLenum uploadFormat;
+	GLenum uploadElementType;
+	toOpenGLUploadType(format, uploadFormat, uploadElementType);
+
+	glBindTexture(GL_TEXTURE_2D, id);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, std::min(8, srcAlignment));
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, srcPitch);
+	checkErrorGL();
+
+	glTexSubImage2D(GL_TEXTURE_2D, 0, dstX, dstY, srcSx, srcSy, uploadFormat, uploadElementType, src);
 	checkErrorGL();
 
 	// restore previous OpenGL states
