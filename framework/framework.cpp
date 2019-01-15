@@ -7410,7 +7410,7 @@ static GLuint s_gxVertexBufferObject[GX_VAO_COUNT] = { };
 static GLuint s_gxIndexBufferObject[GX_VAO_COUNT] = { };
 static GxVertex s_gxVertexBuffer[1024*16];
 
-static int /*GX_PRIMITIVE_TYPE*/ s_gxPrimitiveType = GX_INVALID_PRIM;
+static GX_PRIMITIVE_TYPE s_gxPrimitiveType = GX_INVALID_PRIM;
 static GxVertex * s_gxVertices = 0;
 static int s_gxVertexCount = 0;
 static int s_gxMaxVertexCount = 0;
@@ -7418,7 +7418,7 @@ static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
 static bool s_gxTextureEnabled = false;
 
-static int /*GX_PRIMITIVE_TYPE*/ s_gxLastPrimitiveType = GX_INVALID_PRIM;
+static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
 
 static const VsInput vsInputs[] =
@@ -7514,7 +7514,7 @@ void gxShutdown()
 	s_gxLastVertexCount = -1;
 }
 
-static GLenum toOpenGLPrimitiveType(const int /*GX_PRIMITIVE_TYPE*/ primitiveType)
+static GLenum toOpenGLPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
 {
 	switch (primitiveType)
 	{
@@ -7546,7 +7546,7 @@ static void gxFlush(bool endOfBatch)
 
 	if (s_gxVertexCount)
 	{
-		const int /*GX_PRIMITIVE_TYPE*/ primitiveType = s_gxPrimitiveType;
+		const GX_PRIMITIVE_TYPE primitiveType = s_gxPrimitiveType;
 
 		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : s_gxShader;
 
@@ -7715,7 +7715,7 @@ static void gxFlush(bool endOfBatch)
 		s_gxVertices = 0;
 }
 
-void gxBegin(int /*GX_PRIMITIVE_TYPE*/ primitiveType)
+void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
 {
 	s_gxPrimitiveType = primitiveType;
 	s_gxVertices = s_gxVertexBuffer;
@@ -8396,7 +8396,7 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 
 	case HQ_STROKED_TRIANGLES:
 		setShader_HqStrokedTriangles();
-		gxBegin(GL_TRIANGLES);
+		gxBegin(GX_TRIANGLES);
 		break;
 
 	case HQ_STROKED_CIRCLES:

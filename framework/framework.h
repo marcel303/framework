@@ -32,11 +32,11 @@
 // for now we seem to depend mostly on: SDL_event, SDL_mutex, SDL_thread and SDL_timer
 
 #if defined(WIN32)
-#include <GL/glew.h> // <SDL2/SDL_opengl.h> includes <Windows.h>, which introduces a lot of #define's we don't want. Instead we include GLEW here (for now) which doesn't pollute the global namespace as much. Once framework.h really doesn't depend on OpenGL anymore this can be removed.
-#include <SDL2/SDL.h>
+	#include <GL/glew.h> // <SDL2/SDL_opengl.h> includes <Windows.h>, which introduces a lot of #define's we don't want. Instead we include GLEW here (for now) which doesn't pollute the global namespace as much. Once framework.h really doesn't depend on OpenGL anymore this can be removed.
+	#include <SDL2/SDL.h>
 #else
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
+	#include <SDL2/SDL.h>
+	#include <SDL2/SDL_opengl.h>
 #endif
 #include <string>
 #include <vector>
@@ -1381,7 +1381,7 @@ static inline void gxValidateMatrices() { }
 
 static inline void gxInitialize() { }
 static inline void gxShutdown() { }
-static inline void gxBegin(int /*GX_PRIMITIVE_TYPE*/ primitiveType) { }
+static inline void gxBegin(GX_PRIMITIVE_TYPE primitiveType) { }
 static inline void gxEnd() { }
 static inline void gxColor4f(float r, float g, float b, float a) { }
 static inline void gxColor4fv(const float * rgba) { }
@@ -1412,7 +1412,7 @@ void gxValidateMatrices();
 
 void gxInitialize();
 void gxShutdown();
-void gxBegin(int /*GX_PRIMITIVE_TYPE*/ primitiveType);
+void gxBegin(GX_PRIMITIVE_TYPE primitiveType);
 void gxEnd();
 void gxEmitVertices(int primitiveType, int numVertices);
 void gxColor4f(float r, float g, float b, float a);
